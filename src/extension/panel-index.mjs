@@ -10,6 +10,12 @@ import { loadEmbeddingConfig, saveEmbeddingConfig as saveEmbeddingConfigToFile }
 import { buildIndex as runBuildIndex, needsRebuild, loadIndexManifest, indexCompat } from "../indexer.mjs"
 import { _cwd } from "./panel-messages.mjs"
 
+/** §14 C-12#1/C-15：索引进度 → statusText（webview 状态行段——scan/embed/done 三相位；
+ *  done 相位由 webview 清段——索引结束回常态）。 */
+function postIndexProgress(panel, p) {
+  panel._panel?.webview.postMessage({ type: "statusText", kind: "index", phase: p.phase, done: p.done ?? null, total: p.total ?? null })
+}
+
 export function pushIndexStatus(panel) {
     const cwd = _cwd()
     if (!cwd) return
@@ -148,12 +154,15 @@ export async function buildIndex(panel) {
           onProgress: (p) => {
             if (p.phase === "scan") {
               progress.report({ message: `Scanning ${p.total} files…` })
+              postIndexProgress(panel, p)
             } else if (p.phase === "chunk") {
               progress.report({ message: `Chunking ${p.total} chunks…` })
             } else if (p.phase === "embed") {
               progress.report({ message: `Embedding chunks ${p.done}/${p.total}` })
+              postIndexProgress(panel, p)
             } else if (p.phase === "done") {
               progress.report({ message: "Done" })
+              postIndexProgress(panel, p)
             }
           },
           signal: ctrl.signal,

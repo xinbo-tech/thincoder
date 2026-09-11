@@ -1,9 +1,10 @@
 /**
- * activity-view.js — 活动块呈现叶（2026-09-11 活动区回归——WEBVIEW.md §12 现行机制）。
+ * activity-view.js — 活动块呈现叶（2026-09-12 活动区收口——WEBVIEW.md §14 现行机制）。
  * 单一权威：块头/状态词/折叠 tail/⏹ 停止与取消控件（refreshBlock/updateStopButton/
- * noteChunk——语义随各函数 doc）。块生命周期只有 live → frozen——头词事件驱动
- * （无 1s ticker——无 idle 时钟）；区显隐 = CSS `:empty`、区 pin = ui.js 滚动族
- * （maybeScrollActivity/initScrollFollow）——本叶零参与显隐/pin（无 refresh 侧机制）。
+ * noteChunk——语义随各函数 doc）。块生命周期 live → frozen（frozen 上 awaitingDigest
+ * 单标志 = 待消化驻留态词）；头词事件驱动（无 1s ticker——elapsed 由 panels `_panelTimer`
+ * 2s 同点 refreshLiveHeaders 刷新）；区显隐 = CSS `:empty`、区 pin = ui.js 滚动族
+ * （maybeScrollActivity/initScrollFollow）——本叶零参与显隐/pin。
  * 依赖：state.js + i18n.js——leaf——不依赖编排层 activity.js。
  */
 import { t } from "./i18n.js"
@@ -24,10 +25,13 @@ const W = {
 }
 
 /** Identity/status header line:
- *  live   → "[▶ eng-coder#3 · async · glm-5.3 · 12s · turn 3/100]"
- *  queued → "[⏳ eng-coder#4]"（等待块头——⏳ 即全部语义——无位置/原因词）
+ *  live   → "[▶ eng-coder#3 · async · glm-5.3 · 12s · turn 3/100]" + 状态词
+ *  queued → "[⏳ eng-coder#4]" + 状态区排队信息（C-11②：位置/原因）
  *  frozen → "[✓ eng-coder#3 · async · glm-5.3 · done 15s · turn 4/100]"
+ *  awaiting（settled 待消化）→ "[✓ eng-coder#3 · async · glm-5.3 · 15s] done · awaiting digestion"
+ *           （C-2：括号去 verb + awaiting 态词）
  *  stopped→ "[⏹ eng-coder#3 · async · glm-5.3 · stopped 12s]"
+ *  live 审批 → "[⏸ coder#2 · async · …] 等待审批: write"（§18 C-8——icon 覆盖 ▶）
  *  Parts are conditional on what the events actually carried（turn 只在真实计数值时）。 */
 function headerText(meta, now) {
   const frozen = meta.frozen
@@ -36,6 +40,9 @@ function headerText(meta, now) {
   let icon = "▶"
   let verb = null
   let note = null
+  // §18 C-8（child permission gate）：live 审批态（child ask 在途）→ ⏸ 覆盖 ▶；终态
+  // 图标不覆盖（冰冻头词优先——freezeBlock 已清 approval）。
+  if (!frozen && meta.approval) icon = "⏸"
   if (frozen) {
     if (meta.status === "cancelled") { icon = "⏹"; verb = W.stopped() }
     else if (meta.status === "error") { icon = "⏹"; verb = W.error(); note = meta.error ? String(meta.error) : null }
@@ -47,7 +54,7 @@ function headerText(meta, now) {
     head += " · " + (meta.pool ? W.async() : W.sync())
   }
   if (meta.model && !["consult", "escalate"].includes(meta.role)) head += " · " + meta.model
-  if (verb) head += ` · ${verb} ${sec}s`
+  if (verb && !meta.awaitingDigest) head += ` · ${verb} ${sec}s` // awaiting：括号去 verb（C-2）
   else head += ` · ${sec}s`
   if (meta.maxTurns > 0 && (meta.turn ?? 0) > 0) head += ` · turn ${meta.turn}/${meta.maxTurns}`
   head += "]"
@@ -58,9 +65,20 @@ function headerText(meta, now) {
   return head
 }
 
-/** State word after the bracket (live running): last tool line tail / thinking…
- *  queued 头无外置词（⏳ 即全部语义）。 */
+/** State word after the bracket:
+ *  - awaitingDigest 驻留（C-2）→ `t("sub.awaitingDigest")`（en 逐字 `done · awaiting digestion`）
+ *  - approval（C-8）→ `t("sub.awaitingApproval", { tool })`（child ask 在途——最高优先级；
+ *    清态（tool:null）即回落）
+ *  - queued（C-11②）→ slot：`t("sub.queueSlot", {n: position})`；wait/depc：host detail 原文
+ *  - live running → 结构化工具行（C-11①：`tool — cmd ≤60`）/ 工具文本尾句 / thinking… */
 function stateWord(meta) {
+  if (meta.approval) return t("sub.awaitingApproval", { tool: meta.approval }) || `Awaiting approval: ${meta.approval}`
+  if (meta.awaitingDigest) return t("sub.awaitingDigest") || "done · awaiting digestion"
+  if (meta.status === "queued" && !meta.frozen) {
+    const q = meta.queueInfo
+    if (q?.reason) return String(q.reason) // wait/depc：detail 原文（CLI 同形）
+    return t("sub.queueSlot", { n: q?.position ?? "?" }) || `queued · position ${q?.position ?? "?"} (slot full)`
+  }
   return meta.stateWord || W.thinking()
 }
 
@@ -92,7 +110,7 @@ export function refreshBlock(block) {
   // Frozen: bracket only (verb inside: done/stopped/error Ns). Live running:
   // bracket + state word (tool tail / thinking…). Queued: ⏳ bracket only.
   hdr.textContent = headerText(meta, Date.now())
-    + (!meta.frozen && meta.status !== "queued" ? " " + stateWord(meta) : "")
+    + (!meta.frozen || meta.awaitingDigest ? " " + stateWord(meta) : "")
   summary.appendChild(hdr)
   // Folded context: tail-3 dim lines under the header（live 折叠态或冻结态——终态折叠后
   // 块 = header + tail-3——内容保留可展开——无报告 preview 元素）。
@@ -138,16 +156,24 @@ function updateStopButton(block) {
   }
 }
 
-/** Chunk-level state-word tracking (think → thinking…; tool → line tail;
- *  text leaves the word untouched — CLI currentTool parity). */
-export function noteChunk(block, kind, text) {
+/** Chunk-level state-word tracking (think → thinking…; tool → `${tool} — ${cmd ≤60}`
+ *  or legacy line tail; result chunk 不改写状态区 — CLI currentTool parity §14 C-11①). */
+export function noteChunk(block, kind, text, m) {
   if (!block?._subMeta || block._subMeta.frozen) return
   const meta = block._subMeta
   if (kind === "tool") {
-    const lines = String(text ?? "").split("\n").map((l) => l.trim()).filter(Boolean)
-    const tail = lines[lines.length - 1] ?? ""
-    const flat = tail.replace(/\s+/g, " ").trim()
-    meta.stateWord = flat ? (flat.length > 64 ? flat.slice(0, 63) + "…" : flat) : meta.stateWord
+    if (typeof m?.tool === "string" && m.tool) {
+      // 结构化工具字段（C-11①）：`${tool} — ${cmd ≤60}`（无 cmd 仅 tool）
+      const cmd = typeof m.cmd === "string" ? m.cmd.replace(/\s+/g, " ").trim() : ""
+      meta.stateWord = cmd ? `${m.tool} — ${cmd.length > 60 ? cmd.slice(0, 59) + "…" : cmd}` : m.tool
+    } else if (/^→ /.test(String(text ?? ""))) {
+      return // 结果 chunk 不改写状态区（CLI currentTool 语义——C-11①）
+    } else {
+      const lines = String(text ?? "").split("\n").map((l) => l.trim()).filter(Boolean)
+      const tail = lines[lines.length - 1] ?? ""
+      const flat = tail.replace(/\s+/g, " ").trim()
+      meta.stateWord = flat ? (flat.length > 64 ? flat.slice(0, 63) + "…" : flat) : meta.stateWord
+    }
     refreshBlock(block)
   } else if (kind === "think") {
     meta.stateWord = W.thinking()

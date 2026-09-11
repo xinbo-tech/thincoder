@@ -16,5 +16,7 @@ export function toolPanelPayload(name, chunk) {
   const text = typeof chunk === "string" ? chunk : String(chunk?.text ?? "")
   // §19.5 D-M8: `sub`（嵌套子代理段标——runChild forward 附加，如 "explore#1"）随块
   // 透传——webview 在子代理块内渲染行首 dim 子标 span。白名单字段（NF1——不静默丢字段）。
-  return { type: "toolPanel", name, kind, text, round: chunk?.round, model: chunk?.model, sub: typeof chunk === "string" ? undefined : chunk?.sub }
+  // §14 C-11①（活动区收口批）：增 `tool`/`cmd`（结构化工具名 + 参数摘要——无则不携）。
+  return { type: "toolPanel", name, kind, text, round: chunk?.round, model: chunk?.model, sub: typeof chunk === "string" ? undefined : chunk?.sub,
+    tool: typeof chunk === "string" ? undefined : chunk?.tool, cmd: typeof chunk === "string" ? undefined : chunk?.cmd }
 }

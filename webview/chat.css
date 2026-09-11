@@ -462,10 +462,10 @@
 }
 
 
-/* Subagent/consultation activity blocks — same content height as advisor reviews
-   (2026-09-05 用户设定：advisor/subagent 均 100px——内容完整、内部滚动), dimmer title —
+/* Subagent/consultation activity blocks — 60px content height (2026-09-11 live 块 UX：
+   用户设定 100→60——单块占高更小；advisor 流内评审块维持基础 100px), dimmer title —
    collapsible, reopenable, height 0 when closed. */
-.advisor-block.sub-block .advisor-content { max-height: 100px; }
+.advisor-block.sub-block .advisor-content { max-height: 60px; }
 .advisor-block.sub-block > summary { opacity: 0.75; }
 
 /* 性能（webview 输入卡顿修复）：离屏消息/工具卡跳过 layout/paint，
@@ -473,4 +473,18 @@
 .message, .tool-call, .advisor-block {
   content-visibility: auto;
   contain-intrinsic-size: auto 80px;
+}
+
+/* ─── Ledger surface（LEDGER-SURFACE §2.30.3.5）─── */
+.ledger-line {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--vscode-descriptionForeground, var(--fg));
+  opacity: 0.85;
+  padding: 1px 0;
+}
+
+.ledger-line.warn {
+  color: var(--vscode-editorWarning-foreground, var(--yellow));
+  opacity: 1;
 }

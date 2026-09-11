@@ -4,21 +4,13 @@
  * for the same operation (parity with thinworker's programming tool set).
  */
 import { cp, rename, rm } from "node:fs/promises"
-import { resolvePath, truncate, runInterruptible } from "./shared.mjs"
+import { DESC, resolvePath, truncate, runInterruptible } from "./shared.mjs"
 
 // ─── file_ops ──────────────────────────────────────────────────
 
 export const fileOpsTool = {
   name: "file_ops",
-  description:
-    "Move, copy, or rename a file/directory.\n" +
-    "Returns `Copied|Moved|Renamed <source> → <dest>`.\n" +
-    "Route to file_ops instead of bash: `mv`→move, `cp`→copy, `ren`→rename.\n" +
-    "Parameters:\n" +
-    "- action (required): move | copy | rename\n" +
-    "- source (required): source path, relative to cwd or absolute\n" +
-    "- dest (required): destination path\n" +
-    "Notes: paths resolve relative to the workspace root; dest is overwritten if it exists; copy is recursive for directories.",
+  description: DESC("file_ops"),
   parameters: {
     type: "object",
     properties: {
@@ -56,10 +48,7 @@ export const fileOpsTool = {
 
 export const processTool = {
   name: "process",
-  description:
-    "List running processes (optionally filtered by name). Returns name / PID / memory.\n" +
-    "Route to process instead of bash: `tasklist`/`ps aux` → process.\n" +
-    "List-only — to kill a process use bash `taskkill`/`kill` (confirm with the user first).",
+  description: DESC("process"),
   parameters: {
     type: "object",
     properties: {
@@ -111,8 +100,7 @@ async function listPosix(signal) {
 
 export const getCurrentTimeTool = {
   name: "get_current_time",
-  description:
-    "Get the current date, time, weekday, and timezone. Use when a task depends on the current time/date. Route to this instead of bash `date`/`time`. Returns the date, time, weekday, and timezone.",
+  description: DESC("get_current_time"),
   parameters: { type: "object", properties: {} },
   readonly: true,
   async execute() {

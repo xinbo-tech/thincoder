@@ -27,6 +27,7 @@ import { buildProvider } from "../extension/presets.mjs"
 import { specForModel } from "../specs.mjs"
 import { mergeChildMutations, nextSubagentId } from "./subagent-async.mjs"
 import { logEvent, errText } from "../log.mjs"
+import { makeChildPermission } from "./child-permission.mjs" // §18 C-2/C-9：child 权限通道（2026-09-12）
 
 // ─── §19 escalate 动作（AGENT-LOOP.md §19 D-M4/F7——escalate.mjs 退役，执行逻辑 verbatim 并入）───
 
@@ -139,6 +140,9 @@ export async function escalateAction({ task, model, async: asyncArg }, ctx) {
   let output = ""
   const sink = {}
   const panel = (chunk) => ctx.callbacks?.onToolPanel?.(`sub:escalate ${tag} #${subId}`, chunk)
+  // §18 C-9：飞刀 sync 的写权 child 权限通道（owner = `escalate <tag> #<id>`）——无父通道
+  // （headless）→ null → 键省略（静默直通）。
+  const childPermission = makeChildPermission({ ctx, id: subId, role: "escalate", model: tag, signal: ctx.signal ?? null })
 
   // No wall-clock watchdog — turn cap only (CLI parity, 2026-08-16): a fixed wall-clock
   // aborts NORMAL-but-slow surgery (two max-effort consultants hit a 10min wall just
@@ -163,11 +167,14 @@ export async function escalateAction({ task, model, async: asyncArg }, ctx) {
         // without it — the panel shows WHAT the expert is thinking, not just tool calls.
         onToken: (t) => { output += t; panel({ kind: "text", text: String(t ?? "") }) },
         onReasoning: (r) => panel({ kind: "think", text: String(r ?? "") }),
-        onToolCall: (name, args) => panel({ kind: "tool", text: name + " " + (JSON.stringify(args) || "").slice(0, 120) }),
+        // §14 C-11①：结构化 tool/cmd（webview 块头 `${tool} — ${cmd ≤60}`；无 cmd 仅 tool）
+        onToolCall: (name, args) => panel({ kind: "tool", text: name + " " + (JSON.stringify(args) || "").slice(0, 120), tool: name, cmd: typeof args?.command === "string" ? args.command : undefined }),
         onToolResult: (name, text) => panel({ kind: "tool", text: "→ " + String(text ?? "").slice(0, 80).replace(/\n/g, " ") }),
         onComplete: () => {},
         onQuestion: ctx.callbacks?.onQuestion ?? null,
-      }, ctx.signal ?? null, true, runOpts(resumes > 0))
+        // §18 C-9：child 权限通道（helper 返 null → 键省略）；§18 C-3：模式继承 = live getter
+        ...(childPermission ? { onPermissionRequired: childPermission } : {}),
+      }, ctx.signal ?? null, () => ctx.getAuto?.() ?? false, runOpts(resumes > 0))
       // Escalate mutations are the parent's mutations: verify/advisor guards must see them
       mergeChildMutations(parent, sink)
       ctx.callbacks?.onSubagent?.({ id: subId, role: "escalate", status: "done", model: tag })

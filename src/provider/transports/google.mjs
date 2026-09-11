@@ -130,6 +130,7 @@ export async function parseStream(response, { onToken, onReasoning, signal, idle
         prompt_tokens: json.usageMetadata.promptTokenCount || 0,
         completion_tokens: json.usageMetadata.candidatesTokenCount || 0,
         total_tokens: (json.usageMetadata.totalTokenCount) || 0,
+        reasoning_tokens: json.usageMetadata.thoughtsTokenCount || 0, // §14 C-12#6（有则映射）
       }
     }
 

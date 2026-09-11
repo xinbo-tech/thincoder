@@ -10,6 +10,7 @@
 
 import { readFile, readdir, stat } from "node:fs/promises"
 import { join, isAbsolute } from "node:path"
+import { DESC } from "./shared.mjs"
 
 /** Resolve a user-supplied path against the working directory (absolute wins). */
 function resolvePath(p, cwd) {
@@ -180,11 +181,7 @@ async function* walkFiles(target, rel = "") {
 export const globTool = {
   name: "glob",
   readonly: true,
-  description:
-      "Find files by glob pattern. Returns matching paths (relative to the search path). Supports ** for recursive matching, {a,b} brace expansion (**/*.{js,txt} matches .js and .txt), and space-separated exclusion (**/*.js !test/** — leading \"!\" patterns are excluded). A pattern with a literal space is fine on its own — spaces separate patterns only when a \"!\" exclusion is present. An expression splits ONLY before \"!\"-exclusion tokens: to match several extensions in one include use a {a,b} group (**/*.{js,md}); adjacent space-separated includes are not a supported form. Invalid glob syntax is an EXPLICIT error — never a silent no-match (unsupported extglob ?(x)/@(a|b)/+(x) and malformed braces return glob error). Use this to discover file structure; use grep to search file contents.\n" +
-    "Parameters:\n" +
-    "- pattern (required): Glob pattern — supports **, *, ?, [..], {a,b} braces and \"!exclude\" parts\n" +
-    "- path: Directory to search in (default workspace root)",
+  description: DESC("glob"),
   parameters: {
     type: "object",
     properties: {
@@ -229,16 +226,7 @@ export const globTool = {
 export const grepTool = {
   name: "grep",
   readonly: true,
-  description:
-    "Search file contents with a regex. Returns matching lines.\n" +
-    "Route to grep instead of bash: `findstr /c:\"pat\" file` / `grep -rn pat .` → grep. Searching file contents is a read — never shell out for it.\n" +
-    "Parameters:\n" +
-    "- pattern (required): JavaScript regular expression, or a literal string when literal=true\n" +
-    "- path: Directory or file to search (default workspace root)\n" +
-    "- glob: Only search files matching this glob — supports **, *, ?, [..], {a,b} braces and space-separated exclusion (\"**/*.js !test/**\")\n" +
-    "- ignoreCase: Case-insensitive match (default false)\n" +
-    "- literal: Literal string match — no regex interpretation (default false)\n" +
-    "Use this to find usages, definitions, patterns; use glob to find files by name.",
+  description: DESC("grep"),
   parameters: {
     type: "object",
     properties: {

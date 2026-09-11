@@ -19,6 +19,10 @@ import { specForModel } from "../specs.mjs"
 import { backgroundStatus, reassertLiveChildren } from "./suspension.mjs"
 // 2026-09-11 第 10 批（§5.1.4 第 1/2 条）：任务可见性族投递通道（队列 flush 拍）
 import { flushSubagentOutbox } from "./panel-callbacks.mjs"
+// §18 C-5/C-6（2026-09-12）：permissionResponse 按 promptId 路由 + approve-all 连带释放（同一 release helper）
+import { releasePermission } from "./permission-gate.mjs"
+// LEDGER-SURFACE（§2.30.3.5）：台账启动行投递（webviewReady 时机）
+import { pushLedgerStartup } from "./ledger-surface.mjs"
 
 /** Current workspace folder (or process cwd) — shared with chat-panel. */
 let _cwdOverride = null
@@ -307,14 +311,23 @@ export async function handlePanelMessage(panel, msg) {
     case "setAutoApprove": await panel._setAutoApprove(!!msg.value); break
     case "atComplete": await panel._atComplete(msg.query, msg.cwd, msg.seq); break
     case "permissionResponse": {
-      const entry = panel._permissionQueue.shift()
+      // §18 C-5（child permission gate）：promptId 精确匹配（question F-C1d 同构）；无 id（旧 webview）
+      // → 回退队头；未知 → no-op（陈旧卡不误 resolve）。
+      const entry = msg.promptId != null
+        ? panel._permissionQueue.find((e) => e.id === msg.promptId) ?? null
+        : (panel._permissionQueue[0] ?? null)
+      if (entry == null) break
+      const pi = panel._permissionQueue.indexOf(entry)
+      if (pi >= 0) panel._permissionQueue.splice(pi, 1)
       if (msg.approved === "approveAll") {
-        panel._permissionQueue.forEach((e) => e.resolve(true))
-        panel._permissionQueue.length = 0
+        entry.resolve(true)
+        // §18 C-6 ③：approve-all 连带——其余 pending 逐个 release（permissionWithdrawn）；AUTO 置位（零改）
+        for (const e of [...panel._permissionQueue]) releasePermission(panel, e, true)
         await panel._setAutoApprove(true)
         panel._panel?.webview.postMessage({ type: "autoApprove", value: true })
+      } else {
+        entry.resolve(!!msg.approved)
       }
-      entry?.resolve(msg.approved === "approveAll" ? true : !!msg.approved)
       panel._refreshStatus()
       break
     }
@@ -443,6 +456,7 @@ export async function handlePanelMessage(panel, msg) {
       // 投影本不含已终态者，故不重复。
       flushSubagentOutbox(panel)
       reassertLiveChildren(panel)
+      pushLedgerStartup(panel) // LEDGER-SURFACE：启动行（会话内容落定后——不被 clearMessages 抹掉；不可动作零 post）
       break
     }
     case "setAdvisorGuard": {

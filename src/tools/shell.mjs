@@ -11,7 +11,7 @@
 
 import { exec, execFileSync } from "node:child_process"
 import * as vscode from "vscode"
-import { BASH_TIMEOUT_MS, MAX_STREAM_BUF, makeDecoder, sanitizeOutput, truncate } from "./shared.mjs"
+import { DESC, BASH_TIMEOUT_MS, MAX_STREAM_BUF, makeDecoder, sanitizeOutput, truncate } from "./shared.mjs"
 
 // ─── Terminal modes (A: visible / B: inject) ─────────────────
 
@@ -173,15 +173,7 @@ const SHELL_NOTES = isWin
 
 export const bashTool = {
   name: "bash",
-  description:
-    "Execute a shell command and return stdout+stderr.\n" +
-    "Route to a dedicated tool instead of bash: file reads → read; directory listings → ls; path patterns → glob; content search → grep; file writes → write / edit / insert_after / apply_patch; git → git. Never shell out for reads; never use bash to write or modify files (echo/sed/printf > file, cat << EOF) — the write tools handle encoding and EOL correctly. Do NOT run destructive commands (rm -rf, force-push, drop table) without explicit user confirmation.\n" +
-    (isWin ? SHELL_NOTES + "\n" : SHELL_NOTES + "\n") +
-    "Parameters:\n" +
-    "- command (required): Shell command to execute\n" +
-    "- timeout: Timeout in milliseconds (default 120000)\n" +
-    "- filter: Optional — only return output lines matching this regex (case-insensitive)\n" +
-    "- terminal: \"visible\" runs the command in the user's OWN visible terminal via shell integration — it inherits the user's shell state (current dir, activated venv/conda, env vars) that an isolated child process lacks. \"inject\" fills the command into the terminal WITHOUT running it — the user reviews and presses Enter (use for commands the user should inspect first). Omit for the default isolated child process.",
+  description: DESC("bash"),
   parameters: {
     type: "object",
     properties: {

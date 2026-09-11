@@ -4,7 +4,7 @@
  * 权威：ENGINEERING-MODE.md §2.22.2（镜像锚 A1–A12）/ §2.22.7（双源结构 + 端特有段 + 跨仓节引用）；
  * 验收：AC39（文本类锚逐字 + A12 宿主）/ AC43（双源结构 + 端特有段）；用例 T62 / T65。
  *
- * 断言八面：
+ * 断言九面：
  *   ① 双源同名集合两侧各 15（src/prompts 与 docs/design/prompts，均与 CLI 同仓同名集合相等）；
  *   ② 文本类锚 A1–A8/A11/A12 在 VSC 宿主档（双源两侧）与 CLI 侧逐字相同（A8 = 跨仓同文件 grep）；
  *      A9/A10 为行为锚（宿主是工具/脚本代码），属面① T59/T61，本档不 grep；
@@ -17,6 +17,7 @@
  *      （en↔en / zh↔zh）——权威 = PROMPT-SYSTEM 设计档 §3.3 面⑦ / AC-CL1。
  *   ⑧ 角色重定义批锚（ROLE-REDEFINITION §2.28——本端四端面）：RF-1 勾销句（双源两侧）/ RF-4c 自审第 6 条
  *      （双源两侧）/ RF-4a 身份句 + RF-4d discipline 头注 consumers——旧句零命中 + 替子逐字在位。
+ *   ⑨ 机制纪律锚（机制纪律提示词落地——测试纪律 / 台账维护；本端三档 × 双源 + CLI 侧逐字对照——PROMPT-SYSTEM §8.5）。
  *
  * 跨仓读取 = 兄弟仓路径 `../thincoder/...`（可用 THINCODER_CLI_ROOT 覆盖）；兄弟仓不可用 → fail-closed（显式失败，不静默通过）。
  */
@@ -316,4 +317,66 @@ test("⑧ 角色重定义锚（本端四端面）：勾销句 / 自审第 6 条 
   assert.ok(pecEn.split("\n").some((l) => l.trim() === "Your last message IS the report the parent sees — make it complete:"), "pec-src: 报告引导句未起新行（粘连未修复）")
   assert.ok(!pecZh.includes(RF4C_ZH_OLD), "pec-zh: 自审第 6 条旧句残留")
   assert.ok(pecZh.includes(RF4C_ZH_NEW), "pec-zh: 自审第 6 条替句缺失")
+})
+
+// ── ⑨ 机制纪律锚（机制纪律提示词落地——本端三档 × 双源 + CLI 侧逐字对照；设计 = PROMPT-SYSTEM §8.5）──
+const TD_DE = [
+  "## 测试纪律（工程侧——寿命 / 门禁 / 归册）",
+  "**单元测试 = 开发期工具**",
+  "**不因单次改动而增补**",
+  "**默认退役（删除）**",
+  "三者全满足才转 ②③",
+  "**退役是常态、保留须举证**",
+  "**发布门 = 项目的完整验证链**",
+  "**未归册而超阈 = 硬红**",
+  "活文件只留**未决四态**",
+  "`触发=认账不排期`",
+  "行龄超 30 天标「老化」",
+]
+const TD_DN_EN = [
+  "Code changes must be verified — unit tests are development-time tools",
+  "Integration tests are project assets — never augmented per single change; the release gate is the project's full verification chain.",
+]
+const TD_DN_ZH = [
+  "代码改动必须验证——单元测试是开发期工具",
+  "集成测试是项目资产——不因单次改动而增补；发布门 = 项目的完整验证链。",
+]
+const TD_PE_EN = "- **The ledger is yours**: the requirement-pool / tech-backlog ledger (record + status advance + physical writes; subagents never declare ledger files in `files`)."
+const TD_PE_ZH = "- **台账归你**：需求池 / 技术待办台账（记录 + 状态推进 + 物理落笔；子代理一律不在 `files` 声明台账档）。"
+const TD_C_EN = "Add tests if the project has them — as unit tests"
+const TD_C_ZH = "项目有测试就加测试——写单元测试"
+const TD_CNT = "（计数口径 = 未决数——归档条目不计数）"
+
+test("⑨-1 正常：de 双源——测试纪律新节 + 台账块（VSC ↔ CLI 逐字；T-TD1/T-TD7）", () => {
+  for (const f of [SRC + "discipline-engineering.md", ZH + "discipline-engineering.md"]) {
+    const vsc = readRepo(VSC, f), cli = readRepo(CLI, f)
+    for (const lit of [...TD_DE, TD_CNT]) {
+      assert.ok(cli.includes(lit), `⑨-1: CLI 侧 ${f} 缺字面串（缺 ${JSON.stringify(lit.slice(0, 30))}…）`)
+      assert.ok(vsc.includes(lit), `⑨-1: VSC 侧 ${f} 与 CLI 不逐字（缺 ${JSON.stringify(lit.slice(0, 30))}…）`)
+    }
+  }
+})
+
+test("⑨-2 正常+反证：dn 双源——新句 + `:8` 尾改 + 旧句零残留（回潮即红；T-TD2/T-TD6/T-TD7）", () => {
+  for (const [f, keys, old] of [
+    [SRC + "discipline-normal.md", [...TD_DN_EN, TD_C_EN], "Code changes need at least one test"],
+    [ZH + "discipline-normal.md", [...TD_DN_ZH, TD_C_ZH], "至少要有一个测试"],
+  ]) {
+    const vsc = readRepo(VSC, f), cli = readRepo(CLI, f)
+    for (const lit of keys) {
+      assert.ok(cli.includes(lit), `⑨-2: CLI 侧 ${f} 缺字面串（缺 ${JSON.stringify(lit.slice(0, 30))}…）`)
+      assert.ok(vsc.includes(lit), `⑨-2: VSC 侧 ${f} 与 CLI 不逐字（缺 ${JSON.stringify(lit.slice(0, 30))}…）`)
+    }
+    assert.ok(!cli.includes(old) && !vsc.includes(old), `⑨-2: ${f} 旧句残留（回潮即红）`)
+  }
+})
+
+test("⑨-3 正常+边界：pe 双源归属句（VSC ↔ CLI）+ 新增锚串零维护者注（T-TD3/T-TD4/T-TD7）", () => {
+  for (const [f, lit] of [[SRC + "persona-engineering.md", TD_PE_EN], [ZH + "persona-engineering.md", TD_PE_ZH]]) {
+    const vsc = readRepo(VSC, f), cli = readRepo(CLI, f)
+    assert.ok(cli.includes(lit), `⑨-3: CLI 侧 ${f} 缺归属句（全文锚）`)
+    assert.ok(vsc.includes(lit), `⑨-3: VSC 侧 ${f} 缺归属句（全文锚）`)
+  }
+  const ALL = [...TD_DE, ...TD_DN_EN, ...TD_DN_ZH, TD_PE_EN, TD_PE_ZH, TD_C_EN, TD_C_ZH, TD_CNT]
+  for (const s of ALL) assert.ok(!/\d{4}-\d{2}-\d{2}|第\s*\d+\s*批|评审\s*#/.test(s), `新增文本含维护者注: ${s.slice(0, 26)}…`)
 })

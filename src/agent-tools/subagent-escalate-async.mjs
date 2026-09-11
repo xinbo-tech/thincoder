@@ -32,6 +32,7 @@ import { spawnAsyncSubagent, mergeChildMutations } from "./subagent-async.mjs"
 import { nextSubagentId } from "./subagent-scheduler.mjs"
 import { settleAsyncEntry, buildChildSignal } from "./async-settle.mjs"
 import { escalateLabel, prepareEscalateProvider, touchedFilesNote } from "./subagent-escalate.mjs"
+import { makeChildPermission } from "./child-permission.mjs" // §18 C-2/C-9：child 权限通道（2026-09-12）
 
 /** 飞刀 async 发起（§25 D-R17b——escalateAction async 分支调用）：入 other 池——
  *  spawnAsyncSubagent 全权处理槽位/排队/条目级 controller/停止冻结通知——自定义 settle
@@ -75,6 +76,9 @@ async function runEscalateAsyncEngine({ parent, ctx, entry, task, pick, provider
   // 续跑支以 opts 种子回传。本端续跑支当前休眠（ContinueError 全走 error-class return，
   // 全档无 continue）——种子写入 = 同构契约驻留（未来开放续跑即在位），零行为变化。
   let turnBase = 0
+  // §18 C-9：飞刀 async 的写权 child 权限通道（owner = `escalate <tag> #<id>`；signal =
+  // 条目级 controller——⏹/cancel 释放 pending ask）；无父通道（headless）→ null → 键省略。
+  const childPermission = makeChildPermission({ ctx, id: entry.id, role: "escalate", model: tag, signal: entry.controller?.signal ?? null })
   const runOpts = (resume) => ({
     depth: 1, role: "coder", // full write path: permission gate, recent-changes tracking
     streamOutput: true, // exempt from the agent.mjs onToken depth gate (consult role parity)
@@ -101,14 +105,17 @@ async function runEscalateAsyncEngine({ parent, ctx, entry, task, pick, provider
           // SUBAGENT-OBSERVE-SEND.md 评审 #2（2026-09-08，out-of-list）：飞刀条目同步记当前
           // 工具（observe 读它——与 spawn runChild 一致）。args 截断（N2）。
           if (entry) entry._currentTool = { name, args: (JSON.stringify(args) || "").slice(0, 200) }
-          panel({ kind: "tool", text: name + " " + (JSON.stringify(args) || "").slice(0, 120) })
+          // §14 C-11①：结构化 tool/cmd（webview 块头 `${tool} — ${cmd ≤60}`；无 cmd 仅 tool）
+          panel({ kind: "tool", text: name + " " + (JSON.stringify(args) || "").slice(0, 120), tool: name, cmd: typeof args?.command === "string" ? args.command : undefined })
         },
         onToolResult: (name, text) => panel({ kind: "tool", text: "→ " + String(text ?? "").slice(0, 80).replace(/\n/g, " ") }),
         onComplete: () => {},
         // §19.5 D-M5 同型：turn 钩子同步条目决策字段（status 可见性——与 spawn 子代理一致）
         onAgentTurn: (t, mt) => { turnBase = t; applyTurnFrame(entry, t, mt); entry.childAgent = sink.agent ?? entry.childAgent },
         onQuestion: null, // async：永不弹继续面板——cap → error-class partial（D-R17b）
-      }, entry.controller?.signal ?? null, true, runOpts(resumes > 0))
+        // §18 C-9：child 权限通道（helper 返 null → 键省略）；§18 C-3：模式继承 = live getter
+        ...(childPermission ? { onPermissionRequired: childPermission } : {}),
+      }, entry.controller?.signal ?? null, () => ctx.getAuto?.() ?? false, runOpts(resumes > 0))
       // 完成瞬间被 cancel 的竞态（同 subagent runChild——先于任何事件/merge 判定）
       if (entry?.cancelled) return outcome("cancelled", "")
       ctx.callbacks?.onSubagent?.({

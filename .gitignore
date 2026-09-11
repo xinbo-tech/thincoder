@@ -1,6 +1,9 @@
 node_modules/
 *.vsix
 
+# Logs
+*.log
+
 .thincoder/tmp/
 # Temporary icon candidate assets
 assets/candidates/

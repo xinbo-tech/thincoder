@@ -4,7 +4,7 @@
  */
 
 import { readFileSync, statSync } from "node:fs"
-import { resolvePath } from "./shared.mjs"
+import { DESC, resolvePath } from "./shared.mjs"
 
 // Raster formats only — every mainstream vision API (Kimi, Anthropic, OpenAI, Gemini)
 // rejects svg/bmp. svg is served as text source below; bmp is refused with a hint.
@@ -16,14 +16,7 @@ export const readImageTool = {
   name: "read_image",
   readonly: true,
   multimodal: true, // returns JSON { text, images } — agent loop converts to multimodal user message
-  description:
-    "Read an image file and return it as base64 data visible to the model. " +
-    "Use this to view screenshots, UI mockups, diagrams, or any visual content. " +
-    "The model only sees images through this tool — it cannot 'see' files directly. " +
-    "Supports png, jpg, gif, webp. svg files are returned as text source (no vision API accepts svg). " +
-    "Note: only works with models that support vision input (Kimi K3, Qwen3.8, MiniMax M3, GLM-5.3-Flash).\n" +
-    "Parameters:\n" +
-    "- path (required): Image file path",
+  description: DESC("read_image"),
   parameters: {
     type: "object",
     properties: {

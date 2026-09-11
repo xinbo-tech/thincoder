@@ -30,7 +30,7 @@
 | | 会诊 consult | 飞刀 escalate |
 |---|---|---|
 | 本质 | 多模型**并行给意见** | 一个强模型**亲自执行** |
-| 权限 | 只读 | **可写**（走正常权限门） |
+| 权限 | 只读 | **可写**（走正常权限门——ask 弹卡带归属 / AUTO 直通） |
 | 场景 | 判断不清，要多视角 | 确认干不动，要人代干 |
 | 候选 | `consultModels` 全体 | `consultModels` 全体 |
 | 形态 | 两工具（start/stop），后台 digest | 单动作，**缺省 async（R17）——`async:false` 显式同步** |
@@ -76,7 +76,7 @@ verbatim 并入（约束/前缀/术后报告全保留）：
 subagent(action:"escalate")
   - task (required): 交给飞刀模型的任务描述——目标、约束、入口文件、验收标准
   - model (optional): 指定候选池中的模型（provider:model 格式）；缺省 = 候选池第一个
-  - 可写子 agent（role "coder" + 候选 effort）——走正常权限门
+  - 可写子 agent（role "coder" + 候选 effort）——走正常权限门（ask 弹卡带归属；AUTO 直通）
   - 子 agent 活动流经 `sub:escalate <label> #N` relay 前缀进面板
   → 术后报告：改动清单 / 理由 / 验证结果 + Touched files
 ```
@@ -122,8 +122,8 @@ R17（2026-09-06）把 escalate 改为**缺省 async**（escalate depth-0 only �
 
 ### 2.5 实现要点
 
-- **复用 coder role**：写权限、权限门（`onPermissionRequest` 转发）、recent-changes 追踪全部现成，
-  零新机制。
+- **复用 coder role**：写权限、权限门（`onPermissionRequest` 转发——ask 模式经父面板弹卡，
+  卡归属 `escalate <label> #N`；AUTO 直通）、recent-changes 追踪全部现成，零新机制。
 - **改动并入父级守卫**：`mergeChildMutations` 重置父级收敛预算——飞刀改动照常受父级 verify/advisor 门检。
 - **无墙钟看门狗（飞刀专属，consult 保留）**：固定墙钟会误杀正常但慢的手术（实测 max-effort 顾问
   读文件即撞 10min 墙）——改为完全依赖 turn 上限 + FETCH_TIMEOUT（单 LLM 调用）+ 用户 Stop 直传。
@@ -140,7 +140,7 @@ R17（2026-09-06）把 escalate 改为**缺省 async**（escalate depth-0 only �
   escalate 退役逻辑 verbatim 并入，约束/前缀/报告零变化。
 - **缺省 async（R17）**：长飞刀不再锁死交互——发起 ack → 回合收尾 → 完成报告 digest 自动注入 +
   mutations 自动 merge；`async:false` 显式同步零回归。
-- **复用 coder role**：写权限/权限门/追踪全部现成。
+- **复用 coder role**：写权限/权限门（ask 弹卡带归属）/追踪全部现成。
 - **空池不注册**：模型看不到不存在的功能就不会误调。
 - **术语归并**：surgeon 曾作为角色名与工具名并存导致模型混淆，现统一为 escalate（动作名 = 角色语义，
   role "coder"）。

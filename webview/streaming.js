@@ -1,9 +1,9 @@
 /**
  * streaming.js — token/reasoning stream rendering (rAF-throttled), turn finish,
  * code-block copy buttons, and the in-conversation advisor review block.
- * (2026-09-11 活动区回归：subagent activity blocks live in the `#subagent-activity`
- * region — activity.js. ensureBlock 可返 null——subagentChunk 空安全守卫；rAF 尾区 pin
- * = maybeScrollActivity。)
+ * (2026-09-11 活动区回归 → 2026-09-12 §14 收口：live/awaitingDigest 驻留 `#subagent-activity`；
+ * 终态折叠与归档落流在 activity.js——ensureBlock 可返 null（subagentChunk 空安全守卫）；rAF 尾
+ * 区 pin = maybeScrollActivity + 块级跟滚 maybeScrollBlock。)
  */
 import { ctx, S } from "./state.js"
 import { md } from "./md.js"
@@ -17,7 +17,7 @@ import { renderStatusBar } from "./status-bar.js"
 // 2026-09-11 活动区回归: subagent activity blocks are born in the region
 // (#subagent-activity — activity.js) — lifecycle (create/flip/fold/⏹) lives there;
 // panels.js never imports streaming.js and activity.js imports neither (no cycles).
-import { ensureBlock, noteChunk, resetActivity } from "./activity.js"
+import { ensureBlock, noteChunk, resetActivity, maybeScrollBlock } from "./activity.js"
 
 // Stream render scheduler: reasoning/token chunks arrive at thousands/sec; rendering
 // markdown + innerHTML on EVERY chunk is O(n²) and floods the main thread — the backlog
@@ -29,6 +29,7 @@ let _renderScheduled = false
 let _reasoningDirty = false
 let _tokenDirty = false
 let _advisorScrollDirty = false
+let _subScrollDirty = null // 子代理块跟滚脏集（Set 惰性建——§13 C-LU2；rAF 尾应用后置空）
 let _lastStreamRender = 0
 const STREAM_RENDER_MIN_MS = 50 // 长回复降频：全量 md() 重渲染限到 ≥50ms 一次
 
@@ -40,7 +41,7 @@ function scheduleStreamRender() {
     const now = Date.now()
     if (now - _lastStreamRender < STREAM_RENDER_MIN_MS) {
       // 距上次渲染 <50ms：跳过一次，仍有脏内容则继续排队（flushStreamRender 兜底尾帧）
-      if (_tokenDirty || _reasoningDirty || _advisorScrollDirty) scheduleStreamRender()
+      if (_tokenDirty || _reasoningDirty || _advisorScrollDirty || _subScrollDirty) scheduleStreamRender()
       return
     }
     _lastStreamRender = now
@@ -54,11 +55,16 @@ function scheduleStreamRender() {
       _tokenDirty = false
     }
     if (_advisorScrollDirty) {
-      // 流内 advisor 块内容自滚钉底（ACTIVITY-REWRITE-SIMPLE：rAF 活动区扫描删——
-      // 子代理块随流内 append——无强制滚动——简单形态——B1 参照）
+      // 流内 advisor 块内容自滚钉底（裸钉底——无让位语义——本批范围外——§13.8 边界）；
+      // 子代理块跟滚由 `_subScrollDirty` / maybeScrollBlock 承担（WEBVIEW.md §13）
       const c = S._advisorBlock?.querySelector(".advisor-content")
       if (c) c.scrollTop = c.scrollHeight
       _advisorScrollDirty = false
+    }
+    if (_subScrollDirty) {
+      // 子代理块块级跟滚（§13 C-LU2——逐块应用后置空；让位旗标 = 内容区 _pinFollow）
+      for (const block of _subScrollDirty) maybeScrollBlock(block)
+      _subScrollDirty = null
     }
     maybeScrollDown(ctx)
     maybeScrollActivity(ctx) // 活动区独立 pin（§12.3 第 7 条——不与消息区互拉）
@@ -173,14 +179,14 @@ export function finish(aborted) {
   ctx._toolRefs = {}
   S._currentTool = null
   S._turnStart = null
-  // 2026-09-11 活动区回归: 活动块生命周期 = 块终态（终态消息即时**原地折叠**——settled
-  // 视同 done）/会话退出兜底（suspension freeze）——不随普通回合尾重置。块驻留活动区
-  // （#subagent-activity——live/折叠同区，全程不移动）——正常 complete 尾池 live → 挂起
-  // 会话接管（块留区内等终态通知）；池空 → 无 live 块——reset 恒 no-op。abort 且无挂起
-  // 会话 → 池 children 持回合 controller signal 随中止而死（无终态通知）——resetActivity
-  // 清区（live + 折叠——D-A8）；digest/会话内回合中止（_suspended true）不动块（池仍
-  // live——children 持会话 signal）。
-  if (aborted && !S._suspended) resetActivity() // abort 无会话：池随回合死——活动区整体复位（含折叠块）
+  // 2026-09-11 活动区回归 → 2026-09-12 收口（WEBVIEW.md §14）：活动块生命周期 = 块终态
+  // （终态消息即时折叠；settled → awaitingDigest 驻留、回收才归档）/会话退出兜底
+  // （suspension freeze → 区全体归档）——不随普通回合尾重置。正常 complete 尾池 live →
+  // 挂起会话接管（块留区内等终态通知）；池空 → 无 live 块——reset 恒 no-op。abort 且无
+  // 挂起会话 → 池 children 持回合 controller signal 随中止而死（无终态通知）——
+  // resetActivity 只清区子树（C-7——流内归档块留存）；digest/会话内回合中止（_suspended
+  // true）不动块（池仍 live——children 持会话 signal）。
+  if (aborted && !S._suspended) resetActivity() // abort 无会话：池随回合死——区子树复位（C-7：流内归档块留存）
   if (!S._suspended) S._advisorBlock = null // in-flow sync-advisor block pointer — the element itself stays in the conversation
   setLoading(ctx, false)
   renderStatusBar()
@@ -243,6 +249,8 @@ export function subagentChunk(m) {
   // 丢弃（CLI tombstone 丢弃链对齐——§7.2 D4 完成态冻结——不复活不重建）
   if (!block || block._subMeta?.frozen) return
   appendAdvisorChunk(block, m.kind ?? "tool", m.text, m.sub)
-  noteChunk(block, m.kind ?? "tool", m.text)
-  scheduleStreamRender() // 钉底跟随（rAF 节流——无块内自滚 pin——简单形态）
+  noteChunk(block, m.kind ?? "tool", m.text, m) // m 携结构化 tool/cmd（§14 C-11①——结果 chunk 不改写状态区）
+  _subScrollDirty ??= new Set() // 块级跟滚脏集（§13 C-LU2——rAF 尾逐块应用）
+  _subScrollDirty.add(block)
+  scheduleStreamRender() // 块级跟滚随 rAF 帧应用（§13——节流帧不丢：重排条件含脏集）
 }

@@ -20,11 +20,12 @@
  */
 import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdtempSync, rmSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
-import { envStateLine, pushEnvStateReminder, _resetRestartDetectionForTests, composeGitContext, collectGitContext, _gitFailureCooldownForTests, _clearGitFailureCooldownForTests } from "../src/agent/setup-reminders.mjs"
+import { envStateLine, pushEnvStateReminder, pushInjections, AUTO_REMINDER, _resetRestartDetectionForTests, composeGitContext, collectGitContext, _gitFailureCooldownForTests, _clearGitFailureCooldownForTests } from "../src/agent/setup-reminders.mjs"
+import * as setupReminders from "../src/agent/setup-reminders.mjs"
 import { buildTopLevelAgent, hydrateRun } from "../src/agent/setup.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-slots.mjs"
 
@@ -262,5 +263,35 @@ test("collectGitContext: Map 预填——健康 git 仓也跳过；>30s 旧条�
   } finally {
     _clearGitFailureCooldownForTests(repoRoot)
   }
+})
+
+// ─── VSC-CONTEXT-PARITY D-CI5/D-CI6（§17.7「AUTO 位置 / 无 permission / 去重」）───
+
+test("hydrateRun: permission 句退役（D-CI6）+ AUTO 不由 hydrate 推送（唯一 = 循环头）", async () => {
+  // permission 句 = 删除（裁定 1：权威源 CLI——CLI 无此句；注释「parity」失真随删）
+  const r1 = await hydrateRun(buildTopLevelAgent(), optsFor())
+  assert.ok(!r1.history.some((m) => typeof m.content === "string" && m.content.includes("Permission mode")), "permission 句零注入")
+  assert.ok(!("pushModeReminders" in setupReminders), "pushModeReminders 退役（无导出）")
+  // AUTO 推送唯一 = agent.mjs 循环头检查（语义 = getAuto() && !history.some(AUTO_REMINDER)）——
+  // hydrate 不再承担（推送位 = hydrate 全部注入之后——cli setup.mjs:351 尾位同构）
+  const r2 = await hydrateRun(buildTopLevelAgent(), optsFor({}, { getAuto: () => true }))
+  assert.ok(!r2.history.some((m) => m.content === AUTO_REMINDER), "hydrate 不推 AUTO（唯一 = 循环头）")
+  assert.match(AUTO_REMINDER, /^\[System reminder: AUTO mode is active — all tool calls are automatically approved without asking\.\]$/)
+  const agentSrc = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "src", "agent.mjs"), "utf8")
+  assert.ok(agentSrc.includes("getAuto() && !history.some((m) => m.content === AUTO_REMINDER)"), "AUTO 循环头去重检查在位（D-CI6 唯一推送点）")
+  // 双份字面量漂移锁：run-helpers 压缩重注内联副本必须与 AUTO_REMINDER 常量逐字节相等
+  // （去重判据 m.content === AUTO_REMINDER 依赖恒等；单改一处会静默重复注入）。
+  const runHelpersSrc = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "src", "agent", "run-helpers.mjs"), "utf8")
+  assert.ok(runHelpersSrc.includes(AUTO_REMINDER), "run-helpers.mjs 压缩重注 AUTO 句与常量不逐字（漂移）")
+})
+
+test("pushInjections: 同文去重（D-CI5——幂等注入；异文照投、transient 保持）", () => {
+  const h = []
+  pushInjections(h, { content: "[Current file: a]" })
+  pushInjections(h, { content: "[Current file: a]" })
+  assert.equal(h.length, 1, "同文二次投递零新增")
+  pushInjections(h, { content: "[Current file: b]" })
+  assert.equal(h.length, 2, "异文照投")
+  assert.equal(h[0].transient, true, "transient 保持")
 })
 

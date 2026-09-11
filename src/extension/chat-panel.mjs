@@ -22,6 +22,7 @@ import { ensureSlot, activeData, activeHistory, activeLines, saveLines, loadMode
 import { projectInfo, pushProject, applyProjectSwitch, onProjectChanged, pickProject } from "./panel-project.mjs"
 import { pushIndexStatus, atComplete, saveEmbeddingConfig, maybePromptIndex, buildIndex } from "./panel-index.mjs"
 import { pushMcpStatus, reconnectMcp, editMcp, testMcp } from "./panel-mcp.mjs"
+import { initLedgerSurface, dispose as disposeLedgerSurface } from "./ledger-surface.mjs" // LEDGER-SURFACE（§2.30.3.5）
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -152,6 +153,7 @@ export class ChatPanel {
   // ─── Status bar (run-state awareness outside the panel) ───
 
   _initStatusBar() {
+    initLedgerSurface(this) // LEDGER-SURFACE：台账 item 并立（priority 99）——须先于下方守卫（生产路径 _statusBar 由 extension.mjs 预置）
     if (this._statusBar) return
     this._statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100)
     this._statusBar.name = "ThinCoder"
@@ -244,6 +246,7 @@ export class ChatPanel {
     this._susp?.abort?.abort()
     this._statusBar?.dispose()
     this._statusBar = null
+    disposeLedgerSurface() // LEDGER-SURFACE：台账 item / 周期随面板释放（重载后 init 可重建）
     this._panel?.dispose()
   }
 

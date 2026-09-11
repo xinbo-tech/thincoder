@@ -6,7 +6,7 @@
  * 存储统一：同一目录同一格式，快照跨端互通)。F7 扩展 action 与 checkpoint 子系统分别拆在
  * git-ext.mjs / git-checkpoint.mjs（500 行硬限）。
  */
-import { runGit, truncate } from "./shared.mjs"
+import { DESC, runGit, truncate } from "./shared.mjs"
 import { execFileSync } from "node:child_process"
 import { resolve } from "node:path"
 import { runGitStrict, validateRef, gitConfigArgs, snapshotBefore, executeExtAction } from "./git-ext.mjs"
@@ -32,30 +32,7 @@ function resolveBaseDir(cwd, workdir) {
 export const gitTool = {
   name: "git",
   readonly: false,
-  description:
-    "Run a git command. Only works inside a git repository.\n" +
-    "- action='diff': unified diff (staged=true for staged-only, ref=<ref>, path=<dir> to scope). - 'status': staged/unstaged/untracked/conflicts. - 'log': recent commits (count, oneline, path). - 'show': a commit's details (ref).\n" +
-    "- 'add': stage files (path, or -A all). - 'commit': commit; path → `git commit --only <paths>` (commits the listed files from the working tree — other staged work is not swept in — atomic); no path → add -A then commit (full sweep). - 'rm': untrack a file (path, kept on disk).\n" +
-    "- 'push'/'fetch'/'pull': sync with remote (remote, ref=branch/tag, tags=true for --tags).\n" +
-    "- 'tag'/'branch'/'stash': manage them (tagAction/branchAction/stashAction: list/create/delete/switch, push/pop/list).\n" +
-    "- 'checkout'/'restore': switch to ref, or restore a file (path). - 'reset': soft/mixed/hard (hard snapshots first). - 'revert'/'merge'/'cherry-pick': ref.\n" +
-    "- 'checkpoint': snapshots (checkpointAction: list/create/rewind/cat/versions).\n" +
-    "- 'ls-remote': light remote-ref check — which refs a remote has (read-only, network). remote=<origin>, ref=<branch/tag> optional; config for a proxy.\n" +
-    "- 'clone': clone a repo (remote, path optional). - 'init': init a repo. - 'rebase': rebase onto ref (rebaseAction: start/abort/continue). - 'remote': manage remotes (remoteAction: list/add/remove/set-url, remoteUrl).\n" +
-    "- 'clean': remove untracked files (dryRun for -n preview). - 'switch': switch branch (create for -c). - 'apply': apply a patch (path). - 'worktree': manage worktrees (worktreeAction: list/add/remove). - 'archive': write a tar (path, ref). - 'blame': file blame (path). - 'mv': rename (path, dest).\n" +
-    "- Destructive ops (checkout -- path / restore / reset --hard / stash pop / branch|tag delete / clean / rebase) auto-snapshot first — restore via checkpointAction=rewind.\n\n" +
-    "**Route to git instead of bash:** `git status`→status, `git log`→log, `git diff`→diff, `git show`→show, `git add`→add, `git rm`→rm, `git commit -m`→commit, `git push <remote> <branch> <tag>`→push, `git tag`→tag, `git branch`→branch, `git checkout`→checkout, `git restore`→restore, `git stash`→stash, `git fetch/pull`→fetch/pull, `git reset`→reset, `git revert`→revert, `git merge`→merge, `git cherry-pick`→cherry-pick, `git ls-remote`→ls-remote, `git clone`→clone, `git rebase`→rebase, `git remote`→remote, `git clean`→clean, `git switch`→switch, `git apply`→apply, `git worktree`→worktree, `git archive`→archive, `git blame`→blame, `git mv`→mv.\n\n" +
-    "Parameters:\n" +
-    "- action (required): diff / status / log / show / checkpoint / add / rm / commit / push / tag / branch / checkout / restore / stash / fetch / pull / reset / revert / merge / cherry-pick / ls-remote / clone / init / rebase / remote / clean / switch / apply / worktree / archive / blame / mv\n" +
-    "- path: (diff/log/add/commit/checkout/restore/rm/apply/archive/blame/mv/worktree) file/dir to scope/stage/restore\n" +
-    "- ref: (show/diff/checkout/reset/revert/merge/cherry-pick/rebase/worktree:add/archive) commit/branch/ref; (push/pull/fetch) branch or tag (space-separated for multiple)\n" +
-    "- name: (branch/tag/switch) the branch or tag name — remote: (push/fetch/pull/remote) remote name — tags: (push) push all tags\n" +
-    "- workdir: run git in this workspace subdirectory (monorepo / multi-repo). No directory restrictions — paths are resolved, not restricted (TOOLS.md §10.1). Default: cwd\n" +
-    "- config: (network actions push/fetch/pull/ls-remote/clone) git -c overrides, e.g. [\"http.proxy=http://10.2.2.112:3128\"] for blocked remotes\n" +
-    "- staged: (diff/restore) staged copy — count/oneline: (log) — message: (commit/stash) — filter: (read-only) output-line regex\n" +
-    "- mode: (reset) soft/mixed/hard — tagAction/branchAction/stashAction: the sub-action\n" +
-    "- remoteAction/remoteUrl: (remote) sub-action / URL — rebaseAction: start/abort/continue — dryRun: (clean) -n preview — create: (switch) -c — dest: (mv) destination — worktreeAction: list/add/remove\n" +
-    "- checkpointAction / checkpointId: (checkpoint) sub-action / snapshot id",
+  description: DESC("git"),
   parameters: {
     type: "object",
     properties: {

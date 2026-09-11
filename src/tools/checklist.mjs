@@ -6,6 +6,7 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync } from "node:fs"
 import { join, dirname } from "node:path"
+import { DESC } from "./shared.mjs"
 
 const CHECKLIST = "checklist.md"
 const DONE = "checklist-done.md"
@@ -322,19 +323,7 @@ export function pendingItems(cwd) {
 
 export const checklistTool = {
   name: "checklist",
-  description:
-    "Manage the persistent task checklist in .thincoder/checklist.md. " +
-    "Items support tree hierarchy via indentation (2 spaces per level) and auto-assigned IDs (T1, T1.1). " +
-    "Completed items are auto-archived to .thincoder/checklist-done.md.\n" +
-    "Parameters:\n" +
-    "- action (required): 'add' | 'mark' | 'list'\n" +
-    "- id: task ID to mark, e.g. 'T3' (preferred — use the ID returned by 'add')\n" +
-    "- item: item text (required for add)\n" +
-    "- index: 1-based item index (fallback for mark, only when id is absent)\n" +
-    "- status: 'pending' | 'in_progress' | 'done' (required for mark)\n" +
-    "- parent: parent task ID for tree-structured tasks (e.g. 'T1')\n" +
-    "Note: marking a parent 'done' requires all its children already done — otherwise rejected (complete children first). " +
-    "For in-session subtask breakdown of a single checklist item, use the task tool instead.",
+  description: DESC("checklist"),
   parameters: {
     type: "object",
     properties: {

@@ -17,7 +17,7 @@ import { closeModelMenu } from "./model-menu.js"
 import { applyI18nToDOM } from "./i18n-dom.js"
 import { send } from "./send.js"
 import { onToken, onReasoning, onTurnBreak, finish, attachCopyButtons, advisorChunk, subagentChunk } from "./streaming.js"
-import { resetActivity } from "./activity.js"
+import { resetActivity, applySubagentApproval } from "./activity.js"
 import { renderStatusBar, handleUsageMessage } from "./status-bar.js"
 import { handleTaskProgress, handleSubagentMessage, handleGoalMessage, handleSuspensionMessage, handleTurnStateMessage } from "./panels.js"
 import { updateSessionTitle, handleProjectMessage } from "./session-bar.js"
@@ -26,6 +26,7 @@ import { handleAutoApprove, handleAgentSettings, handlePlanMode } from "./mode-b
 import { handleModelsMessage } from "./model-picker.js"
 import { showQuestion } from "./question.js"
 import { showPermissionRequest, showBatchPermissionRequest } from "./permission.js"
+import { addLedgerNotice } from "./ledger-line.js" // LEDGER-SURFACE（§2.30.3.5）：台账行渲染
 // Side-effect imports: these register their DOM listeners on evaluation.
 // Order preserves the original chat.js top-to-bottom registration order for
 // listeners on the same target (scroll.js's initScrollFollow before history.js's
@@ -132,11 +133,11 @@ window.addEventListener("message", (e) => {
     case "assistantMessage": addAssistantHistory(ctx, m.text, m.timestamp, m.idx);
       attachCopyButtons(ctx.messagesEl.lastElementChild);
       break
-    case "token":            onToken(m.text); break
-    case "reasoning":        onReasoning(m.text); break
+    case "token":            clearStatusText(); onToken(m.text); break
+    case "reasoning":        clearStatusText(); onReasoning(m.text); break
     case "turnBreak":        onTurnBreak(); break
-    case "toolCall":         S._currentTool = m.name; addTool(ctx, m.name, m.args, m.id); renderStatusBar(); break
-    case "toolResult":       finishTool(ctx, m.name, m.id, m.text, m.links); S._currentTool = null; renderStatusBar(); break
+    case "toolCall":         clearStatusText(); S._currentTool = m.name; addTool(ctx, m.name, m.args, m.id); renderStatusBar(); break
+    case "toolResult":       clearStatusText(); finishTool(ctx, m.name, m.id, m.text, m.links); S._currentTool = null; renderStatusBar(); break
     case "toolOutput": {
       // Live output streaming (bash etc.): chunks append to the running card's
       // body. Open while streaming so long commands are watchable; finishTool
@@ -165,9 +166,10 @@ window.addEventListener("message", (e) => {
     case "loading":          setLoading(ctx, m.loading); break
     // C2 (F-C2b): host 忙态单一广播（{type:"turnState", state, counts?}）→ 单一 reducer
     case "turnState":        handleTurnStateMessage(m); break
-    case "complete":         finish(); break
-    case "aborted":          finish(true); break
+    case "complete":         clearStatusText(); finish(); break
+    case "aborted":          clearStatusText(); finish(true); break
     case "error":
+      clearStatusText()
       showError(ctx, m.text, m.techInfo)
       // Send failed because no provider is configured/usable — re-open the
       // welcome configuration panel even if the user previously skipped it.
@@ -180,7 +182,7 @@ window.addEventListener("message", (e) => {
     case "clearMessages":
       ctx.messagesEl.replaceChildren()
       ctx.currentBubble = null; ctx.currentBlock = null; ctx.currentTools = []; ctx.currentRaw = ""; ctx.currentReasoning = null; ctx.currentReasoningRaw = ""
-      S._advisorBlock = null; resetActivity()
+      S._advisorBlock = null; S._digestBoundary = null; S._statusText = null; S._turnFrame = null; resetActivity()
       ctx._hasOlder = false
       ctx._nextIdx = 0
       S._loadingOlder = false
@@ -190,6 +192,8 @@ window.addEventListener("message", (e) => {
     case "historyPage":
       applyHistoryPage(ctx, m)
       break
+    // LEDGER-SURFACE（§2.30.3.5）：台账明细 / 变化行（宿主 ledgerNotice——启动行 | 变化行）
+    case "ledgerNotice":      addLedgerNotice(ctx, m.lines); break
     case "sessions":
       ctx._sessions = m.sessions || []
       ctx.activeSession = m.active || 0
@@ -245,9 +249,21 @@ window.addEventListener("message", (e) => {
     case "digest":
       showDigestStatus(m)
       break
+    case "statusText":       handleStatusText(m); break
+    case "turnFrame":        S._turnFrame = { turn: m.turn, maxTurns: m.maxTurns }; renderStatusBar(); break
     case "permissionRequest":
       showPermissionRequest(m)
       break
+    // §18 C-6（child permission gate）：host 释放（opts.signal / Stop / approve-all 连带）
+    // → 移除对应卡。promptId 精确匹配；无 promptId（旧 host）→ 移除全部带 id 的卡
+    // （中止即整轮作废——无悬挂卡）。批量卡（无 data-prompt-id）不受影响。
+    case "permissionWithdrawn": {
+      const cards = [...document.querySelectorAll(".permission-prompt[data-prompt-id]")]
+      for (const c of cards) {
+        if (m.promptId == null || String(c.dataset.promptId) === String(m.promptId)) c.remove()
+      }
+      break
+    }
     case "batchPermissionRequest":
       showBatchPermissionRequest(m)
       break
@@ -267,8 +283,11 @@ window.addEventListener("message", (e) => {
     case "taskProgress":     handleTaskProgress(m); break
     case "planMode":         handlePlanMode(m); break
     case "subagent":         handleSubagentMessage(m); break
+    // §18 C-8（child permission gate）：审批态块头通知（tool 非空 = `⏸` + 等待审批；
+    // null = 清态）——查块绝不建块（activity.js applySubagentApproval）
+    case "subagentApproval":  applySubagentApproval(m); break
     case "goal":             handleGoalMessage(m); break
-    case "suspension":       handleSuspensionMessage(m); break
+    case "suspension":       S._digestBoundary = null; handleSuspensionMessage(m); break
     case "toolPanel":
       // Advisor streams into an in-conversation details block (like reasoning),
       // round-tagged and never truncated — NOT a side panel.
@@ -313,35 +332,75 @@ function showCompressStatus(m) {
 }
 
 
-// ─── Digest status line (B6 — WEBVIEW.md §7.4) ─────────────────
-// Lifecycle-only visibility for the digestion turn: "Digesting N background report(s)…" →
-// "Digested … (Xs)" / "Digestion interrupted (Xs)". One element in the messages stream,
-// updated in place (compress-status 同族先例；清屏随清). The end message carries {ok, ms}
-// only — n is remembered from the matching start on the same element.
+// ─── Status-line text segment (WEBVIEW §14 C-12#1 / C-15) ──────
+// host 发结构化 statusText（kind 判别——限流/过载/配额/索引）；webview 按 locale 渲染
+// （M3——locale 单源；文案在 status-bar.js）。**活动恢复即清**（token/reasoning/toolCall/
+// toolResult/complete/aborted/error——C-15——无 TTL）。
+function clearStatusText() {
+  if (S._statusText == null) return
+  S._statusText = null
+  renderStatusBar()
+}
+/** index 进度 done 相位 = 状态段清除（索引进度结束）；其余原样存（渲染时按 kind 取文案）。 */
+function handleStatusText(m) {
+  S._statusText = m.kind === "index" && m.phase === "done" ? null : m
+  renderStatusBar()
+}
+
+
+// ─── Digest round visibility (B6 — WEBVIEW.md §7.4 + §14 C-9/C-10) ─────
+// 消化轮可见面（**每轮独立元素**——跨轮漂移消除）：`digest start` → 追加 `.digest-turn` 标签
+// 行（CLI 起跑 dim 行对位）+ 本轮独立 `.digest-status` 元素（`id="digest-status"` 退役）+ 记
+// 本轮边界 `S._digestBoundary`（归档落点——C-4）+ `assistantLabeled` 复位（本轮 assistant
+// 输出带一次回合标签——C-9③）；`digest end` → **本轮**元素原地更新（ok 旗标语义不变）；
+// `digest cap` → `.digest-cap` 行（auto dim / stop warn——CLI agent-turn.mjs:188/:192 对位）。
+let _digestRoundEl = null
 function showDigestStatus(m) {
-  let el = document.getElementById("digest-status")
+  const messagesEl = ctx.messagesEl
+  if (m.status === "start") {
+    const label = document.createElement("div")
+    label.className = "digest-turn"
+    label.textContent = t("digest.turnLabel")
+    messagesEl.appendChild(label)
+    const el = document.createElement("div")
+    el.className = "digest-status"
+    el.dataset.n = String(m.n ?? "?")
+    el.textContent = t("digest.start", { n: el.dataset.n })
+    messagesEl.appendChild(el)
+    _digestRoundEl = el
+    S._digestBoundary = label // C-4：本轮边界 = 本轮首元素（标签行）
+    ctx.assistantLabeled = false // C-9③：本轮 assistant 输出带一次回合标签
+    maybeScrollDown(ctx)
+    return
+  }
+  if (m.status === "cap") {
+    const cap = document.createElement("div")
+    cap.className = m.mode === "stop" ? "digest-cap digest-cap-stop" : "digest-cap"
+    cap.textContent = m.mode === "stop"
+      ? t("digest.capStop", { turns: m.turns ?? "?" })
+      : t("digest.capAuto")
+    messagesEl.appendChild(cap)
+    maybeScrollDown(ctx)
+    return
+  }
+  // end：本轮元素原地更新（start 连发亦各成独立元素——end 更新其前最近未结本轮元素）
+  let el = _digestRoundEl?.isConnected ? _digestRoundEl : null
   if (!el) {
     el = document.createElement("div")
-    el.id = "digest-status"
     el.className = "digest-status"
-    document.getElementById("messages").appendChild(el)
+    el.dataset.n = "?"
+    messagesEl.appendChild(el)
+    _digestRoundEl = el
   }
   el.classList.remove("digest-done", "digest-failed")
-  let text
-  if (m.status === "start") {
-    el.dataset.n = String(m.n ?? "?")
-    text = t("digest.start", { n: el.dataset.n })
+  const seconds = ((m.ms ?? 0) / 1000).toFixed(1)
+  if (m.ok !== false) {
+    el.textContent = t("digest.done", { n: el.dataset.n ?? "?", seconds })
+    el.classList.add("digest-done")
   } else {
-    const seconds = ((m.ms ?? 0) / 1000).toFixed(1)
-    if (m.ok !== false) {
-      text = t("digest.done", { n: el.dataset.n ?? "?", seconds })
-      el.classList.add("digest-done")
-    } else {
-      text = t("digest.aborted", { seconds })
-      el.classList.add("digest-failed")
-    }
+    el.textContent = t("digest.aborted", { seconds })
+    el.classList.add("digest-failed")
   }
-  el.textContent = text
   maybeScrollDown(ctx)
 }
 

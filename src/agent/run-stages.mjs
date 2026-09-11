@@ -21,6 +21,37 @@ import { flushDomains } from "../extension/peer-domains.mjs"
 // 2026-09-05 实践轮：maybeGuardPushbacks——收尾前 guard 推回组（自 runAgent 无工具分支）
 
 /**
+ * 响应后置提醒注入（D-CI9——cli run-stages.mjs:27-51 同语义）：`response._warnings` 非空
+ * → 去重注入（模型下轮可见；本端文本 = 无 stream rules 措辞——PROVIDER 传输面既定）+ 异常
+ * finish reason 警告（reasonMap 三档 + 兜底逐字——响应可能不完整/截断）。调用点 =
+ * agent.mjs chat 返回后（cli agent.mjs:293 同位——interrupt/builtin 处理之后、toolCalls 分支之前）。
+ */
+export function injectResponseReminders(agent, response) {
+  // Warnings channel (provider/stream): de-duplicated so the model sees each warning once.
+  if (response._warnings?.length) {
+    const deDuplicated = [...new Map(response._warnings.map(w => [w.name || w.pattern, w])).values()]
+    agent.history.push({
+      role: "user",
+      content: `[System reminder — warnings from your last response:\n${deDuplicated.map(w => `- ${w.name || w.pattern}: ${w.message}`).join("\n")}]`,
+    })
+  }
+
+  // Warn on abnormal finish reasons — the response may be incomplete/truncated.
+  if (response.finishReason && response.finishReason !== "stop" && response.finishReason !== "tool_calls") {
+    const reasonMap = {
+      length: "output token limit reached after exhausting continuations",
+      insufficient_system_resource: "provider inference resources exhausted — consider retrying or switching models",
+      content_filter: "response blocked by provider content filtering",
+    }
+    const detail = reasonMap[response.finishReason] || `unknown reason "${response.finishReason}"`
+    agent.history.push({
+      role: "user",
+      content: `[System reminder: the previous turn ended abnormally — ${detail}. The assistant response that follows may be incomplete.]`,
+    })
+  }
+}
+
+/**
  * 收尾前 guard 推回组（2026-09-05 实践轮——自 runAgent 无工具分支提取，verbatim + 签名
  * 化）：pending 任务检查（≤1 次/任务表态）→ verify guard（OPT-IN——首次缺验推回 + 失败
  * 重试 ≤MAX_VERIFY_RETRIES + 耗尽诚实声明）→ advisor guard（OPT-IN——非工程模式 + 有
@@ -147,6 +178,9 @@ export async function checkAndCompact(agent, ctx) {
       agent._lastPromptTokens = null
       agent._usageAtLen = null
       agent._compressFailures = 0
+      // D-CI4 / CLI run-stages.mjs:65 对位：压缩后历史缩短——plan 节律复位，提醒恢复
+      // （不复位则 _planReminderAtLen 陈旧阈值压制「新用户消息 → 全量句」触发判据）。
+      agent._planReminderAtLen = 0
       reinjectAfterCompaction(history, agent, getAuto)
       // Completion info (CONTEXT-COMPACTION §7 D-C1): { mode: "summary", tokensFreed,
       // elapsedMs } from compactHistory — the webview renders "Compressed: N tokens

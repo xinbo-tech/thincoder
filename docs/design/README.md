@@ -73,6 +73,7 @@
 
 ## 变更记录
 
+- 2026-09-12：子代理审批面对齐批（VSC-CHILD-PERMISSION）——`AGENT-LOOP.md` **§18** 新增（child permission gate：ask 弹卡带归属 / 模式继承 / 块头 ⏸ / 取消释放 / R2 文档修正）；`TOOLS.md` §8 子代理审批条；协议增补 `WEBVIEW.md` §7.2（4 行）；`ESCALATE.md` / `ENGINEERING-MODE.md` 矛盾措辞随批修正。
 - 2026-09-11：群 A 批（VSC-MIRROR-SWEEP）——规则 6 补**表格行豁免**句 + 检查器契约附则（宽度扫描单源 `checkDocWidths`；`scripts/check-doc-width.mjs` 断言面同步）。
 
 - 2026-09-11：新增板块「测试基建」（`TESTING.md`）——测试生命周期与集成集对位档（与 CLI 仓同名档对应；语义同源·本端原文自持）。集成清单制 / runner / 发布门三环接线为待实施项。

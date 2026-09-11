@@ -2,6 +2,7 @@
 
 > 板块：会话流（panel/webview 时序——B 批 = B1 子代理块原地 + B2 会话打开原子化——A 批已交付 aacebee 后）。权威源：WEBVIEW.md（§2 布局/§5 子代理机制/§8 消息秩序——权威措辞只落此）。
 > 状态：**已交付核销**——2026-09-09（B1 52e03f3 + B2 6e98807——B1：拆容器/freeze 原地/150 无豁免/activity-flow 8 组——B2：openSessionContent 单向 boot/session-boot 组——VSC L2 154/154 绿——audit clean + advisor pass——consume 2e3c1b83——VSC 会话流 C+A+B 全链闭合——A4 尾巴/忙态冷启 boot 守卫观察项留 TODO）。
+> 〔2026-09-12 活动区收口批（VSC-ACTIVITY-CLOSURE）〕**B1 的“块原地（无 DOM move）”限缩为区驻留期**——终态消化回收后归档落流（`WEBVIEW.md` §14——A 方案）；本档 N3 不变式 / AC-B1c / AC-B1d 的“无 DOM move”句以 §14 为准（旧链本体仍禁——§14.4）；F-B1a（拆容器）/ F-B1b（流尾出生）仍为已废位置形态。
 
 ---
 

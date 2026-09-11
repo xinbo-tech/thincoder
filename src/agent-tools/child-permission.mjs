@@ -1,0 +1,38 @@
+/**
+ * child-permission.mjs — child permission channel（§18 C-2——2026-09-12）。
+ *
+ * 写权 child（coder/eng-designer）手动档的每写询问通道：把子代理的 onPermissionRequired
+ * 桥到**父面板**的权限卡（owner 归属 + 定向 signal），并在询问前后以
+ * onSubagentApproval 通知块头审批态（⏸ + 等待审批: <tool>）。eng-coder child 不配通道
+ * （spawn 时授权——C-3/KD-2 保持零弹卡）；explore/plan 只读集不可达；无父通道
+ * （headless / AUTO 构建期）→ 返回 null（调用侧省略该键——静默直通，零回归）。
+ *
+ * 顺序定死（C-2）：announce(tool) → await ask → finally announce(null 清态)。owner label
+ * 与活动块 label 同源（KD-8——卡与块可目视配对）：escalate/consult 带模型
+ * （`escalate <model> #<id>`），family 角色 `<role>#<id>`。
+ */
+
+/** owner label（KD-8——活动块 label 同源）：role ∈ {escalate, consult} 且有 model →
+ *  `<role> <model> #<id>`；否则 `<role>#<id>`。 */
+export function childOwnerLabel(role, id, model) {
+  if ((role === "escalate" || role === "consult") && model) return `${role} <${model}> #${id}`
+  return `${role}#${id}`
+}
+
+/**
+ * 构建 child 权限通道。返回 null（无 `ctx.callbacks.onPermissionRequired`——headless /
+ * AUTO 构建期 / 无关角色调用侧未挂）或 `async (toolName, args, diffInfo) => boolean`。
+ * @param {{ ctx: object, id: number, role: string, model?: string|null, signal?: AbortSignal|null }} deps
+ */
+export function makeChildPermission({ ctx, id, role, model = null, signal = null }) {
+  if (!ctx?.callbacks?.onPermissionRequired) return null
+  const owner = { label: childOwnerLabel(role, id, model), role, id }
+  return async (toolName, args, diffInfo) => {
+    ctx.callbacks.onSubagentApproval?.({ id, role, model, tool: toolName })
+    try {
+      return await ctx.callbacks.onPermissionRequired(toolName, args, diffInfo, { owner, signal })
+    } finally {
+      ctx.callbacks.onSubagentApproval?.({ id, role, model, tool: null })
+    }
+  }
+}

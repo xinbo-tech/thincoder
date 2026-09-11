@@ -332,7 +332,11 @@ export async function connectMcpServersExpanded(configs) {
     else {
       const cfg = configs[i]
       const label = cfg.name || cfg.command || cfg.url || cfg.wsUrl || "(unnamed)"
-      warnings.push(`MCP server "${label}" failed to connect: ${r.reason?.message ?? String(r.reason)}`)
+      const msg = `MCP server "${label}" failed to connect: ${r.reason?.message ?? String(r.reason)}`
+      warnings.push(msg)
+      // D-CI7（F-Q11——cli cli/make-agent.mjs:105-107 同前缀）：失败可见面 = console
+      // （采集点）；mcpWarnings 字段保留（消费面 = console——不发明 history 注入，CLI 无此行为）。
+      console.error("[mcp] " + msg)
     }
   })
   return { tools, warnings }

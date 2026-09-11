@@ -229,6 +229,7 @@ function normalizeUsage(usage) {
     total_tokens: usage.total_tokens ?? (usage.input_tokens ?? 0) + (usage.output_tokens ?? 0),
     prompt_cache_hit_tokens: usage.input_tokens_details?.cached_tokens ?? 0,
     prompt_cache_miss_tokens: Math.max(0, (usage.input_tokens ?? 0) - (usage.input_tokens_details?.cached_tokens ?? 0)),
+    reasoning_tokens: usage.output_tokens_details?.reasoning_tokens ?? 0, // §14 C-12#6
   }
 }
 

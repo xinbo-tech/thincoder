@@ -217,6 +217,27 @@ body {
   color: var(--vscode-errorForeground, #f14c4c);
 }
 
+/* §14 C-9/C-10（活动区收口批）：消化轮标签行 + turn-cap 行——每轮独立元素（跨轮漂移消除）；
+   cap 两档：auto = dim（同族观感）、stop = warn（部分消化——用户需知）。 */
+.digest-turn {
+  margin: 6px 0 0;
+  font-size: 11px;
+  opacity: 0.7;
+  color: var(--vscode-descriptionForeground, inherit);
+}
+
+.digest-cap {
+  margin: 6px 0;
+  font-size: 11px;
+  opacity: 0.75;
+  color: var(--vscode-descriptionForeground, inherit);
+}
+
+.digest-cap.digest-cap-stop {
+  opacity: 1;
+  color: var(--vscode-editorWarning-foreground, #cca700);
+}
+
 
 .permission-prompt-text {
   color: var(--vscode-inputValidation-warningForeground, #cca700);

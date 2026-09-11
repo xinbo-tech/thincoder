@@ -79,7 +79,7 @@ export function installChatFixture() {
  */
 export function installFullIndexFixture() {
   const ids = ("chat-container session-bar project-btn session-selector session-title session-arrow " +
-    "session-dropdown new-session-btn messages panels goal-panel task-panel toolbar status-line at-dropdown " +
+    "session-dropdown new-session-btn messages subagent-activity panels goal-panel task-panel toolbar status-line at-dropdown " +
     "input-row file-input input attach-btn send-btn abort-btn paste-bar paste-badge controls-row model-btn " +
     "reasoning-btn auto-btn advisor-btn eng-btn plan-btn settings-btn model-dropdown reasoning-dropdown " +
     "settings-panel settings-close settings-body welcome-panel welcome-heading welcome-text " +

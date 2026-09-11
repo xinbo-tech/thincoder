@@ -3,10 +3,11 @@
  * (300-line advisory; 2026-08-29 thincoder#3 review #2).
  *
  * All builders here push "user"-role context messages onto the machine history line:
- *   - AUTO/permission reminder (top-level turns)
+ *   - AUTO mode reminder constant (pushed by the agent loop head — D-CI6；permission 句已随本批退役)
  *   - transient per-run time grounding (must stay LAST, after the user input, so its
  *     second-precision content never shifts a provider prefix cache)
- *   - machine-only injections (editor context), transient, never into fullHistory
+ *   - machine-only injections (editor context), transient, never into fullHistory —
+ *     idempotent (a same-content re-delivery is skipped, D-CI5)
  *   - pasted-image pointer appended to the REAL user message (by reference — never
  *     history.at(-1), which is the transient time reminder pushed after the input)
  *
@@ -167,26 +168,10 @@ export async function pushGitContext(history, cwd) {
 }
 
 /** AUTO mode reminder — single source of truth (CLI parity, byte-identical wording).
- *  pushModeReminders pushes it; agent.mjs imports it from HERE for the dedupe check
- *  (importing via setup.mjs would create a setup ↔ setup-reminders import cycle). */
+ *  D-CI6（VSC-CONTEXT-PARITY §17.3——permission 句退役，CLI 无此句）：唯一推送点 =
+ *  agent.mjs 循环头检查（`getAuto() && !history.some(AUTO_REMINDER)`——cli
+ *  `ensureAutoReminder` 同语义；实际位 = hydrate 全部注入之后——cli setup.mjs:351 尾位同构）。 */
 export const AUTO_REMINDER = "[System reminder: AUTO mode is active — all tool calls are automatically approved without asking.]"
-
-/**
- * AUTO/permission reminder — top-level turns with a fresh (uncompressed) machine line.
- * 施工② G4（2026-09-10）：engineering degraded-constraint 警告块随 D-M1/D-M2 机制退役
- * （METHODOLOGY 概念退役——槽位缺失警告由 assemblePrompt 的 D2 通道承担）。
- */
-export function pushModeReminders(history, { depth, freshMachineLine, getAuto }) {
-  if (depth !== 0 || !freshMachineLine) return
-  if (getAuto()) {
-    history.push({ role: "user", content: AUTO_REMINDER })
-  } else {
-    history.push({
-      role: "user",
-      content: "[System reminder: Permission mode — confirm with the user before making changes. Describe what you intend to do first.]",
-    })
-  }
-}
 
 /** Per-run time grounding — transient, pushed LAST (after the user input) so its
  *  second-precision content never shifts a provider prefix cache. */
@@ -209,9 +194,11 @@ export function pushTimeReminder(history) {
 export function pushInjections(history, injections) {
   const list = Array.isArray(injections) ? injections : (injections ? [injections] : [])
   for (const inj of list) {
-    if (inj && typeof inj.content === "string") {
-      history.push({ role: "user", content: inj.content, transient: true })
-    }
+    if (!inj || typeof inj.content !== "string") continue
+    // D-CI5（F-Q10 收窄——同文去重）：history 已有内容相等的消息则跳过该条（幂等注入；
+    // 采集面 editor-context.mjs 零改——无活动编辑器已返 null；3000 上限不变）。
+    if (history.some((m) => m.content === inj.content)) continue
+    history.push({ role: "user", content: inj.content, transient: true })
   }
 }
 

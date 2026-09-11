@@ -37,7 +37,7 @@ import { logEvent, errText } from "../log.mjs"
 // MODEL-MERGE-SESSION 模型/stamp 决策纯函数（500 行硬限拆分——turn-model.mjs）
 import { resolveTurnModelAndStamp } from "./turn-model.mjs"
 // 2026-09-05 实践轮 module-split：回调工厂迁 panel-callbacks.mjs（webview 桥接面独立决策）
-import { buildPanelCallbacks, makeAskInPanel } from "./panel-callbacks.mjs"
+import { buildPanelCallbacks, makeAskInPanel, postDigestCap } from "./panel-callbacks.mjs"
 
 /** §17 D-S9 controller 登记（2026-09-02 偏差修复 #3）：池 children 在 spawn 时刻持有当时的
  * turn controller signal——Ctrl+I / ContinueError / AUTO resume 重建 controller 后，旧
@@ -398,7 +398,7 @@ async function runTurnLoop(panel, deps) {
   if (inherited) { carryTaken = true; panel._guardCarry = null }
   const ro = {
     agent: panel._agent, // §11 单例：存在且绑定匹配（ensurePanelAgent）→ runAgent hydrate 复用
-    mcpServers: getMcpServers(), images, skills: loadSkills(cwd), history, fullHistory,
+    mcpServers: getMcpServers(), images, skills: loadSkills(cwd), history, fullHistory, // skills 载荷 = [4] 层 systemPrompt 尾块消费面（D-CI2/D-CI3——死参数消除）
     injections: [collectEditorInjection(cwd)].filter(Boolean), resume: false,
     distillState: panel._distillState, distillSignal: panel._distillController?.signal,
     engPersist: { cwd, slot: turnSlot },
@@ -435,14 +435,14 @@ async function runTurnLoop(panel, deps) {
       }
       if (e instanceof ContinueError) {
         if (autoTurn) {
-          // §17 D-S9 ContinueError row (digest): NO panel — AUTO auto-resumes (the
-          // user authorized unattended operation, §2 unified rule), manual silently
-          // stops (the partial digest stays in history — finished reports are not
-          // lost, we just stop burning turns unattended).
+          // §17 D-S9 ContinueError row (digest): NO panel — AUTO auto-resumes (§2 unified rule);
+          // manual stops silently (partial digest stays in history — no lost reports).
           if (panel._autoApprove) {
+            postDigestCap(panel, "auto", e.turns) // §14 C-10：cap 行（auto——继续推进）
             newTurnController(panel)
             continue
           }
+          postDigestCap(panel, "stop", e.turns) // §14 C-10：cap 行（stop——部分消化）
           tLog.result = "stopped"
           break
         }

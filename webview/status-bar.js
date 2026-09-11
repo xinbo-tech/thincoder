@@ -1,6 +1,9 @@
 /**
  * status-bar.js — the status line (tokens, cache, context %, current tool,
- * turns, elapsed, badges) and the usage-message handler.
+ * turn N/M, elapsed, status text segment, badges) and the usage-message handler.
+ * §14 C-12/C-15（活动区收口批）：状态文本段（限流/过载/配额/索引）、`turn N/M` 段
+ * （旧 `status.turns` 段退役）、✦reasoning 段——host 只发结构化载荷，文案在 webview
+ * 按 locale 渲染（M3——locale 单源）。
  */
 import { S } from "./state.js"
 import { t } from "./i18n.js"
@@ -14,12 +17,20 @@ export function renderStatusBar(m) {
   const completion = u.completion_tokens ?? 0
   const cacheHit = u.prompt_cache_hit_tokens ?? 0
   const cacheMiss = u.prompt_cache_miss_tokens ?? 0
-  const cachePct = cacheHit + cacheMiss > 0 ? Math.round((cacheHit / (cacheHit + cacheMiss)) * 100) : null
+  const hitText = cacheHit + cacheMiss > 0 ? Math.round((cacheHit / (cacheHit + cacheMiss)) * 100) : null
+  const reasoning = u.reasoning_tokens ?? 0
   let parts = []
   if (S._planActive) parts.push(`<span style="color:var(--accent)">${t("status.plan")}</span>`)
   if (S._goalInfo?.status === "active") parts.push(`<span id="goal-badge" role="button" tabindex="0" aria-label="Goal panel" style="cursor:pointer">🎯</span>`)
+  // 状态文本段（C-15）：限流/过载/配额/索引进度——host 发 kind，本端取 locale 文案；
+  // 活动恢复即清（chat.js clearStatusText——C-15）。
+  if (S._statusText) {
+    const statusText = statusTextText(S._statusText)
+    if (statusText) parts.push(escHtml(statusText))
+  }
   parts.push(`↑${fmtK(prompt)} ↓${fmtK(completion)}`)
-  if (cachePct !== null) parts.push(`hit${cachePct}%`)
+  if (reasoning > 0) parts.push(`✦${fmtK(reasoning)}`) // C-12#6：✦reasoning（>0 才显——同 CLI）
+  if (hitText !== null) parts.push(`hit${hitText}%`)
   const ctxPct = (m && m.ctxPct != null) ? m.ctxPct : S._lastCtxPct
   if (ctxPct != null) {
     // CLI parity: context utilization ≥80% renders in warning color
@@ -32,7 +43,7 @@ export function renderStatusBar(m) {
   if (S._phase === "thinking") parts.push(`${t("status.thinking")}<span class="loading-dots"></span>`)
   // CLI status parity: current tool, turn count (LLM calls), elapsed seconds
   if (S._currentTool) parts.push(`<span class="status-tool">${t("status.currentTool")}: ${escHtml(S._currentTool)}</span>`)
-  if (S._llmCalls > 0) parts.push(`${t("status.turns")} ${S._llmCalls}`)
+  if (S._turnFrame) parts.push(t("status.turn", { n: S._turnFrame.turn, m: S._turnFrame.maxTurns })) // C-15：turn N/M 段（旧 status.turns 段退役）
   if (S._turnStart) parts.push(`${t("status.elapsed")} ${Math.round((Date.now() - S._turnStart) / 1000)}s`)
   if (S._taskStatus) parts.push(`<span id="task-badge" role="button" tabindex="0" aria-label="Task progress" style="cursor:pointer">${S._taskStatus}</span>`) // 子代理计数徽标已撤（SESSION-ACTIVITY-REVISED 评审 #2——活动区自动显隐——计数由 ⏳ 挂起段承担）
   // §17 background-mode status line (D-S8): "后台 N 子代理运行中" while the suspension
@@ -72,4 +83,19 @@ export function handleUsageMessage(m) {
   S._llmCalls++ // one LLM call per usage report (CLI turn parity)
   if (m.ctxPct != null) S._lastCtxPct = m.ctxPct
   renderStatusBar(m)
+}
+
+/** statusText 段文案（C-12#1/C-15——host 发结构化 kind；webview 按 locale 渲染）：
+ *  rateWait/rateLimited/overloaded/quota/index（scan·embed 两相）；未知 kind → null（不渲染）。 */
+function statusTextText(st) {
+  switch (st?.kind) {
+    case "rateWait": return t("status.rateWait", { s: st.seconds ?? "?" })
+    case "rateLimited": return t("status.rateLimited", { s: st.seconds ?? "?" })
+    case "overloaded": return t("status.overloaded", { s: st.seconds ?? "?" })
+    case "quota": return t("status.quota", { msg: st.message ?? "" })
+    case "index": return st.phase === "embed"
+      ? t("status.indexEmbed", { done: st.done ?? "?", total: st.total ?? "?" })
+      : t("status.indexScan", { n: st.total ?? "?" })
+    default: return null
+  }
 }

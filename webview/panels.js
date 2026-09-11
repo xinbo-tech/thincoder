@@ -1,17 +1,17 @@
 /**
  * panels.js — side panels: task progress, goal + suspension message handlers
  * and the subagent/turnState bridge routing.
- * SESSION-ACTIVITY-REVISED（行面板撤除）→ ACTIVITY-REWRITE-SIMPLE（2026-09-09）：
-  * 簿记段全删（活动块 meta 事件字段自足——不再经行簿记水合）——
+ * SESSION-ACTIVITY-REVISED（行面板撤除）→ ACTIVITY-REWRITE-SIMPLE（2026-09-09）→
+ * 活动区收口（2026-09-12——WEBVIEW.md §14）：簿记段全删（活动块 meta 事件字段自足）——
  * handleSubagentMessage 纯转发 applySubagentStatus；挂起退出 freeze 兜底保留
- * （freezeLiveBlocks——残余 live 块折叠——settled 已随消息即时折叠）。
+ * （freezeLiveBlocks——区全体归档——§14 C-8）；`_panelTimer` 同点刷 live 块头（§14 C-11④）。
  */
 import { ctx, S } from "./state.js"
 import { t } from "./i18n.js"
 import { escHtml } from "./ui.js"
 import { setLoading } from "./loading.js"
 import { renderStatusBar } from "./status-bar.js"
-import { applySubagentStatus, freezeLiveBlocks } from "./activity.js"
+import { applySubagentStatus, freezeLiveBlocks, refreshLiveHeaders } from "./activity.js"
 
 export function renderTaskPanel() {
   const panel = document.getElementById("task-panel")
@@ -64,8 +64,12 @@ export function clearPanels() {
 }
 
 // 状态行 elapsed 刷新（保留运行期驱动：usage/toolCall 消息之间有长工具批——elapsed 段
-// 不得冻结）。
-const _panelTimer = setInterval(() => { if (S._turnState === "running") renderStatusBar() }, 2000)
+// 不得冻结）+ live 块头刷新（§14 C-11④——**不设运行态门**：`_turnState` 为 `susp` 的
+// 纯池跑主场景照刷；无 live 块 = 零操作；renderStatusBar 维持既有 running 门不变）。
+const _panelTimer = setInterval(() => {
+  refreshLiveHeaders()
+  if (S._turnState === "running") renderStatusBar()
+}, 2000)
 // Webview lifetime == panel lifetime, but clear on unload so a future
 // teardown/dispose path cannot leak the interval.
 window.addEventListener("unload", () => clearInterval(_panelTimer))
@@ -92,9 +96,8 @@ export function handleSubagentMessage(m) {
 /** §17 D-S2/D-S8: the suspension-session message from the host — activates the
  *  background mode (input stays usable; Stop 语义 = susp 纯池跑不显——子代理停止靠逐块
  *  ⏹——无全停——池空自然消化完), updates the status-line counts, and on session exit
- *  freezes any residual live blocks into the conversation (CLI freezeAllSubTasks
- *  parity — 无 digest 消费、不留悬空 live 块；settled 块已随 settle 消息即时折叠——此
- *  兜底只覆盖极窄竞态）。 */
+ *  archives the whole activity region into the conversation (CLI freezeAllSubTasks
+ *  parity — 无 digest 消费、不留悬空块；§14 C-8：live → 折叠、awaitingDigest → 归档）。 */
 export function handleSuspensionMessage(m) {
   S._suspended = !!m.active
   if (m.active) {

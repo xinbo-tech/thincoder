@@ -6,20 +6,11 @@ import { readFile, writeFile, rename, unlink, mkdir } from "node:fs/promises"
 import { existsSync } from "node:fs"
 import { execFileSync } from "node:child_process"
 import { join, dirname } from "node:path"
-import { resolvePath, formatSize, getOpenDoc, applyEditorEdit, applyEditorRangeEdit, refreshMarkdownPreview, normalizeEOL, detectFileEol, majorityEol, joinWithEol } from "./shared.mjs"
+import { DESC, resolvePath, formatSize, getOpenDoc, applyEditorEdit, applyEditorRangeEdit, refreshMarkdownPreview, normalizeEOL, detectFileEol, majorityEol, joinWithEol } from "./shared.mjs"
 
 export const insertAfterTool = {
   name: "insert_after",
-  description:
-    "Insert a line of text after a specific line in a file.\n" +
-    "Use this instead of edit when you're adding a new line — a checklist item, a doc heading, a line of prose, a function, an import, or a block — no need to fabricate surrounding context for exact matching.\n" +
-    "Parameters:\n" +
-    "- path (required): File path\n" +
-    "- content (required): Text to insert as a new line\n" +
-    "- after_line: Line number to insert after (1-based), takes priority over after_regex\n" +
-    "- after_regex: JavaScript regex to find the line to insert after\n" +
-    "- use the most recent read of the file as the source of old_string / line numbers / hashes — re-read after the file changed\n" +
-    "Returns `Inserted after line N in <path>`.",
+  description: DESC("insert_after"),
   parameters: {
     type: "object",
     properties: {
@@ -246,12 +237,7 @@ export function applyHunks(fileLines, hunks, eol, path) {
 
 export const applyPatchTool = {
   name: "apply_patch",
-  description:
-    "Apply a unified diff to one or more files, atomically: if any hunk fails to apply, nothing is written. Use for multi-file changes. For single-file edits, edit is simpler; for full rewrites, write is simpler.\n" +
-    "Parameters:\n" +
-    "- patch (required): Unified diff text — may span multiple files (multiple --- / +++ header pairs, including creating MULTIPLE new files via --- /dev/null); --- / +++ headers per file, @@ -old,count +new,count @@ hunks。The +++ b/<path> pair may be omitted for existing files — a lone --- a/<path> (or --- b/<path>) header followed directly by hunks applies to that path (new files still need --- /dev/null + +++ b/<path>)。场景引导：一次新建多个文件 / 整文件替换 / 统一 diff 形态\n" +
-    "- Hunk header \"@@\" without coordinates is accepted. Coordinate-less hunks are located by their anchor lines: context lines plus the removed (-) lines, matched as a contiguous sequence — a unique match applies. The anchor-free forms require context: a hunk with no removed (-) lines (pure additions) needs at least 2 context lines for a unique match; a zero/one-context hunk with at least one removed (-) line is located by its anchor sequence (context + removed lines, in order) and applies on a unique match.\n" +
-    "Returns `Patched <path> (created|modified)` per file.",
+  description: DESC("apply_patch"),
   parameters: {
     type: "object",
     properties: {
@@ -332,12 +318,7 @@ export const applyPatchTool = {
 export const lsTool = {
   name: "ls",
   readonly: true,
-  description:
-    "List directory contents with type and size. Use this for a quick overview; use glob when you have a specific file pattern in mind.\n" +
-    "Route to ls instead of bash: `dir /b` / `ls` / `dir` → ls. Listing a directory is a read — never shell out for it.\n" +
-    "Parameters:\n" +
-    "- path: Directory path (default workspace root)\n" +
-    "- filter: Only list entries matching this wildcard (e.g. '*.mjs', '*test*')",
+  description: DESC("ls"),
   parameters: {
     type: "object",
     properties: {
@@ -377,12 +358,7 @@ function wildcardToRegex(pattern) {
 
 export const deleteTool = {
   name: "delete",
-  description:
-    "Delete a file. Use when the agent created a temporary or junk file that should be cleaned up, or when the user explicitly asks to delete something. Refuses to delete git-tracked files as a safety measure.\n" +
-    "Route to delete instead of bash: `del file` / `rm file` → delete (single files). Use bash `rm -rf` only for directories.\n" +
-    "Parameters:\n" +
-    "- path (required): File path, relative to cwd or absolute (alias: filePath)\n" +
-    "- force: Allow deleting git-tracked files (default false)",
+  description: DESC("delete"),
   parameters: {
     type: "object",
     properties: {

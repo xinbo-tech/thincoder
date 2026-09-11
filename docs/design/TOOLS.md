@@ -176,8 +176,9 @@ approve / deny / approve-all + diff 预览（`diff-preview.mjs` 虚拟文档原�
 - **控制类豁免**：subagent cancel / consume-design 免审批；planMode 对 cancel 放行、
   consume-design 拒绝（只停不启 vs 会消费 token 槽）。
 - **eng-coder 子代理**：spawn 时经 design token 预授权（runChild 传 autoApprove=true）——
-  写豁免仅限 onPermissionRequest 阶段；JSON 解析/未知工具/planMode/design-token 前置门先
-  行且原样生效。
+  免逐写询问：权限询问阶段整体跳过；JSON 解析/未知工具/planMode/design-token 前置门先
+  行且原样生效（修正轮 #1）。
+- **子代理（depth>0）审批**：ask 模式经父面板弹卡——卡带归属（`<child key> · <tool>`）；AUTO（含轮中 approve-all）整树直通；eng-coder spawn 预授权（上条）与 explore/plan 只读集不变。机制/用例 = `AGENT-LOOP.md §18`（实现 `agent-tools/child-permission.mjs` + `extension/permission-gate.mjs`）。
 - **Stop 释放挂起门**：permission 挂起的回合被 abort → resolve(false)/deny，循环不悬挂。
 
 ## 9. 逐工具契约要点
@@ -255,8 +256,120 @@ approve / deny / approve-all + diff 预览（`diff-preview.mjs` 虚拟文档原�
 
 **计数（D3）**：用例 5（T-MA9-1–5）· AC 3（AC-MA9-1–3）· 实施域 3 档（`git.mjs` + 新测档 + `test/files.mjs` 登记）。
 
+## 12. 工具描述外部装载：25 档 `.md` 迁移（VSC-CONTEXT-PARITY 批——2026-09-11）
+
+> 来源：批次档 `thincoder/docs/batches/2026-09-11-VSC-CONTEXT-PARITY.md` §1 条目 E4 / R4（用户 22:54
+> 「会话体验差距」+ 裁定 1：权威源 = CLI 蓝图）。
+> 需求 = `TOOLS（CLI 仓）` F7 / N9（逐条回指）；注入面与顺序 = VSC `AGENT-LOOP.md §17`。
+
+### 12.1 问题（现状复核 as-of 2026-09-11）
+
+- CLI：25 档 `src/tools/*.md`（合计 39,106 字符 ≈ 39.1KB——**计数更正 D3**：批次 §1 E4 「26 档」= 笔误，
+  实测 25 档/25 工具）经 `thincoder/src/tools/shared.mjs:12` `DESC()` 运行时装载，含 Routing / Notes 段
+  （如 `read.md` 21 行含「不要用 bash cat」路由与 `repo_outline`/`code_search`/`lsp` 指向）。
+- VSC：`src/tools/` 全 `.mjs`、零 `.md`；31 个 builtinTools 描述全为内联字符串，无 Routing/Notes 结构段；
+  `tools/file.mjs:22-29` read 描述 7 行（CLI 21 行）；装载机制不存在（`DESC(` 零命中；`checklist.mjs:3`
+  注释自述「DESC file-read replaced with inline description」= 施工期简化）。
+- 后果：模型在 VSC 面拿到的路由/反模式信息系统性少于 CLI——工具选择与反模式规避面同族差。
+
+### 12.2 方案选型
+
+| # | 候选 | 判据逐项评估 | 取舍 | 结论 |
+|---|---|---|---|---|
+| 1 | 内联补全（不带 .md，直接扩写各 description 字符串） | 零新档/零装载面；但文本分散在 16 个 .mjs、更新与核对成本高；与 CLI 同族演进无对应面 | — | 否决 |
+| 2 | **`.md` 外部装载（镜像 CLI 机制：25 档文件 + `DESC()`）** | 与 CLI 同构（装载语义同源）；文本单点可测可核；打包面已验（`.vscodeignore` 无 `*.md`；vsce 默认忽略表亦无 `*.md` 通配）；`shared.mjs` 406 行 +~14 行无压 | 25 新档 + 17 档接线〔实现后同步（2026-09-12）更正〕 | **选定** |
+| 3 | 跨仓读取 CLI 的 .md（运行时引用他仓） | 违反零跨仓依赖；安装形态无该路径 | — | 否决 |
+
+### 12.3 契约
+
+**D-TD1 25 档落地**：`src/tools/` 新增 25 档 `.md`——文件名 = 工具名：`apply_patch` · `bash` · `checklist` ·
+`delete` · `edit` · `execute` · `fetch` · `file_ops` · `get_current_time` · `git` · `glob` · `grep` ·
+`hashline_edit` · `insert_after` · `lint` · `ls` · `lsp` · `process` · `question` · `read` · `read_image` ·
+`tree` · `wait_for` · `websearch` · `write`。
+文本 = 各端自持：以 CLI 同文件为语义底本（逐字拷贝），**须过「适用性核对」**——凡文中点名的工具/路径/命令
+在本端不存在的行，按本端事实改述（改动逐处登记实现报告）。**不要求 byte-identical**；不加跨仓描述锚断言
+（各端自持——多实现面纪律）。
+
+**D-TD2 装载面**：`src/tools/shared.mjs` 新增 `DESC(name)`（CLI `shared.mjs:12` 同语义——`readFileSync` +
+`join(__dirname, "<name>.md")`、无缓存、同步读；缺失即抛——fail-visible）；25 个工具定义改
+`description: DESC("<name>")`——落点文件（准确行号实现自扫；字符串键控 = 各工具现 `description:` 块）：
+`read_image.mjs` · `file.mjs`（read/write）· `file-edit.mjs`（edit）· `hashline-edit.mjs` · `more-file.mjs`
+（insert_after/apply_patch/ls/delete）· `search.mjs`（glob/grep）· `shell.mjs` · `git.mjs` · `web.mjs`
+（websearch/fetch）· `linter.mjs` · `lsp.mjs` · `execute.mjs` · `question.mjs` · `tree.mjs` ·
+`wait_for.mjs` · `ops.mjs`（file_ops/process/get_current_time）· `checklist.mjs`（接线档合计 17）。
+〔实现后同步（2026-09-12）：原表 `file.mjs`（read/write/edit）= 笔误——`edit` 宿主实测 = `file-edit.mjs`
+（实现自扫；测试自注 `test/tool-descriptions.test.mjs:9`）。〕
+
+**D-TD3 非迁移面（登记——本批零改）**：`repo_outline` · `code_search` · `doc_search` · `memory` ·
+`context` · `focus` · `peer_instances` 7 工具保持内联（CLI 侧同族亦内联——`repomap.mjs:300` /
+`memory/code-sync.mjs:354` / `memory/docs.mjs:172` / `peer-instances.mjs:220`；`context`/`focus` = 端特有）；
+后续如需外部化另批设计。
+
+### 12.4 受影响文件（as-of 2026-09-11）
+
+| # | 文件 | 现 | 预计 | 动作 |
+|---|---|---|---|---|
+| 1–25 | `src/tools/<name>.md` ×25 | 新 | 合 ≈39K 字符（照 CLI） | D-TD1（新档） |
+| 26 | `src/tools/shared.mjs` | 406 | ~420 | +DESC |
+| 27 | `src/tools/file.mjs` | 136 | ~124（净减） | 2 工具接线（read/write） |
+| 28 | `src/tools/file-edit.mjs` | 452 | 435（实测） | 1 工具接线（edit）〔实现后同步（2026-09-12）补列〕 |
+| 29 | `src/tools/more-file.mjs` | 415 | ~385（净减） | 4 工具接线 |
+| 30 | `src/tools/search.mjs` | 308 | ~285 | 2 |
+| 31 | `src/tools/shell.mjs` | 326 | ~308 | 1 |
+| 32 | `src/tools/git.mjs` | 402 | ~392 | 1 |
+| 33 | `src/tools/web.mjs` | 146 | ~130 | 2 |
+| 34 | `src/tools/linter.mjs` | 136 | ~125 | 1 |
+| 35 | `src/tools/lsp.mjs` | 136 | ~125 | 1 |
+| 36 | `src/tools/execute.mjs` | 222 | ~212 | 1 |
+| 37 | `src/tools/question.mjs` | 71 | ~62 | 1 |
+| 38 | `src/tools/tree.mjs` | 71 | ~62 | 1 |
+| 39 | `src/tools/wait_for.mjs` | 198 | ~188 | 1 |
+| 40 | `src/tools/ops.mjs` | 125 | ~105 | 3 |
+| 41 | `src/tools/checklist.mjs` | 450 | ~440 | 1 |
+| 42 | `src/tools/read_image.mjs` | 71 | ~62 | 1 |
+| 43 | `src/tools/hashline-edit.mjs` | 114 | ~105 | 1 |
+| 44 | `test/tool-descriptions.test.mjs` | 新 | ~120 | T-TD-1~T-TD-4 |
+| 45 | `test/files.mjs` | 72 | 73 | 登记 |
+
+（26–43 的「预计」= 净减方向估计（内联块移出 ~5–15 行/档）；越 500 硬帽停下报告。计数：实施域 = 25 新
++ 18 改 + 2 测档 = 45 档。）
+
+**实现后同步（2026-09-12——交付实测态对齐）**：补 28 列（`file-edit.mjs`——`edit` 宿主；现 452（实现前）
+→ 实测 435）+ `file.mjs` 动作 3→2；计数 44→45（25 新 + 18 改 + 2 测档——对齐实现自扫
+`test/tool-descriptions.test.mjs:9/:63`）。
+
+**行数拆分口径（修正轮 #6——同 `AGENT-LOOP.md` §12.4 先例）**：`shared.mjs` 406 → ~420 **跨 300 行咨询
+线**（≤500 硬限内）——本批增量 = `DESC()` 单函数；本批不拆分，**挂结构债候选**。
+
+### 12.5 用例表
+
+| # | 类型 | 输入 | 预期输出（断言） | 需求 |
+|---|---|---|---|---|
+| T-TD-1 | 正常 | `builtinTools` 全表 | 25 个迁移面描述 = `DESC(name)` 读出（与文件内容逐字相等——含 Routing/Notes 段锚句） | F7 |
+| T-TD-2 | 边界 | 每档文件存在性 | `src/tools/*.md` 25 档在位；`read.md` 含 Routing 段与 `repo_outline`/`code_search`/`lsp` 指向句 | F7 |
+| T-TD-3 | 错误 | 迁出后文件面 | 17 档工具文件对已迁 25 工具的内联描述块零残留（**全量**——17 档 / 25 工具逐档扫描，非抽样；修正轮 #3；实现后同步（2026-09-12）档数更正） | F7 |
+| T-TD-4 | 边界 | `.vscodeignore` | 无 `*.md` 排除模式（打包面） | N9 |
+
+### 12.6 验收标准
+
+| AC | 判据 | 回指 |
+|---|---|---|
+| AC-TD-1 | T-TD-1/T-TD-2/T-TD-3 绿 + `node test/run-fast.mjs` 全绿（新档登记） | F7 |
+| AC-TD-2 | T-TD-4 绿（`.vscodeignore` 无 `*.md`）+ `description: DESC(` 命中 25 处（grep 点数）+ **N9 落点 = 发布前清单核对**（`npx @vscode/vsce ls`（或打包后 `unzip -l <vsix>`）输出含 `src/tools/*.md` 25 档在位——打包忽略表实效核对；修正轮 #3） | F7/N9 |
+| AC-TD-3 | 行数实测对表（§12.4）+ `check-doc-width` 新增违规 0 | — |
+
+### 12.7 边界
+
+- 不做非迁移 7 工具的文本重构（D-TD3）；不加跨仓描述锚断言/同步脚本；不改工具 schema/参数/执行逻辑；
+- 不改 CLI 侧 `.md`；不做多语言（本端描述语言 = 英文，与 CLI 同）。
+
+**计数（D3）**：实施域 45 = 25 新（.md）+ 2 测档（`test/tool-descriptions.test.mjs` 新 + `test/files.mjs` 登记）+ 18 改（含 `file-edit.mjs`）· 用例 4（T-TD-1~4）· AC 3（AC-TD-1~3）——修正轮 #9 对齐 §12.4 表；实现后同步（2026-09-12）更正 44→45（`edit` 宿主更正 + 补列）。
+
 ## 变更记录（历史折叠——详见 git log）
 
+- 2026-09-12（VSC-CONTEXT-PARITY 批·实现后同步——交付实测态对齐）：§12.2 接线档数 16→17 · §12.3 D-TD2 落点更正（`edit` 宿主 = `file-edit.mjs`，非 `file.mjs`）· §12.4 补列 `file-edit.mjs` + 计数 44→45（25 新 + 18 改 + 2 测档）· §12.5 T-TD-3 档数 16→17 · §12.7 计数同步。纯落点与计数更正、零语义。
+- 2026-09-11：新增 §12（工具描述 25 档 `.md` 迁移——VSC-CONTEXT-PARITY 批 R4）。
+- 2026-09-11（修正轮——设计评审轮次 1 #3/#6/#9 落修）：T-TD-3 改全量断言（16 档/25 工具，非抽样）；AC-TD-2 补 N9 发布前清单核对落点（`vsce ls`）；§12.4 计数对齐 44（补 `test/files.mjs`）+ `shared.mjs` 结构债候选注。纯口径与落点登记、零语义。
 - 2026-09-11：群 A 批（VSC-MIRROR-SWEEP）——新增 §11（git commit `--only` 镜像——双层混扫缺口闭源）。
 
 - 2026-09-08：从 ARCHITECTURE §7 迁出成立本档——写全 VSC 独立实现（builtinTools 清单核对

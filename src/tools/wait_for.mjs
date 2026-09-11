@@ -18,7 +18,7 @@
  */
 import { existsSync } from "node:fs"
 import net from "node:net"
-import { resolvePath } from "./shared.mjs"
+import { DESC, resolvePath } from "./shared.mjs"
 
 /** wait_for bounds: a BUILT-IN ceiling replaces the unbounded sleep-then-wait —
  *  timeout_ms defaults to 30s (config.json agent.waitForTimeoutMs overrides),
@@ -150,14 +150,7 @@ async function evalConditionSource(condition, ctx) {
 export const waitForTool = {
   name: "wait_for",
   readonly: true,
-  description:
-    "Wait until a condition becomes true — polls the condition every interval_ms and returns as soon as it holds or the timeout_ms ceiling passes. Use it ONLY for genuinely asynchronous waits: an async subagent/consult still settling, a file appearing, a port opening. Synchronous tools (advisor, blocking subagent spawn) return when done — waiting after them is NOT needed and wastes time.\n" +
-    "Parameters:\n" +
-    '- condition (required): "advisor settled" (an in-flight advisor review finished) | "subagent id:N done" (async subagent N settled) | "consult done" (every consult_start session drained) | "file exists:path" | "port open:N". The agent-internal conditions apply to ASYNC sessions only — a synchronous call already completed before it returned. An unknown condition is an explicit error (`wait_for: unsupported condition "..."` — the supported forms are listed above), never a silent wait.\n' +
-    "- interval_ms: poll interval (default 1000, floor 100)\n" +
-    "- timeout_ms: overall ceiling (default 30000; config.json agent.waitForTimeoutMs overrides the default; hard cap 600000 like the execute tool)\n" +
-    "Returns `wait_for: condition satisfied after Nms (N checks): \"<condition>\"` on success, `wait_for: timed out after Nms ...` when the ceiling passes with the condition still false (never burns beyond the ceiling); interrupts exit immediately.\n" +
-    "Notes: read-only and non-destructive — it only observes (agent pools, the filesystem, a local port probe). Blocking by design — call it ALONE in a turn, not batched with calls that depend on its result.",
+  description: DESC("wait_for"),
   parameters: {
     type: "object",
     properties: {

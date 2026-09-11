@@ -16,6 +16,9 @@
  *   susp（纯后台池跑——主空闲）不显（无全停——池空自然消化完——子代理停止靠活动区
  *   逐块 ⏹）；loading:false 不再隐 abort（修 digest 间按钮闪烁 + 标题窗口/digest
  *   起跑窗口隐藏）。
+ * - **Send 可见性 = running 期隐藏**（WEBVIEW.md §14 C-14——M4 选定案）：与拒发同判据
+ *   （`_turnState === "running"`）——消除「可点但必被拒」假 affordance；Stop 承担停止；
+ *   `send.js` 门禁与 toast 零改（Enter 路径拒发提示保留）。
  * INPUT-LOCK-ASYNC（C'——2026-09-09，thincoder/docs/design/INPUT-LOCK-ASYNC.md）→
  * INPUT-LOCK-BEHAVIOR-REVISED（2026-09-09 修订——不禁录入只禁 send——评审通过）：busy
  * 派生 `_turnState === "running"`（评审 #3：digest 属 running——chat-panel.mjs:50 实证）
@@ -43,14 +46,14 @@ export function applyBusyLock() {
 /**
  * Loading state: send/abort button swap + input state + thinking phase marker.
  * INPUT-LOCK：busy（running）不禁录入（readOnly 锁移除——打字回显）——占位符 busy 文案；
- * send 按钮常显（F-6 语义保留——发送由 send.js 出口守卫兜 busy 拒——文本保留不吞）；Stop
- * 只在 S._turnState==="running" 显（digest/回合执行中可停主会话——susp 纯池等待不显——子
- * 代理 ⏹ 逐块停——无全停——池空自然完）。每次调用重派生状态（applyBusyLock——进出 susp/
- * running 都刷新——不依赖调用方顺序——F7）。
+ * **Send 按钮 running 期隐藏**（§14 C-14——与拒发同判据，消除假 affordance；susp/idle
+ * 恢复 flex）；Stop 只在 S._turnState==="running" 显（digest/回合执行中可停主会话——susp
+ * 纯池等待不显——子代理 ⏹ 逐块停——无全停——池空自然完）。每次调用重派生状态
+ * （applyBusyLock——进出 susp/running 都刷新——不依赖调用方顺序——F7）。
  */
 export function setLoading(ctx, on) {
   S._phase = on ? "thinking" : null
-  ctx.sendBtn.style.display = "flex"
+  ctx.sendBtn.style.display = S._turnState === "running" ? "none" : "flex" // C-14：running 期隐藏（Stop 同派生点）
   ctx.abortBtn.style.display = S._turnState === "running" ? "flex" : "none"
   applyBusyLock()
   if (!on) ctx.inputEl.focus()

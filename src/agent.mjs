@@ -14,8 +14,10 @@ import { MAX_ADVISOR_ROUNDS } from "./advisor/run.mjs"
 import { executeToolBatches } from "./agent/execute-tools.mjs"
 import { hydrateRun, setupAgentRun } from "./agent/setup.mjs"
 import { AUTO_REMINDER, ENG_OFF_REMINDER, ENG_ON_REMINDER, injectEngineeringReminder } from "./agent/setup-reminders.mjs"
-// 主循环阶段函数（压缩检查/蒸馏发射/回合收尾）2026-09-05 实践轮迁 agent/run-stages.mjs
-import { checkAndCompact, fireEndOfRunDistill, finalizeAgentTurn, maybeGuardPushbacks } from "./agent/run-stages.mjs"
+// 主循环阶段函数（压缩检查/蒸馏发射/回合收尾/响应提醒）2026-09-05 实践轮迁 agent/run-stages.mjs
+import { checkAndCompact, fireEndOfRunDistill, finalizeAgentTurn, injectResponseReminders, maybeGuardPushbacks } from "./agent/run-stages.mjs"
+// D-CI4（VSC-CONTEXT-PARITY §17.3）：plan-mode 节律常量/计数（cli agent-tools/plan.mjs 同构）
+import { planReminderForTurn } from "./agent-tools/plan.mjs"
 
 /** Manual-tier auto-turn digest domain (AGENT-LOOP.md §17 D-S6): organize-only.
  *  Injected per manual auto-turn run — writes/execute/spawns/questions are also
@@ -169,6 +171,22 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
       history.push({ role: "user", content: AUTO_REMINDER })
     }
 
+    // Plan-mode reminder cadence (D-CI4——cli run-stages.mjs:91-108 同序：稀疏 2 轮/满 5 轮/
+    // 新用户消息重置——限制不淡化)。位置 = injectEngineeringReminder 之前（CLI 同序）。
+    if (agent._planMode) {
+      const lastMsg = history.at(-1)
+      const realUserMsg = lastMsg?.role === "user"
+        && typeof lastMsg.content === "string"
+        && !lastMsg.content.startsWith("[System reminder:")
+        && !lastMsg.content.startsWith("[User interrupt:")
+      const newUserSince = realUserMsg && history.length > (agent._planReminderAtLen ?? 0)
+      const reminder = planReminderForTurn(agent, newUserSince)
+      if (reminder) {
+        agent._planReminderAtLen = history.length + 1
+        history.push({ role: "user", content: reminder, transient: true })
+      }
+    }
+
     // Engineering-mode transition reminder (CLI parity): covers TUI/panel toggles and
     // session resume — paths that bypass the eng tool's own _pendingReminders push.
     injectEngineeringReminder(agent)
@@ -242,6 +260,10 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
         agent._usageAtLen = history.length
       }
     }
+
+    // Warnings from this response + abnormal finish-reason reminder (D-CI9——cli
+    // agent.mjs:293 同位：interrupt/builtin 处理之后、toolCalls 分支之前)。
+    injectResponseReminders(agent, response)
 
     // ─── No tool calls ──────────────────────
     if (response.toolCalls.length === 0) {

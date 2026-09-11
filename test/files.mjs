@@ -68,4 +68,11 @@ export default [
   "test/advisor-refusal-accounting.test.mjs", // 群 A 批 A6（2026-09-11）：同步记账面拒绝登记——六类拒绝置位 + 记账零写 + builder 单源 + 对照零回归——T-MA6-1–9（ADVISOR-CONVERGENCE.md §16.1）
   "test/git-commit-pathspec.test.mjs", // 群 A 批 A9（2026-09-11）：commit `--only` 镜像——列文件提交（他批 staged 不混入）+ 空/空白 path 明确错误 + 无 path 全量零回归（真 git 子进程——slow 归册；TOOLS.md §11）
   "test/webview-input-history.test.mjs", // 群 A 批 A10（2026-09-11）：↑/↓ 契约——连续上溯/↓ 回落+草稿恢复/单行任意位置/多行边界门零劫持/IME 守卫/下拉让位——T-MA10-1..8（WEBVIEW.md §11.1）
+  "test/context-parity.test.mjs", // VSC-CONTEXT-PARITY 批（2026-09-11）：会话上下文注入面对齐——块序/尾块/缓存契约/plan 节律/响应提醒/skill 形态——T-CI-1~T-CI-11（14 条；AGENT-LOOP.md §17）
+  "test/tool-descriptions.test.mjs", // VSC-CONTEXT-PARITY 批（2026-09-11）：工具描述外部装载 25 档 .md 迁移——DESC 装载逐字/文件在位/内联零残留（全量）/打包面——T-TD-1~T-TD-4（TOOLS.md §12）
+  "test/activity-live-ux.test.mjs", // VSC-LIVE-UX 批（2026-09-12）：live 块流式跟滚 + 内容区高度 60px——块级 follow（近底 24px 让位/复钉 + 两层独立）+ 脏集 rAF 帧应用（节流重排不丢）+ 折叠/已移除 no-op + CSS 静态断言——T-LU1~T-LU6（WEBVIEW.md §13）
+  "test/activity-closure.test.mjs", // 活动区收口批（2026-09-12）：终态清退+归档落流（awaitingDigest 驻留/回收边界前/即时尾追/退出全归档/接管吞守卫/补桩直归档/reset 收窄）+ 块头字段（queued 位置·tool+cmd·turn 帧·elapsed 不设门）——T-CL1~T-CL8/T-CL10~T-CL13/T-CL17~T-CL19（WEBVIEW.md §14）
+  "test/status-line.test.mjs", // 活动区收口批（2026-09-12）：状态行字段级对齐——statusText 五 kind 两 locale/✦reasoning/turn N/M（旧段退役）/端差（scrolled 不做·ctx pct）+ onWait/索引/transport 发射点机检——T-CL21~T-CL24（WEBVIEW.md §14）
+  "test/child-permission.test.mjs", // 子代理审批面对齐批（2026-09-12）：child 审批门——ask 弹卡带归属/approve-deny 语义/AUTO 直通/轮中 approve-all/escalate sync+async（⏹ 与 Stop 两路释放）/promptId 路由/角色域零卡/无通道静默/depth-0 零回归/块头 ⏸+态词+i18n/R2 措辞锚/结构对表——T-CP1..T-CP19（AGENT-LOOP.md VSC §18；测试档登记不拆分）
+  "test/ledger.test.mjs", // LEDGER-SURFACE 批（2026-09-12）：台账可见面 VSC 面——语义同源单元组 + 跨端去重键 + item 形态（T107）+ webview 渲染（T108）+ post/送达门 + 接线机检 + 慢层 git 老化界值（T102）（ENGINEERING-MODE.md §2.30）
 ]

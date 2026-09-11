@@ -172,8 +172,10 @@ test("T-VG19 冻结拦截（executeToolBatches 集成）：射程内写在途被
   assert.ok(!allowed.includes("write refused"), "射程外写不拦")
   assert.equal(readFileSync(resolve(ws, otherRel), "utf8"), "ok\n", "对照写落地")
   assert.deepEqual(executed, [otherRel], "对照工具执行恰一次")
-  // AC-VG10 机判面：实现锚 grep（单一预闸点内冻结分支）
-  const execSrc = readSrc("../src/agent/execute-tools.mjs")
+  // AC-VG10 机判面：实现锚 grep（单一预闸点内冻结分支）——§18 C-11（2026-09-12）：
+  // preGateBlocked 已 verbatim 迁至 src/agent/tool-gates.mjs（execute-tools 500 硬限归位），
+  // 源读路径随迁改指新档。
+  const execSrc = readSrc("../src/agent/tool-gates.mjs")
   assert.ok(execSrc.includes("inflightDesignReviewConflict(agent, absPaths)"), "预闸调用点 grep 命中（两调用点共用同一 preGateBlocked）")
   assert.ok(execSrc.includes("write refused — design review") && execSrc.includes("D5 freeze window"), "拒绝文案锚实现面在位")
 })

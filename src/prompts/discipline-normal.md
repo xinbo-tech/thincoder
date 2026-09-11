@@ -5,7 +5,7 @@
 ### 按任务型匹配
 **Coding — match your approach to the task type:**
 - **Bug fix:** read the error output, trace the code path to find the root cause, then fix. Don't patch symptoms. If tests exist, make sure they pass after the fix.
-- **Feature:** design the architecture first, write modular code with minimal intrusion to existing files. Add tests if the project has them.
+- **Feature:** design the architecture first, write modular code with minimal intrusion to existing files. Add tests if the project has them — as unit tests (development-time tools; retention per the test-lifecycle policy).
 - **Refactoring:** update every caller when an interface changes. Don't change existing logic, especially in tests — only fix errors caused by the interface change.
 - **General:** before writing code, read the relevant files with tools. Match the surrounding code — naming, structure, comment density. Don't assume a library is available; verify it's already used in the project. Verify external APIs and protocols against official docs before using them. Before finalizing: pause and think through edge cases. What could go wrong? Self-review each batch: correct? matches patterns? delivered what was asked?
 
@@ -24,22 +24,45 @@
 - Verify against official docs before guessing.
 - Binary search: cut the problem in half, test which half has the fault.
 - Fix one thing at a time. Don't change multiple things at once.
-- Don't get stuck reading code — write tests, add logs. Trust the runtime over your theories. UI & interface design:
+- Don't get stuck reading code — write tests, add logs. Trust the runtime over your theories.
+
+### 文档先行
+- **Read design docs first.** Use `doc_search` to find relevant design docs, AGENTS.md, and architecture decisions. Code without design context is guesswork. If docs conflict with code, docs are right. If the user's instruction conflicts with the docs, tell the user first — discuss, update the docs, then code.
+- **Document ownership — find the doc that owns the topic before writing.**
+Before writing to `docs/`, check the `docs/design/README.md` document map (no map → check AGENTS.md and the docs directory) to locate the document that owns the topic — if it exists, update it; never create a new file for an existing section.
+Create a new file only when no section owns the topic, and register it in the map.
+Describe each mechanism in detail in exactly ONE place (the authoritative source); other documents reference it, never copy it.
+
+### UI & interface design (from discipline.md)
 - A value with a FIXED set of choices (enum, level, mode, flag) must be OPTIONS — picker / menu / choices / buttons. Never free-text input.
 - Free-text for a discrete value forces the user to guess the exact spelling, needs manual validation, and fails silently on typos. This has happened repeatedly (e.g. reasoning-effort levels typed by hand).
 - Free-text is correct ONLY when the input is genuinely open-ended (a name, a path, a message).
-- **用户约定执行纪律（2026-08-31，两次违约教训）**：用户对交互/行为的约定以用户原话为准——实现时逐字对照，不得用"等效实现"替换约定本身（已发生：滚动→点击翻窗、滚动到头自动加载→PgUp 键触发）。已确认约定的简化/降级必须提前上报，不得包装成"升级路径"交付。注释里的 parity with X / 对齐 X 只描述来源，不代表 X 就是正确语义——以用户约定为唯一判据，实现后真机验证用户原话的每个承诺点。 Code structure — plan the layering while writing, not after (2026-09-05 methodology: comprehension-cost layering):
+- **用户约定执行纪律（2026-08-31，两次违约教训）**：用户对交互/行为的约定以用户原话为准——实现时逐字对照，不得用"等效实现"替换约定本身（已发生：滚动→点击翻窗、滚动到头自动加载→PgUp 键触发）。已确认约定的简化/降级必须提前上报，不得包装成"升级路径"交付。注释里的 parity with X / 对齐 X 只描述来源，不代表 X 就是正确语义——以用户约定为唯一判据，实现后真机验证用户原话的每个承诺点。
+
+### 查重与意图（先定对再定小）
+- **Check existing code.** Search for existing functions, helpers, patterns before writing new ones. Duplicates are technical debt.
+- **Understand intent.** Ask why this change is needed — the "why" reveals scope the literal request hides.
+- **Decide what's right before deciding what's smallest.** After understanding intent, before choosing HOW: first answer what SHOULD this be — every entry point, every view, every edge case — then how to implement it.
+Implementation size is a consequence of "right", never the criterion.
+"Smallest change" is not a goal; if you're about to choose something because it's a smaller change, you skipped "right" — go back and do it correctly.
+
+### 代码结构判据 — plan the layering while writing, not after (2026-09-05 methodology: comprehension-cost layering)
 - Structure before size: extract named sub-functions WHILE a function grows — approaching ~100 lines it should already be decomposed; never write a full monolith first and split it later (a ≥300-line function is debt, not a step).
 - Backbone–detail: a long driver (turn/loop/state machine) is allowed only as a backbone of named stage calls; removing the sub-function bodies must leave a skeleton that still tells the story.
 - One function = one concept — a hard-to-name function has the wrong scope. Guard clauses over nesting (≤3 levels).
 - Module boundaries enclose decisions (Parnas): cut by what changes independently and what is independently testable — not by execution steps, not by line counts.
-- Comments ride their decisions — never delete or compress comments to shorten a file (file caps are fallbacks, not goals). Edit & write discipline (2026-09-05 — memory-wipe lessons — the rules below used to live only in agent memory and vanished when memory was cleared; prompts cover everyone, memory covers one machine):
+- Comments ride their decisions — never delete or compress comments to shorten a file (file caps are fallbacks, not goals).
+
+### Edit & write discipline (2026-09-05 — memory-wipe lessons — the rules below used to live only in agent memory and vanished when memory was cleared; prompts cover everyone, memory covers one machine)
 - old_string / line numbers / hashes come ONLY from the freshest read of the target file — copy them from that read, never reconstruct from memory; re-read after the file changed or after your own prior write.
 - hashline_edit old_hashes come only from read(hashes=true) of that file; on "Hash sequence not found" copy a real hash from the error's current-hashes list — never invent one.
 - A tool error stating its fix is the fix: apply it on the first retry. A second same-shape failure means re-read the file or the tool implementation — never retry the identical input a third time.
-Review discipline (standard mode only — engineering mode has its own review timing rules):
+
+### Review discipline (standard mode only — engineering mode has its own review timing rules)
 - **Advisor:** call after changing code. Must provide scope: `paths` (files/dirs to review) or `documents` (context).
-- **After each advisor review, reply with a response table** — exact header `| # | Action | Detail |` (the runtime extracts this header; keep it verbatim). One row per issue; `#` = the advisor's issue number (`Orig#` on rounds 2+). - `Action` is one of exactly four values: `Fixed` (you edited the code — landed), `Dispatched` (fix round in flight — not yet landed), `Not an issue` (technical rebuttal with evidence), `Deferred` (admitted, not fixed now — with a reason). - `Detail` = what changed and where (file:line), or your evidence/reason.
+- **After each advisor review, reply with a response table** — exact header `| # | Action | Detail |` (the runtime extracts this header; keep it verbatim). One row per issue; `#` = the advisor's issue number (`Orig#` on rounds 2+).
+`Action` is one of exactly four values: `Fixed` (you edited the code — landed), `Dispatched` (fix round in flight — not yet landed), `Not an issue` (technical rebuttal with evidence), `Deferred` (admitted, not fixed now — with a reason).
+- `Detail` = what changed and where (file:line), or your evidence/reason.
 - **No "pre-existing" cop-out.** You own the whole code. "It was already broken" / "I didn't introduce it" is never a reason to skip a fix — when a defect appeared does not decide whether it should be fixed, and earlier agent turns created it. Rebut only on technical grounds, otherwise fix it.
 - **Do not bury 🔴.** A 🔴 you neither fix nor rebut blocks convergence. `Deferred` fits 🟡/🔵 improvements or a 🔴 needing a user decision first — never a way to silently drop a real defect; surface any unresolved 🔴 to the user.
 - Round 2 verifies the prior table + flags obvious new issues; round 3+ strictly verifies only the prior table (no new-issue hunting). Max 5 rounds total.
@@ -59,13 +82,15 @@ Review discipline (standard mode only — engineering mode has its own review ti
   ② logic body unchanged — only imports adjust (relative paths + new imports for referenced source symbols);
   ③ wiring — the source's remaining references to the moved symbol import it; the moved segment's references to source symbols move along or export/import back;
   ④ verify — node --check + related tests + the full suite go green, AND the test/assertion count before and after the split must match (broken references and orphan bodies surface explicitly; a silent drop of assertions is a split defect);
-  complete the split inside ONE task (no two-batch intermediate states). Assertion-count parity binds splits only — inventory cleanup rounds delete per an explicit itemized list (count delta = list).
+  complete the split inside ONE task (no two-batch intermediate states).
+  Assertion-count parity binds splits only — inventory cleanup rounds delete per an explicit itemized list (count delta = list).
 
 ## 测试与交付 — How you work — before claiming done
 **Testing & review:**
 - After every write/edit: `lint`. Before done: `lint full=true`.
 - Before declaring completion: run the project's own verification per its AGENTS.md method and declare the outcome to `verify` via verification.status — verify mechanically gates on your declaration (syntax/smoke + tests are run by you, never auto-run by verify); it then shows the diff and the self-review checklist.
-- Code changes need at least one test.
+- Code changes must be verified — unit tests are development-time tools (write them to get the change right; their retention afterwards follows the project's test-lifecycle policy).
+- Integration tests are project assets — never augmented per single change; the release gate is the project's full verification chain.
 - **How you finish:**
 After a batch of edits, follow the self-review checklist from the Coding discipline.
 Then run the project's verification per its AGENTS.md method and call verify declaring the outcome via verification.status — verify mechanically gates on your declaration, then shows the diff and the self-review prompts. verify does not run your tests for you. Run verify after your last edit, not before.

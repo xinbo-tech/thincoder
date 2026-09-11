@@ -98,11 +98,35 @@ export const window = {
   showTextDocument: async (doc) => ({ document: doc, selection: null, revealRange: () => {} }),
   // tab groups (context tool) — safe no-op default
   tabGroups: { all: [] },
+  // Status bar (LEDGER-SURFACE batch 2026-09-12): items land in `window.statusBarItems`
+  // so tests can inspect text/tooltip/backgroundColor/show-hide after the fact.
+  statusBarItems: [],
+  createStatusBarItem: (alignment, priority) => {
+    const item = {
+      alignment, priority, text: "", tooltip: "", command: undefined, backgroundColor: undefined,
+      visible: false, disposed: false,
+      show() { item.visible = true },
+      hide() { item.visible = false },
+      dispose() { item.disposed = true; item.visible = false },
+    }
+    window.statusBarItems.push(item)
+    return item
+  },
 }
 
 export const commands = {
   registerCommand: () => ({ dispose: () => {} }),
   executeCommand: async () => undefined,
+}
+
+/** LEDGER-SURFACE（§2.30.3.5）：item 并立 / 警示底色（chat-panel.mjs 结构同款）。 */
+export const StatusBarAlignment = { Left: 1, Right: 2 }
+export class ThemeColor {
+  constructor(id) { this.id = id }
+}
+/** tooltip 载荷（明细行集 L2 行）——值承载，不渲染。 */
+export class MarkdownString {
+  constructor(value = "") { this.value = value }
 }
 
 export const env = {

@@ -110,10 +110,11 @@ test("锚#6 凭证不落文档驻留 discipline-engineering（逐字）", () => 
   assert.ok(de.includes("No values, no placeholders."), "锚#6 收束句缺失")
 })
 
-test("锚#7 调度器句驻留（Multi-Task 块——CLI=de / VSC=persona-engineering——各端断言自身宿主）", () => {
-  // 本端 Multi-Task 块含 VSC 端特有 R14 池规则段（persona-engineering.md 原地保留）——锚#7 断言本端宿主。
-  assert.ok(pe.includes("overlapping domains are queued by the scheduler, never hand-serialized"), "锚#7 调度器句缺失（VSC 宿主 persona-engineering R14 段）")
-  assert.ok(pe.includes(SQ_LITERAL), "锚#7 提交即走句缺失（VSC 宿主 persona-engineering）")
+test("锚#7 调度器句驻留（Multi-Task 块——CLI=de / VSC=de——各端断言自身宿主）", () => {
+  // 并行节去重（VSC-CONTEXT-PARITY 批 E-3）：单宿主 = discipline-engineering.md（与 CLI 同）——
+  // persona-engineering.md 副本已删除（pe 零残留由本档 T-PC-3 断言）。
+  assert.ok(de.includes("overlapping domains are queued by the scheduler, never hand-serialized"), "锚#7 调度器句缺失（宿主 discipline-engineering）")
+  assert.ok(de.includes(SQ_LITERAL), "锚#7 提交即走句缺失（宿主 discipline-engineering）")
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -342,11 +343,16 @@ test("§3.4 降级链②：common.md 缺失→同款警告（四槽全覆盖—�
   assert.strictEqual(readFileSync(target, "utf8"), bak, "快照恢复")
 })
 
-test("§3.4 降级链③：AGENTS.md 缺失=静默跳过（本端 [4] 层由 caller 承担——契约=空缺不警告）", () => {
-  // 端差异：VSC setup 无 loadProjectInstructions（AGENTS 不随扩展注入）——静默跳过 =
-  // prompt-overlays 场景表不含 [4] 行（无 AGENTS 槽文件——天然无警告）。
-  const overlays = read("src/prompt-overlays.mjs")
-  assert.ok(overlays.includes("[4] AGENTS/skills 由既有尾部"), "[4] 层注释契约在位")
+test("§3.4 降级链③：AGENTS.md 缺失=静默跳过（[4] 层真实注入——caller tail 契约）", () => {
+  // VSC-CONTEXT-PARITY 批修四：旧「[4] 层由调用面承担」宣告作废——[4] 层已真实落位
+  // （D-CI2：项目指令块 + skills 清单入 setup.mjs systemPrompt 尾）。契约三款：
+  // ① caller tail 真实存在（setup.mjs 注入面）；② 场景表仍无 AGENTS/skills 槽文件
+  // （四槽位矩阵零变——缺失即静默、无警告需求）；③ 缺失静默语义由 T-CI-2 机判
+  // （test/context-parity.test.mjs——AGENTS 缺 → 无 <untrusted_project_instructions>、零报错）。
+  const setup = read("src/agent/setup.mjs")
+  assert.ok(setup.includes("Project instructions (follow these as project conventions):"), "[4] 项目指令块注入缺失")
+  assert.ok(setup.includes("<untrusted_project_instructions>"), "[4] 项目指令块锚缺失")
+  assert.ok(setup.includes("formatSkillListing"), "[4] skills 清单尾块注入缺失")
   for (const files of Object.values(SCENARIO_SLOT_FILES)) {
     if (!files) continue
     assert.ok(files.every((f) => !/AGENTS|skills/i.test(f)), "场景表无 AGENTS/skills 槽——缺失即静默（无警告需求）")
@@ -450,4 +456,79 @@ test("T-RO5/T-RO6 反例+边界：旧三值句/旧相邻形态零残留（本端
     assert.ok(!doc.includes("（发起权在用户）→ 用户批准") && !doc.includes("(initiation stays with the user) → user approval"), `${name}: 旧相邻形态残留（防“追加两版”）`)
   }
   for (const lit of [...ROPE_CHAIN, ROPE_LABEL, ...ROPE_BULLET.split("\n")]) assert.ok(!/\d{4}-\d{2}-\d{2}|第\s*\d+\s*批|评审\s*#/.test(lit), `新增文本含维护者注: ${lit.slice(0, 26)}…`)
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 语料修复（VSC-CONTEXT-PARITY 批 R3——E-1a~f / E-2 / E-3 落位机判：T-PC-1~T-PC-3）。
+// 权威 = VSC 设计档 VSC-PROMPTS「语料修复」节（逐字表）；本端断言自身文本（多实现面纪律）。
+// ─────────────────────────────────────────────────────────────────────────────
+const DN_RESTORED_HEADINGS = [
+  "### 文档先行",
+  "### UI & interface design (from discipline.md)",
+  "### 查重与意图（先定对再定小）",
+  "### 代码结构判据 — plan the layering while writing, not after (2026-09-05 methodology: comprehension-cost layering)",
+  "### Edit & write discipline (2026-09-05 — memory-wipe lessons — the rules below used to live only in agent memory and vanished when memory was cleared; prompts cover everyone, memory covers one machine)",
+  "### Review discipline (standard mode only — engineering mode has its own review timing rules)",
+]
+
+test("T-PC-1 语料修复（修一）：两缺节 + 4 压平标题独占行；两合并行已拆（E-1a~f）", () => {
+  for (const h of DN_RESTORED_HEADINGS) {
+    assert.ok(dn.split("\n").includes(h), `标题未恢复为独占行: ${h}`)
+  }
+  // 缺节正文本体（来源①/② 关键子串——正文按字符串键控回填）
+  assert.ok(dn.includes("**Document ownership — find the doc that owns the topic before writing.**"), "文档先行节：ownership bullet 缺失")
+  assert.ok(dn.includes("check the `docs/design/README.md` document map"), "文档先行节：地图路径替换缺失")
+  assert.ok(dn.includes("Describe each mechanism in detail in exactly ONE place (the authoritative source); other documents reference it, never copy it."), "文档先行节：单一权威源句缺失")
+  assert.ok(dn.includes("- **Check existing code.** Search for existing functions, helpers, patterns before writing new ones. Duplicates are technical debt."), "查重与意图节：Check existing code 缺失")
+  assert.ok(dn.includes("- **Decide what's right before deciding what's smallest.**"), "查重与意图节：先定对再定小缺失")
+  assert.ok(dn.includes(`"Smallest change" is not a goal; if you're about to choose something because it's a smaller change, you skipped "right" — go back and do it correctly.`), "查重与意图节：收束句缺失")
+  // E-1e：合并行①拆 3 行（第 2 行无 bullet 前缀——CLI :99-101 同构）
+  assert.ok(dn.includes(
+    "- **After each advisor review, reply with a response table** — exact header `| # | Action | Detail |` (the runtime extracts this header; keep it verbatim). One row per issue; `#` = the advisor's issue number (`Orig#` on rounds 2+).\n" +
+    "`Action` is one of exactly four values: `Fixed` (you edited the code — landed), `Dispatched` (fix round in flight — not yet landed), `Not an issue` (technical rebuttal with evidence), `Deferred` (admitted, not fixed now — with a reason).\n" +
+    "- `Detail` = what changed and where (file:line), or your evidence/reason."
+  ), "E-1e：合并行未拆为 3 行")
+  // E-1f：合并行②拆 2 行
+  assert.ok(dn.includes(
+    "  complete the split inside ONE task (no two-batch intermediate states).\n" +
+    "  Assertion-count parity binds splits only — inventory cleanup rounds delete per an explicit itemized list (count delta = list)."
+  ), "E-1f：合并行未拆为 2 行")
+  // 压平残留零命中（标题不再并进正文行）
+  for (const residual of ["theories. UI & interface design:", "承诺点。 Code structure — plan the layering", "(file caps are fallbacks, not goals). Edit & write discipline", "timing rules):"]) {
+    assert.ok(!dn.includes(residual), `压平残留: ${residual}`)
+  }
+})
+
+test("T-PC-2 语料修复（修一边界）：编辑点结果行 ≤300 字符（标题不并进正文行）", () => {
+  const lines = dn.split("\n")
+  const keys = [
+    "### UI & interface design (from discipline.md)",
+    "### 代码结构判据 — plan the layering while writing, not after",
+    "### Edit & write discipline (2026-09-05",
+    "### Review discipline (standard mode only",
+    "- **用户约定执行纪律（2026-08-31，两次违约教训）**",
+    "- Comments ride their decisions —",
+    "- **After each advisor review, reply with a response table**",
+    "`Action` is one of exactly four values:",
+    "- `Detail` = what changed and where",
+    "  complete the split inside ONE task (no two-batch intermediate states).",
+    "  Assertion-count parity binds splits only —",
+  ]
+  for (const k of keys) {
+    const hits = lines.filter((l) => l.includes(k))
+    assert.equal(hits.length, 1, `编辑点行定位失败（应恰 1 行）: ${k.slice(0, 40)}`)
+    assert.ok(hits[0].length <= 300, `编辑点行 >300 字符（标题仍并进正文行?）：${hits[0].length}`)
+  }
+})
+
+test("T-PC-3 语料修复（修二）：E-2 三子句 + E-3 cancel 行迁入 de；pe 并行节零残留", () => {
+  for (const s of [
+    "   - 设计 = 对需求的检验——设计写不出来的地方，就是需求没说清的地方（回问，不自己补）。",
+    "   - **需求缺口停报链**：勘察发现需求说不通 / 与实现冲突 / 归属不明 → **停下打回主 agent**，不自行选一种解释往下写。",
+    "   - **写权**：设计档与需求档由 eng-designer 写作（含修订）；主 agent 记批次档、核验设计稿、发起评审。",
+  ]) assert.ok(de.includes(s), `E-2 子句缺失: ${s.slice(0, 24)}…`)
+  assert.ok(de.includes("Cancelling a running eng-coder is a last resort — its in-flight delivery dies unmerged and unaudited; verify the alarm with reliable checks and prefer scoped recovery first."), "E-3 cancel 行未迁入 de（单宿主）")
+  for (const s of ["Multi-Task", "Parallelize aggressively", "Cancelling a running eng-coder"]) {
+    assert.ok(!pe.includes(s), `E-3 去重未竟：persona-engineering.md 残留「${s}」`)
+  }
 })

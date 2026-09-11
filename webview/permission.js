@@ -21,6 +21,8 @@ function renderPatch(patch) {
 export function showPermissionRequest(m) {
   const el = document.createElement("div")
   el.className = "permission-prompt"
+  // §18 C-7：卡携 promptId（host 响应按 id 精确路由 / 释放清扫 permissionWithdrawn 按 id 移除）
+  if (m.promptId != null) el.dataset.promptId = String(m.promptId)
   el.setAttribute("role", "alert")
   el.setAttribute("aria-label", t("perm.wantsTo") + " " + m.tool)
   const argsPreview = m.args ? m.args.slice(0, 150) + (m.args.length > 150 ? "…" : "") : ""
@@ -34,7 +36,14 @@ export function showPermissionRequest(m) {
     diffHtml = '<div class="diff-preview"><div class="diff-header">' + escHtml(m.diff.path) + '</div>' + renderDiff(lines) + '</div>'
     diffBig = lines.filter((l) => l.type !== "same").length > 12
   }
-  let html = '<div class="permission-prompt-text">' + t("perm.wantsTo") + ' <code>' + escHtml(m.tool) + '</code>'
+  // §18 C-7（child permission gate）：owner 非空（child 卡）→ 首行 = `<owner> · <tool>`
+  // （R1 逐字格式——与活动块 label 同源，目视配对）；owner 空（depth-0 既有调用）→ 既有句零改。
+  let html = '<div class="permission-prompt-text">'
+  if (m.owner) {
+    html += '<span class="perm-owner">' + escHtml(m.owner) + '</span> · <code>' + escHtml(m.tool) + '</code>'
+  } else {
+    html += t("perm.wantsTo") + ' <code>' + escHtml(m.tool) + '</code>'
+  }
   if (argsPreview) html += '<br><span style="font-size:11px;opacity:0.7">' + escHtml(argsPreview) + '</span>'
   html += '</div>' + diffHtml
   // Large diffs are unreviewable in the cramped card — offer the native diff viewer.
@@ -48,17 +57,18 @@ export function showPermissionRequest(m) {
   el.querySelector(".view-diff")?.addEventListener("click", () => {
     vscode.postMessage({ type: "openDiff", diff: m.diff })
   })
+  const reply = (approved) => ({ type: "permissionResponse", approved, ...(m.promptId != null ? { promptId: m.promptId } : {}) })
   el.querySelector(".approve").addEventListener("click", () => {
     el.remove()
-    vscode.postMessage({ type: "permissionResponse", approved: true })
+    vscode.postMessage(reply(true))
   })
   el.querySelector(".approve-all").addEventListener("click", () => {
     el.remove()
-    vscode.postMessage({ type: "permissionResponse", approved: "approveAll" })
+    vscode.postMessage(reply("approveAll"))
   })
   el.querySelector(".deny").addEventListener("click", () => {
     el.remove()
-    vscode.postMessage({ type: "permissionResponse", approved: false })
+    vscode.postMessage(reply(false))
   })
   document.getElementById("messages").appendChild(el)
   el.scrollIntoView({ behavior: "smooth" })

@@ -284,17 +284,14 @@ export function reinjectAfterCompaction(history, agent, getAuto) {
     })
   }
 
-  // Re-inject permission mode reminder — getAuto() is the live flag (CLI parity), so a
-  // mid-turn approve-all that survives compaction re-injects the correct reminder.
+  // Re-inject AUTO mode reminder — getAuto() is the live flag (CLI parity), so a
+  // mid-turn approve-all that survives compression re-injects the reminder. D-CI6
+  // (VSC-CONTEXT-PARITY §17.3): the permission sentence retired — the CLI has no
+  // permission reminder, AUTO is the only mode line (agent.mjs loop head re-pushes it).
   if (getAuto()) {
     history.push({
       role: "user",
       content: "[System reminder: AUTO mode is active — all tool calls are automatically approved without asking.]",
-    })
-  } else {
-    history.push({
-      role: "user",
-      content: "[System reminder: Permission mode — confirm with the user before making changes. Describe what you plan to modify and wait for approval before executing file-changing tools.]",
     })
   }
 }

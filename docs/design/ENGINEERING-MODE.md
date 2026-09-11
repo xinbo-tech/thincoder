@@ -126,8 +126,9 @@
   `authorizeEngCoderDesignToken`）：`resolveDesignSlot` 按 designId 定位槽
   （`_engDesignTokens.get(designId) === token`；缺 designId → 恰一槽；多槽歧义/找不到
   → throw 并附持有 id 列表）；格式 + TTL fail-closed。通过 → child 以
-  `engDesignReviewed` 预授权（`_engDesignReviewed = true`——免逐写询问，豁免粒度仅
-  onPermissionRequest 阶段）。**错误信息即发现途径**——持久化恢复后父代理无 digest 可
+  `engDesignReviewed` 预授权 + spawn 侧 autoApprove 等效（`_engDesignReviewed = true`——
+  免逐写询问：权限询问阶段整体跳过；其余前置门（JSON 解析/未知工具/planMode/design-token）
+  先行且原样生效）。**错误信息即发现途径**——持久化恢复后父代理无 digest 可
   查 designId。
 - **角色互斥**：非工程 enum `["explore","plan","coder"]`、工程 enum
   `["explore","plan","eng-coder","eng-designer"]`（`modeRoleField`——schema 首道防线 + execute 运行
@@ -140,7 +141,7 @@
   （未知/已消费 = no-op 提示）。修正轮复用同槽（docs FIRST——落档再 spawn）；链未闭
   合（stalled/L2 非 clean/fix round 在途）不消费。
 
-## 6. 写文件门禁（dispatch gate——execute-tools.mjs `preGateBlocked`）
+## 6. 写文件门禁（dispatch gate——`src/agent/tool-gates.mjs` `preGateBlocked`；修正轮 #3）
 
 门禁在 plan-mode 检查之后、权限阶段之前（防绕过）；覆盖全部变更形态（写/删/改）。
 
@@ -193,6 +194,9 @@
 `test:full`）。逐字锚（guard 前缀句、角色互斥句、dispatch 文案）由 prompts 内容断言
 防回退（fail-when-unchanged）。
 
+新增台账可见面（LEDGER-SURFACE 批——机制与行文本权威 = CLI 仓 `ENGINEERING-MODE.md` §2.30，本节不重述）：
+本端 `test/ledger.test.mjs`（入册 `test/files.mjs`）覆盖解析/计数/老化/阈值/去重/item 形态（含 tooltip 与 hide）/webview 行渲染。
+
 ## 10. 已知取舍
 
 1. 父代理无全面写文件门禁——必须能写 docs/；越权靠提示词（拦截型门禁覆盖产品代码）。
@@ -203,6 +207,10 @@
 4. `verify` 收尾 guard 在工程模式同样被 token/门禁链取代（OPT-IN verifyGuard）。
 
 ## 变更记录（历史折叠——详见 git log）
+
+- 2026-09-12：台账可见面批（LEDGER-SURFACE）——本端增量面登记：状态栏 item（含原生 tooltip）+ chat 流文本行
+  （`ledgerNotice`）+ `src/ledger.mjs` / `src/extension/ledger-surface.mjs` / `webview/ledger-line.js`；
+  机制与行文本权威 = CLI 仓 `docs/design/ENGINEERING-MODE.md` §2.30（本端不重述）。
 
 - 2026-09-11：群 A 批（VSC-MIRROR-SWEEP）——§6 补「D5 冻结窗口预闸」bullet（下界定义句入行——同步面 3/3；见 `ADVISOR-CONVERGENCE.md` §16.2）。
 

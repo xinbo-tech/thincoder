@@ -1,9 +1,11 @@
 /**
- * skill.mjs — skillTool
- * Load a project skill from .thincoder/skills/.
+ * skill.mjs — skillTool（D-CI8：对齐 cli agent-tools/skill.mjs:23-46 注入形态——
+ * 去重 → `<skill-loaded>` XML 转义 + `_pendingReminders` 注入（user 消息——下回合可见）
+ * + 不截断（旧固定长度截断退役）+ 未命中同形错误句）。
+ * Loader 语义（含 name/SKILL.md）与列表格式复用 ../extension/skills.mjs（D-CI3）。
  */
-import { readFileSync, readdirSync, existsSync } from "node:fs"
-import { join } from "node:path"
+import { loadSkills, readSkill } from "../extension/skills.mjs"
+import { escapeXml } from "../agent/run-helpers.mjs"
 
 export const skillTool = {
   name: "skill",
@@ -21,32 +23,30 @@ export const skillTool = {
     },
     required: ["action"],
   },
-  async execute({ action, name }, ctx) {
-    const skillsDir = join(ctx.cwd, ".thincoder", "skills")
-    if (!existsSync(skillsDir)) return "(no .thincoder/skills/ directory in this project)"
-
-    if (action === "list") {
-      try {
-        const files = readdirSync(skillsDir, { recursive: true }).filter((f) => f.endsWith(".md"))
-        if (files.length === 0) return "(no skills found)"
-        return files.join("\n")
-      } catch (e) {
-        return `Error listing skills: ${e.message}`
-      }
+  async execute(args, ctx) {
+    const cwd = ctx.cwd ?? ctx.agent?.cwd
+    const skills = loadSkills(cwd)
+    if (args.action === "list") {
+      if (skills.length === 0) return "No project skills found in .thincoder/skills/."
+      return skills.map((s) => `- ${s.name}: ${s.description}`).join("\n")
     }
-
-    if (action === "load" && name) {
-      const safeName = name.replace(/[^a-zA-Z0-9_-]/g, "_")
-      const filePath = join(skillsDir, `${safeName}.md`)
-      if (!existsSync(filePath)) return `Skill "${name}" not found at .thincoder/skills/${safeName}.md`
-      try {
-        const content = readFileSync(filePath, "utf8")
-        return `Skill loaded: ${name}\n\n${content.slice(0, 8000)}`
-      } catch (e) {
-        return `Error loading skill: ${e.message}`
-      }
+    if (!args.name) return "Error: skill name required for 'load' action."
+    // Dedup: skip reloading if history already contains an <skill-loaded> block with the same name
+    // (history is the ledger; if it got compacted away we naturally won't find it here — correct behavior)
+    if (ctx.agent?.history?.some((m) => typeof m.content === "string" && m.content.includes(`<skill-loaded name="${args.name}"`))) {
+      return `Skill "${args.name}" is already loaded in this conversation — follow the instructions in the existing <skill-loaded> block above. Do not reload it.`
     }
-
-    return "Error: use action=list or action=load with name"
+    const content = readSkill(cwd, args.name)
+    if (!content) {
+      const available = skills.map((s) => s.name).join(", ")
+      return `Error: skill "${args.name}" not found. Available: ${available || "(none)"}`
+    }
+    // Inject the skill content into history (it will appear as the next user message) —
+    // XML-escaped, no truncation (CLI parity).
+    ctx.agent._pendingReminders = ctx.agent._pendingReminders ?? []
+    ctx.agent._pendingReminders.push(
+      `<skill-loaded name="${args.name}" source=".thincoder/skills/${args.name}.md">\n${escapeXml(content)}\n</skill-loaded>\n\nFollow the skill's instructions above for the current task.`
+    )
+    return `Skill "${args.name}" loaded. Instructions will appear in the next message.`
   },
 }

@@ -8,7 +8,7 @@
 import { readFile, writeFile } from "node:fs/promises"
 import { existsSync } from "node:fs"
 import { dirname } from "node:path"
-import { resolvePath, getOpenDoc, applyEditorEdit, normalizeEOL, stripBom, detectFileEol, majorityEol, hashLine, refreshMarkdownPreview, MAX_READ_LINES } from "./shared.mjs"
+import { DESC, resolvePath, getOpenDoc, applyEditorEdit, normalizeEOL, stripBom, detectFileEol, majorityEol, hashLine, refreshMarkdownPreview, MAX_READ_LINES } from "./shared.mjs"
 
 // DUAL-END-TRUNCATION (F-1, C 方案——2026-09-09，CLI file.mjs 逐字同构镜像)：read
 // 双端尾行数——窗口截断大文件时返回 头 N 行（N = 请求窗口，默认 MAX_READ_LINES）+ 省略注
@@ -19,14 +19,7 @@ export const READ_TAIL_LINES = 500
 export const readTool = {
   name: "read",
   readonly: true,
-  description:
-    "Read a text file. Returns numbered lines. Use offset/limit to page large files.\n" +
-    "Route to read instead of bash: `cat file` / `type file` / `node -e \"fs.readFileSync(...)\"` → read. Reading a file is a read — never shell out for it.\n" +
-    "Parameters:\n" +
-    "- path (required): File path, relative to cwd or absolute (alias: filePath)\n" +
-    "- offset: 1-based line number to start reading from\n" +
-    "- limit: Max lines to return (default 2000) — windows over files beyond that return head + `…(truncated: K lines in middle, use offset to continue)` + the file's real tail lines, so the file end is never hidden\n" +
-    "- hashes: Include SHA256 line hashes (for hashline_edit)",
+  description: DESC("read"),
   parameters: {
     type: "object",
     properties: {
@@ -79,13 +72,7 @@ export const readTool = {
 
 export const writeTool = {
   name: "write",
-  description:
-    "Write content to a file. Creates parent directories; overwrites existing file. " +
-    "write replaces the WHOLE file — read it first and confirm you intend to rewrite it entirely; for a small change use edit / insert_after. " +
-    "The file is atomic: it either writes completely or fails. Returns `Wrote <n> chars to <path>`.\n" +
-    "Parameters:\n" +
-    "- path (required): File path, relative to cwd or absolute (alias: filePath)\n" +
-    "- content (required): Full content to write",
+  description: DESC("write"),
   parameters: {
     type: "object",
     properties: {

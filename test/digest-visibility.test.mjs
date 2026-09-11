@@ -1,37 +1,24 @@
 /**
- * digest-visibility.test.mjs — 第 21 批（B6 消化轮起跑可见指示）机器验收。
- * 设计权威：`docs/design/WEBVIEW.md` §7.4（契约 · 用例 T-D1~T-D5 · AC-D1~D3）；
- * 批次档 `thincoder/docs/batches/2026-09-11-VSC-INDEX-PERCEPTION.md` §2。
- *
- * 两组手法（同文件——happy-dom 注册只影响 DOM 全局，extension 侧模块零 DOM 依赖）：
- * ① 主侧（T-D1~D3）：真 `suspensionSession` + 桩面板（posted 捕获）+ mock runTurn——起止
- *    两态时序与载荷；
- * ② webview 侧（T-D4/T-D5——AC-D2「驱动真 chat.js 模块」）：happy-dom 全量 id fixture +
- *    window message 事件直驱 chat.js 的 `case "digest"` → `#digest-status` 三态渲染。
+ * digest-visibility.test.mjs — 第 21 批 B6（起跑可见指示）+ 活动区收口批（2026-09-12 §14 C-9/C-10）机器验收。
+ * 设计权威：`docs/design/WEBVIEW.md` §7.4 + §14（用例 T-D1~T-D5 + T-CL14/T-CL15/T-CL16 · AC-D1~D3 + AC-CL2）；
+ * 批次档 `2026-09-12-VSC-ACTIVITY-CLOSURE.md` §2。手法：① 主侧 T-D1~D3/T-D6（真 suspension
+ * 驱动 + postDigestCap 直驱）；② webview 侧 T-D4/T-D5/T-D7/T-D8（真 chat.js + window message 直驱）。
+ * §14 改写：单元素跨轮复用 → **每轮独立元素** + 标签行 + cap（漂移回归）。
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
-import { setupWebview } from "./helpers/webview-env.mjs"
+import { setupWebview, installFullIndexFixture } from "./helpers/webview-env.mjs"
 import files from "./files.mjs"
 import { suspensionSession } from "../src/extension/suspension.mjs"
+import { postDigestCap } from "../src/extension/panel-callbacks.mjs"
 
 let cleanupEnv
-
-// chat.js 顶层 init 读全量 index.html id（webview-env 的 installChatFixture 只覆盖 25 个 id
-// 的 reducer 组——本档要引导真 chat.js 模块图，fixture 需与 index.html 对齐）。
-const INDEX_IDS = ("chat-container session-bar project-btn session-selector session-title session-arrow " +
-  "session-dropdown new-session-btn messages panels goal-panel task-panel toolbar status-line at-dropdown " +
-  "input-row file-input input attach-btn send-btn abort-btn paste-bar paste-badge controls-row model-btn " +
-  "reasoning-btn auto-btn advisor-btn eng-btn plan-btn settings-btn model-dropdown reasoning-dropdown " +
-  "settings-panel settings-close settings-body welcome-panel welcome-heading welcome-text " +
-  "welcome-provider-label welcome-provider welcome-key-label welcome-key welcome-save-btn welcome-skip-btn " +
-  "welcome-settings-btn").split(" ")
 
 before(() => {
   const env = setupWebview()
   cleanupEnv = env.cleanup
-  document.body.innerHTML = INDEX_IDS.map((id) => `<div id="${id}"></div>`).join("")
+  installFullIndexFixture() // chat.js 顶层 init 读全量 index.html id
 })
 
 after(() => {
@@ -39,9 +26,7 @@ after(() => {
   cleanupEnv()
 })
 
-// ─── ① 主侧：起止两态时序与载荷（AC-D1） ───────────────────────────────
-
-/** 桩面板 + 挂起会话 fixture（pending 两条 → 消化轮触发条件）。 */
+// ① 主侧：起止两态时序与载荷（AC-D1）
 function fixture() {
   const posted = []
   const panel = {
@@ -90,21 +75,38 @@ test("T-D3 异常收尾（F-C1/AC-D1）：runTurn 抛错 → end ok:false（star
   assert.deepEqual(msgs.map((m) => [m.status, m.ok]), [["start", undefined], ["end", false]], "不留「仍在消化」假象")
 })
 
-// ─── ② webview 侧：真 chat.js 渲染（AC-D2） ───────────────────────────
+test("T-D6 digest cap 发射（§14 C-10/AC-CL2）：postDigestCap 载荷逐字（auto/stop 两分支）+ 两调用点机检", () => {
+  const { panel } = fixture()
+  postDigestCap(panel, "auto", 12)
+  postDigestCap(panel, "stop", 34)
+  assert.deepEqual(digestMsgs(panel).filter((m) => m.status === "cap"), [
+    { type: "digest", status: "cap", mode: "auto", turns: 12 },
+    { type: "digest", status: "cap", mode: "stop", turns: 34 },
+  ], "载荷逐字（mode = auto/stop + turns）")
+  const src = readFileSync(new URL("../src/extension/panel-chat.mjs", import.meta.url), "utf8")
+  assert.equal((src.match(/postDigestCap\(panel, "auto", e\.turns\)/g) ?? []).length, 1, "auto 调用点在位")
+  assert.equal((src.match(/postDigestCap\(panel, "stop", e\.turns\)/g) ?? []).length, 1, "stop 调用点在位")
+})
 
+// ② webview 侧：真 chat.js 渲染（AC-D2 + AC-CL2）
 async function loadChat() {
-  await import("../webview/chat.js") // 顶层注册 window message 监听（引导真模块图）
+  await import("../webview/chat.js")
+  return await import("../webview/state.js")
 }
 
 const send = (data) => window.dispatchEvent(new window.MessageEvent("message", { data }))
-const digestEl = () => document.getElementById("digest-status")
+const statusEls = () => [...document.querySelectorAll(".digest-status")]
+const turnEls = () => [...document.querySelectorAll(".digest-turn")]
+const capEls = () => [...document.querySelectorAll(".digest-cap")]
 
-/** 逐字文案（设计 §7.4 表——两档 locales 值即为判据）。 */
-test("T-D4a 逐字文案落档（F-C1）：digest.* 三键两档 locales 与设计表逐字一致", () => {
+test("T-D4a 逐字文案落档（F-C1/AC-CL2）：digest.* 六键两档 locales 与设计表逐字一致", () => {
   const expect = {
     "digest.start": ["正在消化 ${n} 份后台报告…", "Digesting ${n} background report(s)…"],
     "digest.done": ["已消化 ${n} 份后台报告（${seconds}s）", "Digested ${n} background report(s) (${seconds}s)"],
     "digest.aborted": ["消化中断（${seconds}s）", "Digestion interrupted (${seconds}s)"],
+    "digest.turnLabel": ["自动回合：消化已完成的子代理报告…", "[auto-turn: digesting finished subagent reports…]"],
+    "digest.capAuto": ["自动回合：越过轮次上限，继续推进…", "[auto-turn: continuing past turn cap…]"],
+    "digest.capStop": ["自动回合在 ${turns} 轮处停止——部分消化；已完成的报告保留在历史中", "[auto-turn stopped at ${turns} turns — partial digest; finished reports stay in history]"],
   }
   const zh = JSON.parse(readFileSync(new URL("../locales/zh.json", import.meta.url), "utf8"))
   const en = JSON.parse(readFileSync(new URL("../locales/en.json", import.meta.url), "utf8"))
@@ -114,33 +116,83 @@ test("T-D4a 逐字文案落档（F-C1）：digest.* 三键两档 locales 与设�
   }
 })
 
-test("T-D4 webview 渲染（F-C1/AC-D2）：start / end(ok) / end(!ok) 三态原地更新（含 n / 秒）", async () => {
-  await loadChat()
-  digestEl()?.remove()
+test("T-D4 webview 渲染（F-C1/AC-CL2）：start 建标签行 + 本轮独立元素；end 本轮原地更新 + 边界/复位", async () => {
+  const { S, ctx } = await loadChat()
+  send({ type: "clearMessages" })
+  ctx.assistantLabeled = true // 预置真值——digest start 须复位（C-9③）
   send({ type: "digest", status: "start", n: 3 })
-  let el = digestEl()
-  assert.ok(el, "起跑即建 #digest-status 元素")
+  const label = turnEls().at(-1)
+  const el = statusEls().at(-1)
+  assert.ok(label, "起跑即建 `.digest-turn` 标签行")
+  assert.equal(label.textContent, "[auto-turn: digesting finished subagent reports…]", "标签文案（en locale——CLI 起跑 dim 行对位）")
+  assert.ok(el, "本轮独立 `.digest-status` 元素（id 退役）")
   assert.equal(el.parentElement.id, "messages", "流内元素（#messages 尾部）")
-  assert.equal(el.className, "digest-status")
   assert.equal(el.textContent, "Digesting 3 background report(s)…", "起跑态文案（en locale）")
+  assert.equal(S._digestBoundary, label, "本轮边界 = 标签行（C-4——归档落点）")
+  assert.equal(ctx.assistantLabeled, false, "assistantLabeled 复位（本轮 assistant 输出带一次回合标签）")
+  send({ type: "token", text: "digest token" }) // T-CL15 渲染面：本轮新块带 ❯ 标签（CLI ensureAssistantLabel 对位）
+  assert.ok(document.getElementById("messages").lastElementChild?.querySelector(".msg-label")?.textContent.includes("❯"), "本轮 assistant 块含 ❯ 标签")
+  assert.equal(document.getElementById("digest-status"), null, "旧 id 元素不复活（id 退役）")
   send({ type: "digest", status: "end", ok: true, ms: 1500 })
-  el = digestEl()
-  assert.equal(el.textContent, "Digested 3 background report(s) (1.5s)", "收尾态 = n（承自 start）+ 秒（ms/1000 一位小数）")
+  assert.equal(statusEls().length, 1, "end 原地更新（不新增元素）")
+  assert.equal(el.textContent, "Digested 3 background report(s) (1.5s)", "收尾态 = n（承自 start）+ 秒")
   assert.ok(el.classList.contains("digest-done"), "成功态 class")
-  assert.equal(document.querySelectorAll("#digest-status").length, 1, "原地更新（不新增元素）")
+})
+test("T-D5 每轮独立元素（§14 C-9——漂移回归/AC-CL2）：两轮两对元素，第 2 轮位于第 1 轮输出之后；start 连发各成独立元素", async () => {
+  const { S } = await loadChat()
+  send({ type: "clearMessages" })
+  send({ type: "digest", status: "start", n: 2 })
+  const round1Status = statusEls().at(-1)
+  send({ type: "assistantMessage", text: "round1 digest output", timestamp: 1, idx: 1 })
+  const round1Output = document.getElementById("messages").lastElementChild
+  send({ type: "digest", status: "end", ok: true, ms: 900 })
+  assert.equal(round1Status.textContent, "Digested 2 background report(s) (0.9s)", "第 1 轮收尾留痕")
   send({ type: "digest", status: "start", n: 1 })
+  const round2Label = turnEls().at(-1)
+  const round2Status = statusEls().at(-1)
+  assert.equal(turnEls().length, 2, "两轮两条标签行")
+  assert.equal(statusEls().length, 2, "两轮两个状态元素（跨轮漂移消除——原缺陷：第 2 轮出现在第 1 轮输出上方）")
+  assert.ok(round1Output.compareDocumentPosition(round2Label) & Node.DOCUMENT_POSITION_FOLLOWING, "第 2 轮元素位于第 1 轮输出之后（DOM 序断言）")
+  assert.notEqual(round2Status, round1Status, "非同一元素（每轮独立）")
   send({ type: "digest", status: "end", ok: false, ms: 800 })
-  el = digestEl()
-  assert.equal(el.textContent, "Digestion interrupted (0.8s)", "中断态文案（ok:false）")
-  assert.ok(el.classList.contains("digest-failed"), "中断态 class")
+  assert.equal(round2Status.textContent, "Digestion interrupted (0.8s)", "中断态文案（ok:false）")
+  assert.ok(round2Status.classList.contains("digest-failed"), "中断态 class")
+  assert.equal(round1Status.textContent, "Digested 2 background report(s) (0.9s)", "旧轮元素文本不被覆盖（漂移回归）")
+  assert.equal(S._digestBoundary, round2Label, "边界随最新轮覆盖（C-4）")
+  send({ type: "digest", status: "start", n: 4 })
+  send({ type: "digest", status: "start", n: 5 })
+  assert.equal(statusEls().length, 4, "连发 start 不复用（各成独立元素）")
+  send({ type: "digest", status: "end", ok: true, ms: 100 })
+  assert.equal(statusEls().at(-1).textContent, "Digested 5 background report(s) (0.1s)", "end 更新最近未结本轮元素")
+  assert.equal(statusEls().at(-2).textContent, "Digesting 4 background report(s)…", "更早未结元素不被误更新")
 })
 
-test("T-D5 幂等（F-C1/AC-D2）：重复 start（合并轮连发）→ 单元素原地更新", async () => {
-  await loadChat()
-  digestEl()?.remove()
-  send({ type: "digest", status: "start", n: 2 })
-  send({ type: "digest", status: "start", n: 5 })
-  assert.equal(document.querySelectorAll("#digest-status").length, 1, "单元素（不重复建）")
-  assert.equal(digestEl().textContent, "Digesting 5 background report(s)…", "更新为最新 n")
+test("T-D7 cap 行 + 边界清空（§14 C-10/C-4/AC-CL2）：auto dim / stop warn 两档；suspension·清屏清边界", async () => {
+  const { S } = await loadChat()
+  send({ type: "clearMessages" })
+  send({ type: "digest", status: "cap", mode: "auto", turns: 12 })
+  let cap = capEls().at(-1)
+  assert.ok(cap, "cap 行创建")
+  assert.equal(cap.textContent, "[auto-turn: continuing past turn cap…]", "auto 档文案（dim）")
+  assert.ok(!cap.classList.contains("digest-cap-stop"), "auto = 基础档（dim）")
+  send({ type: "digest", status: "cap", mode: "stop", turns: 34 })
+  cap = capEls().at(-1)
+  assert.equal(cap.textContent, "[auto-turn stopped at 34 turns — partial digest; finished reports stay in history]", "stop 档文案（turns 注入）")
+  assert.ok(cap.classList.contains("digest-cap-stop"), "stop = warn 档 class")
+  send({ type: "digest", status: "start", n: 1 })
+  assert.ok(S._digestBoundary, "start 置边界")
+  send({ type: "suspension", active: true, running: 0, queued: 0, pending: 0, done: 0 })
+  assert.equal(S._digestBoundary, null, "suspension 消息清边界（C-4）")
+  send({ type: "digest", status: "start", n: 1 })
+  send({ type: "clearMessages" })
+  assert.equal(S._digestBoundary, null, "clearMessages 清边界（C-4）")
+  assert.equal(capEls().length, 0, "清屏随清（流内元素语义）")
+})
+
+test("T-D8 接线机检（AC-CL2）：本档在册 + `.digest-turn`/`.digest-cap` 样式族在位", () => {
   assert.ok(files.includes("test/digest-visibility.test.mjs"), "本档已登记 test/files.mjs")
+  const css = readFileSync(new URL("../webview/base.css", import.meta.url), "utf8")
+  assert.match(css, /\.digest-turn\s*\{/, "`.digest-turn` 样式族在位")
+  assert.match(css, /\.digest-cap\s*\{/, "`.digest-cap` 样式族在位")
+  assert.match(css, /\.digest-cap\.digest-cap-stop\s*\{/, "stop 档（warn）样式在位")
 })

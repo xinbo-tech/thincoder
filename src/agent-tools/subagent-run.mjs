@@ -13,6 +13,7 @@
  */
 import { shouldAutoResume, mergeChildMutations } from "./subagent-async.mjs"
 import { applyTurnFrame } from "../agent/run-helpers.mjs"
+import { makeChildPermission } from "./child-permission.mjs" // §18 C-2：child 权限通道（2026-09-12）
 
 export async function runChild(entry, { parent, ctx, cwd, runAgent, role, subId, maxTurns, childInput, provider, designId, task, asyncFlag, childSignal, batchDoc = null }) {
       let output = ""
@@ -51,10 +52,12 @@ export async function runChild(entry, { parent, ctx, cwd, runAgent, role, subId,
         engState: { enabled: parent.config?.agent?.engineering ?? false },
         // §18 D-E3 task-domain authorization (spawn-time): the design token was
         // verified above — approved design + spawn task = authorization for the
-        // child's writes. The exemption granularity is ONLY the permission/approval
-        // stage (autoApprove equivalent — the child never pops a per-write panel):
-        // JSON parse / unknown tool / planMode / design-token gates run BEFORE the
-        // permission stage in execute-tools and stay fully effective (T-E14).
+        // child's writes. The stage exemption belongs to the eng-coder only (C-3: its
+        // autoApprove stays true — that child never pops a per-write panel); every other
+        // role now inherits the live AUTO flag instead (C-3 below). The exemption is
+        // stage-limited by construction: JSON parse / unknown tool / planMode /
+        // design-token gates run BEFORE the permission stage in execute-tools and stay
+        // fully effective (T-E14).
         engDesignReviewed: role === "eng-coder", // token verified above → child may write files
         // §2.22.3（第 5 批）：批次档绑定随 run opts 进 setup（→ `agent._batchDoc`，batch_segment 取用）。
         batchDoc,
@@ -84,6 +87,13 @@ export async function runChild(entry, { parent, ctx, cwd, runAgent, role, subId,
           // §19.5 D-M6: async 条目持条目级 controller signal（cancel 定向 abort——只停该
           // 条目）；sync 路径（无 entry）保持共享 signal（childSignal）原样（既有语义）。
           const childSig = entry ? (entry.controller?.signal ?? childSignal) : childSignal
+          // §18 C-2（child permission gate）：写权 child（coder/eng-designer）手动档挂父面板
+          // 权限通道——owner 归属 + 定向 signal（⏹/cancel 释放）；eng-coder 保持零弹卡（C-3
+          // 恒真 autoApprove 不达权限阶段）、explore/plan 只读不配通道；无父通道（headless/
+          // AUTO 构建期）→ helper 返 null → 省略该键（静默直通——T-CP15）。
+          const childPermission = (role === "coder" || role === "eng-designer")
+            ? makeChildPermission({ ctx, id: subId, role, model: provider?.model ?? null, signal: childSig })
+            : null
           const result = await runAgent(provider, cwd, childInput, {
             onToken: (t) => { output += t; panel({ kind: "text", text: t }) },
             onReasoning: (r) => panel({ kind: "think", text: r }),
@@ -92,7 +102,8 @@ export async function runChild(entry, { parent, ctx, cwd, runAgent, role, subId,
               // 在流式回调处顺手记最后工具名+args 单字段进池条目——observe 读它当"当前工具"
               //（判推进 vs 卡死——卡在哪个工具上一眼可见）。args 截断（N2——非全量）。
               if (entry) entry._currentTool = { name, args: (JSON.stringify(args) || "").slice(0, 200) }
-              panel({ kind: "tool", text: name + " " + (JSON.stringify(args) || "").slice(0, 120) })
+              // §14 C-11①：结构化 tool/cmd（webview 块头 `${tool} — ${cmd ≤60}`；无 cmd 仅 tool）
+              panel({ kind: "tool", text: name + " " + (JSON.stringify(args) || "").slice(0, 120), tool: name, cmd: typeof args?.command === "string" ? args.command : undefined })
             },
             onToolResult: (name, text) => panel({ kind: "tool", text: "→ " + String(text ?? "").slice(0, 80).replace(/\n/g, " ") }),
             // §18 visibility (2026-09-03 可见性补齐, CLI parity — 两边都修): the child's
@@ -120,10 +131,14 @@ export async function runChild(entry, { parent, ctx, cwd, runAgent, role, subId,
               turnBase = t // 段前累计 → 下一续跑段的种子
               applyTurnFrame(entry, t, mt) // 帧 → 池条目（entry 空 = sync 路径 → no-op）
               if (entry) entry.childAgent = sink.agent ?? entry.childAgent
+              // §14 C-11③：逐轮进展帧上屏（webview 区头 turn N/M 实时——新通道）
+              ctx.callbacks?.onSubagent?.({ id: subId, role, status: "turn", turn: t, maxTurns: mt })
             },
             onComplete: () => {},
             onQuestion: ctx.callbacks?.onQuestion ?? null,
-          }, childSig, true, { ...baseOpts, resume, ...(resume ? { history: sink.history, _turnSeqBase: turnBase } : {}) })
+            // §18 C-2：写权 child 的权限通道（helper 返 null → 键省略——既有语义零回归）
+            ...(childPermission ? { onPermissionRequired: childPermission } : {}),
+          }, childSig, role === "eng-coder" ? true : (() => ctx.getAuto?.() ?? false), { ...baseOpts, resume, ...(resume ? { history: sink.history, _turnSeqBase: turnBase } : {}) })
 
           // §19.5 D-M6 (advisor round 2 #4): cancel 与完成竞态的统一终态——runAgent 返回后
           // 若条目已被 cancel（完成瞬间点击/模型 cancel 竞态），走 cancelled 分支：不 merge
@@ -135,8 +150,9 @@ export async function runChild(entry, { parent, ctx, cwd, runAgent, role, subId,
 
           // R22 (D-R22b 降级口径 — 实测: 现有 onSubagent/状态事件不携 turn): 池条目
           // (entry) 的终态通知顺带 final turn/maxTurns 快照 — webview 冻结身份头
-          // "[✓ key · … · done Ns · turn n/max]" 用它; 逐轮跳动需新通道 — 不建 (见
-          // ARCHITECTURE.md R22 节实现记录)。同步 spawn (无 entry) 不带 → 无 turn 段。
+          // "[✓ key · … · done Ns · turn n/max]" 用它; **逐轮跳动新通道已建**（§14 C-11③：
+          // onAgentTurn → status:"turn" 帧上屏——本批收口）。同步 spawn (无 entry) 不带终值
+          // 快照 → 无 turn 段（逐轮帧仍随 onAgentTurn 发）。
           ctx.callbacks?.onSubagent?.({
             id: subId, role, status: terminalStatus(),
             ...(entry ? { turn: entry.turn ?? 0, maxTurns: entry.maxTurns ?? 0 } : {}),

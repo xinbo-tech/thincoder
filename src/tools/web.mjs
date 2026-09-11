@@ -6,7 +6,7 @@
  */
 
 import { proxyFetch } from "../proxy.mjs"
-import { isPrivateHost } from "./shared.mjs"
+import { DESC, isPrivateHost } from "./shared.mjs"
 import { URL } from "node:url"
 // §14 D-TF3（2026-09-04）：网络失败错误文本追加 proxy 提示——纯文本提示行，不自动路由（2026-08-31 裁定：proxy 显式传不自动应用）
 const PROXY_HINT = "network failure — retry with proxy: 'http://host:port' if the target is blocked"
@@ -43,13 +43,7 @@ async function fetchTavily(query, limit, ctx, proxyUri) {
 export const websearchTool = {
   readonly: true,
   name: "websearch",
-  description:
-    "Search the web. Returns result titles, URLs, and snippets.\n" +
-    "Parameters:\n" +
-    "- query (required): Search query\n" +
-    "- limit: Max results (default 8)\n" +
-    "- proxy: http://host:port explicit proxy (optional) — use ONLY when passed; no proxy = direct. config.json proxy is NOT auto-applied (2026-08-31 ruling); Bing/foreign sites usually need a proxy, domestic targets don't\n" +
-    "Notes: Bing's index is noisy for technical queries — if a first search returns irrelevant results, DO NOT retry the same query. Configure a search MCP tool (e.g. glm-websearch) for technical lookups; websearch is the fallback. Call the memory tool (action: search) first — the answer may already be in a previous session. Follow up with fetch to read full pages from the results.",
+  description: DESC("websearch"),
   parameters: {
     type: "object",
     properties: {
@@ -94,11 +88,7 @@ export const websearchTool = {
 export const fetchTool = {
   readonly: true,
   name: "fetch",
-  description:
-    "Fetch a URL and return its content as text. Use after websearch to read full documents. Timeout: 20 seconds.\n" +
-    "Parameters:\n" +
-    "- url (required): http/https URL\n" +
-    "- proxy: http://host:port explicit proxy (optional) — use ONLY when passed; no proxy = direct. config.json proxy is NOT auto-applied (2026-08-31 ruling); pick per target",
+  description: DESC("fetch"),
   parameters: {
     type: "object",
     properties: {

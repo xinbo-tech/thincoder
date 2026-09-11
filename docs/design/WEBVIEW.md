@@ -35,14 +35,16 @@ CSS 布局规则落 `webview/base.css` 的 grid 行模板：
 - **活动区**：`#messages` 与 `#panels` 之间（`index.html`——`role="region"`）；**空区
   隐藏零高**（CSS `:empty`——零显隐 JS 机制）；自适应块内容、`max-height:32vh` 封顶 +
   区内自滚（`overflow-y:auto` + `overscroll-behavior:contain`）。
-- 子代理活动块为 `#subagent-activity` 直接子元素（区尾出生——**全程不移动**——折叠
-  原地——**无 DOM move / 落流**）；`#messages` 内零 `.sub-block`（150 块裁剪只数会话
-  内容——`trimOldMessages` 零改——§12.3 第 10 条）。
-- **区内保留上限**：live 不裁；折叠块上限 20（`MAX_REGION_FOLDED`）——超限丢最旧折叠
-  块（簿记条目保留作幂等守卫——§12.3 第 4 条）。
-- 沿革（§13 变更记录）：2026-09-09 前段活动区回归（SESSION-ACTIVITY-REVISED）→ 2026-09-09
-  后段整体去加戏回退流尾（ACTIVITY-REWRITE-SIMPLE）→ 2026-09-11 本批活动区回归
-  （**干净地基**——旧加戏链不复活——§12.4 对照表）。
+- 子代理活动块为 `#subagent-activity` 直接子元素（区尾出生）。**2026-09-12 收口（§14）**：
+  区驻留期（live + awaitingDigest）不移动；**终态消化回收后归档落流 `#messages`**（普通
+  终态即时归档）——`#messages` 内 `.sub-block` = 归档块；150 块裁剪计数含 `.sub-block`
+  （`trimOldMessages` + 逐字一行）；懒历史锚选择器同含（`history.js`）。
+- **区内保留上限退役**（2026-09-12 §14 C-6）：区居民 = live + awaitingDigest（有界）——
+  `MAX_REGION_FOLDED`/`enforceRegionCap` 删除（原 §12.3 第 4 条由 C-6 取代）。
+- 沿革（§15 变更记录）：2026-09-09 前段活动区回归（SESSION-ACTIVITY-REVISED）→ 2026-09-09
+  后段整体去加戏回退流尾（ACTIVITY-REWRITE-SIMPLE）→ 2026-09-11 活动区回归
+  （**干净地基**——旧加戏链不复活——§12.4 对照表）→ 2026-09-12 收口批（**A 方案反转**：
+  终态清退 + 消化后落流——§14）。
 
 shell 结构 `webview/index.html`：`#chat-container` 内含 `#session-bar` / `#messages` /
 `#subagent-activity`（活动区——§12）/ `#panels`（goal/task 两个行面板）/ `#toolbar`（`#status-line` + `#input-row`(attach/
@@ -61,15 +63,17 @@ send/abort) + `#paste-bar` + `#controls-row`）+ `#settings-panel`（dialog）+
   state.js）
 - `md.js`（markdown 渲染）、`state.js`（单一 UI 状态 `S` + DOM 引用 `ctx` + `vscode`
   postMessage 桥）
-- `activity.js`（编排层——2026-09-11 §12：ensureBlock（块 append 活动区
-  `#subagent-activity` 区尾——全程不移动——终态幂等守卫返 null；`MAX_REGION_FOLDED`
-  区内保留上限） + applySubagentStatus 三态机（queued ⏳ 头含取消 ⏹/started 翻
-  running/其余 status 一律终态折叠（第 10 批修订——现行权威，见 §5/§5.1；补桩集 = §5.1.4 第 6 条）——lookup-only 绝不建块——settled 视同 done） + freeze
-  原地折叠 + resetActivity（全区清）+ freezeLiveBlocks（suspension 退出兜底）——导出
-  消费面：panels/chat/streaming）
+- `activity.js`（编排层——2026-09-11 §12 + **2026-09-12 §14 收口**：ensureBlock（块 append
+  活动区 `#subagent-activity` 区尾——终态幂等守卫返 null） + applySubagentStatus 三态机
+  （queued ⏳ 头含取消 ⏹/started 翻 running/**settled → awaitingDigest 驻留**/其余 status
+  终态折叠并归档落流（§14 C-1–C-3；第 10 批修订——现行权威，见 §5/§5.1；补桩集 = §5.1.4 第 6 条）——lookup-only 绝不建块） + 归档 archive（轮边界/尾追双落点） +
+  resetActivity（**只清区**——§14 C-7）+ freezeLiveBlocks（suspension 退出兜底——**区全体归档** §14 C-8）+ refreshLiveHeaders（2s 头刷新入口——
+  §14 C-11④；**实现后同步（2026-09-12）**：归属更正——实落 `activity.js:375`）——导出消费面：panels/chat/streaming）
 - `activity-view.js`（呈现叶——refreshBlock/updateStopButton/noteChunk——块头/状态词/⏹
-  ——区显隐/pin/ticker/awaiting·position·waiting 词已删（2026-09-11 §12：区显隐 = CSS
-  `:empty`；区 pin 在 ui.js 滚动族——本叶仍零逻辑改）——leaf：i18n only——不依赖核心）
+  ——区显隐/pin/ticker 已删（2026-09-11 §12：区显隐 = CSS `:empty`；区 pin 在 ui.js 滚动族）；
+  **2026-09-12 §14 增补**：awaiting 态词 · queued 信息（position/原因）· tool+cmd 状态区 ·
+  turn 进展（归属更正——**实现后同步（2026-09-12）**：原记 `refreshLiveHeaders` 在本叶，实落
+  `activity.js:375`——本叶不含该入口）——leaf：i18n only——不依赖核心）
 - `panels.js`（goal/task 面板 + 挂起态 + 桥路由；簿记 map 已删——handleSubagentMessage
   纯转发 applySubagentStatus——ACTIVITY-REWRITE-SIMPLE）
 - `send.js`/`loading.js`（输入门 + 永不锁挂起分支）、`mode-buttons.js`（ENG/GUARD/
@@ -100,53 +104,57 @@ reasoning, provider, images? } → extension _chat()
 中断/错误/后台态消息见 §7。回合外流（子代理活动/评审流/压缩状态/挂起状态）走
 toolPanel/subagent/compress/suspension 消息族（§7）。
 
-## 5. 子代理活动块（区内出生 · 原地折叠 · 区内保留——2026-09-11 活动区回归现行机制）
+## 5. 子代理活动块（区驻留 → 消化后落流——2026-09-12 收口现行机制）
 
 子 agent/consult/escalate/advisor-async 活动块**出生即 append 到固定活动区
 `#subagent-activity` 区尾**（messages 与输入之间——`ensureBlock`——label = channel 去掉
-`sub:` 前缀；**块全程不移动**——无 DOM move / 无落流 / 无锚插）。**生命周期只有 live →
-frozen 两态**——终态原地折叠（容器与 DOM 序号不变）。位置两度更替（活动区 → 流尾 →
-活动区），**两态机与块身份语义始终不变**；活动区布局与机制权威 = §12（布局承 §2）。
+`sub:` 前缀）。**生命周期 live → frozen 两态不变**——终态原地折叠后**消化回收即归档落流**
+（**2026-09-12 收口批 §14**：普通终态即时归档尾追；settled → awaitingDigest 驻留带提示、
+回收时归档至消化轮边界之前）。位置三度更替（活动区 → 流尾 → 活动区 → **消化后归档入流**），
+**两态机与块身份语义始终不变**；活动区布局与机制权威 = §14（布局承 §2；§12 为沿革与反转注）。
 
 - **live 块（区内）**：live 头 = `[▶ key · sync/async · model · Ns · turn]` + 状态词
-  （工具尾句 / thinking…——事件驱动——**无 1s ticker**）；open 可展开内容。⏹ 覆盖按钮：
+  （工具+参数摘要 / thinking…——事件驱动；**2026-09-12 §14 C-11**：tool chunk 结构化
+  `tool`/`cmd` → `${tool} — ${cmd ≤60}`；`status:"turn"` 帧实时 `turn N/M`；elapsed 经既有
+  2s `_panelTimer` 刷新——**无 per-block ticker**）；open 可展开内容。⏹ 覆盖按钮：
   running + pool 条目（started `pool:true` 区分同步 spawn——同步 spawn 无 ⏹——随首 chunk
   建块）。嵌套子标（`chunk.sub`——如 `explore#1`）行首 dim 归属照旧（appendAdvisorChunk
   原样——ui.js 零改动）。
 - **queued（区内 ⏳ 等待头——F-2 QUEUED-VISIBILITY 保留）**：排队 spawn 消息即建头
-  `[⏳ key]`——头只显 ⏳（position/waiting 状态词及词键删）——**挂取消 ⏹**（标签键
-  `sub.cancelQueueBtn`——取消沿既有 `cancelSubagent` 路径——协议零改——扩展端零动）；
-  started 到达 → 同块翻 running（⏹ 换 stop 标签）；cancelled（was:"queued"）→ 头移除
+  `[⏳ key]` + **2026-09-12 §14 C-11②：状态区补位置/原因**（slot → `排队中 · 位置 N（槽满等位）`；
+  依赖/冲突等位 → host detail 原文——载荷 `position`/`waiting`/`reason` 入 `meta.queueInfo`）
+  ——**挂取消 ⏹**（标签键 `sub.cancelQueueBtn`——取消沿既有 `cancelSubagent` 路径——协议零改）；
+  started 到达 → 同块翻 running（清 queueInfo；⏹ 换 stop 标签）；cancelled（was:"queued"）→ 头移除
   （从未启动——不冻结）。
-- **终态折叠（终态集合闭合——F-1）**：任何非 queued/started 的 status（done/settled/
-  error/cancelled/answered/terminated/failed…）一律视同终态原地折叠——class
-  sub-live→sub-frozen + open=false + ⏹ 移除 + 头词换 `[✓ key · done Ns]`（stopped = ⏹ 词、
-  error = 错误注记随头）。**settled 视同 done 即时折叠**；**answered 有块折叠、无块
-  no-op**；**终态/trim 路径 lookup-only**——never-born 终态防御 = §5.1.4 第 6 条桩集
-  精确成员表（第 10 批修订——现行权威）。
+- **终态折叠 + 归档落流（终态集合闭合——F-1；2026-09-12 §14 C-1/C-3 修订）**：任何非
+  queued/started 的 status 一律终态——class sub-live→sub-frozen + open=false + ⏹ 移除 +
+  头词换；**settled → awaitingDigest 驻留**（头词 `done · awaiting digestion` 对位——C-2；
+  不归档）；**其余终态（done/error/cancelled/answered/terminated/failed…）折叠后即时归档**
+  至 `#messages` 尾；**answered 有块折叠（无块 no-op）**；**终态/trim 路径 lookup-only**——
+  never-born 终态防御 = §5.1.4 第 6 条桩集精确成员表（补桩 = 折叠 + 立即归档——C-5）。
 - **幂等守卫（单 map 单守卫）**：S._subBlocks 键 = 频道名——map 有键且已终态 →
   ensureBlock 返 null（迟来消息丢弃——不复活不重建）；map 有键且 live → 返回既有元素
   （重复 started/queued 覆盖式刷新头词不重挂）；map 无键 → 建块 append 区尾。**新代接管
   / 终态补桩 / 诊断痕迹**为第 10 批语义（§5.1——本批零改）。
-- **区内保留上限（本批新增）**：live 块不裁（预算 = 并发子代理数 + 队列——池有界）；
-  **折叠块上限 `MAX_REGION_FOLDED = 20`**——新增折叠致超限 → 移除最旧折叠块（DOM 先
-  出；**簿记条目保留作幂等守卫**——与 150 裁同生命周期——resetActivity 才清）；元素被
-  移除频道的迟来消息一律丢弃（守卫语义不变）。
-- **resetActivity**（回合中止无挂起会话/会话清）：**清区全部条目（live + 折叠）+ 清
-  map** + 防御孤儿清——活动面整体复位（clearMessages 必经 → 新会话零残留）。折叠块不
-  再有"流内历史"角色——留史 = 会话流本体（消息 + digest 文本）；块本就不跨 reload
-  （SESSION-RESTORE-PARITY：live 块不入 history——消息流是历史）。
-- **会话退出 freeze 兜底**（suspension active:false + freeze:true）：freezeLiveBlocks
-  折叠残余 live 块（**原地折叠**——settled 已随消息即时折叠——此兜底只覆盖极窄竞态——
-  CLI freezeAllSubTasks 中断语义：不留悬空 live 块）。
-- **150 块 DOM 裁剪（口径与实现零改）**：`trimOldMessages` 计数 `#messages` 内
-  `.message`/`.tool-call`/`.advisor-block`——活动块不在其列（居住地 = 活动区）；
-  `#messages` 窗口只数会话内容。
+- **区内保留上限退役（2026-09-12 §14 C-6——原 §12.3 第 4 条/D-A2 废止）**：区居民 = live +
+  awaitingDigest（预算 = 并发子代理数 + 队列——池有界 + 回收即清）；`MAX_REGION_FOLDED` /
+  `enforceRegionCap` 删除；簿记守卫语义不变（终态条目保留作幂等守卫——resetActivity 才清）。
+- **resetActivity**（回合中止无挂起会话/会话清；2026-09-12 §14 C-7 收窄）：**只清区子树
+  （live + awaitingDigest）+ 清 map** + 区子树内防御孤儿清——流内归档块（会话历史）不动；
+  `clearMessages` = `#messages` 全清（归档块随清）+ 本函数。块不跨 reload
+  （SESSION-RESTORE-PARITY：块不入 history——消息流是历史）。
+- **会话退出 freeze 兜底**（suspension active:false + freeze:true；2026-09-12 §14 C-8）：
+  `freezeLiveBlocks` → **区全体归档**（live → 折叠；awaitingDigest → 归档；尾追）——
+  host 既定注释语义「补发 done 冻结：随会话退出折叠进流」（suspension.mjs:328-330）的兑现；
+  CLI freezeAllSubTasks 中断语义：不留悬空块。
+- **150 块 DOM 裁剪（2026-09-12 §14 修订——T-CL9）**：归档后块在 `#messages`——
+  `trimOldMessages` 计数选择器含 `.sub-block`（归档块随窗出窗）；懒历史锚选择器同含
+  （`history.js` 两处）；区驻留块不计（不在其容器）。
 - **report preview / appendPreview 已删**（F-3——折叠块自身 header + tail-3 dim 摘要即
-  呈现面——内容保留可展开）；**ticker / DOM move / 落流锚 / settle 驻留全无**（本批
-  明令不复活——逐项替代见 §12.4）。行面板（子代理行 + consult 计数/回复 preview）已随
-  SESSION-ACTIVITY-REVISED F-3 全撤（历史）；👥 计数由状态行 `_suspCounts` 承担
-  （susp.running/susp.digesting 键）。
+  呈现面——内容保留可展开）；**per-block ticker / 旧 DOM-move 锚链 / 旧 settle 驻留双态仍禁**
+  （2026-09-12 §14 C-1/C-3 为**新干净机制**——逐项对照见 §14.4；§12.4 为沿革名单）。
+  行面板（子代理行 + consult 计数/回复 preview）已随 SESSION-ACTIVITY-REVISED F-3 全撤
+  （历史）；👥 计数由状态行 `_suspCounts` 承担（susp.running/susp.digesting 键）。
 
 ### 5.1 出生投递与块身份——可靠性设计（2026-09-11 第 10 批）
 
@@ -227,7 +235,8 @@ frozen 两态**——终态原地折叠（容器与 DOM 序号不变）。位置
 1. **投递队列（主侧）**：`panel._wvOutbox`（数组，上界 200——溢出丢最旧 + 留痕）。任务可见性族消息经
    `postSubagentEvent(panel, payload)` 投递：`panel._wvReady === true` → 直投；否则入队。首接 = `onSubagent`。
    **族边界（评审 #10 收口）**：`suspension.mjs:95`（`reclaimDigestedBlocks`）的 `{type:"subagent", status:"done"}`
-   补发为**直投、不入队**——它是"已消化块折叠回收"通知（服务**既有**块的收尾，非出生事件；投递场景 = 活会话消化流，
+   补发为**直投、不入队**——它是 “已消化块归档回收”通知（webview 端行为 = 归档落流——
+   2026-09-12 §14；服务**既有**块的收尾，非出生事件；投递场景 = 活会话消化流，
    webview 就绪）；若入队跨暗窗口补投，会为**已消化**任务补出折叠桩，与 §5.1.9「已消化不回填」边界冲突。
 2. **就绪握手（既有机制，新增两拍）**：webview 脚本起手投 `{type:"webviewReady"}`（`chat.js:318`）→
    host `webviewReady` case（`panel-messages.mjs:396`）**新增**：`_wvReady = true`；两拍 **flush（保持入队序）→
@@ -243,15 +252,18 @@ frozen 两态**——终态原地折叠（容器与 DOM 序号不变）。位置
    （`sendHistoryPage` :159→:197）**之后同 tick** 调 `reassertLiveChildren(panel)`——**期望位置 = 活动区流尾**
    （与 §12「出生即区尾」同规；显式定序——2026-09-11 §12 修订：块出生地 = `#subagent-activity`，其余不变）。
 5. **新代接管（webview）**：`applySubagentStatus` 的 `started` + `pool:true` 分支——命中 map 中同名**已冻结**条目 →
-   **建新块并接管键**（旧冻结块以 DOM 留在区内作历史——2026-09-11 §12 修订；记 `takeover` 痕迹）。`queued` 分支维持现状（后续 `started` 接管）。
+   **建新块并接管键**（旧冻结块以 DOM 留在区内作历史——2026-09-11 §12 修订；**2026-09-12 §14 C-5 再修订**：
+   旧 awaitingDigest 块即时归档、已归档块在流内作历史；记 `takeover` 痕迹）。`queued` 分支维持现状（后续 `started` 接管）。
    **显式取舍**：接管后该频道的**迟到 chunk 会落进新块**——仅当"id 重复 + 两实例消息交错"才可见（id 单调由
    `SUBAGENT-ID-COUNTER-AGENT` 保证；接管是最后一道防御）。**代价登记在案，不静默**。
+   （**2026-09-12 §14 C-5③ 修正轮 #5 注**：旧代回收 `done` 命中新代 live 块的失明面 + 「旧代回收在途」
+   吞机制——全量见 §14 C-5③。）
 6. **终态补块（webview）——桩集 = 精确成员表**（有 map 条目者不受本表影响——既有折叠/守卫语义见 §5）：
    无 map 条目时按表判定；前置 = `role ∈ FAMILY_ROLES` + `id != null` + 频道名合法（不满足 → no-op，记 `drop-unknown-role`）：
 
    | status | 上下文 | 无块时 | 折叠 kind | 依据 |
    |---|---|---|---|---|
-   | done / settled | — | **补桩**（立即折叠 + 记 `late-terminal-stub`） | done | F-A2（settled 视同 done——§5） |
+   | done / settled | — | **补桩**（立即折叠 + **立即归档**（§14 C-5）+ 记 `late-terminal-stub`） | done | F-A2（settled 视同 done——§5） |
    | error | — | **补桩** | error（错误注记随头） | F-A2 |
    | cancelled | `was ≠ "queued"`（运行中取消，含 `was` 缺省） | **补桩** | stopped | F-A2 |
    | cancelled | `was === "queued"`（从未启动） | **不补**（no-op） | — | §5 既有裁决（头移除——从未启动不冻结） |
@@ -260,7 +272,7 @@ frozen 两态**——终态原地折叠（容器与 DOM 序号不变）。位置
    | answered | — | **不补**（no-op） | — | §5 既有裁决（有块折叠、无块 no-op——回复走 digest 逐字呈现） |
    | 前置不满足（role 不明 / 非 family 角色如 consult·escalate / id 缺失 / 非法频道） | — | **不补**（no-op） | — | D-4（非法/未知丢弃）；consult 键嵌 model——既有用例锁定 |
 
-   补桩头词 = `[✓/⏹ key · done/stopped …]`（error → 错误注记随头）。非终态不属本表：`started` + pool:true + family →
+   补桩头词 = `[✓/⏹ key · done/stopped …]`（error → 错误注记随头；2026-09-12 §14 C-5：补桩 = 折叠 + 立即归档——流内可见）。非终态不属本表：`started` + pool:true + family →
    出生/接管（第 5 条）；同步 spawn（`pool` 缺省）无块 → 随首 chunk 建块（§5 既有）；`queued` 出生 → 建 ⏳ 头（既有）。
    **§5 原句"终态/trim 路径 lookup-only 绝不建块"由此修订**（依据复核见 §5.1.2 的 R-1/R-3 行：
    `subagent` 族消息只会是本次会话的活事件；answered / queued-cancel 为表内显式不补桩行——§5 裁决保真）。
@@ -268,6 +280,8 @@ frozen 两态**——终态原地折叠（容器与 DOM 序号不变）。位置
    `late-terminal-stub` / `drop-unknown-role` 三类（范围 = 出生事件面——声明见 §5.1.9）；主侧
    `logEvent("ev:subdeliver", {...})` 记入队/出队/丢弃计数。
 8. **协议零新增**：不新增消息类型（复用 `subagent` 既有载荷形状）；`toolPanel` chunk 语义零变化（§7.2 表不动）。
+   （**2026-09-12 活动区收口批修订**：本条 = 当时批口径——该批新增 `statusText`/`turnFrame` 消息 +
+   `toolPanel` 增 `tool`/`cmd` 字段；§7.2 表随之补行（§14 C-11/C-12）。）
 
 #### 5.1.5 关键决策记录（含否决备选）
 
@@ -303,9 +317,9 @@ frozen 两态**——终态原地折叠（容器与 DOM 序号不变）。位置
 | # | 用例 | 输入 | 预期输出（可机判） | 需求回指 |
 |---|---|---|---|---|
 | T-V1 | 双 spawn 背靠背出生（22:32 基例） | 两条 `started`（不同 id，pool:true） | 2 个 live 块（`data-subname` 唯一）+ 各挂 ⏹ | F-A1/F-A3 |
-| T-V2 | 重名新代接管 | 冻结 `sub:eng-coder#4` 在场 → 新 `started` #4 | 新 live 块出生（map 键重绑）+ 痕迹 `takeover` + 旧块仍在区内冻结（2026-09-11 §12 修订） | F-A3 |
-| T-V3 | 清屏后再断言（含位置） | `clearMessages` → `historyPage`（末页 N 条）→ 再断言；存活池（1 running + 1 queued） | 重建块 `pool:true`（⏹ 在）+ async 词 + `startedAt` 保留；queued 得 ⏳ 头；**位置断言：重建块位于活动区（区尾——2026-09-11 §12 修订；#messages 保持零块）** | F-A4/F-A5 |
-| T-V4 | 终态补块（never-born） | 无块的 `sub:explore#7` 收 `done`（family + 合法 id） | 补出**已折叠**块 + 痕迹 `late-terminal-stub` | F-A2 |
+| T-V2 | 重名新代接管 | 冻结 `sub:eng-coder#4` 在场 → 新 `started` #4 | 新 live 块出生（map 键重绑）+ 痕迹 `takeover` + 旧块仍在区内冻结（2026-09-11 §12 修订；**2026-09-12 §14 C-5：旧块若为 awaitingDigest → 即时归档**） | F-A3 |
+| T-V3 | 清屏后再断言（含位置） | `clearMessages` → `historyPage`（末页 N 条）→ 再断言；存活池（1 running + 1 queued） | 重建块 `pool:true`（⏹ 在）+ async 词 + `startedAt` 保留；queued 得 ⏳ 头；**位置断言：重建块位于活动区（区尾——2026-09-11 §12 修订；2026-09-12 §14：本断言面 = 重建块入区——归档块可存于 `#messages`）** | F-A4/F-A5 |
+| T-V4 | 终态补块（never-born） | 无块的 `sub:explore#7` 收 `done`（family + 合法 id） | 补出**已折叠**块 + 痕迹 `late-terminal-stub`（**2026-09-12 §14 C-5：折叠 + 立即归档——采样点 = 流内**） | F-A2 |
 | T-V5 | 补块边界（不补桩行） | ① role 未知 ② id 缺失 ③ 非法频道名 ④ `answered` 无块 ⑤ `cancelled(was:"queued")` 无块 | 五者一律 no-op（零新块）；① 留 `drop-unknown-role`；④⑤ 保 §5 既有裁决（§5.1.4 第 6 条成员表不补桩行） | F-A2 边界 |
 | T-V6 | 暗窗口队列（主侧） | `_wvReady=false` 期投 2 出生 + 1 终态 → `webviewReady` | 按序 flush 3 条 + 其后再断言仅存活者；`ev:subdeliver` 计数对 | F-A1 |
 | T-V7 | 溢出与清队（边界） | 未就绪期投 >200 条 → view dispose | 丢最旧 + 留痕；dispose 后队列空（跨 view 不串味） | F-A1/NFR-A2 |
@@ -315,7 +329,8 @@ frozen 两态**——终态原地折叠（容器与 DOM 序号不变）。位置
 
 - **AC-A1**（F-A1/F-A3）= T-V1：两条不同 id `started` → `#subagent-activity > .sub-block.sub-live` 计数 == 2（采样点改区——2026-09-11 §12 修订）。
 - **AC-A2**（F-A3）= T-V2：重名 `started` → `S._subBlocks.get("sub:eng-coder#4")` 指向**新**元素且 `_subMeta.frozen === false`；`S._subTraceLog` 含 `takeover`。
-- **AC-A3**（F-A2）= T-V4/T-V5：never-born **补桩行**（done/error/运行中 cancelled/terminated/failed）→ 新块且 `_subMeta.frozen === true`、头词含 done/stopped/error；**不补桩行**（§5.1.4 第 6 条成员表：role 未知/非 family/id 缺失/非法频道/answered 无块/queued-cancel 无块）→ `#subagent-activity > .sub-block` 计数不变（采样点改区——2026-09-11 §12 修订）。
+- **AC-A3**（F-A2）= T-V4/T-V5：never-born **补桩行**（done/error/运行中 cancelled/terminated/failed）→ 新块且 `_subMeta.frozen === true`、头词含 done/stopped/error（**2026-09-12 §14 C-5：补桩 = 折叠 + 立即归档**）；
+  **不补桩行**（§5.1.4 第 6 条成员表：role 未知/非 family/id 缺失/非法频道/answered 无块/queued-cancel 无块）→ `#subagent-activity > .sub-block` 计数不变（采样点改区——2026-09-11 §12 修订）。
 - **AC-A4**（F-A4/F-A5）= T-V3：清屏后再断言 → 重建块 `_subMeta.pool === true` 且 `block.querySelector(".sub-stop-btn")` 非空；重建块位于**活动区**（位置断言——区尾；2026-09-11 §12 修订：块出生地 = `#subagent-activity`）。
 - **AC-A5**（F-A1/NFR-A2）= T-V6/T-V7：未就绪期投递全入队；就绪后按序 flush + 再断言；溢出丢最旧且 `ev:subdeliver` 记丢弃计数。
 - **AC-A6**（NFR-A1）= 机检：`src/**` 内 `postPoolSnapshot` / `SNAPSHOT_ROLES` grep 零命中（保持现状）。
@@ -328,7 +343,7 @@ frozen 两态**——终态原地折叠（容器与 DOM 序号不变）。位置
 - 不做已消化/settled 任务的回填重建（呈现面 = digest）。
 - 不改频道命名法 / chunk 路由 / 子标挂载。
 - 不重做池快照（`REMOVE-POOL-SNAPSHOT` 语义保持——见 §5.1.3 边界核对）。
-- 不改 150 窗裁剪与冻结幂等语义。
+- 不改 150 窗裁剪与冻结幂等语义（**2026-09-12 §14 修订：150 计数含 `.sub-block`——T-CL9；幂等语义不变**）。
 - **NFR-A2 痕迹范围声明（评审 #4 收口）**：痕迹集（§5.1.4 第 7 条）覆盖**出生事件面**——同名接管 / 无块终态补桩 /
   未知·非法 role 丢弃三类；`queued` 事件遇**已冻结键**（或 live-tombstone）的丢弃 = **陈旧/重名窗口**事件
   （新代可见性由后续 `started` 接管保证——§5.1.4 第 5 条；queued 分支维持现状）——不补痕
@@ -352,11 +367,13 @@ frozen 两态**——终态原地折叠（容器与 DOM 序号不变）。位置
   session-bar 显示自动占位（`Session N`），生成完成后经 sessions 刷新更新标题。
 - **模型选择 UI**：主下拉列 provider 行 + hover flyout 子菜单选模型（两级菜单——
   hover 展开 provider 的模型表）；底部含 add/remove/key 管理入口。
-- **挂起 UI**：settle 视同 done 即时折叠（§5——无驻留无锚插——digest done 补发被幂等
-  守卫吞——惰性 no-op）；状态行（⏳ 后台 N 子代理 + 待消化计数——`_suspCounts`——子代
-  理计数徽标已撤）；输入框永不锁（loading.js）；send 拦截保留
-  （`isRunning`——Enter/发送按钮拒发——输入框不禁——可继续录入；拒发可见提示——第 28 批 §9）。Stop 只在 running 显
-  （susp 纯池跑不显——子代理停止靠区内逐块 ⏹——F-6）。
+- **挂起 UI**：**2026-09-12 §14 修订**——settled → awaitingDigest 驻留（带提示）；
+  digest 回收 → 归档落流；会话退出 = 区全体归档（§14 C-2/C-3/C-8）；digest 轮标签/状态
+  元素见 §14 C-9/C-10。状态行（⏳ 后台 N 子代理 + 待消化计数——`_suspCounts`——子代理
+  计数徽标已撤）；输入框永不锁（loading.js）；send 拦截保留（`isRunning`——Enter 拒发——
+  输入框不禁——可继续录入；拒发可见提示——第 28 批 §9）；**Send 按钮 running 期隐藏**
+  （§14 C-14——F-6 同族派生，2026-09-12）。Stop 只在 running 显（susp 纯池跑不显——
+  子代理停止靠区内逐块 ⏹——F-6）。
 - 交互控件按钮（mode-buttons.js）：ENG / ADVISOR(guard) / AUTO / PLAN 状态反射。
 
 ## 7. 消息协议（webview ↔ extension）
@@ -390,16 +407,26 @@ frozen 两态**——终态原地折叠（容器与 DOM 序号不变）。位置
 
 | 消息 | 方向 | 载荷/语义 |
 |------|------|-----------|
-| `toolPanel` | ext → wv | `{ type, name, kind, text, round, model, sub }`——活动流 chunk（advisor/子代理/consult/escalate）；`kind` = start/think/text/tool；`sub` = 嵌套子标（string chunk 分支恒 undefined——§5 陷阱注） |
-| `subagent` | ext → wv | `{ type:"subagent", ...info }` 展开透传——started（池条目带 `pool: true`）/settled/done/error/cancelled 终态 + turn/maxTurns 终值快照 |
+| `toolPanel` | ext → wv | `{ type, name, kind, text, round, model, sub }`——活动流 chunk（advisor/子代理/consult/escalate）；`kind` = start/think/text/tool；`sub` = 嵌套子标（string chunk 分支恒 undefined——§5 陷阱注）；**2026-09-12 增 `tool`/`cmd`**（工具名 + 参数摘要——无则不携；§14 C-11①/C-12 #3——修正轮 #3） |
+| `subagent` | ext → wv | `{ type:"subagent", ...info }` 展开透传——started（池条目带 `pool: true`）/settled/done/error/cancelled 终态 + turn/maxTurns 终值快照；**2026-09-12 增 `status:"turn"`**（`{id, role, turn, maxTurns}`——逐轮进展帧；§14 C-11③/C-12 #4——修正轮 #3） |
 | `cancelSubagent` | wv → ext | `{ id, role }`——⏹ 点击路由 → 池条目定向 abort（role 交叉校验防陈旧按钮误停；未知 no-op；advisor role 复用同路由） |
 | `batchPermissionResponse` | wv → ext | approveAll / oneByOne / deny |
+| `permissionRequest` | ext → wv | `{ tool, args, diff, owner, promptId }`——逐项权限卡；`owner` = 子代理归属标签（`<role>#<id>` / `escalate <tag> #<id>`——depth-0 为 null）；`promptId` = 响应匹配键（AGENT-LOOP §18 C-4） |
+| `permissionResponse` | wv → ext | `{ approved, promptId }`——按 promptId 精确匹配队列条目（无 promptId 回退队头——旧 webview）（§18 C-5） |
+| `permissionWithdrawn` | ext → wv | `{ promptId }`——host 侧释放（中止 / approve-all 连带）→ 移除对应卡（§18 C-6） |
+| `subagentApproval` | ext → wv | `{ id, role, model?, tool }`——审批态（tool=null 清除）→ 块头 `⏸` + `等待审批: <tool>`（§18 C-8） |
 | `compress` | ext → wv | start/done/failed/fallback 四态（压缩状态行） |
-| `digest` | ext → wv | `{ status:"start"|"end", n, ok?, ms? }`——消化轮起跑指示（§7.4——第 21 批） |
+| `digest` | ext → wv | `{ status:"start"|"end", n, ok?, ms? }`——消化轮起跑指示（§7.4——第 21 批）；**2026-09-12 增 `status:"cap"`**（`{mode:"auto"|"stop", turns}`——turn-cap 部分消化行；§14 C-10/C-12 #5——修正轮 #3） |
 | `suspension` | ext → wv | 挂起态行/冻结通知（settled→done 补发/active:false+freeze）——计数载荷与 turnState 双通道一致（§8） |
 | `turnState` | ext → wv | `{ state, counts? }`——忙态单一广播（C2——§8 权威锚） |
+| `statusText` | ext → wv | `{ kind:"rateWait"/"rateLimited"/"overloaded"/"quota"/"index", seconds?/message?/phase?/done?/total? }`——限流/索引状态段（§14 C-12 #1——本批新增） |
+| `turnFrame` | ext → wv | `{ turn, maxTurns }`——顶层逐轮进展段（§14 C-12 #2——本批新增） |
 | `questionCancelled` | ext → wv | `{ promptId }`——abort 释放未答 question 卡（C1——§8） |
-| `onAgentTurn` | 内部 | 每轮迭代 turn 计数钩子（顶层无订阅 no-op——池条目同步用） |
+| `onAgentTurn` | 内部 | 每轮迭代 turn 计数钩子（**2026-09-12 更正**：顶层 = `panel-callbacks` 转 `turnFrame` 上屏（§14 C-11③/C-12 #2）；池条目同步沿用——修正轮 #3；引指更正 ④→③——修正轮 #10） |
+
+> **2026-09-12 修订（活动区收口批——§14 C-11/C-12；修正轮 #3）**：本表新增 `statusText`/`turnFrame`
+> 两行；`toolPanel`/`subagent`/`digest` 三行补字段；`onAgentTurn` 行更正（顶层上屏）。协议纪律不变 =
+> 只增不改（N-CL1）。
 
 ### 7.3 演进纪律（三落点）
 
@@ -414,6 +441,10 @@ frozen 两态**——终态原地折叠（容器与 DOM 序号不变）。位置
 > 需求层 = `AGENT-LOOP（CLI 侧）§5`（F-C1 / NFR-C1–C2）；
 > 机制面（挂起会话 digest 驱动）= 本仓 `AGENT-LOOP.md` §7；来源批次 =
 > `2026-09-11-VSC-INDEX-PERCEPTION（CLI 侧）§1` 条目 B6。
+>
+> **2026-09-12 §14 修订（活动区收口批）**：本 §7.4「单元素原地更新三态」契约修订为
+> **每轮独立元素 + 轮内两态**（跨轮漂移消除——§14 C-9）；新增回合标签行与 cap 行
+> （§14 C-9/C-10）；`id="digest-status"` 退役（class 复用）；T-D4/T-D5 用例随 §14.7 改写。
 
 **问题**：消化轮（digest）起跑到首个 token 之间可静默数十秒~分钟——现状只落
 `logEvent("digest:start")`（`src/extension/suspension.mjs:265`——文件日志，用户不可见）；
@@ -423,15 +454,15 @@ CLI 在进消化轮前零延迟打一行 `[auto-turn: digesting …]`（`thincod
 
 | # | 候选方案 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
 |---|---|---|---|---|
-| 1 | **流内生命周期元素（`#digest-status`——压缩状态行同款先例）** | 起跑即时可见：✅；与 CLI 语义对位 | 一元素起止两态原地更新（成功/中断）；会话清屏随清；~30 行 | **选定** |
+| 1 | **流内生命周期元素（`.digest-status`——压缩状态行同款先例）** | 起跑即时可见：✅；与 CLI 语义对位 | 起止两态（成功/中断）；会话清屏随清；~30 行（**2026-09-12 §14 修订：每轮独立元素——单元素原地更新废止**） | **选定** |
 | 2 | 仅状态行文案（挂起段 ⏳ 改「消化中」） | 同一语义已有状态行/`turnState`/计数三面——再加文案 = 第三源；且承载不了「起跑」时刻 | — | 否决 |
 | 3 | 仅 `logEvent`（现状）+ 文档声明 | 判据不满足（用户看不到） | — | 否决 |
 
 **契约**（两跳）：host（`suspension.mjs` 消化分支）在 `entry.runTurn` **之前**发
 `{type:"digest", status:"start", n}`（n = 待消化份数 = `_pendingAsyncResults.length`）；回合结束/异常
 统一以 `{type:"digest", status:"end", ok, ms}` 收尾（ok=false = 异常中断——不留「仍在消化」假象）；
-webview（`chat.js` case "digest" → `showDigestStatus`）以 `#digest-status` 元素原地更新三态文案
-（i18n `digest.start` / `digest.done` / `digest.aborted`）。投递为**直投**（同 `compress` 先例——
+webview（`chat.js` case "digest" → `showDigestStatus`）**每轮**创建独立 `.digest-status` 元素并轮内原地更新两态文案
+（i18n `digest.start` / `digest.done` / `digest.aborted`；2026-09-12 §14 C-9 修订——单元素→每轮元素，id 退役）。投递为**直投**（同 `compress` 先例——
 digest 只在面板活跃且 webview 已就绪后发生，不经任务可见性 outbox）。
 
 **逐字文案（coder 照抄——i18n 三键·两档 locales）**：
@@ -466,13 +497,13 @@ digest 只在面板活跃且 webview 已就绪后发生，不经任务可见性 
 | T-D1 起跑时序 | 桩面板 + pending 非空驱动 `suspensionSession` | runTurn 被调**之前**已 post start（n = pending 数） | F-C1 / AC-D1 |
 | T-D2 正常收尾 | 同上，runTurn resolve | post `{status:"end", ok:true, ms}` | F-C1 / AC-D1 |
 | T-D3 异常收尾 | runTurn 抛错 | post `{status:"end", ok:false}`（无 start 悬留） | F-C1 / AC-D1 |
-| T-D4 webview 渲染 | happy-dom 直驱 handler：start / end(ok) / end(!ok) | `#digest-status` 单元素三态文案（含 n / 秒） | F-C1 / AC-D2 |
-| T-D5 幂等 | 重复 start（合并轮连发） | 单元素更新（不重复建元素） | F-C1 / AC-D2 |
+| T-D4 webview 渲染 | happy-dom 直驱 handler：start / end(ok) / end(!ok) | 本轮 `.digest-status` 元素两态文案（含 n / 秒；每轮独立元素——2026-09-12 §14） | F-C1 / AC-D2 · §14 AC-CL2 |
+| T-D5 跨轮 | 连续两轮 start/end | 两元素随流新增（各自保留文本与位置——漂移回归；2026-09-12 修订） | F-C1 / AC-D2 · §14 AC-CL2 |
 
 **验收标准**：
 
 - **AC-D1**（F-C1 / NFR-C1）：`node --test test/digest-visibility.test.mjs` T-D1–T-D3 全绿（修前红：现状消化分支零 post）。
-- **AC-D2**（F-C1）：T-D4/T-D5 全绿（happy-dom 驱动真 `chat.js` 模块）。
+- **AC-D2**（F-C1）：T-D4/T-D5 全绿（happy-dom 驱动真 `chat.js` 模块；2026-09-12 §14 修订：每轮元素语义）。
 - **AC-D3**（NFR-C2）：既有 `async-visibility` / `webview-turnstate` / `chat-panel` 用例全绿（零回归）。
 
 **边界（本批不做）**：进度百分比/逐条报告进度（消化 = 单回合语义，无可报进度）；历史回填
@@ -994,6 +1025,15 @@ function inline(s) {
 > 「加回固定活动区」：目标 = D-1 原话（**live 固定可见 + 一个面板**），并保留 09-11 批 10 全部可靠性
 > 机制（投递队列/就绪握手/终态防御）与 queued 可见性（F-2）——「干净地基上的活动区」，**非补丁形态**。
 > 上下游不变式：扩展端**零改**（§5.1 契约与实现不动）；CLI 端零改（单面板形态照旧——双端不对称 OK）。
+>
+> **2026-09-12 修订（活动区收口批——A 方案反转；需求 = CLI 仓 `AGENT-LOOP.md` §16）：**冻结块去向
+> 由「区内原地保留」反转为**终态清退 + 消化后落流**（settled → awaitingDigest 驻留带提示 → 回收
+> 归档 `#messages`——落点 = 消化轮边界元素之前）。本 §12 以下条目已由 **§14** 取代/修订：Q1/Q4 选定行、
+> D-A1、D-A2、D-A5、D-A7（`trimOldMessages` 零改 → 选择器补 `.sub-block`——T-CL9）、§12.3#3/#4
+> （settled 驻留 + 区上限 20 退役）、§12.3#9（防御清扫限区子树 + `freezeLiveBlocks` 区全体归档——C-7/C-8）、
+> §12.3#10（150 口径）、§12.4 行 1–3、§12.7 用例表（T-R3/T-R5/T-R6/T-R8/T-R9/T-R14–T-R16）、
+> §12.8 AC-R1（`#messages` 零块限「区驻留期」采样）· AC-R2（折叠采样点 = 折叠时刻）· AC-R3、§12.10；
+> 其余（区位置/显隐/高度/自滚/⏹/批 10 机制）维持。（修正轮 #1——清单补全 §12.3#9 · D-A7 · AC-R1/AC-R2。）
 
 ### 12.1 问题陈述与目标（as-of 2026-09-11）
 
@@ -1012,7 +1052,7 @@ function inline(s) {
 
 | # | 候选 | 判据评估 | 结论 |
 |---|---|---|---|
-| 1 | **区内原地保留**（折叠后留区，上限 20） | 全程零 DOM move（①✓）；容器与 DOM 序号不变（②✓）；补桩块出生即现（批 10✓）；上限保 DOM 有界 | **选定** |
+| 1 | **区内原地保留**（折叠后留区，上限 20） | 全程零 DOM move（①✓）；容器与 DOM 序号不变（②✓）；补桩块出生即现（批 10✓）；上限保 DOM 有界 | **曾选定——2026-09-12 反转：消化后落流（§14 C-1/C-3）；上限退役（C-6）** |
 | 2 | 落流（折叠后移入 `#messages`） | 须 DOM move + 顺序/锚维护（多块乱序、digest 锚插）——补丁链本体（①✗）；与「原地」矛盾（②✗） | 否决 |
 | 3 | 折后即移除 | 补桩块出生即消失（批 10「终态必现」不可见✗）；已完成工作不可读 | 否决 |
 
@@ -1036,7 +1076,7 @@ function inline(s) {
 
 | # | 候选 | 判据评估 | 结论 |
 |---|---|---|---|
-| 1 | **块驻留区 + settled 即时折叠**（digest 与块零位移交互） | 批 10 现行口径原样（settled 视同 done）；挂起期 live 固定可见；digest 文本落 `#messages` | **选定** |
+| 1 | **块驻留区 + settled 即时折叠**（digest 与块零位移交互） | 批 10 现行口径原样（settled 视同 done）；挂起期 live 固定可见；digest 文本落 `#messages` | **曾选定——2026-09-12 反转：settled → awaitingDigest 驻留 + 回收归档（§14 C-2/C-3）** |
 | 2 | settle 驻留 awaiting digestion 双态 | 复活被点名删除的驻留双态（①✗） | 否决 |
 
 ### 12.3 契约（逐条定稿——实现对象）
@@ -1046,14 +1086,14 @@ function inline(s) {
    `base.css` grid 行模板改五行（`auto minmax(0, 1fr) auto auto auto`）+ 区样式（下第 5/6 条）。
 2. **出生**：`buildBlock` append `ctx.activityEl` 区尾（`ensureBlock`/`takeoverBlock`/
    `stubTerminalBlock` 三路径共用单点——`#messages` 零 `.sub-block`）。
-3. **折叠**：终态原地折叠（父容器与 DOM 序号不变——零 DOM move）；终态集合闭合 / settled
-   视同 done / answered 裁决 / 幂等守卫 / tombstone——全部原样（§5/§5.1）。
-4. **保留**：live 不裁；折叠块上限 `MAX_REGION_FOLDED = 20`（activity.js 导出常量）——
+3. **折叠**：终态原地折叠（父容器与 DOM 序号不变——零 DOM move）；终态集合闭合 / ~~settled
+   视同 done~~（**2026-09-12 §14 C-2：settled → awaitingDigest 驻留**）/ answered 裁决 / 幂等守卫 / tombstone——其余原样（§5/§5.1）。
+4. **保留**（**2026-09-12 退役——§14 C-6：区居民 = live + awaitingDigest；`MAX_REGION_FOLDED`/`enforceRegionCap` 删除**）：原折叠块上限 `MAX_REGION_FOLDED = 20`（activity.js 导出常量）——
    `freezeBlock` 折后执行 `enforceRegionCap()`：超出移除 DOM 中最旧 `.sub-frozen`（先序 =
    出生序）；**簿记条目保留**（幂等守卫——与 150 裁同生命周期——resetActivity 才清）。
 5. **显隐**：`#subagent-activity:empty { display: none; }`——空区零高、有块即现；零显隐 JS。
 6. **高度/滚动**：`#subagent-activity { max-height: 32vh; overflow-y: auto;
-   overscroll-behavior: contain; padding: 0 12px; }`；块内 `.advisor-content` 100px 自滚原样。
+   overscroll-behavior: contain; padding: 0 12px; }`；块内 `.advisor-content` 自滚（高度 = 60px——随 §13 批调降，原 100px）。
 7. **区自滚（pin）**：`ctx._pinActivity`（默认钉底）——`ui.js` `maybeScrollActivity(ctx)` 在
    块出生（`buildBlock`）与流式帧（`streaming.js` rAF 尾）调用；`initScrollFollow` 为区元素
    挂 wheel/touch 监听（近底 ≥24px——上滚解 pin、回底重 pin；**空安全绑定**——
@@ -1064,20 +1104,23 @@ function inline(s) {
    `ctx.activityEl?.addEventListener`——生产行为不变、fixture 缺区 id 零抛错——评审 #3 收口）。
 9. **resetActivity**：清区全部条目（live + 折叠）+ 清 map + 防御孤儿清（选择器改全类
    `.sub-block`——含折叠）；`freezeLiveBlocks` 原地折叠不变；clearMessages 路径随之区零残留。
+   **2026-09-12 修订（§14 C-7/C-8——修正轮 #1）**：防御清扫限定 `ctx.activityEl` 后代（全档
+   `.sub-block` 清扫会误删流内归档块＝会话历史——C-7）；`freezeLiveBlocks` 兜底改为**区全体归档**
+   （live → 折叠；awaitingDigest → 归档；尾追——C-8）——「原地折叠不变」句随本批失效。
 10. **批 10 机制零改**：投递队列 / 就绪握手 / 终态防御（补桩成员表 / 新代接管 / 痕迹）
     **实现面不动**（extension 端零改——协议零改）；**口径修订**（随批改准——语义不变：出生
     必达 / 清屏可恢复 / 控制面不降级）：① 再断言「期望位置」流尾 → **区尾**（§5.1.4 第 2/4 条 ·
     §5.1.5 D-6 · §5.1.6 panel-session 行 · §5.1.7 T-V3 · §5.1.8 AC-A4）；② 位置措辞 sweep
     （§5.1.2 复现手法 · §5.1.4 第 5 条 · §5.1.5 D-4 · §5.1.7 T-V2 · §5.1.8 AC-A1/AC-A3 ·
-    §6 · §8.4）。
+    §6 · §8.4）。（2026-09-12 §14 修订：本项①维持；新增口径 = 归档块入 150 窗与懒历史锚——§14 T-CL9）
 
 ### 12.4 旧机制对照（§1 约束①点名清单——逐项替代）
 
 | 被删加戏链（ACTIVITY-REWRITE-SIMPLE 点名） | 本批替代 | 说明 |
 |---|---|---|
-| DOM move 落流（live→冻结移入 `#messages`） | **区内全程不移动** | 出生地与终身居住地 = 活动区；折叠只改 class/open |
-| `freezeInsertPoint` 锚插链（settle 锚/降序 insertBefore/150 裁退化） | **整体删除（无锚需求）** | 折叠块不进流 → 无锚、无顺序维护、无 digest 报告锚插 |
-| settle 驻留双态（awaiting digestion） | **settled 视同 done 即时折叠**（第 10 批口径） | 无第二状态、无补发 done 位移 |
+| DOM move 落流（live→冻结移入 `#messages`） | **区驻留期不移动；消化回收后归档落流（2026-09-12 §14——非旧链，对照 §14.4）** | 出生地与驻留地 = 活动区；折叠只改 class/open；归档 = 单次插入（轮边界/尾追） |
+| `freezeInsertPoint` 锚插链（settle 锚/降序 insertBefore/150 裁退化） | **整体删除；2026-09-12 §14 C-4：轮边界单点引用取代（旧链三组件仍全无）** | 无 per-block 锚、无降序排序、无位移校正；边界失效单分支退化尾追 |
+| settle 驻留双态（awaiting digestion） | **2026-09-12 修订：awaitingDigest 单标志驻留（§14 C-2——非旧双态机）** | 无第二状态机、无补发 done 位移 |
 | `_subagentMap` 逐行簿记 | **单 map（S._subBlocks）原样** | 键 = 频道名；折叠条目 = 幂等守卫（情形同 150 裁） |
 | preview / ticker | **保持删除** | 无 report preview、无 1s 时钟（头词事件驱动） |
 
@@ -1085,13 +1128,13 @@ function inline(s) {
 
 | # | 决策 | 否决备选 / 理由 |
 |---|---|---|
-| D-A1 | 块终身居住活动区、折叠不落流（Q1-1） | 否决落流（DOM move 链复活）与折后移除（补桩不可见） |
-| D-A2 | 折叠块区内保留上限 20 | 否决无上限（DOM 无界——同 150 窗纪律）；否决零保留（= 折后移除） |
+| D-A1 | 块终身居住活动区、折叠不落流（Q1-1）——**2026-09-12 反转** | 否决落流（DOM move 链复活）与折后移除（补桩不可见）——**反转后：消化后归档落流（D-CL1）；旧锚链仍禁（§14.4）** |
+| D-A2 | 折叠块区内保留上限 20——**2026-09-12 退役（§14 C-6）** | 否决无上限（DOM 无界——同 150 窗纪律）；否决零保留（= 折后移除） |
 | D-A3 | 显隐 = CSS `:empty`（零 JS） | 否决常驻空面板 /「有 live 才现」（Q2 表） |
 | D-A4 | 32vh 封顶 + 区 pin 跟随（同 `#messages` 口径） | 否决固定高 / 不封顶 / 不 pin（Q3 表） |
-| D-A5 | settled 即时折叠；digest 与块零位移交互 | 否决驻留双态复活（约束①） |
+| D-A5 | settled 即时折叠；digest 与块零位移交互——**2026-09-12 修订（§14 C-2/C-3）：settled → awaitingDigest 驻留（单标志）+ 回收归档** | 否决旧驻留双态机复活（约束①） |
 | D-A6 | ⏹ 委托迁区（单委托点） | 否决双委托（`messagesEl` 残留死码）；冻结块无 ⏹ 语义不变 |
-| D-A7 | `trimOldMessages` 零改（块自然出窗） | 否决改裁剪函数算块（无必要——块已不在其容器） |
+| D-A7 | ~~`trimOldMessages` 零改（块自然出窗）~~——**2026-09-12 修订（§14 T-CL9/D-CL11——修正轮 #1）：`ui.js` `trimOldMessages` 与 `history.js` 两处锚选择器补 `.sub-block`（150 窗与懒历史含归档块）** | 否决豁免（DOM 无界——同 150 窗纪律） |
 | D-A8 | resetActivity = 全区清（含折叠块） | 否决折叠块跨清屏保留（新会话残留 = 错显；块无跨 reload 角色） |
 
 ### 12.6 受影响文件全清单（行数口径 = `split("\n").length` 含末行；as-of 2026-09-11 实测）
@@ -1114,7 +1157,7 @@ function inline(s) {
 | `test/async-visibility.test.mjs` | 388 | ±12 | helper/fresh 改区 + 位置断言改区 |
 
 **文档域（设计者已落——coder 零碰）**：`docs/design/WEBVIEW.md` 1029 →（§2/§3/§5/§5.1 修订 +
-§12 新节 + 变更记录 §13）· `docs/design/AGENT-LOOP.md` 1045 →（§1 模块行 / §7 挂起 UI / §10 改写 +
+§12 新节 + 变更记录顺延 §14——今 §15）· `docs/design/AGENT-LOOP.md` 1045 →（§1 模块行 / §7 挂起 UI / §10 改写 +
 变更记录）· `docs/design/SESSION-ACTIVITY-REVISED.md`（取代指针）· `docs/design/ACTIVITY-REWRITE-SIMPLE.md`
 （取代指针）。**需求树**：本批条目落 CLI 仓 `docs/requirements/AGENT-LOOP.md` §12（修正轮补——评审 #6 收口；先例 §3/§8~§11）。**拆分评审注**：activity-flow 292→~332 越 ≤300 警示线（≤500 硬限内）——测试族存量
 同带（最高 `chat-panel.test.mjs` 620）——本批**不拆分**（就地改写——同第 10 批结论）。
@@ -1130,7 +1173,7 @@ function inline(s) {
 webview-env +1 照旧（`installChatFixture` 区 id——区语义断言的宿主）；T-R13 手法见 §12.7 注。
 
 **不入 files**：`docs/TODO.md` / `CHANGELOG.md`（父侧）；CLI 仓代码/设计/测试文件（本批 VSC 单端——
-需求树除外：本批条目落 CLI 仓 `docs/requirements/AGENT-LOOP.md` §12，同先例 §3/§8~§11）；群 A §11/§13/§14 节域零碰。
+需求树除外：本批条目落 CLI 仓 `docs/requirements/AGENT-LOOP.md` §12，同先例 §3/§8~§11）；群 A §11/§13/§15 节域零碰。
 
 ### 12.7 用例表（正常 / 边界 / 错误——T-R1..T-R16；activity-flow 族改写 + async-visibility 更新）
 
@@ -1138,20 +1181,20 @@ webview-env +1 照旧（`installChatFixture` 区 id——区语义断言的宿�
 |---|---|---|---|---|
 | T-R1 | 区出生 | `started`（pool:true） | 块 parentNode === `ctx.activityEl` + 区尾位 + `#messages` 零块 | §1 目标 |
 | T-R2 | 内容入块 | chunk（tool/text） | appendAdvisorChunk 入块（区） | F-1 |
-| T-R3 | 原地折叠 | 终态消息 | 父容器与 DOM 序号不变 + class 换 + open=false + ⏹ 移除 | 约束② |
+| T-R3 | 原地折叠 | 终态消息 | 父容器与 DOM 序号不变 + class 换 + open=false + ⏹ 移除（**2026-09-12 §14：折叠后即时归档/驻留——采样分路，见 T-CL1/T-CL3**） | 约束② |
 | T-R4 | queued 三分支 | queued→started→cancelled(was:queued) | ⏳+取消⏹ / 翻 running / 头移除——区内 | F-2 |
-| T-R5 | 终态补桩 | never-born done（family+id） | 区内补出已折叠桩 + `late-terminal-stub` | 批 10 |
-| T-R6 | 新代接管 | 冻结键 + 新 started | 区内新块接管 + `takeover` + 旧块在区 | 批 10 |
+| T-R5 | 终态补桩 | never-born done（family+id） | 区内补出已折叠桩 + `late-terminal-stub`（**2026-09-12 §14 C-5：折叠 + 立即归档——采样点 = 流内**） | 批 10 |
+| T-R6 | 新代接管 | 冻结键 + 新 started | 区内新块接管 + `takeover` + 旧块在区（**2026-09-12 §14 C-5：旧 awaiting 块即时归档、已归档块在流内**） | 批 10 |
 | T-R7 | 区显隐（边界） | 移除末块 / 首块出生 | children 0↔N；`:empty` 规则在位（静态断言） | Q2 |
-| T-R8 | 区上限（边界） | 21 折叠块 | 最旧折叠块 DOM 先出；live 不裁；被移除频道迟来丢弃 | Q1 |
-| T-R9 | live 不裁（边界） | 区 live + 150 消息裁 | live 仍在区；`#messages` 窗只数消息 | §12.3#10 |
+| T-R8 | 区上限（边界） | 21 折叠块 | 最旧折叠块 DOM 先出；live 不裁；被移除频道迟来丢弃（**2026-09-12 退役——§14 C-6：无折叠块常驻可裁**） | Q1 |
+| T-R9 | live 不裁（边界） | 区 live + 150 消息裁 | live 仍在区；`#messages` 窗只数消息（**2026-09-12 §14：窗计数含归档 `.sub-block`——T-CL9**） | §12.3#10 |
 | T-R10 | 区自滚（边界） | 区块更新 / wheel 上滚 / 回底 | pin 钉底 / 解 pin 不强拉 / 回底重 pin | Q3 |
 | T-R11 | 清屏恢复 | clearMessages 模拟 → 再断言 | 区零残留；重建块（pool/⏹/startedAt）落区尾 | 批 10 |
 | T-R12 | 回合中止 | resetActivity | 全区清（含折叠）+ map 清 | §12.3#9 |
 | T-R13 | ⏹ 委托（错误面） | 区内点击 `.sub-stop-btn` | `cancelSubagent` postMessage 逐字 + 不翻折叠 | §12.3#8 |
-| T-R14 | 迟来丢弃（错误面） | 折叠后 / 被上限移除后 chunk | 一切丢弃（返 null / 冻结守卫） | §12.3#4 |
-| T-R15 | error/answered | error / consult answered | 头词与裁决保真（区内） | F-1 |
-| T-R16 | 兜底折叠 | freezeLiveBlocks（suspension 退出） | 残余 live 原地折叠（区内——不移动） | 约束② |
+| T-R14 | 迟来丢弃（错误面） | 折叠后 / 被上限移除后 chunk | 一切丢弃（返 null / 冻结守卫）（**上限路径退役——§14 C-6；折叠守卫不变**） | §12.3#4 |
+| T-R15 | error/answered | error / consult answered | 头词与裁决保真（**2026-09-12 §14：终态折叠 + 即时归档——采样点 = 流内**） | F-1 |
+| T-R16 | 兜底折叠 | freezeLiveBlocks（suspension 退出） | 残余 live 原地折叠（区内——不移动）（**2026-09-12 §14 C-8：区全体归档——live 折叠 + awaiting 归档，尾追**） | 约束② |
 
 > **T-R13 手法（评审 #4 钉死——在 activity-flow 内）**：本档 `before()` 照旧 `installChatFixture`（本批 +1 区 id）；
 > T-R13 先**追加式**补齐 `chat.js` 顶层 init 所需 id——对照 `installFullIndexFixture` 全量清单补缺项 21 个
@@ -1167,11 +1210,13 @@ webview-env +1 照旧（`installChatFixture` 区 id——区语义断言的宿�
 ### 12.8 验收标准（逐条回指——每条可机器验证）
 
 - **AC-R1（§1 目标——live 固定可见 + 单面板）** = T-R1/T-R9：一切出生块 parentNode ===
-  `#subagent-activity`；`#messages` 内 `.sub-block` 计数 == 0；区位于 messages 与 panels 之间
-  （index.html 结构断言）。
-- **AC-R2（§1 约束②——两态机）** = T-R3/T-R5/T-R6/T-R15/T-R16：折叠原地（容器/序号不变）；
+  `#subagent-activity`；`#messages` 内 `.sub-block` 计数 == 0（**2026-09-12 修订——修正轮 #1：
+  采样限定「区驻留期/出生时刻」——归档后流内 `.sub-block` = 归档块（§2/§14 C-3；需求侧 F-J1 同口径）**）；
+  区位于 messages 与 panels 之间（index.html 结构断言）。
+- **AC-R2（§1 约束②——两态机）** = T-R3/T-R5/T-R6/T-R15/T-R16：折叠原地（容器/序号不变；**2026-09-12
+  修订——修正轮 #1：采样点 = 折叠时刻——折叠后归档为 §14 C-3 语义，不再回采**）；
   终态闭合 / 幂等 / queued / 补桩 / 接管断言全绿。
-- **AC-R3（Q1——冻结块去向）** = T-R8/T-R14：折叠块在区不落流；上限 20 丢最旧；簿记守卫保留。
+- **AC-R3（Q1——冻结块去向）** = T-R8/T-R14：折叠块在区不落流；上限 20 丢最旧；簿记守卫保留。**（2026-09-12 反转——AC-CL1：消化后归档落流；上限退役——§14）**
 - **AC-R4（Q2——区显隐）** = T-R7：空区 children==0 且 `:empty` 规则在位；块入区即现。
 - **AC-R5（Q3——高度/自滚）** = T-R10 + 静态样式断言（32vh / overflow-y / overscroll）。
 - **AC-R6（Q4——digest/挂起）** = T-R5/T-R16 + §5.1 位置口径修订在位（流尾→区尾——文档断言）。
@@ -1179,7 +1224,7 @@ webview-env +1 照旧（`installChatFixture` 区 id——区语义断言的宿�
   trace/接管/补桩调用点在位（机检）。
 - **AC-R8（reset/清屏）** = T-R11/T-R12。
 - **AC-R9（⏹ 委托）** = T-R13。
-- **AC-R10（文档面）** = WEBVIEW §2/§3/§5/§5.1/§12/§13 + AGENT-LOOP 三处 + 两沿革档指针在位；
+- **AC-R10（文档面）** = WEBVIEW §2/§3/§5/§5.1/§12/§15 + AGENT-LOOP 三处 + 两沿革档指针在位；
   `check-doc-width` 新增超宽 0。
 
 ### 12.9 边界（本批不做）
@@ -1195,11 +1240,574 @@ webview-env +1 照旧（`installChatFixture` 区 id——区语义断言的宿�
 ### 12.10 UI / 交互决策落档
 
 全落定（**无 open 项**）：区位置 = `#messages` 与输入之间（`#panels` 之上）；空区隐藏零高；
-32vh 封顶 + 区内自滚；pin 跟随（同 `#messages` 口径）；折叠块区内保留上限 20；无新按钮 /
-新交互（⏹ 语义不变、仅迁址）；aria = `role="region"` + 静态 label（英文——随 index.html 惯例，
-不加 locale 键）。**可调常量**（批准环节可翻转）：`MAX_REGION_FOLDED = 20`、`max-height: 32vh`。
+32vh 封顶 + 区内自滚；pin 跟随（同 `#messages` 口径）；~~折叠块区内保留上限 20~~（2026-09-12
+退役）；无新按钮 / 新交互（⏹ 语义不变、仅迁址）；aria = `role="region"` + 静态 label（英文——随 index.html 惯例，
+不加 locale 键）。**可调常量**（批准环节可翻转）：~~`MAX_REGION_FOLDED = 20`~~、`max-height: 32vh`。（2026-09-12 修订：上限退役 + 消化后归档落流——§14；其余维持）
 
-## 13. 变更记录（历史折叠——详见 git log）
+## 13. live 块 UX：流式跟滚 + 内容区高度 60px（2026-09-11）
+
+> 需求源 = 批次档 `../batches/2026-09-11-VSC-LIVE-UX.md`（CLI 仓）§1——用户 23:29 实测两条
+> （live 块默认显示内容头部、不跟流式输出滚动、得手动滚；live 块高度 100 → 60），范围假设 =
+> 只动 live 块（`.sub-block`——advisor 流内评审块维持 100px）。需求树 = CLI 仓
+> `docs/requirements/AGENT-LOOP.md` §14（F-LU1/F-LU2 + N-LU1~N-LU3——本批新增）。
+> 上游机制零碰（§5/§5.1/§12 实现面不动——本批只加块级跟滚 + 改一处高度值）；测试独立成档
+> `test/activity-live-ux.test.mjs`（activity-flow 近满——不追加先例）。
+
+### 13.1 问题陈述与现场核实（as-of 2026-09-11 现状实测）
+
+- **live 块内容区零跟滚消费点（用户实测根因）**：activity 族（`activity.js` / `activity-view.js`）
+  对 `.advisor-content` 无任何 scrollTop 写点；`webview/*.js` 全量中 `.advisor-content` 相关
+  scrollTop 写点仅 `streaming.js:59-60` 一处（流内 advisor 块——见下行更正）。流式追加链
+  （`streaming.js:239-248` `subagentChunk` → `ui.js:41-94` `appendAdvisorChunk`）只落 DOM 不触滚动
+  ——内容区滚动位置停在头部，与用户实测一致。
+- **§1 事实表 #3 措辞更正（本设计现场复核）**：`webview/*.js` 对 `.advisor-content` 并非全量
+  「零命中」——`streaming.js:56-62` 有**流内 advisor 块**（`S._advisorBlock` ∈ `#messages`）的
+  裸钉底消费点（`_advisorScrollDirty`——每帧 `scrollTop = scrollHeight`，无让位语义）；「live 块
+  无消费点」部分与现场一致（activity 族零写点）。该面 ≠ live 块面——本批不动（§13.8 边界登记）。
+- **高度现状**：`chat.css:317-326` 基础 `.advisor-content { max-height: 100px; … }`（流内评审块
+  与子块共用）；`chat.css:465-468` 子块覆盖行 = 100px；`:465-467` 注释 = 2026-09-05 设定
+  （「advisor/subagent 均 100px」——本批后不再成立，随 C-LU3 改述）。
+- **既有钉底族（先例基准——本批语义来源）**：`ui.js:448-456`（`#messages`——`_pinBottom` 旗标 +
+  `Number.MAX_SAFE_INTEGER` 超值写）；`ui.js:460-463`（活动区——`_pinActivity`，同旗标 idiom）；
+  `ui.js:481-491`（`initScrollFollow`——wheel/touchmove 监听 + 近底 24px 判据 + 空安全绑定）。
+- **区级 pin 与块级跟滚的叠加关系（外层 / 内层）**：区（`#subagent-activity`——§12.3 第 6/7 条）
+  管**块的可见性**（块出生与流式帧区钉底）；块内容区管**单块内容下列**（本批新增）。两层 = 独立
+  状态、互不写对方；同一 wheel 事件可同时到达两层监听器（冒泡）——各按**自身元素几何**更新自身
+  判据（区看区几何、块看块内容几何——§13.3 第 1/2 条）。
+
+### 13.2 方案选型对比（U1 装载面——判据 = §1 约束「先例对齐 / 不新造第三种模式」+ 无每 chunk 同步布局 + 动态 N 块目标可承载）
+
+| # | 候选 | 判据评估 | 结论 |
+|---|---|---|---|
+| 1 | **块级 follow 载体（旗标 + wheel/touch 让位 + rAF 帧应用）**——`activity.js` 落 `initBlockFollow`/`maybeScrollBlock` | 语义逐条对位既有族（近底 24px / 上滚解钉 / 回底重钉——`ui.js:481-491` 同规）；应用并入既有 rAF（无每 chunk 同步布局——`streaming.js:26-27` 代价口径）；动态 N 块各有自家旗标位 | **选定** |
+| 2 | 追加点内联裸钉底（`subagentChunk` 内 `scrollTop = scrollHeight`——同 `streaming.js:60` 流内块形态） | 每 chunk 强制同步布局（既有代价口径点名）；**无让位语义**——与 U1「手动上滚让位」硬性冲突；多块各拍写无帧合并 | 否决 |
+| 3 | 无状态几何判定（应用时按当前 gap < 24 才写——零监听零旗标） | 让位信号 = 应用时几何派生（≠ 族内「事件维护旗标」）——§1 点名模式（近底判定 + wheel/touch 让位）缺后者，属新造模式；边缘场景（滚动条拖拽 / 单格滚）虽更稳——如后续实证要改族口径，应与族同批改 | 否决 |
+| 4 | `ui.js` 滚动族泛化为动态目标表（`initScrollFollow` watch 扩展） | ctx 键模型 = 定长双目标——N 动态块状态无处安放（仍须元素 expando）；`ui.js` 492 行距 500 硬限 8 行余量（不可再增） | 否决 |
+
+**U2（高度）**：改动面唯一（值 + 注释），范围假设（改子块覆盖行、基础行不动）单候选——显式声明
+「单方案——无对比」；选择与理由落 §13.4 D-LU4。
+
+### 13.3 契约（逐条定稿——实现对象）
+
+1. **C-LU1 块级跟滚语义（`activity.js`）**：新增模块内 `initBlockFollow(block)`——取
+   `block.querySelector(".advisor-content")`，为其挂 `wheel` / `touchmove` 监听（`{ passive: true }`），
+   处理式 = `内容区._pinFollow = (scrollHeight - scrollTop - clientHeight) < 24`（近底 24px——与
+   `ui.js:485` 同口径）；内容区缺失零操作。新增导出 `maybeScrollBlock(block)`：`!block?.isConnected
+   || !block.open` → no-op（折叠 / 已移除零滚动副作用）；`内容区._pinFollow !== false`（默认钉底——
+   同 `ctx._pinBottom !== false` idiom）→ `内容区.scrollTop = Number.MAX_SAFE_INTEGER`（写超值不读
+   scrollHeight——`ui.js:449-450` 口径）。`buildBlock` 内 `ctx.activityEl.appendChild(block)` 之后
+   （`maybeScrollActivity(ctx)` 邻位）调用 `initBlockFollow(block)`——出生路径三路（出生 / 接管 /
+   补桩）共用单点，全部块获监听（补桩 = 折叠块，应用侧 open 守卫天然跳过）。
+2. **C-LU2 帧驱动（`streaming.js`）**：`subagentChunk` 追加后把块记入脏集（`_subScrollDirty`——Set
+   惰性建，`_advisorScrollDirty` 邻位）；`scheduleStreamRender` rAF 体内处理脏集（逐块
+   `maybeScrollBlock(block)` → 置空）；**节流重排条件（`streaming.js:43`）补 `_subScrollDirty`**——
+   节流跳过帧不得丢跟随（尾 chunk 场景）；rAF ≥50ms 节流与渲染面零改。
+3. **C-LU3 高度（`chat.css`）**：`:468` 值 `100px → 60px`（选择器不变——
+   `.advisor-block.sub-block .advisor-content`；live 与冻结同卡面统一）；`:465-467` 注释改述（逐字）：
+
+   ```css
+   /* Subagent/consultation activity blocks — 60px content height (2026-09-11 live 块 UX：
+      用户设定 100→60——单块占高更小；advisor 流内评审块维持基础 100px), dimmer title —
+      collapsible, reopenable, height 0 when closed. */
+   ```
+
+   `:318` 基础规则维持 `100px`（advisor 流内评审块）。
+4. **C-LU4 注释 / 口径 sweep（实现面）**：`streaming.js:56-58` 注释「（…子代理块随流内 append——
+   无强制滚动——简单形态——B1 参照）」改述（子代理块跟滚 = `_subScrollDirty` / `maybeScrollBlock`
+   承担——见 §13）；`activity.js` 头注职责段补「块内容跟滚（§13）」；`activity-view.js` 头注
+   「本叶零参与显隐 / pin」句维持（其面零改——块级跟滚载体不在叶内）。
+5. **C-LU5 测试与入册**：新档 `test/activity-live-ux.test.mjs`（happy-dom + `installChatFixture`——
+   手法同 `async-visibility` webview 侧；`until` 轮询等待 rAF 帧）；`test/files.mjs` 入册一行
+   （显式清单——不登记不跑——`doc-consistency` T64 纪律）。
+
+### 13.4 关键决策记录（含否决备选）
+
+| # | 决策 | 否决备选 / 理由 |
+|---|---|---|
+| D-LU1 | 跟滚载体 = 旗标 + wheel/touch 让位（族对齐） | 否决内联裸钉底（无让位）/ 几何派生（新造模式）/ watch 泛化（状态模型不符）——§13.2 |
+| D-LU2 | 应用并入流渲染 rAF（≥50ms 节流） | 否决每 chunk 同步布局（`streaming.js:26-27` 已点名代价；帧合并天然去抖） |
+| D-LU3 | 载体落 `activity.js`（非 `ui.js`） | `ui.js` 492 行距 500 硬限 8 行——不可再增；`activity.js` = 块生命周期家（出生 / 折叠 / 簿记）+ 零新 import 边（streaming→activity 已存在）。**拆分评估**见 §13.5 |
+| D-LU4 | 高度作用域 = `.sub-block` 全部（live + 冻结同 60px） | 否决仅 `.sub-live`（冻结展开态须同卡面——live/frozen 不二分）；advisor 流内评审块 100px 不动（§1 假设——如需同改，用户一句话） |
+| D-LU5 | 测试独立成档 + `test/files.mjs` 入册 | activity-flow 486 行近满（先例×2：「近 500 不再追加」/「同族档已满独立成档」）——不拆 activity-flow、不追加 |
+| D-LU6 | WEBVIEW 节号：新 §13 + 变更记录顺延 §14 | 节号 = 文档位序惯例（先例：§9→§13 顺延）；存量指注同步 sweep（§2 沿革行 / §12.6 / §12.8；修正轮 #2） |
+
+### 13.5 受影响文件全清单（行数口径 = `split("\n").length` 含末行；as-of 2026-09-11 实测）
+
+**实施域（VSC 仓——eng-coder；5 改 = 3 源 + 2 测试档：1 新 1 入册；代码面 ~+40 / 测试面 ~+140）**：
+
+| 文件 | 现行 | 预计增量 | 改动 |
+|---|---|---|---|
+| `webview/activity.js` | 328 | +~26 | `initBlockFollow` + `maybeScrollBlock` + `buildBlock` 接线 + 头注 |
+| `webview/streaming.js` | 249 | +~12 | 脏集 + rAF 处理 + 重排条件 + 注释改述 |
+| `webview/chat.css` | 477 | ±4 | `:468` 值 60px + `:465-467` 注释改述 |
+| `test/activity-live-ux.test.mjs` | 新档 | ~140 | T-LU1..T-LU6（新档——同 activity-flow 族手法） |
+| `test/files.mjs` | 72 | +1 | 新档入册行 |
+
+**不动面（零碰——反断言）**：`webview/ui.js`（492 行近硬限）· `webview/activity-view.js` ·
+`webview/state.js` · `webview/index.html` · `webview/base.css` · `locales/**` ·
+`test/helpers/webview-env.mjs`（fixture 已具）· `test/activity-flow.test.mjs`（近满——零追加）。
+
+**文档域（设计者已落——coder 零碰）**：`docs/design/WEBVIEW.md` 1257 →（§13 新节 + §12.3 第 6 条
+改指 + 节号 sweep + 变更记录顺延 §14）· 需求树 = CLI 仓 `docs/requirements/AGENT-LOOP.md` §14；
+`docs/TODO.md` / `CHANGELOG.md` 归父侧。
+
+**拆分评审注**：`activity.js` 328→~354 越 300 软线（<500 硬限）——结论不拆：增量 = 2 小函数
+（~12 / ~8 行）+ 1 行调用 + 头注；再增厚触发拆分评估。`ui.js` 492 近硬限——本批零碰。测试面
+独立新档（`activity-flow` 486 近满——「不再追加」先例）。
+
+### 13.6 用例表（正常 / 边界 / 错误——T-LU1..T-LU6；新档 `test/activity-live-ux.test.mjs`）
+
+| # | 用例 | 输入 | 预期输出（可机判） | 回指 |
+|---|---|---|---|---|
+| T-LU1 | 追加钉底（正常） | `ensureBlock` 建块（出生接线）+ 内容区几何（scrollHeight 500 / clientHeight 60）→ `subagentChunk` 追加 → 等帧 | 内容区 `scrollTop === Number.MAX_SAFE_INTEGER`（真链：chunk → 脏集 → rAF） | U1 |
+| T-LU2 | 上滚让位（边界） | `initScrollFollow(ctx)` + 区几何（scrollHeight 210 / clientHeight 200）；内容区 scrollTop=100（gap 340）→ wheel（bubbles） | 旗标 `_pinFollow === false`；追加后 scrollTop 仍 100（不回弹）；区 pin `_pinActivity === true`（两层独立——同一事件各按自身几何） | U1 |
+| T-LU3 | 近底复钉（边界） | 内容区 scrollTop=460（gap −20 < 24）→ wheel → 追加 | 旗标 `true`；等帧后 scrollTop === 超值 | U1 |
+| T-LU4 | 折叠零副作用（边界） | live 块 `open=false`；scrollTop=100 → 追加 → 等帧（含节流重排） | scrollTop 仍 100 且内容含新文本（追加发生、滚动被抑） | U1 |
+| T-LU5 | CSS 高度（契约·静态） | 读 `chat.css` | 子块规则含 `max-height: 60px`；基础 `.advisor-content` 规则含 `max-height: 100px` | U2 |
+| T-LU6 | 防御 no-op（错误面） | 已移除块 / 已冻结块上 `maybeScrollBlock` | 零抛错、零写（scrollTop 保持原值） | U1 |
+
+### 13.7 验收标准（逐条回指——每条可机器验证）
+
+- **AC-LU1（U1——钉底）** = T-LU1：追加后内容区钉底（真链 subagentChunk → rAF）。
+- **AC-LU2（U1——让位）** = T-LU2：上滚后追加不回弹 + 区/块两层互不写对方状态。
+- **AC-LU3（U1——复钉）** = T-LU3：近底 wheel 后追加复钉超值。
+- **AC-LU4（U1——边界）** = T-LU4/T-LU6：折叠 / 已移除态零滚动副作用、零抛错。
+- **AC-LU5（U2——高度）** = T-LU5：子块内容区 60px + 基础 100px 在位（静态断言）。
+- **AC-LU6（零回归 / 单端）** = VSC 快层全绿（含新档）；`_advisorScrollDirty` 分支在位（流内
+  advisor 路径零改——机检）；CLI 仓代码 diff 空；`src/extension/**` 零改动
+  （扩展端协议与实现零改——`git status` 机检；修正轮 #1）。
+- **AC-LU7（文档面）** = 本节 + §12.3 第 6 条改指 + 节号 sweep 在位 + 需求档 §14 在位；
+  `node scripts/check-doc-width.mjs` 新增违规 0。
+
+### 13.8 边界（本批不做）
+
+- 不动流内 advisor 块（`S._advisorBlock`）跟滚——其裸钉底（`streaming.js:56-62`）无让位语义属
+  既有口径，本批保留原样（如需对齐，另批）；不动其高度（100px 基础值）；
+- 不动区级 pin（`maybeScrollActivity`）/ 块头 / tail-3 摘要（`refreshBlock` 零变）/ ⏹ / 区显隐；
+- 无新交互元素 / 新按钮 / 新 locale 键；不做跨 reload；
+- CLI 仓代码与测试零改（需求档 §14 新增条目除外——设计者已落）；不碰在途批域
+  （VSC-CONTEXT-PARITY / 机制纪律批——提示词文本面）。
+
+### 13.9 UI / 交互决策落档
+
+全落定（**无 open 项**）：钉底默认 + 上滚让位 + 近底 24px 复钉（族同规）；应用帧 = 流渲染 rAF
+（≥50ms 节流）；高度 60px（live + 冻结同族卡面）。**可调常量（批准环节可翻转）**：60px 数值本身；
+**登记行**：advisor 流内评审块是否同改 60px——用户一句话即可（§1 假设维持 100px）。
+
+## 14. 活动区收口：终态清退落流 · digest 可读性 · 块头/状态行字段对齐（2026-09-12）
+
+> 需求源 = 批次档 `../batches/2026-09-12-VSC-ACTIVITY-CLOSURE.md`（CLI 仓）§1——用户 2026-09-12
+> 走查五连：01:03「live 块执行完没有从子agent面板清除，digest 过程远不如 CLI 清晰」· 01:09「1走A」
+> （**A 方案 = 终态块出活动区、内容进会话流 = CLI 语义**——对 §12 的反转，须两档修订）· 01:10
+> 「live 块的标题信息我也希望对齐」· 01:13 Send 可见性与拒发矛盾 · 01:17「状态行那条，我也希望对齐 CLI」。
+> 需求条目 = CLI 仓 `AGENT-LOOP（CLI 仓）§16`（F-R1..F-R6）；本批 R1–R6 对位 = AC-CL1..AC-CL6。
+> 本 §14 吸收 §12 中被反转条目——**条目清单以 §12 修订注为准**（该注逐项列明「以 §14 为准」的条目；
+> 反转不静默）。
+> （修正轮 #9——原内联清单缺 D-A7/§12.3#9/AC-R1/AC-R2，改纯指针句消除双清单漂移。）
+
+### 14.1 问题陈述与现场核实（as-of 2026-09-12——逐条 file:line）
+
+**面一·清退（R1）**：
+
+- 出生位 = 区尾（`activity.js:109`）；终态 = **原地折叠**（`:180-192`——class 翻转 + `open=false` +
+  ⏹ 移除，零 remove / 零 DOM move）；`settled` 视同 done **即时折叠、无 awaitingDigest 驻留**（`:302-322`）；
+  区清退路径穷举 = 上限 20（`:194-201`）/ reset（`:348-353`）/ queued 取消（`:290-300`）——
+  **终态块永久驻区**（全完成后区仍常驻 32vh）。
+- 目标语义（CLI）：面板判据 `!s.done || s.awaitingDigest`（CLI `src/tui/subagent-panel.mjs:43`）；
+  清退动作点 = done → `freezeSubTaskLines` + `delete state.subTasks[key]`（`subagent-blocks.mjs:235-245`）；
+  冻结进流 = splice 至 `_freezeAt` 锚（`subagent-freeze.mjs:88-95`）；面板零驻留（`layout.mjs:121`）。
+
+**面二·待消化提示（R3）**：CLI 块级有——`subagent-panel.mjs:104` `statePart = "done · awaiting digestion"`；
+VSC 块级无（settled 即折叠）；仅状态行聚合 `status-bar.js:40-50`（`⏳ N 个… · M 份报告待消化`）。
+
+**面三·digest 可读性（R2）**：CLI 可见面 = 起跑 dim 行（`suspension-drive.mjs:160-162`）· autoTurn 不画
+假用户气泡但 assistant 标签照画（`agent-turn.mjs:76-82`）· turn-cap 两行（`agent-turn.mjs:188/192`）。
+VSC 差异：① 消化轮无回合标签（`ui.js:205-211` `assistantLabeled` 无 auto-turn 复位点）；② turn-cap
+完全静默（`panel-chat.mjs:436-448`）；③ `#digest-status` 单元素跨轮复用（`chat.js:322-328`）——
+第 2 轮「正在消化…」出现在第 1 轮输出上方（跨轮位置漂移）。
+
+**面四·块头字段（R4）**：CLI 权威 = `subagent-panel.mjs:85`（`[icon key · 模式 · 模型 · Ns · turn N/M]`）+
+`:96-110` 状态区 + 参数摘要 `:107-109`（` — ${command ≤60}`）。VSC 现态 = `activity-view.js:32-59`
+（queued 仅 `[⏳ label]`——`:34` 自述「无位置/原因词」；状态词 = 工具文本尾句；无结构化 tool/args）；
+数据面：queued 载荷携 `position`/`waiting`/`reason`（`subagent-scheduler.mjs:418-423`）但 webview 弃用；
+tool chunk 文本形态 = `name + JSON(args)`（`subagent-run.mjs:95` 等四生产者）；turn 仅在 started/终态快照
+（`subagent-run.mjs:137-143`——`applyTurnFrame` 进池条目不上屏）；审批态 = **VSC 无此数据源**（子代理不经
+权限门——`execute-tools.mjs:258` `depth === 0` 才弹）。
+
+**面五·Send 与状态行（R5/R6）**：`loading.js:53` 无条件 `sendBtn.style.display="flex"`（注释自述「常显」）；
+`:54` Stop = running 派生；busy 拒发 = `send.js:19-25`（toast + 占位符）。状态行权威 = CLI
+`render-frame.mjs:341-397`（statusText/task/turn/token✦/ctx/scroll 段）+ 横幅 `:222-233`；VSC 现态 =
+`status-bar.js` 段集（缺 ✦、缺状态文本段、`轮次 N` 无 M）；数据面：VSC `onWait` 相位已有
+（`provider.mjs:346-361` quota/retry · `rate.mjs:115/136` warn/rate）但**未上屏**（panel-callbacks 无 onWait 键）；
+顶层 turn 帧已有（`agent.mjs:142-143` `onAgentTurn`）但未上屏；usage 无 reasoning 字段（`panel-callbacks.mjs:97`）。
+
+### 14.2 方案选型对比（M1–M6——判据逐项 + 否决理由）
+
+**M1 终态块去向机制（R1 核心）**（判据 = CLI 同序 · §12.4 旧链禁令 · 有界 · 可机判）：
+
+| # | 候选 | 判据评估 | 结论 |
+|---|---|---|---|
+| 1 | **消化后归档落流（轮边界插入）**——终态判定分两路；消化回收时单次 `insertBefore(block, 本轮边界元素)`（失效退化尾追） | CLI 同序（块在 digest 文本前）✓；无 per-block 锚/无降序插/无位移校正（旧链三组件皆无）✓；落点由本轮自建元素单一决定 ✓ | **选定** |
+| 2 | 消化后落流（一律尾追加） | 零边界引用更简；但块恒在 digest 文本之后（与 CLI 序相反——阅读归属弱） | 备选＝降级路径（边界失效时即此行为） |
+| 3 | 旧 DOM-move 锚链复活（settle 记元素锚 / 降序 insertBefore / 150 裁位移校正） | §12.4 点名设计债 + 间歇丢块史（ACTIVITY-REWRITE-SIMPLE） | 否决 |
+| 4 | 仅清退不落流（折后移除） | 内容不可读——批 10「终态必现」呈现面损失 | 否决 |
+
+**M2 digest 轮可见元素形态（R2①③）**（判据 = 漂移消除 · 归属感 · 零新协议）：
+
+| # | 候选 | 判据评估 | 结论 |
+|---|---|---|---|
+| 1 | **专属标签行 + 每轮独立状态元素**（每轮新增；轮内原地更新；`assistantLabeled` 复位） | 漂移消除（元素随轮新增）✓；专属文案 ✓；复用既有 `digest` start 消息（零新协议）✓ | **选定** |
+| 2 | 单元素跨轮复用 + 轮起搬到流尾 | 「搬元素」= 又一位移逻辑 + 幂等状态；跨轮文本覆盖旧轮信息 | 否决 |
+| 3 | 新增 host `turnStart` 类消息 | 为单点需求新增回合边界消息族（比复用 digest start 重） | 否决 |
+
+**M3 状态文本载体（R6 限流/索引）**（判据 = locale 归属 · 注入缝 · 单一小段）：
+
+| # | 候选 | 判据评估 | 结论 |
+|---|---|---|---|
+| 1 | **结构化 `statusText` 消息（kind 判别 → webview i18n 渲染）** | i18n 在 webview（locale 单源）✓；注入缝直测 ✓；状态行单段 ✓ | **选定** |
+| 2 | host 直发成品文本 | host 不知 locale（复制 i18n = 双源） | 否决 |
+| 3 | 不做（仅登记） | R6 判定句要求「用例锁新增状态文本（含限流态）」——不满足 | 否决 |
+
+**M4 Send 可见性（R5）**（判据 = 用户原话 · 与 Stop 范式一致 · 无假 affordance）：
+
+| # | 候选 | 判据评估 | 结论 |
+|---|---|---|---|
+| 1 | **running 期隐藏**（`display:none`——与 Stop 同派生点） | 用户原话「没隐藏」✓；单一显隐范式（F-6 同族）✓；零假 affordance ✓ | **选定** |
+| 2 | 禁用态（灰置） | 保留「不可用」语义但双范式（Stop 隐藏/Send 禁用）且仍占位 | 否决 |
+
+**M5 `scrolled N`（R6 端差裁定）**（判据 = 信息等价 · 无新造单位 · 不与按钮重复）：
+
+| # | 候选 | 判据评估 | 结论 |
+|---|---|---|---|
+| 1 | **保持 VSC 悬浮回底钮**（不做 `scrolled N` 文本） | 可点击超集 ✓；VSC 无 CLI 行式滚动单位（N 需新造语义）✓；避免双指示 ✓ | **选定** |
+| 2 | 补 `scrolled N` 文本段 | N 单位需另造（像素/条数）；与悬浮钮重复 | 否决 |
+
+**M6 会话退出语义（R1 兜底）**（判据 = host 既定注释语义 · CLI freezeAllSubTasks 对位）：
+
+| # | 候选 | 判据评估 | 结论 |
+|---|---|---|---|
+| 1 | **区全体归档**（live → 折叠；awaitingDigest → 归档；落流尾） | 兑现 host 注释「补发 done 冻结：随会话退出折叠进流」（`suspension.mjs:328-330`）✓；无悬空驻留 ✓ | **选定** |
+| 2 | 仅 live 折叠原地（现状） | awaiting 块永不落流（悬空驻留——违反 F-R1 判定句） | 否决 |
+
+### 14.3 契约（逐条定稿——实现对象）
+
+**C-1 生命周期（五段）**：出生（`buildBlock` → 区尾）→ live → 终态判定（`applySubagentStatus` 终态分支）：
+① `settled` → **awaitingDigest 驻留**（C-2）；② 其余终态（done/error/cancelled/terminated/failed/answered）
+→ 折叠 + **即时归档**（C-3 尾追）→ ③ 消化回收（`done` 到达 awaitingDigest 块）→ **归档**（C-3 边界前）→
+流内历史。两态机（live → frozen）保留；awaitingDigest 为冻结态上的**单标志**（非第二状态机）。
+
+**C-2 awaitingDigest 驻留（R3）**：`settled` → `freezeBlock` 同现状（class `sub-frozen`、`open=false`、
+⏹ 移除）+ `meta.awaitingDigest = true`；块头 = **CLI 面板行形态**：括号去 verb（`[✓ {label} · {模式} · {模型} ·
+{N}s · turn n/m]`）+ 态词 `t("sub.awaitingDigest")`（en 逐字 `done · awaiting digestion`）；tail-3 照常显示；
+块**不移动**（驻区）。回收（C-3）后 `awaitingDigest` 清。
+
+**C-3 归档（archive）机制与落点**：单次 DOM 插入（`insertBefore` 或 `appendChild`）——块元素原地进
+`#messages`；落点二值：① **消化回收**（`done` 命中 `awaitingDigest` 块）且 `S._digestBoundary` 有效
+（`isConnected`）→ `insertBefore(block, boundary)`（= 本轮边界元素之前——CLI 序：块在 digest 文本前）；
+② 其余（普通终态 / 会话退出 flush / 边界失效）→ `appendChild(messagesEl)` 尾追。同批多块 = 消息到达序
+（`insertBefore` 逐个 = 保序）；幂等：已归档（`parentNode === messagesEl`）→ no-op。
+
+**C-4 消化轮边界**：`digest start` 处理时创建本轮元素（C-9）并记 `S._digestBoundary = 本轮首元素`
+（标签行）；`suspension` 消息（含 active:true 刷新）与 `clearMessages` 清空该引用；`digest start` 覆盖
+旧值。边界失效（`!isConnected`——被 150 裁/清屏）→ C-3 ② 尾追退化。
+
+**C-5 即时归档 / 补桩 / 接管**：① 终态消息命中 live 块 → 折叠 + 归档（尾追）；② 终态补桩
+（never-born）→ 补出已折叠桩 + **立即归档**（流内可见——批 10「终态必现」呈现面保持）；③ 新代接管
+命中 **awaitingDigest** 旧块 → 旧块立即归档（同步清 `awaitingDigest`——头词回终态形态，不留悬空
+「等待消化」）；旧已归档块本就在流内（历史）——「旧块留区作历史」措辞随本批修订为「旧块在流内作历史」。
+
+**C-5③ 后继后果与防御（修正轮 #5——失明面写全）**：旧代回收 `done`（`suspension.mjs:95-100` 补发——
+载荷 `{id, role, status:"done"}`，无代际字段）在旧块归档后**按键路由**：命中新代 live 块时按 C-1②
+折叠 + 即时归档 → **新代块提前终止、其后 chunk 被冻结守卫吞（失明面）**；迟到 chunk 落新块 = 既有
+登记（§5.1.4 第 5 条）。**防御（本轮采纳）**：接管归档时旧块若处于 awaitingDigest（回收在途）→ 新块记
+`meta.oldReclaimPending`；其后该键**首条 `done` 视为旧代回收 → 吞（no-op + 清标志——新块 live/awaiting
+均不触）**；非 awaiting 旧块接管不布防（无回收在途）。依据：pending 容器 FIFO = settle 序（旧代在前——
+旧代回收先至）。**残余登记**：异常路径致旧代回收永不至（abort 等）× 新代 `done` 后至 → 可能误吞一次
+（降级 = 新块滞留区，会话退出 flush（C-8）兜底归档——不丢内容、不失明；abort 伴随 resetActivity 时
+块与标志同清）；≥2 代积压（连续接管且旧代回收均未至）残余歧义保留（窗口随代际数收窄）。T-CL10 锁「吞」路径。
+
+**C-6 区上限退役**：`enforceRegionCap` / `MAX_REGION_FOLDED` 删除——区居民 = live + awaitingDigest
+（池有界 + 队列有界 + 消化回收即清），折叠块不再常驻（§12.3#4/D-A2 由本契约取代）。
+
+**C-7 resetActivity / clearMessages**：`resetActivity` = 清**区子树**（防御清扫限定 `ctx.activityEl`
+后代——原全档 `.sub-block` 清扫会误删流内归档块＝会话历史）+ 清 map；流内归档块不动。`clearMessages`
+= `#messages` 全清（归档块随清——会话历史语义）+ `resetActivity`（区语义不变）。
+
+**C-8 会话退出 flush**：`suspension active:false + freeze:true` → 区**全体**（live → 折叠；awaitingDigest
+→ 归档；已在流者不动）→ C-3 ② 尾追。abort 同路径（host 既定语义——无 digest 消费、不留悬空块）。
+
+**C-9 digest 轮可见面（R2①③——§7.4 契约修订点）**：`digest start` → ① 追加 `.digest-turn` 标签行
+（i18n `digest.turnLabel`——CLI 起跑 dim 行对位）；② 追加**本轮独立** `.digest-status` 元素（class——
+`id="digest-status"` 退役）；③ `ctx.assistantLabeled = false`（本轮 assistant 输出带一次回合标签——
+CLI `ensureAssistantLabel` 对位）。`digest end` → **本轮** status 元素原地更新（ok 旗标语义不变）。
+跨轮 = 新元素随流追加（漂移消除；§7.4「单元素原地更新三态」修订为「每轮独立元素 + 轮内两态」）；
+start 连发亦各成独立元素（不复用——`end` 更新其前最近未结本轮元素；口径补全——修正轮 #6 附，测试改写所需）。
+
+**C-10 digest cap 行（R2②）**：host（`panel-chat.mjs` ContinueError 分支）→ `{type:"digest",
+status:"cap", mode:"auto"|"stop", turns}`；webview 尾追 `.digest-cap` 行（`mode:"auto"` dim /
+`mode:"stop"` warn）+ i18n `digest.capAuto` / `digest.capStop`（CLI `agent-turn.mjs:188/:192` 语义对位）。
+
+**C-11 块头数据面增补（R4 实现口径）**：① tool chunk 携结构化字段 `tool`（名）与 `cmd`（`args.command` 字符串；
+无则不携）——四生产者（`subagent-run.mjs:95` · `subagent-escalate.mjs:166` · `subagent-escalate-async.mjs:104` ·
+`consult.mjs:285`）+ `toolPanelPayload` 白名单同步；webview 头渲染 `${tool} — ${cmd ≤60}`（无 cmd 仅 tool；
+结果 chunk 不更新状态区——CLI currentTool 语义）；② queued 载荷字段入 `meta.queueInfo`（position/waiting/reason）
+→ 状态区渲染；③ `subagent` 增 `status:"turn"` 进展事件（`{id, role, turn, maxTurns}`——`onAgentTurn` 帧）→
+区头 `turn N/M` 实时；④ elapsed 定时刷新：panels `_panelTimer`（既有 2s）同点调 `refreshLiveHeaders()`
+——**不设运行态门**（仅刷现存 live 块头：`_turnState` 为 `susp` 的纯池跑主场景照刷——既有回调的
+`running` 门（`webview/panels.js:68`）不延伸；`renderStatusBar()` 维持既有 `running` 门不变；无 live 块
+= 零操作）（修正轮 #4）。
+
+**C-12 协议增量登记表（只增不改——N-CL1）**：
+
+| # | 消息面 | 增量 | 发射点 | 接收点 |
+|---|---|---|---|---|
+| 1 | `statusText`（新消息） | `{kind:"rateWait"/"rateLimited"/"overloaded"/"quota"/"index", seconds?/message?/phase?/done?/total?}` | `panel-callbacks.mjs` onWait 映射；`panel-index.mjs` 索引进度 | `chat.js` case → `S._statusText` → 状态行段 |
+| 2 | `turnFrame`（新消息） | `{turn, maxTurns}` | `panel-callbacks.mjs` onAgentTurn（顶层） | 同上 → 状态行 `turn N/M` 段 |
+| 3 | `toolPanel`（增字段） | `tool` / `cmd` | 四 chunk 生产者 + payload 白名单 | `activity-view.js` 块头 |
+| 4 | `subagent`（增 status 值） | `status:"turn"` + `{id, role, turn, maxTurns}` | `subagent-run.mjs` onAgentTurn | `applySubagentStatus` 进展分支 |
+| 5 | `digest`（增 status 值） | `status:"cap"` + `{mode, turns}` | `panel-chat.mjs` ContinueError 分支 | `chat.js` case → `.digest-cap` 行 |
+| 6 | `usage`（增字段） | `reasoning_tokens` | `panel-callbacks.mjs` 累计（transports 映射补全） | `status-bar.js` ✦ 段 |
+
+**C-13 R4 逐字段对位表（字段 × CLI 形态 × VSC 现态 × 目标）**：
+
+| 字段 | CLI 形态（`subagent-panel.mjs`） | VSC 现态（`activity-view.js`） | 目标 |
+|---|---|---|---|
+| icon | `⏸/✓/▶`（审批/完成/运行） | `⏳/▶/✓/⏹`（排队/运行/完成/停） | 保持 VSC 语汇（端差登记——语义对位） |
+| 键 | `role#N` | 同（label） | 保持（等价） |
+| 模式词 | ` · sync/async`（family；queued → 状态词） | ` · 同步/异步`（family；queued 无词） | 保持（等价）；queued 信息走状态区（下两行） |
+| 模型 | ` · model`（宽截断） | ` · model`（consult/escalate 键内嵌） | 保持（等价） |
+| 计时 | ` · Ns`（done 定格） | ` · Ns`（事件驱动） | + 2s 定时刷新（C-11④）；语义不变 |
+| turn | ` · turn N/M`（maxTurns>0） | ` · turn N/M`（maxTurns>0 且 turn>0；仅快照） | 条件对齐 + `status:"turn"` 实时（C-11③） |
+| 状态区·running | `currentTool`（嵌套全路径）/ `thinking...` | 工具文本尾句（≤64）/ `思考中…` | 工具 + 参数摘要（下一行）；think 保持 |
+| 参数摘要 | ` — ${command ≤60}` | 无（裸 JSON 截断尾句） | `tool`/`cmd` 结构化 → `${tool} — ${cmd ≤60}`（C-11①） |
+| 状态区·queued | slot：`queued · position N（槽满等位）`；wait/depc：detail 原文 | 无（`[⏳ label]` 唯一） | `排队中 · 位置 N（槽满等位）` / 原因原文（C-11②） |
+| 审批态 | `等待审批: X` | 无此状态（子代理不经权限门） | 端差登记（不做——无数据源；`execute-tools.mjs:258`） |
+| 待消化 | `done · awaiting digestion`（状态区） | 无 | R3（C-2） |
+| 冻结头 | `[✓ key · … · done Ns · turn]` + tail-3 | 同形态 | 保持（等价）；归档后形态不变 |
+
+**C-14 Send 可见性（R5）**：`loading.js` 同点派生——`ctx.sendBtn.style.display = S._turnState === "running"
+? "none" : "flex"`（Stop 同派生点）；`send.js` 出口守卫与 toast **零改**（Enter 路径拒发提示保留——C-14
+只改按钮可见性，不改门禁）；`setLoading`/turnState/suspension 三入口重派生（现状通径不变）。
+
+**C-15 R6 逐字段对位表（字段 × CLI 形态 × VSC 现态 × 目标）**：
+
+| 字段 | CLI 形态（`render-frame.mjs:341-397`/`:222-233`） | VSC 现态（`status-bar.js`） | 目标 |
+|---|---|---|---|
+| 状态文本段 | `state.status`（Processing/Indexing…/Running: cmd/TPM throttle wait ~Ns/Server overloaded…/Rate-limited 429…/Waiting: X） | 无（thinking 点） | 新增 `statusText` 段（C-12#1；活动恢复清空：token/reasoning/toolCall/toolResult/complete/aborted/error） |
+| 当前工具 | ` ${currentTool}…` | `工具: name` | 保持（等价） |
+| 计时 | processing ` Ns` | `耗时 Ns` | 保持（等价） |
+| 任务 | `✓N/M` | task 徽标 `✓d/total` | 保持（等价） |
+| 轮次 | `turn N/M` | `轮次 N`（LLM 调用数——无 M） | 换 `turn N/M`（C-12#2）——旧 `status.turns` 段退役 |
+| token | `↑X ↓Y ✦R hitN%` | `↑X ↓Y hitN%`（缺 ✦） | 补 ✦（C-12#6——`reasoning_tokens>0` 才显，同 CLI） |
+| context | `context X% Yk` | `context X%` | 端差登记（不做——VSC pct 源 = 实 prompt tokens；绝对数低价值） |
+| 滚动 | `scrolled N` | 悬浮回底钮（`scroll.js`） | 端差保持（M5） |
+| 输入提示/键位 | enterHint + 键位串 | 无（按钮/占位符承载） | 端差登记（不做） |
+| 横幅 | PLAN/AUTO/ADVISOR/ENG + attention chip | 工具条按钮 active + plan 徽标 | 保持 VSC 形态（端差登记；attention chip 不做——权限/提问卡流内可见） |
+| 后台段 | `后台 N 子代理运行中 · M 完成待消化` | `⏳ …` 徽标 | 保持（等价） |
+
+**C-16 i18n 键表（新增 12 键·两 locale 逐字——`locales/zh.json` / `locales/en.json` 同步）**：
+
+| 键 | zh | en |
+|---|---|---|
+| `digest.turnLabel` | 自动回合：消化已完成的子代理报告… | [auto-turn: digesting finished subagent reports…] |
+| `digest.capAuto` | 自动回合：越过轮次上限，继续推进… | [auto-turn: continuing past turn cap…] |
+| `digest.capStop` | 自动回合在 {turns} 轮处停止——部分消化；已完成的报告保留在历史中 | [auto-turn stopped at {turns} turns — partial digest; finished reports stay in history] |
+| `sub.awaitingDigest` | 已完成 · 等待消化 | done · awaiting digestion |
+| `sub.queueSlot` | 排队中 · 位置 {n}（槽满等位） | queued · position {n} (slot full) |
+| `status.turn` | 轮次 {n}/{m} | turn {n}/{m} |
+| `status.rateWait` | TPM 限流等待 ~{s}s | TPM throttle wait ~{s}s |
+| `status.rateLimited` | 限流 429，{s}s 后重试 | Rate-limited 429, retry in {s}s |
+| `status.overloaded` | 服务过载，{s}s 后重试 | Server overloaded, retrying in {s}s |
+| `status.quota` | 配额耗尽：{msg} | quota exhausted: {msg} |
+| `status.indexScan` | 索引：扫描 {n} 文件… | Indexing: scanning {n} files… |
+| `status.indexEmbed` | 索引：嵌入 {done}/{total}… | Indexing: embedding {done}/{total}… |
+
+（`status.turns` 键随段退役删除；`digest.start/done/aborted` 与其余既有键不动。）
+
+**i18n 记法校准——实现后同步（2026-09-12）**：表内占位符 `{n}`/`{m}`/`{s}`/`{turns}`/`{msg}`/`{done}`/`{total}` 为简写——
+实落一律 `${…}` 形态（本端引擎仅认 `${k}`——`webview/i18n.js:30`；照抄 `{n}` 将向用户显示字面占位符）；
+两 locale 12 键实落值以 `locales/zh.json` / `locales/en.json` 为准（逐字核对）。
+
+### 14.4 旧机制对照（§12.4 点名的旧 DOM-move 锚链——为何新机制不是它）
+
+| 旧链组件（ACTIVITY-REWRITE-SIMPLE 点名） | 本批新机制 | 为何不构成旧链 |
+|---|---|---|
+| DOM move 落流（freeze 时刻即移入 `#messages`） | **消化回收时刻**单次归档插入（C-3） | 时点不同（回收≠freeze）；触发面 = 单一回收消息，不与其他终态路径竞争 |
+| `freezeInsertPoint` 锚插链（settle 记元素锚 / 多块降序 insertBefore / 150 裁位移校正） | **轮边界插入**（C-4）——边界 = 本轮自建首元素，单点活引用 | 无 per-block 锚、无降序排序（到达序即序）、无位移校正（无锚可漂）；失效单分支退化尾追 |
+| settle 驻留双态（awaiting digestion 整机） | 冻结态上**单标志** `awaitingDigest`（C-2） | 无第二套状态机/无补发 done 位移逻辑；呈现 = 头词一字段 |
+| `_subagentMap` 逐行簿记 | 单 map（`S._subBlocks`）原样 | 零簿记增量 |
+| preview / ticker | 保持删除 | 零复活（2s 刷新复用既有 `_panelTimer`，非 per-block ticker） |
+
+### 14.5 关键决策记录（含否决备选）
+
+| # | 决策 | 否决备选 / 理由 |
+|---|---|---|
+| D-CL1 | 终态去向 = 消化后归档落流（M1-1） | 否决旧锚链（§12.4）/ 折后移除（不可读）/ 一律尾追（序反 CLI——仅作降级） |
+| D-CL2 | awaitingDigest = 单标志驻留 + CLI 行形态头词（C-2） | 否决第二状态机（旧链）/ 即时折叠（现状——用户点名缺口） |
+| D-CL3 | 消化轮 = 标签行 + 每轮独立状态元素（M2-1） | 否决单元素搬运 / 新 turnStart 消息 |
+| D-CL4 | 区上限退役（C-6） | 否决保留 20 上限（新语义下无居民可裁——死码） |
+| D-CL5 | resetActivity 只清区（C-7） | 否决全域清扫（会删流内归档块＝会话历史——撞上必须当场修） |
+| D-CL6 | 会话退出 = 区全体归档（M6-1） | 否决仅 live 折叠（awaiting 悬空） |
+| D-CL7 | 协议增量 = 只增不改、六项登记（C-12） | 否决 host 直发成品文本 / 新增 turnStart 族 |
+| D-CL8 | Send = 隐藏（M4-1） | 否决禁用态（双范式、仍占位） |
+| D-CL9 | `scrolled N` = 端差保持（M5-1） | 否决补文本段（新造单位 + 双指示） |
+| D-CL10 | 审批态 = 端差登记（C-13） | 否决假造数据 / 改 depth 门禁（超范围） |
+| D-CL11 | 归档块参与 150 窗与懒历史锚（C-…见 §14.7 T-CL9） | 否决豁免（DOM 无界——同 150 窗纪律） |
+
+### 14.6 受影响文件全清单（行数口径 = `split("\n").length` 含末行；as-of 2026-09-12 实测）
+
+**实施域·VSC webview（10 改 = 10 行——locale 行含 en/zh 两档；修正轮 #7）**：
+
+| 文件 | 现行 | 预计增量 | 改动 |
+|---|---|---|---|
+| `webview/activity.js` | 354（本批前）→ **406（实现后实测）** | ±0~-10（预估；实测 **+52**——实现后同步（2026-09-12）） | 归档/awaiting 状态机（含旧代回收吞守卫——C-5③，修正轮 #5）+ 区上限退役 + reset 收窄 + 头注 + `refreshLiveHeaders`（§14 C-11④；归属更正——实落 `:375`）（拆分评估见下） |
+| `webview/activity-view.js` | 157 | +~35 | awaiting 头词/queued 信息/tool+cmd 状态区/turn 进展（**实现后同步（2026-09-12）**：原「+ 刷新入口」撤销——`refreshLiveHeaders` 实落 `activity.js:375`） |
+| `webview/chat.js` | 355 | +~45 | digest 轮元素/cap/boundary 管理 + assistantLabeled 复位 + statusText/turnFrame case |
+| `webview/status-bar.js` | 76 | +~20 | statusText 段 + ✦ + turn N/M（旧 turns 段撤） |
+| `webview/panels.js` | 138 | +~4 | `_panelTimer` 同点 refreshLiveHeaders（不设运行态门——C-11④，修正轮 #4） |
+| `webview/loading.js` | 61 | ±2 | Send 可见性派生（C-14） |
+| `webview/ui.js` | 492 | ±0 | `trimOldMessages` 选择器 + `.sub-block`（逐字一行——距 500 硬限 8 行，不得再增） |
+| `webview/history.js` | 89 | +~3 | 两处锚选择器 + `.sub-block` |
+| `webview/base.css` | 448 | +~20 | `.digest-turn` / `.digest-cap` 样式（`.digest-status` 既有族沿用） |
+| `locales/en.json` / `locales/zh.json` | 248 | +~12 / −1（`status.turns`） | C-16 键表 |
+
+**实施域·VSC extension / provider（13 改 = 13 行；修正轮 #7）**：
+
+| 文件 | 现行 | 预计增量 | 改动 |
+|---|---|---|---|
+| `src/extension/panel-chat.mjs` | 499 | **≤0（硬限零余量）** | cap 两处调用 +1/+1；注释压行 −2；若越线 → 抽 ContinueError autoTurn 处理为 helper（登记方案 B） |
+| `src/extension/panel-callbacks.mjs` | 186 | +~16 | onWait→statusText · onAgentTurn→turnFrame · reasoning_tokens 累计 · postDigestCap helper |
+| `src/extension/panel-index.mjs` | 183 | +~9 | 索引进度→statusText（scan/embed/done） |
+| `src/extension/suspension.mjs` | 363 | ±2 | 注释同步（reclaim 语义「折叠回收」→「归档落流」——零逻辑） |
+| `src/provider.mjs` | 424 | +~6 | 429 onWait 携 status；5xx 重试等待上报（overloaded 相位） |
+| `src/provider/transports/openai.mjs` | 347 | +~2 | usage 映射 `reasoning_tokens`（`completion_tokens_details`） |
+| `src/provider/transports/responses.mjs` | 415 | +~1 | 同上（`output_tokens_details`） |
+| `src/provider/transports/google.mjs` | 264 | +~1 | 同上（`thoughtsTokenCount`——有则映射） |
+| `src/agent-tools/subagent-run.mjs` | 190 | +~4 | tool chunk 增 `tool`/`cmd`；onAgentTurn→`status:"turn"`；:136-139 注释同步（「逐轮跳动需新通道——不建」已履行——C-11③；修正轮 #2） |
+| `src/agent-tools/subagent-escalate.mjs` | 219 | +~2 | tool chunk 增字段 |
+| `src/agent-tools/subagent-escalate-async.mjs` | 226 | +~2 | tool chunk 增字段 |
+| `src/agent-tools/consult.mjs` | 474 | +~2 | tool chunk 增字段 |
+| `src/extension/panel-toolpanel.mjs` | 21 | +~2 | payload 白名单 + `tool`/`cmd` |
+
+**测试域（VSC——逐档预计增量已补；修正轮 #6）**：`test/activity-flow.test.mjs`（486 → **≤+10**——区语义期望
+改写：折叠块不再驻区/上限用例撤/归档断言；净增受控——T-R8 撤除对冲新增）· `test/activity-live-ux.test.mjs`
+（172 → **≤±6**——T-LU6 冻结语义微调）· `test/digest-visibility.test.mjs`（147 → **≤+50**——每轮元素/turn 标签/
+cap/漂移回归改写）· `test/async-visibility.test.mjs`（402 → **≤+15**——补桩/接管/位置期望改归档）·
+`test/webview-turnstate.test.mjs`（292 → **≤+35**——⑤ 补 Send 可见性 + 状态行段）· **新档**
+`test/activity-closure.test.mjs`（R1/R3/R4 核心——本 §14.7 表主力；目标 ≤300 软线）· **新档**
+`test/status-line.test.mjs`（R6——statusText 映射/✦/turn N/M；目标 ≤200）· `test/files.mjs`（75——+2 登记）·
+`test/helpers/webview-env.mjs`（92——如需）。
+
+**测试档越线处置口径（修正轮 #6）**：`activity-flow` 距 500 硬限仅 14 行——落地不得越 500；若预计越线 →
+抽归档断言用例组至 `activity-closure`（同批新档——主题契合；测试档拆分登记先例适用），不静默越线。
+
+**拆分评估注**：`activity.js` 354 → 原预期净减；**实测 406（+52——超预估；越 300 软线）——实现后同步（2026-09-12）**：
+上限机制退役的减量未抵消新增（归档/吞守卫/头注承载长于预估）；<500 硬限（余量 94 行）、未触 450 拆分评估线——
+**本批不拆**；后续批再增触 450 线时按既有口径执行拆分评估。
+`chat.js` 355 → ~400（新职责集中在 digest 处理段——不加新模块；若落地越 450 触发拆分评估）。
+`panel-chat.mjs` 499 = 零余量——**增行前必须先抽 helper**（N-CL3 纪律；方案 B 已登记）。
+`ui.js` 492 同（+0 为限——选择器逐字替换）。
+
+**`state.js` 协调项登记——实现后同步（2026-09-12）**：本批三个跨模块 S 字段 `S._digestBoundary` / `S._turnFrame` /
+`S._statusText`（读面 falsy 安全）为**动态属性挂载**（写点 = `chat.js:184/:250/:274/:325/:330/:355`）——`webview/state.js`
+零改（未入本表——守写域正确）；与「S 字段集中声明」惯例（先例 = 群 A A13 `S._subDescShown`、§12 `ctx.activityEl` 均以
+state.js 行登记）呈落差——**登记为协调项**：集中声明建议随后续批（新设计评审）补录，本批实现链已终态不补。
+
+**文档域（设计者已落——coder 零碰；修正轮 #2/#3 补全）**：本 §14 新节 + §2/§3/§5/§5.1.4/§6/§7.2/§7.4/§12 修订 +
+§2 沿革行 + 变更记录 §15 顺延 · `docs/design/AGENT-LOOP.md` §1/§7/§10 + **未决行（live 头逐轮 turn 段——收口注，
+修正轮 #2）** + 变更记录 · 沿革三指针（`SESSION-ACTIVITY-REVISED.md` / `ACTIVITY-REWRITE-SIMPLE.md` /
+`SESSION-FLOW-B.md`）· 需求树 = CLI 仓 `docs/requirements/AGENT-LOOP.md` §16 + §12 F-J1/F-J3/F-J6 修订。
+
+**不入 files**：`docs/TODO.md` / `CHANGELOG.md`（父侧）；CLI 仓代码/测试（零改——需求树除外）。
+
+### 14.7 用例表（正常 / 边界 / 错误——T-CL1..T-CL24；新档 `activity-closure` + `status-line` 为主力）
+
+| # | 用例 | 输入 | 预期输出（可机判） | 回指 |
+|---|---|---|---|---|
+| T-CL1 | awaiting 驻留 | `started` → `settled` | 块留区（未归档）+ 头含 `t("sub.awaitingDigest")` 文案 | F-R3 |
+| T-CL2 | 回收归档（边界前） | digest start → end → reclaim `done` | 块出区 + 在 `#messages` 且 `nextElementSibling` 链到本轮 `.digest-turn` 之前 | F-R1 |
+| T-CL3 | 普通终态即时归档 | sync `done` | 块出区 + 落 `#messages` 尾 | F-R1 |
+| T-CL4 | 多块保序 | 同批两 reclaim `done` | 两归档块相对序 = 到达序（连续相邻） | F-R1 |
+| T-CL5 | 会话退出 flush | `suspension active:false freeze:true`（live + awaiting 各一） | 两块全归档（尾）+ 区 children 0 | F-R1 |
+| T-CL6 | 全归档后区空 | 末块归档 | 区 children 0 且 `:empty` 规则在位（静态断言） | F-R1 |
+| T-CL7 | 边界失效退化 | 回合元素先被移除 → reclaim | 尾追归档（不抛错） | F-R1 |
+| T-CL8 | 无边界（用户回合路径） | 无在轮 → reclaim `done` | 尾追归档 | F-R1 |
+| T-CL9 | 150 窗 + 懒历史 | 归档后超窗 | trim 计数含 `.sub-block`；懒历史锚选择器含 `.sub-block` | F-R1 |
+| T-CL10 | 新代接管 + 旧代回收吞 | 冻结键 + awaiting 旧块 + 新 `started`；其后旧代回收 `done` | 旧块归档（`awaitingDigest` 清）+ 新块区尾 + `takeover` 痕迹；旧代 `done` 被吞——新块仍 live 不折叠（C-5③ 防御——修正轮 #5） | F-R1 |
+| T-CL11 | 补桩直归档 | never-born `done` | 桩出生即归档（流内可见）+ `late-terminal-stub` | F-R1 |
+| T-CL12 | reset/清屏 | resetActivity / clearMessages | reset 只清区（流内归档块留存）；clearMessages 全清 | F-R1 |
+| T-CL13 | digest 中断残块 | digest `end ok:false` → 无 reclaim | 残块留区（等下一轮）；下一轮 reclaim 时才归档 | F-R1 |
+| T-CL14 | 每轮元素无漂移 | 两轮 start/end | 每轮一对元素；第 2 轮元素位于第 1 轮输出之后（DOM 序断言） | F-R2 |
+| T-CL15 | 回合标签 | digest start → token 流 | `.digest-turn` 在 + 本轮 assistant 块含 `❯` 标签（`assistantLabeled` 复位） | F-R2 |
+| T-CL16 | cap 两档 | `digest cap` auto/stop 注入 | `.digest-cap` 行（dim/warn）+ 两 locale 文案逐字 | F-R2 |
+| T-CL17 | queued 字段 | `queued`（slot；wait） | 状态区 `排队中 · 位置 N（槽满等位）` / 原因原文；`started` 后清 | F-R4 |
+| T-CL18 | 工具 + 参数 | tool chunk（`tool`/`cmd`）→ 结果 chunk | 状态区 `${tool} — ${cmd}`；结果 chunk 不改写状态区 | F-R4 |
+| T-CL19 | turn/计时刷新 | `status:"turn"` 帧；tick 调用 | 头 `turn N/M` 更新；`startedAt` 回拨后 tick 刷新 `Ns`（**tick 断言在 `_turnState:"susp"` 下亦成立——C-11④ 不设运行态门，修正轮 #4**） | F-R4 |
+| T-CL20 | Send 可见性 | running / idle / loading 交替 | running → `display:none`；idle → `flex`；交替不翻 | F-R5 |
+| T-CL21 | statusText 映射 | 五 kind 注入 + 活动恢复 | 各段文案逐字（两 locale）；token/complete 后清空 | F-R6 |
+| T-CL22 | ✦reasoning | usage `reasoning_tokens>0` / =0 | >0 显 `✦X`；0 隐 | F-R6 |
+| T-CL23 | turn N/M 段 | `turnFrame` 消息 | `turn N/M` 渲染（旧 `轮次 N` 段不再出现） | F-R6 |
+| T-CL24 | scrolled 端差 | 静态 | 悬浮回底钮在位 + 状态行无 scrolled 段（端差登记） | F-R6 |
+
+> **C-12 host 发射面覆盖归属（修正轮 #8——六项增量 host 侧机判）**：① cap 两调用（`panel-chat` ContinueError
+> auto/stop）：`digest-visibility` 改写扩 `postDigestCap` helper 直驱（载荷逐字 + 两分支——直驱先例 = 本档
+> T-D1–T-D3 桩面板手法）+ 两调用点 grep 机检；② `statusText`（`panel-callbacks` onWait / `panel-index`
+> 索引进度）+ `turnFrame`（onAgentTurn）+ `reasoning_tokens` 累计：`status-line` 新档直驱其导出映射面
+> （先例 = async-visibility 直驱 `postSubagentEvent`）+ 发射调用点 grep 机检（先例 = async-visibility AC-A6）；
+> ③ `subagent status:"turn"` 发射（`subagent-run`）：发射点机检 + webview 侧 T-CL19；④ 四生产者 `tool`/`cmd`：
+> T-CL18（渲染面）+ `panel-toolpanel` 白名单纯函数直驱（payload 逐字）。webview 侧六项均经注入缝直测
+> （C-9/C-10/C-11 用例）。
+
+### 14.8 验收标准（逐条回指——每条可机器验证）
+
+- **AC-CL1（F-R1）** = T-CL1–T-CL12（含 T-CL5 退出 flush、T-CL9 窗口、T-CL12 范围收窄）：
+  awaiting 驻留与提示、回收/即时/退出三类归档、落点与保序、区空 `:empty`、reset 只清区——全绿。
+- **AC-CL2（F-R2）** = T-CL14/T-CL15/T-CL16：每轮独立元素（漂移回归）、回合标签 + `assistantLabeled`
+  复位、cap 两档文案。
+- **AC-CL3（F-R3）** = T-CL1/T-CL2：settled 未回收头含对位态词；回收前不归档。
+- **AC-CL4（F-R4）** = T-CL17/T-CL18/T-CL19 + C-13 表逐行落位；审批态端差登记在档。
+- **AC-CL5（F-R5）** = T-CL20；`send.js` 零改（git diff 断言）。
+- **AC-CL6（F-R6）** = T-CL21–T-CL24 + C-15 表逐行落位；端差（scrolled/ctx/attention）登记在档。
+- **AC-CL7（零回归——N-CL1）** = VSC 快层全绿；CLI 仓代码零改（`git status`）；协议增量 = C-12 六项
+  （逐项 grep/用例在位）；`check-doc-width` 两仓新增超宽 0。
+
+### 14.9 边界（本批不做）
+
+- 不做 CLI 端（单面板照旧）；不做行面板复活；不做跨 reload 恢复；
+- 不复活 §12.4 旧链（DOM move 锚链 / 双态驻留旧形态 / preview·ticker）；不改 digest 注入与预算；
+- 流内归档块**无独立分页锚**（`data-idx` 不补——懒分页锚仍由 `.message` 承担；归档块随 150 窗出窗，
+  不出现在历史回填中——登记）；`S._subTraceLog` 诊断面零改；
+- 端差不做项：审批态（无数据源）· `scrolled N`（钮替代）· ctx 绝对数 · attention chip · 键盘提示段 ·
+  AUTO 档无人值守行为差异（CLI :188 行文案已对位，行为差异 = 既有双端裁定）；
+- 不碰群 A §11/§13 节域与在途批域；advisor 流内块（`S._advisorBlock`）不动。
+
+### 14.10 UI / 交互决策落档
+
+全落定（**无 open 项**）：awaitingDigest 块头 = CLI 行形态（括号去 verb + 态词）；归档块 = 流内折叠卡
+（可展开，tail-3）；digest 轮 = 标签行 + 状态行（每轮）；cap 行 warn/dim 两档；Send 隐藏 = running 派生；
+状态文本段 = 单段（活动恢复即清）；`turn N/M` 段替旧段；✦ 段条件显。**可调常量（批准环节可翻转）**：
+elapsed 刷新节拍（复用 2s）；`statusText` 保留时长（= 活动恢复/新 text 即清——无 TTL）。
+
+
+## 15. 变更记录（历史折叠——详见 git log）
+- 2026-09-12（活动区收口批·实现后同步——4 处；纯文档，实现面零改）：§3 `refreshLiveHeaders` 归属更正
+  （activity-view.js → `activity.js:375`——activity.js 行补录）；§14.6 `activity.js` 行数对表校准（实测 406——超预估；
+  越 300 软线拆分评估注更新）+ `state.js` 协调项登记（三 S 字段动态挂载 vs 集中声明惯例）；C-16 占位符记法校准
+  （`{n}` 简写 → 实落 `${…}`）。
+- 2026-09-12（活动区收口批·修正轮——设计评审轮次 1 #1~#8 落修）：§12 反转注清单补全（§12.3#9/D-A7/AC-R1·AC-R2）；
+  §7.2 同步（`statusText`/`turnFrame` 新增 + 三行补字段 + `onAgentTurn` 更正）+ §5.1.4 第 5/8 条指注；§14 C-5③
+  失明面写全 + 「旧代回收在途」吞机制 + C-9 start 连发口径 + C-11④ 刷新门明示；§14.6 计数对齐（10/13）+ 测试域
+  逐档 ≤±N + 越线处置 + 文档域补 §7.2/AGENT-LOOP 未决行；§14.7 T-CL10/T-CL19 更新 + C-12 host 覆盖归属注。
+  零契约语义变更（除 C-5③ 防御 = 评审 #5 采纳——待轮次 2 复核）。
+- 2026-09-12（活动区收口批——A 方案反转 + digest/块头/状态行/Send 对齐）：新增 §14（活动区收口——M1–M6 选型 / C-1–C-16 契约 / 旧链对照 / D-CL1–D-CL11 / 受影响文件 / T-CL1–T-CL24 / AC-CL1–AC-CL7）；§12 反转注（Q1/D-A1/D-A2、§12.3#4、§12.4、§12.5、§12.8 AC-R3、§12.10）；§2/§3/§5/§5.1.4/§6/§7.4 同步；变更记录顺延 §14→§15。需求 = CLI 仓 `AGENT-LOOP.md` §16。
+- 2026-09-12（VSC-LIVE-UX 批·修正轮——设计评审轮次 1 #1/#2 落修）：§13.7 AC-LU6 补扩展端
+  反断言（`src/extension/**` 零改动——需求 §14.4「不动扩展端协议与实现」对位；修正轮 #1）；
+  D-LU6 与设计落档条的「§1 沿革行」标签订正为「§2 沿革行」（修正轮 #2）；#3 跨仓引用形态
+  Deferred（父侧登记不改——后续清扫批统一）。纯断言补充与标签订正、零语义。
+- 2026-09-11（VSC-LIVE-UX 批——设计落档；用户 23:29 实测两条）：新增 §13（live 块 UX：流式跟滚 +
+  内容区高度 60px——现场核实（含 §1 事实表 #3 更正）/ 四候选选型 / 契约 C-LU1..C-LU5 / 决策
+  D-LU1..D-LU6 / 用例 T-LU1..T-LU6 / AC-LU1..AC-LU7）；§12.3 第 6 条高度句改指（100px → §13 60px）；
+  节号 sweep（§2 沿革行 / §12.6 / §12.8 指注同步 §14；修正轮 #2）；变更记录顺延 §13→§14。
 - 2026-09-11（活动区回归批·修正轮——设计评审轮次 1 后）：§5.1.8 AC-A1/AC-A3 采样点改区（`#subagent-activity`）+
   §12.3#10 口径修订清单补全（AC-A1/AC-A3 + 全档位置 sweep：§5.1.2 · §5.1.4 第 5 条 · §5.1.5 D-4 · §5.1.7 T-V2 · §6 · §8.4）；
   §12.3#7/#8 空安全绑定收口 + §12.6 fixture 波及面 / 源侧拆分注 + 需求树行；§12.7 补 T-R13 手法注（真 chat.js 图）；

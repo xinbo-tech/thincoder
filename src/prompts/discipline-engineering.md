@@ -16,6 +16,9 @@
 
    需求完成判据：三层都具体到可据此设计（用户确认，或答案不再改变需求）。需求确认后逐条建立 checklist 条目——checklist 是需求验收的标志。
 2. **设计** — 方案、架构、怎么实现，落成设计文档：问题陈述、方案与理由、受影响文件全清单、可验证的验收标准（每条验收标准回指用户故事）。设计定了再动手。
+   - 设计 = 对需求的检验——设计写不出来的地方，就是需求没说清的地方（回问，不自己补）。
+   - **需求缺口停报链**：勘察发现需求说不通 / 与实现冲突 / 归属不明 → **停下打回主 agent**，不自行选一种解释往下写。
+   - **写权**：设计档与需求档由 eng-designer 写作（含修订）；主 agent 记批次档、核验设计稿、发起评审。
 3. **开发** — 写代码。
 4. **测试** — 验证。测试要有测试文档：每条用户故事至少对应一个测试用例，覆盖正常/边界/异常，写清测什么、输入、期望输出。
 
@@ -23,6 +26,13 @@
 - 0. User ruling pending — the result is presented and progress waits for the user's explicit go.
 - 1. Proceed — the user has explicitly approved this step.
 - WAIT 前讨论与呈现照常——档位是步与步之间的闸，非新状态（工程侧权威段 = persona-engineering.md 推进档位节）。
+
+## 测试纪律（工程侧——寿命 / 门禁 / 归册）
+
+- **测试按寿命分三层**：① **单元测试 = 开发期工具**——为改对代码而写（开发期自证，可断言实现内部）；②③ **集成测试 = 项目资产**——② 业务场景设立 + ③ 生产问题补入，只断言业务可观察结果；常驻，**不因单次改动而增补**。
+- **① 的收口处置**：批次收口逐条判——**默认退役（删除）**；业务可观察 + 集成未覆盖 + 可稳定驱动，三者全满足才转 ②③（改写成业务语气场景）；处置行落批次档 §6。**退役是常态、保留须举证**——不为凑数写测试，同类即合、冗余即删（防回潮），不维护存量测试库存。
+- **发布门 = 项目的完整验证链**（本产品自研仓 = lint → test:full → test:integration）：验收依据 = ②③ 集成资产全绿 + 项目其余门禁——**不是单批测试数量**。
+- **重 IO 用例归册**：真 fs / git 子进程 / 定时器 / 网络类用例（单例超阈值——本产品自研仓 = >500ms 归 `slow()`）归册到慢测层——快层自动 skip、全量照跑；**未归册而超阈 = 硬红**（防慢测腐化）。
 
 ## 批次档与执行者纪律（第 2 批行为纪律）
 - **六段自写 · 一段一作者**：批次档 §1 主 agent / §2 eng-designer / §3 评审子代理 / §4 主 agent / §5 eng-coder / §6 父代理——
@@ -109,7 +119,8 @@
 4. **D4 指针纪律** — 指针形态 = `文档:节`（行号只作 as-of 参考）；**禁**“见上/见该节”式相对指针。
 5. **D5 冻结窗口** — **评审在途不改被审文档**（改了 = 评审对象已变 → stale，token 不签发）；改动集齐后统一入场。**在途下界 = 报告送达（digest 注入 / 回合尾 collect）或取消·中止**——「子进程退出」不是窗口边界；窗口内对被审文件集（设计评审含批次档）零写入——射程内写入会被预闸拒绝（先 cancel → 改动 → 重发）。
 6. **D6 回读核对** — 任何写入后**回读核实**再报完成（写入静默失败、编辑吞标题均已实证）。
-7. **D7 变更留痕 + 核销同步** — 每批核销跑**核销同步清单**（批次档 §6）：角色表 / 状态行 / 计数 / 指针 / 变更记录 / 待办勾销。
+7. **D7 变更留痕 + 核销同步** — 每批核销跑**核销同步清单**（批次档 §6）：角色表 / 状态行 / 计数 / 指针 / 变更记录 / 待办勾销 / **台账可见面（收口行）**。
+   收口行 = 台账 `--summary` 汇总面的输出（有汇总面的仓直接跑；无则按同口径汇总输出）——保留在会话流。
 
 ## 评审收敛纪律
 - 发起权：设计评审 ONLY user-initiated——you prepare and remind, the user fires；
@@ -182,7 +193,10 @@ files must be file-level paths (one per file you will modify). Directory declara
 5. **边界**：池只收**用户需求点**——技术待办仍走项目技术待办区（本产品自研仓 = docs/TODO.md 技术组）——不混池；紧急 bug 由快车道覆盖。
 
 需求池与技术待办同一铁律（指针化、不展开任务细节），但锚的形态不同：需求池挂需求档节 + 任务书 §2；技术待办挂归属档节 + 最小证据行（file:line + 症状）。
-台账条目一行一条，续行即违规；组标题声明的条数必须等于组内实条目数。
+台账条目一行一条，续行即违规；组标题声明的条数必须等于组内实条目数（计数口径 = 未决数——归档条目不计数）。
+
+**状态机**：`status=` 只取**六态**——活文件只留**未决四态**（待讨论 / 待设计 / 在途 / 待核销）；**已核销 / 已废弃 = 归档态**——勾销后逐条移入项目归档档（本产品自研仓 = `docs/TODO-archive.md`），活文件不留已决条目。
+**技术待办专属**：每条带**一种触发**——`触发=归批（<批名>）` / `触发=条件（<条件句>）` / `触发=认账不排期`；无触发的条目进「待处置」清单，行龄超 30 天标「老化」——报告只读，处置要人判（主 agent 与用户）。
 
 ## Multi-Task Parallelism (multiple designs in flight)（旧 engineering.md 节——施工③随迁：多设计并行=流程纪律，入工程纪律层；端注：§11.1 R14 per-role-domain pools 段为 VSC 端特有——原地保留于本文件尾部）
 Engineering-mode stages (design / review / implementation / audit / delivery review) can run in parallel —
@@ -208,6 +222,7 @@ reconciliation notes and CHANGELOG entries are the parent's duty, landed after t
 Directory declarations are NOT supported — they bypass the conflict detector and are rejected with an error.
 - **提交即走——排队是机制的职责**：spawn 一律带 `files`/`dependsOn` 后**直接提交**——域冲突由调度器排队（返回 `queued` + position）、并发池满由池排队；**不手工记队列、不逐档放行、不因冲突/池满而推迟提交**。父侧只读状态（status/observe），不模拟调度器。
 **Keep the concurrency cap: at most 4 concurrent eng-coders (review #2 — phrase preserved, T9/T-E16 assertions stay green).**
+Cancelling a running eng-coder is a last resort — its in-flight delivery dies unmerged and unaudited; verify the alarm with reliable checks and prefer scoped recovery first.
 - **Cap: at most 4 concurrent eng-coders.**
 You track each parallel implementation's state (design, token, delivery, audit, review) yourself; past 4 the bookkeeping cost and cross-talk risk outweigh the speedup.
 - **User interactions stay one at a time** (clarifications, approvals) — but you MAY fire several review/approval follow-ups in a single response once the user has answered.

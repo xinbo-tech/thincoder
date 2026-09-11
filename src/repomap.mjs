@@ -116,6 +116,85 @@ async function buildDepGraph(cwd) {
   return { deps, importers, fileCount: deps.size }
 }
 
+// ─── buildSummary（D-CI1——依赖大纲注入体；cli tools/repomap.mjs:185-257 同构）─────
+
+/**
+ * Build the dependency-outline summary pushed as a per-run context injection
+ * (VSC-CONTEXT-PARITY §17.3 pushOutline). Reuses buildDepGraph; the content format is
+ * isomorphic to the CLI's buildSummary (directory deps / hub files / entry points).
+ * 差异登记 §17.10：CLI 走索引 DB 断点（doc_chunks），本端 = live buildDepGraph
+ * （workspace.findFiles ≤5000）——内容格式同构。无源文件 → `(no …` 开头（调用方跳过）。
+ */
+export async function buildSummary(cwd) {
+  const graph = await buildDepGraph(cwd)
+  if (!graph || graph.fileCount === 0) return "(no source files found in workspace.)"
+  const { deps, importers, fileCount } = graph
+
+  const out = []
+  out.push(`${fileCount} source files indexed.`)
+
+  // 1) Directory-level dependencies (only for multi-directory projects)
+  const dirDeps = new Map()
+  const dirSet = new Set()
+  for (const [_rel, d] of deps) {
+    dirSet.add(d.dir)
+    if (!dirDeps.has(d.dir)) dirDeps.set(d.dir, new Set())
+    for (const imp of d.imports) {
+      const targetDir = imp.includes("/") ? imp.slice(0, imp.lastIndexOf("/")) : "."
+      if (targetDir !== d.dir) dirDeps.get(d.dir).add(targetDir)
+    }
+  }
+  if (dirSet.size > 1) {
+    out.push("Directory dependencies:")
+    for (const dir of [...dirSet].sort()) {
+      const targets = dirDeps.get(dir)
+      if (targets?.size) {
+        out.push(`  ${dir}/ → ${[...targets].sort().join(", ")}/`)
+      } else {
+        out.push(`  ${dir}/ (leaf)`)
+      }
+    }
+  }
+
+  // 2) Hub files Top-12 (by inbound dependency count)
+  const HUB_LIMIT = 12
+  const hubScores = []
+  for (const [rel] of deps) {
+    const key = normalizeExt(rel)
+    const rev = importers.get(key)
+    if (rev?.size) hubScores.push({ path: rel, count: rev.size })
+  }
+  hubScores.sort((a, b) => b.count - a.count)
+  if (hubScores.length > 0) {
+    out.push(`Hub files (by inbound dependencies, top ${Math.min(hubScores.length, HUB_LIMIT)}):`)
+    for (const h of hubScores.slice(0, HUB_LIMIT)) {
+      const d = deps.get(h.path)
+      const kb = d?.size ? ` (${d.size} KB)` : ""
+      const key = normalizeExt(h.path)
+      const rev = importers.get(key)
+      const shortRefs = rev.size <= 5 ? [...rev].join(", ") : [...rev].slice(0, 4).join(", ") + ` +${rev.size - 4} more`
+      out.push(`  ${h.path}${kb} — imported by: ${shortRefs}`)
+    }
+  }
+
+  // 3) Entry points (not imported by others)
+  const entries = []
+  for (const [rel] of deps) {
+    const key = normalizeExt(rel)
+    if (!importers.has(key) || importers.get(key).size === 0) entries.push(rel)
+  }
+  if (entries.length > 0 && entries.length < fileCount) {
+    const limit = 8
+    const shown = entries.slice(0, limit)
+    out.push("Entry points (not imported by others):")
+    for (const e of shown) out.push(`  ${e}`)
+    if (entries.length > limit) out.push(`  ... +${entries.length - limit} more`)
+  }
+
+  out.push("For detailed per-file relationships, call repo_outline with a file path.")
+  return out.join("\n")
+}
+
 // ─── repo_outline tool ──────────────────────
 
 export const repoOutlineTool = {

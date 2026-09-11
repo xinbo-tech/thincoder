@@ -2,9 +2,17 @@
  * shared.mjs — Helper functions and constants shared across tool modules
  */
 
-import { join, isAbsolute } from "node:path"
-import { readdirSync, statSync, openSync, readSync, closeSync } from "node:fs"
+import { join, isAbsolute, dirname } from "node:path"
+import { readdirSync, statSync, openSync, readSync, closeSync, readFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
 import * as vscode from "vscode"
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+
+/** Load a tool's external description file (`<name>.md`, sibling of this module) —
+ *  D-TD2（VSC-CONTEXT-PARITY R4，镜像 CLI shared.mjs:12 同语义）：同步读、无缓存、
+ *  缺失即抛（fail-visible——描述文件是发布物的一部分，静默空描述不可接受）。 */
+export const DESC = (name) => readFileSync(join(__dirname, `${name}.md`), "utf8")
 
 export const BASH_TIMEOUT_MS = 120000
 

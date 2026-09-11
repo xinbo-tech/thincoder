@@ -13,7 +13,7 @@
  */
 
 import { readFile, writeFile } from "node:fs/promises"
-import { resolvePath, getOpenDoc, applyEditorEdit, applyEditorRangeEdit, normalizeEOL, lfOffsetToRaw, detectFileEol, findCandidates, refreshMarkdownPreview } from "./shared.mjs"
+import { DESC, resolvePath, getOpenDoc, applyEditorEdit, applyEditorRangeEdit, normalizeEOL, lfOffsetToRaw, detectFileEol, findCandidates, refreshMarkdownPreview } from "./shared.mjs"
 import { applyRegion, EMPTY_NEW_REASON } from "./edit-diff.mjs"
 import { hasLineParams, computeLineEdit, executeLineEdit, LINE_MUTEX_TEXT } from "./edit-line-params.mjs"
 import { findFuzzyMatch, fuzzyAmbiguousBlock, FUZZY_MATCH_NOTE } from "./edit-fuzzy-match.mjs"
@@ -76,24 +76,7 @@ const WHITESPACE_VARIANT_NOTE = "applied to the unique whitespace-only match (co
 const EDIT_MUTEX_TEXT = "edits array is mutually exclusive with top-level old_string/new_string/line/startLine/endLine — a top-level path is allowed (default for entries without their own path); provide each change's targeting (old_string, or line / startLine+endLine) and new_string inside its edits entry"
 export const editTool = {
   name: "edit",
-  description:
-    "Edit a file as a patch. old_string is the current content of the region to change (must match exactly once); new_string is the desired result of that region. Lines shared by both are kept; lines only in new_string take their position relative to the shared lines (LCS order) — when no line overlaps, old_string's lines are REPLACED by new_string and the old lines are deleted (no old-line residue — a replacement never leaves old lines behind); a unique single-line old_string paired with a single-line new_string replaces that exact line in place (line count unchanged). replace_all keeps literal replacement of every occurrence — the diff rules above do not apply.\n" +
-    "old_string matching tiers: 1) exact; 2) unique whitespace-only variant (auto-applied); 3) fuzzy — ≥90% of lines identical after normalization (trimmed, tab→space indent + quote normalization — ASCII single, curly single/double and backtick quotes all unify to straight double quotes): a UNIQUE fuzzy match is auto-applied, multiple fuzzy matches error with line-numbered candidates (add more context to disambiguate).\n" +
-    "Routing — pick the right edit tool:\n" +
-    "- Delete a line/range by number → omit new_string: edit with `line: N` / `startLine: N, endLine: M`\n" +
-    "- Line numbers fresh (just read) → `line`/`startLine`/`endLine` targeting — precise, no content copy needed\n" +
-    "- Line numbers may have drifted / content has whitespace-encoding noise → `hashline_edit` (content-hash addressing — position-independent)\n" +
-    "- Add a line/entry after a known line → insert_after — includes checklist items and doc lines\n" +
-    "Know the line number? Use line/startLine/endLine instead of old_string — give new_string to replace the target line(s), or OMIT new_string to delete the line/range (deleting by number is an explicit, bounded intent); an explicit empty new_string is an error — omit new_string instead of passing an empty string.\n" +
-    "Parameters:\n" +
-    "- path (required): File path, relative to cwd or absolute (alias: filePath)\n" +
-    "- old_string: Current content of the region — must match exactly once in the file (exact → whitespace-variant → fuzzy tiers); mutually exclusive with line/startLine/endLine; for a change that keeps a line, include the unchanged neighbor line in BOTH old_string and new_string\n" +
-    "- new_string: Desired result of the region — diffed against old_string (shared lines kept; old-only lines deleted — a replacement never leaves old lines behind). Content-based edits: required — an explicit empty string is an error (protects against forgetting it). Line-based edits (line/startLine/endLine): give it to replace the line/range, or OMIT it to delete — an explicit empty string is NOT deletion (error — omit instead)\n" +
-    "- line: 1-based line number — replace that single line with new_string, or OMIT new_string to DELETE it; mutually exclusive with old_string and startLine/endLine; replace_all does not apply\n" +
-    "- startLine / endLine: 1-based inclusive line range to replace with new_string (given together; mutually exclusive with old_string and line) — OMIT new_string to DELETE the range; replace_all does not apply\n" +
-    "- replace_all: Replace all occurrences instead of just one (default false; content-based targeting only)\n" +
-    "- edits: Batch form — multiple edits in ONE call, atomic; entries without their own path inherit the top-level path (entry paths override). Mutually exclusive with top-level old_string/new_string\n" +
-    "- use the most recent read of the file as the source of old_string / line numbers / hashes — re-read after the file changed",
+  description: DESC("edit"),
   parameters: {
     type: "object",
     properties: {

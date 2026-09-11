@@ -84,8 +84,8 @@ function pendingRowSnapshot(history) {
 /** §17.5.5 消化完成逐条冻结回收（2026-09-03 实测修订——CLI freezeReclaimDigestedBlocks
  *  parity）：digest/会话内用户回合消化完 pending 条目（run 首行已注入）后调用——对该轮
  *  已消化条目（before 快照中已不在 pending 者）逐条补发 {type:"subagent", status:"done"}
- *  通知 → webview 把 "done · awaiting digestion" 驻留行折叠回收（不等池空——块回收与
- *  池空解耦；会话退出 freeze 仅兜底未消化残项）。归属：快照 = run 开跑时 pending——
+ *  通知 → webview 把 awaitingDigest 驻留块**归档落流**（WEBVIEW.md §14 C-3；不等池空——
+ *  块回收与池空解耦；会话退出 freeze 仅兜底未消化残项）。归属：快照 = run 开跑时 pending——
  *  run 消费后不在 pending 者即本 run 消化者（settle 回调挂起分流先入 pending 再被注入，
  *  无重复）。已知边界：run 首行注入前数毫秒窗口内 settle 的条目（入 pending 后即被本
  *  run 消费、却不在快照内）由会话退出 freeze 兜底折叠——极窄窗口、可接受。
@@ -325,8 +325,8 @@ export async function suspensionSession(panel, entry) {
     }
     panel._susp = null
     panel._suspWake = null
-    // 补发 done 冻结：驻留面板的 awaiting-digest 块随会话退出折叠进流（abort 同样
-    // 折叠——CLI freezeAllSubTasks 的中断语义：无 digest 消费、不留悬空 live 块）。
+    // 补发 done 冻结：区全体随会话退出归档落流（WEBVIEW.md §14 C-8——live 折叠、
+    // awaitingDigest 归档；abort 同路径——CLI freezeAllSubTasks 中断语义：不留悬空块）。
     postSuspensionEnd(panel, { freeze: true })
     panel._refreshStatus?.()
       // 排队输入兜底（2026-09-02 code review round2 #2-VS Code 偏差修复 + INPUT-LOCK 单槽化

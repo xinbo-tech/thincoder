@@ -9,6 +9,8 @@
  * （INPUT-LOCK-BEHAVIOR-REVISED——2026-09-09）：⑤ 状态派生组——busy（running 含 digest——
  * 单一判据）不禁录入（readOnly 锁移除——打字回显）+ busy 占位符 + send 拒发（Enter/发送
  * 按钮——文本保留）/susp·idle 默认占位符——Ctrl+I 中断模态占位符归属（ctx._interruptMode）。
+ * 活动区收口批（2026-09-12 §14 C-14——T-CL20）：**Send 按钮 running 期隐藏**（与拒发同判据——
+ * 消除假 affordance；susp/idle 恢复 flex）——⑤ 尾段 + ⑥ 锁该可见性（send.js 门禁零改）。
  *
  * 手法（webview 侧 happy-dom——smoke-settings.mjs 模式）：setupWebview（helpers/
  * webview-env.mjs——happy-dom 注册 + en locale + acquireVsCodeApi 桥桩）+ installChatFixture
@@ -21,6 +23,7 @@
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
 import { setupWebview, installChatFixture } from "./helpers/webview-env.mjs"
 
 // ─── happy-dom 环境（必须先于 webview 模块 import——state.js 顶层读 DOM + acquireVsCodeApi）───
@@ -54,6 +57,7 @@ async function loadWebview() {
 
 const statusLine = () => document.getElementById("status-line").innerHTML
 const abortShown = () => document.getElementById("abort-btn").style.display === "flex"
+const sendShown = () => document.getElementById("send-btn").style.display === "flex"
 
 /** 逐测冷启复位（node --test 同文件串行——模块缓存共享同一 S——每测独立起点）。 */
 function resetBusy({ S, ctx }) {
@@ -65,6 +69,7 @@ function resetBusy({ S, ctx }) {
   ctx._interruptMode = false
   ctx.inputEl.readOnly = false
   document.getElementById("abort-btn").style.display = "none"
+  document.getElementById("send-btn").style.display = "flex"
   document.getElementById("status-line").innerHTML = ""
 }
 
@@ -273,7 +278,6 @@ test("⑤ busy 不禁录入 + send 禁（INPUT-LOCK-BEHAVIOR-REVISED——AC-1/A
   handleTurnStateMessage({ type: "turnState", state: "idle" })
   setLoading(ctx, false)
   assert.equal(input.placeholder, t("input.placeholder"), "idle → 默认占位符")
-
   // Ctrl+I 中断模态（红线——注入通道保留）：模态激活期间占位符归 input.js（applyBusyLock
   // 不动）；模态退出（ctx._interruptMode 复位）→ applyBusyLock 重派生（回 busy 占位符）
   handleTurnStateMessage({ type: "turnState", state: "running" })
@@ -288,4 +292,37 @@ test("⑤ busy 不禁录入 + send 禁（INPUT-LOCK-BEHAVIOR-REVISED——AC-1/A
   handleTurnStateMessage({ type: "turnState", state: "idle" })
   applyBusyLock()
   assert.equal(input.placeholder, t("input.placeholder"), "idle → 终态默认占位符")
+})
+
+// ⑥ Send 可见性（§14 C-14——T-CL20/AC-CL5）：running ⇄ flex 同 Stop 派生点
+test("⑥ Send running 期隐藏（AC-CL5）：running → display none；susp/idle → flex；loading 交替不翻；send.js 门禁零改", async () => {
+  const { S, ctx, setLoading, handleTurnStateMessage, send } = await loadWebview()
+  resetBusy({ S, ctx })
+  const before = capturedPosts.filter((m) => m.type === "userMessage").length
+  handleTurnStateMessage({ type: "turnState", state: "running" })
+  setLoading(ctx, true)
+  assert.equal(sendShown(), false, "running → Send 隐藏（display none）")
+  assert.equal(document.getElementById("send-btn").style.display, "none", "显式 none（非占位/禁用态——M4 选定案）")
+  setLoading(ctx, false)
+  assert.equal(sendShown(), false, "running + loading:false → 仍隐藏（running 派生——同 Stop）")
+  handleTurnStateMessage({ type: "turnState", state: "susp" })
+  setLoading(ctx, false)
+  assert.equal(sendShown(), true, "susp（主空闲）→ Send 恢复 flex")
+  handleTurnStateMessage({ type: "turnState", state: "running" })
+  setLoading(ctx, true)
+  assert.equal(sendShown(), false, "digest 执行中 → 隐藏")
+  handleTurnStateMessage({ type: "turnState", state: "susp" })
+  setLoading(ctx, false)
+  assert.equal(sendShown(), true, "digest 尾回 susp → 恢复（交替不翻错）")
+  handleTurnStateMessage({ type: "turnState", state: "idle" })
+  setLoading(ctx, false)
+  assert.equal(sendShown(), true, "idle → Send 可见")
+  const sendSrc = readFileSync(new URL("../webview/send.js", import.meta.url), "utf8")
+  assert.ok(sendSrc.includes('_turnState === "running"'), "send.js 出口守卫保留（拒发语义零改）")
+  ctx.inputEl.value = "x"
+  handleTurnStateMessage({ type: "turnState", state: "running" })
+  send()
+  assert.equal(capturedPosts.filter((m) => m.type === "userMessage").length, before, "busy 期仍拒发（门禁未动）")
+  ctx.inputEl.value = ""
+  handleTurnStateMessage({ type: "turnState", state: "idle" })
 })

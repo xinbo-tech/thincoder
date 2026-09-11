@@ -9,6 +9,7 @@
 import * as vscode from "vscode"
 import { join } from "node:path"
 import { existsSync } from "node:fs"
+import { DESC } from "./shared.mjs"
 
 /** Resolve a workspace-relative path to a file URI; returns null when the file is missing. */
 function resolveUri(cwd, p) {
@@ -45,16 +46,7 @@ function renderSymbols(nodes, depth = 0) {
 
 export const lspTool = {
   name: "lsp",
-  description:
-    "LSP code intelligence: go to definition, find references, hover info, document symbols, diagnostics. " +
-    "Uses VS Code's language services directly — works for any language with an installed extension. " +
-    "Find files with glob / repo_outline — use lsp for definition / references / diagnostics. " +
-    "Returns the definitions, references, hover info, or diagnostics for the queried symbol.\n" +
-    "Parameters:\n" +
-    "- subcommand (required): definition | references | hover | symbols | diagnostics\n" +
-    "- uri (required): Target file path (relative to project root)\n" +
-    "- line: 1-based line number (for definition/references/hover)\n" +
-    "- character: 1-based character offset (for definition/references/hover)",
+  description: DESC("lsp"),
   parameters: {
     type: "object",
     properties: {

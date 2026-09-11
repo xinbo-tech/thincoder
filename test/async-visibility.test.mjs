@@ -8,8 +8,9 @@
  *    投递队列（入队/直投/flush/溢出/清队）+ 存活投影再断言 + webviewReady/清屏定序；
  * ② webview 侧（happy-dom 驱真 activity/streaming 模块——activity-flow 同骨架）：
  *    双 spawn 双块 / 新代接管 / 清屏恢复（pool:true + ⏹ + 位置=活动区尾）/ 终态补桩精确成员表。
- *    2026-09-11 活动区回归：块出生地 = `#subagent-activity`（WEBVIEW.md §12）——helper/fresh
- *    与位置断言随批改区（T-V2 = T-R6 / T-V4·T-V5 = T-R5 同断言族）。
+ *    2026-09-11 活动区回归：块出生地 = `#subagent-activity`（WEBVIEW.md §12）；**2026-09-12 活动区
+ *    收口（§14）**：终态折叠后归档落流（`#messages`）——旧块历史在流内、补桩桩块流内可见；
+ *    区驻留 = live + awaitingDigest（断言面随之改：本档用例位置断言带 §14 注）。
  *
  * 环境隔离：config/会话目录/log 目录全部指向 tmp（loadSession 真读盘）。
  */
@@ -257,6 +258,8 @@ function addMessage(ctx, tag) {
 }
 
 const subBlocks = (ctx) => [...ctx.activityEl.children].filter((el) => el.classList.contains("sub-block"))
+/** 流内归档块（§14 C-3——终态落流面）。 */
+const streamBlocks = (ctx) => [...ctx.messagesEl.children].filter((el) => el.classList.contains("sub-block"))
 
 // T-V1（AC-A1——采样点改区，2026-09-11 §12 修订）：22:32 基例——背靠背双 spawn 各得一块 + ⏹。
 test("T-V1 双 spawn 背靠背出生（22:32 基例——AC-A1）：两条不同 id started → 区内 2 live 块 + 各挂 ⏹", async () => {
@@ -276,14 +279,16 @@ test("T-V1 双 spawn 背靠背出生（22:32 基例——AC-A1）：两条不同
   assert.equal(S._subBlocks.size, 2, "簿记 map 双条目")
 })
 
-// T-V2（AC-A2；= T-R6 新代接管）：冻结条目把持键 → 新代接管（新块 + 键重绑 + takeover 痕迹 + 旧块留区内）。
-test("T-V2 重名新代接管（AC-A2）：冻结 #4 在场 → 新 started #4 建新块接管键 + takeover 痕迹 + 旧块留区内冻结", async () => {
+// T-V2（AC-A2；= T-R6 新代接管；§14 C-5③ 修订）：冻结条目把持键 → 新代接管（新块 + 键重绑 +
+// takeover 痕迹 + 旧已归档块历史在流内）。
+test("T-V2 重名新代接管（AC-A2）：冻结 #4 在场 → 新 started #4 建新块接管键 + takeover 痕迹 + 旧块历史在流内", async () => {
   const { S, ctx, applySubagentStatus, subagentChunk } = await loadWebview()
   fresh({ S, ctx })
   applySubagentStatus({ type: "subagent", status: "started", role: "eng-coder", id: 4, pool: true, model: "glm-5.3" })
   const old = S._subBlocks.get("sub:eng-coder#4")
   applySubagentStatus({ type: "subagent", status: "done", role: "eng-coder", id: 4 })
   assert.ok(old._subMeta.frozen, "上一代已冻结（键被把持）")
+  assert.equal(old.parentNode, ctx.messagesEl, "旧块已归档（§14 C-3——流内历史）")
   applySubagentStatus({ type: "subagent", status: "started", role: "eng-coder", id: 4, pool: true, model: "glm-5.3", startedAt: 777 })
   const next = S._subBlocks.get("sub:eng-coder#4")
   assert.ok(next && next !== old, "新一代建块并接管键（原缺陷：返 null 永久失明）")
@@ -291,10 +296,11 @@ test("T-V2 重名新代接管（AC-A2）：冻结 #4 在场 → 新 started #4 �
   assert.ok(next.classList.contains("sub-live"), "新块 sub-live")
   assert.ok(next.querySelector(".sub-stop-btn"), "新块挂 ⏹")
   assert.equal(next._subMeta.startedAt, 777, "新块水合新代 startedAt")
-  assert.equal(old.isConnected, true, "旧冻结块以 DOM 留在区内（历史）")
+  assert.equal(old.isConnected, true, "旧块仍在 DOM（历史——流内）")
   assert.ok(old.classList.contains("sub-frozen"), "旧块仍冻结（不被半复活）")
-  assert.equal(subBlocks(ctx).length, 2, "区内两块（旧冻结 + 新 live）")
-  assert.equal(old.parentNode, ctx.activityEl, "旧块在活动区（原地）")
+  assert.equal(subBlocks(ctx).length, 1, "区内单块（新 live）")
+  assert.equal(streamBlocks(ctx).length, 1, "流内一块（旧已归档）")
+  assert.equal(old.parentNode, ctx.messagesEl, "旧块位置 = #messages（不回流）")
   assert.ok(S._subTraceLog.some((e) => e.kind === "takeover"), "takeover 痕迹在位")
   // 接管后迟到 chunk 落新块（§5.1.4 第 5 条显式取舍）
   subagentChunk({ name: "sub:eng-coder#4", kind: "text", text: "late-generation chunk" })
@@ -337,8 +343,8 @@ test("T-V3 清屏恢复（AC-A4）：clearMessages+historyPage 之后再断言 �
   assert.equal([...ctx.messagesEl.children].filter((el) => el.classList.contains("sub-block")).length, 0, "#messages 零块（位置面与消息流无交）")
 })
 
-// T-V4/T-V5（AC-A3；= T-R5 终态补桩）：终态补桩精确成员表——补桩行 + 不补行。
-test("T-V4 终态补桩（AC-A3）：never-born done/error/运行中 cancelled/terminated/failed → 补已折叠桩 + 头词 + 痕迹", async () => {
+// T-V4/T-V5（AC-A3；= T-R5 终态补桩）：终态补桩精确成员表——补桩行 + 不补行（§14 C-5②：桩 = 折叠 + 立即归档）。
+test("T-V4 终态补桩（AC-A3）：never-born done/error/运行中 cancelled/terminated/failed → 补已折叠桩（归档落流）+ 头词 + 痕迹", async () => {
   const { S, ctx, applySubagentStatus } = await loadWebview()
   fresh({ S, ctx })
   const cases = [
@@ -350,13 +356,14 @@ test("T-V4 终态补桩（AC-A3）：never-born done/error/运行中 cancelled/t
     [{ status: "failed", role: "eng-designer", id: 16 }, "error"],
   ]
   for (const [m, word] of cases) {
-    const before = subBlocks(ctx).length
+    const before = streamBlocks(ctx).length
     applySubagentStatus({ type: "subagent", ...m })
     const block = S._subBlocks.get(`sub:${m.role}#${m.id}`)
     assert.ok(block, `${m.status}（never-born）补出块`)
     assert.equal(block._subMeta.frozen, true, "补桩即折叠（_subMeta.frozen === true）")
-    assert.equal(subBlocks(ctx).length, before + 1, "区内计数 +1")
-    assert.equal(block.parentNode, ctx.activityEl, "补桩块落活动区（区内出生）")
+    assert.equal(streamBlocks(ctx).length, before + 1, "归档落流计数 +1")
+    assert.equal(block.parentNode, ctx.messagesEl, "补桩块 = 折叠 + 立即归档（§14 C-5②——流内可见）")
+    assert.equal(subBlocks(ctx).length, 0, "区不驻留（桩不占区）")
     const hdr = block.querySelector(".sub-hdr").textContent
     assert.ok(hdr.includes(word), `${m.status} 头词含 ${word}（断言用：${hdr}）`)
   }
@@ -366,7 +373,8 @@ test("T-V4 终态补桩（AC-A3）：never-born done/error/运行中 cancelled/t
 test("T-V5 补桩边界（AC-A3 不补行）：role 未知/id 缺失/非法频道/answered 无块/queued-cancel 无块 → 一律 no-op", async () => {
   const { S, ctx, applySubagentStatus } = await loadWebview()
   fresh({ S, ctx })
-  const before = subBlocks(ctx).length
+  const total = () => subBlocks(ctx).length + streamBlocks(ctx).length
+  const before = total()
   // ① role 未知 ② id 缺失 ③ 非法频道名（id 非数字）
   applySubagentStatus({ type: "subagent", status: "done", role: "bogus", id: 3 })
   applySubagentStatus({ type: "subagent", status: "done", role: "explore" })
@@ -374,7 +382,7 @@ test("T-V5 补桩边界（AC-A3 不补行）：role 未知/id 缺失/非法频�
   // ④ answered 无块（§5 既有裁决：回复走 digest——不补）⑤ cancelled(was:"queued") 无块（从未启动——不补）
   applySubagentStatus({ type: "subagent", status: "answered", role: "explore", id: 41 })
   applySubagentStatus({ type: "subagent", status: "cancelled", role: "explore", id: 42, was: "queued" })
-  assert.equal(subBlocks(ctx).length, before, "五例一律零新块")
+  assert.equal(total(), before, "五例一律零新块（区 + 流合计）")
   assert.equal(S._subBlocks.size, 0, "map 零新增条目")
   const traces = S._subTraceLog
   assert.equal(traces.filter((e) => e.kind === "drop-unknown-role").length, 3, "①②③ 各留一条 drop-unknown-role")
@@ -382,7 +390,7 @@ test("T-V5 补桩边界（AC-A3 不补行）：role 未知/id 缺失/非法频�
   // 有 map 条目者不受表影响：已冻结块再收终态 → no-op 且不补
   applySubagentStatus({ type: "subagent", status: "done", role: "explore", id: 7 })
   applySubagentStatus({ type: "subagent", status: "error", role: "explore", id: 7, error: "late" })
-  assert.equal(subBlocks(ctx).length, before + 1, "补桩块单一（不重复建）")
+  assert.equal(total(), before + 1, "补桩块单一（不重复建——流内）")
   assert.equal(S._subTraceLog.filter((e) => e.kind === "late-terminal-stub").length, 1, "重复终态不重复补桩")
 })
 

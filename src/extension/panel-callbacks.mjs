@@ -80,6 +80,23 @@ export function makeAskInPanel(panel) {
   })
 }
 
+// ─── 状态文本 / digest cap 发射面（2026-09-12 活动区收口批——WEBVIEW.md §14 C-12/C-10）──
+/** onWait → `statusText` 结构化载荷（C-12#1——纯函数，测试直驱面）：rate = TPM 限流等待（CLI
+ *  相名 `gate` 一并映射——对位保留）；overloaded = 5xx 重试等待；retry = 429 限流；quota = 配额耗尽；`warn`（前置告警）与未知 → null。 */
+export function statusTextPayload(info) {
+  const phase = info?.phase
+  if (phase === "rate" || phase === "gate") return { type: "statusText", kind: "rateWait", seconds: info.seconds }
+  if (phase === "overloaded") return { type: "statusText", kind: "overloaded", seconds: info.seconds }
+  if (phase === "retry") return { type: "statusText", kind: "rateLimited", seconds: info.seconds }
+  if (phase === "quota") return { type: "statusText", kind: "quota", message: info.message }
+  return null
+}
+
+/** digest turn-cap 行发射（C-10）：auto = AUTO 档续跑（CLI agent-turn.mjs:188）、stop = 手动档停止（:192）。 */
+export function postDigestCap(panel, mode, turns) {
+  panel._panel?.webview.postMessage({ type: "digest", status: "cap", mode, turns })
+}
+
 /**
  * runAgent 回调装配（2026-09-05 module-split：verbatim 自 runPanelChatImpl——语义零变）。
  * 内部闭包：totalUsage（跨 onUsage 调用累计）+ lastAgentState（onComplete 写 →
@@ -94,7 +111,7 @@ export function buildPanelCallbacks(panel, deps) {
   // Token stream is forwarded live to the webview; the assistant reply is persisted by runAgent's
   // pushReal into fullHistory (no separate accumulation needed here).
   // Accumulate token usage across all LLM calls in this turn (matches CLI)
-  const totalUsage = { prompt_tokens: 0, completion_tokens: 0, prompt_cache_hit_tokens: 0, prompt_cache_miss_tokens: 0 }
+  const totalUsage = { prompt_tokens: 0, completion_tokens: 0, prompt_cache_hit_tokens: 0, prompt_cache_miss_tokens: 0, reasoning_tokens: 0 }
   // Agent state captured at onComplete, reused by the async onDistilled save — agent.mjs calls
   // onDistilled without args, so the persisted engineering fields ride the closure.
   let lastAgentState = {}
@@ -114,6 +131,12 @@ export function buildPanelCallbacks(panel, deps) {
     },
     onPlanMode: (active) => { panel._panel?.webview.postMessage({ type: "planMode", active }); panel._setPlanMode(active).catch(() => {}) },
     onSubagent: (info) => postSubagentEvent(panel, { type: "subagent", ...info }),
+    // §18 C-8（child permission gate——2026-09-12）：审批态块头通知（child 权限通道
+    // announce——tool 非空 = 等待审批 / null = 清态）——任务可见性族（outbox/flush 同通道）。
+    onSubagentApproval: (info) => postSubagentEvent(panel, { type: "subagentApproval", ...info }),
+    // §14 C-12#1：onWait 相位 → statusText；§14 C-12#2：顶层逐轮帧 → turnFrame
+    onWait: (info) => { const payload = statusTextPayload(info); if (payload) panel._panel?.webview.postMessage(payload) },
+    onAgentTurn: (turn, maxTurns) => panel._panel?.webview.postMessage({ type: "turnFrame", turn, maxTurns }),
     // Compression lifecycle visibility (CONTEXT-COMPACTION §7 D-C1/D-C3): the webview
     // status line shows "Compressing context…" → "Compressed: N tokens freed (Xs)" /
     // "failed: <error>" / 3-failure degradation note. Only the lifecycle is surfaced —
@@ -133,6 +156,7 @@ export function buildPanelCallbacks(panel, deps) {
       totalUsage.completion_tokens += u.completion_tokens ?? 0
       totalUsage.prompt_cache_hit_tokens += u.prompt_cache_hit_tokens ?? 0
       totalUsage.prompt_cache_miss_tokens += u.prompt_cache_miss_tokens ?? 0
+      totalUsage.reasoning_tokens += u.reasoning_tokens ?? 0 // C-12#6：✦ 段（transports 映射补全）
       const ctxPct = ctxPercentForModel(u.prompt_tokens, p)
       panel._panel?.webview.postMessage({ type: "usage", usage: { ...totalUsage }, ctxPct })
     },

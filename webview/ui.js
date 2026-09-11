@@ -464,11 +464,11 @@ export function maybeScrollActivity(ctx) {
 
 /** 窗口化裁剪：顶层内容块超过上限时删最旧的，防 DOM 无界增长（webview 输入卡顿治本）。
  *  被裁掉的块带 data-idx（history 来自宿主、live 由本地 _nextIdx 续接），向上滚动时 loadOlder 拉回。
- *  子代理活动块居住活动区（D-A7）——不在本容器——本函数零改。 */
+ *  §14 T-CL9（2026-09-12）：消化后归档的子代理块（`.sub-block`）落流后随本窗出入（同一 DOM 无界纪律）。 */
 const MAX_MESSAGE_BLOCKS = 150
 export function trimOldMessages(ctx) {
   const blocks = [...ctx.messagesEl.children].filter((el) =>
-    el.classList.contains("message") || el.classList.contains("tool-call") || el.classList.contains("advisor-block"))
+    el.classList.contains("message") || el.classList.contains("tool-call") || el.classList.contains("advisor-block") || el.classList.contains("sub-block"))
   const overflow = blocks.length - MAX_MESSAGE_BLOCKS
   if (overflow <= 0) return
   for (let i = 0; i < overflow; i++) blocks[i].remove()

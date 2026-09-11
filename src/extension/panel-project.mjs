@@ -8,6 +8,7 @@ import { resumeSlot } from "./session-io.mjs"
 import { _cwd, setProjectFolder } from "./panel-messages.mjs"
 import { loadSession } from "./panel-session.mjs"
 import { pushIndexStatus, maybePromptIndex } from "./panel-index.mjs"
+import { refreshLedger } from "./ledger-surface.mjs" // LEDGER-SURFACE（§2.30.3.5）
 
   /** Snapshot for the webview's project button: { folders, current, multi, followActive }. */
 export function projectInfo(_panel) {
@@ -53,6 +54,7 @@ export async function onProjectChanged(panel) {
     loadSession(panel)   // clearMessages + new project's history + sessions + autoApprove/planMode
     pushIndexStatus(panel)
     maybePromptIndex(panel)
+    refreshLedger(panel, { emit: false }) // LEDGER-SURFACE：换项目即时刷新 item（不投递不记账）
   }
 
   /** Native picker over the workspace roots (fixed options) + the follow-active toggle. */

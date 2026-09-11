@@ -95,7 +95,11 @@ export function buildRequest(provider, messages, tools, { toolChoice, parallelTo
  * usage top level. Miss is derived as prompt_tokens - hit when not reported.
  */
 export function normalizeUsageCache(u) {
-  if (!u || u.prompt_cache_hit_tokens !== undefined) return u
+  if (!u) return u
+  // §14 C-12#6（活动区收口批）：reasoning_tokens 映射（completion_tokens_details——
+  // 有则映射；DeepSeek/OpenAI 同面——早退回前先补）
+  if (u.reasoning_tokens === undefined) u.reasoning_tokens = u.completion_tokens_details?.reasoning_tokens ?? 0
+  if (u.prompt_cache_hit_tokens !== undefined) return u
   const cached = u.prompt_tokens_details?.cached_tokens ?? u.cached_tokens
   if (cached === undefined) return u
   u.prompt_cache_hit_tokens = cached

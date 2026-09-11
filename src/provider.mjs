@@ -357,13 +357,16 @@ async function requestWithRetry(provider, url, headers, body, signal, onWait) {
       lastError = new Error(message)
       lastWas429 = true
       if (attempt < MAX_RETRIES) {
-        onWait?.({ phase: "retry", seconds: Math.ceil(waitMs / 1000) })
+        onWait?.({ phase: "retry", seconds: Math.ceil(waitMs / 1000), status: 429 }) // §14 C-12#1：携 status（webview → rateLimited）
         await abortableSleep(waitMs, signal)
       }
       continue
     }
     if (RETRYABLE_STATUS.has(response.status)) {
       lastError = new Error(message)
+      // §14 C-12#1（活动区收口批）：5xx 重试等待上报（overloaded 相位——下轮循环头退避
+      // `2 ** attempt`s；末次尝试后无等待 → 不上报）。
+      if (attempt < MAX_RETRIES) onWait?.({ phase: "overloaded", seconds: 2 ** attempt })
       continue
     }
     const e = new Error(message); e.status = response.status; throw e

@@ -22,6 +22,7 @@
  */
 import { spawn } from "node:child_process"
 import { resolve } from "node:path"
+import { DESC } from "./shared.mjs"
 
 const MAX_SCRIPT = 50_000
 const MAX_OUTPUT = 50_000
@@ -129,27 +130,7 @@ function validateNodeArgs(nodeArgs) {
 
 export const executeTool = {
   name: "execute",
-  description:
-    "Execute JavaScript — either inline `code` or a `scriptFile`. Runs in a real child `node` process — a pure node ESM environment: top-level `await` and dynamic `import()` are available, no globals are injected. File reads/writes/searches belong to the dedicated read/ls/glob/grep/write/edit tools — not to execute. If a script genuinely needs fs/path, `import` the `node:` module inside the code (one explicit import line).\n" +
-    "\n" +
-    "**Route to execute instead of bash:**\n" +
-    "- `node -e \"…\"` → execute (inline code; top-level await + import() + console all work)\n" +
-    "- `node <script.mjs>` → execute with scriptFile (runs the file in a child node process)\n" +
-    "- `node --test <file>` / `node --check <file>` → execute with scriptFile + nodeArgs\n" +
-    "\n" +
-    "Parameters:\n" +
-    "- code: JavaScript to run inline. Top-level `await` and `import('./x.mjs')` are supported. Pure node ESM — no preloaded helpers; import `node:fs`/`node:path` etc. yourself when needed. File reads/writes go through the dedicated read/ls/glob/grep/write/edit tools. Use this OR scriptFile.\n" +
-    "- scriptFile: run a .mjs/.js file with node (self-contained — the file imports what it needs). Path relative to workdir — no directory restriction. Use this OR code.\n" +
-    "- nodeArgs: (scriptFile) extra node flags before the script, e.g. [\"--test\"], [\"--check\"]. Eval-like flags (--eval/--input-type/--inspect) are rejected.\n" +
-    "- workdir: run in this directory (relative to cwd — no directory restriction; default cwd)\n" +
-    "- filter: optional — only return output lines matching this regex (case-insensitive)\n" +
-    "- timeoutMs: Timeout in milliseconds (default 30000, max 600000 — covers `node --test` suites and package scripts)\n" +
-    "\n" +
-    "Notes:\n" +
-    "- `console.log(...)` prints to the result; objects are JSON-stringified where needed.\n" +
-    "- A non-zero exit / thrown exception returns the stderr (error + stack) as the result.\n" +
-    "- Output is capped at ~50KB; when a script overruns it, an explicit `[output truncated]` marker is appended — print large results in chunks, or have the script write them to a file (node:fs) and read that file back with the `read` tool.\n" +
-    "- Use `write`/`edit`/`apply_patch` for source edits. Still use `bash` for package-manager/CLI subprocesses (`npm test`/`npm publish`/`vsce`), servers, and interactive/TTY programs — execute covers in-process JS and `node <script>`/`node --test`/`node --check`, not arbitrary CLI or long-running programs.\n",
+  description: DESC("execute"),
   parameters: {
     type: "object",
     properties: {

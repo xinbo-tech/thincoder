@@ -282,7 +282,8 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
     for (let resume = false; ; resume = true) {
       try {
         const result = await runner({ ...withEffort, model: m.model }, ctx.cwd, "# Problem\n" + problem, {
-          onToolCall: (name, args) => panel({ kind: "tool", text: name + " " + (JSON.stringify(args) || "").slice(0, 120) }),
+          // §14 C-11①：结构化 tool/cmd（webview 块头 `${tool} — ${cmd ≤60}`；无 cmd 仅 tool）
+          onToolCall: (name, args) => panel({ kind: "tool", text: name + " " + (JSON.stringify(args) || "").slice(0, 120), tool: name, cmd: typeof args?.command === "string" ? args.command : undefined }),
           onToolResult: (name, text) => panel({ kind: "tool", text: "→ " + String(text ?? "").slice(0, 80).replace(/\n/g, " ") }),
           // 完整思考过程 + 输出文本流 (consult-UI review 2026-08-15): onReasoning has no depth
           // gate; onToken needs the consult exemption in agent.mjs — both stream as advisor-kind

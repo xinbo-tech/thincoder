@@ -25,16 +25,18 @@ import { specForModel } from "../specs.mjs"
 import { modeRoleField } from "../agent-tools/subagent.mjs"
 import { loadRaw, loadConsultPool, normalizeProxy, resolveProviders, TRACES_DEFAULTS } from "../config-io.mjs"
 import { expandHome } from "../expand-home.mjs"
-import { pushReal } from "./run-helpers.mjs"
+import { escapeXml, pushReal } from "./run-helpers.mjs"
 import { assemblePrompt } from "../prompt-overlays.mjs"
-import { pushModeReminders, pushTimeReminder, pushInjections, appendImagePointer, pushEnvStateReminder, pushPeerReminder, pushGitContext, detectRestoredSession } from "./setup-reminders.mjs"
+import { loadSkills, formatSkillListing } from "../extension/skills.mjs"
+import { injectRunContext, loadProjectInstructions } from "./context-injections.mjs"
+import { pushTimeReminder, pushInjections, appendImagePointer, pushEnvStateReminder, pushPeerReminder } from "./setup-reminders.mjs"
 
 // PROMPT-SYSTEM 施工② G1（2026-09-10）：旧三件（system.md/discipline.md/main.md）退役——
 // 六件槽位常量装载收口 prompt-overlays.mjs（mod 为槽位内容新家）；本文件不再各自读取。
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
-/** AUTO mode reminder lives in setup-reminders.mjs (single source of truth — its
- *  pushModeReminders pushes it; agent.mjs imports it from there for the dedupe check). */
+/** AUTO mode reminder lives in setup-reminders.mjs (single source of truth —
+ *  D-CI6: the agent loop head pushes it; agent.mjs imports it from there for the dedupe check). */
 
 /**
  * Decorate a consult-related tool's description with the CURRENT configured candidate
@@ -172,7 +174,9 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
       : [taskTool, recentChangesTool] // read-only subagents get fewer meta-tools
 
   // MCP tools: idempotent connect + expand into NATIVE tools (CLI parity, MCP.md D1/D2).
-  // Top level only; failures never block — each warning is injected as a reminder.
+  // Top level only; failures never block — D-CI7（F-Q11）：警告可见面 = console
+  // （mcp/index.mjs `[mcp] ` 前缀——cli make-agent.mjs 同）；不是 history 注入（CLI 无此
+  // 行为）——mcpWarnings 字段保留为采集面。
   let mcpTools = []
   const mcpWarnings = []
   if (depth === 0 && Array.isArray(mcpServers) && mcpServers.length > 0) {
@@ -325,7 +329,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // （不 fallback 其他槽——层间隔离）。consult = 特殊模块（§3.3）——CONSULT_BASE
   // 自含基底直接返回，不入主链、无四槽。eng-coder 场景即工程纪律（G6——本端
   // spawn 侧 engineering 镜像语义同 CLI：scenario=eng-coder → discipline-engineering 槽）。
-  // OS/cwd 尾行为 VSC 端特有——原地保留，多实现面纪律。
+  // [4] 层（项目指令 + skills 清单）= systemPrompt 尾块——D-CI2（cli :341-349 同序）。
   const engPromptActive = engineering && (depth === 0 || role === "eng-coder" || role === "eng-designer")
   const scenario =
     role === "consult"
@@ -335,7 +339,18 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
         : (depth === 0 ? "normal" : role ?? "normal")
   const { prompt: base, warnings: slotWarnings } = assemblePrompt(scenario)
   // G3：overlay（人格）随装配改造退役——人格槽由场景表承载，不再前缀叠加。
-  const systemPrompt = `${base}${depth === 0 ? `\n\nOS: ${platform}. Working directory: ${cwd}.` : ""}`
+  // [4] 层（D-CI2——cli setup.mjs:341-349 同序）：项目指令块（不分 depth）+ skills 清单
+  // （depth 0）。旧「OS: … Working directory:」尾行退役——载体归 pushOsSnapshot（D-CI1 #2）。
+  let systemPrompt = base
+  const projectRules = loadProjectInstructions(cwd)
+  if (projectRules) {
+    systemPrompt += `\n\nProject instructions (follow these as project conventions):\n<untrusted_project_instructions>\n${escapeXml(projectRules)}\n</untrusted_project_instructions>`
+  }
+  if (depth === 0) {
+    const skillsList = Array.isArray(skills) ? skills : loadSkills(cwd)
+    const listing = formatSkillListing(skillsList)
+    if (listing) systemPrompt += `\n\n${listing}`
+  }
 
   // Dual-line history. Top-level runs use PERSISTENT lines passed in via opts (survive across calls,
   // written to the session file by chat-panel): history = machine context (compaction shrinks it),
@@ -384,38 +399,22 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // 同路径）且 fullHistory 载入非空时武装——每次槽恢复进新 agent 天然得一次 resumed:yes；
   // 同绑定复用（restore=false）不武装（下方注入点消费即清——复用路径恒 no）。
   if (restore && fullHistory.length > 0) agent._resumedPending = true
-  // process restarted 句（N6——评审 🔴 修复）：进程级信号——模块级 restartDetectionDone
-  // 一次性闸（现语义保留不迁：extension host 重启后模块级重置；进程内切槽不重置——真
-  // 重启语义）。判据 = 载入（进场）历史非空（N5）——检测必须在用户输入落线（下方
-  // pushReal）之前求值：否则全新会话首回合输入使 fullHistory 变非空而伪触发（F3 同族
-  // 修正——本仓注释"进场即非空"即此语义）。发句位在输入前——CLI prepareRun 同序。
-  // 跨端异名互指（结构债批 5 N7——双端同语义各自独立实现、命名不统一是刻意——thincoder
-  // SESSION.md §11.2）：CLI 端同机制载体异名 = agent._envResumed（session.mjs
-  // applySession——载入历史非空即武装——每次恢复一次）+ agent._processRestartPending
-  // （bin/thincoder.mjs 启动 resume 路径设——prepareRun 发句清——进程级句）。
-  const processRestarted = detectRestoredSession({ depth, resume, autoTurn, fullHistory })
-  if (processRestarted) {
-    history.push({ role: "user", content: `[System reminder: process restarted at ${new Date().toISOString()}.]`, transient: true })
-  }
+  // process restarted 句（N6——评审 🔴 修复）：随 D-CI1 #3 迁入 context-injections
+  // （injectRunContext——模块级 restartDetectionDone 一次性闸保留：extension host 重启后
+  // 模块级重置、进程内切槽不重置＝真重启语义；判据 = 载入历史非空，且在用户输入落线前
+  // 求值——CLI prepareRun 同序）。跨端异名互指（结构债批 5 N7）：thincoder SESSION.md §11.2
+  // ——CLI 同机制载体 = agent._envResumed + agent._processRestartPending。
 
   // Live history reference for the parent: same array the loop appends to — a caller
   // that catches ContinueError can hand it back via opts.history to resume the child
   // conversation (escalate turn-cap continue).
   if (opts.stateSink) opts.stateSink.history = history
 
-  // ─── Context injection (top-level only, fresh machine line only) ────
-  // These machine-only injections are transient context; a persistent machine line already carries
-  // them from prior turns, so only inject when starting a brand-new (empty) machine line.
-  const freshMachineLine = history.length === 0
-  // 施工② G2：slotWarnings 已于上方 system prompt 装配处按 depth===0 门注入（D2 通道）；
-  // engResult 参数随 G4 退役——pushModeReminders 只再承担 AUTO/permission 提醒。
-  pushModeReminders(history, { depth, freshMachineLine, getAuto })
-
-  // Git context (SESSION.md §11.1 T-E6——CLI setup.mjs 富注入同款补齐：branch/
-  // commits/uncommitted，非 clean|dirty 摘要）：顶层用户回合每回合注入当前状态。
-  // GIT-ASYNC L21：pushGitContext → async（collectGitContext 3×execFile 并行）——
-  // await 保持相对注入序（mode → git → user → env-state → peer → time）。
-  if (depth === 0 && !resume && !autoTurn) await pushGitContext(history, cwd)
+  // ─── Context injection（D-CI1/D-CI2——§17.3 契约 / §17.4 序表）────
+  // 块 #1–#7（git → OS/cwd/Session start/快照 → restarted → 依赖大纲 → 文档召回 →
+  // 记忆召回 → checklist）由 context-injections 单一编排注入（只追加、只 transient、
+  // 失败静默；门 = depth 0 且非 resume/autoTurn）。原 git 行与 restarted 段随编排退役。
+  await injectRunContext(agent, { history, cwd, input, depth, resume, autoTurn, platform })
 
   // resume (interrupt continuation): the input is already in history — pushing it
   // again would duplicate the user message (CLI setup.mjs resume parity).
@@ -434,7 +433,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // SESSION.md §11.1/§11.2：统一 env-state reminder（每回合、depth-0）——注入句解耦
   // （N6——评审 🔴 修复、双信号独立消费）：resumed:yes = agent 级 _resumedPending（上方
   // restore 路径武装——读即清，每次会话恢复一次；切槽恢复只发 resumed:yes、不误报进程
-  // 重启）。process restarted 句已在输入前按进场历史求值（上方 detectRestoredSession）。
+  // 重启）。process restarted 句由 context-injections #3（injectRunContext）在输入落线前按进场历史求值。
   if (depth === 0) {
     const resumed = agent._resumedPending === true
     agent._resumedPending = false
@@ -445,9 +444,11 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // 之后、time reminder 之前（transient；有同伴才注入——peerInstances 惰性 mtime 缓存）。
   if (depth === 0) pushPeerReminder(history, cwd)
 
-  pushTimeReminder(history)
-
+  // D-CI2/§17.4 #11/#12：编辑器注入（VSC 独有——D-CI5 同文去重后）在 peer 之后、time 之前；
+  // time 保持最后（前缀缓存契约——KD-2：cli setup.mjs:145-146/152-156 同为尾位）。
   pushInjections(history, opts.injections)
+
+  pushTimeReminder(history)
 
   // Pasted images (GitHub thincoder#3, Plan B): pointer appended to the REAL user
   // message by reference — see setup-reminders.mjs for the full contract.
