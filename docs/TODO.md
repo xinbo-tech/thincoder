@@ -6,18 +6,18 @@
 
 ---
 
-## 需求池（1 条）
+## 需求池（0 条）
 
 
 > 快车道：用户说"急"走单点不入池。生命周期：实现后核销勾销。
 
 
-- [ ] **文档体系各仓自持：需求档 + 设计档 + 批次档 + 台账一律各仓记各仓，禁跨仓写需求与跨仓指针；缺的层补齐**（2026-09-12 用户裁定（含 04:21 R6 / 04:23 R7 追加）——事故溯源：跨仓登记致泄露；实测 VSC 仓 `docs/requirements/` 与 `docs/batches/` **均不存在**（历史缺口 = 前任 agent 图省事，「能记一处就不写两处」），**非豁免理由**；CLI 仓 53 份批档中 ≈25 份（**47%**）、requirements+design 共 **54 档**含 VSC 指涉；VSC design 层已自持 = 塔尖反证；含「台账头部不得引用本产品仓内路径」同族要求）→ 需求 `docs/requirements/ENGINEERING-MODE.md` §1.13（**已落——本批产物**）· 任务书 `docs/batches/2026-09-12-LEDGER-SELF-CONTAINED.md` §2 · status=在途
-> （本条全部约束：台账 / 批次档 / 需求设计档各仓自持 + 禁跨仓写与跨仓指针 + **缺的层必须补齐** + **约束须落提示词层**，不停在文档层）
 
 
 
-## 技术待办（0 条）
+## 技术待办（1 条）
+
+- [ ] **文档↔实装漂移（类）：设计/需求档「事实句」落后于代码/测试现态**（2026-09-12 LEDGER 批串行排查暴露；当晚已清 250+ 处）→ 证据：`docs/design/ADVISOR-CONVERGENCE.md:766`（citations grep 断言面无本批段删承载）· `:913`（同族）· `docs/design/ENGINEERING-MODE.md:2221`（AC76 子串族）· `docs/design/TURN-CAP-CONTINUE.md:159` · `docs/design/ACP-CLIENT.md:435`；另见 `ADVISOR-CONVERGENCE` §14 族 / `ledger-surface` T106 面（2026-09-12 批档 §2 各轮列报）· 消解路径 = 专项「文档↔实装对账」轮（逐档逐句：事实句 ↔ 现代码/现测试）· **触发=条件（该面下次被触碰时 / 下批收口前）**
 
 ---
 
