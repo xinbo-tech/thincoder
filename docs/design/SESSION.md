@@ -822,7 +822,7 @@ unlinkRecordStore(slotFile)  // 删槽联动（deleteSlot 调用——§14.3.8�
 
 | AC | 回指 | 判据（机验） |
 |---|---|---|
-| AC-RS1 | F-S1 | T-RS1 绿（段/行结构 + append-only 不变式）；pushReal 为唯一追加点（grep：`append(` 单调用点） |
+| AC-RS1 | F-S1 | T-RS1 绿（段/行结构 + append-only 不变式）；pushReal 为唯一追加点（grep：`append(` 单调用点）——该判据面已退场（整删，删除记录 = `TESTING.md` §11.3） |
 | AC-RS2 | F-S2/N-S1 | T-RS2 绿；`RECORD_WINDOW_MESSAGES` 单源且 = 200 |
 | AC-RS3 | F-S3 | T-RS3/T-RS10 绿（含 ±1 页沿与滚动补偿）；翻页只经 `store.page`（grep startup.mjs 无 `full.length`） |
 | AC-RS4 | F-S4 | T-RS8/T-RS8b/T-RS10 绿；跨会话 path= 分支零 diff（对照既有 read-history 用例） |

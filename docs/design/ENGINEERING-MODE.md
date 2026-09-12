@@ -1182,7 +1182,7 @@ V2 面有分隔行二次确认、宽度面无此确认，fail-open 方向）；�
 
 | # | 拆法 | 移动量 | 结论 |
 |---|---|---|---|
-| ① | 迁出「eng-designer 双源（AC21–AC25）+ 第 9 批锚（T-RO1–T-RO6）」组（`:420`–EOF） | 144 行 / 11 例 | **选定**——主题连贯（双源 / 跨仓镜像锚）；余档 419、新档 ~180，两档余量充足 |
+| ① | 迁出「eng-designer 双源（AC21–AC25）+ 第 9 批锚（T-RO1–T-RO6）」组（`:420`–EOF；T-RO1–T-RO4 已退场——整删，删除记录 = `TESTING.md` §11.3） | 144 行 / 11 例 | **选定**——主题连贯（双源 / 跨仓镜像锚）；余档 419、新档 ~180，两档余量充足 |
 | ② | 迁出「装配矩阵 + 降级链」运行时组（§3.2 / §3.4） | ~102 行 / 8 例 | 否决——运行时组与保留部分共用基建更多；余档余量较小 |
 
 **契约**：
@@ -1199,7 +1199,7 @@ V2 面有分隔行二次确认、宽度面无此确认，fail-open 方向）；�
 |---|---|---|---|---|
 | 1 | `docs/README.md` | 239 | 改（§3.7 落笔表三条） | +~5 |
 | 2 | `scripts/check-doc-width.mjs` | 298 | 改（表格行豁免 + 宽度扫描单源化 + 头注） | ±~6 |
-| 3 | `test/doc-consistency.test.mjs` | 196 | 改（+T72–T74） | +~45 |
+| 3 | `test/doc-consistency.test.mjs` | 196 | 改（+T72–T73；T74 已退场——整删，删除记录 = `TESTING.md` §11.3） | +~45 |
 | 4 | `test/prompts-async-guidance.test.mjs` | 563 | 改 + **拆**（迁出 `:420`–EOF） | → ~419 |
 | 5 | `test/prompts-dual-source.test.mjs` | 新 | **新增**（11 例逐字迁入 + 头部自持） | ~180 |
 
@@ -1237,7 +1237,7 @@ D-2 契约「禁新档增例」），交付时仅一次性人工核验——**�
 
 | # | 候选方案 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论（选定/否决理由） |
 |---|---|---|---|---|
-| 1 | `test/doc-consistency.test.mjs` 续 T72–T74 | 同档同族（第 13 批 B/C 机判即落此档）；零新档；快层 glob 自动发现 | 档名语义偏「文档一致性」——本组为「测试档拆分完整性」，主题相邻 | **选定** |
+| 1 | `test/doc-consistency.test.mjs` 续 T72–T73（T74 已退场——整删，删除记录 = `TESTING.md` §11.3） | 同档同族（第 13 批 B/C 机判即落此档）；零新档；快层 glob 自动发现 | 档名语义偏「文档一致性」——本组为「测试档拆分完整性」，主题相邻 | **选定** |
 | 2 | 新档 `test/prompts-split-guard.test.mjs` | 主题最贴切 | 违本批「不得自行新建档」边界；新增档位注册/维护面 | 否决——零新档纪律 |
 | 3 | 并入两档提示词测试之一 | 就近可写 | **破坏其自身守恒计数**（拆分时 53 = 42 + 11；现锁 14 + 4 = 18——并入即失稳，自证矛盾） | 否决 |
 
@@ -1383,7 +1383,7 @@ test("T112 边界：新档自持——零跨档引用；import 全 node:（D-2/A
 ```
 
 **coder 落笔注意**：`node:fs` import 行追加 `readdirSync`；新段（含节注）插在**档尾**（收归族段 `:239–:300` 之后、文件末尾）；
-**零改既有用例与档头注**（全量既有 = T41①–⑤ / T46 / T72–T74 / T75·T76 防回潮收归族）；`REPO` / `join` / `assert` 已在该档直接复用。
+**零改既有用例与档头注**（全量既有 = T41①–⑤ / T46 / T72–T73 / T75 防回潮收归族；T74/T76 已退场——整删，删除记录 = `TESTING.md` §11.3）；`REPO` / `join` / `assert` 已在该档直接复用。
 
 #### 2.27.5 关键决策记录（含否决备选）
 
@@ -1908,7 +1908,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 
 - **启动行**（修正轮 #2——可动作门）：首扫**任一项目可动作**（`aged>0` 或阈值）→ push 明细行集 L2 行（每项目一行）；**不可动作 → 会话流零行**（常驻标记不受此门约束——F2 按标记态照显，T98）；同扫若出变化行 → **先变化行、后明细行**。
 - **周期扫描**：仅检测到**新**变化时 push（L3 / L4）；`state.ledger` 每次刷新重写（marker / warn）。
-- headless（`thincoder chat` / ACP）**零改动**——入口 `bin/thincoder.mjs`（`.cjs` 仅 shim）不落任何台账面（N1；文件域判据 = AC89 / T110④）。
+- headless（`thincoder chat` / ACP）**零改动**——入口 `bin/thincoder.mjs`（`.cjs` 仅 shim）不落任何台账面（N1；文件域判据 = AC89 / T110④——T110④「`bin/thincoder.mjs` 内 `ledger` 零命中」已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3））。
 
 ##### 2.30.3.5 VSC 挂载（状态栏 + chat 流 + tooltip）
 
@@ -1954,7 +1954,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 | `docs/design/prompts/discipline-engineering.md` | 修改 | 157 | +2 / −1 | 同上（中文权威镜像） |
 | `test/ledger-surface.test.mjs` | **新增** | — | ~240 | eng-coder（glob 自动发现——无需登记） |
 | `docs/requirements/ENGINEERING-MODE.md` | 修改 | 817 | +60 | eng-designer（**已落**——§1.18 + FR24 + 三处枚举） |
-| `docs/design/ENGINEERING-MODE.md` | 修改 | 2307 | +~340 | eng-designer（**已落**——§2.30 + AC80–AC90 + T97–T110） |
+| `docs/design/ENGINEERING-MODE.md` | 修改 | 2307 | +~340 | eng-designer（**已落**——§2.30 + AC80–AC90 + T97–T110；T105 已退场——整删，删除记录 = `TESTING.md` §11.3） |
 
 **对端仓（VSC）**
 
@@ -2023,7 +2023,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 1. **无台账 → 零输出零标记**（空态零噪音——N1）。
 2. **台账档只读**——本机制唯一写面 = `~/.thincoder/ledger-notify.json`（且仅在送达后写）。
 3. **数字单源**——显示数字全部出自 `src/ledger.mjs`（VSC 等价物）；L2 行在 CLI / VSC / `--summary` 三面同 formatter。
-4. **L1–L3 机检语义零改**——`check-ledger` 既有用例（T67–T96）零改全绿为证。
+4. **L1–L3 机检语义零改**——`check-ledger` 既有用例（T67–T94 + T96；T95 已退场——删除记录 = `TESTING.md` §11.3）零改全绿为证。
 5. **不新增工具 / 命令 / 快捷键面**；headless 零新增输出。
 6. **变化行送达门**——未送达不记账（F5——否则用户永远看不到）。
 
@@ -2070,7 +2070,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 - AC14（§2.11 点 2）: `src/` 内**无 `docs/batches/` 逻辑字面**（评审 #3）——源码全仓扫描该串仅出现在**错误/提示文案**中（§2.12 消息），无路径解析/默认位置引用。
 - AC15（§2.11 点 3 + §2.12 提示词同步）: `src/` 不生成/不校验批次档模板（无“已收口”类措辞匹配、无模板常量）；且 spawn 样例行含 `batchDoc=`（**双源** `discipline-engineering.md`——`src/prompts` 英文落地 + `docs/design/prompts` 中文权威，非双端；校验方式 = 对两文件 grep `batchDoc=`，**非既有锚断言家族**——该家族只断言枚举子串）。
 - AC16（§2.15 A）: `eng-designer` 入**五处**硬清单（subagent.mjs 的 schema/ROLES/描述 + setup.mjs 工程模式枚举 + tool-args 显示）——五处在位且可分别断言；非工程模式 spawn 它 → throw。
-- AC17（§2.15 B——**防静默回退**）: designer 场景**已登记**装配——`assemblePrompt("eng-designer")` 返回的 prompt **非空且 ≠ CONSULT_BASE**，
+- AC17（§2.15 B——**防静默回退**）: designer 场景**已登记**装配——`assemblePrompt("eng-designer")` 返回的 prompt **非空且 ≠ CONSULT_BASE**（`≠ CONSULT_BASE` 断言面已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3）；现体 = 非空（>500）+ warnings=[]）；
   槽序 = `persona-eng-designer → common → discipline-engineering`，warnings 为空（盖 `prompt-overlays.mjs:70-71` 的静默回退陷阱）；
   **且接线断言（评审 #3）**：designer 子代理**实选场景 = `eng-designer`**（非 `engineering`/`normal`）——盖 `setup.mjs:299` 内层选择器。
 - AC18（§2.15 D）: designer spawn **必传 `batchDoc`**（与 eng-coder 同门；不带→throw、带可读路径→通过且任务输入含 `Batch record` 行）；错误文案**含实际角色名**。
@@ -2141,11 +2141,11 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
   **存量面**：基线（`test/fixtures/ledger-baseline.json`）**必须保持为空**——非空 ⇒ FAIL + 固定句「本基线必须保持为空」（fail-closed；「存量分流 / 入基线」已废——阈值 = 0；F14 同条——与 T71① 对齐）；
   输出形态符合 `<档>:<行号> [L1|L2|L3] <症状> — 期望 … · 实得 …`；
   `grep -r "check-ledger" src/prompts/` **零命中**（FR13）。
-- AC49（§2.24.5——双端锚 + VSC 建池）: 双端 `discipline-engineering.md`（产品 + 中文镜像共 4 文件）
+- AC49（§2.24.5——双端锚 + VSC 建池；**锚串判据面已退场——整删，删除记录 = `TESTING.md` §11.3**）: 双端 `discipline-engineering.md`（产品 + 中文镜像共 4 文件）
   各含锚 **L-A / L-B 的固定子串**（逐字 grep；子串取自 §2.24.5 锚句）：`同一铁律（指针化、不展开任务细节）` ·
   `锚的形态不同` · `最小证据行（file:line + 症状）` · `组标题声明的条数必须等于组内实条目数`；
   **镜像面 = 锚句逐字**（节内其余文本各端原文自持——不做跨仓逐字节断言）；
-  `docs/TODO.md（VSC 仓）` 含**需求池组**且组计数自洽。
+  `docs/TODO.md（VSC 仓）` 含**需求池组**且组计数自洽；**锚串判据面已退场（随 AC49 锚用例整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3）；锚句本体（§2.24.5）不变**。
 - AC50（§2.24.3 + §2.24.6 L1/L3④——D3 计数、失效指针、过期 / 未勾销条目）：
   **按指针字符串键控（行号只作 as-of 提示，不作契约——修正轮 #1）**：
   **①D3**：需求档 FR18 行称“**六态**”且 §1.13 表列 **6 行**（D3 机判绿）；
@@ -2164,7 +2164,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
   计数面（FR18 行「六态」/ §1.13 表 6 行）由 AC50 断言，本条只断言**文本交付**。
 - AC53（§2.26.1——跨仓引用规范）: `docs/README.md` §3.7 含规范 bullet 的固定子串（`跨仓引用形态` · `名称（仓别）§N` · `去路径前缀`）；
   检查器对带 `.md` 的跨仓形态保持 fail-closed 如实报（T72 反证钉住）；规范形态零命中（T72）；`checkSectionRefs` 零改动。
-- AC54（§2.26.2——表格行宽度豁免）: T73 / T74 绿（豁免谓词 = `isTableRow`；非表格超宽照报；宽度扫描单源——内联重复零残留 grep）；
+- AC54（§2.26.2——表格行宽度豁免）: T73 绿（T74 已退场——整删，删除记录 = `TESTING.md` §11.3）（豁免谓词 = `isTableRow`；非表格超宽照报；宽度扫描单源——内联重复零残留 grep）；
   `docs/README.md` §3.7 规则 1 含 `表格行豁免` 子串。**判据口径（修正轮 #11）**：「新增超宽 0」= **批前/批后命中集合差**（非 exit 码）；
   豁免后检查器仍报存量非表格命中且 exit 非零（`scripts/check-doc-width.mjs:297`——存量 as-of：37 = 24+13，修正轮实测 38 = 24+14）——**不得读作 exit 0**。
 - AC55（§2.26.3 D-1）: `src/advisor/messages.mjs` 本批零改动（改动集判据）；实测 ≤500；拆分计划在档（子串 `project-context.mjs` 在位）。
@@ -2174,7 +2174,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 - AC57（§2.27.1——T111/T112 宿主与断言）: `test/doc-consistency.test.mjs` 新增 T111/T112 两例（**收归族段之后落档**，落档形态逐字见 §2.27.4）——
   T111 = 发现面（快层集）+ 用例计数（`^(?:test|slow)\(`——**as-of 基线 14 / 4 / 合计 18**，增删须同步）+ 两档 ≤500（`split("\n").length` 口径）；
   T112 = 新档零 `prompts-async-guidance` 子串 + import 全 `node:`；
-  既有用例（**T41①–⑤ / T46 / T72–T74 / T75·T76 防回潮收归族**）零改。机器判据：`node --test test/doc-consistency.test.mjs` 全绿（含新两例）+ 该档 ≤500。
+  既有用例（**T41①–⑤ / T46 / T72–T73 / T75 防回潮收归族**；T74/T76 已退场——整删，删除记录 = `TESTING.md` §11.3）零改。机器判据：`node --test test/doc-consistency.test.mjs` 全绿（含新两例）+ 该档 ≤500。
 - AC58（§2.27.2——行号指针修正）: 修正表 3 处逐行核验（`:297` = exit 行 / `:32` = `SCAN_DIRS` 声明行 / `:34` = `BASELINE_PATH` 声明行）；
   登记集与历史/as-of 行号**未动**（对照 = 仅表列 3 行变化）。机器判据：核验脚本按「指针行号 → 目标行内容」三断言直跑。
 - AC59（§2.27.3——TUI.md §1 回写）: 表内 42 行数值 = **本批落笔 as-of 快照**（2026-09-11 全表实测回写；记录 = §2.27.3 表）；
@@ -2224,12 +2224,11 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 - AC78（§2.24.9③——老化报告 / 审计模式）: `node scripts/check-ledger.mjs --audit` 对合成台账（无触发条目）输出
   「待处置清单」+ 逐条 `<档>:<行号>`；超 N 天者带「老化」标记；**退出码 0**；**运行前后两仓台账字节不变**（不自动删/改——T94）。
 - AC79（§2.24.9①/②执行面——两仓收拢应用清单）: 批次档 §2 含「两仓台账收拢应用清单」表（逐条判定 ∈ {留池 / 移技术组 / 归档 / 勾销}；
-  键控 = 指针字符串）；执行后键控抽验：CLI 归档档含「已全部完成」·「parseValue 两端不一致」·「跨批依赖」，
-  VSC 归档档含「eng(enter)」·「Gitee open 巡检」；活文件组计数 = 未决数（L2 绿——T96）。
+  键控 = 指针字符串）；执行后键控抽验（CLI 归档档「已全部完成」·「parseValue 两端不一致」·「跨批依赖」；VSC 归档档「eng(enter)」·「Gitee open 巡检」）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3）；活文件组计数 = 未决数（L2 绿——T96）。
 
 - AC80（§2.30.3.1——数字单源 / F7）: `scripts/check-ledger.mjs` 消费 `src/ledger.mjs`（grep `src/ledger.mjs` 在场）；
   同一夹具下 `summarizeLedger` 的 `pool`/`tech` 计数 == `checkLedger` L2 判据的「组内未决条目数」（T97 反证：改一条 → 两侧同步变）；
-  `check-ledger` 既有用例（T67–T96）**零改全绿**（L1–L3 语义零改）；`grep -r "check-ledger" src/prompts/` 零命中（FR13——既有不变）。
+  `check-ledger` 既有用例（T67–T94 + T96；T95 已退场——删除记录 = `TESTING.md` §11.3）**零改全绿**（L1–L3 语义零改）；`grep -r "check-ledger" src/prompts/` 零命中（FR13——既有不变）。
 - AC81（§2.30.3.3——行文本逐字 / F1+F2）: L1–L4 四形态与 §2.30.3.3 逐字全等（formatter 直驱断言——含 `台账 4·32`、`（老化 0）` 恒显、`— 可开批` 后缀、`；…` 截断、**无粗体段回退标题**〔修正轮 #3〕）；
   `--summary` 输出 = L2 序列（T98/T99/T104）。
 - AC82（§2.30.3.2 + §2.30.3.4——可动作门 / F3①；修正轮 #2）: **任一项目**可动作（`aged>0` 或阈值）→ 启动行（明细行集）出现；不可动作 → **会话流零行**——**常驻标记不受此门约束**（F2：标记照显、`aged=0` 默认色——T98）（T100 两侧）。
@@ -2237,14 +2236,14 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 - AC84（§2.30.3.2——老化口径 / F7）: 仅技术组无 `触发=` 且行龄 >30 天者计老化（夹具 git 回填界值 29/31 天——T102）；行龄未知 → 不计且不抛。
 - AC85（§2.30.3.2——去重 / F5；修正轮 #3）: 同一事件只报一次；跨会话（状态档在场）零重报；送达后才记账（未送达不记）；**条目键 = 条目归一化文本**（行位移 / 他条编辑零重报；同条文本变更 = 一次新增——T103）（T103）。
 - AC86（§2.30.3.6——收口行 / F6；修正轮 #1）: `node scripts/check-ledger.mjs --summary` 输出 = L2 序列逐字 + 退出码 0 + **运行前后台账字节不变**；
-  四提示词文件与需求档 §1.12/§1.15、设计档 §2.19 含固定子串 `台账可见面（收口行）`；**四提示词文件另含 `--summary` 子串、不含脚本名**（两锚即全部断言面——T105；`check-ledger` 零命中归 AC48/AC80）。
+  四提示词文件与需求档 §1.12/§1.15、设计档 §2.19 含固定子串 `台账可见面（收口行）`；**四提示词文件另含 `--summary` 子串、不含脚本名**（两锚即全部断言面——T105 已退场：整删，删除记录 = `TESTING.md` §11.3；`check-ledger` 零命中归 AC48/AC80）。
 - AC87（§2.30.3.4/§2.30.3.5——渲染接线 / F2+F8）: CLI：`buildStatusLine` 在 `scrollHint` 后注入 L1，空标记零注入（字节等价）；
   VSC：item `text`=L1 / `tooltip` 含全部 L2 行 / `aged>0` → warningBackground / 无台账 → hide；webview `ledgerNotice` → `.ledger-line` 行入 messages（T106–T108）。
 - AC88（§2.30.3.2——项目发现 / F4）: `current` = 向上最近含台账目录（T109①②）；容器目录（无台账且子目录含台账）→ current=null、projects=子目录族；
   全无台账 → current=null、projects=[]、零输出（T109③）。
 - AC89（§2.30.3.2 + §2.30.8——降级与成本 / N1+N2；修正轮 #5）: 台账不可读 / 去重档坏 JSON / 非 git → 零抛出（T110）；
   无候选条目项目零 git 子进程（计数断言——不调 `blameAges`）；两仓夹具单次刷新 ≤500ms（慢层实测）；
-  **headless 面零接线**（文件域判据：`bin/thincoder.mjs` 本批 `git diff` 空 + 其内 `ledger` 零命中——T110④ 承载 N1「headless 零新增输出」）。
+  **headless 面零接线**（文件域判据：`bin/thincoder.mjs` 本批 `git diff` 空 + 其内 `ledger` 零命中——T110④ 承载 N1「headless 零新增输出」）——`ledger` 零命中机判面已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3）。
 - AC90（批级——机检零新增 + 快层）: 两仓 `node scripts/check-doc-width.mjs` **新增超宽 0 + 新增一致性违规 0**（存量照报；口径 = 批前/批后命中集合差）；
   CLI `node test/run-fast.mjs`（或 `npm test`）全绿；VSC 快层按其清单全绿（含 `test/ledger.test.mjs` 入册）。
   **归属注（设计期实跑——as-of 2026-09-12）**：唯一新增 V3 命中 = **本批批次档 §4 占位段内的 `---` 分隔行**（骨架标点被 V3 判为实文——
@@ -2295,15 +2294,15 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 |---|---|---|---|---|
 | T30 | 正常：角色注册五处 | 工程模式 spawn `role="eng-designer"` | 不被白名单/模式门拒；child 装配工程纪律槽 | AC16/FR9 |
 | T31 | 错误：角色互斥 | **非**工程模式 spawn `eng-designer` | throw（与 eng-coder 门同族） | AC16/NFR4 |
-| T32 | 边界：装配不静默回退 | `assemblePrompt("eng-designer")` | prompt 非空、≠ CONSULT_BASE、槽序正确、warnings=[] | AC17/FR9 |
+| T32 | 边界：装配不静默回退 | `assemblePrompt("eng-designer")` | prompt 非空（>500）、槽表行 + warnings=[]；≠ CONSULT_BASE / 槽序正确——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | AC17/FR9 |
 | T33 | 错误：designer 无 batchDoc | 工程模式合法上下文（**不带凭证**）、不带 batchDoc | throw（文案含 eng-designer） | AC18/FR20#9 |
-| T34 | **边界：写域纪律（提示词级）** | grep 双源 `persona-eng-designer.md`；并校对 `src/agent/dispatch.mjs` | persona 含写域声明（`docs/` 扣除 `docs/design/prompts/`）；dispatch **无新增写域判定**（机械层零变更） | AC19/**§1.5#8** + 批次档 §1 对账发现 2 |
+| T34 | **边界：写域纪律（提示词级）** | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | AC19/**§1.5#8** + 批次档 §1 对账发现 2 |
 | T35 | 边界：勘察受限 | designer 内 spawn `role="coder"` / `role="explore"` | 前者拒（explore-only）、后者允；**且勘察任务输入不含 Audit scope 块**（评审 #4） | AC20/§1.5#7 |
 | T36 | 边界：designer 无 token 需求 | spawn 不带 designToken | 通过（不需凭证——与 eng-coder 形成对照） | AC20/§1.5#4 |
 | T37 | 边界：纪律锚驻留（**AC21/AC22 共用例**） | 四条纪律句 + 四步三句 + D2/D5/D6 三句双源 grep + 锚断言；新 person 文件已入 NEW_PROMPTS | 双源命中；锚断言绿 | AC21/**AC22** |
 | T38 | 边界：主 agent 人格改述 | 双源 grep `persona-engineering.md` | 含产品经理/会话面身份；不含 `ARCHITECT`/`You design and delegate` 类交付物句 | AC23/FR9#1#2 |
 | T39 | 边界：designer 写操作走 ask（评审 #7） | designer 子代理写 `docs/x.md`（manual 档位） | 触发父侧授权（非静默）；授权后可“全部授权/切自动” | AC26 |
-| T40 | 边界：写权路由单一口径（**AC27/AC27b 用例——六面**） | grep §2.2 step1/step10 / §2.8 / §2.15 A2 / §2.6 F2 / §2.5 / persona-engineering（双源） | 六面均指向 eng-designer（F2/§2.5 为指向句）；无“父代理更新设计文档”残留；勾销无“进设计档”字样 | AC27+AC27b/FR9#3 |
+| T40 | 边界：写权路由单一口径（**AC27/AC27b 用例——六面**） | grep §2.2 step1/step10 / §2.8 / §2.15 A2 / §2.6 F2 / §2.5 / persona-engineering（双源） | 六面路由句类正向锚 + 无“父代理更新设计文档”残留 + 勾销无“进设计档”字样——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3）；现体 = §2.8 切片非空 | AC27+AC27b/FR9#3 |
 | T41 | 正常：文档一致性机判 | 跑 `test/doc-consistency.test.mjs`（V1 段引用 / V2 计数） | **基线必须为空 + 扫描域零违规**（非空即 FAIL）；人为制造一条计数不符 → 报红（反证非空转） | AC28/§2.19 D3-D4 |
 | T42 | 边界：撤销句/产出要素（评审 #10） | 双源 grep `discipline-engineering.md`（无“主会话即 designer”）；grep `persona-eng-designer.md`（FR19 固定子串） | 前者零命中；后者子串全命中 | AC24/AC25 |
 
@@ -2360,13 +2359,13 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 | T70 | 边界：形态违规（含 status 枚举与分组识别——修正轮 #3/#5） | ①需求池条目带续行细节 ②技术条目缺证据行 ③技术项混入需求池组 ④条目 `status=登记`（六态外） ⑤未带 `需求池`/`技术` 标记的 `##` 组内条目锚形态杂 | ①②③④各报 `[L3]`（逐例可判，不得只报其一）；**④机外取值照报（不再入基线豁免——阈值 = 0）**；⑤**不判 L3③**（分组识别凭标题标记）——仍受 L2 计数与 L3① 约束 | AC45/AC47/AC48/L3 |
 | T71 | 边界：基线不得再设（非空即 FAIL）+ 域不侵入 | ①非空基线 ②对 `docs/design/**` 运行宽度检查 | ①**FAIL**（固定句「本基线必须保持为空」——违规照报；入基线 = 例外 = 违规） ②`check-doc-width.mjs` 与台账检查**互不侵入**（各自域） | AC48/AC51 |
 
-**第 13 批用例（T72–T74 + T111–T112①——文档机制边界与拆分）**
+**第 13 批用例（T72–T73 + T111–T112①——文档机制边界与拆分；T74 已退场——整删，删除记录 = `TESTING.md` §11.3）**
 
 | # | 场景 | 输入 | 预期输出 | 映射 |
 |---|---|---|---|---|
-| T72 | 正常/反证：跨仓引用（B） | 夹具两行：`WEBVIEW.md` §5 形态 / `WEBVIEW（VSC 仓）§5` 规范形态 | 前者报 `unknown-doc`（fail-closed 钉住——防未来静默放开）；后者零命中；`docs/README.md` §3.7 规范子串在位 | AC53 |
+| T72 | 正常/反证：跨仓引用（B） | 夹具两行：`WEBVIEW.md` §5 形态 / `WEBVIEW（VSC 仓）§5` 规范形态 | 前者报 `unknown-doc`（fail-closed 钉住——防未来静默放开）；后者零命中；`docs/README.md` §3.7 规范子串在位——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | AC53 |
 | T73 | 正常：宽度表格行豁免 | 夹具：>300 字符表格行 + >300 字符非表格行 | 表格行零报告；非表格行照报（含行号） | AC54 |
-| T74 | 边界：宽度扫描单源 | `scripts/check-doc-width.mjs` 源码 | 主流程调用 `checkDocWidths(`；内联宽度扫描零残留（grep 断言——防两处规则漂移） | AC54 |
+| T74 | 边界：宽度扫描单源 | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | AC54 |
 | T111 | 正常：拆分守恒（原设计号 T75①） | 拆分后两档 + `node test/run-fast.mjs` | 用例数 = as-of 基线（A 14 · B 4 · 合计 18——增删须同步）；两档各 ≤500；全绿且被 glob 发现 | AC56 |
 | T112 | 边界：新档自持（原设计号 T76①） | 新档源码 | 零跨档 import（无 `prompts-async-guidance` 引用） | AC56 |
 
@@ -2411,7 +2410,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 | T93 | 错误：非法触发取值必报红 | 合成台账：技术条 `触发=随便`；对照 `触发=归批（第 8 批）` | 前者 `[L3⑥]` 红 + 退出码 1；对照条绿；**无 `触发=` 场不报红** | AC77/L3⑥ |
 | T94 | 边界：待处置清单 + 老化（审计模式——**慢层 `slow()` 门控**：含 fs / git 子进程；轮次 4 #6） | `--audit` 对合成台账：1 条无触发新鲜 + 1 条无触发超龄（夹具 git 回填行龄——**commit 日期钉常量**〔超龄条〕，零壁钟依赖） | 「待处置清单」两条均列；超龄者标「老化」；**退出码 0**；运行前后文件字节不变 | AC78 |
 | T95 | 边界：归属修订文本面 | grep：需求档 §1.13 / 两仓台账头部行 | 新句在位（「记录 + 状态推进 + 物理落笔」）；旧句「状态推进 = eng-designer」零命中。**已退役（2026-09-12 PROSE-ANCHOR-RETIRE——判据面作废；见 `TESTING.md` §11.5）** | AC75 |
-| T96 | 正常：收拢执行面（键控抽验） | 两仓台账 + 归档档（收拢执行后） | 归档档含键控条目（CLI/VSC 各 ≥2）；活文件 `- [x]` = 0；组计数 = 未决数（L2 绿） | AC79/AC46 |
+| T96 | 正常：收拢执行面（键控抽验） | 两仓台账 + 归档档（收拢执行后） | 归档档键控条目（CLI/VSC 各 ≥2）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3）；活文件 `- [x]` = 0 + 组计数 = 未决数（L2 绿） | AC79/AC46 |
 
 **台账可见面批用例（T97–T110——LEDGER-SURFACE；含慢层 git 夹具）**
 
@@ -2425,12 +2424,12 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 | T102 | 边界：老化界值（慢层 `slow()`——git 夹具，commit 日期钉常量） | 夹具 git 回填：29 天 / 31 天 / 31 天但带 `触发=认账不排期` | 仅「31 天且无触发」计老化；余不计 | AC84 |
 | T103 | 正常：去重 + 送达门 + **条目键稳定性**（修正轮 #3） | 首扫（新增老化 + 首达阈）→ 再扫同状态 → 再改一条后再扫；另：**行位移 / 他条编辑后重扫**、**同条文本编辑后重扫**；post 失败（面板未就绪）不记账 | 首扫 2 行 + 记账；再扫 0 行；改动后仅新事件 1 行；位移 / 他条编辑 **0 行**（键稳定）；同条文本编辑 **1 行**（键变 = 一次新增）；未送达后补送达重报 | AC85/F5 |
 | T104 | 正常：收口行命令 | `node scripts/check-ledger.mjs --summary`（夹具族）；空族目录对照 | 输出 = L2 序列逐字；退出码 0；运行前后台账字节不变；空族输出「未发现台账」行 | AC86/F6 |
-| T105 | 正常：收口行槽位（文本面；修正轮 #1） | 四提示词 + 需求档 §1.12/§1.15 + 设计档 §2.19 grep | 子串 `台账可见面（收口行）` 全中；`--summary` 子串在 4 提示词文件；**两锚即全部断言面**（不含脚本名——`check-ledger` 在 `src/prompts/**` 零命中归 AC48/AC80） | AC86 |
+| T105 | 正常：收口行槽位（文本面；修正轮 #1） | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | AC86 |
 | T106 | 正常：CLI 状态行接线 | `buildStatusLine` 直驱：marker=null / marker 平态 / marker+warn | null → 零注入（字节等价）；非 null → ` │ 台账 4·32` 在位；warn → 警示色段包裹 | AC87/F2 |
 | T107 | 正常：VSC item 形态 | `refreshLedger` 直驱（vscode-mock） | `text` = L1；`tooltip` 含全部 L2 行；aged>0 → warningBackground；无台账 → `hide()` | AC87/F8 |
 | T108 | 正常：VSC webview 渲染（happy-dom——真 chat.js） | `{type:"ledgerNotice", lines:[…]}` 直驱 | `.ledger-line` 逐行入 `#messages`；warn 类仅警示行；连续两次消息不吞行 | AC87/F8 |
 | T109 | 边界：项目发现 / 无台账 | ①cwd 深路径（含台账仓内）②容器目录（子目录含台账）③无任何台账 | ①current = 该仓 ②current=null、projects=子目录族 ③current=null、projects=[]、零输出 | AC88/F4 |
-| T110 | 错误：降级不崩（修正轮 #5：+headless 文件域） | ①台账档不可读 ②去重档坏 JSON ③非 git（`ageOf`→null）④headless 文件域 | ①该项目跳过（余者照常）②按空态重新记账（最坏一次重报）③老化 0 且不抛 ④`bin/thincoder.mjs` diff 空 + 其内 `ledger` 零命中（零接线） | AC89/N1 |
+| T110 | 错误：降级不崩（修正轮 #5：+headless 文件域） | ①台账档不可读 ②去重档坏 JSON ③非 git（`ageOf`→null）④headless 文件域 | ①该项目跳过（余者照常）②按空态重新记账（最坏一次重报）③老化 0 且不抛；④`bin/thincoder.mjs` diff 空 + 其内 `ledger` 零命中（零接线）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | AC89/N1 |
 
 > 快层归属：T102 / AC89 计时断言走 `slow()`（fs / git 子进程——`test/slow.mjs` 归册制）；余例直驱纯函数或 mock（快层）。
 

@@ -104,7 +104,7 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
     if (baseSignal.aborted) ctrl.abort(baseSignal.reason)
     else baseSignal.addEventListener("abort", () => ctrl.abort(baseSignal.reason), { once: true })
   }
-  // §19.5 D-M5：turn 镜像拦截层（callbacks 包装层——选改动最小方案：在既有
+  // §19.5 D-M5：turn 镜像拦截层（callbacks 包装层——在既有
   // wrapChildCallbacks 之外再包一层，只解析 ⟦ev⟧turn 更新条目，其余原样转发）。
   const trackOpts = { ...childOpts }
   const parentOnToken = trackOpts.onToken

@@ -97,7 +97,7 @@
 |---|---|---|
 | `src/agent.mjs` | ① `if (!resume)` 块加 `_turnSeq = 0` ② 循环内编号帧赋值 + turn 事件改发帧值 | 400 → ~406 |
 | `src/agent/helpers.mjs` | 新增 `turnFrame`（纯函数 + 注释） | 372 → ~382 |
-| `test/turn-across-segments.test.mjs` | 新档——用例 T1-T8 | 新（~90） |
+| `test/turn-across-segments.test.mjs` | 新档——用例 T1-T7 在役（T8 已退场——整删，删除记录 = `TESTING.md` §11.3） | 新（~90） |
 | `docs/design/TURN-CAP-CONTINUE.md` | 本节（19.1-19.8） | 全档 45 → 173 行（`wc -l`；本批增补前 → 现档） |
 | `docs/requirements/TURN-CAP-CONTINUE.md` | F7 / N5 / N6 + §4 边界追加 | 全档 35 → 44 行（`wc -l` 实测） |
 | （父侧排程）`docs/TODO.md` · checklist | 核销 / 登记 | — |
@@ -113,9 +113,9 @@
 | T5 | 边界（不变式） | 扫描（限可达域：段内 `turn ∈ [0, max)`、`seq ≥ turn + 1`）seq∈{1, 100, 101, 250} × max∈{40, 100} | 恒 `turn ≥ 1`、`turn ≤ maxTurns`、`maxTurns = (seq - turn - 1) + max` | F7 / N5 |
 | T6 | 正常（显示面零改动） | 注入 token `explore#9/⟦ev⟧turn\x1e101\x1e200\x1ellm\x1e`（相位 `llm` = 实际发射字面 `src/agent.mjs:186`；`test/subagent-tail-merge.test.mjs:285` 载同形态——相位段不被解析消费） | 块 `turn = 101 / maxTurns = 200`；面板头含 `turn 101/200` | F7（消费点零改动机械证明） |
 | T7 | 正常（同源） | approval 载荷 `⟦ev⟧approval\x1e101\x1e200\x1e…`（与 turn 帧同值） | 块 turn / maxTurns 与 turn 事件同帧（不回落段内值） | D-19b |
-| T8 | 错误 / 回归 | 段内帽：`turn = 99 < 100` 继续跑；`turn = 100` 出循环 | 帽在**段内** `maxTurns` 触发（`ContinueError(maxTurns)` 抛点不变）+ 全量回归绿 | N6 |
+| T8 | 错误 / 回归 | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | N6 |
 
-用例面声明：CLI 测试为接缝式（无 runAgent 直驱在案）——T1-T5 打纯函数缝、T6-T7 打 TUI 解析 / routing 缝、T8 打源码锚 + 全量回归缝（`node test/run-fast.mjs` / `run-full.mjs`）。
+用例面声明：CLI 测试为接缝式（无 runAgent 直驱在案）——T1-T5 打纯函数缝、T6-T7 打 TUI 解析 / routing 缝；T8（源码锚 + 全量回归缝）已退场——整删，删除记录 = `TESTING.md` §11.3（`node test/run-fast.mjs` / `run-full.mjs`）。
 
 ### 19.7 验收标准（逐条回指——每条可机器验证）
 
@@ -126,7 +126,7 @@
 | AC3 | `_turnSeq = 0` 位于 `if (!resume)` 块内（源码锚）；全档无第二复位点（grep 计数 = 1） | 批次 §1 问 2 + N6 |
 | AC4 | `dispatch.mjs:287` approval 行零改动且读同对字段（源码锚）——T7 同帧 | 批次 §1 问 3 |
 | AC5 | 显示面三文件（`subagent-panel.mjs` / `render-segments.mjs` / `subagent-blocks.mjs`）diff 零行 + T6 绿 | 批次 §1 已核事实（渲染层假设复核 = 无假设） |
-| AC6 | 段内帽机制零改动：T8 源码锚 + CLI 全量回归绿 | 批次 §1 范围边界（不改回合帽 / 续跑机制） |
+| AC6 | 段内帽机制零改动：T8 已退场（整删——删除记录 = `TESTING.md` §11.3）；CLI 全量回归绿 | 批次 §1 范围边界（不改回合帽 / 续跑机制） |
 | AC7 | 双端同源：VSC 侧 AC1' / AC2' 同算式同口径（VSC 仓 `docs/design/TURN-CAP-CONTINUE` §AC 表）——两档各自驻留、互不镜像 | 批次 §1 问 2 + 问 6 |
 | AC8 | 三方条目一致：本表条目 = 需求 F7/N5/N6 = 批次档 §2 条目（同清单，逐字可对） | 批次 §1 问 4 |
 | AC9 | 相邻登记关系落档：19.8 关系句在位（可 grep）——登记行本体同步 = 父侧排程（他批在途） | 批次 §1 问 5 |

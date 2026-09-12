@@ -1,5 +1,5 @@
 /**
- * ledger.test.mjs — 台账机检用例（T67–T71 · T92–T96 · T-LS1–T-LS5 · T-LS13–T-LS15 · T-LS42——设计档 ENGINEERING-MODE.md §2.24.6 / §2.24.9 契约 · AC45–AC52 / AC75–AC79；L4② 收紧面 = LEDGER-SELF-CONTAINED 批 §10 · AC-LS34–AC-LS35）。
+ * ledger.test.mjs — 台账机检用例（T67–T71 · T92–T96 · T-LS1–T-LS5 · T-LS13–T-LS15 · T-LS42 · T-LS43——设计档 ENGINEERING-MODE.md §2.24.6 / §2.24.9 契约 · AC45–AC52 / AC75–AC79；L4② 收紧面 = LEDGER-SELF-CONTAINED 批 §10 · AC-LS34–AC-LS35——扫描窗 = 证据场）。
  * 仓库面：本仓活档 + 归档档全绿（违规 0 · 基线必须保持为空——非空即 FAIL，fail-closed）。
  * 反证面：坏指针 / 计数不符 / 形态五例 / 活文件 `- [x]` / 非法触发 / **跨仓证据与跨仓指针（L4——本仓可解析闸）** —— 必报红（防「永远绿的空转脚本」）。
  * 审计面：T94 待处置清单 + 老化（git 回填行龄）走 slow() 门控（fs / git 子进程）。
@@ -244,6 +244,21 @@ test("T-LS42 错误：L4② 收紧（外仓前缀 ⇒ 必报；省略 / 陈旧�
   assert.ok(l4.some((v) => v.key.endsWith("|other/x.mjs:11")), "③ 全匹配逐处判（次处跨仓——首匹配会漏）")
   assert.ok(!l4.some((v) => v.key.endsWith("|x.mjs:1")), "② 省略前缀对照条零报")
   assert.ok(!l4.some((v) => v.key.includes("async-settle.mjs")), "② 陈旧前缀对照条零报")
+  assert.equal(code(["--root", tmp]), 1, "退出码 1（fail-closed）")
+})
+
+test("T-LS43 边界：L4② 扫描窗 = 证据场（标记前跨仓路径不判——窄窗成立；场内 / 无标记 ⇒ 必报——非空转）", () => {
+  mk("src/x.mjs", "// 唯一 basename（场内省略前缀对照）\n")
+  mk("docs/TODO.md", ["# t", "", "## 技术待办（3 条）", "",
+    "- [ ] **场外前缀对照** → 行首说明 `other/x.mjs:9`（标记前段——不入扫描窗）· 证据 `x.mjs:1` · status=在途",
+    "- [ ] **场内跨仓** → 证据 `other/x.mjs:11` · status=在途",
+    "- [ ] **无标记跨仓** → `pkg/notes/x.mjs:7`（无标记 ⇒ 整条）· status=在途", ""].join("\n"))
+  const { fresh } = runTmp()
+  const l4 = fresh.filter((v) => v.kind === "L4")
+  assert.equal(l4.length, 2, JSON.stringify(fresh.map((v) => v.msg)))
+  assert.ok(!l4.some((v) => v.key.includes("other/x.mjs:9")), "标记前跨仓路径不判（窄窗成立）")
+  assert.ok(l4.some((v) => v.key.endsWith("|other/x.mjs:11")), "场内跨仓必报（非空转）")
+  assert.ok(l4.some((v) => v.key.endsWith("|pkg/notes/x.mjs:7")), "无标记 ⇒ 整条（不漏）")
   assert.equal(code(["--root", tmp]), 1, "退出码 1（fail-closed）")
 })
 

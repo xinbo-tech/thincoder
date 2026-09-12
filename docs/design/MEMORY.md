@@ -359,12 +359,12 @@ merged.shell = expandHome(merged.shell)
 | 5 | `src/memory/docs.mjs` | 418 | ≤+2 | :240 同式 | eng-coder |
 | 6 | `src/cli/distill-command.mjs` | 92 | ≤+2 | :67 同式 | eng-coder |
 | 7 | `bin/thincoder.mjs` | 406 | ≤+3 | :227 / :272 / :326 同式 | eng-coder |
-| 8 | `test/home-expansion.test.mjs` | 新 | ~+110 | T-H1–T-H16（快层 + 1 条 slow） | eng-coder |
+| 8 | `test/home-expansion.test.mjs` | 新 | ~+110 | T-H1–T-H15 在役（T-H16 已退场——整删，删除记录 = `TESTING.md` §11.3）；快层 + 1 条 slow | eng-coder |
 | 9 | `README.md` | 472 | ≤+4 | 展开说明句 + 三字段注释（字面定稿 L1–L4） | eng-coder |
 | 10 | `docs/requirements/MEMORY.md` | 73（批前） | ≤+55 | §5（F10–F14 / N7–N9） | eng-designer（**已落**） |
 | 11 | `docs/design/MEMORY.md` | 239（批前） | 实测 +228（as-of 2026-09-11 修正轮落笔；超预计 ≤+210——纯 .md 档豁免尺寸判据） | 本节 §9 | eng-designer（**已落**） |
 
-**行 9 README 字面定稿（L1–L4——T-H15 逐字 oracle；C1e 落笔字面）**：
+**行 9 README 字面定稿（L1–L4——原 T-H15 逐字 oracle 面已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3）；C1e 落笔字面）**：
 
 | 锚 | README 位置（批前行号 as-of） | 逐字文本（coder 照写） |
 |---|---|---|
@@ -407,17 +407,17 @@ merged.shell = expandHome(merged.shell)
 | T-H12 | 正常（零变） | `memoryTools(mem, {cwd, projectDir:"projA"})`（相对） | 目录 === `join(cwd, "projA")`（与 `test/memory-tool.test.mjs` 同式） | N7 |
 | T-H13 | 边界 | 夹具 `team:{repo:"r:1", dir:"~/t"}` → `teamConfig(loadConfig())` | `.dir === join(HOME, "t")`（绝对原样，无 cwd 前缀） | F10/F12 |
 | T-H14 | 端到端（slow） | 子进程（伪 `HOME`/`USERPROFILE` + 另置 cwd）：`dbPath:"~/data/memory.db"` · `projectDir:"~/pdata"` → `loadConfig()` + `createMemory()` | `HOME/data/memory.db` 存在 ∧ `<cwd>/~` 不存在 ∧ stdout 两字段无 `~` 前缀 | F13 |
-| T-H15 | 静态 | `README.md` 文本 + `expandHome` | L1–L4 逐字命中（§9.4 字面定稿）∧ 示例值展开 == `join(HOME, ".thincoder/memory.db")`（绝对、无 `~`） | F14 |
-| T-H16 | 静态 | `grep -rn 'startsWith("~")' src bin` | 恰 1 行命中（`src/expand-home.mjs`） | F10 |
+| T-H15 | 静态 | `README.md` 文本 + `expandHome` | L1–L4 逐字命中（§9.4 字面定稿）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3）；示例值展开 == `join(HOME, ".thincoder/memory.db")`（绝对、无 `~`）保留 | F14 |
+| T-H16 | 静态 | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | F10 |
 
 ### 9.7 验收标准（逐条回指——每条可机器验证）
 
 - **AC-H1（→ F10）**：`loadConfig()` 对含 `~` 的四字段夹具返回全部展开值（T-H7：四字段逐条断言）；全仓展开逻辑恰一处
-  （T-H16：`grep -rn 'startsWith("~")' src bin` == 1 命中，文件 = `src/expand-home.mjs`）。
+  （T-H16 已退场——整删，删除记录 = `TESTING.md` §11.3；原判据 = `grep -rn 'startsWith("~")' src bin` == 1 命中，文件 = `src/expand-home.mjs`）。
 - **AC-H2（→ F11）**：形态表驱动（T-H1–T-H6 绿）——正常 2 组 / 边界 4 组逐条断言（`~` / `~/x` / `~\\x` / 尾分隔符；不展开四形态；非字符串零抛）。
 - **AC-H3（→ F12）**：绝对 projectDir 消费面断言（T-H11）∧ 相对形态与 `join(cwd, p)` 逐字等值（T-H12）。
 - **AC-H4（→ F13）**：伪 HOME 端到端（T-H14，slow）——`HOME/data/memory.db` 存在 ∧ `<cwd>/~` 不存在。
-- **AC-H5（→ F14）**：README 断言（T-H15）——说明句 + 三字段注释 L1–L4 逐字命中（字面 = §9.4 字面定稿）∧ 示例值展开后可用（绝对、无 `~` 前缀）。
+- **AC-H5（→ F14）**：README 断言（T-H15）——说明句 + 三字段注释 L1–L4 逐字命中（字面 = §9.4 字面定稿）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3）；示例值展开后可用（绝对、无 `~` 前缀）保留。
 - **AC-H6（→ N7）**：`node test/run-fast.mjs` 绿 ∧ `npm run test:full` 绿（既有用例零伤——§9.10 锁清单）；T-H8 / T-H12 绿。
 - **AC-H7（→ N8）**：单测零网络、零真实 home 写入（`test/home-expansion.test.mjs` 全部注入 home / tmp 目录）。
 - **AC-H8（→ N9）**：T-H10 绿（读配置前后磁盘字节相等）。
@@ -443,7 +443,7 @@ merged.shell = expandHome(merged.shell)
 |---|---|---|
 | 1 展开点 + helper 归属 | `loadConfig()` 单点（D-H1）+ 新模块 `src/expand-home.mjs`（D-H2） | §9.2 / §9.5 |
 | 2 支持形态 + Windows 分隔符 | `~` / `~/` / `~\`（`\\` 归一生效）；`~user` 不做（D-H3：两平台语义不一、收益低） | §9.3a |
-| 3 四字段落法 + README + 用例/AC | 三字段 loadConfig 展开即毕 / projectDir + 七点位基准解析（§9.3c）；README 见 §9.4 行 9；用例 T-H1–T-H16 + AC-H1–AC-H9（含「cwd 无字面 `~`」机验 = T-H14） | §9.3 / §9.4 / §9.6 / §9.7 |
+| 3 四字段落法 + README + 用例/AC | 三字段 loadConfig 展开即毕 / projectDir + 七点位基准解析（§9.3c）；README 见 §9.4 行 9；用例 T-H1–T-H15 + AC-H1–AC-H9（T-H16 已退场——整删，删除记录 = `TESTING.md` §11.3；含「cwd 无字面 `~`」机验 = T-H14） | §9.3 / §9.4 / §9.6 / §9.7 |
 | 4 VSC 镜像勘察 | VSC **无** memory 字段消费（文件制记忆、`memoryDir` 硬编码 `cwd/.thincoder/memory`）；**`shell` 同病**（`thincoder-vscode/src/agent/setup.mjs:232` → `src/tools/shell.mjs:233/242` `exec({shell})`）——镜像面 = 1 字段，报告父侧排程 | §9.8 |
 | 5 既有锁零伤 + §1.13 核对 | 见下 | — |
 
@@ -526,7 +526,7 @@ merged.shell = expandHome(merged.shell)
 | T-MS1 | 快层 unit | 分块扫描 | 假源 10_000 行 | 单块物化 ≤ `SCAN_CHUNK_ROWS`（计数注入）；逐行回调恰 10_000 次 | F-M1/N-M1 |
 | T-MS2 | 快层 unit | top-K 等价 | 假源 1_000 行 × 已知分数 | 结果与「全量排序取前 K」逐条相等（含并列稳定性） | F-M2/N-M2 |
 | T-MS3 | 快层 unit | 候选上限 | limit=3 / limit=50 | 候选数 = max(limit×4, 20)（既有口径） | F-M2 |
-| T-MS4 | 快层 unit | 三通道接线 | 三处调用点 | 均经 scan 模块（grep/注入计数：无 `.all()` 全表物化） | F-M1 |
+| T-MS4 | 快层 unit | 三通道接线 | 三处调用点 | scan 模块调用面（grep/注入计数：无 `.all()` 全表物化）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3）；现体 = 块常量值锁（`SCAN_CHUNK_ROWS` == 2000） | F-M1 |
 
 ### 10.7 验收标准（逐条回指）
 

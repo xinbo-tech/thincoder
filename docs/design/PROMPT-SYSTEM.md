@@ -265,10 +265,10 @@ R-1 逐字（插入 persona-explore / persona-coder 身份节尾——CN/EN 双�
 
 | AC | 判据（机器可验证） | 回指 |
 |---|---|---|
-| AC-CL1 | 双端 EN `common.md` 含 11 个 `##` 块（= 10 节口径，§1.2）：11 个标题串 **逐字**驻留（§3.3 T-CL1 断言表） | 需求 §2.5 验收①；批次 §1 问 1/问 2 |
+| AC-CL1 | 双端 EN `common.md` 含 11 个 `##` 块（= 10 节口径，§1.2）：11 个标题串 **逐字**驻留（§3.3 T-CL1 断言表）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3）；现体 = `##` 块计数 == 11（两源） | 需求 §2.5 验收①；批次 §1 问 1/问 2 |
 | AC-CL2 | C1–C8 源侧处置落齐：de/dn（双端 × 双源）零残留（搜索条款/路由表/环境行段 + dn 探索顺序）；persona-coder/explore EN 收敛（负断言：`Evidence discipline` 泛化块、交付表块零命中于 persona 层）；eng-coder 2 处补丁在位 | 需求 §2.5 验收②③；批次 §1 问 1 |
 | AC-CL3 | 双端落地面：每改动 4 面齐（§4 面表逐面核）；VSC 端特有段零损（R14 断言、eng-coder Guidelines、persona-engineering 端段保持绿） | 需求 §2.5 验收⑥（本批新增）；批次 §1 问 3 |
-| AC-CL4 | 锚扩展全绿：CLI `prompts-dual-source` 新增 T-CL1/T-CL2/T-CL4（+3 例）；CLI/VSC `prompts-async-guidance` 搜索条款宿主迁 common + `#9` 清单更新；VSC `prompts-mirror-anchors` 面 ⑦ 新增 | 需求 §2.5 验收⑦（本批新增）；批次 §1 问 3/问 4 |
+| AC-CL4 | 锚扩展全绿：CLI `prompts-dual-source` 新增 T-CL1/T-CL2/T-CL4（+3 例；其中 T-CL2/T-CL4 已退场——整删，删除记录 = `TESTING.md` §11.3）；CLI/VSC `prompts-async-guidance` 搜索条款宿主迁 common + `#9` 清单更新；VSC `prompts-mirror-anchors` 面 ⑦ 新增 | 需求 §2.5 验收⑦（本批新增）；批次 §1 问 3/问 4 |
 | AC-CL5 | 装配零回归：七场景 `assemblePrompt` 全槽在位零警告、槽序断言保持绿（既有用例零改） | 需求 §2.5 验收⑤ |
 | AC-CL6 | 零维护者注：新增/改动文本无日期/批次号/评审号（含 CN「评审 #C8 落位」剥除核验） | §2.7 #15 |
 | AC-CL7 | 文档面：需求档 §2.5 验收 ①–⑦ + 落地现状行在位；本档在册；父侧件已登记（README §4 / TODO 行 / VSC-PROMPTS / CHANGELOG） | 批次 §1 问 4 |
@@ -278,10 +278,10 @@ R-1 逐字（插入 persona-explore / persona-coder 身份节尾——CN/EN 双�
 
 | 用例 | 输入 | 预期输出 | 落点 |
 |---|---|---|---|
-| T-CL1 正常：common 十节标题双源驻留 | 读 CLI `src/prompts/common.md` + `docs/design/prompts/common.md` | 11 个标题串全部命中（两源同一字面串） | CLI dual-source |
-| T-CL2 正常：六节关键句双源逐字 | 同上 | 证据句 / 停下上报 4 场景 / 边界 2 句 / 交付表头 + ❌ 句 / 工具观 3 组 / 系统接口 2 条 —— 全部命中 | CLI dual-source |
-| T-CL3 边界：C8 人格段双源 | persona-engineering / persona-normal ×2 源 | C8 标题 + env 行 + reminders 句命中（标题无「评审 #C8」注） | CLI dual-source |
-| T-CL4 反例：de/dn 零残留 | de/dn ×2 源 | 搜索条款 3 字面 / `工具路由` / `环境状态` 段零命中 | CLI dual-source |
+| T-CL1 正常：common 十节标题双源驻留 | 读 CLI `src/prompts/common.md` + `docs/design/prompts/common.md` | 11 个标题串全部命中（两源同一字面串）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3）；现体 = `##` 块计数 == 11 | CLI dual-source |
+| T-CL2 正常：六节关键句双源逐字 | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | CLI dual-source |
+| T-CL3 边界：C8 人格段双源 | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | CLI dual-source |
+| T-CL4 反例：de/dn 零残留 | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | CLI dual-source |
 | T-CL5 正常：搜索条款宿主迁移自证 | 新宿主 common | 3 条字面命中于 common；de/dn 零命中（旧断言重定向 + 反证非空转） | CLI + VSC async-guidance |
 | T-CL6 边界：表行清单清零 | 15 文件机械扫 `|` 行 >200 | 命中集 = `[]`（dn 4 行随表删除） | CLI + VSC async-guidance |
 | T-CL7 正常：跨仓镜像面 ⑦ | CLI ↔ VSC × 双源 | common 11 标题跨仓逐字（zh↔zh / en↔en） | VSC mirror-anchors |
@@ -291,7 +291,7 @@ R-1 逐字（插入 persona-explore / persona-coder 身份节尾——CN/EN 双�
 
 > **落笔前置（首步——顺序不跳）**：3 条搜索条款字面串（CLI/VSC `prompts-async-guidance` 既有断言）↔ §2.2 草案**逐字比对**；差异 ⇒ 草案回改存量串（唯一来源口径下的最小修）。
 
-1. **CLI `test/prompts-dual-source.test.mjs`**（第 15 批设计基线 175 行 → ≈245；**修正轮 #4 重测现为 346 行**——见 §8.8）：新增「第 15 批锚」节 3 例（T-CL1 / T-CL2 + T-CL3 / T-CL4），
+1. **CLI `test/prompts-dual-source.test.mjs`**（第 15 批设计基线 175 行 → ≈245；**修正轮 #4 重测现为 346 行**——见 §8.8）：新增「第 15 批锚」节 3 例（T-CL1 / T-CL2 + T-CL3 / T-CL4；其中 T-CL2–T-CL4 已退场——整删，删除记录 = `TESTING.md` §11.3），
    头部承载批次注释 +1 行；断言 = 标题串表 + 关键句字面表（§3.2 所列），双源（EN + CN）循环。
 2. **CLI `test/prompts-async-guidance.test.mjs`**（419 行，42 例——例数守恒）：
    ①「搜索条款双文件逐字一致」重定向 = 断言宿主改 `common`（3 字面串逐字同款）+ 补负断言（de/dn 零命中）——用例名同步改述；
@@ -624,16 +624,16 @@ const TD_CNT = "（计数口径 = 未决数——归档条目不计数）"      
 | AC-TD7 | 新增文本零维护者注 + 无 >300 字符单行（行宽机检新增违规 0）+ 本仓脚本名/路径仅出现于「本产品自研仓 = 」示例标注形态（可移植核验：含 `test:full` / `slow()` / `TODO-archive` 的每行均带该标注） | N-TD1 / N-TD2 |
 | AC-TD8 | 三档文档在档：需求档 §10 / 本档 §8 / VSC 对位档节——三链条目一致（§10 F-TD# ↔ AC-TD# ↔ 批次档 §2 表） | 批级 |
 
-### 8.7 用例表（T-TD1–T-TD8——正常 / 边界 / 错误）
+### 8.7 用例表（T-TD1–T-TD8——正常 / 边界 / 错误；其中 T-TD1/T-TD2/T-TD6 已退场——整删，见各行注与 `TESTING.md` §11.3）
 
 | # | 类型 | 输入 | 预期输出（断言） |
 |---|---|---|---|
-| T-TD1 | 正常 | CLI de 双源全文 | §8.5 TD_DE 全串命中（fail-when-unchanged） |
-| T-TD2 | 正常 | CLI dn 双源全文 | TD_DN_EN/ZH 命中 + 旧串 doesNotMatch |
-| T-TD3 | 正常 | CLI pe 双源全文 | TD_PE_EN/ZH 命中 |
-| T-TD4 | 边界 | 新增锚串全集 | 零维护者注（日期 / 批名 / 评审号正则零命中） |
+| T-TD1 | 正常 | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） |
+| T-TD2 | 正常 | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） |
+| T-TD3 | 正常 | CLI pe 双源全文 | TD_PE_EN/ZH 全文锚命中——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） |
+| T-TD4 | 边界 | 新增锚串全集（全文锚驻留核对）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | 零维护者注（日期 / 批名 / 评审号正则零命中——常量集面保留） |
 | T-TD5 | 边界 | 四档新增行 | `check-doc-width` 新增违规 0 |
-| T-TD6 | 错误 | dn 四档（反证——旧句回潮即红） | `Code changes need at least one test` / `至少要有一个测试` 零命中常驻断言 |
+| T-TD6 | 错误 | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） |
 | T-TD7 | 正常 | VSC 三档 × 双源 + CLI 对照 | ⑨ 组全串命中（跨仓 fail-closed 照旧） |
 | T-TD8 | 回归 | 两仓快层 | `prompts-async-guidance` / `prompts-dual-source` / `prompts-mirror-anchors` / `doc-consistency` / `ledger` 全绿 |
 

@@ -74,7 +74,7 @@ AC5 = `_sessionSignal` 兜底统一 buildChildSignal（consult 补上）；**AC6
 | 边界 挂起分流 | 挂起期 settle → pending push + 池 delete | 统一守卫 `!parentAborted`，分流一致 | AC4 |
 | 边界 consult 信号 | consult settle 时 ctx.signal 缺失 | `_sessionSignal` 兜底生效（同其他三族） | AC5 |
 | 错误 settle 落盘失败 | advisor settle 时 D1 persistEngTokens 失败 | settleAdvisorRun hook 保留，失败回滚（token 根治不冲突） | AC1/N3 |
-| 一致性 | 四族 settle 对比 | 同守卫/同日志/同分流/同信号兜底 | N1 |
+| 一致性 | 四族 settle 对比 | 同守卫/同日志/同分流/同信号兜底——已退场：整删，删除记录 = `TESTING.md` §11.3 | N1 |
 
 ## 变更记录
 - 2026-09-08：立项。Top-8 #2 async 结果容器统一（STRUCTURE-DEBT 批 E+批 C）——explore CLI 一手核实（settle 4 处重复/pending 3 族/done-in-pool 3 表示/信号兜底抄 3 处+consult 无兜底）+ 用户裁定 4 决策（池 accessor/pending 单容器+role/守卫统一 !parentAborted/consult 补信号兜底）。

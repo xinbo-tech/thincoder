@@ -425,13 +425,13 @@ Notes 第 3 条（`- Returns the user's answer …`）之后插入一行：
 | T14 | 正常 | `applyToolExclusions(builtinTools, ACP_EXCLUDED_TOOLS)` | 结果无 `name === "question"`；长度 = 原 −1；其余逐字保留 | R-A1.1 |
 | T15 | 边界 | `applyToolExclusions(builtinTools, [])` / `applyToolExclusions(builtinTools, ["nope"])` | 原样返回（恒等——零意外剔除） | R-A1.1 |
 | T16 | 正常 | `parseRelayPath` 直测（单层 / 嵌套 / 无前缀 / 尾 rest） | `{ head, inner, label, rest }` 语义与迁移前逐字一致 | R-A2.3 |
-| T17 | 正常 | 文法单一权威（源读断言） | `src/agent/relay-prefix.mjs` 导出三符号；`bridge.mjs` 与 `subagent-blocks.mjs` 自该模块 import；`subagent-blocks.mjs` 无 `SUB_PREFIX_RE` 定义 | R-A2.3 |
+| T17 | 正常 | 文法单一权威（源读断言） | `src/agent/relay-prefix.mjs` 导出三符号（行为/再导出面保留）；`bridge.mjs` / `subagent-blocks.mjs` import 面 + `SUB_PREFIX_RE` 零定义（源读断言）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | R-A2.3 |
 
 ### 12.8 验收标准（AC——逐条回指需求，每条可机器验证）
 
 | AC | 判据（机器可验） | 回指 |
 |---|---|---|
-| AC1 | T14/T15 通过 + 源码接线锁：`src/acp.mjs` 含 `excludeTools: ACP_EXCLUDED_TOOLS`、`src/cli/make-agent.mjs` 含 `applyToolExclusions(` | R-A1.1 |
+| AC1 | T14/T15 通过（+ 工具常量名单锁）；源码接线锁（`src/acp.mjs` 含 `excludeTools: ACP_EXCLUDED_TOOLS`、`src/cli/make-agent.mjs` 含 `applyToolExclusions(`）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | R-A1.1 |
 | AC2 | `src/tools/question.md` 含子串 `returns an error instead of asking` | R-A1.2 |
 | AC3 | T1–T13（+T18）驱动序列中捕获的全部通知/反向请求载荷：文本与标题字段对 relay 前缀文法零命中（非锚定扫描——行首与串中均不得命中；扫描锚自模块 `RELAY_PREFIX_RE` 去 `^` 锚派生——单源 §12.3①，不复制正则字面量） | R-A2.1 |
 | AC4 | T7 / T12 配对断言通过（原样名键） | R-A2.2 |

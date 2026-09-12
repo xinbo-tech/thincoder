@@ -14,7 +14,7 @@
  * ② 本仓根直接解析 ⇒ 通过；③ 外仓前缀排除（相对路径——绝对路径由 ①/② 处置）：相对路径含目录前缀、全路径本仓不可解析时——
  * 前缀首段须为本仓根现存条目；不现存 ⇒ 跨仓形态（外仓前缀）⇒ 违规（不回退 basename）；④ 文档行坐标（`.md` + 行号）按同名 `.md` 仓内定位（≥1 通过）；
  * ⑤ 仓内定位（裸 basename / 陈旧前缀——首段现存）按 basename 仓内唯一定位 ⇒ 通过；0 / ≥2 命中 ⇒ 违规。
- * **全匹配**：同一行 / 条目内多处证据逐处判（`matchAll`——首匹配实现会漏）。
+ * **全匹配**：证据场（末个「证据」标记之后段——无标记 ⇒ 整条）内多处证据逐处判（`matchAll`——首匹配实现会漏）；标记前的行内散文提及不判。
  * 输出：红 = `<档>:<行号> [L1|L2|L3|L4] <症状> — 期望 … · 实得 …` + `<n> 处违规`；绿 = 每档一行 `OK: <档>`。
  * 审计（`--audit`）：技术组无触发条目的「待处置清单」（行龄 > N 天标「老化」）——只读、退出码 0。
  * 汇总（`--summary`）：L2 明细行序列（每项目一行——`src/ledger.mjs` 口径 + 同 formatter）——只读、退出码 0（收口行）。
@@ -102,6 +102,11 @@ function allBasenames(root, out = new Map()) {
     try { if (statSync(p).isDirectory()) allBasenames(p, out); else out.set(name, (out.get(name) ?? 0) + 1); } catch { /* 跳过 */ }
   }
   return out;
+}
+/** 证据场（L4② 扫描窗——末个「证据」标记之后段；无标记 ⇒ 整条；标记前的行内散文提及不判）。 */
+function evidenceScope(text) {
+  const marker = text.lastIndexOf("证据");
+  return marker >= 0 ? text.slice(marker) : text;
 }
 /**
  * L4② 证据解析（判序收紧——外仓前缀排除）。返回 null（通过）或违规描述字符串。
@@ -201,7 +206,7 @@ export function checkLedger(abs, root, extraRoots = [], { live = true, cache = n
         if (!target) add("L4", e.line, `${r.raw} §${r.sec}`, `指针本仓不可解析（${r.raw} §${r.sec}）`, "本仓根 / 台账目录为基根可解析到档", "本仓不可解析");
         else if (!hasSection(sectionNums(target), r.sec)) add("L4", e.line, `${r.raw} §${r.sec}`, `指针本仓不可解析（${r.raw} §${r.sec}）`, "本仓档内节号在标题中", "本仓无该节");
       }
-      for (const m of e.text.matchAll(EVIDENCE_RE_G)) {
+      for (const m of evidenceScope(e.text).matchAll(EVIDENCE_RE_G)) {
         const label = m[0].replace(/`/g, "");
         const p = m[0].replace(/`?\s*:\s*\d+$/, "");
         const why = evidenceState(root, p, rc);
@@ -237,7 +242,7 @@ export function checkLedger(abs, root, extraRoots = [], { live = true, cache = n
       if (!target) add("L4", i + 1, `${r.raw} §${r.sec}`, `指针本仓不可解析（${r.raw} §${r.sec}）`, "本仓根 / 台账目录为基根可解析到档", "本仓不可解析");
       else if (!hasSection(sectionNums(target), r.sec)) add("L4", i + 1, `${r.raw} §${r.sec}`, `指针本仓不可解析（${r.raw} §${r.sec}）`, "本仓档内节号在标题中", "本仓无该节");
     }
-    for (const m of l.matchAll(EVIDENCE_RE_G)) {
+    for (const m of evidenceScope(l).matchAll(EVIDENCE_RE_G)) {
       const label = m[0].replace(/`/g, "");
       const p = m[0].replace(/`?\s*:\s*\d+$/, "");
       const why = evidenceState(root, p, rc);

@@ -1012,7 +1012,7 @@ A 的缺陷面在 **webview 块身份/投递链**。共性是"第二池接入面
 
 | 文件 | 变更前 / 变更后 | 变更 | 增量（实测 / 预计） |
 |---|---|---|---|
-| `test/prompts-normal-audit.test.mjs` | — → ~100 | **新增**（T-NA1–T-NA4） | ~100（预计） |
+| `test/prompts-normal-audit.test.mjs` | — → ~100 | **新增**（T-NA3/T-NA4 在役；T-NA1/T-NA2 已退场——整删，删除记录 = `TESTING.md` §11.3） | ~100（预计） |
 | `src/prompts/discipline-normal.md` | 180 → 180 | 指针修复 2 处（§19.5 第 2 条——内容权主 agent） | 0（行内微调） |
 | `docs/design/prompts/discipline-normal.md` | 183 → 183 | 指针修复 2 处 | 0（行内微调） |
 
@@ -1023,15 +1023,15 @@ A 的缺陷面在 **webview 块身份/投递链**。共性是"第二池接入面
 
 | # | 类别 | 输入 | 预期输出（可机判） | 回指 |
 |---|---|---|---|---|
-| T-NA1 | 正常 | 读 `src/prompts/discipline-normal.md` | 条款锚 6 串全命中：`update the owning doc`、`reconcile the delivery against the owning design doc`、`implementation deviations are fixed`、`implemented by a coder subagent BY DEFAULT`、`Sized delegation without these fields is a defect`、`board design doc` | D1 / F-1·F-2 |
-| T-NA2 | 正常 | 读 `docs/design/prompts/discipline-normal.md` | 中文镜像锚 6 串全命中：`更新所属文档`、`把交付对照所属设计文档`、`实现偏差`、`默认由 coder 子代理实现`、`有规模委派缺这些字段是缺陷`、`本轮用户指示是否落进了板块文档` | D1 / F-1·F-2 |
+| T-NA1 | 正常 | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | D1 / F-1·F-2 |
+| T-NA2 | 正常 | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | D1 / F-1·F-2 |
 | T-NA3 | 边界（反例） | 两档全文件扫描 | 悬空指针零残留：不含 `§21`（修复后 fail-when-unchanged——修复前应红） | D1 / F-3 |
 | T-NA4 | 错误（回归） | 既有 prompts 测试族 | 全绿（零破坏——本批不动其它锚句） | D1·D2 边界 |
 
 ### 19.9 验收标准（AC-NA——逐条回指 D1/D2）
 
 - **AC-NA1**（D1 / F-1）= `../requirements/NORMAL-MODE.md` §6 在位：F-N1.1–F-N1.6 六个 ID + N-N1 全命中（grep 断言）；抬头指针指向本节（§19）。
-- **AC-NA2**（D1 / F-2）= T-NA1 / T-NA2 绿（`node --test test/prompts-normal-audit.test.mjs`——条款锚 fail-when-unchanged：改动任一锚串即红）。
+- **AC-NA2**（D1 / F-2）= 判据面退场（T-NA1 / T-NA2 均整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3）。
 - **AC-NA3**（D1 / F-3）= T-NA3 绿（两档含 `§21` 命中数 = 0）。
 - **AC-NA4**（D1 / F-4）= 状态行条目改述在位（grep：该条含「第 23 批」与需求档 §6 指向；「实施细节待批」**不作未决主张**出现——机判口径 = 「未决 / 待办状态行」节内凡命中该串的行须同行含「不成立」（引用性历史否定留痕，as-of `:13`；未否定形态零命中））。
 - **AC-NA5**（D2）= §19 在位 + §7.6 行 433 退役记录在位（grep：含「已退役（第 23 批评估」+「四个机制承接」；`advisor-context.md` 不再被述为现行机制）。
@@ -1254,7 +1254,7 @@ provider / agent / settle 产生或补标错误（`abortInfo`，第 4 条 #1–#
 | `src/agent-tools/advisor-async.mjs` | 350 | 354 | +4 | hop 1 + 合成 1 + cancel 1 |
 | `src/agent-tools/consult.mjs` | 456 | 461 | +5 | hop 1 + 定时器 1 + stop 2 + 合成 2 |
 | `src/tui/key-handler.mjs` | 440 | 441 | +1 | stop reason 两处 |
-| `test/abort-provenance.test.mjs` | —（新增） | 190 | 新增（设计估 ~170） | T-AP1–T-AP10 |
+| `test/abort-provenance.test.mjs` | —（新增） | 190 | 新增（设计估 ~170） | T-AP1–T-AP8 在役；T-AP9/T-AP10 已退场（整删——删除记录 = `TESTING.md` §11.3） |
 
 口径注：行数 = 读回行数（与批前基线同一计数法）；交付后读数含评审修正轮增量与他批在途并发编辑
 （共享档净变非本批独占——如 `agent.mjs` +13 以他批为主）。
@@ -1276,13 +1276,13 @@ provider / agent / settle 产生或补标错误（`abortInfo`，第 4 条 #1–#
 | T-AP6 | 边界（cause 链——P1） | `Object.assign(new Error("fetch failed"),{cause:new Error("HeadersTimeoutError")})` | `deathLine` 含 `← cause:` 与 cause 文本 | F-D1.3（一次可判） |
 | T-AP7 | 错误（取消 / 停止） | cancel / stop 站点 reason（`{abortTrigger:"cancel"}` / `"stop"`）→ `deathLine` | 分别含 `cancel@…` / `stop@…` | F-D1.1 |
 | T-AP8 | 错误（零回归） | 既有测试族（`sync-cancel` / `async-settle` / `queued-stop` / `subagent-observe-send` / `advisor-chain-guards`） | 全绿（既有 abort 锁零伤） | N-D1.1 |
-| T-AP9 | 错误（合成点残留） | 源码扫描五处合成点 | `entry.error = err?.message` 形态命中 = 0（全经 `deathLine`） | F-D1.3 |
+| T-AP9 | 错误（合成点残留） | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | F-D1.3 |
 
 ### 20.8 验收标准（AC-AP——逐条回指 D1 / F-D1.x）
 
 - **AC-AP1**（F-D1.1）= T-AP1 绿 + `TRIGGERS` 计数 5 与 `../requirements/AGENT-LOOP.md` §6 表述一致（`node --test test/abort-provenance.test.mjs`）。
 - **AC-AP2**（F-D1.2）= T-AP2 绿 + grep 断言：五处 hop 均以 `abort(` 实参携带 reason（裸 `ctrl.abort()` 形态在五档命中 = 0）。
-- **AC-AP3**（F-D1.3）= T-AP3 / T-AP9 绿 + 合成器在五处合成点在位（grep `deathLine(` 命中 ≥5；`err?.message ?? String(err)` 命中 = 0）。
+- **AC-AP3**（F-D1.3）= T-AP3 绿（T-AP9 已退场——整删，删除记录 = `TESTING.md` §11.3） + 合成器在五处合成点在位（grep `deathLine(` 命中 ≥5；`err?.message ?? String(err)` 命中 = 0）。
 - **AC-AP4**（F-D1.4）= T-AP4 绿（unknown 显式——用户实证形态可判；空后缀即红）。
 - **AC-AP5**（F-D1.1/F-D1.3 边界）= T-AP5 + T-AP7 绿（timeout / cancel / stop 三面标注落地；timeout 两形态 = 错误面 `timeoutError` + 信号面 `{abortTrigger:"timeout"}`——含 `triggerOf({abortTrigger:"timeout"}) → timeout` 断言）。
 - **AC-AP6**（N-D1.1）= T-AP8 绿——既有 abort / 结算 / 取消测试族全绿（零回归）。
@@ -1495,7 +1495,7 @@ if (depth === 0 && !signal?.aborted && thrownError?.name !== "AbortError") {
 | T-HS8 | 错误 | hook 命令不存在 | `command` = 不存在路径 | `finalizeAgentTurn` 零异常、零产物 | F-E3 |
 | T-HS9 | 错误 | 非预期异常 | `thrownError = new Error("boom")` | `reason="error"`、`error="boom"` | F-E2 |
 | T-HS10 | 回归 | 工具事件 matcher 语义 | 经注入配置两跑：`runHooks("PreToolUse", {toolName, agent})`——`agent.config.hooks.PreToolUse` = 假脚本（matcher `^bash$`——注入面见注）；`toolName` = `"read"` / `"bash"` | read 不触发 / bash 触发（过滤语义保持） | F-E4 / N-E1 |
-| T-HS11 | 静态 | 事件集收口 | 扫描 `src/hooks.mjs` 源码 | 含 `Stop`；不含 `Notification` | F-E5 |
+| T-HS11 | 静态 | 事件集收口 | 扫描 `src/hooks.mjs` 源码 | 头部事件表四类齐（名单锁）；含 `Stop` / 不含 `Notification` 逐串断言——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | F-E5 |
 
 > 桩 agent 可行性（勘察）：`finalizeAgentTurn` 的依赖对最小桩零崩溃——`flushPeerDomains`（`_peerWritten` 缺席即返回）·
 > `getAsyncPool`（`?? null`）· `collectSettledAsync`（池空 → 早退）· `closeOpenCodeAdvisorRuns`（`_advisorRuns` 非 Map 免疫）。
@@ -1509,8 +1509,8 @@ if (depth === 0 && !signal?.aborted && thrownError?.name !== "AbortError") {
 - **AC-HS1**（F-E1）= T-HS1 / T-HS3 / T-HS4 / T-HS5 / T-HS6 绿（`node --test test/hooks-stop.test.mjs`——触发面五态）。
 - **AC-HS2**（F-E2）= T-HS1 / T-HS3 / T-HS9 绿 + 载荷字段断言（reason 三态 / error 仅 error 态非空 / turn 数字 / timestamp ISO / 骨架 null）。
 - **AC-HS3**（F-E3）= T-HS2（归册按慢门实测——归册时走 `npm run test:full`）+ T-HS8 绿（「宿主返回先于脚本产物」+ 零异常）。
-- **AC-HS4**（F-E4）= T-HS7 / T-HS10 绿 + grep 断言 `ctx.toolName != null` 守卫在位（`src/hooks.mjs`）。
-- **AC-HS5**（F-E5）= T-HS11 绿（源码含 Stop、不含 Notification）+ 交付核验：`src/hooks.mjs` 头部事件表四类齐；
+- **AC-HS4**（F-E4）= T-HS7 / T-HS10 绿 + grep 断言 `ctx.toolName != null` 守卫在位（`src/hooks.mjs`）——该 grep 断言已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3）。
+- **AC-HS5**（F-E5）= T-HS11 绿（`src/hooks.mjs` 头部事件表四类齐）；源码含 Stop / 不含 Notification 逐串断言——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3）；
   `TOOLS.md` §3 分句随父侧排程落档（登记项 §21.9——不阻塞代码面）。
 - **AC-HS6**（N-E1）= `npm test` 全绿 + `npm run test:full` 全绿（既有族零回归；hooks 无既有测试——首个 hooks 测试档为本批新增）。
 - **AC-HS7**（纪律面 / N-E3）= 两仓 `node scripts/check-doc-width.mjs` 本批触碰档零新增违规 + 本批交付 diff 不含
@@ -1771,7 +1771,7 @@ BATCH-3 F-2 原始事故面（1.3MB 请求体）+ 交付偏差记录（`docs/des
 |---|---|---|
 | AC-O1 | F-O1 | T-SM3 绿；`RECORD_WINDOW_MESSAGES` 单源（grep = 200） |
 | AC-O2 | F-O2 | T-SM1/T-SM2 绿；捕获常量经 `text-budget.mjs` 单源 |
-| AC-O3 | F-O3 | T-SM4 绿 + 三消费点 grep（释放调用在位） |
+| AC-O3 | F-O3 | T-SM4 绿（释放语义行为面）；三消费点 grep（释放调用在位）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） |
 | AC-O4 | F-O4 | T-TR1/T-TR2/T-TR3 绿；字段集对照 = `AGENT-LOOP.md` §13 字段清单（修正轮 #9——本仓无既有轨迹用例，锚点改指 §13；新档自身为参照实现） |
 | AC-O5 | F-O5 | T-TR4/T-TR5 绿；`TRACE_PENDING_MAX` 单源 |
 | AC-O6 | N-O2 | 既有族全绿：`test/async-settle.test.mjs` · `test/subagent-observe-send.test.mjs` · `test/subagent-scheduler.test.mjs` · `test/integration/subagent-lifecycle.test.mjs`；digest 注入预算用例零伤（§22） |

@@ -408,9 +408,9 @@ D1–D7 全表 / 锚#1–#7 / C1–C4 / T-RO 组 / A11 的 `batchDoc` 必传句�
 | T-07 | 边界（门禁） | 同上 + 写 `packages/foo/src/x.md` | **拒绝**（原为放行=反证锁） | PO-10 |
 | T-08 | 边界（门禁） | 同上 + 写 `docs/design/x.md` | 放行（设计产物豁免保持） | PO-10 |
 | T-09 | 错误（文案） | 门禁拒绝 hint | 含声明指路；**不含** `in docs/` | PO-11 |
-| T-10 | 正常（注入） | 临时项目：有 AGENTS.md + `docs/README.md` | 指南 + 地图注入保持 | PO-1 |
-| T-11 | 边界（缺料） | 无地图 / 无标准文档 | 两条**降级句**在场；`Read METHODOLOGY.md` 零命中 | PO-1/2/3 |
-| T-12 | 正常（声明） | `advisor.docMap` 指向自定义路径 | 注入该文件（声明优先于探测） | PO-1 |
+| T-10 | 正常（注入） | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | PO-1 |
+| T-11 | 边界（缺料） | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | PO-1/2/3 |
+| T-12 | 正常（声明） | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | PO-1 |
 | T-13 | 正常（非 git） | 临时目录（无 `.git`）含 `a.mjs`/`b.md` | `listProjectFiles` 返回两者；索引非空 | PO-8 |
 | T-14 | 边界（walk） | 含 `node_modules/`、`.hidden/`、超限文件数 | 跳过规则同源；截断标记 | PO-8 |
 | T-15 | 正常（扩展名） | `.dart`/`.lua`/`.cs`/`.org` 文件 | 默认可索引 | PO-9 |
@@ -418,8 +418,8 @@ D1–D7 全表 / 锚#1–#7 / C1–C4 / T-RO 组 / A11 的 `batchDoc` 必传句�
 | T-17 | 正常（文案） | `/reindex` with unlisted | 打印声明指路提示行 | PO-9 |
 | T-18 | 正常（/eng） | 空项目（无 METHODOLOGY.md） | 不弹窗、不崩；`Engineering mode: ON` | PO-11 |
 | T-19 | 边界（/eng） | OFF 切换 | 提醒推入 + 令牌语义保持（快照断言） | PO-11 |
-| T-20 | 正常（提示词） | 六档编辑后 | 新通用化句在场；§3.5 红线锚句零损 | PO-4–7 |
-| T-21 | 正常（FR14） | 需求档文本 | 档位契约要点在场（grep） | PO-12 |
+| T-20 | 正常（提示词） | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | PO-4–7 |
+| T-21 | 正常（FR14） | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | PO-12 |
 | T-22 | 边界（门禁·保守） | 工程模式 + 无令牌 + 变更工具未给出字符串路径（`touchedPaths` 返回非字符串/缺失） | **拒绝**（`typeof p !== "string"` 保守拦截保持——未知路径不放行） | PO-10 |
 
 ## 7. 验收标准（AC-01–AC-14——逐条回指）
@@ -430,7 +430,7 @@ D1–D7 全表 / 锚#1–#7 / C1–C4 / T-RO 组 / A11 的 `batchDoc` 必传句�
 | AC-02 | T-01–T-05 全绿；`packages/foo/src/x.md` 判 code（嵌套漏判消除） | PO-10 · FR12 |
 | AC-03 | T-06–T-08 + T-22 全绿（既有门禁锁保持 + 反证用例转绿方向 = 拒绝 + 未知路径保守拦截保持） | PO-10 · FR12 |
 | AC-04 | `conventions.json` 缺失/损坏不崩溃；声明后行为切换有测试 | PO-10 · FR10 |
-| AC-05 | 评审消息降级句在场 + `Read METHODOLOGY.md` 全仓零命中（产品代码与提示词） | PO-1/2/3 · FR10/11 |
+| AC-05 | 判据面退场（T-11/T-12 均整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | PO-1/2/3 · FR10/11 |
 | AC-06 | 六档编辑面内指令性引用 = 0（`docs/README.md` / `docs/design/<TOPIC>.md`——「本产品自研仓 =」示例标注形态除外）；`check-doc-width` 零指涉（全形态——P7 自指删除，脚本声明走本仓 `AGENTS.md`）；六档外同类（P11——`discipline-normal.md:13/:32`）归批次三（§9） | PO-4–7 · FR13 |
 | AC-07 | 既有提示词锚测试全绿（async-guidance + dual-source + batch-segment）；红线锚句逐一在位 | PO-4–7 · FR13 |
 | AC-08 | `/eng` 无前提下 ON 不崩（T-18）；OFF 语义零回归（T-19） | PO-11 · FR11 |
@@ -438,7 +438,7 @@ D1–D7 全表 / 锚#1–#7 / C1–C4 / T-RO 组 / A11 的 `batchDoc` 必传句�
 | AC-10 | 扩展名：T-15–T-17 全绿；`unlistedExts` 字段与提示行存在 | PO-9 · FR10 |
 | AC-11 | 门禁/工具文案去 `in docs/`（grep 0）；声明指路在场 | PO-11 |
 | AC-12 | `messages.mjs` 拆分兑现：新档 `project-context.mjs` 在位、`messages.mjs ≤ 500` 且较 413 净减；既有导出面零破（re-export 保持） | PO-10（D8） |
-| AC-13 | FR14 契约落 `requirements/PORTABILITY.md`（T-21） | PO-12 · FR14 |
+| AC-13 | FR14 契约落 `requirements/PORTABILITY.md`（T-21 已退场——整删，删除记录 = `TESTING.md` §11.3） | PO-12 · FR14 |
 | AC-14 | 批级机检：`node scripts/check-doc-width.mjs` 新增超宽 0 + 一致性新增违规 0；`npm test` 快层全绿；全部受改文件 ≤500 | 全批 |
 
 > 会话级验证方向（`ENGINEERING-MODE.md` §2 尾）：在**非 Node / 非 `src` 布局 / 无 `docs/` 树 / 非 git** 的项目跑一次工程模式全流程演练——

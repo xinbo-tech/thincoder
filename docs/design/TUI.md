@@ -948,7 +948,7 @@ note: p.baseURL,
 | `src/tui/render-frame.mjs` | 377 | 0 | 零改（8 格余量 + 右截断既有——核对项） |
 | `src/agent/setup.mjs` | 355 | ±3 | A2：受限变体 3 个文案面同步（见 `ENGINEERING-MODE.md` §2.15 D5） |
 | `test/eng-designer-role.test.mjs` | 316 | ±6 | A3：T30 自 `test(` 改 `slow(` + import；A2：T32b 扩两处 description 断言 |
-| `test/tui-selection-surfaces.test.mjs` | 0（新增） | +145 ± 40 | A1/A4 用例表 1:1（新档；用例 10 = 文档面断言——修正轮 #2） |
+| `test/tui-selection-surfaces.test.mjs` | 0（新增） | +145 ± 40 | A1/A4 用例表 1:1（新档；用例 10 = 文档面断言——已退场：整删，删除记录 = `TESTING.md` §11.3；修正轮 #2） |
 
 > 文档写域（设计者）：`../requirements/TUI.md` · 本文件 · `../requirements/ENGINEERING-MODE.md` ·
 > `ENGINEERING-MODE.md` §2.15 D5 · `../requirements/TESTING.md` · `TESTING.md` §1.2 · `docs/TODO.md`（状态推进）。
@@ -960,7 +960,7 @@ note: p.baseURL,
 
 > 新档 `test/tui-selection-surfaces.test.mjs`（直驱 `createPickers` / `handleQuestionMode` / `renderWizard` +
 > `renderPicker` 纯函数面；构造手法照 `model-ref.test.mjs`（脚本化 showPicker）与 `mouse-sane-gate.test.mjs`（最小 state + computeLayout）；
-> 用例 10 = 文档面断言——读本文件 §12.4，修正轮 #2）。
+> 用例 10 = 文档面断言——读本文件 §12.4，修正轮 #2；已退场（整删，删除记录 = `TESTING.md` §11.3）。
 > A2 断言 = 扩既有 T32b（designer / eng-coder 双端 `prepareRun` 装配既有——零新增装配调用，规避慢门）；A3 = 该档 T30 归册自身。
 
 | # | 类型 | 输入 | 预期输出 | 回指 |
@@ -983,7 +983,7 @@ note: p.baseURL,
 | AC-A1-1 | item note 渲染：含 note 条目行尾 = `  ` + note；无 note 条目行形态不变 | `rebuildLines` 输出行文本断言（用例 1/2） | F9 |
 | AC-A1-2 | 警示恒显：80 列渲染 provider 条目行含 `(no key)`（无 key）/ `(不可用)`（探不通） | 用例 3 + `renderPicker` 输出断言 | F9 |
 | AC-A1-3 | 行宽预算：任意渲染行 ≤ `cols − 8`；超宽右截断带 `…` | 用例 4 的 `stringWidth` 断言 | N7 |
-| AC-A4-1 | 契约表落档（三面 × 职责/键位/豁免——§12.4 本表） | 用例 10（读本文件 §12.4——表头 + 三面列名 + 关键行名子串断言） | F10 |
+| AC-A4-1 | 契约表落档（三面 × 职责/键位/豁免——§12.4 本表） | 用例 10（读本文件 §12.4——表头 + 三面列名 + 关键行名子串断言）——已退场：整删，删除记录 = `TESTING.md` §11.3 | F10 |
 | AC-A4-2 | question ↑↓ 环绕（末项 down → 0；首项 up → 末项） | 用例 5 直驱断言 | F10 |
 | AC-A4-3 | wizard provider 选中项恒在可视窗（越窗后 scroll 调整） | 用例 6 断言 | F10 |
 | AC-A4-4 | 三面零回归（picker 键位 / wizard 文本步 / question Esc·Enter 语义） | 用例 7/9 + 既有 TUI 测试面 | F10 |
@@ -1212,7 +1212,7 @@ export function userNeededAtTurnEnd(state, agent, skipSession) {
 | 3 | `src/tui/agent-turn.mjs` | 324 | 改（`userNeededAtTurnEnd` 谓词 + 链尾置位） | +~12 | >300 advisory（交付 ~336；净增小，沿存量口径） |
 | 4 | `src/tui/key-handler.mjs` | 441 | 改（`onKeypress` 入口清位） | +~5 | >300 advisory（交付 ~446 < 500 ✓） |
 | 5 | `src/tui/index.mjs` | 450 | 改（state 字段 + 鼠标输入路径清位） | +~8 | >300 advisory（交付 ~458 < 500 ✓） |
-| 6 | `test/attention-state.test.mjs` | 新 | 新增（T-AT1–T-AT8） | ~200 | 新档 ≤500 ✓ |
+| 6 | `test/attention-state.test.mjs` | 新 | 新增（T-AT1–T-AT7 在役；T-AT8 已退场——整删，删除记录 = `TESTING.md` §11.3） | ~200 | 新档 ≤500 ✓ |
 
 **文档域（eng-designer 写域——本设计者已落）**
 
@@ -1247,7 +1247,7 @@ export function userNeededAtTurnEnd(state, agent, skipSession) {
 | **INPUT-LOCK（busy 提示）** | 零改——processing 期 attention 派生为 null（blocked 除外——审批 / 提问可发生于回合中，属正确提醒） |
 | **TUI-INPUT-BOX §7.2（question 自由文本态）** | 零改（不改 question 键集 / 光标 / 布局） |
 | **D2 单一权威源** | 触发 / 形态 / 消除只在本节详述；需求 F13 引用不重述逐字文案 |
-| **D3 计数·枚举** | 用例 8（T-AT1–T-AT8）· AC 6（AC-AT1–AC-AT6）· 实施域 6 项（5 改 + 1 新）· 文档域 2 档——声明与列表逐条一致（本节计数行同表） |
+| **D3 计数·枚举** | 用例 8（编号 T-AT1–T-AT8；在役 7——T-AT8 已退场，删除记录 = `TESTING.md` §11.3）· AC 6（AC-AT1–AC-AT6）· 实施域 6 项（5 改 + 1 新）· 文档域 2 档——声明与列表逐条一致（本节计数行同表） |
 | **D4 指针纪律** | 指针 = `文档:节`；代码锚 file:line 标 as-of |
 | **D5 冻结窗口** | 本节只**新增节** + 变更记录一行——§1–§13 零碰 |
 | **D6 回读核对** | 需求 F13 与本节落笔后回读核实；实施面验收含静态锚（AC-AT6） |
@@ -1266,7 +1266,7 @@ export function userNeededAtTurnEnd(state, agent, skipSession) {
 | T-AT5 | 边界 | 鼠标路径直驱（滚轮 / 点击桩）：置位 awaiting → 事件 | 清位 + render | F13 判定句② |
 | T-AT6 | 边界 | `userNeededAtTurnEnd(state, agent, skipSession)` 矩阵：正常空闲 / skipSession / suspended / _suspPending / 池 live / queue 非空 / processing | `true` / `false`×6（逐条件） | F13（置位条件） |
 | T-AT7 | 错误 | 非触发态渲染：picker / wizard / search / interruptPrompt / processing（无审批/提问） / suspended（awaiting=false） | `attentionKind → null`；渲染零注意力序列 | F13 判定句④ |
-| T-AT8 | 边界 | 静态锚：`src/tui/render-frame.mjs` / `agent-turn.mjs` 源文本 | 零新增 `setInterval`（N9②）；`attentionKind` / `userNeededAtTurnEnd` 导出在位；**置位接线锚**：`agent-turn.mjs` 含 `userNeededAtTurnEnd` 调用 + `attentionAwaiting = true` 置位（D-AT6 顶层链尾接线——机判） | N9 · D-AT6 |
+| T-AT8 | 边界 | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | N9 · D-AT6 |
 
 > 测试基建：`createKeyHandler` 桩 ctx（同 `input-lock.test.mjs` 手法）+ `renderStatus` / 纯函数直调——零 TTY、
 > 零定时器悬挂、微秒级；新档由 glob 自动发现。
@@ -1280,7 +1280,7 @@ export function userNeededAtTurnEnd(state, agent, skipSession) {
 | AC-AT3 | 三态优先级：T-AT3 绿（blocked > awaiting；permission > question） | F13 |
 | AC-AT4 | 消除：T-AT4 / T-AT5 绿（键 / 鼠标清位 + 重绘） | F13 判定句② |
 | AC-AT5 | 置位条件：T-AT6 绿（七条件矩阵——skipSession / 挂起两态 / 池 live / 队列 / processing 全排除） | F13（置位） |
-| AC-AT6 | 零侵入 + 零回归 + 档位：T-AT8 绿（零新定时器 / 导出在位 / 置位接线锚）；`cd thincoder && node test/run-fast.mjs` 全绿（含 `input-lock.test.mjs` 既有锁档）；受影响文件 ≤ 档位帽（实测对表）；`node scripts/check-doc-width.mjs` 新增违规 0；VSC 仓零改动 | N9 |
+| AC-AT6 | 零侵入 + 零回归 + 档位：T-AT8 已退场（整删——删除记录 = `TESTING.md` §11.3）；`cd thincoder && node test/run-fast.mjs` 全绿（含 `input-lock.test.mjs` 既有锁档）；受影响文件 ≤ 档位帽（实测对表）；`node scripts/check-doc-width.mjs` 新增违规 0；VSC 仓零改动 | N9 |
 
 ### 14.9 边界（本批不做）+ 登记（VSC 对位）
 
@@ -1305,7 +1305,7 @@ export function userNeededAtTurnEnd(state, agent, skipSession) {
 4. **`render-frame.mjs` 拆分的后续评估**：本节交付 ~409 行（>300 advisory 存量档）；若状态栏渲染继续增厚
    → 按 §12.7 口径评估拆出独立 `status.mjs`（本批不拆——净增 ~32 行、职责未变）。
 
-**计数（D3）**：用例 **8**（T-AT1–T-AT8）· AC **6**（AC-AT1–AC-AT6）· 实施域 **6 项**（5 改 + 1 新）· 文档域 **2 档**；需求 = F13 + N9。
+**计数（D3）**：用例 **8**（编号 T-AT1–T-AT8；在役 7——T-AT8 已退场，删除记录 = `TESTING.md` §11.3）· AC **6**（AC-AT1–AC-AT6）· 实施域 **6 项**（5 改 + 1 新）· 文档域 **2 档**；需求 = F13 + N9。
 
 ---
 

@@ -67,13 +67,13 @@ verify.mjs 当前把**项目特定逻辑硬编码进通用工具**：
 | T-V6 | 打回消息含引导 | failed/skipped | 消息含改动文件 + 引 AGENTS.md 验证方式 |
 | T-V7（双端一致，评审 #5） | 同输入双端同输出 | verification 各态在 CLI + VS Code 同参数 | 双端输出一致（通过/打回同判定） |
 | T-V8（相 2：doc-only+failed，G10） | 只改 .md + 显式 failed | doc-only 改动 + verification:{status:failed} | 打回（双端同） |
-| T-V9（相 2：guard 文案，G1-G4） | guard 推回文案 | guard pushback 触发 | 文案含"declaring the outcome"（定稿实际子串——评审 #6）非"run syntax checks and tests" |
-| T-V10（相 2：prompt 语义，G5-G9） | prompt 无旧 verify 语义 | grep prompts 无"verify runs/related tests" | 干净 |
+| T-V9（相 2：guard 文案，G1-G4） | — | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） |
+| T-V10（相 2：prompt 语义，G5-G9） | — | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） |
 | T-V11（相 2：goal 门禁，G13） | VS Code goal mutated 未 verify | goal complete + 改动未 verify | 拦截（对齐 CLI） |
 
 ## 5. 验收
 
-AC1 = T-V1..V11 全绿（test:full）；AC2 = verify.mjs 不含 `MODULE_TO_TEST`/模块映射/**任何语言特定强制/进门禁执行**（可选 node --check 软提示除外——评审 #4）；AC3 = 双端一致（T-V7/T-V8 行为断言）；AC4 = lint/语法过；AC5（相 2）= guard 文案 + prompts 无旧 verify 语义（T-V9/T-V10）。
+AC1 = T-V1..T-V8 + T-V11 全绿（test:full；T-V9/T-V10 已退场——整删，删除记录 = `TESTING.md` §11.3）；AC2 = verify.mjs 不含 `MODULE_TO_TEST`/模块映射/**任何语言特定强制/进门禁执行**（可选 node --check 软提示除外——评审 #4）；AC3 = 双端一致（T-V7/T-V8 行为断言）；AC4 = lint/语法过；AC5（相 2）= 判据面退场（T-V9/T-V10 均整删——删除记录 = `TESTING.md` §11.3）。
 
 测试文件已清空——按"按需加"理念补 verify 自身的 few 用例（T-V 系，相 1 已建 T-V1..V6b；相 2 补 T-V8..V11）。
 

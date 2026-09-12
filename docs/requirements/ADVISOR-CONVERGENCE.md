@@ -92,7 +92,7 @@
 |---|---|---|---|
 | N4 | 零语义漂移 | 既有逐字锚（锚#1–#7——含锚#3 修正轮 docs FIRST、锚#4 拍板≠批准）文本**零改动**；既有 prompts 锚测试不红 | 双端既有 prompts 锚测试套件（CLI + VSC）全绿；锚#1–#7 字面在 `src/prompts/discipline-engineering.md` 逐字在位 |
 | N5 | 双源双端一致 | 新文本**四面同文**：CLI / VSC ×（`src/prompts/` 落地产物 + `docs/design/prompts/` 中文权威）；`discipline-engineering` 与 `discipline-normal` 的 Action 词表不得两说 | 机判：同一字面串四面在位 + 跨仓逐字断言（`test/prompts-mirror-anchors.test.mjs`） |
-| N6 | 可机判 | 每条验收标准可 grep / 断言级判定；计数词与列表同改（D3——“三值→四值”计数与枚举同步） | 本批用例 T-RO1–T-RO6 + `node scripts/check-doc-width.mjs` 新增违规 0（双端） |
+| N6 | 可机判 | 每条验收标准可 grep / 断言级判定；计数词与列表同改（D3——“三值→四值”计数与枚举同步） | 本批用例 T-RO1–T-RO6（T-RO1–T-RO4 已退场——整删，删除记录 = `TESTING.md` §11.3）+ `node scripts/check-doc-width.mjs` 新增违规 0（双端） |
 
 ### 6.4 范围边界（不做）
 
@@ -264,7 +264,7 @@ VSC 端评审链的守卫面补齐收官：设计评审**发起前的凭证信�
 
 | # | 维度 | 标准 | 度量方式 |
 |---|---|---|---|
-| N19 | 零回归 + 可机判 | 判定族 / 六条尾文案 / 提示词 / 压缩触发与判死线的既有关系（×0.8）语义零改；派生为**纯函数**（无 I/O、无状态）；每条验收可机判 | `node test/run-fast.mjs` 全绿（含既有 `advisor-chain-guards` 21 例 + `advisor-sync-accounting` 6 例）；本批用例 T-CB1–T-CB6；`node scripts/check-doc-width.mjs` 新增违规 0 |
+| N19 | 零回归 + 可机判 | 判定族 / 六条尾文案 / 提示词 / 压缩触发与判死线的既有关系（×0.8）语义零改；派生为**纯函数**（无 I/O、无状态）；每条验收可机判 | `node test/run-fast.mjs` 全绿（含既有 `advisor-chain-guards` 21 例 + `advisor-sync-accounting` 6 例）；本批用例 T-CB1–T-CB5 在役（T-CB6 已退场——整删，删除记录 = `TESTING.md` §11.3）；`node scripts/check-doc-width.mjs` 新增违规 0 |
 
 ### 10.4 范围边界（不做）与登记面
 

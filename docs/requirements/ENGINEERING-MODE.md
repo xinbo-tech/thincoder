@@ -860,7 +860,7 @@ eng-designer 勘察）的工具描述**动作拒绝清单**与机械门（`src/a
 
 #### 判定句（逐条回指设计验收）
 
-F1–F8 与 N1/N2 的判定句见设计 `../design/ENGINEERING-MODE.md` §3.1 **AC80–AC90**；用例见 §3.2 **T97–T110**。
+F1–F8 与 N1/N2 的判定句见设计 `../design/ENGINEERING-MODE.md` §3.1 **AC80–AC90**；用例见 §3.2 **T97–T110**（T105 已退场——整删，删除记录 = `TESTING.md` §11.3）。
 三方条目一致：本节 F/N 条目 = 设计 AC 回指条目 = 批次档 §2 本批条目。
 
 ### 1.19 文档体系各仓自持（FR25——2026-09-12 用户裁定；设计见 `../design/LEDGER-SELF-CONTAINED.md`）
@@ -911,11 +911,11 @@ F1–F8 与 N1/N2 的判定句见设计 `../design/ENGINEERING-MODE.md` §3.1 **
 
 #### 判定句（逐条回指设计验收）
 
-F1–F14 与 N1–N4 的判定句见设计 `../design/LEDGER-SELF-CONTAINED.md` §11 **AC-LS1–AC-LS35**；用例见 §10 **T-LS1–T-LS42**。
+F1–F14 与 N1–N4 的判定句见设计 `../design/LEDGER-SELF-CONTAINED.md` §11 **AC-LS1–AC-LS35**；用例见 §10 **T-LS1–T-LS43**。
 - F11 的判定句 = **AC-LS19** / T-LS20 · T-LS21 · T-LS31——判据句「需求层必须在本仓有档——不得以 design 层充当」。
 - F12 的判定句 = **AC-LS28** / T-LS32；F13 的判定句 = **AC-LS29** / T-LS33 + **AC-LS30** / T-LS34。
 - **F14 的判定句 = AC-LS31 · AC-LS32 · AC-LS33 / T-LS35–T-LS39**——判据句「例外的唯一依据是判据句（可机判）；枚举外即红；存量 / 入基线不得再设；例外须带消解路径与到期条件」。
-- **F6 判定句补（L4② 判序收紧——Deferred 收口轮）= AC-LS34 · AC-LS35 / T-LS42**——判据句「外仓前缀不回退 basename（防假阴面）；两仓 L4② 判序等义（含全匹配）」。
+- **F6 判定句补（L4② 判序收紧——Deferred 收口轮）= AC-LS34 · AC-LS35 / T-LS42 · T-LS43**——判据句「外仓前缀不回退 basename（防假阴面）；两仓 L4② 判序等义（含全匹配）」。
 三方条目一致：本节 F/N 条目 = 设计 AC 回指条目 = 批次档 §2 本批条目（B1–B16）。
 
 ## 3. 边界（信任模型）
