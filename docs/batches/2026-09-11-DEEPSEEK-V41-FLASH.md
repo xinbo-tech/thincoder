@@ -1,7 +1,8 @@
 # 批次记录（本仓份）— DEEPSEEK-V41-FLASH（2026-09-11）
 
-> 搬迁注记：本档 = CLI 仓批次记录 `thincoder/docs/batches/2026-09-11-DEEPSEEK-V41-FLASH.md` 的**本仓份拆出承载档**
+> 搬迁注记：本档 = CLI 仓批次记录 `2026-09-11-DEEPSEEK-V41-FLASH（CLI 仓）` 的**本仓份拆出承载档**
 > （LEDGER-SELF-CONTAINED 批——拆分：两端均有实施面，各仓持其份；文字**逐字搬运、零改写**——D10；对端份留源档）。
+> 对端（CLI 仓）源档对端份已**切除**（2026-09-12）——追溯锚 = 源档档首移出清单 + 源档 blob SHA
 > 拆分判据 = `LEDGER-SELF-CONTAINED（CLI 仓）§8.3` 表（本仓份 **4** 条目 = VSC 源 2 + VSC 测试 2）；源档 blob SHA = 18f93661d7e9。
 > 源档案内锚：§2「受影响文件」表 `:137`。
 

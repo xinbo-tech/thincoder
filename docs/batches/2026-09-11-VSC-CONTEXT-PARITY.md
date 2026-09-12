@@ -1,8 +1,9 @@
 # VSC 会话对齐 CLI（提示词装配 + 注入面 + 顺序）· 批次记录（2026-09-11）
 
-> 搬迁注记：本档自 CLI 仓 `thincoder/docs/batches/2026-09-11-VSC-CONTEXT-PARITY.md` 迁入本仓 `docs/batches/`（LEDGER-SELF-CONTAINED 批——实施面全在本仓的批档物理迁移，档名不变、文字逐字；源档 blob SHA = b17444f556e7 · 源提交 = cfcc621）。
+> 搬迁注记：本档自 CLI 仓 `2026-09-11-VSC-CONTEXT-PARITY（CLI 仓）` 迁入本仓 `docs/batches/`（LEDGER-SELF-CONTAINED 批——实施面全在本仓的批档物理迁移，档名不变、文字逐字；源档 blob SHA = b17444f556e7 · 源提交 = cfcc621）。
 
 > 六段 append-only，一段一作者。编制：主 agent · 2026-09-11 23:10 · 来源 = 用户 22:54「VSC 端会话体验与 CLI 差距巨大——提示词系统和注入信息面出现巨大差异，挖差异并修正使行为与 CLI 一致」+ 23:02 三条裁定。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -85,14 +86,13 @@
 
 ## §2 批次任务（eng-designer 写）
 
-_（待写——eng-designer）_
 
 ---
 
 **状态：任务书就绪**（2026-09-11——需求 + 设计 + 测试三层已落档，待设计评审）。实施者 = eng-coder（设计 token 门）。本 §2 = coder 任务书本体（不另写副本；契约逐字 / 序表 / 用例全文在设计档各节，本段只做任务书 + 口径锚）。
 
 **落档位置**（三方一致——本批跨三板块，需求按板块入各自档）：
-- 需求：CLI 仓 `docs/requirements/PROMPT-SYSTEM.md` **§9**（F-P1~F-P5 / N-P1~N-P3）· `docs/requirements/AGENT-LOOP.md` **§13**（F-Q1~F-Q13 / N-Q1~N-Q4）· `docs/requirements/TOOLS.md` **F7 + N9**；
+- 需求：`PROMPT-SYSTEM（CLI 仓·需求）` **§9**（F-P1~F-P5 / N-P1~N-P3）· `AGENT-LOOP（CLI 仓·需求）` **§13**（F-Q1~F-Q13 / N-Q1~N-Q4）· `TOOLS（CLI 仓·需求）` **F7 + N9**；
 - 设计 + 测试：VSC 仓 `docs/design/AGENT-LOOP.md` **§17**（注入面 / 顺序 / 缓存契约 / 用例 / AC）· `docs/design/VSC-PROMPTS.md` **「语料修复」节**（E-1a~f / E-2 / E-3 逐字表）· `docs/design/TOOLS.md` **§12**（25 档 `.md` 迁移）。
 
 **目标与理由**：用户 2026-09-11 22:54 实测「VSC 端会话体验与 CLI 差距巨大——提示词系统和注入信息面出现巨大差异」；三条裁定（权威源 = CLI 蓝图 / `[Current file:]` 收窄保留 / **提示词与注入顺序全对齐**）+ 父侧 23:06 前缀缓存约束。五个需求面：R1 注入面补齐（10 项 + 两家死载荷）· R2 顺序对齐（含系统提示尾块）· R3 语料修复 · R4 工具描述迁移 · R5 VSC 独有面处置。
@@ -166,7 +166,7 @@ _（待写——eng-designer）_
 **对 coder 的实施影响（照设计档实现）**：
 
 - 用例面：**T-CI-2a/2b/2c**（空态 / skills 正向 ≤3 / 截断 >3——含 F-Q12 正向消费）+ **T-CI-3b**（记忆无命中零注入）为新；**T-CI-5 / T-CI-10 含 seam 计数断言**（快照 1 次/实例 · 大纲 1 次/session · 召回/大纲/快照 1 次/run 失败不重试；计数 spy 形态自选、报告备案）；**用例共 14 条**。
-- **T-CI-11 = 跨仓只读**（兄弟仓 `../thincoder`；`THINCODER_CLI_ROOT` 覆盖；缺仓/异位 fail-closed 不 skip）——先例 = `test/prompts-mirror-anchors.test.mjs`。
+- **T-CI-11 = 跨仓只读**（兄弟仓 `../thincoder`；`THINCODER_CLI_ROOT` 覆盖；缺仓/异位 fail-closed 不 skip）——同款 = `test/prompts-mirror-anchors.test.mjs`。
 - **R4：T-TD-3 全量断言**（16 档 / 25 工具逐档扫描）；**AC-TD-2 增发布前清单核对**（`vsce ls` 列 `src/tools/*.md` 25 档）。
 - 计数终值：§17 实施域 **15 档**；TOOLS 实施域 **44**（25 新 + 17 改 + 2 测档）。
 - 其余契约 / 序表 / 逐字表 = **零语义变动**（本轮 = 口径、覆盖与登记补全）。
@@ -194,7 +194,6 @@ _（待写——eng-designer）_
 
 ## §3 设计评审（评审子代理写）
 
-_（待写——评审子代理）_
 
 ---
 
@@ -205,12 +204,12 @@ _（待写——评审子代理）_
 | # | Category | Severity | Issue | Suggestion |
 |---|----------|----------|-------|------------|
 | 1 | Requirements | 🟡 | T-CI-11 跨仓只读测试（AGENT-LOOP(VSC) §17.7 :1244 / AC-CI-5 :1254 / KD-10 :1285）与需求 N-Q3「零跨仓依赖；VSC 自身断言驻留绿」（requirements(CLI) AGENT-LOOP :475）与 N-P1「不加双端同步依赖」（PROMPT-SYSTEM :328）存在张力：CLI 仓缺失/异位/fail-closed 时 VSC 快层恒红 | 父侧确认该偏离（或测试改 skip-if-absent / 移交付期审计）；明示仓库定位与失败语义 |
-| 2 | Document ownership | 🟡 | VSC AGENT-LOOP §3 「上下文注入（顶层）」（:150）与 §17.1 现状复核（:1066「无」）自相矛盾，批后与 §17 双描述；本批文档同步面（本 §17 + VSC-PROMPTS + TOOLS §12）未列 §3 | §3 段落改指针指 §17（或列 merge 项——同 §11.6 先例） |
+| 2 | Document ownership | 🟡 | VSC AGENT-LOOP §3 「上下文注入（顶层）」（:150）与 §17.1 现状复核（:1066「无」）自相矛盾，批后与 §17 双描述；本批文档同步面（本 §17 + VSC-PROMPTS + TOOLS §12）未列 §3 | §3 段落改指针指 §17（或列 merge 项——同 §11.6 同口径） |
 | 3 | Acceptance criteria | 🟡 | TOOLS F7 判定句「内联 description 字符串零残留」（requirements(CLI) TOOLS :23）被 T-TD-3 降为「键控抽查 ≥5 档」（TOOLS(VSC) :339）；N9 vsix 面仅以 .vscodeignore 代理断言（:347） | 全量断言（16 档/25 工具）；发布前 vsix 清单核对落点登记 |
 | 4 | Acceptance criteria | 🟡 | F-Q7 正向面（skills 非空 → systemPrompt 尾 DISREGARD+≤3 条+`... and N more`）无用例：T-CI-1（:1234）只断 history 块序、T-CI-2（:1235）/AC-CI-3（:1252）仅空态；F-Q2 无命中零注入、F-Q12 正向消费同缺 | 补 skills 正向/截断两态用例（T-CI-2 拆两态或扩 T-CI-1） |
 | 5 | Affected-file annotations | 🟡 | VSC-PROMPTS 语料修复节无受影响文件/行数表，却修改 `test/prompts-async-guidance.test.mjs`（:187）+3 档 `src/prompts/*.md`；AC-PC-1（:204）引用「四档行数实测对表」而表未落 | 补行数标注表并明确「四档」所指 |
-| 6 | Affected-file annotations | 🟡 | run-stages.mjs 306→~340（AGENT-LOOP(VSC) :1215）再增无拆分口径，违背本档先例「若后续批次再增长，挂结构债候选」（:671）；同类 shared.mjs 406→~420（TOOLS(VSC) :310） | 挂结构债候选行（或一句话拆分评估） |
-| 7 | Requirements | 🟡 | F-Q13 边界「不改子代理（depth>0）注入面（仅时间提醒）」（requirements(CLI) AGENT-LOOP :467/:480）与 F-P5「不分 depth」（PROMPT-SYSTEM :322）+ D-CI2（:1117）/§17.9（:1258）语义张力；CLI 实证无 depth 门（thincoder/src/agent/setup.mjs:341-344） | 边界改述为「per-run history 注入面」+ 明示 [4] 尾块不分 depth（F-P5 既定） |
+| 6 | Affected-file annotations | 🟡 | run-stages.mjs 306→~340（AGENT-LOOP(VSC) :1215）再增无拆分口径，违背本档既定口径「若后续批次再增长，挂结构债候选」（:671）；同类 shared.mjs 406→~420（TOOLS(VSC) :310） | 挂结构债候选行（或一句话拆分评估） |
+| 7 | Requirements | 🟡 | F-Q13 边界「不改子代理（depth>0）注入面（仅时间提醒）」（requirements(CLI) AGENT-LOOP :467/:480）与 F-P5「不分 depth」（PROMPT-SYSTEM :322）+ D-CI2（:1117）/§17.9（:1258）语义张力；CLI 实证无 depth 门（src/agent/setup.mjs:341-344（CLI 仓）） | 边界改述为「per-run history 注入面」+ 明示 [4] 尾块不分 depth（F-P5 既定） |
 | 8 | Clarity | 🔵 | 现 restarted 段（:396-399）去向未明——D-CI2「替换现 git 注入位置」（:1118）可致误读为原位保留（序表 :1170-1172 要求其在 git/快照后） | 一句明示：现段由 injectRunContext #3 承接（原段删除） |
 | 9 | Clarity | 🔵 | D3 计数与表行数不齐：:1207「13 改+1 新+2 测档」(=16) vs :1287「15 档（13 改+1 新+1 登记）」；TOOLS(VSC) :330(=44) vs :355(=43，漏 test/files.mjs) | 计数与表逐项对齐 |
 | 10 | Acceptance criteria | 🔵 | N-Q2 度量方式「用例断言调用次数（seam 计数）」（requirements(CLI) AGENT-LOOP :474）在用例表（:1230-1244）无落点（仅效果断言） | 需要则补 seam 计数断言，或注记以效果断言等价 |
@@ -233,7 +232,6 @@ VERDICT: pass（0🔴 · 7🟡 · 3🔵）
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 ---
 
@@ -274,14 +272,14 @@ _（待写——eng-coder）_
 | `src/extension/skills.mjs` | ~95 | 119 | loader + listing + readSkill 全语义 |
 | `src/repomap.mjs` | ~245 | **304** | **超 300 咨询线**——buildSummary 块 ~78 行（建议设计侧挂结构债候选/拆分评估） |
 | `test/context-parity.test.mjs` | ~260 | 385 | 14 用例 + 双端锚（超 300 咨询线，登记） |
-| `test/prompts-async-guidance.test.mjs` | ~455 | **535** | **超 500 硬帽**（T-PC-1~3 承载 + T-CI 锚；同仓先例 `chat-panel.test.mjs` 621）——报告披露 |
+| `test/prompts-async-guidance.test.mjs` | ~455 | **535** | **超 500 硬帽**（T-PC-1~3 承载 + T-CI 锚；同仓同口径 `chat-panel.test.mjs` 621）——报告披露 |
 | 其余波 2/3 源档 | 各净减/± | 与预计 ±10 内 | `file-edit.mjs` = 设计表未列（edit 宿主，见偏差 1） |
 
 ### 偏差披露（零静默）
 
 1. **`edit` 宿主 = `src/tools/file-edit.mjs`**（设计 §12.3 D-TD2 / §12.4 记为 `file.mjs`）——实际改档 = `shared.mjs` + **17 工具档**（设计「17 改」→ 实际 18）；测试档自注更正（`test/tool-descriptions.test.mjs:9`）。设计表需随实现更正（父侧/designer）。
 2. **`src/repomap.mjs` 304 行**（预计 ~245）——超 300 咨询线；本批不拆分（与设计对 buildSummary 的落点契约一致），建议挂结构债候选。
-3. **`test/prompts-async-guidance.test.mjs` 535 行**（预计 ~455）——超 500 硬帽；测试档、无功能影响、同仓先例在。
+3. **`test/prompts-async-guidance.test.mjs` 535 行**（预计 ~455）——超 500 硬帽；测试档、无功能影响、同仓同口径在。
 4. **测试 seam 形态**：`context-injections._setInjectionDepsForTests` 依赖表（§17.7 修正轮 #10「spy 形态自选、报告备案」）；`pushGitContext` 在 T-CI 测试中桩化（真 git 语义由 `setup-reminders.test.mjs` 覆盖）。
 5. **评审修正（advisor #4）**：`run-stages.mjs` 压缩成功路径补 `agent._planReminderAtLen = 0`（CLI `run-stages.mjs:65` 对位——防陈旧阈值压制 plan 全量句）。
 6. **评审修正（advisor #5）**：`setup-reminders.test.mjs` 增 AUTO 双份字面量漂移锁（`run-helpers.mjs` 内联副本 vs 常量逐字节）。

@@ -1,7 +1,7 @@
 # 可移植性 — VSC 镜像面（批次二）· 设计
 
-> 板块：可移植性（VSC 镜像面——批次二）· 对照 = CLI 仓 `PORTABILITY（CLI 仓）`（§9 = 对位清单权威）
-> + CLI 仓 `PORTABILITY（CLI 仓）`（需求组 FR10–FR15——正文在 CLI `ENGINEERING-MODE.md` §2）·
+> 板块：可移植性（VSC 镜像面——批次二）· 对照 = `PORTABILITY（CLI 仓·设计）`（§9 = 对位清单权威）
+> + `PORTABILITY（CLI 仓·设计）`（需求组 FR10–FR15——正文在 `ENGINEERING-MODE（CLI 仓·需求）` §2）·
 > 批次档 = `2026-09-11-PORTABILITY-VSC-MIRROR（本仓）`。
 > 状态：设计稿（待评审）。来源 = 批次档 §1（用户 2026-09-11「一起做了吧」——VSC 端 A 家族对位）。
 > 镜像纪律：**各端独立实现、语义同源**（不做 byte-identical、禁以任一端产物回改另一端）——本档文本为 VSC 端定稿；
@@ -71,9 +71,9 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 
 ### 1.5 归属判定与新建授权（留痕）
 
-- **新建 VSC 对位档 = 父侧预授权**（批次档 §1：『`thincoder-vscode/docs/design/PORTABILITY.md` 如需新建——父侧预授权』；先例 = CLI 批 §1.5）。
+- **新建 VSC 对位档 = 父侧预授权**（批次档 §1：『`thincoder-vscode/docs/design/PORTABILITY.md` 如需新建——父侧预授权』；同款 = CLI 批 §1.5）。
 - **新建理由**：机制跨面（注入 / 门禁 / 索引 / 提示词四面），无可归属的既有单档；批次三（B/C 剩余对位）将扩展本档。
-- **需求层落点**：VSC 无 requirements 树——需求陈述并入 CLI `docs/requirements/PORTABILITY.md`（批次档 §1 三；先例 = VSC-GUARD / VSC-MIRROR 批）。
+- **需求层落点**：VSC 无 requirements 树——需求陈述并入 CLI `docs/requirements/PORTABILITY.md`（批次档 §1 三；同款 = VSC-GUARD / VSC-MIRROR 批）。
 
 ## 2. 方案选型对比（决策表）
 
@@ -89,7 +89,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 
 | # | 候选 | 判据评估 | 取舍 | 结论 |
 |---|---|---|---|---|
-| 1 | **`.thincoder/conventions.json`（与 CLI 同文件同 schema）** | 双端同项目共享一份声明；先例已立（CLI 批 §4.1） | 需定义 VSC 侧加载器（§4.1） | **选定** |
+| 1 | **`.thincoder/conventions.json`（与 CLI 同文件同 schema）** | 双端同项目共享一份声明；既定形态已立（CLI 批 §4.1） | 需定义 VSC 侧加载器（§4.1） | **选定** |
 | 2 | VSC 自造键（`~/.thincoder/config.json` / 面板设置） | 复用现有配置面 | 双端声明分裂（同项目两处声明 = 漂移源）；全局配置文件非 per-project | 否决 |
 | 3 | 不做声明面、仅降级提示 | 最小 | 不满足「项目自述/配置可诉」判据 | 否决 |
 

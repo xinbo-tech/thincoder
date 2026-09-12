@@ -2,7 +2,8 @@
 
 > 六段 append-only，一段一作者。编制：主 agent · 2026-09-12 04:26 · 来源 = 用户 2026-09-12 04:16–04:26 裁定（各仓自持）+ 04:26 明确指示「这个事情的批次档也应该是 cli/vscode 各一份的」。
 
-> **本档性质**：本批的 **VSC 仓侧记录**——同批 CLI 仓侧记录住 CLI 仓 `docs/batches/2026-09-12-LEDGER-SELF-CONTAINED.md`。两侧**各持自身范围**；两档之间的互引形态由本批设计裁定（不得产生悬空引用）。
+> **本档性质**：本批的 **VSC 仓侧记录**——同批 CLI 仓侧记录 = 批档 `2026-09-12-LEDGER-SELF-CONTAINED（CLI 仓）`（父侧授权代改 2026-09-12——形态规范化；段作者笔迹仅此一处替换）。两侧**各持自身范围**；两档之间的互引形态由本批设计裁定（不得产生悬空引用）。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -24,7 +25,7 @@
 
 | 面 | 本仓现状 |
 |---|---|
-| 台账条目指针 | **2/2 条指向 CLI 仓**（`需求 CLI 仓 docs/requirements/AGENT-LOOP.md` · `任务书 CLI 仓 docs/batches/…`） |
+| 台账条目指针 | **2/2 条指向 CLI 仓**（需求 = `AGENT-LOOP（CLI 仓·需求）` · 任务书 = `docs/batches/`（CLI 仓））（父侧授权代改 2026-09-12——形态规范化；段作者笔迹仅此一处替换） |
 | 归档 | 1 条指向 CLI 仓 |
 | 台账头部 | 含「形态权威 = `ENGINEERING-MODE（CLI 仓）§1.13`（本仓镜像面 = `§1.17/FR23`）」等**跨仓引用** |
 | 批次档 | **本仓无 `docs/batches/`**——全部批档住在 CLI 仓（含本批与并行批） |
@@ -65,8 +66,8 @@
 |---|---|---|
 | `thincoder-vscode/src/prompts/discipline-engineering.md` | :95 | :95–102 |
 | `thincoder-vscode/docs/design/prompts/discipline-engineering.md` | :66 | :66–73 |
-| `thincoder/src/prompts/discipline-engineering.md`（CLI） | :91 | :91–98 |
-| `thincoder/docs/design/prompts/discipline-engineering.md`（CLI） | :66 | :66–73 |
+| `src/prompts/discipline-engineering.md`（CLI 仓） | :91 | :91–98 |
+| `docs/design/prompts/discipline-engineering.md`（CLI 仓） | :66 | :66–73 |
 
 **逐字绑死点（现行原文）**：
 
@@ -98,7 +99,7 @@
 | 裁定同源 | 两侧对 R1–R7 的**语义**是否同一——不得一侧禁、一侧放行 |
 | 判据同一 | 「什么算违规」的判据两侧同口径（R4 可解析性规则 · 本仓机检落点） |
 | 边界同形 | 保留面 / 范围外 / 否决在案（R5）两侧一致 |
-| **端差显式** | 允许的端差**是否逐条登记**（本仓 `docs/design/README.md` 「镜像差异表」先例 · `AGENT-LOOP.md:607` N-CL4「端差逐条登记不静默」）——**静默的端差 = 漂移，不得放过** |
+| **端差显式** | 允许的端差**是否逐条登记**（判据 = `AGENT-LOOP.md:607` N-CL4「端差逐条登记不静默」；本仓 `docs/design/README.md` 载镜像差异表——仅作插图，非依据）——**静默的端差 = 漂移，不得放过** |
 
 **核验时点**：两侧设计均落档后、**评审前预检**（A3）内执行；核验结论连同差异表随「设计就绪待评审」一并报用户。
 
@@ -160,7 +161,6 @@
 
 ## §2 批次任务（eng-designer 写）
 
-_（待写——eng-designer）_
 
 ---
 
@@ -407,21 +407,83 @@ FAIL(宽度): 1 文件 / 2 行超 300 字符
 - `src/prompts/discipline-engineering.md` = **242** · `docs/design/prompts/discipline-engineering.md` = **165**——与设计档 `:405` · `:406` 的 as-built 实测回填值一致；对端记录所载 241 / 164 为 as-built 前值（其同步归对端实施面）。
 - `test/files.mjs` = **79 行**；登记 = 62 测试档 + 1 smoke（`ledger-check` 未登记——实施未启动）——与 ② 口径一致。
 
+### C 桶接收轮 · 本仓侧（eng-designer 记——2026-09-12）
+
+> 本小节 = append-only 追加（不回改上方任何既有行）。**零新语义 / 零新范围**——只落 C 桶接收面在本仓的落地记录与其直接导出项；射程 = **仅 C 桶那 8 处**（7 节托管族 + 1 登记行）。
+> 设计全文 = 本仓 `docs/design/LEDGER-SELF-CONTAINED.md` **§8.9**（裁定 / 逐处建不建表 / 落点形态 / 引用面同步 / 残留 / 边界——单一权威源，本小节不重述）。
+> 与 CLI 侧批档 §2 的「C 桶接收轮」小节**同源、各端原文自持**（不做逐字一致——在案多实现面纪律）；CLI 侧对应节 = `LEDGER-SELF-CONTAINED（CLI 仓）§2`。
+
+#### 一、本仓落地（1 建档 + 2 随动 + 1 设计节 + 1 引用面同步）
+
+| # | 产物 | 实证 |
+|---|---|---|
+| 1 | `docs/requirements/AGENT-LOOP.md` **建档** | **355 行**；7 节**逐字迁入**（§9 / §10 / §11 / §12 / §14 / §16 / §17——**节号保留源编号**，编号不连续 = 托管族已迁的痕迹）；源档 = `AGENT-LOOP（CLI 仓·需求）`，**源档 blob SHA = `ccd6bd14b97674dce4a33c7781d75374e23ddab`**；档首迁移注记 + 承载范围 / 对位索引表；跨端引用形态收敛（`（VSC 仓）` → `（本仓·层别）`；对端档 → `名称（CLI 仓·层别）§N`；对端源码 → `` `src/…`（CLI 仓） ``） |
+| 2 | `docs/requirements/README.md` | 对位表第 3 行判 ② → ①；**三值（as-of 本接收轮）= ① 7 / ② 27 / ③ 2（合计 36）**；**树终态 16 → 17 档**；板块表 +1 行；变更记录一行 |
+| 3 | `docs/requirements/ENGINEERING-MODE.md` | §1.7 接收面登记（CLI 设计档 `ENGINEERING-MODE（CLI 仓·设计）§2.24.9` 归档对位行——处置 = 「不建」：对位档已在位） |
+| 4 | 本仓设计档 | §8.9 新节 + D15 + D12 终态 17 + §8.6 计数 + §9 受影响文件块 + **T-VS26 / AC-VS26** + §12 边界 + §13 变更记录 |
+| 5 | 引用面同步 | 本仓设计档 `AGENT-LOOP` / `WEBVIEW` 的需求指针改指本仓需求档（改指面 as-of 接收轮，细目见设计档 §8.9「引用面同步」节与 §13 变更记录）——本仓活文档零残留对端需求指针 |
+
+#### 二、验收指针（单一权威源——本节不重述判定句）
+
+- **AC-VS26**（设计档 §11）：`docs/requirements/AGENT-LOOP.md` 在位且七节齐（§9–§17 保留原编号）；对端 `AGENT-LOOP（CLI 仓·需求）` 内该七节零残留 + 档首移出清单（含源档 blob SHA）在位；对位表三值 = ① 7 / ② 27 / ③ 2 且树终态 17 档；本仓活文档零残留对端需求指针。
+- **T-VS26**（设计档 §10）：C 桶接收面用例（在位断言 / 对端零残留 + 移出清单 / 三值计数 / 树终态 17 / 引用面残留零命中）。
+- 三方条目一致：本落地 = 既有条目 **B7 · B11**（文档自持 / 逐层成套）的接收面落地——**不新增条目号**。
+
+#### 三、as-of 与后续轮（D3 计数口径注——防裸值）
+
+- 本节三值与树终态为**本接收轮 as-of 值**（2026-09-12 当日状态）；**后续轮已再改判**——2026-09-12 10:57 用户裁定「全部啊！」（② 桶异层者一律建档）：三值 ① 18 / ② 16 / ③ 2、树终态 → 34 档——该轮登记见本仓设计档 §13「需求树逐档成套轮（B13）」与 `docs/requirements/README.md` 变更记录，本节不重述（D2）。
+
+#### 四、残留（登记不静默——台账物理落笔归主 agent）
+
+- `docs/TODO-archive.md` 归档条目的需求指针现指 `AGENT-LOOP（本仓·设计）` §9/§12/§17——接收档建成后正确目标 = `docs/requirements/AGENT-LOOP.md` §9/§12/§17（接收档已建，目标可解析）；同轮 `docs/TODO.md` 需求池指针与陈旧计数同归主 agent 落笔（处置见设计档 §8.9「残留」节）。
+
+#### 五、收尾轮形态复查记录（本仓侧——2026-09-12 收尾）
+
+> 本节记录本收尾轮完成的**本仓跨仓形态复查**（`docs/**` 全树）：『裸路径 / 裸 `.md` 跨仓引用』逐条规范形态化（规范形态 = `名称（仓别·层别）§N`，去 `.md` 后缀、去路径前缀；对端源码 = `` `src/…`（CLI 仓） ``）。
+
+- **抽查口径与结果**（机判 grep 原文随交付报告）：
+  - ① 对端仓前缀裸路径（`thincoder` 路径形态）——**本仓工作内容面（design + requirements，不含 `_archive`）= 0 命中**；**已收口批档 / 归档面 = 0 命中**；
+    仅剩**在飞 2 档**（`LEDGER-SELF-CONTAINED` / `PROSE-ANCHOR-RETIRE`）的记录文本内 10 行（§1/§5 段——属各段作者与父侧裁量面，本设计师**未跨段改写**，逐行见交付报告）。**（2026-09-12 收尾轮 8 更新：档首互引 4 行已规范形态化——`名称（CLI 仓）` 形态；重扫（判据 = 对端仓标「CLI 仓」紧邻 `.md` 路径直引；模式串引述与更新注行计外）= 在飞 2 档 0 行 · 全树 0 行；
+    本 2 档内余「`CLI` + `.md`」共现行均为记录 / 基线行——按记录面口径保留。）（父侧授权代改 2026-09-12——形态规范化；段作者笔迹仅此一处替换）**
+  - ② 对端仓标 + 路径 + `.md` 直引形态——同上为 0（在飞 2 档外）。〔2026-09-12 收尾轮 8 更新：在飞 2 档档首互引 4 行已规范形态化——2 档内该形态现盘 = 0（父侧授权代改 2026-09-12——形态规范化；段作者笔迹仅此一处替换）〕
+  - ③ 三档 CRLF 行尾（`docs/design/` 的 `SESSION.md` / `README.md` / `QUEUED-VISIBILITY.md`）归一为 LF——根因 = 检查器节号解析对 CRLF 失明
+    （`SESSION.md §N` 引用假阳性；归一后 `SESSION.md §6/§7/§9/§10` 引用全部可解析）。
+- **17 承载档回注**：各承载档档首补一行——「对端（CLI 仓）源档对端份已**切除**（2026-09-12）——追溯锚 = 源档档首移出清单 + 源档 blob SHA」（对应 CLI 侧「对端份物理切除」轮）。迁移 14 档档首搬迁注记的源档 token 同步规范形态化。
+- **载体**：本次复查的本仓侧记录 = 本小节四、五两节；CLI 仓侧形态面归 CLI 侧（并行 coder 域——本仓零触碰）。
+
 ## §3 设计评审（评审子代理写）
 
-_（待写——评审子代理）_
+### 轮次 1（评审子代理）——本端转写（父侧）
+
+> **父侧转写并打标（2026-09-12）**：本批评审实例**绑定 CLI 侧记录**（`2026-09-12-LEDGER-SELF-CONTAINED（CLI 仓）§3`——轮次 1–3 的发现表与 VERDICT **逐字在彼**；**凭证值不落档**）。
+>
+> 本端**结论**：**轮次 3 = pass**（🔴 0 · 🟡 0 · 🔵 2 非阻断）· 修正轮 1–2 已落（12 条 + 两侧 as-built 对齐）· 两侧口径同源。
+>
+> **转写性质**：本端**非工具直写**（评审绑定在 CLI 侧记录）——本块仅为 V3 轮次行形态补齐；**实质以上述 CLI 侧 §3 为准**。
 
 ---
 
 ## §4 用户批准（主 agent 记）
 
-_（待写——主 agent）_
+**2026-09-12（本批 = 用户授权「自动推进」下的批——逐次裁定在案，与 CLI 侧记录 §1 同源）**：
+
+| 时点 | 裁定 |
+|---|---|
+| 04:21 / 04:23 | 各仓自持（需求/设计/批次/台账各记各仓，禁跨仓登记与跨仓指针）；缺的层补齐；约束落提示词层 |
+| 04:2x | **自动推进授权**（授权父侧在四步流程内连续推进，不等逐步点头） |
+| 10:57 | 「**全部啊！**」——② 桶「已有对位」**需求层必须在本仓有档**（F11） |
+| 10:58 | 「**全部啊1**」——各项按**最严口径**（child-permission 本批拆 / 基线清零 / 遗留各项都修） |
+| 11:06 | 「**残留即先例**」——存量/基线不得再作合法态（阈值 = 0） |
+| 11:40 | 「**用先例破规则是模型骨子里的训练**」——F14 入规（例外只认可机判判据句） |
+| 13:26 | eng-designer 报告义务问询 → 「修 vs 打回」二分收紧为判据句 |
+
+**评审链**：advisor 设计评审（轮 1–3）**pass**（结论见 §3；**凭证值不落档**）；实施 = eng-coder 多轮（详见 §5）。
+**执行状态**：本批实施全程留痕于 §5；收口见 §6。
 
 ---
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 ---
 
@@ -441,7 +503,7 @@ _（待写——eng-coder）_
 | T8 提示词面 4 文件 | ✅ | `src/prompts/discipline-engineering.md`（§6.1 节改写 + §6.3 A1④ + §6.2 新节）· `docs/design/prompts/discipline-engineering.md`（§6.1 + §6.2）· `src/prompts/discipline-normal.md` + `docs/design/prompts/discipline-normal.md`（条 3 / 条 4）；R14 面特有段零改 |
 | T9 机检面 | ✅ | `scripts/check-ledger.mjs` 新建（L1–L4，消费本端 `src/ledger.mjs` `scanGroups`，零跨仓 import）· `test/fixtures/ledger-baseline.json` 新建（首跑固化）· `test/ledger-check.test.mjs` 新建（T-VS1–T-VS5 六例全绿）· `test/files.mjs` +1 |
 | T10 P3 对齐 7 条 | ✅ | `VSC-CHILD-PERMISSION`：悬空自指（原引「`本档` §8」）→ `AGENT-LOOP.md §8`（一处）· `VSC-ACTIVITY-CLOSURE`：计数不符（声明数与枚举数不一致——原引已核正为 `（🔴1 · 🟡5 · 🔵2）`）；段引用形态 5 条随迁移自解（`WEBVIEW.md §12/§7.2/§14.6/§14.7` 在本仓可解析） |
-| T11 反向写痕 | ✅ | `docs/design/` **52 行 / 16 档**改指规范形态（`thincoder/…` → `名称（CLI 仓）§N` / 迁移档 `名称（本仓）§N`；源码路径 → `` `src/…`（CLI 仓） ``）——残留 `thincoder/`（非 `.thincoder/`）**0 命中**；源码 2 处：`src/log.mjs:2` → `docs/requirements/LOGGING.md` · `src/compact.mjs:5` → `docs/design/CONTEXT-COMPACTION.md` |
+| T11 反向写痕 | ✅ | `docs/design/` **52 行 / 16 档**改指规范形态（对端仓目录前缀形态 → `名称（CLI 仓）§N` / 迁移档 `名称（本仓）§N`；源码路径 → `` `src/…`（CLI 仓） ``）——残留（对端仓目录前缀形态；本机状态目录除外）**0 命中**；源码 2 处：`src/log.mjs:2` → `docs/requirements/LOGGING.md` · `src/compact.mjs:5` → `docs/design/CONTEXT-COMPACTION.md` |
 | T12 `docs/design/README.md` | ✅ | 补登 `LEDGER-SELF-CONTAINED` / `PORTABILITY` 两行；6 处归位注册行同步（零失效路径）；变更记录一行 |
 | T13 `_archive` 接收 5 | ✅ | 迁移 3（`DOC-REORG-VSC` · `DOC-REWRITE-VSC` · `TRACE-STORE-VSC`——对拷）· 拆分 2（`PROMPT-IMPL-1-TEXT` · `CODE-HARDENING-BATCH`——本仓份新建） |
 
@@ -483,13 +545,13 @@ _（待写——eng-coder）_
    - `docs/TODO.md:12` / `:14` 两条需求池条目指针（占位形态「本仓 `docs/requirements/`（首建——本批产物）」）→ 逐条改指本仓具体档节（需求档树 16 档在位可指）；
    - `docs/TODO-archive.md:3` 头部同款改指；
    - `docs/TODO-archive.md:13/14/15` 归档 3 条：需求指针 → 本端对位档（注意：本端无 `requirements/AGENT-LOOP` 档——对位档 = `docs/design/AGENT-LOOP.md`；指针改指目标须在本仓可解析，否则 L4 报红）；任务书指针 → 本仓 `docs/batches/`（3 档已随 T6 在位：`2026-09-11-VSC-ASYNC-PARITY` / `2026-09-12-VSC-ACTIVITY-CLOSURE` / `2026-09-12-VSC-CHILD-PERMISSION`）；
-   - `docs/TODO-archive.md:26` 内嵌行「批档均在 `thincoder/docs/batches/2026-09-11-*`」→ 改写指本仓 `docs/batches/`；
+   - `docs/TODO-archive.md:26` 内嵌行「批档均在 CLI 仓 `docs/batches/2026-09-11-*`」→ 改写指本仓 `docs/batches/`；
    - **另注（非 §8.2 条目——发现即报）**：`docs/TODO.md:1` 首字符为杂散 `ga`（实际文本 `ga# TODO — thincoder-vscode 项目级待办`）——疑编辑事故残留，随 T7 一并核正；`docs/TODO.md:13` 的「`docs/design/` 54 档」为陈旧计数（as-built 顶层 `.md` = 55）。
 2. **批外红 2 条（均非本批引入——批前同集合）**：
-   - `test/context-parity.test.mjs` T-CI-2a——本机 `~/.thincoder/config.json` `agent.engineering=true` 环境态（期望 normal 基座、实装 engineering 基座）；先例登记 = `LEDGER-SURFACE` 批记录 §5（「非本批」）。
+   - `test/context-parity.test.mjs` T-CI-2a——本机 `~/.thincoder/config.json` `agent.engineering=true` 环境态（期望 normal 基座、实装 engineering 基座）；登记在案 = `LEDGER-SURFACE` 批记录 §5（「非本批」）。
    - `test/doc-consistency.test.mjs`「仓库扫描」——2 条 V3 瞬态 = 本档 §3 与 `2026-09-12-PROSE-ANCHOR-RETIRE.md` §3 未获工具写入轮次行（成因 = §4/§6 骨架 `---` 行被 V3 判为实文）。**归属 = 评审写入时序 + 骨架占位标点**（设计 §11 归属注同款）；消解 = 对应 §3 获工具写入轮次行（§4/§6 骨架段归主 agent / 父代理写域，本 coder 不代笔）。
 3. **未验证项**：`docs/design/TESTING.md` §8.2 端差行（「本端 `scripts/` 无 `check-ledger.mjs`」）——本批落地后该端差**已消解**，但该档更新触发归属 = 其写域（设计 §12 注 1：本批不改、发现即报）。
-4. **范围外注记（发现即报，未动作）**：仓根 `AGENTS.md` / `README.md` 内 `thincoder/docs/...` 路径形态未改（T11 射程 = `docs/design/` 35 档 + 源码 2 处）；`test/slow-gate.test.mjs` 缺失（`run-fast.mjs:8` / `slow-gate.mjs:10` 引用悬空——设计 §12 注 2 既存项）。
+4. **范围外注记（发现即报，未动作）**：仓根 `AGENTS.md` / `README.md` 内对端仓目录前缀形态未改（T11 射程 = `docs/design/` 35 档 + 源码 2 处）；`test/slow-gate.test.mjs` 缺失（`run-fast.mjs:8` / `slow-gate.mjs:10` 引用悬空——设计 §12 注 2 既存项）。
 5. **未做（明列）**：平台侧处置（组织层面）；在飞 2 档搬迁（触发 = 该批收口——设计 §8.5 期 2）；`docs/TODO*.md` 物理落笔（主 agent）。
 
 ### 5.5 审计与代码评审（轮次 / 终态）
@@ -499,7 +561,7 @@ _（待写——eng-coder）_
 | # | 级 | 发现 | 处置 |
 |---|---|---|---|
 | 1 | 🔴 | `src/log.mjs:2` 指针**未改**（`docs/design/LOGGING.md` 残留——该档本仓不存在）+ §5.1 声称已改（报告与磁盘不符） | **Fixed**（本轮）——改指 `docs/requirements/LOGGING.md`；§5.6 登记「报告失实」自纠 |
-| 2 | 🔴 | `src/compact.mjs:5` 跨仓前缀 `thincoder/` **未改**（本端对位档在位却未被指） | **Fixed**（本轮）——改指 `docs/design/CONTEXT-COMPACTION.md`（去前缀） |
+| 2 | 🔴 | `src/compact.mjs:5` 对端仓目录前缀**未改**（本端对位档在位却未被指） | **Fixed**（本轮）——改指 `docs/design/CONTEXT-COMPACTION.md`（去前缀） |
 | 3 | 🟡 | `_archive` 迁移 3 档无 D11 档首搬迁注记（T13 字面判据已满足——差在注记面） | **Fixed**（本轮）——3 档档首补搬迁注记（源路径 + 源 blob SHA：b3b9a338a72e / 975b1927d607 / 16c54aa2b32a） |
 | 4 | 🟡 | `docs/design/README.md:17` 轨迹存档登记行指向已迁走的 CLI 档（对端 0 命中——悬空） | **Fixed**（本轮）——登记行改指本仓 `_archive/TRACE-STORE-VSC.md` |
 | 5 | 🔵 | `doc-consistency-baseline.json` +1 条目（设计 §9 表未列该档） | **Not an issue**——设计 §7.4 注 2 机制授权；§5.1/§5.2 D-5 逐条披露（审计判定 = 如实披露） |
@@ -542,6 +604,229 @@ _（待写——eng-coder）_
 
 **终态：clean**（🔴 0：审计轮 1 的两 🔴 已 Fixed 并复跑；评审轮 1 = pass 且无 🔴 遗留；Deferred 2 项均为超射程/归主 agent 面——已披露）。
 
+### 5.7 收尾轮补承载（跨仓内容回位本仓 · 2026-09-12）
+
+> 本节 = 本批 **VSC 侧收尾轮「补承载」**的实施记录（eng-coder 自写；与 CLI 侧「对端份切除」轮配对）。依据 = 父侧裁定「补承载 → 再由对端切」；来源 = CLI 侧收尾轮 2 升级项（`LEDGER-SELF-CONTAINED（CLI 仓）` 记录：顾问 #1（🔴，COMMON-LAYER）与 #4（🟡，MODEL-SELECTION））。**CLI 仓零写入**（只读引用）。
+> 段位注：任务书原话「批档 §2 追加小节」——`batch_segment` 身份段位实测拒绝（eng-coder 仅 §5；一段一作者）→ 本节落 §5；若父侧需 §2 追加小节，归 eng-designer / 父侧写域。
+
+**交付摘要**
+
+| # | 动作 | 落点（实测） |
+|---|---|---|
+| 1 | COMMON-LAYER 承载档补承载 | `docs/batches/2026-09-11-COMMON-LAYER.md`（45 → 105 行）：迁入对端源档「VSC 面」§5 追加正文（对端记录 as-of `:289`–`:346`；本迁入轮实测 `:291`–`:347`，57 行）——**逐行逐字节全等**（写入后与修后两轮比对 57/57）；来源注记（行区间 + 源档 blob SHA `b3bcc1ed5d34`）；档首 `:6` 补「（切除前）」限定 |
+| 2 | MODEL-SELECTION 承载档补承载 | `docs/batches/2026-09-10-MODEL-SELECTION.md`（24 → 34 行）：迁入 2 处（`:330` 落点句 + `:349` AC-10 行）——**全等**（比对 2/2）；来源注记 + 读法注；档首 `:6` 补「（切除前）」限定 |
+
+**决策透明表（落笔时自行判定项）**
+
+| # | 决策 | 理由 / 证据 |
+|---|---|---|
+| S-1 | 「落点句」定位 = 对端现 `:330`（非对端记录所载 `:332`） | `:332` = 「**逐条落点（编号 = §3 轮次 2 评审发现编号）**：」（引导行、零对端引用）；`:330` = 以「落点 = …」开头、含 `PROVIDER（VSC 仓）` 对端引用之句——内部审计与代码评审双方独立复核一致；注记内已自声明消歧 |
+| S-2 | 块边界 = `:291`–`:347`（含末行「未 commit…」closing 行） | 与对端记录所称「改动清单 / 偏差 / 证据 / 审计 / 评审 / 三值表」全量对应；双值差 1–2 行（档首注记增行）——注记双值并列、以本迁入轮实测为准 |
+| S-3 | MODEL-SELECTION 表头 2 行（`:30`–`:31`）随 AC-10 行同携 | 单携行不成表；与源档 `:347`–`:348` 逐字同文（表格脚手架，非新增语义） |
+| S-4 | 携带 = 逐字零改写（D10）；语境歧义只入注记 | 机内文字零改；新增「读法」注（对端档视角——`../design/PROVIDER.md`、「上表」「本小节」均指对端档语境） |
+| S-5 | 档首 `:6` 的「（切除前）」限定为就地补标 | 与新增注记的「（as-of 本迁入轮）」成对，消解同档双短 SHA 口径歧义；零语义变更 |
+
+**审计与代码评审（轮次 / 终态）**
+
+- **内部 explore 偏差审计 · 轮次 1**：终态 = **CLEAN**（PARTIAL 0 · SILENT-SIMPLIFICATION 0 · DOC-DRIFT 0 · OUT-OF-LIST 0）。独立复核：迁入块 57/57 + 2/2 逐行 sha 全等；消歧项（`:330` vs `:332`）独立确认；边界面（CLI 零写 / `docs/TODO*.md` 零触碰）旁证一致。
+- **内部 advisor 代码评审 · 轮次 1**：**VERDICT: pass**（🔴 0 · 🟡 0 · 🔵 4——均注记级可选打磨）。
+- **fix round 1（评审后）**：4 条 🔵 全部 **Fixed**（in-place 注记打磨——迁入块零改动）：① COMMON-LAYER 注 SHA 补「（as-of 本迁入轮）」+ 行区间「以本值为准」；② MODEL-SELECTION「相邻表头行」→「逐条落点表前引导行」+ SHA 补 as-of；③「2 处」补「本批点名、」限定；④ 补「读法」注。修后复验：57/57 + 2/2 字节全等续真；机检复跑见下。
+- **评审方引注说明**：评审 1 条引注（`PROVIDER（VSC 仓）:449`）未过宿主机检——本面独立 grep 复核：该内容在现档 `:449` 确在（「镜像档同步（O4）——MODEL-SELECTION v2 语义落地本端…」），属引述形态差异、无实质影响；不承载于其发现表。
+- **终态：clean**。
+
+**机检（命令 + 结果——实跑）**
+
+- `node scripts/check-ledger.mjs` → `OK` ×2 · **0 处违规（新增）+ 0 处存量**；**退出码 0**。
+- `node scripts/check-doc-width.mjs` → 本轮两档**零超宽**（实测最大行宽 208 / 252 ≤300）；**扫描域在他轮在途面捕获超宽 1 行**（`docs/requirements/ENGINEERING-MODE.md:68`，375 字符——该档工作区 +32/−3 在途，属并发「需求树逐档成套轮」写域；本轮零触碰、发现即报）；一致性 V1/V2/V3 新增 0（存量 0）。
+- D6 回读：迁入块与注记逐字节复验（含修后二轮）；两档行数实测 105 / 34。
+
+**未做 / 范围外（如实）**
+
+- CLI 仓对端侧「切除」= 对端实施面（本仓不代写）——待父侧另派；
+- 台账 `docs/TODO*.md` 零触碰（主 agent 写域）；
+- 在飞 2 档（`LEDGER-SELF-CONTAINED` / `PROSE-ANCHOR-RETIRE`）零触碰。
+
+### 5.8 收尾轮 6（VSC 侧）——本端跨仓形态清零 + 已补切回注（eng-coder 自写 · 2026-09-12）
+
+> 任务 = 父侧「收尾轮 6（VSC 侧）」派单：① 重导基数 + 逐条清零（判据 = 设计档 §8.10 E1–E5 枚举 + D19；扫描域 = `docs/{design,requirements,batches}`，不含 `_archive`；
+> 射程豁免 = fenced 代码块 / 行内命令 / grep 正则字面——保字面、不判）；② 两处具名点规范形态化；③ 父侧追加：两承载档「已补切」回注（对端补切 id=37 完成）。
+> CLI 仓零写入 · `src/**`/`test/**` 零触碰 · `docs/TODO*.md` 零触碰。段位注：任务书原话「批档 §2 追加小节」——`batch_segment` 身份段位限制（eng-coder 仅 §5；§5.7 已登记同款）→ 本节落 §5。
+
+**一、重导基数（先重导、后清零）**
+
+| 类 | 扫描实测 | 判定 |
+|---|---|---|
+| 对端仓目录前缀 + 文档后缀（`.md`）共现（PLAIN） | 8 行 | **干净基数成员** → 清零（除射程豁免 1 行） |
+| 本机状态目录 `.thincoder/`（DOT） | 8 行 | 噪声剔除（非对端仓指涉） |
+| 本仓自指前缀 `thincoder-vscode/`（VSC） | 40 行 | 判据明文排除（非 `-vscode`） |
+| 裸仓名式对端指涉 + `.md`（BARE） | 7 行 | **干净基数成员** → 清零 |
+| 原始合计（#36 口径复现） | **63 行 / 25 档** | 与 #36 实测一致 |
+
+干净基数 = PLAIN 8 + BARE 7 = **15 行 / 9 档**。清零后：判据面命中 **1 行**（本档 `:525`——grep 正则字面，射程豁免「保字面」）；BARE = **0**；**有效残留 = 0**。
+
+**二、判据面清零（14 行 / 9 档——旧形态字面按 §8.10.1 表现协议以描述式入档；全量「改前 → 改后」原文 = 交付报告）**
+
+| # | file:line | 旧形态类别 | 改后（规范形态） |
+|---|---|---|---|
+| 1–2 | 本档 `:68` · `:69` | 实施面坐标（路径前缀直引） | `src/prompts/discipline-engineering.md`（CLI 仓） · `docs/design/prompts/discipline-engineering.md`（CLI 仓）——去仓前缀、保路径与 `.md`（D19 二分 / E3） |
+| 3–6 | 本档 `:493` · `:535` · `:541` · `:551` | 引述 / 审计行（旧形态对照） | 描述式（「对端仓目录前缀形态」）+ 仓别词（`CLI 仓`）——旧形态字面不再连续出现 |
+| 7 | `2026-09-12-PROSE-ANCHOR-RETIRE.md:93` | 违规位置引述（路径 + `.md`） | `TESTING（CLI 仓·需求）:105` |
+| 8 | `docs/design/AGENT-LOOP.md:27` | 裸仓名式对端指涉 | `TODO（CLI 仓）` |
+| 9 | `docs/design/APPLY-PATCH.md:18` | 同上（设计档引用） | `APPLY-PATCH（CLI 仓·设计）` §2 |
+| 10 | `docs/design/ARCHITECTURE.md:19`（`:20` 并合） | 同上（对端档引用 + 台账引用） | `SESSION（CLI 仓·设计）` §11 · `TODO（CLI 仓）` |
+| 11 | `docs/design/EDIT.md:4` | 同上 | `EDIT（CLI 仓·设计）` |
+| 12 | `docs/design/README.md:93` | 同上（机制权威源引用） | `SESSION（CLI 仓·设计）` §12 |
+| 13 | `docs/design/RELEASE.md:95` | 同上（设计权威源引用） | `RELEASE（CLI 仓·设计）` §1 R7 段 |
+| 14 | `2026-09-11-VSC-MIRROR-SWEEP.md:273` | 仓名指涉（对照跑描述） | `CLI 仓 check-doc-width …` |
+
+**三、具名点族（式样 ① 4 行 · 式样 ② 6 行——「形态 / 等」读法，判定见 D6-2）**
+
+- 式样 ①（`AGENT-LOOP.md §N（CLI 侧）` → `AGENT-LOOP（CLI 仓·设计）§N（本端…节 = §N）`）：`docs/design/prompts/discipline-normal.md:179`（具名——§25）· 同档 `:147`（§18 D-E1a）· `persona-eng-coder.md:23`（§18）· `persona-engineering.md:44`（§18）。
+- 式样 ②（`与 CLI X.md 同名…` → `与 X（CLI 仓·设计） 同名…`）：`docs/design/ENGINEERING-MODE.md:8`（具名）· `ADVISOR-CONVERGENCE.md:5` · `CHECKPOINT.md:7` · `CONTEXT-COMPACTION.md:7` · `MEMORY.md:7` · `SESSION.md:5`。
+
+**四、已补切回注（父侧追加——2 档 / 新增 2 行）**
+
+| # | file:line | 内容 |
+|---|---|---|
+| 1 | `docs/batches/2026-09-11-COMMON-LAYER.md:6` | `> 回注（2026-09-12）：对端（CLI 仓）源档对应块**已补切**（本档逐字承载在先——对齐核验 57/57 零差异 · 源档 blob SHA 双向一致；实证见 `LEDGER-SELF-CONTAINED（CLI 仓）§5` 记录）。` |
+| 2 | `docs/batches/2026-09-10-MODEL-SELECTION.md:6` | 同式（对齐核验 2 处逐字相等）。 |
+
+落位 = 档首搬迁 / 回注注记区，紧接既有「对端（CLI 仓）源档对端份已**切除**」行（`:5`）并列、单行式。
+
+**五、决策透明表（落笔时自行判定项）**
+
+| # | 决策 | 理由 / 依据 |
+|---|---|---|
+| D6-1 | 干净基数 = PLAIN 8 + BARE 7（15 行 / 9 档）；DOT 8 / VSC 40 剔除 | 父侧口径「对端仓指涉（非 `-vscode`）+ 文档后缀共现」；`.thincoder/` = 本机状态目录（噪声）、`thincoder-vscode/` = 本仓自指（判据明文排除） |
+| D6-2 | 具名点族扩展（式样 ① 4 行 / 式样 ② 6 行） | 「形态 / 等」读法 = 同式样同处置（零语义）；若父侧仅需具名行本身，族内其余 8 行可逐行回退 |
+| D6-3 | 引述 / 审计行 → 描述式 / 断开书写 | 设计 §8.10.1 表现协议（旧形态不得连续出现）+ 派单口径「纯语义提及 → 描述式」 |
+| D6-4 | 实施面坐标 → 路径去仓前缀 + （CLI 仓） | D19 二分（实施面路径保路径与 `.md`；坐标形态 `路径（仓别）`） |
+| D6-5 | `:525` grep 正则字面保字面 | 射程豁免（可执行坐标类——保字面、不判）；有效残留口径剔除之 |
+| D6-6 | 回注措辞微调（含 `（CLI 仓）§5`） | 避「裸节号 + 对端仓指标」同行（§8.10.1 判红规则）；保留父侧「实证在 CLI 侧 §5」节位（评审 🔵#5 采纳） |
+| D6-7 | 跨段形态订正（纯形态、语义零改、逐条披露）：本档 §1 `:68`/`:69`（主 agent 段）· §5 `:493` 等 4 行（本段历史行——in-place 引述形态修正，同 §5.6 同款）· PROSE 记录 `:93` · `VSC-MIRROR-SWEEP:273` | 射程 = 扫描域全档（「逐条清零」结算口径）；订正非内容改写 |
+| D6-8 | 并发在改热档零触碰（`docs/requirements/ENGINEERING-MODE.md` · `docs/design/LEDGER-SELF-CONTAINED.md` · `docs/design/prompts/discipline-engineering.md`——均不在本端改动清单） | 边界「不碰在改档」；按实测 mtime 判定 |
+| D6-9 | 评审发现 #1–#4 Deferred（登记行不一致 / `AGENT-LOOP.md:419` 残引 / 在飞 2 档档首引用 4 行 / 裸 §2.22.7） | 均属登记 / 约定裁定面或射程未核明——归父侧 / 设计层；修正轮不夹带 |
+
+**六、机检（原文照录）**
+
+```text
+cd thincoder-vscode && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（114 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。退出码 0。
+
+cd thincoder-vscode && node scripts/check-ledger.mjs
+  → OK: thincoder-vscode/docs/TODO.md · OK: thincoder-vscode/docs/TODO-archive.md
+  → 0 处违规（阻断——修掉）· 基线 0 条（本基线必须保持为空）。退出码 0。
+
+cd thincoder-vscode && node test/run-fast.mjs
+  → tests 599 · pass 582 · fail 1 · skipped 16。
+  → 唯一红 = test/context-parity.test.mjs T-CI-2a（本机 config 环境态——存量红 / 非本批）。
+  → slow 门防漏提示 7 条（负载波动——存量面）。
+
+零残留机判（扫描域 + 判据同上）：命中 1 行 = 本档 `:525`（grep 正则字面——射程豁免）；
+有效残留 0；裸仓名式对端指涉 + `.md` 共现 = 0 行。
+```
+
+**七、审计与评审（in-child §18——轮次 + 裁决 + 终态）**
+
+- **内部 explore 偏差审计 · 轮次 1**：**四类偏差均零**（PARTIAL 0 · SILENT-SIMPLIFICATION 0 · DOC-DRIFT 0 · OUT-OF-LIST 0）；附 QUESTION 项（自指前缀 / 在飞档码段元语句 / src 双源对侧形态——判据外，部分转评）。
+- **内部 advisor 代码评审 · 轮次 1**：**VERDICT: pass**（🔴 0 · 🟡 1 · 🔵 4）。host 机检对其引注报未匹配——经逐条独立复核为引注形态差异（同 §5.7 同款），无实质影响。
+- **裁决表**：#1 🟡 登记行不一致 → Deferred（设计层裁定面）；#2 🟡 `AGENT-LOOP.md:419` 残引 → Deferred（射程未核明）；#3 🟡 在飞 2 档档首引用 4 行 → Deferred（射程 / 时点归父侧）；#4 🔵 裸 `§2.22.7` → Deferred（随 #1 裁定）；#5 🔵 回注证据指针 → **Fixed**（补 `（CLI 仓）§5`，两档）。
+- **fix round 1（评审后）**：Fixed 1 项（两档回注行）；复跑：宽度 114 档全绿 · 一致性新增 0 / 存量 0 · 台账 exit 0 · D6 回读在位。
+- **终态：clean**（🔴 0；审计零偏差；评审 pass——Deferred 4 项均属裁定 / 射程面，已逐条披露）。
+
+**八、未做 / 边界（如实）**
+
+- `docs/TODO*.md` 物理落笔 = 主 agent 写域（零触碰）；CLI 仓零写入；`src/**` / `test/**` 零触碰（EN 对侧形态残量 = 本端硬边界外，随评审 #4 / 审计 Q3 上报）。
+- 评审 #1–#4 裁定项未落笔（Deferred）；`batch_segment` §2 追加 = eng-designer / 父侧写域（身份段位限制）。
+
+### 5.9 收尾轮 13（eng-coder 自写 · 2026-09-12）——空占位残骸清理（两仓）
+
+> 任务 = 父侧「收尾轮 13——空占位残骸清理」派单；依据 = 用户 2026-09-12「残留即先例」原理 +「看得见的每一行都必须合规形态」。
+> **判据（唯一依据——不以先例为据）**：空占位行 `_（待写——×）_`——其所在节已有实体内容者 = 纯残骸 → 删除该占位行；其所在节无实体内容者 = 真缺口 → 保留（不删）。
+> 射程 = 两仓 `docs/batches/**` 全扫；本记录落 spawn 绑定档（VSC 侧）——CLI 侧清理面同记于本节（跨仓记录归属按两仓各持其份口径）。
+
+**一、清理总账：47 档 / 129 处删除 + 47 档档首打标**
+
+VSC（14 档 / 39 处；行号 = 该档落笔前实测）：
+- `ADVISOR-BUDGET-VSC-MIRROR` 3（:56/:99/:128）· `PORTABILITY-VSC-MIRROR` 3（:37/:104/:163）· `VSC-ACTIVITY-REGION-RESTORE` 3（:42/:165/:225）· `VSC-ASYNC-PARITY` 3（:40/:153/:201）· `VSC-CONTEXT-PARITY` 3（:88/:197/:236）
+- `VSC-GUARD-MIRROR` 2（:57/:163）· `VSC-INDEX-PERCEPTION` 4（:58/:217/:258/:260）· `VSC-LIVE-UX` 3（:48/:123/:157）· `VSC-MIRROR-SWEEP` 3（:53/:283/:349）· `VSC-WEBVIEW-ESCAPE` 3（:41/:120/:171）
+- `VSC-ACTIVITY-CLOSURE` 3（:66/:249/:308）· `VSC-CHILD-PERMISSION` 2（:191/:251）· `LEDGER-SELF-CONTAINED` 2（:163/:487）· `PROSE-ANCHOR-RETIRE` 2（:126/:282）
+
+CLI（33 档 / 90 处；行号 = 该档落笔前实测）：
+- `ABORT-PROVENANCE` 2（:142/:179）· `ACP-CHANNEL-FIXES` 2（:111/:166）· `ADVISOR-CONTEXT-BUDGET` 2（:149/:178）· `ARROW-EDITING` 3（:39/:151/:202）· `DEEPSEEK-V41-FLASH` 3（:89/:177/:231）· `DOC-HYGIENE` 3（:63/:166/:196）· `HOME-EXPANSION` 3（:36/:161/:188）· `INPUT-FIXES-SMALL` 3（:41/:142/:197）
+- `MECH-DEBT-SWEEP` 2（:166/:214）· `NORMAL-MODE-AUDIT` 3（:51/:145/:195）· `PORTABILITY` 3（:61/:132/:202）· `PROMPT-REVIEW-ORDER` 3（:77/:174/:215）· `PROVIDER-HEADERS` 3（:36/:145/:196）· `REVIEW-ATTENTION` 3（:36/:110/:146）· `REVIEW-CHAIN-GUARDS` 2（:241/:318）· `ROLE-REDEFINITION` 3（:60/:144/:181）
+- `SETTINGS-NULL-DEFAULT` 2（:159/:199）· `SPAWN-QUEUE-DISCIPLINE` 3（:37/:132/:162）· `STOP-HOOK` 3（:38/:86/:138）· `SUBAGENT-TAIL` 2（:232/:297）· `SWEEP-FOLLOWUP` 2（:165/:239）
+  `TEST-DISCIPLINE-PROMPTS` 3（:69/:151/:187）· `TEST-LIFECYCLE` 3（:79/:182/:215）· `TUI-OOM-FORENSICS` 2（:100/:132）· `TUI-OOM-ROOTCAUSE` 3（:64/:179/:247）
+- `TUI-SELECTION` 3（:53/:123/:173）· `TURN-ACROSS-SEGMENTS` 2（:178/:261）· `VSC-ASYNC-VISIBILITY` 3（:85/:173/:265）· `VSC-REVIEW-ASYNC-SWEEP` 3（:40/:121/:176）
+  `WEBSEARCH-PROVIDER-KEY` 3（:39/:109/:155）· `LEDGER-SELF-CONTAINED` 3（:225/:1378/:1426）· `LEDGER-SURFACE` 3（:49/:148/:197）· `PROSE-ANCHOR-RETIRE` 4（:117/:358/:420/:519）
+
+打标 = 47 行（档级一次）：`> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）`——落于各档档首注记区（末条 `>` 注行之后）。
+
+**二、保留（4 处——真缺口：所在节无实体内容；就地补「（父侧段——收口轮填）」标注行，不删）**
+
+- VSC `2026-09-12-LEDGER-SELF-CONTAINED.md` §6（父代理）
+- CLI `2026-09-12-LEDGER-SELF-CONTAINED.md` §4（主 agent）· §6（父代理）
+- CLI `2026-09-12-PROSE-ANCHOR-RETIRE.md` §4（主 agent）
+
+**三、不动（引述 / 记录行——非空占位行，不属判据射程）**
+
+- VSC `VSC-GUARD-MIRROR:116`（D6 更正引述占位原文——父侧具名保留）· VSC `VSC-CHILD-PERMISSION:53`（上轮形态更正注·引述同类）。
+- 记录类注行族（多档「占位已清 / 随 append-only 保留」历史记录注、审计行「§5 待写（本段补齐）」等）——零触碰。
+- CLI `MODEL-SELECTION:474`（`> 待写。`）——判据形态（`_（待写——×）_`）外，未动、列报（供父侧裁）。
+
+**四、决策透明（零静默）**
+
+| # | 事项 | 处置 | 理由 |
+|---|---|---|---|
+| 1 | 父侧列 2 保留点（VSC LEDGER `:468` · PROSE `:272`）落笔窗口内被并发填段 | 无动作（占位行已随填段消解——无残骸可留、无标注对象） | 落笔前重核实测；§4 批准面已由主 agent 同窗落笔 |
+| 2 | CLI 保留 3 处标注 = 「同办」延伸 | 同式标注落地 | 父侧指令「另 CLI 仓同判据全扫 → 同办（清单自列）」 |
+| 3 | `TEST-LIFECYCLE` §5 占位（机械节边界盲区：实体记录以 `# §5` 级标题续写） | 按判据「实体内容为准」删除 | 该节实体交付记录在位；占位 = 模板残留 |
+| 4 | 并发漂移处置（VSC/CLI LEDGER 等在飞档） | 行号以落笔前即时重核为准；保留 / 标注面用内容定位 | 父侧 / 他轮同窗口追加（CLI LEDGER 窗口内两次增长） |
+| 5 | `#48–#52` 在改档边界 | 未能机检定位其档清单（两仓文档 / checklist 无 #49–#52 字样；仅见 #41/#43/#46/#48 零星引用）——本轮触碰面 = 上表 47 档逐档列明，供父侧核对交叠 | 如实登记（不假设） |
+
+**五、机检（原文——命令 + 结果）**
+
+```text
+cd thincoder-vscode && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（114 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。→ EXIT=0
+cd thincoder-vscode && node scripts/check-ledger.mjs
+  → OK ×2 档 · 0 处违规 · 基线 0 条。→ EXIT=0
+cd thincoder && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（136 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。→ EXIT=0
+cd thincoder && node scripts/check-ledger.mjs
+  → OK ×2 档 · 0 处违规 · 基线 0 条。→ EXIT=0
+cd thincoder-vscode && node test/run-fast.mjs
+  → tests 607 · pass 568 · fail 0 · skipped 39。→ EXIT=0
+```
+
+**六、D6 回读核对**
+
+- 复扫（程序化）：两仓残留精确占位 = **4**（= 保留 4 处，逐条带标注行）；打标计数 = **47/47** 在位；纯残骸 = **0**。
+- 抽读：VSC LEDGER §6 `:745`/`:746` · CLI LEDGER §4 `:1490`/`:1491` · §6 `:3081`/`:3082` · CLI PROSE `:413`/`:414` 逐处核过；VSC GUARD-MIRROR `:57` 已删（`:59` 状态行起正文在位）。
+
+**七、边界 / 未做（如实）**
+
+- 台账 `docs/TODO*.md` 零触碰 · `_archive` 零触碰 · `src/**` / `test/**` 零触碰（纯批档面轮）。
+- 未做 = 无（判据面全量落定）；列报 = `MODEL-SELECTION:474` 形态外近邻行 1 处（不动，供裁）。
+
+> 校注（本节追加后复跑 · as-of 2026-09-12）：CLI 宽度面复跑出现 **3 行超宽**（`2026-09-12-LEDGER-SELF-CONTAINED.md` `:1378` / `:1412` / `:1415`）——全位于并发「存量旧义清零轮（eng-designer）」同窗新增节，**非本节笔迹**；本节改动面在其前两轮复跑 = **136 文件全绿（零新增）**。归属 = 该轮写域（本侧零触碰）。
+
+**八、内部环（in-child §18——轮次 + 裁决 + 终态）**
+
+- **内部 explore 偏差审计 · 轮次 1**：终态 = **CLEAN**（四类偏差 0）。独立复核面：精确占位现盘仅剩 4 保留处（逐处带标注）· 打标 47/47（档级各 1）· 删除面 5 档抽验（含相邻对 `INDEX-PERCEPTION:258/:260` 与边界盲区档 `TEST-LIFECYCLE`）· 边界反证（两仓指纹全树命中仅 batches 内 47 档）· 豁免点 2 处（含 `GUARD-MIRROR:116`）在位。
+- **内部 advisor 代码评审 · 轮次 1**：**VERDICT: pass**（🔴 0 · 🟡 1 optional · 🔵 4）。逐条裁决：
+  - 🟡#1 同族变体 `_（待记——主 agent）_` 2 处（CLI `SPAWN-QUEUE-DISCIPLINE:151` · `SWEEP-FOLLOWUP:235`——所在节均有实体内容）→ **Deferred（归父侧裁）**：判据形态（`待写`）外；本轮「唯一依据」不越形扩删——是否入类由父侧明示。
+  - 🔵#2 打标「空占位行已清」与 3 档保留行并存 → **Not an issue**（打标文本 = 父侧指定逐字；保留项自带「（父侧段——收口轮填）」标注区分）。
+  - 🔵#3 记录类注行「占位…不改 / 保留」所指已删 → **Not an issue**（记录面口径 = §三在案处置；如需同步归父侧另轮）。
+  - 🔵#4 CLI 侧清理面仅记于本档 §5.9 → **Not an issue**（任务书口径 = 单 §5 追加（绑定档）；CLI 侧自持记录如需补登 = 父侧 / CLI 写域）。
+  - 🔵#5 计数口径（父侧「14 档 / 40 处」vs 本表 39 删 + 1 保留）→ **Not an issue**：对账成立——本刻实测 VSC 全量精确占位 = 40 = 39 删 + 1 保留；如父侧 40 另有口径请按本表逐档明细复点。
+- 附（判据外同族 · 名单外档——登记供下轮合扫）：`_（待实施）_` ×3 + `_（待核销）_` ×1（`2026-09-10-VSC-MIRROR`）· `_（待核销）_` ×1（`2026-09-10-BATCH-SEGMENT-TOOL`）。
+- **修正轮：0 轮**（无 must-fix；Deferred 1 = 边界裁定面）。**终态 = clean**（🔴 0）。
+
 ## §6 验证与收口（父代理自写）
 
 _（待写——父代理）_
+（父侧段——收口轮填）

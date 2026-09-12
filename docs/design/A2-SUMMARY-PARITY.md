@@ -46,7 +46,7 @@ VSC summarizeEngTaskInput（subagent-async.mjs:78-93）现状：
   agent._engTaskInput/_touchedFiles fixture——summarizeEngTaskInput 私有不直接测） | 新 ~60 |
 | docs/design/AGENT-LOOP.md | §8 声明同步 + 任务书 verbatim 措辞核（评审 #4——无 ## 无 marker →
   "(not found)" 后措辞核对——确定化非如涉及） | doc |
-| docs/design/README.md | 地图登记本档（评审 #1——循 SESSION-RESTORE-PARITY 先例——核销时父侧） | doc |
+| docs/design/README.md | 地图登记本档（评审 #1——循 SESSION-RESTORE-PARITY 同款——核销时父侧） | doc |
 
 ## 非功能性需求（评审 #7 补——三层完整）
 - 约束：marker 缺失不编造 "(not found)" / A1 指令 + A3 报告模板零触碰 / CLI 生产+测试零改动 /

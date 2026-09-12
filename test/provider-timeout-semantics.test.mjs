@@ -5,6 +5,9 @@
  * 覆盖：绝对墙钟废除（请求 signal = 用户 signal 原样；不再合成 AbortSignal.timeout）+
  * 头/body 相位参数在位 + 四 transport 读侧 idle 看门狗（判死 + 零误杀成对）+ 源文本零残留。
  * 零网络：globalThis.fetch 桩（proxyFetch 无代理 → 单测唯一网络面）+ 假流。
+ * 2026-09-12 收尾轮 9：T-MA1-4 原余量（chunk 20ms / idle 40ms = 2×）在并发负载下
+ * 真判死（20ms 定时器被拖过 40ms）——idleMs 放宽至 300（余量 15×，语义零改：
+ * 持续有数据的零误杀不变量与 timer 清理断言原样保留——非断言放宽，是抗负载硬化）。
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -115,7 +118,7 @@ test("T-MA1-3 两 chunk 后静默挂起 + idleMs=40 → TimeoutError（消息含
 
 // ─── T-MA1-4 边界（对照）：持续有数据 → 零误杀 + timer 已清理（AC-MA1-2）────────
 
-test("T-MA1-4 每 20ms 持续有 chunk（idleMs=40）→ 正常完成零误杀 + timer 清理", async () => {
+test("T-MA1-4 每 20ms 持续有 chunk（idleMs=300——余量 15×，抗负载抖动）→ 正常完成零误杀 + timer 清理", async () => {
   const frames = [contentFrame("x"), contentFrame("y"), "data: [DONE]\n\n"]
   let i = 0
   const paced = new ReadableStream({
@@ -129,16 +132,16 @@ test("T-MA1-4 每 20ms 持续有 chunk（idleMs=40）→ 正常完成零误杀 +
     },
   })
 
-  // timer 记账（idleMs=40 的 timer 全部被 clear——无悬挂 handle）
+  // timer 记账（idleMs=300 的 timer 全部被 clear——无悬挂 handle）
   const origSet = globalThis.setTimeout
   const origClear = globalThis.clearTimeout
   const idleTimers = []
   const cleared = new Set()
-  globalThis.setTimeout = (fn, delay, ...rest) => { const id = origSet(fn, delay, ...rest); if (delay === 40) idleTimers.push(id); return id }
+  globalThis.setTimeout = (fn, delay, ...rest) => { const id = origSet(fn, delay, ...rest); if (delay === 300) idleTimers.push(id); return id }
   globalThis.clearTimeout = (id) => { cleared.add(id); return origClear(id) }
   let result
   try {
-    result = await openaiParseStream(sseResponse(paced), { onToken: () => {}, idleMs: 40 })
+    result = await openaiParseStream(sseResponse(paced), { onToken: () => {}, idleMs: 300 })
   } finally {
     globalThis.setTimeout = origSet
     globalThis.clearTimeout = origClear

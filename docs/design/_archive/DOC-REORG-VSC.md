@@ -1,6 +1,6 @@
 > **变更史——正文冻结**（2026-09-10 文档重组批）：本档为一次实施批的过程记录或已被取代的旧权威档，
 > 内容 as-of 交付时点，**不作为现状依据**。现状见 `docs/README.md` 地图指向的板块权威档。
-> 搬迁注记：本档自 CLI 仓 `thincoder/docs/design/_archive/DOC-REORG-VSC.md` 迁入本仓 `docs/design/_archive/`（LEDGER-SELF-CONTAINED 批——整档迁移，文字逐字；源档 blob SHA = b3b9a338a72e）。
+> 搬迁注记：本档自 CLI 仓 `DOC-REORG-VSC（CLI 仓）` 迁入本仓 `docs/design/_archive/`（LEDGER-SELF-CONTAINED 批——整档迁移，文字逐字；源档 blob SHA = b3b9a338a72e）。
 
 # VSC 文档重组——ARCHITECTURE 拆分 + 双端结构对齐（DOC-REORG-VSC）
 

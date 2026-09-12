@@ -1,10 +1,11 @@
 # 评审上下文预算 VSC 镜像（同款 120K 常量退场）· 批次记录（2026-09-11）
 
-> 搬迁注记：本档自 CLI 仓 `thincoder/docs/batches/2026-09-11-ADVISOR-BUDGET-VSC-MIRROR.md` 迁入本仓 `docs/batches/`（LEDGER-SELF-CONTAINED 批——实施面全在本仓的批档物理迁移，档名不变、文字逐字；源档 blob SHA = 940cf6c1e84a · 源提交 = 167f48f）。
+> 搬迁注记：本档自 CLI 仓 `2026-09-11-ADVISOR-BUDGET-VSC-MIRROR（CLI 仓）` 迁入本仓 `docs/batches/`（LEDGER-SELF-CONTAINED 批——实施面全在本仓的批档物理迁移，档名不变、文字逐字；源档 blob SHA = 940cf6c1e84a · 源提交 = 167f48f）。
 
 > 六段 append-only，**一段一作者**：§1 讨论（主 agent）· §2 批次任务（eng-designer）·
 > §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder 自写）· §6 验证与收口（父代理）。
 > 编制：主 agent（工程模式）· 2026-09-11 14:10 · 来源 = 用户 13:18「120K 那个是 bug…你检查一下」的 **VSC 镜像面**（第 25 批设计的「需父侧排程」项 1–4——同款缺陷**实测确认存在**）。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -16,7 +17,7 @@
   `thincoder-vscode/src/advisor/compaction.mjs:18`（同款常量）+ `loop.mjs:22/116/121`（同款守卫链）；
 - 第 25 批设计已列「需父侧排程」四项（VSC 源 + VSC 测试 + VSC 设计档 §15 + TODO 池行）；
 - 父侧立项（VSC 镜像批——同源语义、各端独立实现、不做 byte-identical）。
-- 需求面：`thincoder/docs/requirements/ADVISOR-CONVERGENCE.md` **§10**（F27/N19——第 25 批已落，本批引用不重述）。
+- 需求面：`ADVISOR-CONVERGENCE（CLI 仓·需求）` **§10**（F27/N19——第 25 批已落，本批引用不重述）。
 
 ### 本批条目（1 条——三方一致锚）
 
@@ -53,7 +54,6 @@
 
 ## §2 批次任务（eng-designer 自写）
 
-_（待写——eng-designer）_
 
 **状态：任务书就绪**（2026-09-11——需求（CLI 侧 §10，第 25 批已落）+ VSC 设计 / 测试三层（VSC 设计档 §15）已落档，待设计评审；**零待裁定项**）。实施者 = eng-coder（设计 token 门）。本 §2 = coder 任务书本体（不另写副本）。
 
@@ -96,7 +96,6 @@ AC-CB5 旧帽退场（`src/` 零残留）+ VSC 仓 `check-doc-width` 新增违�
 
 ## §3 设计评审（评审子代理自写）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
@@ -125,7 +124,6 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 **状态：交付完成**（2026-09-11——4 项落笔 + 6 用例全绿 + 快层全绿 + 内部审计 clean + 内部代码评审 pass/2×🔵 已逐条裁决）。
 

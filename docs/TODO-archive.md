@@ -10,9 +10,9 @@
 - [x] **`eng(enter)` 加用户同意门**（2026-09-08 用户裁不处理——设计如此：模型自主翻转 + 持久化是设计意图；工程模式进出权在模型，无机械同意门）→ status=已废弃
 - [x] **design token 签发后置 pending 需用户批准门**（2026-09-08 用户裁不处理——approval 保持 prompt 散文层；评审链人控点 = sign-off 流程本身）→ status=已废弃
 
-- [x] **GitHub #6 async 子代理保真**（中止丢弃静默 / 孤儿报告丢失 / 终态误读）→ 需求 本仓 `docs/design/AGENT-LOOP.md` §9（② 对位）· 任务书 本仓 `docs/batches/2026-09-11-VSC-ASYNC-PARITY.md` §2 · 设计 本仓 `docs/design/AGENT-LOOP.md` §12 · （§6 收口——AC-G1–G7 / AC-N1–N4 全绿 · 全量 477/477/0 + 令牌消费）· status=已核销
-- [x] **VSC 活动区收口（R1–R6：清退+落流 / digest 可读性 / 待消化提示 / 块标题字段 / Send 按钮 / 状态行字段）**（2026-09-12 用户走查六发现）→ 需求 本仓 `docs/design/AGENT-LOOP.md` §12（② 对位；修订）· 任务书 本仓 `docs/batches/2026-09-12-VSC-ACTIVITY-CLOSURE.md` §2 · （§6 收口 2026-09-12 02:26——VSC 快层 624/609/1（唯一红为他链）· 令牌消费）· status=已核销
-- [x] **VSC 子代理审批面对齐 CLI（child permission gate）**（2026-09-12 用户裁定 A——ask 弹卡带归属 / auto 继承静默）→ 需求 本仓 `docs/design/AGENT-LOOP.md` §17（② 对位）· 任务书 本仓 `docs/batches/2026-09-12-VSC-CHILD-PERMISSION.md` §2 · （§6 收口 2026-09-12 02:50——VSC 快层 643/627/2（两红均批外）· 令牌消费）· status=已核销
+- [x] **GitHub #6 async 子代理保真**（中止丢弃静默 / 孤儿报告丢失 / 终态误读）→ 需求 本仓 `docs/requirements/AGENT-LOOP.md` §9（本仓需求档——2026-09-12 建档）· 任务书 本仓 `docs/batches/2026-09-11-VSC-ASYNC-PARITY.md` §2 · 设计 本仓 `docs/design/AGENT-LOOP.md` §12 · （§6 收口——AC-G1–G7 / AC-N1–N4 全绿 · 全量 477/477/0 + 令牌消费）· status=已核销
+- [x] **VSC 活动区收口（R1–R6：清退+落流 / digest 可读性 / 待消化提示 / 块标题字段 / Send 按钮 / 状态行字段）**（2026-09-12 用户走查六发现）→ 需求 本仓 `docs/requirements/AGENT-LOOP.md` §12（本仓需求档；修订）· 任务书 本仓 `docs/batches/2026-09-12-VSC-ACTIVITY-CLOSURE.md` §2 · （§6 收口 2026-09-12 02:26——VSC 快层 624/609/1（唯一红为他链）· 令牌消费）· status=已核销
+- [x] **VSC 子代理审批面对齐 CLI（child permission gate）**（2026-09-12 用户裁定 A——ask 弹卡带归属 / auto 继承静默）→ 需求 本仓 `docs/requirements/AGENT-LOOP.md` §17（本仓需求档）· 任务书 本仓 `docs/batches/2026-09-12-VSC-CHILD-PERMISSION.md` §2 · （§6 收口 2026-09-12 02:50——VSC 快层 643/627/2（两红均批外）· 令牌消费）· status=已核销
 
 - [x] **散文锚测试退役（含双端提示词镜像锚；结构机检保留）**（2026-09-12 用户裁定「这种类型的测试都不要做」——判据：该类锚收益无实证、成本 ≈本仓 suite 50%、锚红后动作 = 把字改回去而非修缺陷；保留面 = 引用可解析 / 组计数 / 六态取值 / 行宽 / slow 门）→ 需求 本仓 `docs/requirements/TESTING.md` §5（F15–F22 / N10–N12）· 任务书 本仓 `docs/batches/2026-09-12-PROSE-ANCHOR-RETIRE.md` §2 · （§6 收口 2026-09-12 06:37——VSC 快层 **653 → 592（−61 == 整删 61）** · 三环 = lint ✓ / 集成 28/28 ✓ / 全量 2 项批前既存红 · **本仓 `docs/requirements/TESTING.md` 首建** · 令牌消费）· status=已核销
 

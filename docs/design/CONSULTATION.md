@@ -144,7 +144,7 @@ received, total, models }`。settle 语义：正常回复入队；`session.stopp
 
 ## 3. 测试
 
-会诊测试用例清单的权威 = **AGENT-LOOP.md §25**（T-R17a..p：会话 settle park / digest 注入全文 /
+会诊测试用例清单的权威 = **AGENT-LOOP（CLI 仓·设计）§25**（T-R17a..p：会话 settle park / digest 注入全文 /
 check 退役（调 consult_check 工具不存在）/ 部分 settle 不注入 / stop 弃不入 pending / 空闲 settle
 消化 / 超长注入落盘 / 注入一次竞态 / 手动档动作域零容忍 / 双族隔离 / 中止语义等——VS Code 镜像）。
 

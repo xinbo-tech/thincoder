@@ -21,7 +21,7 @@
 
 ① 断言对象是**非测试档**文本——一切非 `test/**` 的仓内文件（`src/**` · `docs/**` · `scripts/**` · `webview/**` ·
    `locales/**`〔资源文本保留——C1-d〕 · `package.json` · 仓根 `*.md` / `*.json` / `*.mjs` · `AGENTS.md` · `README*`；
-   另含**兄弟仓** `../thincoder/**`）或其派生切片；
+   另含**兄弟仓**（CLI 仓））或其派生切片；
 ② 断言其**文本内容**在场 / 缺席 / 出现次数 / 相对顺序（`.includes` · 常量子串 `assert.match` · `.startsWith` /
    `.endsWith` / `.indexOf` · 文本计数 · 全文相等 / 不等）；
 ③ 断言对象**不是**结构机检保留面（F17 封闭枚举）所判属性。

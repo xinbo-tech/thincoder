@@ -27,13 +27,13 @@
 | Webview 前端/消息协议 | `WEBVIEW.md` | VSC 独有（无 CLI 对应——批 7）；webview 布局/文件结构/活动面板 R22/组件 + 消息协议（ARCHITECTURE §11+§12 迁出） |
 | 需求与决策 | `docs/requirements/PROJECT.md` | 需求与决策记录（归位 `docs/requirements/`——台账自持批 LEDGER-SELF-CONTAINED；v1 功能范围节拆出至 `FEATURES.md`） |
 | 三观（提示词根基） | `docs/requirements/PHILOSOPHY.md` | 归位 `docs/requirements/`（价值层需求——LEDGER-SELF-CONTAINED 批） |
-| 提示词系统（双源：中文权威 + 英文落地） | `VSC-PROMPTS.md` + `docs/design/prompts/`（15 档中文权威） | 本端 15 文件槽位化现行态 + 端特有差异（R14 池规则段等）——机制权威 = **本端双源**（中文权威 ↔ `src/prompts/` 英文落地，差异逐项见「镜像差异表」节）；CLI 仓 `PROMPT-SYSTEM.md` 蓝图 + 施工档三件为参照（语义同源·原文自持）——2026-09-10 双端同批 · 2026-09-11 双源化（第 5 批 VSC-MIRROR） |
+| 提示词系统（双源：中文权威 + 英文落地） | `VSC-PROMPTS.md` + `docs/design/prompts/`（15 档中文权威） | 本端 15 文件槽位化现行态 + 端特有差异（R14 池规则段等）——机制权威 = **本端双源**（中文权威 ↔ `src/prompts/` 英文落地，差异逐项见「镜像差异表」节）；`PROMPT-SYSTEM（CLI 仓·需求）` 蓝图 + 施工档三件为参照（语义同源·原文自持）——2026-09-10 双端同批 · 2026-09-11 双源化（第 5 批 VSC-MIRROR） |
 | 配置面板（Settings） | `SETTINGS.md` | 现行权威源（2026-08-25 合并 6 份历史批次文档：SETTINGS-PANEL(-2)/PROXY-ROW/REORG/SUBMODEL-SHELL/MODEL-PICKER-UNIFY，已入 `_archive/`，细节查原文件） |
 | 项目切换 | `PROJECT-SWITCHER.md` | |
 | 发布流程 | `RELEASE.md` |
 | 测试基建 | `TESTING.md` | 测试生命周期与集成集（新建 2026-09-11——与 CLI 仓同名档对应；语义同源·本端原文自持）。快/全两层 + slow 门 + 显式清单实现面见 `TESTING.md` §1 |
 | 台账自持（文档体系各仓自持） | `LEDGER-SELF-CONTAINED.md` | 本批——台账射程（只收本仓条目）/ 需求树建设 / 批档接收 / 机检 L4（`scripts/check-ledger.mjs`）/ 提示词自持条文 / 存量宽口径处置 |
-| 可移植性 | `PORTABILITY.md` | VSC 镜像面（批次二）——对照 = CLI 仓 `PORTABILITY.md`（§9 = 对位清单权威）；分类唯一权威 / 声明面 / 门禁拒绝 / 索引扩表判据 |
+| 可移植性 | `PORTABILITY.md` | VSC 镜像面（批次二）——对照 = `PORTABILITY（CLI 仓·设计）`（§9 = 对位清单权威）；分类唯一权威 / 声明面 / 门禁拒绝 / 索引扩表判据 |
 | 会诊 | `CONSULTATION.md` | |
 | 飞刀 | `ESCALATE.md` | |
 | Design Token 硬化 | `ENG-TOKEN-BINDING-TUNING.md`（需求 = `docs/requirements/ENG-TOKEN-BINDING.md`） | v2 收窄：安全修复（双后门/复活陷阱）+ TTL 7 天可配（2026-08-25，v1 内容绑定被实况否决见文档考古） |
@@ -59,19 +59,19 @@
 ## 镜像差异表（提示词双源——`docs/design/prompts/` ↔ `src/prompts/` ↔ CLI 仓同名档）
 
 > 第 5 批 VSC-MIRROR（2026-09-11）建双源：`docs/design/prompts/` 15 档初始内容**逐字**自 CLI 仓同名档拷贝；
-> 差异只允许在**路径/UI 引用处**与**端特有段**，逐项登记如下（语义同源·原文自持——依据 CLI 侧设计档 `ENGINEERING-MODE.md` §2.22.1/§2.22.7（CLI 侧））。
+> 差异只允许在**路径/UI 引用处**与**端特有段**，逐项登记如下（语义同源·原文自持——依据 `ENGINEERING-MODE（CLI 仓·设计）§2.22.1/§2.22.7`）。
 
 | # | 文件 + 段 | 差异 | 来源 |
 |---|---|---|---|
 | 1 | `discipline-engineering.md` · 尾部「VSC 端特有段：R14 池规则」节 | 镜像独有（CLI 侧不引入） | 端特有段 = 本端 `src/prompts/discipline-engineering.md` 同名尾部节（as-of :225-228；per-role-domain pools / `agent.poolLimits`） |
 | 2 | `persona-engineering.md` · 尾部「VSC 端特有段」节 | 镜像独有 | 端特有段 = 本端 `src/prompts/persona-engineering.md` VSC 独有段（多并行指针 / R14 池规则 / 取消语义） |
 | 3 | `advisor-design.md`（评审标准 7 + 要点，2 处）/ `discipline-normal.md`（工作流节 + 文档先行节，2 处） | `docs/README.md` → `docs/design/README.md` | 跨仓路径改写（本端文档地图 = `docs/design/README.md`） |
-| 4 | `discipline-engineering.md` · D2 / 评审收敛纪律 / 委派节 / 写文档节 | CLI 侧引用注记 + 本端权威改写 | 跨仓节引用（需求档树/`docs/batches/`/§2.20/`docs/design/METHODOLOGY.md` 属 CLI 仓 → 注「（CLI 侧）」；`docs/README.md` 文档规范 §2.7 → 本端 `docs/design/README.md` 归属规则 6） |
-| 5 | `discipline-normal.md` / `persona-eng-coder.md` / `persona-engineering.md` · AGENT-LOOP 引用；`discipline-engineering.md` · 异步锚句 | 保留 CLI 节号 + 注「（CLI 侧）」+ 本端对应节号 | 跨仓节引用（CLI 侧 `AGENT-LOOP.md` §18/§25、以及机制对不上的 §11.2——本端对应 §8 交付协议 / §9 异步化） |
-| 6 | `discipline-normal.md` / `persona-eng-designer.md` / `persona-engineering.md` · 需求层与批次档树引用 | 行内注记「CLI 侧」（如「——CLI 侧批次档树」） | 跨仓路径（本端无 `docs/requirements/`·`docs/batches/`——批次档单一归属 = CLI 仓） |
-| 7 | （V1 判据——非文本差异） | 含「（CLI 侧）」注记的引用行 V1 豁免（不报、不入基线）；本表自身的 CLI 侧设计档引用同此注记 | **VSC 独有语义**（CLI 侧 V1 不变）——CLI 侧设计档 `ENGINEERING-MODE.md` §2.22.7 |
+| 4 | `discipline-engineering.md` · D2 / 评审收敛纪律 / 委派节 / 写文档节 | CLI 侧引用注记 + 本端权威改写 | 跨仓节引用（需求档树/`docs/batches/`/`ENGINEERING-MODE（CLI 仓·设计）§2.20`/`METHODOLOGY（CLI 仓·设计）` 属 CLI 仓 → 注「（CLI 侧）」；`README（CLI 仓）§2.7` → 本端 `docs/design/README.md` 归属规则 6） |
+| 5 | `discipline-normal.md` / `persona-eng-coder.md` / `persona-engineering.md` · AGENT-LOOP 引用；`discipline-engineering.md` · 异步锚句 | 保留 CLI 节号 + `（CLI 仓·设计）` 前置注记 + 本端对应节号；异步锚句 = 引文保字面 + 节号注记（「该节号 = CLI 侧；本端对应节 = §9 …」形态） | 跨仓节引用（`AGENT-LOOP（CLI 仓·设计）§18/§25`、以及机制对不上的 `AGENT-LOOP（CLI 仓·设计）§11.2`——本端对应 §8 交付协议 / §9 异步化） |
+| 6 | `discipline-normal.md` / `persona-eng-designer.md` / `persona-engineering.md` · 需求层与批次档树引用 | 行内注记「CLI 侧」（如「——CLI 侧批次档树」） | 跨仓路径（第 5 批登记时本端无 `docs/requirements/`·`docs/batches/`——批次档单一归属 = CLI 仓；2026-09-12 本端两树已自持补齐） |
+| 7 | （V1 判据——非文本差异） | 含「（CLI 侧）」注记的引用行 V1 豁免（不报、不入基线）；本表自身的 CLI 侧设计档引用同按规范形态（`名称（CLI 仓·层别）§N`）书写 | **VSC 独有语义**（CLI 侧 V1 不变）——CLI 侧设计档 `ENGINEERING-MODE（CLI 仓·设计）§2.22.7` |
 | 8 | `persona-eng-coder.md` · 尾部「VSC 端特有段：实现纪律与交付报告」节 | 镜像独有（CLI 侧不引入）；反向差异：镜像 `file 域声明语义` 节在本端英文落地无对应节（镜像以 CLI 结构为准） | 端特有段 = 本端 `src/prompts/persona-eng-coder.md:33-49`（实现纪律 / 逐文件自查 / 清单外变更 / 收尾自审 / 报告格式） |
-| 9 | `discipline-engineering.md` · 端内锚注/施工迁注文本（`:8` Mandatory Flow 零裁量锚（ENGINEERING-MODE §2.9 锚#1）/ `:38-41` 第 5 批修订注 / `:58` 设计行为纪律四维锚节） | 镜像不并入（镜像以 CLI 中文档结构与机制文本为准；本项为端内锚注/迁注文本——差异已如实登记） | 端内文本差异——已登记（非静默） |
+| 9 | `discipline-engineering.md` · 端内锚注/施工迁注文本（`:8` Mandatory Flow 零裁量锚（ENGINEERING-MODE §2.9 锚#1）/ `:38-41` 第 5 批修订注 / `:58` 设计行为纪律四维锚节 / `:168` 异步锚句迁注「逐字随迁——原 engineering.md 评审节」） | 镜像不并入（镜像以 CLI 中文档结构与机制文本为准；本项为端内锚注/迁注文本——差异已如实登记） | 端内文本差异——已登记（非静默） |
 
 ## 变更记录
 
@@ -90,7 +90,7 @@
 - 2026-08-24：新增板块「Agent 运行参数」（AGENT-PARAMS-*）与「工具输出限制」（TOOL-OUTPUT-LIMITS-*）
 - 2026-08-25：新增「轮末蒸馏异步化」（SEND-STALL-DISTILL-*）、「工具移除」（SLEEP-REMOVAL-*）、「覆盖率缺口修复」（COVERAGE-GAPS-*）；Settings 6 份历史批次文档合并入 `SETTINGS.md`
 - 2026-09-06：README provider 数量修正（17→20——补 GLM Coding Plan / MiMo / MiMo Token Plan，与 `src/config-presets.mjs` PROVIDER_PRESETS 对齐）；其余文档质量观察项见会话记录，未入库
-- 2026-09-06：会话目录残留 GC + 标题写显性化（机制权威源 CLI `SESSION.md` §12）——VSC 端 eng-coder 交付：`src/extension/session-gc.mjs`（残留 GC + 冷 cwd 原语，CLI 同源移植；F2 手动执行面仅 CLI `thincoder session gc`）+ setSlotTitle `{ok, reason}` 契约（session-io.mjs）+ 面板调用方适配（panel-messages/panel-session）+ `test/session-gc.test.mjs`
+- 2026-09-06：会话目录残留 GC + 标题写显性化（机制权威源 `SESSION（CLI 仓·设计）` §12）——VSC 端 eng-coder 交付：`src/extension/session-gc.mjs`（残留 GC + 冷 cwd 原语，CLI 同源移植；F2 手动执行面仅 CLI `thincoder session gc`）+ setSlotTitle `{ok, reason}` 契约（session-io.mjs）+ 面板调用方适配（panel-messages/panel-session）+ `test/session-gc.test.mjs`
 - 2026-09-08：文档格式债清理批——**归档 11 件移 `_archive/`**（SETTINGS-PANEL(-2)/PROXY-ROW/REORG/SUBMODEL-SHELL/MODEL-PICKER-UNIFY + COVERAGE-GAPS 对 + SLEEP-REMOVAL 对 + webview-input-lag）并更新登记；整文件单行 demux 为多行 markdown；归属规则加**规则 6（文档人类可读防复发）**——配 `scripts/check-doc-width.mjs` 批量检查。
 - 2026-09-08：DOC-REORG 第 2 批——`RESPONSES-TRANSPORT.md` 并入新建 `PROVIDER.md`（板块 Provider/transport），README 登记行同步（原 Responses 行改为 PROVIDER 行）
 - 2026-09-08：DOC-REORG-VSC 第 7 批——新板块登记：Webview 前端/消息协议（WEBVIEW，VSC 独有无 CLI 对应），自 ARCHITECTURE §11+§12 迁出（消息协议并入）。

@@ -1,8 +1,9 @@
 # VSC live 块 UX（流式跟滚 + 高度）· 批次记录（2026-09-11）
 
-> 搬迁注记：本档自 CLI 仓 `thincoder/docs/batches/2026-09-11-VSC-LIVE-UX.md` 迁入本仓 `docs/batches/`（LEDGER-SELF-CONTAINED 批——实施面全在本仓的批档物理迁移，档名不变、文字逐字；源档 blob SHA = 7a4105c7c88a · 源提交 = cfcc621）。
+> 搬迁注记：本档自 CLI 仓 `2026-09-11-VSC-LIVE-UX（CLI 仓）` 迁入本仓 `docs/batches/`（LEDGER-SELF-CONTAINED 批——实施面全在本仓的批档物理迁移，档名不变、文字逐字；源档 blob SHA = 7a4105c7c88a · 源提交 = cfcc621）。
 
 > 六段 append-only，一段一作者。编制：主 agent · 2026-09-11 23:33 · 来源 = 用户 23:29 实测（live 块内容不跟随流式滚动须手动滚 + live 块高度 100→60）。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -23,14 +24,14 @@
 | # | 事实 | 证据 |
 |---|---|---|
 | 1 | 高度源 = 两处 CSS | `webview/chat.css:318`（`.advisor-content { max-height: 100px; overflow-y: auto; … }`）+ `:468`（`.advisor-block.sub-block .advisor-content { max-height: 100px; }`）；`:465-467` 注释记载「2026-09-05 用户设定：advisor/subagent 均 100px——内容完整、内部滚动」 |
-| 2 | 钉底模式已有两处先例（语义对齐基准） | `webview/ui.js:450`（messages 面 `scrollTop = Number.MAX_SAFE_INTEGER`）· `webview/streaming.js:49`（reasoning `scrollTop = scrollHeight`；`:27` 注释记 per-chunk scrollTop 强制同步布局的代价） |
+| 2 | 钉底模式已有两处同款（语义对齐基准） | `webview/ui.js:450`（messages 面 `scrollTop = Number.MAX_SAFE_INTEGER`）· `webview/streaming.js:49`（reasoning `scrollTop = scrollHeight`；`:27` 注释记 per-chunk scrollTop 强制同步布局的代价） |
 | 3 | live 块内容区**无任何跟滚消费点** | grep `scrollTop`/`scrollIntoView` 于 `webview/*.js`：`.advisor-content` 相关零命中；`activity-view.js:69` 只读 content 做 tailLines（`:71-77`） |
 | 4 | 内容更新路径 | `activity-view.js` `refreshBlock`（摘要重建）+ 内容追加面（块内 `.advisor-content` 子元素追加）——具体追加点实现面由设计定 |
 | 5 | 区级 pin 已存在（今日活动区批） | 活动区 `_pinActivity`/`maybeScrollActivity`（32vh 区自滚 + 钉底跟新块）——**块级跟滚与区级 pin 的叠加关系须在设计写清**（外层区 / 内层块各管什么） |
 
 ### 设计约束（评审会查）
 
-- **先例对齐**：跟滚语义照既有钉底模式（`ui.js`/`streaming.js` 同族）与活动区批的 `maybeScrollActivity`（近底判定 + wheel/touch 让位）——不新造第三种模式。
+- **既有形态对齐**：跟滚语义照既有钉底模式（`ui.js`/`streaming.js` 同族）与活动区批的 `maybeScrollActivity`（近底判定 + wheel/touch 让位）——不新造第三种模式。
 - **语义边界**：折叠态（details 关闭）不产生滚动副作用；tail-3 摘要面（`refreshBlock`）行为零变。
 - **机验**：跟滚行为可测（追加后钉底；手动上滚后追加不回弹；近底恢复后复钉）+ 高度 60 的 CSS 断言——用例落 `test/activity-flow.test.mjs` 同族（designer 定）。
 - **单端**：VSC 端独有面（CLI 无 live 块 UI）——CLI 零改动。
@@ -45,13 +46,12 @@
 
 ## §2 批次任务（eng-designer 写）
 
-_（待写——eng-designer）_
 
 ---
 
 **状态：任务书就绪**（2026-09-11——需求 + 设计 + 测试三层已落档；待设计评审）。实施者 = eng-coder（设计 token 门）。本 §2 = coder 任务书本体（不另写副本；契约逐字 / 用例全文 / AC 判据在设计档各节，本段只做任务书 + 口径锚）。
 
-**落档位置**：需求 = CLI 仓 `docs/requirements/AGENT-LOOP.md` §14（F-LU1/F-LU2 + N-LU1~N-LU3——本批新增）· 设计 + 测试 = VSC 仓 `docs/design/WEBVIEW.md` **§13**（§13.1–§13.9：现场核实 / 选型 / 契约 C-LU1..C-LU5 / 决策 D-LU1..D-LU6 / 用例 T-LU1..T-LU6 / AC-LU1..AC-LU7）+ §12.3 第 6 条高度句改指 + 变更记录顺延 §14（节号 sweep 已在位）。
+**落档位置**：需求 = `AGENT-LOOP（CLI 仓·需求）` §14（F-LU1/F-LU2 + N-LU1~N-LU3——本批新增）· 设计 + 测试 = VSC 仓 `docs/design/WEBVIEW.md` **§13**（§13.1–§13.9：现场核实 / 选型 / 契约 C-LU1..C-LU5 / 决策 D-LU1..D-LU6 / 用例 T-LU1..T-LU6 / AC-LU1..AC-LU7）+ §12.3 第 6 条高度句改指 + 变更记录顺延 §14（节号 sweep 已在位）。
 
 ### 一、覆盖条目（本批条目 = 设计回指 = 需求档条目；三方一致清单）
 
@@ -79,7 +79,7 @@ _（待写——eng-designer）_
 
 **不动面（零碰——反断言）**：`webview/ui.js`（492 近 500 硬限）· `webview/activity-view.js` · `webview/state.js` · `webview/index.html` · `webview/base.css` · `locales/**` · `test/helpers/webview-env.mjs`（fixture 已具） · `test/activity-flow.test.mjs`（近满——零追加）。
 
-**拆分评审注**：activity.js 328→~354 越 300 软线、<500 硬限——不拆（增量 = 2 小函数 + 1 行调用 + 头注——理由见设计 §13.4 D-LU3）；ui.js 近硬限——本批零碰；测试独立新档（activity-flow 486 近满——「不再追加」先例）。
+**拆分评审注**：activity.js 328→~354 越 300 软线、<500 硬限——不拆（增量 = 2 小函数 + 1 行调用 + 头注——理由见设计 §13.4 D-LU3）；ui.js 近硬限——本批零碰；测试独立新档（activity-flow 486 近满——「不再追加」口径）。
 
 **不入 files**：`docs/**`（设计者 + 父侧写域）· CLI 仓一切文件（本批 VSC 单端——需求档 §14 除外，设计者已落）· `docs/TODO.md` / `CHANGELOG.md`（父侧）。
 
@@ -104,15 +104,15 @@ _（待写——eng-designer）_
 
 ### 修正轮同步（2026-09-12——设计评审轮次 1 后；本追加与上文本冲突时以本追加为准）
 
-**背景**：设计评审轮次 1 VERDICT = pass（🔴 0 · 🟡 1 · 🔵 2——发现表见 §3 轮次 1）。父侧裁定：🟡#1 + 🔵#2 落修；🔵#3（跨仓引用形态）**Deferred**——登记不改（与 §12.6 先例同形、无实际违规；后续文档清扫批统一）。本轮 = 修正轮（**只改文档、不碰实现**；未新建档；`src/**` 零改动、未 commit、未发起评审——待父侧核验）。
+**背景**：设计评审轮次 1 VERDICT = pass（🔴 0 · 🟡 1 · 🔵 2——发现表见 §3 轮次 1）。父侧裁定：🟡#1 + 🔵#2 落修；🔵#3（跨仓引用形态）**Deferred**——登记不改（与 §12.6 同形、无实际违规；后续文档清扫批统一）。本轮 = 修正轮（**只改文档、不碰实现**；未新建档；`src/**` 零改动、未 commit、未发起评审——待父侧核验）。
 
 **落点（逐条——设计档 `WEBVIEW（VSC 仓）§13`；行号 as-of 落修后 2026-09-12）**：
 
 | # | 级别 | 落点 |
 |---|---|---|
-| 1 | 🟡 | §13.7 AC-LU6（L1331-1333）补扩展端反断言——`src/extension/**` 零改动（扩展端协议与实现零改——`git status` 机检；修正轮 #1）；需求 §14.4「不动扩展端协议与实现」对位（先例 NFR-J1 / AC-R7） |
+| 1 | 🟡 | §13.7 AC-LU6（L1331-1333）补扩展端反断言——`src/extension/**` 零改动（扩展端协议与实现零改——`git status` 机检；修正轮 #1）；需求 §14.4「不动扩展端协议与实现」对位（同款 NFR-J1 / AC-R7） |
 | 2 | 🔵 | §13.4 D-LU6（L1287）与设计档变更记录 sweep 行（L1360）「§1 沿革行」标签订正为「§2 沿革行」（修正轮 #2——沿革行实位 §2、零语义）；变更记录新增修正轮条目（L1353-1356） |
-| 3 | 🔵 | 跨仓引用形态未改——**Deferred 登记**（父侧裁定；后续文档清扫批统一；与 §12.6 先例同形、无实际违规） |
+| 3 | 🔵 | 跨仓引用形态未改——**Deferred 登记**（父侧裁定；后续文档清扫批统一；与 §12.6 同形、无实际违规） |
 
 **任务书侧同步（修正轮 #1 直出）**：AC-LU6 执行面 = 本 §2「四、验收标准」AC-LU6 行原判据 + `src/extension/**` 零改动机检（VSC 仓工作树该路径零改动；判据全文 = 设计 §13.7）；机检结果随交付报告。
 
@@ -120,7 +120,6 @@ _（待写——eng-designer）_
 
 ## §3 设计评审（评审子代理写）
 
-_（待写——评审子代理）_
 
 ---
 
@@ -128,15 +127,15 @@ _（待写——评审子代理）_
 
 设计评审（VSC-LIVE-UX——需求 §14 / WEBVIEW §13 跟滚 + 高度 100→60）
 
-评审范围：thincoder/docs/requirements/AGENT-LOOP.md §14 + VSC 仓 WEBVIEW.md 的 §13（新节 + §12.3 第 6 条改指 + 节号 sweep + 变更记录 §14）。〔父侧修正引用形态（V1）2026-09-12〕。证据核验（实测）：§13.1 全部 file:line 引用在位（streaming.js:26-27/43/56-62/59-60/239-248 · ui.js:448-456/460-463/481-491 · chat.css:317-326/465-468）；
+评审范围：AGENT-LOOP（CLI 仓·需求）§14 + VSC 仓 WEBVIEW.md 的 §13（新节 + §12.3 第 6 条改指 + 节号 sweep + 变更记录 §14）。〔父侧修正引用形态（V1）2026-09-12〕。证据核验（实测）：§13.1 全部 file:line 引用在位（streaming.js:26-27/43/56-62/59-60/239-248 · ui.js:448-456/460-463/481-491 · chat.css:317-326/465-468）；
   受影响文件行数逐档抽检一致（activity.js 328 · streaming.js 249 · chat.css 477 · ui.js 492 · activity-flow 486 · files.mjs 72）；「.advisor-content 唯一 scrollTop 写点」grep 实证；happy-dom 20.11.2 rAF = setImmediate（BrowserWindow.js:2089-2140）→「until 轮询等帧」可行；
-  geometry 桩/超值断言/WheelEvent 均有既有先例（activity-flow.test.mjs:241-268）；新档未落地、webview 无 _subScrollDirty/initBlockFollow/maybeScrollBlock（设计先行成立）；无既有测试锁 100px（AC-LU6 零回归前提成立）；两仓触碰档 check-doc-width 宽度/V1/V2 风险面逐项核过。
+  geometry 桩/超值断言/WheelEvent 均有既有同款（activity-flow.test.mjs:241-268）；新档未落地、webview 无 _subScrollDirty/initBlockFollow/maybeScrollBlock（设计先行成立）；无既有测试锁 100px（AC-LU6 零回归前提成立）；两仓触碰档 check-doc-width 宽度/V1/V2 风险面逐项核过。
 
 | # | Category | Severity | Issue | Suggestion |
 |---|----------|----------|-------|------------|
-| 1 | Acceptance criteria | 🟡 | AC-LU6 只机检 CLI 仓代码 diff 空；需求 §14.4「不动扩展端协议与实现」无对应反断言（§12 先例 NFR-J1/AC-R7 有 extension 端 git diff 空） | AC-LU6 或 §13.5 不动面补「`src/extension/**` 零改动」机检一句 |
+| 1 | Acceptance criteria | 🟡 | AC-LU6 只机检 CLI 仓代码 diff 空；需求 §14.4「不动扩展端协议与实现」无对应反断言（§12 同款 NFR-J1/AC-R7 有 extension 端 git diff 空） | AC-LU6 或 §13.5 不动面补「`src/extension/**` 零改动」机检一句 |
 | 2 | Clarity | 🔵 | D-LU6（WEBVIEW.md:1287）与变更记录（:1355）把 sweep 落点写作「§1 沿革行」；该沿革行实际位于 §2（WEBVIEW.md:43——sweep 内容本身正确执行） | 标签改「§2 沿革行」 |
-| 3 | Doc-state | 🔵 | 跨仓引用「`docs/requirements/AGENT-LOOP.md` §14」按 V1 正则（反引号包裹形态）不构成段引用、无实际违规；但同 basename AGENT-LOOP.md 在本仓存在（docs/design/AGENT-LOOP.md）——形态与 README §3.7 建议形态（名称（仓别）§N）不一致，若后续去掉反引号会按错档解析 | 可选：统一为「AGENT-LOOP（CLI 仓）§14」形态（先例 §12.6 同形——不阻断） |
+| 3 | Doc-state | 🔵 | 跨仓引用「`docs/requirements/AGENT-LOOP.md` §14」按 V1 正则（反引号包裹形态）不构成段引用、无实际违规；但同 basename AGENT-LOOP.md 在本仓存在（docs/design/AGENT-LOOP.md）——形态与 README §3.7 建议形态（名称（仓别）§N）不一致，若后续去掉反引号会按错档解析 | 可选：统一为「AGENT-LOOP（CLI 仓）§14」形态（同 §12.6 同形——不阻断） |
 
 VERDICT: pass
 
@@ -154,7 +153,6 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 ---
 

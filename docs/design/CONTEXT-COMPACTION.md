@@ -4,7 +4,7 @@
 > ARCHITECTURE §10 迁出并对照 `src/compact.mjs`/`src/agent/`（原
 > `src/context.mjs` 亦在列——GIT-ASYNC L21 整文件删除后剔除）
 > 核实写全——DOC-REORG-VSC 批 6）。
-> 与 CLI `CONTEXT-COMPACTION.md` 同名对应同一"上下文压缩"机制板块——各端独立实
+> 与 `CONTEXT-COMPACTION（CLI 仓·设计）` 同名对应同一"上下文压缩"机制板块——各端独立实
 > 现，内容以本端代码为准（用户裁定：两端文档各自独立完整，不互指、不复制共享正
 > 文）。本档只写 VSC 端真实接线；CLI 端 TUI 压缩面板等差异在此不表。
 > 权威源（VS Code）：`src/compact.mjs`（压缩/降级全逻辑——
@@ -16,7 +16,7 @@
 > 装配（VS Code）：`src/extension/panel-callbacks.mjs`（onCompressStart/onCompress/
 > onCompressFail → webview `compress` 消息四态）、`webview/chat.js`（#compress-status
 > 状态行渲染）、`src/explore-distill.mjs`（轮末蒸馏）。
-> 关联：ARCHITECTURE.md（§10 源正文——ARCHITECTURE 2026-09-08 瘦身收官，源节已删）、SESSION.md（双线
+> 关联：ARCHITECTURE.md（原 §10 源正文——ARCHITECTURE 2026-09-08 瘦身收官，源节已删）、SESSION.md（双线
 > 历史/压缩落盘）、AGENT-LOOP.md（主循环调用点/安全点）、SEND-STALL-DISTILL-*
 > （蒸馏专题）。
 
@@ -134,7 +134,7 @@
 
 - repo outline：`src/repomap.mjs`（repoOutlineTool——按需工具，非回合自动注入）；
 - git 富注入（branch/commits/uncommitted）：`src/agent/setup-reminders.mjs`
-  collectGitContext/pushGitContext（async——GIT-ASYNC L21——见 SESSION.md §11.1/§10）；
+  collectGitContext/pushGitContext（async——GIT-ASYNC L21——见 SESSION.md §10）；
 - editor/机器注入：`src/extension/editor-context.mjs` + setup-reminders pushInjections。
 
 ## 变更记录（GIT-ASYNC L21——2026-09-09）

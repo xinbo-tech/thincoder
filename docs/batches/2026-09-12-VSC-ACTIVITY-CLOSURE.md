@@ -1,9 +1,10 @@
 # VSC 活动区收口（清退+落流 · digest 可读性 · 待消化提示）· 批次记录（2026-09-12）
 
-> 搬迁注记：本档自 CLI 仓 `thincoder/docs/batches/2026-09-12-VSC-ACTIVITY-CLOSURE.md` 迁入本仓 `docs/batches/`（LEDGER-SELF-CONTAINED 批——实施面全在本仓的批档物理迁移，档名不变、文字逐字；源档 blob SHA = cdd0739ca68e · 源提交 = cfcc621）。
+> 搬迁注记：本档自 CLI 仓 `2026-09-12-VSC-ACTIVITY-CLOSURE（CLI 仓）` 迁入本仓 `docs/batches/`（LEDGER-SELF-CONTAINED 批——实施面全在本仓的批档物理迁移，档名不变、文字逐字；源档 blob SHA = cdd0739ca68e · 源提交 = cfcc621）。
 
 > 六段 append-only，一段一作者。编制：主 agent · 2026-09-12 01:10 · 来源 = 用户走查（01:03「live 块执行完没有从子agent面板清除，digest 过程远不如 CLI 清晰」+ 01:09「1走A」+ 问「live 块等待消化时有提示吗」）。
 > 勘察 = explore#27（只读——证据见下；全文为其报告）。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -16,7 +17,7 @@
 ### 用户裁定（本批最重要的一条——反转项）
 
 **A 方案获批**（01:09「1走A」）：**终态块出活动区、内容进会话流**（= CLI 语义）。此为对既有裁定的**反转**——须在设计/需求两层明确修订（**不得静默**）：
-- `thincoder/docs/requirements/AGENT-LOOP.md:414` §12 F-J3（「冻结块去向 = 区内原地保留（R3）…不做落流…不做折后即移除」）；
+- `docs/requirements/AGENT-LOOP.md:414`（CLI 仓） §12 F-J3（「冻结块去向 = 区内原地保留（R3）…不做落流…不做折后即移除」）；
 - VSC `docs/design/WEBVIEW.md` §12.2 Q1（:1013-1017）候选 2/3 否决 + D-A1（:1088）+ §12.4（:1078-1079「DOM move 落流 / 冻结插入锚链不复活」）。
 - **设计要求**：给出**干净机制**（不是旧 DOM-move 锚链复活）——§12.4 那条禁令的「机制本体」须被正面回答（新机制 = 什么、为何不构成旧链）。
 
@@ -63,13 +64,12 @@
 
 ## §2 批次任务（eng-designer 写）
 
-_（待写——eng-designer）_
 
 ---
 
 **状态：任务书就绪**（2026-09-12——需求+设计+测试三层已落档；待设计评审）。实施者 = eng-coder（设计 token 门）。本 §2 = coder 任务书本体（不另写副本）。
 
-**落档位置**：需求源 = 本批 §1（用户走查五连——含 A 方案反转裁定）+ CLI 仓 `docs/requirements/AGENT-LOOP.md` §16
+**落档位置**：需求源 = 本批 §1（用户走查五连——含 A 方案反转裁定）+ `AGENT-LOOP（CLI 仓·需求）` §16
 （F-R1..F-R6；§12 F-J1/F-J3/F-J6 已随修订）；设计与测试 = VSC 仓 `docs/design/WEBVIEW.md` **§14**（§14.1–§14.10）
 + §2/§3/§5/§5.1.4/§5.1.7/§5.1.9/§6/§7.4/§12 修订 + 变更记录 §15；机制面（挂起 UI / 中止语义）= VSC 仓
 `docs/design/AGENT-LOOP.md` §1/§7/§10 + 变更记录；沿革三指针（`SESSION-ACTIVITY-REVISED.md` / `ACTIVITY-REWRITE-SIMPLE.md` /
@@ -86,7 +86,7 @@ _（待写——eng-designer）_
 | R5 | Send 可见性 | §14 C-14 · §14.2 M4 | T-CL20 | AC-CL5 |
 | R6 | 状态行字段级对齐 | §14 C-15 表 · §14.2 M3/M5 | T-CL21..T-CL24 | AC-CL6 |
 
-需求对位：CLI 仓 `requirements/AGENT-LOOP.md` §16 F-R1..F-R6（判定句逐条；§12 F-J1/F-J3/F-J6 修订注回指 §16）。
+需求对位：`AGENT-LOOP（CLI 仓·需求）` §16 F-R1..F-R6（判定句逐条；§12 F-J1/F-J3/F-J6 修订注回指 §16）。
 
 ### 二、影响文件全清单（as-of 2026-09-12 实测；行数口径 = `split("\n").length` 含末行）
 
@@ -246,7 +246,6 @@ V3 新增 1 条（`2026-09-12-VSC-CHILD-PERMISSION.md` §3——他批）——�
 
 ## §3 设计评审（评审子代理写）
 
-_（待写——评审子代理）_
 
 ---
 
@@ -258,12 +257,12 @@ _（待写——评审子代理）_
 |---|----------|----------|-------|------------|
 | 1 | Document ownership | 🔴 | §12 反转注标注清单不完整——三处未标注 §12 旧文与 §14 新契约直接矛盾：① §12.3#9（WEBVIEW.md:1087-1088）「防御孤儿清（选择器改全类 `.sub-block`——含折叠）」「`freezeLiveBlocks` 原地折叠不变」vs §14 C-7（:1499-1501）「防御清扫限定 `ctx.activityEl` 后代……流内归档块不动」与 C-8（:1503-1504）「区全体归档」；② D-A7（:1116）「`trimOldMessages` 零改」vs §14.6 ui.js 行（:1628）「`trimOldMessages` 选择器 + `.sub-block`」/T-CL9（:1682）；③ AC-R1（:1192）「`#messages` 内 `.sub-block` 计数 == 0」vs §2（:38-41）「`#messages` 内 `.sub-block` = 归档块」/C-3（:1481-1485）。§12 修订注明文清单（:1016 起）未列三者；需求侧 F-J1 已把「`#messages` 零 `.sub-block`」限缩为区驻留期——设计侧 §12.8 未同步 | 把 §12.3#9（两句）、D-A7、AC-R1 补入 §12 修订注清单并就地加 2026-09-12 修订注（#9 → C-7/C-8；D-A7 → T-CL9；AC-R1 → 采样限定「区驻留期/出生时刻」）；顺带 AC-R2（:1194-1195）注明「折叠原地」采样点=折叠时刻 |
 | 2 | Clarity / Doc state | 🟡 | VSC `docs/design/AGENT-LOOP.md`「未决/待办状态行」（:28-30）「live 头缺逐轮 turn 段……不擅建……无跟进计划」将被本批 C-11③（WEBVIEW.md:1520）履行，但批次文档域（WEBVIEW.md:1663-1664）仅列 §1/§7/§10——该行不在写域，交付后成失效悬空句；同族失效注释另在 `src/agent-tools/subagent-run.mjs:136-139`（「逐轮跳动需新通道——不建」） | 把该未决行（标注「已履行/收口」）与 subagent-run 注释的更新补入写域（实现行不改语义） |
-| 3 | Document ownership | 🟡 | WEBVIEW §7.2（:401-414——自述「本架构权威源：扩展机制消息族清单」）不在本批文档域（:1663-1666）；批后其行失真：`subagent`（:406）缺 `status:"turn"`、`digest`（:410）缺 `status:"cap"`、`toolPanel`（:405）缺 `tool/cmd`、`onAgentTurn`（:414「顶层无订阅 no-op」）将被推翻，且 `statusText`/`turnFrame` 两新消息无行（先例：第 21 批为 `digest` 补行） | 将 §7.2 补入文档域并同步五行（四改 + 两增——只增不改口径） |
+| 3 | Document ownership | 🟡 | WEBVIEW §7.2（:401-414——自述「本架构权威源：扩展机制消息族清单」）不在本批文档域（:1663-1666）；批后其行失真：`subagent`（:406）缺 `status:"turn"`、`digest`（:410）缺 `status:"cap"`、`toolPanel`（:405）缺 `tool/cmd`、`onAgentTurn`（:414「顶层无订阅 no-op」）将被推翻，且 `statusText`/`turnFrame` 两新消息无行（同款：第 21 批为 `digest` 补行） | 将 §7.2 补入文档域并同步五行（四改 + 两增——只增不改口径） |
 | 4 | Feasibility / Clarity | 🟡 | C-11④（:1521）「elapsed 定时刷新：panels `_panelTimer`（既有 2s）同点调 `refreshLiveHeaders()`」——既有定时器回调带门 `if (S._turnState === "running")`（`webview/panels.js:68`）；挂起纯池跑（state=susp——live 块后台运行主场景）不在门内，同点接入将致块头 elapsed 冻结（R4「elapsed 定时刷新」落空） | 明示刷新门（如 running || susp）或不设门（仅刷块头），并在 T-CL19 注明 |
 | 5 | Clarity / Risk | 🟡 | C-5③（:1493-1494）接管「其回收消息将路由到新块——登记已知歧义同 §5.1.4 第 5 条」：该登记只涵盖「迟到 chunk 落进新块」；在 awaiting 新语义下，旧代滞留回收 `done` 命中新代 live 块时按 C-1②/C-5①（:1471-1473/:1491）将被折叠 + 即时归档——新代块提前终止、其后 chunk 被冻结守卫吞掉（失明面大于登记所述） | 把后果写全进注册句（或 §5.1.4 第 5 条）；更强防御（接管时记「旧代待回收」吞该 done）评估后登记 |
-| 6 | Acceptance criteria | 🟡 | 测试域（:1651-1656）对四个被改写测试档只给现行行数未给预计增量（activity-flow 486 无 `≤±N`；digest-visibility 147、async-visibility 402、webview-turnstate 292 同）；activity-flow 距 500 线仅 14 行，改写后是否越线不可判（评审准则 #8 要求逐档标注 delta） | 逐档补 `≤±N`（测试档拆分沿用登记先例）；若 activity-flow 预计越 500，注明处置口径 |
-| 7 | Document hygiene | 🔵 | §14.6 表头计数「webview（8 改）」（:1618——表内 10 行，locale 行含 2 档）与「extension / provider（9 改）」（:1633——表内 13 行）与行数不符 | 改实计数（10 行 / 13 行）或注明计数口径；先例 §12.6「12 改 = 9 源 + 3 测试」、§17.6「15 档 = 源档 12 + 测档 3」 |
-| 8 | Acceptance criteria | 🔵 | C-12 六项增量的 host 发射点（panel-chat cap 两调用 · panel-callbacks onWait/onAgentTurn/reasoning · panel-index 索引进度 · 四生产者 tool/cmd）在测试域无显式机判用例（webview 侧经注入缝覆盖） | 在设计/AC 注明 host 面覆盖归属（如 digest-visibility 改写含 host cap 发射）或补桩面板直驱小用例（先例 digest-visibility T-D1–T-D3） |
+| 6 | Acceptance criteria | 🟡 | 测试域（:1651-1656）对四个被改写测试档只给现行行数未给预计增量（activity-flow 486 无 `≤±N`；digest-visibility 147、async-visibility 402、webview-turnstate 292 同）；activity-flow 距 500 线仅 14 行，改写后是否越线不可判（评审准则 #8 要求逐档标注 delta） | 逐档补 `≤±N`（测试档拆分沿用登记口径）；若 activity-flow 预计越 500，注明处置口径 |
+| 7 | Document hygiene | 🔵 | §14.6 表头计数「webview（8 改）」（:1618——表内 10 行，locale 行含 2 档）与「extension / provider（9 改）」（:1633——表内 13 行）与行数不符 | 改实计数（10 行 / 13 行）或注明计数口径；同口径 §12.6「12 改 = 9 源 + 3 测试」、§17.6「15 档 = 源档 12 + 测档 3」 |
+| 8 | Acceptance criteria | 🔵 | C-12 六项增量的 host 发射点（panel-chat cap 两调用 · panel-callbacks onWait/onAgentTurn/reasoning · panel-index 索引进度 · 四生产者 tool/cmd）在测试域无显式机判用例（webview 侧经注入缝覆盖） | 在设计/AC 注明 host 面覆盖归属（如 digest-visibility 改写含 host cap 发射）或补桩面板直驱小用例（同款 digest-visibility T-D1–T-D3） |
 
 **核验记录**：三档全文已读；行数抽检 20 档全部与设计标注相符（activity.js=354 · ui.js=492 · chat.js=355 · panel-chat.mjs=499 · panel-callbacks.mjs=186 · suspension.mjs=363 · status-bar.js=76 · loading.js=61 · panels.js=138 · history.js=89 · activity-view.js=157 · panel-toolpanel.mjs=21 · base.css=448 · locales=248 ·
   consult.mjs=474 · provider.mjs=424 · panel-index.mjs=183 · subagent-run.mjs=190 · activity-flow.test.mjs=486 · digest-visibility.test.mjs=147）；C-4 边界机制与 `suspension.mjs` 实际消息序（reclaim 在 postSuspension 之前）核对为可行（无 findings）。
@@ -305,7 +304,6 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 ---
 
@@ -358,7 +356,7 @@ _（待写——eng-coder）_
 **三、偏差披露（透明表）**
 1. **越表写域**：`webview/streaming.js`（§14.6 未列）——改动 = 头/尾注释同步 + `noteChunk(block, kind, text, m)` 传参一行（C-11① 结构化 tool/cmd 上下行必需；`toolPanel` 消息→`noteChunk` 是唯一通路）。已披露。
 2. **未触碰 `webview/state.js`**（守 D1 写域）：三个跨模块 S 字段 `_digestBoundary`/`_turnFrame`/`_statusText` 以动态属性挂载（读面 falsy 安全）；「S 字段集中声明」惯例落差 = 协调项上报（父侧/设计者）。
-3. **i18n 记法**：C-16 表占位符 `{n}` 为简写，落档为 `${n}`（本端引擎仅认 `${k}`；既有 `digest.*` 同族先例——照抄 `{n}` 会向用户显示字面占位符）。
+3. **i18n 记法**：C-16 表占位符 `{n}` 为简写，落档为 `${n}`（本端引擎仅认 `${k}`；既有 `digest.*` 同族同口径——照抄 `{n}` 会向用户显示字面占位符）。
 4. **行数偏差**：见上表（activity.js +52、panel-callbacks +21、digest-visibility/activity-closure/webview-turnstate 微越自设目标）；无 500 硬限违反。
 5. **既有红/环境面**：`test/context-parity.test.mjs` T-CI-2a = 他批在飞（prompt 两态装配断言与现行提示词不符）——非本批域，不动。
 

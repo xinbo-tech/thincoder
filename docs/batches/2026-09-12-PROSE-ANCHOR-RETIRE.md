@@ -2,7 +2,8 @@
 
 > 六段 append-only，一段一作者。编制：主 agent · 2026-09-12 04:26 · 来源 = 用户 2026-09-12 04:09–04:11 裁定（散文锚一律不做）+ 04:26 指示「批次档 cli/vscode 各一份」。
 
-> **本档性质**：本批的 **VSC 仓侧记录**——同批 CLI 仓侧记录住 CLI 仓 `docs/batches/2026-09-12-PROSE-ANCHOR-RETIRE.md`。两侧**各持自身范围**；互引形态由本批设计裁定。
+> **本档性质**：本批的 **VSC 仓侧记录**——同批 CLI 仓侧记录 = 批档 `2026-09-12-PROSE-ANCHOR-RETIRE（CLI 仓）`（父侧授权代改 2026-09-12——形态规范化；段作者笔迹仅此一处替换）。两侧**各持自身范围**；互引形态由本批设计裁定。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -64,7 +65,7 @@
 | 裁定同源 | 两侧对 R1–R5 的**语义**是否同一——不得一侧禁、一侧放行 |
 | 判据同一 | 「什么算散文锚」的判据三条 + 边界对照表两侧同口径；保留面（结构机检）两侧一致 |
 | 边界同形 | 范围外 / 端差处置两侧一致 |
-| **端差显式** | 允许的端差**是否逐条登记**（本仓 `docs/design/README.md` 「镜像差异表」先例 · `AGENT-LOOP.md:607` N-CL4「端差逐条登记不静默」）——**静默的端差 = 漂移，不得放过** |
+| **端差显式** | 允许的端差**是否逐条登记**（判据 = `AGENT-LOOP.md:607` N-CL4「端差逐条登记不静默」；本仓 `docs/design/README.md` 载镜像差异表——仅作插图，非依据）——**静默的端差 = 漂移，不得放过** |
 
 **核验时点**：两侧设计均落档后、**评审前预检**（A3）内执行；核验结论连同差异表随「设计就绪待评审」一并报用户。
 
@@ -90,7 +91,7 @@
 
 | # | 位置 | 违规 |
 |---|---|---|
-| 1 | `thincoder/docs/requirements/TESTING.md:105`（F16） | 写「CLI + VSC **两仓同批**」= **CLI 仓需求档代 VSC 立规** |
+| 1 | `TESTING（CLI 仓·需求）:105`（F16） | 写「CLI + VSC **两仓同批**」= **CLI 仓需求档代 VSC 立规** |
 | 2 | 本批 VSC 侧需求**无本仓落点** | `thincoder-vscode/docs/design/TESTING.md:97` 自述「需求现指 CLI 侧档（**已登记依赖——未消解**）」；`:268` 变更记录同述 |
 | 3 | 父侧处置 | 把它登记为「已登记依赖——未消解」推给对齐轮 = **拿「以后再说」躲事**——与 R1/R6/R7 冲突，**用户否决该处置** |
 
@@ -116,14 +117,13 @@
 
 ### 范围外
 
-- CLI 仓侧范围（见 CLI 仓 `docs/batches/2026-09-12-PROSE-ANCHOR-RETIRE.md`）；
+- CLI 仓侧范围（见 `2026-09-12-PROSE-ANCHOR-RETIRE（CLI 仓）`）（父侧授权代改 2026-09-12——形态规范化；段作者笔迹仅此一处替换）；
 - 台账 / 批档 / 需求档的各仓自持（并行批 LEDGER-SELF-CONTAINED）。
 
 ---
 
 ## §2 批次任务（eng-designer 写）
 
-_（待写——eng-designer）_
 
 ---
 
@@ -191,7 +191,7 @@ _（待写——eng-designer）_
 | **合计（27 档）** | **7542** | **319** | **61** | **40** | **−821** |
 
 - 合计行口径：行数 / 用例数列 = 上述 27 档之和（非全 suite）；用例数 = `test(` / `slow(` / `it(` 起始行计数。
-- 档位（R24）：本批**只减不增**。两档存量越 500 硬限——`prompts-async-guidance` 535 → 预计净减 −288 ≈ 247（回落 500 内）；`child-permission` 533 → 预计净减 −27 ≈ **506，仍越 500 硬限**——**不拆档**（拆档破坏清单集中度，与既有削段先例一致）→ **登记存量债**：归属 = 后续批次，随该档下次触碰出拆分计划（执行轮实测回填）。
+- 档位（R24）：本批**只减不增**。两档存量越 500 硬限——`prompts-async-guidance` 535 → 预计净减 −288 ≈ 247（回落 500 内）；`child-permission` 533 → 预计净减 −27 ≈ **506，仍越 500 硬限**——**不拆档**（拆档破坏清单集中度，与既有削段口径一致）→ **登记存量债**：归属 = 后续批次，随该档下次触碰出拆分计划（执行轮实测回填）。
 - `test/files.mjs`（登记清单）：**零改**——现行 63 条登记项（62 档 `.test.mjs` + 1 档 `test/smoke-settings.mjs`），本批无整档删除（27 档每档均有保留用例），登记项与实档数不变（`docs/design/TESTING.md` §8.2）。
 
 **提示词面**（写权 = 主 agent 内容权 + eng-coder 落笔；与并行批同两档、不同节位）：
@@ -257,19 +257,28 @@ node -e "const fs=require('fs'),p='test';let n=0;for(const f of fs.readdirSync(p
 
 ## §3 设计评审（评审子代理写）
 
-_（待写——评审子代理）_
+### 轮次 1（评审子代理）——本端转写（父侧）
+
+> **父侧转写并打标（2026-09-12）**：本批评审实例**绑定 CLI 侧记录**（`2026-09-12-PROSE-ANCHOR-RETIRE（CLI 仓）§3`——轮次 1–2 的发现表与 VERDICT **逐字在彼**；**凭证值不落档**）。
+>
+> 本端**结论**：**轮次 2 = pass**（🔴 0 · 🟡 4 · 🔵 3 非阻断——已逐条处置）；本端需求档 `docs/requirements/TESTING.md` 同批建档；§6 收口 = VSC 快层 653→592（−61）。
+>
+> **转写性质**：本端**非工具直写**（评审绑定在 CLI 侧记录）——本块仅为 V3 轮次行形态补齐；**实质以上述 CLI 侧 §3 为准**。
 
 ---
 
 ## §4 用户批准（主 agent 记）
 
-_（待写——主 agent）_
+**2026-09-12**（散文锚退役方向——裁定见本档 §1；本端 = 对位执行面）。
+
+- **批准范围**：VSC 侧散文锚退役（源档端差段退役 + 守恒锁 + 快层 653→592）；**不扩面**（不触 `src/**` 语义、不动 `_archive`）。
+- **评审链**：advisor 设计评审（轮 1–2）**pass**（结论见 §3；**凭证值不落档**）。
+- **执行**：eng-coder 实施（详见本档 §5 与 `2026-09-12-PROSE-ANCHOR-RETIRE（CLI 仓）§5`）。
 
 ---
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 ---
 
@@ -293,7 +302,7 @@ _（待写——eng-coder）_
 |---|---|---|
 | 1 | **child-permission 对拍行**（原 :531，清单外）：T-CP18 中「guard-completion 源读改指新档」断言的操作数 = `readSrc("../src/agent/tool-gates.mjs")` 字面串，已由本批 advisor-guard-completion T-VG19 段删（178-180）移除——保留即恒红且成死代码（实证：`readSrc`/`tool-gates` 在 guard-completion 现零出现） | **最小一致性修正：删该行**（T-CP18 其余断言与用例名保留；档头 :12-13 注记）。来源 = 清单内部两行机械冲突（执行轮发现）；若父侧裁定重开修正轮，可回退重议 |
 | 2 | T-TD-3 段删（66-72）后计数断言保留需求 | 循环体改写为直接计数（`descHits += lines.filter(...)`），保留断言行 `descHits === 25` 保持绿（结构性计数 = 设计保留项） |
-| 3 | 档头注释/退役注记同步（注释面非断言面；同类先例 = 2026-09-11 削段注记） | 各档头加 `PROSE-ANCHOR-RETIRE` 注记与枚举更正；含 child-permission 手法句去「R2 文档锚」、advisor-context-budget 头改 T-CB1–T-CB5、index-perception 注记去已删标识符、prompts-async-guidance 降级链注释更正 |
+| 3 | 档头注释/退役注记同步（注释面非断言面；同类同款 = 2026-09-11 削段注记） | 各档头加 `PROSE-ANCHOR-RETIRE` 注记与枚举更正；含 child-permission 手法句去「R2 文档锚」、advisor-context-budget 头改 T-CB1–T-CB5、index-perception 注记去已删标识符、prompts-async-guidance 降级链注释更正 |
 | 4 | 存量孤儿（**HEAD 实测均为既有——先于本批**） | `flushSubagentOutbox`(async-visibility) / `read`(eng-designer-role) / `snapshot`(index-perception) / `discoverFamily`·`detailScans`·`findProject`(ledger) / `INLINE_KEPT`(tool-descriptions)——按「清单外零触碰」未动，登记为后续 hygiene 项 |
 
 **审计与代码评审轮次与终态**：

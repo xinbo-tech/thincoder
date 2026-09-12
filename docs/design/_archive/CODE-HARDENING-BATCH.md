@@ -1,4 +1,4 @@
-> **变更史——正文冻结**（LEDGER-SELF-CONTAINED 批·2026-09-12 拆分迁入）：本档 = CLI 仓 `docs/design/_archive/CODE-HARDENING-BATCH.md` 的**本仓份拆出承载档**
+> **变更史——正文冻结**（LEDGER-SELF-CONTAINED 批·2026-09-12 拆分迁入）：本档 = CLI 仓 `CODE-HARDENING-BATCH（CLI 仓）` 的**本仓份拆出承载档**
 > （拆分：该档含对端路径面——各仓持其份；文字逐字搬运、零改写；对端份留源档）。源档 blob SHA（as-of 本批）= 见交接记录。
 
 # 代码加固批（本仓份）

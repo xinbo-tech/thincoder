@@ -1,6 +1,6 @@
 # VSC 端镜像（第 1/2/4 批机制搬到 thincoder-vscode）· 批次记录（2026-09-10）
 
-> 搬迁注记：本档自 CLI 仓 `thincoder/docs/batches/2026-09-10-VSC-MIRROR.md` 迁入本仓 `docs/batches/`（LEDGER-SELF-CONTAINED 批——实施面全在本仓的批档物理迁移，档名不变、文字逐字；源档 blob SHA = 8778288e05ba · 源提交 = 05d0946）。
+> 搬迁注记：本档自 CLI 仓 `2026-09-10-VSC-MIRROR（CLI 仓）` 迁入本仓 `docs/batches/`（LEDGER-SELF-CONTAINED 批——实施面全在本仓的批档物理迁移，档名不变、文字逐字；源档 blob SHA = 8778288e05ba · 源提交 = 05d0946）。
 
 > 六段 append-only，**一段一作者**：§1 讨论（主 agent）· §2 批次任务（eng-designer；**本批由父侧代写并打标**——本会话为 VSC 宿主，工具面只暴露 explore/plan/eng-coder，eng-designer 尚不可 spawn，正是本批要修的事）·
 > §3 设计评审（**评审子代理**——本批工具落地后用 `batch_segment` 自写，落地前由父侧代写并**打标**）· §4 用户批准（主 agent）· §5 实施记录（**eng-coder**）· §6 验证与收口（**父代理**）。
@@ -53,7 +53,7 @@
 
 | # | 现存表述 | 本批处置 |
 |---|---|---|
-| 1 | VSC `docs/design/README.md:30`「本端 14 文件…机制权威 = CLI 仓 `PROMPT-SYSTEM.md`」 | 本批建 `docs/design/prompts/` 双源 → 该句须改写（父侧登记，设计列入受影响文件） |
+| 1 | VSC `docs/design/README.md:30`「本端 14 文件…机制权威 = `PROMPT-SYSTEM（CLI 仓·需求）`」 | 本批建 `docs/design/prompts/` 双源 → 该句须改写（父侧登记，设计列入受影响文件） |
 | 2 | VSC `AGENTS.md:120`「1060+ tests / explicit file list in package.json」 | 与现状（`test/files.mjs` 28 条）口径不一致——**非本批引入**，建议以 `test/files.mjs` 为准；登记待办 |
 | 3 | VSC 无 `docs/requirements/`·`docs/batches/` 树 | 本批**只建 `docs/design/prompts/`**；V1/V2 扫描域对缺失目录跳过（待设计定）——**批次档仍落 CLI 仓 `docs/batches/`**（本档即证） |
 | 4 | 两端档位边缘：CLI `advisor-async.mjs` 恰 500 / `run.mjs` 497 | VSC 镜像新增代码前**先给档位账**（设计受影响文件表带 as-of 行数 + 增量上限） |
@@ -115,9 +115,11 @@ FR23 F1-F7 + N1-N5——逐条见 `docs/requirements/ENGINEERING-MODE.md` §1.17
 
 ## §3 设计评审（评审子代理自写）
 
-### 轮次与发现（发现摘要 / 🔴 处置——**凭证值不落档**）
+### 轮次 1（评审子代理）与发现（发现摘要 / 🔴 处置——**凭证值不落档**）
 
 > **父侧代写并打标（2026-09-11）**：本工具落地前无写入通道（`batch_segment` 未实现）——以下轮次 1 发现表由主 agent 按设计评审报告逐条转写，**每条带编号**（供设计档 §2.22 的「发现 #N」解析——轮次3 评审 #10）。
+>
+> **父侧形态更正（2026-09-12）**：本小节标题原为「轮次与发现（…）」——补轮次号以合 V3 轮次行机判（**轮次 1**）；**转写性质不变**（上注为准）。
 
 **轮次 1（设计评审，2🔴 + 8🟡 + 4🔵）**（轮次4 评审 #6：原题头误写 1🔴——表内 #1/#2 均为 🔴）
 
@@ -225,15 +227,9 @@ FR23 F1-F7 + N1-N5——逐条见 `docs/requirements/ENGINEERING-MODE.md` §1.17
 
 ### 交付透明表（Done / Simplified / Not done）
 
-_（待实施）_
-
 ### 审计与代码评审（轮次 / 终态 clean|stalled）
 
-_（待实施）_
-
 ### fix round（如有：发现 → 修复）
-
-_（待实施）_
 
 ## §6 验证与收口（父代理自写）
 
@@ -252,8 +248,6 @@ _（待实施）_
 | 面内 L0 | 面① 83/83+129/129；面② 48/48；宽度/一致性 0 新增违规 |
 
 ### 逐条验收结论（通过 / 未过 / 未做 + 理由）
-
-_（待核销）_
 
 ### 需求池核销
 

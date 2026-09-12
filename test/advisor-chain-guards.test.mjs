@@ -6,8 +6,11 @@
  * `{now, chat}` 覆写——`??` 默认回退，生产路径不可达）、零长等待（T-VG14 时钟注入零真实
  * 等待；T-VG13 形态② 真实墙定时器 ~0.1s 级）。
  * 本端自持编号（T-VG / AC-VG）——映射列回指需求条目（CLI 对位经 §13.1 对位列）。
+ * 归册（2026-09-12 收尾轮 9）：T-VG3（本地 SSE 假服务器真 IO 等待）观测 579–1855ms——
+ * slow() 门控（快层 skip、test:full 照跑）。
  */
 import { test, after } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs"
 import http from "node:http"
@@ -153,7 +156,7 @@ test("T-VG2 负向精度：非块首引用行（围栏 / 表格 / 引用）不�
   assert.equal(advisorIncompleteMarker(text), null, "非块首引用行不得判 incomplete（残余方向 fail-closed）")
 })
 
-test("T-VG3 sync 结算：时间线（含 token 回显）+ 截断尾 → 不签发（零 token 字面 + 提示 + 槽零写）", async () => {
+slow("T-VG3 sync 结算：时间线（含 token 回显）+ 截断尾 → 不签发（零 token 字面 + 提示 + 槽零写）", async () => {
   const ws = mkws()
   write(ws, "docs/design/X.md", "# X\n\nreview target\n")
   const srv = await reviewServer({ tail: TAILS.context_limit })
@@ -184,7 +187,7 @@ test("T-VG4 async 结算同结果：design entry 未完成 → 提示 + 台账�
   assert.ok(incompleteNotice("turn_cap").length > 0, "提示文本单源（compaction.mjs）")
 })
 
-test("T-VG5 正常批准零回归：干净通过 + token 回显 → 槽写入 + Approved 后缀（sync + async 两面）", async () => {
+slow("T-VG5 正常批准零回归：干净通过 + token 回显 → 槽写入 + Approved 后缀（sync + async 两面）", async () => {
   const ws = mkws()
   write(ws, "docs/design/X.md", "# X\n\nreview target\n")
   const srv = await reviewServer({ before: "All good — no findings." })

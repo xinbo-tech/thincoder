@@ -4,7 +4,7 @@
 > ARCHITECTURE §13 Memory 行展开并对照 `src/memory.mjs`/`src/memory-tool.mjs`/
 > `src/embedding.mjs`/`src/indexer.mjs`/`src/embed-config.mjs` 核实写全——
 > DOC-REORG-VSC 批 6）。
-> 与 CLI `MEMORY.md` 同名对应同一"记忆系统"机制板块——各端独立实现。**CLI 是
+> 与 `MEMORY（CLI 仓·设计）` 同名对应同一"记忆系统"机制板块——各端独立实现。**CLI 是
 > FTS5/sqlite 全文检索**，本端是**文件式 markdown + frontmatter**、无 FTS5/sqlite，
 > 配 embedding key 走向量语义检索否则关键词回退——本档写 VSC 真实实现，不表 CLI
 > 内部。
@@ -14,7 +14,7 @@
 > 已随该文件删除退役——GIT-ASYNC L21）。
 > 装配（VS Code）：`src/tools/index.mjs`（memoryTool 注册）、`src/agent-tools/`
 > 执行门禁（readonly 动作并行）、`src/extension/settings.mjs`（embedding 配置面板）。
-> 关联：ARCHITECTURE.md（§13 源行——ARCHITECTURE 2026-09-08 瘦身收官，源行已删）、AGENT-LOOP.md（工
+> 关联：ARCHITECTURE.md（原 §13 源行——ARCHITECTURE 2026-09-08 瘦身收官，源行已删）、AGENT-LOOP.md（工
 > 具调度）、TOOLS.md（readonly 分类）。
 
 ## 变更记录
@@ -23,7 +23,7 @@
   src/ 记忆模块核实写全本端独立文档（markdown 文件即真相 + embedding 向量回退）。
   ARCHITECTURE §13 不删（留后续瘦身批）。
 - 2026-09-11：第 21 批（VSC 索引面收口）——新增 §4 索引有效性面（B1–B4：模型/维度校验 ·
-  gitignored 重建触发 · 嵌套 memory 自检一致 · reason 词表）——需求 = CLI 仓 `requirements/MEMORY.md` §4。
+  gitignored 重建触发 · 嵌套 memory 自检一致 · reason 词表）——需求 = `MEMORY（CLI 仓·需求）` §4。
 - 2026-09-11：第 21 批修正轮（设计评审轮次 1——7 条落修）：契约五补删除存在性扫描 + D-I7 + §4.1-B2 代价补注 +
   T-I6/T-I10 删场景口径 + T-I9/契约八收集域 + AC-I4/AC-I5 标签 + §4.7 登记边界三。
 
@@ -279,7 +279,7 @@ manifest-only（不读 vectors.bin、不发网络）——可被状态面与提�
 | `test/index-perception.test.mjs` | **新档**（用例表 §4.5） | 新 → ~170 |
 | `test/files.mjs` | 新档登记（本批三新档合计 +3；本面 +1） | 55 → 58 |
 
-> 文档域（设计者写域——coder 零碰）：本档 §4 · CLI 仓 `docs/requirements/MEMORY.md` §4 · 两级 `docs/TODO.md` 状态推进。
+> 文档域（设计者写域——coder 零碰）：本档 §4 · `MEMORY（CLI 仓·需求）` §4 · 两级 `docs/TODO.md` 状态推进。
 
 > **档位注记（≤300 警示 / ≤500 硬限）**：`src/indexer.mjs`（326 → ~395）与 `webview/settings-tools.js`
 > （367 → ~382）为**存量超线**档——本批增量 +~69 / +~15，距 500 硬限余量充足，**本批不拆分**；无新增越线文件（~170 行测档远低于线）。

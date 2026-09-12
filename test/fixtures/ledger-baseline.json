@@ -1,13 +1,6 @@
 {
-  "note": "台账机检 L1–L4 存量基线（首跑固化：基线内 = 存量违规（报告，不阻断）；基线外 = 新增违规（fail-closed，退出码 1））。键按 (kind|档|指针/证据) 生成，不含行号——条目编辑位移不改键值；基线条目失效（被修掉）不报错。本批存量 = 归档档 3 条条目内含跨仓指针（6 处 L4）——处置逐条归主 agent（设计档 §8.2 台账改指）。",
+  "note": "台账机检存量基线——**必须保持为空**。2026-09-12（LEDGER-SELF-CONTAINED 批·阈值 = 0）：存量豁免已废——入基线 = 例外 = 违规；检查器对非空基线直接 FAIL（固定句「本基线必须保持为空」）。历史 6 键（均 L4 · 归档档·跨仓指针）处置 = 台账落笔改指本仓后自消（零命中）——逐键判定见 2026-09-12-LEDGER-SELF-CONTAINED（VSC 仓）批档 §5。",
   "generatedAt": "2026-09-12",
-  "source": "node scripts/check-ledger.mjs（首跑固化——LEDGER-SELF-CONTAINED 批 §7.1）",
-  "entries": [
-    "L4|thincoder-vscode/docs/TODO-archive.md|docs/requirements/AGENT-LOOP §9",
-    "L4|thincoder-vscode/docs/TODO-archive.md|batches/2026-09-11-VSC-ASYNC-PARITY §2",
-    "L4|thincoder-vscode/docs/TODO-archive.md|docs/requirements/AGENT-LOOP.md §12",
-    "L4|thincoder-vscode/docs/TODO-archive.md|batches/2026-09-12-VSC-ACTIVITY-CLOSURE.md §2",
-    "L4|thincoder-vscode/docs/TODO-archive.md|docs/requirements/AGENT-LOOP.md §17",
-    "L4|thincoder-vscode/docs/TODO-archive.md|batches/2026-09-12-VSC-CHILD-PERMISSION.md §2"
-  ]
+  "source": "node scripts/check-ledger.mjs（基线清零轮）",
+  "entries": []
 }

@@ -158,8 +158,8 @@ toolPanel/subagent/compress/suspension 消息族（§7）。
 
 ### 5.1 出生投递与块身份——可靠性设计（2026-09-11 第 10 批）
 
-> 需求：CLI 仓 `docs/requirements/AGENT-LOOP.md` §3（F-A1~F-A5 + NFR-A1~A3）（CLI 侧文档树）。
-> 本机一条目（条目 A）——纯 VSC 面；条目 B（后台评审池接入面）在 CLI 仓 `docs/design/AGENT-LOOP.md` §18（CLI 侧）。
+> 需求：`AGENT-LOOP（CLI 仓·需求）` §3（F-A1~F-A5 + NFR-A1~A3）（CLI 侧文档树）。
+> 本机一条目（条目 A）——纯 VSC 面；条目 B（后台评审池接入面）在 `AGENT-LOOP（CLI 仓·设计）` §18（CLI 侧）。
 > 批次：`2026-09-11-VSC-ASYNC-VISIBILITY（本仓）`（CLI 侧；§1 条目 A——用户 2026-09-09 反馈 + 22:32 精复现）。
 
 #### 5.1.1 问题陈述
@@ -307,7 +307,7 @@ toolPanel/subagent/compress/suspension 消息族（§7）。
 | `src/extension/chat-panel.mjs` | 414 | +3 | view dispose → `_wvReady=false` + 清队（跨 view 不串味） |
 | `src/extension/suspension.mjs` | 313 | +22 | `reassertLiveChildren(panel)` + 存活投影（双池 → `subagent` 载荷）——与 `backgroundStatus` 同板块 |
 | `test/async-visibility.test.mjs`（新） | 0 | +170 | 队列/再断言（桩面板）+ 接管/补块/清屏恢复（happy-dom 真模块） |
-| `test/files.mjs` | 49 | +1 | 新测试文件登记（接线硬项——沿用第 5 批先例） |
+| `test/files.mjs` | 49 | +1 | 新测试文件登记（接线硬项——沿用第 5 批同口径） |
 | `test/activity-flow.test.mjs` | 300 | +40 | 既有语义回归（幂等/冻结/窗裁/tombstone）；**「reload 无恢复」用例按新口径改写**（终态补桩——原 no-op 断言更替）。**拆分评审**：300→~340 越 ≤300 警示线（≤500 硬限内）——测试族存量 6 档同带（最高 `chat-panel.test.mjs` 620）——结论 = 本批不拆分（改写就地；测试族重组归独立项） |
 | `docs/design/WEBVIEW.md` | 339（批次前）→ 536（本批落档后） | +~197（见行数差——含修正轮） | 本节 + §5 终态规则修订指注 |
 | 合计 | — | ~+538（代码面 ~+130 = src 8 文件求和；测试面 ~+211；文档面 ~+197——见行数差） | 11 改 + 1 增 |
@@ -454,7 +454,7 @@ CLI 在进消化轮前零延迟打一行 `[auto-turn: digesting …]`（`src/tui
 
 | # | 候选方案 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
 |---|---|---|---|---|
-| 1 | **流内生命周期元素（`.digest-status`——压缩状态行同款先例）** | 起跑即时可见：✅；与 CLI 语义对位 | 起止两态（成功/中断）；会话清屏随清；~30 行（**2026-09-12 §14 修订：每轮独立元素——单元素原地更新废止**） | **选定** |
+| 1 | **流内生命周期元素（`.digest-status`——压缩状态行同款）** | 起跑即时可见：✅；与 CLI 语义对位 | 起止两态（成功/中断）；会话清屏随清；~30 行（**2026-09-12 §14 修订：每轮独立元素——单元素原地更新废止**） | **选定** |
 | 2 | 仅状态行文案（挂起段 ⏳ 改「消化中」） | 同一语义已有状态行/`turnState`/计数三面——再加文案 = 第三源；且承载不了「起跑」时刻 | — | 否决 |
 | 3 | 仅 `logEvent`（现状）+ 文档声明 | 判据不满足（用户看不到） | — | 否决 |
 
@@ -462,7 +462,7 @@ CLI 在进消化轮前零延迟打一行 `[auto-turn: digesting …]`（`src/tui
 `{type:"digest", status:"start", n}`（n = 待消化份数 = `_pendingAsyncResults.length`）；回合结束/异常
 统一以 `{type:"digest", status:"end", ok, ms}` 收尾（ok=false = 异常中断——不留「仍在消化」假象）；
 webview（`chat.js` case "digest" → `showDigestStatus`）**每轮**创建独立 `.digest-status` 元素并轮内原地更新两态文案
-（i18n `digest.start` / `digest.done` / `digest.aborted`；2026-09-12 §14 C-9 修订——单元素→每轮元素，id 退役）。投递为**直投**（同 `compress` 先例——
+（i18n `digest.start` / `digest.done` / `digest.aborted`；2026-09-12 §14 C-9 修订——单元素→每轮元素，id 退役）。投递为**直投**（同 `compress` 同款——
 digest 只在面板活跃且 webview 已就绪后发生，不经任务可见性 outbox）。
 
 **逐字文案（coder 照抄——i18n 三键·两档 locales）**：
@@ -645,7 +645,7 @@ digest 只在面板活跃且 webview 已就绪后发生，不经任务可见性 
 | # | 候选 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
 |---|---|---|---|---|
 | 1 | **复用既有 toast 机制**（选定——提取共享模块 + send 追加一行） | 带文案（复用既有 busy 串——「为何没发」可懂）；与既有「拒绝类瞬时反馈」单一化（防两份 toast 实现漂移）；机验强（元素 + 文案断言） | 代价 = 新模块 `toast.js` + `autocomplete.js` 改 import（行为零变）；收益 = 提示完整 + 机制收拢 | **选定** |
-| 2 | 输入框拒绝闪动（CSS class + 定时移除） | 改动面最小（send.js 三行 + CSS 一条）但**无文案**——「被拒」可感、「为何被拒」不可达；与既有 toast 形成两套瞬时反馈机制 | 省一个模块；代价 = 提示语义不完整 + 机制分叉 | 否决 |
+| 2 | 输入框拒绝闪动（CSS class + 定时移除） | 改动限于 send.js 三行 + CSS 一条，但**无文案**——「被拒」可感、「为何被拒」不可达；与既有 toast 形成两套瞬时反馈机制 | 省一个模块；代价 = 提示语义不完整 + 机制分叉 | 否决 |
 
 ### 9.4 关键决策记录（含否决备选）
 
@@ -710,7 +710,7 @@ digest 只在面板活跃且 webview 已就绪后发生，不经任务可见性 
 
 ## 10. Markdown 行内代码字面量契约与转义回归（GitHub #7——第 34 批，2026-09-11）
 
-> 需求：`AGENT-LOOP（CLI 仓）§10`（F-H1~F-H4 / N-H1~N-H4）。批次档：`2026-09-11-VSC-WEBVIEW-ESCAPE（CLI 仓）§1`
+> 需求：`AGENT-LOOP（本仓·需求）§10`（F-H1~F-H4 / N-H1~N-H4）。批次档：`2026-09-11-VSC-WEBVIEW-ESCAPE（本仓）§1`
 > （GitHub #7 · zacharyyyang 2026-09-08——合成 markdown 复现，不依赖模型 / 网关）。
 > 渲染面 = `webview/md.js`（`md()` / `mdInline()` / `inline()` 单一内联引擎——§3 文件结构行同源）。
 
@@ -914,7 +914,7 @@ function inline(s) {
 |---|---|---|---|
 | D-A10-1 | 「单行」判定 = 逻辑行（`\n` 判定） | textarea 无可靠折行 API；VSC 不实现竖移、无对齐诉求（不追对称——用户明示）；用户点名场景（未回车的文本）精确覆盖 | 视觉折行口径（软换行同权——`scrollHeight` 类粗测不可靠） |
 | D-A10-2 | 非历史态·单行 ↓ = 吞键 + no-op | 与 CLI「键已消费、无 fall-through」同源；单行 ↑/↓ 恒属历史键盘域（可预测）；行尾 ↓ 已被吞（现状）——中段归一 | 放行原生 ↓（跳行尾）——同一单行内两分语义 |
-| D-A10-3 | 修订 = 在既有 `navigateInputHistory` 之上改门限（零新状态） | 最小面；草稿保护 / 历史指针 / 光标安置语义零改 | 历史模块重构（无必要） |
+| D-A10-3 | 修订 = 在既有 `navigateInputHistory` 之上改门限（零新状态） | 改动限于门限修订；草稿保护 / 历史指针 / 光标安置语义零改 | 历史模块重构（无必要） |
 
 #### 11.1.4 受影响文件（行数口径 = `split("\n").length` 含末行；as-of 2026-09-11 实测）
 
@@ -1021,12 +1021,12 @@ function inline(s) {
 
 ## 12. 活动区回归：live 固定可见 · 区内原地保留（2026-09-11）
 
-> 需求源 = 批次档 `../batches/2026-09-11-VSC-ACTIVITY-REGION-RESTORE.md`（CLI 仓）§1——用户 17:23 裁定
+> 需求源 = 批次档 `2026-09-11-VSC-ACTIVITY-REGION-RESTORE（本仓）§1`——用户 17:23 裁定
 > 「加回固定活动区」：目标 = D-1 原话（**live 固定可见 + 一个面板**），并保留 09-11 批 10 全部可靠性
 > 机制（投递队列/就绪握手/终态防御）与 queued 可见性（F-2）——「干净地基上的活动区」，**非补丁形态**。
 > 上下游不变式：扩展端**零改**（§5.1 契约与实现不动）；CLI 端零改（单面板形态照旧——双端不对称 OK）。
 >
-> **2026-09-12 修订（活动区收口批——A 方案反转；需求 = CLI 仓 `AGENT-LOOP.md` §16）：**冻结块去向
+> **2026-09-12 修订（活动区收口批——A 方案反转；需求 = `AGENT-LOOP（本仓·需求）§16`）：**冻结块去向
 > 由「区内原地保留」反转为**终态清退 + 消化后落流**（settled → awaitingDigest 驻留带提示 → 回收
 > 归档 `#messages`——落点 = 消化轮边界元素之前）。本 §12 以下条目已由 **§14** 取代/修订：Q1/Q4 选定行、
 > D-A1、D-A2、D-A5、D-A7（`trimOldMessages` 零改 → 选择器补 `.sub-block`——T-CL9）、§12.3#3/#4
@@ -1159,7 +1159,7 @@ function inline(s) {
 **文档域（设计者已落——coder 零碰）**：`docs/design/WEBVIEW.md` 1029 →（§2/§3/§5/§5.1 修订 +
 §12 新节 + 变更记录顺延 §14——今 §15）· `docs/design/AGENT-LOOP.md` 1045 →（§1 模块行 / §7 挂起 UI / §10 改写 +
 变更记录）· `docs/design/SESSION-ACTIVITY-REVISED.md`（取代指针）· `docs/design/ACTIVITY-REWRITE-SIMPLE.md`
-（取代指针）。**需求树**：本批条目落 CLI 仓 `docs/requirements/AGENT-LOOP.md` §12（修正轮补——评审 #6 收口；先例 §3/§8~§11）。**拆分评审注**：activity-flow 292→~332 越 ≤300 警示线（≤500 硬限内）——测试族存量
+（取代指针）。**需求树**：本批条目落 `AGENT-LOOP（本仓·需求）§12`（修正轮补——评审 #6 收口；同口径 §3/§8~§11）。**拆分评审注**：activity-flow 292→~332 越 ≤300 警示线（≤500 硬限内）——测试族存量
 同带（最高 `chat-panel.test.mjs` 620）——本批**不拆分**（就地改写——同第 10 批结论）。
 
 **拆分评审注（源侧——评审 #5 收口）**：`activity.js` 298→~313 越 ≤300 警示线（≤500 硬限内）——
@@ -1173,7 +1173,7 @@ function inline(s) {
 webview-env +1 照旧（`installChatFixture` 区 id——区语义断言的宿主）；T-R13 手法见 §12.7 注。
 
 **不入 files**：`docs/TODO.md` / `CHANGELOG.md`（父侧）；CLI 仓代码/设计/测试文件（本批 VSC 单端——
-需求树除外：本批条目落 CLI 仓 `docs/requirements/AGENT-LOOP.md` §12，同先例 §3/§8~§11）；群 A §11/§13/§15 节域零碰。
+需求树除外：本批条目落 `AGENT-LOOP（本仓·需求）§12`，同口径 §3/§8~§11）；群 A §11/§13/§15 节域零碰。
 
 ### 12.7 用例表（正常 / 边界 / 错误——T-R1..T-R16；activity-flow 族改写 + async-visibility 更新）
 
@@ -1246,12 +1246,12 @@ webview-env +1 照旧（`installChatFixture` 区 id——区语义断言的宿�
 
 ## 13. live 块 UX：流式跟滚 + 内容区高度 60px（2026-09-11）
 
-> 需求源 = 批次档 `../batches/2026-09-11-VSC-LIVE-UX.md`（CLI 仓）§1——用户 23:29 实测两条
+> 需求源 = 批次档 `2026-09-11-VSC-LIVE-UX（本仓）§1`——用户 23:29 实测两条
 > （live 块默认显示内容头部、不跟流式输出滚动、得手动滚；live 块高度 100 → 60），范围假设 =
 > 只动 live 块（`.sub-block`——advisor 流内评审块维持 100px）。需求树 = CLI 仓
-> `docs/requirements/AGENT-LOOP.md` §14（F-LU1/F-LU2 + N-LU1~N-LU3——本批新增）。
+> `AGENT-LOOP（本仓·需求）§14`（F-LU1/F-LU2 + N-LU1~N-LU3——本批新增）。
 > 上游机制零碰（§5/§5.1/§12 实现面不动——本批只加块级跟滚 + 改一处高度值）；测试独立成档
-> `test/activity-live-ux.test.mjs`（activity-flow 近满——不追加先例）。
+> `test/activity-live-ux.test.mjs`（activity-flow 近满——不追加口径）。
 
 ### 13.1 问题陈述与现场核实（as-of 2026-09-11 现状实测）
 
@@ -1267,7 +1267,7 @@ webview-env +1 照旧（`installChatFixture` 区 id——区语义断言的宿�
 - **高度现状**：`chat.css:317-326` 基础 `.advisor-content { max-height: 100px; … }`（流内评审块
   与子块共用）；`chat.css:465-468` 子块覆盖行 = 100px；`:465-467` 注释 = 2026-09-05 设定
   （「advisor/subagent 均 100px」——本批后不再成立，随 C-LU3 改述）。
-- **既有钉底族（先例基准——本批语义来源）**：`ui.js:448-456`（`#messages`——`_pinBottom` 旗标 +
+- **既有钉底族（同款基准——本批语义来源）**：`ui.js:448-456`（`#messages`——`_pinBottom` 旗标 +
   `Number.MAX_SAFE_INTEGER` 超值写）；`ui.js:460-463`（活动区——`_pinActivity`，同旗标 idiom）；
   `ui.js:481-491`（`initScrollFollow`——wheel/touchmove 监听 + 近底 24px 判据 + 空安全绑定）。
 - **区级 pin 与块级跟滚的叠加关系（外层 / 内层）**：区（`#subagent-activity`——§12.3 第 6/7 条）
@@ -1275,7 +1275,7 @@ webview-env +1 照旧（`installChatFixture` 区 id——区语义断言的宿�
   状态、互不写对方；同一 wheel 事件可同时到达两层监听器（冒泡）——各按**自身元素几何**更新自身
   判据（区看区几何、块看块内容几何——§13.3 第 1/2 条）。
 
-### 13.2 方案选型对比（U1 装载面——判据 = §1 约束「先例对齐 / 不新造第三种模式」+ 无每 chunk 同步布局 + 动态 N 块目标可承载）
+### 13.2 方案选型对比（U1 装载面——判据 = §1 约束「对齐既有形态 / 不新造第三种模式」+ 无每 chunk 同步布局 + 动态 N 块目标可承载）
 
 | # | 候选 | 判据评估 | 结论 |
 |---|---|---|---|
@@ -1328,8 +1328,8 @@ webview-env +1 照旧（`installChatFixture` 区 id——区语义断言的宿�
 | D-LU2 | 应用并入流渲染 rAF（≥50ms 节流） | 否决每 chunk 同步布局（`streaming.js:26-27` 已点名代价；帧合并天然去抖） |
 | D-LU3 | 载体落 `activity.js`（非 `ui.js`） | `ui.js` 492 行距 500 硬限 8 行——不可再增；`activity.js` = 块生命周期家（出生 / 折叠 / 簿记）+ 零新 import 边（streaming→activity 已存在）。**拆分评估**见 §13.5 |
 | D-LU4 | 高度作用域 = `.sub-block` 全部（live + 冻结同 60px） | 否决仅 `.sub-live`（冻结展开态须同卡面——live/frozen 不二分）；advisor 流内评审块 100px 不动（§1 假设——如需同改，用户一句话） |
-| D-LU5 | 测试独立成档 + `test/files.mjs` 入册 | activity-flow 486 行近满（先例×2：「近 500 不再追加」/「同族档已满独立成档」）——不拆 activity-flow、不追加 |
-| D-LU6 | WEBVIEW 节号：新 §13 + 变更记录顺延 §14 | 节号 = 文档位序惯例（先例：§9→§13 顺延）；存量指注同步 sweep（§2 沿革行 / §12.6 / §12.8；修正轮 #2） |
+| D-LU5 | 测试独立成档 + `test/files.mjs` 入册 | activity-flow 486 行近满（口径×2：「近 500 不再追加」/「同族档已满独立成档」）——不拆 activity-flow、不追加 |
+| D-LU6 | WEBVIEW 节号：新 §13 + 变更记录顺延 §14 | 节号 = 文档位序惯例（同口径：§9→§13 顺延）；存量指注同步 sweep（§2 沿革行 / §12.6 / §12.8；修正轮 #2） |
 
 ### 13.5 受影响文件全清单（行数口径 = `split("\n").length` 含末行；as-of 2026-09-11 实测）
 
@@ -1348,12 +1348,12 @@ webview-env +1 照旧（`installChatFixture` 区 id——区语义断言的宿�
 `test/helpers/webview-env.mjs`（fixture 已具）· `test/activity-flow.test.mjs`（近满——零追加）。
 
 **文档域（设计者已落——coder 零碰）**：`docs/design/WEBVIEW.md` 1257 →（§13 新节 + §12.3 第 6 条
-改指 + 节号 sweep + 变更记录顺延 §14）· 需求树 = CLI 仓 `docs/requirements/AGENT-LOOP.md` §14；
+改指 + 节号 sweep + 变更记录顺延 §14）· 需求树 = `AGENT-LOOP（本仓·需求）§14`；
 `docs/TODO.md` / `CHANGELOG.md` 归父侧。
 
 **拆分评审注**：`activity.js` 328→~354 越 300 软线（<500 硬限）——结论不拆：增量 = 2 小函数
 （~12 / ~8 行）+ 1 行调用 + 头注；再增厚触发拆分评估。`ui.js` 492 近硬限——本批零碰。测试面
-独立新档（`activity-flow` 486 近满——「不再追加」先例）。
+独立新档（`activity-flow` 486 近满——「不再追加」口径）。
 
 ### 13.6 用例表（正常 / 边界 / 错误——T-LU1..T-LU6；新档 `test/activity-live-ux.test.mjs`）
 
@@ -1396,11 +1396,11 @@ webview-env +1 照旧（`installChatFixture` 区 id——区语义断言的宿�
 
 ## 14. 活动区收口：终态清退落流 · digest 可读性 · 块头/状态行字段对齐（2026-09-12）
 
-> 需求源 = 批次档 `../batches/2026-09-12-VSC-ACTIVITY-CLOSURE.md`（CLI 仓）§1——用户 2026-09-12
+> 需求源 = 批次档 `2026-09-12-VSC-ACTIVITY-CLOSURE（本仓）§1`——用户 2026-09-12
 > 走查五连：01:03「live 块执行完没有从子agent面板清除，digest 过程远不如 CLI 清晰」· 01:09「1走A」
 > （**A 方案 = 终态块出活动区、内容进会话流 = CLI 语义**——对 §12 的反转，须两档修订）· 01:10
 > 「live 块的标题信息我也希望对齐」· 01:13 Send 可见性与拒发矛盾 · 01:17「状态行那条，我也希望对齐 CLI」。
-> 需求条目 = CLI 仓 `AGENT-LOOP（CLI 仓）§16`（F-R1..F-R6）；本批 R1–R6 对位 = AC-CL1..AC-CL6。
+> 需求条目 = `AGENT-LOOP（本仓·需求）§16`（F-R1..F-R6）；本批 R1–R6 对位 = AC-CL1..AC-CL6。
 > 本 §14 吸收 §12 中被反转条目——**条目清单以 §12 修订注为准**（该注逐项列明「以 §14 为准」的条目；
 > 反转不静默）。
 > （修正轮 #9——原内联清单缺 D-A7/§12.3#9/AC-R1/AC-R2，改纯指针句消除双清单漂移。）
@@ -1699,7 +1699,7 @@ cap/漂移回归改写）· `test/async-visibility.test.mjs`（402 → **≤+15*
 `test/helpers/webview-env.mjs`（92——如需）。
 
 **测试档越线处置口径（修正轮 #6）**：`activity-flow` 距 500 硬限仅 14 行——落地不得越 500；若预计越线 →
-抽归档断言用例组至 `activity-closure`（同批新档——主题契合；测试档拆分登记先例适用），不静默越线。
+抽归档断言用例组至 `activity-closure`（同批新档——主题契合；测试档拆分登记口径适用），不静默越线。
 
 **拆分评估注**：`activity.js` 354 → 原预期净减；**实测 406（+52——超预估；越 300 软线）——实现后同步（2026-09-12）**：
 上限机制退役的减量未抵消新增（归档/吞守卫/头注承载长于预估）；<500 硬限（余量 94 行）、未触 450 拆分评估线——
@@ -1710,13 +1710,13 @@ cap/漂移回归改写）· `test/async-visibility.test.mjs`（402 → **≤+15*
 
 **`state.js` 协调项登记——实现后同步（2026-09-12）**：本批三个跨模块 S 字段 `S._digestBoundary` / `S._turnFrame` /
 `S._statusText`（读面 falsy 安全）为**动态属性挂载**（写点 = `chat.js:184/:250/:274/:325/:330/:355`）——`webview/state.js`
-零改（未入本表——守写域正确）；与「S 字段集中声明」惯例（先例 = 群 A A13 `S._subDescShown`、§12 `ctx.activityEl` 均以
+零改（未入本表——守写域正确）；与「S 字段集中声明」惯例（同款 = 群 A A13 `S._subDescShown`、§12 `ctx.activityEl` 均以
 state.js 行登记）呈落差——**登记为协调项**：集中声明建议随后续批（新设计评审）补录，本批实现链已终态不补。
 
 **文档域（设计者已落——coder 零碰；修正轮 #2/#3 补全）**：本 §14 新节 + §2/§3/§5/§5.1.4/§6/§7.2/§7.4/§12 修订 +
 §2 沿革行 + 变更记录 §15 顺延 · `docs/design/AGENT-LOOP.md` §1/§7/§10 + **未决行（live 头逐轮 turn 段——收口注，
 修正轮 #2）** + 变更记录 · 沿革三指针（`SESSION-ACTIVITY-REVISED.md` / `ACTIVITY-REWRITE-SIMPLE.md` /
-`SESSION-FLOW-B.md`）· 需求树 = CLI 仓 `docs/requirements/AGENT-LOOP.md` §16 + §12 F-J1/F-J3/F-J6 修订。
+`SESSION-FLOW-B.md`）· 需求树 = `AGENT-LOOP（本仓·需求）§16 + §12` F-J1/F-J3/F-J6 修订。
 
 **不入 files**：`docs/TODO.md` / `CHANGELOG.md`（父侧）；CLI 仓代码/测试（零改——需求树除外）。
 
@@ -1750,10 +1750,10 @@ state.js 行登记）呈落差——**登记为协调项**：集中声明建议�
 | T-CL24 | scrolled 端差 | 静态 | 悬浮回底钮在位 + 状态行无 scrolled 段（端差登记） | F-R6 |
 
 > **C-12 host 发射面覆盖归属（修正轮 #8——六项增量 host 侧机判）**：① cap 两调用（`panel-chat` ContinueError
-> auto/stop）：`digest-visibility` 改写扩 `postDigestCap` helper 直驱（载荷逐字 + 两分支——直驱先例 = 本档
+> auto/stop）：`digest-visibility` 改写扩 `postDigestCap` helper 直驱（载荷逐字 + 两分支——直驱同款 = 本档
 > T-D1–T-D3 桩面板手法）+ 两调用点 grep 机检；② `statusText`（`panel-callbacks` onWait / `panel-index`
 > 索引进度）+ `turnFrame`（onAgentTurn）+ `reasoning_tokens` 累计：`status-line` 新档直驱其导出映射面
-> （先例 = async-visibility 直驱 `postSubagentEvent`）+ 发射调用点 grep 机检（先例 = async-visibility AC-A6）；
+> （同款 = async-visibility 直驱 `postSubagentEvent`）+ 发射调用点 grep 机检（同款 = async-visibility AC-A6）；
 > ③ `subagent status:"turn"` 发射（`subagent-run`）：发射点机检 + webview 侧 T-CL19；④ 四生产者 `tool`/`cmd`：
 > T-CL18（渲染面）+ `panel-toolpanel` 白名单纯函数直驱（payload 逐字）。webview 侧六项均经注入缝直测
 > （C-9/C-10/C-11 用例）。
@@ -1799,7 +1799,7 @@ elapsed 刷新节拍（复用 2s）；`statusText` 保留时长（= 活动恢复
   失明面写全 + 「旧代回收在途」吞机制 + C-9 start 连发口径 + C-11④ 刷新门明示；§14.6 计数对齐（10/13）+ 测试域
   逐档 ≤±N + 越线处置 + 文档域补 §7.2/AGENT-LOOP 未决行；§14.7 T-CL10/T-CL19 更新 + C-12 host 覆盖归属注。
   零契约语义变更（除 C-5③ 防御 = 评审 #5 采纳——待轮次 2 复核）。
-- 2026-09-12（活动区收口批——A 方案反转 + digest/块头/状态行/Send 对齐）：新增 §14（活动区收口——M1–M6 选型 / C-1–C-16 契约 / 旧链对照 / D-CL1–D-CL11 / 受影响文件 / T-CL1–T-CL24 / AC-CL1–AC-CL7）；§12 反转注（Q1/D-A1/D-A2、§12.3#4、§12.4、§12.5、§12.8 AC-R3、§12.10）；§2/§3/§5/§5.1.4/§6/§7.4 同步；变更记录顺延 §14→§15。需求 = CLI 仓 `AGENT-LOOP.md` §16。
+- 2026-09-12（活动区收口批——A 方案反转 + digest/块头/状态行/Send 对齐）：新增 §14（活动区收口——M1–M6 选型 / C-1–C-16 契约 / 旧链对照 / D-CL1–D-CL11 / 受影响文件 / T-CL1–T-CL24 / AC-CL1–AC-CL7）；§12 反转注（Q1/D-A1/D-A2、§12.3#4、§12.4、§12.5、§12.8 AC-R3、§12.10）；§2/§3/§5/§5.1.4/§6/§7.4 同步；变更记录顺延 §14→§15。需求 = `AGENT-LOOP（本仓·需求）§16`。
 - 2026-09-12（VSC-LIVE-UX 批·修正轮——设计评审轮次 1 #1/#2 落修）：§13.7 AC-LU6 补扩展端
   反断言（`src/extension/**` 零改动——需求 §14.4「不动扩展端协议与实现」对位；修正轮 #1）；
   D-LU6 与设计落档条的「§1 沿革行」标签订正为「§2 沿革行」（修正轮 #2）；#3 跨仓引用形态
@@ -1817,10 +1817,10 @@ elapsed 刷新节拍（复用 2s）；`statusText` 保留时长（= 活动恢复
 - 2026-09-11（群 A 批增补 A10/A13——设计落档）：新增 §11——A10 输入历史契约（C-MA10-1..6 / T-MA10-1..7 / AC-MA10-1..7——含「多行段不劫持」实测判据）+ A13 面板说明句（Task/Goal 已在登记 + Subagent 首块 `.sub-desc` 契约/用例/AC）。
 - 2026-09-11（第 34 批·修正轮——设计评审轮次 1 后）：§10 六处——差异表补跨界配对向量 2 条（修前 / 修后实测）· 不变量句与 §10.2 取证句标唯一例外 · §10.3 补头注释目标全文（含陈旧 `raw=true` 子句消去注）· §10.6 补 T-H15 + T-H14 金样协议注 · AC-H4 / AC-H6 收窄 · §10.8 登记跨界族。纯登记与口径收窄、零语义。
 - 2026-09-11（第 28 批·修正轮——设计评审轮次 1 后）：§9 三处——C-B2-2 补让位 `preventDefault` 处置（保留）· AC-B2-3 补「自动隐去 = 原样提取的既有机制（行为零变）」继承登记 · AC-B2-4 基线补 skip 位（422/421/0/1；需求档 `AGENT-LOOP（CLI 仓）§8` NFR-F1 同改）。纯措辞与登记、零语义。
-- 2026-09-11（第 34 批·GitHub #7——设计落档）：新增 §10（Markdown 行内代码字面量契约与转义回归——复核 R-1~R-5 · 选型 B′ / A″ · 逐字契约 · 决策 D-V1~D-V6 · 用例 T-H1~T-H14 · AC-H1~AC-H6）；需求 = `AGENT-LOOP（CLI 仓）§10`。
+- 2026-09-11（第 34 批·GitHub #7——设计落档）：新增 §10（Markdown 行内代码字面量契约与转义回归——复核 R-1~R-5 · 选型 B′ / A″ · 逐字契约 · 决策 D-V1~D-V6 · 用例 T-H1~T-H14 · AC-H1~AC-H6）；需求 = `AGENT-LOOP（本仓·需求）§10`。
 - 2026-09-11（第 28 批·输入面小修 B2——设计落档）：新增 §9（输入面 Enter 语义：组合守卫 / @ 下拉协调 / 忙碌拒发可见提示——契约 C-B2-1~4 + 用例 T-B2-1~7 + AC-B2-1~5）；§3 文件表补 `toast.js`；§6 挂起 UI 句补拒发提示指针；需求 = `AGENT-LOOP（CLI 仓）§8`。
 - 2026-09-11：第 21 批（B6 收口）——新增 §7.4 digest 起跑可见指示（流内 `#digest-status` 元素 +
-  `digest` 消息行；起止两态 + ok 旗标）；需求 = CLI 仓 `requirements/AGENT-LOOP.md` §5。
+  `digest` 消息行；起止两态 + ok 旗标）；需求 = `AGENT-LOOP（CLI 仓·需求）` §5。
 - 2026-09-11：第 21 批修正轮（设计评审轮次 1——#4）：§7.4 AC-D1 补 NFR-C1 标签（对位 CLI 判定面回指）。
 - 2026-09-11：VSC-ASYNC-VISIBILITY 条目 A 设计落档——新增 §5.1（出生投递与块身份可靠性：
   根因收口 R-1~R-5 / 两案选型 / 契约 8 条 / 12 文件受影响表 / T-V1~V8 / AC-A1~A8）+ §5 终态

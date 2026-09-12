@@ -15,7 +15,7 @@
 - **功能性**：
   - F-1 拆分 3 文件：activity.js（核心编排 ~290）+ activity-view.js（呈现叶 ~210 新）+ activity-freeze.js（冻结叶 ~85 新）
   - F-2 依赖方向：core→view→{state,i18n} 与 core→freeze→view→state——纯 DAG 无环（repo leaf 纪律）
-  - F-3 外部消费方零改动（hub re-export——panels/chat/streaming/test 动态 import 路径不变——CLI subagent-blocks:23-24 先例）
+  - F-3 外部消费方零改动（hub re-export——panels/chat/streaming/test 动态 import 路径不变——CLI subagent-blocks:23-24 同款）
   - F-4 verbatim 移动——函数体零改——仅 imports 调整——**唯一例外（评审 #1 显式标注）：resetActivity
     的 ticker 清理行提为 view 的 stopTicker 新函数（原内联 clearInterval/_tickDisabled/liveBlocks 清——
     拆后状态在 view——resetActivity 体改为单调用 stopTicker()）——stopTicker = 新代码非 verbatim 移**

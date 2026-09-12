@@ -19,7 +19,7 @@
 
 | # | 用户故事 | 验收语义 |
 |---|---|---|
-| FR1 | 分批落地不被 1h TTL 打断 | TTL 默认 7 天；`agent.engTokenTtlMs` 可配（`Number.isFinite` 且 `>0`，非法回退默认——照抄 advisor timeoutMs 先例） |
+| FR1 | 分批落地不被 1h TTL 打断 | TTL 默认 7 天；`agent.engTokenTtlMs` 可配（`Number.isFinite` 且 `>0`，非法回退默认——照抄 advisor timeoutMs 口径） |
 | FR2 | 畸形/伪造 token 一律拒绝 | fail-closed：格式校验（`uuid:expiresAt`，段数≠2 / uuid 非法 / expiresAt 非数值）或过期 → 拒 |
 | FR3 | 有效 token 跨模式存活，评审贵产物不因开关/重启重复烧（R16） | ON→OFF 不清；OFF→ON 不重评（TTL 内）；仅过期清 |
 | FR4 | 过期 token 有明确清理时机（R16） | 三时机：恢复过滤 / eng enter 清过期 / spawn 门禁拒时删该 designId 槽 |

@@ -24,12 +24,12 @@
 - advisor 工具集与 CLI 的差异项（CLI advisor 有 lsp，本端侧待补）——VSC
   `docs/TODO.md`。
 - 挂起期进程级 reminder 注入含 ISO 时间戳且位于 time 注入之前——每进程首 run 缓存
-  miss 一次（单次量级，可接受）——留待评估（thincoder `docs/TODO.md`）。
+  miss 一次（单次量级，可接受）——留待评估（`TODO（CLI 仓）`）。
 - UI ⏹ 活动块 live 头缺逐轮 turn 段（现有状态事件不携 turn——逐轮跳动需扩展端新
   通道，触碰桥白名单，不擅建）——降级口径已定：池条目终态通知携真实终值，冻结身份
   头显示终值。**2026-09-12 收口（活动区收口批 C-11③/C-12 #4——`status:"turn"` 帧上屏）：
   本条由本批履行（设计权威 = `WEBVIEW.md` §14 C-11③；实现随批交付——批次档
-  `../batches/2026-09-12-VSC-ACTIVITY-CLOSURE.md`（CLI 仓））。（修正轮 #2）**
+  `2026-09-12-VSC-ACTIVITY-CLOSURE（本仓）`）。（修正轮 #2）**
 - 行面板（子代理行 + consult 计数/回复 preview）**保留裁定反转（评审 #4——不得当历史
   折叠）**：B1 拆底部活动面板时裁"保留"（其独有载荷 = queued/waiting 行 + consult
   计数/回复 preview——开放项关闭）→ SESSION-ACTIVITY-REVISED（2026-09-09 用户裁定——
@@ -217,7 +217,7 @@ send = **control**（控制类豁免——只入队/只停不落盘——plan mo
 分组不入组、手动档 digest 放行）。`consume-design` 独立谓词只接权限豁免位（非只读非
 control——见 §2.6）。observe/send 仅 depth-0（子代理上下文无 async 池——错误明示）。
 
-**注入贯通（SUBAGENT-OBSERVE-SEND.md D2——stateSink 先例顺延）**：runChild（spawn）与
+**注入贯通（SUBAGENT-OBSERVE-SEND.md D2——stateSink 同款顺延）**：runChild（spawn）与
 飞刀 async 引擎（escalate）各以新回调 `opts.turnInput` 传给子 runAgent——读池条目
 `entry._injected` 清空取回；子 runAgent 主循环**回合头**（agent.mjs）把待投递消息 push
 作 user 回合入子 history。observe 摘要源 = `entry.childAgent.history`（setup 把
@@ -416,7 +416,7 @@ webview 输入面见下方 UI 段）；settle
 - ③ `subagent cancel <advisor id>` 落评审池（面板 ⏹ 路由已有——`src/extension/panel-messages.mjs:238-241`；
   工具动作缺落点——本批补）+ ④ observe/send 遇 advisor id 明确指引；
 - 命名差异登记：本端 `cancelAdvisorReview` ↔ CLI `cancelAsyncAdvisor`（语义同源；**各端原名不改**——D-B3）。
-- 需求：CLI 档 `docs/requirements/AGENT-LOOP.md` §4（F-B1~F-B4）（CLI 侧）。
+- 需求：`AGENT-LOOP（CLI 仓·需求）§4`（F-B1~F-B4）。
 - 并入登记：条目 A（面板 live 块出生可靠性）本端权威 = `WEBVIEW.md` §5.1——本档不重复（单一权威源）。
 
 ## 10. 子代理活动显示（本地 webview 机制）
@@ -554,7 +554,7 @@ destroy 边界（loadSession/project-switch/dispose/reload）重建单例时，�
 
 ## 12. async 子代理保真：丢弃可见 / 无孤儿 / 终态可辨（第 35 批，2026-09-11——GitHub #6）
 
-> 需求 = `AGENT-LOOP（CLI 仓）§9`（F-G1~F-G7 / N-G1~N-G4——指针不重述）。
+> 需求 = `AGENT-LOOP（本仓·需求）§9`（F-G1~F-G7 / N-G1~N-G4——指针不重述）。
 > 任务书 = `2026-09-11-VSC-ASYNC-PARITY（CLI 仓）§2`。
 > 本批 = **VSC 单端**（CLI 仓代码/测试零改动，仅只读对位）；批次档 §1 的 issue 断言按 §12.1 复核结论执行。
 
@@ -596,7 +596,7 @@ busy 拒收（`src/extension/panel-messages.mjs:56-61`）+ 挂起期消息走单
 |---|---|---|---|---|
 | a1 | 结果面（附在某个工具结果上） | 中止发生在工具调用**之外**（回合收尾/会话驱动）——无在飞工具结果可附；模型此刻不在等任何工具回执 | 不可实现 | 否决 |
 | a2 | 块面（webview ⟦ev⟧ 事件族） | 只达**用户**（webview 渲染），模型看不到；且块面已被 F-6/活动区分支占位（他批） | 不达模型 + 越界他批 | 否决 |
-| a3 | 消息面（user-role system reminder 注入 history） | 唯一可达模型的通道；同形先例 = cancel 提醒 `src/agent-tools/subagent-actions.mjs:161-174`（`injectCancelReminder`——取消注入的既有形态）；中止 = 全池取消，形态对称 | 选定形态；实现单点放新模块，不复制既有函数 | **选定 a3** |
+| a3 | 消息面（user-role system reminder 注入 history） | 唯一可达模型的通道；同形：cancel 提醒 `src/agent-tools/subagent-actions.mjs:161-174`（`injectCancelReminder`——取消注入的既有形态）；中止 = 全池取消，形态对称 | 选定形态；实现单点放新模块，不复制既有函数 | **选定 a3** |
 
 **(b) 「已丢弃」的表示形态**（待裁 2——`{done:true}` 的现代表达）：
 
@@ -741,7 +741,7 @@ Partial changes from discarded children stay unmerged/unaudited; re-spawn if the
 | 3 | 守卫口径差异 | CLI `dispatch.mjs:413` 只 guard `undefined`；本端 C-7 扩为全非字符串 | **登记**（本端从严——理由：`[object Object]` 静默污染正是 issue ① 的病征类） |
 | 4 | 中止后 done-in-pool 报告的到达时点 | 本端留池 → 由**下一次**回合尾收集/会话 sweep 注入（不丢但可能滞后）；CLI 直接清掉 | **登记**（本端保全报告；自动通道唯一消费方裁定 §19.8 不变——不在中止路径新增注入点） |
 | 5 | ack 的 id 类型 | 本端 ack `id` 为 number；CLI 为 `String(id)` | **登记**（本端 status/cancel 已做数值归一——不改） |
-| 6 | 会话收尾站清池（`suspension.mjs:299-308`——评审轮次 1 #1） | F-6 后仅面板销毁/扩展重载生命周期路径驱动；dispose 先统一 abort → 清池时池内条目已全死、无活消费方（机理见 6 注） | **登记不修**（属需求 `AGENT-LOOP（CLI 仓）§9.4` 跨会话排除面——接线会引入与 C-4 文案不符的伪提醒；详见 6 注） |
+| 6 | 会话收尾站清池（`suspension.mjs:299-308`——评审轮次 1 #1） | F-6 后仅面板销毁/扩展重载生命周期路径驱动；dispose 先统一 abort → 清池时池内条目已全死、无活消费方（机理见 6 注） | **登记不修**（属需求 `AGENT-LOOP（本仓·需求）§9.4` 跨会话排除面——接线会引入与 C-4 文案不符的伪提醒；详见 6 注） |
 
 **6 注（评审轮次 1 #1——会话收尾站机理与归属）**：F-6（2026-09-09 用户裁定）后 `susp.abort` 不再由停止驱动（`suspension.mjs:195-200`；面板内新会话/切换/删会话/切项目均有 `_susp?.active`/`turnBusy()` 守卫阻断——`panel-messages.mjs:135/143/166/186`），仅剩面板销毁/扩展重载路径（`chat-panel.mjs:243-244`：先统一 abort 控制器快照与会话句柄）。
 清池时池内条目已全死（子代持会话 signal 或快照 controller——dispose 全 abort；清池 ⟺ 已死成立、无孤儿，与 run-stages 的活条目被清不同）。
@@ -878,7 +878,7 @@ Partial changes from discarded children stay unmerged/unaudited; re-spawn if the
 
 > 来源：批次档 `2026-09-11-VSC-REVIEW-ASYNC-SWEEP（本仓）` §1 条目 B1（复议指令 = 用户 16:45「都一起做了」）；
 > 原登记 = 本档 §12.8 #1（第 35 批「登记不修——advisor 池面属他批」）。
-> 需求 = `AGENT-LOOP（CLI 仓）§11` F-I1 / N-I1~N-I3（指针不重述）。冻结面：§12 已交付契约（C-1~C-9）语义零改——
+> 需求 = `AGENT-LOOP（本仓·需求）§11` F-I1 / N-I1~N-I3（指针不重述）。冻结面：§12 已交付契约（C-1~C-9）语义零改——
 > 本批只新增 advisor 池同构面（C-10）；CLI 仓零写入。（编号避撞注：落档时与群 A A11 §14 并发——本批两节顺延 §15/§16。）
 
 ### 15.1 复议结论（修 / 维持登记——二择一必须有理由）
@@ -894,7 +894,7 @@ Partial changes from discarded children stay unmerged/unaudited; re-spawn if the
    （`subagent-scheduler.mjs:42-47`——`getAsyncPool(parent,"advisor")` / `removeFromAsyncPools` 直接可用）；
    终态墓碑单账本（`writeTombstoneTo`——advisor id 与 subagent 共命名空间，`nextSubagentId` 跨池取号）；
    `status` 终态回显已覆盖 advisor id（`subagent-actions.mjs:119-137` 单查两池未命中查墓碑）——零新谓词、零新账本。
-3. **原判理由已消解**：第 35 批「属他批」= **排程**理由（§12.8 #1 自注「修法同 C-1~C-4，最小改动面 = 同一分支复用判定」），
+3. **原判理由已消解**：第 35 批「属他批」= **排程**理由（§12.8 #1 自注「修法同 C-1~C-4（同一分支复用判定）」），
    非机制理由；复议指令下无维持登记的理由。不修的残留代价 = 评审在 Stop 后静默消失（无提醒、无终态、报告损）——
    正是 §12 全批要治的病在 advisor 面的复制品。
 
@@ -906,7 +906,7 @@ Partial changes from discarded children stay unmerged/unaudited; re-spawn if the
 | # | 候选 | 判据逐项评估 | 取舍 | 结论 |
 |---|---|---|---|---|
 | 1 | **双导出 + 私有共享核**：`discardAbortedPool`（subagent，签名/文案零变）+ 新 `discardAbortedAdvisors`（advisor 文案）；私有 `discardRole(parent, spec)` 承载判定/出池/墓碑/汇总 | 既有 C-1~C-4 契约文本（含 C-4 提醒）零碰——T-D3/T-D4 断言零回归；新面文案独立可断；实现单核无重复（D2） | 模块 +~35 行（64→~99） | **选定** |
-| 2 | 参数化单函数 `discardAbortedPool(parent, role)`（文案按 role 分支） | 调用点少改；但既有导出签名变化（测试直调）+ 文案分支混排 | 回归面大、可读性降 | 否决 |
+| 2 | 参数化单函数 `discardAbortedPool(parent, role)`（文案按 role 分支） | 调用侧仅需补参数；但既有导出签名变化（测试直调）+ 文案分支混排 | 回归面大、可读性降 | 否决 |
 | 3 | 单函数一次处理两池（混合提醒文案） | 调用点一行；但 C-4 文案「subagent(s)」对 advisor 不真，改写既有契约文本 = T-D4 断言辞污染 | 契约文本污染 | 否决 |
 
 ### 15.3 契约 C-10（逐条定稿——advisor 池同构面）
@@ -974,9 +974,9 @@ No design token was issued for a discarded design review; launch the review agai
 ## 16. digest 注入预算统一（群 B 批 B5——VSC 镜像——2026-09-11）
 
 > 来源：批次档 `2026-09-11-VSC-REVIEW-ASYNC-SWEEP（本仓）` §1 条目 B5
-> （BATCH-3 交付偏差承接口——CLI 仓 `docs/TODO.md` 需求池行）。
+> （BATCH-3 交付偏差承接口——CLI 仓台账需求池行）。
 > 语义源（CLI 侧）：`AGENT-LOOP（CLI 仓）§22`（单源模块 / 四族接线 / 用例与 AC——指针不重述）；
-> 需求 = `AGENT-LOOP（CLI 仓）§11` F-I2 / N-I1~N-I3。
+> 需求 = `AGENT-LOOP（本仓·需求）§11` F-I2 / N-I1~N-I3。
 > 镜像口径：语义同源、本端原文自持、零跨仓依赖（无 import / 无同步脚本）——差异登记 §16.5。
 > 冻结面：§5 / §9 / §12 / §15 已交付契约零碰；CLI 仓零写入。
 
@@ -1246,14 +1246,14 @@ VSC 现序违反了它（`:448` time → `:450` pushInjections）。**取「time
 文档域（设计者写域——coder 零碰）：本 §17 + `VSC-PROMPTS.md` + `TOOLS.md §12`。提示词与工具描述文件归
 另两波（VSC-PROMPTS / TOOLS 设计节）。`src/agent/agent-state.mjs` 零改（`_osReminderInjected` 随 agent 单例存）。
 
-**行数拆分口径（修正轮 #6——同 §12.4 先例）**：`run-stages.mjs` 306 → ~340 **跨 300 行咨询线**（≤500
+**行数拆分口径（修正轮 #6——同 §12.4 同口径）**：`run-stages.mjs` 306 → ~340 **跨 300 行咨询线**（≤500
 硬限内）——本批增量 = `injectResponseReminders` 单函数块（响应提醒面后续可独立成档）；本批不拆分，
 **挂结构债候选**。
 
 **实现后同步（2026-09-12——交付实测对齐）**：`src/repomap.mjs` 实测 **304**（预计 ~245）——超 300 咨询线（≤500
 硬限内）；本批不拆分（与 §17.3 `buildSummary` 落点契约一致），**挂结构债候选**（同 `run-stages.mjs` 口径）。测试档：
 `test/context-parity.test.mjs` 实测 **385**（预计 ~260）——超 300 咨询线，**登记**（本批不拆分）；语料修复波测试档
-`test/prompts-async-guidance.test.mjs` 实测 **535**（>500 硬帽——测试档登记口径 = 不拆分，同仓先例
+`test/prompts-async-guidance.test.mjs` 实测 **535**（>500 硬帽——测试档登记口径 = 不拆分，同仓同口径
 `chat-panel.test.mjs` 621；行数表 = `VSC-PROMPTS.md` 语料修复节）。
 
 ### 17.7 用例表（正常/边界/错误三态——全部直驱 hydrateRun/模块函数，不跑真 LLM）
@@ -1277,7 +1277,7 @@ VSC 现序违反了它（`:448` time → `:450` pushInjections）。**取「time
 
 **跨仓只读语义（修正轮 #1——父侧裁定：保留 fail-closed 并写明；N-Q3/N-P1 登记豁免随附）**：T-CI-11 读
 **兄弟仓**（相对本仓根 `../thincoder`；环境 = 两仓并排 checkout（teamcode 工作区）；`THINCODER_CLI_ROOT` 可
-覆盖——同 `test/prompts-mirror-anchors.test.mjs:21,30-34` 先例）。**缺仓/异位 = fail-closed（显式失败，
+覆盖——同 `test/prompts-mirror-anchors.test.mjs:21,30-34` 同款）。**缺仓/异位 = fail-closed（显式失败，
 不 skip）**——理由：skip 会让「CLI 序变 → VSC 红」的漂移检测静默失效（本测试是双端序面的唯一机验锚；真空
 通过比红更坏）。该只读检验属**交付期对照面**——产品/运行链路零跨仓依赖（无 import / 无同步脚本 / 无共享
 模块）不变。需求侧登记补充 = `AGENT-LOOP（CLI 仓）§13.3` N-Q3 豁免句 + `PROMPT-SYSTEM（CLI 仓）§9.3`
@@ -1337,7 +1337,7 @@ AC 5（AC-CI-1~AC-CI-5）· 关键决策 10（KD-1~KD-10）· 实施域 15 档 =
 
 ## 18. 子代理审批面对齐：child permission gate（2026-09-12——VSC 单端）
 
-> 需求源：CLI 仓 `docs/requirements/AGENT-LOOP.md` §17（F-CP1/F-CP2）；批次：CLI 仓
+> 需求源：本仓 `docs/requirements/AGENT-LOOP.md` §17（F-CP1/F-CP2）；批次：本仓
 > `docs/batches/2026-09-12-VSC-CHILD-PERMISSION.md` §1（用户 2026-09-12 裁定 A：child（depth>0）写操作
 > 走审批门——现状为「偶然的洞」）。目标语义 = CLI（参照实现：`src/agent-tools/subagent-spawn.mjs:300-324`
 > 的 owner key 模态 + `src/agent/dispatch.mjs:289-299` 的 `⟦ev⟧approval` 头标 + `src/tui/subagent-panel.mjs:54/:103`）；
@@ -1419,7 +1419,7 @@ approveAll 分支语义保留（全队列 resolve(true) + `_setAutoApprove(true)
 `entry.controller.abort()`）；② `panel._abortController` abort（Stop 触发——现行 `permission-gate.mjs:32-39` 对顶层 ask 已生效，
 本批统一入 `release` 并补 `permissionWithdrawn`）：轮级 Stop 只停主会话当前 controller、不停后台池（F-6——本档 §7）——
 子代存活；其 pending ask 统一 `release(entry, false)`（**deny**）→ 卡移除；child 收 deny 工具结果后沿常态继续（自身未被 abort——
-无解绕分支；与 C-10 同法、异触发源）——同 `TOOLS.md` §8「Stop 释放挂起门」先例（resolve(false)/deny、循环不悬挂）（修正轮 #2）；
+无解绕分支；与 C-10 同法、异触发源）——同 `TOOLS.md` §8「Stop 释放挂起门」同口径（resolve(false)/deny、循环不悬挂）（修正轮 #2）；
 ③ approve-all 连带（C-5 分支对其余 pending 逐个发 `permissionWithdrawn`——多卡并发不留残卡）。
 webview：移除 `.permission-prompt[data-prompt-id=…]`（无 promptId → 移除全部——中止即整轮作废）。
 
@@ -1490,13 +1490,13 @@ callbacks 对象——`id: entry.id`）各加 `onPermissionRequired: makeChildPe
 | 12 | `webview/permission.js` | 108 | ~122 | C-7 + data-prompt-id |
 | 13 | `webview/chat.js` | 355 | ~363 | C-8 路由 + C-6 移除 case |
 | 14 | `locales/en.json` + `locales/zh.json` | 248 ×2 | +1 ×2 | C-12 |
-| 15 | `test/child-permission.test.mjs`（新） | — | ~380 | T-CP1..T-CP19 主力；**测试档登记**（>300——不拆分口径，§17.6 先例；修正轮 #4） |
+| 15 | `test/child-permission.test.mjs`（新） | — | ~380 | T-CP1..T-CP19 主力；**测试档登记**（>300——不拆分口径，§17.6 同口径；修正轮 #4） |
 | 16 | `test/advisor-guard-completion.test.mjs` | 339 | ±1 | C-11 源读改指（修正轮 #7 补 as-of） |
 | 17 | `test/files.mjs` | 75 | +1 | 新测档登记 |
 | 18 | 文档域：`docs/design/AGENT-LOOP.md`（本 §18）/ `TOOLS.md` §8 / `WEBVIEW.md` §7.2 / `ESCALATE.md` / `ENGINEERING-MODE.md` / `README.md` 变更记录 | — | — | 设计者已落（本批） |
 
 **拆分评估注**：① `execute-tools.mjs` 506→~385（C-11 专项）；② `panel-messages.mjs` 485→~492（<500，余量薄——只许增量逐行）；
-③ `activity.js` 354→~372 / `chat.js` 355→~363（越 300 咨询线——本批不拆，登记结构债候选）；④ 源新档（`tool-gates.mjs` / `child-permission.mjs`）≤300；测试档按测试档登记口径 = 不拆分（先例 `chat-panel.test.mjs` 621、`test/prompts-async-guidance.test.mjs` 535——§17.6）——`test/child-permission.test.mjs` ~380 登记不拆分（修正轮 #4）。
+③ `activity.js` 354→~372 / `chat.js` 355→~363（越 300 咨询线——本批不拆，登记结构债候选）；④ 源新档（`tool-gates.mjs` / `child-permission.mjs`）≤300；测试档按测试档登记口径 = 不拆分（同款 `chat-panel.test.mjs` 621、`test/prompts-async-guidance.test.mjs` 535——§17.6）——`test/child-permission.test.mjs` ~380 登记不拆分（修正轮 #4）。
 **与在途批文件域重叠（调度排队——父侧）**：活动区批（`2026-09-12-VSC-ACTIVITY-CLOSURE`）同触 #4/#8/#10/#11/#13/#14——调度器按 `files` 排队，后落批须对表重读。
 **不入 files**：`docs/TODO.md` / `CHANGELOG.md`（父侧）；CLI 仓一切代码（需求树除外——设计者已落）。
 
@@ -1548,7 +1548,7 @@ i18n/文档锚用 fs 直读。
   permission，登记）；批卡协议（`batchPermissionRequest` 无 promptId/无 owner——登记，不动）；顶层 depth-0 审批语义任何改动；
   新权限模式 / 新对话框类型；`docs/design/prompts/` 与提示词文件（零改动）。
 - **与在途批（父侧核销项）**：活动区批 `2026-09-12-VSC-ACTIVITY-CLOSURE` 的 `WEBVIEW.md §14.3 C-13 表` / §14.9 与
-  `requirements/AGENT-LOOP.md §16 F-R4/N-CL4` 中「审批态 = 无数据源」理由句随本批落地失实——两批均落/核销时由父侧同步
+  `AGENT-LOOP（本仓·需求）§16` F-R4/N-CL4 中「审批态 = 无数据源」理由句随本批落地失实——两批均落/核销时由父侧同步
   （本批不改他批档——冻结窗口纪律近亲；本项已登记不静默）。
 - **端差登记（语义同源、形态端差）**：CLI child 审批经 TUI 模态（`_permQueue` 串行 + owner key `${key}/${tool}` + `⟦ev⟧approval`
   头标）；VSC 经面板卡栈（promptId 路由 + owner 标签 + `subagentApproval` 事件）——本端原文自持。

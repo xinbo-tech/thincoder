@@ -1,7 +1,8 @@
 # 批次记录（本仓份）— ROLE-REDEFINITION（2026-09-11）
 
-> 搬迁注记：本档 = CLI 仓批次记录 `thincoder/docs/batches/2026-09-11-ROLE-REDEFINITION.md` 的**本仓份拆出承载档**
+> 搬迁注记：本档 = CLI 仓批次记录 `2026-09-11-ROLE-REDEFINITION（CLI 仓）` 的**本仓份拆出承载档**
 > （LEDGER-SELF-CONTAINED 批——拆分：两端均有实施面，各仓持其份；文字**逐字搬运、零改写**——D10；对端份留源档）。
+> 对端（CLI 仓）源档对端份已**切除**（2026-09-12）——追溯锚 = 源档档首移出清单 + 源档 blob SHA
 > 拆分判据 = `LEDGER-SELF-CONTAINED（CLI 仓）§8.3` 表（本仓份 **5** 条目 = discipline-engineering VSC×2 + persona-eng-coder VSC×2 + prompts-mirror-anchors VSC×1）；源档 blob SHA = 5e9810b10f8e。
 > 源档案内锚：§5 `:184` / `:191` 分端（CLI 4 档 + AGENTS/README + 2 测试档）。
 

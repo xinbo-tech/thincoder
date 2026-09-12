@@ -4,6 +4,8 @@
  * 2026-09-11 TEST-LIFECYCLE 扫① 削段：原 T-V9（guard 文案负向锚）删 + T-V10 裁为正向参数名
  * 驻留锚（旧词组不复现类锚退役——现行守卫行为由集成场景 ① 与 T-V1~V6 覆盖）。
  * 2026-09-12 PROSE-ANCHOR-RETIRE：T-V10 整删（读 src/prompts 常量子串 = 散文锚；判据见 CLI 侧设计档 TESTING.md §11）。
+ * 2026-09-12 收尾轮 9：整档 11 例 slow() 门控（每例真 git 子进程面——`runInterruptible("git", …)` ×2 命令 ×2 cwd 链；
+ * 观测 81–1649ms）；留快层 = T-V11（纯闸逻辑，2ms）。
  *
  * Covers T-V1..V6 of the design test table (VS Code side; T-V7 dual-end
  * consistency is a cross-repo behavior asserted by the parent's full run):
@@ -22,6 +24,7 @@
  * via _touchedFiles only).
  */
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -61,28 +64,28 @@ async function run(changedRel, verification) {
 
 const SRC = ["src", "util.ts"] // non-JS, under src/ → a code change, not doc-only
 
-test("T-V1 passed → 放行", async () => {
+slow("T-V1 passed → 放行", async () => {
   const { passed, verified, out } = await run(SRC, { status: "passed" })
   assert.equal(verified, true)
   assert.equal(passed, true)
   assert.match(out, /Verification passed/)
 })
 
-test("T-V2 failed → 打回 (_verifyPassed=false)", async () => {
+slow("T-V2 failed → 打回 (_verifyPassed=false)", async () => {
   const { passed, verified, out } = await run(SRC, { status: "failed" })
   assert.equal(verified, true)
   assert.equal(passed, false)
   assert.match(out, /NOT VERIFIED/)
 })
 
-test("T-V3 skipped + reason → 放行", async () => {
+slow("T-V3 skipped + reason → 放行", async () => {
   const { passed, out } = await run(SRC, { status: "skipped", summary: "项目无自动化测试" })
   assert.equal(passed, true)
   assert.match(out, /skipped with reason/)
   assert.match(out, /项目无自动化测试/)
 })
 
-test("T-V4 skipped without reason → 打回 (空跳过不允许)", async () => {
+slow("T-V4 skipped without reason → 打回 (空跳过不允许)", async () => {
   const { passed, out } = await run(SRC, { status: "skipped" })
   assert.equal(passed, false)
   assert.match(out, /NOT VERIFIED/)
@@ -91,13 +94,13 @@ test("T-V4 skipped without reason → 打回 (空跳过不允许)", async () => 
   assert.equal(ws.passed, false)
 })
 
-test("T-V5 doc-only change → 快路径跳过 (放行)", async () => {
+slow("T-V5 doc-only change → 快路径跳过 (放行)", async () => {
   const { passed, out } = await run(["README.md"], { status: "passed" })
   assert.equal(passed, true)
   assert.match(out, /Documentation-only/)
 })
 
-test("T-V6 打回消息含改动文件 + 引导 AGENTS.md", async () => {
+slow("T-V6 打回消息含改动文件 + 引导 AGENTS.md", async () => {
   const { ctx, cwd } = makeCtx(SRC)
   try {
     const out = await verifyTool.execute({ verification: { status: "failed" } }, ctx)
@@ -110,19 +113,19 @@ test("T-V6 打回消息含改动文件 + 引导 AGENTS.md", async () => {
   }
 })
 
-test("guard: missing declaration → 打回", async () => {
+slow("guard: missing declaration → 打回", async () => {
   const { passed, out } = await run(SRC, undefined)
   assert.equal(passed, false)
   assert.match(out, /NOT VERIFIED/)
   assert.match(out, /AGENTS\.md/)
 })
 
-test("guard: invalid status → 打回", async () => {
+slow("guard: invalid status → 打回", async () => {
   const { passed } = await run(SRC, { status: "maybe" })
   assert.equal(passed, false)
 })
 
-test("guard: explicit failed on a doc-only change is still respected", async () => {
+slow("guard: explicit failed on a doc-only change is still respected", async () => {
   const { passed, out } = await run(["README.md"], { status: "failed" })
   assert.equal(passed, false)
   assert.match(out, /NOT VERIFIED/)
@@ -130,13 +133,13 @@ test("guard: explicit failed on a doc-only change is still respected", async () 
 
 // ── 相 2（VERIFY-REDESIGN.md T-V8..V11）──
 
-test("T-V8 doc-only 改动 + 显式 failed → 打回（双端同，G10）", async () => {
+slow("T-V8 doc-only 改动 + 显式 failed → 打回（双端同，G10）", async () => {
   const { passed, out } = await run(["README.md"], { status: "failed" })
   assert.equal(passed, false)
   assert.match(out, /NOT VERIFIED/)
 })
 
-test("T-V11b G11: rejection report surfaces the node --check syntax hint on changed .js", async () => {
+slow("T-V11b G11: rejection report surfaces the node --check syntax hint on changed .js", async () => {
   const { passed, out } = await run(["src", "util.js"], { status: "skipped" }) // no summary → rejected
   assert.equal(passed, false)
   assert.match(out, /NOT VERIFIED/)

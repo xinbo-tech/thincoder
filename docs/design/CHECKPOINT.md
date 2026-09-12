@@ -4,7 +4,7 @@
 > 由 ARCHITECTURE §13 Checkpoint 行展开并对照 `src/tools/checkpoint.mjs`/
 > `git-checkpoint.mjs`/`git-ext.mjs`/`git.mjs`/`shell.mjs` 核实写全——DOC-REORG-VSC
 > 批 6）。
-> 与 CLI `CHECKPOINT.md` 同名对应同一"快照/回滚"机制板块——**存储同一目录同一格
+> 与 `CHECKPOINT（CLI 仓·设计）` 同名对应同一"快照/回滚"机制板块——**存储同一目录同一格
 > 式**（`~/.thincoder/checkpoints/{cwdHash12}/`，快照跨端互通），本端为 CLI
 > `src/git/checkpoint.mjs` 的 MIRROR（行为逐项对齐，修改须两端同批）。本档写 VSC
 > 端接线与 git 工具面。
@@ -15,7 +15,7 @@
 > 装配（VS Code）：`src/tools/git.mjs`（checkpoint action 路由/只读分类/commit 清
 > 理）、`git-ext.mjs`（破坏性 op 前 snapshotBefore）、`shell.mjs`（bash git 破坏性
 > 命令 gitGuardSnapshot）、`src/config-io.mjs`（configDir 定位）。
-> 关联：ARCHITECTURE.md（§13 源行——ARCHITECTURE 2026-09-08 瘦身收官，源行已删）、TOOLS.md（git/shell
+> 关联：ARCHITECTURE.md（原 §13 源行——ARCHITECTURE 2026-09-08 瘦身收官，源行已删）、TOOLS.md（git/shell
 > 工具）。
 
 ## 变更记录

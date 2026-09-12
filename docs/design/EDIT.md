@@ -1,7 +1,7 @@
 # edit 工具权威语义（EDIT）
 
 > 板块：编辑工具。权威源：VSC `src/tools/file-edit.mjs`（editTool 壳/schema/描述内嵌）+ `src/tools/edit-line-params.mjs`（D1 子模块）+ `src/tools/edit-fuzzy-match.mjs`（D2 子模块）+ `src/tools/edit-diff.mjs`（diff 内核/判定序）。本文档是 **edit 工具语义的权威源**——VSC `TOOLS.md` §9 只留地图（定位句 + 指针），不得复制本档正文。
-> 双端：VSC（本文档）与 CLI（thincoder `docs/design/EDIT.md`）同机制各自独立实现——镜像锚：两端工具描述逐字一致（评审逐字对齐），语义正文各自落地。**VSC 差异**：无 CLI 的 DESC() md 描述机制——描述内嵌 `.mjs`（file-edit.mjs editTool 对象）；编辑器路径（doc 已打开）走 WorkspaceEdit + range 偏移映射。
+> 双端：VSC（本文档）与 CLI（`EDIT（CLI 仓·设计）`）同机制各自独立实现——镜像锚：两端工具描述逐字一致（评审逐字对齐），语义正文各自落地。**VSC 差异**：无 CLI 的 DESC() md 描述机制——描述内嵌 `.mjs`（file-edit.mjs editTool 对象）；编辑器路径（doc 已打开）走 WorkspaceEdit + range 偏移映射。
 > 状态：**已实现**（D1-D3 落地 2026-09-08）。历史设计见文末「变更记录」。
 
 ## 1. 定位
@@ -71,7 +71,7 @@ EOL 写回与失败候选——**共享 helper 权威见 `EDIT-HELPERS.md`**（V
 
 `test/edit-tool-improvement.test.mjs`（**30 用例**——删行形态全路径/显式空串拒/normalize 与 CLI 逐字同算法用例/批量混用行号+内容条目端到端——2026-09-08 阶段 2 实测校准）+ `test/files.mjs` 登记。
 
-- 2026-09-08：阶段 2 实现落地（EDIT.md §8 变更段并入本档 §1-§7——CLI 26cd89f 先行镜像）——删行形态（省略 new_string = 删，显式空串 EMPTY_NEW_STRING_LINE 拒——废除旧空串=删）+ normalize 统一（与 CLI normalizeEditLine 逐字同算法单遍映射）+ 批量行号补（条件 schema oneOf）+ 描述 4 修 + Routing 段 + 注释 §15 清理（hashlineEditTool 拆 hashline-edit.mjs——500 硬帽）。
+- 2026-09-08：阶段 2 实现落地（EDIT.md 原 §8 变更段并入本档 §1-§7——CLI 26cd89f 先行镜像）——删行形态（省略 new_string = 删，显式空串 EMPTY_NEW_STRING_LINE 拒——废除旧空串=删）+ normalize 统一（与 CLI normalizeEditLine 逐字同算法单遍映射）+ 批量行号补（条件 schema oneOf）+ 描述 4 修 + Routing 段 + 注释 §15 清理（hashlineEditTool 拆 hashline-edit.mjs——500 硬帽）。
 ## 变更记录
 
 - 2026-09-08：文档重组——edit 工具语义从 VSC TOOLS.md §9 + EDIT-TOOL-IMPROVEMENT.md 并入本文档（每工具一档——TOOLS.md §9 退地图）。状态"已实现"（D1-D3 落地：按行号改/模糊匹配/替换即删——原 IMPROVEMENT 档设计 + AC1-AC5，见 `_archive/EDIT-TOOL-IMPROVEMENT.md`）。

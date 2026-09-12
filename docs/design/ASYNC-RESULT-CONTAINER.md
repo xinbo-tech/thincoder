@@ -19,7 +19,7 @@
 
 ### 非功能性需求
 - N1（一致性）——四族 settle 语义一致。
-- N2（改动最小）——accessor 吸收 vs 合并池。
+- N2（实现面收敛）——accessor 吸收 vs 合并池。
 - N3（token 根治不冲突）——settleAdvisorRun（D1 落盘）保留为 advisor 族 hook。
 - N4（双端一致）——CLI/VSC 同机制语义各自实现。
 

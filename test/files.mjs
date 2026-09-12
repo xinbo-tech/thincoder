@@ -75,5 +75,6 @@ export default [
   "test/status-line.test.mjs", // 活动区收口批（2026-09-12）：状态行字段级对齐——statusText 五 kind 两 locale/✦reasoning/turn N/M（旧段退役）/端差（scrolled 不做·ctx pct）+ onWait/索引/transport 发射点机检——T-CL21~T-CL24（WEBVIEW.md §14）
   "test/child-permission.test.mjs", // 子代理审批面对齐批（2026-09-12）：child 审批门——ask 弹卡带归属/approve-deny 语义/AUTO 直通/轮中 approve-all/escalate sync+async（⏹ 与 Stop 两路释放）/promptId 路由/角色域零卡/无通道静默/depth-0 零回归/块头 ⏸+态词+i18n/R2 措辞锚/结构对表——T-CP1..T-CP19（AGENT-LOOP.md VSC §18；测试档登记不拆分）
   "test/ledger.test.mjs", // LEDGER-SURFACE 批（2026-09-12）：台账可见面 VSC 面——语义同源单元组 + 跨端去重键 + item 形态（T107）+ webview 渲染（T108）+ post/送达门 + 接线机检 + 慢层 git 老化界值（T102）（ENGINEERING-MODE.md §2.30）
-  "test/ledger-check.test.mjs", // LEDGER-SELF-CONTAINED 批（2026-09-12）：台账机检 L1–L4——正常（本仓指针全解析）+ 错误（跨仓证据 / 跨仓指针 → [L4] + 退出码 1）+ 边界（零假阳 / 存量分流）（T-VS1–T-VS5；设计档 §7.3）
+  "test/ledger-check.test.mjs", // LEDGER-SELF-CONTAINED 批（2026-09-12）：台账机检 L1–L4——正常（本仓指针全解析）+ 错误（跨仓证据 / 跨仓指针 → [L4] + 退出码 1）+ 边界（零假阳 / 非空基线即 FAIL——必须保持为空）（T-VS1–T-VS6 + L2/L3 面；设计档 §7.3）
+  "test/slow-gate.test.mjs", // D-T6 机制自验（2026-09-12 收尾轮 9 补建——原引用悬空修复）：红/绿两端 + 文件级合成条目跳过分支（slow() 门控：快层 skip、test:full 跑）
 ]

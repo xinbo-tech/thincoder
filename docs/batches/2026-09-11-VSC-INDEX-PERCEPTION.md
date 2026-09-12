@@ -1,10 +1,11 @@
 # VSC 索引 / 感知面收口（6 条）· 批次记录（2026-09-11）
 
-> 搬迁注记：本档自 CLI 仓 `thincoder/docs/batches/2026-09-11-VSC-INDEX-PERCEPTION.md` 迁入本仓 `docs/batches/`（LEDGER-SELF-CONTAINED 批——实施面全在本仓的批档物理迁移，档名不变、文字逐字；源档 blob SHA = bdb90ecc5585 · 源提交 = 167f48f）。
+> 搬迁注记：本档自 CLI 仓 `2026-09-11-VSC-INDEX-PERCEPTION（CLI 仓）` 迁入本仓 `docs/batches/`（LEDGER-SELF-CONTAINED 批——实施面全在本仓的批档物理迁移，档名不变、文字逐字；源档 blob SHA = bdb90ecc5585 · 源提交 = 167f48f）。
 
 > 六段 append-only，**一段一作者**：§1 讨论（主 agent）· §2 批次任务（eng-designer）·
 > §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder 自写）· §6 验证与收口（父代理）。
 > 编制：主 agent（工程模式）· 2026-09-11 13:12 · 来源 = 用户 13:10「**批B开工**」（TODO 全量审计 id=28「该落地」清单之批 B）+ 审计报告（逐条一手实测）。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -31,7 +32,7 @@
 - 全部证据 = 审计 id=28 逐条现场触证（行号 as-of 2026-09-11，须复核）；
 - 设计档候选：索引面 = `docs/design/MEMORY.md`（VSC 仓）；设置面 = `docs/design/SETTINGS.md`；感知/digest 面 = `WEBVIEW.md` / `SESSION-ACTIVITY-REVISED.md` / `QUEUED-VISIBILITY.md`（归属由 A1 勘察裁定）；
 - B5 的 watcher 面：VSC 扩展宿主 API（`vscode.workspace.createFileSystemWatcher`）可用性由设计裁（或明确"轮询/手动刷新"替代）；
-- 双端对位：B6 有 CLI 先例（`[auto-turn: digesting…]`）；B1/B2 为 VSC 独有面（CLI 无向量索引）。
+- 双端对位：B6 有 CLI 同款（`[auto-turn: digesting…]`）；B1/B2 为 VSC 独有面（CLI 无向量索引）。
 - 测试范式：VSC 新档须入 `test/files.mjs`（显式清单）。
 
 ### 范围边界（明确不做）
@@ -55,11 +56,10 @@
 
 ## §2 批次任务（eng-designer 自写）
 
-_（待写——eng-designer）_
 
 **状态：任务书就绪**（2026-09-11——需求 + 设计 + 测试三层已落档，待设计评审）。实施者 = eng-coder（设计 token 门）。本 §2 = coder 任务书本体（不另写副本；契约逐字 / 用例全文 / AC 判据在设计档各节，本段只做任务书 + 口径锚）。
 
-**落档位置**：需求 = CLI 仓 `docs/requirements/MEMORY.md` **§4**（F6–F9 / N5–N6）· `docs/requirements/AGENT-LOOP.md` **§5**（F-C1 / NFR-C1–C2）· `docs/requirements/MULTI-INSTANCE-COLLAB.md` **§2**（F6 / N5–N6）；
+**落档位置**：需求 = `MEMORY（CLI 仓·需求）` **§4**（F6–F9 / N5–N6）· `AGENT-LOOP（CLI 仓·需求）` **§5**（F-C1 / NFR-C1–C2）· `MULTI-INSTANCE-COLLAB（CLI 仓·需求）` **§2**（F6 / N5–N6）；
 设计+测试 = `MEMORY（VSC 仓）§4`（索引面）· `SETTINGS（VSC 仓）§2.5/§2.6`（设置面）· `WEBVIEW（VSC 仓）§7.2/§7.4`（感知面）。
 
 ## 一、六条裁定（§1 五问的结论——实施者据此执行，勿再选型）
@@ -77,7 +77,7 @@ _（待写——eng-designer）_
 ⇒ **返回 score=0.000 的无效条目**。修复 = 三道闸：① `loadIndex` 头一致性（`manifest.vector_dim !== decode.dim` → `null`）
 ② `indexCompat` 名称闸 ③ embed 后 query 维度闸。**返回 `[]` 即回退信号**（`tools/code.mjs:24` / `memory-tool.mjs:160` 既有回退链）——**消费方零改动**。
 **B2 要点**：`!!` 行**不得**进 dirty 集（否则被当"变更文件"）；走查根过滤 `canWalkRoot` = 无 SKIP_DIRS 组件 ∧（无点前缀组件 ∨ `.thincoder/memory` 路径前缀）——与 `discoverFiles` 进入规则同源（`.thincoder` 下仅进 `memory`）；memory 特判块（`:186-195`）**保留**。
-**B6 要点**：post 必须**早于** `entry.runTurn` 调用；结束以 `try/finally` 保证 `end` 必发（`ok:false` = 异常——不留「仍在消化」假象）；**直投**（同 `compress` 先例——不经任务可见性 outbox）。
+**B6 要点**：post 必须**早于** `entry.runTurn` 调用；结束以 `try/finally` 保证 `end` 必发（`ok:false` = 异常——不留「仍在消化」假象）；**直投**（同 `compress` 同款——不经任务可见性 outbox）。
 
 ## 二、目标与背景（为什么）
 
@@ -90,7 +90,7 @@ VSC 索引/感知面六条同族缺陷（审计 id=28「该落地」批 B），�
 - 现状锚（as-of 2026-09-11，全部复核过）：`src/indexer.mjs` 326 行（`:92-93` 写两字段 · `:111-135` load · `:140-215` needsRebuild · `:152-155` 快路径注释 · `:186-195` memory 特判 · `:207` `file-changes` · `:224-261` searchIndex）·
   `src/index-discover.mjs` 74 行（`:42-53` shouldIndexFile 不变量注释 · `:65-73` listMemoryFiles）· `src/embedding.mjs:48` cosine · `src/index-bin.mjs` 解码 ·
   `src/extension/panel-index.mjs` 164 行（`:13-31` pushIndexStatus · `:95-111` maybePromptIndex）· `src/extension/chat-panel.mjs:316-335`（`_pushSettingsLight`/`_pushSettings`）·
-  `src/extension/suspension.mjs:261-274`（digest 分支）· `webview/chat.js:283-…`（`showCompressStatus` 先例）· `webview/base.css:182-198`（`.compress-status`）· `locales/{zh,en}.json:61-65`（`compress.*`）。
+  `src/extension/suspension.mjs:261-274`（digest 分支）· `webview/chat.js:283-…`（`showCompressStatus` 同款）· `webview/base.css:182-198`（`.compress-status`）· `locales/{zh,en}.json:61-65`（`compress.*`）。
 - 调用点：`needsRebuild` 唯一消费 = `panel-index.mjs:102`（只取 `needed`——reason 纯诊断）；`maybePromptIndex` 调用点 = `panel-session.mjs:337` + `panel-project.mjs:55`；`searchIndex` 消费 = `tools/code.mjs:23` + `memory-tool.mjs:151`。
 - 测试范式：新测档**必须登记** `test/files.mjs`（显式清单——不登记不跑）；快层 `npm test`（slow 门 800ms 拦截——见 `test/slow.mjs`：需 git 子进程的用例标 `slow(...)`，快层 skip / test:full 照跑）；webview 侧走 `test/helpers/webview-env.mjs`（happy-dom + en locale）；宿主侧走 `test/vscode-mock`（`import * as vscode from "vscode"` 经 devDependency 别名解析到 mock）。
 - 现状证伪锚：`createFileSystemWatcher` 全仓 **零命中**；test 目录对 `indexer`/`needsRebuild` **零命中**（B1–B4 无既有覆盖——全新增）。
@@ -124,7 +124,7 @@ VSC 索引/感知面六条同族缺陷（审计 id=28「该落地」批 B），�
 **设置面（B5）**：`src/extension/config-watch.mjs`（**新** → ~55）· `extension.mjs`（83 → ~92）· `test/vscode-mock/index.mjs`（141 → ~162——补 `createFileSystemWatcher` + `RelativePattern`）。
 **感知面（B6）**：`src/extension/suspension.mjs`（346 → ~360）· `webview/chat.js`（319 → ~342）· `webview/base.css`（432 → ~446）· `locales/*.json`（+`digest.*` 三键——同上两档）。
 **测试**：`test/index-perception.test.mjs`（**新** → ~170）· `test/config-watch.test.mjs`（**新** → ~95）· `test/digest-visibility.test.mjs`（**新** → ~120）· `test/files.mjs`（55 → 58——三新档登记）。
-**文档域（设计者写域——coder 零碰）**：VSC 仓 `docs/design/{MEMORY,SETTINGS,WEBVIEW}.md` 三节 + `docs/TODO.md` 6 条状态推进；CLI 仓 `docs/requirements/{MEMORY,AGENT-LOOP,MULTI-INSTANCE-COLLAB}.md` 三节。
+**文档域（设计者写域——coder 零碰）**：VSC 仓 `docs/design/{MEMORY,SETTINGS,WEBVIEW}.md` 三节 + `docs/TODO.md` 6 条状态推进；CLI 仓需求档三节（`MEMORY` / `AGENT-LOOP` / `MULTI-INSTANCE-COLLAB`）。
 
 ## 七、验收标准（逐条见设计档 §4.6 / §2.6 / §7.4——每条可机器验证）
 
@@ -152,7 +152,7 @@ VSC 索引/感知面六条同族缺陷（审计 id=28「该落地」批 B），�
 
 1. `test/index-perception.test.mjs`——test 目录对 indexer/needsRebuild **零既有覆盖**（无归属可并）；
 2. `test/config-watch.test.mjs`——watcher = 宿主生命周期面，既有 config 系测档均为读写语义面（不同域）；
-3. `test/digest-visibility.test.mjs`——同族 `async-visibility.test.mjs` 已 388 行（+~120 逼近 500 硬帽；且需 happy-dom 与宿主两面混合——先例 = 第 18 批新档裁定「『档』以文档档为限」）；
+3. `test/digest-visibility.test.mjs`——同族 `async-visibility.test.mjs` 已 388 行（+~120 逼近 500 硬帽；且需 happy-dom 与宿主两面混合——同口径 = 第 18 批新档裁定「『档』以文档档为限」）；
 4. `src/extension/config-watch.mjs`——watcher 生命周期属扩展宿主级（非面板级）；候选宿主 `chat-panel.mjs` 420 / `panel-messages.mjs` 468（贴线）、`settings.mjs` 350（业务面 = provider/key 管理，watcher 非其业务）——**回退案**：不批则并入 `src/extension/settings.mjs`（350 → ~405，语义等价，仅内聚度略降；测试改从 settings.mjs 导入）。
 
 ## 十一、需父侧排程的文档项（设计者写域之外——本轮未写，如实列出）
@@ -214,16 +214,15 @@ VSC 索引/感知面六条同族缺陷（审计 id=28「该落地」批 B），�
 
 ## §3 设计评审（评审子代理自写）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
 | # | Category | Severity | Issue | Suggestion |
 |---|----------|----------|-------|------------|
-| 1 | Requirements coverage / Feasibility（B2 删除面） | 🔴 | B2「删」情形无机制：契约五只对**目录条目**给出「该根下 manifest 中已消失的条目 → `file-removed`」（thincoder-vscode/docs/design/MEMORY.md:221-223）；按**文件模式**被忽略的文件（T-I6 的 `notes.md`）删除后已无现存路径——`!!` 只列举现存被忽略路径（契约五自身建模前提），随后既无目录条目可走查、也无文件条目可判四态 ⇒ 删除无任何触发路径。但 T-I6（:279「删 → `file-removed`」）、AC-I2（:289）、需求 F7（thincoder/docs/requirements/MEMORY.md:55、:69「增/删/改」）均断言必须检出；§2 B2 要点（:68/:77）亦未给出该路径。 | 请设计者给出删除情形的确切触发路径（例：对 manifest 条目按与 `canWalkRoot` 同源的位置做存在性扫描，或其它可达机制），并据以核对 T-I6 与 T-I10「两路同向」在删除场景的一致性；若确不可检出 → 同步修正 T-I6/AC-I2 与需求 F7 的「删」断言（需求侧变更须用户确认）。本判断可实测证伪。 |
-| 2 | Feasibility / Acceptance（B5 自写抑制） | 🔴 | 「stat 元组抑制」无法区分自写与外部写：任何真实写盘（含扩展自写）都改变 mtimeMs ⇒ 必走「异」分支触发 `onChange`（thincoder-vscode/docs/design/SETTINGS.md:72-73）；模块接口（:67 `startConfigWatch({ onChange, debounceMs, configPath })`）没有任何供写盘路径刷新基线的入口、「上次推送值」的更新者/时机未定义 ⇒ D-S2（:85）与 N5（thincoder/docs/requirements/MULTI-INSTANCE-COLLAB.md:60）承诺的「扩展自写不抖动面板」在机制上不可达；T-S3（:99）只测「事件但元组未变」退化形，掩盖真实自写序列（写→事件→元组已变）。 | 二选一：① 定义基线回填（自写成功后刷新 watcher 基准——在契约中显式给出接口与时机）；② 若确认 `_pushSettingsLight` 对未变快照天然无可见抖动，则删去「自写不抖动」的机制归因、并把 T-S3 改为真实自写序列断言。两者均需同步 N5 度量口径（需求侧同源措辞 thincoder/docs/requirements/MULTI-INSTANCE-COLLAB.md:60）。 |
+| 1 | Requirements coverage / Feasibility（B2 删除面） | 🔴 | B2「删」情形无机制：契约五只对**目录条目**给出「该根下 manifest 中已消失的条目 → `file-removed`」（thincoder-vscode/docs/design/MEMORY.md:221-223）；按**文件模式**被忽略的文件（T-I6 的 `notes.md`）删除后已无现存路径——`!!` 只列举现存被忽略路径（契约五自身建模前提），随后既无目录条目可走查、也无文件条目可判四态 ⇒ 删除无任何触发路径。但 T-I6（:279「删 → `file-removed`」）、AC-I2（:289）、需求 F7（docs/requirements/MEMORY.md:55、:69（CLI 仓）「增/删/改」）均断言必须检出；§2 B2 要点（:68/:77）亦未给出该路径。 | 请设计者给出删除情形的确切触发路径（例：对 manifest 条目按与 `canWalkRoot` 同源的位置做存在性扫描，或其它可达机制），并据以核对 T-I6 与 T-I10「两路同向」在删除场景的一致性；若确不可检出 → 同步修正 T-I6/AC-I2 与需求 F7 的「删」断言（需求侧变更须用户确认）。本判断可实测证伪。 |
+| 2 | Feasibility / Acceptance（B5 自写抑制） | 🔴 | 「stat 元组抑制」无法区分自写与外部写：任何真实写盘（含扩展自写）都改变 mtimeMs ⇒ 必走「异」分支触发 `onChange`（thincoder-vscode/docs/design/SETTINGS.md:72-73）；模块接口（:67 `startConfigWatch({ onChange, debounceMs, configPath })`）没有任何供写盘路径刷新基线的入口、「上次推送值」的更新者/时机未定义 ⇒ D-S2（:85）与 N5（docs/requirements/MULTI-INSTANCE-COLLAB.md:60（CLI 仓））承诺的「扩展自写不抖动面板」在机制上不可达；T-S3（:99）只测「事件但元组未变」退化形，掩盖真实自写序列（写→事件→元组已变）。 | 二选一：① 定义基线回填（自写成功后刷新 watcher 基准——在契约中显式给出接口与时机）；② 若确认 `_pushSettingsLight` 对未变快照天然无可见抖动，则删去「自写不抖动」的机制归因、并把 T-S3 改为真实自写序列断言。两者均需同步 N5 度量口径（需求侧同源措辞 docs/requirements/MULTI-INSTANCE-COLLAB.md:60（CLI 仓））。 |
 | 3 | Scope coordination | 🟡 | 协调项（非缺陷）：`AGENT-LOOP（VSC 仓）§7` 需补 1 行指针（digest 起跑指示 → `WEBVIEW（VSC 仓）§7.4`），因 spawn 写域未含该档而未写——§2 §十一（:158）已如实列出并请父侧排程。 | 父侧在批准/收口前排程该指针补写（或显式豁免），避免挂起 digest 机制权威处悬空。 |
-| 4 | Acceptance criteria（回指链） | 🔵 | 需求 N6（thincoder/docs/requirements/MEMORY.md:64）与 NFR-C1（thincoder/docs/requirements/AGENT-LOOP.md:121）未被设计 AC 显式标注：实质覆盖于 T-I6/T-I7/T-I10 slow 归册与 T-D1「post 早于 runTurn」断言；§2 覆盖表将 N6 并入 AC-I5、将 NFR-C1 并入 AC-D3（而 AC-D3 标注的是 NFR-C2）。 | 在设计档 AC 行补 N6 / NFR-C1 标签（或修正 §2 覆盖表映射），使「设计 AC 回指」逐条无歧义。 |
+| 4 | Acceptance criteria（回指链） | 🔵 | 需求 N6（docs/requirements/MEMORY.md:64（CLI 仓））与 NFR-C1（docs/requirements/AGENT-LOOP.md:121（CLI 仓））未被设计 AC 显式标注：实质覆盖于 T-I6/T-I7/T-I10 slow 归册与 T-D1「post 早于 runTurn」断言；§2 覆盖表将 N6 并入 AC-I5、将 NFR-C1 并入 AC-D3（而 AC-D3 标注的是 NFR-C2）。 | 在设计档 AC 行补 N6 / NFR-C1 标签（或修正 §2 覆盖表映射），使「设计 AC 回指」逐条无歧义。 |
 | 5 | Clarity（行数口径） | 🔵 | locales 行数两处同基线各自估：`settings.indexMismatch`（MEMORY（VSC 仓）§4.4：243 → ~245）与 `digest.*` 三键（WEBVIEW（VSC 仓）§7.4：243 → ~246）——合并后（约 +4 键）无统一目标值，§2 §六对 digest 键未给目标。 | 补一句合并口径（两档 locales 的最终预计值），供实施报告「实测对照 §六 预计值」时唯一基准。 |
 | 6 | Acceptance criteria（测试域歧义） | 🔵 | T-I9「全路径 grep + 各分支 reason 收集；reason ∈ 七词表」（MEMORY（VSC 仓）§4.5 :282）与契约一新增的 `indexCompat.reason:"model-changed"`（:182）存在收集域歧义：若收集域未显式限定 `needsRebuild` 分支，新值将 ∉ 七词表 → 自指红灯。 | 在 T-I9/AC-I4 写明收集域 = `needsRebuild` 分支（或注明 `indexCompat.reason` 属独立命名空间，不在词表约束内）。 |
 | 7 | Feasibility（代价证据） | 🔵 | B2 代价实测仅覆盖「本仓 19 条 `!!`、同量级」（§2 :95）；对「大仓 + 大型未被 SKIP_DIRS 豁免的忽略子树」未实测，且未注明 `--ignored=traditional` 对忽略目录是否下钻——git 侧输出规模的最坏界未给（走查侧界已给：MEMORY（VSC 仓）§4.1-B2 :156）。 | 在 §4.1-B2 代价列补 git 侧最坏情形口径或一次实测（亦可注明本机实测局限），使「弃全量扫描」的成本对比两侧证据对等。 |
@@ -238,7 +237,7 @@ VERDICT: changes-required
 
 | # | Category | Severity | Issue | Suggestion |
 |---|----------|----------|-------|------------|
-| 1 | Acceptance criteria（回指链——#4 残遗） | 🟡 | 轮次 1 #4 处置只落了设计侧标签（`thincoder-vscode/docs/design/WEBVIEW.md:468` AC-D1 →（F-C1 / NFR-C1））；批次档 §2「四、覆盖需求」表 `thincoder/docs/batches/2026-09-11-VSC-INDEX-PERCEPTION.md:107` 仍映射 `NFR-C1/C2 → AC-D3`——而 AC-D3 现仅标 NFR-C2（`WEBVIEW.md:470`，已核）；:97 表头「三方一致」对 NFR-C1 不成立（设计 > 记录——记录侧滞后）。 | 父侧 doc 层同步该行（NFR-C1 → AC-D1、NFR-C2 → AC-D3）或加一行注记指向修正块 #4；评审只读，未改。 |
+| 1 | Acceptance criteria（回指链——#4 残遗） | 🟡 | 轮次 1 #4 处置只落了设计侧标签（`thincoder-vscode/docs/design/WEBVIEW.md:468` AC-D1 →（F-C1 / NFR-C1））；批次档 §2「四、覆盖需求」表 `docs/batches/2026-09-11-VSC-INDEX-PERCEPTION.md:107`（CLI 仓） 仍映射 `NFR-C1/C2 → AC-D3`——而 AC-D3 现仅标 NFR-C2（`WEBVIEW.md:470`，已核）；:97 表头「三方一致」对 NFR-C1 不成立（设计 > 记录——记录侧滞后）。 | 父侧 doc 层同步该行（NFR-C1 → AC-D1、NFR-C2 → AC-D3）或加一行注记指向修正块 #4；评审只读，未改。 |
 | 2 | Affected-file size annotations（数值残遗） | 🔵 | `thincoder-vscode/docs/design/SETTINGS.md:94`（`src/extension/config-watch.mjs` 新 → ~65——含基线/自写订阅面）与 `:98` 档位注记（新档 ~55 行）不一致；批次档 :209 亦记 ~65——修正轮修订后 :98 未同步。 | 将 :98 同步为 ~65（或注明 ~55 为修订前基线）。 |
 | 3 | Methodology compliance（变更记录核验——未证实项） | 🔵 | 批次档 :182「四档变更记录逐档一行已加」：`MEMORY（VSC 仓）:27` · `SETTINGS（VSC 仓）:128` · `WEBVIEW（VSC 仓）:569` 三档命中；`thincoder-vscode/docs/design/AGENT-LOOP.md` 全文 grep「修正轮」无变更记录形态命中（仅正文 :189/:355 机制词）——该项**未经证实**（措辞可能不同；非定论）。 | 父侧顺手核对 AGENT-LOOP（VSC 仓）变更记录有无本批（第 21 批 / B6 指针）行——有则忽略本条，无则补一行。 |
 
@@ -255,9 +254,7 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
-_（待写——eng-coder）_
 
 **状态：实施完成 · 交付收敛**（2026-09-11）。内部审计 1 轮（DEVIATIONS：🟡1 + 🔵1，均当场自修）· 内部 advisor 代码评审 1 轮（**VERDICT: pass**，🟡1 + 🔵4——2 条以代码/测试修复，3 条报告面）。
 实施域 = 17 档（13 改 + 4 新——与 §六 修正块计数一致）。红线零破：`docs/**`（设计者写域）零碰 · CLI 仓零改 · `webview/**` 仅 chat.js/base.css/settings-tools.js（设计档 §7.4 受影响表 + §4.4 明列）· 他批在途档零碰。

@@ -5,7 +5,7 @@
 > 提示词载体注（2026-09-10——PROMPT-SYSTEM 施工①③）：旧 engineering.md/engineering-sub.md 已退役——
 > 工程纪律现驻 `src/prompts/discipline-engineering.md` + `persona-engineering.md`（装配链 = assemblePrompt
 > 四槽位——蓝图 §3.2）；机制语义权威 = CLI 仓 `ENGINEERING-MODE（CLI 仓）`（§2.9 锚清单）。
-> 与 CLI `docs/design/ENGINEERING-MODE.md` 同名文档对应同一机制板块——各端独立实现，
+> 与 `ENGINEERING-MODE（CLI 仓·设计）` 同名文档对应同一机制板块——各端独立实现，
 > 内容以本端代码为准（本端 = `thincoder-vscode`；DOC-REORG-VSC）。
 > 本文档为**架构级机制文档**：功能性需求以机制目标与约束表述；评审收敛/轮次衰减的
 > 权威 = [ADVISOR-CONVERGENCE.md](ADVISOR-CONVERGENCE.md)；eng-coder 内部交付协议的
@@ -194,8 +194,12 @@
 `test:full`）。逐字锚（guard 前缀句、角色互斥句、dispatch 文案）由 prompts 内容断言
 防回退（fail-when-unchanged）。
 
-新增台账可见面（LEDGER-SURFACE 批——机制与行文本权威 = CLI 仓 `ENGINEERING-MODE.md` §2.30，本节不重述）：
+新增台账可见面（LEDGER-SURFACE 批——机制与行文本权威 = `ENGINEERING-MODE（CLI 仓·设计）` §2.30，本节不重述）：
 本端 `test/ledger.test.mjs`（入册 `test/files.mjs`）覆盖解析/计数/老化/阈值/去重/item 形态（含 tooltip 与 hide）/webview 行渲染。
+
+**文档一致性机检（V1/V2/V3）与基线（本端原文自持）**：本端扫描器 = `scripts/check-doc-width.mjs`，基线档 = `test/fixtures/doc-consistency-baseline.json`。
+**本基线必须保持为空**——新增违规一律红，**不得再入基线**（**入基线 = 例外 = 违规**，fail-closed：检查器对非空基线直接 FAIL）；
+V3 判据射程 = 工具落地后（2026-09-11 起）创建的批次档（更早者的 §3 由父侧代写——结构性历史事实，不判）。
 
 ## 10. 已知取舍
 
@@ -208,9 +212,11 @@
 
 ## 变更记录（历史折叠——详见 git log）
 
+- 2026-09-12（台账自持批·**基线清零 + 闸门收紧轮**——用户「残留即先例」裁定）：本端一致性基线**清空**（31 条逐条处置：V1 自洈 29 / V2 键失效 1 / V3 射程排除 1）· 检查器补「基线必须保持为空」硬规矩（非空即 FAIL——入基线 = 例外 = 违规）+ V3 判据射程（2026-09-11 起）；§9 补口径句。
+
 - 2026-09-12：台账可见面批（LEDGER-SURFACE）——本端增量面登记：状态栏 item（含原生 tooltip）+ chat 流文本行
   （`ledgerNotice`）+ `src/ledger.mjs` / `src/extension/ledger-surface.mjs` / `webview/ledger-line.js`；
-  机制与行文本权威 = CLI 仓 `docs/design/ENGINEERING-MODE.md` §2.30（本端不重述）。
+  机制与行文本权威 = `ENGINEERING-MODE（CLI 仓·设计）` §2.30（本端不重述）。
 
 - 2026-09-11：群 A 批（VSC-MIRROR-SWEEP）——§6 补「D5 冻结窗口预闸」bullet（下界定义句入行——同步面 3/3；见 `ADVISOR-CONVERGENCE.md` §16.2）。
 

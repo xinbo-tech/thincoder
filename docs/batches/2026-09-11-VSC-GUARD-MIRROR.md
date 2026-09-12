@@ -1,10 +1,11 @@
 # VSC 端评审链守卫镜像（citations / messages / run）+ settings 形状面残留 · 批次记录（2026-09-11）
 
-> 搬迁注记：本档自 CLI 仓 `thincoder/docs/batches/2026-09-11-VSC-GUARD-MIRROR.md` 迁入本仓 `docs/batches/`（LEDGER-SELF-CONTAINED 批——实施面全在本仓的批档物理迁移，档名不变、文字逐字；源档 blob SHA = 75f1b75d4f02 · 源提交 = b70c39c）。
+> 搬迁注记：本档自 CLI 仓 `2026-09-11-VSC-GUARD-MIRROR（CLI 仓）` 迁入本仓 `docs/batches/`（LEDGER-SELF-CONTAINED 批——实施面全在本仓的批档物理迁移，档名不变、文字逐字；源档 blob SHA = 75f1b75d4f02 · 源提交 = b70c39c）。
 
 > 六段 append-only，**一段一作者**：§1 讨论（主 agent）· §2 批次任务（eng-designer）·
 > §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder）· §6 验证与收口（父代理）。
 > 编制：主 agent（工程模式）· 2026-09-11 · 来源 = 用户 10:50「**2.开**」（承接第 11 批 VSC 对位面登记 `docs/TODO.md`）。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -24,13 +25,13 @@
 ### 条目 B：VSC 写面 `agent.subagentModels` 零约束残留（第 8 批交付 ⑤-1）
 
 - 第 8 批 AC-S2.7 枚举 = 本端 2 键（`agent.subagentModel`/`agent.compactThreshold`）+ 跨端 3 键（`defaultModel`/`shell`/`memory.team`），**不含**同族键 `agent.subagentModels`——VSC `_SIBLING_SHAPES`（`thincoder-vscode/src/agent-tools/settings.mjs:33-37`）补第 4 条 = 设计变更（本批走设计 + 评审）。
-- 依据 = W2 裁定先例（两端共享 `~/.thincoder/config.json`——同一缺陷完整存在）。
+- 依据 = W2 裁定（两端共享 `~/.thincoder/config.json`——同一缺陷完整存在）。
 
 ### 已核事实（供 designer 免重复勘察）
 
-- 第 11 批设计权威（已交付）：`thincoder/docs/design/ADVISOR-CONVERGENCE.md` §14（A–E 全量，含 §14.14 E-6 的 VSC 三处登记与 §14.10 登记项）。
-- CLI 侧交付实测（父侧复验）：见上「条目 A」各锚点；测试档 `thincoder/test/advisor-chain-guards.test.mjs`（21 例）为对位参照。
-- VSC 仓测试范式：`thincoder-vscode/test/files.mjs` 为**显式清单**（新档必须登记——第 8/10 批先例）。
+- 第 11 批设计权威（已交付）：`ADVISOR-CONVERGENCE（CLI 仓·设计）` §14（A–E 全量，含 §14.14 E-6 的 VSC 三处登记与 §14.10 登记项）。
+- CLI 侧交付实测（父侧复验）：见上「条目 A」各锚点；测试档 `test/advisor-chain-guards.test.mjs`（CLI 仓）（21 例）为对位参照。
+- VSC 仓测试范式：`thincoder-vscode/test/files.mjs` 为**显式清单**（新档必须登记——第 8/10 批同口径）。
 
 ### 范围边界（明确不做）
 
@@ -54,7 +55,6 @@
 
 ## §2 批次任务（eng-designer 自写）
 
-_（待写——eng-designer）_
 
 **状态：任务书就绪**（2026-09-11——设计已落档，待设计评审）。实施者 = eng-coder（设计 token 门）。本 §2 = coder 任务书本体（不另写副本）。
 
@@ -65,8 +65,8 @@ _（待写——eng-designer）_
 ## 二、已知事实（免重复勘察——直接读）
 
 - 设计权威（三层）= VSC 仓 `docs/design/ADVISOR-CONVERGENCE.md` **§13**（裁定摘要 §13.0 / 契约六条 §13.4 / 受影响文件 §13.5 / 用例 §13.8 / AC §13.9 / 边界 §13.10；§2 载体表已同步）。
-- 需求权威 = CLI 仓 `docs/requirements/ADVISOR-CONVERGENCE.md` **§8**（F18–F23 / N12–N15）+ `docs/requirements/SETTINGS-TOOL.md` **F-S1.7 VSC 对位行**。
-- CLI 对位实测（**只读参照，不碰**）：`thincoder/src/advisor/{citations,compaction,loop,run}.mjs` · `src/agent-tools/{advisor,advisor-async,advisor-settle,design-token}.mjs` · 测试 `thincoder/test/advisor-chain-guards.test.mjs`（21 例）。
+- 需求权威 = `ADVISOR-CONVERGENCE（CLI 仓·需求）` **§8**（F18–F23 / N12–N15）+ `SETTINGS-TOOL（CLI 仓·需求）` **F-S1.7 VSC 对位行**。
+- CLI 对位实测（**只读参照，不碰**）：`src/advisor/{citations,compaction,loop,run}.mjs`（CLI 仓） · `src/agent-tools/{advisor,advisor-async,advisor-settle,design-token}.mjs` · 测试 `test/advisor-chain-guards.test.mjs`（CLI 仓）（21 例）。
 - VSC 现状锚点：`advisor/citations.mjs`（78 行——CLI 修复前逐字副本）· `advisor/messages.mjs:173-176`（信号只在 design round1 注入）·
   `advisor/run.mjs:58/166/170`（压缩/溢出尾）+ `:144-172`（轮间超时）· `agent-tools/advisor-async.mjs:61`（`ADVISOR_FAILURE_TEXT` `^` 锚）+
   `:330/368`（design 结算/失败判定）· `agent-tools/settings.mjs:33-37`（`_SIBLING_SHAPES` 3 条）。
@@ -129,7 +129,7 @@ AC-VG1–AC-VG8。跑法（coder 必须实跑并在报告中给日志尾部）�
 | 4 🔵 | W2/W3 所指注明（W2 = 第 8 批待裁定项「VSC 镜像是否纳入」——裁定 = 纳入；W3 = 待裁定项「`agent.subagentModels` 同族」——该批 CLI 面落地、VSC 面本批补） | VSC 设计档 §13.1 表下注（`:347-349`）· VSC TOOLS（`:120` / `:223-224`） |
 | 5 🔵 | **Deferred（不修——父侧已裁）**：行数注记 `52（实落）` 与实测差 = 他批（第 13 批）内容；该档冻结 + §5 实测复写流程已定 | 零动 |
 | 6 🔵 | 计数口径统一：六 = kind 计（站点另注）；「三要素」= 统计行（rounds / tool calls / review text produced）+ budget 行（本档各处置同一口径） | VSC 设计档 §13.2 #4（`:365-367`）· 契约四表注（`:453-454`）· 契约五（`:488-492`）· T-VG12（`:583`）· T-VG13（`:584`）· AC-VG6（`:603`） |
-| 7 🔵 | 术语 / 措辞 / 可机判：「收集合」→「接受集」（对齐 F-S1.8）；越线 = 新增 advisory 债（非存量先例）；AC-VG3 grep 判据改可机判三式；CLI 侧需求档核对 = 术语一致 → 零改 | VSC 设计档 AC-VG7（`:604`）· §13.5 行 2（`:516`）· AC-VG3（`:600`）；CLI 需求档零改 |
+| 7 🔵 | 术语 / 措辞 / 可机判：「收集合」→「接受集」（对齐 F-S1.8）；越线 = 新增 advisory 债（非存量档）；AC-VG3 grep 判据改可机判三式；CLI 侧需求档核对 = 术语一致 → 零改 | VSC 设计档 AC-VG7（`:604`）· §13.5 行 2（`:516`）· AC-VG3（`:600`）；CLI 需求档零改 |
 | 8 🔵 | 无动作（pass 判定不依赖实施域代码数字） | 零动 |
 
 **口径 / 计数同步（D3——声明处与列表同改）**：① 六 kind 口径自洽（§13.2 #4「现行各一站点」↔ 契约四表注「条 = kind；生成点列站点」）；②「三要素」全档统一（= 统计行；budget 独立行）；③ D-VG6 枚举「五处」与列表同改。
@@ -146,7 +146,7 @@ AC-VG1–AC-VG8。跑法（coder 必须实跑并在报告中给日志尾部）�
 
 | # | 项 | 设计档落点 | 结果摘要 |
 |---|---|---|---|
-| D1 | 硬墙信号组合——交付实现形态（偏差同步） | §13.4 契约五 硬墙 bullet（`:479-486`） | `AbortSignal.any` 不可直接依赖 ⇒ **特征检测 + 本地兜底** `combineSignals`（`loop.mjs:29-38`；形态先例 `mcp/http.mjs:14-22`）；语义零变（任一 abort 即触发、reason 透传） |
+| D1 | 硬墙信号组合——交付实现形态（偏差同步） | §13.4 契约五 硬墙 bullet（`:479-486`） | `AbortSignal.any` 不可直接依赖 ⇒ **特征检测 + 本地兜底** `combineSignals`（`loop.mjs:29-38`；形态同形 `mcp/http.mjs:14-22`）；语义零变（任一 abort 即触发、reason 透传） |
 | D2 | 墙判 ②2 防御分支注 | §13.4 契约五 墙判 bullet 下新增（`:491-495`） | `interrupted` 返回仅 Ctrl+I 置位（四传输层同判 `reason.interrupt`）——②1 先命中（`loop.mjs:176` → `:179` 顺序敏感）⇒ ②2 可达性存疑（实施前核验 id=7 结论）；**保留** + 用例经 seams（T-VG13） |
 | D3 | §13.5 尾注第 2 例校正 | §13.5 尾注（`:537-542`） | `batch-segment.test.mjs:20` **直连** `src/advisor/tools.mjs`（不经 run.mjs）；`advisor-chain-guards.test.mjs:18` 经 `run.mjs:25` re-export——拆分保留 re-export 即可（消费面零改） |
 | D4 | 实施域行数注记 → 交付实测 + 文档域复写 | §13.5 表头（`:519`）· 表 11 行（`:523-535`）· 表下注（`:543-546`）· 文档域行（`:554`） | 右值 = 交付实测：citations 143 · messages 296 · run 221 · loop 278 · compaction 160 · advisor 321 · advisor-async 463 · settings 261 · 测试档 427/192 · files 54；加「实测 vs 预计」行；设计档自注 641 → **660（同步后终值）** |
@@ -160,7 +160,6 @@ AC-VG1–AC-VG8。跑法（coder 必须实跑并在报告中给日志尾部）�
 
 ## §3 设计评审（评审子代理自写）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
@@ -174,7 +173,7 @@ _（待写——评审子代理）_
 | 4 | 编号一致性（检查④） | 🔵 | W2（需求 SETTINGS :32 · 批次 :25 · VSC TOOLS :120「裁定先例」）与 W3（设计 :345 · VSC TOOLS :224「镜像 CLI」）并存，所指未注明 | 回对第 8 批条目号；或注明 W2=裁定 / W3=CLI 条目（避免读成编号漂移） |
 | 5 | 行数注记（检查⑥） | 🔵 | 文档域 SETTINGS-TOOL 注记「52（实落）」（:521）与实测不符（现内容至 :56 + 尾空行 ≈57）——差 = 他批（第 13 批）F-S1.3 补充块（SETTINGS-TOOL :18-22，本评审已除外该内容） | 交付批 §5 复写实测值；评审在途不做写改（D5） |
 | 6 | 计数口径（检查⑥） | 🔵 | 「本端六条宿主尾」列 6 锚（:361-362：:146/:155/:159/:170/:210/:462）vs 契约四表 :445（:146 / :176 双锚 = 7 处）；「机读统计三要素」（:479）vs 四项列举（T-VG12 :567 / F22 需求 :178） | 统一口径（条=kind 或 site；要素 3/4）或注明 |
-| 7 | 文档卫生 | 🔵 | AC-VG7（:588）「收集合」疑为「接受集」（F-S1.8 :36 术语）；§13.5 行 2（:500）「越线按 >300 存量记」——越线系**新增** advisory 债（对比 :504 advisor.mjs 存量先例）；AC-VG3（:584）grep 判据非可执行形态 | 术语 / 措辞同步；AC-VG3 改可机判形态 |
+| 7 | 文档卫生 | 🔵 | AC-VG7（:588）「收集合」疑为「接受集」（F-S1.8 :36 术语）；§13.5 行 2（:500）「越线按 >300 存量记」——越线系**新增** advisory 债（对比 :504 advisor.mjs 存量档）；AC-VG3（:584）grep 判据非可执行形态 | 术语 / 措辞同步；AC-VG3 改可机判形态 |
 | 8 | 复核边界（unverified） | 🔵 | 实施域 11 项代码行数注记与代码锚点（78/285/468/310/460/250/149/53 等）未独立复核——实现代码在评审范围外；pass 判定不依赖之（设计已定 §5 实测流程） | 交付批 §5 按注记口径复写实测 |
 
 VERDICT: pass
@@ -264,8 +263,8 @@ CLI 仓代码零改动（`src/` 与 `test/` 在 spawn 后 mtime 全扫 0 命中�
 
 **④ 偏差披露（零静默）**
 
-1. **`AbortSignal.any` 不可直接依赖**（全仓无裸调先例；`src/provider.mjs:31` 的 polyfill 为非导出局部 const）→ 硬墙信号 = 「特征检测 + 本地兜底」`combineSignals`
-   （`src/advisor/loop.mjs:29-38`，形态先例 = `src/mcp/http.mjs:14-22`）——语义同契约五（用户信号 × deadline 无条件复合传入）。设计档 §13.4 契约五括号句措辞由父侧后置同步（本端不改文档）。
+1. **`AbortSignal.any` 不可直接依赖**（全仓无裸调在案；`src/provider.mjs:31` 的 polyfill 为非导出局部 const）→ 硬墙信号 = 「特征检测 + 本地兜底」`combineSignals`
+   （`src/advisor/loop.mjs:29-38`，形态同形 = `src/mcp/http.mjs:14-22`）——语义同契约五（用户信号 × deadline 无条件复合传入）。设计档 §13.4 契约五括号句措辞由父侧后置同步（本端不改文档）。
 2. **sync 结算面测试经本地 127.0.0.1 SSE fake server 直驱真 `chat()`**（T-VG3 / T-VG5）——零外网、零真实 LLM、零长等待；设计 §13.8「单测零网络」口径按「无外网依赖」理解，此处如实登记。
 3. **残留登记（本批不做、非缺陷）**：design 评审走 `buildAdvisorFollowUp`（round ≥2 且有 prior 的收敛路径）不含 Approval Signal——契约二只覆盖 `buildAdvisorUserMessage` 的三个出口（设计 §13.4 明确范围）；
    该面与启动断言面（§13.10 登记）同族，归后续批评估。
@@ -279,7 +278,7 @@ CLI 仓代码零改动（`src/` 与 `test/` 在 spawn 后 mtime 全扫 0 命中�
 - 内部 explore 偏差审计（只读，单轮）：部分实现 0 · 静默简化 0 · 越出文件清单 0 · 文档漂移 1（🔵——§13.5 行数注记仍为预计值 + 本段当时为占位）→ 本段写入后闭合。
 - 内部 advisor 代码评审（轮次 1）：**pass**（🔴 0 · 🟡 0 · 🔵 4）。
 - 修正轮 1（3 条 Fixed + 1 条 Deferred）：#2 `settings.mjs` parseValue 死分支收敛（`return JSON.parse(s)`——语义零变）· #3 `test/files.mjs:42` 登记注释同步（4 键 + T-S2.30–T-S2.37）·
-  #4 `test/advisor-chain-guards.test.mjs` 源码切片边界加断言 + 新增 EOL 归一 `readSrc`（防 CRLF 切片退化）· #1 `combineSignals` fallback 监听器累积 = Deferred（逐字沿用既有先例 + 有界 ≤100 轮 + `.any` 路径零影响；统一治理须连同先例，本批不动）。
+  #4 `test/advisor-chain-guards.test.mjs` 源码切片边界加断言 + 新增 EOL 归一 `readSrc`（防 CRLF 切片退化）· #1 `combineSignals` fallback 监听器累积 = Deferred（逐字沿用既有形态 + 有界 ≤100 轮 + `.any` 路径零影响；统一治理须连同既有形态，本批不动）。
 - 修正轮后复跑：聚焦档 23/23 绿 · 全量快层 408/407/0 绿（零回归）。
 
 ## §6 验证与收口（父代理自写）

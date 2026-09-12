@@ -195,11 +195,11 @@ Implementation size is a consequence of "right", never the criterion.
 | 1 | `src/prompts/discipline-normal.md` | 168 | ~191 | E-1a~f（两缺节补入 ~+18 · 4 标题/2 合并行拆分 ~+5——合 ~+23） |
 | 2 | `src/prompts/discipline-engineering.md` | 225 | ~229 | E-2 三子句（+3）+ E-3 cancel 行迁入（+1） |
 | 3 | `src/prompts/persona-engineering.md` | 87 | ~55 | E-3 并行节 `:56-87` 删除（−32；cancel 行先行迁入 de） |
-| 4 | `test/prompts-async-guidance.test.mjs` | 453 | ~455 → **535（实测）** | 锚#7 宿主断言 pe→de（换向）+ 降级链③ 契约断言改写（修四——补 `setup.mjs` 尾块源断言）；超 500 硬帽——测试档登记口径 = 不拆分（同仓先例 `chat-panel.test.mjs` 621）〔实现后同步（2026-09-12）〕 |
+| 4 | `test/prompts-async-guidance.test.mjs` | 453 | ~455 → **535（实测）** | 锚#7 宿主断言 pe→de（换向）+ 降级链③ 契约断言改写（修四——补 `setup.mjs` 尾块源断言）；超 500 硬帽——测试档登记口径 = 不拆分（同仓同口径 `chat-panel.test.mjs` 621）〔实现后同步（2026-09-12）〕 |
 
 （口径 = 行数实测；预计为方向估计——实现报告实测对表。E-1a/b 两节整节行数取决于源档拷贝（来源①/②）——含其净增。本档自身亦随本批更新——文档域，不计入实施域。）
 
-**实现后同步（2026-09-12——交付实测态对齐）**：行 4 `test/prompts-async-guidance.test.mjs` 实测 **535**——超 500 硬帽（测试档）；登记口径 = 本批不拆分（同仓先例 `chat-panel.test.mjs` 621 行）。
+**实现后同步（2026-09-12——交付实测态对齐）**：行 4 `test/prompts-async-guidance.test.mjs` 实测 **535**——超 500 硬帽（测试档）；登记口径 = 本批不拆分（同仓同口径 `chat-panel.test.mjs` 621 行）。
 
 ### 用例表
 
@@ -293,7 +293,7 @@ Implementation size is a consequence of "right", never the criterion.
 
 ## 变更记录
 - 2026-09-12（TEST-DISCIPLINE-PROMPTS 批·实现后对位——Text D 归属行移除）：机制纪律节 Text D 第 3 行移除——对齐 CLI 权威版 `PROMPT-SYSTEM（CLI 仓）§8.3.4` 最终版（单宿主 = pe、不设指针）；实现侧已达两行版（批次档 `2026-09-11-TEST-DISCIPLINE-PROMPTS（本仓）` §5 偏差 #1 闭合）。纯对位、零语义。
-- 2026-09-12（VSC-CONTEXT-PARITY 批·实现后同步——交付实测态对齐）：语料修复节受影响文件表行 4 实测回填（`test/prompts-async-guidance.test.mjs` 453 → 实测 535——超 500 硬帽；测试档登记口径 = 不拆分，同仓先例 `chat-panel.test.mjs` 621）。纯登记、零语义。
+- 2026-09-12（VSC-CONTEXT-PARITY 批·实现后同步——交付实测态对齐）：语料修复节受影响文件表行 4 实测回填（`test/prompts-async-guidance.test.mjs` 453 → 实测 535——超 500 硬帽；测试档登记口径 = 不拆分，同仓同口径 `chat-panel.test.mjs` 621）。纯登记、零语义。
 - 2026-09-12（修正轮 #5——TEST-DISCIPLINE-PROMPTS 设计评审轮次 1 落修）：机制纪律节计数口径统一「三档 × 双源 = 6 文件 / 8 编辑点」（原「四档 × 双源」/「四档双源」/「6 档提示词」/「四档同文」四处 + 同型残留——CLI 档 §8.5/§8.7 两处一并）。纯口径、零语义。
 - 2026-09-11：机制纪律提示词落地节新增——TEST-DISCIPLINE-PROMPTS 批（本端 3 档提示词 × 双源 = 6 文件 / 8 编辑点 + ⑨ 锚组；逐字文本同 CLI `PROMPT-SYSTEM（CLI 仓）§8.3`；实施序 = 语料修复批后落）。
 - 2026-09-11：语料修复节新增——VSC-CONTEXT-PARITY 批（E-1a~f 缺节/压平/合并行 + E-2 三子句 + E-3 并行节去重单宿主 de + R24 维持登记）；降级链节 [4] 层权威句替换（「由调用面承担」作废）；端特有差异表两行改写。

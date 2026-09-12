@@ -1,9 +1,10 @@
 # VSC 固定活动区回归（live 固定可见）· 批次记录（2026-09-11）
 
-> 搬迁注记：本档自 CLI 仓 `thincoder/docs/batches/2026-09-11-VSC-ACTIVITY-REGION-RESTORE.md` 迁入本仓 `docs/batches/`（LEDGER-SELF-CONTAINED 批——实施面全在本仓的批档物理迁移，档名不变、文字逐字；源档 blob SHA = 1c1854b8d397 · 源提交 = 167f48f）。
+> 搬迁注记：本档自 CLI 仓 `2026-09-11-VSC-ACTIVITY-REGION-RESTORE（CLI 仓）` 迁入本仓 `docs/batches/`（LEDGER-SELF-CONTAINED 批——实施面全在本仓的批档物理迁移，档名不变、文字逐字；源档 blob SHA = 1c1854b8d397 · 源提交 = 167f48f）。
 
 > 六段 append-only，一段一作者：§1 讨论（主 agent）· §2 批次任务（eng-designer）· §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder 自写）· §6 验证与收口（父代理）。
 > 编制：主 agent · 2026-09-11 · 来源 = 用户 17:20 质询（「块为什么在会话流里」）→ 父侧取证链（git 史 + 档案）→ 用户 **17:23 裁定：「加回固定活动区。」**
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -39,12 +40,11 @@
 
 ## §2 批次任务（eng-designer 写）
 
-_（待写——eng-designer）_
 
 **状态：任务书就绪**（2026-09-11——需求+设计+测试三层已落档；待设计评审）。实施者 = eng-coder（设计 token 门）。本 §2 = coder 任务书本体（不另写副本）。
 
 **落档位置**：需求源 = 本批 §1（用户 17:23 裁定「加回固定活动区」——初版无需求档新增条目，需求三层以 §1 原文 + 本表承载；
-修正轮已补齐需求第三腿：CLI 仓 `docs/requirements/AGENT-LOOP.md` §12，见修正轮 #6 与三方一致表）；设计+测试 = VSC 仓 `docs/design/WEBVIEW.md` **§12**
+修正轮已补齐需求第三腿：`AGENT-LOOP（CLI 仓·需求）` §12，见修正轮 #6 与三方一致表）；设计+测试 = VSC 仓 `docs/design/WEBVIEW.md` **§12**
 （§12.1–§12.10——选型/契约/决策/用例/AC/边界）+ §2/§3/§5/§5.1 修订 + 变更记录 §13；
 `docs/design/AGENT-LOOP.md` §1 模块行 / §7 挂起 UI 与中止语义 / §10 全节改写（+ 变更记录）；
 沿革档两指针（`SESSION-ACTIVITY-REVISED.md` / `ACTIVITY-REWRITE-SIMPLE.md`）。
@@ -72,7 +72,7 @@ _（待写——eng-designer）_
 **拆分评审注**：activity-flow 292→~332 越 ≤300 警示线（≤500 硬限内）——测试族存量同带（最高 `chat-panel.test.mjs` 620）——本批**不拆分**（就地改写——同第 10 批结论）。
 
 **文档域（设计者已落——coder 零碰）**：`docs/design/WEBVIEW.md`（1029→1221——初版落档时点；修正轮后实测 1227→1257，现档 1257；§2/§3/§5/§5.1 修订 + §12 新节 + 变更记录 §13）· `docs/design/AGENT-LOOP.md`（1045→1042：§1/§7/§10 + 变更记录）· 两沿革档指针（各 +3 行量级）。
-**不入 files**：`docs/TODO.md` / `CHANGELOG.md`（父侧写域）· CLI 仓一切文件（本批 VSC 单端——需求树除外：本批条目落 CLI 仓 `docs/requirements/AGENT-LOOP.md` §12，同先例 §3/§8~§11）· 群 A 批 §11/§13/§14 节域（零碰）。
+**不入 files**：`docs/TODO.md` / `CHANGELOG.md`（父侧写域）· CLI 仓一切文件（本批 VSC 单端——需求树除外：本批条目落 `AGENT-LOOP（CLI 仓·需求）` §12，同口径 §3/§8~§11）· 群 A 批 §11/§13/§14 节域（零碰）。
 
 ### 三、验收标准（逐条——每条可机器验证；判据全文见 §12.8，不重抄）
 
@@ -120,7 +120,7 @@ _（待写——eng-designer）_
 > 本轮 = 修正轮——**只改文档、零实现触碰**（VSC 仓 `src/**` / `webview/**` / `test/**` / `locales/**` 零触碰；
 > 未 commit、未发起评审——轮次 2 复核待父侧发起）。D5 落笔时点核验通过（轮次 1 实例已 settle）；
 > 凭证不落档（D5/D6——回读核对已跑）。**落修文件**：VSC 仓 `docs/design/WEBVIEW.md`（1227 → 1257 行，含 §13 变更记录一行）
-> · CLI 仓 `docs/requirements/AGENT-LOOP.md`（390 → 438 行——§12 新增）；其余零触碰。
+> · `AGENT-LOOP（CLI 仓·需求）`（390 → 438 行——§12 新增）；其余零触碰。
 
 **逐条落点**（以 §3 轮次 1 表为准；`WEBVIEW.md` = VSC 仓 `docs/design/WEBVIEW.md`）：
 
@@ -131,7 +131,7 @@ _（待写——eng-designer）_
 | 3 | 🟡 | fixture 空安全（取①）：§12.3#8 明写 chat.js 委托 + §12.3#7 区监听用空安全绑定（`ctx.activityEl?.addEventListener`——生产行为不变）；§12.6 边注 fixture 波及面——`digest-visibility` / `scenario-05` 不列写域、零改；webview-env +1 照旧（`installChatFixture` 区 id）。 |
 | 4 | 🟡 | T-R13 手法钉死（§12.7 注 + §12.6 activity-flow 行注）：activity-flow 内**追加式**补缺项 21 id（对照 `installFullIndexFixture` 清单——append 不换夹具——既有 `ctx` 引用零失效）→ `import` 真 `chat.js` 图；断言 = `capturedPosts` 过滤 `cancelSubagent` 逐字 + `defaultPrevented` 真触 + document 见证零命中 + 块不翻。 |
 | 5 | 🟡 | §12.6 补**源侧拆分评审注**（activity.js 298→~313 越 300 软线——不拆；再增厚即触发评估）；**A13 基线漂移登记**：§11.2.3 的 activity.js / activity-flow 行（298 / 292 前提）因本批先落而失效——交接 A13 批更新。 |
-| 6 | 🟡 | 需求第三腿补齐：CLI 仓 `docs/requirements/AGENT-LOOP.md` 新增 **§12**（总体需求 + F-J1..F-J8 逐条对位 R1–R8 + NFR-J1..J4 + 明确不做——判定句回指 AC-R1..AC-R10）；三方一致表见下。 |
+| 6 | 🟡 | 需求第三腿补齐：`AGENT-LOOP（CLI 仓·需求）` 新增 **§12**（总体需求 + F-J1..F-J8 逐条对位 R1–R8 + NFR-J1..J4 + 明确不做——判定句回指 AC-R1..AC-R10）；三方一致表见下。 |
 | 7 | 🔵 | `WEBVIEW.md` §3 `activity.js` 行补第 10 批指注（「第 10 批修订——现行权威，见 §5/§5.1；补桩集 = §5.1.4 第 6 条」——与 §5 指注同款）。 |
 
 **可行性核验（#4 证据）**：只读临时探针（独立 node 进程——零仓库写入）实测——小夹具 + 21 缺项补齐后 `chat.js` 模块图导入 OK；
@@ -139,7 +139,7 @@ _（待写——eng-designer）_
 
 **三方一致（修正后收口——批次 §2 条目 = 设计回指 = 需求条目）**：
 
-| # | 批次条目（§2 一表） | 需求（CLI 仓 `requirements/AGENT-LOOP.md` §12） | 设计 | 验收 |
+| # | 批次条目（§2 一表） | 需求（`AGENT-LOOP（CLI 仓·需求）` §12） | 设计 | 验收 |
 |---|---|---|---|---|
 | R1 | 活动区回归（live 固定可见 + 单面板） | §12 F-J1 | §12.1 · §12.3#1-2 | AC-R1 |
 | R2 | 可靠性零回归（批 10 三条 + 两态机） | §12 F-J2 | §12.3#3/#10 · §5/§5.1 修订 | AC-R2 · AC-R7 |
@@ -151,7 +151,7 @@ _（待写——eng-designer）_
 | R8 | 测试族更新 + 文档面 | §12 F-J8 | §12.6/§12.7 | AC-R10 |
 
 **登记（父侧核销台面）**：① §11.2.1 交接（群 A A13 批改）；② §11.2.3 基线漂移（A13 批更新）；
-③ 需求树新增（CLI 仓 requirements——`docs/TODO.md` / `CHANGELOG.md` / VSC `docs/design/README.md` 仍归父侧）。
+③ 需求树新增（CLI 仓 requirements——`TODO.md` / `CHANGELOG.md` / VSC `docs/design/README.md` 仍归父侧）。
 **实施清单口径**：12 文件实施域不变；`webview-env.mjs` +1 照旧；activity-flow 内 T-R13 手法并入 +~40 预算。
 **状态推进**：任务书 = 修正轮后版本——待轮次 2 复核（父侧发起）→ 用户批准；UI/交互决策全落档（§12.10 无 open 项）。
 
@@ -162,7 +162,6 @@ _（待写——eng-designer）_
 
 ## §3 设计评审（评审子代理）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
@@ -175,7 +174,7 @@ _（待写——评审子代理）_
 | 3 | Feasibility / 受影响文件 | 🟡 | §12.3#8（`:1056-1057`）把 chat.js 顶层委托（`:89` `ctx.messagesEl.addEventListener("click", onStopClick)`）迁至 `ctx.activityEl`；§12.3#7（`:1052-1055`）再给区挂 wheel/touch（`scroll.js:11` 顶层 `initScrollFollow(ctx)`）。凡驱动真 chat.js 模块图的既有测试，fixture 缺 `#subagent-activity` 即 import 期抛 TypeError（null.addEventListener）：`test/digest-visibility.test.mjs`（自持 INDEX_IDS `:23-29`/`:34`、loadChat `:95-97`——快层在册 `files.mjs:57`）· `test/integration/scenario-05-panel-basics.test.mjs`（`:28` installFullIndexFixture）· `installFullIndexFixture`（`webview-env.mjs:79-89`）。设计只列 webview-env.mjs +1（batch:69 / §12.6:1103），digest-visibility 不在 12 档内；按字面实现（无 `?.`）→ 快层 T-D4/T-D5 红 → AC-R7（`:1147`）不成立。 | 二择一钉死：① 两处绑定用空安全（`ctx.activityEl?.addEventListener`——生产行为不变，fixture 零改）；或 ② 三处 fixture 补 id（webview-env 两表 + digest-visibility INDEX_IDS）并把 digest-visibility 列入受影响表。 |
 | 4 | Clarity / 用例可机验 | 🟡 | T-R13（§12.7:1131）「区内点击 `.sub-stop-btn` → cancelSubagent postMessage 逐字 + 不翻折叠」手法未钉：委托 handler 在 chat.js 顶层（`:82-89`），而 activity-flow 现不加载 chat.js（`:27-33` 只 import state/ui/activity），其 fixture（installChatFixture）亦不含 chat.js 图所需 id（如 `chat-container`——`scroll.js:20` 顶层 appendChild）。不加载 chat.js 则点击无监听者——断言无法成立（或空转假绿）。 | 在 §12.7/§12.6 明写 T-R13 手法（在哪个档、是否换 installFullIndexFixture / 扩 installChatFixture、capturedPosts 取用），保证 postMessage 逐字与 preventDefault/stopPropagation 真被驱动。 |
 | 5 | 结构合规（受影响文件） | 🟡 | activity.js 298→~+15 ≈ 313 越 >300 软线（§12.6:1097 无拆分评审行——同表 activity-flow 越线有注 `:1110-1111`）；且群 A A13 的既有注以 298 为基（`:957`「298→≤306 越 300 软线…**再增厚即触发拆分评估**」、`:962` activity-flow 292→~310）——本批先落（batch:112）使该两处前提失效。 | 补一行源侧拆分评估（313 的软线处置：为何不拆/何时拆）+ 登记 A13 基线漂移（父侧排程已知会 A13 批）。 |
-| 6 | Requirements / 文档链（协调项） | 🟡 | batch:44-45 声明「本批无需求档新增条目，需求三层以 §1 原文 + 本表承载」——第三腿（requirements/ 条目）留空；同日报先例 VSC-ASYNC-VISIBILITY 落了 `requirements/AGENT-LOOP.md` §3/§4（batch:85-86），同类情形在先例评审判 🟡（`batches/2026-09-11-SPAWN-QUEUE-DISCIPLINE.md:140`）。属协调项，非实现阻塞。 | 父侧裁：补一条 requirements 回指（R1..R8）或确认微批豁免并在 §6 留痕。 |
+| 6 | Requirements / 文档链（协调项） | 🟡 | batch:44-45 声明「本批无需求档新增条目，需求三层以 §1 原文 + 本表承载」——第三腿（requirements/ 条目）留空；同日报在案 VSC-ASYNC-VISIBILITY 落了 `requirements/AGENT-LOOP.md` §3/§4（batch:85-86），同类情形在此前评审判 🟡（`batches/2026-09-11-SPAWN-QUEUE-DISCIPLINE.md:140`）。属协调项，非实现阻塞。 | 父侧裁：补一条 requirements 回指（R1..R8）或确认微批豁免并在 §6 留痕。 |
 | 7 | Doc hygiene | 🔵 | §3 activity.js 行（`:64-69`）保留「其余 status 一律终态折叠——lookup-only 绝不建块」——与第 10 批补桩表（§5.1.4#6 `:249-266`）并读为冲突；§5（`:125-126`）已带「（第 10 批修订——现行权威）」指注，§3 行无（batch-10 遗留；本批 §3 同步面触碰未随补）。 | 随 §3 同步补同款指注，或明示该行为摘要、语义权威在 §5/§5.1。 |
 
 **计数**：🔴 1 · 🟡 5 · 🔵 1。
@@ -191,15 +190,15 @@ VERDICT: changes-required
 
 ### 轮次 2（评审子代理）
 
-**发现表（轮次 2——单轮校验：7 件修正落点复核；对象 = 批次档 §2 修正轮 7 条落点 × VSC 仓 `WEBVIEW.md` §3/§5.1/§12 × CLI 仓 `requirements/AGENT-LOOP.md` §12）**
+**发现表（轮次 2——单轮校验：7 件修正落点复核；对象 = 批次档 §2 修正轮 7 条落点 × VSC 仓 `WEBVIEW.md` §3/§5.1/§12 × `AGENT-LOOP（CLI 仓·需求）` §12）**
 
 核验：轮次 1 的 7 条修正 **7/7 全部落位**——① AC-A1 `:316` / AC-A3 `:318` 采样点改区 + §12.3#10 `:1067-1072` 补列 ② 六处 sweep `:168` / `:246` / `:279` / `:306` / `:359` / `:548` 全改区口径 + 正列在位 + §11.2.1 交接登记（batch:128 / :151）
 ③ §12.3#7 / #8 空安全绑定 + §12.6 `:1127-1130` fixture 边注 ④ §12.7 `:1156-1165` 手法注 + 探针实测（batch:135-136）+ §12.6 `:1113` 行注
-⑤ §12.6 `:1122-1125` 源侧拆分注 + A13 基线登记（batch:131 / :151-152） ⑥ CLI 仓 `requirements/AGENT-LOOP.md` §12（`:389-438`）+ 三方一致表（batch:140-149） ⑦ §3 第 10 批指注 `:67` 逐字吻合；另 §3 核验基础折行打标（batch:181-184 / :188）在位。残遗/注记 = 下表（无 🔴）。
+⑤ §12.6 `:1122-1125` 源侧拆分注 + A13 基线登记（batch:131 / :151-152） ⑥ `AGENT-LOOP（CLI 仓·需求）` §12（`:389-438`）+ 三方一致表（batch:140-149） ⑦ §3 第 10 批指注 `:67` 逐字吻合；另 §3 核验基础折行打标（batch:181-184 / :188）在位。残遗/注记 = 下表（无 🔴）。
 
 | # | Category | Severity | Issue | Suggestion |
 |---|----------|----------|-------|------------|
-| 1 | 一致性（残遗——#6 收口后 §2 主文未同步） | 🟡 | batch:44-45 仍称「本批无需求档新增条目，需求三层以 §1 原文 + 本表承载」——与同档修正轮 #6（batch:132「需求第三腿补齐：CLI 仓 `docs/requirements/AGENT-LOOP.md` 新增 §12」）、三方一致表（batch:140-149 需求列）、落档实况（CLI 仓 `requirements/AGENT-LOOP.md` §12 在场）及设计侧需求树行（`WEBVIEW.md:1119`）相抵；batch:73「CLI 仓一切文件（本批 VSC 单端）」亦缺 `WEBVIEW.md:1132-1133` 同款「需求树除外」限定。 | 两处按设计 §12.6 对齐：batch:44-45 注「修正轮补齐 requirements §12——见下」；batch:73 照抄「需求树除外：本批条目落 CLI 仓 `docs/requirements/AGENT-LOOP.md` §12」。一行小改、零语义。 |
+| 1 | 一致性（残遗——#6 收口后 §2 主文未同步） | 🟡 | batch:44-45 仍称「本批无需求档新增条目，需求三层以 §1 原文 + 本表承载」——与同档修正轮 #6（batch:132「需求第三腿补齐：`AGENT-LOOP（CLI 仓·需求）` 新增 §12」）、三方一致表（batch:140-149 需求列）、落档实况（`AGENT-LOOP（CLI 仓·需求）` §12 在场）及设计侧需求树行（`WEBVIEW.md:1119`）相抵；batch:73「CLI 仓一切文件（本批 VSC 单端）」亦缺 `WEBVIEW.md:1132-1133` 同款「需求树除外」限定。 | 两处按设计 §12.6 对齐：batch:44-45 注「修正轮补齐 requirements §12——见下」；batch:73 照抄「需求树除外：本批条目落 `AGENT-LOOP（CLI 仓·需求）` §12」。一行小改、零语义。 |
 | 2 | 计数一致性（行数快照） | 🔵 | 同档两处 WEBVIEW.md 行数快照不一致：batch:72「1029→1221」 vs batch:120「1227 → 1257 行」；现档实测 1257 与后者吻合；轮次 1 引用锚点（AC-R1 `:1138-1139`）现于 `:1169-1171`（位移 ≈ +30 = 修正轮增量）佐证轮次 1 时点值为 1227。两者差 6 行——若中间另有他批落笔（**unverified**）则均属真值、仅缺时点注；否则为漂移。 | 在 batch:72 补时点/口径注，或校对「1221」。 |
 | 3 | 残遗（登记交接——他批节域） | 🔵 | `WEBVIEW.md:939` §11.2.1 仍写「现行 = 流内活动块（`activity.js`）」；`:958` / `:963` §11.2.3 的 298 / 292 基线将因本批先落失效——两处均属群 A A13 修改面，已按轮次 1 处置登记（batch:128 · :131 · :151-152；`WEBVIEW.md:1124-1125` 指注在位）——本轮确认残遗在位、待 A13 批改，**非本批缺陷**。 | 无需本批动作（保持登记；A13 落笔时更新）。 |
 | 4 | 措辞自洽（修正轮新增文本） | 🔵 | `WEBVIEW.md:1123-1124` 源侧拆分注称「（单点小改——无新函数面扩张）」，而同句增量列举含 `enforceRegionCap`（新 helper——`:1052`）与 `MAX_REGION_FOLDED`（导出常量——`:1051`；`:131` 标「本批新增」）——严格读与列举相悖，与「再增厚即触发拆分评估」判据并读易生歧义。 | 措辞精确化（如「仅 1 个小 helper——无大函数面」）；零语义。 |
@@ -222,7 +221,6 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 **状态：交付完成（2026-09-11 · 实施者 = eng-coder · 设计 token 门（值不落档）· 终态 = clean）**
 ——内层 explore 背离审计 **2 轮**（轮次 1：2 条发现 = 1 条已修 + 1 条产物登记；轮次 2 只读复核 fix = clean）；

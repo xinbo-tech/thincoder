@@ -1,9 +1,10 @@
 # 可移植性 VSC 镜像面（批次二）· 批次记录（2026-09-11）
 
-> 搬迁注记：本档自 CLI 仓 `thincoder/docs/batches/2026-09-11-PORTABILITY-VSC-MIRROR.md` 迁入本仓 `docs/batches/`（LEDGER-SELF-CONTAINED 批——实施面全在本仓的批档物理迁移，档名不变、文字逐字；源档 blob SHA = ce6a4869ee95 · 源提交 = 167f48f）。
+> 搬迁注记：本档自 CLI 仓 `2026-09-11-PORTABILITY-VSC-MIRROR（CLI 仓）` 迁入本仓 `docs/batches/`（LEDGER-SELF-CONTAINED 批——实施面全在本仓的批档物理迁移，档名不变、文字逐字；源档 blob SHA = ce6a4869ee95 · 源提交 = 167f48f）。
 
 > 六段 append-only，一段一作者：§1 讨论（主 agent）· §2 批次任务（eng-designer）· §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder 自写）· §6 验证与收口（父代理）。
 > 编制：主 agent · 2026-09-11 · 来源 = 用户 16:43「thincoder 是通用 coding agent，不要跟自身绑死的那个事儿已经处理了吧？」→ 16:45「**一起做了吧**。同时查一下 vsc 端还有哪些没做的，都一起做了」。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -19,12 +20,12 @@
 
 - VSC 端 A 家族对位面：**同源语义镜像**——对 CLI 设计 §9 清单（P1–P10 + P14）在 VSC 代码/提示词中的对位点逐条勘察与设计；
 - **双端镜像纪律**：各端独立实现、语义同源（不做 byte-identical、不加双端同步依赖）；禁以任一端产物回改另一端；
-- **预授权**：VSC 对位设计档如需新建（`thincoder-vscode/docs/design/PORTABILITY.md`）——父侧预授权（先例：CLI 批 §1.5）。
+- **预授权**：VSC 对位设计档如需新建（`thincoder-vscode/docs/design/PORTABILITY.md`）——父侧预授权（同款：CLI 批 §1.5）。
 
 ### 三、边界
 
 - 不含批次三（B/C 剩余）；不含其它 VSC 待办（另勘察归批——explore id=147 在跑）；
-- 需求层：VSC 无 requirements 树——需求陈述并入 CLI `requirements/PORTABILITY.md`（先例：VSC-GUARD / WEBVIEW 批）。
+- 需求层：VSC 无 requirements 树——需求陈述并入 CLI `requirements/PORTABILITY.md`（同款：VSC-GUARD / WEBVIEW 批）。
 
 ### 四、状态
 
@@ -34,7 +35,6 @@
 
 ## §2 批次任务（eng-designer 写）
 
-_（待写——eng-designer）_
 
 ### 批次任务（eng-designer 自写——2026-09-11）
 
@@ -86,9 +86,9 @@ _（待写——eng-designer）_
 
 | # | 严重度 | 落点 |
 |---|---|---|
-| 1 | 🔴 | §4.4(c) `:18` 行改 EN 形态（设计档 :295-296）：old `(e.g. \`docs/design/AGENT-LOOP.md:180\`)` → new `(e.g. \`path/to/file.md:42\`)`（照 CLI EN 已交付——`thincoder/src/prompts/advisor-design.md:18` 实测）；CN `:39` 行维持现写法（零改） |
+| 1 | 🔴 | §4.4(c) `:18` 行改 EN 形态（设计档 :295-296）：old `(e.g. \`docs/design/AGENT-LOOP.md:180\`)` → new `(e.g. \`path/to/file.md:42\`)`（照 CLI EN 已交付——`src/prompts/advisor-design.md:18`（CLI 仓） 实测）；CN `:39` 行维持现写法（零改） |
 | 2 | 🟡 | §4.4(a) `:213` 行新文本补「（CLI 侧）」（设计档 :273）——EN 目标与 CN 现形态（`docs/design/prompts/discipline-engineering.md:139`）逐字同文（脚本逐字符核验 123/123）；§1.4「逐字对齐」（设计档 :69）与 T-V18「两档同文」（设计档 :406）断言随之一致（选项①：保断言、不降级） |
-| 3 | 🟡 | §4.3 两条落笔边界：(a) 门禁前缀 `Error: engineering design gate — ` 保留、其后段替换（设计档 :248）；(b) design 分支追加句插为第 `3.` 项、原 3./4. 顺延为 4./5.（设计档 :237；CLI 已交付口径——`thincoder/src/advisor/messages.mjs:175`） |
+| 3 | 🟡 | §4.3 两条落笔边界：(a) 门禁前缀 `Error: engineering design gate — ` 保留、其后段替换（设计档 :248）；(b) design 分支追加句插为第 `3.` 项、原 3./4. 顺延为 4./5.（设计档 :237；CLI 已交付口径——`src/advisor/messages.mjs:175`（CLI 仓）） |
 | 4 | 🟡 | 下方「范围裁定三态计数更正」 |
 
 **§2 范围裁定三态计数更正（#4——本追加为准）**：VP-8 明确归入需修——**需修 11 项（VP-1–VP-11）· 补缺口 1 项（VP-12）**（父侧二选一 → 取「VP-8 归入需修」口径；合计 = 设计档 §1.3 全量 12 条，逐条 0 差异）；**「已对位 2」= 方面登记而非条目**（P8 索引侧 / P14 本体——§1.2 三态表差异登记面；其非对位部分即 VP-8 · VP-11，已含于上列 11 项）。AC-V14 三方比对按本口径引用。
@@ -97,11 +97,10 @@ _（待写——eng-designer）_
 
 ### 微修（2026-09-11——父侧裁定）
 
-- **微修（CN 目标反引号对齐）**：设计档 `thincoder-vscode/docs/design/PORTABILITY.md:307` §4.4(d) `:39` 行「新」列 —— `（如 path/to/file.md:42）` → `（如 \`path/to/file.md:42\`）`；依据 = CLI CN `thincoder/docs/design/prompts/advisor-design.md:39` 实测（含内层反引号；更新修正轮 #1「CN `:39` 维持现写法」句）。零其它改动。
+- **微修（CN 目标反引号对齐）**：设计档 `thincoder-vscode/docs/design/PORTABILITY.md:307` §4.4(d) `:39` 行「新」列 —— `（如 path/to/file.md:42）` → `（如 \`path/to/file.md:42\`）`；依据 = CLI CN `docs/design/prompts/advisor-design.md:39`（CLI 仓） 实测（含内层反引号；更新修正轮 #1「CN `:39` 维持现写法」句）。零其它改动。
 
 ## §3 设计评审（评审子代理）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
@@ -109,10 +108,10 @@ _（待写——评审子代理）_
 
 | # | Category | Severity | Issue | Suggestion |
 |---|----------|----------|-------|------------|
-| 1 | Clarity（逐字目标） | 🔴 | §4.4(c) `:18`（EN 档）旧/新文本为 CN 形态：设计 `thincoder-vscode/docs/design/PORTABILITY.md:293-294` 写 old=`` （如 `docs/design/AGENT-LOOP.md:180`） `` / new=`` （如 `path/to/file.md:42`） ``，但 EN 档实文 `thincoder-vscode/src/prompts/advisor-design.md:18` = `` (e.g. `docs/design/AGENT-LOOP.md:180`) ``，CLI 已交付 EN 文本 = `` (e.g. `path/to/file.md:42`) ``（`thincoder/src/prompts/advisor-design.md:18`）。机械落笔会：旧串在 EN 档找不到（no-op/停报），或按写定文本把全角中文形态写进 EN 档——与 §2 D6 同文口径及本档 T-V17「§4.4 逐条」冲突。 | 该行改为 EN 形态：old `(e.g. `docs/design/AGENT-LOOP.md:180`)` → new `(e.g. `path/to/file.md:42`)`（照 CLI EN 已交付文本）；CN 行 `:39` 维持现写法。 |
+| 1 | Clarity（逐字目标） | 🔴 | §4.4(c) `:18`（EN 档）旧/新文本为 CN 形态：设计 `thincoder-vscode/docs/design/PORTABILITY.md:293-294` 写 old=`` （如 `docs/design/AGENT-LOOP.md:180`） `` / new=`` （如 `path/to/file.md:42`） ``，但 EN 档实文 `thincoder-vscode/src/prompts/advisor-design.md:18` = `` (e.g. `docs/design/AGENT-LOOP.md:180`) ``，CLI 已交付 EN 文本 = `` (e.g. `path/to/file.md:42`) ``（`src/prompts/advisor-design.md:18`（CLI 仓））。机械落笔会：旧串在 EN 档找不到（no-op/停报），或按写定文本把全角中文形态写进 EN 档——与 §2 D6 同文口径及本档 T-V17「§4.4 逐条」冲突。 | 该行改为 EN 形态：old `(e.g. `docs/design/AGENT-LOOP.md:180`)` → new `(e.g. `path/to/file.md:42`)`（照 CLI EN 已交付文本）；CN 行 `:39` 维持现写法。 |
 | 2 | Clarity（逐字目标） | 🟡 | §4.4(a) `:213` EN 目标比 CN 现形态少「（CLI 侧）」（设计 :271 vs `thincoder-vscode/docs/design/prompts/discipline-engineering.md:139`），而 §1.4（:67-69）声明「EN 逐字对齐 CN 现形态」、T-V18（:406）断言「R24 行两档同文」——三处不自洽。 | EN 目标补「（CLI 侧）」，或把 T-V18 措辞降为「引用形态一致」（二者选一），§1.4 的「逐字」口径随之一并对齐。 |
-| 3 | Clarity（落笔边界） | 🟡 | §4.3 未写明落笔边界：(a) 门禁文案现值含前缀 `Error: engineering design gate — `（`thincoder-vscode/src/agent/execute-tools.mjs:110` 实测），§4.3（:245）只给后段文本、未说前缀去留（CLI 对位面 = hint 字段 + 外层 Error 包装；VSC 无外层，删前缀后该拒绝失去 error 形态）；(b) design 分支追加句给定为 `3. If the ## Project Guide …`（:236），而现列已有 `3. Do NOT run git diff …`（`thincoder-vscode/src/advisor/messages.mjs:173`）——插入位置/重编号未述（CLI 已交付 = `3.` 位 + 顺延，`thincoder/src/advisor/messages.mjs:175`）。 | §4.3 各补一句落笔说明：门禁前缀保留与否（建议保留 `Error: …` 前缀再串新句，或明确整串替换）；追加句插为第 3 项、原 3./4. 顺延为 4./5.。 |
-| 4 | Requirements（三方一致/计数） | 🟡 | 批次档 §2 三态摘要与自身条目表不闭合：`thincoder/docs/batches/2026-09-11-PORTABILITY-VSC-MIRROR.md:42` 的「需修 10 项（VP-1–VP-7 · VP-9–VP-11）」未含 VP-8（评审侧 NO_GIT_NOTICE——同段 :53 明列条目）；「已对位 2 项」指 P8/P14 的方面而非条目——12 条 VP 与 10+2+1=13 口径混用（设计 §1.2 逐条表本身自洽）。 | VP-8 明确归入需修（→「需修 11 项（VP-1–VP-11）」），或注明「已对位 2 = P8/P14 的已对位面，其余部即 VP-8/VP-11」；AC-V14 三方比对据此引用。 |
+| 3 | Clarity（落笔边界） | 🟡 | §4.3 未写明落笔边界：(a) 门禁文案现值含前缀 `Error: engineering design gate — `（`thincoder-vscode/src/agent/execute-tools.mjs:110` 实测），§4.3（:245）只给后段文本、未说前缀去留（CLI 对位面 = hint 字段 + 外层 Error 包装；VSC 无外层，删前缀后该拒绝失去 error 形态）；(b) design 分支追加句给定为 `3. If the ## Project Guide …`（:236），而现列已有 `3. Do NOT run git diff …`（`thincoder-vscode/src/advisor/messages.mjs:173`）——插入位置/重编号未述（CLI 已交付 = `3.` 位 + 顺延，`src/advisor/messages.mjs:175`（CLI 仓））。 | §4.3 各补一句落笔说明：门禁前缀保留与否（建议保留 `Error: …` 前缀再串新句，或明确整串替换）；追加句插为第 3 项、原 3./4. 顺延为 4./5.。 |
+| 4 | Requirements（三方一致/计数） | 🟡 | 批次档 §2 三态摘要与自身条目表不闭合：`docs/batches/2026-09-11-PORTABILITY-VSC-MIRROR.md:42`（CLI 仓） 的「需修 10 项（VP-1–VP-7 · VP-9–VP-11）」未含 VP-8（评审侧 NO_GIT_NOTICE——同段 :53 明列条目）；「已对位 2 项」指 P8/P14 的方面而非条目——12 条 VP 与 10+2+1=13 口径混用（设计 §1.2 逐条表本身自洽）。 | VP-8 明确归入需修（→「需修 11 项（VP-1–VP-11）」），或注明「已对位 2 = P8/P14 的已对位面，其余部即 VP-8/VP-11」；AC-V14 三方比对据此引用。 |
 
 **已验证（支持性证据，非发现）**：§3.6 红线避让声明实质成立——逐一核对 `test/prompts-mirror-anchors.test.mjs` 锚字面（A1–A12 / ⑥ 同文组 / ⑦ common / ⑧ RF）与 §4.4 全部编辑点，无交集；「与 CLI 已交付同文」抽查（discipline :44/:59/:73/:171/:177/:181/:213、messages :175/:267/:246、persona :13/:27、advisor-design EN :5/:9/:10/:24）逐字相符。
 
@@ -130,7 +129,7 @@ VERDICT: changes-required
 
 | # | Category | Severity | Issue | Suggestion |
 |---|----------|----------|-------|------------|
-| 1 | Doc hygiene（引数漂移） | 🔵 | 批次档 §2 修正轮 #2 条目（`thincoder/docs/batches/2026-09-11-PORTABILITY-VSC-MIRROR.md:88`）引「T-V18『两档同文』（设计档 `:406`）」；实测 `thiencoder-vscode/docs/design/PORTABILITY.md:408` = T-V18 行（该档 `:406` = T-V16 行）——与本档 `:83`「行号 as-of 落修后」口径差 2 行（round 1 亦引 `:406`——疑为落修前口径沿用、落修后未随测）；本批其余设计档引数（`:295-296` / `:273` / `:237` / `:248` / `:307` / `:69`）实测相符。 | 复核后将 `:406` 更正为 `:408`（append-only 下可在微修条口径追加更正，或注明测量时点）；非阻断。 |
+| 1 | Doc hygiene（引数漂移） | 🔵 | 批次档 §2 修正轮 #2 条目（`docs/batches/2026-09-11-PORTABILITY-VSC-MIRROR.md:88`（CLI 仓））引「T-V18『两档同文』（设计档 `:406`）」；实测 `thiencoder-vscode/docs/design/PORTABILITY.md:408` = T-V18 行（该档 `:406` = T-V16 行）——与本档 `:83`「行号 as-of 落修后」口径差 2 行（round 1 亦引 `:406`——疑为落修前口径沿用、落修后未随测）；本批其余设计档引数（`:295-296` / `:273` / `:237` / `:248` / `:307` / `:69`）实测相符。 | 复核后将 `:406` 更正为 `:408`（append-only 下可在微修条口径追加更正，或注明测量时点）；非阻断。 |
 
 **落地核验（逐条，实测）**：① `:295-296` EN 形态 old→new 在位；② `:273` 新文本含「（CLI 侧）」在位（与 CN `:139` 逐字等式 = 父侧脚本声明 123/123——CN 侧文件未在只读范围，未复核）；
 ③ `:237` 插第 `3.` 项 + 原 3./4. 顺延、`:248` 保留前缀 `Error: engineering design gate — ` 在位；④ 本档 `:92` = 「需修 11 项（VP-1–VP-11）· 补缺口 1 项（VP-12）」（11+1 = 设计档 §1.3 全量 12 条）在位；
@@ -160,7 +159,6 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 **状态：交付完成（2026-09-11 · 实施者 = eng-coder · 终态 = clean——内层 explore 背离审计 1 轮（5 条全处置）；advisor 代码评审未发起——任务书红线「不发起评审」，归父侧流程节点）。**
 
@@ -237,4 +235,4 @@ _（待写——eng-coder）_
 - **核销同步清单**（D7）：状态行——需求池「评审注入路径硬编码项目约定」条目 → **已核销并移入归档档**（批次一 CLI + 批次二 VSC 双半交付）；计数——T-V01–V19 / AC-V01–14 与 §2 一致；指针——设计档 §1.3/§3–§7 可达；变更记录——设计档在档（#185 回修后）。
 - **令牌**：链终——consume-design 已消费（本批**全链路闭环 ✓**）。
 - **补记（2026-09-11 19:40）**：#185 回修落成——§4.4(e)/(f) 按实际交付口径成文（4 处内联修订 + 变更记录 `:457`）；字节核验与两档实文逐字节相等；doc 面回归 95/0/2（含 T-V17 逐字断言）。**本批终态 = 全闭环 + 回修落地。**
-- **遗留**：① 提示词六档随 reload 生效；② commit 随「扫」批；③ CLI 侧同源残句（`thincoder/docs/design/PORTABILITY.md:311`/`:328`）——**#186 微修在飞**。
+- **遗留**：① 提示词六档随 reload 生效；② commit 随「扫」批；③ CLI 侧同源残句（`docs/design/PORTABILITY.md:311`（CLI 仓）/`:328`）——**#186 微修在飞**。

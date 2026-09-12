@@ -40,7 +40,7 @@
 
 - 默认 TTL **7 天**（`TOKEN_TTL_DEFAULT_MS = 7 * 24 * 3600 * 1000`，`src/agent-tools/advisor.mjs`）。
 - 配置覆盖：`agent.engTokenTtlMs`——运行期校验（`Number.isFinite(cfg) && cfg > 0`，非法回退
-  默认）——照抄 advisor timeoutMs 先例（`effectiveTokenTtlMs`）。
+  默认）——照抄 advisor timeoutMs 口径（`effectiveTokenTtlMs`）。
 - 格式：`${uuid}:${expiresAt}`，uuid 为 `[0-9a-f]{8}-…-{12}`，expiresAt 为数字毫秒时间戳。
 - 过期判定**只对格式合法的 token**判过期：格式/畸形串不在此清理（恢复时读回由门禁格式拒、
   门禁拒时也不删槽——防误删有效槽）。

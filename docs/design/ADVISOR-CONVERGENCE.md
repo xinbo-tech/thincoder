@@ -2,7 +2,7 @@
 
 > 板块：评审收敛——ThinCoder VS Code 的 advisor 评审收敛机制：定义"审查 → 修复 →
 > 复审"循环如何收敛（全绿通过 / 有限轮次机械终止）。
-> 与 CLI `docs/design/ADVISOR-CONVERGENCE.md` 同名文档对应同一机制板块——各端独立
+> 与 `ADVISOR-CONVERGENCE（CLI 仓·设计）` 同名文档对应同一机制板块——各端独立
 > 实现，内容以本端代码为准（本端 = `thincoder-vscode`；DOC-REORG-VSC）。
 > 判定铁律 R1-R7 的**逐字源 = 本端 `src/prompts/advisor-round{1,2,3}.md` 与
 > `advisor-design.md` 尾部的 "Judgment Rules" 块**（四份逐字一致，注入全部轮次提示
@@ -232,7 +232,7 @@ if (!advisorReviewInFlight(agent)     // async 评审未决 → 未决不算未�
 - **R1** 文档矛盾/状态不一致 → 🟡（父侧文档层报出即修——非 🔴；例外：同一机制两处不
   同描述 = Document ownership 🔴）。
 - **R2** 实现偏离设计（验收未达/静默简化）→ 🔴（必须修）。
-- **R3** 既有先例裁定（文件尺寸等债）→ 🟡/🔵，不升级、不重诉。
+- **R3** 裁定（文件尺寸等债）→ 🟡/🔵，不升级、不重诉。
 - **R4** 脆弱测试（wall-clock/序列化形状依赖）→ 🔵 + 建议确定性。
 - **R5** 范围协调（父侧 TODO）→ 🟡 "coordination item"。
 - **R6** 测试 seam（mock 内部工具集需模块级 setter/参数覆盖 + `??` 默认回退；默认
@@ -330,7 +330,7 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
 | 2 | VSC 是否需 loop/compaction 拆分 | **必拆**（468 + 预计新增 ~100–140 行必越 500 硬帽）——拆线 = `loop.mjs`（工具循环 + 墙/提示接线）+ `compaction.mjs`（限额 / 压缩+定锚 / 谓词族 / 文案 / 结构化尾）——§13.3 表 1 |
 | 3 | 条目 B 落点 | `_SIBLING_SHAPES` 补第 4 条 + `_checkShape` 增 `roleMap` 分支 + 计数/测试/文档同步；键空间 = 工具寻址完整点分路径——§13.4 契约六 |
 | 4 | 测试面与编号 | 新档 `test/advisor-chain-guards.test.mjs`（入 `test/files.mjs` 登记——显式清单硬项）；编号 **VSC 自持**（T-VG1–T-VG15 / AC-VG1–AC-VG8；映射列回指需求条目——CLI 对位经 §13.1 对位列）——§13.8 / §13.9 |
-| 5 | 需求层落点 | CLI 需求档（同板块 §8 新节 + SETTINGS-TOOL F-S1.7 VSC 对位行——批 10 / 批 8 先例）（CLI 侧）；本仓无 requirements 树——本档持指针（§13.1） |
+| 5 | 需求层落点 | CLI 需求档（同板块 §8 新节 + SETTINGS-TOOL F-S1.7 VSC 对位行——批 10 / 批 8 同口径）（CLI 侧）；本仓无 requirements 树——本档持指针（§13.1） |
 
 ### 13.1 需求层（指针 + 对位索引）
 
@@ -398,7 +398,7 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
 
 | # | 候选方案 | 判据逐项评估 | 取舍 | 结论 |
 |---|---|---|---|---|
-| 1 | **CLI 需求档新节 + SETTINGS-TOOL F-S1.7 对位行** | 批 10 先例（VSC 条目落 CLI 需求档）+ 批 8 先例（VSC 档明示需求层落 CLI 档）——单源可指、三方一致（批次档 §2 = 本档 AC 回指 = 需求档条目）锚定 | 需求在本端档缺席（本档持索引指针） | **选定** |
+| 1 | **CLI 需求档新节 + SETTINGS-TOOL F-S1.7 对位行** | 批 10 同口径（VSC 条目落 CLI 需求档）+ 批 8 同口径（VSC 档明示需求层落 CLI 档）——单源可指、三方一致（批次档 §2 = 本档 AC 回指 = 需求档条目）锚定 | 需求在本端档缺席（本档持索引指针） | **选定** |
 | 2 | 需求句全落本档内 | 本仓自含；但违「一板块一档」既有布局 + 三方一致锚点模糊 | — | 否决 |
 
 > 契约一 / 二 / 三 / 六为**单一候选**（镜像语义唯一合理落点——同构缺陷已在 §13.2 逐条列证）：
@@ -483,9 +483,9 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
   本调用 deadline（复合信号无条件传入——语义零变）：
   `callSignal = signal ? combineSignals([signal, AbortSignal.timeout(remaining)]) : AbortSignal.timeout(remaining)`。
   **交付实现形态（第 12 批交付同步——只记形态、不改语义）**：`AbortSignal.any` **不可直接依赖**（本端
-  `provider.mjs:31` 载荷 polyfill 为非导出局部 const；仓内无裸调先例）⇒ 组合经 `loop.mjs:29-38` `combineSignals` =
+  `provider.mjs:31` 载荷 polyfill 为非导出局部 const；仓内无裸调在案）⇒ 组合经 `loop.mjs:29-38` `combineSignals` =
   **特征检测**（`typeof AbortSignal.any === "function"` 走原生）+ **本地兜底**（AbortController 包装——任一输入
-  abort 即触发、已 aborted 立即生效、reason 透传；形态先例 `src/mcp/http.mjs:14-22`）——语义一致。
+  abort 即触发、已 aborted 立即生效、reason 透传；形态同形 `src/mcp/http.mjs:14-22`）——语义一致。
   `.timeout` 原生——VS Code 运行环境兼容。
 - 墙判定**绑信号状态**（非异常名）：① 抛错路径——`signal?.aborted` ⇒ 原样上抛（用户中断语义零变）；
   `callSignal.aborted || e.name ∈ {AbortError, TimeoutError}` ⇒ 结构化超时尾；其余错误上抛。② 不抛错
@@ -530,7 +530,7 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
 | 3 | `src/advisor/run.mjs` | 468 → **221** | 组装入口 + 定锚构建 + scope 传参 + re-export 面 | **拆分后** ≤300 |
 | 4 | `src/advisor/loop.mjs` | 新 → **278** | 工具循环（迁出）+ 硬墙 / 提示 / 结构化尾接线 + 循环测试缝 `seams`（`{now, chat}`——`??` 默认回退，生产路径零变） | 新档（≤300） |
 | 5 | `src/advisor/compaction.mjs` | 新 → **160** | 限额 / `compactMessages`（+定锚）/ `renderTimeline` / 谓词族 / `shouldBudgetNudge` / `budgetNudgeText` / `timeoutTail` | 新档（≤300） |
-| 6 | `src/agent-tools/advisor.mjs` | 310 → **321** | sync design 未完成守卫 | 不拆（<500；>300 存量先例） |
+| 6 | `src/agent-tools/advisor.mjs` | 310 → **321** | sync design 未完成守卫 | 不拆（<500；>300 存量档） |
 | 7 | `src/agent-tools/advisor-async.mjs` | 460 → **463** | async 未完成守卫 + `failureVerdict` 换谓词（旧正则退场） | 不拆（<500） |
 | 8 | `src/agent-tools/settings.mjs` | 250 → **261** | 第 4 条形状 + `roleMap` 分支 + 头注计数 | 不拆（≤300） |
 | 9 | `test/advisor-chain-guards.test.mjs` | 新 → **427** | T-VG1–T-VG15（15 例） | 新档（≤500；**入 `test/files.mjs` 登记**） |
@@ -563,7 +563,7 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
 |---|---|---|
 | D-VG1 | **拆分 = `loop.mjs` + `compaction.mjs`**（必拆） | 表 1——468 + 预计新增必越 500 硬帽（无豁免通道）；CLI 同款拆线 = 迁移 / 对读成本最低。否决：仅拆 loop（run 超 advisory 且与 CLI 不同构）· 就地压缩（应付式） |
 | D-VG2 | **镜像范围 = F18–F23 语义面**（含谓词三消费点 + 定锚） | 表 2——谓词无消费点 = 死码，同构缺陷（§13.2 #3/#4）不除；定锚与自愈同属「信号必达」家族（压缩物理丢首条 user 消息 = 同一证据面）。否决：只落谓词不接线 · 定锚延后登记 |
-| D-VG3 | **需求层落 CLI 需求档**（同板块 §8 + F-S1.7 对位行） | 表 3——批 10 / 批 8 先例。否决：需求全落本档（违一板块一档 + 三方一致锚点模糊） |
+| D-VG3 | **需求层落 CLI 需求档**（同板块 §8 + F-S1.7 对位行） | 表 3——批 10 / 批 8 同口径。否决：需求全落本档（违一板块一档 + 三方一致锚点模糊） |
 | D-VG4 | **用例 / AC 编号 VSC 自持**（T-VG / AC-VG；映射列回指需求条目——CLI 对位经 §13.1 对位列） | 覆盖集与 CLI 不同（本批不含启动断言 / 冻结窗口——沿用 CLI 同号会指向不存在的对位件）；两仓同 ID 混淆面。映射表保证可追溯 |
 | D-VG5 | **硬墙形态按本端实况**（中止返回 = `interrupted` 字段；非 interrupt 中止抛错——传输层零改） | 本端 transports 中止语义已定；改传输层超本批边界。判定以信号状态为主判据（异常名兜底）——语义同源、形态差异如实注 |
 | D-VG6 | **新增字面与 CLI 同文**（枚举 = 本批新增字面中与 CLI 同文者，共五处——未签发提示 · 预算提示 · 结构化尾 · 报告候选链段 · 契约三 pin 首行；本端原文自持字面不入枚举——D-VG7） | 选择同文不构成依赖（无同步脚本；各端自持语义锚断言）；两仓用户读到同一文案 = 同机制统一恢复指引；预算提示与结构化尾的逐字抄写源见契约五（本档不重述——D2） |
@@ -694,7 +694,7 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
 
 | # | 候选方案 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
 |---|---|---|---|---|
-| 1 | **`execute-tools.mjs` `preGateBlocked` 单一预闸点**（+ `advisor-async.mjs` 冲突 helper） | 单一来源（批扫描 + 逐项共用）；权限阶段 / autoApprove 之前（审批不得绕过冻结）；全仓唯一执行器（无旁路）；先例同形（既有两道工程门 `:97`/`:105`） | 预闸 +~14 行 / helper ~22 + 消费 ~4（合计 ~26） | **选定** |
+| 1 | **`execute-tools.mjs` `preGateBlocked` 单一预闸点**（+ `advisor-async.mjs` 冲突 helper） | 单一来源（批扫描 + 逐项共用）；权限阶段 / autoApprove 之前（审批不得绕过冻结）；全仓唯一执行器（无旁路）；与既有两道工程门 `:97`/`:105` 同形） | 预闸 +~14 行 / helper ~22 + 消费 ~4（合计 ~26） | **选定** |
 | 2 | 只在逐项执行点内联（`runOne` 权限段前） | 绕过批扫描面（冻结项会进入批审批组——审批语义被扰动）；判据两处重复风险 | — | 否决 |
 | 3 | extension 面板写路径 | 面板写非模型工具写（覆盖不到父 agent 的 FILE_MUTATORS 写——本批保护对象） | — | 否决（射程错位） |
 
@@ -810,12 +810,12 @@ async 点火路径；同步评审阻塞回合、父侧无并发写时刻）。
 |---|---|---|---|---|
 | 1 | `src/advisor/run.mjs` | 221 → ~236 | 启动断言 + `ADVISOR_LAUNCH_REFUSAL_PREFIX` 导出 | ≤300 |
 | 2 | `src/agent-tools/advisor-async.mjs` | 463 → ~489 | 冻结冲突 helper（~22）+ 启动拒绝结算消费（~4）——合计 ~26 | ≤500（**贴线注记**：余量 ~11 行——先落 helper 实测行数再落消费项；越 500 须停下报告——不得静默越线） |
-| 3 | `src/agent/execute-tools.mjs` | 468 → ~482 | `preGateBlocked` 冻结分支 + `relative` import | <500（>300 存量先例） |
-| 4 | `src/agent-tools/advisor.mjs` | 321 → ~324 | 设计评审 ack 冻结句 | <500（>300 存量先例） |
+| 3 | `src/agent/execute-tools.mjs` | 468 → ~482 | `preGateBlocked` 冻结分支 + `relative` import | <500（>300 存量档） |
+| 4 | `src/agent-tools/advisor.mjs` | 321 → ~324 | 设计评审 ack 冻结句 | <500（>300 存量档） |
 | 5 | `test/advisor-guard-completion.test.mjs` | 新 → ~170 | T-VG16–T-VG21（6 例） | 新档（≤500；**入 `test/files.mjs` 登记**） |
 | 6 | `test/files.mjs` | 54 → 55 | 新测档登记（显式清单 +1） | — |
 
-> 新档说明（**测试档——非文档档**；先例 = 第 12 批 `test/advisor-chain-guards.test.mjs`）：既有同族测试档
+> 新档说明（**测试档——非文档档**；同款 = 第 12 批 `test/advisor-chain-guards.test.mjs`）：既有同族测试档
 > 427 行——追加 ~130 行必越 500 硬帽 ⇒ 新建独立测档（域同族、编号续 T-VG）。若父侧判「不得新建」含测试档
 > → 本项停下打回（designer 已留翻转口）。
 > 行数锚（as-of）：run 221 · advisor-async 463 · execute-tools 468 · advisor 321 · 同族测档 427 · files 54
@@ -840,7 +840,7 @@ async 点火路径；同步评审阻塞回合、父侧无并发写时刻）。
 | D-VGC5 | 批次档：不豁免、经 documents 纪律入射程 | CLI E-表 3 同裁定；口径 = 同源（不单边扩大——未列 documents 则两面同界） |
 | D-VGC6 | 同文字面（D-VG6 族）本批 3 处 = 启动拒绝串 / 冻结拒绝串 / 回执冻结句 | 同文 ≠ 依赖（无同步脚本；各端自持语义锚断言）；两仓用户读到同一指引 |
 | D-VGC7 | 残余如实登记（bash / file_ops / execute / git / checkpoint / batch_segment / 子代理合入 / sync 面） | 与 CLI E-6 #2/#3/#5 同族；不静默、不跨端追赶 |
-| D-VGC8 | 测档新立（`test/advisor-guard-completion.test.mjs`） | 既有同族档 427 行——追加必越 500（硬约束触发）；非文档档（先例 = 第 12 批） |
+| D-VGC8 | 测档新立（`test/advisor-guard-completion.test.mjs`） | 既有同族档 427 行——追加必越 500（硬约束触发）；非文档档（同款 = 第 12 批） |
 
 ### 14.8 与既有纪律的冲突点核对
 
@@ -953,8 +953,8 @@ async 点火路径；同步评审阻塞回合、父侧无并发写时刻）。
    经 `src/specs.mjs:5` re-export——本批接线面（§15.3 表 1）。
 4. **接线可达性**：评审循环所持 `provider` 即评审真实 provider（`src/advisor/run.mjs:137` `resolveAdvisorProvider(agent)`
    → `:181` 传入循环）；且循环已在该 provider 上消费 `specForModel`（`loop.mjs:202`，reasoningEcho 判定）——派生值就地可得。
-5. **同族先例（本端）**：主循环阈值跟随窗口——`src/compact.mjs:51-54`（压缩阈值 = 窗口 × 60%）、`src/compact.mjs:98-99`
-   （尾预算 = 窗口 × 15% − 摘要段估算）——「阈值跟随窗口」为本端既有惯例（CLI 同族先例 = 其 §16.1 四条）。
+5. **同族同款（本端）**：主循环阈值跟随窗口——`src/compact.mjs:51-54`（压缩阈值 = 窗口 × 60%）、`src/compact.mjs:98-99`
+   （尾预算 = 窗口 × 15% − 摘要段估算）——「阈值跟随窗口」为本端既有惯例（CLI 同族同口径 = 其 §16.1 四条）。
 6. **消费面（grep 实测）**：`MAX_CONTEXT_TOKENS` 在 VSC 仓定义 1 处（`compaction.mjs:18`）+ 导入与使用 2 处
    （`loop.mjs:22/116/121`）；`run.mjs:19-20` 的 re-export 面**不含**该常量——替换零外溢。
 7. **既有锁零伤**：`test/advisor-chain-guards.test.mjs`（T-VG1–T-VG15）与 `test/advisor-guard-completion.test.mjs`
@@ -1096,7 +1096,7 @@ export function advisorContextBudget(provider) {
 | D-CBV5 | 128K 档线位变化**采纳**（触发 96K → 81.92K；判死 120K → 102.4K） | CLI D-CB6 同源理由（现状 93.75% 窗占比对估算误差无头寸）；本端独立复核：`providerSpec` 语义一致 ⇒ 同结论 |
 | D-CBV6 | 判定族 / 尾文案 / 压缩规则**零改** | 缺陷本体是「上限来源」；§13.4 契约四已被 T-VG1–T-VG15 锁 |
 | D-CBV7 | **不新增 advisor 专用配置项** | 覆盖能力已由 `providers[].context` 提供（`config.mjs:142-149`）；advisor 专属旋钮 = 第二真值源（CLI D-CB3 同款） |
-| D-CBV8 | 测试档**独立新立** + `test/files.mjs` 登记 | VSC 显式清单纪律（不登记不跑）；新档 ≤500（先例 §13.5 #9 / #11） |
+| D-CBV8 | 测试档**独立新立** + `test/files.mjs` 登记 | VSC 显式清单纪律（不登记不跑）；新档 ≤500（同口径 §13.5 #9 / #11） |
 | D-CBV9 | 本批 **VSC 单端**；CLI 仓零写入 | 各端独立实现纪律；CLI 档登记收口 = 父侧（§15.13 #1 / #2） |
 
 ### 15.10 与既有纪律的冲突点核对
@@ -1291,7 +1291,7 @@ CLI 用 `_toolCallId` + `agent._advisorRefusals` Set；本端无 `_toolCallId` �
 
 | # | 候选 | 判据逐项评估 | 取舍 | 结论 |
 |---|---|---|---|---|
-| 1 | **消费点守卫**：记录段对 launchRefused 跳过 `round` / `priorOutput` 写入；`state` 仍归 settled | 改动面最小（钳在写入点）；语义 = 「拒绝 ⇒ 无 attempt」——与 §16.1 / cap 预检同构；`state=settled` 保住同 scope 重发通道（不堵死——`:186-188` 同 scope 守卫读 state） | 新拒绝语义点单点（可机判） | **选定** |
+| 1 | **消费点守卫**：记录段对 launchRefused 跳过 `round` / `priorOutput` 写入；`state` 仍归 settled | 改动限于写入点；语义 = 「拒绝 ⇒ 无 attempt」——与 §16.1 / cap 预检同构；`state=settled` 保住同 scope 重发通道（不堵死——`:186-188` 同 scope 守卫读 state） | 新拒绝语义点单点（可机判） | **选定** |
 | 2 | 结算语义本体修订（拒绝单列早退分支 / 改 state 机） | 「无尝试」语义更纯；但触及 settle 分流本体（pending / _resolve / refill 共享段）与 record.state 词表——面大于收益 | — | 否决 |
 
 **契约（逐条）**：

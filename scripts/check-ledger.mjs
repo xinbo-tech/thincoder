@@ -10,7 +10,13 @@
  *          ②证据形态 `path:line` 的路径段须在**本仓根内**为文件（他仓存在不算）——不可解析 ⇒ `[L4]`。
  *
  * 零假阳面（不入判据）：无路径散文（对位声明 / 镜像登记）· `名称（仓别）§N` 规范形态（无 `.md`、无路径前缀——两轴分离）· 组标题行。
- * 基线（`test/fixtures/ledger-baseline.json`，首跑固化）：存量违规降报告、不阻断；**新增违规 fail-closed**（退出码 1）。
+ * L4② 判序（收紧——外仓前缀排除 + 全匹配）：① 跨仓形态（兄弟仓目录前缀 / `..` 逃逸 / 仓根外绝对路径）⇒ 违规（fail-closed——不回退 basename）；
+ *          ② 本仓根直接解析 ⇒ 通过；③ 外仓前缀排除（相对路径——绝对路径由 ①/② 处置）：相对路径含目录前缀、全路径本仓不可解析时——
+ *          前缀首段须为本仓根现存条目；不现存 ⇒ 跨仓形态（外仓前缀）⇒ 违规（不回退 basename）；④ 文档行坐标（`.md` + 行号）按同名 `.md` 仓内定位（≥1 通过）；
+ *          ⑤ 仓内定位（裸 basename / 陈旧前缀——首段现存）按 basename 仓内唯一定位 ⇒ 通过；0 / ≥2 命中 ⇒ 违规。
+ *          **全匹配**：证据场内多处证据逐处判（`matchAll`——首匹配实现会漏）。
+ * 基线（`test/fixtures/ledger-baseline.json`）：**必须保持为空**——入基线 = 例外 = 违规（B16 阈值 = 0）；
+ * 非空基线 ⇒ FAIL + 固定句「本基线必须保持为空」（fail-closed：违规一律阻断，不再降报告）。
  * 输出：红 = `<档>:<行号> [L1|L2|L3|L4] <症状> — 期望 … · 实得 …`；绿 = 每档一行 `OK: <档>`；尾行计数。
  * 用法：`node scripts/check-ledger.mjs [--root <仓根>] [--ledger <台账档>]...`（默认 = 本仓活档 + 归档档）。
  */
@@ -24,7 +30,7 @@ import { scanGroups } from "../src/ledger.mjs"
 export const SIX_STATES = ["待讨论", "待设计", "在途", "待核销", "已核销", "已废弃"]
 /** 触发字段三枚举。 */
 export const TRIGGERS = ["归批", "条件", "认账不排期"]
-/** 基线档（存量违规报告清单；键稳定、不含行号）。 */
+/** 基线档：**必须保持为空**——入基线 = 例外 = 违规（B16 阈值 = 0；非空即 FAIL）。 */
 export const BASELINE_PATH = "test/fixtures/ledger-baseline.json"
 /** 默认台账清单：活档判 L3⑤（`- [x]` 零命中）；归档档不判（归档口径本就含已完成项）。 */
 export const DEFAULT_LEDGERS = [
@@ -40,6 +46,8 @@ const OPEN_ENTRY_RE = /^- \[ \]\s+/
 const REF_RE = /([A-Za-z0-9_./-]+(?:\.md|\/[A-Za-z0-9_.-]+))`?\s*§\s*(\d+(?:\.\d+)*)/g
 /** 证据形态：`path.ext:line`（可携盘符前缀——`C:/x/y.mjs:9`）。 */
 const EVIDENCE_RE = /((?:[A-Za-z]:)?[A-Za-z0-9_./-]+\.[A-Za-z0-9]+)`?\s*:\s*(\d+)/
+/** L4② 全匹配逐处判的全局实例（非全局 `EVIDENCE_RE` 的 L3 面语义零改）。 */
+const EVIDENCE_RE_G = new RegExp(EVIDENCE_RE.source, "g")
 const TRIGGER_RE = /触发\s*=\s*([^·\n]*)/
 const STATUS_RE = /status=([^·\n（(]*)/
 const DECL_RE = /（(\d+)\s*条）/
@@ -86,6 +94,44 @@ function mdBasenames(root, out = new Map()) {
     try { if (statSync(p).isDirectory()) mdBasenames(p, out); else if (name.endsWith(".md")) out.set(name, (out.get(name) ?? 0) + 1) } catch { /* 跳过 */ }
   }
   return out
+}
+/** 全仓 basename 计数（L4② 仓内定位用；排除 SKIP_DIRS）。 */
+function allBasenames(root, out = new Map()) {
+  for (const name of readdirSync(root)) {
+    if (SKIP_DIRS.has(name)) continue
+    const p = join(root, name)
+    try { if (statSync(p).isDirectory()) allBasenames(p, out); else out.set(name, (out.get(name) ?? 0) + 1) } catch { /* 跳过 */ }
+  }
+  return out
+}
+/**
+ * L4② 证据解析（判序收紧——外仓前缀排除）。返回 null（通过）或违规描述字符串。
+ * ① 跨仓形态（兄弟仓目录前缀 / `..` 逃逸 / 仓根外绝对路径）⇒ 违规（fail-closed，不回退 basename）；② 本仓根直接解析 ⇒ 通过；
+ * ③ 外仓前缀排除（收紧——相对路径；绝对路径由 ①/② 处置）：相对路径含目录前缀、全路径本仓不可解析时——前缀首段须为本仓根现存条目；
+ * 不现存 ⇒ 跨仓形态（外仓前缀）⇒ 违规（不回退 basename——防「外仓前缀 + 仓内唯一 basename」假阴面）；
+ * ④ 文档行坐标（`.md` + 行号——非证据形态）：同名 `.md` 仓内 ≥1 ⇒ 通过；⑤ 仓内定位（裸 basename /
+ * 陈旧前缀——首段现存）：basename 唯一 ⇒ 通过；0 / ≥2 命中 ⇒ 违规（不可定位 / 多义）。
+ */
+function evidenceState(root, p, cache) {
+  const norm = p.replace(/\\/g, "/")
+  const segs = norm.split("/").filter(Boolean)
+  if (segs.includes("..") || SIBLING_NAMES.includes(segs[0])) return "跨仓形态（逃逸 / 兄弟仓目录前缀）"
+  const abs = isAbsolute(p) ? p : resolve(root, p)
+  if (isFile(abs) && withinRoot(root, abs)) return null
+  if (isAbsolute(p) && !withinRoot(root, abs)) return "跨仓形态（仓根外绝对路径）"
+  if (!isAbsolute(p) && segs.length > 1) { // ③ 外仓前缀排除（收紧）：前缀首段非本仓根现存条目 ⇒ 跨仓形态
+    cache.rootEntries ??= new Set(readdirSync(root))
+    if (!cache.rootEntries.has(segs[0])) return "跨仓形态（外仓前缀）"
+  }
+  const base = basename(norm)
+  if (norm.endsWith(".md")) {
+    cache.md ??= mdBasenames(root)
+    return (cache.md.get(base) ?? 0) >= 1 ? null : "本仓无同名文档"
+  }
+  cache.all ??= allBasenames(root)
+  const n = cache.all.get(base) ?? 0
+  if (n === 1) return null
+  return n === 0 ? "本仓无同名文件" : `仓内同名 ${n} 份（多义）`
 }
 /** 路径段是否落在本仓根内（跨平台比较键：正斜杠；win32 大小写不敏感）。 */
 export function withinRoot(root, abs) {
@@ -159,15 +205,19 @@ export function checkLedger(abs, root, { live = true } = {}) {
       }
     }
   }
-  /** L4② 证据路径段须在本仓根内为文件（证据场 = 「证据」标记之后的首个 `path:line`——标记前的行内散文提及不判）。 */
+  /** L4② 证据路径（证据场 = 末个「证据」标记之后段——无标记 ⇒ 整条；段内**全匹配逐处判**；标记前的行内散文提及不判）。
+   *  判序（外仓前缀排除 + 全匹配）见 `evidenceState`：省略 / 陈旧前缀的仓内引用通过；跨仓形态 / 不可定位 / 多义 ⇒ 违规。 */
+  const evCache = {}
   const l4Evidence = (e) => {
     const marker = e.text.lastIndexOf("证据")
-    const m = EVIDENCE_RE.exec(marker >= 0 ? e.text.slice(marker) : e.text)
-    if (!m || m[1].includes("*")) return
-    const p = m[1]
-    const abs = isAbsolute(p) ? p : resolve(root, p)
-    if (!isFile(abs) || !withinRoot(root, abs)) {
-      add("L4", e.line, `evi:${p}`, `证据不可本仓解析（${p}）`, "本仓根内为文件", isFile(abs) ? "在本仓根外" : "文件不存在（他仓 / 他产品线）")
+    const scope = marker >= 0 ? e.text.slice(marker) : e.text
+    for (const m of scope.matchAll(EVIDENCE_RE_G)) {
+      const p = m[1]
+      if (!p || p.includes("*")) continue
+      const why = evidenceState(root, p, evCache)
+      if (why) {
+        add("L4", e.line, `evi:${p}`, `证据不可本仓解析（${p}）`, "本仓可定位（根解析 / 唯一 basename；跨仓形态禁）", why)
+      }
     }
   }
   for (const e of closed) { l4Refs(e); l4Evidence(e) } // 归档闭环条目：只判 L4（跨仓面）
@@ -221,7 +271,7 @@ export function checkLedger(abs, root, { live = true } = {}) {
   return hits
 }
 
-/** 读基线清单（缺失 / 损坏 → 空集 = 全部视为新增）。 */
+/** 读基线清单（缺失 / 损坏 → 空集）。**必须保持为空**——非空即 FAIL（入基线 = 例外 = 违规）。 */
 export function loadBaseline(root) {
   try {
     const j = JSON.parse(readFileSync(resolve(root, BASELINE_PATH), "utf8"))
@@ -229,22 +279,20 @@ export function loadBaseline(root) {
   } catch { return new Set() }
 }
 
-/** 多档机检 + 基线分流：`{perFile, fresh（阻断）, known（存量降报告）, skipped}`。 */
+/** 多档机检：`{perFile, fresh（阻断——全部违规）, baseline（基线条目——必须为空）, skipped}`。
+ *  基线不再分流（B16：阈值 = 0——「入基线」已废；非空基线 = 独立 FAIL 面，见 `main`）。 */
 export function runCheck({ root = process.cwd(), ledgers = null, baseline = null } = {}) {
   const targets = (ledgers ?? DEFAULT_LEDGERS).map((t) => (typeof t === "string" ? { path: t, live: true } : t))
-  const base = baseline ?? loadBaseline(root)
-  const perFile = [], skipped = [], fresh = [], known = []
+  const baselineList = [...(baseline ?? loadBaseline(root))]
+  const perFile = [], skipped = [], fresh = []
   for (const t of targets) {
     const abs = resolve(root, t.path)
     if (!isFile(abs)) { skipped.push(abs); continue } // 缺档 → 跳过不报（降级不阻断）
     const hits = checkLedger(abs, root, { live: t.live !== false })
-    const f = hits.filter((v) => !base.has(v.key))
-    const k = hits.filter((v) => base.has(v.key))
-    perFile.push({ file: displayName(abs, root), hits, fresh: f, known: k })
-    fresh.push(...f)
-    known.push(...k)
+    perFile.push({ file: displayName(abs, root), hits, fresh: hits })
+    fresh.push(...hits)
   }
-  return { perFile, fresh, known, skipped }
+  return { perFile, fresh, baseline: baselineList, skipped }
 }
 
 /** CLI 主行程（导出以便用例进程内断言退出码语义）。 */
@@ -252,14 +300,18 @@ export function main(args = process.argv.slice(2), { cwd = process.cwd(), log = 
   const argOf = (f) => { const i = args.indexOf(f); return i >= 0 && args[i + 1] ? args[i + 1] : null }
   const root = resolve(argOf("--root") ?? cwd)
   const ledgers = args.flatMap((a, i) => (a === "--ledger" && args[i + 1] ? [{ path: args[i + 1], live: !args[i + 1].includes("archive") }] : []))
-  const { perFile, fresh, known, skipped } = runCheck({ root, ledgers: ledgers.length ? ledgers : null })
+  const { perFile, fresh, baseline, skipped } = runCheck({ root, ledgers: ledgers.length ? ledgers : null })
   for (const abs of skipped) log(`SKIP: ${relative(root, abs)}（不可读——跳过不报）`)
+  // 基线**必须保持为空**（B16 闸门收紧）：入基线 = 例外 = 违规——非空即 FAIL
+  if (baseline.length) {
+    log(`FAIL(基线): 基线清单非空（${baseline.length} 条）——**本基线必须保持为空**：入基线 = 例外 = 违规（不得再入基线；条目须修掉）。`)
+    for (const k of baseline) log(`    ${k}`)
+  }
   for (const f of perFile) {
     for (const v of f.fresh) log(v.msg)
     if (!f.fresh.length) log(`OK: ${f.file}`)
   }
-  for (const v of known) log(`· 存量（基线内——降报告，不阻断）：${v.msg}`)
-  log(`${fresh.length} 处违规（新增——阻断）+ ${known.length} 处存量（基线内——降报告）。`)
-  return fresh.length ? 1 : 0
+  log(`${fresh.length} 处违规（阻断——修掉）· 基线 ${baseline.length} 条（**本基线必须保持为空**）。`)
+  return fresh.length || baseline.length ? 1 : 0
 }
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) process.exit(main())

@@ -125,7 +125,7 @@ workspace" 已改为 **"no directory restriction"**（权威源 = CLI TOOLS.md�
 - **跨端 / 同族键**（`_SIBLING_SHAPES`——存在性断言面，4 键；共享 config.json）：`defaultModel` `"provider:model"` 串 ∪ null · `shell` 非空串 ∪ null · `memory.team` 含非空 `repo` 的对象 ∪ null · **`agent.subagentModels` 角色→非空串对象 ∪ null**（第 12 批第 4 条——本端读侧 `subagent.mjs` `effectiveSubagentModel`；`{}` = 清除）。
 - **完备性机械锁**：null 叶子键集 == `_NULL_LEAF_SHAPES` 键集（测试断言 + 运行期一次性警告列出未声明键名）；跨端 / 同族四键在 `_SIBLING_SHAPES` 内**存在性断言**（不参与集合相等）——与 CLI 同款（N-S1.5；第 12 批四键口径）。
 - **描述句同步**：`src/agent-tools/settings.mjs:91` 整句替换（逐字新句见 CLI 档 §8.6）。
-- **需求层落点**：本仓无 `docs/requirements/`（只有设计层）——第 8 批需求句在 CLI 档 `docs/requirements/SETTINGS-TOOL.md` §2（F-S1.7/F-S1.8）；第 12 批 VSC 对位（同族键第 4 条）需求 = 同档 F-S1.7 VSC 对位行。
+- **需求层落点**：本仓无 `docs/requirements/`（只有设计层）——第 8 批需求句在 `SETTINGS-TOOL（CLI 仓·需求）` §2（F-S1.7/F-S1.8）；第 12 批 VSC 对位（同族键第 4 条）需求 = 同档 F-S1.7 VSC 对位行。
 - `toolSchemas` 在 `engineering` 会话级开关判定**之后**构建——subagent 的 role enum 随模式
   变（`modeRoleField`——非工程 explore/plan/coder、工程 explore/plan/eng-coder）。
 
@@ -338,7 +338,7 @@ approve / deny / approve-all + diff 预览（`diff-preview.mjs` 虚拟文档原�
 → 实测 435）+ `file.mjs` 动作 3→2；计数 44→45（25 新 + 18 改 + 2 测档——对齐实现自扫
 `test/tool-descriptions.test.mjs:9/:63`）。
 
-**行数拆分口径（修正轮 #6——同 `AGENT-LOOP.md` §12.4 先例）**：`shared.mjs` 406 → ~420 **跨 300 行咨询
+**行数拆分口径（修正轮 #6——同 `AGENT-LOOP.md` §12.4 同口径）**：`shared.mjs` 406 → ~420 **跨 300 行咨询
 线**（≤500 硬限内）——本批增量 = `DESC()` 单函数；本批不拆分，**挂结构债候选**。
 
 ### 12.5 用例表

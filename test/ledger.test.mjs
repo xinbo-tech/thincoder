@@ -3,6 +3,7 @@
  * 面：语义同源（解析 / 计数 / 阈值 / 行文本 / 去重——本端独立实现）· 跨端去重档键等价 · item 形态（T107）·
  * webview 渲染（T108，真 chat.js + happy-dom）· 启动行 post 门 + 送达门 · 接线机检 · 老化界值（慢层 git）。
  * 手法：tmp 夹具 + 注入 ageOf（确定性）；vscode-mock（`test/vscode-mock`——最小扩展面）。
+ * 归册（2026-09-12 收尾轮 9）：T107 观测 619ms——slow() 门控；AC89/T102 原已归册，其余用例留快层。
  */
 import { test, before, after, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
@@ -90,7 +91,7 @@ test("T103 正常：去重 + 条目键稳定 + 跨端键等价（CLI 写的键�
 })
 
 // ── T107 item 形态（AC87/F8） ───────────────────────────────────────────────
-test("T107 正常：item text = L1 / tooltip = 明细行集 / aged>0 → warningBackground / 无台账 → hide", () => {
+slow("T107 正常：item text = L1 / tooltip = 明细行集 / aged>0 → warningBackground / 无台账 → hide", () => {
   const ws = join(tmp, "ws")
   const alpha = join(ws, "alpha")
   const text = ledgerText([poolEntry("甲"), poolEntry("乙")], [techEntry("丙")])

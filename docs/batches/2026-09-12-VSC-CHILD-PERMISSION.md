@@ -1,9 +1,10 @@
 # VSC 子代理审批面对齐（child permission gate）· 批次记录（2026-09-12）
 
-> 搬迁注记：本档自 CLI 仓 `thincoder/docs/batches/2026-09-12-VSC-CHILD-PERMISSION.md` 迁入本仓 `docs/batches/`（LEDGER-SELF-CONTAINED 批——实施面全在本仓的批档物理迁移，档名不变、文字逐字；源档 blob SHA = bb2a0768afb7 · 源提交 = cfcc621）。
+> 搬迁注记：本档自 CLI 仓 `2026-09-12-VSC-CHILD-PERMISSION（CLI 仓）` 迁入本仓 `docs/batches/`（LEDGER-SELF-CONTAINED 批——实施面全在本仓的批档物理迁移，档名不变、文字逐字；源档 blob SHA = bb2a0768afb7 · 源提交 = cfcc621）。
 
 > 六段 append-only，一段一作者。编制：主 agent · 2026-09-12 01:20 · 来源 = 用户 01:16「G1 你觉得呢」+ 01:17「可以我也这么想」（**裁定：走 A——child 也过审批门**）。
 > 勘察 = explore#29（G1——证据见下）。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -15,13 +16,13 @@
 
 ### 用户裁定（A 方案）
 
-**child（depth>0）写操作走审批门**（ask 模式弹卡；模式继承——auto/approveAll 静默放行）。理由（父侧呈报 + 用户认可）：① 现状是**偶然的洞**（VSC 门禁 `depth === 0` → child 静默放行；回调链无 permission 通道）；② 安全语义应整树一致（ask 模式下后台 child 不该绕过授权）；③ 机制已有（VSC 权限卡 approve/approveAll/deny + 批合并行；CLI 模态带 owner key 先例）。
+**child（depth>0）写操作走审批门**（ask 模式弹卡；模式继承——auto/approveAll 静默放行）。理由（父侧呈报 + 用户认可）：① 现状是**偶然的洞**（VSC 门禁 `depth === 0` → child 静默放行；回调链无 permission 通道）；② 安全语义应整树一致（ask 模式下后台 child 不该绕过授权）；③ 机制已有（VSC 权限卡 approve/approveAll/deny + 批合并行；CLI 模态带 owner key——既有）。
 
 ### 勘察事实（explore#29——逐点 file:line）
 
 | 端 | 事实 | 证据 |
 |---|---|---|
-| CLI | depth>0 的 child 发审批等待前**先发** `⟦ev⟧approval` 事件 → 块头翻 `⏸` + 状态词 `等待审批: <tool>` | `thincoder/src/agent/dispatch.mjs:289-299`（`depth > 0` 才发）· `src/tui/subagent-blocks.mjs:119-122` · `src/tui/subagent-panel.mjs:54/103` |
+| CLI | depth>0 的 child 发审批等待前**先发** `⟦ev⟧approval` 事件 → 块头翻 `⏸` + 状态词 `等待审批: <tool>` | `src/agent/dispatch.mjs:289-299`（CLI 仓）（`depth > 0` 才发）· `src/tui/subagent-blocks.mjs:119-122` · `src/tui/subagent-panel.mjs:54/103` |
 | CLI | 手动档 child 的写工具 ask 走父侧模态，**带 owner key** `${key}/${tool}`；child 块 ⏹ = deny 该 child pending 模态 | `src/agent-tools/subagent-spawn.mjs:300-324` · `src/tui/mouse.mjs:224-228` · `src/tui/key-modes.mjs:22` |
 | VSC | 权限门要求 `depth === 0` → **child 永远到不了审批阶段（静默放行）** | `thincoder-vscode/src/agent/execute-tools.mjs:243-258` |
 | VSC | child 的 `runAgent` callbacks **无 permission 回调**（只转发 onToken/onReasoning/onToolCall/onToolResult/onToolPanel/onAgentTurn/onComplete/onQuestion） | `thincoder-vscode/src/agent-tools/subagent-run.mjs:87-126` |
@@ -50,15 +51,13 @@ CLI 零改 · 不改权限模式集合 · 不动 VSC 顶层（depth 0）审批�
 
 ## §2 批次任务（eng-designer 写）
 
-_（待写——eng-designer）_
-
----
+> （父侧形态更正 2026-09-12：原「_（待写——eng-designer）_」空占位行已去除——实体任务书见下；空占位 = 残留即先例）
 
 ### 批次任务（eng-designer 自写——2026-09-12）
 
 **目标与理由**：VSC 子代理（depth>0）写操作走审批门对齐 CLI——消除「偶然的洞」（三道闸：权限门 `depth === 0` + child 无 permission 回调 + child `autoApprove` 恒 `true`）。R1 = 机制对齐（ask 弹卡带归属 / auto·approve-all 静默 = 模式继承 / 块头 `⏸` + 等待审批 / 覆盖 escalate / 取消释放）；R2 = 文档矛盾修正（`ESCALATE.md` / `ENGINEERING-MODE.md` 与实现对齐）。
 
-**落档位置**：需求 = CLI 仓 `docs/requirements/AGENT-LOOP.md` **§17**（F-CP1/F-CP2——设计者已落）；设计与测试 = VSC 仓
+**落档位置**：需求 = `AGENT-LOOP（CLI 仓·需求）` **§17**（F-CP1/F-CP2——设计者已落）；设计与测试 = VSC 仓
 `docs/design/AGENT-LOOP.md` **§18**（§18.1–§18.10——设计者已落）；门禁增量 = `TOOLS.md` §8 · 协议登记 = `WEBVIEW.md` §7.2；
 R2 修正 = `ESCALATE.md` / `ENGINEERING-MODE.md` / `AGENT-LOOP（VSC 仓）§8` 同族句 · 地图注记 = `README.md` 变更记录（均已落）。**设计档 §18 = 契约全文——
 本段为任务书，不另写副本；实现前先读 §18.4（C-1..C-13）与 §18.7（用例表）。**
@@ -186,11 +185,10 @@ R2 修正 = `ESCALATE.md` / `ENGINEERING-MODE.md` / `AGENT-LOOP（VSC 仓）§8`
 
 **自检（D6 回读 + 宽度/一致性）**：VSC 仓 `check-doc-width` = 宽度 OK + 一致性新增违规 0；本次触碰四档零新增违规。CLI 仓既有失败为批外存量（批次档历史宽行等）；另评审段（§3）内一处自我指称（「本档」+ 节号）被 CLI 侧 V1 记 no-section——语指 VSC 仓 AGENT-LOOP 交付协议节，§3 = 评审段不改，父侧核销时修字面或入基线。
 
-**状态**：修正轮已落（7/7——只动文档：VSC 仓 `docs/design/AGENT-LOOP.md` / `TOOLS.md` / `ENGINEERING-MODE.md` + CLI 仓 `docs/requirements/AGENT-LOOP.md`）；两仓源码/测试零改；未 commit。待父侧核验 + 评审轮次 2。
+**状态**：修正轮已落（7/7——只动文档：VSC 仓 `docs/design/AGENT-LOOP.md` / `TOOLS.md` / `ENGINEERING-MODE.md` + `AGENT-LOOP（CLI 仓·需求）`）；两仓源码/测试零改；未 commit。待父侧核验 + 评审轮次 2。
 
 ## §3 设计评审（评审子代理写）
 
-_（待写——评审子代理）_
 
 ---
 
@@ -201,9 +199,9 @@ _（待写——评审子代理）_
 | # | Category | Severity | Issue | Suggestion |
 |---|----------|----------|-------|------------|
 | 1 | Document ownership | 🟡 | R2 扫尾残留：`TOOLS（VSC 仓）` :179 仍为同族失准句「写豁免仅限 onPermissionRequest 阶段」——C-13（VSC AGENT-LOOP :1445-1451）已对 ESCALATE 4 处 / EM / AGENT-LOOP.md §8 改写为「权限询问阶段整体跳过」，TOOLS.md §8 本批在改（:181 新增 child 审批条）却未列 :178-180；T-CP17（:1514）只读三处文本，检查过后该句仍存 | 将 TOOLS.md:178-180 纳入 C-13/T-CP17（改写或登记有意保留——「豁免仅限该阶段」vs「阶段整体跳过」粒度差异说明） |
-| 2 | Clarity | 🟡 | C-6 ②（VSC AGENT-LOOP :1415——`panel._abortController` abort，自注「既有 Stop 面」）触发面与判定未钉死：轮级 Stop（F-6：不停后台池——:336）下子代存活、其 pending ask 是否即判 deny、子代去向如何——设计与需求均未落句；需求取消清单为 ⏹/模型 cancel/会话中止（需求 :639），Stop 不在列；用例表无 ② 的用例（T-CP7 :1504 只覆盖 ①） | 补 ② 触发/判定/子代去向一句并与 F-6 关系对齐；加用例或注明 ① 等价覆盖（可引 TOOLS.md:182 既有 abort→deny 先例）——考清 Stop 是否为合法释放触发 |
-| 3 | Document ownership / Methodology | 🟡 | C-11 拆分与新模块的文档面不完整：本档 §1 模块地图（:65-89）无 `child-permission.mjs` / `tool-gates.mjs` 行且 execute-tools 行（:71）仍全包「门禁」（先例 §15/§16 落档均带 §1 行）；变更记录（:38 起）无 §18 行；`ENGINEERING-MODE.md:144` 锚「execute-tools.mjs `preGateBlocked`」在符号迁 `tool-gates.mjs`（:1438-1441）后失准而 EM 本批在改；§18.9（:1545）只把「模块图登记」笼统推父侧 | 补 §1 两行新模块 + 修 execute-tools 行；落 §18 变更记录行；EM §6 锚改指 `agent/tool-gates.mjs`（或 §18.9 明列） |
-| 4 | Acceptance criteria | 🟡 | 结构口径自相矛盾：拆分评估注④「新档均 ≤300」（:1490）与 §18.6 #15 `test/child-permission.test.mjs` 预计 ~380（:1484）冲突；AC-CP8「新档 ≤300」（:1532）与需求 N-CP2（需求 :647）未声明测试档口径——~380 新档越 300 线且无登记/拆分说明 | 按测试档登记先例（:1251-1254「测试档登记口径 = 不拆分」）登记该档并修④措辞；或补拆测试档 |
+| 2 | Clarity | 🟡 | C-6 ②（VSC AGENT-LOOP :1415——`panel._abortController` abort，自注「既有 Stop 面」）触发面与判定未钉死：轮级 Stop（F-6：不停后台池——:336）下子代存活、其 pending ask 是否即判 deny、子代去向如何——设计与需求均未落句；需求取消清单为 ⏹/模型 cancel/会话中止（需求 :639），Stop 不在列；用例表无 ② 的用例（T-CP7 :1504 只覆盖 ①） | 补 ② 触发/判定/子代去向一句并与 F-6 关系对齐；加用例或注明 ① 等价覆盖（可引 TOOLS.md:182 既有 abort→deny 处置）——考清 Stop 是否为合法释放触发 |
+| 3 | Document ownership / Methodology | 🟡 | C-11 拆分与新模块的文档面不完整：本档 §1 模块地图（:65-89）无 `child-permission.mjs` / `tool-gates.mjs` 行且 execute-tools 行（:71）仍全包「门禁」（同规：§15/§16 落档均带 §1 行）；变更记录（:38 起）无 §18 行；`ENGINEERING-MODE.md:144` 锚「execute-tools.mjs `preGateBlocked`」在符号迁 `tool-gates.mjs`（:1438-1441）后失准而 EM 本批在改；§18.9（:1545）只把「模块图登记」笼统推父侧 | 补 §1 两行新模块 + 修 execute-tools 行；落 §18 变更记录行；EM §6 锚改指 `agent/tool-gates.mjs`（或 §18.9 明列） |
+| 4 | Acceptance criteria | 🟡 | 结构口径自相矛盾：拆分评估注④「新档均 ≤300」（:1490）与 §18.6 #15 `test/child-permission.test.mjs` 预计 ~380（:1484）冲突；AC-CP8「新档 ≤300」（:1532）与需求 N-CP2（需求 :647）未声明测试档口径——~380 新档越 300 线且无登记/拆分说明 | 按测试档登记口径（:1251-1254「测试档登记口径 = 不拆分」）登记该档并修④措辞；或补拆测试档 |
 | 5 | Requirements | 🟡 | KD-7 连带（:1402 / :1463：手动档「非 eng-coder child」不再注入 AUTO 提醒句——按该口径含 explore/plan）与需求 F-CP1 边界列「consult/explore/plan/eng-coder 零行为」、§17.1「不受影响」（需求 :639/:633）存在字面张力——连带已登记，需求侧未同步 | 需求侧澄清「零行为/不受影响」口径 = 审批面（或确认连带接受）——协调项（父侧） |
 | 6 | Clarity | 🔵 | 标签「D-E3」（:1361、T-CP10 :1507）在审查范围三份文档内无定义（他档/批次档是否定义 = unverified——范围外未核） | 改指 C-3/KD-2 或补定义/出处 |
 | 7 | File-size annotations | 🔵 | §18.6 #16 `test/advisor-guard-completion.test.mjs` 未给 as-of 行数（:1485 列「—」），仅 ±1——受影响文件表当前行数标注不完整 | 补当前行数（口径同表内其他行） |
@@ -220,7 +218,7 @@ VERDICT: pass
 
 **VSC 子代理审批面对齐设计（轮次 2——修正轮核验；只验修正不追新）——设计评审发现**
 
-方法：五份范围内文档全读；以修正轮落点表（批次档 §2 修正轮块）逐条对核当前盘面；引用行号 = 本轮最终读取实测（VSC 设计档 = `docs/design/AGENT-LOOP.md`；需求档 = `thincoder/docs/requirements/AGENT-LOOP.md`）。
+方法：五份范围内文档全读；以修正轮落点表（批次档 §2 修正轮块）逐条对核当前盘面；引用行号 = 本轮最终读取实测（VSC 设计档 = `docs/design/AGENT-LOOP.md`；需求档 = `AGENT-LOOP（CLI 仓·需求）`）。
 
 | # | 轮次 1 项（级别） | 核验 | 证据（file:line） |
 |---|---|---|---|
@@ -250,7 +248,6 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 ---
 

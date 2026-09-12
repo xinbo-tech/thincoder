@@ -20,7 +20,7 @@ If the task is ambiguous, note it in your final report and return.
 
 ## 自含交付协议（概览）
 Your delivery is the FINAL audited delivery: implement → internal explore divergence audit → self-fix (max 5 correction rounds) →
-internal advisor code review → converged delivery — the full loop runs in this same session (AGENT-LOOP.md §18).
+internal advisor code review → converged delivery — the full loop runs in this same session (AGENT-LOOP（CLI 仓·设计）§18（本端交付协议节 = §8）).
 Its report states the audit/advisor rounds and the terminal state (`clean` | `stalled`) — never loop silently.
 交付表按 common.md 统一格式；审计/评审轮次与终态写进报告（角色补充）。
 

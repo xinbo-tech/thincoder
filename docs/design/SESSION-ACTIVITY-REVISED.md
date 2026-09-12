@@ -113,7 +113,7 @@
   单面板形态一体满足用户三连）——D-1/D-2/D-3 用户全裁推荐 + Stop 语义裁定并入。
 - 2026-09-09 评审 7 项采纳（digest running 定论/全停入口定论——无全停池空自然完——status-bar 入表/consult
   answered 路径明示 + 测试 ⑭⑮/ARCHITECTURE 入文档/AC-1 引用修正/尺寸注——token 0b9d1f32）——核销时
-  README 地图登记（同 SESSION-FLOW 先例）。
+  README 地图登记（同 SESSION-FLOW 同款）。
 - 2026-09-09：activity.js 579 行拆分交付（ACTIVITY-SPLIT——三文件终局——activity.js 编排层
   287 行 + activity-view.js 呈现叶 229 行 + activity-freeze.js 冻结叶 94 行——hub re-export
   外部消费方零改动——依赖纯 DAG 无环——verbatim 移动断言 parity 162/15——resetActivity ticker

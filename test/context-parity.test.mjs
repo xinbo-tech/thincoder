@@ -8,7 +8,10 @@
  * `_setInjectionDepsForTests`（依赖表计数包装——§17.7 修正轮 #10「spy 形态实现选定、
  * 报告备案」；git 采集面同表桩化——真 git 收集语义在 setup-reminders.test.mjs 覆盖）。
  * 会话形态：`bag()` = 面板 runOpts 同构对象（history/fullHistory 挂其上——跨 run 共享）。
- * 隔离：USERPROFILE/HOME 指向临时 home（用户级 AGENTS.md / ~/.thincoder/skills 不泄漏进断言）。
+ * 隔离：USERPROFILE/HOME 指向临时 home（用户级 AGENTS.md / ~/.thincoder/skills 不泄漏进断言）
+ * + config 路径经 `_setConfigPathForTest` 沙箱化（config-io 的 configDir/configPath 于 import 期固化——
+ * HOME 覆盖不及其路径读取，故必须用显式缝；否则本机 ~/.thincoder/config.json（agent.engineering）
+ * 进入装配面 → 基座随机器漂移）。
  * T-CI-11 = 跨仓只读兄弟仓 `../thincoder`（THINCODER_CLI_ROOT 可覆盖；缺仓/异位 fail-closed
  * ——显式失败不 skip；先例 = test/prompts-mirror-anchors.test.mjs:21,30-34）；2026-09-12 PROSE-ANCHOR-RETIRE：
  * 序锚字面断言（读 CLI 源文本）删，仅保留 fail-closed 存在性面。
@@ -23,6 +26,7 @@ import { buildTopLevelAgent, hydrateRun } from "../src/agent/setup.mjs"
 import { _setInjectionDepsForTests, _resetInjectionDepsForTests, listWorkDir as realListWorkDir } from "../src/agent/context-injections.mjs"
 import { _resetRestartDetectionForTests } from "../src/agent/setup-reminders.mjs"
 import { assemblePrompt } from "../src/prompt-overlays.mjs"
+import { _setConfigPathForTest } from "../src/config-io.mjs"
 import { loadSkills, formatSkillListing } from "../src/extension/skills.mjs"
 import { planTool, planReminderForTurn } from "../src/agent-tools/plan.mjs"
 import { skillTool } from "../src/agent-tools/skill.mjs"
@@ -47,11 +51,13 @@ beforeEach(() => {
   savedEnv.HOME = process.env.HOME
   process.env.USERPROFILE = home // homedir() 读 env（用户级 AGENTS.md/skills 隔离）
   process.env.HOME = home
+  _setConfigPathForTest(join(home, ".thincoder", "config.json")) // config 沙箱：文件缺席 → loadRaw()={} → engineering=false（基座 = normal，机器态无关）
   _resetInjectionDepsForTests()
   _resetRestartDetectionForTests()
 })
 
 afterEach(() => {
+  _setConfigPathForTest(null)
   _resetInjectionDepsForTests()
   if (savedEnv.USERPROFILE === undefined) delete process.env.USERPROFILE
   else process.env.USERPROFILE = savedEnv.USERPROFILE
@@ -361,7 +367,7 @@ test("T-CI-10 错误：块 I/O 失败 → 该块静默跳过；各恰 1 次调�
 
 // ─── T-CI-11 跨仓只读序锚（AC-CI-5——fail-closed）────────────────────────────
 
-test("T-CI-11 正常（双端对照）：CLI 序锚字面在源且文件内出现序与 §17.4 单调一致", () => {
+test("T-CI-11 边界（fail-closed）：兄弟仓 CLI 源在位（缺仓/异位显式失败）", () => {
   assert.notStrictEqual(CLI_ROOT, VSC_ROOT, "CLI 根不得等于本仓根（THINCODER_CLI_ROOT 空值/自指防护）")
   const cliSetup = join(CLI_ROOT, "src", "agent", "setup.mjs")
   assert.ok(existsSync(cliSetup), `fail-closed：兄弟仓 CLI 源缺失 ${cliSetup}（THINCODER_CLI_ROOT 可覆盖；缺仓/异位 = 显式失败不 skip）`)

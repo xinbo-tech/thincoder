@@ -9,8 +9,10 @@
  * ——§14.7 D-VGC8）。
  * 面③（F26）三形态收敛信号：本档锁前两形态；第三形态（rv.round ≥ 2 无 prior 降级）由
  * 既有 T-VG7 的 `buildAdvisorUserMessage` 自愈锁覆盖（§14.5 交叉引用——不重复断言）。
+ * 归册（2026-09-12 收尾轮 9）：T-VG16（启动拒绝面重装配链）观测 528–951ms——slow() 门控。
  */
 import { test, after } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync, mkdirSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -50,7 +52,7 @@ const STUB_PROVIDER = { name: "stub", baseURL: "http://stub.invalid", apiKey: "k
 
 // ─── A：面① 启动断言（F24 / AC-VG9）──────────────────────────────────────────
 
-test("T-VG16 启动断言：design 无 token 直调 → 拒绝报告（逐字）+ 零请求 + 槽/prior 零写", async () => {
+slow("T-VG16 启动断言：design 无 token 直调 → 拒绝报告（逐字）+ 零请求 + 槽/prior 零写", async () => {
   const ws = mkws()
   write(ws, "docs/design/X.md", "# X\n\nreview target\n")
   const agent = { cwd: ws, history: [], config: {}, _provider: STUB_PROVIDER, _engDesignTokens: new Map() }

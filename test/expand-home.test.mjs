@@ -4,8 +4,10 @@
  *
  * 覆盖：展开形态矩阵（前缀 / 裸 / 尾分隔 / 非分隔符 / 类型护栏）+ setup 读取点接线
  * （`shell` 字段单点归一；`agents.config.shell` 收到的一定是绝对路径；只读——磁盘原文不变）。
+ * 归册（2026-09-12 收尾轮 9）：T-MA2-5（hydrateRun ×3 重装配链）观测 783–1720ms——slow() 门控。
  */
 import test from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir, homedir } from "node:os"
@@ -57,7 +59,7 @@ test("T-MA2-4 null / undefined / number / object / array / boolean → 原样透
 
 // ─── T-MA2-5 接线：setup 读取点归一 + 只读（AC-MA2-2）───────────────────────────
 
-test("T-MA2-5 setup 读取段：`shell: '~/x'` → agent.config.shell = join(homedir(), 'x')；null → null；磁盘原文保留", async () => {
+slow("T-MA2-5 setup 读取段：`shell: '~/x'` → agent.config.shell = join(homedir(), 'x')；null → null；磁盘原文保留", async () => {
   const dir = mkdtempSync(join(tmpdir(), "expand-home-"))
   const sessionsDir = mkdtempSync(join(tmpdir(), "expand-home-s-"))
   const cfgPath = join(dir, "config.json")

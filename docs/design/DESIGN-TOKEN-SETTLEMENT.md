@@ -67,7 +67,7 @@ async design 评审（`advisor async:true`）在**挂起会话**期间 settle（
   忙时场景：settle 落盘 9 项到槽 → **settle 只更新闭包 parent（发起评审的 agent 实例）的 `_engDesignTokens`
   （advisor-async.mjs:322-323），主会话当前 agent 内存 Map 仍是旧 8 项**（settle 发生在其回合处理中途，回合开始时水合
   早于 settle）→ 主会话回合尾 saveLines → agentState 携 incoming = 8 项（非空）→ `return incoming` →
-  **8 项整体覆盖槽的 9 项 → 新 token 被抹**。空闲时无后续 saveLines → 槽保留 9 项。
+  **8 项整体覆盖槽的 9 个条目 → 新 token 被抹**。空闲时无后续 saveLines → 槽保留 9 个条目。
 - **改（用户确认 union 方案）**：merge 改 **union 合并**——`{ ...existing, ...incoming }`：
   - **同 key 以新 mint 者胜（评审 #3——比较 token 尾部 `:expiresAt`——同 TTL 源下 expiresAt 大 = 后 mint = 新）**——非盲目 incoming wins：续跑 round 同 designId 新 token 覆盖旧值（incoming 新）✓；async 重评审同 designId（F2h 复用 id——settle 落槽新 token 而主会话内存仍是旧 token——incoming 旧 vs existing 新）→ **existing（新）胜**——不丢新 token
   - **槽独有项保留**（incoming 缺的——如 settle 刚落盘而主会话内存未同步的项）——多写者（settle/consume/跨端）互不覆盖

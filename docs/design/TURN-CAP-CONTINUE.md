@@ -74,12 +74,12 @@
 
 **live 头逐轮跳动本端本就缺**（出生事件 `suspension.mjs:141` 不携 turn——登记行见 19.8）——本批修的是**值语义**（终值 / 查询值跨段累计），不是新增 live 通道。
 
-### 19.2 方案选型对比（判据 = 用户可见语义正确 · 改动最小面 · 既有锁不破）
+### 19.2 方案选型对比（判据 = 用户可见语义正确 · 既有锁不破 · 改动范围）
 
 | # | 候选方案 | 判据逐项评估 | 取舍 | 结论 |
 |---|---|---|---|---|
 | 1 | **跨段累计**（口径与 CLI 同源：n = 链内累计已跑轮数；max = 累计已授予预算） | 语义与 CLI 一致（双端同源）；改动面 = 本端生成侧（复位 + 种子落点 + 循环赋值 + 回调契约）+ 两消费点（取值 + 段间种子回传——19.3）；**桥消息字段零新增**；既有测试无编号发值断言（全量分类 = 19.2 注①） | 代价：回调增第二参（两消费端同步改） | **选定** |
-| 2 | 分段显式（段号 + 段内号） | 需扩展桥消息（新字段）+ webview 头部与状态面改——登记行明示「桥白名单不擅建」；与最小面判据冲突 | — | 否决 |
+| 2 | 分段显式（段号 + 段内号） | 需扩展桥消息（新字段）+ webview 头部与状态面改——登记行明示「桥白名单不擅建」；与「改动范围」判据冲突 | — | 否决 |
 | 3 | 不动（保持段内值） | 冻结头终值失真（多段任务显示最后一段计数，如真实 130 轮显 30/100）——缺陷原样 | — | 否决 |
 
 **注①（测试面全量分类——2026-09-11 复核）**：本端无 `⟦ev⟧` token 协议（全仓 `test/` 对 `⟦ev⟧` 与 `onAgentTurn` 均 0 命中）；`turn`/`maxTurns` 命中全为 fixture 显式值（`activity-flow.test.mjs:101/288/292`、`subagent-observe-send.test.mjs:17/43`、反向断言 :201）。
@@ -89,7 +89,7 @@
 
 **唯一新增状态**：`agent._turnSeq`（链内累计序数——agent 级）。
 
-- 复位 = 循环前、条件 `!opts.resume`（可与 `src/agent.mjs:99` 既有 `!opts.resume` 守卫或 `_runStartHistoryLen` 赋值邻位同源——实施者择最小面，但**不得无条件复位**，否则续跑累计失效）；
+- 复位 = 循环前、条件 `!opts.resume`（可与 `src/agent.mjs:99` 既有 `!opts.resume` 守卫或 `_runStartHistoryLen` 赋值邻位同源——实施者择其一落点，但**不得无条件复位**，否则续跑累计失效）；
 - **段间种子**（2026-09-11 载体缺口修正轮——修法 A）：`resume` 且 `agent._turnSeq == null` → 落 `opts._turnSeqBase`（缺省 0）——**非空不覆盖**（见下「段间载体契约」）；
 - 递增 = 段内每进入一轮 +1（续跑不重置、不回退）。
 
@@ -148,7 +148,7 @@
 | T2 | 边界 | `turnFrame(101, 0, 100)`——续跑段首轮（缺陷点；累计序数 = 101） | `{turn: 101, maxTurns: 200}`——**不回到 1** | F7 |
 | T3 | 边界 | `turnFrame(238, 37, 100)`——第 3 段中段（段前累计 200 + 段内 37 + 1） | `{turn: 238, maxTurns: 300}` | F7 |
 | T4 | 边界（不变式） | 扫描（限可达域：段内 `turn ∈ [0, max)`、`seq ≥ turn + 1`）seq∈{1, 100, 101, 250} × max∈{40, 100} | 恒 `turn ≥ 1`、`turn ≤ maxTurns`、`maxTurns = (seq - turn - 1) + max` | F7 / N5 |
-| T5 | 正常 | `applyTurnFrame(entry, 101, 200)`（fixture entry——`mkEntry` 风格；`test/subagent-observe-send.test.mjs` 先例） | `entry.turn = 101`、`entry.maxTurns = 200` | F7 |
+| T5 | 正常 | `applyTurnFrame(entry, 101, 200)`（fixture entry——`mkEntry` 风格；`test/subagent-observe-send.test.mjs` 同款） | `entry.turn = 101`、`entry.maxTurns = 200` | F7 |
 | T6 | 边界 | `applyTurnFrame(null, 101, 200)`（`entry` 空——无池条目路径；判定见 19.3 sync 注） | no-op 不抛（sync 零影响） | N6 |
 | T7 | 正常（显示面零改动） | fixture：终态消息 `{type: "subagent", status: "done", turn: 130, maxTurns: 200}` → 冻结头（webview 面） | 头含 `turn 130/200` | F7（webview 零改动机械证明） |
 | T8 | 错误 / 回归 | ① `_turnSeq = 0` 复位条件 = `!opts.resume`（源码锚）② 既有 activity-flow / webview-turnstate / observe-send 全绿 | 复位无第二点；回归绿 | N5 / N6 |
@@ -159,7 +159,7 @@
 用例面声明：纯函数 / 助手打接缝缝（T1-T6）、webview 真模块 fixture（T7——`test/helpers/webview-env.mjs` 面）、源码锚 + 全量回归（T8）、**真 runAgent 直驱段间断言（T9）+ 真 runChild 循环接线（T10）+ 源码锚（T11）——T9-T11 = 载体缺口修正轮新增**。
 
 **接缝注（T9 / T10——载体缺口修正轮）**：T9 provider 桩 = 不可解析（无 `baseURL` 等——`chat` 即抛、无网络），`onAgentTurn` 在循环头先于 chat 发射
-（探针先例 = 批次档 §5 VSC 打回段）——测试 catch 抛错、只收帧；段 2 帧期望 `(2, 101)` = `turnFrame(2, 0, 100)`（差额项 = 段前累计 1 + 段预算 100）。
+（探针同款 = 批次档 §5 VSC 打回段）——测试 catch 抛错、只收帧；段 2 帧期望 `(2, 101)` = `turnFrame(2, 0, 100)`（差额项 = 段前累计 1 + 段预算 100）。
 T10 夹具 = `entry` 空对象 + `ctx.callbacks.onQuestion` 返回 "Continue" + 空 `parent`（`mergeChildMutations` 空 sink 早退）；段 2 假 `runAgent` 以 `onAgentTurn(2, 101)`（= `turnFrame(2, 0, 100)`，与 T9 同口径）模拟生成侧帧。
 
 ### 19.7 验收标准（逐条回指——每条可机器验证）

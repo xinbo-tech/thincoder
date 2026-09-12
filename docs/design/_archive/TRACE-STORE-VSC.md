@@ -1,6 +1,6 @@
 > **变更史——正文冻结**（2026-09-10 文档重组批）：本档为一次实施批的过程记录或已被取代的旧权威档，
 > 内容 as-of 交付时点，**不作为现状依据**。现状见 `docs/README.md` 地图指向的板块权威档。
-> 搬迁注记：本档自 CLI 仓 `thincoder/docs/design/_archive/TRACE-STORE-VSC.md` 迁入本仓 `docs/design/_archive/`（LEDGER-SELF-CONTAINED 批——整档迁移，文字逐字；源档 blob SHA = 16c54aa2b32a）。
+> 搬迁注记：本档自 CLI 仓 `TRACE-STORE-VSC（CLI 仓）` 迁入本仓 `docs/design/_archive/`（LEDGER-SELF-CONTAINED 批——整档迁移，文字逐字；源档 blob SHA = 16c54aa2b32a）。
 
 # VSC 轨迹存档同构（TRACE-STORE-VSC）
 

@@ -147,7 +147,7 @@ R17（2026-09-06）把 escalate 改为**缺省 async**（escalate depth-0 only �
 
 ## 3. 测试
 
-escalate 测试用例清单的权威 = **AGENT-LOOP.md §25**（T-R17d..r：async ack 返回 + 回合收尾 / settle
+escalate 测试用例清单的权威 = **AGENT-LOOP（CLI 仓·设计）§25**（T-R17d..r：async ack 返回 + 回合收尾 / settle
 三分类 merge / sync `async:false` 零回归 / 容量排队 / eng 拒保持 / 取消不入 pending / error
 partial-merge 决策 / 空闲 settle 消化等——VS Code 镜像）。
 

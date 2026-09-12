@@ -1,4 +1,4 @@
-> **变更史——正文冻结**（LEDGER-SELF-CONTAINED 批·2026-09-12 拆分迁入）：本档 = CLI 仓 `docs/design/_archive/PROMPT-IMPL-1-TEXT.md` 的**本仓份拆出承载档**
+> **变更史——正文冻结**（LEDGER-SELF-CONTAINED 批·2026-09-12 拆分迁入）：本档 = CLI 仓 `PROMPT-IMPL-1-TEXT（CLI 仓）` 的**本仓份拆出承载档**
 > （拆分：该档含对端路径面——各仓持其份；文字逐字搬运、零改写；对端份留源档）。源档 blob SHA（as-of 本批）= 见交接记录。
 
 # 施工设计①——提示词文本迁移（本仓份）

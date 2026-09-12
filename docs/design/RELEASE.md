@@ -92,7 +92,7 @@ npx @vscode/vsce publish --pat <你的PAT>
 > **2026-08-31 用户裁定——轮询确认已废止**：Marketplace 与 Open VSX 的新版本都要经审核/病毒扫描队列，上线天然滞后数分钟到更久，**不值得在线等**。发布完成的判定 = **publish 命令本身正确返回**（exit 0、`DONE Published`）；审核队列是平台侧事务，随时间自然消化，无需当场确认。
 > `publish:all` 的 LIVE 轮询随之退役——直接分别跑 `vsce publish` 与 `ovsx publish` 即可，两个都正确返回 = 发布完成。历史教训保留价值：open-vsx 报 "already published" 时先查 API——上一条命令可能**已成功**（本版 0.8.7 实例：60s 超时的 publish 实际已把包发上去，重复 publish 报 already published，API 查询确认 0.8.7 已生效）。
 
-> **2026-09-06 R7 发布单轮制——勘误落档**（需求池 R7——双端实施；设计权威源 = thincoder `docs/design/RELEASE.md` §1 R7 段；publish-all.mjs 头注释同载本落档）：
+> **2026-09-06 R7 发布单轮制——勘误落档**（需求池 R7——双端实施；设计权威源 = `RELEASE（CLI 仓·设计）` §1 R7 段；publish-all.mjs 头注释同载本落档）：
 >
 > - **F-R7e 裁定句（2026-08-31 裁定 + 2026-09-06 重申"只要发布没报错就行了"——勿再问）**：发布完成判定 = **publish 命令 exit 0 即可——不轮询、不检查上线版本**——双市场审核/病毒扫描队列上线滞后是市场的业务。
 > - **边界句（勿把 "exit 0 = 完成" 误推广到发布前校验）**："零检查"只针对市场审核/病毒扫描的**激活滞后**——发布前的**调用级前置仍有效**：显式 `--pat` / 设 `VSCE_PAT`+`OVSX_PAT`（§1.2b verify-pat）、ovsx 无 TTY 静默 exit 0 陷阱（§5.1——其失败模式 = exit 0 但什么都没发）——发布前 PAT 校验照做，拿不准就显式传。

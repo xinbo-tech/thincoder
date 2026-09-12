@@ -15,7 +15,7 @@ apply_patch = **统一 diff 形态应用到一或多个文件，原子**（任�
 
 - `patch`（必须）——unified diff 文本。每文件 `--- a/<path>` / `+++ b/<path>` 头对，后接 `@@ -old,count +new,count @@` hunks。`--- /dev/null` 新建文件。
 
-**宽容格式**（同 CLI——语义权威细节见 thincoder `docs/design/APPLY-PATCH.md` §2，本文档不复制正文）：
+**宽容格式**（同 CLI——语义权威细节见 `APPLY-PATCH（CLI 仓·设计）` §2，本文档不复制正文）：
 - `+++ b/<path>` 头对可省（既有文件——lone `--- a/<path>` 后直接接 hunk）。
 - 无坐标 hunk（裸 `@@`）：上下文 <2 且含 ≥1 `-` 行 → 锚 = 匹配行序列连续；唯一匹配即应用；多匹配报错；纯 `+` 零上下文拒。
 - 文件头容缺（`--- /dev/null` 缺 `+++` 拒；`-- x` 内容不误判；多文件混合；空段过滤）。

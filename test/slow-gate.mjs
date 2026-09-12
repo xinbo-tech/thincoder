@@ -15,6 +15,10 @@
  *
  * 只查叶子用例（跳过 details.type === "suite" 的 describe 聚合）：归册口径是单条
  * 用例 >500ms（slow.mjs 头注释实测铁律），套件时长是子用例聚合，不归拦截口径。
+ * 无 test() 的文件（零用例存根档 / 冒烟型脚本——如本端 smoke-settings.mjs）的**文件级
+ * 合成条目**（runner 把文件本身报为一条 test）同不归拦截口径：它不是一条「用例」，
+ * 无 slow/快归册面（test( → slow( 无处施加）；文件级条目判定 = **名字即文件本体**
+ * （名字 = 报告的 file 基名 / 含路径形态）——真实用例名不携该形态（零假豁免面）。
  * 注：t.test 嵌套子测试形态不在拦截口径（父用例时长 = 子用例聚合——当前库存零该形态，全为顶层 test(/slow(）。
  */
 export default async function* slowGate(source) {
@@ -26,6 +30,9 @@ export default async function* slowGate(source) {
     if (event.type !== "test:pass") continue
     const { name, file, line, details } = event.data
     if (details?.type === "suite") continue
+    // 文件级合成条目（无 test() 的文件——runner 把文件本身报为一条 test，名字 = 文件路径）：不是「用例」——无归册面（见头注）。
+    const baseName = typeof file === "string" ? file.replace(/\\/g, "/").split("/").pop() : ""
+    if (typeof name === "string" && baseName && (name === baseName || name.endsWith("/" + baseName) || name.endsWith("\\" + baseName))) continue
     const ms = details?.duration_ms
     if (typeof ms === "number" && ms > threshold) {
       offenders.push({ name, file, line, duration_ms: Math.round(ms * 10) / 10 })

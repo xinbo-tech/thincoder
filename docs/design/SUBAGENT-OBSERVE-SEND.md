@@ -26,7 +26,7 @@
 - VSC `subagent` 动作：`src/agent-tools/subagent-actions.mjs` status(:87) 只给决策字段；无 panel 动作（AC-P4）。子代理回调经 `subagent.mjs:305-397 runChild` → webview activity。
 - VSC child 历史在 runChild 闭包 `sink.history`（`subagent.mjs:389-393`），`setup.mjs:343` 只 depth0 挂 `_fullHistory`——**父进程内可达 sink.agent/sink.history，但薄、无工具暴露**。
 - 子代理只收 spawn task，无外部输入。父 `pendingInput` 语义同 CLI 可镜像。
-- **VSC 有 stateSink 模式先例**（runChild 已把 onAgentTurn/输出回调注入子 runAgent）——send 的输入源贯通可顺延该模式，比 CLI 顺。
+- **VSC 有 stateSink 模式同款**（runChild 已把 onAgentTurn/输出回调注入子 runAgent）——send 的输入源贯通可顺延该模式，比 CLI 顺。
 
 ### D1 observe 从 sink 拉摘要
 - `subagent-actions.mjs` 加 `observe`：按 id 定位池条目 → 从 `entry.childAgent`/`sink.agent` 或其 history 取最近 **5 条**回合摘要（评审 #1——统一 N=5；摘要来源 = 从 sink.history 尾部 assistant/tool 消息**截断抽取**（每回合取消息首行/工具名），非返回原始消息体——N2）+ 当前工具 + turn/touched + status。
@@ -75,4 +75,4 @@ AC1 = observe 对 running 异步子代理返回最近 N 条回合摘要+当前�
 | 隔离 | observe 超上限 | 截断（不灌全量） | N2 |
 
 ## 变更记录
-- 2026-09-08：立项。用户实测（eng-coder 父看不到进度）+ 用户裁定（父侧、双功能、注入=普通指令）+ explore 前置调研（sink.agent 源 / stateSink 先例可顺延注入贯通）。
+- 2026-09-08：立项。用户实测（eng-coder 父看不到进度）+ 用户裁定（父侧、双功能、注入=普通指令）+ explore 前置调研（sink.agent 源 / stateSink 同款可顺延注入贯通）。

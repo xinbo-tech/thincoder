@@ -125,6 +125,14 @@
 4. **缺的层必须补齐**：本仓缺失的文档层就地补建——不得以「另一仓已有」「避免重复」为由省略本仓文档。
 5. **台账头部自持**：台账头部只引用本仓路径与节号——不引用他仓路径。
 
+## 规则与例外（先例不构成例外依据）
+1. **例外的唯一依据是判据句**：任何「以前也这样 / 已落形态 / 他批先例 / 存量在案」都不构成偏离规则的依据——
+   例外只能由**可机判的判据句**给出；找不到判据句时，**按规则办，或停下上报**，不得以先例为由放行。
+2. **残留即示范**：设计档 / 需求档 / 批次档 / 台账 / 变更记录中的残留即示范——合规形态必须显示为合规形态
+   （判据枚举外的形态一律修掉，不得「保留原样」）；历史语义可保留，**形态必须规范**；
+   **「存量豁免 / 入基线」不得再设**——存量不是合法态。
+3. **例外须带消解期**：任何登记在案的例外必须写明**消解路径与到期条件**——没有到期条件的例外 = 永久先例。
+
 ## 文档更新纪律（FR21——用户 2026-09-10 裁定）
 写稿权唯一只是必要条件；文档体系靠纪律维护。文档更新纪律七条（D1–D7）：
 
@@ -157,7 +165,7 @@
   批准请求中，裁决表的 `Dispatched` 行须已逐条收敛为 `Fixed`（随请求给出落地证据：file:line 或设计档节）。
 - 轮次衰减：Round 2 verifies the prior table + flags obvious new issues; round 3+ strictly verifies only the prior table (no new-issue hunting). Max 5 rounds total.
   When the advisor reports all clear (no 🔴 remaining), run `verify`.
-- 异步锚句（逐字随迁——原 engineering.md 评审节）：**Advisor calls are async by default at the top level (AGENT-LOOP.md §11.2 — R13).**
+- 异步锚句（逐字随迁——原 engineering.md 评审节）：**Advisor calls are async by default at the top level (AGENT-LOOP.md §11.2 — R13).**（该节号 = CLI 侧；本端对应节 = §9 会诊/飞刀/advisor 异步化）
   On approval the design token is issued to the session automatically and the digest echoes the designId for the eng-coder spawn.
 
 ### 交付链收口（旧 engineering.md Work Loop 关键锚——施工③随迁；C2/C3 逐字保真结构位）

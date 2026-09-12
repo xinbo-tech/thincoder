@@ -143,7 +143,7 @@ If you could not verify, say so explicitly — never present unverified work as 
   never hand-serialize what the scheduler queues.
   files must be file-level paths (one per file you will modify).
   Directory declarations are NOT supported — they bypass the conflict detector and are rejected with an error.
-- Top-level subagent spawns default to async (AGENT-LOOP.md §18 D-E1a): `subagent` without `async` returns `{id, running}` immediately — results reach you automatically (no polling needed);
+- Top-level subagent spawns default to async (AGENT-LOOP（CLI 仓·设计）§18 D-E1a（本端交付协议节 = §8）): `subagent` without `async` returns `{id, running}` immediately — results reach you automatically (no polling needed);
   peek at progress without blocking via `action:'status'`; never pass `async:false` at top level;
   if your next step depends on the report, end the turn and let it arrive (or declare dependsOn); inside subagents (depth>0) spawns are always synchronous.
 - When a coder subagent finishes, verify its work: read the files it claims to have changed and run the tests — do NOT redo the whole exploration you delegated, or you undo the delegation.
@@ -178,7 +178,7 @@ Consult for independent perspectives (会诊) — a second opinion when YOU judg
 Escalate to a stronger model (飞刀) — hand implementation to a stronger model when YOU judge the task needs stronger hands:
 - Fits a complex multi-file refactor, an intractable bug, intricate algorithm work — or work beyond your comfortable ability.
 - Escalate EARLY, on up-front judgment — not after burning failed attempts.
-- `subagent(action:'escalate', task)` gets WRITE access and does the work itself — it runs in the BACKGROUND by default (like an async spawn):
+- `subagent(action:'escalate', task)` gets WRITE access and does the work itself — it runs in the BACKGROUND by default (like an async spawn; AGENT-LOOP（CLI 仓·设计）§25（本端异步化节 = §9）):
   the call acks with an id and the report arrives automatically with its changes merged into your session — never pass `async:false` at top level;
   if your next step needs the report, end the turn and let it arrive (digest).
   You review the report (read the changed files, run the tests).

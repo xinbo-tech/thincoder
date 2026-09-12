@@ -49,7 +49,7 @@ The batch record / delegation task books / verification verdicts / review initia
 ## 与 eng-coder 的分工界面（设计写作面归 eng-designer）
 - **Design authoring belongs to eng-designer; implementation belongs to eng-coder.** Your deliverable to eng-coder is the batch record §2
 (the task book itself — no separate copy) + the design token; eng-designer's deliverables are the batch task + the design doc.
-- Deliveries arrive already audited inside the child (explore divergence audit + in-child advisor code review, AGENT-LOOP.md §18)
+- Deliveries arrive already audited inside the child (explore divergence audit + in-child advisor code review, AGENT-LOOP（CLI 仓·设计）§18（本端交付协议节 = §8）)
 — verify the claims and read the changed files; do NOT double-audit what the child's internal protocol already verified.
 - **escalate is unavailable in engineering mode** — `subagent` `action:'escalate'` refuses the same way (implementation belongs to eng-coder).
 `consult` stays available for hard judgment calls.

@@ -1,8 +1,9 @@
 # VSC async 子代理保真（对齐 CLI 语义——GitHub #6）· 批次记录（2026-09-11）
 
-> 搬迁注记：本档自 CLI 仓 `thincoder/docs/batches/2026-09-11-VSC-ASYNC-PARITY.md` 迁入本仓 `docs/batches/`（LEDGER-SELF-CONTAINED 批——实施面全在本仓的批档物理迁移，档名不变、文字逐字；源档 blob SHA = dc461950488f · 源提交 = 167f48f）。
+> 搬迁注记：本档自 CLI 仓 `2026-09-11-VSC-ASYNC-PARITY（CLI 仓）` 迁入本仓 `docs/batches/`（LEDGER-SELF-CONTAINED 批——实施面全在本仓的批档物理迁移，档名不变、文字逐字；源档 blob SHA = dc461950488f · 源提交 = 167f48f）。
 
 > 六段 append-only，一段一作者。编制：主 agent · 2026-09-11 17:35 · 来源 = 用户 13:52「开批，issue都别留着，及时处理」+ GitHub #6（2026-09-06, GCZ-jpg：**修复只落在了 CLI，扩展端没同步**）。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -37,7 +38,6 @@
 
 ## §2 批次任务（eng-designer 自写）
 
-_（待写——eng-designer）_
 
 **状态：任务书就绪**（2026-09-11——需求+设计+测试三层已落档，待设计评审）。实施者 = eng-coder（设计 token 门）。本 §2 = coder 任务书本体（不另写副本）。
 
@@ -76,7 +76,7 @@ GitHub #6（GCZ-jpg 2026-09-06）报告：VSC 端 async 子代理在主会话被
 - 现状锚点（as-of 2026-09-11）：`src/agent/run-stages.mjs:255-264`（中止分支 `asyncMap.clear()`）·
   `src/agent-tools/async-settle.mjs:76-80`（`parentAborted` 单点守卫——**复用不新造**）/`:86-88`（buildChildSignal）·
   `src/agent-tools/subagent-scheduler.mjs:69-88`（墓碑读写）/`:165-178`（depInfo）·
-  `src/agent-tools/subagent-actions.mjs:108-151`（status；`:116` unknown 分支）/`:161-174`（cancel 提醒形态先例）·
+  `src/agent-tools/subagent-actions.mjs:108-151`（status；`:116` unknown 分支）/`:161-174`（cancel 提醒同款形态）·
   `src/agent/execute-tools.mjs:335`（`String(raw)`——守卫插点）·
   `src/extension/suspension.mjs:261-288`（digest 块；`:274-276` 上抛）/`:235`（会话循环）/`:299-308`（会话中止清池）·
   `src/extension/panel-chat.mjs:411`（sessionSignal）/`src/extension/panel-messages.mjs:218-221`（Stop 只停当前轮）。
@@ -84,7 +84,7 @@ GitHub #6（GCZ-jpg 2026-09-06）报告：VSC 端 async 子代理在主会话被
   `src/agent/dispatch.mjs:413`（undefined guard）· `src/tui/key-handler.mjs:60-75`（CLI Stop=全停）。
 - 行数锚（口径 = `wc -l` 内容行，实测）：run-stages 297 · execute-tools 479 · subagent-actions 383 ·
   subagent-scheduler 490（**贴线 500——越线停下报告**）· suspension 358 · files.mjs 58 · subagent-async 498（**本批零改动**）。
-- 测试范式：新档必须登记 `test/files.mjs`（不登记不跑）；快层 `npm test`；桩驱动先例 = `test/digest-visibility.test.mjs`（桩面板 + `suspensionSession`）/
+- 测试范式：新档必须登记 `test/files.mjs`（不登记不跑）；快层 `npm test`；桩驱动同款 = `test/digest-visibility.test.mjs`（桩面板 + `suspensionSession`）/
   `test/batch-doc-gate.test.mjs`（`subagentTool.execute` ack）/`test/advisor-guard-completion.test.mjs`（`executeToolBatches`）/`test/subagent-observe-send.test.mjs`（status 直驱）。
 
 ### 四、实施顺序与红线
@@ -116,9 +116,9 @@ GitHub #6（GCZ-jpg 2026-09-06）报告：VSC 端 async 子代理在主会话被
 - **排程**：`src/agent/execute-tools.mjs` 在 VSC 工作树**未提交**（他批在写）——本批 spawn 须与他批串行（`files` 已声明）。
 - **记录**：GitHub #6 回执/关闭（父侧）；VSC `docs/TODO.md` 需求池行已落（designer 本次）；需求池 → 核销的推进随交付收口。
 - **残留登记（父侧排程后续批）**：① advisor 池同构缺口（同一中止分支）② CLI 面无丢弃提醒/丢弃终态记录（§12.8 #1/#2）。
-- **未确认面**：需求层落 CLI 仓 `docs/requirements/AGENT-LOOP` §9（VSC 仓无 requirements 树——惯例同 §3/§4 先例；batch 18 曾把「不改 CLI 仓」写为 docs 含——本批按惯例取「CLI 仓代码/测试零改，需求层落位为设计者写域」；若父侧另有裁定，改落位即可，内容不变）。
+- **未确认面**：需求层落 CLI 仓 `docs/requirements/AGENT-LOOP` §9（VSC 仓无 requirements 树——惯例同 §3/§4 同口径；batch 18 曾把「不改 CLI 仓」写为 docs 含——本批按惯例取「CLI 仓代码/测试零改，需求层落位为设计者写域」；若父侧另有裁定，改落位即可，内容不变）。
 
-**行数口径更正（append-only 补记——只改口径不改事实）**：上面「三、已知事实」的**行数锚**按内容行（`split−1`）计；本批统一口径 = 读档 `N lines total`（= split，同 `VSC-GUARD-COMPLETION` §2 先例）——各值 +1：
+**行数口径更正（append-only 补记——只改口径不改事实）**：上面「三、已知事实」的**行数锚**按内容行（`split−1`）计；本批统一口径 = 读档 `N lines total`（= split，同 `VSC-GUARD-COMPLETION` §2 同口径）——各值 +1：
 
 - run-stages **298** · execute-tools **480** · subagent-actions **384** · subagent-scheduler **491**（贴线 500——越线停下报告）· suspension **359** · files.mjs **59** · subagent-async **499**（本批零改动）。
 - 设计档 §12.4 受影响文件表已按本口径落档（两处一致）。
@@ -141,7 +141,7 @@ GitHub #6（GCZ-jpg 2026-09-06）报告：VSC 端 async 子代理在主会话被
 
 **红线措辞定稿（评审轮次 1 #3——父侧确认）**：
 
-- CLI 仓 = **代码/测试零改动**（`git status` 自证）；CLI 仓需求档 §9 落位与批次档记录 = **设计者写域**（先例：`requirements/AGENT-LOOP` 已有 VSC 侧 §3/§4/§5/§6/§8 节）——不与「VSC 单端」相抵（:98 旧句、:117「未确认面」均以本段为准）。
+- CLI 仓 = **代码/测试零改动**（`git status` 自证）；CLI 仓需求档 §9 落位与批次档记录 = **设计者写域**（同口径：`requirements/AGENT-LOOP` 已有 VSC 侧 §3/§4/§5/§6/§8 节）——不与「VSC 单端」相抵（:98 旧句、:117「未确认面」均以本段为准）。
 - 跨仓引用统一形态（评审 #4）：`AGENT-LOOP（CLI 仓）§9` / `AGENT-LOOP（VSC 仓）§12`——去 `.md`、去路径前缀（`docs/README` §3.7）。
 - 实施面不变：`suspension.mjs` 改动仅 C-8（digest 轮 AbortError 容忍）；299-308 清池面零改动（§12.8 #6 登记）。
 - 口径归属（#1）：需求档文本零改动——「会话收尾」的面映射（会话内 = F-G3~F-G5；面板销毁 = §9.4 排除面）落设计档 §12.1/§12.7/§12.8。
@@ -150,15 +150,14 @@ GitHub #6（GCZ-jpg 2026-09-06）报告：VSC 端 async 子代理在主会话被
 
 ## §3 设计评审（评审子代理自写）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
 | # | Category | Severity | Issue | Suggestion |
 |---|----------|----------|-------|------------|
-| 1 | 需求覆盖 | 🔴 | 需求 §9.1（`thincoder/docs/requirements/AGENT-LOOP.md:261`）承诺「主会话被中止（Stop）**或会话收尾**时」有据可查、有终可判；设计 §12.1 ②（`thincoder-vscode/docs/design/AGENT-LOOP.md:549-551`）把「会话收尾 = `suspension.mjs:299-308`」列为同款静默清池缺陷并箭头「修：F-G3」，但修复面只接线 run-stages 中止分支（批次档 §2 步骤 2/6：`thincoder/docs/batches/2026-09-11-VSC-ASYNC-PARITY.md:91,95`）；该站点（会话级 abort → `history._asyncSubagents/_asyncAdvisors.clear()` + pending 清空——读档 `suspension.mjs:299-308` 实证）在 §12.3/§12.4/§12.5/§12.6 无契约/用例/AC，§12.7/§12.8 未登记——既未修也未裁出批量；被清条目无墓碑 → `status` 回 unknown，正落需求禁止的「读成已消费」。附带：§12.7（`:705`）「中止路径不清 pending」与 299-308 现状（清 pending）相抵，口径需一并裁定 | 实施前二选一落档：①纳入修复面（该站点接线 discard helper + 用例/AC 回指）；②显式登记出批（§12.8 增行、§12.7 与需求 §9.1 措辞对齐），并修正「中止路径不清 pending」口径句 |
+| 1 | 需求覆盖 | 🔴 | 需求 §9.1（`docs/requirements/AGENT-LOOP.md:261`（CLI 仓））承诺「主会话被中止（Stop）**或会话收尾**时」有据可查、有终可判；设计 §12.1 ②（`thincoder-vscode/docs/design/AGENT-LOOP.md:549-551`）把「会话收尾 = `suspension.mjs:299-308`」列为同款静默清池缺陷并箭头「修：F-G3」，但修复面只接线 run-stages 中止分支（批次档 §2 步骤 2/6：`docs/batches/2026-09-11-VSC-ASYNC-PARITY.md:91,95`（CLI 仓））；该站点（会话级 abort → `history._asyncSubagents/_asyncAdvisors.clear()` + pending 清空——读档 `suspension.mjs:299-308` 实证）在 §12.3/§12.4/§12.5/§12.6 无契约/用例/AC，§12.7/§12.8 未登记——既未修也未裁出批量；被清条目无墓碑 → `status` 回 unknown，正落需求禁止的「读成已消费」。附带：§12.7（`:705`）「中止路径不清 pending」与 299-308 现状（清 pending）相抵，口径需一并裁定 | 实施前二选一落档：①纳入修复面（该站点接线 discard helper + 用例/AC 回指）；②显式登记出批（§12.8 增行、§12.7 与需求 §9.1 措辞对齐），并修正「中止路径不清 pending」口径句 |
 | 2 | 受影响表 / 结构档位 | 🟡 | run-stages 行 298 → ~+8（≤306）（设计 `:656`）将跨 300 行咨询线，设计无拆分评估/说明（§12.4 仅对 scheduler 491→~498 贴 500 硬限有「越线停下」声明）。8 档格式齐整；抽查对中：run-stages 298 / subagent-actions 384 / subagent-scheduler 491 / suspension 359 / subagent-async 499 与读档 `N lines total` 逐一对中（execute-tools 480 属他批未提交工作树、test/files.mjs 59 未抽验） | 在 §12.4/§12.7 补一句 run-stages 拆分口径（如「仅接线、不拆；挂结构债候选」）；300 线为咨询级，不阻断 |
-| 3 | 清晰度 / 协调 | 🟡 | 红线措辞与落位/验收口径不一：批次档 `:98`「不改 CLI 仓任何文件（代码/测试/文档——`git status` 自证）」按字面被本批自身落位（CLI 仓需求 §9 + 批档）触反；`:117` 自标「未确认面」给默认解释；设计 AC-N3（`:696`）取「CLI 仓代码/测试零改动」口径。落位先例成立（`requirements/AGENT-LOOP` 已有 VSC 侧 §3/§4/§5/§6/§8） | 父侧确认后统一措辞（CLI 仓 = 代码/测试零改；需求/批档落位为设计者写域），把 `:117` 默认解释升为定稿；协调项，不阻断 |
+| 3 | 清晰度 / 协调 | 🟡 | 红线措辞与落位/验收口径不一：批次档 `:98`「不改 CLI 仓任何文件（代码/测试/文档——`git status` 自证）」按字面被本批自身落位（CLI 仓需求 §9 + 批档）触反；`:117` 自标「未确认面」给默认解释；设计 AC-N3（`:696`）取「CLI 仓代码/测试零改动」口径。落位在案成立（`requirements/AGENT-LOOP` 已有 VSC 侧 §3/§4/§5/§6/§8） | 父侧确认后统一措辞（CLI 仓 = 代码/测试零改；需求/批档落位为设计者写域），把 `:117` 默认解释升为定稿；协调项，不阻断 |
 | 4 | 文档归属 / 跨仓引用形态 | 🟡 | 跨仓引用未按 `docs/README` §3.7「名称（仓别）§N（去 .md、去路径前缀）」：设计档 `:538`「CLI 仓 `docs/requirements/AGENT-LOOP` §9」、`:539`、`:664`；批次档 `:43`「VSC 仓 `docs/design/AGENT-LOOP` §12」、`:73` 同形。两仓 basename 同名（AGENT-LOOP.md）——按 README 所述 V1 解析有 `no-section` 误报/以错档通过风险（VSC 档自身 §9 存在，误配亦「通过」） | 统一为 `AGENT-LOOP（CLI 仓）§9` / `AGENT-LOOP（VSC 仓）§12` 形态；格式债级别，随文档收口处理 |
 | 5 | 文档卫生 / 数字 | 🔵 | §12.4（`:664`）称本档 529 → 716；本次读档工具报 717 lines total（差 1）。5 个源档现值抽查均严格对上同口径，唯本档 .md 自称差 1（.md 豁免注解，登记级） | 随收口复核口径或标 as-of 时点；不阻断 |
 | 6 | 清晰度 / 契约完备 | 🔵 | T-D3 断言 `kept === 2`（`:674`）依赖 `discardAbortedPool` 返回形态，C-2/C-9（`:609`/`:647-649`）未定签名/返回结构——用例与实现易各自发明 | 契约补返回结构（如 `{discarded, kept}`）或注明由实现与用例共同定稿；不阻断 |
@@ -198,7 +197,6 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 **状态：交付完成 · 终态 = clean**（2026-09-11；8 档 = 批准集全量；审计 1 轮 CLEAN · 代码评审 1 轮 pass · 修正轮 0——零必须修复项）。
 
@@ -228,7 +226,7 @@ _（待写——eng-coder）_
 
 1. `test/files.mjs`：设计锚 59 → 改前实测 61（+2——他批 18/26/21/19/28 批登记行在锚测量后并入；`git diff` 证本批恰 +1 行于 `:60`）→ 改后 62。
 2. 新测档 397 行 vs §12.4 预估 ~200（≈2×）：三缝真跑（真 spawn / 真 `finalizeAgentTurn` / 真挂起驱动）与夹具密度所致；无硬限违规（<500）；
-   拆档建议留后续批（先例：同族档 427 行已满独立成档）。
+   拆档建议留后续批（同款：同族档 427 行已满独立成档）。
 3. `ev:discarded` 落点：实现按 C-2 单点放在 `async-discard.mjs`（有丢弃才记）；§12.4 run-stages 行与任务书步骤 2 的「+ ev:discarded」属同一动作的文件级概述
    ——行为一致（T-D5 锁「恰一条」），父侧文档层可择一注明。
 

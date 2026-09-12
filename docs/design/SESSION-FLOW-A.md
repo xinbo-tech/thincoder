@@ -80,4 +80,4 @@
   明确 +~1 或 TODO 登记 / FIFO 断言确认 / 错误用例补——token c6671007）。
 
 > 归属注（评审 #1）：本档 = A 批设计/实现记录载体——权威措辞只落 WEBVIEW.md §8 + SESSION.md §7（文档锚
-> 段）——核销时随 README 地图登记（同 SESSION-FLOW-C 先例）——不双处详述。
+> 段）——核销时随 README 地图登记（同 SESSION-FLOW-C 同款）——不双处详述。

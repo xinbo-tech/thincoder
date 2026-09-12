@@ -16,8 +16,7 @@
 - advisor 工具集与 CLI 的差异项（CLI advisor 有 lsp，本端侧待补）——VSC
   `docs/TODO.md`。
 - 挂起期进程级 reminder 注入含 ISO 时间戳且位于 time 注入之前——每进程首 run 缓存
-  miss 一次（单次量级，可接受）——留待 CLI `SESSION.md` §11 后续评估（thincoder
-  `docs/TODO.md`）。
+  miss 一次（单次量级，可接受）——留待 `SESSION（CLI 仓·设计）` §11 后续评估（`TODO（CLI 仓）`）。
 - UI ⏹ 活动块 live 头缺逐轮 turn 段（现有状态事件不携 turn——逐轮跳动需扩展端新
   通道，触碰桥白名单，不擅建）——降级口径已定：池条目终态通知携真实终值，冻结身份
   头显示终值。记录在案，无跟进计划。
@@ -158,7 +157,7 @@ AGENTS.md 模块清单为维护寄存器；本节为分组总览 + 「详细设�
 > 档「变更记录」为准。
 
 - 2026-08-22/23：GLM 5.3 畸形 tool_calls 防御——parseStream 单点防御 + 机读线
-  告警（PROVIDER.md §10 权威；src/provider/transports/openai.mjs + agent.mjs）。
+  告警（PROVIDER（CLI 仓）§10 权威；src/provider/transports/openai.mjs + agent.mjs）。
 - 2026-08-22：LLM 标题生成同修（IK9UZ8——thinking 关闭，SESSION.md 变更段权
   威；src/extension/generate-title.mjs）。
 - 2026-08-26：子 agent/advisor 模型显示——桥丢字段断链修复 + **三落点纪律**确
@@ -169,20 +168,20 @@ AGENTS.md 模块清单为维护寄存器；本节为分组总览 + 「详细设�
 - 2026-08-28：**VS 实现注**——会话切换竞态修复（运行中禁止切换三守卫 +
   saveLines slotOverride；§4 切换纪律）。
 - 2026-08-28：子代理工具描述 = CLI 角色能力矩阵 + 委派动机逐字对齐
-  （AGENT-LOOP.md §7.1；描述本体现于 subagent-spec.mjs）。
+  （AGENT-LOOP（CLI 仓·设计）§7.1；描述本体现于 subagent-spec.mjs）。
 - 2026-09-02：deepseek 400 三件套——escape v5 + UTF-16 安全截断 + 续写构造
-  （PROVIDER.md §14；§5）。
+  （PROVIDER（CLI 仓）§14；§5）。
 - 2026-09-02：压缩可见性回调 + webview 压缩状态行（CONTEXT-COMPACTION.md §7 对
   齐形态；§10）。
 - 2026-09-02：subagent 异步化原型（async 分支 + 槽位队列 + subagent_check——
   早期批次形态——已 supersede，并入现五动作面与自动送达，见 §8.1）。
-- 2026-09-02：approval 批确认（AGENT-LOOP.md §4.2；collectBatchPermission +
+- 2026-09-02：approval 批确认（AGENT-LOOP（CLI 仓·设计）§4.2；collectBatchPermission +
   batchPermissionGate + webview 合并行；§7）。
 - 2026-09-02：工具作用域限制移除（TOOLS.md §4——no directory restriction；
   exec-prelude 删除；§7 路径纪律）。
 - 2026-09-02：lint 基建零依赖化（node --check 级联 + scripts/check-syntax.mjs；
   npm run lint）。
-- 2026-09-02：模型上下文长度可配置（PROVIDER.md §15——providers[].context +
+- 2026-09-02：模型上下文长度可配置（PROVIDER（CLI 仓）§15——providers[].context +
   providerSpec；§5）。
 - 2026-09-02：压缩目标调优（CONTEXT-COMPACTION.md §8/§9——摘要 ≤1K 硬目标 +
   tail 15% token 预算；§10）。
@@ -208,7 +207,7 @@ AGENTS.md 模块清单为维护寄存器；本节为分组总览 + 「详细设�
 - 2026-09-03：**VS 实现注**——eng-coder 内 advisor 流可见性（runChild 增
   onToolPanel 转发——子代理块内可见评审流；escalate 同缺口随 R17 异步化补齐）。
 - 2026-09-03：控制面扩展批（原 §19.5 课题）——status 决策字段 + cancel + UI ⏹ + 嵌套子标
-  （AGENT-LOOP.md §7.2；**实现修点两条见 §11.1 实现注**；审计修正轮：started
+  （AGENT-LOOP（CLI 仓·设计）§7.2；**实现修点两条见 §11.1 实现注**；审计修正轮：started
   池条目 pool:true / cancel 幂等 / digest 内 cancel 放行 / forward 引擎级测试）。
 - 2026-09-03：修正轮——subagent-escalate.mjs 拆出 / agent.mjs 500 行回落 /
   cancel 不合并语义（取消路径零 merge）/ spawn task execute 级校验 / cancel 路
@@ -220,7 +219,7 @@ AGENTS.md 模块清单为维护寄存器；本节为分组总览 + 「详细设�
 - 2026-09-05：模块拆分轮——subagent-async.mjs 1017 → 449 行 + 新
   subagent-scheduler.mjs/subagent-actions.mjs（导出面 shim 兜住零消费点改动）。
 - 2026-09-06：async 描述两端对齐 + 收尾引导锚句更新（AGENT-LOOP「7.5」逐字定稿
-  锚句替换旧 D-A2 形态）——action:'check' 删除（AGENT-LOOP.md §7.5；本端描述 =
+  锚句替换旧 D-A2 形态）——action:'check' 删除（AGENT-LOOP（CLI 仓·设计）§7.5；本端描述 =
   CLI 权威版逐段对齐，落 subagent-spec.mjs）。
 - 2026-09-06：design token 防伪层删除（ENGINEERING-MODE.md 2026-09-06 段——无
   HMAC，uuid:expiresAt；§9）。
