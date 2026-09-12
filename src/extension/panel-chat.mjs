@@ -51,7 +51,7 @@ import { buildPanelCallbacks, makeAskInPanel, postDigestCap } from "./panel-call
  * controller 立即 abort 并复位闩（防下次正常回合被误杀）。运行中交付的 abort/interrupt
  * 不置闩（交付即生效）——本消费点对中断续跑重建（runTurnLoop 内 interrupt/ContinueError
  * 路径）恒 no-op，Ctrl+I 续跑不受影响。
- * 导出——chat-panel.test.mjs 桩面板直测闩消费（C1 组③）。 */
+ * 导出——chat-panel-messages.test.mjs（面板入口面）桩面板直测闩消费（C1 组③）。 */
 export function newTurnController(panel) {
   const c = new AbortController()
   ;(panel._turnControllers ??= []).push(c)
@@ -494,6 +494,3 @@ async function runTurnLoop(panel, deps) {
   if (ro.agent) panel._agent = ro.agent
 }
 
-
-// toolPanelPayload 2026-09-05 迁 panel-toolpanel.mjs（512 > 500 硬限）——re-export 保面（chat-panel.test.mjs）
-export { toolPanelPayload } from "./panel-toolpanel.mjs"

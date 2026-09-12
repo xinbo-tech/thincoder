@@ -328,7 +328,7 @@ approve / deny / approve-all + diff 预览（`diff-preview.mjs` 虚拟文档原�
 | 41 | `src/tools/checklist.mjs` | 450 | ~440 | 1 |
 | 42 | `src/tools/read_image.mjs` | 71 | ~62 | 1 |
 | 43 | `src/tools/hashline-edit.mjs` | 114 | ~105 | 1 |
-| 44 | `test/tool-descriptions.test.mjs` | 新 | ~120 | T-TD-1~T-TD-4 |
+| 44 | `test/tool-descriptions.test.mjs` | 新 | ~120 | T-TD-2/T-TD-3 在役；T-TD-1/T-TD-4 已退场（整删——删除记录 = `TESTING.md` §8.1（`:202`–`:203`）） |
 | 45 | `test/files.mjs` | 72 | 73 | 登记 |
 
 （26–43 的「预计」= 净减方向估计（内联块移出 ~5–15 行/档）；越 500 硬帽停下报告。计数：实施域 = 25 新
@@ -345,17 +345,17 @@ approve / deny / approve-all + diff 预览（`diff-preview.mjs` 虚拟文档原�
 
 | # | 类型 | 输入 | 预期输出（断言） | 需求 |
 |---|---|---|---|---|
-| T-TD-1 | 正常 | `builtinTools` 全表 | 25 个迁移面描述 = `DESC(name)` 读出（与文件内容逐字相等——含 Routing/Notes 段锚句） | F7 |
-| T-TD-2 | 边界 | 每档文件存在性 | `src/tools/*.md` 25 档在位；`read.md` 含 Routing 段与 `repo_outline`/`code_search`/`lsp` 指向句 | F7 |
-| T-TD-3 | 错误 | 迁出后文件面 | 17 档工具文件对已迁 25 工具的内联描述块零残留（**全量**——17 档 / 25 工具逐档扫描，非抽样；修正轮 #3；实现后同步（2026-09-12）档数更正） | F7 |
-| T-TD-4 | 边界 | `.vscodeignore` | 无 `*.md` 排除模式（打包面） | N9 |
+| T-TD-1 | 正常 | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:202`）） | F7 |
+| T-TD-2 | 边界 | 每档文件存在性 | `src/tools/*.md` 25 档在位；`read.md` 含 Routing 段与 `repo_outline`/`code_search`/`lsp` 指向句——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1） | F7 |
+| T-TD-3 | 错误 | 迁出后文件面 | 17 档工具文件对已迁 25 工具的内联描述块零残留（**全量**——17 档 / 25 工具逐档扫描，非抽样；修正轮 #3；实现后同步（2026-09-12）档数更正）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；现体 = 工具级 description 计数 == 25 | F7 |
+| T-TD-4 | 边界 | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:203`）） | N9 |
 
 ### 12.6 验收标准
 
 | AC | 判据 | 回指 |
 |---|---|---|
-| AC-TD-1 | T-TD-1/T-TD-2/T-TD-3 绿 + `node test/run-fast.mjs` 全绿（新档登记） | F7 |
-| AC-TD-2 | T-TD-4 绿（`.vscodeignore` 无 `*.md`）+ `description: DESC(` 命中 25 处（grep 点数）+ **N9 落点 = 发布前清单核对**（`npx @vscode/vsce ls`（或打包后 `unzip -l <vsix>`）输出含 `src/tools/*.md` 25 档在位——打包忽略表实效核对；修正轮 #3） | F7/N9 |
+| AC-TD-1 | T-TD-2/T-TD-3 绿（T-TD-1 已退场——整删，删除记录 = `TESTING.md` §8.1（`:202`）） + `node test/run-fast.mjs` 全绿（新档登记） | F7 |
+| AC-TD-2 | T-TD-4 已退场（整删——删除记录 = `TESTING.md` §8.1（`:203`））+ `description: DESC(` 命中 25 处（grep 点数）+ **N9 落点 = 发布前清单核对**（`npx @vscode/vsce ls`（或打包后 `unzip -l <vsix>`）输出含 `src/tools/*.md` 25 档在位——打包忽略表实效核对；修正轮 #3） | F7/N9 |
 | AC-TD-3 | 行数实测对表（§12.4）+ `check-doc-width` 新增违规 0 | — |
 
 ### 12.7 边界
@@ -363,7 +363,7 @@ approve / deny / approve-all + diff 预览（`diff-preview.mjs` 虚拟文档原�
 - 不做非迁移 7 工具的文本重构（D-TD3）；不加跨仓描述锚断言/同步脚本；不改工具 schema/参数/执行逻辑；
 - 不改 CLI 侧 `.md`；不做多语言（本端描述语言 = 英文，与 CLI 同）。
 
-**计数（D3）**：实施域 45 = 25 新（.md）+ 2 测档（`test/tool-descriptions.test.mjs` 新 + `test/files.mjs` 登记）+ 18 改（含 `file-edit.mjs`）· 用例 4（T-TD-1~4）· AC 3（AC-TD-1~3）——修正轮 #9 对齐 §12.4 表；实现后同步（2026-09-12）更正 44→45（`edit` 宿主更正 + 补列）。
+**计数（D3）**：实施域 45 = 25 新（.md）+ 2 测档（`test/tool-descriptions.test.mjs` 新 + `test/files.mjs` 登记）+ 18 改（含 `file-edit.mjs`）· 用例 4（编号 T-TD-1~4；在役 2——T-TD-1/T-TD-4 已退场，删除记录 = `TESTING.md` §8.1（`:202`–`:203`））· AC 3（AC-TD-1~3）——修正轮 #9 对齐 §12.4 表；实现后同步（2026-09-12）更正 44→45（`edit` 宿主更正 + 补列）。
 
 ## 变更记录（历史折叠——详见 git log）
 

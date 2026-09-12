@@ -22,6 +22,7 @@
 
 ## 变更记录
 
+- 2026-09-12：§7 标题触发时机行文按现态收正（标题期消息拒收——无排队无回执；webview Stop 显 = running 派生——A3 原式 state≠idle 经 F-6 收窄；源 = `src/extension/panel-messages.mjs` · `webview/loading.js:57`）。
 - 2026-09-09：MODEL-MERGE-SESSION 语义同步（双端）：config 三旧层（activeProvider/
   activeModel/providers[].model）删除 + defaultModel 复合顶层 + providers[].models[] 候选
   （loadRaw 经 config-migrate.mjs 折中 C 迁移——写回失败不阻断）；会话槽双字段恒非空；
@@ -401,13 +402,13 @@ autoApprove/planMode/索引状态）随 `_cwd()` 刷新。
   失败打印 `{reason}` 不再静默。
 - **触发时机（A2——SESSION-FLOW-A 方案 Y——2026-09-09 用户裁）**：标题 await 在回合尾
   finally **忙态归位之前**（stream 完成即触发——panel-chat.mjs 归位分支前）：期间
-  `_turnState` 仍 running——标题窗口 = busy——webview Stop 显（state≠idle 派生）+ 路由
-  守卫 running→排队（修 R3 无池首回合并发——归位 idle 后标题的旧序会让窗口内新消息直开
+  `_turnState` 仍 running——标题窗口 = busy——webview Stop 显（running 派生——A3 原式 state≠idle 经 F-6 收窄；现态）+ 路由
+  守卫 running→拒收（修 R3 无池首回合并发——归位 idle 后标题的旧序会让窗口内新消息直开
   并发回合与标题 LLM 调用赛跑；有池首回合同理——标题跨释放窗口延后消化入口——新序
   「标题在归位 susp 前完成」——释放窗口不延）。错误路径（评审 #2）：`generateTitle`
   内部全 try/catch 吞错 + 调用点兜底 try/catch——**归位恒执行**（_publishTurnState +
-  loading:false 照发——标题抛错不卡永久 busy）。标题期消息入队 `_suspQueue`（routeUserTurn
-  running 分支直入队——同队列同排空——零丢失）。
+  loading:false 照发——标题抛错不卡永久 busy）。标题期消息拒收（routeUserTurn
+  running 分支——无排队无回执——拒收警告明示；源 = `src/extension/panel-messages.mjs`）。
 - **IK9UZ8（标题生成质量）**：LLM 标题请求**显式禁用思考**（openai body 加
   `thinking:{type:"disabled"}`、anthropic `thinking:{type:"disabled"}`、google
   `thinkingConfig:{thinkingLevel:"none"}`——防 reasoning_content 吃掉整个输出预算把

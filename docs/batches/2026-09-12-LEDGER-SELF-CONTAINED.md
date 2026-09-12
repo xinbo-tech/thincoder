@@ -451,6 +451,884 @@ FAIL(宽度): 1 文件 / 2 行超 300 字符
 - **17 承载档回注**：各承载档档首补一行——「对端（CLI 仓）源档对端份已**切除**（2026-09-12）——追溯锚 = 源档档首移出清单 + 源档 blob SHA」（对应 CLI 侧「对端份物理切除」轮）。迁移 14 档档首搬迁注记的源档 token 同步规范形态化。
 - **载体**：本次复查的本仓侧记录 = 本小节四、五两节；CLI 仓侧形态面归 CLI 侧（并行 coder 域——本仓零触碰）。
 
+### 需求层建档轮 B · 本仓 6 档（eng-designer · 2026-09-12）
+
+> 本轮 =「需求树逐档成套轮（B13）」**建档实施的 B 轮**——设计档 §8.6：① 18 行 → 17 档建档；本轮承建 6 档（`WEBVIEW` / `MCP` / `ESCALATE` / `DESIGN-TOKEN-SETTLEMENT` / `ASYNC-RESULT-CONTAINER` / `SUBAGENT-OBSERVE-SEND`）。
+> 三方条目一致：**B13**（需求树逐档成套）= 需求档 **F11**（需求层必须在本仓有档——不得以 design 层充当）= 设计 **AC-VS19 / T-VS27**。
+> 源 = 对端对位档（E1 形态引用）+ 本仓机制实测证据（file:line）；未照抄对端正文；写法 = 需求三层（总体 / 功能性 + 判定句 + 范围边界 / 非功能 + 度量）+ 对位与端差登记。
+> 写域 = `docs/requirements/` 内 6 新档；`src/**` / `test/**` / 台账 / 他轮在建档 / CLI 仓——零触碰。
+
+**（一）交付表（逐档：行数 / 判定句 / 对位档 / 端差登记）**
+
+| # | 新档 | 行数 | 判定句 | 对位档（E1 形态） | 端差登记 |
+|---|---|---|---|---|---|
+| 1 | `WEBVIEW.md` | 70 | 7（F-W1–F-W7） | `TUI（CLI 仓·需求）` + `TUI-TOOL-OUTPUT（CLI 仓·需求）`——一档承载两行（异名对位） | §4 表逐行（含 attention chip 不做 · `scrolled N` 钮替代 · 工具卡 vs 行间区块形态等） |
+| 2 | `MCP.md` | 45 | 6（F-M1–F-M6） | `MCP（CLI 仓·需求）§1–§4` | §4 表：无 `/mcp` 命令面 · 重读面差异 · 展开机制无端差 |
+| 3 | `ESCALATE.md` | 41 | 5（F-E1–F-E5） | `ESCALATE（CLI 仓·需求）§1` | §4：未见差异（语义同源、各端实现自持） |
+| 4 | `DESIGN-TOKEN-SETTLEMENT.md` | 42 | 6（F-D1–F-D6） | `DESIGN-TOKEN-SETTLEMENT（CLI 仓·需求）§2` | §4：未见差异 + 结算载体各端自持 |
+| 5 | `ASYNC-RESULT-CONTAINER.md` | 45 | 6（F-A1–F-A6） | `ASYNC-RESULT-CONTAINER（CLI 仓·需求）§1` | §4 表：pending 族数 · 池载体 · helper 契约 · 守卫信号 |
+| 6 | `SUBAGENT-OBSERVE-SEND.md` | 41 | 4（F-O1–F-O4） | `SUBAGENT-OBSERVE-SEND（CLI 仓·需求）§1` | §4：未见实质差异 + 本端口径登记（摘要 5 / 行截断 160） |
+| 计 | 6 档 | **284** | **34**（详见逐档列） | — | — |
+
+**（二）机检（原文照录——as-of 本轮收口）**
+
+```text
+cd thincoder-vscode && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（120 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。→ EXIT=0
+
+cd thincoder-vscode && node scripts/check-ledger.mjs
+  → OK ×2 档 · 0 处违规（阻断——修掉）· 基线 0 条（本基线必须保持为空）。→ EXIT=0
+```
+
+- 宽度注：6 新档非表格行全部 ≤300 字符；>300 者仅表格行（README 规则 6 表格行豁免——检查器同款谓词）。
+
+**（三）D6 回读**
+
+- 6 档逐档写入后复读核验：标题 / 三节（总体需求 · 功能性需求 · 非功能性需求）/ 对位与端差登记 / 变更记录逐处在位；行数实测与交付表一致（70 / 45 / 41 / 42 / 45 / 41）。
+
+**（四）边界与未做（如实）**
+
+- 未做（归口）：`docs/requirements/README.md` 的板块表登记行 + 对位表「待建」标记去除 + 树计数——随 17 档建档轮集齐后统一登记（本档收束清单未列；避免与他轮在建档写冲突）；其余 11 档归他轮。
+- 零触碰：`src/**` / `test/**` · `docs/TODO*.md`（主 agent 写域）· 他轮在建档 · CLI 仓任何档。
+
+### 需求树逐档成套轮 · 建档实施 C 轮——VSC 需求层建档 5 档 + README 联动（eng-designer · 2026-09-12）
+
+> append-only 追加（不回改上方任何既有行）。任务 = 父侧「实施轮 C」派单；依据 = 本档 §2 本批任务书 + 设计档 §8.6（B13 建档规则 / 建档实施面）/ 需求档 F11。as-of 2026-09-12（B 轮 6 档落盘后本刻复测）。
+> 三方条目一致：本轮 = 既有条目 **B11 · B13** 的建档实施面——**不新增条目号**（同 C 桶接收轮口径）。
+
+**一、5 档交付**（行数 = `split("\n").length`；判定句 = 功能性 F + 非功能性 N）
+
+| # | 档 | 行数 | 判定句 | 对位档（异名注明） |
+|---|---|---|---|---|
+| 1 | `docs/requirements/PORTABILITY.md` | 51 | F1–F8 · N1–N4 | `PORTABILITY（CLI 仓·需求）` |
+| 2 | `docs/requirements/RELEASE.md` | 42 | F1–F5 · N1–N4 | `RELEASE（CLI 仓·需求）` |
+| 3 | `docs/requirements/TURN-CAP-CONTINUE.md` | 45 | F1–F7 · N1–N5 | `TURN-CAP-CONTINUE（CLI 仓·需求）` |
+| 4 | `docs/requirements/TOOLS.md` | 47 | F1–F7 · N1–N7 | `TOOLS（CLI 仓·需求）` |
+| 5 | `docs/requirements/VSC-PROMPTS.md` | 46 | F1–F7 · N1–N4 | `PROMPT-SYSTEM（CLI 仓·需求）`（**异名**） |
+
+**二、写法判据（任务书逐条落实）**：三层模板（总体需求 / 功能性〔逐条可交付 + 范围边界 + 判定句〕/ 非功能性〔含度量〕）+ 范围边界节 + 变更记录；
+**不得以 design 层充当**（5 档均住 `docs/requirements/`，设计档仅作指路）；源 = 对端同名档对位参照 + **本仓实测证据（file:line）**——不照抄；
+对位注记 **E1 形态**（对端引用一律 `名称（CLI 仓·…）`）；行宽 ≤300（机检绿）；未以先例为据、未用「最小改动」类措辞。
+
+**三、README 联动（`docs/requirements/README.md`）**
+
+| 面 | 改前 → 改后 |
+|---|---|
+| 处置列 + 判列 | 对位表 12 行判 ① → ②、处置「**已建**」+ 实际档名（本稿 5 行 + 同批 B 轮 6 档 7 行）；异名注明（`VSC-PROMPTS` / `WEBVIEW`） |
+| 树终态计数 | 「17 档（已建）→ 34 档（本轮建档后）」→「**树终态计数：17 → 34 档**（= 原 17 已建 + ① 行建档 17 档）· **现态 = 已建 28 · 待建 6**」——两处同步（文首注 + 表题注） |
+| 计数链同步 | 三值计数 ① 18 / ② 16 / ③ 2 → **① 6 · ② 28 · ③ 2**；① 待建档 17 档 → **6 档**；板块表 +11 行；变更记录 +1 行 |
+
+**四、机检（原文——as-of 本刻）**
+
+```text
+cd thincoder-vscode && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（125 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。→ EXIT=0
+cd thincoder-vscode && node scripts/check-ledger.mjs
+  → OK: thincoder-vscode/docs/TODO.md · OK: thincoder-vscode/docs/TODO-archive.md
+  → 0 处违规（阻断——修掉）· 基线 0 条（**本基线必须保持为空**）。→ EXIT=0
+```
+
+**五、边界 / 未做（如实）**：`src/**` / `test/**` 零触碰 · 台账（`docs/TODO*.md`）零触碰 · 同批并行轮在建档**零触碰**（仅 README 登记其已落盘档）。
+未做 = A 轮 6 档（`ADVISOR-CONVERGENCE` · `CHECKPOINT` · `CONSULTATION` · `CONTEXT-COMPACTION` · `MEMORY` · `SESSION`）as-of 本刻**未落盘**——README 其 6 行「待建」保持；
+其落地后需一行级 README 联动（三值计数 / 树终态现态 / 板块表 / 变更记录同步），或由父侧另派。
+
+### 实施轮 A（eng-designer 自写 · 2026-09-12）——VSC 需求层建档 6 档 + 评审新增 4 条收口
+
+> 任务书 = 父侧「实施轮 A」派单（评审 pass 后的实施轮）；前置依据 = 本仓设计档 §8.6 建档规则 + §13「需求树逐档成套轮（B13）」轮 + `ENGINEERING-MODE（本仓·需求）§1.3` F11 + 评审轮次 2 新增 #9–#12（发现表住本批 CLI 侧记录 §3）。
+> 射程 = ① `docs/requirements/` 建档 6 档；② 四条评审新增收口（设计 / 需求面）；③（父侧追加）`docs/requirements/README.md` 一行级联动。
+> 边界：CLI 仓 `docs/**` 仅四项具名点；`src/**` / `test/**` 实体零触碰；两仓台账零触碰；措辞未用「最小改动」类；未以先例为据。as-of 2026-09-12。
+
+#### 一、建档 6 档（逐档：行数 / 判定句条数 / 对位档）
+
+| # | 档 | 行数 | 判定句（F 条 / N 条） | 对位档 | 权威源（实测） |
+|---|---|---|---|---|---|
+| 1 | `ADVISOR-CONVERGENCE.md` | 57 | 12 / 6 | `ADVISOR-CONVERGENCE（CLI 仓·需求）§1–§4` | `src/advisor/` 13 档 + `agent-tools/advisor.mjs`（346）/`advisor-async.mjs`（497） |
+| 2 | `CHECKPOINT.md` | 49 | 7 / 4 | `CHECKPOINT（CLI 仓·需求）§1` | `tools/checkpoint.mjs`（452）· `git-checkpoint.mjs`（151） |
+| 3 | `CONSULTATION.md` | 46 | 7 / 4 | `CONSULTATION（CLI 仓·需求）§1` | `agent-tools/consult.mjs`（475）· `config-consult.mjs`（79） |
+| 4 | `CONTEXT-COMPACTION.md` | 46 | 7 / 4 | `CONTEXT-COMPACTION（CLI 仓·需求）§8.1 / §9.2` | `src/compact.mjs`（389） |
+| 5 | `MEMORY.md` | 50 | 7 / 4 | `MEMORY（CLI 仓·需求）§1–§3` | `src/memory.mjs`（274）· `memory-tool.mjs`（387）· `indexer.mjs`（457） |
+| 6 | `SESSION.md` | 52 | 8 / 5 | `SESSION（CLI 仓·需求）§10.1 / §11.1 / §13.1 / §14.1` | `extension/session-*.mjs` 4 档 + `panel-session.mjs`（339）· `history-window.mjs`（176） |
+
+- 写法 = 三层（总体需求 / 功能性需求〔判定句 + 范围边界〕/ 非功能性需求〔度量方式〕）+ §4 对位与端差登记 + §5 变更记录；跨仓引用形态 = `名称（CLI 仓·需求）§N`（V4 绿）。
+- 内容 = 本仓机制实况登记（证据逐条 file:line——对位参照 CLI 同名档，**零照抄**）；**非复制**——各端原文自持；端差逐条登记于各档 §4（如 MEMORY 无 team 层 / 无 FTS5；SESSION marker 端分离 / 分页 200；ADVISOR 中止形态与记账载体端差）。
+- 机制实况注（发现即报，随档登记）：`CHECKPOINT` / `CONSULTATION` / `CONTEXT-COMPACTION` 三档在 `test/` 内零专属用例（全扫实证——测试缺口如实登记）；`ADVISOR-CONVERGENCE` / `MEMORY` / `SESSION` 用例面逐档列名。
+
+#### 二、评审轮次 2 新增 #9–#12 收口（改前 → 改后；file:line 为现盘）
+
+| # | 项 | 改前 | 改后 |
+|---|---|---|---|
+| #9 | AC-LS13 条目号区间 | CLI 设计 `:920`「B1–B12 = AC 回指 = 需求档 F/N」 | `:921`「**B1–B16** = AC 回指 = 需求档 F/N」（与批档 §2 题注 `:31` 及需求档 `:919` 对齐） |
+| #10 | T-LS43 引用链闭合 | CLI 设计 §10 无 T-LS43 表行（题注 `:857` 仅至 T-LS42）；需求档 `:914`「T-LS1–T-LS42」 | §10 新增 T-LS43 行（场外前缀不报 / 场内必报 / 无标记 ⇒ 整条——`ledger.test.mjs:250`–`:263`）；题注 `:857`「T-LS42 · T-LS43 = Deferred 收口轮面（L4② 收紧反证 + 扫描窗三态——**已落**）」；需求档 `:914`「**T-LS1–T-LS43**」+ F6 补行 `:918`「T-LS42 · **T-LS43**」 |
+| #11 | 「落笔归 coder」残句 | CLI 设计 `:274` / VSC 设计 `:256`「落笔归 coder（提示词实体 = 产品代码）；本小节只出逐字稿与落点。」 | 两处均加「——**已落**（收尾轮——四副本）」（与 §9 行 86–89 齐平） |
+| #12 | §8.10.1 作用域绝对句 | 两仓设计 `:668`/`:511`「可见文本里仍不得存在连续的枚举外形态。」（与 `:666`/`:509` 射程豁免并置——两段作用域未显式分工） | 两仓均加限定「（**豁免面内除外**）」——防后续清理轮按绝对句误判豁免面内字面 |
+
+#### 三、README 联动（父侧追加——6 档落盘并核验后落笔）
+
+- 对位表 6 行（#2 / #6 / #7 / #8 / #17 / #26）：判值 ① → ② + 处置「**已建** `docs/requirements/<档>.md`（本批建档 A 轮——原对位 = `docs/design/<档>.md`）」；对位档列去「**待建**」。
+- 三值 = **① 0 · ② 34 · ③ 2**（= 36）；树终态 = **34 = 34 已建 + 0 待建**（文首注 + 树终态计数段两处）；板块表 +6 行（28 → 34）；① 待建档登记 0 档；判值三态注同步（① 现态 0 行）；变更记录 +1 行（A 轮）。
+- D3：计数与列表逐处一致（表内行数 / 判值分布 / 树终态 / 板块表 / 待建档登记）——V2 绿。残留「待建」字样 = 对位表列头 schema 标签 + 变更记录历史行（as-of 语义）——**无活态待建条目**。
+
+#### 四、机检（原文——命令 + 结果；as-of 本刻）
+
+```text
+cd thincoder-vscode && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（131 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。→ EXIT=0
+cd thincoder-vscode && node scripts/check-ledger.mjs
+  → OK: thincoder-vscode/docs/TODO.md · OK: thincoder-vscode/docs/TODO-archive.md
+  → 0 处违规（阻断——修掉）· 基线 0 条（**本基线必须保持为空**）。→ EXIT=0
+cd thincoder && node scripts/check-doc-width.mjs   ← 跨仓回归（本半轮 CLI 具名点改动安全——加跑）
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（136 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。→ EXIT=0
+cd thincoder && node scripts/check-ledger.mjs
+  → OK: thincoder/docs/TODO.md · OK: thincoder/docs/TODO-archive.md
+  → 0 处违规 · 基线 0 条。→ EXIT=0
+```
+
+#### 五、D6 回读核对（写入后逐处）
+
+- 6 新档逐档回读在位（档首标题 / F 行与 N 行计数见 §一表；131 文件宽度面全绿）。
+- 四条收口改动 9 处逐处回读在位（CLI 设计 `:274` / `:668` / `:857` / `:901`〔T-LS43 行〕/ `:921`；CLI 需求档 `:914` / `:918`；VSC 设计 `:256` / `:511`）。
+- README 联动 14 处回读在位（`:5` / `:69` / `:71` / `:75` / `:82`–`:87` 区 / `:120` / `:153`）。
+
+#### 六、边界 / 未做（如实）
+
+- CLI 仓 `docs/**` 触及 = 仅四项具名点（设计档 5 处 + 需求档 2 处）；CLI `src/**` / `test/**` 零触碰；VSC `src/**` / `test/**` 零触碰；两仓台账零触碰。
+- 未做：无（射程内全部落定）；列报 = 三档测试缺口（随档登记，见 §一注）。
+
+### 收尾轮——拆档 as-built 回填 + AGENT-LOOP 旧口径句更正（eng-designer · 2026-09-12）
+
+> 本小节 = append-only 追加（不回改上方任何既有行）。任务 = 父侧「收尾轮」派单；判据 = 设计档须与实装现态一致（as-built 回填）+ 不得留与现态相抵的旧口径句（不以先例为据）。零新语义 / 零新范围。
+> 实测（本刻复测——`readFileSync(...).split("\n").length` 口径）：余档 `test/child-permission.test.mjs` **368** 行 / 12 例；新档 `test/child-permission-wiring.test.mjs` **218** 行 / 6 例（守恒 **18 = 12 + 6**）；`test/files.mjs` = **82** 行（新档登记 `:77` 在位）。
+
+**（一）逐项「实测值 → 已改 file:line」（设计档 `docs/design/LEDGER-SELF-CONTAINED.md`）**
+
+| # | 面 | 实测值 → 已改 |
+|---|---|---|
+| 1 | §9 档位结论行（`:585`） | 368 / 218（12 / 6 例）→ 估算 ≈374 / ≈215 保留 + as-built 注；「本批拆」→「本批拆——已落」；新档「已建」+「+1 已登记」 |
+| 2 | §9 拆分方案块（`:658`–`:674`：块首 as-built 标 + ① 行 + 块尾落位段） | ① 行 374 / ≈215 → **368 / 218**（as-built）；新档存在性 **已建**；`files.mjs` **+1 已登记（`:77`）**；新增落位段 `:673`–`:674` |
+| 3 | §9 受影响文件行 60–62（`:642`–`:644`） | −130 / ≈374 → **−136（504 → 368）**；≈215 → **已建（218）**；`+1` → **+1 已登记**；`files.mjs` as-built **82** |
+| 4 | §10 T-VS28（`:728`） | 预期列 → as-built **368 / 218** + **12 / 6** + 「已登记」 |
+| 5 | §12（`:793`） | 「拆分实施 = 后续 coder」→ **拆分实施已落**（as-built） |
+| 6 | §13 变更记录（`:863`–`:866`） | **+1 条**（as-built 回填 + 旧口径句同步 + 回读核对） |
+
+**（二）旧口径句更正（`docs/design/AGENT-LOOP.md`——「测试档登记口径 = 不拆分」拆后为假）**
+
+| # | file:line（改后） | 旧口径 → 已改（现态） |
+|---|---|---|
+| 1 | `:1256`–`:1257` | 「>500 硬帽——测试档登记口径 = 不拆分，同仓同口径 `chat-panel` 621」 → 「后经散文锚退役降至 177（≤500）；500 硬限无豁免——`child-permission` 超限拆分已落（方案 = `LEDGER-SELF-CONTAINED.md §9`）」 |
+| 2 | `:1493` | 「>300——不拆分口径，§17.6 同口径」 → 「**拆分已落**——500 行硬限无豁免：余档 368 / 新档 218，守恒 18 = 12 + 6；方案 = `LEDGER-SELF-CONTAINED.md §9`」 |
+| 3 | `:1499`–`:1500` | 「测试档按测试档登记口径 = 不拆分……`~380` 登记不拆分」 → 「**测试档拆分已落**——368 + 218；方案 = `LEDGER-SELF-CONTAINED.md §9`」（本处折行——其下 `:1542` → `:1543` 位移） |
+| 4 | `:1543` | 「（测试档登记口径——不拆分）」 → 「（500 硬限无豁免——超限拆分已落，方案 = `LEDGER-SELF-CONTAINED.md §9`）」 |
+
+- `:1256` / `:1543` = 同口径句全量清零面（判据「不得留相抵旧口径」；派单具名 = `:1493` / `:1499`）。AGENT-LOOP 内「登记口径」字面复扫 = **0**。
+- 非判据面（零触碰）：`:687` / `:1250` / `:1254` / `:1255` 的批内「不拆分」语句（300 咨询线面——批内决策、现态续真）。
+- 设计档内该字面仅存 `:669`（删除指令句——正向）、`:729`（T-VS29 反证输入——零残留断言）与 §13 变更记录引述——均非口径断言。
+- §5.10「范围外注记」所载 AGENT-LOOP `:1493` / `:1499` 项 = 本轮已处置（更新归属 = 本轮设计写域）。
+
+**（三）机检（原文照录——改动后复跑）+ D6 回读**
+
+```text
+cd thincoder-vscode && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（131 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。EXIT=0
+cd thincoder-vscode && node scripts/check-ledger.mjs
+  → OK: thincoder-vscode/docs/TODO.md · OK: thincoder-vscode/docs/TODO-archive.md
+  → 0 处违规（阻断——修掉）· 基线 0 条（本基线必须保持为空）。EXIT=0
+```
+
+- 改动前基线同组命令 = 同值（131 文件 · 0/0 · exit 0）；本轮首稿 1 行 303 字符（AGENT-LOOP `:1499`）→ 折行 → 复跑绿。
+- D6 回读：设计档逐处复读（`:585` / `:642`–`:644` / `:658` / `:664` / `:673`–`:674` / `:728` / `:793` / `:863`–`:866`）；AGENT-LOOP 逐处复读（`:1256`–`:1257` / `:1493` / `:1499`–`:1500` / `:1543`）；设计档行数复测 = **867**（与 §13 ③ 所载一致）。
+- 边界：`src/**` / `test/**` 实体零触碰 · 台账（`docs/TODO*.md`）零触碰 · #61 / #66 在改档零触碰（本轮触碰面 = 设计档 + AGENT-LOOP 上述行 + 本档 §2，其外零动）· CLI 仓零写入。
+
+**补记——同口径句全量复扫（范围外发现：发现即报 / 未动作；2026-09-12 收尾轮）**
+
+- 复扫域 = 本仓 `docs/**`（设计 / 需求 / 批档全量——「不拆分」/「登记口径」字面）。**判据面（一般口径断言——拆后为假）面外残留（逐条列明）**：
+  - `docs/design/VSC-PROMPTS.md` `:198`——语料修复节受影响文件表行 4：「超 500 硬帽——测试档登记口径 = 不拆分（同仓同口径 `chat-panel.test.mjs` 621）〔实现后同步（2026-09-12）〕」；
+  - 同档 `:202`——「实现后同步」注：「登记口径 = 本批不拆分（同仓同口径 `chat-panel.test.mjs` 621 行）」；
+  - 同档 `:296`——变更记录：「测试档登记口径 = 不拆分，同仓同口径 `chat-panel.test.mjs` 621」；
+  - `docs/requirements/AGENT-LOOP.md` `:342`（N-CP2）——「测试档按测试档登记口径 = 不拆分——设计 §18.6 注④」——**括号句与指针双悬空**（§18.6 注④ = 本轮已改现态句）。
+- 处置建议（同 AGENT-LOOP 处置形态——现态 + 指设计档 `LEDGER-SELF-CONTAINED.md §9`）：另派一行级轮清零；`VSC-PROMPTS.md` / `requirements/AGENT-LOOP.md` 均**不在本轮派单面**、且属他批面——本轮零动（`#61` / `#66` 边界）。
+- 非判据面（经扫排除、零触碰）：批内决策句（`docs/design/WEBVIEW.md` `:311` / `:491` / `:1163` / `:1167` / `:1702` · `AGENT-LOOP.md` `:687` / `:1250` / `:1254` / `:1255` · `MEMORY.md` `:285` · `TOOLS.md` `:342`——「本批不拆分」/「越线处置」语义、现态续真）；反证 / 指令句（设计档 `:669` / `:729`）；记录面（batch records 各处 + 迁移逐字档——as-of 记录口径，D10）。
+- 另附（供裁）：`test/chat-panel.test.mjs` 实测 **621** > 500 硬限——「测试族重组归独立项」在案（`WEBVIEW.md` `:311`）；拆分面供父侧裁。
+
+### 收尾轮 2——旧口径残句清零（4 处）+ chat-panel 登记改判（eng-designer · 2026-09-12）
+
+> 任务 = 父侧派单：§2 补记（`:646`–`:655`）所列旧口径残句（4 处）清零 + `test/chat-panel.test.mjs` 621 登记处置；后者经父侧裁定变更 = **本批拆**（实施轮 E 在办——「另有归属」非判据）。判据 = 不得留与现态相抵的旧口径句（F14）+ F12 硬限无豁免。零新语义 / 零新范围。本小节 = append-only 追加（不回改上方任何既有行）。
+
+**（一）旧口径残句清零（4 处——判据面；改前 → 改后）**
+
+| # | file:line（as-of 本刻） | 改前 → 改后 |
+|---|---|---|
+| 1 | `docs/design/VSC-PROMPTS.md` `:198` | 「超 500 硬帽——测试档登记口径 = 不拆分（同仓同口径 `chat-panel.test.mjs` 621）〔实现后同步（2026-09-12）〕」 → 「超 500 硬帽（当时）——后经散文锚退役降至 **177**（≤500）；测试档 500 硬限无豁免——`child-permission` 超限拆分已落（方案 = `LEDGER-SELF-CONTAINED（本仓·设计）§9`）〔实现后同步（2026-09-12）〕」 |
+| 2 | 同档 `:202` | 「实测 **535**——超 500 硬帽（测试档）；登记口径 = 本批不拆分（同仓同口径 `chat-panel.test.mjs` 621 行）。」 → 「实测 **535**（当时）——后经散文锚退役降至 **177**（≤500）；测试档 500 硬限无豁免——`child-permission` 超限拆分已落（方案 = `LEDGER-SELF-CONTAINED（本仓·设计）§9`）。」 |
+| 3 | 同档 `:296` | 「…超 500 硬帽；测试档登记口径 = 不拆分，同仓同口径 `chat-panel.test.mjs` 621」 → 「…超 500 硬帽（当时）；后经散文锚退役降至 177（≤500）；测试档 500 硬限无豁免——`child-permission` 超限拆分已落，方案 = `LEDGER-SELF-CONTAINED（本仓·设计）§9`」 |
+| 4 | `docs/requirements/AGENT-LOOP.md` `:342`（N-CP2） | 「测试档按测试档登记口径 = 不拆分——设计 §18.6 注④」 → 「测试档 500 硬限无豁免——`child-permission` 超限拆分已落，方案 = `LEDGER-SELF-CONTAINED（本仓·设计）§9`」（括号句 + 指针双悬空双清；「（修正轮 #4）」尾标保留） |
+
+**（二）chat-panel 621 > 500 硬限——登记改判（本批拆；实施轮 E 在办——父侧直派）**
+
+| # | file:line（as-of 本刻） | 改前 → 改后 |
+|---|---|---|
+| 1 | `docs/design/WEBVIEW.md` `:311` | 「结论 = 本批不拆分（改写就地；测试族重组归独立项）」 → 「结论 = 本批不拆分（改写就地）；**同族超限档 `test/chat-panel.test.mjs`（621 > 500 硬限）**：**本批拆**（F12 硬限无豁免；LEDGER-SELF-CONTAINED 批）——拆档实施 = **实施轮 E 在办**，as-built 随其落定回填」 |
+| 2 | 同档 `:994` | 「T-MA13-1..3（292→~310 同带——测试族重组归独立项——不拆）」 → 「T-MA13-1..3（292→~310 同带——不拆；**同族超限档 `test/chat-panel.test.mjs`（621 > 500 硬限）**：**本批拆**（F12 硬限无豁免；LEDGER-SELF-CONTAINED 批）——拆档实施 = **实施轮 E 在办**，as-built 随其落定回填）」 |
+| 3 | 同档 `:1163` | 「同带（最高 `chat-panel.test.mjs` 620）——本批**不拆分**（就地改写——同第 10 批结论）。」 → 「同带（最高 `chat-panel.test.mjs` 620）——本批**不拆分**（就地改写）；**同族超限档 `test/chat-panel.test.mjs`（621 > 500 硬限）**：**本批拆**（F12 硬限无豁免；LEDGER-SELF-CONTAINED 批）——拆档实施 = **实施轮 E 在办**，as-built 随其落定回填。」 |
+
+- 落点实定位：派单所载 `docs/requirements/WEBVIEW.md` `:311` 区**无该登记**（该档实测共 70 行、无 `:311`；仅 `:22` 一处用例名提及、无 621 / 测试族登记句）；实际登记 = `docs/design/WEBVIEW.md` 同族 3 处（`:311` / `:994` / `:1163`）——按内容定位落实。
+- 判据 = 父侧裁定（F12 硬限无豁免；「另有归属（测试族重组归独立项）」不构成豁免）→ 本批拆；先例引用句随改判移除（`:1163` 「同第 10 批结论」）。
+- 落文说明：父侧给定文本落成时增批名锚（「LEDGER-SELF-CONTAINED 批」）+ 档名前置锚（`test/chat-panel.test.mjs`——防「本批 / 该档」歧义）；语义零增删。
+- 未动-已核（非登记面 / 同向句）：`docs/design/WEBVIEW.md` `:491` / `:1167` / `:1702`（源档位句 / 越线处置口径——与 F12 同向）；`design/LEDGER-SELF-CONTAINED.md` `:669` / `:729` / `:865`（指令 / 反证 / 引述行）。
+- as-built（拆档行数 / 新档名 / `test/files.mjs` 登记）随实施轮 E 落定在上述三处回填。
+
+**（三）机检（原文照录——改动后复跑）+ D6 回读**
+
+```text
+cd thincoder-vscode && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（131 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。EXIT=0
+cd thincoder-vscode && node scripts/check-ledger.mjs
+  → OK: thincoder-vscode/docs/TODO.md · OK: thincoder-vscode/docs/TODO-archive.md
+  → 0 处违规（阻断——修掉）· 基线 0 条（本基线必须保持为空）。EXIT=0
+```
+
+- 改动前基线同组命令 = 同值（131 文件 · 0/0 · exit 0）。
+- D6 回读：改动点逐处复读——`docs/design/VSC-PROMPTS.md` `:198` / `:202` / `:296`；`docs/requirements/AGENT-LOOP.md` `:342`；`docs/design/WEBVIEW.md` `:311` / `:994` / `:1163`——均落位。
+- 行数复测（本刻；替换均行内——行数不变）：`VSC-PROMPTS.md` **309** · `requirements/AGENT-LOOP.md` **355** · `design/WEBVIEW.md` **1865**；新行宽实测（非表格行全部 ≤300）：`:198`=269 · `:202`=194 · `:296`=244 · `:342`=210 · `:994`=211 · `:1163`=181；`:311`=350（表格行——判据豁免）。
+- 判据面复扫：三档内「登记口径 = 不拆分」/「测试族重组归独立项」/「同仓同口径」字面 = **0**。
+- 记录面（batch records 各处引述 + 迁移档）= D10 零触碰、未动。
+
+**（四）边界 / 未做（如实）**
+
+- `src/**` / `test/**` 实体零触碰（只读实测：`chat-panel` 621 · `prompts-async-guidance` 177 · `child-permission` 368 / wiring 218）；台账（`docs/TODO*.md`）零触碰；`#66` 在改档零触碰（本轮触碰面 = 上述指定行 + 本档 §2——其外零动）；CLI 仓零写入。
+- 措辞复核：改后文案零「最小改动」类表述。未做：无（派单射程 = 7 处改动 + 本小节）。
+
+### 收尾轮 3——两处设计档旧断言项更正（#66 列报落地）（eng-designer · 2026-09-12）
+
+> 任务 = 父侧「收尾轮——两处设计档旧断言项更正（#66 列报）」派单：① `docs/design/AGENT-LOOP.md:1525`（§18.7·T-CP18 行·预期输出）；② `docs/design/TESTING.md:128`（§8.1·child-permission 行）。
+> 判据（唯一依据——不以先例为据）= **设计档不得载与测试现态相抵的旧断言项**（以测试档实态为准——实测 / 读源，不以记述为准）。零新语义 / 零新范围。本小节 = append-only 追加（不回改上方任何既有行）。
+> 测试现态（实测——`test/child-permission.test.mjs:360`–`:367`）：名 = 「T-CP18 结构（AC-CP8）：execute-tools ≤500、tool-gates ≤300」；体 = 恰两断言（`:365` `lines(exec) <= 500` · `:366` `lines(gates) <= 300`）；「五函数在位 / 对拍 / 旧定义零残留」项均不在体（PROSE-ANCHOR-RETIRE 退场——原 `:527`–`:531`）。
+
+**（一）逐处「改前 → 改后」（file:line——as-of 本刻）**
+
+| # | file:line | 改前 | 改后 |
+|---|---|---|---|
+| 1 | `docs/design/AGENT-LOOP.md:1525` | 预期输出 = 「execute-tools ≤500；tool-gates 五函数在位；guard-completion 测档改指绿」（后两项已退场） | 预期输出 = 「execute-tools ≤500；tool-gates ≤300」——与现体两断言一致 |
+| 2 | `docs/design/TESTING.md:128` | 用例名 = 「T-CP18 结构：execute-tools ≤500、tool-gates 五函数」（旧名）；依据 = 「函数名 src grep + 旧定义零残留」（未载对拍行退场） | 用例名收现名 = 「T-CP18 结构（AC-CP8）：execute-tools ≤500、tool-gates ≤300」；依据 = 「函数名 src grep + 旧定义零残留（均已退场）；对拍行（原 :531，清单外）随 T-VG19 段删同步退场（`2026-09-12-PROSE-ANCHOR-RETIRE.md` §5）；余两断言保留」 |
+
+**（二）机检（原文照录——改动后复跑）+ D6 回读**
+
+```text
+cd thincoder-vscode && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（131 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。EXIT=0
+cd thincoder-vscode && node scripts/check-ledger.mjs
+  → OK: thincoder-vscode/docs/TODO.md
+  → OK: thincoder-vscode/docs/TODO-archive.md
+  → 0 处违规（阻断——修掉）· 基线 0 条（**本基线必须保持为空**）。EXIT=0
+```
+
+- D6 回读：两处改动点逐处复读在位——`AGENT-LOOP.md` `:1525` = 两断言现态；`TESTING.md` `:128` = 现名 + 退场注记 + 对拍行退场 + 余两断言保留。
+- 行宽实测（本刻）：`AGENT-LOOP.md` `:1525` = 72 · `TESTING.md` `:128` = 204（表格行；均 ≤300）。
+- 判据面复扫：设计档 / 需求档全量「五函数在位」「测档改指绿」= **0 命中**（命中仅本档 §5 记录面 2 行——as-of 记录，D10）。
+- 措辞复核：改后文案零「最小改动」类表述。
+
+**（三）边界 / 未做（如实）**
+
+- `test/**` 只读核（零改——仅读取实测）· 台账（`docs/TODO*.md`）零触碰 · #67/#68 在改档零触碰 · CLI 仓零写入。
+- 本轮触碰面 = 两设计档具名行（`AGENT-LOOP.md` `:1525` · `TESTING.md` `:128`）+ 本档 §2——其外零动。未做：无（派单射程 = 两处更正 + 本小节）。
+- 范围外注记（发现即报，未动作）：`docs/design/AGENT-LOOP.md` `:1524`（§18.7·T-CP17 行）· `:1542`（§18.8·AC-CP7）仍以在位形态登记 T-CP17——该用例已由 PROSE-ANCHOR-RETIRE 整删（`docs/design/TESTING.md` `:127` 登记）；非本轮派单面（#66 = T-CP18 两处）——是否同办，供父侧裁。
+
+### 收尾轮（#69 列报落地）——T-CP17 两处设计档旧登记更正（eng-designer · 2026-09-12）
+
+> 任务 = 父侧「收尾轮——T-CP17 两处设计档旧登记更正（#69 列报）」派单：① `docs/design/AGENT-LOOP.md:1524`（§18.7·T-CP17 行）；② 同档 `:1542`（§18.8·AC-CP7）。
+> 判据（唯一依据——不以先例为据）= **设计档不得载与测试现态相抵的旧登记**（以测试实态为准——读源核）。零新语义 / 零新范围。本小节 = append-only 追加（不回改上方任何既有行）。
+> 测试现态（实测——`test/child-permission.test.mjs`）：T-CP17 用例零存目；头注 `:12` 载「2026-09-12 PROSE-ANCHOR-RETIRE：T-CP17（R2 措辞锚——读 docs/design/*.md 文本）整删」。
+> 现档 12 例（T-CP1–T-CP5 · T-CP8 · T-CP9 · T-CP12–T-CP14 · T-CP16 · T-CP18）+ `test/child-permission-wiring.test.mjs` 6 例 = 18（= T-CP1..T-CP19 减 T-CP17——与 §18.6 守恒式 18 = 12 + 6 同值）。
+
+**（一）逐处「改前 → 改后」（file:line——as-of 本刻）**
+
+| # | file:line | 改前 | 改后 |
+|---|---|---|---|
+| 1 | `docs/design/AGENT-LOOP.md:1524` | T-CP17 行以在位形态登记——预期输出 = 「ESCALATE 4 处 + ENGINEERING-MODE 1 处 + TOOLS 1 处 + 设计档 §8 1 处含 C-13 逐字锚；旧漏述零残留」 | 退场注记 = 「已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:127`））」；输入列改 `—` |
+| 2 | `docs/design/AGENT-LOOP.md:1542` | AC-CP7 判据 = 「T-CP17 全绿：四处措辞锚逐字在位」 | 退场注记 = 「已退场（随 T-CP17 整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:127`））」 |
+
+**（二）机检（原文照录——改动后复跑）+ D6 回读**
+
+```text
+cd thincoder-vscode && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（131 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。EXIT=0
+cd thincoder-vscode && node scripts/check-ledger.mjs
+  → OK: thincoder-vscode/docs/TODO.md
+  → OK: thincoder-vscode/docs/TODO-archive.md
+  → 0 处违规（阻断——修掉）· 基线 0 条（**本基线必须保持为空**）。EXIT=0
+```
+
+- D6 回读：两处改动点逐处复读在位——`:1524` = 退场注记（整删 + 删除记录指针）；`:1542` = 退场注记（同指针）。
+- 行宽实测（本刻）：`AGENT-LOOP.md` `:1524` = 106 · `:1542` = 102（表格行；均 ≤300）。
+- 措辞复核：改后文案零「最小改动」类表述。
+- 判据面复扫（改动后——设计档 + 需求档全量）：字面族「T-CP17 / AC-CP7」除派单两行（已更正）外，余 = 设计档 `:1351` · 需求档 `:335`；计数 / 区间邻扫另得设计档 `:1493` · `:1570`。余命中 = 批档 / `TESTING.md` §8.1 删除清单 / 测试档头注 = as-of 记录面（D10）。详见（三）。
+
+**（三）边界 / 未做（如实）**
+
+- `test/**` 只读核（零改——仅读取实测）· 台账（`docs/TODO*.md`）零触碰 · #68 在改档零触碰 · CLI 仓零写入。
+- 本轮触碰面 = 两设计档具名行（`docs/design/AGENT-LOOP.md` `:1524` · `:1542`）+ 本档 §2——其外零动。派单射程内未做：无。
+- 范围外注记（发现即报，未动作——供父侧裁）：
+  - ① 同档 `:1351`（§18.1 对位索引）——F-CP2 行仍以「用例 = T-CP17 / 验收 = AC-CP7」活体映射登记（同判据面）。
+  - ② 同档 `:1493`（§18.6 清单注）「`T-CP1..T-CP19` 主力」区间含退场件（同句守恒数 18 = 12 + 6 已对）；同档 `:1570`（§18 计数（D3）行）「用例 19 条（T-CP1..T-CP19）· 验收 9（AC-CP1..AC-CP9）」含退场件（编号条目 / 在役 18 / 8 口径供裁）。
+  - ③ `docs/requirements/AGENT-LOOP.md` `:335`（§17.2 F-CP2 判定句）——「机检逐字锚……——AC-CP7」引用退场机检面与退场 AC（跨层——需求档面）。
+  - ④ 同类面另值例（散文锚整删 → 设计档登记未随）：`docs/design/WEBVIEW.md` `:1366` / `:1375`（T-LU5）· `docs/design/ADVISOR-CONVERGENCE.md` `:1129` / `:1142`（T-CB6）——类面未穷举，或需一次扫描清轮。
+
+### 收尾轮——chat-panel 拆档 as-built 回填 + 旧指认更新（#68 列报落地）（eng-designer · 2026-09-12）
+
+> 任务 = 父侧「收尾轮」派单（#68 列报）：① `docs/design/WEBVIEW.md` 三处「拆档实施 = 实施轮 E 在办，as-built 随其落定回填」→ **已落** + 实测回填；② #68 列报清单（引用 `chat-panel.test.mjs` 指认已迁出组者）→ 按内容定位更新。
+> 判据（唯一依据——不以先例为据）：**不得留与现态相抵的旧指认 / 待办句**（残留即示范）；**以 #68 实测为准**——余档 `test/chat-panel.test.mjs` = **270 行 / 9 例** · 新档 `test/chat-panel-messages.test.mjs` = **373 行 / 8 例**（守恒 **17 = 8 + 9**；本刻复测同值）。
+> 边界：`src/**` / `test/**` 实体零触碰（#72 另有派）· 台账零触碰 · 不碰在改轮 · 措辞未用「最小改动」类 · CLI 仓零写入。本小节 = append-only 追加（不回改上方任何既有行）。
+
+**（一）as-built 回填（`docs/design/WEBVIEW.md`——同族全量）**
+
+| # | file:line（改后） | 改前（片段） | 改后（片段） |
+|---|---|---|---|
+| 1 | `:311` | 「拆档实施 = **实施轮 E 在办**，as-built 随其落定回填」 | 「拆档实施 = **已落**（实施轮 E）：余档 `test/chat-panel.test.mjs` **270** 行 / 9 例 · 新档 `test/chat-panel-messages.test.mjs` **373** 行 / 8 例——守恒 **17 = 8 + 9**；`test/files.mjs` 登记 +1」（表格行——宽度豁免面，480 字符） |
+| 2 | `:994` | 同句 | 同式替换（表格行，341 字符） |
+| 3 | `:1163`–`:1164` | 同句 | 同式替换；非表格行按 ≤300 折行（`:1163` = 213 · `:1164` = 97） |
+
+- 同族复扫（设计 / 需求全量——「在办」/「落定回填」字面）：除上述回填行外零命中（残留 = 本档记录面 as-of 行——D10 口径，未动）。
+
+**（二）旧指认更新（逐处「改前 → 改后」——行号 as-of，以内容定位）**
+
+| # | file:line（改后） | 改前 → 改后（要点） |
+|---|---|---|
+| 1 | `docs/design/QUEUED-VISIBILITY.md:84`–`:85` | 「F-2 取消路由测试迁 chat-panel.test.mjs 保留覆盖。」→ 句尾 +「（2026-09-12 拆档后居 `test/chat-panel-messages.test.mjs`）」；超宽拆行（`:84` = 231 · `:85` = 92） |
+| 2 | `docs/design/AGENT-LOOP.md:1529` | 「（panel 假体——同 `chat-panel.test.mjs` 模式）」→「（panel 假体——同 `chat-panel-messages.test.mjs` 模式）」（桩面板面现居新档） |
+| 3 | `docs/batches/2026-09-12-VSC-CHILD-PERMISSION.md:138` | 「panel 假体——`chat-panel.test.mjs` 模式」→ 同式换名（本仓迁移档——父侧具名面） |
+| 4 | `docs/requirements/WEBVIEW.md:22` | 「用例 = `test/chat-panel.test.mjs` / `test/history-restore.test.mjs`」→「用例 = `test/history-restore.test.mjs`（恢复面——含「与 live 对齐」断言）；活卡面（`toolCall`/`toolOutput`/`toolResult` 接收）现无专属用例（原 `test/chat-panel.test.mjs` 内覆盖随 2026-09-07 测试清空退场——非拆档迁出面）」——**改判说明**：读源实测显示工具卡面不在拆档迁出组（迁出 = ① ② ③ ⑤ ⑦ ⑧ ⑪ ⑫ 八组——不含工具卡），且该指针所指活卡面覆盖已于 2026-09-07「测试清空」（3b974ae）退场——故未按新档名机械改指（那将是失实覆盖断言），改以实态收正；活卡面覆盖缺口是否补案，供父侧裁 |
+| 5 | `docs/design/REMOVE-POOL-SNAPSHOT.md:19` · `:44` · `:45`（+ 同族 `:62` · `:73`——同内容类，一并处置） | F-2 取消路由测试去向 → 逐处 +「（2026-09-12 拆档后居 `test/chat-panel-messages.test.mjs`）」 |
+| 6 | `docs/design/SESSION-FLOW-A.md:22` · `:56` | A1 桩测去向 → 逐处 + 居新档注（`:22` 句内注 · `:56` 表格行注「A1 桩测」限定） |
+| 7 | `docs/design/SESSION-FLOW-C.md:74` · `:90` | C1 组测试去向 → 逐处 +「（2026-09-12 拆档后分居两档——面板入口组居 `test/chat-panel-messages.test.mjs`）」 |
+
+- 非判据面（经内容核验、零触碰——逐条列明）：`SESSION-FLOW-A.md:33`（A2 用例——现仍居 `test/chat-panel.test.mjs`，非迁出组）· 同档 `:73`（测试族泛称）· `SESSION-FLOW-B.md:68` / `:97`（满限改档理由——485 为 as-of 值，非迁出组指认）· `SESSION-FLOW-C.md:48`（files.mjs 清单史）· `docs/design/WEBVIEW.md:507`（「chat-panel 用例」族称）。
+- 记录面（as-of 口径，D10）：本档 §5「实施轮 E」节、迁移档内 620/621 值等——零触碰。
+
+**（三）机检（原文照录——改动后复跑）+ D6 回读**
+
+```text
+cd thincoder-vscode && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（131 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。→ EXIT=0
+cd thincoder-vscode && node scripts/check-ledger.mjs
+  → OK: thincoder-vscode/docs/TODO.md · OK: thincoder-vscode/docs/TODO-archive.md
+  → 0 处违规（阻断——修掉）· 基线 0 条（本基线必须保持为空）。→ EXIT=0
+```
+
+- 改动前基线同组命令 = 同值（131 文件 · 0/0 · EXIT=0）。
+- D6 回读：改动面逐处复读在位（清单见上两表）；`docs/design/WEBVIEW.md` 行数 1865 → 1866（= 折行数 1——登记）；`docs/design/QUEUED-VISIBILITY.md` 85 → 86（同因）。
+
+**（四）边界 / 未做（如实）**
+
+- `src/**` / `test/**` 实体零触碰（只读核验）· 台账零触碰 · CLI 仓零写入；本轮触碰面 = 设计 / 需求 / 迁移档 8 档 + 本档 §2——其外零动。
+- 未做：无（派单射程全部落定）。
+- 范围外注记（发现即报，未动作）：
+  - ① `test/child-permission.test.mjs:7` / `:61` · `test/child-permission-wiring.test.mjs:58` 头注仍载「chat-panel.test 模式」旧称（`test/**` 零触碰面——#72 另有派）；
+  - ② `src/extension/panel-chat.mjs:498` 注释载「re-export 保面（chat-panel.test.mjs）」（`src/**` 零触碰面——前轮已列报）；
+  - ③ `docs/requirements/WEBVIEW.md` N-W5「每条功能需求有既有用例面」整句主张与 F-W4 活卡面无专属用例存在张力——收正后显性化，是否补案 / 改写供父侧裁；
+  - ④ SESSION-FLOW 族内 C'-era 队列语义残述（如 `SESSION-FLOW-A.md:22` 句内「队列含文本 + messageQueued 一次」——现测试 = 拒收无回执）——非拆档面，供父侧裁。
+
+### 收尾轮——散文锚退役「受益面旧登记」全量清扫（#70 落修）（eng-designer · 2026-09-12）
+
+> 任务 = 父侧派单（#70 §四 列报 #4；同判据）：散文锚退役批（`2026-09-12-PROSE-ANCHOR-RETIRE`）整删用例的设计/需求档登记面全量对齐。
+> **判据（唯一依据——不以先例为据）**：设计/需求档不得以「在位」形态登记已退场（整删/整改）的用例或 AC（残留即示范）；**以测试实态为准**（逐用例 grep 核）；**不得反向改测试**。
+> 来源 = 本仓 `TESTING.md` §8.1 逐条删除清单（VSC 端）+ 对端（CLI 仓）`TESTING.md` §11.3（CLI 端）——逐用例号/AC 号 grep 域 = 两仓 `docs/{design,requirements}`（不含 `_archive`）。
+> 射程口径（测试实态核验后）：**整删件（测试树内已零存目）** + 随其退场的 AC = 本条「在位形态登记」判据面；段删件（用例保号存活）按存活判，不属本判据面。
+> 边界：`test/**` 只读核 · 台账（`docs/TODO*.md`）零触碰 · 不碰在改档 · 措辞禁用「最小改动」类。
+
+**（一）重导基数——「仍以在位形态登记 ✗」全量清单（先重导、后逐处处置；行号 as-of 2026-09-12）**
+
+本仓面（源 = `TESTING.md` §8.1；命中 = 本仓 docs）：
+
+| # | 档 | 行 | 退场件 | 形态与落点 |
+|---|---|---|---|---|
+| 1 | `docs/design/AGENT-LOOP.md` | `:1351` | T-CP17 · AC-CP7 | §18.1 对位索引行（活体映射登记——#70 已列） |
+| 2 | 同档 | `:1493` | T-CP1..T-CP19 | §18.6 受影响文件表行（区间含退场件——#70 已列） |
+| 3 | 同档 | `:1570` | 用例 19 / 验收 9 | §18.9 计数行（含退场件——#70 已列） |
+| 4 | `docs/requirements/AGENT-LOOP.md` | `:335` | AC-CP7 | §17.2 F-CP2 判定句（引用退场 AC——#70 已列） |
+| 5 | 同档 | `:343` | T-CP1..T-CP19 | §17.3 N-CP3 度量句（区间含退场件——穷举新增） |
+| 6 | `docs/design/WEBVIEW.md` | `:1367` | T-LU5 | §13.6 用例表行（整删件在位——#70 已列） |
+| 7 | 同档 | `:1376` | AC-LU5 | §13.7 AC 行（回指退场件——#70 已列） |
+| 8 | `docs/design/ADVISOR-CONVERGENCE.md` | `:922` | T-CB1–T-CB6 | §15.0 裁定摘要（同型化声明） |
+| 9 | 同档 | `:934` | T-CB1–T-CB6 | §15.1 对位表行 |
+| 10 | 同档 | `:1065` | T-CB1–T-CB6 | §15.7 决策表行（「断言守」声明） |
+| 11 | 同档 | `:1075` | T-CB1–T-CB6（6 例） | §15.8 受影响文件表行 |
+| 12 | 同档 | `:1110` | T-CB6 | §15.10 D6 回读行 |
+| 13 | 同档 | `:1129` | T-CB6 | §15.11 用例表行（#70 已列） |
+| 14 | 同档 | `:1142` | T-CB6 | §15.12 AC-CB5 行（#70 已列） |
+| 15 | 同档 | `:1156` | 计数 6 / 5 | §15.13 计数行 |
+| 16 | `docs/design/PORTABILITY.md` | `:371` | T-V07–T-V13 | §5 测试面表行（区间含退场件） |
+| 17 | 同档 | `:372` | T-V14–T-V19 | §5 测试面表行 |
+| 18 | 同档 | `:397` | T-V07 | §6 用例表行（整删 4 条之一） |
+| 19 | 同档 | `:398` | T-V08 | §6 用例表行 |
+| 20 | 同档 | `:399` | T-V09 | §6 用例表行 |
+| 21 | 同档 | `:400` | T-V10 | §6 用例表行 |
+| 22 | 同档 | `:407` | T-V17 | §6 用例表行 |
+| 23 | 同档 | `:408` | T-V18 | §6 用例表行 |
+| 24 | 同档 | `:415` | AC-V01 | §7 AC 行（判据面随整删退场） |
+| 25 | 同档 | `:418` | AC-V04 | §7 AC 行（回指退场 3 例） |
+| 26 | 同档 | `:419` | AC-V05 | §7 AC 行 |
+| 27 | 同档 | `:421` | AC-V07 | §7 AC 行 |
+| 28 | `docs/design/TOOLS.md` | `:331` | T-TD-1~T-TD-4 | §12.4 文件表行 |
+| 29 | 同档 | `:348` | T-TD-1 | §12.5 用例表行 |
+| 30 | 同档 | `:351` | T-TD-4 | §12.5 用例表行 |
+| 31 | 同档 | `:357` | AC-TD-1 | §12.6 AC 行 |
+| 32 | 同档 | `:358` | AC-TD-2 | §12.6 AC 行 |
+| 33 | 同档 | `:366` | 计数 4 / 3 | §12.7 计数行 |
+| 34 | `docs/design/VSC-PROMPTS.md` | `:208` | T-PC-1 | 用例表行（整删件在位） |
+| 35 | 同档 | `:209` | T-PC-2 | 用例表行 |
+| 36 | 同档 | `:210` | T-PC-3 | 用例表行 |
+
+对端（CLI 仓）面（源 = `TESTING.md` §11.3（CLI 仓）；命中 = 对端 docs；按档归并——逐行明细见处置节）：
+
+| # | 档（CLI 仓） | 行（as-of） | 退场件 | 形态 |
+|---|---|---|---|---|
+| 37 | `AGENT-LOOP`（CLI 仓·设计）§19/§20 | `:1015` · `:1026` · `:1027` · `:1034` · `:1257` · `:1279` · `:1285` | T-NA1/T-NA2 · T-AP1–T-AP10（T-AP9/T-AP10 整删） | 文件表 + 用例表 + AC 行 |
+| 38 | `ADVISOR-CONVERGENCE`（CLI 仓·设计）§13 | `:355` · `:357` · `:414`–`:417` · `:422` · `:429` · `:431` · `:432` | T-RO1–T-RO6（T-RO1–T-RO4 整删） | 文件表 + 用例表 + AC 行 |
+| 39 | `ADVISOR-CONVERGENCE`（CLI 仓·设计）§16/§17 | `:1136` · `:1167` · `:1169` · `:1204` · `:1214` · `:1224` · `:1381` · `:1413` · `:1422` · `:1440` · `:1455` · `:1466` · `:1468` · `:1481` | T-CB6 · T-SK9（各整删） | 文件表 + 用例表 + AC 行 + 计数行 |
+| 40 | `TUI`（CLI 仓·设计）§12/§14 | `:951` · `:963` · `:986` · `:1215` · `:1250` · `:1269` · `:1283` · `:1308` | 「用例 10」（文档面）· T-AT8 | 同上 |
+| 41 | `MEMORY`（CLI 仓·设计）§9 | `:362` · `:411` · `:416` · `:446` | T-H16（区间 T-H1–T-H16） | 同上 |
+| 42 | `ENGINEERING-MODE`（CLI 仓·设计）§2/§3 | `:1202` · `:1240` · `:1386` · `:2167` · `:2177` · `:2240` · `:2300` · `:2363` · `:2369` · `:2428` | T74 · T76 · T34 · T105（各整删） | 同上 |
+| 43 | `PORTABILITY`（CLI 仓·设计）§6/§7 | `:411`–`:413` · `:421` · `:422` · `:433` · `:441` | T-10–T-12 · T-20 · T-21（各整删） | 同上 |
+| 44 | `PROMPT-SYSTEM`（CLI 仓·设计）§3/§8 | `:282`–`:284` · `:294` · `:631` · `:632` · `:636` | T-CL2–T-CL4 · T-TD1 · T-TD2 · T-TD6（各整删） | 同上 |
+| 45 | `SESSION`（CLI 仓·设计） | `:825` | AC-RS1（追加单点案，整删） | AC 行 |
+| 46 | `VERIFY-REDESIGN`（CLI 仓·设计）§4/§5 | `:70` · `:71` · `:76` | T-V9 · T-V10（各整删） | 用例表 + AC 行 |
+| 47 | `TURN-CAP-CONTINUE`（CLI 仓·设计） | `:100` · `:116` · `:118` · `:129` | T8 源码锚（整删） | 文件表 + 用例表 + AC 行 |
+| 48 | `ASYNC-RESULT-CONTAINER`（CLI 仓·设计） | `:77` | 一致性（四族 settle）案（整删） | 用例表行 |
+| 49 | `ADVISOR-CONVERGENCE`（CLI 仓·需求） | `:95` · `:267` | T-RO1–T-RO6 · T-CB1–T-CB6 | N6/N19 度量句 |
+
+- 合计 **49 组（本仓 36 行 + 对端 13 组 / 逐行约 60 行）**——处置落笔与计数联动见后续追加。
+- 已核、判为记录面（不动，逐条列明）：变更记录 / 修正轮记录（如 `ENGINEERING-MODE`（CLI 仓）`:2494`/`:2499`）· 拆分计划留档（明文「不执行 / 留档备查」——如 `LEDGER-SELF-CONTAINED（本仓·设计）§9` 块）· 批次档 / 删除清单本体 · 历史批注（如「第 33 批·修正轮」行）。
+- 处置形态（按在案落法）：**退场注记 + 删除记录指针**（「已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1 / §11.3（CLI 仓））」）；计数 / 区间与列表同改（D3）。
+
+**（二）逐处处置——两仓 131 处落修（退场注记 + 删除记录指针；行号 as-of 2026-09-12）**
+
+本仓（VSC 仓）面 41 处：`docs/design/AGENT-LOOP.md` 3（T-CP17/AC-CP7 · §18.6 区间 · §18.9 计数）·
+`docs/requirements/AGENT-LOOP.md` 4（F-CP2/AC-CP7 · N-CP3 区间 · F-LU2/AC-LU5 · N-LU2 区间）·
+`docs/design/WEBVIEW.md` 2（T-LU5 · AC-LU5）· `docs/design/ADVISOR-CONVERGENCE.md` 9（T-CB6 族 8 处 + CLI §16 描述行）·
+`docs/design/PORTABILITY.md` 12（T-V07–T-V10/T-V17/T-V18 · AC-V01/V04/V05/V07 · §5 两区间行）·
+`docs/design/TOOLS.md` 6（T-TD-1/T-TD-4 · AC-TD-1/AC-TD-2 · §12.4 区间 · §12.7 计数）·
+`docs/design/VSC-PROMPTS.md` 3（T-PC-1..3）· `docs/design/LEDGER-SELF-CONTAINED.md` 1（§9 拆分计划行注记）·
+`docs/requirements/PORTABILITY.md` 1（F1→AC-V01 判据面退场注）。
+
+对端（CLI 仓）面 90 处：`AGENT-LOOP（CLI 仓·设计）` 7（T-NA1/T-NA2 · T-AP1–T-AP10 区间 · T-AP9 · AC-NA2 · AC-AP3）·
+`ADVISOR-CONVERGENCE（CLI 仓·设计）` 24（T-RO 族 10 · T-CB 族 6 · T-SK 族 8）· `TUI（CLI 仓·设计）` 8（「用例 10」3 · T-AT8 族 5）·
+`MEMORY（CLI 仓·设计）` 4（T-H16 族）· `ENGINEERING-MODE（CLI 仓·设计）` 16（T74/T76 · T34 · T105 · AC49 · 区间/证据句/计划行）·
+`PORTABILITY（CLI 仓·设计）` 7（T-10–T-12 · T-20 · T-21 · AC-05 · AC-13）· `PROMPT-SYSTEM（CLI 仓·设计）` 9（T-CL2–T-CL4 · T-TD1/T-TD2/T-TD6 · AC-CL4 · §8.7 标题）·
+`SESSION（CLI 仓·设计）` 1（AC-RS1）· `VERIFY-REDESIGN（CLI 仓·设计）` 4（T-V9/T-V10 行 · AC1/AC5）· `TURN-CAP-CONTINUE（CLI 仓·设计）` 4（T8）·
+`ASYNC-RESULT-CONTAINER（CLI 仓·设计）` 1（一致性案）· `LEDGER-SELF-CONTAINED（CLI 仓·设计）` 2（拆分计划行 + §2 证据句）·
+`ADVISOR-CONVERGENCE（CLI 仓·需求）` 2（N6/N19）· `ENGINEERING-MODE（CLI 仓·需求）` 1（T97–T110 指针）。
+
+- 较（一）清单的新增穷举（落修中扩出）：本仓 +5——req `:343` · req `:251`/`:258` · `ADVISOR-CONVERGENCE :910` · req PORTABILITY `:23`；
+  对端 +16——`EM :1957`/`:2026`/`:2232`/`:2144`×2/`:1185` · `TUI :963` · `PS :271`/`:627` · `SESSION :825` · `VERIFY :70`/`:71`/`:76` · `TURN :118` · 两 LEDGER 计划行。
+- 处置形态 = 「已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（本仓）/ §11.3（CLI 仓））」· 区间 = 拆出在役集合 + 退场件名注 · AC = 「判据面退场（随 T-xx 整删）」· 计划行 = 与已落行同格注记（计划本体保留）。
+
+**（三）计数联动（D3——计数与列表同改）**
+
+| 档 | 改前 | 改后 |
+|---|---|---|
+| `AGENT-LOOP.md`（本仓）§18.9 | 用例 19 条（T-CP1..T-CP19）· 验收 9 | 编号 19 / 在役 18（T-CP17 退场）· 编号 9 / 在役 8（AC-CP7 退场） |
+| `ADVISOR-CONVERGENCE.md`（本仓）§15.13 | 用例 6（T-CB1–T-CB6） | 编号 6 / 在役 5 |
+| `TOOLS.md`（本仓）§12.7 | 用例 4（T-TD-1~4） | 编号 4 / 在役 2（T-TD-1/T-TD-4 退场） |
+| `PORTABILITY.md`（本仓）§5 两行 | T-V07–T-V13 / T-V14–T-V19 | T-V11–T-V13 在役 / T-V14–T-V16 + T-V19 在役 |
+| `AGENT-LOOP（CLI 仓·设计）` §20.6 | T-AP1–T-AP10 | T-AP1–T-AP8 在役 |
+| `TUI（CLI 仓·设计）` §14 两处 | 用例 8（T-AT1–T-AT8） | 编号 8 / 在役 7 |
+| `ADVISOR-CONVERGENCE（CLI 仓·设计）` 两处 | 6（T-CB1–T-CB6） / 10（T-SK1–T-SK10） | 在役 5 / 在役 9 |
+| `MEMORY（CLI 仓·设计）` | T-H1–T-H16 | T-H1–T-H15 |
+
+（其余为区间 / 指针行同改——不逐一列行号。）
+
+**（四）机检（原文照录——定稿后复跑，两仓）**
+
+```text
+cd thincoder-vscode && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（131 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。
+cd thincoder-vscode && node scripts/check-ledger.mjs
+  → OK ×2 档 · 0 处违规 · 基线 0 条（本基线必须保持为空）。— EXIT=0
+cd thincoder && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（136 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。
+cd thincoder && node scripts/check-ledger.mjs
+  → OK ×2 档 · 0 处违规 · 基线 0 条（本基线必须保持为空）。— EXIT=0
+```
+
+**（五）判据 grep 复跑（程序化重扫 + 逐行判读）**
+
+```text
+重扫域 = 两仓 docs/{design,requirements}（不含 _archive）；字面族 = §8.1 / §11.3（CLI 仓）整删件全量（含 AC）。
+结果：本仓 命中 80 行 → 过滤「注记 / 记录面」后余 14 行；
+      对端 命中 188 行 → 过滤后余 54 行。
+逐行判读：余行全部属四类（均非「在位形态登记已退场件」）——
+  ① 记录面：变更记录 / 修正轮记录 / 编号避让注 / 史留设计稿标注 / 删除清单本体（两仓 `TESTING.md`）；
+  ② 活用具「族名碰撞」（异族同号）：T8（resume / §19 面）· T30–T34（PROVIDER 面）· T92 / T96 · AC-RS1 / AC-RS10 等；
+  ③ 家族范围标题（内点退场件不构成字面用例号命中）：如 AC-CB1–AC-CB5 · AC-V01–AC-V14；
+  ④ 指针面：F8→AC-V07（余判据在役）· AC49 指针注（`EM :1078`——块内已注记）。
+→ **「在位形态登记已退场件」= 0。**
+```
+
+**（六）边界 / 未做（如实）**
+
+- `test/**` 只读核（零改）· 两仓台账 `docs/TODO*.md` 零触碰 · 措辞零「最小改动」类 · 未以先例为据。
+- 段删件（本仓 40 / 对端 29 条——用例保号存活）的断言行级档面对齐：不属「已退场用例在位登记」（用例在役）——未逐条重扫；如需断言级另轮。
+- 跨仓写入声明：派单含两仓 grep + 两仓机检收束——对端（CLI 仓）文档面本轮一并落修（131 处中对端 90 处）；与 #71/#72 若交叠由父侧裁（本侧无法定位其档清单）。
+- 在飞档：两仓 `LEDGER-SELF-CONTAINED`（设计）拆分计划行 = 与已落行同格注记（计划本体保留）。
+- D6 回读：机检复跑（上）+ 程序化重扫（上）+ 抽读（本仓 `AGENT-LOOP.md` `:1351`/`:1493`/`:1570` · `ADVISOR-CONVERGENCE.md` §15.11 · `PORTABILITY.md` §6/§7 · `TOOLS.md` §12.5；对端 `TUI.md` §14 · `MEMORY.md` §9 · `AGENT-LOOP（CLI 仓·设计）` §20.7 · `ENGINEERING-MODE（CLI 仓·设计）` §3.2）。
+
+### 收尾轮——段删件「断言级」档面对齐（量化 + 规模评估；停手上报）（eng-designer · 2026-09-12）
+
+> 任务 = 父侧直派（#73 未做列报落地项：段删件本仓 40 / 对端 29 条——用例保号存活、断言被删——的**断言级**档面对齐；先量后修）。
+> 判据（唯一依据——不以先例为据）：**设计/需求档不得载与测试现态相抵的断言/事实描述**（残留即示范）；**以测试实态为准**（读源核 ✓）；**不得反向改测试** ✗。
+> 方法四步：① 两仓 `TESTING.md` 段删清单（本仓 §8.1 / CLI 侧 §11.3）逐条重导（40 + 29 = 69 条 ✓）；② 逐条按用例号/AC 号 grep 两仓
+> `docs/{design,requirements}`（不含 `_archive`）；③ 以散文锚退役批两提交（VSC `60fc561` / CLI `97bcb11`）的**已删断言行 diff** 作实态基准逐处对读；
+> ④ 抽样 5 档实读对照（doc 句 ↔ 测试现体）。
+> 结论：**判定面 = 50 处**（本仓 25 + 对端 25；跨 13 档）——**临界**；不能出证 ≤50 → 按派单保守侧（超限侧）处置 = **停手上报**（本轮零修复；清单随附供裁）。
+
+**（一）量化重导——判定面 50 处（逐处；行号 as-of 本刻）**
+
+本仓（VSC）面 25 处：
+
+| # | 档（行） | 句面（与测试现态相抵的描述） | 对应段删件 |
+|---|---|---|---|
+| 1 | `docs/design/WEBVIEW.md:1733` | T-CL6 行「…且 `:empty` 规则在位（静态断言）」 | activity-closure T-CL6（base.css 常量 match 删） |
+| 2 | 同档 `:1189` | T-R7 行「…`:empty` 规则在位（静态断言）」 | activity-flow T-R7（同款） |
+| 3 | 同档 `:1221` | AC-R4 行「空区 children==0 且 `:empty` 规则在位」 | 同上 |
+| 4 | 同档 `:1222` | AC-R5 行「+ 静态样式断言（32vh / overflow-y / overscroll）」 | activity-flow T-R10（三条样式 match 删） |
+| 5 | `docs/design/ADVISOR-CONVERGENCE.md:596` | T-VG6 行「…旧正则定义 / 消费零残留」 | advisor-chain-guards T-VG6 |
+| 6 | 同档 `:621` | AC-VG5「`ADVISOR_FAILURE_TEXT` 定义 / 消费 grep 零命中」 | 同上 |
+| 7 | 同档 `:619` | AC-VG3「pin 来源 = 评审参数（grep 判据三式 ①②③…）」 | advisor-chain-guards T-VG8 |
+| 8 | 同档 `:617` | AC-VG1「`citations.mjs` 无全盘扫描（grep：无 `readdir` / glob 调用）」 | advisor-chain-guards T-VG11 |
+| 9 | 同档 `:1138` | AC-CB1「为纯函数（`compaction.mjs` 内无 I/O、无状态写入）」 | advisor-context-budget T-CB1 |
+| 10 | 同档 `:879` | AC-VG9「拒绝前缀…实现 grep 命中」 | advisor-guard-completion T-VG16 |
+| 11 | 同档 `:880` | AC-VG10「拒绝文案锚（…）grep 命中」 | 同族 T-VG19 |
+| 12 | 同档 `:881` | AC-VG11「实现锚（`eventsAtLaunch` / `advisorStale` / `settleAdvisorReview`）grep 对齐」 | 同族 T-VG20 |
+| 13 | `docs/design/TOOLS.md:349` | T-TD-2 行「`read.md` 含 Routing 段与 `repo_outline`/`code_search`/`lsp` 指向句」 | tool-descriptions T-TD-2 |
+| 14 | 同档 `:350` | T-TD-3 行「17 档…内联描述块零残留（全量…）」 | tool-descriptions T-TD-3 |
+| 15 | `docs/design/WEBVIEW.md:336` | AC-A6 行「`postPoolSnapshot` / `SNAPSHOT_ROLES` grep 零命中」 | async-visibility AC-A6/A7 |
+| 16 | `docs/design/AGENT-LOOP.md:1276` | T-CI-11 行「序表各 CLI 锚字面（git 块 / `OS: … Working directory:` / `OUTLINE_INJECT_PREFIX`…）」 | context-parity T-CI-11 |
+| 17 | 同档 `:1298` | AC-CI-5 行「双端序锚漂移检测」 | 同上 |
+| 18 | `docs/design/TURN-CAP-CONTINUE.md:157` | T11 行「① `agent.mjs` 种子落点源锚 ② 两循环续跑支 `_turnSeqBase` 各 1 命中」 | turn-across-segments T11 |
+| 19 | 同档 `:170` | AC2′ 行「（T10 绿 + T11 锚）」 | 同上 |
+| 20 | 同档 `:171` | AC3′ 行「（T11 锚）」 | 同上 |
+| 21 | `docs/design/WEBVIEW.md:1751` | T-CL24 行「悬浮回底钮在位」 | status-line T-CL24（scroll.js 子串删） |
+| 22 | 同档 `:1758` | 「③ `subagent status:"turn"` 发射：发射点机检…」 | status-line T-CL21a-3 |
+| 23 | `docs/design/MEMORY.md:299` | T-I9 行「词表锁」静态面（字面量集比对） | index-perception T-I9 |
+| 24 | 同档 `:309` | AC-I4 行同面 | 同上 |
+| 25 | `docs/design/VSC-PROMPTS.md:187`–`:189` | 修四机判①「`src/agent/setup.mjs` 含项目指令块 + skills 尾块注入」 | prompts-async-guidance 降级链③ |
+
+对端（CLI 仓）面 25 处：
+
+| # | 档（行） | 句面（与测试现态相抵的描述） | 对应段删件 |
+|---|---|---|---|
+| 26 | `docs/design/ENGINEERING-MODE.md:2298` | T32 行「prompt 非空、≠ CONSULT_BASE、槽序正确、warnings=[]」 | eng-designer-role T32 |
+| 27 | 同档 `:2306` | T40 行「grep §2.2 …六面均指向 eng-designer；无…残留」 | eng-designer-role T40 |
+| 28 | `docs/design/ADVISOR-CONVERGENCE.md:761` | AC-CG1「旧 `^` 锚定义与消费在 `advisor-settle.mjs` / `advisor-async.mjs` 零…」 | advisor-chain-guards T-CG5 |
+| 29 | 同档 `:765` | AC-CG5「grep：pin 由 `documents` / `object` / `designToken` 构建」 | advisor-chain-guards T-CG8 |
+| 30 | 同档 `:1019` | AC-SG1「`record-results.mjs` 含 `advisorIncompleteMarker` 消费（grep）」 | advisor-sync-accounting T-SG1 |
+| 31 | `docs/design/MEMORY.md:367` | 「行 9 README 字面定稿（L1–L4——T-H15 逐字 oracle…）」 | home-expansion T-H15 |
+| 32 | 同档 `:410` | T-H15 行「L1–L4 逐字命中（§9.4 字面定稿）…」 | 同上 |
+| 33 | 同档 `:420` | AC-H5 行「README 断言（T-H15）——…L1–L4 逐字命中…」 | 同上 |
+| 34 | `docs/design/AGENT-LOOP.md:1498` | T-HS11 行「扫描 `src/hooks.mjs` 源码 | 含 `Stop`；不含 `Notification`」 | hooks-stop T-HS11 |
+| 35 | 同档 `:1513` | AC-HS5 行「源码含 Stop、不含 Notification」 | 同上 |
+| 36 | `docs/design/ENGINEERING-MODE.md:2433` | T110 行「④`bin/thincoder.mjs` diff 空 + 其内 `ledger` 零命中（零接线）」 | ledger-surface T110 |
+| 37 | 同档 `:2247` | 「…`ledger` 零命中——T110④ 承载 N1…」 | 同上 |
+| 38 | 同档 `:1911` | 「（N1；文件域判据 = AC89 / T110④）」 | 同上 |
+| 39 | 同档 `:2414` | T96 行「归档档含键控条目（CLI/VSC 各 ≥2）…」 | ledger T96 |
+| 40 | 同档 `:2228` | 「VSC 归档档含「eng(enter）」·「Gitee open 巡检」…（L2 绿——T96）」 | 同上 |
+| 41 | `docs/design/MEMORY.md:529` | T-MS4 行「均经 scan 模块（grep/注入计数：无 `.all()` 全表物化）」 | memory-scan-bounds T-MS4 |
+| 42 | `docs/design/AGENT-LOOP.md:1774` | AC-O3 行「T-SM4 绿 + 三消费点 grep（释放调用在位）」 | subagent-memory-bounds T-SM4 |
+| 43 | `docs/design/PROMPT-SYSTEM.md:281` | T-CL1 行「11 个标题串全部命中（两源同一字面串）」 | prompts-dual-source T-CL1 |
+| 44 | 同档 `:268` | AC-CL1 行「11 个标题串 **逐字**驻留（§3.3 T-CL1 断言表）」 | 同上 |
+| 45 | 同档 `:633` | T-TD3 行「CLI pe 双源全文 | TD_PE_EN/ZH 命中」 | prompts-dual-source T-TD3 |
+| 46 | 同档 `:634` | T-TD4 行「新增锚串全集」 | prompts-dual-source T-TD4 |
+| 47 | `docs/design/ADVISOR-CONVERGENCE.md:1465` | AC-SK1「…`designReviewOutcome` 为纯函数（`review-streak.mjs` 无 I/O、无 import `src/`）」 | design-review-streak-guard T-SK1 |
+| 48 | `docs/design/ENGINEERING-MODE.md:2367` | T72 行「…`docs/README.md` §3.7 规范子串在位」 | doc-consistency T72 |
+| 49 | `docs/design/ACP-CLIENT.md:428` | T17 行「文法单一权威（源读断言）…`bridge.mjs` 与 `subagent-blocks.mjs` 自该模块 import…无 `SUB_PREFIX_RE` 定义」 | acp-channel T17 |
+| 50 | 同档 `:434` | AC1 行「T14/T15 通过 + 源码接线锁…」 | acp-channel AC1 |
+
+**（二）抽样 5 档对照（doc 句 ↔ 测试现体——实读；含 1 例对照面）**
+
+| 档 | doc 句 | 测试现体（现读） | 判 |
+|---|---|---|---|
+| activity-closure（VSC） | `WEBVIEW.md:1733`「区 children 0 且 `:empty` 规则在位（静态断言）」 | `test/activity-closure.test.mjs:146-153`——仅 `children 0` + `matches(":empty")`（DOM 行为）；base.css 规则静态检查已删 | 相抵 ✓ |
+| tool-descriptions（VSC） | `TOOLS.md:349-350`「Routing 段与指向句」「内联描述块零残留」 | `test/tool-descriptions.test.mjs:36-48`——仅 25 档存在性 + description 计数 == 25 | 相抵 ✓ |
+| prompts-async-guidance（VSC） | `VSC-PROMPTS.md:187-189`「机判① `setup.mjs` 含尾块」 | `test/prompts-async-guidance.test.mjs:109-119`——仅 ② 场景表无 AGENTS/skills 槽（① 源断言已删） | 相抵 ✓（1 处） |
+| eng-designer-role（CLI） | `EM:2298`「≠ CONSULT_BASE、槽序正确」· `:2306` 六面 grep | `test/eng-designer-role.test.mjs:118-124`（仅 非空+槽表+warnings）· `:263-268`（仅 §2.8 slice 非空） | 相抵 ✓（2 处） |
+| advisor-chain-guards（CLI） | `AVC:761`「旧锚零残留」· `:765`「grep：pin 由 … 构建」 | `test/advisor-chain-guards.test.mjs:150-160` · `:239-271`——行为断言保留；两条静态 grep 已删 | 相抵 ✓（2 处） |
+| （对照）activity-flow 的 T-CL19 / T-R9 面 | `WEBVIEW.md:1746`（行为断言）· `:151`（机制事实——产品侧真值） | 现体行为断言保留 / 事实与产品一致 | 非判定面（不列） |
+
+**（三）规模判定与处置（供裁）**
+
+- 判定面 = **50 处**（本仓 25 + 对端 25；13 档）；另近证行若干、待核 ≤5（如 `VSC-PROMPTS.md:218` AC-PC-2 尾块两态面、`WEBVIEW.md:1736` T-R9 面）——均未计入。
+- 判定 = **临界（≈50）**：不能出证 ≤50 → 按派单保守侧（超限侧）处置 = **停手上报**；**本轮零修复**（不自行开无底洞）。
+- 建议：① 按（一）清单另派修复轮——更正形态照在案样例（`EM:2300` / `:2428` 的「已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3）」），段删件用同款「已退场（段删—…）」注记 + 区间/计数同改（D3）；
+  ② 或裁「按 ≤50 侧直修」——本清单即修复任务书（13 档、单轮可收）；③ 修复轮须避在改档（#73/#75/#76 面）与记录面（D10）。
+
+**（四）机检 + 判据 grep 复跑（原文照录——本刻实跑）**
+
+```text
+cd thincoder-vscode && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（131 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。
+cd thincoder-vscode && node scripts/check-ledger.mjs
+  → OK ×2 档 · 0 处违规 · 基线 0 条（**本基线必须保持为空**）。— EXIT=0
+cd thincoder && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（136 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。
+cd thincoder && node scripts/check-ledger.mjs
+  → OK ×2 档 · 0 处违规 · 基线 0 条（**本基线必须保持为空**）。— EXIT=0
+```
+
+- 判据 grep 复跑（段删件全量重导——程序化）：本仓 40 条（29 唯一 ID）→ 两目标域命中 114 行（除删除清单本体 83 行 / 9 档）；对端 29 条（23 唯一 ID）→ 命中 182 行（除本体 147 行 / 22 档——含族名碰撞）。
+  逐行判读后判定面 = 本仓 25 + 对端 25；余 = 记录面（D10）/ 族名碰撞 / 机制事实（三类别于（二）对照行与（五）列明口径）。
+
+**（五）边界 / 未做（如实）**
+
+- `test/**` 只读核（零改）· 两仓台账 `docs/TODO*.md` 零触碰 · 在改档（#73/#75/#76 面）未碰 · CLI 仓本轮核读零写入 · 措辞零「最小改动」类 · 未以先例为据（判据句 = 派单判据原文）。
+- 未做（明列）：**本轮零修复**——处置 = 超限侧（停手上报）；全量清单 = （一）（50 处）+ 待核 ≤5。
+- 记录面甄别口径（不列判定面）：删除清单本体（两仓 `TESTING.md`）· 变更记录 / 轮次留痕（D10）· 族名碰撞（两仓 T30/T32/T40/T17/AC1 等异族同号）· 机制事实句。
+
+### 收尾轮（#75 供裁两项）——A3/Stop 公式句 + `_suspQueue` 族残述按现态收正（eng-designer 自写 · 2026-09-12）
+
+> 任务 = 父侧直派「收尾轮」：#75 供裁两项——① A3/Stop 公式句（SESSION-FLOW-A 系）② `_suspQueue`/`messageQueued` 族残述（WEBVIEW §8.1 + §8 头注 + SESSION §7 + ARCHITECTURE）。
+> 出处先读核：实盘 §5 无字面「#75」小节——对应实体 = 本档「#71 列报落地」小节（内部环裁决表 #1 = Deferred：A3/Stop 公式句 `:37`/`:40`/`:43`/`:69`——同族 `:14`；三、范围外注记 ① = WEBVIEW §8.1 队列机制 + 头注 `:519` 自相抵 + SESSION.md:409 + ARCHITECTURE.md:195）——已按任务文本逐项执行，未受影响。
+> 判据（唯一依据——不以先例为据）：**设计档不得载与实装/测试现态相抵的机制描述或公式句（残留即示范）**；以读源实测为准；不得反向改代码/测试。
+> 边界：`src/**` · `test/**` · `webview/**` 只读核（零改）· 台账零触碰 · #76/#77 面零触碰 · 措辞零「最小改动」类 · 未以先例为据。
+> 行号 = as-of 落笔后实测（定位按内容；「原」列 = 改前 as-of）。族内扩得项（非派单具名）逐条披露于表内。
+
+**一、逐处「改前 → 改后」（16 处 / 4 档）**
+
+**（一）A3/Stop 公式句族（10 处）**
+
+| # | file:line（原行） | 改前（片段） | 改后（片段） |
+|---|---|---|---|
+| 1 | `SESSION-FLOW-A.md:14`–`:15`（原 `:14`） | `S._turnState !== "idle" || on`（需求 F-A3/A4） | `S._turnState === "running"` 派生（A3 原式 state≠idle 经 F-6 收窄——现态；源 = `webview/loading.js:57` · `WEBVIEW.md` §8.4）；同轮折行（原行 264 字符——加源指针后超限，按标点折行、内容零改） |
+| 2 | 同档 `:38`（原 `:37`） | 同公式（设计 A3/A4 行） | 同收正式（源 = `webview/loading.js:57`） |
+| 3 | 同档 `:41`（原 `:40`） | 「同步更新为 state!==idle 派生」 | 「同步更新为 running 派生（F-6 收窄——源 = `test/webview-turnstate.test.mjs:6` 收窄注）」 |
+| 4 | 同档 `:44`（原 `:43`） | 「susp 派生 → state≠idle 派生」（文档锚） | 「susp 派生 → running 派生——A3 原式 state≠idle 经 F-6 收窄；现态」 |
+| 5 | 同档 `:55`（原 `:54`）· 族内扩得 | 「Stop 公式 state≠idle 派生」（受影响表 loading.js 行） | 「Stop 公式 running 派生（A3 原式 state≠idle 经 F-6 收窄——现态）」 |
+| 6 | 同档 `:58`（原 `:57`）· 族内扩得 | 「③ 断言翻转 state≠idle」（受影响表 test 行） | 「③ 断言翻转 running 派生（F-6 收窄——现态）」 |
+| 7 | 同档 `:70`（原 `:69`） | 「AC-A3 Stop state≠idle 派生」 | 「AC-A3 Stop running 派生（现态——A3 原式 state≠idle 经 F-6 收窄；…）」 |
+| 8 | 同档 `:83`（新增行） | —（无） | 变更记录 +1 行：「2026-09-12：A3/Stop 公式句按现态收正（…；证据 = `webview/loading.js:57` · `test/webview-turnstate.test.mjs:6` 收窄注 · `WEBVIEW.md` §8.4）」 |
+| 9 | `SESSION.md:405`（原 `:404`）· 族内扩得 | 「webview Stop 显（state≠idle 派生）」 | 「webview Stop 显（running 派生——A3 原式 state≠idle 经 F-6 收窄；现态）」 |
+| 10 | `WEBVIEW.md:519`（原 `:519`） | 「Stop 派生扩为 state≠idle」（§8 头注） | 「Stop 派生（A3 原式 state≠idle 经 F-6 收窄为 running——见 8.4）」（消与 §8.4 `:573` 自相抵） |
+
+**（二）`_suspQueue`/`messageQueued` 族（6 处）**
+
+| # | file:line（原行） | 改前（片段） | 改后（片段） |
+|---|---|---|---|
+| 11 | `WEBVIEW.md:526`–`:529`（原 `:526`/`:528`–`:529`） | 「一律入队 `panel._suspQueue` + 回执 `messageQueued`——回合尾 FIFO 顺序消费（零丢失）」；「回显先于入队——运行中命令发送 = 用户气泡 + "message queued"」 | 「一律**拒收**（不排队、无回执——排队机制与排队回执消息类型已废；拒收警告明示，不静默丢）」；「回显先于路由——running→拒收（先于回显——无假气泡、无排队回执）」 |
+| 12 | 同档 `:1794`（新增行） | —（无） | §15 变更记录 +1 行：「2026-09-12（行文按现态收正——纯文档，实现面零改）：§8.1 回合入口守卫按现态改写（…`_suspQueue`/`messageQueued` 残述清零）；§8 头注 Stop 派生句同步 §8.4（…消自相抵）。源 = `src/extension/panel-messages.mjs` · `webview/loading.js:57`」 |
+| 13 | `SESSION.md:406`（原 `:405`） | 「守卫 running→排队」 | 「守卫 running→拒收」 |
+| 14 | 同档 `:410`–`:411`（原 `:409`–`:410`） | 「标题期消息入队 `_suspQueue`（routeUserTurn running 分支直入队——同队列同排空——零丢失）」 | 「标题期消息拒收（routeUserTurn running 分支——无排队无回执——拒收警告明示；源 = `src/extension/panel-messages.mjs`）」 |
+| 15 | 同档 `:25`（新增行） | —（无） | 变更记录 +1 行：「2026-09-12：§7 标题触发时机行文按现态收正（标题期消息拒收——无排队无回执；webview Stop 显 = running 派生…）」 |
+| 16 | `ARCHITECTURE.md:196`–`:197`（原 `:195`–`:196`） | 2026-09-02 修复轮条目载 `_suspPending/_suspQueue`（无退场标记） | 原文保留 + 退场注记：「§8.4。后注：_suspPending/_suspQueue 已废——现态 = running 拒收无排队（源 = `src/extension/panel-messages.mjs`）」 |
+
+**二、读源核证（现态——落笔前实读）**
+
+- **Stop 公式现态**：`webview/loading.js:57`（abort 可见性 = `S._turnState === "running"` 派生；`:56` Send 同派生点）· 收窄注 = `test/webview-turnstate.test.mjs:6`（「Stop 派生由 state≠idle 收窄为 state==="running"」）· 收窄登记 = `WEBVIEW.md`:573（§8.4 F-6）。
+- **队列现态（已废机制）**：`src/extension/chat-panel.mjs:218`（running→warning+return——先于回显 `:226`）· `src/extension/panel-messages.mjs:65`（running→warning+return；`:61` 注「消息一律拒收不排队（排队机制与排队回执 UI 消息类型全删）」）。
+- **全仓复扫**：`_suspQueue`/`messageQueued` 在 `src/**` + `webview/**` + `test/**` 零命中（唯一留存 = `test/chat-panel-messages.test.mjs:28` 退场注「_suspQueue 已删（排队机制废弃）」）；`_suspPending` 退役注 = `src/extension/panel-chat.mjs:14`（C2 布尔退役）。
+
+**三、机检（原文照录——实跑）+ D6 回读**
+
+```text
+cd thincoder-vscode && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（131 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。EXIT=0
+cd thincoder-vscode && node scripts/check-ledger.mjs
+  → OK: thincoder-vscode/docs/TODO.md · OK: thincoder-vscode/docs/TODO-archive.md
+  → 0 处违规（阻断——修掉）· 基线 0 条（**本基线必须保持为空**）。EXIT=0
+```
+
+- D6 回读：4 档 16 处逐处复读 = 改后字面（表内「原」→「改后」逐条对位）；两族全档复扫——改后仅存「已废/收窄」正确式（残余两处 = 刻意保留的退场注记与本节同款记录行）。
+- 折行披露：`SESSION-FLOW-A.md:14` 原 264 字符——加源指针后按标点折行（`:14`–`:15` 两行；内容零改）。
+
+**四、族内扫描列报（未落修——供裁）**
+
+- `WEBVIEW.md:1856`（§15 2026-09-09 A 批历史条目「§8.4 Stop 派生 susp → state≠idle」）——记录面 as-of 条目，本刻零触碰（同档已有 2026-09-12 收正行）。
+- `SESSION.md:35`（变更记录 2026-09-09 条目「路由守卫排队 + webview Stop 显」）——记录面，由同档新增 `:25` 条目超替。
+- `ARCHITECTURE.md:198`（「中止路径排队消息零丢失」）· `:236`（「R15 排队用户指令合并」）——记录面条目、未具名；如需一并处置，建议形态 = 同 `:196` 后注。
+- `SESSION-ACTIVITY-REVISED.md:55` / `:75`——「收窄为 running」正确式（核过，非残述，零动作）。
+
+**五、边界 / 未做（如实）**
+
+- `src/**` · `test/**` · `webview/**` 只读核零改 · 台账 `docs/TODO*.md` 零触碰 · #76/#77 面零触碰 · 未以先例为据 · 措辞零「最小改动」类。
+- 未做：无（派单两项全落）；列报见「四」（供裁——均为记录面条目，处置形态已建议）。
+
+### 收尾轮——段删件「断言级」档面对齐 50 处执行 · VSC 面 25 处（eng-designer 自写 · 2026-09-12）
+
+> 任务 = 父侧「收尾轮——段删件断言级对齐（50 处）执行」派单；清单出处 = 本档 §2「收尾轮——段删件「断言级」档面对齐（量化 + 规模评估；停手上报）」小节（一）50 行全量清单（父侧裁定：边界「>50 停」、50 ≤ 50 → 直修）。
+> 判据（唯一依据——不以先例为据）：**设计/需求档不得载与测试现态相抵的断言描述**（残留即示范）；**以实态为准**（读源核 ✓）；**不得反向改测试** ✗。
+> 更正形态 = 派单指定「已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1 / §11.3（CLI 仓））」——落形按仓自指（本仓面 = `TESTING.md` §8.1；CLI 面 = §11.3）；同仓引用不加仓标（D19）；逐处表内 file:line = as-of 改后（D4）。
+> 核法：① 逐处读 doc 现文（按内容定位——与 as-of 行号复核）；② 对读 PROSE 批两提交（VSC `60fc561` / CLI `97bcb11`）已删断言行 diff（实态基准——与 #77 同源）；③ 逐档读测试现体（本仓面 12 档）确认退场面 ∉ 现体。
+> 边界：`test/**` 只读核（零改）· 台账零触碰 · 措辞零「最小改动」类 · 未以先例为据；落笔窗口实测无并行写者（近刻写面 = #75 轮，已收口记录）；CLI 面 25 处随本小节续落（收束段另附录）。
+
+**一、逐处「改前 → 改后」（本仓面 25 处 / 7 档）**
+
+| # | file:line（改后） | 改前（与测试现态相抵片段） | 改后（落形） |
+|---|---|---|---|
+| 1 | `docs/design/WEBVIEW.md:1733` | T-CL6 预期「区 children 0 且 `:empty` 规则在位（静态断言）」 | +「——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；DOM 层 `matches(":empty")` 命中断言保留」 |
+| 2 | 同档 `:1189` | T-R7 预期「`:empty` 规则在位（静态断言）」 | 同款退场注记 +「DOM 层命中断言保留」 |
+| 3 | 同档 `:1221` | AC-R4「空区 children==0 且 `:empty` 规则在位」 | 「空区 children==0；`:empty` 规则静态断言——已退场（…§8.1）；块入区即现」 |
+| 4 | 同档 `:1222` | AC-R5「+ 静态样式断言（32vh / overflow-y / overscroll）」 | 「= T-R10 行为面（pin / 不强拉 / 重 pin）；静态样式断言——已退场（…§8.1）」 |
+| 5 | `docs/design/ADVISOR-CONVERGENCE.md:596` | T-VG6 预期「旧正则定义 / 消费零残留」 | 「…（行为面保留）；旧正则定义 / 消费零残留（grep 面）——已退场（…§8.1）」 |
+| 6 | 同档 `:621` | AC-VG5「`ADVISOR_FAILURE_TEXT` 定义 / 消费 grep 零命中」 | 「…（行为面）；`ADVISOR_FAILURE_TEXT` …grep 零命中——已退场（…§8.1）」 |
+| 7 | 同档 `:619` | AC-VG3「pin 来源 = 评审参数（grep 判据三式，全真：①②③）」 | 「…（grep 判据三式）——已退场（…§8.1）」（三式细则随退场删除——记录存 `§8.1:116`） |
+| 8 | 同档 `:617` | AC-VG1「`citations.mjs` 无全盘扫描（grep：无 `readdir` / glob 调用）」 | 「…（行为面）；`citations.mjs` 无全盘扫描（grep）——已退场（…§8.1）；命中根报告段在位」 |
+| 9 | 同档 `:1138` | AC-CB1「为纯函数（`compaction.mjs` 内无 I/O、无状态写入）」 | 「…（五组 × 逐断言 + 确定性）；纯函数静态面——已退场（…§8.1）」 |
+| 10 | 同档 `:879` | AC-VG9「拒绝前缀 … 实现 grep 命中」 | 「…（行为面逐字断言保留）；实现 grep——已退场（…§8.1）；…」 |
+| 11 | 同档 `:880` | AC-VG10「拒绝文案锚（…）grep 命中」 | 「…（行为面）；拒绝文案锚（…）grep——已退场（…§8.1）；…」 |
+| 12 | 同档 `:881` | AC-VG11「实现锚（`eventsAtLaunch` / `advisorStale` / `settleAdvisorReview`）grep 对齐」 | 「…（行为面）；实现锚（…）grep——已退场（…§8.1）；回执冻结句逐字在位」 |
+| 13 | `docs/design/TOOLS.md:349` | T-TD-2「`read.md` 含 Routing 段与 `repo_outline`/`code_search`/`lsp` 指向句」 | 「…——已退场（…§8.1）」 |
+| 14 | 同档 `:350` | T-TD-3「内联描述块零残留（全量…）」 | 「…——已退场（…§8.1）；现体 = 工具级 description 计数 == 25」 |
+| 15 | `docs/design/WEBVIEW.md:336` | AC-A6「`postPoolSnapshot` / `SNAPSHOT_ROLES` grep 零命中（保持现状）」 | 「…——已退场（…§8.1）；现体 = 本档在册断言（`test/files.mjs`）保留」 |
+| 16 | `docs/design/AGENT-LOOP.md:1276` | T-CI-11 预期「序表各 CLI 锚字面…出现序与 §17.4 单调一致」 | 「序表各 CLI 锚字面 + 出现序单调一致检测——已退场（…§8.1）；现体 = 兄弟仓 CLI 源在位（fail-closed 显式失败）」 |
+| 17 | 同档 `:1298` | AC-CI-5「双端序锚漂移检测…CLI 侧序变即红」 | 「T-CI-11 绿（…fail-closed…）；双端序锚漂移检测——已退场（…§8.1）」 |
+| 18 | `docs/design/TURN-CAP-CONTINUE.md:157` | T11 预期「锚驻留（fail-when-unchanged）；无第二复位点」 | 「——已退场（…§8.1）；用例保号（断言体空——续跑行为面由 T9/T10 覆盖）」 |
+| 19 | 同档 `:170` | AC2′「（T10 绿 + T11 锚）」 | 「（T10 绿）；T11 锚——已退场（…§8.1）」 |
+| 20 | 同档 `:171` | AC3′「（T11 锚）」 | 「（T11 锚）——T11 锚已退场（…§8.1）」 |
+| 21 | `docs/design/WEBVIEW.md:1751` | T-CL24「悬浮回底钮在位 + 状态行无 scrolled 段」 | 「悬浮回底钮在位（静态面）——已退场（…§8.1）；状态行无 scrolled 段 + ctx 段 pct 形态保留」 |
+| 22 | 同档 `:1758` | 「③ `subagent status:"turn"` 发射 …：发射点机检」 | 「…发射点机检——已退场（…§8.1）+ webview 侧 T-CL19」 |
+| 23 | `docs/design/MEMORY.md:299` | T-I9 预期「`"file-changes"` 零命中；reason ∈ 七词表」 | 「…——已退场（…§8.1）；现体 = 运行抽检 `no-index`」 |
+| 24 | 同档 `:309` | AC-I4「`"file-changes"` 全仓 grep 零命中」 | 「…（现体 = 运行抽检 `no-index`…）；静态面（字面量集比对 + 全仓 grep）——已退场（…§8.1）」 |
+| 25 | `docs/design/VSC-PROMPTS.md:188` | 修四机判①「`src/agent/setup.mjs` 含项目指令块 + skills 尾块注入」 | 「…——已退场（…§8.1）；② / ③ 款不变」 |
+
+- 注记全形（逐处同形、按仓自指）：`已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）`——表内以（…§8.1）略记；行宽（含表内全形）≤300（宽度门复核见收束段）。
+
+**二、读源核验（判据中项——退场面 ∉ 测试现体）**
+
+- 基准 diff：VSC `60fc561` 对 12 档测试的已删断言行逐档提取（程序化——`git show` 过滤）。
+- 现体复核（读文件）：T-CL6/T-R7 = DOM 层 `matches(":empty")` 保留（`activity-closure:152` · `activity-flow:179/182`）；T-R10/T-CL24 = 行为面保留、静态串删（`activity-flow:207` · `status-line:150-155`）；
+  T-VG6/VG8/VG11 = 行为面保留、grep 面删（`advisor-chain-guards:215/248/306`）；T-CB1 = 五组 + 确定性保留、导入表比对删（`advisor-context-budget:56-68`）；
+  T-VG16/VG19/VG20 = 行为面保留、实现锚 grep 删（`advisor-guard-completion:55/130/172`）；T-TD-2/T-TD-3 = 存在性 + 计数保留（`tool-descriptions:36-48`）；
+  T-CI-11 = fail-closed 在位断言保留、序锚族删（`context-parity:370-374`）；T11 = 空体保号（`turn-across-segments:187-191`）；T-I9 = 运行抽检保留、静态面删（`index-perception:229-234`）；
+  AC-A6/A7 = 在册断言保留（`async-visibility:399-401`）；T-CL21a-3 = toolPanel 面保留、发射点机检删（`status-line:72-80`）；降级链③ = ② 款保留、① 款删（`prompts-async-guidance:109-119`）。
+- 反向禁令遵守：`test/**` 零文件改动（只读核）。
+
+**三、本面机检（原文——改动后复跑）**
+
+```text
+cd thincoder-vscode && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（131 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。→ EXIT=0
+```
+
+**四、边界 / 未做（如实）**
+
+- 台账 `docs/TODO*.md` 零触碰 · `src/**` 零触碰 · CLI 仓写入随本小节后段（收束段集齐）。
+- 未做 = CLI 面 25 处（随后执行）；本面 25/25 落定。
+
+### 收尾轮——段删件「断言级」档面对齐 50 处执行 · CLI 面 25 处 + 两仓收束（eng-designer 自写 · 2026-09-12）
+
+> 承接本档 §2 上节（VSC 面 25 处）——本小节 = CLI 面 25 处 + 面扫描扩得 2 处 + 两仓收束机检 + 判据复扫 + D6。
+> 判据 / 边界 = 上节头注（同源）；CLI 面注记全形 = `已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3）`（按仓自指——CLI 面 §11.3）；表内 file:line = as-of 本刻（改后）。
+
+**一、逐处「改前 → 改后」（CLI 面 25 处 / 6 档）**
+
+| # | file:line（改后） | 改前（与测试现态相抵片段） | 改后（落形） |
+|---|---|---|---|
+| 26 | `docs/design/ENGINEERING-MODE.md:2297` | T32 预期「prompt 非空、≠ CONSULT_BASE、槽序正确、warnings=[]」 | 「非空（>500）、槽表行 + warnings=[]；≠ CONSULT_BASE / 槽序正确——已退场（…§11.3）」 |
+| 27 | 同档 `:2305` | T40 预期「六面均指向 eng-designer（F2/§2.5 为指向句）；无“父代理更新设计文档”残留；勾销无“进设计档”字样」 | 「六面路由句类正向锚 + 残留 + 勾销字样——已退场（…§11.3）；现体 = §2.8 切片非空」 |
+| 28 | `docs/design/ADVISOR-CONVERGENCE.md:761` | AC-CG1「`ADVISOR_FAILURE_TEXT` 旧 `^` 锚定义与消费…零残留（grep 零命中）」 | 「…零残留（grep）——已退场（…§11.3）」 |
+| 29 | 同档 `:765` | AC-CG5「定锚内容来源 = 评审参数（非模型输出——grep：pin 由 documents / object / designToken 构建）」 | 「…（grep：pin 由 … 构建）——已退场（…§11.3）」 |
+| 30 | 同档 `:1019` | AC-SG1「`record-results.mjs` 含 `advisorIncompleteMarker` 消费（grep）」 | 「…——已退场（…§11.3）」 |
+| 31 | `docs/design/MEMORY.md:367` | 「行 9 README 字面定稿（L1–L4——T-H15 逐字 oracle；C1e 落笔字面）」 | 「原 T-H15 逐字 oracle 面已退场（…§11.3）；落笔字面表本体保留」 |
+| 32 | 同档 `:410` | T-H15 预期「L1–L4 逐字命中（§9.4 字面定稿）∧ 示例值展开 == join(HOME, …)」 | 「L1–L4 逐字命中——已退场（…§11.3）；示例值展开 == join(HOME, …) 保留」 |
+| 33 | 同档 `:420` | AC-H5「说明句 + 三字段注释 L1–L4 逐字命中（字面 = §9.4 字面定稿）」 | 「…——已退场（…§11.3）；示例值展开后可用（绝对、无 `~` 前缀）保留」 |
+| 34 | `docs/design/AGENT-LOOP.md:1498` | T-HS11 预期「含 `Stop`；不含 `Notification`」 | 「头部事件表四类齐（名单锁）；含 `Stop` / 不含 `Notification` 逐串断言——已退场（…§11.3）」 |
+| 35 | 同档 `:1513` | AC-HS5「源码含 Stop、不含 Notification」 | 「T-HS11 绿（头部事件表四类齐）；源码含 Stop / 不含 Notification 逐串断言——已退场（…§11.3）」 |
+| 36 | `docs/design/ENGINEERING-MODE.md:2432` | T110④「`bin/thincoder.mjs` diff 空 + 其内 `ledger` 零命中（零接线）」 | 「…——已退场（…§11.3）」 |
+| 37 | 同档 `:2246` | AC89「…其内 `ledger` 零命中——T110④ 承载 N1【headless 零新增输出】」 | 「——`ledger` 零命中机判面已退场（…§11.3）」 |
+| 38 | 同档 `:1911` | 「（N1；文件域判据 = AC89 / T110④）」 | 「…——T110④「`bin/thincoder.mjs` 内 `ledger` 零命中」已退场（…§11.3）」 |
+| 39 | 同档 `:2413` | T96 预期「归档档含键控条目（CLI/VSC 各 ≥2）；活文件 `- [x]` = 0；组计数 = 未决数」 | 「归档档键控条目——已退场（…§11.3）；活文件 `- [x]` = 0 + 组计数 = 未决数（L2 绿）」 |
+| 40 | 同档 `:2227` | AC79 尾「执行后键控抽验：CLI 归档档含【已全部完成】…；VSC 归档档含【eng(enter)】…」 | 「执行后键控抽验（…）——已退场（…§11.3）；活文件组计数 = 未决数 保留」（两行并为一行） |
+| 41 | `docs/design/MEMORY.md:529` | T-MS4 预期「均经 scan 模块（grep/注入计数：无 `.all()` 全表物化）」 | 「scan 模块调用面——已退场（…§11.3）；现体 = 块常量值锁（`SCAN_CHUNK_ROWS` == 2000）」 |
+| 42 | `docs/design/AGENT-LOOP.md:1774` | AC-O3「T-SM4 绿 + 三消费点 grep（释放调用在位）」 | 「T-SM4 绿（释放语义行为面）；三消费点 grep——已退场（…§11.3）」 |
+| 43 | `docs/design/PROMPT-SYSTEM.md:268` | AC-CL1「11 个标题串 **逐字**驻留（§3.3 T-CL1 断言表）」 | 「…——已退场（…§11.3）；现体 = `##` 块计数 == 11（两源）」 |
+| 44 | 同档 `:281` | T-CL1 预期「11 个标题串全部命中（两源同一字面串）」 | 「…——已退场（…§11.3）；现体 = `##` 块计数 == 11」 |
+| 45 | 同档 `:633` | T-TD3 预期「TD_PE_EN/ZH 命中」 | 「TD_PE_EN/ZH 全文锚命中——已退场（…§11.3）」 |
+| 46 | 同档 `:634` | T-TD4「新增锚串全集」 | 「新增锚串全集（全文锚驻留核对）——已退场（…§11.3）；零维护者注（常量集面）保留」 |
+| 47 | `docs/design/ADVISOR-CONVERGENCE.md:1465` | AC-SK1「`designReviewOutcome` 为纯函数（`review-streak.mjs` 无 I/O、无 import `src/`）」 | 「…纯函数静态锚——已退场（…§11.3）」 |
+| 48 | `docs/design/ENGINEERING-MODE.md:2366` | T72 预期「…；`docs/README.md` §3.7 规范子串在位」 | 「…——已退场（…§11.3）」 |
+| 49 | `docs/design/ACP-CLIENT.md:428` | T17 预期「`bridge.mjs` 与 `subagent-blocks.mjs` 自该模块 import；`subagent-blocks.mjs` 无 `SUB_PREFIX_RE` 定义」 | 「导出三符号（行为/再导出面保留）；import 面 + 零定义（源读断言）——已退场（…§11.3）」 |
+| 50 | 同档 `:434` | AC1「T14/T15 通过 + 源码接线锁：`src/acp.mjs` 含…、`src/cli/make-agent.mjs` 含…」 | 「T14/T15 通过（+ 工具常量名单锁）；源码接线锁（…）——已退场（…§11.3）」 |
+
+**面扫描扩得（2 处——非派单具名清单；同判据更正并披露）**：两处均由本批反扫发现，证据 = PROSE 批已删断言行 diff + 测试现体双证：
+
+| # | file:line（改后） | 改前 | 改后 |
+|---|---|---|---|
+| 扩1 | `docs/design/ENGINEERING-MODE.md:2073` | AC17「…prompt **非空且 ≠ CONSULT_BASE**，槽序 = …」 | 「…**非空且 ≠ CONSULT_BASE**（`≠ CONSULT_BASE` 断言面已退场（…§11.3）；现体 = 非空（>500）+ warnings=[]）；」 |
+| 扩2 | `docs/design/AGENT-LOOP.md:1512` | AC-HS4「…+ grep 断言 `ctx.toolName != null` 守卫在位（`src/hooks.mjs`）」 | 「…——该 grep 断言已退场（…§11.3）」 |
+
+**二、读源核验（判据中项——退场面 ∉ 测试现体；CLI 面）**
+
+- 基准 diff：CLI `97bcb11` 对 13 档测试的已删断言行逐档提取（程序化——`git show` 过滤）。
+- 现体复核（读文件）：T32 = 槽表 + 长度 + warnings、≠/槽序删（`eng-designer-role:118-124`）；T40 = §2.8 切片非空（`:263-267`）；T-CG5/T-CG8 = 行为面保留、grep 面删（`advisor-chain-guards:150/239`）；
+  T-SG1 = 行为面、record-results grep 删（`advisor-sync-accounting:48`）；T-H15 = 示例值展开行为保留、L1–L4 逐字块删（`home-expansion:189-196`）；T-HS11 = 头部事件表四类齐、逐串断言删（`hooks-stop:251-254`）；
+  T110 = ①②③ 保留、④ headless 删（`ledger-surface:264-284`）；T96 = 活文件 + 组计数保留、键控条目删（`ledger:131-133`）；T-MS4 = 块常量锁保留、scan 调用面删（`memory-scan-bounds:81-83`）；
+  T-SM4 = 释放语义行为面保留、消费点 grep 删（`subagent-memory-bounds:80-90`）；T-CL1 = `##` 块计数保留、标题串逐字删（`prompts-dual-source:75-79`）；T-TD3/T-TD4 = 零维护者注正则保留、全文锚删（`:113-116`）；
+  T-SK1 = 矩阵行为保留、纯函数静态锚删（`design-review-streak-guard:43-60`）；T72 = 跨仓引用面保留、README 子串删（`doc-consistency:201-212`）；T17 = 三符号 + 再导出保留、源读面删（`acp-channel:235-243`）；AC1 = 常量名单锁保留、源码锁删（`:247-249`）。
+- 反向禁令遵守：两仓 `test/**` 零文件改动（只读核）。
+
+**三、收束机检（原文照录——两仓四命令，实跑）**
+
+```text
+cd thincoder && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（136 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。→ EXIT=0
+cd thincoder && node scripts/check-ledger.mjs
+  → OK: thincoder/docs/TODO.md · OK: thincoder/docs/TODO-archive.md
+  → 0 处违规（阻断——修掉）· 基线 0 条（**本基线必须保持为空**）。→ EXIT=0
+cd thincoder-vscode && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（131 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。→ EXIT=0
+cd thincoder-vscode && node scripts/check-ledger.mjs
+  → OK: thincoder-vscode/docs/TODO.md · OK: thincoder-vscode/docs/TODO-archive.md
+  → 0 处违规（阻断——修掉）· 基线 0 条（**本基线必须保持为空**）。→ EXIT=0
+```
+
+**四、判据复扫（#77 程序复刻——程序化：逐处片段 → 两仓 13 档全量扫 → 注记/未注记二分）**
+
+- 注记计数（程序化）：**VSC 25 / CLI 27（= 25 + 扩得 2）——与清单逐处对表命中**；注记全形逐处在位（见上两表「改后」列）。
+- 未注记命中复扫（原文——按片段族）：剩余 **17 行**，逐行判读分三类（**均非本清单判定面**，登记供裁）：
+  ① 机制叙述 / 沿革句（描述被替换的旧机制为叙述对象）：`ADVISOR-CONVERGENCE.md`（VSC）`:371`/`:470`；`ADVISOR-CONVERGENCE.md`（CLI）`:552`/`:560`；`WEBVIEW.md:228`（已撤对象叙述）；`AGENT-LOOP.md`（CLI）`:1434`（matcher 形态机制句）。
+  ② 记录面（D10——零触碰）：`ENGINEERING-MODE.md:2502`（变更记录行）；`ADVISOR-CONVERGENCE.md`（VSC）`:407`/`:845`（节标题）；`（CLI）:1345`（凭证卫生叙述）。
+  ③ 待核邻句（见「五」列报）：`ADVISOR-CONVERGENCE.md`（CLI）`:766`/`:913`；`WEBVIEW.md:231`；`ENGINEERING-MODE.md:2221`；`TURN-CAP-CONTINUE.md`（VSC）`:159`；`ACP-CLIENT.md:435`。
+- 判定面结论：**50 处全部转为注记面；余 17 行按上式三分**——若父侧按更严口径复判，③ 类 6 行即候补（逐条证据随「五」）。
+
+**五、列报（待核 ≤6——不动作，供父侧裁）**
+
+1. `ADVISOR-CONVERGENCE.md`（CLI）`:766` AC-CG6「`citations.mjs` 无全盘扫描（grep）」——无本批段删记录承载（VSC 同面 = 本批 #8 已修）；是否曾断言 / 归另轮，供裁。
+2. 同档 `:913` AC-CG13「拒绝文案锚…实现 grep 命中」——同 1（VSC 同面 = #11 已修）。
+3. `WEBVIEW.md:231`「红线：不复活 `postPoolSnapshot`/`SNAPSHOT_ROLES`（grep 零命中保持）」——与 #15 同面邻句；「保持」措辞与已删机检面的关系供裁。
+4. `ENGINEERING-MODE.md:2221` AC76 子串族（「已全部完成」/「eng(enter)」）——与 #39/#40 同关键词族；子串族 AC 与 T96 承载关系供裁。
+5. `TURN-CAP-CONTINUE.md:159` 用例面声明「源码锚（T11）」——与 #18–20 同面邻句（声明体）；是否入类供裁。
+6. `ACP-CLIENT.md:435` AC2 行——`TESTING.md` §11.3 `:467` 记「整删」；所载子串在 `src/tools/question.md:11` 仍在位（事实真）——非相抵（判据在测试面已删、陈述在产品面仍真）；是否补退场注记供裁。
+
+**六、D6 回读**
+
+- 批次档：本小节 + 上节全文复读在位（§2 尾部——`### 收尾轮——段删件「断言级」…` 两节、§3 前）。
+- 13 档逐处复读（抽读 + 程序化计数）：改动面 52 处（VSC 25 + CLI 27）逐处 = 「改后」列字面；注记计数 52/52 在位（`已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE` 逐档分布：WEBVIEW 7 · ADVISOR-CONVERGENCE-VSC 8 · TOOLS 2 · AGENT-LOOP-VSC 2 · TURN-CAP 3 · MEMORY-VSC 2 · VSC-PROMPTS 1；
+  ENGINEERING-MODE 9 · ADVISOR-CONVERGENCE-CLI 4 · MEMORY-CLI 4 · AGENT-LOOP-CLI 4 · PROMPT-SYSTEM 4 · ACP-CLIENT 2）。
+- 行宽：改动后两仓宽度门复跑全绿（见「三」）。
+
+**七、边界 / 未做（如实）**
+
+- `test/**` 只读核（两仓零改）· 台账 `docs/TODO*.md` 零触碰 · 记录面（D10 / as-of 行）零触碰 · 措辞零「最小改动」类 · 未以先例为据（判据句 = 派单判据原文）。
+- 并行面：#78 在改档未遇重叠（落笔窗口实测唯一近刻写者 = #75 轮，已收口记录）；如父侧知重叠面请另指。
+- 未做：列报 6 条（待核——不动作）；#77 原「待核 ≤5」中的 `VSC-PROMPTS.md:218` / `WEBVIEW.md:1736` 两项本刻未纳入本次扫描域判定（未动作，供裁）。
+- D3：受影响档无独立「N 条断言 / 区间」声明需同改（受影响声明均为定性句；各注记内原值保留；用例保号——区间引用条数不变）。
+
+（附·折行披露：本两小节收束中由宽度门捕获 1 行超宽——CLI 小节 D6 行 347 字符（as-of 捕获时）——已按标点折行、内容零改；折行后两仓四命令复跑全绿：`thincoder` doc-width 136 档 0 超宽 · 台账 EXIT 0；`thincoder-vscode` doc-width 131 档 0 超宽 · 台账 EXIT 0。）
+
 ## §3 设计评审（评审子代理写）
 
 ### 轮次 1（评审子代理）——本端转写（父侧）
@@ -825,6 +1703,665 @@ cd thincoder-vscode && node test/run-fast.mjs
   - 🔵#5 计数口径（父侧「14 档 / 40 处」vs 本表 39 删 + 1 保留）→ **Not an issue**：对账成立——本刻实测 VSC 全量精确占位 = 40 = 39 删 + 1 保留；如父侧 40 另有口径请按本表逐档明细复点。
 - 附（判据外同族 · 名单外档——登记供下轮合扫）：`_（待实施）_` ×3 + `_（待核销）_` ×1（`2026-09-10-VSC-MIRROR`）· `_（待核销）_` ×1（`2026-09-10-BATCH-SEGMENT-TOOL`）。
 - **修正轮：0 轮**（无 must-fix；Deferred 1 = 边界裁定面）。**终态 = clean**（🔴 0）。
+
+### 5.10 实施轮 D（eng-coder 自写 · 2026-09-12）——child-permission 拆档（D18 四条）+ T63③ 用例名更正
+
+> 任务 = 父侧「实施轮 D」派单：① `test/child-permission.test.mjs`（504 > 500 硬限无豁免）按设计档 §9 / D18 四条拆分——迁出「引擎接线组」6 例 + 组内 2 helper → 新档 `test/child-permission-wiring.test.mjs`；`test/files.mjs` +1 登记；② `test/doc-consistency.test.mjs` T63③ 用例名字面按现义更正（断言体零改）。边界：台账零触碰 · `src/**` 零触碰 · 设计档 / 需求档零触碰（他轮在写）· 切点不得自行更改。
+
+**一、交付摘要（逐档实测——`readFileSync(...).split("\n").length` 口径）**
+
+| # | 产物 | 拆分前 | 拆分后 | 判据 |
+|---|---|---|---|---|
+| 1 | `test/child-permission.test.mjs`（余档） | 504 行 / 18 例 | **368 行 / 12 例** | ≤500 ✓（D18 ④） |
+| 2 | `test/child-permission-wiring.test.mjs`（新档） | — | **218 行 / 6 例** | ≤500 ✓（D18 ④） |
+| 3 | 守恒式 | — | `test(` 计数 **18 = 12 + 6** | 设计 §9（守恒句） |
+
+- 迁出 = 设计 §9 选定案逐字落位：T-CP6 / T-CP7 / T-CP19 + T-CP10 / T-CP11 / T-CP15 + 组内 helper `launchEscalateWithAsk` / `driveRunChild`；**相对 HEAD 逐字节全等**（程序化比对：block A 79 行 · block B 51 行 · 夹具 3 段——fix 轮后复比续真）；用例编号保留 `T-CP*` 原号；断言零改 / 零增 / 零删。
+- 新档自持（D18 ②）：imports = `node:*` + `../src/**` + 两个 test-seam（config-io / session-io）——**零跨档 import**（不引 `./child-permission.test.mjs`）、零 webview / DOM 依赖；新档 `node --test` 独立 **6/6**，余档 **12/12**。
+- 切点零交叉（D18 ③）：两组按注释块边界整体迁移（含组头注释）；余档段注释逐块归属留存例，零悬空段头。
+- 头注：余档删「测试档登记口径 = 不拆分」句（设计 §9 明文）+「手法」句内已迁出的「引擎接线」子句改迁出注记；新档自带头注（迁出注记 + 判据 + 夹具自持声明）。
+- `test/files.mjs`：新档登记 +1（:77）；余档既有条目「测试档登记不拆分」子句随拆分改拆出指向（拆后为假）。
+- T63③：`test/doc-consistency.test.mjs:132` 旧义名（`存量不达基线降报告（不阻断）/ 基线外即新增（阻断方向）`）→ 现义名（`基线机制（夹具域——可读可写 · 过滤语义保留）/ 生产判据 = 基线必须保持为空（非空即 FAIL）`）；**断言体零改**；节注释（:131）同轮对齐。
+
+**二、决策透明表（落笔时自行判定项）**
+
+| # | 决策 | 理由 / 证据 |
+|---|---|---|
+| D-1 | 迁出范围含尾随空行（:231–:310 · :345–:396 = 132 行；设计区间 :231–:309 · :345–:395 = 130 行） | 切点按注释块边界取整（D18 ③）；差值 = 边界空行归属，判据无依赖；余档两段间保单个空行 |
+| D-2 | 余档清 5 个仅迁出组使用的 import（`childOwnerLabel` / `runChild` / `escalateAction` / `launchEscalateAsync` / `cancelSubagent`）——368 = 504 − 132 − 4 | 迁出后零孤儿 import；余档 `node --test` 12/12 证不使用 |
+| D-3 | 余档头注「手法」句第 4 子句（引擎接线）改迁出注记（2 行） | 该句自述本档夹具，拆后与实况不符；与设计删句同旨（头注须反映拆分后现实） |
+| D-4 | 新档夹具 = 迁出组最小集 + tmp config/sessions 隔离（`before` / `after`）；`sleep` 由 `until` 消费 | 设计 §9 契约面（头注 + imports + before/after + sleep/until + stubPanel / writeToolSink / settleMsgs）；零 webview 基建（D18 ②） |
+| D-5 | `test/files.mjs` 余档条目「测试档登记不拆分」子句改拆出指向 | 与 D-3 同旨（登记侧对应句拆后为假）；+1 登记 = 设计 §9 明文 |
+| D-6 | 头注需求指针（原携仓标 + 文档后缀路径连写）→ 去仓标、保留本仓可解析直指（评审轮 fix） | 该需求节已随 C 桶接收入本仓（本仓档 §17 节头在 :311 · F-CP1 在 :334）；原形态 = 误导性悬空 |
+| D-7 | `test/doc-consistency.test.mjs:139` 用例体注释旧义措辞按现义同步；`test/files.mjs` 既有「R2 措辞锚」覆盖 token 删除（T-CP17 已随 PROSE 批整删） | 评审轮 fix（🔵 两条）；措辞面，零断言影响 |
+
+**三、机检证据（原文照抄——fix 轮后收束复跑）**
+
+```text
+cd thincoder-vscode && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（125 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。EXIT=0
+cd thincoder-vscode && node scripts/check-ledger.mjs
+  → OK: thincoder-vscode/docs/TODO.md · OK: thincoder-vscode/docs/TODO-archive.md
+  → 0 处违规（阻断——修掉）· 基线 0 条（**本基线必须保持为空**）。EXIT=0
+cd thincoder-vscode && node test/run-fast.mjs
+  → tests 607 · pass 568 · fail 0 · skipped 39。EXIT=0
+cd thincoder-vscode && npm run lint
+  → check-syntax: 291 JS files OK。EXIT=0
+逐档实测：余档 368 / 新档 218；test( 计数 12 / 6（守恒 18 = 12 + 6）；两档单独 `node --test` = 18/18。
+```
+
+**四、内部环（in-child §18——轮次 + 裁决 + 终态）**
+
+- **内部 explore 偏差审计 · 轮次 1**：终态 = **CLEAN**（PARTIAL 0 · SILENT-SIMPLIFICATION 0 · DOC-DRIFT 0 · OUT-OF-LIST 0）；逐条 PASS；披露三项（头注子句 / 登记子句 / 节注释——设计列举之外的完善）独立判 **transparent**（清单内文件、注释面、已披露）。
+- **内部 advisor 代码评审 · 轮次 1**：**VERDICT: pass**（🔴 0 · 🟡 2 optional · 🔵 3）。裁决：
+  - 🟡#1 两档头注需求指针悬空（仓标 + 对端路径形态连写）→ **Fixed**（D-6）。
+  - 🟡#2 设计 T-VS32 ②「合成非空基线 ⇒ FAIL」在 doc-consistency 面无 spawn 承载（ledger 侧有同款反证 `ledger-check.test.mjs:105`–`:121`）→ **Deferred**：超本轮射程（本轮该档面 = T63③ 名改、断言体零改）——上报父侧裁（补造反证 or 登记覆盖归属）。
+  - 🔵#3 `doc-consistency.test.mjs:139` 旧义措辞 → **Fixed**（D-7）。🔵#4 `files.mjs`「R2 措辞锚」token（T-CP17 已删）→ **Fixed**（D-7）。🔵#5 余档 368 > 300 咨询线 → **Not an issue**（D18 ④ 以 ≤500 硬限为准；切点用户固定）。
+  - 引注说明：宿主机检对 2 条引注报未匹配——本面独立复核：设计档 T-VS32 行现行文本含「合成非空基线 ⇒ FAIL」，差异 = 该档并发在改之行位漂移（`git status` 载 M），无实质影响；另一条引注为转写乱码，不计。
+- **fix round 1（评审后）**：Fixed 3（D-6 / D-7 ×2）；复跑：三档 `node --test` **30/30**（28 pass + 2 slow-skip）· 迁出块复比逐字节全等续真 · 全快层 607 / 568 / 0 / 39 · lint / 宽度 / 台账全绿。
+- **终态：clean**（🔴 0；审计 CLEAN；评审 pass；Deferred 1 = 超射程上报项）。
+
+**五、边界 / 未做（如实）**
+
+- 台账 `docs/TODO*.md` 零触碰（主 agent 写域）· `src/**` 零触碰 · 设计档 / 需求档零触碰（并行写域）。
+- 未做：T-VS32② spawn 反证补造（Deferred——待父侧裁）；设计档 as-built 回填（368 / 218 实测值）与 §13 变更记录（设计写域）。
+- 范围外注记（发现即报，未动作）：`docs/design/AGENT-LOOP.md` `:1493` / `:1499` 仍载「测试档登记口径 = 不拆分」旧口径句（拆后为假；更新归属未列入设计 §9 受影响表）；`test/child-permission.test.mjs:360` T-CP18 名含「tool-gates 五函数在位…」而体仅两断言（名 / 体差——源出 PROSE 批段删，审计 QUESTION 面）。
+
+### 5.11 收尾轮（#64 待裁落地）——T-CP18 名/体对齐 + T-VS32② spawn 反证（eng-coder 自写 · 2026-09-12）
+
+> 任务 = 父侧「收尾轮——两处测试面小项（#64 待裁落地）」派单：① `test/child-permission.test.mjs:360` T-CP18 用例名按体收（断言体零改）；② `test/doc-consistency.test.mjs` 补 T-VS32② spawn 反证（临时夹具写非空基线 ⇒ FAIL + 退出码 1；用后复原）。
+> 判据（唯一依据——不以先例为据）：**用例名必须与断言体相符**（名/体一致）· **机检判据须有机器承载**（无承载 = 空转）。
+> 边界：台账 `docs/TODO*.md` 零触碰 · `src/**` 零触碰 · #61/#65（在改档）零触碰；本轮改动面自限于两测试档 + 本档 §5 追加。
+
+**一、逐项「改前 → 改后」（file:line）**
+
+| # | file:line | 改前 | 改后 |
+|---|---|---|---|
+| 1 | `test/child-permission.test.mjs:360` | 名 = 「T-CP18 结构（AC-CP8）：execute-tools ≤500、tool-gates 五函数在位且 ≤300、测档源读改指新档」（名含体无之点——源出 PROSE 批段删） | 名 = 「T-CP18 结构（AC-CP8）：execute-tools ≤500、tool-gates ≤300」——与体恰两断言一一对应（`:365` execute-tools ≤500 · `:366` tool-gates ≤300）；**断言体零改** |
+| 2 | `test/doc-consistency.test.mjs:205`–`:220` | 「合成非空基线 ⇒ FAIL」（设计 T-VS32②）无 spawn 承载——判据空转面 | 新 `slow()` 例「T-VS32 ② 反证」：临时夹具写非空基线 → 真 spawn ⇒ 断言 退出码 1 · `FAIL(基线)` · 固定句 · 「新增违规 0 条」归因 · 条目录入回显；复原（entries 清空）后同夹具复跑 ⇒ 退出码 0 |
+| 3 | `test/doc-consistency.test.mjs:10`–`:14`（头注随动） | 头注④与慢层说明未含新例 | ④ 补「非空即 FAIL（spawn 面反证）」一行；慢层逐例点名（T64 + T-VS32 两例；观测 90ms–1.9s） |
+
+**二、验证证据（原文照录——实跑；均为最终态复跑）**
+
+```text
+① 单跑（全量层）——cd thincoder-vscode && set THINCODER_TEST_FULL=1&& node --test test/doc-consistency.test.mjs
+   ✔ T-VS32 ② 反证：合成非空基线 ⇒ FAIL + 退出码 1（fail-closed——入基线 = 例外 = 违规） (187.3015ms)
+   ℹ tests 12 · pass 12 · fail 0 · skipped 0 —— EXIT=0（同跑含 T64 / T-VS32 / 仓库扫描）
+
+② 单跑——node --test test/child-permission.test.mjs
+   ✔ T-CP18 结构（AC-CP8）：execute-tools ≤500、tool-gates ≤300 (0.5816ms)
+   ℹ tests 12 · pass 12 · fail 0 —— EXIT=0
+
+③ 非空基线反证 · 主行程原文（临时域重放——与 T-VS32 ② 用例断言同文本）
+   === EXIT = 1 ===
+   OK(宽度): 扫描域全部 .md 无 >300 字符单行（0 文件）。
+   FAIL(基线): 基线清单非空（2 条）——**本基线必须保持为空**：新增违规一律红，不得再入基线（入基线 = 例外 = 违规）。
+       V2|docs/design/probe.md|五条|5|3|list
+       V3|docs/batches/2026-09-11-probe.md
+   一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。
+   FAIL(一致性): 0 条违规（V1 段引用 / V2 计数 / V3 批次档 §3 / V4 跨仓形态）——**修掉**；本基线必须保持为空，不得再入基线（入基线 = 例外 = 违规）。
+
+④ 机检——node scripts/check-doc-width.mjs（本小节追加后复跑）
+   OK(宽度): 扫描域全部 .md 无 >300 字符单行（131 文件）。
+   一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。—— EXIT=0
+
+⑤ 机检——node scripts/check-ledger.mjs
+   OK: thincoder-vscode/docs/TODO.md · OK: thincoder-vscode/docs/TODO-archive.md
+   0 处违规（阻断——修掉）· 基线 0 条（**本基线必须保持为空**）。—— EXIT=0
+
+⑥ 快层——node test/run-fast.mjs
+   tests 608 · pass 568 · fail 0 · cancelled 0 · skipped 40（存量红 = 0——如实）—— EXIT=0
+```
+
+**三、内部环（in-child §18——轮次 / 裁决 / 终态）**
+
+- **内部 explore 偏差审计 · 轮次 1**：终态 = **CLEAN**（PARTIAL 0 · SILENT-SIMPLIFICATION 0 · DOC-DRIFT 0 · OUT-OF-LIST 0）；断言链逐条静态追踪独立复核成立；其运行时验证项因审计会话无 shell 未执行——机械证据（单跑 / 机检 / 快层）由本侧实跑补足（见「二」）。
+- **内部 advisor 代码评审 · 轮次 1**：**VERDICT = pass**（🔴 0 · 🟡 0 · 🔵 2）。
+
+| # | 级 | 发现（评审方原文要点） | 裁决 |
+|---|---|---|---|
+| 1 | 🔵 | 头注慢层描述（`:13`–`:14`）归属歧义：「T-VS32（含…仓库扫描面…）」两读法各有一处不贴（T64 非 T-VS32 例 · 仓库扫描例非慢层） | **Fixed**（本轮）——慢层逐例点名（T64 + T-VS32 两例）；复跑全绿 |
+| 2 | 🔵 | 余档 367 行 > 300 行咨询线（≤500 硬限内）——#64 拆分固定切点现状，本轮 ±0 | **Not an issue**（登记——D18 ④ 裁决在案；不重复动作） |
+
+- **fix round 1（评审后）**：Fixed 1 项（头注逐例点名——注释面、判据零改）；复跑：doc-consistency 单跑 12/12 · child-permission 单跑 12/12 · 宽度 131 档全绿 · 台账 EXIT 0 · 快层 608/568/0/40。
+- **终态：clean**（🔴 0；审计 CLEAN；评审 pass——🔵 均注释面 / 在案登记，不阻塞）。
+
+**四、决策透明表（落笔时自行判定项）**
+
+| # | 决策 | 理由 / 证据 |
+|---|---|---|
+| S-1 | 反证用「空扫描域 + 非空基线」隔离形态（新增违规 0 条下仍退出码 1） | 归因最纯：阻断只能来自基线非空本身——旧「存量降报告」语义下会以退出码 0 放行，断言恰锁死新语义 |
+| S-2 | 复原步骤入例（entries 清空 → 同夹具复跑 ⇒ 退出码 0） | 「用后复原夹具」的机器承载；写面仅临时域，真仓基线零触碰 |
+| S-3 | 新例归 slow 层 | spawn 真行程（观测 90ms–1.9s）——重 IO 归册；快层自动 skip、全量照跑 |
+| S-4 | 头注慢层描述按评审 #1 逐例点名 | 原括注归属歧义——fix 轮落地 |
+
+**五、边界 / 未做（如实）**
+
+- 未做：无——#64 待裁项已全落地；判据面全量收束。
+- 范围外注记（发现即报，未动作）：设计档两处对 T-CP18 的登记仍载已删断言项（`docs/design/AGENT-LOOP.md:1525` · `docs/design/TESTING.md:128`）——更新归设计写域；`_fv.log:187` 保留改名前的用例名（日志快照，无判据依赖）。
+- 基线复原实证：`test/fixtures/doc-consistency-baseline.json` 与 `test/fixtures/ledger-baseline.json`（本仓）· 对端仓同路径两档——实读 `entries` 均为 `[]`（未被污染）。
+
+### 实施轮 E（eng-coder 自写 · 2026-09-12）——chat-panel 测试档拆档（F12 + D18 四条）
+
+> 任务 = 父侧「实施轮 E」派单：① `test/chat-panel.test.mjs`（621 > 500 硬限无豁免）拆分——余档 + 新档（命名按面）；② 守恒实证（`test(` 计数 + 用例名/号逐一保留）；③ 新档夹具自持（独立 `node --test` 通过）；④ `test/files.mjs` +1 登记；⑤ 收束机检 + D6 回读。
+> **判据（唯一依据——不以先例为据）**：**F12「>500 硬限无豁免」**；**切点判据 = 设计档 `docs/design/LEDGER-SELF-CONTAINED.md` D18 四条**（① 组内同面；② 迁出组夹具 ⊆ 新档自持集；③ 切点零交叉（按注释块边界）；④ 两档 ≤500 且余量充足）。
+> 边界：台账 `docs/TODO*.md` 零触碰 · `src/**` 零触碰 · `docs/design/**` 与 `docs/requirements/**`（他轮在写）零触碰 · 措辞未用「最小改动」类 · 未以先例为据。
+
+**一、交付摘要（逐档实测——`readFileSync(...).split("\n").length` 口径）**
+
+| # | 档 | 拆前 | 拆后 | 判据 |
+|---|---|---|---|---|
+| 1 | `test/chat-panel.test.mjs`（余档） | 621 行 / 17 例 | **270 行 / 9 例** | ≤500（D18④——余量 230） |
+| 2 | `test/chat-panel-messages.test.mjs`（新档） | — | **373 行 / 8 例** | ≤500（D18④——余量 127） |
+| 3 | `test/files.mjs` | 82 行 | **83 行（+1）** | 新档入册（显式清单制——`:16`） |
+| 4 | 守恒式 | — | `test(` 计数 **17 = 8 + 9** | 交付要求 ② |
+
+- **切点（D18① 面判）**：迁出 = 「面板入口（消息 / 控制 / 状态）面」（桩面板驱动）——① INPUT-LOCK 拒收 + retry · ② 控制直通 · ③ C1a 启动闩 · ⑤ 响应器匹配 · ⑦ C2 忙态状态机 · ⑧ A1 sendMessage · ⑪ `_chat` 单槽 · ⑫ F-2 cancelSubagent 路由 + `stubPanel` helper。
+  留存 = 「真实模块直驱面」（无桩面板）——④ 错误不悬挂 · ⑥ atComplete seq · ⑨⑩ A2 标题回合内 + `a2Panel` helper · ⑪ MODEL-MERGE-SESSION ×5 + 环境隔离（before/after）+ `settle`。
+- 用例名 / 编号逐字保留（不得改名、不得合并）：迁出块相对拆前**逐字节全等**（EOL 归一——12 段块全等）；断言零改 / 零增 / 零删。
+- 迁出组夹具（D18②）：新档自持 `stubPanel` + `poolHistory`；**零跨档 import**、零余档私有符号引用。反向亦然（余档零 `stubPanel` / `poolHistory` 引用）——两档各持单一被驱动面的夹具。
+- 头注：两档各自新头注（迁出注记 + 判据 + 夹具自持声明 + 各自用例面清单）；余档去原「SESSION-FLOW-C C1+C2 host 组」旧述（拆后为假）。
+
+**二、决策透明表（落笔时自行判定项）**
+
+| # | 决策 | 理由 / 依据（判据句） |
+|---|---|---|
+| D-E1 | 切点取「桩面板驱动 vs 真实模块直驱」二分——迁出面 = 面板入口面 | D18② 判据句「迁出组夹具 ⊆ 新档自持集（不依赖余档主力面的 DOM / webview 基建）」：`stubPanel` 仅被迁出 8 组使用、余档零引用；余档的 env 隔离 / `settle` / `a2Panel` 仅被留存组使用、迁出组零引用——两夹具集零交叉，判据句两半同时成立 |
+| D-E2 | 迁出多数组（8/17），余档留 9 例 | D18④ 判据句「两档 ≤500 **且余量充足**」：反向切法（仅迁 ④⑨⑩ = 125 行）余档落 469 行——余量仅 31 行，不达「充足」；本切法 270 / 373（余量 230 / 127） |
+| D-E3 | 新档不含 `before` / `after` 环境隔离 | 迁出组逐条路径核对：`routeUserTurn`（`panel-messages.mjs:59-105`）· `handlePanelMessage` 各 case · `ChatPanel.prototype.sendMessage` / `_chat`（`chat-panel.mjs:210-233/360-405`）· `newTurnController`（`panel-chat.mjs`）——全部落在 stub 或内存态，无一抵达 `ensureSlot` / 磁盘；隔离属余档 ④⑨⑩ 真 runPanelChat 面的夹具（D18② 反向） |
+| D-E4 | 余档删去仅迁出组使用的 import（`newTurnController` / `makeAskInPanel`） | 迁出后零孤儿 import；两档各自 `node --test` 证不使用（8/8 · 9/9） |
+| D-E5 | `test/files.mjs` 余档既有条目注释改写 | 旧述「C1+C2 host 组 / abort 启动闩 / 控制直通 / 响应器 id 匹配」拆后为假——与 `+1` 新档登记同轮落地 |
+| D-E6 | 编号 ⑪ 两档各用一次（新档 `_chat` 单槽 / 余档 MODEL-MERGE-SESSION ×5）原样保留 | 交付要求判据句「用例名 / **号**逐一保留（不得改名、不得合并）」→ 重号保留 = 契约要求，不做消歧改名 |
+| D-E7 | 评审 🔵#4 fix：三处注释的「§9 拆分方案块」指针改指「D18 四条（§5 D18 行）」 | 设计档全档零 `chat-panel` 字样（grep 实证）→ §9 无本轮拆分方案块；指针须指向实际存在的判据落点 |
+
+**三、守恒与夹具自持实证（程序化——非目测）**
+
+- **逐字节全等**：以 `git show HEAD:test/chat-panel.test.mjs` 为拆前基准，按 `// ───` 注释块边界切段，逐段断言「整段（含组头注释、尾随空行归一）出现在新档或余档」——12/12 段全等（迁出面 8 段 → 新档，留存面 4 段 → 余档）；`stubPanel` 整块 → 新档；`settle` + 环境隔离整块 → 余档。
+- **守恒计数**：逐段 `test(` 计数 = 新档 8 · 余档 9 · 合计 17 = 拆前 17。
+- **夹具自持**：新档 imports = `node:test` / `node:assert/strict` / `vscode` / `../src/**`（4 支）——零 `./chat-panel.test.mjs` 形态；全仓 `.mjs` 对这两档零 import 引用。
+- **独立单跑**：新档 8/8 · 余档 9/9 · 两档合跑 17/17（原文见「四」）。
+
+**四、机检（原文照录——fix 轮后收束复跑）**
+
+```text
+cd thincoder-vscode && node --test test/chat-panel-messages.test.mjs   ← 新档独立单跑（夹具自持实证）
+  ✔ ① busy 拒收 · ② 控制直通 · ③ C1a 启动闩 · ⑤ 响应器匹配 · ⑦ C2 忙态状态机 · ⑧ A1 sendMessage · ⑪ _chat 单槽 · ⑫ F-2 cancelSubagent 路由
+  ℹ tests 8 · pass 8 · fail 0 —— EXIT=0
+
+cd thincoder-vscode && node --test test/chat-panel.test.mjs            ← 余档独立单跑
+  ✔ ④ 错误不悬挂 · ⑥ atComplete seq · ⑨ A2 标题窗口 · ⑩ A2 错误路径 · ⑪ MODEL-MERGE-SESSION ×5
+  ℹ tests 9 · pass 9 · fail 0 —— EXIT=0
+
+cd thincoder-vscode && node --test test/chat-panel.test.mjs test/chat-panel-messages.test.mjs
+  ℹ tests 17 · pass 17 · fail 0 —— EXIT=0
+
+cd thincoder-vscode && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（131 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。EXIT=0
+cd thincoder-vscode && node scripts/check-ledger.mjs
+  → OK: thincoder-vscode/docs/TODO.md · OK: thincoder-vscode/docs/TODO-archive.md
+  → 0 处违规（阻断——修掉）· 基线 0 条（**本基线必须保持为空**）。EXIT=0
+cd thincoder-vscode && node test/run-fast.mjs
+  → tests 608 · pass 568 · fail 0 · skipped 40（slow 归册）—— EXIT=0
+cd thincoder-vscode && npm run lint
+  → check-syntax: 292 JS files OK。EXIT=0
+逐档实测：余档 270 / 新档 373；test( 计数 9 / 8（守恒 17 = 8 + 9）；files.mjs 83（+1 登记 `:16`）。
+```
+
+**五、内部环（in-child §18——轮次 / 裁决 / 终态）**
+
+- **内部 explore 偏差审计 · 轮次 1**：终态 = **DIVERGENT**——四类偏差中 partial / silent-simplification / out-of-list **均未发现**；确认偏差 = **doc drift**
+  （🟡×2 行集 + 🔵×3），全部落在本轮禁触写域（`docs/design/**` · `docs/batches/**` · `src/**`），仅上报。
+  审计独立复核：迁移块 12/12 段全等、两档行数 270/373、17 例互异、`files.mjs` 净 +1、两档互引零命中。
+  其 QUESTION 逐条处置：① 拆前副本不可得 → 本侧以 `git show HEAD:` 基准程序化比对补足（「三」）；
+  ② 编号 ⑪ 重号 → 契约要求保留（D-E6）；③④ out-of-list / 运行期 → 本侧 `git` 与实跑证据补足；⑤ 其他测试档历史引述 → 范围外注记。
+- **内部 advisor 代码评审 · 轮次 1**：**VERDICT = pass**（🔴 0 · 🟡 1 可选 · 🔵 3）。裁决表：
+
+| # | 级 | 发现（评审方原文要点） | 裁决 |
+|---|---|---|---|
+| 1 | 🟡（咨询线·非阻塞） | 新档 373 行 > 300 行咨询线（>300 咨询 / >500 阻断） | **Not an issue**——D18④ 判据句「两档 ≤500 且余量充足」：373 ≤500（余量 127）；300 = 咨询线，blocking 线唯 500 |
+| 2 | 🔵 | `chat-panel-messages.test.mjs:98-99` 同一断言逐字连写两遍（零覆盖增益） | **Deferred**——原档既有内容面瑕疵（迁出块逐字承载，本轮射程 = 拆档 + 守恒）；断言面清理 = 该档内容轮，已上报父侧 |
+| 3 | 🔵 | 编号 ⑪ 两档同号异义（跨档引用易混） | **Not an issue**——交付要求判据句「用例名 / 号逐一保留（不得改名、不得合并）」；两档头注 + `files.mjs` 注册行均以文字面名写明各自 ⑪ 指代 |
+| 4 | 🔵 | 三处注释称拆分方案见设计档「§9 拆分方案块」，而该档 §9 无本轮方案块（全档零 `chat-panel` 字样） | **Fixed**（本轮）——指针改指「D18 四条（§5 D18 行）」（两档头注 + `files.mjs:15`）；复跑全绿 |
+
+- **fix round 1（评审后）**：Fixed 1 项（🔵#4——三处注释指针）；复跑：两档合跑 17/17 · 宽度 131 档全绿（0/0）· 台账 EXIT 0 · 快层 608/568/0/40 · lint 292 OK。Deferred 1 项（🔵#2——原档既有断言重复，归内容轮）。
+- **终态：clean**（🔴 0；审计无实现面偏差；评审 pass——唯一 Deferred 为原档既有内容面项，已披露）。
+
+**六、边界 / 未做（如实）**
+
+- 台账 `docs/TODO*.md` 零触碰 · `src/**` 零触碰 · `docs/design/**` 与 `docs/requirements/**` 零触碰（他轮在写）；本轮改动面 = 3 档（两测试档 + `test/files.mjs`），其外零动。
+- 未做：设计档 / 批档 / `WEBVIEW.md` 的 **as-built 回填与登记行更新 = 设计写域**（`docs/design/WEBVIEW.md:311/994/1163` 现载「拆档实施 = 实施轮 E 在办，as-built 随其落定回填」）——归父侧另派；本轮不改设计档（任务边界）。
+- 范围外注记（发现即报，未动作）：多处设计档仍以 `test/chat-panel.test.mjs` 指认已迁出的组
+  （`QUEUED-VISIBILITY.md:84` F-2 取消路由 · `AGENT-LOOP.md:1529` · `VSC-CHILD-PERMISSION.md:138` · `docs/requirements/WEBVIEW.md:22` ·
+  `REMOVE-POOL-SNAPSHOT.md:19/44/45` · `SESSION-FLOW-A/B/C.md`）——随 as-built 回填轮消解；
+  `src/extension/panel-chat.mjs:54` 注释指 `chat-panel.test.mjs` 的 C1 组③（该例现居新档）——`src/**` 本轮禁触面。
+
+### 收尾轮——`panel-chat.mjs:54` 注释旧档指认更正（#68 列报落地）（eng-coder 自写 · 2026-09-12）
+
+> 任务 = 父侧「收尾轮——`src/extension/panel-chat.mjs:54` 注释旧档指认更正（#68 列报）」派单；#68 出处 = 本档「实施轮 E」节的范围外注记（该行指认旧档的已迁出组）。
+> 判据（唯一依据——不以先例为据）：**注释指认须与实际文件结构一致**（被引文件 / 用例现已迁移）。
+> 实况（本刻实测）：拆档已落——`test/chat-panel.test.mjs` = 270 行 / 9 例（真实模块直驱面）；`test/chat-panel-messages.test.mjs` = 373 行 / 8 例（桩面板驱动的面板入口面）。
+> 边界：台账零触碰 · 其余 `src/**` 零触碰（仅该一行注释）· #70/#71 在改档零触碰 · CLI 仓零写入。
+
+**一、改前 → 改后（file:line——as-of 本刻）**
+
+| # | file:line | 改前 | 改后 |
+|---|---|---|---|
+| 1 | `src/extension/panel-chat.mjs:54` | ` * 导出——chat-panel.test.mjs 桩面板直测闩消费（C1 组③）。 */` | ` * 导出——chat-panel-messages.test.mjs（面板入口面）桩面板直测闩消费（C1 组③）。 */` |
+
+- 只改注释字面（JSDoc 尾行）；`newTurnController` 函数体与文件其余各行零改（改后行 61 字符——不含行尾 EOL）。
+
+**二、对应关系核证（改前先读——注释 × 两档 × 引用面交叉实测）**
+
+| 面 | 实测 | 判定 |
+|---|---|---|
+| 注释尾行（原） | 指认 `chat-panel.test.mjs` 承载「桩面板直测闩消费（C1 组③）」 | 与现结构不符——该组已迁出 |
+| 旧档 `test/chat-panel.test.mjs`（270 行 / 9 例） | `newTurnController` 零引用（grep 0 命中）；留存面 = 真实模块直驱（④⑥⑨⑩⑪） | 组不在此档 |
+| 新档 `test/chat-panel-messages.test.mjs`（373 行 / 8 例） | `:22` import `newTurnController`；`:104`–`:131` 用例「③ C1a 启动闩（H-C）」经 `stubPanel`（`:29`–`:52`）直测闩消费（`:113`/`:118`/`:126`/`:129` 四调用） | 组现居此档——新指认落点 |
+| 其余引用面 | `test/image-downgrade.test.mjs:178` 仅断言文本提及（非 import；经 `routeUserTurn`/`handlePanelMessage` 驱动） | 不影响导出面指认 |
+
+**三、机检（原文照录——改动后复跑）**
+
+```text
+cd thincoder-vscode && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（131 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。EXIT=0
+cd thincoder-vscode && node scripts/check-ledger.mjs
+  → OK: thincoder-vscode/docs/TODO.md · OK: thincoder-vscode/docs/TODO-archive.md
+  → 0 处违规（阻断——修掉）· 基线 0 条（**本基线必须保持为空**）。EXIT=0
+cd thincoder-vscode && node test/run-fast.mjs
+  → tests 608 · pass 568 · fail 0 · cancelled 0 · skipped 40。EXIT=0
+cd thincoder-vscode && npm run lint
+  → check-syntax: 292 JS files OK。EXIT=0
+```
+
+**四、D6 回读**
+
+- `src/extension/panel-chat.mjs:54` 复读 = 改后字面（「一」）；`:48`–`:53`（C1 说明段）与 `:55` 起代码逐行零改（edit 目标 = 单行）。
+- 改后行字符数 = 61（含前导 ` * ` 与尾 ` */`；不含行尾 EOL）；注释所载判据句「桩面板直测闩消费（C1 组③）」在新档可原样对位（用例 ③ 用例名「③ C1a 启动闩（H-C）」）。
+
+**五、边界 / 未做（如实）**
+
+- 台账 `docs/TODO*.md` 零触碰 · 其余 `src/**` 零触碰 · #70/#71 在改档零触碰 · CLI 仓零写入。
+- 未做：无（派单射程 = 该一行注释 + 本小节）。
+- 范围外注记（发现即报，未动作）：`src/extension/panel-chat.mjs:498` 注释载「re-export 保面（chat-panel.test.mjs）」——全仓实测 `toolPanelPayload` 无一经 `panel-chat.mjs` 侧 import（唯一测试消费 = `status-line.test.mjs` 直取 `panel-toolpanel.mjs`，grep 实证）；该指认与现结构的对应关系供父侧裁。
+
+**六、内部环（in-child §18——轮次 / 裁决 / 终态）**
+
+- **内部 explore 偏差审计 · 轮次 1**：终态 = **DIVERGENT**——四类偏差计数：partial 0 · silent-simplification 0 · **doc-drift 1**（🔵——本小节「一」「四」自报「改后行 62 字符」，审计独立定长探测 = 61）· out-of-list 0。
+  审计独立复核逐项命中：改后注释行逐字 / 新档 `:22` import / `:104`–`:131` 用例 ③ / `stubPanel` `:29`–`:52` / 四调用 / 旧档零引用 / §5 自报断言抽核（270 + 373 行、8 + 9 例、范围外注记证据）。
+- **fix round 1（审计后——本轮）**：**Fixed 1 项**——「62 字符」×2 →「61 字符——不含行尾 EOL」（in-place 计数修正——本段唯一作者面、语义零改；本面独立复测：含 CRLF = 62 / 不含 = 61）；复跑：宽度 131 档全绿（0/0）· 台账 EXIT 0。
+- **内部 advisor 代码评审 · 轮次 1**：**VERDICT = pass**（🔴 0 · 🟡 1〔可选·非阻断〕· 🔵 2）。裁决表：
+
+| # | 级 | 发现（评审方原文要点） | 裁决 |
+|---|---|---|---|
+| 1 | 🟡（可选·非阻断） | `src/extension/panel-chat.mjs:498`–`:499`：注释「re-export 保面（chat-panel.test.mjs）」与现结构不符 + re-export 现全仓零消费者 | **Deferred**——已在案登记（本小节「五」范围外注记）；处置归父侧裁（下一注释 / 清理轮）；本轮派单射程 = `:54` 单行（未动作——射程外，非静默） |
+| 2 | 🔵 | `test/chat-panel-messages.test.mjs:98`–`:99` 同一断言逐字连写两遍（零覆盖增益） | **Deferred**——拆分前原档既有（拆档轮「断言零改 / 零增 / 零删」下逐字承载）；归该档内容轮（实施轮 E 记录同判） |
+| 3 | 🔵 | 行数 >300 咨询线：`panel-chat.mjs` 499 / 新档 373 | **Not an issue**——在案登记 / 裁决（499 = N-CL3 零余量约束；373 = D18④ 已判）；不复议 |
+
+- **评审引注说明**：评审会话 host 机检 4 条引注中 3 条报未匹配——本面独立复核（实读 / grep）为**引注形态差异**、无实质影响：
+  `src/extension/chat-panel.mjs:38` 行文「…router 交付无效时置位，newTurnController（panel-chat.mjs）」逐字在盘（差异 = 缩进 / 连行形态）；
+  `docs/design/WEBVIEW.md:311` 尾段「拆档实施 = **实施轮 E 在办**，as-built 随其落定回填」逐字在盘（差异 = 省略 / 截断式引述）；
+  且该 3 条均属评审过程引注、不在其发现表。
+- **修正轮（评审后）：0 轮**（无 must-fix；唯一 🟡 为可选协调项、归父侧裁）。
+- **终态：clean**（🔴 0；审计唯一 🔵 已 Fixed；评审 pass——Deferred 2 项均已逐条说明去向）。
+
+**七、收束复跑（原文照录——本收尾轮全部写入落定后）**
+
+- `cd thincoder-vscode && node scripts/check-doc-width.mjs` → OK(宽度): 扫描域全部 .md 无 >300 字符单行（131 文件）；一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。EXIT=0
+- `cd thincoder-vscode && node scripts/check-ledger.mjs` → OK ×2 档（TODO / TODO-archive）；0 处违规 · 基线 0 条。EXIT=0
+- `cd thincoder-vscode && node test/run-fast.mjs` → tests 608 · pass 568 · fail 0 · cancelled 0 · skipped 40。EXIT=0
+- `cd thincoder-vscode && npm run lint` → check-syntax: 292 JS files OK。EXIT=0
+
+### 收尾轮——`panel-chat.mjs:498` 死 re-export 删除（#72 列报落地）（eng-coder 自写 · 2026-09-12）
+
+> 任务 = 父侧「收尾轮——`src/extension/panel-chat.mjs:498` 死 re-export + 误导注释就地修正」派单。#72 出处 = 本记录「收尾轮——`panel-chat.mjs:54` 注释旧档指认更正（#68 列报落地）」小节「五」范围外注记 + 该节「六」评审 Deferred 项（归父侧裁——下一注释 / 清理轮）。
+> 判据（唯一依据——不以先例为据）：**零消费者的 re-export = 死代码**（其「保面」理由 = 旧测试 `chat-panel.test.mjs`——该测试已拆档且不再引用）；**铁律#2**：改动撞到错结构 → 就地修正（只改注释、把死代码留着 = ✗）。
+> 边界：台账 `docs/TODO*.md` 零触碰 · 其余 `src/**` 零触碰（仅该 re-export 块）· #71/#73 在改档零触碰 · CLI 仓零写入。
+
+**一、消费者独立复核（命令 + 原文）**
+
+程序化全仓扫描（292 代码档：`src/**` + `test/**` + `scripts/**` 全量 `.mjs`/`.js`/`.cjs`；排除 `node_modules`/`.git`——静态 import 子句逐档解出 + 动态 `import(` + `export … from` re-export 链三形态全查）：
+
+```text
+scanned code files: 292
+=== static imports FROM panel-chat.mjs (code files) ===
+src/extension/chat-panel.mjs            → { runPanelChat }
+test/agent-lifecycle-singleton.test.mjs → { agentSlotMatches, ensurePanelAgent }
+test/chat-panel-messages.test.mjs       → { newTurnController }
+test/chat-panel.test.mjs                → { runPanelChat }
+=== imports OF toolPanelPayload (any specifier) ===
+src/extension/panel-callbacks.mjs:13 → from "./panel-toolpanel.mjs"
+test/status-line.test.mjs:18        → from "../src/extension/panel-toolpanel.mjs"
+=== dynamic import(panel-chat…) ===  []（零命中）
+=== re-export chains from panel-chat.mjs ===  []（零命中）
+```
+
+- 四档 `panel-chat.mjs` 消费面**无一取 `toolPanelPayload`**；符号级 grep（全仓 `toolPanelPayload`）+ 上表三形态交叉 = **零消费者确证**。
+- `toolPanelPayload` 存活面两处（均直取源模块）：`src/extension/panel-callbacks.mjs:172` 生产调用（`onToolPanel`）· `test/status-line.test.mjs:73`/`:77` 测试直驱。
+- #68 拆档事实复核：`test/chat-panel.test.mjs`（余档——真实模块直驱面）与 `test/chat-panel-messages.test.mjs`（新档——桩面板驱动面）**两档 import 面均无 `toolPanelPayload`**——「保面（chat-panel.test.mjs）」的指认与现结构不符（被指认档已不再引用该符号）。
+
+**二、删除（file:line——as-of 本刻）**
+
+| # | file | 删除块 | 内容 |
+|---|---|---|---|
+| 1 | `src/extension/panel-chat.mjs` | `:498`–`:499` | 注释行 `// toolPanelPayload 2026-09-05 迁 panel-toolpanel.mjs（512 > 500 硬限）——re-export 保面（chat-panel.test.mjs）` + 语句 `export { toolPanelPayload } from "./panel-toolpanel.mjs"` |
+
+- 删除范围 = 该 re-export 块（注释 + 语句）；`:1`–`:497` 逐行零改。
+- 尾区机械归一（行式删除连带——如实披露；三类同点、无他处）：删前尾 = 空行 + 空行 + 块（末行无尾换行，`git diff` 注 `\ No newline at end of file`）→ 删后尾 = 单空行 + 文件尾换行（与同目录 `panel-callbacks.mjs` 同形；邻档间尾形态不一）。
+
+**三、行数实测（`readFileSync(...).split("\n").length` 口径）**
+
+- 删前 **499** 行（32792 B）→ 删后 **497** 行（32609 B）。
+- **未达点名线**：499 < 500（F12 硬限）——无需父侧直派拆分；贴线事实登记：删前 499 = 距 500 硬限仅 1 行余量（N-CL3 零余量状态），删后余量 3 行。
+
+**四、机检（原文照录——实跑）**
+
+```text
+cd thincoder-vscode && npm run lint
+  → check-syntax: 292 JS files OK。EXIT=0
+
+cd thincoder-vscode && node --test test/status-line.test.mjs test/chat-panel.test.mjs test/chat-panel-messages.test.mjs test/agent-lifecycle-singleton.test.mjs
+  → tests 36 · pass 35 · fail 0 · skipped 1（§11.2 resumed 慢层归册——快层照 skip）。EXIT=0
+
+cd thincoder-vscode && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（131 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。EXIT=0
+
+cd thincoder-vscode && node scripts/check-ledger.mjs
+  → OK: thincoder-vscode/docs/TODO.md · OK: thincoder-vscode/docs/TODO-archive.md
+  → 0 处违规（阻断——修掉）· 基线 0 条（**本基线必须保持为空**）。EXIT=0
+
+cd thincoder-vscode && node test/run-fast.mjs
+  → tests 608 · pass 568 · fail 0 · cancelled 0 · skipped 40。EXIT=0（存量红 = 0——如实）
+```
+
+**五、边界 / 未做（如实）**
+
+- 台账 `docs/TODO*.md` 零触碰 · 其余 `src/**` 零触碰（本档仅该 re-export 块）· #71/#73 在改档零触碰 · CLI 仓零写入。
+- 未做：无——派单射程 = 该块删除 + 本小节（内部环随审计 / 评审轮另段追加）。
+- 范围外注记（发现即报，未动作）：`src/extension/panel-toolpanel.mjs:3`–`:4` 头注载「消费方 import 面调整（仅 `panel-chat.mjs` 一处调用）」——迁移时点描述，现生产调用点在 `panel-callbacks.mjs:172`——该指认与删后结构的对应关系供父侧裁（射程外）。
+- 设计档对 `toolPanelPayload` 的登记（`docs/design/ARCHITECTURE.md:164` · `docs/design/WEBVIEW.md:434` / `:1553`——as-of 本刻；该档并发在改、行号随漂）均指 `panel-toolpanel.mjs`——与删后结构一致（零漂移）。
+
+### 收尾轮——`panel-chat.mjs:498` 死 re-export 删除（#72 列报落地）· 内部环与收束复跑（eng-coder 自写 · 2026-09-12）
+
+**内部 explore 偏差审计 · 轮次 1**：终态 = **DIVERGENT**——四类偏差计数：PARTIAL 0 · SILENT-SIMPLIFICATION 0 · **DOC-DRIFT 1（🔵）** · OUT-OF-LIST 0。
+
+- 发现（🔵）：上文「四」前稿把 `docs/design/WEBVIEW.md` 的 `toolPanelPayload` 引注记作 `:1552`——现盘实为 `:1553`（该档并发在改、行号上移 1）。
+- **Fixed（本轮）**：引注改 `:1553` 并补「as-of 本刻；该档并发在改、行号随漂」限定（in-place——本段唯一作者面、语义零改）。
+- 审计独立复核逐项命中：零消费者三形态全查（静态 import 子句 / 动态 `import(` / re-export 链）· 现盘尾区（`:495` `}`、`:496` 空行、尾换行）· 两档 chat-panel* 测试 import 面 · 判据 1–5 逐条 PASS（2/4/5 受限项 = 无命令面的字节级复测——归本侧实跑证据补足）。
+- 审计 QUESTION 处置：① 字节数 / 机检实跑 / 「`:1`–`:497` 逐行零改」的逐字节等价不可独立复测——本侧实跑与本段证据在位、无矛盾；② 尾区机械归一（删除块邻接空行 1 + 尾换行补正）为主动披露、与「删除块」括注口径一致——如需另行裁定「删除块是否应含该空行」归父侧；③ 见上 DOC-DRIFT 处置。
+
+**fix round 1（审计后）**：Fixed 1 项（引注行号）；复跑：宽度 131 档全绿（0/0）· 台账 EXIT 0。
+
+**内部 advisor 代码评审 · 轮次 1**：**VERDICT = pass**（🔴 0 · 可选项 🟡 0 · 🔵 2——均无需动作）。裁决表：
+
+| # | 级 | 发现（评审方原文要点） | 裁决 |
+|---|---|---|---|
+| 1 | 🔵 | `panel-chat.mjs` 删后 497 行仍在 >300 咨询带（未超 500 硬限） | **Not an issue**——既有在案 / 已裁项（批内先前节已判「不复议」）；本轮删除使余量 499 → 497（零余量 → 3 行） |
+| 2 | 🔵 | 上文「二」括注「（与同目录邻档尾形态一致）」——逐档抽核：`panel-callbacks.mjs` 同形；`panel-toolpanel.mjs` / `panel-messages.mjs` 尾形态不一 | **Fixed（本轮）**——括注改「（与同目录 `panel-callbacks.mjs` 同形；邻档间尾形态不一）」 |
+
+- 评审引注说明：评审会话宿主对 2 条引注报未匹配（`panel-callbacks.mjs:172` 为截断引述、`:209`/`:210` 空行命中为叙述形态）——本面独立复核（grep / 字节级实测）两处底实均成立，属引注形态差异、无实质影响。
+- **fix round 2（评审后）**：Fixed 1 项（🔵#2 括注收紧）；🔵#1 为在案登记不复议。
+- **终态：clean**（🔴 0；审计唯一 🔵 已 Fixed；评审 pass——2 🔵 分别为在案项与已修措辞项）。
+
+**收束复跑（原文——实跑；`lint` / `run-fast` = 源码落定后复跑；`doc-width` / `ledger` = 本小节追加前复跑，追加后复跑见下行）**
+
+```text
+cd thincoder-vscode && npm run lint
+  → check-syntax: 292 JS files OK。EXIT=0
+cd thincoder-vscode && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（131 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。EXIT=0
+cd thincoder-vscode && node scripts/check-ledger.mjs
+  → OK ×2 · 0 处违规 · 基线 0 条。EXIT=0
+cd thincoder-vscode && node test/run-fast.mjs
+  → tests 608 · pass 568 · fail 0 · cancelled 0 · skipped 40。EXIT=0
+```
+
+**发布门补充证据（本仓三环——实跑；非本轮收束清单项，补充提交）**
+
+- `npm run test:integration` → **28/28 pass · fail 0**。EXIT=0
+- `npm run test:full` 三跑：**608/607/1** · **608/606/2** · **608/607/1**——红全部落在 `test/ledger.test.mjs` 慢层（AC89 批级 / T102 边界）：EPERM（Windows 临时目录 `rmSync` 清理锁）+ AC89 的 ≤500ms 计时在满负荷下超线（983 / 2089ms）；
+  **隔离复跑**（`THINCODER_TEST_FULL=1 node --test test/ledger.test.mjs`）= **10/10 全绿**。判定 = 负载 / 环境态非确定性红（ledger 面与本轮改动零交集）——存量如实登记。
+- 目标面单跑：`node --test test/status-line.test.mjs test/chat-panel.test.mjs test/chat-panel-messages.test.mjs test/agent-lifecycle-singleton.test.mjs` → **36 例 · pass 35 · fail 0 · skipped 1**（慢层归册例照 skip）。EXIT=0
+
+**收束复跑（末次——本段全部写入后）**：`node scripts/check-doc-width.mjs` → `OK(宽度): 扫描域全部 .md 无 >300 字符单行（131 文件）`；一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。`node scripts/check-ledger.mjs` → `OK ×2` · 0 处违规 · 基线 0 条。两命令 EXIT=0。
+（附：本次收束中曾捕获本段 1 行超宽——`test:full` 证据行 321 字符——已按标点折行、内容零改，复跑即绿。）
+
+### 收尾轮——`panel-toolpanel.mjs:3`–`:4` 头注旧消费方更正（#74 列报落地）（eng-coder 自写 · 2026-09-12）
+
+> 任务 = 父侧「收尾轮——`src/extension/panel-toolpanel.mjs` `:3`–`:4` 头注旧消费方更正（#74 列报；父侧直派）」派单。
+> #74 出处 = 本记录「收尾轮——`panel-chat.mjs:498` 死 re-export 删除（#72 列报落地）」小节「五」范围外注记（所载 = `src/extension/panel-toolpanel.mjs:3`–`:4` 头注「迁移时点描述与现结构不符」）。
+> 注：派单文本称「§5 的 #74 小节」——本刻实盘 §5 无字面「#74」小节（grep 实证）；该项实源即上列 #72 小节范围外注记，执行未受影响。
+> 判据（唯一依据——不以先例为据）：**注释指认须与现结构一致**（被指消费方 / 调用点）；**以实读为准**（grep 核 ✓）。
+> 边界：台账 `docs/TODO*.md` 零触碰 · 其余 `src/**` 零触碰（本档仅该头注两行）· #73/#75 在改档零触碰 · CLI 仓零写入。
+
+**一、改前 → 改后（`src/extension/panel-toolpanel.mjs:3`–`:4`——原文照录）**
+
+```text
+改前：
+ * panel-chat.mjs 512 > 500 硬限——toolPanelPayload 独立纯函数迁入；消费方 import 面
+ * 调整（仅 `panel-chat.mjs` 一处调用）。
+改后：
+ * panel-chat.mjs 512 > 500 硬限——toolPanelPayload 独立纯函数迁入）。消费面：生产调用点
+ * `panel-callbacks.mjs`（onToolPanel）；测试直取本模块（`status-line.test.mjs`）。
+```
+
+- 同两行内附带项（如实披露）：外层括号「（2026-09-05 module-split：…」原句无闭合——改后于「迁入」处补「）」；括号未闭合 = 注释字面完整性问题，落笔同两行一并消除。
+- 代码零改——`git diff` 仅此两行（+2 / −2，原文见「三」）；文件仍 23 行（改后 L3 = 67 字符 / L4 = 70 字符）。
+- 注释指认以「文件 + 入口名」定位（注释字面不携行号——行号随漂；精确行号 = 本节「二」表）。
+
+**二、现消费 / 调用面复核（程序化全仓扫描——落笔前实跑核指认 + 落笔后复跑；下文照录 = 落笔后复跑原文）**
+
+扫描面 = 292 代码档（`src/**` + `test/**` + `scripts/**` 全量 `.mjs`/`.js`/`.cjs`；排除 `node_modules`/`.git`）；三形态全查 = 静态 import / export-from 子句 + 动态 `import(` + 符号级 `toolPanelPayload`。
+
+```text
+scanned code files: 292
+
+=== static import/export-from specifiers containing panel-toolpanel ===
+src/extension/panel-callbacks.mjs  →  ./panel-toolpanel.mjs
+test/status-line.test.mjs  →  ../src/extension/panel-toolpanel.mjs
+
+=== dynamic import( containing panel-toolpanel ===
+(none)
+
+=== every line containing toolPanelPayload ===
+src/extension/panel-callbacks.mjs:13  import { toolPanelPayload } from "./panel-toolpanel.mjs"
+src/extension/panel-callbacks.mjs:172  onToolPanel: (name, chunk) => panel._panel?.webview.postMessage(toolPanelPayload(name, chunk)),
+src/extension/panel-toolpanel.mjs:3  * panel-chat.mjs 512 > 500 硬限——toolPanelPayload 独立纯函数迁入）。消费面：生产调用点
+src/extension/panel-toolpanel.mjs:14  export function toolPanelPayload(name, chunk) {
+test/status-line.test.mjs:18  import { toolPanelPayload } from "../src/extension/panel-toolpanel.mjs"
+test/status-line.test.mjs:73  const obj = toolPanelPayload("sub:eng-coder#1", { kind: "tool", text: "read {}", round: 2, model: "glm-5.3", tool: "read", cmd: "src/x.mjs" })
+test/status-line.test.mjs:77  const strChunk = toolPanelPayload("sub:eng-coder#1", "legacy text")
+
+=== any line containing "panel-toolpanel" (code files) ===
+src/extension/panel-callbacks.mjs:13  import { toolPanelPayload } from "./panel-toolpanel.mjs"
+src/extension/panel-toolpanel.mjs:2  * panel-toolpanel.mjs — toolPanel postMessage payload builder（2026-09-05 module-split：
+test/status-line.test.mjs:18  import { toolPanelPayload } from "../src/extension/panel-toolpanel.mjs"
+```
+
+- 扫描两跑（落笔前 + 落笔后）：消费面集合一致——差异仅 `panel-toolpanel.mjs:3` 行字面（改前 / 改后；该行 = 本模块自身头注，非消费方）。
+- 生产调用点 = `src/extension/panel-callbacks.mjs:172`（`onToolPanel` 回调；同档 `:13` import）——改后注释第一条指认对位。
+- 测试消费 = `test/status-line.test.mjs` 直取本模块（`:18` import；`:73`/`:77` 调用）——改后注释第二条指认对位。
+- `panel-chat.mjs` 零命中——#72 已删其 re-export、其消费面零取该符号（复核续真；旧指认「仅 `panel-chat.mjs` 一处调用」与现结构不符，已消除）。
+- 动态 `import(` / re-export 链两形态零命中——无隐藏消费面。
+
+**三、改后 diff（原文照录）**
+
+```text
+diff --git a/src/extension/panel-toolpanel.mjs b/src/extension/panel-toolpanel.mjs
+index ae5668b..2e2bf9d 100644
+--- a/src/extension/panel-toolpanel.mjs
++++ b/src/extension/panel-toolpanel.mjs
+@@ -1,7 +1,7 @@
+ /**
+  * panel-toolpanel.mjs — toolPanel postMessage payload builder（2026-09-05 module-split：
+- * panel-chat.mjs 512 > 500 硬限——toolPanelPayload 独立纯函数迁入；消费方 import 面
+- * 调整（仅 panel-chat.mjs 一处调用）。
++ * panel-chat.mjs 512 > 500 硬限——toolPanelPayload 独立纯函数迁入）。消费面：生产调用点
++ * `panel-callbacks.mjs`（onToolPanel）；测试直取本模块（`status-line.test.mjs`）。
+  */
+ 
+ /**
+```
+
+**四、机检（原文照录——改动落定后实跑）**
+
+```text
+cd thincoder-vscode && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（131 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。EXIT=0
+cd thincoder-vscode && node scripts/check-ledger.mjs
+  → OK: thincoder-vscode/docs/TODO.md · OK: thincoder-vscode/docs/TODO-archive.md
+  → 0 处违规（阻断——修掉）· 基线 0 条（**本基线必须保持为空**）。EXIT=0
+cd thincoder-vscode && node test/run-fast.mjs
+  → tests 608 · pass 568 · fail 0 · cancelled 0 · skipped 40。EXIT=0（存量红 = 0——如实）
+cd thincoder-vscode && npm run lint
+  → check-syntax: 292 JS files OK。EXIT=0
+```
+
+**五、D6 回读**
+
+- `src/extension/panel-toolpanel.mjs` 复读 = 改后字面；`git diff` 以改前基准对照 = 仅 `:3`–`:4` 两行 +2/−2，`:1`–`:2` 与 `:5` 起逐行零改。
+- 改后两行逐字符复测：L3 = 67 / L4 = 70（均远 ≤300）；两指认（`panel-callbacks.mjs`（onToolPanel）· `status-line.test.mjs`）与「二」扫描表逐一对位。
+
+**六、边界 / 未做（如实）**
+
+- 台账 `docs/TODO*.md` 零触碰 · 其余 `src/**` 零触碰（本档仅该头注两行）· #73/#75 在改档零触碰 · CLI 仓零写入。
+- 未做：无（派单射程 = 该头注两行 + 本小节）。
+
+**七、内部环（in-child §18——轮次 / 裁决 / 终态）**
+
+- **内部 explore 偏差审计 · 轮次 1**：终态 = **CLEAN**（PARTIAL 0 · SILENT-SIMPLIFICATION 0 · DOC-DRIFT 0 · OUT-OF-LIST 0）。
+  独立复核逐项命中：注释两条指认 ↔ 现盘消费面（静态 import / export-from + 动态 `import(` + 符号级三形态）· `panel-chat.mjs` 零命中 · 文件 23 行 · L3=67 / L4=70 逐字符复算一致 · 本节「一」引文与现盘逐字对位。
+  受限项（如实）：git 面（HEAD 对照 / 改前字面）与机检复跑——审计会话无 git / 执行面，不可独立复测；本侧实跑证据在位、无矛盾。
+- **审计 QUESTION 处置**：Q1（🔵 引文保真）——「二」引文标签「every line containing toolPanelPayload」下实列 6 行，扫描域实含 7 行（漏 `panel-toolpanel.mjs:3`——本模块自身头注行、非消费方）→ **Fixed（本轮）**：
+  引文改录落笔后复跑**全文**（标签所声明全部行 + 末段「any line containing "panel-toolpanel"」一节亦补全——全量恢复系同轮自查第二处遗漏后一并落定）；补「落笔前 + 落笔后两跑」注（消费面集合一致——差异仅 `:3` 行字面）。
+  Q2（自披露项）→ **无动作**（注行已主动披露实测口径，维持）。
+- **内部 advisor 代码评审 · 轮次 1**：**VERDICT = pass**（🔴 0 · 🟡 0 · 🔵 0——findings 0）。
+  评审独立复核同轨成立：注释两条指认 ↔ `panel-callbacks.mjs:13`/`:172` · `status-line.test.mjs:18`/`:73`/`:77`；`panel-chat.mjs` 零命中；23 行 / 67 / 70 三值复认；本小节各引文与现盘对位。
+- **评审裁决表**：无（findings 0——无裁决项）。
+- **评审引注说明**：评审会话 host 机检 2 条引注报未匹配（`:3` 引注尾部被续写文本污染截断；`panel-callbacks.mjs:172` 引注缺路径前缀 → 判「file unreadable」）——本面独立复核（实读）两处底实均成立，属引注形态差异、无实质影响（同款见批内先前节）。
+- **fix round 1（审计后）**：Fixed 1 项（Q1——引文全量恢复 + 「两跑」注；语义零改）；恢复后复跑：doc-width 131 档全绿（0/0）· 台账 EXIT 0。
+- **fix round 2（评审后）**：0 轮（findings 0——无 must-fix）。
+- **终态：clean**（🔴 0；审计 CLEAN + 唯一 🔵 QUESTION 已自纠；评审 pass——findings 0）。
+- 占位行说明：本段以占位句「（内部环——…随轮追加。）」替换为实文（in-place——本段唯一作者面、即该占位承诺内容；语义零改）。
+
+### 收尾轮——测试头注旧称 + SESSION-FLOW C' 队列语义残述 + N-W5 覆盖缺口登记（#71 列报落地）（eng-coder 自写 · 2026-09-12）
+
+> 任务 = 父侧「收尾轮」派单（#71 列报；父侧直派）：① 测试头注旧称（`test/**` 面——本项归我）按拆档现名更正；② `docs/design/SESSION-FLOW-A.md:22` C'-era 队列语义残述按现态收正；③ `docs/requirements/WEBVIEW.md` N-W5 按现态收正（缺口显性化）+ 为该缺口登记（消解路径 + 到期条件）。
+> 判据（唯一依据——不以先例为据）：**不得留与现态相抵的旧称/旧述**（残留即示范）；**以测试实态为准**（读源核）；**登记须携消解路径与到期条件**（F14 第三子条）。
+> 边界：台账 `docs/TODO*.md` 零触碰 · `src/**` 零触碰 · #73/#74 在改档零触碰 · CLI 仓零写入 · 措辞零「最小改动」类。file:line = 改后实测（as-of 本刻）。
+
+**一、逐项「改前 → 改后」**
+
+**（一）测试头注旧称（具名 3 处 + 面扫描扩得 1 处——同判据，一并披露）**
+
+| # | file:line | 改前 → 改后 |
+|---|---|---|
+| 1 | `test/child-permission.test.mjs:7` | 旧称 token「chat-panel.test」（panel 假体——…模式 句，跨行）→「`test/chat-panel-messages.test.mjs`」 |
+| 2 | 同档 `:61` | 「（chat-panel.test 模式 + 本批字段：…）」→「（`test/chat-panel-messages.test.mjs` 模式 + 本批字段：…）」 |
+| 3 | `test/child-permission-wiring.test.mjs:58` | 与 #2 同式替换（两档该行行文逐字相同） |
+| 4 | `test/integration/scenario-05-panel-basics.test.mjs:42` | 「chat-panel.test.mjs 先例」→「`test/chat-panel-messages.test.mjs` 先例」（面扫描扩得——非派单具名清单；同判据更正并披露） |
+
+**「模式」指认核证（先核再落）**：stubPanel 桩面板夹具现居 `test/chat-panel-messages.test.mjs:29`–`:52`（面板入口档——桩面板直驱面）；余档 `test/chat-panel.test.mjs` 零 stubPanel 定义（全档 = 真实模块直驱面）；
+两 child 档假体 = 桩面板核心字段（`_permissionQueue` / `_abortController` / `_panel` / `posted`）+ 本批字段（`_permissionSeq` / `_autoApprove` / `_setAutoApprove`）——「模式 / 先例」指认落 `test/chat-panel-messages.test.mjs`。
+
+**（二）SESSION-FLOW 族 C'-era 队列语义残述（具名 1 处 + 族内扩得 11 处）**
+
+| # | file:line | 改前（片段）→ 改后（片段） |
+|---|---|---|
+| 1 | `docs/design/SESSION-FLOW-A.md:12` | 「running→_suspQueue + messageQueued（与 webview 输入同语义——零丢失）」→「running→拒收（先于回显——无排队无回执；与 webview 输入同语义）」 |
+| 2 | 同档 `:13` | 「路由守卫 running→排队」→「路由守卫 running→拒收」 |
+| 3 | 同档 `:21` | 「running→_suspQueue（回合尾 FIFO 消费零丢失）+ messageQueued 回执」→「running→拒收（先于回显——无排队无回执）」 |
+| 4 | 同档 `:22`–`:24` | 「队列含文本 + messageQueued 一次 + 回显 userMessage 一次」→「零回显（不画假气泡——无回执）+ 拒收警告一次」；「两例保回归」→「两例保回归（回显 + _chat 上游分流）」；「FIFO 排空断言 = 既有 susp 释放窗口测试覆盖…——实现期确认，若缺补一条」→「FIFO 排空断言项随 C'（INPUT-LOCK）排队机制废除而消解——现态 = 拒收无排队」 |
+| 5 | 同档 `:28` | 「路由守卫 running→排队」→「路由守卫 running→拒收」（同 2） |
+| 6 | 同档 `:33` | 「userMessage 入队（不并发直发）」→「userMessage 拒收（不并发不排队）」 |
+| 7 | 同档 `:64` | 「（_chatCalls 空 + 队列 + messageQueued + 回显——回合尾 FIFO 消费）」→「（_chatCalls 空 + 零回显无回执——拒收警告明示）」 |
+| 8 | 同档 `:67` | 「userMessage 入队不并发」→「userMessage 拒收（不并发不排队）」 |
+| 9 | 同档 `:81` | 变更记录新增一行：「2026-09-12：C'-era 队列语义残述按现态收正（running 拒收先于回显——无排队 / 无回执；证据 = `src/extension/panel-messages.mjs` 拒收分支 + `test/chat-panel-messages.test.mjs` ①⑦⑧）。」 |
+| 10 | `docs/design/SESSION-FLOW-C.md:47` | 「经 _suspQueue 统一队列」→「经 routeUserTurn 统一入口——running 拒收无排队」 |
+| 11 | 同档 `:84` | 「（守卫统一——_suspQueue 零丢失）」→「（守卫统一——running 拒收无排队）」 |
+| 12 | 同档 `:99` | 变更记录新增一行：「2026-09-12：C'-era 队列语义残述按现态收正（retry 与 userMessage 同入口不变——running 拒收无排队；证据 = `src/extension/panel-messages.mjs` retry case + `test/chat-panel-messages.test.mjs` ①）。」 |
+
+**读源核证（判据中项——现态 = 拒收无排队无回执）**：
+- 源：`src/extension/chat-panel.mjs:218`（running 拒收——先于回显 `:226` 与 `routeUserTurn` `:231`）· `src/extension/panel-messages.mjs:65`（running 拒收不排队）· `:207`–`:212`（retry 并入同入口）。
+- 测试：`test/chat-panel-messages.test.mjs` ①（`:64`–`:66`「无 _chat 无回执无容器」）· ⑦（`:239`–`:240` running→拒收）· ⑧（`:269`–`:271` 拒收先于回显；`:279`–`:284` susp 两态回显 + _chat）。
+- 族内复扫：九词族（队列 / 排队 / 入队 / _suspQueue / messageQueued / 回执 / 零丢失 / 排空 / FIFO）全扫 SESSION-FLOW-{A,B,C}——改后仅存正确式（无排队 / 无回执 / 机制废除）；B 档零命中（无同类残述）。
+
+**（三）N-W5 按现态收正 + 覆盖缺口登记（3 处）**
+
+| # | file:line | 改前 → 改后 |
+|---|---|---|
+| 1 | `docs/requirements/WEBVIEW.md:22`（F-W4 行缺口句） | 句尾 +「；缺口登记 = 本档 N-W5——消解路径 + 到期条件」 |
+| 2 | 同档 `:35`（N-W5 行） | +「**登记在案的例外 1 条**：F-W4 活卡面现无专属用例——**消解路径** = 活卡面（`toolCall`/`toolOutput`/`toolResult` 接收）补测；**到期条件** = WEBVIEW 面下次被触碰时 / 下批收口前（F14 第三子条）」；度量列 +「登记在案的例外 1 条（消解路径 + 到期条件在位）」 |
+| 3 | 同档 `:70`（变更记录） | +「2026-09-12：N-W5 按现态收正（F-W4 活卡面缺口显性化 + 登记在案的例外携消解路径 / 到期条件；F-W4 缺口句补登记指针）。」 |
+
+**登记逐字（F14 第三子条——消解路径 + 到期条件）**：见 `:35`——「**消解路径** = 活卡面（`toolCall`/`toolOutput`/`toolResult` 接收）补测；**到期条件** = WEBVIEW 面下次被触碰时 / 下批收口前」。
+**缺口事实核**：`test/**` 全扫零 `toolOutput` / `type:"toolCall"` 帧驱动（接收面实装 = `webview/chat.js:139`–`:160`）；F-W1–W7 引用的 12 用例档逐一在位。
+
+**二、内部环（in-child §18——轮次 / 裁决 / 终态）**
+
+- **内部 explore 偏差审计 · 轮次 1**：终态 = **CLEAN**（PARTIAL 0 · SILENT-SIMPLIFICATION 0 · DOC-DRIFT 0 · OUT-OF-LIST 0）。独立复核命中：stubPanel 归属（`chat-panel-messages.test.mjs:29` 定义 / 余档零命中）；改前残留已清（本记录 `:836` 所载旧串 vs 现档 `:22`–`:24`）；族内九词复扫零遗漏；N-W5 三要素在位 + 缺口独立性（test/ 零帧驱动引用）；触碰面 = 清单内。
+- **内部 advisor 代码评审 · 轮次 1**：**VERDICT = pass**（🔴 0 · 🟡 1 可选·非阻断 · 🔵 1）。裁决表：
+
+| # | Action | Detail |
+|---|---|---|
+| 1 | Deferred | 🟡 SESSION-FLOW-A A3/Stop 公式句（`:37` / `:40` / `:43` / `:69`——同族 `:14`）仍载 `S._turnState !== "idle" || on`；现态 = `=== "running"`（`webview/loading.js:57` · `test/webview-turnstate.test.mjs:6` 收窄注 · `docs/design/WEBVIEW.md:572` F-6 收窄登记）——非本轮派单面（本记录 #68 节 ④ 只列队列语义）、修正方向属父侧裁定；随本记录上呈（与「三」① 同族，建议并轮） |
+| 2 | Not an issue | 🔵 WEBVIEW `:22` 历史归因（「原覆盖随 2026-09-07 测试清空退场」）——无 git 历史可核（评审只读面），与在案证据（`test/files.mjs:11` / WEBVIEW-ESCAPE 批记录）一致；现态事实（活卡面零专属用例）已独立核验——信息登记，零动作 |
+
+- **fix round：0 轮**（无 must-fix；Deferred 1 = 超射程裁定面 · Not an issue 1 = 信息面）。
+- **终态：clean**（🔴 0；审计 CLEAN；评审 pass）。
+
+**三、边界 / 未做 / 范围外注记（如实）**
+
+- 边界：台账 `docs/TODO*.md` 零触碰 · `src/**` 零触碰 · #73/#74 在改档零触碰 · CLI 仓零写入 · 口径措辞零「最小改动」类。
+- 未做：无（派单射程三项 + 登记全落；Deferred / 范围外注记均已列明去向）。
+- 范围外注记（发现即报，未动作——供父侧裁）：
+  - ① 权威锚 `docs/design/WEBVIEW.md` §8.1（`:526` · `:528`–`:529`）仍载已废队列机制（`_suspQueue` 入队 + `messageQueued` 回执 + 回合尾 FIFO 消费）；
+    同档 §8 头注 `:519` Stop 句与 §8.4（`:572`）自相抵；同族另有 `docs/design/SESSION.md:409` · `docs/design/ARCHITECTURE.md:195`——与上表 Deferred 1 同族，建议父侧并轮处置（设计写域；`docs/design/WEBVIEW.md` 系并发在改档——本 coder 零触碰）。
+  - ② `docs/design/SESSION-FLOW-A.md:80` 载 2026-09-09 历史变更记录行——as-of 记录面，本轮零触碰（其面内历史值存废供裁）。
+  - ③ 设计档骨架行内 file:line 坐标为设计期 as-of 值（`SESSION-FLOW-A:20` / `:21` / `:27` · `SESSION-FLOW-C:47` 等）——记录面口径，未随实装刷新（本轮零触碰）。
+
+**四、机检（原文照录——实跑）+ D6 回读**
+
+**收束复跑（原文——实跑；本收尾轮小节全量落定后复跑）**
+
+```text
+cd thincoder-vscode && node scripts/check-doc-width.mjs
+  → OK(宽度): 扫描域全部 .md 无 >300 字符单行（131 文件）。
+  → 一致性 V1/V2/V3/V4：新增违规 0 条 · 存量（基线内）0 条。EXIT=0
+cd thincoder-vscode && node scripts/check-ledger.mjs
+  → OK: thincoder-vscode/docs/TODO.md · OK: thincoder-vscode/docs/TODO-archive.md
+  → 0 处违规（阻断——修掉）· 基线 0 条（**本基线必须保持为空**）。EXIT=0
+cd thincoder-vscode && node test/run-fast.mjs
+  → tests 608 · pass 568 · fail 0 · cancelled 0 · skipped 40。EXIT=0（存量红 = 0——如实）
+cd thincoder-vscode && npm run lint
+  → check-syntax: 292 JS files OK。EXIT=0
+cd thincoder-vscode && node --test test/doc-consistency.test.mjs
+  → tests 12 · pass 9 · fail 0 · skipped 3（慢层归册照 skip）——仓库扫描 ✔ 零违规。EXIT=0
+```
+
+（附：本次收束中捕获本小节 2 行超宽（初稿 `:1897` 352 / `:1950` 313 字符——as-of 捕获时）——已按标点折行、内容零改；折行后复跑即绿。）
+
+**相关测试档单跑（头注改动零语义——单跑绿佐证）**
+
+```text
+cd thincoder-vscode && node --test test/child-permission.test.mjs test/child-permission-wiring.test.mjs
+  → tests 18 · pass 18 · fail 0。EXIT=0（余档 12 + 接线档 6）
+cd thincoder-vscode && node --test test/integration/scenario-05-panel-basics.test.mjs
+  → tests 4 · pass 4 · fail 0。EXIT=0
+cd thincoder-vscode && node test/run-integration.mjs
+  → tests 28 · pass 28 · fail 0。EXIT=0
+```
+
+**D6 回读**
+
+- 批次档：本小节全文复读在位（§5 尾部——`### 收尾轮——测试头注旧称…` 起、§6 前）；2 处超宽折行后复读 = 折后字面（纯标点折行、内容零改）。
+- 改动面 6 档逐处复读：测试头注 4 处（`test/child-permission.test.mjs` `:7` / `:61` · `test/child-permission-wiring.test.mjs` `:58` · `test/integration/scenario-05-panel-basics.test.mjs` `:42`）· SESSION-FLOW-A 8 处 + 变更记录行 · SESSION-FLOW-C 2 处 + 变更记录行 · WEBVIEW.md 3 处——改后字面与「一」表逐条对位。
+- 审计 QUESTION 处置：① 设计期坐标 / ② SESSION-FLOW-B `:68`/`:97` 满限 as-of 值 / ③ `:80` 历史记录行 = 记录面口径零触碰（见「三」范围外注记）；④ 批次档落节 = 本小节即落；⑤ 脚本实跑与单跑 = 本节证据补足。
 
 ## §6 验证与收口（父代理自写）
 

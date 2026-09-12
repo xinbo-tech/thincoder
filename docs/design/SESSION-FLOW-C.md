@@ -44,7 +44,7 @@
    （autocomplete.js:29 侧自增——webview/autocomplete.js 改）——host 只回显最新 seq（panel-index.mjs:37-41
    过滤）——实现期核 autocomplete 防抖现状后确认是否还需 webview 配合（如防抖已有则 seq 足够）
 4. **响应器 id 匹配**（panel-callbacks.mjs:22-39 + panel-messages.mjs:218-243）：卡片带 {promptId}——host 按 id 查队列条目（非无条件 shift——找不到 no-op）——补 chat.js questionCancelled case（移除卡片）
-5. **retry 并入** userMessage 同入口（panel-messages.mjs:148-151 → 经 _suspQueue 统一队列）
+5. **retry 并入** userMessage 同入口（panel-messages.mjs:148-151 → 经 routeUserTurn 统一入口——running 拒收无排队）
 6. **测试清单漂移修复**（先决——损坏点）：test/files.mjs:9-28 8 项缺失（agent-core/config-io/execute/git/provider/chat-panel/edit-eol/edit-semantics）——git 核实际状态后修清单（删缺项或补回文件）——否则新测试无法入册
 
 ### C2（后做——依赖 C1）
@@ -71,7 +71,7 @@
 | webview/loading.js | setLoading 对齐 | ~30 现（+~4——评审 #1 实测） |
 | webview/panels.js | suspension 消息对齐 | ~240 现（+~4——评审 #1 实测） |
 | test/files.mjs | 清单修复（先决）+ 新测试登记 | ~28 现（+~4——评审 #1 实测） |
-| test/chat-panel.test.mjs（评审 #6：新文件——若树中已有同名则重建——以 files.mjs 实况定） | C1 6 组测试 | 新 ~200 |
+| test/chat-panel.test.mjs（评审 #6：新文件——若树中已有同名则重建——以 files.mjs 实况定；2026-09-12 拆档后分居两档——面板入口组居 `test/chat-panel-messages.test.mjs`） | C1 6 组测试 | 新 ~200 |
 | docs/design/WEBVIEW.md | 新章节「消息秩序与忙态收敛」（评审 #7：权威锚——协议正文唯一来源） | doc |
 | AGENTS.md:72-98 协议表 | 新消息类型行（评审 #7：镜像指 WEBVIEW.md——不重复正文） | doc |
 
@@ -81,13 +81,13 @@
 - AC-C1 Startup 窗口 abort 生效（闩消费——Stop 不再被吞）
 - AC-C1 atComplete 旧扫描不覆盖新下拉（seq 只采纳最新）
 - AC-C1 迟到响应器 no-op 不 resolve 错队头（id 匹配）
-- AC-C1 retry 与 userMessage 同入口（守卫统一——_suspQueue 零丢失）
+- AC-C1 retry 与 userMessage 同入口（守卫统一——running 拒收无排队）
 - AC-C2 _turnState 枚举转换正确（webview reducer 测试——susp 进出 + waiting 修饰）
 - AC-C2 renderStatusBar 单 writer（loading 不覆写徽标——终态 = 最后消息驱动）
 - AC-C2 Stop susp 期常显（_turnState==="susp" 派生）
 - AC-C2e（评审 #3）_suspCounts 不陈旧（digest 间重发后 webview 计数 = host 实际——测试断言）
 - AC 红线：全量 FIFO 串行不引入（abort 直通测试立不变量）+ 既有消息类型名零改
-- AC 测试绿（C1 6 组 chat-panel.test + C2 webview reducer 组 + 既有不回归——VSC npm test 快层 + L2 父侧）
+- AC 测试绿（C1 6 组 chat-panel.test（2026-09-12 拆档后分居两档——面板入口组居 `test/chat-panel-messages.test.mjs`） + C2 webview reducer 组 + 既有不回归——VSC npm test 快层 + L2 父侧）
 
 ## 变更记录
 - 2026-09-09：C 深勘察落档（消息路由全路径 + 忙态镜像全清单 + H-A~F 竞态 + 方案选型单 FIFO 否决——杀 Stop 红线——C1/C2 分阶——测试基建漂移发现）。需求登记 TODO 需求池（用户裁 C 先行 A+B 后做）。
@@ -96,3 +96,4 @@
   🟡1 Reload 冷启 running 不恢复（设计口径——A 批或后续定）/ 🟡2 digest 窗口 Stop 隐藏毫秒级（闩兜底
   ——定夺项）/ 🟡3 panel-chat 493 行近 500（下次拆）/ 设计档状态行已翻。A+B 后做（A：sendMessage 守卫
   依赖 C1 已就绪；B：块原地依赖 C2 已就绪——待排批）。
+- 2026-09-12：C'-era 队列语义残述按现态收正（retry 与 userMessage 同入口不变——running 拒收无排队；证据 = `src/extension/panel-messages.mjs` retry case + `test/chat-panel-messages.test.mjs` ①）。

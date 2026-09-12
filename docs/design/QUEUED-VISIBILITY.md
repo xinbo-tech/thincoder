@@ -81,4 +81,5 @@
 
 ## 变更记录
 - 2026-09-09：落档（深勘察——**VSC queued 可见已存在**（SESSION-ACTIVITY-REVISED 5be6c67 核销）——真差集 = F-2 取消 ⏹（用户全量裁覆盖 F-6 旧"接受无取消"裁定）+ F-3 Reload 快照（SESSION-RESTORE-PARITY 不覆盖——真空缺）+ F-4 i18n——CLI 参照系确认（subagent-panel queued 显示已有——补 ⏹ 即齐）。
-- 2026-09-09：**F-3 已撤销**（REMOVE-POOL-SNAPSHOT——webviewReady 快照重推过度工程——retainContextWhenHidden=true 无 webview 重建场景 + 整窗 reload 池清快照空转——postPoolSnapshot/SNAPSHOT_ROLES/pool-snapshot.test.mjs 删除）——F-2 queued 可见（增量消息驱动）与 F-4 i18n 保留不变；F-2 取消路由测试迁 chat-panel.test.mjs 保留覆盖。
+- 2026-09-09：**F-3 已撤销**（REMOVE-POOL-SNAPSHOT——webviewReady 快照重推过度工程——retainContextWhenHidden=true 无 webview 重建场景 + 整窗 reload 池清快照空转——postPoolSnapshot/SNAPSHOT_ROLES/pool-snapshot.test.mjs 删除）——F-2 queued 可见（增量消息驱动）与 F-4 i18n 保留不变；
+  F-2 取消路由测试迁 chat-panel.test.mjs 保留覆盖（2026-09-12 拆档后居 `test/chat-panel-messages.test.mjs`）。

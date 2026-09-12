@@ -368,8 +368,8 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 | 文件 | 性质 | 预计规模 |
 |---|---|---|
 | `test/portability-vsc-classification.test.mjs` | **新增** | ~150（T-V01–T-V06） |
-| `test/portability-vsc-advisor-context.test.mjs` | **新增** | ~150（T-V07–T-V13） |
-| `test/portability-vsc-index.test.mjs` | **新增** | ~130（T-V14–T-V19） |
+| `test/portability-vsc-advisor-context.test.mjs` | **新增** | ~150（T-V11–T-V13 在役；T-V07–T-V10 已退场——整删，删除记录 = `TESTING.md` §8.1（`:137`–`:140`）） |
+| `test/portability-vsc-index.test.mjs` | **新增** | ~130（T-V14–T-V16 + T-V19 在役；T-V17/T-V18 已退场——整删，删除记录 = `TESTING.md` §8.1（`:143`–`:144`）） |
 | `test/prompts-mirror-anchors.test.mjs` 等既有档 | 回归（预计零改） | 0（编辑点已避让锚表；若实测红→按本设计语义改字面并登记） |
 
 **文档面（本批产物 + 父侧维护）**：
@@ -394,31 +394,31 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 | T-V04 | 错误 | `conventions.json` 非法 JSON / 类型错 | 回退默认 + warn + 不抛；`clearConventionsCache()` 后重读生效 | VP-10 |
 | T-V05 | 正常（门禁） | 工程模式 + 无令牌 + 写 `src/x.mjs`（`execute-tools` 门） | 拒绝；hint 无 `in docs/`、含声明指路 | VP-10 · VP-11 |
 | T-V06 | 边界（门禁） | 同上 + 写 `packages/foo/src/x.md` / 非字符串路径 | 均**拒绝**（嵌套反证 + 保守拦截保持） | VP-10 |
-| T-V07 | 正常（注入） | 临时项目：有 AGENTS.md + `docs/README.md` | `## Project Guide (AGENTS.md)` 段 + 文档地图注入在场 | VP-12 · VP-1 |
-| T-V08 | 边界（缺料） | 无 AGENTS.md / 无地图 / 未声明标准文档 | 三条降级句在场；`Read METHODOLOGY.md` 零命中 | VP-1 · VP-2 · VP-3 · VP-12 |
-| T-V09 | 正常（声明） | `advisor.docMap` / `advisor.standardsDoc` 指向自定义路径 | 声明文件注入（优先于探测） | VP-1 · VP-2 |
-| T-V10 | 正常（非 git） | 临时目录（无 `.git`）跑设计评审消息构建 | NO_GIT_NOTICE 在场；评审照常 | VP-8 |
+| T-V07 | 正常（注入） | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:137`）） | VP-12 · VP-1 |
+| T-V08 | 边界（缺料） | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:138`）） | VP-1 · VP-2 · VP-3 · VP-12 |
+| T-V09 | 正常（声明） | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:139`）） | VP-1 · VP-2 |
+| T-V10 | 正常（非 git） | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:140`）） | VP-8 |
 | T-V11 | 正常（校验） | design 评审传 `documents:["docs/design/x.md"]` | 通过（isDocPath） | VP-10 |
 | T-V12 | 边界（校验） | 传 `["src/prompts/x.md"]` / `["x.mjs"]` | 拒绝（非文档——`docs/` 前缀不再放行） | VP-10 |
 | T-V13 | 错误（文案） | advisor 文档门禁拒绝 + eng 工具 enter | 两条文案均无 `in docs/`；与 §4.3 逐字一致 | VP-11 |
 | T-V14 | 正常（扩展名） | `.dart`/`.lua`/`.cs`/`.org` 文件 | 默认可索引 | VP-9 |
 | T-V15 | 边界（声明） | `index.codeExtensions:[".xyz"]` | `.xyz` 入索引；未列入 → `unlistedExts` 计数 | VP-9 |
 | T-V16 | 正常（可见化） | 含未索引扩展名文件的构建 | `buildIndex` 返回 `unlistedExts`；面板消息含提示行 | VP-9 |
-| T-V17 | 正常（提示词） | 六档编辑后 | 新通用化句在场（§4.4 逐条）；§3.6 红线锚零损 | VP-3–VP-7 |
-| T-V18 | 边界（R24 对齐） | EN/CN `discipline-engineering.md` | R24 行两档同文；`docs/design/METHODOLOGY.md` 引用形态与 CN 现形态一致 | VP-7 |
+| T-V17 | 正常（提示词） | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:143`）） | VP-3–VP-7 |
+| T-V18 | 边界（R24 对齐） | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:144`）） | VP-7 |
 | T-V19 | 正常（索引回归） | 既有 `needsRebuild` 路径 | 行为零回归（非 git 回退保持） | VP-9（回归锁） |
 
 ## 7. 验收标准（AC-V01–AC-V14——逐条回指）
 
 | # | 验收标准（机器可验证） | 回指 |
 |---|---|---|
-| AC-V01 | VSC 全仓 grep：`src` 组件式/锚定式正则副本 = 0、`docs/` 前缀判据副本 = 0（唯一实现 = `src/conventions.mjs`） | VP-10 · FR12 |
+| AC-V01 | 判据面退场（随 AC-V01 静态面整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:142`））；需求本体（唯一实现 = `src/conventions.mjs`——副本 = 0）不变 | VP-10 · FR12 |
 | AC-V02 | T-V01–T-V04 全绿；`packages/foo/src/x.md` 判 code（嵌套漏判消除） | VP-10 · FR12 |
 | AC-V03 | T-V05–T-V06 全绿（门禁拒绝保持 + 非字符串保守拦截保持 + 声明后行为切换） | VP-10 · FR12 |
-| AC-V04 | T-V07–T-V09 全绿；三条降级句逐字在场；`Read METHODOLOGY.md` 全仓零命中（VSC 代码与提示词） | VP-1 · VP-2 · VP-3 · VP-12 · FR10/11 |
-| AC-V05 | T-V10 全绿；NO_GIT_NOTICE 逐字在场 | VP-8 · FR15 |
+| AC-V04 | 判据面退场（T-V07–T-V09 均整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:137`–`:139`）） | VP-1 · VP-2 · VP-3 · VP-12 · FR10/11 |
+| AC-V05 | 判据面退场（T-V10 整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:140`）） | VP-8 · FR15 |
 | AC-V06 | T-V14–T-V16 全绿；`unlistedExts` 字段与面板提示行存在 | VP-9 · FR10 |
-| AC-V07 | T-V17 全绿；六档编辑面内指令性引用 = 0（`docs/design/README.md` / `docs/design/<TOPIC>.md`——「本产品自研仓 =」标注形态除外）；`check-doc-width` 零指涉（全形态） | VP-3–VP-7 · FR13 |
+| AC-V07 | T-V17 已退场（整删——删除记录 = `TESTING.md` §8.1（`:143`））；六档编辑面内指令性引用 = 0（`docs/design/README.md` / `docs/design/<TOPIC>.md`——「本产品自研仓 =」标注形态除外）；`check-doc-width` 零指涉（全形态） | VP-3–VP-7 · FR13 |
 | AC-V08 | 既有提示词锚测试全绿（`prompts-mirror-anchors` + `prompts-async-guidance` + `doc-consistency`）；红线锚句逐一在位 | VP-3–VP-7 · FR13 |
 | AC-V09 | T-V11–T-V13 全绿；门禁/工具文案 `in docs/` grep 0（VSC `src/`） | VP-10 · VP-11 |
 | AC-V10 | `eng` 工具 enter 提示含新文案；OFF 语义零回归（`eng-settlement` 回归绿） | VP-11 · FR11 |

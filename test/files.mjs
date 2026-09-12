@@ -12,7 +12,8 @@ export default [
   "test/activity-flow.test.mjs", // SESSION-FLOW-B B1（2026-09-09）：子代理块流内出生/原地冻结/resetActivity/150 计入/⏹ 规则/parseChannel——F-B1a~f + N3 无 DOM move（happy-dom——helpers/webview-env.mjs）
   "test/async-visibility.test.mjs", // 第 10 批条目 A（2026-09-11）：VSC live 块出生可靠性——投递队列/flush/溢出留痕·新代接管·终态补桩成员表·清屏恢复（pool+⏹+位置）——T-V1~V8 + AC-A1~A8（WEBVIEW.md §5.1）
   "test/wait-for-advisor-pool.test.mjs", // 第 10 批条目 B（2026-09-11）：`advisor settled` 判据 = 评审池真实态（红→绿——双载体）——T-B4/T-B5（CLI AGENT-LOOP.md §18.6）
-  "test/chat-panel.test.mjs", // SESSION-FLOW-C C1+C2 host 组（2026-09-09）：turn 句柄保底/abort 启动闩/控制直通/响应器 id 匹配/atComplete seq/保序入队——F-C1a~e + ⑦ C2 忙态状态机（F-C2a）
+  "test/chat-panel.test.mjs", // 真实模块直驱面（2026-09-09；2026-09-12 拆分）：turn 句柄保底（④ F-C1a/H-B）/ atComplete seq（⑥ F-C1c/H-A）/ A2 标题回合内（⑨⑩ F-A2）/ 模型·stamp 决策（⑪ MODEL-MERGE-SESSION）——真 runPanelChat + 真 atComplete + resolveTurnModelAndStamp（面板入口组已迁 chat-panel-messages.test.mjs；切点判据 = LEDGER-SELF-CONTAINED.md D18 四条）
+  "test/chat-panel-messages.test.mjs", // 面板入口（消息/控制/状态）面（2026-09-12 拆分自 chat-panel.test.mjs——500 行硬限无豁免）：桩面板驱动（stubPanel 夹具自持——零跨档 import）——拒收（①）/ 控制直通（②）/ 启动闩（③）/ 响应器匹配（⑤）/ 忙态状态机（⑦）/ sendMessage（⑧）/ _chat 单槽（⑪）/ F-2 取消路由（⑫）
   "test/webview-turnstate.test.mjs", // SESSION-FLOW-C C2 webview reducer 组（2026-09-09）：_turnState 枚举转换/renderStatusBar 单 writer/Stop susp 常显/_suspCounts 不陈旧——F-C2a~e（happy-dom——helpers/webview-env.mjs）
   "test/edit-tool-improvement.test.mjs",
   "test/memory-tool.test.mjs",
@@ -73,7 +74,8 @@ export default [
   "test/activity-live-ux.test.mjs", // VSC-LIVE-UX 批（2026-09-12）：live 块流式跟滚 + 内容区高度 60px——块级 follow（近底 24px 让位/复钉 + 两层独立）+ 脏集 rAF 帧应用（节流重排不丢）+ 折叠/已移除 no-op + CSS 静态断言——T-LU1~T-LU6（WEBVIEW.md §13）
   "test/activity-closure.test.mjs", // 活动区收口批（2026-09-12）：终态清退+归档落流（awaitingDigest 驻留/回收边界前/即时尾追/退出全归档/接管吞守卫/补桩直归档/reset 收窄）+ 块头字段（queued 位置·tool+cmd·turn 帧·elapsed 不设门）——T-CL1~T-CL8/T-CL10~T-CL13/T-CL17~T-CL19（WEBVIEW.md §14）
   "test/status-line.test.mjs", // 活动区收口批（2026-09-12）：状态行字段级对齐——statusText 五 kind 两 locale/✦reasoning/turn N/M（旧段退役）/端差（scrolled 不做·ctx pct）+ onWait/索引/transport 发射点机检——T-CL21~T-CL24（WEBVIEW.md §14）
-  "test/child-permission.test.mjs", // 子代理审批面对齐批（2026-09-12）：child 审批门——ask 弹卡带归属/approve-deny 语义/AUTO 直通/轮中 approve-all/escalate sync+async（⏹ 与 Stop 两路释放）/promptId 路由/角色域零卡/无通道静默/depth-0 零回归/块头 ⏸+态词+i18n/R2 措辞锚/结构对表——T-CP1..T-CP19（AGENT-LOOP.md VSC §18；测试档登记不拆分）
+  "test/child-permission.test.mjs", // 子代理审批面对齐批（2026-09-12）：child 审批门——ask 弹卡带归属/approve-deny 语义/AUTO 直通/轮中 approve-all/escalate sync+async（⏹ 与 Stop 两路释放）/promptId 路由/角色域零卡/无通道静默/depth-0 零回归/块头 ⏸+态词+i18n/结构对表——T-CP1..T-CP19（AGENT-LOOP.md VSC §18；2026-09-12 拆分：引擎接线组 6 例 → child-permission-wiring.test.mjs）
+  "test/child-permission-wiring.test.mjs", // child-permission 引擎接线组（2026-09-12 拆分自 child-permission.test.mjs——500 行硬限无豁免）：escalate sync/async 通道接线 + ⏹ / Stop 两路释放 + runChild 角色域零卡/无通道静默——T-CP6/T-CP7/T-CP19/T-CP10/T-CP11/T-CP15（AGENT-LOOP.md VSC §18；夹具自持——零跨档 import）
   "test/ledger.test.mjs", // LEDGER-SURFACE 批（2026-09-12）：台账可见面 VSC 面——语义同源单元组 + 跨端去重键 + item 形态（T107）+ webview 渲染（T108）+ post/送达门 + 接线机检 + 慢层 git 老化界值（T102）（ENGINEERING-MODE.md §2.30）
   "test/ledger-check.test.mjs", // LEDGER-SELF-CONTAINED 批（2026-09-12）：台账机检 L1–L4——正常（本仓指针全解析）+ 错误（跨仓证据 / 跨仓指针 → [L4] + 退出码 1）+ 边界（零假阳 / 非空基线即 FAIL——必须保持为空）（T-VS1–T-VS6 + L2/L3 面；设计档 §7.3）
   "test/slow-gate.test.mjs", // D-T6 机制自验（2026-09-12 收尾轮 9 补建——原引用悬空修复）：红/绿两端 + 文件级合成条目跳过分支（slow() 门控：快层 skip、test:full 跑）

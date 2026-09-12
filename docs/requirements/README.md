@@ -2,6 +2,7 @@
 
 > 本文件是 `docs/requirements/` 的登记规则与归属判据——写/改本仓需求文档前**先查这里**。
 > 本目录为**本仓自持面**（2026-09-12 建立）：本仓需求住本仓。
+> 树终态计数：**17 → 34 档**（① 行建档 17 档）；现态 = **34 = 34 已建 + 0 待建**（建档实施完成——见下方对位表）。
 > 与对端仓（CLI）的需求档**语义同源、本端原文自持**——不做逐字一致、不加跨端同步依赖（在案多实现面纪律）。
 
 ## 为什么本目录存在
@@ -47,62 +48,77 @@
 | `settings` 工具 | `SETTINGS-TOOL.md` | 配置读写通道与形状护栏（本批新建） |
 | 结构债 | `STRUCTURE-DEBT.md` | 文件 / 函数 / 文档粒度硬指标（本批新建） |
 | verify 门禁 | `VERIFY-REDESIGN.md` | 声明式完成前门（本批新建） |
+| async 结果容器 | `ASYNC-RESULT-CONTAINER.md` | 异步子代理结果结算（本批建档——原对位 = `docs/design/ASYNC-RESULT-CONTAINER.md`） |
+| 设计评审凭证结算 | `DESIGN-TOKEN-SETTLEMENT.md` | settle 当场落盘 / 门禁读权威（本批建档——原对位 = `docs/design/DESIGN-TOKEN-SETTLEMENT.md`） |
+| 飞刀 | `ESCALATE.md` | 升级到更强模型实现（本批建档——原对位 = `docs/design/ESCALATE.md`） |
+| MCP 客户端 | `MCP.md` | MCP 工具展开并入统一工具表（本批建档——原对位 = `docs/design/MCP.md`） |
+| 可移植性 | `PORTABILITY.md` | 项目约定声明 / 降级可见 / 索引与门禁面（本批建档——原对位 = `docs/design/PORTABILITY.md`） |
+| VSC 提示词 | `VSC-PROMPTS.md` | 槽位装配 / 双源 / 降级链（异名——对位对端 `PROMPT-SYSTEM`）（本批建档） |
+| 发布流程 | `RELEASE.md` | 双源发布 / 唯一门禁 / CalVer 定号（本批建档——原对位 = `docs/design/RELEASE.md`） |
+| 子代理观测 / 注入 | `SUBAGENT-OBSERVE-SEND.md` | observe 查进度 + send 注入引导（本批建档——原对位 = `docs/design/SUBAGENT-OBSERVE-SEND.md`） |
+| 工具系统 | `TOOLS.md` | 注册表 / 描述装载 25 档 / 调度与审批（本批建档——原对位 = `docs/design/TOOLS.md`） |
+| webview 界面 | `WEBVIEW.md` | 本端 UI 面（对话流 / 活动区 / 工具卡；异名——对端 TUI）（本批建档） |
+| 撞墙继续 | `TURN-CAP-CONTINUE.md` | 轮数预算耗尽续跑 / 跨段累计编号（本批建档——原对位 = `docs/design/TURN-CAP-CONTINUE.md`） |
+| 评审收敛 | `ADVISOR-CONVERGENCE.md` | advisor 独立评审的收敛保证 + 评审链边缘守卫（本批建档 A 轮——原对位 = `docs/design/ADVISOR-CONVERGENCE.md`） |
+| 快照与回滚 | `CHECKPOINT.md` | git 破坏性操作保险（v2 全量副本 + 自动快照接线；本批建档 A 轮——原对位 = `docs/design/CHECKPOINT.md`） |
+| 会诊 | `CONSULTATION.md` | 多模型并行分析（digest 唯一消费通道；本批建档 A 轮——原对位 = `docs/design/CONSULTATION.md`） |
+| 上下文压缩 | `CONTEXT-COMPACTION.md` | 安全点压缩 / 摘要回注 / 降级链 / webview 可见性（本批建档 A 轮——原对位 = `docs/design/CONTEXT-COMPACTION.md`） |
+| 记忆系统 | `MEMORY.md` | 两层记忆 + 代码 / 文档索引（本批建档 A 轮——原对位 = `docs/design/MEMORY.md`） |
+| 会话 | `SESSION.md` | 槽位持久化 / 恢复 / GC（本批建档 A 轮——原对位 = `docs/design/SESSION.md`） |
 
-**树终态 = 17 档（已建）→ 34 档（本轮建档后）**：已建 17 = 在位 3（`README` / `ENGINEERING-MODE` / `TESTING`）+ 归位 6 + 拆出 1（`FEATURES`）+ 本批新建 6 + C 桶接收 1（`AGENT-LOOP`）；本轮 ① 建档 17（见下方对位表）——17 + 17 = **34**。
+**树终态计数：17 → 34 档**（= 原 17 已建 + ① 行建档 17 档）：**现态 = 34 = 34 已建 + 0 待建**（建档实施收齐——2026-09-12 A 轮 6 档落盘后；见下方对位表）。
 
-**待建档登记**：① 17 档（下方对位表「待建」行）为**计划登记**——建档实施 = 下一轮；落地后逐档并入本文件「板块 → 文档映射」表并去「待建」标记。
+**待建档登记**：**0 档**（清零——① 行 17 档已全部落盘并逐档并入本文件「板块 → 文档映射」表；下方对位表**无「待建」行**）。
 
 ## 36 档对位表（CLI 仓需求档 → 本仓判 → 本仓对位档 → 处置）
 
-> 判值三态：① = **建本仓需求档**（待建——建档实施 = 下一轮）· ② = **已有对位**（本仓需求层已有档，注明实际档名）· ③ = **本端无此面**（写理由）。
+> 判值三态：① = **建本仓需求档**（现态 **0 行**——建档实施已完成）· ② = **已有对位**（本仓需求层已有档，注明实际档名）· ③ = **本端无此面**（写理由）。
 > **判据句（2026-09-12 10:57 用户裁定「全部啊！」）**：**需求层必须在本仓有档**——② 已有对位**不得以 design 层充当**；「对端有」「design 层有」不构成需求层缺失的理由。
 > 语义同源参照 = `LEDGER-SELF-CONTAINED（CLI 仓）§8.6`（逐档清单 36 行——原值 / 本仓现状 / 处置 / 依据句）；本表为本端原文自持的逐档登记。
 
 | # | CLI 仓需求档 | 判 | 本仓对位档（实际档名 / 待建档名） | 处置 / 理由 |
 |---|---|---|---|---|
 | 1 | `ACP-CLIENT` | ③ | — | 本端无此面（保持）：本端即 IDE 内嵌扩展，不以 ACP 接入 |
-| 2 | `ADVISOR-CONVERGENCE` | ① | **待建** `docs/requirements/ADVISOR-CONVERGENCE.md` | 异层者建档（原对位 = `docs/design/ADVISOR-CONVERGENCE.md`） |
+| 2 | `ADVISOR-CONVERGENCE` | ② | `docs/requirements/ADVISOR-CONVERGENCE.md` | **已建** `docs/requirements/ADVISOR-CONVERGENCE.md`（本批建档 A 轮——原对位 = `docs/design/ADVISOR-CONVERGENCE.md`） |
 | 3 | `AGENT-LOOP` | ② | `docs/requirements/AGENT-LOOP.md` | 已有对位（C 桶接收档） |
 | 4 | `AGENT-PARAMS` | ② | `docs/requirements/AGENT-PARAMS.md` | 已有对位（归位） |
-| 5 | `ASYNC-RESULT-CONTAINER` | ① | **待建** `docs/requirements/ASYNC-RESULT-CONTAINER.md` | 异层者建档（原对位 = `docs/design/ASYNC-RESULT-CONTAINER.md`） |
-| 6 | `CHECKPOINT` | ① | **待建** `docs/requirements/CHECKPOINT.md` | 异层者建档（原对位 = `docs/design/CHECKPOINT.md`） |
-| 7 | `CONSULTATION` | ① | **待建** `docs/requirements/CONSULTATION.md` | 异层者建档（原对位 = `docs/design/CONSULTATION.md`） |
-| 8 | `CONTEXT-COMPACTION` | ① | **待建** `docs/requirements/CONTEXT-COMPACTION.md` | 异层者建档（原对位 = `docs/design/CONTEXT-COMPACTION.md`） |
+| 5 | `ASYNC-RESULT-CONTAINER` | ② | `docs/requirements/ASYNC-RESULT-CONTAINER.md` | **已建**（本批建档——原对位 = `docs/design/ASYNC-RESULT-CONTAINER.md`） |
+| 6 | `CHECKPOINT` | ② | `docs/requirements/CHECKPOINT.md` | **已建** `docs/requirements/CHECKPOINT.md`（本批建档 A 轮——原对位 = `docs/design/CHECKPOINT.md`） |
+| 7 | `CONSULTATION` | ② | `docs/requirements/CONSULTATION.md` | **已建** `docs/requirements/CONSULTATION.md`（本批建档 A 轮——原对位 = `docs/design/CONSULTATION.md`） |
+| 8 | `CONTEXT-COMPACTION` | ② | `docs/requirements/CONTEXT-COMPACTION.md` | **已建** `docs/requirements/CONTEXT-COMPACTION.md`（本批建档 A 轮——原对位 = `docs/design/CONTEXT-COMPACTION.md`） |
 | 9 | `CRASH-REPORTS` | ③ | — | 本端无此面（保持）：本端无崩溃取证面（`crash*.mjs` 零命中） |
-| 10 | `DESIGN-TOKEN-SETTLEMENT` | ① | **待建** `docs/requirements/DESIGN-TOKEN-SETTLEMENT.md` | 异层者建档（原对位 = `docs/design/DESIGN-TOKEN-SETTLEMENT.md`） |
+| 10 | `DESIGN-TOKEN-SETTLEMENT` | ② | `docs/requirements/DESIGN-TOKEN-SETTLEMENT.md` | **已建**（本批建档——原对位 = `docs/design/DESIGN-TOKEN-SETTLEMENT.md`） |
 | 11 | `ENG-TOKEN-BINDING` | ② | `docs/requirements/ENG-TOKEN-BINDING.md` | 已有对位（归位） |
 | 12 | `ENGINEERING-MODE` | ② | `docs/requirements/ENGINEERING-MODE.md` | 已有对位（已在位） |
-| 13 | `ESCALATE` | ① | **待建** `docs/requirements/ESCALATE.md` | 异层者建档（原对位 = `docs/design/ESCALATE.md`） |
+| 13 | `ESCALATE` | ② | `docs/requirements/ESCALATE.md` | **已建**（本批建档——原对位 = `docs/design/ESCALATE.md`） |
 | 14 | `FEATURES` | ② | `docs/requirements/FEATURES.md` | 已有对位（拆出） |
 | 15 | `LOGGING` | ② | `docs/requirements/LOGGING.md` | 已有对位（本批新建——机制在位无档） |
-| 16 | `MCP` | ① | **待建** `docs/requirements/MCP.md` | 异层者建档（原对位 = `docs/design/MCP.md`） |
-| 17 | `MEMORY` | ① | **待建** `docs/requirements/MEMORY.md` | 异层者建档（原对位 = `docs/design/MEMORY.md`） |
+| 16 | `MCP` | ② | `docs/requirements/MCP.md` | **已建**（本批建档——原对位 = `docs/design/MCP.md`） |
+| 17 | `MEMORY` | ② | `docs/requirements/MEMORY.md` | **已建** `docs/requirements/MEMORY.md`（本批建档 A 轮——原对位 = `docs/design/MEMORY.md`） |
 | 18 | `MULTI-INSTANCE-COLLAB` | ② | `docs/requirements/MULTI-INSTANCE-COLLAB.md` | 已有对位（本批新建） |
 | 19 | `NORMAL-MODE` | ② | `docs/requirements/NORMAL-MODE.md` | 已有对位（本批新建） |
 | 20 | `PHILOSOPHY` | ② | `docs/requirements/PHILOSOPHY.md` | 已有对位（归位） |
-| 21 | `PORTABILITY` | ① | **待建** `docs/requirements/PORTABILITY.md` | 异层者建档（原对位 = `docs/design/PORTABILITY.md`） |
+| 21 | `PORTABILITY` | ② | `docs/requirements/PORTABILITY.md` | **已建**（本批建档——原对位 = `docs/design/PORTABILITY.md`） |
 | 22 | `PROJECT` | ② | `docs/requirements/PROJECT.md` | 已有对位（归位异名——原 `docs/design/REQUIREMENTS.md`） |
-| 23 | `PROMPT-SYSTEM` | ① | **待建** `docs/requirements/VSC-PROMPTS.md` | 异层者建档 + **异名**（本端提示词面实际档名 = `VSC-PROMPTS`） |
-| 24 | `RELEASE` | ① | **待建** `docs/requirements/RELEASE.md` | 异层者建档（原对位 = `docs/design/RELEASE.md`） |
+| 23 | `PROMPT-SYSTEM` | ② | `docs/requirements/VSC-PROMPTS.md` | **已建**（本批建档 + **异名**——对位对端 `PROMPT-SYSTEM`；本端档名 = `VSC-PROMPTS`） |
+| 24 | `RELEASE` | ② | `docs/requirements/RELEASE.md` | **已建**（本批建档——原对位 = `docs/design/RELEASE.md`） |
 | 25 | `SEND-STALL-DISTILL` | ② | `docs/requirements/SEND-STALL-DISTILL.md` | 已有对位（归位） |
-| 26 | `SESSION` | ① | **待建** `docs/requirements/SESSION.md` | 异层者建档（原对位 = `docs/design/SESSION.md`） |
+| 26 | `SESSION` | ② | `docs/requirements/SESSION.md` | **已建** `docs/requirements/SESSION.md`（本批建档 A 轮——原对位 = `docs/design/SESSION.md`） |
 | 27 | `SETTINGS-TOOL` | ② | `docs/requirements/SETTINGS-TOOL.md` | 已有对位（本批新建） |
 | 28 | `STRUCTURE-DEBT` | ② | `docs/requirements/STRUCTURE-DEBT.md` | 已有对位（本批新建） |
-| 29 | `SUBAGENT-OBSERVE-SEND` | ① | **待建** `docs/requirements/SUBAGENT-OBSERVE-SEND.md` | 异层者建档（原对位 = `docs/design/SUBAGENT-OBSERVE-SEND.md`） |
+| 29 | `SUBAGENT-OBSERVE-SEND` | ② | `docs/requirements/SUBAGENT-OBSERVE-SEND.md` | **已建**（本批建档——原对位 = `docs/design/SUBAGENT-OBSERVE-SEND.md`） |
 | 30 | `TESTING` | ② | `docs/requirements/TESTING.md` | 已有对位（并行批落位） |
 | 31 | `TOOL-OUTPUT-LIMITS` | ② | `docs/requirements/TOOL-OUTPUT-LIMITS.md` | 已有对位（归位） |
-| 32 | `TOOLS` | ① | **待建** `docs/requirements/TOOLS.md` | 异层者建档（原对位 = `docs/design/TOOLS.md` + 编辑族 6 档） |
-| 33 | `TUI` | ① | **待建** `docs/requirements/WEBVIEW.md` | 异层者建档 + **异名**（本端 UI 面 = webview；端差已登记） |
-| 34 | `TUI-TOOL-OUTPUT` | ① | **待建** `docs/requirements/WEBVIEW.md`（**与 #33 同档**） | 异层者建档（呈现面 = webview 工具卡；行间区块机制端差已登记） |
-| 35 | `TURN-CAP-CONTINUE` | ① | **待建** `docs/requirements/TURN-CAP-CONTINUE.md` | 异层者建档（原对位 = `docs/design/TURN-CAP-CONTINUE.md`） |
+| 32 | `TOOLS` | ② | `docs/requirements/TOOLS.md` | **已建**（本批建档——原对位 = `docs/design/TOOLS.md` + 编辑族 6 档） |
+| 33 | `TUI` | ② | `docs/requirements/WEBVIEW.md` | **已建**（本批建档 + **异名**——本端 UI 面 = webview；端差已登记） |
+| 34 | `TUI-TOOL-OUTPUT` | ② | `docs/requirements/WEBVIEW.md`（**与 #33 同档**） | **已建**（本批建档——呈现面 = webview 工具卡） |
+| 35 | `TURN-CAP-CONTINUE` | ② | `docs/requirements/TURN-CAP-CONTINUE.md` | **已建**（本批建档——原对位 = `docs/design/TURN-CAP-CONTINUE.md`） |
 | 36 | `VERIFY-REDESIGN` | ② | `docs/requirements/VERIFY-REDESIGN.md` | 已有对位（本批新建） |
 
-**三值计数**：① **18** · ② **16** · ③ **2** → **36** ✅（原「② 27」中的 **18 档异层者转入 ①**——不许以 design 层充当需求层；原 ① 7 档已建 → ②）
+**三值计数**：① **0** · ② **34** · ③ **2** → **36** ✅（原「① 18」**全部建档转 ②**——本批建档 17 档〔`WEBVIEW` 一档承载 #33 / #34 两行〕；① 余 **0 行 = 清零**）
 
-**① 待建档 17 档**（② 已有对位 18 行 → 17 档；`WEBVIEW` 一档承载 #33 / #34 两行）：
-`ADVISOR-CONVERGENCE` · `ASYNC-RESULT-CONTAINER` · `CHECKPOINT` · `CONSULTATION` · `CONTEXT-COMPACTION` · `DESIGN-TOKEN-SETTLEMENT` · `ESCALATE` · `MCP` · `MEMORY` ·
-`PORTABILITY` · `VSC-PROMPTS` · `RELEASE` · `SESSION` · `SUBAGENT-OBSERVE-SEND` · `TOOLS` · `WEBVIEW` · `TURN-CAP-CONTINUE`。
-建档规则（建档单位 = 本端机制板块 / 命名取本端权威档名 / 两层各持其档 / 非复制）见本仓设计档 §8.6；**建档实施 = 下一轮**（清单经用户过目 + 评审后）。
+**① 待建档 0 档**（清零——原 ① 6 行已于 A 轮全部落盘：`ADVISOR-CONVERGENCE` · `CHECKPOINT` · `CONSULTATION` · `CONTEXT-COMPACTION` · `MEMORY` · `SESSION`）。
+建档规则（建档单位 = 本端机制板块 / 命名取本端权威档名 / 两层各持其档 / 非复制）见本仓设计档 §8.6。
 
 ## 需求档写法（三层）
 
@@ -128,3 +144,10 @@
   对位表判值改判：**② 27 档中的 18 档异层者 → ①（待建）**、原 ① 7 档（已建）→ **②**；表列扩为「判 / 本仓对位档（实际档名 / 待建档名）/ 处置 · 理由」；
   **三值计数 = ① 18 · ② 16 · ③ 2**；**树终态 17 → 34 档**；① 待建档 17 档逐档列名（`WEBVIEW` 一档承载 `TUI` / `TUI-TOOL-OUTPUT` 两行）；
   **建档实施 = 下一轮**（清单经用户过目 + 评审后）——本轮不写新档正文。
+- 2026-09-12（**需求树逐档成套轮 · 建档实施**——2026-09-12 10:57 用户裁定「全部啊！」的实施面；分轮推进）：
+  本批建档 11 档——`ASYNC-RESULT-CONTAINER` · `DESIGN-TOKEN-SETTLEMENT` · `ESCALATE` · `MCP` · `SUBAGENT-OBSERVE-SEND` · `WEBVIEW`（B13 建档实施 B 轮）
+  + `PORTABILITY` · `VSC-PROMPTS`〔异名——对位对端 `PROMPT-SYSTEM`〕· `RELEASE` · `TOOLS` · `TURN-CAP-CONTINUE`（B13 建档实施 C 轮）；
+  对位表 12 行判 ① → ② + 处置列「已建」；**三值计数 = ① 6 · ② 28 · ③ 2**；**树终态 34 档（现态 = 已建 28 · 待建 6）**；板块表 +11 行；① 待建档 6 档。
+- 2026-09-12（**需求树逐档成套轮 · 建档实施 A 轮**——实施面收齐）：
+  本批建档 6 档——`ADVISOR-CONVERGENCE` · `CHECKPOINT` · `CONSULTATION` · `CONTEXT-COMPACTION` · `MEMORY` · `SESSION`（B13 建档实施 A 轮）；
+  对位表 6 行判 ① → ② + 处置列「已建」；**三值计数 = ① 0 · ② 34 · ③ 2**；**树终态 34 档 = 34 已建 + 0 待建**；板块表 +6 行（28 → 34）；① 待建档 0 档。

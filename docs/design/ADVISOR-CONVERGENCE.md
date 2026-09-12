@@ -593,7 +593,7 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
 | T-VG3 | 正常 | sync design 结算：时间线（含 token 回显）+ context 尾 | 不签发：报告零 token 字面 + 提示串在位 + 槽零写 | F18 |
 | T-VG4 | 正常 | async design 结算（fixture entry，report 同 T-VG3） | 同 T-VG3（`entry.report` 含提示；D1 台账零写） | F18 |
 | T-VG5 | 边界 | 干净通过（无尾 + token 回显） | 签发零回归：槽写入 + Approved 后缀 | F18（负向） |
-| T-VG6 | 错误 | code 守卫：时间线 + context 尾；另一例 `review failed (…)` 字符串形态 | `_calledAdvisorThisRun` **不**置 true；旧正则定义 / 消费零残留 | F23 |
+| T-VG6 | 错误 | code 守卫：时间线 + context 尾；另一例 `review failed (…)` 字符串形态 | `_calledAdvisorThisRun` **不**置 true（行为面保留）；旧正则定义 / 消费零残留（grep 面）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1） | F23 |
 | T-VG7 | 边界 | 构建自愈：design + round ≥1 + 无 prior（降级形态）；幂等复测 | 输出含 `## Approval Signal` + 精确 token 字面；已含时不重复 | F19 |
 | T-VG8 | 边界 | `compactMessages(>20 条, pinned)` / `(≤20 条, pinned)` | 前者压缩后含 pinned 三锚；后者原样返回 | F20 |
 | T-VG9 | 正常 | 夹具双仓；scope 声明 VSC 档；引文 = 裸文件名 | 命中 1/1 + 报告注明解析路径 | F21 |
@@ -614,11 +614,11 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
 
 | AC | 验收内容（机判） | 回指 |
 |---|---|---|
-| AC-VG1 | 候选链零假命中：T-VG9 / T-VG10 / T-VG11 绿；`citations.mjs` 无全盘扫描（grep：无 `readdir` / glob 调用）；命中根报告段在位 | F21 |
+| AC-VG1 | 候选链零假命中：T-VG9 / T-VG10 / T-VG11 绿（行为面）；`citations.mjs` 无全盘扫描（grep）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；命中根报告段在位 | F21 |
 | AC-VG2 | 信号必达：T-VG7 绿（自愈 + 幂等） | F19 |
-| AC-VG3 | 压缩不吞锚：T-VG8 绿；pin 来源 = 评审参数（grep 判据三式，全真：① `function buildPinnedBrief(` 命中 ≥1；② 其定义体内 `documents` / `object` / `designToken` 各 ≥1 引用；③ `compactMessages(` 调用点第二实参（`pinned`）在位 ≥1） | F20 |
+| AC-VG3 | 压缩不吞锚：T-VG8 绿（行为面）；pin 来源 = 评审参数（grep 判据三式）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1） | F20 |
 | AC-VG4 | 未完成不签发：T-VG3 / T-VG4 绿（`passed=false` + 槽 / 台账零写 + 报告零 token 字面 + 提示串在位）；T-VG5 零回归（正常批准不变） | F18 |
-| AC-VG5 | 同谓词守卫：T-VG6 绿；`ADVISOR_FAILURE_TEXT` 定义 / 消费 grep 零命中（六 kind 全覆盖 = 旧六形态语义零丢） | F23 |
+| AC-VG5 | 同谓词守卫：T-VG6 绿（行为面）；`ADVISOR_FAILURE_TEXT` 定义 / 消费 grep 零命中（六 kind 全覆盖）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1） | F23 |
 | AC-VG6 | 硬墙 + 结构收尾 + 提示：T-VG12 / T-VG13 绿（族前缀逐字 + 统计行三要素 + budget 行；两形态同判）；T-VG14 / T-VG15 绿（0.75 阈值、一次性、时钟注入零真实等待） | F22 |
 | AC-VG7 | 形状表第 4 条：T-S2.36 / T-S2.37 绿；`_SIBLING_SHAPES` 键数 = 4 与 TOOLS 档计数一致；roleMap 拒 / 接受集 == `effectiveSubagentModel` 可消费集（表驱动） | F-S1.7 |
 | AC-VG8 | 零回归 + 档位 + 登记：VSC `npm test` 全绿；`test/files.mjs` 清单含新档（+1）；行数实测对表（loop / compaction / run ≤300；advisor-async ≤500；新测试档 ≤500）；两仓 `check-doc-width` 新增违规 0 + 新增超宽 0；CLI 仓代码零改动（`git status` 判据——本批不碰 CLI 实施面） | N15 |
@@ -876,9 +876,9 @@ async 点火路径；同步评审阻塞回合、父侧无并发写时刻）。
 
 | AC | 验收内容（机判） | 回指 |
 |---|---|---|
-| AC-VG9 | 启动断言：T-VG16 / T-VG17 绿；拒绝前缀 `Advisor: design review launch refused` 实现 grep 命中；正常链零回归（既有 design 用例全绿）；拒绝不写槽 / 不写 prior | F24 |
-| AC-VG10 | 冻结拦截：T-VG18 / T-VG19 绿；拒绝文案锚（`write refused — design review` + `D5 freeze window` + `action:'cancel'`）grep 命中；被拒写入零落地（读回断言）；射程外写放行（成对） | F25 / N16 / N17 |
-| AC-VG11 | 边界可观察：T-VG20 绿；§14.4（a）定义句与实现锚（`eventsAtLaunch` / `advisorStale` / `settleAdvisorReview`）grep 对齐；回执冻结句逐字在位 | F25 / N17 |
+| AC-VG9 | 启动断言：T-VG16 / T-VG17 绿（行为面逐字断言保留）；拒绝前缀 `Advisor: design review launch refused` 实现 grep——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；正常链零回归（既有 design 用例全绿）；拒绝不写槽 / 不写 prior | F24 |
+| AC-VG10 | 冻结拦截：T-VG18 / T-VG19 绿（行为面）；拒绝文案锚（`write refused — design review` + `D5 freeze window` + `action:'cancel'`）grep——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；被拒写入零落地（读回断言）；射程外写放行（成对） | F25 / N16 / N17 |
+| AC-VG11 | 边界可观察：T-VG20 绿（行为面）；§14.4（a）定义句与实现锚（`eventsAtLaunch` / `advisorStale` / `settleAdvisorReview`）grep——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；回执冻结句逐字在位 | F25 / N17 |
 | AC-VG12 | 收敛信号锁定 + 零回归：T-VG21 绿；VSC `npm test` 快层全绿；新档登记 `test/files.mjs`（+1）；行数实测对表（run ≤300 · execute-tools / advisor / advisor-async ≤500——贴线项注记）；两仓 `check-doc-width` 新增违规 0 + 新增超宽 0；CLI 仓代码与已交付面零改动（`git status` 判据） | F26 / N18 |
 
 ### 14.11 后续登记项（本批不碰——明示，不静默）
@@ -907,7 +907,7 @@ async 点火路径；同步评审阻塞回合、父侧无并发写时刻）。
 
 > 来源：批次档 `2026-09-11-ADVISOR-BUDGET-VSC-MIRROR`（CLI 仓 docs/batches）§1——用户 2026-09-11 13:18
 > 「120K 那个是 bug…你检查一下」的 **VSC 镜像面**（CLI 第 25 批对位批）。语义源（CLI 侧）：设计档
-> `ADVISOR-CONVERGENCE（CLI 仓）§16`（比例式派生 / 契约 / OOM 论证 / D-CB1–D-CB9 / T-CB1–T-CB6 / AC-CB1–AC-CB5）；
+> `ADVISOR-CONVERGENCE（CLI 仓）§16`（比例式派生 / 契约 / OOM 论证 / D-CB1–D-CB9 / T-CB1–T-CB5（T-CB6 已退场——整删；删除记录 = `TESTING（CLI 仓）§11.3`）/ AC-CB1–AC-CB5）；
 > 需求 = `docs/requirements/ADVISOR-CONVERGENCE（CLI 仓）§10`（F27 / N19——**指针不重述**）。
 > **冻结面**：本档 §13 / §14 已交付契约文本零碰；CLI 仓零写入；本批只新增本节 + §2 载体表同步 + 变更记录行。
 > **镜像口径**：语义同源、本端原文自持、不做 byte-identical、零跨仓依赖（无 import / 无同步脚本）——一致由
@@ -919,7 +919,7 @@ async 点火路径；同步评审阻塞回合、父侧无并发写时刻）。
 |---|---|---|
 | 1 | 派生实现面（语义对齐 + 本端形态） | `providerSpec` 经 `../specs.mjs` 现成面（本模块惯例——`loop.mjs:17` 同源）；`advisorContextBudget(provider)` 单参数、两档命名 `{limit, compactAt}` 照 CLI；OOM = 本端一句 + CLI 指针——§15.3 表 1 / §15.4 / §15.6 |
 | 2 | 两处消费点逐点落法 | 循环体外一次性派生 `const budget = advisorContextBudget(provider)`；`loop.mjs:116` → `budget.compactAt`；`:121` → `budget.limit`——§15.5 |
-| 3 | 受影响文件 / 用例 / AC | 实施域 4 项（2 改 + 1 新测档 + 1 登记）；T-CB1–T-CB6 同型化；AC-CB1–AC-CB5 回指 F27 / N19——§15.8 / §15.11 / §15.12 |
+| 3 | 受影响文件 / 用例 / AC | 实施域 4 项（2 改 + 1 新测档 + 1 登记）；T-CB1–T-CB5 同型化（T-CB6 已退场——整删，删除记录 = `TESTING.md` §8.1（`:118`））；AC-CB1–AC-CB5 回指 F27 / N19——§15.8 / §15.11 / §15.12 |
 | 4 | 与 CLI 语义差异 | **零语义差异**（逐面核对 §15.7）；形态差异 3 处如实注 |
 | 5 | 纪律核对 | 双端纪律 / 既有锁零伤（常量消费面仅 `loop.mjs`；测试零引用）/ `test/files.mjs` 登记——§15.10 |
 
@@ -931,7 +931,7 @@ async 点火路径；同步评审阻塞回合、父侧无并发写时刻）。
 
 | 本批需求（CLI 侧文档 ID） | 语义标题 | 对位（CLI 第 25 批） |
 |---|---|---|
-| F27 | 预算派生（评审上下文——双端同源）的 **VSC 端** | 设计档 §16.3 / §16.9（T-CB1–T-CB6） |
+| F27 | 预算派生（评审上下文——双端同源）的 **VSC 端** | 设计档 §16.3 / §16.9（T-CB1–T-CB5；T-CB6 已退场——整删，删除记录 = `TESTING.md` §8.1（`:118`）） |
 | N19 | 零回归 + 可机判（VSC 端） | 设计档 §16.10（AC-CB1–AC-CB5） |
 
 - 判定句（执行面）：需求 §10.2 F27 行三段——① 1M 大窗在 ~19.7 万 tokens 下**不再**判死 ② 128K / 未知模型
@@ -1062,7 +1062,7 @@ export function advisorContextBudget(provider) {
    （`loop.mjs:17` 的 `specForModel` 同面）。
 2. **`providerSpec` 实现形**：本端 `config.mjs:142-149` 对 `context == null` 提前返回；CLI `model-specs.mjs:174-179`
    经 `Number()` + NaN 兜底——实测等价（非法 / 缺省 / `null` 三态均回落模型表原值；整数 > 0 → ×1024）。
-3. **文本与行位自持**：注释与行号为 VSC 原文（非逐字拷贝）；一致由本端 T-CB1–T-CB6 断言守。
+3. **文本与行位自持**：注释与行号为 VSC 原文（非逐字拷贝）；一致由本端 T-CB1–T-CB5 断言守（T-CB6 已退场——整删，删除记录 = `TESTING.md` §8.1（`:118`））。
 
 ### 15.8 受影响文件全清单（行数注记 = 当前 → 预计；口径 = `N lines total`）
 
@@ -1072,7 +1072,7 @@ export function advisorContextBudget(provider) {
 |---|---|---|---|---|
 | 1 | `src/advisor/compaction.mjs` | 160 → ~176 | 常量退场 + 预算纯函数 + `providerSpec` 导入 | ≤300 ✓（余量充裕） |
 | 2 | `src/advisor/loop.mjs` | 278 → ~280 | 导入换名 + 预算一次性派生 + 两处消费 | ≤300 ✓（余量 ~20；越 300 须停下报告——不硬压行） |
-| 3 | `test/advisor-context-budget.test.mjs` | 新 → ~130–140 | T-CB1–T-CB6（6 例） | 新档（≤500；**入 `test/files.mjs` 登记**） |
+| 3 | `test/advisor-context-budget.test.mjs` | 新 → ~130–140 | T-CB1–T-CB5（5 例在役；T-CB6 已退场——整删，删除记录 = `TESTING.md` §8.1（`:118`）） | 新档（≤500；**入 `test/files.mjs` 登记**） |
 | 4 | `test/files.mjs` | 55 → 56 | 新测档登记（显式清单 +1） | — |
 
 **文档域（eng-designer 写域——本设计者已落）**
@@ -1107,7 +1107,7 @@ export function advisorContextBudget(provider) {
 | **D2 单一权威源** | 契约详文 = 本节；CLI 机制详文 = `ADVISOR-CONVERGENCE（CLI 仓）§16`（指针不重述）；窗口语义 = `PROVIDER（CLI 仓）§15`（只引用） |
 | **D3 计数·枚举** | 用例 6 · AC 5 · 契约 2 条 · 实施域 4 项 · 形态差异 3 处——列表与计数同改（本行与各表一致） |
 | **D5 冻结窗口** | 本档 §13 / §14 已交付契约零碰；CLI 仓零写入；改动集齐后统一入场 |
-| **D6 回读核对** | 本节 + §2 + 变更记录落档后回读核实；实施面验收含读回断言（T-CB6） |
+| **D6 回读核对** | 本节 + §2 + 变更记录落档后回读核实；实施面验收含读回断言（T-CB6——已退场：整删，删除记录 = `TESTING.md` §8.1（`:118`）） |
 | **D7 变更留痕** | 本档变更记录一行（本批）+ 批次档 §2（任务书） |
 | **凭证不落档** | 全文零 token / designId 值 |
 | **多实现面纪律（双端）** | 语义同源 + 本端原文自持；不做 byte-identical、不建依赖；差异 3 处如实登记（§15.7） |
@@ -1126,7 +1126,7 @@ export function advisorContextBudget(provider) {
 | T-CB3 | 对照 | 同上下文 + 128K 模型 provider；同上下文 + 未知模型名 provider | 两者均以截断尾收尾（族前缀 `Advisor: context window limit reached (` 逐字）；`advisorIncompleteMarker → "context_limit"`（机械线不失效 + 未知模型回退判据） | F27 |
 | T-CB4 | 边界 | 同上下文 + `{model:"deepseek-flash", context:64}`（收紧）；同上下文 + `{model:"glm-4", context:1024}`（放宽） | 前者判死、后者不判死（**同量上下文两结果**——provider 级覆盖双向生效，证 `providerSpec` 接线面而非 `specForModel` 单源） | F27 |
 | T-CB5 | 边界 | 1M 模型 provider + ~73.7 万 tokens（45 × 64K 字符工具结果——消息数 > 20，触发压缩真裁剪） | 输出含 `[Context compacted:`（派生触发线在位）且不含截断尾；压缩后估算 < 判死线（就地断言 `estimateTokens(messages) < 800_000`）；评审正常收尾 | F27 |
-| T-CB6 | 正常（静态锚） | `src/advisor/compaction.mjs` / `src/advisor/loop.mjs` 源文本 | `Reserve headroom to avoid OOM` 零残留；`MAX_CONTEXT_TOKENS` 在 `src/` 零残留；`loop.mjs` 消费 `advisorContextBudget(provider)`（三断言） | F27 / N19 |
+| T-CB6 | 正常（静态锚） | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:118`）） | F27 / N19 |
 
 > 测试基建：单测零网络（循环 `seams.chat` 覆写——`??` 默认回退，生产路径不可达）、零真实 LLM、零长等待
 > （字符串夹具——微秒级）；新档入 `test/files.mjs` 登记后随 `npm test` 快层跑。
@@ -1135,11 +1135,11 @@ export function advisorContextBudget(provider) {
 
 | AC | 验收内容（机判） | 回指 |
 |---|---|---|
-| AC-CB1 | 派生与两档：T-CB1 绿（五组输入 × `{limit, compactAt}` 逐断言）；`advisorContextBudget` 为纯函数（`compaction.mjs` 内无 I/O、无状态写入） | F27 |
+| AC-CB1 | 派生与两档：T-CB1 绿（五组输入 × `{limit, compactAt}` 逐断言 + 确定性）；`advisorContextBudget` 纯函数静态面（`compaction.mjs` 内无 I/O、无状态写入）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1） | F27 |
 | AC-CB2 | 核心缺陷闭合：T-CB2 绿（1M 模型 ~19.7 万 tokens **不以** `context_limit` 收尾）+ T-CB3 绿（128K / 未知模型同量上下文仍以截断尾收尾——机械线与回退判据双锁） | F27 |
 | AC-CB3 | 接线面 = `providerSpec`：T-CB4 绿（provider 级 `context` 覆盖**双向**翻转判定结果） | F27 |
 | AC-CB4 | 零回归：T-CB5 绿（派生触发线在位）；既有 `advisor-chain-guards`（T-VG1–T-VG15）+ `advisor-guard-completion`（T-VG16–T-VG21）全绿；`npm test` 快层全绿；CLI 仓零改动（`git status` 判据） | N19 |
-| AC-CB5 | 文档-实现一致 + 旧帽退场：T-CB6 绿（旧 OOM 注释与 `MAX_CONTEXT_TOKENS` 在 `src/` 零残留；循环消费派生函数）；VSC 仓 `node scripts/check-doc-width.mjs` 新增违规 0（宽度 + V1/V2） | N19 |
+| AC-CB5 | 文档-实现一致 + 旧帽退场：旧帽面随 T-CB6 整删退场（删除记录 = `TESTING.md` §8.1（`:118`））；VSC 仓 `node scripts/check-doc-width.mjs` 新增违规 0（宽度 + V1/V2） | N19 |
 
 ### 15.13 边界（本批不做 + 登记项）
 
@@ -1153,7 +1153,7 @@ export function advisorContextBudget(provider) {
   3. `docs/TODO.md` 需求池行状态推进（CLI 仓——父侧写域；CLI §16.8 #4 已注）
   4. `estimateTokens` CJK 低估修正（CLI §16.8 #2 同族——另批评估）
 
-**计数（D3）**：用例 6（T-CB1–T-CB6）· AC 5（AC-CB1–AC-CB5）· 契约 2 条（§15.4 / §15.5）· 实施域 4 项
+**计数（D3）**：用例 6（编号 T-CB1–T-CB6；在役 5——T-CB6 已退场，删除记录 = `TESTING.md` §8.1（`:118`））· AC 5（AC-CB1–AC-CB5）· 契约 2 条（§15.4 / §15.5）· 实施域 4 项
 （2 改 + 1 新测档 + 1 登记）· 文档域 1 档；需求 = F27 / N19（§10，CLI 仓）。
 
 ## 16. 同源镜像收口（群 A——同步记账拒绝登记 + D5 下界定义句同步）（2026-09-11）

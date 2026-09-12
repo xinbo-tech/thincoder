@@ -8,9 +8,10 @@
  *   ③ **V3 三态零假阳**：在飞不报 / 有实质内容无轮次行必报 / 有戳不报 / 骨架行不算；
  *      本仓缺 `docs/batches/` → 跳过不报（跨仓边界）；**工具前时代批次档**（< `V3_ERA_START`）不判；
  *   ④ **基线机制**（夹具域）：基线档可读可写 · 条目降为「存量」的过滤语义保留（本仓基线必须为空）；
+ *      **非空即 FAIL**（spawn 面反证——合成非空基线 ⇒ FAIL + 退出码 1：T-VS32 ②）；
  *   ⑤ **接线**（T64）：`test/files.mjs` 入册 + 校验器真被跑到（未接线 = 红）。
- * 纯文件读取 + 结构判——零网络、零 git。T-VS32（含真 spawn 主行程断言 + 仓库扫描面）
- * 观测 430–1862ms——slow() 门控（2026-09-12 收尾轮 9）；其余用例留快层。
+ * 纯文件读取 + 结构判——零网络、零 git。慢层（slow()——2026-09-12 收尾轮 9 归册）：T64（接线 + 仓库域扫描真跑）·
+ * T-VS32 两例（真 spawn——枚举外必红 / 合成非空基线反证）；观测 90ms–1.9s（随负载波动）；其余用例留快层。
  */
 import { test, beforeEach, afterEach } from "node:test"
 import { slow } from "./slow.mjs"
@@ -128,15 +129,15 @@ test("T61 边界：V3 三态零假阳 + 本仓缺 docs/batches 跳过（跨仓�
   } finally { rmSync(empty, { recursive: true, force: true }) }
 })
 
-// ── ⑤ 基线机制（存量降报告 / 新增阻断） ────────────────────────────────────
-test("T63 ③ 正常：存量不达基线降报告（不阻断）/ 基线外即新增（阻断方向）", () => {
+// ── ⑤ 基线机制（夹具域：基线档可读可写 · 过滤语义保留 / 生产判据 = 基线必须保持为空——非空即 FAIL） ──
+test("T63 ③ 正常：基线机制（夹具域——可读可写 · 过滤语义保留）/ 生产判据 = 基线必须保持为空（非空即 FAIL）", () => {
   mkdirSync(join(tmp, "docs", "design"), { recursive: true })
   writeDoc("probe.md", "# 探针\n\n五条纪律：\n\n- a\n- b\n")
   const { v2 } = checkDocConsistency(tmp)
   const key = v2Key({ file: `${SCAN_DIRS[0]}/probe.md`, decl: "五条", declared: 5, found: 2, form: "list" })
   assert.ok(v2.some((r) => v2Key(r) === key), "计数不符被检出（探针）")
   assert.ok(!loadBaseline(tmp).has(key), "无基线文件 → 一切视为新增（阻断方向）")
-  // 写入基线 → 该条降为「存量」：不再计入新增（报告面），仍留在检出面
+  // 写入基线（夹具域机制）→ 该条不再计入「新增」（报告面），仍留在检出面——生产判据见下：基线非空即 FAIL
   mkdirSync(join(tmp, "test", "fixtures"), { recursive: true })
   writeFileSync(join(tmp, BASELINE_PATH), JSON.stringify({ entries: [key] }))
   const baseline = loadBaseline(tmp)
@@ -199,6 +200,23 @@ slow("T-VS32 错误：V4 枚举外必红（反证非空转——路径直引 / �
   const r = spawnSync(process.execPath, [join(REPO, "scripts", "check-doc-width.mjs")], { cwd: tmp, encoding: "utf8" })
   assert.equal(r.status, 1, "V4 违规 ⇒ 退出码 1（fail-closed）" + r.stdout + r.stderr)
   assert.ok(r.stdout.includes("✗ V4"), "主行程输出含 V4 违规行")
+})
+
+slow("T-VS32 ② 反证：合成非空基线 ⇒ FAIL + 退出码 1（fail-closed——入基线 = 例外 = 违规）", () => {
+  mkdirSync(join(tmp, "test", "fixtures"), { recursive: true })
+  const bfile = join(tmp, BASELINE_PATH)
+  const entries = ["V2|docs/design/probe.md|五条|5|3|list", "V3|docs/batches/2026-09-11-probe.md"]
+  writeFileSync(bfile, JSON.stringify({ entries }), "utf8") // 合成非空基线（临时夹具域——真仓基线零触碰）
+  const blocked = spawnSync(process.execPath, [join(REPO, "scripts", "check-doc-width.mjs")], { cwd: tmp, encoding: "utf8" })
+  assert.equal(blocked.status, 1, "非空基线 ⇒ 退出码 1（fail-closed）" + blocked.stdout + blocked.stderr)
+  assert.ok(blocked.stdout.includes("FAIL(基线)"), "FAIL(基线) 面在位")
+  assert.ok(blocked.stdout.includes("**本基线必须保持为空**"), "固定句「本基线必须保持为空」在位")
+  assert.ok(blocked.stdout.includes("新增违规 0 条"), "零新增违规下仍阻断（归因 = 基线非空本身）")
+  assert.ok(entries.every((k) => blocked.stdout.includes(k)), "条目录入报告（可溯）")
+  // 用后复原夹具：entries 清空 → 同夹具复跑 → 退出码 0（复原实证；真仓基线始终零触碰）
+  writeFileSync(bfile, JSON.stringify({ entries: [] }), "utf8")
+  const clean = spawnSync(process.execPath, [join(REPO, "scripts", "check-doc-width.mjs")], { cwd: tmp, encoding: "utf8" })
+  assert.equal(clean.status, 0, "夹具复原（entries 清空）⇒ 退出码 0" + clean.stdout + clean.stderr)
 })
 
 test("T-VS33 边界：V4 射程豁免——fenced 块 / 行内命令 / 搜索模式串 / 引述码段不红", () => {

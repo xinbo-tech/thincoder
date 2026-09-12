@@ -193,7 +193,8 @@ AGENTS.md 模块清单为维护寄存器；本节为分组总览 + 「详细设�
   panel._suspWake 单槽唤醒器；§8.4）。
 - 2026-09-02：**VS 实现注**——挂起回合偏差修复轮（释放窗口竞态
   _suspPending/_suspQueue + 中止统一 controller _turnControllers + aborted
-  settle 出池 + 会话 lines 双键补形；§8.4）。
+  settle 出池 + 会话 lines 双键补形；§8.4。后注：_suspPending/_suspQueue 已废——
+  现态 = running 拒收无排队（源 = `src/extension/panel-messages.mjs`））。
 - 2026-09-02：**VS 实现注**——挂起 round-2 中止路径排队消息零丢失（退出兜底无
   条件消费残余——T-S21；§8.4）。
 - 2026-09-02/03：工程交付协议（eng-coder 默认 async + 内部自审计闭环——

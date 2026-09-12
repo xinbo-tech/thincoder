@@ -1,7 +1,7 @@
 /**
  * panel-toolpanel.mjs — toolPanel postMessage payload builder（2026-09-05 module-split：
- * panel-chat.mjs 512 > 500 硬限——toolPanelPayload 独立纯函数迁入；消费方 import 面
- * 调整（仅 panel-chat.mjs 一处调用）。
+ * panel-chat.mjs 512 > 500 硬限——toolPanelPayload 独立纯函数迁入）。消费面：生产调用点
+ * `panel-callbacks.mjs`（onToolPanel）；测试直取本模块（`status-line.test.mjs`）。
  */
 
 /**

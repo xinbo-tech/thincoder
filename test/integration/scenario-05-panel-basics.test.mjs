@@ -39,7 +39,7 @@ const postsSince = (mark) => capturedPosts.slice(mark)
 const inputEl = () => document.getElementById("input")
 const messagesEl = () => document.getElementById("messages")
 
-/** 桩面板（宿主侧 handlePanelMessage 最小形状——chat-panel.test.mjs 先例）。 */
+/** 桩面板（宿主侧 handlePanelMessage 最小形状——`test/chat-panel-messages.test.mjs` 先例）。 */
 function stubPanel(over = {}) {
   const posted = []
   const p = {

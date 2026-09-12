@@ -296,7 +296,7 @@ manifest-only（不读 vectors.bin、不发网络）——可被状态面与提�
 | T-I6 ignored 文件三态 | 临时 git 仓 + `.gitignore` 忽略 `notes.md`；改 / 删 / 增 | `needsRebuild`：改 → `file-changed`；删 → `file-removed`（**删除存在性扫描路径**——契约五末条）；增 → `file-added`（均 `needed:true`） | F7 / AC-I2 slow |
 | T-I7 豁免零误报 | ignored 的 `node_modules/x.md`、`.thincoder/tmp/x.txt`、`.hidden/x.md` | `needsRebuild` = `needed:false`（不产候选） | F7 / AC-I2 slow |
 | T-I8 嵌套 memory | `.thincoder/memory/personal/archive/x.md` 入 manifest | 连调两次 `needsRebuild` 均 `needed:false`；`listMemoryFiles` ⊇ 该文件且 == `discoverFiles` 的 memory 子集 | F8 / AC-I3 ✓ |
-| T-I9 词表锁 | 全路径 grep + **`needsRebuild` 各分支** reason 收集（收集域 = `needsRebuild` 返回值；`indexCompat.reason` 独立命名空间——不在词表约束内） | `"file-changes"` 零命中；reason ∈ 七词表 | F9 / AC-I4 ✓ |
+| T-I9 词表锁 | 全路径 grep + **`needsRebuild` 各分支** reason 收集（收集域 = `needsRebuild` 返回值；`indexCompat.reason` 独立命名空间——不在词表约束内） | `"file-changes"` 零命中；reason ∈ 七词表——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；现体 = 运行抽检 `no-index` | F9 / AC-I4 ✓ |
 | T-I10 零回归正控 | 非 git 目录（兜底路径）与同内容 git 仓（快路径）——含 T-I6 忽略文件的**删**场景 | 两路同向（needed 一致——忽略文件删除两路均 `file-removed`）；dirty 集既有语义（rename/引号路径）用例不变 | N5 / AC-I5 slow |
 
 ### 4.6 验收标准（逐条回指需求——可机器验证）
@@ -306,7 +306,7 @@ manifest-only（不读 vectors.bin、不发网络）——可被状态面与提�
 - **AC-I2**（F7）：T-I6/T-I7（slow——`npm run test:full`）全绿；`src/indexer.mjs` 内
   `--ignored=traditional` grep 命中且 `git status --porcelain`（无 flag 的旧形态）零残留。
 - **AC-I3**（F8）：T-I8 全绿（连续两判 `needed:false` = 无效重算已消）。
-- **AC-I4**（F9）：T-I9 全绿（收集域 = `needsRebuild` 返回值——`indexCompat.reason` 不在词表约束内）；`"file-changes"` 全仓 grep 零命中。
+- **AC-I4**（F9）：T-I9 全绿（现体 = 运行抽检 `no-index`——收集域 = `needsRebuild` 返回值；`indexCompat.reason` 不在词表约束内）；静态面（各分支字面量集比对 + `"file-changes"` 全仓 grep 零命中）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）。
 - **AC-I5**（N5/N6）：T-I10 全绿 + 既有 `npm test` 全绿（零回归）。
 
 ### 4.7 边界（本批不做）

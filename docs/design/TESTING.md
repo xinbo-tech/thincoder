@@ -125,7 +125,7 @@
 | batch-doc-gate | 105 | T54 边界：校验逻辑单份 | 整删 | 105-115 | 全为三档 src grep + 计数 |
 | batch-doc-gate | 173 | T54 边界：schema 含 batchDoc 属性 | 段删 | 175-176 | 读 `src/setup.mjs` 正则在场 |
 | child-permission | 494 | T-CP17 R2 措辞锚（四处逐字在位） | 整删 | 494-516 | 全为 `docs/design/*.md` 文本在场 / 缺席 |
-| child-permission | 520 | T-CP18 结构：execute-tools ≤500、tool-gates 五函数 | 段删 | 527-530 | 函数名 src grep + 旧定义零残留 |
+| child-permission | 520 | T-CP18 结构（AC-CP8）：execute-tools ≤500、tool-gates ≤300 | 段删 | 527-530 | 函数名 src grep + 旧定义零残留（均已退场）；对拍行（原 :531，清单外）随 T-VG19 段删同步退场（`2026-09-12-PROSE-ANCHOR-RETIRE.md` §5）；余两断言保留 |
 | context-parity | 363 | T-CI-11 双端对照：CLI 序锚字面在源 | 段删 | 367-384 | 读 `../thincoder` 源 + indexOf 序 |
 | digest-visibility | 78 | T-D6 digest cap 发射 + 两调用点机检 | 段删 | 86-88 | 读 `panel-chat.mjs` 调用点计数 |
 | digest-visibility | 192 | T-D8 接线机检 | 段删 | 194-197 | 读 `webview` CSS 常量子串 |

@@ -1253,8 +1253,8 @@ VSC 现序违反了它（`:448` time → `:450` pushInjections）。**取「time
 **实现后同步（2026-09-12——交付实测对齐）**：`src/repomap.mjs` 实测 **304**（预计 ~245）——超 300 咨询线（≤500
 硬限内）；本批不拆分（与 §17.3 `buildSummary` 落点契约一致），**挂结构债候选**（同 `run-stages.mjs` 口径）。测试档：
 `test/context-parity.test.mjs` 实测 **385**（预计 ~260）——超 300 咨询线，**登记**（本批不拆分）；语料修复波测试档
-`test/prompts-async-guidance.test.mjs` 实测 **535**（>500 硬帽——测试档登记口径 = 不拆分，同仓同口径
-`chat-panel.test.mjs` 621；行数表 = `VSC-PROMPTS.md` 语料修复节）。
+`test/prompts-async-guidance.test.mjs` 实测 **535**（as-of 本批交付对齐——当时越 500 硬帽）——**后经语料修复波（散文锚退役）降至 177**（≤500）；测试档同受 500 硬限无豁免——`child-permission` 超限拆分已落（方案 =
+`LEDGER-SELF-CONTAINED.md §9`；行数表 = `VSC-PROMPTS.md` 语料修复节）。
 
 ### 17.7 用例表（正常/边界/错误三态——全部直驱 hydrateRun/模块函数，不跑真 LLM）
 
@@ -1273,7 +1273,7 @@ VSC 现序违反了它（`:448` time → `:450` pushInjections）。**取「time
 | T-CI-8 | 正常 | skill load（含 `name/SKILL.md` 形态）；重复 load | `<skill-loaded>` 消息 + 转义 + 不截断；二次 → 已加载句 | F-Q7（D-CI8） |
 | T-CI-9 | 边界 | 连续两 run 快照（同会话） | 前一请求体 ⊆ 后一请求体且逐字节相等（前缀缓存契约） | N-Q1 |
 | T-CI-10 | 错误 | 召回/大纲/快照内部 I/O 失败（mock 抛错）；seam 计数（修正轮 #10） | 该块静默跳过；其余块与 user 输入零影响；召回/大纲/快照各恰 1 次调用/run（失败不重试——seam 计数） | N-Q2 |
-| T-CI-11 | 正常（双端对照） | 跨仓只读兄弟仓 （CLI 仓）`src/agent/setup.mjs`（`THINCODER_CLI_ROOT` 可覆盖；缺仓/异位 = fail-closed——显式失败不 skip；修正轮 #1） | 序表各 CLI 锚字面（git 块 / `OS: … Working directory:` / `OUTLINE_INJECT_PREFIX` / `[Relevant documentation` / `[Relevant memories from previous sessions` / `task checklist (pending/in-progress)` / time 文案 / `ensureAutoReminder`）均在源且**文件内出现序**与 §17.4 单调一致——不一致 = 测试失败（提示序表重对齐） | F-Q13 |
+| T-CI-11 | 正常（双端对照） | 跨仓只读兄弟仓 （CLI 仓）`src/agent/setup.mjs`（`THINCODER_CLI_ROOT` 可覆盖；缺仓/异位 = fail-closed——显式失败不 skip；修正轮 #1） | 序表各 CLI 锚字面 + **文件内出现序**与 §17.4 单调一致检测——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；现体 = 兄弟仓 CLI 源在位（缺仓/异位 = fail-closed 显式失败） | F-Q13 |
 
 **跨仓只读语义（修正轮 #1——父侧裁定：保留 fail-closed 并写明；N-Q3/N-P1 登记豁免随附）**：T-CI-11 读
 **兄弟仓**（相对本仓根 `../thincoder`；环境 = 两仓并排 checkout（teamcode 工作区）；`THINCODER_CLI_ROOT` 可
@@ -1295,7 +1295,7 @@ N-P1 同款。
 | AC-CI-2 | 机检：`pushModeReminders` 全仓零命中；`Permission mode` 零命中；`slice(0, 8000)` 于 skill.mjs 零命中；`[mcp] ` 于 `mcp/index.mjs` 命中 | F-Q9/F-Q10/F-Q11 |
 | AC-CI-3 | systemPrompt 两态：有 AGENTS → `<untrusted_project_instructions>` 在、`OS:` 尾行不在；无 → 两者均不在；skills 空 → 零追加 | F-Q1/F-Q5/F-Q7 |
 | AC-CI-4 | 行数实测对表（§17.6）+ 两仓快层全绿（VSC 含新档登记）+ `check-doc-width` 新增违规 0 | N-Q3/N-Q4 |
-| AC-CI-5 | T-CI-11 绿（双端序锚漂移检测——跨仓只读兄弟仓 `../thincoder`；**fail-closed**：缺仓/异位 = 失败不 skip；CLI 侧序变即红——修正轮 #1） | F-Q13 |
+| AC-CI-5 | T-CI-11 绿（跨仓只读兄弟仓 `../thincoder`；**fail-closed**：缺仓/异位 = 失败不 skip——修正轮 #1）；双端序锚漂移检测（CLI 侧序变即红）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1） | F-Q13 |
 
 ### 17.9 边界（本批不做）
 
@@ -1348,7 +1348,7 @@ AC 5（AC-CI-1~AC-CI-5）· 关键决策 10（KD-1~KD-10）· 实施域 15 档 =
 | 需求 | 判定句要点 | 本档契约 | 用例 | 验收 |
 |---|---|---|---|---|
 | F-CP1（R1） | ask 弹卡带归属 `{child key} · {tool}` / auto·approve-all 静默 / 块头 ⏸ + 等待审批 / 覆盖 escalate / 取消释放 | §18.4 C-1..C-10/C-12 | T-CP1..T-CP16、T-CP18、T-CP19 | AC-CP1..AC-CP6、AC-CP8/9 |
-| F-CP2（R2） | 四处同族句改后与实现语义一致（机检措辞） | §18.4 C-13 | T-CP17 | AC-CP7 |
+| F-CP2（R2） | 四处同族句改后与实现语义一致（机检措辞） | §18.4 C-13 | T-CP17 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:127`）） | AC-CP7 已退场（随 T-CP17 整删——删除记录 = `TESTING.md` §8.1（`:127`）） |
 
 ### 18.2 问题陈述（现状复核——as-of 2026-09-12，file:line 实测）
 
@@ -1490,13 +1490,14 @@ callbacks 对象——`id: entry.id`）各加 `onPermissionRequired: makeChildPe
 | 12 | `webview/permission.js` | 108 | ~122 | C-7 + data-prompt-id |
 | 13 | `webview/chat.js` | 355 | ~363 | C-8 路由 + C-6 移除 case |
 | 14 | `locales/en.json` + `locales/zh.json` | 248 ×2 | +1 ×2 | C-12 |
-| 15 | `test/child-permission.test.mjs`（新） | — | ~380 | T-CP1..T-CP19 主力；**测试档登记**（>300——不拆分口径，§17.6 同口径；修正轮 #4） |
+| 15 | `test/child-permission.test.mjs`（新） | — | ~380 | T-CP1..T-CP16 + T-CP18 + T-CP19 主力（T-CP17 已退场——整删，删除记录 = `TESTING.md` §8.1（`:127`））；**测试档登记**（**拆分已落**——500 行硬限无豁免：余档 **368** / 新档 `test/child-permission-wiring.test.mjs` **218**，守恒 **18 = 12 + 6**；拆分方案 = `LEDGER-SELF-CONTAINED.md §9`） |
 | 16 | `test/advisor-guard-completion.test.mjs` | 339 | ±1 | C-11 源读改指（修正轮 #7 补 as-of） |
 | 17 | `test/files.mjs` | 75 | +1 | 新测档登记 |
 | 18 | 文档域：`docs/design/AGENT-LOOP.md`（本 §18）/ `TOOLS.md` §8 / `WEBVIEW.md` §7.2 / `ESCALATE.md` / `ENGINEERING-MODE.md` / `README.md` 变更记录 | — | — | 设计者已落（本批） |
 
 **拆分评估注**：① `execute-tools.mjs` 506→~385（C-11 专项）；② `panel-messages.mjs` 485→~492（<500，余量薄——只许增量逐行）；
-③ `activity.js` 354→~372 / `chat.js` 355→~363（越 300 咨询线——本批不拆，登记结构债候选）；④ 源新档（`tool-gates.mjs` / `child-permission.mjs`）≤300；测试档按测试档登记口径 = 不拆分（同款 `chat-panel.test.mjs` 621、`test/prompts-async-guidance.test.mjs` 535——§17.6）——`test/child-permission.test.mjs` ~380 登记不拆分（修正轮 #4）。
+③ `activity.js` 354→~372 / `chat.js` 355→~363（越 300 咨询线——本批不拆，登记结构债候选）；④ 源新档（`tool-gates.mjs` / `child-permission.mjs`）≤300；**测试档拆分已落**（500 行硬限无豁免）——
+`test/child-permission.test.mjs` 拆后 **368** + 新档 `test/child-permission-wiring.test.mjs` **218**（守恒 **18 = 12 + 6**；拆分方案 = `LEDGER-SELF-CONTAINED.md §9`）。
 **与在途批文件域重叠（调度排队——父侧）**：活动区批（`2026-09-12-VSC-ACTIVITY-CLOSURE`）同触 #4/#8/#10/#11/#13/#14——调度器按 `files` 排队，后落批须对表重读。
 **不入 files**：`docs/TODO.md` / `CHANGELOG.md`（父侧）；CLI 仓一切代码（需求树除外——设计者已落）。
 
@@ -1520,12 +1521,12 @@ callbacks 对象——`id: entry.id`）各加 `onPermissionRequired: makeChildPe
 | T-CP14 | child 多写 | child 单响应 ≥2 非只读工具 | 逐项两卡（批合并分支零进入） | F-CP1 |
 | T-CP15 | 无通道静默 | 无 onPermissionRequired（headless） | child 静默直通（零卡零事件）——零回归 | F-CP1 |
 | T-CP16 | 态词清除 + i18n | 事件 tool=null；两 locale 文件 | 态词回落 chunk 态（或 thinking…）；zh/en 键在位且插值正确 | F-CP1 |
-| T-CP17 | R2 措辞锚 | 读四处文本 | ESCALATE 4 处 + ENGINEERING-MODE 1 处 + TOOLS 1 处 + 本档 §8 1 处含 C-13 逐字锚；旧漏述零残留 | F-CP2 |
-| T-CP18 | 结构 | 行数实测 + 源读 | execute-tools ≤500；tool-gates 五函数在位；guard-completion 测档改指绿 | N-CP2 |
+| T-CP17 | R2 措辞锚 | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:127`）） | F-CP2 |
+| T-CP18 | 结构 | 行数实测 + 源读 | execute-tools ≤500；tool-gates ≤300 | N-CP2 |
 | T-CP19 | Stop 释放 | escalate async ask pending（T-CP7 同夹具）+ `panel._abortController.abort()` | ask resolve(false)（deny）+ `permissionWithdrawn` 发出 + 卡移除；child 未被 abort（F-6 不停池——存活继续） | F-CP1 |
 
 **测试族写法**：新档 `test/child-permission.test.mjs`——host 面直驱 `permission-gate.mjs` / `panel-messages.mjs`
-（panel 假体——同 `chat-panel.test.mjs` 模式）+ webview 面 `installChatFixture`（happy-dom——同 `activity-flow.test.mjs` 模式）；
+（panel 假体——同 `chat-panel-messages.test.mjs` 模式）+ webview 面 `installChatFixture`（happy-dom——同 `activity-flow.test.mjs` 模式）；
 i18n/文档锚用 fs 直读。
 
 ### 18.8 验收标准（逐条回指需求——每条可机器验证）
@@ -1538,8 +1539,8 @@ i18n/文档锚用 fs 直读。
 | AC-CP4 | F-CP1（escalate/释放） | T-CP6/T-CP7/T-CP19 全绿：sync/async ask + 归属 + 取消释放（⏹/Stop——deny） |
 | AC-CP5 | F-CP1（块头） | T-CP1/T-CP13/T-CP16 全绿：⏸ + 态词、冻结丢弃、两 locale |
 | AC-CP6 | F-CP1（路由/释放） | T-CP8/T-CP9/T-CP14 全绿：promptId 匹配 + 回退 + 逐项形态 |
-| AC-CP7 | F-CP2 | T-CP17 全绿：四处措辞锚逐字在位 |
-| AC-CP8 | N-CP2（结构） | T-CP18 + 行数实测表：execute-tools ≤500、源新档 ≤300（测试档登记口径——不拆分）、`check-doc-width` 两仓新增违规 0（修正轮 #4） |
+| AC-CP7 | F-CP2 | 已退场（随 T-CP17 整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:127`）） |
+| AC-CP8 | N-CP2（结构） | T-CP18 + 行数实测表：execute-tools ≤500、源新档 ≤300（测试档 500 硬限无豁免——超限拆分已落，方案 = `LEDGER-SELF-CONTAINED.md §9`）、`check-doc-width` 两仓新增违规 0 |
 | AC-CP9 | N-CP1（零回归/协议） | VSC 快层全绿；CLI 仓 `git status` 零代码改；`WEBVIEW.md` §7.2 协议增量逐条在位（C-4/C-5/C-6/C-8 四行） |
 
 ### 18.9 边界（本批不做 + 登记项）
@@ -1566,5 +1567,5 @@ i18n/文档锚用 fs 直读。
 | U-5 | 焦点/按键 | deny 仍获焦点（既有）；不新造快捷键；⏹ 语义不改（取消 = 定向 abort——C-10） |
 | U-6 | open 项 | 无（全部定稿） |
 
-**计数（D3）**：用例 19 条（T-CP1..T-CP19）· 验收 9（AC-CP1..AC-CP9）· 关键决策 8（KD-1..KD-8）· 方案选型问 6（Q1–Q6）·
-契约 13（C-1..C-13）· 实施域 17 档（源 13：2 新 + 11 改；测 3：1 新 + 1 改 + 1 登记；含文档域 6 档随批落档）。
+**计数（D3）**：用例 19 条（编号 T-CP1..T-CP19；在役 18——T-CP17 已退场，删除记录 = `TESTING.md` §8.1（`:127`））· 验收 9（编号 AC-CP1..AC-CP9；在役 8——AC-CP7 随 T-CP17 退场）·
+关键决策 8（KD-1..KD-8）· 方案选型问 6（Q1–Q6）· 契约 13（C-1..C-13）· 实施域 17 档（源 13：2 新 + 11 改；测 3：1 新 + 1 改 + 1 登记；含文档域 6 档随批落档）。

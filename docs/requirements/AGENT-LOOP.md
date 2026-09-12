@@ -248,14 +248,14 @@ VSC 面板使用者在子代理 live 块流式输出期间**持续看到最新�
 | # | 需求（批次对位） | 判定句（验收语义） | 范围边界（不做） |
 |---|---|---|---|
 | F-LU1 | live 块流式跟滚（U1） | 内容区追加后默认钉底（追加帧后 scrollTop = 超值——AC-LU1）；手动上滚（wheel/touchmove——近底判据 24px）后追加不回弹（AC-LU2）；滚回近底复钉（AC-LU3）；折叠（details 关闭）/已移除态零滚动副作用（AC-LU4） | 不动流内 advisor 块的既有裸钉底；不改区级 pin（`maybeScrollActivity`）；无新交互元素 / 新 locale 键 |
-| F-LU2 | live 块内容区高度 100→60（U2） | `.advisor-block.sub-block .advisor-content` max-height == 60px（静态断言——AC-LU5）；基础 `.advisor-content`（advisor 流内评审块）维持 100px；chat.css 注释同步改述 | 不改 advisor 评审块高度；不改区高度（32vh）；冻结块同 60px（同族卡面统一——live/frozen 不二分） |
+| F-LU2 | live 块内容区高度 100→60（U2） | `.advisor-block.sub-block .advisor-content` max-height == 60px（静态断言——AC-LU5 已退场：随 T-LU5 整删，删除记录 = `TESTING.md` §8.1）；基础 `.advisor-content`（advisor 流内评审块）维持 100px；chat.css 注释同步改述 | 不改 advisor 评审块高度；不改区高度（32vh）；冻结块同 60px（同族卡面统一——live/frozen 不二分） |
 
 ### 14.3 非功能性需求
 
 | # | 维度 | 标准 | 度量方式 |
 |---|---|---|---|
 | N-LU1 | 零回归 | VSC 快层全绿；流内 advisor 块 `_advisorScrollDirty` 路径零改；CLI 仓代码零改动 | 既有测试族运行 + `git status` 机检（AC-LU6） |
-| N-LU2 | 可机判 | 每条功能需求 ≥1 用例机判（happy-dom 直驱真 webview 模块——追加钉底/让位不回弹/复钉/折叠零副作用/CSS 断言） | 新档 `test/activity-live-ux.test.mjs`（入 `test/files.mjs` 登记）全绿（AC-LU1..AC-LU5） |
+| N-LU2 | 可机判 | 每条功能需求 ≥1 用例机判（happy-dom 直驱真 webview 模块——追加钉底/让位不回弹/复钉/折叠零副作用/CSS 断言） | 新档 `test/activity-live-ux.test.mjs`（入 `test/files.mjs` 登记）全绿（AC-LU1..AC-LU4；AC-LU5 已退场——随 T-LU5 整删，删除记录 = `TESTING.md` §8.1） |
 | N-LU3 | 文档与行数 | 触碰档 `check-doc-width` 新增违规 0；源档守 500 硬限（activity.js ~354——越 300 软线登记）；测试面独立新档（activity-flow 486 近满不追加） | 两仓宽度脚本 + 行数实测表（设计 §13.5） |
 
 ### 14.4 明确不做
@@ -332,15 +332,15 @@ eng-coder（spawn 设计令牌预授权）、consult（只读）**审批面**零
 | # | 需求（批次对位） | 判定句（验收语义） | 范围边界（不做） |
 |---|---|---|---|
 | F-CP1 | child 审批门对齐 CLI（R1） | ask 模式：coder/eng-designer 子代理写工具 ⇒ 弹卡（卡含归属 `<child key> · <tool>`）→ approve ⇒ 工具执行、child 继续；deny ⇒ child 工具结果 = 拒绝语义（对位 CLI）；auto / approve-all（含轮中翻转）⇒ 该 child 零卡直通；等待期间块头 `⏸` + `等待审批: <tool>`，resolve 后清除；escalate（sync/async）同覆盖（归属 `escalate <tag> #<id>`）；取消（⏹/模型 cancel/会话中止/Stop）⇒ pending ask 释放（deny + 卡移除）、child 不悬挂（Stop 下 child 存活——不停后台池——修正轮 #2）——AC-CP1..AC-CP6 | 不改权限模式集合；不动 depth-0 顶层审批语义；children 不启用批合并（CLI 对位：`wrapChildCallbacks` 不携批通道——候选扩展登记）；consult/explore/plan/eng-coder 审批面零行为（KD-7 连带除外——见 §17.1——修正轮 #5）；question 面 child 卡释放不做（登记） |
-| F-CP2 | 文档矛盾修正（R2） | `ESCALATE（本仓·设计）:33/:79/:125/:143` · `ENGINEERING-MODE（本仓·设计）:128-130` · `TOOLS（本仓·设计）:178-180` · `AGENT-LOOP（本仓·设计）§8`（同族句）改写后与实现语义一致（机检逐字锚——设计 §18.4 C-13 清单；四处——修正轮 #1）——AC-CP7 | 不改 escalate 机制本体；不改 eng-coder token 门 |
+| F-CP2 | 文档矛盾修正（R2） | `ESCALATE（本仓·设计）:33/:79/:125/:143` · `ENGINEERING-MODE（本仓·设计）:128-130` · `TOOLS（本仓·设计）:178-180` · `AGENT-LOOP（本仓·设计）§8`（同族句）改写后与实现语义一致（机检逐字锚——设计 §18.4 C-13 清单；四处——修正轮 #1）——AC-CP7 已退场（随 T-CP17 整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:127`）） | 不改 escalate 机制本体；不改 eng-coder token 门 |
 
 ### 17.3 非功能性需求
 
 | # | 维度 | 标准 | 度量方式 |
 |---|---|---|---|
 | N-CP1 | 零回归 + 协议登记 | VSC 快层全绿；协议增量（`permissionRequest` 增 owner/promptId · `permissionResponse` 增 promptId · 新 `permissionWithdrawn`/`subagentApproval`）只增不改、逐条登记；CLI 仓代码零改 | 既有族运行 + `git status`（CLI 仓）+ `WEBVIEW（本仓·设计）§7.2` 登记表 |
-| N-CP2 | 结构 | `execute-tools.mjs` 拆 gate 层后 ≤500（as-of 506 已越硬限）；源新档 ≤300（测试档按测试档登记口径 = 不拆分——设计 §18.6 注④）（修正轮 #4）；两仓 `check-doc-width` 新增违规 0 | 行数实测表（设计 §18.6） |
-| N-CP3 | 可机判 | 每功能需求 ≥1 机判用例（卡归属 / 模式继承 / 块头态 / 取消释放 / 角色域 / 文档锚）——host 直驱 + happy-dom 双面 | 用例表 T-CP1..T-CP19 全绿（含 T-CP19 Stop 释放——修正轮 #2） |
+| N-CP2 | 结构 | `execute-tools.mjs` 拆 gate 层后 ≤500（as-of 506 已越硬限）；源新档 ≤300（测试档 500 硬限无豁免——`child-permission` 超限拆分已落，方案 = `LEDGER-SELF-CONTAINED（本仓·设计）§9`）（修正轮 #4）；两仓 `check-doc-width` 新增违规 0 | 行数实测表（设计 §18.6） |
+| N-CP3 | 可机判 | 每功能需求 ≥1 机判用例（卡归属 / 模式继承 / 块头态 / 取消释放 / 角色域 / 文档锚）——host 直驱 + happy-dom 双面 | 用例表 T-CP1..T-CP16 + T-CP18 + T-CP19 全绿（T-CP17 已退场——整删，删除记录 = `TESTING.md` §8.1（`:127`）；含 T-CP19 Stop 释放——修正轮 #2） |
 | N-CP4 | i18n | 新文案键两 locale 同步（`sub.awaitingApproval`） | 键在位 + 插值断言 |
 
 ### 17.4 明确不做

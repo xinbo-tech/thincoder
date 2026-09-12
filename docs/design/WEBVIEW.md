@@ -308,7 +308,7 @@ toolPanel/subagent/compress/suspension 消息族（§7）。
 | `src/extension/suspension.mjs` | 313 | +22 | `reassertLiveChildren(panel)` + 存活投影（双池 → `subagent` 载荷）——与 `backgroundStatus` 同板块 |
 | `test/async-visibility.test.mjs`（新） | 0 | +170 | 队列/再断言（桩面板）+ 接管/补块/清屏恢复（happy-dom 真模块） |
 | `test/files.mjs` | 49 | +1 | 新测试文件登记（接线硬项——沿用第 5 批同口径） |
-| `test/activity-flow.test.mjs` | 300 | +40 | 既有语义回归（幂等/冻结/窗裁/tombstone）；**「reload 无恢复」用例按新口径改写**（终态补桩——原 no-op 断言更替）。**拆分评审**：300→~340 越 ≤300 警示线（≤500 硬限内）——测试族存量 6 档同带（最高 `chat-panel.test.mjs` 620）——结论 = 本批不拆分（改写就地；测试族重组归独立项） |
+| `test/activity-flow.test.mjs` | 300 | +40 | 既有语义回归（幂等/冻结/窗裁/tombstone）；**「reload 无恢复」用例按新口径改写**（终态补桩——原 no-op 断言更替）。**拆分评审**：300→~340 越 ≤300 警示线（≤500 硬限内）——测试族存量 6 档同带（最高 `chat-panel.test.mjs` 620）——结论 = 本批不拆分（改写就地）；**同族超限档 `test/chat-panel.test.mjs`（621 > 500 硬限）**：**本批拆**（F12 硬限无豁免；LEDGER-SELF-CONTAINED 批）——拆档实施 = **已落**（实施轮 E）：余档 `test/chat-panel.test.mjs` **270** 行 / 9 例 · 新档 `test/chat-panel-messages.test.mjs` **373** 行 / 8 例——守恒 **17 = 8 + 9**；`test/files.mjs` 登记 +1 |
 | `docs/design/WEBVIEW.md` | 339（批次前）→ 536（本批落档后） | +~197（见行数差——含修正轮） | 本节 + §5 终态规则修订指注 |
 | 合计 | — | ~+538（代码面 ~+130 = src 8 文件求和；测试面 ~+211；文档面 ~+197——见行数差） | 11 改 + 1 增 |
 
@@ -333,7 +333,7 @@ toolPanel/subagent/compress/suspension 消息族（§7）。
   **不补桩行**（§5.1.4 第 6 条成员表：role 未知/非 family/id 缺失/非法频道/answered 无块/queued-cancel 无块）→ `#subagent-activity > .sub-block` 计数不变（采样点改区——2026-09-11 §12 修订）。
 - **AC-A4**（F-A4/F-A5）= T-V3：清屏后再断言 → 重建块 `_subMeta.pool === true` 且 `block.querySelector(".sub-stop-btn")` 非空；重建块位于**活动区**（位置断言——区尾；2026-09-11 §12 修订：块出生地 = `#subagent-activity`）。
 - **AC-A5**（F-A1/NFR-A2）= T-V6/T-V7：未就绪期投递全入队；就绪后按序 flush + 再断言；溢出丢最旧且 `ev:subdeliver` 记丢弃计数。
-- **AC-A6**（NFR-A1）= 机检：`src/**` 内 `postPoolSnapshot` / `SNAPSHOT_ROLES` grep 零命中（保持现状）。
+- **AC-A6**（NFR-A1）= 机检：`src/**` 内 `postPoolSnapshot` / `SNAPSHOT_ROLES` grep 零命中——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；现体 = 本档在册断言（`test/files.mjs`）保留。
 - **AC-A7**（NFR-A3）= VSC `test/run-fast.mjs` 全绿 + `test/files.mjs` 新档在册；CLI 仓本条目零代码改动（`git status` 断言）。
 - **AC-A8**（NFR-A2/文档面）= 本节 + §5 指注 + 变更记录一行在位；`node scripts/check-doc-width.mjs` 新增超宽 0。
 
@@ -516,17 +516,17 @@ digest 只在面板活跃且 webview 已就绪后发生，不经任务可见性 
 > 同落本节——8.5）。覆盖 C1 消息秩序增量
 > （question promptId/questionCancelled/atComplete seq）、C2 忙态收敛（turnState 广播/
 > renderStatusBar 单 writer/Stop 派生）与 A1/A3 扩展（sendMessage 命令直发同入口/
-> Stop 派生扩为 state≠idle——A2 标题时机正文在 SESSION.md §7）。
+> Stop 派生（A3 原式 state≠idle 经 F-6 收窄为 running——见 8.4）——A2 标题时机正文在 SESSION.md §7）。
 
 ### 8.1 回合入口秩序（C1——F-C1e/H-F + A1——F-A1/R6）
 
 - `userMessage`、`retry` 与 `sendMessage` 命令直发（quick-input/Ask ThinCoder——A1
   SESSION-FLOW-A——修 R6 残留：sendMessage 曾是唯一绕过本入口的直呼 _chat 路径）共用
   **单一入口 routeUserTurn**（panel-messages.mjs）：回合执行中（host `_turnState==="running"`）
-  的消息一律入队 `panel._suspQueue` + 回执 `messageQueued`——回合尾 FIFO 顺序消费
-  （零丢失）；abort/interrupt 等控制消息**永不排队、直通**（延迟红线——杀 Stop 即失败）。
-  sendMessage 回显（`userMessage` postMessage）先于入队——运行中命令发送 = 用户气泡 +
-  "message queued"，与 webview 输入路径观感一致；susp 两态（会话活跃/释放窗口）走
+  的消息一律**拒收**（不排队、无回执——排队机制与排队回执消息类型已废；拒收警告明示，
+  不静默丢）；abort/interrupt 等控制消息**永不排队、直通**（延迟红线——杀 Stop 即失败）。
+  sendMessage 回显（`userMessage` postMessage）先于路由——running→拒收（先于回显——
+  无假气泡、无排队回执），与 webview 输入路径观感一致；susp 两态（会话活跃/释放窗口）走
   _chat 上游分流不变；_panel 空 → warning 分支（不发 _chat）。
 
 ### 8.2 question 卡 id 匹配（C1——F-C1d/H-D）
@@ -991,7 +991,7 @@ function inline(s) {
 | `webview/state.js` | 122 | +1 | `S._subDescShown` 字段声明 |
 | `locales/en.json` | 247 | +1 | `sub.desc`（en 逐字） |
 | `locales/zh.json` | 247 | +1 | `sub.desc`（zh 逐字） |
-| `test/activity-flow.test.mjs` | 292 | +18 ± 6 | T-MA13-1..3（292→~310 同带——测试族重组归独立项——不拆） |
+| `test/activity-flow.test.mjs` | 292 | +18 ± 6 | T-MA13-1..3（292→~310 同带——不拆；**同族超限档 `test/chat-panel.test.mjs`（621 > 500 硬限）**：**本批拆**（F12 硬限无豁免；LEDGER-SELF-CONTAINED 批）——拆档实施 = **已落**（实施轮 E）：余档 `test/chat-panel.test.mjs` **270** 行 / 9 例 · 新档 `test/chat-panel-messages.test.mjs` **373** 行 / 8 例——守恒 **17 = 8 + 9**；`test/files.mjs` 登记 +1） |
 
 #### 11.2.4 用例表（T-MA13-1..3）
 
@@ -1160,7 +1160,8 @@ function inline(s) {
 §12 新节 + 变更记录顺延 §14——今 §15）· `docs/design/AGENT-LOOP.md` 1045 →（§1 模块行 / §7 挂起 UI / §10 改写 +
 变更记录）· `docs/design/SESSION-ACTIVITY-REVISED.md`（取代指针）· `docs/design/ACTIVITY-REWRITE-SIMPLE.md`
 （取代指针）。**需求树**：本批条目落 `AGENT-LOOP（本仓·需求）§12`（修正轮补——评审 #6 收口；同口径 §3/§8~§11）。**拆分评审注**：activity-flow 292→~332 越 ≤300 警示线（≤500 硬限内）——测试族存量
-同带（最高 `chat-panel.test.mjs` 620）——本批**不拆分**（就地改写——同第 10 批结论）。
+同带（最高 `chat-panel.test.mjs` 620）——本批**不拆分**（就地改写）；**同族超限档 `test/chat-panel.test.mjs`（621 > 500 硬限）**：**本批拆**（F12 硬限无豁免；LEDGER-SELF-CONTAINED 批）——拆档实施 = **已落**（实施轮 E）：余档 `test/chat-panel.test.mjs` **270** 行 / 9 例 ·
+新档 `test/chat-panel-messages.test.mjs` **373** 行 / 8 例——守恒 **17 = 8 + 9**；`test/files.mjs` 登记 +1。
 
 **拆分评审注（源侧——评审 #5 收口）**：`activity.js` 298→~313 越 ≤300 警示线（≤500 硬限内）——
 增量 = 区目标 + `MAX_REGION_FOLDED`/`enforceRegionCap` + reset 全区清 + 头注
@@ -1185,7 +1186,7 @@ webview-env +1 照旧（`installChatFixture` 区 id——区语义断言的宿�
 | T-R4 | queued 三分支 | queued→started→cancelled(was:queued) | ⏳+取消⏹ / 翻 running / 头移除——区内 | F-2 |
 | T-R5 | 终态补桩 | never-born done（family+id） | 区内补出已折叠桩 + `late-terminal-stub`（**2026-09-12 §14 C-5：折叠 + 立即归档——采样点 = 流内**） | 批 10 |
 | T-R6 | 新代接管 | 冻结键 + 新 started | 区内新块接管 + `takeover` + 旧块在区（**2026-09-12 §14 C-5：旧 awaiting 块即时归档、已归档块在流内**） | 批 10 |
-| T-R7 | 区显隐（边界） | 移除末块 / 首块出生 | children 0↔N；`:empty` 规则在位（静态断言） | Q2 |
+| T-R7 | 区显隐（边界） | 移除末块 / 首块出生 | children 0↔N；`:empty` 规则在位（静态断言）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；DOM 层 `matches(":empty")` 命中断言保留 | Q2 |
 | T-R8 | 区上限（边界） | 21 折叠块 | 最旧折叠块 DOM 先出；live 不裁；被移除频道迟来丢弃（**2026-09-12 退役——§14 C-6：无折叠块常驻可裁**） | Q1 |
 | T-R9 | live 不裁（边界） | 区 live + 150 消息裁 | live 仍在区；`#messages` 窗只数消息（**2026-09-12 §14：窗计数含归档 `.sub-block`——T-CL9**） | §12.3#10 |
 | T-R10 | 区自滚（边界） | 区块更新 / wheel 上滚 / 回底 | pin 钉底 / 解 pin 不强拉 / 回底重 pin | Q3 |
@@ -1217,8 +1218,8 @@ webview-env +1 照旧（`installChatFixture` 区 id——区语义断言的宿�
   修订——修正轮 #1：采样点 = 折叠时刻——折叠后归档为 §14 C-3 语义，不再回采**）；
   终态闭合 / 幂等 / queued / 补桩 / 接管断言全绿。
 - **AC-R3（Q1——冻结块去向）** = T-R8/T-R14：折叠块在区不落流；上限 20 丢最旧；簿记守卫保留。**（2026-09-12 反转——AC-CL1：消化后归档落流；上限退役——§14）**
-- **AC-R4（Q2——区显隐）** = T-R7：空区 children==0 且 `:empty` 规则在位；块入区即现。
-- **AC-R5（Q3——高度/自滚）** = T-R10 + 静态样式断言（32vh / overflow-y / overscroll）。
+- **AC-R4（Q2——区显隐）** = T-R7：空区 children==0；`:empty` 规则静态断言——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；块入区即现。
+- **AC-R5（Q3——高度/自滚）** = T-R10 行为面（pin 钉底 / 解 pin 不强拉 / 回底重 pin）；静态样式断言（32vh / overflow-y / overscroll）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）。
 - **AC-R6（Q4——digest/挂起）** = T-R5/T-R16 + §5.1 位置口径修订在位（流尾→区尾——文档断言）。
 - **AC-R7（§1 约束②——零回归）** = VSC 快层全绿；extension 端 git diff 空（协议零改）；
   trace/接管/补桩调用点在位（机检）。
@@ -1363,7 +1364,7 @@ webview-env +1 照旧（`installChatFixture` 区 id——区语义断言的宿�
 | T-LU2 | 上滚让位（边界） | `initScrollFollow(ctx)` + 区几何（scrollHeight 210 / clientHeight 200）；内容区 scrollTop=100（gap 340）→ wheel（bubbles） | 旗标 `_pinFollow === false`；追加后 scrollTop 仍 100（不回弹）；区 pin `_pinActivity === true`（两层独立——同一事件各按自身几何） | U1 |
 | T-LU3 | 近底复钉（边界） | 内容区 scrollTop=460（gap −20 < 24）→ wheel → 追加 | 旗标 `true`；等帧后 scrollTop === 超值 | U1 |
 | T-LU4 | 折叠零副作用（边界） | live 块 `open=false`；scrollTop=100 → 追加 → 等帧（含节流重排） | scrollTop 仍 100 且内容含新文本（追加发生、滚动被抑） | U1 |
-| T-LU5 | CSS 高度（契约·静态） | 读 `chat.css` | 子块规则含 `max-height: 60px`；基础 `.advisor-content` 规则含 `max-height: 100px` | U2 |
+| T-LU5 | CSS 高度（契约·静态） | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:114`）） | U2 |
 | T-LU6 | 防御 no-op（错误面） | 已移除块 / 已冻结块上 `maybeScrollBlock` | 零抛错、零写（scrollTop 保持原值） | U1 |
 
 ### 13.7 验收标准（逐条回指——每条可机器验证）
@@ -1372,7 +1373,7 @@ webview-env +1 照旧（`installChatFixture` 区 id——区语义断言的宿�
 - **AC-LU2（U1——让位）** = T-LU2：上滚后追加不回弹 + 区/块两层互不写对方状态。
 - **AC-LU3（U1——复钉）** = T-LU3：近底 wheel 后追加复钉超值。
 - **AC-LU4（U1——边界）** = T-LU4/T-LU6：折叠 / 已移除态零滚动副作用、零抛错。
-- **AC-LU5（U2——高度）** = T-LU5：子块内容区 60px + 基础 100px 在位（静态断言）。
+- **AC-LU5（U2——高度）** = 已退场（随 T-LU5 整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:114`））。
 - **AC-LU6（零回归 / 单端）** = VSC 快层全绿（含新档）；`_advisorScrollDirty` 分支在位（流内
   advisor 路径零改——机检）；CLI 仓代码 diff 空；`src/extension/**` 零改动
   （扩展端协议与实现零改——`git status` 机检；修正轮 #1）。
@@ -1729,7 +1730,7 @@ state.js 行登记）呈落差——**登记为协调项**：集中声明建议�
 | T-CL3 | 普通终态即时归档 | sync `done` | 块出区 + 落 `#messages` 尾 | F-R1 |
 | T-CL4 | 多块保序 | 同批两 reclaim `done` | 两归档块相对序 = 到达序（连续相邻） | F-R1 |
 | T-CL5 | 会话退出 flush | `suspension active:false freeze:true`（live + awaiting 各一） | 两块全归档（尾）+ 区 children 0 | F-R1 |
-| T-CL6 | 全归档后区空 | 末块归档 | 区 children 0 且 `:empty` 规则在位（静态断言） | F-R1 |
+| T-CL6 | 全归档后区空 | 末块归档 | 区 children 0；`:empty` 规则在位（静态断言）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；DOM 层 `matches(":empty")` 命中断言保留 | F-R1 |
 | T-CL7 | 边界失效退化 | 回合元素先被移除 → reclaim | 尾追归档（不抛错） | F-R1 |
 | T-CL8 | 无边界（用户回合路径） | 无在轮 → reclaim `done` | 尾追归档 | F-R1 |
 | T-CL9 | 150 窗 + 懒历史 | 归档后超窗 | trim 计数含 `.sub-block`；懒历史锚选择器含 `.sub-block` | F-R1 |
@@ -1747,14 +1748,14 @@ state.js 行登记）呈落差——**登记为协调项**：集中声明建议�
 | T-CL21 | statusText 映射 | 五 kind 注入 + 活动恢复 | 各段文案逐字（两 locale）；token/complete 后清空 | F-R6 |
 | T-CL22 | ✦reasoning | usage `reasoning_tokens>0` / =0 | >0 显 `✦X`；0 隐 | F-R6 |
 | T-CL23 | turn N/M 段 | `turnFrame` 消息 | `turn N/M` 渲染（旧 `轮次 N` 段不再出现） | F-R6 |
-| T-CL24 | scrolled 端差 | 静态 | 悬浮回底钮在位 + 状态行无 scrolled 段（端差登记） | F-R6 |
+| T-CL24 | scrolled 端差 | 静态 | 悬浮回底钮在位（静态面）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；状态行无 scrolled 段 + ctx 段 pct 形态保留（端差登记） | F-R6 |
 
 > **C-12 host 发射面覆盖归属（修正轮 #8——六项增量 host 侧机判）**：① cap 两调用（`panel-chat` ContinueError
 > auto/stop）：`digest-visibility` 改写扩 `postDigestCap` helper 直驱（载荷逐字 + 两分支——直驱同款 = 本档
 > T-D1–T-D3 桩面板手法）+ 两调用点 grep 机检；② `statusText`（`panel-callbacks` onWait / `panel-index`
 > 索引进度）+ `turnFrame`（onAgentTurn）+ `reasoning_tokens` 累计：`status-line` 新档直驱其导出映射面
 > （同款 = async-visibility 直驱 `postSubagentEvent`）+ 发射调用点 grep 机检（同款 = async-visibility AC-A6）；
-> ③ `subagent status:"turn"` 发射（`subagent-run`）：发射点机检 + webview 侧 T-CL19；④ 四生产者 `tool`/`cmd`：
+> ③ `subagent status:"turn"` 发射（`subagent-run`）：发射点机检——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）+ webview 侧 T-CL19；④ 四生产者 `tool`/`cmd`：
 > T-CL18（渲染面）+ `panel-toolpanel` 白名单纯函数直驱（payload 逐字）。webview 侧六项均经注入缝直测
 > （C-9/C-10/C-11 用例）。
 
@@ -1790,6 +1791,7 @@ elapsed 刷新节拍（复用 2s）；`statusText` 保留时长（= 活动恢复
 
 
 ## 15. 变更记录（历史折叠——详见 git log）
+- 2026-09-12（行文按现态收正——纯文档，实现面零改）：§8.1 回合入口守卫按现态改写（running 消息拒收——不排队、无回执；`_suspQueue`/`messageQueued` 残述清零）；§8 头注 Stop 派生句同步 §8.4（A3 原式 state≠idle 经 F-6 收窄为 running——消自相抵）。源 = `src/extension/panel-messages.mjs` · `webview/loading.js:57`。
 - 2026-09-12（活动区收口批·实现后同步——4 处；纯文档，实现面零改）：§3 `refreshLiveHeaders` 归属更正
   （activity-view.js → `activity.js:375`——activity.js 行补录）；§14.6 `activity.js` 行数对表校准（实测 406——超预估；
   越 300 软线拆分评估注更新）+ `state.js` 协调项登记（三 S 字段动态挂载 vs 集中声明惯例）；C-16 占位符记法校准

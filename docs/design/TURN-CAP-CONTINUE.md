@@ -154,7 +154,7 @@
 | T8 | 错误 / 回归 | ① `_turnSeq = 0` 复位条件 = `!opts.resume`（源码锚）② 既有 activity-flow / webview-turnstate / observe-send 全绿 | 复位无第二点；回归绿 | N5 / N6 |
 | T9 | 边界（**段间生产断言**——修正轮新增，本缺口核心） | 真 `runAgent` 直驱 ×3 段（`depth:1`、`maxTurns:100`、provider 不可解析——见接缝注）：段 1 `resume:false` → 段 2 `resume:true` + `opts._turnSeqBase` = 段 1 末帧第一参 → 段 3 `resume:false` | 段 1 首帧 `(1, 100)`；**段 2 首帧 `(2, 101)` = 段 1 累计 + 1（不回到 1）**；段 3 首帧 `(1, 100)`（新链复位） | F7 |
 | T10 | 边界（**消费侧接线**——修正轮新增） | 真 `runChild`（`entry` 空夹具、`onQuestion → "Continue"`、空 `parent`——见接缝注）+ 假 `runAgent`：段 1 发 `onAgentTurn(1, 100)` 后抛 `ContinueError`；段 2 采集所收 `opts` | 段 2 `opts.resume === true` 且 `opts._turnSeqBase === 1`；`entry.turn === 2`；终态通知 `{turn: 2, maxTurns: 101}` | F7 |
-| T11 | 错误 / 源码锚（修正轮新增） | ① `agent.mjs` 种子落点源锚（`resume` + `_turnSeq == null` → `opts._turnSeqBase`）② 两循环续跑支 `_turnSeqBase` 各 1 命中（`subagent-run.mjs` / `subagent-escalate-async.mjs`——旧码 0 命中） | 锚驻留（fail-when-unchanged）；无第二复位点 | F7 / N6 |
+| T11 | 错误 / 源码锚（修正轮新增） | ① `agent.mjs` 种子落点源锚（`resume` + `_turnSeq == null` → `opts._turnSeqBase`）② 两循环续跑支 `_turnSeqBase` 各 1 命中（`subagent-run.mjs` / `subagent-escalate-async.mjs`——旧码 0 命中） | 锚驻留（fail-when-unchanged）；无第二复位点——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；用例保号（断言体空——续跑行为面由 T9/T10 覆盖） | F7 / N6 |
 
 用例面声明：纯函数 / 助手打接缝缝（T1-T6）、webview 真模块 fixture（T7——`test/helpers/webview-env.mjs` 面）、源码锚 + 全量回归（T8）、**真 runAgent 直驱段间断言（T9）+ 真 runChild 循环接线（T10）+ 源码锚（T11）——T9-T11 = 载体缺口修正轮新增**。
 
@@ -167,8 +167,8 @@ T10 夹具 = `entry` 空对象 + `ctx.callbacks.onQuestion` 返回 "Continue" + 
 | AC | 判据（机器可验证） | 回指 |
 |---|---|---|
 | AC1′ | T1-T4 绿：同算式同口径（与 CLI AC1 同源判据——两档各自驻留）+ **T9 段间生产断言：段 2 首帧 = 段 1 累计 + 1（真 runAgent 直驱——载体缺口修正轮）** | 批次 §1 问 2 |
-| AC2′ | `onAgentTurn` 双参发出（源码锚）+ 两消费点经 `applyTurnFrame`（T5 / T6 绿）+ **消费侧接线：段前累计 → 续跑段 `opts._turnSeqBase`（T10 绿 + T11 锚）** | 批次 §1 问 2 |
-| AC3′ | `_turnSeq = 0` 复位条件 = `!opts.resume`（源码锚——不得无条件复位）+ 无第二复位点 + **种子落点仅在 `_turnSeq == null`（T11 锚）** | 批次 §1 问 2 + 范围边界 |
+| AC2′ | `onAgentTurn` 双参发出（源码锚）+ 两消费点经 `applyTurnFrame`（T5 / T6 绿）+ **消费侧接线：段前累计 → 续跑段 `opts._turnSeqBase`（T10 绿）**；T11 锚——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1） | 批次 §1 问 2 |
+| AC3′ | `_turnSeq = 0` 复位条件 = `!opts.resume`（源码锚——不得无条件复位）+ 无第二复位点 + **种子落点仅在 `_turnSeq == null`（T11 锚）**——T11 锚已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1） | 批次 §1 问 2 + 范围边界 |
 | AC4′ | 终态快照行（`subagent-run.mjs:137`）与 webview 两文件（`activity.js` / `activity-view.js`——命名清单同 19.3）diff 零行 + T7 绿 | 批次 §1 已核事实（渲染层假设复核 = 无假设） |
 | AC5′ | 段内帽 / 续跑语义零改动（**续跑循环仅增种子传参——帽判定 / `ContinueError` 载荷 / 循环结构零改动**）：T8 源码锚 + VSC 全量回归绿 | 批次 §1 范围边界（不改回合帽 / 续跑机制） |
 | AC6′ | 登记行关系落档（19.8 同口径）——登记行本体同步 = 父侧排程 | 批次 §1 问 5 |

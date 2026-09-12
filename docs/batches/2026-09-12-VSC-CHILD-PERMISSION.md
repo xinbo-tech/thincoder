@@ -135,7 +135,7 @@ R2 修正 = `ESCALATE.md` / `ENGINEERING-MODE.md` / `AGENT-LOOP（VSC 仓）§8`
 正常：T-CP1 ask 弹卡带归属 + 块头 ⏸ · T-CP2 approve 继续 · T-CP3 deny 语义 · T-CP4 AUTO 直通 · T-CP5 轮中 approve-all · T-CP6 escalate sync · T-CP7 escalate async + ⏹ 释放；
 边界：T-CP8 双卡 promptId 路由 · T-CP9 陈旧/无 id 响应 · T-CP10 eng-coder 零卡 · T-CP11 explore/plan 零卡 · T-CP12 depth-0 零回归 · T-CP13 冻结块迟来事件 · T-CP14 child 多写逐项两卡 · T-CP16 态词清除 + i18n；
 错误：T-CP15 无通道静默（headless） · T-CP17 R2 措辞锚 · T-CP18 结构对表。
-**测试族写法**：host 直驱（`permission-gate`/`panel-messages` + panel 假体——`chat-panel.test.mjs` 模式）+ happy-dom 面（`installChatFixture`——`activity-flow.test.mjs` 模式）+ fs 直读（i18n/文档锚）。
+**测试族写法**：host 直驱（`permission-gate`/`panel-messages` + panel 假体——`chat-panel-messages.test.mjs` 模式）+ happy-dom 面（`installChatFixture`——`activity-flow.test.mjs` 模式）+ fs 直读（i18n/文档锚）。
 
 #### 六、开放设计问选型（Q1–Q6——全文 §18.3）
 
