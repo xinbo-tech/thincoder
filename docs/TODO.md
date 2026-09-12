@@ -15,9 +15,10 @@
 
 
 
-## 技术待办（1 条）
+## 技术待办（2 条）
 
 - [ ] **文档↔实装漂移（类）：设计/需求档「事实句」落后于代码/测试现态**（2026-09-12 LEDGER 批串行排查暴露；当晚已清 250+ 处）→ 证据：`docs/design/ADVISOR-CONVERGENCE.md:766`（citations grep 断言面无本批段删承载）· `:913`（同族）· `docs/design/ENGINEERING-MODE.md:2221`（AC76 子串族）· `docs/design/TURN-CAP-CONTINUE.md:159` · `docs/design/ACP-CLIENT.md:435`；另见 `ADVISOR-CONVERGENCE` §14 族 / `ledger-surface` T106 面（2026-09-12 批档 §2 各轮列报）· 消解路径 = 专项「文档↔实装对账」轮（逐档逐句：事实句 ↔ 现代码/现测试）· **触发=条件（该面下次被触碰时 / 下批收口前）**
+- [ ] **`:N/:M` 多坐标形态不入 V5 射程**（DOC-CODE-RECONCILE 批外审遗留 · 2026-09-13）：`file.ext:54/:103` 类**多坐标尾**——抽取式只覆盖 `:N` / `:N-M` ⇒ 该形态不可见（无既知实例）· 证据 `scripts/doc-anchors.mjs:37`（坐标组覆盖面）· 消解路径 = 判据句扩 + 复跑（同批 `:N-M` 扩法）+ 判别夹具 · **触发=条件（该面下次被触碰时）**
 
 ---
 
