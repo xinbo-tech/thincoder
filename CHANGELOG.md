@@ -15,7 +15,7 @@ All notable changes to ThinCoder VS Code are documented here.
 - **可移植性 VSC 镜像（VP-1–VP-12）**：`src/conventions.mjs` + `src/advisor/project-context.mjs` 新模块；advisor 注入面 / 文档地图 / 项目方法论探测去硬编码；`~` 展开 · 读侧 idle 超时 · 门禁文案 · 索引面与提示词六档（en/cn）同步。
 - **VSC 镜像清扫（A1–A13）**：provider 读空闲超时 · `§24` 旧锚重锚（39 处）· cap 预检（sync-only）· git commit `--only` · 子代理描述两行 · 降级窗 Stop 定向 abort · 首块说明行 · **输入历史 / 多行编辑**（IME 守卫 + 单行任意位置 ↑/↓）。
 - **评审链 / 异步保真（B1–B5）**：advisor 池中止丢弃（含 discarded 提醒）/ launchRefused 记账守卫 / file_ops 冻结拦 + 合入记账 / CJK 估算加权 / digest 注入预算单源（subagent/advisor/escalate/consult 四族全接线）。
-- **集成集 + 发布门三环**：`test/integration/`（7 场景 28 用例）+ `test:integration`；`vscode:prepublish` = lint → test:full → test:integration。
+- **集成集 + 发布门四环**：`test/integration/`（7 场景 28 用例）+ `test:integration`；`vscode:prepublish` = lint → doc:check → test:full → test:integration。
 - **测试生命周期**：三层来源 + 削段/合档（settings-panel → config-pool）/ 拆档（index-perception git 慢档组）。
 
 ### Fixed
