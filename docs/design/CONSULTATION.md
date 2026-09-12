@@ -28,7 +28,7 @@
 ### 范围边界（不做）
 
 工具内置自动验证、模型间交叉通信、会诊子 agent 改文件、部分 settle 提前注入
-（**全 settle 才入 digest 流**——T-R17k）。
+（**全 settle 才入 digest 流**——T-R17k（引例：CLI 仓用例编号，本仓不在册））。
 
 ## 2. 设计
 
@@ -48,7 +48,7 @@ consult 会话（history._consultSessions = Map<id, Session>，跨 run 存活）
 消化轮逐条判断处置（会诊 = 建议非门禁；手动档禁写禁 spawn——T-R17p 零例外）
 ```
 
-会诊 settle 在用户空闲时也触发消化轮（suspension 驱动判据 = 任一 pending 族非空——T-R17j）。
+会诊 settle 在用户空闲时也触发消化轮（suspension 驱动判据 = 任一 pending 族非空——T-R17j（引例：CLI 仓用例编号，本仓不在册））。
 
 ### 2.2 R17 现行机制（digest 消费模型）
 
@@ -65,7 +65,7 @@ consult 会话（history._consultSessions = Map<id, Session>，跨 run 存活）
   机械拒绝：手动档 auto-turn 内 `consult_start` execute 门拒绝（`cannot start consultations from
   a manual auto-turn`）；`consult_stop` 保留放行（控制类豁免）。
 - **`consult_stop` = 取消语义**：abort 剩余子任务，`terminated` settle（计数不入队）、会话弃——
-  不入 pending（T-R17c）；已回完的回复丢弃不可达（取消不产 digest）。
+  不入 pending（T-R17c（引例：CLI 仓用例编号，本仓不在册））；已回完的回复丢弃不可达（取消不产 digest）。
 - **子代理信号**：`sessionSignal ?? turn signal`——会话 Stop 逐链中止；interrupt（Ctrl+I——停回合
   续跑）不逐链中止在飞会诊（F2 同款豁免——否则意见丢为失败注记 + 噪音 digest）。
 - **等待/活度**：`wait_for "consult done"` 条件保留（会话 Map 沿 history 读）；suspension 驱动
@@ -144,11 +144,11 @@ received, total, models }`。settle 语义：正常回复入队；`session.stopp
 
 ## 3. 测试
 
-会诊测试用例清单的权威 = **AGENT-LOOP（CLI 仓·设计）§25**（T-R17a..p：会话 settle park / digest 注入全文 /
+会诊测试用例清单的权威 = **AGENT-LOOP（CLI 仓·设计）§25**（T-R17a..p（引例：CLI 仓用例编号，本仓不在册）：会话 settle park / digest 注入全文 /
 check 退役（调 consult_check 工具不存在）/ 部分 settle 不注入 / stop 弃不入 pending / 空闲 settle
 消化 / 超长注入落盘 / 注入一次竞态 / 手动档动作域零容忍 / 双族隔离 / 中止语义等——VS Code 镜像）。
 
-**验收**（AGENT-LOOP §25）：T-R17a..p 双端绿 + consult 家族既有零回归。
+**验收**（AGENT-LOOP §25）：T-R17a..p 双端绿 + consult 家族既有零回归（T-R17a..p = 引例：CLI 仓用例编号，本仓不在册）。
 
 ## 变更记录
 

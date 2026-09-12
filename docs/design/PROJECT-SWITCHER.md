@@ -64,7 +64,7 @@ _cwd() = override ?? workspaceFolders[0] ?? process.cwd()
 
 ## 测试
 
-原 `test/project-switcher.test.mjs`（override 校验 / `_cwd` 随 override / `clearProjectOverride` 恢复 / `_projectInfo` 快照 / `_onProjectChanged` 重绑 slot）与 `test/welcome.test.mjs`（`#project-btn` 存在且默认隐藏）随 2026-09-07 测试清空重构删除（files.mjs 收敛）。当前由扩展端套件在相关路径上覆盖；回归以全量套件为准。
+原 `test/project-switcher.test.mjs`（override 校验 / `_cwd` 随 override / `clearProjectOverride` 恢复 / `_projectInfo` 快照 / `_onProjectChanged` 重绑 slot）与 `test/welcome.test.mjs`（`#project-btn` 存在且默认隐藏）随 2026-09-07 测试清空重构已删除（files.mjs 收敛——删除记录 = `test/files.mjs` 收敛清单）。当前由扩展端套件在相关路径上覆盖；回归以全量套件为准。
 
 ## 变更记录
 

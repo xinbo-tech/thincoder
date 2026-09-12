@@ -196,7 +196,7 @@ AGENTS.md 模块清单为维护寄存器；本节为分组总览 + 「详细设�
   settle 出池 + 会话 lines 双键补形；§8.4。后注：_suspPending/_suspQueue 已废——
   现态 = running 拒收无排队（源 = `src/extension/panel-messages.mjs`））。
 - 2026-09-02：**VS 实现注**——挂起 round-2 中止路径排队消息零丢失（退出兜底无
-  条件消费残余——T-S21；§8.4）。
+  条件消费残余——T-S21（已退场——设计期编号；现态不在册）；§8.4）。
 - 2026-09-02/03：工程交付协议（eng-coder 默认 async + 内部自审计闭环——
   AGENT-LOOP.md §8）+ askContinue AUTO 续跑（ctx.getAuto 载体）+ subagent.mjs
   500 行拆分（§8.3）。

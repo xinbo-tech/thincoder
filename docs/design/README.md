@@ -33,16 +33,17 @@
 | 发布流程 | `RELEASE.md` |
 | 测试基建 | `TESTING.md` | 测试生命周期与集成集（新建 2026-09-11——与 CLI 仓同名档对应；语义同源·本端原文自持）。快/全两层 + slow 门 + 显式清单实现面见 `TESTING.md` §1 |
 | 台账自持（文档体系各仓自持） | `LEDGER-SELF-CONTAINED.md` | 本批——台账射程（只收本仓条目）/ 需求树建设 / 批档接收 / 机检 L4（`scripts/check-ledger.mjs`）/ 提示词自持条文 / 存量宽口径处置 |
+| 文档↔实装对账 | `DOC-CODE-RECONCILE.md` | 本批——文档锚一致性机检 **V5**（用例号 / 符号 / 路径三类锚的**存在性**；报告态 → 清后转阻断、阈值 0）+ 层 3 反查（`scripts/reconcile-lookup.mjs`）+ 语义巡检机制；需求 = `docs/requirements/ENGINEERING-MODE.md` §1（F15–F20 / N6–N9）；与对端（CLI 仓）**语义同源·本端原文自持**（差异逐项见该档 §13） |
 | 可移植性 | `PORTABILITY.md` | VSC 镜像面（批次二）——对照 = `PORTABILITY（CLI 仓·设计）`（§9 = 对位清单权威）；分类唯一权威 / 声明面 / 门禁拒绝 / 索引扩表判据 |
 | 会诊 | `CONSULTATION.md` | |
 | 飞刀 | `ESCALATE.md` | |
 | Design Token 硬化 | `ENG-TOKEN-BINDING-TUNING.md`（需求 = `docs/requirements/ENG-TOKEN-BINDING.md`） | v2 收窄：安全修复（双后门/复活陷阱）+ TTL 7 天可配（2026-08-25，v1 内容绑定被实况否决见文档考古） |
-| 覆盖率缺口修复 | `_archive/COVERAGE-GAPS-REQUIREMENTS.md`、`_archive/COVERAGE-GAPS-TUNING.md` | 遗留测试覆盖收口（2026-08-25，与 CLI 同源）——已移 `_archive/` |
+| 覆盖率缺口修复 | `docs/design/_archive/COVERAGE-GAPS-REQUIREMENTS.md`、`docs/design/_archive/COVERAGE-GAPS-TUNING.md` | 遗留测试覆盖收口（2026-08-25，与 CLI 同源）——已退役（归位 `docs/design/_archive/`） |
 | 轮末蒸馏异步化 | `SEND-STALL-DISTILL-TUNING.md`（需求 = `docs/requirements/SEND-STALL-DISTILL.md`） | send 按钮卡顿修复：结束信号先行、蒸馏异步（2026-08-25，与 CLI 同源） |
-| 工具移除 | `_archive/SLEEP-REMOVAL-REQUIREMENTS.md`、`_archive/SLEEP-REMOVAL-TUNING.md` | sleep 工具删除（2026-08-25，与 CLI 同源）——已移 `_archive/` |
+| 工具移除 | `docs/design/_archive/SLEEP-REMOVAL-REQUIREMENTS.md`、`docs/design/_archive/SLEEP-REMOVAL-TUNING.md` | sleep 工具删除（2026-08-25，与 CLI 同源）——已退役（归位 `docs/design/_archive/`） |
 | 工具输出限制 | `TOOL-OUTPUT-LIMITS-TUNING.md`（需求 = `docs/requirements/TOOL-OUTPUT-LIMITS.md`） | 落盘阈值/显示层 16K→64K（2026-08-24，与 CLI 同源） |
 | Agent 运行参数 | `AGENT-PARAMS-TUNING.md`（需求 = `docs/requirements/AGENT-PARAMS.md`） | 评审超时/轮次上限调整（2026-08-24，与 CLI 同源） |
-| Webview 性能 | `_archive/webview-input-lag.md` | 输入卡顿修复方案（纯历史修复记录，已实施）——已移 `_archive/` |
+| Webview 性能 | `docs/design/_archive/webview-input-lag.md` | 输入卡顿修复方案（纯历史修复记录，已实施）——已退役（归位 `docs/design/_archive/`） |
 
 ## 规则
 
@@ -75,6 +76,8 @@
 
 ## 变更记录
 
+- 2026-09-12：文档↔实装对账批（DOC-CODE-RECONCILE）——新增板块行「文档↔实装对账」`DOC-CODE-RECONCILE.md`（V5 锚一致性机检 / 反查 / 语义巡检）；该档为 V5 判据权威源，V1–V3 指针 = `ENGINEERING-MODE.md` §9、V4 指针 = `LEDGER-SELF-CONTAINED.md` §8.10.1（不重述——单一权威源）。
+
 - 2026-09-12：台账自持批（LEDGER-SELF-CONTAINED）——本表补登 `LEDGER-SELF-CONTAINED` / `PORTABILITY` 两行；需求档归位行同步（`docs/requirements/` 四归位 + `PROJECT` 异名归位 + `PHILOSOPHY` 归位——零失效路径）。
 
 - 2026-09-12：子代理审批面对齐批（VSC-CHILD-PERMISSION）——`AGENT-LOOP.md` **§18** 新增（child permission gate：ask 弹卡带归属 / 模式继承 / 块头 ⏸ / 取消释放 / R2 文档修正）；`TOOLS.md` §8 子代理审批条；协议增补 `WEBVIEW.md` §7.2（4 行）；`ESCALATE.md` / `ENGINEERING-MODE.md` 矛盾措辞随批修正。
@@ -90,9 +93,10 @@
 - 2026-08-24：新增板块「Agent 运行参数」（AGENT-PARAMS-*）与「工具输出限制」（TOOL-OUTPUT-LIMITS-*）
 - 2026-08-25：新增「轮末蒸馏异步化」（SEND-STALL-DISTILL-*）、「工具移除」（SLEEP-REMOVAL-*）、「覆盖率缺口修复」（COVERAGE-GAPS-*）；Settings 6 份历史批次文档合并入 `SETTINGS.md`
 - 2026-09-06：README provider 数量修正（17→20——补 GLM Coding Plan / MiMo / MiMo Token Plan，与 `src/config-presets.mjs` PROVIDER_PRESETS 对齐）；其余文档质量观察项见会话记录，未入库
-- 2026-09-06：会话目录残留 GC + 标题写显性化（机制权威源 `SESSION（CLI 仓·设计）` §12）——VSC 端 eng-coder 交付：`src/extension/session-gc.mjs`（残留 GC + 冷 cwd 原语，CLI 同源移植；F2 手动执行面仅 CLI `thincoder session gc`）+ setSlotTitle `{ok, reason}` 契约（session-io.mjs）+ 面板调用方适配（panel-messages/panel-session）+ `test/session-gc.test.mjs`
+- 2026-09-06：会话目录残留 GC + 标题写显性化（机制权威源 `SESSION（CLI 仓·设计）` §12）——VSC 端 eng-coder 交付：`src/extension/session-gc.mjs`（残留 GC + 冷 cwd 原语，CLI 同源移植；F2 手动执行面仅 CLI `thincoder session gc`）+ setSlotTitle `{ok, reason}` 契约（session-io.mjs）+ 面板调用方适配（panel-messages/panel-session）+
+  `test/session-gc.test.mjs`（已删除——删除记录 = 3b974ae · 2026-09-07「测试清空」批）
 - 2026-09-08：文档格式债清理批——**归档 11 件移 `_archive/`**（SETTINGS-PANEL(-2)/PROXY-ROW/REORG/SUBMODEL-SHELL/MODEL-PICKER-UNIFY + COVERAGE-GAPS 对 + SLEEP-REMOVAL 对 + webview-input-lag）并更新登记；整文件单行 demux 为多行 markdown；归属规则加**规则 6（文档人类可读防复发）**——配 `scripts/check-doc-width.mjs` 批量检查。
-- 2026-09-08：DOC-REORG 第 2 批——`RESPONSES-TRANSPORT.md` 并入新建 `PROVIDER.md`（板块 Provider/transport），README 登记行同步（原 Responses 行改为 PROVIDER 行）
+  - 2026-09-08：DOC-REORG 第 2 批——`RESPONSES-TRANSPORT.md`（已退役——现体 = `docs/design/PROVIDER.md`）并入新建 `PROVIDER.md`（板块 Provider/transport），README 登记行同步（原 Responses 行改为 PROVIDER 行）
 - 2026-09-08：DOC-REORG-VSC 第 7 批——新板块登记：Webview 前端/消息协议（WEBVIEW，VSC 独有无 CLI 对应），自 ARCHITECTURE §11+§12 迁出（消息协议并入）。
 - 2026-09-08：DOC-REORG-VSC 第 4 批——新板块登记：工程模式（ENGINEERING-MODE）+ 评审收敛（ADVISOR-CONVERGENCE），各自独立完整（与 CLI 同名档对应）。
 - 2026-09-08：DOC-REORG-VSC 收官（第 8 批）——ARCHITECTURE 瘦身为薄枢纽（删除已迁出 §4-§13 与 §15 CLI 指针表；§3 模块地图加「详细设计 →」指针列）；本表全量登记核对 + 板块名对齐 CLI（补齐 会话/上下文压缩/Agent 循环（AGENT-LOOP 权威 + TURN-CAP 同板块）/工具系统/Checkpoint 事故恢复/记忆 行；Provider 行更名对齐；MCP.md 随 CLI 归「工具系统」行独立保留注；顺序归组为 机制板块 → VSC 独有 → 专题）。

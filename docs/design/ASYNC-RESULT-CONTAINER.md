@@ -28,7 +28,7 @@
 ### 现状（explore 核实 + STRUCTURE-DEBT §4-#2）
 - **settle 重复 4 处**：公共尾部/日志三连/cancelled/挂起分流逐字重复（subagent/advisor/escalate/consult）。
 - **pending 5 族分叉**：`_pendingAsyncResults`/`_pendingAdvisorResults`（独立）/`_pendingEscalateResults`/`_pendingConsultResults` 等（VSC 比 CLI 多 advisor 独立族）。
-- **done-in-pool 双表示**：`_doneInPool` 独立表示 + pending 数组。
+- **done-in-pool 双表示**（已退役——AC3 统一表示落地；现体 = 单容器 role 条目）：`_doneInPool` 独立表示 + pending 数组。
 - **`_sessionSignal` 兜底抄 4 处**（subagent/advisor/escalate/consult——VSC consult 也无兜底或抄法不同）。
 - **池挂共享 history 数组 + alias**（双查询 `history?._X ?? agent._X`——与 CLI 挂 agent.* 不同）。
 
@@ -59,7 +59,7 @@
 
 - 新建：`src/agent-tools/async-settle.mjs`（settle 共享 helper + buildChildSignal + 池 accessor——预估 ~150 行）
 - 修改：`src/agent-tools/subagent-async.mjs`（~450 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-20）、`src/agent-tools/advisor-async.mjs`（~400 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-20）、
-  `src/agent-tools/escalate-async.mjs`（~250 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-20）、`src/agent-tools/consult.mjs`（~300 行，settle 升格完整 entry + 信号兜底 + 改调 helper——delta ~-10）、
+  `src/agent-tools/subagent-escalate-async.mjs`（~250 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-20）、`src/agent-tools/consult.mjs`（~300 行，settle 升格完整 entry + 信号兜底 + 改调 helper——delta ~-10）、
   `src/agent.mjs`（~200 行，pending 消费单容器——delta ~-15）、`src/agent/run-stages.mjs`（~300 行，池 accessor + pending 清理——delta ~-10）、`src/extension/suspension.mjs`（~350 行，sweep 改调 helper + pending 清理——delta ~-20）、
   `src/agent-tools/subagent-actions.mjs`（~400 行，池 accessor——delta ~+5）、`src/agent-tools/subagent-scheduler.mjs`（~350 行，池 accessor——delta ~+5）、**`src/agent-tools/subagent.mjs`（~500 行，buildChildSignal 吸收的 4 处兜底抄之一在 execute :240——D6 必需——delta ~+2）**
 - 文档：本设计 + README 地图登记 + AGENT-LOOP.md 子代理/async §

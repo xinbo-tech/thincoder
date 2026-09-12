@@ -119,7 +119,8 @@ workspace" 已改为 **"no directory restriction"**（权威源 = CLI TOOLS.md�
 
 **`settings` 工具的形状护栏（2026-09-11 第 8 批——与 CLI 同源；范围项 W2（第 8 批待裁定项「VSC 镜像是否纳入」——裁定 = 纳入）已裁定纳入本批——2026-09-11 用户裁定，依据 = 本端同一缺陷完整存在 + 两端共享 `~/.thincoder/config.json`）**：
 
-- **现状（缺陷面）**：类型表自动派生自 `AGENT_DEFAULTS`/`TRACES_DEFAULTS`（`src/config-io.mjs:296-324`），且 `buildTypeMap` 跳过 `null` 叶子（`src/agent-tools/settings.mjs:29`）——被跳过的键**零约束**：字符串/对象/数组一律被接受并落盘（含跨端三键 `defaultModel`/`shell`/`memory.team` 与同族键 `agent.subagentModels`，第 12 批补）→ 应用侧（CLI 读侧）静默折叠 = 「写了等于没写」。
+- **现状（缺陷面）**：类型表自动派生自 `AGENT_DEFAULTS`/`TRACES_DEFAULTS`（`src/config-io.mjs:296-324`），且旧 `buildTypeMap` 跳过 `null` 叶子（已退场——现体 = `_buildShapeTable` + `_NULL_LEAF_SHAPES` 形状表——见下行契约）
+  ——被跳过的键**零约束**：字符串/对象/数组一律被接受并落盘（含跨端三键 `defaultModel`/`shell`/`memory.team` 与同族键 `agent.subagentModels`，第 12 批补）→ 应用侧（CLI 读侧）静默折叠 = 「写了等于没写」。
 - **契约（同源——详本见 CLI 档 `SETTINGS-TOOL（CLI 仓）` §8.3）**：null 叶子（`_NULL_LEAF_SHAPES`）+ 跨端键（`_SIBLING_SHAPES`）走**显式形状表**，不可消费形态**拒绝**（不落盘、不热应用）。
 - **本端键集**（`_NULL_LEAF_SHAPES`——完备性锁的相等面，2 键）：`agent.subagentModel` 非空串 ∪ null · `agent.compactThreshold` number ∪ null（null = auto）。
 - **跨端 / 同族键**（`_SIBLING_SHAPES`——存在性断言面，4 键；共享 config.json）：`defaultModel` `"provider:model"` 串 ∪ null · `shell` 非空串 ∪ null · `memory.team` 含非空 `repo` 的对象 ∪ null · **`agent.subagentModels` 角色→非空串对象 ∪ null**（第 12 批第 4 条——本端读侧 `subagent.mjs` `effectiveSubagentModel`；`{}` = 清除）。
@@ -163,7 +164,7 @@ tool: …]` + `buildHeadTailPreview`（head 16K + 省略注 + tail ≤48K——U
 ## 8. 权限审批（webview 逐工具弹窗 + 批确认）
 
 approve / deny / approve-all + diff 预览（`diff-preview.mjs` 虚拟文档原生 diff）。权限门在
-`extension/permission-gate.mjs`（`permissionGate` 逐工具 + `batchPermissionGate` 批门）。autoApprove
+`src/extension/permission-gate.mjs`（`permissionGate` 逐工具 + `batchPermissionGate` 批门）。autoApprove
 为**活事实源**（`getAuto` live getter + 会话槽位字段）——approve-all / AUTO 按钮轮次中途翻
 转后，权限询问与 AUTO 标注下一条即生效。细节：
 
@@ -178,7 +179,7 @@ approve / deny / approve-all + diff 预览（`diff-preview.mjs` 虚拟文档原�
 - **eng-coder 子代理**：spawn 时经 design token 预授权（runChild 传 autoApprove=true）——
   免逐写询问：权限询问阶段整体跳过；JSON 解析/未知工具/planMode/design-token 前置门先
   行且原样生效（修正轮 #1）。
-- **子代理（depth>0）审批**：ask 模式经父面板弹卡——卡带归属（`<child key> · <tool>`）；AUTO（含轮中 approve-all）整树直通；eng-coder spawn 预授权（上条）与 explore/plan 只读集不变。机制/用例 = `AGENT-LOOP.md §18`（实现 `agent-tools/child-permission.mjs` + `extension/permission-gate.mjs`）。
+- **子代理（depth>0）审批**：ask 模式经父面板弹卡——卡带归属（`<child key> · <tool>`）；AUTO（含轮中 approve-all）整树直通；eng-coder spawn 预授权（上条）与 explore/plan 只读集不变。机制/用例 = `AGENT-LOOP.md §18`（实现 `src/agent-tools/child-permission.mjs` + `src/extension/permission-gate.mjs`）。
 - **Stop 释放挂起门**：permission 挂起的回合被 abort → resolve(false)/deny，循环不悬挂。
 
 ## 9. 逐工具契约要点
@@ -236,7 +237,7 @@ approve / deny / approve-all + diff 预览（`diff-preview.mjs` 虚拟文档原�
    `commit` 行改为「stage + commit（message，path for granular）」→「commit；**path → `git commit --only <paths>`**（工作树取列文件——索引他批不混入——原子）；无 path → add -A 全量」；
 5. `add` / 其余 action 零改；不加 truncate（本端现状保持）。
 
-**用例表（T-MA9——镜像 CLI `test/git-commit-pathspec.test.mjs`——新档本端自持）**：
+**用例表（T-MA9-1–5——镜像 CLI `test/git-commit-pathspec.test.mjs`——新档本端自持）**：
 
 | # | 类 | 输入 | 预期输出（断言） | 映射 |
 |---|---|---|---|---|
@@ -268,7 +269,7 @@ approve / deny / approve-all + diff 预览（`diff-preview.mjs` 虚拟文档原�
   实测 25 档/25 工具）经 `src/tools/shared.mjs:12`（CLI 仓） `DESC()` 运行时装载，含 Routing / Notes 段
   （如 `read.md` 21 行含「不要用 bash cat」路由与 `repo_outline`/`code_search`/`lsp` 指向）。
 - VSC：`src/tools/` 全 `.mjs`、零 `.md`；31 个 builtinTools 描述全为内联字符串，无 Routing/Notes 结构段；
-  `tools/file.mjs:22-29` read 描述 7 行（CLI 21 行）；装载机制不存在（`DESC(` 零命中；`checklist.mjs:3`
+  `src/tools/file.mjs:22-29` read 描述 7 行（CLI 21 行）；装载机制不存在（`DESC(` 零命中；`checklist.mjs:3`
   注释自述「DESC file-read replaced with inline description」= 施工期简化）。
 - 后果：模型在 VSC 面拿到的路由/反模式信息系统性少于 CLI——工具选择与反模式规避面同族差。
 
@@ -302,7 +303,7 @@ approve / deny / approve-all + diff 预览（`diff-preview.mjs` 虚拟文档原�
 
 **D-TD3 非迁移面（登记——本批零改）**：`repo_outline` · `code_search` · `doc_search` · `memory` ·
 `context` · `focus` · `peer_instances` 7 工具保持内联（CLI 侧同族亦内联——`repomap.mjs:300` /
-`memory/code-sync.mjs:354` / `memory/docs.mjs:172` / `peer-instances.mjs:220`；`context`/`focus` = 端特有）；
+`memory/code-sync.mjs:354`（CLI 仓） / `memory/docs.mjs:172`（CLI 仓） / `peer-instances.mjs:220`；`context`/`focus` = 端特有）；
 后续如需外部化另批设计。
 
 ### 12.4 受影响文件（as-of 2026-09-11）

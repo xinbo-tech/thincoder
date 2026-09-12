@@ -104,7 +104,7 @@
 `MAX_ADVISOR_ROUNDS = 5`（`run.mjs`）。**第 6 次 advisor 启动**（该实例 round ≥ 5）
 **直接返回终止消息、不消耗 LLM**——评审根本不启动。执行点：
 
-1. **工具层预检**（`agent-tools/advisor.mjs`——sync/async 共用启动前检查）——cap 拒
+1. **工具层预检**（`src/agent-tools/advisor.mjs`——sync/async 共用启动前检查）——cap 拒
    绝只标记拒发，不置 called、不耗轮次（guard 因此在 cap 后自然停止推回）；
 2. **`runAdvisorReview` 内防线**（`run.mjs`——legacy/直接调用方防绕）；
 3. **completion guard 的 `round < MAX` 项**（§6）——到 cap 后不再推回。
@@ -368,8 +368,8 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
 4. **截断尾无判定族**：本端六 kind 宿主尾（按 kind 计；现行各一站点——`:146` 中断 / `:155` 超时 /
    `:159` 轮上限 / `:170` context 溢出 / `:210` 空响应 / `:462` 失败 resolve）无聚合谓词；
    `src/agent-tools/advisor-async.mjs:61`
-   （`ADVISOR_FAILURE_TEXT`——`^` 锚）对「时间线 + 尾」形态（尾不在文本首行）**不命中** → 截断代码
-   评审仍置 `_calledAdvisorThisRun`（`:372`）；且 design 结算（sync `agent-tools/advisor.mjs:275-294` /
+   （旧 `ADVISOR_FAILURE_TEXT`〔已退场——现体 = `advisorIncompleteMarker`〕——`^` 锚）对「时间线 + 尾」形态（尾不在文本首行）**不命中** → 截断代码
+   评审仍置 `_calledAdvisorThisRun`（`:372`）；且 design 结算（sync `src/agent-tools/advisor.mjs:275-294` /
    async `advisor-async.mjs:330`）只看 token 回显——截断评审回显 token 即签发。
 5. **无硬墙**：`src/advisor/run.mjs:144-172` 的超时只在**轮间**检查——单次 `chat` 不受剩余预算约束
    （默认 600s 与传输层硬顶同量级）→ 停滞吞掉全预算、零输出（CLI 第 10 批实证的同构面）。
@@ -391,7 +391,7 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
 
 | # | 候选方案 | 判据逐项评估 | 取舍 | 结论 |
 |---|---|---|---|---|
-| 1 | **谓词 + 三消费点 + 定锚**（design sync/async 不签发 · code 守卫换谓词 · 报告提示 · 压缩定锚） | 语义同源 = 守卫生效（CLI 三消费点同构）；本端同构缺陷（§13.2 #3/#4）全部消除 | 触及 `agent-tools/advisor.mjs` / `advisor-async.mjs` / `run.mjs`（+~30 行） | **选定** |
+| 1 | **谓词 + 三消费点 + 定锚**（design sync/async 不签发 · code 守卫换谓词 · 报告提示 · 压缩定锚） | 语义同源 = 守卫生效（CLI 三消费点同构）；本端同构缺陷（§13.2 #3/#4）全部消除 | 触及 `src/agent-tools/advisor.mjs` / `advisor-async.mjs` / `run.mjs`（+~30 行） | **选定** |
 | 2 | 只落谓词（不接线消费） | 死码——截断评审签发 / 计数缺陷仍在 | — | 否决（缺陷本体未除） |
 
 **表 3——需求层落点**
@@ -457,7 +457,7 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
   §13.2 #4 的六锚 = 现行代码站点枚举（非交付态站点总数）。
 - 负向精度：非块首形态（围栏内行 / 表格行 / 引用行）**不判** incomplete（残余方向 fail-closed——
   多付一轮重跑，如实登记）；块首裸行引用同串的残余误报方向安全。
-- 消费点 1（design sync 结算，`agent-tools/advisor.mjs`）：`incomplete = advisorIncompleteMarker(result)`；
+- 消费点 1（design sync 结算，`src/agent-tools/advisor.mjs`）：`incomplete = advisorIncompleteMarker(result)`；
   非空 ⇒ **不签发**——剥 token 回显（`makeDesignTokenRegex(token, "g")`）→ 输出 = 剥后文本 + 未签发
   提示（逐字见下）→ `_engDesignTokens` 零写（槽零写）；F2h 映射登记保留；`_lastAdvisorOutput` 覆写为
   清洗后输出（防未注册 token 进 prior）。
@@ -467,7 +467,7 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
   与 prior（唯一写点 `record.priorOutput = stripApprovedSuffix(entry.report, …)`——as-of `:399-400`，取
   **清洗后**报告）均与 report 同源 ⇒ 剥除结果自动传导——async 面无需另设清洗（对偶 = sync 面
   `_lastAdvisorOutput` 显式覆写——消费点 1）。
-- 消费点 3（code 完成守卫，`advisor-async.mjs`）：`failureVerdict` 改用同谓词（`ADVISOR_FAILURE_TEXT`
+- 消费点 3（code 完成守卫，`advisor-async.mjs`）：`failureVerdict` 改用同谓词（旧 `ADVISOR_FAILURE_TEXT`——已退场：现体 = `advisorIncompleteMarker`
   `^` 锚正则**定义与消费退场**——六 kind 全覆盖 = 旧六形态语义零丢；error settle（result=null + error）
   判定保留）。
 - **未签发提示（逐字——与 CLI 同文，机器可 grep）**：
@@ -626,7 +626,7 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
 ### 13.10 边界（本批不做 + 登记项）
 
 - **启动断言面（F12 的 fail-closed 层）——已收口（第 15 批，见 §14.3）**：原登记 = VSC 设计评审链路
-  恒签发 token（`agent-tools/advisor.mjs:254`——as-of 2026-09-11）⇒ 正常链不可达；第 15 批裁定 = **实现直接
+  恒签发 token（`src/agent-tools/advisor.mjs:254`——as-of 2026-09-11）⇒ 正常链不可达；第 15 批裁定 = **实现直接
   调用方兜底**（断言 + 异步结算消费——CLI §14.4 #2 语义同源，「不依赖可达性论证」）→ 契约 §14.3 / AC-VG9。
 - **收敛路径信号面——已复核收口（第 15 批，见 §14.5）**：原登记（交付披露 ③）表述为「收敛路径不含
   Approval Signal」——第 15 批复核**不成立**（normal chain 已携带：`main.mjs:308`/`:311` 显式尾包；三形态探针
@@ -669,7 +669,7 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
    ——拒发不丢码）⇒ 两个生产调用点（`advisor.mjs:265-270` / `advisor-async.mjs:253-259`）**恒携带 token**。
    `run.mjs:95` 的 `runAdvisorReview` **无启动断言**（对照 CLI `run.mjs:162-171`）；全仓无拒绝记账机制
    （`_advisorRefusals` / `ADVISOR_LAUNCH_REFUSAL_PREFIX` 零命中）。
-2. **②冻结窗口**：VSC 无 `src/agent/dispatch.mjs`；父侧工具写面单一执行器 = `src/agent/execute-tools.mjs`
+2. **②冻结窗口**：VSC 无 `src/agent/dispatch.mjs`（CLI 仓）；父侧工具写面单一执行器 = `src/agent/execute-tools.mjs`
    （`executeToolBatches`——唯一 `tool.execute` 模型工具调用点，`agent.mjs:308` 唯一调用方），单一预闸 =
    `preGateBlocked`（`:82-114`；逐项调用点 `:217`——权限阶段 `:237` 之前、autoApprove 短路之前）。
    在途判定面 = `advisorStale`（`advisor-async.mjs:116-143`——design 分支：`entry.documents` 射程 + legacy 面
@@ -955,7 +955,7 @@ async 点火路径；同步评审阻塞回合、父侧无并发写时刻）。
    → `:181` 传入循环）；且循环已在该 provider 上消费 `specForModel`（`loop.mjs:202`，reasoningEcho 判定）——派生值就地可得。
 5. **同族同款（本端）**：主循环阈值跟随窗口——`src/compact.mjs:51-54`（压缩阈值 = 窗口 × 60%）、`src/compact.mjs:98-99`
    （尾预算 = 窗口 × 15% − 摘要段估算）——「阈值跟随窗口」为本端既有惯例（CLI 同族同口径 = 其 §16.1 四条）。
-6. **消费面（grep 实测）**：`MAX_CONTEXT_TOKENS` 在 VSC 仓定义 1 处（`compaction.mjs:18`）+ 导入与使用 2 处
+6. **消费面（grep 实测）**：`MAX_CONTEXT_TOKENS`（已退场——现体 = `advisorContextBudget`）在 VSC 仓定义 1 处（`compaction.mjs:18`）+ 导入与使用 2 处
    （`loop.mjs:22/116/121`）；`run.mjs:19-20` 的 re-export 面**不含**该常量——替换零外溢。
 7. **既有锁零伤**：`test/advisor-chain-guards.test.mjs`（T-VG1–T-VG15）与 `test/advisor-guard-completion.test.mjs`
    （T-VG16–T-VG21）零引用该常量；AC-VG3 的 grep 锚 `compactMessages(messages, pinned)`（`loop.mjs:120` 调用点）
@@ -979,13 +979,13 @@ async 点火路径；同步评审阻塞回合、父侧无并发写时刻）。
 
 | # | 候选方案 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
 |---|---|---|---|---|
-| 1 | **原地替换**（`MAX_CONTEXT_TOKENS` 退场，不留别名） | 本端消费面仅 `loop.mjs`（grep 实测）；留别名 = 双源漂移（D2） | 与 CLI D-CB5 同源 | **选定** |
+| 1 | **原地替换**（`MAX_CONTEXT_TOKENS` 已退场，不留别名——现体 = `advisorContextBudget`） | 本端消费面仅 `loop.mjs`（grep 实测）；留别名 = 双源漂移（D2） | 与 CLI D-CB5 同源 | **选定** |
 | 2 | 保留常量 + 并列新函数 | 旧帽仍在，随时被误用 | — | 否决 |
 | 3 | 保留别名（旧常量名指向新派生） | 常量语义从「绝对帽」变「函数」——误导 | — | 否决 |
 
 ### 15.4 契约一：预算派生（本端原文——逐字函数语义）
 
-`src/advisor/compaction.mjs` 限额族内：`MAX_CONTEXT_TOKENS` **退场**，新增常量与纯函数（`providerSpec` 自
+`src/advisor/compaction.mjs` 限额族内：`MAX_CONTEXT_TOKENS` **已退场**（现体 = `advisorContextBudget`），新增常量与纯函数（`providerSpec` 自
 `../specs.mjs` 导入——与 `loop.mjs:17` 同源面）：
 
 ```js
@@ -1030,7 +1030,7 @@ export function advisorContextBudget(provider) {
 | 1 | 压缩触发 | `loop.mjs:116`——`currentTokens > MAX_CONTEXT_TOKENS * 0.8` | `currentTokens > budget.compactAt` | 触发线 = 判死线 × 0.8（关系零改） |
 | 2 | 判死 | `loop.mjs:121`——`estimateTokens(messages) > MAX_CONTEXT_TOKENS` | `estimateTokens(messages) > budget.limit` | 压缩后仍超 ⇒ `context_limit` 尾（逐字零改） |
 
-- 导入面：`loop.mjs:20-24` 导入块——`MAX_CONTEXT_TOKENS` 退场、`advisorContextBudget` 入列（同块其余零改）。
+- 导入面：`loop.mjs:20-24` 导入块——`MAX_CONTEXT_TOKENS` 已退场、`advisorContextBudget` 入列（同块其余零改；源 = `src/advisor/compaction.mjs`）。
 - **零改余项**（逐字不动）：`[Context compacted:` 提示（`:117`）、`compactMessages(messages, pinned)` 调用点
   （`:120`）、二次估算与分支结构、判死尾文案（`:124`）、`turns` / `toolCallCount` / `reviewTextProduced` 计数、
   超时 / 中止 / 硬墙面（§13.4 契约五）。
@@ -1194,7 +1194,7 @@ CLI 用 `_toolCallId` + `agent._advisorRefusals` Set；本端无 `_toolCallId` �
 5. 记账块（sync 分支）：`toolCtx._advisorRefused === true` → **不置 called / 不推 round**（拒绝 = 未跑）；否则既有置位（零回归）。
    async ack 路径零改（既有 `advisorAsync` 谓词继续跳过记账——settle 面记账不动）。
 
-**用例表（T-MA6——正常 / 边界 / 错误）**：
+**用例表（T-MA6-1–9——正常 / 边界 / 错误）**：
 
 | # | 类 | 输入 | 预期输出（断言） | 映射 |
 |---|---|---|---|---|
@@ -1230,20 +1230,20 @@ CLI 用 `_toolCallId` + `agent._advisorRefusals` Set；本端无 `_toolCallId` �
 
    `**D5 冻结窗口预闸（第 15 批 §14.4——本端）**：设计评审在途期间，父侧对被审文件集（含批次档）的写入被拒（`preGateBlocked` × `inflightDesignReviewConflict`——拒绝串见 ADVISOR-CONVERGENCE.md §14.4（c））。**在途下界 = 报告送达（digest 注入 / 回合尾 collect）或取消·中止**——「子进程退出」不是窗口边界（窗口 = 点火 → 结算）；逃生门 = 先 cancel → 改动 → 重发。`
 
-**用例表（T-MA7）**：
+**用例表（T-MA7——已退场：设计期编号，现态不在册）**：
 
 | # | 类 | 输入 | 预期输出（断言） | 映射 |
 |---|---|---|---|---|
 | T-MA7-1 | 正常 | 双源 `discipline-engineering.md` grep | `在途下界 = 报告送达` 与 `「子进程退出」不是窗口边界` 各命中 1（两档） | AC-MA7-1 |
 | T-MA7-2 | 正常 | `ENGINEERING-MODE.md` grep | `D5 冻结窗口预闸` + 上述两子串在位 | AC-MA7-2 |
-| T-MA7-3 | 边界 | 宽度检查实跑 | 两档新增行 ≤300 字符；宽度命中集合差 = 0 | AC-MA7-3 |
-| T-MA7-4 | 边界（回归） | prompts 测试族实跑 | `prompts-async-guidance` / `prompts-mirror-anchors` / `doc-consistency` 全绿（锚零损） | AC-MA7-3 |
+| T-MA7-3（已退场——设计期编号；现态不在册） | 边界 | 宽度检查实跑 | 两档新增行 ≤300 字符；宽度命中集合差 = 0 | AC-MA7-3 |
+| T-MA7-4（已退场——设计期编号；现态不在册） | 边界（回归） | prompts 测试族实跑 | `prompts-async-guidance` / `prompts-mirror-anchors` / `doc-consistency` 全绿（锚零损） | AC-MA7-3 |
 
 **AC（机判）**：
 
-- AC-MA7-1：T-MA7-1 绿（双源固定子串逐字）；
-- AC-MA7-2：T-MA7-2 绿（机制档子串 + §6 承接）；
-- AC-MA7-3：T-MA7-3 / T-MA7-4 绿（宽度零新增 + 锚族零回归）+ §14.11 #1 原位收口注在位（§16.3）。
+- AC-MA7-1：T-MA7-1（已退场——设计期编号；现态不在册）绿（双源固定子串逐字）；
+- AC-MA7-2：T-MA7-2（已退场——设计期编号；现态不在册）绿（机制档子串 + §6 承接）；
+- AC-MA7-3：T-MA7-3 / T-MA7-4（已退场——设计期编号；现态不在册）绿（宽度零新增 + 锚族零回归）+ §14.11 #1 原位收口注在位（§16.3）。
 
 ### 16.3 §14.11 登记原位收口（注记——只改登记行，不改 §14 契约正文）
 
@@ -1258,7 +1258,7 @@ CLI 用 `_toolCallId` + `agent._advisorRefusals` Set；本端无 `_toolCallId` �
 - 子代理合入面 / bash 等拒绝盲区（§14.11 #3/#4）不在本批（群 B 承接）；
 - **零 UI 面**（全部落工具返回值与 doc/prompt 文本——无面板 / webview 改动；无 `open` 项）。
 
-**计数（D3）**：条目 2（A6 / A7）· 用例 13（T-MA6-1–9 + T-MA7-1–4）· AC 6（AC-MA6-1–3 · AC-MA7-1–3）·
+**计数（D3）**：条目 2（A6 / A7）· 用例 13（T-MA6-1–9 + T-MA7-1–4（已退场——设计期编号；现态不在册））· AC 6（AC-MA6-1–3 · AC-MA7-1–3）·
 实施域 coder 触面 = `execute-tools.mjs` / `advisor.mjs` / `run.mjs` / 双源 `discipline-engineering.md`（4 档 + 测试）；
 设计者已落 = 本档 §16 + §14.11 收口注 + `ENGINEERING-MODE.md` §6 bullet。
 
@@ -1332,7 +1332,7 @@ CLI 用 `_toolCallId` + `agent._advisorRefusals` Set；本端无 `_toolCallId` �
 消费点：`src/advisor/loop.mjs:117 / 123 / 126`（compactAt / limit / 判死尾计数）+ `src/advisor/run.mjs:212`（显示统计）。
 
 **修**：`estimateText`（`src/provider/rate.mjs:68-86`——已导出，ASCII/4 + 非 ASCII/1）替换扁平式：`estimateText(content + toolCalls)`——
-纯 ASCII 与旧式**逐值相等**（同 ceil 式）；CJK 升档；微差为零（空串 → 0 与旧式一致）。import 面：`provider/rate.mjs` 仅依赖 `specs.mjs`——叶子向无环。
+纯 ASCII 与旧式**逐值相等**（同 ceil 式）；CJK 升档；微差为零（空串 → 0 与旧式一致）。import 面：`src/provider/rate.mjs` 仅依赖 `specs.mjs`——叶子向无环。
 
 **选型**：候选 1 = 复用 `provider/rate.mjs#estimateText`（选定——单源加权公式，与主循环同口径）；
 候选 2 = 本文件内联加权式（复制公式 = D2 双源）；候选 3 = 全对齐 `compact.mjs` / `context.mjs` 消息 walker（加 reasoning_content / 逐参 tool_calls——面大于需求）。否决 2/3。

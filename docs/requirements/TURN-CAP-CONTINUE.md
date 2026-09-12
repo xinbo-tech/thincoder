@@ -26,7 +26,7 @@ agent 撞上轮数上限时**不该丢掉已完成的工作**——可就地续�
 
 | # | 维度 | 标准（含度量） |
 |---|---|---|
-| N1 | 继续次数不设上限 | 防卡死靠用户 Stop——无次数帽（`MAX_RESUMES` 已删——代码零命中） |
+| N1 | 继续次数不设上限 | 防卡死靠用户 Stop——无次数帽（`MAX_RESUMES` 已删除——源 = 本仓 `src/` 面零命中） |
 | N2 | 预算可配 | `agent.maxTurns` / `agent.subagentTurns` / `agent.consultTurns`（config——默认 200 / 100 / 40） |
 | N3 | 时钟语义 | 会诊继续 = 新预算 = 墙钟 watchdog 重置（`consultTimeoutMs` 默认 600000ms） |
 | N4 | 显示 / 协议零改动（F7 附带） | 编号经既有回调与终态快照消费——桥消息字段零新增；webview 显示文件零改动（用例 T7 机械证明面） |

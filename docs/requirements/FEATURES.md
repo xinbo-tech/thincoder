@@ -13,7 +13,7 @@
 - `autoApprove` 会话级开关（槽位字段，与 CLI 共享），默认 `false`；AUTO 按钮 / approve-all 翻转，mid-turn 立即生效
 - repo_outline + context compaction
 
-**v1 范围已全部覆盖（08-14）：** 文件式记忆（`.thincoder/memory/` markdown + frontmatter，CLI 格式兼容）、MCP 客户端（stdio/http/ws）、read_image（工具 + 粘贴图片）、编辑器上下文感知（editor-context 注入）、LSP 集成（`tools/lsp.mjs`，直接用 VS Code 语言服务 API）均已实现。v2 待定项暂无。
+**v1 范围已全部覆盖（08-14）：** 文件式记忆（`.thincoder/memory/` markdown + frontmatter，CLI 格式兼容）、MCP 客户端（stdio/http/ws）、read_image（工具 + 粘贴图片）、编辑器上下文感知（editor-context 注入）、LSP 集成（`src/tools/lsp.mjs`，直接用 VS Code 语言服务 API）均已实现。v2 待定项暂无。
 
 ## 变更记录
 

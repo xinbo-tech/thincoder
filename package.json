@@ -111,7 +111,7 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run lint && npm run test:full && npm run test:integration",
+    "vscode:prepublish": "npm run lint && npm run doc:check && npm run test:full && npm run test:integration",
     "package": "vsce package",
     "publish": "vsce publish",
     "publish:ovsx": "ovsx publish",
@@ -119,7 +119,8 @@
     "test": "node test/run-fast.mjs",
     "test:full": "node test/run-full.mjs",
     "test:integration": "node test/run-integration.mjs",
-    "lint": "node scripts/check-syntax.mjs"
+    "lint": "node scripts/check-syntax.mjs",
+    "doc:check": "node scripts/check-doc-anchors.mjs"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^20.11.2",

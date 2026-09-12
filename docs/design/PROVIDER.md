@@ -94,12 +94,12 @@ minimax 携 `chatPath: "/text/chatcompletion_v2"`。
   （剥 `models/` 前缀）。cursor 分页（`has_more`→`after_id` / `nextPageToken`）跟随翻页、
   ≤10 页上限；15s 超时；失败抛出（调用方降级）——**无静态候选、无 fallback 候选**（拉不到列表 =
   该渠道不可选）。
-- **候选面**：`extension/settings.mjs` `fullStatus` 单源拉取（逐已配置渠道各探一次）；探通 →
+- **候选面**：`src/extension/settings.mjs` `fullStatus` 单源拉取（逐已配置渠道各探一次）；探通 →
   候选行 = 拉取结果（直接可选）；探不通 → 该渠道不可选 + 失败消息本体随载荷下发。webview 默认
   模型菜单与预设行改消费**运行期载荷**（`SS.getModels`——不再直读 config 字段）；`providerStatus`
   行显单值默认模型（`models[]` 退场）；失败渠道经 `available:false` / `unavailableReason` 标注。
 - **M9 配置阶段准入**（探针 `probeChannelModels` + 展示态 `recordAdmission` / `admissionOf`，
-  收敛于 `provider/list-models.mjs`；探针形状由 `config-io.mjs` `probeTargetFromEntry` 组装）：
+  收敛于 `src/provider/list-models.mjs`；探针形状由 `config-io.mjs` `probeTargetFromEntry` 组装）：
   加渠道（`addProviderFlow` / 面板 `addProvider`）/ 设 API key（`setKeyFlow` / `saveProviderKey`）/
   设默认模型（`settings-panel-write.mjs` defaultModel 写面）时对目标渠道探一次 `GET /models`。
   探不通 → 失败消息逐字长句 `该渠道不提供模型列表（GET /models {状态}）——无法选择模型，请改用
@@ -116,11 +116,11 @@ minimax 携 `chatPath: "/text/chatcompletion_v2"`。
 | 面 | CLI | 本端（VSC） | 说明 |
 |---|---|---|---|
 | 切换回显 spec 来源 | 有 | **无**（本批不加） | O2 已裁——批范围第 ⑥ 面字面仅含「候选同源 + resolveDefaultModel」 |
-| 拉取实现 | `provider/list-models.mjs` + `tui/model-catalog.mjs`（会话缓存 TTL 60s / 失败不缓存） | `provider/list-models.mjs`（本端独立；`fullStatus` 每次拉取——**无会话级 TTL 缓存**） | 已知不对称（后续可选） |
+| 拉取实现 | `src/provider/list-models.mjs`（CLI 仓） + `src/tui/model-catalog.mjs`（CLI 仓）（会话缓存 TTL 60s / 失败不缓存） | `src/provider/list-models.mjs`（本端独立；`fullStatus` 每次拉取——**无会话级 TTL 缓存**） | 已知不对称（后续可选） |
 | 拉取结果排序 | 调用方 | `listModels` 内部排序保留（既有行为） | 双端允许差异 |
-| 准入探针宿主 | `tui/model-catalog.mjs` + `model-picker.mjs` 落点 | `provider/list-models.mjs`（探针 + 展示态） | 设计未钉宿主，两端各自落地 |
+| 准入探针宿主 | `src/tui/model-catalog.mjs`（CLI 仓） + `model-picker.mjs` 落点 | `src/provider/list-models.mjs`（探针 + 展示态） | 设计未钉宿主，两端各自落地 |
 | 失败诊断载荷 | —— | `models` 载荷附 `unavailable[{provider,reason}]` | 本端自定（测试/排障面） |
-| webview 下拉兜底 | 会话重载 = **会话值优先**（`cmd-config.mjs:67-71` `sessionModel ?? dm.model ?? keep.model`——`keep.model` 仅链尾兜底；不读候选清单） | 候选未命中 = **保持当前选择显示与状态（回落会话槽复合）+ 零 `selectModel` / `selectReasoning` post**（不再取候选首项写会话槽）——**本批处置**（用户 2026-09-11 裁定；M10） | 语义同源（双端独立实现）；T29 / AC-10 锁定 |
+| webview 下拉兜底 | 会话重载 = **会话值优先**（`cmd-config.mjs:67-71` `sessionModel ?? dm.model ?? keep.model`——`keep.model` 仅链尾兜底；不读候选清单） | 候选未命中 = **保持当前选择显示与状态（回落会话槽复合）+ 零 `selectModel` / `selectReasoning` post**（不再取候选首项写会话槽）——**本批处置**（用户 2026-09-11 裁定；M10） | 语义同源（双端独立实现）；T29 / AC-10 锁定（T29 = 引例：批级编号；现体 = `test/model-picker-fallback.test.mjs`） |
 
 ## 4. transport 分派与调用链（provider.mjs chat）
 
@@ -180,8 +180,8 @@ chars/token、CJK ≈1），超预算 `sleep`（onWait 通知）；未配则关�
 ### 4.3 请求链超时语义镜像（群 A 批——绝对墙钟废除 + 读侧 idle 补齐）（2026-09-11）
 
 > 来源：批次档 `2026-09-11-VSC-MIRROR-SWEEP（本仓）` §1 条目 A1（指针 = CLI 批
-> `2026-09-11-ABORT-PROVENANCE.md` §20.10「VSC 镜像 600s 绝对墙钟残留——用户实证文案的唯一在网生产点」）。
-> 语义源：CLI `provider/core.mjs:408-415`（相位拆分——绝对墙钟废除后的现行语义）；双端纪律：语义同源、本端原文自持。
+> `2026-09-11-ABORT-PROVENANCE.md`（CLI 仓）§20.10「VSC 镜像 600s 绝对墙钟残留——用户实证文案的唯一在网生产点」）。
+> 语义源：CLI `src/provider/core.mjs:408-415`（CLI 仓）（相位拆分——绝对墙钟废除后的现行语义）；双端纪律：语义同源、本端原文自持。
 
 **（a）问题陈述（现场复核——as-of 2026-09-11）**：
 
@@ -210,7 +210,7 @@ chars/token、CJK ≈1），超预算 `sleep`（onWait 通知）；未配则关�
 4. 错误分类不变：idle 消息含 "timeout" → `classifyErr` 归 `timeout`（`src/log.mjs:178`）——llm:error 可判来源；
 5. 文档：本档 §4.2 改写（已落）+ 本 §4.3 + 变更记录一行。
 
-**（d）用例表（T-MA1——正常 / 边界 / 错误；零网络——fetch / proxyFetch 桩 + 假流）**：
+**（d）用例表（T-MA1-1–5——正常 / 边界 / 错误；零网络——fetch / proxyFetch 桩 + 假流）**：
 
 | # | 类 | 输入 | 预期输出（断言） | 映射 |
 |---|---|---|---|---|
@@ -444,7 +444,7 @@ offload 写时自清理回收（paste-* 同目录，无名字过滤）。
 - 2026-09-11（第 6 批 DeepSeek V4.1-Flash）：`deepseek` 预设默认模型 → `deepseek-flash`；规格行新增/
   对齐（`deepseek-flash` 新行 + 两退役名参数随 V4.1-Flash + `deepseek-v4-pro` 保留注释）——§2/§6.1/§8
   同步（语义与 CLI 同源；设计/用例权威落 CLI 侧设计档）。
-- 2026-09-11（范围追加——用户裁定）：§3.2 webview 兜底行「未随本批对齐」→ **本批处置**（候选未命中 = 保持当前选择显示 + 零 post——M10；T29/AC-10 锁定）；§3 叙述同步。
+- 2026-09-11（范围追加——用户裁定）：§3.2 webview 兜底行「未随本批对齐」→ **本批处置**（候选未命中 = 保持当前选择显示 + 零 post——M10；T29/AC-10 锁定〔T29 = 引例：批级编号；现体 = `test/model-picker-fallback.test.mjs`〕）；§3 叙述同步。
 - 2026-09-11（范围追加评审修正轮）：§3 补「命中分支维持现状（同值回写）」+ 断言口径统一（零 `selectModel` / `selectReasoning` post）；§3.2 CLI 对位措辞精确化（会话值优先——`keep.model` 仅链尾）；webview 兜底行同步（显示与状态回落会话槽复合）。
 - 2026-09-11：镜像档同步（O4）——MODEL-SELECTION v2 语义落地本端（§1 配置存储 / §2 预设 / §3.1 清单来源与渠道准入 / §3.2 双端差异）。
 - 2026-09-09：MODEL-MERGE-SESSION 语义同步——§1 配置存储改写（三旧层删除 + defaultModel

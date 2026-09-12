@@ -24,7 +24,7 @@
 
 工程模式把"设计先行、评审把关、验证收尾"提升为半机械流程：可硬拦的环节一律硬拦
 （写文件门禁、token 校验、guard 推回、角色互斥），无法硬拦的靠
-`discipline-engineering.md` / `persona-engineering.md` / `persona-eng-coder.md` / `persona-eng-designer.md` 纪律层与人格层槽位提示词约束（旧 `engineering.md` / `engineering-sub.md` 已随 PROMPT-SYSTEM 施工①退役）。核心承诺：**代码必须先有被评审过
+`discipline-engineering.md` / `persona-engineering.md` / `persona-eng-coder.md` / `persona-eng-designer.md` 纪律层与人格层槽位提示词约束（旧 `engineering.md` / `engineering-sub.md` 已退役——随 PROMPT-SYSTEM 施工①）。核心承诺：**代码必须先有被评审过
 的设计；评审对象由任务定义而非遍历猜测；评审循环在 eng-coder 内部闭环。**
 
 本端实现面与 CLI 的差异只在于**平台接线**（webview 面板/会话槽位文件/extension 层）；
@@ -70,7 +70,7 @@
 - **advisor 工具永远可用**（2026-08-21 语义重构）：旧 `advisor.enabled` 双义开关废弃
   ——评审能力无禁用开关，不配置也正常执行。开关收敛为 **guard**：
   `advisor.guard === true`（**默认 OFF**）时收尾推回强制评审；`false`/缺省 → 不推回。
-  工具栏按钮消息 `setAdvisorEnabled` → **`setAdvisorGuard`**（本端消息名，见
+  工具栏按钮消息旧名 `setAdvisorEnabled`（已退场）→ **`setAdvisorGuard`**（现体——本端消息名，见
   AGENTS.md 消息协议表）；按钮/设置面板状态读 `settings.advisor.guard`。
 - **guard 推回（收尾注入——`run-stages.mjs` `maybeGuardPushbacks`）**，逐字前缀：
 
@@ -153,7 +153,7 @@
   （`/^src[\\/]/` 或 `!isDocFile(p)`——未知/缺路径保守视为代码）→ 拦，文案：
   `Error: engineering design gate — write the design document in docs/ first, then call advisor with type='design' to review it, and wait for user approval. Implementation is done by eng-coder subagents.`
 - **豁免边界**：`docs/**` 与根级文档（写文档即设计步骤）放行；`src/` 下一切（含
-  `src/prompts/*.md`）为产品代码，需 token。判定 `isDocFile` 在 `advisor/repos.mjs`。
+  `src/prompts/*.md`）为产品代码，需 token。判定 `isDocFile` 在 `src/advisor/repos.mjs`。
 - **D5 冻结窗口预闸（第 15 批 §14.4——本端）**：设计评审在途期间，父侧对被审文件集（含批次档）的写入被拒
   （`preGateBlocked` × `inflightDesignReviewConflict`——拒绝串见 `ADVISOR-CONVERGENCE.md` §14.4（c））。
   **在途下界 = 报告送达（digest 注入 / 回合尾 collect）或取消·中止**——「子进程退出」不是窗口边界
@@ -165,7 +165,7 @@
   经 `assemblePrompt` 四槽位装配：eng-coder → `persona-eng-coder.md`+common+`discipline-engineering.md`、
   eng-designer → `persona-eng-designer.md`+common+`discipline-engineering.md`、
   engineering 主会话 → `persona-engineering.md`+common+`discipline-engineering.md`（PROMPT-SYSTEM 施工②
-  ——旧 `loadEngineeringPrompt` + METHODOLOGY 降级警告已退役；蓝图 §3.4 降级链 = 槽缺失跳过+警告）。
+  ——旧 `loadEngineeringPrompt` + METHODOLOGY 降级警告已退役（删除记录 = PROMPT-SYSTEM 施工①）；蓝图 §3.4 降级链 = 槽缺失跳过+警告）。
 - **模式 UI**：ENG 按钮/设置面板 toggle（消息 `setEngineeringEnabled`）；非工程模式
   subagent schema 不展示 eng-coder（§5 角色互斥）。活动面板渲染 advisor 活动块/取消
   按钮路由（`panel-messages.mjs` role=advisor）。
@@ -191,8 +191,8 @@
 
 机制级行为（token 格式/TTL、角色互斥、dispatch 门禁、guard 条件、slot 双写、consume
 幂等/隔离）经本端测试基建验证（TESTING.md §1 分层：L0+ 首实现 / L1 快层 / L2 链终
-`test:full`）。逐字锚（guard 前缀句、角色互斥句、dispatch 文案）由 prompts 内容断言
-防回退（fail-when-unchanged）。
+`test:full`）。提示词侧断言面 = 双源镜像锚（`test/prompts-mirror-anchors.test.mjs`——同名集合 / 跨仓节引用 / 零维护者注）
++ 纪律条文逐字锚（F20 条——fail-when-unchanged；判据 = `DOC-CODE-RECONCILE.md` §7）；文本类散文锚已退役（2026-09-12 PROSE-ANCHOR-RETIRE）。
 
 新增台账可见面（LEDGER-SURFACE 批——机制与行文本权威 = `ENGINEERING-MODE（CLI 仓·设计）` §2.30，本节不重述）：
 本端 `test/ledger.test.mjs`（入册 `test/files.mjs`）覆盖解析/计数/老化/阈值/去重/item 形态（含 tooltip 与 hide）/webview 行渲染。
@@ -200,6 +200,9 @@
 **文档一致性机检（V1/V2/V3）与基线（本端原文自持）**：本端扫描器 = `scripts/check-doc-width.mjs`，基线档 = `test/fixtures/doc-consistency-baseline.json`。
 **本基线必须保持为空**——新增违规一律红，**不得再入基线**（**入基线 = 例外 = 违规**，fail-closed：检查器对非空基线直接 FAIL）；
 V3 判据射程 = 工具落地后（2026-09-11 起）创建的批次档（更早者的 §3 由父侧代写——结构性历史事实，不判）。
+
+**V5 文档锚一致性（判据权威 = `docs/design/DOC-CODE-RECONCILE.md`——本档只指路、不重述）**：用例号 / 符号 / 路径三类锚的**存在性**机检；
+宿主 = `scripts/check-doc-anchors.mjs`（报告态 → 清后转阻断、阈值 0；**无基线通道**——不读也不写 `doc-consistency-baseline.json`）；反查 = `scripts/reconcile-lookup.mjs`。
 
 ## 10. 已知取舍
 
@@ -213,6 +216,8 @@ V3 判据射程 = 工具落地后（2026-09-11 起）创建的批次档（更早
 ## 变更记录（历史折叠——详见 git log）
 
 - 2026-09-12（台账自持批·**基线清零 + 闸门收紧轮**——用户「残留即先例」裁定）：本端一致性基线**清空**（31 条逐条处置：V1 自洈 29 / V2 键失效 1 / V3 射程排除 1）· 检查器补「基线必须保持为空」硬规矩（非空即 FAIL——入基线 = 例外 = 违规）+ V3 判据射程（2026-09-11 起）；§9 补口径句。
+
+- 2026-09-12：文档↔实装对账批（DOC-CODE-RECONCILE）——§9 补 V5 指针行（判据权威 = `DOC-CODE-RECONCILE.md`）+ 锚断言状态句收正（散文锚退役后存留面——旧逐字锚句已与现态相抵）；V1–V3 判据语义**零改**。
 
 - 2026-09-12：台账可见面批（LEDGER-SURFACE）——本端增量面登记：状态栏 item（含原生 tooltip）+ chat 流文本行
   （`ledgerNotice`）+ `src/ledger.mjs` / `src/extension/ledger-surface.mjs` / `webview/ledger-line.js`；

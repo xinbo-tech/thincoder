@@ -116,3 +116,40 @@ test("⑨-3 正常+边界：pe 双源归属句（VSC ↔ CLI）+ 新增锚串零
   const ALL = [...TD_DE, ...TD_DN_EN, ...TD_DN_ZH, TD_PE_EN, TD_PE_ZH, TD_C_EN, TD_C_ZH, TD_CNT]
   for (const s of ALL) assert.ok(!/\d{4}-\d{2}-\d{2}|第\s*\d+\s*批|评审\s*#/.test(s), `新增文本含维护者注: ${s.slice(0, 26)}…`)
 })
+
+// ── T-DC16（DOC-CODE-RECONCILE 批 · F20）：纪律条文 fail-when-unchanged 锚 ─────
+// 锚类裁定 = `docs/design/DOC-CODE-RECONCILE.md` §7：本锚类 = **纪律条文 fail-when-unchanged 锚**
+// （被锚文本 = 本批落笔的纪律行为面条文——代理运行期实际执行的条文；断言 = 其**逐字在位性**，脱字即红；
+// **非退役散文锚类**——2026-09-12 PROSE-ANCHOR-RETIRE 删的 = 读非测试档文本的叙述性转述核对）。
+const F20_LINES = [
+  "6. **跨仓批各自落笔**：同一机制落在多个仓的批次——**每仓各起一轮、各带本仓批次档**",
+  "   （语义同源由**同一份简报**保证——不做逐字一致）；**任何一方不得代写对端仓任何档**",
+  "   （含对端批次档 §2 / §5）；确需对端改动 → **停下上报**，由父侧另派对端轮。",
+]
+const F20_SECTION = "## 文档与台账自持（各仓记各仓的）"
+
+/** 取「文档与台账自持」节正文（到下一个 `## ` 标题为止）。 */
+function f20Section(text) {
+  const lines = text.split("\n")
+  const i = lines.indexOf(F20_SECTION)
+  assert.ok(i >= 0, `节标题在位：${F20_SECTION}`)
+  const j = lines.findIndex((l, k) => k > i && /^## /.test(l))
+  return lines.slice(i + 1, j === -1 ? lines.length : j)
+}
+
+test("T-DC16 正常：F20 跨仓批各自落笔——双源同节逐字在位（脱字即红）+ 零维护者注", () => {
+  const secs = {}
+  for (const rel of ["src/prompts/discipline-engineering.md", "docs/design/prompts/discipline-engineering.md"]) {
+    const sec = f20Section(readRepo(VSC, rel))
+    const i = sec.indexOf(F20_LINES[0])
+    assert.ok(i >= 0, `${rel}: F20 条 6 在位（删除 / 改写即行为面失守）`)
+    assert.deepStrictEqual(sec.slice(i, i + F20_LINES.length), F20_LINES, `${rel}: F20 三条逐字在位（fail-when-unchanged）`)
+    secs[rel] = sec.slice(i, i + F20_LINES.length)
+  }
+  assert.deepStrictEqual(secs["src/prompts/discipline-engineering.md"], secs["docs/design/prompts/discipline-engineering.md"],
+    "双源同节同行逐字同源（各端原文自持——语义同源）")
+  for (const s of F20_LINES) {
+    assert.ok(!/\d{4}-\d{2}-\d{2}|第\s*\d+\s*批|评审\s*#/.test(s), `锚文本零维护者注：${s.slice(0, 20)}…`)
+    assert.ok(s.length <= 300, `行宽 ≤300：${s.length}`)
+  }
+})

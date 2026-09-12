@@ -137,7 +137,7 @@ clear。action 级 readonly 分类：**search/list 只读**（plan mode 放行�
 #### B1 —— 索引与当前 embedding 模型/维度不一致（现状：全 0 分条目被当结果返回）
 
 机械根因（已证）：`cosine(a,b)` 长度不等直接 `return 0`（`src/embedding.mjs:48`）——`searchIndex` 排序后
-仍取 top-K ⇒ **返回一批 score=0.000 的无关条目**（不是「搜不到」，是「给错」）。`tools/code.mjs` 的
+仍取 top-K ⇒ **返回一批 score=0.000 的无关条目**（不是「搜不到」，是「给错」）。`src/tools/code.mjs` 的
 `vectorSearch` 只把「空数组」当回退信号（`results.length === 0`），memory 侧 `alive.length > 0` 同理——
 两条消费链都会把无效结果当有效结果。
 
@@ -204,7 +204,7 @@ manifest-only（不读 vectors.bin、不发网络）——可被状态面与提�
 1. `loadIndex` 空 / vectors 空 → `[]`（既有）；
 2. `!indexCompat(...).compatible` → **`[]`**（新增——不进入打分段）；
 3. embed query 后 `qvec.length !== idx.dim` → **`[]`**（新增——名称相同而实际维度变化的兜底）。
-空返回语义 = 既有回退链信号：`tools/code.mjs:24` 与 `memory-tool.mjs:160` 均回退关键词路径——**消费方零改动**。
+空返回语义 = 既有回退链信号：`src/tools/code.mjs:24` 与 `memory-tool.mjs:160` 均回退关键词路径——**消费方零改动**。
 
 **契约四 · 可见面（两处既有推口扩展）**
 

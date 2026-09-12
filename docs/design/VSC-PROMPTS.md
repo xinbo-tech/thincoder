@@ -54,7 +54,7 @@
 ## 指针卫生（群 A 批——`§21` 前缀清理 + R24 归属登记）（2026-09-11）
 
 > 来源：批次档 `2026-09-11-VSC-MIRROR-SWEEP（本仓）` §1 条目 A4/A5
-> （指针 = CLI 批 `2026-09-11-NORMAL-MODE-AUDIT.md:246`（VSC 镜像登记）/ `2026-09-11-ROLE-REDEFINITION.md:72`）。
+> （指针 = CLI 批 `2026-09-11-NORMAL-MODE-AUDIT.md:246`（CLI 仓）（VSC 镜像登记）/ `2026-09-11-ROLE-REDEFINITION.md:72`）。
 
 ### A4：`§21` 前缀残留清理（6 行——逐字删前缀）
 
@@ -84,10 +84,10 @@
 
 > **修正轮再改判（2026-09-11——设计评审轮次 1 #2 后，父侧裁定）**：本行**归 `PORTABILITY-VSC-MIRROR` 批次承接**——
 > 设计 = VSC `PORTABILITY.md` §4.4（a）（其修正轮 #2 已落「（CLI 侧）」逐字同文）——**本批零动（防双写）**。
-> 本节以下内容（增补裁定 / 逐字表 / AC-MA5-1 / T-MA5-1..3 / 协调留痕）为史留设计稿——其「本批承接」朝向均以本注为准；
+> 本节以下内容（增补裁定 / 逐字表 / AC-MA5-1 / T-MA5-1..3 / 协调留痕）为史留设计稿——其「本批承接」朝向均以本注为准（T-MA5-1..3 已退场——设计期编号；现态不在册）；
 > 本批验收不含 A5′（AC / 用例随承接批执行）。
 
-> 增补来源：父侧 2026-09-11 转告（来源注记 =「评审 #157 顺带发现」——实证：`docs/design/METHODOLOGY.md`
+> 增补来源：父侧 2026-09-11 转告（来源注记 =「评审 #157 顺带发现」——实证：`docs/design/METHODOLOGY.md`（CLI 仓）
 > 在 VSC 仓从无、thincoder 仓亦已退役入 `_archive/`）。指令 = 纳入 A4 同族（指针卫生）设计；
 > 同源语义 = CLI 侧已清同族（各端独立落——**勿抄文本**）。
 
@@ -101,11 +101,11 @@
 - 语义源 = **本端 CN 现形态**（`docs/design/prompts/discipline-engineering.md:139`——逐字对齐，消 EN/CN 漂移）；CN 档零改；
 - `（CLI 侧）` 事实限定保留（该方法论文件属 CLI 侧——本端从无）；
 - **节结构零动**（保留 R24 挂钩节——两档本体内引「R24a」（:51/:68）编号引用零波及；不取 CLI 的「整删节」路径——本端独立落）；
-- **与 PORTABILITY 批去重（呈请父侧）**：`2026-09-11-PORTABILITY-VSC-MIRROR` 设计档 §4.4(a):271 / T-V18 已含同行同动作修法（「EN 对齐 CN 现形态」）——本批（增补后）承接该行；请父侧协调 PORTABILITY 批撤下其 `:213` 编辑点（防双写），或另裁。
+  - **与 PORTABILITY 批去重（呈请父侧）**：`2026-09-11-PORTABILITY-VSC-MIRROR` 设计档 §4.4(a):271 / T-V18（已退场——整删；删除记录 = `TESTING.md` §8.1）已含同行同动作修法（「EN 对齐 CN 现形态」）——本批（增补后）承接该行；请父侧协调 PORTABILITY 批撤下其 `:213` 编辑点（防双写），或另裁。
 
 **AC-MA5-1**：`grep -rn "docs/design/METHODOLOGY.md" src/prompts/discipline-engineering.md` 命中仅新句退役注形态（`（CLI 侧）` 在位）；旧串 `见 \`docs/design/METHODOLOGY.md\` R24 节` 零命中；EN/CN 两档 R24 行同文；`prompts-async-guidance` / `prompts-mirror-anchors` 族全绿。
 
-**用例**：T-MA5-1（正常：句尾替换落位——文件+串键控）；T-MA5-2（边界：EN/CN 同文——两档该行 diff 断言）；T-MA5-3（回归：旧串零命中 + 锚族绿）。
+**用例**：T-MA5-1（正常：句尾替换落位——文件+串键控）；T-MA5-2（边界：EN/CN 同文——两档该行 diff 断言）；T-MA5-3（回归：旧串零命中 + 锚族绿）。（T-MA5-1..3 已退场——设计期编号；现态不在册）
 
 **协调留痕**：原「PORTABILITY 批承接——本批零改」句（本条前一版）随增补改判；文件行域避让维持（本批 A4/A7 编辑点 :110/:161/:169 + 本条 :213）。
 
@@ -186,7 +186,7 @@ Implementation size is a consequence of "right", never the criterion.
 - 删除「[4] 层由调用面承担」句（本档降级链节——已替换为真实注入面指向）；
 - `test/prompts-async-guidance.test.mjs:345-354` 的契约断言同步：本端降级链③（AGENTS 缺失 = 静默跳过）
   的机判改为：① `src/agent/setup.mjs` 含项目指令块 + skills 尾块注入（caller tail 真实存在）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；② 场景表仍无
-  `/AGENTS|skills/i` 槽文件（四槽位矩阵零变）；③ 缺失静默语义由 `test/context-parity.test.mjs` T-CI-2 机判。
+  `/AGENTS|skills/i` 槽文件（四槽位矩阵零变）；③ 缺失静默语义由 `test/context-parity.test.mjs` T-CI-2a 机判。
 
 ### 受影响文件（行数 as-of 2026-09-11 实测 → 预计——修正轮 #5 补）
 
@@ -208,7 +208,7 @@ Implementation size is a consequence of "right", never the criterion.
 | T-PC-1 | 正常 | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:182`）） |
 | T-PC-2 | 边界 | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:183`）） |
 | T-PC-3 | 正常 | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:184`）） |
-| T-PC-4 | 回归 | 锚族 | `prompts-async-guidance`（含锚#7 宿主改 de）/ `prompts-mirror-anchors` / `doc-consistency` 全绿 |
+| T-PC-4 | 回归 | 锚族 | `prompts-async-guidance`（含锚#7 宿主改 de）/ `prompts-mirror-anchors` / `doc-consistency` 全绿（T-PC-4 已退场——设计期编号；现态不在册） |
 
 ### 验收标准
 
@@ -287,7 +287,7 @@ Implementation size is a consequence of "right", never the criterion.
 
 ### 用例与验收（本端对位）
 
-- 用例 T-TD7（正常）：本端三档 × 双源（6 文件）全串命中（⑨ 组——修正轮 #5）；T-TD8（回归）：本端快层全绿（mirror-anchors / async-guidance / doc-consistency）；
+- 用例 T-TD7（正常）：本端三档 × 双源（6 文件）全串命中（⑨ 组——修正轮 #5）；T-TD8（回归）：本端快层全绿（mirror-anchors / async-guidance / doc-consistency）（T-TD8 已退场——设计期编号；现态不在册）；
 - 验收 AC-TD1–AC-TD8（CLI 档 §8.6）逐条本端对位；本端专属判据 = ⑨ 组全绿（含 CLI 侧逐字对照）+ `check-doc-width` 新增违规 0；
 - 端特有注：本端 de 行号背景含端特有段（R14 池规则 / Multi-Task 注）——本批编辑点均避开端特有段；pe 并行节去重（语料修复批 E-3）会漂移行号——本批锚点为 Yours 条目（键控）。
 

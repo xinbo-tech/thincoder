@@ -36,7 +36,7 @@
 |---|---|---|
 | pending 族数（统一前） | 本端 5 族（含 advisor 独立族） | 对端 3 族——统一后两端同构单容器；差异已随统一消解 |
 | 池载体 | 挂共享 history 数组 + alias（双查询——accessor 吸收） | 对端挂 `agent.*` 直查——载体差异经 accessor 吸收（语义同源） |
-| helper 契约 | `settleAsyncEntry(parent, entry, { pool, onAccounting })`（`pendingFamily` 参数随单容器冗余删除） | 两端同形（无差异） |
+| helper 契约 | `settleAsyncEntry(parent, entry, { pool, onAccounting })`（`pendingFamily` 参数随单容器冗余已删除——源 = `src/agent-tools/async-settle.mjs`） | 两端同形（无差异） |
 | 守卫 / 信号 / done 表示 | `!parentAborted` / `buildChildSignal` / 留池 done:true + `_inPending` | 语义同源（各端独立实现） |
 
 ## 5. 变更记录

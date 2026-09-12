@@ -74,5 +74,5 @@ EOL 写回与失败候选——**共享 helper 权威见 `EDIT-HELPERS.md`**（V
 - 2026-09-08：阶段 2 实现落地（EDIT.md 原 §8 变更段并入本档 §1-§7——CLI 26cd89f 先行镜像）——删行形态（省略 new_string = 删，显式空串 EMPTY_NEW_STRING_LINE 拒——废除旧空串=删）+ normalize 统一（与 CLI normalizeEditLine 逐字同算法单遍映射）+ 批量行号补（条件 schema oneOf）+ 描述 4 修 + Routing 段 + 注释 §15 清理（hashlineEditTool 拆 hashline-edit.mjs——500 硬帽）。
 ## 变更记录
 
-- 2026-09-08：文档重组——edit 工具语义从 VSC TOOLS.md §9 + EDIT-TOOL-IMPROVEMENT.md 并入本文档（每工具一档——TOOLS.md §9 退地图）。状态"已实现"（D1-D3 落地：按行号改/模糊匹配/替换即删——原 IMPROVEMENT 档设计 + AC1-AC5，见 `_archive/EDIT-TOOL-IMPROVEMENT.md`）。
+- 2026-09-08：文档重组——edit 工具语义从 VSC TOOLS.md §9 + EDIT-TOOL-IMPROVEMENT.md 并入本文档（每工具一档——TOOLS.md §9 退地图）。状态"已实现"（D1-D3 落地：按行号改/模糊匹配/替换即删——原 IMPROVEMENT 档设计 + AC1-AC5，见 `docs/design/_archive/EDIT-TOOL-IMPROVEMENT.md`——归档档·已退役）。
 - 阶段 2 预告（EDIT-TOOLS-REVIEW.md 变更段）：删行形态（裁定 A）+ normalize 统一（裁定合并两端规则）+ 批量行号补 VSC（分歧 c）+ hashline 定位重写——实现后更新本文档对应节。

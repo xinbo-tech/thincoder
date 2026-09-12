@@ -112,7 +112,7 @@ function allBasenames(root, out = new Map()) {
  * ④ 文档行坐标（`.md` + 行号——非证据形态）：同名 `.md` 仓内 ≥1 ⇒ 通过；⑤ 仓内定位（裸 basename /
  * 陈旧前缀——首段现存）：basename 唯一 ⇒ 通过；0 / ≥2 命中 ⇒ 违规（不可定位 / 多义）。
  */
-function evidenceState(root, p, cache) {
+export function evidenceState(root, p, cache) {
   const norm = p.replace(/\\/g, "/")
   const segs = norm.split("/").filter(Boolean)
   if (segs.includes("..") || SIBLING_NAMES.includes(segs[0])) return "跨仓形态（逃逸 / 兄弟仓目录前缀）"

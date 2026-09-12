@@ -4,7 +4,7 @@
 > 板块：工具输出的超长**落盘阈值与显示层**（已实现专题，当前生效——本对文档是该机制的现行权威源）。
 > 关联：`TOOL-OUTPUT-LIMITS-TUNING.md`（设计）、`README.md`（文档地图）。
 > 状态：**已实现**（2026-08-24 首版 + 2026-09-04 预览保头保尾修订；marketplace / Open VSX 0.1.49 发布）。
-> 跨端：CLI（thincoder）有同语义独立文档且**有独立 offload 实现**（`src/agent/helpers.mjs`，已同改）；阈值/preview/advisor 截断/显示层两端各仓库独立实现——**须两端同步（lockstep）**，单边改动会造成行为漂移（评审 #1，2026-08-24）。
+> 跨端：CLI（thincoder）有同语义独立文档且**有独立 offload 实现**（`src/agent/helpers.mjs`（CLI 仓），已同改）；阈值/preview/advisor 截断/显示层两端各仓库独立实现——**须两端同步（lockstep）**，单边改动会造成行为漂移（评审 #1，2026-08-24）。
 
 ## 总体目标
 

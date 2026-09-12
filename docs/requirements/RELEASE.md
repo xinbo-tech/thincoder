@@ -14,7 +14,7 @@
 
 | # | 需求 | 判定句（可机器验证——证据均为本仓实测） |
 |---|---|---|
-| F1 | 发布 = 唯一门禁 | `vscode:prepublish` = `npm run lint && npm run test:full && npm run test:integration`（`package.json:114`）——`vsce package` / 无参 `vsce publish` 自动执行；无独立预跑步（`docs/design/RELEASE.md` §2 / §3） |
+| F1 | 发布 = 唯一门禁 | `vscode:prepublish` = `npm run lint && npm run doc:check && npm run test:full && npm run test:integration`（`package.json:114`）——`vsce package` / 无参 `vsce publish` 自动执行；无独立预跑步（`docs/design/RELEASE.md` §2 / §3） |
 | F2 | 双源发布一条命令 | `npm run publish:all`（`package.json:118` → `scripts/publish-all.mjs`，106 行）——一次打包、双源发同一 .vsix、全量只测一次；`--skip-marketplace` / `--skip-openvsx` 显式单源 |
 | F3 | 号在发布时定 | 开发期 CHANGELOG 挂 `[Unreleased]`（不编号）；发布 = 唯一定号动作；CalVer `0.<月>.<月内序号>`、月内计数重置（`docs/design/RELEASE.md` §5.2）——现态 `[0.9.1]` 已定号（`CHANGELOG.md:8`） |
 | F4 | 发布完成判定 | publish 命令正确返回（exit 0）= 发布完成——不轮询、不检查上线版本（审核队列 = 平台侧事务）；边界 = 发布前 PAT 校验照做（显式 `--pat` / `VSCE_PAT` + `OVSX_PAT`） |

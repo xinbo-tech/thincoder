@@ -70,7 +70,7 @@ await 完成后数组已被原地替换为压缩版，`setupAgentRun` 再 push �
 
 ### 2.3 保存回调（P2 / FR3）
 
-`src/extension/panel-callbacks.mjs` 的 `buildCallbacks` 提供 `onDistilled`——蒸馏 resolve 且 shrunk 非空时由 `fireEndOfRunDistill` 调用：
+`src/extension/panel-callbacks.mjs` 的 `buildPanelCallbacks` 提供 `onDistilled`——蒸馏 resolve 且 shrunk 非空时由 `fireEndOfRunDistill` 调用：
 
 ```js
 onDistilled: () => {

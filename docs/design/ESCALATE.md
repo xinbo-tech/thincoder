@@ -69,7 +69,7 @@ depth-0 装配 `subagentTool` 常驻；`consultModels` 非空时 withPool 装饰
 
 ### 2.2 工具契约
 
-escalate 是 `subagent` 工具的动作（`action:"escalate"`）——退役的独立 `escalateTool` 执行逻辑
+escalate 是 `subagent` 工具的动作（`action:"escalate"`）——已退役的独立 `escalateTool` 执行逻辑（删除记录 = 本档变更记录 2026-09-03 行）
 verbatim 并入（约束/前缀/术后报告全保留）：
 
 ```
@@ -100,7 +100,7 @@ R17（2026-09-06）把 escalate 改为**缺省 async**（escalate depth-0 only �
   - aborted（会话/全停——controller 链中止）→ 出池丢弃（中止清池不注入）。
 - **术后报告经 `history._pendingEscalateResults` digest 自动注入**（done = 已 merge 报告可继续 /
   error = 错误报告）——**动作域仍按消费回合档位**——手动档 digest 禁写禁 spawn——无族例外
-  （T-R17p 零例外）。
+  （T-R17p 零例外——引例：CLI 仓用例编号，本仓不在册）。
 - **条目 settle 即出池**（status 查询在 settle 后为 unknown——报告经 digest 自动到达）。
 - **顶层一律异步**（同 §7.7——§7.7.1：同步保留例外全移除——报告自动到：ack → 回合自然收尾 → 挂起 settle → digest）。`async:false` 仅机制参数——depth>0 子代理内同步（平台规则）。
 
@@ -147,18 +147,18 @@ R17（2026-09-06）把 escalate 改为**缺省 async**（escalate depth-0 only �
 
 ## 3. 测试
 
-escalate 测试用例清单的权威 = **AGENT-LOOP（CLI 仓·设计）§25**（T-R17d..r：async ack 返回 + 回合收尾 / settle
+escalate 测试用例清单的权威 = **AGENT-LOOP（CLI 仓·设计）§25**（T-R17d..r（引例：CLI 仓用例编号，本仓不在册）——async ack 返回 + 回合收尾 / settle
 三分类 merge / sync `async:false` 零回归 / 容量排队 / eng 拒保持 / 取消不入 pending / error
 partial-merge 决策 / 空闲 settle 消化等——VS Code 镜像）。
 
-**验收**（AGENT-LOOP §25）：T-R17a..p 双端绿 + escalate/subagent 家族既有零回归。
+**验收**（AGENT-LOOP §25）：T-R17a..p 双端绿 + escalate/subagent 家族既有零回归（T-R17a..p = 引例：CLI 仓用例编号，本仓不在册）。
 
 ## 变更记录
 
 - 2026-08-16：立项实施（独立 escalate 工具 + 同步执行 + 术后报告；0.1.22 随版发布）；术语归并
   surgeon → escalate；钩选机制删除（所有会诊模型 = 飞刀候选）；飞刀合并入父级守卫、工程模式禁飞刀、
   墙钟看门狗删除、撞墙继续、effort 钳制等整改批合入上文现行语义。
-- 2026-09-03：escalate 并入 `subagent` 工具 `action:"escalate"`（独立 `escalateTool` 退役 verbatim 并入）。
+- 2026-09-03：escalate 并入 `subagent` 工具 `action:"escalate"`（独立 `escalateTool` 已退役——verbatim 并入；删除记录 = 本行）。
 - 2026-09-06：**R17 缺省 async**——后台 other 池 + settle 三分类 + digest 自动注入；`async:false`
   保留同步路径；机制正文收敛为本文件 §2 当前态。
 - 2026-09-08：DOC-REWRITE-VSC 批 V4——从 as-of 快照流水重写为当前态记录（多行 markdown，历史折叠本段）。

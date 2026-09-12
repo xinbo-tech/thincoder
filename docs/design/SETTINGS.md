@@ -2,7 +2,8 @@
 
 > 状态：**现行权威源**（2026-08-25 合并自 6 份历史批次文档，单一权威源纪律）。历史文档归档于 `docs/design/_archive/`（文件名保留，地图不再单独列出）。
 
-> 归档来源：`_archive/SETTINGS-PANEL.md`（批次 A）、`_archive/SETTINGS-PANEL-2.md`（批次 B/C/D）、`_archive/SETTINGS-PANEL-PROXY-ROW.md`、`_archive/SETTINGS-REORG.md`（重组）、`_archive/SETTINGS-SUBMODEL-SHELL.md`、`_archive/MODEL-PICKER-UNIFY.md`（模型选择统一）——全部已实施，细节见各归档文档。
+> 归档来源（已退役归档——归位 `docs/design/_archive/`）：`docs/design/_archive/SETTINGS-PANEL.md`（批次 A）、`docs/design/_archive/SETTINGS-PANEL-2.md`（批次 B/C/D）、`docs/design/_archive/SETTINGS-PANEL-PROXY-ROW.md`、
+> `docs/design/_archive/SETTINGS-REORG.md`（重组）、`docs/design/_archive/SETTINGS-SUBMODEL-SHELL.md`、`docs/design/_archive/MODEL-PICKER-UNIFY.md`（模型选择统一）——全部已实施，细节见各归档文档。
 
 ## 1. 信息架构（5 卡，2026-08-15 REORG 定稿）
 
@@ -120,7 +121,7 @@ embedding key + 构建按钮 + 状态；向量维度/模型切换的校验与可
 ### 2.7 config 路径字段 `~` 展开（`shell`——群 A 批）（2026-09-11）
 
 > 来源：批次档 `2026-09-11-VSC-MIRROR-SWEEP（本仓）` §1 条目 A2
-> （指针 = CLI 批 `2026-09-11-HOME-EXPANSION.md` §十「VSC 镜像面——仅 `shell` 字段同病」）。
+> （指针 = CLI 批 `2026-09-11-HOME-EXPANSION.md`（CLI 仓）§十「VSC 镜像面——仅 `shell` 字段同病」）。
 > 语义源：CLI 设计 `MEMORY.md` §9.3（单一规范化点 / 只读归一）；双端纪律：语义同源、本端独立实现。
 
 **问题（现场复核——as-of 2026-09-11）**：`config.json` 的 `shell` 字段前缀 `~` 不展开——
@@ -143,7 +144,7 @@ embedding key + 构建按钮 + 状态；向量维度/模型切换的校验与可
 3. **只读归一**：磁盘原文保留（不做写回）；面板 / settings 工具写面不展开（与 CLI 同 posture——运行时当次展开缺口 = 登记）；
 4. `src/tools/shell.mjs` 零改（收到的已绝对）；`agent-state.mjs` 透传面零改。
 
-**用例表（T-MA2——正常 / 边界 / 错误；纯函数 + setup 读取两点）**：
+**用例表（T-MA2-1–5——正常 / 边界 / 错误；纯函数 + setup 读取两点）**：
 
 | # | 类 | 输入 | 预期输出（断言） | 映射 |
 |---|---|---|---|---|

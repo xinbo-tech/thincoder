@@ -15,10 +15,10 @@
 VSC 端（`thincoder-vscode/`）是同一产品的第二实现面、承载同一套工程模式机制——但 VSC 仓**零提及**可移植性，
 A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族的缺陷：
 
-- **判据副本四处散落**（P10）：`advisor/repos.mjs:130/:151`（组件式 + 锚定式）+ `agent/execute-tools.mjs:108`（锚定式）
-  + `agent-tools/verify.mjs:114`（松散回退）+ `agent-tools/advisor.mjs:219`（`docs/` 前缀）——
+- **判据副本四处散落**（P10）：`src/advisor/repos.mjs:130/:151`（组件式 + 锚定式）+ `src/agent/execute-tools.mjs:108`（锚定式）
+  + `src/agent-tools/verify.mjs:114`（松散回退）+ `src/agent-tools/advisor.mjs:219`（`docs/` 前缀）——
   嵌套布局漏判 / 项目约定不可诉 / 无声明面；
-- **评审注入静默跳过**（P1/P2）：`advisor/messages.mjs:141-150` + `:236-246` METHODOLOGY 注入（空 catch）、
+- **评审注入静默跳过**（P1/P2）：`src/advisor/messages.mjs:141-150` + `:236-246` METHODOLOGY 注入（空 catch）、
   `:152-164` 固定 `docs/design/README.md` 文档地图（缺失即 skip）；
 - **Project Guide 注入缺失**（§9 真缺口）：`advisor-round1.md:7` 的 `## Project Guide (AGENTS.md)` 锚引用一个 VSC 从未注入的上下文段；
 - **索引扩展名表窄**（P9）：`index-discover.mjs:8-9`（14 代码 + 5 文档）——无声明面、未列入不可见；
@@ -28,9 +28,9 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 
 | CLI 条 | CLI 批修法（语义源——`PORTABILITY（CLI 仓）`） | VSC 对位点（勘察实测） | 三态结论 |
 |---|---|---|---|
-| P1 | 文档地图声明键 + 显式降级句（project-context.mjs） | `advisor/messages.mjs:152-164`（固定路径 + 缺失 skip） | **需修** |
-| P2 | 标准文档声明制 + 降级句（METHODOLOGY 注入移除） | `advisor/messages.mjs:141-150` · `:236-246`（注入 ×2、空 catch） | **需修** |
-| P3 | 评审指令文本去 `METHODOLOGY.md` | `messages.mjs:168/:170/:172` · `src/prompts/advisor-design.md:5` | **需修** |
+| P1 | 文档地图声明键 + 显式降级句（project-context.mjs） | `src/advisor/messages.mjs:152-164`（固定路径 + 缺失 skip） | **需修** |
+| P2 | 标准文档声明制 + 降级句（METHODOLOGY 注入移除） | `src/advisor/messages.mjs:141-150` · `:236-246`（注入 ×2、空 catch） | **需修** |
+| P3 | 评审指令文本去 `METHODOLOGY.md`（已退役——归位 `docs/design/_archive/METHODOLOGY.md`（CLI 仓）） | `messages.mjs:168/:170/:172` · `src/prompts/advisor-design.md:5` | **需修** |
 | P4 | advisor-design 提示词去本仓引用（EN 逐字 + CN 镜像） | EN `:9/:10/:18/:24` + CN `:20/:21/:39/:54` | **需修** |
 | P5 | 纪律层去「docs/design/<TOPIC>.md 树形状」教条 | `discipline-engineering.md` EN `:45/:60/:74` + CN `:37` | **需修** |
 | P6 | 纪律层去流程文件假设（docs/TODO 池 / CHANGELOG） | EN `:172/:202/:178/:182` + CN `:126/:132/:136` | **需修** |
@@ -38,7 +38,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 | P8 | 非 git：索引 walk 回退 + 评审侧降级句 | 索引：`indexer.mjs:231-246` **已有 walk 回退（已对位）**；评审侧：无降级句 | **索引已对位；评审侧需修** |
 | P9 | 索引扩表 / 声明 / 未列入可见 | `index-discover.mjs:8-9`（14/5 项）· 无声明面 · 无 unlisted | **需修** |
 | P10 · P25 | 判据单一权威 + 声明面 + 全接线 | 副本 4 处（上 §1.1）+ 消费 2 处（`run-helpers.mjs:9/:71` · `advisor-async.mjs:32/:124`） | **需修** |
-| P14 | `/eng` 无前提（删 METHODOLOGY 门禁） | `agent-tools/eng.mjs:64-80` enter 直接翻转——**无门禁（已对位）**；差：`:79` 文案 `in docs/` | **本体已对位；文案需修** |
+| P14 | `/eng` 无前提（删 METHODOLOGY 门禁） | `src/agent-tools/eng.mjs:64-80` enter 直接翻转——**无门禁（已对位）**；差：`:79` 文案 `in docs/` | **本体已对位；文案需修** |
 | §9 缺口 | （CLI 有 `injectProjectGuide`——VSC 缺） | `advisor-round1.md:7` 锚 + 全 `src/` 无注入实现 | **需修（真缺口）** |
 
 ### 1.3 本批条目清单（三方一致锚——批次档 §2 = 本表 = 验收标准回指）
@@ -82,7 +82,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 | # | 候选 | 判据（FR12：单一权威 + 声明可诉 + 不漏判 + VSC 体量） | 取舍 | 结论 |
 |---|---|---|---|---|
 | 1 | **新建 `src/conventions.mjs`（镜像 CLI 语义）** | 单一权威；声明面一处；消费方全部换源 | 与 CLI 并行实现（语义同源、文本自持） | **选定** |
-| 2 | 修 `advisor/repos.mjs` 为权威、其余换源 | 少一个新档 | 分类权威藏于 advisor 子模块——门禁面（`agent/`）反向依赖 advisor/——层向倒挂 | 否决 |
+| 2 | 修 `src/advisor/repos.mjs` 为权威、其余换源 | 少一个新档 | 分类权威藏于 advisor 子模块——门禁面（`agent/`）反向依赖 advisor/——层向倒挂 | 否决 |
 | 3 | 各副本就地修（不建权威） | 零结构变更 | 四副本漂移已被本批实证——正是 P10 的教训 | 否决 |
 
 ### D2 声明面载体
@@ -137,15 +137,15 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 
 | 调用点 | 现状 | 改法 |
 |---|---|---|
-| `advisor/repos.mjs:100-131` | `DOC_FILE`/`TEMP_FILE`/`isDocFile`/`isTempFile`/`isCodePath` 本地定义（导出给 4 消费方） | 谓词迁出至 `conventions.mjs`（**不留 re-export**——消费方全部就地换源）；本档剩 `findReviewRepos`/`collectRepoSnapshots`/`collectChangedFiles`/`isDocOnlyChange` |
-| `advisor/repos.mjs:151` `isDocOnlyChange` | `/^src[\\/]/` 锚定 + `DOC_FILE.test` | `isCodePath(filePath, conv)` / `isDocPath(filePath, conv)`（`conv = loadConventions(cwd)`） |
-| `agent/execute-tools.mjs:108` 父侧门禁 | `typeof p !== "string" \|\| /^src[\\/]/.test(p) \|\| !isDocFile(p)` | `typeof p !== "string" \|\| isCodePath(p, conv(agent.cwd))`——**保留非字符串保守拦截**（未知路径不放行） |
-| `agent-tools/advisor.mjs:219` 设计评审文档校验 | `doc.startsWith("docs/")` 放行 + `isDocFile` | `!isDocPath(doc, conv(agent.cwd))` → invalid（`docs/` 前缀判据**退役**） |
-| `agent-tools/verify.mjs:90-121` | 本地 `DOC_FILE`/`isDocFile` 副本 + `findProjectRoot`/`isUnderSrc` | 引用域已核（各仅链式一处引用）——**死代码全删**；`isDocOnlyChange(files, cwd)` 换源 |
-| `agent/run-helpers.mjs:9` · `:68-71` `hasCodeMutations` | 经 `repos.mjs` `isCodePath` | import 换源（导出签名不变） |
-| `agent-tools/advisor-async.mjs:32` · `:123-124` | 经 `repos.mjs` `isCodePath` | import 换源 |
-| 消费方收口 | `agent/execute-tools.mjs:13` · `agent-tools/advisor.mjs:10` import `isDocFile` | 换源 `conventions.mjs` |
-| 过期注释随批更正 | `advisor/main.mjs:6`（"repos.mjs still hosts the doc-file classifier"）· `repos.mjs:104-106/:127-128` · `verify.mjs:87` · `advisor-async.mjs:123` | 换源后指涉失实——随批改正 |
+| `src/advisor/repos.mjs:100-131` | `DOC_FILE`/`TEMP_FILE`/`isDocFile`/`isTempFile`/`isCodePath` 本地定义（导出给 4 消费方） | 谓词迁出至 `conventions.mjs`（**不留 re-export**——消费方全部就地换源）；本档剩 `findReviewRepos`/`collectRepoSnapshots`/`collectChangedFiles`/`isDocOnlyChange` |
+| `src/advisor/repos.mjs:151` `isDocOnlyChange` | `/^src[\\/]/` 锚定 + `DOC_FILE.test` | `isCodePath(filePath, conv)` / `isDocPath(filePath, conv)`（`conv = loadConventions(cwd)`） |
+| `src/agent/execute-tools.mjs:108` 父侧门禁 | `typeof p !== "string" \|\| /^src[\\/]/.test(p) \|\| !isDocFile(p)` | `typeof p !== "string" \|\| isCodePath(p, conv(agent.cwd))`——**保留非字符串保守拦截**（未知路径不放行） |
+| `src/agent-tools/advisor.mjs:219` 设计评审文档校验 | `doc.startsWith("docs/")` 放行 + `isDocFile` | `!isDocPath(doc, conv(agent.cwd))` → invalid（`docs/` 前缀判据**退役**） |
+| `src/agent-tools/verify.mjs:90-121` | 本地 `DOC_FILE`/`isDocFile` 副本 + `findProjectRoot`/`isUnderSrc` | 引用域已核（各仅链式一处引用）——**死代码全删**；`isDocOnlyChange(files, cwd)` 换源 |
+| `src/agent/run-helpers.mjs:9` · `:68-71` `hasCodeMutations` | 经 `repos.mjs` `isCodePath` | import 换源（导出签名不变） |
+| `src/agent-tools/advisor-async.mjs:32` · `:123-124` | 经 `repos.mjs` `isCodePath` | import 换源 |
+| 消费方收口 | `src/agent/execute-tools.mjs:13` · `src/agent-tools/advisor.mjs:10` import `isDocFile` | 换源 `conventions.mjs` |
+| 过期注释随批更正 | `src/advisor/main.mjs:6`（"repos.mjs still hosts the doc-file classifier"）· `repos.mjs:104-106/:127-128` · `verify.mjs:87` · `advisor-async.mjs:123` | 换源后指涉失实——随批改正 |
 
 ### 3.3 评审注入面（VP-1 · VP-2 · VP-3 · VP-8 · VP-12——新建 `src/advisor/project-context.mjs`）
 
@@ -180,10 +180,10 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 
 ### 3.5 文案面（VP-11 · VP-3 收尾）
 
-- `agent/execute-tools.mjs:110` 门禁 hint → §4.3 逐字（含未声明时声明指路）；
-- `agent-tools/eng.mjs:79` → §4.3 逐字；
-- `agent-tools/advisor.mjs:216-223` 拒绝文案 + 注释 → §4.3 逐字；
-- `agent/execute-tools.mjs:103` 注释（"under src/ … needs a live design slot"）随换源更正。
+- `src/agent/execute-tools.mjs:110` 门禁 hint → §4.3 逐字（含未声明时声明指路）；
+- `src/agent-tools/eng.mjs:79` → §4.3 逐字；
+- `src/agent-tools/advisor.mjs:216-223` 拒绝文案 + 注释 → §4.3 逐字；
+- `src/agent/execute-tools.mjs:103` 注释（"under src/ … needs a live design slot"）随换源更正。
 
 ### 3.6 提示词六档（VP-3 · VP-4 · VP-5 · VP-6 · VP-7——逐字见 §4.4）
 
@@ -251,7 +251,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 
 `Engineering mode activated. Design-before-code enforced: write a design document first (location per your project's document conventions), run advisor with type='design', get user approval, then implement via eng-coder subagents.`
 
-**advisor 文档门禁拒绝文案（`agent-tools/advisor.mjs:223`）**：`Advisor: design review documents must be documentation files (per the project's conventions). Invalid: <invalid list>`
+**advisor 文档门禁拒绝文案（`src/agent-tools/advisor.mjs:223`）**：`Advisor: design review documents must be documentation files (per the project's conventions). Invalid: <invalid list>`
 
 **索引可见化提示行（`panel-index.mjs`）**：`Index built: N files, M chunks. Semantic search is now active.` →
 （unlisted 非空时追加）` K file(s) skipped — extensions not indexed: .xyz, …; declare index.codeExtensions in .thincoder/conventions.json to include them.`
@@ -415,8 +415,8 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 | AC-V01 | 判据面退场（随 AC-V01 静态面整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:142`））；需求本体（唯一实现 = `src/conventions.mjs`——副本 = 0）不变 | VP-10 · FR12 |
 | AC-V02 | T-V01–T-V04 全绿；`packages/foo/src/x.md` 判 code（嵌套漏判消除） | VP-10 · FR12 |
 | AC-V03 | T-V05–T-V06 全绿（门禁拒绝保持 + 非字符串保守拦截保持 + 声明后行为切换） | VP-10 · FR12 |
-| AC-V04 | 判据面退场（T-V07–T-V09 均整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:137`–`:139`）） | VP-1 · VP-2 · VP-3 · VP-12 · FR10/11 |
-| AC-V05 | 判据面退场（T-V10 整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:140`）） | VP-8 · FR15 |
+| AC-V04 | 判据面已退场（T-V07–T-V09 均整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:137`–`:139`）） | VP-1 · VP-2 · VP-3 · VP-12 · FR10/11 |
+| AC-V05 | 判据面已退场（T-V10 整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:140`）） | VP-8 · FR15 |
 | AC-V06 | T-V14–T-V16 全绿；`unlistedExts` 字段与面板提示行存在 | VP-9 · FR10 |
 | AC-V07 | T-V17 已退场（整删——删除记录 = `TESTING.md` §8.1（`:143`））；六档编辑面内指令性引用 = 0（`docs/design/README.md` / `docs/design/<TOPIC>.md`——「本产品自研仓 =」标注形态除外）；`check-doc-width` 零指涉（全形态） | VP-3–VP-7 · FR13 |
 | AC-V08 | 既有提示词锚测试全绿（`prompts-mirror-anchors` + `prompts-async-guidance` + `doc-consistency`）；红线锚句逐一在位 | VP-3–VP-7 · FR13 |
@@ -424,7 +424,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 | AC-V10 | `eng` 工具 enter 提示含新文案；OFF 语义零回归（`eng-settlement` 回归绿） | VP-11 · FR11 |
 | AC-V11 | `messages.mjs` 拆分兑现：`project-context.mjs` 在位、`messages.mjs` ≤500 且较 296 净减 | VP-1 · VP-12 |
 | AC-V12 | 批级机检：`node test/run-fast.mjs` 全绿（VSC）＋ `node scripts/check-doc-width.mjs` 新增超宽 0；全部受改文件 ≤500、新档 ≤300 | 全批 |
-| AC-V13 | 需求层：CLI `requirements/PORTABILITY.md` 含批次二范围行（T-V20——grep） | 全批 |
+| AC-V13 | 需求层：CLI `docs/requirements/PORTABILITY.md`（CLI 仓）含批次二范围行（T-V20 已退场——设计期编号；现态不在册——grep） | 全批 |
 | AC-V14 | 三方一致：批次档 §2 条目 = 本档 §1.3 = AC 回指清单（逐条比对 0 差异） | 全批 |
 
 ## 8. 关键决策记录
@@ -453,5 +453,5 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 ## 变更记录
 
 - 2026-09-11：建档（批次二 = VSC 对位镜像——三态对位表 + 逐条修法 + 逐字文本 + 受影响文件 + 用例 + AC）。
-- 2026-09-11（修正轮——设计评审轮次 1 后）：§4.4(c) `:18` 行改 EN 形态（照 CLI EN 已交付文本）；§4.4(a) `:213` 新文本补「（CLI 侧）」——EN 与 CN 现形态逐字同文（选项①：保 §1.4/T-V18 断言，不降级）；§4.3 补两条落笔边界（门禁前缀保留 / design 分支编号顺延）。
+- 2026-09-11（修正轮——设计评审轮次 1 后）：§4.4(c) `:18` 行改 EN 形态（照 CLI EN 已交付文本）；§4.4(a) `:213` 新文本补「（CLI 侧）」——EN 与 CN 现形态逐字同文（选项①：保 §1.4/T-V18〔已退场——整删；删除记录 = `TESTING.md` §8.1〕断言，不降级）；§4.3 补两条落笔边界（门禁前缀保留 / design 分支编号顺延）。
 - 2026-09-11（实施后 as-of 回修——承批次档 §5 偏差披露 #1）：§4.4(e)/(f) 修为实际交付口径——:13 两行（写域句）已交付（与 CLI 已交付文本同文）；:27/:25 两行（todo 句）as-of 已失效（旧串经「2026-09-11 归属修订」（POOL-LEDGER 批）改写），实际交付 = 按 CLI 同源落笔（归属修订后现文——EN `不触碰项目台账档` / CN `不触碰台账档`）。
