@@ -31,7 +31,7 @@ verify.mjs 当前把**项目特定逻辑硬编码进通用工具**：
 - **D-V7 参数清理（评审 #4）**：删除 `full`/`testNamePattern`/`filter` 参数及其拒绝分支（无测试自动跑后语义消亡）；保留 `workdir`（定位项目根/doc-only 判定）。新增 `verification` 参数（D-V1）。
 - **D-V8 受影响文件（评审 #2/#3 补——双端）**：
   - CLI `src/agent-tools/verify.mjs`（删 MODULE_TO_TEST/related-tests/参数清理/verification 接入）
-  - CLI `src/agent-tools/verify-watch.mjs`（runTestFile/runTestSuite 若不被 verify 再用则删——实现时核实去留）
+  - CLI `src/agent-tools/verify-watch.mjs`（runTestFile/runTestSuite 若不被 verify 再用则删——实现时核实去留；**已删**——2026-09-07 通用验证门禁重构；runTestFile/runTestSuite 未被 verify 再用）
   - VS Code `src/agent-tools/verify.mjs` 及 verify 相关（镜像同构）
   - 两端工具 description/schema（verify 参数改 verification）
   - `docs/design/TOOLS.md` §7 verify 契约行更新（当前写 testNamePattern——评审 #3）

@@ -149,7 +149,7 @@ consult-base.md / advisor-design.md / advisor-round{1,2,3}.md——身份+输出
 - **methodology-template.md 退役**：不再提供模板——通用骨干已入纪律层随产品分发，项目侧无需模板。
 - **降级链简化**：D-M1/D-M2（METHODOLOGY 缺失警告+模板携带）整套删除——AGENTS.md 缺失 = 项目层空缺
   跳过（现状语义），无警告需求。
-- 双端存量迁移：双仓 cwd/METHODOLOGY.md 内容并入各自 AGENTS.md 后删除；METHODOLOGY 概念相关锚句/
+- 双端存量迁移：双仓 cwd 下 METHODOLOGY.md（已退役——内容并入各自 AGENTS.md 后删除）；METHODOLOGY 概念相关锚句/
   文档同步清理（ENGINEERING-MODE/PROMPT-DECOUPLING 各处引用）。
 
 ## 2.7 提示词编写纪律（15 条——A 内容性 / B 表达性 / C 工程纪律）

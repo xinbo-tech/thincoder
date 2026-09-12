@@ -143,11 +143,11 @@ stopped, total, received }`。settle 语义：正常回复入队；`session.stop
 
 ## 3. 测试
 
-会诊测试用例清单的权威 = **AGENT-LOOP §25.3**（T-R17a..r：会诊 settle 注入全文 /
+会诊测试用例清单的权威 = **AGENT-LOOP §14**（T-R17a..r 编号已退役——条款面：会诊 settle 注入全文 /
 check 退役（调 consult_check 工具不存在）/ 取消不入 pending / 空闲 settle 消化 /
 部分 settle 不注入 / 超长注入截断落盘 / 注入一次竞态 / 手动档动作域零容忍等）。
 
-**验收**（AGENT-LOOP §25）：T-R17a..p 双端绿 + consult 家族既有零回归。
+**验收**（AGENT-LOOP §14）：consult 家族测试双端绿 + 既有零回归（原 T-R17a..p 编号已退役）。
 
 ## 变更记录
 

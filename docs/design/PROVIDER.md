@@ -431,7 +431,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 **机制**：
 
 - **D-C1 config 字段**（config.json `providers[].context`）：**K 单位**正整数（如 `128` = 128K）；非法值（0/负数/非数字）→ 忽略 + 警告一次（每 provider 名），用 spec 值。
-- **D-C2 解析覆盖**（model-specs.mjs）：`providerSpec(provider)` = `specForModel(provider.model)` 的 **拷贝覆盖**（`{ ...spec, context: provider.context * 1024 }`），**不污染共享 spec 对象**（跨 provider 串扰防护，T-C1）；`specForModel` 保持纯查表不变；`config.mjs` re-export `providerSpec`——既有 importers 从 config 取。
+- **D-C2 解析覆盖**（model-specs.mjs）：`providerSpec(provider)` = `specForModel(provider.model)` 的 **拷贝覆盖**（`{ ...spec, context: provider.context * 1024 }`），**不污染共享 spec 对象**（跨 provider 串扰防护——T-C1〔已删：测试清零批〕）；`specForModel` 保持纯查表不变；`config.mjs` re-export `providerSpec`——既有 importers 从 config 取。
 - **D-C3 调用方改造**：需要 provider 感知的调用方用 `providerSpec`——config.mjs
   （resolveCompactThreshold）、context（keepTailSize）、provider/core.mjs（窗口/钳制/chat spec）、
   advisor（messages/run 预算）、TUI render-frame（模型信息/状态栏 context %）、pickers
@@ -440,7 +440,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 - **D-C4 配置界面**：CLI `/model` provider 管理流加 context 字段（K 单位，复用 syncProviderField）；VS Code = settings.json `providers[].context`（设置 UI 编辑，settings 是 provider 配置唯一权威）。
 - **D-C5 显示**：TUI / VS Code 模型信息显示 context 窗口（如 `128K`，`fmtContextK`：≥1M tokens 用 M 形态）跟随覆盖值。
 
-**关键决策**：provider 级而非模型级（同一模型不同端点上下文不同）；K 单位整数（用户明确）；拷贝覆盖不污染 spec；否决——改 MODEL_SPECS 官方值 / 全局 context 字段 / 自动探测（无可靠 API，用户手配唯一可信源）。单测锁定（`provider-spec.test.mjs` T-C1..C6：覆盖/跟随/非法值/未配置/界面/显示）。
+**关键决策**：provider 级而非模型级（同一模型不同端点上下文不同）；K 单位整数（用户明确）；拷贝覆盖不污染 spec；否决——改 MODEL_SPECS 官方值 / 全局 context 字段 / 自动探测（无可靠 API，用户手配唯一可信源）。单测锁定（原 `provider-spec.test.mjs` T-C1..C6——已删（2026-09-07 测试清零批）；覆盖面现居 `test/advisor-context-budget.test.mjs` 等）。
 
 ## 16. 模型清单 provider 化与放行语义（2026-09-10）
 
@@ -499,7 +499,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 - 播种：20 个预设各携其单值默认模型（2026-09-10 起 = 原候选首值；`deepseek` 于第 6 批更新为 `deepseek-flash`——§11）；wizard / picker 加渠道 / setup-wizard 只落单值。
 - 消费：①会话槽位 `activeModel` 空/缺失 → 回落 `slotProvider.model`（`session.mjs`；VSC 对位见 §16.5 `turn-model.mjs` 行——等价语义已有）②picker/管理面显示回退（L1 行、ctx 标签、remove/set-key/context 列表）③`/config → 默认模型` 渠道行显示
   ④advisor / subagent 裸渠道名克隆时 model 重派生——两调用点语义同源（渠道单值优先 + 父兜底）：
-  - `advisor/run.mjs:341`：`provider.model ?? provider.models?.[0]` → **`provider.model ?? agent.provider?.model`**（`models[0]` 换为父兜底——与 subagent F-2c 同构；VSC `advisor/provider.mjs` 镜像同改）。
+  - `advisor/run.mjs:341`：`provider.model ?? provider.models?.[0]` → **`provider.model ?? agent.provider?.model`**（`models[0]` 换为父兜底——与 subagent F-2c 同构；VSC `src/advisor/provider.mjs（VSC 仓）` 镜像同改）。
   - `agent-tools/subagent-async.mjs:157`：`byName.models?.[0] ?? parent.provider?.model` → **`byName.model ?? parent.provider?.model`**（`models[0]` 换为渠道单值；**尾部 `?? parent.provider?.model` 父 provider 兜底保留**——兜底链尾不动）。
   - **空值语义**（评审修正轮补）：渠道无默认模型（M3「空值合法」/ M7 空结果合法）→ 克隆取值回退主 provider model；两者皆无（极端）→ model 缺失交 chat 前 guard fail-fast（`assertProviderModel`——文案同步不再称 `models[]`）；**绝不产出静默 undefined-model 请求**。用例 T28。
 - 不承担：不是候选清单；不做成员校验；不限制显式 `p:m`；空值合法（模型选择经 `/models` 拉取候选——准入判据见 M8/M9）。
@@ -550,7 +550,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 **M9 渠道准入校验（配置阶段——用户 2026-09-10 裁定）**：
 
 - **落点**：配置写入面——加渠道 / 设 API key / 设默认模型的配置路径。CLI：`cmd-config.mjs`（默认模型菜单与渠道管理 flow）、`tui/wizard.mjs`、`cli/setup-wizard.mjs`；
-  VSC：`provider-flows.mjs`（addProviderEntry / setKeyFlow）、`settings.mjs`（handleAddProvider / saveProviderKey——复用既有 `testProviderConnection` 探针模式）、`settings-panel-write.mjs`（defaultModel 顶层写）、`webview/settings-providers.js`（UI 标注）。
+  VSC：`provider-flows.mjs`（addProviderEntry / setKeyFlow）、`settings.mjs`（handleAddProvider / saveProviderKey——复用既有 `testProviderConnection` 探针模式）、`settings-panel-write.mjs`（defaultModel 顶层写）、`webview/settings-providers.js（VSC 仓）`（UI 标注）。
 - **动作**：对目标渠道探一次 `GET /models`（复用 M1 实现 + 既有超时）；**失败不缓存**（下次配置动作重试）。
 - **判据与表现**：探通 → 渠道可用，探得候选可直接用于该流内的默认模型选择；探不通 → 界面明示失败消息（**消息本体** = 逐字长句 `该渠道不提供模型列表（GET /models {状态}）——无法选择模型，请改用其他渠道`；**状态标签** = `不可用`——分工见 M8），且该渠道**不作为默认模型的可选来源**（不进入可选清单）。
 - **不阻断配置流**：渠道条目本身仍可保存（提示 + 标记不可用——不是拒绝写 config）。
@@ -560,10 +560,10 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 
 - **语义（双端同源）**：候选清单（运行期拉取）未命中「偏好 / 当前选择」时，**不得静默写会话槽**（`activeProvider` / `activeModel`）；
   **未命中/兜底场景内**只允许【保持当前选择 + 呈现候选】——该场景写会话槽仅来自显式用户动作（面板点击候选行 / `/model` 选择）；**命中分支不在此限**：维持现状（同值幂等回写 / 无槽复合时沿用 workspaceState 播种 / reasoning 归一改写——见边界①）。
-- **VSC 落点（本批待改——评审通过后实施）**：`webview/model-picker.js` `handleModelsMessage` 兜底分支（as-of 2026-09-11 快照 `:118-126`——
+- **VSC 落点（本批待改——评审通过后实施）**：`webview/model-picker.js（VSC 仓）` `handleModelsMessage` 兜底分支（as-of 2026-09-11 快照 `:118-126`——
   prefs 不命中且当前显示值不在清单时取 `_models[0]` 替换选中并 post `selectModel` + `selectReasoning`）。
   **改法（统一口径——回落不再以 `ctx.selectedModel` 是否在清单为条件）**：删除候选首项替换与两条 post；**守卫只剩「prefs 复合存在（`prefs.model` 非空）且未命中清单」**；
-  未命中 → 显示与状态**同步**回落会话槽复合（`ctx.selectedModel`/`ctx.selectedProvider` = `prefs.model`/`prefs.provider`——与回合 echo 一致：`send.js:47` 回传二者，不同步则 echo ≠ 槽复合 → `turn-model.mjs:22` 判 trialOverride，显示与实际运行脱节）；
+  未命中 → 显示与状态**同步**回落会话槽复合（`ctx.selectedModel`/`ctx.selectedProvider` = `prefs.model`/`prefs.provider`——与回合 echo 一致：`webview/send.js:47`（VSC 仓） 回传二者，不同步则 echo ≠ 槽复合 → `src/extension/turn-model.mjs:22`（VSC 仓） 判 trialOverride，显示与实际运行脱节）；
   零 `selectModel` / `selectReasoning` post；不改 `ctx.selectedReasoning`；prefs 缺失（无 `model`）→ 保持现有显示与状态（零 post）；prefs 与当前显示均缺 → 保持空白；候选经菜单呈现（`ctx._models` 既有渲染，零改动）。
 - **CLI 对位（已交付——本批同链）**：`tui/cmd-config.mjs` 会话重载 = **会话值优先**（`:67-71` `sessionModel ?? dm.model ?? keep.model`，`keep.model` 仅链尾兜底——不静默改写，评审修正轮已裁）；CLI 端本轮**零改动**。
 - **边界**：① 命中分支维持现状——同值幂等回写（有槽复合时 `selectModel` post 写槽 = 同值）· 无槽复合时沿用 workspaceState 播种进新会话槽（F-7「沿用当前」既有语义）· reasoning 归一改写（`levels[0]`）+ `selectReasoning` post 照旧；② 显式点击写槽路径（`selectModel()`——快照 `:71-80`）不变；
@@ -610,7 +610,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 
 ### 16.5 受影响文件清单
 
-> 行数为 2026-09-10 快照（评审修正轮补齐的 VSC / 测试行数为 2026-09-11 实测；范围追加行 `webview/model-picker.js` 为 2026-09-11 追加轮实测）。**over-tier 说明**：`config.mjs`(484) / `model-picker.mjs`(490) / `core.mjs`(498) 均接近
+> 行数为 2026-09-10 快照（评审修正轮补齐的 VSC / 测试行数为 2026-09-11 实测；范围追加行 `webview/model-picker.js`（VSC 仓） 为 2026-09-11 追加轮实测）。**over-tier 说明**：`config.mjs`(484) / `model-picker.mjs`(490) / `core.mjs`(498) 均接近
 > 500 硬限——本批净增为负或 ≈0（listModels / 拉取逻辑迁出反而减负）；若实施中单文件预计超 500 硬限，必须就地拆分并入交付报告。
 > `model-picker.mjs` 按设计估算 490−35 = 455 行（低于 500 硬限——**455 可接受、本批不拆**）；若实施后仍预计超 500，
 > 拆分计划 = 槽位面（`buildSlotEntriesForProvider` / `fetchSlotModels` / `pickModelForSlot`）迁出独立文件。
@@ -661,23 +661,23 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 
 | 文件 | 当前行数 | 预计增量 | 改动要点 |
 |---|---|---|---|
-| `src/config-presets.mjs` | 41 | ±0 | 预设 20 条单值化 |
+| `src/config-presets.mjs`（VSC 仓） | 41 | ±0 | 预设 20 条单值化 |
 | `src/config-migrate.mjs` | 161 | +25 | 迁移 v2（M7 同规则——独立实现；含 `:110` settings 迁移写回形态核对） |
-| `src/config-io.mjs` | 438 | ±5 | normalize 单值；`resolveDefaultModel` 回退链（R6） |
-| `src/provider.mjs` | 456 | −15 | `listModels` 迁出/加 format 分派 |
+| `src/config-io.mjs`（VSC 仓） | 438 | ±5 | normalize 单值；`resolveDefaultModel` 回退链（R6） |
+| `src/provider.mjs`（VSC 仓） | 456 | −15 | `listModels` 迁出/加 format 分派 |
 | `src/provider/list-models.mjs` | **新增** | ~95 | 三 format 分派 |
-| `src/provider/transports/openai.mjs` | 308 | ±0（文案） | guard 文案（不再称 `models[]`） |
-| `src/advisor/provider.mjs` | 39 | ±0 | `models?.[0]` 兜底换父兜底 `agent._provider?.model`（与 VSC subagent 同构——M3④）；注释 |
+| `src/provider/transports/openai.mjs`（VSC 仓） | 308 | ±0（文案） | guard 文案（不再称 `models[]`） |
+| `src/advisor/provider.mjs`（VSC 仓） | 39 | ±0 | `models?.[0]` 兜底换父兜底 `agent._provider?.model`（与 VSC subagent 同构——M3④）；注释 |
 | `src/agent-tools/subagent.mjs` | 358 | ±0 | `models?.[0]`→`byName.model`（**保 `?? parent._provider?.model` 父兜底**）；注释 |
 | `src/extension/settings.mjs` | 332 | +20 | status payload 单值；`fullStatus` 候选=fetch（失败 = 该渠道不可选 + 明示原因——无 fallback 候选）；custom 空条目判据；准入探复用（M9——既有 `testProviderConnection` 模式） |
-| `src/extension/settings-panel-write.mjs` | 134 | +10 | defaultModel 面板写加准入探（M9——探不通标不可用、不入可选来源） |
-| `src/extension/provider-flows.mjs` | 193 | +15 | 播种单值；`p.models?.[0]`→`p.model`；addProviderEntry / setKeyFlow 加准入探（M9——不通标不可用，不阻断保存） |
-| `src/extension/vision-channel.mjs` | 23 | +5 | 视觉候选判据改渠道默认模型（下注） |
-| `src/extension/panel-chat.mjs` | 499 | 核查 | 「否则首候选」决策/注释 |
-| `src/extension/turn-model.mjs` | 28 | 核查 | VSC 对位 M3①：`runModel = modelOverride || slotModel || baseModel`（槽空经 `baseModel`=`resolveDefaultModel` 新回退链回落——等价语义**已有**）；注释同步（『首候选』旧词） |
-| `src/extension/presets.mjs` / `panel-messages.mjs` / `panel-session.mjs` | 85 / 454 / 333 | ±0（注释） | 头注/注释 |
-| `webview/settings-providers.js` | 264 | +20 | 渠道行（默认模型）、预设行、默认模型菜单数据源改运行期载荷；准入失败渠道标「不可用」且剔出默认模型可选来源（M9） |
-| `webview/model-picker.js` | 135 | −4 | **范围追加**（用户 2026-09-11）：兜底分支统一口径（守卫 = prefs 未命中；显示与状态回落会话槽复合；零 `selectModel` / `selectReasoning` post——M10）；注释同步 |
+| `src/extension/settings-panel-write.mjs`（VSC 仓） | 134 | +10 | defaultModel 面板写加准入探（M9——探不通标不可用、不入可选来源） |
+| `src/extension/provider-flows.mjs`（VSC 仓） | 193 | +15 | 播种单值；`p.models?.[0]`→`p.model`；addProviderEntry / setKeyFlow 加准入探（M9——不通标不可用，不阻断保存） |
+| `src/extension/vision-channel.mjs`（VSC 仓） | 23 | +5 | 视觉候选判据改渠道默认模型（下注） |
+| `src/extension/panel-chat.mjs`（VSC 仓） | 499 | 核查 | 「否则首候选」决策/注释 |
+| `src/extension/turn-model.mjs`（VSC 仓） | 28 | 核查 | VSC 对位 M3①：`runModel = modelOverride || slotModel || baseModel`（槽空经 `baseModel`=`resolveDefaultModel` 新回退链回落——等价语义**已有**）；注释同步（『首候选』旧词） |
+| `src/extension/presets.mjs`（VSC 仓） / `panel-messages.mjs` / `panel-session.mjs` | 85 / 454 / 333 | ±0（注释） | 头注/注释 |
+| `webview/settings-providers.js`（VSC 仓） | 264 | +20 | 渠道行（默认模型）、预设行、默认模型菜单数据源改运行期载荷；准入失败渠道标「不可用」且剔出默认模型可选来源（M9） |
+| `webview/model-picker.js`（VSC 仓） | 135 | −4 | **范围追加**（用户 2026-09-11）：兜底分支统一口径（守卫 = prefs 未命中；显示与状态回落会话槽复合；零 `selectModel` / `selectReasoning` post——M10）；注释同步 |
 
 > `webview/` 其余文件（`model-menu.js` / `settings-models.js` 等）消费的是 **`models` 消息载荷**（运行期模型行）——
 > 载荷字段不变、消费语义不变，不受影响；例外两类：`settings-providers.js`（读 config 字段——已列入上表）与
@@ -694,11 +694,11 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 | `test/config-merge.test.mjs` | 126 | 重写（迁移 v2 + resolveDefaultModel 新回退链） |
 | `test/provider-admission.test.mjs` | **新增** | M9 两态 + 运行期零探测（T23–T25） |
 | `test/provider-model-guard.test.mjs` | 149 | 改（单值兜底 + 新文案；同 `:58` 锚） |
-| `test/image-downgrade.test.mjs` | 120 | 改（视觉判据） |
-| `test/config-io-panel.test.mjs` / `config-softfail.test.mjs` / `settings-panel.test.mjs` / `chat-panel.test.mjs` | 101/114/87/621 | 核查（fixture 迁移触发） |
-| `test/files.mjs`（注册表） | 48 | 改（登记新档——追加 `model-picker-fallback` 条目） |
-| `test/model-picker-fallback.test.mjs` | **新增** | T29（未命中零 `selectModel` / `selectReasoning` post + 显示与状态回落会话槽复合 + 命中分支同值回写正控——happy-dom 直驱 `handleModelsMessage`） |
-| `test/smoke-provider.mjs` | 65 | 改（`preset.models?.[0]`→`preset.model`） |
+| `test/image-downgrade.test.mjs`（VSC 仓） | 120 | 改（视觉判据） |
+| `test/config-io-panel.test.mjs`（VSC 仓） / `config-softfail.test.mjs` / `settings-panel.test.mjs` / `chat-panel.test.mjs` | 101/114/87/621 | 核查（fixture 迁移触发） |
+| `test/files.mjs`（VSC 仓）（注册表） | 48 | 改（登记新档——追加 `model-picker-fallback` 条目） |
+| `test/model-picker-fallback.test.mjs`（VSC 仓） | **新增** | T29（未命中零 `selectModel` / `selectReasoning` post + 显示与状态回落会话槽复合 + 命中分支同值回写正控——happy-dom 直驱 `handleModelsMessage`） |
+| `test/smoke-provider.mjs`（VSC 仓） | 65 | 改（`preset.models?.[0]`→`preset.model`） |
 
 **VSC 文档**：`PROVIDER（VSC 仓）`（O4 同步已交付——2026-09-11）；范围追加的 §3.2 差异行随本轮落档
 ——**不入 eng-coder 任务面**（用户 2026-09-10 裁定 O4）。
@@ -764,7 +764,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 ### 16.10 勘察补充发现（超出批次档 §1 已核清单的面）
 
 1. **契约测试第三族**：`test/provider-model-guard.test.mjs`（CLI 132 行 + VSC 149 行）同样锁定了 `models[0]` 语义与 guard 文案正则——批次档 §1 只列了 model-ref / config-merge 两族，本批一并反转（R7 覆盖）。
-2. **VSC webview 直读 config 字段**：`webview/settings-providers.js:24/93-96/181/195` 直接读 `providerStatus().providers[name].models` 与 presets payload 的 `models`——删除字段后面板显示与默认模型菜单的数据源须改（§16.5 已列）。
+2. **VSC webview 直读 config 字段**：`webview/settings-providers.js:24`（VSC 仓；余行同） 直接读 `providerStatus().providers[name].models` 与 presets payload 的 `models`——删除字段后面板显示与默认模型菜单的数据源须改（§16.5 已列）。
 3. **VSC custom 空条目判据**：`settings.mjs:249` 以 `entry.models.length` 判「空条目删除」——字段删除后判据失效，须改以 `entry.model` 为准（列表内已列）。
 4. **CLI `setup-wizard.mjs` 既存 bug**：`:43` 读 `presets[..].model`（MODEL-MERGE 后已不存在）——本批字段回单值后自动对上（顺带修复），列入清单。
 5. **VSC 视觉通道**：`vision-channel.mjs` 候选扫描依赖 `models[]`——判据变更与能力收窄见 §16.5。
@@ -806,7 +806,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 | T28 | 边界 | 渠道无默认模型时克隆取值（M3④） | 渠道 `p.model` 缺失 + 无显式模型 | advisor：`provider.model ?? agent.provider?.model`；subagent：`byName.model ?? parent.provider?.model`（父兜底生效，无静默 undefined 请求） | R3 | CLI |
 | T29 | 边界 | VSC 面板候选未命中不写槽（M10——兜底分支） | 直驱 `handleModelsMessage`（happy-dom）：① 未命中（prefs 不在拉取清单——`ctx.selectedModel` ∈/∉ 两态 + 冷启空值）② 命中（正控） | ① **零** `selectModel` / `selectReasoning` post；显示与状态 = 会话槽复合（== prefs 复合；均缺空白）② 命中分支仍 post `selectModel`（同值回写） | R10 | VSC |
 
-> **T29 附注**（2026-09-11 修正轮）：断言 `ctx.selectedModel`/`ctx.selectedProvider` == prefs 复合（状态同步——与回合 echo 一致：`send.js:47` → `turn-model.mjs:22`）；`selectReasoning` 只写 workspaceState（不触会话槽——槽写入口唯一 = `selectModel`）；prefs 缺失保持现有显示与状态、均缺 = 空白。
+> **T29 附注**（2026-09-11 修正轮）：断言 `ctx.selectedModel`/`ctx.selectedProvider` == prefs 复合（状态同步——与回合 echo 一致：`webview/send.js:47`（VSC 仓） → `src/extension/turn-model.mjs:22`（VSC 仓））；`selectReasoning` 只写 workspaceState（不触会话槽——槽写入口唯一 = `selectModel`）；prefs 缺失保持现有显示与状态、均缺 = 空白。
 
 ### 17.2 验收标准（逐条回指——每条可机器验证）
 
@@ -913,7 +913,7 @@ Beta / 磁盘缓存默认开 / **多模态视觉**）；旧名 `deepseek-v4-flas
 `reasoningEcho:"required"` = 带 tools 的请求须全程回传 `reasoning_content`（否则 400）；
 `cacheMode:"auto"` = 磁盘缓存默认启用；`prefixMode` = Chat Prefix Completion (Beta)；
 `multimodal` = Vision ✓——官方约束"图片仅限 user 消息"与客户端注入路径一致（客户端只在 user 消息
-注入图像：CLI `src/agent/record-results.mjs:47-55` / VSC `src/agent/execute-tools.mjs:384-387`）；
+注入图像：CLI `src/agent/record-results.mjs:47-55` / VSC `src/agent/execute-tools.mjs:384`（VSC 仓；至 387 行））；
 `reasoningEffortEnum` / `maxOutput` / 默认 effort `high` = 官方参数页 + 渠道实测；
 `tempRange: [0, 2]` = **沿用既有 DeepSeek 行现值**（既有 pro / 两退役名行同值、新行继承——无独立来源声称）。
 
@@ -979,14 +979,14 @@ Beta / 磁盘缓存默认开 / **多模态视觉**）；旧名 `deepseek-v4-flas
 | 文件 | 当前行数 | 预计增量 | 改动要点 |
 |---|---|---|---|
 | `test/config-merge.test.mjs` | 174 | ±0 | `:31` 预设断言值同步 → `deepseek-flash`（T35） |
-| `test/deepseek-v41-specs.test.mjs` | **新增** | ~90 | 四行字段契约（T30/T31）+ 前缀优先级（T32）+ read_image 门放行/拒绝（T33/T34） |
+| `test/deepseek-v41-specs.test.mjs`（已退场——TEST-LIFECYCLE） | **新增** | ~90 | 四行字段契约（T30/T31）+ 前缀优先级（T32）+ read_image 门放行/拒绝（T33/T34） |
 
 **VSC 源（thincoder-vscode/src）**：
 
 | 文件 | 当前行数 | 预计增量 | 改动要点 |
 |---|---|---|---|
 | `src/config.mjs` | 184 | +4~6 | 同 CLI 行集（每行多 `reasoningEffortDefault: "high"`）；块注释同步改写（`dual models` 句） |
-| `src/config-presets.mjs` | 41 | ±0 | 预设 `deepseek.model` → `deepseek-flash`（1 行改值） |
+| `src/config-presets.mjs`（VSC 仓） | 41 | ±0 | 预设 `deepseek.model` → `deepseek-flash`（1 行改值） |
 
 **VSC 测试（thincoder-vscode/test）**：
 
@@ -1011,7 +1011,7 @@ Beta / 磁盘缓存默认开 / **多模态视觉**）；旧名 `deepseek-v4-flas
 | 3 | `deepseek-v4-pro` 保留 + 注释；**不加 `multimodal`** | 9/14 前由 V4-Pro-0813 服务——视觉能力**未核实**（现行表未声明视觉，维持现状保守）：预支视觉的硬失败风险不排除（400 中毒）；9/14 后路由语义待 V4.1 Pro 落定——保守 = 无硬失败；重评入口：**2026-09-14 12:00 路由生效后复检**（复检项 = 视觉能力位是否翻转；含非视觉锚换锚——§19.6(c) #2/#3）/ V4.1 Pro 到货 / 用户裁定 | a2 跟随语义（窗口期风险不排除 + 换锚）；a3 删行（回归） |
 | 4 | 预设 `deepseek` 指向新名 | 用户 §1 已裁（多模态可用 + 官方定性更优） | ——（用户已裁，不重复对比） |
 | 5 | 行注释承载退役/路由/日期语义（不做按日期切换规格的运行期机制） | 静态表 + 注释 = 零新机制；日期分支机制（运行期按时选行）复杂度不成比例 | 运行期日期分支；仅文档记录不加注释（可读性差） |
-| 6 | 新增薄测试档 `test/deepseek-v41-specs.test.mjs`（CLI）；VSC 面复用既有档 | 规格行是消费面契约（多模态门/压缩阈值）——无断言则 R11–R14 只剩 grep 级验证（脆）；VSC 既有档已覆盖行为面（T36/T37 内嵌） | 不新增（仅 grep 验收）；VSC 也新建同型档（镜像成本） |
+| 6 | 新增薄测试档 `test/deepseek-v41-specs.test.mjs`（CLI——已退场：TEST-LIFECYCLE）；VSC 面复用既有档 | 规格行是消费面契约（多模态门/压缩阈值）——无断言则 R11–R14 只剩 grep 级验证（脆）；VSC 既有档已覆盖行为面（T36/T37 内嵌） | 不新增（仅 grep 验收）；VSC 也新建同型档（镜像成本） |
 
 ### 19.6 对账与既有纪律核对
 
@@ -1040,7 +1040,7 @@ Beta / 磁盘缓存默认开 / **多模态视觉**）；旧名 `deepseek-v4-flas
 
 1. CLI 预设断言唯一命中 = `test/config-merge.test.mjs:31`（本批同步，T35）；VSC 侧无 deepseek 预设值断言（本批新增，T37）。
 2. `read-image-guide.test.mjs` 以 `deepseek-v4-pro` 当"非视觉"锚（`test/read-image-guide.test.mjs:20`）——本批保持 pro 非视觉 → 锚不动；若未来 pro 开放视觉，该锚须换（§19.5 #3 重评入口）。
-3. VSC 侧同型锚 = `test/image-downgrade.test.mjs` 用 `deepseek-v4-pro` 做非视觉主模型（`:24` / `:59` / `:109`）——同上保持。
+3. VSC 侧同型锚 = `test/image-downgrade.test.mjs`（VSC 仓） 用 `deepseek-v4-pro` 做非视觉主模型（`:24` / `:59` / `:109`）——同上保持。
 4. VSC `src/extension/settings.mjs:322` 消费 `spec.reasoningEffortDefault` 作为推理档默认——新行须携 `"high"`（VSC-only 字段）。
 5. `test/model-ref.test.mjs:66` 的 spec 断言用 `kimi-k3`——零改。
 6. 双端无 spec 表全量快照 / 跨仓逐字一致性测试——语义同源由各端行为断言守（不新建跨仓比较机制）。
@@ -1071,9 +1071,9 @@ Beta / 磁盘缓存默认开 / **多模态视觉**）；旧名 `deepseek-v4-flas
 | T37 | 正常 | 预设播种（VSC） | `PROVIDER_PRESETS.deepseek.model` | `"deepseek-flash"` | R15 | VSC |
 | T38 | 边界 | 零回归锚 | `specForModel("deepseek-v4-pro")` 只读字段锚（`multimodal` 非真 + `context` 1M / `maxOutput` 384K / `prefixMode` true / `reasoningEffortEnum` ["low","high","max"]——双端）；既有 `read-image-guide.test.mjs` / `image-downgrade.test.mjs` 非视觉锚用例 | 全锚成立；既有锚用例保持绿（pro 行零改） | R14/N5 | 双端 |
 
-> 用例落点（§19.4 文件表同源）：T30–T34 = `test/deepseek-v41-specs.test.mjs`（CLI 新增）；
-> T35 = `test/config-merge.test.mjs`（CLI——既有断言改值）；T36 = `test/image-downgrade.test.mjs`（VSC——
-> 既有档内加断言，**无需** `test/files.mjs` 注册）；T37 = `test/config-merge.test.mjs`（VSC——既有档内加断言）；
+> 用例落点（§19.4 文件表同源）：T30–T34 = `test/deepseek-v41-specs.test.mjs`（CLI 新增——已退场：TEST-LIFECYCLE）；
+> T35 = `test/config-merge.test.mjs`（CLI——既有断言改值）；T36 = `test/image-downgrade.test.mjs`（VSC 仓）（VSC——
+> 既有档内加断言，**无需** `test/files.mjs`（VSC 仓） 注册）；T37 = `test/config-merge.test.mjs`（VSC——既有档内加断言）；
 > T38 = pro 只读字段锚（CLI 新档 pro 段；VSC 面 = `image-downgrade.test.mjs`）+ 既有非视觉锚用例复跑。
 
 ### 20.2 验收标准（逐条回指——每条可机器验证）
@@ -1092,7 +1092,7 @@ Beta / 磁盘缓存默认开 / **多模态视觉**）；旧名 `deepseek-v4-flas
   `VSC 仓 node scripts/check-doc-width.mjs`——**本批文件**（双端 `docs/design/PROVIDER.md` + 本批次档）
   新增超宽 0 行、V1/V2/V3 本批面新增违规 0 条（存量/它在飞批次条目不计——观察见 §19.6（d））。
 - **AC-17（R17）**：`cd thincoder && npm test` 与 `cd thincoder-vscode && npm test` 全绿（含 T30–T38
-  新增面与既有断言同步面；VSC 新断言内嵌既有已注册档——无需 `test/files.mjs` 变更）。
+  新增面与既有断言同步面；VSC 新断言内嵌既有已注册档——无需 `test/files.mjs`（VSC 仓） 变更）。
 
 > 本批验收勾销 / 逐条验收结论落**批次档 §6**（不写进本档——用户 2026-09-10 裁定）。
 
@@ -1206,7 +1206,7 @@ core / responses / generate-title 被内置头覆盖，anthropic 通路无 `Auth
 | # | 候选 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论（选定/否决理由） |
 |---|---|---|---|---|
 | a1 | **各点内联展开**（`...(provider.headers ?? {})` 就地写——与 core.mjs / list-models.mjs 既有形态同形） | 零新机制、零新档；与既有形态一致；5 处一行式改动可 grep 逐一核对；防再漂移由**逐通路行为用例**（T39–T43）承担 | 同一行式表达式在 5 点重复——与 list-models 三处同量级 | **选定** |
-| a2 | 抽共享装配函数（新 `src/provider/headers.mjs` 或既有档导出），各点改调用 | 一处定义顺序语义；但**防漂移无效**（新通路仍须记得调用）；须连 core / list-models 同步改造才自洽（= 触碰已展开面，违背「只铺开」）；+1 新档 | 机制成本 > 收益；既有形态反证（list-models 三处亦内联） | 否决 |
+| a2 | 抽共享装配函数（新 `src/provider/headers.mjs`——已废：否决；或既有档导出），各点改调用 | 一处定义顺序语义；但**防漂移无效**（新通路仍须记得调用）；须连 core / list-models 同步改造才自洽（= 触碰已展开面，违背「只铺开」）；+1 新档 | 机制成本 > 收益；既有形态反证（list-models 三处亦内联） | 否决 |
 | a3 | 反向顺序（内置头前、定制头后——允许定制头覆盖） | 与 core.mjs 既有语义**相反**（既有 = 内置头胜出）；用户可经 headers 覆盖 `Content-Type` / 认证头 = 语义变更（超范围） | 语义回退 + 安全面风险 | 否决 |
 
 **（b）`generate-title.mjs` 改造形态（§1 待裁 #2）**：**局部补**选定（= a1 形态应用于该通路——保持
@@ -1259,7 +1259,7 @@ core / responses / generate-title 被内置头覆盖，anthropic 通路无 `Auth
 
 | # | §1 表述（as-of） | 处置 |
 |---|---|---|
-| 1 | `core.mjs:405-425` 展开 ✓ | 参照面——零改；T39 锁其语义（含覆盖序） |
+| 1 | `src/provider/core.mjs:405-425` 展开 ✓ | 参照面——零改；T39 锁其语义（含覆盖序） |
 | 2 | `responses.mjs:432/451/469` 三处遗漏 | 本批补（§23.2 #1）——锚注：§1 行号 = `headers:` 字面行；本档 §21–§24 统一锚 `proxyFetch(` 调用起始行（同一三处——as-of :430/:449/:467） |
 | 3 | `anthropic.mjs:73-77` 字面头无展开 | 本批补（§23.2 #2） |
 | 4 | `google.mjs:119` 仅 Content-Type | 本批补（§23.2 #3） |
@@ -1290,7 +1290,7 @@ core / responses / generate-title 被内置头覆盖，anthropic 通路无 `Auth
 
 `PROVIDER.md` 头注（`:3`）与 §16 首注（`:448`）原载「R10 / M10 增量待批准」为陈旧两态（`../batches/2026-09-10-MODEL-SELECTION.md` §6
 遗留 #5 / `../batches/2026-09-11-DEEPSEEK-V41-FLASH.md` §5 复检项——两批均注明「随下次 PROVIDER.md 设计轮刷新」）：
-本次一并刷新为已实施并核销（证据：VSC 提交 `cd1de8f` + `test/model-picker-fallback.test.mjs` 在册；批次档 §6 已核销）。
+本次一并刷新为已实施并核销（证据：VSC 提交 `cd1de8f` + `test/model-picker-fallback.test.mjs`（VSC 仓） 在册；批次档 §6 已核销）。
 
 ### 23.7 UI/交互决策（含 open）
 
@@ -1350,8 +1350,8 @@ provider 管理流零改）。**open 项：无。**
   显式 `p:m` 一律放行（§16 M4）；切换回显规格来源（§16 M5/M6）；预设改单值（§11）；渠道准入判据 = `/models` 可用（§16 M8/M9——配置阶段校验，运行期不加闸）。
 - 2026-09-11 评审修正轮：13 条采纳项落档（M1 URL 组合钉死 + 翻页跟随 + mock-only 残余风险与上机验证动作；M3④ 空值语义 / 父兜底对齐；M8/M9 失败文案分工与零探测边界；AC-8 显式排除集；§16.5 行数补齐 + 拆分阈值对齐 500 硬限；§16.6 #14 非对话模型不过滤；T26–T28 新增）。
 - 2026-09-11：AC-8 的 `SESSION.md:230` 命中枚举改准（该处收尾轮已改以「候选成员校验」表达——docs/design 面清零的现状同步；语义不变）。
-- 2026-09-11 范围追加（用户裁定）：VSC 面板兜底静默改写并入本批——R10 + M10 落档（`webview/model-picker.js` 兜底分支：保持当前选择 + 零 post；CLI `keep.model` 对位同源）；§16.5 追加文件行；T29 / AC-10 新增。
-- 2026-09-11 范围追加评审修正轮（8 条采纳项落档）：M10 口径统一（守卫 = prefs 未命中；显示与状态同步回落会话槽复合；零 `selectModel` / `selectReasoning` post）；命中分支维持现状明示（语义句限域 + 边界①展开）；R10/§16.6 #15/§16.7/T29/AC-10 断言口径统一；T29 夹具两态 + 状态断言；CLI 对位链尾措辞精确化（会话值优先；`keep.model` 仅链尾）；§16.5 `test/files.mjs` 行数 48；状态行拆两态。
+- 2026-09-11 范围追加（用户裁定）：VSC 面板兜底静默改写并入本批——R10 + M10 落档（`webview/model-picker.js`（VSC 仓） 兜底分支：保持当前选择 + 零 post；CLI `keep.model` 对位同源）；§16.5 追加文件行；T29 / AC-10 新增。
+- 2026-09-11 范围追加评审修正轮（8 条采纳项落档）：M10 口径统一（守卫 = prefs 未命中；显示与状态同步回落会话槽复合；零 `selectModel` / `selectReasoning` post）；命中分支维持现状明示（语义句限域 + 边界①展开）；R10/§16.6 #15/§16.7/T29/AC-10 断言口径统一；T29 夹具两态 + 状态断言；CLI 对位链尾措辞精确化（会话值优先；`keep.model` 仅链尾）；§16.5 `test/files.mjs`（VSC 仓） 行数 48；状态行拆两态。
 - 2026-09-11（第 6 批 DeepSeek V4.1-Flash）：规格表新增 `deepseek-flash` 行（1M / 384K / thinking 默认开 / 前缀补全 / 磁盘缓存 / `multimodal`）；
   两退役名（`deepseek-v4-flash` / `deepseek-v4-flash-vision-exp`——仍收、当下即路由）参数随 V4.1-Flash；
   `deepseek-v4-pro` 保留 + 注释（9/14 12:00 北京起路由 V4.1-Flash——不预支视觉）；预设 `deepseek` 默认模型 → `deepseek-flash`（需求 R11–R17 / 设计 §18–§20 落档）。

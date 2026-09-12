@@ -44,7 +44,7 @@
 > 来源：批次 `../batches/2026-09-11-VSC-ASYNC-VISIBILITY.md` §1 条目 A（用户 2026-09-09 原话：
 > "实际启动了但不能可靠显示 live 块"）+ 2026-09-09 22:32 精确复现（同响应双 spawn 两个 eng-coder →
 > 扩展侧计数 2 running，webview 只渲染 1 个 live 块）+ 2026-09-11 03:50 用户"第10批开工"指令。
-> 设计+测试见 `../design/AGENT-LOOP.md` §18（CLI 面）与 VSC 仓 `docs/design/WEBVIEW.md` §5.1（VSC 面）。
+> 设计+测试见 `../design/AGENT-LOOP.md` §18（CLI 面）与 VSC 仓 `docs/design/WEBVIEW.md（VSC 仓）` §5.1（VSC 面）。
 
 ### 3.1 总体需求
 
@@ -69,7 +69,7 @@ live 块（谁在跑、跑了多久、能取消）并在任务结束时折叠为
 |---|---|---|---|
 | NFR-A1 | 零回归 | live→frozen 两态机/冻结幂等守卫/150 窗裁剪/tombstone 丢弃语义**零变化**；**不重做池快照重推**（REMOVE-POOL-SNAPSHOT 已裁定撤除——birth 队列不得复活"池行快照"形态） | 既有 activity-flow / webview-turnstate / chat-panel 测试全绿；`postPoolSnapshot`/`SNAPSHOT_ROLES` grep 零命中 |
 | NFR-A2 | 可诊断 | 每一次"出生事件被守卫丢弃/同名接管/补块"必须留一条可断言的痕迹（webview 侧结构化日志 + 主侧投递日志），复发时能凭痕迹定位，不再"不可诊断"；**范围 = 出生事件面**（同名接管 / 无块终态补桩 / 未知 role 丢弃三类；`queued` 事件遇已冻结键的陈旧窗口丢弃不在内——见 VSC 设计 §5.1.9 声明） | 用例断言痕迹发生；grep 断言痕迹调用点在位 |
-| NFR-A3 | 可机器验证 | 每条验收标准由 happy-dom 驱动**真 webview 模块**（`test/helpers/webview-env.mjs`）或桩面板驱动**真 extension 模块**（`test/chat-panel.test.mjs` 骨架）机判 | 新增用例全绿 + 反例（修前红）可复现 |
+| NFR-A3 | 可机器验证 | 每条验收标准由 happy-dom 驱动**真 webview 模块**（`test/helpers/webview-env.mjs（VSC 仓）`）或桩面板驱动**真 extension 模块**（`test/chat-panel.test.mjs（VSC 仓）` 骨架）机判 | 新增用例全绿 + 反例（修前红）可复现 |
 
 ### 3.4 明确不做
 
@@ -250,7 +250,7 @@ VSC 面板输入框的 Enter 键语义必须**可预测**：输入法（IME）�
 | # | 维度 | 标准 | 度量方式 |
 |---|---|---|---|
 | NFR-F1 | 零回归 | busy 占位符 / readOnly / 拒发 / 中断模态语义零变化；既有 webview 测试族全绿（基线 as-of 2026-09-11：422/421/0/1） | 既有族运行 + 新档（happy-dom 直驱真模块） |
-| NFR-F2 | 可机判 | 全部功能需求由 happy-dom 驱动真 webview 模块机判（Enter 经 `KeyboardEvent` 注入——`isComposing` 可控——已实测） | 新档 `test/webview-input-enter.test.mjs` + `test/files.mjs` 登记 |
+| NFR-F2 | 可机判 | 全部功能需求由 happy-dom 驱动真 webview 模块机判（Enter 经 `KeyboardEvent` 注入——`isComposing` 可控——已实测） | 新档 `test/webview-input-enter.test.mjs（VSC 仓）` + `test/files.mjs（VSC 仓）` 登记 |
 | NFR-F3 | 双端纪律 | 本条目纯 VSC（webview 独有——CLI TUI 无 @ 下拉 / 无 webview；busy 拒发语义 CLI 已具备）——两端各自独立实现、无镜像义务 | CLI 仓本面零代码改动（同批 B1 为 CLI 另条目）+ CLI 快层绿 |
 
 ### 8.4 明确不做
@@ -305,7 +305,7 @@ VSC 面板会话与 CLI 主会话的**每 run 上下文注入面同族同序**�
 > **N-Q3 登记豁免（修正轮 #1——设计评审轮次 1 落修）**：跨仓判据 = **产品/运行面**（代码 import / 同步脚本 /
 > 共享模块）零跨仓；VSC 侧 T-CI-11 跨仓只读检验（读兄弟仓 `../thincoder` 源文件做序锚对照）= **交付期对照面**、
 > 登记豁免——**fail-closed**（兄弟仓缺失/异位 = 显式失败不 skip——跳过 = 序锚漂移检测静默失效）；同款 = VSC
-> `test/prompts-mirror-anchors.test.mjs`（同款兄弟仓读 + `THINCODER_CLI_ROOT` 覆盖 + fail-closed）。
+> `test/prompts-mirror-anchors.test.mjs（VSC 仓）`（同款兄弟仓读 + `THINCODER_CLI_ROOT` 覆盖 + fail-closed）。
 
 ### 13.4 明确不做
 

@@ -293,7 +293,7 @@ D1–D7 全表 / 锚#1–#7 / C1–C4 / T-RO 组 / A11 的 `batchDoc` 必传句�
 
 **提示词编辑面（EN 逐字 + 中文镜像对应改写）**：
 
-- `discipline-engineering.md:44`：`板块设计文档（docs/design/<TOPIC>.md——一板块一档、功能点不独立成文）` → `板块设计文档（一板块一档、功能点不独立成文——落点按项目文档约定；本产品自研仓 = docs/design/<TOPIC>.md）`
+- `src/prompts/discipline-engineering.md:44`：`板块设计文档（docs/design/<TOPIC>.md——一板块一档、功能点不独立成文）` → `板块设计文档（一板块一档、功能点不独立成文——落点按项目文档约定；本产品自研仓 = docs/design/<TOPIC>.md）`
 - `:59`：`（查 docs/README.md 总地图——已有则更新不新建）` → `（查项目文档地图——本产品自研仓 = docs/README.md；已有则更新不新建）`
 - `:73`：`（对应板块 docs/design/<TOPIC>.md）` → `（落点按项目文档约定；本产品自研仓 = 对应板块的 docs/design/<TOPIC>.md）`
 - `:171`/`:201`：`— parent-side maintained files (docs/TODO.md, CHANGELOG.md, checklist family) must not be listed;` → `— the project's own process files (requirement pool / changelog / checklist family — 本产品自研仓 = docs/TODO.md / CHANGELOG.md / checklist) must not be listed;`
@@ -302,13 +302,13 @@ D1–D7 全表 / 锚#1–#7 / C1–C4 / T-RO 组 / A11 的 `batchDoc` 必传句�
 - `:213–:214`（整句替换——**全删本仓指涉**、不用「本产品自研仓 =」标注形态）：
   旧句 `检查：node scripts/check-doc-width.mjs（扫 docs/design + docs/requirements + docs/batches 无 >300 单行；同时跑 V1 段引用 / V2 计数一致性校验——新增违规阻断、存量入基线报告）。判据权威源：docs/README.md 文档规范 §2.7。`
   → 新句 `检查：按项目自身的文档规范核验（通用判据：无 >300 字符单行、正常换行与分隔；项目另有声明时以项目为准）。`
-- `advisor-design.md:9`：`(per the document map in docs/README.md)` → `(per the project's document map, when the review context provides one)`
+- `src/prompts/advisor-design.md:9`：`(per the document map in docs/README.md)` → `(per the project's document map, when the review context provides one)`
 - `:10`：`Tier authority: the code-structure criteria section of the discipline-layer prompt discipline-normal.md (the former METHODOLOGY.md is retired).` → `Tier authority: the code-structure criteria stated in this bullet.`
 - `:18`：`(e.g. docs/design/AGENT-LOOP.md:180)` → `(e.g. path/to/file.md:42)`
 - `:24`：旧句 `Read the design document fully. Read the discipline-layer prompts (discipline-engineering.md / discipline-normal.md) and docs/README.md to understand the project's standards.`
   → 新句：`Read the design document fully. Judge against the Project Guide (when present in the review context) and the review criteria in this prompt — do not assume any particular project files.`
-- `persona-eng-designer.md:13`：写域句改 `Your write domain = the project's requirements/design documents（落点按项目文档约定；本产品自研仓 = docs/，扣除 docs/design/prompts/——提示词文件（含中文模板）是产品代码，不归你）。`
-- `persona-eng-designer.md:27`：`advance docs/TODO.md status when merging requirements` → **as-of 已失效**（旧串实施时已不存在——
+- `src/prompts/persona-eng-designer.md:13`：写域句改 `Your write domain = the project's requirements/design documents（落点按项目文档约定；本产品自研仓 = docs/，扣除 docs/design/prompts/——提示词文件（含中文模板）是产品代码，不归你）。`
+- `src/prompts/persona-eng-designer.md:27`：`advance docs/TODO.md status when merging requirements` → **as-of 已失效**（旧串实施时已不存在——
   该行先经「2026-09-11 归属修订」（POOL-LEDGER 批）改写为归主 agent 句）；**实际交付**（归属修订后现文）：
   `**todo 状态推进**（记录 + 状态推进 + 物理落笔）归 **主 agent**（2026-09-11 归属修订）——本角色只做需求档条文修订，不触碰项目台账档。`（`todo 状态推进` 子串保持）。
 
@@ -431,7 +431,7 @@ D1–D7 全表 / 锚#1–#7 / C1–C4 / T-RO 组 / A11 的 `batchDoc` 必传句�
 | AC-03 | T-06–T-08 + T-22 全绿（既有门禁锁保持 + 反证用例转绿方向 = 拒绝 + 未知路径保守拦截保持） | PO-10 · FR12 |
 | AC-04 | `conventions.json` 缺失/损坏不崩溃；声明后行为切换有测试 | PO-10 · FR10 |
 | AC-05 | 判据面退场（T-11/T-12 均整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | PO-1/2/3 · FR10/11 |
-| AC-06 | 六档编辑面内指令性引用 = 0（`docs/README.md` / `docs/design/<TOPIC>.md`——「本产品自研仓 =」示例标注形态除外）；`check-doc-width` 零指涉（全形态——P7 自指删除，脚本声明走本仓 `AGENTS.md`）；六档外同类（P11——`discipline-normal.md:13/:32`）归批次三（§9） | PO-4–7 · FR13 |
+| AC-06 | 六档编辑面内指令性引用 = 0（`docs/README.md` / `docs/design/<TOPIC>.md`——「本产品自研仓 =」示例标注形态除外）；`check-doc-width` 零指涉（全形态——P7 自指删除，脚本声明走本仓 `AGENTS.md`）；六档外同类（P11——`src/prompts/discipline-normal.md:13/:32`）归批次三（§9） | PO-4–7 · FR13 |
 | AC-07 | 既有提示词锚测试全绿（async-guidance + dual-source + batch-segment）；红线锚句逐一在位 | PO-4–7 · FR13 |
 | AC-08 | `/eng` 无前提下 ON 不崩（T-18）；OFF 语义零回归（T-19） | PO-11 · FR11 |
 | AC-09 | 非 git：T-13/T-14 全绿；评审无 git 降级句在场 | PO-8 · FR15 |
@@ -460,7 +460,7 @@ D1–D7 全表 / 锚#1–#7 / C1–C4 / T-RO 组 / A11 的 `batchDoc` 必传句�
 
 - **B/C 家族剩余**（P11–P13、P16–P28 与 🔵 项）——批次三（§1.4）；其中 `src/prompts/discipline-normal.md:13/:32`（+ CN 镜像同款）的 `docs/README.md` 地图引用属**已登记 P11**（`docs/TODO.md` 勘察表；六档编辑面外——不计入 AC-06 作用域）。
 - **VSC 端实现**——批次二登记。镜像清单（勘察实测）：`advisor/messages.mjs`（METHODOLOGY/地图注入 + 指令句）·
-  `agent/execute-tools.mjs:108` 判据 · `advisor/repos.mjs:151` · `index-discover.mjs` 扩展名 ·
+  `src/agent/execute-tools.mjs:108（VSC 仓）` 判据 · `advisor/repos.mjs:151` · `index-discover.mjs` 扩展名 ·
   `agent-tools/advisor.mjs:216-225` 校验 · 六档提示词对应位 · `advisor-round1.md` 的 Project Guide 锚（VSC 缺注入实现——真缺口，随镜像批评估）。
 - **FR10–FR15 正文搬迁归位**（`ENGINEERING-MODE.md` §2 → 需求档）——父侧裁决项。
 - **不触碰**：他链在途档（`docs/design/ENGINEERING-MODE.md` §2.26/§2.27、`docs/TODO.md` 自身、POOL-LEDGER 面）· 第 7–14 批已交付行为面 · `.thincoder/index` 死产物清理（另立项）· 检查点非 git 改造（已核实为明确报错）。
@@ -480,8 +480,8 @@ D1–D7 全表 / 锚#1–#7 / C1–C4 / T-RO 组 / A11 的 `batchDoc` 必传句�
 > 需求面 = `../requirements/PORTABILITY.md` §5。
 
 - **对位结论（三态）**：P1–P10 + P14 在 VSC 端逐条勘察——**需修 10 项**（P1/P2/P3/P4/P5/P6/P7/P9/P10 + P15 文案）·
-  **已对位 2 项**（P14 本体——VSC `eng` 无门禁、无对位物；P8 索引侧——VSC `indexer.mjs:231-246` 已有非 git walk 回退）·
-  **真缺口 1 项**（Project Guide 注入——`advisor-round1.md:7` 锚无实现）；逐条表见 VSC 档 §1.2。
+  **已对位 2 项**（P14 本体——VSC `eng` 无门禁、无对位物；P8 索引侧——VSC `src/indexer.mjs:231`（VSC 仓；至 246 行） 已有非 git walk 回退）·
+  **真缺口 1 项**（Project Guide 注入——`src/prompts/advisor-round1.md:7` 锚无实现）；逐条表见 VSC 档 §1.2。
 - **本批条目**：VP-1–VP-12（VSC 档 §1.3——三方一致锚：批次档 §2 = VSC 档 §1.3 = VSC 档 AC 回指）。
 - **双端镜像纪律执行**：各端独立实现、语义同源——本档（CLI）产物不回改 VSC 端、VSC 文本以 VSC 档定稿为准；
   评审消息文案选定同文（跨端语汇一致——VSC 档 §2 D6，非 byte-identical 同步依赖）。

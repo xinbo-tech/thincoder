@@ -204,7 +204,7 @@ last-write-wins 于内部状态；set 成功后 notify `config_option_update`/`c
 
 ## 8. 测试策略（第 27 批起：`test/acp-channel.test.mjs`）
 
-> 漂移修正（2026-09-11）：旧档 `test/acp.test.mjs` 已随 2026-09-07 存量测试清零批删除——断言面待重建。
+> 漂移修正（2026-09-11）：旧档 `test/acp.test.mjs`（已删——存量测试清零批，2026-09-07）——断言面待重建。
 > 本批重建桥层断言 = `test/acp-channel.test.mjs`（§12.7 用例表）；下表为场景名册（mock 客户端全链路
 > 为长期目标，按需回补）。
 
@@ -373,7 +373,7 @@ Notes 第 3 条（`- Returns the user's answer …`）之后插入一行：
 | 3 | `src/agent-tools/subagent-spawn.mjs` | 改（async 取号分支换 helper——修正轮补登） | 454 | +1 | >300 存量——零结构改动，不拆 |
 | 4 | `src/tui/subagent-blocks.mjs` | 改（文法迁出——净减） | 453 | −22 / +4 | >300 存量（SUBAGENT-TAIL 批已登记「拆分需独立批次」）——本批不拆，方向为净减 |
 | 5 | `src/tui/tool-events.mjs` | 改（import 换名） | 405 | ±2 | >300 存量——零结构改动，不拆 |
-| 6 | `src/acp/bridge.mjs` | 改（import + 显示面剥离） | 355 | +20 / −10 | >300——本批不拆（无新结构体）；拆分计划（登记）：再增厚则先迁 `:98-166` edit 桥族 → `src/acp/edit-bridge.mjs` |
+| 6 | `src/acp/bridge.mjs` | 改（import + 显示面剥离） | 355 | +20 / −10 | >300——本批不拆（无新结构体）；拆分计划（登记）：再增厚则先迁 `:98-166` edit 桥族 → `edit-bridge.mjs`（拟落 `src/acp/`） |
 | 7 | `src/acp.mjs` | 改（常量 + 传参） | 442 | +5 | >300——不拆（无结构增长）；拆分计划（登记）：handlers / M5 扩展 / 入口装配三段 |
 | 8 | `src/cli/make-agent.mjs` | 改（纯函数 + 参数） | 162 | +10 | ≤300 ✓ |
 | 9 | `src/tools/question.md` | 改（描述 +1 行） | 15 | +1 | 文档面 |

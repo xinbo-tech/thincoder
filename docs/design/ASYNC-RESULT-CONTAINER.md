@@ -17,7 +17,7 @@
 - **池 entry 已全带 role 标签**——统一高可行。
 
 ### D1 池 accessor 吸收双池
-- 新建 accessor（如 `src/agent-tools/async-pool.mjs` 或并入 async-settle）：`getAsyncPool(parent, role)`——role="advisor" 返 `_asyncAdvisors`，其他返 `_asyncSubagents`。
+- 新建 accessor（落点 = `src/agent-tools/async-settle.mjs`——设计期备选 `async-pool` 未采用）：`getAsyncPool(parent, role)`——role="advisor" 返 `_asyncAdvisors`，其他返 `_asyncSubagents`。
 - 消费端统一经 accessor（run-stages/suspension-drive/subagent-actions/subagent-scheduler/ops 等池访问点改 accessor）。
 - 底层保留双池（不动调度逻辑——advisor 无队列）。
 

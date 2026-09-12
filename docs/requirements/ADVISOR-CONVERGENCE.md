@@ -91,7 +91,7 @@
 | # | 维度 | 标准 | 度量方式 |
 |---|---|---|---|
 | N4 | 零语义漂移 | 既有逐字锚（锚#1–#7——含锚#3 修正轮 docs FIRST、锚#4 拍板≠批准）文本**零改动**；既有 prompts 锚测试不红 | 双端既有 prompts 锚测试套件（CLI + VSC）全绿；锚#1–#7 字面在 `src/prompts/discipline-engineering.md` 逐字在位 |
-| N5 | 双源双端一致 | 新文本**四面同文**：CLI / VSC ×（`src/prompts/` 落地产物 + `docs/design/prompts/` 中文权威）；`discipline-engineering` 与 `discipline-normal` 的 Action 词表不得两说 | 机判：同一字面串四面在位 + 跨仓逐字断言（`test/prompts-mirror-anchors.test.mjs`） |
+| N5 | 双源双端一致 | 新文本**四面同文**：CLI / VSC ×（`src/prompts/` 落地产物 + `docs/design/prompts/` 中文权威）；`discipline-engineering` 与 `discipline-normal` 的 Action 词表不得两说 | 机判：同一字面串四面在位 + 跨仓逐字断言（`test/prompts-mirror-anchors.test.mjs（VSC 仓）`） |
 | N6 | 可机判 | 每条验收标准可 grep / 断言级判定；计数词与列表同改（D3——“三值→四值”计数与枚举同步） | 本批用例 T-RO1–T-RO6（T-RO1–T-RO4 已退场——整删，删除记录 = `TESTING.md` §11.3）+ `node scripts/check-doc-width.mjs` 新增违规 0（双端） |
 
 ### 6.4 范围边界（不做）

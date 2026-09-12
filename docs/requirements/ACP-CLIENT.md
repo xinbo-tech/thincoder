@@ -14,7 +14,7 @@
 - 工具审批弹在 IDE 内（`request_permission`）；
 - 登录态/会话复用（一次终端登录、多表面可用）。
 
-**协议权威**：`agentclientprotocol/agent-client-protocol` 仓库 `schema/v1/schema.json`（稳定协议版本 **1**；方法名/事件类型以 schema 为准）；kimi-code `packages/acp-adapter/` 为参考实现（方法名与 schema v1 一致）。**注意**：`@agentclientprotocol/sdk@0.23.0` 是 SDK 包版本、不是协议版本；kimi 文档中的 "stable 10/12" 按其 SDK 表面统计——本设计以 schema v1 方法清单为准。
+**协议权威**：`agentclientprotocol/agent-client-protocol` 仓库的 `schema/v1` 下 `schema.json`（稳定协议版本 **1**；方法名/事件类型以 schema 为准）；kimi-code `packages/acp-adapter/` 为参考实现（方法名与 schema v1 一致）。**注意**：`@agentclientprotocol/sdk@0.23.0` 是 SDK 包版本、不是协议版本；kimi 文档中的 "stable 10/12" 按其 SDK 表面统计——本设计以 schema v1 方法清单为准。
 
 ---
 

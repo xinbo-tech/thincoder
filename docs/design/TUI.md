@@ -429,7 +429,7 @@ lines` + tail 3，点击展开 = 60% 封顶的实时视图（token 持续进入�
   渲染——无悬空线语义随区块存在边界迁移）。
 - **冻结头**：`[✓ explore#1 · sync · model · done 45s]`——✓/stopped 动词按状态（cancel 冻结 →
   stopped；interrupt 清场 → interrupted 标）；挂起期**已结算待消化中间态**（sub.done &&
-  awaitingDigest）驻留面板显示 `done · awaiting digestion`（T-S14），池空补发冻结后移除；折叠态头
+  awaitingDigest）驻留面板显示 `done · awaiting digestion`（T-S14——编号已退役：原 §17 记录已随档重写折叠），池空补发冻结后移除；折叠态头
   行 `▶ [✓ …] … subagent activity — click to expand`。
 - **嵌套子代理（SUBAGENT-TAIL——2026-09-11 批；R23 子块小节与更早的子标行方案均已退役）**：内层
   relay 前缀（eng-coder 内 explore）的活动行（工具行/输出/文本/思考）**并入外层块活动流**
@@ -469,7 +469,7 @@ lines` + tail 3，点击展开 = 60% 封顶的实时视图（token 持续进入�
   shiftFreezeAnchors 头裁补偿/降序 splice/freezeReclaimDigestedBlocks 逐条回收/
   panelFreezeGate 门控——全部保留（§17.5.5 有意决策；用户可见变化仅 F-1 少 8 行重复摘要与
   F-2 误冻消除——生产路径本走精确 key）。不引入块落盘恢复；协议零改。
-- 测试：`test/activity-debloat.test.mjs`（用例表 1:1——preview 删/精确 key 命中与无块/
+- 测试：`test/activity-debloat.test.mjs`（已退场——TEST-LIFECYCLE；删除记录 = `TESTING.md` §7.1）（用例表 1:1——preview 删/精确 key 命中与无块/
   现算正常与空态/降级路径/门控等价/驻留回收/锚点不回归）。
 
 #### 内层活动并入外层流（SUBAGENT-TAIL——2026-09-11 批，设计与测试并档）
@@ -564,7 +564,7 @@ N5（防刷屏与行额度）· N6（省略计数真值）。
 - **60% 封顶与展开窗口**：零动（既有组件）。
 - **VSC 对位面**：**无子块小节形态**（另有子标形态——VSC 嵌套活动有对位显示：chunk `sub` 行首 dim 子标，
   `thincoder-vscode/src/agent-tools/subagent-run.mjs` `runChild`·`forward`（子标挂载，as-of :26-37）、
-  `webview/ui.js` `appendAdvisorChunk`（`.advisor-sub` 行首 dim 子标，as-of :41-94））；**本批后两端不再同构**
+  `webview/ui.js（VSC 仓）` `appendAdvisorChunk`（`.advisor-sub` 行首 dim 子标，as-of :41-94））；**本批后两端不再同构**
   （CLI 内层行无归属标 vs VSC 保留子标）——端差异由 AGENT-LOOP 未决行承接（镜像评估待独立批次）；
   本批 CLI-only，VSC 不动。
 
@@ -1060,12 +1060,12 @@ function showPicker(title, entries, { defaultIndex = 0 } = {}) {
 |---|---|---|---|
 | `src/tui/cmd-advisor.mjs` | 256 | +0 ±1 | :89 补 `await`（C-B1-1） |
 | `src/tui/pickers.mjs` | 107 | +5 ±2 | `showPicker` 入口 Array.isArray 守卫（C-B1-2） |
-| `test/advisor-thinking-picker.test.mjs` | 0（新增） | +90 ± 30 | 用例表 1:1（T-B1-1~T-B1-3） |
+| `test/advisor-thinking-picker.test.mjs`（新增——已退场：TEST-LIFECYCLE） | 0（新增） | +90 ± 30 | 用例表 1:1（T-B1-1~T-B1-3） |
 
 > **§1 模块地图回写**：`cmd-advisor.mjs` / `pickers.mjs` 两行行数由**设计者在收口阶段回写**
 > （同 §12.7 口径：coder 交付时报告实测行数、不回写文档；写权 = 设计者、无例外）。
 
-### 13.6 测试层——用例表（新档 `test/advisor-thinking-picker.test.mjs`；直驱、零网络、零定时器）
+### 13.6 测试层——用例表（新档 `test/advisor-thinking-picker.test.mjs`——已退场：TEST-LIFECYCLE；直驱、零网络、零定时器）
 
 > 手法：脚本化 `showPicker` 驱真 `handleAdvisorCommand`（同 `provider-admission.test.mjs` 模式）+
 > 真 `createPickers` 最小 ctx（同 `model-ref.test.mjs` 的最小 state 模式）；快层直跑（<800ms）。
@@ -1294,12 +1294,12 @@ export function userNeededAtTurnEnd(state, agent, skipSession) {
 
 1. **VSC 端 attention 态**：现状盘点（as-of）——`thincoder-vscode/src/extension/chat-panel.mjs:152-177`（`_setStatus` 三态：
    idle / running / waiting）+ `:202-206`（`_refreshStatus`——权限 / question 队列非空 = waiting 优先）；
-   `permission-gate.mjs:28/58` 与 `panel-callbacks.mjs:67` 的 waiting 设置点；webview 侧状态行 = `webview/status-bar.js`
+   `src/extension/permission-gate.mjs:28`（VSC 仓；58 行同） 与 `src/extension/panel-callbacks.mjs:67`（VSC 仓） 的 waiting 设置点；webview 侧状态行 = `webview/status-bar.js（VSC 仓）`
    （`#status-line` 单 writer）。**已覆盖面**：审批 / 提问挂起已有 waiting 态（`statusBarItem.warningBackground`）——
    与 CLI blocked 类同义。**待建面**：回合结束等待输入（idle 态细分）+ 面板内 attention 态（webview 可见形态）。
 2. **VSC 所需档 + 完整修复路径（父侧排程输入）**：设计档 = `WEBVIEW（VSC 仓）`（§8.4 忙态收敛 / 状态栏——现状权威）
    新增 attention 语义节 + 变更记录；需求面登记 = `REQUIREMENTS（VSC 仓）`；实现面（改动预估）= `chat-panel.mjs`
-   （`_setStatus` / `_refreshStatus` 增态——回合结束注意力判据）、`webview/status-bar.js` + `webview/*.css`
+   （`_setStatus` / `_refreshStatus` 增态——回合结束注意力判据）、`webview/status-bar.js（VSC 仓）` + `webview/*.css`
    （面板 attention 渲染）、`locales/{en,zh}.json`（词键——VSC 端 i18n 硬项）、新测试档须注册 `test/files.mjs`（VSC 显式清单）。
 3. **跨端语义同源锚**：三触发态语义 / 消除语义（用户输入或提示消解）与本端一致——各端原文自持，不做 byte-identical。
 4. **`render-frame.mjs` 拆分的后续评估**：本节交付 ~409 行（>300 advisory 存量档）；若状态栏渲染继续增厚

@@ -13,7 +13,7 @@
 - **普通模式偏差审计**（第 23 批评估收口 2026-09-11——F-N1.1..6 条目迁入 `../requirements/NORMAL-MODE.md` §6；审计结论与收口落点见 §19——待批次批准实施；**原「执行/检查分离（扩展 F-N1.5）实施细节待批」不成立**：该细节已由 F-N1.5/F-N1.6 条款实落）。
 - **R23 VS Code 镜像批评估**（2026-09-11 前提更新：CLI 子块小节已随 SUBAGENT-TAIL 批退役——现行差异 =
   CLI 内层行无归属标 vs VS chunk.sub 行首子标——`thincoder-vscode/src/agent-tools/subagent-run.mjs`
-  `runChild`·`forward`（子标挂载，as-of :26-37）、`webview/ui.js` `appendAdvisorChunk`（`.advisor-sub`
+  `runChild`·`forward`（子标挂载，as-of :26-37）、`webview/ui.js（VSC 仓）` `appendAdvisorChunk`（`.advisor-sub`
   行首 dim 子标，as-of :41-94）；评估项 = 是否给 CLI 内层行加归属标 / 如何随镜像批对齐——待独立批次）。
 - **B3 观察点**（advisor 20 轮预算——B1/B2 生效后看实测轮数再议）。
 - **观测设施清理**：LOGGING 可观测项（调试完成后删除）——记 docs/TODO.md。
@@ -330,13 +330,13 @@ check 删除（§7.5）——工具面六动作 → 五动作 → 2026-09-08 obs
    > "Top-level spawns are ALWAYS async — never pass `async:false` at depth-0 (the report arrives automatically; if your next step needs it, end the turn and let the digest deliver it). Inside subagents (depth>0) spawns are always synchronous (platform rule)."
    （评审 #3：实现后 §7.5 锚句区为此文唯一权威——§7.7 保留指针引用不再逐字复述）
 2. **main.md:13**（双端）：删 "pass `async: false` only when the report is required before continuing" → "never pass `async:false` at top level — results reach you automatically; if your next step depends on the report, end the turn and let it arrive".
-3. **engineering.md:18**：同改（"Pass `async:false` only when you must handle the report synchronously before continuing" → 删——顶层一律 async）。
+3. **engineering.md:18**（已退役——2026-09-10 PROMPT-SYSTEM 施工①③）：同改（"Pass `async:false` only when you must handle the report synchronously before continuing" → 删——顶层一律 async）。
 4. **§7.3 L228 机制注**（评审 #7——措辞中性化）：L228 括注 "（逃逸口）" 改中性机制描述——"depth-0 参数合法；顶层行为受提示词约束——见 §7.7"——`async:false` 机制保留（子代理内部 depth>0 用）——不并置"逃逸口"与"不鼓励"混杂信号。
 5. **平台侧 subagent 工具描述**（不可改——平台注入）：仍含旧 async:false 引导——**上报平台侧同步**（项目仓改不了——锚句 fail-when-unchanged 测试需排除平台描述或记录偏差）。
 
 （评审 #5 编号序注：§7.7 编号超前 §7.6——本段插入于 §7.5 后（主题邻接——async 锚句）——重排编号会断既有引用——取保留现序 + 此注说明——§7.6 人格锚不受影响）
 
-**受影响文件**（评审 #2——测试文件点名 + 行数注）：AGENT-LOOP.md（锚句 :258 + §7.3 L228 注 + §7.7 新段 + 变更记录）；src/prompts/main.md（双端——CLI 仓 + VSC 仓 各一）；src/prompts/engineering.md（双端）；prompts 内容断言测试（双端——实现时 grep 定位含 async 锚句断言的测试文件——按实际点名补登——delta ≤±N）——行数实现时刷新。
+**受影响文件**（评审 #2——测试文件点名 + 行数注）：AGENT-LOOP.md（锚句 :258 + §7.3 L228 注 + §7.7 新段 + 变更记录）；src/prompts/main.md（双端——CLI 仓 + VSC 仓 各一）；src/prompts/engineering.md（双端——已退役：2026-09-10 PROMPT-SYSTEM 施工①③）；prompts 内容断言测试（双端——实现时 grep 定位含 async 锚句断言的测试文件——按实际点名补登——delta ≤±N）——行数实现时刷新。
 
 **验收**：
 - AC1（评审 #1——机械断言 1:1）：main.md/engineering.md（双端）删旧句逐字（"pass `async: false` only when the report is required before continuing" / "Pass `async:false` only when you must handle the report synchronously before continuing"）+ 新句存在断言（"never pass `async:false` at top level"）——fail-when-unchanged 双端内容断言同步
@@ -360,10 +360,10 @@ check 删除（§7.5）——工具面六动作 → 五动作 → 2026-09-08 obs
 **现状**：§14.2 :540 escalate "`async:false` 显式同步保留" 与新 §7.7 "顶层一律异步" 打架；
 - VSC main.md:28 escalate 段仍含 "pass `async:false` to wait for the report synchronously"
   （CLI main.md:28 已纯异步引导——**双端漂移**）；CLI/VSC engineering.md advisor 段无
-  async:false 引导（grep 核实——eng-coder 报告项 4 的 engineering.md:16 观察不实）。
+  async:false 引导（grep 核实——eng-coder 报告项 4 的 engineering.md:16 观察不实）——该档已退役（2026-09-10 PROMPT-SYSTEM 施工①③）。
 - **工具描述面（最大引导面——2026-09-08 用户质询发现）**：§7.7 item 5 假设"平台侧不可改"
   **错误**——Async spawn 段 description 在项目仓 src/agent-tools/subagent.mjs:70（CLI）/
-  subagent-spec.mjs:40（VSC）——模型每次调 subagent 看到的描述 = 此处字符串——仍含完整旧
+  src/agent-tools/subagent-spec.mjs:40（VSC）——模型每次调 subagent 看到的描述 = 此处字符串——仍含完整旧
   async:false 引导（"Pass async:false only when you must handle the report synchronously."+
   "use a synchronous spawn instead — pass `async:false`"）——§7.7 交付只改提示词未改此面
   = 主引导面漏改——本设计纳入。
@@ -379,7 +379,7 @@ check 删除（§7.5）——工具面六动作 → 五动作 → 2026-09-08 obs
    （item 5）适用——实现时复核一次（含 advisor*.mjs 描述 + main.md/engineering.md advisor 段）。
 4. **§7.2 escalate 行机制注**（评审 #4——与 §7.3 L228 同款中性注）：:208 escalate 行 "`async:false`
    同步" 保留为机制描述（参数平台合法——item 5）——加注 "（顶层行为受提示词/工具描述约束——见 §7.7.1）"。
-5. **工具描述 Async spawn 段**（CLI subagent.mjs:70 / VSC subagent-spec.mjs:40——§7.7 item 5 纠错）：
+5. **工具描述 Async spawn 段**（CLI subagent.mjs:70 / VSC src/agent-tools/subagent-spec.mjs:40（VSC 仓）——§7.7 item 5 纠错）：
    删 "Pass async:false only when you must handle the report synchronously" + "use a synchronous
    spawn instead — pass `async:false`" 引导——改 "顶层一律异步——报告自动到——depth>0 内同步"
    （对齐 §7.7 新锚句）。escalate 段描述同步去 async:false 句（若含）。
@@ -389,7 +389,7 @@ check 删除（§7.5）——工具面六动作 → 五动作 → 2026-09-08 obs
 **受影响文件**（评审 #2——注解 + 测试点名）：AGENT-LOOP.md（§14.2 + §7.2 escalate 行注 + §7.7.1 新段 + 变更记录）；
    VSC src/prompts/main.md、CLI src/prompts/main.md（核实）；CLI src/agent-tools/subagent.mjs（Async
    spawn 段描述——行数 >500 既有债不重论——描述串替换 = structure unchanged——delta ≤±N 实现时刷新）；
-   VSC src/agent-tools/subagent-spec.mjs（同）；prompts 内容断言测试（双端——实现时 grep 定位——
+   VSC src/agent-tools/subagent-spec.mjs（VSC 仓；同）；prompts 内容断言测试（双端——实现时 grep 定位——
    §7.7:276 排除平台描述的 carve-out **反转**——描述既在仓内可改——断言纳入——按实际点名补登——
    实测 test/ 对 async 锚句/描述零命中——本批新建 CLI test/prompts-async-guidance.test.mjs + VSC
    test/prompts-async-guidance.test.mjs（AC1-AC4 fail-when-unchanged 正向断言）。
@@ -399,8 +399,8 @@ check 删除（§7.5）——工具面六动作 → 五动作 → 2026-09-08 obs
 > 父侧 minor fix 已清（改一律异步——机制零触碰——只改提醒文案）+ main.md:8 上报经核为误报
 > （双端 L13/L28 已清——无残留）——commit 见 VSC 仓。2026-09-08 §7.7.1 实现交付（eng-coder——item
 > 1/4 落 §14.2 + §7.2 escalate 行注——见上）。实现核实纠正设计观察不实三处：CLI main.md:28 实含
-> 残留 / VSC engineering.md:16 advisor 段实含同步句 / advisor.mjs 描述实含同步句（CLI:44 + VSC:177）
-> ——已一并清（"有则一并清并上报"）。VSC discipline.md:69 escalate 行同款残留一并清（报告项）。
+> 残留 / VSC engineering.md:16 advisor 段实含同步句 / advisor.mjs 描述实含同步句（CLI:44 + VSC:177——engineering.md 已退役：2026-09-10 PROMPT-SYSTEM 施工①③）
+> ——已一并清（"有则一并清并上报"）。VSC discipline.md:69 escalate 行同款残留一并清（报告项；该档已退役——2026-09-10 PROMPT-SYSTEM 施工①③）。
 > run-stages.mjs:112 提醒串父侧已清（2026-09-08 收尾 commit）。main.md:8 上报经核为误报（双端无残留）。
 > 待父侧核销（L2/consume——已完成 ed4fc5c/1a89da8 + L2 双端 118/111 绿）。
 
@@ -532,7 +532,7 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
 
 **变更记录**：2026-09-02 挂起回合 V2（用户裁定 AUTO 推进型）+ 偏差修复轮；2026-09-03 硬化轮（settle 完成队列 + 消化逐条回收）+ Ctrl+C 武装化 + sync spawn 精确冻结；
 2026-09-06 pendingInput 排队用户指令合并（§11.3）；2026-09-09 INPUT-LOCK-ASYNC（C'——busy 含 digest 输入禁用——提交吞 + 白名单直执行——R15 攒批/queue 排队废弃——pendingInput 单槽——§11.3 全文废弃记录——专题 INPUT-LOCK-ASYNC.md）；
-2026-09-09 busy 行为修订（INPUT-LOCK-BEHAVIOR-REVISED——评审通过——输入不禁只禁提交——斜杠白名单删——忙时同吞——退出靠 Ctrl+C——双端实现——专题档见 docs/design/INPUT-LOCK-BEHAVIOR-REVISED.md）。
+2026-09-09 busy 行为修订（INPUT-LOCK-BEHAVIOR-REVISED——评审通过——输入不禁只禁提交——斜杠白名单删——忙时同吞——退出靠 Ctrl+C——双端实现——专题档见 docs/design/INPUT-LOCK-BEHAVIOR-REVISED.md——已归档（DOC-REORG 批））。
 
 > 〔eng-designer 折行 2026-09-11 13:10：单行 444 字符 → 纯折行（批 14 候选 2；文字零增删、语义不变）〕
 
@@ -630,7 +630,7 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
   2026-09-09 并发池统一可配置（POOL-CONFIG-UNIFIED——三键 4/4/4 + advisor 读取器 + 同 scope
   守卫 + 文案去数字化——§11.1/§11.2 更新）；2026-09-09 R15 整批废弃（INPUT-LOCK-ASYNC——busy
  禁排队——§11.3 改废弃记录——CLI/VSC 双端实现）。
- 2026-09-09 busy 行为修订（INPUT-LOCK-BEHAVIOR-REVISED——评审通过——输入不禁只禁提交——斜杠白名单删——双端实现——见 docs/design/INPUT-LOCK-BEHAVIOR-REVISED.md）。
+ 2026-09-09 busy 行为修订（INPUT-LOCK-BEHAVIOR-REVISED——评审通过——输入不禁只禁提交——斜杠白名单删——双端实现——见 docs/design/INPUT-LOCK-BEHAVIOR-REVISED.md——已归档（DOC-REORG 批））。
 
 ## 12. 评审收敛 + 铁律 + 文档纪律
 
@@ -789,10 +789,10 @@ reasoning 全文」表述按此限缩（**字段集不变**——F-O4）；写�
 - **①** CLI `src/agent-tools/subagent-actions.mjs:98` `:109` `:145`（双池合并——单查 fall-through + 概览并表）；
   VSC `src/agent-tools/subagent-actions.mjs:89-120`（只 `getAsyncPool(ctx.agent, \"subagent\")`）。
 - **②** 两端同形：判据读**子代理池**里的 role===\"advisor\" 条目——CLI `src/tools/ops.mjs:223-227`、
-  VSC `src/tools/wait_for.mjs:125-129`（均经 `hasRunningAsync` → `asyncPool` = `_asyncSubagents`）；
+  VSC `src/tools/wait_for.mjs:125`（VSC 仓；至 129 行）（均经 `hasRunningAsync` → `asyncPool` = `_asyncSubagents`）；
   而评审条目在 `_asyncAdvisors`（§11.2）——该池里永无 role=\"advisor\" 条目 → `!hasRunning` 恒 true → **0ms 秒过**。
 - **③** CLI：`src/agent-tools/advisor-async.mjs:247` `cancelAsyncAdvisor` + `src/agent-tools/subagent-async.mjs:249-250`
-  （id 不在子代理池 → 落 advisor 池）+ TUI `src/tui/mouse.mjs:207`；VSC：`src/extension/panel-messages.mjs:238-241`
+  （id 不在子代理池 → 落 advisor 池）+ TUI `src/tui/mouse.mjs:207`；VSC：`src/extension/panel-messages.mjs:238`（VSC 仓；至 241 行）
   （面板 ⏹ 路由已有）+ `src/agent-tools/advisor-async.mjs:414` `cancelAdvisorReview`，但 `subagent cancel`
   工具动作无 advisor 落点（`src/agent-tools/subagent-actions.mjs:211-216` 只查子代理池）→ **模型无法取消**。
 - **④** CLI `src/agent-tools/subagent-actions.mjs:235-236`（observe 遇 advisor id → 明确指引）；VSC 无此分支 → 回含糊 \"unknown async subagent id\"。
@@ -862,10 +862,10 @@ A 的缺陷面在 **webview 块身份/投递链**。共性是"第二池接入面
 |---|---|---|---|
 | `src/agent-tools/subagent-actions.mjs` | 337 | +55 | ① 双池合并（单查 fall-through + 概览并表 + 评审专属字段）；③ cancel advisor 落点；④ observe/send 指引 |
 | `src/agent-tools/subagent.mjs` | 380 | +4 | ⑤ 工具描述同步 |
-| `src/tools/wait_for.mjs` | 195 | +10 | ② 判据改读评审池（复用 `advisorReviewInFlight`——双载体已具备） |
+| `src/tools/wait_for.mjs`（VSC 仓） | 195 | +10 | ② 判据改读评审池（复用 `advisorReviewInFlight`——双载体已具备） |
 | `test/subagent-observe-send.test.mjs` | 167 | +45 | ①③④ 用例（VSC 现状盲区） |
 | `test/wait-for-advisor-pool.test.mjs`（新） | 0 | +60 | ② 用例（双端同构） |
-| `test/files.mjs` | 49 | +1 | 新测试文件登记（接线硬项） |
+| `test/files.mjs`（VSC 仓） | 49 | +1 | 新测试文件登记（接线硬项） |
 | `docs/design/AGENT-LOOP.md`（VSC） | 506 | +14 | §9 mirror 注（本批三面 + 命名差异登记 D-B3） |
 | 合计（双端） | — | ~+440（代码面 ~+90） | 14 项 = 12 改 + 2 增（CLI 7 + VSC 7） |
 
@@ -895,7 +895,7 @@ A 的缺陷面在 **webview 块身份/投递链**。共性是"第二池接入面
 ### 18.8 边界与冲突点核对
 
 - **本批不做**：池容量/scope 守卫/评审排队语义（§11.2 原样）；评审收敛机制（`ADVISOR-CONVERGENCE.md` 第 9 批链在飞——
-  **D5 冻结/零碰**）；面板 live 块的出生链（属条目 A——VSC 仓 `docs/design/WEBVIEW.md` §5.1）；admitted 新条件字面。
+  **D5 冻结/零碰**）；面板 live 块的出生链（属条目 A——VSC 仓 `docs/design/WEBVIEW.md（VSC 仓）` §5.1）；admitted 新条件字面。
 - **冲突点核对**：① 与 §7.2 七动作面——零新增动作（并入 status/cancel）✓；② 与 §11.2——只补接入面，不动池语义 ✓；
   ③ 与 `REMOVE-POOL-SNAPSHOT`——零关系（评审池从不参与池快照，撤除面是 queued 行）✓；
   ④ 与第 9 批 `ADVISOR-CONVERGENCE.md`——只在"取消"上共用机制（本批不碰该档，实施时如发现需改该档 → **停下报告**）。
@@ -974,7 +974,7 @@ A 的缺陷面在 **webview 块身份/投递链**。共性是"第二池接入面
 2. **提示词指针修复（CLI 两档——删除「§21 」前缀；内容权 = 主 agent）**：
    `src/prompts/discipline-normal.md:125`（`（§21 F-N1.5 2026-09-05 ruling）` → `（F-N1.5 2026-09-05 ruling）`）、
    同档 `:133`（F-N1.6 同款）；`docs/design/prompts/discipline-normal.md:128` / `:136`（中文「裁定」同款）。
-3. **断言锁**：`test/prompts-normal-audit.test.mjs`（新增——用例表 §19.8）。
+3. **断言锁**：`test/prompts-normal-audit.test.mjs`（新增——用例表 §19.8；**已并入 `test/prompts-dual-source.test.mjs`**——2026-09-11 TEST-LIFECYCLE；删除记录 = `TESTING.md` §7.2）。
 4. **状态行收口**：「未决 / 待办状态行」条目「普通模式偏差审计范围」改述为收口条目（指向需求档 §6 + 本节）。
 5. **D2 退役记录（§7.6 行 433 替换——逐字；落文允许追加指针句）**：
 
@@ -1084,7 +1084,7 @@ digest 原样注入 `entry.error`（`subagent-async.mjs:372-400`）——**用�
 - **CLI 请求链零绝对墙钟残留**：2026-09-01 已废除（`src/provider/core.mjs:70-71` 注——signal 只载用户 / 取消链）。
   实测（undici 7.29.0）：裸 abort 产生的文案 = `"This operation was aborted"`（**非** "aborted due to timeout"）——
   **CLI 请求链已不能产生用户实证的文案**。
-- **现存活墙钟边界 = 有意设计面**（裁定与标注见 §20.3 第 4 条）：proxy 响应头 600s（`core.mjs:420` → `proxy.mjs:86`
+- **现存活墙钟边界 = 有意设计面**（裁定与标注见 §20.3 第 4 条）：proxy 响应头 600s（`src/provider/core.mjs:420` → `proxy.mjs:86`
   "Response timeout"）· SSE 读侧 idle 120s（`sse.mjs:176-179`）· proxy body idle 120s（`proxy.mjs:104`）·
   consult watchdog 600s（`consult.mjs:35` 与 `:206-212`）· advisor 评审预算（`advisor/loop.mjs:141-143`——已自带
   「Advisor: review timeout」文案）。
@@ -1176,7 +1176,7 @@ digest 原样注入 `entry.error`（`subagent-async.mjs:372-400`）——**用�
 
 **合成点（settle 族报告面——5 档；行号 as-of 交付后实测）**：`subagent-run.mjs:162` · `advisor-async.mjs:303` ·
 `escalate-async.mjs:258` · `consult.mjs:334` 与 `:343` · `subagent.mjs:346`（sync 错误日志）。`logEvent("child:error", …)` 经 `entry.error`
-自动携带（零改动）；`llm:error` 事件面（`core.mjs:107`）的 `err` 字段同合成器（P1）。
+自动携带（零改动）；`llm:error` 事件面（`src/provider/core.mjs:107`）的 `err` 字段同合成器（P1）。
 
 **第 4 条 站点总表（12 行——产生 9 / 传播 1 / 取消停止 1 / 定时器 1）**
 
@@ -1206,7 +1206,7 @@ provider / agent / settle 产生或补标错误（`abortInfo`，第 4 条 #1–#
 
 ### 20.4 残留 600s 面裁定（Q3——勘察结论与证据）
 
-1. **CLI 请求链无可切除对象**：绝对墙钟已于 2026-09-01 废除（`core.mjs:70-71`）；实测文案亦不符（F-AP5 第 1 条）；
+1. **CLI 请求链无可切除对象**：绝对墙钟已于 2026-09-01 废除（`src/provider/core.mjs:70`——71 行同段）；实测文案亦不符（F-AP5 第 1 条）；
 2. **有意边界保留**（proxy 头 600s / 读侧 idle 120s / proxy body idle 120s / consult watchdog 600s / advisor 评审墙）——
    本批使其死亡自带 `timeout` 标注（§20.3 第 4 条 #12），不再"静默"；
 3. **VSC 镜像 600s 绝对墙钟**（用户实证文案的唯一在网生产点）——双端纪律下**登记 + 父侧排程**（§20.10），本批零碰。
@@ -1337,7 +1337,7 @@ provider / agent / settle 产生或补标错误（`abortInfo`，第 4 条 #1–#
   `src/tui/tool-events.mjs:380-401`）——调用点 `src/agent/completion.mjs:42/65/83/96/111/139`（六处 continue 路径）、
   `src/agent/post-turn.mjs:69`（每个工具轮）、`src/agent.mjs:387`（工具期中断）——**不含** run 正常完成路径。
   run 终止的唯一收口点 = `finally` → `await finalizeAgentTurn(...)`（`src/agent.mjs:409` → `src/agent/run-stages.mjs:121`）。
-- **死事件**：`Notification` 声明于 `src/hooks.mjs:11`，**零调用点**。存活面清点（全仓 findstr）：代码注释 1 处 ·
+- **死事件（已删——2026-09-11 清理）**：`Notification` 原声明于 `src/hooks.mjs:11`，**零调用点**；现已清退（全仓零命中）。存活面清点（as-of 当时）：代码注释 1 处 ·
   `docs/design/_archive/ROADMAP-0.9.0.md`（归档）· `README.md:306`（0.9.0 历史变更史）；存活文档 `docs/design/TOOLS.md:38`
   未列该事件；配置无校验（hooks 按事件名动态读取——`src/hooks.mjs:28`）。
 - **文档面**：hooks 事件列表的存活处 = `docs/design/TOOLS.md:38`（三事件 + `~/.thincoder/hooks/` 路径误述——

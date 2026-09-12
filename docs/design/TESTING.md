@@ -149,7 +149,7 @@
 |---|---|---|
 | 目录 | `test/integration/` | `test/integration/` |
 | 文件命名 | `<场景名>.test.mjs` | 同 |
-| 目标集合 | glob `test/integration/*.test.mjs`（单层——沿本仓 runner 惯例） | 显式清单 `test/integration/files.mjs`（沿本端"登记即跑"惯例） |
+| 目标集合 | glob `test/integration/*.test.mjs`（单层——沿本仓 runner 惯例） | 显式清单 `test/integration/files.mjs（VSC 仓）`（沿本端"登记即跑"惯例） |
 | 入口 | `test/run-integration.mjs`（npm script `test:integration`——启动器形态沿 `run-full.mjs`） | 同款 |
 | env 门 | 无（执行面 = 入口本身）；集成档**不得**用 `slow()`（无快层执行面） | 同 |
 | 发布门接线 | `scripts/release-check.mjs` 步骤 +1（lint → test:full → test:integration；失败详情提取沿现有形态） | `vscode:prepublish` = `npm run lint && npm run test:full && npm run test:integration` |
@@ -275,23 +275,23 @@
 
 | # | 档 | 行数 as-of | 处置 |
 |---|---|---|---|
-| 1 | `test/activity-debloat.test.mjs` | 202 | 退（删除） |
-| 2 | `test/advisor-description.test.mjs` | 19 | 退 |
-| 3 | `test/advisor-thinking-picker.test.mjs` | 114 | 退 |
-| 4 | `test/deepseek-v41-specs.test.mjs` | 86 | 退 |
-| 5 | `test/distill.test.mjs` | 88 | 退 |
-| 6 | `test/mouse-sane-gate.test.mjs` | 82 | 退 |
-| 7 | `test/tool-args.test.mjs` | 22 | 退 |
-| 8 | `test/websearch-config.test.mjs` | 110 | 退 |
+| 1 | `test/activity-debloat.test.mjs` | 202 | 退（已删） |
+| 2 | `test/advisor-description.test.mjs` | 19 | 退（已删） |
+| 3 | `test/advisor-thinking-picker.test.mjs` | 114 | 退（已删） |
+| 4 | `test/deepseek-v41-specs.test.mjs` | 86 | 退（已删） |
+| 5 | `test/distill.test.mjs` | 88 | 退（已删） |
+| 6 | `test/mouse-sane-gate.test.mjs` | 82 | 退（已删） |
+| 7 | `test/tool-args.test.mjs` | 22 | 退（已删） |
+| 8 | `test/websearch-config.test.mjs` | 110 | 退（已删） |
 
 ### 7.2 合并（C 类——4 组）
 
 | # | 源档 | 目标档 | 处置 |
 |---|---|---|---|
-| 1 | `test/config.test.mjs`（45） | `test/config-merge.test.mjs`（176） | 断言并入 → 删源 |
-| 2 | `test/prompts-normal-audit.test.mjs`（72） | `test/prompts-dual-source.test.mjs`（333） | 同上 |
-| 3 | `test/subagent-id-counter.test.mjs`（49） | `test/subagent-scheduler.test.mjs`（135） | 同上 |
-| 4 | VSC `test/settings-panel.test.mjs`（86） | VSC `test/config-pool.test.mjs`（121） | **呈请裁定**（见 §10）——接受则同法，不接受则原地保留 |
+| 1 | `test/config.test.mjs`（45） | `test/config-merge.test.mjs`（176） | 断言并入 → 源已删 |
+| 2 | `test/prompts-normal-audit.test.mjs`（72） | `test/prompts-dual-source.test.mjs`（333） | 同上（源已删） |
+| 3 | `test/subagent-id-counter.test.mjs`（49） | `test/subagent-scheduler.test.mjs`（135） | 同上（源已删） |
+| 4 | VSC `test/settings-panel.test.mjs`（86） | VSC `test/config-pool.test.mjs`（121） | **呈请裁定 → 已接受**（见 §10）：已并入 |
 
 ### 7.3 削段（约 20 个切点——三类）
 
@@ -309,7 +309,7 @@
 
 | # | 档 | 行数 as-of | 处置 |
 |---|---|---|---|
-| 1 | `test/integration-provider.mjs` | 157 | **退（删除）**——域外事件残迹（MODEL-MERGE 会话语境；唯一在册提及 = `docs/design/_archive/MODEL-MERGE-SESSION.md`）：零执行面（快/全目标 glob `test/*.test.mjs` 名式不匹配——集成集执行面同理）+ 零活引用（`*.mjs` grep 零命中）；入删除清单制（差额核销） |
+| 1 | `test/integration-provider.mjs` | 157 | **退（已删）**——域外事件残迹（MODEL-MERGE 会话语境；唯一在册提及 = `docs/design/_archive/MODEL-MERGE-SESSION.md`）：零执行面（快/全目标 glob `test/*.test.mjs` 名式不匹配——集成集执行面同理）+ 零活引用（`*.mjs` grep 零命中）；入删除清单制（差额核销） |
 
 - 退因补充：内容 = 会话产物（模块直测与自指用例混排——"直接测 JSON parse"、档内局部 switchTo mock）；退役同时消除与新建 `test/integration/` 域的命名相邻混淆。
 - 覆盖附注：`normalizeUsageCache` 直测为该档独有（`src/provider/sse.mjs` 为活代码）——退役后无直测；如需恢复该覆盖，走 §3.4 演进入口（业务设立），不随本批改写。
@@ -379,7 +379,7 @@
 |---|---|---|
 | 1 | L0/L1/L2 分层（§1） | **兼容（两轴）**：分层 = 一次改动的开发期验证纪律（何时跑什么）；集成集 = 验收/发布面。集成档不进任何一层。发布门 = lint + test:full + 集成（验收依据 = ②③——full 保留为兜底网；**不删 full**——①退役渐进期 + ②③ 覆盖尚浅；窄化属后续裁定） |
 | 2 | slow 归册（§1.2） | 兼容：slow 门只管快层防漏；集成档不在快层、**不得用 `slow()`**（其执行面 = 入口自身——不靠 skip 机制） |
-| 3 | 清单制（VSC `files.mjs`） | 兼容：单元清单零含集成档；集成清单独立（`test/integration/files.mjs`——"登记即跑"同性质）；CLI 无登记制（沿 glob 惯例） |
+| 3 | 清单制（VSC `files.mjs`） | 兼容：单元清单零含集成档；集成清单独立（`test/integration/files.mjs（VSC 仓）`——"登记即跑"同性质）；CLI 无登记制（沿 glob 惯例） |
 | 4 | 「代码变更至少要有一个测试」（双端提示词——CLI `src/prompts/discipline-normal.md:82` "Code changes need at least one test."） | **写作义务不变，留存策略新规**：写（每条需求用例映射 + 开发期自证）→ 用 → 收口处置（退/转）。verify 工具层"不强制每改动带测试"零变。附注：与 §2「按需加」库存政策为不同轴——同步轮一并核对表述 |
 | 5 | 「不用目录分层」注（§1.2/§2） | 辨析：该注针对**快/慢**（同一断言两执行面——防漂移）；集成子目录 = **寿命分界**（不同断言集）——机理不同（§4.1） |
 | 6 | D2 单一权威源 | 本机制详述只在 TESTING 两档；ENGINEERING-MODE/提示词只加槽位名（同步面清单 §3.3） |
@@ -399,7 +399,7 @@
 
 **边界（不做）**：真付费端点进层 · PTY 级全 TUI 驱动（⑤ 模块级起步） · VSC commit 镜像缺口修复（技术待办在案） · slow 门/分层机制改动（零改） · 集成集一次性写满（最小起步） · 存量 helper 清理（不顺手清）。
 
-**呈请裁定项**：VSC `settings-panel` → `config-pool` 合并——extension 面断言并入纯单元档（happy-dom env 沿 `helpers/webview-env.mjs` 同款）。设计建议：**接受**（同板块凝聚 + 减碎片；分节标注"面板显示面"）；备选：不接受（原地保留，差额表调整）。
+**呈请裁定项**：VSC `settings-panel` → `config-pool` 合并——extension 面断言并入纯单元档（happy-dom env 沿 `test/helpers/webview-env.mjs`（VSC 仓） 同款）。设计建议：**接受**（同板块凝聚 + 减碎片；分节标注"面板显示面"）；备选：不接受（原地保留，差额表调整）。
 
 ## 变更记录
 
@@ -429,7 +429,7 @@
 | C2 | 非测试档边界 | `等` 展开 = 一切非 `test/**` 的仓内文件：`src/**` · `docs/**` · `scripts/**` · `bin/**` · `webview/**` · `locales/**`（资源文本保留——C1-d） · `package.json` · 仓根 `*.md` / `*.json` / `*.mjs` · `AGENTS.md` · `README*`；VSC 侧另含兄弟仓 `../thincoder/**` |
 | C3 | 保留面 = 封闭枚举 | **F17 封闭枚举**所判属性（V1/V2/V3 · L1–L3 · 行宽 · 归册 · **工具契约面**——工具契约面判定见 C1-b）。对非测试档文本的**出现次数 / 相对顺序 / 位置**断言**不属**该枚举 → 按散文锚处置 |
 | C4 | 存在性断言保留 | `existsSync` 类文件存在性断言不属「文本在场 / 缺席」→ 判据 ② 不成立 → 保留（如 T75 退役提示词文件未复活） |
-| C5 | 测试档自身保留 | 断言读的是 `test/**`（含 `test/files.mjs` 登记清单、`test/helpers/**`、fixtures、测试内常量）→ 判据 ① 不成立 → 保留 |
+| C5 | 测试档自身保留 | 断言读的是 `test/**`（含 `test/files.mjs（VSC 仓）` 登记清单、`test/helpers/**`、fixtures、测试内常量）→ 判据 ① 不成立 → 保留 |
 
 **归类三值**：`整删`（该用例全部断言均为散文锚——删后无内容残留）/ `段删`（夹锚断言——只删锚断言行，行为断言保留）/ `保留`（无锚断言；**不进清单**）。
 
@@ -463,7 +463,7 @@
 | 档 | 用例行 | 用例名（截断） | 归类 | 删除行号 | 依据 |
 |---|---|---|---|---|---|
 | abort-provenance | 167 | T-AP9 合成点残留扫描：五处全经 deathLine | 整删 | 167-175 | 读 src 源码文本 + 计数 |
-| abort-provenance | 177 | T-AP10 hop 扫描：五处逐跳保 reason + 零裸 abort | 整删 | 177-189 | 读 src 源码 match / includes |
+| abort-provenance | 177 | T-AP10 hop 扫描：五处逐跳保 reason + 零裸 abort | 已删（整删） | 177-189 | 读 src 源码 match / includes |
 | acp-channel | 261 | AC2 question.md 含「无交互面返回错误」句 | 整删 | 261-263 | 读 `src/tools/question.md` 子串 |
 | acp-channel | 240 | T17 文法单一权威（三符号 + 消费方直连） | 段删 | 244-246 | 三行 src 文本 match / includes |
 | acp-channel | 255 | AC1 装配接线锁（acp.mjs / make-agent） | 段删 | 257-258 | 两行 src 文本 match |
@@ -574,7 +574,7 @@
 > 本档不再重述（D2 单一权威源）；两侧语义同源、各端原文自持（不做 byte-identical）。判据 / 口径裁定 / 归类三值 = 本档 §11.1（两侧共用）。
 
 - **VSC 小计：27 档 · 整删 61 条 · 段删 40 条**（= 101 条处置行）——逐条见 `TESTING（VSC 仓）` §8.1。
-- 本端**无整档删除**（每档均有保留用例）→ `test/files.mjs` 登记清单**零改**（63 条登记项 = 62 档 `.test.mjs` + 1 档 `smoke-settings.mjs`，与实档数不变）。
+- 本端**无整档删除**（每档均有保留用例）→ `test/files.mjs（VSC 仓）` 登记清单**零改**（63 条登记项 = 62 档 `.test.mjs` + 1 档 `smoke-settings.mjs`，与实档数不变）。
 - **需求面（2026-09-12 修正轮二）**：VSC 侧需求自持于 `docs/requirements/TESTING.md`（VSC 仓）（F15–F22 / N10–N12——语义同源、各端原文自持）；本档 §11 判据为双端共享语义源（登记见 `TESTING（VSC 仓）` §8 头注）。
 - **粗筛 → 逐条判定的差额**：VSC 侧记录 §1「事实基线」的粗筛口径 = 「读档 + `includes`/`match` ≥3 的档 → 该档**全部**用例」= 28 档 / ≈330 用例 ≈ 本仓 suite 50%。
   逐条判定后（含 2026-09-12 修正轮）= **61 整删 + 40 段删**（101 条处置行）——差额原因同 CLI 侧（粗筛把断言对象为运行产物的用例一并计入）。

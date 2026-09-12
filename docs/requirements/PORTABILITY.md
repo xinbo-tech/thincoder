@@ -59,7 +59,7 @@
   ① 评审注入（Project Guide / 文档地图 / 标准文档）缺失时降级可见；② 代码/文档判据单一权威 + 声明可诉
   （`.thincoder/conventions.json` 与 CLI 同文件同 schema）；③ 索引扩展名可声明、未列入可见；④ 提示词面无本仓指涉。
 - **已对位项（差异登记）**：P14 本体（VSC `eng` 无 METHODOLOGY 门禁——无对位物）；P8 索引侧
-  （VSC `indexer.mjs:231-246` 已有非 git walk 回退）。
+  （VSC `src/indexer.mjs:231`（VSC 仓；至 246 行） 已有非 git walk 回退）。
 - **镜像纪律**：各端独立实现、语义同源——不做 byte-identical、禁以任一端产物回改另一端。
 - **条目**：VP-1–VP-12（VSC 档 §1.3——三方一致锚）。
 

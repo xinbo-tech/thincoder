@@ -84,7 +84,7 @@
 ### #3 `_` 状态字段摊平面对象 + 手写生命周期（🟠 中高）
 
 **现象**：createAgent 一次性初始化 ~30 `_` 字段 + 运行期动态 ~30，无 schema/封装，摊 ≥18 文件读写。
-- reset（session.mjs:424-446 逐字段清）/继承（agent.mjs:134 for-8 键手抄）靠手写清单
+- reset（`src/session.mjs:424-446` 逐字段清）/继承（agent.mjs:134 for-8 键手抄）靠手写清单
 - 新增/漏删字段即状态泄漏
 
 **方向**：归组为 run-scoped / session-scoped / guard 三 capsule，reset/继承收进 capsule 方法。
@@ -106,7 +106,7 @@
 
 ### #7 async settle 逻辑重复（🟡 中低）
 
-**现象**：settle→pending+waiter 唤醒+`_asyncSettleSeq` 同构逻辑 4 文件重复（subagent-run:181/advisor-async:480/escalate-async:271/consult:140）；kill-tree ×3；abort 双保险（system.mjs:150-182）。
+**现象**：settle→pending+waiter 唤醒+`_asyncSettleSeq` 同构逻辑 4 文件重复（subagent-run:181/advisor-async:480/escalate-async:271/consult:140）；kill-tree ×3；abort 双保险（`src/tools/bash.mjs:136`——原 `system.mjs:150-182`，档已拆：2026-09-08 工具面拆分）。
 **方向**：抽共享 settle 收尾 helper。
 
 ### #8 跨仓复制漂移（🟠 中 · 架构伞项）
@@ -142,7 +142,7 @@ advisory 400-500 带（均 <500 不触发硬限，记录观察）：
 
 > **执行核销（2026-09-08）**：A1-A8（CLI）+ V1-V5（VSC）**已全部执行完毕**——CLI 经 DOC-REWRITE/DOC-REWRITE-LARGE eng-coder 批 + VSC 经 DOC-REWRITE-VSC + DOC-REORG-VSC 第 1-8 批（含 96KB ARCHITECTURE 拆薄枢纽 + 11 机制档）。下表为**原规划**（历史）。
 > **净剩余核销（批 2 DOC-CLEANUP-BATCH——2026-09-08 执行完毕）**：VERIFY-DOCONLY.md 并入 VERIFY-REDESIGN.md 变更记录后归档 `_archive/`（README 地图/SETTINGS-TOOL 先例同步清）；docs/guides/ides.md 与 VSC docs/CAPABILITY_GAP.md demux 干净格式（含 memory 旧裸工具名/过期路径修正）；
-> `>300` 长单行双端清零（CLI 6 档 15 行 + VSC 2 档 2 行——:269 恰 300 不超）；docs/TODO.md 两长行折行；TOOLS.md:4 悬空指针改 EDIT-HELPERS.md；AGENT-LOOP.md:94 旧名清扫 + §12.2 补 R7f 豁免注；VSC 根 METHODOLOGY.md:5 悬空修正。
+> `>300` 长单行双端清零（CLI 6 档 15 行 + VSC 2 档 2 行——:269 恰 300 不超）；docs/TODO.md 两长行折行；TOOLS.md:4 悬空指针改 EDIT-HELPERS.md；AGENT-LOOP.md:94 旧名清扫 + §12.2 补 R7f 豁免注；VSC 根 METHODOLOGY.md:5 悬空修正（该档已退役——PROMPT-SYSTEM 施工① VSC 镜像批）。
 
 **目标**：双端全部坏格式设计文档重写为**人类可读** markdown（领导审核级）。方法 = TOOLS.md 样板（用户裁定"统一"）：**保留当前机制正文，历史变更流水账折叠/精简**。
 
@@ -172,7 +172,7 @@ advisory 400-500 带（均 <500 不触发硬限，记录观察）：
 | V1 | README.md、ARCHITECTURE.md（**整文件 1 行 96KB 最极端**）、RELEASE.md、REQUIREMENTS.md | 大件/极端 |
 | V2 | PHILOSOPHY.md、PROJECT-SWITCHER.md、TURN-CAP-CONTINUE.md、SETTINGS.md | 权威/专题 |
 | V3 | 已完成专题对（AGENT-PARAMS/COVERAGE-GAPS/ENG-TOKEN-BINDING/SEND-STALL/SLEEP-REMOVAL/TOOL-OUTPUT-LIMITS）+ SETTINGS-PANEL/REORG/SUBMODEL/MODEL-PICKER-UNIFY/RESPONSES-TRANSPORT/webview-input-lag | 专题 |
-| V4 | CONSULTATION.md、ESCALATE.md + docs/COMPETITIVE_ANALYSIS.md | 协作/参考 |
+| V4 | CONSULTATION.md、ESCALATE.md + docs/COMPETITIVE_ANALYSIS.md（VSC 仓） | 协作/参考 |
 | V5 | VSC docs/TODO.md | 根 docs |
 
 **每子批交付**：eng-coder 重写该批文件为可读（保留当前机制 + 折叠历史），git mv 任何发现应归档的到 _archive。验收 = 人类可读判据 4 条 + node --check 无关（纯 md）+ lint。双端同文件域不重叠故可并行 eng-coder。

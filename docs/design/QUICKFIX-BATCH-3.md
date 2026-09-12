@@ -50,15 +50,15 @@
   登记（CLI 在案 a4f1255）
 
 ### 2. F-2 §24→§11 旧锚清理（双端——实证 68 处）
-- 实测面（评审 #4 具名族）：CLI src 29 处（advisor/messages.mjs:133、advisor/run.mjs:15/418、advisor.mjs:269、
+- 实测面（评审 #4 具名族）：CLI src 29 处（advisor/messages.mjs:133、advisor/run.mjs:15/418、`src/advisor.mjs:269`、
   agent/completion.mjs:123、agent/dispatch.mjs:355、agent/record-results.mjs:99、agent/run-stages.mjs:166、
   agent-tools/eng.mjs:37/55、escalate-async.mjs:154、subagent-actions.mjs:107、subagent-run.mjs:39/55/83、
   subagent-scheduler.mjs:341/346、subagent.mjs:130/378、agent.mjs:69/70、tui/cmd-eng.mjs:51、mouse.mjs:202、
-  subagent-panel.mjs:112、suspension-drive.mjs:25/30/77/133、test/advisor-description.test.mjs:18）+ VSC src
+  `src/tui/subagent-panel.mjs:112`、suspension-drive.mjs:25/30/77/133、test/advisor-description.test.mjs:18（已退场——TEST-LIFECYCLE））+ VSC src
   39 处（advisor/main.mjs:94/105/111/123/163/213/260、advisor/messages.mjs:50/78/88、advisor/run.mjs:340/362/419、
-  agent/execute-tools.mjs:19/249/410/428、run-stages.mjs:96/110/265、setup.mjs:216/238、agent-tools/advisor.mjs:
-  23/91/177/187/191/221、subagent-async.mjs:304/470、subagent-escalate-async.mjs:4、subagent-escalate.mjs:16、
-  agent.mjs:24/110、extension/panel-messages.mjs:230、suspension.mjs:27/58/102/257）
+  `src/agent/execute-tools.mjs:19`（VSC 仓）/249/410/428、run-stages.mjs:96/110/265、setup.mjs:216/238、agent-tools/advisor.mjs:
+  23/91/177/187/191/221、subagent-async.mjs:304/470、`src/agent-tools/subagent-escalate-async.mjs:4`（VSC 仓）、`src/agent-tools/subagent-escalate.mjs:16`（VSC 仓）、
+  agent.mjs:24/110、`src/extension/panel-messages.mjs:230`（VSC 仓）、`src/extension/suspension.mjs:27`（VSC 仓；余行同））
 - 逐处替换 + 逐处核上下文（§24 引用确指旧章才换——记史/历史文档不换）——映射粒度照 POOL-CONFIG-UNIFIED
   F-7（评审 #5——§11.1/§11.2——非裸 §11）
 - 测试：test/prompts-async-guidance.test.mjs 或同族 doc 断言宿主（评审 #4 具名）——grep §24 双端 src 零残留
@@ -88,14 +88,14 @@
 |---|---|---|---|---|
 | src/tools/git.mjs | VSC | 392 | ≤+8 | F-1 commit --only 镜像 + 描述层同步 |
 | test/git-commit-pathspec.test.mjs（评审 #3 新） | VSC | 新 | 新 ≤80 | F-1 原子/空 path/无 path 回归 + files.mjs 登记 |
-| test/files.mjs | VSC | 既有 | +1 | F-1 测试登记 |
+| test/files.mjs（VSC 仓） | VSC | 既有 | +1 | F-1 测试登记 |
 | src/（§24 残留族——CLI 29 处 19 文件 + VSC 39 处 13 文件——评审 #2 round2 数值校正） | 双端 | — | 各 -N | F-2 逐处替换 |
-| test/advisor-description.test.mjs（评审 #2 round2 补行——枚举含 :18——替换目标） | CLI | 既有 | ±1 | F-2 替换 |
+| test/advisor-description.test.mjs（评审 #2 round2 补行——枚举含 :18——替换目标；已退场：TEST-LIFECYCLE） | CLI | 既有 | ±1 | F-2 替换 |
 | test/prompts-async-guidance.test.mjs（评审 #4 具名宿主） | 双端 | 既有 | +5 | F-2 §24 零残留断言 |
 | src/tui/tui-lifecycle.mjs | CLI | 87 | ≤+4 | F-3 CLEANUP_REST |
 | test/tui-exit-cleanup.test.mjs | CLI | 96 | ±2 | F-3 常量断言 |
-| src/extension/image-handler.mjs | VSC | 81 | +3 | F-4 visionMaxTurns 导出 + 调用点 |
-| test/image-downgrade.test.mjs | VSC | 120 | +5 | F-4 纯函数断言 |
+| src/extension/image-handler.mjs（VSC 仓） | VSC | 81 | +3 | F-4 visionMaxTurns 导出 + 调用点 |
+| test/image-downgrade.test.mjs（VSC 仓） | VSC | 120 | +5 | F-4 纯函数断言 |
 
 ## 用例表
 
@@ -120,7 +120,7 @@
 
 ## 变更记录
 - 2026-09-09：评审 #2 round2 通过（token 已签发——9 findings 全 Fixed——新 2 🔵 已修：文件数 16/18 → 19/13
-  校正 + test/advisor-description.test.mjs 补受影响行——定稿版待实现）。
+  校正 + test/advisor-description.test.mjs（已退场：TEST-LIFECYCLE）补受影响行——定稿版待实现）。
 - 2026-09-09：落档（10 条评估分批——批 1 四小修——L255 VSC git commit 镜像（实证 L204-207）+ L216 §24 旧锚
   （**实证 68 处**——映射权威 POOL-CONFIG-UNIFIED F-7 §11.1/§11.2）+ L260 CLEANUP_REST（L20/L84 核过）+
   L250② maxTurns（L77 实证——visionMaxTurns 纯函数）——L183 已勾销（ACTIVITY-SPLIT 实证三文件终局）——L197

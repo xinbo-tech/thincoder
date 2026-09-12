@@ -158,11 +158,11 @@ MCP 工具**动态展开**为独立原生工具（`{server}_{tool}` 前缀、完
 |---|---|---|
 | CLI 声明 | `src/config.mjs:104` | 删 `provider: "tavily"` 行；"empty apiKey → Bing 兜底"语义注并到 `apiKey` 行 |
 | CLI 文档 | `README.md:159` | 配置模板删 `"provider": "tavily",` 行（两条注释已准确——保留） |
-| CLI 测试 | `test/websearch-config.test.mjs`（新建） | 见 §11.7 |
+| CLI 测试 | `test/websearch-config.test.mjs`（新建——已退场：TEST-LIFECYCLE，删除记录 = `TESTING.md` §7.1） | 见 §11.7 |
 | VSC 写面 | `thincoder-vscode` `src/extension/settings.mjs:140` | 删 `ws.provider = "tavily"` 写点（停播种——防产品继续写死键） |
-| VSC 读面 | 同档 `:131-134` | 快照 `{ provider, hasKey }` → `{ hasKey }`（webview 零渲染该字段——实证 `webview/settings-tools.js`） |
+| VSC 读面 | 同档 `:131-134` | 快照 `{ provider, hasKey }` → `{ hasKey }`（webview 零渲染该字段——实证 `webview/settings-tools.js（VSC 仓）`） |
 | VSC 兜底 | `thincoder-vscode` `src/agent/setup.mjs:119` / `:221` / `:243` | 兜底字面量去 `provider`（3 处字面量） |
-| VSC 测试 | `thincoder-vscode` `test/agent-lifecycle-singleton.test.mjs:45` | 夹具同步（去 provider） |
+| VSC 测试 | `thincoder-vscode` `test/agent-lifecycle-singleton.test.mjs:45（VSC 仓）` | 夹具同步（去 provider） |
 
 **目标形态（语义锚——措辞可微调，语义不可变）**：
 
@@ -179,7 +179,7 @@ websearch: {
 |---|---|---|---|---|
 | 1 | `src/config.mjs` | 487 | DEFAULTS.websearch 删 provider 行 + 注释合并 | −1 行 |
 | 2 | `README.md` | 472 | 配置模板删 provider 行 | −1 行 |
-| 3 | `test/websearch-config.test.mjs` | 新建 | T1–T8（§11.7） | ~+80 行 |
+| 3 | `test/websearch-config.test.mjs`（已退场——TEST-LIFECYCLE；删除记录 = `TESTING.md` §7.1） | 新建 | T1–T8（§11.7） | ~+80 行 |
 | 4 | `docs/requirements/TOOLS.md` | 40（批次前） | F6 / N8 / §4 / 变更记录（已落——本批 designer） | +7 行（实测 47） |
 | 5 | `docs/design/TOOLS.md` | 126（批次前） | §11 + 变更记录（已落——本批 designer） | +121 行（修正轮后实测 247） |
 | 6 | `thincoder-vscode/src/extension/settings.mjs` | 350 | 写面删 1 行；读面快照去字段 | −2 行 |

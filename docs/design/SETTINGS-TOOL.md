@@ -149,7 +149,7 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
 | T-S2.35 | VSC | N | 工具 description 逐字断言（§8.6 VSC 新句） | 新句逐字出现 | N-S1.4 |
 
 **覆盖映射（历史声称 → 落地）**：T-S1.1→T-S2.16 · T-S1.2→T-S2.17b（本批补——get 成功态）· T-S1.3→T-S2.17 · T-S1.4→T-S2.18 · T-S1.5→T-S2.20 · T-S1.7→T-S2.21 · T-S1.8→T-S2.19；
-**T-S1.6/T-S1.9/T-S1.10 未纳入本批回归网——不在本批改动面**（布尔解析/门禁路由/对象值展平；不虚指他档——`test/config.test.mjs` 只覆盖 `reloadMcpFromDisk` 的 mcp.servers 回退、`test/**` 无 settings 面断言）。
+**T-S1.6/T-S1.9/T-S1.10 未纳入本批回归网——不在本批改动面**（布尔解析/门禁路由/对象值展平；不虚指他档——原 `test/config.test.mjs`（已并入 `test/config-merge.test.mjs`——2026-09-11 TEST-LIFECYCLE）只覆盖 `reloadMcpFromDisk` 的 mcp.servers 回退、`test/**` 无 settings 面断言）。
 
 ## 6. 验收（AC-S1）
 

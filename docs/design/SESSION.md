@@ -4,7 +4,7 @@
 > CLI 与 VS Code 共享同一存储契约：文件格式、槽位认领、双线字段、并发防护全部一致（VS Code 侧为镜像实现，见下）。
 > 权威源（CLI）：`src/session.mjs`（saveSession/applySession/loadSlotFile 主体）、`src/session-slots.mjs`（槽位/manifest/认领/resumeSlot/end marker primitives）、`src/session-rename.mjs`（renameSlot——标题写契约）、`src/session-gc.mjs`（残留 GC + 冷 cwd）、`src/session-migrate.mjs`（旧短 hash 一次性迁移）。
 > 装配（CLI）：`bin/thincoder.mjs`（启动恢复 + 钉 `_slot`）、`src/context.mjs`（pushReal——消息入线 + ts 打点）、`src/agent-tools/read-history.mjs`（read_history 工具）。
-> 权威源（VS Code 镜像——同契约）：thincoder-vscode `src/extension/session-io.mjs`（读写双线）、`session-slots.mjs`（槽位/认领/marker）、`session-gc.mjs`、`session-slot-write.mjs`；装配：`panel-session.mjs` / `panel-project.mjs` / `panel-messages.mjs`。
+> 权威源（VS Code 镜像——同契约）：thincoder-vscode `src/extension/session-io.mjs（VSC 仓）`（读写双线）、`session-slots.mjs`（槽位/认领/marker）、`session-gc.mjs`、`session-slot-write.mjs`；装配：`panel-session.mjs` / `panel-project.mjs` / `panel-messages.mjs`。
 > 关联：ARCHITECTURE.md（双结构）、CONTEXT-COMPACTION.md（压缩/机读线）、MULTI-INSTANCE-COLLAB.md（本存储层为其上游基建）、TOOLS.md（read_history 工具面——语义权威 = 本文件 §9/§13）。
 > 章节号 §1-§13 沿用原档案序号（外部文档与代码注释引用稳定），内容已按机制重组为当前态。
 
@@ -375,8 +375,8 @@ m = loadManifest(cwd)
 **未决/限制**（后续项，非本批）：
 
 - VS Code `detectRestoredSession` 为进程级一次性闸——中途切换会话拿不到 `resumed: yes`（按会话跟踪语义待后续完善）；
-- ~~git 富注入 = 3×execSync 每回合同步（最坏 ~15s 阻塞事件循环）~~——**2026-09-09 核销**（GIT-ASYNC L21——双端同改：collectGitContext → async——3×execFile 并行（Promise.all——最坏单次 5s）+ all-or-nothing + 失败冷却 30s（Map<cwd,ts> 惰性清）——本节 §11.1 注入语义/字节 parity 不变——设计档 VSC 仓 `docs/design/GIT-ASYNC.md`）；
-- ~~**env-state 缺当前会话 slot（2026-09-08 用户需求点登记——SESSION §11 env-state 行无 slot）**~~——**已交付核销**（2026-09-08 快车道批——§11.1/§11.2：双端 setup-reminders envStateLine 加 `slot: {N}` + 本 §11 字段映射 slot 行 + 双端 system.md:24 slot 字段——本条作废，TODO Requirement Pool 登记项勾销）。
+- ~~git 富注入 = 3×execSync 每回合同步（最坏 ~15s 阻塞事件循环）~~——**2026-09-09 核销**（GIT-ASYNC L21——双端同改：collectGitContext → async——3×execFile 并行（Promise.all——最坏单次 5s）+ all-or-nothing + 失败冷却 30s（Map<cwd,ts> 惰性清）——本节 §11.1 注入语义/字节 parity 不变——设计档 VSC 仓 `docs/design/GIT-ASYNC.md（VSC 仓）`）；
+- ~~**env-state 缺当前会话 slot（2026-09-08 用户需求点登记——SESSION §11 env-state 行无 slot）**~~——**已交付核销**（2026-09-08 快车道批——§11.1/§11.2：双端 setup-reminders envStateLine 加 `slot: {N}` + 本 §11 字段映射 slot 行 + 双端 system.md:24 slot 字段——本条作废，TODO Requirement Pool 登记项勾销；该档已退役——PROMPT-SYSTEM 施工①③）。
 - R9 的"模式历史"（agent 自查询模式历史）本批不做——设计只覆盖"当前模式"注入；
 - R12（async 深度门控：depth-0 缺省 async、depth>0 缺省 sync）与本节同批实现——权威 = AGENT-LOOP.md §18。
 
@@ -393,20 +393,20 @@ m = loadManifest(cwd)
   agent 全量可用——`agent._slot` 直接可取。envStateLine 加 `slot` 参数——push 内传 `agent._slot`。
   **null 窗口**（从未落盘新会话首回合 / applySession 清槽 / resetSessionState）→ 字段如实 `slot: null`
   （N3——不读 manifest active 共享指针——避免 ACP 多会话张冠李戴——粘性 `_slot` 才是"本 agent 之槽"）。
-- VSC：hydrateRun（setup.mjs:229）内 slot = `bind?.slot`（opts.engPersist = {cwd, slot: turnSlot}——panel-chat.mjs:348 回合入口捕获）——pushEnvStateReminder 签名加 `slot` 透传（沿用解构风格）。无槽绑定（直连/非面板）→ slot null 降级（同 model "unknown" 降级族）。
+- VSC：hydrateRun（setup.mjs:229）内 slot = `bind?.slot`（opts.engPersist = {cwd, slot: turnSlot}——`src/extension/panel-chat.mjs:348`（VSC 仓） 回合入口捕获）——pushEnvStateReminder 签名加 `slot` 透传（沿用解构风格）。无槽绑定（直连/非面板）→ slot null 降级（同 model "unknown" 降级族）。
 - 行位：`env: {END}, mode, model, slot: {N}, resumed`——slot 在 model 后 resumed 前。
 
 **resumed 按会话跟踪**（F2）：
 - **VSC（评审 🔴 修复——双信号分离）**：resumed 按会话跟踪用**新 agent 级字段**
   （如 `agent._resumedPending`——只在 agent 新建且 restore:true factory 路径、fullHistory 载入非空时
-  武装——agent 每 (面板×slot) 绑定销毁重建（ensurePanelAgent panel-chat.mjs:60-63——换槽即
+  武装——agent 每 (面板×slot) 绑定销毁重建（ensurePanelAgent `src/extension/panel-chat.mjs:60`（VSC 仓；至 63 行）——换槽即
   `panel._agent = null`；runAgent 缺省 factory 新建 agent.mjs:85-92）——每次槽恢复进新 agent
   天然得一次 resumed:yes——同绑定复用不武装。判定 `fullHistory?.length > 0`（N5）。
   **模块级 `restartDetectionDone`（:69）保留不迁**——它是 process-restarted 句的进程级闸
   （extension host 重启后模块级重置——进程内切槽不重置——N6 需）——`_resetRestartDetectionForTests`
   （:72）保留。两信号独立：resumed = agent 级每恢复；process restarted 句 = 模块级每进程一次。
 - **CLI**：现 setup.mjs:101-121 内联 `_sessionStart != null` 推断 + `agent._restartReminderInjected` 闸
-  ——**改显式恢复事件**：恢复落点收敛 `applySession(agent, data)`（session.mjs:261-325——启动 bin:291
+  ——**改显式恢复事件**：恢复落点收敛 `applySession(agent, data)`（`src/session.mjs:261-325`——启动 bin:291
   + /session cmd-session:92 + ACP acp:229/276 全汇于此）——applySession 内 `data.history?.length > 0`
   时武装待发标记 + 去 `_sessionStart` 推断 + 闸改由 applySession 复位——prepareRun :115-121 消费标记。
   **顺带修复 F3 伪触发**（全新会话 turn 2 不误报——无恢复事件不武装）。/new 与空历史槽切换不武装。
@@ -427,7 +427,7 @@ m = loadManifest(cwd)
   + CLI `_envResumed` 消费即清 + VSC `_resumedPending` agent 级载体（评审 #7 点名——新 agent+
   非空历史→首 run true 次 run false/换槽新建→再 true/depth>0·resume·autoTurn→false）
   + CLI applySession 恢复事件（有历史→下回合 yes 一次→再切槽→再 yes——无恢复事件恒 no——F3 防伪触发回归）
-- VSC test/agent-lifecycle-singleton.test.mjs 补"换槽销毁重建 → resumed 事件随绑定新生"用例
+- VSC `test/agent-lifecycle-singleton.test.mjs`（VSC 仓） 补"换槽销毁重建 → resumed 事件随绑定新生"用例
 
 **受影响文件**（双端）：
 | 文件 | 端 | 改动 |
@@ -439,7 +439,7 @@ m = loadManifest(cwd)
 | src/agent/setup-reminders.mjs | VSC | envStateLine 加 slot + push 签名 + resumed 改 agent 级 `_resumedPending`（**模块级闸保留不迁——评审 #7——process restarted 句不变**） |
 | src/agent/setup.mjs | VSC | hydrateRun 传 slot + 注入句解耦（resumedSession 与 process restarted 分门） |
 | test/setup-reminders.test.mjs | 双端新 | 上述用例 |
-| test/agent-lifecycle-singleton.test.mjs | VSC | 换槽重建 resumed 用例 |
+| test/agent-lifecycle-singleton.test.mjs（VSC 仓） | VSC | 换槽重建 resumed 用例 |
 
 **验收**：
 - AC1 env-state 行含 `slot: {N}`（双端——无绑定显式 null）
@@ -451,10 +451,10 @@ m = loadManifest(cwd)
 
 ### 11.3 描述同步变更段（2026-09-08——用户裁 A + system.md 漂移修正——小改快车道）
 
-> 需求：SESSION §11.2 实现后 system.md:24 描述漂移（缺 slot 字段 + resumed 语义窄化为"process restarted only"）。用户裁 A：**接受实现语义 = 每次会话恢复发 yes（含进程内切槽到有历史槽）**——改描述匹配实现（非改实现）。快车道（用户明确指令——"A"）。
+> 需求：SESSION §11.2 实现后 system.md:24 描述漂移（缺 slot 字段 + resumed 语义窄化为"process restarted only"）。用户裁 A：**接受实现语义 = 每次会话恢复发 yes（含进程内切槽到有历史槽）**——改描述匹配实现（非改实现）。快车道（用户明确指令——"A"）。（system.md 已退役——PROMPT-SYSTEM 施工①③）
 > 状态：**已交付核销**（2026-09-08——CLI 6910be1 / VSC 752c127——AC1-AC4 字节断言绿——双端 L2 待跑——consume 278e7612——上报待裁项见 §11.3 变更记录）。
 
-**改**（双端 system.md:24——模板行 + 语义描述）：
+**改**（双端 system.md:24——模板行 + 语义描述；该档已退役——PROMPT-SYSTEM 施工①③）：
 1. 模板行 `[System reminder: env: cli|vscode, mode: eng|normal, model: <id>, resumed: yes|no.]` → 加
    `slot: <N|null>`（model 后 resumed 前——与实现 envStateLine 一致——无绑定显式 null——
    评审 #4：占位符沿用 <…> 风格——与 model <id> 一致——AC1 断言字面同步）
@@ -464,12 +464,12 @@ m = loadManifest(cwd)
    重启分支也限 prior history——空历史恢复不发 yes——与 §11.2 武装条件 data.history 非空一致）每次会话恢复一次
 3. 保留 design token 段（CLI）/ mode-model 段——不改
 
-**受影响文件**：CLI src/prompts/system.md、VSC src/prompts/system.md（模板行 + 语义句——各行
+**受影响文件**：CLI src/prompts/system.md、VSC src/prompts/system.md（模板行 + 语义句——两档已退役：PROMPT-SYSTEM 施工①③；各行
    ~900 字符内子串替换——行数不变）+ SESSION.md §11 自身模板记录 :351/:359 同步补 slot
    （评审 #2——避免本档自身无 slot 描述与同步后 system.md 打架——同批 doc-only 改）
 
 **验收**：
-- AC1 双端 system.md:24 模板行含 `slot: <N|null>`（model 后 resumed 前——评审 #4 占位符 <…> 风格）
+- AC1 双端 system.md:24 模板行含 `slot: <N|null>`（model 后 resumed 前——评审 #4 占位符 <…> 风格；system.md 两档已退役——PROMPT-SYSTEM 施工①③）
 - AC2 resumed 语义描述 = 每次会话恢复（含切槽）——非 process restarted only
 - AC3 实现零触碰（只改描述——envStateLine 输出/setup-reminders 不动）
 
@@ -572,7 +572,7 @@ CLI `renameSlot`（src/session-rename.mjs）+ VS Code `setSlotTitle`（session-i
 | 3 | TUI 懒加载只懒「渲染」，分页源 `full` = 内存全量数组；翻页把行 unshift 进 `state.lines` 且无淘汰 | `src/tui/startup.mjs:142-170`（`createLoadOlder`——`full.length − loaded − PAGE`）· `:119-136`（restoreLines） |
 | 4 | 活消息增长使翻页锚点漂移（`full.length` 增长而 `_historyLoaded` 只记恢复/翻页量）——错位隐患 | `src/tui/startup.mjs:147`（`start = full.length − loaded − HISTORY_PAGE_MESSAGES`） |
 | 5 | 人读线内存消费者全清单：本会话检索 / 观察摘要 / 标题生成 / 保存 / 恢复 / 翻页（无第七方） | `src/agent-tools/read-history.mjs:290` · `src/agent-tools/subagent-actions.mjs:194` · `src/generate-title.mjs:72` · `src/session.mjs:114` · `:292` · `:415` · `src/tui/startup.mjs:145` |
-| 6 | 槽 JSON 的跨端读面（VSC/ACP/列表）依赖 `history` 为**全量数组** | VSC：`thincoder-vscode` `session-io.mjs:104`/`panel-session.mjs:87`（本仓不引用——评估面）· ACP `src/acp.mjs:260` · 列表 `src/session-slots.mjs:141`/`:359` |
+| 6 | 槽 JSON 的跨端读面（VSC/ACP/列表）依赖 `history` 为**全量数组** | VSC：`thincoder-vscode` `src/extension/session-io.mjs:104`（VSC 仓） / `src/extension/panel-session.mjs:87`（VSC 仓）（本仓不引用——评估面）· ACP `src/acp.mjs:260` · 列表 `src/session-slots.mjs:141`/`:359` |
 
 事故形态：19 分钟会话 ≈ 8GB 堆（爬升型）；C1 为结构性无界之一（其余见架构批设计）。
 
@@ -722,7 +722,7 @@ unlinkRecordStore(slotFile)  // 删槽联动（deleteSlot 调用——§14.3.8�
 - 跨会话（`path=` / `cwd:`）：**逐字保持**读槽 JSON（投影全量）+ 既有护栏（`READ_HISTORY_SCAN_MAX`
   200k 行 / `READ_HISTORY_MAX_MESSAGES` 50k）——零改动。
 - **语义 delta 登记**（修正轮 #5——原「逐字不变」的隐藏面）：匹配基准 = **存储文本（slim 后）**——
-  ① 工具结果 >500 字符、工具参数 >300 字符的尾段被 slim 丢弃（`session.mjs:88-98`）——落于丢弃段
+  ① 工具结果 >500 字符、工具参数 >300 字符的尾段被 slim 丢弃（`src/session.mjs:88-98`）——落于丢弃段
   的 keyword 不再命中（旧实现匹配未瘦身 `_fullHistory`——`read-history.mjs:290`）；② 输出截断省略数
   N 按存储文本长度计（`read-history.mjs:78-84` 的 `t.length − end`）——对已带 `truncated for storage`
   标记者 N ≈ 存储标记长，不反映原始丢弃量。修输出层（剥离存储标记/携带原长）需另存原长或回读槽

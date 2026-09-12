@@ -204,7 +204,7 @@
 | src/cli/distill-command.mjs | ~95 | 注释 L13 + usage **L31**（AC2 块插入后偏移——原 L25）+ flags.scope→flags.layer **L73** + 展示串 **L75** + --scope 显式检查 L23-28 | ≤±15（实测 +15） |
 | src/distill.mjs | ~160 | prompt L21/30 + docstring + 判别变量 L124/131/135/144 + 错误串 L136/145/154 + 读时归一 | ≤±5（同文替换） |
 | src/tui/distill-cmd.mjs | ~40 | 展示串 L25 | ≤±2 |
-| test/distill.test.mjs | 新增 | 读时归一/错误串/--scope 报错 | ~+80（现 0 测试） |
+| test/distill.test.mjs（已退场——TEST-LIFECYCLE；删除记录 = `TESTING.md` §7.1） | 新增 | 读时归一/错误串/--scope 报错 | ~+80（现 0 测试） |
 | docs/design/MEMORY.md | 本段 | 评审后并入当前态 | 本段 |
 
 **验收（评审 #2 采纳——AC1 排除豁免；#4 归一前置确认）**：
@@ -444,7 +444,7 @@ merged.shell = expandHome(merged.shell)
 | 1 展开点 + helper 归属 | `loadConfig()` 单点（D-H1）+ 新模块 `src/expand-home.mjs`（D-H2） | §9.2 / §9.5 |
 | 2 支持形态 + Windows 分隔符 | `~` / `~/` / `~\`（`\\` 归一生效）；`~user` 不做（D-H3：两平台语义不一、收益低） | §9.3a |
 | 3 四字段落法 + README + 用例/AC | 三字段 loadConfig 展开即毕 / projectDir + 七点位基准解析（§9.3c）；README 见 §9.4 行 9；用例 T-H1–T-H15 + AC-H1–AC-H9（T-H16 已退场——整删，删除记录 = `TESTING.md` §11.3；含「cwd 无字面 `~`」机验 = T-H14） | §9.3 / §9.4 / §9.6 / §9.7 |
-| 4 VSC 镜像勘察 | VSC **无** memory 字段消费（文件制记忆、`memoryDir` 硬编码 `cwd/.thincoder/memory`）；**`shell` 同病**（`thincoder-vscode/src/agent/setup.mjs:232` → `src/tools/shell.mjs:233/242` `exec({shell})`）——镜像面 = 1 字段，报告父侧排程 | §9.8 |
+| 4 VSC 镜像勘察 | VSC **无** memory 字段消费（文件制记忆、`memoryDir` 硬编码 `cwd/.thincoder/memory`）；**`shell` 同病**（`thincoder-vscode/src/agent/setup.mjs:232` → `src/tools/shell.mjs:233`（VSC 仓；242 行同） `exec({shell})`）——镜像面 = 1 字段，报告父侧排程 | §9.8 |
 | 5 既有锁零伤 + §1.13 核对 | 见下 | — |
 
 **既有锁零伤清单（as-of 实测）**：
@@ -452,7 +452,7 @@ merged.shell = expandHome(merged.shell)
 - `test/settings.test.mjs`：T-S2.13 表行集不含 `~` 值 → `c.shell === v` / `teamConfig(c)` 判据零伤。**语义登记**：含 `~` 的 `shell` 写入后，
   经 `loadConfig()` 读回为展开值（等式 `c.shell === v` 对 `~` 值不成立）——未来若加该夹具行，须按展开语义断言；
 - `test/memory-tool.test.mjs`：相对 projectDir 夹具 → `isAbsolute` 分支与 `join` 逐字同（T-H12）零伤；
-- `test/config-merge.test.mjs` / `test/config.test.mjs` / `test/portability-*.test.mjs`：夹具不含 `~`、`DEFAULTS` 零改 → 零伤；
+- `test/config-merge.test.mjs` / `test/config.test.mjs`（已并入 config-merge——TEST-LIFECYCLE） / `test/portability-*.test.mjs`：夹具不含 `~`、`DEFAULTS` 零改 → 零伤；
 - `test/config-pool.test.mjs`：只锁 `poolLimits` → 零伤；
 - 默认值面：`DEFAULTS.memory.dbPath` 已绝对 → `expandHome` 恒等（零值变化）。
 
@@ -473,8 +473,8 @@ merged.shell = expandHome(merged.shell)
 |---|---|---|
 | 1 | 三张表的向量通道全表 `.all()` 物化后逐行 cosine + 全量排序——无 SQL LIMIT、无分块 | `src/memory/core.mjs:60-68`（entries ∪ files）· `docs.mjs:112-116` · `code-sync.mjs:294-298` |
 | 2 | 触发面 = 每轮 run 装配（prompt 注入）+ 工具调用（doc_search/code_search）；本机 memory.db ~736MB（embedding BLOB 为体量主源） | `src/agent/setup.mjs:100-124` · `docs.mjs:185` · `code-sync.mjs:350` |
-| 3 | 结果侧本身有界（候选 = `max(limit×4, 20)`）——病灶是**扫描期**全量物化 | `core.mjs:68` · `docs.mjs:116` |
-| 4 | FTS 通道已有 `LIMIT`（对照面） | `core.mjs:88-104` · `docs.mjs:94-99` |
+| 3 | 结果侧本身有界（候选 = `max(limit×4, 20)`）——病灶是**扫描期**全量物化 | `src/memory/core.mjs:68` · `docs.mjs:116` |
+| 4 | FTS 通道已有 `LIMIT`（对照面） | `src/memory/core.mjs:88-104` · `docs.mjs:94-99` |
 
 ### 10.2 方案选型对比
 

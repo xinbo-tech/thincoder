@@ -31,7 +31,8 @@
  *
  * 用法：node scripts/check-doc-width.mjs [--dir <docs/design>] [--max 300]
  * 导出（test/doc-consistency.test.mjs 消费）：collectMarkdown / checkDocWidths /
- * checkSectionRefs / checkCountLists / checkBatchSegments / checkDocConsistency / loadBaseline / SCAN_DIRS。
+ * checkSectionRefs / checkCountLists / checkBatchSegments / checkDocConsistency / loadBaseline / SCAN_DIRS /
+ * isExecutableLine / inCodeSpan（共享豁免谓词单源——V5 `scripts/doc-anchors.mjs` 同源复用，判据语义零改）。
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve, basename } from "node:path";
@@ -234,15 +235,15 @@ export function checkCountLists(root) {
 }
 
 // ── V4 跨仓形态合规（B16 / §8.10.1）──────────────────────────────────────────
-/** 行内可执行坐标（命令 / 搜索模式串码段）——V4 射程豁免（证据与命令保字面；D19 同类）。 */
-function isExecutableLine(line) {
+/** 行内可执行坐标（命令 / 搜索模式串码段）——V4 射程豁免（证据与命令保字面；D19 同类）；V5 排除式 4 同源复用。 */
+export function isExecutableLine(line) {
   if (/`[^`\n]*&&[^`\n]*`/.test(line)) return true; // 命令链（cd … && …）
   if (/`[^`\n]*\b(?:cd|node|npm|npx|grep|rg|git)\s[^`\n]*`/.test(line)) return true; // 码段内命令词
   if (/`[^`\n]*(?:\[\^|\\\.|\(\?<|\(\?:|\{\d)/.test(line)) return true; // 码段内搜索模式串片段
   return false;
 }
-/** 行内位置是否在反引号码段内（引述面——仓标 + 裸 §N 的引述不判）。 */
-function inCodeSpan(line, idx) {
+/** 行内位置是否在反引号码段内（引述面——仓标 + 裸 §N 的引述不判）；V5 码段判定同源复用。 */
+export function inCodeSpan(line, idx) {
   return (line.slice(0, idx).match(/`/g) ?? []).length % 2 === 1;
 }
 /**

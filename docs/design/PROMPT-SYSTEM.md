@@ -227,7 +227,7 @@ R-1 逐字（插入 persona-explore / persona-coder 身份节尾——CN/EN 双�
 | # | 候选方案 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论（选定/否决理由） |
 |---|---|---|---|---|
 | 1 | **新建 `design/PROMPT-SYSTEM.md`（板块镜像补全）** | 符合文档地图 §3.2 同板块镜像；需求半档在册、设计半档缺失；施工档已归档不可复用 | 新档需登记（父侧一行）；与需求档同名 basename 的多义性见 §5 D-CL8（fail-open 方向） | **选定** |
-| 2 | 批专属档（如 `design/COMMON-LAYER.md`） | 落点直白 | 违反「一个板块一个文档」+ 零新档纪律；后续批无归属 | 否决 |
+| 2 | 批专属档（如批专属 `COMMON-LAYER` 类专档——该形态未落地） | 落点直白 | 违反「一个板块一个文档」+ 零新档纪律；后续批无归属 | 否决 |
 | 3 | 并入 `requirements/PROMPT-SYSTEM.md` | 零新档 | 违三层拆分（设计+测试层须独立成档）；需求档已批准定稿 | 否决 |
 | 4 | 打回等待新档预授权 | 严格守「必须新建 → 停下打回」 | 现场校正意图明确（§1 归属档路径笔误已校正）；阻塞全批且内容与落点解耦、迁移成本一行 | 否决（已如实登记本裁定待父侧复核） |
 | 5 | 设计档落点：`design/ENGINEERING-MODE.md` | 工程模式设计档在册 | 板块错位（本机制属提示词系统；eng 模式只是消费方之一） | 否决 |
@@ -297,9 +297,9 @@ R-1 逐字（插入 persona-explore / persona-coder 身份节尾——CN/EN 双�
    ①「搜索条款双文件逐字一致」重定向 = 断言宿主改 `common`（3 字面串逐字同款）+ 补负断言（de/dn 零命中）——用例名同步改述；
    ②`§2.7 #9` 期望清单 `["discipline-normal.md:L158(234)", …]` → `[]`。
 3. **VSC `test/prompts-async-guidance.test.mjs`**（450 行）：同 ① ② 两款（各端自持文本）。
-4. **VSC `test/prompts-mirror-anchors.test.mjs`**（第 15 批设计基线 231 行 → ≈280；**修正轮 #4 重测现为 319 行**——见 §8.8）：新增面 ⑦ 一例——common 标题组 + 关键句组跨仓逐字
+4. **VSC `test/prompts-mirror-anchors.test.mjs（VSC 仓）`**（第 15 批设计基线 231 行 → ≈280；**修正轮 #4 重测现为 319 行**——见 §8.8）：新增面 ⑦ 一例——common 标题组 + 关键句组跨仓逐字
    （照面 ⑥ 同构：`readRepo` 双仓 × 双源）；头部注释面清单 +1。
-5. **零新增测试文件**（`test/files.mjs` 免改——**VSC 仓显式清单**（本批零新增测试档）；CLI 仓走 glob 自动发现）；`test/eng-designer-role.test.mjs` / `prompts-dual-source` 既有例零改。
+5. **零新增测试文件**（`test/files.mjs（VSC 仓）` 免改——**VSC 仓显式清单**（本批零新增测试档）；CLI 仓走 glob 自动发现）；`test/eng-designer-role.test.mjs` / `prompts-dual-source` 既有例零改。
 
 > **落地文本卫生**：§2.2/§2.3 行文中的【R-2】= 设计侧定位标注——落地剥除，不得进入任何落地面文本（重点核验：`src/prompts/common.md` 镜像 bullet 与 CN 侧同条，零「【R-2】」残留）。
 
@@ -352,8 +352,8 @@ R-1 逐字（插入 persona-explore / persona-coder 身份节尾——CN/EN 双�
 | 23-31 | `src/prompts/` 同上 9 件（common 40→≈115；persona-engineering 79→≈84；persona-normal 20→≈25；persona-explore 28→≈19；persona-coder 47→≈27；persona-plan 29→≈27；persona-eng-coder 50→≈52；discipline-engineering 234→≈219；discipline-normal 230→≈172） | — | 同款（R14 / Guidelines / 端段保留） | VSC·EN |
 | 32-38 | `docs/design/prompts/` 对应 7 件（common 120→≈121；persona-engineering 54；persona-normal 23；persona-explore 15→≈16；persona-coder 18→≈19；discipline-engineering 161→≈147；discipline-normal 248→≈192） | — | 同款 | VSC·CN |
 | 39 | `test/prompts-async-guidance.test.mjs` | 450 → ≈451 | 重定向 + 清单 | VSC·测试 |
-| 40 | `test/prompts-mirror-anchors.test.mjs` | 231 → ≈280（**现测 319**——修正轮 #4） | +面 ⑦ | VSC·测试 |
-| 41 | `docs/design/VSC-PROMPTS.md` | 59 → ≈67 | 落地纪要 + CLI 档引用改跨仓形态 | 父侧/端侧 |
+| 40 | `test/prompts-mirror-anchors.test.mjs（VSC 仓）` | 231 → ≈280（**现测 319**——修正轮 #4） | +面 ⑦ | VSC·测试 |
+| 41 | `docs/design/VSC-PROMPTS.md（VSC 仓）` | 59 → ≈67 | 落地纪要 + CLI 档引用改跨仓形态 | 父侧/端侧 |
 
 > 档位：全部 ≤300 行（除既有 DN 档 245→185 后回落；测试档 ≤500 硬限内）；无拆分计划触发。
 > 提示词文件的落笔 = 双源**手抄/译写**（无同步脚本——PROMPT-SYSTEM §2 双源流程），逐字草案以本档 §2.2/§2.3 为唯一来源。
@@ -410,7 +410,7 @@ R-1 逐字（插入 persona-explore / persona-coder 身份节尾——CN/EN 双�
 | 同族句面 | 三任务型句（`:7`–`:9`）+ 其余测试提及——逐条复核结论见 §8.4 | `src/prompts/discipline-normal.md:7-9` |
 | 发布门表述 | `RELEASE.md` 已含 v3 门禁（lint → test:full → test:integration）——提示词零承载 | `RELEASE.md:6/:22` · `scripts/release-check.mjs:67-83` |
 | 台账维护面 | 提示词仅四件（攒批 / 指针化 / 一行一条 / 组计数）——六态 / 归档 / 触发 / 老化 / 维护归属零命中 | CLI `de:183-184` · VSC `de:184-185` · `persona-eng-designer.md:27` |
-| 锚断言面 | 既有族（dual-source / async-guidance / mirror-anchors / doc-consistency / ledger）与本批新增无冲突位（逐串核过） | `test/prompts-dual-source.test.mjs` · `test/prompts-mirror-anchors.test.mjs` |
+| 锚断言面 | 既有族（dual-source / async-guidance / mirror-anchors / doc-consistency / ledger）与本批新增无冲突位（逐串核过） | `test/prompts-dual-source.test.mjs` · `test/prompts-mirror-anchors.test.mjs（VSC 仓）` |
 
 **计数（D3）**：编辑动作 = 新节 ×4（de）+ 旧句替换 ×4（dn）+ 同族句尾改 ×4（dn）+ 台账块 ×4（de，含既有行尾注改）+ 归属句 ×4（pe）+ 锚组 ×2（测试档）——涉及
 **12 档提示词 + 2 档测试 + 3 档文档**（本档 + 需求档 + VSC 对位档）。
@@ -546,7 +546,7 @@ R-1 逐字（插入 persona-explore / persona-coder 身份节尾——CN/EN 双�
 | 15 | VSC `src/prompts/persona-engineering.md` | 87 | 同上（EN 侧） | Text E | +1 |
 | 16 | VSC `docs/design/prompts/persona-engineering.md` | 53 | 同上（CN） | Text E | +1 |
 | 17 | CLI `test/prompts-dual-source.test.mjs` | 346 | 末组后追加「TD 锚」组（§8.5——+3 例） | +锚组 | +~45 |
-| 18 | VSC `test/prompts-mirror-anchors.test.mjs` | 319 | ⑧ 组后追加 ⑨ 组（§8.5——+3 例） | +锚组 | +~40 |
+| 18 | VSC `test/prompts-mirror-anchors.test.mjs（VSC 仓）` | 319 | ⑧ 组后追加 ⑨ 组（§8.5——+3 例） | +锚组 | +~40 |
 
 预期行数落定（对表基准——修正轮 #2：Text D 收 2 行）：CLI de 217→227 / CN 146→156 · VSC de 225→235 / CN 152→162 · dn 四档 +1 · pe 四档 +1 · 测试档两处对表（§8.5 组体量——TD 组 3 例）。
 
@@ -603,7 +603,7 @@ const TD_CNT = "（计数口径 = 未决数——归档条目不计数）"      
 断言形态（照既有族惯例）：逐串 `assert.ok(doc.includes(s))`（双源 for 循环）；**反证**（旧句零残留）：`assert.ok(!doc.includes("Code changes need at least one test"))` / `!doc.includes("至少要有一个测试")`（四档 dn）；
 **维护者注反证**（T-RO6 同型）：对全部新增锚串断言 `!/\d{4}-\d{2}-\d{2}|第\s*\d+\s*批|评审\s*#/`。
 
-**VSC 面**（`test/prompts-mirror-anchors.test.mjs` 追加「⑨ 机制纪律锚」组——**+3 例**同构）：同上字面串对 **VSC 三档 × 双源（6 文件）**断言（修正轮 #5），并按该档既有模式做 **CLI 侧逐字对照**
+**VSC 面**（`test/prompts-mirror-anchors.test.mjs（VSC 仓）` 追加「⑨ 机制纪律锚」组——**+3 例**同构）：同上字面串对 **VSC 三档 × 双源（6 文件）**断言（修正轮 #5），并按该档既有模式做 **CLI 侧逐字对照**
 （VSC 宿主两侧 ↔ CLI 同文件同串——两仓同存前提照旧 fail-closed）。
 
 **既有锚零触碰**（一处口径校准——修正轮 #3）：本批新增不修改任何既有断言；**唯一随动 = T75 守恒锁计数**（锁体落地时由「后落地者」按现场同步——见下条；本批零碰锁体宿主档）。受影响面 = 上述两档**追加** + 既有族全绿复跑（`prompts-async-guidance` / `doc-consistency` / `ledger` 等）。
@@ -657,7 +657,7 @@ const TD_CNT = "（计数口径 = 未决数——归档条目不计数）"      
 | VSC `src/prompts/persona-engineering.md` | 87 → **55（实测）** | +1 | 同上（并行节去重后形态——本批锚点为 Yours 条目；原 as-of 87 = 去重前值） |
 | VSC `docs/design/prompts/persona-engineering.md` | 53 → **54（实测）** | +1 | 同上 |
 | CLI `test/prompts-dual-source.test.mjs` | 346 | +~45 | TD 锚组（§8.5——+3 例） |
-| VSC `test/prompts-mirror-anchors.test.mjs` | 319 | +~40 | ⑨ 组（§8.5——+3 例） |
+| VSC `test/prompts-mirror-anchors.test.mjs（VSC 仓）` | 319 | +~40 | ⑨ 组（§8.5——+3 例） |
 | `docs/requirements/PROMPT-SYSTEM.md` | 357 → **405**（本批已落 §10） | +48（实测） | eng-designer 本批写 |
 | `docs/design/PROMPT-SYSTEM.md`（本档） | 398 → **697**（本批已落 §8） | +299（实测） | 同上 |
 | `VSC-PROMPTS（VSC 仓）` | 220 → **290**（本批已落对位节） | +70（实测） | VSC 对位节 |

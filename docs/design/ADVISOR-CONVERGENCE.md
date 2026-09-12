@@ -324,7 +324,7 @@ VSC `src/prompts/discipline-engineering.md`（现 228 行）· VSC `docs/design/
 |---|---|
 | **运行时只加载 `src/prompts/*`** | `src/prompt-overlays.mjs:17-19`（`loadSlot` = `readFileSync(join(__dirname, "prompts", name))`，模块级常量）+ `:48-57`（engineering 场景槽序 = persona-engineering → common → discipline-engineering） |
 | **中文权威面不参与加载（零运行时引用）** | `docs/design/prompts/*` 在 `src/**` 零引用（loader 实证——运行时只读 `src/prompts/*`）；`.mjs` 引用仅测试层（双源/跨仓断言所需——实测行位见下注）——双源流程 = 「改中文模板 → 内容把关 → 落地时译写回填 `src/prompts`」（`requirements/PROMPT-SYSTEM.md` §2） |
-| **双源同步机制 = 手抄/译写（无脚本）** | 同上零脚本引用；双端为**语义同源、原文自持**（多实现面纪律），跨仓逐字由锚测试守（`test/prompts-mirror-anchors.test.mjs`：A1–A8/A11/A12 + 双源同名集合各 15 档） |
+| **双源同步机制 = 手抄/译写（无脚本）** | 同上零脚本引用；双端为**语义同源、原文自持**（多实现面纪律），跨仓逐字由锚测试守（`test/prompts-mirror-anchors.test.mjs（VSC 仓）`：A1–A8/A11/A12 + 双源同名集合各 15 档） |
 | **`Fixed` 定义副本 = 8 文件** | `discipline-engineering.md` ×4 + `discipline-normal.md` ×4（§13.3 落点表；逐文件行号） |
 | **评审侧零副本** | `advisor-design.md` / `advisor-round{1,2,3}.md` / `consult-base.md` / `persona-*.md` 对 `Fixed` 词表 grep 零命中——评审侧只描述自身输出格式（VERDICT），不定义 Action 词表 |
 | **运行时零解析（四值化无代码影响）** | `src/advisor/history.mjs:8`（`AGENT_RESPONSE_HEADER = "\| # \| Action \| Detail \|"`）+ `:29-45`（`extractAgentResponseTable` 按表头取整段、`agent.history` 只作 round2+ “聚焦参考”）——Action **值**从不解析 |
@@ -332,7 +332,7 @@ VSC `src/prompts/discipline-engineering.md`（现 228 行）· VSC `docs/design/
 | **链行四面同位** | CLI zh `docs/design/prompts/persona-engineering.md:18-19` · CLI en `src/prompts/persona-engineering.md:21-22` · VSC zh `docs/design/prompts/persona-engineering.md:18-19` · VSC en `src/prompts/persona-engineering.md:21-22`（四面逐字一致——A12 断言对象） |
 | **VSC 端无 `docs/requirements/` 层** | `docs/`（VSC 仓）仅 `design/` + 三份根级 .md（三层历史形态——VSC 设计档即其权威） |
 
-> 测试层引用实测（`.mjs` 行位，as-of 2026-09-11——均为中文权威面的读取/断言，非运行时加载）：CLI `test/prompts-async-guidance.test.mjs:428` · `test/eng-designer-role.test.mjs:298` · `test/batch-segment.test.mjs:220`；VSC `test/prompts-mirror-anchors.test.mjs:30`。
+> 测试层引用实测（`.mjs` 行位，as-of 2026-09-11——均为中文权威面的读取/断言，非运行时加载）：CLI `test/prompts-async-guidance.test.mjs:428` · `test/eng-designer-role.test.mjs:298` · `test/batch-segment.test.mjs:220`；VSC `test/prompts-mirror-anchors.test.mjs:30（VSC 仓）`。
 
 ### 13.6 受影响文件全清单（as-of 2026-09-11 · 当前行数实测）
 
@@ -379,7 +379,7 @@ VSC `src/prompts/discipline-engineering.md`（现 228 行）· VSC `docs/design/
 | D-RO4 | **新增文本 = 中文、四面同文**（含两端 `src/`） | 判据 = 跨面同字面 → 一致性可机判性最高（A12 型字面断言）；插图注（第 2 批已落形态：`批次档与执行者纪律` 节中文进 `src/`，`test/prompts-async-guidance.test.mjs` AC22① 即断言中文子串于**双源**）——仅作插图，非依据。既有英文句**就地改词**（Action 词表句不整句改语言） |
 | D-RO5 | **时序细则落 `discipline-engineering.md`「评审收敛纪律」节**（不落「交付链收口」节） | 实证：「交付链收口」节**只存在于两端 `src/` 落地档**（中文权威镜像无该节）——落彼处 = 新规则只在落地档、权威档缺规则（违 N5）；「评审收敛纪律」节**四面齐备（4/4）**且已拥有「裁决表」条（同节内聚） |
 | D-RO6 | **追溯留痕 = 新老划断，不回填冻结批次档**（F10） | 维度：①第 3/6 批当时无规则，行为不构成违例——无需“纠错”；②两批批次档已冻结（`docs/README.md` §3.4 正文冻结）；③§6 段属父侧写域且已收口。**载体** = 本档 §13.1/§13.7 + 本档变更记录行。**否决**：回填两批 §6 注记（破坏冻结 + 跨批写权）· 写进提示词（§2.7 #15 禁维护者注）· 只登记 TODO（台账≠决策留痕） |
-| D-RO7 | **测试落点 = 扩展既有测试档，不新增测试文件** | VSC `test/files.mjs` 零变更（新增档须入册）；断言与既有双源/A12 模式同址 |
+| D-RO7 | **测试落点 = 扩展既有测试档，不新增测试文件** | VSC `test/files.mjs（VSC 仓）` 零变更（新增档须入册）；断言与既有双源/A12 模式同址 |
 | D-RO8 | **提示词落笔交 eng-coder，与锚断言同批**（既有裁定支持 + §2.7 #13 口径差） | **既有裁定支持**：`requirements/ENGINEERING-MODE.md:126-128`（§1.5 #8 注「落笔仍走正常链」）+ `:130`（#10）；内容权口径见 §13.8；#13 口径差登记 §13.9。**理由**：§2.7 #12 锚句变更 = 同批改断言（文本+断言同链原子交付）。**备选**（designer/parent 落文本、coder 只改断言）在案 |
 
 ### 13.8 与既有纪律的冲突点核对
@@ -418,7 +418,7 @@ VSC `src/prompts/discipline-engineering.md`（现 228 行）· VSC `docs/design/
 | T-RO5 | 错误（反例） | 12 个改动提示词档 | 负断言：无 `恰好三选一` / `exactly three values` 残留；zh persona 面无旧相邻形态 `（发起权在用户）→ 用户批准`、en persona 面无 `(initiation stays with the user) → user approval`（防“追加两版”） | F7 / F9 |
 | T-RO6 | 边界 | 新增文本 + 既有锚 | §2.7 #15：新增文本零日期/批次号；锚#1–#7 字面逐字在位；既有 prompts 锚测试（双端）全绿 | N4 / N6 |
 
-> **新面⑥定义**（VSC `test/prompts-mirror-anchors.test.mjs` 第六断言面——文件头注「断言五面」→「断言六面」同改）：**本批同文组跨仓逐字**（CLI ↔ VSC），两组——
+> **新面⑥定义**（VSC `test/prompts-mirror-anchors.test.mjs（VSC 仓）` 第六断言面——文件头注「断言五面」→「断言六面」同改）：**本批同文组跨仓逐字**（CLI ↔ VSC），两组——
 > **组 1 四值句**：§13.3 中文面整句（4 文件 = 双端 × `docs/design/prompts/{discipline-engineering,discipline-normal}.md`）与英文面整句（4 文件 = 双端 × `src/prompts/{…}`）——zh↔zh / en↔en 跨仓逐字（T-RO2/T-RO3 原逐文件子串断言已退场——整删，删除记录 = `TESTING.md` §11.3；跨仓逐字由本面承载）；
 > **组 2 时序 bullet**：§13.4(b) bullet 全文（4 文件 = 双端 × 双源 `discipline-engineering.md`）跨仓逐字。链行组（2 字面）由 A12 字面 +2 承载（面②内）——不重复。
 
@@ -443,7 +443,7 @@ VSC `src/prompts/discipline-engineering.md`（现 228 行）· VSC `docs/design/
 - 不改工程模式机制的**机制档**（`ENGINEERING-MODE.md` 两仓——见 §13.9 后续登记项）
 - 不新增锚号、不新增测试文件、不改 `thincoder-vscode/test/files.mjs`
 - 不做双源同步脚本自动化（本批只做规则文本；脚本化不在需求内）
-- 不重排既有段落、不改行结构（VSC `discipline-normal.md:93` 合并行只做子句级改）
+- 不重排既有段落、不改行结构（VSC `src/prompts/discipline-normal.md:93`（VSC 仓） 合并行只做子句级改）
 - 不改批次档与 TODO / README / CHANGELOG（父侧写域）
 
 ## 14. 评审/凭证链边缘守卫（溢出 / 信号 / cite / 超时——2026-09-11 第 11 批）
@@ -494,7 +494,7 @@ token 回显（例如模型先写完结论再继续补充检查）都会让**被
 
 **D 超时零输出**：超时只在**轮间**检查——`src/advisor/run.mjs:170-172`（`Date.now() - startTime > timeoutMs`），
 单次模型请求不受评审预算约束（响应头超时同量级：`src/provider/core.mjs:77-78` 默认 600s；body idle 120s——
-`core.mjs:72`）。预算语义 = 整场墙钟（`docs/design/AGENT-PARAMS.md:19-39`）。第 10 批设计评审 600s 超时、零产出、
+`src/provider/core.mjs:72`）。预算语义 = 整场墙钟（`docs/design/AGENT-PARAMS.md:19-39`）。第 10 批设计评审 600s 超时、零产出、
 父侧无部分结果可回收——根因候选（证据不足以区分，守卫对两类均有效）：① 预算被探索耗尽（大范围 + 慢模型）；
 ② 单次调用停滞吞掉预算（无预算感知 deadline）；③ 模型不知预算在烧（无中途提示），撞墙时来不及收敛产出。
 
@@ -666,7 +666,7 @@ Advisor: review timeout after {S}s. Review incomplete — the wall-clock budget 
 | `src/agent-tools/advisor-async.mjs` | 500 → **350** | −150（实测——设计估 −~150 迁出 + ~3） | 拆出 advisor-settle.mjs；settle 接线 | **必拆**（500 = 硬帽**在册**——任何新增必越；交付清偿 500 → 350；import 面经 re-export 保持） |
 | `src/agent-tools/advisor-settle.mjs` | 新 → **214** | 214（新档——设计估 ~165；含 E-2 增量） | `settleAdvisorRun` + 失败 / 截断判定块 + 陈旧判定（自 advisor-async 迁入 + 谓词消费；E 族增量见 §14.14） | 新文件（交付 214 ≤300） |
 | `src/agent-tools/design-token.mjs` | 105 → **118** | +13（实测——设计估 +~20） | settle 未完成守卫（`opts.incomplete`） | 不拆 |
-| `test/advisor-chain-guards.test.mjs` | 新 → **498**（评审轮 1 🔴 压缩 513→498；21 例） | 498（新档——设计估 ~280；含 E 增量） | T-CG1–T-CG14 · T-CG19–T-CG21（修正轮） | 新档（交付 498 ≤500 帽内；>300 advisory——`test/` 存量档；CLI glob 自动发现——**登记要求 = 无**；VSC 端若有 `test/files.mjs` 才需入册，本批不涉 VSC） |
+| `test/advisor-chain-guards.test.mjs` | 新 → **498**（评审轮 1 🔴 压缩 513→498；21 例） | 498（新档——设计估 ~280；含 E 增量） | T-CG1–T-CG14 · T-CG19–T-CG21（修正轮） | 新档（交付 498 ≤500 帽内；>300 advisory——`test/` 存量档；CLI glob 自动发现——**登记要求 = 无**；VSC 端若有 `test/files.mjs（VSC 仓）` 才需入册，本批不涉 VSC） |
 
 > 档位依据：`discipline-engineering.md` 代码结构判据（>300 主动审视 / >500 必拆——无豁免通道）。本批两处**必拆**均为硬约束触发，
 > 非可选项；拆分保持既有 import 面（`run.mjs` 继续 re-export `_runAdvisorToolLoop` / `advisorToolsFor` / 谓词；
@@ -1180,14 +1180,13 @@ export function advisorContextBudget(provider) {
 
 1. **VSC 端镜像（后续批建议——父侧排程）**：**同款缺陷确认存在**（非推测）——`thincoder-vscode` 仓
    `src/advisor/compaction.mjs:18`（同款常量 `MAX_CONTEXT_TOKENS = 120_000`）、`src/advisor/loop.mjs:22/116/121`
-   （导入 + 两处守卫）；VSC 侧 `providerSpec` 现成（`src/config.mjs:142-149`，经 `src/specs.mjs` re-export）——
+   （导入 + 两处守卫）；VSC 侧 `providerSpec` 现成（`src/config.mjs:142-149（VSC 仓）`，经 `src/specs.mjs（VSC 仓）` re-export）——
    完整修复路径同本端（+~15 行 / +1~3 行）。测试面：新增 VSC 用例档 + **登记 `thincoder-vscode/test/files.mjs`**
    （VSC 为显式清单，与 CLI glob 不同）。文档面：`ADVISOR-CONVERGENCE（VSC 仓）` 新增 §15 + 变更记录 1 行——
    VSC 档不在本批写域（本设计者未写）。
 2. **`estimateTokens` 估算器修正（CJK 低估）**：`chars/4` 扁平式 vs 主循环 `estimateText`（ASCII/4 + 非 ASCII/1，
    `src/provider/rate.mjs:29-35`）——修正会平移全部模型的压缩时点，另批评估（本批头寸已计入误差）。**（收口 2026-09-11：群 B 批承接——本档 §18。）**
-3. **§14.3 生成点行号指针**：`context_limit` 生成点（表引 `src/advisor/loop.mjs:124`）如因本批落笔位移（+1~3 行），
-   节内容零改、行号由父侧收口并入（D4 as-of 口径）。
+3. **§14.3 生成点行号指针**：`context_limit` 生成点（kind 字面 = `src/advisor/run.mjs:43`；表引渲染行 = `src/advisor/loop.mjs:127`——原 :124 落笔位移 +3，已随收口并入；节内容零改——D4 as-of 口径）。
 4. **父侧核销面**：`docs/TODO.md` 需求池行（本批来源 = 用户 bug 报告）——父侧写域，本设计者不动。
 5. **tpm / rpm 交互**：`rateGate`（`src/provider/rate.mjs:52-57`）对单请求估算超 tpm 只告警放行——大窗评审的额度
    后果由用户模型选择承担（登记；不新增闸）。
@@ -1244,7 +1243,7 @@ export function advisorContextBudget(provider) {
   2. 同步面（`src/agent-tools/advisor.mjs:218-237`）在同点持有 `settled.passed` 与 `incomplete`；
   3. 「同一 doc-set」键现成：`docSetKey`（`src/agent-tools/advisor-async.mjs:67-75`——次序无关 + ABS 归一；
      与实例续跑同源）。
-- **既有语义可复用**：拒发语义（不置 called / 不耗轮次——`advisor.mjs:165-168` cap 款）、
+- **既有语义可复用**：拒发语义（不置 called / 不耗轮次——`src/agent-tools/advisor.mjs:165-168` cap 款）、
   未完成判定单谓词（§14.3）、每评审实例注册表（`agent._advisorRuns`）。
 
 ### 17.2 方案选型对比

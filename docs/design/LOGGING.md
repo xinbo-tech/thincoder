@@ -38,13 +38,13 @@
   advisor/子代理/consult/auto-think 各回合）。字段：provider/model/ms/err/stage/turn/
   auto/child（child=CLI 子代理 id；vscode 以 role/depth 归属）；llm:done 带 head/len/finish/tools。
 - **`tool:call` / `tool:done` / `tool:error`** — dispatch 执行前后（`src/agent/dispatch.mjs`
-  runOne / vscode `agent/execute-tools.mjs` runOne——pre-gate 拦截与参数解析失败不入事件）。
+  runOne / vscode `src/agent/execute-tools.mjs（VSC 仓）` runOne——pre-gate 拦截与参数解析失败不入事件）。
   字段：tool/ms/head（≤200）/err（≤200）。
 - **`child:spawn` / `child:done` / `child:error`** — 子代理 spawn/settle
   （agent-tools/{subagent,subagent-async,consult}.mjs + vscode 同族 + escalate 执行器）。
   字段：role/id/ms/kind（ok/partial）——id 形如 explore#1。
 - **`susp:enter` / `susp:exit` / `digest:start` / `digest:end`** — 挂起态迁移
-  （`src/tui/agent-turn.mjs` suspensionSession/digestTurn / vscode `extension/suspension.mjs`）。
+  （`src/tui/agent-turn.mjs` suspensionSession/digestTurn / vscode `src/extension/suspension.mjs（VSC 仓）`）。
   字段：pendingN/poolN/ms/reason。
 - **`ev:settled` / `ev:stopped` / `ev:cancelled`** — settle 回调分流（cancelled 分支 →
   ev:cancelled；挂起移交 → ev:settled）+ **中止清池 `ev:stopped`**（settle 回调外的
@@ -59,11 +59,11 @@
 - **llm:\* 统一落 chat()**（`src/provider/core.mjs` chat 包装器——含续写嵌套对）——覆盖
   agent.mjs 消化轮、context.mjs compress/distill、auto-think、advisor、子代理/consult 各
   回合（单点全覆盖）。
-- tool:*（`src/agent/dispatch.mjs` runOne——vscode agent/execute-tools.mjs runOne——
+- tool:*（`src/agent/dispatch.mjs` runOne——vscode `src/agent/execute-tools.mjs（VSC 仓）` runOne——
   pre-gate 拦截不入事件）。
 - child:*/ev:*（agent-tools/{subagent,subagent-async,consult}.mjs 与 vscode 同族 +
   escalate 执行器——spawn/settle 分流点）。
-- 挂起循环（suspensionSession/digestTurn——CLI agent-turn.mjs / vscode extension/suspension.mjs）。
+- 挂起循环（suspensionSession/digestTurn——CLI agent-turn.mjs / vscode src/extension/suspension.mjs（VSC 仓））。
 - 中止清池（agent.mjs runAgent finally Ctrl+C + suspension abort）→ ev:stopped。
 
 **今日场景直接可验证**：4 spawn → tool:call ×4（并行同刻）→ child:done ×4 → llm:start
@@ -85,11 +85,11 @@
   `src/context.mjs`（compress/distill logCtx）；`src/auto-think.mjs`（logCtx）；
   `src/agent-tools/{subagent,subagent-async,consult}.mjs`（child/ev 事件 + escalate
   执行器）；测试（T-L1..L10）。
-- **VS Code**：同构镜像——新 `src/log.mjs`（同一实现语义）；`src/provider.mjs`（llm:*）；
-  `src/agent.mjs`（logCtx + ev:stopped）；`src/agent/execute-tools.mjs`（tool:*）；
-  `src/extension/panel-chat.mjs`（turn/err——runPanelChat 包装）；
-  `src/extension/suspension.mjs`（susp/digest/ev:stopped）；`src/agent-tools/*`（child/ev）；
-  `src/compact.mjs` + `src/advisor/run.mjs`（logCtx stage）；测试（镜像）。
+- **VS Code**：同构镜像——新 `src/log.mjs`（同一实现语义）；`src/provider.mjs（VSC 仓）`（llm:*）；
+  `src/agent.mjs`（logCtx + ev:stopped）；`src/agent/execute-tools.mjs（VSC 仓）`（tool:*）；
+  `src/extension/panel-chat.mjs（VSC 仓）`（turn/err——runPanelChat 包装）；
+  `src/extension/suspension.mjs（VSC 仓）`（susp/digest/ev:stopped）；`src/agent-tools/*`（child/ev）；
+  `src/compact.mjs（VSC 仓）` + `src/advisor/run.mjs`（logCtx stage）；测试（镜像）。
 - **文档**：本文（README 地图已注册）；两端 AGENTS.md 模块表登记 log.mjs。
 
 ### 2.4 关键决策

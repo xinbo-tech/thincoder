@@ -63,8 +63,8 @@ explore 与其它角色一致走 `subagentTurns`（见 `src/agent-tools/subagent
 | `src/agent/helpers.mjs` | MODIFY | `DEFAULT_MAX_TURNS = 200` |
 | `src/tui/cmd-config.mjs` | MODIFY | 四处显示兜底 `?? 100` → `?? 200` |
 | 相关设计文档 | MODIFY | "默认 100" 描述同步为 "默认 200" |
-| `test/advisor.test.mjs` | MODIFY | 新增 timeoutMs 配置覆盖/回退用例（见 §4） |
-| `test/agent.test.mjs` | MODIFY | 显式 `maxTurns: 100` 配置保持合法（仅确认断言不锁死默认值） |
+| `test/advisor.test.mjs`（已删——存量测试清零批） | MODIFY | 新增 timeoutMs 配置覆盖/回退用例（见 §4） |
+| `test/agent.test.mjs`（已删——存量测试清零批） | MODIFY | 显式 `maxTurns: 100` 配置保持合法（仅确认断言不锁死默认值） |
 
 ## 4. 验收标准（Acceptance Criteria）
 

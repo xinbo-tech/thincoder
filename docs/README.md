@@ -94,9 +94,12 @@ docs/
 - **变更记录折叠**（新变更落一行注记，不堆逐批需求/评审/测试流水账）
 - **跨仓引用形态**：引用他仓文档不得写 `X.md` §N 形态（V1 按本仓 basename 解析——**basename 不在本仓扫描域时**恒判 `unknown-doc`；同名 basename 按本仓档解析、可能 `no-section` 误报甚至以错档通过）——写「名称（仓别）§N」（如 `WEBVIEW（VSC 仓）§5`）：去 `.md` 后缀、去路径前缀（跨仓引用 = V1 域外）
 - **自持边界（条目与归属）**：台账 / 批次档 / 需求只收本仓事项——禁跨仓指针（含本产品多端互引）；正文引用他仓用上条规范形态。一句话：**正文可以指他仓（规范形态），条目与归属不行**（两轴并列——权威 = `requirements/ENGINEERING-MODE.md` §1.19）
+- **文档锚一致性（V5）**：现行档内的**事实锚**（用例号 / 文件路径 / 符号）必须对得上实装——悬空即报（报告态 → 收紧后阈值 0）；
+  **已退场 / 已废的锚必须带注记 + 来源指针**（标记集与指针形态 = 设计档 `design/ENGINEERING-MODE.md` §2.32.3；需求 = `requirements/ENGINEERING-MODE.md` §1.20）。
 
 违反即文档格式债——与源码 500 行硬限同理。批量检查：`node scripts/check-doc-width.mjs`
 （扫描域 = `docs/design/` + `docs/requirements/` + `docs/batches`——排除 `_archive/`（历史快照豁免）；`docs/README.md`、`docs/TODO.md`、`docs/PHILOSOPHY.md` 覆盖为待办，见 `TODO.md`）。
+**V5 文档锚一致性**（本批交付）：`node scripts/doc-anchors.mjs`（**轮 2 收紧后默认闸态**；临时放宽 = `--v5-report`；扫描域 = `docs/design` + `docs/requirements`）。
 
 ### 3.8 批次记录档（`batches/`——本仓路径）
 

@@ -273,7 +273,7 @@ explore / plan / coder（普通模式）**不适用**——行为零变更。
 A 胜在：**单一共用装配点 + 与 token 门同出口**（错误生命周期一致）；B 覆盖等价但会把门禁拆到与 token 门不同的层，后续加角色时需再想一遍；C 冗余（本条否决理由已按评审 #5 修正——原“B 只盖同步前半”不成立） |
 | 判据级别 | (i) 措辞正则（"已收口"）· (ii) 机器标记（HTML 注释）· (iii) 存在 + 可读 | **(iii)** | (i) 把中文措辞写死进代码、模板一改就断；(ii) 给文档加机器字段=形状约束；(iii) 零脆弱——内容好坏由执行者拒收兜底（需求已定） |
 | 提示词同步时机 | 本批最小同步（样例行）· 全部留给第 2 批 | **本批最小同步** | 门禁先行而样例不教 = 每次调用撞墙；第 2 批的"六段自写"规则仍留第 2 批 |
-| 测试落点 | 新文件 `test/batch-doc-gate.test.mjs` · 并入 design-token-settlement | **新文件** | 机制独立（batchDoc ≠ token）；token 测试已 245 行。构造手法同形于两档既有测试：`test/design-token-settlement.test.mjs`（隔离缝 + 最小 agent + assert.throws）与 **`test/subagent-id-counter.test.mjs:12,27`**（直驱 `buildSpawnChild`——T27 成功路径断言靠它） |
+| 测试落点 | 新文件 `test/batch-doc-gate.test.mjs` · 并入 design-token-settlement | **新文件** | 机制独立（batchDoc ≠ token）；token 测试已 245 行。构造手法同形于两档既有测试：`test/design-token-settlement.test.mjs`（隔离缝 + 最小 agent + assert.throws）与 **`test/subagent-id-counter.test.mjs:12`（VSC 仓；27 行同）**（直驱 `buildSpawnChild`——T27 成功路径断言靠它） |
 
 
 ### 2.14 受影响文件（第 1 批 as-of 快照——不得当契约引用）
@@ -549,7 +549,8 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 | 校验 | 内容 | 落点 |
 |---|---|---|
 | V1 **段引用可解析** | 扫描 **`docs/design/` + `docs/requirements/` + `docs/batches/`** 里的 `§N` / `文档:节` 引用，目标节号存在（**排除 `_archive/`**——历史快照豁免，同 check-doc-width 现行口径） | **落点见 §2.21 二选一**（首选 `scripts/check-doc-width.mjs`——增量 ≤±19 守 300；超出则拆 `scripts/doc-consistency.mjs`）；**“定死此文件”口径已废**（轮次4 评审 #2——同机制不得两说） |
-| V2 **计数与列表一致** | 匹配“**N 项/N 处/N 条**”声明，并在**同节（同一标题块）**内找对应陈述；其条数 ≠ 声明值 → 报。识别三形态：md 列表行 / 表格行 / 顿号·斜杠枚举（括号内计数） | **落点见 §2.21 二选一**（首选 `scripts/check-doc-width.mjs`——增量 ≤±19 守 300；超出则拆 `scripts/doc-consistency.mjs`）；`test/doc-consistency.test.mjs` 为用例面（轮次5 评审 #6：与 V1 同口径，同机制不得两说） |
+| V2 **计数与列表一致** | 匹配“**N 项/N 处/N 条**”声明，并在**同节（同一标题块）**内找对应陈述；其条数 ≠ 声明值 → 报。识别三形态：md 列表行 / 表格行 / 顿号·斜杠枚举（括号内计数） | **落点见 §2.21 二选一**（首选 `scripts/check-doc-width.mjs`——增量 ≤±19 守 300；超出则拆独立档——**未采用：实际落 = 留单档 + 拆分计划登记**）；`test/doc-consistency.test.mjs` 为用例面（轮次5 评审 #6：与 V1 同口径，同机制不得两说） |
+| V5 **文档锚一致性** | 现行档内**事实锚**（用例号 / 文件路径 / 符号）的存在性判定（报告态 → 收紧阈值 0）——判据规格、射程边界与假阳排除见 **§2.32.3**（本节不重述——D2）；落点 = **独立档** `scripts/doc-anchors.mjs` + `test/doc-anchors.test.mjs`（`scripts/check-doc-width.mjs` 368 行——本批只导出共享豁免谓词） | 设计 = §2.32（DOC-CODE-RECONCILE 批——2026-09-12；需求 §1.20 / FR26） |
 
 > 边界（不硬判）：V1/V2 只查**可机判的两类**；语义级一致性（“同一机制两处不同描述”）仍归**评审**（advisor 八维 **#7 Document ownership**——`src/prompts/advisor-design.md:9`）——
 > 机械只管计数/指针，不管意思（否则误报湮没信号）。
@@ -628,7 +629,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 #### 2.20.6 V3 机械校验（零假阳口径）
 
 加入 `scripts/check-doc-width.mjs` 一致性扫描族：**仅当批次档「§4 或 §6 有实质内容」时**（机器判据；**不引用 §1 的“已收口”状态词**——它是讨论状态，与本守卫无关）；**“有实质内容”的定义（轮次5 评审 #1）**：该段内**除骨架行/斜体占位行外**存在非空行——即 `_（...）_` 形态占位、`### 批准（...）` 等模板骨架行**一律不算内容**（不定义则本批档在飞时即假阳——其 §4/§6 带占位行）；断言「§3 **含工具写入的轮次行**（`### 轮次 \d+（评审子代理）`——排除骨架行）」；
-**落点按 §2.21 二选一**（首选 `check-doc-width.mjs` +≤19 守 300；超出则拆 `scripts/doc-consistency.mjs`）；**§2.19 V1 的“定死此文件”句已在本批同步废除**（轮次4 评审 #2——同机制不得两说）：
+**落点按 §2.21 二选一**（首选 `check-doc-width.mjs` +≤19 守 300；超出则拆独立档——**未采用：实际落 = 留单档**）；**§2.19 V1 的“定死此文件”句已在本批同步废除**（轮次4 评审 #2——同机制不得两说）：
 在飞批次（尚未评审）**不报**（避免每批都假阳）。反证用例：构造已批准但 §3 空 → 必报。
 **判据射程（2026-09-12 清零轮收紧）**：V3 只判**工具落地后**（`V3_ERA_START` = 2026-09-11）创建的批次档——该日及之前的批次档 §3 无工具写入通道（父侧代写），属**结构性历史事实**而非违规；原「存量入基线」处置由**射程排除**取代（残留即先例——基线不得留任何合法态）。
 
@@ -677,7 +678,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 | src/prompts/persona-eng-coder.md | 修改 | 35 | ≤±6 | 纯 .md（§5 自写→用工具） |
 | docs/design/prompts/persona-eng-coder.md | 修改 | 35 | ≤±6 | 纯 .md（双源） |
 | scripts/check-doc-width.mjs | 修改 | 281 | **≤±19** | **>300 档：增量收到 ≤19 以守住 300（评审 #9）**——V1/V2/V3 扫描若超出，拆到新文件（见下）；仍越线 → 停下报告 |
-| scripts/doc-consistency.mjs | **新增（条件）** | — | ≤±120 | **评审 #9 备选**：V1/V2/V3 扫描独立成文件（`check-doc-width.mjs` 只留宽度）——二者取一，**不得都做也不得都不做** |
+| （条件备选）`doc-consistency` 独立档——**未建** | **新增（条件）** | — | ≤±120 | **评审 #9 备选**：V1/V2/V3 扫描独立成文件（`check-doc-width.mjs` 只留宽度）——二者取一；**实际落 = 留单档（本备选未采用）** |
 | test/batch-segment.test.mjs | **新增** | — | +150±40 | T43–T47 |
 | test/doc-consistency.test.mjs | 修改 | 176 | ≤±30 | V3 用例 |
 | docs/design/TOOLS.md | 修改 | 124 | ≤±8 | 工具系统权威源（登记新工具——轮次4 评审 #5 实测校正 79→124） |
@@ -685,7 +686,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 | docs/requirements/ENGINEERING-MODE.md | 修改（**eng-designer 落笔**——写权表 §2.15 A2 / D1） | 679 | ≤±8 | 4 项：§1.12 段表加「写入手段」列 · §1.11 B9 同步 batchDoc 参数 · §1.16 F1 注评审侧口径 · §1.16 N2 改“§3 段不在评审对象清单” · **§1.17 N3 计数口径改（“双源 15+15=30 档之宿主档”——轮次3 评审 #9）** |
 
 > 行数为 2026-09-10 实测；**档位风险结论（评审 #9）**：`scripts/check-doc-width.mjs` 由“≤±45（上界 326 越 300）”改为
-> **二选一**：①增量 ≤19 守住 300（V3 仅少许行）；②V1/V2/V3 拆入 `scripts/doc-consistency.mjs`（增量不限）。
+> **二选一**：①增量守住 300（V3 仅少许行）；②V1/V2/V3 拆入独立 `doc-consistency` 档（增量不限）。**实际落 = ①留单档**（拆分计划登记——≥400 必拆）。
 > `src/advisor/run.mjs` 488 + ≤±10 = 498 **逼近 500 硬顶**——若实施中越 500，停下报告并带拆分计划（不静默越）。
 
 ### 2.22 VSC 端镜像（第 5 批——FR23）
@@ -730,7 +731,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 |---|---|---|---|
 | 门落在哪 | A **两处各落 + 共享校验函数**（阻塞 `subagent.mjs` / 异步 `subagent-async.mjs` 各一个调用点，校验逻辑单份） · B 先造共享 spawn 等价点 | **A** | VSC **无** CLI 的双路装配单点（勘察实证）；B 是结构性重构（动阻塞/异步两条链的公共骨架）= 风险超出镜像范围；A 校验逻辑仍单份（语义不会漂） |
 
-- **共享校验函数落点**：`src/agent-tools/subagent-spawn-gate.mjs`（169 行——token gate 家族所在，门的天然落点）；签名 `resolveBatchDoc(agent, batchDoc)`：空/解析失败/非文件 → throw（消息明示）。
+- **共享校验函数落点**：`src/agent-tools/batch-segment.mjs`（`resolveBatchDocPath`——原拟 `subagent-spawn-gate` 落点未采用）；签名 `resolveBatchDocPath(cwd, given)`：空/解析失败/非文件 → throw（消息明示）。
 - **角色域（发现 #3——必须写死，否则违 N2 零回归）**：门**只对 `NEEDS_BATCH_DOC = { eng-coder, eng-designer }` 生效**——其余角色（explore / plan / coder）**零变更**（不带 batchDoc 照常 spawn）。
   AC37/T55 的“两路拒”**仅指这两个角色**；反面例（explore 不带 batchDoc 不得被拒）入 T55b。
 - **参数面（发现 #3）**：spawn schema 需新增 `batchDoc` 属性（否则参数无处传入）；受限变体（审计/勘察子代理）的 `delete props` 清单**同步加 `batchDoc`**（不得透传给子代）。
@@ -749,17 +750,17 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 | ④ **装配分支** | `src/agent/setup.mjs:151-160`（449 行） | 增 `eng-designer` 分支：读/搜/写设计产出 + `batch_segment` + **勘察通道工具（explore-only 受限 subagent 变体——镜像 CLI §2.15 D3 的受限变体与注册）**；**不含 advisor**（轮次3 评审 #5） |
 | ⑤ **角色 enum** | `src/agent-tools/subagent.mjs:56-74`（`modeRoleField`） | 工程模式 enum 由 `[explore, plan, eng-coder]` → 含 `eng-designer` |
 | ⑥ **场景表** | `src/prompt-overlays.mjs`（82 行） | 补 `"persona-eng-designer.md": loadSlot(...)` 与 `"eng-designer": [...]` 两行（CLI:26/CLI:52 同形——**全文逐行同构，最干净的可照抄点**） |
-| ⑦ **webview 枚举** | `activity-view.js:13`（157）· `activity.js:37`（205）· `settings-agent.js`（175）· `settings-models.js`（215） | 四处角色枚举/regex 补 `eng-designer` |
+| ⑦ **webview 枚举** | `webview/activity-view.js:13`（VSC 仓）（157）· `webview/activity.js:37`（VSC 仓）（205）· `webview/settings-agent.js`（VSC 仓）（175）· `webview/settings-models.js`（VSC 仓）（215） | 四处角色枚举/regex 补 `eng-designer` |
 | ⑧ **人格文件** | `src/prompts/persona-eng-designer.md`（**新增**） | 逐字源 = CLI 同名文件（56 行）；锚句 A3 |
 
 **⑨ 勘察通道（发现 #4——CLI §2.15 D2/D3 的镜像，**必搬**）**：designer 的勘察能力 = **explore-only 受限子代理变体**（schema 只暴露 explore + 描述分流）；
-否则逐字拷来的人格文本（CLI `persona-eng-designer.md:24`「勘察预算 ≤6 explore spawns per batch」）**指向不存在的能力**（CLI 侧动机 = FR9 #7「勘察归 designer 自己做」）。
+否则逐字拷来的人格文本（CLI `src/prompts/persona-eng-designer.md:24`「勘察预算 ≤6 explore spawns per batch」）**指向不存在的能力**（CLI 侧动机 = FR9 #7「勘察归 designer 自己做」）。
 **无“不搬”选项**（轮次3 评审 #1——原退路句已删）：实施中若遇阻，停下报告（同档位停线体例），不得以“记取舍 + 同步人格文本”代替能力交付。
 
 #### 2.22.5 batch_segment 移植（F4——工具本体 + 两个适配点）
 
 - **工具本体**：新增 `src/agent-tools/batch-segment.mjs`（契约同 §2.20.1：无路径参数 / 段白名单按身份 / append-only / 来源戳仅 §3 / 剥证自有正则 / fail-closed 六条）——**无依赖冲突，可逐步移植**。
-- **适配点 ①（工具集落点）**：VSC 的 `advisorToolsFor` 在 **`src/advisor/tools.mjs:26`（单参，49 行）**而非 `run.mjs`——签名改 `(agent, reviewType, batchDoc)`，**仅当 `reviewType === "design"` 且 batchDoc 已绑定**时追加工具；测试缝 `_resolvedAdvisorToolsFor` 保留语义。
+- **适配点 ①（工具集落点）**：VSC 的 `advisorToolsFor` 在 **`src/advisor/tools.mjs:26`（VSC 仓；单参，49 行）**而非 `run.mjs`——签名改 `(agent, reviewType, batchDoc)`，**仅当 `reviewType === "design"` 且 batchDoc 已绑定**时追加工具；测试缝 `_resolvedAdvisorToolsFor` 保留语义。
 - **适配点 ②（实例键通道）**：VSC 的 `runAdvisorReview`（`src/advisor/run.mjs:346`，459 行）比 CLI 多一个 `rv` 实例参数——`batchDoc` 沿 **`rv.batchDoc`** 传递（与 `rv.round`/`rv.priorOutput` 同族），**不用单值会话态**（与 §2.20.2 同口径）。
 - **挂载**：`src/agent-tools/index.mjs`（16 行）barrel export；`src/agent-tools.mjs`（2 行）为 `export * from` 不需改。
 
@@ -776,8 +777,8 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
   VSC 的 V3 默认扫**本仓** `docs/batches/`——该目录不存在 → **跳过不报**（现状）；
   **但批次档的单一归属是 CLI 仓**（决策 A），**真实守门在 CLI 侧的 V3**（已落地，第 4 批）；
   VSC 侧 V3 的价值 = 结构对等 + 测试面 + 未来 VSC 自建批次档时可用；**若将来需要扫 CLI 仓批次档，以显式参数传入扫描根**（不得硬编码跨仓相对路径）。
-- **接线是硬项**（N3）：接线落点**钉死 `test/files.mjs` 入册**（**`package.json` 不入本批受影响文件与两个实现面文件域**——轮次2 评审 #4；**5 个新 test 档全部入册**，基线 fixture 不入；`test/files.mjs` 增量按入册条数上调）——
-  VSC 快层目标 = 显式清单 `test/files.mjs`（41 行，**28 条清单项**；`test/` 下 **27 个 `.test.mjs`**——两数口径不同，发现 #11）——否则“有校验器但不跑” = 机制没活。
+- **接线是硬项**（N3）：接线落点**钉死 `test/files.mjs`（VSC 仓） 入册**（**`package.json` 不入本批受影响文件与两个实现面文件域**——轮次2 评审 #4；**5 个新 test 档全部入册**，基线 fixture 不入；`test/files.mjs`（VSC 仓） 增量按入册条数上调）——
+  VSC 快层目标 = 显式清单 `test/files.mjs`（VSC 仓）（41 行，**28 条清单项**；`test/` 下 **27 个 `.test.mjs`**——两数口径不同，发现 #11）——否则“有校验器但不跑” = 机制没活。
 
 #### 2.22.7 提示词双源（F6——用户在裁：双源）
 
@@ -797,8 +798,8 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 
 | 面 | 文件域（**与 §2.23 两表一致**） | 内容 |
 |---|---|---|
-| **① 代码面** | `src/**`（除 `src/prompts/**`）· `scripts/**` · `test/**`（除 `test/prompts-mirror-anchors.test.mjs`） | 门/角色/工具/装配/枚举/V1-V3 + 四个新用例档（含基线 fixture） |
-| **② 提示词双源面** | `src/prompts/**` · `docs/design/prompts/**` · `docs/design/README.md（VSC 仓）` · `test/prompts-mirror-anchors.test.mjs` | 15 拷贝 + **锚句宿主 6 档定点改** + 1 新建 + 锚句断言测试（轮次4 评审 #4/#5） |
+| **① 代码面** | `src/**`（除 `src/prompts/**`）· `scripts/**` · `test/**`（除 `test/prompts-mirror-anchors.test.mjs`（VSC 仓）） | 门/角色/工具/装配/枚举/V1-V3 + 四个新用例档（含基线 fixture） |
+| **② 提示词双源面** | `src/prompts/**` · `docs/design/prompts/**` · `docs/design/README.md（VSC 仓）` · `test/prompts-mirror-anchors.test.mjs`（VSC 仓） | 15 拷贝 + **锚句宿主 6 档定点改** + 1 新建 + 锚句断言测试（轮次4 评审 #4/#5） |
 
 **文件域不相交** → 两个 eng-coder **并行**（`files` 声明交调度器）；**锚句断言测试归面 ②**（它拥有那些文件），面 ① 的测试只测代码行为——避免跨面依赖。
 
@@ -818,22 +819,22 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 | 文件 | 性质 | as-of | 增量上限 |
 |---|---|---|---|
 | src/agent-tools/batch-segment.mjs | **新增** | — | +≤200（CLI 同名档 196 行） |
-| src/agent-tools/subagent-spawn-gate.mjs | 修改 | 169 | +≤15（共享校验 `resolveBatchDoc`） |
+| src/agent-tools/batch-segment.mjs（原拟 `subagent-spawn-gate`） | 修改 | 169 | +≤15（共享校验 `resolveBatchDocPath`） |
 | src/agent-tools/subagent.mjs | 修改 | 358 | +≤22（白名单/模式门/enum + **阻塞路 batchDoc 门调用点**〔轮次4 评审 #2〕）——**>300 档：不拆**（单点枚举与单点校验调用，无结构增长）；**函数档：无 ≥300 行单函数**（as-of） |
 | src/agent-tools/subagent-async.mjs | 修改 | 489 | **+≤10（→499，越 500 停下报告）**——含**异步路 batchDoc 门调用点**〔轮次4 评审 #2〕；>300 档：不拆；**函数档：无 ≥300 行单函数**（as-of） |
 | src/agent-tools/advisor.mjs | 修改 | 296 | +≤14（`batchDoc` 参数）——**跨 300：不拆**（单点参数新增，无结构增长；拆分留给专项债）；**函数档：无 ≥300 行单函数**（as-of） |
 | src/agent-tools/advisor-async.mjs | 修改 | 457 | +≤10（`rv.batchDoc` 实例字段）——>300 档：不拆（同因）；**函数档：无 ≥300 行单函数**（as-of） |
-| src/advisor/tools.mjs | 修改 | 49 | +≤10（三参签名 + 注入） |
+| src/advisor/tools.mjs（VSC 仓） | 修改 | 49 | +≤10（三参签名 + 注入） |
 | src/advisor/run.mjs | 修改 | 459 | +≤10（调用点 / rv 透传）——>300 档：不拆；**函数档：无 ≥300 行单函数**（as-of） |
 | src/agent/setup.mjs | 修改 | 449 | +≤24（eng-designer 分支 + 勘察变体）——>300 档：不拆；**函数档：无 ≥300 行单函数**（as-of） |
 | src/agent-tools/index.mjs | 修改 | 16 | +≤2（barrel） |
 | src/prompt-overlays.mjs | 修改 | 82 | +≤4（两行 eng-designer 条目） |
-| scripts/check-doc-width.mjs | 修改 | 51 | **+≤247（→298，对齐 CLI 同机制实测 298 行；≤300）；若超 300 即拆 `scripts/doc-consistency.mjs`（二选一）** |
-| webview/activity-view.js | 修改 | 157 | +≤2（FAMILY_ROLES） |
-| webview/activity.js | 修改 | 205 | +≤2（角色 regex） |
-| webview/settings-agent.js | 修改 | 175 | +≤2 |
-| webview/settings-models.js | 修改 | 215 | +≤2 |
-| test/files.mjs | 修改 | 41 | +≤8（**5 个新 test 档**全部入册；基线 fixture 不入——轮次3 评审 #13） |
+| scripts/check-doc-width.mjs | 修改 | 51 | **+≤247（→298，对齐 CLI 同机制实测 298 行；≤300）；若超 300 即拆独立档（二选一——实际落 = 留单档 + 拆分计划登记）** |
+| webview/activity-view.js（VSC 仓） | 修改 | 157 | +≤2（FAMILY_ROLES） |
+| webview/activity.js（VSC 仓） | 修改 | 205 | +≤2（角色 regex） |
+| webview/settings-agent.js（VSC 仓） | 修改 | 175 | +≤2 |
+| webview/settings-models.js（VSC 仓） | 修改 | 215 | +≤2 |
+| test/files.mjs（VSC 仓） | 修改 | 41 | +≤8（**5 个新 test 档**全部入册；基线 fixture 不入——轮次3 评审 #13） |
 | test/batch-segment.test.mjs | **新增** | — | +200 |
 | test/batch-doc-gate.test.mjs | **新增** | — | +150 |
 | test/eng-designer-role.test.mjs | **新增** | — | +180（含运行期门三例） |
@@ -852,7 +853,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 | src/prompts/persona-engineering.md | 修改 | 71 | 锚句 **A12**（身份段改述 + spawn eng-designer 调用链——轮次2 评审 #1 🔴） |
 | docs/design/prompts/persona-engineering.md | 修改 | — | 中文镜像同步（A12 中文版） |
 | docs/design/prompts/*.md（VSC 仓） | **新增 15** | — | 逐字自 CLI `docs/design/prompts/` 拷贝 + **端特有段适配**（§2.22.7） + **跨仓节引用改写**（轮次2 评审 #9） |
-| test/prompts-mirror-anchors.test.mjs | **新增** | — | +≤120（锚句 A1-A8/A11/A12 双源断言 + 端特有段存在性；面 ②） |
+| test/prompts-mirror-anchors.test.mjs（VSC 仓） | **新增** | — | +≤120（锚句 A1-A8/A11/A12 双源断言 + 端特有段存在性；面 ②） |
 
 > 行数为 2026-09-10 实测（VSC 仓）；**唯一逼近硬顶**：`subagent-async.mjs` 489 + ≤10 = 499——越 500 停下报告并带拆分计划。
 
@@ -1062,7 +1063,7 @@ FR18 的诉求：**一眼看出"哪条需求落地了没有"**，无需遍历文
 | test/ledger.test.mjs | **新增** | — | ≤180（T92–T96 增量） | 新增档 |
 | test/fixtures/ledger-baseline.json | **新增** | — | ≤80 | 台账检查**基线档**（**必须保持为空**——非空即 FAIL；「存量分流 / 入基线」已废——§2.24.6）；键稳定不含行号（与 `test/fixtures/doc-consistency-baseline.json` 同口径）；**入 eng-coder `files`** |
 | `docs/TODO-archive.md` | **新增**（父侧落笔） | — | ≈+40 行（归档 / 勾销条目迁入 + 头部注） | 台账归档档（§2.24.9①）；**不入任何子代理 `files`**——物理落笔 = 父侧 |
-| 测试注册面（CLI 仓 glob 自动发现） | **无改动** | — | **0** | CLI 仓**无显式清单档**——`test/run-fast.mjs:19` / `test/run-full.mjs:9` 走 `test/*.test.mjs` glob → 新 test 档注册改动 **0**（`test/files.mjs` 是 VSC 仓机制，不入本表） |
+| 测试注册面（CLI 仓 glob 自动发现） | **无改动** | — | **0** | CLI 仓**无显式清单档**——`test/run-fast.mjs:19` / `test/run-full.mjs:9` 走 `test/*.test.mjs` glob → 新 test 档注册改动 **0**（`test/files.mjs`（VSC 仓） 是 VSC 仓机制，不入本表） |
 | scripts/check-doc-width.mjs | **不触碰** | 298 | **0** | 已贴 300 硬顶——本批一律不改 |
 
 **代码 / 文档面**（VSC 仓 `thincoder-vscode`）
@@ -1205,7 +1206,7 @@ V2 面有分隔行二次确认、宽度面无此确认，fail-open 方向）；�
 
 **档位结论（修正轮 #6）**：`scripts/check-doc-width.mjs` = **存量贴线档**（298/300 建议线）——本批承诺**终态 ≤300**（净增 ≤2；±~6 为双向评估，删除内联重复扫描为减量项）；
 落地以**批前 298 / 批后实测对表**记账（§5 行数对表）。**若实测 >300（净增 ≥3）→ 拆分退路**：抽宽度扫描核心（`collectMarkdown` / `scanDomain` / `checkDocWidths`）至
-`scripts/lib/doc-scan.mjs`（re-export 保持消费面零改——`test/doc-consistency.test.mjs` 导入点不变），主档回 ≤300；触发即**停下报告父侧**（增量档不在本批 files 声明内）。
+独立档 + 扫描库分档（原拟 `doc-scan` 库档——**未采用**；re-export 保持消费面零改——`test/doc-consistency.test.mjs` 导入点不变），主档回 ≤300；触发即**停下报告父侧**（增量档不在本批 files 声明内）。
 
 #### 2.26.4 关键决策记录（含否决备选）
 
@@ -1238,7 +1239,7 @@ D-2 契约「禁新档增例」），交付时仅一次性人工核验——**�
 | # | 候选方案 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论（选定/否决理由） |
 |---|---|---|---|---|
 | 1 | `test/doc-consistency.test.mjs` 续 T72–T73（T74 已退场——整删，删除记录 = `TESTING.md` §11.3） | 同档同族（第 13 批 B/C 机判即落此档）；零新档；快层 glob 自动发现 | 档名语义偏「文档一致性」——本组为「测试档拆分完整性」，主题相邻 | **选定** |
-| 2 | 新档 `test/prompts-split-guard.test.mjs` | 主题最贴切 | 违本批「不得自行新建档」边界；新增档位注册/维护面 | 否决——零新档纪律 |
+| 2 | 新档 `test/prompts-split-guard.test.mjs`（已废——否决） | 主题最贴切 | 违本批「不得自行新建档」边界；新增档位注册/维护面 | 否决——零新档纪律 |
 | 3 | 并入两档提示词测试之一 | 就近可写 | **破坏其自身守恒计数**（拆分时 53 = 42 + 11；现锁 14 + 4 = 18——并入即失稳，自证矛盾） | 否决 |
 
 **契约（T111/T112 = 静态不变量——逐字实现形态见 §2.27.4 代码块）**：
@@ -1532,7 +1533,7 @@ test("T112 边界：新档自持——零跨档引用；import 全 node:（D-2/A
 
 **RF-6 回归锁（FR19 + 需求 #11 可机判）**
 - CLI：`test/eng-designer-role.test.mjs`（T40 断言更新——README 口径「过渡期主 agent 代行」零命中）· `test/prompts-dual-source.test.mjs`（**新增断言**——勾销旧句零命中 + 替句子串在位）（修正轮 #7）。
-- VSC：`test/prompts-mirror-anchors.test.mjs`（**新增断言**——勾销句 · VSC 自审第 6 条零命中 · 身份句子串）（修正轮 #7——同前，措辞统一）。
+- VSC：`test/prompts-mirror-anchors.test.mjs`（VSC 仓）（**新增断言**——勾销句 · VSC 自审第 6 条零命中 · 身份句子串）（修正轮 #7——同前，措辞统一）。
 - 口径：断言随文本同批落（锚句变更永不静默）。
 
 #### 2.28.5 方案选型与关键决策
@@ -1598,7 +1599,7 @@ test("T112 边界：新档自持——零跨档引用；import 全 node:（D-2/A
 |---|---|---|
 | C1 | `read_image` 工具描述（**模型可见面**）事实错误：点名「DeepSeek V4, GLM-5」为纯文本模型——实测 `deepseek-flash` / `deepseek-v4-flash` / `deepseek-v4-flash-vision-exp` 均 `multimodal: true`（仅 `deepseek-v4-pro` 非视觉）；能力门为 spec 驱动 | `src/tools/read_image.md:8` vs `src/model-specs.mjs:33/38/40`；门 `src/tools/file.mjs:168` |
 | C2 | `§24` 旧锚残留（AGENT-LOOP 重排后旧节号不存 = 断链）：CLI `src/**` 实测 **28 行 / 29 处 token / 18 文件**（审计估「25 处」——以逐行枚举为准，D3） | 逐行见 §2.29.3 |
-| C3 | `AGENT-LOOP（VSC 仓）§7` 两句仍述 C' 态（busy「输入禁用」/ readOnly 锁）——与 INPUT-LOCK-BEHAVIOR-REVISED 及本端实现矛盾 | `AGENT-LOOP（VSC 仓）:290-291` / `:322-325`；实现 `webview/loading.js:38`（readOnly 锁移除）+ `webview/send.js` 出口守卫 + `locales/{zh,en}.json:13`（占位符定稿串） |
+| C3 | `AGENT-LOOP（VSC 仓）§7` 两句仍述 C' 态（busy「输入禁用」/ readOnly 锁）——与 INPUT-LOCK-BEHAVIOR-REVISED 及本端实现矛盾 | `AGENT-LOOP（VSC 仓）:290-291` / `:322-325`；实现 `webview/loading.js:38`（VSC 仓）（readOnly 锁移除）+ `webview/send.js`（VSC 仓） 出口守卫 + `locales/{zh,en}.json:13`（占位符定稿串） |
 | C4 | `wrapped-spawn.mjs:1` 注释指向已归档档 `docs/design/TUI-STDERR-CAPTURE.md`（真断链） | `src/tui/wrapped-spawn.mjs:1`；归档实况 `docs/design/_archive/TUI-STDERR-CAPTURE.md` |
 | C5 | 需求档 5 点位未同步（第 4 批 C 遗留 ②；第 5 项 N3 为第 5 批评审 #9 委托项） | `docs/requirements/ENGINEERING-MODE.md` §1.12 段表 / §1.11 B9 / §1.16 F1 / §1.16 N2 / §1.17 N3 |
 | C6 | CLI 仓 `.thincoder/index/`（`manifest.json` 117,135 B + `vectors.bin` 4,395,208 B）为 DB 化前死产物（mtime 2026-07-29；`src/**`+`bin/**` 零读写点；活体索引 = `~/.thincoder/memory.db`） | `thincoder/.thincoder/index/`；`.gitignore:18`（未跟踪） |
@@ -1670,13 +1671,13 @@ test("T112 边界：新档自持——零跨档引用；import 全 node:（D-2/A
 无语义变化、零行为）。
 **同族观察（出批——登记不并修）**：① 同描述/同文件内另有同代旧编号锚（`§15/§18` 串、`§19.x`、`§20`——实测
 `src/agent-tools/subagent.mjs` 内 `§19` 21 处 / `§20` 5 处）——不属 C2（`§24`）范围，建议另立勘察做一次全描述重锚；
-② `test/advisor-description.test.mjs:18` 的「旧 §24 已更新」为**变更注**（非断链）——保留；`docs/**` 记史面照留；
+② `test/advisor-description.test.mjs:18`（已退场——TEST-LIFECYCLE）的「旧 §24 已更新」为**变更注**（非断链）——保留；`docs/**` 记史面照留；
 ③ VSC 仓 `src/**` `§24` 残留（实测 39 处 / 13 文件）——本批 CLI 单端，出批（TODO「双端」余 VSC 面另议）。
 
 #### 2.29.4 C3 机制正文同步（`AGENT-LOOP（VSC 仓）§7`——两句修订，已落）
 
-**事实核对（实现已按 INPUT-LOCK-BEHAVIOR-REVISED 落地）**：`webview/loading.js:38` `readOnly = false`（锁移除——始终可编辑）；
-`webview/send.js` 出口守卫 busy 拒发（文本保留不吞）；占位符定稿串 = `input.busyPlaceholder`「主会话处理中——Enter 提交禁用——可继续输入」
+**事实核对（实现已按 INPUT-LOCK-BEHAVIOR-REVISED 落地）**：`webview/loading.js:38`（VSC 仓） `readOnly = false`（锁移除——始终可编辑）；
+`webview/send.js`（VSC 仓） 出口守卫 busy 拒发（文本保留不吞）；占位符定稿串 = `input.busyPlaceholder`「主会话处理中——Enter 提交禁用——可继续输入」
 （`locales/{zh,en}.json:13` 同串）。原文两句为 C' 态残留（busy 输入禁用 + readOnly）。
 
 **修订（逐字两处——已落磁盘；本节行号 as-of 2026-09-11——该档活跃，键控以句内容为准）**：
@@ -1699,7 +1700,7 @@ test("T112 边界：新档自持——零跨档引用；import 全 node:（D-2/A
 | 1 | 改指归档档（`docs/design/_archive/TUI-STDERR-CAPTURE.md`） | 指针可解析；但 src 全仓 `_archive/` 零引用（开先例），且产品注释指冻结档（DOC 地图归档面「不作现状依据」） | 否决 |
 | 2 | **去路径（机制名保留）** | 同机制姊妹引用已是名称形态（`src/crash-reports.mjs:35`「TUI-STDERR-CAPTURE F-2」零路径）——两处同形；名称可 grep 回溯 | **选定** |
 
-**定稿改动（逐字）**：`src/tui/wrapped-spawn.mjs:1` 删去 `（docs/design/TUI-STDERR-CAPTURE.md）`——首行变为
+**定稿改动（逐字）**：`src/tui/wrapped-spawn.mjs:1` 删去 `（docs/design/TUI-STDERR-CAPTURE.md——已归档（DOC-REORG 批））`——首行变为
 `/** wrapped-spawn.mjs — TUI-STDERR-CAPTURE F-1/F-3：包装父`（其余注释逐字不动）。
 **后续触发（登记）**：`TUI.md` §1 已登记 wrapped-spawn 补登随「后续 TUI 文档维护批」——届时注释可再改指 `TUI.md` 权威节。
 
@@ -1814,7 +1815,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 |---|---|---|---|---|
 | 1 | 会话内内存 | 零持久化 | 「首次越线」跨会话重报（每次启动重报 = 不是一次性） | **否决** |
 | 2 | `~/.thincoder/ledger-notify.json`（configDir 同区——crash-reports） | 跨会话、跨端（同一台机器一份）；坏档降空 | 两进程并发写有丢更新窗口（后果 = 至多一次重报，非缺陷级） | **选定** |
-| 3 | 写进仓库（如 `docs/.ledger-notify.json`） | 随仓可共享 | 污染用户仓库 + 需 gitignore + 对跨仓族不适用 | **否决** |
+| 3 | 写进仓库（如 `docs/.ledger-notify.json` 形态——已废：否决未采用） | 随仓可共享 | 污染用户仓库 + 需 gitignore + 对跨仓族不适用 | **否决** |
 
 **D4 收口行载体**（需求设计约束 4）
 
@@ -1915,12 +1916,12 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 | 点 | 接线 | 行为 |
 |---|---|---|
 | `src/extension/ledger-surface.mjs`（新档） | `initLedgerSurface(panel)` / `refreshLedger(panel,{emit})` / `pushLedgerStartup(panel)` / `dispose()` | 扫描 + item 更新 + post |
-| `src/extension/chat-panel.mjs` | `_initStatusBar()` 内调 `initLedgerSurface(this)`（item 并立——`StatusBarAlignment.Right`、priority 99；同 `:156`） | item 建立 + 周期注册 |
-| `src/extension/panel-messages.mjs` | `webviewReady` 分支（既有三推口处，`:428-430`）加 `pushLedgerStartup(panel)`——每次 webview 创建一次（`retainContextWhenHidden` 下 ≈ 每宿主会话一次） | 启动行 post |
-| `src/extension/panel-project.mjs` | `onProjectChanged` 尾加 `refreshLedger(panel,{emit:false})` | 换项目即时刷新 |
-| `webview/chat.js` | 新 case `ledgerNotice` → `addLedgerNotice(ctx, m.lines)` | 流内行 |
-| `webview/ledger-line.js`（新档 ~25 行） | 逐行 `<div class="ledger-line [warn]">` append 到 `ctx.messagesEl`（`ui.js` 492 行 +25 越 500 硬限 → 独立新档） | 渲染 |
-| `webview/chat.css` | `.ledger-line` 样式（弱化小字；`.warn` 警示色） | 视觉 |
+| `src/extension/chat-panel.mjs`（VSC 仓） | `_initStatusBar()` 内调 `initLedgerSurface(this)`（item 并立——`StatusBarAlignment.Right`、priority 99；同 `:156`） | item 建立 + 周期注册 |
+| `src/extension/panel-messages.mjs`（VSC 仓） | `webviewReady` 分支（既有三推口处，`:428-430`）加 `pushLedgerStartup(panel)`——每次 webview 创建一次（`retainContextWhenHidden` 下 ≈ 每宿主会话一次） | 启动行 post |
+| `src/extension/panel-project.mjs`（VSC 仓） | `onProjectChanged` 尾加 `refreshLedger(panel,{emit:false})` | 换项目即时刷新 |
+| `webview/chat.js`（VSC 仓） | 新 case `ledgerNotice` → `addLedgerNotice(ctx, m.lines)` | 流内行 |
+| `webview/ledger-line.js`（VSC 仓）（新档 ~25 行） | 逐行 `<div class="ledger-line [warn]">` append 到 `ctx.messagesEl`（`ui.js` 492 行 +25 越 500 硬限 → 独立新档） | 渲染 |
+| `webview/chat.css`（VSC 仓） | `.ledger-line` 样式（弱化小字；`.warn` 警示色） | 视觉 |
 
 - item 形态：`text = L1`；`tooltip = MarkdownString(明细行集 L2 行)`；**无 `command`**（点击面板否决在案）；无台账 → `hide()`。
 - 消息载荷：`{type:"ledgerNotice", lines:[{text, warn:bool}]}`（端内自有投递通道——与 CLI 的 pushLine 各自实现，语义同源）。
@@ -1962,20 +1963,20 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 |---|---|---|---|---|
 | `src/ledger.mjs` | **新增** | — | ~180 | eng-coder（独立实现、语义同源） |
 | `src/extension/ledger-surface.mjs` | **新增** | — | ~120 | eng-coder ✓ |
-| `src/extension/chat-panel.mjs` | 修改 | 420 | +6 | eng-coder（≤426 / 500）——>300 档：**不拆**（`_initStatusBar` 单点初始化，零结构增长）；函数档：无 ≥300 行单函数（as-of；最大 `constructor` 74 行） |
-| `src/extension/panel-messages.mjs` | 修改 | 485 | +3 | eng-coder（**紧**——488 / 500，不得超）——>300 档：**不拆**（`webviewReady` 分支单点调用）；函数档：**`handlePanelMessage` 378 行（既有 switch 巨型函数，as-of）**——本批仅加 1 个 case 分支；拆 = 专项债（§2.30.6） |
-| `src/extension/panel-project.mjs` | 修改 | 92 | +2 | eng-coder ✓ |
-| `webview/chat.js` | 修改 | 398 | +3 | eng-coder（≤401 / 500）——>300 档：**不拆**（新 case `ledgerNotice` 单点；渲染外置 `ledger-line.js`）；函数档：无 ≥300 行单函数（as-of；最大 message 监听 156 行） |
-| `webview/ledger-line.js` | **新增** | — | ~25 | eng-coder（独立新档——`ui.js` 492+25 越硬限，故不寄居） |
-| `webview/chat.css` | 修改 | 477 | +12 | eng-coder（≤489 / 500）——>300 档：**不拆**（追加 `.ledger-line` 样式段，零结构增长）；样式表——**无函数档（不适用）** |
+| `src/extension/chat-panel.mjs`（VSC 仓） | 修改 | 420 | +6 | eng-coder（≤426 / 500）——>300 档：**不拆**（`_initStatusBar` 单点初始化，零结构增长）；函数档：无 ≥300 行单函数（as-of；最大 `constructor` 74 行） |
+| `src/extension/panel-messages.mjs`（VSC 仓） | 修改 | 485 | +3 | eng-coder（**紧**——488 / 500，不得超）——>300 档：**不拆**（`webviewReady` 分支单点调用）；函数档：**`handlePanelMessage` 378 行（既有 switch 巨型函数，as-of）**——本批仅加 1 个 case 分支；拆 = 专项债（§2.30.6） |
+| `src/extension/panel-project.mjs`（VSC 仓） | 修改 | 92 | +2 | eng-coder ✓ |
+| `webview/chat.js`（VSC 仓） | 修改 | 398 | +3 | eng-coder（≤401 / 500）——>300 档：**不拆**（新 case `ledgerNotice` 单点；渲染外置 `ledger-line.js`）；函数档：无 ≥300 行单函数（as-of；最大 message 监听 156 行） |
+| `webview/ledger-line.js`（VSC 仓） | **新增** | — | ~25 | eng-coder（独立新档——`ui.js` 492+25 越硬限，故不寄居） |
+| `webview/chat.css`（VSC 仓） | 修改 | 477 | +12 | eng-coder（≤489 / 500）——>300 档：**不拆**（追加 `.ledger-line` 样式段，零结构增长）；样式表——**无函数档（不适用）** |
 | `src/prompts/discipline-engineering.md` | 修改 | 240 | +2 / −1 | 同 CLI |
 | `docs/design/prompts/discipline-engineering.md` | 修改 | 163 | +2 / −1 | 同上 |
-| `test/ledger.test.mjs` | **新增** | — | ~240 | eng-coder + `test/files.mjs` 登记（VSC 显式清单） |
-| `test/files.mjs` | 修改 | 77 | +1 | eng-coder |
+| `test/ledger.test.mjs` | **新增** | — | ~240 | eng-coder + `test/files.mjs`（VSC 仓） 登记（VSC 显式清单） |
+| `test/files.mjs`（VSC 仓） | 修改 | 77 | +1 | eng-coder |
 | `docs/design/ENGINEERING-MODE.md`（VSC 仓） | 修改 | 218 | +3 | eng-designer（登记行——**已落**） |
 
 > **档位结论**（修正轮 #4——六档逐档注）：全表**无**触发拆分的档（新增档均 ≤300；既有档增量均守 ≤500；两处临界已在表中标注）。
-> **>300 六档**（CLI `tui/index.mjs` / `tui/render-frame.mjs`；VSC `extension/chat-panel.mjs` / `extension/panel-messages.mjs` / `webview/chat.js` / `webview/chat.css`）**均不拆**——各自为单点接线 / 追加样式，零结构增长；
+> **>300 六档**（CLI `tui/index.mjs` / `tui/render-frame.mjs`；VSC `src/extension/chat-panel.mjs`（VSC 仓） / `src/extension/panel-messages.mjs`（VSC 仓） / `webview/chat.js（VSC 仓）` / `webview/chat.css（VSC 仓）`）**均不拆**——各自为单点接线 / 追加样式，零结构增长；
 > **函数档结论（as-of 实测）**：`index.mjs` `startTUI` 400 行 · `panel-messages.mjs` `handlePanelMessage` 378 行——**两处均为既有巨型函数**（本批零新增函数；拆 = 专项债，§2.30.6）；余四档无 ≥300 行单函数（最大 85 / 74 / 156 行；chat.css 不适用）。
 > **实现面拆分（建议——实施阶段终定）**：2 个并行 eng-coder——① CLI 面（代码 + 测试 + CLI 提示词双源）② VSC 面（代码 + 测试 + VSC 提示词双源）；文件域不相交。
 
@@ -2002,7 +2003,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 - **提示词面可移植性**（FR13；修正轮 #1）：四提示词文件只写「台账 `--summary` 汇总面」口径——**不含脚本名**（`src/prompts/**` `check-ledger` 零命中保持，AC48/AC80）；具体命令字面只落**批次档 §6 模板 / 本档**。用户项目无该脚本 → 收口行由主 agent 按同口径汇总输出——不阻断工作流。
 - **同级枚举上限（N2 成本有界——确定性退化；实现后同步（2026-09-12））**：同级枚举限 `MAX_SIBLING_SCAN=100`（`src/ledger.mjs:76`）——父目录的目录项数超限 → 该层候选判**空集**（不取部分结果），退化 **current-only**（`projects = [current]`）；current 缺（容器目录）→ 继续向上求候选。
   **裁定句**：F4「项目集 = current + 同级含台账者」不设语义上限，**N2 成本有界（≤500ms）优先**——上限只约束枚举规模，不改「含台账者」判据本身；触发面 = 缓存 / 临时等非仓族形态的超大父目录（真实工作区远小于 100）。
-- **登记（不在本批）**：两处既有 ≥300 行单函数——`src/tui/index.mjs` `startTUI`（400 行）· `src/extension/panel-messages.mjs` `handlePanelMessage`（378 行）（as-of 2026-09-12 实测；本批零新增函数、零结构增长）——拆分专项另议（父侧登记台账）。
+- **登记（不在本批）**：两处既有 ≥300 行单函数——`src/tui/index.mjs` `startTUI`（400 行）· `src/extension/panel-messages.mjs`（VSC 仓） `handlePanelMessage`（378 行）（as-of 2026-09-12 实测；本批零新增函数、零结构增长）——拆分专项另议（父侧登记台账）。
 - 不做：跨进程缓存 / 全工作区深扫 / 文件监听 / 任何网络面 / 台账档写入（唯一写面 = 去重档）。
 
 #### 2.30.7 UI / 交互决策落档
@@ -2049,6 +2050,222 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 **边界**：不改 L1–L3 / V1/V2/V3 既有判据语义；不做跨仓历史重写；不做 36 档需求物理复制；在飞 2 档的拆分收口随其收口（期 2——逐档点名不豁免）；台账物理落笔归主 agent。
 
 **分期**：期 1 = 本批（自持面 + 提示词 + 机检 + 存量处置 + 互引改指——无条件）；期 2 = 在飞 2 档拆分收口（触发 = 该批收口）。
+
+### 2.32 文档↔实装对账（DOC-CODE-RECONCILE 批——2026-09-12；需求 §1.20 / FR26 + §1.19 F15–F17）
+
+> 需求 = `../requirements/ENGINEERING-MODE.md` §1.20（F1–F10 / N1–N5）；批次档 = `../batches/2026-09-12-DOC-CODE-RECONCILE.md` §1/§2。
+> 三层：① 机检器 V5（报告态 → 收紧）② 按锚类型清账 ③ 防回潮 + 流程入规（含跨仓批派单与写域——用户 23:01 追加）。
+
+#### 2.32.1 问题陈述与三层交付
+
+设计/需求档的「事实句」落后于代码/测试现态——撞见即清 250+ 处，但**没有全量清单**（清的是撞见的，不是存在的）。病根四条见需求 §1.20。三层交付：
+
+| 层 | 交付 | 判据面 | 落点 |
+|---|---|---|---|
+| 1 机检器 | V5「文档锚一致性」（三锚）+ 全量清单 + 报告态/闸态两态 | 可机器判的事实锚 | `scripts/doc-anchors.mjs` + `test/doc-anchors.test.mjs` |
+| 2 清账 | 逐条处置（现态改写 / 退场·已废注记 + 来源指针）+ 收紧 | 文档面（零代码/测试语义改动） | `docs/design/**` + `docs/requirements/**` |
+| 3 防回潮 | 反查脚本 + V5 常驻 + 语义巡检 + 跨仓批派单与写域 | 机检面 + 人流程面 | `scripts/doc-impact.mjs`（轮 3 已落） + 提示词层 + 批次流程 |
+
+#### 2.32.2 方案选型对比
+
+| # | 候选 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
+|---|---|---|---|---|
+| ① | **形态-only**（只判锚的书写形态合规，不判存在性） | 零假阳：✓；断真漂移：✗（句子写的档/号是否还存在——形态面无此信息）；成本：最低 | 本批要治的就是「句子落后于现态」——形态-only 等于不治 | **否决** |
+| ② | **全树存在性（裸口径）**：反引号内标识符 / 用例号 / 路径一律判存在性 | 零假阳：✗（实测：反引号标识符 2629 个候选里 196 个在代码树无命中——统计面 = 本仓扫描域全域（97 档），其中多为**对端仓符号 / 库·平台 API / 退场叙述 / 术语**——假阳为主）；断真漂移：✓ | 红一片 = 无人看 = 等于没有（违 F2 硬条） | **内核保留、口径收窄**（见 ④） |
+| ③ | **声明式清单**（人工维护「允许清单 / 例外清单」） | 零假阳：✓（人工兜底）；清单腐烂：✗（新锚不入清单即假阳；存量豁免 = 先例源——违 F14 / N2）；成本：持续人工 | 与本仓「**基线必须保持为空 / 不得再设存量通道**」同一裁定相抵（登账即例外即违规） | **否决** |
+| ④ | **坐标化判定（选定）**：② 的存在性内核 + 判定面收窄到「可证明为坐标的引用」 | 零假阳：✓（实测：用例号悬空 16 · 路径悬空 103 · 窄形态符号悬空 2——均真悬空）；断真漂移：✓（直击「档/号/符号不存在」类事实句）；成本：判定面窄于 ②（无坐标的符号提及归语义巡检——已声明的边界） | 选定：例外的**唯一依据 = 判据句**（F14）；窄化带来的漏判面 = 显式登记（写进 §2.32.8 边界） | **选定** |
+
+**选定代价（如实列）**：④ 不覆盖「无坐标 / 无宿主声明的符号引用」（实测面最大的一类）——该类归 **V5-C 宽形态报告清单 + 语义巡检**（不阻断）；也不覆盖「设计计划未落地」类（用例表编号在 test 树无宿主的计划面，实测 294 条——**不属悬空**：其编号定义在本档用例表内，归测试生命周期 / §6 收口面）。
+
+#### 2.32.3 V5 判据规格
+
+##### 2.32.3.1 锚抽取（逐条：正则 + 排除式）
+
+判定单位 = **行**（fenced 块整块跳过——与 V1–V4 同口径）。三锚抽取规则：
+
+- **V5-A 路径 / 坐标锚（入闸）**：正则 `/(?<![A-Za-z0-9_.\-\/])((?:[A-Za-z0-9_.\-]+\/)*[A-Za-z0-9_.\-]+\.(?:mjs|cjs|js|json|md|css|html|svg|yml|yaml|sh|ps1))(?::(\d+(?:-\d+)?))?(?![\w])/`。
+  **射程** = ① 含 `/` 的路径形态，**或** ② 带行号坐标（`:NN`——含**行区间 `:N-M`**，整条参与抽取、不截断；轮 3 实装收正）——裸 basename 且无坐标者**不判**（它是文档互指 / 运行期档名 / 术语的常用写法，无坐标则不可定位）。
+  排除式逐条（与假阳类一一对应；每条均为硬排除）：
+  1. **占位 / 示意名与通配**：token 含 `< > { } * ? …`；或**夹具 / 示意档名**——末段裸名 ∈ 占位集（`x` / `y` / `a` / `b` / `foo` / `bar` / `file` / `target` / `doc` / `none` / `example`）
+     + **通用入口名类**（`app` / `main` / `index`——应用入口类通用名，同类属示意档名），**大小写不敏感**。
+     **判据句 = 「夹具与示例档名」（通用示意名不主张档存在——如用例表描述面的 `src/app.mjs`）**；**射程 = 末段裸名**（同条既有口径）——正文主张句不受此豁免；**（新增判据——实装对齐已落：`scripts/doc-anchors.mjs`）**。
+  2. **运行期面**：以 `.thincoder/` / `.git/` / `.vscode/` 等点目录开头者（不在仓内的运行期/工具面档）。
+  3. **组合简写**：一段内出现 ≥2 个扩展名段（`main.md/engineering.md` 类简写）。
+  4. **命令字面与围栏**：fenced 块整块；行内命令链 / 命令词 / 搜索模式串行（`isExecutableLine` 同一谓词——与 V4 射程豁免同源）。
+  5. **已属他判据**：**`.md` token** 后接 `§N` 者（V1 段引用面——V1 只判 `.md`；非 `.md` token **不豁免**，照判存在性——轮 3 实装收窄）；**对端仓直引的 V4 违规形态**（枚举 E1–E5 外——裸 `thincoder-vscode/…` 未附 `（仓别）`
+     注记 / `VSC 仓` + 裸 `§N`）归 V4——V5 **跳过**（不判、不报、不入域外行）；**合规形态**（`路径（仓别）`——E3）**不排除**——入存在性域判存在性（不可达 ⇒ 域外报告，见 2.32.3.2 / 2.32.3.6）。
+- **V5-B 用例号锚（入闸）**：正则 `/(?<![A-Za-z0-9-])((?:T-[A-Z]{1,5}\d{1,3}(?:-\d{1,3})?|T-\d{1,3}|T[A-Z]?\d{1,3})[a-z]?(?:\.\d+)?)(?![A-Za-z0-9-])/`。
+  - 形态注（修正轮 #10 收紧 + **实施后同步轮按实装收正**）：① 裸 `T` 后 ≤1 字母且直接数字——`TLS12` / `TAB123` 类不入抽取；② `T-` 前缀「字母块 1–5」形态补**多段号完整捕获**（`(?:-\d{1,3})?`）——`T-V5-12` 类多段号完整命中（逐字旧形态只捕获到 `T-V5` 前缀，与「类均保留」的声明意图相抵——按实装收正）；③ 收尾 lookahead 补 `-`（`(?![A-Za-z0-9-])`）；`T-V5-*` / `T-LS*` / `T-H8` / `T-01` 类均保留。
+  排除式：① 带前缀的内部编号（`D-TR6` / `AC-xx` / `F-x` / `N-x`——前导 `-` 即排除）；② 裸 `T<数>.<数>`（台账/条目号族——与用例号同形不同物）；③ 形态面：`TLS12` / `TAB123` 类标识符**不入抽取**（正则收紧——假阳类 10）。
+  存在性域 = **定义面**（不直接判 test 树——见 2.32.3.2）。
+- **V5-C 符号锚**：分两段（同一抽取面，两种判定）：
+  - **窄形态（入闸）**：同一行内同时出现「反引号标识符」+「定义谓词」（闭枚举：`定义于` / `定义在` / `声明于` / `声明在` / `生成点` / `定义处` / `唯一权威` / `导出`）+「**唯一**宿主档坐标」三要素时，判该符号在宿主档文本存在。
+  - **宽形态（报告态——不阻断）**：反引号标识符（≥5 字符、含大写或 `_`）在代码树的存在性——实测 2629 候选 / 196 悬空（统计面 = 本仓扫描域全域——§2.32.3.7），悬空面含大比例对端符号 / 库·平台 API / 退场叙述（假阳），**按 F2 硬条不入闸**，仅入报告清单（供语义巡检选样）。
+
+##### 2.32.3.2 存在性域
+
+- **路径 / 坐标 / 窄符号宿主**：解析序 = ① 本仓根 → ② **本档所在目录**（`../requirements/X.md` 类）→ ③ **对端仓根** → ④ **唯一 basename 索引**。
+  - ③ 可达来源序（实施后同步轮按实装收正）：显式 `peerRoot` 参数（用例直驱入口）→ env `THINCODER_PEER_ROOT`（别名 `THINCODER_CLI_ROOT`——对端侧同源名；**自指防护** = 取值解析为本仓根即弃用）→ 工作区兄弟目录（仓族名枚举、跳过自身）。**仅合规形态**（`路径（仓别）`——E3）入域——V4 违规形态跳过（排除式 5）；仓前缀形态含 `thincoder-vscode/…` / `thincoder/…`。
+  - ④ **本仓**同名命中口径：唯一 ⇒ 通过；多命中且带目录前缀 ⇒ 通过；多命中无目录前缀 / 零命中 ⇒ 报。**仓前缀合规形态（③ 不命中、对端可达）同落此步**——本仓同名命中（≥1）⇒ 通过（**缺档不报 = 已登记代价**——见 §2.32.8）；本仓零同名 ⇒ 悬空报行。
+- **代码树（符号宽/窄形态）**：`src` / `scripts` / `bin` / `test` 四树（两仓）。
+- **用例号定义面**（三源任一命中即通过）：① 两仓 `test/**` 文本（含测试名内嵌号）；② **定义位**——表格首格 / 列表项首 / 粗体行首（全档全域：`docs/{design,requirements,batches}` 两仓）；③ **退役登记表**（表头含 `用例名` 的表格行任意格）。
+- **降级（明示）**：对端仓不可达（单仓克隆）⇒ 解析序 ③ 不可用——**合规形态锚**记「**域外**」计入报告行（不阻断）；**不得**因对端缺失而静默放过或静默报红。域外行**只**来自合规形态——V4 违规形态根本不入 V5 域（两态互斥，见 2.32.3.6）。
+
+##### 2.32.3.3 注记识别（何种形态视为「已退场 / 已废」而通过）
+
+- **粒度 = 判定行**（同行即通过；**不做跨行语义判**——防假阳）。
+- **标记集（闭枚举，逐字）**：`已退场` · `已退役` · `已废` · `已废弃` · `已撤` · `已收窄` · `退场` · `退役` · `已删` · `已拆` · `已清空` · `已并入` · `归档` · `换名` · `改名` · `删除记录` · `未恢复`（修正轮 #4 补后三项）。
+- **并档叙述形态（新增判据——实装对齐已落：`scripts/doc-anchors.mjs`）**：`原…系`——旧编号系列的谱系括注（如「（原 T-L/T-F4/T-F5 系，…）」）；**判据句 = 谱系叙述不主张单号存在**；**射程 = 叙述位（标题 / 括注）**；判定粒度 = 判定行（同注记——`原`＋编号段〔字母 / 数字 / `-` / `/`〕＋`系`，正则可判）。
+- **指针形态**：`源 = <file:line>` 或 `删除记录 = <指针>`（指针本体同受 V5-A 判定——自洽：注记不能拿一个不存在的指针当退场证据）。
+- **本轮已落处置形态**（被识别——逐字样例）：「已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3）」·「已废/收窄——源 = `src/x.mjs:42`」。
+- **可见面（防标记集滥用）**：每次运行报告「注记豁免条数」——标记膨胀即漂移信号（与 F14「残留即示范」同族）。
+
+##### 2.32.3.4 假阳类逐条排除（硬——F2 的落地面）
+
+| # | 假阳类 | 排除式 |
+|---|---|---|
+| 1 | 设计档内部编号（`AC-xx` / `D-xx` / `F-x` / `N-x` / `D-TR6` 类） | V5-B 前导 `-`/字母排除 + 形态不含 `T` 前缀者不入抽取 |
+| 2 | 库 / 浏览器 / 平台 API（如 `preventDefault`） | V5-C 宽形态**不入闸**（仅报告）；窄形态需「定义谓词 + 宿主坐标」双证 |
+| 3 | 提交哈希 | 形态排除（40 位 hex 不在三锚正则内） |
+| 4 | 命令字面 / fenced 块（可执行坐标） | 围栏整块跳过 + `isExecutableLine` 谓词（与 V4 射程豁免同源） |
+| 5 | 夹具 / 示例占位路径（`docs/design/X.md` 等——含**通用入口名类**） | 占位 / 示意名排除（2.32.3.1 排除式 1） |
+| 6 | 运行期 / 用户面档名（`config.json` / `.thincoder/…`） | 无坐标裸 basename 不判 + 点目录排除 |
+| 7 | 对端仓符号 / 对端相对路径（**合规形态** `路径（仓别）`——E3） | 对端仓根入存在性域（可达时判存在性）；不可达 ⇒ 域外报告（不阻断）；**V4 违规形态（裸直引）→ V5 跳过**（归 V4——排除式 5） |
+| 8 | 退场 / 换名 / 归档叙述句（**含「原…系」并档叙述**——判据见 2.32.3.3 新增条） | 同行注记标记集（闭枚举——逐字见 2.32.3.3；含 `已拆` / `已并入` / `归档` / `换名` / `改名` 类书面语） |
+| 9 | 裸 `T<数>.<数>`（台账/条目号） | V5-B 排除式 ② |
+| 10 | 标识符撞用例号形态（`TLS12` / `TAB123`——裸 `T` + ≥2 字母 + 数字） | V5-B 形态收紧（裸 `T` 后 ≤1 字母且直接数字——不入抽取；修正轮 #10） |
+
+##### 2.32.3.5 报告态 → 阻断态（切换条件与阈值）
+
+- **两态**：模块常量 `V5_GATE`（初值 `false` = **报告态**——轮 2 清账完成后已翻 `true`）；CLI 参数 `--v5-gate` / `--v5-report` 可覆盖（反证与临时收紧 / 放宽用——翻转后两态仍可直驱）。
+- **报告态语义**：命中逐条打印为报告段（`报告(V5): <档>:<行> <锚>（<类>）`）+ 汇总行 `V5 报告 <n> 条（报告态——不阻断）`；**退出码不受 V5 影响**；**不入基线**（N2）。
+- **闸态语义**：命中计入违规集——`exit 1`（固定句与 V1–V4 同族）；阈值 = **0**。
+- **切换条件（收紧点）**：① 扫描域（`docs/design` + `docs/requirements`）三锚命中 = **0**（层 2 清账完成）② `V5_GATE` 翻 `true`（落点 = `scripts/doc-anchors.mjs`——翻转属轮 2）③ 快层断言 as-of 与本态同步（一次性）。三者齐备才收紧；**未清完不收紧**（不得提前设闸建红一片）。
+- **测试稳定性**：判定函数接受**显式 `gate` 参数**（两态均可直驱）——用例与 AC 跨切换点零改（T-V5-12 即此形态——夹具域 + 显式参数，不读真实扫描域）。
+
+##### 2.32.3.6 与 V1–V4 的射程边界（不重复报同一行）
+
+| 判据 | 判什么 | V5 的避让 |
+|---|---|---|
+| V1 段引用可解析 | `X.md §N` 的档 / 节号存在性 | **`.md` token** 后接 `§N` 归 V1（V5 跳过；非 `.md` 不豁免——V1 域外照判存在性） |
+| V2 计数与列表 | “N 项/处/条”与枚举对齐 | 面不交（V5 不碰计数） |
+| V3 批次档 §3 轮次行 | 批次档（`docs/batches`）——V5 扫描域**不含批档** | 域不交 |
+| V4 跨仓形态合规 | 对端仓**直引形态**（枚举 E1–E5 外） | **V4 违规形态（枚举外）token 归 V4——V5 跳过**；**合规形态（`路径（仓别）`——E3）入存在性域**判存在性（不可达 ⇒ 域外行，不阻断）。两态互斥：同一 token 不会既归 V4 又入 V5 域 |
+
+##### 2.32.3.7 设计期实测基线（原型 as-of 2026-09-12——作量级与清单预估）
+
+原型在本仓扫描域（`docs/design` + `docs/requirements` · 97 档）实测（规则集 = §2.32.3 全量排除式）：
+
+| 锚类 | 候选（射程内） | 悬空（未过） | 备注 |
+|---|---|---|---|
+| 用例号（V5-B） | 1552 | **16** | 16 条均真悬空（退场/清空批的旧引用行无本地注记） |
+| 路径 / 坐标（V5-A） | 2894 | **103** | 含退役/归档档引用、已删/已并测试档、已归档设计档、设计备选档名 |
+| 符号·窄形态（V5-C 入闸） | 34 | **2** | 两条均真命中（死事件声明 / 生成点行号指针） |
+| 符号·宽形态（报告面） | 2629 | 196 | 不入闸（假阳类 2 / 7 / 8 为主——见 §2.32.3.4）；统计面 = 全域（勿与批次档 §1 单档实测混读） |
+
+**数字口径注**：上表 = **设计期原型**（规则集 as-of；未含实现期新增规则与注记集的完整生效）；**统计面 = 本仓扫描域全域**（`docs/design` + `docs/requirements` · 97 档）——**与批次档 §1 的单档实测**（`WEBVIEW.md` 一档：符号锚 196 个候选 / 真缺失 9 + 噪声 2）**为两个不同统计面**（同值不同量，勿互读；复核结论 = 修正轮 #13；原型未随批入库，数量事实以首跑清单为准）；**最终清单 = 实现落地首跑的输出**（层 1 交付物 F5——以它为准；本表只作量级与分档预估）。
+
+#### 2.32.4 层 2 清账契约
+
+- **顺序**：用例号（V5-B）→ 符号（V5-C 窄形态）→ 路径（V5-A）——按需求 §1.20 F6。
+- **粒度与纪律**：逐档改完即 D6 回读；同行可判者不改语义、只改**现态陈述**；**不得**顺手重写整段（超出对账面）。
+- **处置三选**（二选一 + 订正）：① **现态改写**（改为现行号 / 现行档 / 现行符号）② **退场·已废注记 + 来源指针**（标记集 + 指针形态见 2.32.3.3）③ **订正**（引用确属笔误 → 改为正确引用）。
+- **零代码面**：不改 `src/**` / `test/**` 实体（本批 = 文档面对账）；锚缺失若暴露**真实代码问题**（例：文档说的机制在代码里不存在）→ **停下上报**（不自行改码）。
+- **轮 2 写域对接（动态清单 → `files` 声明）**：首跑清单（F5 输出）中 `docs/design/**` + `docs/requirements/**` 的**每个命中档**逐档转为 file-level `files` 项（清单「档」列去重后逐行取用）；`scripts/doc-anchors.mjs`（`V5_GATE` 翻转）另列一项——轮 2 文件域 = 该集合（清单外的档不入）。
+- **收紧**：清账完成即翻闸（2.32.3.5 三条件）——件随层 2 末轮。
+
+#### 2.32.5 层 3 防回潮 + 流程入规
+
+##### 2.32.5.1 反查脚本（`scripts/doc-impact.mjs`——轮 3 已落）
+
+**目标**：给批次「受影响文件表」一条机械化的补充来源——改了哪些符号 → 哪些设计/需求档必须跟着改。
+
+- **接口**：`node scripts/doc-impact.mjs --base <ref> [--files a,b] [--json]`；退出码 **0**（非门禁——查询工具；git 降级亦 0——打印「反查跳过」行）；**用法错误（缺 `--base`）⇒ `2`**（fail-loud——工具未运行，轮 3 as-built 登记）；`--base` **必给**（基准 = 上一批收口点——见下条）。（D-V5-6 / AC-V5-12 / 需求 §1.20 F7 的「退出码 0」= 非门禁语义——正常运行 / 降级恒 0，用法错误另计。）
+- **输入**：① 变更文件（`git diff --name-only <base>`）② 变更符号（`git diff -U0 <base>` 的新增/删除行内标识符候选——过滤保留）。
+- **输出**：① 变更面（文件 + 符号候选）② 反查命中档清单（`docs/{design,requirements}` 内——每档一行 + 命中词 + 命中数）③ 一行提示（「以上档建议录入批次档 §2 受影响文件表」）。
+- **实现形态（单源）**：纯函数 `docImpact({changedFiles, changedSymbols, docsRoot})`（**快层直驱可测**）+ 薄 git 包装（子进程——**慢层 `slow()` 归册**，同 T94/T102 口径）。
+- **时点与基准（修正后——#6）**：**实施轮开工前**跑一次（设计期无 diff——不在设计期跑）；基准 = **上一批收口点**（同批多轮 = 上一轮开工点）——**不以 HEAD 为默认**（干净工作区下 `git diff HEAD` 为空、输出无意义）；归属 = 主 agent（流程句入提示词层——两副本另起节，见 2.32.5.5）；输出**不自动**写批次档（写权归作者——建议录入选用）。
+
+##### 2.32.5.2 V5 常驻
+
+清账后 V5 常驻两个面：① 快层面（`test/doc-anchors.test.mjs`——随 `npm test` 生效，同 V1–V4 的接线口径；真实域复跑 = T-V5-15②——`slow()` 归册、`test:full` 跑）② 发部门链（`lint` → `test:full` → `test:integration`）经快层间接生效。再出现即红（闸态）。
+
+##### 2.32.5.3 语义巡检机制（机器判不了的那类——F9）
+
+| 要素 | 定义 |
+|---|---|
+| 对象 | **无锚语义句**（句中不含可判锚的事实句——例：「消息一律入队（回合尾 FIFO 消费，零丢失）」） |
+| 周期 | ① **触发式**：某板块档发生**实质修订**（内容增删改）→ 该档**随改巡检**该档 ② **收口式**：批次收口时对**本批触碰档**逐档过一遍 |
+| 归属 | **eng-designer**（写稿面唯一作者——巡检发现的修正也归其修订） |
+| 记录形态 | 批次档 §6 既有「遗留项」行内一行：`语义巡检（<档>）：发现 <n> 处 — 处置/遗留`（**零新槽位**——不改 §1.12 模板） |
+| 判据面 | **无机械判据（明示）**——不入机检；发现项经设计者修订后由评审核验 |
+
+##### 2.32.5.4 跨仓批派单与写域（用户 2026-09-12 23:01 裁定「本来就应该各自落笔。」——需求 §1.19 F15–F17）
+
+- **派单形态**：跨仓面的批次——**每仓各起一轮实施**，各轮带**自己仓的批次档**（`batchDoc` = 本轮所在仓）；语义同源由**同一份简报**保证，**不做逐字一致**（多实现面纪律）。
+- **写域纪律**：子代理**只写本仓**（含本仓批次档里自己那一段）；**写对端仓任何档 = 违规**；确需对端改动 → **停下上报**，由主 agent **另起对端仓一轮**。
+- **反例在案**：本批前序轮的**跨仓落修 = 反例**——不得再犯（不因「顺手」「只有一行」「对端缺人」而代写）。
+- **本批自适用**：本设计只写 CLI 仓（需求/设计/§2）；对端（VSC 仓）的需求/设计与提示词同节 = **对端仓一轮自行落笔**（本设计只给语义同源的简报）。
+
+##### 2.32.5.5 提示词落笔表（逐字——落笔归 coder 轮；内容权归主 agent）
+
+| # | 落点文件 : 节 | 逐字文本（逐条落笔，不改字） |
+|---|---|---|
+| 1 | 两副本 §「文档与台账自持（各仓记各仓的）」——续编号 6 | `6. **跨仓批 = 每仓一轮、各带自己的批次档**：一批涉及工作区里两个仓时，**每仓各起一轮实施**——每轮带**自己仓的批次档**（`batchDoc` = 本轮所在仓的批次档）；两轮共用**同一份简报**（语义同源），**不追求逐字一致**（各端原文自持）。` |
+| 2 | 两副本 同节——续编号 7 | `7. **子代理只写本仓**：任何子代理（eng-designer / eng-coder）**只写本仓文件**——含本仓批次档里自己那一段；写对端仓的任何档（含代写、顺手改、路径指向他仓的写入）= **违规**。` |
+| 3 | 两副本 同节——续编号 8 | `8. **需对端改动 = 停下上报**：本轮确需改对端仓时，**停下报告**（改什么 / 为什么），由主 agent **另起对端仓一轮**——不得在本轮跨仓落笔。` |
+| 4 | 两副本——**另起节**「改动面反查（文档影响面）」（同档，不并入自持节——修正轮 #11） | `本批实施轮开工前跑本仓反查脚本（文档影响面；基准 = 上一批收口点）——其输出的设计/需求档建议一并录入本批「受影响文件」表。` |
+| 5 | `docs/design/prompts/discipline-engineering.md`（**中文权威镜像**——`docs/README.md`:15）§「文档与台账自持（各仓记各仓的）」+ 另起节「改动面反查（文档影响面）」 | **同 1–4 行逐字**（两副本逐字同落——不另抄文本；D2） |
+
+> 落笔注：① 第 1–3 条落两副本同节「文档与台账自持」；第 4 条落两副本同档**另起节**「改动面反查（文档影响面）」（节题适配——修正轮 #11；不并入自持节）；**两副本** = `src/prompts/discipline-engineering.md`（产品装配源）+ `docs/design/prompts/discipline-engineering.md`（中文权威镜像——`docs/README.md`:15）——**逐字同落**（AC15 双源口径；纪律层为工程模式全链共读，不另在 persona 层重述）；
+> ② 第 4 条的脚本名**不写进提示词**（可移植性口径——同 `台账可见面（收口行）` 先例）；③ 对端（VSC 仓）同节由**对端一轮**落笔（非本端代写——2.32.5.4）。
+
+#### 2.32.6 受影响文件全清单（行数口径 = read 工具；as-of 2026-09-12 设计期——实施后同步轮回读刷新）
+
+| # | 文件 | 当前行数 | 动作 | 预计增量 | 分工 |
+|---|---|---|---|---|---|
+| 1 | `docs/requirements/ENGINEERING-MODE.md` | 926（批前）→ **1000（修正轮后实测）**（轮 3：F7 落点行 as-built——行数零变） | 改（§1.19 补 F15–F17 + 新增 §1.20 + header 行；修正轮：F10 / F17 / §1.20 判定句行 + N5 判定句同步；轮 3：F7 去计划注） | **+74（实测）** | eng-designer（**已落**） |
+| 2 | `docs/design/ENGINEERING-MODE.md` | 2735（批前）→ **3024（实施后同步轮实测）** → **3025（轮 3 实测）** | 改（§2.19 补 V5 行 + 新增 §2.32 + §3.1 AC + §3.2 用例 + §7 变更记录；修正轮：3🔴+3🟡+7🔵 落地；实施后同步轮：设计↔实装对齐 + 口径刷新；轮 3：判据收窄 / 行区间 + §2.32.6 / §3.2 as-built 同步） | **+289 → +290（累计实测）** | eng-designer（**已落**；轮 3 机械登记 = eng-coder） |
+| 3 | `scripts/doc-anchors.mjs` | 新 → **300（实施轮实测；split 口径 300 / read 口径 299）** | **新增**（三锚抽取 + 存在性域 + 注记 + 两态 + CLI 清单；轮 3：排除式 5 收窄为 `.md` + 坐标行区间 `:N-M`——行数零变） | ~260 → **300（实测）** | eng-coder（轮 1） |
+| 4 | `test/doc-anchors.test.mjs` | 新 → **282 → 298（轮 3 实测）** | **新增**（T-V5-1–T-V5-12 · T-V5-15（含②真实域·洁净句——轮 3）· T-V5-16；T-V5-13/14 → 行 6；快层 8 例 + `slow()` **7 例**；轮 3：T-V5-2 补排除式 5① 收窄 + `:N-M` 断言） | **282 → 298（轮 3 实测）** | eng-coder（轮 1 · 轮 3 增补） |
+| 5 | `scripts/doc-impact.mjs` | 新 → **142（轮 3 实测）** | **新增**（纯函数 + git 包装 + CLI——已落） | ~150 → **142（实测）** | eng-coder（轮 3） |
+| 6 | `test/doc-impact.test.mjs` | 新 → **91（轮 3 实测）** | **新增**（T-V5-13 / T-V5-14——含慢层 git 夹具；已落） | ~110 → **91（实测）** | eng-coder（轮 3） |
+| 7 | `scripts/check-doc-width.mjs` | 367（批前）→ **368（实施后实测）** | 改（导出既有 `isExecutableLine` / `inCodeSpan`——共享豁免谓词单源；头部导出清单 +1 行；判据语义零改） | **+1（实测）** | eng-coder（轮 1） |
+| 8 | `docs/README.md` | 247（批前）→ **250（实施前小轮后实测）** | 改（§3.7 补 V5 判据面一条；修正轮：补运行命令；实施前小轮：命令去重） | **+3（实测）** | eng-designer（**已落**） |
+| 9 | `src/prompts/discipline-engineering.md` | 252 → **259（轮 3 实测）** | 改（§「文档与台账自持」续编号 6–8 + 另起节「改动面反查」——逐字见 §2.32.5.5；已落） | **+7（实测）** | eng-coder（轮 3——提示词落笔） |
+| 10 | `docs/design/prompts/discipline-engineering.md` | 181 → **188（轮 3 实测）** | 改（同行 9 逐字——**两副本逐字同落**；修正轮 #1；已落） | **+7（实测）** | eng-coder（轮 3——提示词落笔） |
+| 11 | `scripts/doc-anchors.mjs`（轮 2） | 轮 1 交付 → **300（轮 2 实测）** | 改（**实装对齐**——两类新排除（通用入口名类 / 「原…系」并档叙述）；净 ±0 行；**清账处置 36 档**（347 → 330 → 9 → **0**——末 9 = 轮 3 交付面 8 + ACP edit 桥拆分计划 1，按现态改写为计划面形态）；**`V5_GATE` 翻 `true`**（三条件齐备）+ 增 `--v5-report` 临时放宽参数（披露见批次档 §5）；对照记录 = 批次档 §5） | ±0 / 动态 | eng-coder（轮 2） |
+
+**档位结论证**：`scripts/check-doc-width.mjs` **367（批前）→ 368（实施后实测）**——本批净增 +1（两处 `export` 前缀 ±0 行 + 头部导出清单 +1 行；≤500 硬限内）；**新判据面不入该档**（独立成 `scripts/doc-anchors.mjs`）——既有拆分计划（LEDGER 批登记：再有功能增厚随批评估 / ≥400 必拆）**本批不触发**（无净增结构体）；
+  **新四档各自 ≤300**（`scripts/doc-anchors.mjs` / `test/doc-anchors.test.mjs` / `scripts/doc-impact.mjs` / `test/doc-impact.test.mjs`——轮 3 全部已落，实测均 ≤300）。
+
+#### 2.32.7 关键决策记录（含否决备选）
+
+| # | 决策 | 否决备选 | 依据 |
+|---|---|---|---|
+| D-V5-1 | 判定面 = **坐标化引用**（路径/坐标 + 用例号定义面 + 窄符号） | ① 形态-only · ③ 声明式清单 | 假阳纪律（F2）+ F14（例外的唯一依据 = 判据句）+ 基线不得再设（N2） |
+| D-V5-2 | 用例号锚 = **定义面存在性**（不直接判 test 树） | 直接判 test 树（实测 425 条命中——含跨仓宿主 / 计划面 / 在途设计档，假阳为主） | 实测基线（§2.32.3.7）+ 零假阳前提 |
+| D-V5-3 | 符号宽形态 **不入闸**（仅报告） | 全量入闸（实测 196/2629 假阳为主） | 同上；漏判面显式登记（§2.32.8） |
+| D-V5-4 | V5 = **独立脚本**（不扩展 `check-doc-width.mjs`） | 入既有档（368+~260 > 500 硬限——违 F12 无豁免） | 硬限无豁免（F12）+ 既有拆分计划 |
+| D-V5-5 | 报告态先落、清账后收紧（阈值 0） | 直接 fail-closed（首跑即红一片——无人看） | 需求 F4 + 假阳纪律 |
+| D-V5-6 | 反查脚本 **非门禁**（退出码 0） | 入闸（`git diff` 面多变——噪声入闸即红一片） | 工具 vs 闸门分离（与 V1–V5 闸面不混） |
+| D-V5-7 | 跨仓批 = 各仓一轮 + 提示词单档落笔（D2） | 父侧代写对端 / 双档重述（persona + discipline） | 用户 23:01 裁定 + D2 单一权威源 |
+
+#### 2.32.8 边界（本批不做）
+
+- **不动既有判据语义**：V1–V4 / L1–L4 / 宽度域 / 台账域——各自域零改（N5——判定句 = AC-V5-16 / T-V5-16）；新增 V5 与它们**不重叠报行**（§2.32.3.6）。
+- **不动 `_archive/`**：归档档不作现状依据，也不入扫描域（历史快照——同现有扫描域口径）。
+- **不重写历史批档**（`docs/batches/**` append-only）；V5 扫描域**不含批档**。
+- **不改代码 / 测试语义**（含不改测试用例名——用例号锚缺失的处置只能走文档面：改写或注记）。
+- **不承诺清零的两类**（已声明）：① 无锚语义句（归巡检——F9）② 符号宽形态命中（归报告 + 巡检选样——D-V5-3）。
+- **不入产品提示词**：V5 脚本名/命令字面属本仓工具面（同 `check-doc-width` 口径）；只有 §2.32.5.5 的**通用行为条款**入提示词。
+- **对端仓零写**：本端不写 VSC 仓任何档（含提示词镜像 / 台账 / 批档）——对端一轮自行落笔（§2.32.5.4）。
+- **两端差异不对齐（各自保留、互不追赶）**：**对端仓树不可达**的处置两端口径不同——本仓（CLI）= 合规形态锚记「域外」报告行、**不阻断**（判据见 §2.32.3.2 降级条）；对端仓（VSC）= **fail-closed 拒跑**（`DOC-CODE-RECONCILE（VSC 仓）§4.1`「缺仓行为 = fail-closed」：固定报错句 + 退出码非 0 + 不产出清单）。**不做统一、不以任一端为准回改另一端**——判据 = 多实现面纪律「各端独立实现、语义同源、差异如实登记、互不追赶」。
+- **已登记代价（假阴面——2026-09-12 实施后同步轮登记）**：对端仓前缀**合规形态**——**对端可达但档缺失**时 ③ 不命中转 ④ 本仓同名 basename（≥1）⇒ **通过** ⇒ **缺档不报**（已知代价；判别判据 = §2.32.3.2 ④）；该面归语义巡检选样，**不得**以「通过」读作对端档案存在。
+
+#### 2.32.9 UI / 交互决策落档
+
+**本批零 UI / 交互决策**（文档面机制 + 命令行工具——无界面变更）——8 项中「UI / 交互决策落档」本批**不适用**（显式声明，非缺项）；无 `open` 项。
 
 ## 3. 测试（Testing）
 
@@ -2117,10 +2334,10 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
   **A12 宿主 = VSC `persona-engineering.md` 双源**（含产品经理身份 + spawn eng-designer 调用链，**不含 ARCHITECT 交付物句**——轮次2 评审 #1）；
   **A9/A10 为行为锚，不进 grep 集合**（断言由 T59/T61 行为用例承载——轮次2 评审 #8）。
 - AC40（§2.22.5——工具移植 + 只读面）: 工具契约同 §2.20.1（无 `path` / 段白名单按身份 / append-only / 戳仅 §3 / 自有剥证正则 / fail-closed 六条）；
-  VSC `src/advisor/tools.mjs` **仅当 `reviewType==='design'` 且 batchDoc 已绑定**时追加；**代码评审工具集逐字节不变**（`_resolvedAdvisorToolsFor` 断言）。
+  VSC `src/advisor/tools.mjs（VSC 仓）` **仅当 `reviewType==='design'` 且 batchDoc 已绑定**时追加；**代码评审工具集逐字节不变**（`_resolvedAdvisorToolsFor` 断言）。
 - AC41（§2.22.5 适配点②——实例键通道）: batchDoc 沿 **`rv` 实例参数**传递（非单值会话态）；两批设计评审并发各自正确落档。
 - AC42（§2.22.6——V1/V2/V3 + 接线 + 跨仓边界）: VSC `check-doc-width.mjs` 扩为一致性扫描（V1/V2/V3）+ 基线读写 + 导出；
-  **接线钉死 `test/files.mjs` 入册**（`package.json` 不在本批文件域——不得改，轮次2 评审 #4）；**V3 扫描根/跨仓边界**按 §2.22.6 定（本仓缺目录即跳过；真守门在 CLI 侧）；**V1/V2 两面各有用例**。
+  **接线钉死 `test/files.mjs`（VSC 仓） 入册**（`package.json` 不在本批文件域——不得改，轮次2 评审 #4）；**V3 扫描根/跨仓边界**按 §2.22.6 定（本仓缺目录即跳过；真守门在 CLI 侧）；**V1/V2 两面各有用例**。
 - AC43（§2.22.7——双源结构 + 端特有段）: VSC 建 `docs/design/prompts/` **15 文件**（与 CLI 同名集合一一对应）；`src/prompts/` 14 → **15**；
   **同名集合两侧相等**（无多无少）；**端特有段进镜像且被断言**（非仅锚句）；VSC 特有文件不得被 CLI 版本整体覆盖（逐差异面登记）。
 - AC44（§2.22.9 + 需求 N4——验收不冒充）: 机械面全绿之外，**交付报告必须写明“生效需重载扩展”**；不得以“文件存在/静态断言绿”声称机制已生效（第 2 批教训）。
@@ -2202,7 +2419,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
   `§11.1`/`§11.2`/`§11.3` 在新锚位分别在位（域 A 9 处 / 域 B 19 处 / 域 C 1 处）。
 - AC70（§2.29.4 C3——VSC 机制正文同步）: `AGENT-LOOP.md`（VSC 仓）内旧串「单一判据）输入禁用」「readOnly + busy」零命中；
   替句子串「提交拒收」「readOnly 锁已撤」「主会话处理中——Enter 提交禁用——可继续输入」在位。
-- AC71（§2.29.5 C4——注释断链）: `src/tui/wrapped-spawn.mjs` 内「docs/design/TUI-STDERR-CAPTURE.md」零命中；
+- AC71（§2.29.5 C4——注释断链）: `src/tui/wrapped-spawn.mjs` 内「docs/design/TUI-STDERR-CAPTURE.md」零命中（该档已归档——DOC-REORG 批）；
   「TUI-STDERR-CAPTURE F-1/F-3」在位；该档 diff 仅 1 行（其余注释逐字未动）。
 - AC72（§2.29.6 C5——需求档同步）: 五点位逐点子串在位（① 段表「写入手段」列 + 6 行填值；② B9 行 `若传则须可读` + `§3 段不在评审对象清单内`；
   ③ F1 段 `评审侧口径`；④ N2 段 `§3 段不在评审对象清单内` 且「非被审文档」零命中；⑤ N3 行 `15+15=30` 且该行 `29 文件` 零命中）。
@@ -2248,6 +2465,27 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
   CLI `node test/run-fast.mjs`（或 `npm test`）全绿；VSC 快层按其清单全绿（含 `test/ledger.test.mjs` 入册）。
   **归属注（设计期实跑——as-of 2026-09-12）**：唯一新增 V3 命中 = **本批批次档 §4 占位段内的 `---` 分隔行**（骨架标点被 V3 判为实文——
   在飞态瞬态：§3 获评审轮次行后自消）；归父侧收紧（去掉该行）或随评审自消——**非本批代码面**（批次档 = 父侧写域）。
+
+- AC-V5-1（§2.32.3.1——用例号锚 / F1+F3）: 夹具三例（①引用未定义号 ②引用 test 树/定义面存在的号 ③悬空但同行带退场注记）→ **仅 ① 报**；
+  ②③ 零命中（反证非空转 + 零假阳；T-V5-1）。
+- AC-V5-2（§2.32.3.1——路径/坐标锚 / F1）: 夹具四例（① 悬空路径 ② 现存路径 ③ 占位形态（`<file>.md` / 末段占位集）④ 裸 basename 无坐标）→ **仅 ① 报**（T-V5-2）。
+- AC-V5-3（§2.32.3.1——符号锚 / F1）: 夹具三例（① 有定义谓词 + 宿主坐标但宿主无此符号 ② 宿主有此符号 ③ 无定义谓词/无宿主的悬空符号）→ **仅 ① 报**（③ 射程外——不报；T-V5-4）。
+- AC-V5-4（§2.32.3.4——假阳类 / F2+N1）: 夹具覆盖假阳表十类（内部编号 / 库·平台 API / 提交哈希 / fenced 与命令行 / 夹具占位路径 / 运行期面 / 对端仓**违规形态**（裸直引——V5 跳过）/ 退场·换名·归档叙述行 / 裸 `T<数>.<数>` / `TLS12` 类标识符）→ **全零命中**（逐类可判——T-V5-5）。
+- AC-V5-5（§2.32.3.5——两态 / F4）: 同一夹具域：`gate:false` → 命中非空 + 主行程**退出码 0** + 输出含报告段标记；`gate:true` → **退出码 1**（两态由显式参数驱动——逐态可判；T-V5-6/T-V5-7）。
+- AC-V5-6（§2.32.3.5——基线 / N2）: `test/fixtures/doc-consistency-baseline.json` `entries` = `[]`；V5 命中**不入基线**（两态均不写）；非空 ⇒ FAIL（既有判据零改；T-V5-8）。
+- AC-V5-7（§2.32.3.5——全量清单 / F5）: CLI 输出逐条清单（档:行 + 锚 + 锚类）+ 汇总（各类候选数 / 悬空数 / 注记豁免数 / 域外数 + 报告态标记）——可重定向落盘作层 2 清账输入（T-V5-9）。
+- AC-V5-8（§2.32.3.6——射程边界 / F10）: 夹具（后接 `§N` 的引用 / **对端仓直引的 V4 违规形态**（枚举外——裸 `thincoder-vscode/…` / `VSC 仓` + 裸 `§N`）/ “N 项”计数声明）→ **V5 零命中**且 V1 / V4 / V2 各自照报（不重复报行；T-V5-10）。
+- AC-V5-9（§2.32.3.2——降级 / N1）: 夹具仅建本仓树（无对端）+ **合规形态**（`路径（仓别）`——E3）锚 → 记「域外」入报告行、**不阻断、零抛出**；不得静默放过 / 静默报红（与 AC-V5-8 夹具**互斥两类**；T-V5-11）。
+- AC-V5-10（§2.32.4——清账完成判据 / F6）: 本仓扫描域（`docs/design` + `docs/requirements`）三锚命中 = **0**；`node scripts/doc-anchors.mjs --v5-gate` 退出码 0——核验面 = **轮 2 收口复跑**（首跑清单 → 清账 → 复跑；轮 1 快层不断言真实域——夹具两态见 T-V5-12）。
+- AC-V5-11（§2.32.3.5——收紧落位 / F4+F6）: `V5_GATE` = `true`（轮 2 翻转）+ 闸态夹具命中 ⇒ 退出码 1 + 基线仍空（V5 不进基线）；收紧点三条件逐条可验（T-V5-12 夹具两态 + 轮 2 复跑）。
+- AC-V5-12（§2.32.5.1——反查纯函数 / F7）: 直驱 `docImpact({changedFiles, changedSymbols, docsRoot})` 夹具 → 返回命中档清单（每档带命中词）；反证：无关联变更 → 空清单；**退出码 0**（非门禁；T-V5-13）。
+- AC-V5-13（§2.32.5.1——反查 git 包装 · **慢层 `slow()`** / F7）: 临时 git 仓夹具（改动档导出符号 + 设计档引用该符号）→ CLI 输出含该设计档（子进程/真实 git 类归册；T-V5-14）。
+- AC-V5-14（§2.32.5.2——V5 常驻接线 / F8）: `test/doc-anchors.test.mjs` 被快层 glob 发现（`readdirSync(test)` 含该档）+ 快层全绿（未接线 = 红；T-V5-15）。
+- AC-V5-15（批级门）: 两仓 `node scripts/check-doc-width.mjs` **新增超宽 0 + 新增一致性违规 0**（口径 = 批前/批后命中集合差）；CLI 快层全绿；改动档守 500 硬限（新四档 ≤300）。
+- AC-V5-16（§2.32.8——既有判据零伤 / N5）: `SCAN_DIRS` 三元素逐字不变；V1–V4 输出**批前/批后逐字节一致**（批级对照运行——变更前快照 vs 变更后复跑，对照记录入批次档 §5）；V1–V4 夹具域判定集合 = 钉死快照（`test/doc-anchors.test.mjs`——T-V5-16）；L1–L4 / 宽度域 / 台账域零触碰（本批变更面仅 `scripts/check-doc-width.mjs` 两处 `export` 前缀）。
+
+**无机械判据项（明示——F9 / F17）**：① 语义巡检机制（无锚语义句——机器判不了；周期 / 归属 / 记录形态见 §2.32.5.3）
+② 提示词层逐字落笔（F15–F17——落笔面验收 = coder 交付报告 + 评审；**不设机检锚**：提示词句子断言属已退役的散文锚面，`TESTING.md` §11）。
 
 ### 3.2 用例表
 
@@ -2345,7 +2583,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 | T61 | 边界：V3 零假阳 | ①在飞批次（仅骨架/占位行）②§4 有实质内容 + §3 无工具轮次行 ③二者均备 ④**本仓缺 `docs/batches/`** | ①不报 ②报 ③不报 ④**跳过不报**（跨仓边界） | AC42/F5 |
 | T62 | 正常：双源结构 + 锚句 + 端特有段 | 同名集合对比 + 文本类锚 grep（双源）+ 端特有段存在性 | **两侧各 15**、集合相等；锚句逐字一致；端特有段在镜像中 | AC39/AC43/F6 |
 | T63 | 正常：V1/V2 + 跨仓注记（发现 #5 · 轮次3 评审 #7） | ①人造段引用失配 ②计数声明与列表不符 ③基线内条目（存量） ④**带“（CLI 侧）”注记的引用行** | ①②**报** ③**不再降报告分流**（生产路径：非空基线 ⇒ FAIL——入基线 = 例外 = 违规） ④**豁免不报**（注记行不判） | AC42/F5 |
-| T64 | 正常：接线（发现 #5） | `test/files.mjs` 入册并实跑 | 校验器**真被跑到**（未接线 = 红） | AC42/N3 |
+| T64 | 正常：接线（发现 #5） | `test/files.mjs`（VSC 仓） 入册并实跑 | 校验器**真被跑到**（未接线 = 红） | AC42/N3 |
 | T65 | 边界：主 agent 人格（轮次2 评审 #1，对齐 CLI T38） | 双源 grep `src/prompts/persona-engineering.md（VSC 仓）` + 中文镜像 | 含产品经理身份 + spawn eng-designer 调用链；**不含 ARCHITECT/交付物句** | AC39/FR23 |
 | T66 | 边界：并发隔离（轮次3 评审 #4——镜像 CLI T51） | 两个设计评审（不同批次档）并发启动并各自写 §3 | **各自落自档**（RV 实例键绑定），不得串档 | AC41/§2.22.5 |
 
@@ -2395,7 +2633,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 |---|---|---|---|---|
 | T84 | 正常：C1 描述面 | `src/tools/read_image.md:8` 与定稿替句逐字比对 + `src/tools/file.mjs` diff | `:8` 与定稿替句逐字全等（蕴含旧串零命中）；`file.mjs` diff 空 | AC68 |
 | T85 | 正常：C2 清理 | `src/**` grep `§24` + 逐行对照 §2.29.3 映射表 | 0 命中；29 处新锚逐处落位（域 A 9 / B 19 / C 1） | AC69 |
-| T86 | 边界：C2 扫描域 | 同 grep 于 `test/**` / `docs/**` | scope = `src/**`；`test/advisor-description.test.mjs:18` 变更注与 `docs/**` 记史面不判 | AC69 |
+| T86 | 边界：C2 扫描域 | 同 grep 于 `test/**` / `docs/**` | scope = `src/**`；`test/advisor-description.test.mjs:18`（已退场——TEST-LIFECYCLE）变更注与 `docs/**` 记史面不判 | AC69 |
 | T87 | 正常：C3 同步 | `AGENT-LOOP.md`（VSC 仓）grep（旧串 / 新串） | 旧串零命中；新子串在位 | AC70 |
 | T88 | 正常：C4 断链 | `src/tui/wrapped-spawn.mjs` grep + diff | 归档路径串零命中；diff = 1 行 | AC71 |
 | T89 | 正常：C5 五点位 | `docs/requirements/ENGINEERING-MODE.md` grep（五点位子串） | 逐点全中；旧措辞（「非被审文档」/ N3 行「29 文件」）零命中 | AC72 |
@@ -2433,6 +2671,31 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 
 > 快层归属：T102 / AC89 计时断言走 `slow()`（fs / git 子进程——`test/slow.mjs` 归册制）；余例直驱纯函数或 mock（快层）。
 
+**文档↔实装对账批用例（T-V5-1–T-V5-16——DOC-CODE-RECONCILE；设计 §2.32 / AC-V5-1–AC-V5-16）**
+
+| # | 场景 | 输入 | 预期输出 | 映射 |
+|---|---|---|---|---|
+| T-V5-1 | 正常/反证：用例号锚（定义面 + 注记） | 夹具：① 悬空号（三源均无、同行无注记）② 在 test 树存在的号 ③ 悬空但同行注记 | 仅 ① 报（报行含档:行 + 号 + 锚类）；②③ 零命中 | F1/F3 |
+| T-V5-2 | 正常：路径/坐标锚（射程 + 排除式 5① 收窄 / 行区间） | 夹具：① 悬空路径 ② 现存路径 ③ `<file>.md` 占位 ④ 裸 basename 无坐标；⑤ 非 `.md` + `§N` 照判（存 / 缺两向）· `:N-M` 坐标整条抽取（轮 3 补） | 仅 ① 报；③④ 射程外不报；⑤ 非 `.md` 不豁免——缺 ⇒ 报（收窄反证） | F1 |
+| T-V5-3 | 边界：解析序（档相对 / 唯一 basename / 对端合规形态） | 夹具：① `../requirements/x.md`（档相对可解析）② 唯名 basename（仓内唯一）③ 对端**合规形态** `thincoder-vscode/…（VSC 仓）`（可达且存在） | 三者均通过（零命中——③ = 合规形态入域判存在性的正例） | F1 |
+| T-V5-4 | 正常/反证：符号锚窄形态 | 夹具：① 定义谓词 + 宿主坐标但宿主无此符号 ② 宿主有此符号 ③ 无宿主/无谓词的悬空符号 | 仅 ① 报；③ 不报（归宽形态报告面） | F1 |
+| T-V5-5 | 边界：假阳类十类零命中（逐类钉死） | 十类夹具：① 内部编号（`AC-V5-1` / `D-V5-1` / `F-x` / `N-x`）② 库·平台 API（`preventDefault`）③ 提交哈希（40 位 hex）④ 命令 / fenced 块 ⑤ 占位路径（`docs/design/X.md`）⑥ 运行期面（`config.json` / `.thincoder/…`）⑦ 对端仓违规形态（裸直引——V4 面）⑧ 退场 / 换名 / 归档叙述行（`已拆` / `已并入` / `归档` / `换名` / `改名` + 同行悬空锚）⑨ 裸 `T<数>.<数>` ⑩ `TLS12` / `TAB123` | 全零命中（逐类可判，不得只排其一） | F2/N1 |
+| T-V5-6 | 正常：报告态 | 夹具命中 + `gate:false` + 主行程 CLI | 退出码 **0**；输出含报告段 + 汇总行（报告态标记） | F4 |
+| T-V5-7 | 正常：闸态（反证非空转） | 同夹具 + `gate:true` | 退出码 **1**；违规行含锚与档:行 | F4 |
+| T-V5-8 | 边界：基线零改 | `test/fixtures/doc-consistency-baseline.json` + 两态运行后回读 | `entries` = `[]`；V5 不出现在条目标记（`V1|/V2|/V3|/V4|` 面零改） | N2 |
+| T-V5-9 | 正常：全量清单 | CLI 对夹具域（含注记行 / 对端域外行） | 汇总含四数（候选 / 悬空 / 注记豁免 / 域外）+ 逐条行；重定向落盘可读 | F5 |
+| T-V5-10 | 边界：射程不重叠（**与 T-V5-11 互斥两类**） | 夹具：① 档名 + 节号的引用形态（V1 面）② 对端仓**违规形态**（裸直引 / `VSC 仓` + 裸 `§N`——V4 面）③ “三条：”+ 两行列表（V2 面） | V5 零命中（② 直接被跳过——**不产生域外行**）；①②③ 各自归 V1 / V4 / V2 报（不重复报行） | F10 |
+| T-V5-11 | 错误：降级不抛 | 夹具仅本仓树（对端仓根不存在）+ **合规形态** `thincoder-vscode/…（VSC 仓）` 锚（与 T-V5-10 ② 互斥两类） | 该锚记「域外」入报告行；零抛出；不阻断；退出码按本态语义 | N1 |
+| T-V5-12 | 正常/反证：收紧两态（**夹具域 + 显式 `gate` 参数——不读真实扫描域**） | 夹具域：① 清账完成态（三锚命中 0）+ 显式 `gate:true` ② 同域植入一条悬空锚 + `gate:true` ③ 同域 + `gate:false`（报告态） | ① 退出码 **0**（收紧不误红）+ 闸态洁净句 `OK(V5): 0 条悬空锚（闸态——阈值 0）`（轮 3 补断言）；② 退出码 **1**（反证非空转）；③ 退出码 **0** + 报告段；基线仍空（两态均不写） | F6/F4 |
+| T-V5-13 | 正常：反查纯函数 | 直驱 `docImpact`：变更文件 + 符号（设计档内有引用） | 返回命中档清单（档 + 命中词）；无关联变更 → 空清单 | F7 |
+| T-V5-14 | 正常：反查 git 包装（**慢层 `slow()`**） | 临时 git 仓：commit 一档改动（导出符号）+ 设计档引用该符号 → 跑 CLI | 输出含该设计档；退出码 0（非门禁） | F7 |
+| T-V5-15 | 正常：常驻接线（① 快层发现集 · ② 真实域复跑） | ① `readdirSync(test)` + `node test/run-fast.mjs`；② `scanDocAnchors(REPO)` 默认 peer 解析（`slow()` 归册——≈1.3s） | ① 新档在快层发现集内；快层全绿；② 真实域 `danglingTotal` = **0**（闸态——再出现即红；轮 3 补） | F8 |
+| T-V5-16 | 正常/反证：既有判据零伤（N5 承接——① ② 快层 / ③ 批级对照） | ① `SCAN_DIRS` 断言（import——逐字三元素全等）② 夹具域直驱 `checkDocConsistency`（V1 / V2 / V4 各人造命中 + 合规对照 + V3 批档夹具）→ 与钉死快照全等 ③ 批级对照：变更前 `check-doc-width` 输出快照 vs 变更后复跑 | ① 全等；② 快照全等（逐例可判）；③ V1–V4 段逐字节一致（差 = 0） | N5 |
+
+> 快层归属（**轮 3 实施轮收正**）：**T-V5-6 / 7 / 8 / 9 / 11 / 12 六例走 `slow()`**（主行程 CLI 子进程 spawn——实施轮实测 0.8–1.9s/例，归册制）；**T-V5-15② 真实域复跑走 `slow()`**（REPO 全域扫描 ≈1.3s——常驻接线面）；
+> 宿主归属：T-V5-1–T-V5-12 · T-V5-15 · T-V5-16 = `test/doc-anchors.test.mjs`（轮 1；T-V5-15② 轮 3 增补）；T-V5-13（快层——纯函数直驱）/ T-V5-14（慢层——真实 git 子进程）= `test/doc-impact.test.mjs`（轮 3）；
+> T-V5-16 ③ = 批级对照运行（对照记录入批次档 §5）；**快层 8 例 · 慢层 7 例**（`test/doc-anchors.test.mjs` 全 15 例——`test:full` 全跑）。
+
 ## 5. 配置与会话恢复
 
 **engineering 与 advisor.guard 都是会话级**（2026-08-29 重构）——事实源是当前会话槽位文件
@@ -2459,6 +2722,33 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 5. 架构级文档以机制约束（FR1-FR8）替代用户故事——架构级机制文档的既定形式（评审 2026-09-02 #1 措辞修正，不主张 METHODOLOGY 原文含此豁免）。
 
 ## 7. 变更记录
+
+- 2026-09-12（文档↔实装对账批·**实施后同步轮（设计↔实装对齐 + 父侧裁定）**；只改文档、零代码）：
+  ① §2.32.3.1 V5-B 正则**按实装收正**（补多段号完整捕获 `(?:-\d{1,3})?` + 收尾 lookahead 补 `-`——`T-V5-12` 类完整命中；`TLS12` / `TAB123` 收紧面零改）·
+  ② §3.2 快层归属注收正——T-V5-6/7/8/9/11/12 六例 `slow()` 归册（快层 8 例 / `test:full` 14 例）·
+  ③ §2.32.6 受影响文件表回读刷新（`scripts/check-doc-width.mjs` 367 → **368**；`scripts/doc-anchors.mjs` 300 / `test/doc-anchors.test.mjs` 282 / `docs/README.md` 250）；§2.19 V5 行 / 档位结论 / D-V5-4 同数同步·
+  ④ §2.32.3.2 补对端仓根**可达来源序**（显式参数 → env `THINCODER_PEER_ROOT`〔别名 `THINCODER_CLI_ROOT`〕+ 自指防护 → 兄弟目录）；④ 补仓前缀形态**通过条件**（按实装写入）·
+  ⑤ 排除式 1 + §2.32.3.3 + 假阳类 5 / 8 新增**排除判据**（通用入口名类 / 「原…系」并档叙述——F2 / N1 假阳缺口闭环；判据句 + 射程入档；**实装对齐随其后实施轮**）·
+  ⑥ §2.32.8 登记**假阴面代价**（对端可达但档缺失 ⇒ 缺档不报——已知代价）。
+  批次档 §2 追加同轮小节（`../batches/2026-09-12-DOC-CODE-RECONCILE.md` §2）；§2.32 自引用全量核验 = 0 悬空。
+
+- 2026-09-12（文档↔实装对账批·**实施前小轮——两端差异登记 + README 去重**；只改文档、零实现）：
+  §2.32.8 补**两端差异登记**一条——对端仓树不可达的处置两端口径**各自保留、互不追赶**（本仓 CLI = 合规形态记「域外」报告行、不阻断；对端 VSC = fail-closed 拒跑）；
+  `docs/README.md` §3.7 的 V5 运行命令**去重保留检查器登记行**（删条目内命令句——单源）。
+  批次档 §2 追加小轮小节（`../batches/2026-09-12-DOC-CODE-RECONCILE.md` §2）。
+
+- 2026-09-12（文档↔实装对账批——**设计评审轮次 1 后修正轮**：3🔴+3🟡+7🔵 逐条落地；只落评审发现直接导出的修正、零新语义）：
+  **#1 🔴 中文权威镜像入表**——受影响文件表 + §2.32.5.5 落笔表各行 + 批次档 §2 各补 `docs/design/prompts/discipline-engineering.md`（+~14；**两副本逐字同落**——`docs/README.md`:15 中文权威源；AC15 双源口径；批次档轮 3 口径改「1 节 × 2 副本」）·
+  **#2 🔴 T-V5-12 宿主与判据**——用例覆盖逐例钉死（`test/doc-anchors.test.mjs` = T-V5-1–12 · 15 · 16；`doc-impact.test.mjs`（拟落 `test/`） = T-V5-13/14）；T-V5-12 改夹具域 + 显式 `gate` 参数（消轮 1 批级门冲突）；受影响文件表补轮 2 行（`V5_GATE` 翻转 + 清账档集合 = 首跑清单——动态清单 → `files` 对接入 §2.32.4）·
+  **#3 🔴 对端仓锚统一**（父侧裁定）——V4 违规形态（枚举外）→ V5 跳过；合规形态（`路径（仓别）`——E3）→ 入存在性域、不可达记「域外」不阻断——排除式 5 / 解析序 ③ / 降级条 / 假阳类 7 / §2.32.3.6 全文统一；AC-V5-8/9 与 T-V5-10/11 夹具钉成互斥两类·
+  **#4 🟡 标记集补 `归档` / `换名` / `改名` + 假阳类 8 括注对齐 + T-V5-5 十类夹具逐类钉死**·
+  **#5 🟡 N5 独立判定句——新增 AC-V5-16 / T-V5-16**（`SCAN_DIRS` 不变 + V1–V4 批前/批后逐字节对照 + 夹具快照；需求档 §1.20 判定句行同步）·
+  **#6 🟡 反查时点与基准**——`--base` 必给 = 上一批收口点、实施轮开工前跑（§2.32.5.1 + 落笔表第 4 条逐字同改）·
+  **#7–#13 🔵**：366→367（D-V5-4）· 「新四档」· 需求档行 1 实测回填 +74（1000——修正轮后终值；修正轮前实测 999/+73）· V5-B 收紧（`TLS12` / `TAB123` 不入抽取——假阳类 10 + T-V5-5 ⑩）· item 9 另起节（#11）· README §3.7 补运行命令 · 196 口径统计面消歧（#13——单档 vs 全域）。
+
+- 2026-09-12（文档↔实装对账批——DOC-CODE-RECONCILE：用户「完整的全面清理」裁定）：**新增 §2.32**（问题陈述与三层交付 · 方案选型对比四条 · **V5 判据规格**（三锚抽取与排除式 / 存在性域 / 注记识别 / 假阳类十条 / 报告态→闸态与阈值 0 / 与 V1–V4 射程边界 / 设计期实测基线）· 层 2 清账契约 · 层 3 防回潮（反查脚本 / V5 常驻 / 语义巡检 / **跨仓批派单与写域**——用户 23:01 追加 + 提示词落笔表）· 受影响文件 11 项 · 决策 D-V5-1–D-V5-7 · 边界）
+  + **§3.1 AC-V5-1–AC-V5-16** + **§3.2 T-V5-1–T-V5-16**；§2.19 机械校验最小集补 **V5** 行（指针级——D2）；需求档 §1.20（FR26）+ §1.19 F15–F17 + `docs/README.md` §3.7 同批。
+  **实施待 coder（token 门）**；层 2 清账与收紧随其后轮（批次档 `../batches/2026-09-12-DOC-CODE-RECONCILE.md` §2）。
 
 - 2026-09-12（台账自持批·**存量旧义清零轮**——F14 同条（阈值 = 0）对齐；只改文档、零代码）：
   §2.18 / §2.22.7 / §2.24.3 / §2.24.6 / §2.24.9 / §2.25 与 **AC28 · AC48 · T41 · T63 · T70 · T71** 的旧口径（「存量入基线降报告」）
@@ -2576,7 +2866,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
   新增口径的文本断言——补 E1 缺口；**枚举统一为 AC45–AC52**）· §2.24.2/§2.24.3 改**指针引用**需求档 §1.13
   （D2：只留本批新增量）· §2.24.4 钉死计数口径（`##` 组 / 行首顶格条目）+ 数字一律 as-of ·
   §2.24.6 机判收窄（L3 只判形态，语义留评审）· §2.24.5 锚句逐字钉死 + 镜像面限定为「锚句逐字」·
-  §2.25 行数刷新 + 删 `test/files.mjs` 行（CLI 无显式清单档，glob 自动发现 → 注册改动 0）·
+  §2.25 行数刷新 + 删 `test/files.mjs`（VSC 仓） 行（CLI 无显式清单档，glob 自动发现 → 注册改动 0）·
   §3.2 用例组标题改「第 8 批」。
 
 - 2026-09-11（凌晨·四）：**第 8 批设计定稿（FR18 需求池指针台账——CLI + VSC 双端；定稿时序号记为第 6 批，同日改号第 8 批）**——
@@ -2607,7 +2897,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
   **批次档（父侧写域）**：§3 落**带编号的轮次 1/轮次 2 发现表**（供「发现 #N」解析）；§2 计数改提示词面 **8 项** + 用例表 **T54–T66**。
 
 - 2026-09-10（晚·十六）：**第 5 批设计评审轮次 2 处置**（1🔴+8🟡+5🔵，用户裁定**全修**）：
-  🔴 **主 agent 人格面缺位**（VSC `persona-engineering.md:10-13` 实证仍是 ARCHITECT/设计档交付者——与带入的 A1/A4/D1 同装配互斥）——**新增锚 A12**（双源改述 + spawn eng-designer 调用链，逐字源 = CLI 同档）+ §2.23 补双源两行 + **T65** + §2.22 目标段记实证；
+  🔴 **主 agent 人格面缺位**（VSC `src/prompts/persona-engineering.md:10`（VSC 仓；至 13 行） 实证仍是 ARCHITECT/设计档交付者——与带入的 A1/A4/D1 同装配互斥）——**新增锚 A12**（双源改述 + spawn eng-designer 调用链，逐字源 = CLI 同档）+ §2.23 补双源两行 + **T65** + §2.22 目标段记实证；
   🟡 用例标题 **T54–T65**（含 T55b/T57b/T65；T62 归位）+ 批次档 §2 同步；
   轮次 1 发现落点：批次档 §3 待父侧代写打标（§3 = 评审子代理自写，工具落地前通道：**本轮先补设计档内“发现 #N”可解析性**——处置段已逐条化）；
   AC38 ⑨ **勘察变体必搬**（无“不搬”选项）；接线落点**钉死 files.mjs**（package.json 不入文件域）；
@@ -2629,7 +2919,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 
 - 2026-09-10（晚·十四）：**第 5 批设计（VSC 端镜像，FR23/§1.17）**——新增 **§2.22**（总原则语义同源原文自持 / **镜像锚 A1-A10 逐字源钉死** / batchDoc 门两处各落+共享校验 / eng-designer 五处落地 / batch_segment 两个适配点 / V1-V2-V3 含**接线硬项** / 双源新建 15 档 / 实现面拆分 / 五条不变量）
   + **§2.23**（受影响文件 as-of：VSC 仓 23 项代码面 + 6 项提示词面，行数实测；唯一逼近硬顶 `subagent-async.mjs` 489+≤10=499）+ **AC37–AC44** + **T54–T62**。
-  **适配点**：工具集落点 = `src/advisor/tools.mjs:26`（三参签名）；实例键通道 = `rv.batchDoc`（非单值会话态）。
+  **适配点**：工具集落点 = `src/advisor/tools.mjs:26`（VSC 仓）（三参签名）；实例键通道 = `rv.batchDoc`（非单值会话态）。
   **实现面拆分（选型 3）**：2 个并行 eng-coder（①代码面 ②提示词双源面，文件域不相交；锚句断言测试归面 ②）。
   **待用户裁**：无（四项选型已定，见 §2.22）；**实现未启动**（待用户发起评审 → 批准）。
 
@@ -2664,7 +2954,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 - 2026-09-10（晚·九）：**第 4 批设计评审轮次 2 处置**（1🔴+8🟡+3🔵——用户裁定**全修**）：
   🔴 **AC31 同步**——由“必传”改为“**若传则须可读**；未传→工具不挂载、评审照常”（与正文 §2.20.2/取舍记录/T47 口径一致，不破 N5）；
   🟡 §2.21 补 round2/round3 **双源**行 · 剥证器改**自有正则**（不复用 §2.7——其正则匹配不到冒号态；F6 同步）· 来源戳与 V3 改**收窄口径**（只认工具写入的轮次行，排骨架行；T46④/T48④ 反证）· V3 触发条件改**机器判据「§4 或 §6 非空」**（删“已收口”同名状态词）·
-  身份判据改与目标档绑定**同读实例键** · 需求档 **B12 §4→§5** · §2.21 定义 `check-doc-width.mjs` **二选一**（增量 ≤19 守 300 / 拆 `scripts/doc-consistency.mjs`）；
+  身份判据改与目标档绑定**同读实例键** · 需求档 **B12 §4→§5** · §2.21 定义 `check-doc-width.mjs` **二选一**（增量 ≤19 守 300 / 拆独立档——**未采用：实际落 = 留单档**）；
   🔵 新增 **T52**（超量 throw）/ **T53**（身份判据同源）· §2.20.2 末段按实例键重写 · 批次档 §1 标签改“第 4 批”。
 
 - 2026-09-10（晚·八）：**第 4 批设计评审轮次 1 处置**（1🔴+6🟡+5🔵——用户裁定**全照办**）：
@@ -2687,7 +2977,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
   🔴2 `docs/README.md` 纳入（登记面→7 处 + §2.18 新增行）；
   🟡 AC25 合并去重 · 删逐字重复段 · 需求 §1.15 尾段改指针 · 批次档计数 8 条 · V1 落点定死+`_archive` 豁免+V2 三形态判据 ·
   AC28 口径照需求档（新增阻断/存量降报告 + 基线文件）· AC22 枚举扩全（三组十句）· 补 T42（AC24/AC25）· FR9 #5 落点与 #7 勘察预算（≤6/批，与审计预算独立）；
-  🔵 T33 输入措辞 · D4 落点→V1 · 八维编号校正为 **#7 Document ownership**（定耆 `advisor-design.md:9`）· 目标计数 7 场景/15 文件 ·
+  🔵 T33 输入措辞 · D4 落点→V1 · 八维编号校正为 **#7 Document ownership**（定耆 `src/prompts/advisor-design.md:9`）· 目标计数 7 场景/15 文件 ·
   A2 补 `files` 声明 + C 补 todo 状态推进（§1.8 步 2 / B5）。
 
 - 2026-09-10（晚·三）：**设计评审轮次 2 处置**（1🔴+5🟡+3🔵——用户逐条裁）：

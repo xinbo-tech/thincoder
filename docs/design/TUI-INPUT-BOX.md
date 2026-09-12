@@ -109,7 +109,7 @@
 | `src/tui/render-frame.mjs` / `render-loop.mjs` | question 自由文本态光标例外（hasOverlay 细化 / cursorSuffix 正常发）；Inject 框标题提示与空态占位符（§8.3） |
 | `src/tui/ansi.mjs` | keyboardPush / keyboardPop 序列常量 |
 | `src/tui/index.mjs` | state 初始化（含 `_draft` / `interruptPrompt` 空态）；stdin 层 translateShiftEnter 接线；启动 keyboardPush / 退出 keyboardPop |
-| `test/input-lock.test.mjs` + `test/arrow-editing.test.mjs` | 按键分发锁（含 busy 门禁）+ 方向键编辑用例（§9.6——新档；原表 `test/tui.test.mjs` / `test/clipboard.test.mjs` 已不存在——第 31 批更正） |
+| `test/input-lock.test.mjs` + `test/arrow-editing.test.mjs` | 按键分发锁（含 busy 门禁）+ 方向键编辑用例（§9.6——新档；原表 `test/tui.test.mjs` / `test/clipboard.test.mjs` 已删（存量测试清零批）——第 31 批更正） |
 
 ## 7. question 自由文本输入态：光标与编辑键
 
@@ -312,7 +312,7 @@ Inject 框（Ctrl+I）`state.interruptPrompt` 为裸 `{ text }`、无 cursor—�
 
 ## 变更记录
 
-- 2026-09-11（第 31 批——设计已落档、实现待批准）：↑↓ 三规则（§3）+ processing 期语义（§3）；Inject 框 `{chars,cursor}` 与四方向键（§8）；契约 §1/§2/§6 同步；批设计/用例/AC = §9；§6 测试行更正（原 `test/tui.test.mjs` / `test/clipboard.test.mjs` 不存在 → 实档）。
+- 2026-09-11（第 31 批——设计已落档、实现待批准）：↑↓ 三规则（§3）+ processing 期语义（§3）；Inject 框 `{chars,cursor}` 与四方向键（§8）；契约 §1/§2/§6 同步；批设计/用例/AC = §9；§6 测试行更正（原 `test/tui.test.mjs` / `test/clipboard.test.mjs` 已删（存量测试清零批），改指实档）。
 - 2026-09-11（第 31 批修正轮——设计评审轮次 1 后）：评审 #1/#2/#6 用例复算修正（T-A6 数组序 / T-A7 夹具 / T-A8 几何）；#3 AC-E1-9 回指收窄 + 新增 AC-E1-10（检视口径）；#5 档头枚举 + §8 引言目标态措辞；#6/#7 不变量 5 哨兵与 cursor 落 `\n` 归属；#8 §8.2 差异两项。语义零改。
 - 2026-09-11（第 31 批交付后刷新）：§9.6 T-A8 括注几何修正（行 1 / 行 2 = 33 / 27 字符——含 2 列行前缀、显示宽 35 / 29；「↑」列保持 → cursor=27——按 §9.3 #3 单源 + `render.mjs` 行前缀语义实测、与测试档断言对齐）；§1 不变量 4 分发序归位（interruptPrompt 先于 picker——原「picker 吃掉按键」口径与实现不符）；档头/§9.5 末注更新（`TUI.md` 更新面已回写）。
 - 2026-09-07：格式债清理——批量档案重写为当前态契约文档；历史回归批（BUG-1..8、v0.11.1→HEAD 逐提交审计、多行渲染/图片粘贴诊断、各 fix 修改文件清单、§7 round1 评审处置）折叠为一条注记，现行语义以本文档契约为准，均已实现并测试通过。

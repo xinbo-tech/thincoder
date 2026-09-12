@@ -28,7 +28,7 @@
 - 双端 `advisor-async.mjs` `ADVISOR_POOL_LIMIT` 常量（CLI :196 / VSC :39）2 → 4——评审 #6 措辞：
   常量 = 运行时回退权威——DEFAULTS/回退对象 = config 层镜像（保持逐字节同值——耦合锁测试保一致）——
   四源同改缺一即漂移
-- 默认源同步 4：CLI config.mjs:65 DEFAULTS.agent.poolLimits 加 `advisor: 4` / VSC config-io.mjs:271 AGENT_DEFAULTS.poolLimits + VSC settings.mjs:96 回退对象加 `advisor: 4`
+- 默认源同步 4：CLI config.mjs:65 DEFAULTS.agent.poolLimits 加 `advisor: 4` / VSC `src/config-io.mjs:271`（VSC 仓） AGENT_DEFAULTS.poolLimits + VSC settings.mjs:96 回退对象加 `advisor: 4`
 - **耦合锁补真空**（勘察：T-24a4 锚定测试现不存在——注释宣称锁但测试树零引用）——新测试断言 DEFAULTS ↔ 运行时常量逐键同值（3 键 4/4/4）
 
 ### 2. advisor 读取器（F-2——每端各一，放 advisor-async.mjs 判定点旁）
@@ -43,9 +43,9 @@
 - 显示回退 cur()（:242/:274）读 DEFAULTS——DEFAULTS 加 advisor:4 后自然显示（undefined 问题消）
 
 ### 4. VSC 面板并入（F-4）
-- webview/settings-agent.js:20-21 Agent 卡加第三数字框 `ag-pool-advisor`——payload :91-101 加读取
-- locales/en.json:235-238 + zh.json:235-238 加 settings.poolAdvisor/Help
-- extension/panel-messages.mjs:361-362 → config-io.mjs:369-376 saveAgentSettingsFromPanel 白名单（:371 现 ["engCoder","other"]）加 "advisor"（全非法 → 删整键回退默认语义不变）
+- `webview/settings-agent.js:20`（VSC 仓；21 行同） Agent 卡加第三数字框 `ag-pool-advisor`——payload :91-101 加读取
+- `locales/en.json:235`（VSC 仓；至 238 行） + `locales/zh.json:235`（VSC 仓；至 238 行） 加 settings.poolAdvisor/Help
+- `src/extension/panel-messages.mjs:361`（VSC 仓；至 362 行） → `src/config-io.mjs:369`（VSC 仓；至 376 行） saveAgentSettingsFromPanel 白名单（:371 现 ["engCoder","other"]）加 "advisor"（全非法 → 删整键回退默认语义不变）
 - settings.mjs:96 回退对象加 advisor + settings-agent.js 显示 `?? 4`
 - 运行期：effectivePoolLimits 加 advisor 键遍历（subagent-scheduler.mjs:344-360 键表 2→3——评审 #2：
   第三键**仅供面板生效值显示/读取回退**——调度路径过滤不消费（subagent 两域 engCoder/other 判定不变）——
@@ -60,8 +60,8 @@
 - 与池容量守卫独立：容量 = 全局 ≤4——scope 守卫 = 同 scope ≤1——两守卫都过才启动
 
 ### 6. 文案去数字化（F-6——用户裁②）
-- CLI advisor.mjs:43 工具描述 "at most 2 reviews run in parallel" → 引用配置活值（"at most {agent.poolLimits.advisor || 4} reviews…"——描述构建时读）
-- VSC engineering.md:16 "pool limit 2 — start reviews one at a time" → 活引用（去硬数字）
+- CLI `src/agent-tools/advisor.mjs:49` 工具描述（原 :43） "at most 2 reviews run in parallel" → 引用配置活值（"at most {agent.poolLimits.advisor || 4} reviews…"——描述构建时读）
+- VSC engineering.md:16 "pool limit 2 — start reviews one at a time" → 活引用（去硬数字）。（该档已退役——PROMPT-SYSTEM 施工① VSC 镜像批）
 - VSC advisor-async.mjs:173 错误文案硬编码 "pool limit 2" → 插值生效上限
 - CLI :365 已插值（读常量）→ 改读**生效上限**（config 覆盖后如实）
 
@@ -83,18 +83,18 @@
 | src/agent-tools/advisor.mjs | CLI | 211 | ≤+2 | 描述去数字化活引用 |
 | src/agent-tools/subagent-async.mjs | CLI | 417（>300 审视——仅注释） | 0（替换） | §24→§11 注释 |
 | src/agent-tools/advisor-async.mjs | VSC | 433（>300 审视——增量安全） | ≤±25 | 常量 4 + 读取器 + scope 守卫 + 文案插值 |
-| src/config-io.mjs | VSC | 494（>300 审视——最热点 495 安全） | +1 | 默认 + 白名单加 advisor |
+| src/config-io.mjs（VSC 仓） | VSC | 494（>300 审视——最热点 495 安全） | +1 | 默认 + 白名单加 advisor |
 | src/extension/settings.mjs | VSC | 309（>300 审视——增量安全） | +1 | 回退对象加 advisor:4 |
-| webview/settings-agent.js | VSC | 169 | ≤+10 | 第三数字框 |
-| locales/en.json + zh.json | VSC | 240 ×2 | ≤+4 ×2 | poolAdvisor 文案 |
+| webview/settings-agent.js（VSC 仓） | VSC | 169 | ≤+10 | 第三数字框 |
+| locales/en.json（VSC 仓） + zh.json | VSC | 240 ×2 | ≤+4 ×2 | poolAdvisor 文案 |
 | src/agent-tools/subagent-scheduler.mjs | VSC | 459（>300 审视——键表评估） | ≤+1 | 键表 + §24 注释 |
-| src/prompts/engineering.md | VSC | 88（.md 豁免——列结构变更） | ≤+2 | 去数字化活引用 |
+| src/prompts/engineering.md（VSC 仓——已退役：PROMPT-SYSTEM 施工① VSC 镜像批） | VSC | 88（.md 豁免——列结构变更） | ≤+2 | 去数字化活引用 |
 | docs/design/AGENT-LOOP.md + ENGINEERING-MODE.md + ARCHITECTURE.md | 双端 | doc 豁免 | doc | 同步 |
 | docs/README.md | CLI | doc 豁免 | doc | 登记（核销时） |
 | docs/TODO.md L91 | CLI | doc 豁免 | doc | 需求勾销（核销时）|
 | test/（评审 #3 点名：CLI test/config-pool.test.mjs（耦合锁/读取器/容量拒/scope 守卫/子菜单读写——
-  若 TUI 基建无则子菜单走人工清单）+ test/advisor-description.test.mjs（活引用）；VSC
-  test/config-pool.test.mjs（耦合锁/读取器/容量拒/scope 守卫/白名单）+ test/settings-panel.test.mjs
+  若 TUI 基建无则子菜单走人工清单）+ test/advisor-description.test.mjs（活引用——已退场：TEST-LIFECYCLE，删除记录 = `TESTING.md` §7.1）；VSC
+  test/config-pool.test.mjs（VSC 仓；耦合锁/读取器/容量拒/scope 守卫/白名单）+ test/settings-panel.test.mjs（VSC 仓——已并入 config-pool：TEST-LIFECYCLE）
   （回退显 4）） | 双端 | 新 | 新 ≤150 | 新测试 |
 ## 用例表（正常/边界/错误——对应 F-1~7）
 
