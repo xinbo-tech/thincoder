@@ -1,11 +1,13 @@
 # 文档 / 产品文案卫生（6 条）· 批次记录（2026-09-11）
 
-> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分）**：本档对端（VSC）份已由 VSC 仓 `docs/batches/2026-09-11-DOC-HYGIENE（VSC 仓）` 逐字承载（D10——零改写）；本档保留本仓份。
-> 移出条目（对端份）清单：对端面 1 处 = `AGENT-LOOP.md`（VSC 仓）C3 两句（as-of `:116`）——条目计数（对端份 / 本仓份）= 1 / 21（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。
+> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分 · 已切除 2026-09-12）**：本档对端（VSC）份**已自本档切除**（原文不再留本仓——D11 完全态）；承载档 = VSC 仓 `docs/batches/2026-09-11-DOC-HYGIENE（VSC 仓）`（逐字搬运、零改写——D10）。
+> 已切除条目清单：§2 文档域行内对端面 1 处 = `AGENT-LOOP.md`（VSC 仓，≤+8）——条目计数（对端份 / 本仓份）= 1 / 21（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。**源档 blob SHA（切除前）= `151ecda3812b`**。
+> 变更记录：2026-09-12——对端份经承载档逐字承接后自本档物理切除；档首注记形态收敛为「已切除」。
 
 > 六段 append-only，**一段一作者**：§1 讨论（主 agent）· §2 批次任务（eng-designer）·
 > §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder 自写）· §6 验证与收口（父代理）。
 > 编制：主 agent（工程模式）· 2026-09-11 13:14 · 来源 = 用户 13:12「**批C开工**」（TODO 全量审计 id=28「该落地」清单之批 C）+ 审计报告（逐条一手实测）。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -23,7 +25,7 @@
 |---|---|---|---|
 | **C1** | **`read_image` 工具描述事实错误**——写「Pure text models (DeepSeek V4, GLM-5) will receive an error」；实测 `deepseek-flash`/`deepseek-v4-flash`/`-vision-exp` 均 `multimodal: true`（仅 `deepseek-v4-pro` 非视觉）；门为 spec 驱动 | **P2 · 小** | `src/tools/read_image.md:8`（描述=模型可见面）vs `src/model-specs.mjs:33/38/40`；门 `src/tools/file.mjs:168` |
 | **C2** | **§24 旧锚 25 处**——全仓注释仍余 `§24 D-24*` 写法（章节已改 §11，旧锚=断链） | P3 · 小 | `src/agent.mjs:71-72` · `src/advisor/run.mjs:22/145` · `src/agent-tools/subagent.mjs:132` 等 25 处 |
-| **C3** | **VSC 旧句与代码矛盾**——`AGENT-LOOP（VSC 仓）§7` 仍述 C' 态「busy 输入禁用」；现行 = INPUT-LOCK-BEHAVIOR-REVISED（输入不禁、只禁提交） | P3 · 小 | `thincoder-vscode/docs/design/AGENT-LOOP.md:288-295` |
+| **C3** | **VSC 旧句与代码矛盾**——`AGENT-LOOP（VSC 仓）§7` 仍述 C' 态「busy 输入禁用」；现行 = INPUT-LOCK-BEHAVIOR-REVISED（输入不禁、只禁提交） | P3 · 小 | `AGENT-LOOP（VSC 仓）:288-295` |
 | **C4** | **注释断链**——`wrapped-spawn` 指 `docs/design/TUI-STDERR-CAPTURE.md`；该档已归档 `_archive/` | P3 · 小 | `src/tui/wrapped-spawn.mjs:1` |
 | **C5** | **需求档 4 项同步**——§1.12 段表「写入手段」列 / §1.11 B9 / §1.16 F1 口径 / §1.16 N2 措辞 | P3 · 小 | `docs/requirements/ENGINEERING-MODE.md`（grep「写入手段」零命中） |
 | **C6** | **CLI 仓 `.thincoder/index/` 死产物**——mtime 2026-07-29、CLI 仓零读写点（活体索引 = `~/.thincoder/memory.db`）；**只限 CLI 仓**（VSC 仓该目录是活体索引——零碰） | P3 · 小 | `thincoder/.thincoder/index/`（PORTABILITY §9 已裁「另立项」） |
@@ -59,7 +61,6 @@
 
 ## §2 批次任务（eng-designer 自写）
 
-_（待写——eng-designer）_
 
 **状态：任务书就绪**（2026-09-11——需求 + 设计 + 测试三层已落档（设计 §2.29 / AC68–AC74 / T84–T91），待设计评审）。实施者 = eng-coder（设计 token 门）。本 §2 = coder 任务书本体（不另写副本；逐字替句 / 映射表 / 用例 / AC 判据在设计档各节，本段只做任务书 + 口径锚）。
 
@@ -72,7 +73,7 @@ _（待写——eng-designer）_
 | C1 | `read_image` 描述事实错误 | **去具体模型名 + 能力以 spec 为准**——逐字替句整行替换 | §2.29.2 | eng-coder |
 | C2 | `§24` 旧锚残留 | **`§11.x` 粒度逐行替换**（28 行 / 29 处 token / 18 文件——映射表逐行；基准域三域 A/B/C） | §2.29.3 | eng-coder |
 | C3 | VSC 旧句与实现矛盾 | **两句修订（已由设计者落笔）**——coder 零接触 | §2.29.4 | eng-designer（**已落**） |
-| C4 | 注释断链 | **去归档路径**（机制名保留——同族先例 `src/crash-reports.mjs:35`） | §2.29.5 | eng-coder |
+| C4 | 注释断链 | **去归档路径**（机制名保留——同族同款 `src/crash-reports.mjs:35`） | §2.29.5 | eng-coder |
 | C5 | 需求档 5 点位同步 | **5 点位 + §1.12 附注 1 处（已由设计者落笔）**——coder 零接触 | §2.29.6 | eng-designer（**已落**） |
 | C6 | 死产物 | **删除 `thincoder/.thincoder/index/` 整目录**（先决检查 fail-closed） | §2.29.7 | eng-coder |
 
@@ -83,7 +84,7 @@ _（待写——eng-designer）_
 ### 三、已知事实（免重复勘察——直接读）
 
 - **C1**：`src/tools/read_image.md`（9 行）第 8 行 = 待替换句；门 = `src/tools/file.mjs:168`（`specForModel(model).multimodal`——本批零改）；spec 行 `src/model-specs.mjs:33/38/40`（`multimodal: true`）+ `:36`（`deepseek-v4-pro` 无该字段）；测试面 `test/read-image-guide.test.mjs`（行为断言——描述文本无既有断言）。
-- **C2**：逐行枚举 = 设计 §2.29.3 表（28 行 / 29 处 / 18 文件；行号 as-of——他链在飞会漂，**动手前重扫**）；同形已更新先例 = `src/config.mjs:77`；`src/prompts/**` 零命中；`test/**` 唯一 `§24` = 变更注（`advisor-description.test.mjs:18`——**不判**）。
+- **C2**：逐行枚举 = 设计 §2.29.3 表（28 行 / 29 处 / 18 文件；行号 as-of——他链在飞会漂，**动手前重扫**）；同形已更新同款 = `src/config.mjs:77`；`src/prompts/**` 零命中；`test/**` 唯一 `§24` = 变更注（`advisor-description.test.mjs:18`——**不判**）。
 - **C4**：`src/tui/wrapped-spawn.mjs`（39 行）第 1 行；diff 应只此 1 行。
 - **C6**：`.gitignore:18` 命中（未跟踪）；`git ls-files .thincoder/` 无 `index/` 条目；`src/`+`bin/` 零引用（实测 0 命中）；目录内容 = `manifest.json`（117,135 B）+ `vectors.bin`（4,395,208 B）。VSC 仓同名目录 = 活体索引（**零碰**）。
 - **C3/C5**：已落（coder 零接触）；本批文档域改动全部完成。
@@ -116,7 +117,7 @@ _（待写——eng-designer）_
 | 3 | `src/tui/wrapped-spawn.mjs` | 39 | 0（串删除） | C4 去路径 | eng-coder |
 | 4 | `thincoder/.thincoder/index/`（目录） | 2 文件（4.5 MB） | 删除 | C6 | eng-coder |
 
-**文档域（设计者已落——coder 零碰）**：`docs/requirements/ENGINEERING-MODE.md`（≤+24）· `docs/design/ENGINEERING-MODE.md`（≤+240）· `AGENT-LOOP.md`（VSC 仓，≤+8）· `docs/TODO.md`（±6）。
+**文档域（设计者已落——coder 零碰）**：`docs/requirements/ENGINEERING-MODE.md`（≤+24）· `docs/design/ENGINEERING-MODE.md`（≤+240）· `docs/TODO.md`（±6）。
 
 ### 七、验收标准（逐条见设计 §3.1——每条可机器验证）
 
@@ -162,7 +163,6 @@ _（待写——eng-designer）_
 
 ## §3 设计评审（评审子代理自写）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
@@ -175,7 +175,9 @@ _（待写——评审子代理）_
 | 3 | 行号指针 | 🔵 | §2.29.4 边界行引「`:308`（中止语义行的 C' 标签）」——实读 VSC 档该 C' 标签在 :309–310；同节内另有 `:290`/`:322` 与 `:291–294`/`:324–327` 两套口径 | 行号统一标 as-of 或改内容键控（如「中止语义（F-6」行）——防读者按指针落空 |
 | 4 | 验收标准 | 🔵 | AC68 零命中名单（Pure text models / Kimi K3 / DeepSeek V4 / GLM-5.3-Flash）是两名单（另含 Qwen3.8 / MiniMax M3 / GLM-5）的真子集——整行替换下残余风险低 | 补全零命中集，或加一条「:8 与定稿替句逐字全等」断言（机判更硬） |
 
-**重点核 ①–⑥ 结论**：① C1 名单纯已去、svg 例外保留、无新工具名示例、`file.mjs` 零改——与 spec 驱动真值面一致；② C2 映射 29 处 = 域 A 9 / 域 B 19 / 域 C 1（28 行 / 18 文件计数自洽），键控 = 文件 + 旧锚串，`D-24x` 标签保留——逐行可执行；③ C6 先决三证（`git ls-files` 零条目 / `.gitignore:18` 命中 / src+bin 零引用）+ fail-closed「任一不成立停下报告」+ AC73 两仓对照——闭合；④ AC68–AC74 与 C1–C6 逐条回指、T84–T91 全映射、判据均可机判；⑤ 批次 §2 ↔ 设计 §2.29 ↔ 需求 §1.15 批块/§1.12 附注逐条一致（C5 五点位 + 附注 1 处实测在位），落档面（需求+设计+VSC+TODO）披露齐；⑥ 无 🔴。
+**重点核 ①–⑥ 结论**：① C1 名单纯已去、svg 例外保留、无新工具名示例、`file.mjs` 零改——与 spec 驱动真值面一致；② C2 映射 29 处 = 域 A 9 / 域 B 19 / 域 C 1（28 行 / 18 文件计数自洽），键控 = 文件 + 旧锚串，`D-24x` 标签保留——逐行可执行；③ C6 先决三证（`git ls-files` 零条目 / `.gitignore:18`
+命中 / src+bin 零引用）+ fail-closed「任一不成立停下报告」+ AC73 两仓对照——闭合；④ AC68–AC74 与 C1–C6 逐条回指、T84–T91 全映射、判据均可机判；⑤ 批次 §2 ↔ 设计 §2.29 ↔ 需求 §1.15 批块/§1.12 附注逐条一致（C5 五点位 + 附注 1 处实测在位），落档面（需求+设计+VSC+TODO）披露齐；⑥ 无 🔴。
+机械折行（2026-09-12 形态清零轮）——语义零改
 
 **计数**：🔴 0 · 🟡 0 · 🔵 4。
 VERDICT: pass
@@ -190,7 +192,6 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 **交付摘要**：第 22 批实施域全量落地——**20 文件**（C1 ×1 + C2 ×18 + C4 ×1）+ **1 目录删除面**（C6）；无新增文件、未 commit（改动留工作区）。
 改动集与任务书 §2「受影响文件」逐项全等，无表外文件。红线零触碰：VSC 仓零改 · `src/prompts/**` 零改 · CLI `docs/**` 本批零改 · 他链在途档零碰 · 未发起评审。
@@ -238,7 +239,7 @@ _（待写——eng-coder）_
 
 **⑤ 偏差披露（零静默）**
 
-1. **AC73 ② 前提与磁盘不符**：`thincoder-vscode/.thincoder/` 实测无 `index/` 目录（磁盘真值）——AC73（T90、批次档 §2 C6 行）「存在且零触碰（对照）」的「存在」不成立；「零触碰」成立（本批零改 VSC 仓）。fail-closed 记录为文档层收口项（不代改设计档）；C6 删除面（CLI 侧）不受影响、已达成。
+1. **AC73 ② 前提与磁盘不符**：VSC 仓 `.thincoder/` 实测无 `index/` 目录（磁盘真值）——AC73（T90、批次档 §2 C6 行）「存在且零触碰（对照）」的「存在」不成立；「零触碰」成立（本批零改 VSC 仓）。fail-closed 记录为文档层收口项（不代改设计档）；C6 删除面（CLI 侧）不受影响、已达成。
 2. **快层 T41 批前既有**：批前/批后同集合（471/458/1/12）——源自他链在飞档 4 条新增一致性违规；按 AC74 归属注体例归他链修（D5 零碰），本批不引入、不代修。
 3. **映射表行号漂移 2 处**：设计表 as-of `advisor/messages.mjs:133` → 实测 `:42`；`agent.mjs:71/72` → `:72/73`——按设计声明「实现时以 grep 重扫为准」以「文件 + 旧锚串」键控落位，计数守恒（28/29/18）。
 4. **首轮 10 行 whitespace-variant 误匹配**（替换工具容错匹配扰动前导空白；含 `eng.mjs:37/55` 缩进）：同轮逐行回正——28 行前导空白对照 HEAD **零差异**（`git diff` 面复核）；其余字面逐字未动。

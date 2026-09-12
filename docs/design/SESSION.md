@@ -34,7 +34,7 @@
   （≤201 = 尾窗 200 + ±1 页沿头一条）, total, base }`、单源 `sessionDescriptor()`（`src/session.mjs:69-78`）、
   `base` = `history[0]` 绝对序号（渲染起点；缺省 `total − len` 推导）、翻页锚复用 `state._historyTotal`
   （`_historyAnchor` 未落地——不新增状态位）；§14.5 表补 `session-segments.mjs`（交付 101——按职责拆分
-  产物）行 + `session-store.mjs` 交付 442 行越 300 咨询线登记（不拆——新增档先例）。纯实现态对齐、零语义变更。
+  产物）行 + `session-store.mjs` 交付 442 行越 300 咨询线登记（不拆——新增档口径）。纯实现态对齐、零语义变更。
 
 ---
 
@@ -359,7 +359,7 @@ m = loadManifest(cwd)
 
 **字段映射**：
 
-- `env` → 运行身份（R8）——CLI 仓 `END="cli"` / VS Code 仓 `END="vscode"` 静态常量（§10 D-1 先例），不做 cmdline 判别；
+- `env` → 运行身份（R8）——CLI 仓 `END="cli"` / VS Code 仓 `END="vscode"` 静态常量（§10 D-1 同口径），不做 cmdline 判别；
 - `mode` → 工程模式（R9）——`agent.config?.agent?.engineering` 现状字段；
 - `model` → 模型（R11）——`agent.activeModel ?? provider.model ?? "unknown"`（MODEL-MERGE-SESSION：activeModel = 会话复合具体值恒非空——回退链仅 legacy 形态兜底）；
 - `slot` → 当前会话槽（粘性——N2：CLI `agent._slot` / VSC `_engPersist.slot`——非 manifest active 共享指针）——无绑定窗口（全新会话首回合/直连）如实 `slot: null`（N3——不读 active 回退）；
@@ -547,7 +547,7 @@ CLI `renameSlot`（src/session-rename.mjs）+ VS Code `setSlotTitle`（session-i
 > 检索/记忆族选哪个：查**本会话**说过/裁定过 → read_history（默认）；查**别的会话/项目**旧对话 → read_history 带 path/cwd 参数；查**本 run 改过哪些文件** → recent_changes；查**跨会话已存知识/约定**（memory）→ memory search；
 > 查**项目设计文档** → doc_search；查**代码实现** → code_search；查 git 历史快照 → checkpoint cat/versions。read_history 只查会话消息——文件级改动用 recent_changes——知识与约定用 memory——互相不替代。
 
-消歧段补进各工具描述（互指尾句——最小改动）：read-history.mjs（尾段——含 cwd 参数说明 + 族表）、recent-changes.mjs（尾句"会话级历史用 read_history"）、memory 工具描述（search 段补"会话消息历史不在 memory——用 read_history"）、doc_search/code_search（"查设计决策用 doc_search——查实现用 code_search——查会话用 read_history"——已有互指补 read_history 引用）。双端一致。
+消歧段补进各工具描述（互指尾句）：read-history.mjs（尾段——含 cwd 参数说明 + 族表）、recent-changes.mjs（尾句"会话级历史用 read_history"）、memory 工具描述（search 段补"会话消息历史不在 memory——用 read_history"）、doc_search/code_search（"查设计决策用 doc_search——查实现用 code_search——查会话用 read_history"——已有互指补 read_history 引用）。双端一致。
 
 ### 13.3 验收方向与实现提示
 
@@ -773,7 +773,7 @@ unlinkRecordStore(slotFile)  // 删槽联动（deleteSlot 调用——§14.3.8�
 
 | 文件 | 当前行数 | 预计增量 | 变更点 |
 |---|---|---|---|
-| `src/session-store.mjs` | 新 → 442（交付实测） | +280 ± 40 | 全新模块：段 IO / 索引 / 窗口 / 绑定对账 / 投影写 / 流式迭代 / 生命周期。实现后同步（2026-09-12）：越 300 咨询线——登记、不拆（新增档先例——见拆分结论） |
+| `src/session-store.mjs` | 新 → 442（交付实测） | +280 ± 40 | 全新模块：段 IO / 索引 / 窗口 / 绑定对账 / 投影写 / 流式迭代 / 生命周期。实现后同步（2026-09-12）：越 300 咨询线——登记、不拆（新增档口径——见拆分结论） |
 | `src/session-segments.mjs` | 新 → 101（交付实测） | —（拆分产物） | 段 IO 原语 + 人读线条目形态（`slimForDisplay`/`isLegacyTransient`/`shouldAppend`/`isRealUserMsg`）+ `_storeStats`；store 越 500 硬限后按职责拆出——公开名 re-export、调用面零改（实现后同步 2026-09-12） |
 | `src/session.mjs` | 476 | +8 / −26 → ~458 | `slimForDisplay`/`isLegacyTransient` 迁出（re-export）；saveSession 分支；applySession `{slot}`（bind：`slotFile` + identity——修正轮 #1）；reset 解绑；首保存补绑 |
 | `src/session-slots.mjs` | 490 | +~3 | `deleteSlot` → `unlinkRecordStore`（删除联动——修正轮 #7） |
@@ -792,8 +792,8 @@ unlinkRecordStore(slotFile)  // 删槽联动（deleteSlot 调用——§14.3.8�
 | `test/integration/session-resume.test.mjs` | 156 | +30 | 端到端：恢复→翻页→检索→保存 往返 |
 
 > 拆分结论：全部触碰档 ≤500 硬限；`read-history.mjs`（~330）与 `startup.mjs`（~291）越 300 咨询线
-> ——单点追加、不拆（先例 §12.3）。`session-store.mjs`（交付 442——实现后同步 2026-09-12）越 300
-> 咨询线——登记、不拆（新增档先例：本批新档单点开档、职责单一；越 500 硬限时已按职责拆出
+> ——单点追加、不拆（同口径 §12.3）。`session-store.mjs`（交付 442——实现后同步 2026-09-12）越 300
+> 咨询线——登记、不拆（新增档口径：本批新档单点开档、职责单一；越 500 硬限时已按职责拆出
 > `session-segments.mjs`（交付 101），余部为 store 核心）。`session-slots.mjs`（490）**+~3**——仅
 > `deleteSlot` 一行 `unlinkRecordStore` 调用（删除联动——修正轮 #7）；**原子写实现仍放 store 模块内**
 > （store 零项目内依赖——路径经 `slotFile` 传入，避免依赖环；语义指针注明同族）。

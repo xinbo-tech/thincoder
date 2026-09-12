@@ -14,11 +14,20 @@
  * ③ V2 计数与列表一致：声明“N 项/N 处/N 条”（N ≥ 2）且**紧邻**枚举时，枚举条数必须 == N。
  *    识别三形态：md 列表行 / 表格行 / 括号内顿号·斜杠枚举（声明前后紧邻）。
  * ④ V3 批次档 §3 工具写入轮次行（FR22 N3/§2.20.6）：触发判据 = 该档「§4 或 §6 有实质内容」（**骨架行/斜体占位行不算内容**——在飞批次不报，零假阳）；命中则 §3 必须含工具写入形态 `### 轮次 N（评审子代理）`（骨架行不计）。
+ *    射程 = **工具落地后**（`V3_ERA_START` = 2026-09-11）创建的批次档；该日及之前的批次档 §3 由父侧代写（工具通道未存在）——结构性历史事实，**不判、不入基线**。
+ * ⑤ V4 跨仓形态合规（B16 / §8.10.1——先例不构成例外依据）：对端仓文档引用**枚举外即红**
+ *    （允许形态 E1–E5：`名称（仓别）§N` / `名称（仓别）` / `路径（仓别）` / 裸仓名 / 纯语义提及）。
+ *    枚举外判据：`对端仓目录名/…<名>.md` 直引（裸形态——未附（…）注记 / 行坐标）；仓标 + 裸 `§N`（未附「名称（仓别）」，引述码段内不判）。
+ *    **射程豁免（硬——可执行坐标）**：fenced 代码块整块跳过；行内含命令 / 搜索模式串码段者不判
+ *    （与 D19「实施面文件坐标」同类——证据与命令保字面）。V4 仅判散文引用面；与 V1 不重复报行
+ *    （`.md §N` 可解析性 = V1 面；V4 只看跨仓形态）。
  *
  * 精度取向（评审要求“零假阳才能常驻”）：V2 只判**结构上明确相邻**的声明+枚举
  * （行内声明后紧跟列表/表格，或紧邻括号枚举）；正文散文里的计数不判（语义级一致性归评审——
- * §2.19 边界）。存量违规由基线吸收（`test/fixtures/doc-consistency-baseline.json`）：
- * **新增违规阻断、存量降为报告**（需求 §1.15 非功能性需求）。
+ * §2.19 边界）。
+ * 基线（`test/fixtures/doc-consistency-baseline.json`）：**必须保持为空**——新增违规一律红，
+ * **不得再入基线**（**入基线 = 例外 = 违规**，fail-closed：基线非空即 FAIL）。历史存量已于
+ * 2026-09-12 清零轮逐条修掉/规范形态化（CLI 25 条 · VSC 31 条）——「存量降报告」不再是合法态。
  *
  * 用法：node scripts/check-doc-width.mjs [--dir <docs/design>] [--max 300]
  * 导出（test/doc-consistency.test.mjs 消费）：collectMarkdown / checkDocWidths /
@@ -30,8 +39,13 @@ import { pathToFileURL } from "node:url";
 
 /** 文档一致性扫描域（排除 _archive/——历史快照豁免，同 check-doc-width 现行口径） */
 export const SCAN_DIRS = ["docs/design", "docs/requirements", "docs/batches"];
-/** 基线文件（首跑固化清单）：存量违规报告、新增违规阻断 */
+/** 基线文件：**必须保持为空**（新增违规一律红——入基线 = 例外 = 违规，fail-closed） */
 export const BASELINE_PATH = "test/fixtures/doc-consistency-baseline.json";
+/** V3 判据射程起点：批次档段写入工具（batch_segment）落地 = 2026-09-10（第 4 批）；
+ *  该日及之前的批次档 §3 无工具写入通道（父侧代写）——结构性历史事实，非违规。 */
+export const V3_ERA_START = "2026-09-11";
+/** V4 对端仓目录名（本端仓目录名不入判据——本端路径前缀非跨仓面）。 */
+export const PEER_DIRS = ["thincoder-vscode"];
 
 /** 递归收集 .md 文件（跳过 _archive/——归档区是历史快照，不受人类可读判据与一致性校验约束） */
 export function collectMarkdown(dir, out = []) {
@@ -219,16 +233,62 @@ export function checkCountLists(root) {
   return out;
 }
 
-/** V1+V2+V3 一次跑全：{ v1, v2, v3 } */
+// ── V4 跨仓形态合规（B16 / §8.10.1）──────────────────────────────────────────
+/** 行内可执行坐标（命令 / 搜索模式串码段）——V4 射程豁免（证据与命令保字面；D19 同类）。 */
+function isExecutableLine(line) {
+  if (/`[^`\n]*&&[^`\n]*`/.test(line)) return true; // 命令链（cd … && …）
+  if (/`[^`\n]*\b(?:cd|node|npm|npx|grep|rg|git)\s[^`\n]*`/.test(line)) return true; // 码段内命令词
+  if (/`[^`\n]*(?:\[\^|\\\.|\(\?<|\(\?:|\{\d)/.test(line)) return true; // 码段内搜索模式串片段
+  return false;
+}
+/** 行内位置是否在反引号码段内（引述面——仓标 + 裸 §N 的引述不判）。 */
+function inCodeSpan(line, idx) {
+  return (line.slice(0, idx).match(/`/g) ?? []).length % 2 === 1;
+}
+/**
+ * V4：跨仓形态合规（枚举外即红——B16「先例不构成例外依据」）。返回 [{file, line, ref, kind}]。
+ * 枚举外判据：① `对端仓目录名/…<名>.md` 直引（裸形态：其后不接 `（…）` 注记 / 行坐标）；
+ *          ② 对端仓标（`VSC 仓`）+ 裸 `§N`（未附「名称（仓别）」；引述码段内不判）。
+ * 射程豁免（硬——可执行坐标）：fenced 块整块跳过；命令 / 搜索模式串行不判（与 D19「实施面文件坐标」同类）。
+ */
+export function checkCrossRepoForms(root) {
+  const out = [];
+  const X1 = new RegExp(`(?<![A-Za-z0-9_.\\-])(?:${PEER_DIRS.join("|")})/(?:[A-Za-z0-9_.\\-]+/)*[A-Za-z0-9_.\\-]+\\.md(?![A-Za-z0-9:])`, "g");
+  const X3 = /VSC\s*仓\s*§\s*\d+(?:\.\d+)*/g;
+  for (const f of scanDomain(root)) {
+    const relF = f.slice(root.length + 1).replace(/\\/g, "/");
+    let fence = false;
+    readFileSync(f, "utf8").split("\n").forEach((line, i) => {
+      if (/^\s*```/.test(line)) { fence = !fence; return; }
+      if (fence) return;
+      if (!PEER_DIRS.some((d) => line.includes(d)) && !/VSC\s*仓/.test(line)) return; // 快速预筛（对端目录名由 PEER_DIRS 派生——防预筛窄于判据）
+      if (isExecutableLine(line)) return;
+      for (const m of line.matchAll(X1)) {
+        if (/^`?\s*[（(]\s*(?:CLI|VSC|对端|本仓|他仓)[^（）)]{0,10}[）)]/.test(line.slice(m.index + m[0].length))) continue; // D19 坐标形态（附仓别注记）——不入本判据
+        out.push({ file: relF, line: i + 1, ref: m[0], kind: "cross" });
+      }
+      for (const m of line.matchAll(X3)) {
+        if (inCodeSpan(line, m.index)) continue; // 引述码段内不判（断开书写协议等价实现）
+        out.push({ file: relF, line: i + 1, ref: m[0], kind: "cross" });
+      }
+    });
+  }
+  return out;
+}
+
+/** V1+V2+V3+V4 一次跑全：{ v1, v2, v3, v4 } */
 export function checkDocConsistency(root) {
-  return { v1: checkSectionRefs(root), v2: checkCountLists(root), v3: checkBatchSegments(root) };
+  return { v1: checkSectionRefs(root), v2: checkCountLists(root), v3: checkBatchSegments(root), v4: checkCrossRepoForms(root) };
 }
 
 /** V3：批次档 §4/§6 有实质内容（排骨架行/斜体占位行）时，§3 必须含工具写入的轮次行。
- *  在飞批次不报；判据不引用 §1 讨论状态词。split 只吃标题前缀——每段首行剩标题余文，先剥。 */
+ *  在飞批次不报；**工具前时代（文件名日期 < `V3_ERA_START`）不判**（§3 无工具写入通道）；
+ *  判据不引用 §1 讨论状态词。split 只吃标题前缀——每段首行剩标题余文，先剥。 */
 export function checkBatchSegments(root) {
   const out = [];
   for (const f of scanDomain(root).filter((p) => /[\\/]docs[\\/]batches[\\/]/.test(p))) {
+    const era = /(\d{4}-\d{2}-\d{2})/.exec(basename(f))?.[1];
+    if (era && era < V3_ERA_START) continue; // 工具前时代：§3 父侧代写——结构性历史事实，不判
     const parts = readFileSync(f, "utf8").split(/^## §(\d+)(?=\s|$)/m), sec = {};
     for (let i = 1; i < parts.length; i += 2) sec[parts[i]] = parts[i + 1].replace(/^[^\n]*\n?/, "");
     const real = (n) => String(sec[n] ?? "").split("\n").some((l) => l.trim() && !/^#{1,6}\s/.test(l) && !/^_[（(].*[）)]_$/.test(l.trim()));
@@ -244,6 +304,8 @@ export const v1Key = (r) => `V1|${r.file}|${r.ref}`;
 export const v2Key = (r) => `V2|${r.file}|${r.decl}|${r.declared}|${r.found}|${r.form}`;
 /** V3 条目键（同一批次档一条——修好即可从基线移除） */
 export const v3Key = (r) => `V3|${r.file}`;
+/** V4 条目键（同一行同一引用一条） */
+export const v4Key = (r) => `V4|${r.file}|${r.ref}`;
 /** 读基线清单（缺失/损坏 → 空清单 = 全部视为新增）。 */
 export function loadBaseline(root) {
   try {
@@ -278,20 +340,26 @@ if (isMain) {
     console.log(`OK(宽度): 扫描域全部 .md 无 >${maxW} 字符单行（${widthFiles.length} 文件）。`);
   }
 
-  // ② 一致性 V1/V2/V3——新增阻断、存量报告（基线 = test/fixtures/doc-consistency-baseline.json）
-  const { v1, v2, v3 } = checkDocConsistency(root);
+  // ② 一致性 V1/V2/V3/V4——新增阻断、存量报告（基线 = test/fixtures/doc-consistency-baseline.json）
+  const { v1, v2, v3, v4 } = checkDocConsistency(root);
   const baseline = loadBaseline(root);
-  const all = [...v1.map((r) => [v1Key(r), r]), ...v2.map((r) => [v2Key(r), r]), ...v3.map((r) => [v3Key(r), r])];
+  // 基线必须保持为空（2026-09-12 清零轮闸门收紧）：入基线 = 例外 = 违规 → 非空即 FAIL
+  if (baseline.size) {
+    console.log(`FAIL(基线): 基线清单非空（${baseline.size} 条）——**本基线必须保持为空**：新增违规一律红，不得再入基线（入基线 = 例外 = 违规）。`);
+    for (const k of baseline) console.log(`    ${k}`);
+  }
+  const all = [...v1.map((r) => [v1Key(r), r]), ...v2.map((r) => [v2Key(r), r]), ...v3.map((r) => [v3Key(r), r]), ...v4.map((r) => [v4Key(r), r])];
   const fresh = all.filter(([k]) => !baseline.has(k));
   const known = all.length - fresh.length;
   for (const [, r] of fresh) {
     console.log(r.kind === "batch" ? `✗ V3 ${r.file} §3 缺工具写入的轮次行（一批一段——FR22 N3）`
       : r.declared !== undefined ? `✗ V2 ${r.file}:${r.line} “${r.decl}” 声明 ${r.declared} ≠ 枚举 ${r.found}（${r.form}）`
+      : r.kind === "cross" ? `✗ V4 ${r.file}:${r.line} “${r.ref}”（跨仓形态——枚举 E1–E5 外）`
       : `✗ V1 ${r.file} “${r.ref}”（${r.reason}）`);
   }
-  console.log(`一致性 V1/V2/V3：新增违规 ${fresh.length} 条 · 存量（基线内）${known} 条。`);
-  if (fresh.length) {
-    console.log(`\nFAIL(一致性): ${fresh.length} 条新增违规（V1 段引用 / V2 计数 / V3 批次档 §3）——修掉或（存量）入基线 ${BASELINE_PATH}。`);
+  console.log(`一致性 V1/V2/V3/V4：新增违规 ${fresh.length} 条 · 存量（基线内）${known} 条。`);
+  if (fresh.length || baseline.size) {
+    console.log(`\nFAIL(一致性): ${fresh.length} 条违规（V1 段引用 / V2 计数 / V3 批次档 §3 / V4 跨仓形态）——**修掉**；本基线必须保持为空，不得再入基线（入基线 = 例外 = 违规）。`);
     process.exit(1);
   }
   process.exit(widthHits.length ? 1 : 0);

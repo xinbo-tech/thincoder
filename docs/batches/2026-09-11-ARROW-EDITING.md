@@ -1,6 +1,7 @@
 # 方向键编辑能力（输入框竖直移动 + Inject 框升级）· 批次记录（2026-09-11）
 
 > 六段 append-only，一段一作者。编制：主 agent · 2026-09-11 15:10 · 来源 = 用户 13:36「都可以」（Gitee #IKC6IX + 父侧建议获准）。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -13,11 +14,11 @@
 | **E1** | **输入框 ↑↓ 竖直移动 + Inject 框（Ctrl+I）方向键编辑** | 成立（两条）。主输入框：`src/tui/key-handler.mjs:296-325` ↑↓ **无条件** = 历史导航；光标移动只有 ←→/Home/End（`:328-347`）；`state.input` 扁平 codepoint + 单整数光标（`docs/design/TUI-INPUT-BOX.md:9` 不变量 1）——无行列模型 ⇒ 竖直移动结构性不存在；processing 期 ↑↓ 直接屏蔽（`:271`）。Inject 框：`src/tui/key-modes.mjs:210-238` handleInterruptMode 只处理 Esc/Enter/Backspace/可打印，其余落到末尾 `return true`（模态独占吞键）；`state.interruptPrompt` 是**裸字符串、无 cursor**（对比 question 自由文本态 `q.cursor`，`:152-199`、`TUI-INPUT-BOX.md:113-123`）⇒ 四方向键结构性无响应。 |
 
 ### 用户裁定（2026-09-11 13:36 批准父侧建议）
-**↑↓ = 多行时竖直移动、单行时回落历史；正在翻历史（historyIndex ≠ -1）时恒为历史导航**（与 zsh/readline 惯例 + 本仓 VSC webview 先例 `thincoder-vscode/webview/input.js:76-84` 一致）。
+**↑↓ = 多行时竖直移动、单行时回落历史；正在翻历史（historyIndex ≠ -1）时恒为历史导航**（与 zsh/readline 惯例 + 本仓 VSC webview 同款 `thincoder-vscode/webview/input.js:76-84` 一致）。
 
 ### 已核事实（免重复）
-- 契约档：`docs/design/TUI-INPUT-BOX.md:9`（不变量 1 扁平模型）· `:13`（不变量 5 `layoutInput` → `{cursorLine,cursorCol}`）· `:22-31`（§2 按键表）· `:37-42`（§3 语义）· `:113-123`（question 自由文本态先例）。
-- VSC 先例（同款规则）：`thincoder-vscode/webview/input.js:76-84`。
+- 契约档：`docs/design/TUI-INPUT-BOX.md:9`（不变量 1 扁平模型）· `:13`（不变量 5 `layoutInput` → `{cursorLine,cursorCol}`）· `:22-31`（§2 按键表）· `:37-42`（§3 语义）· `:113-123`（question 自由文本态同款）。
+- VSC 同规（同款规则）：`thincoder-vscode/webview/input.js:76-84`。
 
 ### 待设计裁定
 1. 主框实现形态（按 `layoutInput` 行列模型做「上行/下行 + 列保持钳制」；与既有 ↑↓ 历史语义的切换条件）+ 契约 §2/§3 更新；
@@ -36,15 +37,14 @@
 
 ## §2 批次任务（eng-designer 自写）
 
-_（待写——eng-designer）_
 
 **状态：任务书就绪**（2026-09-11——需求层 + 设计/测试层已落档，待设计评审）。实施者 = eng-coder（设计 token 门）。本 §2 = coder 任务书本体（不另写副本；按键语义逐字 / 用例表 / 验收判据全文在设计档，本段只做任务书 + 口径锚）。
 
 **目标**：主输入框 ↑↓ 获得多行竖移（可视行口径、显示列保持），不可移时回落历史；Inject 框（Ctrl+I）升级为 `{chars,cursor}` 带光标编辑（四方向键可用）。**为什么**：多行输入不可竖移 + 注入框方向键结构性无响应（本档 §1 条目 E1 一手实证）。
 
-**已知事实（免重复勘察）**：本档 §1「已核事实」+ 设计 §9.1。要点：↑↓ 现状 = `key-handler.mjs:296-325` 无条件历史导航；`:271` busy 门禁屏蔽 ↑↓；`state.interruptPrompt` = 裸 `{ text }`、`key-modes.mjs:210-238` 未列键吞；契约不变量 = `TUI-INPUT-BOX.md` §1；VSC 先例 = `thincoder-vscode/webview/input.js:76-84`。
+**已知事实（免重复勘察）**：本档 §1「已核事实」+ 设计 §9.1。要点：↑↓ 现状 = `key-handler.mjs:296-325` 无条件历史导航；`:271` busy 门禁屏蔽 ↑↓；`state.interruptPrompt` = 裸 `{ text }`、`key-modes.mjs:210-238` 未列键吞；契约不变量 = `TUI-INPUT-BOX.md` §1；VSC 同款 = `webview/input.js:76-84`（VSC 仓）。
 
-**落档位置**：需求 = `docs/requirements/TUI.md` §2 **F11** + §3 **N8**（F5 括注改指 F11）· 设计+测试 = `docs/design/TUI-INPUT-BOX.md` **§8（Inject 契约）+ §9 全节**（三规则 / 选型 / 决策 / 受影响文件 / 用例 11 条 / AC-E1-1..10）。`docs/design/TUI.md` 更新面 = 报告父侧（本批未写——超会话声明面；最小改动面见设计 §9.5 末注）。
+**落档位置**：需求 = `docs/requirements/TUI.md` §2 **F11** + §3 **N8**（F5 括注改指 F11）· 设计+测试 = `docs/design/TUI-INPUT-BOX.md` **§8（Inject 契约）+ §9 全节**（三规则 / 选型 / 决策 / 受影响文件 / 用例 11 条 / AC-E1-1..10）。`docs/design/TUI.md` 更新面 = 报告父侧（本批未写——超会话声明面；完整修复路径见设计 §9.5 末注）。
 
 **本批覆盖的条目**（三方一致——本节条目 = 设计档 AC 回指 = 需求档条目）：
 
@@ -80,7 +80,7 @@ _（待写——eng-designer）_
 **未确认面（呈父侧确认）**：
 
 ① **设计承载档** = `docs/design/TUI-INPUT-BOX.md` §8/§9——本会话写域「上述 2 档」的解读 = 需求档 + 契约档（契约更新为本档 §1 待裁 1/2/5 明示要求）；若父侧原意含 `docs/design/TUI.md` 承载，内容与落点解耦、迁移成本低，父侧可否决重定向；
-② `docs/design/TUI.md` 更新面本批未写（超声明面）——最小改动面 = 设计 §9.5 末注三处；
+② `docs/design/TUI.md` 更新面本批未写（超声明面）——完整修复路径 = 设计 §9.5 末注三处；
 ③ processing 期语义微扩（C1：竖移放行、历史禁）——设计裁定（§9.2 C / D-31.3），裁定权在评审 / 用户；
 ④ 契约 §2/§3/§8 现按**目标态**落档（实现待批准）——实现后由设计者去标（本批不代改）。
 
@@ -148,7 +148,6 @@ _（待写——eng-designer）_
 
 ## §3 设计评审（评审子代理自写）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
@@ -199,7 +198,6 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 **状态：交付完成**（2026-09-11）——设计 §9.3 八条契约变更 + §8 按键表逐条落地；8 档（7 改 + 1 新测档）；定向验证 15/15 绿（11 新 + 4 既有锁，锁档零改）；`node scripts/check-syntax.mjs` 290 档 OK；未 commit；VSC 仓零改。
 
@@ -249,7 +247,9 @@ _（待写——eng-coder）_
 
 **偏差披露（1 条——doc-side，代码/测试侧零改；呈设计者/父侧）**
 
-① **T-A8 数字与设计档失配**：设计 §9.6 写 cols=40「内容宽 35 → 折 2 行：行 1 宽 35 / 行 2 宽 25」、预期「↑ → cursor=25」；按设计 §9.3 #3 公式（`inputContentWidth(40) = max(20,39) − 4 = 35`）与 `layoutInput` 既有语义（`render.mjs:171` `avail = width − 2`——每行 2 列行前缀），实测折行 = **33 / 27 字符**（显示宽 35 / 29），↑ 自 cursor=60 → **27**。测试按实测几何断言并在档内注明（`test/arrow-editing.test.mjs:176-184`、`:197`）；↓→60、末行 ↓ 吞、←→59、Home 0、End 60、Ctrl+U 六项与设计逐项一致。令 25 成立须让 inject 用与渲染不同的宽度（违 §9.3 #3 单源 + §9.2 A1 选定理由）——**待设计者/父侧修 §9.6 括注**（33/27 字符 = 显示宽 35/29、↑→27）。内部审计与 advisor 评审均复核该诊断成立，且唯一受影响用例 = T-A8。
+① **T-A8 数字与设计档失配**：设计 §9.6 写 cols=40「内容宽 35 → 折 2 行：行 1 宽 35 / 行 2 宽 25」、预期「↑ → cursor=25」；按设计 §9.3 #3 公式（`inputContentWidth(40) = max(20,39) − 4 = 35`）与 `layoutInput` 既有语义（`render.mjs:171` `avail = width − 2`——每行 2 列行前缀），实测折行 = **33 / 27 字符**（显示宽 35 / 29），↑ 自 cursor=60
+→ **27**。测试按实测几何断言并在档内注明（`test/arrow-editing.test.mjs:176-184`、`:197`）；↓→60、末行 ↓ 吞、←→59、Home 0、End 60、Ctrl+U 六项与设计逐项一致。令 25 成立须让 inject 用与渲染不同的宽度（违 §9.3 #3 单源 + §9.2 A1 选定理由）——**待设计者/父侧修 §9.6 括注**（33/27 字符 = 显示宽 35/29、↑→27）。内部审计与 advisor 评审均复核该诊断成立，且唯一受影响用例 = T-A8。
+机械折行（2026-09-12 形态清零轮）——语义零改
 
 **审计与代码评审轮次（终态 clean）**
 
@@ -267,7 +267,7 @@ _（待写——eng-coder）_
 | 3 | Deferred | `key-handler.mjs`（461）/`index.mjs`（450）/`render-frame.mjs`（377）> 300 行（🟡 advisory）——设计 §9.5 已逐档裁定「不拆」（≤500 硬限内），存量债，不重复升级。 |
 | 4 | Deferred | `key-modes.mjs` 294 行近 300 线（🔵）——本批不动（设计裁不拆）；下批再触该档优先拆分（permission/question/inject 三模态天然可分）。 |
 | 5 | Deferred | F1 帮助文案「↑/↓ — Navigate input history」未含竖移语义（🔵）——设计 §9.5 变更点未含该项，未自行扩语义；建议后续批次补。 |
-| 6 | Fixed | 注入框形态防御一致化（🔵）——`src/tui/clipboard.mjs:103` 改为 `p.chars ? [...p.chars] : []`（同 question 面先例，保文本不丢）；修后复跑双档 15/15 绿。 |
+| 6 | Fixed | 注入框形态防御一致化（🔵）——`src/tui/clipboard.mjs:103` 改为 `p.chars ? [...p.chars] : []`（同 question 面同款，保文本不丢）；修后复跑双档 15/15 绿。 |
 
 **fix round（1 项，已落地）**：`src/tui/clipboard.mjs:103` 形态防御统一（`[]` → `p.chars ? [...p.chars] : []`）；另修 `src/tui/key-modes.mjs:247` 注释别字（鉗→钳）。复跑：`node --test test/arrow-editing.test.mjs test/input-lock.test.mjs` → 15/15 绿；`check-syntax` 290 OK。
 

@@ -1,11 +1,13 @@
 # `settings` 工具 null 默认值类型校验失效 · 批次记录（2026-09-11）
 
-> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分）**：本档对端（VSC）份已由 VSC 仓 `docs/batches/2026-09-11-SETTINGS-NULL-DEFAULT（VSC 仓）` 逐字承载（D10——零改写）；本档保留本仓份。
-> 移出条目（对端份）清单：§5 交付面 VSC 侧（as-of `:253`——VSC 3 文件）——条目计数（对端份 / 本仓份）= 3 / 2（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。
+> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分 · 已切除 2026-09-12）**：本档对端（VSC）份**已自本档切除**（原文不再留本仓——D11 完全态）；承载档 = VSC 仓 `docs/batches/2026-09-11-SETTINGS-NULL-DEFAULT（VSC 仓）`（逐字搬运、零改写——D10）。
+> 已切除条目清单：§5 改动清单 VSC 侧（VSC 源 settings.mjs + 新档 settings-tool.test.mjs + VSC test/files.mjs 登记 = 3 文件）——条目计数（对端份 / 本仓份）= 3 / 2（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。**源档 blob SHA（切除前）= `795f8f7b14fd`**。
+> 变更记录：2026-09-12——对端份经承载档逐字承接后自本档物理切除；档首注记形态收敛为「已切除」。
 
 > 六段 append-only，**一段一作者**：§1 讨论（主 agent）· §2 批次任务（eng-designer）·
 > §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder）· §6 验证与收口（父代理）。
 > 编制：主 agent（工程模式）· 2026-09-11 · 来源 = `docs/TODO.md` 登记项（父侧改用户 config 时实证）。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -69,7 +71,7 @@
 
 **状态：任务书就绪**（2026-09-11——设计已落档，待设计评审）。实施者 = eng-coder（设计 token 门）。本 §2 = coder 任务书本体（不另写副本）。
 
-**落档位置**：需求 `docs/requirements/SETTINGS-TOOL.md` §2（F-S1.7/F-S1.8）+ §3（N-S1.5）· 设计 `docs/design/SETTINGS-TOOL.md` §8（设计层）/ §5.1（测试层）/ §6（AC-S2）/ §7.2（D-S2 决策）/ 第 8 批受影响文件表 · VSC 镜像 `thincoder-vscode/docs/design/TOOLS.md`（agentTools 节——⚑ W2 条件项）。
+**落档位置**：需求 `docs/requirements/SETTINGS-TOOL.md` §2（F-S1.7/F-S1.8）+ §3（N-S1.5）· 设计 `docs/design/SETTINGS-TOOL.md` §8（设计层）/ §5.1（测试层）/ §6（AC-S2）/ §7.2（D-S2 决策）/ 第 8 批受影响文件表 · VSC 镜像 `TOOLS（VSC 仓）`（agentTools 节——⚑ W2 条件项）。
 
 **一、覆盖条目（三方一致清单——本 §2 = 设计档 AC 回指 = 需求档条目）**
 
@@ -106,7 +108,7 @@
 1. **W2（VSC 镜像）= 纳入**：本批做 VSC 面——AC-S2.7 为**确定项**（无「未获纳入则不出」前置条件）；受影响文件表 VSC（W2）四行全部保留。
 2. **W3（`agent.subagentModels` 同族）= 保留（一并修）**：不剔除——W3 条目与用例保留（T-S2.12 正控 + T-S2.13 表驱动含 W3 行）。
 
-**同步规范化落点**（eng-designer 2026-09-11 已落）：设计档 §6 AC-S2.7 · §7.2 D-S2.7 · 需求档 §2 F-S1.7 同族条 · VSC 镜像档 `thincoder-vscode/docs/design/TOOLS.md` 护栏节首句。**编号不变**：AC-S2.1–AC-S2.7 / T-S2.1–T-S2.24·T-S2.30–T-S2.35 / D-S2.1–D-S2.8 编号集合零变化。
+**同步规范化落点**（eng-designer 2026-09-11 已落）：设计档 §6 AC-S2.7 · §7.2 D-S2.7 · 需求档 §2 F-S1.7 同族条 · VSC 镜像档 `TOOLS（VSC 仓）` 护栏节首句。**编号不变**：AC-S2.1–AC-S2.7 / T-S2.1–T-S2.24·T-S2.30–T-S2.35 / D-S2.1–D-S2.8 编号集合零变化。
 
 **修正轮同步（2026-09-11——设计评审轮次 1 后；本追加与上文冲突时以本追加为准）**
 
@@ -142,9 +144,9 @@
 
 | # | 项 | 设计档落点 | 结果 |
 |---|---|---|---|
-| 1 | 测试缝导出 5 → **6** | §8.3 第 6 条 | 补 `_checkShapeCompleteness`（导出面 `src/agent-tools/settings.mjs:263`；T-S2.14 唯一机械缝——`test/settings.test.mjs:284-290` 直用；VSC 同导出于 `thincoder-vscode/src/agent-tools/settings.mjs:249`） |
-| 2 | VSC 锁断言形态：设计字面 → 实测 | §8.3 第 7 条 + T-S2.33 行 | `_nullLeafPaths({ agent: AGENT_DEFAULTS })`（实测 `thincoder-vscode/test/settings-tool.test.mjs:106`）；原字面产出裸名集合、与形状表键集不可同时满足——旁注理由已落 |
-| 3 | VSC 派生表键空间显式化 + 连带行为增量 | §8.4 + T-S2.34 行 | `_DEFAULTS_ROOT`（`thincoder-vscode/src/agent-tools/settings.mjs:39-40`）入档；增量 = `agent.*` 非 null 叶子开始受校验、裸名键按未知键原样——如实记录 |
+| 1 | 测试缝导出 5 → **6** | §8.3 第 6 条 | 补 `_checkShapeCompleteness`（导出面 `src/agent-tools/settings.mjs:263`；T-S2.14 唯一机械缝——`test/settings.test.mjs:284-290` 直用；VSC 同导出于 `src/agent-tools/settings.mjs:249`（VSC 仓）） |
+| 2 | VSC 锁断言形态：设计字面 → 实测 | §8.3 第 7 条 + T-S2.33 行 | `_nullLeafPaths({ agent: AGENT_DEFAULTS })`（实测 `test/settings-tool.test.mjs:106`（VSC 仓））；原字面产出裸名集合、与形状表键集不可同时满足——旁注理由已落 |
+| 3 | VSC 派生表键空间显式化 + 连带行为增量 | §8.4 + T-S2.34 行 | `_DEFAULTS_ROOT`（`src/agent-tools/settings.mjs:39-40`（VSC 仓））入档；增量 = `agent.*` 非 null 叶子开始受校验、裸名键按未知键原样——如实记录 |
 | 4 | 受影响文件行数注记：估计 → 实测 | 第 8 批受影响文件表 | 口径 =「批次前 → 交付态·实测」；CLI 工具 153→263（+110）· 新档 433 · VSC 工具 147→249（+102）· VSC 新档 148 |
 
 **与实测零冲突声明**：除上述 4 项外，设计档与需求档未发现与交付实测的其他冲突。一处按实测精度修正：同步项 3 所据表述「`agent.*`/`traces.*` 非 null 键开始受校验」——实测 `traces.*` 旧实现已带前缀（批次前源码 `:33`），键空间归一不影响其校验面；设计档按 `agent.*` 面如实入档。
@@ -155,11 +157,10 @@
 
 ## §3 设计评审（评审子代理自写）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
-**第 8 批设计评审——发现表**（评审对象 = `docs/design/SETTINGS-TOOL.md` §8/§5.1/§6/§7.2 + `docs/requirements/SETTINGS-TOOL.md` §1–§4 + `thincoder-vscode/docs/design/TOOLS.md` settings 护栏节 + 批次档 §2；全部行号对当轮磁盘态核验）
+**第 8 批设计评审——发现表**（评审对象 = `docs/design/SETTINGS-TOOL.md` §8/§5.1/§6/§7.2 + `docs/requirements/SETTINGS-TOOL.md` §1–§4 + `TOOLS（VSC 仓）` settings 护栏节 + 批次档 §2；全部行号对当轮磁盘态核验）
 
 | # | Category | Severity | Issue | Suggestion |
 |---|----------|----------|-------|------------|
@@ -168,8 +169,8 @@ _（待写——评审子代理）_
 | 3 | Clarity | 🟡 | §8.6 VSC 新句（:267）把 `defaultModel` 归入「non-empty string」，与 VSC TOOLS.md:124（`defaultModel` = `"provider:model"` 串）及同源契约（CLI §8.3 :218）不符；T-S2.32（:138）仅覆盖 `'{}'` 拒绝，发现不了该差异——描述句要么错述待实现语义（若按 non-empty string 实现则违同源/跨端一致），要么漏述形态校验。 | 对齐两处：描述句按 provider:model 形态改写（或明确 VSC 端只做非空串——但那与同源契约及 VSC TOOLS.md:124 冲突，须一并裁定）；可顺手补一条无冒号串的 VSC 负例。 |
 | 4 | Clarity | 🟡 | VSC TOOLS.md 内部归类矛盾：:122 称 `defaultModel`/`shell`/`memory.team` 为「跨端三键」，:124 又把 `defaultModel` 列入「本端键集」；AC-S2.7（:160）与 T-S2.33（:139）按「本端 null 叶子 2 键 + 跨端三键」计数——实现者若按 :124 归类建本端集（3 键），T-S2.33 的「相等（当前 2 键）」不成立。 | 统一归类（`defaultModel` 归跨端三键），使 VSC TOOLS.md:124、AC-S2.7、T-S2.33 三处一致。 |
 | 5 | Acceptance criteria | 🟡 | 回归网覆盖声明不实 + AC 与用例表不一致：§5（:143）称 T-S1.2/T-S1.6/T-S1.9/T-S1.10「其验证面由 `test/config.test.mjs` + dispatch 测试覆盖」——实证 `test/config.test.mjs:21-45` 仅覆盖 `reloadMcpFromDisk` 的 mcp.servers 畸形回退，与 settings 工具的 get/解析/门禁面无交集；`thincoder/test/**` 全目录无 settings 分类断言（`test/subagent-observe-send.test.mjs:181` 只覆盖子代理分支）。同时 AC-S2.5（:158）把「get 成功」列为由 T-S2.16–T-S2.23 佐证的面，但该区间无 get 成功态用例（唯一 get 用例 T-S2.17 :128 为缺失键错误态；get 成功恰是未纳入的 T-S1.2）。 | 二选一并如实改文：(a) 补一条 get 成功用例（如 `get agent.maxTurns`）（可选：settings 的 list/get 分类断言）；或 (b) 从 AC-S2.5 删去「get 成功」、并把 §5 覆盖声明改为「未覆盖（不在本批改动面）」而非虚指他档。 |
-| 6 | Clarity | 🔵 | 测试缝标注不完整：§5.1（:106）把 `config.mjs _setConfigPathForTest` 标为「（T-S2.13 用）」，但 T-S2.1/T-S2.2/T-S2.3/T-S2.5（:112-116）的「`loadConfig()` 读回」断言同样需要它（`settingsTool` 默认写导出常量 `configPath`——`settings.mjs:90`；`loadConfig` 读覆盖路径——`config.mjs:26-30/253-255`——两缝须并用，只用其一会造成对真实用户配置的读写）；VSC 面（T-S2.30–35）的注入缝（`thincoder-vscode/src/config-io.mjs:35` `_setConfigPathForTest`）与形状表 `_` 导出未在 W2 节/§5.1 列明。 | 补一句双缝并用的说明（CLI）；列明 VSC 测试缝（config-io 注入 + `_` 导出）。 |
-| 7 | Affected-file size annotations | 🔵 | 受影响文件表文档行注记口径陈旧：`docs/design/SETTINGS-TOOL.md` 标「121」（现 313）、`docs/requirements/SETTINGS-TOOL.md` 标「22」（现 49）、`thincoder-vscode/docs/design/TOOLS.md` 标「213」（现 223）——.md 豁免行数要求，属注记问题（自称「当前行数」实为批次前状态，且 +~130 估计与实际 ~+190 有差）。 | 改注为「批次前」或更新数字，避免 coder 对账混淆（纯口径，不影响验收）。 |
+| 6 | Clarity | 🔵 | 测试缝标注不完整：§5.1（:106）把 `config.mjs _setConfigPathForTest` 标为「（T-S2.13 用）」，但 T-S2.1/T-S2.2/T-S2.3/T-S2.5（:112-116）的「`loadConfig()` 读回」断言同样需要它（`settingsTool` 默认写导出常量 `configPath`——`settings.mjs:90`；`loadConfig` 读覆盖路径——`config.mjs:26-30/253-255`——两缝须并用，只用其一会造成对真实用户配置的读写）；VSC 面（T-S2.30–35）的注入缝（`src/config-io.mjs:35`（VSC 仓） `_setConfigPathForTest`）与形状表 `_` 导出未在 W2 节/§5.1 列明。 | 补一句双缝并用的说明（CLI）；列明 VSC 测试缝（config-io 注入 + `_` 导出）。 |
+| 7 | Affected-file size annotations | 🔵 | 受影响文件表文档行注记口径陈旧：`docs/design/SETTINGS-TOOL.md` 标「121」（现 313）、`docs/requirements/SETTINGS-TOOL.md` 标「22」（现 49）、`TOOLS（VSC 仓）` 标「213」（现 223）——.md 豁免行数要求，属注记问题（自称「当前行数」实为批次前状态，且 +~130 估计与实际 ~+190 有差）。 | 改注为「批次前」或更新数字，避免 coder 对账混淆（纯口径，不影响验收）。 |
 
 计数：🔴 1 · 🟡 4 · 🔵 2（共 7 条）
 
@@ -195,7 +196,6 @@ VERDICT: changes-required
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 **SETTINGS 形状护栏实施（2026-09-11——CLI + VSC 双端同批）**
 
@@ -206,9 +206,6 @@ _（待写——eng-coder）_
 
 - CLI `src/agent-tools/settings.mjs`（153→263 行）：形状层 `:29`（null 叶子 4 键）/`:38`（同族 1 键）· 派生 `:44-58` · `_nullLeafPaths :61` · `_checkShapeCompleteness :72` + 装载自检 `:81` · 错误构造与形状校验 `:84-127` · `_checkKnownKeyValue :130` · 描述句 `:209` · 校验调用点 `:245` · 导出 `:263`。
 - CLI `test/settings.test.mjs`（NEW——433 行 / 25 例）：T-S2.1–T-S2.24 + T-S2.17b；锁断言逐字形态在 T-S2.14；表驱动 T-S2.13（16 行）；回归网 T-S2.16–T-S2.23；双缝并用（写侧 `settingsTool({configPath})` + 读侧 `_setConfigPathForTest`）。
-- VSC `src/agent-tools/settings.mjs`（147→249 行）：本端 2 键 `:26` · 跨端 3 键 `:33` · 派生根 `:40`（`agent.*`/`traces.*` 全路径键空间）· `_checkKnownKeyValue :125` · 描述句 `:196` · 校验调用点 `:237` · 导出 `:249`。
-- VSC `test/settings-tool.test.mjs`（NEW——148 行 / 6 例）：T-S2.30–T-S2.35。
-- VSC `test/files.mjs`（49→50 行）：`:40` 登记 `test/settings-tool.test.mjs`（清单显式列表——登记即跑）。
 
 **③ 逐需求透明表**
 
@@ -232,8 +229,8 @@ _（待写——eng-coder）_
 **⑤ 测试证据**
 
 - `cd thincoder && node --test test/settings.test.mjs` → tests 25 / pass 25 / fail 0。
-- `cd thincoder-vscode && node --test test/settings-tool.test.mjs` → tests 6 / pass 6 / fail 0。
-- 全量（先落盘再读）：`thincoder/_t-settings-cli.log`（tests 388 / pass 376 / fail 1 / skipped 11——见 ④-5）· `thincoder-vscode/_t-settings-vsc.log`（tests 372 / pass 371 / fail 0 / skipped 1）。
+- VSC 仓 `node --test test/settings-tool.test.mjs` → tests 6 / pass 6 / fail 0。
+- 全量（先落盘再读）：`thincoder/_t-settings-cli.log`（tests 388 / pass 376 / fail 1 / skipped 11——见 ④-5）· `_t-settings-vsc.log`（VSC 仓）（tests 372 / pass 371 / fail 0 / skipped 1）。
 - VSC 首跑曾触发 slow-gate 阈值抖动误红（`test/smoke-settings.mjs` 875ms > 800ms 拦截线）——重跑绿，非本批用例。
 
 **⑥ 内部审计与代码评审（本会话）**
@@ -245,7 +242,7 @@ _（待写——eng-coder）_
 
 - VSC 写面 `agent.subagentModels` 零约束残留（AC-S2.7 枚举 2+3 键之外；若按 W3 延伸双端需设计更新）。
 - 设计档同步项：§8.3 第 7 条 VSC 断言形态 · §8.4 裸名改全路径 · 行数注记（测试实测 433 行 vs 设计估 ~163）。
-- 日志产物 `thincoder/_t-settings-cli.log` · `thincoder-vscode/_t-settings-vsc.log` 留工作树（验证证据，收口时可清理）。
+- 日志产物 `thincoder/_t-settings-cli.log` · `_t-settings-vsc.log`（VSC 仓）留工作树（验证证据，收口时可清理）。
 
 **终态：converged**（交付面 clean——无 🔴、无越界、无静默简化；文档同步项与范围确认项已披露转父侧）。
 

@@ -227,7 +227,7 @@
 explore / plan / coder（普通模式）**不适用**——行为零变更。
 
 **判据（只到"参数在 + 路径可读"）**：`args.batchDoc` 为非空字符串，且 `resolve(cwd, batchDoc)` 存在且为文件
-（路径语义照 `files` 先例：cwd 相对或绝对均可，`\\` 归一为 `/`）。**不校验内容/措辞**——不做"已收口"正则、
+（路径语义与 `files` 同口径：cwd 相对或绝对均可，`\\` 归一为 `/`）。**不校验内容/措辞**——不做"已收口"正则、
 不生成、不匹配模板（内容够不够由**执行者拒收**兜底——需求 §1.14 #9 行为面，提示词层第 2 批）。
 
 **校验落点 = `buildSpawnChild`（token 门之前）**：async 与 sync 两条 spawn 路径都经过它——一处校验双路生效，
@@ -273,7 +273,7 @@ explore / plan / coder（普通模式）**不适用**——行为零变更。
 A 胜在：**单一共用装配点 + 与 token 门同出口**（错误生命周期一致）；B 覆盖等价但会把门禁拆到与 token 门不同的层，后续加角色时需再想一遍；C 冗余（本条否决理由已按评审 #5 修正——原“B 只盖同步前半”不成立） |
 | 判据级别 | (i) 措辞正则（"已收口"）· (ii) 机器标记（HTML 注释）· (iii) 存在 + 可读 | **(iii)** | (i) 把中文措辞写死进代码、模板一改就断；(ii) 给文档加机器字段=形状约束；(iii) 零脆弱——内容好坏由执行者拒收兜底（需求已定） |
 | 提示词同步时机 | 本批最小同步（样例行）· 全部留给第 2 批 | **本批最小同步** | 门禁先行而样例不教 = 每次调用撞墙；第 2 批的"六段自写"规则仍留第 2 批 |
-| 测试落点 | 新文件 `test/batch-doc-gate.test.mjs` · 并入 design-token-settlement | **新文件** | 机制独立（batchDoc ≠ token）；token 测试已 245 行。构造手法照抄**两份**先例：`test/design-token-settlement.test.mjs`（隔离缝 + 最小 agent + assert.throws）与 **`test/subagent-id-counter.test.mjs:12,27`**（直驱 `buildSpawnChild`——T27 成功路径断言靠它） |
+| 测试落点 | 新文件 `test/batch-doc-gate.test.mjs` · 并入 design-token-settlement | **新文件** | 机制独立（batchDoc ≠ token）；token 测试已 245 行。构造手法同形于两档既有测试：`test/design-token-settlement.test.mjs`（隔离缝 + 最小 agent + assert.throws）与 **`test/subagent-id-counter.test.mjs:12,27`**（直驱 `buildSpawnChild`——T27 成功路径断言靠它） |
 
 
 ### 2.14 受影响文件（第 1 批 as-of 快照——不得当契约引用）
@@ -521,7 +521,7 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 | test/eng-designer-role.test.mjs | **新增** | — | +120±40 | 角色注册/装配不回退/勘察受限用例 |
 | scripts/check-doc-width.mjs | 修改 | 51 → **281**（以 §2.21 为准） | ≤±60 | §2.19 机械校验 V1/V2（扩为文档一致性扫描）——**当时为 51 行小脚本；实测已 281 行，档位判定以 §2.21 为准**（轮次5 评审 #9） |
 | test/doc-consistency.test.mjs | **新增** | — | +90±30 | V1/V2 机判用例（进快层 `test/*.test.mjs` glob，随 `npm test` 生效） |
-| test/fixtures/doc-consistency-baseline.json | **新增** | — | +与存量同数 | V1/V2 **基线**（首跑固化清单——AC28 “存量降报告”的判据源） |
+| test/fixtures/doc-consistency-baseline.json | **新增** | — | +与存量同数 | V1/V2 **基线**（**必须保持为空**——非空即 FAIL；AC28 的判据源） |
 
 > 行数为 2026-09-10 实测；.md 提示词/文档文件按标准豁免行数标注；
 > 表中 **>300 行的共 5 个**（4 个源文件 `subagent.mjs` 395 / `subagent-spawn.mjs` 444 / `setup.mjs` 343 / `subagent-blocks.mjs` 451
@@ -557,6 +557,11 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 **受影响**：`scripts/check-doc-width.mjs`（扩扫——现 51 行）+ **新增** `test/doc-consistency.test.mjs`（进快层 glob，随 `npm test` 生效）+
 **新增基线** `test/fixtures/doc-consistency-baseline.json`（§2.18 已列）；
 提示词层三句（D5/D6/D2）入锚家族（**AC22 ③ 项**）。
+
+**基线清零 + 闸门收紧（2026-09-12 清零轮——用户「残留即先例」裁定）**：
+
+- **本基线必须保持为空**——新增违规一律红，**不得再入基线**（**入基线 = 例外 = 违规**，fail-closed：`scripts/check-doc-width.mjs` 对非空基线直接 FAIL，`test/doc-consistency.test.mjs` T41 ①/⑤ 断言同钉）；「存量降报告」**不再是合法态**（存量＝破例先例源）；
+- 历史存量已逐条处置清零（CLI **25** 条 · VSC **31** 条）：V1 规范形态化（`名称 §N`——去 `.md` 与路径前缀；自引同规）· V2 计数与列表同改（D3）· V3 工具前时代批次档由**判据射程**排除（见 §2.20.6）。
 
 
 ### 2.20 批次档段写入工具（第 4 批——FR22/§1.16）
@@ -625,6 +630,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 加入 `scripts/check-doc-width.mjs` 一致性扫描族：**仅当批次档「§4 或 §6 有实质内容」时**（机器判据；**不引用 §1 的“已收口”状态词**——它是讨论状态，与本守卫无关）；**“有实质内容”的定义（轮次5 评审 #1）**：该段内**除骨架行/斜体占位行外**存在非空行——即 `_（...）_` 形态占位、`### 批准（...）` 等模板骨架行**一律不算内容**（不定义则本批档在飞时即假阳——其 §4/§6 带占位行）；断言「§3 **含工具写入的轮次行**（`### 轮次 \d+（评审子代理）`——排除骨架行）」；
 **落点按 §2.21 二选一**（首选 `check-doc-width.mjs` +≤19 守 300；超出则拆 `scripts/doc-consistency.mjs`）；**§2.19 V1 的“定死此文件”句已在本批同步废除**（轮次4 评审 #2——同机制不得两说）：
 在飞批次（尚未评审）**不报**（避免每批都假阳）。反证用例：构造已批准但 §3 空 → 必报。
+**判据射程（2026-09-12 清零轮收紧）**：V3 只判**工具落地后**（`V3_ERA_START` = 2026-09-11）创建的批次档——该日及之前的批次档 §3 无工具写入通道（父侧代写），属**结构性历史事实**而非违规；原「存量入基线」处置由**射程排除**取代（残留即先例——基线不得留任何合法态）。
 
 #### 2.20.7 方案选型（四个决策点）
 
@@ -684,7 +690,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 
 ### 2.22 VSC 端镜像（第 5 批——FR23）
 
-**目标**：把第 1/2/4 批机制落到 `thincoder-vscode`，使两端**同一套机制、各自实现**。终局判据 = **VSC 会话可 spawn eng-designer 并令其自写 §2/设计档**（需求 `requirements/ENGINEERING-MODE.md` FR23 行 / §1.17 总体目标——N4 是验收两层，非判据句，轮次2 评审 #14）。
+**目标**：把第 1/2/4 批机制落到 VSC 仓，使两端**同一套机制、各自实现**。终局判据 = **VSC 会话可 spawn eng-designer 并令其自写 §2/设计档**（需求 `requirements/ENGINEERING-MODE.md` FR23 行 / §1.17 总体目标——N4 是验收两层，非判据句，轮次2 评审 #14）。
 
 #### 2.22.1 总原则：语义同源·原文自持（N1）
 
@@ -693,7 +699,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 
 #### 2.22.2 镜像锚（逐字源钉死——多实现面规则 §1.12）
 
-**主 agent 人格面同批落地（轮次2 评审 #1 🔴）**：`thincoder-vscode/src/prompts/persona-engineering.md:10-13` 实证仍写「You are the ARCHITECT… deliverables are: the requirements + design documents」——
+**主 agent 人格面同批落地（轮次2 评审 #1 🔴）**：`src/prompts/persona-engineering.md（VSC 仓）:10-13` 实证仍写「You are the ARCHITECT… deliverables are: the requirements + design documents」——
 与本批带入 VSC 的 A1/A4（D1「需求/设计档=eng-designer」）**在同一次装配内互斥**（同 §2.15:365 判据）；且本批要拷的 CLI 中文镜像恰是改述后版本——
 不落此面则中文权威与英文落地相反。**故 `persona-engineering.md` 双源入本批锚/受影响文件（A12）**。
 
@@ -722,7 +728,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 
 | 决策点 | 候选 | 选定 | 否决理由 |
 |---|---|---|---|
-| 门落在哪 | A **两处各落 + 共享校验函数**（阻塞 `subagent.mjs` / 异步 `subagent-async.mjs` 各一个调用点，校验逻辑单份） · B 先造共享 spawn 等价点 | **A** | VSC **无** CLI 的双路装配单点（勘察实证）；B 是结构性重构（动阻塞/异步两条链的公共骨架）= 风险超出镜像范围；A 改动面最小且校验逻辑仍单份（语义不会漂） |
+| 门落在哪 | A **两处各落 + 共享校验函数**（阻塞 `subagent.mjs` / 异步 `subagent-async.mjs` 各一个调用点，校验逻辑单份） · B 先造共享 spawn 等价点 | **A** | VSC **无** CLI 的双路装配单点（勘察实证）；B 是结构性重构（动阻塞/异步两条链的公共骨架）= 风险超出镜像范围；A 校验逻辑仍单份（语义不会漂） |
 
 - **共享校验函数落点**：`src/agent-tools/subagent-spawn-gate.mjs`（169 行——token gate 家族所在，门的天然落点）；签名 `resolveBatchDoc(agent, batchDoc)`：空/解析失败/非文件 → throw（消息明示）。
 - **角色域（发现 #3——必须写死，否则违 N2 零回归）**：门**只对 `NEEDS_BATCH_DOC = { eng-coder, eng-designer }` 生效**——其余角色（explore / plan / coder）**零变更**（不带 batchDoc 照常 spawn）。
@@ -779,20 +785,20 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 - **本批建 `docs/design/prompts/` 15 文件**（中文权威）——初始内容 **逐字自 CLI `docs/design/prompts/` 拷贝**（现有 15 档）。
 - **端特有段处置（发现 #8——不得静默）**：CLI 纪律明文「**端特有段各端保留**」（CLI `src/prompts/discipline-engineering.md:91` / `:205`：VSC R14 池规则段“原地保留于 VSC、CLI 不引入”），
   而 VSC `src/prompts/discipline-engineering.md:202-205` 确有该段——故“逐字拷 CLI 中文档”后，**VSC 的中文权威镜像不含其英文源里的端特有段**。
-  本批定：**端特有段一并进 VSC 中文镜像**（以 VSC `src/prompts` 为准适配写入），**逐项登记在镜像差异表**（文件 + 段 + 来源；**差异表宿主 = `thincoder-vscode/docs/design/README.md` 新增节**——轮次2 评审 #13），并让 AC43 的双源断言**覆盖端特有段存在性**（非仅锚句）。
+  本批定：**端特有段一并进 VSC 中文镜像**（以 VSC `src/prompts` 为准适配写入），**逐项登记在镜像差异表**（文件 + 段 + 来源；**差异表宿主 = `README（VSC 仓）` 新增节**——轮次2 评审 #13），并让 AC43 的双源断言**覆盖端特有段存在性**（非仅锚句）。
 - **跨仓节引用处置（轮次2 评审 #9）**：CLI 中文档含 CLI 侧文档节引用（实证 `docs/design/prompts/discipline-engineering.md:81`「需求档 §1.12」/`:91`「§2.20」/`:138`「docs/README.md 文档规范 §2.7」），VSC 无对应档；
   **逐字拷入后按“路径/UI 引用处”豁免**：能对上目标仓对应节的改写、对不上的改注“（CLI 侧）”，**逐项入镜像差异表**。
-  **V1 判据（轮次3 评审 #7——必须写死，否则自创规则）**：V1 扫含**“（CLI 侧）”注记的行/引用时豁免**（不报、不入基线）；无注记且目标节不存在的引用 → 正常报（新增阻断 / 存量入基线）。该规则入 **T63** 用例。
-  **差异登记（轮次4 评审 #13）**：本豁免为 **VSC 侧独有语义**（CLI 侧 V1 不变）——逐项入**镜像差异表**（宿主 `thincoder-vscode/docs/design/README.md` 新增节），以免被当成 N1“语义同源”的反例。
+  **V1 判据（轮次3 评审 #7——必须写死，否则自创规则）**：V1 扫含**“（CLI 侧）”注记的行/引用时豁免**（不报、不入基线）；无注记且目标节不存在的引用 → 正常报（一律阻断——不得再入基线；F14 同条）。该规则入 **T63** 用例。
+  **差异登记（轮次4 评审 #13）**：本豁免为 **VSC 侧独有语义**（CLI 侧 V1 不变）——逐项入**镜像差异表**（宿主 `README（VSC 仓）` 新增节），以免被当成 N1“语义同源”的反例。
 - **VSC `src/prompts/` 14 → 15**（新增 `persona-eng-designer.md`）；**锚句宿主档定点改写**（A1/A2/A4/A6/A7/A11/A12 所在档），**其余档不动**（轮次2 评审 #10——不做“余 14 档都改”的宽表述）——**不得拿 CLI 的 src/prompts 整体覆盖**（VSC 自持原文，整体覆盖会回退 VSC 特有内容）。
-- `thincoder-vscode/docs/design/README.md:30` 的“机制权威 = CLI 仓”句随之改写（登记项；发现 #12 注仓前缀）。
+- `README（VSC 仓）:30` 的“机制权威 = CLI 仓”句随之改写（登记项；发现 #12 注仓前缀）。
 
 #### 2.22.8 实现面拆分（选型 3）
 
 | 面 | 文件域（**与 §2.23 两表一致**） | 内容 |
 |---|---|---|
 | **① 代码面** | `src/**`（除 `src/prompts/**`）· `scripts/**` · `test/**`（除 `test/prompts-mirror-anchors.test.mjs`） | 门/角色/工具/装配/枚举/V1-V3 + 四个新用例档（含基线 fixture） |
-| **② 提示词双源面** | `src/prompts/**` · `docs/design/prompts/**` · `thincoder-vscode/docs/design/README.md` · `test/prompts-mirror-anchors.test.mjs` | 15 拷贝 + **锚句宿主 6 档定点改** + 1 新建 + 锚句断言测试（轮次4 评审 #4/#5） |
+| **② 提示词双源面** | `src/prompts/**` · `docs/design/prompts/**` · `docs/design/README.md（VSC 仓）` · `test/prompts-mirror-anchors.test.mjs` | 15 拷贝 + **锚句宿主 6 档定点改** + 1 新建 + 锚句断言测试（轮次4 评审 #4/#5） |
 
 **文件域不相交** → 两个 eng-coder **并行**（`files` 声明交调度器）；**锚句断言测试归面 ②**（它拥有那些文件），面 ① 的测试只测代码行为——避免跨面依赖。
 
@@ -833,7 +839,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 | test/eng-designer-role.test.mjs | **新增** | — | +180（含运行期门三例） |
 | test/doc-consistency.test.mjs | **新增** | — | +180（V1/V2/V3 + 接线） |
 | test/fixtures/doc-consistency-baseline.json | **新增** | — | 基线 |
-| thincoder-vscode/docs/design/README.md | 修改（**归面②**——轮次4 评审 #4） | — | +≤20（“机制权威”句改写 + **镜像差异表新增节**——轮次3 评审 #12；行前缀已标明仓） |
+| docs/design/README.md（VSC 仓） | 修改（**归面②**——轮次4 评审 #4） | — | +≤20（“机制权威”句改写 + **镜像差异表新增节**——轮次3 评审 #12；行前缀已标明仓） |
 
 **提示词双源面**
 
@@ -845,7 +851,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 | src/prompts/persona-eng-coder.md | 修改 | 43 | 锚句 A3 |
 | src/prompts/persona-engineering.md | 修改 | 71 | 锚句 **A12**（身份段改述 + spawn eng-designer 调用链——轮次2 评审 #1 🔴） |
 | docs/design/prompts/persona-engineering.md | 修改 | — | 中文镜像同步（A12 中文版） |
-| thincoder-vscode/docs/design/prompts/*.md | **新增 15** | — | 逐字自 CLI `docs/design/prompts/` 拷贝 + **端特有段适配**（§2.22.7） + **跨仓节引用改写**（轮次2 评审 #9） |
+| docs/design/prompts/*.md（VSC 仓） | **新增 15** | — | 逐字自 CLI `docs/design/prompts/` 拷贝 + **端特有段适配**（§2.22.7） + **跨仓节引用改写**（轮次2 评审 #9） |
 | test/prompts-mirror-anchors.test.mjs | **新增** | — | +≤120（锚句 A1-A8/A11/A12 双源断言 + 端特有段存在性；面 ②） |
 
 > 行数为 2026-09-10 实测（VSC 仓）；**唯一逼近硬顶**：`subagent-async.mjs` 489 + ≤10 = 499——越 500 停下报告并带拆分计划。
@@ -893,7 +899,7 @@ FR18 的诉求：**一眼看出"哪条需求落地了没有"**，无需遍历文
 - **组计数口径（钉死——机检 L2 与验收共用同一口径；2026-09-11 改为未决口径）**：**组** = 行首 `##` 级标题（H1 档标题不计入）；
   **条目** = 行首顶格 `- [ ]`（未决——`- [x]` 只存于归档档、活文件零命中：L3⑤）。组标题声明的「N 条」必须等于组内**未决**实条目数（D3）。
 - **归档（2026-09-11 追加裁定——替代原「就地 `[x]` 保留、计入组计数」）**：`status=已核销` / `已废弃` 的条目
-  **勾销（锚行 `- [x]`）后整体移入同仓 `docs/TODO-archive.md`**（照 `checklist-done.md` 先例）；条目连同其冻结指针入归档档，
+  **勾销（锚行 `- [x]`）后整体移入同仓 `docs/TODO-archive.md`**（与 `checklist-done.md` 同口径）；条目连同其冻结指针入归档档，
   **活文件只留未决**；活组计数 = 未决数。细则（命名 / 形态 / 机检 / VSC 对位）= §2.24.9。
 - **数字口径**：本节 / §2.25 / 变更记录里的散文字数一律为 **as-of 实测**，不构成契约；
   **验收以检查器（`check-ledger.mjs`）重算值为准**（散文数字不作判据）。
@@ -915,7 +921,7 @@ FR18 的诉求：**一眼看出"哪条需求落地了没有"**，无需遍历文
 | 端 | 产品提示词 | 中文权威镜像 |
 |---|---|---|
 | CLI | `src/prompts/discipline-engineering.md`（「需求池攒批工作流」节末，as-of `:170`–`:176`） | `docs/design/prompts/discipline-engineering.md` 同名节末 |
-| VSC | `thincoder-vscode/src/prompts/discipline-engineering.md`（同名节末，as-of `:171`–`:177`） | `thincoder-vscode/docs/design/prompts/discipline-engineering.md` 同名节末 |
+| VSC | `src/prompts/discipline-engineering.md（VSC 仓）`（同名节末，as-of `:171`–`:177`） | `docs/design/prompts/discipline-engineering.md（VSC 仓）` 同名节末 |
 
 **镜像纪律**（§1.12 / §2.22.1 沿用，本批不重选）：**锚句逐字 · 节内其余各端原文自持**——
 4 文件内 L-A / L-B **逐字相同**（中文）；该节其余文本各端以本端原文为准，**不设 byte-identical 依赖**
@@ -944,7 +950,7 @@ FR18 的诉求：**一眼看出"哪条需求落地了没有"**，无需遍历文
 - **分组识别（钉死结构依据）**：`##` 组标题**含 `需求池` → 需求池组**；**含 `技术` → 技术组**；
   **两标记都不含的 `##` 组不判 L3③**（仍受 L2 计数与 L3① 约束）。两仓台账的组标题据此统一（收拢动作的一部分）。
 - **status 枚举豁免**：非必填态槽位写 `—`、**无 `status=` 场**的条目豁免 L3④；
-  台账内**存量**机外取值（如 `登记` / `登记待裁` / `根因已定位待设计`）入基线降报告（本节基线机制），
+  台账内机外取值（如 `登记` / `登记待裁` / `根因已定位待设计`）**不再入基线**——违规照报（阈值 = 0；F14 同条），
   并在**收拢时就近归一**（`登记` / `登记待裁` → 待讨论；`根因已定位待设计` → 待设计）。
 - **归档态与触发字段豁免（2026-09-11）**：已核销 / 已废弃条目不在活文件（归档档——L3⑤ 排除，不另判 L3④）；
   需求池组无 `触发=` 场（触发 = 技术条目专属）；技术组**无触发** → 审计「待处置」（非 L3⑥）；`触发=` 写而取值非三枚举 → **L3⑥ 红**。
@@ -966,12 +972,12 @@ FR18 的诉求：**一眼看出"哪条需求落地了没有"**，无需遍历文
 **明确不含**：`docs/design/**`（宽度扫描域，归 `check-doc-width.mjs`）——
 两扫描域**互不侵入**（见 §2.24.7 决策点 1）。
 
-**基线与存量**：机检含**基线机制**（同 `check-doc-width.mjs` V1/V2/V3 的存量口径）——
-本批修正后新出现的违规**阻断**；未在本批范围内的存量违规**入基线并降为报告**（不阻断）。
+**基线与存量**：机检基线（`test/fixtures/ledger-baseline.json`）**必须保持为空**——**违规一律阻断**（修掉；
+「存量分流 / 入基线」已废——阈值 = 0；F14 同条）；非空基线 ⇒ FAIL + 固定句「本基线必须保持为空」（fail-closed）。
 **基线存放面（修正轮裁决 #6）**：`test/fixtures/ledger-baseline.json`——键**稳定、不含行号**
-（照 `scripts/check-doc-width.mjs:34` → `test/fixtures/doc-consistency-baseline.json` 先例，按 `(kind|file|引用串)` 键控）；
+（与 `scripts/check-doc-width.mjs:34` → `test/fixtures/doc-consistency-baseline.json` 同口径，按 `(kind|file|引用串)` 键控）；
 入 eng-coder `files`；文件格式由实现阶段定（本节只钉**路径与键稳定性**）。
-「存量降报告不阻断」是 **AC48** 的断言项之一（与 T71① 对齐）。
+「基线必须保持为空（非空即 FAIL）」是 **AC48** 的断言项之一（与 T71① 对齐）。
 **反证要求**：用例须含"合成坏台账必报红"（防"永远绿的空转脚本"）。
 
 **实现细节**（解析正则 / 行扫描算法 / 基线文件格式 / 报表排版）**由实现阶段确定**——
@@ -1016,11 +1022,12 @@ FR18 的诉求：**一眼看出"哪条需求落地了没有"**，无需遍历文
 **① 归档口径（替代「就地 `[x]` 保留、计入组计数」——§2.24.4 已同步改写）**：
 
 - 已核销 / 已废弃条目**勾销（锚行 `- [x]`）后整体移入同仓 `docs/TODO-archive.md`**
-  （CLI = `docs/TODO-archive.md`；VSC = `thincoder-vscode/docs/TODO-archive.md`——**同 basename**；照 `checklist-done.md` 先例）。
+  （CLI = `docs/TODO-archive.md`；VSC = `docs/TODO-archive.md（VSC 仓）`——**同 basename**；与 `checklist-done.md` 同口径）。
 - 活文件**只留未决**：`- [x]` 零命中（**L3⑤**）；**组计数（N 条）= 未决数**（L2 口径同改）。
 - 归档档最小形态：一行标题 + 来源注（自本仓 `docs/TODO.md` 移出）+ 原样迁入行（保留 `- [x]` 锚、status、冻结指针）；
   **不入机检扫描域**（扫描域 = 两仓活台账——§2.24.6）。
-- **VSC 归档对位**：命名 / 位置 = VSC 仓 `docs/TODO-archive.md`；登记点 = 需求档 §1.17「台账归档对位」追加登记 + 本节。
+- **VSC 归档对位**：**已迁 VSC 仓**（台账自持批 LEDGER-SELF-CONTAINED——本端不再承载该登记）；
+  接收 = `ENGINEERING-MODE（VSC 仓·需求）` 档「归档对位」节；**移出行源档 blob SHA** = `7b05f1b0badeac8775a0a2b72164764fded2be2e`（本批改动前 HEAD 版）。
 
 **② 触发字段（技术待办——(b) 形态补定；文本权威 = 需求档 §1.13）**：
 
@@ -1040,7 +1047,7 @@ FR18 的诉求：**一眼看出"哪条需求落地了没有"**，无需遍历文
 （§1.13 职责分工——2026-09-11 修订）；运行面头部行口径 = 父侧落笔（含「归档 = 同仓 `docs/TODO-archive.md`」句）。
 
 **⑤ 机检增量汇总（L1–L3 基础上）**：L3⑤（活文件零 `- [x]`）· L3⑥（触发取值合法）· 审计模式（待处置清单 + 老化标记）。
-基线机制沿用（存量入基线降报告）；**反证**：合成活文件含 `- [x]` / 非法 `触发=` → 必报红（T92 / T93）。
+基线不得再设（**必须保持为空**——非空即 FAIL；「存量分流」已废——阈值 = 0；F14 同条）；**反证**：合成活文件含 `- [x]` / 非法 `触发=` → 必报红（T92 / T93）。
 
 ### 2.25 受影响文件（第 8 批 as-of——2026-09-11 实测，不得当契约引用）
 
@@ -1053,7 +1060,7 @@ FR18 的诉求：**一眼看出"哪条需求落地了没有"**，无需遍历文
 | docs/TODO.md | 修改（收拢执行——父侧） | 174（as-of 2026-09-11 脚本复算） | 净减（收拢后活文件 = 未决 **30**；归档档 +40 条） | 非源文件，无硬顶；**他批并行在写**——as-of 仅供参照；物理落笔 = 父侧（2026-09-11 归属修订） |
 | scripts/check-ledger.mjs | **新增** | — | ≤240（L3⑤⑥ + 审计模式增量） | 新增档，300 硬顶内 |
 | test/ledger.test.mjs | **新增** | — | ≤180（T92–T96 增量） | 新增档 |
-| test/fixtures/ledger-baseline.json | **新增** | — | ≤80 | 台账检查**基线档**（存量违规降报告——§2.24.6）；键稳定不含行号（照 `test/fixtures/doc-consistency-baseline.json` 先例）；**入 eng-coder `files`** |
+| test/fixtures/ledger-baseline.json | **新增** | — | ≤80 | 台账检查**基线档**（**必须保持为空**——非空即 FAIL；「存量分流 / 入基线」已废——§2.24.6）；键稳定不含行号（与 `test/fixtures/doc-consistency-baseline.json` 同口径）；**入 eng-coder `files`** |
 | `docs/TODO-archive.md` | **新增**（父侧落笔） | — | ≈+40 行（归档 / 勾销条目迁入 + 头部注） | 台账归档档（§2.24.9①）；**不入任何子代理 `files`**——物理落笔 = 父侧 |
 | 测试注册面（CLI 仓 glob 自动发现） | **无改动** | — | **0** | CLI 仓**无显式清单档**——`test/run-fast.mjs:19` / `test/run-full.mjs:9` 走 `test/*.test.mjs` glob → 新 test 档注册改动 **0**（`test/files.mjs` 是 VSC 仓机制，不入本表） |
 | scripts/check-doc-width.mjs | **不触碰** | 298 | **0** | 已贴 300 硬顶——本批一律不改 |
@@ -1062,9 +1069,9 @@ FR18 的诉求：**一眼看出"哪条需求落地了没有"**，无需遍历文
 
 | 文件 | 性质 | as-of | 增量上限 | 说明 |
 |---|---|---|---|---|
-| thincoder-vscode/docs/TODO.md | 修改（收拢执行——父侧） | 63（as-of 2026-09-11 实测） | 净变（活留 **9** / 归档 **11** 条移出——as-of 清单表） | 单脚本以外部路径输入覆盖此档（§2.24.7 决策 3）；**不入任何子代理 `files`**——物理落笔 = 父侧 |
-| thincoder-vscode/docs/design/PROVIDER.md | **不触碰** | — | **0** | 并行会话在写——只读参照，本批不得改 |
-| thincoder-vscode/docs/TODO-archive.md | **新增**（父侧落笔） | — | ≈+13 行（11 条迁入 + 头部注） | VSC 归档档（同 basename 对位——需求档 §1.17 登记；§2.24.9①）；物理落笔 = 父侧 |
+| `docs/TODO.md（VSC 仓）` | 修改（收拢执行——父侧） | 63（as-of 2026-09-11 实测） | 净变（活留 **9** / 归档 **11** 条移出——as-of 清单表） | 单脚本以外部路径输入覆盖此档（§2.24.7 决策 3）；**不入任何子代理 `files`**——物理落笔 = 父侧 |
+| docs/design/PROVIDER.md（VSC 仓） | **不触碰** | — | **0** | 并行会话在写——只读参照，本批不得改 |
+| docs/TODO-archive.md（VSC 仓） | **新增**（父侧落笔） | — | ≈+13 行（11 条迁入 + 头部注） | VSC 归档档（同 basename 对位——需求档 §1.17 登记；§2.24.9①）；物理落笔 = 父侧 |
 
 **提示词双源面**（**8 文件 = `persona-eng-designer.md` ×4 + `discipline-engineering.md` ×4**——**落笔归 eng-coder**）
 
@@ -1074,8 +1081,8 @@ FR18 的诉求：**一眼看出"哪条需求落地了没有"**，无需遍历文
 |---|---|---|---|
 | src/prompts/discipline-engineering.md | 修改 | 222 | +≤12（锚 L-A / L-B 入「需求池攒批工作流」节；**入 eng-coder `files`**） |
 | docs/design/prompts/discipline-engineering.md | 修改 | 150 | +≤12（中文权威同步；**入 eng-coder `files`**） |
-| thincoder-vscode/src/prompts/discipline-engineering.md | 修改 | 229 | +≤12（端原文自持，语义同源；**入 eng-coder `files`**） |
-| thincoder-vscode/docs/design/prompts/discipline-engineering.md | 修改 | 156 | +≤12（同上；**入 eng-coder `files`**） |
+| src/prompts/discipline-engineering.md（VSC 仓） | 修改 | 229 | +≤12（端原文自持，语义同源；**入 eng-coder `files`**） |
+| docs/design/prompts/discipline-engineering.md（VSC 仓） | 修改 | 156 | +≤12（同上；**入 eng-coder `files`**） |
 
 *（b）`persona-eng-designer.md` ×4——todo 归属句替换（**2026-09-11 补列**——§5 审计 Deferred 闭合；实落）*
 
@@ -1083,16 +1090,16 @@ FR18 的诉求：**一眼看出"哪条需求落地了没有"**，无需遍历文
 |---|---|---|---|
 | src/prompts/persona-eng-designer.md | 修改 | 56 | 归属句替换（逐字源 = 本批 §4 批准面 / §5 对表 4–7——「todo 状态推进（记录 + 状态推进 + 物理落笔）= 主 agent」；AC25 子串 `todo 状态推进` 保留）；**入 eng-coder `files`** |
 | docs/design/prompts/persona-eng-designer.md | 修改 | 54 | 同上（中文权威）；**入 eng-coder `files`** |
-| thincoder-vscode/src/prompts/persona-eng-designer.md | 修改 | 56 | 同上（端原文自持——含「不触碰本仓 `docs/TODO.md`」）；**入 eng-coder `files`** |
-| thincoder-vscode/docs/design/prompts/persona-eng-designer.md | 修改 | 54 | 同上；**入 eng-coder `files`** |
+| src/prompts/persona-eng-designer.md（VSC 仓） | 修改 | 56 | 同上（端原文自持——含「不触碰本仓 `docs/TODO.md`」）；**入 eng-coder `files`** |
+| docs/design/prompts/persona-eng-designer.md（VSC 仓） | 修改 | 54 | 同上；**入 eng-coder `files`** |
 
 > 行数一律 as-of（2026-09-11 实测），不作契约。persona 面设计侧零新增选型——纯登记（逐字源 = 批次档 §4 批准面 + §5 对表 4–7 实落）。
 
-> **声明纪律（2026-09-11 归属修订）**：两仓台账（`docs/TODO.md` / `thincoder-vscode/docs/TODO.md`）与归档档
-> （`docs/TODO-archive.md` / `thincoder-vscode/docs/TODO-archive.md`）**均不列入任何子代理 `files` 参数**；
+> **声明纪律（2026-09-11 归属修订）**：两仓台账（`docs/TODO.md` / `docs/TODO.md（VSC 仓）`）与归档档
+> （`docs/TODO-archive.md` / `docs/TODO-archive.md（VSC 仓）`）**均不列入任何子代理 `files` 参数**；
 > **物理落笔 = 父侧（主 agent）**（§1.13 职责分工——原「eng-designer 落笔」口径作废）。
 > **VSC 三文件归属拆分**：2 个提示词档（`thincoder-vscode/src/prompts/…` + 同仓中文镜像）**入 eng-coder `files`**；
-> `thincoder-vscode/docs/TODO.md` **不入**（同父侧维护档）。
+> `docs/TODO.md（VSC 仓）` **不入**（同父侧维护档）。
 > **注册面已核实（原“待实测确认项”结案）**：CLI 仓无显式清单档，`test/*.test.mjs` glob 自动发现
 > （`test/run-fast.mjs:19`、`test/run-full.mjs:9`）→ 新 test 档注册改动 **0**。
 
@@ -1133,7 +1140,7 @@ FR18 的诉求：**一眼看出"哪条需求落地了没有"**，无需遍历文
 | # | 候选 | 判据（规范-机制一致 / 成本） | 取舍 | 结论 |
 |---|---|---|---|---|
 | ① | 表格行豁免（规范 + 检查器同步） | 双层一致；表格行结构性不可折行 | 表格可任意宽——以「建议就近折行」非阻断注保留可读性取向 | **选定** |
-| ② | 检查器单边跳过 | 改动最小 | 规范仍禁、机制放行——规范-机制漂移（违 D2 / 零静默取向） | 否决 |
+| ② | 检查器单边跳过 | 只改检查器一侧 | 规范仍禁、机制放行——规范-机制漂移（违 D2 / 零静默取向） | 否决 |
 | ③ | 发现表非表格化 | 保住宽度域 | 评审协议 / 提示词模板 / 既有 §3 结构全动；提示词面不在本批 | 否决 |
 
 **契约（选定 ①）**：
@@ -1169,7 +1176,7 @@ V2 面有分隔行二次确认、宽度面无此确认，fail-open 方向）；�
   第 11 批既有裁定同向（§14.10 #4——「若后续继续增厚，按 loop.mjs 同法拆分」）。
 - **拆分计划（登记——不执行；触发 = 再度增厚）**：候选线 = 抽「项目上下文发现」组
   （`findProjectRoot` + `injectProjectGuide`，~85 行）→ `src/advisor/project-context.mjs`；import 面由 re-export
-  保持不变（`run.mjs` / `advisor.mjs` / 测试三处导入点零改——按 `loop.mjs` 先例）。
+  保持不变（`run.mjs` / `advisor.mjs` / 测试三处导入点零改——同 `loop.mjs` 形态）。
 
 **D-2 `test/prompts-async-guidance.test.mjs`（563 行——超 500 硬限）——拆分为两档**：
 
@@ -1204,7 +1211,7 @@ V2 面有分隔行二次确认、宽度面无此确认，fail-open 方向）；�
 
 | # | 决策 | 否决备选 | 依据 |
 |---|---|---|---|
-| D-26a | B = 形态规范（检查器零改） | ① 跨仓解析 / ③ 静默容忍 | 成本-收益 + §2.22.6 先例 + 零静默 |
+| D-26a | B = 形态规范（检查器零改） | ① 跨仓解析 / ③ 静默容忍 | 成本-收益 + §2.22.6 既定口径 + 零静默 |
 | D-26b | C = 表格行双层豁免 | ② 机制单边 / ③ 非表格化 | 规范-机制一致 + 提示词面隔离 |
 | D-26c | D-1 不拆（计划登记） | 本批拆 | 硬限内 + 零增厚 + 第 11 批裁定同向 |
 | D-26d | D-2 按拆法①（双源 + ROPE 组迁出） | 拆法② | 主题连贯 + 两档余量 |
@@ -1382,7 +1389,7 @@ test("T112 边界：新档自持——零跨档引用；import 全 node:（D-2/A
 
 | # | 决策 | 否决备选 | 依据 |
 |---|---|---|---|
-| D-27a | T111/T112 宿主 = `doc-consistency.test.mjs`（档尾新段——修正轮重钉） | 新档 / 并入两档 | 零新档 + 同族先例 + 守恒自洽 |
+| D-27a | T111/T112 宿主 = `doc-consistency.test.mjs`（档尾新段——修正轮重钉） | 新档 / 并入两档 | 零新档 + 同族同形 + 守恒自洽 |
 | D-27b | T111 断言 = 静态不变量（发现 + 守恒 + ≤500）；「全绿」归套件级 | 用例内 spawn runner | 零重复执行、零 spawn 面、无边际信号 |
 | D-27c | C 口径 = rawSplit + **全表**回写 | nlCount 归一化 / 只回写观察处 | 与同表多数 + id=11 + SUBAGENT-TAIL（git 核验）同口径；混口径/混时点一次消灭 |
 | D-27d | B 修正集 = 批 13 所致 3 处；存量 5 处登记不修 | 全档全量重算 / 只修单处 | 溯源一致（第 13 批遗留）；「新增阻断、存量报告」纪律类比 |
@@ -1424,7 +1431,7 @@ test("T112 边界：新档自持——零跨档引用；import 全 node:（D-2/A
 
 | # | 候选 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
 |---|---|---|---|---|
-| 1 | eng-designer 自落（本轮） | D1 设计档写权唯一；零语义格式修订；批记录侧域主代笔先例；零 token 链成本 | 无（纯格式面，无实现信号可验） | **选定** |
+| 1 | eng-designer 自落（本轮） | D1 设计档写权唯一；零语义格式修订；批记录侧域归父侧代笔（同规）；零 token 链成本 | 无（纯格式面，无实现信号可验） | **选定** |
 | 2 | eng-coder 落（token 门后） | 实施/设计分离 | 设计档写权异位（D1）+ 为格式面新开 token 链 | 否决 |
 | 3 | 不折（留存量） | 零成本 | 违「非表格禁 >300」纪律 + TODO 清理面挂账 | 否决 |
 
@@ -1471,7 +1478,7 @@ test("T112 边界：新档自持——零跨档引用；import 全 node:（D-2/A
 - 与双端纪律的相容性：4 面（CLI src/中文权威 + VSC src/中文权威）**各端独立落笔、语义同源**；不做 byte-identical 硬一致；差异如实上报（多实现面纪律——纪律层文档规范节）。
 - 落档形态：本设计 §2.28.4 各条 = 逐字草案（照抄件）；落笔批「文本 + 断言同批」（锚句变更永不静默——`PROMPT-SYSTEM.md` §2.7 #12）。
 
-#### 2.28.4 差异面收口（RF-1–RF-6——逐字草案 + 最小改动面）
+#### 2.28.4 差异面收口（RF-1–RF-6——逐字草案 + 完整修复路径）
 
 **RF-1 勾销口径（需求 #12）——4 面**（CLI/VSC × src/中文权威 `discipline-engineering.md`）
 - 定位：设计文档模板细化 →「变更记录」行尾句。
@@ -1499,7 +1506,7 @@ test("T112 边界：新档自持——零跨档引用；import 全 node:（D-2/A
 - (b) 同档 §3.1 作者表——「| 需求层 | … | eng-designer（过渡期主 agent 代行） |」→「| 需求层 | … | eng-designer |」。
 - (c) `AGENTS.md`（本仓根）——整句替换：现句「**需求基线**：需求层 `docs/requirements/`（主 agent·产品经理产物）+ 设计层 `docs/design/`（eng-designer 产物）+ 用户对话。」→ 替句「**需求基线**：需求层 `docs/requirements/` + 设计层 `docs/design/`（均 **eng-designer 产物**——写稿权唯一；需求讨论/登记在会话面）+ 用户对话。」
 - (d) 设计档 §2.1 + 需求档 §1.6 落地注——**本批已落**。
-- 排程：(a)(b)(c) 落笔（README 与 T40 断言同批；AGENTS.md 按父侧维护面先例）；(d) 已落。
+- 排程：(a)(b)(c) 落笔（README 与 T40 断言同批；AGENTS.md 归父侧维护面）；(d) 已落。
 
 **RF-4 子代理提示词角色句（需求 #1/#3）——提示词面（修正轮 #4——EN + 中文权威均逐字）**
 - (a) `persona-eng-coder.md` 身份句 4 面——EN 现句
@@ -1554,7 +1561,7 @@ test("T112 边界：新档自持——零跨档引用；import 全 node:（D-2/A
 | `src/prompts/persona-eng-coder.md`（VSC 仓） | 50 | ≤±8 | RF-4a/4b/4c | 提示词面 |
 | `docs/design/prompts/persona-eng-coder.md`（VSC 仓） | 46 | ≤±8 | RF-4a/4b/4c | 提示词面 |
 | `docs/README.md`（CLI） | 240 | ≤±3 | RF-3a/3b | 落笔（随 T40） |
-| `AGENTS.md`（CLI 仓根） | 69 | ≤±2 | RF-3c | 落笔（父侧维护面先例） |
+| `AGENTS.md`（CLI 仓根） | 69 | ≤±2 | RF-3c | 落笔（父侧维护面） |
 | `docs/requirements/PROMPT-SYSTEM.md`（CLI） | 308 | ≤±14 | RF-2a/2b/2c | 父侧排程 |
 | `docs/design/ENGINEERING-MODE.md`（VSC 仓） | 206 | ≤±10 | RF-5c | 父侧排程（跨仓） |
 | `docs/requirements/ENGINEERING-MODE.md`（CLI） | 761 | +17（实测 778） | RF-5a + 收口块 | **本批已落** |
@@ -1591,7 +1598,7 @@ test("T112 边界：新档自持——零跨档引用；import 全 node:（D-2/A
 |---|---|---|
 | C1 | `read_image` 工具描述（**模型可见面**）事实错误：点名「DeepSeek V4, GLM-5」为纯文本模型——实测 `deepseek-flash` / `deepseek-v4-flash` / `deepseek-v4-flash-vision-exp` 均 `multimodal: true`（仅 `deepseek-v4-pro` 非视觉）；能力门为 spec 驱动 | `src/tools/read_image.md:8` vs `src/model-specs.mjs:33/38/40`；门 `src/tools/file.mjs:168` |
 | C2 | `§24` 旧锚残留（AGENT-LOOP 重排后旧节号不存 = 断链）：CLI `src/**` 实测 **28 行 / 29 处 token / 18 文件**（审计估「25 处」——以逐行枚举为准，D3） | 逐行见 §2.29.3 |
-| C3 | `AGENT-LOOP（VSC 仓）§7` 两句仍述 C' 态（busy「输入禁用」/ readOnly 锁）——与 INPUT-LOCK-BEHAVIOR-REVISED 及本端实现矛盾 | `thincoder-vscode/docs/design/AGENT-LOOP.md:290-291` / `:322-325`；实现 `webview/loading.js:38`（readOnly 锁移除）+ `webview/send.js` 出口守卫 + `locales/{zh,en}.json:13`（占位符定稿串） |
+| C3 | `AGENT-LOOP（VSC 仓）§7` 两句仍述 C' 态（busy「输入禁用」/ readOnly 锁）——与 INPUT-LOCK-BEHAVIOR-REVISED 及本端实现矛盾 | `AGENT-LOOP（VSC 仓）:290-291` / `:322-325`；实现 `webview/loading.js:38`（readOnly 锁移除）+ `webview/send.js` 出口守卫 + `locales/{zh,en}.json:13`（占位符定稿串） |
 | C4 | `wrapped-spawn.mjs:1` 注释指向已归档档 `docs/design/TUI-STDERR-CAPTURE.md`（真断链） | `src/tui/wrapped-spawn.mjs:1`；归档实况 `docs/design/_archive/TUI-STDERR-CAPTURE.md` |
 | C5 | 需求档 5 点位未同步（第 4 批 C 遗留 ②；第 5 项 N3 为第 5 批评审 #9 委托项） | `docs/requirements/ENGINEERING-MODE.md` §1.12 段表 / §1.11 B9 / §1.16 F1 / §1.16 N2 / §1.17 N3 |
 | C6 | CLI 仓 `.thincoder/index/`（`manifest.json` 117,135 B + `vectors.bin` 4,395,208 B）为 DB 化前死产物（mtime 2026-07-29；`src/**`+`bin/**` 零读写点；活体索引 = `~/.thincoder/memory.db`） | `thincoder/.thincoder/index/`；`.gitignore:18`（未跟踪） |
@@ -1618,7 +1625,7 @@ test("T112 边界：新档自持——零跨档引用；import 全 node:（D-2/A
 
 #### 2.29.3 C2 旧锚清理（`§24`→`§11.x`——逐行映射表）
 
-**口径（映射权威 = POOL-CONFIG-UNIFIED F-7）**：`§24` → **`§11.x` 粒度**（非裸 `§11`）；`D-24x` 标签保留（与已更新行先例同形——
+**口径（映射权威 = POOL-CONFIG-UNIFIED F-7）**：`§24` → **`§11.x` 粒度**（非裸 `§11`）；`D-24x` 标签保留（与已更新行同形——
 `src/config.mjs:77`「§11.1 D-24a/R14 + §11.2 R13」）。三域：
 
 - `D-24a` / `R14` / 分域池 → **§11.1**（角色分池 + 可配置）；
@@ -1689,7 +1696,7 @@ test("T112 边界：新档自持——零跨档引用；import 全 node:（D-2/A
 
 | # | 候选 | 判据（可解析 / 不开先例 / 同族一致 / 现状依据边界） | 结论 |
 |---|---|---|---|
-| 1 | 改指归档档（`docs/design/_archive/TUI-STDERR-CAPTURE.md`） | 指针可解析、最小改动；但 src 全仓 `_archive/` 零引用（开先例），且产品注释指冻结档（DOC 地图归档面「不作现状依据」） | 否决 |
+| 1 | 改指归档档（`docs/design/_archive/TUI-STDERR-CAPTURE.md`） | 指针可解析；但 src 全仓 `_archive/` 零引用（开先例），且产品注释指冻结档（DOC 地图归档面「不作现状依据」） | 否决 |
 | 2 | **去路径（机制名保留）** | 同机制姊妹引用已是名称形态（`src/crash-reports.mjs:35`「TUI-STDERR-CAPTURE F-2」零路径）——两处同形；名称可 grep 回溯 | **选定** |
 
 **定稿改动（逐字）**：`src/tui/wrapped-spawn.mjs:1` 删去 `（docs/design/TUI-STDERR-CAPTURE.md）`——首行变为
@@ -1748,8 +1755,8 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 | # | 决策 | 否决备选 | 理由 |
 |---|---|---|---|
 | D-29a | C1 去模型名 + spec 口径 | 更新名单 / 保留原句 | 名单即漂移源（本缺陷形态复发）；spec 驱动为单一真值面 |
-| D-29b | C2 映射 `§11.x` 粒度 + 保留 `D-24x` 标签 | 裸 `§11` / 删 `D-24x` | F-7 权威；与已更新行先例（`config.mjs:77`）同形 |
-| D-29c | C3 局部修订两句 | 整段重写 / 不修 | 最小改动；整段重写越权（该档他链面内容） |
+| D-29b | C2 映射 `§11.x` 粒度 + 保留 `D-24x` 标签 | 裸 `§11` / 删 `D-24x` | F-7 权威；与已更新行（`config.mjs:77`）同形 |
+| D-29c | C3 局部修订两句 | 整段重写 / 不修 | 改动限于两句、不涉他处；整段重写越权（该档他链面内容） |
 | D-29d | C4 去路径 | 归档前缀改指 | 同族同形（`crash-reports.mjs:35`）；不开 `_archive` 先例；归档面「不作现状依据」 |
 | D-29e | C5 含 N3（5 点位） | 只做 4 项 | 同位同源未完项（第 5 批评审委托）；计数与列表同改（D3） |
 | D-29f | C6 归 eng-coder | 父侧执行 | 同批一次交付/一次核验；未跟踪态机械可判（先决检查 fail-closed） |
@@ -1806,7 +1813,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 | # | 候选 | 判据 | 取舍 | 结论 |
 |---|---|---|---|---|
 | 1 | 会话内内存 | 零持久化 | 「首次越线」跨会话重报（每次启动重报 = 不是一次性） | **否决** |
-| 2 | `~/.thincoder/ledger-notify.json`（configDir 先例——crash-reports 同区） | 跨会话、跨端（同一台机器一份）；坏档降空 | 两进程并发写有丢更新窗口（后果 = 至多一次重报，非缺陷级） | **选定** |
+| 2 | `~/.thincoder/ledger-notify.json`（configDir 同区——crash-reports） | 跨会话、跨端（同一台机器一份）；坏档降空 | 两进程并发写有丢更新窗口（后果 = 至多一次重报，非缺陷级） | **选定** |
 | 3 | 写进仓库（如 `docs/.ledger-notify.json`） | 随仓可共享 | 污染用户仓库 + 需 gitignore + 对跨仓族不适用 | **否决** |
 
 **D4 收口行载体**（需求设计约束 4）
@@ -1895,9 +1902,9 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 
 | 点 | 接线 | 行为 |
 |---|---|---|
-| `src/tui/index.mjs` | state 加 `ledger: {marker:null, warn:false, scannedAt:0}`；`showStartup` 后调 `startLedgerSurface({state,agent,pushLine,render})`；`cleanup()` 调 `dispose()`（`process.on("exit", cleanup)` 先例 = `:278`） | 启动扫描 + 周期 |
+| `src/tui/index.mjs` | state 加 `ledger: {marker:null, warn:false, scannedAt:0}`；`showStartup` 后调 `startLedgerSurface({state,agent,pushLine,render})`；`cleanup()` 调 `dispose()`（`process.on("exit", cleanup)` 同 `:278`） | 启动扫描 + 周期 |
 | `src/tui/ledger-surface.mjs`（新档） | 首扫（`setImmediate` 后——不抢首帧）→ push 变化行 / 启动行 → 写 `state.ledger`；`setInterval(REFRESH_MS)`（`unref()`）；`state.processing` 期间跳过本轮（git 子进程不打断回合帧） | 三面发射 + 状态位 |
-| `src/tui/render-frame.mjs` | `buildStatusLine` 状态簇尾插 L1；空标记零注入（半态逐字节等价先例——render-frame `:233-238` 同款纪律） | 常驻标记 |
+| `src/tui/render-frame.mjs` | `buildStatusLine` 状态簇尾插 L1；空标记零注入（半态逐字节等价纪律——render-frame `:233-238` 同款） | 常驻标记 |
 
 - **启动行**（修正轮 #2——可动作门）：首扫**任一项目可动作**（`aged>0` 或阈值）→ push 明细行集 L2 行（每项目一行）；**不可动作 → 会话流零行**（常驻标记不受此门约束——F2 按标记态照显，T98）；同扫若出变化行 → **先变化行、后明细行**。
 - **周期扫描**：仅检测到**新**变化时 push（L3 / L4）；`state.ledger` 每次刷新重写（marker / warn）。
@@ -1908,7 +1915,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 | 点 | 接线 | 行为 |
 |---|---|---|
 | `src/extension/ledger-surface.mjs`（新档） | `initLedgerSurface(panel)` / `refreshLedger(panel,{emit})` / `pushLedgerStartup(panel)` / `dispose()` | 扫描 + item 更新 + post |
-| `src/extension/chat-panel.mjs` | `_initStatusBar()` 内调 `initLedgerSurface(this)`（item 并立——`StatusBarAlignment.Right`、priority 99；先例 `:156`） | item 建立 + 周期注册 |
+| `src/extension/chat-panel.mjs` | `_initStatusBar()` 内调 `initLedgerSurface(this)`（item 并立——`StatusBarAlignment.Right`、priority 99；同 `:156`） | item 建立 + 周期注册 |
 | `src/extension/panel-messages.mjs` | `webviewReady` 分支（既有三推口处，`:428-430`）加 `pushLedgerStartup(panel)`——每次 webview 创建一次（`retainContextWhenHidden` 下 ≈ 每宿主会话一次） | 启动行 post |
 | `src/extension/panel-project.mjs` | `onProjectChanged` 尾加 `refreshLedger(panel,{emit:false})` | 换项目即时刷新 |
 | `webview/chat.js` | 新 case `ledgerNotice` → `addLedgerNotice(ctx, m.lines)` | 流内行 |
@@ -1918,7 +1925,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 - item 形态：`text = L1`；`tooltip = MarkdownString(明细行集 L2 行)`；**无 `command`**（点击面板否决在案）；无台账 → `hide()`。
 - 消息载荷：`{type:"ledgerNotice", lines:[{text, warn:bool}]}`（端内自有投递通道——与 CLI 的 pushLine 各自实现，语义同源）。
 - **启动行 post 门 = 同 §2.30.3.4**（任一项目可动作才 post；不可动作零 post——零噪音 N1；修正轮 #2）。
-- **自验前置**（N4 先例）：源码改动**需重载扩展才生效**——终局自验 = 重载后在含台账工作区看到 item / 启动行。
+- **自验前置**（见 N4）：源码改动**需重载扩展才生效**——终局自验 = 重载后在含台账工作区看到 item / 启动行。
 
 ##### 2.30.3.6 收口行（命令面 + 清单槽位 + 提示词逐字）
 
@@ -2084,8 +2091,8 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
   §2.2 step 1 / §2.2 step 10 / §2.6 F2 / §2.5 / §2.8 / §2.15 A2——**口径**：语义修订→eng-designer（**F2/§2.5 本体各含一句指向 §2.15 A2 的引用**——D2 不重述、但可核对）；勾销/验收/核销→**批次档 §6**，不进设计档；
   另 `docs/README.md:12/:44` 的作者口径一致；`persona-engineering.md` 双源含**调用链段**（批次档 → spawn eng-designer（带 `files`）→ 核验 → 提醒评审）。
 - AC28（§2.19 文档更新纪律）: 纪律表 D1-D7 双源在位（写权矩阵/单一权威源/计数枚举/指针/冻结窗口/回读核对/变更留痕）；
-  机械校验 V1/V2 在 `test/doc-consistency.test.mjs` 内可跑：**新增违规阻断、存量不达基线降为报告**（口径照需求档 §1.15:614，非自创）；
-  基线 = 首跑固化清单（存 `test/fixtures/doc-consistency-baseline.json`，入 §2.18）。
+  机械校验 V1/V2 在 `test/doc-consistency.test.mjs` 内可跑：**违规一律阻断（修掉）**；**基线必须保持为空**——非空 ⇒ FAIL（固定句；「存量分流 / 入基线」已废——阈值 = 0；F14 同条）（口径照需求档 §1.15，非自创）；
+  基线档 = `test/fixtures/doc-consistency-baseline.json`（§2.18 已列）。
 - AC29（§2.20.1——工具契约与 fail-closed 面）: `batch_segment` schema **不含 `path`**；段白名单按调用者身份强制（designer→§2 / 设计评审→§3 / **eng-coder→§5**），
   **越段/未知段 → throw**；**append-only**（写入前后档内既有行 **字节不变**）；
   **fail-closed 面逐条**：骨架保护（text 含 `^## §\d` → 拒）· text >20000 → 拒 · 未绑定/路径不可读 → 拒 · 目标段标题缺失 → 拒；**父代理不适用**（无绑定即无写权——不变量 3）。
@@ -2129,16 +2136,16 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
   2026-09-11 追加裁定，替代原「就地保留、计入」口径）。
 - AC47（§2.24.2——技术待办 (b) 形态）: 每条技术待办 = **指针（可指则指）+ 最小证据行（`file:line` + 症状）**；
   无归属档时指针为 `—`；正文方案叙述不入台账。
-- AC48（§2.24.6——机检 + 反证 + 存量降报告 + 不进产品提示词）: `node scripts/check-ledger.mjs` 对双端台账 **退出码 0**；
+- AC48（§2.24.6——机检 + 反证 + 违规一律阻断 / 基线保持为空 + 不进产品提示词）: `node scripts/check-ledger.mjs` 对双端台账 **退出码 0**；
   对**合成坏台账**（坏指针 / 计数不符 / 需求池组非指针行）**报红且退出码 1**（反证非空转）；
-  **存量面**：入基线（`test/fixtures/ledger-baseline.json`）的违规**降为报告且不阻断**（退出码 0——与 T71① 对齐）；
+  **存量面**：基线（`test/fixtures/ledger-baseline.json`）**必须保持为空**——非空 ⇒ FAIL + 固定句「本基线必须保持为空」（fail-closed；「存量分流 / 入基线」已废——阈值 = 0；F14 同条——与 T71① 对齐）；
   输出形态符合 `<档>:<行号> [L1|L2|L3] <症状> — 期望 … · 实得 …`；
   `grep -r "check-ledger" src/prompts/` **零命中**（FR13）。
 - AC49（§2.24.5——双端锚 + VSC 建池）: 双端 `discipline-engineering.md`（产品 + 中文镜像共 4 文件）
   各含锚 **L-A / L-B 的固定子串**（逐字 grep；子串取自 §2.24.5 锚句）：`同一铁律（指针化、不展开任务细节）` ·
   `锚的形态不同` · `最小证据行（file:line + 症状）` · `组标题声明的条数必须等于组内实条目数`；
   **镜像面 = 锚句逐字**（节内其余文本各端原文自持——不做跨仓逐字节断言）；
-  `thincoder-vscode/docs/TODO.md` 含**需求池组**且组计数自洽。
+  `docs/TODO.md（VSC 仓）` 含**需求池组**且组计数自洽。
 - AC50（§2.24.3 + §2.24.6 L1/L3④——D3 计数、失效指针、过期 / 未勾销条目）：
   **按指针字符串键控（行号只作 as-of 提示，不作契约——修正轮 #1）**：
   **①D3**：需求档 FR18 行称“**六态**”且 §1.13 表列 **6 行**（D3 机判绿）；
@@ -2151,7 +2158,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
   `grep -c "已全部完成" docs/TODO.md` **= 0**（已移出活文件）且 `grep -c "已全部完成" docs/TODO-archive.md` **≥ 1**（该条存入、锚行 `- [x]`——2026-09-11 追加裁定后口径）。
 - AC51（§2.24.7——不侵入纪律；**全文权威落点 = 本节**，批次档 §2 只引用）: `scripts/check-doc-width.mjs` **零改动**（as-of 298 行不变）；
   宽度扫描域**维持** `docs/{design,requirements,batches}`（`scripts/check-doc-width.mjs:32`）**不变**——本批**未扩至** `docs/TODO.md` / `docs/README.md`；
-  `thincoder-vscode/docs/design/PROVIDER.md` 零改动。
+  `docs/design/PROVIDER.md（VSC 仓）` 零改动。
 - AC52（§2.24.2/§2.24.3 交付面——需求档文本已在位）: 需求档 `ENGINEERING-MODE.md` §1.13 含本批新增口径的
   **固定子串**（逐字 grep）：`重分组口径` · `需求点一律入需求池组，技术项一律入技术组` · `(b) = 指针（可指则指）` · `最小证据行`；
   计数面（FR18 行「六态」/ §1.13 表 6 行）由 AC50 断言，本条只断言**文本交付**。
@@ -2297,7 +2304,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 | T38 | 边界：主 agent 人格改述 | 双源 grep `persona-engineering.md` | 含产品经理/会话面身份；不含 `ARCHITECT`/`You design and delegate` 类交付物句 | AC23/FR9#1#2 |
 | T39 | 边界：designer 写操作走 ask（评审 #7） | designer 子代理写 `docs/x.md`（manual 档位） | 触发父侧授权（非静默）；授权后可“全部授权/切自动” | AC26 |
 | T40 | 边界：写权路由单一口径（**AC27/AC27b 用例——六面**） | grep §2.2 step1/step10 / §2.8 / §2.15 A2 / §2.6 F2 / §2.5 / persona-engineering（双源） | 六面均指向 eng-designer（F2/§2.5 为指向句）；无“父代理更新设计文档”残留；勾销无“进设计档”字样 | AC27+AC27b/FR9#3 |
-| T41 | 正常：文档一致性机判 | 跑 `test/doc-consistency.test.mjs`（V1 段引用 / V2 计数） | 存量基线全绿；人为制造一条计数不符 → 报红（反证非空转） | AC28/§2.19 D3-D4 |
+| T41 | 正常：文档一致性机判 | 跑 `test/doc-consistency.test.mjs`（V1 段引用 / V2 计数） | **基线必须为空 + 扫描域零违规**（非空即 FAIL）；人为制造一条计数不符 → 报红（反证非空转） | AC28/§2.19 D3-D4 |
 | T42 | 边界：撤销句/产出要素（评审 #10） | 双源 grep `discipline-engineering.md`（无“主会话即 designer”）；grep `persona-eng-designer.md`（FR19 固定子串） | 前者零命中；后者子串全命中 | AC24/AC25 |
 
 > 需求层已迁出（2026-09-10 需求层拆分批）：信任模型/边界需求见 `../requirements/ENGINEERING-MODE.md` **§3**。
@@ -2338,20 +2345,20 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 | T60 | 错误：只读面 | `_resolvedAdvisorToolsFor`（code） | 工具集**不含** batch_segment（零变更） | AC40/N1 |
 | T61 | 边界：V3 零假阳 | ①在飞批次（仅骨架/占位行）②§4 有实质内容 + §3 无工具轮次行 ③二者均备 ④**本仓缺 `docs/batches/`** | ①不报 ②报 ③不报 ④**跳过不报**（跨仓边界） | AC42/F5 |
 | T62 | 正常：双源结构 + 锚句 + 端特有段 | 同名集合对比 + 文本类锚 grep（双源）+ 端特有段存在性 | **两侧各 15**、集合相等；锚句逐字一致；端特有段在镜像中 | AC39/AC43/F6 |
-| T63 | 正常：V1/V2 + 跨仓注记（发现 #5 · 轮次3 评审 #7） | ①人造段引用失配 ②计数声明与列表不符 ③存量不达基线 ④**带“（CLI 侧）”注记的引用行** | ①②**报** ③**降报告**（不阻断） ④**豁免不报**（注记行不入基线） | AC42/F5 |
+| T63 | 正常：V1/V2 + 跨仓注记（发现 #5 · 轮次3 评审 #7） | ①人造段引用失配 ②计数声明与列表不符 ③基线内条目（存量） ④**带“（CLI 侧）”注记的引用行** | ①②**报** ③**不再降报告分流**（生产路径：非空基线 ⇒ FAIL——入基线 = 例外 = 违规） ④**豁免不报**（注记行不判） | AC42/F5 |
 | T64 | 正常：接线（发现 #5） | `test/files.mjs` 入册并实跑 | 校验器**真被跑到**（未接线 = 红） | AC42/N3 |
-| T65 | 边界：主 agent 人格（轮次2 评审 #1，对齐 CLI T38） | 双源 grep `thincoder-vscode/src/prompts/persona-engineering.md` + 中文镜像 | 含产品经理身份 + spawn eng-designer 调用链；**不含 ARCHITECT/交付物句** | AC39/FR23 |
+| T65 | 边界：主 agent 人格（轮次2 评审 #1，对齐 CLI T38） | 双源 grep `src/prompts/persona-engineering.md（VSC 仓）` + 中文镜像 | 含产品经理身份 + spawn eng-designer 调用链；**不含 ARCHITECT/交付物句** | AC39/FR23 |
 | T66 | 边界：并发隔离（轮次3 评审 #4——镜像 CLI T51） | 两个设计评审（不同批次档）并发启动并各自写 §3 | **各自落自档**（RV 实例键绑定），不得串档 | AC41/§2.22.5 |
 
 **第 8 批用例（T67–T71——需求池指针台账 / 台账机检）**
 
 | # | 场景 | 输入 | 预期输出 | 映射 |
 |---|---|---|---|---|
-| T67 | 正常：台账机检全绿 | `node scripts/check-ledger.mjs`（CLI + VSC 修正后台账） | 每档一行 `OK: <档>`；**退出码 0**；**对端仓不可读 / 本仓缺目录 → 该档跳过不报**（降级不阻断——对称 T61 ④ 跨仓先例） | AC48/L1-L3 |
+| T67 | 正常：台账机检全绿 | `node scripts/check-ledger.mjs`（CLI + VSC 修正后台账） | 每档一行 `OK: <档>`；**退出码 0**；**对端仓不可读 / 本仓缺目录 → 该档跳过不报**（降级不阻断——对称 T61 ④ 跨仓口径） | AC48/L1-L3 |
 | T68 | 错误：坏指针必报红（反证） | 合成台账：引用不存在的档 / 存在档但无该 §X | 逐行 `<档>:<行号> [L1] … — 期望 … · 实得 …`；**退出码 1**（防空转脚本） | AC48/L1 |
 | T69 | 错误：计数不符必报红（D3） | 合成台账：组标题写“（5 条）”而组内 3 条 | 报 `[L2]` 违规 + 汇总计数；**退出码 1** | AC46/L2 |
-| T70 | 边界：形态违规（含 status 枚举与分组识别——修正轮 #3/#5） | ①需求池条目带续行细节 ②技术条目缺证据行 ③技术项混入需求池组 ④条目 `status=登记`（六态外） ⑤未带 `需求池`/`技术` 标记的 `##` 组内条目锚形态杂 | ①②③④各报 `[L3]`（逐例可判，不得只报其一）；**④机外取值若在基线内 → 降报告不阻断**；⑤**不判 L3③**（分组识别凭标题标记）——仍受 L2 计数与 L3① 约束 | AC45/AC47/AC48/L3 |
-| T71 | 边界：存量降报告不阻断 + 域不侵入 | ①未在本批范围的存量违规 ②对 `docs/design/**` 运行宽度检查 | ①**入基线、降报告、退出码 0** ②`check-doc-width.mjs` 与台账检查**互不侵入**（各自域） | AC48/AC51 |
+| T70 | 边界：形态违规（含 status 枚举与分组识别——修正轮 #3/#5） | ①需求池条目带续行细节 ②技术条目缺证据行 ③技术项混入需求池组 ④条目 `status=登记`（六态外） ⑤未带 `需求池`/`技术` 标记的 `##` 组内条目锚形态杂 | ①②③④各报 `[L3]`（逐例可判，不得只报其一）；**④机外取值照报（不再入基线豁免——阈值 = 0）**；⑤**不判 L3③**（分组识别凭标题标记）——仍受 L2 计数与 L3① 约束 | AC45/AC47/AC48/L3 |
+| T71 | 边界：基线不得再设（非空即 FAIL）+ 域不侵入 | ①非空基线 ②对 `docs/design/**` 运行宽度检查 | ①**FAIL**（固定句「本基线必须保持为空」——违规照报；入基线 = 例外 = 违规） ②`check-doc-width.mjs` 与台账检查**互不侵入**（各自域） | AC48/AC51 |
 
 **第 13 批用例（T72–T74 + T111–T112①——文档机制边界与拆分）**
 
@@ -2454,6 +2461,23 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 
 ## 7. 变更记录
 
+- 2026-09-12（台账自持批·**存量旧义清零轮**——F14 同条（阈值 = 0）对齐；只改文档、零代码）：
+  §2.18 / §2.22.7 / §2.24.3 / §2.24.6 / §2.24.9 / §2.25 与 **AC28 · AC48 · T41 · T63 · T70 · T71** 的旧口径（「存量入基线降报告」）
+  全部对齐为**「违规一律阻断（修掉）· 基线必须保持为空（非空即 FAIL）」**；需求档 §1.13 / §1.15 同句同步（`:562` L3④ 语境 + NFR 句）；
+  两仓同族面逐处研判与处置见批次档 `../batches/2026-09-12-LEDGER-SELF-CONTAINED.md` §2 本轮小节；历史语义保留（变更记录 / 批次档记录 / 引述类——F14 同条）。
+
+- 2026-09-12（台账自持批·**基线清零 + 闸门收紧轮**——用户 11:06「残留即先例」裁定；文档 + 脚本 + 夹具）：
+  §2.19 机械校验最小集补**基线必须保持为空**硬规矩（入基线 = 例外 = 违规，fail-closed；检查器非空基线直接 FAIL · T41 ①/⑤ 断言翻转）·
+  §2.20.6 V3 补**判据射程**（`V3_ERA_START` = 2026-09-11——工具前时代批次档 §3 父侧代写，结构性历史事实不判）·
+  `test/fixtures/doc-consistency-baseline.json` **清空**（CLI 25 条逐条处置：V1 规范形态化 14 行 / V2 计数与列表同改 2 条 /
+  V3 射程排除 3 条；对端同源：31 条）；实施记录 = 批次档 `../batches/2026-09-12-LEDGER-SELF-CONTAINED.md` §5。
+
+- 2026-09-12（台账自持批·**C 桶托管内容迁移**——只改文档、零代码）：§2.24.9 的「VSC 归档对位」登记行**迁出本档**（
+  接收 = `ENGINEERING-MODE（VSC 仓·需求）` 档——该登记陈述的是 VSC 仓归档档的命名 / 位置，属对端事项）；
+  原行位留**搬迁注记**（源档 blob SHA = `7b05f1b0badeac8775a0a2b72164764fded2be2e`）；
+  同批另有对端需求档 `requirements/AGENT-LOOP.md` 的 7 节 VSC 托管族迁出（移出清单 = 该档档首）——
+  两处处置 = 设计档 `LEDGER-SELF-CONTAINED.md` §8.4 C 桶。
+
 - 2026-09-12（第 14 批·**设计评审轮次 1 后修正轮**：发现 2🔴+3🟡+2🔵 逐条落地；只落直接导出的修正、零新语义）：
   **#1 🔴 回归锁数值重测重钉**——两被锁档实测 `dual-source` 21 例 / 404 行 · `async-guidance` 42 例 / 420 行（合计 63）；锁定形态改 **as-of 基线 + 增删同步实施规则**（§2.27.1 / §2.27.4 `SPLIT_CASES`）；§3.2 行 / AC57 / 需求档 §1.15 同步（AC56 补 as-of 注）·
   **#2 🔴 用例编号避让**——新例定名 **T111/T112**（同档已存 T75/T76 防回潮收归族）；插入锚重钉 = **档尾**（收归族段之后）；「既有用例零改」清单刷新为全量（T41①–⑤ / T46 / T72–T74 / T75·T76 收归族）·
@@ -2483,7 +2507,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
   单源导出契约 + 口径 + 行文本逐字契约 + 双端挂载 + 收口行 / 受影响文件 23 项 / 决策与边界 / 不变量六条）
   + **§3.1 AC80–AC90** + **§3.2 T97–T110**；§2.19 D7 行与需求 §1.12/§1.15 枚举同步加「台账可见面（收口行）」；
   需求档 §1.18（FR24）+ §1.13 指针行已落；**否决在案**：`/todo` 命令 · 触发字段回填+机检强制 · 点击面板 · 状态行合计/多行。
-  实现待 coder（token 门）；VSC 仓登记行已落（`thincoder-vscode/docs/design/ENGINEERING-MODE.md`）。
+  实现待 coder（token 门）；VSC 仓登记行已落（`ENGINEERING-MODE（VSC 仓）`）。
 
 - 2026-09-11（第 8 批·范围扩展轮后**微修**——§5 审计遗留 Deferred 闭合；只改文档、零代码）：§2.25 提示词面表改
   「**8 文件 = persona ×4 + discipline ×4**」——补列 `persona-eng-designer.md` ×4（todo 归属句替换实落——逐字源 = 本批 §4 批准面 / §5 对表 4–7）；
@@ -2543,7 +2567,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
   **③L3③ 补豁免与分组识别**（`—`/可挂槽只判单行形态；`需求池`/`技术` 标题标记定组，无标记组不判 L3③）·
   **④AC45 尾句改可机判形态**（需求池组零续行；数字不作文本契约）+ 标签改「非必填三要素断言态」·
   **⑤L3 增 ④status 六态枚举判据**（非必填槽/无 status 场豁免；存量机外取值入基线，收拢时就近归一）·
-  **⑥补基线存放面** `test/fixtures/ledger-baseline.json`（键稳定不含行号——照 `doc-consistency-baseline.json` 先例）+ AC48 增「存量降报告不阻断」·
+  **⑥补基线存放面** `test/fixtures/ledger-baseline.json`（键稳定不含行号——与 `doc-consistency-baseline.json` 同口径）+ AC48 增「存量降报告不阻断」·
   **⑦`已核销` 去向钉死**：就地 `- [x]` 保留冻结指针，**计入**活组计数；AC46 按此改写，需求档 §1.13 该行两列自洽 ·
   **⑧T70 扩至五例**（+status 机外取值 / +无标记组不判 L3③）。
   需求档 §1.13 增「状态取值面」段（六态机判指针 + 勾销形态）。
@@ -2601,7 +2625,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
   🟡 V1/V2 与接线补用例（新 **T63/T64**）；V3 **跨仓边界**写死（真守门在 CLI 侧，VSC 缺目录即跳过；将来用显式参数传根）；
   锚表补**宿主列**（A1 宿主改 VSC discipline-engineering 新增六段节）+ 新 **A11**（spawn 样例带 batchDoc=）；
   双源定**端特有段进镜像 + 被断言**（AC43/T62）；删自相矛盾的“>300 档”括注；
-  🔵 计数口径（28 条清单 / 27 个 .test.mjs）· 仓前缀已标（`thincoder-vscode/docs/design/README.md`）· “両側”→“两侧”。
+  🔵 计数口径（28 条清单 / 27 个 .test.mjs）· 仓前缀已标（`README（VSC 仓）`）· “両側”→“两侧”。
   **批次档（父侧写域）**：§2 任务书落笔并打标（覆盖条目/不在本批/受影响文件指针/验收标准/就绪）。
 
 - 2026-09-10（晚·十四）：**第 5 批设计（VSC 端镜像，FR23/§1.17）**——新增 **§2.22**（总原则语义同源原文自持 / **镜像锚 A1-A10 逐字源钉死** / batchDoc 门两处各落+共享校验 / eng-designer 五处落地 / batch_segment 两个适配点 / V1-V2-V3 含**接线硬项** / 双源新建 15 档 / 实现面拆分 / 五条不变量）

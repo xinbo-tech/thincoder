@@ -190,7 +190,7 @@ keepTail = min(max(10, floor(context/100_000 × 30)), floor(len × 0.4))
 
 ### 8.3 TUI 压缩面板（D-C2）
 
-复用子 agent 面板机制（AGENT-LOOP.md §7.2.1）——用户要求"像子agent 面板那样显示压缩会话"。
+复用子 agent 面板机制（AGENT-LOOP §7.2.1）——用户要求"像子agent 面板那样显示压缩会话"。
 
 - `onCompressStart` → 打开一个压缩面板区块：头部 `Compressing context…`（C.warn）+ 进行中状态（耗时 ticker + "summarizing N messages" 阶段标签——N = 待摘要历史条数）。面板独立于会话流（复用 subagent-blocks 的区块创建/更新/冻结机制——压缩是阻塞主循环的串行步骤，但面板显示的是"正在发生什么"，与并行子 agent 面板同构，不冲突）。
 - **面板状态机**：`Compressing…`（进行中）→ `Compression failed: <错误>`（失败，仅错误文本，**不含降级说明**）→ 重试时回到进行中（每次 onCompressStart 重置）→ **第 3 次失败后 `compressFallback` 实际运行** → 面板更新为 `Compression failed — fallback: truncated to N messages`（此时降级说明才出现）。**降级说明与"连续 3 次失败"绑定，不在单次失败时显示**。

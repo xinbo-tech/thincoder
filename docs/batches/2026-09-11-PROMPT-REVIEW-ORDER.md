@@ -1,11 +1,13 @@
 # 评审后修正轮 ⇄ 用户批准 时序 + `Fixed` 语义 · 批次记录（2026-09-11）
 
-> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分）**：本档对端（VSC）份已由 VSC 仓 `docs/batches/2026-09-11-PROMPT-REVIEW-ORDER（VSC 仓）` 逐字承载（D10——零改写）；本档保留本仓份。
-> 移出条目（对端份）清单：§5 对端 16 文件分仓（12 提示词 × 双端之 VSC 侧 + VSC 测试档，as-of `:218`）——条目计数（对端份 / 本仓份）= 9 / 8（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。
+> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分 · 已切除 2026-09-12）**：本档对端（VSC）份**已自本档切除**（原文不再留本仓——D11 完全态）；承载档 = VSC 仓 `docs/batches/2026-09-11-PROMPT-REVIEW-ORDER（VSC 仓）`（逐字搬运、零改写——D10）。
+> 已切除条目清单：§2 落笔面 VSC 侧（VSC 提示词六面 + VSC 测试档 2 + VSC 设计档 1 = 9 条目）——条目计数（对端份 / 本仓份）= 9 / 8（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。**源档 blob SHA（切除前）= `9383af4fb08e`**。
+> 变更记录：2026-09-12——对端份经承载档逐字承接后自本档物理切除；档首注记形态收敛为「已切除」。
 
 > 六段 append-only，**一段一作者**：§1 讨论（主 agent）· §2 批次任务（eng-designer）·
 > §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder）· §6 验证与收口（父代理）。
 > 编制：主 agent（工程模式）· 2026-09-11 · 来源 = 本会话用户实况发现（`docs/TODO.md`「工程模式 / 评审收敛」组登记项）。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -73,7 +75,6 @@
 
 ## §2 批次任务（eng-designer 自写）
 
-_（待写——eng-designer）_
 
 ### 批次任务（eng-designer 自写 · 2026-09-11）
 
@@ -107,9 +108,6 @@ _（待写——eng-designer）_
 4. **锚断言同批**（§2.7 #12——文本与断言同链原子落地）：
    - CLI `test/prompts-async-guidance.test.mjs`：新批节（链行/四值/时序 bullet 双源断言 + 负断言）；
    - CLI `test/eng-designer-role.test.mjs`：T40 双源循环字面表 **+2**（`评审 pass 后逐条裁决`、`修正轮落地并经核验`）；
-   - VSC `test/prompts-async-guidance.test.mjs`：同款断言（本端 src + 中文镜像两侧）；
-   - VSC `test/prompts-mirror-anchors.test.mjs`：A12 字面 **+2** + 新面⑥（本批两组字面表跨仓逐字：CLI ↔ VSC × 双源）。
-5. **VSC 设计档同步**：`thincoder-vscode/docs/design/ADVISOR-CONVERGENCE.md`（现 287 行）——§7 第 2 条改四值 + 时序规则节 + 变更记录行。
 
 **不做（禁止范围）**
 
@@ -128,7 +126,7 @@ _（待写——eng-designer）_
 | AC-RO3 | 8 个词表句文件各含 `Dispatched` + 计数词同改（`exactly four values` / `恰好四选一`），词序 Fixed→Dispatched→Not an issue→Deferred（T-RO2/T-RO3） | F9 / N6 |
 | AC-RO4 | 4 个 de 各含时序 bullet 四要素（label / 不得请求批准 / 不得夹带新语义新范围 / `Dispatched` 收敛句）（T-RO4） | F7 / F8 |
 | AC-RO5 | 负断言零残留：无 `恰好三选一` / `exactly three values`；persona 面旧相邻形态零命中（T-RO5） | F9 |
-| AC-RO6 | 双端既有 prompts 锚测试全绿：`cd thincoder && node test/run-fast.mjs`；`cd thincoder-vscode && node test/run-fast.mjs`；锚#1–#7 字面逐字在位 | N4 |
+| AC-RO6 | 双端既有 prompts 锚测试全绿：`cd thincoder && node test/run-fast.mjs`；VSC 仓 `node test/run-fast.mjs`；锚#1–#7 字面逐字在位 | N4 |
 | AC-RO7 | 范围外零改动：`git status` 中 `src/advisor/**`、`src/agent-tools/advisor*.mjs`、`src/prompts/advisor-*.md`、`src/prompts/consult-base.md` 零变更 | 需求 §6.4 |
 | AC-RO8 | 文档面一致（VSC 设计档 §7/时序节/变更记录）+ 双端 `node scripts/check-doc-width.mjs` **新增超宽 0**（存量不属本批） | N6 |
 | AC-RO9 | 追溯留痕：本档变更记录含「新老划断」行；两冻结批次档**不在本批改动集** | F10 |
@@ -153,7 +151,7 @@ Done / Simplified / Not done 三值表 + 逐文件改动清单（16 项，标 4 
 
 **归属与计数收口（评审 #1——按主 agent 裁定）**：
 
-- `thincoder-vscode/docs/design/ADVISOR-CONVERGENCE.md`（上文「要做」第 5 项）**owner = eng-designer**（D1 设计档写权 + 本会话第 3/6 批先例）——**本修正轮已落**（§7 四值 + §12 收口节 + 变更记录行）；`D-RO8` 的「coder 落笔」只适用**产品代码**（`src/prompts/*.md`），不适用设计档。
+- `ADVISOR-CONVERGENCE（VSC 仓）`（上文「要做」第 5 项）**owner = eng-designer**（D1 设计档写权 + 本会话第 3/6 批同口径）——**本修正轮已落**（§7 四值 + §12 收口节 + 变更记录行）；`D-RO8` 的「coder 落笔」只适用**产品代码**（`src/prompts/*.md`），不适用设计档。
 - **coder 交付 = 16 项**（12 提示词 + 4 测试）——VSC 设计档**不计入** coder 交付清单与 `files` 声明；三处计数对齐 = 本段（16）= 设计档 §13.6 实施域（16）= 交付报告口径（16）。
 
 **逐条落点（编号 = §3 轮次 1 发现编号——详文落设计档 §13；下表为修正轮落定后落点）**：
@@ -173,14 +171,13 @@ Done / Simplified / Not done 三值表 + 逐文件改动清单（16 项，标 4 
 
 ## §3 设计评审（评审子代理自写）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
 | # | Category | Severity | Issue | Suggestion |
 |---|----------|----------|-------|------------|
-| 1 | Affected files / Clarity | 🟡 | VSC 设计档的归属与计数三处不一致：设计 `thincoder/docs/design/ADVISOR-CONVERGENCE.md:337` 实施域称「16 项：12 提示词 + 4 测试」且 `:358` 文档域表头写「非 coder 写域」、把 `thincoder-vscode/docs/design/ADVISOR-CONVERGENCE.md`（`:365`）划在 coder 域外；但批次档 `thincoder/docs/batches/2026-09-11-PROMPT-REVIEW-ORDER.md:97` 「要做（16 文件…）」实列 5 项、第 5 项（`:109`）即该 VSC 设计档，交付清单口径「16 项」（`:136`）；本评审对象声明计「17 项（实施）」。第 17 项无单一 owner：归 coder 则 D1（设计档=eng-designer）张力未登记（对标 D-RO8）；归 designer 则批次链无落笔步骤。 | 定一个 owner 并对齐三处计数：coder → §13.6 改 17、该档入 `files` 声明与交付清单、补 D1 张力注记；designer → 批次档第 5 项标注 owner、§13.6 表头与计数同步（16 项保持）。 |
-| 2 | Evidence accuracy | 🟡 | §13.5「`docs/design/prompts/*` 全仓 `.mjs` 零引用」（`:326`）与事实不符：测试层 .mjs 引用该路径——`thincoder/test/prompts-async-guidance.test.mjs:428` · `thincoder/test/eng-designer-role.test.mjs:298` · `thincoder/test/batch-segment.test.mjs:220` · `thincoder-vscode/test/prompts-mirror-anchors.test.mjs:30`。「中文权威面不参与加载」结论成立（`src/**` 零引用 + loader 实证），仅证据表述过宽。 | 改写为「零**运行时**引用（`src/**` 不加载）；测试层引用为双源/跨仓断言所需」。 |
+| 1 | Affected files / Clarity | 🟡 | VSC 设计档的归属与计数三处不一致：设计 `thincoder/docs/design/ADVISOR-CONVERGENCE.md:337` 实施域称「16 项：12 提示词 + 4 测试」且 `:358` 文档域表头写「非 coder 写域」、把 `ADVISOR-CONVERGENCE（VSC 仓）`（`:365`）划在 coder 域外；但批次档 `thincoder/docs/batches/2026-09-11-PROMPT-REVIEW-ORDER.md:97` 「要做（16 文件…）」实列 5 项、第 5 项（`:109`）即该 VSC 设计档，交付清单口径「16 项」（`:136`）；本评审对象声明计「17 项（实施）」。第 17 项无单一 owner：归 coder 则 D1（设计档=eng-designer）张力未登记（对标 D-RO8）；归 designer 则批次链无落笔步骤。 | 定一个 owner 并对齐三处计数：coder → §13.6 改 17、该档入 `files` 声明与交付清单、补 D1 张力注记；designer → 批次档第 5 项标注 owner、§13.6 表头与计数同步（16 项保持）。 |
+| 2 | Evidence accuracy | 🟡 | §13.5「`docs/design/prompts/*` 全仓 `.mjs` 零引用」（`:326`）与事实不符：测试层 .mjs 引用该路径——`thincoder/test/prompts-async-guidance.test.mjs:428` · `thincoder/test/eng-designer-role.test.mjs:298` · `thincoder/test/batch-segment.test.mjs:220` · `test/prompts-mirror-anchors.test.mjs:30`（VSC 仓）。「中文权威面不参与加载」结论成立（`src/**` 零引用 + loader 实证），仅证据表述过宽。 | 改写为「零**运行时**引用（`src/**` 不加载）；测试层引用为双源/跨仓断言所需」。 |
 | 3 | Methodology / Requirements fit | 🟡 | D-RO8/§13.8 的 §2.7 #13「冲突点」记录不完整（`:380`、`:390`）：未引同日用户裁定 `thincoder/docs/requirements/ENGINEERING-MODE.md:126-128`（§1.5 #8：提示词**内容权=主 agent**、「**落笔仍走正常链**（设计评审 → 用户批准 → eng-coder）」）与 `:130`（#10）——#8 恰为「落笔交 coder」提供既有裁定支持，本批应按「有既有裁定 + §2.7 #13 口径差」叙事；且本批「内容权 = 设计面」（`:380`）与 #8/#10「内容权 = 主 agent」的口径差未核对。 | D-RO8/§13.8 补引 ENGINEERING-MODE §1.5 #8/#10；写清内容权口径；如需收口 §2.7 #13 文本，登记 §13.9。 |
 | 4 | Test plan / Clarity | 🟡 | 「新面⑥（本批两组字面表）」未定义（`:356`、AC-RO2 `:420`、批次档 `:108`）：「两组」指哪些字面（链行组/四值句组/时序 bullet 组）、断言哪几面，不足以无歧义实现/判收；四值句的跨仓逐字（zh↔zh、en↔en）仅该面承载（T-RO2/T-RO3 只做逐文件子串在位）。 | §13.6/§13.10 列明面⑥两组字面清单与文件面（或写明「镜像 T-RO1–T-RO4 字面集跨仓」），四值句跨仓逐字纳入。 |
 | 5 | Doc hygiene | 🔵 | §13.6 文档域「当前行数实测」为改前值（`:362-364`）：`requirements/ADVISOR-CONVERGENCE.md` 65→现 105；本档 234→现 450；`PROMPT-SYSTEM` 296→现 301。纯 .md 豁免 R24a，不影响实施。 | 改标「改前行数」或按现态更新；±1 计数口径（如 VSC persona 表 78/实测 79）一并注明。 |
@@ -200,7 +197,7 @@ VERDICT: pass
 
 - 设计评审（轮次 1）**pass**（0🔴 · 4🟡 · 4🔵——发现表见 §3 轮次 1）；
 - 8 条发现经主 agent 裁决**全部采纳**：① **VSC 设计档归属收口**（裁定 = **designer 落**——D1 设计档写权 +
-  本会话第 3/6 批先例；D-RO8 的 coder 落笔仅适用**产品代码** `src/prompts/*.md`）② §13.5「全仓 .mjs 零引用」→「零**运行时**引用」③ D-RO8 补引
+  本会话第 3/6 批同口径；D-RO8 的 coder 落笔仅适用**产品代码** `src/prompts/*.md`）② §13.5「全仓 .mjs 零引用」→「零**运行时**引用」③ D-RO8 补引
   `requirements/ENGINEERING-MODE.md:126-128`（§1.5 #8）+ `:130`（#10）+ 内容权口径显式化 + §13.9 登记口径抵牾 ④ **新面⑥定义**（组 1 = 四值句跨仓逐字 /
   组 2 = 时序 bullet）⑤ 文档行数注记改「改前 → 现态」⑥ tier 措辞改「无新增跨档」⑦ 锚#3 仓限定（CLI 135-138 / VSC 136-139）⑧ AC-RO9 判据收缩；
 - 修正轮落地（id=13）经父侧核验：**11/11 内容抽查** + **全仓 `git status` 兜底**（提示词/测试面零改动；VSC 设计档 287→330 行已落，
@@ -214,7 +211,6 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 ### PROMPT-REVIEW-ORDER 实施（eng-coder 自写 · 2026-09-11）
 

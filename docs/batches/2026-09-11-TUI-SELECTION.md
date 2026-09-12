@@ -3,6 +3,7 @@
 > 六段 append-only，**一段一作者**：§1 讨论（主 agent）· §2 批次任务（eng-designer）·
 > §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder 自写）· §6 验证与收口（父代理）。
 > 编制：主 agent（工程模式）· 2026-09-11 13:08 · 来源 = 用户 13:07「**批A开工吧**」（对 TODO 全量审计 id=28 的「该落地」建议清单之批 A）+ 审计报告（逐条一手实证）。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -50,7 +51,6 @@
 
 ## §2 批次任务（eng-designer 自写）
 
-_（待写——eng-designer）_
 
 **状态：任务书就绪**（2026-09-11——需求 / 设计 / 测试三层已落档；待设计评审）。实施者 = eng-coder（设计 token 门）。本 §2 = coder 任务书本体（不另写副本；契约逐字文案 / 用例表 / 验收判据全文在设计档，本段只做任务书）。上方「待写」占位行为 append-only 工具面既有行（不改）。
 
@@ -120,16 +120,15 @@ _（待写——eng-designer）_
 
 ## §3 设计评审（评审子代理自写）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
 | # | Category | Severity | Issue | Suggestion |
 |---|----------|----------|-------|------------|
-| 1 | Document ownership / Methodology | 🔴 | 交付要求指派 eng-coder 回写设计档：`docs/design/TUI.md` §1 模块地图 4 行（`docs/batches/2026-09-11-TUI-SELECTION.md:87`、`docs/design/TUI.md:946`）——与「设计档 = eng-designer（含修订；写稿权唯一，不给直改留口子）」（`docs/design/ENGINEERING-MODE.md:319`/`:324`）及「落档动作经 eng-designer（主 agent/eng-coder 不代笔）」（`docs/design/ENGINEERING-MODE.md:91`）互斥；先例 §2.27.8 连零语义格式修订都判归 designer（`docs/design/ENGINEERING-MODE.md:1326`）。且与本任务书自身「零改核对项：docs/**（写稿面 = 设计者；本批文档已落档）」（`docs/batches/2026-09-11-TUI-SELECTION.md:80`）及 §12.7「文档写域（设计者）：…本文件…」（`docs/design/TUI.md:942-943`）自相矛盾——coder 无法同时满足「docs/** 零改」与「改 4 行」。 | 二选一（父侧裁定）：① 收回该 coder 项，改由 eng-designer 收口时回写；② 显式定义「as-of 行数机械回写」为写权例外，并同改 §2.15 A2 / 批次档 §2 / TUI.md §12.7 三处口径。 |
+| 1 | Document ownership / Methodology | 🔴 | 交付要求指派 eng-coder 回写设计档：`docs/design/TUI.md` §1 模块地图 4 行（`docs/batches/2026-09-11-TUI-SELECTION.md:87`、`docs/design/TUI.md:946`）——与「设计档 = eng-designer（含修订；写稿权唯一，不给直改留口子）」（`docs/design/ENGINEERING-MODE.md:319`/`:324`）及「落档动作经 eng-designer（主 agent/eng-coder 不代笔）」（`docs/design/ENGINEERING-MODE.md:91`）互斥；按 §2.27.8 连零语义格式修订都判归 designer（`docs/design/ENGINEERING-MODE.md:1326`）。且与本任务书自身「零改核对项：docs/**（写稿面 = 设计者；本批文档已落档）」（`docs/batches/2026-09-11-TUI-SELECTION.md:80`）及 §12.7「文档写域（设计者）：…本文件…」（`docs/design/TUI.md:942-943`）自相矛盾——coder 无法同时满足「docs/** 零改」与「改 4 行」。 | 二选一（父侧裁定）：① 收回该 coder 项，改由 eng-designer 收口时回写；② 显式定义「as-of 行数机械回写」为写权例外，并同改 §2.15 A2 / 批次档 §2 / TUI.md §12.7 三处口径。 |
 | 2 | Acceptance criteria | 🟡 | AC-A4-1 机验手段「新档文档断言（读本文件「§12.4」关键行）」（`docs/design/TUI.md:973`）未落入 §12.8 用例表（9 表项无此项），与「新档九用例 1:1」（`docs/batches/2026-09-11-TUI-SELECTION.md:85`）计数对不上；「关键行」未钉子串——§12.9 表头「每条可机器验证」在此条落空。 | 落位二选一：把文档断言列为新档显式用例（并同步九用例计数与 +130±40 估算），或改判据为可执行命令 + 钉死子串（如 §12.4 表头/关键行的 grep）。 |
 | 3 | Scope coordination | 🟡 | A2/A3 承载档超出批前声明档集：批前候选 = §2.22.x / TOOLS·AGENT-LOOP（`docs/batches/2026-09-11-TUI-SELECTION.md:28`），实落 = `§2.15 D.5`（`docs/design/ENGINEERING-MODE.md:431-446`）/ `TESTING §1.2`（`docs/design/TESTING.md:48-51`）——已在 `docs/batches/2026-09-11-TUI-SELECTION.md:92` ① 如实披露「父侧可否决重定向」。落点归属经核与机制本体相符（受限变体定义簇 D.2–D.5；slow 门 = TESTING §1.2）。 | 协同项（非缺陷）：父侧对 batch:92 ① 确认或否决即可；确认则无需改动。 |
-| 4 | Clarity / A1 论证 | 🔵 | 「警示恒显由结构保证（不依赖截断余量）」（`docs/design/TUI.md:906`）略强于机制——text 自身仍走既有右截断（`docs/design/TUI.md:900-901` 自述「text 截断 = 既有语义」），极端长条目 + 窄列下 text 尾部的警示仍可被截（不在 AC/用例覆盖内：AC-A1-2 锚 80 列真实条目，`docs/design/TUI.md:971`）。先例引用（setKeyFlow as-of :398 / wizard `(added, no key)`，`docs/design/TUI.md:904-905`）属源文件事实，本评审读取域内不可核验。 | 建议把保证口径收窄为「警示不再位于最先牺牲段（与 text 内既有状态标同权）」或补一条极端宽度边界用例；先例与 as-of 由 coder 交付时对照确认。 |
+| 4 | Clarity / A1 论证 | 🔵 | 「警示恒显由结构保证（不依赖截断余量）」（`docs/design/TUI.md:906`）略强于机制——text 自身仍走既有右截断（`docs/design/TUI.md:900-901` 自述「text 截断 = 既有语义」），极端长条目 + 窄列下 text 尾部的警示仍可被截（不在 AC/用例覆盖内：AC-A1-2 锚 80 列真实条目，`docs/design/TUI.md:971`）。引用面（setKeyFlow as-of :398 / wizard `(added, no key)`，`docs/design/TUI.md:904-905`）属源文件事实，本评审读取域内不可核验。 | 建议把保证口径收窄为「警示不再位于最先牺牲段（与 text 内既有状态标同权）」或补一条极端宽度边界用例；引用锚与 as-of 由 coder 交付时对照确认。 |
 | 5 | Requirements coverage / A1 | 🔵 | §12.1 把 `cmd-advisor.mjs` 主菜单与 model-picker 合述为「（baseURL / (no key) / (不可用) / Provider 注记）」note 写入面（`docs/design/TUI.md:840-841`），而 §1 审计证据单指 `model-picker.mjs:125` 产出警示（`docs/batches/2026-09-11-TUI-SELECTION.md:20`）；§12.5 警示上移仅收口 model-picker——若 cmd-advisor 亦承载渠道警示，其「恒显」未收口；若不含，§12.1 合述措辞失准。 | 补一句面归属说明：cmd-advisor 面含警示 → 同款上移或明示豁免；不含 → 修 §12.1 措辞。（源面标 unverified） |
 | 6 | Clarity / N7 | 🔵 | 宽度预算双口径并存：预算式「≤ cols − 8 − width(指示位)」与判定式「任意渲染行 ≤ cols − 8（含指示行）」（`docs/requirements/TUI.md:42` ↔ `docs/design/TUI.md:898-899`）；用例 4 锚 cols−8（cols=80 → ≤72，`docs/design/TUI.md:959`）。 | 注明判定式为准（或说明指示位宽已含于 8 格余量）；措辞若动需 req/design 同改。 |
 | 7 | Affected-file annotations | 🔵 | §12.7 拆分评审句「其余档 ≤300 或无增」（`docs/design/TUI.md:945`）对 `test/eng-designer-role.test.mjs`（316，±6 → ≤322，跨 >300 advisory 档，`docs/design/TUI.md:939`）不成立——该行未获拆分评审明示（model-picker 496 / setup 355 均有）。 | 补半行「test 档 316±6——单点断言扩写，不拆」或改口径句。 |
@@ -170,9 +169,8 @@ VERDICT: changes-required
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
-**状态：实现完成**（2026-09-11——本批 7 档落笔；L0+ 定向两档 + 快层证据齐备）。上方「待写」占位行为 append-only 工具面既有行——不改（同 §2 先例）。内部闭环（偏差审计 → advisor 代码评审 → 收敛）终态见本段末「内部闭环」块。
+**状态：实现完成**（2026-09-11——本批 7 档落笔；L0+ 定向两档 + 快层证据齐备）。上方「待写」占位行为 append-only 工具面既有行——不改（同 §2 同款）。内部闭环（偏差审计 → advisor 代码评审 → 收敛）终态见本段末「内部闭环」块。
 
 ### 落笔清单（逐条对设计档 §12——行为语义零偏离）
 

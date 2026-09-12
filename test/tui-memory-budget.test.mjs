@@ -4,8 +4,11 @@
  *
  * 形态：快层 unit——直驱（零定时器、零终端）；常量一律从 `display-budget.mjs` 导入断言
  * （AC-TB2 单源）。
+ * 归册（2026-09-12 收尾轮 9）：T-TB9（400 条 × 2k 字符 + 20 轮翻页模拟）观测 568–857ms
+ * ——slow() 门控（快层 skip、test:full 照跑）。
  */
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import {
   capLine, capLines, accountLine, accountAll, lineChars, syncLineBudget,
@@ -162,7 +165,7 @@ test("T-TB8 state.lines 总量：各路径混合塞入至超 2M → 裁头生效
   assert.equal(state._linesChars <= LINES_CHAR_BUDGET + 1000, true)
 })
 
-test("T-TB9 翻页不无界：模拟 50 页载入 → 总量对账仍 ≤ 预算（锚定不破）", async () => {
+slow("T-TB9 翻页不无界：模拟 50 页载入 → 总量对账仍 ≤ 预算（锚定不破）", async () => {
   const { pushReal } = await import("../src/context.mjs")
   const { restoreLines, createLoadOlder } = await import("../src/tui/startup.mjs")
   const { RECORD_WINDOW_MESSAGES } = await import("../src/session-store.mjs")

@@ -115,7 +115,7 @@ R17（2026-09-06）把 escalate 改为**缺省 async**（depth-0——唯一允�
 | `src/config.mjs` | consultModels 校验 |
 | `src/tui/cmd-config.mjs` | `/config` 候选池管理 |
 | `src/prompts/discipline-normal.md` | 飞刀条款（术语 + 时机 + 直接调用红线——旧 main.md 飞刀节施工③随迁于此） |
-| 测试 | escalate 家族测试（async ack / settle merge / error partial-merge / 取消 / sync 保留 / 深度护栏 / 工程模式 / 撞墙继续——用例清单权威 = AGENT-LOOP.md §25.3 T-R17a..r） |
+| 测试 | escalate 家族测试（async ack / settle merge / error partial-merge / 取消 / sync 保留 / 深度护栏 / 工程模式 / 撞墙继续——用例清单权威 = AGENT-LOOP §25.3 T-R17a..r） |
 
 ### 2.7 关键决策记录
 
@@ -130,7 +130,7 @@ R17（2026-09-06）把 escalate 改为**缺省 async**（depth-0——唯一允�
 
 ## 3. 测试
 
-escalate 测试用例清单的权威 = **AGENT-LOOP.md §25.3**（T-R17d..r：async ack 返回 + 回合
+escalate 测试用例清单的权威 = **AGENT-LOOP §25.3**（T-R17d..r：async ack 返回 + 回合
 收尾 / settle 三分类 merge / sync `async:false` 零回归 / 容量排队 / eng 拒保持 / 取消不入
 pending / error partial-merge 决策 / 空闲 settle 消化等）。
 

@@ -1,9 +1,11 @@
 # 输入面小修（/advisor 缺 await + VSC Enter 离线面）· 批次记录（2026-09-11）
 
-> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分）**：本档对端（VSC）份已由 VSC 仓 `docs/batches/2026-09-11-INPUT-FIXES-SMALL（VSC 仓）` 逐字承载（D10——零改写）；本档保留本仓份。
-> 移出条目（对端份）清单：§2 「仓」列 VSC 行（B2 纯 VSC，as-of `:205`）——条目计数（对端份 / 本仓份）= 6 / 3（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。
+> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分 · 已切除 2026-09-12）**：本档对端（VSC）份**已自本档切除**（原文不再留本仓——D11 完全态）；承载档 = VSC 仓 `docs/batches/2026-09-11-INPUT-FIXES-SMALL（VSC 仓）`（逐字搬运、零改写——D10）。
+> 已切除条目清单：§5.1 交付清单表 VSC 行（6 行 = B2 纯 VSC 六档）——条目计数（对端份 / 本仓份）= 6 / 3（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。**源档 blob SHA（切除前）= `4808cdea90ef`**。
+> 变更记录：2026-09-12——对端份经承载档逐字承接后自本档物理切除；档首注记形态收敛为「已切除」。
 
 > 六段 append-only，一段一作者。编制：主 agent · 2026-09-11 15:10 · 来源 = 用户 13:36「都可以」（Gitee #IKEZ1C + #IKALHO 离线面——评估 id=47/48）。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -18,8 +20,8 @@
 
 ### 已核事实（免重复）
 - B1：`src/tui/cmd-advisor.mjs:89`（调用点）/`:225`（async 定义）；`src/tui/pickers.mjs:46`（filter）；`src/tui/slash-commands.mjs:120-123`（错误打印）；全仓唯一调用点 ✓。
-- B2：`thincoder-vscode/webview/input.js:73`（Enter→send）/`:101-106`（composition 仅追踪高度）；`webview/send.js:17-21`（busy 静默拒发）；`webview/autocomplete.js:96-104`（下拉 Enter 冲突）；`webview/index.html:34`（#input）；`webview/panels.js:124`（_turnState 广播）。VSC 扩展版本 0.8.10（issue 引的 v0.12.3 是 CLI 版本号——错位）。
-- 参考先例（B2-① 竖移规则）：`webview/input.js:76-84`（selectionStart===0 走历史）。
+- B2：VSC 仓 `webview/input.js:73`（Enter→send）/`:101-106`（composition 仅追踪高度）；`webview/send.js:17-21`（busy 静默拒发）；`webview/autocomplete.js:96-104`（下拉 Enter 冲突）；`webview/index.html:34`（#input）；`webview/panels.js:124`（_turnState 广播）。VSC 扩展版本 0.8.10（issue 引的 v0.12.3 是 CLI 版本号——错位）。
+- 参考同款（B2-① 竖移规则）：`webview/input.js:76-84`（selectionStart===0 走历史）。
 
 ### 待设计裁定
 1. B1 守卫形态（throw 显式错误 vs 空集返回——建议显式）+ 用例；
@@ -37,7 +39,6 @@
 
 ## §2 批次任务（eng-designer 自写）
 
-_（待写——eng-designer）_
 
 **状态：任务书就绪**（2026-09-11——需求+设计+测试三层已落档，待设计评审；含父侧排程项 2 条——见「需父侧排程」）。实施者 = eng-coder（设计 token 门）。本 §2 = coder 任务书本体（不另写副本）。
 
@@ -79,16 +80,10 @@ _（待写——eng-designer）_
 **B1（CLI 仓）**：`src/tui/cmd-advisor.mjs`(256,+0±1——:89 补 `await`) · `src/tui/pickers.mjs`(107,+5±2——`showPicker`
 入口 Array.isArray 守卫) · `test/advisor-thinking-picker.test.mjs`(新增,+90±30)。
 
-**B2（VSC 仓）**：`webview/input.js`(133,+6±3) · `webview/autocomplete.js`(201,-8±4) · `webview/send.js`(53,+3±1) ·
-`webview/toast.js`(新增,+22±6) · `test/webview-input-enter.test.mjs`(新增,+130±40) · `test/files.mjs`(56,+1)。
-零改核对项（B2）：`webview/controls.css` / `webview/index.html`（toast 复用既有 id/class/CSS）· `webview/loading.js` /
-`webview/state.js` / `webview/chat.js` / `webview/panels.js`（零改）· 全部 locale 文件（零新增键）。
-
 **文档写域（设计者）**：`docs/requirements/TUI.md` · `docs/design/TUI.md` · `docs/requirements/AGENT-LOOP.md` ·
 `WEBVIEW（VSC 仓）`（以上已落档）；收口回写项 = `design/TUI.md` §1 模块地图两行（`cmd-advisor.mjs` / `pickers.mjs`——
 设计者收口阶段回写，coder 不回写）。
 
-**写域外（coder 不碰）**：`thincoder-vscode/AGENTS.md` 模块图 +1 行（登记新模块 `webview/toast.js`）——父侧落笔（见下）。
 
 ## 交付要求
 
@@ -103,7 +98,7 @@ _（待写——eng-designer）_
 
 ## 需父侧排程 / 需注意
 
-- **VSC 仓 `AGENTS.md` 模块图 +1 行**（登记 `webview/toast.js`）——设计者写域外，请父侧落笔或指派；
+- **`AGENTS（VSC 仓）` 模块图 +1 行**（登记 `webview/toast.js`）——设计者写域外，请父侧落笔或指派；
 - **TODO 需求池**：本批两条目无池条目（源自 issue 评估 id=47/48）——如需登记，属主 agent 记录面；
 - **他批基线红（报告不动）**：CLI 快层 1 红（`doc-consistency`——PORTABILITY / TUI-SELECTION 两档 4 条新增 V1/V2）+ 宽度检查
   9 档 11 行超宽（均为他批批次档，as-of 2026-09-11）——在途批冻结窗口，非本批触碰面；
@@ -144,7 +139,6 @@ _（待写——eng-designer）_
 
 ## §3 设计评审（评审子代理自写）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
@@ -195,11 +189,10 @@ VERDICT: pass
 
 **批准范围**：B1 CLI 3 档（`cmd-advisor.mjs` 补 `await` · `pickers.mjs` Array.isArray 守卫 · 新测档 `advisor-thinking-picker.test.mjs`）+ B2 VSC 6 档（`webview/input.js` · `autocomplete.js` · `send.js` · 新 `toast.js` · 新测档 `webview-input-enter.test.mjs` · `test/files.mjs`）；零改核对项照 §2。
 
-**遗留（批准时登记）**：① 收口回写：`design/TUI.md` §1 模块地图两行（设计者）；② 父侧：`thincoder-vscode/AGENTS.md` 模块图 +1 行（toast.js）；③ commit 待父侧。
+**遗留（批准时登记）**：① 收口回写：`design/TUI.md` §1 模块地图两行（设计者）；② 父侧：`AGENTS.md`（VSC 仓）模块图 +1 行（toast.js）；③ commit 待父侧。
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 **状态：交付完成——终态 `clean`**（2026-09-11）。范围 = §2 两条目全量交付（B1 CLI 3 档 / B2 VSC 6 档）。内部协议闭环：explore 偏差审计 1 轮（四类偏差 0 条）→ advisor 代码评审首审（0 🔴 · 0 需修 🟡 · 3 🔵——3/3 采纳自修·修正轮 1/5）→ 复评（3/3 `Fixed`，**pass**）。零 commit；`docs/**` 手工零改（本 §5 经 `batch_segment` 工具通道写入本档，设计档/需求档零触）。
 
@@ -210,12 +203,6 @@ _（待写——eng-coder）_
 | CLI | `src/tui/cmd-advisor.mjs` | 256 | **256** | +0 | :89 补 `await`（C-B1-1） |
 | CLI | `src/tui/pickers.mjs` | 107 | **118** | +6（守卫块逐字；余 +5 = 批前在飞漂移，非本批） | `showPicker` 入口 Array.isArray 守卫（C-B1-2，:44-49；先于 `closePicker()`） |
 | CLI | `test/advisor-thinking-picker.test.mjs` | — | **115**（新增） | 新增 | T-B1-1~3 |
-| VSC | `webview/input.js` | 133 | **146** | +13 | C-B2-1 ×2（:42/:77）+ C-B2-2 让位（:78-84——保留 preventDefault）+ C-B2-3 硬化（:121-124） |
-| VSC | `webview/autocomplete.js` | 201 | **189** | −12 | C-B2-1 接受分支守卫（:99）+ showToast 提取改 import（:7；本地私有实现删） |
-| VSC | `webview/send.js` | 53 | **57** | +4 | C-B2-4 busy 分支追加 `showToast(t("input.busyPlaceholder"))`（:23） |
-| VSC | `webview/toast.js` | — | **23**（新增） | 新增 | showToast 共享模块（原样提取：懒建 `#paste-toast` / `.visible` / 2.6s / 静态 `_t`） |
-| VSC | `test/webview-input-enter.test.mjs` | — | **204**（新增） | 新增 | T-B2-1~7 |
-| VSC | `test/files.mjs` | 56 | **61** | +1 | 新档登记（:59；余 +4 = 他批在飞条目） |
 
 **增量超设计预估带（3 处，如实披露）**：① `pickers.mjs` 实测 118（预估 110±2 含批前——本批贡献 +6 = 守卫块，仍在内）；② `input.js` 实测 +13（预估 +6±3——超 4：C-B2-1/C-B2-2 逐字注释块 + 修正轮次序注 +1）；③ `test/webview-input-enter.test.mjs` 实测 204（预估 130±40——超 34：7 用例 + 自备 DOM 装配 + 逐测复位 helper + 断言密度）。
 
@@ -288,6 +275,6 @@ _（待写——eng-coder）_
 
 ### 遗留项
 
-1. **父侧**：`thincoder-vscode/AGENTS.md` 模块图 +1 行（`webview/toast.js`）；
+1. **父侧**：`AGENTS.md`（VSC 仓）模块图 +1 行（`webview/toast.js`）；
 2. **设计者**：`design/TUI.md` §1 两行行数回写（实测值见 §5.1）；mac 真机 IME 矩阵（§9.8 范围外）；
 3. **设计 token 已消费（链终）**；commit 待父侧随批提交。

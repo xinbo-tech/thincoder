@@ -406,8 +406,9 @@ lines` + tail 3，点击展开 = 60% 封顶的实时视图（token 持续进入�
   （与 model 标识同生命周期）；**旧区块（无 async 字段）回退标 sync**（数据无法区分历史 async——
   显示层已知回退）。model 名先按显示宽度截断（≤cols/3——防模型名撑破括号宽度预算），状态区按
   剩余宽度截断——整行 ≤ cols 铁律。
-- **⏹ 停止标记（门控）**：**仅 running && SUBAGENT_ROLES/advisor &&（sub.async === true
-  ∪ sync registry live）的区块**——async 由 `⟦ev⟧async` 置位；**sync 由
+- **⏹ 停止标记（门控）**：**仅 running ∪ queued/waiting && SUBAGENT_ROLES/advisor &&
+  （sub.async === true ∪ sync registry live ∪ `sub.queued`——QUEUED-VISIBILITY F-2）的区块**
+  ——async 由 `⟦ev⟧async` 置位；**sync 由
   `state._agent._syncChildAborts` live 判据（SYNC-CANCEL——2026-09-09：阻塞 spawn 运行期
   注册 {ctrl, stopped}——成功/折叠/整回合停 finally 注销——⏹ 随注册出现随注销消失）**——
   钉与可中止一一对应（杜绝"可见但不可中止"误导；headless/测试无 _agent → sync 不钉——
@@ -421,8 +422,9 @@ lines` + tail 3，点击展开 = 60% 封顶的实时视图（token 持续进入�
 - **waiting/queued 块（排队面板 UX——AGENT-LOOP §10/§10.3）**：排队 spawn 返回即建面板块（不等子代理首 token）；括号状态
   词 = `waiting`（依赖未满足/域冲突——状态区 `waiting for: …` 原因恒标；依赖取消/失败滞留恒标
   `dependency cancelled`——不静默）或 `queued`（槽满等位——`queued · position N（槽满等位）`）；
-  **不标 sync/async**（未启动——sync 词会误导：async spawn 排队的块不是 sync；⏹ 随启动后
-  ⟦ev⟧async 置位才出现）；启动 → 清 waiting 标转正常 running 头（同 key 不重建）；取消/出队 →
+  **不标 sync/async**（未启动——sync 词会误导：async spawn 排队的块不是 sync）；**queued/waiting
+  块头即置取消 ⏹（QUEUED-VISIBILITY F-2——2026-09-09——用户可撤销排队决策——点击 = 出队——
+  覆盖旧"接受无取消"裁定）**；启动 → 清 waiting 标转正常 running 头（同 key 不重建）；取消/出队 →
   ⟦ev⟧cancelled 移除块（不冻结）。面板存在条件 = running ∪ queued/waiting 非空（queued-only 也
   渲染——无悬空线语义随区块存在边界迁移）。
 - **冻结头**：`[✓ explore#1 · sync · model · done 45s]`——✓/stopped 动词按状态（cancel 冻结 →
@@ -615,7 +617,7 @@ N5（防刷屏与行额度）· N6（省略计数真值）。
 会话**（模块缓存——当次会话不生效），触发一次嵌套 explore（spawn 一个 eng-coder——其内部探索即走嵌套
 路径），目视三查：① 外层块 tail 出现内层活动行；② 无 `❯ explore#N` 小节头行；③ 面板高度较批前下降
 （有嵌套时折叠态 7 → 4 行/块）。执行者 = 主 agent / 用户（coder 无 TTY，不承担该步）；任一项不符 →
-报父侧开修正轮（同链 docs FIRST）。依据：本批为用户可见显示面变更——项目先例「真机手感是唯一判据」
+报父侧开修正轮（同链 docs FIRST）。依据：本批为用户可见显示面变更——项目既定判据「真机手感是唯一判据」
 （§11 2026-08-31 性能行）+ 折叠阈值曾两轮死于真机（§10 折叠决策行）。单测（AC1..AC9）仍为机器
 可验证基线。
 
@@ -909,7 +911,7 @@ marker → note；截断从行尾开始——note（附注段）最先牺牲**�
 同权（text 截断 = 既有语义）。
 
 **产出面收口（`model-picker.mjs` `buildProviderEntries`）**：`(no key)` / `(不可用)` 自 note **上移进
-`text`**——与既有状态标同簇（`(ctx …)` / `← session`；先例 = 同文件 `setKeyFlow`（as-of :398）与
+`text`**——与既有状态标同簇（`(ctx …)` / `← session`；同形 = 同文件 `setKeyFlow`（as-of :398）与
 wizard 的 `(added, no key)`——渠道警示本就属 text 面，model-picker 是唯一把警示放 note 的面）；
 `note` 收窄为 baseURL（补充信息——预算内显示、超宽右截断可接受）。**警示不再位于最先牺牲段**（修正轮 #4——
 与 text 内既有状态标同权；极端长条目 + 极窄列下随 text 尾部既有右截断语义，80 列真实条目由 AC-A1-2 锚定）。
@@ -1061,7 +1063,7 @@ function showPicker(title, entries, { defaultIndex = 0 } = {}) {
 | `test/advisor-thinking-picker.test.mjs` | 0（新增） | +90 ± 30 | 用例表 1:1（T-B1-1~T-B1-3） |
 
 > **§1 模块地图回写**：`cmd-advisor.mjs` / `pickers.mjs` 两行行数由**设计者在收口阶段回写**
-> （同 §12.7 先例：coder 交付时报告实测行数、不回写文档；写权 = 设计者、无例外）。
+> （同 §12.7 口径：coder 交付时报告实测行数、不回写文档；写权 = 设计者、无例外）。
 
 ### 13.6 测试层——用例表（新档 `test/advisor-thinking-picker.test.mjs`；直驱、零网络、零定时器）
 
@@ -1134,7 +1136,7 @@ function showPicker(title, entries, { defaultIndex = 0 } = {}) {
 | 1 | **整行注意力底色 + 提示语前缀（稳态）** | 「变色」直译——整行可扫视；单一渲染点（`renderStatus`）；稳态可静帧断言；与 VSC `statusBarItem.warningBackground` 同色系（跨端观感一致） | 需处理内部样式复位（底色重施加——实现要点见 §14.3） | **选定** |
 | 2 | 仅加文案前缀（不上色） | 实现最简；但不是「变色」——不满足用户原话 | — | 否决 |
 | 3 | 闪烁 / 频闪 | 更抓眼；但需**空闲重绘定时器**（现仅 processing / 子代理期有 1s ticker）——新定时器 + 耗电 + 闪屏；违「零新定时器」取向（N9②） | — | 否决 |
-| 4 | 输入框边框变色 | 有 permission 先例（`inputBoxStyle` warn 边框）；但输入框在屏上可见度低于整行状态栏，且 question 态边框现为 tool 色（改动波及面大） | 提醒强度不足 + 波及 question 观感 | 否决 |
+| 4 | 输入框边框变色 | 有 permission 同款（`inputBoxStyle` warn 边框）；但输入框在屏上可见度低于整行状态栏，且 question 态边框现为 tool 色（改动波及面大） | 提醒强度不足 + 波及 question 观感 | 否决 |
 
 **表 3——消除条件**（判据：「查看后复位」的可判定近似 / 复位及时性 / 无新交互契约）
 
@@ -1207,7 +1209,7 @@ export function userNeededAtTurnEnd(state, agent, skipSession) {
 |---|---|---|---|---|---|
 | 1 | `src/tui/render-frame.mjs` | 377 | 改（`attentionKind` 派生 + chip + 底色包裹 + 宽度预算） | +~32 | >300 advisory（存量 377 → 交付 ~409；拆分评估见 §14.9 #4） |
 | 2 | `src/tui/ansi.mjs` | 49 | 改（`bg` 序列 + 注意力色对常量） | +~5 | ✓（≤300） |
-| 3 | `src/tui/agent-turn.mjs` | 324 | 改（`userNeededAtTurnEnd` 谓词 + 链尾置位） | +~12 | >300 advisory（交付 ~336；净增小，沿存量先例） |
+| 3 | `src/tui/agent-turn.mjs` | 324 | 改（`userNeededAtTurnEnd` 谓词 + 链尾置位） | +~12 | >300 advisory（交付 ~336；净增小，沿存量口径） |
 | 4 | `src/tui/key-handler.mjs` | 441 | 改（`onKeypress` 入口清位） | +~5 | >300 advisory（交付 ~446 < 500 ✓） |
 | 5 | `src/tui/index.mjs` | 450 | 改（state 字段 + 鼠标输入路径清位） | +~8 | >300 advisory（交付 ~458 < 500 ✓） |
 | 6 | `test/attention-state.test.mjs` | 新 | 新增（T-AT1–T-AT8） | ~200 | 新档 ≤500 ✓ |
@@ -1295,13 +1297,13 @@ export function userNeededAtTurnEnd(state, agent, skipSession) {
    `permission-gate.mjs:28/58` 与 `panel-callbacks.mjs:67` 的 waiting 设置点；webview 侧状态行 = `webview/status-bar.js`
    （`#status-line` 单 writer）。**已覆盖面**：审批 / 提问挂起已有 waiting 态（`statusBarItem.warningBackground`）——
    与 CLI blocked 类同义。**待建面**：回合结束等待输入（idle 态细分）+ 面板内 attention 态（webview 可见形态）。
-2. **VSC 所需档 + 最小改动面（父侧排程输入）**：设计档 = `WEBVIEW（VSC 仓）`（§8.4 忙态收敛 / 状态栏——现状权威）
+2. **VSC 所需档 + 完整修复路径（父侧排程输入）**：设计档 = `WEBVIEW（VSC 仓）`（§8.4 忙态收敛 / 状态栏——现状权威）
    新增 attention 语义节 + 变更记录；需求面登记 = `REQUIREMENTS（VSC 仓）`；实现面（改动预估）= `chat-panel.mjs`
    （`_setStatus` / `_refreshStatus` 增态——回合结束注意力判据）、`webview/status-bar.js` + `webview/*.css`
    （面板 attention 渲染）、`locales/{en,zh}.json`（词键——VSC 端 i18n 硬项）、新测试档须注册 `test/files.mjs`（VSC 显式清单）。
 3. **跨端语义同源锚**：三触发态语义 / 消除语义（用户输入或提示消解）与本端一致——各端原文自持，不做 byte-identical。
-4. **`render-frame.mjs` 拆分的后续评估**：本节交付 ~409 行（>300 advisory 存量先例）；若状态栏渲染继续增厚
-   → 按 §12.7 先例评估拆出独立 `status.mjs`（本批不拆——净增 ~32 行、职责未变）。
+4. **`render-frame.mjs` 拆分的后续评估**：本节交付 ~409 行（>300 advisory 存量档）；若状态栏渲染继续增厚
+   → 按 §12.7 口径评估拆出独立 `status.mjs`（本批不拆——净增 ~32 行、职责未变）。
 
 **计数（D3）**：用例 **8**（T-AT1–T-AT8）· AC **6**（AC-AT1–AC-AT6）· 实施域 **6 项**（5 改 + 1 新）· 文档域 **2 档**；需求 = F13 + N9。
 
@@ -1513,7 +1515,7 @@ syncLineBudget(state, { pushLineLike })              // state.lines 总量对账
 - 2026-09-09：INPUT-LOCK-BEHAVIOR-REVISED 批（busy 行为修订——VSC 不禁录入只禁 send——CLI 白名单删、忙时斜杠同吞）——§4 门禁描述去白名单、§9 slash 命令节同步、§1 模块地图行数回写（见 §11 完成史行）。
 - 2026-09-09：INPUT-LOCK-ASYNC 批（C'——busy 提交吞/白名单/单槽化/queue UI 撤）——§4 门禁、§8 交接续发、§1 模块地图行数回写（见 §11 完成史行）。
 - 2026-09-07：格式债批 A——本文件由逐批变更档案重写为人类可读当前态（DOC-REWRITE.md +
-  DOC-REWRITE-LARGE.md §4）。按机制主题重组；历史流水折叠入 §11 专题完成史与本文档底部；模块地图
+  DOC-REWRITE-LARGE §4）。按机制主题重组；历史流水折叠入 §11 专题完成史与本文档底部；模块地图
   按现文件结构回写（2026-09-05 拆分文件 suspension-drive/subagent-freeze/tool-display/
   tui-lifecycle/cmd-mcp-form 入图 + 行数实测 2026-09-07）；display 快照废弃/`_autoExpand` 删除等
   漂移点不再声称。

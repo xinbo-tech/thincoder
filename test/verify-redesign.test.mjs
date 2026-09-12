@@ -9,8 +9,10 @@
  *
  * 2026-09-12 散文锚退役批：guard 文案 / prompts verify 语义两读档用例整删（判据见
  * `docs/design/TESTING.md` §11.1）；行为面由 T-V1..V8 + 集成 ①（工具流 verify 关口）覆盖。
+ * 2026-09-12 收尾轮 9 归册：本档用例面统一走真子进程（git rev-parse / git diff ×3；code 路径再叠
+ * node --check 建议步）——按子进程类整档 slow() 门控（快层 skip、test:full 照跑）。
  */
-import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert"
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -40,7 +42,7 @@ const SRC_FILES = {
   "lib/str.mjs": "export const up = (s) => s.toUpperCase()\n",
 }
 
-test("T-V1 声明 passed → 放行（_verifyPassed=true）", async (t) => {
+slow("T-V1 声明 passed → 放行（_verifyPassed=true）", async (t) => {
   const { dir, ctx, touch } = makeProject(SRC_FILES)
   cleanup(t, dir)
   touch("lib/math.mjs")
@@ -53,7 +55,7 @@ test("T-V1 声明 passed → 放行（_verifyPassed=true）", async (t) => {
   assert.doesNotMatch(out, /full suite/)
 })
 
-test("T-V2 声明 failed → 打回（_verifyPassed=false）", async (t) => {
+slow("T-V2 声明 failed → 打回（_verifyPassed=false）", async (t) => {
   const { dir, ctx, touch } = makeProject(SRC_FILES)
   cleanup(t, dir)
   touch("lib/math.mjs")
@@ -62,7 +64,7 @@ test("T-V2 声明 failed → 打回（_verifyPassed=false）", async (t) => {
   assert.match(out, /VERIFY BLOCKED/)
 })
 
-test("T-V3 声明 skipped + summary 理由 → 放行", async (t) => {
+slow("T-V3 声明 skipped + summary 理由 → 放行", async (t) => {
   const { dir, ctx, touch } = makeProject(SRC_FILES)
   cleanup(t, dir)
   touch("lib/math.mjs")
@@ -72,7 +74,7 @@ test("T-V3 声明 skipped + summary 理由 → 放行", async (t) => {
   assert.match(out, new RegExp(reason))
 })
 
-test("T-V4 声明 skipped 无 summary → 打回（空跳过不允许）", async (t) => {
+slow("T-V4 声明 skipped 无 summary → 打回（空跳过不允许）", async (t) => {
   const { dir, ctx, touch } = makeProject(SRC_FILES)
   cleanup(t, dir)
   touch("lib/math.mjs")
@@ -81,7 +83,7 @@ test("T-V4 声明 skipped 无 summary → 打回（空跳过不允许）", async
   assert.match(out, /empty skip is not allowed/)
 })
 
-test("T-V5 doc-only 改动 → 快路径放行", async (t) => {
+slow("T-V5 doc-only 改动 → 快路径放行", async (t) => {
   const { dir, ctx, touch } = makeProject({ "README.md": "# docs\n", "guide/docs.md": "notes\n" })
   cleanup(t, dir)
   touch("README.md")
@@ -91,7 +93,7 @@ test("T-V5 doc-only 改动 → 快路径放行", async (t) => {
   assert.match(out, /Documentation-only changes/)
 })
 
-test("T-V6 打回消息含改动源文件 + 引 AGENTS.md 验证方式", async (t) => {
+slow("T-V6 打回消息含改动源文件 + 引 AGENTS.md 验证方式", async (t) => {
   const { dir, ctx, touch } = makeProject(SRC_FILES)
   cleanup(t, dir)
   touch("lib/math.mjs")
@@ -105,7 +107,7 @@ test("T-V6 打回消息含改动源文件 + 引 AGENTS.md 验证方式", async (
   assert.match(out, /does not run commands for you/)
 })
 
-test("T-V6b 未声明 verification → 打回并要求声明", async (t) => {
+slow("T-V6b 未声明 verification → 打回并要求声明", async (t) => {
   const { dir, ctx, touch } = makeProject(SRC_FILES)
   cleanup(t, dir)
   touch("lib/math.mjs")
@@ -116,7 +118,7 @@ test("T-V6b 未声明 verification → 打回并要求声明", async (t) => {
 
 // ── 相 2（VERIFY-REDESIGN.md T-V8..V11）──
 
-test("T-V8 doc-only 改动 + 显式 failed → 打回（G10，双端同）", async (t) => {
+slow("T-V8 doc-only 改动 + 显式 failed → 打回（G10，双端同）", async (t) => {
   const { dir, ctx, touch } = makeProject({ "README.md": "# docs\n" })
   cleanup(t, dir)
   touch("README.md")

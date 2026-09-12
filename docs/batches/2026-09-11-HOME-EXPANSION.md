@@ -1,6 +1,7 @@
 # `~` 家目录展开（config 路径字段单一规范化点）· 批次记录（2026-09-11）
 
 > 六段 append-only，一段一作者。编制：主 agent · 2026-09-11 15:10 · 来源 = 用户 13:36「都可以」（Gitee #IKETT1——评估 id=48）。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -33,7 +34,6 @@
 
 ## §2 批次任务（eng-designer 自写）
 
-_（待写——eng-designer）_
 
 **状态：任务书就绪**（2026-09-11——需求 + 设计 + 测试三层已落档（需求 §5 / 设计 §9 / AC-H1–AC-H9 + T-H1–T-H16），待设计评审）。实施者 = eng-coder（设计 token 门）。本 §2 = coder 任务书本体（不另写副本；契约逐字 / 点位表 / 用例 / AC 判据全文在设计档 §9.3 / §9.6 / §9.7，本段只做任务书 + 口径锚）。
 
@@ -61,7 +61,7 @@ _（待写——eng-designer）_
 - 病灶链与四字段证据 = 设计 §9.1（file:line 逐条）；本批无需再勘察。
 - 七点位行号 as-of 2026-09-11（**动手前重扫**——他链在飞行号会漂）：`src/cli/make-agent.mjs:44` ·
   `src/cli/memory-command.mjs:70` · `src/memory/docs.mjs:240` · `src/cli/distill-command.mjs:67` · `bin/thincoder.mjs:227/272/326`。
-- 测试缝与先例：`test/config-merge.test.mjs`（`_setConfigPathForTest` + tmp config）；伪 HOME 子进程 = `test/tui-stderr-capture.test.mjs:59`
+- 测试缝与同款：`test/config-merge.test.mjs`（`_setConfigPathForTest` + tmp config）；伪 HOME 子进程 = `test/tui-stderr-capture.test.mjs:59`
   （`USERPROFILE` / `HOME` 覆盖 + 另置 cwd）；memory 工具夹具式 = `test/memory-tool.test.mjs:26`。
 - 既有锁零伤清单 = 设计 §9.10（既有夹具无 `~` 值——零伤）。
 - 零改面：`DEFAULTS` 四字段默认值（`src/config.mjs:91-95`）· `teamConfig()` 缺省（`src/cli/make-agent.mjs:152`）· `dbPath` / `team.dir` / `shell` 消费端。
@@ -149,7 +149,7 @@ _（待写——eng-designer）_
 |---|---|---|---|
 | 1 | 🟡 | N7 口径与 D-H4 / §9.3(c) 冲突（非 `~` 绝对 projectDir 会变） | `docs/requirements/MEMORY.md:100`（N7 括号收窄「默认值 / 相对」）+ `:111`（判定句注明：非 `~` 绝对 projectDir 为有意 delta，其余字段非 `~` 绝对形态仍逐字） |
 | 2 | 🟡 | AC-H5 / T-H15 无字面 oracle | `docs/design/MEMORY.md:367-376`（§9.4 字面定稿块——L1–L4 逐字 + 示例值 oracle）+ `:363`（行 9 引用）+ `:410`（T-H15 断言）+ `:420`（AC-H5 判据） |
-| 3 | 🔵 | §9.2 内联否决行理由不区分两案 | `docs/design/MEMORY.md:282`（改述——区分点 = 纯函数单测面 / 模块边界 / 拆分先例，非行数）+ `:383`（D-H2 同步） |
+| 3 | 🔵 | §9.2 内联否决行理由不区分两案 | `docs/design/MEMORY.md:282`（改述——区分点 = 纯函数单测面 / 模块边界 / 拆分口径，非行数）+ `:383`（D-H2 同步） |
 | 4 | 🔵 | D-H3「可见失败」口径（dbPath / team.dir 不成立） | `docs/design/MEMORY.md:384`（口径限定 shell 面 + dbPath / projectDir / team.dir 登记残余静默面）+ `:430`（§9.8 同步登记） |
 | 5 | 🔵 | 数字漂移（113 / 455 / +216） | 本档 `:104` 刷新（113 / 467）+ `docs/design/MEMORY.md:365`（实测 +228——修正轮落笔值，评审时点 +216） |
 | 6 | 🔵 | 重点核抽验（备查） | 无需动作（§3 表已注「记录备查」——留档） |
@@ -158,7 +158,6 @@ _（待写——eng-designer）_
 
 ## §3 设计评审（评审子代理自写）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
@@ -166,10 +165,10 @@ _（待写——评审子代理）_
 |---|----------|----------|-------|------------|
 | 1 | Requirements | 🟡 | 口径冲突：需求 N7（docs/requirements/MEMORY.md:100「不含 `~` 的既有形态（默认值 / 绝对 / 相对）行为逐字不变」）vs 设计 D-H4（docs/design/MEMORY.md:374）/§9.3(c)（docs/design/MEMORY.md:333-336）：非 `~` 的绝对 projectDir 行为会变（`join(cwd,p)` → `p` 原样）；F12 边界（docs/requirements/MEMORY.md:92）仅承诺相对侧逐字——属文档口径冲突（非机制双述），不阻断 | 父侧文档层收窄 N7「绝对」口径，或把「绝对 projectDir 归一」登记为有意 delta（评审只报不改） |
 | 2 | Acceptance criteria | 🟡 | AC-H5/T-H15（docs/design/MEMORY.md:409/:399）断「逐字命中」，但 §9 未锚定 README 说明句 / 三字段注释的字面（§9.4 行 9＝docs/design/MEMORY.md:363 只写「说明句 + 三字段注释」，无字面 oracle）；F14 判定句第三分句「示例值展开后可用」（docs/requirements/MEMORY.md:110）无显式断言 | 设计定稿 README 字面（或将判据降为「注释在场 + 三字段名」并写明）；补示例值可用性断言 |
-| 3 | Clarity | 🔵 | §9.2 内联否决行（docs/design/MEMORY.md:282「+8–12 行 → ~497/500 无余量」）与选定案自述（docs/design/MEMORY.md:272、:356：config ≤+10，487→~497）落同一末态——「无余量」不区分两案（真区分点＝纯函数单测面 / 模块边界 / 拆分先例，docs/design/MEMORY.md:281/:372） | 修正该格数字或改述理由；新模块结论不受影响 |
+| 3 | Clarity | 🔵 | §9.2 内联否决行（docs/design/MEMORY.md:282「+8–12 行 → ~497/500 无余量」）与选定案自述（docs/design/MEMORY.md:272、:356：config ≤+10，487→~497）落同一末态——「无余量」不区分两案（真区分点＝纯函数单测面 / 模块边界 / 拆分口径，docs/design/MEMORY.md:281/:372） | 修正该格数字或改述理由；新模块结论不受影响 |
 | 4 | Requirements | 🔵 | D-H3 尾句（docs/design/MEMORY.md:373「不做 = 原样透传（可见失败优于猜）」）对 dbPath / team.dir 不成立：`~user/x` 透传仍静默创建字面 `~user` 目录（同病灶、出契约形态，docs/design/MEMORY.md:310/:297）；仅 shell 面响亮失败 | 措辞限定到 shell 面，或登记 `~user` 形态残余静默面 |
 | 5 | Doc hygiene | 🔵 | 数字漂移（本评审实测）：批 §2（docs/batches/2026-09-11-HOME-EXPANSION.md:104）记「需求 73→114 行 / 设计 239→448 行」，实测 requirements/MEMORY.md 全文 113 行、design/MEMORY.md 全文 455 行；docs/design/MEMORY.md:365 预算 ≤+210，实际增量 +216。纯 .md 注释豁免尺寸判据，仅卫生级 | 解冻时刷新数字（非阻断） |
-| 6 | Verification record | 🔵 | 重点核抽验（备查）：config.mjs 实测 487 行（读工具报「487 lines total」）；合并块 :274-285 逐字符、providers 归一自 :287 起、迁移写回 :265-272 在前（§9.3(b) 落点可行——docs/design/MEMORY.md:314/:331）；src/memory/schema.mjs mkdirSync=:67（∈ 引用 :66-68；§1 :54-56 为旧记录）；src/acp.mjs 不读 config dbPath（:419/:424 硬编码属实）；`src`+`bin` 现零命中 `startsWith("~`（AC-H1/T-H16 基线成立）；src/cli/make-agent.mjs:44 逐字符（七点位 #1 抽点）；isAbsolute 先例属实（src/tui/cmd-undo.mjs:24 逐字 / src/agent-tools/read-history.mjs:172 变体）。未复测：其余六点位行号 / README:138 / §9.10 锁清单逐档 / `_setConfigPathForTest` 缝 / VSC 勘察（预扫要求在档，非缺陷） | 无需动作——记录备查 |
+| 6 | Verification record | 🔵 | 重点核抽验（备查）：config.mjs 实测 487 行（读工具报「487 lines total」）；合并块 :274-285 逐字符、providers 归一自 :287 起、迁移写回 :265-272 在前（§9.3(b) 落点可行——docs/design/MEMORY.md:314/:331）；src/memory/schema.mjs mkdirSync=:67（∈ 引用 :66-68；§1 :54-56 为旧记录）；src/acp.mjs 不读 config dbPath（:419/:424 硬编码属实）；`src`+`bin` 现零命中 `startsWith("~`（AC-H1/T-H16 基线成立）；src/cli/make-agent.mjs:44 逐字符（七点位 #1 抽点）；isAbsolute 同款属实（src/tui/cmd-undo.mjs:24 逐字 / src/agent-tools/read-history.mjs:172 变体）。未复测：其余六点位行号 / README:138 / §9.10 锁清单逐档 / `_setConfigPathForTest` 缝 / VSC 勘察（预扫要求在档，非缺陷） | 无需动作——记录备查 |
 
 **计数：🔴 0 · 🟡 2 · 🔵 4**
 
@@ -185,7 +184,6 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 **（2026-09-11 实施完成——本段为上记占位行的交付记录，占位行以本段为准；实施者 = eng-coder，设计 token 门）**
 

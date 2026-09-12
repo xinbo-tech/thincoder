@@ -2,6 +2,7 @@
 
 > 六段 append-only，一段一作者。编制：主 agent · 2026-09-11 23:46 · 来源 = 用户同事实测（OOM 崩溃截图）+ 用户 23:43「自动推进到排空」；勘察 = explore#7 全量报告（已核事实见下）。
 > 姊妹批：`2026-09-11-TUI-OOM-FORENSICS.md`（取证固化——堆快照参数，另链在飞）；本批 = **根因修复**。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -48,7 +49,7 @@ CLI TUI 会话 ~19.4 分钟（1,166,708ms）后 **Node 堆 OOM**（`Ineffective 
   **用户 23:48 输入（已核事实）**：CLI **显示层懒加载在且稳**——`startup.mjs:7-11`（首屏末段 + `HISTORY_PAGE_MESSAGES = 20`）+ `:147-163` `loadOlder` 分页（PgUp 到头/滚到顶自动触发；2026-08-31 系列提交专门修过：卡顿根治/自动触发/穿出边界/段级缓存）；**但分页源 `full` 是全量在内存的数组**（`:147` `full.length - loaded - PAGE`）——**内存层无懒加载**。
   **设计要求**：正视「分页源改为磁盘」的迁移路径（磁盘为准 + 内存窗口 + loadOlder 从盘取页 + `read_history`/落盘改走磁盘）——含 `read_history` 语义、落盘完整性（append-only）、恢复速度、VSC parity 影响评估。
   **用户裁定（2026-09-11 23:49「我觉得按这个方向做吧」）**：**C1 修复方向 = 磁盘为准 + 内存窗口（懒加载下沉到内存层）**——方向已定，设计不再对方向做选型；实现级细节（迁移路径/分段粒度/索引形态/read_history 兼容）仍逐项给候选对比与论证。
-- C2 修法注意「digest 完整性」——`_capturedOutput` 是报告来源，截断≠丢失报告（落盘先例可循）；
+- C2 修法注意「digest 完整性」——`_capturedOutput` 是报告来源，截断≠丢失报告（落盘同款可循）；
 - 可移植性：看门狗/遥测凡涉项目约定（如阈值/目录）须通用化 + 可关（env/config）；
 - 机验：上界类修复须可测（模拟增长 → 断言有界）；遥测须可注入（测试缝）；
 - 证据链：同事物证（Node report JSON + tui-stderr 日志）待取回——**设计按现勘察推进，物证到达后回填归因**（爬升型 vs 尖峰型）。
@@ -61,7 +62,6 @@ CLI TUI 会话 ~19.4 分钟（1,166,708ms）后 **Node 堆 OOM**（`Ineffective 
 
 ## §2 批次任务（eng-designer 写）
 
-_（待写——eng-designer）_
 
 ---
 
@@ -118,7 +118,7 @@ _（待写——eng-designer）_
 
 1. **与姊妹批 TUI-OOM-FORENSICS 的协同**：`src/tui/wrapped-spawn.mjs` 与 `docs/design/CRASH-REPORTS.md`（F3 面）为两批共触——本批 §8/§9 为**新增节**（不改其 §1–§7）；若 FORENSICS 评审在途，改动集齐后统一入场（D5 冻结窗口）；实现按 files 域排队（先落者先并）。
 2. **C5/C6/C7 登记**：转 `docs/TODO.md` 技术待办（记录归属 = 主 agent——本席未写 TODO）。
-3. `docs/design/TUI.md` §1 模块地图行数回写：归设计者收口阶段（先例——TUI-SELECTION 修正轮 #1 裁定）；本批不预写。
+3. `docs/design/TUI.md` §1 模块地图行数回写：归设计者收口阶段（同口径——TUI-SELECTION 修正轮 #1 裁定）；本批不预写。
 
 ### 修正轮（2026-09-11——设计评审轮次 1 后；本追加与上文本冲突时以本追加为准）
 
@@ -161,7 +161,7 @@ _（待写——eng-designer）_
 |---|---|---|
 | 1 | `design/SESSION.md` §14.3.6 | 恢复描述符按实载校准：`{history ≤201（尾窗 200 + ±1 页沿头一条）, total, base}`——单源 `sessionDescriptor()`（`src/session.mjs:69-78`）；`base` = `history[0]` 绝对序号（渲染起点；缺省 `total − len` 推导）；翻页锚字段名同步（复用既有 `state._historyTotal`——`_historyAnchor` 未落地） |
 | 2 | `design/TUI.md` §15.5 | 补两行：`subagent-freeze.mjs` 170 → 176（冻结 splice 行经 `accountLine` 入 `state.lines` 总量账）· `cmd-clear.mjs` 21 → 23（清屏行集清空时 `_linesChars` 归零）——均声明外触碰补行 |
-| 3 | `design/SESSION.md` §14.5 | `session-store.mjs` 交付 442 越 300 登记（不拆——新增档先例）+ `session-segments.mjs` 交付 **101**（拆分产物）表行 + 拆分结论句同步；两调用点行（startup / cmd-session）的 `base` 括注同步 |
+| 3 | `design/SESSION.md` §14.5 | `session-store.mjs` 交付 442 越 300 登记（不拆——新增档口径）+ `session-segments.mjs` 交付 **101**（拆分产物）表行 + 拆分结论句同步；两调用点行（startup / cmd-session）的 `base` 括注同步 |
 | 4 | 两档变更记录 | `design/SESSION.md` / `design/TUI.md` 各一行「实现后同步（2026-09-12）」 |
 
 **行 1 附注**：两调用点锚行按实载刷新（`bin/thincoder.mjs:338` / `src/tui/startup.mjs:226-230` / `src/tui/cmd-session.mjs:96-104`）。
@@ -176,14 +176,15 @@ _（待写——eng-designer）_
 
 ## §3 设计评审（评审子代理写）
 
-_（待写——评审子代理）_
 
 ---
 
 ### 轮次 1（评审子代理）
 
 **评审对象**：TUI-OOM-ROOTCAUSE 设计（A+B 档：_fullHistory 磁盘为准+内存窗口 / 子代理历史与捕获上界 / 堆遥测 / 显示层额度 / trace+检索收敛 / 终端恢复）。评审范围 = 12 档需求+设计（SESSION/AGENT-LOOP/TUI/MEMORY/CRASH-REPORTS/CONTEXT-COMPACTION 双端）。
-**计数**：🔴 2 · 🟡 6 · 🔵 4（共 12 条）。抽查证据（实读源码行数）：session.mjs 476 ✓ · session-slots 490 ✓ · agent.mjs 414 ✓ · subagent-spawn 454 ✓ · acp 448 ✓ · tui/index 455 ✓ · tool-events 408 ✓ · subagent-blocks 436 ✓ · startup 266 ✓ · read-history 295 ✓ · trace-store 225 ✓ · spawn-child 229 ✓ · run-stages 243 ✓ · async-settle 192 ✓ · suspension-drive 298 ✓ · escalate-async 290 ✓ · memory docs/code-sync/core 418/414/301 ✓——无越 500 档。
+**计数**：🔴 2 · 🟡 6 · 🔵 4（共 12 条）。抽查证据（实读源码行数）：session.mjs 476 ✓ · session-slots 490 ✓ · agent.mjs 414 ✓ · subagent-spawn 454 ✓ · acp 448 ✓ · tui/index 455 ✓ · tool-events 408 ✓ · subagent-blocks 436 ✓ · startup
+266 ✓ · read-history 295 ✓ · trace-store 225 ✓ · spawn-child 229 ✓ · run-stages 243 ✓ · async-settle 192 ✓ · suspension-drive 298 ✓ · escalate-async 290 ✓ · memory docs/code-sync/core 418/414/301 ✓——无越 500 档。
+机械折行（2026-09-12 形态清零轮）——语义零改
 
 | # | Category | Severity | Issue | Suggestion |
 |---|----------|----------|-------|------------|
@@ -205,7 +206,9 @@ _（待写——评审子代理）_
 ### 轮次 2（评审子代理）
 
 **评审对象**：TUI-OOM-ROOTCAUSE 设计（A+B 档：_fullHistory 磁盘为准+内存窗口 / 子代理历史与捕获上界 / 堆遥测 / 显示层额度 / trace+检索收敛 / 终端恢复）——**轮次 2**（核验 §3 轮次 1 的 2🔴+6🟡+4🔵 修正轮落修；只验修正）。
-**方法**：本轮实读 design/SESSION.md · design/AGENT-LOOP.md（§13/§23）· design/CRASH-REPORTS.md · design/TUI.md（§15）· requirements/SESSION.md · requirements/CRASH-REPORTS.md · 批次档修正轮追加；源码行数抽查（wrapped-spawn 41 · tui-stderr 106 · key-handler-search 114 · subagent-actions 479 · session-guard 48——与刷新值一致）。修正轮「src/** 零改动」声明无 diff 工具可核验（不支撑判定——本轮对象为文档面，已排除）。
+**方法**：本轮实读 design/SESSION.md · design/AGENT-LOOP.md（§13/§23）· design/CRASH-REPORTS.md · design/TUI.md（§15）· requirements/SESSION.md · requirements/CRASH-REPORTS.md · 批次档修正轮追加；源码行数抽查（wrapped-spawn
+41 · tui-stderr 106 · key-handler-search 114 · subagent-actions 479 · session-guard 48——与刷新值一致）。修正轮「src/** 零改动」声明无 diff 工具可核验（不支撑判定——本轮对象为文档面，已排除）。
+机械折行（2026-09-12 形态清零轮）——语义零改
 **计数**：🔴 0 · 🟡 0 · 🔵 1（残留同步项——非阻断）。轮次 1 共 12 条 = **12/12 已修**。
 
 | # | Orig# | File | Severity | Status | Notes |
@@ -240,7 +243,6 @@ _（待写——评审子代理）_
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 ---
 
@@ -271,7 +273,7 @@ escalate-async/trace-store；组 3 = tool-events/tool-display/tool-args/subagent
 | 4 | 子块入块文本先过单块自身额度（90K+30K+中段标记） | 防「单条无换行巨 chunk 被字符维整行丢光」；环总量仍按最旧先行 |
 | 5 | 冷 GC `files` 含 sidecar 目录项（`rmSync` 递归） | F-S6 判定句要求「gc 清冷前缀后 sidecar 不存在」；设计句「files 仍只计文件」按数据文件判定面理解 |
 | 6 | trace-store 增 `_traceHooks`（readdir/exists/mkdir/append）+ `_resetTraceStateForTest` | 设计 T-TR4/T-TR5 要求的注入缝（慢写替身 / readdir 计数） |
-| 7 | session-store 495 行（设计估 +280±40） | 越 300 咨询线、未越 500 硬限——单点不拆（先例）；父侧可在收口时登记 |
+| 7 | session-store 495 行（设计估 +280±40） | 越 300 咨询线、未越 500 硬限——单点不拆（同口径）；父侧可在收口时登记 |
 | 8 | 三处 out-of-list 触碰（上表） | file 域 = 预期触碰面（非授权边界）——如实披露即可 |
 
 **审计与代码评审轮次（本会话内）**：
@@ -329,13 +331,17 @@ escalate-async/trace-store；组 3 = tool-events/tool-display/tool-args/subagent
 | 5 | Deferred | 🔵 描述符 `{history ≤201, total, base}` vs 设计 §14.3.6 句「≤200」：实现不改（±1 页沿为必要），已披露待设计者同步设计句——非阻断 |
 | 6 | Fixed | 🔵 `dropFirstContentLine` 字符账少记行分隔符：`src/tui/subagent-children.mjs` :73 返回 `droppedLine.length + (kept === "" ? 0 : 1)` |
 
-轮 2（advisor code：仅核验修正声明）VERDICT = **pass**——原 🔴 已解、无新增 🔴；残余 = 1 🔵（上表 #5，披露在案，非阻断）。两轮合计修正档：`src/session-store.mjs` · `src/session-segments.mjs`（新） · `src/tui/tool-events.mjs` · `src/tui/display-budget.mjs` · `src/tui/subagent-children.mjs` · `src/agent-tools/{escalate-async,subagent-actions,consult}.mjs` · 三份测试档。
+轮 2（advisor code：仅核验修正声明）VERDICT = **pass**——原 🔴 已解、无新增 🔴；残余 = 1 🔵（上表 #5，披露在案，非阻断）。两轮合计修正档：`src/session-store.mjs` · `src/session-segments.mjs`（新） · `src/tui/tool-events.mjs`
+· `src/tui/display-budget.mjs` · `src/tui/subagent-children.mjs` · `src/agent-tools/{escalate-async,subagent-actions,consult}.mjs` · 三份测试档。
+机械折行（2026-09-12 形态清零轮）——语义零改
 
 ## §6 验证与收口（父代理自写）
 
 **2026-09-12 01:30 收口（父侧核验）**
 
-- **真跑**：CLI 快层 `node test/run-fast.mjs` → **630 例 / 614 过 / 1 fail / 15 skip**——唯一红 = `doc-consistency` V3 指向**本批外的两个新批档**（`2026-09-12-VSC-ACTIVITY-CLOSURE（VSC 仓）` / `VSC-CHILD-PERMISSION（VSC 仓）` §3——尚未评审，评审写 §3 后自消；非本批因果）；定向（coder 报告）：`session-store` 17/17 · 组 2/3/4/5 族 46/46 · `integration/session-resume` 4/4 · `tui-stderr-capture` 全绿；
+- **真跑**：CLI 快层 `node test/run-fast.mjs` → **630 例 / 614 过 / 1 fail / 15 skip**——唯一红 = `doc-consistency` V3 指向**本批外的两个新批档**（`2026-09-12-VSC-ACTIVITY-CLOSURE（VSC 仓）` / `VSC-CHILD-PERMISSION（VSC 仓）`
+  §3——尚未评审，评审写 §3 后自消；非本批因果）；定向（coder 报告）：`session-store` 17/17 · 组 2/3/4/5 族 46/46 · `integration/session-resume` 4/4 · `tui-stderr-capture` 全绿；
+  机械折行（2026-09-12 形态清零轮）——语义零改
 - **交付表 10 项全 Done**（组 1–5 全落地：记录存储/子代理上界/显示层额度/堆遥测+终端恢复/检索收敛）；内部审计 clean + 代码评审 2 轮收敛（**1🔴 已修**：投影半行防护 + `_dropPartialTail`；3🟡 全修含硬限拆分 `session-segments.mjs`；残余 1🔵 已登记）；
 - **透明表 8 项采纳**（声明外触碰 5 处均有设计依据或评审导出——非静默）；触碰档均 ≤500 硬限（最大 session-store 442）；
 - **遗留（doc 层——#31 同步）**：设计 §14.3.6 描述符句（≤200 → ≤201/±1 口径）· 设计 §15.5 表补两行（`subagent-freeze.mjs`/`cmd-clear.mjs`）· `session-store.mjs` 越 300 线登记；③ `read-history` 工具描述串（含 "never compacted"）待提示词批处理（已在披露 #8）；

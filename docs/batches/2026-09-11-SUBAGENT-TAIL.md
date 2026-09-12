@@ -4,6 +4,7 @@
 > §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder）· §6 验证与收口（父代理）。
 > 不是规格：需求内容按**新老划断**同档承载（TUI 板块需求层落 `../design/` 设计档——具体落点由 designer 定）；
 > 整批做完本档冻结。编制：主 agent（工程模式）· 2026-09-11。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -164,7 +165,7 @@ AGENT-LOOP 侧（relay/前缀路由）本批零改（指针照旧）。
 | 1 | §6 契约节 | 新增「守护字段最小形状与②注」条：正读者 = `done`/`currentTool`/`children`；其余字段可留可删（防反向补实现/补断言）；② = 防御性保留、不设断言 |
 | 2 | §6 约束节折叠键句（原 :609）/ §10 as-of R23 行（原 :761） | 折叠键句去退役键示例（`sub.key`/`innerPath`）改写 + 表内 supersede 注；**两处已改毕**——回写清单见上表新增行 |
 | 3 | §6 冲突点核对（原 :543-544）/ `docs/design/AGENT-LOOP.md` 未决行 | VSC 表述改准（无子块小节形态 · 另有子标形态 · 两端不再同构）；镜像批对齐目标重述（现行差异 = CLI 内层行无归属标 vs VS 子标） |
-| 4 | §6 AC 表后 | 新增**真机 smoke** 步骤（**选定 = 真机 smoke，非残余风险记录**）：实现落盘后新起 CLI 会话目视三查（tail 含内层行 / 无 `❯` 小节头 / 面板高度 7 → 4 下降）；依据 = 用户可见显示面变更 + 项目先例「真机手感是唯一判据」 |
+| 4 | §6 AC 表后 | 新增**真机 smoke** 步骤（**选定 = 真机 smoke，非残余风险记录**）：实现落盘后新起 CLI 会话目视三查（tail 含内层行 / 无 `❯` 小节头 / 面板高度 7 → 4 下降）；依据 = 用户可见显示面变更 + 项目既定判据「真机手感是唯一判据」 |
 | 5 | §6 契约节（路由条后） | 新增「已知失效前提」条：并发内层子块交错 = 本批不处理的未来复核项 |
 | 7 | §6 用例 2 / 用例 6 | 用例 6 输入混入内层前缀行（内层计入 500 行环直接断言）；用例 2 加负断言（tail 行不含 `explore#N` 归属前缀） |
 
@@ -198,7 +199,7 @@ AGENT-LOOP 侧（relay/前缀路由）本批零改（指针照旧）。
 
 - TUI.md:508-510（sync 门）：`subagent.mjs` `wantAsync` / `subagent-run.mjs` `executeAsyncSpawn` / `spawn-child.mjs` `gateEngCoderSpawn`。
 - TUI.md:520-522（tombstone 丢弃路径）：`subagent-blocks.mjs` `ensureSubTaskKey`（守卫本体）+ `routeSubReasoning` / `routeSubToolCall` / `routeSubToolOutput` 的 tombstone 分支。
-- TUI.md:558-560（VSC 子标两处）：`thincoder-vscode/src/agent-tools/subagent-run.mjs` `runChild`·`forward`（子标挂载）+ `webview/ui.js` `appendAdvisorChunk`（`.advisor-sub` 子标）。
+- TUI.md:558-560（VSC 子标两处）：`src/agent-tools/subagent-run.mjs`（VSC 仓） `runChild`·`forward`（子标挂载）+ `webview/ui.js` `appendAdvisorChunk`（`.advisor-sub` 子标）。
 - `AGENT-LOOP.md`:14-17（同批 VSC 两处）：同上。
 
 **机检**：`node scripts/check-doc-width.mjs`——本轮新增行全 ≤300 字符（新增超宽 0；TUI.md / AGENT-LOOP.md 文案侧最长 97 字符）；存量超宽 14 行 / 5 文件（均非本轮引入——TUI §1/§11、AGENT-LOOP 变更记录、SESSION、其他专题档、本档 §3 评审行）；一致性新增违规 0（V1/V2/V3）。
@@ -221,7 +222,7 @@ AGENT-LOOP 侧（relay/前缀路由）本批零改（指针照旧）。
 
 **存量观察（未改——非本批触及行）**：§1 地图其余行存在独立漂移（split 口径实测：pickers 500→107 · mouse 213→250 · key-modes +23 · tui-lifecycle +13 · wizard +20）——按「量级参考（会漂）」不随批重测；全表重测属独立文档维护项（未登记）。
 
-**历史快照沿革**：§5 偏差①②③的原裁定不变（测试档实测行数超设计估计 = 接受 / D-ST6 注释口径 = 接受 / 两文件 >300 行 = 存量先例）；§6 并档节「受影响文件清单」的「预计增量」列保留为设计估（不追改），交付实测以本块与 §5/§6 为准。
+**历史快照沿革**：§5 偏差①②③的原裁定不变（测试档实测行数超设计估计 = 接受 / D-ST6 注释口径 = 接受 / 两文件 >300 行 = 存量档）；§6 并档节「受影响文件清单」的「预计增量」列保留为设计估（不追改），交付实测以本块与 §5/§6 为准。
 
 **与实测零冲突声明**：除上述 5 项外，设计档与交付实测未发现其他冲突；需求档 `docs/requirements/TUI.md` 零改（F8 / N5 / N6 三处条目一致保持）。
 
@@ -229,20 +230,19 @@ AGENT-LOOP 侧（relay/前缀路由）本批零改（指针照旧）。
 
 ## §3 设计评审（评审子代理自写）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
-**设计评审（advisor-design 独立评审）** — 评审对象：`docs/design/TUI.md` §6「内层活动并入外层流（SUBAGENT-TAIL）」节（TUI.md:471-589）· 需求档 `docs/requirements/TUI.md` F8/N5/N6 · 批次档 §2（任务书）。核验基线：源码实测（subagent-blocks/-children/-panel、render-segments、subagent-freeze、mouse、fold-block）＋ `thincoder-vscode` 对位面抽查。事实面全部 file:line 落地。
+**设计评审（advisor-design 独立评审）** — 评审对象：`docs/design/TUI.md` §6「内层活动并入外层流（SUBAGENT-TAIL）」节（TUI.md:471-589）· 需求档 `docs/requirements/TUI.md` F8/N5/N6 · 批次档 §2（任务书）。核验基线：源码实测（subagent-blocks/-children/-panel、render-segments、subagent-freeze、mouse、fold-block）＋ VSC 仓对位面抽查。事实面全部 file:line 落地。
 
 | # | Category | Severity | Issue | Suggestion |
 |---|----------|----------|-------|------------|
 | 1 | Requirements/Contract | 🟡 | 契约把「外层冻结时未收尾子块不悬空（closeOpenSubChildren 定格 stopped）」列为守护职责②（TUI.md:506-508），但删光子块渲染面后②无读者：冻结后迟到 relay 由 tombstone 独立丢弃（subagent-blocks.mjs:96-97、307-308/326-327/356-357），child.stopped 的唯一读者 subChildHeadRow 被删（subagent-panel.mjs:54）；leaf 的 model/started/doneAt/stopped/blocks/toolArgs/approval 同为写而不读；AC8（TUI.md:588）不含② | 契约显式标注②=防御性保留（无可见语义，不必设断言），并写明守护字段最小形状（正读者只有 done/currentTool/children），其余字段标为可留可删字面量——避免 coder 反向补实现 |
 | 2 | Doc-state（本档） | 🟡 | 退役面残余不在回写清单：《TUI.md》§6 约束节 :609 仍写「子块/区块键天然身份化（sub.key / innerPath）」，与 :511/:539「折叠键只剩 sub-${key}」不一致；§10 as-of 行 :761 仍以「工具式头 + 独立折叠键」为决策（:744-745 有总括 supersede 注，但该行对前身 D-M8 有成例的表内注）。设计文档写域（TUI.md:558）与批次档回写清单（batch:107——只列 §1 地图行/§11/变更记录）均不含这两处 | 收口时 :609 随批改写、:761 行内补 supersede 注，并把两处加入交付后回写清单（不阻塞——正文已可判读现行态） |
-| 3 | Doc-state（跨档承接） | 🟡 | VSC 推迟承接点引向「AGENT-LOOP 未决行」（TUI.md:543-544），该行为 AGENT-LOOP.md:14「R23 VS Code 镜像批评估（嵌套子代理子块形态 vs VS 子标）」——本批后 CLI 子块形态消失、其前提作废且不在任何回写清单；VSC 实况=嵌套活动有对位显示（chunk.sub 行首 dim 子标——thincoder-vscode/src/agent-tools/subagent-run.mjs:19-30、thincoder-vscode/webview/ui.js:48），「无对位面」准确表述应为「无子块小节形态（另有子标形态）」；本批后两端不再同构（CLI 内层行无归属标） | 父侧收口时改写 AGENT-LOOP.md:14（重述镜像批对齐目标）；并把 TODO.md:146 status「设计落档中」与 :142-145 现状核对一并改记（后者随批成历史快照） |
-| 4 | Acceptance | 🟡 | 交付动作（batch:152）与 AC1..AC9（TUI.md:579-589）全为单测直驱/渲染断言，无真机（真实终端）目视步骤、无残余风险声明；本批为用户可见显示面变更，项目自身先例=「真机手感是唯一判据」（TUI.md:781）、折叠阈值曾两轮死于真机（TUI.md:755）。另：本批两档中未找到「未真机实跑 TUI」自报文字（grep 真机/实跑/未验 零命中）——该面是沉默而非声明 | 交付/验收加一步真机 smoke（spawn eng-coder 触发嵌套 explore → 目视 tail 含内层行、无 ❯ 小节头、面板高度下降），或显式记录「单测即验收口径」的残余风险 |
+| 3 | Doc-state（跨档承接） | 🟡 | VSC 推迟承接点引向「AGENT-LOOP 未决行」（TUI.md:543-544），该行为 AGENT-LOOP.md:14「R23 VS Code 镜像批评估（嵌套子代理子块形态 vs VS 子标）」——本批后 CLI 子块形态消失、其前提作废且不在任何回写清单；VSC 实况=嵌套活动有对位显示（chunk.sub 行首 dim 子标——`src/agent-tools/subagent-run.mjs:19-30`（VSC 仓）、`webview/ui.js:48`（VSC 仓）），「无对位面」准确表述应为「无子块小节形态（另有子标形态）」；本批后两端不再同构（CLI 内层行无归属标） | 父侧收口时改写 AGENT-LOOP.md:14（重述镜像批对齐目标）；并把 TODO.md:146 status「设计落档中」与 :142-145 现状核对一并改记（后者随批成历史快照） |
+| 4 | Acceptance | 🟡 | 交付动作（batch:152）与 AC1..AC9（TUI.md:579-589）全为单测直驱/渲染断言，无真机（真实终端）目视步骤、无残余风险声明；本批为用户可见显示面变更，项目既定判据「真机手感是唯一判据」（TUI.md:781）、折叠阈值曾两轮死于真机（TUI.md:755）。另：本批两档中未找到「未真机实跑 TUI」自报文字（grep 真机/实跑/未验 零命中）——该面是沉默而非声明 | 交付/验收加一步真机 smoke（spawn eng-coder 触发嵌套 explore → 目视 tail 含内层行、无 ❯ 小节头、面板高度下降），或显式记录「单测即验收口径」的残余风险 |
 | 5 | Clarity（残留前提） | 🔵 | 合并后 fresh 判别按 leaf.currentTool（TUI.md:503）：同一外层块若出现两个并发内层子块交错，内层输出会并入末块的他人工具头块（pushBlock 仅按 kind 合并——subagent-children.mjs:79）；当前不可达（depth>0 仅 sync spawn——agent-tools/subagent.mjs:176），仅未来扩展的复核前提 | 契约或 D-ST 留一句「并发内层子块 = 已知失效前提」，供放开并行嵌套时复核（本批不需处理） |
-| 6 | 受影响文件/行数（核验通过） | 🔵 | 受影响表（TUI.md:546-557）逐项与实测相符：subagent-blocks 451 / children 177 / panel 205 / render-segments 183 / freeze 169 / index 450 / mouse 250（尾随空行记法一致）；净 −95±40 行、无文件跨 500 硬帽（subagent-blocks ≈446 仍 >300 = 存量先例，本批净减不新增）。「mouse.mjs 零改」成立：命中链只读通用 `_foldToggle`/`_stopCol`（mouse.mjs:161-185），toggleFoldBlock 与键族无关（fold-block.mjs:37），全库无 sub-*/innerPath 键其它读者 | 无需动作（记录用） |
+| 6 | 受影响文件/行数（核验通过） | 🔵 | 受影响表（TUI.md:546-557）逐项与实测相符：subagent-blocks 451 / children 177 / panel 205 / render-segments 183 / freeze 169 / index 450 / mouse 250（尾随空行记法一致）；净 −95±40 行、无文件跨 500 硬帽（subagent-blocks ≈446 仍 >300 = 存量档，本批净减不新增）。「mouse.mjs 零改」成立：命中链只读通用 `_foldToggle`/`_stopCol`（mouse.mjs:161-185），toggleFoldBlock 与键族无关（fold-block.mjs:37），全库无 sub-*/innerPath 键其它读者 | 无需动作（记录用） |
 | 7 | Test coverage（可加强） | 🔵 | N5「内层内容计入外层 500 行环」未以含内层前缀的追加路径直接断言（用例 6 只写「追加超限」——内层计数属结构性推断）；用例 2 未断言「内层行无归属标」的可见后果（由「无子块头行」间接覆盖） | 可选：用例 6 序列混入内层前缀行；用例 2 加一条「tail 行文本不含 explore#N 归类前缀」负断言 |
 | 8 | Scope/授权（记录用） | 🔵 | N6 授权读法：用户条件句针对「子块省略标记」（batch:23-24，取代后消失），设计按「块级省略标记仍在 → 计数真值一并修」分支执行（D-ST5 TUI.md:527-529 + batch:93 已显式记录）——属对齐读法而非静默扩面 | 收口向用户汇报时一句点明「块级省略标记保留且计数修真值」，闭环授权链（不阻塞） |
 
@@ -294,7 +294,6 @@ coder 无 TTY 不承担）+ 批次档 §5 自写。
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 ### SUBAGENT-TAIL 实施记录（eng-coder 自写——2026-09-11）
 
@@ -322,7 +321,7 @@ _（待写——eng-coder）_
 **自审闭环（AGENT-LOOP §18）**
 
 - **内部 explore 偏差审计**（只读，对照设计档 §6 + 批次档 §2）：**VERDICT clean**——部分实现 / 静默简化 / 文档漂移 / 清单外改动四类均未发现（残项 O1-O3 均属父侧回写项或时点观察）。
-- **内部 advisor 代码评审**：**pass**（🔴 0 · 🟡 0 · 🔵 5）→ 处置：**Fixed ×2**（死 import 移除；用例 1 补 `routeSubReasoning` 直驱 + kind 序列断言）· **Deferred ×3**（测试档行数超设计估计 → 父侧回写；D-ST6 注释口径残留 → 父侧裁决；两文件 >300 行 → 存量先例，拆分需独立批次）。
+- **内部 advisor 代码评审**：**pass**（🔴 0 · 🟡 0 · 🔵 5）→ 处置：**Fixed ×2**（死 import 移除；用例 1 补 `routeSubReasoning` 直驱 + kind 序列断言）· **Deferred ×3**（测试档行数超设计估计 → 父侧回写；D-ST6 注释口径残留 → 父侧裁决；两文件 >300 行 → 存量档，拆分需独立批次）。
 - **终态：clean**（审计 clean → 修正 → 评审 pass → `verify` passed）。
 
 **逐需求透明表（Done / Simplified / Not done）**
@@ -351,7 +350,7 @@ _（待写——eng-coder）_
 
 - **交付面**：6 源 + 1 新测试档（12 用例）——四处 `routeSub*` 嵌套分支 append 上移（数据流合并）· 渲染面净删（−55 行）· 单环 trim 收窄 · 省略计数三缺陷修复 · `mouse.mjs` / `docs/**` 零改。
 - **父侧实跑（验收时态）**：新档 12/12 · 全量 363/352/0（既有 TUI 用例零回归；同窗并行批次计数波动已登记）。
-- **偏差裁定**：① 测试档实测 291 行 > 设计估计上限 180——**接受**（用例表 1:1 + 注释，无功能含义）② D-ST6 注释口径（改动区域 + 显示契约指针；未改动区域旧节号 = 存量库性文档债）——**接受**（存量不随批迁移）③ 两文件 >300 行——存量先例，拆分需独立批次（登记）。
+- **偏差裁定**：① 测试档实测 291 行 > 设计估计上限 180——**接受**（用例表 1:1 + 注释，无功能含义）② D-ST6 注释口径（改动区域 + 显示契约指针；未改动区域旧节号 = 存量库性文档债）——**接受**（存量不随批迁移）③ 两文件 >300 行——存量档，拆分需独立批次（登记）。
 - **内部闭环**：explore 偏差审计 clean · advisor 代码评审 pass（🔴0/🟡0/🔵5 → Fixed×2 + Deferred×3）· 终态 clean。
 - **文档回写**（§5 遗留）：`docs/design/TUI.md` §1 地图行 / §11 / §6 / 变更记录 → designer 同步轮（id=11）**已落地核验**（`:22` 表头注 · `:40`/`:42`/`:47` 地图行 · `:391` 指针 · `:548` 偏差注 · `:621` 交付核验行 · `:821`/`:831` 完成史与变更记录 · 本档 §2 交付同步块 `:208`+）；TODO / CHANGELOG → 父侧随收口。
 - **回写核验注（超宽口径——父侧实测钉口径）**：TUI.md 现 4 行 >300 **全为表格行**——`:30`(358)/`:820`(301) = 存量（HEAD 基线 2 行，仅位移）；`:40`(330)/`:42`(329) = 本轮回写的地图行（HEAD 侧无对应超宽行）。**表格行口径**：第 13 批条目 C（表格行豁免——in-flight）落地后整类不计；若按现行检查器读数，此 2 行会显示 +2。id=11 报告「全文零超宽」措辞不实——**非表格面新增超宽 0 成立**（其实质结论不变）。

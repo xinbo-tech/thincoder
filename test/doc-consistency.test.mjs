@@ -3,26 +3,30 @@
  * 需求 §1.15 · 批次档 §2 用例 T41 / AC28）。
  *
  * 断言面：
- *   ① 仓库扫描零新增——`checkDocConsistency(repoRoot)` 的违规必须全部在基线
- *     （`test/fixtures/doc-consistency-baseline.json`）内：**新增违规阻断、存量不达基线降为报告**
- *      （需求 §1.15 非功能性需求——零假阳才能常驻）。
+ *   ① 仓库扫描零违规——`checkDocConsistency(repoRoot)` 的违规集必须为空，且基线
+ *     （`test/fixtures/doc-consistency-baseline.json`）**必须保持为空**（入基线 = 例外 = 违规；
+ *     fail-closed：基线非空即 FAIL——检查器直接退出码 1）。合规面零假阳才能常驻。
  *   ② 反证非空转（夹具面）——临时域内人为制造 V1 失效引用 / V2 计数不符 → 必被检出；
  *      合规对照文档不被误报（零假阳面）。
  *   ③ 反证非空转（仓库域面）——向真实扫描域注入一条计数不符探针 → 判为**新增**（不落基线）→ 检出。
- *   ④ 基线文件本身可读且非空（首跑固化清单——AC28 判据源）。
+ *   ④ 基线文件本身可读且**为空**（入基线 = 例外 = 违规——fail-closed；AC28 判据源）。
  *   ⑤ 防回潮静态锚（T75——退役提示词文件未复活；2026-09-11 TEST-LIFECYCLE 扫① 收归）。
- * 纯文件读取 + 字符串/结构判——零网络、零 git、快层直跑。
+ *   ⑥ V4 跨仓形态合规（T-LS35–T-LS37——枚举内零报 / 枚举外必红 / 射程豁免）。
+ * 纯文件读取 + 字符串/结构判——零网络、零 git。仓库域扫描两例（T41①/T41④）+ spawn 主行程
+ * 断言一例（T-LS36）走 slow() 门控（2026-09-12 收尾轮 9——重扫描真实进程类）；其余用例留快层。
  */
 import { test, beforeEach, afterEach, after } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync, existsSync, readdirSync } from "node:fs"
+import { spawnSync } from "node:child_process"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
 import {
   checkDocConsistency, checkSectionRefs, checkCountLists, checkDocWidths, checkBatchSegments,
-  loadBaseline, v1Key, v2Key, v3Key, SCAN_DIRS, BASELINE_PATH,
+  checkCrossRepoForms, loadBaseline, v2Key, SCAN_DIRS, BASELINE_PATH,
 } from "../scripts/check-doc-width.mjs"
 
 const __here = dirname(fileURLToPath(import.meta.url))
@@ -44,21 +48,18 @@ function writeDoc(name, content) {
   writeFileSync(join(dir, name), content)
 }
 
-test("T41 ① 仓库扫描：V1/V2/V3 违规全部在基线内（新增违规阻断）", () => {
-  const { v1, v2, v3 } = checkDocConsistency(REPO)
+slow("T41 ① 仓库扫描：V1/V2/V3/V4 零违规 + 基线必须为空（入基线 = 例外 = 违规）", () => {
+  const { v1, v2, v3, v4 } = checkDocConsistency(REPO)
   const baseline = loadBaseline(REPO)
-  assert.ok(baseline.size > 0, "基线清单非空（首跑固化）")
-  const fresh = [
-    ...v1.map((r) => [v1Key(r), `V1 ${r.file} “${r.ref}”（${r.reason}）`]),
-    ...v2.map((r) => [v2Key(r), `V2 ${r.file}:${r.line} “${r.decl}” 声明 ${r.declared} ≠ 枚举 ${r.found}（${r.form}）`]),
-    ...v3.map((r) => [v3Key(r), `V3 ${r.file} §3 缺工具写入的轮次行`]),
-  ].filter(([k]) => !baseline.has(k))
-  assert.deepStrictEqual(fresh.map(([, msg]) => msg), [], "新增违规（修掉或按存量入基线——§2.19 D3/D4）")
-  // 存量报告面（不阻断——需求 §1.15「存量不达基线降为报告」）：失效基线条目只统计、不报错
-  const detected = new Set([...v1.map(v1Key), ...v2.map(v2Key), ...v3.map(v3Key)])
-  const stale = [...baseline].filter((k) => !detected.has(k))
-  if (stale.length) console.log(`[doc-consistency] 基线条目已失效（已被修掉/文档位移）${stale.length} 条——报告不阻断`)
-  assert.ok(Array.isArray(v1) && Array.isArray(v2) && Array.isArray(v3), "扫描产出三列表（V1/V2/V3）")
+  assert.equal(baseline.size, 0, "基线必须保持为空——新增违规一律红，不得再入基线（入基线 = 例外 = 违规）")
+  const offenders = [
+    ...v1.map((r) => `V1 ${r.file} “${r.ref}”（${r.reason}）`),
+    ...v2.map((r) => `V2 ${r.file}:${r.line} “${r.decl}” 声明 ${r.declared} ≠ 枚举 ${r.found}（${r.form}）`),
+    ...v3.map((r) => `V3 ${r.file} §3 缺工具写入的轮次行`),
+    ...v4.map((r) => `V4 ${r.file}:${r.line} “${r.ref}”`),
+  ]
+  assert.deepStrictEqual(offenders, [], "扫描域零违规（清零轮后无存量合法态——修掉，不入基线）")
+  assert.ok(Array.isArray(v1) && Array.isArray(v2) && Array.isArray(v3) && Array.isArray(v4), "扫描产出四列表（V1/V2/V3/V4）")
 })
 
 test("T41 ② 反证（夹具域）：V1 失效引用被检出 / 合规引用不误报", () => {
@@ -151,7 +152,7 @@ test("T41 ③ 反证（夹具域）：V2 计数不符被检出 / 相符与伪形
   assert.deepStrictEqual([...got].sort(), ["3/2/list", "4/3/table", "5/3/paren"], "恰好 3 条（零假阳——负例全不报）")
 })
 
-test("T41 ④ 反证（仓库域）：注入一条计数不符探针 → 判为新增（不落基线）", () => {
+slow("T41 ④ 反证（仓库域）：注入一条计数不符探针 → 判为新增（不落基线）", () => {
   const probe = PROBE
   writeFileSync(probe, "# 探针\n\n五条纪律：\n\n- a\n- b\n")
   try {
@@ -168,8 +169,8 @@ test("T41 ④ 反证（仓库域）：注入一条计数不符探针 → 判为�
 
 test("T41 ⑤ 基线文件与扫描域口径（AC28 判据源）", () => {
   const raw = JSON.parse(readFileSync(join(REPO, BASELINE_PATH), "utf8"))
-  assert.ok(Array.isArray(raw.entries) && raw.entries.length > 0, "基线 entries 数组非空")
-  assert.ok(raw.entries.every((e) => /^(V1|V2|V3)\|/.test(e)), "条目标记形态 V1|/V2|/V3|")
+  assert.ok(Array.isArray(raw.entries) && raw.entries.length === 0, "基线 entries 必须为空数组——入基线 = 例外 = 违规（fail-closed）")
+  assert.ok(raw.entries.every((e) => /^(V1|V2|V3|V4)\|/.test(e)), "条目标记形态 V1|/V2|/V3|/V4|")
   assert.deepStrictEqual(SCAN_DIRS, ["docs/design", "docs/requirements", "docs/batches"], "扫描域（排除 _archive/）")
   // 扫描域宽度面：V1/V2 域内 _archive/ 不受约束（collectMarkdown 跳过）
   const widths = checkDocWidths(REPO, { dir: SCAN_DIRS[0] })
@@ -220,6 +221,50 @@ test("T73 正常：宽度表格行豁免——表格行零报告 / 非表格超�
   assert.equal(hits[0].line, 5, "非表格超宽行照报（含行号）")
   assert.equal(hits[0].len, plainLine.length, "行长度如实（非表格面零改）")
   assert.ok(!hits.some((h) => h.line === 3), ">300 字符表格行零报告（豁免谓词 = isTableRow）")
+})
+
+/* ─── 收尾轮 5（T-LS35–T-LS37——V4 跨仓形态合规；B16 / AC-LS31） ─── */
+
+test("T-LS35 正常：V4 枚举内零报（E1–E5 允许形态 + 仓别注记坐标）", () => {
+  writeDoc("cross-in.md", [
+    "# 枚举内",
+    "",
+    "对位声明：AGENT-LOOP（VSC 仓）§12 · 路径坐标：src/prompts/discipline-engineering.md（VSC 仓） · 裸仓名 VSC 仓 · 纯语义：多端镜像。",
+    "注记坐标：`thincoder-vscode/src/prompts/x.md`（VSC 仓）——仓别注记在位（D19 坐标形态）。",
+  ].join("\n"))
+  assert.deepStrictEqual(checkCrossRepoForms(tmp), [], "枚举内零报")
+})
+
+slow("T-LS36 错误：V4 枚举外必红（反证非空转——路径直引 / 裸节号）", () => {
+  writeDoc("cross-out.md", [
+    "# 枚举外",
+    "",
+    "① 对端仓路径 + 文档后缀连写：见 thincoder-vscode/docs/design/AGENT-LOOP.md §12。",
+    "③ 裸节号：裁定见 VSC 仓 §1 的登记。",
+  ].join("\n"))
+  const got = checkCrossRepoForms(tmp).map((r) => `${r.line}|${r.ref}`)
+  assert.ok(got.includes("3|thincoder-vscode/docs/design/AGENT-LOOP.md"), "路径直引必红")
+  assert.ok(got.includes("4|VSC 仓 §1"), "裸节号必红")
+  assert.equal(got.length, 2, `恰两条：${JSON.stringify(got)}`)
+  const r = spawnSync(process.execPath, [join(REPO, "scripts", "check-doc-width.mjs")], { cwd: tmp, encoding: "utf8" })
+  assert.equal(r.status, 1, "V4 违规 ⇒ 退出码 1（fail-closed）" + r.stdout + r.stderr)
+  assert.ok(r.stdout.includes("✗ V4"), "主行程输出含 V4 违规行")
+})
+
+test("T-LS37 边界：V4 射程豁免——fenced 块 / 行内命令 / 搜索模式串 / 引述码段不红", () => {
+  writeDoc("cross-exempt.md", [
+    "# 豁免",
+    "",
+    "行内命令：复跑 `cd thincoder-vscode && node scripts/check-doc-width.mjs` 全绿。",
+    "搜索模式串：口径 = `grep -E 'thincoder-vscode/docs/x.md|VSC 仓 [^（]*\\.md'`。",
+    "引述码段：如 `VSC 仓 §1` 为枚举外样例。",
+    "",
+    "```text",
+    "cd thincoder-vscode && node scripts/check-doc-width.mjs",
+    "thincoder-vscode/docs/a.md 全绿",
+    "```",
+  ].join("\n"))
+  assert.deepStrictEqual(checkCrossRepoForms(tmp), [], "可执行坐标（命令 / 模式串 / 引述）不判")
 })
 
 /* ─── 防回潮静态锚（2026-09-11 TEST-LIFECYCLE 扫① 收归；原档删段）───

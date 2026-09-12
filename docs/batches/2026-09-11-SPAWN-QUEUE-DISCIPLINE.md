@@ -1,10 +1,12 @@
 # spawn 排队纪律（提交即走）· 批次记录（2026-09-11）
 
-> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分）**：本档对端（VSC）份已由 VSC 仓 `docs/batches/2026-09-11-SPAWN-QUEUE-DISCIPLINE（VSC 仓）` 逐字承载（D10——零改写）；本档保留本仓份。
-> 移出条目（对端份）清单：§2 落点 VSC 2 档 + 2 测试档分端（as-of `:41`–`:42`）——条目计数（对端份 / 本仓份）= 4 / 2（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。
+> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分 · 已切除 2026-09-12）**：本档对端（VSC）份**已自本档切除**（原文不再留本仓——D11 完全态）；承载档 = VSC 仓 `docs/batches/2026-09-11-SPAWN-QUEUE-DISCIPLINE（VSC 仓）`（逐字搬运、零改写——D10）。
+> 已切除条目清单：§2 落点 VSC 2 档 + 受影响文件表 VSC 测试档 2 行（4 条目）——条目计数（对端份 / 本仓份）= 4 / 2（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。**源档 blob SHA（切除前）= `0c4e43b2f3a2`**。
+> 变更记录：2026-09-12——对端份经承载档逐字承接后自本档物理切除；档首注记形态收敛为「已切除」。
 
 > 六段 append-only，一段一作者：§1 讨论（主 agent）· §2 批次任务（eng-designer）· §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder 自写）· §6 验证与收口（父代理）。
 > 编制：主 agent · 2026-09-11 · 来源 = 用户 16:47「**你应该用调度器去排队而不是自己管排队，最好能在提示词里也说明一下**」。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -33,16 +35,13 @@
 
 ## §2 批次任务（eng-designer 写）
 
-_（待写——eng-designer）_
 
 ### 批次任务（eng-designer 自写 · 2026-09-11）
 
 **状态（三态推进）**：① 任务书就绪（本段）→ ② 设计就绪待评审（发起权在用户——评审经 `batchDoc` 传本档 → 写本档 §3）→ ③ 批准后 spawn eng-coder（设计 token 门）。实施者 = eng-coder（提示词落笔）；设计文档面 = eng-designer（本设计轮已落）。
 
-**落点（3 档——纯插入，各 +1 行）**：
+**落点（1 档——纯插入，+1 行；本仓份）**：
 - `thincoder/src/prompts/discipline-engineering.md` —— Multi-Task 调度段：插入锚 = 含 `**Keep the concurrency cap` 的行（as-of :205）之前；
-- `thincoder-vscode/src/prompts/discipline-engineering.md` —— 同款锚（as-of :206）之前；
-- `thincoder-vscode/src/prompts/persona-engineering.md` —— Multi-Task 对位段：同款锚（as-of :81）之前（即 R14 段后）。
 
 **CLI persona 明示不引入（不对称理由）**：CLI `src/prompts/persona-engineering.md` 端无 Multi-Task/调度对位段（实测零 `Multi-Task`/`Declare spawn`——CLI 该块宿主 = CLI de）；VSC pe 的 Multi-Task 段为 VSC 端特有端段（锚#7 断言宿主 = VSC pe）。端差零新增——不强行对称。
 
@@ -52,9 +51,9 @@ _（待写——eng-designer）_
 ③ **不手工记队列、不逐档放行、不因冲突/池满而推迟提交**；
 ④ 父侧只读状态（status/observe），不模拟调度器。
 
-**三方条目一致**：本段条目 ①–④ = 本段机验断言表的回指对象 = **需求档条目**（`docs/requirements/PROMPT-SYSTEM.md` §2.5 纪律层「spawn 排队纪律」条——修正轮补，2026-09-11）= 设计档变更注记所载语义（`docs/design/PROMPT-SYSTEM.md` 变更记录——本端，已落 + 修正轮注记；`thincoder-vscode/docs/design/VSC-PROMPTS.md` 变更记录——对位，已落）。
+**三方条目一致**：本段条目 ①–④ = 本段机验断言表的回指对象 = **需求档条目**（`docs/requirements/PROMPT-SYSTEM.md` §2.5 纪律层「spawn 排队纪律」条——修正轮补，2026-09-11）= 设计档变更注记所载语义（`docs/design/PROMPT-SYSTEM.md` 变更记录——本端，已落 + 修正轮注记；`VSC-PROMPTS（VSC 仓）` 变更记录——对位，已落）。
 
-**微批口径（设计档记录形态）**：单方案（本档 §1 草稿句 = 唯一来源——无选型对比，豁免声明）；无接口/UI 面（提示词文本）；关键决策 = 落点 3 档 + 插入锚（cap 行前）+ 不对称裁定（见上）+ 修正轮增项（锚防护 3 套件——文件表 #4–#6；位置机验 T-SQ7）。
+**微批口径（设计档记录形态）**：单方案（本档 §1 草稿句 = 唯一来源——无选型对比，豁免声明）；无接口/UI 面（提示词文本）；关键决策 = 落点 1 档 + 插入锚（cap 行前）+ 不对称裁定（见上）+ 修正轮增项（锚防护 3 套件——文件表 #4–#6；位置机验 T-SQ7）。
 
 #### 1. 目标与为什么
 
@@ -84,11 +83,7 @@ _（待写——eng-designer）_
 | # | 文件 | 插入锚（as-of——落笔首步现场复核） | 落定 |
 |---|------|----------------------------------|------|
 | 1 | `thincoder/src/prompts/discipline-engineering.md` | cap 行（:205）之前；上一行 = `Directory declarations…`（:204——取 cap 前那处） | 新行 = :205；cap 顺延 :206；213 → 214 |
-| 2 | `thincoder-vscode/src/prompts/discipline-engineering.md` | cap 行（:206）之前；上一行 = `Directory declarations…`（:205） | 新行 = :206；cap 顺延 :207；221 → 222 |
-| 3 | `thincoder-vscode/src/prompts/persona-engineering.md` | cap 行（:81）之前；上一行 = R14 段末（:80——`agent.poolLimits` 行） | 新行 = :81；cap 顺延 :82；86 → 87 |
 | 4 | `thincoder/test/prompts-async-guidance.test.mjs` | 锚#7 测试体（:124-127——:126 = de 调度器句断言，本档 §2:68 所引守卫）——新增断言行插于 :126 后 | +1 断言行：`assert.ok(de.includes(SQ_LITERAL), "锚#7 提交即走句缺失（CLI 宿主 de）")`；419 → 420 |
-| 5 | `thincoder-vscode/test/prompts-async-guidance.test.mjs` | 锚#7 测试体（:112-115——:114 = pe 同句断言，本档 §2:68 所引守卫）——插于 :114 后 | +1 断言行：`assert.ok(pe.includes(SQ_LITERAL), "锚#7 提交即走句缺失（VSC 宿主 persona-engineering）")`；452 → 453 |
-| 6 | `thincoder-vscode/test/prompts-mirror-anchors.test.mjs` | ⑥ GROUPS（:212-216——本档 §2:68 所引镜像套件）——新组条目插于组 2（:215）后 | +1 跨仓组（组 3）：`{ id: "组3 提交即走句 en↔en", files: [SRC + "discipline-engineering.md"], literals: [SQ_LITERAL] }`（组内 cli/vsc 两侧断言）；组清单同步 = 测试名 + 头部注释；318 → 319 |
 
 **测试档锚防护（修正轮新增——文件表 #4–#6；各 +1 条 includes 断言/组）**：断言字面 SQ_LITERAL = 上框落笔行**逐字**（含行首 `- ` 前缀——与 T-SQ1 全文判据同串）；分发按本档 §2:68 所引既有守卫；CLI `prompts-dual-source.test.mjs` 零改（EN-only 新句不属双源对断言面——既有断言保持绿）。
 
@@ -134,7 +129,6 @@ _（待写——eng-designer）_
 
 ## §3 设计评审（评审子代理）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
@@ -143,18 +137,16 @@ _（待写——评审子代理）_
 | 1 | 需求覆盖 / 文档链（协调项） | 🟡 | 需求层零改属声明（`thincoder/docs/batches/2026-09-11-SPAWN-QUEUE-DISCIPLINE.md:52`：「需求档 docs/requirements/PROMPT-SYSTEM.md 本批零改（微批——需求来源 = 本档 §1 用户指令）」）——「三方条目一致」（`thincoder/src/prompts/discipline-engineering.md:36`）第三腿（需求档条目）留空；`docs/README.md` §3.4 写「需求谈清由 eng-designer 抽入 requirements/」「批次记录不代替需求文档——需求永远在 requirements/ 里成文」，快车道口径 =「no step cut」（`thincoder/src/prompts/discipline-engineering.md:180`）。属协调项，非实现阻塞。 | 父侧裁定（`thincoder/docs/batches/2026-09-11-SPAWN-QUEUE-DISCIPLINE.md:111` 已预留「如需…需求档登记 = 父侧裁定」）：确认微批豁免并在 §6 留痕，或登记一行需求条目/注明所依托的既有条目。 |
 | 2 | 验收标准（落点位置） | 🟡 | 「cap 行之前」的位置要求（`thincoder/docs/batches/2026-09-11-SPAWN-QUEUE-DISCIPLINE.md:83-85`）无机验覆盖：T-SQ1（整行 includes）、T-SQ2（grep 命中集）、T-SQ4（numstat `1 0` + 锚串驻留）、T-SQ5、T-SQ6 在「行落在文件任意位置（如追加到文件尾）」时仍全绿——位置要求目前只靠交付报告 diff 的人工阅读。 | 补一条可判检查：逐档断言新行位置 = cap 行位置 − 1（或断言其上一行 = 两 de 档的 `Directory declarations…` 行 / VSC pe 的 `agent.poolLimits` 行）。 |
 | 3 | 测试 / 持久防护 | 🟡 | 新句将成 3 档长期行为锚，但本批声明「零测试档改动」（`thincoder/docs/batches/2026-09-11-SPAWN-QUEUE-DISCIPLINE.md:87`）——无 fail-when-unchanged 断言防守，与项目提示词锚防护机制（`thincoder/src/prompts/discipline-engineering.md:87-89`「一致由同源设计 + 各端独立语义锚断言守」）不一致；设计所引既有守卫（`thincoder/docs/batches/2026-09-11-SPAWN-QUEUE-DISCIPLINE.md:68`）只覆盖邻句而非新句。 | 可把新句加入既有各端锚套件（各 +1 条 includes 断言），或记一条跟进；鉴于本批声明的零测试档口径，由父侧裁定。 |
-| 4 | 文档归属（D2 复核） | 🔵 | D2 核查结论：草稿句与既有调度段**无矛盾**。部分语义重叠（限同节内）：元数据子句（`thincoder/src/prompts/discipline-engineering.md:197` / `thincoder-vscode/src/prompts/discipline-engineering.md:198` / `thincoder-vscode/src/prompts/persona-engineering.md:70`）与「overlapping domains are queued by the scheduler, never hand-serialized」（`thincoder/src/prompts/discipline-engineering.md:199` / `thincoder-vscode/src/prompts/discipline-engineering.md:200` / `thincoder-vscode/src/prompts/persona-engineering.md:72`）；无跨档漂移面，属可接受的行为强化。`thincoder/docs/batches/2026-09-11-SPAWN-QUEUE-DISCIPLINE.md:59`「缺正面句」表述略强（`:66` 已承认 dn 等价句；never hand-serialized 已覆盖部分语义）。 | 无需改动（用户明确要求该文本）；如日后要精简，重叠处是裁点。 |
-| 5 | 清晰度 / 精度 | 🔵 | 新句通述「域冲突由调度器排队」「不因冲突/池满而推迟提交」未带 async 限定——既有邻句（`thincoder/src/prompts/discipline-engineering.md:198` / `thincoder-vscode/src/prompts/discipline-engineering.md:199` / `thincoder-vscode/src/prompts/persona-engineering.md:71`）为「sync spawns conflicting on files error out (not queued)」。默认 async eng-coder 流程无冲突；sync 冲突子场景仍是报错非排队。 | 可不改（邻句仍保留完整语义、相距 2 行）；如需可加 async 限定——父侧酌定，非阻塞。 |
+| 4 | 文档归属（D2 复核） | 🔵 | D2 核查结论：草稿句与既有调度段**无矛盾**。部分语义重叠（限同节内）：元数据子句（`thincoder/src/prompts/discipline-engineering.md:197` / `src/prompts/discipline-engineering.md:198`（VSC 仓） / `src/prompts/persona-engineering.md:70`（VSC 仓））与「overlapping domains are queued by the scheduler, never hand-serialized」（`thincoder/src/prompts/discipline-engineering.md:199` / `src/prompts/discipline-engineering.md:200`（VSC 仓） / `src/prompts/persona-engineering.md:72`（VSC 仓））；无跨档漂移面，属可接受的行为强化。`thincoder/docs/batches/2026-09-11-SPAWN-QUEUE-DISCIPLINE.md:59`「缺正面句」表述略强（`:66` 已承认 dn 等价句；never hand-serialized 已覆盖部分语义）。 | 无需改动（用户明确要求该文本）；如日后要精简，重叠处是裁点。 |
+| 5 | 清晰度 / 精度 | 🔵 | 新句通述「域冲突由调度器排队」「不因冲突/池满而推迟提交」未带 async 限定——既有邻句（`thincoder/src/prompts/discipline-engineering.md:198` / `src/prompts/discipline-engineering.md:199`（VSC 仓） / `src/prompts/persona-engineering.md:71`（VSC 仓））为「sync spawns conflicting on files error out (not queued)」。默认 async eng-coder 流程无冲突；sync 冲突子场景仍是报错非排队。 | 可不改（邻句仍保留完整语义、相距 2 行）；如需可加 async 限定——父侧酌定，非阻塞。 |
 | 6 | 验收标准（T-SQ5） | 🔵 | T-SQ5 的「`第 N 批`」为口语占位（`thincoder/docs/batches/2026-09-11-SPAWN-QUEUE-DISCIPLINE.md:97`）——字面机跑匹配不到「第 3 批」；「全部可机跑」口径下需具体模式。落笔行本身不含任何被扫形态（已核）。 | 脚本化 T-SQ5 时具体化（如 `第\s*\d+\s*批`）。 |
-| 7 | 抽检 / 表述精度 | 🔵 | 抽检记录（全对）：cap 行锚三档各 1 次、逐字同文（`thincoder/src/prompts/discipline-engineering.md:205` / `thincoder-vscode/src/prompts/discipline-engineering.md:206` / `thincoder-vscode/src/prompts/persona-engineering.md:81`）；as-of 行号与行数（213/221/86）与 §2 全符；`Directory declarations…` 2 处行序（:173/:204、:174/:205）已核；§2 落笔行 = §1 草稿句逐字 + 声明的 `- ` 前缀；`提交即走` 三档零命中（grep）。一处表述瑕疵：`:65`「（第二处 = 「实施委托结构化」段）」与实测行序相反——该处实为前一出现（`thincoder/src/prompts/discipline-engineering.md:173` / `thincoder-vscode/src/prompts/discipline-engineering.md:174`），Multi-Task 内那处在后（:204 / :205）。 | 序数改「另一处」或对调即可——纯表述；操作结论（非唯一 → 以 cap 行为唯一锚）已验证正确。 |
+| 7 | 抽检 / 表述精度 | 🔵 | 抽检记录（全对）：cap 行锚三档各 1 次、逐字同文（`thincoder/src/prompts/discipline-engineering.md:205` / `src/prompts/discipline-engineering.md:206`（VSC 仓） / `src/prompts/persona-engineering.md:81`（VSC 仓））；as-of 行号与行数（213/221/86）与 §2 全符；`Directory declarations…` 2 处行序（:173/:204、:174/:205）已核；§2 落笔行 = §1 草稿句逐字 + 声明的 `- ` 前缀；`提交即走` 三档零命中（grep）。一处表述瑕疵：`:65`「（第二处 = 「实施委托结构化」段）」与实测行序相反——该处实为前一出现（`thincoder/src/prompts/discipline-engineering.md:173` / `src/prompts/discipline-engineering.md:174`（VSC 仓）），Multi-Task 内那处在后（:204 / :205）。 | 序数改「另一处」或对调即可——纯表述；操作结论（非唯一 → 以 cap 行为唯一锚）已验证正确。 |
 
 VERDICT: pass
 
 计数：🔴 0 · 🟡 3 · 🔵 4（合计 7）
 
 ## §4 用户批准（主 agent 记）
-
-_（待记——主 agent）_
 
 **2026-09-11 17:30 父侧代签**——用户 16:40「自动推进到全完成」授权窗口；三条件齐备：轮次 1 pass（🔴0·🟡3·🔵4）+ **修正轮 5/5 落修 + 父侧核验通过**（需求条目/设计注记/T-SQ7/T-SQ8/字数/序数——逐条抽核 ✓）+ **token 已签发**（值不落档）。
 
@@ -164,11 +156,10 @@ _（待记——主 agent）_
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 ### 实施记录（eng-coder 自写 · 2026-09-11）
 
-**交付摘要**：本批 6 档全部落地——3 档提示词纯插入落笔行（照 §2:76 逐字，三档同文）+ 3 测试档锚防护（SQ_LITERAL 定义 + 断言/组）。T-SQ1–T-SQ8 内容级全过；两仓定向套件绿（CLI 60/60 · VSC 55/55）；快层零本批引入回归。落笔行 = §2:76 逐字（含行首 bullet），三提示词档与三测试档共用同串（跨 6 文件逐字核对通过）。
+**交付摘要**：本批 2 档全部落地——1 档提示词纯插入落笔行（照 §2:76 逐字）+ 1 测试档锚防护（SQ_LITERAL 定义 + 断言/组）。T-SQ1–T-SQ8 内容级全过；两仓定向套件绿（CLI 60/60 · VSC 55/55）；快层零本批引入回归。落笔行 = §2:76 逐字（含行首 bullet），三提示词档与三测试档共用同串（跨 6 文件逐字核对通过）。
 
 **条目三值表（①–④ 全 Done；无 Simplified / Not done）**
 
@@ -184,11 +175,7 @@ _（待写——eng-coder）_
 | # | 文件 | 落点（现况） | 本批增量 |
 |---|------|--------------|----------|
 | 1 | thincoder/src/prompts/discipline-engineering.md | 新行 :208（cap :209） | +1 −0（纯插入；重建核验） |
-| 2 | thincoder-vscode/src/prompts/discipline-engineering.md | 新行 :209（cap :210） | +1 −0 |
-| 3 | thincoder-vscode/src/prompts/persona-engineering.md | 新行 :81（cap :82） | +1 −0 |
 | 4 | thincoder/test/prompts-async-guidance.test.mjs | SQ_LITERAL :53 · 断言 :131 | +2 −0 |
-| 5 | thincoder-vscode/test/prompts-async-guidance.test.mjs | SQ_LITERAL :41 · 断言 :116 | +2 −0 |
-| 6 | thincoder-vscode/test/prompts-mirror-anchors.test.mjs | SQ_LITERAL :210 · 组 3 :217 · 组清单同步 :15/:200/:212 | +5 −3 |
 
 numstat（快照 ↔ 现场，`git diff --no-index --numstat`）：cli-de 4 0（本批 1 + 他链 3）· vsc-de 4 0（同）· vsc-pe 1 0 · cli-ag 12 11（本批 +2；余为他链重构）· vsc-ag 2 0 · vsc-ma 5 3。
 

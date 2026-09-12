@@ -128,7 +128,7 @@ stopped, total, received }`。settle 语义：正常回复入队；`session.stop
 | `src/tui/cmd-config.mjs` | `/config` 候选池管理（增删改 + effort picker） |
 | `src/prompts/consult-base.md` | 会诊子任务 prompt（只读约束 + main_history + 预算引导） |
 | `src/prompts/discipline-normal.md`（旧 main.md 会诊条款——2026-09-10 PROMPT-SYSTEM 施工①随迁） | 主 agent 会诊条款（何时会诊 + 简报质量） |
-| 测试 | consult 家族测试（会诊 settle 注入 / check 退役 / 取消 / 空闲 settle 消化——用例清单权威 = AGENT-LOOP.md §25.3 T-R17a..r） |
+| 测试 | consult 家族测试（会诊 settle 注入 / check 退役 / 取消 / 空闲 settle 消化——用例清单权威 = AGENT-LOOP §25.3 T-R17a..r） |
 
 ### 2.6 关键决策记录
 
@@ -143,7 +143,7 @@ stopped, total, received }`。settle 语义：正常回复入队；`session.stop
 
 ## 3. 测试
 
-会诊测试用例清单的权威 = **AGENT-LOOP.md §25.3**（T-R17a..r：会诊 settle 注入全文 /
+会诊测试用例清单的权威 = **AGENT-LOOP §25.3**（T-R17a..r：会诊 settle 注入全文 /
 check 退役（调 consult_check 工具不存在）/ 取消不入 pending / 空闲 settle 消化 /
 部分 settle 不注入 / 超长注入截断落盘 / 注入一次竞态 / 手动档动作域零容忍等）。
 

@@ -93,7 +93,7 @@
 - 独立 try/catch（尽力面——武装失败不阻断启动、不影响 F1 既有步骤）。
 - 导入形态：命名空间 import（`import * as v8 from "node:v8"`——API 缺失降级为调用期异常并被吞，不做 import 期硬失败）。
 - 接口（注入缝——默认参数保调用点零改）：`prepareCrashReporting({ dir = crashReportsDir(), env = process.env, armHeapSnapshot = <node:v8 实函数> } = {})`；
-  测试注入替身（先例：`spawnTuiWrapped({ spawnImpl, exitImpl })`——`src/tui/wrapped-spawn.mjs`）。
+  测试注入替身（同款：`spawnTuiWrapped({ spawnImpl, exitImpl })`——`src/tui/wrapped-spawn.mjs`）。
 - 返回值不变（目录路径）；`dir` 选项同时服务 mkdir / `report.directory` / purge / 返回（默认值 = 原行为）。
 
 ### 3.2 env 开关
@@ -310,7 +310,7 @@
 |---|---|---|---|
 | 1 | **复用清理序列常量**（`clearScreen + mouseOff + bracketedPasteOff + keyboardPop + modifyOtherKeysOff + mainBuffer + showCursor + reset + wrapOn`——`writeCleanupSequence` 同源提取） | 单一序列来源；与 JS 崩溃路径行为一致；幂等 | **选定** |
 | 2 | 最小子集（仅 mouseOff + mainBuffer） | 终端键盘/粘贴模式可能残留 | 否决 |
-| 3 | 父侧另造字面量 | 第三份序列副本——漂移面（QUICKFIX-BATCH-3 F-3 同题先例） | 否决 |
+| 3 | 父侧另造字面量 | 第三份序列副本——漂移面（QUICKFIX-BATCH-3 F-3 同题在案） | 否决 |
 
 ### 9.3 契约（实现对象）
 

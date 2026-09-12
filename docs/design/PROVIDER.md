@@ -210,7 +210,7 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`，
 
 | **退役/路由名保留为独立行**（2026-09-11 第 6 批） | 服务端仍收旧名时删行 → 旧配置降 `DEFAULT_SPEC`（压缩阈值/窗口显示错）——保留 + 行注释；参数与能力位**是否随新模型按"当下合同"判**：旧名**当下即**由新模型服务 → 随行；**限期路由**（切换前仍由旧模型服务）→ 不预支能力位（防硬失败）。 |
 
-**re-export 契约**：`config.mjs` re-export `specForModel` / `providerSpec` / `specMatch`（先例：2026-08-31 规格表迁出后既有 importers 从 config 取，不破坏调用点）；`providerSpec` = spec + provider 级 context 覆盖（§15）。
+**re-export 契约**：`config.mjs` re-export `specForModel` / `providerSpec` / `specMatch`（沿革：2026-08-31 规格表迁出后既有 importers 从 config 取，不破坏调用点）；`providerSpec` = spec + provider 级 context 覆盖（§15）。
 
 ## 10. 畸形 tool_calls 防御解析（sse.mjs mergeToolCalls / finalizeToolCalls）
 
@@ -419,7 +419,7 @@ prefix 模式只续文本，不需要工具历史（真机矩阵实证：过滤�
 两端同规格（VS Code 端口由并行任务处理，镜像 CLI）：
 ① escape v5 同步（sanitizeLoneSurrogates + sanitizeText 总入口 + odd-run 修复 +
 escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
-② UTF-16 安全截断 5 处（context doc 注入 / code / offloadToolResult / compact 序列化）；
+② UTF-16 安全截断 5 处（context doc 注入 / code 预览 / offloadToolResult / compact 序列化 / explore 蒸馏）；
 ③ 续写构造对齐 `buildContinuationMessages` + 失败可见性；④ 两端测试 parity。
 
 ## 15. 模型上下文可配置（providerSpec context）
@@ -488,9 +488,9 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 
 **M2 候选面 = 拉取（CLI）**：
 
-- `/model` L2（会话面）：候选 = 拉取结果**直接可选**（会话面提升到槽位面语义——槽位面 `model-picker.mjs:177` 起已是先例）；进入 L2 即触发拉取。
+- `/model` L2（会话面）：候选 = 拉取结果**直接可选**（会话面提升到槽位面语义——槽位面 `model-picker.mjs:177` 起已为既有形态）；进入 L2 即触发拉取。
 - `/config → 默认模型` L2：同源（共用拉取 helper）；槽位面（`/submodel` + consult 池）零改（仅随 M1 获得三 format 支持）。
-- 加载中 header 文案 `Available models (loading…)`（既有先例）；失败 header `(fetch failed: …)` + 一行提示（文案与不可选处置见 M8）。
+- 加载中 header 文案 `Available models (loading…)`（既有形态）；失败 header `(fetch failed: …)` + 一行提示（文案与不可选处置见 M8）。
 - 归并：`dedupeModels` / `modelSeries` 显示归并保留（迁入 helper——`src/tui/model-catalog.mjs`）。
 
 **M3 渠道默认模型（单值——`providers[].model`）**：
@@ -579,7 +579,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 | `specMatch(model)` | **新增** | `{ spec, matched }`——matched:false = DEFAULT 兜底 |
 | `specForModel` / `providerSpec` | 不变 | 热路径与拷贝覆盖契约不动 |
 | `migrateLegacyModelFields(raw)` | 语义反转（M7） | 幂等纯函数；返回 changed |
-| TUI 拉取 helper：`src/tui/model-catalog.mjs`（新增） | **新增** | `getProviderModels(providerConfig) → Promise<string[]>`（会话缓存 TTL 60s，失败不缓存；`dedupeModels` / `modelSeries` 迁入；**缓存时钟可注入**——测试假时钟钩子（先例 `rate.mjs` `_rateHooks`），T6 确定性断言不依赖壁钟） |
+| TUI 拉取 helper：`src/tui/model-catalog.mjs`（新增） | **新增** | `getProviderModels(providerConfig) → Promise<string[]>`（会话缓存 TTL 60s，失败不缓存；`dedupeModels` / `modelSeries` 迁入；**缓存时钟可注入**——测试假时钟钩子（同款 `rate.mjs` `_rateHooks`），T6 确定性断言不依赖壁钟） |
 | VSC `resolveDefaultModel(entry, raw)` | 回退链改（R6） | 复合属本渠道 → 渠道默认单值 → `null`（不再 `models[0]`） |
 
 ### 16.4 方案选型对比
@@ -928,7 +928,7 @@ Beta / 磁盘缓存默认开 / **多模态视觉**）；旧名 `deepseek-v4-flas
 | `model` | `"deepseek-v4-pro"` | **`"deepseek-flash"`** |
 | `thinking` | `{ type: "enabled" }` | 不变（V4.1-Flash thinking 默认开——显式 enabled 合法） |
 | `reasoningEffort` | `"max"` | 不变（∈ enum `low/high/max`——合法，§1 待核对项已核） |
-| `maxTokens` | 393216（= 384K） | 不变（与 `maxOutput` 同量级——既有 pro 行同值先例，无新风险） |
+| `maxTokens` | 393216（= 384K） | 不变（与 `maxOutput` 同量级——既有 pro 行同值在案，无新风险） |
 | `desc` | `"DeepSeek"` | 不变 |
 
 **（c）前缀匹配核对**（`SORTED_SPECS` 长度降序——§9 既有机制）：
@@ -1089,7 +1089,7 @@ Beta / 磁盘缓存默认开 / **多模态视觉**）；旧名 `deepseek-v4-flas
 - **AC-15（R15）**：`cd thincoder && node --test test/config-merge.test.mjs` 全绿（T35）；
   `cd thincoder-vscode && node --test test/config-merge.test.mjs` 全绿（T37）。
 - **AC-16（R16）**：`cd thincoder && node scripts/check-doc-width.mjs` 与
-  `cd thincoder-vscode && node scripts/check-doc-width.mjs`——**本批文件**（双端 `docs/design/PROVIDER.md` + 本批次档）
+  `VSC 仓 node scripts/check-doc-width.mjs`——**本批文件**（双端 `docs/design/PROVIDER.md` + 本批次档）
   新增超宽 0 行、V1/V2/V3 本批面新增违规 0 条（存量/它在飞批次条目不计——观察见 §19.6（d））。
 - **AC-17（R17）**：`cd thincoder && npm test` 与 `cd thincoder-vscode && npm test` 全绿（含 T30–T38
   新增面与既有断言同步面；VSC 新断言内嵌既有已注册档——无需 `test/files.mjs` 变更）。
@@ -1205,8 +1205,8 @@ core / responses / generate-title 被内置头覆盖，anthropic 通路无 `Auth
 
 | # | 候选 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论（选定/否决理由） |
 |---|---|---|---|---|
-| a1 | **各点内联展开**（`...(provider.headers ?? {})` 就地写——与 core.mjs / list-models.mjs 既有先例同形） | 零新机制、零新档；与既有先例一致；5 处一行式改动可 grep 逐一核对；防再漂移由**逐通路行为用例**（T39–T43）承担 | 同一行式表达式在 5 点重复——与 list-models 三处先例同量级 | **选定** |
-| a2 | 抽共享装配函数（新 `src/provider/headers.mjs` 或既有档导出），各点改调用 | 一处定义顺序语义；但**防漂移无效**（新通路仍须记得调用）；须连 core / list-models 同步改造才自洽（= 触碰已展开面，违背「只铺开」）；+1 新档 | 机制成本 > 收益；既有先例反证（list-models 三处亦内联） | 否决 |
+| a1 | **各点内联展开**（`...(provider.headers ?? {})` 就地写——与 core.mjs / list-models.mjs 既有形态同形） | 零新机制、零新档；与既有形态一致；5 处一行式改动可 grep 逐一核对；防再漂移由**逐通路行为用例**（T39–T43）承担 | 同一行式表达式在 5 点重复——与 list-models 三处同量级 | **选定** |
+| a2 | 抽共享装配函数（新 `src/provider/headers.mjs` 或既有档导出），各点改调用 | 一处定义顺序语义；但**防漂移无效**（新通路仍须记得调用）；须连 core / list-models 同步改造才自洽（= 触碰已展开面，违背「只铺开」）；+1 新档 | 机制成本 > 收益；既有形态反证（list-models 三处亦内联） | 否决 |
 | a3 | 反向顺序（内置头前、定制头后——允许定制头覆盖） | 与 core.mjs 既有语义**相反**（既有 = 内置头胜出）；用户可经 headers 覆盖 `Content-Type` / 认证头 = 语义变更（超范围） | 语义回退 + 安全面风险 | 否决 |
 
 **（b）`generate-title.mjs` 改造形态（§1 待裁 #2）**：**局部补**选定（= a1 形态应用于该通路——保持
@@ -1246,7 +1246,7 @@ core / responses / generate-title 被内置头覆盖，anthropic 通路无 `Auth
 
 | # | 决策 | 理由 | 否决备选 |
 |---|---|---|---|
-| 1 | 展开形态 = 各点内联（与既有先例同形） | §23.3（a）——一致性 + 最小改动面 | 共享装配（a2——防漂移无效 + 须动已展开面）；反向顺序（a3——语义回退） |
+| 1 | 展开形态 = 各点内联（与既有形态同形） | §23.3（a）——一致性 + 改动范围 | 共享装配（a2——防漂移无效 + 须动已展开面）；反向顺序（a3——语义回退） |
 | 2 | responses 三处 fetch 提升单 `const headers` | §23.3（c）——DRY + 单点可审 | 三处各自内联（漂移面 ×3） |
 | 3 | 覆盖语义 = 内置头胜出（定制头在前） | 对齐 core.mjs 既有语义 + 安全（认证 / 内容类型不可被 headers 劫持） | 反向顺序（= 语义变更） |
 | 4 | generate-title 局部补（不改「自建头」结构） | §23.3（b）——保持「只铺开」定性 | 统一装配（须连 core 一起改） |

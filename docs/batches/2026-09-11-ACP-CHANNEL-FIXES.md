@@ -2,6 +2,7 @@
 
 > 六段 append-only，**一段一作者**：§1 主 agent · §2 eng-designer · §3 评审子代理 · §4 主 agent · §5 eng-coder · §6 父代理。
 > 编制：主 agent · 2026-09-11 15:10 · 来源 = 用户 13:36「那几条你的建议都可以」（Gitee #IKEV9I + #IKEV9H——评估 id=48 逐条核实）。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -16,8 +17,12 @@
 
 ### 已核事实（id=48 侦察——免重复）
 
-- A1：`src/tools/question.mjs:20` 无 `ctx.onQuestion` 即 throw；TUI 接 `src/tui/tool-events.mjs:329`；`src/agent/dispatch.mjs:385` 原样转发；ACP `src/acp/bridge.mjs:168-285` buildAcpCallbacks **无 onQuestion**（全仓 grep 命中仅 question.mjs/dispatch.mjs/tui）；工具默认注册 `src/tools/index.mjs:22`；ACP 走同一 `assembleAgent`（`src/acp.mjs:78-81`）。漂移：`src/tools/question.md:1,8-10` 假承诺；`docs/design/ACP-CLIENT.md:113` 回调映射无 question 行；`docs/requirements/ACP-CLIENT.md:30-39` 无该工具不可用声明。
-- A2：生成侧 `src/agent/spawn-child.mjs:126-143`（onToken :130 / onReasoning :133 / onToolCall :136 / onToolOutput :139，嵌套递归）；TUI 剥离 `src/tui/subagent-blocks.mjs:32` SUB_PREFIX_RE + `:46-59` parseRelayPath、路由 `src/tui/tool-events.mjs:68/76/84/286`；ACP 侧 `src/acp/bridge.mjs:169-181` 仅剥 `[model]`/`⟦ev⟧`（不放行正文）、`onReasoning:183` 零剥离、`onToolCall:188-209`（`inferToolKind:27` 取 `/` 尾段）；`docs/design/ACP-CLIENT.md:113` 漂移。
+- A1：`src/tools/question.mjs:20` 无 `ctx.onQuestion` 即 throw；TUI 接 `src/tui/tool-events.mjs:329`；`src/agent/dispatch.mjs:385` 原样转发；ACP `src/acp/bridge.mjs:168-285` buildAcpCallbacks **无 onQuestion**（全仓 grep 命中仅 question.mjs/dispatch.mjs/tui）；工具默认注册
+  `src/tools/index.mjs:22`；ACP 走同一 `assembleAgent`（`src/acp.mjs:78-81`）。漂移：`src/tools/question.md:1,8-10` 假承诺；`docs/design/ACP-CLIENT.md:113` 回调映射无 question 行；`docs/requirements/ACP-CLIENT.md:30-39` 无该工具不可用声明。
+  机械折行（2026-09-12 形态清零轮）——语义零改
+- A2：生成侧 `src/agent/spawn-child.mjs:126-143`（onToken :130 / onReasoning :133 / onToolCall :136 / onToolOutput :139，嵌套递归）；TUI 剥离 `src/tui/subagent-blocks.mjs:32` SUB_PREFIX_RE + `:46-59` parseRelayPath、路由 `src/tui/tool-events.mjs:68/76/84/286`；ACP
+  侧 `src/acp/bridge.mjs:169-181` 仅剥 `[model]`/`⟦ev⟧`（不放行正文）、`onReasoning:183` 零剥离、`onToolCall:188-209`（`inferToolKind:27` 取 `/` 尾段）；`docs/design/ACP-CLIENT.md:113` 漂移。
+  机械折行（2026-09-12 形态清零轮）——语义零改
 
 ### 待设计裁定
 1. A1 剔除点（make-agent 工具装配 + acp 传入标志 vs bridge 过滤——勘察定）与 `question.md` 修正措辞；ACP 文档「能力缺口」节归属档；
@@ -69,7 +74,7 @@
 
 ### 待父侧排程 / 未确认面
 
-1. **文档联动（写域边界外——本设计已给最小改动面）**：`docs/design/TUI.md` §1 模块表 1 行 · `docs/design/AGENT-LOOP.md` §1 模块地图 ±2 行 · `docs/requirements/AGENT-LOOP.md` §1 +1 行。
+1. **文档联动（写域边界外——本设计已给完整修复路径）**：`docs/design/TUI.md` §1 模块表 1 行 · `docs/design/AGENT-LOOP.md` §1 模块地图 ±2 行 · `docs/requirements/AGENT-LOOP.md` §1 +1 行。
 2. **登记项（设计 §12.9——待父侧裁）**：① `thincoder chat` 同缺陷（`bin/thincoder.mjs:140` 未传剔除——同款一行修复）② 子代理 children 的工具剔除（`subagent-spawn.mjs:447-450` 无 `onQuestion`）③ kimi 式「子代理事件整体过滤」（需用户裁定）④ onToolOutput 流式补齐（后续批）。
 3. **需求池登记（记录 = 主 agent）**：本批未随任务带入 todo 项——`docs/TODO.md` 需求池缺本批条目（建议一行指针：需求 §13 + 本批 §2 + `status=在途`；eng-designer 未自行登记）。
 4. **批次档 §1 宽度债**：§1 :19 / :20 两行 >300 字符（`check-doc-width` 报）——一段一作者，请主 agent 就地折行。
@@ -87,7 +92,7 @@
 | 2 | 🟡 | AC6 指位对齐——二择一取②（不动需求 §13.2 R-A2.4 指位；按「裁剪权威＝需求 §12」补登记）：需求 §12「不做项」表新增 `onToolOutput` 明示缺行——设计 §12.6 权威声明因此成立；AC6 改两档 grep（`onToolOutput` 两档均命中）→ 设计 §12.8 AC6。 |
 | 3 | 🟡 | replay 缺口：补 **T18**（`replayHistory` 直驱——带前缀 → 剥离 / 无前缀 → 零变化；已核 = bridge 导出 `src/acp/bridge.mjs:299`，可直测）；设计 §12.7 表 1 头加「+ `replayHistory` 直驱」、表末增 T18 行；§12.3③ 表行 5 注 T18。 |
 | 4 | 🟡 | 新档计数对账——**父侧认定行**：`test/acp-channel.test.mjs` = 需求 §13.3 明示「新增断言档」（本批新档数 = 2：`src/agent/relay-prefix.mjs` 预授权 + 断言宿主）；免后续审计按 §1 字面判超额。 |
-| 5 | 🔵 | §2 上文遗留的模板占位行（原 :38）已由本节作者清理（同 SUBAGENT-TAIL / REVIEW-CHAIN-GUARDS 先例；D6 回读核实）。 |
+| 5 | 🔵 | §2 上文遗留的模板占位行（原 :38）已由本节作者清理（同 SUBAGENT-TAIL / REVIEW-CHAIN-GUARDS 同款；D6 回读核实）。 |
 | 6 | 🔵 | 行号互异以设计为准——本轮复核：`SUB_PREFIX_RE` = `src/tui/subagent-blocks.mjs:32`、`parseRelayPath` = `:51-67`（与源一致）；§1 :20 旧快照不回改；后续引用以符号名为主锚。 |
 | 7 | 🔵 | 锚形态口径已留——设计 §12.10 新增行（file:line = 勘察快照锚 as-of 2026-09-11；实施后维护以符号名为主锚）。 |
 | 8 | 🔵 | VSC 零面声明补硬证据（本轮现场）：`thincoder-vscode` 全仓 grep `acp` 仅文档/注释命中、无 `src/acp/`；`thincoder-vscode/src/tools/question.mjs:43-68` 实读 = panel 回调 + QuickPick/InputBox 兜底——与设计 §12.10 一致。 |
@@ -104,7 +109,6 @@
 
 ## §3 设计评审（评审子代理自写）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
@@ -159,7 +163,6 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 **状态：完成（2026-09-11）**——实施者 = eng-coder（设计 token 门通过；任务书 = 本档 §2 本体 + 修正块，冲突以修正块为准）。
 落笔面 = 2 新档 + 8 改动档（另 2 档为设计师已落的需求/设计文档面）；自含交付协议两轮：**分歧审计 1 轮**（explore 只读——四类偏差 0 发现）+ **内部代码评审 1 轮**（VERDICT pass：🔴0 · 🟡2 协调项 · 🔵3 记录面，其中 1 条 🔵 已就地收口）；**终态 = clean**。
@@ -200,7 +203,9 @@ _（待写——eng-coder）_
 
 ### ④ 偏差披露（零静默）
 
-1. **AC8 面（唯一未全绿项——写域外，须父侧处置）**：快层 1 红 = `test/doc-consistency.test.mjs:46`（T41 ① 新增违规阻断）。报出条目全部在本批 write 域之外：`docs/batches/2026-09-11-PORTABILITY.md`（V1 ×2）· `docs/batches/2026-09-11-TUI-SELECTION.md`（V1+V2）· `docs/batches/2026-09-11-ABORT-PROVENANCE.md`（V2）· 以及本档一行 V1（`本档「§13.2」`——位于评审子代理 §3 轮次 2 的引文内，一段一作者，eng-coder 不得改 §3）。本批代码面零贡献；建议父侧二择一：入基线登记（本批按「零新增」判）或由 §3 作者/父侧就地收口后复跑。
+1. **AC8 面（唯一未全绿项——写域外，须父侧处置）**：快层 1 红 = `test/doc-consistency.test.mjs:46`（T41 ① 新增违规阻断）。报出条目全部在本批 write 域之外：`docs/batches/2026-09-11-PORTABILITY.md`（V1 ×2）· `docs/batches/2026-09-11-TUI-SELECTION.md`（V1+V2）·
+   `docs/batches/2026-09-11-ABORT-PROVENANCE.md`（V2）· 以及本档一行 V1（`本档「§13.2」`——位于评审子代理 §3 轮次 2 的引文内，一段一作者，eng-coder 不得改 §3）。本批代码面零贡献；建议父侧二择一：入基线登记（本批按「零新增」判）或由 §3 作者/父侧就地收口后复跑。
+   机械折行（2026-09-12 形态清零轮）——语义零改
 2. **行为细面（依设计落法，非偏离）**：onToken/onReasoning 改「payload 非空才发」——裸空串 `onToken("")` 从「发空 chunk」变为「零通知」（设计 §12.3③ 行 1/2 + D6 的字面落法；T11 覆盖剥后空载荷）。
 3. **信号判定收敛（等价替换，已论证）**：`[model]`/`⟦ev⟧` 检查从「前缀可选组 + 锚定」改为「先 parseRelayPath 剥净再锚定」——`{prefix}*信号` 与 `parse(prefix).rest 为信号` 同构（同一条文法单源）；相位白名单逐字保留。
 4. **注释口径收口（评审 🔵）**：`src/agent/relay-prefix.mjs:34` 由「生成侧唯一前缀构造点」改为「本批统一的两个构造点」，并注明 escalate/advisor async 两处字面构造为另批登记——零语义。

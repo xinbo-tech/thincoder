@@ -176,7 +176,7 @@ Escalate to a stronger model (飞刀) — hand implementation to a stronger mode
 - Fits a complex multi-file refactor, an intractable bug, intricate algorithm work — or work beyond your comfortable ability.
 - Escalate EARLY, on up-front judgment — not after burning failed attempts.
 - `subagent(action:'escalate', task)` gets WRITE access and does the work itself; you review its report (read the changed files, run the tests).
-Escalate is DEFAULT-ASYNC at the top level (AGENT-LOOP.md §25): the launch returns an ack and the report arrives automatically with its mutations merged — never pass `async:false` at top level; if your next step needs the report, end the turn and let it arrive.
+Escalate is DEFAULT-ASYNC at the top level (AGENT-LOOP §25): the launch returns an ack and the report arrives automatically with its mutations merged — never pass `async:false` at top level; if your next step needs the report, end the turn and let it arrive.
 - Terminology: `escalate` is the only technical name (the `subagent` action); 飞刀 is the Chinese alias.
 - When the user says "飞刀" / "escalate" / "fly in <model>" — including colloquial forms like "飞刀一下" — call `subagent` with `action:'escalate'` directly — it is in YOUR tool table.
 Never write a script that imports the module.

@@ -1,9 +1,11 @@
 # websearch.provider 死键处置（Gitee #IKEI3M 副面）· 批次记录（2026-09-11）
 
-> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分）**：本档对端（VSC）份已由 VSC 仓 `docs/batches/2026-09-11-WEBSEARCH-PROVIDER-KEY（VSC 仓）` 逐字承载（D10——零改写）；本档保留本仓份。
-> 移出条目（对端份）清单：§2 实施域 VSC 3 档 + 审计轮对端面（as-of `:146`）——条目计数（对端份 / 本仓份）= 5 / 3（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。
+> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分 · 已切除 2026-09-12）**：本档对端（VSC）份**已自本档切除**（原文不再留本仓——D11 完全态）；承载档 = VSC 仓 `docs/batches/2026-09-11-WEBSEARCH-PROVIDER-KEY（VSC 仓）`（逐字搬运、零改写——D10）。
+> 已切除条目清单：§2 实施域 VSC 3 档 + §5 改动清单 VSC 3 行 + 审计轮对端面——条目计数（对端份 / 本仓份）= 5 / 3（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。**源档 blob SHA（切除前）= `ba3c8cec9080`**。
+> 变更记录：2026-09-12——对端份经承载档逐字承接后自本档物理切除；§4 批准范围 6 档 → 3 档（CLI）。
 
 > 六段 append-only，一段一作者。编制：主 agent · 2026-09-11 17:35 · 来源 = 评估 id=48 勘出 + 用户 13:52「开批，issue都别留着，及时处理」。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -35,7 +37,6 @@
 
 ## §2 批次任务（eng-designer 自写）
 
-_（待写——eng-designer）_
 
 **状态：任务书就绪**（2026-09-11——设计已落档，待设计评审 · 实施者 = eng-coder / 设计 token 门）。本 §2 = coder 任务书本体（不另写副本）。
 
@@ -61,7 +62,6 @@ _（待写——eng-designer）_
 **四、受影响文件**（详见设计 §11.4 表）
 
 - CLI：`src/config.mjs`（487 行——删 1 行）· `README.md`（472 行——删 1 行）· 新档 `test/websearch-config.test.mjs`（T1–T8 · ~80 行）
-- VSC（纳入 or 拆批待裁——荐同批）：`src/extension/settings.mjs` · `src/agent/setup.mjs` · `test/agent-lifecycle-singleton.test.mjs`；VSC 文档面零同步（VSC 档未申报该键——已核）
 - 文档 2 档已落（designer）；父侧：`CHANGELOG.md` / `docs/TODO.md` 记账（不入 coder files 域）
 
 **五、验收标准**——AC-1..AC-7（逐条见设计 §11.6）。跑法：`cd thincoder && node --test test/websearch-config.test.mjs` · `npm test`（快层）· `node scripts/check-doc-width.mjs`（新增 0）；VSC 面追加 VSC 仓同跑。
@@ -90,11 +90,11 @@ _（待写——eng-designer）_
 **三、逐条落点（设计档 `docs/design/TOOLS.md` §11）**
 
 - 🟡#1 覆盖表对齐 = 本追加「一、」表（补 AC-5 与 T7/T8；F6 行原「T1–T4」中的 T2 移出——T2→AC-4 归 N8 行）。
-- 🔵#2 AC-7 验证载体注（§11.6 AC-7 行）：磁盘/快照子句 = 代码走查（写点/快照点）+ 残留清扫产出（§11.7 注）；测试绿 = `cd thincoder-vscode && npm test`。
+- 🔵#2 AC-7 验证载体注（§11.6 AC-7 行）：磁盘/快照子句 = 代码走查（写点/快照点）+ 残留清扫产出（§11.7 注）；测试绿 = VSC 仓 `npm test`。
 - 🔵#3 T2 行为等价机验（§11.7 T2 行）：A/B 双配置——A 段去遗留键后与 B 段 deepEqual + `apiKey` 等值（D-2 保留语义下整段 deepEqual 不成立，取去键等值）。
 - 🔵#4 扫描枚举单源（§11.7 新注）：4 形态（点 / 括号 / 解构 / 单行申报）+ 排除面明确；AC-2 / T3 / T7 引用同源。
 - 🔵#5 T6 对齐 AC-3（§11.7 T6 行）：补 `apiKey` 子句。
-- 🔵#6 T5 符号面核实（§11.7 T5 行）：`_buildShapeTable` 已核为导出符号（`src/agent-tools/settings.mjs:265`）· 纯派生（`:54-58`）· 测试先例（`test/settings.test.mjs:19`）——假设成立，无须新增受影响行。
+- 🔵#6 T5 符号面核实（§11.7 T5 行）：`_buildShapeTable` 已核为导出符号（`src/agent-tools/settings.mjs:265`）· 纯派生（`:54-58`）· 测试同款（`test/settings.test.mjs:19`）——假设成立，无须新增受影响行。
 - 🔵#7 残留清扫注（§11.7 新注）：两仓 `src` + 文档面（含 `docs/`）配置域 provider 清扫，产出并入 §5 验收记录。
 - （核出项）VSC 播种点回填：`src/agent/setup.mjs` 兜底字面量 **3 处**（`:119` / **`:221`** / `:243`——原列 2 处，`:221` 为漏列）→ 设计 §11.3 / §11.4 表已修正。
 
@@ -106,7 +106,6 @@ _（待写——eng-designer）_
 
 ## §3 设计评审（评审子代理自写）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
@@ -146,13 +145,12 @@ VERDICT: pass
 
 **2026-09-12 02:10 父侧代签**——用户 12:48 授权（13:38 延展至排空）；三条件齐备：轮次 1 pass（🟡1 · 🔵7）→ 修正 8/8 + 核出项（播种 3 处回填）→ 轮次 2 pass（残遗 🟡1）→ **单行修正落定经核**（`:136`「另三处（:119/:221/:243）」——与 :164/:186 对齐）→ **token 已签发**（值不落档）。
 
-**批准范围**：实施域 6 档（CLI 3 + VSC 3）：`src/config.mjs`（−1）· `README.md`（−1）· 新档 `test/websearch-config.test.mjs`（T1–T8）· `thincoder-vscode/src/extension/settings.mjs`（−2）· `thincoder-vscode/src/agent/setup.mjs`（±3——3 处字面量）· `thincoder-vscode/test/agent-lifecycle-singleton.test.mjs`（±1）。
+**批准范围**：实施域 3 档（CLI 3）：`src/config.mjs`（−1）· `README.md`（−1）· 新档 `test/websearch-config.test.mjs`（T1–T8）。
 
 **遗留（批准时登记）**：① 父侧排程：残留清扫产出并入 §5 验收记录；② commit 待父侧。
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 **状态：clean**（内部偏离审计 clean · 内部代码评审 pass（🔴 0 · 🟡 0 · 🔵 3）· 交付验收 AC-1–AC-7 已核 · 实测口径 = read-tool 行数（内容行 + 尾行），内容行数括注）。实施者 = eng-coder（设计 token 门）。as-of 2026-09-11。
 
@@ -163,9 +161,6 @@ _（待写——eng-coder）_
 | 1 | CLI 声明 | `src/config.mjs` | `DEFAULTS.websearch` 删 provider 行 + 注释合并（§11.3 目标形态逐字） | 497 行（内容 496） | 0（设计预计 −1） |
 | 2 | CLI 文档 | `README.md` | 配置模板删 `"provider": "tavily",` 行（websearch 段两注释保留） | 472 行（内容 471） | −1 ✓ |
 | 3 | CLI 测试 | `test/websearch-config.test.mjs` | 新建——T1–T8（§11.7 逐条） | 111 行（内容 110） | 新建 |
-| 4 | VSC 写/读面 | `thincoder-vscode/src/extension/settings.mjs` | 写点删 `ws.provider = "tavily"`（:138-143）；快照 `{provider,hasKey}` → `{hasKey}`（:130-134） | 349 行（内容 348） | −1（设计预计 −2） |
-| 5 | VSC 兜底 | `thincoder-vscode/src/agent/setup.mjs` | 3 处字面量去 provider：`:119` / `:221` / `:243`（逐点位改） | 463 行（内容 462） | 0（±3 ✓） |
-| 6 | VSC 夹具 | `thincoder-vscode/test/agent-lifecycle-singleton.test.mjs` | `:45` 夹具同步（与 `setup.mjs:119` 同形） | 431 行（内容 430） | 0（±1 ✓） |
 
 ### 二、交付验收透明表（AC-1–AC-7——判据源 = 设计 §11.6）
 
@@ -185,18 +180,18 @@ _（待写——eng-coder）_
 |---|---|
 | `cd thincoder && node --test test/websearch-config.test.mjs` | 8 pass / 0 fail（246ms） |
 | `cd thincoder && npm test`（快层全量 ×2） | run2：tests 519 / pass 504 / fail 1——唯一 fail = `doc-consistency` T41（新增 5 条全在他批档：ACP-CHANNEL-FIXES / PORTABILITY / TUI-SELECTION）；run1 另见 2 负载型 flake（`activity-debloat` / `input-lock`——隔离单跑 10/10、4/4 绿复核）+ slow-gate 2 例（`portability-index`，他批）（cli-fast.log / cli-fast2.log） |
-| `cd thincoder-vscode && npm test` | tests 459 / pass 452 / fail 0 / skipped 7（9.8s）（vsc-fast.log） |
+| VSC 仓 `npm test` | tests 459 / pass 452 / fail 0 / skipped 7（9.8s）（vsc-fast.log） |
 | `node scripts/check-doc-width.mjs`（CLI 仓） | 宽度 11 文件/18 行 + 一致性新增 5 条——**全部他批在途档**；本批 3 档文档面零命中（dw-cli.log） |
 | `node scripts/check-doc-width.mjs`（VSC 仓） | OK 宽度（67 文件）· 一致性新增 0 · 存量 33（dw-vsc.log） |
 
 ### 四、残留清扫产出（设计 §11.7 注——并入本条验收记录）
 
 - `thincoder/src`：**0 命中**（websearch↔provider 语法关系）；Tavily 实现/注释 = 后端名（保留）。
-- `thincoder-vscode/src`：**0 命中**（`agent-state.mjs:92` = `cfg.websearch` 透传，无键面）。
+- VSC 仓 `src`：**0 命中**（`agent-state.mjs:92` = `cfg.websearch` 透传，无键面）。
 - 文档面：`thincoder/README.md` 0 命中；`thincoder/docs/` 命中 = 设计 TOOLS.md §11 / 需求 TOOLS.md F6·N8 / 本批次档（决策与历史记录——预期保留）。
 - ⚠ 域外命中 2 处（**父侧裁定项；本批未改——超批准 6 档域**）：
-  1. `thincoder-vscode/README.md:66`——配置模板仍申报 `"provider": "tavily",`（与 §2「VSC 档未申报该键——已核」断言不符；N8 文档面洞）。
-  2. `thincoder-vscode/webview/settings-state.js:21`——JSDoc 类型注解仍含 `provider?`（零功能影响：webview 只读 `hasKey`）。
+  1. `README.md:66`（VSC 仓）——配置模板仍申报 `"provider": "tavily",`（与 §2「VSC 档未申报该键——已核」断言不符；N8 文档面洞）。
+  2. `webview/settings-state.js:21`（VSC 仓）——JSDoc 类型注解仍含 `provider?`（零功能影响：webview 只读 `hasKey`）。
 
 ### 五、偏差披露（设计 §11.4 预计 vs 实测）
 
@@ -221,7 +216,7 @@ _（待写——eng-coder）_
 
 ### 八、边界遵守（设计 §11.8）
 
-`src/tools/web.mjs` 零改 · 工具描述/提示词零改 · 遗留值零剥离/校验/特判 · VSC 面板 UI 零改 · 不 commit · 不发起链上评审。批准域 6/6 档落齐，零超域改动（域外 2 处残留仅报告未改——见四）。
+`src/tools/web.mjs` 零改 · 工具描述/提示词零改 · 遗留值零剥离/校验/特判 · VSC 面板 UI 零改 · 不 commit · 不发起链上评审。批准域 3/3 档落齐（CLI 面），零超域改动（域外 2 处残留仅报告未改——见四）。
 
 ### 审计修正轮（2026-09-11——父侧裁定：域外 2 处「修」；eng-coder 自写）
 
@@ -232,21 +227,19 @@ _（待写——eng-coder）_
 
 | # | 档 | 改动 | 证据 |
 |---|---|---|---|
-| 1 | `thincoder-vscode/README.md` | websearch 配置模板删 `"provider": "tavily",` 行（原 :66——与 CLI README 同款） | git diff：−1 行；段内 `"apiKey"` 保留（模板仍成立） |
-| 2 | `thincoder-vscode/webview/settings-state.js` | JSDoc 类型注解去 `provider?: string`（:21）→ `{ hasKey?: boolean }` | git diff：−1 词；node --check OK；与实际读面一致（`settings-tools.js:50/:104` 仅读 `.hasKey`——「零功能影响」复核成立） |
 
 **二、终扫证据（两仓配置域 provider 残留——三查）**
 
-- **4 形态语法关系扫描**（点 / 括号 / 解构 / 单行申报；枚举与测试单源）：`thincoder/src` 0 · `thincoder-vscode/src` 0 · `thincoder-vscode/webview` 0——源码域合计 0。
+- **4 形态语法关系扫描**（点 / 括号 / 解构 / 单行申报；枚举与测试单源）：`thincoder/src` 0 · VSC 仓 `src` 0 · VSC 仓 `webview` 0——源码域合计 0。
 - **段级**（T6 语义扩展到 VSC README）：两 README `"websearch": {` 段内 provider 零出现 · `apiKey` 在 · 4 形态行命中 0。
 - **精确串 `"provider": "tavily"` 全树**：**VSC 仓 0 命中**；CLI 仓 3 档 = `test/websearch-config.test.mjs`（T7 负例探针）· `docs/design/TOOLS.md` §11（决策记录）· 本批次档（历史记录）——均为记录面，配置模板 / 代码面 0。
-- 附带：`thincoder-vscode/package.json` 无 websearch / provider 键面（VSC 配置 schema 零申报）；webview `provider?` 软残留 0。
+- 附带：VSC 仓 `package.json` 无 websearch / provider 键面（VSC 配置 schema 零申报）；webview `provider?` 软残留 0。
 
 **三、验证实测（先落盘再查——log 落 `%TEMP%`）**
 
 | 跑法 | 结果（log） |
 |---|---|
-| `cd thincoder-vscode && npm test` | tests 466 / pass 459 / fail 0 / skipped 7（8.2s——ws36-vsc-fix2.log） |
+| VSC 仓 `npm test` | tests 466 / pass 459 / fail 0 / skipped 7（8.2s——ws36-vsc-fix2.log） |
 | `node scripts/check-doc-width.mjs`（VSC 仓） | OK 宽度（67 文件）· 一致性新增 0 · 存量 33（ws36-vsc-dw.log） |
 | `cd thincoder && node --test test/websearch-config.test.mjs` | 8 pass / 0 fail（204ms——ws36-cli-fix.log） |
 

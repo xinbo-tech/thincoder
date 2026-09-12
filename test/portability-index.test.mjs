@@ -5,6 +5,8 @@
  * 断言对象 = src/memory/file-walk.mjs（walk 回退）+ code-sync/docs 接线
  * （{entries, unlisted} / indexExtensions / unlistedExts）+ cmd-reindex 提示行。
  * 全离线：临时目录 + :memory: 库（不跑 git 索引真实仓库）。
+ * 归册（2026-09-12 收尾轮 9）：T-13/T-14/T-16 为真 fs 索引构建（临时项目全遍历）——
+ * slow() 门控（快层 skip、test:full 照跑）。
  */
 import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
@@ -50,7 +52,7 @@ const declare = (payload) => {
   clearConventionsCache()
 }
 
-test("T-13 正常（非 git）：列表面覆盖 a.mjs/b.md；索引非空（原为全空）", async () => {
+slow("T-13 正常（非 git）：列表面覆盖 a.mjs/b.md；索引非空（原为全空）", async () => {
   w("a.mjs", "export const a = 1\n")
   w("b.md", "# doc\n")
   const mem = createMemory({ dbPath: ":memory:" })
@@ -61,7 +63,7 @@ test("T-13 正常（非 git）：列表面覆盖 a.mjs/b.md；索引非空（原
   assert.equal(mem.db.prepare("SELECT COUNT(*) n FROM code_chunks").get().n > 0, true, "非 git 项目索引非空（原为全空）")
 })
 
-test("T-14 边界（walk）：node_modules/.hidden 跳过；超限截断标记；上限常量在册", async () => {
+slow("T-14 边界（walk）：node_modules/.hidden 跳过；超限截断标记；上限常量在册", async () => {
   w("ok.mjs")
   w("node_modules/junk.mjs")
   w(".hidden/h.mjs")
@@ -94,7 +96,7 @@ test("T-15 正常（扩展名）：.dart/.lua/.cs/.org 默认可索引 + 语言�
   for (const ext of [".org", ".wiki"]) assert.ok(doc.has(ext), `声明面缺文档扩展名 ${ext}`)
 })
 
-test("T-16 边界（声明）：index.codeExtensions 声明后 .xyz 入索引；未列入 → unlistedExts 计数", async () => {
+slow("T-16 边界（声明）：index.codeExtensions 声明后 .xyz 入索引；未列入 → unlistedExts 计数", async () => {
   w("a.xyz", "payload\n")
   w("b.mjs")
   const listed = await listProjectFiles(tmp, indexExtensions(tmp).code)

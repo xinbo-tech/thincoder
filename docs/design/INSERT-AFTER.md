@@ -40,4 +40,4 @@ VSC 端 insert_after normalizeEOL + 编辑器分支换行符按 fileEol（消除
 
 ## 变更记录
 
-- 2026-09-08：文档重组——insert_after 语义从 TOOLS.md §6.2 + insert_after.md 描述并入本文档（每工具一档）。
+- 2026-09-08：文档重组——insert_after 语义从 TOOLS §6.2 + insert_after.md 描述并入本文档（每工具一档）。

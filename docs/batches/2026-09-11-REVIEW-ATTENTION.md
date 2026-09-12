@@ -1,6 +1,7 @@
 # 评审失败护栏 + 用户介入提醒（#IKDCVV 收口）· 批次记录（2026-09-11）
 
 > 六段 append-only，一段一作者。编制：主 agent · 2026-09-11 15:10 · 来源 = 用户 13:36「都可以」（Gitee #IKDCVV——评估 id=47 拆条；②④ 两面获准）。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -33,7 +34,6 @@
 
 ## §2 批次任务（eng-designer 自写）
 
-_（待写——eng-designer）_
 
 **状态：任务书就绪**（2026-09-11——需求层 + 设计/测试层已落档，待设计评审——发起权在用户）。实施者 = eng-coder（设计 token 门）。本 §2 = coder 任务书本体（不另写副本；契约逐字 / 用例表 / AC 判据全文在设计档各节，本段只做任务书 + 口径锚）。
 
@@ -69,7 +69,7 @@ G2（TUI，5 改 + 1 新）：`src/tui/render-frame.mjs`（派生 + chip + 底�
 **需父侧排程（非本设计者写域 / 非 coder 域）**
 
 1. **VSC 两链**：G2 面（所需档 = `WEBVIEW（VSC 仓）` 新增 attention 节 + `REQUIREMENTS（VSC 仓）` 登记；
-   最小改动面 = `chat-panel.mjs` `_setStatus`/`_refreshStatus` + `webview/status-bar.js`/`*.css` + `locales/{en,zh}.json` + `test/files.mjs` 注册——设计档 §14.9 #2）；
+   完整修复路径 = `chat-panel.mjs` `_setStatus`/`_refreshStatus` + `webview/status-bar.js`/`*.css` + `locales/{en,zh}.json` + `test/files.mjs` 注册——设计档 §14.9 #2）；
    G1 镜像（VSC `agent-tools/advisor-async.mjs` **492 行近帽**——先评估拆分；设计档 §17.9 #1）。
 2. `docs/TODO.md` 池行 / #IKDCVV 台账 / CHANGELOG 记账——父侧写域。
 3. **D5 核对（开工前）**：本批四档（两需求 + 两设计）写入时点若有他链评审在途（本设计者不可见父侧评审池），本次写入会致其 stale——请父侧点火前核对；他链在途批次档现含 `2026-09-11-PORTABILITY.md` / `2026-09-11-TUI-SELECTION.md` 等（`check-doc-width` 一致性面报告 4 条新增违规在他链档，非本批写域——如实转报）。
@@ -107,7 +107,6 @@ G2（TUI，5 改 + 1 新）：`src/tui/render-frame.mjs`（派生 + chip + 底�
 
 ## §3 设计评审（评审子代理自写）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
@@ -115,9 +114,9 @@ _（待写——评审子代理）_
 |---|----------|----------|-------|------------|
 | 1 | 文档一致性（需求⇄设计） | 🟡 | `docs/requirements/TUI.md:41`（F13④）把 `processing` 列入「非触发态」；`docs/design/TUI.md:1243`（§14.6 INPUT-LOCK 行）与 :1152 派生首行（permission/question ⇒ blocked 无条件）表明「processing 中弹审批/提问」仍提醒——该情形的字面表述两处相反。设计侧与 F13 正向触发集一致、自洽；仅与④括注字面不一致——判为措辞滞后，非机制冲突 | 建议父侧文档层对 F13④ 与 §14.6 的表述做一致性收敛（消除字面歧义）；可同时建议 T-AT1/T-AT3 矩阵补「blocked + processing 同真」一行锁住裁决 |
 | 2 | 验收强度（负向锁） | 🔵 | `docs/requirements/TUI.md:55`（N9 判定句）要求「attention 为 null 时状态帧与改动前逐字节等价」；设计操作化为「`\x1b[43m` 零出现」（`docs/design/TUI.md:1175`），T-AT2/AC-AT2（:1259/:1275）只断言零序列+strip-ANSI 形态——弱于字面等价 | 可选：为平态负向锁补基线夹具对照，或把 N9 判定句与 T-AT2 的验收口径明确对齐——两选一，父侧文档层定 |
-| 3 | 受影响表（档位标注一致性） | 🔵 | `docs/design/ADVISOR-CONVERGENCE.md:1380`（§17.6 行 5）`advisor-async.mjs` 350 行（>300）档位结论只写「交付 ~344 ≤500 ✓」，未沿同批 >300 文件的「>300 advisory」标注先例（对照 `docs/design/TUI.md:1208-1210`）；§17.9 :1428-1430 拆分评估只提 VSC 侧 492 行档 | 统一标注口径即可（补 advisory 标注或注明净减理由）——不影响放行 |
+| 3 | 受影响表（档位标注一致性） | 🔵 | `docs/design/ADVISOR-CONVERGENCE.md:1380`（§17.6 行 5）`advisor-async.mjs` 350 行（>300）档位结论只写「交付 ~344 ≤500 ✓」，未沿同批 >300 文件的「>300 advisory」既定标注（对照 `docs/design/TUI.md:1208-1210`）；§17.9 :1428-1430 拆分评估只提 VSC 侧 492 行档 | 统一标注口径即可（补 advisory 标注或注明净减理由）——不影响放行 |
 | 4 | 设计完备性（生命周期语义） | 🔵 | `docs/design/ADVISOR-CONVERGENCE.md:1438-1439`（§17.9 #5）把 `_designReviewStreaks` 与 `_advisorRuns` 重置点一致性留给「实施时同点清空或在本节登记（二选一）」——影响可观察语义（eng 模式切换能否在会话内复位护栏），与 `docs/requirements/ADVISOR-CONVERGENCE.md:316`（F28⑤「停止在该会话内不可自解除」）及结论串三选项相交 | 建议点火前在设计侧先定并写明各自语义；若维持二选一，回收选中项进 §17.9 |
-| 5 | 验收强度（置位接线） | 🔵 | G2 置位点「顶层链尾」（`docs/design/TUI.md:1177-1186`）无行为用例、无 call-site 静态锚——T-AT6 只测谓词矩阵、T-AT8（:1265）只查零新 setInterval+导出在位；对照 G1 先例 T-SK9（`docs/design/ADVISOR-CONVERGENCE.md:1454`）含消费点静态锚 | 建议 T-AT8 沿 T-SK9 先例补置位调用点静态锚（一行 grep 级），把 D-AT6 接线裁决纳入机判 |
+| 5 | 验收强度（置位接线） | 🔵 | G2 置位点「顶层链尾」（`docs/design/TUI.md:1177-1186`）无行为用例、无 call-site 静态锚——T-AT6 只测谓词矩阵、T-AT8（:1265）只查零新 setInterval+导出在位；对照 G1 侧 T-SK9（`docs/design/ADVISOR-CONVERGENCE.md:1454`）含消费点静态锚 | 建议 T-AT8 沿 T-SK9 同款补置位调用点静态锚（一行 grep 级），把 D-AT6 接线裁决纳入机判 |
 | 6 | 证据范围（披露） | 🔵 | 本评审按声明限读所列节段，未打开实现源文件——§17.6/§14.4 实现域「当前行数/增量」为设计侧实测声明，未在本评审内独立复核；文档域四行与磁盘一致（design/ADVISOR-CONVERGENCE.md 1499 行 · design/TUI.md 1342 行 · requirements/TUI.md 75 行 · requirements/ADVISOR-CONVERGENCE.md 334 行——均与声明落档值吻合） | 无需动作——交付链 AC-SK6/AC-AT6「实测对表」兜底 |
 
 核验计数：🔴 0 · 🟡 1 · 🔵 5。重点核①–⑤逐项核验通过（三选型与口径逐条一致；G2 七面裁决+色对+chip+稳态+置位/消除齐备；受影响 12 项=9 改+3 新、档位无越帽、T-SK1–10/T-AT1–8 与 AC-SK1–6/AC-AT1–6 清单对齐；两档冲突核对节零冲突；三方条目映射一致、D5 冻结提示与 VSC 两链登记在档）。
@@ -143,7 +142,6 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 ### 实施记录（eng-coder 自写——2026-09-11）
 
@@ -160,11 +158,11 @@ _（待写——eng-coder）_
 | G1 | `src/advisor/run.mjs` | 239 → ~281 | 294 | ≤300 ✓ |
 | G1 | `src/agent-tools/advisor.mjs` | 241 → ~261 | 261 | ≤300 ✓ |
 | G1 | `src/agent-tools/advisor-settle.mjs` | 212 → ~222 | 232 | ≤300 ✓ |
-| G1 | `src/agent-tools/advisor-async.mjs` | 354 → ~348 | 347（净 −7） | >300 advisory（存量先例） |
+| G1 | `src/agent-tools/advisor-async.mjs` | 354 → ~348 | 347（净 −7） | >300 advisory（存量档） |
 | G1 | `test/design-review-streak-guard.test.mjs` | 新 → ~230 | 292 | ≤500 ✓ |
-| G2 | `src/tui/render-frame.mjs` | 377 → ~409 | 397 | >300 advisory（存量先例） |
+| G2 | `src/tui/render-frame.mjs` | 377 → ~409 | 397 | >300 advisory（存量档） |
 | G2 | `src/tui/ansi.mjs` | 49 → ~54 | 51 | ≤300 ✓ |
-| G2 | `src/tui/agent-turn.mjs` | 324 → ~336 | 344 | >300 advisory（存量先例） |
+| G2 | `src/tui/agent-turn.mjs` | 324 → ~336 | 344 | >300 advisory（存量档） |
 | G2 | `src/tui/key-handler.mjs` | 441 → ~446 | 475 | >300 advisory（<500 ✓） |
 | G2 | `src/tui/index.mjs` | 450 → ~458 | 455 | >300 advisory（<500 ✓） |
 | G2 | `test/attention-state.test.mjs` | 新 → ~200 | 211 | ≤500 ✓ |

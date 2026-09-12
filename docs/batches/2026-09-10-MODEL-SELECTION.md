@@ -1,7 +1,11 @@
 # 模型清单 provider 化 + 去候选否决权 · 批次记录（2026-09-10）
 
-> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分）**：本档对端（VSC）份已由 VSC 仓 `docs/batches/2026-09-10-MODEL-SELECTION（VSC 仓）` 逐字承载（D10——零改写）；本档保留本仓份。
-> 移出条目（对端份）清单：§2 双块之 VSC 源块（as-of `:237`）+ §5 对端主体提交（`9299661`）——条目计数（对端份 / 本仓份）= 28 / 30（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。
+> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分 · 已切除 2026-09-12）**：本档对端（VSC）份**已自本档切除**（原文不再留本仓——D11 完全态）；承载档 = VSC 仓 `docs/batches/2026-09-10-MODEL-SELECTION（VSC 仓）`（逐字搬运、零改写——D10）。
+> 已切除条目清单：§2 双块之 VSC 源块（18 文件）+ VSC 测试块（10 文件）——条目计数（对端份 / 本仓份）= 28 / 30（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。**源档 blob SHA（切除前）= `f121fb82bf68`**。
+> 变更记录：2026-09-12——对端份经承载档逐字承接后自本档物理切除；档首注记形态收敛为「已切除」。
+> 变更记录（收尾轮）：2026-09-12——§2「范围追加」节两处对端纯端片段（追加范围行 + VSC 档落点行）补切；承载档/对应设计档承接。
+> 已切除条目清单（补切 · 收尾轮 4）：§2「范围追加评审修正轮」节对端引用（落点句 + AC-10 行）——**源档 blob SHA（切除前）= `c8953eeb5368`**；承载档 = VSC 仓 `docs/batches/2026-09-10-MODEL-SELECTION（VSC 仓）`（逐字搬运——D10）。
+> 变更记录（收尾轮 4）：2026-09-12——上列对端引用经 VSC 侧补承载（逐字核对通过）后补切。
 
 > 六段 append-only，**一段一作者**：§1 讨论（主 agent）· §2 批次任务（eng-designer）·
 > §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder）· §6 验证与收口（父代理）。
@@ -48,7 +52,7 @@
    留的是**单值**（一个启动/兜底模型）。不保留的代价：无网或端点不支持时，必须先手输模型名才能开始对话。
 8. **排除方向（沿用原条目）**：不是"放宽 F-1"、不是给白名单开后门、不是往 `models[]` 补登记一行
    （补登记 = 迁就该拆的错结构）。
-9. **槽位面已是目标形态**（现成先例，非新机制）：`/submodel` 与 `/config` consult 池（`model-picker.mjs:177` 起）
+9. **槽位面已是目标形态**（现成形态，非新机制）：`/submodel` 与 `/config` consult 池（`model-picker.mjs:177` 起）
    **已**从 `listModels` 拉取并**直接可选**、不受 `models[]` 约束。本批实质 = 把**会话面**提升到槽位面语义。
 
 ### 对账结果（与现有文档/裁定的冲突 + 用户澄清）
@@ -61,7 +65,7 @@
 | 4 | `docs/design/PROVIDER.md` §9（规格表与决策）/ §11（模型支持与预设） | 本批设计落点；§11「预设 = models 种子（裁定⑦）」改写为「预设 = 单值默认模型」 |
 | 5 | `_archive/MODEL-MERGE-SESSION.md` F-1/F-7 裁定（候选白名单） | `_archive/` **正文冻结不重写**；取代关系在 `PROVIDER.md` 变更记录记一行，代码注释内 F-1/F-7 引用就地清理 |
 | 6 | `docs/TODO.md:275-304` 需求池条目（多行细节） | 本批已改写为**指针条目**（顺带兑现 `docs/TODO.md:144` 的"条目格式收拢"） |
-| 7 | VSC 端是否有对应 Provider 板块档需同改 | **待勘察**（designer 定：`thincoder-vscode/docs/` 现状 + 是否新增） |
+| 7 | VSC 端是否有对应 Provider 板块档需同改 | **待勘察**（designer 定：VSC 仓 `docs/` 现状 + 是否新增） |
 
 > 口径注（本批不动）：预设的 `maxTokens` / `thinking` / `reasoningEffort` / `format` 等字段**保留原样**——
 > 本批只动"模型清单"这一件事。
@@ -103,7 +107,7 @@
 - `src/provider/core.mjs` `listModels`（`:352` 起，勘察）——`GET {baseURL}/models` + Bearer + 超时；
   **仅 OpenAI 形状**。`claude`（`format:"anthropic"`）需 `x-api-key`/`anthropic-version`，`gemini`（`format:"google"`）
   走 `?key=` 路径——两者用现实现会 401/404 ⇒ 本批须按 format 各实现一份。
-- 槽位面（`model-picker.mjs:177` 起 + `:287` 起，前段已读）——已有"拉取即候选、直接可选"的先例可参照。
+- 槽位面（`model-picker.mjs:177` 起 + `:287` 起，前段已读）——已有"拉取即候选、直接可选"的形态可参照。
 
 **固化契约测试**
 
@@ -119,7 +123,7 @@
 | 3 | 渠道默认模型（单值） | `config.mjs` 预设 · `config-migrate.mjs` · `session.mjs` 槽位兜底 · `model-ref.mjs`（`firstCandidate` 退场） | 待设计 |
 | 4 | 显式 `provider:model` 放行 | `model-ref.mjs`（`parseModelRef`）· `model-picker.mjs`（`selectModel` + 建议行）· `cmd-model.mjs` | 待设计 |
 | 5 | 切换回显 spec 来源（DEFAULT 警示色） | `model-picker.mjs` · `cmd-model.mjs` · `model-specs.mjs`（须暴露"是否命中"判据——现返回共享对象无来源信息） | 待设计 |
-| 6 | VSC 端同批对齐 | `thincoder-vscode`：`config-io.mjs` · `panel-messages.mjs` · `config-migrate.mjs` · `wizard.mjs`（勘察定） | 待设计 |
+| 6 | VSC 端同批对齐 | VSC 仓：`config-io.mjs` · `panel-messages.mjs` · `config-migrate.mjs` · `wizard.mjs`（勘察定） | 待设计 |
 
 ### todo 项（提交 designer 时必须带上）
 
@@ -209,7 +213,7 @@
 - **`defaultModel` 的 F-5/F-6 语义**（新会话起点 + 未设显式引导）——不改。
 - **子代理 / advisor 模型覆盖语义**（自由串 / 裸渠道名 / `default` 别名）——红线零改；仅改其 `models[0]` 兜底取值。
 - **VSC 面板 spec 来源回显**——本批不做（O2 已裁——用户 2026-09-10；见 §16.7）。
-- **VSC 仓文档更新**（`thincoder-vscode/docs/design/PROVIDER.md`）——父侧收口后执行（用户 2026-09-10 裁定 O4），不在 coder 交付物。
+- **VSC 仓文档更新**（`PROVIDER（VSC 仓）`）——父侧收口后执行（用户 2026-09-10 裁定 O4），不在 coder 交付物。
 - **拉取结果持久化缓存 / 双端同步依赖 / 逐字硬一致**——不做。
 
 ### 受影响文件（带当前行数 + 预计增量）
@@ -237,22 +241,13 @@
 **CLI 测试（7 文件，其中新增 2）**：`test/list-models.test.mjs`（新增 ~130）· `test/provider-admission.test.mjs`（新增 ~110）· `test/model-ref.test.mjs`（170→~190 重写）·
   `test/config-merge.test.mjs`（151→~160 重写）· `test/provider-model-guard.test.mjs`（132→~140）· `test/consult-models-softfail.test.mjs`（98，核查）· `test/advisor-provider.test.mjs`（72，核查）。
 
-**VSC 源（18 文件，其中新增 1）**：
-
-- `src/config-presets.mjs`(41) · `src/config-migrate.mjs`(161,+25) · `src/config-io.mjs`(438,±5) · `src/provider.mjs`(456,−15) · `src/provider/list-models.mjs`（新增 ~95）· `src/provider/transports/openai.mjs`(±0 文案)
-- `src/advisor/provider.mjs`(39) · `src/agent-tools/subagent.mjs`(358) · `src/extension/settings.mjs`(332,+20) · `src/extension/provider-flows.mjs`(193,+15) · `src/extension/settings-panel-write.mjs`(134,+10) · `src/extension/vision-channel.mjs`(23,+5)
-- `src/extension/panel-chat.mjs`(499,核查) · `src/extension/turn-model.mjs`(28,核查) · `src/extension/presets.mjs` / `panel-messages.mjs`(454) / `panel-session.mjs`(333)（头注/注释）· `webview/settings-providers.js`(264,+20)
-
-**VSC 测试（10 文件）**：`test/config-merge.test.mjs`(126 重写) · `test/provider-admission.test.mjs`（新增）· `test/provider-model-guard.test.mjs`(149 改) · `test/image-downgrade.test.mjs`(120 改) ·
-  `config-io-panel`(101) / `config-softfail`(114) / `settings-panel`(87) / `chat-panel`(621)（核查） · `test/files.mjs` + `smoke-provider.mjs`（注册表/smoke 核查）。
-
 ### 验收标准（逐条回指需求）
 
 > 与 `../design/PROVIDER.md` §17.2 一致（AC-1..AC-9）；机器验证命令照写。
 
 | AC | 回指 | 验证（机器可判） |
 |---|---|---|
-| AC-1 | R1 | `node --test test/list-models.test.mjs` 全绿（三 format 分派：URL/请求头/响应解析/失败态）；拉取失败 = 该渠道不可选 + 明示原因（T5/T20）；picker 候选行来自拉取的 mock 断言；VSC 静态候选来源清除：`cd thincoder-vscode && grep -rn "configCandidates" src/` → 空（标识符只在 VSC 仓——现状 `settings.mjs:301-317` 命中；CLI 仓无此名） |
+| AC-1 | R1 | `node --test test/list-models.test.mjs` 全绿（三 format 分派：URL/请求头/响应解析/失败态）；拉取失败 = 该渠道不可选 + 明示原因（T5/T20）；picker 候选行来自拉取的 mock 断言；VSC 静态候选来源清除：VSC 仓 `grep -rn "configCandidates" src/` → 空（标识符只在 VSC 仓——现状 `settings.mjs:301-317` 命中；CLI 仓无此名） |
 | AC-2 | R2 | `node --test test/config-merge.test.mjs` 全绿（迁移后磁盘无 `models` 键）；配置字段读写零残留：`cd thincoder && grep -rn --exclude=config-migrate.mjs --exclude=consult.mjs --exclude=cmd-advisor.mjs --exclude=model-catalog.mjs --exclude=list-models.mjs "\.models" src/` → 空 |
 | AC-3 | R3 | 预设 20 条单值断言；槽位/克隆兜底断言绿（provider-model-guard） |
 | AC-4 | R4 | `node --test test/model-ref.test.mjs` 表驱动全绿（放行：候选外/多冒号；无效：三类） |
@@ -267,7 +262,7 @@
 - **交付物**：双端代码 + 测试改动（工作区未提交）；本文档 §5 自写实施记录（交付摘要 / 透明表 / 轮次 / 终态）。
 - **凭证**：designId + designToken 经 spawn 参数传递（**绝不进任务文本、绝不落文档**）。
 - **建议 spawn 面**：本批跨双仓——建议按仓拆两个 eng-coder（CLI / VSC 各一，files 域不重叠）或单 coder 顺序实施；由主 agent 定。
-- **实现提示（勘察已核，供免重复勘察）**：三 format 的端点规范与响应形状见 §16.2 M1（已核）；VSC webview 直读 config 字段的四处（§16.10 #2）与 custom 空条目判据（#3）易漏；`setup-wizard.mjs:43` 既存 bug 本批自动对上（#4）；M9 准入探复用 `provider/list-models.mjs`（双端）——VSC 既有 `testProviderConnection`（`settings.mjs:155`）为现成探针先例。
+- **实现提示（勘察已核，供免重复勘察）**：三 format 的端点规范与响应形状见 §16.2 M1（已核）；VSC webview 直读 config 字段的四处（§16.10 #2）与 custom 空条目判据（#3）易漏；`setup-wizard.mjs:43` 既存 bug 本批自动对上（#4）；M9 准入探复用 `provider/list-models.mjs`（双端）——VSC 既有 `testProviderConnection`（`settings.mjs:155`）为现成探针同款。
 - **边界重申**：撞设计缺口 → 停下报告；超范围改动 → 逐项报告；不编辑设计文档。
 
 
@@ -286,7 +281,7 @@
 | 4 | §17.2 AC-8 | 显式排除集：`--exclude=PROVIDER.md --exclude-dir=_archive`；目标态自检（排除后当前码非空 → 目标空）；归档 SHA 检查保留 |
 | 5 | §16.5（VSC 源表 + VSC 测试表） | 行数补齐：openai.mjs 308 · presets 85 / panel-messages 454 / panel-session 333 · files 41 · smoke-provider 65；smoke-provider 增量「核查」→「改」 |
 | 6 | R9 · §16.2 M8/M9 · §16.7 · T24 · AC-9 | 文案分工钉死：消息本体 = 逐字长句 `…——无法选择模型，请改用其他渠道`；状态标签 = `不可用`（唯一逐字断言对象） |
-| 7 | §16.3（model-catalog 行）· T6 | 缓存时钟可注入（先例 `rate.mjs` `_rateHooks`；本函数钩子 `_catalogHooks`）——T6 假时钟确定性断言 |
+| 7 | §16.3（model-catalog 行）· T6 | 缓存时钟可注入（同款 `rate.mjs` `_rateHooks`；本函数钩子 `_catalogHooks`）——T6 假时钟确定性断言 |
 | 8 | §16.2 M1 · §16.6 #14 | 决策：候选不过滤非对话模型（embedding 等）——理由与否决备选入决策表 |
 | 9 | N2 · §16.2 M9 边界 · T25 | 零探测边界定义：探测只允许发生在配置写入面；首启向导加渠道 = 配置流内动作（不受限）；非配置流启动零探测 |
 | 10 | §16.2 M3① · §16.5 turn-model.mjs 行 | VSC 对位核验：等价回落**已有**（`runModel = modelOverride \|\| slotModel \|\| baseModel`——槽空经 `baseModel`=`resolveDefaultModel` 新回退链）；注释同步项列入 |
@@ -314,8 +309,6 @@
 > 依据：§5 VSC 面 advisor 代码评审 🟡#1（语义悬挂——上报父侧裁定）+ 用户 2026-09-11 01:45 裁定「并入本批，不单独立项」。
 > 本轮 = 设计档范围追加落档（docs FIRST——同链补记）；**实现前须用户重新发起一轮设计评审 + 批准**（不自动进入实施）。
 
-**追加范围**：`thincoder-vscode/webview/model-picker.js`（135 行——2026-09-11 实测）`handleModelsMessage` 兜底分支（as-of 快照 `:118-126`）。
-
 **语义（已裁——与 CLI 对位同源）**：候选未命中不得静默写会话槽——未命中/兜底场景只允许【保持当前选择 + 呈现候选】；
 写会话槽仅显式用户动作（点击候选行）。CLI 对位 = `tui/cmd-config.mjs` 会话重载兜底 `keep.model`（本批已交付）。
 
@@ -326,7 +319,6 @@
 | 需求 | `../design/PROVIDER.md` §0.2 | **R10**（新增） |
 | 机制 | `../design/PROVIDER.md` §16.2 | **M10**（新增） |
 | 用例 / 验收 | `../design/PROVIDER.md` §17.1 / §17.2 | **T29 / AC-10**（新增） |
-| VSC 档 | `thincoder-vscode/docs/design/PROVIDER.md` §3 / §3.2 | 差异表「未随本批对齐」→「本批处置」 |
 | 文件表 | `../design/PROVIDER.md` §16.5（VSC 源表 + 测试表） | `webview/model-picker.js` + 新测试档 |
 
 **实现面（待新评审 + 用户批准后 spawn）**：VSC 端单端改动——webview 兜底分支去静默写槽（零 `postMessage`、保持当前选择显示）；
@@ -337,7 +329,6 @@
 ### 范围追加评审修正轮（2026-09-11——8 条采纳项落档）
 
 > 依据：§3 轮次 2 评审（🟡×3 + 🔵×5——VERDICT: pass）经主 agent 裁决**全部采纳**；本轮 = 设计档修正（docs FIRST——同一 designId 链内，不重新发起评审）。
-> 落点 = `../design/PROVIDER.md` 与 `thincoder-vscode/docs/design/PROVIDER.md` 两档；**本小节声明对 §2 上文的修正**——上表与本小节不一致处，以本小节 + 两设计档为准。
 
 **逐条落点（编号 = §3 轮次 2 评审发现编号）**：
 
@@ -350,13 +341,9 @@
 | 5 | CLI 档 §16.5 VSC 测试表 | `test/files.mjs` 行数刷新：41 → 48（2026-09-11 实测） |
 | 6 | CLI 档 §16 首注 · 本档顶部状态行 | 状态拆两态：主体（R1–R9/M1–M9）已实施并过父侧代码评审 / 范围追加（R10/M10）增量已评审待批准 |
 | 7 | VSC 档 §3.2 · CLI 档 M10 CLI 对位行 + §16.5 cmd-config 行 | 「会话重载兜底 = `keep.model`」→ 主行为 = 会话值优先（`cmd-config.mjs:67-71` `sessionModel ?? dm.model ?? keep.model`）；`keep.model` 仅链尾兜底 |
-| 8 | 本档 §2（本小节） | AC 计数修正：验收标准前言「AC-1..AC-9」前向扩读为 **AC-1..AC-10**；AC-10 行增补如下（前言行为 append-only 不改——以本注记为准） |
+| 8 | 本档 §2（本小节） | AC 计数修正：验收标准前言「AC-1..AC-9」前向扩读为 **AC-1..AC-10**；**AC-10 行已随对端份迁出**（前言行为 append-only 不改——以本注记为准） |
 
-**验收表增补行（AC-10——对应「范围追加」小节与 `PROVIDER.md` §17.2）**：
-
-| AC | 回指 | 验证（机器可判） |
-|---|---|---|
-| AC-10 | R10 | `cd thincoder-vscode && node --test test/model-picker-fallback.test.mjs` 全绿（T29——未命中零 `selectModel` / `selectReasoning` post = 会话槽零写；显示与状态回落会话槽复合（== prefs 复合）；命中分支同值回写仍在）；`npm test` 全绿（新档已注册 `test/files.mjs`）。 |
+**（父侧形态更正 2026-09-12）**：原「验收表增补行（AC-10）」块**已随对端份迁出**——引导行与空表座随之清空；对应内容见**档首移出清单**与对端**承载档**（本档内不再留空表头/空表体）。
 
 **§2 上文其余句的读法与本轮裁定（本小节修正）**：
 
@@ -386,7 +373,7 @@
 | 4 | Acceptance criteria | 🟡 | AC-8 的机器检查按字面不可能返回空——被搜字面量出现在 AC-8 自己行（:779）、R8 行（:34）、§16.1（:444）、§16.4 表头（:490）与 SESSION.md:230（变更叙述）；两处版本排除集不一致（:779「§16 本文叙述除外」vs 批次档 :259 仅「_archive/ 除外」）。 | 按 AC-2 白名单范式给出显式排除/收窄 pattern，两处 AC 文本对齐；保留归档 SHA 检查 |
 | 5 | File-size annotations | 🟡 | §16.5 部分将改动的源/测试文件缺「当前行数」（「—」）：VSC `transports/openai.mjs`（:635）。**…余文与建议逐字见下「§3-补 5」** | **（见下「§3-补 5」）** |
 | 6 | Document consistency | 🟡 | 准入失败文案两版本并存：R9（:35）/M9（:535）引 `…——不可用`；M8（:527）/§16.7（:693）/批次档「失败文案终态」（:156）为 `…——无法选择模型，请改用其他渠道`；T24（:762）只断言「标『不可用』」。测试将锁定的逐字文案不唯一。 | 以批次档终态为准统一长句（或明写「——不可用」=状态标签、长句=消息本体），使 T24/AC-9 有唯一逐字断言对象 |
-| 7 | Tests / Determinism | 🔵 | T6（:744）缓存 TTL 未给确定性测试缝——按壁钟/睡眠写即脆弱测试。 | 预制可注入时钟/钩子（先例 rate.mjs `_rateHooks`），在 §16.3 helper 契约点明 |
+| 7 | Tests / Determinism | 🔵 | T6（:744）缓存 TTL 未给确定性测试缝——按壁钟/睡眠写即脆弱测试。 | 预制可注入时钟/钩子（同款 rate.mjs `_rateHooks`），在 §16.3 helper 契约点明 |
 | 8 | Content / Defensiveness | 🔵 | 拉取候选将包含非对话模型（Gemini embedding 类等）——设计未过滤也未记录该取舍。 | 一句话记录「不过滤」决策（或按能力字段过滤，如 google `supportedGenerationMethods`） |
 | 9 | N2 一致性 | 🔵 | 「运行期零探测」边界未写死：M9 落点含「首启加渠道探 `/models`」（:599），而 T25 断言「会话启动 / 发请求 → 无 `/models` 调用」——首启即启动路径，测试口径需显式排除「配置流内探测」。 | 在 M9/N2 交界写边界定义（探测只允许发生在配置写入面，与发生在进程早期无关），T25 场景表述同步 |
 | 10 | Double-end parity | 🔵 | CLI M3① 槽位兜底（`activeModel` 空 → `slotProvider.model`，:482）在 §16.5 VSC 列中无对位改动/核验项——若 VSC 恢复路径对同形态槽无等价回落，N4「语义同源」在两端行为上出现缺口。 | 核验 VSC 对位语义并如实落档（有则标「已有」、无则列入） |
@@ -486,67 +473,6 @@ VERDICT: pass
 
 > 待写。
 
-### VSC 面（eng-coder 自写 · 2026-09-11）
-
-**交付摘要**
-
-- 范围：MODEL-SELECTION 第 3 批 **VSC 端**（`thincoder-vscode/`）——R1–R9 的 VSC 面 + 测试层；交付 = 工作区未提交（未 commit）。
-- 新增 2 文件：`src/provider/list-models.mjs`（163 行——三 format 分派 + 翻页 ≤10 页 + 15s 超时 + 失败抛出带 status + M9 渠道准入探针/展示态）· `test/provider-admission.test.mjs`（267 行——T1–T4/T23–T27 本端用例）。
-- 改动源 16 / webview 2 / 测试 9：`config-presets.mjs`(41) · `config-migrate.mjs`(186, 迁移 v2) · `config-io.mjs`(455, 单值归一 + resolveDefaultModel 新链 + probeTargetFromEntry) ·
-  `provider.mjs`(433, listModels 迁出 + re-export) · `provider/transports/openai.mjs`(309, guard 文案) · `advisor/provider.mjs`(40) · `agent-tools/subagent.mjs`(381) ·
-  `extension/settings.mjs`(352, status 单值 + fullStatus 拉取 + M9) · `extension/provider-flows.mjs`(221, M9 探 + 单值播种) · `extension/settings-panel-write.mjs`(154, defaultModel 写面探) ·
-  `extension/vision-channel.mjs`(24) · `extension/panel-messages.mjs`(455, selectModel 注释 + addProvider M9 接线 + testProvider format 透传) · `extension/panel-chat.mjs` / `turn-model.mjs` / `presets.mjs`（注释同步） ·
-  `webview/settings-providers.js`(270, 四处配置直读改运行期载荷 + 不可用标注) · `webview/settings.css`(+15, 标注样式——超 §16.5 清单，已披露)。
-- 测试：`cd thincoder-vscode && npm test` → **353 tests / 352 pass / 1 skipped（既有 slow 归册）/ 0 fail**，exit 0；日志 `_t-modelselect-vsc.log`（工作区根，实现期产物）。AC-1 VSC 侧机器判据：`grep -rn "configCandidates" src/` → 空。
-- 轮次与终态：explore 差异审计 1 轮（0🔴/1🟡/5🔵——🟡 已修）→ 内部 advisor 代码评审 1 轮（**VERDICT: pass**，0🔴/2🟡/3🔵）→ 复核全绿 → **clean**。
-
-**逐需求透明表（VSC 面，逐条对 R1–R9）**
-
-| 需求 | 状态 | VSC 落点与说明 |
-|---|---|---|
-| R1 清单来源 provider 化 | **Done** | 新 `provider/list-models.mjs`：openai（缺省/未知）/anthropic（`?limit=1000` + x-api-key/anthropic-version）/google（`?key=…&pageSize=1000` + 剥 `models/` 前缀）；翻页 `has_more→after_id` / `nextPageToken→pageToken`（≤10 页，任一分页失败整体抛）；失败抛出（调用方降级）。**…余文见 §5 末尾「§5-补」** |
-| R2 `providers[].models[]` 整字段删除 | **Done** | 预设 20 条单值；迁移 v2 `delete p.models`；`resolveProviders` 单值归一（非字符串/空串删）；`saveCustomProvider`/`deleteProviderKey` custom 判据改 `entry.model`；`openai.mjs` guard 文案不再称 `models[]`。 |
-| R3 渠道默认模型（单值） | **Done** | 预设 20 条各携 `model`（T13 锁定）；`resolveDefaultModel` 第二级 = 渠道单值；advisor `provider.model ?? agent._provider?.model`；subagent `byName.model ?? parent._provider?.model`（T28 父兜底锁定）；槽位空兜底链（`runModel = modelOverride \|\| slotModel \|\| baseModel`）经核验**已有**，仅注释同步。 |
-| R4 显式 `provider:model` 放行 | **Done（本端无闸）** | VSC 侧不存在成员校验路径（命令面属 CLI）；`selectModel` 消息 = 会话槽写（无候选校验）；注释同步（显式 p:m 一律放行）。 |
-| R5 切换回显 spec 来源 | **N/A（设计明示不加）** | O2 已裁：回显仅 CLI 面（§16.7——不扩范围）；VSC 未实现。 |
-| R6 VSC 同批对齐 | **Done** | `resolveDefaultModel` 新回退链（复合属本渠道 → 渠道默认单值 → null，不再 `models[0]`）；`fullStatus` 失败 = 该渠道不可选（无候选行、无 fallback）+ `unavailable[{provider,reason}]` 随载荷；webview 四处 config 直读（presets 行 / 默认模型菜单 / 渠道行 / custom）改运行期载荷与单值。 |
-| R7 契约测试反转 | **Done（本端）** | `config-merge.test.mjs` 重写（迁移 A/B + 预设单值 + 回退链）· `provider-model-guard.test.mjs` 改（F-1 新文案 + 单值兜底 + T28）· `image-downgrade.test.mjs` 改（视觉判据 + 旧字段不读）· `provider-admission.test.mjs` 新增；`files.mjs` 登记。 |
-| R8 文档连带改写（代码注释面） | **Done（本端）** | 头注/注释：config-io / config-migrate / config-presets / presets / provider-flows / panel-messages / panel-chat / turn-model / vision-channel / list-models / openai.mjs。 |
-| R9 渠道准入（配置阶段） | **Done** | 探针落点 6 处：`addProviderFlow` · `setKeyFlow` · `saveProviderKey` · `saveCustomProvider`(有 key) · panel `addProvider` case · `defaultModel` 写面（fire-and-forget）；探不通 → 标 `不可用`（行内）+ 失败消息逐字长句 + 不入默认模型可选来源 + **不阻断保存**；失败不缓存（重探）；运行期零**新增**探测点（fullStatus 拉取 = R6 候选面既有机制，非 M9）。 |
-| N1–N4 | **Done** | N1 迁移不丢凭据（测试锁）；N2 拉取 15s 超时/异步、零启动期新增依赖；N3 失败不缓存/成功结果即权威；N4 独立实现、零双端 import、差异如实落档（回显仅 CLI）。 |
-
-**决策透明表（实现取舍与披露项）**
-
-| # | 事项 | 取舍 | 理由 / 披露 |
-|---|---|---|---|
-| 1 | 准入展示态与探针宿主 | 新增于 `provider/list-models.mjs`（`_admission` + `probeChannelModels` / `recordAdmission` / `admissionOf` + `_setProbeImplForTest` 测试缝） | 设计未钉宿主；该模块为依赖叶（settings / provider-flows / settings-panel-write 均可引，零环），M9 明示「复用 M1」 |
-| 2 | `defaultModel` 写面探针形态 | fire-and-forget（`settings-panel-write.mjs`） | 写面为**同步契约**（调用方不 await）；探针全捕获、绝不 reject、不阻断写——结果入展示态 |
-| 3 | 加渠道探针落点 | `panel-messages` addProvider case + `addProviderFlow`（非 `addProviderEntry` 内部） | 保持纯持久化函数零副作用；两 UI 路径各探一次、可 await、失败可提示 |
-| 4 | `testProviderConnection` 增 `format` 参数 | settings.mjs + `webview/settings-providers.js` + panel-messages 三处接线 | M1 三格式分派对自定义渠道表单是**必需**：否则 anthropic/google 渠道表单探针走 openai 形状 → 拉不到候选 → 无法保存（审计 🟡#1 即此处漏接线，已修 + T23b 锁定） |
-| 5 | 新增 `webview/settings.css` 两条类 | `.prov-unavailable` / `.prov-hint` | **超 §16.5 文件清单**（该文件未列）——为 M9 行内标注的样式承载；如实披露，父侧收口时补表 |
-| 6 | VSC `listModels` 内部 `.sort()` | 保留本端排序（文件头已注明） | 设计行文「排序由调用方」；本仓既有行为即内部排序（UI 确定性），双端 N4 允许差异——已披露，未改动 |
-| 7 | `models` 载荷新增 `unavailable` 字段 | 失败渠道诊断载荷（原因随载荷下发） | 设计未钉原因承载位置；UI 面失败原因实际经 providerStatus 行渲染（`.prov-hint`），本字段为测试/排障面（T24 断言对象） |
-| 8 | custom 渠道无 key 保存不探 | `saveCustomProvider` 仅在写 key 时探 | 无 key 渠道本就不可用（无候选）；已披露为边界豁免 |
-
-**审计与代码评审轮次与终态**
-
-- **explore 差异审计（轮次 1）**：0🔴 / 1🟡 / 5🔵。
-  - 🟡（**已修**）：`panel-messages.mjs` 的 `testProvider` case 未透传 `format` → 自定义渠道 anthropic/google 表单探针走 openai 形状（拉不到候选→渠道加不进）——修为 `format: msg.format` + 新增 `T23b` 断言（anthropic 完整 URL/头 + 下拉得到候选）。
-  - 5🔵：① settings.css 超清单（已披露）② 受影响文件表呈现差异（panel-messages 实含功能性 M9 接线、list-models 含探针展示态）→ 父侧收口时更新 §16.5/§2 ③ 排序措辞（保留，见透明表 #6）④ custom 无 key 不探（透明表 #8）⑤ 无。
-- **内部 advisor 代码评审（轮次 1）**：**VERDICT: pass**，0🔴 / 2🟡 / 3🔵。
-  - 🟡#1 **语义悬挂（Deferred——上报父侧裁定）**：`webview/model-picker.js:118-126` 兜底（prefs/当前选择不命中拉取清单时取 `_models[0]` 并 post `selectModel`）
-    → `panel-messages` 随即**写会话槽**；本批把 `models` 载荷来源从静态候选换成运行期拉取后，兜底值变为「首个已配置渠道的排序首项」，
-    会话开面板/切槽时可能被静默改写渠道+模型。该消费面**不在本批交付清单**（属设计缺口；CLI 对位已由设计裁为 `:70 兜底首候选 → keep.model`）。
-    建议父侧按 CLI 对位语义立项/补做（仅命中才回写，或兜底保持当前）。
-  - 🟡#2 `docs/TODO.md:130` 状态仍 `待设计`（§4 已批准）→ 父侧收口翻「在途」（非本端文档域）。
-  - 🔵#3 `unavailable` 载荷无 UI 消费点 → 已补注释（诊断/测试载荷，见透明表 #7）。
-  - 🔵#4 排序措辞漂移 → 保留（透明表 #6）。
-  - 🔵#5 VSC `fullStatus` 无会话级缓存（CLI 有 TTL 60s）→ 记录为已知双端不对称（可选后续）。
-- **修正轮**：1 轮（审计 🟡 修复 + T23b 新增 + 全量复核绿）；advisor 后仅注释澄清（0 代码语义改动）。
-- **终态：clean**——可修项全部修复；剩余 2🟡/3🔵 = 已披露项（父侧裁定/文档收口/设计表补录），无未披露偏离。
-
-**实现期产物（非交付物）**：`thincoder-vscode/_t-modelselect-vsc.log`（测试日志留证）——提交前可由父侧清理。
-
 ### 交付（eng-coder · CLI 面 = `thincoder/` 仓）
 
 **交付摘要**：CLI 面实现完成（含修复轮）。新增源 2 + 新增测试 2；改源 20 + 改测试 3。
@@ -566,7 +492,7 @@ VERDICT: pass
 | R3 渠道单值默认模型 | **Done** | 预设 20 条 · 槽位兜底 `session.mjs` · 显示回退（L1/槽位/管理面）· `advisor/run.mjs` + `subagent-async.mjs` 克隆链（`?? 父 model` 兜底，T28） | |
 | R4 显式 `p:m` 放行 | **Done** | `model-ref.mjs`（首冒号分割 v2；删 `firstCandidate`）· `selectModel`（仅未知 provider/空模型名拒）· `cmd-model.mjs` | 表驱动 T7/T8/T9 |
 | R5 切换回显 spec 来源 | **Done** | `model-specs.mjs`（`specMatch` 共享单次查表）· `selectModel` 两分支（正常 `C.tool` / DEFAULT `C.error` + `/config` 提示） | 含 `providers[].context` 覆盖用例 |
-| R6 VSC 端同批 | **Not in this end** | —— | 另一端 eng-coder 并行实施（非本端文件域，未触碰 `thincoder-vscode/`） |
+| R6 VSC 端同批 | **Not in this end** | —— | 另一端 eng-coder 并行实施（非本端文件域，未触碰 VSC 仓） |
 | R7 契约测试反转 | **Done** | `test/model-ref` / `config-merge` / `provider-model-guard` 三族重写 + 新 `test/list-models` | |
 | R8 文档连带改写（代码注释与文案面） | **Done** | `model-ref` 头注 · `model-picker`/`pickers`/`cmd-model`/`wizard`/`errors`/`session`/`config`/`core`/`bin` 注释与帮助文案 | AC-8 grep 空；`_archive/MODEL-MERGE-SESSION.md` SHA 未变（`35d1d6b8…`），`docs/**` 零改 |
 | R9 渠道准入校验（配置阶段） | **Done** | `probeChannelModels`（fresh 探）· cmd-config 默认模型菜单（探不通标 `不可用` + 不入可选来源 + 不阻断）· `setProviderKey` / 加渠道流（`wizard.js`、`cli/setup-wizard.mjs`） | 运行期零探测（T25）；命令面放行不变 |
@@ -604,54 +530,6 @@ VERDICT: pass
   #1 首启向导注释（`src/cli/setup-wizard.mjs:67`——“与 TUI wizard 同构”改为“近似同构” + `thinking: null` 落盘差异已登记待口径统一（父侧））——
   3 处均注释/一行级，**零行为改动**；`npm test`（快层）= **342 tests / 331 pass / 0 fail** / 11 skipped（exit 0；日志 `thincoder/_t-modelselect-fix.log`）。
 
-### M10 范围追加（eng-coder 自写 · 2026-09-11）
-
-**交付摘要**：MODEL-SELECTION 第 3 批「范围追加」增量（VSC 单端）实现完成——`webview/model-picker.js` 兜底分支按 M10 统一口径改写（守卫 = prefs 未命中；显示与状态回落会话槽复合；零 `selectModel` / `selectReasoning` post）；新增 `test/model-picker-fallback.test.mjs`（T29 六用例）+ `test/files.mjs` 注册行。交付 = 工作区未提交（未 commit）。
-
-**① 改动清单（file:line）**
-
-- `thincoder-vscode/webview/model-picker.js:118-128`——旧兜底分支（`!ctx._models.find(x => x.id === ctx.selectedModel)` 守卫 + 取 `_models[0]` 替换 + 两条 post）
-  整段删除 → 新守卫 `} else if (prefs.model) {` + 三行回落（`:125` `ctx.selectedModel = prefs.model` · `:126` `ctx.selectedProvider = prefs.provider` ·
-  `:127` `ctx.modelBtn.textContent = prefs.model`）+ M10 注释（`:119-124`）。命中分支 `:108-117`、空清单分支 `:129-134`、
-  显式点击 `selectModel()` `:71-80` 均零改动（git diff 佐证）。
-- `thincoder-vscode/test/model-picker-fallback.test.mjs`（**新增**，157 行）——T29 ①：未命中两态（`ctx.selectedModel` ∈/∉ 清单）+ 冷启空值 +
-  prefs 缺失/均缺 → 零 `selectModel`/`selectReasoning` post + 显示与 `ctx.selectedModel`/`selectedProvider` == prefs 复合；
-  T29 ②：命中正控（同值回写 post + reasoning 归一 `ultra`→`levels[0]`）。happy-dom 直驱 `handleModelsMessage`（`test/helpers/webview-env.mjs` 夹具只读复用）。
-- `thincoder-vscode/test/files.mjs:20`——注册行（+1 行）。
-
-**② 新增文件**：`thincoder-vscode/test/model-picker-fallback.test.mjs`（唯一新增）。
-
-**③ 测试结果**
-
-- `cd thincoder-vscode && node --test test/model-picker-fallback.test.mjs` → **6 tests / 6 pass / 0 fail**（exit 0）。
-- `cd thincoder-vscode && npm test > _t-modelselect-m10.log 2>&1` → **359 tests / 358 pass / 0 fail / 1 skipped**（exit 0；skip = 既有 slow 归册用例，非本增量）；日志 `thincoder-vscode/_t-modelselect-m10.log`（实现期产物，非交付物，提交前可清理）。
-- 计数吻合：353（前次交付）+ 6（新档）= 359 → 注册生效。
-
-**④ 与设计的偏差**
-
-- 功能语义：**无偏差**（explore 差异审计 0 偏差；R10/M10/T29/AC-10 含两轮修正 8 条口径逐项对位）。
-- 呈现项（已披露）：设计 §16.5 记 `webview/model-picker.js` 135 行 / 预估增量 −4（≈131）；实测落地 135 行（±0——6 行 M10 注释抵偿删除段）——文档标注面，coder 不改设计文档，父侧 O4 收口时可刷新。
-
-**⑤ 未完成/存疑（供父侧裁定）**
-
-1. **reasoning 下拉在兜底态**：M10 兜底后「选中 = 会话槽复合、不在拉取清单」为新增可达态；此时 `buildReasoningDropdown`（`:33` 按 `_models` 查 id）未命中即渲染「无 reasoning」区——设计只钉「不改 `ctx.selectedReasoning`」、未覆盖下拉内容（设计沉默，非偏离）。advisor 已以 🔵 report-only 记录。
-2. **空清单分支**（`model-picker.js:129-134`；全渠道拉取失败时 `settings.mjs:347` 仍推送 `models: []`）隐藏 model/reasoning 按钮、不走 M10 兜底——存量行为、非本增量引入，M10/T29 只定义非空清单面。
-3. `_t-modelselect-m10.log` 为实现期产物（见 ③）。
-
-**⑥ 轮次与终态**
-
-- **explore 差异审计 ×1**：0🔴 / 0🟡 / 3🔵（注记：行数标注漂移 · `prefs.provider` 上游已证恒有值 · 测试反证句冗余）——**VERDICT: pass，0 修复**。
-- **内部 advisor 代码评审 ×1**：**VERDICT: pass**，0🔴 / 0 must-fix 🟡 / 3🔵（全部 report-only）。
-- **响应表（advisor 3 条，`| # | Action | Detail |`）**：
-  - #1 → **Deferred**：reasoning 下拉内容属设计沉默面（M10 明示「不改 `ctx.selectedReasoning`」；T29 只断言显示不被改写）——处置权在父侧/设计档，按红线不自行扩语义（Detail：`webview/model-picker.js:33`/`:36` 与设计 §16.2 M10 边界①）。
-  - #2 → **Deferred**：§16.5 行数标注漂移（`PROVIDER.md:672`）——coder 写域不含设计文档，父侧收口刷新（Detail：实测 135 行 vs 标注 135/−4）。
-  - #3 → **Not an issue**：测试非自证悬空——两命令均已实跑（聚焦 6/6；全量 359/358/0/1 skip，exit 0，日志在盘 `_t-modelselect-m10.log`），评审侧只读无法复跑为环境限制（Detail：本报告 ③）。
-- **fix round 计数：0**（审计与评审均无代码级发现；未触 5 轮上限）。
-- **终态：clean**。
-
-> **§5-补（父侧格式整备——R1 表行余文；原文文字逐字保留，仅移出表单元）**：候选面 = `settings.mjs fullStatus` 单源拉取（无静态兜底）；
-> `webview/settings-providers.js` 默认模型菜单改运行期载荷；`testProviderConnection` 带动 `format` 三格式分派。
-
 ## §6 验证与收口（父代理自写）
 
 **收口 2026-09-11**（用户 02:24"第三批验收通过"）——本批**已核销**，本档冻结。
@@ -662,8 +540,8 @@ VERDICT: pass
 |---|---|---|
 | `d67c01b` + `05d0946` | thincoder | **主实现被第 5 批（他链）提交卷走**——本批 CLI 面 23 源 + 7 测试的改动全部落在这两次提交内（**非本链自有提交**；父侧调查确认改动未丢、无回滚） |
 | `4e59a76` | thincoder | 父侧评审修正轮 3 处 + 设计档 AC-8 枚举改准 + 批次档 §5 补登 |
-| `9299661` | thincoder-vscode | VSC 主体 26 改 + 2 增（含设计档镜像同步 O4） |
-| `cd1de8f` | thincoder-vscode | 范围追加 M10：`webview/model-picker.js` + 新测试档 + `files.mjs` 登记 |
+| `9299661` | VSC 仓 | VSC 主体 26 改 + 2 增（含设计档镜像同步 O4） |
+| `cd1de8f` | VSC 仓 | 范围追加 M10：`webview/model-picker.js` + 新测试档 + `files.mjs` 登记 |
 
 ### 验证实跑（父侧——非采信自述）
 

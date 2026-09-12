@@ -1,11 +1,13 @@
 # VSC 异步任务可见性/可控性（live 块显示 + advisor 池）· 批次记录（2026-09-11）
 
-> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分）**：本档对端（VSC）份已由 VSC 仓 `docs/batches/2026-09-11-VSC-ASYNC-VISIBILITY（VSC 仓）` 逐字承载（D10——零改写）；本档保留本仓份。
-> 移出条目（对端份）清单：§2 条目 A（纯对端）（as-of `:122`）——条目计数（对端份 / 本仓份）= 16 / 5（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。
+> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分 · 已切除 2026-09-12）**：本档对端（VSC）份**已自本档切除**（原文不再留本仓——D11 完全态）；承载档 = VSC 仓 `docs/batches/2026-09-11-VSC-ASYNC-VISIBILITY（VSC 仓）`（逐字搬运、零改写——D10）。
+> 已切除条目清单：§2 条目 A（纯对端 12 项）+ 条目 B VSC 行（7 项）——条目计数（对端份 / 本仓份）= 16 / 5（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。**源档 blob SHA（切除前）= `ef9b8c7b55ca`**。
+> 变更记录：2026-09-12——对端份经承载档逐字承接后自本档物理切除；档首注记形态收敛为「已切除」。
 
 > 六段 append-only，**一段一作者**：§1 讨论（主 agent）· §2 批次任务（eng-designer）·
 > §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder）· §6 验证与收口（父代理）。
 > 编制：主 agent（工程模式）· 2026-09-11 · 来源 = 用户 2026-09-09 反馈 + 本会话「还记得吗」追问 + 「第10批开工，相邻的那个也并入」。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -40,7 +42,7 @@
 
 ### 已核事实（供 designer 免重复勘察——**均为 TODO 记录 as-of，须现场复核**）
 
-- 条目 A 代码面：`thincoder-vscode/src/.../panel-callbacks.mjs`（`:81/:113` 出生投递、`:165` 快照门控）·
+- 条目 A 代码面：`src/extension/panel-callbacks.mjs`（VSC 仓）（`:81/:113` 出生投递、`:165` 快照门控）·
   `run-stages.mjs:279` · `webview/activity.js`（`:179-201/:234-248`）· `webview/chat.js:180-189`（clearMessages）。
 - 条目 B 面：CLI 工具侧（`subagent status` 动作 / `wait_for` 工具 / cancel 通道）+ 池实现（`_asyncAdvisors`）。
 - **已知盲区**：现测试 fixture **恒双 Map running**——advisor-only / explore-only / settle-after-reload / **并发双 spawn** 四类场景无用例。
@@ -81,12 +83,11 @@
 
 ## §2 批次任务（eng-designer 自写）
 
-_（待写——eng-designer）_
 
 **状态：任务书就绪**（2026-09-11——需求+设计+测试三层已落档，待设计评审；**含一项用户裁定项** = 条目 A 修复选型 A/B 案——见下「待总裁定」）。实施者 = eng-coder（设计 token 门）。本 §2 = coder 任务书本体（不另写副本）。
 
 **落档位置**：需求 = `docs/requirements/AGENT-LOOP.md` **§3**（条目 A：F-A1~F-A5 / NFR-A1~A3）+ **§4**（条目 B：F-B1~F-B4 / NFR-B1~B2）。
-设计+测试 = 条目 A → VSC 仓 `docs/design/WEBVIEW.md` **§5.1**（+ §5 终态规则修订指注）· 条目 B → `docs/design/AGENT-LOOP.md` **§18**（+ `docs/design/TOOLS.md` §7 `wait_for` 口径行 · VSC 镜像 `thincoder-vscode/docs/design/AGENT-LOOP.md` §9）。
+设计+测试 = 条目 A → `WEBVIEW（VSC 仓）` **§5.1**（+ §5 终态规则修订指注）· 条目 B → `docs/design/AGENT-LOOP.md` **§18**（+ `docs/design/TOOLS.md` §7 `wait_for` 口径行 · VSC 镜像 `AGENT-LOOP（VSC 仓）` §9）。
 
 ## 覆盖条目（本批 = §1 两条目，逐条回指）
 
@@ -115,15 +116,8 @@ _（待写——eng-designer）_
 
 ## 受影响文件（双端分列，行数口径 = `wc -l`；as-of 2026-09-11；明细见设计档表）
 
-**条目 A（VSC——12 项：11 改 + 1 增，代码面 ~+130 行 = 设计 §5.1.6 src 8 文件求和）**：
-`webview/activity.js`(204,+45) · `webview/state.js`(113,+3) · `webview/streaming.js`(244,±5) ·
-`src/extension/panel-callbacks.mjs`(148,+30) · `src/extension/panel-messages.mjs`(455,+14) · `src/extension/panel-session.mjs`(332,+8) ·
-`src/extension/chat-panel.mjs`(414,+3) · `src/extension/suspension.mjs`(313,+22) · `test/async-visibility.test.mjs`(新,+170) ·
-`test/files.mjs`(49,+1) · `test/activity-flow.test.mjs`(300,+40) · `docs/design/WEBVIEW.md`(339,+197)。
-
 **条目 B（双端——14 项 = 12 改 + 2 增，代码面 ~+90 行）**：
 CLI：`src/tools/ops.mjs`(286,+14) · `src/agent-tools/subagent.mjs`(402,+4) · `src/agent-tools/subagent-actions.mjs`(470,±3——已具备核实) · `test/subagent-observe-send.test.mjs`(200,+45) · `test/wait-for-advisor-pool.test.mjs`(新,+60) · `docs/design/TOOLS.md`(124,+3) · `docs/design/AGENT-LOOP.md`(724,+138)。
-VSC：`src/agent-tools/subagent-actions.mjs`(337,+55) · `src/agent-tools/subagent.mjs`(380,+4) · `src/tools/wait_for.mjs`(195,+10) · `test/subagent-observe-send.test.mjs`(167,+45) · `test/wait-for-advisor-pool.test.mjs`(新,+60) · `test/files.mjs`(49,+1) · `docs/design/AGENT-LOOP.md`(506,+14)。
 
 ## 验收标准（逐条机验；本表 = 设计档 AC 索引）
 
@@ -176,7 +170,6 @@ VSC：`src/agent-tools/subagent-actions.mjs`(337,+55) · `src/agent-tools/subage
 
 ## §3 设计评审（评审子代理自写）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
@@ -189,7 +182,7 @@ VSC wait_for.mjs:58-62/:125-129、CLI ops.mjs:159-161/:223-227、
 CLI/VSC subagent-actions.mjs（双池/单池、行数 470/337）、advisor-async.mjs:413/:468、
 suspension.mjs:95、test/files.mjs（glob：仅 VSC 仓存在）。
 > 〔父侧代笔 2026-09-11 04:38〕本段仅两处**形式**处理：① 折行（原单行 415 字符）；② 原引用为「VSC 仓档名 + `.md` 后缀 + 节号」三段形态——
-> 此类**跨仓引用**在 V1 按 basename 解析恒判 `unknown-doc`（基线零先例），改为 `WEBVIEW（VSC 仓）§5/§5.1`。**文字零增删、语义不变**；
+> 此类**跨仓引用**在 V1 按 basename 解析恒判 `unknown-doc`（基线零条目），改为 `WEBVIEW（VSC 仓）§5/§5.1`。**文字零增删、语义不变**；
 > 「已核通过的关键项」段同因折行。评审结论与计数不受影响。
 
 | # | Category | Severity | Issue | Suggestion |
@@ -268,12 +261,11 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 **实施状态**：2026-09-11 04:39–05:05 实施完毕。写域 = 21 个唯一文件（条目 A 11 个：VSC 仓 8 src/webview + 3 测试；条目 B 10 个：CLI 5 + VSC 6，其中 `test/files.mjs` 为两清单共面条目）。
 双仓全量实跑（先落盘再读）：VSC `npm test` → **391 用例 / 390 通过 / 0 失败**（1 条 slow 归册跳过，零 slow 门拦截）；
 CLI `npm test` → **398 / 386 / 1 失败**——唯一失败 = `test/doc-consistency.test.mjs` T41（预存文档面红，非本批代码面，见「未闭项」）。
-日志：`thincoder-vscode/_t-vscvis-vsc.log` · `thincoder/_t-vscvis-cli.log`。
+日志：`_t-vscvis-vsc.log`（VSC 仓） · `thincoder/_t-vscvis-cli.log`。
 
 **逐需求透明表（条目 A — VSC live 块出生可靠性；设计 = WEBVIEW（VSC 仓）§5.1）**
 
@@ -303,7 +295,7 @@ CLI `npm test` → **398 / 386 / 1 失败**——唯一失败 = `test/doc-consis
 
 1. VSC `wait_for.mjs` 以**惰性动态 import**（非顶层静态）引 `advisorReviewInFlight`——静态 import 实测成环 TDZ（`Cannot access 'waitForTool' before initialization`，经 wait_for 入口加载时复现）；复用同 helper、语义零变，仅加载写法偏离惯例一处。
 2. VSC 工具描述句落在 `src/agent-tools/subagent.mjs` 的 description 组装点（本仓描述载荷在 `subagent-spec.mjs`——写域外未动）：句尾追加评审面句。
-3. 增量与预估有差：`test/async-visibility.test.mjs` 387 行（预估 +170）——覆盖 T-V1~T-V7 + 主侧定序/载荷/机检；测试族同带存量先例（最高 620），本批不拆分。其余文件增减落在预估带内。
+3. 增量与预估有差：`test/async-visibility.test.mjs` 387 行（预估 +170）——覆盖 T-V1~T-V7 + 主侧定序/载荷/机检；测试族同带存量档（最高 620），本批不拆分。其余文件增减落在预估带内。
 4. 契约 §5.1.4 第 4 条的清屏再断言使 boot 路径出现「loadSession 内再断言 → flush → case 两拍」三段（末两拍仍为 flush → reassert；三段均幂等，末拍保证块恒落流尾）。
 5. 内部代码评审 🟡#1 已修：cancel→settle 窗口内单查判定原两端不一致（VSC 报 `cancelled` / CLI 报 `running`）——删 VSC 分支对齐 CLI（NFR-B1 同输入同判定），两端各加一条锁定用例（T-B2b）。
 
@@ -329,7 +321,7 @@ CLI `npm test` → **398 / 386 / 1 失败**——唯一失败 = `test/doc-consis
 
 > 〔父侧代笔 2026-09-11 12:58：单行 412 字符 → 纯折行〕
 - **文档面**：§3 两处跨仓/计数形态违规 → 父侧 05:05 **代笔**（带标注）+ T41 复跑 **6/6 绿** ✓。
-- **偏差裁定**：惰性动态 import = 接受（TDZ 实测）· VSC 描述落点 = 接受 · 387 行测试档 = 接受（同带先例）· boot 三段幂等 = 接受 · cancel↔settle 两端对齐（代码评审 🟡 已修）✓。
+- **偏差裁定**：惰性动态 import = 接受（TDZ 实测）· VSC 描述落点 = 接受 · 387 行测试档 = 接受（同带档）· boot 三段幂等 = 接受 · cancel↔settle 两端对齐（代码评审 🟡 已修）✓。
 - **实机面**：VS Code 真 webview 目视 = 用户验收面（coder 无 IDE 环境——按设计口径声明；用户 10:53 验收通过）。
 - **令牌链**：设计评审 token **已消费**（`consume-design`——链终）。
 

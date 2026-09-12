@@ -1,10 +1,12 @@
 # 测试生命周期与集成集 · 批次记录（2026-09-11）
 
-> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分）**：本档对端（VSC）份已由 VSC 仓 `docs/batches/2026-09-11-TEST-LIFECYCLE（VSC 仓）` 逐字承载（D10——零改写）；本档保留本仓份。
-> 移出条目（对端份）清单：§5 对端面（as-of `:213`；该计数标 unverified——受并发他链改写影响）——条目计数（对端份 / 本仓份）= ≈23 / ≈35（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。
+> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分 · 已切除 2026-09-12）**：本档对端（VSC）份**已自本档切除**（原文不再留本仓——D11 完全态）；承载档 = VSC 仓 `docs/batches/2026-09-11-TEST-LIFECYCLE（VSC 仓）`（逐字搬运、零改写——D10）。
+> 已切除条目清单：§5「实施记录（VSC 面）」整节（≈23 条目；该计数标 unverified——档数受并发他链改写影响）——条目计数（对端份 / 本仓份）= ≈23 / ≈35（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。**源档 blob SHA（切除前）= `034c76e6c42b`**。
+> 变更记录：2026-09-12——对端份经承载档逐字承接后自本档物理切除；档首注记形态收敛为「已切除」。
 
 > 六段 append-only，一段一作者：§1 讨论（主 agent）· §2 批次任务（eng-designer）· §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder 自写）· §6 验证与收口（父代理）。
 > 编制：主 agent · 2026-09-11 · 来源 = 用户 15:37「对 cli 和 vscode 的所有测试做一个评估，统计…」→ 16:04「单元测试和集成测试的做法是我们线下做项目开发时长期沿用的策略…常出的问题才会进集成测试」→ 16:09「测试在批次档里列着，用过就退役是有数据支撑的」→ 16:13「开」。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -32,7 +34,7 @@
 | 件 | 执行人 | 钩子 |
 |---|---|---|
 | ① 本批测试逐条处置 + **②集成影响核** | 主 agent | 批次 §6 核销同步清单**加一行**（唯一新钩子；漏填 = 记录可见缺口）——**双半：①本批单元档处置（退/转）＋②本批需求是否触及集成场景（新增/修订/无）** |
-| ① 落手（删档/改写） | eng-coder | 维护小批 / 随触碰批（删除清单制——09-07 先例） |
+| ① 落手（删档/改写） | eng-coder | 维护小批 / 随触碰批（删除清单制——09-07 同口径） |
 | ② 新增与演进 | **触发 = 需求发展（用户 16:14 补）：集成用例随需求不断提而变化——主 agent 评估更新**（不外包不自动；判②影响 → 需变则出条目）→ eng-designer 定形 → eng-coder 落 | 业务变化 / 需求批次收口 / 发布前 |
 | ③ 收编 | 用户 → 主 agent 登记 → 转② | 每个真问题处理后 |
 | 规则本身 | eng-designer 写 · 用户裁定 | 规则变更时 |
@@ -75,11 +77,10 @@
 
 ## §2 批次任务（eng-designer 写）
 
-_（待写——eng-designer）_
 
 **状态：任务书就绪**（2026-09-11——需求层 + 设计/测试层已落档，待设计评审；含排程与裁定项）。实施者 = eng-coder（设计 token 门）。本 §2 = 任务书本体（不另写副本）。
 
-**落档位置**：需求 = `docs/requirements/TESTING.md` §2–§4（F6–F14 · N7–N9 · §2.1 维护模型，已落）· 设计+测试 = `docs/design/TESTING.md` §3–§10（已落）；VSC 对位 = `thincoder-vscode/docs/design/TESTING.md`（新建，已落 + README 登记）。
+**落档位置**：需求 = `docs/requirements/TESTING.md` §2–§4（F6–F14 · N7–N9 · §2.1 维护模型，已落）· 设计+测试 = `docs/design/TESTING.md` §3–§10（已落）；VSC 对位 = `TESTING（VSC 仓）`（新建，已落 + README 登记）。
 
 ### 本批覆盖的需求条目（三链锚——批次档 §2 = 需求档 = 设计档回指）
 
@@ -139,7 +140,7 @@ _（待写——eng-designer）_
 
 ### 呈请裁定项（待用户裁定后执行）
 
-**VSC `settings-panel` → `config-pool` 合并**：extension 面断言并入纯单元档（happy-dom env 沿 helpers/webview-env.mjs 先例）。设计建议：**接受**（同板块凝聚 + 减碎片；分节标注「面板显示面」）；备选：不接受（原地保留，差额表调整）。接受与否都须差额对账。
+**VSC `settings-panel` → `config-pool` 合并**：extension 面断言并入纯单元档（happy-dom env 沿 helpers/webview-env.mjs 同款）。设计建议：**接受**（同板块凝聚 + 减碎片；分节标注「面板显示面」）；备选：不接受（原地保留，差额表调整）。接受与否都须差额对账。
 
 ### 排程说明
 
@@ -160,7 +161,7 @@ _（待写——eng-designer）_
 | 🟡#3 N1 作用域 | `docs/requirements/TESTING.md` §3 N1（:53——单元档作用域限定 + 集成档排除句；对齐设计档 §4.3） |
 | 🔵#4 判定探针 | `docs/design/TESTING.md` §4.5（:170——`_verifyPassed` 判定探针口径句） |
 | 🔵#5 N8 回指 | `docs/design/TESTING.md` §6 AC-TL1（:253——子串枚举补「最小可跑起步」）；本档 TL-4 回指更新（下表） |
-| 🔵#6 数字落定 | `docs/design/TESTING.md` §8.1（:322）· §8.2（:354）· `thincoder-vscode/docs/design/TESTING.md` §6（:73） |
+| 🔵#6 数字落定 | `docs/design/TESTING.md` §8.1（:322）· §8.2（:354）· `TESTING（VSC 仓）` §6（:73） |
 | 🔵#7 候选 2 表述 | `docs/design/TESTING.md` §4.2（:144——目标参数已存在（`run-fast.mjs`:18-19）；真实分界 = slow-gate + 消费方语义） |
 
 **二、TL 表回指更新（🔵#5——三方一致；上文 TL 表 TL-4 行以本行为准）**
@@ -178,7 +179,6 @@ _（待写——eng-designer）_
 
 ## §3 设计评审（评审子代理）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
@@ -205,82 +205,12 @@ VERDICT: pass
 **父侧裁定（随签）**：
 
 1. **VSC `settings-panel` → `config-pool` 合并 = 接受**（设计建议；分节标注「面板显示面」）——用户如有异议一句话翻转；
-2. 执行轮顺带：`thincoder-vscode/docs/design/README.md` 行数注对齐（实测 125）。
+2. 执行轮顺带：`README（VSC 仓）` 行数注对齐（实测 125）。
 
 **遗留（批准时登记）**：提示词 D7 双源同步（处置槽位枚举——D5 窗口让位，窗关即落）；0.8.10 存量用户下个发布生效。
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
-
-### 实施记录（VSC 面——eng-coder 自写）
-
-**状态：clean**（2026-09-11——集成集 28/28 退出码 0 · 快层 483 pass/0 fail · doc-width 新增 0；内部偏差审计 1 轮 + 内部代码评审 pass + 修正轮 6/6 落地）。未 commit；未发起用户级评审（设计评审已由父侧完成，本链设计 token 复用）。
-
-#### 一、交付摘要（as-of 落地）
-
-1. **集成集（TL-3/TL-4）**：`test/run-integration.mjs`（新，53 行——清单启动器 + 启动前自检四项：清单在盘 /
-   漏登记反证（递归）/ 两清单零混入 / 集成档禁 slow）；`test/integration/files.mjs`（新，18 行——显式清单）；
-   7 场景档共 1012 行 + 共享夹具 `test/integration/helpers/mock-llm.mjs` 86 行；**28 用例**（①–⑦ 各三态 + 种子 S1 落 ③ / S2 落 ⑤）。
-   断言面 = 业务可观察结果为主（产物/送达/放行-打回/渲染逐字）；判定探针 `_verifyPassed` 按 CLI 侧设计档 §4.5 口径内使用。
-2. **接线**：`package.json` `test:integration` script + `vscode:prepublish` = `lint → test:full → test:integration`（三环）。
-3. **扫①（TL-5）**：合档 + 削段（逐条清单见下）。
-4. **连带文档**：`docs/design/RELEASE.md`（发布门三环 5 处 + 变更记录）、`AGENTS.md`（Testing 段 +3 行）、`docs/design/TESTING.md`（§6 受影响文件表对齐执行结果 + README 行数注落定 125 as-of 本批 + 状态行）。
-
-#### 二、削段 / 合档清单（删除清单制——逐条与理由）
-
-| 档 | 处置 | 理由（真契约留 / 重复自明删） |
-|---|---|---|
-| `test/settings-panel.test.mjs` → `test/config-pool.test.mjs` | **合档**：源档删；断言全并入（8+5=13 用例）；并后 193 行（差额 = 头部/import/env 装配去重） | 父侧随签裁定 = 接受（分节标注「面板显示面」；happy-dom 沿 helpers/webview-env.mjs） |
-| `test/turn-across-segments.test.mjs` · T8 | **删**（11 断言） | 源码字面锚（循环条件/抛点/复位点/单一计算点/负向旧参锚）——行为由 T1–T4 + T9（真 runAgent 段间）+ T10（真 runChild 消费）覆盖 |
-| 同上 · T11 | **裁**（8 → 2 断言） | agent.mjs 种子锚 = T9 行为覆盖、runChild 种子锚 = T10 行为覆盖 → 删；escalate-async 种子支全仓唯一覆盖 → 保留最小锁 |
-| `test/verify-redesign.test.mjs` · T-V9 | **删**（6 断言） | guard 文案负向锚——旧语义早退役，现行守卫行为由集成 ①（重试提醒）与 T-V1~V6 覆盖 |
-| 同上 · T-V10 | **裁**（6 → 2 断言） | 三条「旧词组不复现」负向锚删；保留 `verification.status` 正向参数名锚（模型据此声明） |
-| `test/eng-designer-role.test.mjs` · T58 | **改挂行为面**（5 源码 regex → 2 行为断言） | 枚举 regex 脆弱（重排/改名即红）；改断言渲染产物（agentCardHtml 的 eng-designer 槽位）+ 频道建块（role 入族行为） |
-| `test/index-perception.test.mjs` · T-I9 | **裁**（6 → 4 断言） | 旧串负向全路径 grep + 两条源码形态锚删（ignored 语义由 git 慢档组行为锁）；词表锁 + no-index 抽检保留 |
-| 同上（评审修正轮） | **拆档** | 328 行 > 300 咨询线 → git 慢档组（T-I6/T-I6b/T-I7/T-I10）独立成 `test/index-ignored-slow.test.mjs`（123 行）；本档 258 行；两档各自入册 |
-| `test/activity-flow.test.mjs` · never-born 补桩用例 | **删**（邻档重复） | 承载方 = `async-visibility.test.mjs` T-V4/T-V5（精确成员表 + 不补行边界 + 痕迹断言） |
-
-#### 三、审计与代码评审（终态 = clean）
-
-- **内部 explore 偏差审计 ×1**：DEVIATIONS 2 条（均 🔵 doc-drift 数字：`TESTING.md` 行数注、`AGENTS.md` +3 未同步）→ 当场修正；无部分实现 / 静默简化 / 清单外变更。
-- **内部 advisor 代码评审 ×1**：**pass**（🔴 0 · 🟡 2 · 🔵 4）——无 🔴；修正轮 6/6 收敛（下表）。
-
-#### 四、修正轮（评审发现逐条——同 designToken 复用）
-
-| # | 严重级 | 发现 | 处置 |
-|---|---|---|---|
-| 1 | 🟡 | `index-perception.test.mjs` 328 行 > 300 咨询线 | **Fixed**：拆出 git 慢档组 → 258 行 + 新档 123 行（登记 `test/files.mjs`）；`THINCODER_TEST_FULL=1` 实跑 4/4 |
-| 2 | 🟡 | `TESTING.md` 状态行陈旧（「待设计评审 + 用户批准后进入实施」） | **Fixed**：改「已实施（集成集 + 发布门三环已接线；执行结果见 §6 表）」 |
-| 3 | 🔵 | runner 自检非递归（子目录漏登记盲区）+ slow 子串判据（注释误伤） | **Fixed**：递归收集 `.test.mjs` + import 形态判据（`/from "…slow.mjs"/` 或 `slow(`） |
-| 4 | 🔵 | scenario-05 自建 `INDEX_IDS` 与共享夹具重复 | **Fixed**：`helpers/webview-env.mjs` 新增 `installFullIndexFixture()`；scenario-05 改用之 |
-| 5 | 🔵 | scenario-03 墙钟 `flush()` 等待（flake 面） | **Fixed**：改条件轮询 `until(pred)`（scenario-02 同类改造同步） |
-| 6 | 🔵 | scenario-02 裸取 regex `[1]`（文案一变即 TypeError） | **Fixed**：先 `assert.ok(match, …)` 再取值（两处） |
-
-#### 五、实测证据（先落盘再查）
-
-- `npm run test:integration` → **28/28 · 0 fail · 退出码 0**（日志 `thincoder-vscode/_t-int-full-3.log`；修正轮后复跑）。
-- `npm test`（快层）→ **490 用例 / 483 pass / 0 fail / 7 skip(slow) · 退出码 0**（`_t-fast-2.log`）。
-- `node scripts/check-doc-width.mjs` → 新增超宽 0 + 新增一致性违规 0（存量基线内 29）。
-- 拆档慢档组：`THINCODER_TEST_FULL=1 node --test test/index-ignored-slow.test.mjs` → 4/4。
-- 清单自检反证：临时投放未登记档 → runner 点名失败（`_t-int-manifest.log`）；档已删除。
-
-#### 六、偏差与披露（如实——供 §6 核销）
-
-- **超原 file 域声明的新增（披露即合规）**：`test/integration/helpers/mock-llm.mjs`（共享夹具——设计受影响表未具名，属 `test/integration/*` 域内）；
-  `test/index-ignored-slow.test.mjs`（评审修正轮拆档新增）；`test/helpers/webview-env.mjs`（评审修正轮新增 `installFullIndexFixture`）；
-  `docs/design/TESTING.md`（§6 执行结果对齐 + 状态行 + 变更记录——父侧随签裁定「行数注对齐」范围内 + 评审 #2 修正）。
-- **明确未碰**：`docs/design/README.md` 本体（行数注落点在 TESTING.md §6；README 另含他批在飞增量）；提示词 D7 枚举（同步面——排程项）；CLI 仓文件（另一 eng-coder 域）；`test/files.mjs` 单元清单**零含集成档**（有意——集成档只登集成清单，runner 自检机械兜底）。
-- **口径披露**：种子 S1/S2 以用例形式落 ③/⑤ 档（设计「种子落此」口径——非独立档）；场景 ⑥ 正常态只用「他批未暂存改动」（CLI `--only` pathspec 的 pre-staged 分支 = VSC commit 镜像缺口（技术待办）——本批不覆盖，档头注明）；场景 ⑤ 错误态 = Stop/abort 清理链（CLI「退出键 → cleanup」的本端语义映射——VSC 无 TUI 退出键，档头注明）。
-- **遗留（非本批）**：`docs/design/SETTINGS.md` 对 `settings-panel` 的既有引用未随合档改指（他链文档面）；批次档本 §5 落笔前审计引用为空（本节即填实）。
-
-**格式修补（追加——2026-09-11 · 透明度披露）**：§5 上文两条超宽行（>300 字符——「一、交付摘要」第 1 条、「六、偏差与披露」首条）已**就地折行**（折后 <300）——doc-width 机检（CLI `scripts/check-doc-width.mjs`）对该档口径的修复；语义零变更（仅换行）。手段说明：段写入通道（batch_segment）为 append-only，无法改写既有行，故以一次定点折行修补本段自身行——段内、未动他人段、未改语义，随批如实披露。
-
-**计数更正（追加——2026-09-11 · 修正轮后实测；上文数字以本块为准）**：修正轮（评审 #3–#6 加固 / #1 拆档）改动了行数——最终实测：
-`test/run-integration.mjs` **60 行**（原记 53）；7 场景档共 **1024 行**（原记 1012；scenario-02 185 / 03 234 / 05 152）；
-`test/index-perception.test.mjs` **259 行**（原记 258）；`test/index-ignored-slow.test.mjs` **122 行**（原记 123）；
-`test/helpers/webview-env.mjs` **90 行**（+28——新增 `installFullIndexFixture`，修正轮 #4）。VSC 设计档 §6 表已同步（run-integration 60 / 场景档 1024）。
-四面实测在修正轮后复跑：`test:integration` 28/28 · 退出码 0；`npm test` 490 用例 / 483 pass / 0 fail / 7 skip；`check-doc-width` 新增超宽 0 + 新增一致性违规 0。
 
 # §5 实施记录（eng-coder 自写——CLI 面：集成集保护墙 ②）
 
@@ -425,7 +355,7 @@ _（待写——eng-coder）_
 
 | # | 候选 | 评估 | 结论 |
 |---|---|---|---|
-| 1 | 不拆（单档 ~340 行） | 纯文件读取型锚族、同质；无 slow/fast 执行层分界（VSC `index-perception` 拆档判据 = git 慢档组，本档无）；拆 = 前导/双源配对夹具复制（~25 行重复）+ 断言族割裂；300 = 咨询线（AGENTS.md），在树先例（`prompts-async-guidance` 419 / `advisor-chain-guards` 498）；守 500 硬限 | **选定** |
+| 1 | 不拆（单档 ~340 行） | 纯文件读取型锚族、同质；无 slow/fast 执行层分界（VSC `index-perception` 拆档判据 = git 慢档组，本档无）；拆 = 前导/双源配对夹具复制（~25 行重复）+ 断言族割裂；300 = 咨询线（AGENTS.md），在树同档（`prompts-async-guidance` 419 / `advisor-chain-guards` 498）；守 500 硬限 | **选定** |
 | 2 | 拆两档（第 2/9 批 engineering 面 + 第 15/16/23 批 common/角色面） | 无语义分界（三代锚同属"双源提示词锚"）；前导重复 + 配对读取重复 | 否决 |
 
 **执行顺序**：A 退 → B 并 → C 削/收归 → 清点 → 对账 → 内部审计/评审。
@@ -467,7 +397,9 @@ _（待写——eng-coder）_
 #### 4.3 实测证据（先落盘再查）
 
 - 定向 12 档实跑：**134 tests / 132 pass / 0 fail / 2 skip（slow）**（日志 `thincoder/_tl-touched.log`）。
-- 快层 `node test/run-fast.mjs` ×2：**562 tests / 546 pass / 1 fail / 15 skip**——唯一 fail = `doc-consistency T41①`（批前存量红：他批档 V1 违规——ACP-CHANNEL-FIXES / PORTABILITY / TUI-SELECTION / VSC-MIRROR-SWEEP；**本批新增 0**）；慢门 0 命中（首跑 6 条 = 负载型 flake——隔离复跑 21/21 绿复核，`_tl-gate.log`；日志 `_tl-fast.log` / `_tl-fast2.log`）。
+- 快层 `node test/run-fast.mjs` ×2：**562 tests / 546 pass / 1 fail / 15 skip**——唯一 fail = `doc-consistency T41①`（批前存量红：他批档 V1 违规——ACP-CHANNEL-FIXES / PORTABILITY
+  / TUI-SELECTION / VSC-MIRROR-SWEEP；**本批新增 0**）；慢门 0 命中（首跑 6 条 = 负载型 flake——隔离复跑 21/21 绿复核，`_tl-gate.log`；日志 `_tl-fast.log` / `_tl-fast2.log`）。
+  机械折行（2026-09-12 形态清零轮）——语义零改
 - `node --test test/doc-consistency.test.mjs`：**T75/T76 绿**（11/10/1——唯一红同 T41①）。
 - `node scripts/check-doc-width.mjs`：本批改动档新增超宽 0 / 新增一致性违规 0（12 条新增全为他链批档；本批 `docs/batches/2026-09-11-TEST-LIFECYCLE.md` 零新增）。
 - **AC-TL8 机验**：三点名档原锚串 grep **零残留**（3+7+7 串）；扫描器族在岗（执行面未删）。

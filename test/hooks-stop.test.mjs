@@ -4,8 +4,11 @@
  * 失败静默 / PreToolUse matcher 回归 / 事件集静态收口（AC-HS1–AC-HS5）。
  * 快层零网络：假 hook 脚本 = tmpdir 运行期生成（command = process.execPath——
  * 免 PATH / Windows 差异）；配置注入面 = 既有缝（桩 agent.config.hooks[event]，§21.6 注记）。
+ * 归册（2026-09-12 收尾轮 9）：真 spawn 用例（T-HS1/2/3/6/7/9/10）走 slow() 门控（子进程类——
+ * 快层 skip、test:full 照跑）；T-HS4/5/8/11 零真进程留快层。
  */
 import { after, test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -103,7 +106,7 @@ function artifactFail(target, label, errSource = target) {
 
 // ── T-HS1–T-HS9：触发判定 / 载荷（AC-HS1 / AC-HS2 / AC-HS3） ─────────────────
 
-test("T-HS1 正常：主会话 run 终止触发 Stop——载荷骨架 / reason=done", async () => {
+slow("T-HS1 正常：主会话 run 终止触发 Stop——载荷骨架 / reason=done", async () => {
   const f = hookFixture()
   const payload = f.path("payload.json")
   const agent = stubAgent({ Stop: [hookEntry({ script: f.script, payload })] })
@@ -124,7 +127,7 @@ test("T-HS1 正常：主会话 run 终止触发 Stop——载荷骨架 / reason=
   assert.equal(new Date(p.timestamp).toISOString(), p.timestamp, "timestamp must be ISO 8601")
 })
 
-test("T-HS2 边界：非阻塞（宿主返回先于脚本产物——信号同步）", { timeout: 15_000 }, async () => {
+slow("T-HS2 边界：非阻塞（宿主返回先于脚本产物——信号同步）", { timeout: 15_000 }, async () => {
   const f = hookFixture()
   const payload = f.path("payload.json")
   const started = f.path("started")
@@ -144,7 +147,7 @@ test("T-HS2 边界：非阻塞（宿主返回先于脚本产物——信号同�
   assert.equal(JSON.parse(raw).event, "Stop")
 })
 
-test("T-HS3 边界：撞帽（ContinueError）→ reason=maxTurns / error=null", async () => {
+slow("T-HS3 边界：撞帽（ContinueError）→ reason=maxTurns / error=null", async () => {
   const f = hookFixture()
   const payload = f.path("payload.json")
   const agent = stubAgent({ Stop: [hookEntry({ script: f.script, payload })] })
@@ -177,7 +180,7 @@ test("T-HS5 边界：用户中止（signal 已 abort / AbortError 展开）不�
   assert.equal(abortErr.reads(), 0, "AbortError unwinding must suppress Stop")
 })
 
-test("T-HS6 边界：auto-turn（digest）回合同样触发", async () => {
+slow("T-HS6 边界：auto-turn（digest）回合同样触发", async () => {
   const f = hookFixture()
   const payload = f.path("payload.json")
   const agent = stubAgent({ Stop: [hookEntry({ script: f.script, payload })] })
@@ -189,7 +192,7 @@ test("T-HS6 边界：auto-turn（digest）回合同样触发", async () => {
   assert.equal(JSON.parse(raw).reason, "done")
 })
 
-test("T-HS7 边界：Stop hook 带 matcher（无工具名）仍触发", async () => {
+slow("T-HS7 边界：Stop hook 带 matcher（无工具名）仍触发", async () => {
   const f = hookFixture()
   const payload = f.path("payload.json")
   const agent = stubAgent({ Stop: [hookEntry({ script: f.script, payload, matcher: "^bash$" })] })
@@ -213,7 +216,7 @@ test("T-HS8 错误：hook 命令不存在 → 零异常、零产物", async () =
   assert.equal(existsSync(`${payload}.err`), false, `script must not have run: ${payload}.err`)
 })
 
-test("T-HS9 错误：非预期异常 → reason=error / error=message", async () => {
+slow("T-HS9 错误：非预期异常 → reason=error / error=message", async () => {
   const f = hookFixture()
   const payload = f.path("payload.json")
   const agent = stubAgent({ Stop: [hookEntry({ script: f.script, payload })] })
@@ -229,7 +232,7 @@ test("T-HS9 错误：非预期异常 → reason=error / error=message", async ()
 
 // ── T-HS10–T-HS11：matcher 回归 / 事件集收口（AC-HS4 / AC-HS5） ───────────────
 
-test("T-HS10 回归：工具事件 matcher 过滤语义保持（PreToolUse 直驱）", async () => {
+slow("T-HS10 回归：工具事件 matcher 过滤语义保持（PreToolUse 直驱）", async () => {
   const f = hookFixture()
   const payload = f.path("payload.json")
   const agent = stubAgent({ PreToolUse: [hookEntry({ script: f.script, payload, matcher: "^bash$" })] })

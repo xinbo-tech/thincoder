@@ -1,6 +1,6 @@
 # 批 1：工具/代码面四小修（QUICKFIX-BATCH-3）
 
-> 板块：跨面快修（CLI+VSC——工具缺陷镜像 + 注释债 + 代码洁）。权威源：QUICKFIX-BATCH-2（CLI F-3 git commit --only 先例）+ POOL-CONFIG-UNIFIED（§24→§11.1/§11.2 映射权威——F-7）+ RESIZE-MOUSE-LEAK-FIX 交付建议 + IMAGE-DOWNGRADE-VISION 跟进项。
+> 板块：跨面快修（CLI+VSC——工具缺陷镜像 + 注释债 + 代码洁）。权威源：QUICKFIX-BATCH-2（CLI F-3 git commit --only 处置）+ POOL-CONFIG-UNIFIED（§24→§11.1/§11.2 映射权威——F-7）+ RESIZE-MOUSE-LEAK-FIX 交付建议 + IMAGE-DOWNGRADE-VISION 跟进项。
 > 状态：**设计待评审（重发定稿版）**——2026-09-09 落档（10 条评估分批——批 1 = **四小修**——L255（VSC git
 >   L204-207 granular add + 整索引实证）+ L216（**CLI src 29 处 + VSC src 39 处 = 68 处实证**——远超初勘 8+）
 >   + L260（tui-lifecycle L20/L84 字面量三源核过）+ L250②（image-handler L77 maxTurns 10 固定实证——8+ 图
@@ -33,7 +33,7 @@
     注释引用）；CLEANUP_REST 只收拢字面量（序列内容零变——测试字节锁保持）；F-4 只改 maxTurns 计算（超时/
     fallback 逻辑零动）；历史文档/CHANGELOG 记史不换。
 
-## 设计（先例/勘察实证——照做勿自行解释）
+## 设计（实证 / 勘察实证——照做勿自行解释）
 
 ### 1. F-1 VSC git commit 镜像（thincoder-vscode/src/tools/git.mjs——392 现）
 - commit case（L200-207——实证现形态：path 给定 granular `add -- <paths>`（L204-205）+ 整索引
@@ -44,10 +44,10 @@
   - 空/空白 path（trim 后空）→ 明确错误
   - 无 path → 现行为保留（add -A → commit）
 - 描述层同步（评审 #3——模型经工具描述发现新能力——commit path 句加 "--only 原子——多 path 空格分隔"——
-  CLI git.md 契约先例）
+  CLI git.md 契约同口径）
 - 测试（评审 #3——VSC 无 git 测试面——新文件）：test/git-commit-pathspec.test.mjs（新 ≤80——镜像 CLI 矩阵：
   --only 原子（他批 pre-staged 不混入）/ 多文件空格分隔 / 空 path 错误 / 无 path 回归 add -A）+ files.mjs
-  登记（CLI 先例 a4f1255）
+  登记（CLI 在案 a4f1255）
 
 ### 2. F-2 §24→§11 旧锚清理（双端——实证 68 处）
 - 实测面（评审 #4 具名族）：CLI src 29 处（advisor/messages.mjs:133、advisor/run.mjs:15/418、advisor.mjs:269、

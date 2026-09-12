@@ -179,7 +179,7 @@
 
 - scope 出现 6 文件：bin/thincoder.mjs（usage L90 + bash/zsh/fish completion L353/392/438）、src/cli/distill-command.mjs（L13/25/67/69）、src/distill.mjs（L21/30/56/120/124/131/135/144/136/145/154）、src/tui/distill-cmd.mjs（L25）。
 - **无持久转录 JSON**——scope 只存在于 LLM 候选输出 JSON（每运行现产现用不落盘）——JSON 兼容落点 = 读时归一单点（distill.mjs L124）。
-- distill --scope 是**全 CLI 现存唯一 scope flag**（memory remove 现仅 <uid> 无 flag——先例是工具参数面非 CLI flag）。
+- distill --scope 是**全 CLI 现存唯一 scope flag**（memory remove 现仅 <uid> 无 flag——既有形态为工具参数面非 CLI flag）。
 - **flag 静默吞参风险**：现 flag 解析不校验未知 flag（distill-command L16-22）——纯改名会让旧 --scope 输入静默 no-op。
 - 值域分裂：prompt "personal|project"（L21）≠ saveCandidate 支持 personal/project/team（L131-153）≠ CLI usage（L25）——与改名正交。
 
@@ -278,8 +278,8 @@ AC6 值域语义不变（提示仍 personal/project）。
 
 | # | 候选 | 评估 | 结论 |
 |---|---|---|---|
-| 1 | **新模块 `src/expand-home.mjs`** | `config.mjs` 已 487/500 行（近硬限；同因拆分先例 `config-migrate.mjs` / `model-specs.mjs`）；纯函数单测面干净；VSC 镜像可同构（各自独立实现，不做同步依赖） | **选定** |
-| 2 | `config.mjs` 内联导出 | 行数两案同末态（内联 +8–12 → ~497——同贴 500 硬限，非区分点）；真代价 = 纯函数失独立单测面（须经 `loadConfig()` 全链）+ 与同因拆分先例（`config-migrate.mjs` / `model-specs.mjs`）不一致 | 否决（区分点 = 可测面 / 模块边界 / 先例，非行数） |
+| 1 | **新模块 `src/expand-home.mjs`** | `config.mjs` 已 487/500 行（近硬限；同因拆分同款 `config-migrate.mjs` / `model-specs.mjs`）；纯函数单测面干净；VSC 镜像可同构（各自独立实现，不做同步依赖） | **选定** |
+| 2 | `config.mjs` 内联导出 | 行数两案同末态（内联 +8–12 → ~497——同贴 500 硬限，非区分点）；真代价 = 纯函数失独立单测面（须经 `loadConfig()` 全链）+ 与同因拆分档（`config-migrate.mjs` / `model-specs.mjs`）不一致 | 否决（区分点 = 可测面 / 模块边界 / 同因拆分，非行数） |
 
 ### 9.3 接口契约
 
@@ -333,7 +333,7 @@ merged.shell = expandHome(merged.shell)
 **（c）projectDir 消费侧基准解析**（七点位：`join(cwd, p)` → `isAbsolute(p) ? p : join(cwd, p)`）：
 
 理由：`~` 展开产出**绝对路径**；`path.join(cwd, "/home/u/x")` 会拼成 `<cwd>/home/u/x`（join 不做绝对绕过）——必须绝对原样。
-**相对形态走原 `join` 分支** → 与修前逐字相同（N7 零伤硬证据）。该式为本仓既有惯用式（先例 `src/tui/cmd-undo.mjs:24`、`src/agent-tools/read-history.mjs:172`）。
+**相对形态走原 `join` 分支** → 与修前逐字相同（N7 零伤硬证据）。该式为本仓既有惯用式（同款 `src/tui/cmd-undo.mjs:24`、`src/agent-tools/read-history.mjs:172`）。
 
 | # | 点位（as-of 2026-09-11） | 用途 |
 |---|---|---|
@@ -380,7 +380,7 @@ merged.shell = expandHome(merged.shell)
 | # | 决策 | 否决备选与理由 |
 |---|---|---|
 | D-H1 | 展开点 = `loadConfig()` 单点（选型 1） | 消费点分散（漏点不可枚举）· 代理层（破坏 config 契约）· 写盘归一（毁原文 / 可移植性） |
-| D-H2 | 展开器住新模块 `src/expand-home.mjs` | config.mjs 内联（行数同贴硬限——非区分点；纯函数失独立单测面 + 违同因拆分先例） |
+| D-H2 | 展开器住新模块 `src/expand-home.mjs` | config.mjs 内联（行数同贴硬限——非区分点；纯函数失独立单测面 + 违同因拆分口径） |
 | D-H3 | 形态面 = `~` / `~/` / `~\`，**不含** `~user` | `~user` 需 passwd / Windows 用户名解析——收益低、双平台语义不一、猜错即静默错域；不做 = 原样透传——**shell 面**响亮失败（spawn 不存在路径）；**dbPath / projectDir / team.dir 面为残余静默面**（透传建字面 `~user` 目录——同病灶，登记 §9.8） |
 | D-H4 | projectDir 消费侧 `isAbsolute ? p : join(cwd, p)`（非 `resolve(cwd, p)`） | `resolve` 对相对输入也有归一二进样（尾斜杠 / `..` 折叠）→ origin 串非零 delta；`isAbsolute` 分支下相对路径逐字同修前（N7 零伤硬证据） |
 | D-H5 | 磁盘原文不动（读时归一） | 写回绝对路径：毁可移植性 + 存量手写配置不生效 |

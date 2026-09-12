@@ -1,9 +1,11 @@
 # 台账提醒/可见面（LEDGER-SURFACE）· 批次记录（2026-09-12）
 
-> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分）**：本档对端（VSC）份已由 VSC 仓 `docs/batches/2026-09-12-LEDGER-SURFACE（VSC 仓）` 逐字承载（D10——零改写）；本档保留本仓份。
-> 移出条目（对端份）清单：§5 交付 VSC 13 档（as-of `:268`）——条目计数（对端份 / 本仓份）= 13 / 8（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。
+> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分 · 已切除 2026-09-12）**：本档对端（VSC）份**已自本档切除**（原文不再留本仓——D11 完全态）；承载档 = VSC 仓 `docs/batches/2026-09-12-LEDGER-SURFACE（VSC 仓）`（逐字搬运、零改写——D10）。
+> 已切除条目清单：§5 落笔对表 VSC 13 行（第 9–19 项）——条目计数（对端份 / 本仓份）= 13 / 8（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。**源档 blob SHA（切除前）= `bfe7936ea26e`**。
+> 变更记录：2026-09-12——对端份经承载档逐字承接后自本档物理切除；档首注记形态收敛为「已切除」。
 
 > 六段 append-only，一段一作者。编制：主 agent · 2026-09-12 02:00 · 来源 = 用户 01:47 发现「从未见过任何提醒」（实查：两仓 40 条技术待办 · 触发字段 0/40 · 老化报告仅 slow 层 · 零推送面）+ 用户 01:48–01:59 逐条裁定「开」。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -27,7 +29,7 @@
 ### 设计约束
 
 1. **数字单源**：台账解析/计数/老化口径**一处实现**（现有 `scripts/check-ledger.mjs` 面扩展或新汇总模块——designer 定；口径 = `requirements/ENGINEERING-MODE.md` §1.13：未决数计数 + 30 天行龄 + 「可开批」阈值 = 同板块 ≥2 / 池 ≥3）；
-2. **启动行先例** = `recentCrashHint`（存在即有输出面；仅在有可动作项时出现——零噪音）；
+2. **启动行形态** = `recentCrashHint`（存在即有输出面；仅在有可动作项时出现——零噪音）；
 3. **变化行** = 事件驱动 + 去重（同一条不重复烦；跨会话去重载体 designer 定）；
 4. **收口行** = 核销同步清单（批次档 §6 模板）内的机械步骤；
 5. **双端纪律**：语义同源、各端独立实现（CLI = TUI 状态行尾段 + 流内文本行；VSC = 状态栏 item + chat 流文本行 + tooltip）；
@@ -45,7 +47,6 @@
 
 ## §2 批次任务（eng-designer 写）
 
-_（待写——eng-designer）_
 
 ---
 
@@ -54,7 +55,7 @@ _（待写——eng-designer）_
 **落档位置**：需求 = `docs/requirements/ENGINEERING-MODE.md` §1.18（F1–F8 / N1–N2 + 口径）+ FR24 行；
 设计 + 测试 = `docs/design/ENGINEERING-MODE.md` §2.30（§2.30.2 选型 / §2.30.3 契约——**行文本逐字 = §2.30.3.3** /
 §2.30.4 受影响文件 / §2.30.5–2.30.7 决策与边界 / §2.30.8 不变量）+ §3.1 AC80–AC90 + §3.2 T97–T110；
-VSC 仓登记 = `thincoder-vscode/docs/design/ENGINEERING-MODE.md` §9/变更记录。
+VSC 仓登记 = `ENGINEERING-MODE（VSC 仓）` §9/变更记录。
 
 ### 本批覆盖的需求条目（三方条目一致——需求 §1.18 = 本节 = 设计 AC 回指）
 
@@ -96,7 +97,7 @@ VSC 仓登记 = `thincoder-vscode/docs/design/ENGINEERING-MODE.md` §9/变更记
 2. `check-ledger` L1–L3 语义零改（既有 T67–T96 零改全绿为证）；只加消费共享 `scanGroups` + 只读 `--summary`；`bin/thincoder.mjs` 零碰。
 3. 档位：新增档 ≤300；既有档守 ≤500（`panel-messages.mjs` 488 紧、`webview/chat.css` 489 紧）；`webview/ui.js` 不得寄居新函数（改为新档 `ledger-line.js`）。
 4. 提示词四文件 D7 行逐字源 = 设计 §2.30.3.6（主 agent 内容权 + eng-coder 落笔）；锚断言子串 `台账可见面（收口行）` + `--summary`（**不含脚本名**——`check-ledger` 零命中口径不动；命令字面只落设计档 / 批次档 §6 模板——修正轮 #1）。
-5. 终局自验前置：VSC 源码改动**需重载扩展才生效**（N4 先例——"文件在了"≠"机制活了"）。
+5. 终局自验前置：VSC 源码改动**需重载扩展才生效**（N4 同规——"文件在了"≠"机制活了"）。
 6. 实现面拆分（建议、实施阶段终定）：**2 个并行 eng-coder**——① CLI 面（`src/ledger.mjs` + TUI 接线 + `scripts/check-ledger.mjs` + CLI 测试 + CLI 提示词双源）② VSC 面（`src/ledger.mjs`(VSC) + 扩展/webview 面 + VSC 测试 + VSC 提示词双源）；文件域不相交，可并行。
 
 _（本段由 eng-designer 经 `batch_segment` 自写；设计与行文本细节以 `docs/design/ENGINEERING-MODE.md` §2.30 为准。）_
@@ -144,7 +145,6 @@ _（本段由 eng-designer 经 `batch_segment` 自写；设计与行文本细节
 
 ## §3 设计评审（评审子代理写）
 
-_（待写——评审子代理）_
 
 ---
 
@@ -157,7 +157,7 @@ _（待写——评审子代理）_
 | 1 | Acceptance criteria | 🔴 | §2.30.3.6 要求把逐字文本（含 `收口行 = `node scripts/check-ledger.mjs --summary` 的输出…`，设计档:1884）落入 **4 个** `discipline-engineering.md`（含两仓 `src/prompts/` 的 2 份——§2.30.4 已列改动）；而 AC80（设计档:2144）与 AC48（设计档:2060）断言 `grep -r "check-ledger" src/prompts/` **零命中**，§2.24.6（设计档:980-981）明文「`src/prompts/**` 不得出现该脚本名（AC48 机判）」；现状实测 0 命中（grep 复核）。照逐字落笔 → AC80/AC48 必红；不落笔 → §2.30.3.6/T105 不达——**两条验收标准不可同时满足**，且牵动 FR13（需求档:723「不得要求跑本仓自带的脚本」）的可移植性立场。 | 单口径裁定「脚本名可否进产品提示词」：或改 §2.30.3.6 逐字文本（保留 `台账可见面（收口行）`/`--summary` 锚、不写脚本字面；具体命令只在批次档核销清单/设计档出现）；或显式修订 AC80/AC48/§2.24.6 的零命中口径并同批登记 FR13 处置——不得两存。 |
 | 2 | Clarity（一致性） | 🟡 | 「启动行」触发条件两说：§2.30.3.4:1856 写「首扫**明细集**非空 → push L2 行」，而明细行集定义（§2.30.3.2:1824）= `{current} ∪ {可动作项目}`——`current` 无条件在内，故「有台账但不可动作」的当前项目也会触发启动行；需求 F3①（需求档:830-831）「**有可动作项才出**」、AC82:2147 / T100:2331「不可动作 → 零行零输出」、U4:1955「不可动作 → 零行」则按可动作门。另「零输出」与常驻标记的边界未明（§2.30.1:1736「常驻两数」/ F2:828-829——不可动作时标记按 F2/T98:2329 应仍在默认色）。 | §2.30.3.4 触发句改按可动作门（触发 = 可动作；推内容 = 明细行集）；AC82/T100 的「零输出」显式限定「会话流零行、标记不受门约束」。 |
 | 3 | Clarity | 🟡 | 去重键与标题派生缺定义：§2.30.3.2:1825 状态档 `{aged:[条目键…]}` 与导出 `agedKeys`（§2.30.3.1:1815）中的「条目键」无派生规则（跨编辑/行位移的稳定性无从判），而一次性去重（F5 / AC85:2150 / T103:2334）与「自清」逻辑全赖它；§2.30.3.3:1840 L3 标题 = 「条目首段 `**…**`」未给「无粗体段」回退（T99:2330 仅盖 >3 条截断）。 | 在 §2.30.3.2 / §2.30.3.3 补条目键派生与标题回退规则，各配一例（可并入 T99/T103 或新增反例）。 |
-| 4 | Affected-file annotations | 🟡 | §2.30.4 的 6 个 >300 行被改文件缺逐档拆分评审注与函数档结论——CLI `src/tui/index.mjs`（478→486）· `src/tui/render-frame.mjs`（398→408）；VSC `src/extension/chat-panel.mjs`（420→426）· `src/extension/panel-messages.mjs`（485→488）· `webview/chat.js`（398→401）· `webview/chat.css`（477→489）；现表只有表级结论（:1923）与 ≤500 上限注（§2.18:527-529 / §2.23:816-822 先例为逐档「不拆 + 理由」+ 函数档结论）。抽验：各行数实测与表一致、无一越 500（read 复核 478/398/240/485/477/398/420/77）。 | 按 §2.23 体例逐档补「不拆 + 理由」与「函数档：无 ≥300 行单函数（as-of）」两注（纯标注，不触发实现改动）。 |
+| 4 | Affected-file annotations | 🟡 | §2.30.4 的 6 个 >300 行被改文件缺逐档拆分评审注与函数档结论——CLI `src/tui/index.mjs`（478→486）· `src/tui/render-frame.mjs`（398→408）；VSC `src/extension/chat-panel.mjs`（420→426）· `src/extension/panel-messages.mjs`（485→488）· `webview/chat.js`（398→401）· `webview/chat.css`（477→489）；现表只有表级结论（:1923）与 ≤500 上限注（§2.18:527-529 / §2.23:816-822 现行体例 = 逐档「不拆 + 理由」+ 函数档结论）。抽验：各行数实测与表一致、无一越 500（read 复核 478/398/240/485/477/398/420/77）。 | 按 §2.23 体例逐档补「不拆 + 理由」与「函数档：无 ≥300 行单函数（as-of）」两注（纯标注，不触发实现改动）。 |
 | 5 | Acceptance criteria | 🔵 | N1（需求档:855-856）「headless（`thincoder chat` / ACP）零新增输出」无对应 AC/用例——设计侧只有散文（§2.30.3.4:1858）与受影响文件域排除；AC80–AC90 无承载项。 | 补一条 AC（`bin/thincoder.mjs` 零改动 / headless 零新增输出）或注明由文件域判据覆盖。 |
 
 **计数**：🔴 1 · 🟡 3 · 🔵 1
@@ -175,9 +175,9 @@ VERDICT: changes-required
 | 3 | 3 | 同上（§2.30.3.2 / §2.30.3.3 / AC81 / AC85 / T99 / T103） | 🟡 | Fixed | :1825「键 = 条目行**归一化文本**——去行首 `- [ ] ` 前缀 + 去首尾空白 + 连续空白折叠为单空格」（位移/编辑两例 + 跨端「CLI 写的键 VSC 须逐字认得」）；:1843「**无粗体段 → 回退 = 归一化文本前 20 字**」；AC81（:2153）/AC85（:2158）/T99（:2339）/T103（:2343）补例。 |
 | 4 | 4 | 同上（§2.30.4 / §2.30.6） | 🟡 | Fixed | 六档逐档注（:1900–1920）+ 档位结论（:1927–1929）；两处既有 ≥300 行单函数如实登记（:1953）；CLI 边界抽验绿（`startTUI` :72 起、:471 收——「L72–471 = 400 行」一致）；对轮 1 建议注的偏离（实测确有 ≥300 行函数）属纠正，方向正确。余四档「无 ≥300 行单函数」注未逐档复核（unverified）。残留漂移见 #6。 |
 | 5 | 5 | 同上（AC89 / T110） | 🔵 | Fixed | AC89（:2167「**headless 面零接线**（文件域判据：`bin/thincoder.mjs` 本批 `git diff` 空 + 其内 `ledger` 零命中——T110④ 承载 N1…）」）；T110（:2350 ④）；未新增 AC 号（D3 计数不动）。 |
-| 6 | (new) | thincoder-vscode/src/extension/panel-messages.mjs | 🔵 | New（numeric drift——他链在飞；不阻塞） | as-of 声明（批前 485 / `handlePanelMessage` L107–484）与当前磁盘不符：函数声明在 :109（`export async function handlePanelMessage(panel, msg) {`），且 :484 仍在 switch 内（`case "saveProxySettings": {`）——文件/函数尾已越声明值；本批只改文档未碰 src，VSC 侧他链（#41）在飞，疑为漂移（原因未证）。建议实施前按当前磁盘重取基准并复核 +3 后 ≤500。 |
+| 6 | (new) | `src/extension/panel-messages.mjs`（VSC 仓） | 🔵 | New（numeric drift——他链在飞；不阻塞） | as-of 声明（批前 485 / `handlePanelMessage` L107–484）与当前磁盘不符：函数声明在 :109（`export async function handlePanelMessage(panel, msg) {`），且 :484 仍在 switch 内（`case "saveProxySettings": {`）——文件/函数尾已越声明值；本批只改文档未碰 src，VSC 侧他链（#41）在飞，疑为漂移（原因未证）。建议实施前按当前磁盘重取基准并复核 +3 后 ≤500。 |
 | 7 | (new) | 设计档 :1883 / :1952 + 需求档 :657 / :840 / :843 | 🔵 | New（措辞/state 对齐；不影响 AC） | 「命令字面（含脚本名）只落本档 / 批次档 §6 模板」/「具体命令字面只落**批次档 §6 模板 / 本档**」与现状不完全一致：需求档 §1.15 D7（:657）、§1.18 F6（:840）、F7（:843）仍含 `scripts/check-ledger.mjs`（修正轮裁定「需求档零碰」）。建议措辞收敛为「不入 `src/prompts/**`（AC48/AC80 判据）」或登记需求档为许可落点。 |
-| 8 | (new) | 批次档 §2 / 设计档 §2.30.6:1953 | 🟡 | Coordination（非缺陷；不阻塞） | 两处函数档拆分债的台账登记（`docs/TODO.md`）待父侧落笔（本档 §2「**待父侧**：台账登记两处拆分债」）；建议附拆分触发条件（对照 §2.26.3 D-1「触发 = 再度增厚」先例）。 |
+| 8 | (new) | 批次档 §2 / 设计档 §2.30.6:1953 | 🟡 | Coordination（非缺陷；不阻塞） | 两处函数档拆分债的台账登记（`docs/TODO.md`）待父侧落笔（本档 §2「**待父侧**：台账登记两处拆分债」）；建议附拆分触发条件（对照 §2.26.3 D-1「触发 = 再度增厚」口径）。 |
 
 **计数**：遗留 🔴 0 · 🟡 1（coordination）· 🔵 2（drift 1 + 措辞 1）；前轮 5/5 Fixed。
 
@@ -193,7 +193,6 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 ---
 
@@ -211,17 +210,6 @@ _（待写——eng-coder）_
 | 6 | `thincoder/src/prompts/discipline-engineering.md`（228 行） | D7 逐字（两锚：`台账可见面（收口行）`/`--summary`） |
 | 7 | `thincoder/docs/design/prompts/discipline-engineering.md`（157 行） | 同上（中文权威） |
 | 8 | `thincoder/test/ledger-surface.test.mjs`（新，~360 行） | T97–T106/T109/T110 + AC89 计时/计数（slow）+ 盘符归一 |
-| 9 | `thincoder-vscode/src/ledger.mjs`（新，225 行） | VSC 独立实现、语义同源（不跨仓 import） |
-| 10 | `thincoder-vscode/src/extension/ledger-surface.mjs`（新，111 行） | item（L1/tooltip/warningBackground/hide）+ post 门 + 送达门 + 周期 |
-| 11 | `thincoder-vscode/src/extension/chat-panel.mjs`（422 行） | `_initStatusBar` 首行 initLedgerSurface（先于守卫——生产路径 `_statusBar` 由 extension.mjs 预置）+ dispose |
-| 12 | `thincoder-vscode/src/extension/panel-messages.mjs`（499 行） | webviewReady 尾（openSessionContent 后）pushLedgerStartup |
-| 13 | `thincoder-vscode/src/extension/panel-project.mjs`（93 行） | onProjectChanged 尾 refreshLedger(emit:false) |
-| 14 | `thincoder-vscode/webview/chat.js`（~415 行） | `ledgerNotice` case + import |
-| 15 | `thincoder-vscode/webview/ledger-line.js`（新，18 行） | 逐行 `.ledger-line [warn]` append |
-| 16 | `thincoder-vscode/webview/chat.css`（~491 行） | `.ledger-line` / `.warn` 样式 |
-| 17 | `thincoder-vscode/src/prompts/discipline-engineering.md`（240 行）+ `docs/design/prompts/…`（163 行） | 同 CLI D7 逐字 |
-| 18 | `thincoder-vscode/test/ledger.test.mjs`（新，~250 行）+ `test/files.mjs`（78 行） | VSC 面用例 + 入册 |
-| 19 | `thincoder-vscode/test/vscode-mock/index.mjs`（**声明外补丁**，~190 行） | 补 `createStatusBarItem`/`StatusBarAlignment`/`ThemeColor`/`MarkdownString`——T107 直驱 item 的前置（原 mock 无状态栏 API）；加性、既有用例零影响 |
 
 ### 决策透明表（实现级裁定——供父侧核）
 
@@ -267,7 +255,7 @@ _（待写——eng-coder）_
 
 **2026-09-12 03:32 收口（父侧核验）**
 
-- **真跑**：CLI `ledger-surface` 15 例 **0 fail** · VSC `ledger` 11 例 **0 fail**；快层 CLI 645/626/1（唯一红 = doc-consistency T41 他链 7 条）· VSC 654/637/1（context-parity 环境态）；**父侧实跑 `--summary`**：四项目行 ✓（thincoder「需求池 4 · 技术待办 34（老化 0）— 可开批」✓ / thincoder-vscode 3·9 可开批 ✓）；
+- **真跑**：CLI `ledger-surface` 15 例 **0 fail** · VSC `ledger` 11 例 **0 fail**；快层 CLI 645/626/1（唯一红 = doc-consistency T41 他链 7 条）· VSC 654/637/1（context-parity 环境态）；**父侧实跑 `--summary`**：四项目行 ✓（thincoder「需求池 4 · 技术待办 34（老化 0）— 可开批」✓ / VSC 仓 3·9 可开批 ✓）；
 - **交付 21 档**（含声明外 1 = `test/vscode-mock/index.mjs` 状态栏 API 补齐——加性零影响，**采纳**）；**提示词禁字面红线**：两仓 `src/prompts/**` `check-ledger` **0 命中** ✓；
 - **评审**：内层背离审计 1 轮（AC89 断言缺口 → 补）→ 代码评审轮 1 changes-required（1🔴+1🟡+2🔵）→ 修正 → 轮 2 超时（600s）→ **轮 3 严格核验 pass**；终态 clean；
 - **裁决（评审 4 项）**：🔴 跨端去重键盘符大小写 → **Fixed**（`notifyKey` 归一，同 session-slots `normalizeCwd` 契约）；🟡 发现序 current 前置 → Fixed；🔵 as-of 漂移 + 🔵 循环 import → Deferred（登记）；

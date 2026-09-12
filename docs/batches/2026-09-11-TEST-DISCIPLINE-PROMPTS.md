@@ -1,9 +1,11 @@
 # 测试体系纪律 · 提示词系统落地（TEST-DISCIPLINE-PROMPTS）· 批次记录（2026-09-11）
 
-> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分）**：本档对端（VSC）份已由 VSC 仓 `docs/batches/2026-09-11-TEST-DISCIPLINE-PROMPTS（VSC 仓）` 逐字承载（D10——零改写）；本档保留本仓份。
-> 移出条目（对端份）清单：§2 波 2（VSC）面（as-of `:90`）——条目计数（对端份 / 本仓份）= 7 / 7（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。
+> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分 · 已切除 2026-09-12）**：本档对端（VSC）份**已自本档切除**（原文不再留本仓——D11 完全态）；承载档 = VSC 仓 `docs/batches/2026-09-11-TEST-DISCIPLINE-PROMPTS（VSC 仓）`（逐字搬运、零改写——D10）。
+> 已切除条目清单：§2 波 2（VSC）面（VSC 6 档提示词 + VSC 测试档 ⑨ 组 = 7 条目）——条目计数（对端份 / 本仓份）= 7 / 7（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。**源档 blob SHA（切除前）= `511d217b296a`**。
+> 变更记录：2026-09-12——对端份经承载档逐字承接后自本档物理切除；档首注记形态收敛为「已切除」。
 
 > 六段 append-only，一段一作者。编制：主 agent · 2026-09-11 23:18 · 来源 = 用户 23:13「今天我们讨论的关于测试体系的那一系列逻辑，你似乎没有落地到提示词里？」+ 23:15「对的，要落地到提示词系统里。」
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -65,7 +67,6 @@
 
 ## §2 批次任务（eng-designer 写）
 
-_（待写——eng-designer）_
 
 ---
 
@@ -74,7 +75,7 @@ _（待写——eng-designer）_
 **落档位置**（三方一致——本批跨双端双源）：
 - 需求 = `docs/requirements/PROMPT-SYSTEM.md` **§10**（F-TD1–F-TD7 / N-TD1–N-TD3——已落）；
 - 设计+测试 = `docs/design/PROMPT-SYSTEM.md` **§8**（逐字文本 §8.3 / 复核表 §8.4 / 锚串 §8.5 / AC-TD1–8 §8.6 / 用例 T-TD1–8 §8.7 / 文件表 §8.8——已落）；
-- VSC 对位 = VSC 仓 `docs/design/VSC-PROMPTS.md`「机制纪律提示词落地」节（本端编辑点 + 同文副本——已落）。
+- VSC 对位 = `VSC-PROMPTS（VSC 仓）`「机制纪律提示词落地」节（本端编辑点 + 同文副本——已落）。
 
 **覆盖条目（三链锚——本表 = 需求档 §10 = 设计档 AC 回指）**：
 
@@ -90,8 +91,7 @@ _（待写——eng-designer）_
 
 **实施波次建议**（两波——文件域不相交；跨批序为硬约束）：
 - **波 1（CLI 面）**：CLI 6 档（de×2 / dn×2 / pe×2，8 编辑点）+ CLI 测试档 TD 锚组——完成即跑 CLI 快层（`node test/run-fast.mjs`）+ 宽度机检。
-- **波 2（VSC 面）**：VSC 6 档 + VSC 测试档 ⑨ 组——**前置 = `VSC-CONTEXT-PARITY` 批已落**（语料修复后基线；落笔前读现态、键控定位——行号会漂移）；完成即跑 VSC 快层 + VSC 宽度机检。
-- 两波可由同一 coder 顺序执行，或按 `files` 域分两 spawn（调度器串行）；VSC 波 `files` 含跨仓测试档路径照实声明。
+两波可由同一 coder 顺序执行。
 
 **验收标准（机验——逐条回指设计 §8.6/§8.7）**：AC-TD1–AC-TD8 + 用例 T-TD1–T-TD8；关键命令 = 两仓 `node test/run-fast.mjs` 全绿 · 两仓 `node scripts/check-doc-width.mjs` 新增违规 0 · 行数实测对表（设计 §8.8 预计值）。
 
@@ -127,7 +127,7 @@ _（待写——eng-designer）_
 
 **基线口径披露（#4 附带）**：§3.3/§4 表 = 第 15 批设计基线（该批已落地；其后各批改动使其多数行相对现状漂移——如 VSC async 450→534）——已就地标基线/现测口径，读者以各批节内现测值为准；本轮按评审「两处互斥」四对逐对修，不逐行重写全表（避免与 §8.x 现测重复）。
 
-**本轮落笔文件**：`docs/design/PROMPT-SYSTEM.md` · `docs/requirements/PROMPT-SYSTEM.md` · `thincoder-vscode/docs/design/VSC-PROMPTS.md`（+ 本段）。**核验**：D6 回读（逐处实读确认）· 两仓 `check-doc-width`（thincoder：本批落笔档零 >300 行——报告超宽均在他批 docs/batches 档；VSC：全仓 .md 全绿）· 一致性机检（本批落笔档零新增；新增 2 条属他批档——范围外披露）。
+**本轮落笔文件**：`docs/design/PROMPT-SYSTEM.md` · `docs/requirements/PROMPT-SYSTEM.md` · `VSC-PROMPTS（VSC 仓）`（+ 本段）。**核验**：D6 回读（逐处实读确认）· 两仓 `check-doc-width`（thincoder：本批落笔档零 >300 行——报告超宽均在他批 docs/batches 档；VSC：全仓 .md 全绿）· 一致性机检（本批落笔档零新增；新增 2 条属他批档——范围外披露）。
 
 ### 实现后对位档残项同步（2026-09-12——微修；本追加与上文本冲突时以本追加为准）
 
@@ -137,24 +137,23 @@ _（待写——eng-designer）_
 
 | # | 条目 | 落点 | 判据（机验） |
 |---|---|---|---|
-| S1 | VSC 对位档 Text D 第 3 行（归属行）移除——对齐 CLI 权威版 `PROMPT-SYSTEM（CLI 仓）§8.3.4` 最终版（单宿主 = pe、不设指针） | `thincoder-vscode/docs/design/VSC-PROMPTS.md`（逐字文本节 + 变更记录） | 该档 Text D 两行版在位；「维护归属」于 VSC 提示词 12 档零残留（grep 实测——注文/变更记录引用除外） |
+| S1 | VSC 对位档 Text D 第 3 行（归属行）移除——对齐 CLI 权威版 `PROMPT-SYSTEM（CLI 仓）§8.3.4` 最终版（单宿主 = pe、不设指针） | `VSC-PROMPTS（VSC 仓）`（逐字文本节 + 变更记录） | 该档 Text D 两行版在位；「维护归属」于 VSC 提示词 12 档零残留（grep 实测——注文/变更记录引用除外） |
 | S2 | §8.8 VSC 六行实现后实测回填 + 变更记录一行 | `thincoder/docs/design/PROMPT-SYSTEM.md`（§8.8 表 + 节内注 + 变更记录） | 六行实测值在位（239 / 162 / 193 / 183 / 55 / 54——2026-09-12 现读重测）· 漂移归因注在位 |
 
 **验收（机验——实测结果）**：D6 回读 ✓ · 两仓 `check-doc-width` 本批落笔档零新增（VSC 全仓 OK 69 文件；CLI 超宽 31 行均在他批 docs/batches 存量档）· 两仓 `doc-consistency` 定向全绿（CLI 11/11 · VSC 8/8——新增违规 0）。
 
 **范围外（登记不改）**：§8.8 测试档两行（估算口径 `+~45 / +~40`——交付实测 403 / 382）· §8.3.6 编辑点表 as-of 基线（键控注已在）· 提示词 / 测试档本体（零碰）。
 
-**落笔文件**：`thincoder-vscode/docs/design/VSC-PROMPTS.md` · `thincoder/docs/design/PROMPT-SYSTEM.md`（+ 本段）。
+**落笔文件**：`VSC-PROMPTS（VSC 仓）` · `thincoder/docs/design/PROMPT-SYSTEM.md`（+ 本段）。
 
 ## §3 设计评审（评审子代理写）
 
-_（待写——评审子代理）_
 
 ---
 
 ### 轮次 1（评审子代理）
 
-**评审对象**：TEST-DISCIPLINE-PROMPTS 设计（需求 `requirements/PROMPT-SYSTEM.md` §10 / 设计 `design/PROMPT-SYSTEM.md` §8 / VSC 仓 `VSC-PROMPTS.md`「机制纪律提示词落地」节）——待评审态；评审范围为三档文档（域外磁盘复核未做，见 #4 标注）。
+**评审对象**：TEST-DISCIPLINE-PROMPTS 设计（需求 `requirements/PROMPT-SYSTEM.md` §10 / 设计 `design/PROMPT-SYSTEM.md` §8 / `VSC-PROMPTS（VSC 仓）`「机制纪律提示词落地」节）——待评审态；评审范围为三档文档（域外磁盘复核未做，见 #4 标注）。
 
 | # | Category | Severity | Issue | Suggestion |
 |---|----------|----------|-------|------------|
@@ -184,7 +183,6 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 ---
 
@@ -210,7 +208,7 @@ _（待写——eng-coder）_
 | 2 | Text A/D 中文正文通落两源（src 侧亦中文） | §8.3 通则（修正轮 #1） |
 | 3 | 尾注落句号前：`…实条目数（计数口径 = 未决数——归档条目不计数）。` | §8.3.4「句尾追加」（引文不含句号）；锚 TD_CNT 命中 |
 | 4 | VSC-PROMPTS 对位档 Text D 三行版（含 :276 残留行）vs CLI §8.3.4 两行版 → 取 CLI | VSC 档自注「与 CLI §8.3 字面核对」（设计权威 = CLI §8.3）；残留行登记父/设计侧 |
-| 5 | 测试头注自述同步（CLI 档 +1 bullet；VSC 档「断言八面」→「断言九面」+ ⑨ 行） | 同族先例（第 16 批 ⑧ 组头注七面→八面）；文件自描述一致；零断言语义 |
+| 5 | 测试头注自述同步（CLI 档 +1 bullet；VSC 档「断言八面」→「断言九面」+ ⑨ 行） | 同族同款（第 16 批 ⑧ 组头注七面→八面）；文件自描述一致；零断言语义 |
 | 6 | dual-source 头注「用例守恒 53 = 42 + 11」零碰 | §8.5 修正轮 #3（本批零碰锁体面）；锁值 63 = 42 + 21 由后落地者同步 |
 | 7 | 锚测试例命名改标 T-TD#（审计 n2 修正） | 内部分歧审计发现命名可追溯性瑕疵（覆盖完整）——修正后复跑双档全绿 |
 
@@ -253,7 +251,7 @@ _（待写——eng-coder）_
 ### 审计与代码评审（轮次与终态）
 
 - **分歧审计**（explore 只读，1 轮）：四类偏差（部分实现 / 静默简化 / 文档漂移 / 超清单文件）**零发现**；3 条低级注记——n2 命名可追溯性 → **已修正**（改标 T-TD#；复跑全绿）；n1（VSC pe src 行数 as-of 陈旧）· n3（§5 待写）→ 随本段处理。
-- **代码评审**（advisor type=code，1 轮）：**VERDICT: pass（0🔴 · 1🟡 optional）**——🟡 = 两测试档 >300 行（存量既超 + 测试档登记不拆先例；无须动作）；2 处注记引文被 host 校验标 mismatch（backtick 转义提取伪差——实读复核均正确）。
+- **代码评审**（advisor type=code，1 轮）：**VERDICT: pass（0🔴 · 1🟡 optional）**——🟡 = 两测试档 >300 行（存量既超 + 测试档登记不拆口径；无须动作）；2 处注记引文被 host 校验标 mismatch（backtick 转义提取伪差——实读复核均正确）。
 - **终态 = clean**：无未收敛 🔴；修正轮 = 1（审计 n2）。
 
 ### §5 写入自证
@@ -267,6 +265,6 @@ _（待写——eng-coder）_
 - **真跑**：CLI `test/prompts-dual-source.test.mjs` → **21/21** ✓（18→21）；VSC `test/prompts-mirror-anchors.test.mjs` → **12/12** ✓（9→12）；
 - **全仓快层**：CLI 578 例 / 562 过 / 1 fail（= T41① 他批档引用形态——**父侧已修**：`VSC-LIVE-UX.md:129` V1 引用改形 + 打标 → `doc-consistency` **11/11 绿**）；VSC 601 / 587 / 0；
 - **机检**：34/34 锚串命中 · 可移植标注零违规 · 旧句/维护归属零残留（12 档）；
-- **交付表 7 项全 Done**（12 档提示词 + 2 锚档）；审计 clean + 代码评审 pass（1 Deferred = 锚档 >300 存量登记口径——先例）；
+- **交付表 7 项全 Done**（12 档提示词 + 2 锚档）；审计 clean + 代码评审 pass（1 Deferred = 锚档 >300 存量登记同口径）；
 - **遗留（doc 层——随收口划扫）**：VSC-PROMPTS.md:276 Text D 残留行 + §8.8 as-of 行数（VSC pe 87→54 跨批漂移）；T75 锁值 63 = 42 + 21 待第 14 批同步；
 - **链终**：design 链令牌已消费（值不落档）——再动需新评审。

@@ -1,10 +1,13 @@
 # VSC 评审链 / 异步残留收口（群 B）· 批次记录（2026-09-11）
 
-> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分）**：本档对端（VSC）份已由 VSC 仓 `docs/batches/2026-09-11-VSC-REVIEW-ASYNC-SWEEP（VSC 仓）` 逐字承载（D10——零改写）；本档保留本仓份。
-> 移出条目（对端份）清单：§2 VSC 面（as-of `:56`；VSC 15 / CLI 6）——条目计数（对端份 / 本仓份）= 15 / 6（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。
+> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分 · 已切除 2026-09-12）**：本档对端（VSC）份**已自本档切除**（原文不再留本仓——D11 完全态）；承载档 = VSC 仓 `docs/batches/2026-09-11-VSC-REVIEW-ASYNC-SWEEP（VSC 仓）`（逐字搬运、零改写——D10）。
+> 已切除条目清单：§2「VSC 仓」表 15 行（src 10 档 + 测试 5 档）——条目计数（对端份 / 本仓份）= 15 / 6（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。**源档 blob SHA（切除前）= `d295763ac0e2`**。
+> 变更记录：2026-09-12——对端份经承载档逐字承接后自本档物理切除；档首注记形态收敛为「已切除」。
+> 变更记录（收尾轮）：2026-09-12——§2 覆盖表 B1–B3 行（对端纯端条目）补切；承载档承接。
 
 > 六段 append-only，一段一作者：§1 讨论（主 agent）· §2 批次任务（eng-designer）· §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder 自写）· §6 验证与收口（父代理）。
 > 编制：主 agent · 2026-09-11 · 来源 = 用户 16:45「都一起做了」+ VSC 未做项普查（explore #148——48 项/4 群）。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -35,46 +38,22 @@
 
 ## §2 批次任务（eng-designer 写）
 
-_（待写——eng-designer）_
 
 **状态：任务书就绪**（2026-09-11——需求层 + 设计/测试三层已落档，待设计评审；**B1 复议结论 = 修**（重新论证见 VSC 设计档 §15.1——非默认维持）；零阻塞裁定项）。实施者 = eng-coder（设计 token 门）。本 §2 = coder 任务书本体（不另写副本）。
 
 **落档位置**：需求 = CLI 仓 `docs/requirements/AGENT-LOOP.md` §11（B1/B5：F-I1 / F-I2 + N-I1~N-I3）
 + `docs/requirements/ADVISOR-CONVERGENCE.md` §13（B2/B3/B4：F30 / F31 / F32 + N22~N24）；
-设计 = VSC 仓 `docs/design/AGENT-LOOP.md` §15（B1）/ §16（B5 镜像）+ `docs/design/ADVISOR-CONVERGENCE.md` §17（B2/B3/B4-VSC）
+设计 = `AGENT-LOOP（VSC 仓）` §15（B1）/ §16（B5 镜像）+ `ADVISOR-CONVERGENCE（VSC 仓）` §17（B2/B3/B4-VSC）
 · CLI 仓 `docs/design/ADVISOR-CONVERGENCE.md` §18（B4 语义源 + 对位登记）+ `docs/design/AGENT-LOOP.md` §22（B5 语义源）。
 
 ### 一、逐条覆盖表（§2 条目 = 设计档验收标准回指 = 需求档条目——三方一致）
 
 | # | 批次条目 | 需求条目 | 设计落点 | 验收（AC） | 实施域 |
 |---|---|---|---|---|---|
-| B1 | advisor 池中止孤儿（复议 = **修**） | F-I1 | VSC AGENT-LOOP §15（契约 C-10a~f / T-D11~T-D13） | AC-B1-1~4 | VSC：async-discard / run-stages / 测试档 |
-| B2 | 结算面 launchRefused 残留 | F30 | VSC ADVISOR-CONVERGENCE §17.1（消费点守卫 / T-RS1~2） | AC-B2-1 | VSC：advisor-async |
-| B3 | 冻结窗口盲区（file_ops 拦 + 记；batch_segment 记；五面登记） | F31 | VSC ADVISOR-CONVERGENCE §17.2（T-FZ1~4——→ 修正轮 :128） | AC-B3-1 | VSC：execute-tools / batch-segment |
 | B4 | estimateTokens CJK 低估（**双端**） | F32 | CLI ADVISOR-CONVERGENCE §18（语义源）+ VSC §17.3（VSC 面 / T-EST1~2） | AC-B4-CLI-1~2（CLI）/ AC-B4-1（VSC） | 双端：advisor/compaction + 测试档 |
 | B5 | digest 注入预算扩面（**双端**） | F-I2 | CLI AGENT-LOOP §22（语义源）+ VSC AGENT-LOOP §16（VSC 镜像 / T-DG1~3） | AC-B5-CLI-1~3 / AC-B5-1~3 | 双端：digest-budget 新档 + 四族注入器 + 测试档 |
 
 ### 二、受影响文件全清单（行数 as-of 2026-09-11 实测——口径 `N lines total`）
-
-**VSC 仓（src 10 档 + 测试 5 档）**
-
-| 文件 | 现 | 预计 | 条目 |
-|---|---|---|---|
-| `src/agent-tools/async-discard.mjs` | 64 | ~99 | B1 |
-| `src/agent/run-stages.mjs` | 304 | ~306 | B1 |
-| `src/agent-tools/advisor-async.mjs` | 493 | ≤498（**贴线**——越 500 停下报告） | B2 + B5 |
-| `src/agent/execute-tools.mjs` | 483 | ~489 | B3 |
-| `src/agent-tools/batch-segment.mjs` | 185 | ~188 | B3 |
-| `src/advisor/compaction.mjs` | 171 | ~174 | B4 |
-| `src/agent-tools/digest-budget.mjs` | 新 | ~70 | B5 |
-| `src/agent-tools/subagent-async.mjs` | 499 | ~470（净减——迁出预算块） | B5 |
-| `src/agent-tools/subagent-escalate-async.mjs` | 221 | ~224 | B5 |
-| `src/agent-tools/consult.mjs` | 469 | ~473 | B5 |
-| `test/async-parity.test.mjs` | 397 | ~440 | B1（T-D11~13） |
-| `test/advisor-guard-completion.test.mjs` | 221 | ~280 | B2 / B3（T-RS / T-FZ） |
-| `test/batch-segment.test.mjs` | 221 | ~245 | B3（T-FZ3） |
-| `test/advisor-context-budget.test.mjs` | 155 | ~190 | B4（T-EST） |
-| `test/eng-settlement.test.mjs` | 290 | ~330 | B5（T-DG1~3） |
 
 **CLI 仓（src 4 档 + 测试 2 档）**
 
@@ -127,7 +106,7 @@ _（待写——eng-designer）_
 | # | 级别 | 落点 |
 |---|---|---|
 | 1 | 🟡 | VSC ADVISOR-CONVERGENCE §17.2：契约 2 补 `l3Paths` → `agent._touchedFiles` 同点记账（`:1322-1324`）· 契约 4 `_touchedFiles` 除外句（`:1327`）· 表 #7 陈旧记账 + 理由句（`:1316`）——子代理 file_ops 合入面缺口闭合；用例 T-FZ4（`:1369`）· AC-B3-1（`:1378`）· §17 计数「用例 7→8」（`:1392`）· §17.4 行 5 预计 ~290（`:1351`） |
-| 2 | 🟡 | VSC AGENT-LOOP §12.3 C-9 收口注（`:656`——原「零改动」= 第 35 批排程口径；§16 净减迁出——照 §12.8 #1 / §14.11 先例同形） |
+| 2 | 🟡 | VSC AGENT-LOOP §12.3 C-9 收口注（`:656`——原「零改动」= 第 35 批排程口径；§16 净减迁出——照 §12.8 #1 / §14.11 同形） |
 | 3 | 🔵 | 本档 §2 计数更正（与上方冲突处以下列为准）：三态·测试层「VSC 4 档」→ **5 档**（async-parity / advisor-guard-completion / batch-segment / advisor-context-budget / eng-settlement——与表头「测试 5 档」、D3「VSC 15」对齐）；D3 同步——用例 13 → **14**（T-FZ 组 = T-FZ1~4）、`test/advisor-guard-completion.test.mjs` 预计 ~280 → **~290** |
 | 4 | 🔵 | VSC ADVISOR §17.4 贴线注「B2+B4」→「**B2+B5**」（`:1355`） |
 | 5 | 🔵 | VSC AGENT-LOOP §16.3 `persistOverflowReport(raw, { cwd, tag })` 的 `tag` 落处注明——落盘文件名后缀（`:990`） |
@@ -139,7 +118,6 @@ _（待写——eng-designer）_
 
 ## §3 设计评审（评审子代理）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
@@ -147,12 +125,12 @@ _（待写——评审子代理）_
 
 | # | Category | Severity | Issue | Suggestion |
 |---|----------|----------|-------|------------|
-| 1 | Coverage（B3） | 🟡 | VSC ADVISOR-CONVERGENCE §17.2 表 #7（`thincoder-vscode/docs/design/ADVISOR-CONVERGENCE.md:1314`）理由句「陈旧记账**已有**（合入即记账）／判面已覆盖」对 file_ops 子案例过度声明：`mergeChildMutations`（`thincoder-vscode/src/agent-tools/subagent-async.mjs:483-498`）只搬运 `sink.touchedFiles`＝子代 `_touchedFiles`，而 `_touchedFiles` 仅在成功记账块（`thincoder-vscode/src/agent/execute-tools.mjs:411-430`、push 于 :429）以 FILE_MUTATORS 为键入账；本批契约 2（同档 :1320）只扩 `recordFileMutation`（父/子各写各自载体）、契约 3（:1322）只补 batch_segment——子代理 file_ops 改被审档（move/copy/rename）既不被拦（子代理面预闸不可达）、也不进父侧变更事件、亦未显式登记为该子面残余。 | 契约 2 键同扩时同步把 l3Paths 记入 `_touchedFiles`（子代即随 merge 合入父侧）；或 §17.2 #7 理由句改为「FILE_MUTATORS + batch_segment 已覆盖；file_ops 子代理写残余登记（复核触发随表）」——二择一，勿留未声明缺口。 |
-| 2 | Doc-state（B5） | 🟡 | VSC AGENT-LOOP §12.3 C-9（`thincoder-vscode/docs/design/AGENT-LOOP.md:659`）声明「`subagent-async.mjs` **零改动**（499 行贴线——不越 500）」，本批 §16.4（同档 :1010）将该档列为改动档（499→~470 净减迁出 + D-DG4 re-export，:1002），§16 头（:968）冻结面却写「§5 / §9 / §12 / §15 已交付契约零碰」——C-9 该句无收口/限定注。 | 按 §12.8 #1 / §14.11 收口注先例加一行：原「零改动」= 第 35 批排程口径；本批 §16 以净减方式迁出预算块（§12 冻结限「语义零改」）。 |
+| 1 | Coverage（B3） | 🟡 | VSC ADVISOR-CONVERGENCE §17.2 表 #7（`ADVISOR-CONVERGENCE（VSC 仓）:1314`）理由句「陈旧记账**已有**（合入即记账）／判面已覆盖」对 file_ops 子案例过度声明：`mergeChildMutations`（`src/agent-tools/subagent-async.mjs:483-498`（VSC 仓））只搬运 `sink.touchedFiles`＝子代 `_touchedFiles`，而 `_touchedFiles` 仅在成功记账块（`src/agent/execute-tools.mjs:411-430`（VSC 仓）、push 于 :429）以 FILE_MUTATORS 为键入账；本批契约 2（同档 :1320）只扩 `recordFileMutation`（父/子各写各自载体）、契约 3（:1322）只补 batch_segment——子代理 file_ops 改被审档（move/copy/rename）既不被拦（子代理面预闸不可达）、也不进父侧变更事件、亦未显式登记为该子面残余。 | 契约 2 键同扩时同步把 l3Paths 记入 `_touchedFiles`（子代即随 merge 合入父侧）；或 §17.2 #7 理由句改为「FILE_MUTATORS + batch_segment 已覆盖；file_ops 子代理写残余登记（复核触发随表）」——二择一，勿留未声明缺口。 |
+| 2 | Doc-state（B5） | 🟡 | VSC AGENT-LOOP §12.3 C-9（`AGENT-LOOP（VSC 仓）:659`）声明「`subagent-async.mjs` **零改动**（499 行贴线——不越 500）」，本批 §16.4（同档 :1010）将该档列为改动档（499→~470 净减迁出 + D-DG4 re-export，:1002），§16 头（:968）冻结面却写「§5 / §9 / §12 / §15 已交付契约零碰」——C-9 该句无收口/限定注。 | 按 §12.8 #1 / §14.11 收口注口径加一行：原「零改动」= 第 35 批排程口径；本批 §16 以净减方式迁出预算块（§12 冻结限「语义零改」）。 |
 | 3 | 计数 | 🔵 | 批次档 §2 三态行「VSC 4 档」（`thincoder/docs/batches/2026-09-11-VSC-REVIEW-ASYNC-SWEEP.md:99`）与同档表头「测试 5 档」（:56）及 D3「VSC 15」（:116）不一致；档列实为 5 档（async-parity / advisor-guard-completion / batch-segment.test / advisor-context-budget / eng-settlement）。 | 4 → 5。 |
-| 4 | Clarity | 🔵 | VSC §17.4 贴线注记（`thincoder-vscode/docs/design/ADVISOR-CONVERGENCE.md:1352`）「若实施越 500：先落 B2+**B4** 实测行数」——B4 落 `advisor/compaction.mjs`，不动 advisor-async；同表 #1 行为「B2 守卫（+~3）+ **B5** 接线（+~3）」。 | B2+B4 → B2+B5。 |
-| 5 | Clarity | 🔵 | VSC §16.3（`thincoder-vscode/docs/design/AGENT-LOOP.md:992`）`persistOverflowReport(raw, { cwd, tag })` 的 `tag` 未定义用途（VSC 现函数无 tag；CLI 对位 `thincoder/docs/design/AGENT-LOOP.md:1568` 的 `{ tag }` ↔ 现 callId 入文件名）。 | 注明 tag 落处（如文件名后缀）或删参。 |
-| 6 | Doc hygiene | 🔵 | VSC AGENT-LOOP §1 模块地图 `subagent-scheduler.mjs` 两行重复（`thincoder-vscode/docs/design/AGENT-LOOP.md:68` / :69——后者为 D1 accessor 增补行）。 | 合并两行（本批已动 §1，可顺手清）。 |
+| 4 | Clarity | 🔵 | VSC §17.4 贴线注记（`ADVISOR-CONVERGENCE（VSC 仓）:1352`）「若实施越 500：先落 B2+**B4** 实测行数」——B4 落 `advisor/compaction.mjs`，不动 advisor-async；同表 #1 行为「B2 守卫（+~3）+ **B5** 接线（+~3）」。 | B2+B4 → B2+B5。 |
+| 5 | Clarity | 🔵 | VSC §16.3（`AGENT-LOOP（VSC 仓）:992`）`persistOverflowReport(raw, { cwd, tag })` 的 `tag` 未定义用途（VSC 现函数无 tag；CLI 对位 `thincoder/docs/design/AGENT-LOOP.md:1568` 的 `{ tag }` ↔ 现 callId 入文件名）。 | 注明 tag 落处（如文件名后缀）或删参。 |
+| 6 | Doc hygiene | 🔵 | VSC AGENT-LOOP §1 模块地图 `subagent-scheduler.mjs` 两行重复（`AGENT-LOOP（VSC 仓）:68` / :69——后者为 D1 accessor 增补行）。 | 合并两行（本批已动 §1，可顺手清）。 |
 
 **抽核与未复验声明**：行数表 21/21 档逐项源码实测相符（含 2 新档 `digest-budget.mjs` 双端确认未存在）；宽度代理抽核（regex ≥300 非表行）5 档新增节零命中——`scripts/check-doc-width.mjs` 实跑未复验（unverified）；需求 F-I1/F-I2/F30/F31/F32/N-I1~3/N22~24 逐条在位（源核）；TODO.md 状态推进、群 A 并发落档「已修复」断言未复验（不在评审档面）。
 
@@ -168,8 +146,8 @@ VERDICT: pass
 
 | # | Category | Severity | Issue | Suggestion |
 |---|----------|----------|-------|------------|
-| 1 | 计数一致性（D3） | 🔵 | 本档 §2 覆盖表 B3 行（`thincoder/docs/batches/2026-09-11-VSC-REVIEW-ASYNC-SWEEP.md:50`）仍写「VSC ADVISOR-CONVERGENCE §17.2（T-FZ1~3）」：设计档已含 T-FZ4（`thincoder-vscode/docs/design/ADVISOR-CONVERGENCE.md:1369`）、§17 计数 = 8（:1392）、AC-B3-1 含 T-FZ4（:1378）；修正轮追加（本档 :128）显名更正 :99 / :116 / :71 并声明「T-FZ 组 = T-FZ1~4」——:50 不在显名之列，仅靠「以本追加为准」条款解析。 | 下次触碰本档时补一行回指注（如「→ 修正轮 :128」）；按现条款可视为已解析——记录项，非未落。 |
-| 2 | 引用形态（Clarity） | 🔵 | 本轮落修新增句尾注（`thincoder-vscode/docs/design/ADVISOR-CONVERGENCE.md:1324`）「（§14.14 E-D6 口径）」：本档无 §14.14（§14 子节止于 §14.12——同档 :897），本档 CLI 侧引用惯例带仓标（同档 :764「CLI §14.14 E-3c」· :1162 · :1221）；「E-D6」目标是否存在未复验（CLI 档不在评审域）。 | 若指 CLI 档项 → 补「CLI」仓标；若指本档 → 改指 §14.4(c)（拦集 ⊆ 判 stale 集同源判据原位）。 |
+| 1 | 计数一致性（D3） | 🔵 | 本档 §2 覆盖表 B3 行（`thincoder/docs/batches/2026-09-11-VSC-REVIEW-ASYNC-SWEEP.md:50`）仍写「VSC ADVISOR-CONVERGENCE §17.2（T-FZ1~3）」：设计档已含 T-FZ4（`ADVISOR-CONVERGENCE（VSC 仓）:1369`）、§17 计数 = 8（:1392）、AC-B3-1 含 T-FZ4（:1378）；修正轮追加（本档 :128）显名更正 :99 / :116 / :71 并声明「T-FZ 组 = T-FZ1~4」——:50 不在显名之列，仅靠「以本追加为准」条款解析。 | 下次触碰本档时补一行回指注（如「→ 修正轮 :128」）；按现条款可视为已解析——记录项，非未落。 |
+| 2 | 引用形态（Clarity） | 🔵 | 本轮落修新增句尾注（`ADVISOR-CONVERGENCE（VSC 仓）:1324`）「（§14.14 E-D6 口径）」：本档无 §14.14（§14 子节止于 §14.12——同档 :897），本档 CLI 侧引用惯例带仓标（同档 :764「CLI §14.14 E-3c」· :1162 · :1221）；「E-D6」目标是否存在未复验（CLI 档不在评审域）。 | 若指 CLI 档项 → 补「CLI」仓标；若指本档 → 改指 §14.4(c)（拦集 ⊆ 判 stale 集同源判据原位）。 |
 
 **复验口径（六件落点逐点回读——只读域 = 三档 + 锚点）**：① `:1322-1324`（契约 2 `_touchedFiles` 同点记账）/ `:1327`（契约 4 除外句）/ `:1316`（表 #7）/ `:1369`（T-FZ4）/ `:1378`（AC-B3-1）/ `:1392`（计数 8）+ §17.4 `:1351`（~290）✓ ·
 ② `AGENT-LOOP.md:656` C-9 收口注 ✓ · ③ 本档 `:128` 三数（4→5 档 / 用例 13→14 / ~280→~290）✓ · ④ `:1355`「B2+B5」✓ · ⑤ `AGENT-LOOP.md:990` tag 落处（文件名后缀）✓ · ⑥ `AGENT-LOOP.md:70` 合并后单行（调度器行无重复）✓。
@@ -194,7 +172,6 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 **状态：交付完成（clean）**——B1~B5 双端落地；两仓快层复跑（VSC 全绿；CLI 唯一失败＝他批在途批次档 V1/V2 违规——本批零命中，见四）；内部分歧审计 + 内部代码评审轮 1/轮 2 全部收敛（零 🔴、零 must-fix）。
 

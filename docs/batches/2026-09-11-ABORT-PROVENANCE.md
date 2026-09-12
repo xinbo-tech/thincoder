@@ -3,6 +3,7 @@
 > 六段 append-only，**一段一作者**：§1 讨论（主 agent）· §2 批次任务（eng-designer）·
 > §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder 自写）· §6 验证与收口（父代理）。
 > 编制：主 agent（工程模式）· 2026-09-11 13:18 · 来源 = 用户 13:17「两条都办」（C#155 **本仓接管**）。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -91,7 +92,7 @@ TUI 块面错误文案（digest 已是首次可判载体）· tool-result/sync �
 **VSC 镜像 600s 绝对墙钟残留**：`thincoder-vscode/src/provider.mjs:28`（`FETCH_TIMEOUT_MS = 600_000`）→ `:324` 每请求
 `AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)])`（`:24-27` 注释 "CLI parity" 已陈旧）——
 用户实证文案 "aborted due to timeout" 的**唯一在网生产点**（CLI 链实测不符）。所需档 = VSC
-`docs/design/AGENT-LOOP.md` + `PROVIDER.md` + `src/provider.mjs`；最小改动面 = `:324` 去绝对墙钟 /
+`docs/design/AGENT-LOOP.md` + `PROVIDER.md` + `src/provider.mjs`；完整修复路径 = `:324` 去绝对墙钟 /
 `:327` 头阶段语义对齐 CLI；另有 VSC 镜像标注/合成面（`entry.error` 合成族）。
 
 **未确认面（open）**：① 用户实证两次的原始死亡文本未入档（§20.4 有机械论证——可补截图二审，不阻塞）；② detail 短串是否收紧为枚举（实现后按实测收敛）。
@@ -139,7 +140,6 @@ TUI 块面错误文案（digest 已是首次可判载体）· tool-result/sync �
 
 ## §3 设计评审（评审子代理自写）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
@@ -176,7 +176,6 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 ### 交付摘要（eng-coder 自写 · 2026-09-11）
 

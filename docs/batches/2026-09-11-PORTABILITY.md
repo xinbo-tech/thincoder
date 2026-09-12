@@ -3,6 +3,7 @@
 > 六段 append-only，**一段一作者**：§1 讨论（主 agent）· §2 批次任务（eng-designer）·
 > §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder 自写）· §6 验证与收口（父代理）。
 > 编制：主 agent（工程模式）· 2026-09-11 · 来源 = 用户 12:44「**那可移植性那条可以做了**」（解冻 9-10 勘察的「先全整明白，再改」）。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -58,7 +59,6 @@
 
 ## §2 批次任务（eng-designer 自写）
 
-_（待写——eng-designer）_
 
 ### 批次任务（eng-designer 自写——2026-09-11）
 
@@ -129,7 +129,6 @@ _（待写——eng-designer）_
 
 ## §3 设计评审（评审子代理自写）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
@@ -156,7 +155,7 @@ VERDICT: changes-required
 
 计数：🔴 1 · 🟡 7 · 🔵 4（合计 12）。
 
-> 〔父侧代笔（2026-09-11 13:15；17:10 改字——V1 引述字面不再命中）：§3 轮次 1 表内一处段引用勘误——上表发现 #2 行的旧写法（「本档」+§N 形态）改为「设计档 §9:424（`design/PORTABILITY.md`）」；本注不再引述旧字面，V1 源头消除。依据 = 第 8/12 批父侧代笔 §3 先例。〕
+> 〔父侧代笔（2026-09-11 13:15；17:10 改字——V1 引述字面不再命中）：§3 轮次 1 表内一处段引用勘误——上表发现 #2 行的旧写法（「本档」+§N 形态）改为「设计档 §9:424（`design/PORTABILITY.md`）」；本注不再引述旧字面，V1 源头消除。依据 = 第 8/12 批父侧代笔 §3 同口径。〕
 
 ### 轮次 2（评审子代理）
 
@@ -199,7 +198,6 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 ### 实施记录（eng-coder 自写——2026-09-11）
 
@@ -246,7 +244,9 @@ _（待写——eng-coder）_
 
 **批级机检（实测值）**
 
-- `node test/run-fast.mjs`：**463 tests / 449 pass / 12 skip / 2 fail**。两条失败均非本批：① `doc-consistency` T41——V1 违规 2 条（`docs/batches/2026-09-11-PORTABILITY.md` §3 父侧代笔行 :159 **引述**旧错误写法（自指形态：本档「§9」）+ 他批 `2026-09-11-TUI-SELECTION.md`），② `eng-designer-role` T40——他批在飞的 `docs/design/ENGINEERING-MODE.md`（已核 **HEAD 版该断言通过**、工作树版失败 ⇒ 非本批引入）。本批 4 新档 14 用例 + 定向回归档（prompts-async-guidance / prompts-dual-source / batch-segment / memory-tool / distill / verify-redesign / config / config-pool）**134/134 绿**。
+- `node test/run-fast.mjs`：**463 tests / 449 pass / 12 skip / 2 fail**。两条失败均非本批：① `doc-consistency` T41——V1 违规 2 条（`docs/batches/2026-09-11-PORTABILITY.md` §3 父侧代笔行 :159 **引述**旧错误写法（自指形态：本档「§9」）+ 他批 `2026-09-11-TUI-SELECTION.md`），② `eng-designer-role`
+  T40——他批在飞的 `docs/design/ENGINEERING-MODE.md`（已核 **HEAD 版该断言通过**、工作树版失败 ⇒ 非本批引入）。本批 4 新档 14 用例 + 定向回归档（prompts-async-guidance / prompts-dual-source / batch-segment / memory-tool / distill / verify-redesign / config / config-pool）**134/134 绿**。
+  机械折行（2026-09-12 形态清零轮）——语义零改
 - `node scripts/check-doc-width.mjs`：本批文件**新增超宽 0**（修复过程：CN 镜像 :132 由 307 字符断行至 ≤300）；一致性新增 3 条**全部**在他批/父侧文件（PORTABILITY 批次档 §3 代笔引述 1 条 + TUI-SELECTION 2 条）——本批新增违规 0。
 - slow 门：零未归册拦截（T-17 归册 slow 后复核通过）。
 

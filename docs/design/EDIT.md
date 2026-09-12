@@ -1,7 +1,7 @@
 # edit 工具权威语义（EDIT）
 
 > 板块：编辑工具。权威源：CLI `src/tools/edit-diff.mjs`（diff 内核/判定序）+ `src/tools/edit-batch.mjs`（D1/D2 纯函数）+ `src/tools/file.mjs`（editTool 壳/schema）。本文档是 **edit 工具语义的权威源**——`TOOLS.md` §6.1 只留地图（定位句 + 指针），不得复制本档正文。
-> 双端：CLI（本文档）与 VSC（thincoder-vscode `docs/design/EDIT.md`）同机制各自独立实现——镜像锚：两端工具描述逐字一致（评审逐字对齐），语义正文各自落地。
+> 双端：CLI（本文档）与 VSC（对位档 `EDIT（VSC 仓）`）同机制各自独立实现——镜像锚：两端工具描述逐字一致（评审逐字对齐），语义正文各自落地。
 > 状态：**已实现**（D1-D3 落地 2026-09-08）。历史设计见文末「变更记录」。
 
 ## 1. 定位
@@ -71,8 +71,8 @@ EOL 写回（detectFileEol/joinWithEol/majorityEol）与失败候选（findCandi
 
 `test/edit-tool-improvement.test.mjs`（**33 用例——29 快 + 4 slow**：删行形态全路径/显式空串拒含 replace_all/normalize 弯引号命中 + 单遍映射单元/防误匹配/批量删行+模糊端到端——2026-09-08 阶段 2 实测校准）。
 
-- 2026-09-08：阶段 2 实现落地（EDIT.md §8 变更段并入本档 §1-§7）——删行形态（行号省略 new_string = 删，显式空串/内容空串拒）+ normalize 统一（单遍逐字符映射 `'`/`‘’`/`“”`/反引号 → `"`——无行内折叠——双端同算法）+ 描述/提示词改写（路由段/空串 note/discipline/system 陈旧句）+ 代码注释 §15 旧编号清理。
+- 2026-09-08：阶段 2 实现落地（本档原 §8 变更段并入本档 §1-§7）——删行形态（行号省略 new_string = 删，显式空串/内容空串拒）+ normalize 统一（单遍逐字符映射 `'`/`‘’`/`“”`/反引号 → `"`——无行内折叠——双端同算法）+ 描述/提示词改写（路由段/空串 note/discipline/system 陈旧句）+ 代码注释 §15 旧编号清理。
 ## 变更记录
 
-- 2026-09-08：文档重组——edit 工具语义从 TOOLS.md §6.1 + EDIT-TOOL-IMPROVEMENT.md 并入本文档（每工具一档——TOOLS.md 退地图）。状态"已实现"（D1-D3 落地：按行号改/模糊匹配/替换即删——原 IMPROVEMENT 档设计 + AC1-AC5 + 测试表 8 用例，见 `_archive/EDIT-TOOL-IMPROVEMENT.md`）。
+- 2026-09-08：文档重组——edit 工具语义从 TOOLS §6.1 + EDIT-TOOL-IMPROVEMENT.md 并入本文档（每工具一档——TOOLS 退地图）。状态"已实现"（D1-D3 落地：按行号改/模糊匹配/替换即删——原 IMPROVEMENT 档设计 + AC1-AC5 + 测试表 8 用例，见 `_archive/EDIT-TOOL-IMPROVEMENT.md`）。
 - 阶段 2 预告（EDIT-TOOLS-REVIEW.md 变更段）：删行形态（评审裁定 A）+ normalize 统一（裁定合并两端规则）+ hashline 定位重写——实现后更新本文档对应节。

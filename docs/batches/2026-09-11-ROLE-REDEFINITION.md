@@ -1,11 +1,14 @@
 # 工程模式角色重定义 · 批次记录（2026-09-11）
 
-> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分）**：本档对端（VSC）份已由 VSC 仓 `docs/batches/2026-09-11-ROLE-REDEFINITION（VSC 仓）` 逐字承载（D10——零改写）；本档保留本仓份。
-> 移出条目（对端份）清单：§5 对端分端面（as-of `:184` / `:191`）——条目计数（对端份 / 本仓份）= 5 / 8（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。
+> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分 · 已切除 2026-09-12）**：本档对端（VSC）份**已自本档切除**（原文不再留本仓——D11 完全态）；承载档 = VSC 仓 `docs/batches/2026-09-11-ROLE-REDEFINITION（VSC 仓）`（逐字搬运、零改写——D10）。
+> 已切除条目清单：§5 落笔对表 VSC 行（discipline-engineering VSC ×2 + persona-eng-coder VSC ×2 + prompts-mirror-anchors VSC ×1 = 5 条目）——条目计数（对端份 / 本仓份）= 5 / 8（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。**源档 blob SHA（切除前）= `5e9810b10f8e`**。
+> 变更记录：2026-09-12——对端份经承载档逐字承接后自本档物理切除；落笔对表行 1–4 收敛为 CLI 两面。
+> 变更记录（收尾轮）：2026-09-12——§5 摘要句两处对端证据子句（已逐字承载）补切。
 
 > 六段 append-only，**一段一作者**：§1 讨论（主 agent）· §2 批次任务（eng-designer）·
 > §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder 自写）· §6 验证与收口（父代理）。
 > 编制：主 agent（工程模式）· 2026-09-11 · 来源 = 用户 2026-09-10 裁定（需求已收口，待设计）+ 用户 2026-09-11 12:52「都跑起来吧」。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -31,7 +34,7 @@
 ### 已核事实（供 designer 免重复勘察）
 
 - 本会话 7–15 批**全链已按该角色分工实际运行**（主 agent 编排/核验 + eng-designer 唯一写稿 + eng-coder 实现 + 设计两轮评审）——设计的第一手 = **现状对账**（已实现面 vs 裁定面），**差异清单**即本批工作量的真身。
-- 提示词双源：`src/prompts/*`（运行时）+ `docs/design/prompts/*`（内容权威）；第 9 批先例 = 链行/四值句落 4 面。
+- 提示词双源：`src/prompts/*`（运行时）+ `docs/design/prompts/*`（内容权威）；第 9 批同口径 = 链行/四值句落 4 面。
 - 相关登记（旁链）：`requirements/ENGINEERING-MODE.md` §1.5 #8/#10 与 `requirements/PROMPT-SYSTEM.md` §2.7 #13 的「内容权」口径三条互相抵牾——**本批是否一并收口由你裁**（TODO「VS Code 镜像/评审面差异」组在案）。
 
 ### 范围边界（明确不做）
@@ -55,7 +58,6 @@
 
 ## §2 批次任务（eng-designer 自写）
 
-_（待写——eng-designer）_
 
 **状态：任务书就绪**（2026-09-11——需求层 + 设计/测试层已落档，待设计评审；含排程分列——见「排程说明」）。实施者 = eng-coder（设计 token 门）。本 §2 = coder 任务书本体（不另写副本）。
 
@@ -87,7 +89,7 @@ _（待写——eng-designer）_
 - **提示词 8 面**（`src/prompts/**` + `docs/design/prompts/**`，双仓）：逐字草案在 §2.28.4；**落笔排程归父侧**（提示词面纪律——与在途链同触 `discipline-engineering.md` 时由调度器按 files 串行）。
   若并入本批 coder：files 建议 = 8 提示词面 + `README.md` + 3 测试档（`test/eng-designer-role.test.mjs` · `test/prompts-dual-source.test.mjs` · `test/prompts-mirror-anchors.test.mjs`）。
 - **`docs/requirements/PROMPT-SYSTEM.md`**（RF-2）：修正逐字稿在 §2.28.4 RF-2；父侧排程（主 agent 内容权确认后落笔）。
-- **`AGENTS.md`**（RF-3c）：父侧维护面先例（不入 coder files）。
+- **`AGENTS.md`**（RF-3c）：父侧维护面同规（不入 coder files）。
 - **`ENGINEERING-MODE.md`（VSC 仓）**（RF-5c）：跨仓——父侧排程。
 - **`docs/TODO.md`**：只读（§1 边界）——状态推进/核销点（父侧执行）：本批条目推进 · TODO「内容权抵牾」行随落笔核销 · 旧 VSC 镜像登记行（VSC 已落地，建议核销——父侧裁）。
 
@@ -139,7 +141,6 @@ AC61 勾销口径 4 面（旧句零命中 + 替句子串）· AC62 内容权与�
 
 ## §3 设计评审（评审子代理自写）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
@@ -147,10 +148,10 @@ _（待写——评审子代理）_
 
 | # | Category | Severity | Issue | Suggestion |
 |---|----------|----------|-------|------------|
-| 1 | Methodology compliance（提示词纪律） | 🟡 | RF-1 替句自带维护者注：`实现后验收勾销落批次档 §6（设计档内不写勾销状态——用户 2026-09-10 裁定）。`（design:1336）——「用户 2026-09-10 裁定」与 `PROMPT-SYSTEM.md` §2.7 #15「提示词不含维护者注」相抵（#15 示例即「（用户裁定 2026-09-10）」；:183-187）；第 9 批先例同向（`ADVISOR-CONVERGENCE.md` §13.8:394「新增文本零日期/批次号/评审号」） | 落笔前删归因注、保留规则本体（AC61 子串不含归因，不受影响）；或在设计中显式给豁免依据 |
+| 1 | Methodology compliance（提示词纪律） | 🟡 | RF-1 替句自带维护者注：`实现后验收勾销落批次档 §6（设计档内不写勾销状态——用户 2026-09-10 裁定）。`（design:1336）——「用户 2026-09-10 裁定」与 `PROMPT-SYSTEM.md` §2.7 #15「提示词不含维护者注」相抵（#15 示例即「（用户裁定 2026-09-10）」；:183-187）；第 9 批同规同向（`ADVISOR-CONVERGENCE.md` §13.8:394「新增文本零日期/批次号/评审号」） | 落笔前删归因注、保留规则本体（AC61 子串不含归因，不受影响）；或在设计中显式给豁免依据 |
 | 2 | Clarity / 可验证性 | 🟡 | RF-2b 定位「§8.1 末行『9 条裁定』」（design:1350）与磁盘不符：`PROMPT-SYSTEM.md` §8.1（:275-286）无该串；全档唯一命中在 §8 变更记录 2026-09-10 行（:297）——按字面落笔则 AC62 的「『9 条裁定』零命中」（design:1564）不可达 | 改指变更记录该行（或收窄 AC62 范围到 §8 正文并按实际残留核对） |
 | 3 | Acceptance criteria | 🟡 | AC65/T81「设计档 §2.15/§2.16 无『过渡期注』残留」（design:1567、1699）与本批已落核销句字面冲突：design:451（§2.15 G「含过渡期注：…该注已随落地核销」）、design:457（§2.16「过渡期注已消」）——核销句本身含该串，字面 grep 必假红 | 断言改为「无『过渡期由主 agent 代行』类残留」或对核销句显式豁免（零假阳口径） |
-| 4 | Requirements coverage / 双源 | 🟡 | RF-4(c) 的 VSC 中文面：任务书 §2 明写「VSC 自审第 6 条 ×2 面」（batch:68）、§2.28.6 已把 `thincoder-vscode/docs/design/prompts/persona-eng-coder.md` 列入 RF-4c 范围（design:1406），但 §2.28.4(c) 只给 EN 现句/改述（design:1367）、AC64 亦只断言 EN 子串（design:1566）——zh 面 :44「⑥ 受影响的设计档章节随 diff 更新（模块地图/受影响文件表）」零命中无断言；若按字面只改 EN 面 → VSC 双源内「只报告」vs「更新设计档」互斥（即本批 RF-4 要消灭的形态），且漏改不可见。另 RF-4a/b/d 的中文面亦只注「同义」（design:1365-1368），与批次档「照抄 §2.28.4 逐字草案、不得自行解释/润色」的落笔纪律（batch:98）留缺口——中文面需落笔者自行措辞（漂移面） | 为 RF-4 各中文面补逐字替句（或钉死逐字源）；AC64 补 zh 面零命中子串（如「受影响的设计档章节随 diff 更新」） |
+| 4 | Requirements coverage / 双源 | 🟡 | RF-4(c) 的 VSC 中文面：任务书 §2 明写「VSC 自审第 6 条 ×2 面」（batch:68）、§2.28.6 已把 `persona-eng-coder（VSC 仓）` 列入 RF-4c 范围（design:1406），但 §2.28.4(c) 只给 EN 现句/改述（design:1367）、AC64 亦只断言 EN 子串（design:1566）——zh 面 :44「⑥ 受影响的设计档章节随 diff 更新（模块地图/受影响文件表）」零命中无断言；若按字面只改 EN 面 → VSC 双源内「只报告」vs「更新设计档」互斥（即本批 RF-4 要消灭的形态），且漏改不可见。另 RF-4a/b/d 的中文面亦只注「同义」（design:1365-1368），与批次档「照抄 §2.28.4 逐字草案、不得自行解释/润色」的落笔纪律（batch:98）留缺口——中文面需落笔者自行措辞（漂移面） | 为 RF-4 各中文面补逐字替句（或钉死逐字源）；AC64 补 zh 面零命中子串（如「受影响的设计档章节随 diff 更新」） |
 | 5 | Document ownership / 指针 | 🔵 | §2.28.3 引「`ADVISOR-CONVERGENCE.md` §13.9 既有裁法」（design:1327）——「归属 ≠ 分工」裁法文本实际在 §13.8（`ADVISOR-CONVERGENCE.md:393`）；§13.9 为后续登记项 | 校正指针（D4） |
 | 6 | 档位注记 | 🔵 | §2.28.6 档位注「无源文件触发档位线」（design:1417）——`test/eng-designer-role.test.mjs` 316 行已在 >300 建议档（+≤6 后 ≤322，不越 500、本批无档位跨越）；按历史批惯例（「>300 档——不拆：理由」）宜补一句结论或改述注记 | 补一句「>300 档：本批单点更新不拆」或改述档位注 |
 | 7 | 计数/措辞 | 🔵 | RF-6 行「`test/prompts-dual-source.test.mjs`（新增——…）」（design:1378）与 §2.28.6 该档「修改 175 +~25」（design:1414）两说——该档第 14 批已存在，「新增」应为「新增断言」 | 统一措辞（防 D3 类歧义） |
@@ -176,26 +177,29 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
-**交付摘要**（2026-09-11——eng-coder 自写）：第 16 批 ROLE-REDEFINITION **提示词面收口**——13 档落笔完成，字面 = 设计档 §2.28.4 逐字稿机械照抄（EN + 中文权威各端各面；零自行措辞）。RF-1（勾销口径 4 面）· RF-4a/4b（4 面）· RF-4c（VSC 自审第 6 条 ×2 面）· RF-4d（discipline 头注 4 面）· RF-3a/3b/3c（README `:12`/`:44` + `AGENTS.md`）· RF-6（T40 更新 + 3 测试档新增断言）。RF-2（`requirements/PROMPT-SYSTEM.md`）与 RF-5c（VSC 仓设计档）按 §2.28.6 属父侧排程——**零碰**。
+**交付摘要**（2026-09-11——eng-coder 自写）：第 16 批 ROLE-REDEFINITION **提示词面收口**——13 档落笔完成，字面 = 设计档 §2.28.4 逐字稿机械照抄（EN + 中文权威各端各面；零自行措辞）。RF-1（勾销口径 4 面）· RF-4a/4b（4 面）· RF-4c（VSC 自审第 6 条 ×2 面）·
+RF-4d（discipline 头注 4 面）· RF-3a/3b/3c（README `:12`/`:44` + `AGENTS.md`）· RF-6（T40 更新 + 3 测试档新增断言）。RF-2（`requirements/PROMPT-SYSTEM.md`）与 RF-5c（VSC 仓设计档）按 §2.28.6 属父侧排程——**零碰**。
+机械折行（2026-09-12 形态清零轮）——语义零改
 
 **落笔对表（13 档——逐字源 = 设计档 §2.28.4）**：
 
 | # | 文件（端） | 落笔 |
 |---|---|---|
-| 1–4 | `discipline-engineering.md` ×4（CLI/VSC × src/docs） | RF-1 替句「实现后验收勾销落批次档 §6（设计档内不写勾销状态）。」+ RF-4d 头注「eng-coder + eng-designer subagents — all engineering-mode assemblies」/ zh 同型（逐字源 :1378/:1416） |
+| 1–2 | `discipline-engineering.md`（CLI src/docs） | RF-1 替句「实现后验收勾销落批次档 §6（设计档内不写勾销状态）。」+ RF-4d 头注「eng-coder + eng-designer subagents — all engineering-mode assemblies」/ zh 同型（逐字源 :1378/:1416） |
 | 5–6 | `persona-eng-coder.md`（CLI src/docs） | RF-4a 身份句 + RF-4b 边界句（EN src 面 / zh docs 面；:1406/:1408/:1410/:1411） |
-| 7–8 | `persona-eng-coder.md`（VSC src/docs） | 同上 + RF-4c：EN 自审第 6 条替句 + 粘连断行修复（`Your last message…` 起新行）；zh ⑥ 替句（:1413–1415） |
 | 9 | `docs/README.md`（CLI） | RF-3a `:12` 删「过渡期由主 agent 代行」限定；RF-3b `:44` 作者列 → `eng-designer`（:1397–1398） |
 | 10 | `AGENTS.md`（CLI 仓根） | RF-3c 需求基线整句替换（:1399） |
 | 11 | `test/eng-designer-role.test.mjs` | T40 更新：README 过期限定零命中 + 表行正则 + AGENTS 口径双断言（RF-6 :1426） |
 | 12 | `test/prompts-dual-source.test.mjs` | 新增 AC61（勾销双源 + 反证）+ AC64（persona 双源 + 头注）两例（RF-6 :1426） |
-| 13 | `test/prompts-mirror-anchors.test.mjs`（VSC） | 新增 ⑧ 组（勾销/自审第 6 条/身份句/头注——本端四端面）+ 头注七面→八面（RF-6 :1427） |
 
-**AC61–AC66 自证（机检实测）**：AC61 ✅ 4 面旧句零命中 + 两替子串在位 · AC62 ✅（父侧 RF-2 已落）固定子串全中、旧口径与「9 条裁定」零命中、§8 标题无「待设计」· AC63 ✅ README 产物口径在位 + 过期限定零命中；AGENTS 新句在位、旧句零命中 · AC64 ✅ 4 面旧句零命中（`architect`/`架构师`/`provided a design document`/「父代理提供了设计文档」）、新子串在位；VSC 自审第 6 条双面替句在位 · AC65 ✅（登记面父侧已落——抽核需求档 header/§1.5/§1.17、设计档 §2.1/§2.15/§2.16、VSC 设计档）· AC66 ⚠️ 本批文件新增超宽 0 / 新增一致性违规 0（批前/批后差集）；CLI 快层余 1 fail = T41①（他链 PORTABILITY/TUI-SELECTION 文件）；VSC 快层全绿。
+**AC61–AC66 自证（机检实测）**：AC61 ✅ 4 面旧句零命中 + 两替子串在位 · AC62 ✅（父侧 RF-2 已落）固定子串全中、旧口径与「9 条裁定」零命中、§8 标题无「待设计」· AC63 ✅ README 产物口径在位 + 过期限定零命中；AGENTS 新句在位、旧句零命中 · AC64 ✅ 4 面旧句零命中（`architect`/`架构师`/`provided a design document`/「父代理提供了设计文档」）、新子串在位
+· AC65 ✅（登记面父侧已落——抽核需求档 header/§1.5/§1.17、设计档 §2.1/§2.15/§2.16、VSC 设计档）· AC66 ⚠️ 本批文件新增超宽 0 / 新增一致性违规 0（批前/批后差集）；CLI 快层余 1 fail = T41①（他链 PORTABILITY/TUI-SELECTION 文件）。
+机械折行（2026-09-12 形态清零轮）——语义零改
 
-**测试实测值**（先落盘再查）：CLI 定向 `node --test test/eng-designer-role.test.mjs test/prompts-dual-source.test.mjs` = **27/27 pass**；VSC 定向 `node --test test/prompts-mirror-anchors.test.mjs` = **9/9 pass**；CLI 快层 = 475 tests / 462 pass / **1 fail（T41①——他链）**；VSC 快层 = 447 / 441 / **0 fail**；`node scripts/check-doc-width.mjs` = 本批 13 档**零命中**（存量/他链照报）。
+**测试实测值**（先落盘再查）：CLI 定向 `node --test test/eng-designer-role.test.mjs test/prompts-dual-source.test.mjs` = **27/27 pass**；VSC 定向 `node --test test/prompts-mirror-anchors.test.mjs`
+= **9/9 pass**；CLI 快层 = 475 tests / 462 pass / **1 fail（T41①——他链）**；VSC 快层 = 447 / 441 / **0 fail**；`node scripts/check-doc-width.mjs` = 本批 13 档**零命中**（存量/他链照报）。
+机械折行（2026-09-12 形态清零轮）——语义零改
 
 **审计与代码评审（in-child §18）**：explore 偏差审计 1 轮——**四类偏差全 0**（逐字对照 / 旧句零命中 / 范围 / AC 覆盖），7 条观察项；自修 1 处（评审 #1 反证断言）；advisor 代码评审 1 轮 **pass**（🔴0 · 🟡4 · 🔵3）→ 裁决 Fixed 1 / Not an issue 2 / Deferred 4；复跑定向测试绿。**终态 = clean**。
 
@@ -209,7 +213,9 @@ _（待写——eng-coder）_
 | D-4 | VSC docs ⑥ 保留行尾「。」 | 设计稿按段引述（现句引述同样不含行尾句号）——段级替换、行级标点保留 |
 | D-5 | README `:12` 最小删改（仅删限定句 + 分号） | 逐字遵循 RF-3a「删限定」 |
 
-**偏差披露（as-of 漂移——落笔以现场为准）**：CLI `discipline-engineering.md` 现场 213/143 行（表 as-of 227/155——C1–C8 迁移在途）；VSC 221/149（表 234/161）——本批 4 面均为**行内等长替换（+0 行）**。测试档：`prompts-dual-source` 现场 289 → **333 行**（表 175+~25）；`prompts-mirror-anchors` 现场 ≈280 → **317 行**（表 231）；`eng-designer-role` 316 → **322 行**（表 ≤±6 ✓）。两测试档越 300 建议档——评审 #3/#4 交父侧/设计侧裁（拆分或档位结论；硬限 500 未越）。跨批协调：本批 +2 例使待落地 T75 守恒锁值应为 **58 = 42 + 16**（`TODO.md:104` 登记 56 = 42 + 14）——父侧同步（评审 #2）。VSC src persona `:34`/`:51` 另有两处同型粘连（非 RF-4c 改点、未获授权）——评审 #6，交父侧裁。
+**偏差披露（as-of 漂移——落笔以现场为准）**：CLI `discipline-engineering.md` 现场 213/143 行（表 as-of 227/155——C1–C8 迁移在途）；VSC 221/149（表 234/161）——本批 4 面均为**行内等长替换（+0 行）**。测试档：`prompts-dual-source` 现场 289 → **333 行**（表 175+~25）；`prompts-mirror-anchors` 现场 ≈280 → **317 行**（表 231）；`eng-designer-role`
+316 → **322 行**（表 ≤±6 ✓）。两测试档越 300 建议档——评审 #3/#4 交父侧/设计侧裁（拆分或档位结论；硬限 500 未越）。跨批协调：本批 +2 例使待落地 T75 守恒锁值应为 **58 = 42 + 16**（`TODO.md:104` 登记 56 = 42 + 14）——父侧同步（评审 #2）。VSC src persona `:34`/`:51` 另有两处同型粘连（非 RF-4c 改点、未获授权）——评审 #6，交父侧裁。
+机械折行（2026-09-12 形态清零轮）——语义零改
 
 ## §6 验证与收口（父代理自写）
 

@@ -3,6 +3,7 @@
 > 六段 append-only，**一段一作者**：§1 讨论（主 agent）· §2 批次任务（eng-designer）·
 > §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder）· §6 验证与收口（父代理）。
 > 编制：主 agent（工程模式）· 2026-09-11 · 来源 = 用户「开工」（同族三条攒批——父侧提议 + 用户 04:10 批准）。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -114,7 +115,7 @@ narrower scope.」）——无发现表 / verdict / token / 部分结果可回�
 | C | cite 校验对无仓前缀路径误报 → **声明范围派生根候选链** + 失败原因三分 | F14 | §14.5 |
 | D | 设计评审 600s 超时零输出（父侧当日追加——设计者**裁定纳入**，同族：宿主侧非正常收尾）→ **预算硬墙 + 0.75 一次性提示 + 结构化收尾** | F15（凭证面由 F11 覆盖） | §14.6 |
 
-**明示不在本批**：VSC 端对位面（`thincoder-vscode/src/advisor/{citations,messages,run}.mjs` 同构面——登记 §14.10，后续批含 VSC `test/files.mjs` 注册）· `AGENT-LOOP.md` §11.2 同步行（第 10 批在途）· 评审语义判据 / 凭证机制本体（槽/TTL/门禁/consume/cap）/ 评审侧提示词 / README / CHANGELOG / `docs/TODO.md`（父侧写域）。
+**明示不在本批**：VSC 端对位面（`src/advisor/{citations,messages,run}.mjs`（VSC 仓） 同构面——登记 §14.10，后续批含 VSC `test/files.mjs` 注册）· `AGENT-LOOP.md` §11.2 同步行（第 10 批在途）· 评审语义判据 / 凭证机制本体（槽/TTL/门禁/consume/cap）/ 评审侧提示词 / README / CHANGELOG / `docs/TODO.md`（父侧写域）。
 
 ### 受影响文件（= coder `files` 声明清单——10 项：7 改 + 3 新；行数 as-of 2026-09-11 实测）
 
@@ -155,7 +156,7 @@ narrower scope.」）——无发现表 / verdict / token / 部分结果可回�
 ### E 追加（eng-designer · 2026-09-11——条目 E 落档；上文 A–D 内容零改）
 
 **状态**：E 的文档面已落——需求 `docs/requirements/ADVISOR-CONVERGENCE.md` §7 追加 **F17 / N11**；设计 `docs/design/ADVISOR-CONVERGENCE.md` **§14.14 契约五**（+ 用例 T-CG15–T-CG18 + AC-CG13 / AC-CG14）；**实施面并入本批 coder 任务**（E-1…E-5 = §14.14 E-4 表 coder 视角）。
-上文「落档位置」行记的 F11–F16 / N7–N10 为 A–D 段——全节现值 = **F11–F17 / N7–N11**。另：本节顶部遗留占位行 `_（待写——eng-designer）_`（前次落档遗留）已由本节作者清理（同 SUBAGENT-TAIL 先例——D6 回读核实无正文重复）。
+上文「落档位置」行记的 F11–F16 / N7–N10 为 A–D 段——全节现值 = **F11–F17 / N7–N11**。另：本节顶部遗留占位行 `_（待写——eng-designer）_`（前次落档遗留）已由本节作者清理（同 SUBAGENT-TAIL 批的清理处置——D6 回读核实无正文重复）。
 
 **覆盖条目（三方一致——追加行）**
 
@@ -238,7 +239,6 @@ narrower scope.」）——无发现表 / verdict / token / 部分结果可回�
 
 ## §3 设计评审（评审子代理自写）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
@@ -247,7 +247,7 @@ _（待写——评审子代理）_
 | # | Category | Severity | Issue | Suggestion |
 |---|----------|----------|-------|------------|
 | 1 | 零回归 / F16 需求覆盖 | 🔴 | `settleAdvisorRun` 的 `failureVerdict`「改用同谓词（替代 `^` 锚的 `ADVISOR_FAILURE_TEXT`，设计 §14.3 消费点 2）**按字面会丢 `review failed` 形态**：现行 `ADVISOR_FAILURE_TEXT`（`advisor-async.mjs:236`，实文六形态含 `review failed`），而新谓词族只有 5 个 kind（设计 §14.3 表无 `review failed` 行）；`runAdvisorReview` 的 catch 以字符串 resolve（`run.mjs:492` `Advisor: review failed (…)`，不 throw）⇒ 字面实现后机械失败评审重新被计为「已覆盖」（`_calledAdvisorThisRun=true`，guard 不再重推）——与 `advisor-async.mjs:333-342` 既定注释意图及设计自述「失败判定扩展」相悖；`test/` 全库无该行为断言（grep `ADVISOR_FAILURE_TEXT` / `failureVerdict` 零命中）；AC-CG1 的 grep 锚（`^Advisor: (review timeout|context window limit)`）只列两形态，证明不了旧锚零残留 | 契约补一句：谓词族保留 `review failed` 分支（或把 `review_failed` 列入 kind 表并同步 D3 计数）；补一条用例（code + `Advisor: review failed …` → 不置 `_calledAdvisorThisRun`）；AC-CG1 锚覆盖全六形态或改测谓词全覆盖 |
-| 2 | 可行性 / D 硬墙 | 🟡 | 「捕获 `AbortError`：…否则（预算墙触发）⇒ 返回超时尾（不转 generic 失败）」（设计 §14.6 #1）与运行时错误形态不齐：`AbortSignal.timeout` 的中止 reason 是 **TimeoutError** DOMException（本仓先例 `sse.mjs:168-170`「The operation was aborted due to timeout」直透 · `log.mjs:178-179` 按 `signal?.reason?.name === "TimeoutError"` 区分 timeout）⇒ TTFB 阶段墙触发的抛错名可能非 `AbortError`；且 `sse.mjs:228-235` + `core.mjs:235` 会把「已有内容的流中断」以 partial 结果**不抛错**返回 ⇒ 评审按普通结果收尾——超时尾/统计（rounds/tool calls/budget）不出现；T-CG12 只走 `remaining ≤ 0` 早退、T-CG13 不触发墙 ⇒ 该路径零覆盖（AC-CG7 绿不保证） | 墙判定绑信号状态（composite aborted ∧ user signal 未 aborted ⇒ 超时尾）而非仅异常名；接受 {AbortError, TimeoutError} 两名；补一条「墙在调用中触发（含 partial 返回形态）」用例 |
+| 2 | 可行性 / D 硬墙 | 🟡 | 「捕获 `AbortError`：…否则（预算墙触发）⇒ 返回超时尾（不转 generic 失败）」（设计 §14.6 #1）与运行时错误形态不齐：`AbortSignal.timeout` 的中止 reason 是 **TimeoutError** DOMException（本仓同形态：`sse.mjs:168-170`「The operation was aborted due to timeout」直透 · `log.mjs:178-179` 按 `signal?.reason?.name === "TimeoutError"` 区分 timeout）⇒ TTFB 阶段墙触发的抛错名可能非 `AbortError`；且 `sse.mjs:228-235` + `core.mjs:235` 会把「已有内容的流中断」以 partial 结果**不抛错**返回 ⇒ 评审按普通结果收尾——超时尾/统计（rounds/tool calls/budget）不出现；T-CG12 只走 `remaining ≤ 0` 早退、T-CG13 不触发墙 ⇒ 该路径零覆盖（AC-CG7 绿不保证） | 墙判定绑信号状态（composite aborted ∧ user signal 未 aborted ⇒ 超时尾）而非仅异常名；接受 {AbortError, TimeoutError} 两名；补一条「墙在调用中触发（含 partial 返回形态）」用例 |
 | 3 | E / 自洽性（登记完整） | 🟡 | E-D6「拦与判 stale 同集」（设计 §14.14 E-5）不精确：`reviewIsStale` 读的 `agent._mutLog` 还收**子代理合入**的写入（`mergeChildMutations` → `noteMutations`，`subagent-async.mjs:446-459` 实文）⇒ 子代理在途写被审文档仍可致 stale 但 dispatch 预闸拦不到（子代理无 `_asyncAdvisors` 池面）；E-6 #3 只登记 bash / file_ops 盲区 | E-6 补登「子代理合入写入面」或限定 E-D6 表述（拦 = 父侧自身 `FILE_MUTATORS` 写面；判 stale 集 ⊇ 拦集） |
 | 4 | D3 计数·编号 | 🔵 | A–D 段「10 项：7 改 + 3 新」与逐行标签（6 改 + 4 新 = 10）差 1——三处：设计 §14.7 表头 / §14.9 D3 行 / 批次档 §2 受影响文件行；E 后 §14.9 的「用例 14、AC 12」亦为 A–D 局部数（E-6 #4 只注记前项） | 裁定：以逐行标签为准 = **6 改 + 4 新**（测试档全新 → 计「新」）；三处表述一次编辑同步（非阻断）；§14.9 计数加「A–D 段」限定 |
 | 5 | 用例稳健性（R4） | 🔵 | T-CG13「预算 1500ms + 首次调用阻塞 ~1200ms」实际余量仅 300ms——负载过冲即 elapsed > 1500 → 第 2 轮落 `remaining ≤ 0` 走超时尾 → 断言红（wall-clock 依赖） | 时钟注入或判定绑纯函数（`shouldBudgetNudge` 已有）+ 集成断言放宽阈值 / mock 计时器驱动 |
@@ -315,7 +315,6 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 _（eng-coder 自写 · 2026-09-11）_
 
@@ -364,7 +363,7 @@ _（eng-coder 自写 · 2026-09-11）_
 | # | 偏差 | 理由 | 处置 |
 |---|---|---|---|
 | 1 | **拆分线落点**：守卫族（六 kind 谓词 / 0.75 提示 / 结构化尾 / `renderTimeline` / 评审上限常量）落 `compaction.mjs`，非设计 §14.7 表所写 `loop.mjs` | 逐字迁移（含注释，拆分红线）后 loop.mjs 承载全部守卫将超 300 档 | 已实现且全档达标（loop 290 / compaction 158）；**设计 §14.7 表内容列建议由设计者/父侧同步**（写域外） |
-| 2 | **T-CG17 对照组**：非 scope 写以「过冻结闸 + 拒因下移权限层（`no permission handler`）」证明选择性，未真执行写 | 真写执行触发 peer 注册表冷扫（实测 ~470ms，负载下 >3s）——触快层慢门（>800ms 拦截 → `npm test` 非零退出）；先例同形（design-token-settlement AC4「工程门放行——拒因变权限层」） | 断言不弱化：拒绝逐字 + 读回零落地 + autoApprove 不绕过三项全在 |
+| 2 | **T-CG17 对照组**：非 scope 写以「过冻结闸 + 拒因下移权限层（`no permission handler`）」证明选择性，未真执行写 | 真写执行触发 peer 注册表冷扫（实测 ~470ms，负载下 >3s）——触快层慢门（>800ms 拦截 → `npm test` 非零退出）；同形态处置（design-token-settlement AC4「工程门放行——拒因变权限层」） | 断言不弱化：拒绝逐字 + 读回零落地 + autoApprove 不绕过三项全在 |
 | 3 | **测试档行数**：513 → 498（评审轮 1 🔴） | 写域 11 文件按红线上限「不新建档」→ 不可拆第二档 | 压缩格式（结构/断言/文案零删减）后 21/21 仍绿 |
 | 4 | **拒绝前缀单源**：审计发现前缀字面三处重复 → 加 `ADVISOR_LAUNCH_REFUSAL_PREFIX` 常量（run.mjs 导出，工具面/结算面消费） | 防三处各写字符串漂移（同 D2 口径） | 已修（测试断言覆盖） |
 | 5 | **异步面拒绝不计覆盖**：审计算术复核发现 design 结算恒置 `_calledAdvisorThisRun`（原注释误读） | 设计 §14.4 明写「异步结算面据此不置」 | 已修：`launchRefused` 排除 + T-CG7 双向断言（拒绝不计 / 普通 design 结算照常计入） |
@@ -377,7 +376,7 @@ _（eng-coder 自写 · 2026-09-11）_
 | # | Action | Detail |
 |---|---|---|
 | 1 | **Fixed** | 测试档 513 行越 500 硬帽 → 压缩至 **498**（未拆档：写域红线「不新建档」）；21/21 重跑绿 |
-| 2 | **Not an issue** | `messages.mjs` 413 行 >300 advisory——存量（402 → +11），设计 §14.10 #4 已登记「本批不拆」；R3 存量先例不升级 |
+| 2 | **Not an issue** | `messages.mjs` 413 行 >300 advisory——存量（402 → +11），设计 §14.10 #4 已登记「本批不拆」；R3 存量档不升级 |
 | 3 | **Not an issue** | `dispatch.mjs` 481 行 >300 advisory——存量（455 → +26），设计 E-1 行已登记「不拆（<500 帽）」；未越硬帽 |
 
 - **外域项（无级别，交父侧裁定）**：① F16 同步面残留（`src/agent/record-results.mjs` 无「未完成尾」判定——设计 §14.3 消费点 2 限定在 `settleAdvisorRun`；与需求 F16 行文字面差，文件在写域外）；② 批次档 §5 本体（本段即落）；③ 设计档载体指针滞后（§ 实现载体 header 仍以 run.mjs 记 `MAX_ADVISOR_TURNS`——文档面，登记后续批）。
@@ -398,7 +397,7 @@ _（eng-coder 自写 · 2026-09-11）_
 - **交付面**：11 文件（7 改 + 4 新）——A 谓词族六 kind（含 `review_failed`）+ 三消费点 + 启动断言 · B 构建自愈 + 压缩定锚 · C 引文候选链 × 三条件 · D 硬墙绑信号状态 + 0.75 提示 + 结构化尾 · E 写前拦截 + ack 冻结句；两处硬帽拆分（`run.mjs` 498→239 + `loop.mjs` 291 + `compaction.mjs` 158；`advisor-async.mjs` 500→350 + `advisor-settle.mjs` 214）+ import 面 re-export 零改。
 - **父侧实跑**：新档 **21/21** · CLI 全量 **419/408/0**（唯一红 = 既有 TUI 慢例，coder `git stash` 对照实证非本批）· 实现读码——六 kind 表含 `review_failed` ✓ · 墙判 partial 同判（`loop.mjs:177-181`）✓ · dispatch 预闸在只读/autoApprove 短路前（`dispatch.mjs:217`）✓ · `launchRefused` 排除 ✓ · 候选链/自愈/冻结句 ✓。
 - **验收后同步轮**（id=30）：设计档 ↔ 交付实测 4 项（§14.7 载体列 + 全表行数 + 载体指针 sweep（8 处）+ F16 边界登记 §14.10 #6）——父侧核验 ✓ · T41 复跑 6/6 ✓。
-- **偏差裁定**：拆分线落 `compaction.mjs` = 接受（≤300 档位实测达标；设计档已同步）· T-CG17 对照组口径 = 接受（先例 = design-token-settlement AC4）· 测试档 513→498 = 接受（硬帽内）。
+- **偏差裁定**：拆分线落 `compaction.mjs` = 接受（≤300 档位实测达标；设计档已同步）· T-CG17 对照组口径 = 接受（判据 = design-token-settlement AC4 同口径）· 测试档 513→498 = 接受（硬帽内）。
 - **遗留转后续**：F16 同步面残留 → **第 13 批**（用户 10:50 已裁「扩展实现」）；设计档载体指针滞后 = id=30 已修 ✓。
 - **令牌链**：设计评审 token **已消费**（`consume-design`——链终）。
 

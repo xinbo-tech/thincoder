@@ -7,8 +7,10 @@
  *   T50 骨架保护 · T51 并发隔离（实例键）· T52/T52b 超量拒 + 分段追加 N 顺延 ·
  *   T53 身份判据同源（绑定即身份——不读他批状态）。
  * 纯单元：零网络、零子代理启动、零真实评审（advisor 只在门禁抛出点驱动）。
+ * T47b 经 prepareRun + buildSpawnChild（真 git 子进程面）——slow() 门控（2026-09-12 收尾轮 9）。
  */
 import { test, beforeEach, afterEach } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -165,7 +167,7 @@ test("T47 错误/边界：路径门（若传则须可读）+ 代码评审工具�
   assert.ok(_advisorToolsFor(agent, "design", abs).byName.has("batch_segment"), "设计评审 + 已绑定 → 挂载")
 })
 
-test("T47b 边界：挂载面 + spawn 绑定（eng-designer/eng-coder 有；主 agent 无——不变量 3）", async () => {
+slow("T47b 边界：挂载面 + spawn 绑定（eng-designer/eng-coder 有；主 agent 无——不变量 3）", async () => {
   const abs = makeDoc()
   // §2.20.2 spawn 绑定：buildSpawnChild 把批次档绝对路径记在 child 上
   const token = `${randomUUID()}:${Date.now() + 3600e3}`

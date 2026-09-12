@@ -1,6 +1,7 @@
 # TUI OOM 取证固化（堆快照参数进启动链）· 批次记录（2026-09-11）
 
 > 六段 append-only，一段一作者。编制：主 agent · 2026-09-11 23:42 · 来源 = 用户 23:39「这个故障比较难复现，这个参数你是不是能固化在代码里，这样碰到的时候他们能截图发给我；他说是会话很长的时候容易发生」。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -30,9 +31,9 @@
 
 ### 设计约束
 
-- 注入点候选（选择理由进档）：① `wrapped-spawn.mjs` child spawn 的 execArgv 注入（TUI 主路径，最小面）② `bin` 早期自 re-exec（全路径覆盖，但双进程）——候选 ≥2 对比；
+- 注入点候选（选择理由进档）：① `wrapped-spawn.mjs` child spawn 的 execArgv 注入（TUI 主路径）② `bin` 早期自 re-exec（全路径覆盖，但双进程）——候选 ≥2 对比；
 - 与既有捕获链协同：快照 + Node report + tui-stderr 三件套的落点/命名/可发现性写清（快照由 Node 写 CWD——是否需要启动时提示「快照将落在 <cwd>」）；
-- 测试：参数注入可机验（spawn 参数断言族——`wrapped-spawn` 有既有测试先例）；env 开关用例；真快照不跑（代价大——用参数断言替代，写明）。
+- 测试：参数注入可机验（spawn 参数断言族——`wrapped-spawn` 有既有测试同款）；env 开关用例；真快照不跑（代价大——用参数断言替代，写明）。
 - **范围外**：泄漏根因修复（另波/另批——勘察 explore#7 在跑 + 同事物证待取回）· 不改堆上限默认值 · 不改崩溃捕获既有面。
 
 ### 关联
@@ -75,7 +76,7 @@
 
 **事实更正（供评审知悉）**：§1 事实表 #2 的「report.*.json 写进程 CWD」经实测更正为写 `~/.thincoder/crash-reports/`（`process.report.directory` 已由进程内设定——`src/crash-reports.mjs:66`）——设计档 §1.1 已落更正与证据。
 
-**占位行清理（本节作者）**：本段正文前的模板遗留占位行「_（待写——eng-designer）_」已清除（append-only 工具语义不删既有行——由本节作者手工清理并留此注；同 REVIEW-CHAIN-GUARDS 先例——D6 回读核实无正文重复）。
+**占位行清理（本节作者）**：本段正文前的模板遗留占位行「_（待写——eng-designer）_」已清除（append-only 工具语义不删既有行——由本节作者手工清理并留此注；同 REVIEW-CHAIN-GUARDS 同款——D6 回读核实无正文重复）。
 
 ### 修正轮（2026-09-11——设计评审轮次 1 后；本追加与上文本冲突时以本追加为准）
 
@@ -87,7 +88,7 @@
 |---|---|---|
 | #1 矩阵引用不可解析（「D/E/I」） | 🟡 | `design/CRASH-REPORTS.md` §2.1 候选 3 行——「实测 D/E/I」→「实测 D/E」（矩阵无 I 行，悬空引用删；行内标 修正轮 #1） |
 | #2 AC7/T7 负例隔离不足 | 🟡 | 同档 §6 新增 **T7b** 行（仅新 Heap 快照、无 crash/report 记录 → `recentCrashHint` 返回 `null`）+ AC7 回指改「T7 / T7b 绿」（修正轮 #2） |
-| #3 行号锚定 | 🟡 | 同档 §1.1 加 as-of 口径注 + §2.1 候选 3/4 · D1 · §3.1（调用点 / 注入先例）· §3.4 · §4 `bin` 行 · AC1 行号锚 → 符号锚（`prepareCrashReporting` / `spawnTuiWrapped` / `buildBashEnv` /「bin 入口」；修正轮 #3） |
+| #3 行号锚定 | 🟡 | 同档 §1.1 加 as-of 口径注 + §2.1 候选 3/4 · D1 · §3.1（调用点 / 注入同款）· §3.4 · §4 `bin` 行 · AC1 行号锚 → 符号锚（`prepareCrashReporting` / `spawnTuiWrapped` / `buildBashEnv` /「bin 入口」；修正轮 #3） |
 | #4 .md 行已在盘 | 🔵 | 同档 §4 表 README / ARCHITECTURE 两行——增量列改「**已落（建档时）**——现 243 / 85」+ 表下实现增量注（修正轮 #4） |
 | #5 T8/D7 命令缺参 | 🔵 | 同档 §6 T8 行 + D7——命令写全 `node --max-old-space-size=64 test/fixtures/r25-oom.mjs`（修正轮 #5） |
 
@@ -97,7 +98,6 @@
 
 ## §3 设计评审（评审子代理写）
 
-_（待写——评审子代理）_
 
 ---
 
@@ -129,7 +129,6 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 ---
 
@@ -177,11 +176,13 @@ _（待写——eng-coder）_
 
 ### 五、外批红（非本批面，如实登记）
 
-`npm run test:full` 3 红：`doc-consistency` T41（V1 `2026-09-11-VSC-LIVE-UX（VSC 仓）` 失效引用 + V3 `docs/batches/2026-09-11-TUI-OOM-ROOTCAUSE.md` §3 缺轮次行）· `ledger` T67/T96（`docs/TODO.md:15/:17` 锚形态）。两校验器扫描域 = docs（`test/doc-consistency.test.mjs:26` SCAN_DIRS；ledger 扫 `docs/TODO.md`），本批零文档写入 → 与本批无因果；属他批在飞档，父侧收口面。
+`npm run test:full` 3 红：`doc-consistency` T41（V1 `2026-09-11-VSC-LIVE-UX（VSC 仓）` 失效引用 + V3 `docs/batches/2026-09-11-TUI-OOM-ROOTCAUSE.md` §3 缺轮次行）· `ledger`
+T67/T96（`docs/TODO.md:15/:17` 锚形态）。两校验器扫描域 = docs（`test/doc-consistency.test.mjs:26` SCAN_DIRS；ledger 扫 `docs/TODO.md`），本批零文档写入 → 与本批无因果；属他批在飞档，父侧收口面。
+机械折行（2026-09-12 形态清零轮）——语义零改
 
 ### 六、披露（超声明 / 未落项 / 规模）
 
-1. **`test/files.mjs` 不存在**（任务书测试行 + §4 批准范围提及）：CLI 仓测试发现 = `test/*.test.mjs` glob（`test/run-fast.mjs:19` / `test/run-full.mjs:9`）→ **注册改动 = 0**（无需动作；POOL-LEDGER 批同款裁定先例）。
+1. **`test/files.mjs` 不存在**（任务书测试行 + §4 批准范围提及）：CLI 仓测试发现 = `test/*.test.mjs` glob（`test/run-fast.mjs:19` / `test/run-full.mjs:9`）→ **注册改动 = 0**（无需动作；POOL-LEDGER 批同款裁定）。
 2. **仓外临时件**：诊断期在 `%TEMP%` 建过两个一次性脚本（`diag-wrapped-spawn.mjs` / `diag-wrapper-ret.mjs`），已删；仓内零残留。
 3. **规模（现读·内容行）**：`src/crash-reports.mjs` 129→150（设计预告 +~16）· `src/tui/wrapped-spawn.mjs` 39→41 · 新档 `test/crash-reports.test.mjs` 82 行（预告 ~110）· `test/tui-stderr-capture.test.mjs` 79→106（预告 +~10；含修正轮 #1/#3 增量）。全部低于 300 行档位。
 4. **零改守**：`bin/thincoder.mjs`（调用点零改）· `docs/*` 全部（他批/designer/父侧写域）· 堆上限（未引入 `--max-old-space-size`）。
@@ -194,6 +195,6 @@ _（待写——eng-coder）_
 - **真跑**：`node --test test/crash-reports.test.mjs test/tui-stderr-capture.test.mjs` → **14 例 / 12 过 / 0 败 / 2 skip**（slow 归册——`THINCODER_TEST_FULL=1` 下 14/14）；全套件（coder）575 例 572 过，**3 红均他批在飞文档面**（doc-consistency V1/V3 + ledger T67/T96），非本批因果；
 - **AC 勾销**：AC1-AC8 全绿（§5 交付表逐条）；F3①-④ / N1-N4 全 Done；
 - **偏差（估算内、如实记录）**：crash-reports.mjs +21（预告 +16）· 新测档 82 行（预告 ~110）· tui-stderr-capture +26（预告 +10——含修正轮增量）；
-- **披露采纳**：`test/files.mjs` 不存在（CLI 测试发现 = glob——注册改动 0，POOL-LEDGER 先例）；T6 落既有 mock 族档（设计 §4 为准）；
+- **披露采纳**：`test/files.mjs` 不存在（CLI 测试发现 = glob——注册改动 0，POOL-LEDGER 同款）；T6 落既有 mock 族档（设计 §4 为准）；
 - **遗留（文档面微项，随收口划扫）**：① 设计 §4:147 摘要行漏列 T7b（正文/AC 均在）；② 批次档 §2:94 交叉引用 stale（`design §8` → 姊妹批后为 §10）；
 - **链终**：design 链令牌已消费（值不落档）——再动需新评审。

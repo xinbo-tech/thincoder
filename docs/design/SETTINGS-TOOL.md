@@ -1,6 +1,6 @@
 # settings 工具——agent 配置调整
 
-> 板块：工具系统（TOOLS.md 同板块独立保留——MCP.md 先例）。
+> 板块：工具系统（TOOLS.md 同板块独立保留——MCP.md 同规）。
 > 状态：**已实现**（2026-09-05）+ **第 8 批在途**（2026-09-11——null 默认值键形状约束：F-S1.7/F-S1.8/N-S1.5；设计见本档 §8；设计评审轮次 1 修正已落档——待复审）；**第 13 批（2026-09-11）**：parseValue 两端统一（**用户裁定 ① 去引号**——2026-09-11）+ CHANGELOG 记账更正说明（§9）。
 > （2026-09-11 更正：原“CLI settings.test 11/11 + VS Code 镜像 6/6 全绿”陈述不实——`test/settings.test.mjs` 从未落地，实证见 §5 更正注。）
 > 权威源：CLI `src/agent-tools/settings.mjs`、`src/config.mjs`（DEFAULTS / writeConfigAtomic / configPath）。
@@ -70,7 +70,7 @@ SENSITIVE_SEGMENT = /(^|[._-])(api[_-]?key|key|token|secret|password)($|[._-])/i
 
 遍历 `DEFAULTS`（config.mjs 导出）递归生成 `键路径 → 值类型` 映射（模块加载时一次构建）——set 校验用；数组不递归（`providersList` 等下无标量约束）、对象节递归到叶子；未知键跳过类型校验。null/对象/数组默认值键无标量约束（compactThreshold null=auto 等——消费方/面板层校验）。
 
-> **2026-09-11 更正**：本句与 CLI 实现不符——CLI `buildTypeMap` 对 `null` 叶子记 `typeof null === "object"`（`src/agent-tools/settings.mjs:24-32`），**并非**“无约束”；"跳过 null 叶子"是 VSC 端的写法（`thincoder-vscode/src/agent-tools/settings.mjs:29`）。null 叶子的口径自本批起以 `docs/design/SETTINGS-TOOL.md` §8.3 形状表为准。
+> **2026-09-11 更正**：本句与 CLI 实现不符——CLI `buildTypeMap` 对 `null` 叶子记 `typeof null === "object"`（`src/agent-tools/settings.mjs:24-32`），**并非**“无约束”；"跳过 null 叶子"是 VSC 端的写法（`src/agent-tools/settings.mjs:29`（VSC 仓））。null 叶子的口径自本批起以 `docs/design/SETTINGS-TOOL.md` §8.3 形状表为准。
 
 **加键流程**：CLI config.mjs DEFAULTS 一处 + VS Code config-io AGENT_DEFAULTS 一处 → 类型护栏自动跟随（消除手写漂移）。
 
@@ -172,7 +172,7 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
 ## 7. 关键决策
 
 - **全量任意键而非白名单**（用户拍板——明知可碰 apiKey 仍选全量）：配套 N-S1.2 敏感遮罩护栏（不是禁止——遮罩回显防泄漏；set 敏感键合法）。取舍：agent 理论上可把 apiKey 改成错误值（自伤）——与 bash rm -rf 同族（agent 自主域——审批门是防线——护栏为防"无意的明文泄漏"而非防"有意的破坏"）。
-- **单工具多动作**（list/get/set——"工具会爆炸——靠参数做不同的事"——memory/subagent 先例）。
+- **单工具多动作**（list/get/set——"工具会爆炸——靠参数做不同的事"——memory/subagent 同款）。
 - **热应用而非"改完重启"**：set 内存即热 = 本工具存在理由（否则等价用户手改文件）；持久化写盘保重启。
 - **文档级持久性边界**（F-S1.6）：loadConfig 保留域外键不承诺重启存活——设计诚实声明而非假装全量持久。
 - **双端同批**（用户拍板）——VS Code config 存储差异（settings.json vs config.json）以 D-S1.5 偏差注处理。
@@ -186,7 +186,7 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
 - **D-S2.5 不校验渠道/模型/可执行文件存在性**（形状层止步）：`defaultModel` 只校验 `provider:model` 形态（首冒号 idx>0 ∧ 尾段非空），不查渠道是否存在——存在性属运行期（`src/model-ref.mjs:38-43`），已有 D-S1 原因面（`providerInvalidReason`）；同理 `shell` 不查可执行文件、`memory.team.repo` 不查 git 可达。
 - **D-S2.6 不动读取侧**（零 reader 改动）：全部折叠/回落点（`config.mjs:277` / `make-agent.mjs:150` / `subagent-async.mjs:135-158` / `tools/bash.mjs:131`）保持原样——本批只加写侧护栏，护栏与 reader 是「拒绝 ⊆ 不可消费」的单调关系（§8.5），不可能新增静默。
 - **D-S2.7 W3 同族纳入**（`agent.subagentModels`——默认 `{}` ⇒ 派生表零条目 ⇒ 零约束）：实证字符串被静默忽略（回落 `subagentModel`，`subagent-spawn.mjs:92`）——按 F-S1.8 一般表述纳入；**已裁定纳入本批**（2026-09-11 用户裁定——保留 W3 条目与用例：T-S2.12 正控 + T-S2.13 表驱动含 W3 行）。
-- **D-S2.8 `parseValue` 引号行为保持现状**（登记观察，本批不裁定）：CLI 对“JSON 解析成功但结果为字符串”返回**原始串**（`settings.mjs:83`——`set x '"abc"'` 落盘 `"abc"` 含引号），VSC 返回**解析值**（`thincoder-vscode/src/agent-tools/settings.mjs:79`——落盘 `abc`）；F-S1.3 值解析条款未覆盖引号语义，差异登记 `docs/TODO.md`（父侧）——本批不修、不锁测试。
+- **D-S2.8 `parseValue` 引号行为保持现状**（登记观察，本批不裁定）：CLI 对“JSON 解析成功但结果为字符串”返回**原始串**（`settings.mjs:83`——`set x '"abc"'` 落盘 `"abc"` 含引号），VSC 返回**解析值**（`src/agent-tools/settings.mjs:79`（VSC 仓）——落盘 `abc`）；F-S1.3 值解析条款未覆盖引号语义，差异登记 `docs/TODO.md`（父侧）——本批不修、不锁测试。
 
 ## 8. 设计追加：null 默认值键的形状约束（第 8 批——2026-09-11）
 
@@ -250,7 +250,7 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
    - `settings set: "memory.team" requires a non-empty "repo" (team layer stays off without it) — got <value>`
    - `settings set: "<key>" expects object of role→non-empty string — got <kind> (<value>)`
 5. **`null` 语义**：显式清除 = 有效动作（消费面均有“未设置”态，见 D-S2.3）——不是静默。
-6. **测试缝导出**（`_` 前缀——`config.mjs _setConfigPathForTest` 先例；**6 个**——`_checkShapeCompleteness` 为交付实测补入，2026-09-11）：`_buildShapeTable` / `_nullLeafPaths` / `_NULL_LEAF_SHAPES` / `_SIBLING_SHAPES` / `_checkKnownKeyValue` / `_checkShapeCompleteness`。
+6. **测试缝导出**（`_` 前缀——同 `config.mjs _setConfigPathForTest` 口径；**6 个**——`_checkShapeCompleteness` 为交付实测补入，2026-09-11）：`_buildShapeTable` / `_nullLeafPaths` / `_NULL_LEAF_SHAPES` / `_SIBLING_SHAPES` / `_checkKnownKeyValue` / `_checkShapeCompleteness`。
    依据注：`_checkShapeCompleteness` = T-S2.14「夹具注入未声明键被捕获 + 一次性警告列出键名」的**唯一机械缝**（导出面 `src/agent-tools/settings.mjs:263`；测试直用 `test/settings.test.mjs:284-290`；VSC 端同导出于 `thincoder-vscode/src/agent-tools/settings.mjs:249`）。
 7. **锁断言形态（逐字——coder 照抄；VSC 相等面 = 交付实测形态 2026-09-11）**：CLI——`assert.deepEqual(Object.keys(_NULL_LEAF_SHAPES).sort(), _nullLeafPaths(DEFAULTS).sort())`（T-S2.14 相等面）·
    `assert.ok("agent.subagentModels" in _SIBLING_SHAPES)`（存在性面）。VSC——`assert.deepEqual(Object.keys(_NULL_LEAF_SHAPES).sort(), _nullLeafPaths({ agent: AGENT_DEFAULTS }).sort())`（T-S2.33 相等面——当前 2 键；实测 `thincoder-vscode/test/settings-tool.test.mjs:106`）·

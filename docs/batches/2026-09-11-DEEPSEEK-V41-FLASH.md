@@ -1,7 +1,8 @@
 # DeepSeek V4.1-Flash 接入（两端 MODEL_SPECS + 预设） · 批次记录（2026-09-11）
 
-> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分）**：本档对端（VSC）份已由 VSC 仓 `docs/batches/2026-09-11-DEEPSEEK-V41-FLASH（VSC 仓）` 逐字承载（D10——零改写）；本档保留本仓份。
-> 移出条目（对端份）清单：§2 行级 VSC 行（as-of `:137`–`:140`）——条目计数（对端份 / 本仓份）= 4 / 4（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。
+> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分 · 已切除 2026-09-12）**：本档对端（VSC）份**已自本档切除**（原文不再留本仓——D11 完全态）；承载档 = VSC 仓 `docs/batches/2026-09-11-DEEPSEEK-V41-FLASH（VSC 仓）`（逐字搬运、零改写——D10）。
+> 已切除条目清单：§2 受影响文件表 VSC 行（4 行 = VSC 源 2 + VSC 测试 2）——条目计数（对端份 / 本仓份）= 4 / 4（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。**源档 blob SHA（切除前）= `18f93661d7e9`**。
+> 变更记录：2026-09-12——对端份经承载档逐字承接后自本档物理切除；§2 受影响文件表合计 8 → 4 文件。
 
 > 六段 append-only，**一段一作者**：§1 讨论（主 agent）· §2 批次任务（eng-designer）·
 > §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder）· §6 验证与收口（父代理）。
@@ -9,6 +10,7 @@
 > `../design/PROVIDER.md`）；整批做完本档冻结。
 > 机制与模板见 `requirements/ENGINEERING-MODE.md` §1.12。**本档 = 第 6 批**
 > （第 1 批 ENGINEERING-MODE / 第 2 批 ENG-DESIGNER / 第 3 批 MODEL-SELECTION / 第 4 批 C 工具 / 第 5 批 VSC-MIRROR）。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -47,9 +49,9 @@
 | # | 现存表述 | 本批处置 |
 |---|---|---|
 | 1 | `thincoder/src/model-specs.mjs:29-32` 三行 deepseek（pro / flash / flash-vision-exp） | 新增 `deepseek-flash` + 两条退役名对齐 V4.1 Flash（含 `multimodal: true`）|
-| 2 | `thincoder-vscode/src/config.mjs:25-28` 同三行（多 `reasoningEffortDefault: "high"` 字段） | 同上（各端独立实现、语义同源）|
+| 2 | `src/config.mjs:25-28`（VSC 仓）同三行（多 `reasoningEffortDefault: "high"` 字段） | 同上（各端独立实现、语义同源）|
 | 3 | `thincoder/src/config.mjs:36` 预设 `deepseek: { … model: "deepseek-v4-pro" … }` | `model` → `"deepseek-flash"`（多模态可用 + 官方定性更优）|
-| 4 | `thincoder-vscode/src/config-presets.mjs:11` 预设同款 | 同上 |
+| 4 | `src/config-presets.mjs:11`（VSC 仓）预设同款 | 同上 |
 | 5 | `PROVIDER.md` §9（规格表与决策）/ §11（模型支持与预设） | 本批设计落点（需求层 + 设计层）|
 | 6 | 用户本机 `~/.thincoder/config.json` 的 `deepseek` 渠道 `model: "deepseek-v4-flash"`（退役名，仍可用） | **非本批代码事**——改名与否属用户环境（待用户许可，父侧可代改）|
 
@@ -85,10 +87,9 @@
 
 ## §2 批次任务（eng-designer 自写）
 
-_（待写——eng-designer）_
 
 **状态：任务书就绪**（2026-09-11——设计已落档，待设计评审）。设计档 = `../design/PROVIDER.md` §18（需求层）/
-§19（设计层）/ §20（测试层）；VSC 镜像档 `thincoder-vscode/docs/design/PROVIDER.md` 对应节已同步。
+§19（设计层）/ §20（测试层）；VSC 镜像档 `PROVIDER（VSC 仓）` 对应节已同步。
 实施者 = eng-coder（设计 token 门）。本 §2 = coder 任务书本体（不另写副本）。
 
 ### 目标与已知事实（免重复勘察）
@@ -129,7 +130,7 @@ _（待写——eng-designer）_
 - **不**改多模态消费链（read_image 门 / 视觉渠道 / 贴图门 / 注入）——数据变化经既有机制生效。
 - **不**改提示词 / README / CHANGELOG / `docs/TODO.md`；不 commit；**不**改文档面（已落档）。
 
-### 受影响文件（实施者写域——spawn `files` 声明同此，共 8 文件）
+### 受影响文件（实施者写域——spawn `files` 声明同此，共 4 文件）
 
 | 端 | 文件 | 改动要点 |
 |---|---|---|
@@ -137,17 +138,13 @@ _（待写——eng-designer）_
 | CLI 源 | `thincoder/src/config.mjs` | 预设 `deepseek.model` → `deepseek-flash` |
 | CLI 测试 | `thincoder/test/config-merge.test.mjs` | `:31` 预设断言改值 |
 | CLI 测试 | `thincoder/test/deepseek-v41-specs.test.mjs` | **新增**（T30–T34） |
-| VSC 源 | `thincoder-vscode/src/config.mjs` | 同 CLI 行集（多 `reasoningEffortDefault`） |
-| VSC 源 | `thincoder-vscode/src/config-presets.mjs` | 预设改值 |
-| VSC 测试 | `thincoder-vscode/test/config-merge.test.mjs` | 预设值断言新增（T37） |
-| VSC 测试 | `thincoder-vscode/test/image-downgrade.test.mjs` | 镜像行字段 + 视觉判据放行（T36） |
 
 > 文档面（双端 `PROVIDER.md`）已由 designer 落档——**不在 coder 写域**；发现文档与实现不符 → 报告，勿径改。
 
 ### 验收标准（AC-11–AC-17——机器可验证；判据全文 = 设计档 §20.2）
 
 - **AC-11（R11）**：`cd thincoder && node --test test/deepseek-v41-specs.test.mjs` 全绿；
-  `cd thincoder-vscode && node --test test/image-downgrade.test.mjs` 全绿。
+  VSC 仓 `node --test test/image-downgrade.test.mjs` 全绿。
 - **AC-12（R12）**：同套件内退役名对齐 + 行为放行断言（`multimodal` 为真——read_image / 视觉判据）。
 - **AC-13（R13）**：vision-exp 行 = 契约；`grep -n "vision-exp" thincoder/src/model-specs.mjs` 命中退役/路由注释。
 - **AC-14（R14）**：pro 行零改 + 非多模态断言；`grep -n "2026-09-14"` 双端源文件非空。
@@ -167,7 +164,7 @@ _（待写——eng-designer）_
 
 **状态更新**：设计评审（轮次 1）pass——修正轮已落设计档（CLI §18–§20 + VSC 镜像档 §6.1）；本追加 = §2 同步（判据全文权威 = 设计档 §20.2；与上文本冲突时以本追加为准）。实现待用户批准（§4）。
 
-- **AC-13 增补（VSC 侧判据——原「（双端同款）」具体化）**：新增 `cd thincoder-vscode && grep -n "vision-exp" src/config.mjs`——命中行注释含退役/路由字样；T31（CLI）/ T36（VSC）覆盖 vision-exp 行字段。
+- **AC-13 增补（VSC 侧判据——原「（双端同款）」具体化）**：新增 VSC 仓 `grep -n "vision-exp" src/config.mjs`——命中行注释含退役/路由字样；T31（CLI）/ T36（VSC）覆盖 vision-exp 行字段。
 - **T36 扩面（VSC）**：关键字段断言扩至 vision-exp 行（三行 = 契约）——落点不变（`test/image-downgrade.test.mjs`）。
 - **T38 扩面（双端）**：增 pro 只读字段锚（`context` 1M / `maxOutput` 384K / `prefixMode` true / `reasoningEffortEnum`——防实施误改）——落点 = CLI 新档 pro 段 + VSC `test/image-downgrade.test.mjs`。
 - **设计档其余修正（非 §2 面，以设计档为准）**：§19.5 #3 / N7 增重评触发（2026-09-14 12:00 路由生效后复检——视觉能力位是否翻转）；a1/a2 措辞降级（pro 视觉能力未核实——保守）；§19.2(c) 字符位改准（第 10 字符）；§19.2(a) tempRange 出处补记（沿用既有行现值）；§19.4 VSC 行补块注释改写句。
@@ -177,7 +174,6 @@ _（待写——eng-designer）_
 
 ## §3 设计评审（评审子代理自写）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
@@ -192,10 +188,10 @@ _（待写——评审子代理）_
 | 5 | 清晰度 | 🔵 | §19.2(c) 字符位计数 off-by-one：「第 9 字符均为 `v`，新键第 9 字符为 `f`」——实际第 9 字符双方均为 `-`，分叉在第 10 字符（`v` vs `f`）；长度数（14/17/28/15）与结论（互不为前缀、各自命中自身行——对照 `SORTED_SPECS` 长度降序 + `lookupSpec` 实测）均无误。 | 改「第 9」为「第 10 字符（`deepseek-` 之后首字符）」。 |
 | 6 | 依据溯源 | 🔵 | §19.2(a) 逐项依据中仅 `tempRange: [0,2]` 无 §1 事实行（其余 10 项——context/maxOutput/thinking/prefixMode/multimodal/cacheMode/thinkApi/reasoningEcho/effort enum/默认 effort——均有落点）；该值三行中两行沿用既有行现值、新行继承（`src/model-specs.mjs:29/30/32` 实测），风险低；映射表声称的「官方参数页」在档内不可复核。 | 补记出处，或明示「沿用既有 DeepSeek 行现值」。 |
 | 7 | 行为变化告知 | 🔵 | 旧名行为变化（`deepseek-v4-flash` 起允许读图/贴图）已入档且可判定：批次 §1 需求点 2（「行为变化：deepseek 渠道将允许贴图」，随需求清单回读用户）、R12 判定句、§19.3 b1、VSC 镜像 §6.1/§8；VSC 连带面（该渠道进入视觉判据/贴图放行）同档。唯一缺口 = 用户可见发布注记（CHANGELOG 明确不在本批范围）。 | 发布流程时补 CHANGELOG 一行注记（父侧发布面，非本批交付物）。 |
-| 8 | 受影响文件 | 🔵 | VSC 源块注释将成 stale：`thincoder-vscode/src/config.mjs:23-24`「DeepSeek V4 series (official Models & Pricing: **dual models**…)」——本批后该名下有 4 行（新名 + 两退役名 + pro）；§19.4 CLI 行明示「块注释改写」，VSC 行只写「同 CLI 行集」，未点明是否含该块注释改写。 | VSC 行补「块注释同步改写（dual models 句）」一句，或在 §2 已知事实中明示。 |
+| 8 | 受影响文件 | 🔵 | VSC 源块注释将成 stale：`src/config.mjs:23-24`（VSC 仓）「DeepSeek V4 series (official Models & Pricing: **dual models**…)」——本批后该名下有 4 行（新名 + 两退役名 + pro）；§19.4 CLI 行明示「块注释改写」，VSC 行只写「同 CLI 行集」，未点明是否含该块注释改写。 | VSC 行补「块注释同步改写（dual models 句）」一句，或在 §2 已知事实中明示。 |
 
 **断言核验（实测）**：双端 8 个受影响文件行数与行位逐条一致（172 / 487 / 174 / 184 / 41 / 180 / 127；deepseek 块 `model-specs.mjs:29-32` ↔
-`thincoder-vscode/src/config.mjs:25-28`；锚测试 `read-image-guide.test.mjs:20` / `image-downgrade.test.mjs:24/59/109`）；§19.2 引用锚（`file.mjs:168-173` 门、
+`src/config.mjs:25-28`（VSC 仓）；锚测试 `read-image-guide.test.mjs:20` / `image-downgrade.test.mjs:24/59/109`）；§19.2 引用锚（`file.mjs:168-173` 门、
 `record-results.mjs:47-55`、`execute-tools.mjs:384-387`、`settings.mjs:322`）逐条成立；三档宽度扫描（≥301 字符行）为零；
 「VSC 无 deepseek 预设断言」「CLI 预设断言唯一命中 `config-merge.test.mjs:31`」等声明与现状一致；非视觉锚不受影响的论证成立（pro 零改）。
 
@@ -205,7 +201,7 @@ _（待写——评审子代理）_
 > **§3-补 1 建议**：把「9/14 路由生效后复检」补为第三触发（或说明届时为何仍不翻转）；复检登记为父侧协调项，使 N7 的「显式」有可被触发的接收方。
 >
 > **§3-补 3 余文**：VSC 端 vision-exp 行/注释（§19.4 VSC 行「同 CLI 行集」含注释）在测试层零断言。
-> **§3-补 3 建议**：补一行 `cd thincoder-vscode && grep -n "vision-exp" src/config.mjs`（命中退役/路由字样），或把 T36 关键字段断言扩到 vision-exp 行。
+> **§3-补 3 建议**：补一行 VSC 仓 `grep -n "vision-exp" src/config.mjs`（命中退役/路由字样），或把 T36 关键字段断言扩到 vision-exp 行。
 
 **计数**：发现 8 条——🔴 0 · 🟡 3 · 🔵 5。批准链不受阻（无 🔴）。
 
@@ -214,7 +210,7 @@ VERDICT: pass
 ## §4 用户批准（主 agent 记）
 
 **2026-09-11 02:40 用户批准**（原话："批准"）——**修正轮落地 + 父侧核验后的正式签字**。
-本次采用「**严格序**」先例：原则性批准（02:30）→ 修正轮落地（id=15）→ 父侧逐条核验 → **冻结文本呈报** → 本签字。
+本次采用「**严格序**」口径：原则性批准（02:30）→ 修正轮落地（id=15）→ 父侧逐条核验 → **冻结文本呈报** → 本签字。
 
 - 设计评审（轮次 1）**pass**（0🔴 · 3🟡 · 5🔵——发现表见 §3）；
 - 8 条发现经主 agent 裁决：**7 Fixed + 1 Deferred**（发布面 CHANGELOG 一行——已登记 `docs/TODO.md:139`）；
@@ -231,13 +227,12 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 ### 实施记录（双端实施 · 2026-09-11）
 
 _（上方占位行随 append-only 保留——以本段为准。）_
 
-**交付摘要**：8 文件全部落地（CLI 2 源 + 2 测试 / VSC 2 源 + 2 测试）——双端 spec 表新增
+**交付摘要**：4 文件全部落地（CLI 2 源 + 2 测试）——双端 spec 表新增
 `deepseek-flash` 行、两退役名对齐 V4.1-Flash（加 `multimodal`）、`deepseek-v4-pro` 保留 + 注释
 （字段零改）、预设 `deepseek.model` → `deepseek-flash`。纯数据面更新——read_image 门 / 视觉判据 /
 注入链经 `specForModel` 数据驱动，机制零改（N5）。
@@ -250,10 +245,6 @@ _（上方占位行随 append-only 保留——以本段为准。）_
 | `thincoder/src/config.mjs` | 486 → 486 | 预设 `:36` 改值（1 行，净增 0） |
 | `thincoder/test/config-merge.test.mjs` | 173 → 176 | T35：`:31` 改值 + `:32-34` 只读锚（advisor 轮 1 第 2 条采纳） |
 | `thincoder/test/deepseek-v41-specs.test.mjs` | 新增 86 | T30 / T31 / T32 / T33 / T34+T38（5 用例） |
-| `thincoder-vscode/src/config.mjs` | 183 → 190 | 同 CLI 行集 + `reasoningEffortDefault: "high"`；块注释改写（`dual models` 句去除） |
-| `thincoder-vscode/src/config-presets.mjs` | 40 → 40 | 预设 `:11` 改值（1 行，净增 0） |
-| `thincoder-vscode/test/config-merge.test.mjs` | 179 → 180 | T37 断言 +1 行（`:137`） |
-| `thincoder-vscode/test/image-downgrade.test.mjs` | 126 → 157 | T36（`:114-132`）+ T38（`:134-142`） |
 
 **逐需求透明表（R11–R17——Done / Simplified / Not done）**：
 
@@ -270,7 +261,7 @@ _（上方占位行随 append-only 保留——以本段为准。）_
 **验收实跑（AC-11–AC-17——长测试先落盘再读）**：
 
 - AC-11 / AC-12：`cd thincoder && node --test test/deepseek-v41-specs.test.mjs` → 5 pass / 0 fail；
-  `cd thincoder-vscode && node --test test/image-downgrade.test.mjs test/config-merge.test.mjs` → 18 pass / 0 fail。
+  VSC 仓 `node --test test/image-downgrade.test.mjs test/config-merge.test.mjs` → 18 pass / 0 fail。
 - AC-13：`grep -n "vision-exp"` 双端源文件——CLI `:39` / VSC `:34` 行注释含 retired / 仍收 / 路由语义。
 - AC-14：`grep -n "2026-09-14"` 双端源文件非空（CLI `:35` / VSC `:30`）。
 - AC-15：双端 `node --test test/config-merge.test.mjs` 全绿（CLI 7 / 7 · VSC 10 / 10）。
@@ -323,7 +314,7 @@ _（上方占位行随 append-only 保留——以本段为准。）_
 | 提交 | 仓 | 内容 |
 |---|---|---|
 | `c22b3ea` | thincoder | 7 文件 / +742 −19：`src/model-specs.mjs`（新行 + 两退役行 + pro 注释）· `src/config.mjs`（预设改值）· `test/deepseek-v41-specs.test.mjs`（新 86 行）· `test/config-merge.test.mjs` · 设计档 §18–§20 · 本批次档 · `docs/TODO.md` |
-| `3e771ee` | thincoder-vscode | 5 文件 / +66 −7：`src/config.mjs` · `src/config-presets.mjs` · `test/config-merge.test.mjs` · `test/image-downgrade.test.mjs` · 设计档镜像同步 |
+| `3e771ee` | VSC 仓 | 5 文件 / +66 −7：`src/config.mjs` · `src/config-presets.mjs` · `test/config-merge.test.mjs` · `test/image-downgrade.test.mjs` · 设计档镜像同步 |
 
 ### 验证实跑（父侧——非采信自述）
 

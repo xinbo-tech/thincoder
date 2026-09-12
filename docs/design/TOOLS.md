@@ -152,7 +152,7 @@ MCP 工具**动态展开**为独立原生工具（`{server}_{tool}` 前缀、完
 - **读取面（单点，不变）**：`config.websearch.apiKey` → `agent.config`（`make-agent` 装配）→ `web.mjs:49` 触发 Tavily；无 key / 失败 → Bing 兜底。**`web.mjs` 本批零改**。
 - **遗留值语义**：磁盘 `websearch.provider` 原样保留（零读取 / 零校验 / 零写回）；`settings` 工具类型表自动派生自 DEFAULTS（`settings.mjs:58`）——键移除即脱表 = 未知键原样语义（既有通用行为，零特判）。
 
-**逐面改动（最小面）**：
+**逐面改动（完整修复路径）**：
 
 | 面 | 文件（as-of 行） | 改动 |
 |---|---|---|
@@ -218,7 +218,7 @@ websearch: {
 | T2 | 边界 | 遗留键兼容（零读取——行为等价） | tmp config ×2（缝 = `_setConfigPathForTest`）：A = `{websearch:{provider:"tavily",apiKey:"tvly-x"}}` · B = `{websearch:{apiKey:"tvly-x"}}` → 各 `loadConfig()` | 均不抛；`apiKey === "tvly-x"` 原样；A 段去 `provider` 后与 B 段 deepEqual（「行为与未设置一致」机验——D-2 保留语义下整段 deepEqual 不成立，故取去键等值 + 消费位等值） | AC-4 |
 | T3 | 边界 | 读取面扫描 | 遍历 `src/**/*.mjs` 逐行（扫描器 = §11.7 注枚举） | 0 命中 | AC-2 |
 | T4 | 边界 | 触发面单点 | `src/tools/web.mjs` 文本 | 含 `config?.websearch?.apiKey` | AC-2 |
-| T5 | 边界 | 键表脱表 | `_buildShapeTable(DEFAULTS)`——符号面**已核**：导出 `src/agent-tools/settings.mjs:265` · 纯派生 `:54-58` · 测试先例 `test/settings.test.mjs:19` | `websearch.provider` 未定义 | AC-4 |
+| T5 | 边界 | 键表脱表 | `_buildShapeTable(DEFAULTS)`——符号面**已核**：导出 `src/agent-tools/settings.mjs:265` · 纯派生 `:54-58` · 测试同款 `test/settings.test.mjs:19` | `websearch.provider` 未定义 | AC-4 |
 | T6 | 正常 | 文档面 | `README.md` 文本 | 无 `"provider": "tavily"`；websearch 段在且含 `apiKey`（与 AC-3 逐字对齐） | AC-3 |
 | T7 | 错误（反证） | 扫描器非空转 | 探针串 = §11.7 注枚举 4 形态各一（点访问 / 括号 / 解构 / 单行申报） | 全部命中 | AC-5 |
 | T8 | 错误（反证负例） | 合法文本不误报 | `websearch?.apiKey` 读取行 · proxy.mjs "websearch, fetch, and provider calls" 注释行 | 0 命中 | AC-5 |

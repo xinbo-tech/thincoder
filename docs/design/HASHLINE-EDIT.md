@@ -43,5 +43,5 @@ hashline 相关用例在既有 file 工具测试（hash 匹配/歧义/not-found 
 
 ## 变更记录
 
-- 2026-09-08：文档重组——hashline_edit 语义从 TOOLS.md §6.3 + hashline_edit.md 描述并入本文档（每工具一档）。定位判定记录：保留独立（用户裁定）。
+- 2026-09-08：文档重组——hashline_edit 语义从 TOOLS §6.3 + hashline_edit.md 描述并入本文档（每工具一档）。定位判定记录：保留独立（用户裁定）。
 - 阶段 2 预告（EDIT-TOOLS-REVIEW.md）：hashline 定位重写（位置无关哈希寻址写入描述）+ 路由段同步。

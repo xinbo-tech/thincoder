@@ -208,8 +208,8 @@ Inject 框（Ctrl+I）`state.interruptPrompt` 为裸 `{ text }`、无 cursor—�
 
 | # | 候选方案 | 判据逐项评估 | 取舍 | 结论 |
 |---|---|---|---|---|
-| B1 | 可视行口径（折行 + `\n` 同权） | 与 zsh/readline 惯例 + VSC webview 先例一致；长粘贴文本可竖移 | 长折行单行输入 ↑ 不再一步进历史（须移至顶行） | **选定** |
-| B2 | 逻辑行口径（仅 `\n`） | 「多行」= 显式换行；单行 ↑ 直接进历史 | 与两先例不符；折行文本内无法竖移 | 否决 |
+| B1 | 可视行口径（折行 + `\n` 同权） | 与 zsh/readline 惯例 + VSC webview 同款一致；长粘贴文本可竖移 | 长折行单行输入 ↑ 不再一步进历史（须移至顶行） | **选定** |
+| B2 | 逻辑行口径（仅 `\n`） | 「多行」= 显式换行；单行 ↑ 直接进历史 | 与两类形态不符；折行文本内无法竖移 | 否决 |
 
 **C. processing 期屏蔽（`key-handler.mjs:271`）**：
 
@@ -223,7 +223,7 @@ Inject 框（Ctrl+I）`state.interruptPrompt` 为裸 `{ text }`、无 cursor—�
 | # | 候选方案 | 判据逐项评估 | 取舍 | 结论 |
 |---|---|---|---|---|
 | D1 | `{ chars, cursor }` + 复用 `layoutInput` 渲染 + 最小集 + 四方向键 | 与主框/question 同源（codepoint 数组语义）；可单测 | 触碰 5 源文件；state 注释同步 | **选定** |
-| D2 | 保留 `{ text }` 加 `cursor` 整数 | 改动最小 | text/cursor 双源（切字正确性靠约定——emoji 代理对风险）；与既有 codepoint 口径分叉 | 否决 |
+| D2 | 保留 `{ text }` 加 `cursor` 整数 | 改动范围 = 单字段扩展 | text/cursor 双源（切字正确性靠约定——emoji 代理对风险）；与既有 codepoint 口径分叉 | 否决 |
 | D3 | 多行 Inject（支持换行） | 可写长插话 | 提交/渲染/单行守卫全改——语义扩，非本批诉求 | 否决（后续候选） |
 
 ### 9.3 接口契约（契约变更清单——语义正文 = §1/§2/§3/§8）
@@ -245,7 +245,7 @@ Inject 框（Ctrl+I）`state.interruptPrompt` 为裸 `{ text }`、无 cursor—�
 
 | # | 决策 | 理由 | 否决备选 |
 |---|---|---|---|
-| D-31.1 | 「多行」= 可视行（折行与 `\n` 同权） | zsh/readline 惯例 + VSC 先例；长粘贴可竖移 | 逻辑行口径（§9.2 B2） |
+| D-31.1 | 「多行」= 可视行（折行与 `\n` 同权） | zsh/readline 惯例 + VSC 同款；长粘贴可竖移 | 逻辑行口径（§9.2 B2） |
 | D-31.2 | 列保持**逐键现算**（不记忆） | 状态零增；行为可预测 | sticky 列记忆（§9.2 A3） |
 | D-31.3 | processing 期：竖移放行 / 历史禁 | 与「吞提交不吞编辑」一致 | 全屏蔽（§9.2 C2）；`:271` tab 死条件在案（TODO 待讨论）——本批不删、原样保留 |
 | D-31.4 | Inject 去 `text` 改 `chars/cursor`（单行不变式保留） | 与主框/question codepoint 语义同源；四方向键可机验 | 双源 text+cursor；多行 Inject（§9.2 D2/D3） |
@@ -304,7 +304,7 @@ Inject 框（Ctrl+I）`state.interruptPrompt` 为裸 `{ text }`、无 cursor—�
 
 ### 9.8 边界（本批不做）
 
-- 不做 VSC 端改动（其 webview 已有同款先例；差异仅报告：VSC 在文本框首行 col>0 时 ↑ 为浏览器
+- 不做 VSC 端改动（其 webview 已有同款；差异仅报告：VSC 在文本框首行 col>0 时 ↑ 为浏览器
   默认 no-op——不回落历史；CLI 按裁定回落历史）。
 - 不改 question 自由文本态（§7 键集零动）；不给 Inject 引入 Delete / 多行 / 历史回落。
 - 不引入列记忆状态；不动 search / picker / wizard / permission 键语义；不动 `:271` tab 死条件（TODO 在案）。

@@ -4,6 +4,7 @@
  * 去重 + 送达门 + 条目键稳定（T103）· 收口行命令（T104）· 状态行接线（T106）·
  * 项目发现（T109）· 降级不崩（T110）。
  * 手法：夹具台账（tmp）+ 注入 `ageOf`（确定性——真 git 走 slow 层）+ 直驱 `runLedgerScan` / `renderStatus`。
+ * 归册（2026-09-12 收尾轮 9）：T104（`--summary` 真 blameAges）→ slow 层。
  */
 import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
@@ -200,7 +201,7 @@ const cliFamily = () => {
 }
 const FAMILY_ROWS = ["台账 alpha：需求池 1 · 技术待办 1（老化 0）", "台账 beta：需求池 0 · 技术待办 0（老化 0）"]
 
-test("T104 正常：`--summary` 输出 = L2 序列逐字 + 退出码 0 + 台账字节不变（main 直驱）", () => {
+slow("T104 正常：`--summary` 输出 = L2 序列逐字 + 退出码 0 + 台账字节不变（main 直驱）", () => {
   const family = cliFamily()
   const ledgerAbs = join(family, "alpha", "docs", "TODO.md")
   const before = readFileSync(ledgerAbs)

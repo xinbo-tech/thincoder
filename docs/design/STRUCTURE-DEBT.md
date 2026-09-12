@@ -97,7 +97,7 @@
 ### #5 CLI system.mjs 506 行塞 4 工具（🟡 中）
 
 **现象**：一个文件塞 bash+glob+grep+ls 四工具 + gitGuardSnapshot，超 500 硬限；VSC 已拆 shell.mjs/search.mjs，CLI 未拆。
-**方向**：按 VSC 先例拆（bash 族/搜索族）。
+**方向**：按 VSC 现行拆分形态拆（bash 族/搜索族）。
 
 ### #6 工具寄生/名不符实（🟡 中低）
 

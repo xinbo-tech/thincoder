@@ -1,6 +1,7 @@
 # 散文锚测试退役（PROSE-ANCHOR-RETIRE）· 批次记录（2026-09-12）
 
 > 六段 append-only，一段一作者。编制：主 agent · 2026-09-12 04:14 · 来源 = 用户 2026-09-12 04:09–04:11 三轮裁定（「机械耦合那个测试删了吧，好烦」→「这种类型的测试都不要做」→「提示词同步靠他就完蛋了，他特么什么时候起过作用？」）+ 04:13「走」。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -10,7 +11,9 @@
 
 **已收口 2026-09-12 04:13**（用户「走」）。下一步 = **设计**（spawn eng-designer）。
 
-**VSC 侧记录**（2026-09-12 04:26 用户指示「批次档 cli/vscode 各一份」后由主 agent 建）：`thincoder-vscode/docs/batches/2026-09-12-PROSE-ANCHOR-RETIRE.md`（§1 含 VSC 侧裁定表 + 事实基线：**顶层 `.test.mjs` 62 档** / 散文锚粗筛 28 档 / ≈330 用例 ≈ 本仓 suite 50%——**as-of 2026-09-12 04:26，口径 = 顶层 `.test.mjs`**；原写「65 档」为初测口径混入子目录/非用例档，已更正）。本批两侧记录的互引形态与实施分派方式由设计裁定。
+**VSC 侧记录**（2026-09-12 04:26 用户指示「批次档 cli/vscode 各一份」后由主 agent 建）：`2026-09-12-PROSE-ANCHOR-RETIRE（VSC 仓）`（§1 含 VSC 侧裁定表 + 事实基线：**顶层 `.test.mjs` 62 档**
+/ 散文锚粗筛 28 档 / ≈330 用例 ≈ 本仓 suite 50%——**as-of 2026-09-12 04:26，口径 = 顶层 `.test.mjs`**；原写「65 档」为初测口径混入子目录/非用例档，已更正）。本批两侧记录的互引形态与实施分派方式由设计裁定。
+机械折行（2026-09-12 形态清零轮）——语义零改
 
 ### 用户裁定（逐条拍——实施者据此，勿再选型）
 
@@ -71,7 +74,7 @@
 | 裁定同源 | 两侧对 R1–R5 的**语义**是否同一——不得一侧禁、一侧放行 |
 | 判据同一 | 「什么算散文锚」的判据三条 + 边界对照表两侧同口径；保留面（结构机检）两侧一致 |
 | 边界同形 | 范围外 / 端差处置两侧一致 |
-| **端差显式** | 允许的端差**是否逐条登记**（`thincoder-vscode/docs/design/README.md:57` 「镜像差异表」先例 · `requirements/AGENT-LOOP.md:607` N-CL4「端差逐条登记不静默」）——**静默的端差 = 漂移，不得放过** |
+| **端差显式** | 允许的端差**是否逐条登记**（判据 = `requirements/AGENT-LOOP.md:607` N-CL4「端差逐条登记不静默」；`README（VSC 仓）:57` 载镜像差异表——仅作插图，非依据）——**静默的端差 = 漂移，不得放过** |
 
 **核验时点**：两侧设计均落档后、**评审前预检**（A3）内执行；核验结论连同差异表随「设计就绪待评审」一并报用户。
 
@@ -93,7 +96,7 @@
 
 ### 设计约束
 
-1. **清单制**（沿 `TESTING.md` 既有「存量清理轮走删除清单制」——2026-09-07 先例删 94 档）：设计产出 = **逐条删除清单**（`档:行` + 用例名 + 归类依据），交父侧核销；
+1. **清单制**（沿 `TESTING.md` 既有「存量清理轮走删除清单制」——2026-09-07 同款删 94 档）：设计产出 = **逐条删除清单**（`档:行` + 用例名 + 归类依据），交父侧核销；
 2. **零误删**：混装档只删锚断言；行为用例 / 结构机检 / slow 门**一律不动**；删除后**用例总数下降须与清单条数对得上**（可机判）；
 3. **禁止新写散文锚**的纪律落点：提示词双端（CLI + VSC）语义同源、各端原文自持（多实现面纪律——不做 byte-identical、不加跨端同步依赖）；需求/设计档同批落档；
 4. **T95 处置**：连同设计档 §3.2 T95 行 + §3.1 AC75 一并出方案（退役注记形态 designer 定）；
@@ -112,7 +115,6 @@
 
 ## §2 批次任务（eng-designer 写）
 
-_（待写——eng-designer）_
 
 ---
 
@@ -120,7 +122,7 @@ _（待写——eng-designer）_
 
 > 目标（为什么）：让测试只在**系统行为 / 结构自洽**上红——消灭「读档断言某句在场/缺席」这类改一字即红、失败零信息量、锚红后动作永远是「把字改回去」的断言。
 > 设计全文 = `docs/design/TESTING.md` §11（判据执行版与口径裁定 C1–C5 / 方案选型对比 / 逐条删除清单 / T95+AC75 处置 / 受影响文件 / AC-PA1–AC-PA10 / T-PA1–T-PA9 / 边界与待裁项 / D-PA1–D-PA8）。
-> 需求 = `docs/requirements/TESTING.md` §5（F15–F22 / N10–N12）+ `docs/requirements/PROMPT-SYSTEM.md` 判据面四处 + 机制面三处去锚（F-TD6 / N-TD2 / N-TD3 / N-P1 + §2·§2.5·§2.7——修正轮二）。VSC 侧需求 = `thincoder-vscode/docs/requirements/TESTING.md`（本端自持——修正轮二）。
+> 需求 = `docs/requirements/TESTING.md` §5（F15–F22 / N10–N12）+ `docs/requirements/PROMPT-SYSTEM.md` 判据面四处 + 机制面三处去锚（F-TD6 / N-TD2 / N-TD3 / N-P1 + §2·§2.5·§2.7——修正轮二）。VSC 侧需求 = `TESTING（VSC 仓·需求）`（本端自持——修正轮二）。
 
 #### 1. 覆盖条目（本批 = 四条）
 
@@ -140,7 +142,7 @@ _（待写——eng-designer）_
 #### 3. 受影响文件
 
 - **设计侧已落**：`docs/requirements/TESTING.md`（74 → 130，§5）· `docs/requirements/PROMPT-SYSTEM.md`（412 → 417）· `docs/design/TESTING.md`（411 → 772，§11）· `docs/design/ENGINEERING-MODE.md`（2624，AC75/T95 注记 + 变更记录）
-  · `thincoder-vscode/docs/design/TESTING.md`（98 → 282，§8）· `thincoder-vscode/docs/requirements/TESTING.md`（新 87，VSC 端需求自持——修正轮二）。
+  · `TESTING（VSC 仓·设计）`（98 → 282，§8）· `TESTING（VSC 仓·需求）`（新 87，VSC 端需求自持——修正轮二）。
 - **实施侧（待 eng-coder）**：CLI **25** 个测试档（`test/` 顶层，逐条见 §11.3）+ 提示词双源 2 档（`src/prompts/discipline-engineering.md` · `docs/design/prompts/discipline-engineering.md`）。
 - 两仓**无整档删除** → VSC `test/files.mjs` 登记清单零改；CLI 为 glob 自动发现，零登记动作。
 
@@ -164,7 +166,7 @@ _（待写——eng-designer）_
 
    （**父侧机械折行**——2026-09-12 04:52：原为单行 335 字符，违反行宽规则；**语义零改**，仅拆行。）
 2. **粗筛 → 逐条判定的差额**：CLI 344 → 71 整删 + 29 段删（VSC 330 → 61 + 40）——粗筛把断言对象为运行产物的用例一并计入（§1「规模」节自注已预警）；本批口径为**逐条判定**。
-3. **本批记录落点**：本段为 CLI 侧记录 §2（eng-designer 自写）；VSC 侧记录（`thincoder-vscode/docs/batches/2026-09-12-PROSE-ANCHOR-RETIRE.md`）的 §2 **未写**——该档需绑定其自身的 designer spawn 写入，或由父侧代写并打标（子代理无跨档写通道）。
+3. **本批记录落点**：本段为 CLI 侧记录 §2（eng-designer 自写）；VSC 侧记录（`2026-09-12-PROSE-ANCHOR-RETIRE（VSC 仓）`）的 §2 **未写**——该档需绑定其自身的 designer spawn 写入，或由父侧代写并打标（子代理无跨档写通道）。
 
 **就绪**：设计已落（§11 + 本段任务书）；待用户发起设计评审 → 批准 → eng-coder 实施。
 
@@ -182,7 +184,7 @@ _（待写——eng-designer）_
 | **PA-A3** | 工具 `description` 静态文案 2 条 → 反向回退、保留 | §11.1 增**判据补充 C1-b**（工具契约面 = 契约守卫，非文档散文锁；读 `src/**` 源码档文本仍命中 ①）；`settings` T-S2.24 / `settings-tool` T-S2.35 自两侧清单**撤出**——`settings` / `settings-tool` 档随之出清单 |
 | **缺陷 b** | VSC 侧 §8.2 :213 / AC-VT10 称「本端 `check-ledger.mjs`」= 事实错误 + 端差未登记 | 已**如实更正**：本端 `scripts/` 实测无该脚本（= `check-doc-width.mjs` / `check-syntax.mjs` / `publish-all.mjs`）；本端结构机检面实际构成 = `check-doc-width.mjs`（行宽 + V1/V2/V3 单源）+ `check-syntax.mjs` + `test/doc-consistency.test.mjs` + slow 门；跨仓形态（CLI 侧 `check-ledger.mjs` 默认台账清单含两端）**逐条登记为端差**（N-CL4 口径；修正轮二就地消解为「端差在册、本批零改」）——落点 = 设计档 §11.6 端差登记（两侧）+ `TESTING（VSC 仓）` §8.2 |
 | **缺陷 c** | CLI §11.3 段删实计 22 vs 声明 21 | 已**复核并更正**：实计 **22**（声明曾为 21，合计行声明 90 条 → 实 91 行）——声明数与实条目数同步改（D3）；修正轮追加后 = 段删 29 / 处置行 100 |
-| **缺陷 d** | 跨仓引用（设计档 `docs/design/TESTING.md` §11.4 ↔ VSC 侧设计档 §8 头注）与并行批 `LEDGER-SELF-CONTAINED` R1/R7 冲突、该批未落地 | 已**就地消解（2026-09-12 修正轮二——用户 05:11 裁定「涉及 VSC 的文档必须在 VSC 仓写」；原「未消解 / 对齐轮」处置被否决）**：VSC 侧需求档已建（`thincoder-vscode/docs/requirements/TESTING.md`——本端自持、语义同源）；两侧需求指针均改指本仓档；设计档互引 = 跨端执行面指针（（CLI 侧）注记先例）；§11.9 第 4 行 / `TESTING（VSC 仓）` §8.6 为处置落点 |
+| **缺陷 d** | 跨仓引用（设计档 `docs/design/TESTING.md` §11.4 ↔ VSC 侧设计档 §8 头注）与并行批 `LEDGER-SELF-CONTAINED` R1/R7 冲突、该批未落地 | 已**就地消解（2026-09-12 修正轮二——用户 05:11 裁定「涉及 VSC 的文档必须在 VSC 仓写」；原「未消解 / 对齐轮」处置被否决）**：VSC 侧需求档已建（`TESTING（VSC 仓·需求）`——本端自持、语义同源）；两侧需求指针均改指本仓档；设计档互引 = 跨端执行面指针（（CLI 侧）注记同款）；§11.9 第 4 行 / `TESTING（VSC 仓）` §8.6 为处置落点 |
 | **PA-撤回** | 缺陷 a（批档 §2 残留占位行 + `---` 错位）= 本仓惯例 | **零改动**（本档与 VSC 侧批档的占位行 / `---` 位置未触碰） |
 
 **2. 两侧清单与对账——修正后实测（D3 声明数 == 实条目数）**
@@ -211,14 +213,14 @@ _（待写——eng-designer）_
 | 文件 | 变动（实测） |
 |---|---|
 | `docs/design/TESTING.md` | 411 → **772**（§11.1 判据补充 + C1-d · §11.2 差额 · §11.3 追加 10 条 + 撤 1 条 + 计数 + T95/AC49 行界 · §11.4 计数 + 需求面 · §11.6 端差/依赖/行数 + 禁写句 · §11.7 AC-PA11 · §11.8 · §11.9 裁定结果 + 跨批协调项 · §11.10 D-PA9/D-PA10/D-PA11 · 变更记录） |
-| `thincoder-vscode/docs/design/TESTING.md` | 98 → **282**（§8 头注需求依据/依赖登记 · §8.1 追加 10 条 + 撤 1 条 + 计数 · §8.2 端差/基准/登记项 · §8.3 AC-VT8/AC-VT10/AC-VT12 · §8.6 依赖消解 + 跨批协调项 · 变更记录） |
+| `TESTING（VSC 仓·设计）` | 98 → **282**（§8 头注需求依据/依赖登记 · §8.1 追加 10 条 + 撤 1 条 + 计数 · §8.2 端差/基准/登记项 · §8.3 AC-VT8/AC-VT10/AC-VT12 · §8.6 依赖消解 + 跨批协调项 · 变更记录） |
 | `docs/requirements/TESTING.md` | 74 → **130**（§5.1 判据补充 + C1-d + F17 + 分仓对齐 + 来源行） |
 | `docs/requirements/PROMPT-SYSTEM.md` | 412 → **417**（修正轮二：§2 双源流程 / §2.5 验收⑥⑦ / §2.7 #12 去锚表述 + 状态行 + 变更记录） |
-| `thincoder-vscode/docs/requirements/TESTING.md`（VSC 仓——新建） | 新 → **87**（VSC 端需求自持——F15–F22 / N10–N12 + 判据 C1-a–d） |
+| `TESTING（VSC 仓·需求）`（新建） | 新 → **87**（VSC 端需求自持——F15–F22 / N10–N12 + 判据 C1-a–d） |
 
 **5. 未了项（不属本修正轮——如实登记）**
 
-1. **VSC 侧记录 §2 未写**：本角色的 `batch_segment` 目标档由 spawn 绑定（= CLI 侧本档），无跨档写通道——VSC 侧记录（`thincoder-vscode/docs/batches/2026-09-12-PROSE-ANCHOR-RETIRE.md`）§2 需**父侧代写并打标**（或另绑其自身 designer spawn）。
+1. **VSC 侧记录 §2 未写**：本角色的 `batch_segment` 目标档由 spawn 绑定（= CLI 侧本档），无跨档写通道——VSC 侧记录（`2026-09-12-PROSE-ANCHOR-RETIRE（VSC 仓）`）§2 需**父侧代写并打标**（或另绑其自身 designer spawn）。
 2. **缺陷 d 的依赖**：**已就地消解**（2026-09-12 修正轮二——VSC 侧需求档自建；原「对齐轮」处置经用户 05:11 裁定否决）。
 3. **实施面**：逐条删除 + 禁用句落提示词 → eng-coder（需设计评审 pass + 用户批准后的 designToken）。
 4. **out-of-scope 注记**：`TESTING（VSC 仓）` §6 表内「削段点名档 … `eng-designer-role` 169」为历史实测值，与实档 189 行不符（TEST-LIFECYCLE 批的 as-of 值，非本批面）——本修正轮未触碰，登记待其后批次校准。
@@ -245,7 +247,7 @@ _（待写——eng-designer）_
 
 **3. 本修正轮内的自指误用更正（透明留痕）**
 
-- 本段「裁定逐条落地」表 **PA-B1/缺陷 d 行**初稿把设计档引用误写为**自指形态**（致 `doc-consistency` V1 报 `no-section` 悬空自指）；已**就地更正**为完整档名 + 节号（`docs/design/TESTING.md` §11.4）——同段、同作者、同回合内的单点改形（沿本仓「改形转绿」先例），**未触碰他段与他作者任何行**。
+- 本段「裁定逐条落地」表 **PA-B1/缺陷 d 行**初稿把设计档引用误写为**自指形态**（致 `doc-consistency` V1 报 `no-section` 悬空自指）；已**就地更正**为完整档名 + 节号（`docs/design/TESTING.md` §11.4）——同段、同作者、同回合内的单点改形（沿本仓「改形转绿」同口径），**未触碰他段与他作者任何行**。
 - 本修正轮**未被引入**的其他 §2 行零改动（含 `PA-撤回` 所指的占位行与 `---` 位置）。
 
 **4. AC-PA10 口径说明（本批自证）**：AC-PA10 = 「批前 / 批后**命中集合差**——本批改动文件」。本修正轮落笔后实跑，差集 = ∅（上表「1. 自检结果」）；上「2. 在册存量」三条均**批前已命中**（VSC 仓对照 + 文件新档即含 —— 非本修正轮新增）。
@@ -278,7 +280,7 @@ _（待写——eng-designer）_
 
 处置（全部就地落，不挂对齐轮）：
 
-1. **VSC 仓需求档新建**：`thincoder-vscode/docs/requirements/TESTING.md`（**87 行**——语义同源、各端原文自持：判据三条 + C1-a–d + F15–F22 + N10–N12 + 边界 + 判定句）。**命名 / 落点与并行批 requirements 树蓝图无冲突**（该树 README 规则 3 = 新板块新建；命名沿 `<TOPIC>.md` 先例）。
+1. **VSC 仓需求档新建**：`TESTING（VSC 仓·需求）`（**87 行**——语义同源、各端原文自持：判据三条 + C1-a–d + F15–F22 + N10–N12 + 边界 + 判定句）。**命名 / 落点与并行批 requirements 树蓝图无冲突**（该树 README 规则 3 = 新板块新建；命名沿 `<TOPIC>.md` 口径）。
 2. **CLI 需求档去代立规**：`docs/requirements/TESTING.md` §5——F15 例改本仓档 / F16 去「两仓同批」/ F19·F20 改本仓 + 对端自持 / N10·N11 改本仓构成；① 行去「VSC 侧另含兄弟仓」；§5 头加**语义同源声明**（同标识、各端原文自持）。
 3. **指针全面对齐**：VSC 设计档 §8 头注 → 本仓需求档；CLI 设计档 §11.4 加需求面登记；两仓批档相关表述更新（CLI 侧 :123 / :183 / :218 / :251 + VSC 侧 §2 三处——见 §3）。
 4. **连带**：受影响文件表（设计档 §11.6 + 本档 §2 表）加 VSC 需求档行（新 87）；**AC-PA11 / AC-VT12 / T-PA10**（「需求档自持」可机判）；§11.9 第 4 行 + VSC §8.6 依赖条目**就地消解**（原「待并行批落地后由对齐轮改指本仓」处置作废）。
@@ -287,7 +289,7 @@ _（待写——eng-designer）_
 
 | # | 项 | 状态 |
 |---|---|---|
-| a | **VSC 侧记录 §2**（`thincoder-vscode/docs/batches/2026-09-12-PROSE-ANCHOR-RETIRE.md`） | **已直改落笔**（需求指针三处 + 档位算式 + 文档面行数 + 「修正轮二登记」块）——本角色 `batch_segment` 绑定 CLI 档、无跨档通道，故以编辑工具**直改**；**父侧核验**（若不认可可单点回退） |
+| a | **VSC 侧记录 §2**（`2026-09-12-PROSE-ANCHOR-RETIRE（VSC 仓）`） | **已直改落笔**（需求指针三处 + 档位算式 + 文档面行数 + 「修正轮二登记」块）——本角色 `batch_segment` 绑定 CLI 档、无跨档通道，故以编辑工具**直改**；**父侧核验**（若不认可可单点回退） |
 | b | **VSC 侧记录 §1 :29/:32**（父侧写域——未碰） | 「65 档 / 9 用例」旧口径 → 正确值 = **62 档 / 8 用例（includes 35）**——待父侧或 VSC 写通道一行级更正 |
 | c | **CLI 侧记录 §1 :13**（父侧写域——未碰） | 「本仓 65 档」同 b 项——待父侧一行级更正 |
 | d | **并行批 requirements 树 README 映射表登记** | 本修正轮**未碰**（「不碰并行批任何档」约束 vs 树规则 3「立即登记」——冲突按「不自裁」条款上报）：TESTING 行登记（表格一行 + 变更记录一行）**待父侧裁定落地人** |
@@ -301,7 +303,7 @@ SWEEP-FOLLOWUP 守恒锁（`SPLIT_CASES = { async: 42, dual: 21 }`）将被本�
    （五处同值面 = `docs/design/ENGINEERING-MODE.md` §2.27.1 / §2.27.4 / AC57 / §3.2 T111 + 需求档 `docs/requirements/ENGINEERING-MODE.md` §1.15；守则 = 同档 :1248「守恒锁守则」）
    ——**不得让 SWEEP 锁静默变红**。SWEEP 批先落（现盘 42 / 21 / 合计 63 成立——父侧 2026-09-12 05:12 裁定）。
 2. 设计档 `docs/design/TESTING.md` §11.9 **跨批协调项**块（同内容；指明对方档位与守则）。
-3. `thincoder-vscode/docs/design/TESTING.md` §8.6 同规登记（本端对应两档 `prompts-async-guidance` / `prompts-mirror-anchors`——**本端无同类锁**（grep 实测零命中）→ 无锁值同步面）。
+3. `TESTING（VSC 仓·设计）` §8.6 同规登记（本端对应两档 `prompts-async-guidance` / `prompts-mirror-anchors`——**本端无同类锁**（grep 实测零命中）→ 无锁值同步面）。
 
 **5. 落笔文件与自检（本修正轮二实测）**
 
@@ -310,9 +312,9 @@ SWEEP-FOLLOWUP 守恒锁（`SPLIT_CASES = { async: 42, dual: 21 }`）将被本�
 | `docs/requirements/PROMPT-SYSTEM.md` | 412 → **417**（#1 + 变更记录） |
 | `docs/requirements/TESTING.md` | 126 → **130**（#5 + 第 9 条 + 头部） |
 | `docs/design/TESTING.md` | 746 → **772**（#2/#4/#5/#6/#8 + 第 9/10 条） |
-| `thincoder-vscode/docs/design/TESTING.md` | 272 → **282**（#7 + 第 9/10 条） |
-| `thincoder-vscode/docs/requirements/TESTING.md` | **新建 87**（第 9 条） |
-| `thincoder-vscode/docs/batches/…-PROSE-ANCHOR-RETIRE.md` | → **279**（§2 直改——见 §3.a） |
+| `TESTING（VSC 仓·设计）` | 272 → **282**（#7 + 第 9/10 条） |
+| `TESTING（VSC 仓·需求）` | **新建 87**（第 9 条） |
+| `2026-09-12-PROSE-ANCHOR-RETIRE（VSC 仓）` | → **279**（§2 直改——见 §3.a） |
 | 本档（CLI 记录） | 逐行更正 + 本节追加 |
 
 自检（两仓实跑——`node scripts/check-doc-width.mjs`）：
@@ -353,23 +355,22 @@ SWEEP-FOLLOWUP 守恒锁（`SPLIT_CASES = { async: 42, dual: 21 }`）将被本�
 
 ## §3 设计评审（评审子代理写）
 
-_（待写——评审子代理）_
 
 ---
 
 ### 轮次 1（评审子代理）
 
-**评审对象**：PROSE-ANCHOR-RETIRE 设计轮（目标 = `docs/design/TESTING.md` §11 · `thincoder-vscode/docs/design/TESTING.md` §8 · `docs/requirements/{TESTING,PROMPT-SYSTEM}.md` 判据面 · 两仓批档 §1/§2）。未跑 git diff；未读范围外档（`test/**` 实体、他批档）。
+**评审对象**：PROSE-ANCHOR-RETIRE 设计轮（目标 = `docs/design/TESTING.md` §11 · `TESTING（VSC 仓·设计）` §8 · `docs/requirements/{TESTING,PROMPT-SYSTEM}.md` 判据面 · 两仓批档 §1/§2）。未跑 git diff；未读范围外档（`test/**` 实体、他批档）。
 
 | # | 类别 | 严重度 | 问题 | 建议 |
 |---|------|--------|------|------|
 | 1 | 需求覆盖 / 文档归属 | 🔴 | `docs/requirements/PROMPT-SYSTEM.md` 仍以「现行」语气规定被本批退役的散文锚机制，设计只去锚「四处判据面」（`:328` / `:367` / `:375` / `:376`），未覆盖同档另两处（非 AC）：`:30`「锚句断言对象 = src/prompts 落地文本（生成质量由断言守）」、`:179` §2.7 #12「被测试 fail-when-unchanged 锁定的锚句，改写 = 同批改断言（锚句变更永不静默）」（另 `:100` §2.5 验收⑦「锚测试同步扩展」）。二者与 `docs/requirements/TESTING.md:104–108`（F15/F16/F19：一律不做 / 全删 / 禁止新写）对**同一机制**给出相反指令；`docs/design/TESTING.md:706` 的延后口径只涵盖「既有 AC 中的锚式判据」，未登记本两项（静默并存矛盾表述——违文档地图 §5 四问 #4）。 | 同批把 PROMPT-SYSTEM 三处改去锚表述；若确要延后，须在 §5.4 / §11.9 显式登记延后项与归属批次，不得静默留存。 |
-| 2 | 受影响文件标注 / 档位 | 🟡 | 「净减后均回落至 500 内」与实测数不符：`thincoder-vscode/docs/batches/2026-09-12-PROSE-ANCHOR-RETIRE.md:141`（`child-permission` 533 行 · 预计净减 −27 → **506**）与同档 `:162` 的断言（同断言见 `docs/design/TESTING.md:645`）；506 > 500 硬限，设计却以「拆档破坏清单集中度」为由不拆，未写拆分/结转立场。 | 更正声明数或给出 ≥−33 的实测依据；对仍 >500 的档写结构性处置（预存债 + 归属后续批次），勿以不成立的算式声明合规。 |
+| 2 | 受影响文件标注 / 档位 | 🟡 | 「净减后均回落至 500 内」与实测数不符：`2026-09-12-PROSE-ANCHOR-RETIRE（VSC 仓）:141`（`child-permission` 533 行 · 预计净减 −27 → **506**）与同档 `:162` 的断言（同断言见 `docs/design/TESTING.md:645`）；506 > 500 硬限，设计却以「拆档破坏清单集中度」为由不拆，未写拆分/结转立场。 | 更正声明数或给出 ≥−33 的实测依据；对仍 >500 的档写结构性处置（预存债 + 归属后续批次），勿以不成立的算式声明合规。 |
 | 3 | 方法合规 / 清晰 | 🟡 | CLI 批档 §2 的取代声明只点名两节（`:172`），其余节仍留修正前计数：`:136`「VSC 27 档 · 整删 58 · 段删 34」（修正后 61/40）、`:143`「CLI 26 个测试档」（修正后 25）、`:152`「645 → 576（−69 …）」（修正后 574 / −71）；另 `:197`「CLI 设计档 411 → 743」与 `:211`「411 → **746**」互斥（实档 746）。 | 把取代声明扩到整节或逐行更正——实施按任务书取数会取到错误目标（D3：声明数 == 实条目数）。 |
 | 4 | 验收标准可验性 | 🟡 | AC-PA6 提示词半（`docs/design/TESTING.md:672`「4 档测试纪律节含禁写句（grep）」）无逐字形态可 grep：设计仅在 `:608–611` 写「+2」，全档未见禁写句原文；而本批声明产出恰为逐字形态 → 该 AC 现状不可机判。 | 在设计与/或 §2 任务书落禁写句逐字形态（或写明由内容权方于实施前提供并给出机检锚串）。 |
 | 5 | 清晰 / 判据一致性 | 🟡 | `locales/**` 文本值断言：判据①与 C2 明列 `locales/**` 为命中面（`docs/requirements/TESTING.md:85`、`docs/design/TESTING.md:429`），F17 封闭枚举（`docs/requirements/TESTING.md:106`）不含该面，而 `docs/design/TESTING.md:715` 裁定「保留」并把理由写成「载体类 C1」——判据文本内无对应豁免。 | 把该裁定落成判据补充（或在 C2 注明 locales 资源文本属产品面、不命中①），免后续批次按判据机械执行得出相反结论。 |
 | 6 | 计数纪律 | 🟡 | `docs/design/TESTING.md:714` 称 PA-A1「两仓合计 20 条：**10 整删 + 10 段删**」，实为 7 整删（CLI 3 + VSC 4）+ 13 段删（CLI 7 + VSC 6）（批档 `:178` 系「两仓各 10 条」；§11.3 / §8.1 逐条可数）。 | 改为 7 整删 + 13 段删或「两仓各 10 条」（D3 同步）。 |
-| 7 | 数值漂移（卫生） | 🔵 | 三处计数不一致：VSC 批档 `:29`「test/ 总档 65 档」vs `:101`「本端顶层测试 62 档」；`thincoder-vscode/docs/design/TESTING.md:219` 与 `docs/design/TESTING.md:575` 均写「62 条登记项」，而 VSC 批档 `:163` 写「63 条登记项（62 档 .test.mjs + 1 档 smoke）」；VSC 批档 `:32` portability-vsc-advisor-context「9 / 35」vs `:148` 用例数 8（另批档 `:23` 引 T95 `:124–134` vs 设计 §11.5 `:124-133`）。 | 每项落定一个口径并同步（范围外实档未核 —— 见报告 out-of-scope 注）。 |
+| 7 | 数值漂移（卫生） | 🔵 | 三处计数不一致：VSC 批档 `:29`「test/ 总档 65 档」vs `:101`「本端顶层测试 62 档」；`TESTING（VSC 仓·设计）:219` 与 `docs/design/TESTING.md:575` 均写「62 条登记项」，而 VSC 批档 `:163` 写「63 条登记项（62 档 .test.mjs + 1 档 smoke）」；VSC 批档 `:32` portability-vsc-advisor-context「9 / 35」vs `:148` 用例数 8（另批档 `:23` 引 T95 `:124–134` vs 设计 §11.5 `:124-133`）。 | 每项落定一个口径并同步（范围外实档未核 —— 见报告 out-of-scope 注）。 |
 | 8 | 清晰（枚举引用） | 🔵 | 设计 C3（`docs/design/TESTING.md:430`）把保留面写成「R3 的四项机检器所判属性」，需求 F17（`docs/requirements/TESTING.md:106`）已扩为五项封闭枚举（含工具契约面）；功能由 C1-b 覆盖，但判据③的枚举两侧不同源。 | C3 保留面改指 F17 封闭枚举（工具契约面由 C1-b 承载）。 |
 
 **计数**：🔴 1 · 🟡 5 · 🔵 2（合计 8）。已核项（通过）：CLI §11.3 逐条 = 25 档 · 整删 71 · 段删 29（=100）实计相符；VSC §8.1 = 27 档 · 61 · 40（=101）实计相符；AC-PA1 / AC-VT8 算术（645−71=574 / 653−61=592）自洽；交付集与保留面集互斥穷尽（行为断言/结构机检/slow 门零触碰）；PA-B1 缺陷 b/c/d 修正已落（VSC §8.2 端差更正、段删实计 22 更正、跨仓引用登记为未消解依赖）。
@@ -378,37 +379,44 @@ _（待写——评审子代理）_
 
 ### 轮次 2（评审子代理）
 
-**评审对象**：PROSE-ANCHOR-RETIRE 设计 · **轮次 2 复核**（修正轮二落修后状态）——需求 `thincoder/docs/requirements/TESTING.md` §5（含 §5.1 C1-a–d）· `thincoder/docs/requirements/PROMPT-SYSTEM.md` 去锚面 · 设计 `thincoder/docs/design/TESTING.md` §11 · VSC 侧设计 `thincoder-vscode/docs/design/TESTING.md` §8 / `thincoder-vscode/docs/requirements/TESTING.md` · 两仓批档 §1/§2。未跑 git diff；未读范围外档（`test/**` 实体、并行批档、`ENGINEERING-MODE.md`）。轮次 1 的全部发现逐条核验落地（结论见下表与文末「已核项」）。
+**评审对象**：PROSE-ANCHOR-RETIRE 设计 · **轮次 2 复核**（修正轮二落修后状态）——需求 `thincoder/docs/requirements/TESTING.md` §5（含 §5.1 C1-a–d）· `thincoder/docs/requirements/PROMPT-SYSTEM.md` 去锚面 · 设计 `thincoder/docs/design/TESTING.md` §11
+· VSC 侧设计 `TESTING（VSC 仓·设计）` §8 / `TESTING（VSC 仓·需求）` · 两仓批档 §1/§2。未跑 git diff；未读范围外档（`test/**` 实体、并行批档、`ENGINEERING-MODE.md`）。轮次 1 的全部发现逐条核验落地（结论见下表与文末「已核项」）。
+机械折行（2026-09-12 形态清零轮）——语义零改
 
 > 父侧机械更正（2026-09-12 06:05）：原文写「轮次 1 的 **8 条**发现」，触发 V2 计数校验（声明 8 ≠ 枚举 7）——改为「全部发现」，**语义零改**。
 
 | # | 类别 | 严重度 | 问题 | 建议 |
 |---|------|--------|------|------|
-| 1 | 方法合规 / 计数（轮次 1 #3 落地核验） | 🟡 | 两仓任务书的「设计全文 / 验收」枚举未随修正轮二同步：`thincoder/docs/batches/2026-09-12-PROSE-ANCHOR-RETIRE.md:122` 仍写「AC-PA1–AC-PA10 / T-PA1–T-PA9 / D-PA1–D-PA8」（设计实为 AC-PA1–AC-PA11（`thincoder/docs/design/TESTING.md:687`）/ T-PA1–T-PA10（`:710`）/ D-PA1–D-PA11（`:751`））；同档 `:153–156` 的 AC 摘要未含 AC-PA11（且跳 AC-PA8）；`thincoder-vscode/docs/batches/2026-09-12-PROSE-ANCHOR-RETIRE.md:220–223` 回指表只列 AC-VT8–AC-VT11、缺 AC-VT12（同档 `:135` 头注已含 AC-VT8–AC-VT12——改一处漏两处）。与修正轮二「逐行更正……任务书取数即正确」自证（同档 `:175`）不符。 | 三处枚举补齐或改按节名列举（沿 VSC `:135` 已更新形态）；把「任务书全部枚举行」纳入逐行更正范围（D3）。 |
+| 1 | 方法合规 / 计数（轮次 1 #3 落地核验） | 🟡 | 两仓任务书的「设计全文 / 验收」枚举未随修正轮二同步：`thincoder/docs/batches/2026-09-12-PROSE-ANCHOR-RETIRE.md:122` 仍写「AC-PA1–AC-PA10 / T-PA1–T-PA9 / D-PA1–D-PA8」（设计实为 AC-PA1–AC-PA11（`thincoder/docs/design/TESTING.md:687`）/ T-PA1–T-PA10（`:710`）/ D-PA1–D-PA11（`:751`））；同档 `:153–156` 的 AC 摘要未含 AC-PA11（且跳 AC-PA8）；`2026-09-12-PROSE-ANCHOR-RETIRE（VSC 仓）:220–223` 回指表只列 AC-VT8–AC-VT11、缺 AC-VT12（同档 `:135` 头注已含 AC-VT8–AC-VT12——改一处漏两处）。与修正轮二「逐行更正……任务书取数即正确」自证（同档 `:175`）不符。 | 三处枚举补齐或改按节名列举（沿 VSC `:135` 已更新形态）；把「任务书全部枚举行」纳入逐行更正范围（D3）。 |
 | 2 | 验收标准可验性（轮次 1 #4 落地核验） | 🟡 | AC-PA6 机检锚串 `散文锚` / `行为面` 被要求 4 档各 ≥1 命中（`thincoder/docs/design/TESTING.md:621`、`:682`），其中两档 = 英文落地提示词 `src/prompts/discipline-engineering.md`（双端；`thincoder/docs/requirements/PROMPT-SYSTEM.md:28–29`「英文生产提示词……译英回填」）；同条又允许「措辞可按端微调」（`:620`）——EN 半的固定中文锚串可满足性 / 语言面未裁定（EN 档实体未核——范围外）。 | 按语言分档定义锚串（CN 双档 = 现有中文串；EN 双档 = 内容权方落定的英文等价串）并在 AC-PA6 同步判据。 |
-| 3 | 文档状态（分仓落地核验——#9 连） | 🟡 | `thincoder-vscode/docs/design/TESTING.md:278` 变更记录仍写「需求落 CLI 侧 `thincoder/docs/requirements/TESTING.md` §5」——与 §8 头注 `:96–97`（需求自持本仓档）及本批 AC-PA11（`thincoder/docs/design/TESTING.md:687`）/ T-PA10（`:710`）的「零跨仓需求指针」grep 判据直接冲突（实施轮自检会误红或需改形）。 | 给该历史行加「已被修正轮二取代」注记，或明确 AC-PA11 / T-PA10 的 grep 口径为现行指针（排除变更记录历史行）。 |
+| 3 | 文档状态（分仓落地核验——#9 连） | 🟡 | `TESTING（VSC 仓·设计）:278` 变更记录仍写「需求落 CLI 侧 `thincoder/docs/requirements/TESTING.md` §5」——与 §8 头注 `:96–97`（需求自持本仓档）及本批 AC-PA11（`thincoder/docs/design/TESTING.md:687`）/ T-PA10（`:710`）的「零跨仓需求指针」grep 判据直接冲突（实施轮自检会误红或需改形）。 | 给该历史行加「已被修正轮二取代」注记，或明确 AC-PA11 / T-PA10 的 grep 口径为现行指针（排除变更记录历史行）。 |
 | 4 | 范围协调项（R5——非缺陷） | 🟡 | ① 并行批 requirements 树 README 的 TESTING 行登记未落（`thincoder/docs/batches/2026-09-12-PROSE-ANCHOR-RETIRE.md:293` 自登记「待父侧裁定落地人」）；② VSC 侧记录 `:104` 声明「CLI 侧记录的 §1 同条登记待 #10 收笔后补」——截至本复核 CLI 记录 §1 未见该节。 | 父侧裁落地人后补两行级登记；协调项、不阻塞。 |
 | 5 | 数值漂移（卫生） | 🔵 | `thincoder/docs/batches/2026-09-12-PROSE-ANCHOR-RETIRE.md:57` 规模表 VSC 行档数仍为 **65**（初测旧口径；正确值 = 62——同表 `:56`、同档 `:28`、VSC 记录 `:29` 均 62）——轮次 1 #7 更正只覆盖 VSC §1 与 CLI §1 `:13`，未覆盖本表。 | 更正为 62（与全档口径一致）。 |
 | 6 | 文档卫生（非指定节残点） | 🔵 | `thincoder/docs/requirements/PROMPT-SYSTEM.md` 退役机制措辞残留（非相反口径）：`:265–266`「锚测试清单 / 锚测试重写」· `:282`「锚断言」· `:296` · `:379` N-TD3 标题「锚稳定」未随 §2.7 #12 改述 · `:335–337` N-P1 豁免注所指跨仓锚测试族大半已入本批删除集。与修正轮二自证「零相反口径留存」（`:416`）有细微出入。 | 随下次触碰该档一并同步或加注；非操作口径，不阻塞。 |
-| 7 | 引用一致性（卫生） | 🔵 | `thincoder-vscode/docs/batches/2026-09-12-PROSE-ANCHOR-RETIRE.md:22`「并行批 LEDGER-SELF-CONTAINED 的 **R3** 提示词层要求」vs 同档 `:71`「**R8** 承载（单一权威源）」——同一条文两编号（CLI 侧记录同文 `:78` 为 R8）。 | 以并行批档实测为准统一编号（本批只引用）。 |
+| 7 | 引用一致性（卫生） | 🔵 | `2026-09-12-PROSE-ANCHOR-RETIRE（VSC 仓）:22`「并行批 LEDGER-SELF-CONTAINED 的 **R3** 提示词层要求」vs 同档 `:71`「**R8** 承载（单一权威源）」——同一条文两编号（CLI 侧记录同文 `:78` 为 R8）。 | 以并行批档实测为准统一编号（本批只引用）。 |
 
 **计数**：🔴 0 · 🟡 4 · 🔵 3（合计 7）。
 
-**已核项（通过）——轮次 1 八条逐条落地核验**：#1 三处去锚表述在岗（PROMPT-SYSTEM `:30` / `:100–101` / `:181–183` + 落地现状行 `:103–105`）；#2 档位注更正 + `child-permission` 存量债登记在岗（设计 `:655` / VSC 记录 §2 同条）；#3 计数逐行更正核验（CLI 批档 `:129` / `:143` / `:153` / `:196` / `:199` 现值正确——残点 = `:122` 枚举（表 #1）与 `:57`（表 #5））；#4 禁写句逐字形态 + 锚串 + AC-PA6 改指在岗（设计 `:616–621` / `:682` / `:705`，残点见表 #2）；#5 C1-d 三档 + §11.9 改指在岗（`thincoder/docs/requirements/TESTING.md:102` / `thincoder-vscode/docs/requirements/TESTING.md:39` / 设计 `:443` / `:727`）；#6 PA-A1 拆分 7 整删 + 13 段删与两仓清单逐条吻合（设计 `:726`；CLI 3+7 / VSC 4+6）；#7 62 档 / 8 用例 / 63 登记项 / T95 `:124-134` / AC49 `:136-145` 在岗；#8 C3（`:430`）与 D-PA2（`:742`）改指 F17 封闭枚举在岗。
+**已核项（通过）——轮次 1 八条逐条落地核验**：#1 三处去锚表述在岗（PROMPT-SYSTEM `:30` / `:100–101` / `:181–183` + 落地现状行 `:103–105`）；#2 档位注更正 + `child-permission` 存量债登记在岗（设计 `:655` / VSC 记录 §2 同条）；#3 计数逐行更正核验（CLI 批档 `:129` / `:143` / `:153` /
+`:196` / `:199` 现值正确——残点 = `:122` 枚举（表 #1）与 `:57`（表 #5））；#4 禁写句逐字形态 + 锚串 + AC-PA6 改指在岗（设计 `:616–621` / `:682` / `:705`，残点见表 #2）；#5 C1-d 三档 + §11.9 改指在岗（`thincoder/docs/requirements/TESTING.md:102` /
+`TESTING（VSC 仓·需求）:39` / 设计 `:443` / `:727`）；#6 PA-A1 拆分 7 整删 + 13 段删与两仓清单逐条吻合（设计 `:726`；CLI 3+7 / VSC 4+6）；#7 62 档 / 8 用例 / 63 登记项 / T95 `:124-134` / AC49 `:136-145` 在岗；#8 C3（`:430`）与 D-PA2（`:742`）改指 F17 封闭枚举在岗。
+机械折行（2026-09-12 形态清零轮）——语义零改
 
-**清单与算术实核（逐条点数）**：CLI §11.3 = 25 档 / 71 整删 / 29 段删 = 100 行；VSC §8.1 = 27 档 / 61 整删 / 40 段删 = 101 行；AC-PA1 / AC-VT8 算术自洽（645−71=574 / 653−61=592）；PA-A3 回退面（`settings` / `settings-tool` 出清单、出 §11.6 表）在岗；两仓「无整档删除 → 登记清单零改」声明与清单形态一致。**文档面行数（D3 实读核对）**：772 / 282 / 130 / 87 / 417 / 279 全对。父侧对 VSC 批档 §1 `:29` / `:32` 与 CLI 批档 `:13` 的更正已落（62 档 / 8 用例 / 附更正注）。
+**清单与算术实核（逐条点数）**：CLI §11.3 = 25 档 / 71 整删 / 29 段删 = 100 行；VSC §8.1 = 27 档 / 61 整删 / 40 段删 = 101 行；AC-PA1 / AC-VT8 算术自洽（645−71=574 / 653−61=592）；PA-A3 回退面（`settings` / `settings-tool`
+出清单、出 §11.6 表）在岗；两仓「无整档删除 → 登记清单零改」声明与清单形态一致。**文档面行数（D3 实读核对）**：772 / 282 / 130 / 87 / 417 / 279 全对。父侧对 VSC 批档 §1 `:29` / `:32` 与 CLI 批档 `:13` 的更正已落（62 档 / 8 用例 / 附更正注）。
+机械折行（2026-09-12 形态清零轮）——语义零改
 
 **VERDICT: pass**
 
 ## §4 用户批准（主 agent 记）
 
 _（待写——主 agent）_
+（父侧段——收口轮填）
 
 ---
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
 
 ---
 
@@ -426,7 +434,9 @@ _（待写——eng-coder）_
 
 - 基线实测 = **647**（≠ 设计档 as-of 645：SWEEP 批 T111/T112 已先落 +2——任务书已预警「对账口径 = 下降数 == 71」）。
 - 落点实测 = **576**；**下降 71 == 清单整删 71** ✅。
-- 逐档整删复点（HEAD vs 现盘用例名集差）：abort-provenance −2 · acp-channel −1 · advisor-context-budget −1 · async-settle −1 · attention-state −1 · batch-segment −1 · cmd-eng −1 · design-review-streak-guard −1 · doc-consistency −2 · eng-designer-role −1 · home-expansion −1 · ledger-surface −1 · ledger −2 · portability-advisor-context −4 · prompts-async-guidance −28 · prompts-dual-source −17 · session-store −1 · subagent-memory-bounds −1 · tui-selection-surfaces −1 · turn-across-segments −1 · verify-redesign −2 = **71**；非清单 37 档零变动（62 档中仅 25 档变更）。
+- 逐档整删复点（HEAD vs 现盘用例名集差）：abort-provenance −2 · acp-channel −1 · advisor-context-budget −1 · async-settle −1 · attention-state −1 · batch-segment −1 · cmd-eng −1 · design-review-streak-guard −1 · doc-consistency −2 · eng-designer-role −1 · home-expansion −1 · ledger-surface
+  −1 · ledger −2 · portability-advisor-context −4 · prompts-async-guidance −28 · prompts-dual-source −17 · session-store −1 · subagent-memory-bounds −1 · tui-selection-surfaces −1 · turn-across-segments −1 · verify-redesign −2 = **71**；非清单 37 档零变动（62 档中仅 25 档变更）。
+  机械折行（2026-09-12 形态清零轮）——语义零改
 
 ### 3. 决策透明表
 
@@ -467,7 +477,7 @@ _（待写——eng-coder）_
 - 快层 `node test/run-fast.mjs` = 577 tests / **558 pass / 1 fail / 18 slow-skip**（唯一红 = T41①；slow 门三次重跑三组不同集合 = 负载抖动，非本批引入）
 - 全量 `node test/run-full.mjs` = **576 pass / 1 fail**（同 T41①）
 - 集成 `node test/run-integration.mjs` = PASS ✅
-- **他链存量红（如实报）**：T41① 8 条 fresh——`docs/batches/2026-09-12-VSC-ACTIVITY-CLOSURE.md` ×6（V1×5 + V2×1）· `…VSC-CHILD-PERMISSION.md` ×1（V1）· `…PROSE-ANCHOR-RETIRE.md:355` ×1（V2，§3 评审段落——评审/父侧面）。
+- **他链存量红（如实报）**：T41① 8 条 fresh——`2026-09-12-VSC-ACTIVITY-CLOSURE（VSC 仓）` ×6（V1×5 + V2×1）· `2026-09-12-VSC-CHILD-PERMISSION（VSC 仓）` ×1（V1）· `2026-09-12-PROSE-ANCHOR-RETIRE:355` ×1（V2，§3 评审段落——评审/父侧面）。（**跨批形态规范转写**——LEDGER-SELF-CONTAINED 批代笔·父侧授权〔用户 10:58 裁定〕；见该批档 §2）
 
 ### 6. 边界自证
 
@@ -485,7 +495,9 @@ _（待写——eng-coder）_
 | **CLI** | **647 → 576（−71）** | 25 档 + 提示词 2 档 | `lint` 308 OK · 快层 577（558 pass / 1 fail / 18 skip）· 全量 576 pass · 集成 PASS |
 | **VSC** | **653 → 592（−61）** | 27 档 + 提示词 2 档 | `lint` 286 OK · 快层 593（575 pass / 2 fail / 16 skip）· 全量 591/593 · 集成 **28/28** |
 
-**父侧独立核验（不采信报告）**：CLI 逐条点数 25 档 / 71 整删 / 29 段删 = 100 ✓ · VSC 27 / 61 / 40 = 101 ✓ · VSC 顶层用例实测 **592** ✓ · `test/files.mjs` diff 空 ✓ · 提示词双档锚串（`散文锚` + `行为面`）✓ · 点名零命中 ✓ · `scripts/**` diff 空 ✓ · **守恒锁同步 `SPLIT_CASES = { async: 14, dual: 4 }`（14+4=18）** ✓ 及其派生面（设计 §2.27 / AC56/AC57 / 需求 §1.15）逐处同步 ✓。
+**父侧独立核验（不采信报告）**：CLI 逐条点数 25 档 / 71 整删 / 29 段删 = 100 ✓ · VSC 27 / 61 / 40 = 101 ✓ · VSC 顶层用例实测 **592** ✓ · `test/files.mjs` diff 空 ✓ · 提示词双档锚串（`散文锚` +
+`行为面`）✓ · 点名零命中 ✓ · `scripts/**` diff 空 ✓ · **守恒锁同步 `SPLIT_CASES = { async: 14, dual: 4 }`（14+4=18）** ✓ 及其派生面（设计 §2.27 / AC56/AC57 / 需求 §1.15）逐处同步 ✓。
+机械折行（2026-09-12 形态清零轮）——语义零改
 
 **跨批义务（SWEEP §6 所挂）——已闭环**：本批实施删除两档用例后同批重测并同步 SWEEP 锁 ✓。
 
@@ -503,4 +515,3 @@ _（待写——eng-coder）_
 
 **收口行（台账可见面）**：需求池 → 本批核销；`docs/design/TESTING.md` §11 全节落定；两侧记录互引已就位。
 
-_（待写——父代理）_

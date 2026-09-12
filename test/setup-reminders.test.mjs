@@ -18,8 +18,11 @@
  *    detached/dirty>20 截断/clean——纯函数不需真 git）+ collectGitContext 失败冷却单测
  *    （AC-3 必做锁——非 git 目录 ms 级真失败 → catch 记 ts → 30s 内二次调用跳过——
  *    不触发真 5s 超时；Map 预填 ts 正向锁 skip 路径 + >30s 旧条目访问时惰性清）。
+ * 归册（2026-09-12 收尾轮 9）：prepareRun ×3 + collectGitContext ×2 走真 git 子进程——
+ * slow() 门控（快层 skip、test:full 照跑）。
  */
 import { test, beforeEach, afterEach } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -212,7 +215,7 @@ test("applySession: 无恢复事件恒 no——空历史槽切换与 sessionStar
 
 // ─── prepareRun 注入句消费（N6/AC4——双信号独立）───
 
-test("prepareRun: 启动恢复（_processRestartPending）→ process restarted 句一次 + 清；同回合 env resumed:yes", async () => {
+slow("prepareRun: 启动恢复（_processRestartPending）→ process restarted 句一次 + 清；同回合 env resumed:yes", async () => {
   const agent = runAgentMock(tmp)
   // bin/thincoder.mjs 启动 resume 路径同款序列：resumeSlot → applySession（武装 _envResumed）
   // → 设 _processRestartPending（仅启动路径）
@@ -225,7 +228,7 @@ test("prepareRun: 启动恢复（_processRestartPending）→ process restarted 
   assert.match(envOf(agent), /slot: null,/, "本轮未钉槽（测试 agent 无 _slot）→ 显式 null")
 })
 
-test("prepareRun: 切槽 resumed:yes 无 process restarted 句——进程内多次切槽句不再发（AC4/N6）", async () => {
+slow("prepareRun: 切槽 resumed:yes 无 process restarted 句——进程内多次切槽句不再发（AC4/N6）", async () => {
   const agent = runAgentMock(tmp)
   const runOpts = { depth: 0, systemPrompt: "sys", disciplineRules: "d", mainOverlay: "m" }
   // 启动恢复（一次）
@@ -247,7 +250,7 @@ test("prepareRun: 切槽 resumed:yes 无 process restarted 句——进程内多
   assert.match(envOf(agent), /resumed: yes\./)
 })
 
-test("prepareRun: 全新会话 turn 2 不再伪触发——_sessionStart 已播种仍无句、恒 resumed:no（F3）", async () => {
+slow("prepareRun: 全新会话 turn 2 不再伪触发——_sessionStart 已播种仍无句、恒 resumed:no（F3）", async () => {
   const agent = runAgentMock(tmp)
   const runOpts = { depth: 0, systemPrompt: "sys", disciplineRules: "d", mainOverlay: "m" }
   // turn 1：全新会话（无恢复事件）——prepareRun 内部 ??= 播种 _sessionStart
@@ -299,7 +302,7 @@ test("composeGitContext: clean 形态（空 status/log——等价 git 无输出
 // ─── GIT-ASYNC L21：失败冷却（AC-3 必做锁——确定性 seam = 非 git 目录 ms 级快失败 +
 //      Map 预填正向锁——评审 #3：真 git 5s 超时永不触发）───
 
-test("collectGitContext: 非 git 目录真失败 → all-or-nothing '' + 记冷却 ts + 30s 内二次调用跳过", async () => {
+slow("collectGitContext: 非 git 目录真失败 → all-or-nothing '' + 记冷却 ts + 30s 内二次调用跳过", async () => {
   const dir = mkdtempSync(join(tmpdir(), "gitctx-fail-"))
   try {
     assert.equal(await collectGitContext(dir), "", "非 git 仓——git ms 级失败 → ''（AC-2 同路径）")
@@ -312,7 +315,7 @@ test("collectGitContext: 非 git 目录真失败 → all-or-nothing '' + 记冷�
   }
 })
 
-test("collectGitContext: Map 预填——健康 git 仓也跳过；>30s 旧条目访问时惰性清后恢复收集（评审 #2）", async () => {
+slow("collectGitContext: Map 预填——健康 git 仓也跳过；>30s 旧条目访问时惰性清后恢复收集（评审 #2）", async () => {
   // 探针 = 本仓根（test 文件上级——健康 git 仓：无冷却时 collect 必非空——compose 首行恒非空）
   const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..")
   try {

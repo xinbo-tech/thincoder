@@ -80,7 +80,7 @@ FR22 F1-F7（工具契约）+ N1-N5（非功能面）——逐条见 `docs/requi
 
 ### 受影响文件（带当前行数 + 预计增量）
 
-**以设计档 `docs/design/ENGINEERING-MODE.md` §2.21 为权威表**（as-of 2026-09-10）；两处档位风险已明标：
+**以设计档 `docs/design/ENGINEERING-MODE.md` §2.21 为权威表**（as-of 2026-09-10）；档位风险 2 处（`src/advisor/run.mjs` / `scripts/check-doc-width.mjs`）已明标：
 
 | 文件 | 性质 | as-of | 增量上限 |
 |---|---|---|---|
@@ -208,8 +208,6 @@ setup 工程角色两分支追加工具、主 agent 不挂载（`setup.mjs`—�
 | 交付透明表 | Done ×7 · Not done ×4（均为本批写域外，已列遗留）· Simplified 无 |
 
 ### 逐条验收结论（通过 / 未过 / 未做 + 理由）
-
-_（待核销）_
 
 ### 需求池核销
 

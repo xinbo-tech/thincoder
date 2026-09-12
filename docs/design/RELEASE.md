@@ -1,6 +1,6 @@
 # 发布流程（RELEASE）
 
-> 归属：`thincoder` CLI 发布到 npm 的完整流程（规则基线参考 thincoder-vscode `docs/design/RELEASE.md`）。
+> 归属：`thincoder` CLI 发布到 npm 的完整流程（规则基线参考对位档 `RELEASE（VSC 仓）`）。
 > 包名：`thincoder`（package.json `name` 字段）。npm 发布者：`xinbo-tech`（已登录，`npm whoami` 验证）。
 > 仓库：Gitee `https://gitee.com/shanghai-xinbo/thincoder`（main 分支）+ GitHub 镜像远端 `github`。
 > 状态：发布 = 唯一门禁（R7 单轮制已落地）——`npm publish` 的 `prepublishOnly` 自动跑 lint + test:full + test:integration 单轮。
@@ -110,7 +110,7 @@ git -c http.proxy=http://10.2.2.112:3128 push github vX.Y.Z
 
 ### 5.3 vsce/ovsx（VS Code 端）教训——CLI 不适用，但发布团队须知
 
-以下为 VS Code 端发布（vsce/ovsx）教训，详细见 thincoder-vscode `docs/design/RELEASE.md`。CLI 侧只需记住核心结论，勿把它们推广到 npm（npm 无审核队列、无 silent-exit-0）：
+以下为 VS Code 端发布（vsce/ovsx）教训，详细见对位档 `RELEASE（VSC 仓）`。CLI 侧只需记住核心结论，勿把它们推广到 npm（npm 无审核队列、无 silent-exit-0）：
 
 - **vsce patch 自动 bump**（2026-08-25）：`vsce publish patch` 会自动再 bump 一次——手动 bump 后执行 `publish patch` 会再跳一号，还自动建 bump commit，tag 与 release commit 错位。**规则：手动 bump + 直接 `vsce publish`（不带 patch/minor/major）**。
 - **Open VSX 异步激活**（2026-08-25）：ovsx publish 返回 `🚀 Published` 后，版本处于"已发布未激活"（API 仍显示旧版本）——服务端异步扫描 malware，通过后自动激活，通常几分钟，**不是发布失败**。诊断口诀：报错 "already published, but currently isn't active and not visible" = 扫描进行中，等待即可；真失败会报 Invalid access token 或明确错误。

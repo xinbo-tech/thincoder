@@ -41,7 +41,7 @@
 
 - 默认 TTL **7 天**（`TOKEN_TTL_DEFAULT_MS = 7 * 24 * 3600 * 1000`，advisor-async.mjs）。
 - 配置覆盖：`agent.engTokenTtlMs`——运行期校验（`Number.isFinite(cfg) && cfg > 0`，非法回退
-  默认）——照抄 advisor timeoutMs 先例（`effectiveTokenTtlMs`）。
+  默认）——照抄 advisor timeoutMs 口径（`effectiveTokenTtlMs`）。
 - 格式：`${uuid}:${expiresAt}`，uuid 为 `[0-9a-f]{8}-…-{12}`，expiresAt 为数字毫秒时间戳。
   格式校验 + 数值过期时刻判定集中在 `src/token-ttl.mjs`（`tokenExpiryMs`/`tokenExpired`——
   与 `validateDesignToken` fail-closed 判定同源，单一权威）。

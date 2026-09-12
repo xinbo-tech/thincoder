@@ -1,11 +1,13 @@
 # turn 跨段累计（双端 live 头回合编号）· 批次记录（2026-09-11）
 
-> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分）**：本档对端（VSC）份已由 VSC 仓 `docs/batches/2026-09-11-TURN-ACROSS-SEGMENTS（VSC 仓）` 逐字承载（D10——零改写）；本档保留本仓份。
-> 移出条目（对端份）清单：§2 VSC 行（as-of `:86`）——条目计数（对端份 / 本仓份）= 6 / 3（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。
+> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分 · 已切除 2026-09-12）**：本档对端（VSC）份**已自本档切除**（原文不再留本仓——D11 完全态）；承载档 = VSC 仓 `docs/batches/2026-09-11-TURN-ACROSS-SEGMENTS（VSC 仓）`（逐字搬运、零改写——D10）。
+> 已切除条目清单：§2 VSC 实施面行（5 档）+ VSC 父侧排程行（2 处同改防漂移）——条目计数（对端份 / 本仓份）= 6 / 3（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。**源档 blob SHA（切除前）= `a63f6aabda21`**。
+> 变更记录：2026-09-12——对端份经承载档逐字承接后自本档物理切除；档首注记形态收敛为「已切除」。
 
 > 六段 append-only，**一段一作者**：§1 讨论（主 agent）· §2 批次任务（eng-designer）·
 > §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder 自写）· §6 验证与收口（父代理）。
 > 编制：主 agent（工程模式）· 2026-09-11 12:59 · 来源 = 用户 12:48「你都自动推进，授权到下午两点」窗口内立项（残余侦察 id=22 确认的真缺口）。
+> （父侧形态更正 2026-09-12：空占位行已清——实体内容见对应节；空占位 = 残留即先例）
 
 ---
 
@@ -86,14 +88,13 @@
 **受影响文件（实施面——coder 声明 `files`；行数口径 = `wc -l`，as-of 2026-09-11）**：
 
 CLI：`src/agent.mjs`(400 → ~406) · `src/agent/helpers.mjs`(372 → ~382) · `test/turn-across-segments.test.mjs`(新 ~90)
-VSC：`src/agent.mjs`(353 → ~358) · `src/agent/run-helpers.mjs`(276 → ~292) · `src/agent-tools/subagent-run.mjs`(184 → ~185) · `src/agent-tools/subagent-escalate-async.mjs`(216 → ~217) · `test/turn-across-segments.test.mjs`(新 ~90)
 
 **验收标准（机器可验证——逐条）**：= 设计档 CLI AC1-AC9（19.7）+ VSC AC1′-AC6′（19.7）；最低门：
 ① 两仓新增用例全绿（T1-T8）；② 既有全量回归绿（CLI `node test/run-full.mjs` · VSC `npm test` / test:full）；③ 两仓 `node scripts/check-doc-width.mjs` 新增违规 0；④ 源码锚（AC2/AC3/AC4 · AC2′/AC3′）驻留。
 
 **明确不在本批**（边界）：分段显式（选型否决）· 继续提示文案（D-19d——`open`）· VSC live 头逐轮跳动（登记行保持开放——`open`）· `TUI.md` / 桥面零改动 · 段内帽与 `ContinueError` 载荷零改动。
 
-**父侧排程（coder / 设计者均不写）**：CLI `docs/TODO.md` + checklist 核销（两仓 checklist 均查无 T130 条目——核销以本档 §1 为源）· VSC `docs/design/AGENT-LOOP` :27-29 登记行指针 + :129 hook 措辞同步 · VSC `docs/design/ARCHITECTURE` :21-23 同款指针（两处同改防漂移）。
+**父侧排程（coder / 设计者均不写）**：CLI `docs/TODO.md` + checklist 核销（两仓 checklist 均查无 T130 条目——核销以本档 §1 为源）。
 
 **交付报告格式**：改动文件 + 行数（实际）· AC 逐条证据（用例名 / 断言 / 命令输出）· 偏差表（有则列：设计↔实现差异 + 理由）· 未落地项与去向 · 既有回归结果。
 
@@ -128,7 +129,7 @@ VSC：`src/agent.mjs`(353 → ~358) · `src/agent/run-helpers.mjs`(276 → ~292)
 （设计 §19.3 载体假设在 VSC 子代理面不成立：`agent.mjs:85` 每段新 agent 对象——`opts.agent` 仅 depth-0；两续跑循环不传 agent）
 → **父侧裁定修法 A**（段间种子经 `opts`；保 D-19a′「生成侧单点」）。
 
-**落点映射（逐条——VSC 仓 `docs/design/TURN-CAP-CONTINUE.md`；file:line as-of 落修后）**：
+**落点映射（逐条——`TURN-CAP-CONTINUE（VSC 仓）`；file:line as-of 落修后）**：
 
 | # | 落点 | 内容 |
 |---|---|---|
@@ -157,7 +158,7 @@ CLI 面设计 / 实现零改动（同一 child 对象载体成立——CLI 交�
 
 **背景**：设计评审（VSC 载体缺口修正轮单轮校验）VERDICT = **pass**（🔴 0 · 🟡 1 · 🔵 0——发现 #1 详见 §3）。父侧裁定：落修（修法 = 假帧对齐 `(2, 101)`——与 T9 同口径，最简案；否决备选 = 注明 T10 段预算 / 意图）。本轮 = 单 🟡 修正轮（**只改文档**：VSC 仓 1 档；`src/**` 零改动；未新建档；未 commit；未发起评审）。
 
-**落点映射（VSC 仓 `docs/design/TURN-CAP-CONTINUE.md`——file:line as-of 落修后）**：
+**落点映射（`TURN-CAP-CONTINUE（VSC 仓）`——file:line as-of 落修后）**：
 
 | # | 落点 | 内容 |
 |---|---|---|
@@ -175,7 +176,6 @@ CLI 面设计 / 实现零改动（同一 child 对象载体成立——CLI 交�
 
 ## §3 设计评审（评审子代理自写）
 
-_（待写——评审子代理）_
 
 ### 轮次 1（评审子代理）
 
@@ -185,12 +185,14 @@ _（待写——评审子代理）_
 |---|----------|----------|-------|------------|
 | 1 | 验收标准/清晰度 | 🔴 | 编号帧公式与用例向量/不变式不自洽（seq 口径 off-by-one，两仓同病）：公式 `turn = seq；maxTurns = seq - turn - 1 + maxTurns`（CLI 设计 :64 / VSC :93）按其「差额项 = 段前累计」gloss 要求 seq = 当轮累计序数，但 CLI T2 :107（`(1,99,100)` 期望 `(100,100)`——公式按字面得 (1,1)）、T3 :108（`(100,0,100)` 期望 `(101,200)`——得 (100,199)）、T4 :109（`(200,37,100)` 期望 `(238,300)`——得 (200,262)）、VSC T2 :128 / T3 :129 同病；CLI T5 :110 / VSC T4 :130 扫描含不可达组合（如 seq=100,turn=99,max=40 → maxTurns=40 而 turn=100），「恒 turn ≤ maxTurns」按字面不成立。→ AC1 :121 / AC1′ :142 按字面无法通过（§2 门① :88-89 同受牵连）。 | 先裁定 seq 唯一口径（同一口径：公式字面 / 向量首参 / 扫描构造三处对齐，两仓同步），再交实现——勿让 coder 在二者间自行取舍（会构成设计↔实现静默偏离）。 |
 | 2 | 证据强度（选型判据①） | 🟡 | 「既有测试无编号发值断言（`⟦ev⟧` 字面全为注入式解析测试）」为全称断言、仅单例佐证：CLI :52 仅引 `test/subagent-tail-merge.test.mjs:285`、VSC :81 引 `activity-flow.test.mjs:288` 等。该前提支撑候选 #1「消费面零工具改动 / 既有锁不破」成本结论；本评审受节段只读约束未复核 test 面（unverified）。 | 补全量命中列举/计数（两仓 test/ 对 `⟦ev⟧turn` 逐条分类）坐实，或改述为回归门可验形态（§2 门② 全量回归可兜底检出，但结论口径宜先坐实）。 |
-| 3 | 协议面（字面一致性） | 🟡 | T6 注入串 phase 字面与 19.3 发射格式不一致：CLI :111 注入 `⟦ev⟧turn\x1e101\x1e200\x1eturn\x1e` vs :72 发射 `…\x1ellm\x1e`；AC2 :122 锚「4 段 + phase 驻留」。两处字面（或 phase 合法取值域）至少其一需澄清。 | 对齐两处字面（以既有测试先例与实际发射行为为准）或注明 phase 取值域；核对 T6「形态同 subagent-tail-merge:285」的实际字面。 |
+| 3 | 协议面（字面一致性） | 🟡 | T6 注入串 phase 字面与 19.3 发射格式不一致：CLI :111 注入 `⟦ev⟧turn\x1e101\x1e200\x1eturn\x1e` vs :72 发射 `…\x1ellm\x1e`；AC2 :122 锚「4 段 + phase 驻留」。两处字面（或 phase 合法取值域）至少其一需澄清。 | 对齐两处字面（以既有测试同款与实际发射行为为准）或注明 phase 取值域；核对 T6「形态同 subagent-tail-merge:285」的实际字面。 |
 | 4 | 完整性（消费端清单） | 🔵 | VSC 19.1 :68-69 列 `subagent-escalate.mjs` 为「同款内联循环」，但消费端 :97 / 受影响面 :117-118 只含 `subagent-run.mjs` / `subagent-escalate-async.mjs`；T6 :132 以「sync 路径无池条目 → no-op」带过——sync 飞刀无需 `applyTurnFrame` 的判定依据未成文（第一参累计化可自动覆盖显示，第二参记账是否牵连不明）。 | 19.5/19.3 补一句注明 sync 路径（`subagent-escalate.mjs`）为何不在改动面（无池条目/不消费第二参），防实施者漏改或多改。 |
 | 5 | 验收标准（清单漂移） | 🔵 | VSC AC4′ :145 称「webview 三文件 diff 零行」，而 19.3 零改动面 :100 仅列两档（`activity.js` / `activity-view.js`）——计数与清单不一致，验证时无从对齐。 | 统一为命名清单（或补第三档名并同步 19.3）。 |
 | 6 | 行数标注（口径） | 🔵 | 19.5 md 行「45 → 169」（CLI :98）与「70 → 177」（VSC :120）同现档实测（170 / 178 行）不符，且未注明口径（文件现→预计 vs 本节新增前→后）；来源文件行数（400→406 等）本评审未复核（unverified）。两处 >300 行源文件维持既有 advisory 区间、未跨档——不作本批要求。 | 注明 md 行口径或改注「本节增补」；实施前顺手刷新来源行数。 |
 
-其余重点核结论（无 finding）：② 同因主张档内自洽——CLI 端续跑集中于共享骨架（`:30` runWithContinue、同一 child 对象 resume 重跑）vs VSC 内联循环（VSC :68-69），载体差异与受影响面（CLI 2 源文件 vs VSC 4 文件）一致；④ D-19b 机制形状正确（两字段同点取帧 + approval 零改动读同对字段 ⇒ turn/approval 同帧，AC4 :124 以源码锚固化）；⑤ D-19c 取舍论证成立（同构面 + approval 无 depth 维度），代价已在 19.8 :133-140 披露；⑥ 归属落点（TURN-CAP-CONTINUE 双端、避让 AGENT-LOOP 三条理由）与地图登记相符，三方条目映射一致——均无 🔴。
+其余重点核结论（无 finding）：② 同因主张档内自洽——CLI 端续跑集中于共享骨架（`:30` runWithContinue、同一 child 对象 resume 重跑）vs VSC 内联循环（VSC :68-69），载体差异与受影响面（CLI 2 源文件 vs VSC 4 文件）一致；④ D-19b 机制形状正确（两字段同点取帧 + approval
+零改动读同对字段 ⇒ turn/approval 同帧，AC4 :124 以源码锚固化）；⑤ D-19c 取舍论证成立（同构面 + approval 无 depth 维度），代价已在 19.8 :133-140 披露；⑥ 归属落点（TURN-CAP-CONTINUE 双端、避让 AGENT-LOOP 三条理由）与地图登记相符，三方条目映射一致——均无 🔴。
+机械折行（2026-09-12 形态清零轮）——语义零改
 
 VERDICT: changes-required
 
@@ -214,7 +216,7 @@ VERDICT: pass
 
 ### 轮次 3（评审子代理）
 
-第 19 批设计评审（轮次 2——VSC 面载体缺口修正轮单轮校验）——评审对象：VSC 设计档 `thincoder-vscode/docs/design/TURN-CAP-CONTINUE.md` 4 条落点（① 载体契约 §19.3 :92-:106+:111 + 连带 :81 / §19.4 :128-:129 / §19.8 :183；② 用例/AC §19.6 :155-:163 / §19.7 :169-:173；③ 清单 §19.5 :135-:140；④ 本档 §2 修正块 :122-:151 + 变更记录 :206）；只读锚点区间（±10 行）；发现 = 仅残遗/未落/新增矛盾。
+第 19 批设计评审（轮次 2——VSC 面载体缺口修正轮单轮校验）——评审对象：VSC 设计档 `TURN-CAP-CONTINUE（VSC 仓）` 4 条落点（① 载体契约 §19.3 :92-:106+:111 + 连带 :81 / §19.4 :128-:129 / §19.8 :183；② 用例/AC §19.6 :155-:163 / §19.7 :169-:173；③ 清单 §19.5 :135-:140；④ 本档 §2 修正块 :122-:151 + 变更记录 :206）；只读锚点区间（±10 行）；发现 = 仅残遗/未落/新增矛盾。
 
 | # | Category | Severity | Issue | Suggestion |
 |---|----------|----------|-------|------------|
@@ -227,7 +229,7 @@ VERDICT: pass
 
 ### 轮次 4（评审子代理）
 
-单轮校验——修正轮 id=106 三落点核验（VSC 面 `thincoder-vscode/docs/design/TURN-CAP-CONTINUE.md`；读窗 146–173 / 197–217）：
+单轮校验——修正轮 id=106 三落点核验（VSC 面 `TURN-CAP-CONTINUE（VSC 仓）`；读窗 146–173 / 197–217）：
 
 | # | Category | Severity | Issue | Suggestion |
 |---|---|---|---|---|
@@ -256,58 +258,11 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder 自写）
 
-_（待写——eng-coder）_
-
-### 第 19 批 · VSC 面（2026-09-11）——实施未开始：设计缺口 → 打回父侧
-
-**状态：打回（blocked，待父侧裁定）**。零代码改动（`src/**` · `test/**` 未触碰；未新建档；未 commit；未发评审）。
-§2 任务书可读、VSC 设计 §19.1-19.8 已通读——打回原因 = **设计机制与本端实现冲突**（下表），非任务书缺失/不可读。
-
-**缺口（实证）**：设计 §19.3 的载体假设 =「`agent._turnSeq` 跨续跑段保留（复位只在 `!opts.resume`）」。
-该假设在 VSC **子代理面（本批唯一可观测面）不成立**：
-
-| 事实 | 证据（file:line，as-of 2026-09-11） |
-|---|---|
-| VSC `runAgent` 内部自建 agent——`opts.agent` 仅 depth-0 复用 | `src/agent.mjs:85`（`existingAgent = (depth === 0 && opts.agent) || null`）；`src/agent/setup.mjs:128`（注释「opts.agent 仅 depth-0 honored」） |
-| 两处续跑循环每段重新调 `runAgent`，均不传 agent | `src/agent-tools/subagent-run.mjs:76`（循环）+ `:81-121`（调用）；`src/agent-tools/subagent-escalate-async.mjs:73-84`（runOpts）+ `:106`（调用） |
-| 子代理 resume 重跑 setup → 新 agent 对象 | `src/agent-tools/subagent-run.mjs:108-112` 注释（「a resume re-runs setup … re-binds the CURRENT run's object」——D-SF1 刻意语义） |
-
-**实测探针**（真 `runAgent`、`depth:1`、两次调用 = 段 1 / 段 2（resume）、`stateSink` 采集；
-provider 故意不可解析使 LLM 调用即抛——`onAgentTurn` 在循环头发射、先于 chat，足够观测）：
-
-- `same agent object across segments: false`（段 2 = 新对象）；
-- 段 1 与段 2 首轮 `onAgentTurn` 各收到 `turn=1`；`a2._turnSeq === undefined`。
-
-→ 照字面实现（复位 `!opts.resume`、每轮 `+1`）后，续跑段因新 agent 的 `_turnSeq === undefined` 而 `?? 0 → 1`——
-**段 2 首轮仍发 1**（T2 期望 101），`entry.turn` 依旧重置，F7 未达。
-
-**影响面（为何不能带病放过）**：VSC 唯一可观测编号面 = 子代理（D-19c′：本端主会话不显示 turn）——
-池条目 `entry.turn` → 冻结身份头（`subagent-run.mjs:137` → `webview/activity-view.js:52`）+ `subagent status`（`subagent-actions.mjs:66`）。
-照字面实现后**该面观测值零变化**（设计自举例：真实 130 轮仍显 30/100）。
-且 VSC AC1′-AC6′ 全为纯函数 / fixture / 源码锚——**照字面实现可全绿而功能未达 F7（盲区）**。
-
-**根因（同源翻译缺口）**：CLI 侧 `runAgent(agent, …)` 以对象参数接收 agent，续跑骨架
-`runWithContinue`（CLI 仓 `src/agent/spawn-child.mjs:201-223`）**跨段复用同一 `child` 对象**——
-CLI 设计「复位只在 `!resume`」因此成立（CLI 设计档 :30 明写「同一 child 对象，history 天然保留」）。
-VSC 侧 `runAgent` 内部自建 agent 且子代理不复用（`opts.agent` 仅 depth-0）——
-批次 §2 已注「同因、载体不同」，但 VSC 设计未把该载体假设在机制层补齐。
-
-**可选修法（供设计裁定——本 coder 未自行选择，未落任何一行）**：
-
-- **A（建议形态）**：段间种子经 opts——两消费循环持「段前累计」（`entry.turn` / 上次帧值），
-  续跑段传 `opts._turnSeqBase`；`agent.mjs` 复位点保持唯一（`!opts.resume → 0`），
-  resume 分支仅在 `_turnSeq == null` 时落种子。帧算式 / 回调契约 / `applyTurnFrame` 零改动。
-- **B**：消费侧偏移（`applyTurnFrame(entry, base + t, base + mt)`，`base` 每段取一次）——削弱 D-19a′「生成侧单点」。
-- 两案均需：设计档补一句载体契约 + AC 补一条可机器验证的段间断言（现 AC 面无法察觉本缺口）。
-
-**未落地项/去向**：VSC 5 档（`src/agent.mjs` · `src/agent/run-helpers.mjs` · `src/agent-tools/subagent-run.mjs` ·
-`src/agent-tools/subagent-escalate-async.mjs` · `test/turn-across-segments.test.mjs`）全部未落——
-待父侧裁定（改设计重发 / 裁定修法后重派）一次落齐。§19.5 文件清单本身无需变更（修法只增种子机制，不改面）。
 
 ### 第 19 批 · CLI 面（2026-09-11）——实施完成：T1-T8 绿 · 内部审计 clean · 内部代码评审 pass
 
 **状态：交付完成（本面零红）**。实施面 3 档：`src/agent.mjs` · `src/agent/helpers.mjs` · `test/turn-across-segments.test.mjs`（新）。
-逐字照设计 `docs/design/TURN-CAP-CONTINUE.md` §19.1-19.8（含修正轮对齐值）落地；消费面四档 / VSC 仓 / `TUI.md` 零触碰；未 commit；
+逐字照设计 `docs/design/TURN-CAP-CONTINUE.md` §19.1-19.8（含修正轮对齐值）落地；消费面四档 · `TUI.md` · VSC 仓——零触碰；未 commit；
 未向用户或父侧发起评审（内部偏离审计 + 内部代码评审 = §18 自含交付自动节点，非「发起评审」——无外部审批面）。
 
 **实测行数**（`wc -l`；设计预估 → 实测）：`src/agent.mjs` 400 → **411**（预估 ~406）· `src/agent/helpers.mjs` 372 → **384**（预估 ~382）·
@@ -327,7 +282,7 @@ VSC 侧 `runAgent` 内部自建 agent 且子代理不复用（`opts.agent` 仅 d
 - T40 eng-designer-role（快层 + 全量）：断言他批在途 `ENGINEERING-MODE.md` 稿「勾销未见『进设计档』字样」——本批零触碰 prompt / ENGINEERING-MODE；
 - tui-stderr-capture AC-1/2/3/6（仅全量层）：**HEAD 干净 worktree 复跑同款失败** = 存量基线；本批面与该路径（wrapped-spawn / crash-reports）零交集。
 
-**端到端冒烟**（仓外临时脚本、**真 runAgent** + mock-LLM 本地服务；非交付测试面——设计 §19.6 声明接缝式、无 runAgent 直驱先例）：
+**端到端冒烟**（仓外临时脚本、**真 runAgent** + mock-LLM 本地服务；非交付测试面——设计 §19.6 声明接缝式、无 runAgent 直驱同款）：
 段 1 帧 `⟦ev⟧turn 1/3` → 续跑段（resume:true）帧 `⟦ev⟧turn 2/4`（累计：max = 段前累计 1 + 段预算 3）→ 新链（resume:false）复位 `1/3`；`_turnSeq` 1 → 2 → 1。
 
 **AC1-AC9 透明表**：
@@ -362,73 +317,6 @@ VSC 侧 `runAgent` 内部自建 agent 且子代理不复用（`opts.agent` 仅 d
 | 4 | Not an issue | 🔵 AC1 直证缺口——设计 `docs/design/TURN-CAP-CONTINUE.md` §19.6 明示接缝式取舍；交付照设计，仓外真 runAgent 冒烟补行为证据。 |
 
 **未落地项与去向**：VSC 5 档（另 coder——§5 VSC 子节已打回父侧）· 报告扩写复位数裁定（父侧）· 相邻登记行指针（父侧排程）· commit（父侧）。
-
-### 第 19 批 · VSC 面（2026-09-11）——修正轮后实施完成：T1–T11 绿 · 内部审计 clean · 内部代码评审 pass
-
-**状态：交付完成（本面零红）**。实施面 6 档（设计 §19.5 清单 5 档 + `test/files.mjs` 登记 1 行——偏差披露见下）。
-逐字照设计 `docs/design/TURN-CAP-CONTINUE.md` §19.1-19.8（含载体缺口修正轮修法 A + 假帧口径修正轮 `(2, 101)`）。
-未 commit；未触碰 CLI 仓；未新建档（除新测档）；未向用户/父侧发起评审（内部偏离审计 + 内部代码评审 = §18 自含交付自动节点，非「发起评审」——无外部审批面）。
-
-**实测行数**（`wc -l`；设计预估 → 实测）：`src/agent.mjs` 353 → **365**（预估 ~362）· `src/agent/run-helpers.mjs` 276 → **296**（~292）·
-`src/agent-tools/subagent-run.mjs` 184 → **189**（~185）· `src/agent-tools/subagent-escalate-async.mjs` 216 → **220**（~217）·
-新测档 → **220**（~140）· `test/files.mjs` 58 → **59**（+1 行登记）。四源档均未近 500 硬限（>300 advisory 带 = 存量债）。
-
-**改动点**（4 源档 + 新测档）：
-
-1. `src/agent.mjs:123-127`：复位/种子块——`if (!opts.resume) agent._turnSeq = 0`（复位点唯一，全档 1 处）；
-   `else if (agent._turnSeq == null) agent._turnSeq = opts._turnSeqBase ?? 0`（段间种子——非空不覆盖）；
-2. `src/agent.mjs:140-141`：循环头编号帧 `const frame = turnFrame(++agent._turnSeq, turn, maxTurns)` → `callbacks.onAgentTurn?.(frame.turn, frame.maxTurns)`（双参、每轮无条件递增）；
-3. `src/agent/run-helpers.mjs:29-41`：`turnFrame`（唯一计算点——差额项 = 段前累计）+ `applyTurnFrame`（entry 空 no-op / maxTurns ≤ 0 不覆盖）；
-4. `src/agent-tools/subagent-run.mjs:81 / :119-123 / :126`：循环外「段前累计」`let turnBase = 0`；onAgentTurn 双参（`turnBase = t` + `applyTurnFrame`）；续跑支 `_turnSeqBase: turnBase`；
-5. `src/agent-tools/subagent-escalate-async.mjs:76 / :87 / :108`：同款（续跑支当前休眠——同构契约驻留，零行为变化）；
-6. 新测档 `test/turn-across-segments.test.mjs`：T1-T11 照设计 §19.6 逐字；`test/files.mjs:58` 登记 1 行。
-
-**测试实测**（先落盘再查）：定向 `node --test test/turn-across-segments.test.mjs` = **11/11 绿**；
-快层 `npm test` = tests **459** · fail **0**；全量 `npm run test:full` = tests **459** · pass **459** · fail **0** · skipped **0**；
-`npm run lint` = 246 JS files OK；`node scripts/check-doc-width.mjs`（VSC 仓）= 宽度 OK（67 文件）+ 一致性新增违规 0（存量基线 33）。**本批面零红**。
-
-**T9/T10 生产路径证据（本缺口核心——非纯函数绿）**：
-
-- T9 真 `runAgent` 直驱 ×3 段：段 1 首帧 `(1, 100)` → 段 2 首帧 **`(2, 101)`**（`_turnSeqBase: 1` 种子生效——不回到 1）→ 段 3 新链复位 `(1, 100)`；
-  消费面确认：全 src `_turnSeq` 写入点仅 `agent.mjs:124/125/126/140`（删种子 / 删 `++` / 旧单参 → 断言必翻红）；帧发射在循环头、先于 chat（fetch 桩只挡网络）；
-- T10 真 `runChild`（假 runAgent 经生产参数缝 `runAgent` 注入）：段 1 帧 `(1, 100)` → 续跑段 `opts._turnSeqBase === 1`；`entry.turn === 2` / `entry.maxTurns === 101`；终态通知 `{turn: 2, maxTurns: 101}`。
-
-**AC1′–AC6′ 透明表**：
-
-| AC | 判据（设计 §19.7） | 结果 | 证据 |
-|---|---|---|---|
-| AC1′ | T1-T4 同算式同口径 + T9 段间生产断言（段 2 首帧 = 段 1 累计 + 1） | ✅ | 定向 11/11；T2 `turnFrame(101,0,100)→{101,200}`；T3 `(238,37,100)→{238,300}`；T4 可达域三不变式恒真；T9 `[[1,100]]→[[2,101]]→[[1,100]]`（真 runAgent） |
-| AC2′ | `onAgentTurn` 双参（源锚）+ 两消费点经 `applyTurnFrame`（T5/T6）+ 消费侧接线（T10 + T11 锚） | ✅ | `agent.mjs:141` 双参发出；`subagent-run.mjs:119-121` / `escalate-async.mjs:108` 经 `applyTurnFrame`；T10 `_turnSeqBase === 1`；T11 两循环种子各 1 命中 |
-| AC3′ | 复位条件 `!opts.resume` + 无第二复位点 + 种子仅 `_turnSeq == null` | ✅ | `agent.mjs:123-127`；全档 `_turnSeq = 0` 唯一；T8/T11 源锚驻留 |
-| AC4′ | 终态快照行 + webview 两文件（`activity.js` / `activity-view.js`）diff 零行 + T7 绿 | ✅ | `subagent-run.mjs:140-143` 零改动（读 entry 累计值）；webview 两档本批零触碰（`activity-view.js:52` 逐字消费）；T7 冻结头含 `turn 130/200` |
-| AC5′ | 段内帽 / 续跑语义零改动：T8 源锚 + VSC 全量回归绿 | ✅ | `agent.mjs:134` 循环条件 + `:349` 抛点锚驻留；循环结构仅增种子传参；全量 459/0/0 |
-| AC6′ | 登记行关系落档——登记行本体同步 = 父侧排程 | ✅ | 设计 §19.8 关系句在位（本批零触碰）；登记行本体（AGENT-LOOP :27-29 / :134 hook 措辞 + ARCHITECTURE :21-23）= 父侧排程（批准时遗留登记） |
-
-**偏差披露**：
-
-1. `test/files.mjs` 登记 1 行 = **out-of-list**（设计 §19.5 清单未列）——**机械必需**：VSC 测试清单为显式注册
-   （`test/run-fast.mjs` / `run-full.mjs` 只跑清单项），不登记则新测档在 `npm test` / `test:full` 永不执行；已披露且列入去向（设计档清单补行 = designer/父侧文档层）；
-2. T9 fetch 桩形态 = 接缝注「不可解析 provider」的实现细节：无 baseURL 的 URL 在 `requestWithRetry` 内触发 1s/2s/4s 退避重试（实测单段 ~7.8s）；
-   以 AbortError 桩（生产 `provider.mjs:252` 免重试分支）将其压到零等待 + 机械保证零网络——帧发射时序（循环头先于 chat）与断言面不变；
-3. 行数实测与预估有差（上表；新测档 220 vs ~140——T9/T10/T11 生产断言与注释开销）——预估为 `~` 值，非验收项。
-
-**内部审计 + 内部代码评审（§18 自动节点）**：
-
-- explore 偏离审计（只读，blocking）：**代码行为面 clean**——四类偏离（PARTIAL / SILENT-SIMPLIFICATION / DOC-DRIFT / OUT-OF-LIST）仅 1 条 🔵（`test/files.mjs` 出清单——机械必要 + 已披露，建议设计档补行）；
-- advisor 代码评审（轮次 1——全量）：**VERDICT = pass**（🔴 0 · 🟡 2 · 🔵 1，均非阻塞，无 fix round）；
-- advisor 聚焦复核（轮次 2——T9/T10 生产路径非空性）：**VERDICT = pass**（0 新增发现）。
-
-**评审发现裁决（逐条）**：
-
-| # | Action | Detail |
-|---|---|---|
-| 1 | Deferred | 🟡 设计 §19.5 文件清单未含 `test/files.mjs`——登记行机械必需且已披露；设计档补行属 designer/父侧文档层（本 coder 无设计档写权），随 §5/交付报告上报。 |
-| 2 | Deferred | 🟡 文件体积 advisory（`src/agent.mjs` 365 行 >300 建议档）——存量债（本批前 353），远未近 500 硬限；随 CLI 面同口径不升级（R3）。 |
-| 3 | Deferred | 🔵 撞墙拒绝/错误终态通知不携 turn/maxTurns（`subagent-run.mjs:179` / `:185`）→ 该态冻结头无编号段——属「live 头」既有登记开放面（D-19d′），§19 AC 不涉；若 F7 需覆盖，父侧另立条目（设计覆盖项，非本实现偏离）。 |
-
-**未落地项与去向**：① 设计 §19.5 清单补 `test/files.mjs` 行（designer/父侧）；② 相邻登记行本体同步 + hook 措辞（父侧排程——批准时遗留）；③ commit（父侧）；④ 报告扩写重跑复位数（CLI 面已登记遗留——父侧裁定，非本面）。
-
-**终态：clean**（审计 clean · 评审 pass 两轮 · fix round 0 轮）。
 
 ## §6 验证与收口（父代理自写）
 
