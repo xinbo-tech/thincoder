@@ -169,8 +169,8 @@ export async function prepareRun(agent, input, callbacks, {
 
   // task/plan tools are injected with the main loop; subagent/skill/goal/verify only at top level
   // eng-coder subagents get advisor for mandatory design review before coding
-  const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool, readHistoryTool, batchSegmentTool } = await import("../agent-tools.mjs")
-  const { consultStartTool, consultStopTool } = await import("../agent-tools/consult.mjs")
+  // CORE-UNIFICATION TOOLS #83：consult 家族随统一登记册自 `../agent-tools.mjs` 取用（单一来源）
+  const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool, readHistoryTool, batchSegmentTool, consultStartTool, consultStopTool } = await import("../agent-tools.mjs")
   // withPool: decorate the consult_start description with the CURRENT candidate pool
   // so the model knows which models it can pick (CLI parity with the plugin). The
   // retired escalate tool surface is now the subagent action:"escalate" — its pool
