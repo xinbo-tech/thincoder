@@ -8,6 +8,8 @@
  *  · 相似度：两侧各自读成行、**去首尾空白 + 丢空行**后取**行集合**，
  *    相似度 = **Jaccard = |交集| / |并集|**。
  *  · 另报**逐字节完全相同**（sha256 比对）对数。
+ *  注：口径**不按扩展名过滤**——`src/**` 下全部档型（`.md` 等非代码档）一并计入成对与统计；
+ *      与「仅代码档」口径的数字不可直接互照，比对前先确认口径一致。
  *
  * ── 输出（默认人类可读；`--json` 给机器——单行 JSON） ─────────────────────────
  *  1. 两树档数 · 同路径对数
@@ -123,20 +125,20 @@ export function analyze(dirA, dirB, { threshold = NEAR_SAME } = {}) {
       overall: median(rows.map((r) => r.jaccard)),
       bySubdir: [...groups.entries()]
         .map(([dir, xs]) => ({ dir, median: median(xs), count: xs.length }))
-        .sort((x, y) => x.dir.localeCompare(y.dir)),
+        .sort((x, y) => (x.dir < y.dir ? -1 : x.dir > y.dir ? 1 : 0)),
     },
   };
 }
 
 const f4 = (x) => (x === null ? "n/a" : x.toFixed(4));
 
-/** 人类可读报告。 */
+/** 人类可读报告（入参 = `run()` 的返回——`analyze()` 的返回不含 `root`，此处兜底）。 */
 export function formatReport(res) {
   const out = [];
-  out.push(`镜像发散度度量 — 仓根 ${res.root}`);
+  out.push(`镜像发散度度量 — 仓根 ${res.root ?? "(未提供)"}`);
   out.push(`  A = ${res.a.dir}（${res.a.files} 档）`);
   out.push(`  B = ${res.b.dir}（${res.b.files} 档）`);
-  out.push(`  同路径对数 = ${res.pairs}`);
+  out.push(`[1] 同路径对数 = ${res.pairs}`);
   out.push("");
   out.push(`[2] 逐字节完全相同（sha256）= ${res.identical.count} 对`);
   for (const x of res.identical.list) out.push(`  · ${x.path}`);
