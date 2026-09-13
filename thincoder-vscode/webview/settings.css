@@ -1,0 +1,379 @@
+/* ─── Settings Panel ──────────────────────────── */
+
+#settings-panel {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(30px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.close-btn {
+  width: 28px; height: 28px;
+  border: none; border-radius: 6px; background: transparent;
+  color: var(--fg); font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.close-btn:hover { background: var(--hover-bg-strong); }
+
+.panel-body {
+  flex: 1; overflow-y: auto; padding: 16px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+
+/* ─── Section cards ─────────────────────────── */
+
+.settings-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0; /* .panel-body is a flex column — without this the cards shrink
+                     and overflow:hidden clips their content into tiny stubs */
+}
+
+.settings-card-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.55;
+  margin: 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--hover-bg);
+}
+
+.settings-card-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ─── In-card subsection title ─────────────── */
+
+.settings-subtitle {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.55;
+  margin: 6px 0 0;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+/* ─── Fields ────────────────────────────────── */
+
+.key-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.key-field label {
+  font-size: 11px;
+  color: var(--fg);
+  opacity: 0.65;
+  margin-bottom: 0;
+}
+
+.settings-card-body input,
+.settings-card-body select {
+  padding: 6px 10px;
+  background: var(--input-bg);
+  color: var(--input-fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+  line-height: 1.4;
+}
+
+.settings-card-body input:focus,
+.settings-card-body select:focus {
+  border-color: var(--accent);
+}
+
+.settings-card-body select { cursor: pointer; }
+
+/* ─── Key rows (generic label + control + actions) ─── */
+
+.key-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.key-label { font-size: 12px; flex: 1; min-width: 0; }
+
+.key-status { font-size: 11px; opacity: 0.5; white-space: nowrap; }
+.key-status.ok { opacity: 1; color: var(--green); }
+
+/* ─── Buttons ───────────────────────────────── */
+
+.key-btn {
+  padding: 4px 12px;
+  font-size: 11px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.key-btn:hover { border-color: var(--accent); }
+.key-btn:disabled { opacity: 0.35; cursor: default; }
+.key-btn:disabled:hover { border-color: var(--border); }
+
+.del-key { color: var(--red); border-color: transparent; padding: 4px 8px; }
+.del-key:hover { background: var(--diff-del-bg); border-color: transparent; }
+
+/* ─── Provider rows ─────────────────────────── */
+
+.prov-row {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.prov-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.prov-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--border);
+  flex: 0 0 auto;
+}
+.prov-dot.ok { background: var(--green); }
+
+.prov-name {
+  font-size: 12px;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+.prov-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.prov-sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 5px;
+  padding-left: 15px; /* align under the name (dot 7px + gap 8px) */
+}
+
+.prov-model {
+  font-size: 10px;
+  opacity: 0.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* MODEL-SELECTION M9：准入失败渠道的行内标注（消息本体在 .prov-hint） */
+.prov-unavailable {
+  color: var(--red);
+  opacity: 1;
+}
+
+.prov-hint {
+  font-size: 10px;
+  color: var(--red);
+  opacity: 0.8;
+  padding-left: 15px;
+  margin-top: 3px;
+  white-space: normal;
+}
+
+/* ─── Switch (checkbox → toggle) ────────────── */
+
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.switch input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 30px; height: 16px;
+  border-radius: 8px;
+  background: var(--border);
+  border: none;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+.switch input::after {
+  content: "";
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left 0.15s;
+}
+
+.switch input:checked { background: var(--accent); }
+.switch input:checked::after { left: 16px; }
+
+/* ─── MCP list ──────────────────────────────── */
+
+.mcp-reconnect-btn { margin-left: auto; }
+
+/* ─── Feedback states (save flash / delete confirm / errors) ── */
+
+.key-btn.btn-saved { color: var(--green); border-color: var(--green); }
+
+.key-btn.confirming { color: var(--red); border-color: var(--red); font-weight: 700; }
+
+.settings-error-banner {
+  padding: 8px 12px;
+  border: 1px solid var(--red);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--red) 12%, transparent);
+  color: var(--red);
+  font-size: 12px;
+}
+
+.settings-card-body input.input-error { border-color: var(--red); }
+
+/* ─── First-run onboarding panel ─────────────── */
+
+#welcome-panel {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.welcome-inner {
+  max-width: 400px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.welcome-inner h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.welcome-inner p {
+  font-size: 12px;
+  opacity: 0.7;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.welcome-inner select,
+.welcome-inner input {
+  padding: 6px 10px;
+  background: var(--input-bg);
+  color: var(--input-fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.welcome-inner input:focus,
+.welcome-inner select:focus { border-color: var(--accent); }
+
+.welcome-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.welcome-actions .save-btn { flex: 1; margin-top: 0; }
+
+/* Consult rows: provider+model pair on one line */
+.consult-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.consult-row .consult-effort { flex: 0 0 auto; width: auto; min-width: 0; }
+/* effort dropdown: content-width, never stretched (a 3-7 item enum shouldn't outweigh the model pick) */
+.consult-row .consult-del {
+  padding: 4px 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--fg);
+  cursor: pointer;
+}
+.consult-row .consult-del:hover { border-color: #f14c4c; color: #f14c4c; }
+
+
+/* Change-to-save "saved" badge (agent card) */
+.agent-saved-badge { font-size: 11px; color: #4ec9b0; opacity: 0; transition: opacity .3s; height: 14px; }
+.agent-saved-badge.visible { opacity: 1; }
+
+
+/* model picker trigger button (menu itself = overlay, styles self-injected by model-menu.js) */
+.model-menu-root { display: inline-flex; min-width: 0; flex: 1; }
+.model-menu-btn { text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ✕ clear-to-inherit button next to model-menu triggers */
+.model-menu-clear { padding: 4px 8px; background: transparent; border: 1px solid var(--border); border-radius: 6px; color: var(--fg); cursor: pointer; }
+.model-menu-clear:hover { border-color: #f14c4c; color: #f14c4c; }
+
+/* MCP tools expander */
+.mcp-tools-detail { padding: 4px 0 4px 24px; display: flex; flex-direction: column; gap: 6px; }
+.mcp-tool-row { border-left: 2px solid var(--border); padding: 2px 8px; }
+.mcp-tool-name { font-family: var(--mono, monospace); font-size: 12px; color: var(--accent); }
+.mcp-tool-desc { font-size: 11px; opacity: 0.7; }
+.mcp-tool-params { font-size: 10px; opacity: 0.45; font-family: var(--mono, monospace); }
+
+/* effort selects: content-width everywhere (consult rows + advisor) */
+#adv-effort { width: auto; max-width: 140px; }
+.consult-effort { max-width: 120px; }

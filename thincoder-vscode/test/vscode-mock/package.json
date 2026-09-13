@@ -1,0 +1,7 @@
+{
+  "name": "vscode",
+  "version": "1.0.0-mock",
+  "description": "Minimal local mock of the vscode module for node --test runs (replaces the deprecated npm 'vscode' package whose postinstall build is blocked). Not shipped in the .vsix — test/ is .vscodeignore'd.",
+  "type": "module",
+  "main": "index.mjs"
+}

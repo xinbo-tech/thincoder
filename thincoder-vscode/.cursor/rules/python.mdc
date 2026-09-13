@@ -1,0 +1,6 @@
+---
+globs: "*.py"
+---
+Use type hints for all function signatures.
+Prefer dataclasses over plain dicts for data structures.
+Maximum line length: 100 characters.

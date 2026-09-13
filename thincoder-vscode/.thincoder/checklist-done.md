@@ -1,0 +1,9 @@
+- [x] T1: P0-1: 抽公共 mergeChildMutations（subagent.mjs 导出），escalate 复用并重置 verify/advisor 收敛预算
+- [x] T3: P1-3: AbortError 在 catch 开头 rethrow（用户 Stop 传播）
+- [x] T5: P1-5: model 匹配 strip 尾部 " (effort)" 后缀
+- [x] T7: P2-7/8/9/10: chat.js surgeon 行显示模型；onReasoning/onToken 流式转发（含 agent.mjs onToken 门豁免）；返回附 Touched files；ContinueError 单独话术
+- [x] T9: 测试: (a) merge 重置 (b) AbortError rethrow (c) ContinueError 话术 + 补充用例，npm test 全绿
+- [x] T2: P0-2: 工程模式下 escalate 报错指向 eng-coder（subagent 行为一致）
+- [x] T4: P1-4: 墙钟 watchdog（独立 AbortController 级联 ctx.signal，超时报 timed out）
+- [x] T6: P1-6: buildProvider 后 apiKey 预检
+- [x] T8: 文档: ESCALATE.md 状态行 + main.md:16 事前判断口径

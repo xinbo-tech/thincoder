@@ -1,0 +1,6 @@
+{
+  "note": "台账机检存量基线——**必须保持为空**。2026-09-12（LEDGER-SELF-CONTAINED 批·阈值 = 0）：存量豁免已废——入基线 = 例外 = 违规；检查器对非空基线直接 FAIL（固定句「本基线必须保持为空」）。历史 6 键（均 L4 · 归档档·跨仓指针）处置 = 台账落笔改指本仓后自消（零命中）——逐键判定见 2026-09-12-LEDGER-SELF-CONTAINED（VSC 仓）批档 §5。",
+  "generatedAt": "2026-09-12",
+  "source": "node scripts/check-ledger.mjs（基线清零轮）",
+  "entries": []
+}

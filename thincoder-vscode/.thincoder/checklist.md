@@ -1,0 +1,16 @@
+- [ ] T10: FR1: 工具输出 ≤64K 不落盘直接进上下文；>64K 落盘 + 64K preview + 路径（MAX_TOOL_RESULT 16000 → 65536）
+- [ ] T11: FR2: 落盘内联 preview 放大到 64K（TOOL_RESULT_PREVIEW 2000 → 65536）
+- [ ] T12: FR3: advisor MAX_RESULT_CHARS 12K → 64K（line-aware 截断逻辑不变）
+- [ ] T13: FR4: 面板实时工具结果 20K → 64K（panel-chat onToolResult slice）
+- [ ] T14: FR5: 历史页工具卡 2K → 64K（panel-session sendHistoryPage slice）
+- [ ] T15: FR6: 落盘机制/写时自清理/webview DOM 上限保留（webview/lib.js MAX_TOOL_OUTPUT 已达标不动）
+- [ ] T16: AC1: 65536 字符工具结果不落盘，原样返回（=== 输入）
+- [ ] T17: AC2: 65537 落盘，返回 preview + [Large output saved 路径，磁盘全量 65537
+- [ ] T18: AC3: 落盘 preview 放大到 64K（内联返回长度 > 20000）
+- [ ] T19: AC4: advisor MAX_RESULT_CHARS === 65536（常量断言）
+- [ ] T20: AC5: 实时显示截断 = 64K（70_000 经 onToolResult 后 ≤ 65536）
+- [ ] T21: AC6: 历史页工具卡 = 64K（70_000 经 sendHistoryPage 后 ≤ 65536 且 > 20000）
+- [ ] T22: AC7: 落盘格式与清理逻辑不变（现有 offload 测试通过，输入改 70_000）
+- [ ] T23: AC8: npm test 全套通过
+- [ ] T24: AC9: src/ 无工具输出相关 16000/20000/2000/12000 残留（grep，区分业务常量）
+- [ ] T25: AC10: 落盘失败回退截断 = 65536（新增用例，评审 #6）

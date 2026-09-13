@@ -1,0 +1,215 @@
+/* ─── Session Bar ─────────────────────────────── */
+
+#session-bar {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  min-height: 36px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  gap: 6px;
+}
+
+#session-selector {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+
+#session-selector:hover {
+  background: var(--hover-bg);
+}
+
+#session-title {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+#session-arrow {
+  font-size: 8px;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+#session-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 2px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  z-index: 100;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.session-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+  transition: background 0.1s;
+}
+
+.session-item:last-child { border-bottom: none; }
+
+.session-item:hover {
+  background: var(--hover-bg);
+}
+
+.session-item.active {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.session-item.active .session-item-title {
+  color: var(--accent);
+}
+
+.session-item-title {
+  font-size: 13px;
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-item-meta {
+  font-size: 11px;
+  color: var(--fg);
+  opacity: 0.4;
+  flex-shrink: 0;
+}
+
+.session-delete {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.1s, background 0.1s;
+  flex-shrink: 0;
+}
+
+.session-item:hover .session-delete { opacity: 0.5; }
+
+.session-delete:hover {
+  background: var(--diff-del-bg);
+  opacity: 1;
+  color: var(--error-fg);
+}
+
+/* Rename button mirrors the delete button but with a neutral hover (✎) */
+.session-rename {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.1s, background 0.1s;
+  flex-shrink: 0;
+}
+
+.session-item:hover .session-rename { opacity: 0.5; }
+
+.session-rename:hover {
+  background: var(--hover-bg-strong);
+  opacity: 1;
+  color: var(--accent);
+}
+
+#new-session-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg);
+  font-size: 18px;
+  font-family: inherit;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+
+#new-session-btn:hover {
+  background: var(--hover-bg-strong);
+  color: var(--accent);
+  opacity: 1;
+}
+
+/* Current-project button (multi-root switcher) — left edge of the session bar */
+#project-btn {
+  flex-shrink: 0;
+  max-width: 200px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg);
+  font-size: 12px;
+  font-family: inherit;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.8;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+
+#project-btn:hover {
+  background: var(--hover-bg-strong);
+  color: var(--accent);
+  opacity: 1;
+}
+
+.dropdown-section {
+  padding: 4px 12px 2px;
+  font-size: 10px;
+  color: var(--fg);
+  opacity: 0.4;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}

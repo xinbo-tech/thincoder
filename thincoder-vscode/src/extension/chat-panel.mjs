@@ -1,0 +1,422 @@
+/**
+ * chat-panel.mjs — ChatPanel class: webview panel, message routing, session management.
+ * Extracted from extension.mjs to keep the entry point lean.
+ * Split 2026-08-22 (500-line rule): session/project/index/MCP method implementations
+ * live in panel-session.mjs / panel-project.mjs / panel-index.mjs / panel-mcp.mjs;
+ * the same-named methods below are thin delegates, so every external caller
+ * (panel-messages.mjs, panel-chat.mjs, permission-gate.mjs) is unaffected.
+ */
+import * as vscode from "vscode"
+import { readFileSync } from "node:fs"
+import { join, dirname } from "node:path"
+import { fileURLToPath } from "node:url"
+import { closeAllMcp } from "../mcp.mjs"
+import { setSlotAutoApprove, setSlotPlanMode } from "./session-io.mjs"
+import { providerStatus, saveProviderKey, saveCustomProvider, deleteProviderKey, pushStatus, fullStatus, agentSettings, proxySettings, shellCandidates, websearchSettings, saveMcpServer, deleteMcpServer } from "./settings.mjs"
+import { loadLocaleStrings } from "../i18n.mjs"
+import { handlePanelMessage, routeUserTurn, _cwd, setProjectFolder, clearProjectOverride } from "./panel-messages.mjs"
+import { runPanelChat } from "./panel-chat.mjs"
+import { loadRaw } from "../config-io.mjs"
+import { initStopTrace } from "./stop-trace.mjs"
+import { ensureSlot, activeData, activeHistory, activeLines, saveLines, loadModelPrefs, loadSession, loadOlder, newSession, deleteSession, pushSessions, generateTitle, status as bootstrapStatus } from "./panel-session.mjs"
+import { projectInfo, pushProject, applyProjectSwitch, onProjectChanged, pickProject } from "./panel-project.mjs"
+import { pushIndexStatus, atComplete, saveEmbeddingConfig, maybePromptIndex, buildIndex } from "./panel-index.mjs"
+import { pushMcpStatus, reconnectMcp, editMcp, testMcp } from "./panel-mcp.mjs"
+import { initLedgerSurface, dispose as disposeLedgerSurface } from "./ledger-surface.mjs" // LEDGER-SURFACE（§2.30.3.5）
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+
+export class ChatPanel {
+  /** @param {vscode.ExtensionContext} context */
+  constructor(context) {
+    this._context = context
+    this._panel = null
+
+    this._abortController = null
+    // C1（SESSION-FLOW-C F-C1a/b）：_turnHandle = 最近回合的 promise（fire 语义——不 await）——
+    // 保底 catch 挂它（回合 promise 永不悬挂——H-B）；_abortRequested = abort 启动闩（H-C——
+    // Startup 窗口 Stop 被吞）——router 交付无效时置位，newTurnController（panel-chat.mjs）
+    // 消费即复位。
+    this._turnHandle = null
+    this._abortRequested = false
+    this._distillController = null  // async distillation abort (SEND-STALL-DISTILL): aborted ONLY on dispose / session switch, never per turn
+    this._permissionQueue = []
+    // Live autoApprove flag for the current turn — approve-all / the AUTO toolbar
+    // button flip it MID-TURN (via _setAutoApprove); the permission gate re-checks
+    // it on every invocation because runAgent's startup snapshot cannot change.
+    this._autoApprove = false
+    this._questionQueue = []  // pending inline question-tool prompts (panel, not native popups)
+    this._statusBar = null    // status-bar run indicator (idle/running/waiting)
+    // C2（SESSION-FLOW-C F-C2a——忙态单来源）：_turnState 枚举 {idle, running, susp}——
+    // running = 回合（含会话内 digest/用户回合）执行中；susp = 挂起会话活跃（或释放窗口
+    // 池仍 live）；waiting（权限/question 队列）为 running 修饰态非互斥——只经 _refreshStatus
+    // 呈现（"waiting 优先 running"语义保留），不入枚举。读者一律走谓词 turnBusy()（缩小迁移面）。
+    this._turnState = "idle"
+    // §17 挂起（suspension.mjs / panel-chat.mjs，2026-09-02）：
+    // _susp/_suspWake 由 suspensionSession 建/清（会话句柄 + 单槽唤醒器）；
+    // 入队容器已随排队机制废弃（INPUT-LOCK-ASYNC C'——2026-09-09——busy（running 含
+    // digest/标题窗口）输入禁用——routeUserTurn 拒收——挂起空闲消息走
+    // susp.pendingInput 单槽（_chat 内分流）。
+    // _turnControllers = 回合内 controller 重建登记（偏差修复 #3——会话 Stop 统一 abort）。
+    this._turnControllers = []
+    // The slot number this panel is bound to. Set once when a session is opened/created,
+    // then used for ALL reads and writes — we never re-read the shared manifest's active
+    // pointer mid-conversation (it can be changed by a concurrently running CLI).
+    this._slot = null
+    // AGENT-LOOP.md §11（2026-09-08——agent 生命周期对齐 CLI）：顶层 agent 会话级单例——
+    // 首轮 runAgent 经 ensurePanelAgent 建、后续回合复用同一对象（AC1/F1）；会话切换/换项目/
+    // dispose 销毁置 null（AC4——六销毁点）——内存态随对象回收，槽文件仍权威。
+    this._agent = null
+
+    // Follow-active-file project switching (multi-root): when the setting is on and the
+    // active editor's folder differs from the current project, switch automatically.
+    // Guarded by turnBusy() — never yank the cwd out from under a running turn OR a
+    // live suspension session (C2: susp counts as busy).
+    context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor((editor) => {
+      if (!editor) return
+      try {
+        const follow = vscode.workspace.getConfiguration("thincoder.project").get("followActiveEditor", false)
+        if (!follow) return
+        const folder = vscode.workspace.getWorkspaceFolder(editor.document.uri)
+        if (!folder || folder.uri.fsPath === _cwd() || this.turnBusy()) return
+        const r = setProjectFolder(folder.uri.fsPath)
+        if (r.ok) {
+          // §11 销毁点（AGENT-LOOP §11——切换边界守卫在上方 turnBusy() 检查——销毁安全）
+          this._agent = null
+          this._onProjectChanged().catch((e) => console.error("[chat-panel] project switch failed:", e.message))
+        }
+      } catch (e) {
+        console.error("[chat-panel] follow-active-file switch failed:", e.message)
+      }
+    }))
+
+    // If the overridden project folder is removed from the workspace, fall back to
+    // workspaceFolders[0] (a stale cwd would point agent runs at a dead directory).
+    context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(() => {
+      const folders = vscode.workspace.workspaceFolders ?? []
+      const cwd = _cwd()
+      if (!cwd || folders.some((f) => f.uri.fsPath === cwd)) return
+      clearProjectOverride()
+      // §11 销毁点（AGENT-LOOP §11——工作区兜底即换 cwd——agent 不跨项目复用）
+      this._agent = null
+      this._onProjectChanged().catch((e) => console.error("[chat-panel] project fallback failed:", e.message))
+    }))
+  }
+
+  // ─── WebviewViewProvider ─────────────────────────
+
+  /**
+   * Called by VS Code when the sidebar view becomes visible.
+   * Sets up the webview HTML, message listener, and initial state.
+   * @param {vscode.WebviewView} webviewView
+   * @param {vscode.WebviewViewResolveContext} _context
+   * @param {vscode.CancellationToken} _token
+   */
+  resolveWebviewView(webviewView, _context, _token) {
+    this._panel = webviewView
+    webviewView.webview.options = {
+      enableScripts: true,
+      retainContextWhenHidden: true,
+    }
+
+    webviewView.onDidDispose(() => {
+      this._panel = null
+      // 2026-09-11 第 10 批（§5.1.4 第 1 条——跨 view 不串味）：view 销毁 → 投递闸门
+      // 关闩 + 清空队列（旧 view 的待投事件不得灌进下一个 view——新 view 经 webviewReady
+      // 握手重新开闩）。
+      this._wvReady = false
+      this._wvOutbox = []
+      // §11 销毁点：view 销毁 → 会话级 agent 随之销毁（面板重开经 ensurePanelAgent 重建）
+      this._agent = null
+      this._abortController?.abort()
+      this._distillController?.abort()  // kill any in-flight async distillation — it belongs to the dying view
+      closeAllMcp()
+    })
+
+    webviewView.webview.html = this._html()
+    webviewView.webview.postMessage({ type: "i18n", strings: loadLocaleStrings(vscode.env.language) })
+    initStopTrace(this._context, vscode)
+
+    webviewView.webview.onDidReceiveMessage((msg) => {
+      handlePanelMessage(this, msg).catch((e) => console.error("[chat-panel] message handler:", e.message))
+    })
+
+    this._initStatusBar()
+    // B2（SESSION-FLOW-B F-B2a/F-B2b——2026-09-09）：resolve 只起慢段（_status() = status()
+    // 慢段——migrate/fullStatus/mcpStatus/模型偏好/索引——探测与 webview 加载重叠并行）；
+    // 快段 openSessionContent（会话内容 + 槽绑定）移入 webviewReady 握手——resolve 期
+    // webview 未加载，此刻发内容即丢（Reload 后对话区空缺陷的静态根因）——不得双跑快段
+    // （内容双发/槽重绑）。慢段头部 pushStatus 可能丢——webviewReady _pushStatus 兜底（幂等）。
+    this._status()
+  }
+
+  // ─── Status bar (run-state awareness outside the panel) ───
+
+  _initStatusBar() {
+    initLedgerSurface(this) // LEDGER-SURFACE：台账 item 并立（priority 99）——须先于下方守卫（生产路径 _statusBar 由 extension.mjs 预置）
+    if (this._statusBar) return
+    this._statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100)
+    this._statusBar.name = "ThinCoder"
+    this._statusBar.tooltip = "ThinCoder — click to open the chat panel"
+    this._statusBar.command = "thincoder.openChat"
+    this._setStatus("idle")
+    this._statusBar.show()
+  }
+
+  /** running = agent turn active; waiting = permission/question prompt pending. */
+  _setStatus(state) {
+    if (!this._statusBar) return
+    if (state === "running") {
+      this._statusBar.text = "$(sync~spin) ThinCoder"
+      this._statusBar.backgroundColor = undefined
+    } else if (state === "waiting") {
+      this._statusBar.text = "$(warning) ThinCoder: waiting for your input"
+      this._statusBar.backgroundColor = new vscode.ThemeColor("statusBarItem.warningBackground")
+    } else {
+      this._statusBar.text = "$(hubot) ThinCoder"
+      this._statusBar.backgroundColor = undefined
+    }
+  }
+
+  /**
+   * C2（SESSION-FLOW-C F-C2a——忙态单来源）：读者谓词——任何回合执行中 / 挂起会话活跃 /
+   * 释放窗口（池仍 live）都算 busy。内部以 _turnState 枚举表达；读者只调本方法
+   * （迁移面缩小——6+ 处读者不用各自推导 idle/running/susp）。
+   */
+  turnBusy() {
+    return this._turnState !== "idle"
+  }
+
+  /**
+   * C2（SESSION-FLOW-C F-C2b——忙态单一广播点）：每次忙态 set/clear 行调用——
+   * 发 {type:"turnState", state, counts?} 新消息（webview 单一 reducer 更新 S._turnState；
+   * counts 随 susp 计数刷新携带——F-C2e digest 间不陈旧）。状态未变且无 counts → 不重发
+   * （幂等——282/300 同态重发只靠 counts 参数驱动）。
+   */
+  _publishTurnState(state, counts) {
+    const changed = state !== this._turnState
+    this._turnState = state
+    if (changed || counts) {
+      this._panel?.webview.postMessage({ type: "turnState", state, ...(counts ? { counts } : {}) })
+    }
+  }
+
+  /** Waiting prompts beat running; without pending prompts, fall back to turn state. */
+  _refreshStatus() {
+    if (this._permissionQueue.length > 0 || this._questionQueue.length > 0) { this._setStatus("waiting"); return }
+    this._setStatus(this.turnBusy() ? "running" : "idle")
+  }
+
+  sendMessage(text) {
+    if (!this._panel) {
+      vscode.window.showWarningMessage("ThinCoder panel is not ready yet — please wait a moment and try again.")
+      return
+    }
+    // INPUT-LOCK-ASYNC（C'——F-1/F-3）：busy（_turnState==="running"——回合/digest/标题
+    // 窗口——单一判据）输入禁用——外部入口（Ask ThinCoder 命令）先于回显拒绝——不排队
+    // 不回显（拒收 = 无假气泡——webview 输入框已由 loading.js 锁——正常发送到不了这里）。
+    if (this._turnState === "running") {
+      vscode.window.showWarningMessage("ThinCoder: a task is running — wait for it to finish before sending.")
+      return
+    }
+    if (this._panel) {
+      // Echo FIRST — the quick-input command renders its own user bubble. 非 running 提交
+      // 才回显（susp 挂起空闲消息经 _chat 上游分流——气泡先行观感一致）。
+      // F（SESSION-RESTORE-PARITY）：echo 补真实时间戳——气泡时间 = 发出时刻（非回退"现在"）
+      this._panel.webview.postMessage({ type: "userMessage", text, timestamp: Date.now() })
+      // A1（SESSION-FLOW-A F-A1——修 R6 残留——sendMessage 曾是唯一绕过 routeUserTurn 的
+      // 入口——回合中 Ask ThinCoder/发送命令直呼 _chat 杀当前回合）：命令直发并入
+      // userMessage/retry 的单一入口——running 拒收（INPUT-LOCK——禁排队）；susp 两态
+      // （会话活跃/释放窗口）走 _chat 上游分流不变（D-S5 唤醒/接管语义）；idle 直发。
+      routeUserTurn(this, { text, modelOverride: undefined, reasoning: undefined, providerName: undefined, images: undefined })
+    }
+  }
+
+  dispose() {
+    closeAllMcp()
+    // §11 销毁点：面板 dispose → 会话级 agent 随之销毁（扩展重载/关面板后重建走 ensurePanelAgent）
+    this._agent = null
+    this._abortController?.abort()
+    this._distillController?.abort()  // in-flight async distillation belongs to the dying panel (SEND-STALL-DISTILL)
+    // §17: a live suspension session dies with the panel — abort the session controller
+    // AND the entering turn's full controller set (偏差修复 #3: children spawned under
+    // rebuilt controllers would otherwise escape; their settles then no-op on the
+    // aborted signal).
+    this._susp?.abortControllers?.forEach((c) => c.abort())
+    this._susp?.abort?.abort()
+    this._statusBar?.dispose()
+    this._statusBar = null
+    disposeLedgerSurface() // LEDGER-SURFACE：台账 item / 周期随面板释放（重载后 init 可重建）
+    this._panel?.dispose()
+  }
+
+  // ─── Session (implementations in panel-session.mjs) ───
+
+  _ensureSlot() { return ensureSlot(this) }
+  _activeData() { return activeData(this) }
+  _activeHistory() { return activeHistory(this) }
+  _activeLines() { return activeLines(this) }
+  _saveLines(fullHistory, contextHistory, extra = {}, slotOverride) { return saveLines(this, fullHistory, contextHistory, extra, slotOverride) }
+  _loadModelPrefs() { return loadModelPrefs(this) }
+  _loadSession() { return loadSession(this) }
+  _loadOlder(before) { return loadOlder(this, before) }
+  async _newSession() { return newSession(this) }
+  async _deleteSession(slot) { return deleteSession(this, slot) }
+  _pushSessions() { return pushSessions(this) }
+  async _generateTitle(slotOverride) { return generateTitle(this, slotOverride) }
+  async _status() { return bootstrapStatus(this) }
+
+  // ─── Project (implementations in panel-project.mjs) ───
+
+  _projectInfo() { return projectInfo(this) }
+  _pushProject() { return pushProject(this) }
+  async _applyProjectSwitch(fsPath) { return applyProjectSwitch(this, fsPath) }
+  async _onProjectChanged() { return onProjectChanged(this) }
+  async _pickProject() { return pickProject(this) }
+
+  // ─── MCP (implementations in panel-mcp.mjs) ───
+
+  _pushMcpStatus() { return pushMcpStatus(this) }
+  async _reconnectMcp(name) { return reconnectMcp(this, name) }
+  _editMcp(name, config) { return editMcp(this, name, config) }
+  async _testMcp(name) { return testMcp(this, name) }
+
+  // ─── Settings ─────────────────────────────────
+
+  _providerStatus() { return providerStatus() }
+  async _saveProviderKey(name, key) { await saveProviderKey(name, key); this._pushStatus() }
+  async _saveCustomProvider(config) { await saveCustomProvider(config); this._pushStatus() }
+  async _deleteProviderKey(name) { await deleteProviderKey(name); this._pushStatus() }
+  _saveMcpServer(name, config) { return saveMcpServer(name, config) }
+  _deleteMcpServer(name) { return deleteMcpServer(name) }
+
+  async _setAutoApprove(value) {
+    this._autoApprove = value  // mid-turn source of truth for the permission gate
+    // Session-level persistence (CLI parity): autoApprove lives in the slot file shared
+    // with the CLI — NOT in VS Code settings.json. Workspace-scope overrides of the old
+    // `thincoder.autoApprove` setting are gone with it (the setting is removed).
+    try {
+      setSlotAutoApprove(_cwd(), this._ensureSlot(), value)
+    } catch { /* slot unwritable — the live flag still governs this turn */ }
+  }
+
+  /** Toggle plan mode (session-level, like autoApprove). Persists to the slot so the
+   *  toolbar button and the model's own plan tool stay in sync across turns. */
+  async _setPlanMode(value) {
+    try {
+      setSlotPlanMode(_cwd(), this._ensureSlot(), value)
+    } catch { /* slot unwritable — the flag still governs this turn */ }
+    this._panel?.webview.postMessage({ type: "planMode", active: value })
+  }
+
+  _pushStatus() {
+    pushStatus(this._panel)
+  }
+
+  /** Settings snapshot push WITHOUT the provider-model network probe (fullStatus).
+   *  Used for save acknowledgements — the panel already shows what the user typed;
+   *  a full re-probe would rebuild the settings panel and drop in-progress edits. */
+  _pushSettingsLight() {
+    // Snapshot-only (no network probe) — but the snapshot must be COMPLETE: providerStatus
+    // (per-provider proxy checkboxes revert without it) and shellCandidates WITH current
+    // (the webview nulls the shell value when current is missing).
+    pushStatus(this._panel)
+    this._panel?.webview.postMessage({ type: "agentSettings", settings: agentSettings(this._agentSettingsSession()) })
+    this._panel?.webview.postMessage({ type: "proxySettings", settings: proxySettings() })
+    this._panel?.webview.postMessage({ type: "websearchSettings", settings: websearchSettings() })
+    this._panel?.webview.postMessage({ type: "shellCandidates", candidates: shellCandidates(), current: loadRaw().shell ?? null })
+  }
+
+  _pushSettings() {
+    fullStatus(this._panel)
+    this._panel?.webview.postMessage({ type: "agentSettings", settings: agentSettings(this._agentSettingsSession()) })
+    this._panel?.webview.postMessage({ type: "proxySettings", settings: proxySettings() })
+    this._panel?.webview.postMessage({ type: "websearchSettings", settings: websearchSettings() })
+    this._panel?.webview.postMessage({ type: "shellCandidates", candidates: shellCandidates(), current: loadRaw().shell ?? null })
+    this._pushMcpStatus()
+    this._pushIndexStatus()
+  }
+
+  /** Session reference for the agentSettings snapshot: engineering/advisor.guard are
+   *  session-level (slot authority) — the ENG/GUARD buttons must reflect the session,
+   *  not global config. Unbound panel (no slot yet) → null → config fallback. */
+  _agentSettingsSession() {
+    try {
+      const slot = this._slot ?? this._ensureSlot()
+      return slot != null ? { cwd: _cwd(), slot } : null
+    } catch { return null }
+  }
+
+  // ─── Index (implementations in panel-index.mjs) ───
+
+  _pushIndexStatus() { return pushIndexStatus(this) }
+  async _atComplete(query, cwd, seq) { return atComplete(this, query, cwd, seq) }
+  async _saveEmbeddingConfig(config) { return saveEmbeddingConfig(this, config) }
+  async _maybePromptIndex() { return maybePromptIndex(this) }
+  async _buildIndex() { return buildIndex(this) }
+
+  // ─── Chat ─────────────────────────────────────
+
+  async _chat(text, modelOverride, reasoning, providerName, images) {
+    // §17 D-S4/D-S5（INPUT-LOCK-ASYNC C'——2026-09-09）：挂起会话活跃期消息走 driver 的
+    // pendingInput 单槽——挂起空闲（driver 纯等待）填槽 + 唤醒即开用户回合；busy（running
+    // 含 digest）由 routeUserTurn 上游拒收（本端只接挂起空闲——单槽语义——至多一条待交接，
+    // 绝不并发开独立回合（会从磁盘重载 lines 孤儿化后台池）。
+    const susp = this._susp
+    if (susp?.active) {
+      // 槽满（同事件循环竞态防御——driver 唤醒即消费，正常不可达）→ 拒收提示不覆盖不丢
+      if (susp.pendingInput.length > 0) {
+        vscode.window.showWarningMessage("ThinCoder: a task is running — wait for it to finish before sending.")
+        return
+      }
+      susp.pendingInput.push({ text, modelOverride, reasoning, providerName, images })
+      // 唤醒走 panel._suspWake 单槽（waitForSettleOrWake 在纯等待期注入；digest/回合执行期
+      // 为 null → no-op——driver 轮末 pendingInput 检查接走）。susp.wake 曾是死字段
+      // （2026-09-02 偏差修复 #4 已从 suspension.mjs 删除——唤醒槽单槽化至 _suspWake，
+      // 历史说明见 ARCHITECTURE.md「挂起唤醒断链修复」段）。
+      this._suspWake?.()
+      return
+    }
+    // §17 D-S2 释放窗口（2026-09-02 偏差修复 #2 + A2 修订 + INPUT-LOCK）：回合尾已登记
+    // 挂起（池仍 live——_turnState==="susp" 且会话尚未建立）——A2 后标题移入 finally 归位前
+    //（running——routeUserTurn 拒收），会话建立与 susp 广播同同步续段（零事件窗口）——
+    // 防御：无会话的 susp 态消息拒收（开并发独立回合 = 从磁盘重载 lines 孤儿化池 + abort
+    // 外回合 controller——AC-S2 竞态）。
+    if (this._turnState === "susp") {
+      vscode.window.showWarningMessage("ThinCoder: a task is running — wait for it to finish before sending.")
+      return
+    }
+    // C1（SESSION-FLOW-C F-C1a——turn 句柄化——修 H-B）：fire 语义不变（不 await——
+    // sendMessage/消息路由都不阻塞）；句柄挂 panel._turnHandle。保底 catch：回合 setup 期
+    // 异常（impl try 之前的抛点——ensureSlot/agent 绑定等）会跳过 impl 的 finally——UI 卡
+    // running——这里兜底 error + loading:false + 复位忙态（不变量：回合 promise 永不悬挂）。
+    // catch 内不再抛——派生 promise 恒 resolve——无 unhandled rejection 面。
+    const handle = runPanelChat(this, { text, modelOverride, reasoning, providerName, images })
+    this._turnHandle = handle
+    handle.catch((e) => {
+      console.error("[chat-panel] turn failed (F-C1a guard):", e?.message ?? e)
+      const rawMsg = (e && (e.message || String(e))) || "unknown turn error"
+      const errTextLine = rawMsg.split("\n")[0].replace(/https?:\/\/[^\s,)"']+/g, "[endpoint]")
+      this._publishTurnState("idle")
+      this._refreshStatus()
+      this._panel?.webview.postMessage({ type: "error", text: errTextLine, techInfo: rawMsg })
+      this._panel?.webview.postMessage({ type: "loading", loading: false })
+    })
+  }
+
+  // ─── HTML ─────────────────────────────────────
+
+  _html() {
+    let html = readFileSync(join(__dirname, "..", "..", "webview", "index.html"), "utf8")
+    const csp = this._panel.webview.cspSource
+    html = html.replace("__CSP__",
+      `default-src 'none'; style-src ${csp} 'unsafe-inline'; script-src ${csp} 'unsafe-inline'; img-src ${csp} https: data:; font-src ${csp}; connect-src ${csp};`)
+    html = html.replace("__CSS_BASE_URI__", this._panel.webview.asWebviewUri(vscode.Uri.file(join(__dirname, "..", "..", "webview", "base.css"))).toString())
+    html = html.replace("__CSS_CHAT_URI__", this._panel.webview.asWebviewUri(vscode.Uri.file(join(__dirname, "..", "..", "webview", "chat.css"))).toString())
+    html = html.replace("__CSS_CONTROLS_URI__", this._panel.webview.asWebviewUri(vscode.Uri.file(join(__dirname, "..", "..", "webview", "controls.css"))).toString())
+    html = html.replace("__CSS_SESSION_URI__", this._panel.webview.asWebviewUri(vscode.Uri.file(join(__dirname, "..", "..", "webview", "session.css"))).toString())
+    html = html.replace("__CSS_SETTINGS_URI__", this._panel.webview.asWebviewUri(vscode.Uri.file(join(__dirname, "..", "..", "webview", "settings.css"))).toString())
+    html = html.replace("__CHAT_URI__", this._panel.webview.asWebviewUri(vscode.Uri.file(join(__dirname, "..", "..", "webview", "chat.js"))).toString())
+    return html
+  }
+}

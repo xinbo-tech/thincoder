@@ -1,0 +1,468 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --fg: var(--vscode-editor-foreground, #d4d4d4);
+  --bg: var(--vscode-editor-background, #1e1e1e);
+  --border: var(--vscode-panel-border, #3c3c3c);
+  --input-bg: var(--vscode-input-background, #3c3c3c);
+  --input-fg: var(--vscode-input-foreground, #cccccc);
+  --btn-bg: var(--vscode-button-background, #007acc);
+  --btn-fg: var(--vscode-button-foreground, #ffffff);
+  --btn-hover: var(--vscode-button-hoverBackground, #1a8ad4);
+  --accent: var(--vscode-focusBorder, #007acc);
+  --tool-bg: var(--vscode-textBlockQuote-background, #2a2a2a);
+  --error-fg: var(--vscode-errorForeground, #f44747);
+  --msg-user-bg: var(--vscode-button-background, #007acc);
+  --msg-assistant-bg: var(--vscode-textBlockQuote-background, #2a2a2a);
+  /* overlay / surface — adapt to theme */
+  --hover-bg: rgba(255,255,255,0.08);
+  --hover-bg-strong: rgba(255,255,255,0.16);
+  --overlay: rgba(0,0,0,0.3);
+  --shadow: 0 4px 12px rgba(0,0,0,0.4);
+  /* syntax highlighting (dark defaults) */
+  --syn-kw: #569cd6;
+  --syn-str: #ce9178;
+  --syn-cmt: #6a9955;
+  --syn-num: #b5cea8;
+  --syn-type: #4ec9b0;
+  --syn-prop: #9cdcfe;
+  --syn-atrule: #d7ba7d;
+  /* diff colors */
+  --diff-add-bg: rgba(34,187,51,0.14);
+  --diff-add-fg: #a5d6a7;
+  --diff-del-bg: rgba(244,71,71,0.14);
+  --diff-del-fg: #ef9a9a;
+  /* semantic */
+  --green: #4ec9b0;
+  --yellow: #cca700;
+  --red: #e06c75;
+  --white: #ffffff;
+}
+
+body.vscode-light {
+  --hover-bg: rgba(0,0,0,0.06);
+  --hover-bg-strong: rgba(0,0,0,0.12);
+  --overlay: rgba(0,0,0,0.08);
+  --shadow: 0 4px 12px rgba(0,0,0,0.12);
+  --syn-kw: #0000ff;
+  --syn-str: #a31515;
+  --syn-cmt: #008000;
+  --syn-num: #098658;
+  --syn-type: #267f99;
+  --syn-prop: #795e26;
+  --syn-atrule: #af00db;
+  --diff-add-bg: rgba(16,137,62,0.12);
+  --diff-add-fg: #0d6b30;
+  --diff-del-bg: rgba(201,37,37,0.12);
+  --diff-del-fg: #b91a1a;
+  --green: #1a8a4a;
+  --yellow: #8a6d00;
+  --red: #d1242f;
+  --white: #1e1e1e;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--vscode-editor-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+  font-size: var(--vscode-editor-font-size, 14px);
+  color: var(--fg);
+  background: var(--bg);
+}
+
+/* ─── Layout ──────────────────────────────────── */
+
+#chat-container {
+  display: grid;
+  /* 2026-09-11 活动区回归（WEBVIEW.md §2/§12）垂直序：header(session-bar) /
+     #messages(1fr) / 活动区 #subagent-activity(auto) / #panels(goal/task——auto) /
+     输入区(#toolbar)。后三层均 auto，隐藏项不占高 → 消息区高 = 容器 − 活动区 −
+     面板 − 输入（grid 1fr 自动吸收）。 */
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+  height: 100%;
+  position: relative;
+}
+
+#messages {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 12px 12px;
+}
+
+/* 活动区（2026-09-11 回归——WEBVIEW.md §12.3 第 5/6 条）：live 块全程驻留；空区
+   隐藏零高（`:empty`——零显隐 JS——同 #panels 先例）；内容自适应、32vh 封顶 +
+   区内自滚（不与消息区互拉——overscroll-behavior: contain）。 */
+#subagent-activity {
+  max-height: 32vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 12px;
+}
+
+#subagent-activity:empty { display: none; }
+
+/* ─── Scroll-to-bottom button ─────────────────── */
+
+.scroll-bottom-btn {
+  position: absolute;
+  right: 16px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--vscode-button-secondaryBackground, rgba(255,255,255,0.08));
+  color: var(--fg);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  z-index: 5;
+}
+.scroll-bottom-btn.visible {
+  opacity: 0.8;
+  pointer-events: auto;
+}
+.scroll-bottom-btn.visible:hover { opacity: 1; }
+
+#toolbar {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+
+/* ─── Provider Banner ─────────────────────────── */
+
+.provider-banner {
+  padding: 5px 12px;
+  font-size: 11px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.provider-banner.ok {
+  background: var(--vscode-textBlockQuote-background, rgba(78,201,176,0.1));
+  color: var(--vscode-charts-green, #4ec9b0);
+}
+
+.provider-banner.warn {
+  background: var(--vscode-textBlockQuote-background, rgba(244,199,71,0.1));
+  color: var(--vscode-charts-yellow, #cca700);
+}
+
+.setup-btn {
+  padding: 1px 8px;
+  font-size: 11px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1.4;
+}
+
+.setup-btn:hover {
+  background: var(--hover-bg);
+}
+
+/* ─── Inline Permission Prompt ──────────────────── */
+
+.permission-prompt {
+  margin: 12px 0;
+  padding: 10px 14px;
+  border: 1px solid var(--vscode-inputValidation-warningBorder, rgba(204,167,0,0.35));
+  border-radius: 8px;
+  background: var(--vscode-inputValidation-warningBackground, rgba(204,167,0,0.06));
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+
+/* ─── Compression / digest status lines（CONTEXT-COMPACTION §7 D-C3 · WEBVIEW.md §7.4）── */
+
+.compress-status,
+.digest-status {
+  margin: 6px 0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: var(--vscode-editorWidget-background, rgba(128,128,128,0.08));
+  border: 1px solid var(--vscode-editorWidget-border, rgba(128,128,128,0.25));
+  font-size: 11px;
+  opacity: 0.85;
+  color: var(--vscode-foreground, inherit);
+}
+
+.compress-status.compress-done,
+.digest-status.digest-done {
+  background: var(--vscode-inputValidation-infoBackground, rgba(0,122,204,0.08));
+  border-color: var(--vscode-inputValidation-infoBorder, rgba(0,122,204,0.35));
+}
+
+.compress-status.compress-failed,
+.digest-status.digest-failed {
+  background: var(--vscode-inputValidation-errorBackground, rgba(255,0,0,0.08));
+  border-color: var(--vscode-inputValidation-errorBorder, rgba(255,0,0,0.35));
+  color: var(--vscode-errorForeground, #f14c4c);
+}
+
+/* §14 C-9/C-10（活动区收口批）：消化轮标签行 + turn-cap 行——每轮独立元素（跨轮漂移消除）；
+   cap 两档：auto = dim（同族观感）、stop = warn（部分消化——用户需知）。 */
+.digest-turn {
+  margin: 6px 0 0;
+  font-size: 11px;
+  opacity: 0.7;
+  color: var(--vscode-descriptionForeground, inherit);
+}
+
+.digest-cap {
+  margin: 6px 0;
+  font-size: 11px;
+  opacity: 0.75;
+  color: var(--vscode-descriptionForeground, inherit);
+}
+
+.digest-cap.digest-cap-stop {
+  opacity: 1;
+  color: var(--vscode-editorWarning-foreground, #cca700);
+}
+
+
+.permission-prompt-text {
+  color: var(--vscode-inputValidation-warningForeground, #cca700);
+  margin-bottom: 8px;
+  word-break: break-word;
+}
+
+.permission-prompt-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.perm-btn {
+  padding: 4px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  border: 1px solid;
+  transition: background 0.15s;
+}
+
+.perm-btn.deny {
+  background: transparent;
+  color: var(--red);
+  border-color: var(--red);
+}
+.perm-btn.deny:hover { background: color-mix(in srgb, var(--red) 15%, transparent); }
+
+.perm-btn.approve {
+  background: var(--green);
+  color: var(--bg);
+  border-color: var(--green);
+}
+.perm-btn.approve:hover { filter: brightness(1.1); }
+
+.perm-btn.approve-all {
+  background: transparent;
+  color: var(--green);
+  border-color: var(--green);
+}
+.perm-btn.approve-all:hover { background: color-mix(in srgb, var(--green) 15%, transparent); }
+
+/* ─── Inline Question Prompt (question tool) ───── */
+
+/* 字号统一 14px（修复注 #3——评审 #1 scoped 覆盖点写明）：card 文本继承此处 font-size。 */
+.question-card {
+  margin: 12px 0;
+  padding: 10px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  font-size: var(--vscode-editor-font-size, 14px);
+  line-height: 1.5;
+}
+
+/* Scoped 字号/字重覆盖（修复注 #3/#4）：.perm-btn/.question-input 自带字号（11px/12px）
+   不随 card 继承——逐一显式覆盖。全局基样式不动：.perm-btn 现消费点全在 question 卡内
+   （question.js 的 submit/option/cancel 三构造点——permission.js 弹窗用裸 .approve/.deny
+   不命中 .perm-btn，评审 #2 实证——就地改全局亦零副作用）；scoped 覆盖为防御性选择
+   （防未来复用漂移——实现批择一，注释说明）。 */
+.question-card .perm-btn {
+  font-size: var(--vscode-editor-font-size, 14px);
+  font-weight: 400; /* 粗体去（原 600） */
+}
+.question-card .question-input {
+  font-size: var(--vscode-editor-font-size, 14px);
+}
+
+.question-mark {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.question-text {
+  color: var(--fg);
+  margin-bottom: 8px;
+  word-break: break-word;
+  white-space: pre-wrap;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+/* 选项按钮成列（修复注 #1）：每按钮 width:100% + text-align:left——整行可点、左对齐
+   （CLI picker 形态趋同）。容器仅在带 options 时存在于 DOM（纯输入路径无——负断言）。 */
+.question-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.question-options .perm-btn {
+  width: 100%;
+  text-align: left;
+}
+
+/* 底部操作行（修复注 #2）：input（flex:1）+ submit + cancel——选项按钮已移入
+   .question-options 层——不再需要 flex-wrap（旧 wrap 正是选项参差换行的成因）。 */
+.question-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.question-input {
+  flex: 1;
+  min-width: 140px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--fg);
+  background: var(--vscode-input-background, transparent);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  outline: none;
+}
+.question-input:focus { border-color: var(--accent); }
+
+
+/* ─── Syntax highlighting tokens ─────────────────── */
+
+.tk-keyword  { color: var(--syn-kw); }
+.tk-string   { color: var(--syn-str); }
+.tk-comment  { color: var(--syn-cmt); font-style: italic; }
+.tk-number   { color: var(--syn-num); }
+.tk-type     { color: var(--syn-type); }
+.tk-property { color: var(--syn-prop); }
+.tk-atrule   { color: var(--syn-atrule); }
+.tk-class    { color: var(--syn-type); }
+.tk-id       { color: var(--syn-atrule); }
+
+/* ─── Code block copy button ─────────────────────── */
+
+.code-block {
+  position: relative;
+}
+.code-copy-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--overlay);
+  color: var(--fg);
+  opacity: 0.4;
+  cursor: pointer;
+  transition: opacity 0.15s, background 0.15s;
+}
+.code-copy-btn:hover { opacity: 1; background: var(--hover-bg-strong); }
+.code-copy-btn.copied { opacity: 1; color: var(--green); border-color: var(--green); }
+
+/* ─── Diff preview in permission prompts ──────────── */
+
+.diff-preview {
+  margin: 8px 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: var(--vscode-editor-font-family, "Consolas","Courier New",monospace);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.diff-header {
+  padding: 4px 10px;
+  font-size: 11px;
+  background: var(--hover-bg);
+  color: var(--fg);
+  opacity: 0.6;
+  border-bottom: 1px solid var(--border);
+}
+.diff-line {
+  padding: 1px 10px;
+  white-space: pre;
+  overflow-x: auto;
+}
+.diff-same  { color: var(--fg); opacity: 0.7; }
+.diff-add  { background: var(--diff-add-bg); color: var(--diff-add-fg); }
+.diff-del  { background: var(--diff-del-bg); color: var(--diff-del-fg); }
+.diff-prefix {
+  display: inline-block;
+  width: 16px;
+  opacity: 0.5;
+  user-select: none;
+}
+
+/* ─── Accessibility — keyboard focus ──────────── */
+
+/* Remove default focus outline for mouse users, show for keyboard */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Interactive custom elements need visible focus */
+.dropdown-item:focus-visible,
+.session-item:focus-visible,
+.tool-call-header:focus-visible,
+.permission-prompt button:focus-visible,
+.auto-confirm button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: var(--hover-bg-strong);
+}
+
+/* Status bar badges（子代理计数徽标已随行面板撤除——SESSION-ACTIVITY-REVISED 评审
+   #2——块随消息流内呈现无需 badge 开关——计数由 ⏳ 挂起段承担） */
+#goal-badge:focus-visible,
+#task-badge:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Screen-reader-only text */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  border: 0;
+}

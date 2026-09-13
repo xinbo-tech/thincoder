@@ -1,0 +1,168 @@
+/**
+ * verify-redesign.test.mjs — verifyTool gate semantics (VERIFY-REDESIGN.md).
+ *
+ * 2026-09-11 TEST-LIFECYCLE 扫① 削段：原 T-V9（guard 文案负向锚）删 + T-V10 裁为正向参数名
+ * 驻留锚（旧词组不复现类锚退役——现行守卫行为由集成场景 ① 与 T-V1~V6 覆盖）。
+ * 2026-09-12 PROSE-ANCHOR-RETIRE：T-V10 整删（读 src/prompts 常量子串 = 散文锚；判据见 CLI 侧设计档 TESTING.md §11）。
+ * 2026-09-12 收尾轮 9：整档 11 例 slow() 门控（每例真 git 子进程面——`runInterruptible("git", …)` ×2 命令 ×2 cwd 链；
+ * 观测 81–1649ms）；留快层 = T-V11（纯闸逻辑，2ms）。
+ *
+ * Covers T-V1..V6 of the design test table (VS Code side; T-V7 dual-end
+ * consistency is a cross-repo behavior asserted by the parent's full run):
+ *   T-V1 passed            → 放行
+ *   T-V2 failed            → 打回, _verifyPassed=false
+ *   T-V3 skipped + reason  → 放行
+ *   T-V4 skipped w/o reason→ 打回 (空跳过不允许)
+ *   T-V5 doc-only change   → 快路径跳过 (放行)
+ *   T-V6 rejection message → lists changed files + points at AGENTS.md
+ * Plus guard rails: a missing declaration rejects; an explicit failed on a
+ * doc-only change is respected.
+ *
+ * verify imports "vscode" → test/vscode-mock (getDiagnostics → []) — no real
+ * diagnostics, deterministic. Changed files are non-JS (skips the soft node
+ * --check hint) and live in an os.tmpdir temp dir (not a git repo → resolved
+ * via _touchedFiles only).
+ */
+import { test } from "node:test"
+import { slow } from "./slow.mjs"
+import assert from "node:assert/strict"
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { dirname, join } from "node:path"
+import { verifyTool } from "../src/agent-tools/verify.mjs"
+
+/** Build a throwaway agent + ctx with one changed source file already written. */
+function makeCtx(changedRel) {
+  const cwd = mkdtempSync(join(tmpdir(), "verify-redesign-"))
+  const files = [join(cwd, ...changedRel)]
+  for (const f of files) {
+    mkdirSync(dirname(f), { recursive: true })
+    writeFileSync(f, "export const x = 1\n")
+  }
+  const agent = {
+    _touchedFiles: files,
+    _tasks: [],
+    _verifiedThisRun: false,
+    _verifyPassed: undefined,
+  }
+  return { ctx: { agent, cwd }, cwd }
+}
+
+function cleanup(ctx) {
+  try { rmSync(ctx.cwd, { recursive: true, force: true }) } catch { /* ignore */ }
+}
+
+async function run(changedRel, verification) {
+  const { ctx, cwd } = makeCtx(changedRel)
+  try {
+    const out = await verifyTool.execute({ verification }, ctx)
+    return { out, passed: ctx.agent._verifyPassed, verified: ctx.agent._verifiedThisRun }
+  } finally {
+    cleanup({ cwd })
+  }
+}
+
+const SRC = ["src", "util.ts"] // non-JS, under src/ → a code change, not doc-only
+
+slow("T-V1 passed → 放行", async () => {
+  const { passed, verified, out } = await run(SRC, { status: "passed" })
+  assert.equal(verified, true)
+  assert.equal(passed, true)
+  assert.match(out, /Verification passed/)
+})
+
+slow("T-V2 failed → 打回 (_verifyPassed=false)", async () => {
+  const { passed, verified, out } = await run(SRC, { status: "failed" })
+  assert.equal(verified, true)
+  assert.equal(passed, false)
+  assert.match(out, /NOT VERIFIED/)
+})
+
+slow("T-V3 skipped + reason → 放行", async () => {
+  const { passed, out } = await run(SRC, { status: "skipped", summary: "项目无自动化测试" })
+  assert.equal(passed, true)
+  assert.match(out, /skipped with reason/)
+  assert.match(out, /项目无自动化测试/)
+})
+
+slow("T-V4 skipped without reason → 打回 (空跳过不允许)", async () => {
+  const { passed, out } = await run(SRC, { status: "skipped" })
+  assert.equal(passed, false)
+  assert.match(out, /NOT VERIFIED/)
+  // whitespace-only summary is still empty
+  const ws = await run(SRC, { status: "skipped", summary: "   " })
+  assert.equal(ws.passed, false)
+})
+
+slow("T-V5 doc-only change → 快路径跳过 (放行)", async () => {
+  const { passed, out } = await run(["README.md"], { status: "passed" })
+  assert.equal(passed, true)
+  assert.match(out, /Documentation-only/)
+})
+
+slow("T-V6 打回消息含改动文件 + 引导 AGENTS.md", async () => {
+  const { ctx, cwd } = makeCtx(SRC)
+  try {
+    const out = await verifyTool.execute({ verification: { status: "failed" } }, ctx)
+    // Lists the changed source file (absolute path) and references AGENTS.md
+    assert.match(out, /util\.ts/)
+    assert.match(out, /AGENTS\.md/)
+    assert.match(out, /Changed files:/)
+  } finally {
+    cleanup({ cwd })
+  }
+})
+
+slow("guard: missing declaration → 打回", async () => {
+  const { passed, out } = await run(SRC, undefined)
+  assert.equal(passed, false)
+  assert.match(out, /NOT VERIFIED/)
+  assert.match(out, /AGENTS\.md/)
+})
+
+slow("guard: invalid status → 打回", async () => {
+  const { passed } = await run(SRC, { status: "maybe" })
+  assert.equal(passed, false)
+})
+
+slow("guard: explicit failed on a doc-only change is still respected", async () => {
+  const { passed, out } = await run(["README.md"], { status: "failed" })
+  assert.equal(passed, false)
+  assert.match(out, /NOT VERIFIED/)
+})
+
+// ── 相 2（VERIFY-REDESIGN.md T-V8..V11）──
+
+slow("T-V8 doc-only 改动 + 显式 failed → 打回（双端同，G10）", async () => {
+  const { passed, out } = await run(["README.md"], { status: "failed" })
+  assert.equal(passed, false)
+  assert.match(out, /NOT VERIFIED/)
+})
+
+slow("T-V11b G11: rejection report surfaces the node --check syntax hint on changed .js", async () => {
+  const { passed, out } = await run(["src", "util.js"], { status: "skipped" }) // no summary → rejected
+  assert.equal(passed, false)
+  assert.match(out, /NOT VERIFIED/)
+  assert.match(out, /Syntax check \(advisory/)
+})
+
+
+test("T-V11 goal 门禁：mutated 未 verify → 拦截（G13）", async () => {
+  const { goalTool } = await import("../src/agent-tools/goal.mjs")
+  const mk = (mutated, verified) => ({
+    agent: {
+      _goal: { objective: "x", criteria: "c", status: "active", turnsUsed: 0 },
+      _mutatedThisRun: mutated,
+      _verifiedThisRun: verified,
+    },
+  })
+  // mutated 未 verify → 拦截（对齐 CLI goal.mjs:53）
+  const blocked = mk(true, false)
+  const bOut = await goalTool.execute({ action: "complete" }, { agent: blocked.agent })
+  assert.match(bOut, /verify has not run/)
+  assert.equal(blocked.agent._goal.status, "active")
+  // verified → 放行
+  const passed = mk(true, true)
+  const pOut = await goalTool.execute({ action: "complete" }, { agent: passed.agent })
+  assert.doesNotMatch(pOut, /verify has not run/)
+})

@@ -1,0 +1,186 @@
+/**
+ * eng-designer-role.test.mjs — eng-designer 角色 VSC 落地（ENGINEERING-MODE.md §2.15 D /
+ * §2.22.4 八处 · FR23 F2；用例 T57/T57b/T57c/T58 + 运行期三关）。
+ *
+ * 发现 #1 的教训：枚举/装配层落完**不等于角色能 spawn**——运行期有 fail-closed 白名单与三道门。
+ * 本档断言下沉到运行期：
+ *   ① 白名单放行 + 未知角色文案点名新角色；② 模式门第三门（非工程模式拒 designer）；
+ *   ③ 子代 spawn 门（designer 勘察 = explore-only）；④ 装配分支（batch_segment 在、advisor 不在、
+ *   `agent._batchDoc` 落到工具）；⑤ 角色 enum 含 designer；⑥ 场景表两行 + 人格槽位；
+ *   ⑦ webview 四处枚举；⑨ 勘察通道行为（explore 允 / 其它拒、勘察任务不含 Audit scope 块）。
+ * 测试缝 `ctx.runAgent` 驱动真实 execute 的放行面（零网络）。
+ */
+import { test, beforeEach, afterEach } from "node:test"
+import assert from "node:assert/strict"
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join, resolve } from "node:path"
+import { fileURLToPath } from "node:url"
+
+import { subagentTool, modeRoleField } from "../src/agent-tools/subagent.mjs"
+import { gateEngCoderSpawn } from "../src/agent-tools/subagent-async.mjs"
+import { setupAgentRun } from "../src/agent/setup.mjs"
+import { SCENARIO_SLOT_FILES, assemblePrompt } from "../src/prompt-overlays.mjs"
+import { setupWebview, installChatFixture } from "./helpers/webview-env.mjs"
+
+const REPO = resolve(fileURLToPath(import.meta.url), "..", "..")
+const read = (rel) => readFileSync(join(REPO, rel), "utf8")
+
+let cwd
+let wv
+beforeEach(() => {
+  cwd = mkdtempSync(join(tmpdir(), "eng-designer-")); stop.length = 0
+  wv = setupWebview()
+  installChatFixture()
+})
+afterEach(() => {
+  wv?.cleanup?.()
+  rmSync(cwd, { recursive: true, force: true })
+})
+
+const stop = []
+const provider = { name: "probe", model: "gpt-4o", apiKey: "k" }
+const batchFile = () => {
+  mkdirSync(join(cwd, "docs", "batches"), { recursive: true })
+  const abs = join(cwd, "docs", "batches", "b.md")
+  writeFileSync(abs, "# 批次\n\n## §1 讨论\n\n## §2 批次任务\n\n## §3 设计评审\n\n## §4 用户批准\n\n## §5 实施记录\n\n## §6 验证与收口\n")
+  return abs
+}
+const parentAgent = ({ engineering = true, role = null, depth = 0 } = {}) => ({
+  config: { agent: { engineering } }, cwd, _role: role, _depth: depth,
+  _asyncSubagents: new Map(), _asyncAdvisors: new Map(), _subIdCounter: 0, _engDesignTokens: new Map(),
+})
+const ctxFor = (parent, extra = {}) => ({
+  agent: parent, cwd, depth: parent._depth,
+  callbacks: { onSubagent: () => {}, onToolPanel: () => {} },
+  getAuto: () => false,
+  runAgent: async (p, c, input, callbacks, signal, flag, opts) => {
+    stop.push({ input, batchDoc: opts?.batchDoc ?? null })
+    return "Subagent report (stub)"
+  },
+  ...extra,
+})
+
+// ── T57 运行期三关 + 装配 ───────────────────────────────────────────────────
+test("T57 正常：工程模式 spawn eng-designer 放行（白名单 + 模式门 + 子代门）", async () => {
+  batchFile()
+  const parent = parentAgent()
+  await subagentTool.execute({ task: "写批次 §2", role: "eng-designer", batchDoc: "docs/batches/b.md", async: false }, ctxFor(parent))
+  assert.equal(stop.length, 1, "白名单/模式门/子代门全过 → 真进 runAgent")
+  assert.ok(!parent._engAuditSpawns, "designer 勘察不占审计预算（返回 null——不计审计尝试）")
+})
+
+test("T57 错误：未知角色文案点名新角色（漏改则报错信息说谎）", async () => {
+  const parent = parentAgent()
+  await assert.rejects(
+    () => subagentTool.execute({ task: "x", role: "eng-architect", async: false }, ctxFor(parent)),
+    (e) => /Valid roles: explore, plan, coder, eng-coder, eng-designer/.test(e.message),
+    "白名单错误文案列举含 eng-designer",
+  )
+})
+
+test("T57 边界：角色 enum（工程模式含 designer / 普通模式不含）", () => {
+  const eng = modeRoleField(true).role.enum
+  assert.ok(eng.includes("eng-designer"), "工程模式 enum 含 eng-designer")
+  assert.ok(!modeRoleField(false).role.enum.includes("eng-designer"), "普通模式 enum 不含（模式互斥）")
+  assert.match(modeRoleField(true).suffix, /eng-designer/, "suffix 指向新角色（模型可见引导）")
+})
+
+test("T57 正常：装配分支——batch_segment 在、advisor 不在、绑定落到工具（§2.22.4 ④/⑨）", async () => {
+  const abs = batchFile()
+  const run = await setupAgentRun({
+    provider, cwd, input: "task", depth: 1, role: "eng-designer", getAuto: () => false,
+    opts: { engineering: true, engState: { enabled: true }, batchDoc: abs },
+  })
+  assert.equal(run.agent._batchDoc, abs, "spawn 绑定 → agent._batchDoc")
+  assert.ok(run.toolByName.has("batch_segment"), "designer 挂 batch_segment（§2 写通道）")
+  assert.ok(!run.toolByName.has("advisor"), "designer 不挂 advisor（设计师不发起评审）")
+  assert.ok(run.toolByName.has("subagent"), "勘察通道工具在（explore-only 受限变体）")
+  // 挂载的工具真能写进绑定的档（绑定不是摆设）
+  await run.toolByName.get("batch_segment").execute({ segment: "§2", text: "### 本批任务" }, { agent: run.agent, cwd })
+  assert.ok(readFileSync(abs, "utf8").includes("### 本批任务"), "designer 工具写 §2 落到绑定档")
+  // 受限变体的 schema 面：explore-only + 无 batchDoc/async/action
+  const props = run.toolByName.get("subagent").parameters.properties
+  assert.deepEqual(props.role.enum, ["explore"], "勘察通道 role 仅 explore")
+  assert.ok(!("async" in props) && !("action" in props) && !("batchDoc" in props), "受限变体 delete 清单（含 batchDoc）")
+})
+
+test("T57 零回归：eng-coder 装配面不变（advisor/verify 在，batch_segment 仍挂）", async () => {
+  const abs = batchFile()
+  const run = await setupAgentRun({
+    provider, cwd, input: "task", depth: 1, role: "eng-coder", getAuto: () => false,
+    opts: { engineering: true, engState: { enabled: true }, batchDoc: abs },
+  })
+  for (const t of ["advisor", "verify", "batch_segment", "subagent"]) assert.ok(run.toolByName.has(t), `eng-coder 工具：${t}`)
+  assert.equal(run.agent._batchDoc, abs, "eng-coder 绑定同形")
+})
+
+test("T57 边界：场景表（不静默回退）+ 人格槽位 + 纪律槽", () => {
+  assert.deepEqual(SCENARIO_SLOT_FILES["eng-designer"], ["persona-eng-designer.md", "common.md", "discipline-engineering.md"], "designer 场景已登记（槽序 persona→common→discipline）")
+  const { prompt, warnings } = assemblePrompt("eng-designer")
+  assert.ok(prompt.length > 0, "prompt 非空")
+  // 人格槽文件由提示词面（面②）交付——落地前唯一允许的警告 = 该槽文件缺失（不误报其他槽）
+  assert.ok(
+    warnings.length === 0 || (warnings.length === 1 && warnings[0].includes("persona-eng-designer.md")),
+    `warnings 只可能是人格槽缺失：${JSON.stringify(warnings)}`,
+  )
+})
+
+// ── T57b 模式门 + 子代门 ────────────────────────────────────────────────────
+test("T57b 错误：①非工程模式 spawn designer 拒（文案含角色名，不与既有模式门文案撞车）", async () => {
+  const parent = parentAgent({ engineering: false })
+  const err = await subagentTool.execute({ task: "写设计档", role: "eng-designer", batchDoc: "docs/batches/b.md", async: false }, ctxFor(parent))
+    .then(() => null, (e) => e)
+  assert.match(err.message, /Engineering mode is not active/, "同族前缀（与 eng-coder 门同族）")
+  assert.match(err.message, /role='eng-designer'/, "点名实际角色（不误导）")
+  assert.notEqual(err.message, "Engineering mode: use role='eng-coder' for implementation tasks.", "不撞 generic 模式门文案")
+  assert.equal(stop.length, 0, "拒在装配之前（未进 runAgent）")
+})
+
+test("T57b 错误：②designer 子代 spawn 非 explore 拒（受限通道 explore-only）", async () => {
+  const parent = parentAgent({ role: "eng-designer", depth: 1 })
+  for (const role of ["plan", "eng-coder", "coder"]) {
+    const err = await subagentTool.execute({ task: "x", role, async: false }, ctxFor(parent)).then(() => null, (e) => e)
+    assert.match(err.message, /may only spawn role='explore'/, `${role} → 拒`)
+    assert.match(err.message, /eng-designer subagents/, "文案点名父角色（designer 不被误导为审计语义）")
+  }
+  assert.equal(stop.length, 0, "三个非法子代均未进 runAgent")
+})
+
+// ── T57c 勘察通道行为 ──────────────────────────────────────────────────────
+test("T57c 正常：designer 内 spawn explore 允（勘察报告拿到）且不含 Audit scope 块", async () => {
+  const parent = parentAgent({ role: "eng-designer", depth: 1 })
+  await subagentTool.execute({ task: "勘察现状", role: "explore", async: false }, ctxFor(parent))
+  assert.equal(stop.length, 1, "designer 勘察放行")
+  assert.ok(!stop[0].input.includes("Audit scope"), "勘察任务不注入审计范围块（设计师勘察 ≠ 审计）")
+  assert.equal(gateEngCoderSpawn(parent, 1, "explore", false), null, "勘察路径返回 null（非审计——不计数）")
+})
+
+test("T57c 错误：designer 内 spawn eng-coder/plan 拒（受限变体只暴露 explore）", () => {
+  const parent = parentAgent({ role: "eng-designer", depth: 1 })
+  for (const role of ["eng-coder", "plan", "coder"]) {
+    assert.throws(() => gateEngCoderSpawn(parent, 1, role, false), /may only spawn role='explore'/, `${role} 拒`)
+  }
+  assert.throws(() => gateEngCoderSpawn(parent, 1, "explore", true), /sync-only/, "async 勘察拒（子代同步）")
+  assert.equal(parent._engAuditSpawns, undefined, "勘察不计审计预算")
+  assert.equal(gateEngCoderSpawn(parent, 0, "plan", false), null, "非子代理上下文不加限制（主 agent 面零变更）")
+})
+
+// ── T58 webview 四处枚举（2026-09-11 扫① 改挂行为面）───────────────────────
+// 原 5 条源码 regex 锚删——settings 面改断言渲染产物（角色卡槽位 id，settings-models.mountModelMenus
+// 挂载的同 id 槽位）+ 活动面改断言频道建块（role 入族行为）——契约留在行为面，不锁源码形态。
+test("T58 行为面：eng-designer 在面板/活动面真实可达（角色卡槽位 + 频道建块）", async () => {
+  // ① settings 面：角色卡渲染 eng-designer 子模型槽
+  const { agentCardHtml } = await import("../webview/settings-agent.js")
+  const { SS } = await import("../webview/settings-state.js")
+  SS.agentSettings = {}
+  const html = agentCardHtml()
+  assert.match(html, /id="submodel-slot-eng-designer"/, "角色卡渲染 eng-designer 槽位（UI 面真实可达）")
+  // ② 活动面：eng-designer 频道消息建块（webview 频道 regex 行为）
+  const state = await import("../webview/state.js")
+  const activity = await import("../webview/activity.js")
+  state.ctx.messagesEl.replaceChildren()
+  state.S._subBlocks.clear()
+  activity.applySubagentStatus({ type: "subagent", status: "started", role: "eng-designer", id: 5, pool: true, model: "m" })
+  assert.ok(state.S._subBlocks.get("sub:eng-designer#5"), "eng-designer 频道建块（role 入族——频道 regex 行为）")
+})

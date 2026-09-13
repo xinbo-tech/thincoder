@@ -1,0 +1,16 @@
+.vscode/**
+.vscode-test/**
+node_modules/**
+.gitignore
+.git/**
+test/**
+docs/**
+.cursor/**
+.github/**
+.thincoder/**
+.thincoder-*
+*.txt
+*.vsix
+AGENTS.md
+package-lock.json
+assets/candidates/**

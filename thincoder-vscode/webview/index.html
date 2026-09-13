@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="__CSP__">
+  <link rel="stylesheet" href="__CSS_BASE_URI__">
+  <link rel="stylesheet" href="__CSS_CHAT_URI__">
+  <link rel="stylesheet" href="__CSS_CONTROLS_URI__">
+  <link rel="stylesheet" href="__CSS_SESSION_URI__">
+  <link rel="stylesheet" href="__CSS_SETTINGS_URI__">
+</head>
+<body>
+  <div id="chat-container" role="main">
+    <div id="session-bar" role="navigation" aria-label="Session navigation">
+      <button id="project-btn" class="project-btn" title="Current project" aria-label="Current project" style="display:none">📁</button>
+      <div id="session-selector" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox" aria-label="Select session">
+        <span id="session-title">Session 1</span>
+        <span id="session-arrow" aria-hidden="true">▼</span>
+        <div id="session-dropdown" role="listbox" style="display:none"></div>
+      </div>
+      <button id="new-session-btn" title="New Session" aria-label="New Session">+</button>
+    </div>
+    <div id="messages" role="log" aria-label="Conversation"></div>
+    <div id="subagent-activity" role="region" aria-label="Subagent activity"></div>
+    <div id="panels">
+      <div id="goal-panel" role="region" aria-label="Goal" style="display:none"></div>
+      <div id="task-panel" role="region" aria-label="Tasks" style="display:none"></div>
+    </div>
+    <div id="toolbar">
+      <div id="status-line" role="status" aria-live="polite" aria-atomic="true"></div>
+      <div id="at-dropdown" class="dropdown" role="listbox" aria-label="File suggestions" style="display:none"></div>
+      <div id="input-row">
+        <input type="file" id="file-input" accept="image/*" multiple style="display:none">
+        <textarea id="input" rows="1" placeholder="Ask ThinCoder... (Shift+Enter for new line)" aria-label="Message input"></textarea>
+        <button id="attach-btn" title="Attach image" aria-label="Attach image">Attach</button>
+        <button id="send-btn" title="Send (Enter)" aria-label="Send message"></button>
+        <button id="abort-btn" title="Stop" aria-label="Stop generation" style="display:none">Stop</button>
+      </div>
+      <div id="paste-bar" style="display:none">
+        <span id="paste-badge" role="list" aria-label="Attached images"></span>
+      </div>
+      <div id="controls-row">
+        <button id="model-btn" class="ctrl-btn" title="Change model" aria-label="Change model" aria-haspopup="listbox">...</button>
+        <button id="reasoning-btn" class="ctrl-btn active" title="Reasoning effort" aria-label="Reasoning effort" aria-haspopup="listbox">max</button>
+        <button id="auto-btn" class="ctrl-btn" title="Auto-approve tools" aria-label="Toggle auto-approve">AUTO</button>
+        <button id="advisor-btn" class="ctrl-btn" title="Advisor review" aria-label="Toggle advisor review">ADVISOR</button>
+        <button id="eng-btn" class="ctrl-btn" title="Engineering mode" aria-label="Toggle engineering mode">ENG</button>
+        <button id="plan-btn" class="ctrl-btn" title="Plan mode (read-only exploration)" aria-label="Toggle plan mode">PLAN</button>
+        <button id="settings-btn" class="ctrl-btn" title="Settings" aria-label="Open settings">⚙</button>
+        <div id="model-dropdown" class="dropdown" role="listbox" aria-label="Model list" style="display:none"></div>
+        <div id="reasoning-dropdown" class="dropdown" role="listbox" aria-label="Reasoning levels" style="display:none"></div>
+      </div>
+    </div>
+    <div id="settings-panel" role="dialog" aria-label="Settings" aria-hidden="true" style="display:none">
+      <div class="panel-header">
+        <h3>Settings</h3>
+        <button id="settings-close" class="close-btn" aria-label="Close settings">✕</button>
+      </div>
+      <div class="panel-body" id="settings-body"></div>
+    </div>
+    <!-- First-run onboarding: shown when no provider has a key configured -->
+    <div id="welcome-panel" role="dialog" aria-label="Welcome" aria-hidden="true" style="display:none">
+      <div class="welcome-inner">
+        <h2 id="welcome-heading"></h2>
+        <p id="welcome-text"></p>
+        <div class="key-field">
+          <label id="welcome-provider-label" for="welcome-provider"></label>
+          <select id="welcome-provider"></select>
+        </div>
+        <div class="key-field">
+          <label id="welcome-key-label" for="welcome-key"></label>
+          <input id="welcome-key" type="password" placeholder="sk-..." autocomplete="off">
+        </div>
+        <div class="welcome-actions">
+          <button id="welcome-save-btn" class="save-btn"></button>
+          <button id="welcome-skip-btn" class="key-btn"></button>
+          <button id="welcome-settings-btn" class="key-btn"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="__CHAT_URI__"></script>
+</body>
+</html>

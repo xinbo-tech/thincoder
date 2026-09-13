@@ -1,0 +1,131 @@
+{
+  "name": "thincoder-vscode",
+  "displayName": "ThinCoder",
+  "version": "0.9.2",
+  "description": "ThinCoder AI coding assistant — prompts-driven, zero bloat",
+  "publisher": "xinbo-tech",
+  "license": "MIT",
+  "icon": "assets/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xinbo-tech/thincoder-vscode.git"
+  },
+  "homepage": "https://github.com/xinbo-tech/thincoder-vscode",
+  "bugs": {
+    "url": "https://github.com/xinbo-tech/thincoder-vscode/issues"
+  },
+  "categories": [
+    "Machine Learning",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "ai",
+    "coding agent",
+    "assistant",
+    "chat",
+    "agent"
+  ],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "type": "module",
+  "main": "./extension.mjs",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "thincoder",
+          "title": "ThinCoder",
+          "icon": "$(hubot)"
+        }
+      ]
+    },
+    "views": {
+      "thincoder": [
+        {
+          "type": "webview",
+          "id": "thincoder.chat",
+          "name": "Chat"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "thincoder.openChat",
+        "title": "ThinCoder: Open Chat"
+      },
+      {
+        "command": "thincoder.sendMessage",
+        "title": "ThinCoder: Send Message"
+      },
+      {
+        "command": "thincoder.setup",
+        "title": "ThinCoder: Setup Provider & API Key"
+      },
+      {
+        "command": "thincoder.askSelection",
+        "title": "Ask ThinCoder"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "thincoder.askSelection",
+          "when": "editorHasSelection",
+          "group": "navigation"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "thincoder.openChat",
+        "key": "ctrl+alt+t",
+        "mac": "cmd+alt+t"
+      }
+    ],
+    "configuration": {
+      "title": "ThinCoder",
+      "properties": {
+        "thincoder.providers": {
+          "type": "object",
+          "default": {},
+          "order": 1,
+          "markdownDescription": "# Providers (legacy — migrated automatically)\nProvider configuration now lives in `~/.thincoder/config.json`, shared with the CLI. On first activation any keys/providers stored here (and in SecretStorage) are migrated into that file and this setting is cleared. Use the in-panel Settings (⚙) or edit `~/.thincoder/config.json` directly.",
+          "deprecationMessage": "Provider config is stored in ~/.thincoder/config.json (shared with the CLI). This setting is only read once for migration."
+        },
+        "thincoder.stopTrace": {
+          "type": "boolean",
+          "default": false,
+          "description": "Trace Stop/abort propagation hops to the \"ThinCoder Stop Trace\" output channel (latency debugging)."
+        },
+        "thincoder.project.followActiveEditor": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "In multi-root workspaces, automatically switch the **current project** to the folder of the active editor. Sessions, search index, and agent working directory follow the switch. (Never switches while a task is running.)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run lint && npm run doc:check && npm run test:full && npm run test:integration",
+    "package": "vsce package",
+    "publish": "vsce publish",
+    "publish:ovsx": "ovsx publish",
+    "publish:all": "node scripts/publish-all.mjs",
+    "test": "node test/run-fast.mjs",
+    "test:full": "node test/run-full.mjs",
+    "test:integration": "node test/run-integration.mjs",
+    "lint": "node scripts/check-syntax.mjs",
+    "doc:check": "node scripts/check-doc-anchors.mjs --strict"
+  },
+  "devDependencies": {
+    "@happy-dom/global-registrator": "^20.11.2",
+    "@vscode/vsce": "^3.4.0",
+    "ovsx": "^1.1.1",
+    "vscode": "file:test/vscode-mock"
+  }
+}
