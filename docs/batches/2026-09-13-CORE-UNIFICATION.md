@@ -1992,5 +1992,53 @@ VERDICT: pass
 **须裁定（本轮唯一问题）**：D1 / D2 取「**保留**（⇒ 视为 §4.3.3 增列 2 类站点排除，K2 / K3 判据同步扩）」还是「**照字面全替**（⇒ 接受 51 处机检记录 + 2 处规则描述被改成假陈述 / 自毁形态）」？
 **本轮建议 = 保留**（依据 = 设计自身 D5 + §4 档头「规则描述不写裸 token」原则 + §1:320 同族先例——三处同源）。裁定后下一轮：`node sweep.mjs --root . --apply`（保留态）或 `--apply --literal`（字面态）⇒ 复跑 K1–K8。
 
+### 实施轮 2：目录改名子批（2026-09-13 · eng-coder）——**环境阻断 · 已回退（仓内净零改动）**
+
+**段位**：改名子批（S1 / S2 / S3 零触碰）。**终态 = stalled**（仓内净零改动、未 commit）。
+审计轮 0 · advisor 代码评审轮 0（无交付物可审）。
+
+**裁定遵循**：D1 / D2 = **保留**（本档 §1）⇒ 扫替按**站点排除第 6 / 7 类**实现（默认态；**不加 `--literal`**）。
+
+**执行与结果**
+
+| 步 | 动作 | 结果 |
+|---|---|---|
+| 1a | `git mv thincoder thincoder-cli` | **成功**（562 档重命名，保历史） |
+| 1b | `git mv core thincoder-core` | **失败**（`renaming 'core' failed: Permission denied`） |
+| — | 回退 1a（`git mv thincoder-cli thincoder`） | **成功** ⇒ 仓内净零改动（`git status` 干净） |
+| 2–6 | 扫替 / 类 C 5 处 / 折行 / commit | **未做**——1b 未成；半改名态会破 `check-ledger` 的跨目录 import，故必须整体回退 |
+
+**阻断根因（实测取证——非推断）**
+
+1. **`core` 被一个不带 `FILE_SHARE_DELETE` 的句柄占住**：`CreateFileW(core, GENERIC_READ, share=0)` → **err 32（ERROR_SHARING_VIOLATION）**；
+   `share=FILE_SHARE_DELETE` → err 32；`share=FILE_SHARE_READ` → OK。**对照组** `docs` / `thincoder-cli` 的 `share=0` → **OK** ⇒ 占用为 `core` 特有。
+2. **非 cwd 占用**：全进程 PEB-cwd 扫描 ⇒ **无任何进程 cwd 落在 `core`**。
+3. **非文件占用**：Restart Manager 注册 `core` 下全部 **46** 档 ⇒ **0 个占用者** ⇒ 占用在**目录对象**层（watch / 枚举类句柄）。
+4. **编辑器持树内目录句柄**（全系统句柄枚举——ObjectType=File ∧ GrantedAccess ⊇ `FILE_LIST_DIRECTORY|SYNCHRONIZE`）：
+   命中 **Code.exe（pid 12060）** 持 `…\teamcode\thincoder\.git` · `…\teamcode\thincoder\core\advisor` · `…\teamcode\thincoder-vscode\.git` · `…\teamcode\thincoder.com\.git`。
+5. **与目标名无关**：`ren core coreX` 同失败；`\\?\` 长路径前缀亦失败；重试 **70+ 次 / 逾 12 分钟**（含 3 分钟连续窗口）**全败**。
+
+**结论 / 上报**：设计档 §4.8.3 ④ 的处置（重试 → **失败即停下上报**）触发。
+§4.8.1 前置①「本树无其他活动实例」**不成立** —— 设计期以「node 进程数 / `peer_instances`」判前置，**测不到编辑器持有的目录句柄**
+（**收正项**：前置判法须加**目标目录独占打开 / `share=0` 探测**——本次实测即以此判出占用）。
+
+**解阻建议（交父侧 / 用户）**：关闭编辑器内 `core/` 子树（尤 `core/advisor/**`）的打开页签与资源管理器展开节点，或 **Reload Window**
+（放下 watcher 句柄——**注意 Reload 会结束本会话**，请父侧先行安排），或改在**编辑器外终端**执行；解阻后本轮 1b–6 可原样重放。
+
+**已就绪未落笔**（下轮可直取）：仓外一次性脚本 `d:\teamcode\.thincoder\tmp\sweep.mjs`。本轮**就地收正两处**：
+① §4.3.3 第 2 / 3 项站点改**产品前缀无关**匹配（`thincoder/` ∥ `thincoder-cli/`）—— 否则 §4.2「先改名后扫替」会使该两处排除**静默失效**（S2 / S3 被扫 = 真陈述改成错陈述）；
+② 新增 `--out <dir>` 镜像态，供 K3「脚本产出子集逐字节」取证。保留态 = 默认态。
+
+**决策透明表（实现决定——设计档未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 站点排除做成「产品前缀无关」匹配 | §4.3.3 第 2 / 3 项的**文件身份**须跨改名存活；§4.2 明定先改名后扫替 ⇒ 纯字面路径比较必失效 |
+| 2 | 回退 1a 而非留半改名态 | 半改名态破 `scripts/check-ledger.mjs:40` 的跨目录 import ⇒ 仓内转红；「一笔改动集」不宜留半成品 |
+| 3 | 不关闭他进程句柄（虽已定位编辑器持句柄） | 关闭他进程句柄属**越权破坏性动作**（可崩编辑器 / 宿主会话）⇒停下上报，不自行处置 |
+
+**复跑读数（回退后 · 证明基线完好）**：`doc-anchors` exit 0 · `check-doc-width` OK（306 档）· `check-ledger` 0 处违规 ·
+`node --test`（cwd = 核）**49 / 49** · `git status` 干净。
+
 ## §6 验证与收口（父代理）
 
