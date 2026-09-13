@@ -126,16 +126,20 @@ export const advisorTool = {
     // §11.2 (R13 — ruling ②-3 A): async gate. Depth-0 defaults to the
     // background pool; depth>0 (eng-coder internal self-review) is ALWAYS sync —
     // an explicit async:true there is rejected, the default never flips.
-    const depth = ctx?.depth
-    if (args.async === true && depth !== 0) {
+    // depth 显式校验（归一形态——判定单点：`depth` 取一次 + `asyncRequested` 显式布尔，
+    // 判定表与原逐值等价）：
+    //   depth 0 + 未传/true ⇒ 异步（本层默认）/ depth 0 + false ⇒ 同步；
+    //   depth>0（或直调方无 depth） + 显式 true ⇒ 拒；其余 ⇒ 同步。
+    // 「无 depth」= 无 dispatch 上下文的直调方（测试/legacy）——按同步处理。
+    const depth = ctx?.depth ?? null
+    const asyncRequested = args.async === true
+    if (asyncRequested && depth !== 0) {
       // 拒发登记（与 cap/池满拒同款）：评审未跑——不置 called/不耗轮次（record-results
       // 的 REFUSED 契约——advisor 评审发现 #1：拒发不得静默满足 guard）。
       if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
       return "Advisor: async reviews are only available at depth 0 — the top-level session owns the background pool (AGENT-LOOP.md §11.2); inside a child (eng-coder self-review) reviews run synchronously. Call advisor again without async:true (or with async:false)."
     }
-    const isAsync = args.async === true || (depth === 0 && args.async !== false)
-    // (ctx.depth undefined = direct callers/tests without a dispatch context —
-    // legacy sync semantics.)
+    const isAsync = asyncRequested || (depth === 0 && args.async !== false)
 
     // Per-review instance resolution (§11.2 ③ — ruling ②-5 A): fix rounds
     // continue the same reviewId (design = the doc-set instance's designId —

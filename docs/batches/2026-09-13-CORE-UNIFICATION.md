@@ -2015,6 +2015,81 @@
 2. copy 面 dest 门禁扩面：工作树实见在途实现——其设计面登记（§2.13.5 补正清单 / 读数再改判）归其落轮；本档按交付态未落该扩面。
 3. 超软线档拆分计划（§2.8.1 覆盖口径在案——另轮）。
 
+### 设计面小收正轮 · `_asyncWaiters` 并入 + 同族全扫（2026-09-14 · eng-designer）
+
+**段位**：当前段 = S2 之前（设计面补正）；S2 / S3 动作零执行。本轮**只改设计档**——不写代码、不动 `thincoder-core/**`、未 commit（父侧统一）、未发起评审、未碰台账。**核 / 两产品零改动**（见「实核发现」3）。
+
+**依据** = 父侧裁定（`_asyncWaiters` = **并入**）+ 父侧派单 4 件——逐条先实核再落（坐标以核内现实为准）。
+
+**本批条目（覆盖面——供三方条目一致对账）**
+
+| # | 条目 | 设计档落点 | 状态 |
+|---|---|---|---|
+| 1 | §2.3 载体字段集 **7 款 → 8 款**：补 `_asyncWaiters`（唤醒栓注册表——容器类型 = **数组**；注册 `thincoder-core/agent/suspension.mjs:133` · 摘除同档 `:121-122` · 兑现 `thincoder-core/agent-tools/async-settle.mjs:270`——回写义务承「首用单点 · 同步落容器 · 两径命中同一容器」口径） | `docs/design/AGENT-LOOP.md` §2.3（carrier 行 :79 · 字段集 :91 · 回写义务 :92 · 新增 :94-95） | 已落 |
+| 2 | 「不预置载体字段」夹具范畴（全空缺枚举）+ VSC 绑定不变式同步扩 **8 字段** | 同档 §2.3（不变式 :98 · 验收点 2 :110） | 已落 |
+| 3 | 同族全核实扫（判据 =「跨模块裸访问的共享容器 / 注册表」）——并入 / 同类形 / 非同类逐项列（见下「同族扫描表」） | 报告 + 本段 | 已扫 |
+| 4 | 变更记录各档一行 | `AGENT-LOOP.md` :152 · `CORE-UNIFICATION.md` :1169 | 已落 |
+
+**同族扫描表**（全核 `.mjs` 非测试档 `对象._字段` 裸访问面实扫 · 2026-09-14）
+
+判据（三条全中 ⇒ 同类）：① 跨模块裸访问（核内 ≥2 模块直接 `对象._字段` 读写）② 共享容器 / 注册表（或跨模块分流标志）③ VSC 跨 run 存活面（现役实现为 history 载体 / S2 后须跨 run 存活——错过绑定即断裂）。
+
+**A. 并入（本批——第 8 款）**
+
+| 字段 | 容器 | 核内访问面 | VSC 面 |
+|---|---|---|---|
+| `_asyncWaiters` | 数组 | `agent/suspension.mjs:133`（注册）· `:121-122`（摘除）· `agent-tools/async-settle.mjs:270`（兑现） | VSC 现役零对位（新统一机制）；S2 按绑定不变式（run 起始补建 + 绑） |
+
+**B. 同类形（本轮新发现——超派单口径，待父侧裁定是否并入 8 → 9 / 10）**
+
+| 字段 | 容器 | 核内访问面（实核） | VSC 现役 history 载体证据 |
+|---|---|---|---|
+| `_advisorRuns` | Map（评审实例注册表） | `agent.mjs:73` · `agent-tools/advisor-async.mjs:66-68,73,83,336` · `agent-tools/eng.mjs:57,75` | `thincoder-vscode/src/agent-tools/advisor-async.mjs:64-72`（`holder = parent.history ?? parent`——注释「跨 runAgent 存活——agent per-run 重建」）· `advisor.mjs:115` |
+| `_mutLog`（VSC 对位名 `_fileMutEvents`——名差实核） | 数组（≤200 环） | `agent-tools/advisor-settle.mjs:46-47`（写）· `:58`（读）· `agent-tools/escalate-async.mjs:47`（读） | `thincoder-vscode/src/agent-tools/advisor-async.mjs:83-85,118,257` · `subagent-escalate-async.mjs:51,175-176`（同经 `parent.history ?? parent`） |
+
+**C. 非同类（附理由——不中判据）**
+
+| 组 | 字段（代表） | 理由 |
+|---|---|---|
+| 已裁保留 | `_subAgentCounter` | ① 标量发号器（非容器）；已明文「载体 = agent 本体」+ `poolMax` 兜底（上轮结论保留） |
+| 标量 / 标志 / 信号 | `_asyncSettleSeq` · `_sessionSignal` · `_inAutoTurn` · `_mutationSeq` · `_consultIdCounter` 等 | ② 非容器（信号 / 计数 / 布尔）；生命周期 = 单链 / 单 run（`_sessionSignal` 写入方在端侧） |
+| 条目级 | `_inPending` · `_settle` · `_settleSeq` · `_capturedOutput` | ①② 挂 entry 对象（非载体字段）、标记非容器 |
+| 槽 / 持久化面承载 | `_engDesignTokens` · `_pendingReminders` · `_tasks` / `goal` | ③ 跨 run 由槽 hydrate / reconcile / session 存取承载（`token-ttl.mjs` · `session.mjs:132,300` · VSC `agent-state.mjs:103-104`）——非 history 绑定面 |
+| run / 回合内生命周期 | `_touchedFiles` · `_inflightTools` · `_peerWritten` · `_pendingTimers` · guard 标量族（`_mutatedThisRun` 等） | ③ 每次 run 起始复位 / 回合尾清空（VSC §11.2 A 类同口径） |
+| 工具调用生命周期 | `_advisorRefusals` · `_advisorAsyncAcks` · `_advisorSyncCalls` | ③ 记-消闭环在工具结果回合内；VSC 零对位 |
+| 核内单模块封装 | `_designReviewStreaks` | ① 字段访问仅 `agent-tools/review-streak.mjs`（函数封装）；VSC 零对位 |
+| VSC 零对位 + 非容器装置 / 同步面 | `_permQueue`（promise 链）· `_syncChildAborts`（同步子回合注册 / 注销闭环） | ②/③ 值非容器或生命周期 = 同步子回合；VSC 现役零对位 |
+
+**受影响文件（本轮——行数口径 = `find /c /v ""`）**
+
+| 档 | 改前 | 改后 | Δ | 变更点 |
+|---|---|---|---|---|
+| `docs/design/AGENT-LOOP.md` | 148 | **152** | +4 | §2.3：carrier 行 :79 · 字段集 :91 · 回写义务 :92 · 新增 :94-95 · 勘定注 :96-97 · 不变式 :98 · 验收点 2 :110 · 变更记录 :152 |
+| `docs/design/CORE-UNIFICATION.md` | 1169 | **1170** | +1 | 变更记录 :1169 |
+
+**三机检读数（cwd = 仓根 · 终态实跑——自检一修后）**
+
+| # | 机检 | 读数 | 判 |
+|---|---|---|---|
+| 1 | `doc-anchors` | 域一（32 档）：候选 **1674** · 悬空 **0**——OK(V5)；域二（99 档）：候选 8799 · 悬空 0——OK(V5)；V5 命中 0 处 | ✓ exit 0 |
+| 2 | `check-doc-width` | **OK(宽度)：306 文件无 >300 字符单行**（新增违规 0 · 存量 0） | ✓ exit 0 |
+| 3 | `check-ledger` | OK: `thincoder/docs/TODO.md` · OK: `thincoder/docs/TODO-archive.md`——0 处违规（基线 0） | ✓ exit 0 |
+
+> 自检一修：初稿 :96 三处裸 basename 锚（`escalate-async.mjs:149-150` / `advisor-async.mjs:254` / `consult.mjs:417`）触 3 条悬空 ⇒ 补全路径前缀 + 按宽行规范折两行；终态复跑全绿（上表）。
+
+**实核发现（供父侧协调 · 含不阻断观察项）**
+
+1. **同族扫描（本段 B 表两项为新增发现）**：`_advisorRuns` / `_mutLog`（VSC 名 `_fileMutEvents`）具同族三特征（跨模块裸访问 + 容器 + VSC history 载体）——核内现均为裸字段访问（无 `carrierField` 吸收）、字段集与绑定不变式均未覆盖 ⇒ 与 `_asyncQueue` / `_asyncWaiters` 同缺陷类。**是否并入待裁**（见未决 1）。
+2. **名差两项登记**（S2 对位面）：`_mutLog`（核）↔ `_fileMutEvents`（VSC 现役）——同一机制异名异形；`_subAgentCounter`（核）↔ `_subIdCounter`（VSC 测试面）——标量发号器异名。
+3. **工作树（时点读数）**：核内 2 M + 2 ??（`thincoder-core/session-slots.mjs` · `session.mjs`；`history-window.mjs` · `test/history-window.test.mjs`——**他轮在途，非本轮写入**）；docs 面 = 仅本轮两档；两产品零改动；未 commit。
+4. **观察项（不阻断 · 未展开核实）**：VSC `AGENT-LOOP.md` §11.2 A 类（:459）与 C 类（:465）**同时**列 `_pendingReminders`（A = 每 run 复位 / C = 会话级保留）——两清单并列的语义供 S2 对位时留意。
+
+**未决（记档 · 不代裁）**
+
+1. `_advisorRuns` / `_mutLog`（VSC 名 `_fileMutEvents`）是否并入 §2.3 字段集（**8 → 9 / 10**）+ 绑定义务同扩——**待父侧裁定**（证据见「同族扫描表」B 表；若并入，S2 装配绑定清单与「不预置」夹具范畴须同步再扩）。
+2. 超软线档拆分计划（§2.8.1 覆盖口径在案——另轮）。
+3. §2.13.x 读数 / 计数三组滞后收正（批次档 §5「S1 续轮第三批」未决 1 在案——另轮，本轮未含）。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
@@ -2902,6 +2977,133 @@ C 类 13 行原状：`#84 ✅（缝位 · 上轮）` · `#68 ✅（写路径缝 
 5. 审计 Q 项口径：Q1/Q2 并入未决 2 · Q3 并入未决 3 · Q4 限制登记（本段执行面读数 = 自跑；审计/评审席位无 shell 未独立复跑）。
 
 **轮次自证**：审计 1 轮 + advisor 2 轮 + 修复轮 1；K1/K2/K3 终态读数见上表；报告 ①–⑥ 见交付报告（父侧转呈）。
+
+### 实施：S1 续轮第四批 —— E 类并入（SESSION #123–#127 · CONSULTATION #93 #95 #104–#110 #160 #161）（2026-09-14 · eng-coder）——**终态 = clean**
+
+**段位**：当前段 = **S1（建核补齐）**。S2 / S3 面零触碰；**两产品零改动**（`git status --porcelain` 产品侧条目 = 0——见 K3）；未 commit（父侧统一）；未碰台账；
+**未改任何 docs**（设计档 / 需求档零写入；批次档本段 = 本记录本身）。
+
+**存量核对**：E 类 16 行逐行读 `docs/design/SESSION.md` §2.2 与 `docs/design/CONSULTATION.md` §2.3/§2.4 的「端差处置」列（不按印象归并），并以
+`git diff --no-index` 逐档对照两侧实现面（CLI / VSC）后按行内口径落码。
+
+## 改动面（全部在 `thincoder-core/**`；10 档修改 `+67/−41` · 2 档新建模块 · 3 档新建测试）
+
+| # | 档 | 行数（`wc -l`） | 改动 |
+|---|---|---|---|
+| 1 | `history-window.mjs`（新建） | 179 | #123：人读线惰性窗口面归核（`historyWindow` / `HISTORY_PAGE_SIZE` / `isRealUserMsg` + 工具配对，纯函数零宿主依赖） |
+| 2 | `session-slot-write.mjs`（新建） | 167 | #126：槽写入面归核（`newSlotData` · 四开关写 · `saveSlotData` 落盘单点 · `rotateIfForeign` 轮转判定 · `mergeEngTokensForSave` 保存面合并规则） |
+| 3 | `session-slots.mjs` | 490（−3） | #124：谓词单源——私有 `isRealUserMsg` 删除，改自 `history-window.mjs` import |
+| 4 | `session.mjs` | 494（+2） | #123：re-export 窗口面（调用方单一路径） |
+| 5 | `session-segments.mjs` | 99（−3） | #123：谓词改 re-export（保既有 import 面：session-store 经本档取用） |
+| 6 | `session-gc.mjs` | 225（+6） | #125：手动执行面加「④ 端差段」标记（核内零消费方——结构机检③守） |
+| 7 | `agent/setup.mjs` | 354（+1） | #93：`opts.extraTools` 注入面（`Array.isArray` 守卫——非数组当空态） |
+| 8 | `agent.mjs` | 428（+2） | #93：`runAgent` 透传 `extraTools` 至 `prepareRun` |
+| 9 | `agent-tools/advisor.mjs` | 264（+3） | #95：depth 显式校验归一为单一谓词（判定表逐值保持） |
+| 10 | `agent-tools/advisor-async.mjs` | 357（+20/−6） | #110：实例注册表载体吸收（只读面 `carrierField` + 缺省创建落跨 run 载体） |
+| 11 | `advisor/loop.mjs` | 298（+13/−12） | #109：检索面恒在（`code_search` 常驻 + 未绑定索引时执行面降级） |
+| 12 | `advisor/project-context.mjs` | 197（+4） | #105：供应商字段名归一（`provider` ?? `_provider`） |
+| 13 | `test/history-window.test.mjs`（新建） | 193 | 行为 8 用例（规则 1–6 + 分页/跨页配对/孤儿） |
+| 14 | `test/session-slot-write.test.mjs`（新建） | 136 | 行为 8 用例（四开关 + 全新槽属主判 + 轮转四判据 + 合并规则 + 损坏现场） |
+| 15 | `test/advisor-consult-merge.test.mjs`（新建） | 174 | 行为 8 用例 + 结构机检 3（本批模块零端名 · 谓词单源 · 手动面零核内消费方） |
+
+## 逐行并入 / 复核（16 行 → 落点）
+
+1. **#123** `session.mjs` ↔ 对端 `session-io.mjs`（②「融合：数据层取一侧 + `history-window` 拆面按核内结构归位」）：
+   窗口面逐条随迁入核 `history-window.mjs`（规则 1–6 / turnStart 可见前驱 / 全历史配对 / 跨页防双显；`isRealUserMsg` 加空安全 `?.`）；
+   经 `session.mjs:47` re-export。**同轮收单源**：`session-slots.mjs` 私有副本与 `session-segments.mjs` 副本并入同一份（核内定义点恰一处——结构机检②守）。
+2. **#124** `session-slots.mjs`（②「融合：取一侧」）→ **核内已承载**：slot / manifest / 认领 / 属主判定四面在 `session-slots.mjs`（`ensureActive` / `claimSlot` / `allocateFresh` / `slotOccupancy` 于 `session.mjs`）；判据面（`normalizeCwd` / `isProcessAlive` / `END` / end marker）齐。
+3. **#125** `session-gc.mjs`（②「融合：取一侧；冷 cwd 手动执行面仅 CLI ⇒ 端差段」）→ 自动残留 GC 与冷 cwd 原语取一侧在核；`runSessionGc`（`session-gc.mjs:180`）标为 **④ 端差段**（核内零消费方——机检; 命令接线属壳侧）。
+4. **#126** `session-store.mjs` ↔ 对端 `session-slot-write.mjs`（②「融合：核内单一记录存储 + 槽写入面归位」）→ 单一记录存储 = 核内既有 `session-store.mjs`；
+   槽写入面新建 `session-slot-write.mjs`（读-改-写 + 落盘单点 + 轮转判定 + 保存面合并规则）。**边界**：token 台账槽 I/O 面仍归 `token-ttl.mjs`（单源），标题写面仍归 `session-rename.mjs`——本档不复制。
+5. **#127** 段 / 归属守卫 / 改名 / 旧短哈希迁移四面（②「融合：按核内结构归位」）→ **核内已承载**：`session-segments.mjs` · `session-guard.mjs` · `session-rename.mjs`（`renameSlot`）· `session-migrate.mjs` 四档齐（含 5 候选短哈希迁移）。
+6. **#93** `agent-tools/consult.mjs`（②「取 CLI 装配 + 对端 `specForModel` / `extraTools` 面归位」）→ 装配取 CLI（不动）；
+   `extraTools` 面落核（`agent.mjs:96/129` → `agent/setup.mjs`）；`specForModel` 面核内已有等价（`agent/spawn-child.mjs` 的 `clampEffort` 用同一规格表钳制）。
+7. **#95** `agent-tools/advisor.mjs`（②「取 CLI + 对端 `depth` 显式校验并入」）→ 判定收为单一谓词：`depth` 取一次 + `asyncRequested` 显式布尔 + `depth !== 0` 拒发；判定表逐值等价（无 depth 上下文归同步、depth 0 缺省归异步）。
+8. **#104** `advisor/citations.mjs`（②「融合：取一侧——仅注释契约编号不同」）→ **核内已承载（取一侧）**：逐字节随迁自 CLI（差异面仅头注批号，非语义）。
+9. **#105** `advisor/project-context.mjs`（②「取一侧 + 取模型窗口字段名归一」）→ 归一为 `agent.provider ?? agent._provider`（两形产出逐字相同，用例钉）。
+10. **#106** `advisor/repos.mjs`（②「取一侧 + `isDocOnlyChange` 语义归一」）→ **核内已承载（取一侧 = CLI）**：语义登记 = 非代码即「只文档」（临时件不排除）；对端为「非代码 ∧ 是文档」的严格形态，两端当前均无消费方，属潜伏差异（见未决 3）。
+11. **#107** `advisor/compaction.mjs`（②「融合：取一侧——空响应标记字面归一」）→ **核内已承载（取一侧 = CLI）**：字面 = `Advisor: empty response`，与判定族前缀表同源（用例钉块首行扫描）；对端 `incompleteNotice` 与核内 `agent-tools/design-token.mjs` 的未签发提示同文（文案单源在核）。
+12. **#108** `advisor/messages.mjs`（②「正文取一侧 + 装配管道按核内结构归一」）→ **核内已承载**：三面均在——声明注入点（构建面内插）、轮次来源（实例解析作用域 `_advisorRound` / `_lastAdvisorOutput`）、相对路径前缀守卫（`startsWith(cwd + sep)` 形态，避免 `/proj` 误配 `/proj-other`）。
+13. **#109** `advisor/loop.mjs`（②「取 CLI 限额族 + 工具集取并集（`code_search` 恒在）+ 进度行按端注入」）→ 限额族不动；工具集改为**恒在六工具**（未绑定索引时执行面端中立降级）；进度行注入缝已于前批落地（`seams.describeArgs`）。
+14. **#110** `advisor/run.mjs`（③「取并集：以 CLI 为准（含止损护栏）+ 对端评审实例上下文并入」）→ 止损护栏与实例解析取 CLI（已在核）；
+    对端「实例上下文」按核内载体口径并入 = 注册表载体吸收（只读走 `carrierField`，缺省创建落跨 run 载体；既有形态零变）。
+15. **#160** `advisor.mjs`（②「融合：取一侧」）→ **核内已承载（取一侧 = CLI）**：提示词选择 / 跟进构建 / 会话装配三面在核（对端为拆档实现，按核内结构归位后为单档）。
+16. **#161** ↔ 对端 `advisor/provider.mjs` + `advisor/tools.mjs`（②「融合：评审 provider 解析 / 工具集按核内结构归位」）→ **核内已承载**：provider 解析 = `advisor/run.mjs` 的 `resolveAdvisorProvider`（核内结构 = 单档承载，非拆档）；工具集 = `advisor/loop.mjs`（本轮 #109 已并入 `code_search` 恒在）。
+
+## K1–K3 读数（cwd = 仓根 · 终态复跑）
+
+| # | 判据 | 读数 | 判 |
+|---|---|---|---|
+| K1 | 三机检 | `doc-anchors` **exit 0**（域一/域二 均 `OK(V5): 0 条悬空锚`）· `check-doc-width` **exit 0**（306 档无 >300 字符单行）· `check-ledger` **exit 0**（0 违规） | ✓ |
+| K2 | 核内 `node --test` | 基线 **129/129** 保持绿 + 新增 **27** 全绿 ⇒ **156/156 · fail 0 · exit 0** | ✓ |
+| K3 | 工作树 | 核内 **10 M + 5 ??**（2 新模块 + 3 新测试）；**产品侧条目 = 0**；`docs/**` = 批次档 1 M（父侧在途写入，非本段）；未 commit | ✓ |
+
+## K4 更新版逐行表（E 类 16 行逐行改判——D/F 保持原判）
+
+**E 类（本轮工作单 · 16 行）**
+
+| 行 | 改判 | 落点 / 原因 |
+|---|---|---|
+| #123 | ✅ 已并入 | 窗口面归核 `history-window.mjs`（+ 谓词单源 + re-export） |
+| #124 | ✅ 已承载 | `session-slots.mjs`（slot/manifest/认领/属主）+ `session.mjs` `slotOccupancy`——取一侧 = CLI |
+| #125 | ✅ 已承载 + ④ 端差段 | 自动 GC 与原语在核；`runSessionGc` 标端差段（`session-gc.mjs:180`，零核内消费方） |
+| #126 | ✅ 已并入 | `session-slot-write.mjs`（槽写入面）+ 单一记录存储 = `session-store.mjs`（已承载） |
+| #127 | ✅ 已承载 | 段/守卫/改名/迁移四档在核 |
+| #93 | ✅ 已并入 | `extraTools` 面落核（`agent.mjs` → `agent/setup.mjs`）；`specForModel` 面 = `clampEffort` 等价（已承载） |
+| #95 | ✅ 已并入 | depth 显式校验归一（判定表逐值保持） |
+| #104 | ✅ 已承载 | 取一侧 = CLI（差异仅注释批号） |
+| #105 | ✅ 已并入 | 字段名归一 `provider ?? _provider` |
+| #106 | ✅ 已承载 | 取一侧 = CLI + 语义登记（对端严格形态为潜伏差异——未决 3） |
+| #107 | ✅ 已承载 | 取一侧 = CLI（空响应字面与判定族同源；对端 `incompleteNotice` 与核内同文） |
+| #108 | ✅ 已承载 | 装配管道三面均在核（声明注入点 / 实例轮次来源 / 前缀守卫） |
+| #109 | ✅ 已并入 | 工具集恒在（`code_search` 常驻 + 执行面降级）；进度行注入缝前批已落 |
+| #110 | ✅ 已并入 | 止损护栏取 CLI（已承载）+ 实例注册表载体吸收（对端上下文并入形态） |
+| #160 | ✅ 已承载 | 取一侧 = CLI（三面在核） |
+| #161 | ✅ 已承载 | provider 解析（`advisor/run.mjs`）+ 工具集（`advisor/loop.mjs`）按核内结构归位 |
+
+**其余类**：A 类（#94 · #98 · #100–#102 · #154 · #158）· B 类（#112 部分 · #113）· C 类（#56 · #57 · #59 · #61 · #66 · #69 · #88 · #91 · #96 · #63 · #64 · #68 · #84）·
+D 类（#70 · #83）· F 类（#111 · #149–#153 · #155 · #157 · #103 · #175 · #81 · #134 · #170 · #178 · #179）——本轮零触碰，保持原判。
+
+## 内部轮（自含交付协议）
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **DIVERGENT**——命中 2 组 doc drift（均设计面：`CORE-UNIFICATION.md` §2.8.1 未登两新档；
+  §2.5 端特有桶 #183 仍把对端 `history-window` 列 ④，与 #123「归核」相抵）；`partial implementation` / `silent simplification` / `out-of-file-list` **三类均未命中**。
+  审计限制如实登记（该席位无 shell / 无 git / 不可执行 ⇒ K1/K2/K3 未独立复跑）。
+- **advisor 代码评审 2 轮**（`type=code`）：
+  - **轮 1 = pass**（🔴 0 · 🟡 2 · 🔵 4）：① 🟡 保存面 token 台账合并规则（`engTokensMergeForSave`）无核内对位且未登记；
+    ② 🟡 >300 行档（在册）；③ 🔵 头注「不回写旧快照」与实现不符；④ 🔵 mtime 缓存无复位缝（用例 flake 面）；⑤ 🔵 轮转 catch 面零日志；⑥ 🔵 `extraTools` 无非数组守卫。
+  - **修复轮 1（落修 4 项）**：① `mergeEngTokensForSave` 落核（纯函数 + 6 条用例）；③ 头注收正；④ 补 `_resetSlotMtimeCacheForTest` + `beforeEach` 复位；⑤ 补 `console.error`（带原因）；⑥ `Array.isArray` 守卫 + 用例。
+  - **轮 2 = pass**（仅核第一轮 6 行 + 新引入面）：4 项**逐行实读为真**；② 维持（在册咨议不复议）；新提 2 条 🔵 残留（用例名措辞 · 日志无条件声称「已保全」）——**已随轮 2 后置修掉**（用例名改判 + `preserved` 标记），复跑 156/156 与三机检 exit 0。
+  - **收敛读数**：审计 1 轮 + advisor 2 轮 + 修复轮 1（+ 后置 2 🔵）；**终态 0 未决 🔴**。
+
+## 决策透明表（设计未明写者）
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 谓词收单源时给 `isRealUserMsg` 加空安全（`m?.role` / `m?.content`） | 原两份副本一半带 `?.`（段档）一半不带（窗口档）；合一时取严形态 ⇒ 非对象输入不抛，合法输入逐值等价。备选 = 保留两副本（结构机检②会红） |
+| 2 | 窗口面 re-export 落在 `session.mjs`（与对端 `session-io` 同形） | 对端同形 + 调用方单一路径；代价 = 该档（494 行）距 500 硬限余量变小（评审 🟡② 已登记） |
+| 3 | 槽写入面的轮转判定自实现（不调 `session-guard.mjs` 的 agent 面守卫） | 本面入参是**目标数据**而非 agent（无 `_slotMtime` / `_sessionStart` 可读）；判据集同源并加「同会话并发追加」判据（对端并入）。备选 = 由数据反构 agent 伪上下文调守卫（会丢「并发追加」判据，且守卫面侧挂副作用 moveSidecar） |
+| 4 | 保存面合并规则落 `session-slot-write.mjs` 而非 `token-ttl.mjs` | 该函数是**槽写入面**的保存规则（纯函数、零 I/O）；token 台账的槽 I/O 三面仍留 `token-ttl.mjs`（单源不变）。备选 = 入 token-ttl（该档 286 → 300+ 触软线未登记红） |
+| 5 | `code_search` 恒在但**执行面**降级（不删工具、不改参数面） | 工具清单恒定 ⇒ 评审者在两端看到同一只读集；未绑定索引时返回端中立说明（不崩、不伪造）。备选 = 沿用「无索引即不挂载」（清单随会话变，与裁决「取并集」方向不符） |
+| 6 | 实例注册表吸收取「父对象字段优先、缺字段回退载体」 | 与核内 `carrierField`（#94 载体口径）同源；对端「载体优先」写法会让双存态下夺权。备选 = 载体优先（改既有单端取值） |
+| 7 | 端差段（`runSessionGc`）**留核内**仅加标记，不迁壳 | 裁决只要求标「端差段」；迁移属 S2 端侧接线动作（本段零触碰两产品） |
+
+## 未决 / 越段发现（只记 ✗ · 未处置）
+
+1. **设计登记滞后**（审计 🟡① · 设计面）：`CORE-UNIFICATION.md` §2.8.1 未登本轮两新档（`thincoder-core/history-window.mjs` 179 · `thincoder-core/session-slot-write.mjs` 167）。
+2. **裁决行相抵**（审计 🟡② · 设计面）：§2.5 端特有桶 **#183** 把对端 `extension/history-window` 列为 ④ 端特有，而 **#123** 要求该面「按核内结构归位」——核内实档为纯函数（零宿主依赖）⇒ 二者须取一（建议按 #180/#182 先例补一条收正）。
+3. **#106 潜伏差异**（取一侧 = CLI；对端为严格形态「非代码 ∧ 是文档」）：两端当前均无消费方 ⇒ 归一后若对端接线，临时件不再触发代码面守卫——属 S2 接线前的口径确认项。
+4. **会话档位余量**（评审 🟡② · 设计面）：`session.mjs` 494 行（+2 后距 500 硬限 6 行）· `agent.mjs` 428 · `agent/setup.mjs` 354 · `agent-tools/advisor-async.mjs` 357——均在册（`test/core-hygiene.test.mjs` 的 `SOFT_LINE_REGISTRY`），拆分计划仍属设计面。
+5. **`_asyncWaiters` 类载体字段**（承前批未决）：本批未涉。
+
+**轮次自证**：审计 1 轮 + advisor 2 轮 + 修复轮 1；K1/K2/K3 终态读数见上表；报告 ①–⑥ 见交付报告（父侧转呈）。
+
+**本段读数收正（append-only 补记 · 轮 2 后置两修所致）**：轮 2 后置修掉评审两条 🔵 残留（用例名措辞 · 轮转日志口径）时，另修了一处**自引入缺陷**（`session-gc.mjs` 双 JSDoc 块 → 合并为单块，该档 −1 行）。
+故上表两处读数与两处坐标漂移 1 行，以本行为终态真值：
+`session-slot-write.mjs` **168** 行（上文 167）· `session-gc.mjs` **224** 行（上文 225）· `runSessionGc` 坐标 = **`session-gc.mjs:179`**（上文两处写 :180）。
+其余档位读数复跑一致（`history-window.mjs` 179 · `session-slots.mjs` 490 · `session.mjs` 494 · `session-segments.mjs` 99 · `agent/setup.mjs` 354 · `agent.mjs` 428 ·
+`agent-tools/advisor.mjs` 264 · `agent-tools/advisor-async.mjs` 357 · `advisor/loop.mjs` 298 · `advisor/project-context.mjs` 197 ·
+三新测试档 193 / 136 / 174）；K2 = **156/156 · fail 0**、三机检 exit 0（终态复跑，见上）。
 
 ## §6 验证与收口（父代理）
 

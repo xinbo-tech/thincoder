@@ -43,6 +43,8 @@ export {
 } from "./session-slots.mjs"
 // §12.2.5 契约改使 session-slots.mjs 超 500 行硬限 → renameSlot 拆至 session-rename.mjs（§12.3 授权）
 export { renameSlot } from "./session-rename.mjs"
+// 人读线惰性窗口面（`history-window.mjs`）——re-export 保调用方单一路径。
+export { historyWindow, HISTORY_PAGE_SIZE, isRealUserMsg } from "./history-window.mjs"
 
 /** 恢复决策包装（SESSION.md §12 启动钩子，2026-09-06）：本端恢复入口触发一次残留 GC——
  *  scheduleSessionGC 内部 setImmediate 空闲执行 + 每进程每前缀去重，不阻塞启动路径（N4）。 */

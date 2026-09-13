@@ -93,7 +93,7 @@ export function streamOutputAllowed(depth, role, streamOutput = false) {
 }
 
 /** Run the agent loop: LLM ↔ tool-call cycle until task completion or turn limit. Returns final text content. */
-export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal, maxTurns: overrideTurns, resume = false, autoTurn = false, suspDriven = false, consumeInjected = null, streamOutput = false } = {}) {
+export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal, maxTurns: overrideTurns, resume = false, autoTurn = false, suspDriven = false, consumeInjected = null, streamOutput = false, extraTools = null } = {}) {
   // Previous run's async exploration distillation must settle before this run pushes
   // input (SEND-STALL-DISTILL §2.2 N1) — await first, or its history replace wipes it.
   if (agent._pendingDistill) {
@@ -126,7 +126,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     // G1/G2（施工②）：prompt 装配收口 prepareRun 内部（assemblePrompt——prompt-overlays.mjs
     // 槽位常量，与子代理角色常量同源——单一权威锚 D1）；本调用不再携带 prompt 常量。
     agent, input, callbacks,
-    { depth, signal, overrideTurns, resume: resume || autoTurn },
+    { depth, signal, overrideTurns, resume: resume || autoTurn, extraTools },
   )
 
   // Exploration-distillation boundary (CONTEXT-COMPACTION §5): prepareRun already

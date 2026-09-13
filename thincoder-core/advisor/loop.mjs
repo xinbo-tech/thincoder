@@ -23,27 +23,29 @@ const { lspTool } = await import("../tools/lsp.mjs")
 const { codeSearchTool } = await import("../memory/code-sync.mjs")
 
 /**
- * Advisor tool set — ZERO git, read-only ONLY, every round. The change surface
- * comes from the review scope (paths / _touchedFiles injected by the caller),
- * never from git: git output misled reviews (committed fixes never show in
- * `git diff HEAD`, so "no changes" was read as "not fixed") and the user
- * mandate is full decoupling (7d49a52 + d3be613). The reviewer reads files
- * and searches code; it never touches git and never writes.
- * No round parameter — the set is constant across all rounds.
- * @param {Object} agent — only used for the code index (agent.memory); the
- *   semantic code_search tool needs it. Without a memory, the set is 5 tools.
+ * Advisor tool set — ZERO git, read-only ONLY, every round. The change surface comes from the
+ * review scope (paths / _touchedFiles injected by the caller), never from git: git output misled
+ * reviews (committed fixes never show in `git diff HEAD`, so "no changes" was read as "not
+ * fixed") and the user mandate is full decoupling (7d49a52 + d3be613). The reviewer reads files
+ * and searches code; it never touches git and never writes. No round parameter — the set is
+ * constant across all rounds. 检索面**恒在**（与索引绑定解耦）：`code_search` 永远在集内，
+ * 未绑定索引的会话在**执行面**降级为一句端中立说明（不崩、不伪造结果）——工具清单恒定。
+ * @param {Object} agent — 索引面载体（`agent.memory`）；缺省时执行面降级。
  */
+function advisorCodeSearchTool(agent) {
+  return agent?.memory
+    ? codeSearchTool(agent.memory)
+    : { ...codeSearchTool(undefined), async execute() { return "(code index not available in this session)" } }
+}
+
 function advisorToolsFor(agent, reviewType = "code", batchDoc = null) {
-  const search = agent?.memory ? codeSearchTool(agent.memory) : null
-  const tools = search
-    ? [readTool, globTool, grepTool, lsTool, lspTool, search]
-    : [readTool, globTool, grepTool, lsTool, lspTool]
+  const tools = [readTool, globTool, grepTool, lsTool, lspTool, advisorCodeSearchTool(agent)]
   // §2.20.3（第 4 批）：**只有绑定了批次档的设计评审**额外拿到写通道——代码评审工具集
   // 逐字节不变（零 git + 只读不变量，§2.20.8 #1）；未绑定 → 不挂载（fail-closed）。
   if (reviewType === "design" && batchDoc) tools.push(batchSegmentTool(batchDoc, { review: true }))
   return { schemas: tools.map(toOpenAISchema), byName: new Map(tools.map((t) => [t.name, t])) }
 }
-// Test seam: the tool set is pure (agent.memory → code_search inclusion).
+// Test seam: the tool set is pure（恒在六工具 + 批次档绑定條件）。
 export { advisorToolsFor, advisorToolsFor as _advisorToolsFor }
 
 /**

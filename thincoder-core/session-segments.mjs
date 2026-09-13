@@ -61,10 +61,9 @@ export function shouldAppend(m) {
   return !!m && typeof m === "object" && !m.transient && !isLegacyTransient(m)
 }
 
-/** 真实 user 消息（turnCount/firstMessage 口径——同 session-slots.extractSlotMeta）。 */
-export function isRealUserMsg(m) {
-  return m?.role === "user" && typeof m.content === "string" && !m.content.startsWith("[System reminder:")
-}
+/** 真实 user 消息（turnCount/firstMessage 口径——同 session-slots.extractSlotMeta）。
+ *  单源 = `history-window.mjs`（本档只 re-export 保既有消费面：session-store 等）。 */
+export { isRealUserMsg } from "./history-window.mjs"
 
 /** sidecar 目录路径（`{slot 文件路径}.d`——同目录同前缀）。 */
 export function recordDirOf(slotFile) { return slotFile + RECORD_DIR_SUFFIX }

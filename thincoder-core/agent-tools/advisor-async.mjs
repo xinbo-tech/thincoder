@@ -60,17 +60,31 @@ import { bindChildController, buildChildSignal, carrierField, getAsyncPool, sett
 import { nextSubagentId } from "./subagent-scheduler.mjs"
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Review-instance registry (agent._advisorRuns — per-review rounds/prior/cap)
+// Review-instance registry (_advisorRuns — per-review rounds/prior/cap)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** 载体吸收后的只读读取（不创建）：父对象字段优先、缺字段回退跨 run 载体
+ *  （`history` 数组——agent 逐 run 重建的形态靠它跨 run 存活）。无 ⇒ null。 */
+function advisorRunsRead(agent) {
+  const m = carrierField(agent, "_advisorRuns")
+  return m instanceof Map ? m : null
+}
+
 export function advisorRuns(agent) {
-  if (!(agent._advisorRuns instanceof Map)) agent._advisorRuns = new Map()
-  return agent._advisorRuns
+  // 实例注册表读取吸收（与 #94 载体口径同源）：既有形态（字段挂 agent）零变；
+  // 注册表已挂跨 run 载体的形态直接沿用（不另建分叉）。
+  const existing = advisorRunsRead(agent)
+  if (existing) return existing
+  // 缺省创建：落在跨 run 载体上（有 history 时）——与其余载体字段同口径。
+  const holder = agent?.history ?? agent
+  if (!holder) return new Map()
+  if (!(holder._advisorRuns instanceof Map)) holder._advisorRuns = new Map()
+  return holder._advisorRuns
 }
 
 /** The newest OPEN code instance (the thread a fix-round launch continues), or null. */
 export function openCodeRun(agent) {
-  const runs = agent?._advisorRuns
+  const runs = advisorRunsRead(agent)
   if (!(runs instanceof Map) || runs.size === 0) return null
   for (const r of [...runs.values()].reverse()) {
     if (r.reviewType === "code" && r.open) return r
@@ -80,7 +94,7 @@ export function openCodeRun(agent) {
 
 /** The newest OPEN design instance for the given document set, or null. */
 function openDesignRun(agent, key) {
-  const runs = agent?._advisorRuns
+  const runs = advisorRunsRead(agent)
   if (!(runs instanceof Map) || runs.size === 0) return null
   for (const r of [...runs.values()].reverse()) {
     if (r.reviewType === "design" && r.open && r.docSetKey === key) return r
@@ -333,7 +347,7 @@ export function closeOpenCodeAdvisorRuns(agent) {
   if ((getAsyncPool(agent, "subagent")?.size ?? 0) > 0) return false
   if ((carrierField(agent, "_pendingAsyncResults") ?? []).some((e) => e.role === "advisor")) return false
   let closed = false
-  const runs = agent?._advisorRuns
+  const runs = advisorRunsRead(agent)
   if (runs instanceof Map) {
     for (const r of runs.values()) {
       if (r.reviewType === "code" && r.open) { r.open = false; closed = true }

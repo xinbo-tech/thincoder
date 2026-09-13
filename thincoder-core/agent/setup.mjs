@@ -39,7 +39,7 @@ const MEMORY_SEARCH_LIMIT = 3
  * Returns all state needed by the main loop, and writes initialization messages into agent.history.
  */
 export async function prepareRun(agent, input, callbacks, {
-  depth = 0, signal, overrideTurns, resume,
+  depth = 0, signal, overrideTurns, resume, extraTools = null,
 } = {}) {
   const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_TURNS
   const threshold = agent.config?.agent?.compactThreshold ?? DEFAULT_COMPACT_THRESHOLD
@@ -290,7 +290,7 @@ export async function prepareRun(agent, input, callbacks, {
     : agent._role === "coder" ? [verifyTool, advisorTool]
     : agent._role === "consult" ? [recentChangesTool]
     : []
-  const tools = [...agent.tools, taskTool, planTool, timerTool, ...depthOnly]
+  const tools = [...agent.tools, taskTool, planTool, timerTool, ...depthOnly, ...(Array.isArray(extraTools) ? extraTools : [])]
   const toolSchemas = tools.map(toOpenAISchema)
   const toolByName = new Map(tools.map((t) => [t.name, t]))
   agent._onTaskUpdate = callbacks.onTaskUpdate

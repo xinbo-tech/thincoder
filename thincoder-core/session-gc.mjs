@@ -166,8 +166,11 @@ export function deleteColdCwd(hash, { dir = sessionsDir(), now = Date.now(), ali
 }
 
 /**
- * `thincoder session gc` 子命令分发（§12.2.3/12.2.4 手动面——F2 执行入口仅 CLI，
- *  VS Code 端无 shell 子命令通道，review #7）：
+ * ④ 端差段 · 手动执行面（§12.2.4）——仅命令行壳提供（另一形态无 shell 子命令通道）；
+ * 本段**核内零消费方**（结构机检③）：核内保存实现（取一侧），命令接线属壳侧（S2）。
+ *
+ * `thincoder session gc` 子命令分发（§12.2.3/12.2.4 手动面——F2 执行入口仅命令行壳，
+ * 另一形态无 shell 子命令通道，review #7）：
  *   --dry-run          报告当前 cwd 残留候选 + 跨 cwd 冷候选（只列不删，N2 预览）
  *   --confirm <hash>   删除指定冷 cwd 整前缀（警告 + 文件清单 + TOCTOU 重校验）
  *   --confirm --all    逐冷 cwd 同型警告删除

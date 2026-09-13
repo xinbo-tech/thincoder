@@ -18,6 +18,9 @@ import { migrateHashLength } from "./session-migrate.mjs"
 // legacy 过滤）属 session.mjs（500 行内不迁移）——静态环仅此一处：函数声明实例化期已初始化、
 // 只函数体内运行时使用（环安全）；VS Code 端 session-slots ↔ session-io 同构镜像。
 import { loadSlotFile, isLegacyTransient } from "./session.mjs"
+// 「真实用户消息」谓词单源（`history-window.mjs`——人读线窗口与槽摘要同判据；原为
+// 本档私有副本——提取期收归单源，防两处漂移）。
+import { isRealUserMsg } from "./history-window.mjs"
 // TUI-OOM-ROOTCAUSE 批（SESSION.md §14.3.8）：删槽联动记录存储（store 零项目内依赖——无环）。
 import { unlinkRecordStore } from "./session-store.mjs"
 
@@ -117,11 +120,6 @@ export function writeSessionFile(p, data) {
 }
 
 // ========== slot management ==========
-
-/** Detect a genuine user message (excludes system-reminder injected messages) */
-function isRealUserMsg(m) {
-  return m.role === "user" && typeof m.content === "string" && !m.content.startsWith("[System reminder:")
-}
 
 /** Extract slot metadata from history (shared by slotDigest and loadSlotMeta) */
 function extractSlotMeta(history, activeProvider, updatedAt, title = "") {
