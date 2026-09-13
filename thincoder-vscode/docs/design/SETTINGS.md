@@ -165,7 +165,7 @@ embedding key + 构建按钮 + 状态；向量维度/模型切换的校验与可
 
 ## 3. 已知待办（不属本文档范围）
 
-- design round2 专用提示词、ARCHITECTURE NFR 补全等见 `docs/TODO.md`。
+- design round2 专用提示词、ARCHITECTURE NFR 补全等见 `docs/TODO.md`（产品级台账已退役——台账单仓化：现体 = 仓根 `docs/TODO.md`）。
 
 ## 4. 变更记录
 

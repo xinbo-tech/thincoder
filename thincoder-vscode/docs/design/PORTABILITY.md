@@ -377,7 +377,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 - VSC 本档（新增——立即在 `docs/design/README.md` 登记：**父侧**）；
 - CLI `docs/design/PORTABILITY.md` 补「批次二·VSC 镜像面」节（**本批产物——回指不复制**）；
 - CLI `docs/requirements/PORTABILITY.md` 补批次二范围行（**本批产物**）；
-- 父侧维护面：VSC `docs/design/README.md`（新板块登记 + 镜像差异表 #3/#4 对照更新）· VSC `docs/TODO.md`（登记）· CLI `docs/TODO.md`（核销）· CHANGELOG。
+- 父侧维护面：VSC `docs/design/README.md`（新板块登记 + 镜像差异表 #3/#4 对照更新）· VSC `docs/TODO.md`（登记）· CLI `docs/TODO.md`（核销）· CHANGELOG——产品级台账已退役（台账单仓化：现体 = 仓根 `docs/TODO.md`）。
 
 **实现面拆分建议（供父侧 spawn）**：面 I（分类核心——conventions + 5 接线）→ 面 II（注入——project-context + messages）· 面 III（索引）· 面 IV（提示词六档）各自独立；
 面 II/III/IV 的 conventions 依赖面 `dependsOn` 面 I（共用新档）。文件域不相交。

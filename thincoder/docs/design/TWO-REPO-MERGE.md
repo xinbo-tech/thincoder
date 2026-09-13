@@ -105,7 +105,7 @@
 | R13 | 「每仓一轮」流程口径 | 两仓 `src/prompts/discipline-engineering.md`（「跨仓批」条——CLI `:123` / VSC `:127`，as-of）及 `docs/design/prompts/` 镜像副本（各 `:98`） | 失去对象 | 改写（VSC 侧 T-DC16 条文锚随字面同步） |
 | R14 | 「禁跨仓 import」纪律句 | 两仓 `docs/requirements/ENGINEERING-MODE.md`（CLI §1.17 N1「语义同源·原文自持——不作跨仓 import」`:795`；`ENGINEERING-MODE（VSC 仓）§1` N5「不跨仓依赖」`:78`——as-of）；设计档同源句（CLI `docs/design/ENGINEERING-MODE.md` as-of `:698`/`:810`） | 单仓内 import 合法 | 删除禁令 |
 | R15 | 端差登记 | **纪律句级——无独立脚本落点**（`scripts/` 实测零判据）：VSC `docs/requirements/AGENT-LOOP.md:302（VSC 仓）` N-CL4「端差逐条登记不静默」；登记面 = `docs/design/README.md（VSC 仓）`「镜像差异表」节 + 两仓设计档端差登记节（如 CLI `docs/design/TESTING.md` §11.6） | 跨仓登记语境失去对象（登记面收为产品侧对位）；`（CLI 侧）`注记按产品侧语义存续——V1 豁免**保留**（§2.5 / R8） | 纪律句级——随 R12/R13 同批改写；**验收 = T-M27**（检索式——三落点） |
-| R16 | 跨仓 fail-closed 源在位守卫（T-CI-11——兄弟仓 CLI 源在位） | VSC `test/context-parity.test.mjs（VSC 仓）`（:3 计数句 14 条 · :15-17 头注跨仓自述 · :37 `CLI_ROOT` 兄弟解析 `join(VSC_ROOT, "..", "thincoder")` + `THINCODER_CLI_ROOT` 覆盖口 · :368-374 T-CI-11 整条——:371 自指断言 `notStrictEqual(CLI_ROOT, VSC_ROOT)` · :372-373 `cliSetup` 存在性 fail-closed） | 合并后 `join(VSC_ROOT, "..", "thincoder")` 恰解析到**仓内**子目录 `<合并仓根>/thincoder` ⇒ 两断言**恒真、守卫空转且静默绿**——与 R10 同型（对端发现 + 自指防护 + 缺仓 fail-closed 全要素；§2.4 尾注「不报红」类） | **整段退役**（R10 同款范式；实施批 = S4）——删 :3 计数句（14 → 13 条；T-CI-1 ~ T-CI-10）· :15-17 头注跨仓句 · :21 import 同步（`existsSync` 无他处消费者）· :37 解析（含 `THINCODER_CLI_ROOT` 口）· :368-374（banner + 整条用例）；**`cliSetup` 存在性断言不设单仓版**——其唯一消费者（跨仓序锚读取）已于 2026-09-12 PROSE-ANCHOR-RETIRE 退役，「兄弟产品内部文件存在」改写版属跨产品内部耦合（与 F2 互不触发相抵）、无同仓意义；**连带文档 = T-CI-11 引用行退场注记**——口径 = **按 T-CI-11 语义面扫描（含 §17.9 / 跨仓只读叙述段），非按坐标清单**；VSC `docs/design/AGENT-LOOP.md（VSC 仓）` `:48` 变更记录行——as-of 豁免；**代表点** = VSC `docs/design/AGENT-LOOP.md（VSC 仓）` `:1278-1284`（跨仓只读语义段）· `:1302`（§17.9 边界句）· §17 组（:1242 · :1276 · :1294 · :1298 · :1332 · :1334——as-of）· VSC `docs/design/TESTING.md:129（VSC 仓）` · CLI `docs/requirements/AGENT-LOOP.md:306` · CLI `docs/requirements/PROMPT-SYSTEM.md:337（+ :413）`——V5 注记面；随 S6） |
+| R16 | 跨仓 fail-closed 源在位守卫（T-CI-11——兄弟仓 CLI 源在位） | VSC `test/context-parity.test.mjs（VSC 仓）`（:3 计数句 14 条 · :15-17 头注跨仓自述 · :37 `CLI_ROOT` 兄弟解析 `join(VSC_ROOT, "..", "thincoder")` + `THINCODER_CLI_ROOT` 覆盖口 · :368-374 T-CI-11 整条——:371 自指断言 `notStrictEqual(CLI_ROOT, VSC_ROOT)` · :372-373 `cliSetup` 存在性 fail-closed） | 合并后 `join(VSC_ROOT, "..", "thincoder")` 恰解析到**仓内**子目录 `<合并仓根>/thincoder` ⇒ 两断言**恒真、守卫空转且静默绿**——与 R10 同型（对端发现 + 自指防护 + 缺仓 fail-closed 全要素；§2.4 尾注「不报红」类） | **整段退役**（R10 同款范式；实施批 = S4）——删 :3 计数句（14 → 13 条；T-CI-1 ~ T-CI-10）· :15-17 头注跨仓句 · :21 import 同步（`existsSync` 无他处消费者）· :37 解析（含 `THINCODER_CLI_ROOT` 口）· :368-374（banner + 整条用例）；**`cliSetup` 存在性断言不设单仓版**——其唯一消费者（跨仓序锚读取）已于 2026-09-12 PROSE-ANCHOR-RETIRE 退役，「兄弟产品内部文件存在」改写版属跨产品内部耦合（与 F2 互不触发相抵）、无同仓意义；**连带文档 = T-CI-11 引用行退场注记**——口径 = **按 T-CI-11 语义面扫描（含 §17.9 / 跨仓只读叙述段），非按坐标清单**；VSC `docs/design/AGENT-LOOP.md（VSC 仓）` `:48` 变更记录行——已落退场注记（收正轮——原列 as-of 豁免）；**代表点** = VSC `docs/design/AGENT-LOOP.md（VSC 仓）` `:1278-1284`（跨仓只读语义段）· `:1302`（§17.9 边界句）· §17 组（:1242 · :1276 · :1294 · :1298 · :1332 · :1334——as-of）· VSC `docs/design/TESTING.md:129（VSC 仓）` · CLI `docs/requirements/AGENT-LOOP.md:306` · CLI `docs/requirements/PROMPT-SYSTEM.md:337（+ :413）`——V5 注记面；**已随收正轮提前落地**（§2.5 尾条）） |
 
 **R1 / R7 是本次退役中最隐蔽的两条**：它们不是"失效"，而是**反向生效**——合并后机制继续运行，但结论全错，
 且**不产生任何红**（R10 / R16 所示：测试侧守卫空转、语义保证在无人察觉中消失）。这类静默退化是本板块必须整体删除、而非逐条修补判据的根本原因。
@@ -148,6 +148,17 @@
 **解析语义变更（关键）**：现行 `resolveFile` 的候选序含"本仓别名前缀剥离"（CLI `scripts/doc-anchors.mjs:189`）。
 合并后 token 形如 `thincoder/src/x.mjs` 时，候选① `resolve(root, token)` **直接命中**（因 CLI 内容确在 `thincoder/` 下）——
 即**两产品文档的 128 处路径 token 无需任何改写**，自行从"跨仓引用"降格为"仓内路径"。这是 §2.2 子目录命名约束的兑现点。
+
+**VSC 域文档引用面收口（2026-09-13 收正轮）**：批 2 的测试段删除（R8/R9 · R16）与台账单仓化（§2.6）在 VSC 文档层留下 **41 处**悬空引用面，
+已随本收正轮统一处置（形态 = **退场注记 + 来源指针**——不删行、不改编号；与既有「注销留行」惯例同形）：
+
+- **R8/R9 文档面（15 处 A1）**——`thincoder-vscode/docs/design/LEDGER-SELF-CONTAINED.md` · `thincoder-vscode/docs/requirements/ENGINEERING-MODE.md` 内 T-VS2 / T-VS31–T-VS33 引用行；
+  注记 = 「已退场（段删——两仓合并批 2；删除记录 = 2026-09-13-TWO-REPO-MERGE §5）」；T-VS2 / T-VS3 面附「存留语义由 T-VS35 覆盖」。
+- **R16 面（7 处 A1）**——`thincoder-vscode/docs/design/AGENT-LOOP.md` · `thincoder-vscode/docs/design/TESTING.md` 内 T-CI-11 引用行；注记 = 「已退场（整删——两仓合并批 2；…）」；
+  该面原列 S6（§2.15——「R16 连带文档面」）——**已随本收正轮提前落地**，S6 只保留复跑复核；含 `:48` 变更记录行（原列 as-of 豁免——实况落退场注记）。
+- **台账单仓化面（19 处 A3）**——VSC 文档内 `docs/TODO.md` / `docs/TODO-archive.md` 引用行（跨 11 档；归属 = §2.6 台账单仓化的文档收尾）；注记 = 「产品级台账已退役（台账单仓化：现体 = 仓根 `docs/TODO.md`）」。
+- **终态实证（2026-09-13 复跑）**：VSC `npm run doc:check` = **exit 0**（41 → 0）；VSC 测试 doc-anchors 档零失败（T-DC6② 复锁 = 0）；仓根三机检保持全绿——复跑原文见批次档 §2 收正轮补记。
+- **仍留 S6（无门禁红——不动作）**：本板块两档（本档 + 需求档）R 表 / §2.14 的六档行号锚**语义注记**（批 2 §5 发现 #3）——机器侧由 `MERGED_SCRIPTS` 并入映射兜底（V5 悬空 0）；随 S6 文档批复核并批（归属不变）。
 
 ### 2.6 文档层处置（F5 / N6 / B4 / B5）
 
@@ -315,7 +326,7 @@ phase 2 目标 = 「一个核 + 两个薄壳」：共享核心真正可 `import`
 | S3b | 旧 VSC 仓远端**置归档 / 只读**（远端动作）——**不可逆**：置前须用户确认（N4） | 不适用——确认门前不执行；已置则不可逆 |
 | S4 | **批 2 首项 = 批 1 补正：产品级 `.gitignore` 落位（`thincoder/.gitignore`，§2.10）+ 探针验证 `git check-ignore` 命中**；机检脚本单仓化（R1–R9 · R16 删改 + 统一版三档落位——档名 / 仓根 / 执行根与扫描域口径见 §2.5）——含连带测试档与调用点处置（两产品 test 面——含 VSC `test/context-parity.test.mjs` 跨仓防护段（R16）/ VSC `package.json`——§2.14）；`doc-impact.mjs` 措辞改写（§2.4）；**本板块两档六档锚退场注记**（§2.5——含 R16 行坐标同批）；现行文档非命令形态脚本引用随批处置（§2.5 登记面） | 回退脚本改动提交 |
 | S5 | 提示词跨仓机制层退役（按 §2.7；含 VSC `test/prompts-mirror-anchors.test.mjs` 跨仓断言段删——R10；两产品 `AGENTS.md` 镜像约定段改写——R11 附加面） | 同上 |
-| S6 | 文档纪律句改写（R12–R15——含提示词自持节两副本与端差句；**R16 连带文档面——T-CI-11 引用行退场注记**）；**本板块两档复跑 V5**（自身锚零悬空——T-M17 / T-M21 面）；§2.5 非命令形态引用登记面复核 | 同上 |
+| S6 | 文档纪律句改写（R12–R15——含提示词自持节两副本与端差句；**R16 连带文档面——已随收正轮提前落地**（T-CI-11 引用行退场注记——§2.5 尾条；本步只复跑复核））；**本板块两档复跑 V5**（自身锚零悬空——T-M17 / T-M21 面）；§2.5 非命令形态引用登记面复核 | 同上 |
 | S7 | 两产品全量测试 + 机检全绿 + 发布链演练 | 任一步失败即回退至 S0 |
 
 **每步独立提交**——这是 N4「任一步可退」的兑现方式。
@@ -416,3 +427,6 @@ phase 2 目标 = 「一个核 + 两个薄壳」：共享核心真正可 `import`
   ③ §2.14 拆分注收正为**实测落地结构**（8 档全部 ≤300——`wc -l` 最大 272）+「机检脚本（新增）」行指针同步；
   ④ §2.14「>300 行档拆分审视」清单补 VSC `test/context-parity.test.mjs（VSC 仓）`（364——终态仍 >300，归后续批复核）；
   ⑤ §3.1 T-M5 检索口径收正 = **已退役判据符号五名逐个零命中**（射程 = 代码 / 脚本 / 测试面）+ 白名单两处（`PEER_WRITE_TOOLS` / `PEER_DOMAIN_HOT_MS`——并发实例机制）。
+- 2026-09-13：**VSC 文档引用面收正轮（批 2 交付评审 #20 连带面——41 处清零）**——R8/R9 文档面 15（A1——T-VS2 / T-VS31–T-VS33）· R16 面 7（A1——T-CI-11，
+  原列 S6——**已随本收正轮提前落地**；§2.4 R16 行 / §2.15 S6 行同步收正）· 台账单仓化引用面 19（A3——`docs/TODO.md` / `docs/TODO-archive.md`）；
+  处置 = 退场注记 + 来源指针（不删行 / 不改编号；同「注销留行」惯例）——终态实证：VSC `doc:check` exit 0（41 → 0）· doc-anchors 档零失败（T-DC6② 复锁 = 0）· 仓根三机检全绿；处置明细 = §2.5 尾条 + 批次档 §2 收正轮补记。

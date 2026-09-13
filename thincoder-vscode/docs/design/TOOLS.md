@@ -220,7 +220,7 @@ approve / deny / approve-all + diff 预览（`diff-preview.mjs` 虚拟文档原�
 ## 11. git commit 路径面：`--only` 镜像（群 A 批）（2026-09-11）
 
 > 来源：批次档 `2026-09-11-VSC-MIRROR-SWEEP（本仓）` §1 条目 A9
-> （指针 = `docs/TODO.md:167`「QUICKFIX-2 交付注——后批镜像 F-3」）。语义源：CLI
+> （指针 = `docs/TODO.md:167`「QUICKFIX-2 交付注——后批镜像 F-3」；产品级台账已退役——台账单仓化：现体 = 仓根 `docs/TODO.md`）。语义源：CLI
 > `src/tools/git.mjs:150-181`（F-3——`commit --only`）；双端纪律：语义同源、本端独立实现。
 
 **问题（现状——as-of 2026-09-11）**：`src/tools/git.mjs:200-219` commit 走**双层混扫**——

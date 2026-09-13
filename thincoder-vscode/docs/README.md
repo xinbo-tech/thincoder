@@ -9,7 +9,7 @@
 |---|---|---|---|
 | 1 | 仓根（非 `docs/`） | `AGENTS.md` · `README.md` · `CHANGELOG.md` · `LICENSE` | 保持——工程指南 / 用户说明 / 变更 / 许可 |
 | 2 | `docs/README.md` | **本档**（总地图） | 逐层登记 + 登记规则指针；层变更同步本表 |
-| 3 | `docs/TODO.md` / `docs/TODO-archive.md` | 台账（需求池 + 技术待办）｜归档档 | 形态权威见 `ENGINEERING-MODE.md`；活文件只留未决、归档条目移入归档档 |
+| 3 | `docs/TODO.md` / `docs/TODO-archive.md`（产品级台账已退役——台账单仓化：现体 = 仓根 `docs/TODO.md` / `docs/TODO-archive.md`） | 台账（需求池 + 技术待办）｜归档档 | 形态权威见 `ENGINEERING-MODE.md`；活文件只留未决、归档条目移入归档档 |
 | 4 | `docs/requirements/` | 需求层（**17 档**——含 C 桶接收 `AGENT-LOOP`） | 地图与登记规则 = `docs/requirements/README.md`（本档不重述）；36 档对位表住该档 |
 | 5 | `docs/design/` | 设计层（顶层板块档 + `README.md` 地图） | 板块登记与归属规则 = `docs/design/README.md`（本档不重述） |
 | 6 | `docs/design/prompts/`（中文权威）+ `src/prompts/`（英文落地） | 提示词双源（各 15 档对位） | 机制权威 = 本端双源；差异登记 = `docs/design/README.md`「镜像差异表」 |

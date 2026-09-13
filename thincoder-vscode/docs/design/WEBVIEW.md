@@ -1173,7 +1173,7 @@ function inline(s) {
 与 `test/integration/scenario-05-panel-basics.test.mjs`（各自自持 id 夹具）**不列写域、零改**——
 webview-env +1 照旧（`installChatFixture` 区 id——区语义断言的宿主）；T-R13 手法见 §12.7 注。
 
-**不入 files**：`docs/TODO.md` / `CHANGELOG.md`（父侧）；CLI 仓代码/设计/测试文件（本批 VSC 单端——
+**不入 files**：`docs/TODO.md`（产品级台账已退役——台账单仓化：现体 = 仓根 `docs/TODO.md`） / `CHANGELOG.md`（父侧）；CLI 仓代码/设计/测试文件（本批 VSC 单端——
 需求树除外：本批条目落 `AGENT-LOOP（本仓·需求）§12`，同口径 §3/§8~§11）；群 A §11/§13/§15 节域零碰。
 
 ### 12.7 用例表（正常 / 边界 / 错误——T-R1..T-R16〔T-R5/T-R6 之现体 = T-V4/T-V2；T-R8/T-R16 已退场——删除记录 = §14〕；activity-flow 族改写 + async-visibility 更新）
@@ -1350,7 +1350,7 @@ webview-env +1 照旧（`installChatFixture` 区 id——区语义断言的宿�
 
 **文档域（设计者已落——coder 零碰）**：`docs/design/WEBVIEW.md` 1257 →（§13 新节 + §12.3 第 6 条
 改指 + 节号 sweep + 变更记录顺延 §14）· 需求树 = `AGENT-LOOP（本仓·需求）§14`；
-`docs/TODO.md` / `CHANGELOG.md` 归父侧。
+`docs/TODO.md`（产品级台账已退役——台账单仓化：现体 = 仓根 `docs/TODO.md`） / `CHANGELOG.md` 归父侧。
 
 **拆分评审注**：`activity.js` 328→~354 越 300 软线（<500 硬限）——结论不拆：增量 = 2 小函数
 （~12 / ~8 行）+ 1 行调用 + 头注；再增厚触发拆分评估。`ui.js` 492 近硬限——本批零碰。测试面
@@ -1719,7 +1719,7 @@ state.js 行登记）呈落差——**登记为协调项**：集中声明建议�
 修正轮 #2）** + 变更记录 · 沿革三指针（`SESSION-ACTIVITY-REVISED.md` / `ACTIVITY-REWRITE-SIMPLE.md` /
 `SESSION-FLOW-B.md`）· 需求树 = `AGENT-LOOP（本仓·需求）§16 + §12` F-J1/F-J3/F-J6 修订。
 
-**不入 files**：`docs/TODO.md` / `CHANGELOG.md`（父侧）；CLI 仓代码/测试（零改——需求树除外）。
+**不入 files**：`docs/TODO.md`（产品级台账已退役——台账单仓化：现体 = 仓根 `docs/TODO.md`） / `CHANGELOG.md`（父侧）；CLI 仓代码/测试（零改——需求树除外）。
 
 ### 14.7 用例表（正常 / 边界 / 错误——T-CL1..T-CL24；新档 `activity-closure` + `status-line` 为主力）
 

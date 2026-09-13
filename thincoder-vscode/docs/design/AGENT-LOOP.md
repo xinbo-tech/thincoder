@@ -20,9 +20,9 @@
 ## 未决 / 待办状态行（承接开放项——勿当历史折叠）
 
 - `eng(enter)` 的用户同意门、design token 的用户批准点、拒绝文案降噪——CLI 同存，
-  两端待议（VSC `docs/TODO.md`）。
+  两端待议（VSC `docs/TODO.md`——产品级台账已退役：台账单仓化，现体 = 仓根 `docs/TODO.md`）。
 - advisor 工具集与 CLI 的差异项（CLI advisor 有 lsp，本端侧待补）——VSC
-  `docs/TODO.md`。
+  `docs/TODO.md`（产品级台账已退役——台账单仓化：现体 = 仓根 `docs/TODO.md`）。
 - 挂起期进程级 reminder 注入含 ISO 时间戳且位于 time 注入之前——每进程首 run 缓存
   miss 一次（单次量级，可接受）——留待评估（`TODO（CLI 仓）`）。
 - UI ⏹ 活动块 live 头缺逐轮 turn 段（现有状态事件不携 turn——逐轮跳动需扩展端新
@@ -45,7 +45,7 @@
   §17.10 补登记（文档召回 `> heading` 段本端恒缺——索引无 heading 字段；模板逐字、条件省略）。纯登记与实测对齐、零契约语义变动。
 - 2026-09-11（VSC-CONTEXT-PARITY 批·修正轮——设计评审轮次 1 #1~#10 落修）：§3 注入段改指针指 §17（消批后双描述）·
   §17.4+D-CI2 补 restarted 段去向注（原段删除）· §17.6/§17.11 计数对齐（15 档 = 源档 12 + 测档 3）+ run-stages
-  结构债候选注 · §17.7 补 T-CI-2a/b/c 与 T-CI-3b、T-CI-5/T-CI-10 seam 计数落点、T-CI-11 跨仓只读 fail-closed ·
+  结构债候选注 · §17.7 补 T-CI-2a/b/c 与 T-CI-3b、T-CI-5/T-CI-10 seam 计数落点、T-CI-11 跨仓只读 fail-closed——T-CI-11 已退场（整删——两仓合并批 2；删除记录 = 2026-09-13-TWO-REPO-MERGE §5） ·
   §17.8 AC-CI-5 / §17.9 边界 / §17.11 KD-10 同步。纯口径与覆盖补全、零契约语义变动。
 - 2026-09-11：活动区回归批（VSC-ACTIVITY-REGION-RESTORE）——块全程驻留固定活动区（区内出生 · 原地折叠 · 区内保留）；§1 模块地图行 / §7 挂起 UI 与中止语义 / §10 全节改写——权威 = `WEBVIEW.md` §12。
 - 2026-09-11：群 B 批（VSC-REVIEW-ASYNC-SWEEP）**新增 §15**（advisor 池中止收口——`discardAbortedAdvisors` + C-10；§12.8 #1 收口注）**与 §16**（digest 注入预算统一 VSC 镜像——`digest-budget.mjs`）；§1 模块地图 +2 行（编号避撞：落档时群 A A11 §14 已占位，本批两节顺延 §15/§16）。
@@ -688,7 +688,7 @@ Partial changes from discarded children stay unmerged/unaudited; re-spawn if the
 
 文档（设计者写域，coder 零碰；已落——实测行数）：`AGENT-LOOP（CLI 仓）` 245 → **297**（§9）·
 本档 529 → **731**（as-of 2026-09-11 修正轮后实测——§12 + §1 模块地图行 + §5 指针 + 变更记录行）· `2026-09-11-VSC-ASYNC-PARITY（CLI 仓）§2`（任务书）·
-本仓 `docs/TODO.md` 需求池（2 条 → 3 条）。
+本仓 `docs/TODO.md` 需求池（2 条 → 3 条）——产品级台账已退役（台账单仓化：现体 = 仓根 `docs/TODO.md`）。
 
 ### 12.5 用例表（正常 / 边界 / 错误——输入 / 预期输出；映射列 = 需求号）
 
@@ -1239,7 +1239,7 @@ VSC 现序违反了它（`:448` time → `:450` pushInjections）。**取「time
 | 10 | `src/extension/panel-chat.mjs` | 499 | 499（载荷不变；**贴线注记**——不得加行） | 仅注释 |
 | 11 | `src/mcp/index.mjs` | 417 | ~419 | console 可见面 |
 | 12 | `src/repomap.mjs` | 225 | ~245 → **304（实测）** | +buildSummary 导出；**结构债候选**〔实现后同步（2026-09-12）〕 |
-| 13 | `test/context-parity.test.mjs` | 新 | ~260 → **385（实测）** | T-CI-1~T-CI-11（含子态 T-CI-2a/b/c、T-CI-3b——修正轮 #4）机判；**登记**（>300 咨询线）〔实现后同步（2026-09-12）〕 |
+| 13 | `test/context-parity.test.mjs` | 新 | ~260 → **385（实测）** | T-CI-1~T-CI-11（含子态 T-CI-2a/b/c、T-CI-3b——修正轮 #4）机判；**登记**（>300 咨询线）〔实现后同步（2026-09-12）〕——T-CI-11 已退场（整删——两仓合并批 2；删除记录 = 2026-09-13-TWO-REPO-MERGE §5） |
 | 14 | `test/files.mjs` | 72 | 73 | 新档登记 |
 | 15 | `test/setup-reminders.test.mjs` | 267 | ~285 | AUTO 位置/无 permission/去重断言 |
 
@@ -1275,7 +1275,7 @@ VSC 现序违反了它（`:448` time → `:450` pushInjections）。**取「time
 | T-CI-10 | 错误 | 召回/大纲/快照内部 I/O 失败（mock 抛错）；seam 计数（修正轮 #10） | 该块静默跳过；其余块与 user 输入零影响；召回/大纲/快照各恰 1 次调用/run（失败不重试——seam 计数） | N-Q2 |
 | T-CI-11 | 正常（双端对照） | 跨仓只读兄弟仓 （CLI 仓）`src/agent/setup.mjs`（`THINCODER_CLI_ROOT` 可覆盖；缺仓/异位 = fail-closed——显式失败不 skip；修正轮 #1） | 序表各 CLI 锚字面 + **文件内出现序**与 §17.4 单调一致检测——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；现体 = 兄弟仓 CLI 源在位（缺仓/异位 = fail-closed 显式失败） | F-Q13 |
 
-**跨仓只读语义（修正轮 #1——父侧裁定：保留 fail-closed 并写明；N-Q3/N-P1 登记豁免随附）**：T-CI-11 读
+**跨仓只读语义（修正轮 #1——父侧裁定：保留 fail-closed 并写明；N-Q3/N-P1 登记豁免随附；T-CI-11 已退场——整删——两仓合并批 2；删除记录 = 2026-09-13-TWO-REPO-MERGE §5）**：T-CI-11 读
 **兄弟仓**（相对本仓根 `../thincoder`；环境 = 两仓并排 checkout（teamcode 工作区）；`THINCODER_CLI_ROOT` 可
 覆盖——同 `test/prompts-mirror-anchors.test.mjs:21,30-34` 同款）。**缺仓/异位 = fail-closed（显式失败，
 不 skip）**——理由：skip 会让「CLI 序变 → VSC 红」的漂移检测静默失效（本测试是双端序面的唯一机验锚；真空
@@ -1299,7 +1299,7 @@ N-P1 同款。
 
 ### 17.9 边界（本批不做）
 
-- 不改 CLI 仓（代码/提示词）；不做跨仓依赖（产品/运行面——T-CI-11 跨仓只读检验除外：交付期对照、fail-closed，见 §17.7/§17.8；修正轮 #1/#7）；不改子代理（depth>0）的 **per-run history 注入面**（`[4]` 尾块不分 depth——F-P5 既定项、D-CI2）；不改 webview/面板协议；
+- 不改 CLI 仓（代码/提示词）；不做跨仓依赖（产品/运行面——T-CI-11 跨仓只读检验除外：交付期对照、fail-closed，见 §17.7/§17.8；修正轮 #1/#7）；不改子代理（depth>0）的 **per-run history 注入面**（`[4]` 尾块不分 depth——F-P5 既定项、D-CI2）；不改 webview/面板协议；（T-CI-11 已退场——整删——两仓合并批 2；删除记录 = 2026-09-13-TWO-REPO-MERGE §5）
 - 不做注入预算/裁剪；不做 skills 热刷新；不做 `_warnings` 之外新警告源；
 - 已知代价登记：A 类块随磁盘文件变更于下 run 生效（前缀失效一次）——接受；
 - 反例处置登记：permission 句删除后「非 AUTO 模式提醒」面 = 本端无（CLI 同）——模板文本已覆盖确认门。
@@ -1329,9 +1329,9 @@ N-P1 同款。
 | KD-7 | 召回 depth 门 | depth 0 门 + 差异登记 §17.10 | CLI 式无 depth 门（本端索引/记忆为 cwd 级模块态——子代理会多召回） |
 | KD-8 | 两家死载荷 | skills：真实消费（尾块）；MCP：console 可见面对齐 CLI | 删除 skills 载荷（仍会重复读盘）；MCP 发明 history 注入（CLI 无此行为——违对齐判据） |
 | KD-9 | 写入后增量重索引（E1 附） | 本批不做（出批登记——VSC indexer 无单文件 API，属索引板块） | 本批一并实现（跨板块、无设计基础） |
-| KD-10 | 双端对照 AC 形态 | 跨仓序锚漂移检测（T-CI-11——机验；**fail-closed**——缺仓/异位 = 红不 skip；交付期对照面、产品面零跨仓依赖——修正轮 #1） + 序表逐格文档基准 | 真运行时双端 dump 脚本（双端 trace 形态未对齐——机验成本高于本批；留交付复核流程）；skip-if-absent（跳过 = 漂移检测静默失效——不取） |
+| KD-10 | 双端对照 AC 形态 | 跨仓序锚漂移检测（T-CI-11——机验；**fail-closed**——缺仓/异位 = 红不 skip；交付期对照面、产品面零跨仓依赖——修正轮 #1） + 序表逐格文档基准 | 真运行时双端 dump 脚本（双端 trace 形态未对齐——机验成本高于本批；留交付复核流程）；skip-if-absent（跳过 = 漂移检测静默失效——不取）——T-CI-11 已退场（整删——两仓合并批 2；删除记录 = 2026-09-13-TWO-REPO-MERGE §5） |
 
-**计数（D3）**：用例 14 条（T-CI-1、T-CI-2a、T-CI-2b、T-CI-2c、T-CI-3、T-CI-3b、T-CI-4、T-CI-5、T-CI-6、T-CI-7、T-CI-8、T-CI-9、T-CI-10、T-CI-11）——修正轮 #4 ·
+**计数（D3）**：用例 14 条（T-CI-1、T-CI-2a、T-CI-2b、T-CI-2c、T-CI-3、T-CI-3b、T-CI-4、T-CI-5、T-CI-6、T-CI-7、T-CI-8、T-CI-9、T-CI-10、T-CI-11；在役 13——T-CI-11 已退场（整删——两仓合并批 2；删除记录 = 2026-09-13-TWO-REPO-MERGE §5））——修正轮 #4 ·
 AC 5（AC-CI-1~AC-CI-5）· 关键决策 10（KD-1~KD-10）· 实施域 15 档 = 源档 12（1 新 + 11 改）+ 测档 3（1 新 + 1 改 + 1 登记）（修正轮 #9）·
 文档域 3（本 §17 / VSC-PROMPTS / TOOLS §12）。
 
@@ -1499,7 +1499,7 @@ callbacks 对象——`id: entry.id`）各加 `onPermissionRequired: makeChildPe
 ③ `activity.js` 354→~372 / `chat.js` 355→~363（越 300 咨询线——本批不拆，登记结构债候选）；④ 源新档（`tool-gates.mjs` / `child-permission.mjs`）≤300；**测试档拆分已落**（500 行硬限无豁免）——
 `test/child-permission.test.mjs` 拆后 **368** + 新档 `test/child-permission-wiring.test.mjs` **218**（守恒 **18 = 12 + 6**；拆分方案 = `LEDGER-SELF-CONTAINED.md §9`）。
 **与在途批文件域重叠（调度排队——父侧）**：活动区批（`2026-09-12-VSC-ACTIVITY-CLOSURE`）同触 #4/#8/#10/#11/#13/#14——调度器按 `files` 排队，后落批须对表重读。
-**不入 files**：`docs/TODO.md` / `CHANGELOG.md`（父侧）；CLI 仓一切代码（需求树除外——设计者已落）。
+**不入 files**：`docs/TODO.md` / `CHANGELOG.md`（父侧）；CLI 仓一切代码（需求树除外——设计者已落）——产品级台账已退役（台账单仓化：现体 = 仓根 `docs/TODO.md`）。
 
 ### 18.7 用例表（正常 / 边界 / 错误——输入 / 预期输出；映射列 = 需求号）
 

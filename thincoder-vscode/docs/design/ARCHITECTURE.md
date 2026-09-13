@@ -12,9 +12,9 @@
 ## 未决 / 待办状态行（承接开放项——不得当历史折叠）
 
 - `eng(enter)` 的用户同意门、design token 的用户批准点、拒绝文案降噪——CLI 同存，
-  两端待议（VSC `docs/TODO.md`）。
+  两端待议（VSC `docs/TODO.md`——产品级台账已退役：台账单仓化，现体 = 仓根 `docs/TODO.md`）。
 - advisor 工具集与 CLI 的差异项（CLI advisor 有 lsp，本端侧待补）——VSC
-  `docs/TODO.md`。
+  `docs/TODO.md`（产品级台账已退役——台账单仓化：现体 = 仓根 `docs/TODO.md`）。
 - 挂起期进程级 reminder 注入含 ISO 时间戳且位于 time 注入之前——每进程首 run 缓存
   miss 一次（单次量级，可接受）——留待 `SESSION（CLI 仓·设计）` §11 后续评估（`TODO（CLI 仓）`）。
 - UI ⏹ 活动块 live 头缺逐轮 turn 段（现有状态事件不携 turn——逐轮跳动需扩展端新
