@@ -478,4 +478,62 @@ Added dir 'thincoder-vscode'
 - **内部 advisor 代码评审未跑**（父侧预算指令「先提交、再报告」，优先保障交付不丢）；语义零改的替代证据 = 全域输出逐数一致（改前 = 改后：8741 / 0 / 773 + 41 / 6 / 22-0-19）+ 两产品全链复跑 + 受影响测试档直跑（含 slow）。
 - 审计附注（非偏差）：`check-doc-width.mjs` CLI 起点的 `widthFiles` + `checkDocWidths` 两次域扫描为**既有结构**（原档逐字保留，非本轮引入；`widthFiles` 仅服务「N 文件」计数）；如需收敛归后续批。
 
+### 批 2 · 交付评审 #20 发现 #2 收口——V1 全域跨域掩蔽修复（eng-coder 自写 · 2026-09-13）
+
+**范围**：批 2 交付评审发现 #2（🟡）——`scanDomain` 域参缺省时返回全域并集，`checkSectionRefs` 的 `byBase` 按 basename 跨域汇总、
+判定用 `cands.some(...)` ⇒ 同 basename 的两产品档互相满足节号：一条对甲产品失效的引用可被乙产品同名档掩蔽（假阴；
+违设计档 §3.1 T-M9 期望「按产品前缀隔离解析，无 basename 一对多 fail-open」）。
+**执行根**：合并仓根 `d:\teamcode\thincoder`。**提交**：`bed0bc320de70e1fa58733ea800e99ca4e18295b`（显式路径 add → status 核对 → `--only` 同路径提交）。
+
+#### 一、改法（正确面 = 解析核；入口档零改）
+
+- `scripts/check-doc-width-core.mjs`：V1 解析**按域隔离**——`checkSectionRefs` 改为**逐域各跑一次**：域基驱动（`scanBases`）与单域收集
+  （`collectDomain`）自 `scanDomain` 抽出为内部助手（域驱动单源，`scanDomain` 输出语义零改），`byBase` **每域独立重建**（本域索引——不跨域并表）。
+  全域调用 = 逐域结果的并集：**任一域有违规 ⇒ 全域退出码 1**；报告行路径自带域前缀（`thincoder/…` 与 `thincoder-vscode/…`），汇总计数为全域聚合。
+- **产品域态（`--domain`）逐字不变**：单域路径下候选集与改前逐元素一致（夹具两域实测改前 = 改后逐字相同——见下表）。
+- 入口档 `scripts/check-doc-width.mjs` **零改**（`main` 调用路径无需调整——隔离落在解析核，全域 / 产品域 / 程序直调三面同收益；
+  未用「按 basename 加域前缀猜」类折中）。
+- 行数（wc -l）：`check-doc-width-core.mjs` 272 → 286（≤300）；入口档 109（±0）。
+
+#### 二、等价性证据（夹具 = 两域同 basename + 域外档引用；改前 / 改后对照）
+
+夹具 `%TEMP%\dwfix-fixture\`：alpha / beta 两域各持 `docs/design/`。夹具语义 = alpha 引用 `TESTING.md` §7（本域同名档无此节、beta 同名档有——掩蔽源）；
+beta 引用他域独有档 `ONLY-ALPHA.md` §5（本域无此档 ⇒ 预期 unknown-doc）。
+
+| 命令（cwd = 夹具，脚本 = 仓根统一版） | 改前 | 改后 |
+|---|---|---|
+| 全域（无域参） | 0 违规 · exit 0——**掩蔽**（alpha / beta 两条均漏报） | 2 违规 · exit 1（= 逐域并集，alpha / beta 各 1） |
+| `--domain alpha` | 1 违规（失效节号 no-section）· exit 1 | 同左（逐字不变） |
+| `--domain beta` | 1 违规（域外档 unknown-doc）· exit 1 | 同左（逐字不变） |
+
+⇒ 改后全域输出 = 逐域输出并集（违规 2 = 1 + 1；扫描文件 5 = 3 + 2）；改前全域 ≠ 并集（0 ≠ 2）＝本发现的假阴实证。
+真仓复核：全域 273 文件 0 违规 · `--domain thincoder` 140 · `--domain thincoder-vscode` 133（273 = 140 + 133）——改前 / 改后逐数一致、exit 0。
+
+#### 三、回归用例（宿主 = VSC `test/doc-consistency.test.mjs`；改前红 → 改后绿）
+
+- **宿主选择理由**：该档 = V1 边界断言族宿主（T63④ 同族：失效引用 / unknown-doc / 「（CLI 侧）」豁免），且为 S4 单仓化修订面、锚定仓根统一版；
+  不改 CLI 同名档——其探针路径并发缺陷属项目台账「触发 = 条件」登记项，不顺势扩大本轮触碰面（任务口径「改动收窄」）。
+- 用例 `T-M9`：alpha 引用受阻节号**必须报（不得被 beta 同名档满足）**；beta 引用他域独有档**必须报 unknown-doc**；两向「本域可解析引用零误报」负例钉住不过度收紧。
+- **改前**：VSC 目录 `node --test test/doc-consistency.test.mjs` = tests 10 / pass 7 / **fail 1**（T-M9 首断言）· exit 1。
+- **改后**：同命令 = tests 10 / pass 8 / fail 0 / skip 2 · exit 0。该档 214 → 238 行（wc -l；≤300）。
+
+#### 四、全链复跑（与批 2 §5 基线同口径对照）
+
+| 门 | 改后实测 | 批 2 基线 | 对照 |
+|---|---|---|---|
+| 仓根三机检 | `doc-anchors` exit 0（V5 0 悬空 ×2；VSC 域报告态 41 命中 = A1 22 / A2 0 / A3 19）· `check-doc-width` exit 0（273 档 0 违规）· `check-ledger` exit 0（2 档 OK · 0 违规） | 同 | 一致 |
+| CLI 链 | lint 311 OK · 快层 605/548/0/57 · test:full 605/605/0 · 集成 23/23/0 | 同 | 一致 |
+| VSC 链 | lint 293 OK · 快层 622/581/0/41 · test:full 622/621/**1** · 集成 28/28/0 · `doc:check` 41 命中阻断（既有面） | 621/580/0/41 · 621/620/1 | 计数 +1 = 新用例（绿）；唯一 fail = T-DC6②（既有红——命中面与基线一致） |
+
+- VSC full 复核：首跑 2 红 = T-DC6② + AC89（「单次刷新 501ms > 500ms」）；AC89 单档复跑通过 · 全量次跑通过——属既有满负荷抖动
+  （批档 LEDGER-SELF-CONTAINED.md 已记同型），非本批引入。
+- **未触碰**：产品 `src/**` · 设计 / 需求档 · 编号 · 既有用例（仅 VSC `doc-consistency` 追加一例 + 头注同步）。
+
+#### 五、发现与上报
+
+- **设计档行数注记漂移（写权在 eng-designer，本批未改）**：设计档拆分结构注记（commit `c3d0e6cd`）载「最大 272 = `check-doc-width-core.mjs`」，
+  现实测 **286**（本修复 +14）；「各文件目标 ≤300 行已达成」仍成立，仅逐个数值待收正。
+- **范围外观察（不阻塞）**：域**内**同名 basename（`docs/design/` 与 `docs/requirements/` 撞名）仍为 `some()` 判存——属 D-CL8 已如实登记的
+  fail-open 方向；本修复射程 = 域间隔离（T-M9 口径），域内面未动。
+
 ## §6 验证与收口（父代理自写）
