@@ -56,7 +56,7 @@ import { stripEventToken } from "../agent/spawn-child.mjs"
 import { logEvent } from "../log.mjs"
 import { deathLine } from "../abort-provenance.mjs"
 // ASYNC-RESULT-CONTAINER.md D3/D6：settle 公共收尾单点 + child signal 构建单点
-import { buildChildSignal, settleAsyncEntry } from "./async-settle.mjs"
+import { bindChildController, buildChildSignal, carrierField, getAsyncPool, settleAsyncEntry } from "./async-settle.mjs"
 import { nextSubagentId } from "./subagent-scheduler.mjs"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -169,7 +169,7 @@ export function advisorPoolLimitFor(agent) {
  *  （docSetKey）；code = 单 code 线程（记录不记路径键——与 openCodeRun 语义一致）。
  *  与池容量守卫独立：容量 = 全局 ≤N——scope = 同 scope ≤1——两关都过才启动。 */
 export function runningAdvisorOfScope(agent, reviewType, docSetKey) {
-  const pool = agent?._asyncAdvisors
+  const pool = getAsyncPool(agent, "advisor")
   if (!(pool instanceof Map)) return false
   for (const e of pool.values()) {
     if (e.status !== "running" || e.reviewType !== reviewType) continue
@@ -180,13 +180,13 @@ export function runningAdvisorOfScope(agent, reviewType, docSetKey) {
 }
 
 export function runningAdvisorCount(agent) {
-  return [...(agent?._asyncAdvisors?.values() ?? [])].filter((e) => e.status === "running").length
+  return [...(getAsyncPool(agent, "advisor")?.values() ?? [])].filter((e) => e.status === "running").length
 }
 
 /** Any in-flight (non-done) async advisor review? — the completion guard skips
  *  its push-back while a review is pending (T-24b4: 未决不算未评审). */
 export function advisorReviewPending(agent) {
-  return [...(agent?._asyncAdvisors?.values() ?? [])].some((e) => !e.done)
+  return [...(getAsyncPool(agent, "advisor")?.values() ?? [])].some((e) => !e.done)
 }
 
 /** Directed cancel (ruling ②-6b — ⏹/cancel): abort the running review's
@@ -194,7 +194,7 @@ export function advisorReviewPending(agent) {
  *  branch (no pending entry / no token / "评审已取消——token 未签发" reminder). */
 export function cancelAsyncAdvisor(agent, id) {
   const key = String(id)
-  const map = agent?._asyncAdvisors ?? new Map()
+  const map = getAsyncPool(agent, "advisor") ?? new Map()
   const entry = map.get(key)
   if (!entry) {
     return { id: key, status: "error", error: `unknown async advisor review id: ${key}` }
@@ -275,12 +275,9 @@ export function launchAsyncAdvisor(parent, ctx, launch) {
   // D6 buildChildSignal 单点（ASYNC-RESULT-CONTAINER.md）。
   const ctrl = new AbortController()
   entry.controller = ctrl
-  const baseSignal = buildChildSignal(parent, ctx)
-  if (baseSignal) {
-    // §20.3 站点 #10（第 24 批）：hop 逐跳保 reason
-    if (baseSignal.aborted) ctrl.abort(baseSignal.reason)
-    else baseSignal.addEventListener("abort", () => ctrl.abort(baseSignal.reason), { once: true })
-  }
+  // §20.3 站点 #10（第 24 批）：hop 逐跳保 reason；#98 链结单点（interrupt 豁免面——
+  // Ctrl+I 不逐链中止飞行评审）。
+  bindChildController(ctrl, buildChildSignal(parent, ctx))
   entry.promise = new Promise((res) => { entry._settle = res })
   entry.start = () => {
     entry.startedAt = Date.now()
@@ -327,14 +324,14 @@ export function launchAsyncAdvisor(parent, ctx, launch) {
  * @returns {boolean} whether any instance was closed
  */
 export function closeOpenCodeAdvisorRuns(agent) {
-  const advisors = agent?._asyncAdvisors
+  const advisors = getAsyncPool(agent, "advisor")
   // Any pooled advisor entry — running OR settled-not-consumed — keeps the
   // thread open: an in-run settle whose report has not reached the model (the
   // suspension sweep / digest consumes it next) must still be continuable by
   // the fix round that follows the disposition.
   if ((advisors?.size ?? 0) > 0) return false
-  if ((agent?._asyncSubagents?.size ?? 0) > 0) return false
-  if ((agent?._pendingAsyncResults ?? []).some((e) => e.role === "advisor")) return false
+  if ((getAsyncPool(agent, "subagent")?.size ?? 0) > 0) return false
+  if ((carrierField(agent, "_pendingAsyncResults") ?? []).some((e) => e.role === "advisor")) return false
   let closed = false
   const runs = agent?._advisorRuns
   if (runs instanceof Map) {

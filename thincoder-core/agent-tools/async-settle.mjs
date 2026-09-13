@@ -22,6 +22,13 @@
  * 列表）+ log/context/helpers/spawn-child——四族 settle 回调（subagent-run/advisor-async/
  * escalate-async/consult）单向 import 本模块；scheduler 反向 import 本模块（getAsyncPool）
  * 与既有 scheduler ↔ subagent-async 同款惰性环——无求值期依赖。
+ *
+ * S1 续轮第二批（2026-09-14——异步机械族 VSC 侧并入，AGENT-LOOP.md §2.3 载体口径）：
+ * - #94 载体吸收：`carrierField`（父对象字段优先 / 回退 `history`——VSC 形跨 runAgent
+ *   载体）+ 墓碑三函数单点（`writeTombstoneTo` / `writeTombstone` / `tombstoneOf`，
+ *   原核内 3 处 inline 写全部收口）；`getAsyncPool` / `parkAsyncPending` 走吸收。
+ * - #98 interrupt 豁免面：`parentAborted` 豁免 `reason.interrupt`（Ctrl+I 不是全停）；
+ *   `bindChildController` = 链结单点（原 4 处逐字同构，interrupt 不逐链中止）。
  */
 import { logEvent, errText } from "../log.mjs"
 import { pushReal } from "../context.mjs"
@@ -29,22 +36,86 @@ import { escapeXml } from "../agent/helpers.mjs"
 import { TURN_CAP_MARK } from "../agent/spawn-child.mjs"
 import { dependentLabels, maybeRefillAsync, refreshQueuedTokens } from "./subagent-scheduler.mjs"
 
+// ─── #94 载体吸收（VSC 侧并入——AGENT-LOOP.md §2.3 载体五字段）───────────────
+
+/**
+ * 载体字段读取吸收（#94——「VSC 的跨 runAgent 存活载体面按核内结构归一」）：
+ * §2.3 载体口径 = `_asyncSubagents` · `_asyncAdvisors` · `_consultSessions` ·
+ * `_pendingAsyncResults` · `_suspended`（AGENT-LOOP.md §2.3 seam 表）。
+ * CLI 形：字段直接挂 agent（跨 run 存活）；VSC 形：字段挂 depth-0 `history`
+ * （agent per-run 重建——run 起始把 history 容器绑到 agent 字段，绑定不变式）。
+ * 本函数吸收两形为同一读取：父对象字段优先，缺字段回退 `parent.history`。
+ * 写侧**不变**（仍以父对象字段为入口——绑定不变式下与 history 同一容器）。
+ */
+export function carrierField(parent, field) {
+  const own = parent?.[field]
+  if (own !== undefined && own !== null) return own
+  return parent?.history?.[field] ?? undefined
+}
+
+/**
+ * 终态墓碑写入单点（#94——VSC 侧并入：`writeTombstoneTo` / `writeTombstone` 单点收口；
+ * 原核内 3 处 inline `(x._asyncTombstones ??= new Map()); .set(...)` 全数经此）。
+ * holder 向 = 拥有载体的对象（agent / history 数组——跨 runAgent 存活口径同 getAsyncPool）。
+ */
+export function writeTombstoneTo(holder, id, status, role) {
+  if (!holder) return
+  if (!(holder._asyncTombstones instanceof Map)) holder._asyncTombstones = new Map()
+  holder._asyncTombstones.set(String(id), { status, role })
+}
+
+/** parent 形态墓碑写入（载体吸收：父对象无 Map 而 history 有 ⇒ 借用同一 Map——不另建分叉）。 */
+export function writeTombstone(parent, id, status, role) {
+  const existing = carrierField(parent, "_asyncTombstones")
+  if (!(parent?._asyncTombstones instanceof Map) && existing instanceof Map) parent._asyncTombstones = existing
+  writeTombstoneTo(parent, id, status, role)
+}
+
+/** 终态墓碑读取（parent 形态——载体吸收；无记录 ⇒ null）。 */
+export function tombstoneOf(parent, id) {
+  const m = carrierField(parent, "_asyncTombstones")
+  return (m instanceof Map ? m.get(String(id)) : undefined) ?? null
+}
+
+/**
+ * 条目 controller 链到基信号单点（#98 VSC 侧并入——interrupt 豁免面；原 subagent-run /
+ * advisor-async / escalate-async / consult 四处逐字同构）：
+ * - 基信号**已 aborted** 且非 interrupt ⇒ 立即 abort（reason 逐跳保留——§20.3 站点 #10）；
+ * - interrupt aborted（Ctrl+I——中断消息注入后同回合续跑）⇒ **不逐链中止**（池保留；
+ *   子代理 / 评审继续跑完，settle 照常注入——「Ctrl+I keeps the pool」意图对齐）；
+ * - 未来 abort ⇒ 非 interrupt 才逐链传播（Stop / 会话中止全停语义不变）。
+ */
+export function bindChildController(ctrl, baseSignal) {
+  if (!ctrl || !baseSignal) return
+  if (baseSignal.aborted) {
+    if (baseSignal.reason?.interrupt !== true) ctrl.abort(baseSignal.reason)
+    return
+  }
+  baseSignal.addEventListener("abort", () => {
+    if (baseSignal.reason?.interrupt === true) return
+    ctrl.abort(baseSignal.reason)
+  }, { once: true })
+}
+
 // ─── D1 池 accessor（吸收双池）────────────────────────────────────────────────
 
-/** 池 accessor（D1）：role "advisor" → `_asyncAdvisors`（独立评审池——无队列独立调度）；
- *  其余角色 → `_asyncSubagents`（子代理/飞刀共享槽位队列池）。未初始化返 null——调用方
- *  以 `?? new Map()` / 可选链处置。 */
+/** 池 accessor（D1）：role "advisor" → `_asyncAdvisors`（独立评审池——无队列独立调度）·
+ *  role "consult" → `_consultSessions`（会话池）· 其余 → `_asyncSubagents`（子代理/飞刀
+ *  共享槽位队列池）。载体经 `carrierField` 吸收（#94）；未初始化返 null——调用方以
+ *  `?? new Map()` / 可选链处置。 */
 export function getAsyncPool(parent, role) {
-  if (role === "advisor") return parent?._asyncAdvisors ?? null
-  return parent?._asyncSubagents ?? null
+  const field = role === "advisor" ? "_asyncAdvisors" : role === "consult" ? "_consultSessions" : "_asyncSubagents"
+  return carrierField(parent, field) ?? null
 }
 
 // ─── D2 pending 单容器（+role）───────────────────────────────────────────────
 
 /** pending 单容器停靠（settle 挂起分流 / sweep 补扫共用——统一表示：条目置 `_inPending`
- *  防重复移交（sweep 幂等判据），includes 去重兜底）。 */
+ *  防重复移交（sweep 幂等判据），includes 去重兜底）。载体经 `carrierField` 吸收（#94——
+ *  VSC 形 pending 挂 history）；写侧仍落父对象字段（无则借用 history 的数组）。 */
 export function parkAsyncPending(parent, entry) {
-  const pend = (parent._pendingAsyncResults ??= [])
+  const existing = carrierField(parent, "_pendingAsyncResults")
+  const pend = (parent._pendingAsyncResults ??= Array.isArray(existing) ? existing : [])
   if (pend.includes(entry)) return
   entry._inPending = true
   pend.push(entry)
@@ -52,11 +123,14 @@ export function parkAsyncPending(parent, entry) {
 
 // ─── D4 守卫统一（严格版）+ D6 信号兜底单点 ──────────────────────────────────
 
-/** D4 settle 守卫统一（escalate 严格版）：父侧中止 = 回合 signal aborted 或条目
- *  controller aborted（取消先行——cancelled 分支在守卫之前分流，定向 cancel 不算父中止）。
- *  日志三连与挂起分流共用本守卫。 */
+/** D4 settle 守卫统一（escalate 严格版）：父侧中止 = 回合 signal aborted（#98 VSC 侧
+ *  并入——interrupt 豁免：Ctrl+I `reason.interrupt` 不是全停，回合续跑、池保留 ⇒ 不判
+ *  父中止）或条目 controller aborted（取消先行——cancelled 分支在守卫之前分流，定向
+ *  cancel 不算父中止）。日志三连与挂起分流共用本守卫。 */
 export function parentAborted(ctx, entry) {
-  return Boolean(ctx?.signal?.aborted || entry?.controller?.signal?.aborted)
+  const base = ctx?.signal
+  if (base?.aborted === true && base?.reason?.interrupt !== true) return true
+  return Boolean(entry?.controller?.signal?.aborted)
 }
 
 /** D6 child signal 构建单点（D5——consult 补 _sessionSignal 兜底）：挂起会话内的回合
@@ -120,6 +194,8 @@ export function settleAsyncEntry(parent, entry, opts = {}) {
   const childLogId = `${role}#${entry.id}`
   const childMs = entry.startedAt ? Date.now() - entry.startedAt : 0
   const aborted = parentAborted(ctx, entry)
+  // 挂起分流判定单点（#94 载体吸收——VSC 形 `_suspended` 挂 history）。
+  const suspended = carrierField(parent, "_suspended") === true
   // ② 日志三连（D4 统一守卫——中止不落错误事件——ev:stopped 已在中止清池点表达；
   // 定向 cancel 走 ev:cancelled）。族形态差异（LOGGING.md）：
   // - advisor：合并单 child:done（kind error/ok）；
@@ -140,7 +216,7 @@ export function settleAsyncEntry(parent, entry, opts = {}) {
         if (entry.error != null) logEvent("child:error", { role, id: childLogId, ms: childMs, err: errText(entry.error, 200) })
         else logEvent("child:done", { role, id: childLogId, ms: childMs, kind: String(entry.report ?? "").includes(TURN_CAP_MARK) ? "partial" : "ok" })
       }
-      if (parent._suspended) logEvent("ev:settled", { id: childLogId, kind: "suspended" })
+      if (suspended) logEvent("ev:settled", { id: childLogId, kind: "suspended" })
     }
   }
   // ③ 分流
@@ -148,8 +224,7 @@ export function settleAsyncEntry(parent, entry, opts = {}) {
     // §19.5 cancelled settle 分支（D-M6）：不入 pending、不参与回合尾直注入——清池 +
     // 终态墓碑（dependsOn 取消语义）+ ⟦ev⟧stopped 冻结 + 族提醒（半成品警示对模型可见）。
     pool?.delete(String(entry.id))
-    const tombstones = (parent._asyncTombstones ??= new Map())
-    tombstones.set(String(entry.id), { status: "cancelled", role })
+    writeTombstone(parent, entry.id, "cancelled", role) // §20 D-SD5：单点写入（#94 载体吸收）
     ctx?.callbacks?.onToken?.(`${entry.relayPrefix}⟦ev⟧stopped\x1e0\x1e0\x1estopped\x1e`)
     if (role === "advisor") {
       // ②-6b：评审取消——token 未签发提醒（settleAdvisorRun 不消费预算）。
@@ -181,7 +256,7 @@ export function settleAsyncEntry(parent, entry, opts = {}) {
     // 单容器（digest 注入）+ 出池 + ⟦ev⟧settled 驻留；回合内 → ⟦ev⟧done 立即冻结
     // （条目留池——done-in-pool 统一表示——回合尾 collectSettledAsync 注入）。
     // consult 族恒停靠（settle 即出会话池入 pending——无 TUI 冻结事件——子块各自冻结）。
-    if (parent._suspended || role === "consult") {
+    if (suspended || role === "consult") {
       parkAsyncPending(parent, entry)
       pool?.delete(String(entry.id))
       ctx?.callbacks?.onToken?.(`${entry.relayPrefix}⟦ev⟧settled\x1e0\x1e0\x1esettled\x1e`)

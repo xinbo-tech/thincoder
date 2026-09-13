@@ -5,7 +5,9 @@
  * 再保存。不保存会让缓冲变脏而磁盘仍旧 ⇒ 下一次编辑撞上我们自己的 isDirty 护栏，外部
  * 写入又与用户随后的保存互相竞写（split-brain 数据丢失）。核内原先写盘直调
  * `node:fs/promises`、散在 5 个档的 8 个写点上 ⇒ **没有可注入的一跳** ⇒ 端侧接核后会
- * 丢掉编辑器径。本模块就是那一跳：核内**全部工具写点**改调 `writeThroughPath`。
+ * 丢掉编辑器径。本模块就是那一跳：核内**工具面的 8 个编辑写点**全改调 `writeThroughPath`
+ * （模型面直写 `agent-tools/batch-segment.mjs` = 设计登记的 S2 前置门 · `tools/checklist-sync.mjs`
+ * = 已登记豁免——两者不在本缝覆盖面；口径与 `CORE-UNIFICATION.md` §2.13.5 落地收正同源）。
  *
  * 默认径 = CLI 语义（**零行为变**）：`writeFile` + 记账。端侧
  * `configureWritePath({ openDoc, applyEdit, isDirty })` 覆盖 ⇒ 编辑器径；**缺省不覆盖**。
@@ -73,22 +75,40 @@ export const dirtyRefusalMessage = (abs) =>
   `File has unsaved changes in the editor: ${abs}. Save or discard before allowing automated edits.`
 
 /**
- * 试注入面：命中 ⇒ 编辑器径（`{ written: true, via: "editor" }`）；未处理 ⇒ null（回默认）。
- * 未打开（`openDoc` 返回假值）/ 无注入面 / 非内容写点 ⇒ 未处理。
+ * 门禁单点（src 面与 dest 面共用——每面各问一次 `openDoc`）：
+ * fail-closed（给了 `applyEdit` 却没给 `isDirty` ⇒ 脏态不可知 ⇒ 抛配置错，不静默退化为
+ * 无护栏编辑器径）；打开且脏 ⇒ 抛端中立拒写文案（split-brain 护栏）。
+ * @returns doc | null（未打开 ⇒ null——该面无门禁）
  */
-async function tryInjectedPath(abs, content, meta) {
-  const impl = injected
-  if (!impl?.openDoc) return null
-  const doc = impl.openDoc(abs) // 每个写点都问一次（门禁面——见 configureWritePath）
+function gateOpenDoc(impl, abs) {
+  const doc = impl.openDoc(abs)
   if (!doc) return null
-  // fail-closed：给了 applyEdit 却没给 isDirty ⇒ 脏态不可知 ⇒ 抛配置错（不静默退化为无护栏编辑器径）
   if (typeof impl.applyEdit === "function" && typeof impl.isDirty !== "function") {
     throw new Error("writeThroughPath: injection provides applyEdit without isDirty — refusing to write to an open file whose dirty state is unknown")
   }
   if (typeof impl.isDirty === "function" && impl.isDirty(doc)) throw new Error(dirtyRefusalMessage(abs))
+  return doc
+}
+
+/**
+ * 试注入面：命中 ⇒ 编辑器径（`{ written: true, via: "editor" }`）；未处理 ⇒ null（回默认）。
+ * 未打开（`openDoc` 返回假值）/ 无注入面 / 非内容写点 ⇒ 未处理。
+ * **dest 面门禁**（move / rename 的覆盖面——父侧裁定补丁）：路径操作会覆盖目标档 ⇒
+ * 目标档与源档**同过门禁**（覆盖「编辑器打开且脏」的目标档 = 直接吞掉用户缓冲，
+ * 与 src 面同源 split-brain 风险）⇒ 拒写。src 未打开**不豁免** dest 门（两面各问一次）。
+ * copy 不写 src、覆 dest——本补丁按裁定范围只覆盖 move / rename（copy 面登记见交付报告）。
+ */
+async function tryInjectedPath(abs, content, meta) {
+  const impl = injected
+  if (!impl?.openDoc) return null
+  const op = meta.op ?? "write"
+  const doc = gateOpenDoc(impl, abs) // 每个写点都问一次（门禁面——见 configureWritePath）
+  if ((op === "move" || op === "rename") && typeof meta.dest === "string" && meta.dest.length > 0) {
+    gateOpenDoc(impl, meta.dest) // dest 面过门禁（覆盖目标档——与 src 同源拒写判据）
+  }
   // 编辑器径只承载**内容写点**（op="write"）；delete / 路径操作（copy/move/rename）与
   // commit（默认径两段式的收尾）无端侧载体 ⇒ 门禁过后回默认径。
-  if ((meta.op ?? "write") !== "write") return null
+  if (!doc || op !== "write") return null
   if (typeof impl.applyEdit !== "function") return null
   const handled = await impl.applyEdit(doc, content, meta)
   if (handled === null) return null // 契约：null = 未处理 ⇒ 回退默认径（防“报成功但无落盘”）

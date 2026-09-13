@@ -14,7 +14,9 @@ import { existsSync, statSync } from "node:fs"
 import { poolLimitsFor, runningPoolCount, ASYNC_POOL_LIMITS } from "./subagent-async.mjs"
 // ASYNC-RESULT-CONTAINER.md D1：池 accessor——async-settle.mjs 反向 import 本模块
 // （dependentLabels）构成同款惰性环（函数级绑定——无求值期依赖）。
-import { getAsyncPool } from "./async-settle.mjs"
+// #94（VSC 侧并入）：池 / pending / 墓碑读取全走载体吸收（carrierField / getAsyncPool /
+// tombstoneOf——CLI 形字段优先 / VSC 形回退 history）。
+import { carrierField, getAsyncPool, tombstoneOf } from "./async-settle.mjs"
 
 // ═══════════════════════════════════════════════════════════════════════════
 // §20 子 agent 任务调度器（AGENT-LOOP.md §20——D-SD1..SD5 + 20.4 处置注）
@@ -115,10 +117,10 @@ export function depInfo(parent, id) {
     return { state: "pending", role: e.role }
   }
   // ASYNC-RESULT-CONTAINER.md D2：pending 单容器（四族统一停靠——依赖目标挂起期 settle
-  // 移交也在此——注入前视为已消费）。
-  const pend = (parent._pendingAsyncResults ?? []).find((x) => String(x.id) === key)
+  // 移交也在此——注入前视为已消费）。载体吸收（#94——VSC 形 pending 挂 history）。
+  const pend = (carrierField(parent, "_pendingAsyncResults") ?? []).find((x) => String(x.id) === key)
   if (pend) return pend.error != null ? { state: "failed", role: pend.role } : { state: "ok", role: pend.role }
-  const t = parent._asyncTombstones?.get(key)
+  const t = tombstoneOf(parent, key)
   if (t) return { state: t.status === "cancelled" || t.status === "failed" ? t.status : "ok", role: t.role }
   return { state: "unknown", role: null }
 }
@@ -142,7 +144,7 @@ export function describeBlockers(parent, entry) {
   }
   const myFiles = entry._files ?? []
   if (myFiles.length > 0) {
-    for (const e of parent._asyncSubagents?.values() ?? []) {
+    for (const e of getAsyncPool(parent, "subagent")?.values() ?? []) {
       if (e === entry) continue
       if (e.status !== "running" && e.status !== "queued") continue
       // SCHEDULER-DYNAMIC-DOMAIN（2026-09-09）：他条目域 = effectiveFiles(e)（声明 ∪
@@ -187,7 +189,7 @@ export function describeBlockers(parent, entry) {
 export const STALL_NOTE = "cancel one task in the loop (action:'cancel') to break the cycle, then re-spawn it (AGENT-LOOP.md §21.1 P-SL2)"
 
 export function detectStall(parent) {
-  const map = parent._asyncSubagents
+  const map = getAsyncPool(parent, "subagent")
   if (!(map instanceof Map) || map.size === 0) return null
   const all = [...map.values()]
   if (all.some((e) => e.status === "running")) return null // ① running 锚点——正常排队不报
@@ -269,7 +271,7 @@ export function queueRunnable(parent, entry) {
   }
   const myFiles = entry._files ?? []
   if (myFiles.length > 0) {
-    for (const e of parent._asyncSubagents?.values() ?? []) {
+    for (const e of getAsyncPool(parent, "subagent")?.values() ?? []) {
       if (e === entry) continue
       if (e.status !== "running" && e.status !== "queued") continue
       if (!filesOverlap(myFiles, effectiveFiles(e))) continue // 动态域：声明 ∪ running touched
@@ -291,7 +293,7 @@ export function queueRunnable(parent, entry) {
  *  错误明确——T-SD5）。运行/排队条目皆可成环节点；池小（≤4 槽 + 有限队列）深度有限。 */
 export function assertNoDepCycle(parent, dependsOn) {
   const edges = new Map()
-  for (const e of parent._asyncSubagents?.values() ?? []) {
+  for (const e of getAsyncPool(parent, "subagent")?.values() ?? []) {
     if (e.status === "running" || e.status === "queued") {
       edges.set(String(e.id), (e._dependsOn ?? []).map(String))
     }
@@ -379,7 +381,7 @@ export function maybeRefillAsync(parent) {
  */
 export function nextSubagentId(parent) {
   let poolMax = 0
-  for (const pool of [parent?._asyncSubagents, parent?._asyncAdvisors]) {
+  for (const pool of [carrierField(parent, "_asyncSubagents"), carrierField(parent, "_asyncAdvisors")]) {
     if (!pool || pool.size === 0) continue
     for (const k of pool.keys()) {
       const n = typeof k === "number" ? k : Number.parseInt(k, 10)

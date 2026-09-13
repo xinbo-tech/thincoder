@@ -32,7 +32,7 @@ import { makeRelay, wrapChildCallbacks, runWithContinue, ensureChildApiKey, clam
 // TUI-OOM-ROOTCAUSE §23.3.1：子代理人读线窗口常量（单源——store 零依赖）。
 import { RECORD_WINDOW_MESSAGES } from "../session-store.mjs"
 // ASYNC-RESULT-CONTAINER.md D2/D3/D6：pending 单容器停靠 + settle 公共收尾 + child signal 单点
-import { buildChildSignal, settleAsyncEntry } from "./async-settle.mjs"
+import { bindChildController, buildChildSignal, settleAsyncEntry } from "./async-settle.mjs"
 import { digestBudgetOver, persistOverflowReport } from "./digest-budget.mjs" // B5（群 B 批 §22 D-DG2）：digest 注入预算单源
 
 // Named consult defaults (consult P2, 2026-08-30).
@@ -428,13 +428,9 @@ export const consultStartTool = {
       const ctrl = new AbortController()
       session.controllers.push(ctrl)
       // D6 buildChildSignal 单点（ASYNC-RESULT-CONTAINER.md D5——consult 补 _sessionSignal
-      // 兜底：挂起会话内的 consult children 持会话 signal，digest 自身 Ctrl+C 不误伤）。
-      const baseSignal = buildChildSignal(agent, ctx)
-      if (baseSignal) {
-        // §20.3 站点 #10（第 24 批）：hop 逐跳保 reason
-        if (baseSignal.aborted) ctrl.abort(baseSignal.reason)
-        else baseSignal.addEventListener("abort", () => ctrl.abort(baseSignal.reason), { once: true })
-      }
+      // 兜底：挂起会话内的 consult children 持会话 signal，digest 自身 Ctrl+C 不误伤）·
+      // #98 链结单点（interrupt 豁免面——Ctrl+I 不逐链中止）。
+      bindChildController(ctrl, buildChildSignal(agent, ctx))
       // Fire and forget — each child settles itself into the session; the session
       // routes to the pending single container when every child has settled (R17).
       runConsultChild(ctx, session, id, m, problem, ctrl)

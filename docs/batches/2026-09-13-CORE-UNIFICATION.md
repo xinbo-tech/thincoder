@@ -2640,5 +2640,108 @@ VERDICT: pass
 7. **仓外一次性件**（越段 1 · 非产品仓）：`d:\teamcode\.thincoder\tmp\wp-drive.mjs` · `wp-fail.mjs`（对照脚本）·
    `core-before/`（HEAD 副本）——均不在仓内，未计入改动集。
 
+### 实施：S1 续轮第二批 —— A 类异步机械族 VSC 侧并入 + file_ops dest 门禁（2026-09-14 · eng-coder）——**终态 = clean**
+
+**段位**：S1 续轮第二批（承接上一轮 K4 的 A 类 ⏳ 工作单 + 父侧裁定补丁）。S2 / S3 面零触碰；**两产品零改动**（`git status --porcelain` 产品侧条目 = 0）；未 commit（父侧统一）；未碰台账；**未改任何 docs**（设计面两档已由父侧先行提交 `15b32aa4`，本段全程只读）。
+
+**改动面**（全部在 `thincoder-core/**`；12 档修改 `+276/−83` + 4 档新建测试）
+
+| # | 档 | 改后行数 | 改动 |
+|---|---|---|---|
+| 1 | `tools/write-path.mjs` | **191**（171 →） | 补丁：file_ops dest 面门禁（门禁单点 `gateOpenDoc`；move/rename 的 dest 同过门禁） |
+| 2 | `agent-tools/async-settle.mjs` | **279**（205 →） | #94 载体吸收（`carrierField` / 墓碑三函数 / `getAsyncPool`+`parkAsyncPending` 吸收）+ #98（`parentAborted` 豁免 + `bindChildController` 链结单点） |
+| 3 | `agent-tools/subagent-scheduler.mjs` | **393**（392 →） | #94 读侧吸收：`depInfo` / `nextSubagentId` / `describeBlockers` / `queueRunnable` / `detectStall` / `assertNoDepCycle` |
+| 4 | `agent-tools/subagent-run.mjs` | **202**（206 →） | #98 接线（链结单点） |
+| 5 | `agent-tools/advisor-async.mjs` | **343**（347 →） | #98 接线 + #94 池读取吸收（5 处：作用域守卫/计数/未决/取消/回合尾关闭） |
+| 6 | `agent-tools/escalate-async.mjs` | **293**（298 →） | #98 接线 |
+| 7 | `agent-tools/consult.mjs` | **469**（474 →） | #98 接线 |
+| 8 | `agent-tools/subagent-async.mjs` | **437**（438 →） | #94 墓碑单点收口（2 处）+ 取消 / 池读侧吸收（`runningPoolCount` / `cancelAsyncSubagent` / `executeCancelAction`） |
+| 9 | `agent-tools/batch-segment.mjs` | **219** | #84 记账面注入缝（`configureBatchSegment` / `resetBatchSegment`；缺省 no-op） |
+| 10 | `agent/setup-reminders.mjs` | **105**（70 →） | #113 并入（`pushInjections` / `appendImagePointer`） |
+| 11 | `token-ttl.mjs` | **285**（275 →） | #154 `reconcileEngTokensFromSlot` 内存 TTL 清理 + 与 VSC 两处口径差登记 |
+| 12 | `test/write-path.test.mjs` | **289**（250 →） | 读数改判 9/9/6 + dest 门禁用例 |
+| 13 | 新建 `test/async-family.test.mjs` | **177** | 8 用例（#94 双夹具 5 + #98 3） |
+| 14 | 新建 `test/token-ttl.test.mjs` | **81** | 5 用例 |
+| 15 | 新建 `test/setup-reminders.test.mjs` | **61** | 4 用例 |
+| 16 | 新建 `test/batch-segment.test.mjs` | **83** | 2 用例（缝双向 + 非法形态 no-op） |
+
+**逐子系统并入（逐行 → 落点）**
+
+1. **#94 载体吸收**（「VSC 的跨 runAgent 存活载体面按核内结构归一」——口径 = `AGENT-LOOP.md` §2.3 五字段）：
+   `carrierField(parent, field)`（父对象字段优先 / 缺字段回退 `history`）· `getAsyncPool`（advisor / consult / subagent 三键）· `parkAsyncPending` · 墓碑三函数（`writeTombstoneTo` / `writeTombstone` / `tombstoneOf`——原 3 处 inline 写全数收口）；
+   读侧吸收面：scheduler 六函数（上表 3）· advisor-async 5 处 · subagent-async 3 处。
+   测试：`test/async-family.test.mjs` 双夹具（CLI 形 = 字段挂本体 / VSC 形 = 字段挂 `history`）——`getAsyncPool` 三键 · `parkAsyncPending` · 墓碑读写 · `depInfo` · `nextSubagentId` 两形同值。
+2. **#98 interrupt 豁免面**（设计 §2.13.4 许可选项「并入核内统一守卫」）：
+   `parentAborted(ctx, entry)` 豁免 `reason.interrupt`（Ctrl+I 非全停）；`bindChildController(ctrl, baseSignal)` = 链结单点（已-aborted 非 interrupt → 立即 abort 且 reason 逐跳保留；interrupt → 不逐链中止；未来 abort 非 interrupt 才传播）——原 4 处逐字同构（subagent-run / advisor-async / escalate-async / consult）全数接线。
+   测试：同档 3 用例（守卫四态 + 链结四态 + `settleAsyncEntry`：interrupt ⇒ 正常结算 / 普通 abort ⇒ 守卫抑制零事件）。
+3. **#154 token TTL / 会话槽台账**：`reconcileEngTokensFromSlot` 先清内存过期项（过期项在任何门禁都过不了——清理不改变授权结果）；与 VSC `reconcileEngDesignTokens` 的两处有意差异（同 id 冲突以槽为准；`droppedExpired` 回写惰性）如实登记于码内注释。
+4. **#113 提醒面（VSC 取并集）**：`pushInjections`（机器行专用注入——单条/数组/非法条目跳过/同文去重/transient 标记）+ `appendImagePointer`（粘贴图指引——非多模态模型可见报错）。
+5. **#84 记账面注入缝**（设计 §2.13.4「记账面按端注入」，形态参 §2.13.5）：`configureBatchSegment({ onWrite })` / `resetBatchSegment()`——缺省 no-op（CLI 语义零行为变），VSC 侧 `_touchedFiles` 记账内容 = S2 端装配注入；**直写保持**（设计登记 S2 前置门——不裸接线）。
+6. **补丁（父侧裁定）file_ops dest 面过门禁**：`gateOpenDoc` 单点（src / dest 两面共用；fail-closed `isDirty` 配置错保留）；move / rename 覆盖目标档前对 `dest` 问 `openDoc` + 脏判——**src 未打开不豁免 dest 门**。
+   读数：`openDoc` / `isDirty` 各 **9**（8 写点 + dest 面 1）· `applyEdit` 6——双夹具（注入 / 不注入）同步；新增用例（move/rename 覆盖脏 dest ⇒ 拒写 + 磁盘不变 + 放行对照）。
+7. **#100 / #101 / #102 / #158（复核判定 = 核内已承载——落点逐处）**：
+   - #100：cancel 执行器 + advisor 评审取消路由 = `subagent-async.mjs`（`executeCancelAction` → `cancelAsyncAdvisor`；本轮读侧载体吸收）；
+   - #101：settle 记账 / token 组外提 = `advisor-settle.mjs` + `design-token.mjs`；会话槽台账写入面 = `persistEngTokens`（settle 当场同步落盘、写失败 = 结算失败——VSC `setSlotEngDesignTokens` 同语义）；
+   - #102：§18 审计门 = `agent/spawn-child.mjs` `gateEngCoderSpawn`；回合尾收集 = `agent/run-stages.mjs` `collectSettledAsync`；四族注入器 = `subagent-async.mjs` `injectAsyncResult`；
+   - #158：settle 记账 / 变更日志（`noteMutations`）/ 陈旧判定（`reviewIsStale`）= `advisor-settle.mjs`——「取 CLI 拆分」即设计裁定形态。
+
+**K1–K3 读数（cwd = 仓根 · 终态复跑）**
+
+| # | 判据 | 读数 | 判 |
+|---|---|---|---|
+| K1 | 三机检 | `doc-anchors` **exit 0** · `check-doc-width` **exit 0**（306 档）· `check-ledger` **exit 0**（0 违规） | ✓ |
+| K2 | 核内 `node --test` | 基线 **96/96** 保持绿 + 新增 **20** 全绿 ⇒ **116/116 · fail 0 · exit 0**（新增逐子系统：write-path 1 · async-family 8 · token-ttl 5 · setup-reminders 4 · batch-segment 2） | ✓ |
+| K3 | 工作树 | 12 档修改 + 4 档新建，**全部在 `thincoder-core/**`**；**产品侧条目 = 0**；`docs/**` 零改动（设计面两档已由父侧先提交） | ✓ |
+
+**K4 更新版逐行表（逐行改判 · A/B/C 全覆盖；D/E/F 保持原判）**
+
+**A 类（本轮首选 · 7 行）**
+
+| 行 | 改判 | 落点 / 原因 |
+|---|---|---|
+| #94 | ✅ 已并入 | 载体吸收（见上 1）；残留 = 队列字段集（未决 1） |
+| #98 | ✅ 已并入 | interrupt 豁免 + 链结单点（见上 2） |
+| #100 | ✅ 核内已承载 | cancel 执行器 + advisor 路由（见上 7） |
+| #101 | ✅ 核内已承载 | settle 记账 / 槽台账 `persistEngTokens`（见上 7）+ 本轮读侧吸收 |
+| #102 | ✅ 核内已承载 | 审计门 / collect / 注入器（见上 7） |
+| #154 | ✅ 已并入 | 内存 TTL 清理 + 口径差登记（见上 3） |
+| #158 | ✅ 核内已承载 | `advisor-settle.mjs` 三件（见上 7） |
+
+**B 类（2 行）**：**#113 ✅ 已并入**（见上 4）· **#112 ⏳ 部分**——① 编辑器上下文注入位 = `pushInjections`（本轮落核，端供内容）；② `read_image` 按模型能力的登记门 = 核内已有等价面（工具集由端经 `agent.tools` 供给 + `readImageTool` 运行期能力拒 `tools/file.mjs:158-165`）；③ MCP 扩工具时机 = 端侧 hydrate 供给——装配表三项条件参数化形态留 S2 端侧接线轮。
+
+**C 类（13 行）**：**#84 ✅ 已并入（缝位形态——见上 5）** · **#68 ✅ 已完成**（上轮写路径缝——8 写点全经缝） · **#63 ⏳ 部分**（编辑器编辑 = 已落；`runInterruptible` 仍无——设计已收正为「部分」） · **#64 ✅ 核内已承载**（§2.13.4 已记「有（`ctx.onQuestion`）」；端侧接线属 S2） · 余 9 行 **未做（原因 = 本批预算未覆盖，未开工；形态一行见 §2.13.4）**：
+#56（cwd 归一按端注入）· #57（树杀实现按端注入）· #59（只读判定 / 审批门按端注入）· #61（执行器按端注入——`runInterruptible`）· #66（宿主语言服务径按端注入）· #69（回执形态按端注入）· #88（同步 loader 面按核内结构归一）· #91（写盘镜像按端注入）· #96（信息段与执行方式按端注入）。
+
+**D/E/F 类**：保持原判（D：`#70` · `#83`；E：`#123–#127` · `#93` · `#95` · `#104–#110` · `#160` · `#161`；F：`#111` · `#149–#153` · `#155` · `#157` · `#103` · `#175` · `#81` · `#134` · `#170` · `#178` · `#179`）——本轮零触碰。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | `carrierField` 读取序 = 父对象字段优先、缺字段回退 `history` | CLI 形零变化（字段在本体）；VSC 形按 run 起始绑定不变式（字段即 history 同一容器）。备选 = history 优先（VSC 现形序）——双存态下会改 CLI 取值 |
+| 2 | `_asyncTombstones` 一并纳入吸收（不在 §2.3 五字段表内） | VSC `tombMap` 即 history 优先载体（其 scheduler 现形）——属「VSC 机制并入」而非另起口径；读侧吸收 + 写侧借用已有 Map |
+| 3 | `bindChildController` 保留 `{ once: true }` 与 reason 逐跳传递 | 与 4 处原实现逐字同构、只加 interrupt 豁免；reason 保真 = §20.3 站点 #10 既有语义 |
+| 4 | #154 清理挂在 `reconcileEngTokensFromSlot`（先清后并） | VSC 清理在 hydrate；核内该函数是唯一「内存 × 槽」汇合点（gate / restore 两径共用）；无槽可读路径同样生效（先清再判 obj） |
+| 5 | #84 缝形态 = 模块级 setter（同 `configureWritePath` 款） | 设计「形态参 §2.13.5 注入缝」= 模块级 configure + 缺省不覆盖；备选 = ctx/opts 传参（与写路径缝形态不一） |
+| 6 | dest 门禁只覆盖 move / rename（copy 面登记残留） | 父侧裁定原文只列 move/rename；copy 同类洞登记为未决（待裁）——不越裁定扩面 |
+
+**内部轮（自含交付协议）**
+
+- **审计 1 轮**（只读 explore 分歧审计，阻塞）：结论 **CLEAN——四类偏差均未发现**。独立复核：dest 门位于 `if (!doc || op !== "write")` 之前（src 未打开不短路）· 双夹具非空转 · 墓碑单点无第二生产调用者 · 四接线点无残留 `baseSignal` · 循环 import 全函数级。
+  审计限制如实登记（无 shell / 无 git / 不可执行——K1/K2/K3 未独立复跑）。4 条 QUESTION（判为非偏差）：#84 直写仍直写（设计在案）· copy 面 · 同步路径无 interrupt 豁免（`subagent.mjs` `armSyncChildAbort`——非本批面）· K4 落点（本段即答）。
+- **advisor 代码评审 2 轮**（`type=code`，阻塞）：**轮 1 = changes-required**（🔴 1 · 🟡 3 · 🔵 5）；**修复轮 1** = 3 项落修（#84 记账面还原为注入缝——缺省 no-op / #154 注释两处口径差登记 / write-path 头注覆盖面收正）；**轮 2 = pass**（3 项复核逐行实核为真；剩余 6 项 🟡/🔵 非阻断、无一 must-fix；未引入新 🔴）。
+  裁决表（9 项）：**Fixed 3**（#1 #84 缝 / #3 注释 / #6 头注）· **Deferred 6**（#2 载体字段集 = 设计面 / S2 前须定；#4 设计登记滞后；#5 copy 面（待裁）；#7 拆分计划（已在案另轮）；#8 文档锚点；#9 已登记偏差的设计侧收正）。
+- **轮次自证**：审计 1 轮 + advisor 2 轮 + 修复轮 1；终态 **0 未决 🔴**。
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **§2.3 载体字段集缺 `_asyncQueue`**（advisor 🟡#2 · 设计面）：核内队列读写全走裸字段（`subagent-scheduler.mjs:317/329/353` · `subagent-run.mjs:52/186`）——「机制对载体零预设，除上表字段集」（§2.3 验收点 2）在队列面不成立；
+   VSC 形下排队条目跨 run 存活依赖 shell 绑定，而设计表未列该义务。建议：`_asyncQueue`（及 `_asyncTombstones`）补入 §2.3 字段集 + 写明「新建容器须回写载体」义务 + 补一组不预置字段的双夹具。**S2 接线前须定**。
+2. **设计登记滞后**（advisor 🟡#4 · 设计面）：`CORE-UNIFICATION.md` `:734`（#113 核内位 = 无 → 已有缝）· `:756`（#84 核内位 = 无 → 已有缝）· `:819`（缺位 16 处计数——#98/#84/#113 已有位）· `:717`（onToken 缝行号漂移）· `:783`（171 行 · 读数 8 → 191 行 · 读数 9/9/6）——随设计收正轮归口。
+3. **copy 面 dest 门禁残留**（advisor 🔵#5 · 待裁）：父侧裁定只列 move/rename；`copy` 同样覆盖目标档且不过 dest 门（`write-path.mjs:99/106`）——扩一格或正式登记 §2.13.5 补正清单，待父侧裁定。
+4. **同步路径无 interrupt 豁免**（审计 Q4 · 非本批面）：`agent-tools/subagent.mjs` `armSyncChildAbort`（`:66-71`）仍无条件逐链中止——与 #98 异步面新单点不同形；同步面（sync-cancel L52）无 VSC 对位机制 ⇒ 本轮未动（记档）。
+5. **VSC `async-discard.mjs` 与核内 `parentAborted` 签名差**（S2 对位 · #111 面）：VSC 中止清池单点 = 「只清已死」+ 单参 `parentAborted(entry)`；核内守卫 = 双参 `parentAborted(ctx, entry)`（本轮加 interrupt 豁免）——S2 接线时该模块需对位改造（其 `entry.signal` 字段核内条目未持）。
+6. **落档链**：本段（上表读数）即「落态以批次档 §5 为准」（设计 §2.13.5 补正注）的对应记录——设计档侧两处计数/读数收正见未决 2。
+
 ## §6 验证与收口（父代理）
 

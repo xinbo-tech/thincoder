@@ -15,9 +15,14 @@
  * collectGitContext, wired in setup.mjs) carries it.
  * Peer awareness (R10 L1) rides the same per-turn transient channel:
  * pushPeerReminder injects the live co-cwd instance list when present.
+ *
+ * #113（S1 续轮第二批——VSC 侧并入 ④ 段）：`pushInjections`（机器行专用注入——编辑器上下文
+ * 等端侧采集内容；同文去重）与 `appendImagePointer`（粘贴图指引——非多模态模型可见报错）
+ * 两档并入——内容由端采集 / 传入（核内零端名），核供注入纪律单点。
  */
 import { END } from "../session-slots.mjs"
 import { peerInstances } from "../peer-instances.mjs"
+import { specForModel } from "../config.mjs"
 
 /** env-state line builder — pure, unit-testable.
  *  §11.2（F1）：slot 字段入行——位置在 model 后 resumed 前（N3：无绑定 → 显式 null——
@@ -66,4 +71,35 @@ export function pushPeerReminder(agent) {
     content: `[System reminder: 本目录另有 ${peers.length} 个活跃 thincoder（${who}）——文件操作注意避让]`,
     transient: true,
   })
+}
+
+/**
+ * 机器行专用注入单点（#113 VSC 侧并入——编辑器上下文等端侧采集内容）：`injections` =
+ * 单条或数组，每条 `{ content }`。纪律与 CLI parity：只进机器行（transient——持久化层
+ * 可丢；不进人读记录——自动上下文不得污染人读历史）；**同文去重**（幂等注入——history
+ * 已有等文消息则跳过）。非法条目静默跳过（注入绝不打断回合）。内容由**端装配**采集并
+ * 传入（核内零端名——④ 段）。
+ */
+export function pushInjections(history, injections) {
+  const list = Array.isArray(injections) ? injections : (injections ? [injections] : [])
+  for (const inj of list) {
+    if (!inj || typeof inj.content !== "string") continue
+    if (history.some((m) => m.content === inj.content)) continue
+    history.push({ role: "user", content: inj.content, transient: true })
+  }
+}
+
+/**
+ * 粘贴图指引（#113 VSC 侧并入——贴图指引按端注入）：`images` = 绝对路径列表（端侧保存
+ * 的粘贴图档）。把指引追加到**真实用户消息**尾部（content 保持字符串形态——不用旧
+ * image_url parts 数组），模型经 `read_image` 查看（其多模态路径注入图像 part）。非多模态
+ * 模型 ⇒ **抛错**（可见错误，绝不静默丢图）。depth>0 / 无图 / 消息缺失 ⇒ no-op。
+ */
+export function appendImagePointer(userMsg, images, providerModel, { depth } = {}) {
+  if (depth !== 0 || !userMsg || !Array.isArray(images) || images.length === 0) return
+  const spec = specForModel(providerModel)
+  if (!spec.multimodal) {
+    throw new Error("This model does not support pasted images. Switch to a vision-capable model (Kimi K3, Qwen, GLM, etc.) or attach the image as a file and let the model read it.")
+  }
+  userMsg.content += `\n\n[Attached images: ${images.join(" | ")}] — use the read_image tool to view them before answering.`
 }

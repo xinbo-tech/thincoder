@@ -10,7 +10,12 @@
  *  - 凭证剥除：含凭证形态的行剥掉该子串，剥后为空则整行丢弃（「零命中」+「其余逐字保留」）；
  *  - 路径门禁：`resolveBatchDocPath`（评审侧「若传则须可读」）；工具内再查一次可读性。
  *
- * 导出面：`batchSegmentTool` · `resolveBatchDocPath` · `batchDocForReview`（异步评审实例键取绑定）。
+ * 导出面：`batchSegmentTool` · `resolveBatchDocPath` · `batchDocForReview`（异步评审实例键取绑定）·
+ * `configureBatchSegment` / `resetBatchSegment`（#84 记账面注入缝——缺省 no-op，见下）。
+ *
+ * #84 记账面（CORE-UNIFICATION §2.13.4）：写入成功后的记账（把绑定档记入调用者写域）
+ * **按端注入**（形态参 §2.13.5 注入缝）——核内缺省 no-op = CLI 语义零行为变；端装配
+ * 经 `configureBatchSegment({ onWrite })` 覆盖（VSC 侧现形 = `_touchedFiles` 记账）。
  */
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
@@ -26,6 +31,20 @@ const sectionHeaderRe = (seg) => new RegExp(`^## §${seg}(?=\\s|$)`, "m")
 /** 凭证形态（§2.7 冒号态）：`[DESIGN-TOKEN:…]` 与 `designId: …`——本节自有正则。 */
 const CRED_RE = /\[DESIGN-TOKEN:[^\]]*\]|designId\s*:\s*\S+/g
 const CRED_TEST_RE = /\[DESIGN-TOKEN:[^\]]*\]|designId\s*:\s*\S+/
+
+// ─── #84 记账面注入缝（「记账面按端注入」，形态参 §2.13.5 注入缝）───────────────
+/**
+ * 写入成功后的记账注入面（**缺省 no-op** = CLI 语义零行为变）：端装配层可覆盖——把写成的
+ * 批次档记入调用者写域（VSC 侧现形 = `agent._touchedFiles` 记账，供子代理合入 / recent_changes /
+ * verify / advisor 默认范围消费）。核内零端名分支（契约 5——本档只认 `onWrite` 函数名）。
+ * 形态与 `tools/write-path.mjs` 的 `configureWritePath` 同款：模块级、缺省不覆盖、null 撤销。
+ */
+let injectedOnWrite = null
+export function configureBatchSegment(impl) {
+  injectedOnWrite = impl && typeof impl.onWrite === "function" ? impl.onWrite : null
+}
+/** 撤销注入（测试与端装配生命周期用——缺省态 = 零记账）。 */
+export function resetBatchSegment() { injectedOnWrite = null }
 
 /** 可读文件判据（存在且为文件——目录/缺失同判不可读）。 */
 function readableFile(abs) {
@@ -189,6 +208,11 @@ export function batchSegmentTool(batchDoc = null, { review = false } = {}) {
       const src = readFileSync(abs, "utf8")
       const { written, roundN } = insertIntoSection(src, seg, body)
       writeFileSync(abs, written)
+      // #84（S1 续轮第二批——VSC 侧并入 ④）：记账面**按端注入**（缺省 no-op = CLI 语义
+      // 零行为变——端装配经 configureBatchSegment 覆盖；VSC 侧现形 = 把绑定档记入调用者
+      // 写域 `_touchedFiles`）。核内不内建记账（设计裁定形态——CORE-UNIFICATION §2.13.4 #84
+      // 「记账面按端注入」）。
+      injectedOnWrite?.(agent, abs)
       return `batch_segment: appended ${body.length} characters to §${seg} of the batch record${roundN ? ` (### 轮次 ${roundN}（评审子代理）)` : ""}.`
     },
   }

@@ -177,9 +177,20 @@ export function readEngTokensFromSlot(agent) {
 
 /** 内存 miss 时从权威槽 reconcile（D2 spawn 门 + D3 dispatch 写门同源）：把槽文件中
  *  **未过期**项并进内存 Map（TTL 过滤保留——expired 不并入，fail-closed；格式/畸形串
- *  与 restoreEngTokens 同语义读回——门禁格式拒）；槽无活项 → 内存原样。返回判定用 Map。 */
+ *  与 restoreEngTokens 同语义读回——门禁格式拒）；槽无活项 → 内存原样。返回判定用 Map。
+ *  #154（VSC 侧并入——`reconcileEngDesignTokens` 的**清理方向**）：内存中的过期项先清（过期项在
+ *  任何门禁都过不了 tokenExpired——清掉不改变授权结果，仅防槽计数/落盘被死 token 撑大）。
+ *  **与 VSC 版的两处有意差异（如实登记，非偏差）**：① 同 id 冲突以**槽为准**（本函数下段
+ *  `merged.set`——D2「槽 = 权威」；VSC 版为内存优先）；② VSC 的 `droppedExpired` 有当场权威
+ *  台账回写一步（`setSlotEngDesignTokens`），本形态回写为**惰性**（下一次 `persistEngTokens` /
+ *  `saveSession` 携带清理后的 Map）。 */
 export function reconcileEngTokensFromSlot(agent) {
   const slots = agent?._engDesignTokens
+  if (slots instanceof Map) {
+    for (const [id, t] of [...slots]) {
+      if (typeof t === "string" && tokenExpired(t)) slots.delete(id)
+    }
+  }
   const obj = readEngTokensFromSlot(agent)
   if (!obj) return slots instanceof Map ? slots : new Map()
   const live = new Map()

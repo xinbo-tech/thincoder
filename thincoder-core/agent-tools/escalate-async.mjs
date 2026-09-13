@@ -37,7 +37,7 @@ import {
 import { refreshQueuedTokens, nextSubagentId } from "./subagent-scheduler.mjs"
 import { mutationSeqOf } from "./advisor-async.mjs"
 // ASYNC-RESULT-CONTAINER.md D3/D6：settle 公共收尾单点 + child signal 构建单点
-import { buildChildSignal, settleAsyncEntry } from "./async-settle.mjs"
+import { bindChildController, buildChildSignal, settleAsyncEntry } from "./async-settle.mjs"
 
 /** Parent-side mutations (absolute paths) committed AFTER the escalate launch —
  *  the overlap scan feeds the settle classification (review #4/round2 #4: the
@@ -177,13 +177,9 @@ export function launchEscalateAsync(parent, ctx, launch) {
   entry.promise = new Promise((res) => { entry._settle = res })
   const ctrl = new AbortController()
   entry.controller = ctrl
-  // D6 buildChildSignal 单点（ASYNC-RESULT-CONTAINER.md——D5 同款：_sessionSignal 兜底）。
-  const baseSignal = buildChildSignal(parent, ctx)
-  if (baseSignal) {
-    // §20.3 站点 #10（第 24 批）：hop 逐跳保 reason
-    if (baseSignal.aborted) ctrl.abort(baseSignal.reason)
-    else baseSignal.addEventListener("abort", () => ctrl.abort(baseSignal.reason), { once: true })
-  }
+  // D6 buildChildSignal 单点（ASYNC-RESULT-CONTAINER.md——D5 同款：_sessionSignal 兜底）·
+  // #98 链结单点（interrupt 豁免面——Ctrl+I 不逐链中止池内子代理）。
+  bindChildController(ctrl, buildChildSignal(parent, ctx))
   // Turn mirror (⟦ev⟧turn from the child runAgent → entry.turn/maxTurns — status parity).
   const flight = async () => {
     entry.status = "running"

@@ -14,7 +14,7 @@ import {
   describeBlockers, refreshQueuedTokens,
 } from "./subagent-scheduler.mjs"
 // ASYNC-RESULT-CONTAINER.md D3/D6：settle 公共收尾单点 + child signal 构建单点
-import { buildChildSignal, settleAsyncEntry } from "./async-settle.mjs"
+import { bindChildController, buildChildSignal, settleAsyncEntry } from "./async-settle.mjs"
 
 /**
  * SUBAGENT-OBSERVE-SEND D2：注入队列回合边界消费核心——把 entry._injected 全部消息按普通
@@ -98,12 +98,9 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
   // D6 buildChildSignal 单点（ASYNC-RESULT-CONTAINER.md）。
   const ctrl = new AbortController()
   entry.controller = ctrl
-  const baseSignal = buildChildSignal(parent, ctx)
-  if (baseSignal) {
-    // §20.3 站点 #10（第 24 批）：hop 逐跳保 reason
-    if (baseSignal.aborted) ctrl.abort(baseSignal.reason)
-    else baseSignal.addEventListener("abort", () => ctrl.abort(baseSignal.reason), { once: true })
-  }
+  // §20.3 站点 #10（第 24 批）：hop 逐跳保 reason；#98 链结单点（interrupt 豁免面——
+  // Ctrl+I 不逐链中止池内子代理）。
+  bindChildController(ctrl, buildChildSignal(parent, ctx))
   // §19.5 D-M5：turn 镜像拦截层（callbacks 包装层——在既有
   // wrapChildCallbacks 之外再包一层，只解析 ⟦ev⟧turn 更新条目，其余原样转发）。
   const trackOpts = { ...childOpts }

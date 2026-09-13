@@ -31,6 +31,8 @@ import {
 // code（lazy function-level cycle——advisor-async → async-settle → scheduler →
 // 本模块——全函数级绑定无求值期依赖，环安全）。
 import { cancelAsyncAdvisor, noteMutations } from "./advisor-async.mjs"
+// #94（VSC 侧并入——异步机械族）：池读取载体吸收 + 墓碑写入单点（原 inline 写收口）。
+import { getAsyncPool, writeTombstone } from "./async-settle.mjs"
 
 // agent-tools 共享：并行子代理的审批/继续弹窗经 owner 上命名 promise 链串行——
 // 永不叠弹窗（返回链供调用方 .then 续接）。
@@ -117,7 +119,7 @@ function warnPoolFallback(what, sig) {
  *  条目带 _pool 域字段——spawn 时 poolDomainOf(role) 落位；缺字段（手工/旧条目）按
  *  other——既有 coder 域测试语义不变)。 */
 export function runningPoolCount(parent, pool) {
-  return [...(parent?._asyncSubagents?.values() ?? [])]
+  return [...(getAsyncPool(parent, "subagent")?.values() ?? [])]
     .filter((e) => e.status === "running" && (e._pool ?? "other") === pool).length
 }
 
@@ -170,7 +172,7 @@ export function resolveChildProvider(parent, modelArg) {
  */
 export function cancelAsyncSubagent(agent, id) {
   const key = String(id)
-  const map = agent._asyncSubagents ?? new Map()
+  const map = getAsyncPool(agent, "subagent") ?? new Map()
   const entry = map.get(key)
   if (!entry) {
     return { id: key, status: "error", error: `unknown async subagent id: ${key}` }
@@ -193,8 +195,7 @@ export function cancelAsyncSubagent(agent, id) {
     map.delete(key)
     // §20 D-SD5 终态墓碑：queued 取消（无 settle 事件——出队即终态）——依赖者经
     // 墓碑查得 cancelled 分支（round1 #4——cancel 返回时即重估标注）。
-    const tombstones = (agent._asyncTombstones ??= new Map())
-    tombstones.set(key, { status: "cancelled", role: entry.role })
+    writeTombstone(agent, key, "cancelled", entry.role)
     entry._settle?.()
     return { id: key, status: "cancelled", was: "queued" }
   }
@@ -244,11 +245,11 @@ export function executeCancelAction(args, ctx) {
   }
   const key = String(id)
   const agent = ctx.agent
-  const entry = agent._asyncSubagents?.get(key)
+  const entry = getAsyncPool(agent, "subagent")?.get(key)
   // §11.2 (②-6b): an id that names no async SUBAGENT falls through to the
   // async ADVISOR pool (the background reviews share the cancel surface — ⏹ on
   // an advisor block / action:'cancel' with an advisor id abort that review).
-  if (!entry && agent?._asyncAdvisors?.has(key)) {
+  if (!entry && getAsyncPool(agent, "advisor")?.has(key)) {
     return JSON.stringify(cancelAsyncAdvisor(agent, key))
   }
   const wasQueued = entry?.status === "queued"
@@ -368,8 +369,7 @@ export async function injectAsyncResult(agent, entry) {
   // digest 首行注入）——注入即消费（调用方随即从容器移除）——dependsOn 引用该 id 的
   // 后续 spawn 视为已满足（T-SD14 消费终态语义——§19.8 后 check 消费路径删除，本自动
   // 通道为唯一消费方；error 条目记 failed——依赖取消/失败分支照旧，不误标成功）。
-  const tombstones = (agent._asyncTombstones ??= new Map())
-  tombstones.set(String(entry.id), { status: entry.error != null ? "failed" : "consumed", role: entry.role })
+  writeTombstone(agent, entry.id, entry.error != null ? "failed" : "consumed", entry.role)
 }
 
 /**
