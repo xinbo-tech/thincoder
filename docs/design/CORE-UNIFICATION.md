@@ -535,6 +535,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | F11 | 对称面全集均入核清单（含低相似度真分叉面）；§2.5 「端差处置」列无空值、无「排除」字样 | T-C2 · T-C3 | §2.5 行数 / 列值机检 + 抽查（证据列不得空） |
 | F12 | 凡归一改行为 / 改对外契约的条目均逐条提交裁定且状态为「已裁」；提交含四要素；未裁完不进 S1 | T-C2 | §2.5「须用户裁」列 × §2.5.1 子表一一对应（列非空 ⇒ 子表有行；行状态 = 已裁 / 日期） |
 | **F13** | 凡归一引发的对外契约变更（配置格式 / 输出文案 / 命令面 / 事件语义）**保留兼容**（旧配置可读 / 迁移说明 / CHANGELOG / 旧命令面保留 / 事件语义登记）；无法兼容者已列入上抛清单且**状态 = 已裁** | T-C17 | §2.12.2 处置表逐条核验（处置 + 落地物非空）+ §2.12.3 裁定状态 |
+| **F14** | 目录改名子批（§4）：两处目录改名 + 全仓引用一致（K1–K8 全绿）；一笔提交可回退 | D-R1–D-E2 | 本档 §4.5 K1–K8 + 批次档 §5 |
 | N1 | **未涉面**：门禁三命令 exit 0 且用例逐数不变；**面内**：按裁决改判并登记（A10） | T-C5 · T-C6 | 未涉面计数比对 + 面内改判登记核验 |
 | N2 | 每段有回滚点；**建核段（S0a / S1）** 两产品零改动；回退演练复绿 | T-C12 · T-C13 | `git diff --stat` / `git revert` + 复跑 |
 | N3 | 核独立可验证 + 核内零产品 import + **核内提示词读取面零产品路径** | T-C4 · T-C15 | 核测试 + import / 路径机检 |
@@ -662,7 +663,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 
 > **依据** = 用户 2026-09-13 裁定（批次档 §1「追加裁定（目录改名）」——原话：「目录名我不满意……**thincoder 应该改成 thincoder-cli，core 应该改成 thincoder-core**」）。
 > **性质** = **新范围子批**——与 §2.6 的 S0a / S0b / S1–S3 段序**并列**：不改变其段序与退出条件，也不被 S 段吸收（S 段讲「核与两产品怎么合」，本节只讲「目录叫什么」）。
-> **状态** = **设计待评审**——实施须先过设计评审 + 用户批准（发起权在用户）；本轮不动任何目录。
+> **状态** = **设计评审已通过**（轮次 2——0 🔴 · 5 🟡 · 2 🔵，发现表见批次档 §3）· **评审修正轮已落地**（2026-09-13）→ **待用户批准**——实施须先过用户批准（发起权在用户）；本轮不动任何目录。
 > **口径**：「旧名」= CLI 产品目录 `thincoder` 与核包目录 `core`；「路径引用」= 目录名后紧跟斜杠的 token（仓根相对路径的首段形态）。
 > **本节自身的扫替面**：本节的路径指针（指向他档 / 他档行号）与全仓他档**同规**——随扫替更新，改后仍可解析；但**对规则本身的描述不写裸 token**（否则扫替会把规则说明改坏——例如「旧名 + 斜杠 → 新名 + 斜杠」若写成字面就会自我替换）。
 
@@ -683,9 +684,9 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 
 1. **改名**：仓根 `git mv thincoder thincoder-cli` + `git mv core thincoder-core`（两步均保历史；先改名后扫替——扫替与复核脚本都在最终布局上跑）。
 2. **扫替**：按 §4.3 的三类替换 + 全局保护字面量（§4.3.2）+ 站点排除（§4.3.3），对**仓内 git 跟踪的文本档**做机械替换；`package-lock.json` 整档免扫（生成物，且实扫 0 命中）。
-3. **裸目录名**：§4.3.1 的 4 处逐处改（非路径形态，扫替模式抓不到）。
+3. **手改站点（类 C）**：§4.3.1 的 5 处逐处改（非「名 + 斜杠」token，扫替模式抓不到）。
 4. **折行**：扫替给长行加 +4 / +9 字符 ⇒ 机检域内有 2 行**非表格行**会越过 300 字符闸（批次档 §2 两行）⇒ 同批折行（**仅换行、语义与文字零改**；执行者 = 父侧并打标，先例 = 2026-09-13 §5 折行）。其余超宽行全为表格行（表格行豁免）。
-5. **验证 + 一笔提交**：跑 §4.5 的 K1–K8，全绿后**一笔提交**（回退点见 §4.7）。
+5. **验证 + 一笔提交（时序写死）**：**实现者产出单笔改动集**（改名 + 扫替 + 类 C 手改）→ **父侧折行并打标**（步骤 4）→ **在折行后的状态**上复跑 §4.5 的 K1–K8，全绿后由**父侧执行该笔提交**（**一笔** = 改名 + 扫替 + 类 C + 折行同笔；实现者不 commit；回退点见 §4.7）。
 
 #### 4.2.1 方案选型对比（候选 ≥2）
 
@@ -715,13 +716,15 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 |---|---|---|---|---|
 | **A** | 旧名 + 斜杠（路径引用） | 新名 + 斜杠 | **766** | **122** |
 | **B** | 核目录名 + 斜杠（**仅首段**形态） | 新核名 + 斜杠 | **158** | **10** |
-| **C** | 裸目录名（非路径引用） | 见 §4.3.1 | **4** | 4 |
+| **C** | 手改站点——扫替模式抓不到的形态（裸目录名 4 处 + 花括号简写 1 处） | 见 §4.3.1 | **5** | 5 |
 
 - 读数口径（2026-09-13 逐档实扫）：git 跟踪的文本档（`.md` / `.mjs` / `.js` / `.json` / `.yml`），排除 `package-lock.json`；**类 B 只收首段形态**（`src/` 之后、第三方 scope 之后、横线词尾之后的同名段一律不收——见 §4.3.2）。分布（类 A 按顶层目录）：CLI 产品树 350 · 仓根文档层 **339** · VSC 产品树 52 · `scripts/` 14 · 核 3 · 仓根档 8。
 - **计数口径**：本节各计数 = 2026-09-13 按本节规则实扫的 **as-of 读数**（**含本节与批次档 §2 自身的路径指针**——它们随扫替更新）；实施轮以扫替脚本的 check 模式为准（K2 / K3），脚本**不必硬编码**本节数值。
 - **类 B 收窄的实据**：非首段形态有真实反例——`thincoder/docs/design/MEMORY.md:3` 的子模块枚举（`schema` / `core` / `delete` …）与 `thincoder/test/portability-classification.test.mjs:79` 的夹具串（`x/packages/core/y.md`）。它们不是核目录引用，替换即改语义。
 
-#### 4.3.1 类 C · 裸目录名（4 处 · 逐处点名）
+#### 4.3.1 类 C · 手改站点（5 处 · 逐处点名）
+
+第 1–4 项 = **裸目录名**（非路径引用）；第 5 项 = **花括号简写**——均非「名 + 斜杠」token，扫替模式抓不到，故逐处手改。
 
 | # | 站点 | 现状 | 改为 | 理由 |
 |---|---|---|---|---|
@@ -729,6 +732,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | 2 | `thincoder/test/doc-anchors.test.mjs:253` | 域参数（`domain:` + 旧名） | 新名 | 域根 = 真实 CLI 产品域；不改则扫不到任何档 ⇒ 该用例必红（反证：`r.files >= 50` 断言） |
 | 3 | `thincoder-vscode/test/doc-anchors.test.mjs:51` | 临时工作区夹具目录名（`join(ws, …)`） | 新名 | 夹具与同档注释（`:5` 的 `<ws>/…` 描述）同改，保持自持一致 |
 | 4 | `thincoder-vscode/test/ledger-check.test.mjs:131` | 临时工作区夹具目录名 | 新名 | 同上（`:128` 的夹具键是路径形态，已含在类 A） |
+| 5 | `scripts/mirror-divergence.mjs:82` | `--mirror-a/-b` 帮助行的默认路径写作**花括号简写**：`<仓根>/thincoder{,-vscode}/docs/design/prompts` | 改为**展开语义等价的新写法**（例：`<仓根>/thincoder{-cli,-vscode}/docs/design/prompts`——展开后 = `thincoder-cli` + `thincoder-vscode`） | **扫替模式抓不到**（「名 + 斜杠」token 不匹配花括号简写）⇒ 不改则 `--help` 仍印旧默认路径（静默残留）；**复核 = 本表逐点读校（K2）+ 改后 `--help` 输出抽查** |
 
 **不改的两处裸名（保护项，附理由）**：
 
@@ -754,7 +758,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 
 | # | 站点 | 内容 | 不改的理由 |
 |---|---|---|---|
-| 1 | `docs/batches/2026-09-13-CORE-UNIFICATION.md:1672` | 「自工作区根计 = …」（显式工作区根口径） | 该行说的是**从工作区根看**的路径（= 仓根下 `scripts/`），仓根不改 ⇒ 改了反而变成错路径 |
+| 1 | `docs/batches/2026-09-13-CORE-UNIFICATION.md` §5 · **按内容匹配**（含「自工作区根计 = 」的行——行号随批次档增行漂移，**不按行号引**） | 「自工作区根计 = …」（显式工作区根口径） | 该行说的是**从工作区根看**的路径（= 仓根下 `scripts/`），仓根不改 ⇒ 改了反而变成错路径 |
 | 2 | `thincoder/docs/requirements/TWO-REPO-MERGE.md:48` | phase 1 的 N1 旁注（`<ws>/…` 层深表述） | phase 1 的 as-of 陈述；属**参照档**（迁移政策：保留原地、被触碰时随批迁）⇒ 本次只登记，不代改 |
 | 3 | `thincoder/docs/batches/2026-09-13-TWO-REPO-MERGE.md:207` | phase 1 评审发现 #15（同上层深表述） | 批次档**已冻结**（历史留痕）——不改写历史 |
 
@@ -772,7 +776,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | 6 | **核包** | 目录自身改名 + 3 处注释指针（`core/advisor/truncate.mjs:3` · `core/log.mjs:2` · `core/test/advisor-truncate.test.mjs:3`）；`core/package.json` 的 `name` / `exports` / `files` **无目录名引用**（实核） | `node --test`（cwd = 核目录）49/49 + 核内结构机检（`core-hygiene.test.mjs`） |
 | 7 | **批次档指针** | 仓根批次档 28 处 + 产品批次档（如 `thincoder/docs/batches/2026-09-12-LEDGER-SELF-CONTAINED.md` 82 处）——**指针形态更新，非内容改写**（D4 指针纪律） | diff 逐行可逆（K3）+ 三机检（批次档不入 V5 扫描域） |
 | 8 | **台账** | `docs/TODO.md` / `docs/TODO-archive.md` 的路径证据行（L4② 前缀判据要求首段现存 ⇒ **必须随扫替**，否则台账机检转红） | `check-ledger` exit 0 |
-| 9 | **不动面** | `.thincoder` 状态目录 · `~/.thincoder/`（cwd 键检查点）· 两产品 `package.json` 的包名 / bin / repository · `.vscodeignore` · 锁文件 | K2 的保护项计数扫替前后相等（as-of = 565 / 50 / 2+2 / 1）+ K7 干净工作树 |
+| 9 | **不动面** | `.thincoder` 状态目录 · `~/.thincoder/`（cwd 键检查点）· 两产品 `package.json` 的包名 / bin / repository · `.vscodeignore` · 锁文件 | K2 的保护项计数扫替前后相等（as-of = 565 / 50 / 2+2 / 1 / 241）+ K7 干净工作树 |
 
 #### 4.4.1 受影响文件清单（R24a 口径：当前行数 + 预计增量）
 
@@ -782,17 +786,68 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | 目录改名（`git mv`） | `core/` → `thincoder-core/` | **46 档 · 1,976 行** | **行数 0**（纯移动） |
 | 文本扫替（类 A + 类 B） | **125 档**（类 A 122 ∧ 类 B 10 的交集 7）——分布：CLI 产品树 44 · 仓根文档层 36 · VSC 产品树 35 · `scripts/` 5 · 核 4 · 仓根档 1 | 逐档行数不变 | **逐档 0 行**（token 替换，不增删行） |
 | 折行（越闸 2 行） | `docs/batches/2026-09-13-CORE-UNIFICATION.md`（§2 段） | 逐档 +1 行 / 处 | **+2 行**（仅换行，文字零改） |
-| 裸目录名（类 C） | 4 档（CI · CLI 测试 · VSC 两测试） | 逐档 0 行 | **0 行** |
+| 手改站点（类 C） | **5 档**（CI · CLI 测试 · VSC 两测试 · 度量脚本） | 逐档 0 行 | **0 行** |
 
 **档位判定（R24a / 代码线）**：本子批**不新增**任何源 / 测试档，也不使任何档越线——超软线档 `scripts/mirror-divergence.mjs`（480 行）为**既有**状态（拆分计划已登记 §2.8），本子批对其只做路径 token 替换 ⇒ **拆分计划无需重议**。核内 `.mjs` 档位（≤300 软线）不受影响。
 
+**扫替面 · 非 `.md` 档逐档行数（R24a 补全）**：合计 **42 档**（类 A 命中 41 档 + 类 B 单档 1 档）；行数 = `wc -l` 读数（as-of 2026-09-13）；预计增量**逐档 = 0**（token 替换，结构未变 ⇒ 档位判定不受影响）。
+
+| 面 | 档 | 当前行数 | 预计增量 |
+|---|---|---|---|
+| VSC src | `thincoder-vscode/src/advisor/project-context.mjs` | 198 | 0（结构未变） |
+| VSC src | `thincoder-vscode/src/agent-tools/read-history.mjs` | 271 | 0（结构未变） |
+| VSC src | `thincoder-vscode/src/agent-tools/subagent-async.mjs` | 466 | 0（结构未变） |
+| VSC src | `thincoder-vscode/src/agent-tools/timer.mjs` | 43 | 0（结构未变） |
+| VSC src | `thincoder-vscode/src/agent/run-helpers.mjs` | 297 | 0（结构未变） |
+| VSC src | `thincoder-vscode/src/config-io.mjs` | 470 | 0（结构未变） |
+| VSC src | `thincoder-vscode/src/config-migrate.mjs` | 185 | 0（结构未变） |
+| VSC src | `thincoder-vscode/src/config-presets.mjs` | 40 | 0（结构未变） |
+| VSC src | `thincoder-vscode/src/conventions.mjs` | 226 | 0（结构未变） |
+| VSC src | `thincoder-vscode/src/explore-distill.mjs` | 156 | 0（结构未变） |
+| VSC src | `thincoder-vscode/src/extension/suspension.mjs` | 362 | 0（结构未变） |
+| VSC src | `thincoder-vscode/src/log.mjs` | 196 | 0（结构未变） |
+| VSC src | `thincoder-vscode/src/memory.mjs` | 273 | 0（结构未变） |
+| VSC src | `thincoder-vscode/src/prompt-overlays.mjs` | 83 | 0（结构未变） |
+| VSC src | `thincoder-vscode/src/tools/checklist.mjs` | 438 | 0（结构未变） |
+| VSC src | `thincoder-vscode/src/tools/linter.mjs` | 127 | 0（结构未变） |
+| VSC src | `thincoder-vscode/src/traces/trace-store.mjs` | 254 | 0（结构未变） |
+| VSC test | `thincoder-vscode/test/activity-live-ux.test.mjs` | 162 | 0（结构未变） |
+| VSC test | `thincoder-vscode/test/advisor-chain-guards.test.mjs` | 409 | 0（结构未变） |
+| VSC test | `thincoder-vscode/test/async-parity.test.mjs` | 473 | 0（结构未变） |
+| VSC test | `thincoder-vscode/test/async-visibility.test.mjs` | 401 | 0（结构未变） |
+| VSC test | `thincoder-vscode/test/config-watch.test.mjs` | 156 | 0（结构未变） |
+| VSC test | `thincoder-vscode/test/doc-anchors.test.mjs` | 329 | 0（结构未变） |
+| VSC test | `thincoder-vscode/test/index-perception.test.mjs` | 237 | 0（结构未变） |
+| VSC test | `thincoder-vscode/test/ledger-check.test.mjs` | 150 | 0（结构未变） |
+| VSC test | `thincoder-vscode/test/md-render-escape.test.mjs` | 174 | 0（结构未变） |
+| VSC test | `thincoder-vscode/test/status-line.test.mjs` | 157 | 0（结构未变） |
+| VSC test | `thincoder-vscode/test/subagent-audit-summary.test.mjs` | 104 | 0（结构未变） |
+| VSC test | `thincoder-vscode/test/wait-for-advisor-pool.test.mjs` | 59 | 0（结构未变） |
+| VSC test | `thincoder-vscode/test/webview-turnstate.test.mjs` | 325 | 0（结构未变） |
+| CLI test | `thincoder/test/advisor-chain-guards.test.mjs` | 488 | 0（结构未变） |
+| CLI src | `thincoder/src/log.mjs` | 195 | 0（结构未变） |
+| scripts | `scripts/check-doc-width.mjs` | 109 | 0（结构未变） |
+| scripts | `scripts/check-ledger.mjs` | 259 | 0（结构未变） |
+| scripts | `scripts/doc-anchors-v5.mjs` | 255 | 0（结构未变） |
+| scripts | `scripts/doc-anchors.mjs` | 90 | 0（结构未变） |
+| scripts | `scripts/mirror-divergence.mjs` | 480 | 0（结构未变） |
+| 核 | `core/advisor/truncate.mjs` | 57 | 0（结构未变） |
+| 核 | `core/log.mjs` | 195 | 0（结构未变） |
+| 核 | `core/test/advisor-truncate.test.mjs` | 88 | 0（结构未变） |
+| 核 | `core/test/core-hygiene.test.mjs` | 74 | 0（结构未变） |
+| webview | `thincoder-vscode/webview/loading.js` | 63 | 0（结构未变） |
+
+**注**：① 41 档 = 类 A 命中面（与批次档 §2 的「62 处 / 41 档」逐面一致——VSC src 17 · VSC test 13 · CLI test 1 · CLI src 1 · `scripts/` 5 · 核 3 · webview 1）；另 1 档 = **类 B 单档**（`core/test/core-hygiene.test.mjs`——2 处首段 token，同属扫替面）。② `thincoder/src/upgrade.mjs` 不入本表（其 1 处为 registry URL 保护项——§4.3.2 第 4 项，不替换）。
+
 ### 4.5 验收判据（可机判）
+
+**需求回指**：K1–K8 = 需求档 **F14** 的验收判据（逐条可机判；F14 见 `docs/requirements/CORE-UNIFICATION.md` §2——来源 = 批次档 §1 用户裁定）。
 
 | # | 判据 | 通过条件 | 反证面 |
 |---|---|---|---|
 | **K1** | 三机检（cwd = 仓根） | `node scripts/doc-anchors.mjs` · `check-doc-width.mjs` · `check-ledger.mjs` **全 exit 0** | 残留旧 token / 断了的 import ⇒ 至少一项转红 |
-| **K2** | 扫替复查 | 三类替换各自的 check 模式**报 0 处**；§4.3.2 保护项计数**扫替前后逐项相等**（as-of 参考 = 565 / 50 / 2+2 / 1——**以同脚本前后两次读数为准，不硬编码**） | 漏扫 = 报非 0；误伤 = 保护项计数前后不等 |
-| **K3** | **diff 可逆性**（防夹带） | 以改前提交（HEAD）为输入跑扫替脚本 dry-run ⇒ 输出**逐字节等于**本次改动集 | 夹带人工改动 ⇒ 两者不等 |
+| **K2** | 扫替复查 | 三类替换各自的 check 模式**报 0 处**（类 C 逐点 = 5 处，含第 5 项花括号简写的改后逐字读校）；§4.3.2 保护项计数**扫替前后逐项相等**（as-of 参考 = 点状态目录 565 / 作用域前缀 50 / 盘符路径 2+2 / registry URL 1 / 文件名里的 `core` 241——**以同脚本前后两次读数为准，不硬编码**）；§4.3.3 站点排除 3 处**逐字未变**（核验 = 改动集 diff 不触及这 3 处；第 1 处按内容定位——「自工作区根计 = 」行） | 漏扫 = 报非 0；误伤 = 保护项计数前后不等；排除项被扫动 = 所在行出现在改动集 diff 中 |
+| **K3** | **diff 可逆性**（防夹带——对照面 = **脚本产出子集**） | 以改前提交（HEAD）为输入跑扫替脚本 dry-run ⇒ 输出**逐字节等于**本次改动集中的**脚本产出部分**（类 A + 类 B 的 token 替换）；改动集其余部分 = **恰好两类人工改动、逐处可枚举**——① 类 C 5 处手改（§4.3.1）② 折行（§4.2 步骤 4 的行集）——出现枚举外的人工改动即判红 | 夹带人工改动 ⇒ 两者不等 |
 | **K4** | 两产品全链 | CLI：`npm run lint` → `test:full` → `test:integration`；VSC：`npm run lint` + `doc:check` → `test:full` → `test:integration`——**全 exit 0** | 域参数 / 夹具 / 长路径引用漏改 ⇒ 用例红 |
 | **K5** | 核内测试 | `node --test`（cwd = 核目录）**49 / 49 · exit 0**（改前基线同值） | 核内注释指针或 import 面被改坏 |
 | **K6** | 度量复现 | `node scripts/mirror-divergence.mjs` 读数与改前**逐位一致**（路径字段除外）：同路径对 107 · 逐字节同 29 · ≥0.9 39 · 中位 0.6494 · 单端 148 / 91 · 席位 51 / 71 | 默认目录 / 面定义漏改 ⇒ 读数变化或报错 |
@@ -814,7 +869,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 
 ### 4.7 回退
 
-- **一笔提交**：整个子批 = 一笔提交（改名 + 扫替 + 折行同笔）⇒ 回退 = `git revert`（自动逆替换）或 `git checkout <改前提交> -- .` + 两个 `git mv` 反向。
+- **一笔提交（执行者 = 父侧）**：整个子批 = 一笔提交（改名 + 扫替 + 类 C 手改 + 折行同笔）——**时序**：实现者产出单笔改动集 → 父侧折行 / 打标（§4.2 步骤 4 / 5）→ 父侧执行该笔提交 ⇒ 回退 = `git revert`（自动逆替换）或 `git checkout <改前提交> -- .` + 两个 `git mv` 反向。
 - **前置**：改动期间**不叠其他在途改动**（保「一笔回退」成立）。
 - **改名自身的可逆性**：两处 `git mv` 反向即还原目录名（历史无需重写——`git mv` 是重命名记录，不是历史改写）。
 
@@ -830,7 +885,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 
 - 不改仓根名、不改 npm 包名、不动 `thincoder-vscode`、不动点状态目录。
 - 不借机做文档重排、不修既有死指针（如已退役的产品台账指针）、不动 S0–S3 段序与核内容。
-- 不 commit（提交由父侧统一）；不发起评审（发起权在用户）。
+- 不 commit（**实现者产出单笔改动集 → 父侧折行 / 打标 → 父侧执行该笔提交**——§4.2 步骤 5）；不发起评审（发起权在用户）。
 - 不引入任何新脚本到仓内（扫替 / 复查脚本可一次性运行，规则以本节为准）。
 
 ### 4.10 执行归属与流程门
@@ -841,7 +896,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 
 ### 4.11 未决（记档 · 不遗忘）
 
-1. **需求侧登记形态**：本子批的验收回指源 = 批次档 §1 的用户裁定（本节边界 = 只改本档 + 批次档 §2）⇒ 「三方条目一致」的需求档一侧**暂无独立条目**；是否在 `docs/requirements/` 补一条（如 F14 / N9）由父侧 / 用户定。
+1. **需求侧登记形态——已办（2026-09-13 评审修正轮）**：需求档已补 **F14**（`docs/requirements/CORE-UNIFICATION.md` §2——用户故事 + 范围边界，来源 = 批次档 §1 用户裁定）；「三方条目一致」已闭合（本档 §4.5 K1–K8 ⇄ F14 ⇄ 批次档 §2 目录改名块）。
 2. **phase 1 两档的 as-of 陈述**（§4.3.3 第 2 / 3 项）在改名后过期 ⇒ 待随迁移 / 触碰收正。
 3. **既有死指针**（已退役的产品台账指针族）为**既有债**：本子批只做前缀一致化，不修指向（改指向 = 语义面，另议）。
 
@@ -877,5 +932,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
   范围与不做（仓根名 / 包名 / VSC 目录 / 点状态目录均不动）· 五步方法 · 三类替换规则（类 A **766 处 / 122 档** · 类 B **158 处 / 10 档** · 类 C **4 处**）
   · 严禁误伤清单 8 项（逐条实核计数）· 站点排除 3 处 · 受影响面 9 面 + 核验方式 · 验收判据 **K1–K8**（含行宽闸与 diff 可逆性）
   · 用例 D-R1..D-E2 · 回退 · 风险与前置 · 未决 3 项。**依据** = 批次档 §1 追加裁定；**状态** = 设计待评审（实施须先过评审 + 用户批准）。
+- 2026-09-13（**目录改名子批 · 评审修正轮**——轮次 2 的 5 🟡 / 2 🔵 逐条落修）：§4.3.3 第 1 项行锚改**按内容匹配**（「自工作区根计 = 」行——行号随批次档增行漂移）；§4.5 **K3** 对照面 = **脚本产出子集** + **K2** 补第 5 保护项（241）与站点排除「逐字未变」；
+  **类 C 补花括号简写站点**（4 → **5 处 / 5 档**）· §4.4.1 补**非 `.md` 档逐档行数（42 档）**；**提交时序写死**（实现者产出单笔改动集 → 父侧折行 / 打标 → 父侧执行该笔提交）；需求档补 **F14**（§4.11 未决 1 结案）。
 
 
