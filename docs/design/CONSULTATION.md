@@ -58,6 +58,12 @@
 | 109 | `advisor/loop.mjs` | 同路径 | 0.3889 · 异 | ② | 进核 | 融合：取 CLI 限额族 + 工具集取并集（`code_search` 恒在）+ 进度行按端注入（④ 段） | 分叉 ＝ 评审工具集（CLI 需 `agent.memory` 才挂 `code_search` `src/advisor/loop.mjs:37-46` / VSC 恒在 `src/advisor/tools.mjs:29-37`）+ 进度行实现；墙 / 轮帽 / 预算同 | — | S1（建核补齐） |
 | 110 | `advisor/run.mjs` | 同路径 | 0.3589 · 异 | ③ | 进核 | 取并集：以 CLI 为准（含设计评审连续失败止损护栏 `src/advisor/run.mjs:15-17,59-75,199-204`）+ VSC 的评审实例上下文并入 | 分叉 ＝ CLI 多一道止损闸（VSC 全仓零 `review-streak` 命中）+ 轮次载体（全局字段 vs 实例 `rv`）；前提（同职责）仍成立 | **①** | S1（建核补齐） |
 
+> **#106 S2 接线前口径确认项（只记——S2 动作；设计面收正轮 3 补 · 2026-09-14）**：
+> 归一形态 = **取一侧 = CLI**（核内已承载：`thincoder-core/advisor/repos.mjs:128` `isDocOnlyChange` = **非代码即「只文档」**——`docs/` / `*.md` 与临时件（`tmp-*` / `.tmp` / `.temp`）**同落「只文档」流**；逐行实核）；
+> 对端严格形态 = **非代码 ∧ 是文档**（`thincoder-vscode/src/advisor/repos.mjs:111`——临时件既非代码也非文档 ⇒ **中断「只文档」流**）——随 S2 接线被取代。
+> 两端当前**均无生产消费方**（对端仅测试面引用：`thincoder-vscode/test/portability-vsc-classification.test.mjs:16`）⇒ 属**潜伏差异**；
+> **S2 接线前须确认**：接线后差异面 = **仅「临时件场景」**（`isDocOnlyChange` 对「临时件（+ 文档）」变更集的判定由 false 变为 true）——接受统一，或以端差注入承载严格形态（二选一——属 S2 接线轮动作，本项只记）。
+
 ### 2.4 语义对位遍行（原 §2.5（四）行集——同职责但相对路径不同）
 
 | # | 对位（CLI ↔ VSC） | 分类 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
@@ -88,3 +94,4 @@
 - 2026-09-13：建档——自 `docs/design/CORE-UNIFICATION.md` 拆出（§2.5 #1 / #40 / #41 / #93 / #95 / #104–#110 / #159–#161 + 四要素明细 · §2.5.1 A24）；**语义零改**，行号沿用原编号。
 - 2026-09-14（S1 收口轮）：§5 补**核内落点行数**指针（`agent-tools/panel-blocks.mjs`——#159 · #180 收正）。
 - 2026-09-14（markdown 面小收正轮）：§1 / §2.4 裸名点名补路径前缀（`advisor/provider.mjs` · `advisor/tools.mjs` · `agent-tools/subagent-panel.mjs`——与 `src/provider.mjs` / `src/tools.mjs` / `src/tui/subagent-panel.mjs` 同名不同物；**消除歧义不改判据**）。
+- 2026-09-14（**设计面收正轮 3 · eng-designer**）：§2.3 表后补 **#106 S2 接线前口径确认项**（归一取 CLI 的核内实核坐标 + 对端严格形态 + 潜伏差异的行为差登记——只记，S2 动作）。

@@ -319,21 +319,25 @@ A8 / A9（对称面均入核）与 F3（零「新写」——不得造第三份�
 
 **族清单（16 族 / 63 条）**：会话 5 · 配置 4 · 记忆 3 · 索引 2 · 供应商 6 · MCP 5 · agent 主循环 6 · agent-tools 6 · advisor 2 · 压缩/标题/额度 3 · 权限 2 · 检查点/hooks 3 · 技能/规则/同伴/台账 5 · 推理/模型 3 · 工具实现面 2 · **宿主面与余项 6**（④ 四档 + 挂起面 #184 + 文案面 #185 两条对位）。
 
-**端特有桶（④ · 4 行 · 不迁——行本体住本节；#180 / #182 收正见下表后注）**
+**端特有桶（④ · 4 行 · 不迁——行本体住本节；#180 / #182 / #183 收正见下表后注）**
 
 | # | 对位（CLI ↔ VSC） | 分类 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|
 | 180 | CLI `tui/**`（67 档）+ `tui.mjs` ↔ ④ | ④ | 端特有（TUI 渲染 / 交互 / 键位 / 布局 / 面板 / 命令面） | 结构性不对称 = **依赖壳能力（终端 TUI）**——B17 实测仅 CLI 11258 行 | — | 不迁（端特有；**两处函数本体归核——收正见下表后注**） |
 | 181 | CLI `acp.mjs` + `acp/**`（3 档）↔ ④ | ④ | 端特有（ACP 协议客户端 / 会话 / 传输） | 结构性不对称 = **仅 CLI 存在**（VSC `src/**` 零 acp 命中） | — | 不迁（端特有） |
 | 182 | CLI 其余单端杂项（`completions.mjs` · `crash-reports.mjs` · `heap-watch.mjs` · `upgrade.mjs` · `distill.mjs`）↔ ④ | ④ | 端特有（shell 补全 / 崩溃报告 / 堆监视 / 自升级 / 蒸馏入口） | 结构性不对称 = **依赖壳能力或分发通道**（补全 = shell 通道；自升级 = CLI 分发；崩溃报告 / 堆监视 = CLI 进程形态）；`memory-command` / `permission` / `setup-wizard` 已单列（#135 / #165 / #177）；顶层 **`src/markdown.mjs`（共享逻辑：记忆条目 frontmatter 解析 / 序列化）归核**；**`src/tui/markdown.mjs`（TUI 行内渲染）属 ④**，随 #180 `tui/**`（收正见下表后注） | — | 不迁（端特有；顶层 `src/markdown.mjs` 除外） |
-| 183 | VSC `extension/**` 面板与宿主面（`chat-panel` · `panel-*` 8 档 · `notify` · `file-links` · `file-refs` · `diff-preview` · `editor-context` · `image-handler` · `vision-channel` · `turn-model` · `stop-trace` · `history-window`）↔ ④ | ④ | 端特有（webview / 宿主 API / 编辑器集成） | 结构性不对称 = **依赖壳能力（VS Code 宿主 API / webview）**——B17 实测仅 VSC；`config-watch` / `migrate-settings` / `permission-gate` 已单列（#132 / #165） | — | 不迁（端特有） |
+| 183 | VSC `extension/**` 面板与宿主面（`chat-panel` · `panel-*` 8 档 · `notify` · `file-links` · `file-refs` · `diff-preview` · `editor-context` · `image-handler` · `vision-channel` · `turn-model` · `stop-trace`）↔ ④（**`history-window` 项按 #123 归核——收正见下表后注**） | ④ | 端特有（webview / 宿主 API / 编辑器集成） | 结构性不对称 = **依赖壳能力（VS Code 宿主 API / webview）**——B17 实测仅 VSC；`config-watch` / `migrate-settings` / `permission-gate` 已单列（#132 / #165） | — | 不迁（端特有；**`history-window` 项收正**——见下表后注） |
 
-> **#180 / #182 收正（2026-09-14）**：
+> **#180 / #182 / #183 收正（2026-09-14）**：
 > · **#182 markdown 面（逻辑 / 渲染分家 · 用户裁定 2026-09-14）**——同名两档，原判**指错对象**（把顶层逻辑档当成「TUI 渲染」端特有面）：
 > **① 逻辑面** = 顶层 `thincoder-cli/src/markdown.mjs`（记忆条目 frontmatter 解析 / 序列化）——**共享逻辑 ⇒ 归核内**（`thincoder-core/markdown.mjs` 106 行；被核内 `memory/core.mjs` · `memory/delete.mjs` · `rules.mjs` 消费，依赖闭包自洽）；**归属段 = 进核（S1，已落）**。
 > **② 渲染面** = `thincoder-cli/src/tui/markdown.mjs`（**TUI 行内渲染**）——**④ 端特有（不迁）**，随 #180 `tui/**`。
 > · **#180 `tui/**` 两处归位**（取 #149 / #159）——**函数本体零 TUI 依赖**者可归核内：
 > `snapshotForUndo`（自 `thincoder-cli/src/tui/cmd-undo.mjs` 逐字随迁 → `thincoder-core/undo-stack.mjs` 47 行）· `computePanelBlocks`（自 `thincoder-cli/src/tui/subagent-freeze.mjs` 逐字随迁 → `thincoder-core/agent-tools/panel-blocks.mjs` 24 行）；其余 `tui/**` 维持不迁。
+> · **#183 `history-window` 项收正（承 #123——父侧裁定 2026-09-14「按 #123 落核正确」；覆盖关系 = #123 覆盖 #183 的该单项）**：
+> 理由一行 = 该面**纯函数、零宿主依赖**（核内 `thincoder-core/history-window.mjs` 全档零 import；对端 `thincoder-vscode/src/extension/history-window.mjs:5` 头注自述 `Pure functions — no vscode/fs imports`）⇒ 非结构性不对称（A9）——不属 ④。
+> 已按 #123「VSC 的 `history-window` 拆面按核内结构归位」落核（S1 已落——**179 行**；`session.mjs` re-export 保调用方单一路径——见 §2.8.1 **#12 行**）；**④ 清单与计数收正**：`history-window` 移出（**十九档 → 十八档**）——
+> 覆盖对账同轮同步（`extension/**` 对位 **17 → 18** · ④ **21 → 20** · ④ 桶合计 **102 → 101** · 其余 **136 → 137**）；`extension/**` 其余（面板 / webview / 宿主面）维持 ④。
 > **渲染面总则（markdown 面）**：**markdown 渲染面 = 两端各自实现、互不合并、互不追赶**（TUI 终端行内渲染 / VSC 宿主侧渲染）——逻辑面（顶层 `markdown.mjs`）才是共享面（归核）。
 > **「同名≠同物」判据纪律**：裁决行点名档时**必须带路径前缀**（`tui/markdown.mjs` ✓ / `markdown.mjs` ✗ 属歧义）——两端 / 多目录同名者一律前缀。
 
@@ -357,15 +361,15 @@ A8 / A9（对称面均入核）与 F3（零「新写」——不得造第三份�
 | VSC `agent/**` 单端 | 5 | 对位（#149 / #150 / #154 / #155） | — |
 | VSC `agent-tools/**` 单端 | 9 | 对位（#155–#157 / #166）+ 四档随对应同路径对（`index`→#83 · `read-history-discovery`→#89 · `subagent-spec`→#99 · `async-discard`→#111） | — |
 | VSC 顶层单端（compact · config-consult/-io/-mcp/-presets · embed-config · i18n · index-* · memory-tool · provider · repomap · specs · tools.mjs） | 14 | 对位（#128–#131 / #136–#138 / #144 / #148 / #162 / #167 / #176 / #177 / #185） | — |
-| VSC `extension/**`（38 档） | 38 | 对位 **17** 档（#123–#126 / #131 / #163 / #165 / #170–#174 / #175 / #177 / #184）+ ④ **21** 档（#132 两档 + #183 十九档） | — |
+| VSC `extension/**`（38 档） | 38 | 对位 **18** 档（#123–#126 / #131 / #163 / #165 / #170–#174 / #175 / #177 / #184）+ ④ **20** 档（#132 两档 + #183 十八档） | — |
 | VSC `mcp/**` | 5 | 对位（#144–#148） | — |
 | VSC `provider/**` + `provider/transports/**` | 5 | 对位（#138–#141） | — |
 | VSC `tools/**` 单端 | 12 | 对位 10 档（#167 / #179 + 映射表）+ ④ 2 档（`context` / `focus`） | — |
 
 > **结论**：单端 **148 + 91 = 239 档**逐面闭合——每档或落对位行、或落 ④ 结构性不对称桶（附结构性证据）；无「两者皆缺」的未闭合面。
-> **④ 桶合计 = 102 档**：**CLI 79**（`tui/**` + `tui.mjs` 68 · `acp.mjs` + `acp/**` 4 · `cli/**` 2 · 顶层杂项 5）· **VSC 23**（`extension/**` 21 · `tools/**` 2）。
+> **④ 桶合计 = 101 档**：**CLI 79**（`tui/**` + `tui.mjs` 68 · `acp.mjs` + `acp/**` 4 · `cli/**` 2 · 顶层杂项 5）· **VSC 22**（`extension/**` 20 · `tools/**` 2）。
 > 顶层杂项 5 = `completions` · `crash-reports` · `heap-watch` · `upgrade` · `distill`（顶层 `src/markdown.mjs` 归核——见上注）；VSC `tools` 的 2 = `context.mjs` · `focus.mjs`。
-> **边界纪律**：本桶只收「仅单侧存在 / 依赖壳能力」者（A9 第 1 条），**不得**以「差异 / 相似度低」入桶；其余 **136 档**全部落对位行。
+> **边界纪律**：本桶只收「仅单侧存在 / 依赖壳能力」者（A9 第 1 条），**不得**以「差异 / 相似度低」入桶；其余 **137 档**全部落对位行。
 > **工具实现面单端档逐档映射表**（#178 / #179 的行内容）→ 已随拆档移入 **`docs/design/TOOLS.md` §2.3**（行本体）；本节不复制。
 #### 2.5.1 须用户裁条目清单（A11——四要素提交形式）
 
@@ -520,8 +524,21 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | 9 | `ledger-surface.mjs` | 76 | WORKSPACE #174（台账可见面；渲染色表 ④ 注入） | —（软线内） |
 | 10 | `agent/suspension.mjs` | **234** | AGENT-LOOP #184（挂起 / 唤醒机制按核内结构归位——S1 续轮落地） | —（软线内） |
 | 11 | `i18n.mjs` | **102** | I18N #185（文案字典投影 `projectDictionary`——S1 续轮落地） | —（软线内） |
+| 12 | `history-window.mjs` | **179** | SESSION #123（人读线惰性窗口面归核——`historyWindow` / `HISTORY_PAGE_SIZE` / `isRealUserMsg` + 工具配对；**纯函数零宿主依赖**——S1 续轮第四批（E 类轮）落地） | —（软线内） |
+| 13 | `session-slot-write.mjs` | **168** | SESSION #126（槽写入面归核——`newSlotData` / 四开关写 / `saveSlotData` 落盘单点 / `rotateIfForeign` 轮转判定 / `mergeEngTokensForSave` 保存面合并规则——S1 续轮第四批（E 类轮）落地） | —（软线内） |
 
-**覆盖口径**：本表 = S1 落地新增 / 拆分产物档（**11 档** = §2.8 表「核包（S1 新建）」行的逐档展开 + **S1 续轮两档**——#184 / #185）；`SOFT_LINE_REGISTRY` 其余已登记档（逐字随迁、结构未变）的拆分计划**待补**（记档——补登范围与时点另定）。
+**覆盖口径**：本表 = S1 落地新增 / 拆分产物档（**13 档** = §2.8 表「核包（S1 新建）」行的逐档展开 + **S1 续轮两档**——#184 / #185 + **S1 续轮第四批两档**——#123 / #126）。
+`SOFT_LINE_REGISTRY`（`thincoder-core/test/core-hygiene.test.mjs`）在册 **30 档**：拆分计划已登 **5 档**（`config.mjs` + 本轮补 4 档——见下子表）；**其余 25 档待补**（记档——补登范围与时点另定）。
+其中距 500 硬限最近四档——`provider/responses.mjs` **495** · `session-slots.mjs` **490** · `agent/dispatch.mjs` **489** · `agent-tools/subagent-actions.mjs` **483**——**建议下轮优先补计划**。
+
+**在册超软线档拆分计划（S1 逐字随迁面——本轮补 4 档；读数 = `wc -l` · 实核 2026-09-14）**
+
+| # | 档（`thincoder-core/` 内） | 当前行数 | 拆分计划 |
+|---|---|---|---|
+| 1 | `session.mjs` | **494** | **>300——须带（最高优先——距 500 硬限 6 行）**：抽取**会话生命周期面**（`resumeSlot` / `applySession` / `stripTruncatedToolArgs` / `newSession` / `resetSessionState` / `switchToSlot` / `slotOccupancy`——约 250 行）外提姊妹档（`session-lifecycle.mjs` 式）；re-export 保既有 import 面；余量预计 ≈**245** · 新档预计 ≈**275**。消解条件 = **该档下次实质改动前**（不得再增量——超 500 = 硬红） |
+| 2 | `agent.mjs` | **428** | **>300——须带**：`runAgent` 体内五面外提（① run 起始 pending 注入面 `:97-123` 约 27 行 · ② per-run guard 复位面 `:136-161` 约 26 行 · ③ chat 调用选项组装面 `:240-265` 约 26 行 · ④ 响应提交面〔内置工具结果 / 流规则中止 / 中断提交 / usage〕`:280-330` 约 50 行 · ⑤ 工具执行中断记账面 `:369-406` 约 38 行——合计约 **170 行**；外提形态参 `handleCompletion` 的 action 返回式）外提姊妹档（`run-internals.mjs` 式）；余量预计 ≈**260** · 新档预计 ≈**200**。消解条件 = 下次实质改动时 |
+| 3 | `agent/setup.mjs` | **354** | **>300——须带**：**工具装配面**（`withPool` / `subagentRoles` / `filteredSubagent` / `engChildSubagent` / `consultTools` / `depthOnly` / 三表集成——`:170-296` 约 130 行）外提姊妹档（`tool-setup.mjs` 式）；余量预计 ≈**230** · 新档预计 ≈**150**。备选切法 = 上下文注入面（`:51-168` 约 118 行）同法外提——择一即可。消解条件 = 下次实质改动时 |
+| 4 | `agent-tools/advisor-async.mjs` | **357** | **>300——须带**：**实例注册表 + 启动解析面**（`advisorRunsRead` / `advisorRuns` / `openCodeRun` / `openDesignRun` / `resolveAdvisorLaunch` / `effectiveAdvisorRound`——`:62-158` 约 97 行；依赖面 = `carrierField` + `docSetKey` + `randomUUID`，零宿主回指 ⇒ 无环）外提姊妹档（`advisor-runs.mjs` 式）；余量预计 ≈**265** · 新档预计 ≈**110**。消解条件 = 下次实质改动时 |
 
 ### 2.9 与既有纪律的冲突点核对
 
@@ -1168,5 +1185,10 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
   同轮 `docs/design/AGENT-LOOP.md` §2.3 载体字段集补正（`_asyncQueue` / `_asyncTombstones` 两款 + 回写义务 + 不预置夹具——见该档变更记录）。
 - 2026-09-14（**载体字段集小收正轮 · eng-designer**）：同轮 `docs/design/AGENT-LOOP.md` §2.3 载体字段集 **7 款 → 8 款**（补 `_asyncWaiters` 唤醒栓注册表；「不预置载体字段」夹具与 VSC 绑定不变式同步扩至 8 字段）；同族面全核实扫结论见批次档 §2。
 - 2026-09-14（**载体字段集二轮小收正轮 · eng-designer**）：同轮 `docs/design/AGENT-LOOP.md` §2.3 载体字段集 **8 款 → 10 款**（补 `_advisorRuns` / `_mutLog`——VSC 对位名 `_fileMutEvents`；「不预置载体字段」夹具与 VSC 绑定不变式同步扩至 10 字段；**10 款即全集**结论落档）；同族面实扫依据见批次档 §2。
+- 2026-09-14（**设计面收正轮 3 · eng-designer**——承批次档 §5「S1 续轮第四批」未决 1 / 2 / 3 / 4）：
+  ① §2.8.1 补登 E 类轮两新档（`history-window.mjs` **179** / `session-slot-write.mjs` **168**——实核读数；覆盖口径 11 → **13 档**）；
+  ② §2.5 端特有桶 **#183 收正**（`extension/history-window` 窗口算法面按 #123 归核——覆盖关系 = #123 覆盖 #183 的该单项；④ 清单 十九档 → **十八档** · extension 对位 17 → **18** / ④ 21 → **20** · ④ 桶合计 102 → **101** · 其余 136 → **137**）；
+  ③ §2.8.1 新增「在册超软线档拆分计划」子表（本轮补 **4 档**——`session.mjs` 494〔距硬限 6 行 · 最高优先〕/ `agent.mjs` 428 / `agent/setup.mjs` 354 / `agent-tools/advisor-async.mjs` 357）；
+  ④ `docs/design/CONSULTATION.md` #106 补 S2 接线前口径确认注（见该档变更记录）。
 
 

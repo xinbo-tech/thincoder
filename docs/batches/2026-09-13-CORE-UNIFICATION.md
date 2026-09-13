@@ -2090,6 +2090,114 @@
 2. 超软线档拆分计划（§2.8.1 覆盖口径在案——另轮）。
 3. §2.13.x 读数 / 计数三组滞后收正（批次档 §5「S1 续轮第三批」未决 1 在案——另轮，本轮未含）。
 
+### 设计面小收正轮 2 · 载体字段集 8 → 10 款（`_advisorRuns` / `_mutLog` 并入）（2026-09-14 · eng-designer）
+
+**段位**：当前段 = S2 之前（设计面补正）；S2 / S3 动作零执行。本轮**只改设计档**——不写代码、不动 `thincoder-core/**`、未 commit（父侧统一）、未发起评审、未碰台账。**核 / 两产品零改动**（见「实核发现」4）。
+
+**依据** = 父侧裁定（`_advisorRuns` / `_mutLog` = **并入**——承上轮同族扫描 B 表两项）+ 派单 4 件——逐条先实核再落（坐标以核内现实为准）。
+
+**本批条目（覆盖面——供三方条目一致对账）**
+
+| # | 条目 | 设计档落点 | 状态 |
+|---|---|---|---|
+| 1 | §2.3 载体字段集 **8 款 → 10 款**：补 `_advisorRuns`（评审实例注册表——`Map`；读取 `advisor-async.mjs:68-71` · 首用单点 `:73-83` · 重置 `eng.mjs:57` / `:75`——回写义务承「首用单点 · 同步落容器 · 两径命中同一容器」口径）· `_mutLog`（变更日志——数组 · ≤200 环；VSC 对位名 `_fileMutEvents` 名差登记；书写点 `advisor-settle.mjs:42-49` · 读点 `:58` / `escalate-async.mjs:47`） | `docs/design/AGENT-LOOP.md` §2.3（carrier 行 :79 · 字段集 :91-93 · 回写义务 :94 · 新增 :98-102 · 勘定 :103-104 · 不变式 :105 · 变更记录 :160） | 已落 |
+| 2 | 「不预置载体字段」夹具范畴（全空缺枚举） + VSC 绑定不变式同步扩 **10 字段** | 同档 §2.3（验收点 2 :117 · 不变式 :105） | 已落 |
+| 3 | 完备性复核（VSC `history` 载体面 ∪ 核侧新机制两侧实扫）：「**10 款即全集**」结论落档 | 同档 §2.3（全集结论 :93） | 已落 |
+| 4 | 变更记录各档一行 | `AGENT-LOOP.md` :160 · `CORE-UNIFICATION.md` :1170 | 已落 |
+
+**本批明确不做（出批）**：`thincoder-core/**` 任何改动（`_advisorRuns` 重置写点的载体对位 = 登记项，未动核）· S2 / S3 一切动作 · 超软线档拆分计划（§2.8.1 在案——另轮）· §2.13.x 读数收正（§5 在案——另轮）。
+
+**受影响文件（本轮——行数口径 = `find /c /v ""`）**
+
+| 档 | 改前 | 改后 | Δ | 变更点 |
+|---|---|---|---|---|
+| `docs/design/AGENT-LOOP.md` | 152 | **160** | +8 | §2.3：carrier 行 :79 · 字段集 :91-93（+2 行）· 回写义务 :94 · 新增两字段块 :98-102（+5 行）· 勘定 :103-104 · 不变式 :105 · 验收点 2 :117 · 变更记录 :160（+1 行） |
+| `docs/design/CORE-UNIFICATION.md` | 1170 | **1171** | +1 | 变更记录 :1170 |
+
+**三机检读数（cwd = 仓根 · 终态实跑）**
+
+| # | 机检 | 读数 | 判 |
+|---|---|---|---|
+| 1 | `doc-anchors` | 域一（32 档）：候选 **1706** · 悬空 **0**——OK(V5)；域二（99 档）：候选 8799 · 悬空 0——OK(V5)；V5 命中 0 处（报告态） | ✓ exit 0 |
+| 2 | `check-doc-width` | **OK(宽度)：306 文件无 >300 字符单行**（一致性 V1/V2/V3：新增违规 0 · 存量 0） | ✓ exit 0 |
+| 3 | `check-ledger` | OK: `thincoder/docs/TODO.md` · OK: `thincoder/docs/TODO-archive.md`——**0 处违规**（基线 0） | ✓ exit 0 |
+
+**完备性复核（两侧实扫——「10 款即全集」依据）**
+
+1. **VSC `history` 载体面实扫**（`thincoder-vscode/src/**`——`history?._X` 与 `holder._X`（holder = `parent.history ?? parent`）访问面）= **8 款**：`_asyncSubagents` · `_asyncAdvisors` · `_consultSessions` · `_pendingAsyncResults` · `_suspended` · `_asyncTombstones` · `_advisorRuns` · `_fileMutEvents`
+   （代表证据：`thincoder-vscode/src/agent.mjs:111-113` 绑定 · `agent-tools/subagent-scheduler.mjs:71-82` 墓碑 · `agent-tools/advisor-async.mjs:64-72` / `:83-85`）。
+2. **核侧机制面实扫**（`carrierField(` 全量调用点 + `??=` / `instanceof Map` 新建点 + 跨模块读写面）= **10 款**：上述 8（`_fileMutEvents` ↔ `_mutLog` 名差对一）+ `_asyncQueue` · `_asyncWaiters`（VSC 现役零对位——`subagent-scheduler.mjs:23` 注「无独立 `_asyncQueue`」）。
+3. **去重后 = 10 款（全集）**：无第 11 款；排除项（标量 / 条目级 / 槽承载 / 单模块封装 / 同步面）承前轮 C 表复核无新增。
+
+**实核发现（供父侧协调 · 含不阻断观察项）**
+
+1. **`_advisorRuns` 重置写点的载体交叉面**（本轮新发现）：`eng.mjs:57` / `:75` 模式切换为**替换写**（`= new Map()`）落父对象字段、不触载体——VSC 形（绑定不变式）下重置不被载体保持（次 run 绑定回旧容器 ⇒「instances die with the mode」跨 run 不成立）；对位方式 = S2 装配面待定（未决 1）。
+2. **勘定注坐标收正**（一致性面 · 已当场修）：`AGENT-LOOP.md:103-104`「无借用步」清单 `advisor-async.mjs:254` → **`:268`**（实核 = `parent._asyncAdvisors ??= new Map()`；`:254` 为 `launchAsyncAdvisor` 函数首行——原坐标失准）；同扩 `advisor-settle.mjs:46`（`_mutLog` 的 `??=` 新建点，无借用步同类）。
+3. **形差登记**：核内 `_mutLog` 有 ≤200 环截断（`advisor-settle.mjs:48`）；VSC 现役 `_fileMutEvents` 仅追加、无环上限（`thincoder-vscode/src/agent-tools/advisor-async.mjs:83-85`）——S2 归一时以核内环形态为准。
+4. **工作树（时点读数）**：核内 3 M + 1 ??（`agent-tools.mjs` · `agent/setup.mjs` · `tools/index.mjs` · `test/tool-registry.test.mjs`——他轮在途，非本轮写入）；docs 面 = 本轮两档 + 本批次档；两产品零改动；未 commit。
+5. **观察项（不阻断）**：VSC `advisorRunsMap` 取值序 = 载体优先（`parent.history ?? parent`——`:64-72`）；核内 `advisorRunsRead` = 父对象优先（`carrierField`）——双存态语义差归 S2 对位（E 类轮决策 6 口径已在案）。
+
+**未决（记档 · 不代裁）**
+
+1. `_advisorRuns` 重置写点的 VSC 载体对位（重置写触载体 / run 尾回写策略）——S2 装配前须定。
+2. 超软线档拆分计划（§2.8.1 覆盖口径在案——另轮）。
+3. §2.13.x 读数 / 计数三组滞后收正（批次档 §5「S1 续轮第三批」未决 1 在案——另轮，本轮未含）。
+
+### 设计面收正轮 3 · §2.8.1 两新档 + #183 收正 + 拆分计划 4 档 + #106 S2 口径（2026-09-14 · eng-designer）
+
+**段位**：当前段 = S2 之前（设计面收正）；S2 / S3 动作零执行。本轮**只改设计档**——不写代码、不动 `thincoder-core/**`、未 commit（父侧统一）、未发起评审、未碰台账。**核 / 两产品零改动**（全程只读——实核发现 5）。
+
+**依据** = 批次档 §5「S1 续轮第四批」未决 1 / 2 / 3 / 4 + 父侧派单 4 件——逐条先实核再落（任务书引用数字仅作线索，读数以本轮实核为准）。
+
+**本批条目（覆盖面——供三方条目一致对账）**
+
+| # | 条目 | 设计档落点 | 状态 |
+|---|---|---|---|
+| 1 | §2.8.1 补登两新档（`history-window.mjs` **179** · `session-slot-write.mjs` **168**——本轮实核；覆盖口径 11 → **13 档**） | `docs/design/CORE-UNIFICATION.md` §2.8.1（主表 #12 / #13 + 覆盖口径） | 已落 |
+| 2 | §2.5 端特有桶 **#183 收正**（`extension/history-window` 窗口算法面按 #123 归核——覆盖关系 = #123 覆盖 #183 的该单项；④ 清单十九档 → 十八档 · extension 对位 17 → 18 / ④ 21 → 20 · ④ 桶合计 102 → 101 · 其余 136 → 137） | 同档 §2.5（桶头 · #183 行 · 收正注块 · 覆盖对账 3 处） | 已落 |
+| 3 | §2.8.1 增「在册超软线档拆分计划」子表（4 档——逐档：拆块 + 行区间 + 拆后预估） | 同档 §2.8.1（新子表） | 已落 |
+| 4 | **#106 S2 接线前口径确认注**（只记——S2 动作；潜伏差异行为差登记） | `docs/design/CONSULTATION.md` §2.3 表后注 | 已落 |
+| 5 | 变更记录各档一行 | `CORE-UNIFICATION.md` · `CONSULTATION.md` 变更记录 | 已落 |
+
+**本批明确不做（出批）**：`thincoder-core/**` 任何改动 · S2 / S3 一切动作 · 其余 25 档拆分计划（只登记「距硬限最近四档——建议下轮优先」）· §2.13.x 读数 / 计数三组滞后收正（前轮在案——另轮）· 批次档其他段。
+
+**受影响文件（本轮——行数 = `wc -l` 口径）**
+
+| 档 | 改前 | 改后 | Δ | 变更点 |
+|---|---|---|---|---|
+| `docs/design/CORE-UNIFICATION.md` | 1172 | **1194** | +22 | §2.5：桶头 · #183 行（枚举 19 → 18 项 + 收正指针）· 收正注块 +4 行 · 覆盖对账 3 格；§2.8.1：主表 +2 行 · 覆盖口径 +2 行 · 新子表 +8 行；变更记录 +5 行 |
+| `docs/design/CONSULTATION.md` | 90 | **97** | +7 | §2.3 表后 +6 行（#106 口径确认注）· 变更记录 +1 行 |
+
+**三机检读数（cwd = 仓根 · 终态实跑 · exit code 原样）**
+
+| # | 机检 | 读数 | 判 |
+|---|---|---|---|
+| 1 | `doc-anchors` | 域一（32 档）：候选 **1753** · 悬空 **0**；域二（99 档）：候选 **8799** · 悬空 0——`OK(V5): 0 条悬空锚`；`V5: 命中 0 处` | ✓ **exit 0** |
+| 2 | `check-doc-width` | **FAIL(宽度)：1 文件 / 1 行 >300 字符**——`docs/batches/2026-09-13-CORE-UNIFICATION.md:3192`（362 字符——S1 续轮第五批 §5 段；**非本轮写入面**）；两设计档新增行零违规 | ✗ **exit 1**（既有红——见未决 1） |
+| 3 | `check-ledger` | OK: `thincoder/docs/TODO.md` · OK: `thincoder/docs/TODO-archive.md`——**0 处违规**（基线 0） | ✓ **exit 0** |
+
+**自检一修（已复核 · 终态全绿）**：`doc-anchors` 首跑本档新增 **2 悬空**——拆分计划中两处「拟建姊妹档」名带 `agent/` 前缀被解析为路径锚而悬空 ⇒ 去前缀（同既有 `config-mcp.mjs` 式 先例）⇒ 复跑 **0 悬空**、exit 0。
+
+**验收判据（本轮）**：① 件 1 两档读数 = 本轮 `wc -l` 实核（非引任务书）；② 件 2 计数与枚举同改（#183 枚举 18 项 ⇔「十八档」⇔ extension ④ 20 ⇔ ④ 桶合计 101——链式一致）；
+③ 件 3 四档拆分计划各自含「拆哪块（块名 + 行区间）+ 拆后预估（存量 / 新档）」；④ 件 4 与 `CONSULTATION.md:55` 行文不冲突、坐标实核；⑤ 三方条目一致：本段条目 ⇔ 设计档落点 ⇔ §5 未决 1–4 同源。
+
+**实核发现（供父侧协调 · 含不阻断观察项）**
+
+1. **两新档读数实核**：`thincoder-core/history-window.mjs` = **179** · `session-slot-write.mjs` = **168**（`wc -l` 口径；与 §5「本段读数收正」终态行一致）。
+2. **`SOFT_LINE_REGISTRY` 全量实核**：**30 档全数 >300**（逐档读数见交付报告）；本轮补计划 4 档 + 既有 `config.mjs` ⇒ **其余 25 档无计划**。
+   距硬限最前 = **`provider/responses.mjs` 495**——该档**未被任何未决点名**（此前未决点名序：session.mjs / agent.mjs / setup / advisor-async / subagent-async / subagent-actions / trace-store）。
+   ⇒ 已在 §2.8.1 覆盖口径登记「距硬限最近四档——建议下轮优先」（**超出派单 4 档范围的登记项**——透明起见明记；补不补计划由父侧定）。
+3. **覆盖对账基数勾稽（既有 · 非本轮引入）**：CLI 行合计 **147** ≠ 声明 **148**；④ **101** + 其余 **137** = **238** ≠ **239**（差 1——疑「顶层对位档」22 vs 枚举 23 或他处单元格失准）。本轮**未动基数**（无审计面无法定权威值），仅随枚举变更做机械偏移（136 → 137）——差异随本报告上抛。
+4. **批次档宽度红（他段面 · 非本轮）**：`check-doc-width` 现红唯一一条 = `批次档 :3192`（362 字符——S1 续轮第五批 §5 段）；折行属该段作者 / 父侧，**设计面零违规**。
+5. **工作树（时点读数）**：核内 3 M + 1 ??（第五批在途——非本轮写入）；两产品零改动；`docs/**` = 本轮两档 + 本批次档（未 commit——父侧统一）。
+
+**未决（记档 · 不代裁）**
+
+1. 批次档 `:3192` 折行（§5 段作者 / 父侧）——`check-doc-width` 恢复绿的唯一缺口。
+2. 其余 25 档拆分计划（含 `provider/responses.mjs` 495）——设计档已登记「建议下轮优先」；补不补、补几档由父侧定。
+3. 覆盖对账基数差 1（实核发现 3）——建议另轮对账（本轮未含）。
+4. §2.13.x 读数 / 计数三组滞后收正（前轮在案）——本轮零触碰。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
@@ -3104,6 +3212,115 @@ D 类（#70 · #83）· F 类（#111 · #149–#153 · #155 · #157 · #103 · #
 其余档位读数复跑一致（`history-window.mjs` 179 · `session-slots.mjs` 490 · `session.mjs` 494 · `session-segments.mjs` 99 · `agent/setup.mjs` 354 · `agent.mjs` 428 ·
 `agent-tools/advisor.mjs` 264 · `agent-tools/advisor-async.mjs` 357 · `advisor/loop.mjs` 298 · `advisor/project-context.mjs` 197 ·
 三新测试档 193 / 136 / 174）；K2 = **156/156 · fail 0**、三机检 exit 0（终态复跑，见上）。
+
+### 实施：S1 续轮第五批 —— F 类 15 行 + D 类 2 行（注册表面）（2026-09-14 · eng-coder）——**终态 = clean**
+
+**段位**：当前段 = **S1（建核补齐）**。S2 / S3 面零触碰；**两产品零改动**（`git status --porcelain` 产品侧条目 = 0——见 K3）；未 commit（父侧统一）；未碰台账；**未改任何 docs**（`docs/design/{AGENT-LOOP,CORE-UNIFICATION}.md` 的 M = 设计面在途写入，非本段）。
+
+**存量核对（逐行读设计档 · 不按印象归并）**：F 15 行逐行读 `AGENT-LOOP.md` §2.1/§2.2 · `MCP.md` §2.1 · `MEMORY.md` §2.1 · `WORKSPACE.md` §2.2 · `TOOLS.md` §2.3 的「端差处置」列；D 2 行读 `TOOLS.md` §2.2。核内实档 vs CLI / VSC 逐字节对照（`git diff --no-index` 等价口径）。
+
+**改动面**（全部在 `thincoder-core/**`；3 档修改 + 1 档新建）
+
+| # | 档 | 行数（`wc -l`） | 改动 |
+|---|---|---|---|
+| 1 | `agent-tools.mjs` | 17 → **21** | #83 统一登记册：补 `consultStartTool` / `consultStopTool` 导出（VSC 表含、CLI 原另挂 `agent/setup.mjs:173`） |
+| 2 | `agent/setup.mjs` | 353 → **354** | #83 归位：consult 家族改自 `../agent-tools.mjs` 单源取用（去原 `agent-tools/consult.mjs` 直取） |
+| 3 | `tools/index.mjs` | 35 → **74** | #70 完整注册表：`builtinTools` 移出 `read_image`（改门控）+ 新增 `assembleBuiltinTools`（CLI 消费方拼装面归位） |
+| 4 | `test/tool-registry.test.mjs`（新建） | **79** | 行为 3 + 结构机检 1 |
+
+**逐行并入 / 复核（F 15 行 → 落点：核内实档逐处）**
+
+1. **#103** `agent-tools/subagent-run.mjs`（同名不同物）：核 `:47` `executeAsyncSpawn`（CLI 异步 spawn 执行器）+ `agent/spawn-child.mjs:218` `runWithContinue` / `:77` `makeRelay`（VSC `runChild` 闭环归位面）——两份能力分别落位 ✓
+2. **#111** `agent/run-stages.mjs`：核档与 CLI **逐字节同**（含 `:132` `runHooks("Stop", …)`）+ VSC 的 guard 推回（`agent/completion.mjs:30` `handleCompletion`）/ 蒸馏发射（`explore-distill.mjs:145` `summarizeRunExplorations`）按核内结构在位 ✓
+3. **#149** `agent/dispatch.mjs`：与 CLI 仅 1 行差（`:7` `import { snapshotForUndo } from "../undo-stack.mjs"`——#180 收正路径）✓
+4. **#150** `agent/helpers.mjs`：与 CLI 逐字节同 ✓
+5. **#151** `agent/post-turn.mjs`：与 CLI 逐字节同（回合后记账面）+ VSC 落点（`setup-reminders` / 主循环内联）按核内结构归一 ✓
+6. **#152** `agent/spawn-child.mjs`：与 CLI 逐字节同（含 `:171` `CAPTURE_CAP_OPTS` 额度面）✓
+7. **#153** `agent/{completion,record-results,relay-prefix}.mjs`：三档与 CLI 逐字节同 ✓
+8. **#155** `agent-tools/escalate-async.mjs`：核 = CLI + #98 链结（`:182` `bindChildController`）+ VSC 流式豁免（`:220-221` `streamOutput: true`）✓
+9. **#157** `agent-tools/subagent-spawn.mjs`：与 CLI 逐字节同（`:198` `prepareScheduling` / `:241` `buildSpawnChild`）+ 门 `agent/spawn-child.mjs:53` `gateEngCoderSpawn` ✓
+10. **#175** `auto-think.mjs`：与 CLI 逐字节同（`:62` `classifyAndApply`）；端侧选择面（VSC `extension/reasoning-mode.mjs:20` `resolveReasoningMode`）属端差 ✓
+11. **#81** `mcp.mjs`：与 CLI 逐字节同 + `mcp/{helpers,transport-stdio,transport-http,transport-ws}.mjs`（VSC 分档结构归位）；配置面板 / 监视面 = ④ 端侧 ✓
+12. **#134** `memory/docs.mjs`：与 CLI 逐字节同（`:241` `memoryTools` / `:170` `docSearchTool`）✓
+13. **#170** `skills.mjs`（234 行 = CLI 153 + #88 同步 loader 面 `loadSkillsSync` / `readSkillSync`）+ `agent-tools/skill.mjs:63` `configureSkillLoader`（fs 面按端注入）✓
+14. **#178** CLI 单端 6 档：`tools/{bash,checklist-sync,edit-batch,glob-dialect,patch,repomap}.mjs` 全在核（逐档随其工具面，不据相似度断言）✓
+15. **#179** VSC 单端 12 档：`checkpoint`→`tools/git-checkpoint.mjs`+`git/checkpoint.mjs` · `code`→`memory/docs.mjs`（`codeSearchTool`/`docSearchTool`）·
+`edit-fuzzy-match`/`edit-line-params`/`file-edit`/`more-file`/`hashline-edit`→`tools/{edit-diff,edit-batch,file,patch}.mjs` · `read_image`→`tools/file.mjs` ·
+`shell`→`tools/bash.mjs` · `wait_for`→`tools/ops.mjs` 齐；
+`context` / `focus` = ④ 端特有（不入核）✓
+
+**D 类（2 行 · 本轮实施 → 落点）**
+
+- **#70** `tools/index.mjs`：`builtinTools`（24 静态）+ `assembleBuiltinTools({ memory, cwd, projectDir, author, team, model })` = 静态 ∪ 实例绑定 6 面（`memory` / `code_search` / `doc_search` / `repo_outline` / `settings` / `peer_instances`）∪ 门控 `read_image` ⇒ **31 名**（VSC 完整表可达面 − 宿主特有 2 档，逐名对齐）。
+  `read_image` **注册门取 VSC**：`:62` `const imageOk = Boolean(specForModel(model)?.multimodal);`——与 VSC `agent/setup.mjs:199` `specForModel(provider.model).multimodal ? [readImageTool] : []` 同判
+（`DEFAULT_SPEC`（`model-specs.mjs:97`）无 `multimodal` ⇒ 未知 / 缺省模型不注册）。CLI 侧消费方拼装面（`cli/make-agent.mjs:64`）已归位为本函数。
+- **#83** `agent-tools.mjs`：登记册 = **14 名**（CLI 12 + consult 家族 2）= VSC `agent-tools/index.mjs` 暴露集合逐名一致；`agent/setup.mjs:172-173` 改自登记册单源取用（原另挂点消失）。
+
+**形态纪律（承写路径缝）**：核内零端名分支（新档代码零产品名）；缺省不覆盖（`assembleBuiltinTools` 缺省参数 = 现 CLI 语义 + 保守门）；结构机检 fail-closed（31 名集合逐名等值 / 零重名 / 宿主特有零入册 / 门控只掉 `read_image` / 登记册单源正向断言）。
+
+**K1–K3 读数（cwd = 仓根 · 终态复跑）**
+
+| # | 判据 | 读数 | 判 |
+|---|---|---|---|
+| K1 | 三机检 | `doc-anchors` **exit 0**（`OK(V5): 0 条悬空锚`——域一候选 1674 / 域二 8799）· `check-doc-width` **exit 0**（306 档无 >300 字符单行）· `check-ledger` **exit 0**（0 违规） | ✓ |
+| K2 | 核内 `node --test` | 基线 **156/156** 保持绿 + 新增 **4** 全绿 ⇒ **160/160 · fail 0 · exit 0** | ✓ |
+| K3 | 工作树 | 核内 **3 M + 1 ??**（`agent-tools.mjs` / `agent/setup.mjs` / `tools/index.mjs` / `test/tool-registry.test.mjs`）；**产品侧条目 = 0**；`docs/**` 的 M = 设计面在途写入（非本段） | ✓ |
+
+**K4 全表终态（S1 的 126 行逐行有结论 · 三类齐全）**
+
+**① A 类（7 行）**：`#94` ✅已并入 · `#98` ✅已并入 · `#100` ✅核内已承载 · `#101` ✅核内已承载 · `#102` ✅核内已承载 · `#154` ✅已并入 · `#158` ✅核内已承载（前批 · §5 各段）。
+**② B 类（2 行）**：`#112` ✅已并入（`pushInjections` 注入位 + `read_image` 门 + MCP 扩工具时机 = S2 装配）· `#113` ✅已并入。
+**③ C 类（13 行）**：`#56` / `#57` / `#59` / `#61` / `#63` / `#66` / `#69` / `#88` / `#91` / `#96` ✅已并入（注入缝）· `#64` ✅核内已承载（`ctx.onQuestion`）· `#68` ✅已完成（写路径缝）· `#84` ✅已并入（记账注入缝）。
+**④ D 类（2 行 · 本轮）**：`#70` ✅已并入（完整注册表 + 消费方拼装面归位 + `read_image` 门取 VSC）· `#83` ✅已并入（统一登记册 = 14 名）。
+**⑤ E 类（16 行）**：`#123` ✅已并入 · `#124` ✅已承载 · `#125` ✅已承载 + ④端差段 · `#126` ✅已并入 · `#127` ✅已承载 · `#93` ✅已并入 · `#95` ✅已并入 · `#104`–`#108` ✅已承载 · `#109` ✅已并入 · `#110` ✅已并入 · `#160` ✅已承载 · `#161` ✅已承载（前批）。
+**⑥ F 类（15 行 · 本轮）**：`#103` `#111` `#149` `#150` `#151` `#152` `#153` `#155` `#157` `#175` `#81` `#134` `#170` `#178` `#179` **✅已承载**（逐行落点见上「逐行并入 / 复核」；不含本轮代码改动者以「核内实档 vs CLI 逐字节对照」判）。
+
+**⑦ 其余 S1 行（71 行 = 126 − 55）→ ✅ 已承载**（取一侧 / 近同 ⇒ 核内面在位；按档分组）：
+
+- `MEMORY.md` **6**：`#75` `#82` `#133` `#136` `#137` `#168` —— 核 `embedding.mjs` · `memory/**`（8 档）· `memory.mjs` · `index-bin.mjs` · `index-discover.mjs` · `git/gitmem.mjs`（A12 归一 = 以 CLI 为准）。
+- `SESSION.md` **1**：`#89` —— 核 `agent-tools/read-history.mjs`。
+- `CONFIG.md` **11**：`#74` `#77` `#79` `#80` `#87` `#128`–`#132` `#177` —— 核 `config.mjs` · `config-io.mjs` · `config-presets.mjs` · `config-migrate.mjs`。
+- `TOOLS.md` **14**：`#52`–`#55` `#58` `#60` `#62` `#65` `#67` `#85` `#86` `#90` `#92` `#97` —— 核 `tool-docs/*.md`（25）+ `tools/*.mjs` + `agent-tools/{plan,timer,task,digest-budget,goal}.mjs`。
+- `PROMPT-SYSTEM.md` **3**：`#117`–`#119` —— 核 `prompts/*.md`（15）+ `tool-docs/`（25）+ §2.13.2 锚（提示词 ④ 段以锚承载）。
+- `AGENT-LOOP.md` **9**：`#76` `#78` `#99` `#156` `#165` `#166` `#169` `#176` `#184` —— 核 `explore-distill.mjs` · `agent.mjs` · `agent-tools/subagent.mjs`（`panel` 动词 = S2 端侧剔除）· `recent-changes.mjs` · `permission.mjs` · `child-permission.mjs` · `hooks.mjs` · `model-ref.mjs` · `agent/suspension.mjs`。
+- `CONSULTATION.md` **1**：`#159` —— 核 `agent-tools/panel-blocks.mjs`。
+- `PROVIDER.md` **8**：`#114` `#115` `#138`–`#143` —— 核 `provider/*.mjs`（11 档）。
+- `MCP.md` **5**：`#144`–`#148` —— 核 `mcp/helpers.mjs` + 三传输（`transport-*`）。
+- `TRACES.md` **1**：`#116` —— 核 `traces/trace-store.mjs`。
+- `CHECKPOINT.md` **1**：`#167` —— 核 `git/checkpoint.mjs` + `tools/git-checkpoint.mjs`。
+- `CONTEXT-COMPACTION.md` **3**：`#162`–`#164` —— 核 `context.mjs` · `generate-title.mjs` · `text-budget.mjs`。
+- `I18N.md` **1**：`#185` —— 核 `i18n.mjs`（`projectDictionary` 投影）。
+- `WORKSPACE.md` **7**：`#71` `#72` `#73` `#171`–`#174` —— 核 `ledger.mjs` · `conventions.mjs` · `escape.mjs` · `rules.mjs` · `peer-instances.mjs` · `peer-domains.mjs` · `ledger-surface.mjs`。
+
+**⑧ 非 S1 行（59 = 185 − 126）**：**S0a 38** ✅完成（S0a 首批建核——逐字节同的提示词 / 工具描述面已入核 `prompts/` 15 + `tool-docs/` 25）；**文档面 15** ✅完成（不进核包——中文镜像按裁定 B 两产品原地保留）；
+**不迁 5 = `#135` · `#180`–`#183`** ❌ **不进核（结构性不对称）**：`tui/**` 68 档 + `acp.mjs`/`acp/**` 4 档 + 顶层杂项 5（依赖壳能力：终端 TUI / 协议 / shell 通道 / 分发通道）· VSC `extension/**` 21 档（宿主 API / webview）· CLI `memory` 子命令面（仅单侧 shell 通道）。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | #70 的「CLI 侧消费方拼装面归位」落实为 `assembleBuiltinTools({ memory, cwd, … })`（async，函数式装配） | `memoryTools` / `codeSearchTool` / `docSearchTool` / `repoOutlineTool` 均为**工厂**（需 memory 实例 ⇒ 无法静态入 `builtinTools`）；备选 = 静态表硬塞（不可能）/ 把工厂调用留在壳侧（= 拼装面未归位）。设计只写「归位」未定形态 ⇒ 取函数式单点 |
+| 2 | `builtinTools` 移出 `read_image`（改门控注册） | #70 明写「`read_image` 注册门取 VSC（按模型能力）」——VSC 静态表**不含** `read_image`、由 `setup.mjs:199` 按 `multimodal` 条件加入 ⇒ 核内静态表同名收窄、门在装配面；只取静态表的消费方会静默丢该工具（记未决 1） |
+| 3 | 门判据用 `Boolean(specForModel(model)?.multimodal)`（无 `model == null` 特例） | 与 VSC 逐字同判；未知 / 缺省模型 ⇒ 保守不注册（`DEFAULT_SPEC` 无 `multimodal`）。备选 = 缺省注册（原实现，advisor 🟡#1 判为门可空转）——已改 |
+| 4 | `#83` 采用「登记册含 consult 家族」而非「registry 只列 12 名」 | VSC `agent-tools/index.mjs:15` 已含；设计行的「融合」即取此形；`setup.mjs` 的条件注册（池空不挂）保留在装配侧 = 端侧注册策略，非第二登记处 |
+
+**内部轮（自含交付协议）**
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **DIVERGENT**——命中 1 条 **🟡 静默简化**：`#70` 的 `read_image` 注册门未落（原实现 = `model == null ? true : …` 的 fail-open + 注释「registration follows VS Code」与 VSC 实况相反——VSC 为**登记期**条件注册）⇒ **已修**（见修复轮）；「部分实现 / 越清单改动」未命中。
+审计限制如实登记（该席位无 shell / 无 git / 不可执行 ⇒ K1–K3 未独立复跑；产品树零改只能间接推断——本段补 `git status` 实测：核内 3 M + 1 ??，零清单外）。
+- **advisor 代码评审 2 轮**（`type=code`，阻塞）：**轮 1 = pass**（🔴 0 · 🟡 2（均非 must-fix）· 🔵 5）；**修复轮 1 = 4 项落修**（① 门改 VSC 同判 fail-closed；③ 用例夹具前提显式断言 + 未知模型正例；④ #83 结构检查改正向断言 + 否定面收窄；⑤ `SHARED_STATIC` → `SHARED_FACE`）；**轮 2 = pass**（4 项逐行实读为真；新提 1 条 🔵 = fail-closed 的反向默认风险，见裁决表；未引入新 🔴）。
+- **裁决表（8 项）**：**Fixed 4**（#1 门 / #3 夹具 / #4 结构机检 / #5 命名）· **Deferred 3**（#2 生产消费方 = S2 接线（未决 1）· #7 TOOLS.md 行为登记 = 设计面（未决 2）· 新#2 漏传 `model` ⇒ `read_image` 静默消失 = 同上，随 S2 接线清单）· **Not an issue 1**（#6 `agent/setup.mjs` 354 行 = `SOFT_LINE_REGISTRY` 在册，R3 不复议）。
+- **收敛读数**：审计 1 轮 + advisor 2 轮 + 修复轮 1；**终态 0 未决 🔴** → **clean**。
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **S2 接线清单（#70 消费方）**：`assembleBuiltinTools` 现无生产消费方（仅测试）；`cli/make-agent.mjs:64` 与 `thincoder-cli/src/tools/index.mjs:18-26` 仍是并行副本。**S2 必须**：① 两壳改调 `assembleBuiltinTools` 且**传 `model`**（漏传 ⇒ `read_image` 对所有模型静默消失）；② 不再单独取静态 `builtinTools` 当完整表（该表已语义收窄）。
+2. **设计面登记（#70 行为后果）**：`TOOLS.md:72` 只写「注册门取 VSC」，未登记归一后果——S2 后 CLI 文本模型不再看到 `read_image`，`tools/file.mjs:159-163` 的 F-3 软引导句对主 agent 不可达。A2（`CORE-UNIFICATION.md:586`「该侧行为变化逐条登记」）口径下建议补登记——归 eng-designer。
+3. **>300 在册档**：`agent/setup.mjs` 354（本段 +1）· `session.mjs` 494 · `agent.mjs` 428 · `agent-tools/{subagent-async,subagent-actions}.mjs` 437/483 · `traces/trace-store.mjs` 303——在 `core-hygiene` 的 `SOFT_LINE_REGISTRY`，拆分计划属设计面（承前批未决）。
+4. **F 类复核口径**：F/D 17 行中仅 #70 / #83 有本轮代码改动；其余 15 行以「核内实档 vs CLI 逐字节 / 逐处对照」判 ✅ 已承载（其中 `#103` `#149` `#155` `#170` 含前批并入差，已逐处登记）；未做两端运行期等价复跑（核内零消费方阶段无法驱动）。
+5. **#183 相抵（承前批未决）**：`CORE-UNIFICATION.md` §2.5 端特有桶 #183 把对端 `extension/history-window` 列 ④，与 #123「归核」相抵——归设计面（前批已记）。
+
+**轮次自证**：审计 1 轮 + advisor 2 轮 + 修复轮 1；K1/K2/K3 终态读数见上表；终态 = **clean**；报告 ①–⑥ 见交付报告（父侧转呈）。
 
 ## §6 验证与收口（父代理）
 
