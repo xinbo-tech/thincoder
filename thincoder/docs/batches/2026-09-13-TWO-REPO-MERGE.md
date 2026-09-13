@@ -347,4 +347,78 @@ Added dir 'thincoder-vscode'
 
 ---
 
+### 批 2 · 机制退役（S4）· 实施记录（eng-coder 自写 · 2026-09-13——前轮上下文崩溃后收窄续跑轮）
+
+**范围**：设计档 §2.15 S4；批 2 验收 = §3 T-M5 · T-M6 · T-M9 · T-M10 · T-M11 · T-M17 · T-M20 · T-M21 · T-M22。
+**执行根**：合并仓根 `d:\teamcode\thincoder`；产品域 = `thincoder/` · `thincoder-vscode/`。
+**前轮已在案提交**：`66a1962a`（仓根统一三档 + 六档产品脚本退役 + 调用点改指）· `57087021`（产品级 `.gitignore` 补正）。
+
+#### 一、本轮提交（每次报实际 hash）
+
+| 序 | commit | 内容 |
+|---|---|---|
+| A | `f7331c21` | S4 收尾——统一脚本 `main` 契约恢复（`{cwd, log, env}` 直驱 + `--json` 五字段投影）· R8/R9 连带测试档单仓化（两档整档重写·跨仓段删）· T109 夹具确定化（幽灵链）· T-M5 注释面收正（`PEER_*` / `domain-out` 字面零残留）；13 files, +204/−391 |
+| B | `90f1222` | CI 仓根 `.github/workflows/test.yml` 增设全域机检 job `docs`（三机检·全域态）——批 1 §5 发现 #3 收口；1 file, +11 |
+
+提交纪律：`git add <显式路径…>` → `git status --porcelain` 核验 → `git commit --only <同路径…>`；`thincoder/docs/TODO.md`（父侧台账未提交改动——需求池 +1 条）**不入本批提交、未触碰**（留待父侧收口）。
+
+#### 二、4 红修法与理由（任务书 4 红，实况全清——另清 2 个未列入的改指缺失档红）
+
+**红 1–3 · VSC `test/doc-anchors.test.mjs` T-DC6 / T-DC12 / T-DC13**（根因同一）：
+统一版 `scripts/doc-anchors.mjs` 丢了两项**既有公共契约**——(a) 输出直走 `console.log`，未收注入 `log`
+（旧 VSC 契约为 `main(args, { cwd, log, env })`；进程内驱动收集不到输出 → `out` 为空）；(b) `V5_GATE` 直读 `process.env`，未收注入 `env`（测试注入失效）；
+另 (c) `--json` 把 7 字段内部 hits 原样序列化，破坏旧版 **5 字段投影**公共契约（旧实现 `main` 内 `.map()` 投影——已从 `57087021` 历史核实，非猜测）。
+**修法** = 恢复 `main(argv, { cwd = process.cwd(), log = console.log, env = process.env })` 契约 + 恢复五字段投影（`expect`/`got` 仅入文本面）。**测试档零改动即转绿**——未弱化任何断言；另按 T-M5 口径把退役注记里的 `PEER_PREFIX` / `PEER_DIRS` / `domain-out` / `resolvePeerRoot` 字面收正（代码/测试/脚本层检索零命中）。
+
+**红 4 · CLI `test/ledger-surface.test.mjs` T109③**：
+根因 = 夹具**环境依赖**（非断言错）：旧 ③ 以 `%TEMP%` 子目录为锚，`discoverFamily` 沿父链扫描会命中**并行用例在 %TEMP% 遗留的 `ledger-*` 台账目录**（`%TEMP%` ≤100 项时触发——实测复现：注入残留目录即红；`test:full` 并行下稳定复现；单跑偶绿）。
+**修法** = 锚改为**系统盘根下全链不存在的幽灵路径**（`parse(tmpdir()).root` + `thincoder-zero-ledger-probe/deep/nested`）——全链零台账、环境自持、不随残留漂移；断言强度不变（仍 `current=null` + `projects=[]`）。**否决**「先清 %TEMP% 残留再跑」——不防并行、下一轮必再污染；**否决**条件跳过/过滤环境噪声——等价弱化断言。
+
+**另 2 红（未列入任务书，改指缺失档 import 崩）——同批清掉**：
+- VSC `test/doc-consistency.test.mjs`（R8）：整档 import 已删的 `scripts/check-doc-width.mjs` → ERR_MODULE_NOT_FOUND。重写 = 改指仓根统一版 + **V4 段整类删**（T-VS31 / T-VS32 / T-VS33）· T-VS32② 基线反证保留 + spawn 路径改指 · T64/① 的 V4 引用收正 · T-MA8-2 静态串对齐统一版单源调用行。
+- VSC `test/ledger-check.test.mjs`（R9）：同上（import 已删档）。重写 = 改指 + **T-VS2 / T-VS3 删段**（跨仓必报——判据已退役；以「越出根必报」存留语义由 T-VS35 覆盖）· T-VS35 重述（`仓根外前缀（首段非仓根条目）` / `仓根外绝对路径` + **补 T-VS2 遗留的越根绝对路径臂**——不静默丢覆盖）· T-VS5 夹具换本域坏指针 · L2/L3 消息串对齐统一版（`活文件含`）。
+- 另：VSC `test/files.mjs` 两条接线注释随内容收正（R8/R9 面——登记行与实况对齐）。
+
+#### 三、S4 项逐条核验（任务书步骤 3）
+
+| 项 | 结果 |
+|---|---|
+| 批 1 补正 `.gitignore` | ✅ 已提交（`57087021`）；探针复核 `git check-ignore -v thincoder/.thincoder/tmp/probe.txt` → 命中 `thincoder/.gitignore:2:/.thincoder/tmp/` |
+| CI 全域机检 step | ✅ 本轮补（`90f1222`）：job `docs` = 全域三机检（无域参 = 全域；无 npm install 需求——依赖纯 node 内建，已核） |
+| VSC `package.json` `doc:check` | ✅ 改指仓根统一版并传产品域（`node ../scripts/doc-anchors.mjs --root .. --domain thincoder-vscode --strict`）——实跑核验见「四·已知红」 |
+| `doc-impact.mjs` 措辞 | ✅（`66a1962a`）：「对端」2 处改写「VSC 侧」+ import 改指统一版；复核零 `对端/跨仓` 字面 |
+| 本板块两档退场注记 | ⚠️ **未动**（eng-designer 写权）——需注记行列清单见「五·发现 #3」，上报 |
+
+#### 四、验证（本轮实测读数）
+
+| 项 | 结果 |
+|---|---|
+| 仓根三机检（全域态） | **exit 0 ×3**：`OK(V5) 0 条悬空锚`（候选 8741）· `OK(宽度) 273 档 0 违规` · 台账 `0 处违规 · 基线 0` |
+| CLI 链 | lint 311 OK · 快层 605/548/pass/0 fail/57 skip · test:full **605/605/0** · integration 23/23/0 |
+| VSC 链 | lint 293 OK · 快层 621/580/**0**/41 · test:full 621/619/**2** · integration 28/28/0 |
+| 改动测试档直跑（9 档） | CLI 4 档 56/42/0/14 exit 0 · VSC 5 档 46/42/0/4 exit 0 |
+| 与批 1 基线对照 | 测试数差**逐条对得上**：CLI −6（T-LS2/T-LS3/T-LS35–37/T-V5-11）· VSC −6（T-VS2/T-VS3/T-VS31–33/T-CI-11），pass/skip 差同步吻合；批 1 的 %TEMP% EPERM 红（CLI 4 / VSC 3+1）本轮清残留后未现（同口径）。 |
+
+**VSC test:full 2 红（设计序列过渡 + 既有抖动——非本批代码缺陷）**：
+- T-DC6②（真仓零命中锁）：现 22 处 A1 悬空（7 R16 面 + 15 R8/R9 文档面）——见发现 #1。
+- AC89 批级：819ms > 500ms 一次（满负荷）；单档复跑**通过**——批档 `LEDGER-SELF-CONTAINED.md` 已记同型（983/2089ms）。
+
+#### 五、发现与上报（供父侧 / 设计者裁决——不静默）
+
+**#1（🟡 设计序列过渡红 · 需补处置项）**：R8/R9 测试删除产生**文档引用面** 15 处悬空，设计档无归属批（R16 文档面只覆盖 T-CI-11，随 S6）：
+- VSC `docs/design/LEDGER-SELF-CONTAINED.md`：`:648`（×2）· `:702` · `:731` · `:733` · `:743` · `:796`（×2）· `:849`（×2）· `:850` —— T-VS2 / T-VS31 / T-VS33 引用行（用例表 / 受影响文件表 / AC 行）。
+- VSC `docs/requirements/ENGINEERING-MODE.md`：`:94`（×2）· `:125`（×2）—— F14 判定句区间引用行。
+- 因果链：测试段按 R8/R9 **删** ⇒ 对应 A1 引用悬空 ⇒ VSC 引擎（`--strict` / 真仓锁）报红。全域三机检 exit 0 不受影响（全域态 VSC 引擎为报告态）；`doc:check` 与 T-DC6② 需此面注记后才绿。
+- 本批**未动**（doc 面非 S4 文件域；R16 面属批 3）——**建议设计者补一条处置项（建议随 S6 一并退场注记）**。
+
+**#2（🔵 既有满负荷抖动）**：VSC AC89 批级计时红一次（819ms）——单复跑过；批档已记在案。非本批引入。
+
+**#3（🟡 本板块两档退场注记——写权在 eng-designer·本批只列清单）**：设计档 §2.5 尾条要求「R 表 / §2.14 的六档行号锚（及 R16 行坐标）在批 2 删改后 → 退场注记 + 来源指针」。
+需注记面 = 设计档 `docs/design/TWO-REPO-MERGE.md` §2.4 **R1–R9 · R16 各行内的旧脚本坐标**（`thincoder/scripts/doc-anchors.mjs:73/:32/:173/:188-190/:31/:199` 等已删档行号）+ §2.14「机检脚本（删改）」行 + §2.5 内旧档名提及。
+机器侧暂由 `MERGED_SCRIPTS` 并入映射兜底（V5 悬空 0）；语义层注记建议随 S6（与 #1 并批）。
+
+**#4（🔵 范围外观察）**：`thincoder/docs/TODO.md` 存在父侧未提交改动（需求池 +1 条：「子 agent 需要上下文压缩机制」）——未入本批、未动；按「各仓自持」纪律其收口归父侧。
+
+**#5（🔵 自审 + advisor 未执行）**：轮次预算收窄（父侧指示「优先收口落地」）——本批**未跑**内部 explore 审计与 advisor 代码评审；建议下一轮补跑，射程 = 批 2 全量（含 `66a1962a`）。
+
 ## §6 验证与收口（父代理自写）
