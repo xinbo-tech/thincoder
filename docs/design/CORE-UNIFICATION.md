@@ -1,10 +1,11 @@
 # 核心统一（CORE-UNIFICATION）
 
 > 板块 = **核心统一**（phase 2——「一个核 + 两个薄壳」）——架构级机制档：本档承载**设计层 + 测试层**（需求层已拆出）。
-> 建档：2026-09-13 · 状态：**设计待评审**（用户发起评审前状态）；2026-09-13 **重写轮**（核形态 = 单仓 npm workspace 真包——依据见下）。
+> 建档：2026-09-13 · 状态：**设计待评审**（用户发起评审前状态）；2026-09-13 **R3 形态轮**（核形态 = 独立发布真包 + 开发期本地链接；依据见下）。
 > 需求见 `docs/requirements/CORE-UNIFICATION.md`（板块镜像形态见 `README.md` §3.2）——本档保留设计与测试细节。
 > 上游通道 = `thincoder/docs/design/TWO-REPO-MERGE.md` §2.13（phase 1 仅预留通道，明文「若启动须另建板块文档」）；本档即该新板块。
-> 需求来源 = 批次档 `docs/batches/2026-09-13-CORE-UNIFICATION.md` §1（用户裁定「计划可以，干吧」+ 追加裁定 A4 / A5：核 = 一个包 · 不单独发布 ⇒ 单仓 npm workspace 真包）。
+> 需求来源 = 批次档 `docs/batches/2026-09-13-CORE-UNIFICATION.md` §1（用户裁定「计划可以，干吧」+ 追加裁定 A4 / A5 / **A6 与 A5 放宽**：核可单独发布 · 开发期本地链接 / 生产期发布包 · 用户**否掉打包期垫片形态**）。
+> **形态轮次**：第 1 轮 = 副本形态（D-C3 原版）；第 2 轮 = 单仓 npm workspace 真包；**第 3 轮（本轮）= 非 workspace 真包 + 双态引用**——逐轮依据与更替见 §2.3.2 与「变更记录」。
 
 ---
 
@@ -12,70 +13,82 @@
 
 ### 2.1 现状事实基线（勘察结论）
 
-**事实基线（12 条）**——本设计的全部依据：
+**事实基线（13 条）**——本设计的全部依据：
 
 | # | 事实 | 证据 / 量化 |
 |---|---|---|
 | B1 | **内容层已同、实现层真分叉** | 同路径 107 对：`.md` 40 对中位 1.0000（逐字节同 28）；`.mjs` 67 对中位 0.2829（逐字节同 1 · ≥0.9 仅 7 · <0.2 者 29）。来源 = 批次档 §1（2026-09-13 父侧复算）；口径与复现 = `docs/requirements/CORE-UNIFICATION.md` §1.1 + `scripts/mirror-divergence.mjs:5-12` |
-| B2 | **CLI 产物 = 包根内 `files` 白名单 + 内嵌面** | `thincoder/package.json:22-28`：`files` 白名单 = bin/ + src/ + README + CHANGELOG + LICENSE；`:4` 自述「no build step」；**重写轮更正**：npm 产物在 `files` 面之外还有 `bundledDependencies` 内嵌面（`node_modules/**` 进 tarball）——核的装载即走此面（§2.2.1 实测 M2） |
-| B3 | **VSC 产物 = 扩展根内运行期文件 + vsce 依赖收集面** | `thincoder-vscode/package.json:33`（`main: ./extension.mjs`）+ `:113-124`（scripts 无构建步骤）；`.vscodeignore`（16 行）排除 `node_modules/**` 等；**重写轮更正**：`.vscodeignore` 是**本仓自有策略、可改**（非机械约束）；且 vsce 的依赖收集面（默认模式）才是产物装核的通道（§2.2.1 实测 M3/M4） |
+| B2 | **CLI 产物 = 包根内 `files` 白名单 + 标准 npm 依赖面** | `thincoder/package.json:22-28`：`files` 白名单 = bin/ + src/ + README + CHANGELOG + LICENSE；`:35` `prepublishOnly` = `npm run release:check`（发布预检挂点）；`:33-40` scripts 无构建步骤。npm 产物的依赖面 = `dependencies` 声明 +（可选）`bundledDependencies` 内嵌面——**R3 选定形态只用前者**（§2.2.1 R2/R6/R8） |
+| B3 | **VSC 产物 = 扩展根内运行期文件 + vsce 依赖收集面** | `thincoder-vscode/package.json:33`（`main: ./extension.mjs`）+ `:113-124`（scripts 无构建步骤）+ `:125-130`（仅 devDependencies）；`.vscodeignore`（16 行）第 3 行 = `node_modules/**`。**R3 更正**：该行**必须保留**（删掉会把 devDependencies 一并打进 vsix——§2.2.1 R5），核靠**反排除行**进入；R2 轮「.vscodeignore 可改」的判断**本轮收窄**为「加一行、不删行」 |
 | B4 | **提示词与工具文档在包内硬加载** | CLI `thincoder/src/prompt-overlays.mjs:17-19`（读同目录 `prompts/`，缺档静默空串）；VSC `thincoder-vscode/src/advisor/main.mjs:66-72`（读 `../prompts/`，缺档抛错）⇒ 该两面必须住在各自包根内 |
 | B5 | **提示词 / 工具文档体量** | 两产品各 15 档提示词（`src/prompts/`）+ 25 档工具文档（`src/tools/`），另有中文权威模板各 15 档（`docs/design/prompts/`）——实测 glob 计数 |
 | B6 | **运行期无跨仓依赖；共享面 = 用户级状态** | 承 phase 1 B1 / B2：跨仓机制 100% 位于 build / doc / test 期；共享面 = 用户级 `~/.thincoder/`（配置 / 快照 / 日志）⇒ 核与壳的接口是**模块接口**，不涉用户状态迁移 |
-| B7 | **两产品现状零第三方运行时依赖** | CLI `thincoder/package.json` 无 `dependencies` 字段（自述「zero dependencies」）；VSC `thincoder-vscode/package.json:125-130` 仅 `devDependencies` |
-| B8 | **CI 现状 = 仓根三 job** | `.github/workflows/test.yml`：`cli`（`:4`）· `vscode`（`:17`）· `docs`（`:30`——全域三机检 `:38-40`） |
+| B7 | **两产品现状零第三方运行时依赖** | CLI `thincoder/package.json` 无 `dependencies` 字段（自述「zero dependencies」）；VSC `thincoder-vscode/package.json:125-130` 仅 `devDependencies`；**R3 起**两产品各增一条自家核依赖（第三方仍为零——§2.9 第 5 条） |
+| B8 | **CI 现状 = 仓根三 job** | `.github/workflows/test.yml`：`cli`（`:4`，`working-directory: thincoder`）· `vscode`（`:17`，`:22`）· `docs`（`:30`——全域三机检 `:38-40`）；两 job 各 `npm install` ⇒ **核发布后被自动解析**（R3 新增依赖面，job 结构零改） |
 | B9 | **同路径成对不是全部差异面** | 技术待办「CLI 无『子 agent 被丢弃』提醒（与 VSC 不对称）」：CLI 侧静默清池 `thincoder/src/agent/run-stages.mjs:168-169` · `thincoder/src/tui/suspension-drive.mjs:260`；VSC 对侧住**不同相对路径** `thincoder-vscode/src/agent/async-discard.mjs:57-74` ⇒ 语义对位模块可能不出现在同路径对里 |
 | B10 | **度量工具已是入库资产** | `scripts/mirror-divergence.mjs`（171 行 · 零依赖 · 口径写在头注）——S0 的度量面基线；其用法 / 退出码契约收敛 = 台账技术待办（仓根 `docs/TODO.md`，触发 = 条件：该档下次被触碰时） |
-| B11 | **装载机制已实测（重写轮 · 2026-09-13）** | 假包探针（系统临时目录）·工具链 node v24.19.0 / npm 11.17.0 / vsce 3.9.2——关键读数见 §2.2.1（M1–M6）：workspace 安装布局 / npm pack 内嵌条件 / vsce 成员目录三失败模式 / vsce 装载通过路径 / 运行期解析 / 静默失败护栏 |
-| B12 | **今日 VSC 打包通畅的前提** | `thincoder-vscode` 现 `npm list --production --parseable` 输出单行（= 扩展根自身；无运行期依赖）⇒ vsce 默认模式可用。新形态引入**运行期依赖**后该前提消失，装载机制成为必需（§2.2.1） |
+| B11 | **装载机制已实测（R2 轮 · 2026-09-13）** | workspace 假包探针：成员内无本地链接时 `bundledDependencies` **静默跳过**；vsce 于 workspace 成员目录内三失败形态（硬拒 ×2 / 静默无核 vsix）；运行期解析通；缺核产物可「成功」产出 ⇒ 含核断言必需。**R3 保留为对照读数**（本轮读数见 B13） |
+| B12 | **仓结构现状（R3 实测）** | **仓根无 `package.json`、无根 lock**（`thincoder/package.json` / `thincoder-vscode/package.json` 各自独立）；两产品各有 `package-lock.json` ⇒ 非 workspace 形态**零仓结构改动** |
+| B13 | **R3 形态键实测（本轮 · 2026-09-13）** | 假包探针（系统临时目录 · node v24.19.0 / npm 11.17.0 / vsce 3.9.2）：**npm 不支持 `workspace:` 协议**（`EUNSUPPORTEDPROTOCOL`）· **pack/publish 不重写依赖字段**（tarball manifest 原样 + npm 源码双证）· `*` 声明在消费者侧解析到 **registry latest**（漂移实读）· 非 workspace 形态下 vsce **默认即可把真目录核打进 vsix**（零标志零垫片）· `.vscodeignore` 正解 = 「保留 `node_modules/**` + 反排除核」· `npm link` 零 manifest/lock 污染。逐条读数与原始命令见 §2.2.1（R1–R8） |
 
-**B2 / B3 / B4 是本设计的第一地基**：核的装载必须在**真实安装场景**成立——CLI 走 npm 内嵌面、VSC 走 vsce 依赖收集面（两条通道均已实测，§2.2.1）。
+**B2 / B3 / B4 是本设计的第一地基**：核的装载必须在**真实安装场景**成立——CLI 走 npm 依赖解析、VSC 走 vsce 依赖收集面（两条通道均已实测，§2.2.1）。
 **B9 是第二地基**：核模块清单**不能**只由「同路径成对」推出——须加一遍语义对位发现（§2.4）。
+**B13 是第三地基（R3）**：形态选择由本轮读数决定，不由偏好决定（§2.3.2）。
 
 ### 2.2 目标形态与消费契约
 
-目标形态 = 「一个核 + 两个薄壳」：核是**单一权威源**（一个真包），两壳各自只留端特有部分；核的引入不改变任一产品的可观察行为。
+目标形态 = 「一个核 + 两个薄壳」：核是**单一权威源**（一个真包，独立版本，**发布到 npm**），两壳各自只留端特有部分；核的引入不改变任一产品的可观察行为。
 
 ```
-<仓根>/
-├── package.json                     ← workspace 根（private；workspaces = core / thincoder / thincoder-vscode）
-├── core/                            ← 核包 @thincoder/core（private · 唯一撰写处）
-│   ├── package.json                 ← name / version / type / exports（子路径导出）
-│   ├── <模块>.mjs                   ← S1 逐模块提取（来源可追溯——§2.5 裁决表）
-│   └── test/                        ← 核自带测试（S1：两边测试合流）
-├── thincoder/                       ← CLI 壳（workspace 成员）
-│   ├── package.json                 ← + dependencies / bundledDependencies / prepack（S2 接线）
-│   └── scripts/                     ← + release-check 产物含核断言（S2）
-├── thincoder-vscode/                ← VSC 壳（workspace 成员）
-│   ├── .vscodeignore                ← + 核白名单反排除行（S2）
-│   └── scripts/                     ← + 打包脚本（链接 + 分阶段 + vsce 标志 + 断言，S2）
-└── scripts/core-link.mjs            ← 打包期链接垫片（S2 新增——零字节副本；两产品共用）
+<仓根>/                                ← 无 package.json（非 workspace——B12）
+├── core/                              ← 核包 @thincoder/core（唯一撰写处 · 独立版本 · 发布到 npm）
+│   ├── package.json                   ← name / version / type / exports / files（非 private——可发布）
+│   ├── <模块>.mjs                     ← S1 逐模块提取（来源可追溯——§2.5 裁决表）
+│   └── test/                          ← 核自带测试（S1：两边测试合流）
+├── thincoder/                         ← CLI 壳（独立包 · 自己的 lock）
+│   ├── package.json                   ← + dependencies: {"@thincoder/core": "^<核版本>"}（S2）
+│   └── scripts/release-check.mjs      ← + 发布预检（核版本已发布 + 装入版本一致——S2）
+└── thincoder-vscode/                  ← VSC 壳（独立包 · 自己的 lock）
+    ├── package.json                   ← + dependencies（同上）+ postpackage 断言挂点（S2）
+    ├── .vscodeignore                  ← 保留 node_modules/** + 加反排除行（S2）
+    └── scripts/check-vsix.mjs         ← 新建：vsix 含核 + 版本一致断言（S2）
 ```
+
+**R3 删面（R2 轮拟建条目已撤——明确不再产生）**：`core-link.mjs`（落 `scripts/`）· `package.mjs`（落 `thincoder-vscode/scripts/`）· 仓根 workspace `package.json` · 成员 lock 删除 · `.gitignore` 分阶段目录行——**整条垫片面不存在了**（用户否垫片判定 + 本轮实测证明不需要）。
 
 **消费契约（7 条）**：
 
 1. **核的边界是包边界**：核内容 = 两产品共有的机制实现（`@thincoder/core` 包本体）；壳 = 各自端特有部分（CLI 的 TUI / 命令面，VSC 的宿主 API / webview）。
 2. **核 → 壳禁止，壳 → 核允许**：核内 import 面**只含核内相对路径 + `node:` 内建**；核的依赖闭包必须落在核内（否则该模块不进核——§2.4 判定闸 G2）。
-3. **壳按包名 import 核**：产品代码以裸名 `@thincoder/core`（含子路径导出）引用——开发期由 workspace 链接解析（根 `node_modules/` 链接）；产物期由**内嵌副本**解析（`node_modules/@thincoder/core`，随打包机制落位）。
-4. **装载 = 打包期链接 + 内嵌 + 含核断言（fail-closed）**：CLI 经 `bundledDependencies` 把核内嵌进 tarball（打包期须有产品内本地链接——`prepack` 垫片保证）；VSC 经**分阶段目录**（cwd 非成员）+ 打包期链接 + `vsce package --follow-symlinks` 把核内嵌进 vsix；**两产物均配含核断言——缺核即红，不允许静默成功**（机制实测与失败模式见 §2.2.1）。
+3. **壳按包名 import 核**：产品代码以裸名 `@thincoder/core`（含子路径导出）引用——**开发期**由本地链接解析、**生产期**由已发布核包解析。同一个 `dependencies` 声明两态通用（manifest 恒为真 semver 范围，无 `workspace:` / `file:` / `*`）。
+4. **双态引用（R3 选定）**：
+   - **开发期 = 本地链接**：`npm link`（在 `core/` 一次、在产品目录一次）⇒ `node_modules/@thincoder/core` 为指向 `core/` 的链接；**不发布也能开发**，且**零 manifest / lock 污染**（§2.2.1 R8）。
+   - **生产期 = 已发布核包**：`npm publish`（核先发）→ 产品以真 semver 范围从 registry 解析；VSC 的 vsix 因 marketplace **无依赖解析**而**内嵌**核（反排除行，§2.2.1 R4/R5）。
 5. **端差以注入表达**：两侧差异用显式参数 / 回调 / 配置项承载，核内**禁止 `if (vsc)` 式壳判断**与产品标识字符串。
 6. **核测试独立**：核测试住核包内、只依赖 `node:` 与核内模块；产品侧测试中与核重叠的部分随 S2 改指或收敛（不重复两份断言）。
-7. **CI 增设 `core` job**：核测试（B8 三 job 之外新增一个；两产品 job 不变）。
+7. **CI 增设 `core` job**：核测试（B8 三 job 之外新增一个；两产品 job 内部命令不变——依赖由 `npm install` 自动解析）。
 
-#### 2.2.1 装载机制（实测读数——重写轮）
+#### 2.2.1 装载机制（实测读数——R3 轮）
 
-> 方法：系统临时目录内**假包探针**（最小复现：workspace 根 + `core` + `cli` + `vsc` 四件套），工具链 node v24.19.0 / npm 11.17.0 / vsce 3.9.2；**未触碰本仓任何产品文件**。探针原始命令与逐条读数存于重写轮交付报告（批次档 §1 之后流程的汇报面）。
+> 方法：系统临时目录内**假包探针**（workspace 五件套 + 非 workspace 四件套 + 最小本地 registry 两实例：全量 / 无核）；工具链 node v24.19.0 / npm 11.17.0 / vsce 3.9.2（`@vscode/vsce` 树内）；**未触碰本仓任何产品文件**。
+> 列「原始命令」= 复核者可直接复跑的最小形态（`$P` = 探针根）。
 
-| # | 机制点 | 实测读数（2026-09-13） |
-|---|---|---|
-| M1 | workspace 安装布局 | 根 `npm install` 后：`node_modules/@<核>` 为**链接**、成员目录**无** `node_modules`；成员内解析经根链接可达（dev 解析成立）。成员内 `npm install` / `--install-strategy=nested` / `--install-links` 均**不**产生成员内链接 |
-| M2 | `npm pack` 内嵌（CLI 面） | 成员内**无本地链接**：`bundledDependencies` **静默跳过**（tarball 无核；安装该 tarball → registry E404——不发布核时安装失败，对照实读）；打包期**存在本地链接**（symlink / junction）：tarball 内嵌 `node_modules/<核>/{package.json,*.mjs}`（实读通过）；`npm publish --dry-run` 与 `npm pack` 同 shasum（同一打包管线） |
-| M3 | vsce 于成员目录的失败模式 | 三结局（逐一实读）：① 默认模式——vsce 经 `npm list` 收进**工作区根链路**，产物路径含 `..` → `yazl` 硬拒（`invalid relative path`）；② 成员内放**真实目录**核——根收集与依赖收集**双份**同名条目 → vsce 重复条目硬拒；③ 成员内放**链接**核——缺 `--follow-symlinks` 时**静默产出无核 vsix**（成功退出、内容缺核——最危险形态） |
-| M4 | vsce 装载通过路径 | **分阶段目录**（仓库根子目录 junction → 扩展目录；cwd 非成员）+ 打包期链接 + `vsce package --follow-symlinks`：vsix 含 `extension/node_modules/<核>/*`（实读通过）。否决变体：`--install-links` 真实目录 —— `npm list` 判 invalid、vsce 拒收 |
-| M5 | 运行期解析 | 解包 vsix 目录内 `import` 通（核函数执行成功）；bundled tarball 消费端 `npm install` 与 `-g --prefix` 全局模拟：`node_modules/<cli>/node_modules/<核>/` 就位、bin 运行输出正确 |
-| M6 | 静默失败的护栏 | 缺核 vsix / 缺核 tarball 均为**可成功产出**的失败形态 ⇒ 装载机制必须配**产物含核断言**（T-C11 换判据）；`npm pack --dry-run` 会执行 `prepack`（实读）⇒ CLI 侧断言可挂 `release:check` |
+| # | 机制点 | 原始命令（探针） | 实测读数（2026-09-13） |
+|---|---|---|---|
+| **R1** | **workspace 依赖在 pack/publish 之后被写成什么** | `cd $P/i/cli && npm pack --json` → `tar -xzf *.tgz -O package/package.json` | **不重写**：tarball 内 manifest **原样**保留 `"@thincoder/core": "*"`（另一成员写 `"^0.3.0"` 者同法原样）。**源码双证**：`libnpmpublish/lib/publish.js:70-90`（`patchManifest` 只跑 `steps:['fixName']` + semver.clean，无依赖改写）· 同档 `:104`（`root.versions[v] = manifest` 原样入 packument）⇒ **发布到 registry 的依赖字段与 manifest 逐字相同** |
+| **R2** | **`workspace:` 协议支持面** | 成员写 `"@thincoder/core": "workspace:*"` → 根 `npm install` | `EUNSUPPORTEDPROTOCOL: Unsupported URL Type "workspace:"` ⇒ npm workspaces 只能写真范围或 `*`（**没有** pnpm/yarn 那种 publish 自动换版本机制） |
+| **R3** | **消费者侧：`*` 声明的解析结果** | 本地 registry（核 0.3.0 + 0.4.0，latest=0.4.0）`npm install probe-cli --registry <reg>` | 安装得 **core v0.4.0**（latest），**不是**打包时对照的 0.3.0；bin 跑通但跑的是未对照版本 ⇒ **`*` 在生产期产生静默版本漂移** |
+| **R4** | **消费者侧：真 semver 声明** | `npm install probe-cli-ii`（声明 `^0.3.0`，registry 同上） | 安装得 **core v0.3.0**（精确命中）；bin 输出 `core-v0.3.0` ✓ ⇒ **「生产期引用已发布核包」成立** |
+| **R5** | **核未发布时的两形态** | registry 去掉 `@thincoder/core` 后同法安装 | `*`/`^x.y.z` 声明者 ⇒ **E404 硬失败**（可见）；`bundledDependencies` 内嵌者 ⇒ exit 0 且自足运行 ⇒ 发布顺序是**真前置**（用户已接受），守卫 = 发布前预检（§2.7 D-C12） |
+| **R6** | **vsce 于 workspace 成员目录内** | `cd $P/i/vsc && vsce package` / `--no-dependencies` / `--no-dependencies --follow-symlinks` | 默认 ⇒ `ERROR invalid relative path: extension/../package.json`（硬拒）；`--no-dependencies` ⇒ **exit 0 但 5 文件无核**（静默）；再加 `--follow-symlinks` ⇒ **仍 5 文件无核** ⇒ 成员目录内**绕不开**，必须分阶段（R2 轮结论在 R3 复核成立） |
+| **R7** | **vsce 于扩展目录内（非 workspace）** | `cd $P/ii/vsc && vsce package`（依赖 =**真目录** `node_modules/@thincoder/core`） | **默认即含核**：8 文件，含 `extension/node_modules/@thincoder/core/{package.json,index.mjs,util.mjs}`；**零标志、零垫片** ✓ —— 这是 R3 选型的决定性读数 |
+| **R8** | **`.vscodeignore` 正解 + 链接形态 + 开发期链接** | ① `.vscodeignore` 只删 `node_modules/**` → package；② 改「保留 `node_modules/**` + `!node_modules/@thincoder/core/**`」→ package；③ junction 核 → package（默认 / `--follow-symlinks`）；④ `cd core && npm link` → `cd cli && npm link @thincoder/core` | ① **devDependencies 一并进 vsix**（17 文件，含人造 devDep）⇒ 删行**不可取**；② **含核且排除 devDep**（15 文件，核在位、`fake-devdep` 不在）⇒ **正解**；③ junction 缺 `--follow-symlinks` ⇒ `Error: not a file`（yazl，exit 1——**响的失败**）；带标志 ⇒ 含核；④ 链接为 symlink、`package.json` 与 `package-lock.json` **哈希前后一致**（零污染），bin 跑通 ✓ |
+| **R9** | **运行期解析（两产物）** | 解包 vsix → `import extension.mjs`；registry 安装 CLI tarball → 跑 bin | vsix 内 `activate()` 输出 `hello vsc-ii core-v0.3.0`；内嵌核 version = 仓内核 version（0.3.0）= 声明范围（`^0.3.0`）；CLI tarball 消费者侧 bin 输出正确 ✓ |
+| **R10** | **断言机制可行性 + `file:` 形态反证** | vsix 用树内 `yauzl@3.4.0` 读条目；`file:../core` 声明者 `npm pack` 后读 tarball manifest | `yauzl` 可列 vsix 条目（无需新增工具链）⇒ **含核断言可落在零构建脚本里**；`file:` 声明 **原样进 tarball**（`"@thincoder/core": "file:../core"`）⇒ 消费者拿到不存在的本地路径 ⇒ 该形态否决（§2.3.2 候选 d） |
 
-**机制结论**：核 = workspace 真包（不发布）时，「两产品以 workspace 依赖引用」+「产物自足」可同时成立，代价 = **两处打包期垫片**（CLI `prepack` 链接 + VSC 分阶段打包脚本），均为**链接 / 目录别名，零字节副本**（单一权威源不受影响）。Linux（symlink）组合未实测——发布环境（Windows · junction）已实测；S3 于发布环境复核（§2.11 A3）。
+**机制结论（R3）**：核作为**独立发布真包**时，「开发期不发布也能开发」与「生产期引用发布包」**各自落在标准机制上**——
+开发期 = `npm link`（npm 标准开发命令，非打包垫片）；生产期 = `npm install` 依赖解析 + vsce 依赖收集面（两者都是工具默认行为）。
+**代价** = 三项、全部登记在 §2.11 A3：① 发布顺序（核先发——用户明示接受）；② VSC 发布机须**真实安装态**（`npm ci`；dev 链接态打包实测硬错，但这不是保证）；③ `.vscodeignore` 反排除行是**唯一**的产品侧装载配置（漏掉 ⇒ 静默无核 ⇒ 含核断言必需）。
 
 ### 2.3 方案选型对比
 
@@ -88,20 +101,21 @@
 | 3 | **凭空写中立核**（另设计一套 API，再让两产品适配） | 反面：造第三份实现——工作量 = 重写，行为回归风险最大；正是 phase 1 否决「抽独立核心包」的理由 | 无可取权衡 | **否决**（第三份实现；违 F3） |
 | 4 | **维持现状 + 机检守语义同源**（不建核，只把漂移管起来） | 反面：机制税仍在（phase 1 已证「各仓自持 / 端差登记」类机制不解决病根）；不触动 B1 的真分叉 | 成本最低但收益为零 | **否决**（不解决 B1） |
 
-#### 2.3.2 核的物理形态与消费机制（重写轮重估——4 候选）
+#### 2.3.2 核的物理形态与消费机制（R3 重估——4 候选）
 
 | # | 候选方案 | 判据逐项评估 | 取舍（选定代价 / 权衡） | 结论（选定 / 否决理由） |
 |---|---|---|---|---|
-| a | **仓根权威源 + 产品包根内同源副本**（原 D-C3；含 `core-sync` 生成 / 校验） | 产物自足可达成；但需副本生成 + 逐字节 fail-closed 校验机制（版本库内多份同字节） | 机制税：生成脚本 + 校验机检 + 副本树维护 | **否决**（**用户 2026-09-13 裁定**：副本形态 / `core-sync` / 逐字节同源校验整条移除） |
-| b | **单仓 npm workspace 真包**：核 `@thincoder/core`（private）为工作区成员；两产品以 **workspace 依赖引用**（`"*"`）；装载 = 打包期链接垫片 + `bundledDependencies`（CLI）+ 分阶段 vsce + `--follow-symlinks`（VSC）+ 含核断言 | 正面：符合 A4 / A5；**仓内零字节副本**（单一权威源由包机制保证）；dev 单根安装 + 成员解析实测通过（M1）；两产物内嵌 + 运行期解析实测通过（M2 / M4 / M5） | 代价 = 两处打包期垫片（§2.2.1 / D-C9）+ 发布流程内部步骤（F7 边界同步改述——§2.9 第 7 条）；Linux symlink 组合待 S3 复核 | **选定**（重写轮——原否决三条理由经实核不成立，更正记录见下） |
-| c | **独立 npm 包**（发布核到 registry，两产品作常规依赖） | 反面：违反 A5（「能不独立发 npm 就不要独立」）；发布顺序 / 版本耦合真实存在于此形态；两产品仍须解决同一套产物装载问题（vsix 带 `node_modules` 的机制不可避免——M3 / M4 同款） | 无可取权衡 | **否决**（A5） |
-| d | **同仓真包 + 产品非成员**（`file:../core` 引用；两产品维持各自安装） | 正面：零垫片脚本（npm 自建链接；vsce 仅加 `--follow-symlinks`——实测同 M4 简化形态）；两产品维持各自安装（今日形态） | 代价：偏离裁定句「两产品以 workspace 依赖引用」；无根级单次安装；核的 workspace 地位退化（单成员） | **否决**（与裁定形态不符；**低机械化备选**，保留于 §2.11 A3——用户可换向） |
+| a | **仓根权威源 + 产品包根内同源副本**（含 `core-sync` 生成 / 逐字节校验） | 产物自足可达成；但需副本生成 + 逐字节 fail-closed 校验机制（版本库内多份同字节） | 机制税：生成脚本 + 校验机检 + 副本树维护 | **否决**（**A4 裁定**：副本形态整条移除） |
+| b | **单仓 npm workspace 真包**（核为工作区成员；两产品以 **workspace 依赖**引用 `"*"`；装载 = 成员内链接垫片 + `bundledDependencies` + 分阶段 vsce） | **R3 否定其三处**：① 生产期「引用发布包」**不成立**——`*` 被原样发布（R1）且消费者解析到 latest（R3 漂移实读）；② npm 无 `workspace:` 协议（R2）⇒ 只能写 `*` 或死版本；③ 成员目录内 vsce 仍**必须**分阶段（R6）⇒ 两处垫片一个都省不掉 | 取舍面只剩「dev 白拿根链接」，代价 = 垫片 ×2 + 仓结构改动（根 manifest / lock 迁移） | **改判否决**（R3 轮；R2 轮「选定」被本轮读数推翻——更正登记见下） |
+| c | **非 workspace 真包 + 双态引用**：核 `@thincoder/core` 独立版本、**发布到 npm**；两产品以真 semver 范围声明；开发期 `npm link` / 生产期发布包；VSC vsix 内嵌核（反排除行） | 正面（逐条实测）：生产期引用发布包**成立**（R4 精确命中）；dev 不发布也能开发（R8④）；vsce 扩展目录内**默认含核**（R7）；零垫片、零仓结构改动（B12）；运行期两产物解析通（R9）；断言可落零构建脚本（R10） | 代价 = 发布顺序前置（核先发——**A6 用户明示接受**）+ 发布机须真实安装态 + `.vscodeignore` 一行反排除 + 开发期多一条 `npm link` 命令 | **选定**（R3 轮——本轮全部读数指向它） |
+| d | **同仓真包 + 产品非成员**（`file:../core` 引用；两产品维持各自安装） | 反面：`file:` 声明**原样进 tarball**（R10 实测）⇒ 消费者拿到本地相对路径，无法解析；且 `file:` 指向的是**仓内目录**而非发布包 ⇒ 与 A6「生产期引用发布包」不符 | 无可取权衡 | **否决**（R10 反证 + 与 A6 语义不符） |
 
-**更正记录（父侧自曝登载——原否决理由经实核不成立）**：
-① 「破 CLI 零依赖承诺」= **误用**（零依赖只约束第三方；自家核不在范畴——§2.9 第 5 条同步改述）；
-② 「克隆即跑失效」= **非用户要求**（由现状属性推定，未核实）；
-③ 「发布顺序耦合」= workspace 单仓内**不存在**（该耦合属独立发布形态 c）。
-另：「`.vscodeignore` 排除 `node_modules`」乃本仓自有策略、可改，非机械约束。
+**更正记录（R2 轮否决理由经 R3 实核登载）**：
+
+① **R2 选定的候选 b 现被否决**——不是偏好变向，是三项实测（R1 / R2 / R3 / R6）**直接推翻**「workspace 依赖 = 生产期引用发布包」这一前提；
+② 原候选 c 的否决理由（A5「能不独立发 npm 就不要独立」）**已被用户 A5 放宽撤销**（核可单独发布 ✓）；
+③ R2 轮「`.vscodeignore` 可改（非机械约束）」的判断本轮**收窄**：该行是**必须保留**的（删之 → devDeps 进 vsix，R8①），核只靠**追加反排除行**进入；
+④ R2 轮「打包期垫片为零字节副本、可接受」的取舍**本轮作废**——用户否掉垫片形态（「太不标准不规范」），且 R3 证明标准形态不需要它。
 
 ### 2.4 S0 的方法与产出形态
 
@@ -161,12 +175,13 @@
 | 段 | 动作 | 进入条件 | 退出条件（验证） | 回退点 |
 |---|---|---|---|---|
 | **S0** | 差异分析 + 逐模块裁决（零代码） | 需求收口（§1）+ 本档批准 + 度量脚本补齐（F10） | 本档 §2.5 覆盖 107 对全量 + 语义对位遍；分类列无空值；③ 类逐条带行为实证与建议；**用户对 ③ 类存疑条目裁定完毕** | 无代码改动 ⇒ 撤回本档修订 |
-| **S1** | 建包：新建 `core/`（含 `test/`）+ 仓根 `package.json`（workspace 根）；**两产品一行不改** | S0 退出达标 | 核测试独立跑绿（`node --test` 于 `core/` exit 0）· 核内零产品 import、零裸包名 import · 两产品 `git diff --stat` 为空 | 删 `core/` + 根 `package.json` 即退 |
-| **S2** | 逐模块迁移（一次一个模块族：接线 + 删旧实现 + 复跑）；接线含包依赖声明与装载垫片就位 | S1 退出达标 + 该模块接线方案明确 | 该产品全链复跑与迁移前基线**逐数一致**（Lint / test:full / 集成 + 机检）· 该模块旧实现零引用 | 单模块一步一提交 ⇒ `git revert` 该提交 |
-| **S3** | 收尾（残留删净 + 装载机制就位复核 + 文档 / 机检收正） | S2 全模块迁完 | 旧实现零引用 · 三机检 exit 0 · 两产物生成且**含核断言**通过（T-C7 / T-C11）· 文档与台账收正 | 逐提交回退 |
+| **S1** | 建包：新建 `core/`（`package.json` + 模块 + `test/`）；**两产品一行不改** | S0 退出达标 | 核测试独立跑绿（`node --test` 于 `core/` exit 0）· 核内零产品 import、零裸包名 import · 两产品 `git diff --stat` 为空 | 删 `core/` 即退（仓结构零改——B12） |
+| **S2** | 逐模块迁移（一次一个模块族：接线 → 删旧实现 → 复跑）；接线 = 加依赖声明 + 改 import 指向包名 + （VSC 一次）装载配置 | S1 退出达标 + 该模块接线方案明确 + **核已发布到 npm（R5：未发布则两产品 `npm install` E404）** + 开发期链接就位（`npm link`） | 该产品全链复跑与迁移前基线**逐数一致**（lint / test:full / 集成 + 机检）· 该模块旧实现零引用 · 该产品 `npm install` 可从 registry 解析核 | 单模块一步一提交 ⇒ `git revert` 该提交 |
+| **S3** | 收尾（残留删净 + 装载面复核 + 文档 / 机检收正） | S2 全模块迁完 | 旧实现零引用 · 三机检 exit 0 · 两产物生成且**含核 / 版本断言**通过（T-C7 / T-C11）· 文档与台账收正 | 逐提交回退 |
 
 **段序纪律**：每段独立提交、独立可验；S2 内先做完一个产品（或一个模块族）再接下一个——**不做跨模块大包**；
 S1 的「两产品一行不改」是硬判据（可用 `git diff --stat` 直接判）。
+**发布顺序（R3 新增硬约束）**：核先发布 → 产品后发布；S2 的产品接线**以核已发布为前提**（保守路线的「先建核、试一下可用」在 S1 即完成验证，不需要发布；发布只在 S2 开始前发生一次）。
 
 ### 2.7 关键决策记录（含否决备选）
 
@@ -174,40 +189,41 @@ S1 的「两产品一行不改」是硬判据（可用 `git diff --stat` 直接�
 |---|---|---|
 | **D-C1** | 分段推进（S0–S3），不做一次性重写 | 依据 F1 / N2；备选（一次性迁移）否决于不可回退 |
 | **D-C2** | 核**必须从两套现有实现提取** | 依据 §1 判据 2；备选（凭空写中立核）否决于第三份实现（§2.3.1 候选 3） |
-| **D-C3** | 核的物理形态 = **单仓 npm workspace 真包**（`@thincoder/core` · private · 不单独发布）；两产品以 workspace 依赖引用 | 依据 A4 / A5 + §2.3.2 选定 b；备选（副本形态 a / 独立发布 c / 非成员 d）否决理由见同道表 |
-| **D-C4** | 核内 import 面 = 核内相对路径 + `node:` 内建（禁壳判断 / 禁裸包名） | 依据 B2 / B3 + B7 + F7（重写轮复核：**仍成立**，且由包边界机械强化——壳经包名引用、核内面不指向壳）；备选（在核内按端分支）否决于把两壳耦合回核 |
-| **D-C5** | 提示词与工具文档**不进核**（承 phase 1 D14） | 依据 B4 / B5（重写轮复核：**仍成立**）——D14 的机械约束（硬加载 + 打包边界）对本板块同样有效；核的**装载机制不外推**到提示词（提示词仍各产品自持、包内硬加载） |
+| **D-C3** | 核的物理形态 = **仓内真包 `core/` + 独立版本 + 发布到 npm**；两产品以**真 semver 范围**声明依赖；**开发期本地链接 / 生产期发布包** | 依据 A4 / A5 放宽 / **A6** + §2.3.2 选定 c；备选（副本形态 a / workspace 成员 b / `file:` 非成员 d）否决理由见同道表 |
+| **D-C4** | 核内 import 面 = 核内相对路径 + `node:` 内建（禁壳判断 / 禁裸包名） | 依据 B2 / B3 + B7 + F7（R3 复核：**仍成立**，且由包边界机械强化——壳经包名引用、核内面不指向壳）；备选（在核内按端分支）否决于把两壳耦合回核 |
+| **D-C5** | 提示词与工具文档**不进核**（承 phase 1 D14） | 依据 B4 / B5（R3 复核：**仍成立**）——D14 的机械约束（硬加载 + 打包边界）对本板块同样有效；核的装载机制**不外推**到提示词（提示词仍各产品自持、包内硬加载） |
 | **D-C6** | ③ 类判决**不得改变任一产品行为** | 依据 F6 / N1；行为差异 ⇒ 判 ④ 端特有或以注入表达；行为统一另立需求（不进本板块） |
 | **D-C7** | S0 执行者 = eng-designer（零代码分析 + 直接落档） | 依据：S0 无代码改动，且裁决表是设计档内容——单作者避免二次加工 |
 | **D-C8** | 裁决默认向 CLI 倾斜——**待用户拍板**（§2.11 A2，本档不代裁） | 本行仅登记该原则的**建议**与风险面；S0 不得据本行自行决断存疑条目 |
-| **D-C9** | **装载机制 = 打包期链接垫片（零字节副本）+ CLI `bundledDependencies` 内嵌 + VSC 分阶段目录 + `--follow-symlinks` + 产物含核断言（fail-closed）** | 依据 §2.2.1 实测 M1–M6；备选（分阶段复制树——否决于字节复本与门禁相对路径断裂；`--install-links` 真实目录——否决于 vsce 拒收） |
-| **D-C10** | 核包名 / 发布策略 = `@thincoder/core` · `private: true` · 独立版本（不随产品版本；产物含核断言校验版本一致） | 依据 A5（不单发）+ M2（bundled 不依赖 registry）+ M5（两产物携带同源核）；核版本独立 = 壳与核解耦升级（S2 逐模块迁移不被包版本节奏绑住） |
+| **D-C9** | **装载机制 = 标准机制，零垫片**：CLI 侧 = 纯 `dependencies`（无内嵌）；VSC 侧 = `.vscodeignore` 保留 `node_modules/**` + 反排除行（`!node_modules/@thincoder/core/**`）+ `vsce package` 默认模式；**两产物均配含核 / 版本断言（fail-closed）** | 依据 §2.2.1 R4 / R5 / R7 / R8 / R9；**否决备选**：① 打包期链接垫片（链接 + 分阶段脚本）——用户否（「太不标准不规范」）且 R7 证明不需要；② CLI 内嵌（`bundledDependencies`，R3 实测真目录态无需垫片即可内嵌）——否决于与 A6 语义不符（生产期引用的是**打包时快照**而非发布包，且产物内容取决于打包机 `node_modules` 状态）；③ 分阶段复制树——否决于字节复本；④ 分发 registry 之外的核（`file:`）——R10 反证 |
+| **D-C10** | 核包名 / 发布策略 = `@thincoder/core`（**非 private**——`private:true` 会被 npm 拒发：`libnpmpublish/lib/publish.js:15-21` `EPRIVATE`）· 独立版本（不随产品版本）· 发布顺序 = 核先发 | 依据 A5 放宽 + A6 + R4 / R5（核未发布 = 消费者 E404）；核版本独立 = 壳核解耦升级 |
+| **D-C11** | **版本一致性规则（三条断言，零第三方依赖）**：范围形式 = `"^<核版本>"`；**断言 A（仓内）** 产品声明去掉前导 `^` 后**逐字等于** `core/package.json` 的 `version`；**断言 B（VSC 产物）** vsix 内 `extension/node_modules/@thincoder/core/package.json.version` **逐字等于**仓内核版本；**断言 C（CLI 发布预检）** 产品目录 `npm ls @thincoder/core --json` 的装入版本**逐字等于**仓内核版本，且 registry 上该版本存在（`npm view @thincoder/core@<v> version`） | 依据 N5 + §2.2.1 R9 / R10；**否决备选**：自写 semver 范围匹配器——否决于在零依赖前提下复刻 semver 判定（正确性风险 > 收益）；纯 `^` 逐字比对是**约定**（写进契约，机器可判、零依赖） |
+| **D-C12** | **发布顺序守卫落点**：CLI = `prepublishOnly`（B2 已有钩子）内的发布预检（断言 C）；VSC = `publish-all.mjs` 段 1 之前的核版本存在性预检 + 段 1 之后的 vsix 断言（§2.8） | 依据 R5（核未发布 ⇒ 消费者 E404；缺核 vsix ⇒ 静默成功——B11 M6 / R6 同族）；**前置**：核的 npm scope 归属 + 首版发布（`--access public`）属运营前置，登记于 §2.11 A3 |
 
 ### 2.8 受影响文件清单（R24a）
 
 | 类别 | 档 | 当前行数 | 预计增量 | 备注 |
 |---|---|---|---|---|
-| 需求档（本批改） | `docs/requirements/CORE-UNIFICATION.md` | 110 | **112（Δ+2 · 已落地）**：复核改述 F7 / N4 / N5 + §4 第 6 条与 X1 关系句同步 + 变更记录行（F5 复核零改） | 纯 `.md` ⇒ 免档位判定 |
-| 设计档（本档 · 本批改） | `docs/design/CORE-UNIFICATION.md` | 268 | **311（Δ+43 · 已落地）**：重写轮全节修订（形态 / 选型 / 决策 / 装载机制 / 用例 / 冲突点） | 纯 `.md` ⇒ 免档位判定 |
-| workspace 根（S1 新建） | `package.json` | 0 | +12±4 | `private` + `workspaces = core / thincoder / thincoder-vscode` |
-| 核包（S1 新建） | `core/`（`package.json` + 模块 + `test/`） | 0 | 逐档行数挂 §2.5（S1 前不可预知）；`core/package.json` 约 +16 | `@thincoder/core` · private · exports 子路径 |
-| 链接垫片（S2 新建） | `core-link.mjs`（落 `scripts/`） | 0 | +25±10 | 打包期链接（win32 junction / 其他 symlink）；两产品共用；幂等 |
-| CLI 产品包配置（S2 改） | `thincoder/package.json` | 43 | +10±4 | dependencies（`"*"`）+ `bundledDependencies` + `prepack` |
-| CLI 发布自检（S2 改） | `thincoder/scripts/release-check.mjs` | 85 | +18±8 | `npm pack --dry-run --json` 产物含核断言（fail-closed） |
-| VSC 产品包配置（S2 改） | `thincoder-vscode/package.json` | 131 | +3±2 | dependencies + `package` 脚本改指打包脚本；devDeps 增 `yauzl`（断言用） |
-| VSC 打包脚本（S2 新建） | `package.mjs`（落 `thincoder-vscode/scripts/`） | 0 | +45±15 | 链接 + 分阶段目录 + `vsce package --follow-symlinks` + 含核断言 + junction-safe 清理 |
-| VSC 发布编排（S2 改） | `thincoder-vscode/scripts/publish-all.mjs` | 105 | ±6 | 段 1 改调打包脚本；双源与 PAT 预检原样 |
-| VSC 打包白名单（S2 改） | `thincoder-vscode/.vscodeignore` | 16 | +1 | `!node_modules/@thincoder/core/**`（反排除核） |
-| CI（S1 改） | `.github/workflows/test.yml` | 40 | +14±6 | 增设 `core` job（核测试）；三 job 原样 |
-| 仓根忽略（S2 改） | `.gitignore` | 22 | +1 | 分阶段目录（`.vsix-stage/`） |
-| 成员锁文件（S2 删） | `thincoder/package-lock.json` · `thincoder-vscode/package-lock.json` | 现存 | 删除 | workspace 单锁（根 `package-lock.json` 取代） |
-| 度量脚本（S0 改） | `scripts/mirror-divergence.mjs` | 171 | +40±20 | 补按类型 / 按目录拆分 + 分布分档；**同批收敛用法 / 退出码契约**（台账技术待办，触发=条件：该档被触碰） |
-| 产品运行期（S2 改） | `thincoder/src/**` · `thincoder-vscode/src/**` | — | 逐模块见 §2.5 | 接线点（import 指向包名）+ 旧实现删除 |
-| 产品测试（S1 / S2 改） | `thincoder/test/**` · `thincoder-vscode/test/**` | — | 逐模块见 §2.5 | S1 测试合流入核（取并集、去重、按核接口重述）；S2 改指 / 收敛重叠断言 |
+| 需求档（本批改） | `docs/requirements/CORE-UNIFICATION.md` | 112 | **114（Δ+2 · 已落地）**：F7 / N4 / N5 复核改述 + §4 第 6 条与 X1 关系句 + 变更记录行（N3 复核零改） | 纯 `.md` ⇒ 免档位判定 |
+| 设计档（本档 · 本批改） | `docs/design/CORE-UNIFICATION.md` | 311 | **329（Δ+18 · 已落地）**：R3 形态轮全节修订（形态 / 实测表 / 选型 / 分段 / 决策 / 冲突点 / 用例） | 纯 `.md` ⇒ 免档位判定 |
+| **核包（S1 新建）** | `core/package.json` | 0 | +18±4 | `@thincoder/core` · 独立版本 · **非 private** · exports 子路径 · `files` 白名单 |
+| **核包（S1 新建）** | `core/`（模块 + `test/`） | 0 | 逐档行数挂 §2.5（S1 前不可预知） | 逐模块从两侧提取 / 融合；≤300 软线（N8） |
+| **真依赖面（S2 改）** | `thincoder/package.json` | 43 | +6±3 | `dependencies: {"@thincoder/core": "^<核版本>"}`（真 semver；**无** `bundledDependencies`——D-C9） |
+| **发布编排面（S2 改）** | `thincoder/scripts/release-check.mjs` | 85 | +25±10 | 发布预检：断言 C（核版本已发布 + 装入版本一致）；挂在已有 `prepublishOnly`（`thincoder/package.json:35`） |
+| **真依赖面（S2 改）** | `thincoder-vscode/package.json` | 131 | +8±3 | `dependencies`（同左）· `postpackage` = 断言脚本 · devDeps + `yauzl`（读 vsix 条目——R10 实测树内已有 3.4.0） |
+| **装载配置（S2 改）** | `thincoder-vscode/.vscodeignore` | 16 | **+1** | 追加 `!node_modules/@thincoder/core/**`；**第 3 行 `node_modules/**` 保留**（R8① ⇒ 删除会外泄 devDeps） |
+| **含核断言（S2 新建）** | `check-vsix.mjs`（落 `thincoder-vscode/scripts/`） | 0 | +50±15 | 解 vsix 断言 B（含核 + 版本逐字相等）；零构建、只读 |
+| **发布编排面（S2 改）** | `thincoder-vscode/scripts/publish-all.mjs` | 105 | +8±4 | 新增段 0（核版本存在性预检）+ 段 1.5（调 `check-vsix.mjs`）；段 1 / 段 2 与 PAT 预检原样 |
+| **CI（S1 改）** | `.github/workflows/test.yml` | 40 | +14±6 | 增设 `core` job（核测试）；三 job 原样（两产品 job 内命令不变） |
+| **度量脚本（S0 改）** | `scripts/mirror-divergence.mjs` | 171 | +40±20 | 补按类型 / 按目录拆分 + 分布分档；**同批收敛用法 / 退出码契约**（台账技术待办，触发=条件：该档被触碰） |
+| **产品运行期（S2 改）** | `thincoder/src/**` · `thincoder-vscode/src/**` | — | 逐模块见 §2.5 | 接线点（import 指向包名）+ 旧实现删除 |
+| **产品测试（S1 / S2 改）** | `thincoder/test/**` · `thincoder-vscode/test/**` | — | 逐模块见 §2.5 | S1 测试合流入核（取并集、去重、按核接口重述）；S2 改指 / 收敛重叠断言 |
 | 台账与需求池 | 仓根 `docs/TODO.md` 等 | — | 归**主 agent** | 不在本表（本表只含设计与实施面） |
 
+**R3 删面（R2 轮条目已撤——本表不再登记、不得产生）**：`core-link.mjs`（落 `scripts/`）· `package.mjs`（落 `thincoder-vscode/scripts/`）· 仓根 workspace `package.json` · 两产品 `package-lock.json` 的删除 · `.gitignore` 的 `.vsix-stage/` 行——R2 轮这些条目**整条作废**。
+
 > **行数口径**：本表行数一律 `wc -l`（= 换行符计数；与编辑器「末行」显示差 1 属末尾空行，同 phase 1 口径）。
-> 本表「已落地」行数 = 重写轮写入后实测复读（D6：写入 → 回读；`wc -l` 口径）；「由 S0 裁决表决定」= 该面在 S0 前不可预知（登记口径，非遗漏）。
+> 「已落地」行数 = 上一轮写入后实测复读（D6：写入 → 回读）；「由 S0 裁决表决定」= 该面在 S0 前不可预知（登记口径，非遗漏）。
 > **档位判定**：上表涉改的**源 / 测试**档（核模块 · 产品 `src/**` · `test/**` · 新脚本）逐档受 ≤300（软线）/ ≤500（硬限）约束，
 > 行数与拆分计划随 §2.5 逐档给出；纯 `.md` 档（需求档 / 设计档）免档位判定，行数仅作增量参考。
 
@@ -215,17 +231,15 @@ S1 的「两产品一行不改」是硬判据（可用 `git diff --stat` 直接�
 
 1. **F7（phase 1：产品运行行为零改动）**：本板块把它作为核的准入条件（G4 / D-C6），不放松。
 2. **D14（提示词不做单副本合流）**：本板块**不改**其边界——核内零提示词档（D-C5）；提示词仍各产品自持、包内硬加载。
-   重写轮后本板块已无副本机制，D14 与核的装载机制**互不指涉**（原「与副本形态不矛盾」段随副本形态删除）。
-3. **「单一权威源」纪律**：核的唯一撰写处 = `core/` 包本体；**仓内零副本**（打包期链接为指针、非撰写面，不构成第二权威源）
-   ——原「产品内副本是生成物」的调和解**失去对象**，删除并说明（用户 2026-09-13 裁定）。
-4. **「多实现面 · 语义同源、不做 byte-identical 硬一致」纪律**：原第 4 条调和**失去对象**（无副本、无多实现面）
-   ——核与壳是**包边界**关系，不是「同源多实现面」；若某端日后确需偏离，走**注入**（G5）。本条按用户裁定「改写或删除并说明」——**改写**。
-5. **CLI「零运行时依赖 / 无构建步骤」承诺**：**改述**——零依赖只约束**第三方**（B7 自述语境；自家核不在范畴——
-   重写轮更正原「误用」）；「无构建步骤」= 两产品仍直接运行、无源码编译（打包装载步骤见第 7 条）。N7（核内零裸包名）继续守住第三方零依赖。
+   R3 形态下核与提示词面**互不指涉**（无副本机制、无装载机制外推）。
+3. **「单一权威源」纪律**：核的唯一撰写处 = `core/` 包本体；**仓内零副本**；**dev 链接是解析指针、非撰写面**（`node_modules` 链接由 `.gitignore` 覆盖，不入版本库）——不构成第二权威源。
+4. **「多实现面 · 语义同源、不做 byte-identical 硬一致」纪律**：本板块**无多实现面**——核与壳是**包边界**关系；若某端日后确需偏离，走**注入**（G5）。原第 4 条调和解**失去对象**，本条按裁定「改写或删除并说明」——**改写**。
+5. **CLI「零运行时依赖 / 无构建步骤」承诺**：**改述**——零依赖只约束**第三方**（B7 自述语境；自家核不在范畴）；「无构建步骤」= 两产品仍直接运行、无源码编译（装载靠 npm / vsce 的**标准**依赖机制，不引入打包步骤——D-C9）。N7（核内零裸包名）继续守住第三方零依赖。
 6. **机器检查面**：核目录 `core/` 不在 V5 的代码树枚举（`src` / `scripts` / `bin` / `test`）内 ⇒ 核**符号**不进宽形态索引（报告面，不入闸）；
    核路径锚的可解析性由「仓根相对路径」解析序保证。**S1 前须实跑一次确认零红**（N6）。
-7. **发布链边界（重写轮新增）**：「不改发布链（npm publish / vsce + ovsx）」的边界解读 = **对外命令接口与双源流程不变**；
-   打包准备步骤（链接 / 分阶段 / 标志 / 断言）为链内实现步骤（实测必需——§2.2.1）——需求档 F7 边界已同步改述。
+7. **发布链边界**：「不改发布链（npm publish / vsce + ovsx）」的边界解读 = **对外命令接口与双源流程不变**；
+   R3 形态下发布链**连内部步骤都不新增**（无垫片、无分阶段），只在既有钩子上加**预检 / 断言**（§2.8）——F7 边界改述见需求档。
+8. **零依赖 / 零构建与**核的发布**（R3 新增）**：核发布到 npm 引入「核先发、产品后发」的顺序依赖——**不是**新增构建步骤，而是**发布编排**前置（D-C12 / §2.11 A3）；用户 A6 已明示接受该顺序。
 
 ### 2.10 验收标准逐条回指需求
 
@@ -235,17 +249,17 @@ S1 的「两产品一行不改」是硬判据（可用 `git diff --stat` 直接�
 | F2 | 裁决表覆盖 107 对全量 + 语义对位行，分类列无空白 | T-C2 | 本档 §2.5 行数与声明一致（V2 机检口径）+ 抽查 |
 | F3 | 每个进核模块有来源侧（取一 / 融合），零「新写」行 | T-C3 | §2.5 表列核验 |
 | F4 | 核测试独立跑绿、不加载产品模块 | T-C4 | `node --test`（`core/`）exit 0 |
-| F5 | 单模块迁移后该产品全链与基线逐数一致（接线 = 包依赖声明 + import 指向包名） | T-C5 | 两产品门禁命令 + 计数比对 |
+| F5 | 单模块迁移后该产品全链与基线逐数一致（接线 = 依赖声明 + import 指向包名） | T-C5 | 两产品门禁命令 + 计数比对 |
 | F6 | 两产品全量测试与迁移前基线逐数一致（差异逐条登记） | T-C6 · T-C16 | 基线对照表 + 变异夹具反证 |
-| F7 | 两产品产物生成成功且含核（tarball / vsix 内嵌核包） | T-C7 · T-C11 | `npm pack` / `vsce package` + 解包断言 + 版本一致 |
+| F7 | 两产品产物生成成功且**产物可用性闭合**：CLI = 声明可由 registry 解析；VSC = vsix 内嵌核 | T-C7 · T-C11 | `npm ls` / `npm pack` / `vsce package` + 解包断言 + 版本一致 |
 | F8 | 提示词 / 工具文档布局零改动，核内零提示词档 | T-C8 | 档数清点（各 15 / 25）+ 核目录扫描 |
 | F9 | 残留零：旧实现零引用、三机检 exit 0 | T-C9 | `scripts/doc-anchors.mjs` / `scripts/check-doc-width.mjs` / `scripts/check-ledger.mjs` |
 | F10 | 度量脚本产出按类型 / 按目录拆分且与需求档 §1 一致 | T-C10 | `node scripts/mirror-divergence.mjs --json` 数字比对 |
 | N1 | 门禁三命令全 exit 0 且与基线一致 | T-C5 · T-C6 | 同上 |
 | N2 | 每段有回滚点；S1 两产品零改动；回退演练复绿 | T-C12 · T-C13 | `git diff --stat` / `git revert` + 复跑 |
 | N3 | 核独立可验证 + 核内零产品 import | T-C4 · T-C15 | 核测试 + import 面机检 |
-| N4 | 产物自足、发布链对外接口不变 | T-C7 · T-C11 | 产物含核断言（含反证） |
-| N5 | 单一权威源由包机制保证（仓内零副本）；产物内嵌核版本 = core 包版本 | T-C11 | 产物断言 + 反证（缺核即红） |
+| N4 | **两态引用闭合**：开发期本地链接跑通 · 生产期核包可由 registry 解析（CLI）/ vsix 内嵌核（VSC）；发布链对外命令接口不变 | T-C7 · T-C11 | 发布预检（断言 C）+ vsix 断言（断言 B）+ 反证 |
+| N5 | 单一权威源由包机制保证（仓内零副本）；**产物携带的核版本 = 仓内核版本** | T-C7 · T-C11 | 断言 A / B / C（§2.7 D-C11）+ 反证（缺核即红） |
 | N6 | 本板块两档 + 核路径纳入扫描域后三机检 exit 0 | T-C1 · T-C9 | 仓根三命令 |
 | N7 | 核内零裸包名 import | T-C15 | import 面机检 |
 | N8 | 核模块 ≤300 行（软线）· 无 >500；超线带拆分计划 | T-C14 | `wc -l` 逐档 |
@@ -256,8 +270,8 @@ S1 的「两产品一行不改」是硬判据（可用 `git diff --stat` 直接�
 |---|---|---|---|
 | **A1** | **核的边界**（哪些模块进核） | **不预设**——由 S0 数据 + §2.4 五条闸给出；核清单 = 裁决表「进核」集合 | 预设边界会在写第一行核代码前引入未验证假设，而「哪些能合」正是 S0 要算出来的产物（承批次档 §1） |
 | **A2** | **裁决原则**（③ 类真分叉以谁为准） | **逐模块比优劣，默认向 CLI 倾斜；例外须给理由并登记**（承批次档 §1 建议） | 依据：CLI 为无宿主依赖的主干（B7）且 phase 1 以 `main` 为主干；**风险面 = 向 CLI 倾斜若改变 VSC 行为即触 F6** ⇒ 此时该条判 ④ 或走注入，不得以「倾斜」为由改行为 |
-| **A3**（重写轮更新） | **打包垫片的接受面**（选定形态含两处打包期垫片——§2.2.1 / D-C9） | 采纳垫片（= 裁定形态 A4 / A5 的可执行化）；**若用户不接受垫片** → 备选 = §2.3.2 候选 d（产品非成员 + `file:` 引用，零垫片、已实测，代价 = 偏离「两产品以 workspace 依赖引用」句） | 垫片均为链接 / 目录别名（零字节副本、无持久产物）；**Linux（symlink）组合未实测**——发布环境（Windows · junction）已实测，S3 于发布环境复核。垫片被否 = 形态换向，须重新裁定 |
-| **A4**（本档新增） | **核包名与版本策略**（`@thincoder/core` · private · 独立版本） | 采纳 D-C10 | 名称仅本仓解析用（不发布）；独立版本 = 壳核解耦；若用户要求核版本与 CLI 同步 ⇒ 改 D-C10，物面无其他变化 |
+| **A3**（R3 更新） | **垫片接受面的后续** | **已按 A6 解决**——用户否掉垫片形态，R3 选定的标准形态**零垫片**（§2.3.2 候选 c / D-C9），原 A3「垫片接受面」**失去对象**。**残余**（非垫片，如实登记）：① 发布顺序前置（核先发——A6 已接受）；② VSC 发布机须真实安装态（`npm ci`）——dev 链接态打包实测硬错（R8③），但**不得据该现象当保证**，断言 B 才是保证；③ `.vscodeignore` 反排除行漏写 ⇒ 静默无核（R6 同族）⇒ 断言 B fail-closed 兜住；④ **运营前置**：核的 npm scope（`@thincoder`）归属 + 首版发布（建议显式 `--access public`）——属发布账号运营面，非代码面 |
+| **A4**（自 R2 轮沿用） | **核包名与版本策略**（`@thincoder/core` · 非 private · 独立版本） | 采纳 D-C10 + D-C11（版本一致性三条断言） | 名称即 npm 包名——发布后**全局唯一**，须先确认 `@thincoder` scope 归属与名称可用（§2.11 A3 ④）；独立版本 = 壳核解耦；若用户要求核版本与 CLI 同步 ⇒ 改 D-C10 / D-C11，物面无其他变化 |
 
 ---
 
@@ -275,7 +289,7 @@ S1 的「两产品一行不改」是硬判据（可用 `git diff --stat` 直接�
 | T-C4 | F4 · N3 | `node --test`（`core/`，独立于两产品） | exit 0；运行期不加载任一产品模块 |
 | T-C5 | F5 · N1 | 单模块迁移后跑该产品全链 | `npm run lint` / `test:full` / `test:integration` 全 exit 0，计数与基线一致 |
 | T-C6 | F6 · N1 | 两产品全量测试（迁移后） | 与迁移前基线逐项一致；差异项逐条登记且可解释 |
-| T-C7 | F7 · N4 | `npm pack` / `vsce package`（发布流程装载机制就位） | 两产物生成 exit 0；产物内含核文件且与 `core/` 逐字节一致、版本字段一致；解包后可从产物目录 `import` 核（解析通过） |
+| T-C7 | F7 · N4 · N5 | **VSC**：`npm ci` 后 `vsce package`（`.vscodeignore` 含反排除行）→ 解包 vsix；**CLI**：产品目录 `npm ls @thincoder/core --json` + `npm pack --dry-run --json` | 两产物生成 exit 0；**vsix 含 `extension/node_modules/@thincoder/core/package.json` 且其 `version` 逐字等于仓内 `core/package.json` 的 `version`**（断言 B）；**CLI 装入版本逐字等于仓内核版本且 registry 上该版本存在**（断言 C）；CLI tarball 内 manifest 的核依赖为**真 semver 范围**（非 `*` / `file:`——R1 / R10 反例） |
 | T-C8 | F8 | 两产品 `src/prompts/` · `src/tools/` · `docs/design/prompts/` 清点 | 各 15 / 25 / 15 档不变；核目录内零提示词档 |
 | T-C9 | F9 · N6 | 仓根三机检 | `scripts/doc-anchors.mjs` · `scripts/check-doc-width.mjs` · `scripts/check-ledger.mjs` 全 exit 0 |
 | T-C10 | F10 | `node scripts/mirror-divergence.mjs --json` | 输出含按类型 / 按目录拆分 + 分布分档；与需求档 §1 数字逐位一致 |
@@ -284,7 +298,7 @@ S1 的「两产品一行不改」是硬判据（可用 `git diff --stat` 直接�
 
 | 用例 | 对应需求 | 输入 | 预期输出 |
 |---|---|---|---|
-| T-C11 | N5 · N4 · F7 | 两产物（tarball / vsix）+ `core/package.json` 版本；**反证** = 撤除装载（链接 / 标志）后打包 | 产物内嵌核存在且版本字段一致；**缺核即红**（断言 fail-closed——不允许「成功但无核」的静默产物；M6 失败形态反证） |
+| T-C11 | N5 · N4 · F7 | **反证（缺核即红）**：① VSC 撤除 `.vscodeignore` 反排除行后 `vsce package`；② CLI 把声明改成 `*` 或 `file:` 后跑发布预检 | ①→ vsix 无核**且**断言 B exit 1（对照实读 R6 / R8①：vsce 自身 exit 0 ⇒ **必须断言化**，不允许「成功但无核」的静默产物）；②→ 断言 C exit 1（`*` 漂移 R3 / `file:` 不可解析 R10） |
 | T-C12 | N2 | S1 收口时 `git diff --stat` 对两产品目录 | 输出为空（两产品一行未改） |
 | T-C13 | N2 | S2 任一模块提交做 `git revert` | 该产品全链复跑回到迁移前基线（回退可验） |
 | T-C14 | N8 | 核内逐档 `wc -l` | 各档 ≤300（软线）；>300 者带拆分计划；无 >500 |
@@ -302,10 +316,14 @@ S1 的「两产品一行不改」是硬判据（可用 `git diff --stat` 直接�
 
 - 2026-09-13：建档——phase 2「核心统一」设计 + 测试（方案选型对比 / S0 方法与判定口径 / 裁决表骨架 / S0–S3 分段执行 /
   关键决策 / 受影响文件清单 / 冲突点核对 / 验收回指 / 待定裁定 A1–A3）；依据 = 批次档 §1（用户裁定）+ phase 1 设计档 §2.13 通道。
-- 2026-09-13（重写轮）：**核形态变更**——D-C3 副本形态（仓根权威源 + 产品包根内同源副本 + `core-sync` + 逐字节校验）**整条移除**；
-  改为**单仓 npm workspace 真包**（`@thincoder/core` · private · 不单独发布；两产品以 workspace 依赖引用）。
-  §2.2 改真包形态与含核装载契约 + 新增 §2.2.1 装载机制实测读数（M1–M6）；§2.1 增 B11 / B12、更正 B2 / B3；
-  §2.3.2 重估四候选（原候选 b 改判选定、更正记录登载）；§2.5 / §2.6 / §2.7（D-C3 改写、D-C4 / D-C5 复核、新增 D-C9 / D-C10）/
-  §2.8（增 workspace 根与核包、删副本面）/ §2.9（第 3 / 4 条失去对象改述、第 5 条零依赖改述、第 7 条新增）/
-  §2.10 / §2.11（A3 更新、A4 新增）/ §3（T-C7 与 T-C11 判据更新）同步修订。
-  依据 = 批次档 §1 追加裁定 A4 / A5 + 重写轮实测试读（探针于系统临时目录，未触碰产品文件）。
+- 2026-09-13（重写轮 / R2）：**核形态变更（第 2 次）**——D-C3 副本形态（仓根权威源 + 产品包根内同源副本 + `core-sync` + 逐字节校验）整条移除；
+  改为**单仓 npm workspace 真包**。依据 = 批次档 §1 追加裁定 A4 / A5。
+- 2026-09-13（**R3 形态轮 / 第 3 次形态变更**）：依据 = 用户 A5 放宽（核可单独发布）+ **A6**（开发期本地链接 / 生产期发布包）
+  + 用户**否掉打包期垫片形态**（「太不标准不规范」）+ 本轮实测试读（§2.2.1 R1–R10，探针于系统临时目录、未触碰产品文件）。
+  **变更点**：D-C3 改为**独立发布真包 + 双态引用**（dev `npm link` / prod 已发布包）；D-C9 改为**标准机制零垫片**
+  （CLI 纯 `dependencies`；VSC 保留 `node_modules/**` + 反排除行 + vsce 默认模式）；原 R2 选定候选 b（workspace）**改判否决**
+  （R1 / R2 / R3 / R6 四项实测推翻其前提）；新增 D-C11（版本一致性三断言）/ D-C12（发布顺序守卫落点）；
+  §2.1 增 B12 / B13、更正 B2 / B3 / B7 / B8；§2.2 改形态树与消费契约 3/4；§2.6 S2 增「核已发布」进入条件；
+  §2.8 删垫片面（`core-link.mjs` / `package.mjs` / 仓根 workspace manifest / lock 迁移 / 分阶段目录）并增真依赖面 + 发布编排面；
+  §2.9 第 3 / 4 / 5 / 7 条改述、第 8 条新增；§2.10（F7 / N4 / N5 判据）/ §2.11（A3 结案「已按 A6 解决」+ 残余登记）/
+  §3（T-C7 / T-C11 判据换成本轮形态）同步修订。
