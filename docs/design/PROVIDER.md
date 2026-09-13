@@ -10,7 +10,7 @@
 
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
-| 调用核心 | `thincoder-cli/src/provider/core.mjs` + `index.mjs` | `thincoder-vscode/src/provider.mjs` |
+| 调用核心 | `thincoder-cli/src/provider/core.mjs` + `src/provider/index.mjs` | `thincoder-vscode/src/provider.mjs` |
 | 传输 | `src/provider/{anthropic,google,responses}.mjs` | `src/provider/transports/{anthropic,google,responses}.mjs` |
 | 基础件 | `src/provider/{sse,retry,normalize,errors,abort-provenance}.mjs` | 内联 / 无独立档 |
 | 限流 | `src/provider/rate.mjs` | 同名（同路径对） |
@@ -30,7 +30,7 @@
 
 | # | 对位（CLI ↔ VSC） | 分类 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|
-| 138 | `src/provider/core.mjs` + `index.mjs` ↔ `src/provider.mjs` | ② | 融合：以 CLI 调用核心为准 + VSC 的传输分派面归位 | 分叉 ＝ 组织（VSC 单档 / CLI 拆 core + sse + normalize）；两端同 API 语义（`chat` / `createProvider`——VSC `thincoder-vscode/src/provider.mjs:123` 自述「CLI core.mjs 同构」）⇒ 前提成立 | — | S1（建核补齐） |
+| 138 | `src/provider/core.mjs` + `src/provider/index.mjs` ↔ `src/provider.mjs` | ② | 融合：以 CLI 调用核心为准 + VSC 的传输分派面归位 | 分叉 ＝ 组织（VSC 单档 / CLI 拆 core + sse + normalize）；两端同 API 语义（`chat` / `createProvider`——VSC `thincoder-vscode/src/provider.mjs:123` 自述「CLI core.mjs 同构」）⇒ 前提成立 | — | S1（建核补齐） |
 | 139 | `src/provider/anthropic.mjs` ↔ `src/provider/transports/anthropic.mjs` | ② | 融合：取一侧 + 核内 `transports/` 目录归位 | 分叉 ＝ 目录（CLI 平铺 / VSC `transports/`）；同源自述 ⇒ 前提成立 | — | S1（建核补齐） |
 | 140 | `src/provider/google.mjs` ↔ `src/provider/transports/google.mjs` | ② | 融合：同 #139 | 同 #139（VSC 头注自述「与 CLI 同修」）⇒ 前提成立 | — | S1（建核补齐） |
 | 141 | `src/provider/responses.mjs` ↔ `src/provider/transports/responses.mjs` | ② | 融合：同 #139 | 同 #139（VSC `:376` 自述「与 CLI/core 同构」）⇒ 前提成立 | — | S1（建核补齐） |
@@ -59,3 +59,4 @@
 ## 变更记录
 
 - 2026-09-13：建档——自 `docs/design/CORE-UNIFICATION.md` 拆出（§2.5 #114 / #115 / #138–#143 · §2.5.1 A19 / A20 · §2.12.2 第 8 行）；**语义零改**，行号沿用原编号。
+- 2026-09-14（markdown 面小收正轮）：§1 归属表与 §2.4 #138 行的 `index.mjs` 补路径前缀（`src/provider/index.mjs`——与 `src/tools/index.mjs` / `src/tui/index.mjs` 同名不同物；**消除歧义不改判据**）。

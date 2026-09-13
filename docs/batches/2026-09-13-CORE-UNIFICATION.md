@@ -1801,6 +1801,54 @@
 
 **打标（本作者段内就地修正 · 2026-09-14）**：上块「行数变化」行原 **339 字符**（超文档宽度闸），就地折为两行——**语义与文字零改**；折后三机检复跑全 **exit 0**。
 
+### markdown 面小收正轮 · 设计面（2026-09-14 · eng-designer）
+
+**段位**：当前段 = S1 续轮之前（设计面小收正）；S0b / S2 / S3 面零触碰。本轮**只改设计档**——不写代码、不动 `thincoder-core/**`、未 commit（父侧统一）、未发起评审、未碰台账。
+
+**依据** = 父侧派单「小收正轮：markdown 面的判据指错对象」（4 件）+ 本档 §1「追加裁定（markdown 面：逻辑与渲染分家 · 2026-09-14）」。
+
+**4 件落点（改动档 → 变更点）**
+
+| # | 件 | 落点（档） | 变更点 |
+|---|---|---|---|
+| 1 | #182 行收正（点名 → `tui/markdown.mjs`） | `CORE-UNIFICATION.md` §2.5 端特有桶 #182 行 + 表后收正注 | ① 「TUI 渲染」的判据对象 = `thincoder-cli/src/tui/markdown.mjs`（**TUI 行内渲染**，④ 端特有，随 #180）；② 顶层 `thincoder-cli/src/markdown.mjs` = 共享逻辑（记忆条目 frontmatter 解析 / 序列化）⇒ 归核（S1 已落）；③ **归核理由由「G2 覆盖」收正为「共享逻辑（对称面）归核」**（G2 / 依赖闭包降为自洽佐证） |
+| 2 | 顶层 `markdown.mjs` 出 ④ 列表 | 同档 §2.5 #182 行 · 覆盖对账行 · 结论注 | ④ 列表 = **5 档**（无 markdown）；凡点名一律改**顶层 `src/markdown.mjs`**（唯一名）；④ 桶合计 **102** / CLI **79** / 顶层杂项 **5** 不变（列表内容 id 61 已落，本轮只做唯一名收正） |
+| 3 | 渲染面总则 | 同档 §2.5 端特有桶节（表后收正注内） | 「**markdown 渲染面 = 两端各自实现、互不合并、互不追赶**（TUI 终端行内渲染 / VSC 宿主侧渲染）」+「**「同名≠同物」判据纪律**：裁决行点名档时**必须带路径前缀**」 |
+| 4 | 同族自查（裸名 → 路径前缀） | `CORE-UNIFICATION.md` §2.3.3 · 变更记录；`AGENT-LOOP.md` §1；`CONSULTATION.md` §1 / §2.4；`PROVIDER.md` §1 / §2.4（+ 各档变更记录 1 行） | 逐处见下 |
+
+**④ 同族自查——判据与逐处清单**
+
+判据（本轮实取，已在报告披露）：**同一端（CLI 或 VSC）树内该 basename ≥2 档** = 「同名≠同物」族（markdown 同型）；此类**裸名点名**逐处补路径前缀（**不改判据，只消除歧义**）。
+
+实测该族 = **10 名**：`session.mjs` · `advisor.mjs` · `helpers.mjs` · `settings.mjs` · `subagent-panel.mjs` · `markdown.mjs` · `core.mjs` · `index.mjs` · `provider.mjs` · `tools.mjs`。
+
+**逐处（改 8 处）**
+
+| # | 档:行 | 改前 → 改后 |
+|---|---|---|
+| 1 | `CORE-UNIFICATION.md:168` | advisor 加载面 `advisor.mjs` → `CLI `src/advisor.mjs` / VSC `advisor/main.mjs`` |
+| 2 | `CORE-UNIFICATION.md:328` / `:332` / `:348` / `:367` | `markdown.mjs` → 顶层 `src/markdown.mjs`（+ #182 行点名补 `src/tui/markdown.mjs`） |
+| 3 | `CORE-UNIFICATION.md:967`（历史变更记录行） | `markdown.mjs` → `thincoder-cli/src/markdown.mjs`（**形态规范·语义零改**——变更记录亦受「残留即示范」约束） |
+| 4 | `AGENT-LOOP.md:14` | `helpers.mjs` → `src/agent/helpers.mjs`（与 `src/mcp/helpers.mjs` 同名不同物） |
+| 5 | `CONSULTATION.md:13` | `provider.mjs` → `advisor/provider.mjs` · `tools.mjs` → `advisor/tools.mjs`（与 VSC `src/provider.mjs` / `src/tools.mjs` 同名不同物） |
+| 6 | `CONSULTATION.md:14` | `subagent-panel.mjs` → `agent-tools/subagent-panel.mjs` |
+| 7 | `CONSULTATION.md:65`（#159 裁决行） | `subagent-panel.mjs` → `src/agent-tools/subagent-panel.mjs`（与 `src/tui/subagent-panel.mjs` 同名不同物） |
+| 8 | `PROVIDER.md:13` · `:33`（#138 裁决行） | `index.mjs` → `src/provider/index.mjs`（与 `src/tools/index.mjs` / `src/tui/index.mjs` 同名不同物） |
+
+**未改 3 处（理由登记）**：① `CORE-UNIFICATION.md:774` 的 `core.mjs` = **文件名 / 模块名模式描述**（改名保护项），非点名档；② `CONSULTATION.md:37` 的 `advisor.mjs` = **JSDoc 注释内引用的模块名原样引文**（同句已标「端内模块名」）；③ `CORE-UNIFICATION.md:367` 的 `context.mjs` / `focus.mjs` = 同行已由「VSC `tools` 的 2」限定端与目录。
+
+**三机检（cwd = 仓根 · 改后原样读数）**
+
+- `node scripts/doc-anchors.mjs` → **exit 0**——根域 / CLI 域均 `OK(V5): 0 条悬空锚（闸态——阈值 0）`；VSC 域 = 报告态（命中 0 处）。
+- `node scripts/check-doc-width.mjs` → **exit 0**——`OK(宽度): 扫描域全部 .md 无 >300 字符单行（306 文件）。` · `一致性 V1/V2/V3：新增违规 0 条 · 存量（基线内）0 条。`
+- `node scripts/check-ledger.mjs` → **exit 0**——`0 处违规（阻断——修掉）· 基线 0 条`。
+
+**行数变化（`wc -l`）**：`CORE-UNIFICATION.md` 965 → **970**（Δ+5）· `AGENT-LOOP.md` 133 → **134**（Δ+1）· `CONSULTATION.md` 89 → **90**（Δ+1）· `PROVIDER.md` 61 → **62**（Δ+1）。
+
+**事实收正（派单事实面）**：派单列的三条事实——`#182 行把 markdown.mjs 列进 ④（理由标注「TUI 渲染」）` · `:338 清单含 markdown` · `:357 注含 markdown`——为 **id 61（S1 收口轮）之前**的存档读数（行号 `:327` / `:338` / `:357` 同为该版 as-of；现档对应 `:328` / `:344` / `:363`）。id 61 已把 markdown 移出 ④ 列表（6 → 5 档）。本轮**不减 id 61 成果**：件 2 只做唯一名收正（列表内容不变），件 1 补 id 61 未做的「点名 → `tui/markdown.mjs`」，并把归核理由按用户裁定由「G2 覆盖」收正为「共享逻辑」。
+
+**未决（记档 · 不遗忘）**：① **同族判据的宽度待父侧裁**——本轮按「同一端内同名多档」执行；若按字面「该名在两端**或**多目录同名多档」，则**裁决行**（编号表行）命中 **77** 处、`docs/design/**` 全域 **216** 处（多为「同路径对」行与列头已限定 `thincoder-core/` 者）——是否一并前缀属**范围裁定**，本轮不自行扩大。② `docs/design/CORE-UNIFICATION.md` 2026-09-14 的两条历史变更记录行现并存（id 61 的「G2 覆盖」表述 + 本轮的收正条）——**as-of 记述、不改写第二条的历史语义**。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）

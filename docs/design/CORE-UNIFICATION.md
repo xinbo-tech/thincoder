@@ -165,7 +165,7 @@
 | c | 核内**单目录混放**（15 + 25 同目录） | 反面：槽位提示词（按场景装配）与工具描述（按工具名取）**两个集合的用途/消费面不同**；混放后「槽位档清单」与「工具档清单」无法各自枚举——**使 T-C7 的两集合逐字断言失去对象** | 省一层目录，代价 = 丢掉一个机检面 | **否决**（为省目录丢断言面，不划算） |
 
 **加载面接线口径（选定 a 后的产品侧形态）**：四个加载面（B4）各自把「本模块相对目录」换成「核加载面导出」——
-槽位加载面（`prompt-overlays.mjs`）与 `DESC()`（`tools/shared.mjs`）与 advisor 加载面（`advisor.mjs` / `advisor/main.mjs`）各改一行级指向；
+槽位加载面（`prompt-overlays.mjs`）与 `DESC()`（`tools/shared.mjs`）与 advisor 加载面（CLI `src/advisor.mjs` / VSC `advisor/main.mjs`）各改一行级指向；
 **缺档语义不变**（契约 9）：改的是**根**，不是**语义**。
 
 ### 2.4 S0 的方法与产出形态
@@ -325,13 +325,17 @@ A8 / A9（对称面均入核）与 F3（零「新写」——不得造第三份�
 |---|---|---|---|---|---|---|
 | 180 | CLI `tui/**`（67 档）+ `tui.mjs` ↔ ④ | ④ | 端特有（TUI 渲染 / 交互 / 键位 / 布局 / 面板 / 命令面） | 结构性不对称 = **依赖壳能力（终端 TUI）**——B17 实测仅 CLI 11258 行 | — | 不迁（端特有；**两处函数本体归核——收正见下表后注**） |
 | 181 | CLI `acp.mjs` + `acp/**`（3 档）↔ ④ | ④ | 端特有（ACP 协议客户端 / 会话 / 传输） | 结构性不对称 = **仅 CLI 存在**（VSC `src/**` 零 acp 命中） | — | 不迁（端特有） |
-| 182 | CLI 其余单端杂项（`completions.mjs` · `crash-reports.mjs` · `heap-watch.mjs` · `upgrade.mjs` · `distill.mjs`）↔ ④ | ④ | 端特有（shell 补全 / 崩溃报告 / 堆监视 / 自升级 / 蒸馏入口） | 结构性不对称 = **依赖壳能力或分发通道**（补全 = shell 通道；自升级 = CLI 分发；崩溃报告 / 堆监视 = CLI 进程形态）；`memory-command` / `permission` / `setup-wizard` 已单列（#135 / #165 / #177）；**`markdown.mjs` 归核——收正见下表后注** | — | 不迁（端特有；`markdown.mjs` 除外） |
+| 182 | CLI 其余单端杂项（`completions.mjs` · `crash-reports.mjs` · `heap-watch.mjs` · `upgrade.mjs` · `distill.mjs`）↔ ④ | ④ | 端特有（shell 补全 / 崩溃报告 / 堆监视 / 自升级 / 蒸馏入口） | 结构性不对称 = **依赖壳能力或分发通道**（补全 = shell 通道；自升级 = CLI 分发；崩溃报告 / 堆监视 = CLI 进程形态）；`memory-command` / `permission` / `setup-wizard` 已单列（#135 / #165 / #177）；顶层 **`src/markdown.mjs`（共享逻辑：记忆条目 frontmatter 解析 / 序列化）归核**；**`src/tui/markdown.mjs`（TUI 行内渲染）属 ④**，随 #180 `tui/**`（收正见下表后注） | — | 不迁（端特有；顶层 `src/markdown.mjs` 除外） |
 | 183 | VSC `extension/**` 面板与宿主面（`chat-panel` · `panel-*` 8 档 · `notify` · `file-links` · `file-refs` · `diff-preview` · `editor-context` · `image-handler` · `vision-channel` · `turn-model` · `stop-trace` · `history-window`）↔ ④ | ④ | 端特有（webview / 宿主 API / 编辑器集成） | 结构性不对称 = **依赖壳能力（VS Code 宿主 API / webview）**——B17 实测仅 VSC；`config-watch` / `migrate-settings` / `permission-gate` 已单列（#132 / #165） | — | 不迁（端特有） |
 
 > **#180 / #182 收正（2026-09-14）**：
-> · **#182 `markdown.mjs`**——原判「不迁」**被 G2（依赖闭包必须落核内）覆盖 ⇒ 归核内**（`thincoder-core/markdown.mjs` 106 行）：它是核内已迁模块的依赖闭包（被 `thincoder-core/memory/core.mjs` · `thincoder-core/memory/delete.mjs` · `thincoder-core/rules.mjs` 消费）⇒ 相抵时 **G2 优先**。
+> · **#182 markdown 面（逻辑 / 渲染分家 · 用户裁定 2026-09-14）**——同名两档，原判**指错对象**（把顶层逻辑档当成「TUI 渲染」端特有面）：
+> **① 逻辑面** = 顶层 `thincoder-cli/src/markdown.mjs`（记忆条目 frontmatter 解析 / 序列化）——**共享逻辑 ⇒ 归核内**（`thincoder-core/markdown.mjs` 106 行；被核内 `memory/core.mjs` · `memory/delete.mjs` · `rules.mjs` 消费，依赖闭包自洽）；**归属段 = 进核（S1，已落）**。
+> **② 渲染面** = `thincoder-cli/src/tui/markdown.mjs`（**TUI 行内渲染**）——**④ 端特有（不迁）**，随 #180 `tui/**`。
 > · **#180 `tui/**` 两处归位**（取 #149 / #159）——**函数本体零 TUI 依赖**者可归核内：
 > `snapshotForUndo`（自 `thincoder-cli/src/tui/cmd-undo.mjs` 逐字随迁 → `thincoder-core/undo-stack.mjs` 47 行）· `computePanelBlocks`（自 `thincoder-cli/src/tui/subagent-freeze.mjs` 逐字随迁 → `thincoder-core/agent-tools/panel-blocks.mjs` 24 行）；其余 `tui/**` 维持不迁。
+> **渲染面总则（markdown 面）**：**markdown 渲染面 = 两端各自实现、互不合并、互不追赶**（TUI 终端行内渲染 / VSC 宿主侧渲染）——逻辑面（顶层 `markdown.mjs`）才是共享面（归核）。
+> **「同名≠同物」判据纪律**：裁决行点名档时**必须带路径前缀**（`tui/markdown.mjs` ✓ / `markdown.mjs` ✗ 属歧义）——两端 / 多目录同名者一律前缀。
 
 **覆盖对账（单端 148 + 91 逐面闭合——§2.6 判据 3 覆盖程序）**
 
@@ -341,7 +345,7 @@ A8 / A9（对称面均入核）与 F3（零「新写」——不得造第三份�
 | CLI `acp.mjs` + `acp/**` | 4 | ④ 端特有（协议） | #181 |
 | CLI `cli/**` | 5 | #135 / #165 / #177（3 档对位）+ #182（2 档 ④） | — |
 | CLI 顶层对位档（session 8 · config · context · generate-title · text-budget · skills · rules · peer ×2 · token-ttl · auto-think · model-ref · model-specs · hooks · abort-provenance · advisor.mjs） | 22 | 对位行（#123–#127 / #128 / #142 / #143 / #154 / #160 / #162–#164 / #169–#173 / #175 / #176） | — |
-| CLI 顶层 ④ 档（completions · crash-reports · heap-watch · upgrade · distill） | 5 | ④ 端特有（`markdown.mjs` 归核——见上注） | #182 |
+| CLI 顶层 ④ 档（completions · crash-reports · heap-watch · upgrade · distill） | 5 | ④ 端特有（顶层 `src/markdown.mjs` 归核——见上注） | #182 |
 | CLI `agent/**` | 7 | 对位（#149–#153 + `setup` / `setup-reminders` / `run-stages` 属 107 同路径对） | — |
 | CLI `agent-tools/**` 单端 | 7 | 对位（#154–#159） | — |
 | CLI `git/**` | 2 | 对位（#167 / #168） | — |
@@ -360,7 +364,7 @@ A8 / A9（对称面均入核）与 F3（零「新写」——不得造第三份�
 
 > **结论**：单端 **148 + 91 = 239 档**逐面闭合——每档或落对位行、或落 ④ 结构性不对称桶（附结构性证据）；无「两者皆缺」的未闭合面。
 > **④ 桶合计 = 102 档**：**CLI 79**（`tui/**` + `tui.mjs` 68 · `acp.mjs` + `acp/**` 4 · `cli/**` 2 · 顶层杂项 5）· **VSC 23**（`extension/**` 21 · `tools/**` 2）。
-> 顶层杂项 5 = `completions` · `crash-reports` · `heap-watch` · `upgrade` · `distill`（`markdown.mjs` 归核——见上注）；VSC `tools` 的 2 = `context.mjs` · `focus.mjs`。
+> 顶层杂项 5 = `completions` · `crash-reports` · `heap-watch` · `upgrade` · `distill`（顶层 `src/markdown.mjs` 归核——见上注）；VSC `tools` 的 2 = `context.mjs` · `focus.mjs`。
 > **边界纪律**：本桶只收「仅单侧存在 / 依赖壳能力」者（A9 第 1 条），**不得**以「差异 / 相似度低」入桶；其余 **136 档**全部落对位行。
 > **工具实现面单端档逐档映射表**（#178 / #179 的行内容）→ 已随拆档移入 **`docs/design/TOOLS.md` §2.3**（行本体）；本节不复制。
 #### 2.5.1 须用户裁条目清单（A11——四要素提交形式）
@@ -960,6 +964,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 - 2026-09-13（**目录改名子批 · 评审修正轮**——轮次 2 的 5 🟡 / 2 🔵 逐条落修）：§4.3.3 第 1 项行锚改**按内容匹配**（「自工作区根计 = 」行——行号随批次档增行漂移）；§4.5 **K3** 对照面 = **脚本产出子集** + **K2** 补第 5 保护项（241）与站点排除「逐字未变」；
   **类 C 补花括号简写站点**（4 → **5 处 / 5 档**）· §4.4.1 补**非 `.md` 档逐档行数（42 档）**；**提交时序写死**（实现者产出单笔改动集 → 父侧折行 / 打标 → 父侧执行该笔提交）；需求档补 **F14**（§4.11 未决 1 结案）。
 - 2026-09-13（**目录改名子批 · 小补丁轮**——父侧批 5 条逐条落）：折行集 2 → **3 行**（+ 台账 `docs/TODO.md` 1 行——「子 agent 需要上下文压缩机制」，294 → 302；执行者仍 = 父侧）+ **防漂移句**（实施轮 `check-doc-width` 改后实测复核折行集）；**K3** 人工改动枚举补「折行行集 3 行」；**站点排除 3 → 4 处**（第 4 处 = 批次档 §3 评审块——他段 append-only 冻结尾 + 工作区根口径）；**覆盖条目收正**（批次档 §2 七行——F11–F14 加入时未随登）。
-- 2026-09-14（**S1 收口轮 · 设计面补正**）：§2.5 端特有桶 **#180 / #182 收正**（`tui/**` 函数本体零 TUI 依赖者归核——`undo-stack.mjs` / `agent-tools/panel-blocks.mjs`；`markdown.mjs` 判「不迁」被 G2 覆盖 ⇒ 留核内）；§2.8 新增 **§2.8.1 核内逐档行数与拆分计划**（S1 新增 / 拆分 9 档 + `config.mjs` 拆分计划）；§2.8 文案面行裁定状态收正（丁组 D1 已裁 · 按建议）。
+- 2026-09-14（**S1 收口轮 · 设计面补正**）：§2.5 端特有桶 **#180 / #182 收正**（`tui/**` 函数本体零 TUI 依赖者归核——`undo-stack.mjs` / `agent-tools/panel-blocks.mjs`；顶层 `thincoder-cli/src/markdown.mjs` 判「不迁」被 G2 覆盖 ⇒ 留核内）；§2.8 新增 **§2.8.1 核内逐档行数与拆分计划**（S1 新增 / 拆分 9 档 + `config.mjs` 拆分计划）；§2.8 文案面行裁定状态收正（丁组 D1 已裁 · 按建议）。
+- 2026-09-14（**markdown 面小收正轮 · eng-designer**）：§2.5 端特有桶 **#182 收正为「逻辑 / 渲染分家」**——顶层 `thincoder-cli/src/markdown.mjs`（共享逻辑）⇒ 归核（S1 已落）；`thincoder-cli/src/tui/markdown.mjs`（TUI 行内渲染）⇒ ④ 端特有（随 #180）；补 **渲染面总则 + 「同名≠同物」判据纪律（点名必须带路径前缀）**；`§2.5` 覆盖对账行与本档 §2.3.3 加载面接线行的裸名点名同步补前缀。
 
 

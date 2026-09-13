@@ -11,7 +11,7 @@
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
 | 主循环 | `thincoder-cli/src/agent.mjs` | 同名（同路径对） |
-| 装配 / 提醒 / 收尾 | `src/agent/setup.mjs` · `setup-reminders.mjs` · `run-stages.mjs` · `post-turn.mjs` · `dispatch.mjs` · `completion.mjs` · `record-results.mjs` · `relay-prefix.mjs` · `helpers.mjs` · `spawn-child.mjs` | `src/agent/*`（拆档：`execute-tools` · `tool-gates` · `run-helpers` · `context-injections` · `agent-state`） |
+| 装配 / 提醒 / 收尾 | `src/agent/setup.mjs` · `setup-reminders.mjs` · `run-stages.mjs` · `post-turn.mjs` · `dispatch.mjs` · `completion.mjs` · `record-results.mjs` · `relay-prefix.mjs` · `src/agent/helpers.mjs` · `spawn-child.mjs` | `src/agent/*`（拆档：`execute-tools` · `tool-gates` · `run-helpers` · `context-injections` · `agent-state`） |
 | 子代理 / 异步 | `src/agent-tools/{subagent-scheduler,subagent,subagent-actions,subagent-async,subagent-run,async-settle,subagent-spawn,escalate-async}.mjs` | 同名 / 拆分档 |
 | 挂起与唤醒 | `src/tui/suspension-drive.mjs` | `src/extension/suspension.mjs` |
 | 权限 | `src/cli/permission.mjs` | `src/extension/permission-gate.mjs` · `agent-tools/child-permission.mjs` |
@@ -131,3 +131,4 @@
 - 2026-09-13：建档——自 `docs/design/CORE-UNIFICATION.md` 拆出（§2.5 #76 / #78 / #94 / #98–#103 / #111–#113 / #149–#158 / #165 / #166 / #169 / #175 / #176 / #184 · §2.5.1 A7 / A15 / A22 / A23 / D2）；**语义零改**，行号沿用原编号。
 - 2026-09-13：同行次——**#170–#173（技能 / 规则 / 同伴）改归 `docs/design/WORKSPACE.md`**（同批拆分轮内的归属校正：与 #174 台账展示面同族，归工作区约定档）。
 - 2026-09-14（S1 收口轮）：新增 **§2.3 #184 核内形态**（注入面 / 端特有面 / 验收点——S1 续轮执行面）；§3.2 丁组 **D2 裁定状态收正**（已裁 · 按建议）；§2 两处裸 basename 锚补路径前缀（`thincoder-vscode/src/config-io.mjs:319`——机检修复）。
+- 2026-09-14（markdown 面小收正轮）：§1 归属表 `helpers.mjs` 补路径前缀（`src/agent/helpers.mjs`——与 `src/mcp/helpers.mjs` 同名不同物，**消除歧义不改判据**）。
