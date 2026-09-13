@@ -1,0 +1,24 @@
+{
+  "name": "@thincoder/core",
+  "version": "0.1.0",
+  "description": "ThinCoder shared core — shared mechanism modules + shared prompt content (CLI ↔ VS Code extension).",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "exports": {
+    "./prompt-files.mjs": "./prompt-files.mjs",
+    "./prompt-overlays.mjs": "./prompt-overlays.mjs",
+    "./log.mjs": "./log.mjs",
+    "./advisor/convergence.mjs": "./advisor/convergence.mjs",
+    "./advisor/history.mjs": "./advisor/history.mjs",
+    "./advisor/truncate.mjs": "./advisor/truncate.mjs"
+  },
+  "files": [
+    "*.mjs",
+    "advisor/",
+    "prompts/",
+    "tool-docs/"
+  ]
+}
