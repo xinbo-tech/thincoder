@@ -290,6 +290,8 @@ phase 2 目标 = 「一个核 + 两个薄壳」：共享核心真正可 `import`
 
 **边界**：phase 2 若启动，应另建板块文档（按文档规范 §3.3 规则 3），不在本档扩张。
 
+**已启动（2026-09-13）**：phase 2 板块文档 = `CORE-UNIFICATION.md`（设计 + 测试；板块镜像 `../requirements/CORE-UNIFICATION.md`）——本档不含 phase 2 内容。
+
 ### 2.14 受影响文件清单
 
 | 类别 | 范围 |
