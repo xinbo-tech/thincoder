@@ -880,9 +880,14 @@ S5 删除 `prompts-mirror-anchors.test.mjs:26` 使 `THINCODER_CLI_ROOT` **失去
 
 - **S0–S7 八步 · 四批全部落地**，逐批均带 §6 收口（批 2 见上、批 3 见中、批 4 见本段）；设计档 §3 全表 28 行逐项 ✅（T-M12 按设计原文免验）。
 - **不在本批次档射程**：**S3b（旧 VSC 仓远端归档 / 只读）——用户 2026-09-13 已确认执行**。实况（本批实测）：旧仓 = 工作区顶层 `thincoder-vscode/`（有效 git 仓 · 工作树干净 · HEAD `40409b4 release: v0.9.2`），**双远端** = `github` `https://github.com/xinbo-tech/thincoder-vscode.git` ∥ `origin` `https://gitee.com/shanghai-xinbo/thincoder-vscode.git`。
-  **执行受阻（如实报）**：本机**无 `gh` CLI**、**无平台凭据**，且凭证不得入档/经手 ⇒ **S3b 须在平台侧手动完成**：
-  ① GitHub → 该仓 Settings → 勾选「Archive this repository」；② Gitee → 该仓设置（若平台无「归档」能力，则置只读 + 发布退役公告，形态自定）。
-  **S0 回滚点仍在位**（`_merge-backup/thincoder-vscode.git` mirror 完好）——归档后如需取证仍可自备份取。执行后由父侧回填本行状态。
+  **执行进度（2026-09-13 回填）**：
+  ① **合并仓已推送对外生效**——`git push origin` / `github main` 两远端 `3d50068b..fbf9e8a2`（**干净快进**，远端零独有提交；tag 71/71/71 齐）。
+  ② **旧仓退役说明已推**——README 顶部横幅（`thincoder-vscode` 已并入 `thincoder` 单仓，指两远端 URL），两远端 `40409b4..6d07977` ✓。
+  ③ GitHub 归档——**待用户 `gh auth login`**（`gh` 已装 v2.100.0；认证属用户、凭据不入档）后由父侧跑 `gh repo archive xinbo-tech/thincoder-vscode`。
+  ④ Gitee——待用户在网页置「**关闭**」（建议关闭而非暂停：help.gitee.com 该页对「暂停态能否查看 / Pull」自相矛盾）。
+  **顺序依赖（已实核）**：退役说明**必须先于归档**推送（归档后不可写）——已按此序执行；而退役说明又必须先有合并仓在线（否则指向不存在的新家）——已按此序执行。
+  **S0 回滚点仍在位**（`_merge-backup/thincoder-vscode.git` mirror 完好）——归档后如需取证仍可自备份取。ⓢ④ 完成后由父侧回填本行状态。
+  **推送暴露项（登记）**：GitHub 报 Dependabot 告警——合并仓预设分支 **1 高**（来自 VSC 产品依赖树，CLI 零依赖）、旧 VSC 仓 **5 高**（旧仓既有，随退役失效）。
 - **另**：phase 2（核心统一）为独立需求，**未立项**。
 
 
