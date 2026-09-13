@@ -39,9 +39,17 @@ Entry points: `thincoder/AGENTS.md` · `thincoder/docs/README.md` (CLI) and `thi
 - Release tags belong to the CLI line; the extension repository keeps its own tags at its original remote,
   so the two tag sets never collide here.
 
+## Project docs
+
+Project-level documents — the cross-product layer (ledger · board requirements/design · batch records) — live under
+`docs/`. See `docs/README.md` for the map and the **staged migration policy**: new project-level documents go there
+from now on; existing ones stay where they are as **references** and migrate when their surface is next touched.
+Per-product docs remain in each product tree (`thincoder/docs/` · `thincoder-vscode/docs/`).
+
 ## Merge record
 
-Requirements, design and batch record for this layout live in the CLI tree:
+Requirements, design and batch record for the layout change (phase 1 · TWO-REPO-MERGE) still live in the CLI tree as
+references pending migration:
 `thincoder/docs/requirements/TWO-REPO-MERGE.md` · `thincoder/docs/design/TWO-REPO-MERGE.md` ·
 `thincoder/docs/batches/2026-09-13-TWO-REPO-MERGE.md`.
 
