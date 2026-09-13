@@ -149,6 +149,30 @@ phase 2 核心统一 · 产品运行行为改动 · 删除旧 VSC 仓 · 合并 
 
 **提交**：`50c907c3`（14 档；提交纪律 = 机检与提交分离——先跑、绿了再单独提交）。本补记随第二批提交。
 
+### 批 3 · 收尾轮（四项遗留收口）· 补记（2026-09-13 · eng-designer）
+
+**范围**：四项遗留——① 六档行号锚「语义」退场注记（批 2 §5 发现 #3 遗留）· ② VSC 设计档 `AGENT-LOOP.md:1294` T-CI-11 补注 · ③ `prompts-mirror-anchors` 跨对端读的文档引用措辞复核 · ④ §2.14 行数对账收正 + A2 注记归因校准。**零触碰**：产品代码 / 提示词 / 测试档 / 编号。
+
+**① 六档锚语义注记（设计档 `thincoder/docs/design/TWO-REPO-MERGE.md`——不删行、不改编号）**：
+- §2.4 **R1–R9 行末** → 退场注记 + 来源指针（`已退场（六档坐标 as-of——并入仓根统一脚本；两仓合并批 2；删除记录 = 批次档 §5）`——9 行）；机器侧 `MERGED_SCRIPTS` 并入映射继续兜底。
+- §2.14「**机检脚本（删改）**」行 → 同式注记（档目 as-of）；**§2.14 测试行实测收正**：VSC `test/prompts-mirror-anchors.test.mjs` → `155 → **145（Δ −10）**`（差额 = 可删跨仓面实测仅 12 行、**守卫与常量面**（单仓版 ③/⑤/T-DC16 + ⑨-3）为设计**保留项**——批次档 §5 批 3 · S5 发现 #2 口径）。
+- §2.5：表「现状」列（两份实现）· 定案「档名」条（并入已落地）· 解析语义段（`resolveFile` 坐标）→ 三处加注；§2.5 尾条「仍留 S6」→ **收口重写**；R16 行 + §2.5「R16 面」bullet → 计数同步（7 处 + 收尾轮补 3 处）。
+- 设计档**变更记录补 1 行**（四项收口）。**需求档（`thincoder/docs/requirements/TWO-REPO-MERGE.md`）复扫 = 零已删档坐标（无注记对象）**——唯一 `scripts/check-ledger.mjs` 引用指向存活统一版（L3③ 在册）。
+
+**② VSC T-CI-11 面（`thincoder-vscode/docs/design/AGENT-LOOP.md`）**：`:1294`（AC-CI-1「T-CI-1~T-CI-11 全绿」）补注「T-CI-11 已退场（整删——两仓合并批 2；删除记录 = §5）」。另**同语义面残注校准 2 处**（超任务点名——依据 = 设计档 R16 行「按 T-CI-11 语义面扫描」在案口径）：`:1276`（「现体 = 兄弟仓 CLI 源在位」句在批 2 后已失真 → 注「该残部已退场（整删——批 2…§5）」）· `:1298`（AC-CI-5 残部同注）。
+
+**③ 跨对端读引用复核（清单：句 / 改法 / 因）**：
+- CLI 需求 `AGENT-LOOP.md:308`「同款 = VSC `test/prompts-mirror-anchors.test.mjs（VSC 仓）`（同款兄弟仓读 + `THINCODER_CLI_ROOT` 覆盖 + fail-closed）」→ 加注「该跨仓读面已退场（段删——批 3 · S5（R10）；现体 = 单仓版双源守卫：本端同名集合相等 + 本端镜像节引用可解析；…§5）」。因 = S5 删其跨仓段后该句按旧形态描述已失真。
+- CLI 需求 `PROMPT-SYSTEM.md:337`「VSC 侧既有跨仓只读锚测试（`prompts-mirror-anchors`——读兄弟仓 `../thincoder` 逐字对照）」→ 同注（N-P1 登记豁免句）。
+- VSC 设计 `AGENT-LOOP.md:1280`「同 `test/prompts-mirror-anchors.test.mjs:21,30-34` 同款」→ 同注（该同款跨仓读面已退场——段删，批 3 · S5（R10））。因 = 同一「跨对端读」引用面（超任务点名，按 ③ 口径「复核并按需」补）。
+- **复核未动**（判定 = 历史 / as-of 记录，非现行断言）：CLI `design/ADVISOR-CONVERGENCE.md` §13.5 勘察实证行（as-of 2026-09-11）· CLI `design/PROMPT-SYSTEM.md` 各批设计记录 · VSC `design/PORTABILITY.md` / `TESTING.md` 批记录面——按「历史 AC / as-of 行留痕不改写」分界保留。
+
+**④ A2 注记归因校准 2 处**：VSC `AGENT-LOOP.md:1279`（「该口已退场——批 2」→「批 2；**末载体随批 3 · S5（R10）移除**」）· `DOC-CODE-RECONCILE.md:98`（补「`THINCODER_CLI_ROOT` 末载体随批 3 · S5（R10）移除」）——依据 = 批次档 §5 批 3 · S5 补记（该符号最后代码载体 = `prompts-mirror-anchors.test.mjs:26`，由 R10 / S5 移除——git 实测复核在案）。
+
+**验证（写后复跑——先跑绿、后提交）**：仓根三机检 = **exit 0 ×3**（V5 悬空 0 ×2；宽度 273 档 0 违规 · V1/V2/V3 新增 0；台账 2 档 OK · 0 违规）；VSC `npm run doc:check` = **0 命中（阻断态，exit 0）**；VSC `test/doc-anchors.test.mjs` full = **16/16 绿**（含 T-DC6② 真仓锁）。提交 = **`8e903dfa`**（5 档；机检与提交分离）。本补记随第二批提交。
+
+**边界 / 未做**：零回退动作；除上列 5 档零触碰；批次段 §1 / §3–§6 零触碰。超任务点名的补面（②残注 2 处 · ③ `:1280`）如父侧判越界 → 可经 `8e903dfa` 整档回退。
+
 ## §3 设计评审（评审子 agent 自写）
 
 > **父侧代写打标**：评审者（review #1 · round 1 · 2026-09-13）的 `batch_segment` 写入被拒——
