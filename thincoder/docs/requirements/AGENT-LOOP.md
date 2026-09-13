@@ -305,7 +305,7 @@ VSC 面板会话与 CLI 主会话的**每 run 上下文注入面同族同序**�
 > **N-Q3 登记豁免（修正轮 #1——设计评审轮次 1 落修）**：跨仓判据 = **产品/运行面**（代码 import / 同步脚本 /
 > 共享模块）零跨仓；VSC 侧 T-CI-11 跨仓只读检验（读兄弟仓 `../thincoder` 源文件做序锚对照）= **交付期对照面**、
 > 登记豁免——**fail-closed**（兄弟仓缺失/异位 = 显式失败不 skip——跳过 = 序锚漂移检测静默失效）——**T-CI-11 已退场（整删——两仓合并批 2；删除记录 = 2026-09-13-TWO-REPO-MERGE §5）**；同款 = VSC
-> `test/prompts-mirror-anchors.test.mjs（VSC 仓）`（同款兄弟仓读 + `THINCODER_CLI_ROOT` 覆盖 + fail-closed）。
+> `test/prompts-mirror-anchors.test.mjs（VSC 仓）`（同款兄弟仓读 + `THINCODER_CLI_ROOT` 覆盖 + fail-closed）——**该跨仓读面已退场（段删——两仓合并批 3 · S5（R10）；现体 = 单仓版双源守卫：本端同名集合相等 + 本端镜像节引用可解析；删除记录 = 2026-09-13-TWO-REPO-MERGE §5）**。
 
 ### 13.4 明确不做
 

@@ -1273,11 +1273,11 @@ VSC 现序违反了它（`:448` time → `:450` pushInjections）。**取「time
 | T-CI-8 | 正常 | skill load（含 `name/SKILL.md` 形态）；重复 load | `<skill-loaded>` 消息 + 转义 + 不截断；二次 → 已加载句 | F-Q7（D-CI8） |
 | T-CI-9 | 边界 | 连续两 run 快照（同会话） | 前一请求体 ⊆ 后一请求体且逐字节相等（前缀缓存契约） | N-Q1 |
 | T-CI-10 | 错误 | 召回/大纲/快照内部 I/O 失败（mock 抛错）；seam 计数（修正轮 #10） | 该块静默跳过；其余块与 user 输入零影响；召回/大纲/快照各恰 1 次调用/run（失败不重试——seam 计数） | N-Q2 |
-| T-CI-11 | 正常（双端对照） | 跨仓只读兄弟仓 （CLI 仓）`src/agent/setup.mjs`（`THINCODER_CLI_ROOT` 可覆盖；缺仓/异位 = fail-closed——显式失败不 skip；修正轮 #1） | 序表各 CLI 锚字面 + **文件内出现序**与 §17.4 单调一致检测——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；现体 = 兄弟仓 CLI 源在位（缺仓/异位 = fail-closed 显式失败） | F-Q13 |
+| T-CI-11 | 正常（双端对照） | 跨仓只读兄弟仓 （CLI 仓）`src/agent/setup.mjs`（`THINCODER_CLI_ROOT` 可覆盖；缺仓/异位 = fail-closed——显式失败不 skip；修正轮 #1） | 序表各 CLI 锚字面 + **文件内出现序**与 §17.4 单调一致检测——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；现体 = 兄弟仓 CLI 源在位（缺仓/异位 = fail-closed 显式失败）——该残部已退场（整删——两仓合并批 2；删除记录 = 2026-09-13-TWO-REPO-MERGE §5） | F-Q13 |
 
 **跨仓只读语义（修正轮 #1——父侧裁定：保留 fail-closed 并写明；N-Q3/N-P1 登记豁免随附；T-CI-11 已退场——整删——两仓合并批 2；删除记录 = 2026-09-13-TWO-REPO-MERGE §5）**：T-CI-11 读
-**兄弟仓**（相对本仓根 `../thincoder`；环境 = 两仓并排 checkout（teamcode 工作区）；`THINCODER_CLI_ROOT` 可覆盖（**该口已退场——两仓合并批 2；删除记录 = 2026-09-13-TWO-REPO-MERGE §5**）——同
-`test/prompts-mirror-anchors.test.mjs:21,30-34` 同款）。**缺仓/异位 = fail-closed（显式失败，
+**兄弟仓**（相对本仓根 `../thincoder`；环境 = 两仓并排 checkout（teamcode 工作区）；`THINCODER_CLI_ROOT` 可覆盖（**该口已退场——两仓合并批 2；末载体随批 3 · S5（R10）移除；删除记录 = 2026-09-13-TWO-REPO-MERGE §5**）——同
+`test/prompts-mirror-anchors.test.mjs:21,30-34` 同款）。——该同款跨仓读面已退场（段删——两仓合并批 3 · S5（R10）；删除记录 = 2026-09-13-TWO-REPO-MERGE §5）。**缺仓/异位 = fail-closed（显式失败，
 不 skip）**——理由：skip 会让「CLI 序变 → VSC 红」的漂移检测静默失效（本测试是双端序面的唯一机验锚；真空
 通过比红更坏）。该只读检验属**交付期对照面**——产品/运行链路零跨仓依赖（无 import / 无同步脚本 / 无共享
 模块）不变。需求侧登记补充 = `AGENT-LOOP（CLI 仓）§13.3` N-Q3 豁免句 + `PROMPT-SYSTEM（CLI 仓）§9.3`
@@ -1291,11 +1291,11 @@ N-P1 同款。
 
 | AC | 判据 | 回指 |
 |---|---|---|
-| AC-CI-1 | T-CI-1~T-CI-11 全绿（`node test/run-fast.mjs`） | F-Q1~F-Q13 / N-Q1~N-Q4 |
+| AC-CI-1 | T-CI-1~T-CI-11 全绿（`node test/run-fast.mjs`）——T-CI-11 已退场（整删——两仓合并批 2；删除记录 = 2026-09-13-TWO-REPO-MERGE §5） | F-Q1~F-Q13 / N-Q1~N-Q4 |
 | AC-CI-2 | 机检：`pushModeReminders` 全仓零命中；`Permission mode` 零命中；`slice(0, 8000)` 于 skill.mjs 零命中；`[mcp] ` 于 `src/mcp/index.mjs` 命中 | F-Q9/F-Q10/F-Q11 |
 | AC-CI-3 | systemPrompt 两态：有 AGENTS → `<untrusted_project_instructions>` 在、`OS:` 尾行不在；无 → 两者均不在；skills 空 → 零追加 | F-Q1/F-Q5/F-Q7 |
 | AC-CI-4 | 行数实测对表（§17.6）+ 两仓快层全绿（VSC 含新档登记）+ `check-doc-width` 新增违规 0 | N-Q3/N-Q4 |
-| AC-CI-5 | T-CI-11 绿（跨仓只读兄弟仓 `../thincoder`；**fail-closed**：缺仓/异位 = 失败不 skip——修正轮 #1）；双端序锚漂移检测（CLI 侧序变即红）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1） | F-Q13 |
+| AC-CI-5 | T-CI-11 绿（跨仓只读兄弟仓 `../thincoder`；**fail-closed**：缺仓/异位 = 失败不 skip——修正轮 #1）；双端序锚漂移检测（CLI 侧序变即红）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；残部（跨仓只读源在位守卫）已退场（整删——两仓合并批 2；删除记录 = 2026-09-13-TWO-REPO-MERGE §5） | F-Q13 |
 
 ### 17.9 边界（本批不做）
 

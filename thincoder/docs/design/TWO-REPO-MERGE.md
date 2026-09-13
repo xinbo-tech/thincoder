@@ -90,22 +90,22 @@
 
 | # | 机制 | 行级落点 | 合并后状态 | 处置 |
 |---|---|---|---|---|
-| R1 | 对端仓根发现（③兄弟目录） | CLI `scripts/doc-anchors.mjs:73` `resolvePeerRoot`，:80-86 兄弟循环 | **反转成假阳性生成器**——`ws/<sibling>` 命中旧仓真目录 | 删（仅留本仓根解析）；**连带测试 = CLI `test/doc-anchors.test.mjs`**（`:21` 导入 `resolvePeerRoot` + 对端解析 / 降级断言段——删断言段 + 导入清单同步；S4） |
-| R2 | 对端前缀解析 | CLI `scripts/doc-anchors.mjs:32` `PEER_PREFIX`；:173 排除式 5②（`token.split("/")[0] === PEER_PREFIX` ⇒ 跳判裸直引）；:188-190 `peerPrefixed` 早返回 | 命中旧 VSC 仓或悬空 | 删（token 走仓内相对路径）；**扫描口径 = 实施批按 `PEER_PREFIX` 全消费者面扫描，不按坐标清单**；**连带测试 = CLI `test/doc-anchors.test.mjs`**——**T-V5-5⑦ 夹具（`:139`）+ `:146-147` 计数断言随单仓化重述**（单仓化后该类 token 转「仓内相对路径」被判定 ⇒ 夹具期望需重述、非整段删；S4） |
-| R3 | 缺仓/域外口径 | CLI `scripts/doc-anchors.mjs:199` `domain-out` | 语义消失（无"域外"可言） | 删 |
-| R4 | 兄弟仓族常量 | CLI `scripts/doc-anchors.mjs:31`；`scripts/check-ledger.mjs:52` | 同仓真目录被认作兄弟仓 | 删 |
-| R5 | 跨仓形态判据（V4/X1/X3） | CLI `scripts/check-doc-width.mjs:49` `PEER_DIRS`；:257 X1 正则；:265 预筛 | **仓内合规路径被判违规** | 删判据与预筛；**连带测试 = CLI `test/doc-consistency.test.mjs`**（T-LS35–T-LS37 V4 段——`:226` 起）· CLI `test/doc-anchors.test.mjs`（V4 钉死快照 `:288-291` + `resolvePeerRoot` 直驱 `:293`——随 R1 同档处理）；S4 |
-| R6 | 台账跨仓闸（L4） | CLI `scripts/check-ledger.mjs:123` 形态判据；:70 wide 域 | 仓内路径被认作"跨仓形态" | 删形态判据；wide 域收为本仓根；**连带测试 = CLI `test/ledger.test.mjs`**（T-LS2 / T-LS3 跨仓 L4 必报 + T-LS42 / T-LS43 形态判据段 + T67 缺仓跳过段——实施前逐档确认失红面）· CLI `test/ledger-surface.test.mjs`（调用点改指——零跨仓断言）；S4 |
-| R7 | 对端根断言与解析 | VSC `scripts/check-doc-anchors.mjs:303（VSC 仓）` `assertPeerRoot`；:311-313 `resolvePeerRoot`；:331 调用点 | 合并后路径**真能解析**⇒断言静默通过 | 删（含调用点）；**连带测试 = VSC `test/doc-anchors.test.mjs:90（VSC 仓）`**（T-DC3 缺仓域外 / 自指 fail-closed——`:116` 段；T-DC7⑥ 对端符号夹具随批）· **连带脚本 = VSC `scripts/reconcile-lookup.mjs:19（VSC 仓）`**（import 自同目录 VSC `scripts/check-doc-anchors.mjs（VSC 仓）`——移仓 / 改指统一版）· VSC `test/reconcile-lookup.test.mjs（VSC 仓）`（随移仓同步）；S4 |
-| R8 | 跨仓形态判据（VSC 侧） | VSC `scripts/check-doc-width.mjs:39` `PEER_DIRS`；:260 X1；:268 预筛 | 同 R5（方向相反） | 删；**V1「（CLI 侧）」豁免保留**（单仓语义 = 产品域外引用豁免——§2.5；判据句按单仓语境重述随 R8 落）；**连带测试 = VSC `test/doc-consistency.test.mjs:177（VSC 仓）`**（T-VS31–T-VS33 V4 段）；S4 |
-| R9 | 台账跨仓闸（VSC 侧） | VSC `scripts/check-ledger.mjs:41` `SIBLING_NAMES`；:118 形态判据；:76 wide 域 | 同 R6 | 删；**连带测试 = VSC `test/ledger-check.test.mjs:55（VSC 仓）`**（T-VS2 / T-VS3 跨仓 L4 必报——`:74` 段 + 跨仓夹具）；S4 |
+| R1 | 对端仓根发现（③兄弟目录） | CLI `scripts/doc-anchors.mjs:73` `resolvePeerRoot`，:80-86 兄弟循环 | **反转成假阳性生成器**——`ws/<sibling>` 命中旧仓真目录 | 删（仅留本仓根解析）；**连带测试 = CLI `test/doc-anchors.test.mjs`**（`:21` 导入 `resolvePeerRoot` + 对端解析 / 降级断言段——删断言段 + 导入清单同步；S4）——已退场（六档坐标 as-of——并入仓根统一脚本；两仓合并批 2；删除记录 = 批次档 §5） |
+| R2 | 对端前缀解析 | CLI `scripts/doc-anchors.mjs:32` `PEER_PREFIX`；:173 排除式 5②（`token.split("/")[0] === PEER_PREFIX` ⇒ 跳判裸直引）；:188-190 `peerPrefixed` 早返回 | 命中旧 VSC 仓或悬空 | 删（token 走仓内相对路径）；**扫描口径 = 实施批按 `PEER_PREFIX` 全消费者面扫描，不按坐标清单**；**连带测试 = CLI `test/doc-anchors.test.mjs`**——**T-V5-5⑦ 夹具（`:139`）+ `:146-147` 计数断言随单仓化重述**（单仓化后该类 token 转「仓内相对路径」被判定 ⇒ 夹具期望需重述、非整段删；S4）——已退场（六档坐标 as-of——并入仓根统一脚本；两仓合并批 2；删除记录 = 批次档 §5） |
+| R3 | 缺仓/域外口径 | CLI `scripts/doc-anchors.mjs:199` `domain-out` | 语义消失（无"域外"可言） | 删——已退场（六档坐标 as-of——并入仓根统一脚本；两仓合并批 2；删除记录 = 批次档 §5） |
+| R4 | 兄弟仓族常量 | CLI `scripts/doc-anchors.mjs:31`；`scripts/check-ledger.mjs:52` | 同仓真目录被认作兄弟仓 | 删——已退场（六档坐标 as-of——并入仓根统一脚本；两仓合并批 2；删除记录 = 批次档 §5） |
+| R5 | 跨仓形态判据（V4/X1/X3） | CLI `scripts/check-doc-width.mjs:49` `PEER_DIRS`；:257 X1 正则；:265 预筛 | **仓内合规路径被判违规** | 删判据与预筛；**连带测试 = CLI `test/doc-consistency.test.mjs`**（T-LS35–T-LS37 V4 段——`:226` 起）· CLI `test/doc-anchors.test.mjs`（V4 钉死快照 `:288-291` + `resolvePeerRoot` 直驱 `:293`——随 R1 同档处理）；S4——已退场（六档坐标 as-of——并入仓根统一脚本；两仓合并批 2；删除记录 = 批次档 §5） |
+| R6 | 台账跨仓闸（L4） | CLI `scripts/check-ledger.mjs:123` 形态判据；:70 wide 域 | 仓内路径被认作"跨仓形态" | 删形态判据；wide 域收为本仓根；**连带测试 = CLI `test/ledger.test.mjs`**（T-LS2 / T-LS3 跨仓 L4 必报 + T-LS42 / T-LS43 形态判据段 + T67 缺仓跳过段——实施前逐档确认失红面）· CLI `test/ledger-surface.test.mjs`（调用点改指——零跨仓断言）；S4——已退场（六档坐标 as-of——并入仓根统一脚本；两仓合并批 2；删除记录 = 批次档 §5） |
+| R7 | 对端根断言与解析 | VSC `scripts/check-doc-anchors.mjs:303（VSC 仓）` `assertPeerRoot`；:311-313 `resolvePeerRoot`；:331 调用点 | 合并后路径**真能解析**⇒断言静默通过 | 删（含调用点）；**连带测试 = VSC `test/doc-anchors.test.mjs:90（VSC 仓）`**（T-DC3 缺仓域外 / 自指 fail-closed——`:116` 段；T-DC7⑥ 对端符号夹具随批）· **连带脚本 = VSC `scripts/reconcile-lookup.mjs:19（VSC 仓）`**（import 自同目录 VSC `scripts/check-doc-anchors.mjs（VSC 仓）`——移仓 / 改指统一版）· VSC `test/reconcile-lookup.test.mjs（VSC 仓）`（随移仓同步）；S4——已退场（六档坐标 as-of——并入仓根统一脚本；两仓合并批 2；删除记录 = 批次档 §5） |
+| R8 | 跨仓形态判据（VSC 侧） | VSC `scripts/check-doc-width.mjs:39` `PEER_DIRS`；:260 X1；:268 预筛 | 同 R5（方向相反） | 删；**V1「（CLI 侧）」豁免保留**（单仓语义 = 产品域外引用豁免——§2.5；判据句按单仓语境重述随 R8 落）；**连带测试 = VSC `test/doc-consistency.test.mjs:177（VSC 仓）`**（T-VS31–T-VS33 V4 段）；S4——已退场（六档坐标 as-of——并入仓根统一脚本；两仓合并批 2；删除记录 = 批次档 §5） |
+| R9 | 台账跨仓闸（VSC 侧） | VSC `scripts/check-ledger.mjs:41` `SIBLING_NAMES`；:118 形态判据；:76 wide 域 | 同 R6 | 删；**连带测试 = VSC `test/ledger-check.test.mjs:55（VSC 仓）`**（T-VS2 / T-VS3 跨仓 L4 必报——`:74` 段 + 跨仓夹具）；S4——已退场（六档坐标 as-of——并入仓根统一脚本；两仓合并批 2；删除记录 = 批次档 §5） |
 | R10 | 自指 fail-closed 防护 | VSC `test/prompts-mirror-anchors.test.mjs:26（VSC 仓）`（兄弟仓路径）、:28（自指断言）、:31-35（跨仓读取） | 前提消失——"缺对端必须失败"的语义保证在**无一条红测**下蒸发 | 删跨仓段（:26/:28 + 跨仓读取与比对）；**产品内双源守卫保留**——本端双源同名集合相等 + 本端镜像节引用可解析断言（单仓版，见 §2.7）；实施批 = S5；**该「删跨仓断言段」处置 = 本批 R1–R9 连带测试档的统一范式**（§2.14）；**R16 = 同范式**（context-parity T-CI-11——同型对端发现 + 自指防护 + 缺仓 fail-closed，见 R16 行） |
 | R11 | 提示词双副本 | CLI / VSC 各自的 `src/prompts/` 与 `docs/design/prompts/`；两产品 `AGENTS.md`「镜像提示词约定」段（CLI `:21` / VSC `:15`——as-of；含 `thincoder/scripts/…` 跨仓指针与「两端各自照抄」叙述） | 跨仓机制层失去对象；产品内双源存续（§2.7） | **跨仓机制层退役**；产品内「权威模板 ↔ 运行期落地物」双源保留（§2.7）；**AGENTS.md 两段 = 改写为产品内双源约定**（去跨仓叙述 / 跨仓指针——实施批 = S5） |
 | R12 | 「各仓自持」纪律句 | 两仓 `docs/README.md`（自持段——CLI `:114` / `README（VSC 仓）:23`，as-of）+ 两仓 `docs/requirements/ENGINEERING-MODE.md`（CLI §1.19 / `ENGINEERING-MODE（VSC 仓）§1`）+ 提示词自持节两副本（`discipline-normal.md`——CLI `:38` / VSC `:35`；`discipline-engineering.md`——CLI `:119` / VSC `:123`；均含 `docs/design/prompts/` 镜像副本；as-of） | 失去对象 | 改写为仓内规范（含提示词自持节两副本——S6）；验收 = T-M24（检域含提示词档） |
 | R13 | 「每仓一轮」流程口径 | 两仓 `src/prompts/discipline-engineering.md`（「跨仓批」条——CLI `:123` / VSC `:127`，as-of）及 `docs/design/prompts/` 镜像副本（各 `:98`） | 失去对象 | 改写（VSC 侧 T-DC16 条文锚随字面同步） |
 | R14 | 「禁跨仓 import」纪律句 | 两仓 `docs/requirements/ENGINEERING-MODE.md`（CLI §1.17 N1「语义同源·原文自持——不作跨仓 import」`:795`；`ENGINEERING-MODE（VSC 仓）§1` N5「不跨仓依赖」`:78`——as-of）；设计档同源句（CLI `docs/design/ENGINEERING-MODE.md` as-of `:698`/`:810`） | 单仓内 import 合法 | 删除禁令 |
 | R15 | 端差登记 | **纪律句级——无独立脚本落点**（`scripts/` 实测零判据）：VSC `docs/requirements/AGENT-LOOP.md:302（VSC 仓）` N-CL4「端差逐条登记不静默」；登记面 = `docs/design/README.md（VSC 仓）`「镜像差异表」节 + 两仓设计档端差登记节（如 CLI `docs/design/TESTING.md` §11.6） | 跨仓登记语境失去对象（登记面收为产品侧对位）；`（CLI 侧）`注记按产品侧语义存续——V1 豁免**保留**（§2.5 / R8） | 纪律句级——随 R12/R13 同批改写；**验收 = T-M27**（检索式——三落点） |
-| R16 | 跨仓 fail-closed 源在位守卫（T-CI-11——兄弟仓 CLI 源在位） | VSC `test/context-parity.test.mjs（VSC 仓）`（:3 计数句 14 条 · :15-17 头注跨仓自述 · :37 `CLI_ROOT` 兄弟解析 `join(VSC_ROOT, "..", "thincoder")` + `THINCODER_CLI_ROOT` 覆盖口 · :368-374 T-CI-11 整条——:371 自指断言 `notStrictEqual(CLI_ROOT, VSC_ROOT)` · :372-373 `cliSetup` 存在性 fail-closed） | 合并后 `join(VSC_ROOT, "..", "thincoder")` 恰解析到**仓内**子目录 `<合并仓根>/thincoder` ⇒ 两断言**恒真、守卫空转且静默绿**——与 R10 同型（对端发现 + 自指防护 + 缺仓 fail-closed 全要素；§2.4 尾注「不报红」类） | **整段退役**（R10 同款范式；实施批 = S4）——删 :3 计数句（14 → 13 条；T-CI-1 ~ T-CI-10）· :15-17 头注跨仓句 · :21 import 同步（`existsSync` 无他处消费者）· :37 解析（含 `THINCODER_CLI_ROOT` 口）· :368-374（banner + 整条用例）；**`cliSetup` 存在性断言不设单仓版**——其唯一消费者（跨仓序锚读取）已于 2026-09-12 PROSE-ANCHOR-RETIRE 退役，「兄弟产品内部文件存在」改写版属跨产品内部耦合（与 F2 互不触发相抵）、无同仓意义；**连带文档 = T-CI-11 引用行退场注记**——口径 = **按 T-CI-11 语义面扫描（含 §17.9 / 跨仓只读叙述段），非按坐标清单**；VSC `docs/design/AGENT-LOOP.md（VSC 仓）` `:48` 变更记录行——已落退场注记（收正轮——原列 as-of 豁免）；**代表点** = VSC `docs/design/AGENT-LOOP.md（VSC 仓）` `:1278-1284`（跨仓只读语义段）· `:1302`（§17.9 边界句）· §17 组（:1242 · :1276 · :1294 · :1298 · :1332 · :1334——as-of）· VSC `docs/design/TESTING.md:129（VSC 仓）` · CLI `docs/requirements/AGENT-LOOP.md:306` · CLI `docs/requirements/PROMPT-SYSTEM.md:337（+ :413）`——V5 注记面；**已随收正轮提前落地**（VSC 侧 7 处——§2.5 尾条；CLI 侧代表点 3 处——已随批 3 / S6 落地，同 §2.5 尾条）） |
+| R16 | 跨仓 fail-closed 源在位守卫（T-CI-11——兄弟仓 CLI 源在位） | VSC `test/context-parity.test.mjs（VSC 仓）`（:3 计数句 14 条 · :15-17 头注跨仓自述 · :37 `CLI_ROOT` 兄弟解析 `join(VSC_ROOT, "..", "thincoder")` + `THINCODER_CLI_ROOT` 覆盖口 · :368-374 T-CI-11 整条——:371 自指断言 `notStrictEqual(CLI_ROOT, VSC_ROOT)` · :372-373 `cliSetup` 存在性 fail-closed） | 合并后 `join(VSC_ROOT, "..", "thincoder")` 恰解析到**仓内**子目录 `<合并仓根>/thincoder` ⇒ 两断言**恒真、守卫空转且静默绿**——与 R10 同型（对端发现 + 自指防护 + 缺仓 fail-closed 全要素；§2.4 尾注「不报红」类） | **整段退役**（R10 同款范式；实施批 = S4）——删 :3 计数句（14 → 13 条；T-CI-1 ~ T-CI-10）· :15-17 头注跨仓句 · :21 import 同步（`existsSync` 无他处消费者）· :37 解析（含 `THINCODER_CLI_ROOT` 口）· :368-374（banner + 整条用例）；**`cliSetup` 存在性断言不设单仓版**——其唯一消费者（跨仓序锚读取）已于 2026-09-12 PROSE-ANCHOR-RETIRE 退役，「兄弟产品内部文件存在」改写版属跨产品内部耦合（与 F2 互不触发相抵）、无同仓意义；**连带文档 = T-CI-11 引用行退场注记**——口径 = **按 T-CI-11 语义面扫描（含 §17.9 / 跨仓只读叙述段），非按坐标清单**；VSC `docs/design/AGENT-LOOP.md（VSC 仓）` `:48` 变更记录行——已落退场注记（收正轮——原列 as-of 豁免）；**代表点** = VSC `docs/design/AGENT-LOOP.md（VSC 仓）` `:1278-1284`（跨仓只读语义段）· `:1302`（§17.9 边界句）· §17 组（:1242 · :1276 · :1294 · :1298 · :1332 · :1334——as-of）· VSC `docs/design/TESTING.md:129（VSC 仓）` · CLI `docs/requirements/AGENT-LOOP.md:306` · CLI `docs/requirements/PROMPT-SYSTEM.md:337（+ :413）`——V5 注记面；**已随收正轮提前落地**（VSC 侧 7 处——§2.5 尾条；CLI 侧代表点 3 处——已随批 3 / S6 落地；**批 3 收尾轮补注 3 处**（VSC `:1294` · `:1276` · `:1298`——T-CI-11 语义面全覆盖；同 §2.5 尾条）） |
 
 **R1 / R7 是本次退役中最隐蔽的两条**：它们不是"失效"，而是**反向生效**——合并后机制继续运行，但结论全错，
 且**不产生任何红**（R10 / R16 所示：测试侧守卫空转、语义保证在无人察觉中消失）。这类静默退化是本板块必须整体删除、而非逐条修补判据的根本原因。
@@ -121,14 +121,14 @@
 
 | 脚本 | 现状 | 合并后设计 |
 |---|---|---|
-| 文档锚一致性（V5） | CLI `scripts/doc-anchors.mjs`；VSC `scripts/check-doc-anchors.mjs（VSC 仓）`（两份实现） | 收为**一份**（居合并仓根 `scripts/`——域参数化，两态见下段）；路径 token 按**仓根相对路径**解析 |
+| 文档锚一致性（V5） | CLI `scripts/doc-anchors.mjs`；VSC `scripts/check-doc-anchors.mjs（VSC 仓）`（两份实现——已退场：并入仓根统一版，两仓合并批 2；删除记录 = 批次档 §5） | 收为**一份**（居合并仓根 `scripts/`——域参数化，两态见下段）；路径 token 按**仓根相对路径**解析 |
 | 文档格式（V1/V4） | 同名两份，`PEER_DIRS` 方向相反 | 收为一份（同上）；**V4 跨仓形态整类删除**（R5/R8） |
 | 台账（L4） | 同名两份，兄弟仓闸 | 收为一份（同上）；L4 收为**仓内可解析**（R6/R9） |
 | 语法（check-syntax） | 同名两份，无跨仓逻辑 | 按产品各跑一次（各产品自有源码树），逻辑不变 |
 
 **统一脚本定案（档名 / 位置 / 执行根 / 调用 / 扫描域两态）**：
 
-- **档名**：**沿用现有三名**——`scripts/doc-anchors.mjs` / `scripts/check-doc-width.mjs` / `scripts/check-ledger.mjs`（VSC 侧 `scripts/check-doc-anchors.mjs（VSC 仓）` 并入后取 `scripts/doc-anchors.mjs` 一名）⇒ 现行文档命令形态 `node scripts/<name>.mjs` **零改**（2026-09-13 第 3 修正轮裁定）。
+- **档名**：**沿用现有三名**——`scripts/doc-anchors.mjs` / `scripts/check-doc-width.mjs` / `scripts/check-ledger.mjs`（VSC 侧 `scripts/check-doc-anchors.mjs（VSC 仓）` 并入后取 `scripts/doc-anchors.mjs` 一名——已落地：两仓合并批 2；删除记录 = 批次档 §5）⇒ 现行文档命令形态 `node scripts/<name>.mjs` **零改**（2026-09-13 第 3 修正轮裁定）。
 - **位置**：合并仓根 `scripts/`（单份 ×3——文档锚 / 文档格式 / 台账；落点见 §2.14）。
 - **执行根**：机检命令一律**自合并仓根执行**（命令形态保持有效的前提）。
 - **调用**：两产品门禁链各自调用仓根统一脚本并**传入本产品域**（`thincoder/` 或 `thincoder-vscode/`）——避免两产品发布门禁相互牵连（F2「互不触发」/ N5）。
@@ -145,7 +145,7 @@
 - **代表形态**：「落点 = `scripts/doc-anchors.mjs`」（CLI `docs/design/ENGINEERING-MODE.md:553`）·「受影响文件表行 `scripts/check-doc-width.mjs`」（CLI `docs/design/ENGINEERING-MODE.md:522`）·「本端检查器 `scripts/check-ledger.mjs`」（VSC `docs/design/LEDGER-SELF-CONTAINED.md:546（VSC 仓）`）。
 - **分界**：**历史 AC / as-of 断言行按留痕处理、不改写**（坐标记录的是当时事实——同 `（X 仓）` 冻结口径 D10）；**随批处置** = 此界之外的现行断言（S4 脚本删改同批触发 + S6 文档批复核——改法不逐条规划）。
 
-**解析语义变更（关键）**：现行 `resolveFile` 的候选序含"本仓别名前缀剥离"（CLI `scripts/doc-anchors.mjs:189`）。
+**解析语义变更（关键）**：现行 `resolveFile` 的候选序含"本仓别名前缀剥离"（CLI `scripts/doc-anchors.mjs:189`——坐标 as-of：原档已退场，并入仓根统一脚本；两仓合并批 2；删除记录 = 批次档 §5）。
 合并后 token 形如 `thincoder/src/x.mjs` 时，候选① `resolve(root, token)` **直接命中**（因 CLI 内容确在 `thincoder/` 下）——
 即**两产品文档的 128 处路径 token 无需任何改写**，自行从"跨仓引用"降格为"仓内路径"。这是 §2.2 子目录命名约束的兑现点。
 
@@ -154,11 +154,11 @@
 
 - **R8/R9 文档面（15 处 A1）**——`thincoder-vscode/docs/design/LEDGER-SELF-CONTAINED.md` · `thincoder-vscode/docs/requirements/ENGINEERING-MODE.md` 内 T-VS2 / T-VS31–T-VS33 引用行；
   注记 = 「已退场（段删——两仓合并批 2；删除记录 = 2026-09-13-TWO-REPO-MERGE §5）」；T-VS2 / T-VS3 面附「存留语义由 T-VS35 覆盖」。
-- **R16 面（7 处 A1）**——`thincoder-vscode/docs/design/AGENT-LOOP.md` · `thincoder-vscode/docs/design/TESTING.md` 内 T-CI-11 引用行；注记 = 「已退场（整删——两仓合并批 2；…）」；
-  该面原列 S6（§2.15——「R16 连带文档面」）——**已随本收正轮提前落地**，S6 只保留复跑复核；含 `:48` 变更记录行（原列 as-of 豁免——实况落退场注记）。
+- **R16 面（7 处 A1；批 3 收尾轮补 3 处）**——`thincoder-vscode/docs/design/AGENT-LOOP.md` · `thincoder-vscode/docs/design/TESTING.md` 内 T-CI-11 引用行；注记 = 「已退场（整删——两仓合并批 2；…）」；
+  该面原列 S6（§2.15——「R16 连带文档面」）——**已随本收正轮提前落地**，S6 只保留复跑复核；含 `:48` 变更记录行（原列 as-of 豁免——实况落退场注记）；批 3 收尾轮补注 3 处 = `:1294`（AC-CI-1）· `:1276` / `:1298`（残注校准）——T-CI-11 语义面全覆盖（明细 = 批次档 §2 收尾轮补记）。
 - **台账单仓化面（19 处 A3）**——VSC 文档内 `docs/TODO.md` / `docs/TODO-archive.md` 引用行（跨 11 档；归属 = §2.6 台账单仓化的文档收尾）；注记 = 「产品级台账已退役（台账单仓化：现体 = 仓根 `docs/TODO.md`）」。
 - **终态实证（2026-09-13 复跑）**：VSC `npm run doc:check` = **exit 0**（41 → 0）；VSC 测试 doc-anchors 档零失败（T-DC6② 复锁 = 0）；仓根三机检保持全绿——复跑原文见批次档 §2 收正轮补记。
-- **仍留 S6（无门禁红）**：本板块两档（本档 + 需求档）R 表 / §2.14 的六档行号锚**语义注记**（批 2 §5 发现 #3）——机器侧由 `MERGED_SCRIPTS` 并入映射兜底（V5 悬空 0）；**随批 3 / S6 复核：本轮未动作（任务清单外）——保留原归属、待父侧裁定**。
+- **六档行号锚语义注记（批 2 §5 发现 #3——已收口，2026-09-13 批 3 收尾轮）**：本板块两档（本档 + 需求档）R 表 / §2.14 的六档行号锚**语义注记已落位**（形态 = 退场注记 + 来源指针——「已退场（…——两仓合并批 2；删除记录 = 批次档 §5）」型；落点 = §2.4 R1–R9 · §2.14「机检脚本（删改）」行 · §2.5 表 `现状` 列与解析语义段；不删行、不改编号）；需求档复扫 = 零已删档坐标（无注记对象）；机器侧由 `MERGED_SCRIPTS` 并入映射兜底（V5 悬空 0）。
   另：R16 面 CLI 侧代表点（CLI `docs/requirements/AGENT-LOOP.md:306` · `PROMPT-SYSTEM.md:337（+ :413）`）——**已随批 3 / S6 落地**（退场注记落位 = 该两档 T-CI-11 引用行，3 处；V5 悬空 0）。
 
 ### 2.6 文档层处置（F5 / N6 / B4 / B5）
@@ -295,9 +295,9 @@ phase 2 目标 = 「一个核 + 两个薄壳」：共享核心真正可 `import`
 | 类别 | 范围 |
 |---|---|
 | **结构搬迁** | CLI 仓顶层全部条目 → `thincoder/`；VSC 仓全部条目 → `thincoder-vscode/`（subtree 并入） |
-| **机检脚本（删改）** | CLI `scripts/doc-anchors.mjs`（299 → 删）· `scripts/check-doc-width.mjs`（367 → 删）· `scripts/check-ledger.mjs`（354 → 删）· `scripts/doc-impact.mjs`（141 → 措辞改写（§2.4）——±0，import 改指统一版）；VSC `scripts/check-doc-anchors.mjs（VSC 仓）`（411 → 删）· `scripts/check-doc-width.mjs（VSC 仓）`（365 → 删）· `scripts/check-ledger.mjs（VSC 仓）`（317 → 删）· `scripts/reconcile-lookup.mjs（VSC 仓）`（124 → 移仓 / 改指——import 改指统一版）；六档判据并入仓根统一版（§2.5）；调用点同步改指（两产品 test 面 + VSC `package.json` `doc:check`——§2.8；CLI `package.json` 无六档调用点——零改）；单源依赖改指见 §2.5；S4 |
+| **机检脚本（删改）** | CLI `scripts/doc-anchors.mjs`（299 → 删）· `scripts/check-doc-width.mjs`（367 → 删）· `scripts/check-ledger.mjs`（354 → 删）· `scripts/doc-impact.mjs`（141 → 措辞改写（§2.4）——±0，import 改指统一版）；VSC `scripts/check-doc-anchors.mjs（VSC 仓）`（411 → 删）· `scripts/check-doc-width.mjs（VSC 仓）`（365 → 删）· `scripts/check-ledger.mjs（VSC 仓）`（317 → 删）· `scripts/reconcile-lookup.mjs（VSC 仓）`（124 → 移仓 / 改指——import 改指统一版）；六档判据并入仓根统一版（§2.5）；调用点同步改指（两产品 test 面 + VSC `package.json` `doc:check`——§2.8；CLI `package.json` 无六档调用点——零改）；单源依赖改指见 §2.5；S4——已退场（六档档目 as-of——并入仓根统一脚本；两仓合并批 2；删除记录 = 批次档 §5） |
 | **机检脚本（新增）** | 合并仓根 `scripts/`（单份 ×3——文档锚 / 文档格式 / 台账；目录定死（仓根）· **档名沿用现有三名**——`scripts/doc-anchors.mjs` / `scripts/check-doc-width.mjs` / `scripts/check-ledger.mjs`（VSC 侧 `scripts/check-doc-anchors.mjs（VSC 仓）` 并入后取 `scripts/doc-anchors.mjs` 一名；§2.5）；拆分结构与实测行数见下注） |
-| **测试（R1–R10 · R16 连带面——删跨仓断言段 + 调用点改指统一版脚本；净删为主）** | CLI `test/doc-anchors.test.mjs`（297 → −25±10——含 R2 T-V5-5⑦ 夹具重述，见 §2.4 R2 行）· `test/doc-consistency.test.mjs`（309 → −30±10）· `test/ledger.test.mjs`（285 → −35±15）· `test/ledger-surface.test.mjs`（333 → ±0——调用点改指）· `test/doc-impact.test.mjs`（90 → ±0——调用点改指）；VSC `test/doc-anchors.test.mjs（VSC 仓）`（362 → −40±15）· `test/doc-consistency.test.mjs（VSC 仓）`（255 → −30±10）· `test/ledger-check.test.mjs（VSC 仓）`（180 → −25±10）· `test/reconcile-lookup.test.mjs（VSC 仓）`（100 → ±0——随移仓改指）· `test/context-parity.test.mjs（VSC 仓）`（374 → −11±3——R16 跨仓防护段整段退役；S4）· `test/prompts-mirror-anchors.test.mjs（VSC 仓）`（155 → ≤−20——R10 跨仓段删 + T-DC16 随 R13 同步；S5）；**除本行列名者外，两产品其余测试档零改**（可枚举口径）；逐档实测 delta 以实施轮为准（口径 = `wc -l`） |
+| **测试（R1–R10 · R16 连带面——删跨仓断言段 + 调用点改指统一版脚本；净删为主）** | CLI `test/doc-anchors.test.mjs`（297 → −25±10——含 R2 T-V5-5⑦ 夹具重述，见 §2.4 R2 行）· `test/doc-consistency.test.mjs`（309 → −30±10）· `test/ledger.test.mjs`（285 → −35±15）· `test/ledger-surface.test.mjs`（333 → ±0——调用点改指）· `test/doc-impact.test.mjs`（90 → ±0——调用点改指）；VSC `test/doc-anchors.test.mjs（VSC 仓）`（362 → −40±15）· `test/doc-consistency.test.mjs（VSC 仓）`（255 → −30±10）· `test/ledger-check.test.mjs（VSC 仓）`（180 → −25±10）· `test/reconcile-lookup.test.mjs（VSC 仓）`（100 → ±0——随移仓改指）· `test/context-parity.test.mjs（VSC 仓）`（374 → −11±3——R16 跨仓防护段整段退役；S4）· `test/prompts-mirror-anchors.test.mjs（VSC 仓）`（155 → **145（Δ −10）**——R10 跨仓段删 + T-DC16 随 R13 同步；S5；差额 = 可删跨仓面实测仅 12 行、守卫与常量面（单仓版 ③/⑤/T-DC16 + ⑨-3）为设计保留项——批次档 §5）；**除本行列名者外，两产品其余测试档零改**（可枚举口径）；逐档实测 delta 以实施轮为准（口径 = `wc -l`） |
 | **提示词** | 两产品 `src/prompts/`（15 档）+ `docs/design/prompts/`（15 档）——**结构保留**（D14）；仅退役其跨仓机制层 |
 | **文档** | 两产品 `docs/README.md`（自持段改写——CLI `:114` as-of / `README（VSC 仓）:23` as-of；R12）；纪律档 = `docs/requirements/ENGINEERING-MODE.md` §1.19 / `ENGINEERING-MODE（VSC 仓）§1`（R12 / R14 句）+ CLI `docs/design/ENGINEERING-MODE.md` 同源句（R14）+ VSC `docs/requirements/AGENT-LOOP.md:302（VSC 仓）` N-CL4 · VSC `docs/design/README.md（VSC 仓）`「镜像差异表」· CLI `docs/design/TESTING.md` §11.6（R15——随 R12 / R13 同批）；提示词双源面（`src/prompts/` + `docs/design/prompts/` 各持）：`discipline-normal.md`（R12 自持节——CLI `:38` / VSC `:35` as-of）· `discipline-engineering.md`（R12 自持节 + R13「跨仓批」条）；两产品 `AGENTS.md`（「镜像提示词约定」段改写——CLI `:21` / VSC `:15` as-of；R11 附加面）；**本板块两档**（`../requirements/TWO-REPO-MERGE.md` + 本档——R24a 标注面 + 自身锚处置见 §2.5）；**六档脚本引用面**（非命令形态 190——跨 14 档；登记与分界见 §2.5；命令形态零改） |
 | **CI** | 新增合并仓根 `.github/workflows/`；原 VSC 工作流迁出子目录 |
@@ -397,6 +397,10 @@ phase 2 目标 = 「一个核 + 两个薄壳」：共享核心真正可 `import`
 ---
 
 ## 变更记录
+
+- 2026-09-13：**批 3 收尾轮（四项遗留收口）**——① 六档行号锚**语义退场注记**落位（§2.4 R1–R9 · §2.14「机检脚本（删改）」行 · §2.5 表与解析语义段；形态 = 退场注记 + 来源指针，不删行、不改编号；§2.5 尾条「仍留 S6」收口）；
+  ② §2.14 测试行实测收正（VSC `prompts-mirror-anchors` 155 → **145（Δ −10）**——差额 = 可删跨仓面实测 12 行、守卫与常量面为设计保留项；见批次档 §5）；③ VSC 残余注记收口（`AGENT-LOOP.md` `:1294` 补注 · `:1276` / `:1298` 残注校准）与 A2 注记归因校准（`AGENT-LOOP.md:1279` · `DOC-CODE-RECONCILE.md:98`——末载体归 R10 / 批 3 · S5）；
+  ④ `prompts-mirror-anchors` 跨对端读引用复核（CLI 需求档 2 处 + VSC `AGENT-LOOP.md:1280` 加注——现体 = 单仓版双源守卫）；三机检 + VSC `doc:check` 复跑全绿。
 
 - 2026-09-13：**批 3（S6）· 纪律句改写（文档面）落地**——R12 / R14 / R15 / R16-CLI 侧四处落位（两产品 `docs/README.md` 自持段 · 两引擎需求档自持节 · 端差三落点 · T-CI-11 退场注记 3 处）；§2.14 拆分审视块按 `wc -l` 复核实测收正（309 → 265 出列 · 333 → 334 · 362 → 329 · 364 不变）；§2.5 尾条 / R16 行状态同步；三机检全域绿（2026-09-13 复跑）。
 
