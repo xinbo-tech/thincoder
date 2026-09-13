@@ -280,6 +280,7 @@ A8 / A9（对称面均入核）与 F3（零「新写」——不得造第三份�
 
 > **本表行本体（185 行）已随「文档拆分轮」（2026-09-13）按子系统拆分为独立档**（只搬不改语义）；本节保留**组口径注 · 子系统注册表 · 端特有桶 · 覆盖对账**；行原文见各子系统档。
 > **本档内凡称「§2.5 填齐 / §2.5 覆盖 / §2.5 行数」者**，行本体现住各子系统档——§2.5 = 其**注册表 + 列定义**，§2.5.1 = 其**索引 + 分组口径**。
+> **「行数（CLI / VSC / 核）」列的现落点**：核内逐档行数与拆分计划 → **§2.8.1**（R24a · S1 落地收正——行本体拆走后该列由本节列定义 + §2.8.1 表承载）。
 
 **子系统档注册表（15 档 · 覆盖 **181** 行；余 **4** 行 = 端特有桶 #180–#183 住本节下文）**
 
@@ -318,14 +319,19 @@ A8 / A9（对称面均入核）与 F3（零「新写」——不得造第三份�
 
 **族清单（16 族 / 63 条）**：会话 5 · 配置 4 · 记忆 3 · 索引 2 · 供应商 6 · MCP 5 · agent 主循环 6 · agent-tools 6 · advisor 2 · 压缩/标题/额度 3 · 权限 2 · 检查点/hooks 3 · 技能/规则/同伴/台账 5 · 推理/模型 3 · 工具实现面 2 · **宿主面与余项 6**（④ 四档 + 挂起面 #184 + 文案面 #185 两条对位）。
 
-**端特有桶（④ · 4 行 · 不迁——行本体住本节）**
+**端特有桶（④ · 4 行 · 不迁——行本体住本节；#180 / #182 收正见下表后注）**
 
 | # | 对位（CLI ↔ VSC） | 分类 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|
-| 180 | CLI `tui/**`（67 档）+ `tui.mjs` ↔ ④ | ④ | 端特有（TUI 渲染 / 交互 / 键位 / 布局 / 面板 / 命令面） | 结构性不对称 = **依赖壳能力（终端 TUI）**——B17 实测仅 CLI 11258 行 | — | 不迁（端特有） |
+| 180 | CLI `tui/**`（67 档）+ `tui.mjs` ↔ ④ | ④ | 端特有（TUI 渲染 / 交互 / 键位 / 布局 / 面板 / 命令面） | 结构性不对称 = **依赖壳能力（终端 TUI）**——B17 实测仅 CLI 11258 行 | — | 不迁（端特有；**两处函数本体归核——收正见下表后注**） |
 | 181 | CLI `acp.mjs` + `acp/**`（3 档）↔ ④ | ④ | 端特有（ACP 协议客户端 / 会话 / 传输） | 结构性不对称 = **仅 CLI 存在**（VSC `src/**` 零 acp 命中） | — | 不迁（端特有） |
-| 182 | CLI 其余单端杂项（`completions.mjs` · `crash-reports.mjs` · `heap-watch.mjs` · `markdown.mjs` · `upgrade.mjs` · `distill.mjs`）↔ ④ | ④ | 端特有（shell 补全 / 崩溃报告 / 堆监视 / TUI 渲染 / 自升级 / 蒸馏入口） | 结构性不对称 = **依赖壳能力或分发通道**（补全 = shell 通道；自升级 = CLI 分发；崩溃报告 / 堆监视 = CLI 进程形态）；`memory-command` / `permission` / `setup-wizard` 已单列（#135 / #165 / #177） | — | 不迁（端特有） |
+| 182 | CLI 其余单端杂项（`completions.mjs` · `crash-reports.mjs` · `heap-watch.mjs` · `upgrade.mjs` · `distill.mjs`）↔ ④ | ④ | 端特有（shell 补全 / 崩溃报告 / 堆监视 / 自升级 / 蒸馏入口） | 结构性不对称 = **依赖壳能力或分发通道**（补全 = shell 通道；自升级 = CLI 分发；崩溃报告 / 堆监视 = CLI 进程形态）；`memory-command` / `permission` / `setup-wizard` 已单列（#135 / #165 / #177）；**`markdown.mjs` 归核——收正见下表后注** | — | 不迁（端特有；`markdown.mjs` 除外） |
 | 183 | VSC `extension/**` 面板与宿主面（`chat-panel` · `panel-*` 8 档 · `notify` · `file-links` · `file-refs` · `diff-preview` · `editor-context` · `image-handler` · `vision-channel` · `turn-model` · `stop-trace` · `history-window`）↔ ④ | ④ | 端特有（webview / 宿主 API / 编辑器集成） | 结构性不对称 = **依赖壳能力（VS Code 宿主 API / webview）**——B17 实测仅 VSC；`config-watch` / `migrate-settings` / `permission-gate` 已单列（#132 / #165） | — | 不迁（端特有） |
+
+> **#180 / #182 收正（2026-09-14）**：
+> · **#182 `markdown.mjs`**——原判「不迁」**被 G2（依赖闭包必须落核内）覆盖 ⇒ 归核内**（`thincoder-core/markdown.mjs` 106 行）：它是核内已迁模块的依赖闭包（被 `thincoder-core/memory/core.mjs` · `thincoder-core/memory/delete.mjs` · `thincoder-core/rules.mjs` 消费）⇒ 相抵时 **G2 优先**。
+> · **#180 `tui/**` 两处归位**（取 #149 / #159）——**函数本体零 TUI 依赖**者可归核内：
+> `snapshotForUndo`（自 `thincoder-cli/src/tui/cmd-undo.mjs` 逐字随迁 → `thincoder-core/undo-stack.mjs` 47 行）· `computePanelBlocks`（自 `thincoder-cli/src/tui/subagent-freeze.mjs` 逐字随迁 → `thincoder-core/agent-tools/panel-blocks.mjs` 24 行）；其余 `tui/**` 维持不迁。
 
 **覆盖对账（单端 148 + 91 逐面闭合——§2.6 判据 3 覆盖程序）**
 
@@ -335,7 +341,7 @@ A8 / A9（对称面均入核）与 F3（零「新写」——不得造第三份�
 | CLI `acp.mjs` + `acp/**` | 4 | ④ 端特有（协议） | #181 |
 | CLI `cli/**` | 5 | #135 / #165 / #177（3 档对位）+ #182（2 档 ④） | — |
 | CLI 顶层对位档（session 8 · config · context · generate-title · text-budget · skills · rules · peer ×2 · token-ttl · auto-think · model-ref · model-specs · hooks · abort-provenance · advisor.mjs） | 22 | 对位行（#123–#127 / #128 / #142 / #143 / #154 / #160 / #162–#164 / #169–#173 / #175 / #176） | — |
-| CLI 顶层 ④ 档（completions · crash-reports · heap-watch · markdown · upgrade · distill） | 6 | ④ 端特有 | #182 |
+| CLI 顶层 ④ 档（completions · crash-reports · heap-watch · upgrade · distill） | 5 | ④ 端特有（`markdown.mjs` 归核——见上注） | #182 |
 | CLI `agent/**` | 7 | 对位（#149–#153 + `setup` / `setup-reminders` / `run-stages` 属 107 同路径对） | — |
 | CLI `agent-tools/**` 单端 | 7 | 对位（#154–#159） | — |
 | CLI `git/**` | 2 | 对位（#167 / #168） | — |
@@ -353,8 +359,8 @@ A8 / A9（对称面均入核）与 F3（零「新写」——不得造第三份�
 | VSC `tools/**` 单端 | 12 | 对位 10 档（#167 / #179 + 映射表）+ ④ 2 档（`context` / `focus`） | — |
 
 > **结论**：单端 **148 + 91 = 239 档**逐面闭合——每档或落对位行、或落 ④ 结构性不对称桶（附结构性证据）；无「两者皆缺」的未闭合面。
-> **④ 桶合计 = 103 档**：**CLI 80**（`tui/**` + `tui.mjs` 68 · `acp.mjs` + `acp/**` 4 · `cli/**` 2 · 顶层杂项 6）· **VSC 23**（`extension/**` 21 · `tools/**` 2）。
-> 顶层杂项 6 = `completions` · `crash-reports` · `heap-watch` · `markdown` · `upgrade` · `distill`；VSC `tools` 的 2 = `context.mjs` · `focus.mjs`。
+> **④ 桶合计 = 102 档**：**CLI 79**（`tui/**` + `tui.mjs` 68 · `acp.mjs` + `acp/**` 4 · `cli/**` 2 · 顶层杂项 5）· **VSC 23**（`extension/**` 21 · `tools/**` 2）。
+> 顶层杂项 5 = `completions` · `crash-reports` · `heap-watch` · `upgrade` · `distill`（`markdown.mjs` 归核——见上注）；VSC `tools` 的 2 = `context.mjs` · `focus.mjs`。
 > **边界纪律**：本桶只收「仅单侧存在 / 依赖壳能力」者（A9 第 1 条），**不得**以「差异 / 相似度低」入桶；其余 **136 档**全部落对位行。
 > **工具实现面单端档逐档映射表**（#178 / #179 的行内容）→ 已随拆档移入 **`docs/design/TOOLS.md` §2.3**（行本体）；本节不复制。
 #### 2.5.1 须用户裁条目清单（A11——四要素提交形式）
@@ -447,7 +453,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | 需求档（本板块改） | `docs/requirements/CORE-UNIFICATION.md` + **15 份子系统需求档**（同层 `docs/requirements/<子系统>.md`） | 114 | 工作流档 **195**（as-of 2026-09-13 需求侧拆分轮——含 §5 登记表）· 子系统需求档合计 **615**（`wc -l`） | 纯 `.md` ⇒ 免档位判定；拆分口径与清单见需求档 §5 |
 | 设计档（本档 · 本板块改） | `docs/design/CORE-UNIFICATION.md` | 329 | **969（Δ+640 · as-of 2026-09-13 S0b 收尾轮）** | 纯 `.md` ⇒ 免档位判定 |
 | **核包（S1 新建）** | `thincoder-core/package.json` | 0 | +22±4 | `@thincoder/core` · 独立版本 · **非 private** · exports 子路径 · `files` 白名单**含 `prompts/` 与 `tool-docs/`**（断言 D 的对象） |
-| **核包（S1 新建）** | `thincoder-core/`（模块 + `test/`） | 0 | 逐档行数挂 §2.5（S1 前不可预知） | 逐模块从两侧提取 / 融合；≤300 软线（N8） |
+| **核包（S1 新建）** | `thincoder-core/`（模块 + `test/`） | 0 | 逐档行数 / 拆分计划见 **§2.8.1**（S1 落地收正） | 逐模块从两侧提取 / 融合；≤300 软线（N8） |
 | **核提示词面（S1 新建）** | `thincoder-core/prompts/*.md`（15 档） | 0 | 逐档行数挂 §2.5 | 唯一副本（A7）；来源 = 两产品 `src/prompts/` 裁决结果（B14） |
 | **核提示词面（S1 新建）** | `thincoder-core/tool-docs/*.md`（25 档） | 0 | 逐档行数挂 §2.5 | 唯一副本（A7）；来源 = 两产品 `src/tools/*.md`（B14） |
 | **核提示词加载面（S0a 首建 · S1 随裁决面补齐）** | `prompt-files.mjs`（落 `thincoder-core/`） | 0 | +60±20 | D-C13 解析面（`import.meta.url` 为根——三态一致）；缺档语义按调用方三类（契约 9） |
@@ -465,7 +471,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | **产品测试（S2 改）** | `thincoder-cli/test/{prompts-dual-source,prompts-async-guidance,doc-consistency}.test.mjs` · `thincoder-vscode/test/prompts-mirror-anchors.test.mjs` · `files.mjs` | 116 / 168 / 265 / 145 / 84 | 逐档 ±10 | 双源断言改指新落点（含档名集合断言——随接线改） |
 | **记忆面（S2 改）** | `thincoder-cli/src/memory/**`（8 档：`schema` 452 · `docs` 419 · `code-sync` 415 · `core` 299 · `delete` 236 · `code-index` 219 · `file-walk` 109 · `scan` 95）· `thincoder-vscode/src/memory.mjs`（273）· `memory-tool.mjs`（386） | — | 逐档见 §2.5 | **A12**：面向 CLI 语义归一（CLI 为准）；VSC 两档改 / 删依 S0 裁决；**旧数据迁移面**（VSC `personal` 层 md / 遗留 `.json` / `modelPrefs`——无自动迁移路径——§2.12.3 上抛清单） |
 | **记忆面导入器（S2 新建）** | CLI `memory import` 子命令面（落 `thincoder-cli/src/cli/`） | 0 | +60±20 | **§2.5.1 A2 已裁 ①**（一次性导入器：VSC `personal` 层 md / 遗留 `.json` → CLI `entries`）；`modelPrefs` 无文件系统载体 ⇒ 不迁 |
-| **文案面（S1 建核 · S2 接线）** | 核内文案常量档（落 `thincoder-core/`）· `thincoder-vscode/src/i18n.mjs` + `locales/{en,zh}.json` | 0 / 57 / — | +40±15 / ±6 | **§2.5 #185 / 丁组 D1（待裁）**：容器归一 + 投影端差；机器消费面冻结（§2.12.2 第 12 行） |
+| **文案面（S1 建核 · S2 接线）** | 核内文案常量档（落 `thincoder-core/`）· `thincoder-vscode/src/i18n.mjs` + `locales/{en,zh}.json` | 0 / 57 / — | +40±15 / ±6 | **§2.5 #185 / 丁组 D1（已裁 · 按建议——2026-09-13）**：容器归一 + 投影端差；机器消费面冻结（§2.12.2 第 12 行） |
 | **版本下限面（S2 改——须过目）** | `thincoder-vscode/package.json` 的 `engines.vscode`（当前 `^1.85.0`）· `thincoder-cli/package.json` 的 `engines.node`（当前 `>=24`） | 131 / 43 | ±2 / ±2 | **A8 / A13（已裁）**：**采纳 `node:sqlite`（定案）**、抬下限、不保留降级路径；**候选值 `^1.104.0`**（原 `^1.101.0` 经实核不成立 ✗），经**真机实测**确认后定值（测法见 §2.11 A8）+ 用户过目；**配套运行时护栏**（`activate()` 自检 + 提示，不崩） |
 | **真依赖面（S2 改）** | `thincoder-cli/package.json` | 43 | +6±3 | `dependencies: {"@thincoder/core": "^<核版本>"}`（真 semver；**无** `bundledDependencies`——D-C9） |
 | **发布编排面（S2 改）** | `thincoder-cli/scripts/release-check.mjs` | 85 | +25±10 | 发布预检：断言 C（核版本已发布 + 装入版本一致）；挂在已有 `prepublishOnly`（`thincoder-cli/package.json:35`） |
@@ -485,13 +491,31 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 > **行数口径**：本表行数一律 `wc -l`（= 换行符计数；与编辑器「末行」显示差 1 属末尾空行，同 phase 1 口径）。
 > 「由 S0 裁决表决定」= 该面在 S0 前不可预知（登记口径，非遗漏）。
 > **档位判定**：上表涉改的**源 / 测试**档（核模块 · 产品 `src/**` · `test/**` · 新脚本）逐档受 ≤300（软线）/ ≤500（硬限）约束，
-> 行数与拆分计划随 §2.5 逐档给出；纯 `.md` 档（需求档 / 设计档）免档位判定，行数仅作增量参考。
+> 行数与拆分计划：核内逐档见 **§2.8.1**（S1 落地收正）；纯 `.md` 档（需求档 / 设计档）免档位判定，行数仅作增量参考。
 > **超软线档（`scripts/mirror-divergence.mjs`：171 → 480 行 · Δ+309 · `wc -l` 口径）——保留单档 + 拆分计划**：保留理由 = ① 单一入口保 F10 复现性（本板块全部招牌数字由同一脚本复现）；
 > ② 无冗余面可删；③ 未超 ≤500 硬限。**拆分计划** = 报告渲染 + 新面计算外提为姊妹档 `scripts/mirror-divergence-*.mjs`；
 > **消解条件** = 下次实质改动时或行数逼近 500 时执行（N8 / T-C14 的检查对象）。按 `split('\n')` 口径读 481——差 1 属末尾换行（同本表口径注）。
 > **段标注（A5）**：上表「S1 新建」= **核包首建**（按 A5 在 **S0a** 内执行，随即试跑）；「S1」段职责 = **建核补齐**（S0b 裁决面并入）；「S2 改 / S3 迁入」含义不变。
 > **兼容面（A7）**：对外契约变更的落地物（CHANGELOG / README / 迁移说明）逐条挂 **§2.12.2**——无变更则不入表（登记口径，非遗漏）。
 > **子系统面行（2026-09-13 文档拆分轮）**：本表**行本体仍住本档**（R24a 对象，未拆）；各子系统档的「受影响文件」节**回指**本表对应行（不复制行文）。
+
+#### 2.8.1 核内逐档行数与拆分计划（R24a 补全 · S1 落地收正 · 2026-09-14）
+
+**口径**：本小节 = 核内逐档行数的**设计侧落点**（R24a；T-C14 检查对象）；核内读数侧 = `thincoder-core/test/core-hygiene.test.mjs` 的 `SOFT_LINE_REGISTRY`（未登记的新超线档 = 红——防回潮）。行数 = `wc -l`；**>300（软线）档须带拆分计划**。
+
+| # | 档（`thincoder-core/` 内） | 当前行数 | 来源 / 落点（裁决行） | 拆分计划 |
+|---|---|---|---|---|
+| 1 | `config.mjs` | **419** | CONFIG #80 / #128（装载器 + DEFAULTS；S1 并入 VSC 面后 674 行 → 三档拆分产物） | **>300——须带**：① MCP 热重载族（`reloadMcpFromDisk` 起——约 80 行）按 VSC 切分同形外提姊妹档（`config-mcp.mjs` 式）；② `DEFAULTS` 全量表 + 派生纯函数族（约 190 行）外提姊妹档（`config-defaults.mjs` 式）；余量预计 ≤300。消解条件 = 下次实质改动时（同 `scripts/mirror-divergence.mjs` 例） |
+| 2 | `config-io.mjs` | 277 | CONFIG #129 / #131 / #177（单一读写面 + 自写通知 + provider 纯持久化函数） | —（软线内） |
+| 3 | `config-presets.mjs` | 46 | CONFIG #129（`PROVIDER_PRESETS` 取一侧） | —（软线内） |
+| 4 | `index-bin.mjs` | 48 | MEMORY #137（向量编解码——VSC 拆档逐字随迁） | —（软线内） |
+| 5 | `index-discover.mjs` | 176 | MEMORY #137（走查规则 / 扩展名表） | —（软线内） |
+| 6 | `permission.mjs` | 79 | AGENT-LOOP #165（权限闸；展示面 ④ 注入） | —（软线内） |
+| 7 | `undo-stack.mjs` | 47 | AGENT-LOOP #149（`snapshotForUndo`；自 `thincoder-cli/src/tui/cmd-undo.mjs` 随迁——#180 收正） | —（软线内） |
+| 8 | `agent-tools/panel-blocks.mjs` | 24 | CONSULTATION #159（`computePanelBlocks`；自 `thincoder-cli/src/tui/subagent-freeze.mjs` 随迁——#180 收正） | —（软线内） |
+| 9 | `ledger-surface.mjs` | 76 | WORKSPACE #174（台账可见面；渲染色表 ④ 注入） | —（软线内） |
+
+**覆盖口径**：本表 = S1 落地新增 / 拆分产物档（9 档 = §2.8 表「核包（S1 新建）」行的逐档展开）；`SOFT_LINE_REGISTRY` 其余已登记档（逐字随迁、结构未变）的拆分计划**待补**（记档——补登范围与时点另定）。
 
 ### 2.9 与既有纪律的冲突点核对
 
@@ -936,5 +960,6 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 - 2026-09-13（**目录改名子批 · 评审修正轮**——轮次 2 的 5 🟡 / 2 🔵 逐条落修）：§4.3.3 第 1 项行锚改**按内容匹配**（「自工作区根计 = 」行——行号随批次档增行漂移）；§4.5 **K3** 对照面 = **脚本产出子集** + **K2** 补第 5 保护项（241）与站点排除「逐字未变」；
   **类 C 补花括号简写站点**（4 → **5 处 / 5 档**）· §4.4.1 补**非 `.md` 档逐档行数（42 档）**；**提交时序写死**（实现者产出单笔改动集 → 父侧折行 / 打标 → 父侧执行该笔提交）；需求档补 **F14**（§4.11 未决 1 结案）。
 - 2026-09-13（**目录改名子批 · 小补丁轮**——父侧批 5 条逐条落）：折行集 2 → **3 行**（+ 台账 `docs/TODO.md` 1 行——「子 agent 需要上下文压缩机制」，294 → 302；执行者仍 = 父侧）+ **防漂移句**（实施轮 `check-doc-width` 改后实测复核折行集）；**K3** 人工改动枚举补「折行行集 3 行」；**站点排除 3 → 4 处**（第 4 处 = 批次档 §3 评审块——他段 append-only 冻结尾 + 工作区根口径）；**覆盖条目收正**（批次档 §2 七行——F11–F14 加入时未随登）。
+- 2026-09-14（**S1 收口轮 · 设计面补正**）：§2.5 端特有桶 **#180 / #182 收正**（`tui/**` 函数本体零 TUI 依赖者归核——`undo-stack.mjs` / `agent-tools/panel-blocks.mjs`；`markdown.mjs` 判「不迁」被 G2 覆盖 ⇒ 留核内）；§2.8 新增 **§2.8.1 核内逐档行数与拆分计划**（S1 新增 / 拆分 9 档 + `config.mjs` 拆分计划）；§2.8 文案面行裁定状态收正（丁组 D1 已裁 · 按建议）。
 
 

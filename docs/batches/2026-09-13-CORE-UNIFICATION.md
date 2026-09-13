@@ -1761,6 +1761,46 @@
 
 **同轮修订**：设计档 `docs/design/CORE-UNIFICATION.md` §4（折行集 / 防漂移 / K2 · K3 · K8 · D-B3 · D5 · D6 / §4.3.3 第 4 行 / 变更记录 1 条）。**三机检**（cwd = 仓根）复跑：`doc-anchors` / `check-doc-width` / `check-ledger` ——全 exit 0。
 
+### S1 收口轮 · 设计面补正（2026-09-14 · eng-designer）
+
+**段位**：当前段 = **S1 续轮之前**（设计面补正）；S2 / S3 面零触碰。本轮**只改设计 / 文档**——不写代码、不动 `thincoder-core/**`、未 commit（父侧统一）、未发起评审、未碰台账。
+
+**依据** = 父侧派单「S1 收口轮 · 设计面补正」（6 件）+ 本档 §1「追加裁定（收口：同类项一并按建议）」+ 本档 §5 的 S1 报告缺口 1–5。
+
+**6 件落点（改动档 → 变更点）**
+
+| # | 件 | 落点（档） | 变更点 |
+|---|---|---|---|
+| 1 | 核内新增档入设计档 | `docs/design/CORE-UNIFICATION.md`（§2.5 注 + **§2.8.1 新增**）· `CONFIG.md` / `MEMORY.md` / `WORKSPACE.md` / `AGENT-LOOP.md` / `CONSULTATION.md`（§5 指针） | 9 档逐档行数（`wc -l`：`config.mjs` **419** · `config-io` 277 · `index-discover` 176 · `permission` 79 · `ledger-surface` 76 · `index-bin` 48 · `undo-stack` 47 · `config-presets` 46 · `panel-blocks` 24）+ `config.mjs` 拆分计划（>300 者仅此一档） |
+| 2 | #182 裁定（**G2 优先**） | 同档 §2.5 端特有桶 #182 行 + 表后收正注 | `markdown.mjs` 判「不迁」被 G2 覆盖 ⇒ 归核内（核内已迁模块的依赖闭包——`memory/core.mjs` · `memory/delete.mjs` · `rules.mjs` 消费）；④ 桶计数同改（103 → 102 · CLI 80 → 79 · 顶层杂项 6 → 5） |
+| 3 | #180 裁定（**取 #149 / #159**） | 同档 §2.5 端特有桶 #180 行 + 收正注 | `snapshotForUndo` / `computePanelBlocks` 归核（逐字随迁 → `thincoder-core/undo-stack.mjs` / `agent-tools/panel-blocks.mjs`）；其余 `tui/**` 不迁 |
+| 4 | **#184 核内形态** | `docs/design/AGENT-LOOP.md` **§2.3 新增**（全文） | 核模块 `thincoder-core/agent/suspension.mjs`（新档 · +170±40）+ 注入面（carrier / runTurn / abortSignal / hooks ×4 / 唤醒句柄 / 退出回执）+ 端特有面 3 组 + 验收点 5 条——**S1 续轮执行面** |
+| 5 | #185 / D1 裁定状态 | `docs/design/I18N.md` · `docs/design/CORE-UNIFICATION.md` · `docs/requirements/I18N.md` · `docs/requirements/CORE-UNIFICATION.md`（+ 同类项 **D2** → `docs/design/AGENT-LOOP.md` §3.2） | 待裁 → **已裁（2026-09-13）· 按建议**（落核禁令解除——文案面可进 S1 续轮） |
+| 6 | `docs/README.md` §4 收正 | `docs/README.md` | requirements 侧「暂留 / 随 S2 逐档建」→「**已建齐 15 档**（与设计侧同名成对）」 |
+
+**派单外同源处置（已报 · 同类项 / 基线修复）**
+
+1. **基线红：3 条悬空锚（就地修复）**——本轮会话开始时（未动任何档）`doc-anchors` 实测 **exit 1**：根域 3 条悬空——`docs/design/AGENT-LOOP.md:60` · `:79` 的 `config-io.mjs:319` · `docs/design/MEMORY.md:39` 的 `index-discover.mjs:5-8`。
+   成因 = S1 建核新增核内同名档后，两 basename 在树内各出现**双份**（核 + VSC）⇒ 机检 ④「唯一 basename」谓词失配；本轮补路径前缀收正（`thincoder-vscode/src/…`——引用目标逐行实核）。
+   **同族风险登记**：S1 续轮再入核内档时同类失配可能再发——`doc-anchors` 每轮收口必跑（覆盖面）。
+2. **D2 状态同批收正**——同一裁定块（「收口：同类项一并按建议」）覆盖 D2 `autoThink`；`AGENT-LOOP.md` §3.2 行 待裁 → 已裁。
+3. **需求侧 D1 同源行收正**——`docs/requirements/I18N.md`（§2.1 断言行 · F12 行 · 变更记录）与 `docs/requirements/CORE-UNIFICATION.md` §5 登记表行同批收正。
+
+**三机检（cwd = 仓根 · 改后原样读数）**
+
+- `node scripts/doc-anchors.mjs` → **exit 0**——根域：`V5 汇总：候选 1358 · 悬空 0 · 注记豁免 28` · `OK(V5): 0 条悬空锚（闸态——阈值 0）`；CLI 域：`候选 8799 · 悬空 0` · `OK(V5)`；VSC 域：`V5: 命中 0 处 · distinct 0（A1 0 / A2 0 / A3 0）· 报告态`。
+- `node scripts/check-doc-width.mjs` → **exit 0**——`OK(宽度): 扫描域全部 .md 无 >300 字符单行（306 文件）。` · `一致性 V1/V2/V3：新增违规 0 条 · 存量（基线内）0 条。`
+- `node scripts/check-ledger.mjs` → **exit 0**——`OK: thincoder/docs/TODO.md` · `OK: thincoder/docs/TODO-archive.md` · `0 处违规（阻断——修掉）· 基线 0 条`。
+
+**行数变化（`wc -l`）**：`CORE-UNIFICATION.md` 940 → **965**（Δ+25）· `AGENT-LOOP.md` 92 → **133**（Δ+41）· `I18N.md` 47 → **48** · `CONFIG.md` 75 → **77** · `MEMORY.md` 77 → **79** · `WORKSPACE.md` 53 → **55**。
+`CONSULTATION.md` 87 → **89** · `README.md` 69 → **70** · `requirements/CORE-UNIFICATION.md` → **198** · `requirements/I18N.md` → **42**。
+
+**S1 续轮可执行面**：① #184 按 `AGENT-LOOP.md` §2.3 落核（顺序约束：与异步机械族 VSC 侧融合同批或紧邻）；② #185 文案面可落核（D1 已裁）；③ 其余未完成面（~60 行融合 / 审计缺口）以本档 §5 S1 报告为准。
+
+**未决（记档）**：① `SOFT_LINE_REGISTRY` 其余已登记档的逐档拆分计划仍待补（设计侧落点 = §2.8.1「覆盖口径」——补登范围 / 时点待定）；② 两处历史变更记录行（`docs/design/CORE-UNIFICATION.md` · `docs/requirements/I18N.md` 的 2026-09-13 条目）保留当日的「待裁」字样——**as-of 记述、不改写历史**，新条目已在其后收正。
+
+**打标（本作者段内就地修正 · 2026-09-14）**：上块「行数变化」行原 **339 字符**（超文档宽度闸），就地折为两行——**语义与文字零改**；折后三机检复跑全 **exit 0**。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
