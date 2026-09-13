@@ -1,6 +1,6 @@
 /**
- * prompt-files.test.mjs — 核内单一提示词解析面（CORE-UNIFICATION D-C13 · S0a）。
- * 行为面：核包提示词面档名集合（S0a 席位）· 缺档语义按调用方保留（契约 9）·
+ * prompt-files.test.mjs — 核内单一提示词解析面（CORE-UNIFICATION D-C13 · S0a 建 · S1 补齐）。
+ * 行为面：核包提示词面档名集合（S1 全量）· 缺档语义按调用方保留（契约 9）·
  * 用户已裁两条融合的落地（#44 取「the document」· #47 标题并集 + 跨端注入位）。
  */
 import { test } from "node:test"
@@ -15,15 +15,18 @@ import {
   loadToolDoc,
 } from "../prompt-files.mjs"
 
-/** S0a 席位槽位提示词（12）= 逐字节同 8 + sim ≥ 0.90 非逐字节同 4（裁决后落地）。 */
-const S0A_SLOT_PROMPTS = [
+/** S1 核内槽位提示词（15）= 全量（S0a 席位 12 + S1 补齐 3）。 */
+const SLOT_PROMPTS = [
   "advisor-design.md",
   "advisor-round1.md",
   "advisor-round2.md",
   "advisor-round3.md",
   "common.md",
   "consult-base.md",
+  "discipline-engineering.md",
+  "discipline-normal.md",
   "persona-coder.md",
+  "persona-eng-coder.md",
   "persona-eng-designer.md",
   "persona-engineering.md",
   "persona-explore.md",
@@ -31,9 +34,10 @@ const S0A_SLOT_PROMPTS = [
   "persona-plan.md",
 ]
 
-/** S0a 席位工具描述（20）= 逐字节同 20。 */
-const S0A_TOOL_DOCS = [
+/** S1 核内工具描述（25）= 全量（S0a 席位 20 + S1 补齐 5）。 */
+const TOOL_DOCS = [
   "apply_patch",
+  "bash",
   "checklist",
   "delete",
   "edit",
@@ -43,24 +47,28 @@ const S0A_TOOL_DOCS = [
   "get_current_time",
   "git",
   "glob",
+  "grep",
   "hashline_edit",
   "insert_after",
+  "lint",
   "ls",
   "lsp",
   "process",
+  "question",
   "read",
   "read_image",
   "tree",
   "wait_for",
+  "websearch",
   "write",
 ]
 
-test("core prompts/ holds exactly the S0a seat slot prompts", () => {
-  assert.deepEqual(readdirSync(PROMPTS_DIR).sort(), [...S0A_SLOT_PROMPTS].sort())
+test("core prompts/ holds exactly the full slot set (15)", () => {
+  assert.deepEqual(readdirSync(PROMPTS_DIR).sort(), [...SLOT_PROMPTS].sort())
 })
 
-test("core tool-docs/ holds exactly the S0a seat tool descriptions", () => {
-  assert.deepEqual(readdirSync(TOOL_DOCS_DIR).sort(), S0A_TOOL_DOCS.map((n) => `${n}.md`).sort())
+test("core tool-docs/ holds exactly the full tool-description set (25)", () => {
+  assert.deepEqual(readdirSync(TOOL_DOCS_DIR).sort(), TOOL_DOCS.map((n) => `${n}.md`).sort())
 })
 
 test("slot loader is silent on a missing file (contract 9: 静默空串)", () => {

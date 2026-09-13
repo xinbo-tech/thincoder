@@ -8,16 +8,20 @@
     "node": ">=22.13.0"
   },
   "exports": {
-    "./prompt-files.mjs": "./prompt-files.mjs",
-    "./prompt-overlays.mjs": "./prompt-overlays.mjs",
-    "./log.mjs": "./log.mjs",
-    "./advisor/convergence.mjs": "./advisor/convergence.mjs",
-    "./advisor/history.mjs": "./advisor/history.mjs",
-    "./advisor/truncate.mjs": "./advisor/truncate.mjs"
+    "./*": "./*"
   },
   "files": [
     "*.mjs",
     "advisor/",
+    "agent/",
+    "agent-tools/",
+    "git/",
+    "mcp/",
+    "memory/",
+    "provider/",
+    "session-*.mjs",
+    "tools/",
+    "traces/",
     "prompts/",
     "tool-docs/"
   ]
