@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 /**
- * doc-anchors-core.mjs — 文档锚一致性机检 · VSC 锚引擎（合并仓统一版 · S4 机检单仓化；`doc-anchors.mjs` 判据核）。
+ * doc-anchors-core.mjs — 文档锚一致性机检 · VSC 锚引擎（判据核；`doc-anchors.mjs` 家族）。
  *
  * 来源 = `thincoder-vscode/scripts/check-doc-anchors.mjs`（本仓独立实现 · 语义同源）；判据权威 =
  * `thincoder-vscode/docs/design/DOC-CODE-RECONCILE.md` §4（本档不重述判据——单一权威源）。
+ * 结构（R24a 拆分——各档 ≤300 行）：本档 = VSC 锚引擎（抽取 + 判定）；采集面（源域 / 在册判据域）=
+ * `doc-anchors-targets.mjs`；V5 锚引擎 = `doc-anchors-v5.mjs`；入口 / 报告 = `doc-anchors.mjs`。
  * 判据面 = **存在性**。三类锚：
  *   A1 用例号：`T-…` / 裸 `T<数字>`——**右界强制**（`T-VS3` 不得由 `T-VS32` 满足）；
  *              在册判据 = 目标域 `test/**` 的**用例注册调用**（顶层 `test(` / `slow(` 首参字面量）标题含该 token。
@@ -22,12 +24,14 @@
  * **无基线通道**：本检查器不读也不写任何基线档——不是「默认空」，是通道不存在（阈值 0 的对应实现）。
  * 输出（由 `doc-anchors.mjs` 主行程承载）：逐处 `✗ V5 <档>:<行> [A1|A2|A3] <锚> — 期望 … · 实得 …`；尾行计数；`--json` 机读清单。
  */
-import { readdirSync, readFileSync, statSync } from "node:fs"
-import { join, relative, resolve, basename } from "node:path"
+import { readFileSync, statSync } from "node:fs"
+import { basename, join, relative, resolve } from "node:path"
 // P2 谓词单源（与 V5 射程豁免同源）+ 六档并入映射（S4 退场注记语义的机器侧对位）
 import { isExecutableLine, MERGED_SCRIPTS } from "./check-doc-width.mjs"
 // A3 判序单源：台账机检 L4② 同一函数（不复制实现、不发明第二套定位语义——设计档 D3 / §4.5）
 import { evidenceState } from "./check-ledger.mjs"
+// 采集面（源域 + 在册判据域——A1/A2 目标面，单源）
+import { caseTokenExists, collectCaseTitles, collectCodeTokensFor, collectDocStems, collectSourceDomain } from "./doc-anchors-targets.mjs"
 
 /** 三类锚（判据面 = 存在性）。 */
 export const ANCHOR_KINDS = ["A1", "A2", "A3"]
@@ -50,9 +54,6 @@ export const A3_PLACEHOLDER = ["x", "foo", "bar", "path", "to", "name", "notes",
 export const isGlobOrAnglePlaceholder = (t) => t.split("/").some((s) => s.includes("*") || /<[^>]*>/.test(s))
 /** A2 排除式 ④：平台码形态。 */
 export const PLATFORM_CODE_RE = /^[A-Z]{2,5}\d{3,}$/
-const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", "coverage", ".turbo"])
-/** 台账两档（L1–L4 专判面——不入本检查源域，避免重复报行）。 */
-export const LEDGER_FILES = ["docs/TODO.md", "docs/TODO-archive.md"]
 
 /**
  * 平台 / 库 API 词表（A2 排除式 ③——判据句：**不是本仓命名空间的名字，不属「本仓自建符号」的定义域**；
@@ -168,128 +169,6 @@ export function extractTokens(text, ctx = { docStems: new Set(), repoNames: [] }
     if (isStrongSymbol(s) && !a2Excluded(s, ctx)) out.push({ kind: "A2", token: s, after: c.after })
   }
   return out
-}
-
-/** 源域（被检文档）：本域 docs 树全量 .md − 归档（历史快照）− 批档（时序日志）− 台账两档（L1–L4 专判）。 */
-export function collectSourceDomain(root) {
-  const out = []
-  const walk = (dir) => {
-    let names = []
-    try { names = readdirSync(dir) } catch { return }
-    for (const n of names) {
-      if (SKIP_DIRS.has(n)) continue
-      const p = join(dir, n)
-      let st
-      try { st = statSync(p) } catch { continue }
-      if (st.isDirectory()) walk(p)
-      else if (n.endsWith(".md")) out.push(p)
-    }
-  }
-  walk(join(root, "docs"))
-  const keep = (p) => {
-    const rel = relative(root, p).replace(/\\/g, "/")
-    if (rel.split("/").includes("_archive")) return false
-    if (rel === "docs/batches" || rel.startsWith("docs/batches/")) return false
-    return !LEDGER_FILES.includes(rel)
-  }
-  return out.filter(keep).sort()
-}
-
-/** 档名主干集合（A2 排除式 ②——本域 `docs/` 树任一 `.md` 档名去后缀）。 */
-export function collectDocStems(root) {
-  const stems = new Set()
-  const walk = (dir) => {
-    let names = []
-    try { names = readdirSync(dir) } catch { return }
-    for (const n of names) {
-      if (SKIP_DIRS.has(n)) continue
-      const p = join(dir, n)
-      let st
-      try { st = statSync(p) } catch { continue }
-      if (st.isDirectory()) walk(p)
-      else if (n.endsWith(".md")) stems.add(n.slice(0, -3))
-    }
-  }
-  walk(join(root, "docs"))
-  return stems
-}
-
-/** 代码面标识符集（A2 在册判据：词界命中 ⇔ 标识符集含该名）。 */
-export function collectCodeTokens(root, dirs = ["src", "webview", "scripts", "test"], files = ["extension.mjs"]) {
-  const set = new Set()
-  const add = (p) => {
-    let text = ""
-    try { text = readFileSync(p, "utf8") } catch { return }
-    for (const m of text.matchAll(/[A-Za-z_$][A-Za-z0-9_$]*/g)) set.add(m[0])
-  }
-  const walk = (dir) => {
-    let names = []
-    try { names = readdirSync(dir) } catch { return }
-    for (const n of names) {
-      if (SKIP_DIRS.has(n)) continue
-      const p = join(dir, n)
-      let st
-      try { st = statSync(p) } catch { continue }
-      if (st.isDirectory()) walk(p)
-      else if (/\.(?:mjs|js|cjs|json)$/.test(n)) add(p)
-    }
-  }
-  for (const d of dirs) walk(join(root, d))
-  for (const f of files) add(join(root, f))
-  return set
-}
-
-/** 合并仓代码面（A2 在册判据域）：各域代码树并集（判据句 = 仓内实装；两仓合并后「对端」并入仓内）。 */
-export function collectCodeTokensFor(roots) {
-  const set = new Set()
-  for (const r of roots) for (const t of collectCodeTokens(r)) set.add(t)
-  return set
-}
-
-/** 读一个字面量串（`"` / `'` / `` ` `` 起始；未闭合 → null）。 */
-function readLiteral(text, i) {
-  const q = text[i]
-  if (q !== '"' && q !== "'" && q !== "`") return null
-  let out = ""
-  for (let k = i + 1; k < text.length; k++) {
-    const c = text[k]
-    if (c === "\\") { out += text[k + 1] ?? ""; k++; continue }
-    if (c === q) return out
-    if (c === "\n" && q !== "`") return null
-    out += c
-  }
-  return null
-}
-/** A1 目标域：`test/**` 的用例注册调用（顶层 `test(` / `slow(`）首参字面量 = 用例标题集。 */
-export function collectCaseTitles(testRoot) {
-  const titles = []
-  const walk = (dir) => {
-    let names = []
-    try { names = readdirSync(dir) } catch { return }
-    for (const n of names) {
-      if (SKIP_DIRS.has(n)) continue
-      const p = join(dir, n)
-      let st
-      try { st = statSync(p) } catch { continue }
-      if (st.isDirectory()) walk(p)
-      else if (/\.(?:mjs|js|cjs)$/.test(n)) {
-        let text = ""
-        try { text = readFileSync(p, "utf8") } catch { continue }
-        for (const m of text.matchAll(/(?<![A-Za-z0-9_$])(?:test|slow)\s*\(/g)) {
-          const lit = readLiteral(text, m.index + m[0].length)
-          if (lit) titles.push(lit)
-        }
-      }
-    }
-  }
-  walk(testRoot)
-  return titles
-}
-/** A1 在册判据：某用例标题含该 token（**右界判**——`T-VS3` 不得由 `T-VS32` 满足）。 */
-export function caseTokenExists(titles, token) {
-  const esc = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-  const re = new RegExp(`(?<![A-Za-z0-9_-])${esc}(?![A-Za-z0-9_-])`)
-  return titles.some((t) => re.test(t))
 }
 
 /** 症状串（固定——设计档 §4.10）。 */
