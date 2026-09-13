@@ -12,7 +12,7 @@ Design docs in `docs/design/`. Independent product — no dependency on thincode
 - ESM (`.mjs`) throughout — `package.json` declares `"type": "module"`.
 - LLM calls go through native `fetch` with SSE streaming, same as thincoder core.
 - Tool implementations are adapted for VS Code context (workspace root = cwd; no directory restriction on tools since 2026-09-02 — paths resolve relative to cwd, approval gate is the guard).
-- **镜像提示词约定（2026-09-04 项目文档层声明——[x] 2026-09-04 11:11 修订——§18.11）**：本仓库（thincoder-vscode）与 thincoder CLI 的 `src/prompts/*.md`——**byte-identical 约束已取消（2026-09-04）——设计锚为准**：锚文本在设计文档（AGENT-LOOP.md §18.x 等）逐字定稿——两端各自照抄实现——差异靠设计评审+交付审计发现（非机械比对）；**不再要求"只写 CLI 侧 + 同步脚本"**（`thincoder/scripts/sync-prompts.mjs` 同步脚本候选已取消——见 `thincoder/docs/TODO.md` 8 点批 #1）。注：两端当前文本仍一致（末次维护 2026-09-04）——未来允许漂移/独立演进。
+- **镜像提示词约定（本产品双源——2026-09-13 修订）**：本产品提示词 = **产品内双源**：`docs/design/prompts/*.md`（中文权威模板——内容权威 / 内容维护位）↔ `src/prompts/*.md`（运行期落地物——加载与发布面）。变更流 = 改中文模板 → 内容把关 → 落地回填（手抄 / 译写——无同步脚本）；双源语义同源、原文自持——落地质量由内容把关 + 设计评审守（非机械比对）。
 
 
 ## Key Conventions

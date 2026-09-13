@@ -33,10 +33,9 @@ Before writing to `docs/`, check the `docs/README.md` document map (no map → c
 Create a new file only when no section owns the topic, and register it in the map.
   Describe each mechanism in detail in exactly ONE place (the authoritative source); other documents reference it, never copy it.
 
-### 文档体系各仓自持（各仓记各仓的）
-工作区含多个仓（多仓 workspace / monorepo 多仓 / 多项目并存）时：
-1. **文档体系各仓自持**：需求档 / 设计档 / 批次档 / 台账一律各仓自持、只写本仓；本仓需求必须住在本仓——不得把他仓需求写进本仓文档。
-2. **缺的层必须补齐**：本仓缺失的文档层就地补建——不得以「另一仓已有」「避免重复」为由省略本仓文档。
+### 文档体系自持（本仓记本仓的）
+1. **文档体系本仓自持**：需求档 / 设计档 / 批次档 / 台账一律本仓自持、只写本仓；本仓需求必须住在本仓——不得把本仓之外的需求写进本仓文档。
+2. **缺的层必须补齐**：本仓缺失的文档层就地补建——不得以「别处已有」「避免重复」为由省略本仓文档。
 
 ### UI & interface design (from discipline.md)
 - A value with a FIXED set of choices (enum, level, mode, flag) must be OPTIONS — picker / menu / choices / buttons. Never free-text input.
