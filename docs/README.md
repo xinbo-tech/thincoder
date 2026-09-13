@@ -179,6 +179,7 @@ docs/
 | 提示词架构（历史） | ~~`_archive/PROMPT-DECOUPLING.md`~~ | 已被 PROMPT-SYSTEM 蓝图 + 施工①②③取代 |
 | 路线图/评估/竞评（历史） | `_archive/ROADMAP-0.9.0.md`、`_archive/EVALUATION.md`、`_archive/COMPETITIVE-CLI-2026.md`、`_archive/KIMI-CODE-PROMPT-ANALYSIS.md`、`_archive/TTSR-ANALYSIS.md`、`_archive/EDIT-TOOL-*.md` | 时点数据/已被取代——勿引用为现状 |
 | 文档基建（本批） | `_archive/DOC-REORG.md` | 2026-09-10 文档目录结构重组施工设计——**已交付入档**（批尾 T1-T5 同日完成） |
+| 两仓合并 | `requirements/TWO-REPO-MERGE.md`（需求）+ `design/TWO-REPO-MERGE.md`（设计+测试） | 2026-09-13 建档（**设计待评审，未实施**）——CLI 与 VSC 收入单一 git 仓、各占子目录；跨仓机制全线退役。架构级机制档（功能性需求以机制约束规格句表述——§3.3 规则 6）；**phase 2 核心统一只留通道不实施** |
 | 在途设计档（未实施） | `design/POOL-CONFIG-UNIFIED.md`、`design/QUICKFIX-BATCH-3.md`、`design/SUBAGENT-ID-COUNTER-AGENT.md` | 设计待评审——未实施，不适用冻结 |
 
 ### 4.1 需求层文档（`requirements/`）
@@ -219,6 +220,7 @@ docs/
 | `requirements/TUI-TOOL-OUTPUT.md` | TUI 工具输出（行间区块显示） |
 | `requirements/TUI.md` | TUI（终端界面：渲染/滚动/输入/会话显示） |
 | `requirements/TURN-CAP-CONTINUE.md` | Agent 循环 · 撞墙继续（轮数预算耗尽后的续跑） |
+| `requirements/TWO-REPO-MERGE.md` | 两仓合并（CLI 与 VSC 收入单一 git 仓、各占子目录——跨仓机制全线退役） |
 | `requirements/VERIFY-REDESIGN.md` | verify 重构（声明式完成前门） |
 
 ## 5. 归属判定（写档前四问）
@@ -229,6 +231,8 @@ docs/
 4. 与既有档**冲突**吗？（冲突先摆出来讨论，不静默并存两份矛盾表述）
 
 ## 变更记录
+
+- 2026-09-13：新增「两仓合并」板块——`requirements/TWO-REPO-MERGE.md`（需求）+ `design/TWO-REPO-MERGE.md`（设计+测试）——phase 1 目录合并（单一 git 仓 + 两产品子目录；跨仓机制全线退役）。同日按 §3.2 板块镜像 + §4 首注「新老划断」拆出需求层（原三层同档）——登记 §4 / §4.1。
 
 - 2026-09-12：§3.7 / §3.8 补自持与互引规范句（LEDGER-SELF-CONTAINED 批——各仓自持：条目与归属不带跨仓指针 + 批次档同规）。
 - 2026-09-11：新增「崩溃捕获与取证」板块——`requirements/CRASH-REPORTS.md` + `design/CRASH-REPORTS.md`（TUI-OOM-FORENSICS 批建档；R25 / TUI-STDERR-CAPTURE 归宿落定）——登记 §4 / §4.1。
