@@ -6,6 +6,8 @@
  *   ① 仓库扫描零违规 + **基线必须为空**（入基线 = 例外 = 违规——fail-closed；存量不再有「降报告」合法态）；
  *   ② **V1 豁免**（§2.22.7 VSC 独有语义）：含「（CLI 侧）」注记的行豁免（不报、不入基线）——单仓语义 =
  *      产品域外引用豁免（设计档 TWO-REPO-MERGE.md §2.5；判据本体保留）；
+ *   ②b **跨域隔离（T-M9）**：两域同 basename 同名档不互相满足节号——全域解析 = 逐域隔离（引用只对本域
+ *      文件解析，无 basename 一对多 fail-open）；
  *   ③ **V3 三态零假阳**：在飞不报 / 有实质内容无轮次行必报 / 有戳不报 / 骨架行不算；
  *      域缺 `docs/batches/` → 跳过不报（夹具空域行为面）；**工具前时代批次档**（< `V3_ERA_START`）不判；
  *   ④ **基线机制**（夹具域）：基线档可读可写 · 条目降为「存量」的过滤语义保留（本仓基线必须为空）；
@@ -84,6 +86,28 @@ test("T63 ④ 边界：V1 失效引用被检出 / 合规引用不误报 / 「（
   assert.ok(!refs.some((r) => r.startsWith("target.md §1|")), "合规引用不误报（§1）")
   assert.ok(!refs.some((r) => r.startsWith("target.md §2.15|")), "合规引用不误报（§2.15）")
   assert.ok(!refs.some((r) => r.startsWith("本文件 §1|")), "合规自指不误报")
+})
+
+// ── ②b T-M9 跨域隔离（全域 = 逐域解析——无 basename 一对多 fail-open） ─────
+test("T-M9 边界：两域同 basename 档不互相满足节号——引用只对本域文件解析（跨域掩蔽消除）", () => {
+  const mk = (domain, name, content) => {
+    const dir = join(tmp, domain, SCAN_DIRS[0])
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, name), content)
+  }
+  // 两域（合并仓两产品域形态）：同 basename 同路径档各一份——甲的 §1 与乙的 §7 不互认
+  mk("alpha", "TESTING.md", "# Alpha\n\n## 1. 一\n")
+  mk("beta", "TESTING.md", "# Beta\n\n## 7. 七\n")
+  mk("alpha", "ONLY-ALPHA.md", "# 甲域独有\n\n## 5. 五\n")
+  mk("alpha", "probe.md", "合规：见 TESTING.md §1。\n\n失效引用：见 TESTING.md §7。\n")
+  mk("beta", "probe2.md", "合规：见 TESTING.md §7。\n\n域外档引用：见 ONLY-ALPHA.md §5。\n")
+  const rows = checkSectionRefs(tmp).map((r) => `${r.file}|${r.ref}|${r.reason}`)
+  assert.ok(rows.includes("alpha/docs/design/probe.md|TESTING.md §7|no-section"),
+    "A 域失效引用必须报——不得被 B 域同名档 §7 掩蔽（改前 = 假阴）")
+  assert.ok(rows.includes("beta/docs/design/probe2.md|ONLY-ALPHA.md §5|unknown-doc"),
+    "他域档不进入本域解析面（B 域引用只在 B 域解析——fail-closed）")
+  assert.ok(!rows.some((r) => r.startsWith("alpha/docs/design/probe.md|TESTING.md §1|")), "本域可解析引用零误报（甲 §1）")
+  assert.ok(!rows.some((r) => r.startsWith("beta/docs/design/probe2.md|TESTING.md §7|")), "本域可解析引用零误报（乙 §7）")
 })
 
 // ── ③ V2 反证（三形态 + 零假阳负例） ───────────────────────────────────────

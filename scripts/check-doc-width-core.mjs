@@ -2,7 +2,8 @@
  * check-doc-width-core.mjs — 文档格式 + 文档一致性机械校验 · 判据核（域驱动 / V1 / V2 / V3 / 基线）。
  *
  * 本档 = `check-doc-width.mjs`（入口 / 报告 / 宽度判据）的判据核（R24a 拆分——各档 ≤300 行）：
- * 域驱动（collectMarkdown / discoverDomains / scanDomain）· V1 段引用 · V2 计数 · V3 批次档 · 基线读写 ·
+ * 域驱动（collectMarkdown / discoverDomains / scanDomain）· V1 段引用（**按域隔离解析**——T-M9：全域 = 逐域
+ * 各跑一次，无 basename 一对多 fail-open）· V2 计数 · V3 批次档 · 基线读写 ·
  * 共享豁免谓词（isExecutableLine / inCodeSpan——统一版 `doc-anchors.mjs` / `check-ledger.mjs` 同源复用）。
  * 判据说明（精度取向 / 基线口径 / 用法）权威 = 入口档头注（本档不重述）。
  * S4 单仓化（设计档 TWO-REPO-MERGE.md §2.4 R5/R8）：V4 跨仓形态整类退役。
@@ -47,16 +48,25 @@ export function discoverDomains(root) {
   return out;
 }
 
+/** 扫描域基列表（域驱动单源）：显式 `domain` → 该域；无域参 → 发现域集（为空回退仓根本身）。 */
+function scanBases(root, domain = null) {
+  const list = domain ? [resolve(root, domain)] : discoverDomains(root);
+  return list.length ? list : [resolve(root)];
+}
+
+/** 单域收集：域基 × SCAN_DIRS 的 .md（目录缺失跳过——域外项目布局不报错）。 */
+function collectDomain(base) {
+  const files = [];
+  for (const d of SCAN_DIRS) {
+    try { collectMarkdown(join(base, d), files); } catch { /* 目录缺失：跳过（域外项目布局不报错） */ }
+  }
+  return files;
+}
+
 /** 扫描域内的全部 .md（root 为仓根；域 = 发现域集（或显式 `domain` 产品域）；不存在的目录跳过）。 */
 export function scanDomain(root, domain = null) {
   const files = [];
-  const list = domain ? [resolve(root, domain)] : discoverDomains(root);
-  for (const base of list.length ? list : [resolve(root)]) {
-    for (const d of SCAN_DIRS) {
-      const abs = join(base, d);
-      try { collectMarkdown(abs, files); } catch { /* 目录缺失：跳过（域外项目布局不报错） */ }
-    }
-  }
+  for (const base of scanBases(root, domain)) files.push(...collectDomain(base));
   return files;
 }
 
@@ -93,15 +103,10 @@ function productSideAnnotated(text, idx) {
 /**
  * V1：段引用可解析。返回 [{file, ref, reason}]（file 相对传入 root）。
  * reason：unknown-doc（目标文档不在扫描域）| no-section（目标节号不存在）
+ * 解析**按域隔离**（T-M9）：全域 = 逐域各跑一次——每域的引用只对本域文件解析（跨域同名档不互相
+ * 满足节号——无 basename 一对多 fail-open）；产品域态（显式 `domain`）与逐域语义逐字一致。
  */
 export function checkSectionRefs(root, domain = null) {
-  const files = scanDomain(root, domain);
-  const byBase = new Map();
-  for (const f of files) {
-    const b = basename(f);
-    if (!byBase.has(b)) byBase.set(b, []);
-    byBase.get(b).push(f);
-  }
   const numsCache = new Map();
   const numsOf = (f) => {
     if (!numsCache.has(f)) numsCache.set(f, sectionNumbers(readFileSync(f, "utf8")));
@@ -109,18 +114,27 @@ export function checkSectionRefs(root, domain = null) {
   };
   const rel = (f) => f.slice(resolve(root).length + 1).replace(/\\/g, "/");
   const out = [];
-  for (const f of files) {
-    const text = readFileSync(f, "utf8");
-    for (const m of text.matchAll(QUALIFIED_REF_RE)) {
-      if (productSideAnnotated(text, m.index)) continue; // 产品域外引用豁免
-      const cands = byBase.get(basename(m[1])) ?? [];
-      if (!cands.length) out.push({ file: rel(f), ref: m[0].trim(), reason: "unknown-doc" });
-      else if (!cands.some((c) => hasSection(numsOf(c), m[2]))) out.push({ file: rel(f), ref: m[0].trim(), reason: "no-section" });
+  for (const base of scanBases(root, domain)) {
+    const files = collectDomain(base);
+    const byBase = new Map(); // 本域索引——不跨域并表（跨域同名 = 掩蔽源，T-M9）
+    for (const f of files) {
+      const b = basename(f);
+      if (!byBase.has(b)) byBase.set(b, []);
+      byBase.get(b).push(f);
     }
-    const nums = numsOf(f);
-    for (const m of text.matchAll(SELF_REF_RE)) {
-      if (productSideAnnotated(text, m.index)) continue;
-      if (!hasSection(nums, m[2])) out.push({ file: rel(f), ref: m[0].trim(), reason: "no-section" });
+    for (const f of files) {
+      const text = readFileSync(f, "utf8");
+      for (const m of text.matchAll(QUALIFIED_REF_RE)) {
+        if (productSideAnnotated(text, m.index)) continue; // 产品域外引用豁免
+        const cands = byBase.get(basename(m[1])) ?? [];
+        if (!cands.length) out.push({ file: rel(f), ref: m[0].trim(), reason: "unknown-doc" });
+        else if (!cands.some((c) => hasSection(numsOf(c), m[2]))) out.push({ file: rel(f), ref: m[0].trim(), reason: "no-section" });
+      }
+      const nums = numsOf(f);
+      for (const m of text.matchAll(SELF_REF_RE)) {
+        if (productSideAnnotated(text, m.index)) continue;
+        if (!hasSection(nums, m[2])) out.push({ file: rel(f), ref: m[0].trim(), reason: "no-section" });
+      }
     }
   }
   return out;
