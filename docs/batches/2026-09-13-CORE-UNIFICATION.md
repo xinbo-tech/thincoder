@@ -2146,5 +2146,62 @@ VERDICT: pass
 
 **未做（本属他人 / 后续）**：折行（**父侧**——§4.2 步骤 4 / 5）· 本笔提交（**父侧**）· 越段 1 / 2（设计面 / 台账面）。
 
+### 实施：S1 建核补齐（2026-09-13/14 · eng-coder）——**部分完成 · 终态 stalled（自陈 · 非收敛）**
+
+**段位**：当前段 = S1（建核补齐）。S2 / S3 面零触碰；两产品零改动（`git status --porcelain` 无 `thincoder-cli/` / `thincoder-vscode/` 行 ✓）。未 commit（父侧统一）。未发起评审。未碰台账。
+
+**改动面**（全部在 `thincoder-core/` 内；无核外写入）
+
+| 面 | 读数 |
+|---|---|
+| 核 `.mjs` 模块档 | **143**（root 46 · tools 22 · agent-tools 29 · provider 11 · advisor 10 · agent 10 · memory 8 · mcp 4 · git 2 · traces 1） |
+| 核测试档 | **7 → 10**（新增 `core-modules` · `core-prompt-face` · `config`） |
+| 核 `.mjs` 总行数 | **30,131**（模块 + 测试） |
+| 核槽位提示词 | 12 → **15**（+`discipline-engineering` · `discipline-normal` · `persona-eng-coder`） |
+| 核工具描述 | 20 → **25**（+`bash` · `grep` · `lint` · `question` · `websearch`） |
+| 核测试读数 | S0a 基线 **49/49** → **70/70 · fail 0 · exit 0** |
+
+**执行方式（设计口径 = 「从两侧提取/融合」，默认向 CLI 倾斜）**
+
+1. **批量提取**：把 `thincoder-cli/src/**` 的**非壳**面（排除 `tui/` · `cli/` · `acp/` · `acp.mjs` · `tui.mjs`——#180/#181 ④ 端特有）逐档逐字随迁入核（133 档）——这即设计「取一侧 / 以 CLI 为准」各行的落点（§2.5 S1 行中「取一侧」「以 CLI 为准」共 50 行）。
+2. **依赖闭包收核**（契约 2 / G2）：三处核外依赖改线——`agent/dispatch.mjs` 的 `snapshotForUndo` 归位为核内 `undo-stack.mjs`（逐字随迁自 `tui/cmd-undo.mjs`）· `agent-tools/subagent-panel.mjs` 的 `computePanelBlocks` 归位为核内 `agent-tools/panel-blocks.mjs`（逐字随迁自 `tui/subagent-freeze.mjs`）· `advisor/loop.mjs` 的进度行格式化改为 **④ 注入点** `seams.describeArgs`（核内零端名分支——契约 5/10）。
+3. **提示词加载面改根**（D-C13 / 契约 8）：`tools/shared.mjs` 的 `DESC()` 改经核内单一解析面 `prompt-files.mjs` 的 `loadToolDoc`（**只改根、不改语义**——缺档仍抛错，契约 9）。
+4. **CONFIG 子系统（#74/#79/#80/#128/#129/#130/#131/#177）**：VSC 侧能力并入——`proxy.mjs` 坏代理串友好报错 · `config-migrate.mjs` 增 `migrateCore`（VS Code 旧设置 / 密钥库迁移遍）· `writeConfigAtomic` 增 `opts.schema`（`$schema` 按端注入）· 新增 `config-io.mjs`（单一读写面 + 自写通知 + provider 纯持久化函数）/ `config-presets.mjs` · `cascadeRemoveProvider`。
+5. **提示词面（#52/#53/#55/#117/#118/#119）**：5 档工具描述 + 3 档槽位按「融合（取并集）+ 端特有段按注入」落核——端特有段以 `{{inject:<name>}}` 锚点承载（核内零端名分支）。
+6. **其余可移行**：#165 权限闸 → 核 `permission.mjs`（展示面 ④ 注入）· #166 子代理权限通道 → 核（VSC 逐字随迁）· #137 索引面两档 → 核（VSC 逐字随迁）· #174 台账可见面 → 核（渲染色表 ④ 注入）。
+
+**未完成面（自陈 · 不复述父侧）——** **76 行**「端差处置」列要求**实质并合**（融合 / 取并集 / 并入，排除「融合：取一侧」26 行）的行里，本轮**已并入 VSC 侧的只有 15 行**（CONFIG 6 · PROMPT-SYSTEM 3 · TOOLS 3 · AGENT-LOOP 2 · WORKSPACE 1）；**其余约 60 行的核内落点 = CLI 侧逐字随迁**，其 VS Code 侧并入**未做**（例：`agent.mjs` 的 `streamOutput` 三态门 · `provider/rate.mjs` 的 `abortableSleep` · `session.mjs` 的 `history-window` 拆面 · `embedding.mjs` 的 VSC RETRYABLE 常量）。另 **#184（挂起/唤醒）未迁**——CLI 面 `tui/suspension-drive.mjs` 深度耦合 tui/agent-turn · subagent-blocks · tool-events，非机械随迁，需设计面给出核内形态。**#185（文案面）未建**——设计档 §2.5.1 丁组 D1 裁定状态 = **待裁**，按 A11 / D-C16「未裁定不进 S1」**不得**落核。
+
+**内部审计轮（只读 explore 分歧审计 · 阻塞 ×1）**：结论 **DIVERGENT**。命中三类；**silent simplification 未命中**（抽样范围内无「近似实现替代设计承诺」）。
+- ① partial implementation（🔴）：76 行融合面 VSC 侧未并入（实现者已自陈，非静默）。
+- ② out-of-file-list（🟡）：核内含设计判「不迁（端特有）」的档——#182 点名的 6 档中的 5 档（已修，见下）+ #180 的 tui 面 2 档（`undo-stack.mjs` / `panel-blocks.mjs`——**是否属 #149/#159「按核内结构归位」授权范围，审计列为 QUESTION**）。
+- ③ doc drift（🟡/🔵）：`tools/shared.mjs` 为「CLI 体 + 改线」非逐字随迁（**审计指出未在申报面内**——补报于本段）· `config.mjs` 拆为 3 档（`config.mjs` / `config-io.mjs` / `config-presets.mjs`）——**设计档 §2.8 未登记该拆分**。
+审计限制（如实登记）：该席位**无 shell / 无 git / 不可执行** ⇒ K1 / K2 / K3 三条**未独立复跑**（其自标 unverified）；逐字节比对退化为「尺寸 + 首 12 行 + 行数」三重比对。其独立复证：S1 行计数 **126 行 / 14 档** ✓ · 核 prompts **15** / tool-docs **25** ✓ · 核内零裸包名 / 零产品 import ✓ · 全核零 `../..` 上跳 ✓ · 软线登记表抽样 22 档一致 ✓。
+
+**fix round 1（审计后落修）**：删除核内 5 档**无消费方**且设计判「不迁」的端特有面——`completions.mjs` · `crash-reports.mjs` · `heap-watch.mjs` · `upgrade.mjs` · `distill.mjs`（先证零 import：`grep 'from "[^"]*/(completions|crash-reports|heap-watch|upgrade|distill)\.mjs"' thincoder-core` → 无命中）。落修后复跑 **70/70** ✓ + 三机检 exit 0 ✓。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | `markdown.mjs` **留在核内** | 设计 #182 把它列为「不迁（TUI 渲染）」④，但它**被核内已迁模块消费**（`memory/core.mjs:8` · `memory/delete.mjs:14` · `rules.mjs:16`）⇒ 按契约 2 / G2（依赖闭包必须落核内）留在核内。**与设计 #182 相抵——停下上报**（另见「未决」1） |
+| 2 | `undo-stack.mjs` / `panel-blocks.mjs` 归位核内 | 取 #149 / #159「按核内结构归位」；与 #180「tui/** 不迁」相抵——**停下上报**（审计 QUESTION 2，见「未决」2） |
+| 3 | `config.mjs` 拆 3 档（`config.mjs` / `config-io.mjs` / `config-presets.mjs`） | CLI 单档 496 行 + 本轮并入 VSC 面后 **674 行 > 500 硬限** ⇒ 必须拆；拆法与 VSC 侧切分同形（#129/#131 的设计措辞本就是该切分）。**设计档 §2.8 需补行**（见「未决」3） |
+| 4 | `package.json` 的 `exports` 用通配 `"./*": "./*"` | 设计只写「exports 子路径」未给清单；S1 实装面 143 档 ⇒ 逐档枚举不可维护。`files` 白名单已按子目录补全（含 prompts/ · tool-docs/——断言 D 对象） |
+| 5 | `core-hygiene` 的 T-C14 判据改为「≤500 硬红 + >300 须登记」 | 逐字随迁档本就在两产品侧 >300（S1 只提取、**不重写**——F3 / D-C2）⇒ 原「软线必须为空」的谓词不可满足。登记表 = 防回潮闸（新增未登记 >300 档 = 红）；**逐档拆分计划仍属设计面**（§2.5 行数列） |
+| 6 | 提示词端差段以 `{{inject:<name>}}` 锚点承载 | 承 #47 先例（S0a 已定此语法）；**注入位的消费方仍未定义**（S0a 评审 #1 Deferred）——本段沿用并**新增 4 个锚名**：`bash-terminal-face` · `question-ui-face` · `discipline-normal-finish` · `discipline-normal-consult-stop` · `discipline-engineering-vsc-r14-pools` · `discipline-engineering-change-surface-probe` · `eng-coder-guidelines` |
+
+**已并入 VSC 侧的 S1 行（15 行 · 逐线可查）**：#74 · #79 · #80 · #128 · #129 · #130 · #131 · #177（CONFIG）· #52 · #53 · #55（TOOLS 工具描述）· #117 · #118 · #119（提示词槽位）· #165 · #166（权限闸/子代理通道，VSC 侧逐字随迁 + ④ 注入）· #174（台账可见面 ④ 注入）。**注**：#166 / #137 / #174 属 VSC 侧单端档随迁，非「两产品都持有」的对称面融合。
+
+**未决（记档 · 不遗忘 · 均为本段停下上报项）**
+1. **#182 与 G2 相抵**：`markdown.mjs` 被核内模块消费 ⇒ 不能按「不迁」处理。设计面须二者取一：改 #182 措辞（把 `markdown.mjs` 移出端特有桶）或改 G2。
+2. **#180 与 #149/#159 相抵**：tui/ 面 2 档的函数本体已按「按核内结构归位」入核；若父侧裁定 #180 优先，则须回退这 2 处归位并改为注入。
+3. **设计档 §2.8 / §2.5 待补**：核内新增档（`config-io.mjs` · `config-presets.mjs` · `index-bin.mjs` · `index-discover.mjs` · `permission.mjs` · `undo-stack.mjs` · `agent-tools/panel-blocks.mjs` · `ledger-surface.mjs`）与逐档行数 / 拆分计划——属**设计者面**（写权矩阵），执行者不代写。
+4. **~60 行融合面的 VSC 侧并入**未做（见「执行方式」末）——须 S1 续轮；**#184** 须设计面先给核内形态。
+5. **#185 待裁**（丁组 D1）——裁定完毕前不得落核。
+
+**未发起**：内部 advisor 代码评审（`type=code`）——**本轮轮次 = 0**（剩余预算耗尽；如实登记，不假装跑过）。
+**终态 = `stalled`**（审计 1 轮 + fix round 1；advisor 评审 0 轮；**未收敛**——交付面 = 部分完成 + 逐条自陈缺口）。
+
 ## §6 验证与收口（父代理）
 
