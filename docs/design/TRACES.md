@@ -10,7 +10,7 @@
 
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
-| 轨迹存储 | `thincoder/src/traces/trace-store.mjs` | 同名（同路径对） |
+| 轨迹存储 | `thincoder-cli/src/traces/trace-store.mjs` | 同名（同路径对） |
 
 **共同基线**：目录 / 命名 / 字段两端已一致；默认开关两端皆 `false`。
 

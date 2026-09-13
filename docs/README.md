@@ -1,7 +1,7 @@
 # 项目文档（Project docs — thincoder 合并仓）
 
 > 本目录 = **项目级**文档层（跨两产品的文档：台账 · 板块档 · 批次档）。
-> 产品级文档仍在各产品树：CLI = `thincoder/docs/` · VSC = `thincoder-vscode/docs/`（两产品各自成体系——D5）。
+> 产品级文档仍在各产品树：CLI = `thincoder-cli/docs/` · VSC = `thincoder-vscode/docs/`（两产品各自成体系——D5）。
 > 建档：2026-09-13（用户裁定：「逐步在根仓建立起全套的文档体系，项目目录里的先保留做参照，不要一下子全改掉，免得没法回顾」）。
 
 ## 1. 本层内容
@@ -24,8 +24,8 @@
 
 | 档 | 现址 | 状态 |
 |---|---|---|
-| 核心统一（phase 2）· 需求 / 设计 / 批次 | 原 `thincoder/docs/{requirements,design,batches}/` → 现 **`docs/{requirements,design,batches}/`** | ✅ **已迁入**（2026-09-13——`git mv` 三档 + 17 处引用改写；三机检绿） |
-| 两仓合并（phase 1）· 需求 / 设计 / 批次 | `thincoder/docs/{requirements,design,batches}/TWO-REPO-MERGE*` | **参照**——已闭环批；引用面大（约 40 处，含两产品文档树与脚本头注），**暂留原地**，被触碰时再议 |
+| 核心统一（phase 2）· 需求 / 设计 / 批次 | 原 `thincoder-cli/docs/{requirements,design,batches}/` → 现 **`docs/{requirements,design,batches}/`** | ✅ **已迁入**（2026-09-13——`git mv` 三档 + 17 处引用改写；三机检绿） |
+| 两仓合并（phase 1）· 需求 / 设计 / 批次 | `thincoder-cli/docs/{requirements,design,batches}/TWO-REPO-MERGE*` | **参照**——已闭环批；引用面大（约 40 处，含两产品文档树与脚本头注），**暂留原地**，被触碰时再议 |
 
 ## 4. 子系统设计档（核心统一拆分——2026-09-13）
 
@@ -57,7 +57,7 @@
 
 ## 5. 与产品文档地图的关系
 
-- CLI 产品地图 = `thincoder/docs/README.md`（**CLI 产品**的文档入口）——它此前登记了项目级板块（历史原因：合并前无项目级层）；板块迁入本层后，其登记行**撤除**（该板块不再属 CLI 产品树——本层为唯一登记处）。
+- CLI 产品地图 = `thincoder-cli/docs/README.md`（**CLI 产品**的文档入口）——它此前登记了项目级板块（历史原因：合并前无项目级层）；板块迁入本层后，其登记行**撤除**（该板块不再属 CLI 产品树——本层为唯一登记处）。
 - VSC 产品地图 = `thincoder-vscode/docs/README.md`（VSC 产品入口）。
 - 本层**不进**两产品的文档域扫描；本层自带台账机检覆盖（`scripts/check-ledger.mjs` 默认域含本目录）。
 

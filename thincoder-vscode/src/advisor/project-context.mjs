@@ -15,7 +15,7 @@
  * state the limitation in its findings. Projects can point at their own files through
  * `.thincoder/conventions.json` (advisor.docMap / advisor.standardsDoc).
  *
- * Semantics are shared with the CLI twin (thincoder/src/advisor/project-context.mjs)
+ * Semantics are shared with the CLI twin (thincoder-cli/src/advisor/project-context.mjs)
  * — two independent implementations, one contract.
  */
 import { readFileSync, existsSync } from "node:fs"

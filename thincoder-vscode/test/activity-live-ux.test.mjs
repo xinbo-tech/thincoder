@@ -1,7 +1,7 @@
 /**
  * activity-live-ux.test.mjs — VSC live 块 UX（流式跟滚 + 内容区高度 60px）机器验收。
  * 设计权威：`docs/design/WEBVIEW.md` §13（契约 C-LU1..C-LU5 / 用例 T-LU1..T-LU6 §13.6 /
- * AC-LU1..AC-LU7 §13.7）；批次档 `thincoder/docs/batches/2026-09-11-VSC-LIVE-UX.md` §2。
+ * AC-LU1..AC-LU7 §13.7）；批次档 `thincoder-cli/docs/batches/2026-09-11-VSC-LIVE-UX.md` §2。
  * 2026-09-12 PROSE-ANCHOR-RETIRE：T-LU5（CSS 文本静态断言）整删——读非测试档文本断言 = 散文锚
  *（判据见 CLI 侧设计档 TESTING.md §11）；其余用例行为面不变。
  * 手法同 activity-flow / async-visibility webview 侧：installChatFixture + 动态 import 真

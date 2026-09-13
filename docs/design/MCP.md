@@ -10,7 +10,7 @@
 
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
-| 客户端入口 | `thincoder/src/mcp.mjs`（真实现） | `thincoder-vscode/src/mcp.mjs`（12 行转口）+ `src/mcp/index.mjs` |
+| 客户端入口 | `thincoder-cli/src/mcp.mjs`（真实现） | `thincoder-vscode/src/mcp.mjs`（12 行转口）+ `src/mcp/index.mjs` |
 | 基础件 | `src/mcp/helpers.mjs` | `src/mcp/utils.mjs` |
 | 传输 | `src/mcp/transport-stdio.mjs` · `transport-http.mjs` · `transport-ws.mjs` | `src/mcp/stdio.mjs` · `http.mjs` · `ws.mjs` |
 

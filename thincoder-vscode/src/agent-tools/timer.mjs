@@ -1,5 +1,5 @@
 /**
- * timer.mjs — thinking-budget timer (ported from CLI thincoder/src/agent-tools/timer.mjs)
+ * timer.mjs — thinking-budget timer (ported from CLI thincoder-cli/src/agent-tools/timer.mjs)
  * Sets a time budget for reasoning. When it expires, a system reminder is injected
  * (by the agent main loop's expired-timer check) suggesting the model act instead of
  * continuing to think. Read-only + side-effect-exempt (does not trigger the verify guard).

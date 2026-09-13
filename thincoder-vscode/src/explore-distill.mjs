@@ -2,12 +2,12 @@
  * explore-distill.mjs — End-of-run exploration distillation (AGENT-LOOP §13 +
  * CONTEXT-COMPACTION §5, 2026-08-23). 2026-09-05 module-split: moved verbatim out of
  * compact.mjs (503 > 500 hard limit) — CLI context.mjs distillation mirrors this
- * module (same-name file in thincoder/src, cross-repo parity anchors point here).
+ * module (same-name file in thincoder-cli/src, cross-repo parity anchors point here).
  *
  * The main agent's machine line is flooded by inline step-by-step exploration (read/grep/...).
  * At run end we distill THIS run's exploration tool-results into one semantic summary note that
  * replaces them in the machine line (history); the human line (fullHistory, a separate array) is
- * never touched. Same semantics as thincoder/src/context.mjs — the VOICE line is the CLI.
+ * never touched. Same semantics as thincoder-cli/src/context.mjs — the VOICE line is the CLI.
  */
 
 import { chat } from "./provider.mjs"

@@ -1,6 +1,6 @@
 /**
  * config-io.mjs — shared config file I/O (VS Code side)
- * MODEL-SELECTION schema（2026-09-10——mirrors CLI `thincoder/src/config.mjs`）：providers[]
+ * MODEL-SELECTION schema（2026-09-10——mirrors CLI `thincoder-cli/src/config.mjs`）：providers[]
  * with a single `model` default per channel + config.defaultModel top-level composite；
  * `providers[].models[]` 候选清单字段已退场（清单权威 = provider 运行期 `/models` 拉取——
  * `provider/list-models.mjs`）；legacy shapes migrate on loadRaw (config-migrate.mjs

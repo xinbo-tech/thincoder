@@ -10,7 +10,7 @@
 
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
-| advisor 主面 | `thincoder/src/advisor.mjs` + `src/advisor/*`（`run` · `loop` · `messages` · `compaction` · `project-context` · `repos` · `citations` · `history` · `truncate` · `convergence`） | `thincoder-vscode/src/advisor/main.mjs` + `src/advisor/*`（拆档：`provider.mjs` · `tools.mjs`） |
+| advisor 主面 | `thincoder-cli/src/advisor.mjs` + `src/advisor/*`（`run` · `loop` · `messages` · `compaction` · `project-context` · `repos` · `citations` · `history` · `truncate` · `convergence`） | `thincoder-vscode/src/advisor/main.mjs` + `src/advisor/*`（拆档：`provider.mjs` · `tools.mjs`） |
 | 工具面 | `src/agent-tools/advisor.mjs` · `src/agent-tools/consult.mjs` · `src/agent-tools/advisor-settle.mjs` · `src/agent-tools/review-streak.mjs` · `subagent-panel.mjs` | 同名 / 拆分档（`subagent-escalate-async` 等） |
 | 飞刀（升级） | `src/agent-tools/escalate-async.mjs` | `src/agent-tools/subagent-escalate*.mjs` |
 
@@ -22,7 +22,7 @@
 
 | # | 相对路径 / 对位 | 面 | 相似度 · 逐字节 | 分类 | 目标 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | `advisor/history.mjs` | 同路径 | 1.0000 · 同 | ① | 进核（`core/advisor/history.mjs`） | 取任一侧、逐字节随迁 | —（逐字节同，无分叉） | — | S0a（首批建核） |
+| 1 | `advisor/history.mjs` | 同路径 | 1.0000 · 同 | ① | 进核（`thincoder-core/advisor/history.mjs`） | 取任一侧、逐字节随迁 | —（逐字节同，无分叉） | — | S0a（首批建核） |
 
 ### 2.2 非逐字节同组（原 §2.5（二）行集）
 

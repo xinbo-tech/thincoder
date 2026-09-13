@@ -125,10 +125,10 @@ test("L2/L3：组计数不符 + 活档 `- [x]` 照报（同源判据面）", () 
 
 // T-VS35 错误：L4② 假阴面反证 + 全匹配（收紧——本端；AC-VS32 · AC-VS33）
 test("T-VS35 错误：L4② 收紧（仓根外前缀 / 越根绝对路径 ⇒ 必报；省略 / 陈旧前缀零回归；全匹配逐处判——端差消解）", () => {
-  const ws = fixture(base("# TODO\n", { "thincoder/src/agent/x.mjs": "export const x = 1\n" }))
+  const ws = fixture(base("# TODO\n", { "thincoder-cli/src/agent/x.mjs": "export const x = 1\n" }))
   try {
     const root = join(ws, "thincoder-vscode")
-    const abs = join(ws, "thincoder", "src", "agent", "x.mjs").replace(/\\/g, "/")
+    const abs = join(ws, "thincoder-cli", "src", "agent", "x.mjs").replace(/\\/g, "/")
     const ledger = "# TODO\n\n## 需求池（0 条）\n\n## 技术待办（5 条）\n\n"
       + "- [ ] **仓根外前缀** → 证据 `pkg/src/a.mjs:10`（前缀首段非本端现存）· 触发=认账不排期\n"
       + "- [ ] **省略前缀对照** → 证据 `a.mjs:3`（仓内唯一 basename）· 触发=认账不排期\n"

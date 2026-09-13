@@ -10,7 +10,7 @@
 
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
-| 上下文压缩 | `thincoder/src/context.mjs` | `thincoder-vscode/src/compact.mjs` |
+| 上下文压缩 | `thincoder-cli/src/context.mjs` | `thincoder-vscode/src/compact.mjs` |
 | 会话标题 | `src/generate-title.mjs` | `src/extension/generate-title.mjs` |
 | 文本额度 | `src/text-budget.mjs` | `src/agent/run-helpers.mjs`（`safeSliceUTF16` 族） |
 

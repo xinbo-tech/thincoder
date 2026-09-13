@@ -10,7 +10,7 @@
 
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
-| 会话数据层 | `thincoder/src/session.mjs` · `session-store.mjs` · `session-segments.mjs` · `session-guard.mjs` · `session-migrate.mjs` · `session-rename.mjs` | `thincoder-vscode/src/extension/session-io.mjs` · `session-slot-write.mjs`（记录存储内联） |
+| 会话数据层 | `thincoder-cli/src/session.mjs` · `session-store.mjs` · `session-segments.mjs` · `session-guard.mjs` · `session-migrate.mjs` · `session-rename.mjs` | `thincoder-vscode/src/extension/session-io.mjs` · `session-slot-write.mjs`（记录存储内联） |
 | 槽位 | `src/session-slots.mjs` | `src/extension/session-slots.mjs` |
 | 清理 | `src/session-gc.mjs`（+ `session gc` 子命令） | `src/extension/session-gc.mjs` |
 | 历史读取工具 | `src/agent-tools/read-history.mjs` | 同名（同路径对） |
@@ -49,7 +49,7 @@
 
 | # | 项 | 为何无法兼容（实测 / 证据） | 上抛形态（四要素） | 裁定状态 |
 |---|---|---|---|---|
-| 3 | **会话 / 历史面** | **已兼容**（无需上抛）：两端读写同一批档同一 `version`（1 / 2）+ 各自内置旧短哈希迁移（`thincoder/src/session-migrate.mjs:10-48` · `thincoder-vscode/src/extension/session-io.mjs:92-113`）⇒ 归一后历史可直接续读 | 登记为「已兼容」· 兼容形态 = 复用现成迁移函数 | 已兼容（登记） |
+| 3 | **会话 / 历史面** | **已兼容**（无需上抛）：两端读写同一批档同一 `version`（1 / 2）+ 各自内置旧短哈希迁移（`thincoder-cli/src/session-migrate.mjs:10-48` · `thincoder-vscode/src/extension/session-io.mjs:92-113`）⇒ 归一后历史可直接续读 | 登记为「已兼容」· 兼容形态 = 复用现成迁移函数 | 已兼容（登记） |
 
 ## 5. 受影响文件（该子系统）
 

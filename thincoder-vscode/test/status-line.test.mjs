@@ -1,7 +1,7 @@
 /**
  * status-line.test.mjs — 活动区收口批（2026-09-12）R6 机器验收（状态行字段级对齐 CLI）。
  * 设计权威：`docs/design/WEBVIEW.md` §14（C-12#1/#2/#6 · C-15 逐字段对位表 · 用例
- * T-CL21..T-CL24 · AC-CL6）；批次档 `thincoder/docs/batches/2026-09-12-VSC-ACTIVITY-CLOSURE.md`
+ * T-CL21..T-CL24 · AC-CL6）；批次档 `thincoder-cli/docs/batches/2026-09-12-VSC-ACTIVITY-CLOSURE.md`
  * §2（§14.7 注：本档直驱导出映射面 + 发射调用点 grep 机检）。
  *
  * 两组手法：

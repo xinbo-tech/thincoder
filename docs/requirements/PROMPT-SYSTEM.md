@@ -4,12 +4,12 @@
 > **工作流档**（需求层）= `docs/requirements/CORE-UNIFICATION.md` §1–§4 + §5 登记表（统一目标 / 边界原则 / 量级读数基线 / 范围边界）——本档**不复制**（D2 单一权威源）。
 > **设计层** = `docs/design/PROMPT-SYSTEM.md`（本子系统设计与测试）；工作流设计档 = `docs/design/CORE-UNIFICATION.md`。
 > 建档：2026-09-13（**需求侧拆分轮**——用户 2026-09-13 明令「需求侧文档先拆」）。**不新增需求**：条文分**搬移 / 回填 / 派生**三类并逐条标来源；无现成表述者由设计裁决派生，标「**派生 · 非用户原话**」。
-> 命名与层级 = **板块镜像**（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**）——规则原文见 CLI 产品地图 `thincoder/docs/README.md` §3.2；三层归属见同图 §3.1。
+> 命名与层级 = **板块镜像**（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**）——规则原文见 CLI 产品地图 `thincoder-cli/docs/README.md` §3.2；三层归属见同图 §3.1。
 
 ## 1. 总体定位
 
 提示词系统 = **运行期面**（槽位提示词 `src/prompts/*.md` 15 档 + 工具描述 `src/tools/*.md` 25 档 + 槽位加载面）**+** **中文设计档**（两产品 `docs/design/prompts/**`，供人读、**非运行期**）。
-核内落点 = `core/prompts/`（15）+ `core/tool-docs/`（25）+ 单一解析面 `prompt-files.mjs`；**中文设计档永进核**。
+核内落点 = `thincoder-core/prompts/`（15）+ `thincoder-core/tool-docs/`（25）+ 单一解析面 `prompt-files.mjs`；**中文设计档永进核**。
 本板块对本子系统的要求 = 提示词**并入核、核内唯一副本**，两端从核加载。
 
 > 面清单与逐面裁决（分类 / 端差处置 / 前提校验 / 归属段）→ `docs/design/PROMPT-SYSTEM.md` §1–§2（不复制）。

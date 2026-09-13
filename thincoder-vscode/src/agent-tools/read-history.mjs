@@ -35,7 +35,7 @@
  * readonly: true — planMode pass / no permission ask. Registered depth-0 only:
  * subagents get their own throwaway history, so querying "the session" from a
  * child would be semantically confusing (SESSION.md §9.5 refinement 1).
- * §9 baseline mirrored from thincoder/src/agent-tools/read-history.mjs;
+ * §9 baseline mirrored from thincoder-cli/src/agent-tools/read-history.mjs;
  * §13 R19 path/cwd extension mirrored per SESSION.md §13 (double-end isomorphic —
  * no cross-end byte test).
  */

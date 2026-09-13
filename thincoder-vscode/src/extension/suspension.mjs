@@ -23,7 +23,7 @@ import { logEvent } from "../log.mjs"
 // 调用期读——环安全（两模块无顶层跨环读取）。
 import { postSubagentEvent } from "./panel-callbacks.mjs"
 
-// INPUT-LOCK-ASYNC（C'——2026-09-09，设计 thincoder/docs/design/INPUT-LOCK-ASYNC.md——双端）：
+// INPUT-LOCK-ASYNC（C'——2026-09-09，设计 thincoder-cli/docs/design/INPUT-LOCK-ASYNC.md——双端）：
 // R15 排队用户指令合并整批废弃（攒批取数/合并文案/上限常量全删）——busy（_turnState
 // running 含 digest）输入禁用（routeUserTurn 拒收 + loading.js 锁）——挂起空闲消息走
 // pendingInput 单槽（至多一条待交接——单消息逐发不攒批）。废弃记录见 AGENT-LOOP.md §7。

@@ -3,7 +3,7 @@
  * doc-anchors-v5.mjs — 文档锚一致性机检 · V5 锚引擎（CLI 锚判据核）。
  *
  * 本档 = `doc-anchors.mjs`（入口 / 报告）的 V5 判据核（R24a 拆分——各档 ≤300 行）：
- * ① **CLI 锚（V5-A 路径/坐标 · V5-B 用例号 · V5-C 符号）**——判据全文见 `thincoder/docs/design/ENGINEERING-MODE.md` §2.32.3；
+ * ① **CLI 锚（V5-A 路径/坐标 · V5-B 用例号 · V5-C 符号）**——判据全文见 `thincoder-cli/docs/design/ENGINEERING-MODE.md` §2.32.3；
  * 判定单位 = 行（fenced 块整块跳过）。三锚、存在性域与解析序、注记识别、假阳类逐条排除（§2.32.3.1–3.6）。
  * 两态（CLI 锚）：模块常量 `V5_GATE`（`true` = 闸态）+ CLI `--v5-gate` / `--v5-report`（入口档驱动）；
  * 判定函数接受**显式 `gate` 参数**（两态可直驱——用例与 AC 跨切换点零改）。

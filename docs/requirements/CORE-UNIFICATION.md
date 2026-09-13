@@ -2,7 +2,7 @@
 
 > 板块：核心统一（phase 2——「一个核 + 两个薄壳」：两产品共有的机制实现收敛为**单一权威源**的可共享核，两壳只留端特有部分）。
 > 需求层文档（`docs/requirements/`）。**架构级机制档**——功能性需求以用户故事表述（文档规范 §3.3 规则 6）。
-> 上游 = `thincoder/docs/design/TWO-REPO-MERGE.md` §2.13（phase 1 仅预留通道，明文「**若启动须另建板块文档**」——本档即该通道的落地）。
+> 上游 = `thincoder-cli/docs/design/TWO-REPO-MERGE.md` §2.13（phase 1 仅预留通道，明文「**若启动须另建板块文档**」——本档即该通道的落地）。
 > 建档：2026-09-13 · 状态：**需求已收口**（批次档 `docs/batches/2026-09-13-CORE-UNIFICATION.md` §1——用户 2026-09-13 裁定「计划可以，干吧」）；
 > 设计+测试见 `docs/design/CORE-UNIFICATION.md`（板块镜像形态见 `README.md` §3.2）；需求池条目 = 仓根 `docs/TODO.md`「phase 2：核心统一」。
 > **子系统档拆分（2026-09-13）**：设计面与需求面**各拆子系统档**——设计侧 15 档落 `docs/design/`（清单见 `docs/design/CORE-UNIFICATION.md` §2.5 注册表）；需求侧 15 档落同层 `docs/requirements/`（与设计侧**同名成对**）。
@@ -25,14 +25,14 @@
    提交形式固定四要素（**左端行为 / 右端行为 / 建议归一形态 / 影响面**）；**裁定未完毕的条目不得进入实施段**。
 
 **为什么现在做**：phase 1（目录合并）已把两产品收进单一 git 仓、原有跨仓机制全线退役；但**两份实现与两份文本仍在**。
-phase 1 的实测（口径与复现命令 = `thincoder/docs/requirements/TWO-REPO-MERGE.md` §1）与 phase 2 的逐档复核表明：
+phase 1 的实测（口径与复现命令 = `thincoder-cli/docs/requirements/TWO-REPO-MERGE.md` §1）与 phase 2 的逐档复核表明：
 **内容层与实现层都存在真分叉**——代码（`.mjs`）67 对中位仅 0.2829、逐字节同仅 1；提示词面 40 对中**逐字节同 28 · 不同 12**（§1.2）。
 
 **phase 2 的第一手数据（按类型 / 按目录拆分；口径与复现见 §1.1）**：
 
 | 切面 | 读数 |
 |---|---|
-| 同路径代码对（CLI `thincoder/src/**` ↔ VSC `thincoder-vscode/src/**`） | **107** 对 |
+| 同路径代码对（CLI `thincoder-cli/src/**` ↔ VSC `thincoder-vscode/src/**`） | **107** 对 |
 | 逐字节相同 / ≥0.9（全量口径） | **29** / **39** |
 | **代码（`.mjs`）67 对** | 中位 **0.2829** · 逐字节同 **1** · ≥0.9 仅 **7** |
 | `.mjs` 相似度分布 | ≥0.9 = 7 · 0.5–0.9 = 17 · 0.2–0.5 = 14 · **<0.2（真分叉）= 29** |
@@ -52,7 +52,7 @@ phase 1 的实测（口径与复现命令 = `thincoder/docs/requirements/TWO-REP
 
 ### 1.1 度量口径与复现（写给复核者）
 
-**口径（逐字，勿改——口径一变则历史数字不可比）**：成对判据 = 两产品 `thincoder/src/**` 与 `thincoder-vscode/src/**` 下
+**口径（逐字，勿改——口径一变则历史数字不可比）**：成对判据 = 两产品 `thincoder-cli/src/**` 与 `thincoder-vscode/src/**` 下
 **相对路径逐段相等**者成对（含全部档型，**不按扩展名过滤**）；相似度 = 两侧读成行、**去首尾空白 + 丢空行**后取**行集合**的
 **Jaccard**（|交集| / |并集|）；另报 sha256 **逐字节完全相同**对数。复现命令 = `node scripts/mirror-divergence.mjs`
 （仓根执行；`--json` 给机器；口径逐字写于该脚本头注 `:5-12`）。
@@ -64,7 +64,7 @@ phase 1 的实测（口径与复现命令 = `thincoder/docs/requirements/TWO-REP
 
 ### 1.2 提示词面第一手读数（2026-09-13）
 
-**背景**：`src/prompts/` 子目录中位 = **1.0000** **不足以**推出「内容层已同」——中位数**掩盖**同一层内的真分叉（同子目录里既有 1.000 也有 12 档不同 ⇒ 中位不可代表全层）。本节 = 逐档读数（两端 `thincoder/` ↔ `thincoder-vscode/`，逐字节 sha256 比对）：
+**背景**：`src/prompts/` 子目录中位 = **1.0000** **不足以**推出「内容层已同」——中位数**掩盖**同一层内的真分叉（同子目录里既有 1.000 也有 12 档不同 ⇒ 中位不可代表全层）。本节 = 逐档读数（两端 `thincoder-cli/` ↔ `thincoder-vscode/`，逐字节 sha256 比对）：
 
 | 面 | 档数（两端各） | 逐字节同 | 不同 | 不同的档 |
 |---|---|---|---|---|
@@ -82,7 +82,7 @@ phase 1 的实测（口径与复现命令 = `thincoder/docs/requirements/TWO-REP
    - 仅 VSC 12 档：`checkpoint.mjs` · `code.mjs` · `context.mjs` · `edit-fuzzy-match.mjs` · `edit-line-params.mjs` · `file-edit.mjs` · `focus.mjs` · `hashline-edit.mjs` · `more-file.mjs` · `read_image.mjs` · `shell.mjs` · `wait_for.mjs`。
    **计数口径**：两端合一 = **59** 档（41 同名 + 仅 CLI 6 + 仅 VSC 12）——勿与**仅 CLI 侧计数**混用（20 同 + 21 异 + 6 仅 CLI = 47，漏 VSC 独有 12 档）。
 5. **实测口径**：逐字节 = sha256 文件比对；档名集合 = 目录枚举。**复现命令** = `node -e` 内联脚本（F10：该口径并入 `scripts/mirror-divergence.mjs`）。
-6. **记忆面（A12 点名面）**：CLI `thincoder/src/memory/**`（8 档）用 **`node:sqlite` 的 `DatabaseSync` + FTS5**（`thincoder/src/memory/schema.mjs:9` / `:68`——零第三方依赖 ✓）；
+6. **记忆面（A12 点名面）**：CLI `thincoder-cli/src/memory/**`（8 档）用 **`node:sqlite` 的 `DatabaseSync` + FTS5**（`thincoder-cli/src/memory/schema.mjs:9` / `:68`——零第三方依赖 ✓）；
    VSC `thincoder-vscode/src/memory.mjs` + `memory-tool.mjs` **零 sqlite 用法**（两套逻辑）✗；VSC 包声明 `engines.vscode = ^1.85.0`，CLI 声明 `engines.node = >=24`。
    ⇒ 分叉源于**已失效的前提**（「VS Code 内置 Node 不支持 sqlite」）⇒ 用户 2026-09-13 裁定 **A12：记忆面向 CLI 语义归一**（CLI 为准）。
    **（A8 残余 · 定案）**：**`node:sqlite` 采纳为定案** ✓；VSC 引擎下限 = **候选 `^1.101.0`，经 S0 实测确认后定值**（测法：读扩展宿主 `process.versions.node` + 试 `import('node:sqlite')`——设计档 §2.11 A8）；
@@ -115,7 +115,7 @@ phase 1 的实测（口径与复现命令 = `thincoder/docs/requirements/TWO-REP
 | **N2** | **可回退** | 每段有回滚点、S2 每个模块一步一提交；**建核段（S0a / S1）** 期间两产品**零改动**（`git diff --stat` 对两产品目录为空）；回退演练后该产品全链复绿 |
 | **N3** | **核独立可验证** | 核测试可独立执行（`node --test` 于核目录）且 exit 0；**核内 import 面零产品路径**（机检：核内不得出现指向产品侧的相对 import）；**核内提示词读取面只从核包内目录解析**（机检：核内零指向产品侧 `src/prompts/` / `src/tools/` 的路径常量） |
 | **N4** | **两态引用闭合 · 发布链不断** | **CLI**：产物依赖声明可由 registry 解析（核已发布且范围命中——判据 = 发布预检断言：装入版本 = 仓内核版本，且 registry 上该版本存在）；**VSC**：vsix 内嵌核（marketplace 无依赖解析——判据 = 解包断言）；**提示词面随同一条通道到达两端**（核包内 `prompts/` 15 档 + `tool-docs/` 25 档）；两产品互不依赖对端包；发布链对外命令接口不变 |
-| **N5** | **单一权威源 · 由包机制保证** | 核内容只在一处撰写（`core/` 包本体——**含提示词面**；仓内零副本；开发期链接是解析指针、非撰写面）；**版本一致性三条断言**（零第三方依赖）：A 产品声明范围与仓内核版本逐字绑定 · B vsix 内嵌核版本 = 仓内核版本 · C 装入版本 = 仓内核版本；**第 4 条 D（提示词面完备性）**：核包内档名集合 = 槽位 15 + 工具描述 25（逐字），随产物到达两端且与仓内核目录**逐字节相同**（判据详式见设计档 §2.7 D-C11；反证：缺核 / 缺档即红） |
+| **N5** | **单一权威源 · 由包机制保证** | 核内容只在一处撰写（`thincoder-core/` 包本体——**含提示词面**；仓内零副本；开发期链接是解析指针、非撰写面）；**版本一致性三条断言**（零第三方依赖）：A 产品声明范围与仓内核版本逐字绑定 · B vsix 内嵌核版本 = 仓内核版本 · C 装入版本 = 仓内核版本；**第 4 条 D（提示词面完备性）**：核包内档名集合 = 槽位 15 + 工具描述 25（逐字），随产物到达两端且与仓内核目录**逐字节相同**（判据详式见设计档 §2.7 D-C11；反证：缺核 / 缺档即红） |
 | **N6** | **机检零红** | 本板块两档 + 新增核路径纳入扫描域后，仓根三机检（`scripts/doc-anchors.mjs` / `scripts/check-doc-width.mjs` / `scripts/check-ledger.mjs`）exit 0 |
 | **N7** | **零第三方运行时依赖** | 核内一律 `node:` 内建；核内零裸包名 import（保 CLI 零依赖承诺与 vsix 体积）。**版本下限不冻结**（承 A12）——归一若要求更高下限（如 VSC 记忆面统一到 `node:sqlite` ⇒ VSC 引擎下限须抬高）⇒ **逐条提交用户裁定**（F12 ② 命中）；**版本映射以查表 / 实测为准（不凭记忆写版本号）**。**（A8 残余 · 定案）**：**采纳 `node:sqlite`（定案）** ✓；VSC 引擎下限 = **候选 `^1.101.0`，经 S0 实测确认后定值**（测法：读扩展宿主 `process.versions.node` + 试 `import('node:sqlite')`——设计档 §2.11 A8）；下限值属对外契约变更 ⇒ 提交用户过目（**F13** / A11 ②） |
 | **N8** | **结构尺度** | 核模块档 ≤300 行（软线）/ ≤500 行（硬限）；>300 行须在设计档给拆分计划；口径 = `wc -l`（承 phase 1） |
@@ -151,7 +151,7 @@ phase 1 的实测（口径与复现命令 = `thincoder/docs/requirements/TWO-REP
 **依据** = 用户 2026-09-13 裁定「**需求侧文档先拆。**」（批次档 `docs/batches/2026-09-13-CORE-UNIFICATION.md` §1）。
 **硬约束 = 不新增需求**：各档条文只作三类处置并**逐条标来源**——**搬移**（自本档移入，F / N 编号与文本不变；本档留同编号回指行）·
 **回填**（本档已有表述的条目化，注来源节号）· **派生**（本档确无表述者，由设计档**已裁内容**派生一句，逐条标「**派生 · 非用户原话**」——只重述已裁内容，**不引入新范围**）。
-**命名与落点** = **板块镜像**形态（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**——规则原文见 CLI 产品地图 `thincoder/docs/README.md` §3.2）；本层 15 档与设计侧 15 档**逐一同名成对**。
+**命名与落点** = **板块镜像**形态（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**——规则原文见 CLI 产品地图 `thincoder-cli/docs/README.md` §3.2）；本层 15 档与设计侧 15 档**逐一同名成对**。
 
 | 子系统 | 需求档（本层 `docs/requirements/`） | 设计档（`docs/design/`） | 装入内容 | 行数 |
 |---|---|---|---|---|

@@ -1,6 +1,6 @@
 /**
  * config-presets.mjs — provider preset table (mirrors CLI PROVIDER_PRESETS).
- * CLI (`thincoder/src/config.mjs`) is the authority — keep in sync.
+ * CLI (`thincoder-cli/src/config.mjs`) is the authority — keep in sync.
  * Split out of config-io.mjs (500-line hard limit; zero dependencies by design).
  * 2026-09-10 MODEL-SELECTION：预设置回**单值默认模型**（`model`——承接新装启动种子 /
  * 会话槽位空兜底 / 显示回退；原 `models[]` 候选清单字段随本批退场——CLI PROVIDER_PRESETS

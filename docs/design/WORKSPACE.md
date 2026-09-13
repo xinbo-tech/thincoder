@@ -10,7 +10,7 @@
 
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
-| 技能发现 | `thincoder/src/skills.mjs` | `thincoder-vscode/src/extension/skills.mjs` |
+| 技能发现 | `thincoder-cli/src/skills.mjs` | `thincoder-vscode/src/extension/skills.mjs` |
 | 规则发现 | `src/rules.mjs` | `src/extension/rules.mjs` |
 | 同伴实例 / 域 | `src/peer-instances.mjs` · `src/peer-domains.mjs` | `src/extension/peer-instances.mjs` · `peer-domains.mjs` |
 | 台账规则 / 路径约定 | `src/ledger.mjs` · `src/conventions.mjs` · `src/escape.mjs` | 同名（同路径对） |

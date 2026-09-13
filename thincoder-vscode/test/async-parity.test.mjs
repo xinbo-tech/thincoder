@@ -2,8 +2,8 @@
  * async-parity.test.mjs — 第 35 批（GitHub #6）VSC async 子代理保真机器验收。
  * 设计权威：`docs/design/AGENT-LOOP.md` §12（契约 C-1~C-9 / 用例 T-D1~T-D10 /
  * AC-G1~G7 + AC-N1~N4）+ §15（群 B 批 B1——advisor 池同构面 C-10 / T-D11~T-D13 /
- * AC-B1-1~AC-B1-4）；批次档 `thincoder/docs/batches/2026-09-11-VSC-ASYNC-PARITY.md` §2
- * + `thincoder/docs/batches/2026-09-11-VSC-REVIEW-ASYNC-SWEEP.md` §2。
+ * AC-B1-1~AC-B1-4）；批次档 `thincoder-cli/docs/batches/2026-09-11-VSC-ASYNC-PARITY.md` §2
+ * + `thincoder-cli/docs/batches/2026-09-11-VSC-REVIEW-ASYNC-SWEEP.md` §2。
  *
  * 手法（三条缝，全部零网络）：
  * ① 直驱纯函数——`discardAbortedPool`（T-D3/T-D4）、`discardAbortedAdvisors`（T-D12）、

@@ -277,7 +277,7 @@ test("T-VG8 压缩定锚：（>20 条）重挂 pinned 三锚 + 幂等重挂；�
 test("T-VG9 声明文件目录候选：裸文件名经声明范围解析 → 命中 1/1 + 报告注明解析路径", () => {
   const ws = mkws()
   write(ws, "thincoder-vscode/docs/design/X.md", "# X\n\nVSC line three content here\n")
-  write(ws, "thincoder/docs/design/X.md", "# X\n\nMain repo line three content\n")
+  write(ws, "thincoder-cli/docs/design/X.md", "# X\n\nMain repo line three content\n")
   const text = `Finding: X.md:3: VSC line three content here`
   const res = verifyCitations(text, ws, { scope: ["thincoder-vscode/docs/design/X.md"] })
   assert.equal(res.total, 1)
@@ -291,16 +291,16 @@ test("T-VG9 声明文件目录候选：裸文件名经声明范围解析 → 命
 
 test("T-VG10 声明仓根候选：仓根相对路径命中；同名另一仓不被误命中（内容判据）", () => {
   const ws = mkws()
-  write(ws, "thincoder/docs/design/Y.md", "# Y\n\nmain-repo-marker line\n")
+  write(ws, "thincoder-cli/docs/design/Y.md", "# Y\n\nmain-repo-marker line\n")
   write(ws, "thincoder-vscode/docs/design/Y.md", "# Y\n\nvsc-repo-marker line\n")
-  const scope = ["thincoder/docs/design/X.md"]
+  const scope = ["thincoder-cli/docs/design/X.md"]
   const hit = verifyCitations(`See docs/design/Y.md:3: main-repo-marker line`, ws, { scope })
   assert.equal(hit.matched.length, 1, "经声明仓根命中")
   assert.equal(hit.failed.length, 0)
   const sameName = verifyCitations(`See docs/design/Y.md:3: vsc-repo-marker line`, ws, { scope })
   assert.equal(sameName.matched.length, 0, "同名另一仓不被误命中")
   assert.equal(sameName.failed.length, 1)
-  assert.equal(sameName.failed[0].reason, "content mismatch @ thincoder/docs/design/Y.md", "失败原因含解析到的相对路径")
+  assert.equal(sameName.failed[0].reason, "content mismatch @ thincoder-cli/docs/design/Y.md", "失败原因含解析到的相对路径")
 })
 
 test("T-VG11 失败原因三分：file unreadable / content mismatch @ path / path traversal", () => {

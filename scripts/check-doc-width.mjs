@@ -4,7 +4,7 @@
  *
  * 结构（R24a 拆分——各档 ≤300 行）：本档 = 入口 / 报告 + 宽度判据 + 六档并入映射；
  * 判据核（域驱动 / V1 / V2 / V3 / 基线）= `check-doc-width-core.mjs`（全量 re-export——对外导入面不变）。
- * 来源 = 两产品同名档（CLI `thincoder/scripts/check-doc-width.mjs` 与 VSC `thincoder-vscode/scripts/check-doc-width.mjs`）
+ * 来源 = 两产品同名档（CLI `thincoder-cli/scripts/check-doc-width.mjs` 与 VSC `thincoder-vscode/scripts/check-doc-width.mjs`）
  * 的并集——跨仓判据（V4 跨仓形态 / 方向对常量）整类退役（两仓合并 S4；设计档 TWO-REPO-MERGE.md §2.4 R5/R8）。
  * 本档 = 域参数化单份：**无域参 = 全域**（仓根 `docs` 自身 + 各产品子目录域）；产品域由门禁显式传参（`--domain`）。
  *

@@ -10,7 +10,7 @@
 > · **§2 当前有效任务书** → 第 859 行起（「归并（R5 收口轮——§2 唯一有效任务书）」；其前各块为历史留痕，见「历史块索引」）；**S0a / S0b 任务书**在第 885 / 904 行
 > · **§2 一次性材料归位**（自需求 / 设计档移出的内容）→ **第 1077 行起**（子节一–六）
 > · **§3 设计评审** → 第 1344 行 · **§4 用户批准** → 第 1374 行 · **§5 实施记录**（度量脚本 / 审计 / 建核）→ 第 1389 行 · **§6 验证与收口** → 第 1536 行
-> 上游：`thincoder/docs/design/TWO-REPO-MERGE.md` §2.13（phase 1 仅为 phase 2 预留通道；**若启动须另建板块文档**，不在该档扩张）· 需求池条目见 `docs/TODO.md`。
+> 上游：`thincoder-cli/docs/design/TWO-REPO-MERGE.md` §2.13（phase 1 仅为 phase 2 预留通道；**若启动须另建板块文档**，不在该档扩张）· 需求池条目见 `docs/TODO.md`。
 
 ---
 
@@ -33,7 +33,7 @@
 
 | 项 | 读数 |
 |---|---|
-| 同路径代码对（CLI `thincoder/src/**` ↔ VSC `thincoder-vscode/src/**`） | **107** 对 |
+| 同路径代码对（CLI `thincoder-cli/src/**` ↔ VSC `thincoder-vscode/src/**`） | **107** 对 |
 | 逐字节相同 / ≥0.9 | **29** / **39**（与档内招牌数字一致 ⇒ 独立复现成立） |
 | **代码（`.mjs`）67 对** | 中位 **0.2829** · **逐字节同仅 1** · ≥0.9 仅 **7** |
 | 非代码（提示词 / 工具文档 `.md`）40 对 | 中位 **1.0000** · 逐字节同 **28** |
@@ -60,7 +60,7 @@
 
 ### 边界与约束（设计须遵守）
 
-- **另建板块文档**（`docs/README.md` 地图登记）——不在 `thincoder/docs/design/TWO-REPO-MERGE.md` 内扩张（§2.13 明文边界）。
+- **另建板块文档**（`docs/README.md` 地图登记）——不在 `thincoder-cli/docs/design/TWO-REPO-MERGE.md` 内扩张（§2.13 明文边界）。
 - **产品运行时行为不变**（承 phase 1 F7 口径）；核的引入不得改变 CLI/VSC 的可观察行为。
 - **提示词不做单副本合流**（D14 仍有效：运行期硬加载 + 打包只收包根内文件 ⇒ 机械约束）——核**不得**试图统一提示词文件布局。
 - **每段可回退**：S1 不动两产品；S2 单模块一步一提交。
@@ -145,7 +145,7 @@
 
 | # | 用户原话 | 裁定 |
 |---|---|---|
-| **A12** | 「以前开发 vscode 的时候以为 vscode 内置的 nodejs 版本不支持 sqlite，结果导致 vscode 和 cli 在记忆系统方面采用了完全不同的逻辑，但事实是新的 vscode 内置的 nodejs 是支持 sqlite 的，所以未来**记忆系统要向 cli 端统一**。」 | **记忆系统向 CLI 端归一** ✓（CLI 语义为准）。**父侧实核（2026-09-13）**：CLI = `thincoder/src/memory/**`（8 档；`schema.mjs` 用 `node:sqlite` 的 `DatabaseSync` + FTS5，零依赖 ✓）；VSC = `thincoder-vscode/src/memory.mjs` + `memory-tool.mjs`（**零 sqlite 用法** ✗）。 |
+| **A12** | 「以前开发 vscode 的时候以为 vscode 内置的 nodejs 版本不支持 sqlite，结果导致 vscode 和 cli 在记忆系统方面采用了完全不同的逻辑，但事实是新的 vscode 内置的 nodejs 是支持 sqlite 的，所以未来**记忆系统要向 cli 端统一**。」 | **记忆系统向 CLI 端归一** ✓（CLI 语义为准）。**父侧实核（2026-09-13）**：CLI = `thincoder-cli/src/memory/**`（8 档；`schema.mjs` 用 `node:sqlite` 的 `DatabaseSync` + FTS5，零依赖 ✓）；VSC = `thincoder-vscode/src/memory.mjs` + `memory-tool.mjs`（**零 sqlite 用法** ✗）。 |
 
 **由 A12 派生的方法要求（父侧登记，供重写轮执行）**：**S0 增设「**前提校验**」一遗** ✓——对每一个**分叉面**不只问「以谁为准」✓，先问「**为何会分叉？当年的前提还成立吗？**」✓：若分叉源于**已失效/错误的前提**（如本条的「VS Code 不支持 sqlite」✗）⇒ **直接归一** ✓（前提消失 = 分叉理由消失 ✓），**不必也不应**当成行为裁决 ③ 类逐条拉锯 ✗。此项应进 S0 裁决表的判定口径 ✓。
 
@@ -224,7 +224,7 @@
 
 **用户问题**：「让你拆的按各子系统或者模块的设计文档，会跟现有的两仓参照嘛？」
 
-**父侧实核**：两产品**各有成体系的子系统设计档**——CLI `thincoder/docs/design/*.md` **47** 档 · VSC `thincoder-vscode/docs/design/*.md` **50** 档；
+**父侧实核**：两产品**各有成体系的子系统设计档**——CLI `thincoder-cli/docs/design/*.md` **47** 档 · VSC `thincoder-vscode/docs/design/*.md` **50** 档；
 **同名 27 档**（`MEMORY.md` · `SESSION.md` · `TOOLS.md` · `MCP.md` · `PROVIDER.md` · `AGENT-LOOP.md` · `ENGINEERING-MODE.md` · `EDIT.md` · `CHECKPOINT.md` · `CONSULTATION.md` · `TESTING.md` · `RELEASE.md` …✓）；**仅 CLI 20 · 仅 VSC 23** ✓。
 
 **登记项（归属段 = S2 / S3——尾段 ✗：只记档、不上抛 ✗）**：**文档面与代码面同步归一** ——
@@ -242,7 +242,7 @@
 
 ### 追加裁定（建核收口 · 2026-09-13）
 
-**事实**：`core/` 已建成——**46 档**（`prompts/` 12 · `tool-docs/` 20 · `test/` 7 · 6 个 `.mjs` + `package.json`）；**父侧复跑** `node --test`（cwd = `core/`）→ **49 测试全过 · 退出码 0** ✓；两产品 `git diff` 为空 ✓；核内零产品依赖、零第三方包 ✓。用户裁定 #44 / #47 已落地且带测试断言 ✓。
+**事实**：`thincoder-core/` 已建成——**46 档**（`prompts/` 12 · `tool-docs/` 20 · `test/` 7 · 6 个 `.mjs` + `package.json`）；**父侧复跑** `node --test`（cwd = `thincoder-core/`）→ **49 测试全过 · 退出码 0** ✓；两产品 `git diff` 为空 ✓；核内零产品依赖、零第三方包 ✓。用户裁定 #44 / #47 已落地且带测试断言 ✓。
 
 **三条裁定（回应执行者停下上报 ✓）**：
 1. **验收数字以设计档为准**：S0a 席位 = **槽位 12 + 工具描述 20** ✓——父侧任务书里的「15 + 25」**是我写错** ✗（全量属 S1）；**未裁决的 8 档不得提前进核** ✗（否则违「未裁定不进 S1」）。
@@ -295,7 +295,7 @@
 
 **用户原话**：「文档里的中文提示词你是不是有什么误解？**那他妈的是设计文档好吗！**」
 
-**实核** ✓：`thincoder/docs/design/prompts/*.md`（各 15 档）开篇即 `<!-- 槽位:[1] 消费方:[…] -->` + 中文正文 —— 它们是**提示词层的中文设计档**（给人读、供审计 ✓），**不是**运行期的提示词本体 ✗。
+**实核** ✓：`thincoder-cli/docs/design/prompts/*.md`（各 15 档）开篇即 `<!-- 槽位:[1] 消费方:[…] -->` + 中文正文 —— 它们是**提示词层的中文设计档**（给人读、供审计 ✓），**不是**运行期的提示词本体 ✗。
 
 **父侧错误（真缺陷）** ✗：拆档轮把 `#30–#39`（这 10 档）的归属段标为 **`S0a（首批建核）`** ✗ —— 等于**把设计文档搬进核包** ✗✗（核内只放运行期的 `prompts/` + `tool-docs/` ✓）。**必须收正** ✓。
 
@@ -305,14 +305,14 @@
 
 **用户原话**：「**需求侧文档先拆。**」
 
-⇒ 设计侧已拆 15 份子系统档 ✓ ⇒ **需求侧按同一板块名成对拆分**（`docs/requirements/<板块>.md` ↔ `docs/design/<板块>.md` ✓——项目规矩见 `thincoder/docs/README.md`，**引用前自行实核** ✗）。
+⇒ 设计侧已拆 15 份子系统档 ✓ ⇒ **需求侧按同一板块名成对拆分**（`docs/requirements/<板块>.md` ↔ `docs/design/<板块>.md` ✓——项目规矩见 `thincoder-cli/docs/README.md`，**引用前自行实核** ✗）。
 **硬约束**：**不新增需求** ✗（只搬移 / 回填已有表述；砏无表述者由设计**派生**并标注「派生·非用户原话」✓）；工作流档保留**统一目标 + 边界原则 + 登记表** ✓。已排轮（等概念纠正轮 id 50 ✓）。
 
 ### 追加裁定（目录改名 · 2026-09-13 · **待执行——父侧先量代价并报计划**）
 
 **用户原话**：「目录名我不满意，**thincoder 应该改成 thincoder-cli，core 应该改成 thincoder-core**。」
 
-**父侧实测代价（2026-09-13）**：`thincoder/` 作路径前缀的引用 —— `.md` **579 处 / 52 档** · `.mjs` **63 处 / 42 档** · CI `working-directory: thincoder` ✓ · 度量脚本 `DEFAULT_A="thincoder/src"` + 镜像默认 + 两个面定义 ✓（合计 ~650 处，均机械替换 ✓）。
+**父侧实测代价（2026-09-13）**：`thincoder-cli/` 作路径前缀的引用 —— `.md` **579 处 / 52 档** · `.mjs` **63 处 / 42 档** · CI `working-directory: thincoder` ✓ · 度量脚本 `DEFAULT_A="thincoder-cli/src"` + 镜像默认 + 两个面定义 ✓（合计 ~650 处，均机械替换 ✓）。
 
 **拟行方案（待用户确认后执行 ✓）**：
 1. **顺序**：等手头两轮（概念纠正 / 需求侧拆分）落地 ⇒ 否则它们刚写的路径立刻又得改 ✗；
@@ -341,9 +341,22 @@
 
 ### 追加记录（改名子批 · 环境阻断 · 2026-09-13 夜）
 
-**状态** ✓：设计已评审通过 + 用户已批准 ✓；**实施被文件系统锁阻断** ✗——`core` 目录被 **VS Code（`Code.exe`）持有的目录句柄**占住 ✓（该句柄**不允许删除/改名共享** ✓）。父侧多次实测 ✓：`thincoder` 可改 ✓ · **`core` 恒 `Permission denied`** ✗ · 而 `core/advisor` 与 `core/test` **均可改** ✓ ⇒ **锁在 `core` 目录本体** ✗（非其子项 ✓）。仓内**净零改动** ✓（实施者已完整回退 ✓，无半改名态 ✓）。
+**状态** ✓：设计已评审通过 + 用户已批准 ✓；**实施被文件系统锁阻断** ✗——`core` 目录被 **VS Code（`Code.exe`）持有的目录句柄**占住 ✓（该句柄**不允许删除/改名共享** ✓）。
+父侧多次实测 ✓：`thincoder` 可改 ✓ · **`core` 恒 `Permission denied`** ✗ · 而 `thincoder-core/advisor` 与 `thincoder-core/test` **均可改** ✓ ⇒ **锁在 `core` 目录本体** ✗（非其子项 ✓）。仓内**净零改动** ✓（实施者已完整回退 ✓，无半改名态 ✓）。
 
 **接手须知** ✓（给解锁后的任何会话 ✓）：解锁方式 = VS Code 命令面板 → **`Developer: Reload Window`** ✓（或关闭引用 `core` 的视图 ✓）；解锁后**直接重派 eng-coder 实施** ✓——任务书 = §2 的该子批 + 设计档 §4 ✓；**同一 designId 可复用** ✓；扫替脚本 = `.thincoder/tmp/sweep.mjs`（**保留态**为默认 ✓，**勿用 `--literal`** ✗）；若该临时脚本已不在 ⇒ 按设计档 §4.3 三类替换规则重写 ✓。
+
+### 追加裁定（改名实施 · 追认执行者自处置 · 2026-09-14）
+
+实施轮 3 自主处置了 4 处「保真优先」面（均带 `file:line` 证据 + 可一键翻转 ✓）—— **全部追认** ✓：
+
+1. **P8 / P9 两类 URL 保护** ✓ —— npm org URL 与 Gitee 仓 URL 会被机械规则误替 ✗，而设计 §4.3.2 第 8 项明写「域名 / URL 不属路径」✓；
+2. **回退 3 处类 B 假阳性** ✓ —— 散文枚举里的 **CLI 模块名**（`core/sse` 族 ✗）不是核目录 ✓；内部 advisor 评审 🔴 抓出、执行者逐条复证后还原 ✓；
+3. **回退 2 处 D2 同族自毁行** ✓ —— 规则句被替成「新 → 新」✗，与 §1:320 同族 ✓。
+
+机制定位（执行者自证 ✓）：类 B 跳过规则原只判「前一字符 ∈ `[A-Za-z0-9_.-]` 或 `/`」✗ ⇒ **空格前**的 `core/` 漏判 ✓；全仓 167 处逐处分类 = 161 处反引号前（合法 ✓）+ 6 处空格前（4 合法 + **3 假阳性** ✓ 已还原 ✓），**无遗漏** ✓。
+
+**越段发现两项 —— 归主 agent，本轮已由父侧就地收正** ✓：`README.md:23-24` 的裸名命令（`cd thincoder` ✗）· 台账 `docs/TODO.md:7` 的规则句（`thincoder/…` ✗）。
 
 > 本节之后由 eng-designer 接手写 §2 批次任务与需求/设计档；设计就绪后由**用户发起**设计评审（发起权在用户）。
 
@@ -357,7 +370,7 @@
 
 ### 范围与权威
 
-- **范围** = phase 2「核心统一」全段（S0 → S1 → S2 → S3）；两产品 = CLI（`thincoder/`）与 VSC 扩展（`thincoder-vscode/`）。
+- **范围** = phase 2「核心统一」全段（S0 → S1 → S2 → S3）；两产品 = CLI（`thincoder-cli/`）与 VSC 扩展（`thincoder-vscode/`）。
 - **覆盖条目** = 需求档 **F1–F14 · N1–N8 全量**（逐条验收回指 = 设计档 §2.10 表）——本段不新增条目、不改编号。
 - **权威边界**：分段进入 / 退出条件与回退点（设计档 §2.6）、判定口径与五条闸（设计档 §2.4）、裁决表列定义（设计档 §2.5）、受影响文件清单（设计档 §2.8）——细节一律以设计档为准；本段只做派工与验收编排，**不夹带新设计**。
 - **发现即报告**：设计缺口 / 与实现冲突 / 归属不明 → **停下上报主 agent**（不自行选解释往下写）。
@@ -390,7 +403,7 @@
 - **执行者** = eng-coder；模块集合 = 设计档 §2.5「归属段 = S1（首批建核）」集合。
 - **前置**：实跑一次三机检确认零红（设计档 §2.9 第 6 条「机器检查面」/ N6）。
 - **动作**：
-  1. **建核**：`core/`（含 `test/`）——逐模块**从两侧提取 / 融合**（来源可追溯、零「新写」——F3 / D-C2）。
+  1. **建核**：`thincoder-core/`（含 `test/`）——逐模块**从两侧提取 / 融合**（来源可追溯、零「新写」——F3 / D-C2）。
   2. **测试合流**：两边测试并入核测试（取并集、去重、按核接口重述——设计档 §2.8 产品测试行）；核内零产品 import、零裸包名 import（N3 / N7）。
   3. **核独立跑绿**：`node --test` 于核目录 exit 0（F4 / **T-C4**）。
   4. **CI 增设 `core` job**（核测试 + 同源校验——设计档 §2.2 契约 7 / §2.8 CI 行；三 job 原样）。
@@ -415,7 +428,7 @@
 - **执行者** = eng-coder（实现面）；文档 / 台账收正按写权矩阵归口（设计档 = eng-designer · 台账 = 主 agent）。
 - **动作**：
   1. **残留零引用复核**（旧实现删净——F9）；
-  2. **副本集合一致**（两产品 `src/core/` 与 `core/` 权威源逐字节一致、集合对应无缺漏——**T-C11** 复跑）；
+  2. **副本集合一致**（两产品 `src/core/` 与 `thincoder-core/` 权威源逐字节一致、集合对应无缺漏——**T-C11** 复跑）；
   3. **三机检**（cwd = 仓根）exit 0——`node scripts/doc-anchors.mjs` · `check-doc-width.mjs` · `check-ledger.mjs`（**T-C9**）；
   4. **两产品门禁**与迁移前基线逐数一致（**T-C5** / **T-C6**）；
   5. **两产物生成**：`npm pack` / `vsce package` 成功且含核文件（**T-C7**）；
@@ -473,9 +486,9 @@
 
 ### 范围与权威
 
-- **范围** = phase 2「核心统一」全段（S0 → S1 → S2 → S3）；两产品 = CLI（`thincoder/`）与 VSC 扩展（`thincoder-vscode/`）。
+- **范围** = phase 2「核心统一」全段（S0 → S1 → S2 → S3）；两产品 = CLI（`thincoder-cli/`）与 VSC 扩展（`thincoder-vscode/`）。
 - **覆盖条目** = 需求档 **F1–F14 · N1–N8 全量**（逐条验收回指 = 设计档 §2.10 表）——本段不新增条目、不改编号。
-- **新形态一句话**：核 = `core/` 内真包 `@thincoder/core`（private · 不单独发布）+ 仓根 workspace 根；两产品以 workspace 依赖引用；产物装载 = 打包期链接垫片 + 内嵌（CLI `bundledDependencies`；VSC 分阶段 vsce + `--follow-symlinks`）+ **含核断言 fail-closed**（设计档 §2.2 / §2.2.1 / D-C9）。
+- **新形态一句话**：核 = `thincoder-core/` 内真包 `@thincoder/core`（private · 不单独发布）+ 仓根 workspace 根；两产品以 workspace 依赖引用；产物装载 = 打包期链接垫片 + 内嵌（CLI `bundledDependencies`；VSC 分阶段 vsce + `--follow-symlinks`）+ **含核断言 fail-closed**（设计档 §2.2 / §2.2.1 / D-C9）。
 - **权威边界**：分段进入 / 退出条件与回退点（设计档 §2.6）、判定口径与五条闸（§2.4）、裁决表列定义（§2.5）、装载机制与实测（§2.2.1）、受影响文件清单（§2.8）——细节一律以设计档为准；本段只做派工与验收编排，**不夹带新设计**。
 - **发现即报告**：设计缺口 / 与实现冲突 / 归属不明 → **停下上报主 agent**。
 - **三方一致**：批次档 §2 本批条目 = 设计档 §2.10 验收回指 = 需求档 F / N 条目。
@@ -507,14 +520,14 @@
 - **执行者** = eng-coder；模块集合 = 设计档 §2.5「归属段 = S1（首批建包）」集合。
 - **前置**：实跑一次三机检确认零红（设计档 §2.9 第 6 条 / N6）。
 - **动作**：
-  1. **建包**：`core/`（`package.json` + 模块 + `test/`）——逐模块**从两侧提取 / 融合**（来源可追溯、零「新写」——F3 / D-C2）。
+  1. **建包**：`thincoder-core/`（`package.json` + 模块 + `test/`）——逐模块**从两侧提取 / 融合**（来源可追溯、零「新写」——F3 / D-C2）。
   2. **workspace 根**：仓根 `package.json`（private；workspaces = core / thincoder / thincoder-vscode）——S1 仅建设；产品依赖声明留 S2。
   3. **测试合流**：两边测试并入核测试（取并集、去重、按核接口重述）；核内零产品 import、零裸包名 import（N3 / N7）。
-  4. **核独立跑绿**：`node --test` 于 `core/` exit 0（F4 / **T-C4**）。
+  4. **核独立跑绿**：`node --test` 于 `thincoder-core/` exit 0（F4 / **T-C4**）。
   5. **CI 增设 `core` job**（核测试；三 job 原样——设计档 §2.8 CI 行）。
 - **禁止**：改两产品任何文件——收口以 `git diff --stat` 为空为硬判据（**T-C12**）。
 - **退出验收**（设计档 §2.6 S1 行）：T-C3（随建包逐档核验来源侧）· T-C4 · T-C8（核目录内零提示词档）· T-C12 · T-C14（核档 ≤300 软线 / 无 >500）· T-C15（核内 import 面机检）。
-- **回退点** = 删 `core/` + 根 `package.json` 即退（产品零改）。
+- **回退点** = 删 `thincoder-core/` + 根 `package.json` 即退（产品零改）。
 
 #### S2 逐模块迁移（一步一提交）
 
@@ -604,9 +617,9 @@
 
 ### 范围与权威
 
-- **范围** = phase 2「核心统一」全段（S0 → S1 → S2 → S3）；两产品 = CLI（`thincoder/`）与 VSC 扩展（`thincoder-vscode/`）；仓根 = 本仓根（**无 workspace 根 manifest**——设计档 §2.1 B12）。
+- **范围** = phase 2「核心统一」全段（S0 → S1 → S2 → S3）；两产品 = CLI（`thincoder-cli/`）与 VSC 扩展（`thincoder-vscode/`）；仓根 = 本仓根（**无 workspace 根 manifest**——设计档 §2.1 B12）。
 - **覆盖条目** = 需求档 **F1–F14 · N1–N8 全量**（逐条验收回指 = 设计档 §2.10 表）——本段不新增条目、不改编号。
-- **新形态一句话**：核 = `core/` 内真包 `@thincoder/core`（独立版本 · **发布到 npm**）；两产品以**真 semver 范围**声明依赖；
+- **新形态一句话**：核 = `thincoder-core/` 内真包 `@thincoder/core`（独立版本 · **发布到 npm**）；两产品以**真 semver 范围**声明依赖；
   **开发期**本地链接（`npm link`——不发布也能开发）· **生产期**引用已发布核包（CLI 走 npm 依赖解析；VSC 的 vsix 内嵌核）；
   **零垫片、零仓结构改动**；两产物均配**含核 / 版本断言 fail-closed**（设计档 §2.2 / §2.2.1 / §2.7 D-C9 / D-C11 / D-C12）。
 - **权威边界**：分段进入 / 退出条件与回退点（设计档 §2.6）、判定口径与五条闸（§2.4）、裁决表列定义（§2.5）、
@@ -643,15 +656,15 @@
 - **执行者** = eng-coder；模块集合 = 设计档 §2.5「归属段 = S1（首批建包）」集合。
 - **前置**：实跑一次三机检确认零红（设计档 §2.9 第 6 条 / N6）。
 - **动作**：
-  1. **建包**：`core/`（`package.json` + 模块 + `test/`）——逐模块**从两侧提取 / 融合**（来源可追溯、零「新写」——F3 / D-C2）；
-     `core/package.json`：name / version / type / exports / files（**非 private**——D-C10）。
+  1. **建包**：`thincoder-core/`（`package.json` + 模块 + `test/`）——逐模块**从两侧提取 / 融合**（来源可追溯、零「新写」——F3 / D-C2）；
+     `thincoder-core/package.json`：name / version / type / exports / files（**非 private**——D-C10）。
   2. **测试合流**：两边测试并入核测试（取并集、去重、按核接口重述）；核内零产品 import、零裸包名 import（N3 / N7）。
-  3. **核独立跑绿**：`node --test` 于 `core/` exit 0（F4 / **T-C4**）。
+  3. **核独立跑绿**：`node --test` 于 `thincoder-core/` exit 0（F4 / **T-C4**）。
   4. **CI 增设 `core` job**（核测试；三 job 原样——设计档 §2.8 CI 行）。
 - **不发布**：S1 只建包并验证可用（用户「先建核、试一下可用」；发布发生在 S2 进入前）。
 - **禁止**：改两产品任何文件——收口以 `git diff --stat` 为空为硬判据（**T-C12**）。
 - **退出验收**：T-C3 · T-C4 · T-C8 · T-C12 · T-C14 · T-C15。
-- **回退点** = 删 `core/` 即退（仓结构零改）。
+- **回退点** = 删 `thincoder-core/` 即退（仓结构零改）。
 
 #### S2 逐模块迁移（一步一提交）
 
@@ -662,7 +675,7 @@
      - 产品 `package.json` 声明 `dependencies: {"@thincoder/core": "^<核版本>"}`（真 semver——断言 A）；产品代码 import 改指**包名**（壳 → 核允许、核 → 壳禁止——设计档 §2.2 契约 2/3）。
      - **开发期链接**：`cd core && npm link` → `cd <产品> && npm link @thincoder/core`（不发布也能跑；manifest / lock 零污染——设计档 §2.2.1 R8④）。
      - **装载面（每产品一次，取代 R2 垫片步骤）**：
-       - CLI：改 `thincoder/scripts/release-check.mjs` 加**发布预检**（断言 C：装入版本 = 仓内核版本 + registry 上该版本存在）；走已有 `prepublishOnly` 钩子。
+       - CLI：改 `thincoder-cli/scripts/release-check.mjs` 加**发布预检**（断言 C：装入版本 = 仓内核版本 + registry 上该版本存在）；走已有 `prepublishOnly` 钩子。
        - VSC：`.vscodeignore` **追加反排除行**（`!node_modules/@thincoder/core/**`；**第 3 行 `node_modules/**` 保留**——删之会外泄 devDeps，设计档 §2.2.1 R8①）；
          新建 `check-vsix.mjs`（落 `thincoder-vscode/scripts/`——断言 B：解 vsix 判含核 + 版本逐字相等）；
          `publish-all.mjs` 加**段 0**（核版本存在性预检）+ **段 1.5**（调断言脚本）；`package.json` 加 `postpackage` + devDeps `yauzl`。
@@ -713,7 +726,7 @@
 
 | 编号 | 变更 | 说明 |
 |---|---|---|
-| T-C7 | **判据换形态** | 旧 = 「产物内含核文件且与 `core/` 逐字节一致」⇒ 新 = **VSC**：vsix 内含核 + 内嵌版本逐字等于仓内核版本（断言 B）；**CLI**：tarball 内 manifest 的核依赖为**真 semver 范围**（非 `*` / `file:`）+ 装入版本一致且 registry 上存在（断言 C）。CLI 侧不再要求「内嵌」——A6 语义是「生产期引用发布包」 |
+| T-C7 | **判据换形态** | 旧 = 「产物内含核文件且与 `thincoder-core/` 逐字节一致」⇒ 新 = **VSC**：vsix 内含核 + 内嵌版本逐字等于仓内核版本（断言 B）；**CLI**：tarball 内 manifest 的核依赖为**真 semver 范围**（非 `*` / `file:`）+ 装入版本一致且 registry 上存在（断言 C）。CLI 侧不再要求「内嵌」——A6 语义是「生产期引用发布包」 |
 | T-C11 | **判据换形态（对象不变：fail-closed 反证）** | 旧 = 「撤除装载（链接 / 标志）后打包」⇒ 新 = ① 撤除 `.vscodeignore` 反排除行后 `vsce package` → 断言 B exit 1（**对照实读 R8①：vsce 自身 exit 0** ⇒ 必须断言化）；② 声明改成 `*` 或 `file:` → 断言 C exit 1（R3 漂移 / R10 不可解析） |
 | 其余不变 | 复核通过 | T-C1–T-C6 · T-C8–T-C10 · T-C12–T-C16 逐条复核：**均不绑垫片 / 不绑 workspace**，语义不变；R2 版块「同源校验（`core-sync`）」「分阶段打包」表述随形态**作废** |
 
@@ -750,7 +763,7 @@
 
 ### 范围与权威
 
-- **范围** = phase 2「核心统一」全段（S0 → S1 → S2 → S3）；两产品 = CLI（`thincoder/`）与 VSC 扩展（`thincoder-vscode/`）；仓根 = 本仓根（**无 workspace 根 manifest**——设计档 §2.1 B12）。
+- **范围** = phase 2「核心统一」全段（S0 → S1 → S2 → S3）；两产品 = CLI（`thincoder-cli/`）与 VSC 扩展（`thincoder-vscode/`）；仓根 = 本仓根（**无 workspace 根 manifest**——设计档 §2.1 B12）。
 - **覆盖条目** = 需求档 **F1–F11 · N1–N8 全量**（逐条验收回指 = 设计档 §2.10 表）——本轮**新增 F11**（对称面进核 · 差异不作排除理由）；F6 / N1 按 A10 重写。
 - **边界原则（本批总则，不得反向使用）**：① 对称 ⇒ 进核（含低相似度真分叉面）· ② **差异不得作为排除理由**（A9——排除不是选项）· ③ **端特有桶只收结构性不对称**（仅供单侧存在 / 依赖壳能力，判定须附证据）· ④ **行为不变不作判据**（A10——验收 = 裁决是否落实：面内归一后行为 = 裁决结果，**不要求**等于旧行为；未涉面不得无故回归）· ⑤ 提示词并入核且核内唯一副本（A7）。
 - **术语（本段与设计档同口径）**：**面内** = 本批裁决并归一的对称面（行为按裁决变 = 预期）· **未涉面** = 本批不动的既有功能（不得无故回归）。
@@ -796,16 +809,16 @@
 - **前置**：实跑一次三机检确认零红（设计档 §2.9 第 6 条 / N6）。
 - **动作**：
   0. **探针（首模块接线前必跑）**：核内提示词随产物可达性最小探针（设计档 §2.2.1 R11——`.vscodeignore` 反排除目录内含 `.md` 时 `vsce package` 是否带走；R7 探针核内零 `.md` ⇒ **无直接读数**）。读数落批次档 §5。
-  1. **建包**：`core/`（`package.json` + 模块 + **`prompts/` 15 档 + `tool-docs/` 25 档 + `prompt-files.mjs` 加载面** + `test/`）——逐模块 / 逐档**从两侧提取 / 融合**（来源可追溯、零「新写」——F3 / D-C2）；
-     `core/package.json`：name / version / type / exports / `files`（**非 private**——D-C10；`files` **含 `prompts/` 与 `tool-docs/`**——断言 D 的对象）。
+  1. **建包**：`thincoder-core/`（`package.json` + 模块 + **`prompts/` 15 档 + `tool-docs/` 25 档 + `prompt-files.mjs` 加载面** + `test/`）——逐模块 / 逐档**从两侧提取 / 融合**（来源可追溯、零「新写」——F3 / D-C2）；
+     `thincoder-core/package.json`：name / version / type / exports / `files`（**非 private**——D-C10；`files` **含 `prompts/` 与 `tool-docs/`**——断言 D 的对象）。
   2. **提示词落位**（A7 / D-C13 / §2.3.3 选定 a）：15 档槽位 + 25 档工具描述按 §2.5 裁决结果落核；**缺档语义按调用方保留**（契约 9——槽位静默 + 警告 / advisor·工具描述·consult 抛错）；核档内**零端名分支**（契约 10）。
   3. **测试合流**：两边测试并入核测试（取并集、去重、按核接口重述）；核内零产品 import、零裸包名 import（N3 / N7）；核内提示词读取面零产品路径（N3 扩）。
-  4. **核独立跑绿**：`node --test` 于 `core/` exit 0（F4 / **T-C4**）。
+  4. **核独立跑绿**：`node --test` 于 `thincoder-core/` exit 0（F4 / **T-C4**）。
   5. **CI 增设 `core` job**（核测试；三 job 原样——设计档 §2.8 CI 行）。
 - **不发布**：S1 只建包并验证可用（用户「先建核、试一下可用」；发布发生在 S2 进入前）。
 - **禁止**：改两产品任何文件——收口以 `git diff --stat` 为空为硬判据（**T-C12**）。
 - **退出验收**：T-C3 · T-C4 · **T-C8（核内 15 + 25 档在位）** · T-C12 · T-C14 · T-C15。
-- **回退点** = 删 `core/` 即退（仓结构零改）。
+- **回退点** = 删 `thincoder-core/` 即退（仓结构零改）。
 
 #### S2 逐模块 / 逐档迁移（一步一提交）
 
@@ -816,13 +829,13 @@
      - 产品 `package.json` 声明 `dependencies: {"@thincoder/core": "^<核版本>"}`（真 semver——断言 A）；产品代码 import 改指**包名**（壳 → 核允许、核 → 壳禁止——设计档 §2.2 契约 2/3）。
      - **开发期链接**：`cd core && npm link` → `cd <产品> && npm link @thincoder/core`（不发布也能跑；manifest / lock 零污染——设计档 §2.2.1 R8④）。
      - **提示词面接线（A7 新增——四个加载面，设计档 B4）**：
-       - `thincoder/src/prompt-overlays.mjs` / `thincoder-vscode/src/prompt-overlays.mjs`（槽位加载面）；
-       - `thincoder/src/advisor.mjs` / `thincoder-vscode/src/advisor/main.mjs`（advisor 加载面）；
-       - `thincoder/src/tools/shared.mjs` / `thincoder-vscode/src/tools/shared.mjs`（`DESC()` 工具描述面）；
-       - `thincoder/src/agent/setup.mjs` / `thincoder-vscode/src/agent/setup.mjs`（consult 消费点——缺档抛错语义不变）。
+       - `thincoder-cli/src/prompt-overlays.mjs` / `thincoder-vscode/src/prompt-overlays.mjs`（槽位加载面）；
+       - `thincoder-cli/src/advisor.mjs` / `thincoder-vscode/src/advisor/main.mjs`（advisor 加载面）；
+       - `thincoder-cli/src/tools/shared.mjs` / `thincoder-vscode/src/tools/shared.mjs`（`DESC()` 工具描述面）；
+       - `thincoder-cli/src/agent/setup.mjs` / `thincoder-vscode/src/agent/setup.mjs`（consult 消费点——缺档抛错语义不变）。
        四处**只改根、不改语义**（契约 9）；产品侧不做路径运算（D-C13 否决备选①）。
      - **装载面（每产品一次）**：
-       - CLI：改 `thincoder/scripts/release-check.mjs` 加**发布预检**（断言 C + **D**：装入版本 = 仓内核版本 + registry 存在 + 装机核目录提示词档集合完备）。
+       - CLI：改 `thincoder-cli/scripts/release-check.mjs` 加**发布预检**（断言 C + **D**：装入版本 = 仓内核版本 + registry 存在 + 装机核目录提示词档集合完备）。
        - VSC：`.vscodeignore` 追加反排除行（`!node_modules/@thincoder/core/**`；**第 3 行 `node_modules/**` 保留**）+ 新建 `check-vsix.mjs`（断言 B + **D**）
          + `publish-all.mjs` 加**段 0**（核版本存在性预检）+ **段 1.5**（调断言脚本）+ `package.json` 加 `postpackage` + devDeps `yauzl`。
   2. **删旧**：删该模块旧实现 + **该端提示词旧档**（`src/prompts/*.md` / `src/tools/*.md`——零引用随步核验）。
@@ -908,7 +921,8 @@
 ### 受影响文件
 
 = **设计档 §2.8 清单（R24a）**——逐档当前行数 + 预计增量；核逐档行数 / delta 挂设计档 §2.5 裁决表（S0 前不可预知）。本段不复制清单（单一权威源）。
-**R4 新增面（摘要，逐档见 §2.8）**：核内 `core/prompts/*.md`（15）· `core/tool-docs/*.md`（25）· `core/prompt-files.mjs`；四个提示词加载面 × 两端（`prompt-overlays.mjs` · `advisor.mjs` / `advisor/main.mjs` · `tools/shared.mjs` · `agent/setup.mjs`）；两产品提示词档删除面；仓根 `docs/design/prompts/`（CN 镜像合流）；两产品 `AGENTS.md` 镜像约定段；测试面五档。
+**R4 新增面（摘要，逐档见 §2.8）**：核内 `thincoder-core/prompts/*.md`（15）· `thincoder-core/tool-docs/*.md`（25）· `thincoder-core/prompt-files.mjs`；
+四个提示词加载面 × 两端（`prompt-overlays.mjs` · `advisor.mjs` / `advisor/main.mjs` · `tools/shared.mjs` · `agent/setup.mjs`）；两产品提示词档删除面；仓根 `docs/design/prompts/`（CN 镜像合流）；两产品 `AGENTS.md` 镜像约定段；测试面五档。
 
 ### 打标：§2 内就地修正（本作者段内 · 语义零改 · R4 轮）
 
@@ -930,7 +944,7 @@
    - 前提**失效 / 本就错误** ⇒ **直接归一**（写「以 <端> 为准（前提失效——B20 式）」），**不得**当作 ③ 类行为裁决拉锯（设计档 §2.4 / D-C17）。
    - ⚠ **归一的后果仍走 A11 逐条裁定**（前提校验只消去「以谁为准」的争议）。
    - **入表**：设计档 §2.5 新增「**前提校验**」列——S0 填表时该列与分类 / 端差处置 / 须用户裁三列**同规不得留空**（① 类写「—（近乎同）」）。
-2. **点名面派生动作（A12）**：记忆面（CLI `thincoder/src/memory/**` 8 档 ↔ VSC `src/memory.mjs` + `memory-tool.mjs`）按 **CLI 为准**归一；产出须同时登记**归一后果**（引擎下限 / 记忆库格式与迁移 / 两侧测试面）——进 §2.5.1 须裁清单。
+2. **点名面派生动作（A12）**：记忆面（CLI `thincoder-cli/src/memory/**` 8 档 ↔ VSC `src/memory.mjs` + `memory-tool.mjs`）按 **CLI 为准**归一；产出须同时登记**归一后果**（引擎下限 / 记忆库格式与迁移 / 两侧测试面）——进 §2.5.1 须裁清单。
 3. **版本下限实测（A13 残余）**：候选值 `^1.101.0`（推导链见设计档 §2.11 A8：`node:sqlite` Added in v22.5.0 · v22.13.0 起免标志 · VS Code 1.101.0 = Electron 35.5.1 = Node v22.14.0）；
    **S0 须实测确认**——在候选版本下读扩展宿主 `process.versions.node` + 试 `import('node:sqlite')` / `new DatabaseSync(':memory:')` / FTS5 建表；**读数落批次档 §5**。
    **下限值属对外契约变更 ⇒ 提交用户过目**（A11 ②——A13 已裁「可抬」、值未过目）。
@@ -960,7 +974,7 @@
 
 ### 范围与权威
 
-- **范围** = phase 2「核心统一」全段（**S0a → S0b → S1 → S2 → S3**）；两产品 = CLI（`thincoder/`）与 VSC 扩展（`thincoder-vscode/`）；仓根 = 本仓根（**无 workspace 根 manifest**——设计档 §2.1 B12）。
+- **范围** = phase 2「核心统一」全段（**S0a → S0b → S1 → S2 → S3**）；两产品 = CLI（`thincoder-cli/`）与 VSC 扩展（`thincoder-vscode/`）；仓根 = 本仓根（**无 workspace 根 manifest**——设计档 §2.1 B12）。
 - **覆盖条目** = 需求档 **F1–F14 · N1–N8 全量**（逐条验收回指 = 设计档 §2.10 表）——本段不新增条目、不改编号；**R5 新增 F13**（对外契约要兼容——A7）· **F14 新增**（目录改名子批——2026-09-13）。
 - **边界原则（本批总则，不得反向使用）**：① **对称 ⇒ 进核**（含低相似度真分叉面）· ② **差异不得作为排除理由**（A9——排除不是选项）· ③ **端特有桶只收结构性不对称**（仅供单侧存在 / 依赖壳能力 + 证据——设计档 B17）· ④ **行为不变不作判据**（A10——验收 = 裁决是否落实：面内归一后行为 = 裁决结果，**不要求**等于旧行为；未涉面不得无故回归）· ⑤ **提示词并入核且核内唯一副本**（A7）。
 - **对外契约（R5 · A7）**：归一引发的契约变更（配置格式 / 输出文案 / 命令面 / 事件语义）**须保留兼容**（旧配置可读 / 迁移说明 / CHANGELOG / 旧命令面保留 / 事件语义登记）；
@@ -994,14 +1008,14 @@
   2. **高相似面逐条分类并填设计档 §2.5 裁决表**（分类 ① / ② / ③ / ④ 判据 = 设计档 §2.4；提示词面用 §2.4 的提示词口径）——「归属段」列填 `S0a（首批建核）`（**中文设计档行除外**——`docs/design/prompts/**` 归属段恒为 `文档面`；见设计档 §2.5 列定义）。
   3. **前提校验遍**（A12 派生方法）：对每个分叉面先答两问——① 为何分叉（写成可核句子 + 两侧 `file:line` 证据）② 当年前提还成立吗（实测 / 权威源核对）；
      前提失效 / 本就错误 ⇒ **直接归一**（写「以 <端> 为准（前提失效——B20 式）」），**不得**当 ③ 类拉锯（设计档 §2.4 / D-C17）。⚠ 归一的后果仍走 A11 逐条裁定。
-  4. **首建核并试跑**（**R5 · A5**）：`core/` 首批 = 高相似面进核模块 + **运行期**提示词面 **S0a 席位全族的运行期面**（逐字节同：槽位 8 档 + 工具描述 20 档——B14；**含 `sim ≥ 0.90` 非逐字节同对**——设计档 §2.6 判据 5；**中文设计档不在建核面**）+ 加载面 `prompt-files.mjs` + `test/`——
-     逐模块 / 逐档**从两侧提取 / 融合**（来源可追溯、零「新写」——F3 / D-C2）；**试跑** = `node --test` 于 `core/` exit 0（F4 / **T-C4**）＝ **用户「先建核、试一下可用」的验证口**。
+  4. **首建核并试跑**（**R5 · A5**）：`thincoder-core/` 首批 = 高相似面进核模块 + **运行期**提示词面 **S0a 席位全族的运行期面**（逐字节同：槽位 8 档 + 工具描述 20 档——B14；**含 `sim ≥ 0.90` 非逐字节同对**——设计档 §2.6 判据 5；**中文设计档不在建核面**）+ 加载面 `prompt-files.mjs` + `test/`——
+     逐模块 / 逐档**从两侧提取 / 融合**（来源可追溯、零「新写」——F3 / D-C2）；**试跑** = `node --test` 于 `thincoder-core/` exit 0（F4 / **T-C4**）＝ **用户「先建核、试一下可用」的验证口**。
   5. **对外契约探测**（**R5 · A7**）：逐条登记「可能变的对外可见契约」（命令面 / 配置格式 / 输出文案 / 事件语义）+ 兼容形态（设计档 §2.12.1 逐类模板）；
      **无法兼容者**入 §2.12.3 上抛清单——**只列与建议、不代裁**。
-- **产出**：设计档 §2.5 高相似面行填齐 + §2.12.2 处置表对应行 + `core/` 首批（可独立跑绿）。
+- **产出**：设计档 §2.5 高相似面行填齐 + §2.12.2 处置表对应行 + `thincoder-core/` 首批（可独立跑绿）。
 - **退出验收**：高相似面席位全覆盖（前提校验 / 分类 / 端差处置 / 须用户裁 四列无空值）· 核测试独立跑绿（**T-C4**）· 两产品 `git diff --stat` 为空（**T-C12**）·
   命中 A11 ②③ 的条目已裁定（未裁定不进 S0b / S1）。
-- **回退点** = 删 `core/` 即退（仓结构零改——B12）。
+- **回退点** = 删 `thincoder-core/` 即退（仓结构零改——B12）。
 
 #### S0b 低相似对称面 + 语义对位遍（逐条裁决 · 零代码）
 
@@ -1019,7 +1033,7 @@
 - **产出**：设计档 §2.5 全表填齐 + §2.5.1 全裁定 + §2.12.2 / §2.12.3 填齐 + 版本下限读数（本档 §5）。
 - **退出验收**：设计档 §2.5 覆盖**全席位**（107 + 中文设计档 15 + 对位遍）；四列无空值；③ 类逐条带实证与建议；**§2.5.1 全部须裁条目裁定完毕**（未裁定不进 S1）；
   度量数字可复现（**T-C10**）；§2.12.3 上抛项已裁定（**T-C17**）。
-- **回退点** = 无代码改动 ⇒ 撤回设计档修订（`core/` 不增删）。
+- **回退点** = 无代码改动 ⇒ 撤回设计档修订（`thincoder-core/` 不增删）。
 
 #### S1 建核补齐（两产品一行不改 · 不发布）
 
@@ -1027,16 +1041,16 @@
 - **前置**：实跑一次三机检确认零红（设计档 §2.9 第 6 条 / N6）。
 - **动作**：
   0. **探针**（首模块接线前必跑）：核内提示词随产物可达性最小探针（设计档 §2.2.1 R11——`.vscodeignore` 反排除目录内含 `.md` 时 `vsce package` 是否带走；R7 探针核内零 `.md` ⇒ **无直接读数**）。读数落本档 §5。
-  1. **建核补齐**：把 S0b 裁决面的**运行期面**并入 `core/`（模块 + `prompts/` + `tool-docs/` + `prompt-files.mjs` 加载面 + `test/`；**中文设计档不并入**——文档面）——逐模块 / 逐档**从两侧提取 / 融合**（来源可追溯、零「新写」——F3 / D-C2）；
-     `core/package.json`：name / version / type / exports / `files`（**非 private**——D-C10；`files` **含 `prompts/` 与 `tool-docs/`**——断言 D 的对象）。
+  1. **建核补齐**：把 S0b 裁决面的**运行期面**并入 `thincoder-core/`（模块 + `prompts/` + `tool-docs/` + `prompt-files.mjs` 加载面 + `test/`；**中文设计档不并入**——文档面）——逐模块 / 逐档**从两侧提取 / 融合**（来源可追溯、零「新写」——F3 / D-C2）；
+     `thincoder-core/package.json`：name / version / type / exports / `files`（**非 private**——D-C10；`files` **含 `prompts/` 与 `tool-docs/`**——断言 D 的对象）。
   2. **提示词落位**（A7 / D-C13 / §2.3.3 选定 a）：15 档槽位 + 25 档工具描述按 §2.5 裁决结果落核；**缺档语义按调用方保留**（契约 9——槽位静默 + 警告 / advisor · 工具描述 · consult 抛错）；核档内**零端名分支**（契约 10）。
   3. **测试合流**：两边测试并入核测试（取并集、去重、按核接口重述）；核内零产品 import、零裸包名 import、零产品侧提示词路径（N3 / N7 / **T-C15**）。
-  4. **核独立跑绿**：`node --test` 于 `core/` exit 0（F4 / **T-C4**）。
+  4. **核独立跑绿**：`node --test` 于 `thincoder-core/` exit 0（F4 / **T-C4**）。
   5. **CI 增设 `core` job**（核测试；三 job 原样——设计档 §2.8 CI 行）。
 - **不发布**：S1 只补齐并验证可用；发布发生在 S2 进入前。
 - **禁止**：改两产品任何文件——收口以 `git diff --stat` 为空为硬判据（**T-C12**）。
 - **退出验收**：T-C3 · T-C4 · **T-C8（核内 15 + 25 档在位）** · T-C12 · T-C14 · T-C15。
-- **回退点** = 删 `core/` 即退（仓结构零改）。
+- **回退点** = 删 `thincoder-core/` 即退（仓结构零改）。
 
 #### S2 逐模块 / 逐档迁移（一步一提交）
 
@@ -1048,7 +1062,7 @@
      - **开发期链接**：`cd core && npm link` → `cd <产品> && npm link @thincoder/core`（不发布也能跑；manifest / lock 零污染——设计档 §2.2.1 R8④）。
      - **提示词面接线**（A7 新增——四个加载面，设计档 B4）：槽位加载面（`prompt-overlays.mjs`）· advisor 加载面（`advisor.mjs` / `advisor/main.mjs`）· 工具描述面（`tools/shared.mjs` 的 `DESC()`）· consult 消费点（`agent/setup.mjs`——缺档抛错语义不变）——**两端各一处**；
        四处**只改根、不改语义**（契约 9）；产品侧不做路径运算（D-C13 否决备选①）。
-     - **装载面（每产品一次）**：CLI = 改 `thincoder/scripts/release-check.mjs` 加**发布预检**（断言 C + **D**：装入版本 = 仓内核版本 + registry 存在 + 装机核目录提示词档集合完备）；
+     - **装载面（每产品一次）**：CLI = 改 `thincoder-cli/scripts/release-check.mjs` 加**发布预检**（断言 C + **D**：装入版本 = 仓内核版本 + registry 存在 + 装机核目录提示词档集合完备）；
        VSC = `.vscodeignore` 追加反排除行（`!node_modules/@thincoder/core/**`；**`node_modules/**` 行保留**——R8①）+ 新建 `check-vsix.mjs`（断言 B + **D**）+ `publish-all.mjs` 加**段 0**（核版本存在性预检）+ **段 1.5**（调断言脚本）+ `package.json` 加 `postpackage` + devDeps `yauzl`。
      - **对外契约兼容形态落地**（**R5 · A7**）：按设计档 §2.12.2 处置表把兼容形态落到实装（旧名别名 / 旧格式读取 / 迁移说明 / 文案登记）；落地物 = CHANGELOG 条目 / README / 测试断言。
   2. **删旧**：删该模块旧实现 + **该端提示词旧档**（`src/prompts/*.md` / `src/tools/*.md`——零引用随步核验）。
@@ -1143,7 +1157,8 @@
 = **设计档 §2.8 清单（R24a）**——逐档当前行数 + 预计增量；核逐档行数 / delta 挂设计档 §2.5 裁决表（S0 前不可预知）。本段不复制清单（单一权威源）。
 
 **R5 新增面（摘要，逐档见 §2.8）**：**对外契约兼容面**——两产品 `CHANGELOG.md`（BREAKING / 迁移说明条目）· 两产品 `README.md`（命令面 / 配置面文档同步）· 受影响测试（旧格式读入 / 旧名别名 / 文案登记）——逐条挂设计档 §2.12.2 处置表。
-**R4 新增面（摘要，逐档见 §2.8）**：核内 `core/prompts/*.md`（15）· `core/tool-docs/*.md`（25）· 核内提示词加载面；四个提示词加载面 × 两端（`prompt-overlays.mjs` · `advisor.mjs` / `advisor/main.mjs` · `tools/shared.mjs` · `agent/setup.mjs`）；两产品提示词档删除面；仓根 `docs/design/prompts/`（中文设计档——**文档面**，副本建立）；两产品 `AGENTS.md` 镜像约定段；测试面五档。
+**R4 新增面（摘要，逐档见 §2.8）**：核内 `thincoder-core/prompts/*.md`（15）· `thincoder-core/tool-docs/*.md`（25）· 核内提示词加载面；
+四个提示词加载面 × 两端（`prompt-overlays.mjs` · `advisor.mjs` / `advisor/main.mjs` · `tools/shared.mjs` · `agent/setup.mjs`）；两产品提示词档删除面；仓根 `docs/design/prompts/`（中文设计档——**文档面**，副本建立）；两产品 `AGENTS.md` 镜像约定段；测试面五档。
 **A12 / A13 新增面（摘要，逐档见 §2.8）**：**记忆面**（CLI 8 档 / VSC 2 档）· **版本下限面**（两端 `package.json` 的 `engines`）。
 
 ### 历史块索引（append-only 留痕——上文各块的可追溯信息归位）
@@ -1207,7 +1222,7 @@
 ##### 5. §1.2 标题与背景段（原 L65 / L67–L68）
 
    原标题：### 1.2 提示词面第一手读数（**第 4 轮** · 2026-09-13）→ 现文去「第 4 轮」。
-   原背景段（过程部分）：**背景（父侧事实收正）**：早先据「`src/prompts/` 子目录中位 = **1.0000**」声称「内容层已同」**不成立** ✗——中位数**掩盖**了同一层内的真分叉（同子目录里既有 1.000 也有 12 档不同 ⇒ 中位不可代表全层）。本小节为**收正后**的逐档读数（两端 `thincoder/` ↔ `thincoder-vscode/`，逐字节 sha256 比对）：
+   原背景段（过程部分）：**背景（父侧事实收正）**：早先据「`src/prompts/` 子目录中位 = **1.0000**」声称「内容层已同」**不成立** ✗——中位数**掩盖**了同一层内的真分叉（同子目录里既有 1.000 也有 12 档不同 ⇒ 中位不可代表全层）。本小节为**收正后**的逐档读数（两端 `thincoder-cli/` ↔ `thincoder-vscode/`，逐字节 sha256 比对）：
    （现文保留「中位不足以代表全层」这一方法论结论 + 读数表——见「四、未搬项」第 3 条。）
 
 ##### 6. §1.2 要点 4 / 要点 5（原 L84 / L85）
@@ -1276,7 +1291,7 @@
    | **R9** | **运行期解析（两产物）** | 解包 vsix → `import extension.mjs`；registry 安装 CLI tarball → 跑 bin | vsix 内 `activate()` 输出 `hello vsc-ii core-v0.3.0`；内嵌核 version = 仓内核 version（0.3.0）= 声明范围（`^0.3.0`）；CLI tarball 消费者侧 bin 输出正确 ✓ |
    | **R10** | **断言机制可行性 + `file:` 形态反证** | vsix 用树内 `yauzl@3.4.0` 读条目；`file:../core` 声明者 `npm pack` 后读 tarball manifest | `yauzl` 可列 vsix 条目（无需新增工具链）⇒ **含核断言可落在零构建脚本里**；`file:` 声明 **原样进 tarball**（`"@thincoder/core": "file:../core"`）⇒ 消费者拿到不存在的本地路径 ⇒ 该形态否决（§2.3.2 候选 d） |
    | **R11** | **核内提示词随产物可达性（A7 新增——**待实测**）** | ① `.vscodeignore` 保留 `node_modules/**` + 反排除行 ⇒ 真目录核内含 `.md` 时 `vsce package`（探针）；② `npm pack` 核包（`files` 含 `prompts/`）后解 tarball 列条目 | **未实测**（R7 探针核内零 `.md` ⇒ 无直接读数；推断为「随反排除目录一并打包」，但**不得当保证**）。**处置**：S2 首模块接线前跑 ① 最小探针；不管探针结果如何，**断言 D 都是保证**（T-C7 扩判据 + T-C11 反证——缺档即红） |
-   | **R12** | **核包 `files` 白名单漏 `prompts/` 的失败形态（推演）** | `core/package.json` 的 `files` 去掉 `prompts/` → `npm pack` → 解 tarball 条目枚举 | **推演**（未实测）：tarball 无 `package/prompts/` ⇒ CLI 与 VSC 装到**无提示词档的核**；此时**槽位加载面静默空串**（B4）⇒ 系统提示词降级为不完整版且**不报错**——正是 A7 要消的病。⇒ **必须断言化**（核包自身 + 两产物均判档名集合，T-C7 / T-C11） |
+   | **R12** | **核包 `files` 白名单漏 `prompts/` 的失败形态（推演）** | `thincoder-core/package.json` 的 `files` 去掉 `prompts/` → `npm pack` → 解 tarball 条目枚举 | **推演**（未实测）：tarball 无 `package/prompts/` ⇒ CLI 与 VSC 装到**无提示词档的核**；此时**槽位加载面静默空串**（B4）⇒ 系统提示词降级为不完整版且**不报错**——正是 A7 要消的病。⇒ **必须断言化**（核包自身 + 两产物均判档名集合，T-C7 / T-C11） |
 
    （现 §2.2.1 = 机制点 + 读数两列 + 一条指向本节的指针；读数逐字保留——见「四、未搬项」第 1 条。）
 
@@ -1330,7 +1345,7 @@
    - 2026-09-13（**R4 边界轮 / 第 4 次边界变更**）：依据 = 批次档 §1 追加裁定 **A7**（提示词并入核）· **A8**（对称面全集进核）· **A9**（差异不得作为排除理由）
      + 本轮实读（§2.1 B14–B19，全程只读、未触碰本仓产品文件）。
      **变更点**：§2.1 收正 B1 / B4 / B5 并新增 **B14–B19**（提示词面逐档读数 · 对称面量级 · 点名面实读 · 端特有枚举 · tools 计数收正 · 未验证项）；
-     §2.2 形态树加 `core/prompts/` / `core/tool-docs/` / `prompt-files.mjs`（落 `core/`）与仓根 CN 镜像，契约 1 改写 + 新增 8/9/10；
+     §2.2 形态树加 `thincoder-core/prompts/` / `thincoder-core/tool-docs/` / `prompt-files.mjs`（落 `thincoder-core/`）与仓根 CN 镜像，契约 1 改写 + 新增 8/9/10；
      §2.2.1 新增 **R11 / R12**（核内提示词可达性待实测 · `files` 漏档的失败形态）；§2.3 新增 **2.3.3 提示词面组织（3 候选，选定 a）**；
      §2.4 新增**边界原则**与**提示词面分类口径**，**G1 拆两义**（持有 ≠ 实现一致）· **G4 由排除通道降为准入门槛**（A9）· G2 补提示词面；新增量级与分批建议；
      §2.5 列定义加**端差处置列**、行数改 107 + 镜像 15 + 对位行；§2.6 四段退出条件均加提示词面；
@@ -1358,7 +1373,7 @@
      §2.11 **A5 / A6 / A7 / A8 四条状态改「已裁」**（A7 行本轮**补建**——原表缺该行、与既有变更记录声明不符，属残留收正）+ 新增**编号空间声明**（§2.11 A1–A8 ↔ §1 A4–A13）；
      §2.8 加**对外契约兼容面**行 + 段标注（「S1 新建」= S0a 首建）；§2.9 新增第 11 条 + 第 9 条按 A10 口径收正；
      §2.10 F1（五段）/ F2（席位判据）+ **F13 新增** + N7（`node:sqlite` 定案 / 下限候选）；§3.1 T-C1 / T-C2 判据扩 + **T-C17 新增**（§3.2 边界 4 → 5 条）；
-     **锚一致性收正**：3 处外部 / 前向路径锚改为可解析形态（B20 与 §2.11 A8 的 URL 加协议头 · 提示词加载面档由全路径写法改为 `prompt-files.mjs`（落 `core/`））——三机检 doc-anchors 由 5 悬空 → 0。
+     **锚一致性收正**：3 处外部 / 前向路径锚改为可解析形态（B20 与 §2.11 A8 的 URL 加协议头 · 提示词加载面档由全路径写法改为 `prompt-files.mjs`（落 `thincoder-core/`））——三机检 doc-anchors 由 5 悬空 → 0。
    - 2026-09-13（**评审后修正轮**）：承接批次档 §3 设计评审发现表（0🔴 / 9🟡 / 6🔵）逐条落修——
      **口径统一（#1）**：§2.6 判据 1 / §2.8 度量脚本行 / §2.10 F10 行 / §3 T-C10 同写脚本扩展覆盖面（按类型 / 按目录拆分 + 分布分档 + 中文镜像对（`docs/design/prompts/`）+ 提示词面逐档 sha256 / 档名集合枚举 + 单端枚举计数（B15））；
      **席位 ⇔ 建入（#2）**：新增 §2.6 判据 5（`sim ≥ 0.90` 非逐字节同的提示词对随 S0a 首建建入）+ §2.6 S0a 行 / T-C2 同步；**机检边界（#3）**：§2.6 判据 3 写准（互斥 + 归属段谓词一致 = 可机判；对位遍完备性 = 定性复核 + 覆盖程序）；
@@ -1469,7 +1484,7 @@
 
 | # | 项 | 收正结果 |
 |---|---|---|
-| 1 | §2.5.1 #44 / #47 仍写「待裁」 | **已改「已裁（2026-09-13）『按建议』」**，并入 §2.5.1 丙组（含落地证据：`core/prompts/advisor-design.md` · `core/prompts/persona-engineering.md`——批次档 §5） |
+| 1 | §2.5.1 #44 / #47 仍写「待裁」 | **已改「已裁（2026-09-13）『按建议』」**，并入 §2.5.1 丙组（含落地证据：`thincoder-core/prompts/advisor-design.md` · `thincoder-core/prompts/persona-engineering.md`——批次档 §5） |
 | 2 | D-C14「S3 删两产品同名镜像目录」 | **按用户裁定 B 作废** ✗——连带收正 §2.2 形态树 · §2.8 两行（删除行 → **作废 ✗** + 登记「已撤面」）· §2.1 B19② · §2.9 第 2 / 3 条 · §3.1 T-C8（零残留口径**限于实现侧** `src/prompts/*.md` · `src/tools/*.md`） |
 | 3 | §2.11 A2 旧义 F6 措辞 | **按 A10 收正**：原句「向 CLI 倾斜若改变 VSC 行为即触 F6 ⇒ 必须以注入承载」→ 「行为变化**不再作阻断理由**（「产品行为不变」不得作判据）；须**逐条登记**并命中三口径者提交裁定」 |
 
@@ -1487,7 +1502,7 @@
 
 ### S0b 收尾轮（2026-09-13 · eng-designer）
 
-**段位**：当前段 = **S0b**；**S2 / S3 尾段项零触碰**（CN 镜像合流 / 残留删净等不上抛）；本轮**零代码**（`core/` 零增删 · 两产品零触碰）· 只改需求档 / 设计档 / 本段 · 不 commit（父侧统一）。
+**段位**：当前段 = **S0b**；**S2 / S3 尾段项零触碰**（CN 镜像合流 / 残留删净等不上抛）；本轮**零代码**（`thincoder-core/` 零增删 · 两产品零触碰）· 只改需求档 / 设计档 / 本段 · 不 commit（父侧统一）。
 
 **依据** = 本档 §1「追加裁定（S0b 26 条须裁项 · 用户批量批准 · 2026-09-13）」+「S0b 剩余动作」四项 + 用户本轮指令（语义对位遍 / 引擎下限 / 记忆面实测 / F9 措辞）。
 
@@ -1535,12 +1550,12 @@
 3. **验收面判据无变化**：行数口径（107 同路径对 + 15 镜像对 + 对位遍 63 行 / 16 族）与席位（S0a 51 / S0b 71）不变；T-C2 / T-C10 / T-C14 / T-C17 的检查对象集合 = 设计档 §2.5 注册表所指各档（并集不变）。
 4. **需求档保持单一**（本板块需求 F1–F13 / N1–N8 为**工作流级**，无子系统归属）；板块镜像的 `requirements/<子系统>.md` 侧**随 S2 各子系统迁移时逐档建**——记档，非本轮动作。
 5. 三机检（`doc-anchors` / `check-doc-width` / `check-ledger`）**拆后复跑 exit 0**（根三机检读数见设计档变更记录 + 父侧收口）。
-6. **越段纪律**：本轮零代码（`core/` 未动）· 两产品零触碰 · 不 commit · 不发起评审 · 不碰台账；**S2 / S3 尾段项零触碰**（CN 镜像合流等不上抛）。
+6. **越段纪律**：本轮零代码（`thincoder-core/` 未动）· 两产品零触碰 · 不 commit · 不发起评审 · 不碰台账；**S2 / S3 尾段项零触碰**（CN 镜像合流等不上抛）。
 
 ### 概念纠正轮（中文设计档 = 设计文档 · 2026-09-13 · eng-designer）
 
 **依据** = 本档 §1「追加裁定（中文提示词档 = 设计文档——概念纠正）」。**段位** = S0b 收尾后 / S1 前；
-本轮**零代码**（`core/` 零增删 · 两产品零触碰）· 不发起评审 · 不碰台账（**commit 例外见末条**）。
+本轮**零代码**（`thincoder-core/` 零增删 · 两产品零触碰）· 不发起评审 · 不碰台账（**commit 例外见末条**）。
 
 **① 归属段收正（15 行）**：`PROMPT-SYSTEM.md` 裁决行的「归属段」列，改前 → 改后：
 
@@ -1568,7 +1583,7 @@
 
 ### 需求侧拆分轮（2026-09-13 · eng-designer）
 
-**段位**：当前段 = **S1 前**（需求侧拆分）；**S2 / S3 尾段项零触碰**（CN 镜像合流 / 残留删净等不上抛）；本轮**零代码**（`core/` 零增删 · 两产品零触碰）· 只改文档 · 不 commit（父侧统一）· 不发起评审 · 不碰台账。
+**段位**：当前段 = **S1 前**（需求侧拆分）；**S2 / S3 尾段项零触碰**（CN 镜像合流 / 残留删净等不上抛）；本轮**零代码**（`thincoder-core/` 零增删 · 两产品零触碰）· 只改文档 · 不 commit（父侧统一）· 不发起评审 · 不碰台账。
 
 **依据** = 本档 §1「追加裁定（需求侧文档同样拆分 · 2026-09-13）」+ 已定稿的 15 份设计子系统档（`docs/design/`）+ 用户明令「**需求侧文档先拆。**」。
 
@@ -1694,8 +1709,8 @@
 #### 未决（记档 · 不遗忘）
 
 1. **需求侧登记形态——已办（2026-09-13 评审修正轮）**：需求档已补 **F14**（用户故事 + 范围边界，来源 = §1 用户裁定）；「三方条目一致」已闭合（设计档 §4.5 K1–K8 ⇄ F14 ⇄ 本块）。
-2. **phase 1 两档的 as-of 陈述过期**（`thincoder/docs/requirements/TWO-REPO-MERGE.md:48` · `thincoder/docs/batches/2026-09-13-TWO-REPO-MERGE.md:207`）⇒ 本子批只登记（站点排除，见设计档 §4.3.3），收正时机由父侧 / 后续批次定。
-3. **父侧原测数与实核不符（事实收正 · 供参考）**：§1 记「`.mjs` 63 处 / 42 档，全部在 `core/**` 与 `scripts/**`，两产品源码零命中」——
+2. **phase 1 两档的 as-of 陈述过期**（`thincoder-cli/docs/requirements/TWO-REPO-MERGE.md:48` · `thincoder-cli/docs/batches/2026-09-13-TWO-REPO-MERGE.md:207`）⇒ 本子批只登记（站点排除，见设计档 §4.3.3），收正时机由父侧 / 后续批次定。
+3. **父侧原测数与实核不符（事实收正 · 供参考）**：§1 记「`.mjs` 63 处 / 42 档，全部在 `thincoder-core/**` 与 `scripts/**`，两产品源码零命中」——
    本轮逐档实扫（**扫替口径**）为 **`.mjs` 61 处 / 40 档**（另 `.js` 1 处 / 1 档），且**含两产品源码与测试**：
    VSC `src/**` 19 处 / 17 档 · VSC `test/**` 20 处 / 13 档 · CLI `test/**` 4 处 / 1 档 · CLI `src/**` 1 处 / 1 档 · `scripts/` 14 处 / 5 档 · 核 3 处 / 3 档 · webview 1 处 / 1 档（合计 62 处 / 41 档）
    ⇒ 「目录名与产品代码无耦合」**不成立**（耦合面 = 注释指针 + 少量路径常量 + 一处 registry URL 保护项，均为机械可改，**风险等级不变**）。完整口径 / 保护项见设计档 §4.3。
@@ -1890,26 +1905,26 @@ VERDICT: pass
 
 **终态 = clean**（审计 1 轮 + 评审 1 轮；0 未决 🔴；🟡 3 条 = 设计档 / 台账面 Deferred 且已逐条登记；🔵 2 条 Fixed · 2 条 Not an issue · 1 条 Deferred）
 
-### 实施：S0a 动作 3 —— 首建 `core/` 并试跑（eng-coder）
+### 实施：S0a 动作 3 —— 首建 `thincoder-core/` 并试跑（eng-coder）
 
-**段位**：当前段 = S0a；S2 / S3 面零触碰；两产品零触碰（`git status` = 仅 `core/` 未跟踪）。
+**段位**：当前段 = S0a；S2 / S3 面零触碰；两产品零触碰（`git status` = 仅 `thincoder-core/` 未跟踪）。
 
-**改动面**（全部新建于仓根 `core/`——写域内；未改两产品、未改任何文档）：
+**改动面**（全部新建于仓根 `thincoder-core/`——写域内；未改两产品、未改任何文档）：
 
 | 面 | 档数 | 来源 |
 |---|---|---|
-| `core/package.json` | 1 | 新写（S0a 首建元数据；见「决策透明表」） |
-| `core/prompt-files.mjs` | 1 | 新写——D-C13 单一解析面（缺档语义按调用方保留：槽位静默空串 / advisor·工具描述抛错 / consult 走槽位链、消费点抛错） |
-| `core/prompt-overlays.mjs` | 1 | 取 CLI 侧 + 槽位解析改经 `prompt-files.mjs`（D-C13 强制；语义不变） |
-| `core/log.mjs` | 1 | 取 CLI 侧 + 注释指针订正（§2.5 #42） |
-| `core/advisor/history.mjs` | 1 | 逐字节同 ⇒ 取 CLI 侧逐字节随迁（§2.5 #1） |
-| `core/advisor/convergence.mjs` | 1 | 取 CLI 侧 + 注释端名订正（§2.5 #40） |
-| `core/advisor/truncate.mjs` | 1 | 取 CLI 侧 + 指针订正至归档路径（§2.5 #41） |
-| `core/prompts/*.md` | 12 | 8 档逐字节同随迁 + 4 档 S0a 非逐字节同：`advisor-design.md`（#44 取「the document」= CLI 侧）· `advisor-round2.md`/`advisor-round3.md`（#45/#46 取 CLI 两行式）· `persona-engineering.md`（#47 标题并集 + 跨端指针注入位） |
-| `core/tool-docs/*.md` | 20 | 逐字节同 20 档随迁（§2.5 #10–#29） |
-| `core/test/*.test.mjs` | 7 | 合并既有行为用例（`advisor-truncate` 取自两产品同名测试）+ 核面测试（提示词面 / 加载面 / N3·T-C15 结构机检） |
+| `thincoder-core/package.json` | 1 | 新写（S0a 首建元数据；见「决策透明表」） |
+| `thincoder-core/prompt-files.mjs` | 1 | 新写——D-C13 单一解析面（缺档语义按调用方保留：槽位静默空串 / advisor·工具描述抛错 / consult 走槽位链、消费点抛错） |
+| `thincoder-core/prompt-overlays.mjs` | 1 | 取 CLI 侧 + 槽位解析改经 `prompt-files.mjs`（D-C13 强制；语义不变） |
+| `thincoder-core/log.mjs` | 1 | 取 CLI 侧 + 注释指针订正（§2.5 #42） |
+| `thincoder-core/advisor/history.mjs` | 1 | 逐字节同 ⇒ 取 CLI 侧逐字节随迁（§2.5 #1） |
+| `thincoder-core/advisor/convergence.mjs` | 1 | 取 CLI 侧 + 注释端名订正（§2.5 #40） |
+| `thincoder-core/advisor/truncate.mjs` | 1 | 取 CLI 侧 + 指针订正至归档路径（§2.5 #41） |
+| `thincoder-core/prompts/*.md` | 12 | 8 档逐字节同随迁 + 4 档 S0a 非逐字节同：`advisor-design.md`（#44 取「the document」= CLI 侧）· `advisor-round2.md`/`advisor-round3.md`（#45/#46 取 CLI 两行式）· `persona-engineering.md`（#47 标题并集 + 跨端指针注入位） |
+| `thincoder-core/tool-docs/*.md` | 20 | 逐字节同 20 档随迁（§2.5 #10–#29） |
+| `thincoder-core/test/*.test.mjs` | 7 | 合并既有行为用例（`advisor-truncate` 取自两产品同名测试）+ 核面测试（提示词面 / 加载面 / N3·T-C15 结构机检） |
 
-**试跑读数**：`node --test`（cwd = 仓根 `core/`）→ `tests 49 · pass 49 · fail 0`（**exit 0**）。
+**试跑读数**：`node --test`（cwd = 仓根 `thincoder-core/`）→ `tests 49 · pass 49 · fail 0`（**exit 0**）。
 **结构机检**（核内自带测试）：核内 import 面 = `node:` 内建 + 核内相对，零裸包名 / 零产品 import；核内相对 import 全可解析；核 `.mjs` 档位均 ≤300。
 **逐字节随迁自证**（sha256 前 12 位，双侧对照）：`prompts/` 12 档中 8 档与两侧逐字节同；`tool-docs/` 20 档与两侧逐字节同；`advisor/history.mjs` 与两侧逐字节同；其余 4 档模块 + 1 档提示词 = 设计指定的订正 / 融合（≠两侧，符合 §2.5）。
 **仓根三机检**：`doc-anchors` / `check-doc-width` / `check-ledger` 全 **exit 0**（核目录不在三机检扫描域内——§2.9 第 6 条）。
@@ -1926,16 +1941,16 @@ VERDICT: pass
 
 | # | 决定 | 依据 / 备选 |
 |---|---|---|
-| 1 | `core/package.json` `engines = { node: ">=22.13.0" }` | 任务书要求「engines 按设计档」，但设计档 §2.8 该行字段枚举**无 engines**；取值依 §2.11 A8（`node:sqlite` 免标志 ≥ v22.13）——实现决定，待 S0b 实测 / 用户过目后回填 |
+| 1 | `thincoder-core/package.json` `engines = { node: ">=22.13.0" }` | 任务书要求「engines 按设计档」，但设计档 §2.8 该行字段枚举**无 engines**；取值依 §2.11 A8（`node:sqlite` 免标志 ≥ v22.13）——实现决定，待 S0b 实测 / 用户过目后回填 |
 | 2 | `exports` 子路径枚举 6 档（本段实装面） | 设计档只写「exports 子路径」未给清单；按已建模块枚举，S1 补齐时同步扩 |
 | 3 | #47 注入位语法 `{{inject:agent-loop-pointer}}` | 设计档 / 契约 10 授权「注入位」但未定语法；本段自定 token——**待设计面定义语法与消费方**（评审 #1） |
-| 4 | ①类「注释订正」落点：指针按**仓根相对**订正（`thincoder/docs/…`）；端名提及中性化；合并前「双端镜像」措辞去除 | §2.5 #40/#41/#42 的「注释 / 指针订正（非语义）」未给目标文本 |
-| 5 | `core/prompts/` 不含 S0b 席位槽位（`discipline-engineering` / `discipline-normal` / `persona-eng-coder`）⇒ 8 场景中 7 个装配缺槽（契约 9 静默 + 警告） | 席位分批的设计内状态（S1 补齐）；核尚无消费方 |
+| 4 | ①类「注释订正」落点：指针按**仓根相对**订正（`thincoder-cli/docs/…`）；端名提及中性化；合并前「双端镜像」措辞去除 | §2.5 #40/#41/#42 的「注释 / 指针订正（非语义）」未给目标文本 |
+| 5 | `thincoder-core/prompts/` 不含 S0b 席位槽位（`discipline-engineering` / `discipline-normal` / `persona-eng-coder`）⇒ 8 场景中 7 个装配缺槽（契约 9 静默 + 警告） | 席位分批的设计内状态（S1 补齐）；核尚无消费方 |
 
 **审计轮（内部 explore 分歧审计）与自修**
 
 - **审计轮次 = 1 轮**（只读 explore，阻塞式）。结论 **DIVERGENT**：① 未建 #48/#49 + 依赖闭包在核外——**账目准确**（逐 `file:line` 复核）；② 提示词面 12 + 20——**准确**（并收正：12 条 CN 镜像席按 §2.8 / D-C14 顺延 **S3**，非遗漏）；③ 两条**未申报**项：`package.json` 的 `engines`、`prompt-files.mjs` 错误文案含单端产品名。
-- **自修（fix round 1）**：`core/prompt-files.mjs` 错误文案中性化（`reinstall thincoder` → `reinstall the package`）。
+- **自修（fix round 1）**：`thincoder-core/prompt-files.mjs` 错误文案中性化（`reinstall thincoder` → `reinstall the package`）。
 - 审计限制（如实登记）：该席位**无 shell / 无 git / 不可执行** ⇒ 执行面读数（`node --test` / 三机检 / 两产品 diff / 逐字节哈希）为其读法推断，非独立复跑（其自标 `unverified`）。
 
 **代码评审轮（内部 advisor）与裁决**
@@ -1943,7 +1958,7 @@ VERDICT: pass
 - **评审轮次 = 1 轮**（`type=code`，阻塞式）；**VERDICT: pass**（🔴 0 · 🟡 2 · 🔵 4，共 6 条）。
 - **fix round 1（评审后落修）**：#2 结构机检谓词放宽（`../../<产品>` → **任意层 `..` + 产品名**，堵一级上跳盲区）✓ · #3 核内注释去除合并前产品实现路径 / 镜像措辞（`log.mjs` · `advisor/truncate.mjs`）✓ · #5 `log.test.mjs` 去掉按当日重算文件名的 wall-clock 依赖（改目录枚举断言）✓。
 - **未落修**：#1 注入位语法与消费方未定义——**设计面缺口**（Deferred，须在 S2 接线前闭合）；#4 `engines` 依据未登记——**设计档面登记项**（Deferred，决策表 1 已登记）；#6 S0b 槽位缺失致 7/8 场景降级——**设计内状态**（Not an issue；建议 S1 退出闸写明「槽位 15 档全在位」为 S2 接线前置）。
-- **评审后复验**：`node --test`（`core/`）→ **49 / 49 / 0 · exit 0**；`node --check` 6 档全绿；仓根三机检 exit 0；两产品 `git status` 零改动。
+- **评审后复验**：`node --test`（`thincoder-core/`）→ **49 / 49 / 0 · exit 0**；`node --check` 6 档全绿；仓根三机检 exit 0；两产品 `git status` 零改动。
 
 **终态 = clean**（审计 1 轮 + 评审 1 轮；0 未决 🔴；🟡 2 条 = 1 Fixed / 1 Deferred（设计面）；🔵 4 条 = 2 Fixed / 1 Deferred（设计档面） / 1 Not an issue）
 
@@ -1953,7 +1968,7 @@ VERDICT: pass
 
 **前置核验（设计档 §4.8 · 逐项实核）**：
 ① 本会话 cwd = 工作区根 `d:\teamcode`（**不在被改名目录内**——`git mv` 不会被句柄挡住 ✓）；② 进程面 `node` = **0**（未用 `peer_instances` 判活 ✓）；③ 工作树干净 ✓；
-④ 目标名 `thincoder-cli` / `thincoder-core` 实核**均不存在**（无覆盖冲突 ✓）；⑤ 仓根结构实核 = 仓根含 `core/` · `docs/` · `scripts/` · `thincoder/`（CLI 产品树）· `thincoder-vscode/` —— 两处待改名目标均为仓根一级子目录 ✓。
+④ 目标名 `thincoder-cli` / `thincoder-core` 实核**均不存在**（无覆盖冲突 ✓）；⑤ 仓根结构实核 = 仓根含 `thincoder-core/` · `docs/` · `scripts/` · `thincoder-cli/`（CLI 产品树）· `thincoder-vscode/` —— 两处待改名目标均为仓根一级子目录 ✓。
 ⇒ 前置**成立**，但未进入改名动作（见下）。
 
 **停下原因：设计内部不自洽（须裁定——不自行选解释）**
@@ -1967,9 +1982,9 @@ VERDICT: pass
 
 **D1 的实测复证**（scratch 克隆 `d:\teamcode\_rename-dryrun\thincoder`——**仓外**，事后已删）：两处 `git mv` + 扫替（D1 / D2 保留）后跑 `node scripts/check-ledger.mjs` → 输出 **`OK: thincoder/docs/TODO.md` · `OK: thincoder/docs/TODO-archive.md`（逐字同改前）** ⇒ 「替 D1 = 假陈述」结论成立（非推断）。
 
-**D1 逐档分布**（62 处 / 10 档）：`thincoder/docs/batches/2026-09-12-LEDGER-SELF-CONTAINED.md` 34 · `thincoder/docs/batches/2026-09-12-DOC-CODE-RECONCILE.md` 10 · `docs/TODO-archive.md` 4 ·
-`thincoder-vscode/docs/batches/2026-09-12-LEDGER-SELF-CONTAINED.md` 4 · `thincoder/docs/batches/2026-09-13-TWO-REPO-MERGE.md` 4 · `docs/batches/2026-09-13-CORE-UNIFICATION.md` 2 ·
-`docs/TODO.md` 1 · `thincoder-vscode/test/ledger.test.mjs` 1 · `thincoder/docs/design/LEDGER-SELF-CONTAINED.md` 1 · `thincoder/test/ledger-surface.test.mjs` 1。
+**D1 逐档分布**（62 处 / 10 档）：`thincoder-cli/docs/batches/2026-09-12-LEDGER-SELF-CONTAINED.md` 34 · `thincoder-cli/docs/batches/2026-09-12-DOC-CODE-RECONCILE.md` 10 · `docs/TODO-archive.md` 4 ·
+`thincoder-vscode/docs/batches/2026-09-12-LEDGER-SELF-CONTAINED.md` 4 · `thincoder-cli/docs/batches/2026-09-13-TWO-REPO-MERGE.md` 4 · `docs/batches/2026-09-13-CORE-UNIFICATION.md` 2 ·
+`docs/TODO.md` 1 · `thincoder-vscode/test/ledger.test.mjs` 1 · `thincoder-cli/docs/design/LEDGER-SELF-CONTAINED.md` 1 · `thincoder-cli/test/ledger-surface.test.mjs` 1。
 
 **已备妥、未落笔**（下一轮可直取——规则以设计档 §4 为准，本段不复制口径）：仓外一次性脚本 `d:\teamcode\.thincoder\tmp\sweep.mjs`（`--check` / `--apply` / `--literal`；D1 / D2 的保留由 `--literal` 一键翻转）。
 
@@ -1981,7 +1996,7 @@ VERDICT: pass
 | 保护项（K2 前半） | 点状态目录 **565** · 作用域前缀 **50** · 盘符路径 **2** · registry URL **1** | **与设计 as-of 逐项相等** ✓（口径互证成立）；文件名里的 `core` 本脚本口径 22（与设计 241 非同一谓词） |
 | 站点排除（K2 后半） | S1 **3** · S4 **3** · S2 / S3 / S5 各 **1** | 逐处命中 |
 | K1 `doc-anchors` | 两域 **OK(V5): 0 条悬空锚 · exit 0** | ✓ |
-| K1 `check-ledger` | **0 处违规 · 基线 0 条 · exit 0** | ✓（依赖类 A 的 `../thincoder/src/ledger.mjs` 跨目录 import 被替——§4.4 行 2「必改」实证） |
+| K1 `check-ledger` | **0 处违规 · 基线 0 条 · exit 0** | ✓（依赖类 A 的 `../thincoder-cli/src/ledger.mjs` 跨目录 import 被替——§4.4 行 2「必改」实证） |
 | K1 `check-doc-width` | **3 行超线**：`:320`（320 · **改前既存**）· `:896`（322 · 扫替推过）· `:1131`（309 · 扫替推过） | 折行集实测 = **3 行，全在 `docs/batches/2026-09-13-CORE-UNIFICATION.md`**（§1 / §2 段） |
 | K5 核内测试 | `node --test`（核目录）**49 / 49 · fail 0 · exit 0** | ✓ 与改前基线同值 |
 | K6 度量复现 | **107 · 29 · 39 · 0.6494 · 单端 148 / 91 · 席位 51 / 71** | ✓ 与 K6 期望逐位一致 |
@@ -2028,7 +2043,7 @@ VERDICT: pass
 §4.8.1 前置①「本树无其他活动实例」**不成立** —— 设计期以「node 进程数 / `peer_instances`」判前置，**测不到编辑器持有的目录句柄**
 （**收正项**：前置判法须加**目标目录独占打开 / `share=0` 探测**——本次实测即以此判出占用）。
 
-**解阻建议（交父侧 / 用户）**：关闭编辑器内 `core/` 子树（尤 `core/advisor/**`）的打开页签与资源管理器展开节点，或 **Reload Window**
+**解阻建议（交父侧 / 用户）**：关闭编辑器内 `thincoder-core/` 子树（尤 `thincoder-core/advisor/**`）的打开页签与资源管理器展开节点，或 **Reload Window**
 （放下 watcher 句柄——**注意 Reload 会结束本会话**，请父侧先行安排），或改在**编辑器外终端**执行；解阻后本轮 1b–6 可原样重放。
 
 **已就绪未落笔**（下轮可直取）：仓外一次性脚本 `d:\teamcode\.thincoder\tmp\sweep.mjs`。本轮**就地收正两处**：
@@ -2045,6 +2060,91 @@ VERDICT: pass
 
 **复跑读数（回退后 · 证明基线完好）**：`doc-anchors` exit 0 · `check-doc-width` OK（306 档）· `check-ledger` 0 处违规 ·
 `node --test`（cwd = 核）**49 / 49** · `git status` 干净。
+
+### 实施轮 3：目录改名子批（2026-09-13 · eng-coder）——**实施完成 · 未 commit（待父侧折行 / 提交）**
+
+**段位**：改名子批（S1 / S2 / S3 面零触碰）。**终态 = clean**（内部审计 1 轮 + 内部 advisor 代码评审 1 轮 + 自修 1 轮；0 未决 🔴）。
+
+**前置**（设计档 §4.8；父侧已解锁）：父侧已用「逐子项 git mv」把旧核目录 `core` 的 8 子项搬入 `thincoder-core/`（46 档 · 保历史）；余一空壳目录 `core`（未跟踪 · 内容为空 · 被编辑器目录句柄锁住）——按指示**未动** ✓。本轮只做 `git mv thincoder thincoder-cli`（**成功** ✓ · 562 档）。
+
+**改动集读数**（`git status --porcelain`）：合计 **686** 行 = **重命名 608**（`R ` 562 + `RM` 46；= 562 CLI + 46 核）+ **仅内容改动 78**；`??` 未跟踪 = **0** ✓。
+扫替面 = 类 A **709** 处 · 类 B **166** 处 · **122 档**（脚本产出面；其中 46 档在改名目录内 ⇒ `RM`）；另类 C 5 档（其中 2 档脚本未触及）。
+
+**三类替换计数**（仓外一次性脚本，规则 = 设计档 §4.3；**未入仓** ✓）
+
+| 类 | 替换 | check 模式（改后） | 判 |
+|---|---|---|---|
+| A 旧名 + 斜杠 → 新名 + 斜杠 | **709** 处 | **0 处** | ✓ |
+| B 核目录名 + 斜杠（**仅首段**形态）→ 新核名 + 斜杠 | **166** 处 | **0 处** | ✓ |
+| C 手改站点（§4.3.1 5 处） | 5 处逐点 | 逐处读校（含花括号简写 + `--help` 抽查） | ✓ |
+| 脚本产出面合计 | 875 处 / **122 档** | A + B = 0 | ✓ |
+
+**保护项扫替前后逐项对照**（同脚本前后两次读数；as-of 参考见设计档 §4.3.2）
+
+| 保护类 | 改前 | 改后 | 判 |
+|---|---|---|---|
+| P1 npm 作用域前缀 `@thincoder/` | 51 | **51** | 相等 ✓ |
+| P2 点状态目录 `.thincoder/` | 565 | **565** | 相等 ✓ |
+| P3 盘符绝对路径 | 2 | **2** | 相等 ✓（另 2 处反斜杠形态天然不匹配） |
+| P4 registry 包 URL（registry 域 + 旧名 + `/latest`） | 1 | **1** | 相等 ✓ |
+| P8 npm org URL（本轮新增——决策表 1） | 1 | **1** | 相等 ✓ |
+| P9 forge 仓 URL（本轮新增——决策表 1） | 1 | **1** | 相等 ✓ |
+| P6/7 非首段 `core` 段（注入跳过数） | 23 | 185 | **谓词自变**：改后产物 `thincoder-core/` 自身重命中该谓词；**掩蔽 `thincoder-core` 后两侧同为 21** ✓ |
+| 裸词 `core`（文件名 / 模块名面） | 238 | **238** | 相等 ✓（设计 as-of 241；同谓词前后相等即合 K2） |
+
+> 注：本表读数 = **扫替 apply 前后**（本段 §5 落笔前）。§5 自身含同类受保 token（`@thincoder/…` · `.thincoder/…` 等）⇒ 事后复跑 P1 **52** · P2 **568** · D1 **76**——增量均为**记录自身引用**，非误伤 ✓。
+
+**7 类站点排除逐字未变自证**（核验 = 逐行对 HEAD 副本 `.thincoder/tmp/head/` 与工作树同号行）
+
+| 类 | 站点 | 行数 | 逐字未变 | 变动 |
+|---|---|---|---|---|
+| S1 工作区根口径行（含「自工作区根计」） | 批次档 §5 | 5 | **5** | 0 ✓ |
+| S2 phase 1 需求档行 | `thincoder-cli/docs/requirements/TWO-REPO-MERGE.md:48` | 1 | **1** | 0 ✓ |
+| S3 phase 1 批次档行 | `thincoder-cli/docs/batches/2026-09-13-TWO-REPO-MERGE.md:207` | 1 | **1** | 0 ✓ |
+| S4 本批次档 §3 评审冻结块 | `docs/batches/2026-09-13-CORE-UNIFICATION.md` §3 | 51 | **51** | 0 ✓ |
+| S5 本批次档 §1 规则句 | 含「本行故意不写连写 token」 | 1 | **1** | 0 ✓ |
+| S6 = D1（`thincoder/docs/TODO` 字面） | 10 档 41 行 / 72 token | 41 | **41** | 0 ✓ |
+| S7 = D2（设计档 §4.4.1 规则描述行） | `docs/design/CORE-UNIFICATION.md` 2 行 | 2 | **2** | 0 ✓ |
+
+**K1–K8 逐条读数**（cwd = 仓根）
+
+| # | 判据 | 读数 | 判 |
+|---|---|---|---|
+| K1 | 三机检 | `doc-anchors` **exit 0**（0 悬空锚；候选 1285 / 8799 与改前同）· `check-ledger` **exit 0**（0 违规；D1 面 `OK: thincoder/docs/TODO.md` 逐字保留）· `check-doc-width` **exit 1**（3 行——全在批次档，待父侧折行后即绿） | ⚠️ 2/3 绿，1 待折行 |
+| K2 | 扫替复查 | 三类 check = **A 0 · B 0 · C 逐点 ✓**；保护项前后相等；7 类排除逐字未变（上两表） | ✓ |
+| K3 | diff 可逆性 | 以 HEAD 副本跑脚本 dry-run → 产出 **122 档**：**119 档逐字节等于**工作树，**3 档** = 枚举内人工改动（类 C）；**枚举外人工改动 = 0** ✓ | ✓ |
+| K4 | 两产品全链 | CLI：lint **0** · test:full **605/605** · test:integration **23/23**；VSC：lint **0** · doc:check **0**（V5 命中 0 · 阻断态）· test:full **622/622** · test:integration **28/28** —— **全 exit 0** | ✓ |
+| K5 | 核内测试 | `node --test`（cwd = `thincoder-core/`）**49 / 49 · fail 0 · exit 0** | ✓ 与改前同值 |
+| K6 | 度量复现 | `mirror-divergence`：107 · 29 · 39 · 0.6494 · 单端 148 / 91 · 席位 **51 / 71** —— 与改前**逐位一致**（仅路径字段变） | ✓ |
+| K7 | 工作树 | 686 行 = 重命名 608 + 内容改动 78；**`??` 未跟踪 = 0** ✓（脚本 / HEAD 副本 / 镜像均在仓外 `.thincoder/tmp/`） | ✓ |
+| K8 | 行宽闸 | 机检域内新增 >300 非表格行 = **3 行**（全在批次档——见下；折行后归零） | ⚠️ 待折行 |
+
+**被推过 300 的行（交父侧折行；台账那行按已定不折）**——`check-doc-width` **改后实测**复核折行集（防漂移）：
+`docs/batches/2026-09-13-CORE-UNIFICATION.md` **`:344`（302）· `:911`（322）· `:1146`（309）**，均非表格行、均由扫替 +4/+9 字符推过（该档在 HEAD 上 0 行超线 ⇒ 无既存超宽行）。
+台账 `docs/TODO.md:15`（「子 agent 需要上下文压缩机制」，改后 **302**）属机检域外，按已定**不折** ✓。
+
+**空壳目录 `core` 状态（报告 ⑥）**：`d:\teamcode\thincoder\core` = **空目录**（0 项）；**未被 git 跟踪**（`git ls-files core` = 0；686 行 status 无任何该目录条目）⇒ 不进本笔提交、不影响 K7；按父侧指示**未动** ✓。
+
+**内部审计 + 内部 advisor 代码评审（自含交付协议）**
+- **审计 1 轮**（只读 explore 分歧审计，阻塞）：**DIVERGENT**——「部分实现 / 静默简化 / 越清单改动」全无；命中 **1 类 doc drift**（本段 §5 内 3 处「规则描述引文」被扫成自毁形态 = `X → X` / `旧名 ∥ 旧名`）。其限知如实登记（无 shell / 无 git，执行面读数未独立复跑）。
+- **评审 1 轮**（内部 advisor · `type=code`，阻塞）：**changes-required**——🔴 3 条（**类 B 过度匹配**把 2 档**散文枚举**里的 `provider core/sse/…` · `如 core/proxy` · `若 core/retry` 改成 `thincoder-core/…` = 假陈述）+ 🟡/🔵 若干（裸名命令 / 台账规则句 / 空壳 / 计数漂移 / 既有软线）。其读数经本段**逐条复证**（HEAD 副本 vs 工作树逐字对照）。
+- **自修 1 轮（fix round 1）**：见下决策表第 2 / 3 条，落修后**全量复跑**（K1 / K3 / K5 / K6 重读，见上表）。
+
+**决策透明表（实现决定——设计档未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 扫替器加 **P8 / P9 两类 URL 保护**（`registry.npmjs.org/-/org/thincoder/package` · `gitee.com/shanghai-xinbo/thincoder/commits/main`） | 设计档 §4.3.2 **第 8 项**明写「域名 / URL 不属路径」（第 4 项同类已设保）；机械规则会误替这 2 处 ⇒ 假陈述（**org 名 / 远端名不随改名而变**）。备选 = 照字面替（违第 8 项）⇒ 取保护。**读数影响**：类 A 711 → **709** · 扫替档 125 → **124** |
+| 2 | **回退 3 处类 B 假阳性**（`provider core/sse/…` · `如 core/proxy` · `若 core/retry`）+ 加 **P10 保护类** | 3 处均为**散文枚举**里的 CLI 模块名（`src/provider/*`），非核目录；替后成假陈述（`thincoder-core/sse` 等路径不存在）。判据 = 设计档 §4.3 D4「非首段同名段…替换即改语义」+ 档头「对规则本身的描述不写裸 token」同源。备选 = 只上报不改（拒绝：交付态留假陈述） |
+| 3 | **回退 2 处 D2 同族自毁行**（D2 行引文 · 判据行的「旧名 ∥ 新名」）+ 加 **D2p 保护类** | 该 2 行 = **规则 / 判据描述**，替后自毁为「`X → X`」「`旧名 ∥ 旧名`」；判据 = 父侧 D1 / D2 裁定（保留）同源 + §4.3.3 第 4 项「他段冻结尾」精神。备选 = 照字面替（交付态自相矛盾） |
+| 4 | 交付面计数以**脚本 check 模式**为准 | 设计档 §4.3「计数口径」注明文授权（脚本不必硬编码本节数值） |
+
+**越段发现（只记 ✗ · 未处置）**
+1. **活档裸名命令未收正**：仓根 `README.md:23` / `:24` = `cd thincoder && npm install …`（该档已被本批扫替 8 处、档内 `:10` 已写 `thincoder-cli/` ⇒ 档内自相矛盾、命令不可执行）；同族 = `thincoder-cli/docs/design/RELEASE.md:32` `cd thincoder`。**类 C 名单（§4.3.1 5 处）未收该形态** ⇒ 设计面完备性缺口，**执行者不代扩**——交父侧裁（收正 / 登记待收正）。
+2. **台账规则句未收正**：`docs/TODO.md:7`「本档条目一律写全仓相对路径（`thincoder/…` ∥ `thincoder-vscode/…` ∥ 仓根 `scripts/…`）」仍指旧首段——成因 = 同行含 `thincoder/docs/TODO.md` 字面 ⇒ D1 **行级**保护整行跳过。**台账归主 agent**（设计档 §2.8 明文）⇒ 报告不动。
+3. **受影响文件表计数 as-of 漂移**：设计档 §4.4.1 给 **125 档**；实测扫替面 **122 档**（差量 = D1 72 + D2 2 + 站点 10 + P8/P9 2 + P10 3 的扣减 + 文档增长）⇒ 属 as-of，父侧收口回填即可。
+
+**未做（本属他人 / 后续）**：折行（**父侧**——§4.2 步骤 4 / 5）· 本笔提交（**父侧**）· 越段 1 / 2（设计面 / 台账面）。
 
 ## §6 验证与收口（父代理）
 

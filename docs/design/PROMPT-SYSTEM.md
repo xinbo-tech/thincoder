@@ -10,14 +10,14 @@
 
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
-| 槽位提示词（运行期加载） | `thincoder/src/prompts/*.md`（15 档） | 同名 |
-| 工具描述（运行期加载） | `thincoder/src/tools/*.md`（25 档） | 同名 |
-| **中文设计档（供人读・非运行期——与运行期档同源）** | `thincoder/docs/design/prompts/*.md`（15 档） | `thincoder-vscode/docs/design/prompts/*.md`（15 档） |
+| 槽位提示词（运行期加载） | `thincoder-cli/src/prompts/*.md`（15 档） | 同名 |
+| 工具描述（运行期加载） | `thincoder-cli/src/tools/*.md`（25 档） | 同名 |
+| **中文设计档（供人读・非运行期——与运行期档同源）** | `thincoder-cli/docs/design/prompts/*.md`（15 档） | `thincoder-vscode/docs/design/prompts/*.md`（15 档） |
 | 槽位加载面 | `src/prompt-overlays.mjs` | 同名（同路径对） |
 
-**核内落点**：`core/prompts/`（15 档槽位）+ `core/tool-docs/`（25 档工具描述）+ 单一解析面 `prompt-files.mjs`（落 `core/`）——**核内唯一副本**（用户裁定 A7）。
+**核内落点**：`thincoder-core/prompts/`（15 档槽位）+ `thincoder-core/tool-docs/`（25 档工具描述）+ 单一解析面 `prompt-files.mjs`（落 `thincoder-core/`）——**核内唯一副本**（用户裁定 A7）。
 
-**核内只有运行期面** ✓——`core/prompts/`（15）+ `core/tool-docs/`（25）；**中文设计档永进核** ✗（归属**文档面**：两产品原地保留；其改名 / 移动只在文档面，随子系统迁移按文档面计划处置）。
+**核内只有运行期面** ✓——`thincoder-core/prompts/`（15）+ `thincoder-core/tool-docs/`（25）；**中文设计档永进核** ✗（归属**文档面**：两产品原地保留；其改名 / 移动只在文档面，随子系统迁移按文档面计划处置）。
 
 > 工具**实现面**（`src/tools/*.mjs`）的行本体住 `docs/design/TOOLS.md`；本档收**文本面**（槽位 / 描述 / 中文设计档）。
 
@@ -29,14 +29,14 @@
 
 | # | 相对路径 / 对位 | 面 | 相似度 · 逐字节 | 分类 | 目标 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|---|---|---|
-| 2 | `prompts/advisor-round1.md` | 同路径 | 1.0000 · 同 | ① | 进核（`core/prompts/advisor-round1.md`） | 取任一侧、逐字节随迁 | —（逐字节同，无分叉） | — | S0a（首批建核） |
-| 3 | `prompts/common.md` | 同路径 | 1.0000 · 同 | ① | 进核（`core/prompts/common.md`） | 取任一侧、逐字节随迁 | —（逐字节同，无分叉） | — | S0a（首批建核） |
-| 4 | `prompts/consult-base.md` | 同路径 | 1.0000 · 同 | ① | 进核（`core/prompts/consult-base.md`） | 取任一侧、逐字节随迁 | —（逐字节同，无分叉） | — | S0a（首批建核） |
-| 5 | `prompts/persona-coder.md` | 同路径 | 1.0000 · 同 | ① | 进核（`core/prompts/persona-coder.md`） | 取任一侧、逐字节随迁 | —（逐字节同，无分叉） | — | S0a（首批建核） |
-| 6 | `prompts/persona-eng-designer.md` | 同路径 | 1.0000 · 同 | ① | 进核（`core/prompts/persona-eng-designer.md`） | 取任一侧、逐字节随迁 | —（逐字节同，无分叉） | — | S0a（首批建核） |
-| 7 | `prompts/persona-explore.md` | 同路径 | 1.0000 · 同 | ① | 进核（`core/prompts/persona-explore.md`） | 取任一侧、逐字节随迁 | —（逐字节同，无分叉） | — | S0a（首批建核） |
-| 8 | `prompts/persona-normal.md` | 同路径 | 1.0000 · 同 | ① | 进核（`core/prompts/persona-normal.md`） | 取任一侧、逐字节随迁 | —（逐字节同，无分叉） | — | S0a（首批建核） |
-| 9 | `prompts/persona-plan.md` | 同路径 | 1.0000 · 同 | ① | 进核（`core/prompts/persona-plan.md`） | 取任一侧、逐字节随迁 | —（逐字节同，无分叉） | — | S0a（首批建核） |
+| 2 | `prompts/advisor-round1.md` | 同路径 | 1.0000 · 同 | ① | 进核（`thincoder-core/prompts/advisor-round1.md`） | 取任一侧、逐字节随迁 | —（逐字节同，无分叉） | — | S0a（首批建核） |
+| 3 | `prompts/common.md` | 同路径 | 1.0000 · 同 | ① | 进核（`thincoder-core/prompts/common.md`） | 取任一侧、逐字节随迁 | —（逐字节同，无分叉） | — | S0a（首批建核） |
+| 4 | `prompts/consult-base.md` | 同路径 | 1.0000 · 同 | ① | 进核（`thincoder-core/prompts/consult-base.md`） | 取任一侧、逐字节随迁 | —（逐字节同，无分叉） | — | S0a（首批建核） |
+| 5 | `prompts/persona-coder.md` | 同路径 | 1.0000 · 同 | ① | 进核（`thincoder-core/prompts/persona-coder.md`） | 取任一侧、逐字节随迁 | —（逐字节同，无分叉） | — | S0a（首批建核） |
+| 6 | `prompts/persona-eng-designer.md` | 同路径 | 1.0000 · 同 | ① | 进核（`thincoder-core/prompts/persona-eng-designer.md`） | 取任一侧、逐字节随迁 | —（逐字节同，无分叉） | — | S0a（首批建核） |
+| 7 | `prompts/persona-explore.md` | 同路径 | 1.0000 · 同 | ① | 进核（`thincoder-core/prompts/persona-explore.md`） | 取任一侧、逐字节随迁 | —（逐字节同，无分叉） | — | S0a（首批建核） |
+| 8 | `prompts/persona-normal.md` | 同路径 | 1.0000 · 同 | ① | 进核（`thincoder-core/prompts/persona-normal.md`） | 取任一侧、逐字节随迁 | —（逐字节同，无分叉） | — | S0a（首批建核） |
+| 9 | `prompts/persona-plan.md` | 同路径 | 1.0000 · 同 | ① | 进核（`thincoder-core/prompts/persona-plan.md`） | 取任一侧、逐字节随迁 | —（逐字节同，无分叉） | — | S0a（首批建核） |
 
 ### 2.2 中文设计档（原 §2.5（一）逐字节同组——组陈述同 2.1）
 
@@ -71,7 +71,7 @@
 
 - **#43 `prompt-overlays.mjs`**（同路径 · j 0.9853 · sha `5ff987804ff9` / `fe9c32f47f1c` · 82 / 83 行）
   - 左端读数（CLI）：无独有行——除右端注记外两侧逐字相同。
-  - 右端读数（VSC）：独有 1 行头注 `* VSC mirror of thincoder/src/prompt-overlays.mjs (多实现面纪律——语义同源、原文自持).`
+  - 右端读数（VSC）：独有 1 行头注 `* VSC mirror of thincoder-cli/src/prompt-overlays.mjs (多实现面纪律——语义同源、原文自持).`
   - 建议归一形态：取 CLI 侧（镜像注记随归一失去对象——核内为唯一源）。
   - 影响面：无（仅头注；须用户裁 = —）。
 - **#44 `prompts/advisor-design.md`**（同路径 · j 0.9487 · sha `f8804b1138f5` / `b46a6d77bd73` · 41 / 41 行）
@@ -109,7 +109,7 @@
 
 | # | 相对路径 / 对位 | 面 | 相似度 · 逐字节 | 分类 | 目标 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|---|---|---|
-| 117 | `prompts/discipline-engineering.md` | 同路径 | 0.7713 · 异 | ③ | 进核（`core/prompts/discipline-engineering.md`） | 融合（取并集）+ 端特有段按注入（VSC 的 R14 池段 / 取消 eng-coder 判据；CLI 的改动面反查段） | 分叉 ＝ 各端机制不同（VSC per-role-domain 池 `src/prompts/discipline-engineering.md:262-265`；CLI 改动面反查 `:128-130`）+ 文档地图与 `AGENT-LOOP` 节号错位（§11.2 ↔ §9）；前提（各端机制仍存在）成立 ⇒ **段级 ④** | **①②** | S1（建核补齐） |
+| 117 | `prompts/discipline-engineering.md` | 同路径 | 0.7713 · 异 | ③ | 进核（`thincoder-core/prompts/discipline-engineering.md`） | 融合（取并集）+ 端特有段按注入（VSC 的 R14 池段 / 取消 eng-coder 判据；CLI 的改动面反查段） | 分叉 ＝ 各端机制不同（VSC per-role-domain 池 `src/prompts/discipline-engineering.md:262-265`；CLI 改动面反查 `:128-130`）+ 文档地图与 `AGENT-LOOP` 节号错位（§11.2 ↔ §9）；前提（各端机制仍存在）成立 ⇒ **段级 ④** | **①②** | S1（建核补齐） |
 | 118 | `prompts/discipline-normal.md` | 同路径 | 0.6085 · 异 | ③ | 进核 | 融合 + 端特有段注入（VSC「收尾验收」节 / CLI 会诊终止口径） | 分叉 ＝ VSC 增「收尾验收」节（`:191-195`）+ 完成声明受审句；CLI 多「Ctrl+I 不终止会诊」等句 + 节序不同；指针按端地图（`docs/README.md` ↔ `docs/design/README.md`） | **①** | S1（建核补齐） |
 | 119 | `prompts/persona-eng-coder.md` | 同路径 | 0.5510 · 异 | ③ | 进核 | 融合 + 端特有段注入（VSC「Guidelines」块：不得静默降级 / 收尾自审六条 / 工具权限处置） | 分叉 ＝ VSC 独有六条收尾自审与降级纪律（`:34-51`）；CLI 的 file 域节为独立标题形态（内容 VSC 以 bullet 保留） | **①** | S1（建核补齐） |
 | 120 | `docs/design/prompts/discipline-engineering.md` | 镜像 | 0.8268 · 异 | ② | 文档面（中文设计档——**非运行期加载面**；两产品同名目录按裁定 B 原地保留） | 融合（版式取一侧 + 指针参数化）+ 端特有段随同源英文档裁决 | 分叉 ＝ 与同源英文档同源的中文投影（端注记 6 处 / 端特有段 / D5 细则）；前提（各端自持）仍成立 | — | 文档面 |
@@ -130,8 +130,8 @@
 
 | # | 条目（路径 / 对位） | 命中 | 左端行为（CLI） | 右端行为（VSC） | 建议归一形态 | 影响面 | 裁定状态 |
 |---|---|---|---|---|---|---|---|
-| C1 | `prompts/advisor-design.md`（§2.5 #44） | ① | 判据 7 =「…amend **the document** that already owns its topic…」（`src/prompts/advisor-design.md`） | 判据 7 =「…the **design** document…」（收窄）；其余逐字相同 | 融合——取「the document」（判据通用口径——评审面 ≠ 仅设计档：尚覆盖需求档 / 批次档） | 模型可见指令（advisor 设计评审判据措辞）· 对外契约无涉 · 测试面无涉 | **已裁（2026-09-13）**「按建议」· 已落地 `core/prompts/advisor-design.md`（批次档 §5 实施记录） |
-| C2 | `prompts/persona-engineering.md`（§2.5 #47） | ① | 标题「与 eng-designer / eng-coder 的分工界面」+ 指针 `AGENT-LOOP.md` 的 §18（`src/prompts/persona-engineering.md`） | 标题「与 eng-coder 的分工界面（设计写作面归 eng-designer）」+ 指针「AGENT-LOOP（CLI 仓·设计）§18（本端交付协议节 = §8）」 | 融合——标题取**并集语义**；跨端指针以**注入**承载端差（契约 10） | 模型可见指令（分工表述 + 跨端指针）· 对外契约无涉 | **已裁（2026-09-13）**「按建议」· 已落地 `core/prompts/persona-engineering.md`（批次档 §5；注入位语法待设计面定义） |
+| C1 | `prompts/advisor-design.md`（§2.5 #44） | ① | 判据 7 =「…amend **the document** that already owns its topic…」（`src/prompts/advisor-design.md`） | 判据 7 =「…the **design** document…」（收窄）；其余逐字相同 | 融合——取「the document」（判据通用口径——评审面 ≠ 仅设计档：尚覆盖需求档 / 批次档） | 模型可见指令（advisor 设计评审判据措辞）· 对外契约无涉 · 测试面无涉 | **已裁（2026-09-13）**「按建议」· 已落地 `thincoder-core/prompts/advisor-design.md`（批次档 §5 实施记录） |
+| C2 | `prompts/persona-engineering.md`（§2.5 #47） | ① | 标题「与 eng-designer / eng-coder 的分工界面」+ 指针 `AGENT-LOOP.md` 的 §18（`src/prompts/persona-engineering.md`） | 标题「与 eng-coder 的分工界面（设计写作面归 eng-designer）」+ 指针「AGENT-LOOP（CLI 仓·设计）§18（本端交付协议节 = §8）」 | 融合——标题取**并集语义**；跨端指针以**注入**承载端差（契约 10） | 模型可见指令（分工表述 + 跨端指针）· 对外契约无涉 | **已裁（2026-09-13）**「按建议」· 已落地 `thincoder-core/prompts/persona-engineering.md`（批次档 §5；注入位语法待设计面定义） |
 
 ## 4. 对外契约影响（自 `CORE-UNIFICATION.md` §2.12.2 搬入 · 逐字）
 

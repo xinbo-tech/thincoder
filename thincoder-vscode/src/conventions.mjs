@@ -19,7 +19,7 @@
  *          not a documentation extension;  doc — documentation extension outside
  *          any code segment;  temp — tmp-* name or .tmp/.temp extension.
  *
- * Semantics are shared with the CLI authority (thincoder/src/conventions.mjs) —
+ * Semantics are shared with the CLI authority (thincoder-cli/src/conventions.mjs) —
  * two independent implementations, one vocabulary (双端镜像纪律：各端独立实现、
  * 语义同源；不做 byte-identical).
  */

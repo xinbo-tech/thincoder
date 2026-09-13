@@ -1,7 +1,7 @@
 /**
  * async-visibility.test.mjs — 第 10 批条目 A（VSC live 块出生可靠性）机器验收。
  * 设计权威：`docs/design/WEBVIEW.md` §5.1（契约 §5.1.4 / 用例 T-V1~T-V8 §5.1.7 / AC-A1~A8
- * §5.1.8）；批次档 `thincoder/docs/batches/2026-09-11-VSC-ASYNC-VISIBILITY.md` §2。
+ * §5.1.8）；批次档 `thincoder-cli/docs/batches/2026-09-11-VSC-ASYNC-VISIBILITY.md` §2。
  *
  * 两组手法（同文件——happy-dom 注册只影响 DOM 全局，extension 侧模块零 DOM 依赖）：
  * ① 主侧（真 extension 模块 + 桩面板/真 ChatPanel 原型——session-boot 同骨架）：

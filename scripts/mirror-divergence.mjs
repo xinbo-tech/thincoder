@@ -3,7 +3,7 @@
  * mirror-divergence.mjs — 两产品镜像发散度度量（可复现工具 · 零依赖 · 只用 node: 内建）。
  *
  * ── 口径（本工具存在的全部意义——数字可复现的前提；逐字如此，勿改） ────────────
- *  · 成对判据：两产品 `<仓根>/thincoder/src/**` ↔ `<仓根>/thincoder-vscode/src/**` 下
+ *  · 成对判据：两产品 `<仓根>/thincoder-cli/src/**` ↔ `<仓根>/thincoder-vscode/src/**` 下
  *    **相对路径逐段相等**者成对（仅文件；大小写敏感、扩展名在内）。
  *  · 相似度：两侧各自读成行、**去首尾空白 + 丢空行**后取**行集合**，
  *    相似度 = **Jaccard = |交集| / |并集|**。
@@ -33,9 +33,9 @@
  *  node scripts/mirror-divergence.mjs [--json] [--help]
  *      [--root <dir>] [--a <dir>] [--b <dir>] [--mirror-a <dir>] [--mirror-b <dir>]
  *   --root <dir>        仓根（默认 = 本脚本所在仓根，即 `scripts/` 的父目录）
- *   --a / --b <dir>     主面两侧待比目录（默认 = <仓根>/thincoder/src ·
+ *   --a / --b <dir>     主面两侧待比目录（默认 = <仓根>/thincoder-cli/src ·
  *                       <仓根>/thincoder-vscode/src）
- *   --mirror-a/-b <dir> 中文镜像两侧（默认 = <仓根>/thincoder/docs/design/prompts ·
+ *   --mirror-a/-b <dir> 中文镜像两侧（默认 = <仓根>/thincoder-cli/docs/design/prompts ·
  *                       <仓根>/thincoder-vscode/docs/design/prompts）
  *   --json              机器可读输出（单行 JSON）
  *   --help / -h         打印本用法（stdout）· exit 0
@@ -49,10 +49,10 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 /** 默认主面两侧待比目录（相对仓根）。 */
-export const DEFAULT_A = "thincoder/src";
+export const DEFAULT_A = "thincoder-cli/src";
 export const DEFAULT_B = "thincoder-vscode/src";
 /** 默认中文权威镜像两侧（相对仓根——F10 ④）。 */
-export const DEFAULT_MIRROR_A = "thincoder/docs/design/prompts";
+export const DEFAULT_MIRROR_A = "thincoder-cli/docs/design/prompts";
 export const DEFAULT_MIRROR_B = "thincoder-vscode/docs/design/prompts";
 /** 相似度「近同」阈值（口径固定值——不改）。 */
 export const NEAR_SAME = 0.9;
@@ -69,8 +69,8 @@ export const DIST_BUCKETS = [
 ];
 /** 提示词面（F10 ⑤）：槽位提示词 = 目录全档；工具描述 = 该目录下 `.md`。 */
 export const PROMPT_FACES = [
-  { name: "prompts", a: "thincoder/src/prompts", b: "thincoder-vscode/src/prompts", ext: null },
-  { name: "tool-docs", a: "thincoder/src/tools", b: "thincoder-vscode/src/tools", ext: ".md" },
+  { name: "prompts", a: "thincoder-cli/src/prompts", b: "thincoder-vscode/src/prompts", ext: null },
+  { name: "tool-docs", a: "thincoder-cli/src/tools", b: "thincoder-vscode/src/tools", ext: ".md" },
 ];
 
 /** 用法（`--help` 与用法错误提示共用——与头注「用法 / 退出码契约」同源）。 */
@@ -78,8 +78,8 @@ export const USAGE = [
   "用法：node scripts/mirror-divergence.mjs [--json] [--help]",
   "        [--root <dir>] [--a <dir>] [--b <dir>] [--mirror-a <dir>] [--mirror-b <dir>]",
   "  --root <dir>        仓根（默认 = 本脚本所在仓根）",
-  "  --a / --b <dir>     主面两侧待比目录（默认 = <仓根>/thincoder/src · <仓根>/thincoder-vscode/src）",
-  "  --mirror-a/-b <dir> 中文镜像两侧（默认 = <仓根>/thincoder{,-vscode}/docs/design/prompts）",
+  "  --a / --b <dir>     主面两侧待比目录（默认 = <仓根>/thincoder-cli/src · <仓根>/thincoder-vscode/src）",
+  "  --mirror-a/-b <dir> 中文镜像两侧（默认 = <仓根>/thincoder{-cli,-vscode}/docs/design/prompts）",
   "  --json              机器可读输出（单行 JSON）",
   "  --help / -h         打印本用法并 exit 0",
   "  （旗标值不得为空、不得以 - 开头——防把下一个旗标吞成值）",

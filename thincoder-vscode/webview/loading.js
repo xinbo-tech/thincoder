@@ -19,7 +19,7 @@
  * - **Send 可见性 = running 期隐藏**（WEBVIEW.md §14 C-14——M4 选定案）：与拒发同判据
  *   （`_turnState === "running"`）——消除「可点但必被拒」假 affordance；Stop 承担停止；
  *   `send.js` 门禁与 toast 零改（Enter 路径拒发提示保留）。
- * INPUT-LOCK-ASYNC（C'——2026-09-09，thincoder/docs/design/INPUT-LOCK-ASYNC.md）→
+ * INPUT-LOCK-ASYNC（C'——2026-09-09，thincoder-cli/docs/design/INPUT-LOCK-ASYNC.md）→
  * INPUT-LOCK-BEHAVIOR-REVISED（2026-09-09 修订——不禁录入只禁 send——评审通过）：busy
  * 派生 `_turnState === "running"`（评审 #3：digest 属 running——chat-panel.mjs:50 实证）
  * ——输入不禁（readOnly 锁移除——打字回显——send 禁由 send.js 出口守卫兜——Ctrl+C/I 门禁

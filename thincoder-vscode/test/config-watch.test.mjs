@@ -1,7 +1,7 @@
 /**
  * config-watch.test.mjs — 第 21 批（B5 外部 config.json 写盘感知）机器验收。
  * 设计权威：`docs/design/SETTINGS.md` §2.6（契约 · 用例 T-S1~T-S6 · AC-S1~S2）；
- * 批次档 `thincoder/docs/batches/2026-09-11-VSC-INDEX-PERCEPTION.md` §2。
+ * 批次档 `thincoder-cli/docs/batches/2026-09-11-VSC-INDEX-PERCEPTION.md` §2。
  *
  * 手法：真模块 `src/extension/config-watch.mjs` + vscode mock 的 watcher 捕获面
  * （`workspace.fileSystemWatchers`——注册形状可断言；事件由 `watcher._fire` 驱动，

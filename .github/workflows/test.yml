@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: thincoder
+        working-directory: thincoder-cli
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

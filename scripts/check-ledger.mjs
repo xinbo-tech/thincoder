@@ -4,7 +4,7 @@
  *
  * 结构（R24a 拆分——各档 ≤300 行）：本档 = 入口 / L4 定位判序 / 报告（审计 / 汇总 / 退出码）；
  * 判据核（单档扫描 `checkLedger` / 多档驱动 `runCheck` / 默认清单 / 基线）= `check-ledger-core.mjs`（全量 re-export）。
- * 来源 = 两产品同名档（CLI `thincoder/scripts/check-ledger.mjs` 与 VSC `thincoder-vscode/scripts/check-ledger.mjs`）
+ * 来源 = 两产品同名档（CLI `thincoder-cli/scripts/check-ledger.mjs` 与 VSC `thincoder-vscode/scripts/check-ledger.mjs`）
  * 的并集——跨仓闸（兄弟仓形态 / 工作区根基根 / 跨仓失败关闭）随两仓合并 S4 退役（设计档 TWO-REPO-MERGE.md §2.4 R6/R9）。
  * 本档 = 域参数化单份：**无域参 = 全域**；产品域由门禁显式传参（`--domain`）。
  *
@@ -37,7 +37,7 @@ import { execFileSync } from "node:child_process";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { MERGED_SCRIPTS } from "./check-doc-width.mjs";
 // 数字单源（F7/AC80）：台账解析 / 计数 / 老化阈值 / 显示面 formatter 按产品域取用（两产品各自实现——不跨产品混用）
-import * as cliLedgerModule from "../thincoder/src/ledger.mjs";
+import * as cliLedgerModule from "../thincoder-cli/src/ledger.mjs";
 import * as vscLedgerModule from "../thincoder-vscode/src/ledger.mjs";
 import { defaultEntries, runCheck } from "./check-ledger-core.mjs";
 

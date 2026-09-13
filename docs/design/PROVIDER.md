@@ -10,7 +10,7 @@
 
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
-| 调用核心 | `thincoder/src/provider/core.mjs` + `index.mjs` | `thincoder-vscode/src/provider.mjs` |
+| 调用核心 | `thincoder-cli/src/provider/core.mjs` + `index.mjs` | `thincoder-vscode/src/provider.mjs` |
 | 传输 | `src/provider/{anthropic,google,responses}.mjs` | `src/provider/transports/{anthropic,google,responses}.mjs` |
 | 基础件 | `src/provider/{sse,retry,normalize,errors,abort-provenance}.mjs` | 内联 / 无独立档 |
 | 限流 | `src/provider/rate.mjs` | 同名（同路径对） |

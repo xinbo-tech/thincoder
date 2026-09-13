@@ -87,7 +87,7 @@ export function gateEngCoderSpawn(parent, depth, role, asyncArg) {
  * 2026-09-09 — CLI parity; the old <2-kept-sections verbatim guard is deleted).
  * Isomorphic declaration (评审 #4 — AC-3 diff anchor): summarizeEngTaskInput is
  * verbatim-isomorphic with the CLI's summarizeEngTaskBook
- * (thincoder/src/agent-tools/subagent-spawn.mjs:37-73) — this function body is
+ * (thincoder-cli/src/agent-tools/subagent-spawn.mjs:37-73) — this function body is
  * byte-identical to it; the only textual differences are the declaration-line
  * name and the repos' line-ending convention (CLI stays the untouched baseline).
  * Independence is unchanged: still built from _engTaskInput (not the

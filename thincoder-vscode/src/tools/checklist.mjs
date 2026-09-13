@@ -1,6 +1,6 @@
 /**
  * checklist.mjs — persistent task checklist (.thincoder/checklist.md)
- * Ported from CLI thincoder/src/tools/checklist.mjs (DESC file-read replaced with inline description).
+ * Ported from CLI thincoder-cli/src/tools/checklist.mjs (DESC file-read replaced with inline description).
  * Manages a tree-structured checklist; done items auto-archive to checklist-done.md.
  */
 

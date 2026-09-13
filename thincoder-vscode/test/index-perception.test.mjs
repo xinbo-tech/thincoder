@@ -1,7 +1,7 @@
 /**
  * index-perception.test.mjs — 第 21 批（VSC 索引感知面 B1–B4）机器验收。
  * 设计权威：`docs/design/MEMORY.md` §4（契约一~八 · 用例 T-I1~T-I10 §4.5 · AC-I1~I5 §4.6）；
- * 批次档 `thincoder/docs/batches/2026-09-11-VSC-INDEX-PERCEPTION.md` §2。
+ * 批次档 `thincoder-cli/docs/batches/2026-09-11-VSC-INDEX-PERCEPTION.md` §2。
  *
  * 分层（§4.5 归册）：T-I1~T-I4/T-I4b/T-I8/T-I9 快层直跑（无真实网络——fetch 桩按需注入）；
  * T-I5（提示面——内含 needsRebuild）与 T-I8b 走真实 git 子进程/真仓 → slow(...)（快层 skip、

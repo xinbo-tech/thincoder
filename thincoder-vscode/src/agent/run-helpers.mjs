@@ -202,7 +202,7 @@ export function offloadToolResult(cwd, text) {
  * A real message (user input, assistant reply, tool result, multimodal image) is appended to BOTH the
  * machine line (history) and the human line (fullHistory). Machine-only injections ([System reminder:...],
  * compaction notes, task/plan reminders) are pushed to history directly and never enter fullHistory.
- * Mirrors thincoder/src/context.mjs:pushReal — the two lines are written independently at the source.
+ * Mirrors thincoder-cli/src/context.mjs:pushReal — the two lines are written independently at the source.
  */
 export function pushReal(history, fullHistory, msg) {
   // SESSION.md §9 D-S1 (CLI parity): real messages carry an epoch-ms ts stamped HERE at push

@@ -1,7 +1,7 @@
 /**
  * trace-store.mjs — VSC 完整轨迹存档同构（docs/design/TRACE-STORE-VSC.md——CLI
  * AGENT-LOOP.md §18.6 D-TR1..TR8 权威规格镜像——语义照抄不照抄路径；CLI 参照实现
- * thincoder/src/traces/trace-store.mjs）。
+ * thincoder-cli/src/traces/trace-store.mjs）。
  *
  * 完整请求-响应轨迹落盘：每次 chat() 调用一个 JSONL 文件到
  * ~/.thincoder/traces/YYYY-MM-DD/<sessionKey>-<seq>.jsonl（与 CLI 同根目录——

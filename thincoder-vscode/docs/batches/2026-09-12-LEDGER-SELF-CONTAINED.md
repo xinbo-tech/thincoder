@@ -1401,8 +1401,8 @@ cd thincoder-vscode && node scripts/check-ledger.mjs
 | D-6 | 折行 = **脚本折点（优先 `；` / `·` / `，` / `。`，次 ` + ` / ` / `）+ 逐段 ≤290**；内容零增删 | 10 行 340–804 字符 → 全部 ≤300（复跑宽度 113 文件全绿）；折点均在标点后、不切词 |
 | D-7 | 拆分承载档 = **档首搬迁注记 + 本仓份逐字区块**（§2 VSC 行 / §5 VSC 交付行 / 验收本仓相关行） | D10「按条/按块逐字搬运」；条目计数对齐 §8.3 本仓份（MODEL-SELECTION 28 · COMMON-LAYER 18 · DEEPSEEK 4 · DOC-HYGIENE 1 · INPUT-FIXES-SMALL 6 · POOL-LEDGER 5 · PROMPT-REVIEW-ORDER 9 · ROLE-REDEFINITION 5 · SETTINGS-NULL-DEFAULT 3 · SPAWN-QUEUE 2 · TEST-DISCIPLINE-PROMPTS 7 · TEST-LIFECYCLE ≈23 · TURN-ACROSS 6 · VSC-ASYNC-VISIBILITY 16 · VSC-REVIEW-ASYNC-SWEEP 15 · WEBSEARCH-PROVIDER-KEY 5 · LEDGER-SURFACE 13 → **≈168**） |
 | D-8 | `docs/requirements/README.md` 板块表 **16 行**（含 README 自身行） | 树终态 16 = README + 在位 3 + 归位 6 + 拆出 1 + 新建 6（设计 §8.6 口径） |
-| D-9 | 跨仓源路径形态 = `` `src/…:N`（CLI 仓） ``（源码无节号，`名称（仓别）§N` 形态不适用） | 设计 §4.3 规范形态是文档互引；源码路径按「去路径前缀 + 仓别标记」收敛，机检面（`thincoder/` 残留）零命中 |
-| D-10 | 设计档内 3 处**元语句**（本设计档描述转换规则处）改写为不含 `thincoder/` 字面的等价表述 | T11 射程含设计档；残留形态零命中口径以「无 `thincoder/` 路径形态」机判 |
+| D-9 | 跨仓源路径形态 = `` `src/…:N`（CLI 仓） ``（源码无节号，`名称（仓别）§N` 形态不适用） | 设计 §4.3 规范形态是文档互引；源码路径按「去路径前缀 + 仓别标记」收敛，机检面（`thincoder-cli/` 残留）零命中 |
+| D-10 | 设计档内 3 处**元语句**（本设计档描述转换规则处）改写为不含 `thincoder-cli/` 字面的等价表述 | T11 射程含设计档；残留形态零命中口径以「无 `thincoder-cli/` 路径形态」机判 |
 
 ### 5.3 验证证据（命令 + 结果——全部实跑）
 
@@ -1413,7 +1413,7 @@ cd thincoder-vscode && node scripts/check-ledger.mjs
 - `node scripts/check-ledger.mjs` → `OK: thincoder-vscode/docs/TODO.md` + `OK: thincoder-vscode/docs/TODO-archive.md`；`0 处违规（新增——阻断）+ 6 处存量（基线内——降报告）`；**退出码 0**（首跑——迁移前快照；迁移后复跑 = 3 处存量——见 §5.5）。
 - `node scripts/check-doc-width.mjs` → `OK(宽度): 扫描域全部 .md 无 >300 字符单行（113 文件）`；一致性 **新增 2**（= 批前既存集——见 5.4）· 存量 25。
 - 提示词面 grep（T-VS6–T-VS9 / T-VS12 口径）：`双端镜像` / `CLI/VSC` / `乒乓振荡——已实证` / `VSC R14 池规则段` / `2026-09-09 修订` / `核双端对位面` 全零命中；`多端镜像` / `④ 核多实现面镜像面` / 核验四维句 / 自持五条 / normal 双源「缺的层必须补齐」在位。
-- 反向写痕机判：`docs/design/**.md` 中 `(?<![\w.-])thincoder/(?!-vscode)` **0 命中**（改写前 52 行 / 16 档）。
+- 反向写痕机判：`docs/design/**.md` 中 `(?<![\w.-])thincoder-cli/(?!-vscode)` **0 命中**（改写前 52 行 / 16 档）。
 - T6 双向对位：本仓 `docs/batches/` 33 档（2 在飞 + 14 迁移 + 17 拆分承载）；迁移 14 档档首搬迁注记逐档在位；拆分 17 档逐档在位（本仓份条目计数对齐 D-7）。
 
 ### 5.4 未完成 / 未验证 / 批外红（如实披露）

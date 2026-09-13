@@ -2,7 +2,7 @@
  * md-render-escape.test.mjs — 第 34 批（VSC webview 行内代码字面量契约与转义回归 · GitHub #7）机器验收。
  * 设计权威：`thincoder-vscode/docs/design/WEBVIEW.md` §10（契约 §10.3 / 用例表 T-H1~T-H15 §10.6 /
  * AC-H1~AC-H6 §10.7）；需求：CLI 仓 `docs/requirements/AGENT-LOOP.md` §10（F-H1~F-H4 / N-H1~N-H4）；
- * 批次档 `thincoder/docs/batches/2026-09-11-VSC-WEBVIEW-ESCAPE.md` §2。
+ * 批次档 `thincoder-cli/docs/batches/2026-09-11-VSC-WEBVIEW-ESCAPE.md` §2。
  *
  * 手法：纯函数直驱 `webview/md.js`（渲染器零 DOM 依赖——无需 happy-dom；D-V4）。
  * T-H14 金样协议：金样于**改动前**捕获（修前工作树 = HEAD 直驱出期望串，以固定字面量钉死于本档）

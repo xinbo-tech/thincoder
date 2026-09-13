@@ -10,7 +10,7 @@
 
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
-| 主循环 | `thincoder/src/agent.mjs` | 同名（同路径对） |
+| 主循环 | `thincoder-cli/src/agent.mjs` | 同名（同路径对） |
 | 装配 / 提醒 / 收尾 | `src/agent/setup.mjs` · `setup-reminders.mjs` · `run-stages.mjs` · `post-turn.mjs` · `dispatch.mjs` · `completion.mjs` · `record-results.mjs` · `relay-prefix.mjs` · `helpers.mjs` · `spawn-child.mjs` | `src/agent/*`（拆档：`execute-tools` · `tool-gates` · `run-helpers` · `context-injections` · `agent-state`） |
 | 子代理 / 异步 | `src/agent-tools/{subagent-scheduler,subagent,subagent-actions,subagent-async,subagent-run,async-settle,subagent-spawn,escalate-async}.mjs` | 同名 / 拆分档 |
 | 挂起与唤醒 | `src/tui/suspension-drive.mjs` | `src/extension/suspension.mjs` |

@@ -462,7 +462,7 @@ $ V5_GATE=1 node scripts/check-doc-anchors.mjs  # 退出码 1（env 通道与显
 #### D. 首跑已识别事项（如实登记，不静默）
 
 1. **设计档自命中面大于其 §9.1 的乐观声明**：§9.1 写「本档夹具 / 引例 token 按 P4 ② 注记形态落位……期 2 不需自清本档」，实跑显示 `docs/design/DOC-CODE-RECONCILE.md` 仍产出命中（`enforceRegionCap`（§3.4/§4.7 实测例行）、`agent-tools/advisor.mjs` / `tui/model-catalog.mjs`（§4.11 A3 行））⇒ 「期 2 不需自清本档」为**乐观句**，期 2 的清单会含本档——**列清单上报**（设计档修订权 = eng-designer）。
-2. **`enforceRegionCap` 的「对端仓在册」前提对现态对端仓不成立**：实测对端仓树（`../thincoder/{src,scripts,test}`）无此名 ⇒ 设计 §3.4 / §4.7 / §10 T-DC3 所引该名为**设计期实测值**，现态已漂移。T-DC3 以**夹具工作区**（`<ws>/thincoder-vscode` + `<ws>/thincoder`）自持对端仓面落地——不牵真实兄弟仓，判据（对端仓代码面在册 ⇒ 零报）照验；设计档侧该名的处置列为期 2 清账面。
+2. **`enforceRegionCap` 的「对端仓在册」前提对现态对端仓不成立**：实测对端仓树（`../thincoder-cli/{src,scripts,test}`）无此名 ⇒ 设计 §3.4 / §4.7 / §10 T-DC3 所引该名为**设计期实测值**，现态已漂移。T-DC3 以**夹具工作区**（`<ws>/thincoder-vscode` + `<ws>/thincoder`）自持对端仓面落地——不牵真实兄弟仓，判据（对端仓代码面在册 ⇒ 零报）照验；设计档侧该名的处置列为期 2 清账面。
 3. **glob / 占位形态不在 §4.5 排除枚举内**：如 `src/prompts/advisor-*.md`（glob）· `docs/TODO*.md`（glob）· `docs/batches/<批>-<主题>.md`（占位）⇒ 现判据下判红。**不自行扩展判据**（§4.5/§4.7 为封闭枚举——扩枚举须判据句修订 + 重评审）；列清单上报，期 2 由处置形态（现态改写 / 注记 + 指针）收口。
 4. 设计档 §7 落点注「该节现 5 条——as-of `:118-126`」在本批 F20 落笔后成为历史快照（实为 6 条）——**设计档文案，不自行改述**；列清单上报。
 

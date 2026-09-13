@@ -2,7 +2,7 @@
  * memory.mjs — File-based memory system for ThinCoder VS Code
  *
  * Entries are Markdown files with YAML frontmatter in .thincoder/memory/.
- * Format matches the CLI (thincoder/src/markdown.mjs):
+ * Format matches the CLI (thincoder-cli/src/markdown.mjs):
  *
  *   ---
  *   type: rule
@@ -68,7 +68,7 @@ function oneLine(v) {
 
 /**
  * Serialize entry to markdown with YAML frontmatter.
- * Format identical to thincoder CLI (thincoder/src/markdown.mjs).
+ * Format identical to thincoder CLI (thincoder-cli/src/markdown.mjs).
  */
 export function serializeEntry({ type, title, content, tags }) {
   const tagList = (tags || "").trim().split(/\s+/).filter(Boolean)

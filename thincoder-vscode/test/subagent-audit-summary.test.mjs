@@ -1,7 +1,7 @@
 /**
  * subagent-audit-summary.test.mjs — A2-SUMMARY-PARITY (docs/design/A2-SUMMARY-PARITY.md,
  * 2026-09-09): VSC summarizeEngTaskInput is verbatim-isomorphic with the CLI's
- * summarizeEngTaskBook (thincoder/src/agent-tools/subagent-spawn.mjs) — the A2 mechanical
+ * summarizeEngTaskBook (thincoder-cli/src/agent-tools/subagent-spawn.mjs) — the A2 mechanical
  * summary keeps only the three audit-relevant sections VERBATIM (design docs involved /
  * affected-file list / acceptance criteria), dropping verbose context. Locks the
  * alignment surface via the auditTaskBook seam (summarizeEngTaskInput is module-private —

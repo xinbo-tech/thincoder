@@ -1,8 +1,8 @@
 /**
  * wait-for-advisor-pool.test.mjs — 第 10 批条目 B ②（VSC 端）：`wait_for "advisor settled"`
  * 判据 = **评审池真实态**（双载体）。
- * 设计权威：`thincoder/docs/design/AGENT-LOOP.md` §18.3 #2 / §18.6（T-B4/T-B5）/ §18.7（AC-B2）；
- * 需求：`thincoder/docs/requirements/AGENT-LOOP.md` §4（F-B2）。CLI 镜像同构（各端独立实现·
+ * 设计权威：`thincoder-cli/docs/design/AGENT-LOOP.md` §18.3 #2 / §18.6（T-B4/T-B5）/ §18.7（AC-B2）；
+ * 需求：`thincoder-cli/docs/requirements/AGENT-LOOP.md` §4（F-B2）。CLI 镜像同构（各端独立实现·
  * 同输入同判定——NFR-B1）；本端判据复用 `advisorReviewInFlight`（advisor-async.mjs——双载体）。
  *
  * 红→绿（修前病灶复现）：判据读**子代理池**的 role==="advisor" 条目——评审条目只在评审池

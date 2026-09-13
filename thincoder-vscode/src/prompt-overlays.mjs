@@ -2,7 +2,7 @@
  * prompt-overlays.mjs — prompt slot constants + the scenario→slot assembly (PROMPT-SYSTEM
  * 施工② G1+G2, 2026-09-10). Slot constants are loaded ONCE (byte-stable, module scope);
  * assemblePrompt composes them per PROMPT-SYSTEM.md §3.2 装配矩阵 (D1 内联表——设计锚).
- * VSC mirror of thincoder/src/prompt-overlays.mjs (多实现面纪律——语义同源、原文自持).
+ * VSC mirror of thincoder-cli/src/prompt-overlays.mjs (多实现面纪律——语义同源、原文自持).
  *
  * Slot model (PROMPT-SYSTEM.md §1/§2): persona → common → discipline → [4] other
  * (AGENTS/skills ride the existing tail logic). explore/coder/plan reuse PERSONA_NORMAL

@@ -5,11 +5,11 @@
  * 结构（R24a 拆分——各档 ≤300 行）：
  *   ① 本档 = 入口 / 域驱动 / 报告（`main` + `formatReport`）+ 家族全量 re-export（对外导入面不变）；
  *   ② `doc-anchors-v5.mjs` = V5 锚引擎（CLI 锚：V5-A 路径/坐标 · V5-B 用例号 · V5-C 符号——判据全文
- *      见 `thincoder/docs/design/ENGINEERING-MODE.md` §2.32.3）；
+ *      见 `thincoder-cli/docs/design/ENGINEERING-MODE.md` §2.32.3）；
  *   ③ `doc-anchors-core.mjs` = VSC 锚引擎（A1 用例号 / A2 符号 / A3 路径——判据权威 =
  *      `thincoder-vscode/docs/design/DOC-CODE-RECONCILE.md` §4）；
  *   ④ `doc-anchors-targets.mjs` = 采集面（源域 + 在册判据域）。
- * 来源 = 两产品实现并集（CLI `thincoder/scripts/doc-anchors.mjs` + VSC `thincoder-vscode/scripts/check-doc-anchors.mjs`）；
+ * 来源 = 两产品实现并集（CLI `thincoder-cli/scripts/doc-anchors.mjs` + VSC `thincoder-vscode/scripts/check-doc-anchors.mjs`）；
  * 跨仓面整类退役（设计档 TWO-REPO-MERGE.md §2.4 R1–R3 / R7）：对端仓根发现（兄弟目录循环）·
  * 对端前缀判据与排除式 5② · 缺仓/域外口径 · 对端根断言与自指防护——全数删除（旧判据符号零留存）。
  * 两引擎一体（`--domain` 参数化）：**无域参 = 全域**（仓根发现域集——两产品各按自身锚面）；产品域由门禁显式传参。

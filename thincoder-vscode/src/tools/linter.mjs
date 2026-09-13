@@ -1,6 +1,6 @@
 /**
  * linter.mjs — language-aware lint tool (replaces the weaker syntax_check)
- * Ported from CLI thincoder/src/tools/linter.mjs (DESC file-read replaced with inline description).
+ * Ported from CLI thincoder-cli/src/tools/linter.mjs (DESC file-read replaced with inline description).
  * Fast path: node --check. Full path: language-aware cascade (tsc --noEmit for TS/TSX — requires tsconfig.json;
  * ruff/cargo/go for the other languages; JS/JSX falls back to node --check — eslint removed
  * 2026-09-02, TOOLS.md §10.2 zero-dependency).

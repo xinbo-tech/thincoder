@@ -1,6 +1,6 @@
 /**
  * log.mjs — 诊断事件日志（docs/requirements/LOGGING.md 权威规格）。
- * 双端同构：thincoder/src/log.mjs 与 thincoder-vscode/src/log.mjs 同一实现语义
+ * 双端同构：thincoder-cli/src/log.mjs 与 thincoder-vscode/src/log.mjs 同一实现语义
  * （共享 ~/.thincoder/logs/、同格式、同事件面——F-L6）。
  *
  * 常驻骨架日志：回合/LLM/工具/子代理/挂起的关键事件——每行一个 JSON 事件，按天轮转

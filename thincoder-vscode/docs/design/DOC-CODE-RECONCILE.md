@@ -90,7 +90,7 @@
 | **源域（被检文档）** | 本仓 `docs/**/*.md` − `docs/design/_archive/` − `docs/batches/` − 台账两档（`docs/TODO.md` / `docs/TODO-archive.md`） | 归档 = 历史快照（与宽度 / V1–V4 同源豁免）· 批档 = 时序日志（§3.5）· 台账 = 已有 L1–L4 专判（**避免重复报行**——N7） |
 | 源域实测档数 | **102 档**（`docs/` 树 155 档 − 归档 17 − 批档 34 − 台账 2；as-of 2026-09-12——含本设计档自身） | 全量口径（N8）——不抽样 |
 | **A1 目标域** | 本仓 `test/**`（含 `test/integration/`、`test/helpers/`） | 用例号在册性——**认用例标题**（注册调用首参字面量——口径写死见 §4.3） |
-| **A2 目标域** | 本仓代码面（`src/` · `webview/` · `scripts/` · `test/` · `extension.mjs`）**∪** 对端仓代码面（`../thincoder/{src,webview,scripts,test}`） | 本仓面在册 = 通过；对端仓面在册 = **跨仓参照**（不判红——面归属由 V4 管） |
+| **A2 目标域** | 本仓代码面（`src/` · `webview/` · `scripts/` · `test/` · `extension.mjs`）**∪** 对端仓代码面（`../thincoder-cli/{src,webview,scripts,test}`） | 本仓面在册 = 通过；对端仓面在册 = **跨仓参照**（不判红——面归属由 V4 管） |
 | **A3 目标域** | 本仓仓面（排除 `_archive/` · `node_modules/` · `.git/`） | 存在性 = **现态面**（只存在于 `_archive/` 的档 = 现态不在 → 判） |
 
 路径基根解析 = **仓根**（本仓）；对端仓 = **只读兄弟仓**（仓内已有先例：跨仓只读兄弟仓的对照用例族）。
@@ -404,7 +404,7 @@
 | T-DC6 | 正常 | 源域实跑（报告态） | 逐处行 + 尾行计数 + `--json` 字段齐；退出码 0 | B5 / AC-DC7 |
 | T-DC7 | 边界 | 假阳八类夹具（§4.7 逐类一行） | **零报** | B2 / AC-DC4 |
 | T-DC8 | 边界 | fenced 块内锚 · 行内命令（`&&`）· 搜索模式串行 | 整块 / 整行跳过——零报 | B1 / AC-DC4 |
-| T-DC9 | 边界 | 射程边界夹具（**判别化**）：`.md` token + 同行 `§`（归 V1）· 非 `.md` token + 同行 `§`（**必判**）· `:N-M` 区间尾（剥离后判）· `thincoder/…` 跨仓路径 · `路径（仓别）` E3 形态 | `.md`+`§` 零报（归 V1）；非 `.md`+`§` 与 `:N-M` 各判 1 处（必判反证）；跨仓 / E3 零报 | B4 / AC-DC6 |
+| T-DC9 | 边界 | 射程边界夹具（**判别化**）：`.md` token + 同行 `§`（归 V1）· 非 `.md` token + 同行 `§`（**必判**）· `:N-M` 区间尾（剥离后判）· `thincoder-cli/…` 跨仓路径 · `路径（仓别）` E3 形态 | `.md`+`§` 零报（归 V1）；非 `.md`+`§` 与 `:N-M` 各判 1 处（必判反证）；跨仓 / E3 零报 | B4 / AC-DC6 |
 | T-DC10 | 边界 | 源域排除夹具：`_archive/` 档 · `docs/batches/` 档 · 台账两档 | **零扫描**（不进清单） | B4 / AC-DC6 |
 | T-DC11 | 边界 | 占位与运行时域：`.thincoder/conventions.json` · `X.md` · `path/to/file.md` · `node_modules/x.md` | 零报 | B2 / AC-DC4 |
 | T-DC12 | 边界 | `--json` 输出 vs 尾行计数 | 字段枚举齐 + 计数自洽（total = Σ 分型；distinct ≤ total）+ 含 `counts.external` 与 `external[]` 自洽（external 不计入 total）——D3 口径 | B5 / AC-DC7 |

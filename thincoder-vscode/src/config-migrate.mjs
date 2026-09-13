@@ -3,7 +3,7 @@
  * ① legacy VS Code key stores → config.json (migrateCore, below).
  * ② 模型字段老形态迁移（migrateLegacyModelFields——2026-09-10 MODEL-SELECTION M7 v2：
  *    `providers[].models[]` 候选清单退场 + 渠道单值 `providers[].model` 恢复；与 CLI
- *    `thincoder/src/config-migrate.mjs` 同规则——语义同源，各端独立实现（不做逐字硬一致，
+ *    `thincoder-cli/src/config-migrate.mjs` 同规则——语义同源，各端独立实现（不做逐字硬一致，
  *    N4 多实现面纪律）。双端差异只许在头注释/语言/导入行。
  * Split out of config-io.mjs (500-line hard limit). The VS Code glue (settings +
  * SecretStorage wiring) lives in extension/migrate-settings.mjs.

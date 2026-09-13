@@ -5,7 +5,7 @@
  * A3（SESSION-FLOW-A——2026-09-09）→ F-6（SESSION-ACTIVITY-REVISED——2026-09-09）：
  * ③ 尾段断言再翻转——Stop 派生由 state≠idle 收窄为 state==="running"（评审 #1 定论：
  * susp = 纯后台池跑——主空闲——不显 Stop——无全停——子代理停止靠活动区每块 ⏹）。
- * INPUT-LOCK（C'——2026-09-09，thincoder/docs/design/INPUT-LOCK-ASYNC.md）→ 修订
+ * INPUT-LOCK（C'——2026-09-09，thincoder-cli/docs/design/INPUT-LOCK-ASYNC.md）→ 修订
  * （INPUT-LOCK-BEHAVIOR-REVISED——2026-09-09）：⑤ 状态派生组——busy（running 含 digest——
  * 单一判据）不禁录入（readOnly 锁移除——打字回显）+ busy 占位符 + send 拒发（Enter/发送
  * 按钮——文本保留）/susp·idle 默认占位符——Ctrl+I 中断模态占位符归属（ctx._interruptMode）。

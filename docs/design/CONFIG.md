@@ -10,7 +10,7 @@
 
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
-| 装载器 / 默认值 | `thincoder/src/config.mjs` | `thincoder-vscode/src/config-io.mjs` |
+| 装载器 / 默认值 | `thincoder-cli/src/config.mjs` | `thincoder-vscode/src/config-io.mjs` |
 | 迁移 | `src/config-migrate.mjs` | `src/config-migrate.mjs` |
 | 分段配置 | （内联于 `config.mjs`） | `src/config-presets.mjs` · `config-consult.mjs` · `config-mcp.mjs` · `embed-config.mjs` |
 | 写盘面 / 面板 | `src/cli/`（TUI 侧） | `src/extension/settings-panel-write.mjs` · `extension/settings.mjs` · `config-watch.mjs` · `migrate-settings.mjs` |
@@ -61,7 +61,7 @@
 
 | # | 条目（契约点） | 类 | 归一变更 | 兼容形态（§2.12.1 模板） | 落地物（档:行 / 用例名 / CHANGELOG 条目） | 裁定状态 |
 |---|---|---|---|---|---|---|
-| 1 | `~/.thincoder/config.json` 键面与默认值（含 CLI-only `agent.goalTurns` / `agent.streamRules`；`agent.compactThreshold` 默认值分叉） | 配置 | 两面 → 核内单一 DEFAULTS | 旧键可读（迁移幂等 + 写回带 `.bak-{ts}`）· CHANGELOG | 两产品 `CHANGELOG.md` + `thincoder/README.md` 键面 + 旧配置读入用例（S2 落） | 已裁（2026-09-13）· 按建议（§2.5.1 A4） |
+| 1 | `~/.thincoder/config.json` 键面与默认值（含 CLI-only `agent.goalTurns` / `agent.streamRules`；`agent.compactThreshold` 默认值分叉） | 配置 | 两面 → 核内单一 DEFAULTS | 旧键可读（迁移幂等 + 写回带 `.bak-{ts}`）· CHANGELOG | 两产品 `CHANGELOG.md` + `thincoder-cli/README.md` 键面 + 旧配置读入用例（S2 落） | 已裁（2026-09-13）· 按建议（§2.5.1 A4） |
 | 2 | `$schema` 注入与否（VSC 写盘注入 / CLI 不注入） | 配置 | 取一侧 + 登记 | 登记 + README 键面同步 | 同第 1 行 + 配置读写用例 | 已裁（2026-09-13）· 按建议（§2.5.1 A4） |
 | 3 | `settings` 工具的类型校验面（错类型是否拒写） | 输出（工具回话） | VSC 由「静默落盘」→「拒绕并报错」（同 CLI） | 登记 + CHANGELOG（工具行为条目） | `SETTINGS-TOOL.md` 同步 + VSC 用例 | 已裁（2026-09-13）· 按建议（§2.5.1 A5） |
 | 4 | `agent.engineering` 的写盘范围（VSC 双写共享 `config.json`） | 配置 | 取 CLI（只进会话） | 旧行为撤回 ⇒ CHANGELOG + 登记 | `SESSION.md` / `ENGINEERING-MODE.md` 同步 | 已裁（2026-09-13）· 按建议（§2.5.1 A6） |

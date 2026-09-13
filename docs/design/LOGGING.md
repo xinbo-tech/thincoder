@@ -10,7 +10,7 @@
 
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
-| 事件日志 | `thincoder/src/log.mjs` | 同名（同路径对） |
+| 事件日志 | `thincoder-cli/src/log.mjs` | 同名（同路径对） |
 
 ## 2. 核模块裁决行（自 `CORE-UNIFICATION.md` §2.5 搬入 · 逐字）
 

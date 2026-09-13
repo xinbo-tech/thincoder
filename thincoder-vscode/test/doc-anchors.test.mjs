@@ -2,7 +2,7 @@
  * doc-anchors.test.mjs — V5 文档锚一致性机检用例（DOC-CODE-RECONCILE 批 §10 · T-DC1–T-DC14；S4 单仓化修订）。
  *
  * 判据权威 = `docs/design/DOC-CODE-RECONCILE.md` §4（判据）/ §4.7（假阳八类）/ §4.8（双态）/ §10（用例）/ §11（AC）。
- * 夹具 = 临时工作区 `<ws>/thincoder-vscode`（本域根）+ `<ws>/thincoder`（合并仓另一域——A2 代码面并集），
+ * 夹具 = 临时工作区 `<ws>/thincoder-vscode`（本域根）+ `<ws>/thincoder-cli`（合并仓另一域——A2 代码面并集），
  * **夹具自持**（S4：对端发现 / 缺仓域外 / 自指 fail-closed 整类退役——设计档 TWO-REPO-MERGE.md §2.4 R7）。
  * 慢层（slow()）：真仓（合并仓全域——仓根统一版脚本）全量扫描（T-DC6 ②）。
  */
@@ -43,12 +43,12 @@ const SYNTHETIC_MISSING = "zzNo" + "Such"
 const BASE = {
   "thincoder-vscode/src/a.mjs": "export const alphaOne = 1\nexport function scanGroups() { return [] }\n",
   "thincoder-vscode/test/a.test.mjs": 'test("T-VS1 正常：例", () => {})\nslow("T-VS32 错误：例", () => {})\n',
-  "thincoder/src/x.mjs": `export function ${OTHER_SYMBOL}() { return 0 }\n`,
+  "thincoder-cli/src/x.mjs": `export function ${OTHER_SYMBOL}() { return 0 }\n`,
 }
 /** 建一个含探针档的工作区（`extra` 可覆盖 / 追加）。 */
 function scenario(docContent, extra = {}, name = "PROBE") {
   const ws = fixture({ ...BASE, [`thincoder-vscode/docs/design/${name}.md`]: docContent, ...extra })
-  return { ws, root: join(ws, "thincoder-vscode"), other: join(ws, "thincoder") }
+  return { ws, root: join(ws, "thincoder-vscode"), other: join(ws, "thincoder-cli") }
 }
 const clean = (ws) => rmSync(ws, { recursive: true, force: true })
 /** 进程内跑 main 并收集输出。 */
@@ -213,7 +213,7 @@ test("T-DC8 边界：fenced 块整块跳 · 行内命令与搜索模式串整行
     "# 预处理",
     "",
     "行内命令：`cd thincoder-vscode && node scripts/check-doc-width.mjs`",
-    "搜索模式串：`grep -E 'thincoder/docs/x.md|CLI 仓 [^（]*\\.md'`",
+    "搜索模式串：`grep -E 'thincoder-cli/docs/x.md|CLI 仓 [^（]*\\.md'`",
     "",
     "```",
     "T-ZZ7",
@@ -234,7 +234,7 @@ test("T-DC9 边界：`.md`+§ 归 V1（零报）· 非 `.md`+§ 必判 · `:N-M`
     "- V1 面（`.md` token + 同行 § ⇒ 归 V1——零报）：`NOPE-V1.md` 见 §8.1",
     "- 非 `.md` token + 同行 §（归 V5——必判）：`src/nope.mjs` 见 §4",
     "- `:N-M` 行区间尾（剥离后按裸路径判）：`scripts/nope.mjs:12-34`",
-    "- V4 退场面：`thincoder/src/x.md`（带域前缀 ⇒ 不入本域判——R8 后仍不入 A3 面）",
+    "- V4 退场面：`thincoder-cli/src/x.md`（带域前缀 ⇒ 不入本域判——R8 后仍不入 A3 面）",
     "- E3 形态：`tui/model-catalog.mjs`（CLI 仓）",
   ].join("\n")
   const { ws, root } = scenario(docs)
