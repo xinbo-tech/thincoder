@@ -157,6 +157,7 @@
 | `（X 仓）` 注记（约 1031 处） | 跨仓引用形态的合规标记 | **不再新增**；存量留痕档（`batches/`、`_archive/`）**不动**（历史留痕，冻结）；现行档触碰时随改 |
 | **同名撞车 27 + 31 + 20 对** | 两产品各自的 `docs/design/TESTING.md` 等同名档 | **不物理合并**——两产品文档分层保留在各自子目录内（`thincoder/docs/` 与 `thincoder-vscode/docs/`），撞车不成立 |
 | 文档地图 | 两仓各一份 `docs/README.md` | 各留一份（各管各产品）；合并仓根另建总览 `README.md` |
+| **项目台账单仓化**（仓根 `docs/TODO.md` / `docs/TODO-archive.md`） | 两产品各自产品级活档 + 归档档（共四档） | **已实施（2026-09-13——commit `c9f35f93`）**：仓根 `docs/TODO.md`（项目级唯一活档）+ `docs/TODO-archive.md`（两产品归档并入 + 单仓化归档节）；原产品四档退役；仓根 `README.md` 增「Project ledger」节；机检承接 = `check-ledger` 默认清单改指仓根两档（批 2 补做轮落地——SKIP 零行） |
 
 **关于"同名撞车"的结论**：撞车之所以成为问题，前提是"扫描域扁平化为单层"。
 本方案**保持两产品各自的 `docs/` 分层**，扫描域按产品前缀隔离（§2.5），撞车自然消解——
@@ -221,6 +222,9 @@ GitHub Actions **只读仓根 `.github/workflows/`**——合并后若原样留�
 - **全域文档机检**：工作流增设全域调用 step（统一脚本扫合并仓全域——扫描域两态见 §2.5；F5 的「全域」口径承载面）；
 - CLI 侧此前无 CI——合并是补齐其 CI 的**顺路机会**：**已定案执行（D11）；非 F 级需求**——工作流迁仓根时一并落地 CLI job；验收口径 = T-M28（仓根 CI 实跑：两产品 job 绿 + 全域机检 step 绿）。
 
+**「零红」口径（2026-09-13 收正轮）**：全域调用下 VSC 域引擎为**报告态**——仓根 `scripts/doc-anchors.mjs` 内 `vscGate` 默认不阻断 ⇒ CI 全域 job 会打印报告行而**退出码 0**。「零红」= **退出码 0**（报告行不阻断）。
+VSC 域转闸（报告态 → 阻断态）的时间点 = **依赖批 3 / S6 面清零**（清零前全域调用保持「退出码 0」口径）。
+
 ### 2.10 仓根状态与清理（B10 / B12）
 
 | 项 | 处置 |
@@ -280,7 +284,7 @@ phase 2 目标 = 「一个核 + 两个薄壳」：共享核心真正可 `import`
 |---|---|
 | **结构搬迁** | CLI 仓顶层全部条目 → `thincoder/`；VSC 仓全部条目 → `thincoder-vscode/`（subtree 并入） |
 | **机检脚本（删改）** | CLI `scripts/doc-anchors.mjs`（299 → 删）· `scripts/check-doc-width.mjs`（367 → 删）· `scripts/check-ledger.mjs`（354 → 删）· `scripts/doc-impact.mjs`（141 → 措辞改写（§2.4）——±0，import 改指统一版）；VSC `scripts/check-doc-anchors.mjs（VSC 仓）`（411 → 删）· `scripts/check-doc-width.mjs（VSC 仓）`（365 → 删）· `scripts/check-ledger.mjs（VSC 仓）`（317 → 删）· `scripts/reconcile-lookup.mjs（VSC 仓）`（124 → 移仓 / 改指——import 改指统一版）；六档判据并入仓根统一版（§2.5）；调用点同步改指（两产品 test 面 + VSC `package.json` `doc:check`——§2.8；CLI `package.json` 无六档调用点——零改）；单源依赖改指见 §2.5；S4 |
-| **机检脚本（新增）** | 合并仓根 `scripts/`（单份 ×3——文档锚 / 文档格式 / 台账；目录定死（仓根）· **档名沿用现有三名**——`scripts/doc-anchors.mjs` / `scripts/check-doc-width.mjs` / `scripts/check-ledger.mjs`（VSC 侧 `scripts/check-doc-anchors.mjs（VSC 仓）` 并入后取 `scripts/doc-anchors.mjs` 一名；§2.5）；行数预估与拆分计划见下注） |
+| **机检脚本（新增）** | 合并仓根 `scripts/`（单份 ×3——文档锚 / 文档格式 / 台账；目录定死（仓根）· **档名沿用现有三名**——`scripts/doc-anchors.mjs` / `scripts/check-doc-width.mjs` / `scripts/check-ledger.mjs`（VSC 侧 `scripts/check-doc-anchors.mjs（VSC 仓）` 并入后取 `scripts/doc-anchors.mjs` 一名；§2.5）；拆分结构与实测行数见下注） |
 | **测试（R1–R10 · R16 连带面——删跨仓断言段 + 调用点改指统一版脚本；净删为主）** | CLI `test/doc-anchors.test.mjs`（297 → −25±10——含 R2 T-V5-5⑦ 夹具重述，见 §2.4 R2 行）· `test/doc-consistency.test.mjs`（309 → −30±10）· `test/ledger.test.mjs`（285 → −35±15）· `test/ledger-surface.test.mjs`（333 → ±0——调用点改指）· `test/doc-impact.test.mjs`（90 → ±0——调用点改指）；VSC `test/doc-anchors.test.mjs（VSC 仓）`（362 → −40±15）· `test/doc-consistency.test.mjs（VSC 仓）`（255 → −30±10）· `test/ledger-check.test.mjs（VSC 仓）`（180 → −25±10）· `test/reconcile-lookup.test.mjs（VSC 仓）`（100 → ±0——随移仓改指）· `test/context-parity.test.mjs（VSC 仓）`（374 → −11±3——R16 跨仓防护段整段退役；S4）· `test/prompts-mirror-anchors.test.mjs（VSC 仓）`（155 → ≤−20——R10 跨仓段删 + T-DC16 随 R13 同步；S5）；**除本行列名者外，两产品其余测试档零改**（可枚举口径）；逐档实测 delta 以实施轮为准（口径 = `wc -l`） |
 | **提示词** | 两产品 `src/prompts/`（15 档）+ `docs/design/prompts/`（15 档）——**结构保留**（D14）；仅退役其跨仓机制层 |
 | **文档** | 两产品 `docs/README.md`（自持段改写——CLI `:114` as-of / `README（VSC 仓）:23` as-of；R12）；纪律档 = `docs/requirements/ENGINEERING-MODE.md` §1.19 / `ENGINEERING-MODE（VSC 仓）§1`（R12 / R14 句）+ CLI `docs/design/ENGINEERING-MODE.md` 同源句（R14）+ VSC `docs/requirements/AGENT-LOOP.md:302（VSC 仓）` N-CL4 · VSC `docs/design/README.md（VSC 仓）`「镜像差异表」· CLI `docs/design/TESTING.md` §11.6（R15——随 R12 / R13 同批）；提示词双源面（`src/prompts/` + `docs/design/prompts/` 各持）：`discipline-normal.md`（R12 自持节——CLI `:38` / VSC `:35` as-of）· `discipline-engineering.md`（R12 自持节 + R13「跨仓批」条）；两产品 `AGENTS.md`（「镜像提示词约定」段改写——CLI `:21` / VSC `:15` as-of；R11 附加面）；**本板块两档**（`../requirements/TWO-REPO-MERGE.md` + 本档——R24a 标注面 + 自身锚处置见 §2.5）；**六档脚本引用面**（非命令形态 190——跨 14 档；登记与分界见 §2.5；命令形态零改） |
@@ -291,10 +295,14 @@ phase 2 目标 = 「一个核 + 两个薄壳」：共享核心真正可 `import`
 | **产品代码** | **零改动**（F7 / B1） |
 
 > **行数口径（2026-09-13 第 2 修正轮）**：本表行数一律 **`wc -l`**（= 换行符计数；与编辑器「末行」显示差 1 属末尾空行所致——非行数变更）。
-> **>300 行档拆分审视（2026-09-13）**：测试档 CLI `test/doc-consistency.test.mjs`（309）· `test/ledger-surface.test.mjs`（333）· VSC `test/doc-anchors.test.mjs（VSC 仓）`（362）——本批均净删向或 ±0、不新增结构体，**本批不拆**；终态若仍 >300（软线），按既有拆分触发（切法 = 用例组二分 · 判据 = D18 四条）归后续批复核。六档机检脚本为删除项（拆分无对象）。
-> **统一脚本行数预估与拆分计划（R24a）**：三档统一版 = 两实现并集——现行两版合计（文档锚 710 · 文档格式 732 · 台账 671 行）扣除跨仓段与重复框架后，
-> 预估**均 >300 行** ⇒ 本注即主动拆分规划；若实测 >500 行，按硬上限**必须拆分**（无豁免通道）。
-> 预设拆分面 = 「入口 / 域驱动 / 报告」∥「判据核（抽取与判定）」两文件（如 `doc-anchors.mjs` + `doc-anchors-core.mjs`——定名与切点依脚本结构于实施批定案，各文件目标 ≤300 行）。
+> **>300 行档拆分审视（2026-09-13）**：测试档 CLI `test/doc-consistency.test.mjs`（309）· `test/ledger-surface.test.mjs`（333）·
+> VSC `test/doc-anchors.test.mjs（VSC 仓）`（362）· VSC `test/context-parity.test.mjs（VSC 仓）`（364——批 2 后实测；终态仍 >300，归后续批复核）——
+> 本批均净删向或 ±0、不新增结构体，**本批不拆**；终态若仍 >300（软线），按既有拆分触发（切法 = 用例组二分 · 判据 = D18 四条）归后续批复核。六档机检脚本为删除项（拆分无对象）。
+> **统一脚本拆分与行数——实测落地（R24a——2026-09-13 收正轮）**：统一脚本实测落为 **8 档**（批 2 补做轮落地；切点与定名依据见批次档 §5 批 2 补做轮），
+> 全部 ≤300 行（`wc -l` 口径）：`doc-anchors.mjs`（90——入口 / 域驱动 / 报告）· `doc-anchors-v5.mjs`（255——V5 锚引擎）· `doc-anchors-core.mjs`（231——VSC 锚引擎）·
+> `doc-anchors-targets.mjs`（139——采集面）· `check-doc-width.mjs`（109——入口 / 报告 + 宽度判据）· `check-doc-width-core.mjs`（272——判据核：域驱动 + 判据 + 基线）·
+> `check-ledger.mjs`（259——入口 / 定位判序 / 报告）· `check-ledger-core.mjs`（151——判据核）。
+> **「各文件目标 ≤300 行」已达成**（最大 272——`check-doc-width-core.mjs`；「末行」显示 273——差 1 属末尾空行，同本表口径注）；>500 行硬上限无对象。
 
 ### 2.15 迁移步骤与回滚点（N4）
 
@@ -326,8 +334,8 @@ phase 2 目标 = 「一个核 + 两个薄壳」：共享核心真正可 `import`
 | T-M2 | F1 / F7 | — | 两产品各自全量测试 | 各自全绿，与迁移前基线一致；`src/**` 无行为差异 |
 | T-M3 | F2 | — | `thincoder/` 内 `npm pack`；`thincoder-vscode/` 内 `vsce package` | 两产物各自可生成，互不触发对方链 |
 | T-M4 | F3 | — | `git log --follow -m -- thincoder-vscode/package.json`（或 `git blame`——无需附加参数） | 可回溯至 VSC 仓并入前的提交，历史连续——批 1 实测基准（干跑仓 ×2 + 正式仓三处一致）：单 `--follow`（未给 `-m`）返回空 · `--follow -m` = 234 条 · `git rev-list --count HEAD` = 2251 · VSC tip `--is-ancestor` = YES · `git blame` 归属 `^d27f773c` 跨 graft 连续 |
-| T-M5 | F4 | R1–R9 | 在合并仓内检索跨仓判据（R1–R9 的落点） | 全部删除；`PEER_*` / `SIBLING_NAMES` / `domain-out` 无残留 |
-| T-M6 | F5 | — | 单仓化后运行文档机检（V1 / V5 / 台账） | 合并仓全域零红 |
+| T-M5 | F4 | R1–R9 | 合并仓内检索跨仓判据（R1–R9 落点）——**检索口径 = 已退役判据符号五名**（`PEER_PREFIX` / `PEER_DIRS` / `domain-out` / `resolvePeerRoot` / `SIBLING_NAMES`）**逐个检索须零命中**（射程 = 两产品 `src/` · `test/` · `scripts/` + 仓根 `scripts/`） | 全部删除——**五名零命中**（2026-09-13 实测——代码 / 脚本 / 测试面零残留；文档层 as-of 证据记录（R 表 / 批次档留痕）不属射程）；另登记 `PEER_*` 裸字面**白名单两处**（并发实例机制、与跨仓判据无关——批 4 复跑不误红）：`PEER_WRITE_TOOLS`（`thincoder/src/peer-domains.mjs:31`）· `PEER_DOMAIN_HOT_MS`（`thincoder-vscode/src/extension/peer-domains.mjs:30`） |
+| T-M6 | F5 | — | 单仓化后运行文档机检（V1 / V5 / 台账） | 合并仓全域零红——**口径 = 退出码 0**（VSC 域报告态：报告行不阻断——§2.9） |
 | T-M7 | F6 | — | 访问旧 VSC 仓远端 + 校验 VSC `package.json` 的 `repository` 字段 | 归档只读可达；`repository` 字段值**仍指向旧 VSC 仓**（现值 = `https://github.com/xinbo-tech/thincoder-vscode.git`）——不得改为新仓 |
 | T-M8 | N2 | — | `git blame` 抽查跨搬迁档（基准 = §2.15 S2 前置实测记录——工作命令形态 `--follow -m` 与 blame 归属形态） | 归属连续（工作形态 = `--follow -m` 或 `git blame`），不出现整档归并为搬迁提交——批 1 实测基准：VSC `thincoder-vscode/package.json` 归属 `^d27f773c`（跨 graft 连续）· CLI `thincoder/src/log.mjs` 归属 `0b37f4219`（跨搬迁连续） |
 | T-M22 | F4 | R1–R10 · R16 | 合并仓内检索「自指防护 / 缺对端 fail-closed」类跨仓断言——**检索域 = 两产品全部测试档** | 跨仓断言段已删、**残余为零**（射程 = R1–R10 · R16 判据家族——含 context-parity T-CI-11 同型守卫）；产品内双源守卫断言保留（本端同名集合相等 + 本端镜像节引用可解析） |
@@ -403,3 +411,8 @@ phase 2 目标 = 「一个核 + 两个薄壳」：共享核心真正可 `import`
   ② 仓根 `.gitignore` 锚定漂移（产品级规则缺位——实施批 §5 发现 #2）——增产品级 `thincoder/.gitignore`（§2.10 / §2.14 / §2.15 S4 / §4；批 1 实测 `git check-ignore` 未命中），批 2 首项 = 批 1 补正：产品级 `.gitignore` 落位 + 探针验证 `git check-ignore` 命中。
 - 2026-09-13：**记录同步轮**——① 批次档 §2 同步：批 2 范围条补入批 1 补正项（产品级 `thincoder/.gitignore` 落位 + 探针验证 `git check-ignore` 命中——与 §2.15 S4 / §4 同源）+ 批 1 S2 并入前必验项命令形态收正为实测工作形态（`--follow -m`——单 `--follow`（未给 `-m`）在 graft 合并提交上返回空，见 §2.3 / §3.1 T-M4）；
   ② 档头状态行刷新为「设计评审通过（轮次 3 PASS）· 用户已批准（2026-09-13）· 批 1（搬迁）已实施」。
+- 2026-09-13：**设计收正轮（批 2 交付评审 #20 裁示 + F5 漏派工补记——5 项）**——① §2.6 增「项目台账单仓化」行（已实施——commit `c9f35f93`；批次档 §2 批 3 范围 + 批 2 验收同步补记）；
+  ② §2.9 增「零红」口径（= **退出码 0**——VSC 域报告态不阻断；转闸依赖批 3 / S6 面清零）+ §3.1 T-M6 同步；
+  ③ §2.14 拆分注收正为**实测落地结构**（8 档全部 ≤300——`wc -l` 最大 272）+「机检脚本（新增）」行指针同步；
+  ④ §2.14「>300 行档拆分审视」清单补 VSC `test/context-parity.test.mjs（VSC 仓）`（364——终态仍 >300，归后续批复核）；
+  ⑤ §3.1 T-M5 检索口径收正 = **已退役判据符号五名逐个零命中**（射程 = 代码 / 脚本 / 测试面）+ 白名单两处（`PEER_WRITE_TOOLS` / `PEER_DOMAIN_HOT_MS`——并发实例机制）。
