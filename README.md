@@ -44,3 +44,14 @@ Entry points: `thincoder/AGENTS.md` · `thincoder/docs/README.md` (CLI) and `thi
 Requirements, design and batch record for this layout live in the CLI tree:
 `thincoder/docs/requirements/TWO-REPO-MERGE.md` · `thincoder/docs/design/TWO-REPO-MERGE.md` ·
 `thincoder/docs/batches/2026-09-13-TWO-REPO-MERGE.md`.
+
+## Project ledger
+
+The merged repository keeps a single project ledger at the repository root — the two per-product ledgers
+were retired in the 2026-09-13 single-ledger consolidation:
+
+| Path | What it holds |
+|---|---|
+| `docs/TODO.md` | open items — requirement pool (user requirement points) + tech backlog (design debt / review findings) |
+| `docs/TODO-archive.md` | closed items (resolved / withdrawn), moved out of the live file |
+
