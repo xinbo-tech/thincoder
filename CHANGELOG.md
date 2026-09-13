@@ -1,9 +1,30 @@
-- fix: 子代理块 done 后定格修复批（2026-09-07 id:14）——CLI trimSubTree done 豁免 + route* done 守卫（迟到 chunk 丢弃）；VS 冻结门三处 + id 计数器跨 resume 持久化
-
-- fix: prompts.test 折行断言折叠化收口（2026-09-07 id:3）——双侧 \s+ 归一匹配——负守卫保持负向——锚整块/落位序断言加固
 # Changelog
 
 All notable changes to ThinCoder VS Code are documented here.
+
+## [0.9.2] — 2026-09-13
+
+> 0.9.1 → 0.9.2（发布时定号）
+
+### Added
+
+- **文档锚一致性机检 V5（DOC-CODE-RECONCILE 批）**：`scripts/check-doc-anchors.mjs`（三类锚存在性 + 假阳类逐条排除 + 注记闭枚举 + 两态 `--strict` / `V5_GATE`）· `scripts/reconcile-lookup.mjs`（改动面反查）· **清账 323 处 → 0**、外审揪出并清零隐藏 25 处（A3 排除条件取反缺陷）· 双向判别夹具（`.md`+§ 零报 / 非 `.md`+§ 必判 / `:N-M` 剥离）。
+- **台账自持机检**：`check-ledger` 需求树对齐（本仓 34 档：三层写法 + 判定句 + 实测证据）· 文档地图 `DOC-MAP`。
+
+### Changed
+
+- **对端仓不可达口径 = 域外标记、不阻断**（用户裁定 B′）：缺仓 ⇒ 对端面不可判者逐处记「域外」（独立计数项，不入阈值、不阻断）；**自指（配置错）仍 fail-closed**。两端口径自此一致。
+- **发布门四环**：`vscode:prepublish` = lint → **doc:check（`--strict`）** → test:full → test:integration（发布 = 唯一门禁）。
+- **文档体系各仓自持**：需求档 / 设计档 / 批次档 / 台账各仓记各仓；跨仓引用统一「名称（仓别）§N」形态。
+- **台账归档制**：活文件只留未决四态，已决逐条移入 `TODO-archive.md`。
+
+### Removed
+
+- **散文锚退役（PROSE-ANCHOR-RETIRE 批）**：退役断言「某句在场 / 缺席」类测试 61 例（保留结构机检面）。
+
+### Fixed
+
+- 文档↔实装漂移清账（逐档处置留痕，禁「只删不记」）· 台账机检跨仓误扫修正 · 拆分档位守恒（`child-permission` / `chat-panel`）· 设计档超宽行与计数纪律收正。
 
 ## [0.9.1]
 
@@ -20,6 +41,8 @@ All notable changes to ThinCoder VS Code are documented here.
 
 ### Fixed
 
+- **子代理块 `done` 后定格修复（2026-09-07 id:14）**：CLI trimSubTree done 豁免 + route\* done 守卫（迟到 chunk 丢弃）；VS 冻结门三处 + id 计数器跨 resume 持久化。
+- **prompts.test 折行断言折叠化（2026-09-07 id:3）**：双侧 `\s+` 归一匹配——负守卫保持负向——锚整块 / 落位序断言加固。
 - **webview 行内代码转义（GitHub #7）** · 设置 null 默认键校验 · git 快路径 gitignore 盲区 · `loadIndex`/`searchIndex` 维度校验 · 语义索引 reason 串统一 · digest 起止指示 · 面板 live 块显示可靠性（投递队列 + 就绪握手 + 终态防御）。
 
 ### Changed

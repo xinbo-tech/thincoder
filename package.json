@@ -1,7 +1,7 @@
 {
   "name": "thincoder-vscode",
   "displayName": "ThinCoder",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "ThinCoder AI coding assistant — prompts-driven, zero bloat",
   "publisher": "xinbo-tech",
   "license": "MIT",
