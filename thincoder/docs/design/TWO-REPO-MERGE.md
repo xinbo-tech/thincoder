@@ -1,7 +1,7 @@
 # 两仓合并（TWO-REPO-MERGE）
 
 > 板块 = **两仓合并**——架构级机制档：本档承载**设计层 + 测试层**（需求层已迁出，见下）。
-> 建档：2026-09-13 · 状态：**设计评审通过（轮次 3 PASS）· 待用户批准**
+> 建档：2026-09-13 · 状态：**设计评审通过（轮次 3 PASS）· 用户已批准（2026-09-13）· 批 1（搬迁）已实施**
 > 本档承载 **phase 1（目录合并）**的权威设计；**phase 2（核心统一）**只留演进通道（§2.13），不在本批实施。
 > 需求层已迁出（2026-09-13 需求层拆分批）：需求见 `../requirements/TWO-REPO-MERGE.md`（板块镜像形态见 `docs/README.md` §3.2）——本档保留设计与测试细节。
 
@@ -67,7 +67,7 @@
 |---|---|---|
 | 工具可用性 | 系统 git 自带（2.55.0），零安装 | **未安装**——采用即引入"先装工具"前提 |
 | 历史可达 | VSC 807 提交以独立根并入，逐个可达 | 可达，且可重写路径前缀 |
-| 追溯成本 | `git log -- <子目录>` 只显示 graft 提交 ⇒ 追溯须 `--follow` | 追溯连续，无需 `--follow` |
+| 追溯成本 | `git log -- <子目录>` 只显示 graft 提交 ⇒ 追溯须 `--follow -m`（graft 合并提交未给 `-m` 时改名检测不成立——批 1 实测：单 `--follow` 返回空）或 `git blame` | 追溯连续，无需 `--follow` |
 | 回滚 | 并入是一次普通提交，`reset` 即退 | 需重跑全仓重写，回滚成本高 |
 | 风险 | 低（不改既有历史） | 高（重写 SHA，全部 tag / 引用失效） |
 
@@ -228,6 +228,7 @@ GitHub Actions **只读仓根 `.github/workflows/`**——合并后若原样留�
 | 未跟踪临时产物（日志 / `.vsix` / 探针档，两仓合计近百） | **迁入前清理**——未跟踪，删除无历史损失；清理清单迁移前逐条确认 |
 | `.thincoder/`（两仓均入库，内容不同） | 合并后**各产品子目录内各留一份**（B10 同名不同内容的 `checklist.md`、`skills/code-review.md` 因此不必合流）；仓根如需 `.thincoder/` 另行建 |
 | 仓根级配置文件（`.gitattributes` / `.gitignore`） | 仓根建一份（两产品共用）；各产品子目录内可保留自有规则 |
+| **产品级 `.gitignore`（批 1 补正——实施批 §5 发现 #2）** | 仓根 `.gitignore` 沿用 CLI 原档后，其含斜杠规则（`.thincoder/index/` / `.thincoder/tmp/`）锚定在**仓根** ⇒ 产品内 `.thincoder/` 产物脱保（批 1 实测：`git check-ignore -v thincoder/.thincoder/tmp/x.txt` 未命中、`git status` 报 `?? thincoder/.thincoder/tmp/`——可被误提交）。处置 = 新增**产品级** `thincoder/.gitignore`（依据 = 本节「各产品子目录内可保留自有规则」授权；内容 = `/.thincoder/index/` · `/.thincoder/tmp/`——**目录锚定形态**：恢复原 CLI 仓根语义、命中面限于本产品；否决「根档规则改非锚定 `**/.thincoder/…`」——命中面扩散至任意层嵌套、且把产品规则混入共享根档）；VSC 侧自带子目录 `.gitignore`，不受影响。**批 2 首项 = 批 1 补正：产品级 `.gitignore` 落位 + 探针验证 `git check-ignore` 命中** |
 | `LICENSE` / `CHANGELOG.md` | 两产品各自保留（版本线与许可各自独立） |
 
 ### 2.11 迁移完成判据（N3）
@@ -285,6 +286,7 @@ phase 2 目标 = 「一个核 + 两个薄壳」：共享核心真正可 `import`
 | **文档** | 两产品 `docs/README.md`（自持段改写——CLI `:114` as-of / `README（VSC 仓）:23` as-of；R12）；纪律档 = `docs/requirements/ENGINEERING-MODE.md` §1.19 / `ENGINEERING-MODE（VSC 仓）§1`（R12 / R14 句）+ CLI `docs/design/ENGINEERING-MODE.md` 同源句（R14）+ VSC `docs/requirements/AGENT-LOOP.md:302（VSC 仓）` N-CL4 · VSC `docs/design/README.md（VSC 仓）`「镜像差异表」· CLI `docs/design/TESTING.md` §11.6（R15——随 R12 / R13 同批）；提示词双源面（`src/prompts/` + `docs/design/prompts/` 各持）：`discipline-normal.md`（R12 自持节——CLI `:38` / VSC `:35` as-of）· `discipline-engineering.md`（R12 自持节 + R13「跨仓批」条）；两产品 `AGENTS.md`（「镜像提示词约定」段改写——CLI `:21` / VSC `:15` as-of；R11 附加面）；**本板块两档**（`../requirements/TWO-REPO-MERGE.md` + 本档——R24a 标注面 + 自身锚处置见 §2.5）；**六档脚本引用面**（非命令形态 190——跨 14 档；登记与分界见 §2.5；命令形态零改） |
 | **CI** | 新增合并仓根 `.github/workflows/`；原 VSC 工作流迁出子目录 |
 | **仓根级** | 新增 `.gitattributes` / `.gitignore` / `README.md`（合并仓总览） |
+| **产品级配置（批 1 补正——批 2 首项）** | 新增 `thincoder/.gitignore`（0 → 2 行；内容 / 依据 / 探针验证 = §2.10）——**批 2 首项 = 批 1 补正：产品级 `.gitignore` 落位 + 探针验证 `git check-ignore` 命中** |
 | **清理** | 两仓未跟踪临时产物（迁入前删除） |
 | **产品代码** | **零改动**（F7 / B1） |
 
@@ -300,10 +302,10 @@ phase 2 目标 = 「一个核 + 两个薄壳」：共享核心真正可 `import`
 |---|---|---|
 | S0 | 两仓全量备份 = `git clone --mirror` 至**仓外目录**（CLI / VSC 各一份）+ 未跟踪产物另行归档（tar / 目录拷贝）；清理未跟踪产物 | 备份即回滚点（恢复形态 = mirror 恢复仓库 + 产物归档回拷——T-M18 按此验收） |
 | S1 | 在 CLI 仓内 `git mv` 顶层条目至 `thincoder/`，提交 | `reset --hard` 回退该提交 |
-| S2 | `git subtree add --prefix=thincoder-vscode` 并入 VSC 历史，提交（**前置 = §2.3 实施前必验项——tag 行为 + graft 追溯实测**：副本仓并入后抽查 `git log --follow -- thincoder-vscode/package.json` 与跨搬迁档 `git blame`——记录基准供 T-M8 判定） | `reset --hard` 回退（subtree 并入是单次提交） |
+| S2 | `git subtree add --prefix=thincoder-vscode` 并入 VSC 历史，提交（**前置 = §2.3 实施前必验项——tag 行为 + graft 追溯实测**：副本仓并入后抽查 `git log --follow -m -- thincoder-vscode/package.json` 与跨搬迁档 `git blame`——记录基准供 T-M8 判定；单 `--follow`（未给 `-m`）在 graft 合并提交上返回空——工作形态 = `--follow -m` 或 `git blame`） | `reset --hard` 回退（subtree 并入是单次提交） |
 | S3 | 建仓根级配置与总览；迁 CI 工作流 | 同上 |
 | S3b | 旧 VSC 仓远端**置归档 / 只读**（远端动作）——**不可逆**：置前须用户确认（N4） | 不适用——确认门前不执行；已置则不可逆 |
-| S4 | 机检脚本单仓化（R1–R9 · R16 删改 + 统一版三档落位——档名 / 仓根 / 执行根与扫描域口径见 §2.5）——含连带测试档与调用点处置（两产品 test 面——含 VSC `test/context-parity.test.mjs` 跨仓防护段（R16）/ VSC `package.json`——§2.14）；`doc-impact.mjs` 措辞改写（§2.4）；**本板块两档六档锚退场注记**（§2.5——含 R16 行坐标同批）；现行文档非命令形态脚本引用随批处置（§2.5 登记面） | 回退脚本改动提交 |
+| S4 | **批 2 首项 = 批 1 补正：产品级 `.gitignore` 落位（`thincoder/.gitignore`，§2.10）+ 探针验证 `git check-ignore` 命中**；机检脚本单仓化（R1–R9 · R16 删改 + 统一版三档落位——档名 / 仓根 / 执行根与扫描域口径见 §2.5）——含连带测试档与调用点处置（两产品 test 面——含 VSC `test/context-parity.test.mjs` 跨仓防护段（R16）/ VSC `package.json`——§2.14）；`doc-impact.mjs` 措辞改写（§2.4）；**本板块两档六档锚退场注记**（§2.5——含 R16 行坐标同批）；现行文档非命令形态脚本引用随批处置（§2.5 登记面） | 回退脚本改动提交 |
 | S5 | 提示词跨仓机制层退役（按 §2.7；含 VSC `test/prompts-mirror-anchors.test.mjs` 跨仓断言段删——R10；两产品 `AGENTS.md` 镜像约定段改写——R11 附加面） | 同上 |
 | S6 | 文档纪律句改写（R12–R15——含提示词自持节两副本与端差句；**R16 连带文档面——T-CI-11 引用行退场注记**）；**本板块两档复跑 V5**（自身锚零悬空——T-M17 / T-M21 面）；§2.5 非命令形态引用登记面复核 | 同上 |
 | S7 | 两产品全量测试 + 机检全绿 + 发布链演练 | 任一步失败即回退至 S0 |
@@ -323,11 +325,11 @@ phase 2 目标 = 「一个核 + 两个薄壳」：共享核心真正可 `import`
 | T-M1 | F1 | — | 合并仓根执行 `git ls-tree --name-only HEAD` | 顶层仅含 `thincoder/`、`thincoder-vscode/`、仓根级配置与总览——两产品分居子目录 |
 | T-M2 | F1 / F7 | — | 两产品各自全量测试 | 各自全绿，与迁移前基线一致；`src/**` 无行为差异 |
 | T-M3 | F2 | — | `thincoder/` 内 `npm pack`；`thincoder-vscode/` 内 `vsce package` | 两产物各自可生成，互不触发对方链 |
-| T-M4 | F3 | — | `git log --follow -- thincoder-vscode/package.json` | 可回溯至 VSC 仓并入前的提交，历史连续 |
+| T-M4 | F3 | — | `git log --follow -m -- thincoder-vscode/package.json`（或 `git blame`——无需附加参数） | 可回溯至 VSC 仓并入前的提交，历史连续——批 1 实测基准（干跑仓 ×2 + 正式仓三处一致）：单 `--follow`（未给 `-m`）返回空 · `--follow -m` = 234 条 · `git rev-list --count HEAD` = 2251 · VSC tip `--is-ancestor` = YES · `git blame` 归属 `^d27f773c` 跨 graft 连续 |
 | T-M5 | F4 | R1–R9 | 在合并仓内检索跨仓判据（R1–R9 的落点） | 全部删除；`PEER_*` / `SIBLING_NAMES` / `domain-out` 无残留 |
 | T-M6 | F5 | — | 单仓化后运行文档机检（V1 / V5 / 台账） | 合并仓全域零红 |
 | T-M7 | F6 | — | 访问旧 VSC 仓远端 + 校验 VSC `package.json` 的 `repository` 字段 | 归档只读可达；`repository` 字段值**仍指向旧 VSC 仓**（现值 = `https://github.com/xinbo-tech/thincoder-vscode.git`）——不得改为新仓 |
-| T-M8 | N2 | — | `git blame` 抽查跨搬迁档（基准 = §2.15 S2 前置实测记录——`--follow` 可达性与 blame 归属形态） | 归属连续（必要时 `--follow`），不出现整档归并为搬迁提交 |
+| T-M8 | N2 | — | `git blame` 抽查跨搬迁档（基准 = §2.15 S2 前置实测记录——工作命令形态 `--follow -m` 与 blame 归属形态） | 归属连续（工作形态 = `--follow -m` 或 `git blame`），不出现整档归并为搬迁提交——批 1 实测基准：VSC `thincoder-vscode/package.json` 归属 `^d27f773c`（跨 graft 连续）· CLI `thincoder/src/log.mjs` 归属 `0b37f4219`（跨搬迁连续） |
 | T-M22 | F4 | R1–R10 · R16 | 合并仓内检索「自指防护 / 缺对端 fail-closed」类跨仓断言——**检索域 = 两产品全部测试档** | 跨仓断言段已删、**残余为零**（射程 = R1–R10 · R16 判据家族——含 context-parity T-CI-11 同型守卫）；产品内双源守卫断言保留（本端同名集合相等 + 本端镜像节引用可解析） |
 | T-M23 | F4 | R11 | 两产品 `src/prompts/` + `docs/design/prompts/` 检索跨仓机制层措辞（对端发现 / 跨仓逐字断言） | 跨仓机制层措辞**零残留**；产品内双源结构保留（D14——两目录同名集合不变） |
 | T-M24 | F4 | R12 | 纪律层提示词与两产品 `docs/README.md` 内检索「跨仓」「他仓」键残留 | 改写为仓内规范——**零跨仓键残留** |
@@ -366,7 +368,7 @@ phase 2 目标 = 「一个核 + 两个薄壳」：共享核心真正可 `import`
 | 批 | 范围 | 可独立回滚 | 依赖 |
 |---|---|---|---|
 | **批 1 · 搬迁** | S0–S3b（清理、`git mv`、subtree 并入、仓根配置、CI 迁移、旧仓归档确认门） | 是 | 无 |
-| **批 2 · 机制退役** | S4（R1–R9 判据删除 + 机检单仓化 + 连带测试档 / 调用点处置） | 是 | 批 1 |
+| **批 2 · 机制退役** | S4（R1–R9 判据删除 + 机检单仓化 + 连带测试档 / 调用点处置）；**批 2 首项 = 批 1 补正：产品级 `.gitignore` 落位（`thincoder/.gitignore`，§2.10）+ 探针验证 `git check-ignore` 命中** | 是 | 批 1 |
 | **批 3 · 提示词与文档** | S5–S6（提示词跨仓机制层退役、纪律句改写、两产品 `AGENTS.md` 镜像约定段） | 是 | 批 1 |
 | **批 4 · 验证收口** | S7（全量测试、机检、发布演练、验收勾销） | — | 批 1–3 |
 
@@ -396,3 +398,8 @@ phase 2 目标 = 「一个核 + 两个薄壳」：共享核心真正可 `import`
   ③ R16 连带文档面口径改语义面扫描（含 §17.9 / 跨仓只读叙述段——代表点补 `:1278-1284` / `:1302`；`:48` as-of 豁免；非按坐标清单）。
 - 2026-09-13：**收口轮（评审通过后——P1/P2 面级措辞收正 + 档头状态刷新）**——① §2.7 P1 行「硬加载」收正为槽位面实况（**静默空载**——缺档返回空串；与落点 `src/prompt-overlays.mjs:18` 的 `catch { return "" }` 一致）；
   ② §2.7 P2 行改面级表述（槽位面（两侧同型）静默空载 / advisor 面缺档即抛错——抛错面 = CLI `src/advisor.mjs:63-69` + VSC `src/advisor/main.mjs:66-71（VSC 仓）`）；档头状态行改「**设计评审通过（轮次 3 PASS）· 待用户批准**」（建档日期等信息不动）；P3 行与结论句、D14 一字不动。
+- 2026-09-13：**批 1 实施发现收正（2 条）**——① 追溯命令形态收正为实测工作形态 `git log --follow -m -- <path>`（或 `git blame`——单 `--follow` 未给 `-m` 时在 graft 合并提交上返回空）：
+  §2.3 / §2.15 S2 / §3.1 T-M4 · T-M8 同步，实测基准写入（`git rev-list --count HEAD` = 2251 · VSC tip `--is-ancestor` = YES · `--follow -m` = 234 条 · blame 归属 `^d27f773c`）；
+  ② 仓根 `.gitignore` 锚定漂移（产品级规则缺位——实施批 §5 发现 #2）——增产品级 `thincoder/.gitignore`（§2.10 / §2.14 / §2.15 S4 / §4；批 1 实测 `git check-ignore` 未命中），批 2 首项 = 批 1 补正：产品级 `.gitignore` 落位 + 探针验证 `git check-ignore` 命中。
+- 2026-09-13：**记录同步轮**——① 批次档 §2 同步：批 2 范围条补入批 1 补正项（产品级 `thincoder/.gitignore` 落位 + 探针验证 `git check-ignore` 命中——与 §2.15 S4 / §4 同源）+ 批 1 S2 并入前必验项命令形态收正为实测工作形态（`--follow -m`——单 `--follow`（未给 `-m`）在 graft 合并提交上返回空，见 §2.3 / §3.1 T-M4）；
+  ② 档头状态行刷新为「设计评审通过（轮次 3 PASS）· 用户已批准（2026-09-13）· 批 1（搬迁）已实施」。

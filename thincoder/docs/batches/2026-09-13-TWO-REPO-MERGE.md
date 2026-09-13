@@ -74,14 +74,15 @@ phase 2 核心统一 · 产品运行行为改动 · 删除旧 VSC 仓 · 合并 
 ### 批 1 · 搬迁（S0–S3b）
 
 - **范围**：设计档 §2.15 S0–S3b——S0 全量备份（`git clone --mirror` 至仓外 + 未跟踪产物归档）与清理 · S1 CLI 顶层条目 `git mv` 至 `thincoder/` · S2 `git subtree add --prefix=thincoder-vscode` 并入 VSC 历史 · S3 仓根配置与总览 + CI 迁仓根 · S3b **旧 VSC 仓远端置归档 / 只读——不可逆，置前须用户确认**（设计档 §2.15 S3b）。
-- **S2 并入前必验项**（设计档 §2.3 / §2.15 S2——必在副本仓先跑）：tag 行为实测（`subtree add` 干跑 + `git tag -l` 并入前后对比）与 graft 追溯实测（`git log --follow -- thincoder-vscode/package.json` + 跨搬迁档 `git blame` 抽查）——命令与输出逐字记录，结论落实施批 §5（供 T-M8 基准）。
+- **S2 并入前必验项**（设计档 §2.3 / §2.15 S2——必在副本仓先跑）：tag 行为实测（`subtree add` 干跑 + `git tag -l` 并入前后对比）与 graft 追溯实测（`git log --follow -m -- thincoder-vscode/package.json` + 跨搬迁档 `git blame` 抽查）——命令与输出逐字记录，结论落实施批 §5（供 T-M8 基准）。单 `--follow`（未给 `-m`）在 graft 合并提交上返回空——见设计档 §2.3 / §3.1 T-M4。
 - **触碰面**：设计档 §2.14「结构搬迁」·「仓根级」·「CI」·「清理」行 + §2.9 / §2.10；产品 `src/**` 零改动（F7）。
 - **验收**：§3 = T-M1 · T-M4 · T-M7 · T-M8 · T-M13 · T-M14 · T-M15 · T-M16 · T-M18；两产品测试（与迁移前基线一致）；三机检按 N3「机检不退化」口径（统一版落位 = S4）。
 - **依赖**：无前置（设计档 §4 表）；本批为批 2–4 的前置。
 
 ### 批 2 · 机制退役（S4）
 
-- **范围**：设计档 §2.15 S4——R1–R9 · R16 判据删除 + 统一三档落位（档名 / 位置 / 执行根 / 扫描域两态——§2.5）+ 连带测试档与调用点处置（§2.14「测试」行 + VSC `package.json` `doc:check`——§2.8）+ `doc-impact.mjs` 措辞改写 + **本板块两档锚退场注记**（§2.5 尾条）+ 现行文档非命令形态脚本引用随批处置（§2.5 登记面）。
+- **范围**：设计档 §2.15 S4——**首项 = 批 1 补正：产品级 `thincoder/.gitignore` 落位（内容与依据见设计档 §2.10）+ 探针验证 `git check-ignore` 命中**；
+  R1–R9 · R16 判据删除 + 统一三档落位（档名 / 位置 / 执行根 / 扫描域两态——§2.5）+ 连带测试档与调用点处置（§2.14「测试」行 + VSC `package.json` `doc:check`——§2.8）+ `doc-impact.mjs` 措辞改写 + **本板块两档锚退场注记**（§2.5 尾条）+ 现行文档非命令形态脚本引用随批处置（§2.5 登记面）。
 - **前置**：批 1 完成（硬依赖——见段首批序约束）；S2 必验记录在案（批 1 产出）。
 - **触碰面**：设计档 §2.4 R1–R9 / R16 行 + §2.5 + §2.14「机检脚本（删改）/（新增）/ 测试（R1–R10 · R16 连带面）」行。
 - **验收**：§3 = T-M5 · T-M6 · T-M9 · T-M10 · T-M11 · T-M17 · T-M20 · T-M21 · T-M22；三机检（仓根统一版）；两产品测试（调用点改指后全绿）。
@@ -193,6 +194,156 @@ VERDICT: pass
 ---
 
 ## §5 实施记录（eng-coder 自写）
+
+> **父侧转录标记（主 agent · 2026-09-13）**：以下 §5 正文由主 agent 从 `_merge-backup\batch-5-section.md` **逐字转录**
+> （eng-coder 的 `batch_segment` 因 S1 搬迁使绑定路径失效而被拒——见其次行注记）。除本标记外未改一字（唯 §5 的 4 条超宽非表格行已按其原句读折行——形态性收正、语义零改）。
+> **§5 未写入（工具通道失败——批次档已随 S1 搬迁改路径）**：eng-coder 的 `batch_segment` 绑定目标 = 搬迁前路径
+> `d:\teamcode\thincoder\docs\batches\2026-09-13-TWO-REPO-MERGE.md`（现不存在）→ 工具 fail-closed 拒绝。
+> 本文 = eng-coder 自写的 §5 正文原文，**由主 agent 打标代录**（转录，未改一字）。
+
+### 批 1 · 搬迁（S0–S3）· 实施记录（eng-coder 自写 · 2026-09-13）
+
+**范围**：设计档 §2.15 S0–S3。**S3b 未执行**（旧 VSC 仓远端置归档/只读——不可逆，置前须用户确认；本批未触碰任何远端）。
+**执行根**：合并仓根 = `d:\teamcode\thincoder`（原 CLI 仓目录原地改造，D9）。工作树实施前后均干净。
+
+#### 一、提交清单（每步独立提交 = 回滚点）
+
+| 步 | commit | 内容 | 回滚点 |
+|---|---|---|---|
+| 基线 | `406369f9` | 实施起点（主 agent 设计+记录档提交） | — |
+| S0 | — | 无提交（备份 + 未跟踪产物清理均不入版本控制） | mirror 备份（见下） |
+| S1 | `1d450d2d887b184203a2397f01eb6c42541e1aed` | `git mv` CLI 顶层 13 项 → `thincoder/`（566 文件全 rename，0 insert/0 delete；`.gitattributes` / `.gitignore` 留仓根） | `reset --hard 406369f9` |
+| S2 | `37cb1b34ae23a445e9b53b719a4543659ca333d3` | `git subtree add` 并入 VSC 历史（merge commit；parents = `1d450d2d` + VSC tip `40409b4`） | `reset --hard 1d450d2d` |
+| S3 | `2b7274ccb3ec987871e4252ec5e23723b2bc82c6` | 仓根总览 `README.md` + 仓根 `.github/workflows/test.yml`（两产品各一 job）；原 VSC 工作流迁出子目录（3 files changed, +75/−12） | `reset --hard 37cb1b34` |
+
+提交纪律：每步均 `git mv`/`git rm` 先行 → `git add <显式路径>` → `git status --porcelain` 核验「只含本批文件」→ `git commit --only <同一显式路径清单>` 单行原子提交。无 `git add -A`、无 `git commit -a`、无 git 工具裸 commit。
+
+#### 二、S0 备份与清理（B12）
+
+`git clone --mirror` 两仓至**合并仓根之外** `d:\teamcode\_merge-backup\`：
+
+| 备份 | HEAD 核对 | tags | commits |
+|---|---|---|---|
+| `_merge-backup\thincoder.git` | `406369f9` = 迁移前 HEAD ✓ | 71 | 1441 |
+| `_merge-backup\thincoder-vscode.git` | `40409b4` = 迁移前 HEAD ✓ | 34 | 807 |
+
+**未跟踪产物清单与处置**（清单 + sha256 全量落 `_merge-backup\untracked\`）：
+
+- **CLI 侧（归档 + 移除，158 项）**：根级日志 67（`tmp-*.log` / `_*.log` / `.tmp-*.log`）+ `.thincoder/tmp/tool-*.txt` 91（agent 工具临时输出）。处置 = 逐条判明性质（日志 / agent-tmp）→ 拷贝至 `untracked\cli\`（保留相对路径）→ 158/158 sha256 复核一致 → 自 CLI 仓根移除。移除后 `git status --porcelain --ignored` 空。
+- **VSC 侧（仅列清单上报，16645 项，零动作）**：`.vsix` 18 · 根级日志 2 · `.thincoder/tmp` 94（含 1 个 `.log`）· `assets/candidates/` 16（未入库图标候选）· `node_modules/` 16515。性质均已判明、无「判不明项」；其未跟踪产物不随 subtree 进入合并仓（subtree 只搬已跟踪对象），旧 VSC 工作目录原地未动。
+
+#### 三、S2 并入前必验项（副本仓干跑 · 命令与输出逐字）
+
+**干跑仓 1**：`git clone d:\teamcode\_merge-backup\thincoder.git _merge-backup\_dryrun\cli` → 同 S1 搬迁 → 并入。命令与输出：
+
+```
+$ git subtree add --prefix=thincoder-vscode d:\teamcode\thincoder-vscode master
+git fetch d:\teamcode\thincoder-vscode master
+From d:\teamcode\thincoder-vscode
+ * branch              master     -> FETCH_HEAD
+Added dir 'thincoder-vscode'
+(exit 0)
+```
+
+**① tag 行为实测**（`git tag -l` 并入前后对比）：
+
+```
+before = 71
+after  = 71
+fc tags-before.txt tags-after.txt  →  FC: no differences encountered
+```
+
+⇒ **fetch 未自动跟随 tag、无同名拒绝、无告警**（4 条同名交集 `v0.8.1/v0.8.2/v0.8.5/v0.8.10` 未产生冲突）。**对策候选（`--no-tags` / 改本地 mirror）实测亦安全但本批不需要**（见干跑仓 2）。
+
+**干跑仓 2**（备选路线：bare mirror 源 + `fetch --no-tags` + `subtree add <commit>`）：
+
+```
+$ git fetch --no-tags d:\teamcode\_merge-backup\thincoder-vscode.git master
+(无输出；tags 71 → 71)
+$ git subtree add --prefix=thincoder-vscode 40409b448dd817b454a8789b913030b0e24aae7a
+(exit 0；tags 71 → 71；tag 集合差集 = 空)
+```
+
+⇒ 备选路线同样安全，且结论与源形态（工作仓 / bare mirror）无关。
+
+**② graft 追溯实测**（两干跑仓结论一致，正式仓复现一致）：
+
+| 探针 | 结果 |
+|---|---|
+| `git merge-base --is-ancestor 40409b4 HEAD` | YES（VSC tip 可达） |
+| `git rev-list --count HEAD` | 2250 = CLI 1441 + S1 1 + S2 1 + VSC 807（807 提交逐个可达；正式仓 +S3 = 2251） |
+| `git log --oneline -- thincoder-vscode/` | 1 条（graft 提交）——符合设计档 §2.3 第 1 半句 |
+| `git log --oneline --follow -- thincoder-vscode/package.json` | **空**（exit 0）——**与设计档「追溯须 `--follow`」不符，见发现 #1** |
+| `git log --oneline --follow -m -- thincoder-vscode/package.json` | **234 条**（含 VSC 线 121 · CLI 线 111 · merge 2）——可达 T-M4 语义 |
+| `git blame -L1,3 thincoder-vscode/package.json` | `^d27f773c package.json`（VSC 仓首个提交；跨 graft 归属连续） |
+| `git log --follow --oneline -- thincoder/src/log.mjs` | 6 条（含 S1 搬迁提交 + 原提交）——CLI 侧跨搬迁归属连续 |
+
+**正式仓执行**（源 = 设计档原形的 VSC 工作仓）：
+
+```
+$ git subtree add --prefix=thincoder-vscode -m "chore: two-repo merge S2 - ..." d:\teamcode\thincoder-vscode master
+git fetch d:\teamcode\thincoder-vscode master
+From d:\teamcode\thincoder-vscode
+ * branch              master     -> FETCH_HEAD
+Added dir 'thincoder-vscode'
+(exit 0；tags 71 → 71；状态干净)
+```
+
+#### 四、验收结果（设计档 §3 本批必过项）
+
+| 用例 | 结果 | 证据 |
+|---|---|---|
+| T-M1 | ✅ | `git ls-tree --name-only HEAD` = `.gitattributes` · `.github` · `.gitignore` · `README.md` · `thincoder-vscode` · `thincoder` |
+| T-M4 | ⚠️ 部分 | 语义达成（VSC tip 可达 + 2251 提交可达 + `--follow -m` 234 条），但**设计档所写命令 `git log --follow -- thincoder-vscode/package.json` 实测返回空**——见发现 #1（工作命令形态 = `--follow -m`） |
+| T-M7 | ✅ | `thincoder-vscode/package.json` `repository.url` = `https://github.com/xinbo-tech/thincoder-vscode.git`（未改，F6）；远端归档部分 = S3b 未执行 |
+| T-M8 | ✅ | blame 跨 graft/搬迁均归属原提交（VSC `^d27f773c package.json`；CLI `0b37f4219 src/log.mjs`），无整档归并搬迁提交 |
+| T-M13 | ✅ | 两产品 `.thincoder/` 各自保留：`checklist.md`（cliBlob 9795a0a8 / vscBlob 4ed445bf）· `skills/code-review.md`（92d5b49f / e90df26c）——同名不同内容并存、互不覆盖 |
+| T-M14 | ✅ | `git tag -l` = 71 条、重复 0；VSC 34 tag 未搬入（无冲突） |
+| T-M15 | ✅ | 合并仓根 `git status --porcelain --ignored` 空（CLI 未跟踪产物已清理，不进入合并仓） |
+| T-M16 | ✅ | 对账（路径映射 + blob 哈希）：CLI 568 项 + VSC 521 项 → 期望 1088；**missing 0 · content-changed 0**；新增恰 2 个（仓根 `README.md`、仓根 `.github/workflows/test.yml`）；1 项**授权迁移**（`thincoder-vscode/.github/workflows/test.yml` → 仓根，内容按 §2.9 重写） |
+| T-M18 | ✅ | 两 mirror HEAD 与迁移前一致（`406369f9` / `40409b4`），tags/commits 齐全；归档未跟踪产物 158/158 sha256 复核一致 = 可恢复基线 |
+
+**两产品门禁链（迁移前基线 ↔ 迁移后，同条件：先清 `%TEMP%` 残留再跑）**：
+
+| 步骤 | CLI 前 | CLI 后 | VSC 前 | VSC 后 |
+|---|---|---|---|---|
+| `npm run lint` | exit 0（314 文件 OK） | **同** | exit 0（296 文件 OK） | **同** |
+| `node scripts/doc-anchors.mjs` / VSC `--strict` | exit 0（候选 8684 · 悬空 0 · 域外 0） | **同** | exit 0（命中 0 · 域外 0） | **同** |
+| `node scripts/check-doc-width.mjs` | exit 0（140 文件 · 违规 0） | **同** | exit 0（133 文件 · 违规 0） | **同** |
+| `node scripts/check-ledger.mjs` | exit 0（两档 OK · 0 违规） | **同** | exit 0（两档 OK · 0 违规） | **同** |
+| `npm test`（快层） | 611 / pass 552 / fail 0 / skip 59 → exit 0 | **同** | 627 / 585 / 0 / 42 → exit 0 | **同** |
+| `npm run test:full` | 611 / 607 / **fail 4** / skip 0 → exit 1 | **同**（fail 4 同型） | 627 / 624 / **fail 3** → exit 1 | **同**（fail 3 同型） |
+| `npm run test:integration` | 23 pass / fail 0 → exit 0 | **同** | 29 / 28 / **fail 1** → exit 1 | **同**（fail 1 同型） |
+
+**测试红项性质（既有环境问题，非本批引入，见发现 #4）**：8 处失败**全部**是 Windows 上 `rmSync(recursive)` 删 `%TEMP%` 内含只读 `.git` 对象的临时目录抛 `EPERM`（teardown 钩子失败），**断言失败数 = 0**；迁移前后 fail 数、pass 数、skipped 数逐项一致。
+
+#### 五、发现与偏差（供父侧/设计者裁决）
+
+**#1（🟡 设计档与实测不符 · T-M4 命令形态）**：`git subtree add` 的 graft 提交使设计要求路径在**两个父提交中都不存在**（父 1 = S1 提交，父 2 = VSC tip 的原布局），
+故 `git log --follow -- <子目录路径>` 在**未给 `-m`** 时不做合并差异的改名检测 ⇒ **输出为空**（干跑仓 1/2 与正式仓三处一致复现）。
+设计档 §2.3「追溯须 `--follow`」与 T-M4 输入命令据此**不成立**；工作形态 = `git log --follow -m -- <path>`（234 条，含 VSC 线）或 `git blame`（无需附加参数）。
+历史**并非不可达**（2251 提交可达、blame 连续），故不构成回滚级阻塞；建议由设计者在 §2.3 / §3.1 T-M4 · T-M8 记录该工作命令形态（本批未改设计档——设计档写权在 eng-designer）。
+
+**#2（🟡 结构后果 · 仓根 `.gitignore` 锚定漂移）**：CLI 原 `.gitignore` 成为仓根档后，其两条含斜杠规则 `.thincoder/index/` / `.thincoder/tmp/` 锚定在**仓根**；
+实测 `git check-ignore -v thincoder/.thincoder/tmp/x.txt` → **未命中**（exit 1），建探针文件后 `git status --porcelain` 报 `?? thincoder/.thincoder/tmp/`（可被误提交）。
+对照：VSC 产品自带子目录 `.gitignore`，`thincoder-vscode/.thincoder/tmp/w.txt` 命中其 `.gitignore:7` ⇒ VSC 侧不受影响。
+**本批未自造修法**（§2.14 仓根级清单只列 `.gitattributes`/`.gitignore`，无产品级新增项）；候选修法：(a) 增产品级 `thincoder/.gitignore`（§2.10「各产品子目录内可保留自有规则」已允许）；(b) 两条规则改非锚定形态（`**/.thincoder/index/` 等）。
+
+**#3（🟡 §2.9「全域文档机检 step」未落地 · 转批 2）**：§2.9 要求仓根工作流增设「全域调用 step（统一脚本扫合并仓全域）」。
+统一三档脚本按 §2.15 = S4（批 2）落位，本批此刻仓根 `scripts/` 不存在 ⇒ 该 step 若现在加即**knowingly 红**（违反「三机检 + 测试失败项不得带病推进」）。
+本批按任务书 S3 落地**两产品各一 job**（CLI job 按 D11 补齐：`npm install` / `npm test` / `npm run lint`，与 VSC job 同构），**未加全域 step**——建议批 2（S4）落统一脚本同批补该 step（T-M28 为批 4 验收）。
+
+**#4（🔵 迁移前既有环境红 · 非本批引入）**：CLI `test:full` 4 红 / VSC `test:full` 3 红 + `test:integration` 1 红，全部为 Windows `%TEMP%` 内只读 `.git` 对象的 teardown `EPERM`；
+且**残留目录会污染后续轮次**（`ledger-*/doc-impact-*` 残留被 `discoverFamily` 当作同级项目 → 追加 `ERR_ASSERTION` 假红——已复现并定位）。
+基线对照均在清残留后取得，前后一致。修复属产品测试面（F7 禁改运行逻辑；测试档改属批 2 R 计划面）⇒ 本批不动、如实上报。
+
+#### 六、明示未做项
+
+- **S3b**（旧 VSC 仓远端置归档/只读）：**未执行**（不可逆 + 设计内置用户确认门）。未 push、未改任何远端设置、未改旧 VSC 仓工作目录。
+- **批 2–4 面**：R1–R9/R16 判据删除、统一三档脚本落位、提示词/文档纪律句改写、仓根全域机检 step、全量发布链演练——均未触碰（`thincoder/scripts/*` 与 `thincoder-vscode/scripts/*` 保持原样，判据零改）。
+- **`thincoder-vscode/package.json` 的 `repository`**：未改（T-M7 ✓）。
+- 本地为跑门禁在 `thincoder-vscode/` 执行过一次 `npm install`（`package-lock.json` 哈希 9b901c7c… 前后一致、git status 干净）；`node_modules/` 为该产品自有且被忽略，不进版本控制。
+
 
 ---
 
