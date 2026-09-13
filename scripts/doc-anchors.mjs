@@ -1,22 +1,34 @@
 #!/usr/bin/env node
 /**
- * doc-anchors.mjs — V5「文档锚一致性」机检（设计 `ENGINEERING-MODE.md` §2.32.3；需求 §1.20 / FR26）。
- * 判定单位 = 行（fenced 块整块跳过——与 V1–V4 同口径）。三锚（V5-A 路径/坐标 · V5-B 用例号 · V5-C 符号）、
- * 存在性域与解析序、注记识别、假阳类逐条排除、与 V1–V4 的射程边界——判据全文见设计 §2.32.3（不重述——D2）。
- * 两态（§2.32.3.5）：模块常量 `V5_GATE`（轮 2 翻 `true` = 闸态）+ CLI `--v5-gate` / `--v5-report`（临时收紧 / 放宽）；判定函数接受**显式 `gate` 参数**（两态可直驱——
- * 用例与 AC 跨切换点零改）。报告态：命中逐条打印报告段 + 汇总行，**退出码不受 V5 影响**、**不入基线**（N2）；闸态：命中计入违规集 →
- * `exit 1`（阈值 0）。对端仓根 = `THINCODER_PEER_ROOT`（别名 `THINCODER_CLI_ROOT`）/ 工作区兄弟目录；不可达 ⇒ 合规形态
- * （`路径（仓别）`）锚记「域外」，不阻断、零抛出。用法：`node scripts/doc-anchors.mjs [--v5-gate|--v5-report]`（扫描域 = `docs/design` +
- * `docs/requirements`，不含批档）。导出：V5_GATE / V5_SCAN_DIRS / NOTE_MARKERS / DEF_PREDICATES / extractAnchors / resolvePeerRoot / scanDocAnchors / formatReport / main（`test/doc-anchors.test.mjs` 消费）。
+ * doc-anchors.mjs — 文档锚一致性机检（合并仓统一版 · S4 机检单仓化——「两实现并集」单档）。
+ *
+ * 来源 = 两产品实现并集（CLI `thincoder/scripts/doc-anchors.mjs` + VSC `thincoder-vscode/scripts/check-doc-anchors.mjs`）；
+ * 跨仓面整类退役（设计档 TWO-REPO-MERGE.md §2.4 R1–R3 / R7）：对端仓根发现（`resolvePeerRoot` 兄弟目录）·
+ * 对端前缀（`PEER_PREFIX` / 排除式 5②）· 缺仓/域外口径（`domain-out`）· 对端根断言与自指防护——全数删除。
+ * 两引擎一体（`--domain` 参数化）：
+ *   ① **CLI 锚（V5-A 路径/坐标 · V5-B 用例号 · V5-C 符号）**——本档（判据全文见 `thincoder/docs/design/ENGINEERING-MODE.md` §2.32.3）；
+ *   ② **VSC 锚（A1 用例号 / A2 符号 / A3 路径）**——`doc-anchors-core.mjs`（语义同源独立实现；本档 re-export 供两产品测试面消费）。
+ * 域参数化两态：**无域参 = 全域**（仓根发现域集——两产品各按自身锚面）；产品域由门禁显式传参（`--domain thincoder-vscode`）。
+ * 解析语义（§2.5）：路径 token 按**仓根相对路径**解析（合并后 `thincoder-vscode/…` 前缀自降格为仓内相对路径、
+ * 无需改写）；合规形态（`路径（仓别）`——E3）在基根未命中时按**仓内其它产品域**兜底。
+ * 判定单位 = 行（fenced 块整块跳过）。三锚（V5-A / V5-B / V5-C）、存在性域与解析序、注记识别、假阳类逐条排除。
+ * 两态（CLI 锚）：模块常量 `V5_GATE`（`true` = 闸态）+ CLI `--v5-gate` / `--v5-report`（临时收紧 / 放宽）；
+ * 判定函数接受**显式 `gate` 参数**（两态可直驱——用例与 AC 跨切换点零改）。
+ * 用法：`node scripts/doc-anchors.mjs [--root <仓根>] [--domain <产品域>] [--engine v5|vsc] [--v5-gate|--v5-report] [--strict] [--json]`
+ * 导出：V5_GATE / V5_SCAN_DIRS / NOTE_MARKERS / DEF_PREDICATES / extractAnchors / scanDocAnchors / formatReport / main
+ * + `doc-anchors-core.mjs` 全量 re-export（checkAnchors / extractTokens / collectSourceDomain / collectCaseTitles / …）。
  */
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { inCodeSpan, isExecutableLine } from "./check-doc-width.mjs"; // 共享豁免谓词单源（与 V4 射程豁免同源）
+import { discoverDomains, inCodeSpan, isExecutableLine, MERGED_SCRIPTS } from "./check-doc-width.mjs"; // 共享豁免谓词单源 + 六档并入映射
+import { checkAnchors } from "./doc-anchors-core.mjs";
 
-/** 两态常量（轮 2 清账完成后翻 `true` = 闸态；临时放宽经 CLI `--v5-report`——§2.32.3.5 / AC-V5-11）。 */
+export * from "./doc-anchors-core.mjs";
+
+/** 两态常量（`true` = 闸态；临时放宽经 CLI `--v5-report`——§2.32.3.5 / AC-V5-11）。 */
 export const V5_GATE = true;
-/** 扫描域（设计 §2.32.3.5 切换条件①；不含 `docs/batches`——§2.32.3.6 V3 行；不触 `_archive/`）。 */
+/** 扫描域（文档锚判定面；不含 `docs/batches`——§2.32.3.6 V3 行；不触 `_archive/`）。 */
 export const V5_SCAN_DIRS = ["docs/design", "docs/requirements"];
 /** 注记标记集（**闭枚举逐字**——§2.32.3.3；同行命中即通过，不做跨行语义判）。 */
 export const NOTE_MARKERS = [
@@ -27,13 +39,10 @@ export const NOTE_MARKERS = [
 const isLineage = (line) => { const m = /原\s*[A-Za-z0-9\-\/]+\s*系/.exec(line); return !!m && (/^#{1,6}\s/.test(line) || (/[（(][^（）()]*$/.test(line.slice(0, m.index)) && /^[^（）()]*[）)]/.test(line.slice(m.index + m[0].length)))); };
 /** 定义谓词（闭枚举——V5-C 窄形态三要素之一）。 */
 export const DEF_PREDICATES = ["定义于", "定义在", "声明于", "声明在", "生成点", "定义处", "唯一权威", "导出"];
-/** 兄弟仓族（解析序 ③；与 `check-ledger.mjs` 同族口径）+ 对端仓目录前缀（合规形态入存在性域；**裸直引 = V4 违规形态 ⇒ V5 跳过**——排除式 5）。 */
-const SIBLING_NAMES = ["thincoder", "thincoder-vscode"];
-const PEER_PREFIX = "thincoder-vscode";
 const CODE_TREES = ["src", "scripts", "bin", "test"]; // 代码树（符号存在性域——§2.32.3.2）
 const PLACEHOLDERS = new Set(["x", "y", "a", "b", "foo", "bar", "file", "target", "doc", "none", "example", "app", "main", "index"]); // 占位集（末段裸名——排除式 1；含通用入口名类 `app`/`main`/`index`；大小写不敏感）
 const EXTS = "mjs|cjs|js|json|md|css|html|svg|yml|yaml|sh|ps1";
-const PATH_RE = new RegExp( // V5-A 路径 / 坐标锚（§2.32.3.1；坐标含**行区间** `:N-M`——轮 3 收正）
+const PATH_RE = new RegExp( // V5-A 路径 / 坐标锚（§2.32.3.1；坐标含**行区间** `:N-M`）
   `(?<![A-Za-z0-9_.\\-\\/])((?:[A-Za-z0-9_.\\-]+\\/)*[A-Za-z0-9_.\\-]+\\.(?:${EXTS}))(?::(\\d+(?:-\\d+)?))?(?![\\w])`, "g");
 /** V5-B 用例号锚（§2.32.3.1 收紧形态 + 多段号 `T-V5-12` 形态完整捕获——见档尾注）。 */
 const CASE_RE = /(?<![A-Za-z0-9-])((?:T-[A-Z]{1,5}\d{1,3}(?:-\d{1,3})?|T-\d{1,3}|T[A-Z]?\d{1,3})[a-z]?(?:\.\d+)?)(?![A-Za-z0-9-])/g;
@@ -44,7 +53,7 @@ const TOKEN_RE = /[A-Za-z_$][A-Za-z0-9_$.-]*/g;
 const PTR_RE = /(?:源|删除记录)\s*=\s*`?([^\s`）)]+)`?/g;
 /** 合规形态（E3）：token 后接 `（仓别）` 注记。 */
 const NOTE_AFTER_RE = /^`?\s*[（(]\s*(?:CLI|VSC|对端|本仓|他仓)[^（）)]{0,10}[）)]/;
-/** 排除式 5①：**`.md` token** 后接 `§N` ⇒ 归 V1（V1 只判 `.md`；非 `.md` 不豁免——照判存在性——轮 3 收窄）。 */
+/** 排除式 5①：**`.md` token** 后接 `§N` ⇒ 归 V1（V1 只判 `.md`；非 `.md` 不豁免——照判存在性）。 */
 const SECTION_AFTER_RE = /^[\s:：]*§\s*\d/;
 const EXT_SEG_RE = new RegExp(`\\.(?:${EXTS})(?=\\/|$)`, "g");
 const DOT_DIR_RE = /^\.[\w-][\w.-]*\//; // 排除式 2：点目录首段（`.thincoder/` / `.git/` 类）；`..` / `.` 档相对形态不在此列（解析序 ② 要用）
@@ -69,27 +78,10 @@ const addTokens = (set, text) => { for (const m of text.matchAll(TOKEN_RE)) set.
 /** 符号存在性：**整标识符边界**匹配（子串匹配会把 `foo` 误判为存在于 `fooBar`——假阴面）。 */
 const symbolIn = (text, id) => new RegExp(`(?<![A-Za-z0-9_$])${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![A-Za-z0-9_$])`).test(text);
 
-/** 对端仓根：① 显式参数（`null` = 无对端）→ ② env → ③ 工作区兄弟目录；不存在 ⇒ `null`（不可达）。 */
-export function resolvePeerRoot(root, explicit) {
-  const ok = (p) => (p && existsSync(p) ? resolve(p) : null);
-  if (explicit !== undefined) return ok(explicit);
-  for (const k of ["THINCODER_PEER_ROOT", "THINCODER_CLI_ROOT"]) {
-    const v = process.env[k];
-    if (v && resolve(v) !== resolve(root)) return ok(v);
-  }
-  const ws = resolve(root, ".."), own = basename(resolve(root));
-  for (const n of SIBLING_NAMES) {
-    if (n === own) continue;
-    if (isFile(join(ws, n))) continue;
-    try { if (statSync(join(ws, n)).isDirectory()) return join(ws, n); } catch { /* 不可达：降级 */ }
-  }
-  return null;
-}
-
-/** V5-B 定义面（三源任一命中即通过——§2.32.3.2）：① 两仓 `test/**` 文本；② 定义位（表格首格 / 列表项首 / 粗体行首）；③ 退役登记表（表头含 `用例名`——表内任意格）。 */
-function buildCaseIndex(root, peer) {
+/** V5-B 定义面（三源任一命中即通过——§2.32.3.2）：① 各域 `test/**` 文本；② 定义位（表格首格 / 列表项首 / 粗体行首）；③ 退役登记表（表头含 `用例名`——表内任意格）。 */
+function buildCaseIndex(domains) {
   const tokens = new Set();
-  for (const base of [root, peer].filter(Boolean)) {
+  for (const base of domains) {
     for (const f of walk(join(base, "test"))) { if (isFile(f)) addTokens(tokens, readFileSync(f, "utf8")); }
     for (const d of ["docs/design", "docs/requirements", "docs/batches"]) {
       for (const f of walk(join(base, d))) {
@@ -113,10 +105,10 @@ function buildCaseIndex(root, peer) {
   }
   return tokens;
 }
-/** 代码树标识符集（V5-C 宽形态存在性域——四树两仓；token + 点分段）。 */
-function buildCodeIds(root, peer) {
+/** 代码树标识符集（V5-C 宽形态存在性域——四树；token + 点分段）。 */
+function buildCodeIds(domains) {
   const ids = new Set();
-  for (const base of [root, peer].filter(Boolean)) {
+  for (const base of domains) {
     for (const tree of CODE_TREES) {
       for (const f of walk(join(base, tree))) {
         if (!isFile(f)) continue;
@@ -129,7 +121,7 @@ function buildCodeIds(root, peer) {
   }
   return ids;
 }
-/** 唯一 basename 索引（解析序 ④——**本仓**同名唯一命中即通过；对端面由 ③（合规形态）承担）。 */
+/** 唯一 basename 索引（解析序 ④——**域内**同名唯一命中即通过）。 */
 function buildBasenames(root) {
   const m = new Map();
   for (const f of walk(root)) m.set(basename(f), (m.get(basename(f)) ?? 0) + 1);
@@ -153,7 +145,8 @@ function pointerRanges(line) {
   return out;
 }
 
-/** 行内三锚抽取（含射程收窄 + 排除式 1–5——§2.32.3.1）。返回 { cases, paths, symbols, wide }。 */
+/** 行内三锚抽取（含射程收窄 + 排除式 1–5①——§2.32.3.1）。返回 { cases, paths, symbols, wide }。
+ *  （排除式 5②「对端前缀裸直引跳判」随跨仓面退役删除——该类 token 转「仓内相对路径」照判。） */
 export function extractAnchors(line) {
   const out = { cases: [], paths: [], symbols: [], wide: [] };
   for (const m of line.matchAll(CASE_RE)) {
@@ -169,57 +162,59 @@ export function extractAnchors(line) {
     if ((token.match(EXT_SEG_RE) ?? []).length >= 2) continue; // 排除式 3（组合简写 `a.md/b.md`）
     if (isExecutableLine(line)) continue; // 排除式 4（命令字面 / 搜索模式串行——共享谓词）
     const after = line.slice(m.index + m[0].length);
-    if (token.endsWith(".md") && SECTION_AFTER_RE.test(after)) continue; // 排除式 5①（`.md` token 后接 `§N` ⇒ 归 V1；非 `.md` 照判——轮 3 收窄）
-    if (token.split("/")[0] === PEER_PREFIX && !NOTE_AFTER_RE.test(after)) continue; // 排除式 5②（裸直引 ⇒ 归 V4：不判、不报、不入域外行）
+    if (token.endsWith(".md") && SECTION_AFTER_RE.test(after)) continue; // 排除式 5①（`.md` token 后接 `§N` ⇒ 归 V1；非 `.md` 照判）
     out.paths.push({ anchor: token + (coord ? ":" + coord : ""), token, coord, idx: m.index, note: NOTE_AFTER_RE.test(after) });
   }
   const ids = codeSpanIdentifiers(line);
-  if (ids.length && DEF_PREDICATES.some((p) => line.includes(p))) { // V5-C 窄形态：三要素（标识符 + 谓词 + 唯一宿主档坐标）
+  const named = ids.filter((s) => /[A-Za-z0-9]/.test(s.id)); // 占位排除：`_` 类纯装饰符非具名符号（假阳类逐条排除）
+  if (named.length && DEF_PREDICATES.some((p) => line.includes(p))) { // V5-C 窄形态：三要素（标识符 + 谓词 + 唯一宿主档坐标）
     const hosts = [...new Map(out.paths.filter((p) => p.coord).map((p) => [p.token, p])).values()];
-    if (hosts.length === 1) for (const s of ids) out.symbols.push({ anchor: s.id, idx: s.idx, host: hosts[0].token, note: hosts[0].note });
+    if (hosts.length === 1) for (const s of named) out.symbols.push({ anchor: s.id, idx: s.idx, host: hosts[0].token, note: hosts[0].note });
   }
   for (const s of ids) if (s.id.length >= 5 && /[A-Z_]/.test(s.id)) out.wide.push({ anchor: s.id, idx: s.idx }); // 宽形态（报告面）
   return out;
 }
 
-/** 解析序 ① 本仓根 → ② 本档所在目录 → ③ 对端仓根（仓前缀剥离；③ **仅合规形态**（`路径（仓别）`——E3）入域）；命中返回绝对路径。 */
+/** 解析序（单仓）：① 仓根 ② 域根 ③ 本档所在目录 ④ 域别名前缀剥离 ⑤（合规形态 E3）仓内其它产品域 ⑥ 六档并入映射（旧档名 → 仓根统一版）——命中返回绝对路径。 */
 function resolveFile(env, docDir, token, note = false) {
   const norm = token.replace(/\\/g, "/"), segs = norm.split("/");
-  const peerPrefixed = segs[0] === PEER_PREFIX;
-  const stripped = peerPrefixed || segs[0] === basename(env.root) ? segs.slice(1).join("/") : null;
-  if (peerPrefixed) return env.peer && isFile(join(env.peer, stripped)) ? join(env.peer, stripped) : null;
-  const cands = [resolve(env.root, norm), resolve(docDir, norm)];
-  if (stripped) cands.push(resolve(env.root, stripped));
-  if (env.peer && note) cands.push(resolve(env.peer, norm)); // ③ 仅合规形态入域（裸 / 本仓形态不落对端根）
+  const stripped = segs[0] === basename(env.scanRoot) ? segs.slice(1).join("/") : null;
+  const cands = [resolve(env.root, norm), resolve(env.scanRoot, norm), resolve(docDir, norm)];
+  if (stripped) cands.push(resolve(env.scanRoot, stripped));
+  if (note) for (const d of env.otherDomains) cands.push(resolve(d, norm)); // E3 合规形态跨域候选（单仓语义）
+  const merged = MERGED_SCRIPTS[basename(norm)];
+  if (merged) cands.push(resolve(env.root, "scripts", merged)); // 六档并入映射（退场注记语义的机器侧对位）
   return cands.find(isFile) ?? null;
 }
-/** V5-A 判定：`null` 通过 · `"domain-out"` 域外（对端不可达——合规形态，不阻断）· `"dangling"` 悬空。 */
+/** V5-A 判定：`null` 通过 · `"dangling"` 悬空。 */
 function pathState(env, docDir, a) {
   if (resolveFile(env, docDir, a.token, a.note)) return null;
-  if (a.token.startsWith(PEER_PREFIX + "/") && !env.peer) return "domain-out"; // 降级：不得静默放过 / 静默报红
-  const n = env.basenames.get(basename(a.token)) ?? 0; // ④ 唯一 basename 索引
+  const n = env.basenames.get(basename(a.token)) ?? 0; // ④ 唯一 basename 索引（域内）
   if (n === 1) return null;
   if (n >= 2 && a.token.includes("/")) return null; // 多命中**且有目录前缀** ⇒ 不报（§2.32.3.2 ④）
+  if ((env.repoBasenames.get(basename(a.token)) ?? 0) === 1) return null; // ⑥ 仓根唯一 basename（单仓语义——跨域唯一亦命中）
   return "dangling";
 }
 
-/** 扫描（判定函数——显式 `gate` 参数；`peerRoot: null` = 对端不可达）。 */
-export function scanDocAnchors(root, { gate = V5_GATE, dirs = V5_SCAN_DIRS, peerRoot } = {}) {
+/** 扫描（判定函数——显式 `gate` 参数；`domain` 显式时仅扫该产品域）。 */
+export function scanDocAnchors(root, { gate = V5_GATE, dirs = V5_SCAN_DIRS, domain = null } = {}) {
   const rootAbs = resolve(root);
-  const peer = resolvePeerRoot(rootAbs, peerRoot);
-  const env = { root: rootAbs, peer, basenames: buildBasenames(rootAbs) };
-  const defs = buildCaseIndex(rootAbs, peer);
-  const codeIds = buildCodeIds(rootAbs, peer);
+  const domains = discoverDomains(rootAbs);
+  const scanRoot = domain ? resolve(rootAbs, domain) : (domains[0] ?? rootAbs);
+  const domainSet = domains.length ? domains : [rootAbs];
+  const env = { root: rootAbs, scanRoot, otherDomains: domainSet.filter((d) => d !== scanRoot), basenames: buildBasenames(scanRoot), repoBasenames: buildBasenames(rootAbs) };
+  const defs = buildCaseIndex(domainSet);
+  const codeIds = buildCodeIds(domainSet);
   const files = [];
-  for (const d of dirs) for (const f of walk(join(rootAbs, d))) if (f.endsWith(".md")) files.push(f);
+  for (const d of dirs) for (const f of walk(join(scanRoot, d))) if (f.endsWith(".md")) files.push(f);
   files.sort();
 
   const rows = [], wideRows = [];
   const cand = { case: 0, path: 0, symbol: 0, wide: 0 };
   const exempt = { case: 0, path: 0, symbol: 0, wide: 0 };
-  const dang = { case: 0, path: 0, symbol: 0, outside: 0 };
+  const dang = { case: 0, path: 0, symbol: 0 };
   for (const f of files) {
-    const rel = relative(rootAbs, f).replace(/\\/g, "/");
+    const rel = relative(scanRoot, f).replace(/\\/g, "/");
     const docDir = dirname(f);
     let fence = false;
     readFileSync(f, "utf8").split("\n").forEach((raw, i) => {
@@ -242,7 +237,6 @@ export function scanDocAnchors(root, { gate = V5_GATE, dirs = V5_SCAN_DIRS, peer
         if (free(a.idx)) { exempt.path++; continue; }
         const st = pathState(env, docDir, a);
         if (st === null) continue;
-        if (st === "domain-out") { dang.outside++; push("域外", a.anchor); continue; }
         dang.path++; push("路径/坐标", a.anchor);
       }
       for (const a of symbols) {
@@ -262,33 +256,60 @@ export function scanDocAnchors(root, { gate = V5_GATE, dirs = V5_SCAN_DIRS, peer
     });
   }
   return {
-    gate, root: rootAbs, peer, scanDirs: dirs, files: files.length,
+    gate, root: rootAbs, scanRoot, scanDirs: dirs, files: files.length,
     rows, wideRows, cand, exempt, dang,
-    danglingTotal: dang.case + dang.path + dang.symbol, outsideTotal: dang.outside,
+    danglingTotal: dang.case + dang.path + dang.symbol,
   };
 }
 
 /** 输出（报告段逐条 + 汇总四数 / 各类计数 + 两态固定句——§2.32.3.5 / AC-V5-7）。 */
 export function formatReport(r) {
   const sum = (o) => Object.values(o).reduce((a, b) => a + b, 0);
-  const out = [`V5 文档锚一致性：扫描域 ${r.scanDirs.join(" + ")} · ${r.files} 档 · 对端仓 ${r.peer ?? "不可达（合规形态锚记「域外」）"}`];
+  const out = [`V5 文档锚一致性：扫描域 ${r.scanDirs.join(" + ")} · ${r.files} 档`];
   for (const x of r.rows) out.push(`报告(V5): ${x.file}:${x.line} ${x.anchor}（${x.clazz}）`);
   for (const x of r.wideRows) out.push(`报告(V5): ${x.file}:${x.line} ${x.anchor}（${x.clazz}——报告面，不入闸）`);
-  out.push(`V5 汇总：候选 ${sum(r.cand)} · 悬空 ${r.danglingTotal} · 注记豁免 ${sum(r.exempt)} · 域外 ${r.outsideTotal}`);
+  out.push(`V5 汇总：候选 ${sum(r.cand)} · 悬空 ${r.danglingTotal} · 注记豁免 ${sum(r.exempt)}`);
   out.push(`  用例号（V5-B）：候选 ${r.cand.case} · 悬空 ${r.dang.case} · 注记豁免 ${r.exempt.case}`);
-  out.push(`  路径/坐标（V5-A）：候选 ${r.cand.path} · 悬空 ${r.dang.path} · 注记豁免 ${r.exempt.path} · 域外 ${r.outsideTotal}`);
+  out.push(`  路径/坐标（V5-A）：候选 ${r.cand.path} · 悬空 ${r.dang.path} · 注记豁免 ${r.exempt.path}`);
   out.push(`  符号·窄（V5-C）：候选 ${r.cand.symbol} · 悬空 ${r.dang.symbol} · 注记豁免 ${r.exempt.symbol}`);
   out.push(`  符号·宽（V5-C 报告面——不入闸）：候选 ${r.cand.wide} · 悬空 ${r.wideRows.length} · 注记豁免 ${r.exempt.wide}`);
   out.push(r.gate ? (r.danglingTotal > 0 ? `FAIL(V5): ${r.danglingTotal} 条悬空锚（闸态——阈值 0）` : "OK(V5): 0 条悬空锚（闸态——阈值 0）") : `V5 报告 ${r.danglingTotal} 条（报告态——不阻断）`);
   return out;
 }
 
-/** CLI 主行程：报告态退出码恒 0；闸态有悬空锚 ⇒ 1；`--v5-gate` / `--v5-report` 直驱两态（翻转后）。 */
+/** CLI 主行程（域驱动）：无域参 = 全域（各域按自身锚面）；`--domain` 显式产品域。
+ *  CLI 锚两态 = `--v5-report` / `--v5-gate`（默认闸）；VSC 锚两态 = `--strict` / `V5_GATE=1`（默认报告）。 */
 export function main(argv = process.argv.slice(2)) {
-  const gate = argv.includes("--v5-gate") ? true : argv.includes("--v5-report") ? false : V5_GATE;
-  const report = scanDocAnchors(process.cwd(), { gate });
-  for (const line of formatReport(report)) console.log(line);
-  return gate && report.danglingTotal > 0 ? 1 : 0;
+  const argOf = (f) => { const i = argv.indexOf(f); return i >= 0 && argv[i + 1] ? argv[i + 1] : null; };
+  const root = resolve(argOf("--root") ?? process.cwd());
+  const domainArg = argOf("--domain");
+  const engineArg = argOf("--engine");
+  const v5Gate = argv.includes("--v5-report") ? false : true; // V5 锚：默认闸（V5_GATE=true——翻转后）
+  const vscGate = argv.includes("--strict") || /^(?:1|true)$/i.test(process.env.V5_GATE ?? "");
+  const all = discoverDomains(root);
+  const list = domainArg ? [resolve(root, domainArg)] : (all.length ? all : [root]);
+  const codeRoots = all.length ? all : [root];
+  const repoNames = [...new Set(codeRoots.map((d) => basename(d)))];
+  let fail = 0;
+  for (const d of list) {
+    const engine = engineArg ?? (basename(d) === "thincoder-vscode" ? "vsc" : "v5"); // 域表（`--engine` 可显式覆盖）
+    if (engine === "vsc") {
+      const res = checkAnchors({ root: d, mode: vscGate ? "strict" : "report", codeRoots, repoNames, repoRoot: root });
+      if (argv.includes("--json")) {
+        console.log(JSON.stringify({ mode: res.mode, sourceDomain: res.sourceDomain, counts: res.counts, hits: res.hits }));
+      } else {
+        for (const h of res.hits) console.log(`✗ V5 ${h.file}:${h.line} [${h.kind}] ${h.anchor} — 期望 ${h.expect} · 实得 ${h.got}`);
+        console.log(`V5: 命中 ${res.counts.total} 处 · distinct ${res.counts.distinct}（A1 ${res.counts.A1} / A2 ${res.counts.A2} / A3 ${res.counts.A3}）· ${vscGate ? "阻断态" : "报告态"}`);
+        if (vscGate && res.counts.total) console.log(`FAIL(V5): 命中 ${res.counts.total} 处（阈值 0——文档锚须在册）——修掉；不得入基线（入基线 = 例外 = 违规）。`);
+      }
+      if (vscGate && res.counts.total) fail = 1;
+    } else {
+      const r = scanDocAnchors(root, { gate: v5Gate, domain: domainArg ?? (d === root ? null : relative(root, d)) });
+      for (const line of formatReport(r)) console.log(line);
+      if (v5Gate && r.danglingTotal > 0) fail = 1;
+    }
+  }
+  return fail ? 1 : 0;
 }
 
 const isMain = process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url;

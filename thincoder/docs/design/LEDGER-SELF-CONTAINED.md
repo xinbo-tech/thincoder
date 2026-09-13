@@ -744,7 +744,7 @@
 | 48 | B 类改指面（本仓 18 档 + 对端反向 35 档） | 行数 ±0 | ±0 | 逐条规范形态化（D4） |
 | 49 | `docs/design/prompts/discipline-normal.md` | 184 | +10±4 | §6.2 条 3 / 条 4（CN 镜像面——修正轮纳入） |
 | 50 | `docs/design/prompts/discipline-normal.md`（VSC 仓） | 184 | +10±4 | 同上（本端原文自持） |
-| 51 | `thincoder-vscode/test/prompts-carryover-anchors.test.mjs` | — | **不建** | as-built 核对：拆分面经并行批先落消解（余档 177 ≤500——拆分不适用） |
+| 51 | `thincoder-vscode/test/prompts-carryover-anchors.test.mjs` | — | **不建**（已废——拆分面消解） | as-built 核对：拆分面经并行批先落消解（余档 177 ≤500——拆分不适用） |
 | 52 | `docs/requirements/AGENT-LOOP.md`（本仓） | 658 | **−302**（→356） | **7 节切除**（§9 / §10 / §11 / §12 / §14 / §16 / §17）+ 档首「迁移注记 + 移出清单」（含源档 blob SHA）——§8.9 |
 | 53 | `docs/design/ENGINEERING-MODE.md`（本仓） | 2712 | +7（→2719） | §2.24.9 归档对位行切除 + 搬迁注记；§7 变更记录一行 |
 | 54 | `docs/requirements/AGENT-LOOP.md`（VSC 仓） | **新建（已落 355）** | — | C 桶接收档（7 节逐字迁移 + 迁移注记 + 承载范围表 + 变更记录） |

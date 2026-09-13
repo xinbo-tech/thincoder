@@ -20,14 +20,14 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { extractAnchors, V5_SCAN_DIRS } from "./doc-anchors.mjs"; // 扫描域 / 抽取面单源（D2）
+import { extractAnchors, V5_SCAN_DIRS } from "../../scripts/doc-anchors.mjs"; // 扫描域 / 抽取面单源（D2——S4 单仓化改指仓根统一版）
 
 /** 字面量 / 伪标识符停止集（强形态过滤保留的残余面——`NaN` 类会撞 camelCase 形态）。 */
 const LITERALS = new Set(["NaN", "Infinity", "constructor", "prototype"]);
-/** 代码 / 文档扩展名（点径强形态排除——`loop.mjs` 类裸文件名形态不入符号面；与对端 A2 排除式同族）。 */
+/** 代码 / 文档扩展名（点径强形态排除——`loop.mjs` 类裸文件名形态不入符号面；与 VSC 侧 A2 排除式同族）。 */
 const CODE_EXT_RE = /\.(?:mjs|cjs|js|json|md|css|html|svg|yml|yaml|sh|ps1)$/;
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-/** 行内拆分（与对端反查同族口径——空白 / 常见标点断开；`-` / `.` / `/` 不在断点）。 */
+/** 行内拆分（与 VSC 侧反查同族口径——空白 / 常见标点断开；`-` / `.` / `/` 不在断点）。 */
 const PIECE_SPLIT_RE = /[\s,;:()[\]{}"'`|]+/;
 /** 强形态判据（过滤保留——`oldName` ✓ / `all_lower` ✗ / `SNAKE_CASE` ✓ / `_private` ✓ / `a.b` ✓）。 */
 export function isStrongSymbol(t) {

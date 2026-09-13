@@ -359,7 +359,7 @@
 | `thincoder-vscode/test/integration/files.mjs` | 新 | ~15 | 集成清单（登记即跑） |
 | `thincoder-vscode/test/integration/*.test.mjs` | 新 | ~500–800 | 本端实例 + 种子 |
 | `thincoder-vscode/package.json` | 129 | +2 行 | `test:integration` + prepublish 串 |
-| `thincoder-vscode/test/settings-panel.test.mjs` → `config-pool.test.mjs` | 86 / 121 | 裁定 | 合并（§7.2 #4） |
+| `thincoder-vscode/test/settings-panel.test.mjs` → `config-pool.test.mjs` | 86 / 121 | 裁定 | 合并（§7.2 #4——已并入 `config-pool.test.mjs`） |
 | 削段点名档（VSC） | `turn-across-segments` 220 · `verify-redesign` 187 · `eng-designer-role` 169 · `index-perception` 342 · `activity-flow` 311 ↔ `async-visibility` 387 | 删段 | 执行轮出清单 |
 | `AGENTS.md`（VSC 仓） | 122 | ±~5 | Testing 段 |
 | `docs/design/RELEASE.md`（VSC 仓） | 200 | +~6 | 发布门表述 |
