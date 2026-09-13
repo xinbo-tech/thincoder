@@ -714,12 +714,12 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 | `ctx.colors` · `ctx.pushLine` · `ctx.render`（台账渲染面） | `thincoder-core/ledger-surface.mjs:20,54` | 端装配层 | CLI = `{warn,dim}` + TUI 推送（现形：`thincoder-cli/src/tui/ledger-surface.mjs:10,31`）· VSC = 面板推送（现形：`thincoder-vscode/src/extension/ledger-surface.mjs`） | 未注入 ⇒ 空色表 + 纯文本（零端名）；注入 ⇒ 每行以注入函数推送（计数 = 行数） |
 | `ctx.onQuestion`（question 无 UI 降级径） | `tools/question.mjs:20,24` | 端装配层 | CLI = TUI 问答（现形：`thincoder-cli/src/tui/tool-events.mjs:370` → `agent/dispatch.mjs:394`）· VSC = 面板卡片（现形：`thincoder-vscode/src/extension/panel-callbacks.mjs:195`） | 未注入 ⇒ 抛 `not supported in this context`；注入 ⇒ 返回值 = 注入函数返回值 |
 | `ctx.onPermissionRequest`（子代理权限通道） | `agent-tools/consult.mjs:317` · `agent-tools/escalate-async.mjs:232` · `agent-tools/subagent-actions.mjs:437` | 端装配层 | CLI = 主 agent 同一 y/N 面板 · VSC = 合并面板（`batchPermissionGate` / `permissionGate`） | 未注入 ⇒ 视为拒绝（`thincoder-core/agent-tools/subagent-actions.mjs:281`）；注入 ⇒ 逐次询问且并发只弹一个 |
-| `ctx.callbacks.onToken`（事件承载面） | `agent/spawn-child.mjs:128` · `agent-tools/async-settle.mjs:103` | 端装配层 | CLI = `⟦ev⟧` 文本 token（`thincoder-cli/src/tui/subagent-blocks.mjs`）· VSC = `postMessage`（`thincoder-vscode/src/extension/panel-callbacks.mjs`） | 注入假 `onToken` ⇒ 收到的 token 序列两端各自断言（各自面原文为准） |
+| `ctx.callbacks.onToken`（事件承载面） | `agent/spawn-child.mjs:134-135`（包装转发）· `agent-tools/async-settle.mjs:228,262-264`（stopped / settled / done 发射点；补位刷新 :277） | 端装配层 | CLI = `⟦ev⟧` 文本 token（`thincoder-cli/src/tui/subagent-blocks.mjs`）· VSC = `postMessage`（`thincoder-vscode/src/extension/panel-callbacks.mjs`） | 注入假 `onToken` ⇒ 收到的 token 序列两端各自断言（各自面原文为准） |
 | `ctx.carrier` · `ctx.runTurn` · `ctx.hooks`（挂起 / 唤醒载体） | `agent/suspension.mjs:151,216`（形态见 `AGENT-LOOP.md` §2.3） | 端装配层 | CLI = `agent` 字段对象（池 / pending / `_suspended` 挂 agent）· VSC = `history` 字段对象 | 载体双夹具（CLI 形 / VSC 形）各跑同组状态机断言（`AGENT-LOOP.md` §2.3 验收点 1–2） |
 | `opts.schema`（`$schema` 写盘注入） | `thincoder-core/config-io.mjs:57,74` | 端装配层 | CLI = 不传（写盘无 `$schema`）· VSC = `$schema` 指针（现形：`thincoder-vscode/src/config-io.mjs:108`） | 未注入 ⇒ 产物无 `$schema` 键；注入 ⇒ 键在场且值 = 注入值 |
 | `projectDictionary(locale)`（文案字典投影） | `thincoder-core/i18n.mjs:87` | 端消费者 | CLI = 不用（直接读核内常量）· VSC = `locales/{en,zh}.json` 投影（逐字一致） | 投影结果与 VSC 现 `locales/*.json` 逐字相同（机器消费面冻结） |
 | `config-migrate` 注入参数（`loadRaw`/`saveRaw`/`conflictError`） | `thincoder-core/config-migrate.mjs:83` | **核内 `config.mjs`**（非端侧注入） | 两端同（核内调用点） | 核内测试：假 `saveRaw` 注入 ⇒ 写回失败不阻断（`conflictError` 路径） |
-| `writeThroughPath` / `configureWritePath`（编辑器写路径缝） | `thincoder-core/tools/write-path.mjs:64`（`configureWritePath`；171 行 · **已落 2026-09-14** · §5 交付读数） | 端装配层 | CLI = 不注入（默认 fs 径） · VSC = `getOpenDoc` / `applyEditorEdit` / `applyEditorRangeEdit`（迁 `thincoder-vscode/src/tools/shared.mjs:66-106` 进端壳） | 双夹具 + 结构机检——见 §2.13.5（`thincoder-core/test/write-path.test.mjs`） |
+| `writeThroughPath` / `configureWritePath`（编辑器写路径缝） | `thincoder-core/tools/write-path.mjs:66`（`configureWritePath`；191 行 · **已落 2026-09-14** · §5 交付读数） | 端装配层 | CLI = 不注入（默认 fs 径） · VSC = `getOpenDoc` / `applyEditorEdit` / `applyEditorRangeEdit`（迁 `thincoder-vscode/src/tools/shared.mjs:66-106` 进端壳） | 双夹具 + 结构机检——见 §2.13.5（`thincoder-core/test/write-path.test.mjs`） |
 
 #### 2.13.4 ④ 裁决行 → 核内位对照（设计行不复制原文，只记「核内是否已有位」）
 
@@ -728,10 +728,10 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 
 | ④ 裁决行（子系统档） | 核内位 | S2 需补的形态 |
 |---|---|---|
-| #98 `agent-tools/async-settle.mjs`（VSC interrupt 豁免面） | 无 | 豁免面按端参数化（或并入核内统一守卫） |
+| #98 `agent-tools/async-settle.mjs`（VSC interrupt 豁免面） | **有**（并入核内统一守卫 2026-09-14——`parentAborted` interrupt 豁免 + `bindChildController` 链结单点；`thincoder-core/agent-tools/async-settle.mjs:88-98,130-134`） | 无（核内已闭合——端侧随 S2 接线自然获得） |
 | #99 `agent-tools/subagent.mjs`（VSC 无 `panel` 动作） | 核内**含** `panel`（`agent-tools/subagent.mjs:144`） | VSC 侧需**工具登记面剔除缝**（否则 VSC 凭空获得 `panel`） |
 | #112 `agent/setup.mjs`（编辑器上下文 / `read_image` 门 / MCP 扩工具时机） | 无 | 装配表按端注入（三项条件参数化） |
-| #113 `agent/setup-reminders.mjs`（编辑器上下文 / 贴图指引） | 无 | 提醒段按端注入 |
+| #113 `agent/setup-reminders.mjs`（编辑器上下文 / 贴图指引） | **有**（并集面已落 2026-09-14——`pushInjections` / `appendImagePointer`；`thincoder-core/agent/setup-reminders.mjs:83,98`） | 端侧接线（编辑器上下文采集内容与贴图事件按端供给——④ 段） |
 | #165 权限闸展示面 | **有**（`io.ask`） | 端侧接线 |
 | #175 `auto-think.mjs` ↔ VSC 推理档位面 | 无（核内 = CLI 自动难度分级） | 端侧选择面按端注入 |
 | #184 挂起 / 唤醒池载体 | **有**（`ctx.carrier` 等） | 端侧接线（`AGENT-LOOP.md` §2.3） |
@@ -753,7 +753,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 | #66 `tools/lsp.mjs` 宿主语言服务径 | 无（核内 = CLI JSON-RPC 实现） | 宿主语言服务径按端注入 |
 | #68 `tools/file.mjs` 编辑器编辑径（**写路径**） | **有**（写路径缝已落 2026-09-14 · `tools/write-path.mjs`——8 写点全经注入面） | 见 §2.13.5（**写路径缝**）——S2 端侧接线待做 |
 | #69 `tools/edit-diff.mjs` 回执形态 | 无（核内回执 = CLI 形态，`tools/edit-diff.mjs:344-347`） | 回执形态按端注入 |
-| #84 `agent-tools/batch-segment.mjs` `_touchedFiles` 记账 | 无（核 `agent-tools/batch-segment.mjs:191` 直写——**与写路径缝并列的 S2 前置门**，不裸接线） | 记账面按端注入（形态参 §2.13.5 注入缝） |
+| #84 `agent-tools/batch-segment.mjs` `_touchedFiles` 记账 | **有**（注入缝已落 2026-09-14——`configureBatchSegment` / `resetBatchSegment`（缺省 no-op）；`thincoder-core/agent-tools/batch-segment.mjs:43,47`——直写点 :210 保持） | 端侧接线（VSC `_touchedFiles` 记账内容经 `configureBatchSegment({ onWrite })` 注入） |
 | #91 `agent-tools/eng.mjs` 持久化镜像 / 面板提示 | 无（核内只进会话） | 写盘镜像按端注入 |
 | #96 `agent-tools/verify.mjs` 编辑器诊断段 / 可中断 | 无（VSC 面在 `thincoder-vscode/src/agent-tools/verify.mjs:250-275`） | 信息段与执行方式按端注入 |
 | #170 `skills.mjs` fs 面（同步 / 异步） | 无（核内全异步，`thincoder-core/skills.mjs:12`） | loader 形态按端注入（若 VSC 仍需同步面） |
@@ -780,19 +780,18 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 
 | 项 | 建议 |
 |---|---|
-| 注入面 | 工具写面单点 `tools/write-path.mjs`（**已落 2026-09-14 · 171 行** · §5 交付读数）：`writeThroughPath(abs, content, meta)`——**8 写点全改调它**；默认实现 = `writeFile` + `recordWrite`（= CLI 语义，零行为变）；端侧可 `configureWritePath({ openDoc, applyEdit, isDirty })` 覆盖 |
+| 注入面 | 工具写面单点 `tools/write-path.mjs`（**已落 2026-09-14 · 191 行**（含 dest 面门禁补丁）· §5 交付读数）：`writeThroughPath(abs, content, meta)`——**8 写点全改调它**；默认实现 = `writeFile` + `recordWrite`（= CLI 语义，零行为变）；端侧可 `configureWritePath({ openDoc, applyEdit, isDirty })` 覆盖 |
 | 端侧填什么 | **CLI = 不注入**（默认 fs 径）· **VSC = `getOpenDoc` / `applyEditorEdit` / `applyEditorRangeEdit`**（迁 `thincoder-vscode/src/tools/shared.mjs:66-106` 进端壳），脏缓冲 ⇒ 拒写 |
 | 契约 | 注入实现返回 `{ written: true, via: "editor" }` 或 `null`（未处理 ⇒ 回退默认）；缺省 = 现状；核内零端名分支（契约 5） |
 | 覆盖点 | §2.13.5 上列 8 个写点（write / insert_after / hashline_edit / edit / edits 数组 / apply_patch / delete / file_ops）——`ctx` 已透传到各 `execute(args, ctx)`，可行 |
-| 验收（可机判） | ① 核内测试：假注入面驱动全部 8 个写点 ⇒ 全部经过注入面 + 未注入 ⇒ 回 fs 径（双夹具；交付读数：`openDoc` / `isDirty` 各 8 · 内容写点 `applyEdit` 6——`file_ops` `dest` 面门禁（补正①）落地后按 9 改判；用例见 `thincoder-core/test/write-path.test.mjs` 夹具一 / 二）；② 结构机检（**落地口径**）：**扫描域 = `tools/**`**；检测面 = `writeFile(Sync)` / `appendFile(Sync)` / `createWriteStream` / `writeSync`；白名单 1 档 = `tools/write-path.mjs`；**已登记豁免 1 档 = `tools/checklist-sync.mjs:88`**（checklist 状态档同步机——非模型面文件编辑写点）；白名单外**命中集合逐档等值（fail-closed——新增命中即红、豁免消失亦红）**；8 写点所在 5 档**零直调 fs 写（无豁免）**；豁免登记位置 = `thincoder-core/test/write-path.test.mjs` 结构机检用例的 `EXEMPT` 表（`WHITELIST` 白名单同处）；③ VSC 侧（S2）：对已打开文件执行 write ⇒ 断言 `applyEdit` 被调 + `doc.isDirty === false` + 磁盘内容 = 缓冲内容 |
+| 验收（可机判） | ① 核内测试：假注入面驱动全部 8 个写点 ⇒ 全部经过注入面 + 未注入 ⇒ 回 fs 径（双夹具；交付读数：`openDoc` / `isDirty` 各 **9**（8 写点 + `file_ops` dest 面 1——补正① 已落 2026-09-14）· 内容写点 `applyEdit` 6；用例见 `thincoder-core/test/write-path.test.mjs` 夹具一 / 二）；② 结构机检（**落地口径**）：**扫描域 = `tools/**`**；检测面 = `writeFile(Sync)` / `appendFile(Sync)` / `createWriteStream` / `writeSync`；白名单 1 档 = `tools/write-path.mjs`；**已登记豁免 1 档 = `tools/checklist-sync.mjs:88`**（checklist 状态档同步机——非模型面文件编辑写点）；白名单外**命中集合逐档等值（fail-closed——新增命中即红、豁免消失亦红）**；8 写点所在 5 档**零直调 fs 写（无豁免）**；豁免登记位置 = `thincoder-core/test/write-path.test.mjs` 结构机检用例的 `EXEMPT` 表（`WHITELIST` 白名单同处）；③ VSC 侧（S2）：对已打开文件执行 write ⇒ 断言 `applyEdit` 被调 + `doc.isDirty === false` + 磁盘内容 = 缓冲内容 |
 
 **落地状态与补正登记（2026-09-14 · 写路径缝已落）**
 
-- **已落读数（核内面）**：`thincoder-core/tools/write-path.mjs`（171 行——注入面 + 默认径 + 记账面单源）· 8 写点全改道（`file.mjs` / `edit-diff.mjs` / `edit-batch.mjs` / `patch.mjs` / `ops.mjs` 5 档）·
-  `thincoder-core/test/write-path.test.mjs`（250 行 · 6 用例）——核内 `node --test` **96/96 · exit 0**（2026-09-14 交付读数——明细见批次档 §5「写路径注入缝做实」）。**S2 端侧接线仍待做**（CLI 不注入 / VSC 注入编辑器径 = S2 动作——落点 ≠ 接线）。
-- **补正①（已裁定 · 待落——下一代码轮）**：`file_ops` 的 **`dest` 面门禁**——现 `writeThroughPath` 只对 `src` 问 `openDoc` ⇒ move/rename **覆盖到「编辑器打开且脏」的目标档**时不拒写。
-  裁定 = **补 `openDoc(dest)` 门禁**；落地后验收① 的 `openDoc` / `isDirty` 基数按新形态改判（`file_ops` 写点 = `src` + `dest` 两次问询）——计数与用例同步属落轮。
-  **实核注（设计轮 · 2026-09-14）**：该落轮已在途——工作树可见核内实现与用例改动（未 commit、未经收口复跑）；本档计数仍锚定交付态，落态以该轮提交 / 批次档 §5 为准。
+- **已落读数（核内面）**：`thincoder-core/tools/write-path.mjs`（**191 行**——注入面 + 默认径 + 记账面单源 + dest 面门禁）· 8 写点全改道（`file.mjs` / `edit-diff.mjs` / `edit-batch.mjs` / `patch.mjs` / `ops.mjs` 5 档）·
+  `thincoder-core/test/write-path.test.mjs`（**289 行 · 7 用例**）——核内 `node --test` **116/116 · exit 0**（2026-09-14 交付读数——明细见批次档 §5「写路径注入缝做实」/「S1 续轮第二批」）。**S2 端侧接线仍待做**（CLI 不注入 / VSC 注入编辑器径 = S2 动作——落点 ≠ 接线）。
+- **补正①（已落 2026-09-14）**：`file_ops` 的 **`dest` 面门禁**——原 `writeThroughPath` 只对 `src` 问 `openDoc`（move/rename **覆盖到「编辑器打开且脏」的目标档**时不拒写）。
+  落态 = `gateOpenDoc` 单点（`thincoder-core/tools/write-path.mjs:83`——src / dest 两面共用；`src` 未打开不豁免 dest 门）；验收① 基数改判为 `openDoc` / `isDirty` 各 **9** · `applyEdit` **6**——计数与用例已同步（落轮 = S1 续轮第二批 · 批次档 §5）。
 - **补正②（文案对齐口径——S2 接线时）**：核内拒写文案（`thincoder-core/tools/write-path.mjs:72-73`）= VSC 主句（同句——`thincoder-vscode/src/tools/file.mjs:99` · `edit-line-params.mjs:124` · `file-edit.mjs:396` · `hashline-edit.mjs:91` · `more-file.mjs:55` 5 处；VSC 侧带 `Error: ` 前缀）。
   VSC 另有 2 处尾句为 `Save or discard first.`（`thincoder-vscode/src/tools/more-file.mjs:266,380`）⇒ **S2 接线后该两处用户可见文案随核内句统一**（本项只登记口径——端侧改动属 S2）。
 - **范围注（结构机检域）**：验收② 机检域 = `tools/**`（工具写面）。核内域外档（存储 / 日志 / 快照 / trace / 配置等面 + 测试夹具）另含 fs 写、**不在本机检域**；
@@ -816,9 +815,9 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
    **定稿形态**：核内 `:11` 的 CLI 措辞行**移出核内正文**，锚上移到 `:11` 位并改为**替换**该行（非追加）。
    CLI 值 = 现核内 `:11` 原文（与 `thincoder-cli/src/tools/question.md:11` 逐字同）· VSC 值 = 面板版 `Availability` 行（`thincoder-vscode/src/tools/question.md:11`）。
    验收：两端装配后 `Availability` 行各**恰一份**；核内正文零 CLI 措辞 `Availability` 行。
-5. **函数面 ④ 缺位 16 处**：§2.13.4「核内位 = 无」的行（#98 · #112 · #113 · #175 · #143 · #56 · #57 · #59 · #61 · #66 · #69 · #84 · #91 · #96 · #170 · #172）
-   ——其中 **#68 / #63（写路径）核内面已落**（2026-09-14 · `tools/write-path.mjs` · §2.13.5）——原为**阻断级**（不补即 VSC 丢编辑器径）；**S2 端侧接线仍待做**；
-   **#84（`agent-tools/batch-segment.mjs` 模型面直写）= 与写路径缝并列的 S2 前置门**（VSC 接核后同缺端侧承载——形态参 §2.13.5 注入缝）。
+5. **函数面 ④ 缺位 13 处**：§2.13.4「核内位 = 无」的行（#112 · #175 · #143 · #56 · #57 · #59 · #61 · #66 · #69 · #91 · #96 · #170 · #172）
+   ——**#98 / #113 / #84 已获核内位**（2026-09-14——统一守卫 / 提醒并集面 / 记账注入缝；§2.13.4 对应行已改判，不再计缺位）；其中 **#68 / #63（写路径）核内面已落**（2026-09-14 · `tools/write-path.mjs` · §2.13.5）——原为**阻断级**（不补即 VSC 丢编辑器径）；**S2 端侧接线仍待做**；
+   **#84（`agent-tools/batch-segment.mjs` 记账面）注入缝已落**（2026-09-14——`configureBatchSegment` / `resetBatchSegment` · 直写点保持）——与写路径缝并列的 S2 前置门，**核内面已闭合 · S2 端侧接线待做**。
 6. **`#99` 反向风险**：核内 `subagent` 动作枚举含 `panel`，VSC 端差要求「不注入该动作」——现无剔除缝 ⇒ S2 原样接线会让 VSC 凭空多一个动作（对外可见行为变化）。
 
 #### 2.13.7 验收（可机判——S2 落位与接线）
@@ -828,7 +827,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 3. **取值表完备（设计面）**：§2.13.2 每行「两端各填什么」非空且指向实存 `file:line`；空值行显式标「空」。
 4. **缝覆盖（核内可机判 · 已落）**：§2.13.5 验收② 的写路径结构机检——扫描域 `tools/**`；写 API 命中集合 = 白名单 `tools/write-path.mjs` + 已登记豁免 `tools/checklist-sync.mjs:88`
    （**命中集合逐档等值 fail-closed**——新增命中即红、豁免消失亦红；豁免登记位置 = `thincoder-core/test/write-path.test.mjs` 结构机检用例的 `EXEMPT` 表）；8 写点所在 5 档零豁免。
-   **落地读数（2026-09-14 · 批次档 §5）**：`tools/write-path.mjs` 171 行 · 8 写点全改道 · `thincoder-core/test/write-path.test.mjs` 250 行（6 用例）· 核内 `node --test` 96/96 · exit 0。
+   **落地读数（2026-09-14 · 批次档 §5——含 dest 面门禁补丁）**：`tools/write-path.mjs` **191 行** · 8 写点全改道 · `thincoder-core/test/write-path.test.mjs` **289 行（7 用例）** · 核内 `node --test` **116/116** · exit 0。
 5. **端侧行为（S2 可机判）**：两端各自装配用例断言本端取值（§2.13.2 验收列逐条）。
 6. **锚名集合与指针族（核内可机判）**：扫描对象 = `thincoder-core/prompts/` + `thincoder-core/tool-docs/`（本档内作为 as-of 引文的旧锚名不计）——
    锚名去重集合 = **13**；旧名 `agent-loop-pointer` **零命中**；`agent-loop-ptr-*` **恰 5 名 / 5 处**；VSC 侧端说明括注不出现在核内（与 `thincoder-core/test/prompt-files.test.mjs:107` 的反向断言同向）。
@@ -1163,5 +1162,9 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
   ② 状态标记收正（§2.13.5 形态头 · §2.13.4 #63 / #68 行 · §2.13.6 缺口 5——写路径缝已落 2026-09-14 · S2 端侧接线仍待做；缺位 18 → 16）+ §2.13.5 缺口成因段时态收正（3 行）；
   ③ §2.13.5 增「落地状态与补正登记」（`file_ops` `dest` 门禁 = 已裁定 · 待落；文案对齐口径 = S2 面；机检域范围注）· §2.13.4 #84 行加「与写路径缝并列的 S2 前置门」标；
   ④ §2.13.3 增写路径缝行（已物化缝 10 → 11）· §2.8.1 补登 S1 续轮两档（`agent/suspension.mjs` 234 / `i18n.mjs` 102；覆盖口径 9 → 11 档）；同轮 `docs/design/AGENT-LOOP.md` §2.3 行数收正 + §3.1 未并入项登记（VSC「仅 reasoning」分支）。
+- 2026-09-14（**设计登记滞后收正轮 · eng-designer**——承批次档 §5「S1 续轮第二批」未决 1 / 2）：
+  ① §2.13.4 **#98 / #113 / #84 三行核内位由「无」改判「有」**（统一守卫 / 提醒并集面 / 记账注入缝——逐行实核锚）；② §2.13.6 缺口 5 **缺位 16 → 13**（枚举同改）；
+  ③ §2.13.5 写路径读数按落态收正（**191 行** · 读数 **9/9/6** · 用例 **7** · 核内 **116/116**；**补正① 改「已落」**）；④ §2.13.3 两行锚位收正（onToken 发射点 · `configureWritePath` `:66`）。
+  同轮 `docs/design/AGENT-LOOP.md` §2.3 载体字段集补正（`_asyncQueue` / `_asyncTombstones` 两款 + 回写义务 + 不预置夹具——见该档变更记录）。
 
 

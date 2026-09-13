@@ -76,7 +76,7 @@
 
 | seam | 内容 | CLI 装配（S2） | VSC 装配（S2） |
 |---|---|---|---|
-| `carrier` | 池 / pending / 标志载体对象——字段集 = 核内异步面现行口径（`_asyncSubagents` · `_asyncAdvisors` · `_consultSessions` · `_pendingAsyncResults` · `_suspended`） | 传 `agent`（现形——核内已迁异步面同持此形） | 传 depth-0 `history`（现形——池 / pending / 标志全挂 history） |
+| `carrier` | 池 / pending / 标志载体对象——字段集 = 核内异步面现行口径（`_asyncSubagents` · `_asyncAdvisors` · `_consultSessions` · `_pendingAsyncResults` · `_suspended` · `_asyncQueue` · `_asyncTombstones`——2026-09-14 补正两款，见下「载体字段集与回写义务」） | 传 `agent`（现形——核内已迁异步面同持此形） | 传 depth-0 `history`（现形——池 / pending / 标志全挂 history） |
 | `runTurn(text, opts)` | 回合执行器（digest = `{ autoTurn: true, text: "" }`） | 注入 `runAgentTurn` 包装（函数级静态环消失——驱动器不再 import `agent-turn`） | 注入 `entry.runTurn`（现形） |
 | `abortSignal` | 会话中止信号（兜底监听） | `agent._sessionAbort.signal`（现形） | `susp.abort.signal`（现形） |
 | `hooks.onCounts(counts)` | 计数变化通知（`{ running, queued, pending, done }`） | 组合状态行文本 + `render()` + 1s tick 重绘（现 `backgroundStatusText` + `setInterval`） | `suspension` 消息 + `_publishTurnState`（现 `postSuspension`——文案由 webview 按 locale 组合） |
@@ -85,6 +85,15 @@
 | `hooks.freezeAll()` | 退出冻结（兜底残项） | `freezeAllSubTasks` + `sweepToolBlocks`（`thincoder-cli/src/tui/subagent-blocks.mjs` · `thincoder-cli/src/tui/tool-events.mjs`） | `postSuspensionEnd(panel, { freeze: true })`（现形） |
 | 唤醒 / 入槽 | `handle.pushInput(msg)` + `handle.wake()` | Enter → `pushInput`；Ctrl+C → 中止 | `routeUserTurn` 拒收 busy + `_chat` → `pushInput`（现形） |
 | 退出回执 | `{ reason: "idle" \| "aborted", residualInput }` | abort 残余 → `state.queue` + 提示行（现形） | abort 残余 → 退出后以普通回合消费（现形） |
+
+**载体字段集与回写义务（2026-09-14 补正轮定 · S2 接线前）**：
+
+- **字段集**（核内异步面现行口径——本次补正：原五字段 + 两款）= `_asyncSubagents` · `_asyncAdvisors` · `_consultSessions` · `_pendingAsyncResults` · `_suspended` · **`_asyncQueue`**（排队容器）· **`_asyncTombstones`**（终态墓碑）；容器类型：三池 / 墓碑 = `Map`，队列 / pending = 数组，`_suspended` = 布尔。
+- **回写义务（谁写 · 何时写）**：容器类字段（三池 / 队列 / pending / 墓碑）的新建 / 借用**只在首次使用的核内单点发生**，并与首次使用**同步**（先落容器后使用——无「已使用未回写」窗口）；写入落**父对象字段**，且须使容器经 `carrierField(parent, 字段)` 与 `parent[字段]` 两条读取路径命中**同一容器**（不另起分叉）。
+  - **借用规则**：父对象缺而载体（`history`）有 ⇒ **借用同一容器**（不另建）；两处皆无 ⇒ 就地新建。已按「借用 / 新建」落核的单点：pending = `parkAsyncPending`（`thincoder-core/agent-tools/async-settle.mjs:116-122`）· 墓碑 = `writeTombstone`（同档 `:61-72`）。
+  - **队列 / 三池新建点**（`thincoder-core/agent-tools/subagent-run.mjs:51-52` / `thincoder-core/agent-tools/escalate-async.mjs:149-150` 的 `??=`）**无借用步**——绑定不变式下不可观测（勘定注）。
+- **VSC 跨 run 存活面 = 端装配绑定不变式**（S2 装配义务——`_asyncQueue` / `_asyncTombstones` 同列）：run 起始对**全部 7 字段**成立——`history` 有容器 ⇒ 绑到 `agent` 字段；`history` 缺 ⇒ **先在 `history` 侧补建**再绑（新建回写载体的落点——否则新建落 per-run `agent`、跨 run 断裂）。
+- **验收**：见验收点 2 扩展（「不预置载体字段」夹具——机制须自建容器、同组断言与预置形同值）。
 
 **端特有面（④ 段——不归核）**：
 
@@ -95,7 +104,7 @@
 **验收点（S1 续轮）**：
 
 1. 落核 + 核测试状态机用例（假 carrier / 假 runTurn / 假 hooks 纯 Node 驱动——不加载端模块，T-C4 / N3）：池空直退 · pending 触发消化轮 · 用户输入优先 · abort 清池不注入 · idle 残余注入 · 唤醒栓双路（settle / wake）。
-2. **载体双夹具**：CLI 形（`agent` 字段对象）与 VSC 形（`history` 字段对象）各跑同组断言——证明「池载体按端注入」成立（机制对载体零预设，除上表字段集）。
+2. **载体双夹具**：CLI 形（`agent` 字段对象）与 VSC 形（`history` 字段对象）各跑同组断言——证明「池载体按端注入」成立（机制对载体零预设，除上表字段集）；**并各补一组「不预置载体字段」夹具**（池 / 队列 / pending / 墓碑全空缺）：机制须**自建容器**且同组断言与预置形同值（防「两端各自预置才碰巧能跑」——见上「载体字段集与回写义务」）。
 3. 核内零端名分支 / 零文案：`suspension.mjs` 无产品名、无状态行文案字面量（grep 零命中——契约 5 / 10）；零 TUI / 宿主依赖（N3——既有 `core-hygiene` 机检覆盖）。
 4. **依赖顺序（硬）**：本行与异步机械族的 VSC 侧融合（#98 / #101 / #154 等——清扫 / 计数读法 = 核内异步面单一实现的下游）同批或先后紧邻；先定异步面载体口径，再落本行（池队列表示随 #94 融合收敛——本行不重复裁决）。
 5. 行为面：核内零消费方阶段只测内核；S2 接线后按面内裁决口径验收（A10）；**S1 段两产品一行不改**（T-C12）。S2 时两端驱动档退化为**薄适配**（ctx 装配 + 端侧钩子 + 键位 / 消息路由）。
@@ -136,3 +145,4 @@
 - 2026-09-14（S1 收口轮）：新增 **§2.3 #184 核内形态**（注入面 / 端特有面 / 验收点——S1 续轮执行面）；§3.2 丁组 **D2 裁定状态收正**（已裁 · 按建议）；§2 两处裸 basename 锚补路径前缀（`thincoder-vscode/src/config-io.mjs:319`——机检修复）。
 - 2026-09-14（markdown 面小收正轮）：§1 归属表 `helpers.mjs` 补路径前缀（`src/agent/helpers.mjs`——与 `src/mcp/helpers.mjs` 同名不同物，**消除歧义不改判据**）。
 - 2026-09-14（写路径缝落地补正轮 · eng-designer）：§2.3 核内模块行数收正（`thincoder-core/agent/suspension.mjs` 已落 **234 行**——原估 +170±40 被实际取代）；§3.1 增「**未并入项登记**」（A7 / #78：VSC「仅 reasoning ⇒ 视为 content」分支未并入核内——非偏离，登记项）。
+- 2026-09-14（载体字段集补正轮 · eng-designer——S2 接线前）：§2.3 carrier 行字段集补两款（`_asyncQueue`（排队容器）· `_asyncTombstones`（终态墓碑））；新增「载体字段集与回写义务」块（回写义务 · 谁写 / 何时写 · VSC 绑定不变式覆盖全 7 字段 · 队列 / 池无借用步勘定注）；验收点 2 扩「不预置载体字段」夹具。
