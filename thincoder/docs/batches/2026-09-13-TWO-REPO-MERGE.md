@@ -883,7 +883,10 @@ S5 删除 `prompts-mirror-anchors.test.mjs:26` 使 `THINCODER_CLI_ROOT` **失去
   **执行进度（2026-09-13 回填）**：
   ① **合并仓已推送对外生效**——`git push origin` / `github main` 两远端 `3d50068b..fbf9e8a2`（**干净快进**，远端零独有提交；tag 71/71/71 齐）。
   ② **旧仓退役说明已推**——README 顶部横幅（`thincoder-vscode` 已并入 `thincoder` 单仓，指两远端 URL），两远端 `40409b4..6d07977` ✓。
-  ③ **GitHub 归档已完成（2026-09-13）**——先清 issue 再冻结：旧仓 #6（子代理被杀/修复未同步）与 #7（行内代码未转义）以 `completed` 关闭并各附证据评论（四子条测试锁 T-D1..T-D13 · `panel-messages.mjs:65-67` · `md.js:106/:45/:61/:147` + 回归用例 `md-render-escape.test.mjs:38-45`）；#8（阅读强制跳底/Thinking 默认展开）与 #5（Win10 界面异常 · 判定为无法判定）以 `not_planned` 关闭并**迁成合并仓新单 `thincoder#7` / `thincoder#8`**（正文带现态 `file:line` 与与需求档 F-W2 相抵说明）；随后写仓库描述、再置 `archived=true`；**独立复核**（不带凭据走公开 API）确认 `archived=true` + 描述已变。
+  ③ **GitHub 归档已完成（2026-09-13）**——先清 issue 再冻结：
+     · 旧仓 #6（子代理被杀 / 修复未同步）与 #7（行内代码未转义）→ 以 `completed` 关闭，各附证据评论（四子条测试锁 T-D1..T-D13 · `panel-messages.mjs:65-67` · `md.js:106/:45/:61/:147` + 回归用例 `md-render-escape.test.mjs:38-45`）。
+     · #8（阅读强制跳底 / Thinking 默认展开）与 #5（Win10 界面异常 · 判定无法判定）→ 以 `not_planned` 关闭并**迁成合并仓新单 `thincoder#7` / `thincoder#8`**（正文带现态 `file:line` 与需求档 F-W2 相抵说明）。
+     · 随后写仓库描述、再置 `archived=true`；**独立复核**（不带凭据走公开 API）确认 `archived=true` + 描述已变。
   **凭据纪律（如实记）**：写操作经 `git credential fill` 取用凭据并**仅在管道内传递**（不回显、不落盘、不入档），只打印 API 结果字段。
   ④ Gitee——**必须网页操作**（已实核：Gitee Open API 仓库更新参数集**无 `status` 字段**——该块参数为 title / homepage / has_issues / can_comment / private / path / default_branch 等，不涉暂停 / 关闭）⇒ 待用户在该仓「仓库设置」置「关闭」（建议关闭而非暂停：help.gitee.com 该页对「暂停态能否查看 / Pull」自相矛盾）。
   **顺序依赖（已实核）**：退役说明**必须先于归档**推送（归档后不可写）——已按此序执行；而退役说明又必须先有合并仓在线（否则指向不存在的新家）——已按此序执行。
