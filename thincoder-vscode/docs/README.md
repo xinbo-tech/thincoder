@@ -13,14 +13,14 @@
 | 4 | `docs/requirements/` | 需求层（**17 档**——含 C 桶接收 `AGENT-LOOP`） | 地图与登记规则 = `docs/requirements/README.md`（本档不重述）；36 档对位表住该档 |
 | 5 | `docs/design/` | 设计层（顶层板块档 + `README.md` 地图） | 板块登记与归属规则 = `docs/design/README.md`（本档不重述） |
 | 6 | `docs/design/prompts/`（中文权威）+ `src/prompts/`（英文落地） | 提示词双源（各 15 档对位） | 机制权威 = 本端双源；差异登记 = `docs/design/README.md`「镜像差异表」 |
-| 7 | `docs/batches/` | 批次档（`<批>-<主题>.md`；各仓自持） | 六段 append-only、一段一作者；批次档机制见 `ENGINEERING-MODE.md` |
+| 7 | `docs/batches/` | 批次档（`<批>-<主题>.md`；产品侧自持） | 六段 append-only、一段一作者；批次档机制见 `ENGINEERING-MODE.md` |
 | 8 | `docs/design/_archive/` | 设计归档（退役 / 历史快照） | 归档区豁免宽度与一致性机检（历史快照不追改） |
 | 9 | `docs/guides/` | **不建**（端差——已登记） | 理由：本仓无「ACP / 终端 IDE 接入」类面（对位表 ③ 行）；接入 / 使用面已住本档与 `docs/design/WEBVIEW.md`，发布面住 `docs/design/RELEASE.md`。**触发**：出现首个「面向用户的操作指南」主题时建层并回本表登记 |
 | 10 | 本仓独有档 | `docs/CAPABILITY_GAP.md` · `docs/COMPETITIVE_ANALYSIS.md` | **保留**（本仓独有，不得因对位而删） |
 
 ## 三条横切规则（摘要——详文不在此重述）
 
-1. **各仓自持**：需求档 / 设计档 / 批次档 / 台账一律各仓记各仓的——禁跨仓写需求、禁跨仓指针（他仓档以「名称（仓别）§N」形态引用）。
+1. **文档自持**：需求档 / 设计档 / 批次档 / 台账一律按产品归属各记各的——原跨产品写需求 / 指针禁令随两仓合并退役（批 3），指针面收窄为仓内可解析；对端产品档以「名称（仓别）§N」形态引用。
    机制权威 = `docs/requirements/ENGINEERING-MODE.md`；提示词层 = `src/prompts/discipline-engineering.md`「文档与台账自持」节。
 2. **人类可读**：无 >300 字符单行（表格行豁免）；markdown 结构正确；变更记录折叠为一行注记。
    批量检查：`node scripts/check-doc-width.mjs`（扫描域 = `docs/design` + `docs/requirements` + `docs/batches`；`_archive/` 豁免）。
@@ -34,5 +34,6 @@
 
 ## 变更记录
 
+- 2026-09-13：**两仓合并批 3（S6）纪律句收窄**——横切规则 1 与层 7 行按仓内口径改写（原跨产品写需求 / 指针禁令收窄为仓内可解析——依据 = `TWO-REPO-MERGE（CLI 仓·设计）`§2.4 R12）。
 - 2026-09-12：建档（LEDGER-SELF-CONTAINED 批——本仓文档地图首建；层清单十行逐行登记，含 `docs/guides/` 「不建 + 理由 + 触发」端差行）。
 - 2026-09-12（C 桶接收轮）：层 4 需求层 **16 → 17 档**（`AGENT-LOOP.md` 新建——自对端仓 `AGENT-LOOP（CLI 仓·需求）` 的 VSC 托管族迁入 7 节）。

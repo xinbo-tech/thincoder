@@ -105,7 +105,7 @@
 | R13 | 「每仓一轮」流程口径 | 两仓 `src/prompts/discipline-engineering.md`（「跨仓批」条——CLI `:123` / VSC `:127`，as-of）及 `docs/design/prompts/` 镜像副本（各 `:98`） | 失去对象 | 改写（VSC 侧 T-DC16 条文锚随字面同步） |
 | R14 | 「禁跨仓 import」纪律句 | 两仓 `docs/requirements/ENGINEERING-MODE.md`（CLI §1.17 N1「语义同源·原文自持——不作跨仓 import」`:795`；`ENGINEERING-MODE（VSC 仓）§1` N5「不跨仓依赖」`:78`——as-of）；设计档同源句（CLI `docs/design/ENGINEERING-MODE.md` as-of `:698`/`:810`） | 单仓内 import 合法 | 删除禁令 |
 | R15 | 端差登记 | **纪律句级——无独立脚本落点**（`scripts/` 实测零判据）：VSC `docs/requirements/AGENT-LOOP.md:302（VSC 仓）` N-CL4「端差逐条登记不静默」；登记面 = `docs/design/README.md（VSC 仓）`「镜像差异表」节 + 两仓设计档端差登记节（如 CLI `docs/design/TESTING.md` §11.6） | 跨仓登记语境失去对象（登记面收为产品侧对位）；`（CLI 侧）`注记按产品侧语义存续——V1 豁免**保留**（§2.5 / R8） | 纪律句级——随 R12/R13 同批改写；**验收 = T-M27**（检索式——三落点） |
-| R16 | 跨仓 fail-closed 源在位守卫（T-CI-11——兄弟仓 CLI 源在位） | VSC `test/context-parity.test.mjs（VSC 仓）`（:3 计数句 14 条 · :15-17 头注跨仓自述 · :37 `CLI_ROOT` 兄弟解析 `join(VSC_ROOT, "..", "thincoder")` + `THINCODER_CLI_ROOT` 覆盖口 · :368-374 T-CI-11 整条——:371 自指断言 `notStrictEqual(CLI_ROOT, VSC_ROOT)` · :372-373 `cliSetup` 存在性 fail-closed） | 合并后 `join(VSC_ROOT, "..", "thincoder")` 恰解析到**仓内**子目录 `<合并仓根>/thincoder` ⇒ 两断言**恒真、守卫空转且静默绿**——与 R10 同型（对端发现 + 自指防护 + 缺仓 fail-closed 全要素；§2.4 尾注「不报红」类） | **整段退役**（R10 同款范式；实施批 = S4）——删 :3 计数句（14 → 13 条；T-CI-1 ~ T-CI-10）· :15-17 头注跨仓句 · :21 import 同步（`existsSync` 无他处消费者）· :37 解析（含 `THINCODER_CLI_ROOT` 口）· :368-374（banner + 整条用例）；**`cliSetup` 存在性断言不设单仓版**——其唯一消费者（跨仓序锚读取）已于 2026-09-12 PROSE-ANCHOR-RETIRE 退役，「兄弟产品内部文件存在」改写版属跨产品内部耦合（与 F2 互不触发相抵）、无同仓意义；**连带文档 = T-CI-11 引用行退场注记**——口径 = **按 T-CI-11 语义面扫描（含 §17.9 / 跨仓只读叙述段），非按坐标清单**；VSC `docs/design/AGENT-LOOP.md（VSC 仓）` `:48` 变更记录行——已落退场注记（收正轮——原列 as-of 豁免）；**代表点** = VSC `docs/design/AGENT-LOOP.md（VSC 仓）` `:1278-1284`（跨仓只读语义段）· `:1302`（§17.9 边界句）· §17 组（:1242 · :1276 · :1294 · :1298 · :1332 · :1334——as-of）· VSC `docs/design/TESTING.md:129（VSC 仓）` · CLI `docs/requirements/AGENT-LOOP.md:306` · CLI `docs/requirements/PROMPT-SYSTEM.md:337（+ :413）`——V5 注记面；**已随收正轮提前落地**（VSC 侧 7 处——§2.5 尾条；CLI 侧代表点随 S6 语义面复核）） |
+| R16 | 跨仓 fail-closed 源在位守卫（T-CI-11——兄弟仓 CLI 源在位） | VSC `test/context-parity.test.mjs（VSC 仓）`（:3 计数句 14 条 · :15-17 头注跨仓自述 · :37 `CLI_ROOT` 兄弟解析 `join(VSC_ROOT, "..", "thincoder")` + `THINCODER_CLI_ROOT` 覆盖口 · :368-374 T-CI-11 整条——:371 自指断言 `notStrictEqual(CLI_ROOT, VSC_ROOT)` · :372-373 `cliSetup` 存在性 fail-closed） | 合并后 `join(VSC_ROOT, "..", "thincoder")` 恰解析到**仓内**子目录 `<合并仓根>/thincoder` ⇒ 两断言**恒真、守卫空转且静默绿**——与 R10 同型（对端发现 + 自指防护 + 缺仓 fail-closed 全要素；§2.4 尾注「不报红」类） | **整段退役**（R10 同款范式；实施批 = S4）——删 :3 计数句（14 → 13 条；T-CI-1 ~ T-CI-10）· :15-17 头注跨仓句 · :21 import 同步（`existsSync` 无他处消费者）· :37 解析（含 `THINCODER_CLI_ROOT` 口）· :368-374（banner + 整条用例）；**`cliSetup` 存在性断言不设单仓版**——其唯一消费者（跨仓序锚读取）已于 2026-09-12 PROSE-ANCHOR-RETIRE 退役，「兄弟产品内部文件存在」改写版属跨产品内部耦合（与 F2 互不触发相抵）、无同仓意义；**连带文档 = T-CI-11 引用行退场注记**——口径 = **按 T-CI-11 语义面扫描（含 §17.9 / 跨仓只读叙述段），非按坐标清单**；VSC `docs/design/AGENT-LOOP.md（VSC 仓）` `:48` 变更记录行——已落退场注记（收正轮——原列 as-of 豁免）；**代表点** = VSC `docs/design/AGENT-LOOP.md（VSC 仓）` `:1278-1284`（跨仓只读语义段）· `:1302`（§17.9 边界句）· §17 组（:1242 · :1276 · :1294 · :1298 · :1332 · :1334——as-of）· VSC `docs/design/TESTING.md:129（VSC 仓）` · CLI `docs/requirements/AGENT-LOOP.md:306` · CLI `docs/requirements/PROMPT-SYSTEM.md:337（+ :413）`——V5 注记面；**已随收正轮提前落地**（VSC 侧 7 处——§2.5 尾条；CLI 侧代表点 3 处——已随批 3 / S6 落地，同 §2.5 尾条）） |
 
 **R1 / R7 是本次退役中最隐蔽的两条**：它们不是"失效"，而是**反向生效**——合并后机制继续运行，但结论全错，
 且**不产生任何红**（R10 / R16 所示：测试侧守卫空转、语义保证在无人察觉中消失）。这类静默退化是本板块必须整体删除、而非逐条修补判据的根本原因。
@@ -158,8 +158,8 @@
   该面原列 S6（§2.15——「R16 连带文档面」）——**已随本收正轮提前落地**，S6 只保留复跑复核；含 `:48` 变更记录行（原列 as-of 豁免——实况落退场注记）。
 - **台账单仓化面（19 处 A3）**——VSC 文档内 `docs/TODO.md` / `docs/TODO-archive.md` 引用行（跨 11 档；归属 = §2.6 台账单仓化的文档收尾）；注记 = 「产品级台账已退役（台账单仓化：现体 = 仓根 `docs/TODO.md`）」。
 - **终态实证（2026-09-13 复跑）**：VSC `npm run doc:check` = **exit 0**（41 → 0）；VSC 测试 doc-anchors 档零失败（T-DC6② 复锁 = 0）；仓根三机检保持全绿——复跑原文见批次档 §2 收正轮补记。
-- **仍留 S6（无门禁红——不动作）**：本板块两档（本档 + 需求档）R 表 / §2.14 的六档行号锚**语义注记**（批 2 §5 发现 #3）——机器侧由 `MERGED_SCRIPTS` 并入映射兜底（V5 悬空 0）；随 S6 文档批复核并批（归属不变）。
-  另：R16 面 CLI 侧代表点（CLI `docs/requirements/AGENT-LOOP.md:306` · `PROMPT-SYSTEM.md:337（+ :413）`）——无门禁红（V5 悬空 0）；语义注记随 S6（与 N-Q3 / N-P1 登记豁免句同批）。
+- **仍留 S6（无门禁红）**：本板块两档（本档 + 需求档）R 表 / §2.14 的六档行号锚**语义注记**（批 2 §5 发现 #3）——机器侧由 `MERGED_SCRIPTS` 并入映射兜底（V5 悬空 0）；**随批 3 / S6 复核：本轮未动作（任务清单外）——保留原归属、待父侧裁定**。
+  另：R16 面 CLI 侧代表点（CLI `docs/requirements/AGENT-LOOP.md:306` · `PROMPT-SYSTEM.md:337（+ :413）`）——**已随批 3 / S6 落地**（退场注记落位 = 该两档 T-CI-11 引用行，3 处；V5 悬空 0）。
 
 ### 2.6 文档层处置（F5 / N6 / B4 / B5）
 
@@ -307,9 +307,9 @@ phase 2 目标 = 「一个核 + 两个薄壳」：共享核心真正可 `import`
 | **产品代码** | **零改动**（F7 / B1） |
 
 > **行数口径（2026-09-13 第 2 修正轮）**：本表行数一律 **`wc -l`**（= 换行符计数；与编辑器「末行」显示差 1 属末尾空行所致——非行数变更）。
-> **>300 行档拆分审视（2026-09-13）**：测试档 CLI `test/doc-consistency.test.mjs`（309）· `test/ledger-surface.test.mjs`（333）·
-> VSC `test/doc-anchors.test.mjs（VSC 仓）`（362）· VSC `test/context-parity.test.mjs（VSC 仓）`（364——批 2 后实测；终态仍 >300，归后续批复核）——
-> 本批均净删向或 ±0、不新增结构体，**本批不拆**；终态若仍 >300（软线），按既有拆分触发（切法 = 用例组二分 · 判据 = D18 四条）归后续批复核。六档机检脚本为删除项（拆分无对象）。
+> **>300 行档拆分审视（2026-09-13——批 3 复核实测收正）**：测试档 CLI `test/doc-consistency.test.mjs`（309 → **265**——已回落 300 内、出列）· `test/ledger-surface.test.mjs`（333 → **334**）·
+> VSC `test/doc-anchors.test.mjs（VSC 仓）`（362 → **329**）· VSC `test/context-parity.test.mjs（VSC 仓）`（364——批 2 后实测；仍 >300）——
+> 口径 = `wc -l`（批 3 实测）；均净删向或 ±0、不新增结构体，**本轮不拆**；余三档仍 >300（软线），按既有拆分触发（切法 = 用例组二分 · 判据 = D18 四条）归后续触碰批复审。六档机检脚本为删除项（拆分无对象）。
 > **统一脚本拆分与行数——实测落地（R24a——2026-09-13 收正轮；数字收正轮复核实测）**：统一脚本实测落为 **8 档**（批 2 补做轮落地；切点与定名依据见批次档 §5 批 2 补做轮），
 > 全部 ≤300 行（`wc -l` 口径）：`doc-anchors.mjs`（90——入口 / 域驱动 / 报告）· `doc-anchors-v5.mjs`（255——V5 锚引擎）· `doc-anchors-core.mjs`（231——VSC 锚引擎）·
 > `doc-anchors-targets.mjs`（139——采集面）· `check-doc-width.mjs`（109——入口 / 报告 + 宽度判据）· `check-doc-width-core.mjs`（286——判据核：域驱动 + 判据 + 基线；272 → 286——V1 跨域隔离修复 +14）·
@@ -397,6 +397,8 @@ phase 2 目标 = 「一个核 + 两个薄壳」：共享核心真正可 `import`
 ---
 
 ## 变更记录
+
+- 2026-09-13：**批 3（S6）· 纪律句改写（文档面）落地**——R12 / R14 / R15 / R16-CLI 侧四处落位（两产品 `docs/README.md` 自持段 · 两引擎需求档自持节 · 端差三落点 · T-CI-11 退场注记 3 处）；§2.14 拆分审视块按 `wc -l` 复核实测收正（309 → 265 出列 · 333 → 334 · 362 → 329 · 364 不变）；§2.5 尾条 / R16 行状态同步；三机检全域绿（2026-09-13 复跑）。
 
 - 2026-09-13：**需求层拆档（结构搬迁——零语义变更）**——需求层（总体需求 / 功能性需求 F1–F7 / 非功能性需求 N1–N6 / 与既有需求的关系）
   迁出为 `../requirements/TWO-REPO-MERGE.md`（板块镜像形态——`docs/README.md` §3.1 / §3.2 / §4 首注「新老划断」）；本档保留**设计层 + 测试层**

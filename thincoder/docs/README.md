@@ -92,8 +92,8 @@ docs/
 - **无 >300 字符单行**（整节/表/规则不得压成一行）——**表格行豁免**：markdown 表格行结构性不可折行，超宽表格行不计入宽度检查（建议就近折行或表下补充——非阻断）
 - **markdown 结构正确**（标题/表格/代码块不被吞进正文，空行隔离节）
 - **变更记录折叠**（新变更落一行注记，不堆逐批需求/评审/测试流水账）
-- **跨仓引用形态**：引用他仓文档不得写 `X.md` §N 形态（V1 按本仓 basename 解析——**basename 不在本仓扫描域时**恒判 `unknown-doc`；同名 basename 按本仓档解析、可能 `no-section` 误报甚至以错档通过）——写「名称（仓别）§N」（如 `WEBVIEW（VSC 仓）§5`）：去 `.md` 后缀、去路径前缀（跨仓引用 = V1 域外）
-- **自持边界（条目与归属）**：台账 / 批次档 / 需求只收本仓事项——禁跨仓指针（含本产品多端互引）；正文引用他仓用上条规范形态。一句话：**正文可以指他仓（规范形态），条目与归属不行**（两轴并列——权威 = `requirements/ENGINEERING-MODE.md` §1.19）
+- **跨产品引用形态**：引用对端产品文档不得写 `X.md` §N 形态（V1 按本域 basename 解析——**basename 不在本域时**恒判 `unknown-doc`；同名 basename 按本域档解析、可能 `no-section` 误报甚至以错档通过）——写「名称（仓别）§N」（如 `WEBVIEW（VSC 仓）§5`）：去 `.md` 后缀、去路径前缀（跨产品引用 = V1 域外）
+- **自持边界（条目与归属）**：台账 / 批次档 / 需求只收本仓事项——指针须在仓内可解析（原跨产品指针禁令已随两仓合并退役——批 3）；正文引用对端产品用上条规范形态。一句话：**正文可以指对端（规范形态），条目与归属按仓内可解析**（两轴并列——权威 = `requirements/ENGINEERING-MODE.md` §1.19）
 - **文档锚一致性（V5）**：现行档内的**事实锚**（用例号 / 文件路径 / 符号）必须对得上实装——悬空即报（报告态 → 收紧后阈值 0）；
   **已退场 / 已废的锚必须带注记 + 来源指针**（标记集与指针形态 = 设计档 `design/ENGINEERING-MODE.md` §2.32.3；需求 = `requirements/ENGINEERING-MODE.md` §1.20）。
 
@@ -111,7 +111,7 @@ docs/
 
 **本仓特有**：跨批检索由 `TODO.md` 需求池台账做索引（每条需求 → 哪批谈的 + 当前状态），而非翻遍批次档。
 
-**各仓自持（各仓记各仓的）**：批次档与台账同规——本仓批次档只登记本仓范围；缺失的文档层就地补建，不得以「另一仓已有」「避免重复」为由省略本仓文档（权威 = `requirements/ENGINEERING-MODE.md` §1.19）。
+**文档自持（各产品记各产品的）**：批次档与台账同规——批次档只登记本批范围；缺失的文档层就地补建，不得以「别处已有」「避免重复」为由省略（权威 = `requirements/ENGINEERING-MODE.md` §1.19；两仓合并批 3 收窄为仓内口径，「各仓自持」隔离条款已退役——`design/TWO-REPO-MERGE.md` §2.4 R12）。
 
 ### 3.9 需求池（本仓路径）
 
@@ -179,7 +179,7 @@ docs/
 | 提示词架构（历史） | ~~`_archive/PROMPT-DECOUPLING.md`~~ | 已被 PROMPT-SYSTEM 蓝图 + 施工①②③取代 |
 | 路线图/评估/竞评（历史） | `_archive/ROADMAP-0.9.0.md`、`_archive/EVALUATION.md`、`_archive/COMPETITIVE-CLI-2026.md`、`_archive/KIMI-CODE-PROMPT-ANALYSIS.md`、`_archive/TTSR-ANALYSIS.md`、`_archive/EDIT-TOOL-*.md` | 时点数据/已被取代——勿引用为现状 |
 | 文档基建（本批） | `_archive/DOC-REORG.md` | 2026-09-10 文档目录结构重组施工设计——**已交付入档**（批尾 T1-T5 同日完成） |
-| 两仓合并 | `requirements/TWO-REPO-MERGE.md`（需求）+ `design/TWO-REPO-MERGE.md`（设计+测试） | 2026-09-13 建档（**设计待评审，未实施**）——CLI 与 VSC 收入单一 git 仓、各占子目录；跨仓机制全线退役。架构级机制档（功能性需求以机制约束规格句表述——§3.3 规则 6）；**phase 2 核心统一只留通道不实施** |
+| 两仓合并 | `requirements/TWO-REPO-MERGE.md`（需求）+ `design/TWO-REPO-MERGE.md`（设计+测试） | 2026-09-13 建档（**设计评审通过 · 已批准——批 1–3 实施中**）——CLI 与 VSC 收入单一 git 仓、各占子目录；原有两仓间机制全线退役。架构级机制档（功能性需求以机制约束规格句表述——§3.3 规则 6）；**phase 2 核心统一只留通道不实施** |
 | 在途设计档（未实施） | `design/POOL-CONFIG-UNIFIED.md`、`design/QUICKFIX-BATCH-3.md`、`design/SUBAGENT-ID-COUNTER-AGENT.md` | 设计待评审——未实施，不适用冻结 |
 
 ### 4.1 需求层文档（`requirements/`）
@@ -220,7 +220,7 @@ docs/
 | `requirements/TUI-TOOL-OUTPUT.md` | TUI 工具输出（行间区块显示） |
 | `requirements/TUI.md` | TUI（终端界面：渲染/滚动/输入/会话显示） |
 | `requirements/TURN-CAP-CONTINUE.md` | Agent 循环 · 撞墙继续（轮数预算耗尽后的续跑） |
-| `requirements/TWO-REPO-MERGE.md` | 两仓合并（CLI 与 VSC 收入单一 git 仓、各占子目录——跨仓机制全线退役） |
+| `requirements/TWO-REPO-MERGE.md` | 两仓合并（CLI 与 VSC 收入单一 git 仓、各占子目录——原有两仓间机制全线退役） |
 | `requirements/VERIFY-REDESIGN.md` | verify 重构（声明式完成前门） |
 
 ## 5. 归属判定（写档前四问）
@@ -232,9 +232,10 @@ docs/
 
 ## 变更记录
 
-- 2026-09-13：新增「两仓合并」板块——`requirements/TWO-REPO-MERGE.md`（需求）+ `design/TWO-REPO-MERGE.md`（设计+测试）——phase 1 目录合并（单一 git 仓 + 两产品子目录；跨仓机制全线退役）。同日按 §3.2 板块镜像 + §4 首注「新老划断」拆出需求层（原三层同档）——登记 §4 / §4.1。
+- 2026-09-13：**两仓合并批 3（S6）纪律句收窄**——§3.7 引用形态 / 自持边界与 §3.8 自持段按仓内口径改写（原跨产品指针禁令收窄为仓内可解析——依据 = `design/TWO-REPO-MERGE.md` §2.4 R12）。
+- 2026-09-13：新增「两仓合并」板块——`requirements/TWO-REPO-MERGE.md`（需求）+ `design/TWO-REPO-MERGE.md`（设计+测试）——phase 1 目录合并（单一 git 仓 + 两产品子目录；原有两仓间机制全线退役）。同日按 §3.2 板块镜像 + §4 首注「新老划断」拆出需求层（原三层同档）——登记 §4 / §4.1。
 
-- 2026-09-12：§3.7 / §3.8 补自持与互引规范句（LEDGER-SELF-CONTAINED 批——各仓自持：条目与归属不带跨仓指针 + 批次档同规）。
+- 2026-09-12：§3.7 / §3.8 补自持与互引规范句（LEDGER-SELF-CONTAINED 批——文档自持：条目与归属不带跨产品指针 + 批次档同规）。
 - 2026-09-11：新增「崩溃捕获与取证」板块——`requirements/CRASH-REPORTS.md` + `design/CRASH-REPORTS.md`（TUI-OOM-FORENSICS 批建档；R25 / TUI-STDERR-CAPTURE 归宿落定）——登记 §4 / §4.1。
 - 2026-09-10：**文档目录结构重组**（DOC-REORG 批）——35 档批次/变更史档入 `design/_archive/`（正文冻结）；
   建 `requirements/`（含说明档）；地图自 `design/README.md` 迁入本文件（§1 目录/§2 档位分类/§3 规范/§4 登记表/§5 四问）。

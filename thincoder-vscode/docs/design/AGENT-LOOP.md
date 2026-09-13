@@ -1276,8 +1276,8 @@ VSC 现序违反了它（`:448` time → `:450` pushInjections）。**取「time
 | T-CI-11 | 正常（双端对照） | 跨仓只读兄弟仓 （CLI 仓）`src/agent/setup.mjs`（`THINCODER_CLI_ROOT` 可覆盖；缺仓/异位 = fail-closed——显式失败不 skip；修正轮 #1） | 序表各 CLI 锚字面 + **文件内出现序**与 §17.4 单调一致检测——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；现体 = 兄弟仓 CLI 源在位（缺仓/异位 = fail-closed 显式失败） | F-Q13 |
 
 **跨仓只读语义（修正轮 #1——父侧裁定：保留 fail-closed 并写明；N-Q3/N-P1 登记豁免随附；T-CI-11 已退场——整删——两仓合并批 2；删除记录 = 2026-09-13-TWO-REPO-MERGE §5）**：T-CI-11 读
-**兄弟仓**（相对本仓根 `../thincoder`；环境 = 两仓并排 checkout（teamcode 工作区）；`THINCODER_CLI_ROOT` 可
-覆盖——同 `test/prompts-mirror-anchors.test.mjs:21,30-34` 同款）。**缺仓/异位 = fail-closed（显式失败，
+**兄弟仓**（相对本仓根 `../thincoder`；环境 = 两仓并排 checkout（teamcode 工作区）；`THINCODER_CLI_ROOT` 可覆盖（**该口已退场——两仓合并批 2；删除记录 = 2026-09-13-TWO-REPO-MERGE §5**）——同
+`test/prompts-mirror-anchors.test.mjs:21,30-34` 同款）。**缺仓/异位 = fail-closed（显式失败，
 不 skip）**——理由：skip 会让「CLI 序变 → VSC 红」的漂移检测静默失效（本测试是双端序面的唯一机验锚；真空
 通过比红更坏）。该只读检验属**交付期对照面**——产品/运行链路零跨仓依赖（无 import / 无同步脚本 / 无共享
 模块）不变。需求侧登记补充 = `AGENT-LOOP（CLI 仓）§13.3` N-Q3 豁免句 + `PROMPT-SYSTEM（CLI 仓）§9.3`
