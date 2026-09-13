@@ -369,6 +369,12 @@
 
 **裁定** ✓：① **逻辑面**（`src/markdown.mjs`）= **共享** ✓ ⇒ 归核（S1 已落 ✓ 取法正确 ✓）；② **渲染面** = **端特有** ✓（两端各自实现、互不合并、互不追赶 ✓）；③ 设计档 **#182 行须收正**（点名改 `tui/markdown.mjs` ✓ + 顶层 `markdown.mjs` 从 ④ 列表移出、归 S1 ✓）。
 
+### 追加裁定（注入位清单 · 缺口 2 = 选项① · 2026-09-14）
+
+**用户原话**：「1」✓ ⇒ 锚 `agent-loop-pointer` 采**选项①** ✓：**收窄成「整条跳端指针」+ 一处一锚名** ✓（5 处 → 5 个明确锚 ✓）——理由 = 精确 ✓ 且**模型可见指令零变化** ✓（选项②会改模型可见文本 ✗，不值 ✓）。
+
+**同轮裁定的其余处置** ✓：缺口 3（`discipline-normal-finish` 注入后与核内正文**重复三段** ✗）· 缺口 4（`question-ui-face` ⇒ VSC 侧会看到**两条 `Availability` 行** ✗）⇒ **设计面收正**；缺口 5（**写路径缝** ✗ = **阻断级** ✓）⇒ 属**已批准设计的落实** ✓（设计早写「编辑器编辑径按端注入」✓，§2.13.5 给了形态 ✓）⇒ **排一轮做实** ✓；缺口 6（#99 反向风险 ✗）⇒ 登记 · S2 处置 ✓。
+
 > 本节之后由 eng-designer 接手写 §2 批次任务与需求/设计档；设计就绪后由**用户发起**设计评审（发起权在用户）。
 
 ---
@@ -1887,6 +1893,40 @@
 2. **锚的消费方（替换实现）落点**：核内替换 vs 端侧装配替换——本表只给「消费方 = 端侧装配层」的口径（承契约 10「拼装点在产品装配层」），实现位置与时机属 S2 设计面。
 3. **缺口 5 的函数面缺位（18 处）**（含阻断级 #68 / #63 写路径）——属 S2 接线面，本批只登记。
 
+### 注入位收正轮 · 设计面（2026-09-14 · eng-designer）
+
+**段位**：当前段 = **S2 之前**（设计面收口）；S2 / S3 动作零执行。本轮**只改设计档**——不写代码、不动 `thincoder-core/**`、未 commit（父侧统一）、未发起评审、未碰台账。
+
+**依据** = 本档 §1「追加裁定（注入位清单 · 缺口 2 = 选项① · 2026-09-14）」+ 父侧派单三件（缺口 2 落采选项① / 缺口 3 去重形态 / 缺口 4 去重形态）。
+
+**本批条目（覆盖面——供三方条目一致对账）**
+
+| # | 条目 | 设计档落点 | 状态 |
+|---|---|---|---|
+| 1 | 缺口 2 = 选项① 落采：`agent-loop-pointer` 单锚（5 处）→ **5 个独立锚** `agent-loop-ptr-*`，逐锚「出现处 · 两端取值 · 验收」**定稿** | `docs/design/CORE-UNIFICATION.md` §2.13.2 | 已落 |
+| 2 | 锚名计数收正 **9 → 13**（出现次数 15 不变） | 同档 §2.13.2 标题 · §2.13.6 缺口 1 | 已落 |
+| 3 | 核内**节号删除坐标**登记（S2 动作面——本轮不改核） | 同档 §2.13.2 表后「`agent-loop` 指针族 · 核内须连带删节号的坐标」 | 已落 |
+| 4 | 缺口 3 去重形态（`discipline-normal-finish`：哪边留 / 哪边删 / 注入什么） | 同档 §2.13.2 行 + §2.13.6 缺口 3 | 已落 |
+| 5 | 缺口 4 去重形态（`question-ui-face` ⇒ 改「替换」非「追加」） | 同档 §2.13.2 行 + §2.13.6 缺口 4 | 已落 |
+| 6 | 验收增条：锚名集合与指针族（核内可机判） | 同档 §2.13.7 第 6 条 | 已落 |
+
+**本批明确不做（出批）**：核内锚改名 / 删节号 / 移行（**S2 动作**）· 替换实现与端侧接线（S2）· 写入路径缝代码 · `thincoder-core/**` 任何改动 · §2.13.3 / §2.13.4 / §2.13.5 既有行文改动 · S2 / S3 的一切动作。
+
+**受影响文件（本轮——行数 `wc -l` 口径，改前 = HEAD）**
+
+| 档 | 改前 | 改后 | Δ | 变更点 |
+|---|---|---|---|---|
+| `docs/design/CORE-UNIFICATION.md` | 1109 | **1143** | +34 | §2.13.2（锚族 5 行 + 表后坐标块 + 取值表状态注）· §2.13.6（缺口 2 / 3 / 4 标「已定」+ 缺口 1 计数 9→13）· §2.13.7（+第 6 条）· 变更记录 1 条 |
+
+**验收判据（本轮）**：① 设计档自身过三机检（原样读数见交付报告）；② §2.13.2 锚族 5 行的「两端取值」列逐行指向实存 `file:line`；③ §2.13.7 第 6 条为 S2 可机判（扫描对象 = 核内 `prompts/` + `tool-docs/`）。
+
+**计数收正（D3——append-only 收正）**：本段上块「注入点清单化轮」记的「提示词面锚清单（**9 锚名 / 15 处**）」按本轮收正为 **13 锚名 / 15 处**（`agent-loop-pointer` 一格分解为 5 锚）——旧块按 append-only 保留、以本行为准。
+
+**未决（记档 · 不代裁）**
+
+1. **核内三机检红（他段面）**：`check-doc-width` 报 `docs/batches/2026-09-13-CORE-UNIFICATION.md:2383`（575）· `:2421`（361）· `:2425`（320）三行超 300 字符，全部落在本档 **§5（eng-coder 段）**——非设计面、非本轮改动；本轮只登记（折行属该段作者 / 父侧）。
+2. 锚的**消费方（替换实现）**落点（核内替换 vs 端侧装配替换）——仍归 S2 设计面（§2.13.6 缺口 1）。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
@@ -2344,6 +2384,109 @@ VERDICT: pass
 
 **未发起**：内部 advisor 代码评审（`type=code`）——**本轮轮次 = 0**（剩余预算耗尽；如实登记，不假装跑过）。
 **终态 = `stalled`**（审计 1 轮 + fix round 1；advisor 评审 0 轮；**未收敛**——交付面 = 部分完成 + 逐条自陈缺口）。
+
+### 实施：S1 续轮 —— VSC 侧并入 / #184 / #185（2026-09-14 · eng-coder）——**终态 = clean**
+
+**段位**：当前段 = S1 续轮（承接上一轮「部分完成 · stalled」的未完成面）。S2 / S3 面零触碰；**两产品零改动**（`git status` 无 `thincoder-cli/` / `thincoder-vscode/` 条目——自证见 K3）；未 commit（父侧统一）；未碰台账。
+
+**改动面**（全部在 `thincoder-core/` 内；12 档修改 +282/−115 · 6 档新建）
+
+| 面 | 读数 |
+|---|---|
+| 先例 12 档（修改） | `agent.mjs` · `agent-tools/{subagent-async,escalate-async,subagent-actions,plan}.mjs` · `provider/{rate,list-models}.mjs` · `generate-title.mjs` · `text-budget.mjs` · `explore-distill.mjs` · `tools/search.mjs` · `traces/trace-store.mjs` |
+| 新建模块 2 档 | `agent/suspension.mjs`（234 行·#184）· `i18n.mjs`（102 行·#185） |
+| 新建测试 4 档 | `test/suspension.test.mjs`（213）· `test/i18n.test.mjs`（70）· `test/provider-merge.test.mjs`（151）· `test/text-budget.test.mjs`（36） |
+| 核测试计数 | 基线 **70/70** → **90/90 · fail 0 · exit 0**（+20 用例；逐子系统：suspension 6 · i18n 5 · provider-merge 7 · text-budget 3——含后述修复轮追加） |
+
+**K1–K3 读数（cwd = 仓根 · 终态复跑）**
+
+| # | 判据 | 读数 | 判 |
+|---|---|---|---|
+| K1 | 三机检 | `doc-anchors` **exit 0**（根/CLI 域 `OK(V5): 0 条悬空锚`；VSC 域报告态命中 0）· `check-doc-width` **exit 0**（306 档无 >300 行）· `check-ledger` **exit 0**（0 违规） | ✓ |
+| K2 | 核内 `node --test` | **90/90 · fail 0 · exit 0**（基线 70 保持绿 + 新增 20 全绿） | ✓ |
+| K3 | 工作树 | 修改/新增条目全部在 `thincoder-core/**`；**产品侧条目 = 0**；`docs/**` 的 3 档修改为本轮之外（设计面作者在途） | ✓ |
+
+> K1 补充（时点纪律）：本轮中途曾读到 `doc-anchors` 20 条悬空 + `check-doc-width` 2 行超线（均在 `docs/design/CORE-UNIFICATION.md` §2.13 与 `docs/design/I18N.md`——设计面在途写入的暂时态；执行者全程未写任何 docs）。其后原样复跑归 0——两读数均为**未动 docs 前提下的时点读数**，如实登记。
+
+**本轮并入（逐子系统 → 落点）**
+
+1. **AGENT-LOOP**：#76（`explore-distill.mjs` 截断改经 `text-budget.safeSliceUTF16`）· #78（`agent.mjs` 三态门 `streamOutputAllowed` + 帧回调 `onAgentTurn` + 三处子代理 `streamOutput: true` 接线——空响应重试已由核内 `completion.mjs` 承载）。
+2. **PROVIDER**：#114（`rate.mjs` 并入 `abortableSleep` + spec 回退 + 默认维度回退（1_000_000/500）+ 防死等守护 + 估算并集（图片 part/`max_tokens`）；CLI abort 溯源保留）· #115（`list-models.mjs` 排序 + 非 JSON/缺 baseURL 明确报错 + `provider.headers` 三格式全带 + VSC M8/M9 探针/准入面并入）· #163（`generate-title.mjs` 三格式分派）。
+3. **TRACES**：#116 / A21（完整落盘——64K 截断、记录降级、在途上限 8 丢弃全数移除；每写一次 prune——`cleanupTraces` 落写盘异步体）。
+4. **TOOLS/其他**：#65（`search.mjs` glob/grep 路径不存在明确报错并入，其余以 CLI 为准）· #85（`plan.mjs` 未知 action 报错——以 VSC 为准）· #164（`text-budget.mjs` 增 `safeSliceUTF16` / `safeSliceUTF16Tail` 单一文本额度面）。
+5. **#184 落核**：`agent/suspension.mjs`（按 `AGENT-LOOP.md` §2.3 全文：池 live 判据 / 竞态清扫 / 主循环（用户输入优先→消化轮→池空退出→等待）/ 消化轮驱动 / 唤醒栓三态（settle·wake·aborted）/ 退出清场（abort = 清池不注入 / idle = 残余直注入））；
+`startSuspension(ctx)` → 句柄 `{pushInput, wake, done}`，`done ⇒ {reason, residualInput}`；注入面 = carrier / runTurn / abortSignal / hooks×4 / `injectResidual`（残余注入面——实现决策 1）。核测试：六场景 + **载体双夹具**（CLI 形 `{}` / VSC 形 `[]` 各跑同组断言）+ 零产品名断言。
+依赖顺序：载体字段集 = §2.3 已定口径（`_asyncSubagents`·`_asyncAdvisors`·`_consultSessions`·`_pendingAsyncResults`·`_suspended`）——异步机械族 VSC 侧并入（#94/#98/#100–#102/#154）仍为下一步工作（见 K4）。
+6. **#185 落核**：`i18n.mjs`（`CORE_MESSAGES` 33 键 en/zh 常量容器（深冻结）· `t()` · `projectDictionary()` 字典投影 · `normalizeLocale`）；机器消费面值与现 VSC `locales/{en,zh}.json` 逐字一致（审计逐键比对 24/24 通过）。
+
+**K4 更新版逐行表（上一轮「未完成面」工作单口径 = 76 行实质并合面 − 已并入 15 行；逐行改判 · 全覆盖）**
+
+**✅ 本轮已并入 / 已承载（落点）**——18 行：
+| 行 | 落点 |
+|---|---|
+| #76 | `explore-distill.mjs` ← `text-budget.safeSliceUTF16` |
+| #78 | `agent.mjs`（三态门/帧回调）+ 三处子代理 `streamOutput` |
+| #114 | `provider/rate.mjs`（守护 + 默认回退 + 估算并集） |
+| #115 | `provider/list-models.mjs`（排序/报错/headers/探针） |
+| #116 | `traces/trace-store.mjs`（完整落盘 + 每写 prune——A21） |
+| #163 | `generate-title.mjs`（三格式分派） |
+| #164 | `text-budget.mjs`（UTF-16 安全切片） |
+| #65 | `tools/search.mjs`（路径不存在报错） |
+| #85 | `agent-tools/plan.mjs`（未知 action 报错） |
+| #184 | `agent/suspension.mjs` + 双夹具用例 |
+| #185 | `i18n.mjs` + 投影/冻结用例 |
+| #75 | 核内已承载（VSC ⊂ CLI，实测 diff 无净能力；RETRYABLE 单源 = `provider/index.mjs` 再导出） |
+| #99 | 核内已承载（CLI 含 panel 为准；VSC 动作剔除 = S2 装配面；载荷面缺席已有降级通道） |
+| #162 | 核内已承载（取一侧 = CLI；VSC 仅档名/目录差） |
+| #167 | 核内已承载（取一侧 = CLI `git/checkpoint.mjs`） |
+| #169 | 核内已承载（以 CLI 为准；VSC 零 `runHooks`——S2 接线后触发） |
+| #176 | 核内已承载（`model-ref.mjs` = CLI 单一解析） |
+| #89 | 核内已承载（以 CLI 为准——相对路径/宽松版本校验/磁盘全量查询均在位） |
+
+**⏳ 仍待做（原因编码）**——A=异步机械族（#184 载体口径已定，VSC 侧并入未做）；B=装配/主循环注入缝未加；C=工具面 ④ 段注入缝未加；D=注册表面；E=SESSION/CONSULTATION 面未复核并入；F=本轮预算未覆盖（逐行未复核）：
+#94⏳A · #98⏳A · #100⏳A · #101⏳A · #102⏳A · #154⏳A · #158⏳A ·
+#112⏳B · #113⏳B · #111⏳F · #149⏳F · #150⏳F · #151⏳F · #152⏳F · #153⏳F · #155⏳F · #157⏳F · #103⏳F · #175⏳F ·
+#56⏳C · #57⏳C · #59⏳C · #61⏳C · #63⏳C · #64⏳C · #66⏳C · #68⏳C · #69⏳C · #84⏳C · #88⏳C · #91⏳C · #96⏳C ·
+#70⏳D · #83⏳D ·
+#123⏳E · #124⏳E · #125⏳E · #126⏳E · #127⏳E · #93⏳E · #95⏳E · #104⏳E · #105⏳E · #106⏳E · #107⏳E · #108⏳E · #109⏳E · #110⏳E · #160⏳E · #161⏳E ·
+#81⏳F · #134⏳F · #170⏳F · #178⏳F · #179⏳F · #91(#91 已列 C)
+（其余行 = 上一轮已并入 15 行 / 「取一侧」「以 CLI 为准」且核内即裁决结果者——不受本轮影响。）
+
+> 说明：⏳ 行 = 上一轮口径下「VSC 侧并入未做」的实质工作单余量（本表逐行给出状态与原因，无静默跳过）；A 类为设计钦点的紧邻依赖（§2.3 验收点 4），建议下一轮优先。
+
+**内部审计轮（只读 explore 分歧审计 · 阻塞 ×1）**：结论 **DIVERGENT**。四类偏差中「部分实现 / 静默简化 / 越清单改动」未命中（抽样范围内）；命中 1 条 🔵 doc drift：`§2.8.1` 表未登记本轮新增两档（`agent/suspension.mjs` 234 行 / `i18n.mjs` 102 行）——两档均 <300 软线，仅需设计面补登记行 / 收正 §2.3 的 +170±40 估算（**越段**——设计者面）。
+审计限制如实登记：该席位无 shell / 无 git / 不可执行 ⇒ K1/K2/K3 未独立复跑，产物为静态读证。其独立复核：注入面 9/9 齐 · 双夹具成立 · 74 行逐点对位 CLI 状态机无简化 · 新增测试声明数 17（当时）。
+
+**代码评审轮（内部 advisor · `type=code`）与裁决 —— 3 轮收敛**
+
+- **轮 1 = changes-required**（🔴 1 · 🟡 2 · 🔵 3）：🔴 `agent.mjs` 的 `opts` 未绑定标识符（照抄 VSC 的 `opts.streamOutput`，而核内 `runAgent` 形参为匿名解构 ⇒ 全部 depth>0 非 consult 子代理运行期 `ReferenceError`）；🟡 rate.mjs 默认维度回退未落（A19 影响面②）；🟡 超软线档拆分计划设计面待补；🔵 i18n 浅冻结；🔵 VSC「仅 reasoning」分支未并入（设计未列——登记项）。
+裁决 = 全部 Fixed（见修复轮）／🔵#6 登记不修（设计清单未列，不构成偏离）。
+- **修复轮 1**：`streamOutput = false` 入解构表 + 抽纯函数 `streamOutputAllowed`（用例：`test/suspension.test.mjs` 四态断言）· rate.mjs 补 VSC 默认维度回退 · suspension.mjs 退出清场 abort 判定与实时信号合并（两端同式；用例：④b 回合内 AbortError ⇒ 清池零注入）· i18n 深冻结（用例：嵌套冻结 + TypeError）。
+- **轮 2 = changes-required（新 🔴 1）**：修复引入的新问题——默认维度回退后 `effectiveTpm` 恒非空，`estimated > effectiveTpm` 时 `overTokens` 恒真 ⇒ 窗口等待循环无限空转（两端对位均有守护：CLI `tpm == null ? … : 0` / VSC `estimated > effectiveTpm ⇒ 放行`）。
+- **修复轮 2**：`rate.mjs` 补防死等守护（告警 + 记账 + 直接放行，早于窗口循环）+ 回归用例（仅配 rpm + 估算 2M——无守护时该用例以 5s 超时红捕获）。
+- **轮 3 = pass**：6/6 项复核通过（逐项对当前文件取证）；新修复未引入新 🔴。
+- **收敛读数**：advisor 3 轮（changes-required → changes-required → pass）· 修复轮 2 · 终态 0 未决 🔴；🟡 = 拆分计划协调项（设计面，不阻塞）· 🔵 = 登记项。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | `suspension.mjs` 增加 `ctx.injectResidual(entry)` 注入面 | §2.3 seam 表列了 carrier/runTurn/abortSignal/hooks×4；残余注入在不同载体上需要不同装配（CLI 逐族分发 / VSC 单容器注入器）⇒ 以注入承载；备选 = 核内静态 import 两端注入器（会把载体形态预设进核） |
+| 2 | `runTurn(text, opts)` 的 digest 调用 = `("", { autoTurn: true })` | §2.3 写作「digest = `{ autoTurn: true, text: "" }`」（VSC 对象形态调用）；与同表 `runTurn(text, opts)` 签名统一取双参形态，语义等价（审计复核认可） |
+| 3 | carrier 唤醒 = 池 waiter（`carrier._asyncWaiters`——核内异步面 settle 尾部已唤醒）+ `handle.wake()` 双路 | §2.3 验收点 1「唤醒栓双路（settle / wake）」；`_asyncWaiters` 为核内异步面现行字段（async-settle.mjs 尾部已消费） |
+| 4 | i18n 键集边界 = 核域文案（压缩/消化/限流/异步池/会诊/任务/goal/思考 + turn 帧） | §2.5 #185「VSC 字典投影（CLI 无字典需求 ⇒ 端差段）」；webview 面板专属文案留 VSC 侧字典（④）；审计 QUESTION 1 按此口径复核通过 |
+| 5 | `list-models.mjs` 一并并入 VSC M8/M9（`channelUnavailableMessage` / `probeChannelModels` / admission 面） | §2.5 #115 行未列探针；但该面与 list-models 同文件同源（VSC 侧已在案）、纯 Node 零依赖 ⇒ 并入避免 S2 出现第二份实现（F3 / D-C2）；审计归入 #115 核验通过 |
+| 6 | `trace-store.mjs` 单遍序列化器保留（含 `msgParts` 分缓冲） | A21 只裁「容量 / 清理策略取 VSC」；序列化实现属 CLI 结构面（字段名/次序两端同形）——保留 CLI 单遍形态，仅去额度逻辑 |
+| 7 | `plan.mjs` 保留 CLI 字段名 `agent.planMode` | #85 只裁「未知 action 报错」；字段名（CLI `planMode` / VSC `_planMode`）属端差载体面，S2 接线端归一 |
+
+**未决 / 越段发现（只记 · 不处置）**
+
+1. **设计面补登记**（审计 🔵 · 越段）：`CORE-UNIFICATION.md` §2.8.1 未列 `agent/suspension.mjs`（234）/ `i18n.mjs`（102）两档；§2.3 的 +170±40 估算被实际 234 行取代（仍 <300 软线）。归设计者面。
+2. **超软线档拆分计划**（advisor 🟡 · 越段）：`agent.mjs`(428) · `agent-tools/subagent-async.mjs`(437) · `agent-tools/subagent-actions.mjs`(483) · `traces/trace-store.mjs`(303) 均在 `SOFT_LINE_REGISTRY` 在册（机检绿）；§2.8.1「覆盖口径」记明逐档拆分计划待补——设计面收口项。
+3. **K1 时点读数**（见上注）：设计面在途写入期间曾出现 20 悬空锚 + 2 超宽行（全在未跟踪的 docs 修改面）；执行者零 docs 写入，终态复跑为 0。
+4. **advisor 🔵 登记项**：核内未并入 VSC「仅 reasoning ⇒ 视为 content」分支（A7 清单未列——非偏离）；建议设计面在 #78 行或批次档登记「未并入项」结论。
+
+**轮次自证**：审计 1 轮 + advisor 3 轮 + 修复轮 2；K1/K2/K3 终态读数见上表；报告 ①–⑥ 见交付报告（父侧转呈）。
 
 ## §6 验证与收口（父代理）
 

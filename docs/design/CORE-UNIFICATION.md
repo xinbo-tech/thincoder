@@ -664,22 +664,44 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 | **现状标签** | 无消费方者一律写「**待 S2 接线**」——如实登记，不假装已有 |
 | **锚语法** | `{{inject:<name>}}`，`<name>` ∈ `[a-z0-9-]+`；机检 = `thincoder-core/test/core-prompt-face.test.mjs:38-48` 的锚文法断言（非法形态即红） |
 
-#### 2.13.2 提示词面锚（9 个锚名 · 出现 15 次）
+#### 2.13.2 提示词面锚（13 个锚名 · 出现 15 次）
 
 **读法**：「两端各填什么」列 = 两侧**同源原文的实读位置**（`file:line`）+ 该端取值；「空」= 该端无对应段（注入空串）。
-**取值表本身尚未定义**——锚只声明了「这里有端差」，没声明「差是什么」；逐锚取值须先闭合 §2.13.6 缺口 1–4。
+**取值表状态（2026-09-14 注入位收正轮）**：缺口 2 **已定**（用户裁定 = 选项① ⇒ `agent-loop-ptr-*` 五行，见下）；缺口 3 / 4 **已给去重形态**（逐条见 §2.13.6）；**缺口 1（消费方 = 替换实现）仍归 S2** ⇒ 本表「消费方」列逐行「待 S2 接线」不变。
 
 | 锚名 | 出现处（核内 `thincoder-core/`） | 消费方（谁填） | 两端各填什么（证据 = 两侧原文位置） | 验收怎么测 |
 |---|---|---|---|---|
 | `{{inject:doc-map-path}}` | `prompts/discipline-engineering.md:69` · `prompts/discipline-normal.md:13` · `:32` | 待 S2 接线 | CLI = **空串**（`thincoder-cli/src/prompts/discipline-normal.md:13` 作 `docs/README.md`）· VSC = `design/`（`thincoder-vscode/src/prompts/discipline-normal.md:13` 作 `docs/design/README.md`） | 替换后核档文本零 `{{inject:` 字面；端侧装配断言本端文档地图路径在场（行为面） |
-| `{{inject:agent-loop-pointer}}` | `prompts/discipline-engineering.md:172` · `prompts/discipline-normal.md:145` · `:184` · `prompts/persona-eng-coder.md:23` · `prompts/persona-engineering.md:52` | 待 S2 接线 | **逐处取值不同**（缺口 2）：CLI 需 `.md §18`（`thincoder-cli/src/prompts/persona-engineering.md:52`）· `.md`（CLI `thincoder-cli/src/prompts/discipline-normal.md:146`）· **空串**（CLI `:178` 作 `AGENT-LOOP §25`）；VSC 需 `（CLI 仓·设计）§18（本端交付协议节 = §8）`（VSC `thincoder-vscode/src/prompts/persona-engineering.md:52`）· `（CLI 仓·设计）`（VSC `thincoder-vscode/src/prompts/discipline-normal.md:146`） | 同上；**先定单锚语义**（缺口 2）再定测法 |
-| `{{inject:discipline-normal-finish}}` | `prompts/discipline-normal.md:108` | 待 S2 接线 | CLI = **空**（CLI 无「收尾验收」节）· VSC = 「## 收尾验收」节（`thincoder-vscode/src/prompts/discipline-normal.md:191-196`）——**该节三行与核内既有行重复**（缺口 3） | 端侧装配断言：VSC 侧该节标题在场且**不重复**；CLI 侧无该标题 |
+| `{{inject:agent-loop-ptr-async-note}}` | `prompts/discipline-engineering.md:172` | 待 S2 接线 | CLI = `AGENT-LOOP.md §11.2`（CLI 侧原文 `thincoder-cli/src/prompts/discipline-engineering.md:172`）· VSC = `AGENT-LOOP.md §11.2`（VSC 侧原文 `thincoder-vscode/src/prompts/discipline-engineering.md:170`）——**两端指针相同**（端差在该行尾部端说明括注，见表后登记） | 端装配断言：本端指针原文逐字在场；核内该锚名唯一 |
+| `{{inject:agent-loop-ptr-async-spawn}}` | `prompts/discipline-normal.md:145` | 待 S2 接线 | CLI = `AGENT-LOOP.md §18`（CLI 侧原文 `thincoder-cli/src/prompts/discipline-normal.md:146`）· VSC = `AGENT-LOOP（CLI 仓·设计）§18`（VSC 侧原文 `thincoder-vscode/src/prompts/discipline-normal.md:146`） | 同上（本端指针原文逐字在场 + 核内锚名唯一） |
+| `{{inject:agent-loop-ptr-escalate}}` | `prompts/discipline-normal.md:184` | 待 S2 接线 | CLI = `AGENT-LOOP §25`（**无 `.md`**——`thincoder-cli/src/prompts/discipline-normal.md:178`）· VSC = `AGENT-LOOP（CLI 仓·设计）§25`（`thincoder-vscode/src/prompts/discipline-normal.md:181`） | 同上 |
+| `{{inject:agent-loop-ptr-eng-coder-delivery}}` | `prompts/persona-eng-coder.md:23` | 待 S2 接线 | CLI = `AGENT-LOOP.md §18`（CLI 侧原文 `thincoder-cli/src/prompts/persona-eng-coder.md:23`）· VSC = `AGENT-LOOP（CLI 仓·设计）§18`（VSC 侧原文 `thincoder-vscode/src/prompts/persona-eng-coder.md:23`） | 同上 |
+| `{{inject:agent-loop-ptr-engineering-delivery}}` | `prompts/persona-engineering.md:52` | 待 S2 接线 | CLI = `AGENT-LOOP.md §18`（CLI 侧原文 `thincoder-cli/src/prompts/persona-engineering.md:52`）· VSC = `AGENT-LOOP（CLI 仓·设计）§18`（VSC 侧原文 `thincoder-vscode/src/prompts/persona-engineering.md:52`） | 同上 |
+| `{{inject:discipline-normal-finish}}` | `prompts/discipline-normal.md:108` | 待 S2 接线 | CLI = **空**（CLI 无「收尾验收」节）· VSC = **节标题 + 引导行**（`thincoder-vscode/src/prompts/discipline-normal.md:191` · `:192`）——该节三行内容（`:193` / `:194` / `:195`）**不注入**（核内 `thincoder-core/prompts/discipline-normal.md:104` · `:159` · `:160` 已逐字承载；缺口 3 定稿） | 端侧装配断言：VSC 侧该标题在场；核内三行对应三句各**恰一份**；CLI 侧无该标题 |
 | `{{inject:discipline-normal-consult-stop}}` | `prompts/discipline-normal.md:178` | 待 S2 接线 | CLI = 会诊终止口径两句（`thincoder-cli/src/prompts/discipline-normal.md:183-184`）· VSC = **空**（VSC 对应文已在核内 `thincoder-core/prompts/discipline-normal.md:190-192`） | 端侧装配断言：CLI 侧含 `Ctrl+I` 句；VSC 侧「Consultations outlive …」**恰一份** |
 | `{{inject:discipline-engineering-change-surface-probe}}` | `prompts/discipline-engineering.md:130` | 待 S2 接线 | CLI = 「## 改动面反查（文档影响面）」节（`thincoder-cli/src/prompts/discipline-engineering.md:128-130`）· VSC = **空** | 端侧装配断言：CLI 侧该节在场、VSC 侧不在场 |
 | `{{inject:discipline-engineering-vsc-r14-pools}}` | `prompts/discipline-engineering.md:257` | 待 S2 接线 | CLI = **空** · VSC = 「### VSC 端特有段：R14 池规则」节（`thincoder-vscode/src/prompts/discipline-engineering.md:262-265`） | 端侧装配断言（反向）：VSC 侧该节在场、CLI 侧不在场 |
 | `{{inject:eng-coder-guidelines}}` | `prompts/persona-eng-coder.md:32` | 待 S2 接线 | CLI = **空** · VSC = 「## Guidelines …」块（`thincoder-vscode/src/prompts/persona-eng-coder.md:34-51`） | 同上（反向） |
 | `{{inject:bash-terminal-face}}` | `tool-docs/bash.md:15` | 待 S2 接线 | CLI = **空** · VSC = `terminal` 参数行（`thincoder-vscode/src/tools/bash.md:15`） | 端侧装配断言：VSC 工具描述含 `terminal: "visible"` 行、CLI 不含 |
-| `{{inject:question-ui-face}}` | `tool-docs/question.md:12` | 待 S2 接线 | CLI = **空**（CLI 的 `Availability:` 行已内联在核内 `thincoder-core/tool-docs/question.md:11`）· VSC = 面板版 `Availability:` 行（`thincoder-vscode/src/tools/question.md:11`）——**VSC 侧将同时看到两条 `Availability` 行**（缺口 4） | 端侧装配断言：VSC 侧 `Availability` 行**恰一份** |
+| `{{inject:question-ui-face}}` | `tool-docs/question.md:11`（**替换位**——原 `:12` 的追加位作废；缺口 4 定稿） | 待 S2 接线 | CLI = 现核内 `:11` 原文（与 `thincoder-cli/src/tools/question.md:11` 逐字同）· VSC = 面板版 `Availability:` 行（`thincoder-vscode/src/tools/question.md:11`）——核内 `:11` 的 CLI 措辞行**移出正文**，锚改为**替换**该行（非追加） | 端侧装配断言：两端 `Availability` 行各**恰一份**；核内正文零 CLI 措辞 `Availability` 行 |
+
+**`agent-loop` 指针族 · 核内须连带删节号的坐标**（缺口 2 = 选项① 的 S2 动作面 · 2026-09-14 登记——本轮**只登记坐标、不改核**）
+
+| # | 核内位置 | 现文本（锚 + 节号） | S2 动作 |
+|---|---|---|---|
+| 1 | `prompts/discipline-engineering.md:172` | `AGENT-LOOP{{inject:agent-loop-pointer}} §11.2 — R13` | 删锚后 ` §11.2`（节号并入锚值） |
+| 2 | `prompts/discipline-normal.md:145` | `AGENT-LOOP{{inject:agent-loop-pointer}} §18 D-E1a` | 删锚后 ` §18` |
+| 3 | `prompts/discipline-normal.md:184` | `AGENT-LOOP{{inject:agent-loop-pointer}} §25` | 删锚后 ` §25` |
+| 4 | `prompts/persona-eng-coder.md:23` | `(AGENT-LOOP{{inject:agent-loop-pointer}})` | **核内现无节号**（合并时丢 `§18`）⇒ 锚值补齐即可（无删动作） |
+| 5 | `prompts/persona-engineering.md:52` | `(AGENT-LOOP{{inject:agent-loop-pointer}})` | 同上 |
+
+**相邻端说明括注**（须与改名同批处置，否则 VSC 侧丢字）：VSC 侧四处指针后随端说明——
+`thincoder-vscode/src/prompts/discipline-normal.md:146`「（本端交付协议节 = §8）」· `:181`「（本端异步化节 = §9）」·
+`thincoder-vscode/src/prompts/persona-eng-coder.md:23` / `thincoder-vscode/src/prompts/persona-engineering.md:52`「（本端交付协议节 = §8）」·
+`thincoder-vscode/src/prompts/discipline-engineering.md:170`「（该节号 = CLI 侧；本端对应节 = §9 …）」。
+**建议并入同锚值**（判据 = 裁定理由「模型可见指令零变化」）；核内**不得**硬写端说明——`thincoder-core/test/prompt-files.test.mjs:107` 已反向断言核内零「本端交付协议节 = §8」。
+
+**核内测试同步坐标**：`thincoder-core/test/prompt-files.test.mjs:105` 现断言旧锚名字面 `AGENT-LOOP{{inject:agent-loop-pointer}}`（于 `persona-engineering.md`）⇒ 改名后该断言须同步（S2 动作）。
 
 #### 2.13.3 函数面注入位（核内已物化的缝）
 
@@ -763,15 +785,22 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 
 **同源缺口**：`runInterruptible`（#61 / #63 / #96 的可中断执行面）与「编辑器诊断段」（#96）同类——核内 `execFileSync` / `spawn` 直调，无注入面；形态同上（执行器按端注入）。
 
-#### 2.13.6 缺口清单（S2 接线前置门——逐条需闭合）
+#### 2.13.6 缺口清单（S2 接线前置门——逐条需闭合；缺口 2 / 3 / 4 已于 2026-09-14 定形态）
 
-1. **锚缺消费方与取值表（总缺口）**：9 个锚**全无**替换环节，且设计面**未定义**任何锚的两端取值（§2.13.2 的取值列是本轮按两侧原文实读**首填**的，非既有定义）。
-2. **`agent-loop-pointer` 单锚语义不自洽**：同一锚名在 5 处的「应有取值」互不相同（CLI 需 `.md §18` / `.md` / 空串三种；VSC 需整条指针 / 仅中缀两种）⇒ **单一替换值不可能同时满足**。
-   建议形态（择一，**须用户定**）：① 锚语义收窄为「**整条跨端指针**」——核内删去锚后的节号，一处一锚名
-   （如 `agent-loop-ptr-delivery` / `agent-loop-ptr-escalate` / `agent-loop-ptr-async-note`），端侧注入完整指针；
-   ② 维持单锚 + 接受「CLI 侧 `.md` 统一补全」的**模型可见指令微变**（A11 ① 口径 ⇒ 须登记 + 裁定）。
-3. **`discipline-normal-finish` 注入内容与核内正文重复**：VSC 侧该节三行（完成声明受审 / load skills / 与设计档对账）在核内**已有等价行**（`thincoder-core/prompts/discipline-normal.md:104,159,160`）⇒ 注入同一文本 = VSC 侧重复三段。建议：锚只承载 VSC 独有差异（节标题 + 缺项），或核内正文删重复行后按端注入。
-4. **`question-ui-face` 注入与在场行重复**：核内 `tool-docs/question.md:11` 已内联 CLI 版 `Availability` 行，锚在其下一行 ⇒ VSC 侧**同时看到两条** `Availability`（一 CLI 措辞、一 VSC 措辞）。建议：锚改为**替换**该行（而非追加），即该行移出核内正文。
+1. **锚缺消费方与取值表（总缺口）**：13 个锚**全无**替换环节，且设计面**未定义**任何锚的两端取值（§2.13.2 的取值列是本轮按两侧原文实读**首填**的，非既有定义）。
+2. **`agent-loop-pointer` 单锚语义不自洽**（**已定 · 2026-09-14 用户裁定 = 选项①**）：原同一锚名在 5 处的「应有取值」互不相同（CLI 需 `.md §18` / `.md` / 空串三种；VSC 需整条指针 / 仅中缀两种）⇒ **单一替换值不可能同时满足**。
+   **定稿形态** = **锚语义收窄为「整条跨端指针」+ 一处一锚名**——5 处 → 5 锚（`agent-loop-ptr-async-note` / `-async-spawn` / `-escalate` / `-eng-coder-delivery` / `-engineering-delivery`；逐锚出现处与两端取值见 §2.13.2）；
+   核内删去锚后硬写的节号（坐标 = §2.13.2 表后登记），端侧注入完整指针。
+   判据 = 精确 + **模型可见指令零变化**；选项②（维持单锚 + 接受 CLI 侧 `.md` 统一补全的微变）**不采用**。
+3. **`discipline-normal-finish` 注入内容与核内正文重复**（**已定 · 2026-09-14 设计面收正**）：VSC 侧该节三行（`thincoder-vscode/src/prompts/discipline-normal.md:193` / `:194` / `:195`）与核内正文三行（`thincoder-core/prompts/discipline-normal.md:104` / `:159` / `:160`）**逐字重复** ⇒ 注入同一文本 = VSC 侧重复三段。
+   **定稿形态**：**核内正文三行留**（共享正文——两端装配都读核）· **VSC 侧三行内容不注入**。
+   锚只承载 **VSC 独有、核内无的部分** = 节标题 `## 收尾验收`（`thincoder-vscode/src/prompts/discipline-normal.md:191`）+ 引导行 `:192`；
+   该引导行与核内 `:98` 同义（仅用于引出 VSC 侧标题节）⇒ S2 落位时「标题 + 引导行」与「仅标题」**语义等价**，二选一。CLI 值 = **空串**。
+   验收：VSC 装配后 `## 收尾验收` 在场，且核内三行对应三句各**恰一份**；CLI 侧该标题不在场。
+4. **`question-ui-face` 注入与在场行重复**（**已定 · 2026-09-14 设计面收正**）：核内 `thincoder-core/tool-docs/question.md:11` 已内联 CLI 版 `Availability` 行，锚在其下一行（`:12`）⇒ VSC 侧**同时看到两条** `Availability`（一 CLI 措辞、一 VSC 措辞）。
+   **定稿形态**：核内 `:11` 的 CLI 措辞行**移出核内正文**，锚上移到 `:11` 位并改为**替换**该行（非追加）。
+   CLI 值 = 现核内 `:11` 原文（与 `thincoder-cli/src/tools/question.md:11` 逐字同）· VSC 值 = 面板版 `Availability` 行（`thincoder-vscode/src/tools/question.md:11`）。
+   验收：两端装配后 `Availability` 行各**恰一份**；核内正文零 CLI 措辞 `Availability` 行。
 5. **函数面 ④ 缺位 18 处**：§2.13.4「核内位 = 无」的行（#98 · #112 · #113 · #175 · #143 · #56 · #57 · #59 · #61 · #63 · #66 · #68 · #69 · #84 · #91 · #96 · #170 · #172）——其中 **#68 / #63（写路径）为阻断级**（不补即 VSC 丢编辑器径，§2.13.5）。
 6. **`#99` 反向风险**：核内 `subagent` 动作枚举含 `panel`，VSC 端差要求「不注入该动作」——现无剔除缝 ⇒ S2 原样接线会让 VSC 凭空多一个动作（对外可见行为变化）。
 
@@ -782,6 +811,8 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 3. **取值表完备（设计面）**：§2.13.2 每行「两端各填什么」非空且指向实存 `file:line`；空值行显式标「空」。
 4. **缝覆盖（核内可机判）**：§2.13.5 建议的写路径白名单机检——`writeFile` / `writeFileSync` 调用点只许出现在 `write-path.mjs`（核内单点）（现 8 个写点改动即为落地证据）。
 5. **端侧行为（S2 可机判）**：两端各自装配用例断言本端取值（§2.13.2 验收列逐条）。
+6. **锚名集合与指针族（核内可机判）**：扫描对象 = `thincoder-core/prompts/` + `thincoder-core/tool-docs/`（本档内作为 as-of 引文的旧锚名不计）——
+   锚名去重集合 = **13**；旧名 `agent-loop-pointer` **零命中**；`agent-loop-ptr-*` **恰 5 名 / 5 处**；VSC 侧端说明括注不出现在核内（与 `thincoder-core/test/prompt-files.test.mjs:107` 的反向断言同向）。
 
 ---
 
@@ -1105,5 +1136,8 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 - 2026-09-14（**注入点清单化轮 · eng-designer**——S2 接线前置）：新增 **§2.13 注入位清单**（口径 · 提示词面**9 个锚名 / 出现 15 次**逐锚两端取值与实读证据 · 函数面 **10 个已物化缝** · **④ 裁决行 → 核内位对照 32 行** · **编辑工具径专项**）。
   同轮**同源处置**：`I18N.md` 一行悬空锚补路径前缀（`doc-anchors` 基线红清零）；`TOOLS.md` §2.2 加指针一行。
   **依据** = 批次档 §1 / §5 的 S1 未决项（注入位消费方未定义）；**状态** = 设计面闭合，替换实现与端侧接线归 S2（本档不含代码）。
+- 2026-09-14（**注入位收正轮 · eng-designer**——用户裁定「1」= 缺口 2 采选项①）：§2.13.2 锚族收窄——`agent-loop-pointer`（单锚 5 处）→ **5 个独立锚** `agent-loop-ptr-*`（逐锚出现处 + 两端取值定稿；锚名计数 **9 → 13**）；
+  同轮收正 **缺口 3**（`discipline-normal-finish` 去重形态：核内三行留 / VSC 侧三行内容不注入 / 锚只带节标题 + 引导行）与 **缺口 4**（`question-ui-face` 改**替换**形态——核内 CLI 措辞行移出正文）；§2.13.6 缺口 2 / 3 / 4 标「已定」；§2.13.7 增第 6 条（锚名集合机检）。
+  同轮**登记**（S2 动作面，不改核）：核内 5 处指针的节号删除坐标（`:172` / `:145` / `:184` 三处硬写 + `thincoder-core/prompts/persona-eng-coder.md:23` / `thincoder-core/prompts/persona-engineering.md:52` 两处缺节号）+ 相邻端说明括注坐标 + 核内测试断言同步坐标（`thincoder-core/test/prompt-files.test.mjs:105`）。
 
 
