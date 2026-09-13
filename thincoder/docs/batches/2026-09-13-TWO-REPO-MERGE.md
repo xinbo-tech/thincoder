@@ -468,4 +468,10 @@ Added dir 'thincoder-vscode'
 - 未触碰：产品 `src/**`、批 3 面（`src/prompts/**` · `AGENTS.md` · 纪律句）、设计 / 需求 / 批次档 §1–§4、既有测试档（一律零改）。
 - VSC T-DC6②（文档引用面）与 AC89（计时抖动）仍为既有红——非本批引入（T-DC6② 命中面 41 与改前一致；AC89 本轮 full 与 focused 单跑均通过）。
 
+#### 五、内部审计（补记 · 2026-09-13）
+
+- **内部 explore 审计 1 轮**（read-only 偏差审计，射程 = 本轮 8 档 + 上列验收标准）：**VERDICT clean**——四类偏差（半成品验收项 / 静默简化 / 文档漂移 / 越清单改动）均未发现。已核：8 档行数与语法 · `check-doc-width` T-MA8-2 三处逐字钉点（含「`const isMain` 后零 `length > maxW`」）· `evidenceState` 恰在 `check-ledger.mjs` 且 `doc-anchors-core.mjs` 含逐字导入（双向 import 顶层无求值依赖——静态安全）· 全消费者（`doc-impact.mjs` / `reconcile-lookup.mjs` / 两产品测试档）import 面全解析 · 单仓台账两路径 + SKIP 零行结构核验。
+- **内部 advisor 代码评审未跑**（父侧预算指令「先提交、再报告」，优先保障交付不丢）；语义零改的替代证据 = 全域输出逐数一致（改前 = 改后：8741 / 0 / 773 + 41 / 6 / 22-0-19）+ 两产品全链复跑 + 受影响测试档直跑（含 slow）。
+- 审计附注（非偏差）：`check-doc-width.mjs` CLI 起点的 `widthFiles` + `checkDocWidths` 两次域扫描为**既有结构**（原档逐字保留，非本轮引入；`widthFiles` 仅服务「N 文件」计数）；如需收敛归后续批。
+
 ## §6 验证与收口（父代理自写）
