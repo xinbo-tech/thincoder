@@ -2164,13 +2164,18 @@ VERDICT: pass
 **执行方式（设计口径 = 「从两侧提取/融合」，默认向 CLI 倾斜）**
 
 1. **批量提取**：把 `thincoder-cli/src/**` 的**非壳**面（排除 `tui/` · `cli/` · `acp/` · `acp.mjs` · `tui.mjs`——#180/#181 ④ 端特有）逐档逐字随迁入核（133 档）——这即设计「取一侧 / 以 CLI 为准」各行的落点（§2.5 S1 行中「取一侧」「以 CLI 为准」共 50 行）。
-2. **依赖闭包收核**（契约 2 / G2）：三处核外依赖改线——`agent/dispatch.mjs` 的 `snapshotForUndo` 归位为核内 `undo-stack.mjs`（逐字随迁自 `tui/cmd-undo.mjs`）· `agent-tools/subagent-panel.mjs` 的 `computePanelBlocks` 归位为核内 `agent-tools/panel-blocks.mjs`（逐字随迁自 `tui/subagent-freeze.mjs`）· `advisor/loop.mjs` 的进度行格式化改为 **④ 注入点** `seams.describeArgs`（核内零端名分支——契约 5/10）。
+2. **依赖闭包收核**（契约 2 / G2）：三处核外依赖改线——`agent/dispatch.mjs` 的 `snapshotForUndo` 归位为核内 `undo-stack.mjs`（逐字随迁自 `tui/cmd-undo.mjs`）· `agent-tools/subagent-panel.mjs` 的 `computePanelBlocks` 归位为核内 `agent-tools/panel-blocks.mjs`（逐字随迁自 `tui/subagent-freeze.mjs`）·
+`advisor/loop.mjs` 的进度行格式化改为 **④ 注入点** `seams.describeArgs`（核内零端名分支——契约 5/10）。
 3. **提示词加载面改根**（D-C13 / 契约 8）：`tools/shared.mjs` 的 `DESC()` 改经核内单一解析面 `prompt-files.mjs` 的 `loadToolDoc`（**只改根、不改语义**——缺档仍抛错，契约 9）。
-4. **CONFIG 子系统（#74/#79/#80/#128/#129/#130/#131/#177）**：VSC 侧能力并入——`proxy.mjs` 坏代理串友好报错 · `config-migrate.mjs` 增 `migrateCore`（VS Code 旧设置 / 密钥库迁移遍）· `writeConfigAtomic` 增 `opts.schema`（`$schema` 按端注入）· 新增 `config-io.mjs`（单一读写面 + 自写通知 + provider 纯持久化函数）/ `config-presets.mjs` · `cascadeRemoveProvider`。
+4. **CONFIG 子系统（#74/#79/#80/#128/#129/#130/#131/#177）**：VSC 侧能力并入——`proxy.mjs` 坏代理串友好报错 · `config-migrate.mjs` 增 `migrateCore`（VS Code 旧设置 / 密钥库迁移遍）· `writeConfigAtomic` 增 `opts.schema`（`$schema` 按端注入）·
+新增 `config-io.mjs`（单一读写面 + 自写通知 + provider 纯持久化函数）/ `config-presets.mjs` · `cascadeRemoveProvider`。
 5. **提示词面（#52/#53/#55/#117/#118/#119）**：5 档工具描述 + 3 档槽位按「融合（取并集）+ 端特有段按注入」落核——端特有段以 `{{inject:<name>}}` 锚点承载（核内零端名分支）。
 6. **其余可移行**：#165 权限闸 → 核 `permission.mjs`（展示面 ④ 注入）· #166 子代理权限通道 → 核（VSC 逐字随迁）· #137 索引面两档 → 核（VSC 逐字随迁）· #174 台账可见面 → 核（渲染色表 ④ 注入）。
 
-**未完成面（自陈 · 不复述父侧）——** **76 行**「端差处置」列要求**实质并合**（融合 / 取并集 / 并入，排除「融合：取一侧」26 行）的行里，本轮**已并入 VSC 侧的只有 15 行**（CONFIG 6 · PROMPT-SYSTEM 3 · TOOLS 3 · AGENT-LOOP 2 · WORKSPACE 1）；**其余约 60 行的核内落点 = CLI 侧逐字随迁**，其 VS Code 侧并入**未做**（例：`agent.mjs` 的 `streamOutput` 三态门 · `provider/rate.mjs` 的 `abortableSleep` · `session.mjs` 的 `history-window` 拆面 · `embedding.mjs` 的 VSC RETRYABLE 常量）。另 **#184（挂起/唤醒）未迁**——CLI 面 `tui/suspension-drive.mjs` 深度耦合 tui/agent-turn · subagent-blocks · tool-events，非机械随迁，需设计面给出核内形态。**#185（文案面）未建**——设计档 §2.5.1 丁组 D1 裁定状态 = **待裁**，按 A11 / D-C16「未裁定不进 S1」**不得**落核。
+**未完成面（自陈 · 不复述父侧）——** **76 行**「端差处置」列要求**实质并合**（融合 / 取并集 / 并入，排除「融合：取一侧」26 行）的行里，本轮**已并入 VSC 侧的只有 15 行**（CONFIG 6 · PROMPT-SYSTEM 3 · TOOLS 3 · AGENT-LOOP 2 · WORKSPACE 1）；
+**其余约 60 行的核内落点 = CLI 侧逐字随迁**，其 VS Code 侧并入**未做**（例：`agent.mjs` 的 `streamOutput` 三态门 · `provider/rate.mjs` 的 `abortableSleep` · `session.mjs` 的 `history-window` 拆面 · `embedding.mjs` 的 VSC RETRYABLE 常量）。
+另 **#184（挂起/唤醒）未迁**——CLI 面 `tui/suspension-drive.mjs` 深度耦合 tui/agent-turn · subagent-blocks · tool-events，非机械随迁，需设计面给出核内形态。
+**#185（文案面）未建**——设计档 §2.5.1 丁组 D1 裁定状态 = **待裁**，按 A11 / D-C16「未裁定不进 S1」**不得**落核。
 
 **内部审计轮（只读 explore 分歧审计 · 阻塞 ×1）**：结论 **DIVERGENT**。命中三类；**silent simplification 未命中**（抽样范围内无「近似实现替代设计承诺」）。
 - ① partial implementation（🔴）：76 行融合面 VSC 侧未并入（实现者已自陈，非静默）。
