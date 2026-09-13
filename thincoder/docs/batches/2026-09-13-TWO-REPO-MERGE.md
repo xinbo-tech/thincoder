@@ -421,4 +421,51 @@ Added dir 'thincoder-vscode'
 
 **#5（🔵 自审 + advisor 未执行）**：轮次预算收窄（父侧指示「优先收口落地」）——本批**未跑**内部 explore 审计与 advisor 代码评审；建议下一轮补跑，射程 = 批 2 全量（含 `66a1962a`）。
 
+### 批 2 · 机制退役（S4）· 补做轮——拆分达标 + 台账机检改指（eng-coder 自写 · 2026-09-13）
+
+**范围**：父侧核验发现的两处欠项——① 统一脚本四档全部超 300 行（未达设计档 §2.14 的主动拆分规划）；② 台账机检默认清单仍指 4 条已退役路径（SKIP 噪声）。**语义零改**（唯一目的 = 结构达标 + 默认清单改指）。
+**执行根**：合并仓根 `d:\teamcode\thincoder`。
+**提交**：`9cd13163b49be96188bb26824f91c2be1bcbd358`（8 files, +885/−812；提交纪律 = 显式路径 add → status 核对 → `--only` 同路径提交；提交后工作树干净）。
+
+#### 一、拆分（R24a：各档 ≤300）
+
+| 档 | 前 | 后 | 角色 |
+|---|---|---|---|
+| `scripts/check-doc-width.mjs` | 374 | **109** | 入口 / 报告 + 宽度判据 + `MERGED_SCRIPTS` |
+| `scripts/check-doc-width-core.mjs` | —（新） | **272** | 判据核：域驱动（collectMarkdown / discoverDomains / scanDomain）+ V1/V2/V3 + 基线 + 共享谓词 |
+| `scripts/check-ledger.mjs` | 384 | **259** | 入口 / L4 定位判序 / 报告（审计 / 汇总 / 退出码） |
+| `scripts/check-ledger-core.mjs` | —（新） | **151** | 判据核：checkLedger（单档 L1–L4）+ runCheck（多档驱动）+ defaultEntries + loadBaseline |
+| `scripts/doc-anchors.mjs` | 326 | **90** | 入口 / 域驱动 / 报告（main + formatReport + 三档全量 re-export） |
+| `scripts/doc-anchors-v5.mjs` | —（新） | **255** | V5 锚引擎（V5-A/B/C 抽取 + 判定 + scan） |
+| `scripts/doc-anchors-core.mjs` | 353 | **231** | VSC 锚引擎（A1/A2/A3 抽取 + 判定） |
+| `scripts/doc-anchors-targets.mjs` | —（新） | **139** | 采集面（源域 + 在册判据域：代码面 / 用例标题） |
+
+**切点与定名依据**（实施批定案——设计档 §2.14 委托）：
+- 预设面「入口 / 域驱动 / 报告」∥「判据核（抽取与判定）」按**脚本实际结构**落为 2–4 档/族：check-doc-width / check-ledger 单档两分；doc-anchors 族 = 两引擎一体（V5 + VSC 共 679 行）需 ≥3 档 ⇒ 按引擎切（v5 / core）+ 采集面独立成档（targets）。
+- **两条既有测试锚点钉死切点**（测试零改——「全部既有测试全绿」）：① VSC `test/doc-anchors.test.mjs:124-127` 扫 `scripts/*.mjs`：`export function evidenceState` 须**恰在 `check-ledger.mjs`**，且 `doc-anchors-core.mjs` 逐字含 `import { evidenceState } from "./check-ledger.mjs"` ⇒ evidenceState 与 checkLedger 判据核分居两档；② VSC `test/doc-consistency.test.mjs:207-214`（T-MA8-2）逐字要求 `check-doc-width.mjs` 含 `const widthHits = checkDocWidths(...)` + `if (l.length > max && !isTableRow(l))`，且 `const isMain` 后零 `length > maxW` ⇒ 宽度判据与主行程同档。
+- **单源纪律**：判据 / 常量零复制——新档间以显式 import + re-export 维系（入口档 `export *` ⇒ 对外导入面不变；四档对外导出名零改，两产品测试档与 `doc-impact.mjs` / `reconcile-lookup.mjs` 零改动即接线）。`check-ledger.mjs ↔ check-ledger-core.mjs` 为**双向 import**（测试锚点所迫：evidenceState 钉在入口档、checkLedger 判据核需用）——模块级仅函数调用、无顶层求值依赖，Node ESM 求值安全（实跑全链验证）。
+
+#### 二、台账机检默认清单改指（②）
+
+- `DEFAULT_LEDGERS` 语义收正为**单仓唯一台账**（仓根 `docs/TODO.md` + `docs/TODO-archive.md`）；`defaultEntries(rootAbs)` 解析基 = **调用根（其下存在任一台账档时）→ 本脚本所属仓根**（全域 / 产品域两态共用；域参不再改变台账位置——单仓一账，`--domain` 参数契约与产品门禁传参面保留）。
+- 实测（改后四态）：仓根 / CLI 目录 / VSC 目录 / `--domain thincoder-vscode` 均 = `OK: thincoder/docs/TODO.md` + `OK: thincoder/docs/TODO-archive.md`（**SKIP 零行**）· 0 违规。T67（`runCheck({root: REPO})` + `runCli([])` 断言 2 条 OK）与 T96 复跑绿。
+- 保留：`live: true/false` 两档语义（活档判 L3⑤ / 归档档不判）、缺档跳过不报（显式 `--ledger` 面）、基线零容忍。
+
+#### 三、验证（本轮实测）
+
+| 项 | 结果 |
+|---|---|
+| 仓根三机检（全域态） | `doc-anchors` exit 0（V5 0 悬空 ×2；VSC 域报告态 41 命中——既有面）/ `check-doc-width` exit 0（273 档 0 违规 · V1/V2/V3 0）/ `check-ledger` exit 0（2 档 OK · 0 违规 · **SKIP 0 行**） |
+| 语义零改对照（doc-anchors 全域） | 改前 = 改后逐数一致：CLI 域候选 8741 · 悬空 0 · 豁免 773；VSC 域命中 41 · distinct 6（A1 22 / A2 0 / A3 19）；宽面 125 行 |
+| CLI 链 | lint 311 OK · 快层 605/548/0/57 · test:full **605/605/0**（首跑 T104b「空族」一次红 = 既有 %TEMP% 并行残留污染类，重跑绿）/ integration 23/23/0 |
+| VSC 链 | lint 293 OK · 快层 621/580/0/41 · test:full 621/620/**1**（T-DC6② 文档引用面——既有红，命中数与改前一致）/ integration 28/28/0 |
+| 受影响测试档直跑（含 slow） | CLI 5 档 59/59/0 · VSC 4 档 33/32/1（同上 T-DC6②）；T-DC4（evidenceState 恰一处 + 导入逐字）/ T-DC5 / T-DC14 / AC-DC13 / T-MA8-2 / T-DC15 静态断言全绿 |
+| `doc:check`（VSC 门禁命令） | 行为零变：`--strict` 阻断态 41 命中 FAIL（既有面，随批 3 处置） |
+
+#### 四、明示未做 / 上报
+
+- **设计档 §2.14 拆分注与终态命名**：预设「两文件」示例未覆盖 doc-anchors 族实际需要（679 行 ⇒ 需 3 档）；实测落为 **4 档族**——切点依据见上（含测试锚点钉死）。注记收正归 eng-designer（本批未改设计档）。
+- 未触碰：产品 `src/**`、批 3 面（`src/prompts/**` · `AGENTS.md` · 纪律句）、设计 / 需求 / 批次档 §1–§4、既有测试档（一律零改）。
+- VSC T-DC6②（文档引用面）与 AC89（计时抖动）仍为既有红——非本批引入（T-DC6② 命中面 41 与改前一致；AC89 本轮 full 与 focused 单跑均通过）。
+
 ## §6 验证与收口（父代理自写）
