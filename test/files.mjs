@@ -79,6 +79,6 @@ export default [
   "test/ledger.test.mjs", // LEDGER-SURFACE 批（2026-09-12）：台账可见面 VSC 面——语义同源单元组 + 跨端去重键 + item 形态（T107）+ webview 渲染（T108）+ post/送达门 + 接线机检 + 慢层 git 老化界值（T102）（ENGINEERING-MODE.md §2.30）
   "test/ledger-check.test.mjs", // LEDGER-SELF-CONTAINED 批（2026-09-12）：台账机检 L1–L4——正常（本仓指针全解析）+ 错误（跨仓证据 / 跨仓指针 → [L4] + 退出码 1）+ 边界（零假阳 / 非空基线即 FAIL——必须保持为空）（T-VS1–T-VS6 + L2/L3 面；设计档 §7.3）
   "test/slow-gate.test.mjs", // D-T6 机制自验（2026-09-12 收尾轮 9 补建——原引用悬空修复）：红/绿两端 + 文件级合成条目跳过分支（slow() 门控：快层 skip、test:full 跑）
-  "test/doc-anchors.test.mjs", // DOC-CODE-RECONCILE 批·期 1（2026-09-12）：V5 文档锚一致性机检——A1/A2/A3 三类锚存在性 + 假阳八类零报 + 注记 + 射程边界 + 报告态/阻断态 + 缺仓 fail-closed（T-DC1–T-DC14；设计档 §4/§10）
+  "test/doc-anchors.test.mjs", // DOC-CODE-RECONCILE 批·期 1（2026-09-12）：V5 文档锚一致性机检——A1/A2/A3 三类锚存在性 + 假阳八类零报 + 注记 + 射程边界 + 报告态/阻断态 + 缺仓域外标记（不阻断；自指仍 fail-closed）（T-DC1–T-DC14；设计档 §4/§10）
   "test/reconcile-lookup.test.mjs", // DOC-CODE-RECONCILE 批·期 1（2026-09-12）：层 3 反查——变更 token → 设计/需求档清单；只读不阻断 + 零写 + 抽取器单源（T-DC15；设计档 §5）
 ]

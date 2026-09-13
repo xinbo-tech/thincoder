@@ -3,7 +3,7 @@
  *
  * 判据权威 = `docs/design/DOC-CODE-RECONCILE.md` §4（判据）/ §4.7（假阳八类）/ §4.8（双态）/ §10（用例）/ §11（AC）。
  * 夹具 = 临时工作区 `<ws>/thincoder-vscode`（本仓根）+ `<ws>/thincoder`（兄弟仓——A2 跨仓参照面），
- * **夹具不牵真实兄弟仓**（对端面在夹具内自持；缺仓 fail-closed 由 T-DC3 反证）。
+ * **夹具不牵真实兄弟仓**（对端面在夹具内自持；缺仓域外标记 / 自指 fail-closed 由 T-DC3 反证）。
  * 慢层（slow()）：真仓双仓树全量扫描（T-DC6 ②）。
  */
 import { test } from "node:test"
@@ -86,22 +86,38 @@ test("T-DC2 边界：右界反证——语料 `T-VS3` 不被 `T-VS32` / `T-VS35`
   } finally { clean(ws) }
 })
 
-// ── T-DC3 正常：A2 存在域（本仓 ∪ 对端仓）+ 缺仓 fail-closed（AC-DC2） ──────
-test("T-DC3 正常：A2 本仓 / 对端仓在册零报 · 两仓皆无必报 · 缺对端仓显式失败", () => {
+// ── T-DC3 正常 / 边界：A2 存在域（本仓 ∪ 对端仓）+ 缺仓两向 · 自指 fail-closed（AC-DC2）
+test("T-DC3 正常/边界：A2 本仓 / 对端仓在册零报 · 两仓皆无必报 · 缺仓记域外（不阻断）· 自指 fail-closed", () => {
   const docs = `# 符号\n\n- 本仓在册：\`scanGroups\`\n- 对端仓在册：\`${PEER_SYMBOL}\`\n- 两仓皆无：\`${SYNTHETIC_MISSING}\`\n`
   const { ws, root } = scenario(docs)
   try {
+    // 向 1（反证面）：对端树在位 ⇒ 对端专属名零报 · 合成缺失判 1 处（零域外）
     const r = checkAnchors({ root })
     assert.equal(r.hits.length, 1, JSON.stringify(r.hits))
     assert.deepStrictEqual([r.hits[0].kind, r.hits[0].anchor], ["A2", SYNTHETIC_MISSING])
     assert.ok(r.hits[0].symptom.includes("符号锚不在册"), r.hits[0].symptom)
-    // 缺仓 = fail-closed（API 面抛出）
-    assert.throws(() => checkAnchors({ root, peerRoot: join(ws, "nope") }), /对端仓不可用（.*）——A2 跨仓参照面 fail-closed/)
-    // 缺仓 = 固定句 + 退出码非 0（报告态同规）；清单与计数不产出
-    const bad = runMain(["--root", root], { env: { THINCODER_CLI_ROOT: join(ws, "nope") } })
-    assert.equal(bad.code, 1, bad.text)
-    assert.ok(bad.text.includes("对端仓不可用"), bad.text)
-    assert.ok(!bad.text.includes("V5: 命中"), "缺输入不冒充满输出（计数面不产出）")
+    assert.deepStrictEqual(r.external, [], "对端面可用 ⇒ 零域外")
+    // 向 2：不建对端树 ⇒ 后二者记域外行（不判红、不计命中 · 退出码 0——报告态 / 阻断态同规）
+    const gone = resolve(join(ws, "no-peer-at-all"))
+    for (const args of [["--root", root], ["--root", root, "--strict"]]) {
+      const out = runMain(args, { env: { THINCODER_CLI_ROOT: gone } })
+      assert.equal(out.code, 0, out.text)
+      const ext = out.out.filter((l) => l.startsWith("域外 V5 "))
+      assert.equal(ext.length, 2, out.text)
+      assert.ok(ext.every((l) => l.includes(`对端仓不可达（${gone}）`)), out.text)
+      assert.ok(ext.some((l) => l.includes(`[A2] ${PEER_SYMBOL}`)), out.text)
+      assert.ok(ext.some((l) => l.includes(`[A2] ${SYNTHETIC_MISSING}`)), out.text)
+      assert.ok(out.out.every((l) => !l.startsWith("✗ V5")), `域外不判红：${out.text}`)
+      assert.ok(out.text.includes("命中 0 处") && out.text.includes("域外 2"), out.text)
+    }
+    const j = JSON.parse(runMain(["--root", root, "--json"], { env: { THINCODER_CLI_ROOT: gone } }).out[0])
+    assert.deepStrictEqual([j.counts.total, j.counts.external, j.external.length], [0, 2, 2], JSON.stringify(j))
+    // 自指（对端根 = 本仓根，配置错）⇒ 仍 fail-closed（配置错 ≠ 缺仓——不得降为域外）
+    assert.throws(() => checkAnchors({ root, peerRoot: root }), /对端仓根自指/)
+    const self = runMain(["--root", root], { env: { THINCODER_CLI_ROOT: root } })
+    assert.equal(self.code, 1, self.text)
+    assert.ok(self.text.includes("对端仓根自指"), self.text)
+    assert.ok(!self.text.includes("域外 V5"), "自指不得降为域外（配置错≠缺仓）")
   } finally { clean(ws) }
 })
 
@@ -160,12 +176,14 @@ test("T-DC6 正常：报告态——逐处行 + 尾行计数 + `--json` 字段�
     const r = runMain(["--root", root])
     assert.equal(r.code, 0, r.text)
     assert.ok(r.out.some((l) => l.startsWith("✗ V5 docs/design/PROBE.md:3 [A1] T-ZZ9 — 期望")), r.text)
-    assert.match(r.out[r.out.length - 1], /^V5: 命中 1 处 · distinct 1（A1 1 \/ A2 0 \/ A3 0）· 报告态$/)
+    assert.match(r.out[r.out.length - 1], /^V5: 命中 1 处 · distinct 1（A1 1 \/ A2 0 \/ A3 0）· 域外 0 · 报告态$/)
     const j = runMain(["--root", root, "--json"])
     const obj = JSON.parse(j.out[0])
-    assert.deepStrictEqual(Object.keys(obj).sort(), ["counts", "hits", "mode", "sourceDomain"])
+    assert.deepStrictEqual(Object.keys(obj).sort(), ["counts", "external", "hits", "mode", "sourceDomain"])
     assert.equal(obj.mode, "report")
+    assert.deepStrictEqual(Object.keys(obj.counts).sort(), ["A1", "A2", "A3", "distinct", "external", "total"])
     assert.deepStrictEqual(Object.keys(obj.hits[0]).sort(), ["anchor", "file", "kind", "line", "symptom"])
+    assert.deepStrictEqual(obj.external, [], "对端面可用 ⇒ `external` 空")
   } finally { clean(ws) }
 })
 
@@ -177,6 +195,12 @@ slow("T-DC6 ② 正常：源域实跑（真仓 + 真兄弟仓树——报告态�
   assert.ok(obj.sourceDomain > 50, `源域档数入输出（实得 ${obj.sourceDomain}）`)
   assert.ok(obj.counts.total === 0, "清账收口：真仓复跑零命中（期 2 清账 323 → 0——防回潮锁）")
   assert.ok(readFileSync(join(REPO, "docs/design/DOC-CODE-RECONCILE.md"), "utf8").includes("源域实测档数"), "as-of 口径在档")
+  // 缺仓（单仓克隆）⇒ 域外标记、不阻断：命中恒 0、退出码 0——真仓零值锁不因缺仓变红（§4.1）
+  const solo = runMain(["--json"], { cwd: REPO, env: { THINCODER_CLI_ROOT: resolve(join(REPO, "no-peer-clone")) } })
+  assert.equal(solo.code, 0, solo.text)
+  const soloObj = JSON.parse(solo.out[0])
+  assert.ok(soloObj.counts.total === 0, "缺仓不产生命中（域外为独立计数项——total 不含域外）")
+  assert.equal(soloObj.counts.external, soloObj.external.length, "缺仓域外计数自洽")
 })
 
 // ── T-DC7 边界：假阳八类逐类一行 → 零报（AC-DC4 / N6 硬前提） ────────────────
@@ -271,20 +295,26 @@ test("T-DC11 边界：`.thincoder/…` · `X.md` · `path/to/file.md` · `node_m
   } finally { clean(ws) }
 })
 
-// ── T-DC12 边界：`--json` vs 尾行计数自洽（D3 口径） ─────────────────────────
-test("T-DC12 边界：`--json` 计数自洽（total=Σ 分型；distinct ≤ total）+ 与尾行一致", () => {
+// ── T-DC12 边界：`--json` vs 尾行计数自洽（D3 口径；域外独立计数——AC-DC7） ──
+test("T-DC12 边界：`--json` 计数自洽（total=Σ 分型；distinct ≤ total；external 独立）+ 与尾行一致", () => {
   const docs = `# 计数\n\n- \`T-ZZ9\`\n- \`T-ZZ9\`（重处）\n- \`${SYNTHETIC_MISSING}\`\n- \`src/nope.mjs\`\n`
   const { ws, root } = scenario(docs)
   try {
     const obj = JSON.parse(runMain(["--root", root, "--json"]).out[0])
-    assert.deepStrictEqual(obj.counts, { total: 4, distinct: 3, A1: 2, A2: 1, A3: 1 })
+    assert.deepStrictEqual(obj.counts, { total: 4, distinct: 3, A1: 2, A2: 1, A3: 1, external: 0 })
     assert.equal(obj.counts.total, obj.hits.length)
+    assert.equal(obj.counts.external, obj.external.length)
     assert.equal(obj.counts.A1 + obj.counts.A2 + obj.counts.A3, obj.counts.total)
     assert.equal(obj.counts.distinct, new Set(obj.hits.map((h) => h.anchor)).size)
     assert.ok(obj.counts.distinct <= obj.counts.total)
     assert.equal(obj.sourceDomain, 1)
     const txt = runMain(["--root", root]).out.slice(-1)[0]
-    assert.ok(txt.includes(`命中 ${obj.counts.total} 处 · distinct ${obj.counts.distinct}（A1 ${obj.counts.A1} / A2 ${obj.counts.A2} / A3 ${obj.counts.A3}）`), txt)
+    assert.ok(txt.includes(`命中 ${obj.counts.total} 处 · distinct ${obj.counts.distinct}（A1 ${obj.counts.A1} / A2 ${obj.counts.A2} / A3 ${obj.counts.A3}）· 域外 0 · 报告态`), txt)
+    // 缺仓向：A2 未命中项出 `hits`、入 `external`——`total` 不含域外（阈值输入面 = 命中数）
+    const solo = JSON.parse(runMain(["--root", root, "--json"], { env: { THINCODER_CLI_ROOT: resolve(join(ws, "no-peer")) } }).out[0])
+    assert.deepStrictEqual(solo.counts, { total: 3, distinct: 2, A1: 2, A2: 0, A3: 1, external: 1 })
+    assert.deepStrictEqual(solo.external, [{ file: "docs/design/PROBE.md", line: 5, kind: "A2", anchor: SYNTHETIC_MISSING }])
+    assert.equal(solo.counts.total, solo.hits.length, "total 不含域外（独立计数项）")
   } finally { clean(ws) }
 })
 

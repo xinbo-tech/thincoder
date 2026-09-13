@@ -18,7 +18,8 @@
  * 射程边界（不重复报行）：`.md §N` 可解析性 = V1 面 · 仓前缀 / 仓标坐标 = V4 面 · 台账 = L1–L4 专判 ·
  * 批次档（时序日志）与归档（历史快照）**不入源域** ⇒ V5 对上述形态零报。
  * 对端仓依赖（四项登记）：解析 = `resolvePeerRoot`（默认 `../thincoder`，`THINCODER_CLI_ROOT` 覆盖）·
- * 缺仓 = **fail-closed 显式失败**（固定句 + 退出码非 0；报告态 / 阻断态同规——不降级为「对端面 = 空集」）·
+ * 缺仓 = **域外标记、不阻断**（本仓代码面未命中的 A2 锚记域外行——不判红、不计命中、退出码 0，报告态 / 阻断态同规）·
+ * **自指（对端根 = 本仓根）⇒ 仍 fail-closed**（固定句 + 退出码非 0——**配置错 ≠ 缺仓**，不得降为域外）·
  * 可复算 = 判定输入面 = 本仓树 + 对端仓树（只读）；独立性 = 只读扫描，不写 / 不执行 / **不跨仓 import**。
  * **无基线通道**：本检查器不读也不写任何基线档——不是「默认空」，是通道不存在（阈值 0 的对应实现）。
  * 输出：逐处 `✗ V5 <档>:<行> [A1|A2|A3] <锚> — 期望 … · 实得 …`；尾行计数；`--json` 机读清单。
@@ -294,17 +295,19 @@ export function caseTokenExists(titles, token) {
   return titles.some((t) => re.test(t))
 }
 
-/** 对端仓不可用（fail-closed 固定句）。 */
-export const peerMissingMsg = (p) => `对端仓不可用（${p}）——A2 跨仓参照面 fail-closed`
-/** 对端仓根校验（不可读 / 自指 ⇒ 抛出——不降级为空集；注入路径同样受检）。 */
+/** 对端仓根自指（**配置错**——fail-closed 固定句；不得降为域外——设计档 §4.1）。 */
+export const peerSelfRefMsg = (p) => `对端仓根自指（${p} = 本仓根）——配置错（A2 跨仓参照面 fail-closed）`
+/** 同根判定（大小写随平台：Windows 盘符 / 目录名不敏感——`relative` 归一；POSIX 保敏感）。 */
+const isSameRoot = (a, b) => relative(resolve(a), resolve(b)) === ""
+/** 对端仓根校验：**自指 ⇒ 抛出**（fail-closed）；**不可读（缺仓）⇒ `{root, available:false}`**（域外标记，不阻断——§4.1）。 */
 export function assertPeerRoot(peer, own = null) {
   const p = resolve(peer)
-  let ok = false
-  try { ok = (own === null || p !== resolve(own)) && statSync(p).isDirectory() } catch { ok = false }
-  if (!ok) throw new Error(peerMissingMsg(p))
-  return p
+  if (own !== null && isSameRoot(p, own)) throw new Error(peerSelfRefMsg(p))
+  let available = false
+  try { available = statSync(p).isDirectory() } catch { available = false }
+  return { root: p, available }
 }
-/** 对端仓根解析（默认 `../thincoder`；`THINCODER_CLI_ROOT` 覆盖；不可读 / 自指 ⇒ 抛出）。 */
+/** 对端仓根解析（默认 `../thincoder`；`THINCODER_CLI_ROOT` 覆盖）⇒ `{root, available}`（自指 ⇒ 抛出）。 */
 export function resolvePeerRoot(root, env = process.env) {
   const own = resolve(root)
   return assertPeerRoot(env.THINCODER_CLI_ROOT?.trim() || join(own, "..", "thincoder"), own)
@@ -319,25 +322,35 @@ export const SYMPTOM = {
 const EXPECT = { A1: "用例标题在册（test/ 树）", A2: "本仓或对端仓代码面在册", A3: "本仓现态面可解析" }
 
 /**
- * V5 机检。返回 `{mode, sourceDomain, counts:{total,distinct,A1,A2,A3}, hits:[{file,line,kind,anchor,symptom,expect,got}]}`。
- * 缺对端仓 ⇒ **抛出**（fail-closed——清单与计数不产出；报告态 / 阻断态同规）。
+ * V5 机检。返回 `{mode, sourceDomain, counts:{total,distinct,A1,A2,A3,external}, hits:[…], external:[…], peerRoot}`。
+ * 对端仓树不可读（缺仓）⇒ 本仓代码面未命中的 A2 锚记**域外**（不判红、不计命中——报告态 / 阻断态同规，§4.1）；
+ * 对端根**自指**（配置错）⇒ 抛出（fail-closed——不得降为域外）。
  */
 export function checkAnchors({ root = process.cwd(), peerRoot = null, docs = null, mode = "report", env = process.env } = {}) {
   const own = resolve(root)
-  const peer = assertPeerRoot(peerRoot ?? resolvePeerRoot(own, env), own)
+  const peerInfo = peerRoot != null ? assertPeerRoot(peerRoot, own) : resolvePeerRoot(own, env)
+  const peerAvailable = peerInfo.available
   const targets = docs ?? collectSourceDomain(own)
-  const ctx = { docStems: collectDocStems(own), repoNames: [basename(own), basename(peer)] }
+  const ctx = { docStems: collectDocStems(own), repoNames: [basename(own), basename(peerInfo.root)] }
   const ownTokens = collectCodeTokens(own)
-  const peerTokens = collectCodeTokens(peer)
+  const peerTokens = peerAvailable ? collectCodeTokens(peerInfo.root) : new Set()
   const titles = collectCaseTitles(join(own, "test"))
   const evCache = {}
   const hits = []
+  const external = []
   const seen = new Set()
   const push = (file, line, kind, anchor, got) => {
     const key = `${file}|${line}|${kind}|${anchor}`
     if (seen.has(key)) return
     seen.add(key)
     hits.push({ file, line, kind, anchor, symptom: SYMPTOM[kind], expect: EXPECT[kind], got: got ?? "" })
+  }
+  /** 域外行（缺仓时本仓代码面未命中的 A2 锚——只记不判红、不计命中；§4.1 / §4.10）。 */
+  const pushExternal = (file, line, kind, anchor) => {
+    const key = `域外|${file}|${line}|${kind}|${anchor}`
+    if (seen.has(key)) return
+    seen.add(key)
+    external.push({ file, line, kind, anchor })
   }
   for (const p of targets) {
     const rel = relative(own, p).replace(/\\/g, "/")
@@ -353,7 +366,9 @@ export function checkAnchors({ root = process.cwd(), peerRoot = null, docs = nul
           if (!caseTokenExists(titles, a.token)) push(rel, n, "A1", a.token, "test/ 树无此用例号")
         } else if (a.kind === "A2") {
           const t0 = a.token.split(".")[0]
-          if (!ownTokens.has(t0) && !peerTokens.has(t0)) push(rel, n, "A2", a.token, "两仓代码面均无此名")
+          if (ownTokens.has(t0)) continue // 本仓代码面在册 ⇒ 通过
+          if (!peerAvailable) { pushExternal(rel, n, "A2", a.token); continue } // 缺仓 ⇒ 域外（不判红、不计命中）
+          if (!peerTokens.has(t0)) push(rel, n, "A2", a.token, "两仓代码面均无此名")
         } else {
           if (a.token.endsWith(".md") && /§\s*\d/.test(line)) continue // A3 排除式 ③ 归 V1（`.md` token 才免判——不重复报行）
           if (/^[（(][^（）()]{0,12}仓[）)]/.test(a.after ?? "")) continue // A3 排除式 ④ E3 允许形态（归 V4）
@@ -363,9 +378,10 @@ export function checkAnchors({ root = process.cwd(), peerRoot = null, docs = nul
       }
     })
   }
-  const counts = { total: hits.length, distinct: new Set(hits.map((h) => h.anchor)).size, A1: 0, A2: 0, A3: 0 }
+  // counts.external = 独立计数项（`total` 不含域外——阈值输入面只有命中数，§4.8 / §4.10）
+  const counts = { total: hits.length, distinct: new Set(hits.map((h) => h.anchor)).size, A1: 0, A2: 0, A3: 0, external: external.length }
   for (const h of hits) counts[h.kind]++
-  return { mode, sourceDomain: targets.length, counts, hits }
+  return { mode, sourceDomain: targets.length, counts, hits, external, peerRoot: peerInfo.root }
 }
 
 /** CLI 主行程（返回退出码；导出以便用例进程内断言退出码语义）。 */
@@ -377,15 +393,17 @@ export function main(args = process.argv.slice(2), { cwd = process.cwd(), log = 
   try {
     res = checkAnchors({ root, mode: gate ? "strict" : "report", env })
   } catch (e) {
-    if (String(e.message).includes("fail-closed")) { log(e.message); return 1 } // 缺仓：清单与计数不产出
+    if (String(e.message).includes("fail-closed")) { log(e.message); return 1 } // 自指（配置错）；缺仓不抛——走域外行
     throw e
   }
   if (args.includes("--json")) {
     const hits = res.hits.map((h) => ({ file: h.file, line: h.line, kind: h.kind, anchor: h.anchor, symptom: h.symptom }))
-    log(JSON.stringify({ mode: res.mode, sourceDomain: res.sourceDomain, counts: res.counts, hits }))
+    const external = res.external.map((x) => ({ file: x.file, line: x.line, kind: x.kind, anchor: x.anchor }))
+    log(JSON.stringify({ mode: res.mode, sourceDomain: res.sourceDomain, counts: res.counts, hits, external }))
   } else {
     for (const h of res.hits) log(`✗ V5 ${h.file}:${h.line} [${h.kind}] ${h.anchor} — 期望 ${h.expect} · 实得 ${h.got}`)
-    log(`V5: 命中 ${res.counts.total} 处 · distinct ${res.counts.distinct}（A1 ${res.counts.A1} / A2 ${res.counts.A2} / A3 ${res.counts.A3}）· ${gate ? "阻断态" : "报告态"}`)
+    for (const x of res.external) log(`域外 V5 ${x.file}:${x.line} [${x.kind}] ${x.anchor} — 对端仓不可达（${res.peerRoot}）`)
+    log(`V5: 命中 ${res.counts.total} 处 · distinct ${res.counts.distinct}（A1 ${res.counts.A1} / A2 ${res.counts.A2} / A3 ${res.counts.A3}）· 域外 ${res.counts.external} · ${gate ? "阻断态" : "报告态"}`)
     if (gate && res.counts.total) log(`FAIL(V5): 命中 ${res.counts.total} 处（阈值 0——文档锚须在册）——修掉；不得入基线（入基线 = 例外 = 违规）。`)
   }
   return gate && res.counts.total ? 1 : 0

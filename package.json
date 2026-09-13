@@ -120,7 +120,7 @@
     "test:full": "node test/run-full.mjs",
     "test:integration": "node test/run-integration.mjs",
     "lint": "node scripts/check-syntax.mjs",
-    "doc:check": "node scripts/check-doc-anchors.mjs"
+    "doc:check": "node scripts/check-doc-anchors.mjs --strict"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^20.11.2",

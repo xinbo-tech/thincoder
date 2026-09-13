@@ -19,7 +19,7 @@
 - [x] **文档体系各仓自持（本仓侧）：需求档 + 设计档 + 批次档 + 台账各仓记各仓，禁跨仓写需求与跨仓指针；本仓缺的层补齐；约束落提示词层**（2026-09-12 用户裁定——含 10:57「全部啊！」② 桶全部补建）→ 需求 本仓 `docs/requirements/ENGINEERING-MODE.md` §1.3（**F11 · F12 · F13 · F14**）· 任务书 本仓 `docs/batches/2026-09-12-LEDGER-SELF-CONTAINED.md` §2 · （**收口 2026-09-12**：**需求树 17 → 34 档**（① 0 遗留 · 17 档三层写法 + 判定句 + 本仓实测证据 file:line · 对位 E1 形态）· 跨仓形态 **0**（V4 枚举外 0）· 先例作依据 **0** · 最小改动类 **0** · 存量阈值 **0**（基线空 + fail-closed）· 拆档守恒（`child-permission` 18=12+6 · `chat-panel` 17=8+9；两档各 ≤500）· 文档↔实装漂移清 250+ 处 · 全门禁全绿（full 608/608 · 集成 28/28 · V1–V4 0/0 · 台账 0））· status=已核销
 - [x] **文档↔实装对账：全量清理 + 防回潮（本仓侧）**（DOC-CODE-RECONCILE——2026-09-12 用户 22:54「可以啊，我希望完整的全面清理解决」+ 23:37「a 批准」· 端差选 A）→ 需求 本仓 `docs/requirements/ENGINEERING-MODE.md` §1.3（F15–F20）/ §1.4（N6–N9）· 任务书 本仓 `docs/batches/2026-09-12-DOC-CODE-RECONCILE.md` §2 · 设计 本仓 `docs/design/DOC-CODE-RECONCILE.md` · （**收口 2026-09-13**：装置（`check-doc-anchors` + `reconcile-lookup` + 两测档）· **清账 323 → 0** → **外审抳出 🔴（A3 排除取反）修复后新显形 25 处 → 0** · 双向判别夹具 + 零值锁 · 端差 7 项（#9–#15）登记 · 门禁全绿（**full 627/627** · 集成 28/28 · V1–V4 0/0 · 台账 0 · **V5 悬空 0**）· 签入 `bc5be73` 双远端 · **遗留 = 用户 ④ 待裁（见技术待办）**）· status=已核销
 
-## 技术待办（归档 32 条）
+## 技术待办（归档 33 条）
 
 > 以下 13 条为 2026-09-12 **跨仓条目回位**（原 CLI 仓归档档——按「台账各仓自持」迁入本仓；9 条整迁 + 4 条拆分入本仓份）。
 
@@ -78,3 +78,4 @@
 - [x] **发布排期（VSC 0.8.11）——用户 2026-09-11 17:16 裁定挂起等指示**：webview 转义 #7 / async 保真 #6 / 输入面 / 死键等修复仍在工作树；流程 = 备包（版本号 + CHANGELOG + 构建 vsix）→ 用户测试 → 发布 → 证据 `docs/design/RELEASE.md` · status=已废弃（原状态=待讨论（挂起））
 - [x] **VSC 文档补 NFR 小节**（design round2 提示词 · ARCHITECTURE 补 NFR · 原则 2 改述 · PROVIDER_PRESETS 静态镜像说明 · 模块小节补 memory/repomap/specs/extension/prompts · §6§3§4 补懒历史·双通道·Ctrl+I·readSSE · runAgent 签名 input→text · §4 补 thinkEnabledValue·noUsageStream · advisor 工具补 lsp）→ 证据 `docs/design/ARCHITECTURE.md:34`（§1）· status=已废弃（原状态=无 status）
 - [x] **qwen 请求 thinking 未设置时携带 `thinking:{type:"enabled"}`**（智谱式参数，GLM 修复引入的通用 spec 默认注入；百炼兼容性属 Qwen `enable_thinking` 范畴——知悉观察）→ 证据 `src/provider/transports/openai.mjs:53` · status=已废弃（原状态=无 status）
+- [x] **对端仓不可达口径待裁（用户 ④）**（DOC-CODE-RECONCILE · 2026-09-13）→ 用户 07:52 裁定 **B′**（域外标记、不阻断）· 链路 = 设计改（#99）+ 评审 #101 pass + 修正轮 #102 + 实施轮 #103 · 实证（真仓）= 缺仓 ⇒ 域外 37 条 + exit 0 ✓ · 自指（含异体大小写 d:\…\THINCODER-VSCODE）⇒ exit 1 ✓ · 自指判定盘符大小写 bug 已于实施轮发现并修正 · 发布门 `--strict` 已接线（`package.json:123`）· 两端口径自此一致（对端 CLI 已注销其 §2.32.8 端差条）· status=已核销
