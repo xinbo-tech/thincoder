@@ -1,8 +1,9 @@
 /**
- * ledger-check.test.mjs — 台账机检用例（LEDGER-SELF-CONTAINED 批 §7 · T-VS1–T-VS6 · T-VS35 + L2/L3 面）。
+ * ledger-check.test.mjs — 台账机检用例（LEDGER-SELF-CONTAINED 批 §7 · T-VS1 · T-VS4–T-VS6 · T-VS35 + L2/L3 面；S4 单仓化修订）。
  *
- * 夹具 = 临时工作区 `<ws>/thincoder-vscode`（本仓根）+ `<ws>/thincoder`（兄弟仓——跨仓引用可解析面）。
- * 组语义：L1 宽基根（含工作区 / 兄弟仓）· L4 本仓基根（本仓根 + 台账目录）——两者差集 = 跨仓指针。
+ * 夹具 = 临时工作区 `<ws>/thincoder-vscode`（本域根）；「仓」= 合并仓（单仓语义——设计档 TWO-REPO-MERGE.md §2.4 R9：
+ * 跨仓闸删除，L4 收为本仓可解析；跨仓类断言段 T-VS2 / T-VS3 随批删除）。
+ * 组语义：L1 指针可解析（基根组）· L4 本仓可解析（基根组 / 唯一 basename；越出根禁——`仓根外前缀` / `仓根外绝对路径`）。
  * 基线（B16 阈值 = 0）：**必须保持为空**——非空即 FAIL（固定句「本基线必须保持为空」）。
  */
 import { test } from "node:test"
@@ -10,7 +11,7 @@ import assert from "node:assert/strict"
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
-import { main, runCheck } from "../scripts/check-ledger.mjs"
+import { main, runCheck } from "../../scripts/check-ledger.mjs"
 
 /** 夹具：写临时工作区文件集（键 = 相对路径）。 */
 function fixture(files) {
@@ -51,41 +52,8 @@ test("T-VS1 正常：本仓指针 + 证据全解析 → 零 L4；退出码 0", (
   } finally { rmSync(ws, { recursive: true, force: true }) }
 })
 
-// T-VS2 错误：跨仓证据路径（本仓根内不存在 / 存在但本仓根外）→ [L4] + 退出码 1
-test("T-VS2 错误：跨仓证据路径 → [L4] + 退出码 1", () => {
-  const evi = "- [ ] **技术项** → 证据 `thincoder/src/agent/x.mjs:3`（他仓）· 触发=认账不排期\n"
-  const eviAbs = "- [ ] **技术项 2** → 证据 `<ws>/thincoder/src/agent/x.mjs:9`（他仓绝对路径）· 触发=认账不排期\n"
-  const ws = fixture(base(groups(POOL_OK, evi + eviAbs), { "thincoder/src/agent/x.mjs": "export const x = 1\n" }))
-  try {
-    const root = join(ws, "thincoder-vscode")
-    const abs = join(ws, "thincoder", "src", "agent", "x.mjs").replace(/\\/g, "/")
-    const text = groups(POOL_OK, evi + eviAbs.replace("<ws>", ws.replace(/\\/g, "/")))
-    writeFileSync(join(root, "docs/TODO.md"), text, "utf8")
-    const r = runCheck({ root, ledgers: [{ path: "docs/TODO.md", live: true }] })
-    const l4 = r.fresh.filter((v) => v.kind === "L4")
-    assert.equal(l4.length, 2, `L4=${JSON.stringify(l4.map((v) => v.msg))}`)
-    assert.ok(l4.some((v) => v.msg.includes("跨仓形态")), "相对跨仓证据 → 跨仓形态（兄弟仓目录前缀）")
-    assert.ok(l4.some((v) => v.msg.includes("仓根外绝对路径")), `绝对跨仓证据（${abs}）→ 跨仓形态`)
-    assert.equal(run(root).code, 1)
-  } finally { rmSync(ws, { recursive: true, force: true }) }
-})
-
-// T-VS3 错误：跨仓指针（仅对端仓可解析）→ [L4]（L1 不放行）
-test("T-VS3 错误：跨仓指针 → [L4]（对端可解析不等于通过）", () => {
-  const pool = "- [ ] **跨仓项** → 需求 CLI 仓 `docs/requirements/AGENT-LOOP.md` §9 · status=待设计\n"
-  const ws = fixture(base(groups(pool, TECH_OK), {
-    "thincoder/docs/requirements/AGENT-LOOP.md": "# AGENT-LOOP\n\n## 9. 节\n\n正文。\n",
-  }))
-  try {
-    const root = join(ws, "thincoder-vscode")
-    const r = runCheck({ root, ledgers: [{ path: "docs/TODO.md", live: true }] })
-    const l4 = r.fresh.filter((v) => v.kind === "L4")
-    assert.equal(l4.length, 1, `L4=${JSON.stringify(l4.map((v) => v.msg))}`)
-    assert.ok(l4[0].msg.includes("指针不可本仓解析"))
-    assert.equal(r.fresh.filter((v) => v.kind === "L1").length, 0, "宽基根可解析 → L1 不报（差集恰为 L4）")
-    assert.equal(run(root).code, 1)
-  } finally { rmSync(ws, { recursive: true, force: true }) }
-})
+// T-VS2 / T-VS3（跨仓证据 / 跨仓指针 → [L4]）随 S4 整段删除——跨仓闸判据已退役（设计档 §2.4 R9）；
+// 「越出根必报」的存留语义由 T-VS35（仓根外前缀 / 越根绝对路径）覆盖。
 
 // T-VS4 边界：零假阳（无路径散文 / `名称（仓别）§N` 规范形态 / 组标题行）
 test("T-VS4 边界：散文 + 规范形态 + 组标题行 → 零 L4", () => {
@@ -103,15 +71,13 @@ test("T-VS4 边界：散文 + 规范形态 + 组标题行 → 零 L4", () => {
 
 // T-VS5 反证：基线不得再设——非空基线 ⇒ FAIL（固定句）；违规一律阻断
 test("T-VS5 反证：基线不得再设——非空基线 ⇒ FAIL（固定句）；违规一律阻断", () => {
-  const pool = "- [ ] **跨仓项** → 需求 CLI 仓 `docs/requirements/AGENT-LOOP.md` §9 · status=待设计\n"
-  const ws = fixture(base(groups(pool, TECH_OK), {
-    "thincoder/docs/requirements/AGENT-LOOP.md": "# AGENT-LOOP\n\n## 9. 节\n\n正文。\n",
-  }))
+  const pool = "- [ ] **坏指针项** → 需求 `NOSUCH-DOC.md` §9 · 任务书 `docs/batches/B.md` §2 · status=待设计\n"
+  const ws = fixture(base(groups(pool, TECH_OK)))
   try {
     const root = join(ws, "thincoder-vscode")
     const ledgers = [{ path: "docs/TODO.md", live: true }]
     const keys = runCheck({ root, ledgers }).fresh.map((v) => v.key)
-    assert.ok(keys.length >= 1, "跨仓项为阻断面（反证非空转）")
+    assert.ok(keys.length >= 1, "坏指针为阻断面（反证非空转）")
     const bfile = join(root, "test", "fixtures", "ledger-baseline.json")
     mkdirSync(dirname(bfile), { recursive: true })
     writeFileSync(bfile, JSON.stringify({ entries: keys }), "utf8")
@@ -153,27 +119,31 @@ test("L2/L3：组计数不符 + 活档 `- [x]` 照报（同源判据面）", () 
     const root = join(ws, "thincoder-vscode")
     const r = runCheck({ root, ledgers: [{ path: "docs/TODO.md", live: true }] })
     assert.ok(r.fresh.some((v) => v.kind === "L2" && v.msg.includes("组计数不符")))
-    assert.ok(r.fresh.some((v) => v.msg.includes("活档含 `- [x]`")))
+    assert.ok(r.fresh.some((v) => v.msg.includes("活文件含 `- [x]`")))
   } finally { rmSync(ws, { recursive: true, force: true }) }
 })
 
 // T-VS35 错误：L4② 假阴面反证 + 全匹配（收紧——本端；AC-VS32 · AC-VS33）
-test("T-VS35 错误：L4② 收紧（外仓前缀 ⇒ 必报；省略 / 陈旧前缀零回归；全匹配逐处判——端差消解）", () => {
-  const ledger = "# TODO\n\n## 需求池（0 条）\n\n## 技术待办（4 条）\n\n"
-    + "- [ ] **外仓前缀** → 证据 `pkg/src/a.mjs:10`（前缀首段非本端现存）· 触发=认账不排期\n"
-    + "- [ ] **省略前缀对照** → 证据 `a.mjs:3`（仓内唯一 basename）· 触发=认账不排期\n"
-    + "- [ ] **陈旧前缀对照** → 证据 `src/old/a.mjs:12`（首段现存）· 触发=认账不排期\n"
-    + "- [ ] **双证据条** → 证据 `a.mjs:3` · `other/a.mjs:11`（次处外仓前缀）· 触发=认账不排期\n"
-  const ws = fixture(base(ledger))
+test("T-VS35 错误：L4② 收紧（仓根外前缀 / 越根绝对路径 ⇒ 必报；省略 / 陈旧前缀零回归；全匹配逐处判——端差消解）", () => {
+  const ws = fixture(base("# TODO\n", { "thincoder/src/agent/x.mjs": "export const x = 1\n" }))
   try {
     const root = join(ws, "thincoder-vscode")
+    const abs = join(ws, "thincoder", "src", "agent", "x.mjs").replace(/\\/g, "/")
+    const ledger = "# TODO\n\n## 需求池（0 条）\n\n## 技术待办（5 条）\n\n"
+      + "- [ ] **仓根外前缀** → 证据 `pkg/src/a.mjs:10`（前缀首段非本端现存）· 触发=认账不排期\n"
+      + "- [ ] **省略前缀对照** → 证据 `a.mjs:3`（仓内唯一 basename）· 触发=认账不排期\n"
+      + "- [ ] **陈旧前缀对照** → 证据 `src/old/a.mjs:12`（首段现存）· 触发=认账不排期\n"
+      + "- [ ] **双证据条** → 证据 `a.mjs:3` · `other/a.mjs:11`（次处仓根外前缀）· 触发=认账不排期\n"
+      + `- [ ] **越根绝对路径** → 证据 \`${abs}:9\`（绝对路径越出根）· 触发=认账不排期\n`
+    writeFileSync(join(root, "docs", "TODO.md"), ledger, "utf8")
     const r = runCheck({ root, ledgers: [{ path: "docs/TODO.md", live: true }] })
     const l4 = r.fresh.filter((v) => v.kind === "L4")
-    assert.equal(l4.length, 2, `L4=${JSON.stringify(l4.map((v) => v.msg))}`)
-    assert.ok(l4.every((v) => v.msg.includes("跨仓形态（外仓前缀）")), "①③ 均报「外仓前缀」")
+    assert.equal(l4.length, 3, `L4=${JSON.stringify(l4.map((v) => v.msg))}`)
+    assert.equal(l4.filter((v) => v.msg.includes("仓根外前缀（首段非仓根条目）")).length, 2, "①③ 均报「仓根外前缀」")
+    assert.ok(l4.some((v) => v.msg.includes("仓根外绝对路径")), "⑤ 越根绝对路径必报")
     assert.ok(l4.some((v) => v.key.includes("pkg/src/a.mjs")), "① 假阴面必报（旧 basename 回退会漏）")
-    assert.ok(l4.some((v) => v.key.includes("other/a.mjs")), "③ 全匹配逐处判（次处跨仓——首匹配会漏——端差消解）")
-    assert.ok(!l4.some((v) => v.key.includes("evi:a.mjs")), "② 省略前缀对照条零报")
+    assert.ok(l4.some((v) => v.key.includes("other/a.mjs")), "③ 全匹配逐处判（次处越根——首匹配会漏——端差消解）")
+    assert.ok(!l4.some((v) => v.key.endsWith("|a.mjs:3")), "② 省略前缀对照条零报")
     assert.ok(!l4.some((v) => v.key.includes("src/old/a.mjs")), "② 陈旧前缀对照条零报")
     assert.equal(run(root).code, 1, "退出码 1（fail-closed）")
   } finally { rmSync(ws, { recursive: true, force: true }) }

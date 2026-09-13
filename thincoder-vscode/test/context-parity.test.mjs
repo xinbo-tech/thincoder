@@ -1,6 +1,6 @@
 /**
  * context-parity.test.mjs — VSC-CONTEXT-PARITY 批（R1/R2/R5）注入面 / 顺序 / 尾块机判：
- * T-CI-1 ~ T-CI-11（14 条——含 T-CI-2a/2b/2c、T-CI-3b）。设计权威 = VSC 仓
+ * T-CI-1 ~ T-CI-10（13 条——含 T-CI-2a/2b/2c、T-CI-3b）。设计权威 = VSC 仓
  * `docs/design/AGENT-LOOP.md` §17.3（契约 D-CI1~D-CI10）/ §17.4（序表）/ §17.5（缓存契约）/
  * §17.7（用例表——各断言逐条回指）。
  *
@@ -12,13 +12,12 @@
  * + config 路径经 `_setConfigPathForTest` 沙箱化（config-io 的 configDir/configPath 于 import 期固化——
  * HOME 覆盖不及其路径读取，故必须用显式缝；否则本机 ~/.thincoder/config.json（agent.engineering）
  * 进入装配面 → 基座随机器漂移）。
- * T-CI-11 = 跨仓只读兄弟仓 `../thincoder`（THINCODER_CLI_ROOT 可覆盖；缺仓/异位 fail-closed
- * ——显式失败不 skip；先例 = test/prompts-mirror-anchors.test.mjs:21,30-34）；2026-09-12 PROSE-ANCHOR-RETIRE：
- * 序锚字面断言（读 CLI 源文本）删，仅保留 fail-closed 存在性面。
+ * S4 单仓化（设计档 TWO-REPO-MERGE.md §2.4 R16）：T-CI-11（跨仓 fail-closed 源在位守卫）
+ * 整段退役——对端发现 / 自指防护 / 缺仓 fail-closed 三要素随两仓合并失去对象（计数 14 → 13）。
  */
 import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync, existsSync } from "node:fs"
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir, platform as osPlatform } from "node:os"
 import { join, dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -34,7 +33,6 @@ import { injectResponseReminders } from "../src/agent/run-stages.mjs"
 
 const __here = dirname(fileURLToPath(import.meta.url))
 const VSC_ROOT = resolve(__here, "..")
-const CLI_ROOT = resolve(process.env.THINCODER_CLI_ROOT?.trim() || join(VSC_ROOT, "..", "thincoder"))
 const PLATFORM = { win32: "Windows", darwin: "macOS", linux: "Linux" }[osPlatform()] ?? osPlatform()
 const provider = { model: "deepseek-v4-pro" }
 
@@ -363,12 +361,4 @@ test("T-CI-10 错误：块 I/O 失败 → 该块静默跳过；各恰 1 次调�
   assert.ok(r.history.some((m) => m.role === "user" && m.content === "hello"), "用户输入零影响")
   assert.ok(firstIdx(r.history, "[System reminder: env: vscode,") >= 0, "其余块零影响（env-state）")
   assert.ok(contents(r.history).at(-1).startsWith("[System reminder: current time is "), "time 尾位零影响")
-})
-
-// ─── T-CI-11 跨仓只读序锚（AC-CI-5——fail-closed）────────────────────────────
-
-test("T-CI-11 边界（fail-closed）：兄弟仓 CLI 源在位（缺仓/异位显式失败）", () => {
-  assert.notStrictEqual(CLI_ROOT, VSC_ROOT, "CLI 根不得等于本仓根（THINCODER_CLI_ROOT 空值/自指防护）")
-  const cliSetup = join(CLI_ROOT, "src", "agent", "setup.mjs")
-  assert.ok(existsSync(cliSetup), `fail-closed：兄弟仓 CLI 源缺失 ${cliSetup}（THINCODER_CLI_ROOT 可覆盖；缺仓/异位 = 显式失败不 skip）`)
 })

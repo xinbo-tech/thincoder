@@ -11,9 +11,9 @@
  *   ③ 反证非空转（仓库域面）——向真实扫描域注入一条计数不符探针 → 判为**新增**（不落基线）→ 检出。
  *   ④ 基线文件本身可读且**为空**（入基线 = 例外 = 违规——fail-closed；AC28 判据源）。
  *   ⑤ 防回潮静态锚（T75——退役提示词文件未复活；2026-09-11 TEST-LIFECYCLE 扫① 收归）。
- *   ⑥ V4 跨仓形态合规（T-LS35–T-LS37——枚举内零报 / 枚举外必红 / 射程豁免）。
+ * S4 单仓化（设计档 TWO-REPO-MERGE.md §2.4 R5）：V4 跨仓形态合规整类退场（T-LS35–T-LS37 删段）。
  * 纯文件读取 + 字符串/结构判——零网络、零 git。仓库域扫描两例（T41①/T41④）+ spawn 主行程
- * 断言一例（T-LS36）走 slow() 门控（2026-09-12 收尾轮 9——重扫描真实进程类）；其余用例留快层。
+ * 断言一例走 slow() 门控（2026-09-12 收尾轮 9——重扫描真实进程类）；其余用例留快层。
  */
 import { test, beforeEach, afterEach, after } from "node:test"
 import { slow } from "./slow.mjs"
@@ -26,11 +26,12 @@ import { fileURLToPath } from "node:url"
 
 import {
   checkDocConsistency, checkSectionRefs, checkCountLists, checkDocWidths, checkBatchSegments,
-  checkCrossRepoForms, loadBaseline, v2Key, SCAN_DIRS, BASELINE_PATH,
-} from "../scripts/check-doc-width.mjs"
+  loadBaseline, v2Key, SCAN_DIRS, BASELINE_PATH,
+} from "../../scripts/check-doc-width.mjs"
 
 const __here = dirname(fileURLToPath(import.meta.url))
 const REPO = resolve(__here, "..")
+const MERGED = resolve(REPO, "..") // 合并仓根（S4——仓根统一版脚本）
 
 let tmp
 beforeEach(() => { tmp = mkdtempSync(join(tmpdir(), "doc-consistency-")) })
@@ -48,18 +49,17 @@ function writeDoc(name, content) {
   writeFileSync(join(dir, name), content)
 }
 
-slow("T41 ① 仓库扫描：V1/V2/V3/V4 零违规 + 基线必须为空（入基线 = 例外 = 违规）", () => {
-  const { v1, v2, v3, v4 } = checkDocConsistency(REPO)
+slow("T41 ① 仓库扫描：V1/V2/V3 零违规 + 基线必须为空（入基线 = 例外 = 违规）", () => {
+  const { v1, v2, v3 } = checkDocConsistency(REPO)
   const baseline = loadBaseline(REPO)
   assert.equal(baseline.size, 0, "基线必须保持为空——新增违规一律红，不得再入基线（入基线 = 例外 = 违规）")
   const offenders = [
     ...v1.map((r) => `V1 ${r.file} “${r.ref}”（${r.reason}）`),
     ...v2.map((r) => `V2 ${r.file}:${r.line} “${r.decl}” 声明 ${r.declared} ≠ 枚举 ${r.found}（${r.form}）`),
     ...v3.map((r) => `V3 ${r.file} §3 缺工具写入的轮次行`),
-    ...v4.map((r) => `V4 ${r.file}:${r.line} “${r.ref}”`),
   ]
   assert.deepStrictEqual(offenders, [], "扫描域零违规（清零轮后无存量合法态——修掉，不入基线）")
-  assert.ok(Array.isArray(v1) && Array.isArray(v2) && Array.isArray(v3) && Array.isArray(v4), "扫描产出四列表（V1/V2/V3/V4）")
+  assert.ok(Array.isArray(v1) && Array.isArray(v2) && Array.isArray(v3), "扫描产出三列表（V1/V2/V3）")
 })
 
 test("T41 ② 反证（夹具域）：V1 失效引用被检出 / 合规引用不误报", () => {
@@ -170,7 +170,7 @@ slow("T41 ④ 反证（仓库域）：注入一条计数不符探针 → 判为�
 test("T41 ⑤ 基线文件与扫描域口径（AC28 判据源）", () => {
   const raw = JSON.parse(readFileSync(join(REPO, BASELINE_PATH), "utf8"))
   assert.ok(Array.isArray(raw.entries) && raw.entries.length === 0, "基线 entries 必须为空数组——入基线 = 例外 = 违规（fail-closed）")
-  assert.ok(raw.entries.every((e) => /^(V1|V2|V3|V4)\|/.test(e)), "条目标记形态 V1|/V2|/V3|/V4|")
+  assert.ok(raw.entries.every((e) => /^(V1|V2|V3)\|/.test(e)), "条目标记形态 V1|/V2|/V3|（V4 随 S4 退场）")
   assert.deepStrictEqual(SCAN_DIRS, ["docs/design", "docs/requirements", "docs/batches"], "扫描域（排除 _archive/）")
   // 扫描域宽度面：V1/V2 域内 _archive/ 不受约束（collectMarkdown 跳过）
   const widths = checkDocWidths(REPO, { dir: SCAN_DIRS[0] })
@@ -198,16 +198,16 @@ test("T46 边界：V3 批次档 §3 工具轮次行三态零假阳（AC32——�
 
 /* ─── 第 13 批（T72–T73——文档机制边界与拆分；ENGINEERING-MODE.md §2.26） ─── */
 
-test("T72 正常/反证：跨仓引用——带 .md 形态 fail-closed 报 unknown-doc；规范形态零命中（B/AC53）", () => {
+test("T72 正常/反证：带 .md 形态引用 fail-closed 报 unknown-doc；规范形态零命中（B/AC53）", () => {
   writeDoc("cross-repo.md", [
-    "# 跨仓引用夹具",
+    "# 引用夹具",
     "",
-    "带 .md 的跨仓形态：见 WEBVIEW.md §5 展开说明。", // 反证：必报 unknown-doc（防未来静默放开）
+    "带 .md 的域外形态：见 WEBVIEW.md §5 展开说明。", // 反证：必报 unknown-doc（防未来静默放开）
     "",
-    "规范形态：见 WEBVIEW（VSC 仓）§5 展开说明。", // 规范：V1 域外——零命中
+    "规范形态：见 WEBVIEW（VSC 仓）§5 展开说明。", // 规范：无 .md 形态 ⇒ 不入 V1 判——零命中
   ].join("\n"))
   const refs = checkSectionRefs(tmp).map((r) => `${r.ref}|${r.reason}`)
-  assert.ok(refs.includes("WEBVIEW.md §5|unknown-doc"), "带 .md 跨仓形态如实报（fail-closed 钉住）")
+  assert.ok(refs.includes("WEBVIEW.md §5|unknown-doc"), "带 .md 域外形态如实报（fail-closed 钉住）")
   assert.equal(refs.length, 1, "规范形态零命中（仅反证行一条）")
 })
 
@@ -221,50 +221,6 @@ test("T73 正常：宽度表格行豁免——表格行零报告 / 非表格超�
   assert.equal(hits[0].line, 5, "非表格超宽行照报（含行号）")
   assert.equal(hits[0].len, plainLine.length, "行长度如实（非表格面零改）")
   assert.ok(!hits.some((h) => h.line === 3), ">300 字符表格行零报告（豁免谓词 = isTableRow）")
-})
-
-/* ─── 收尾轮 5（T-LS35–T-LS37——V4 跨仓形态合规；B16 / AC-LS31） ─── */
-
-test("T-LS35 正常：V4 枚举内零报（E1–E5 允许形态 + 仓别注记坐标）", () => {
-  writeDoc("cross-in.md", [
-    "# 枚举内",
-    "",
-    "对位声明：AGENT-LOOP（VSC 仓）§12 · 路径坐标：src/prompts/discipline-engineering.md（VSC 仓） · 裸仓名 VSC 仓 · 纯语义：多端镜像。",
-    "注记坐标：`thincoder-vscode/src/prompts/x.md`（VSC 仓）——仓别注记在位（D19 坐标形态）。",
-  ].join("\n"))
-  assert.deepStrictEqual(checkCrossRepoForms(tmp), [], "枚举内零报")
-})
-
-slow("T-LS36 错误：V4 枚举外必红（反证非空转——路径直引 / 裸节号）", () => {
-  writeDoc("cross-out.md", [
-    "# 枚举外",
-    "",
-    "① 对端仓路径 + 文档后缀连写：见 thincoder-vscode/docs/design/AGENT-LOOP.md §12。",
-    "③ 裸节号：裁定见 VSC 仓 §1 的登记。",
-  ].join("\n"))
-  const got = checkCrossRepoForms(tmp).map((r) => `${r.line}|${r.ref}`)
-  assert.ok(got.includes("3|thincoder-vscode/docs/design/AGENT-LOOP.md"), "路径直引必红")
-  assert.ok(got.includes("4|VSC 仓 §1"), "裸节号必红")
-  assert.equal(got.length, 2, `恰两条：${JSON.stringify(got)}`)
-  const r = spawnSync(process.execPath, [join(REPO, "scripts", "check-doc-width.mjs")], { cwd: tmp, encoding: "utf8" })
-  assert.equal(r.status, 1, "V4 违规 ⇒ 退出码 1（fail-closed）" + r.stdout + r.stderr)
-  assert.ok(r.stdout.includes("✗ V4"), "主行程输出含 V4 违规行")
-})
-
-test("T-LS37 边界：V4 射程豁免——fenced 块 / 行内命令 / 搜索模式串 / 引述码段不红", () => {
-  writeDoc("cross-exempt.md", [
-    "# 豁免",
-    "",
-    "行内命令：复跑 `cd thincoder-vscode && node scripts/check-doc-width.mjs` 全绿。",
-    "搜索模式串：口径 = `grep -E 'thincoder-vscode/docs/x.md|VSC 仓 [^（]*\\.md'`。",
-    "引述码段：如 `VSC 仓 §1` 为枚举外样例。",
-    "",
-    "```text",
-    "cd thincoder-vscode && node scripts/check-doc-width.mjs",
-    "thincoder-vscode/docs/a.md 全绿",
-    "```",
-  ].join("\n"))
-  assert.deepStrictEqual(checkCrossRepoForms(tmp), [], "可执行坐标（命令 / 模式串 / 引述）不判")
 })
 
 /* ─── 防回潮静态锚（2026-09-11 TEST-LIFECYCLE 扫① 收归；原档删段）───

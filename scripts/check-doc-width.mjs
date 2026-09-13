@@ -3,7 +3,7 @@
  * check-doc-width.mjs — 文档宽度检查 + 文档一致性机械校验 V1/V2/V3（合并仓统一版 · S4 机检单仓化）。
  *
  * 来源 = 两产品同名档（CLI `thincoder/scripts/check-doc-width.mjs` 与 VSC `thincoder-vscode/scripts/check-doc-width.mjs`）
- * 的并集——跨仓判据（V4 跨仓形态 / `PEER_DIRS` 方向对）整类退役（两仓合并 S4；设计档 TWO-REPO-MERGE.md §2.4 R5/R8）。
+ * 的并集——跨仓判据（V4 跨仓形态 / 方向对常量）整类退役（两仓合并 S4；设计档 TWO-REPO-MERGE.md §2.4 R5/R8）。
  * 本档 = 域参数化单份：**无域参 = 全域**（仓根 `docs` 自身 + 各产品子目录域）；产品域由门禁显式传参（`--domain`）。
  *
  * ① 宽度检查（既有）：扫描域内 .md 的 >max 字符单行（文档人类可读判据——README 归属规则 6）；

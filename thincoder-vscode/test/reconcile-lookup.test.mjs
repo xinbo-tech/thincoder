@@ -4,7 +4,7 @@
  * 判据权威 = `docs/design/DOC-CODE-RECONCILE.md` §5（输入 / 变更抽取 / 反查 / 输出 / 判据句 / 边界）。
  * 夹具 = 临时 **git 仓**（`git init` + 两次提交——夹具 diff 改 `scanGroups` 定义）。
  * 慢层（slow()）：真 git 子进程（单例 >500ms——快层 skip、全量照跑）。
- * 边界硬项：**只读、不写、不阻断**（退出码恒 0）；跑前后 `git status --porcelain` 同集；不跨仓反查。
+ * 边界硬项：**只读、不写、不阻断**（退出码恒 0）；跑前后 `git status --porcelain` 同集；只读本域（S4 单仓化——对端面并入仓内）。
  */
 import { test } from "node:test"
 import { slow } from "./slow.mjs"
@@ -43,7 +43,7 @@ const runMain = (args) => {
 // ── T-DC15 静态：抽取器单源 + 默认 range（AC-DC10） ──────────────────────────
 test("T-DC15 静态：抽取器单源（复用 V5 `extractTokens`——无第二份抽取正则）+ 默认 range", () => {
   const src = readFileSync(join(REPO, "scripts", "reconcile-lookup.mjs"), "utf8")
-  assert.ok(/import\s*\{\s*collectDocStems,\s*extractTokens\s*\}\s*from\s*"\.\/check-doc-anchors\.mjs"/.test(src), "抽取器复用 V5（同一函数导入）")
+  assert.ok(/import\s*\{\s*collectDocStems,\s*extractTokens\s*\}\s*from\s*"\.\.\/\.\.\/scripts\/doc-anchors\.mjs"/.test(src), "抽取器复用 V5（同一函数导入——S4 单仓化改指仓根统一版）")
   assert.ok(!/T\(\?:-\[A-Za-z\]/.test(src), "无第二份 A1 抽取式")
   assert.ok(!/mjs\|js\|json\|md\|css\|html/.test(src), "无第二份 A3 抽取式")
   assert.ok(!src.includes("A1_TOKEN_RE"), "零第二份抽取常量")

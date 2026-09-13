@@ -10,7 +10,7 @@ import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { dirname, join, resolve } from "node:path"
+import { dirname, join, parse, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { spawnSync, execFileSync } from "node:child_process"
 import { slow } from "./slow.mjs"
@@ -18,10 +18,10 @@ import { blameAges, discoverFamily, entryTitle, findProject, formatAgingLine, fo
 import { runLedgerScan } from "../src/tui/ledger-surface.mjs"
 import { renderStatus } from "../src/tui/render-frame.mjs"
 import { C } from "../src/tui/ansi.mjs"
-import { main as ledgerMain, runCheck } from "../scripts/check-ledger.mjs"
+import { main as ledgerMain, runCheck } from "../../scripts/check-ledger.mjs"
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..")
-const CLI = join(REPO, "scripts", "check-ledger.mjs")
+const CLI = join(REPO, "..", "scripts", "check-ledger.mjs")
 const stripAnsi = (s) => String(s).replace(/\x1b\[[0-9;]*m/g, "")
 const lineOf = (text, needle) => text.split("\n").findIndex((l) => l.includes(needle)) + 1
 let tmp
@@ -252,12 +252,13 @@ test("T109 边界：深路径 / 容器目录 / 全无台账", () => {
   assert.deepStrictEqual(cont.projects.map((p) => p.root), [join(tmp, "ws", "alpha"), join(tmp, "ws", "beta")], "②候选集 = 子目录族")
   const cur2 = discoverFamily(join(tmp, "ws", "beta", "src"))
   assert.deepStrictEqual(cur2.projects.map((p) => p.root), [join(tmp, "ws", "beta"), join(tmp, "ws", "alpha")], "发现序：current 在前（字典序在后仍居首——判别夹具）")
-  const iso = mkdtempSync(join(tmpdir(), "ledger-iso-"))
-  try {
-    const none = discoverFamily(join(iso, "deep", "nested"))
-    assert.equal(none.current, null, "③无任何台账 → current=null")
-    assert.deepStrictEqual(none.projects, [], "③projects=[]（零输出前提）")
-  } finally { rmSync(iso, { recursive: true, force: true }) }
+  // ③ 全无台账：锚 = 系统盘根下**全链不存在的幽灵路径**——全链零台账（环境自持）。
+  //    旧夹具以 tmpdir 子目录为锚，父链扫描会命中并行用例在 %TEMP% 遗留的 ledger-* 台账目录 → 假红
+  //    （test:full 并行下实测复现）；幽灵链任何时刻不随环境漂移，断言强度不变（仍要求 current=null + projects=[]）。
+  const ghost = join(parse(tmpdir()).root, "thincoder-zero-ledger-probe", "deep", "nested")
+  const none = discoverFamily(ghost)
+  assert.equal(none.current, null, "③无任何台账 → current=null")
+  assert.deepStrictEqual(none.projects, [], "③projects=[]（零输出前提）")
 })
 
 // ── T110 降级不崩（AC89/N1+N2） ─────────────────────────────────────────────

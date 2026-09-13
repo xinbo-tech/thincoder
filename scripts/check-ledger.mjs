@@ -31,7 +31,7 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
-import { pathToFileURL } from "node:url";
+import { pathToFileURL, fileURLToPath } from "node:url";
 import { discoverDomains, MERGED_SCRIPTS } from "./check-doc-width.mjs";
 // 数字单源（F7/AC80）：台账解析 / 计数 / 老化阈值 / 显示面 formatter 按产品域取用（两产品各自实现——不跨产品混用）
 import * as cliLedgerModule from "../thincoder/src/ledger.mjs";
@@ -57,7 +57,7 @@ const LEDGER_MODULES = [
 /** 产品域 ledger 模块取用（`root` = 域根 / 台账所属域）；未列名 ⇒ 回退 CLI 模块。 */
 export function ledgerModuleFor(root) {
   const b = basename(resolve(root));
-  return (LEDGER_MODULES.find((e) => e.dir === b) ?? cliLedgerModule).mod;
+  return LEDGER_MODULES.find((e) => e.dir === b)?.mod ?? cliLedgerModule;
 }
 const ENTRY_RE = /^- \[[ x]\]\s+/, OPEN_ENTRY_RE = /^- \[ \]\s+/; // 任意锚（条目键 / 全档扫）/ 未决条目（组计数——§2.24.4 未决口径）
 const DECL_RE = /（(\d+)\s*条）/;
@@ -82,9 +82,12 @@ export function sectionNums(file) {
   return out;
 }
 const hasSection = (nums, n) => nums.has(n) || [...nums].some((x) => x.startsWith(n + "."));
+/** 统一版脚本自身所属仓根（= 合并仓根——「本仓」解析面：引用仓根 `scripts/` 的台账证据在
+ *  产品根调用（测试面）下仍可解析；仓外夹具根（tmp）不并入——保测试隔离）。 */
+const SCRIPT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 /** 解析基根组（单仓）：合并仓根（调用根）+ 台账所属域根 + 台账目录——去重、依次搜索。 */
 export function resolutionBases(rootBase, domainRoot, ledgerDir) {
-  return [...new Set([resolve(rootBase), resolve(domainRoot), resolve(ledgerDir)])];
+  return [...new Set([resolve(rootBase), resolve(domainRoot), resolve(ledgerDir), ...(withinRoot(SCRIPT_ROOT, rootBase) ? [SCRIPT_ROOT] : [])])];
 }
 /** 档引用解析（搜索序见上）；命中返回绝对路径，否则 null。 */
 function resolveDoc(p, bases) {

@@ -1,7 +1,9 @@
 /**
  * ledger.test.mjs — 台账机检用例（T67–T71 · T92–T96 · T-LS1–T-LS5 · T-LS13–T-LS15 · T-LS42 · T-LS43——设计档 ENGINEERING-MODE.md §2.24.6 / §2.24.9 契约 · AC45–AC52 / AC75–AC79；L4② 收紧面 = LEDGER-SELF-CONTAINED 批 §10 · AC-LS34–AC-LS35——扫描窗 = 证据场）。
  * 仓库面：本仓活档 + 归档档全绿（违规 0 · 基线必须保持为空——非空即 FAIL，fail-closed）。
- * 反证面：坏指针 / 计数不符 / 形态五例 / 活文件 `- [x]` / 非法触发 / **跨仓证据与跨仓指针（L4——本仓可解析闸）** —— 必报红（防「永远绿的空转脚本」）。
+ * 反证面：坏指针 / 计数不符 / 形态五例 / 活文件 `- [x]` / 非法触发 / **仓根外证据（L4——本仓可解析闸）** —— 必报红（防「永远绿的空转脚本」）。
+ * S4 单仓化（设计档 TWO-REPO-MERGE.md §2.4 R6）：跨仓闸删除（T-LS2 / T-LS3 删段）；wide 域收为本仓根；
+ * 「外仓前缀」形态判据更名收正为「仓根外前缀」（语义 = 越出合并仓）。
  * 审计面：T94 待处置清单 + 老化（git 回填行龄）走 slow() 门控（fs / git 子进程）。
  * 归册（2026-09-12 收尾轮 9）：仓库面 T67 同归册（全仓扫描 + 真命令 spawn——快层 skip、test:full 照跑）。
  *
@@ -16,11 +18,11 @@ import { basename, dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { spawnSync, execFileSync } from "node:child_process"
 import { slow } from "./slow.mjs"
-import { runCheck, collectPending, main } from "../scripts/check-ledger.mjs"
-import { SCAN_DIRS } from "../scripts/check-doc-width.mjs"
+import { runCheck, collectPending, main } from "../../scripts/check-ledger.mjs"
+import { SCAN_DIRS } from "../../scripts/check-doc-width.mjs"
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..")
-const CLI = join(REPO, "scripts", "check-ledger.mjs")
+const CLI = join(REPO, "..", "scripts", "check-ledger.mjs")
 let tmp
 beforeEach(() => { tmp = mkdtempSync(join(tmpdir(), "ledger-")) })
 afterEach(() => { rmSync(tmp, { recursive: true, force: true }) })
@@ -38,7 +40,7 @@ slow("T67 正常：本仓台账机检全绿（每档一行 OK / 退出码 0；�
   assert.equal(r.status, 0, r.stdout + r.stderr)
   assert.equal((r.stdout.match(/^OK: /gm) ?? []).length, 2, "两档各一行 `OK: <档>`（L4/R1——默认 = 本仓活档 + 归档档；不扫对端）")
   mk("docs/TODO.md", "# t\n\n## 需求池（0 条）\n\n## 技术待办（0 条）\n")
-  const skip = runCheck({ root: tmp, ledgers: ["docs/TODO.md", "docs/NOPE.md", "../thincoder-vscode/docs/TODO.md"] }) // 缺档 / 跨仓默认项不存在 → 跳过不报（降级不阻断）
+  const skip = runCheck({ root: tmp, ledgers: ["docs/TODO.md", "docs/NOPE.md", "../missing-sibling/docs/TODO.md"] }) // 缺档（含仓外相对路径）→ 跳过不报（降级不阻断）
   assert.equal(skip.checked, 1)
   assert.equal(skip.skipped.length, 2, "缺档跳过不报（降级不阻断）")
   assert.deepStrictEqual(skip.fresh, [])
@@ -142,30 +144,6 @@ test("T-LS1 正常：本仓指针全解析 → 零 [L4]、退出码 0", () => {
   assert.equal(code(["--root", tmp]), 0, "退出码 0")
 })
 
-test("T-LS2 错误：跨仓证据路径必报 [L4] + 退出码 1（事故形态反证）", () => {
-  mk("docs/TODO.md", ["# t", "", "## 技术待办（1 条）", "",
-    "- [ ] **乙** → 证据 `../thincoder-vscode/src/x.mjs:10` · status=在途", ""].join("\n"))
-  const { fresh } = runTmp()
-  const l4 = fresh.filter((v) => v.kind === "L4")
-  assert.equal(l4.length, 1, JSON.stringify(fresh.map((v) => v.msg)))
-  assert.match(l4[0].msg, /\[L4\] 证据路径本仓不可解析/)
-  assert.equal(code(["--root", tmp]), 1, "退出码 1（fail-closed）")
-})
-
-test("T-LS3 错误：跨仓指针不以对端可解析放行（本仓基根解析失败必报 [L4]）", () => {
-  mk("thincoder/docs/requirements/AGENT-LOOP.md", "# A\n\n## 1 x\n") // 本仓同名档在，但无 §9
-  mk("thincoder/docs/batches/B.md", "# B\n\n## §2 任务\n")
-  mk("thincoder-vscode/docs/requirements/AGENT-LOOP.md", "# A\n\n## 9 x\n") // 对端仓有且存在——不得据此放行
-  mk("thincoder/docs/TODO.md", ["# t", "", "## 需求池（1 条）", "",
-    "- [ ] **丙** → 需求 `docs/requirements/AGENT-LOOP.md` §9 · 任务书 `docs/batches/B.md` §2 · status=待设计", ""].join("\n"))
-  const repo = join(tmp, "thincoder")
-  const { fresh } = runCheck({ root: repo, ledgers: ["docs/TODO.md"], baseline: new Set() })
-  const l4 = fresh.filter((v) => v.kind === "L4")
-  assert.equal(l4.length, 1, JSON.stringify(fresh.map((v) => v.msg)))
-  assert.match(l4[0].msg, /本仓无该节/)
-  assert.equal(main(["--root", repo], { log: () => {} }), 1, "退出码 1")
-})
-
 test("T-LS4 边界：零假阳（散文提及 + 「名称（仓别）§N」规范形态不入判据）", () => {
   mkTargets()
   mk("docs/TODO.md", ["# t", "", "## 需求池（2 条）", "",
@@ -194,7 +172,7 @@ test("T-LS13 正常/错误：默认 = 本仓两档（活档 + 归档档）；归
   assert.equal(two.checked, 2, "默认扫两档（本仓活档 + 归档档）")
   assert.ok(two.perFile[1].file.endsWith("docs/TODO-archive.md"), two.perFile.map((f) => f.file).join(","))
   assert.deepStrictEqual(two.fresh.map((v) => v.msg), [], "归档 `- [x]` 不判 L3⑤；闭环证据本仓可解析 → 零违规")
-  mk("docs/TODO-archive.md", "# a\n\n- [x] **跨仓条** → 证据 `../thincoder-vscode/src/x.mjs:1`\n")
+  mk("docs/TODO-archive.md", "# a\n\n- [x] **仓根外条** → 证据 `pkg/src/x.mjs:1`\n")
   const bad = runCheck({ root: tmp, baseline: new Set() })
   assert.equal(bad.fresh.filter((v) => v.kind === "L4").length, 1, JSON.stringify(bad.fresh.map((v) => v.msg)))
   assert.equal(code(["--root", tmp]), 1, "退出码 1（fail-closed）")
@@ -228,36 +206,36 @@ test("T-LS15 正常/错误：L4② 判据精化（省略/陈旧前缀仓内定�
   assert.equal(code(["--root", tmp]), 1)
 })
 
-test("T-LS42 错误：L4② 收紧（外仓前缀 ⇒ 必报；省略 / 陈旧前缀零回归；全匹配逐处判）", () => {
-  mk("src/x.mjs", "// 唯一 basename（假阴面「外仓前缀 + 仓内唯一 basename」的仓内同名面）\n")
+test("T-LS42 错误：L4② 收紧（仓根外前缀 ⇒ 必报；省略 / 陈旧前缀零回归；全匹配逐处判）", () => {
+  mk("src/x.mjs", "// 唯一 basename（假阴面「仓根外前缀 + 仓内唯一 basename」的仓内同名面）\n")
   mk("src/agent-tools/async-settle.mjs", "// 陈旧前缀面（首段现存）\n")
   mk("docs/TODO.md", ["# t", "", "## 技术待办（4 条）", "",
-    "- [ ] **外仓前缀** → 证据 `pkg/src/x.mjs:10` · status=在途",
+    "- [ ] **仓根外前缀** → 证据 `pkg/src/x.mjs:10` · status=在途",
     "- [ ] **省略前缀对照** → 证据 `x.mjs:1` · status=在途",
     "- [ ] **陈旧前缀对照** → 证据 `src/agent/async-settle.mjs:138` · status=在途",
     "- [ ] **双证据条** → 证据 `x.mjs:1` · `other/x.mjs:11` · status=在途", ""].join("\n"))
   const { fresh } = runTmp()
   const l4 = fresh.filter((v) => v.kind === "L4")
   assert.equal(l4.length, 2, JSON.stringify(fresh.map((v) => v.msg)))
-  assert.ok(l4.every((v) => v.msg.includes("跨仓形态（外仓前缀）")), "①③ 均报「外仓前缀」：" + JSON.stringify(l4.map((v) => v.msg)))
+  assert.ok(l4.every((v) => v.msg.includes("仓根外前缀（首段非仓根条目）")), "①③ 均报「仓根外前缀」：" + JSON.stringify(l4.map((v) => v.msg)))
   assert.ok(l4.some((v) => v.key.endsWith("|pkg/src/x.mjs:10")), "① 假阴面必报（旧 basename 回退会漏）")
-  assert.ok(l4.some((v) => v.key.endsWith("|other/x.mjs:11")), "③ 全匹配逐处判（次处跨仓——首匹配会漏）")
+  assert.ok(l4.some((v) => v.key.endsWith("|other/x.mjs:11")), "③ 全匹配逐处判（次处仓根外——首匹配会漏）")
   assert.ok(!l4.some((v) => v.key.endsWith("|x.mjs:1")), "② 省略前缀对照条零报")
   assert.ok(!l4.some((v) => v.key.includes("async-settle.mjs")), "② 陈旧前缀对照条零报")
   assert.equal(code(["--root", tmp]), 1, "退出码 1（fail-closed）")
 })
 
-test("T-LS43 边界：L4② 扫描窗 = 证据场（标记前跨仓路径不判——窄窗成立；场内 / 无标记 ⇒ 必报——非空转）", () => {
+test("T-LS43 边界：L4② 扫描窗 = 证据场（标记前仓根外路径不判——窄窗成立；场内 / 无标记 ⇒ 必报——非空转）", () => {
   mk("src/x.mjs", "// 唯一 basename（场内省略前缀对照）\n")
   mk("docs/TODO.md", ["# t", "", "## 技术待办（3 条）", "",
     "- [ ] **场外前缀对照** → 行首说明 `other/x.mjs:9`（标记前段——不入扫描窗）· 证据 `x.mjs:1` · status=在途",
-    "- [ ] **场内跨仓** → 证据 `other/x.mjs:11` · status=在途",
-    "- [ ] **无标记跨仓** → `pkg/notes/x.mjs:7`（无标记 ⇒ 整条）· status=在途", ""].join("\n"))
+    "- [ ] **场内仓根外** → 证据 `other/x.mjs:11` · status=在途",
+    "- [ ] **无标记仓根外** → `pkg/notes/x.mjs:7`（无标记 ⇒ 整条）· status=在途", ""].join("\n"))
   const { fresh } = runTmp()
   const l4 = fresh.filter((v) => v.kind === "L4")
   assert.equal(l4.length, 2, JSON.stringify(fresh.map((v) => v.msg)))
-  assert.ok(!l4.some((v) => v.key.includes("other/x.mjs:9")), "标记前跨仓路径不判（窄窗成立）")
-  assert.ok(l4.some((v) => v.key.endsWith("|other/x.mjs:11")), "场内跨仓必报（非空转）")
+  assert.ok(!l4.some((v) => v.key.includes("other/x.mjs:9")), "标记前仓根外路径不判（窄窗成立）")
+  assert.ok(l4.some((v) => v.key.endsWith("|other/x.mjs:11")), "场内仓根外必报（非空转）")
   assert.ok(l4.some((v) => v.key.endsWith("|pkg/notes/x.mjs:7")), "无标记 ⇒ 整条（不漏）")
   assert.equal(code(["--root", tmp]), 1, "退出码 1（fail-closed）")
 })
