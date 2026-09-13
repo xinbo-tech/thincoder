@@ -27,3 +27,14 @@ jobs:
       - run: npm install
       - run: npm test
       - run: npm run lint
+  docs:
+    name: repo-wide doc machine checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      # 全域态（无域参 = 全域——设计档 TWO-REPO-MERGE.md §2.5）：doc-anchors（V5 两引擎）/ 宽度+一致性 V1–V3 / 台账 L1–L4
+      - run: node scripts/doc-anchors.mjs
+      - run: node scripts/check-doc-width.mjs
+      - run: node scripts/check-ledger.mjs
