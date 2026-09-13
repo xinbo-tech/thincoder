@@ -19,7 +19,8 @@
 > 快车道：用户说"急"走单点不入池。生命周期：实现后核销勾销。
 
 
-## 技术待办（8 条）
+## 技术待办（9 条）
+- [ ] **`peer_instances` 假阳性：只按 pid 判活、不验进程身份（pid 复用即误报「另有活动实例」）**（2026-09-13 用户发现并要求挂账）→ **实测**：记录里的 pid 9800 现为 **`SearchHost.exe`**（Windows 搜索 ✗，与 thincoder 无关）；`node.exe` 一个都没有（**无其他实例** ✓），而 `peer_instances` **仍报** `{pid:9800, end:null, sessionId:"9800-…", slots:[1]}` ✗。**根因**（父侧实读）：`thincoder/src/peer-instances.mjs:185-191` 的活判定 `liveOthers = others.filter(g => aliveSet.has(g.pid))` **只用 pid 存在性** ✗——`probeCmdlines`（`:106-126`，Windows 走 `Get-CimInstance` ✓）虽能拿命令行，却**只用于给 `end` 字段分类**（`:204`），**未用于身份校验** ✗ ⇒ pid 回收后即假阳性 ✓。**修法**：活判定加**身份校验**（命令行含本产品 / 工作区 cwd 匹配 ✓，复用既有 cmdline 探测 ✓）+ **陈旧记录清理**（pid 活着但不是本产品 ⇒ 视为死、清 manifest ✓）+ 用例（注入缝 `_setPeerInstancesTestImpl` 已具备 ✓）· **触发=条件（下次触碰 peer 面 / 发版前）**
 
 - [ ] **CLI `README.md` 契约面漂移（本批外 · 父侧已复核 2 处）**（2026-09-13 CORE-UNIFICATION R5 轮勘察报出）→ 已复核：`thincoder/README.md:412` 列 TUI 菜单含 `/provider`，而 `thincoder/src/tui/` 源码对 `/provider` **零命中** ✗；`:97` 亦列 `/provider` ✗ · 未复核面（同轮报出）= `/config set` 实装只认 `embedkey` · README 示例标 `jsonc`+注释 vs 实装 `JSON.parse` · `:123` 仍写 `activeProvider`（迁移已删该键）· README「可用环境变量」与代码相反 · `tui` 子命令不在 USAGE/补全词表 · hooks 三处不一致（README 含 `Notification` vs `hooks.mjs` 四事件 vs `TOOLS.md` 三类）· 消解路径 = 专档对账轮（逐条实核后改文档或改实装）· **触发=条件（该档下次被触碰时 / 下批收口前）**
 - [ ] **疑似代码缺陷两处（半核：坐标已复核，故障面未复现）**（2026-09-13 R5 轮报出）→ ① **已复核坐标** `thincoder/src/acp/bridge.mjs:184`：⟦ev⟧ 剥离白名单 = `turn|approval|done|settled|stopped|async`，**不含 `queued` / `cancelled`** ✗ ⇒ 若这两类 token 确有发射点，将随 ACP 泄漏给客户端（该发射面**父侧未核** ✗）② CLI `onWait` 在 `thincoder/src/acp/bridge.mjs:196` 仅做日志（无相位分支 ✓）⇒ 报出的「`phase:"warn"/"quota"` 渲染成 `retry in undefineds`」应在**另一消费端**（TUI 侧，父侧未定位 ✗）· 消解路径 = 实跑复现 + 修 + 用例 · **触发=条件（该面下次被触碰时）**
