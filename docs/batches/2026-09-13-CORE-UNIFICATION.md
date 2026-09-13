@@ -358,6 +358,17 @@
 
 **越段发现两项 —— 归主 agent，本轮已由父侧就地收正** ✓：`README.md:23-24` 的裸名命令（`cd thincoder` ✗）· 台账 `docs/TODO.md:7` 的规则句（`thincoder/…` ✗）。
 
+### 追加裁定（markdown 面：逻辑与渲染分家 · 2026-09-14）
+
+**用户原话**：「这一处设计其实是不合理的——TUI 和 VSC **都会有** markdown 支持，但是会是**完全不一样的代码**。」✓
+
+**父侧实核** ✓：
+- 同名**两个不同档** ✗ —— `thincoder-cli/src/markdown.mjs`（107 行 ✓ = 记忆条目的 frontmatter **解析/序列化逻辑** ✓，被 `memory/core` · `memory/delete` · `rules` 消费 ✓）与 `thincoder-cli/src/tui/markdown.mjs`（71 行 ✓ = 自述「lightweight inline markdown **rendering** for the TUI display layer」✓）；
+- 设计档 **#182** 把「`markdown.mjs`」列进 **CLI 顶层 ④ 端特有**（理由标注 = 「**TUI 渲染**」✗）⇒ **判据指错了对象** ✗：被点名的顶层档是**逻辑**（共享 ✓），渲染是**另一个**档 ✓；
+- **渲染面两端各有一套且完全不同** ✓（TUI 终端行内渲染 / VSC 宿主侧渲染 ✓）⇒ **永不合并** ✓（用户裁定 ✓）。
+
+**裁定** ✓：① **逻辑面**（`src/markdown.mjs`）= **共享** ✓ ⇒ 归核（S1 已落 ✓ 取法正确 ✓）；② **渲染面** = **端特有** ✓（两端各自实现、互不合并、互不追赶 ✓）；③ 设计档 **#182 行须收正**（点名改 `tui/markdown.mjs` ✓ + 顶层 `markdown.mjs` 从 ④ 列表移出、归 S1 ✓）。
+
 > 本节之后由 eng-designer 接手写 §2 批次任务与需求/设计档；设计就绪后由**用户发起**设计评审（发起权在用户）。
 
 ---
