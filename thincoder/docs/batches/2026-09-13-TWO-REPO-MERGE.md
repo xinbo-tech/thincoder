@@ -879,7 +879,11 @@ S5 删除 `prompts-mirror-anchors.test.mjs:26` 使 `THINCODER_CLI_ROOT` **失去
 #### 五、全批收口声明
 
 - **S0–S7 八步 · 四批全部落地**，逐批均带 §6 收口（批 2 见上、批 3 见中、批 4 见本段）；设计档 §3 全表 28 行逐项 ✅（T-M12 按设计原文免验）。
-- **不在本批次档射程**：S3b（旧 VSC 仓远端归档——不可逆，**待用户单独确认**）；phase 2（核心统一——独立需求，未立项）。
+- **不在本批次档射程**：**S3b（旧 VSC 仓远端归档 / 只读）——用户 2026-09-13 已确认执行**。实况（本批实测）：旧仓 = 工作区顶层 `thincoder-vscode/`（有效 git 仓 · 工作树干净 · HEAD `40409b4 release: v0.9.2`），**双远端** = `github` `https://github.com/xinbo-tech/thincoder-vscode.git` ∥ `origin` `https://gitee.com/shanghai-xinbo/thincoder-vscode.git`。
+  **执行受阻（如实报）**：本机**无 `gh` CLI**、**无平台凭据**，且凭证不得入档/经手 ⇒ **S3b 须在平台侧手动完成**：
+  ① GitHub → 该仓 Settings → 勾选「Archive this repository」；② Gitee → 该仓设置（若平台无「归档」能力，则置只读 + 发布退役公告，形态自定）。
+  **S0 回滚点仍在位**（`_merge-backup/thincoder-vscode.git` mirror 完好）——归档后如需取证仍可自备份取。执行后由父侧回填本行状态。
+- **另**：phase 2（核心统一）为独立需求，**未立项**。
 
 
 
