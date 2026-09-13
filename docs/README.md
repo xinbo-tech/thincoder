@@ -9,8 +9,8 @@
 | 类 | 位置 | 形态 |
 |---|---|---|
 | 台账（项目级唯一） | `TODO.md` · `TODO-archive.md` | ✅ 已在位（2026-09-13 单仓单账） |
-| 板块档（需求 / 设计） | `requirements/` · `design/` | 🚧 逐步迁入 |
-| 批次档 | `batches/` | 🚧 逐步迁入 |
+| 板块档（需求 / 设计） | `requirements/` · `design/` | ✅ 核心统一已迁入（2026-09-13）；后续新板块档直接落此 |
+| 批次档 | `batches/` | ✅ 核心统一已迁入（2026-09-13） |
 
 ## 2. 迁移政策（2026-09-13 用户裁定——「逐步建立 · 旧档留参照 · 不一刀切」）
 
@@ -24,15 +24,16 @@
 
 | 档 | 现址 | 状态 |
 |---|---|---|
-| 核心统一（phase 2）· 需求 / 设计 / 批次 | `thincoder/docs/{requirements,design,batches}/CORE-UNIFICATION*` | 🚧 **待迁**——等 eng-designer 改稿轮落地后迁（避免与在途写入冲突） |
+| 核心统一（phase 2）· 需求 / 设计 / 批次 | 原 `thincoder/docs/{requirements,design,batches}/` → 现 **`docs/{requirements,design,batches}/`** | ✅ **已迁入**（2026-09-13——`git mv` 三档 + 17 处引用改写；三机检绿） |
 | 两仓合并（phase 1）· 需求 / 设计 / 批次 | `thincoder/docs/{requirements,design,batches}/TWO-REPO-MERGE*` | **参照**——已闭环批；引用面大（约 40 处，含两产品文档树与脚本头注），**暂留原地**，被触碰时再议 |
 
 ## 4. 与产品文档地图的关系
 
-- CLI 产品地图 = `thincoder/docs/README.md`（**CLI 产品**的文档入口）——它此前登记了项目级板块（历史原因：合并前无项目级层）；板块迁入本层后，其登记行**改为指向本层**。
+- CLI 产品地图 = `thincoder/docs/README.md`（**CLI 产品**的文档入口）——它此前登记了项目级板块（历史原因：合并前无项目级层）；板块迁入本层后，其登记行**撤除**（该板块不再属 CLI 产品树——本层为唯一登记处）。
 - VSC 产品地图 = `thincoder-vscode/docs/README.md`（VSC 产品入口）。
 - 本层**不进**两产品的文档域扫描；本层自带台账机检覆盖（`scripts/check-ledger.mjs` 默认域含本目录）。
 
 ## 变更记录
 
+- 2026-09-13：**首批迁入**——核心统一（phase 2）需求 / 设计 / 批次三档自 CLI 产品树 `git mv` 至本层（含 17 处引用改写：本板块自指 / 互指 11 处 → 根形态 · 引 phase 1 两档 5 处 → CLI 树形态 · 另 1 处）；CLI 产品地图登记行同批撤除；三机检 exit 0、零悬空锚。
 - 2026-09-13：建档——根文档层 + 迁移政策（用户裁定「逐步建立全套文档体系、旧档先保留作参照」）；待迁清单初版（CORE 待迁 / TWO 参照）。

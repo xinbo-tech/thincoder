@@ -2,9 +2,9 @@
 
 > 板块 = **核心统一**（phase 2——「一个核 + 两个薄壳」）——架构级机制档：本档承载**设计层 + 测试层**（需求层已拆出）。
 > 建档：2026-09-13 · 状态：**设计待评审**（用户发起评审前状态）。
-> 需求见 `../requirements/CORE-UNIFICATION.md`（板块镜像形态见 `README.md` §3.2）——本档保留设计与测试细节。
-> 上游通道 = `TWO-REPO-MERGE.md` §2.13（phase 1 仅预留通道，明文「若启动须另建板块文档」）；本档即该新板块。
-> 需求来源 = 批次档 `../batches/2026-09-13-CORE-UNIFICATION.md` §1（用户裁定「计划可以，干吧」）。
+> 需求见 `docs/requirements/CORE-UNIFICATION.md`（板块镜像形态见 `README.md` §3.2）——本档保留设计与测试细节。
+> 上游通道 = `thincoder/docs/design/TWO-REPO-MERGE.md` §2.13（phase 1 仅预留通道，明文「若启动须另建板块文档」）；本档即该新板块。
+> 需求来源 = 批次档 `docs/batches/2026-09-13-CORE-UNIFICATION.md` §1（用户裁定「计划可以，干吧」）。
 
 ---
 
@@ -16,7 +16,7 @@
 
 | # | 事实 | 证据 / 量化 |
 |---|---|---|
-| B1 | **内容层已同、实现层真分叉** | 同路径 107 对：`.md` 40 对中位 1.0000（逐字节同 28）；`.mjs` 67 对中位 0.2829（逐字节同 1 · ≥0.9 仅 7 · <0.2 者 29）。来源 = 批次档 §1（2026-09-13 父侧复算）；口径与复现 = `../requirements/CORE-UNIFICATION.md` §1.1 + `scripts/mirror-divergence.mjs:5-12` |
+| B1 | **内容层已同、实现层真分叉** | 同路径 107 对：`.md` 40 对中位 1.0000（逐字节同 28）；`.mjs` 67 对中位 0.2829（逐字节同 1 · ≥0.9 仅 7 · <0.2 者 29）。来源 = 批次档 §1（2026-09-13 父侧复算）；口径与复现 = `docs/requirements/CORE-UNIFICATION.md` §1.1 + `scripts/mirror-divergence.mjs:5-12` |
 | B2 | **CLI 产物只含包根内文件**（打包边界 · 硬证据） | `thincoder/package.json:22-28`：`files` 白名单 = bin/ + src/ + README + CHANGELOG + LICENSE；`:4` 自述「no build step」——npm 产物无法收录包根之外的文件 |
 | B3 | **VSC 产物只含扩展根内文件** | `thincoder-vscode/package.json:33`（`main: ./extension.mjs`）+ `:113-124`（scripts 无构建步骤）；`.vscodeignore` 排除 `test/` · `docs/` · `node_modules/` 等 ⇒ 产物 = 扩展根内运行期文件 |
 | B4 | **提示词与工具文档在包内硬加载** | CLI `thincoder/src/prompt-overlays.mjs:17-19`（读同目录 `prompts/`，缺档静默空串）；VSC `thincoder-vscode/src/advisor/main.mjs:66-72`（读 `../prompts/`，缺档抛错）⇒ 该两面必须住在各自包根内 |
@@ -159,8 +159,8 @@ S1 的「两产品一行不改」是硬判据（可用 `git diff --stat` 直接�
 
 | 类别 | 档 | 当前行数 | 预计增量 | 备注 |
 |---|---|---|---|---|
-| 需求档（本批新建） | `thincoder/docs/requirements/CORE-UNIFICATION.md` | 0 | **110（已落地）** | 三层 + 范围边界；纯 `.md` ⇒ 免 300 / 500 档位判定 |
-| 设计档（本档 · 本批新建） | `thincoder/docs/design/CORE-UNIFICATION.md` | 0 | **265（已落地）**；S0 填表再 +120±40 | 设计 + 测试同档；第二轮增量 = §2.5 裁决表填实 |
+| 需求档（本批新建） | `docs/requirements/CORE-UNIFICATION.md` | 0 | **110（已落地）** | 三层 + 范围边界；纯 `.md` ⇒ 免 300 / 500 档位判定 |
+| 设计档（本档 · 本批新建） | `docs/design/CORE-UNIFICATION.md` | 0 | **268（已落地）**；S0 填表再 +120±40 | 设计 + 测试同档；第二轮增量 = §2.5 裁决表填实 |
 | 文档地图 | `thincoder/docs/README.md` | 254 | **258（Δ +4 · 已落地）** | §4 板块行 + §4.1 需求档行 + 变更记录行 |
 | 上游设计档（指针） | `thincoder/docs/design/TWO-REPO-MERGE.md` | 441 | **443（Δ +2 · 已落地）** | §2.13 加一行指向本板块（不在该档扩张） |
 | 度量脚本（S0 改） | `scripts/mirror-divergence.mjs` | 171 | +40±20 | 补按类型 / 按目录拆分 + 分布分档；**同批收敛用法 / 退出码契约**（台账技术待办，触发=条件：该档被触碰） |

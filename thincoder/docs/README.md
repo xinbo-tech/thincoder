@@ -180,7 +180,6 @@ docs/
 | 路线图/评估/竞评（历史） | `_archive/ROADMAP-0.9.0.md`、`_archive/EVALUATION.md`、`_archive/COMPETITIVE-CLI-2026.md`、`_archive/KIMI-CODE-PROMPT-ANALYSIS.md`、`_archive/TTSR-ANALYSIS.md`、`_archive/EDIT-TOOL-*.md` | 时点数据/已被取代——勿引用为现状 |
 | 文档基建（本批） | `_archive/DOC-REORG.md` | 2026-09-10 文档目录结构重组施工设计——**已交付入档**（批尾 T1-T5 同日完成） |
 | 两仓合并 | `requirements/TWO-REPO-MERGE.md`（需求）+ `design/TWO-REPO-MERGE.md`（设计+测试） | 2026-09-13 建档（**设计评审通过 · 已批准——批 1–3 实施中**）——CLI 与 VSC 收入单一 git 仓、各占子目录；原有两仓间机制全线退役。架构级机制档（功能性需求以机制约束规格句表述——§3.3 规则 6）；**phase 2 核心统一只留通道不实施** |
-| 核心统一 | `requirements/CORE-UNIFICATION.md`（需求）+ `design/CORE-UNIFICATION.md`（设计+测试） | 2026-09-13 建档（**phase 2——「一个核 + 两个薄壳」**；**设计待评审**）——两产品共有机制收敛为**单一权威源**的可共享核，保守路线 S0–S3（差异分析 → 建核 → 逐模块迁移 → 收尾）。架构级机制档（功能性需求以用户故事表述——§3.3 规则 6）；上游通道 = `design/TWO-REPO-MERGE.md` §2.13 |
 | 在途设计档（未实施） | `design/POOL-CONFIG-UNIFIED.md`、`design/QUICKFIX-BATCH-3.md`、`design/SUBAGENT-ID-COUNTER-AGENT.md` | 设计待评审——未实施，不适用冻结 |
 
 ### 4.1 需求层文档（`requirements/`）
@@ -198,7 +197,6 @@ docs/
 | `requirements/CHECKPOINT.md` | Checkpoint 事故恢复（快照/回滚保险） |
 | `requirements/CONSULTATION.md` | 会诊（多模型并行分析同一问题） |
 | `requirements/CONTEXT-COMPACTION.md` | 上下文压缩 |
-| `requirements/CORE-UNIFICATION.md` | 核心统一（phase 2——一个核 + 两个薄壳：两产品共有机制收敛为单一权威源的可共享核） |
 | `requirements/CRASH-REPORTS.md` | 崩溃捕获与取证（崩溃留痕 / Node 报告 / TUI stderr 捕获 / 近堆上限堆快照） |
 | `requirements/DESIGN-TOKEN-SETTLEMENT.md` | 设计评审凭证结算（settle 当场落盘 / 门禁读权威 / 废旧镜像） |
 | `requirements/ENG-TOKEN-BINDING.md` | — |
@@ -234,7 +232,7 @@ docs/
 
 ## 变更记录
 
-- 2026-09-13：新增「核心统一」板块（**phase 2**）——`requirements/CORE-UNIFICATION.md`（需求）+ `design/CORE-UNIFICATION.md`（设计+测试）——两产品共有机制收敛为单一权威源的可共享核；保守路线 S0–S3。依据 = phase 1 设计档 §2.13 通道（若启动须另建板块文档）。登记 §4 / §4.1。
+- 2026-09-13：核心统一板块已迁仓根项目级文档层（`docs/README.md`）——原登记行（§4 / §4.1）同步撤除（该板块已不属 CLI 产品树）。
 
 - 2026-09-13：**两仓合并批 3（S6）纪律句收窄**——§3.7 引用形态 / 自持边界与 §3.8 自持段按仓内口径改写（原跨产品指针禁令收窄为仓内可解析——依据 = `design/TWO-REPO-MERGE.md` §2.4 R12）。
 - 2026-09-13：新增「两仓合并」板块——`requirements/TWO-REPO-MERGE.md`（需求）+ `design/TWO-REPO-MERGE.md`（设计+测试）——phase 1 目录合并（单一 git 仓 + 两产品子目录；原有两仓间机制全线退役）。同日按 §3.2 板块镜像 + §4 首注「新老划断」拆出需求层（原三层同档）——登记 §4 / §4.1。
