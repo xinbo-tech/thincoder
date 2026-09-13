@@ -10,6 +10,7 @@
  */
 
 import { chat } from "./provider/index.mjs"
+import { safeSliceUTF16 } from "./text-budget.mjs"
 
 /** Read-only knowledge tools counted as "exploration" (execute writes files → never exploration). */
 export const EXPLORE_TOOLS = new Set([
@@ -77,7 +78,7 @@ function serializeExplorationMessages(messages) {
       let text = ""
       if (typeof m.content === "string") text = m.content
       else if (Array.isArray(m.content)) text = m.content.filter((p) => p?.type === "text").map((p) => p.text ?? "").join(" ")
-      return `[${m.role}]${toolNote} ${text.slice(0, cap)}`
+      return `[${m.role}]${toolNote} ${safeSliceUTF16(text, cap)}`
     })
     .join("\n")
 }

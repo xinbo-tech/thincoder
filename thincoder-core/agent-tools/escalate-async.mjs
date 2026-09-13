@@ -221,6 +221,8 @@ export function launchEscalateAsync(parent, ctx, launch) {
       depth: 1,
       maxTurns: parent.config?.agent?.subagentTurns ?? DEFAULT_SUBAGENT_TURNS,
       signal: entry.controller.signal,
+      // §2.5 #78 并入：escalate 子代理输出流式（VSC subagent-escalate-async 同款豁免）。
+      streamOutput: true,
     }
     // 权限按 async 子代理同款装配：AUTO 直放行；手动档经父 _permQueue（并行子代理
     // 审批不叠弹窗）——背景飞行撞门时无 handler → denied 不悬挂（D-S7 同规则）。

@@ -417,6 +417,8 @@ export async function executeEscalateAction(args, ctx) {
       depth: 1,
       maxTurns: parent.config?.agent?.subagentTurns ?? DEFAULT_SUBAGENT_TURNS, // review #7: constant, not literal (single source with subagent)
       signal: ctx.signal ?? null,
+      // §2.5 #78 并入：escalate 子代理输出流式（VSC subagent-escalate 同款豁免）。
+      streamOutput: true,
     }
     // Continue 经 runWithContinue（§7.2 D3，主会话同等 y/n 面板）：resume:true 不重注入
     // task 文本（setup 跳 input）且保留 child history + mutation 记账，刷新 turn 预算；

@@ -386,6 +386,9 @@ export function buildChildRunOpts(ctx) {
     depth: (ctx.depth ?? 0) + 1,
     maxTurns: ctx.agent?.config?.agent?.subagentTurns ?? DEFAULT_SUBAGENT_TURNS,
     signal: ctx.agent?._sessionSignal ?? ctx.signal ?? null,
+    // §2.5 #78 并入（VSC onToken 三态门）：子代理输出保持流式——VSC runChild 同款显式
+    // 豁免（豁免键语义 = 子代理主动选择进入流式通道）。
+    streamOutput: true,
   }
 }
 

@@ -65,12 +65,17 @@ export const planTool = {
   },
   readonly: true,
   async execute(args, ctx) {
+    // §2.5 #85（已裁 · 以 VSC 为准）：未知 action 明确报错——旧行为（非 exit 一律进 plan
+    // 模式）把拼错的 action 当成 enter，静默改写会话状态。
     if (args.action === "exit") {
       ctx.agent.planMode = false
       ctx.agent._planTurnsSinceReminder = 0
       ctx.agent._pendingReminders = ctx.agent._pendingReminders ?? []
       ctx.agent._pendingReminders.push(PLAN_EXIT_REMINDER)
       return "Plan mode exited. You may now edit files and run commands."
+    }
+    if (args.action !== "enter") {
+      return `Error: unknown action "${args.action}". Use "enter" or "exit".`
     }
     ctx.agent.planMode = true
     ctx.agent._planTurnsSinceReminder = 0

@@ -43,6 +43,12 @@ export const globTool = {
       return `glob error: invalid pattern "${args.pattern}": ${e.message}`
     }
     const results = []
+    // §2.5 #65 并入（VSC「路径不存在明确报错」）：目标路径缺失不再静默空清单。
+    try {
+      await stat(base)
+    } catch {
+      return `glob error: path not found: ${base}`
+    }
     for await (const relPath of walkFiles(base)) {
       if (match(relPath)) {
         results.push(relPath)
@@ -102,6 +108,12 @@ export const grepTool = {
       regex = new RegExp(pat, args.ignoreCase ? "i" : "")
     } catch (e) {
       throw new Error(`grep pattern /${args.pattern}/ is not a valid regex: ${e.message}`, { cause: e })
+    }
+    // §2.5 #65 并入（VSC「路径不存在明确报错」）：目标路径缺失不再静默 "(no matches)"。
+    try {
+      await lstat(base)
+    } catch {
+      return `grep error: path not found: ${base}`
     }
     // §17 调用侧拆分：glob 参数支持空格分隔 include !exclude 多模式（include/exclude 求交）。
     let fileTest = null

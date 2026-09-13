@@ -1,10 +1,11 @@
 /**
- * generate-title.mjs — LLM-generated session titles (CLI side)
+ * generate-title.mjs — LLM-generated session titles
  * Called after the first user message to auto-title the session.
- * Mirrors thincoder-vscode/src/extension/generate-title.mjs but uses the CLI provider shape.
  *
- * CLI is OpenAI-compatible ONLY: a single direct fetch (no anthropic/google format dispatch) —
- * see docs/design/SESSION.md §IK9UZ8-D.
+ * §2.5 #163 并入：按 `provider.format` 三格式分派（VSC 侧能力归位）——openai 兼容（缺省/
+ * 未知）/ anthropic / google；各格式的 thinking 禁用形态与响应提取各自适配（IK9UZ8：
+ * thinking 模型会把输出预算烧在 reasoning 上、content 为空——标题静默失败）。
+ * 定制头（`provider.headers`）与代理路径（`proxyUri`）为 CLI 侧口径，三格式共用。
  */
 
 import { proxyFetch } from "./proxy.mjs"
@@ -28,25 +29,59 @@ export async function generateTitle(userContent, provider) {
   if (!provider?.apiKey || !provider?.baseURL || !provider?.model) return null
 
   try {
-    const body = JSON.stringify({
-      model: provider.model,
-      messages: [
-        { role: "system", content: "Generate a concise title (max 40 chars, no quotes) for this conversation. Reply ONLY with the title." },
-        { role: "user", content: userText.slice(0, 200) },
-      ],
-      // Disable thinking so reasoning_content doesn't consume the whole output budget and
-      // leave content empty (IK9UZ8). Providers that don't accept the field ignore it
-      // (OpenAI-compatible convention). A 40-char title wants ~60–80 tokens, so 100 is
-      // ~2.5x headroom (design decision — docs/design/SESSION.md §IK9UZ8-D).
-      thinking: { type: "disabled" },
-      max_tokens: MAX_TITLE_TOKENS,
-      stream: false,
-    })
-    const chatPath = provider.chatPath ?? "/chat/completions"
-    const url = `${provider.baseURL.replace(/\/+$/, "")}${chatPath}`
+    const system = "Generate a concise title (max 40 chars, no quotes) for this conversation. Reply ONLY with the title."
+    const text = userText.slice(0, 200)
+    let url, body, extract
+    if (provider.format === "anthropic") {
+      url = `${provider.baseURL.replace(/\/+$/, "")}/messages`
+      body = JSON.stringify({
+        model: provider.model,
+        system,
+        messages: [{ role: "user", content: text }],
+        max_tokens: MAX_TITLE_TOKENS,
+        stream: false,
+        thinking: { type: "disabled" }, // IK9UZ8：不让 reasoning 吃掉输出预算
+      })
+      extract = (data) => data.content?.map((b) => b.text || "").join("")
+    } else if (provider.format === "google") {
+      url = `${provider.baseURL.replace(/\/+$/, "")}/models/${encodeURIComponent(provider.model)}:generateContent?key=${encodeURIComponent(provider.apiKey)}`
+      body = JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: "user", parts: [{ text }] }],
+        generationConfig: { maxOutputTokens: MAX_TITLE_TOKENS, thinkingConfig: { thinkingLevel: "none" } }, // IK9UZ8
+      })
+      extract = (data) => data.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("")
+    } else {
+      const bodyObj = {
+        model: provider.model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: text },
+        ],
+        // Disable thinking so reasoning_content doesn't consume the whole output budget and
+        // leave content empty (IK9UZ8). Providers that don't accept the field ignore it
+        // (OpenAI-compatible convention). A 40-char title wants ~60–80 tokens, so 100 is
+        // ~2.5x headroom (design decision — docs/design/SESSION.md §IK9UZ8-D).
+        thinking: { type: "disabled" },
+        max_tokens: MAX_TITLE_TOKENS,
+        stream: false,
+      }
+      const chatPath = provider.chatPath ?? "/chat/completions"
+      url = `${provider.baseURL.replace(/\/+$/, "")}${chatPath}`
+      body = JSON.stringify(bodyObj)
+      extract = (data) => data.choices?.[0]?.message?.content
+    }
+    // 定制头展开（PROVIDER.md §21）——定制头在前、内置头在后：内置头胜出；三格式各自内置头。
+    const headers = { ...(provider.headers ?? {}), "Content-Type": "application/json" }
+    if (provider.format === "anthropic") {
+      headers["x-api-key"] = provider.apiKey
+      headers["anthropic-version"] = "2023-06-01"
+    } else if (provider.format !== "google") {
+      headers.Authorization = `Bearer ${provider.apiKey}` // google 走 URL key
+    }
     const opts = {
       method: "POST",
-      headers: { ...(provider.headers ?? {}), "Content-Type": "application/json", Authorization: `Bearer ${provider.apiKey}` }, // 定制头展开（PROVIDER.md §21）——定制头在前、内置头在后：内置头胜出
+      headers,
       body,
       signal: AbortSignal.timeout(10000),
     }
@@ -55,7 +90,7 @@ export async function generateTitle(userContent, provider) {
       : await fetch(url, opts)
     if (!res.ok) return null
     const data = await res.json()
-    const title = data.choices?.[0]?.message?.content?.trim().slice(0, 40)
+    const title = extract(data)?.trim().slice(0, 40)
     return title || null
   } catch {
     return null

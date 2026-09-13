@@ -17,14 +17,11 @@
  * - 脱敏（D-TR2）：复用 log.mjs 字段名黑名单（apikey/designtoken/password/secret/
  *   token/authorization/proxyuri/proxy）+ SECRET_FORM 形态扫描（redactSecret）——对
  *   messages/content/reasoning/toolCalls/error 全字段应用；不发明新遮蔽模式。
- *   **单遍序列化（TUI-OOM-ROOTCAUSE——§23.3.2：修正轮 #2 使「不截断」表述作废）**：
- *   脱敏内联进输出缓冲（不再构造复制图 + 二次全量字符串）——字段名/次序与既有
- *   `JSON.stringify` 形态同构（T-TR1 等价断言）。
- * - 容量有界（N-TR1 修订）：单消息字符串超 `TRACE_MESSAGE_MAX_CHARS` 截断（头 16K +
- *   中段标记 + 尾 48K）；序列化总长超 `TRACE_RECORD_MAX_CHARS` → `messages` 降级为
- *   stub 串（其余字段保留）；在途写盘份数 ≤ `TRACE_PENDING_MAX`（超限丢弃并计数——
- *   尽力面，可观测）。目录按日组织（YYYY-MM-DD），可按日/会话过滤；保留期清理见
- *   `cleanupTraces`（D-TR8）。
+ *   **单遍序列化**：脱敏内联进输出缓冲（不构造复制图 + 二次全量字符串）——字段名/次序
+ *   与 `JSON.stringify` 形态同构（T-TR1 等价断言）。
+ * - 容量 / 清理（§2.5 #116 / A21 已裁 · 按建议——取 VSC 侧）：**完整落盘**（不截断、
+ *   不丢行、不丢记录）；**清理 = 每写一次 prune**（写盘成功后顺带 `cleanupTraces`——
+ *   与写盘同在 fire-and-forget 异步体内）。目录按日组织（YYYY-MM-DD），可按日/会话过滤。
  * - seq = 当日目录内最大已有 seq + 1（D-TR3——跨会话/进程重启不覆写既有旧轨迹——
  *   18.6.1 评审 #3）；**进程内 seqCache（§23.3.2——消除逐调用同步扫目录）**：首次
  *   readdirSync 后进程内递增预留，目录被清理（retention）后取下界重扫一次（防御）。
@@ -41,10 +38,9 @@ import { readdirSync, existsSync } from "node:fs"
 import { appendFile, mkdir, readdir, stat, unlink, rmdir } from "node:fs/promises"
 import { join } from "node:path"
 import { createHash } from "node:crypto"
-import { configDir } from "../config.mjs"
+import { configDir, loadConfig } from "../config.mjs"
 import { redactSecret, errText, classifyErr } from "../log.mjs"
 import { normalizeCwd } from "../session-slots.mjs"
-import { capText } from "../text-budget.mjs"
 
 /** 轨迹根目录：THINCODER_TRACES_DIR（测试隔离/override——同 THINCODER_LOG_DIR
  *  惯例）> ~/.thincoder/traces（configDir——D-TR3——与 sessions/ 同域）。 */
@@ -91,44 +87,17 @@ export function tracesDirFor(dateStr) {
   return join(tracesRoot(), dateStr)
 }
 
-// ─── 额度常量（§23.3.2——编译期常量，不新增配置项 D-TR4）─────────────────────
-
-/** 单消息字符串额度（消息内容/推理/工具参数串）——超限：头 16K + 中段标记 + 尾 48K。 */
-export const TRACE_MESSAGE_MAX_CHARS = 65_536
-/** 单记录总长额度——超限：`messages` 字段整体降级为 stub 串（元数据保留）。 */
-export const TRACE_RECORD_MAX_CHARS = 4_000_000
-/** 在途写盘份数上限（超限丢弃本记录 + 计数——不阻塞模型调用路径）。 */
-export const TRACE_PENDING_MAX = 8
-
-/** 内容额度标记（逐字——进测试断言；同族工具预览形态）。 */
-const MSG_MARKER = "… [trace truncated: N chars omitted] …"
-const HEAD_CHARS = 16_384
-const TAIL_CHARS = 49_152
-
-/** 受额度约束的字段名（消息内容/推理/工具参数串——§23.3.2 字面集）。 */
-const CAPPED_KEYS = new Set(["content", "reasoning", "reasoning_content", "reasoningContent", "arguments"])
-
-// ─── 在途计数（§23.3.2 表 4 候选 1：待写计数上限 8 + 超限丢弃计数）────────────
-
-let _pendingWrites = 0
-let _droppedRecords = 0
-let _saturationNotified = false
+// ─── 容量 / 清理策略（§2.5 #116 / A21 已裁 · 按建议——取 VSC 侧）───────────────
+// 完整落盘：不截断、不丢行（无单消息/单记录额度，无在途丢弃）；清理 = 每写一次 prune
+// （写盘成功后顺带 cleanupTraces——与写盘同在 fire-and-forget 异步体内，永不阻塞 chat）。
 
 // 进程内 seq 缓存（§23.3.2：dir → 已见/已预留 max——首次 readdirSync 后递增预留；
 // 目录被清理（retention）后取下界重扫一次（防御））。
 const _seqCache = new Map()
 
-/** 在途/丢弃观测（测试缝——T-TR4）。 */
-export function _traceStoreStats() {
-  return { pending: _pendingWrites, dropped: _droppedRecords }
-}
-
-/** 测试缝：清进程内状态（seqCache + 在途/丢弃计数）。 */
+/** 测试缝：清进程内状态（seqCache）。 */
 export function _resetTraceStateForTest() {
   _seqCache.clear()
-  _pendingWrites = 0
-  _droppedRecords = 0
-  _saturationNotified = false
 }
 
 function scanMaxSeq(dir) {
@@ -171,11 +140,7 @@ const OMIT = Symbol("omit") // JSON.stringify 语义：对象属性省略（数�
 
 function scalarJson(key, v) {
   if (typeof v === "string") {
-    // 额度（§23.3.2）+ 脱敏（D-TR2）单点：先限长（标记随附）再遮蔽形态扫描——
-    // 输出与既有 redactValue(key, s) 串值路径逐字同形（除外显式截断标记）。
-    if (v.length > TRACE_MESSAGE_MAX_CHARS && CAPPED_KEYS.has(key)) {
-      return JSON.stringify(redactSecret(key, capText(v, { max: TRACE_MESSAGE_MAX_CHARS, keepHead: HEAD_CHARS, keepTail: TAIL_CHARS, marker: MSG_MARKER })))
-    }
+    // 脱敏（D-TR2）单点：完整落盘（#116 取 VSC——不截断）；redactSecret 内联写出。
     return JSON.stringify(redactSecret(key, v))
   }
   if (v === null) return "null"
@@ -235,16 +200,6 @@ export function recordChatTrace(provider, opts = {}, result = null, error = null
   if (!writeEnabled()) return
   const logCtx = opts.logCtx ?? {}
   if (!tracesEnabled(logCtx)) return
-  // §23.3.2 在途上界（表 4 候选 1）：饱和即丢弃本记录（尽力面——丢弃可观测），
-  // 首次饱和打一行 stderr（每饱和段一次；排空后复位）。
-  if (_pendingWrites >= TRACE_PENDING_MAX) {
-    _droppedRecords++
-    if (!_saturationNotified) {
-      _saturationNotified = true
-      console.error(`[trace] pending write queue full — ${_droppedRecords} record(s) dropped`)
-    }
-    return
-  }
   // cwd/session 经 logCtx 增补（调用点传 agent.cwd / agent._sessionStart——
   // D-TR3 的 cwdHash/命名与 D-TR1 的 session 字段所需）；无 agent 作用域的调用点
   // 回退 process.cwd()——CLI 会话即工作区。该类点开关状态：distill 已含
@@ -258,7 +213,7 @@ export function recordChatTrace(provider, opts = {}, result = null, error = null
   const seq = nextTraceSeq(dateStr)
   const sessionKey = traceSessionKey(cwd)
 
-  // 单遍序列化：头段字段 + messages（独立缓冲——记录级额度降级用）+ 尾段字段。
+  // 单遍序列化：头段字段 + messages（独立缓冲——字段次序与既有 JSON.stringify 形态同构）+ 尾段字段。
   const parts = ["{"]
   let first = true
   const put = (k, v) => {
@@ -298,40 +253,33 @@ export function recordChatTrace(provider, opts = {}, result = null, error = null
   const headStr = parts.slice(0, msgAt).join("")
   const tailStr = parts.slice(msgAt).join("")
   const msgStr = msgParts.join("")
-  const msgsArr = Array.isArray(opts.messages) ? opts.messages : []
-  const record = (() => {
-    const total = headStr.length + msgStr.length + tailStr.length + 1
-    if (total > TRACE_RECORD_MAX_CHARS) {
-      // 单记录额度（§23.3.2）：messages 整体降级 stub——元数据字段保留、标记含计数
-      const stub = `[trace record truncated for size: ${total} chars / ${msgsArr.length} messages]`
-      return `${headStr},${JSON.stringify("messages")}:${JSON.stringify(stub)}${tailStr}}`
-    }
-    return `${headStr},${JSON.stringify("messages")}:${msgStr}${tailStr}}`
-  })()
+  const record = `${headStr},${JSON.stringify("messages")}:${msgStr}${tailStr}}`
 
   // 真 fire-and-forget（F-TR3——模型调用路径零额外阻塞）：seq 已在上面同步预留
   // （原子号位——写盘在途并发不撞号）；写盘异步（不 await——chat() 出口立即返回）。
   // 返回值 = 落盘 promise（测试 await 用；chat() 不消费——fire-and-forget 语义）。
-  _pendingWrites++
+  // §2.5 #116（A21 已裁）：写盘成功后每写一次 prune（与写盘同异步体内——零阻塞）。
   return (async () => {
     try {
       const dir = tracesDirFor(dateStr)
       await _traceHooks.mkdir(dir) // D-TR3：写前建目录（与 sessions/tool-results 同惯例）
       await _traceHooks.append(join(dir, `${sessionKey}-${seq}.jsonl`), record + "\n")
+      let retentionHours = 24
+      try { retentionHours = loadConfig()?.traces?.retentionHours ?? 24 } catch { /* 默认 24h */ }
+      await cleanupTraces({ dir: tracesRoot(), retentionHours })
     } catch {
-      // F-TR3：落盘失败静默降级——不抛错、不阻塞 chat() 返回
-    } finally {
-      _pendingWrites--
-      if (_pendingWrites === 0) _saturationNotified = false // 排空 → 下个饱和段可再报一次
+      // F-TR3：落盘/prune 失败静默降级——不抛错、不阻塞 chat() 返回
     }
   })()
 }
 
 /**
- * D-TR10（2026-09-05 用户裁定——发布隐私 + 磁盘卫生）：启动清理——删除 traces 根下
+ * D-TR10（用户裁定——发布隐私 + 磁盘卫生）：清理——删除 traces 根下
  * mtime 超过保留期的轨迹文件（保留期 = config.traces.retentionHours，默认 24h）；
- * 删空的日期目录（YYYY-MM-DD）。目录里非 .jsonl 文件不碰。CLI 启动点 fire-and-forget
- * 调用（不 await——不阻塞启动——失败静默——与轨迹写盘同纪律）。返回删除文件数。
+ * 删空的日期目录（YYYY-MM-DD）。目录里非 .jsonl 文件不碰。
+ * §2.5 #116 / A21（已裁 · 按建议）：调用点 = 每写一次 prune（`recordChatTrace` 写盘成功
+ * 后顺带调用——fire-and-forget 异步体内）；CLI 启动点的启动清理保留（本端不动）。
+ * 返回删除文件数。
  */
 export async function cleanupTraces({ dir = tracesRoot(), retentionHours = 24 } = {}) {
   const cutoff = Date.now() - retentionHours * 3_600_000

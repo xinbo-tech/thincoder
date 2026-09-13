@@ -44,3 +44,36 @@ export function appendCappedText(prev, add, { hard, head = 0, tail = 0, marker =
   if (!(hard > 0) || merged.length <= hard) return merged
   return capText(merged, { max: hard, keepHead: head, keepTail: tail, marker })
 }
+
+/**
+ * UTF-16 safe HEAD slice（§2.5 #76 / #164 并入——VSC 侧实现归位；VSC 与 CLI 两处独立实现
+ * 的安全规则一致）：plain `slice(0, N)` cuts BY UTF-16 CODE UNIT —— a surrogate pair
+ * straddling the boundary leaves a LONE high surrogate (U+D800-DBFF) that strict UTF-16
+ * decoders reject. When the cut point lands on a high surrogate, step back one code unit
+ * (the pair is dropped whole).
+ */
+export function safeSliceUTF16(text, max) {
+  const t = String(text ?? "")
+  if (t.length <= max) return t
+  const cp = t.charCodeAt(max - 1)
+  if (cp >= 0xd800 && cp <= 0xdbff) return t.slice(0, max - 1)
+  return t.slice(0, max)
+}
+
+/**
+ * UTF-16 safe TAIL slice（safeSliceUTF16 的对称面——§2.5 #164 并入）。两个切点都要安全：
+ *  - START：孤立低代理（U+DC00-DFFF）= 代理对被切开 ⇒ 前进一码元（整对丢弃）；
+ *  - END（原文末尾）：末尾孤立高代理（U+D800-DBFF）也去掉——尾切片不得新增头切片规则
+ *    同样要避开的孤立代理（VSC 侧强化形态，随融合并入）。
+ */
+export function safeSliceUTF16Tail(text, max) {
+  const t = String(text ?? "")
+  if (t.length <= max) return t
+  let start = t.length - max
+  const first = t.charCodeAt(start)
+  if (first >= 0xdc00 && first <= 0xdfff) start += 1 // 起点落低代理 → 丢弃代理对整体（向前一码元）
+  let tail = t.slice(start)
+  const last = tail.charCodeAt(tail.length - 1)
+  if (last >= 0xd800 && last <= 0xdbff) tail = tail.slice(0, -1) // 终点孤立高代理 → 去掉（截断边界安全）
+  return tail
+}

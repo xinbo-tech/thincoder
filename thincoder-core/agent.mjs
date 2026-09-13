@@ -86,8 +86,14 @@ export function createAgent({
   }
 }
 
+/** 流式输出门（§2.5 #78 并入——VSC 三态门，纯函数可直驱测试）：depth 0 恒通；
+ *  consult 子代理豁免（其输出进会诊面板）；其余经 `streamOutput` 显式选择进入。 */
+export function streamOutputAllowed(depth, role, streamOutput = false) {
+  return depth === 0 || role === "consult" || streamOutput === true
+}
+
 /** Run the agent loop: LLM ↔ tool-call cycle until task completion or turn limit. Returns final text content. */
-export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal, maxTurns: overrideTurns, resume = false, autoTurn = false, suspDriven = false, consumeInjected = null } = {}) {
+export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal, maxTurns: overrideTurns, resume = false, autoTurn = false, suspDriven = false, consumeInjected = null, streamOutput = false } = {}) {
   // Previous run's async exploration distillation must settle before this run pushes
   // input (SEND-STALL-DISTILL §2.2 N1) — await first, or its history replace wipes it.
   if (agent._pendingDistill) {
@@ -201,6 +207,9 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     if (depth > 0 && callbacks.onToken) {
       callbacks.onToken(`⟦ev⟧turn\x1e${agent._currentTurn}\x1e${agent._maxTurns}\x1ellm\x1e`)
     }
+    // §2.5 #78 并入（VSC 帧回调）：每轮帧另经结构化回调发出（池条目 entry.turn 的
+    // VSC 等价通道——⟦ev⟧turn token 解析的宿主面随时可用；签名扩展向后兼容）。
+    callbacks.onAgentTurn?.(frame.turn, frame.maxTurns)
 
     // SUBAGENT-OBSERVE-SEND D2: 子代理回合边界消费点——每轮开头把父侧经 subagent
     // action:'send' 注入队列（entry._injected）的消息按普通 user 回合推入子历史
@@ -230,7 +239,9 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     if (process.env.ADVISOR_DEBUG) console.error("[chat-call]", JSON.stringify({ turn, histLen: agent.history.length, lastRole: agent.history.at(-1)?.role }))
     try {      response = await chat(agent.provider, {
         messages, tools: toolSchemas,
-        onToken: callbacks.onToken,
+        // §2.5 #78 并入（VSC onToken 三态门）：depth 0 恒通；consult 子代理豁免（其输出进
+        // 会诊面板）；escalate 等经 opts.streamOutput 显式选择进入；其余子代理不流式。
+        onToken: streamOutputAllowed(depth, agent._role, streamOutput) ? callbacks.onToken : null,
         onReasoning: callbacks.onReasoning,
         onWait: callbacks.onWait,
         signal,
