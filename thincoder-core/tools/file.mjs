@@ -14,9 +14,12 @@ import {
 } from "./shared.mjs";
 import { applyEditBatch } from "./edit-batch.mjs";
 import { runSingleEdit } from "./edit-diff.mjs";
+// 单一写路径点（编辑器编辑径注入缝——CORE-UNIFICATION §2.13.5）：本档三个写点全走它，
+// 记账面同源住该档（下面只做再导出——保既有 import 面稳定）。
+import { writeThroughPath, clearDirty, clearLastWrite, lastWriteOf, isDirty } from "./write-path.mjs";
 import { specForModel } from "../config.mjs";
 import { createHash } from "node:crypto";
-import { mkdir, readFile, stat, writeFile, unlink } from "node:fs/promises";
+import { mkdir, readFile, stat, unlink } from "node:fs/promises";
 import { join, relative, dirname } from "node:path";
 
 const MAX_FILE_READ_BYTES = 10_000_000
@@ -31,25 +34,13 @@ export const READ_TAIL_LINES = 500
 // ────────────────────────────────────────
 // insert_after anchors on LINE NUMBERS — the most drift-prone addressing.
 // Every write tool marks the file dirty; insert_after refuses to run on a
-// dirty file until the agent reads it again (fresh line numbers). This turns
-// the "read after edit" discipline into a structural guarantee: a stale
-// after_line can never silently land in the wrong place again.
-const dirtyPaths = new Set()
-export function markDirty(abs) { dirtyPaths.add(abs) }
-export function clearDirty(abs) { dirtyPaths.delete(abs) }
-export function isDirty(abs) { return dirtyPaths.has(abs) }
-
-// 2026-08-31 工具顺手度优化（用户批准）：写入工具记录受影响行范围——insert_after
-// 精确判定：after_line 在未受影响区（< lastWrite.startLine）→ 行号未漂移 → 允许
-// （消掉"我写的文件被当外部修改、必须重 read"的摩擦）；受影响区内 → 拒绝（护栏保留）；
-// write 全文重写 → 全文件受影响，任何 after_line 拒绝。
-const lastWrites = new Map() // abs → { type: 'write'|'edit'|'insert', startLine, shift }
-export function recordWrite(abs, write) {
-  lastWrites.set(abs, write)
-  dirtyPaths.delete(abs) // 本 session 写入——等效于刚 read 过（快照在 lastWrites）
-}
-export function lastWriteOf(abs) { return lastWrites.get(abs) }
-export function clearLastWrite(abs) { lastWrites.delete(abs) }
+// dirty file until the agent reads it again (fresh line numbers).
+// 2026-09-14（CORE-UNIFICATION §2.13.5）：记账面（`dirtyPaths` / `lastWrites` +
+// `markDirty` / `clearDirty` / `isDirty` / `recordWrite` / `lastWriteOf` /
+// `clearLastWrite`）已**同源迁至单一写路径点** `tools/write-path.mjs`——写盘只此一处 ⇒
+// 记账只此一处，调用方不再自行记账（**不重复记账**）。本档只做再导出（**兼容面**——
+// 核内消费方现直取 `write-path.mjs`，此处保留给未改档 / 端侧装配的既有 import 面）。
+export { markDirty, clearDirty, isDirty, recordWrite, lastWriteOf, clearLastWrite } from "./write-path.mjs"
 
 /** 2026-08-31 工具顺手度（用户批准"可以啊"）：写入工具返回带上下文窗口——
  *  模型拿到的不只是"inserted at L395"，而是"L395 这行是什么内容"——下次再操作时
@@ -221,8 +212,8 @@ export const writeTool = {
     const prev = st ? await readFile(abs, "utf8").catch(() => null) : null
     const eol = prev != null ? detectFileEol(prev) : majorityEol(dirname(abs))
     const content = eol === "\r\n" ? normalizeEOL(args.content).replace(/\n/g, "\r\n") : args.content
-    await writeFile(abs, content, "utf8")
-    recordWrite(abs, { type: "write", startLine: 1, shift: 0 }) // 全文重写——全文件受影响
+    // 单一写路径点：默认 = writeFile + 记账；端侧注入 ⇒ 编辑器径（§2.13.5）。
+    await writeThroughPath(abs, content, { op: "write", record: { type: "write", startLine: 1, shift: 0 } }) // 全文重写——全文件受影响
     const diff = gitDiffOne(ctx.cwd, abs)
     return `Wrote ${args.content.length} chars to ${args.path}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}`
   },
@@ -366,8 +357,10 @@ export const insertAfterTool = {
     // Write back in the file's ORIGINAL EOL style (review R9#2: same bug class as
     // edit — a CRLF file must not silently become LF here either).
     const updated = joinWithEol(lines, raw)
-    await writeFile(abs, updated, "utf8")
-    recordWrite(abs, { type: "insert", startLine: targetLine, shift: normalizeEOL(args.content).split("\n").length })
+    await writeThroughPath(abs, updated, {
+      op: "write",
+      record: { type: "insert", startLine: targetLine, shift: normalizeEOL(args.content).split("\n").length },
+    })
     const diff = gitDiffOne(ctx.cwd, abs)
     const baseResult = `Inserted after line ${targetLine} in ${args.path}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}`
     return await appendWriteContext(abs, targetLine + 1, baseResult)
@@ -459,8 +452,10 @@ export const hashlineEditTool = {
     lines.splice(pos, target.length, ...newLines)
     // Write back in the file's original EOL style (same rule as edit / apply_patch).
     const updated = joinWithEol(lines, raw)
-    await writeFile(abs, updated, "utf8")
-    recordWrite(abs, { type: "edit", startLine: pos + 1, shift: newLines.length - target.length })
+    await writeThroughPath(abs, updated, {
+      op: "write",
+      record: { type: "edit", startLine: pos + 1, shift: newLines.length - target.length },
+    })
     const diff = gitDiffOne(ctx.cwd, abs)
     const baseResult = `Edited ${args.path}: replaced ${target.length} line(s) at L${pos + 1} with ${newLines.length} line(s)${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}${corrupted ? `\n${FFFD_WARNING}` : ""}`
     return await appendWriteContext(abs, pos + 1, baseResult)

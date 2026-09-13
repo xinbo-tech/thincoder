@@ -2488,5 +2488,119 @@ VERDICT: pass
 
 **轮次自证**：审计 1 轮 + advisor 3 轮 + 修复轮 2；K1/K2/K3 终态读数见上表；报告 ①–⑥ 见交付报告（父侧转呈）。
 
+### 实施：写路径注入缝做实（2026-09-14 · eng-coder）——终态 = clean
+
+**段位**：当前段 = S2 前置（阻断级缺口闭合，§2.13.5）；S2 端侧接线 / S3 面零触碰；
+**两产品零改动**（`git status --porcelain` 无 `thincoder-cli/` / `thincoder-vscode/` 条目——见 K3 自证）；未 commit（父侧统一）；未碰台账；未改任何 docs。
+
+**改动面**（全部在 `thincoder-core/**`；5 档修改 + 2 档新建 · `+66/−59` 行）：
+
+| 档 | 改前 → 改后（`wc -l` 口径） | 改动 |
+|---|---|---|
+| `tools/write-path.mjs` | 新建 → **171** | 单一写路径点（注入面 + 默认径 + 记账面） |
+| `tools/file.mjs` | 469 → **464** | 记账面迁出 + 3 个写点改调 |
+| `tools/edit-diff.mjs` | 348 → **353** | 单形态 edit 写点改调 |
+| `tools/edit-batch.mjs` | 191 → **196** | edits 数组写点改调 |
+| `tools/patch.mjs` | 282 → **290** | apply_patch 两段式 + delete 改调 |
+| `tools/ops.mjs` | 299 → **293** | file_ops move/copy/rename 改调 |
+| `test/write-path.test.mjs` | 新建 → **250** | 双夹具 + 门禁/契约 + 结构机检（6 用例） |
+
+**8 个写点逐处（改前 → 改后）**
+
+| # | 写点 | 改前（`file:line`） | 改后（`file:line`） |
+|---|---|---|---|
+| 1 | write | `tools/file.mjs:224` `await writeFile(abs, content, "utf8")` + `:225` `recordWrite(...)` | `tools/file.mjs:215` `await writeThroughPath(abs, content, { op:"write", record:{…} })` |
+| 2 | insert_after | `tools/file.mjs:369` + `:370` `recordWrite(...)` | `tools/file.mjs:359-362`（同形经缝） |
+| 3 | hashline_edit | `tools/file.mjs:462` + `:463` `recordWrite(...)` | `tools/file.mjs:454-457`（同形经缝） |
+| 4 | edit（单形态） | `tools/edit-diff.mjs:341` + `:342` `recordWrite(...)` | `tools/edit-diff.mjs:344-347`（同形经缝） |
+| 5 | edit（edits 数组） | `tools/edit-batch.mjs:83` + `:84` `recordWrite(...)` | `tools/edit-batch.mjs:86-89`（同形经缝） |
+| 6 | apply_patch | `tools/patch.mjs:214`（写 `.thincoder-tmp`）+ `:218`（`rename`） | `tools/patch.mjs:216`（`{op:"write", stage:true}`）+ `:222`（`{op:"commit"}`）——两段式结构保持 |
+| 7 | delete | `tools/patch.mjs:276` `unlink` + `:277` `markDirty` | `tools/patch.mjs:281` `await writeThroughPath(abs, null, { op:"delete" })` |
+| 8 | file_ops | `tools/ops.mjs:36-47`（`cp` / `rename` + EXDEV 回退） | `tools/ops.mjs:40` `await writeThroughPath(src, null, { op: action, dest: dst })` |
+
+**`tools/write-path.mjs` 接口与默认实现**
+
+- `writeThroughPath(abs, content, meta)` → `{ written: true, via: "editor" | "fs" | "staged" | "committed" }`；
+  先试注入面，未处理 ⇒ 默认径。
+- `meta`：`op`（`write` 默认 / `delete` / `copy` / `move` / `rename` / `commit`）· `record`（记账快照）·
+  `dest`（路径操作目标）· `stage`（apply_patch 阶段一：落 `<abs>.thincoder-tmp`，不提交、不记账）。
+- **默认径 = CLI 语义（零行为变）**：`write` ⇒ `writeFile` + `recordWrite`；`stage` ⇒ 写暂存档；`commit` ⇒ `rename`；
+  `delete` ⇒ `unlink` + `markDirty`；`copy` ⇒ `cp{recursive,force}`；`move`/`rename` ⇒ `rename` + EXDEV 回退 `cp`+`rm`。
+- `configureWritePath({ openDoc, applyEdit, isDirty })`（**缺省不覆盖**）· `resetWritePath()`（撤销）·
+  `TMP_SUFFIX = ".thincoder-tmp"`（单点定义）。
+- 契约（§2.13.5）：`openDoc(abs)` 每写点问一次（门禁面）；`isDirty(doc)` 真 ⇒ 抛端中立拒写文案；
+  `applyEdit(doc, content, meta)` 返回 **null** = 未处理 ⇒ 回退默认径；**给了 `applyEdit` 必须给 `isDirty`**（否则抛配置错，fail-closed）。
+- `op="commit"` 不问注入面（默认径两段式的收尾，无端侧载体）。
+- **核内零端名分支**（契约 5）：本档只认三个函数名与 `op` 字面，无产品名 / 无端名分支。
+
+**记账面同源（报告 ③）**
+
+- `dirtyPaths` / `lastWrites` 两个 Map/Set 与 `markDirty` / `clearDirty` / `isDirty` / `recordWrite` /
+  `lastWriteOf` / `clearLastWrite` **原住 `tools/file.mjs:38-52` ⇒ 迁至 `tools/write-path.mjs:30-44`**（写盘只此一处 ⇒ 记账只此一处）。
+- 谁调谁：默认径由写路径点代落（`meta.record` ⇒ `recordWrite`；`op="delete"` ⇒ `markDirty`）；
+  注入径同样在落盘后 `recordWrite`（编辑器径写的也是「我们写的」）。调用方一律不再自行记账 ⇒ **不重复记账**。
+  **唯一例外** = apply_patch 的**批级**记账：两段式全部成功后由 `patch.mjs:233` 一次 `markDirty`（与改前逐字同）。
+- `file.mjs:43` 保留再导出为**兼容面**（核内消费方现直取 `write-path.mjs`）。
+
+**验收读数（cwd = 仓根）**
+
+| 判据 | 读数 |
+|---|---|
+| ① 双夹具（核内） | 夹具一（注入面）：`openDoc` **8** 次（= 写点数）· `isDirty` 8 次 · `applyEdit` **6** 次（内容写点）· 落盘 = 交给注入面的字节；夹具二（不注入）：回默认 fs 径，**产物与夹具一逐字节同**（`assert.deepEqual(snapshot)`） |
+| ① 改前逐字节同（仓外一次性对照，`git show HEAD:` 版 5 档 + 同驱动） | 8 写点（另含 copy / rename 共 10 次调用）**结果串逐字相同 · 产物逐字节相同**；apply_patch 失败面（写阶段失败）**原子性相同**（目标档零落盘、无暂存残留） |
+| ② 结构机检 | 8 个写点所在档 **零直调 fs 写**（无豁免断言）；`tools/**` 写 API（`writeFile(Sync)`/`appendFile(Sync)`/`createWriteStream`/`writeSync`）命中集合 = 白名单 `tools/write-path.mjs` + **已登记豁免 `tools/checklist-sync.mjs:88`**（逐档等值断言，新增命中即红） |
+| ③ 核内 `node --test` | 基线 **90/90**（id 63 交付后）保持绿 + 新增 **6** 用例全绿 ⇒ **96/96 · fail 0 · exit 0** |
+| ④ 三机检 | `doc-anchors` **exit 0**（0 悬空锚）· `check-doc-width` **exit 0**（306 档无 >300 行）· `check-ledger` **exit 0**（0 违规） |
+| ④ 两产品零改动 | `git status --porcelain` = 仅 `thincoder-core/**`（5 `M` + 2 `??`）；产品侧条目 **0**；未 commit |
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 记账面**迁入**写路径点（`file.mjs` 再导出） | 写盘只此一处 ⇒ 记账只此一处（单一真值，避免 `file.mjs ⇄ write-path.mjs` 新循环）；备选 = 留原处 + 反向 import（新增循环依赖，且「谁记账」两个地址） |
+| 2 | 注入面 = **三函数组合**（`openDoc` / `isDirty` / `applyEdit`），由核内组合出 `{written, via}` | 任务书明文 `configureWritePath({openDoc, applyEdit, isDirty})`；§2.13.5 契约的「注入实现返回 … 或 null」按 **`applyEdit` 返回 `null` = 未处理** 落实（唯一可判形态——对象本身不能有返回值） |
+| 3 | apply_patch 保留**两段式**（stage → commit）而非常规 write | 原子性是与改前逐字节同的硬要求；`stage`/`commit` 两个 op 承载它。**注入径例外**：编辑器径无暂存档（即时提交，`via:"editor"`），调用方读 `via` 跳过 commit——与宿主侧现行为一致（`patch.mjs:209-214` 已写明） |
+| 4 | 门禁（脏缓冲）**一律适用**于全部 8 个写点（含 delete / file_ops） | 写点=改盘⇒脏缓冲风险同源；`file_ops` 面属**新增**其原有护栏（VSC 侧无）——记「未决 1 / 4」供 S2 与设计面确认 |
+| 5 | 拒写文案由核内组（端中立英文句） | 端侧不返回文案 ⇒ 文案必须住核；与宿主侧现句同句（VSC `more-file.mjs:266,380` 尾句为 `Save or discard first.`——**文案统一项**记「越段发现 2」） |
+| 6 | 结构机检**扩面**：`tools/**` 写 API（含 appendFile / createWriteStream / writeSync）+ 「8 写点档零豁免」双断言 | 调用面白名单易被别名/换 API 绕过；豁免集做成**逐档等值**（fail-closed） |
+| 7 | `TMP_SUFFIX` 单点定义 + `patch.mjs` 复用它做失败清理 | 原字面 `.thincoder-tmp` 在 3 处出现；单点后不再漂移 |
+
+**内部审计轮（只读 explore 分歧审计 · 阻塞 ×1）**：结论 **DIVERGENT**（5 行：🟡3 + 🔵2；「8 写点漏改 / 记账重复 / 消费方断裂 / 核内端名分支」四类均 CLEAN）。
+- 🟡 F1「注入实现返回 null ⇒ 回退默认」未实现（返回值被丢弃）⇒ **已修**（`write-path.mjs:88-89`：`null` = 未处理 ⇒ 回退；补用例）。
+- 🟡 F2 结构机检「白名单 1 档」被放宽为「1 + 豁免 1」⇒ **口径已登记 + 断言 fail-closed**；设计档字样收正属设计面（未决 2）。
+- 🟡 F3 `apply_patch` 注释「原子性保持」表述不准（混合场景）⇒ **已修**（注释改为「默认径 = 改前语义；编辑器径即时提交、已提交档不回滚——宿主侧同款」）。
+- 🔵 F4 设计档状态标记滞后 / 🔵 F5 仓外一次性校验脚本（`.thincoder/tmp/` 2 档，非产品仓）⇒ 如实登记（未决 2 / 越段 1）。
+- 审计限制（如实登记）：该席位**无 shell / 无 git / 不可执行** ⇒ 执行面读数（`node --test` / 三机检 / 逐字节对照）为其读法推断（其自标 unverified）；其独立复证 = 8 写点逐处对位 + 记账面单源 + `meta` 无死字段 + 新增文件零端名。
+
+**代码评审轮（内部 advisor · `type=code`）与裁决 —— 2 轮收敛**
+
+- **轮 1 = pass**（🔴 0 · 🟡 7 · 🔵 3，共 10 条）；其自证 = 8 写点逐一改调 ✓ · 默认径与改前逐写点等价 ✓（对照 `core-before`）· 记账面单源 ✓ · 无端名分支 ✓。
+- **fix round 1（评审后落修 5 项）**：
+  🟡#4 `isDirty` 可选 ⇒ 护栏可静默失效 ⇒ **已修**（`write-path.mjs:84-87` fail-closed：给 `applyEdit` 漏 `isDirty` ⇒ 抛配置错）；
+  🟡#5 `meta.stage × 注入径` 语义未记 ⇒ **已修**（元数据表 `:106-109` + JSDoc `:160-161` 补「编辑器径即时提交、读 `via` 跳过 commit」）；
+  🔵#8 记账面 import 源不统一 ⇒ **已修**（`edit-diff.mjs:38` / `patch.mjs:9` 直取 `./write-path.mjs`）；
+  🔵#9 测试覆盖缺口 ⇒ **已修**（补「未打开 / 撤销注入 / 漏 isDirty / delete·file_ops 脏门禁」4 类断言，含磁盘不变）；
+  🔵#10 结构机检检测面窄 ⇒ **已修**（扩 `appendFile(Sync)`/`createWriteStream`/`writeSync`，并实测扩面后断言集合仍成立）。
+- **轮 2 = pass**（仅核第一轮 10 行处置）：5 项落修**逐行实地验证为真**；#6（>300 档位）= **Not an issue**（两档均在 `core-hygiene` 的 `SOFT_LINE_REGISTRY` 内、未触 500 硬限）；#1 / #2 / #3 / #7 = 设计面待收（report-only）；**修复未引入新 🔴**（三项针对性反查：新 fail-closed 抛错无存量调用方 / 扩面机检不自判红 / 记账面改直取不产生循环）。
+- **收敛读数**：审计 1 轮 + advisor 2 轮 + fix round 1；**终态 0 未决 🔴**。
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **`file_ops` 的 `dest` 面未过门禁**（advisor 🟡#7 · 设计待裁）：`writeThroughPath` 只对 `src` 问 `openDoc`
+   ⇒ move/rename **覆盖到「编辑器打开且脏」的目标档**时不拒写。改法（加 `openDoc(dest)`）会把「每写点恰一次 `openDoc`」的
+   验收①计数从 8 改掉 ⇒ 属设计面裁定（S2 面），执行者不自行扩。
+2. **结构机检「白名单 1 档」与落地的「1 + 豁免 1」不同源**（advisor 🟡#1 / 🔵#3 · 设计面）：§2.13.5 验收② / §2.13.7④
+   仍写「只许出现在 `write-path.mjs`（核内单点）」；实测核内另有 13 档（`tools/**` 外）与 `tools/checklist-sync.mjs:88` 直写。
+   测试已把豁免写进档内注释 + 逐档等值断言，**但设计档文字未收正**（写权 = eng-designer）。
+3. **设计档状态标记滞后**（advisor 🟡#2 · 设计者面）：`:776`「形态建议 · **待 S2 落**」· `:749/:751`「核内位 = **无**」·
+   `:804`「#68/#63 为**阻断级**缺位」——与本轮已落地事实相反，S2 接线轮有被误导风险。
+4. **文案统一项**（advisor 备注 · S2 面）：核内拒写文案取 VSC 主句；VSC 两处（`more-file.mjs:266,380`）尾句为
+   `Save or discard first.` ⇒ S2 接线后该两处用户可见文案会统一为核内句（要么接受统一、要么由注入面承载端文案）。
+5. **`agent-tools/batch-segment.mjs` 直写未含本轮**（`tools/**` 外，设计 `:753` `#84` 单列）：它是模型面改盘面，
+   VSC 接核后同样缺端侧承载 ⇒ 建议设计面把 `#84` 与写路径缝并列成同一条 S2 前置门。
+6. **`ops.mjs:151,163` 注释含 "VS Code"**（逐字随迁自 CLI 的既有注释，非本轮改动面）：核内注释面端名收正属 S1/设计面口径。
+7. **仓外一次性件**（越段 1 · 非产品仓）：`d:\teamcode\.thincoder\tmp\wp-drive.mjs` · `wp-fail.mjs`（对照脚本）·
+   `core-before/`（HEAD 副本）——均不在仓内，未计入改动集。
+
 ## §6 验证与收口（父代理）
 

@@ -6,9 +6,9 @@ import {
   detectFileEol,
   majorityEol
 } from "./shared.mjs";
-import { markDirty } from "./file.mjs";
+import { writeThroughPath, TMP_SUFFIX, markDirty } from "./write-path.mjs";
 import { execFileSync } from "node:child_process";
-import { mkdir, readFile, lstat, writeFile, unlink } from "node:fs/promises";
+import { mkdir, readFile, lstat, unlink } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { relative, dirname } from "node:path";
 
@@ -206,26 +206,34 @@ export const applyPatchTool = {
       }
     }
     // Multi-file write: write all to .tmp first, rename only after all succeed — failure cleans up written .tmp without affecting committed files
-    const { rename } = await import("node:fs/promises") // unlink already statically imported
-    const written = []
+    // 两段式经单一写路径点（§2.13.5）：阶段一全部 staging（写入各自 `<abs>.thincoder-tmp`）
+    // ⇒ 阶段二逐档 commit（rename 到目标）。**默认径 = 改前语义逐字同**（任一失败无档落盘：
+    // 阶段一失败时目标档全未动、阶段二失败时已提交档保持——同改前）。
+    // 编辑器径（注入面）例外：内容在阶段一即提交（宿主侧同款——applyEdit + save）⇒ 阶段
+    // 二跳过该档；已提交档不回滚（与宿主侧现行为一致，非本档引入的语义）。
+    const staged = []
+    const committedByEditor = new Set()
     try {
       for (const p of planned) {
         await mkdir(dirname(p.abs), { recursive: true })
-        await writeFile(p.abs + ".thincoder-tmp", p.content, "utf8")
-        written.push(p.abs)
+        const r = await writeThroughPath(p.abs, p.content, { op: "write", stage: true })
+        if (r.via === "editor") committedByEditor.add(p.abs)
+        else staged.push(p.abs)
       }
       for (const p of planned) {
-        await rename(p.abs + ".thincoder-tmp", p.abs)
+        if (committedByEditor.has(p.abs)) continue
+        await writeThroughPath(p.abs, null, { op: "commit" })
       }
     } catch (renameError) {
       // rename phase failed: clean up leftover .tmp files
-      for (const abs of written) {
-        try { await unlink(abs + ".thincoder-tmp") } catch {}
+      for (const abs of staged) {
+        try { await unlink(abs + TMP_SUFFIX) } catch {}
       }
       throw renameError
     }
     const summary = planned.map((p) => `  ${p.isNew ? "created " : "modified"} ${p.path}`).join("\n")
     // Mark every touched file dirty — insert_after must not run on stale line numbers.
+    // 整批记账（dirty）= apply_patch 的批级语义（两段式全成功后一次落账——与改前逐字同）。
     for (const p of planned) markDirty(p.abs)
     const syntaxChecks = await Promise.all(planned.map(async (p) => {
       const r = await autoSyntaxCheck(p.abs)
@@ -273,8 +281,8 @@ export const deleteTool = {
       // untracked / non-git repo
     }
     if (tracked && !args.force) throw new Error(`"${args.path}" is git-tracked. Set force=true to delete anyway.`)
-    await unlink(abs)
-    markDirty(abs)
+    // 单一写路径点（§2.13.5）：删除也经注入面（打开且脏 ⇒ 拒删）；默认径 = unlink + 记账。
+    await writeThroughPath(abs, null, { op: "delete" })
     return `Deleted ${args.path}`
   },
 }

@@ -27,13 +27,15 @@
  * edit-diff.mjs ↔ edit-batch.mjs 循环引用（2026-09-08——D1/D2 实现落点 edit-batch）：
  * 两侧仅函数声明（提升初始化）、仅调用期使用——ESM 循环下安全（同 file.mjs 先例）。
  */
-import { readFile, writeFile } from "node:fs/promises"
+import { readFile } from "node:fs/promises"
 import {
   resolveInCwd, normalizeEOL, joinWithEol, gitDiffOne, autoSyntaxCheck, findCandidates,
 } from "./shared.mjs"
 // file.mjs ↔ edit-diff.mjs 循环引用：两侧导入的都是函数声明（提升初始化），
 // 仅在调用期使用——ESM 循环下安全（无模块求值期取值）。
-import { recordWrite, appendWriteContext, lastWriteOf, isDirty } from "./file.mjs"
+// 写盘经单一写路径点（§2.13.5）——本档不再直调 fs。
+import { appendWriteContext } from "./file.mjs"
+import { writeThroughPath, lastWriteOf, isDirty } from "./write-path.mjs"
 // D1/D2 落点（EDIT.md §6——edit-batch.mjs）：按行号改 + 模糊匹配纯函数。
 import { applyLineEdit, findFuzzyWindow, FUZZY_MATCH_NOTE } from "./edit-batch.mjs"
 
@@ -338,8 +340,11 @@ export async function runSingleEdit(args, ctx) {
   const content = normalizeEOL(raw)
   const out = computeEditEntry(content, args, { path: args.path, absPath: abs })
   // 写回按原文行尾（joinWithEol）——normalizeEOL 先行避免 \r\n 污染 split/join
-  await writeFile(abs, joinWithEol(normalizeEOL(out.updated).split("\n"), raw), "utf8")
-  recordWrite(abs, { type: "edit", startLine: out.editStartLine, shift: out.lineShift })
+  // 单一写路径点：默认 = writeFile + 记账；端侧注入 ⇒ 编辑器径（§2.13.5）。
+  await writeThroughPath(abs, joinWithEol(normalizeEOL(out.updated).split("\n"), raw), {
+    op: "write",
+    record: { type: "edit", startLine: out.editStartLine, shift: out.lineShift },
+  })
   const diff = gitDiffOne(ctx.cwd, abs)
   const baseResult = out.deleted
     ? `Deleted ${deleteTarget(out)} of ${args.path}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}`

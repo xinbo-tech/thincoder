@@ -5,7 +5,9 @@
  * (parity with thinworker).
  */
 import { DESC, resolveInCwd, truncate } from "./shared.mjs"
-import { cp, rename, rm } from "node:fs/promises"
+// 单一写路径点（编辑器编辑径注入缝——CORE-UNIFICATION §2.13.5）：路径操作也经它落盘
+// （默认径 = 既有 cp / rename / EXDEV 回退语义，零行为变）。
+import { writeThroughPath } from "./write-path.mjs"
 import { existsSync } from "node:fs"
 import { execFileSync } from "node:child_process"
 import net from "node:net"
@@ -33,19 +35,11 @@ export const fileOpsTool = {
     const dst = resolveInCwd(ctx, dest)
     if (src === dst) return "Error: source and dest resolve to the same path"
 
-    if (action === "copy") {
-      await cp(src, dst, { recursive: true, force: true })
-      return `Copied ${source} → ${dest}`
-    }
-    // move & rename share the rename syscall; cross-device move falls back to copy+rm.
-    try {
-      await rename(src, dst)
-    } catch (e) {
-      if (e?.code !== "EXDEV") throw e
-      await cp(src, dst, { recursive: true, force: true })
-      await rm(src, { recursive: true, force: true })
-    }
-    return `${action === "rename" ? "Renamed" : "Moved"} ${source} → ${dest}`
+    // move & rename share the rename syscall; cross-device move falls back to copy+rm
+    // （回退语义住写路径点——§2.13.5）。
+    await writeThroughPath(src, null, { op: action, dest: dst })
+    const verb = action === "copy" ? "Copied" : action === "rename" ? "Renamed" : "Moved"
+    return `${verb} ${source} → ${dest}`
   },
 }
 

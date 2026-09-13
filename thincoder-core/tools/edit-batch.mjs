@@ -10,11 +10,13 @@
  * （args.path）为无自带 path 条目的默认（2026-09-05 用户裁定——条目自带 path 优先——见
  * EDIT.md §5 修订注）。
  */
-import { readFile, writeFile } from "node:fs/promises"
+import { readFile } from "node:fs/promises"
 import { resolveInCwd, normalizeEOL, joinWithEol, gitDiffOne, autoSyntaxCheck } from "./shared.mjs"
 // file.mjs ↔ edit-batch.mjs 循环引用：两侧导入的都是函数声明（提升初始化），
 // 仅在调用期使用——ESM 循环下安全（无模块求值期取值）。
-import { recordWrite, appendWriteContext } from "./file.mjs"
+// 写盘经单一写路径点（§2.13.5）——本档不再直调 fs。
+import { appendWriteContext } from "./file.mjs"
+import { writeThroughPath } from "./write-path.mjs"
 // EDIT.md §6：批量条目判定+应用共用 edit-diff（EDIT.md §4 分支 0 单行替换 + 行级 LCS——零重叠→替换即删）；
 // EDIT.md §5：edits 互斥错误文本随前置校验分支迁出至 edit-diff.mjs。
 import { assertEditArgsExclusive, validateEditEntry, computeEditEntry, splitLines, EMPTY_NEW_STRING_LINE, deleteTarget } from "./edit-diff.mjs"
@@ -80,8 +82,11 @@ export async function applyEditBatch(args, ctx) {
   // ——受影响区护栏覆盖组内所有编辑
   for (const g of groups.values()) {
     const startLine = Math.min(...prepared.filter((p) => p.g === g).map((p) => p.editStartLine))
-    await writeFile(g.abs, joinWithEol(normalizeEOL(g.content).split("\n"), g.raw), "utf8")
-    recordWrite(g.abs, { type: "edit", startLine, shift: g.netShift })
+    // 单一写路径点：默认 = writeFile + 记账；端侧注入 ⇒ 编辑器径（§2.13.5）。
+    await writeThroughPath(g.abs, joinWithEol(normalizeEOL(g.content).split("\n"), g.raw), {
+      op: "write",
+      record: { type: "edit", startLine, shift: g.netShift },
+    })
   }
   const results = []
   for (const p of prepared) {
