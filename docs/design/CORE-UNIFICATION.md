@@ -273,7 +273,7 @@ A8 / A9（对称面均入核）与 F3（零「新写」——不得造第三份�
 
 > 读数 = `node scripts/mirror-divergence.mjs --json`（exit 0）as-of 2026-09-13；席位 = §2.6 判据 1（逐字节同 ∨ `sim ≥ 0.90`）；sha256 前缀（12 位）与行数为同口径复读。
 > 「归属段」列 = `S0a（首批建核）`（机检 ⇔ 席位谓词——§2.6 判据 3）；**S0b 席位行（同路径 68 + 镜像 3）已填——见（三）**；
-> **语义对位遍产出行仍待填**（§2.6 判据 2 的第三类席位源）——全表届时四列无空值收口。
+> **语义对位遍产出行已填**（§2.6 判据 2 的第三类席位源）——见**（四）63 行 / 16 族**（2026-09-13；单端 239 档逐面闭合）。
 > 行数（CLI / VSC / 核）列：CLI / VSC 侧数随（二）明细逐行给出；「核」列与（一）组行数（CLI = VSC——逐字节同）待首建后收正（登记口径，非遗漏）。
 
 **（一）逐字节同组（39 行 = 同路径 29 + 镜像 10）——组陈述：取任一侧、逐字节随迁**
@@ -487,11 +487,138 @@ A8 / A9（对称面均入核）与 F3（零「新写」——不得造第三份�
 | 122 | `docs/design/prompts/persona-engineering.md` | 镜像 | 0.7872 · 异 | ② | 文本面（CN 镜像） | 融合（行内注记归一）+ 尾段三条端特有随同源英文档 | 分叉 ＝ VSC 镜像多端特有段与「CLI 侧批次档树」注记（`:11,44,49-54`） | — | S1（随同源档裁决） |
 
 
+**（四）语义对位遍行集（S0b 第三类席位源——2026-09-13 填）**
+
+> **席位口径**（§2.6 判据 2 第三类）：**同职责但相对路径不同**的模块对——即同路径对（107）+ 中文镜像对（15）之外的**全部**差异面来源。
+> **单端枚举读数**（`node scripts/mirror-divergence.mjs --json`，exit 0，as-of 2026-09-13）：**仅 CLI 148 档 / 27338 行 · 仅 VSC 91 档 / 16537 行**。
+> **判定口径**：单端每一档要么**有对位行**（本小节），要么**归 ④ 结构性不对称桶并附证据**（§2.4 第 3 条 / A9）——两者皆缺 = 该面未闭合。
+> **「须用户裁」列口径**：仅**新引入**可观察行为 / 契约变化且**既有 §2.5.1 无等价条目**者标 ①②③（→ 入 §2.5.1 丁组）；
+> 已有等价裁定者标「—（承 #N）」；两端自述同源 / 同构的镜像融合（无新契约点）标「—」＝ **自动合**。
+> **证据来源** = 两端源码头注自述（`CLI parity` / `MIRROR of` / 「同源移植」等）+ 本轮逐档实读（`file:line`）；**未实读者不写结论**。
+
+**族清单（16 族 / 63 条）**：会话 5 · 配置 4 · 记忆 3 · 索引 2 · 供应商 6 · MCP 5 · agent 主循环 6 · agent-tools 6 · advisor 2 · 压缩/标题/额度 3 · 权限 2 · 检查点/hooks 3 · 技能/规则/同伴/台账 5 · 推理/模型 3 · 工具实现面 2 · **宿主面与余项 6**（④ 四档 + 挂起面 #184 + 文案面 #185 两条对位）。
+
+| # | 对位（CLI ↔ VSC） | 分类 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
+|---|---|---|---|---|---|---|
+| 123 | `src/session.mjs` ↔ `src/extension/session-io.mjs` | ② | 融合：数据层取一侧 + VSC 的 `history-window` 拆面按核内结构归位 | 分叉 ＝ 目录归属（VSC 住 `extension/`）；存储契约两端自述同格式（同一 `~/.thincoder/sessions/<hash>.json.{N,manifest}`——VSC 头注 `:2-8`）⇒ 前提成立 | — | S1（建核补齐） |
+| 124 | `src/session-slots.mjs` ↔ `src/extension/session-slots.mjs` | ② | 融合：取一侧（slot / manifest / 认领 / 属主判定） | 分叉 ＝ 目录归属；头注互指「同构镜像」（CLI `src/session-slots.mjs:19` / VSC `:21`）⇒ 前提成立 | — | S1（建核补齐） |
+| 125 | `src/session-gc.mjs` ↔ `src/extension/session-gc.mjs` | ② | 融合：取一侧；**冷 cwd 手动执行面**（`session gc` 子命令）仅 CLI ⇒ 端差段 | 分叉 ＝ 目录归属 + VSC 无 shell 通道（VSC 头注 `:3-5` 自述）；保留期 / 阈值两端同值 ⇒ 前提成立 | — | S1（建核补齐） |
+| 126 | `src/session-store.mjs` ↔ `src/extension/session-slot-write.mjs` | ② | 融合：核内单一记录存储 + 槽写入面归位 | 分叉 ＝ 切分与目录归属（VSC 记录存储内联于槽写面）；槽写语义两端同 ⇒ 前提成立 | — | S1（建核补齐） |
+| 127 | `src/session-segments.mjs` · `session-guard.mjs` · `session-rename.mjs` · `session-migrate.mjs` ↔ 核内（VSC 侧内联于 `session-io` / `session-slots`） | ② | 融合：按核内结构归位（段 / 归属守卫 / 改名 / 旧短哈希迁移四面各保留） | 分叉 ＝ 拆档粒度（VSC 未拆）；能力面逐条对位（VSC `session-io.mjs:92-113` 迁移遍 / `:399` 改名枚举同构）⇒ 前提成立 | — | S1（建核补齐） |
+| 128 | `src/config.mjs`（装载器 + DEFAULTS）↔ `src/config-io.mjs` | ② | 融合：以 CLI 装载器为准 + `$schema` 注入按端差注入 | 分叉 ＝ 拆分（VSC 拆 8 档）；同一 `~/.thincoder/config.json`、同一 v2 架构 ⇒ 前提成立；**承 §2.5 #80** | —（承 #80） | S1（建核补齐） |
+| 129 | `src/config.mjs`（`PROVIDER_PRESETS`）↔ `src/config-presets.mjs` | ② | 融合：取一侧（逐条同值） | 分叉 ＝ 拆档；VSC 头注自述「mirrors CLI PROVIDER_PRESETS…双端逐条同值」（`:2,7`）⇒ 前提成立 | — | S1（建核补齐） |
+| 130 | `src/config.mjs`（consult / mcp / embedding 三段）↔ `src/config-consult.mjs` · `config-mcp.mjs` · `embed-config.mjs` | ② | 融合：核内单一 DEFAULTS + 三段的端侧消费面按端注入 | 分叉 ＝ 拆档；三段均以同一 `config.json` 为源（VSC `config-consult.mjs:8` 自述「镜像 CLI config.mjs 同规则」）⇒ 前提成立 | — | S1（建核补齐） |
+| 131 | `src/config.mjs`（写盘面）↔ `src/extension/settings-panel-write.mjs` · `extension/settings.mjs` | ② | 融合：核内单一读写 + 面板写面按端注入；**MCP 配置留 VS Code 设置** ＝ 端特有段 | 分叉 ＝ 写入口（VSC 设置面板 / CLI TUI）；写盘产物同一 `config.json`（VSC `thincoder-vscode/src/extension/settings.mjs:2` 自述「Backed by the shared ~/.thincoder/config.json」）⇒ 前提成立 | — | S1（建核补齐） |
+| 132 | （CLI 无监视面）↔ `src/extension/config-watch.mjs` · `extension/migrate-settings.mjs` | ④ | 端特有段：配置监视（宿主 `workspace` 事件）+ VS Code 旧设置 / 密钥库迁移 | 结构性不对称 = **依赖壳能力**（宿主文件监视 / `SecretStorage`）——CLI 无对应宿主面（B17）；依据是「**只在单侧存在**」，**非**「差异」（A9） | — | S1（建核补齐） |
+| 133 | `src/memory.mjs` + `src/memory/**`（8 档）↔ `src/memory.mjs` + `memory-tool.mjs` | ③ | 以 CLI 为准（A12——**前提失效，非选边**） | 分叉 ＝ **前提已失效**（「VS Code 内置 Node 不支持 sqlite」不成立；CLI `node:sqlite`+FTS5 `src/memory/schema.mjs:9,68` / VSC 零 sqlite）⇒ 直接归一；**承 §2.5 #82** | —（承 #82） | S1（建核补齐） |
+| 134 | `src/memory/docs.mjs`（`memoryTools`）↔ `src/memory-tool.mjs` | ② | 融合：核内单一 memory 工具面（动作集 / schema / 文案取一侧） | 分叉 ＝ 拆档位置（CLI 工具面住 `memory/docs.mjs:241`）；两端动作集同规格（五动作 / layer 词面）⇒ 前提成立；**随 #82 / A1 归一** | —（承 #82） | S1（建核补齐） |
+| 135 | `src/cli/memory-command.mjs` ↔ 核内（VSC 无对位） | ④ | 端特有段：CLI `memory` 子命令面（shell 通道） | 结构性不对称 = **仅 CLI 有 shell 子命令通道**（VSC 无终端子命令面——与 #125 冷 cwd 面同源）；**非**「差异」排除（A9） | — | 不迁（端特有） |
+| 136 | `src/memory/code-index.mjs` + `code-sync.mjs` ↔ `src/indexer.mjs` | ③ | 以 CLI 为准（**同一 A12 前提失效**；进核） | 分叉 ＝ 索引存储（VSC `.thincoder/index/{manifest.json,vectors.bin}` 文件 ↔ CLI sqlite 库——CLI `src/**` 零 `.thincoder/index` 命中）；前提同 #82 ⇒ 失效；**随 A1 归一** | —（承 #82） | S1（建核补齐） |
+| 137 | （CLI 无切分档）↔ `src/index-bin.mjs` · `index-discover.mjs` | ② | 融合：随核内索引面一并归位（向量编解码 / 走查规则） | 分叉 ＝ 拆档（VSC 拆 3 档 / CLI 2 档）；走查规则（`SKIP_DIRS` / 点目录 / `.thincoder` 特例）两端同源（VSC `index-discover.mjs:5-8` 自述「CLI-aligned」）⇒ 前提成立 | — | S1（建核补齐） |
+| 138 | `src/provider/core.mjs` + `index.mjs` ↔ `src/provider.mjs` | ② | 融合：以 CLI 调用核心为准 + VSC 的传输分派面归位 | 分叉 ＝ 组织（VSC 单档 / CLI 拆 core + sse + normalize）；两端同 API 语义（`chat` / `createProvider`——VSC `thincoder-vscode/src/provider.mjs:123` 自述「CLI core.mjs 同构」）⇒ 前提成立 | — | S1（建核补齐） |
+| 139 | `src/provider/anthropic.mjs` ↔ `src/provider/transports/anthropic.mjs` | ② | 融合：取一侧 + 核内 `transports/` 目录归位 | 分叉 ＝ 目录（CLI 平铺 / VSC `transports/`）；同源自述 ⇒ 前提成立 | — | S1（建核补齐） |
+| 140 | `src/provider/google.mjs` ↔ `src/provider/transports/google.mjs` | ② | 融合：同 #139 | 同 #139（VSC 头注自述「与 CLI 同修」）⇒ 前提成立 | — | S1（建核补齐） |
+| 141 | `src/provider/responses.mjs` ↔ `src/provider/transports/responses.mjs` | ② | 融合：同 #139 | 同 #139（VSC `:376` 自述「与 CLI/core 同构」）⇒ 前提成立 | — | S1（建核补齐） |
+| 142 | `src/provider/sse.mjs` · `retry.mjs` · `normalize.mjs` · `errors.mjs` · `abort-provenance.mjs` ↔ 核内（VSC 侧内联 / 无独立档） | ② | 融合：按核内结构归位（重试链 / 预发归一 / 错误分类 / abort 溯源） | 分叉 ＝ 拆档粒度（VSC 未拆）；VSC 多处自述「与 CLI 对齐」（`thincoder-vscode/src/provider.mjs:250` 等）⇒ 前提成立 | — | S1（建核补齐） |
+| 143 | `src/model-specs.mjs` ↔ `src/config.mjs`（模型规格段）+ `specs.mjs` | ② | 融合：核内单一 `MODEL_SPECS` + 端侧派生面（面板下拉 / 默认档）按端注入 | 分叉 ＝ 档名与拆分（VSC `config.mjs` 实为规格表、`specs.mjs` 仅转发）；VSC 头注自述「与 CLI src/model-specs.mjs 的查找语义对齐，但非逐行等价」（`:103`）⇒ 前提成立；字段差（`reasoningEffortDefault`）按端差登记 | — | S1（建核补齐） |
+| 144 | `src/mcp/helpers.mjs` ↔ `src/mcp/utils.mjs` | ② | 融合：取一侧（常量 + RPC id 生成） | 分叉 ＝ 档名（helpers / utils）；常量逐条同值（`INIT_TIMEOUT_MS` / `CALL_TIMEOUT_MS` / `ENDPOINT_WAIT_MS`）⇒ 前提成立 | — | S1（建核补齐） |
+| 145 | `src/mcp/transport-stdio.mjs` ↔ `src/mcp/stdio.mjs` | ② | 融合：取一侧 + 核内 `mcp/` 切分归位 | 分叉 ＝ 档名与目录；同源自述 ⇒ 前提成立 | — | S1（建核补齐） |
+| 146 | `src/mcp/transport-http.mjs` ↔ `src/mcp/http.mjs` | ② | 融合：同 #145 | 同 #145（VSC `http.mjs:252` 自述「与 CLI 语义同构」）⇒ 前提成立 | — | S1（建核补齐） |
+| 147 | `src/mcp/transport-ws.mjs` ↔ `src/mcp/ws.mjs` | ② | 融合：同 #145 | 同 #145 ⇒ 前提成立 | — | S1（建核补齐） |
+| 148 | `src/mcp.mjs` ↔ `src/mcp/index.mjs` | ② | 融合：核内单一切分 + 端侧配置面板 / 监视面按端注入 | 分叉 ＝ 组织（VSC 2 行转口 + `mcp/index.mjs`）；可配项（三种传输）与 `mcp.servers[]` 同源；**承 §2.5 #81** | —（承 #81） | S1（建核补齐） |
+| 149 | `src/agent/dispatch.mjs` ↔ `src/agent/execute-tools.mjs` + `src/agent/tool-gates.mjs` | ② | 融合：两阶段执行 + 前置门禁按核内结构归位 | 分叉 ＝ 拆分（VSC 拆 tools / gates —— `tool-gates.mjs:2-6` 自述「自 execute-tools.mjs verbatim 迁出——零语义」）⇒ 前提成立 | — | S1（建核补齐） |
+| 150 | `src/agent/helpers.mjs` ↔ `src/agent/run-helpers.mjs` | ② | 融合：核内单一工具函数面 | 分叉 ＝ 档名（helpers / run-helpers）；VSC `context-injections.mjs:11` 自述「CLI 对位 `agent/helpers.mjs:275-348`」⇒ 前提成立 | — | S1（建核补齐） |
+| 151 | `src/agent/post-turn.mjs` ↔ `src/agent/setup-reminders.mjs` + `agent.mjs`（内联） | ② | 融合：回合后记账（计时器 / 提醒 / 停滞检测 / goal 追踪）按核内结构归位 | 分叉 ＝ 落点（VSC 住 setup-reminders / 主循环内联——`thincoder-vscode/src/agent.mjs:351` 自述「ported from CLI post-turn」）⇒ 前提成立 | — | S1（建核补齐） |
+| 152 | `src/agent/spawn-child.mjs` ↔ `src/agent-tools/subagent-run.mjs` | ② | 融合：子运行器按核内结构归位（含 `_capturedOutput` 额度面） | 分叉 ＝ 文件名复用而实体不同（VSC 该档 = `runChild` 闭环 `:18-205`）；**承 §2.5 #103** | —（承 #103） | S1（建核补齐） |
+| 153 | `src/agent/completion.mjs` · `record-results.mjs` · `relay-prefix.mjs` ↔ 核内（VSC 内联） | ② | 融合：按核内结构归位（完成守卫 / 结果提交与记账 / 前缀续写切片） | 分叉 ＝ 拆档（VSC 内联于主循环）；守卫语义两端同（`completion.mjs` 三守卫 / 配对关闭 / UTF-16 安全切片）⇒ 前提成立 | — | S1（建核补齐） |
+| 154 | `src/agent-tools/design-token.mjs` + `src/token-ttl.mjs` ↔ `src/agent/agent-state.mjs` + `src/agent/tool-gates.mjs` | ② | 融合：token TTL / 会话槽台账按核内结构归位 | 分叉 ＝ 落点（CLI 独立档 / VSC 住 agent-state · tool-gates）；两端同 token 格式（`uuid:expiresAt`）与 fail-closed 口径 ⇒ 前提成立 | — | S1（建核补齐） |
+| 155 | `src/agent-tools/escalate-async.mjs` ↔ `src/agent-tools/subagent-escalate-async.mjs` + `subagent-escalate.mjs` | ② | 融合：异步飞刀引擎按核内结构归位 | 分叉 ＝ 档名与拆分（VSC 拆 sync / async 两档）；同池（「other」域）/ 同 ack 形态 ⇒ 前提成立 | — | S1（建核补齐） |
+| 156 | `src/agent-tools/recent-changes.mjs` ↔ `src/agent-tools/recent_changes.mjs` | ② | 融合：取一侧（工具名 `recent_changes` 两端同） | 分叉 ＝ 档名连字符 / 下划线 + `readonly` 标记；工具语义同（本轮已读）⇒ 前提成立 | — | S1（建核补齐） |
+| 157 | `src/agent-tools/subagent-spawn.mjs` ↔ `src/agent-tools/subagent-spawn-gate.mjs` | ② | 融合：spawn 门禁按核内结构归位 | 分叉 ＝ 档名与拆分；VSC `:136` 自述「CLI 同构面；CLI 执行器在 agent-tools/subagent-spawn.mjs」⇒ 前提成立 | — | S1（建核补齐） |
+| 158 | `src/agent-tools/advisor-settle.mjs` ↔ 核内（VSC 侧住 `advisor-async.mjs`） | ② | 融合：advisor settle 记账 / 变更日志 / 陈旧判定按核内结构归位 | 分叉 ＝ 拆档（VSC 未拆；**同路径对 #101 的另一半**）⇒ 随 #101 处置 | —（承 #101） | S1（建核补齐） |
+| 159 | `src/agent-tools/review-streak.mjs` + `subagent-panel.mjs` ↔ 核内（VSC 零 `review-streak` / `panel` 动作） | ③ | 以 CLI 为准（评审连续失败止损 / `panel` 动作）——VSC 接线后生效 | 分叉 ＝ VSC 未实现（零命中）；**承 §2.5 #110（止损）/ #99（panel 端特有段）** | —（承 #110 / #99） | S1（建核补齐） |
+| 160 | `src/advisor.mjs` ↔ `src/advisor/main.mjs` | ② | 融合：取一侧（advisor 提示词选择 / 跟进构建 / 会话装配） | 分叉 ＝ 档名与目录（VSC 头注自述「VS Code port of thincoder CLI src/advisor.mjs」`:3`）⇒ 前提成立 | — | S1（建核补齐） |
+| 161 | （CLI 侧内联于 `advisor/run.mjs`）↔ `src/advisor/provider.mjs` + `advisor/tools.mjs` | ② | 融合：评审 provider 解析 / 工具集按核内结构归位 | 分叉 ＝ 拆档（VSC 拆 2 档）；工具集差异（`code_search` 挂载条件）**已由 §2.5 #109 裁决** ⇒ 前提成立 | —（承 #109） | S1（建核补齐） |
+| 162 | `src/context.mjs` ↔ `src/compact.mjs` | ② | 融合：取一侧（压缩触发 / 摘要 / 降级截断 / 尾部预算） | 分叉 ＝ 档名（context / compact）+ 目录；VSC 头注 20+ 处自述「CLI parity（CONTEXT-COMPACTION.md D2/D3/D4/D6）」⇒ 前提成立 | — | S1（建核补齐） |
+| 163 | `src/generate-title.mjs` ↔ `src/extension/generate-title.mjs` | ② | 融合：取一侧 + 端差（CLI 仅 OpenAI 兼容 / VSC 三格式分派）按端注入 | 分叉 ＝ 目录 + 格式分派（CLI 头注自述「CLI is OpenAI-compatible ONLY」）；会话标题语义同 ⇒ 前提成立 | — | S1（建核补齐） |
+| 164 | `src/text-budget.mjs` ↔ `src/agent/run-helpers.mjs`（`safeSliceUTF16` 族） | ② | 融合：核内单一文本额度纯函数（头保 + 中段标记 + 尾保） | 分叉 ＝ 落点（CLI 独立档 / VSC 住 run-helpers）；计长口径（UTF-16 码元）两端同 ⇒ 前提成立 | — | S1（建核补齐） |
+| 165 | `src/cli/permission.mjs` ↔ `src/extension/permission-gate.mjs` | ② | 融合：权限闸按核内结构归位 + 展示面按端注入 | 分叉 ＝ 目录与展示形态（TUI 卡 / webview 卡）；闸语义（每回合 `autoApprove` 快照 + 中途 live 标志）同 ⇒ 前提成立 | — | S1（建核补齐） |
+| 166 | （CLI 无独立档）↔ `src/agent-tools/child-permission.mjs` | ② | 融合：子代理权限通道按核内结构归位（父卡归属 + 定向 signal） | 分叉 ＝ 拆档（VSC 独有拆面）；**承 §2.5 #112（装配）/ §2.12.1 事件语义面** | —（承 #112） | S1（建核补齐） |
+| 167 | `src/git/checkpoint.mjs` ↔ `src/tools/checkpoint.mjs` | ② | 融合：取一侧（v2 全文件快照 / rewind / 每文件恢复 / 只读 git 仓） | 分叉 ＝ 目录归属；VSC 头注自述「MIRROR of thincoder CLI src/git/checkpoint.mjs——同一目录同一格式、快照跨端互通」⇒ 前提成立 | — | S1（建核补齐） |
+| 168 | `src/git/gitmem.mjs` ↔ 核内（VSC 侧无 team 层同步面） | ③ | 以 CLI 为准（team 层记忆 git 同步）；VSC team 层现行「明确拒绝、指向 CLI」⇒ 随 A1 归一 | 分叉 ＝ team 层处置（VSC 无该层）；**承 #82 / A1** | —（承 #82） | S1（建核补齐） |
+| 169 | `src/hooks.mjs` ↔ 核内（VSC 侧零 `runHooks`） | ③ | 以 CLI 为准（Stop 等四事件）——VSC 接线后开始触发（外部副作用随 #111 登记） | 分叉 ＝ VSC 未实现（零命中）；**承 §2.5 #111** | —（承 #111） | S1（建核补齐） |
+| 170 | `src/skills.mjs` ↔ `src/extension/skills.mjs` | ② | 融合：取一侧（发现规则两端同构：扁平 + `SKILL.md` / 排序 / 项目层优先）+ fs 面（同步 / 异步）按端注入 | 分叉 ＝ 目录 + loader 形态（VSC 头注自述「同构语义…语义同源、实现自持」`:3-5`）⇒ 前提成立 | — | S1（建核补齐） |
+| 171 | `src/rules.mjs` ↔ `src/extension/rules.mjs` | ② | 融合：取一侧 | 分叉 ＝ 目录归属（VSC 住 `extension/`）⇒ 前提成立 | — | S1（建核补齐） |
+| 172 | `src/peer-instances.mjs` ↔ `src/extension/peer-instances.mjs` | ② | 融合：取一侧 + 端判别面按端注入 | 分叉 ＝ 目录 + 端标记判别（VSC 头注自述「VS Code 镜像」`:2`）⇒ 前提成立 | — | S1（建核补齐） |
+| 173 | `src/peer-domains.mjs` ↔ `src/extension/peer-domains.mjs` | ② | 融合：取一侧 | 分叉 ＝ 目录（VSC 头注自述「VS Code 镜像」`:3`）⇒ 前提成立 | — | S1（建核补齐） |
+| 174 | `src/tui/ledger-surface.mjs` ↔ `src/extension/ledger-surface.mjs` | ② | 融合：取一侧 + 渲染面按端注入 | 分叉 ＝ 目录（CLI 住 `tui/` / VSC 住 `extension/`）；台账规则两端逐字同（`ledger.mjs` 同路径 #71）⇒ 前提成立 | — | S1（建核补齐） |
+| 175 | `src/auto-think.mjs` ↔ `src/extension/reasoning-mode.mjs` | ② | 融合：核内推理档位面 + 端侧选择面（UI 下拉 / 自动分级）按端注入 | 分叉 ＝ 落点（CLI 自动难度分级 / VSC UI→provider 字段映射）；VSC DEFAULTS 已载 `autoThink`（`config-io.mjs:319`）但**全仓无消费方** ⇒ 归一后接线（默认 `false` ⇒ 默认无行为变化） | **②**（丁组 D2） | S1（建核补齐） |
+| 176 | `src/model-ref.mjs` ↔ `src/config.mjs`（模型引用解析段）+ `specs.mjs` | ② | 融合：核内单一 `provider:model` 解析 | 分叉 ＝ 落点；解析口径（首冒号切分 / 双段非空 / 显式 `p:m` 一律放行）两端同源 ⇒ 前提成立 | — | S1（建核补齐） |
+| 177 | `src/cli/setup-wizard.mjs` + `src/tui/model-picker.mjs` ↔ `src/extension/settings.mjs` + `provider-flows.mjs` + `presets.mjs` | ② | 融合：provider 增删 / 密钥 / 激活的**纯持久化函数**取一侧 + UI 壳按端注入 | 分叉 ＝ UI 壳（QuickPick / TUI picker）+ 目录；持久化语义两端同（`config.json` `providers[]` + 单值 `model`——VSC `provider-flows.mjs:10` 自述「identical to the CLI」）⇒ 前提成立 | — | S1（建核补齐） |
+| 178 | CLI 单端工具实现 **6 档** ↔ VSC 侧对位 | ② | 融合：逐档随其**工具面**（§2.5 #52–#70）的裁决落地 | 分叉 ＝ 实现切分；**B18 反例**：单端独有档之间最高 j 仅 0.256 ⇒ 不据相似度断言，逐档按工具面归属（映射见下表） | — | S1（建核补齐） |
+| 179 | VSC 单端工具实现 **12 档** ↔ CLI 侧对位 | ② | 同上（逐档映射见下表；两档归 ④ 端特有段） | 同上 | — | S1（建核补齐） |
+| 180 | CLI `tui/**`（67 档）+ `tui.mjs` ↔ ④ | ④ | 端特有（TUI 渲染 / 交互 / 键位 / 布局 / 面板 / 命令面） | 结构性不对称 = **依赖壳能力（终端 TUI）**——B17 实测仅 CLI 11258 行 | — | 不迁（端特有） |
+| 181 | CLI `acp.mjs` + `acp/**`（3 档）↔ ④ | ④ | 端特有（ACP 协议客户端 / 会话 / 传输） | 结构性不对称 = **仅 CLI 存在**（VSC `src/**` 零 acp 命中） | — | 不迁（端特有） |
+| 182 | CLI 其余单端杂项（`completions.mjs` · `crash-reports.mjs` · `heap-watch.mjs` · `markdown.mjs` · `upgrade.mjs` · `distill.mjs`）↔ ④ | ④ | 端特有（shell 补全 / 崩溃报告 / 堆监视 / TUI 渲染 / 自升级 / 蒸馏入口） | 结构性不对称 = **依赖壳能力或分发通道**（补全 = shell 通道；自升级 = CLI 分发；崩溃报告 / 堆监视 = CLI 进程形态）；`memory-command` / `permission` / `setup-wizard` 已单列（#135 / #165 / #177） | — | 不迁（端特有） |
+| 183 | VSC `extension/**` 面板与宿主面（`chat-panel` · `panel-*` 8 档 · `notify` · `file-links` · `file-refs` · `diff-preview` · `editor-context` · `image-handler` · `vision-channel` · `turn-model` · `stop-trace` · `history-window`）↔ ④ | ④ | 端特有（webview / 宿主 API / 编辑器集成） | 结构性不对称 = **依赖壳能力（VS Code 宿主 API / webview）**——B17 实测仅 VSC；`config-watch` / `migrate-settings` / `permission-gate` 已单列（#132 / #165） | — | 不迁（端特有） |
+| 184 | `src/extension/suspension.mjs` ↔ `src/tui/suspension-drive.mjs` | ② | 融合：挂起 / 唤醒机制按核内结构归位（池载体按端注入） | 分叉 ＝ 目录（CLI 住 `tui/`）；VSC 头注自述「与 CLI 的结构差异（同语义移植）——CLI 的池 / pending / _suspended 挂 agent 对象」`:9` ⇒ 前提成立 | — | S1（建核补齐） |
+| 185 | VSC `i18n.mjs` + `locales/*.json` ↔ CLI 文案面（内联字面量） | ② | 融合：核内文案常量 + VSC 字典投影（CLI 无字典需求 ⇒ 端差段） | 分叉 ＝ 本地化机制（VSC 字典 + `t()` / CLI 单语内联）；**对外文案契约面**（§2.12.1「输出文案」类）⇒ 归一方向是真选择 | **②**（丁组 D1） | S1（建核补齐） |
+
+**工具实现面单端档逐档映射（#178 / #179 的行内容）**
+
+| 单端档 | 对位 / 处置 |
+|---|---|
+| CLI `tools/bash.mjs` | ↔ VSC `tools/shell.mjs`（同一 `bash` 工具）⇒ 随 §2.5 #53 |
+| CLI `tools/checklist-sync.mjs` | 核内并发写同步机（VSC 内联于 `checklist.mjs`）⇒ 随 #60 |
+| CLI `tools/edit-batch.mjs` | 核内 edit 数组形态（VSC 住 `edit-line-params.mjs` / `file-edit.mjs`）⇒ 随 #69 |
+| CLI `tools/glob-dialect.mjs` | 核内 glob 方言（VSC 住 `search.mjs` / `more-file.mjs`）⇒ 随 #54 / #65 |
+| CLI `tools/patch.mjs` | 核内 `apply_patch` / `delete` 实现（VSC 住 `file-edit.mjs`）⇒ 随 #10 / #12（同路径 `.md`） |
+| CLI `tools/repomap.mjs` | ↔ VSC `repomap.mjs`（同一 repo 大纲；VSC 头注自述「Ported from thincoder CLI src/tools/repomap.mjs」）⇒ 融合 |
+| VSC `tools/checkpoint.mjs` | ↔ CLI `git/checkpoint.mjs`（行 #167） |
+| VSC `tools/code.mjs` | ↔ CLI `memory/docs.mjs` 的 `codeSearchTool` / `docSearchTool` ⇒ 随 #82 |
+| VSC `tools/context.mjs` | **④ 端特有段**（IDE 上下文 = 宿主能力；CLI 无 IDE） |
+| VSC `tools/edit-fuzzy-match.mjs` · `edit-line-params.mjs` · `file-edit.mjs` · `more-file.mjs` · `hashline-edit.mjs` | 核内 edit / read / insert 实现切分 ⇒ 随 #68 / #69 |
+| VSC `tools/focus.mjs` | **④ 端特有段**（驱动编辑器光标 = 宿主能力） |
+| VSC `tools/read_image.mjs` | 核内 `read_image` 实现（CLI 住 `tools/file.mjs`；同路径 `read_image.md` = #26） |
+| VSC `tools/shell.mjs` | ↔ CLI `tools/bash.mjs`（同首行） |
+| VSC `tools/wait_for.mjs` | 核内 `wait_for`（CLI 并回 `tools/ops.mjs`）⇒ 随 #62 |
+
+**覆盖对账（单端 148 + 91 逐面闭合——§2.6 判据 3 覆盖程序）**
+
+| 单端面 | 档数 | 处置 | 行号 |
+|---|---|---|---|
+| CLI `tui/**` + `tui.mjs` | 68 | ④ 端特有（TUI） | #180 |
+| CLI `acp.mjs` + `acp/**` | 4 | ④ 端特有（协议） | #181 |
+| CLI `cli/**` | 5 | #135 / #165 / #177（3 档对位）+ #182（2 档 ④） | — |
+| CLI 顶层对位档（session 8 · config · context · generate-title · text-budget · skills · rules · peer ×2 · token-ttl · auto-think · model-ref · model-specs · hooks · abort-provenance · advisor.mjs） | 22 | 对位行（#123–#127 / #128 / #142 / #143 / #154 / #160 / #162–#164 / #169–#173 / #175 / #176） | — |
+| CLI 顶层 ④ 档（completions · crash-reports · heap-watch · markdown · upgrade · distill） | 6 | ④ 端特有 | #182 |
+| CLI `agent/**` | 7 | 对位（#149–#153 + `setup` / `setup-reminders` / `run-stages` 属 107 同路径对） | — |
+| CLI `agent-tools/**` 单端 | 7 | 对位（#154–#159） | — |
+| CLI `git/**` | 2 | 对位（#167 / #168） | — |
+| CLI `mcp/**` | 4 | 对位（#144–#147；`mcp.mjs` → 107 同路径对 #81） | — |
+| CLI `memory/**` | 8 | 对位（#133 / #134 / #136；`memory.mjs` → 107 同路径对 #82） | — |
+| CLI `provider/**` | 9 | 对位（#138–#142） | — |
+| CLI `tools/**` 单端 | 6 | 对位（#178 + 映射表） | — |
+| VSC `advisor/**` 单端 | 3 | 对位（#160 / #161） | — |
+| VSC `agent/**` 单端 | 5 | 对位（#149 / #150 / #154 / #155） | — |
+| VSC `agent-tools/**` 单端 | 9 | 对位（#155–#157 / #166）+ 四档随对应同路径对（`index`→#83 · `read-history-discovery`→#89 · `subagent-spec`→#99 · `async-discard`→#111） | — |
+| VSC 顶层单端（compact · config-consult/-io/-mcp/-presets · embed-config · i18n · index-* · memory-tool · provider · repomap · specs · tools.mjs） | 14 | 对位（#128–#131 / #136–#138 / #144 / #148 / #162 / #167 / #176 / #177 / #185） | — |
+| VSC `extension/**`（38 档） | 38 | 对位 **17** 档（#123–#126 / #131 / #163 / #165 / #170–#174 / #175 / #177 / #184）+ ④ **21** 档（#132 两档 + #183 十九档） | — |
+| VSC `mcp/**` | 5 | 对位（#144–#148） | — |
+| VSC `provider/**` + `provider/transports/**` | 5 | 对位（#138–#141） | — |
+| VSC `tools/**` 单端 | 12 | 对位 10 档（#167 / #179 + 映射表）+ ④ 2 档（`context` / `focus`） | — |
+
+> **结论**：单端 **148 + 91 = 239 档**逐面闭合——每档或落对位行、或落 ④ 结构性不对称桶（附结构性证据）；无「两者皆缺」的未闭合面。
+> **④ 桶合计 = 103 档**：**CLI 80**（`tui/**` + `tui.mjs` 68 · `acp.mjs` + `acp/**` 4 · `cli/**` 2 · 顶层杂项 6）· **VSC 23**（`extension/**` 21 · `tools/**` 2）。
+> 顶层杂项 6 = `completions` · `crash-reports` · `heap-watch` · `markdown` · `upgrade` · `distill`；VSC `tools` 的 2 = `context.mjs` · `focus.mjs`。
+> **边界纪律**：本桶只收「仅单侧存在 / 依赖壳能力」者（A9 第 1 条），**不得**以「差异 / 相似度低」入桶；其余 **136 档**全部落对位行。
+
 #### 2.5.1 须用户裁条目清单（A11——四要素提交形式）
 
 **子表**（S0b 填齐 2026-09-13——**与 §2.5「须用户裁」列对应**：列非空则本表必有行；本表 = 提交给用户的「须你拍」清单，只建议、不代裁）：
 
-> **分组口径**：**甲组 = 存在真选择**（两侧方向都说得通，须用户拍）；**乙组 = 方向只有一种**（修 bug / 单一正确做法，可一并按建议通过）。
+> **分组口径**：**甲组 = 存在真选择**（两侧方向都说得通，须用户拍）；**乙组 = 方向只有一种**（修 bug / 单一正确做法，可一并按建议通过）；
+> **丙组 = S0a 席位已裁**（裁定正文见批次档 §1）；**丁组 = S0b 语义对位遍**新增须裁条目（章程同甲 / 乙组）。
 > **「命中」列** = §2.5 三口径：① 改变可观察行为 · ② 改变对外契约 · ③ 两侧语义真分叉（需选边 / 定新语义）——**无法以端差注入保留两侧现状的正常使用路径差异才入本表**。
 > 裁定完毕后在本表行未标日期（裁定正文归批次档 §1 / §4，本表只记状态）；**未裁定不进 S1**（§2.6 退出条件）。
 
@@ -499,37 +626,37 @@ A8 / A9（对称面均入核）与 F3（零「新写」——不得造第三份�
 
 | # | 条目（路径 / 对位） | 命中 | 左端行为（CLI） | 右端行为（VSC） | 建议归一形态 | 影响面 | 裁定状态 |
 |---|---|---|---|---|---|---|---|
-| A1 | `memory.mjs`（席位 #82；实为 CLI `src/memory/**` 8 档 ↔ VSC `memory.mjs` + `memory-tool.mjs`） | ①②③ | `node:sqlite` `DatabaseSync` + FTS5（`src/memory/schema.mjs:9,68`）；库 = `~/.thincoder/memory.db`；三层 `personal` / `project` / `team`，**personal = 全机共享的库行**；project 层 = `.thincoder/memory/*.md`（**只扫顶层** `src/memory/core.mjs:205-212`） | 零 sqlite——纯仓内 md（`.thincoder/memory/{personal,project}/*.md`，`:26-37`）+ 遗留 `.json` 读兼容（`:150-162`）；两层（`team` 明确拒绝、指向 CLI）；`personal` 落在**仓库目录内** | **以 CLI 为准**（A12——前提失效，非选边）；`node:sqlite` 采纳为定案（§2.11 A8） | ① 记忆存哪变了（VSC 的 personal 由仓内目录 → 全机库）；② 两端**从此可互读**（现状：VSC 读不到 CLI 的库、CLI 不递归读 VSC 的子目录）；③ 旧数据要搬（见 A2）；④ 检索能力（FTS5 + 中文逐字分段）随之而来；⑤ 两侧测试面 | **待裁** |
-| A2 | 记忆面旧数据迁移（§2.12.3 第 2 行） | ②③ | 有 `memory` 子命令（list / search / put / remove）与 `/reindex`；**无 md / json 导入命令** | 用户既有记忆 = 仓内 `personal` 层 md + 遗留 `.json` + `workspaceState` 的 `thincoder.modelPrefs` | 二选一：① **提供一次性导入器**（md / json → `entries`）；② 用户手工迁移 / 丢弃 | 用户既有记忆是否保留；`modelPrefs` 住 VS Code 状态（不在文件系统）⇒ 导入器也取不到 | **待裁** |
-| A3 | VSC 引擎下限（§2.12.3 第 1 行） | ② | `engines.node = >=24` | `engines.vscode = ^1.85.0` | 抬到 **`^1.101.0`**（A13 已裁「可抬」；推导链逐环有源——§2.11 A8）；**须 S0b 实测确认 + 用户过目** | 放弃 VS Code < 1.101 的用户（A13 已接受该代价）；装上旧宿主 ⇒ 扩展不可用 | 已裁（「可抬」）· **值待实测 + 过目** |
-| A4 | `config.mjs`（席位 #80；**同名不同物**——对位 = CLI `config.mjs` ↔ VSC `config-io.mjs`） | ①② | 装载器 + 全量 DEFAULTS（agent / memory / shell / embedding / mcp / websearch / traces）；写盘不注入 `$schema` | 装载器在 `config-io.mjs`（同址同格式）；写盘**注入 `$schema`**（`src/config-io.mjs:108`）；本端 `config.mjs` 实为模型规格表 | 以 CLI 为准（装载器）+ 端差注入（`$schema` 是否注入 · 配置监视面） | ① 配置文件里会 / 不会多一个 `$schema` 键（仅 VSC 写盘时）；② 键名与默认值口径统一 ⇒ 旧键保留为读入别名（兼容） | **待裁** |
-| A5 | `agent-tools/settings.mjs`（#87） | ①② | 类型表由**全量** DEFAULTS 派生（`src/agent-tools/settings.mjs:58`）⇒ 错类型被拒 | 类型表只派生 agent / traces（`:43,61`）⇒ `websearch` / `mcp` / `memory` / `embedding` / `shell` 的错类型**静默写进两端共享的 `config.json`** | 以 CLI 为准（全量类型校验） | ① VSC 里写错类型会被拒绝（原来会静默落盘，且 CLI 下次读该值会异常）；② 共享 `config.json` 的写入可靠性 | **待裁** |
-| A6 | `agent-tools/eng.mjs`（#91） | ①② | 工程模式位只进会话（`cmd-eng.mjs` 自述 `(session)`） | **双写**：会话槽 + `config.json` 的 `agent.engineering`（`src/agent-tools/eng.mjs:92-104`） | 以 CLI 为准（只进会话）+ VSC 的面板提示按端注入 | ① **跨端副作用**（现状：在 VSC 开一次工程模式，会改变 CLI 下次启动的模式） | **待裁** |
-| A7 | `agent.mjs`（#78） | ①② | 读 `config.agent.streamRules` 传给模型（`src/agent.mjs:237`）；中断时丢弃工具结果并写占位（`:387`） | `streamRules` **全仓零消费方**（VSC `src/**` 0 命中，本端 PARITY 批亦登记为缺口）；中断时保留真实工具结果（`:342-350`） | 以 CLI 为准（主循环本体）+ VSC 的 onToken 三态门 / 帧回调 / 空响应重试并入 | ① CLI 能配的流规则在 VSC 不生效（现状）⇒ 归一后生效；② 中断时模型所见的历史内容不同 | **待裁** |
-| A8 | `tools/web.mjs` + `tools/websearch.md`（#67 / #58） | ①② | RSS 端点 + `engine` / `page` 参数；fetch **跟随一次重定向**、上限 200K、正文转换 + SPA / 屏蔽提示 | Bing HTML 抓取、无翻页；fetch **拒绝跟随重定向**（`src/tools/web.mjs:111-115`）、上限 **20K**、朴素去标签 | 以 CLI 为准（RSS + 翻页 + 跟随重定向 + 200K + `htmlToText`） | ① 一大批会重定向的正常网址，VSC 现在抓不到 ⇒ 归一后可抓；② 抓回的正文长度（20K → 200K）与可读性变化；③ 工具参数面变化（VSC 侧多出 `engine` / `page`） | **待裁** |
-| A9 | `tools/lsp.mjs`（#66） | ①③ | 自实现 JSON-RPC over stdio，按 `config.lsp.servers` **懒启动**语言服务器；未配置则回引导语 | 直接用 VS Code 语言服务命令（`:76-112`），**开箱即用**、不读配置 | 以 CLI 为准（核内实现）+ VSC 宿主语言服务径按端注入 | ① 归一后 CLI 侧仍需配置才能用（不变）；② VSC 侧是否继续用编辑器已装的语言服务（若改走核内实现，则须自行配置） | **待裁** |
-| A10 | `tools/file.mjs`（#68） | ① | read 有 10MB 体积门 + 200K 截断；写入回执含 git diff + `Syntax: OK/FAILED` + 写入点上下文；`insert_after` 有「读取后才准插 / 行号漂移即拒」护栏 | read 无体积门与截断（`:34-70`）；写入回执只一句「Wrote / Replaced / Inserted」（`file-edit.mjs:305`）；`insert_after` 无护栏、且插入的文件不进 `touchedFiles`（`more-file.mjs:11-24`） | 以 CLI 为准（体积门 + 截断 + 回执 + 护栏）+ 编辑器编辑径按端注入 | ① VSC 读超大文件从此会被截断（并给出提示）；② VSC 写入 / 编辑后模型开始看到 diff 与语法检查结果；③ VSC 的 `insert_after` 会拒绝漂移行号 | **待裁** |
-| A11 | `tools/grep.md` + `tools/search.mjs`（#54 / #65） | ① | grep 支持 `before` / `after` 上下文档（`search.mjs:116-118`）；含 `ls`；非法正则 / glob 抛错 | grep 无上下文档（`:230-238`）；`ls` 在 `more-file.mjs:318`；错误一律返回字符串；glob 指向文件可直配、路径不存在明确报错 | 以 CLI 为准（上下文 + `ls` 归位）+ VSC 的「路径不存在明确报错」并入 | ① VSC 的 grep 从此可带上下文（少一次额外 read 回合）；② 找不到路径时的回话形态变化（静默 `(no matches)` → 明确报错） | **待裁** |
-| A12 | `agent-tools/goal.mjs`（#97） | ①③ | 四动作（set / complete / blocked / cancel）；`criteria` 强制；complete 过「改过文件未 verify」门 + depth-0 **独立裁判**；blocked 需同一理由连续 3 次 | 三动作（**无 `blocked`**，模型调用会因 enum 直接失败 `:18`）；`criteria` 可省（缺省填 `manual verification`）；complete 只有 verify 门、无独立裁判 | 以 CLI 为准（四动作 + criteria 强制 + 独立裁判） | ① VSC 丢失「卡住要连续 3 次才认账」与「完成要过独立裁判」两道承诺 ⇒ 归一后恢复；② 模型在 VSC 可用的 `goal` 动作集变大 | **待裁** |
-| A13 | `agent-tools/task.mjs`（#90） | ① | 空标题丢弃、done 只留最近 3 条、总量截到 20（`:66-77`） | 不过滤、不截断（`:60-66`） | 以 CLI 为准（过滤 + 截断） | ① VSC 面板里会少掉空标题行、历史 done 项与超量条目（长清单从此瘦身） | **待裁** |
-| A14 | `agent-tools/read-history.mjs`（#89） | ① | 相对路径按 cwd 解析；只要求有 `history` 数组；本会话流式迭代磁盘（`:295-304`）；空 path 明确报错 | 相对路径不做 cwd 解析；要求 `version` 1 / 2；本会话只读内存（`:260`） | 以 CLI 为准（相对路径 + 宽松校验 + 磁盘全量） | ① VSC 里传相对路径不再直接 `not found`；② 旧版 / 无 `version` 字段的会话档从「拒」变「可查」 | **待裁** |
-| A15 | `agent-tools/subagent.mjs`（#99） | ① | 八动作（含 `panel`） | 七动作——**有意无 `panel`**（`subagent-spec.mjs:11-12`，其载荷面在 VSC 不存在） | 以 CLI 为准（保留 `panel`）+ VSC 端按端差**不注入**该动作 | ① VSC 的 `subagent` 动作集不变（`panel` 仍无）；CLI 不变——本行只登记端差合法性与注入位 | **待裁** |
-| A16 | `prompts/discipline-engineering.md`（#117；含中文镜像） | ①② | 独有「改动面反查（文档影响面）」节（`src/prompts/discipline-engineering.md:128-130`）；无 R14 池段 | 独有 R24 挂钩节、**R14 域池段**（`:262-265`）、取消 eng-coder 判据、D5 冻结窗口细则（`:145`） | 融合（取并集）+ 端特有段按注入（VSC 的 R14 / 取消判据；CLI 的改动面反查） | ① 归一后两侧模型被要求做的事会**并集化**（CLI 侧开始看到 R24 / D5 细则，VSC 侧开始看到改动面反查）⇒ 须逐条确认哪些真是端特有；② 模型可见指令面变更 | **待裁** |
-| A17 | `prompts/discipline-normal.md`（#118） | ① | 独有「Ctrl+I 不终止会诊」等句；会诊节位置不同 | 独有「收尾验收」节（`:191-195`）——完成声明受审 / load skills / 与设计档对账 | 融合 + 端特有段注入 | ① VSC 侧新增的收尾要求是否晋升为**两端共同**纪律（会改变模型收尾行为） | **待裁** |
-| A18 | `prompts/persona-eng-coder.md`（#119；含中文镜像） | ① | 无 Guidelines 块（`file` 域节为独立标题形态） | 独有 Guidelines 块（`:34-51`）：不得静默降级 / UI 与交互决策缺失即停报 / **收尾自审六条** / 工具权限处置 | 融合 + 端特有段注入 | ① 同上：VSC 的六条收尾自审是端特有还是应两端共用（会改变 eng-coder 的收尾行为与成本） | **待裁** |
-| A19 | `provider/rate.mjs`（#114） | ① | 等待期间按 Stop **要拖到窗口结束**（`:89-90`）；只按 provider 配置的 tpm/rpm 限流 | 10s 段可中断睡眠（`:26-34,135-137`）；只配一个维度时**补默认另一维度**；token 估算含图片 part 与 `max_tokens` | 取并集：等待取 VSC 的可中断实现 + 默认限流口径取 VSC + token 估算取并集 | ① 被限流时按 Stop 的响应速度（CLI 侧变快）；② 只配 rpm 的场景会多一层 TPM 闸（限流更早触发） | **待裁** |
-| A20 | `provider/list-models.mjs`（#115） | ①② | 按接口返回序；**带 `provider.headers`**；解析失败静默返回空清单 | 结果 **sort() 排序**；openai / anthropic 分支**不带** `provider.headers`；失败抛错并在配置面板显示「该渠道不提供模型列表」 | 取并集：保留 VSC 的排序与明确报错 + CLI 的 `provider.headers` 随请求发出 | ① 走自建网关 / 需额外鉴权 header 的用户：VSC 现会 401 拉不到 ⇒ 归一后能拉到；② 清单顺序变化（排序 vs 接口序）；③ 拉不到时的提示形态变化 | **待裁** |
-| A21 | `traces/trace-store.mjs`（#116） | ① | 单条 >64K 截断（头 16K + 尾 48K）；在途上限 8 条、超了**丢记录**并打 stderr（`:96-106,240-247`）；清理在启动时跑一次 | 不截断、不丢弃，逐条完整落盘（`:22-23,218`）；**每写一次 prune**（每次多一遍目录扫描） | 取并集：目录 / 命名 / 字段取同一形态（现状已一致）+ 容量 / 清理策略取一侧（建议取 VSC 的完整落盘 + 每写 prune） | ① **默认关**（两端皆 `false`）⇒ 多数用户无感；开启后：CLI 的超大轨迹不再缺内容 / VSC 每次落盘多一次扫描；② 两端轨迹可合并分析（现状已可） | **待裁** |
-| A22 | `agent/setup.mjs`（#112） | ① | 每轮装配全内联；`read_image` **恒在**注册表；子代理继承含 `settings` 的工具集；文档 / 记忆召回只受 `!resume` 约束（未按 depth 门控） | 拆 `context-injections.mjs`；`read_image` 仅当模型多模态（`:199`）；`settings` 只挂 depth0（`:141`）；召回限 depth0 且 `!autoTurn`；每轮惰性把 MCP 扩成原生工具 | 以 CLI 为准（装配顺序与注入块）+ 端差注入（编辑器上下文 · 按模型能力的 `read_image` · MCP 扩工具时机） | ① VSC 非多模态模型仍没有 `read_image`（端能力，保留）；② 子代理的 `settings` 工具与记忆召回门控归属（CLI 子代理上下文更肥 vs VSC 更瘦） | **待裁** |
-| A23 | `agent/run-stages.mjs`（#111） | ① | 收尾跑 **Stop 钩子**（`:131-140`）；中止时**直接清空**异步子代理池与评审池（`:168-169`） | **全仓零 `runHooks`**（无 Stop 钩子）；中止时只清**已死**条目（`:296-297,312-313`） | 以 CLI 为准（Stop 钩子 + 收尾编排）+ VSC 的 guard 推回 / 蒸馏发射面按核内结构归位 | ① 归一后 VSC 侧是否开始触发 Stop 钩子（外部副作用）；② 按中断时后台子代理是「被清」还是「被留」⇒ 结果可见差异 | **待裁** |
-| A24 | `advisor/run.mjs`（#110） | ① | 有**止损护栏**：同一批设计文档连续失败达阈值即拒发并给失败尝试表（`:15-17,59-75,199-204`） | **无该护栏**（VSC 全仓零 `review-streak`）⇒ 一次次重复发起、烧配额 | 取并集：以 CLI 为准（含止损护栏）+ VSC 的评审实例上下文并入 | ① VSC 侧评审连续失败时从此会止损并给出失败清单（现状是重复失败） | **待裁** |
+| A1 | `memory.mjs`（席位 #82；实为 CLI `src/memory/**` 8 档 ↔ VSC `memory.mjs` + `memory-tool.mjs`） | ①②③ | `node:sqlite` `DatabaseSync` + FTS5（`src/memory/schema.mjs:9,68`）；库 = `~/.thincoder/memory.db`；三层 `personal` / `project` / `team`，**personal = 全机共享的库行**；project 层 = `.thincoder/memory/*.md`（**只扫顶层** `src/memory/core.mjs:205-212`） | 零 sqlite——纯仓内 md（`.thincoder/memory/{personal,project}/*.md`，`:26-37`）+ 遗留 `.json` 读兼容（`:150-162`）；两层（`team` 明确拒绝、指向 CLI）；`personal` 落在**仓库目录内** | **以 CLI 为准**（A12——前提失效，非选边）；`node:sqlite` 采纳为定案（§2.11 A8） | ① 记忆存哪变了（VSC 的 personal 由仓内目录 → 全机库）；② 两端**从此可互读**（现状：VSC 读不到 CLI 的库、CLI 不递归读 VSC 的子目录）；③ 旧数据要搬（见 A2）；④ 检索能力（FTS5 + 中文逐字分段）随之而来；⑤ 两侧测试面 | **已裁（2026-09-13）· 按建议** |
+| A2 | 记忆面旧数据迁移（§2.12.3 第 2 行） | ②③ | 有 `memory` 子命令（list / search / put / remove）与 `/reindex`；**无 md / json 导入命令** | 用户既有记忆 = 仓内 `personal` 层 md + 遗留 `.json` + `workspaceState` 的 `thincoder.modelPrefs` | **已裁（2026-09-13）：① 提供一次性导入器**（md / json → `entries`）——**父侧代选**（用户 2026-09-13「全部按建议」未逐字指定本行，已披露 ✓；理由：选 ② 会让 VSC 老用户记忆清空，与「不丢用户数据」相悖）。**落地** = S2 建一次性导入器（`memory import` 子命令面；`modelPrefs` 仍取不到——住 VS Code 状态，不在文件系统） | 用户既有记忆保留（md / json → `entries`）；`modelPrefs` 明确不迁（无文件系统载体） | **已裁（2026-09-13）· ① 一次性导入器（父侧代选）** |
+| A3 | VSC 引擎下限（§2.12.3 第 1 行） | ② | `engines.node = >=24` | `engines.vscode = ^1.85.0` | 抬到 **候选 `^1.104.0`**（A13 已裁「可抬」；**原候选 `^1.101.0` 经本轮实核不成立** ✗——见下行与 §2.11 A8）；**须真机实测确认 + 用户过目** | 放弃 VS Code < 新下限的用户（A13 已接受该代价）；装上旧宿主 ⇒ 扩展不可用 | 已裁（「可抬」）· **值换候选 `^1.104.0` + 待真机实测 + 过目** |
+| A4 | `config.mjs`（席位 #80；**同名不同物**——对位 = CLI `config.mjs` ↔ VSC `config-io.mjs`） | ①② | 装载器 + 全量 DEFAULTS（agent / memory / shell / embedding / mcp / websearch / traces）；写盘不注入 `$schema` | 装载器在 `config-io.mjs`（同址同格式）；写盘**注入 `$schema`**（`src/config-io.mjs:108`）；本端 `config.mjs` 实为模型规格表 | 以 CLI 为准（装载器）+ 端差注入（`$schema` 是否注入 · 配置监视面） | ① 配置文件里会 / 不会多一个 `$schema` 键（仅 VSC 写盘时）；② 键名与默认值口径统一 ⇒ 旧键保留为读入别名（兼容） | **已裁（2026-09-13）· 按建议** |
+| A5 | `agent-tools/settings.mjs`（#87） | ①② | 类型表由**全量** DEFAULTS 派生（`src/agent-tools/settings.mjs:58`）⇒ 错类型被拒 | 类型表只派生 agent / traces（`:43,61`）⇒ `websearch` / `mcp` / `memory` / `embedding` / `shell` 的错类型**静默写进两端共享的 `config.json`** | 以 CLI 为准（全量类型校验） | ① VSC 里写错类型会被拒绝（原来会静默落盘，且 CLI 下次读该值会异常）；② 共享 `config.json` 的写入可靠性 | **已裁（2026-09-13）· 按建议** |
+| A6 | `agent-tools/eng.mjs`（#91） | ①② | 工程模式位只进会话（`cmd-eng.mjs` 自述 `(session)`） | **双写**：会话槽 + `config.json` 的 `agent.engineering`（`src/agent-tools/eng.mjs:92-104`） | 以 CLI 为准（只进会话）+ VSC 的面板提示按端注入 | ① **跨端副作用**（现状：在 VSC 开一次工程模式，会改变 CLI 下次启动的模式） | **已裁（2026-09-13）· 按建议** |
+| A7 | `agent.mjs`（#78） | ①② | 读 `config.agent.streamRules` 传给模型（`src/agent.mjs:237`）；中断时丢弃工具结果并写占位（`:387`） | `streamRules` **全仓零消费方**（VSC `src/**` 0 命中，本端 PARITY 批亦登记为缺口）；中断时保留真实工具结果（`:342-350`） | 以 CLI 为准（主循环本体）+ VSC 的 onToken 三态门 / 帧回调 / 空响应重试并入 | ① CLI 能配的流规则在 VSC 不生效（现状）⇒ 归一后生效；② 中断时模型所见的历史内容不同 | **已裁（2026-09-13）· 按建议** |
+| A8 | `tools/web.mjs` + `tools/websearch.md`（#67 / #58） | ①② | RSS 端点 + `engine` / `page` 参数；fetch **跟随一次重定向**、上限 200K、正文转换 + SPA / 屏蔽提示 | Bing HTML 抓取、无翻页；fetch **拒绝跟随重定向**（`src/tools/web.mjs:111-115`）、上限 **20K**、朴素去标签 | 以 CLI 为准（RSS + 翻页 + 跟随重定向 + 200K + `htmlToText`） | ① 一大批会重定向的正常网址，VSC 现在抓不到 ⇒ 归一后可抓；② 抓回的正文长度（20K → 200K）与可读性变化；③ 工具参数面变化（VSC 侧多出 `engine` / `page`） | **已裁（2026-09-13）· 按建议** |
+| A9 | `tools/lsp.mjs`（#66） | ①③ | 自实现 JSON-RPC over stdio，按 `config.lsp.servers` **懒启动**语言服务器；未配置则回引导语 | 直接用 VS Code 语言服务命令（`:76-112`），**开箱即用**、不读配置 | 以 CLI 为准（核内实现）+ VSC 宿主语言服务径按端注入 | ① 归一后 CLI 侧仍需配置才能用（不变）；② VSC 侧是否继续用编辑器已装的语言服务（若改走核内实现，则须自行配置） | **已裁（2026-09-13）· 按建议** |
+| A10 | `tools/file.mjs`（#68） | ① | read 有 10MB 体积门 + 200K 截断；写入回执含 git diff + `Syntax: OK/FAILED` + 写入点上下文；`insert_after` 有「读取后才准插 / 行号漂移即拒」护栏 | read 无体积门与截断（`:34-70`）；写入回执只一句「Wrote / Replaced / Inserted」（`file-edit.mjs:305`）；`insert_after` 无护栏、且插入的文件不进 `touchedFiles`（`more-file.mjs:11-24`） | 以 CLI 为准（体积门 + 截断 + 回执 + 护栏）+ 编辑器编辑径按端注入 | ① VSC 读超大文件从此会被截断（并给出提示）；② VSC 写入 / 编辑后模型开始看到 diff 与语法检查结果；③ VSC 的 `insert_after` 会拒绝漂移行号 | **已裁（2026-09-13）· 按建议** |
+| A11 | `tools/grep.md` + `tools/search.mjs`（#54 / #65） | ① | grep 支持 `before` / `after` 上下文档（`search.mjs:116-118`）；含 `ls`；非法正则 / glob 抛错 | grep 无上下文档（`:230-238`）；`ls` 在 `more-file.mjs:318`；错误一律返回字符串；glob 指向文件可直配、路径不存在明确报错 | 以 CLI 为准（上下文 + `ls` 归位）+ VSC 的「路径不存在明确报错」并入 | ① VSC 的 grep 从此可带上下文（少一次额外 read 回合）；② 找不到路径时的回话形态变化（静默 `(no matches)` → 明确报错） | **已裁（2026-09-13）· 按建议** |
+| A12 | `agent-tools/goal.mjs`（#97） | ①③ | 四动作（set / complete / blocked / cancel）；`criteria` 强制；complete 过「改过文件未 verify」门 + depth-0 **独立裁判**；blocked 需同一理由连续 3 次 | 三动作（**无 `blocked`**，模型调用会因 enum 直接失败 `:18`）；`criteria` 可省（缺省填 `manual verification`）；complete 只有 verify 门、无独立裁判 | 以 CLI 为准（四动作 + criteria 强制 + 独立裁判） | ① VSC 丢失「卡住要连续 3 次才认账」与「完成要过独立裁判」两道承诺 ⇒ 归一后恢复；② 模型在 VSC 可用的 `goal` 动作集变大 | **已裁（2026-09-13）· 按建议** |
+| A13 | `agent-tools/task.mjs`（#90） | ① | 空标题丢弃、done 只留最近 3 条、总量截到 20（`:66-77`） | 不过滤、不截断（`:60-66`） | 以 CLI 为准（过滤 + 截断） | ① VSC 面板里会少掉空标题行、历史 done 项与超量条目（长清单从此瘦身） | **已裁（2026-09-13）· 按建议** |
+| A14 | `agent-tools/read-history.mjs`（#89） | ① | 相对路径按 cwd 解析；只要求有 `history` 数组；本会话流式迭代磁盘（`:295-304`）；空 path 明确报错 | 相对路径不做 cwd 解析；要求 `version` 1 / 2；本会话只读内存（`:260`） | 以 CLI 为准（相对路径 + 宽松校验 + 磁盘全量） | ① VSC 里传相对路径不再直接 `not found`；② 旧版 / 无 `version` 字段的会话档从「拒」变「可查」 | **已裁（2026-09-13）· 按建议** |
+| A15 | `agent-tools/subagent.mjs`（#99） | ① | 八动作（含 `panel`） | 七动作——**有意无 `panel`**（`subagent-spec.mjs:11-12`，其载荷面在 VSC 不存在） | 以 CLI 为准（保留 `panel`）+ VSC 端按端差**不注入**该动作 | ① VSC 的 `subagent` 动作集不变（`panel` 仍无）；CLI 不变——本行只登记端差合法性与注入位 | **已裁（2026-09-13）· 按建议** |
+| A16 | `prompts/discipline-engineering.md`（#117；含中文镜像） | ①② | 独有「改动面反查（文档影响面）」节（`src/prompts/discipline-engineering.md:128-130`）；无 R14 池段 | 独有 R24 挂钩节、**R14 域池段**（`:262-265`）、取消 eng-coder 判据、D5 冻结窗口细则（`:145`） | 融合（取并集）+ 端特有段按注入（VSC 的 R14 / 取消判据；CLI 的改动面反查） | ① 归一后两侧模型被要求做的事会**并集化**（CLI 侧开始看到 R24 / D5 细则，VSC 侧开始看到改动面反查）⇒ 须逐条确认哪些真是端特有；② 模型可见指令面变更 | **已裁（2026-09-13）· 按建议** |
+| A17 | `prompts/discipline-normal.md`（#118） | ① | 独有「Ctrl+I 不终止会诊」等句；会诊节位置不同 | 独有「收尾验收」节（`:191-195`）——完成声明受审 / load skills / 与设计档对账 | 融合 + 端特有段注入 | ① VSC 侧新增的收尾要求是否晋升为**两端共同**纪律（会改变模型收尾行为） | **已裁（2026-09-13）· 按建议** |
+| A18 | `prompts/persona-eng-coder.md`（#119；含中文镜像） | ① | 无 Guidelines 块（`file` 域节为独立标题形态） | 独有 Guidelines 块（`:34-51`）：不得静默降级 / UI 与交互决策缺失即停报 / **收尾自审六条** / 工具权限处置 | 融合 + 端特有段注入 | ① 同上：VSC 的六条收尾自审是端特有还是应两端共用（会改变 eng-coder 的收尾行为与成本） | **已裁（2026-09-13）· 按建议** |
+| A19 | `provider/rate.mjs`（#114） | ① | 等待期间按 Stop **要拖到窗口结束**（`:89-90`）；只按 provider 配置的 tpm/rpm 限流 | 10s 段可中断睡眠（`:26-34,135-137`）；只配一个维度时**补默认另一维度**；token 估算含图片 part 与 `max_tokens` | 取并集：等待取 VSC 的可中断实现 + 默认限流口径取 VSC + token 估算取并集 | ① 被限流时按 Stop 的响应速度（CLI 侧变快）；② 只配 rpm 的场景会多一层 TPM 闸（限流更早触发） | **已裁（2026-09-13）· 按建议** |
+| A20 | `provider/list-models.mjs`（#115） | ①② | 按接口返回序；**带 `provider.headers`**；解析失败静默返回空清单 | 结果 **sort() 排序**；openai / anthropic 分支**不带** `provider.headers`；失败抛错并在配置面板显示「该渠道不提供模型列表」 | 取并集：保留 VSC 的排序与明确报错 + CLI 的 `provider.headers` 随请求发出 | ① 走自建网关 / 需额外鉴权 header 的用户：VSC 现会 401 拉不到 ⇒ 归一后能拉到；② 清单顺序变化（排序 vs 接口序）；③ 拉不到时的提示形态变化 | **已裁（2026-09-13）· 按建议** |
+| A21 | `traces/trace-store.mjs`（#116） | ① | 单条 >64K 截断（头 16K + 尾 48K）；在途上限 8 条、超了**丢记录**并打 stderr（`:96-106,240-247`）；清理在启动时跑一次 | 不截断、不丢弃，逐条完整落盘（`:22-23,218`）；**每写一次 prune**（每次多一遍目录扫描） | 取并集：目录 / 命名 / 字段取同一形态（现状已一致）+ 容量 / 清理策略取一侧（建议取 VSC 的完整落盘 + 每写 prune） | ① **默认关**（两端皆 `false`）⇒ 多数用户无感；开启后：CLI 的超大轨迹不再缺内容 / VSC 每次落盘多一次扫描；② 两端轨迹可合并分析（现状已可） | **已裁（2026-09-13）· 按建议** |
+| A22 | `agent/setup.mjs`（#112） | ① | 每轮装配全内联；`read_image` **恒在**注册表；子代理继承含 `settings` 的工具集；文档 / 记忆召回只受 `!resume` 约束（未按 depth 门控） | 拆 `context-injections.mjs`；`read_image` 仅当模型多模态（`:199`）；`settings` 只挂 depth0（`:141`）；召回限 depth0 且 `!autoTurn`；每轮惰性把 MCP 扩成原生工具 | 以 CLI 为准（装配顺序与注入块）+ 端差注入（编辑器上下文 · 按模型能力的 `read_image` · MCP 扩工具时机） | ① VSC 非多模态模型仍没有 `read_image`（端能力，保留）；② 子代理的 `settings` 工具与记忆召回门控归属（CLI 子代理上下文更肥 vs VSC 更瘦） | **已裁（2026-09-13）· 按建议** |
+| A23 | `agent/run-stages.mjs`（#111） | ① | 收尾跑 **Stop 钩子**（`:131-140`）；中止时**直接清空**异步子代理池与评审池（`:168-169`） | **全仓零 `runHooks`**（无 Stop 钩子）；中止时只清**已死**条目（`:296-297,312-313`） | 以 CLI 为准（Stop 钩子 + 收尾编排）+ VSC 的 guard 推回 / 蒸馏发射面按核内结构归位 | ① 归一后 VSC 侧是否开始触发 Stop 钩子（外部副作用）；② 按中断时后台子代理是「被清」还是「被留」⇒ 结果可见差异 | **已裁（2026-09-13）· 按建议** |
+| A24 | `advisor/run.mjs`（#110） | ① | 有**止损护栏**：同一批设计文档连续失败达阈值即拒发并给失败尝试表（`:15-17,59-75,199-204`） | **无该护栏**（VSC 全仓零 `review-streak`）⇒ 一次次重复发起、烧配额 | 取并集：以 CLI 为准（含止损护栏）+ VSC 的评审实例上下文并入 | ① VSC 侧评审连续失败时从此会止损并给出失败清单（现状是重复失败） | **已裁（2026-09-13）· 按建议** |
 
 **乙组：方向只有一种（可一并按建议通过）**
 
 | # | 条目（路径 / 对位） | 命中 | 左端行为（CLI） | 右端行为（VSC） | 建议归一形态 | 影响面 | 裁定状态 |
 |---|---|---|---|---|---|---|---|
-| B1 | `agent-tools/timer.mjs`（#86） | ① | `seconds` 非有限正数 ⇒ **当场报错**（`:34-37`） | 直取 `?? 180`（`:34-35`）⇒ 传成 `"30s"` 时 `expiresAt = NaN`，**定时器永不触发且不报错** | 以 CLI 为准（补校验）——前提失效型（该修复只在 CLI 落地，非有意端差） | ① VSC 里传错秒数由「静默失效」变「报错」——只有一种合理做法（修 bug） | **待裁**（建议按建议通过） |
-| B2 | `agent-tools/plan.mjs`（#85） | ① | 未知 `action` 也进入 plan 模式并返回 `activated`（`:68-79`）⇒ 会话可能被误锁成只读 | 未知 `action` 返回 Error（`:86`） | 以 VSC 为准（未知 action 报错） | ① CLI 里模型传垃圾 action 时由「突然只能读不能写」变「报错」——只有一种合理做法 | **待裁**（建议按建议通过） |
+| B1 | `agent-tools/timer.mjs`（#86） | ① | `seconds` 非有限正数 ⇒ **当场报错**（`:34-37`） | 直取 `?? 180`（`:34-35`）⇒ 传成 `"30s"` 时 `expiresAt = NaN`，**定时器永不触发且不报错** | 以 CLI 为准（补校验）——前提失效型（该修复只在 CLI 落地，非有意端差） | ① VSC 里传错秒数由「静默失效」变「报错」——只有一种合理做法（修 bug） | **已裁（2026-09-13）· 按建议** |
+| B2 | `agent-tools/plan.mjs`（#85） | ① | 未知 `action` 也进入 plan 模式并返回 `activated`（`:68-79`）⇒ 会话可能被误锁成只读 | 未知 `action` 返回 Error（`:86`） | 以 VSC 为准（未知 action 报错） | ① CLI 里模型传垃圾 action 时由「突然只能读不能写」变「报错」——只有一种合理做法 | **已裁（2026-09-13）· 按建议** |
 
 **丙组：S0a 席位（已裁——裁定正文见批次档 §1「追加裁定（S0a 动作 2 的 2 条须裁项 · 2026-09-13）」）**
 
@@ -538,12 +665,21 @@ A8 / A9（对称面均入核）与 F3（零「新写」——不得造第三份�
 | C1 | `prompts/advisor-design.md`（§2.5 #44） | ① | 判据 7 =「…amend **the document** that already owns its topic…」（`src/prompts/advisor-design.md`） | 判据 7 =「…the **design** document…」（收窄）；其余逐字相同 | 融合——取「the document」（判据通用口径——评审面 ≠ 仅设计档：尚覆盖需求档 / 批次档） | 模型可见指令（advisor 设计评审判据措辞）· 对外契约无涉 · 测试面无涉 | **已裁（2026-09-13）**「按建议」· 已落地 `core/prompts/advisor-design.md`（批次档 §5 实施记录） |
 | C2 | `prompts/persona-engineering.md`（§2.5 #47） | ① | 标题「与 eng-designer / eng-coder 的分工界面」+ 指针 `AGENT-LOOP.md` 的 §18（`src/prompts/persona-engineering.md`） | 标题「与 eng-coder 的分工界面（设计写作面归 eng-designer）」+ 指针「AGENT-LOOP（CLI 仓·设计）§18（本端交付协议节 = §8）」 | 融合——标题取**并集语义**；跨端指针以**注入**承载端差（契约 10） | 模型可见指令（分工表述 + 跨端指针）· 对外契约无涉 | **已裁（2026-09-13）**「按建议」· 已落地 `core/prompts/persona-engineering.md`（批次档 §5；注入位语法待设计面定义） |
 
+**丁组：语义对位遍新增（§2.5（四）——2026-09-13 登记）**
+
+> 本组 = 本轮语义对位遍新发现、且**既有甲 / 乙组无等价条目**的须裁项。**未裁定不进 S1**（A11 同口径）。
+
+| # | 条目（路径 / 对位） | 命中 | 左端行为（CLI） | 右端行为（VSC） | 建议归一形态 | 影响面 | 裁定状态 |
+|---|---|---|---|---|---|---|---|
+| D1 | 文案面（`src/**` 内联字面量 ↔ `src/i18n.mjs` + `locales/{en,zh}.json`；§2.5 #185） | ② | 文案内联于源码字面量（USAGE / stderr 前缀族 / TUI 文案）；单一语言 | `i18n.mjs` 字典 + `t()`（`t()` 缺键回退返回 key，`i18n.mjs:51`）；`locales/` 双语 | **建议**：核内文案**常量**（键 + 中 / 英值）+ VSC 字典投影（VSC 保留 `t()` 壳；CLI 直接用常量，不引入字典）——即「容器归一、投影端差」 | ① 机器消费面（`[error] ` 前缀 / VSC locale 逐字串）**不得改**（§2.12.1 输出文案类已锁）；② 人读文案允许改但须登记 + CHANGELOG；③ 归一后两端文案**同源**（现状各自维护 ⇒ 同类文案两端不一致无人管） | **待裁** |
+| D2 | `src/auto-think.mjs` ↔ `src/extension/reasoning-mode.mjs`（§2.5 #175） | ② | 自动难度分级 → 推理档位（`config.agent.autoThink` 为开关，CLI 有消费方） | VSC DEFAULTS **已载** `autoThink`（`config-io.mjs:319`）但**全仓零消费方** ⇒ 该键在 VSC 是**死键** | **建议（方向唯一）**：核内实现 + VSC 接线（死键恢复语义）；默认 `false` ⇒ **默认无行为变化**；面板推理档位面按端注入 | ① 在 VSC 显式设过 `autoThink: true` 的用户：该键从「无效」变「生效」（行为变化，但 = 恢复 CLI parity 的既定语义）；② 默认配置下无变化 | **待裁**（建议按建议通过） |
+
 ### 2.6 分段执行（S0a · S0b · S1–S3）
 
 | 段 | 动作 | 进入条件 | 退出条件（验证） | 回退点 |
 |---|---|---|---|---|
 | **S0a** | **高相似面**（席位 = 本节判据 ①）：**① 度量脚本补齐**（F10——首项动作；覆盖面 / 用法契约见 §2.8 度量脚本行）· **② 逐条裁决**（零代码）· **③ 首建核并试跑**（`core/` 首批 = 高相似面进核模块 + 提示词面 **S0a 席位全族**（逐字节同 8 + 20，含 `sim ≥ 0.90` 非逐字节同对——判据 5）+ 加载面）——**试跑 = 用户「先建核、试一下可用」的验证口** | 需求收口（§1）+ 本档批准（度量脚本补齐 = 首项动作，见动作列） | ① 高相似面席位在本档 §2.5 填齐、四列（前提校验 / 分类 / 端差处置 / 须用户裁）无空值；② **核独立跑绿**（`node --test` 于 `core/` exit 0——F4 / T-C4）；③ **两产品 `git diff --stat` 为空**（T-C12）；④ 命中 A11 ②③ 的条目已裁定（未裁定不进 S0b / S1） | 删 `core/` 即退（仓结构零改——B12） |
-| **S0b** | **低相似对称面 + 语义对位遍 + B16 点名面**（席位 = 本节判据 ②）：逐条裁决（零代码）+ 前提校验遍 + **版本下限实测**（A8 残余）+ **对外契约探测**（A7） | S0a 退出达标 | 本档 §2.5 覆盖**全席位**（107 同路径对 + 15 镜像对 + 语义对位遍）；四列无空值；③ 类逐条带行为实证与建议；**§2.5.1 全部须裁条目裁定完毕**（A11——未裁定不进 S1）；度量数字可复现（T-C10）；§2.12.3 上抛项已裁定（T-C17） | 无代码改动 ⇒ 撤回本档修订（`core/` 不增删） |
+| **S0b** | **低相似对称面 + 语义对位遍 + B16 点名面**（席位 = 本节判据 ②）：逐条裁决（零代码）+ 前提校验遍 + **版本下限实测**（A8 残余）+ **对外契约探测**（A7） | S0a 退出达标 | 本档 §2.5 覆盖**全席位**（107 同路径对 + 15 镜像对 + **语义对位遍 63 行 / 16 族**——单端 239 档逐面闭合，§2.5（四））；四列无空值；③ 类逐条带行为实证与建议；**§2.5.1 全部须裁条目裁定完毕**（A11——含**丁组 D1 / D2**；未裁定不进 S1）；**A8 残余真机实测**（引擎下限——测法见 §2.11 A8）+ **记忆面归一实测**；度量数字可复现（T-C10）；§2.12.3 上抛项已裁定（T-C17） | 无代码改动 ⇒ 撤回本档修订（`core/` 不增删） |
 | **S1** | **建核补齐**：按 S0b 裁决把剩余模块 / 提示词档并入 `core/`（模块 + `prompts/` + `tool-docs/` + 加载面 + `test/`）；**两产品一行不改** | S0b 退出达标（S0a 已建首批核） | 核测试独立跑绿（`node --test` 于 `core/` exit 0）· 核内零产品 import、零裸包名 import · **核包提示词面档名集合 = 15 + 25** · 两产品 `git diff --stat` 为空 | 删 `core/` 即退（仓结构零改——B12） |
 | **S2** | 逐模块 / 逐档迁移（一次一个模块族：接线 → 删旧 → 复跑）；接线 = 加依赖声明 + 改 import 指向包名 + （VSC 一次）装载配置 + **四个提示词加载面改指核 + 删产品内提示词档** | S1 退出达标 + 该模块接线方案明确 + **核已发布到 npm** + 开发期链接就位 + **该模块所涉面内条目均已裁定 · §2.12.3 待裁为零**（未裁定不进 S1——统一口径，承 A11 / A7） | 该产品全链 exit 0（**面内**用例按裁决结果改判并登记 · **未涉面**用例逐数不变）· 该模块旧实现 / 旧提示词档零引用 · 该产品 `npm install` 可从 registry 解析核 · **产物提示词断言通过（T-C7）** | 单模块一步一提交 ⇒ `git revert` 该提交 |
 | **S3** | 收尾（残留删净 + 装载面复核 + 文档 / 机检收正 + **提示词副本唯一**） | S2 全模块迁完 | 旧实现与提示词旧档零残留 · 三机检 exit 0 · 两产物生成且**含核 / 版本 / 提示词面断言**通过 · **对外契约变更已逐条登记并保留兼容（§2.12 / T-C17）** · 文档与台账收正 | 逐提交回退 |
@@ -552,7 +688,7 @@ A8 / A9（对称面均入核）与 F3（零「新写」——不得造第三份�
 
 1. **S0a 席位** = 满足 `sha256(左) == sha256(右)` **或** `sim(左, 右) ≥ 0.90` 的对（同路径对 + 中文镜像对）——读数取自 `node scripts/mirror-divergence.mjs --json`（**覆盖面（F10）= 按类型 / 按目录拆分 + 分布分档 + 中文镜像对（`docs/design/prompts/`）+ 提示词面逐档 sha256 / 档名集合枚举 + 单端枚举计数（B15）**；口径 = 需求档 §1.1）。
    量级（**脚本输出**）= 同路径对 **39**（其中逐字节同 **29**）+ 中文镜像对 **12**（逐字节同 10 + `sim ≥ 0.90` 非逐字节同 2：`advisor-design.md` 0.9667 · `discipline-normal.md` 0.9143）⇒ **S0a 席位合计 51**。
-2. **S0b 席位** = 其余全部席位 = 同路径对 `sim < 0.90 且非逐字节同`（**68**）+ 镜像对剩余（**3**）+ **语义对位遍产出行全集**（B9 / B16——席位由对位遍发现，**不参与**相似度阈值判定）。
+2. **S0b 席位** = 其余全部席位 = 同路径对 `sim < 0.90 且非逐字节同`（**68**）+ 镜像对剩余（**3**）+ **语义对位遍产出行全集**（B9 / B16——席位由对位遍发现，**不参与**相似度阈值判定；**2026-09-13 已枚举 = 本档 §2.5（四）63 行 / 16 族**，单端 239 档逐面闭合）。
 3. **完备性 / 互斥（机检边界）**：**可机判** = ① 互斥（S0a ∩ S0b = ∅）· ② §2.5「归属段」列值 ⇔ 判据 1 / 2 谓词一致（取值 `S0a（首批建核）` ⇔ 满足判据 1；其余三值 ⇔ 属 S0b 席位——T-C2 扩判据）；已枚举面（107 + 15）的覆盖 = 计数对账（B15）。
    **定性复核** = **语义对位遍产出行**的**完备性**（行由对位发现而来——**无计数判据，不判机检红**）。**覆盖程序（S0 执行 · 复核抽查）**：对照 **B15 单端枚举**（仅 CLI 148 档 / 仅 VSC 91 档）与 **B16 / B17 点名面**，**逐面**确认「**有对位行** or **④ / 不迁行附结构性证据**」——两者皆缺 = 该面未闭合（补对位行或补结构性证据）。
 4. **结构性对称判据（与相似度互补）**：判 `不迁`（端特有）**只能**凭结构性不对称（仅单侧存在 / 依赖壳能力 + 证据——§2.4 第 3 条）；相似度高低**不构成**判据（B18 反例：单端独有档之间最高 j 仅 0.256）。
@@ -596,8 +732,8 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 
 | 类别 | 档 | 当前行数 | 预计增量 | 备注 |
 |---|---|---|---|---|
-| 需求档（本板块改） | `docs/requirements/CORE-UNIFICATION.md` | 114 | **159（Δ+45）** | 纯 `.md` ⇒ 免档位判定 |
-| 设计档（本档 · 本板块改） | `docs/design/CORE-UNIFICATION.md` | 329 | **820（Δ+491 · as-of 2026-09-13 S0b 裁决轮）** | 纯 `.md` ⇒ 免档位判定 |
+| 需求档（本板块改） | `docs/requirements/CORE-UNIFICATION.md` | 114 | **160（Δ+46 · as-of 2026-09-13 S0b 收尾轮）** | 纯 `.md` ⇒ 免档位判定 |
+| 设计档（本档 · 本板块改） | `docs/design/CORE-UNIFICATION.md` | 329 | **969（Δ+640 · as-of 2026-09-13 S0b 收尾轮）** | 纯 `.md` ⇒ 免档位判定 |
 | **核包（S1 新建）** | `core/package.json` | 0 | +22±4 | `@thincoder/core` · 独立版本 · **非 private** · exports 子路径 · `files` 白名单**含 `prompts/` 与 `tool-docs/`**（断言 D 的对象） |
 | **核包（S1 新建）** | `core/`（模块 + `test/`） | 0 | 逐档行数挂 §2.5（S1 前不可预知） | 逐模块从两侧提取 / 融合；≤300 软线（N8） |
 | **核提示词面（S1 新建）** | `core/prompts/*.md`（15 档） | 0 | 逐档行数挂 §2.5 | 唯一副本（A7）；来源 = 两产品 `src/prompts/` 裁决结果（B14） |
@@ -616,7 +752,9 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | **产品文档（S2 改）** | `thincoder/AGENTS.md`（`:21`）· `thincoder-vscode/AGENTS.md`（`:15`） | 68 / 125 | ±4 / ±4 | 「产品内双源」约定段改述为「核内落地 + 仓根 CN 权威」 |
 | **产品测试（S2 改）** | `thincoder/test/{prompts-dual-source,prompts-async-guidance,doc-consistency}.test.mjs` · `thincoder-vscode/test/prompts-mirror-anchors.test.mjs` · `files.mjs` | 116 / 168 / 265 / 145 / 84 | 逐档 ±10 | 双源断言改指新落点（含档名集合断言——随接线改） |
 | **记忆面（S2 改）** | `thincoder/src/memory/**`（8 档：`schema` 452 · `docs` 419 · `code-sync` 415 · `core` 299 · `delete` 236 · `code-index` 219 · `file-walk` 109 · `scan` 95）· `thincoder-vscode/src/memory.mjs`（273）· `memory-tool.mjs`（386） | — | 逐档见 §2.5 | **A12**：面向 CLI 语义归一（CLI 为准）；VSC 两档改 / 删依 S0 裁决；**旧数据迁移面**（VSC `personal` 层 md / 遗留 `.json` / `modelPrefs`——无自动迁移路径——§2.12.3 上抛清单） |
-| **版本下限面（S2 改——须过目）** | `thincoder-vscode/package.json` 的 `engines.vscode`（当前 `^1.85.0`）· `thincoder/package.json` 的 `engines.node`（当前 `>=24`） | 131 / 43 | ±2 / ±2 | **A8 / A13（已裁）**：**采纳 `node:sqlite`（定案）**、抬下限、不保留降级路径；**候选值 `^1.101.0`，经 S0b 实测确认后定值**（测法见 §2.11 A8）+ 用户过目 |
+| **记忆面导入器（S2 新建）** | CLI `memory import` 子命令面（落 `thincoder/src/cli/`） | 0 | +60±20 | **§2.5.1 A2 已裁 ①**（一次性导入器：VSC `personal` 层 md / 遗留 `.json` → CLI `entries`）；`modelPrefs` 无文件系统载体 ⇒ 不迁 |
+| **文案面（S1 建核 · S2 接线）** | 核内文案常量档（落 `core/`）· `thincoder-vscode/src/i18n.mjs` + `locales/{en,zh}.json` | 0 / 57 / — | +40±15 / ±6 | **§2.5 #185 / 丁组 D1（待裁）**：容器归一 + 投影端差；机器消费面冻结（§2.12.2 第 12 行） |
+| **版本下限面（S2 改——须过目）** | `thincoder-vscode/package.json` 的 `engines.vscode`（当前 `^1.85.0`）· `thincoder/package.json` 的 `engines.node`（当前 `>=24`） | 131 / 43 | ±2 / ±2 | **A8 / A13（已裁）**：**采纳 `node:sqlite`（定案）**、抬下限、不保留降级路径；**候选值 `^1.104.0`**（原 `^1.101.0` 经实核不成立 ✗），经**真机实测**确认后定值（测法见 §2.11 A8）+ 用户过目；**配套运行时护栏**（`activate()` 自检 + 提示，不崩） |
 | **真依赖面（S2 改）** | `thincoder/package.json` | 43 | +6±3 | `dependencies: {"@thincoder/core": "^<核版本>"}`（真 semver；**无** `bundledDependencies`——D-C9） |
 | **发布编排面（S2 改）** | `thincoder/scripts/release-check.mjs` | 85 | +25±10 | 发布预检：断言 C（核版本已发布 + 装入版本一致）；挂在已有 `prepublishOnly`（`thincoder/package.json:35`） |
 | **真依赖面（S2 改）** | `thincoder-vscode/package.json` | 131 | +8±3 | `dependencies`（同左）· `postpackage` = 断言脚本 · devDeps + `yauzl`（读 vsix 条目——R10 实测树内已有 3.4.0） |
@@ -690,7 +828,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | N4 | **两态引用闭合**：开发期本地链接跑通 · 生产期核包可由 registry 解析（CLI）/ vsix 内嵌核（VSC）；**提示词面随同一通道到达两端**；发布链对外命令接口不变 | T-C7 · T-C11 | 发布预检（断言 C / D）+ vsix 断言（断言 B / D）+ 反证 |
 | N5 | 单一权威源由包机制保证（**含提示词面**；仓内零副本）；**产物携带的核版本 = 仓内核版本**；**核包提示词档集合完备且与仓内逐字节相同** | T-C7 · T-C11 | 断言 A / B / C / **D**（§2.7 D-C11）+ 反证（缺核 / 缺档即红） |
 | N6 | 本板块两档 + 核路径纳入扫描域后三机检 exit 0 | T-C1 · T-C9 | 仓根三命令 |
-| N7 | 核内零裸包名 import（第三方仍为零）；**记忆面采纳 `node:sqlite`（定案——A8 残余）**· VSC 引擎下限 = 候选 `^1.101.0` **经 S0b 实测确认后定值** | T-C15 | import 面机检 + **S0b 实测（§2.11 A8 测法，读数落批次档 §5）**——读宿主 `process.versions.node` + 试 `import('node:sqlite')` + 建 FTS5 表 |
+| N7 | 核内零裸包名 import（第三方仍为零）；**记忆面采纳 `node:sqlite`（定案——A8 残余）**· VSC 引擎下限 = 候选 **`^1.104.0`**（**原 `^1.101.0` 经实核不成立**）**经真机实测确认后定值**；**配套运行时护栏** = `activate()` 自检 + 明确提示（不崩） | T-C15 | import 面机检 + **真机实测（§2.11 A8 测法，读数落批次档 §5）**——读宿主 `process.versions.node` + 试 `import('node:sqlite')` + `new DatabaseSync(':memory:')` + 建 FTS5 虚表 |
 | N8 | 核 `.mjs` 模块 ≤300 行（软线）· 无 >500；超线带拆分计划（`.md` 提示词档免档位判定——T-C14） | T-C14 | `wc -l` 逐档 |
 
 ### 2.11 裁定事项与状态（A1–A8 · 逐条）
@@ -707,7 +845,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | **A5**（**已裁 · 按建议**） | **S0 的量级与分批**（A8 后裁决面显著扩大） | **已裁（2026-09-13）**：**按建议分两批** ✓——**S0a**（高相似面：**先建核并试跑**）· **S0b**（低相似对称面逐条裁决）。**席位判据与段职责见 §2.6**（可机判谓词：逐字节同 ∨ `sim ≥ 0.90` ⇒ S0a；其余 + 语义对位遍行 ⇒ S0b） | 量级（实测）：同路径对 107（分叉 **78**）+ 镜像 15 + 对位遍（估 **~30–60 行**）⇒ S0a 席位 = 39 + 12；S0b 承接 68 + 3 + 对位遍 + B16 点名面（配置 / 会话 / 记忆）——镜像 **12 / 3**（脚本输出）；一次全量 S0 选项**不再适用**（分两批已定） |
 | **A6**（**已裁 · 碰到再议**） | **A9 与 F3 的残余张力**（差异**无法**以注入表达时） | **已裁（2026-09-13）**：**不设预先规则** ✓——S0b 逐条遇到该形态时 ⇒ 以**四要素**（左端行为 / 右端行为 / 建议归一形态 / 影响面）**上抛用户裁定**（§2.5.1），**S0 不得自行选一侧**（D-C8 同口径） | 风险面（保留）：若为「入核率」强行注入 ⇒ 引入包装层 / 适配函数 = **新的实现面**（违 F3 精神）——故**不预设**处置，遇到再议；注：**A10 已消除「行为不变」一侧的张力**（行为不冻结），本条只剩 A9 ↔ F3 |
 | **A7**（**已裁 · 要兼容**） | **对外契约兼容策略**（归一引发的契约变更如何处置） | **已裁（2026-09-13）** ✓：**要兼容**——配置格式 / 输出文案 / 命令面 / 事件语义四类，凡归一引入的变更**须保留兼容**（旧格式可读 / 迁移说明 / CHANGELOG ✓）；**确无法兼容者单独上抛**（不得静默破 ✗）。**形态 = §2.12 逐类表**；上抛清单 = §2.12.3（逐条带裁定状态）；机检 = T-C17 | 要求来源 = A10 连带项 + A11（逐条裁定）；**已知项**：VSC 引擎下限抬升（A8 残余——A13 已裁「可抬」、值待实测 + 过目）· 记忆面旧数据迁移（实测无自动迁移路径 ⇒ 入 §2.12.3）；落地物 = CHANGELOG / README / 测试同步（§2.8 兼容面行） |
-| **A8**（**已裁 · 明确支持 sqlite**；下限值待 S0b 实测 + 过目） | **VSC 引擎下限**（记忆面归一到 `node:sqlite` 的硬后果） | **已裁**（A13）✓：**明确要支持 sqlite ⇒ 采纳 `node:sqlite`（定案）** ✓ · 抬高 VSC 引擎下限 ✓ · **不保留降级路径** ✓（两套逻辑不得再现）。**下限 = 候选 `^1.101.0`，经 S0 实测确认后定值** ✓（实测低于候选 ⇒ 不采纳）。**测法（S0b 执行 · A13 残余）**：在候选版本下**读扩展宿主 `process.versions.node`**（读数须 ≥ 22.13）**+ 试 `import('node:sqlite')`** / `new DatabaseSync(':memory:')` / 建 FTS5 表；读数落批次档 §5。**推导链（逐环有源 · 2026-09-13 实查）**：`node:sqlite` Added in **v22.5.0**（`https://nodejs.org/api/sqlite.html`）；**v22.13.0 / v23.4.0 起不再需要 `--experimental-sqlite`**（同页 History）⇒ 需 **Node ≥ 22.13**；**Electron 34.0.0 = Node v20.18.1 ✗ · 35.0.0 = Node v22.14.0 ✓**（electron/electron `DEPS` 的 `node_version` 实证）；**VS Code 1.100.0 = Electron 34.5.1 ✗ · 1.101.0 = Electron 35.5.1 ✓**（microsoft/vscode tag 的 `package.json` 实证）⇒ **首个满足的 VS Code 版本 = 1.101.0** | **残余待办（S0b）**：① **实测确认**（测法见左栏——**推断未实测**，本档不把推断当保证）；② Electron 34.5.1 的 Node 未逐档核（读到的是 v34.0.0）；③ **下限值属对外契约变更 ⇒ 提交用户过目**（A11 ② / §2.12.3 第 1 行）。**已接受代价**：放弃 VS Code < 1.101 的用户（A13）；对照锚 = VS Code 1.135.0 内置 Node 24.18.1（来源 = 用户缺陷报告转述——**未自核**） |
+| **A8**（**已裁 · 明确支持 sqlite**；**下限候选经本轮实核上修为 `^1.104.0`** · 待真机实测 + 过目） | **VSC 引擎下限**（记忆面归一到 `node:sqlite` 的硬后果） | **已裁**（A13）✓：**明确要支持 sqlite ⇒ 采纳 `node:sqlite`（定案）** ✓ · 抬高 VSC 引擎下限 ✓ · **不保留降级路径** ✓（两套逻辑不得再现）。**下限候选 = `^1.104.0`**（**原候选 `^1.101.0` 经本轮实核不成立** ✗——见右栏③）；**须真机实测确认后定值** ✓。**测法（S0b 执行 · A13 残余）**：① **真机**：旧宿主与候选宿主各装一次，在扩展宿主内执行「读 `process.versions.node` + `import('node:sqlite')` + `new DatabaseSync(':memory:')` + 建 FTS5 虚表」四步探针，读数落批次档 §5；② **护栏（建议随 S2 落地）**：扩展 `activate()` 首步自检（Node 版本 ≥ 22.13 且 `node:sqlite` 可导入），不满足 ⇒ `showErrorMessage` 明确提示并停用记忆面，**不抛崩**（对照风险见右栏④）。**推导链（逐环有源 · 2026-09-13 实查重跑）**：`node:sqlite` Added in **v22.5.0**（`https://nodejs.org/api/sqlite.html`）；**v22.13.0 / v23.4.0 起不再需要 `--experimental-sqlite`**（同页 History）⇒ 需 **Node ≥ 22.13**；**Electron `DEPS` 的 `node_version`（本轮逐档实查）**：`v34.5.1` = **v20.19.0 ✗** · `v35.5.1` = **v22.15.1 ✓（版本够）** · `v37.2.0` = v22.17.0；**VS Code `package.json` 的 `devDependencies.electron`（本轮逐档实查）**：**1.101.0 = 35.5.1 · 1.102.0 = 35.6.0 · 1.103.0 = 37.2.3 · 1.104.0 = 37.3.1** | **残余待办（S0b）**：① **真机实测**（测法见左栏①；**推断未实测**，本档不把推断当保证）；② **记忆面归一实测**（同法，见 §2.5.1 A1 / §2.12.2）；③ **版本映射不足以判定**（本轮硬发现 ✗）：Electron 的 GN 构建配置曾**整体关闭** `node:sqlite` 内置（electron/electron PR **#47706**「fix: missing SQLite builtin support in Node.js」——「`require('node:sqlite')` didn't work」，2025-07-15 入 `main`，**回移分支 = 36-x-y / 37-x-y / 38-x-y，无 35-x-y**）⇒ **Electron 35.x（= VS Code 1.101 / 1.102）即便 Node 版本够，也大概率无 `node:sqlite`** ⇒ 原候选 `^1.101.0` 不成立 ✗；保守候选 = **`^1.104.0`（Electron 37.3.1，在修复回移之后）**；④ **37.2.x 回归窗口**（上轮既有发现 · 本轮未复证）：37.2.x 疑似落入 sqlite 相关回归窗口 ⇒ **须真机实测确认**，不得据映射表定值；⑤ **下限值属对外契约变更 ⇒ 提交用户过目**（A11 ② / §2.12.3 第 1 行）。**已接受代价**：放弃 VS Code < 新下限的用户（A13）；对照锚 = VS Code 1.135.0 内置 Node 24.18.1（来源 = 用户缺陷报告转述——**未自核**） |
 
 ---
 
@@ -732,16 +870,18 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 
 | # | 条目（契约点） | 类 | 归一变更 | 兼容形态（§2.12.1 模板） | 落地物（档:行 / 用例名 / CHANGELOG 条目） | 裁定状态 |
 |---|---|---|---|---|---|---|
-| 1 | `~/.thincoder/config.json` 键面与默认值（含 CLI-only `agent.goalTurns` / `agent.streamRules`；`agent.compactThreshold` 默认值分叉） | 配置 | 两面 → 核内单一 DEFAULTS | 旧键可读（迁移幂等 + 写回带 `.bak-{ts}`）· CHANGELOG | 两产品 `CHANGELOG.md` + `thincoder/README.md` 键面 + 旧配置读入用例（S2 落） | 待裁（§2.5.1 A4） |
-| 2 | `$schema` 注入与否（VSC 写盘注入 / CLI 不注入） | 配置 | 取一侧 + 登记 | 登记 + README 键面同步 | 同第 1 行 + 配置读写用例 | 待裁（§2.5.1 A4） |
-| 3 | `settings` 工具的类型校验面（错类型是否拒写） | 输出（工具回话） | VSC 由「静默落盘」→「拒绕并报错」（同 CLI） | 登记 + CHANGELOG（工具行为条目） | `SETTINGS-TOOL.md` 同步 + VSC 用例 | 待裁（§2.5.1 A5） |
-| 4 | `agent.engineering` 的写盘范围（VSC 双写共享 `config.json`） | 配置 | 取 CLI（只进会话） | 旧行为撤回 ⇒ CHANGELOG + 登记 | `SESSION.md` / `ENGINEERING-MODE.md` 同步 | 待裁（§2.5.1 A6） |
-| 5 | `tools/web` fetch 上限（20K → 200K）与重定向策略 · `websearch` 参数面（+`engine` / `page`） | 输出（工具可见面） | 取 CLI | 登记 + CHANGELOG（输出上限 / 截断标记变更） | `TOOLS.md` 同步 + VSC 用例 | 待裁（§2.5.1 A8） |
-| 6 | `tools/lsp` 是否需先配 `lsp.servers`（CLI）· VSC 宿主语言服务径 | 输出 / 命令面（工具可用性） | 取 CLI + 端差注入 | 登记（配置面文档同步——README 配置节） | LSP 面文档 + 用例 | 待裁（§2.5.1 A9） |
-| 7 | `tools/file` 写入回执的信息面（diff / `Syntax:` / 上下文窗）· read 截断标记 | 输出（模型可见回执） | 取 CLI | 登记（信息面变更——无兼容破坏） | `EDIT.md` / `TOOLS.md` 同步 + 用例 | 待裁（§2.5.1 A10） |
-| 8 | `provider/list-models` 失败形态（空清单 → 明确报错） | 输出 | 取并集 | 登记 + CHANGELOG | `PROVIDER.md` 同步 + 用例 | 待裁（§2.5.1 A20） |
-| 9 | 提示词面指令集（`discipline-engineering` · `discipline-normal` · `persona-eng-coder` 三档 + CN 镜像） | 输出（模型可见指令） | 并集化 + 端特有段注入 | 逐条登记（§2.5 #117–#119）+ 端特有段保留 | `PROMPT-SYSTEM.md` 同步 + 核内档 + 装配用例 | 待裁（§2.5.1 A16–A18） |
-| 10 | `traces` 的容量 / 清理策略（默认关） | 事件 / 数据面 | 取一侧 | 登记（默认关 ⇒ 无升级破坏） | 轨迹面文档同步 + 用例 | 待裁（§2.5.1 A21） |
+| 1 | `~/.thincoder/config.json` 键面与默认值（含 CLI-only `agent.goalTurns` / `agent.streamRules`；`agent.compactThreshold` 默认值分叉） | 配置 | 两面 → 核内单一 DEFAULTS | 旧键可读（迁移幂等 + 写回带 `.bak-{ts}`）· CHANGELOG | 两产品 `CHANGELOG.md` + `thincoder/README.md` 键面 + 旧配置读入用例（S2 落） | 已裁（2026-09-13）· 按建议（§2.5.1 A4） |
+| 2 | `$schema` 注入与否（VSC 写盘注入 / CLI 不注入） | 配置 | 取一侧 + 登记 | 登记 + README 键面同步 | 同第 1 行 + 配置读写用例 | 已裁（2026-09-13）· 按建议（§2.5.1 A4） |
+| 3 | `settings` 工具的类型校验面（错类型是否拒写） | 输出（工具回话） | VSC 由「静默落盘」→「拒绕并报错」（同 CLI） | 登记 + CHANGELOG（工具行为条目） | `SETTINGS-TOOL.md` 同步 + VSC 用例 | 已裁（2026-09-13）· 按建议（§2.5.1 A5） |
+| 4 | `agent.engineering` 的写盘范围（VSC 双写共享 `config.json`） | 配置 | 取 CLI（只进会话） | 旧行为撤回 ⇒ CHANGELOG + 登记 | `SESSION.md` / `ENGINEERING-MODE.md` 同步 | 已裁（2026-09-13）· 按建议（§2.5.1 A6） |
+| 5 | `tools/web` fetch 上限（20K → 200K）与重定向策略 · `websearch` 参数面（+`engine` / `page`） | 输出（工具可见面） | 取 CLI | 登记 + CHANGELOG（输出上限 / 截断标记变更） | `TOOLS.md` 同步 + VSC 用例 | 已裁（2026-09-13）· 按建议（§2.5.1 A8） |
+| 6 | `tools/lsp` 是否需先配 `lsp.servers`（CLI）· VSC 宿主语言服务径 | 输出 / 命令面（工具可用性） | 取 CLI + 端差注入 | 登记（配置面文档同步——README 配置节） | LSP 面文档 + 用例 | 已裁（2026-09-13）· 按建议（§2.5.1 A9） |
+| 7 | `tools/file` 写入回执的信息面（diff / `Syntax:` / 上下文窗）· read 截断标记 | 输出（模型可见回执） | 取 CLI | 登记（信息面变更——无兼容破坏） | `EDIT.md` / `TOOLS.md` 同步 + 用例 | 已裁（2026-09-13）· 按建议（§2.5.1 A10） |
+| 8 | `provider/list-models` 失败形态（空清单 → 明确报错） | 输出 | 取并集 | 登记 + CHANGELOG | `PROVIDER.md` 同步 + 用例 | 已裁（2026-09-13）· 按建议（§2.5.1 A20） |
+| 9 | 提示词面指令集（`discipline-engineering` · `discipline-normal` · `persona-eng-coder` 三档 + CN 镜像） | 输出（模型可见指令） | 并集化 + 端特有段注入 | 逐条登记（§2.5 #117–#119）+ 端特有段保留 | `PROMPT-SYSTEM.md` 同步 + 核内档 + 装配用例 | 已裁（2026-09-13）· 按建议（§2.5.1 A16–A18） |
+| 10 | `traces` 的容量 / 清理策略（默认关） | 事件 / 数据面 | 取一侧 | 登记（默认关 ⇒ 无升级破坏） | 轨迹面文档同步 + 用例 | 已裁（2026-09-13）· 按建议（§2.5.1 A21） |
+| 11 | **代码索引存储面**（VSC `.thincoder/index/{manifest.json,vectors.bin}` 文件 ↔ CLI `node:sqlite` 库内索引） | 数据面 / 文件格式 | 取 CLI（索引入 sqlite 库；VSC 索引文件面退场） | 旧文件格式**不再写**；读取兼容或迁移说明（随 A2 导入器一并处置）· CHANGELOG | 索引面文档 + 用例 + 两产品 `CHANGELOG.md` | 已裁（2026-09-13）· 按建议（承 §2.5.1 A1 / §2.11 A8） |
+| 12 | **文案面**（VSC `src/i18n.mjs` + `locales/{en,zh}.json` ↔ CLI 内联字面量） | 输出文案 | 核内文案常量 + VSC 字典投影（§2.5 #185） | 机器消费面**冻结**（CLI `[error] ` 前缀 / VSC locale 逐字串）；人读文案变更登记 + CHANGELOG | 两产品 `CHANGELOG.md` + `locales/*.json` + 文案用例 | 待裁（§2.5.1 丁组 D1） |
 
 **纪律**：`§2.5「对外契约影响」列非空 ⇒ 本表必有行`（T-C17 ①）——（三）表以**「须用户裁」列的 ② 标记**承载该列（② 非空行 ⇔ 本表有行；未命中 ② 者对外契约无涉，登记口径、非遗漏）；**无契约变更 ⇒ 零改**（登记口径，非遗漏）。
 
@@ -749,8 +889,8 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 
 | # | 项 | 为何无法兼容（实测 / 证据） | 上抛形态（四要素） | 裁定状态 |
 |---|---|---|---|---|
-| 1 | **VSC 引擎下限抬升**（`engines.vscode` `^1.85.0` → 候选 `^1.101.0`） | 旧宿主内置 Node < 22.13 ⇒ 无 `node:sqlite`；A13 已裁「抬高、不保留降级路径」⇒ **无兼容路径可给**（给降级路径 = 两套逻辑再现 ✗） | 左端 = VSC 现状（`thincoder-vscode/package.json` 的 `engines.vscode: ^1.85.0`）· 右端 = 新下限 `^1.101.0`（候选）· 建议 = 采纳（A13）· 影响面 = < 1.101 用户不可用 | 已裁（「可抬」· 2026-09-13）· **值待 S0b 实测 + 过目**（§2.5.1 A3） |
-| 2 | **记忆面旧数据迁移**（VSC `personal` 层 md 档 · 遗留 `.json` 记忆档 · `workspaceState` 的 `thincoder.modelPrefs`） | VSC `personal` = 仓内目录（`thincoder-vscode/src/memory.mjs:26-37`）· CLI `personal` = 用户级全局 sqlite 库行（`thincoder/src/config.mjs:92`）；CLI 侧无导入命令（`thincoder/src/cli/memory-command.mjs:21-63`）· 同步只认顶层 `.md`（`thincoder/src/memory/core.mjs:205-212`）⇒ **无自动迁移路径**；`modelPrefs` 住 VS Code 状态（不在文件系统） | 左端 = VSC 现状（仓内 md 持久）· 右端 = CLI 现状（全局库 + 顶层 md）· 建议 = ① 提供一次性导入器（md → `entries`）或 ② 用户手工迁移 / 丢弃 · 影响面 = 用户既有记忆 + 语义（每仓私有 → 全机共享） | **待裁**（S0b 已提交——§2.5.1 A2；A11 ②③） |
+| 1 | **VSC 引擎下限抬升**（`engines.vscode` `^1.85.0` → **候选 `^1.104.0`**） | 旧宿主内置 Node < 22.13 ⇒ 无 `node:sqlite`；**且 Electron 35.x（= VS Code 1.101 / 1.102）未获 sqlite 内置修复**（electron/electron #47706 回移分支 = 36 / 37 / 38-x-y）⇒ 原候选 `^1.101.0` 不成立；A13 已裁「抬高、不保留降级路径」⇒ **无兼容路径可给**（给降级路径 = 两套逻辑再现 ✗） | 左端 = VSC 现状（`thincoder-vscode/package.json` 的 `engines.vscode: ^1.85.0`）· 右端 = 新下限 **`^1.104.0`（候选，经真机实测确认后定值）** · 建议 = 采纳（A13）· 影响面 = < 新下限用户不可用；**配套护栏** = `activate()` 自检 + 明确提示（不崩） | 已裁（「可抬」· 2026-09-13）· **候选上修 `^1.101.0` → `^1.104.0` · 值待真机实测 + 过目**（§2.5.1 A3 / §2.11 A8） |
+| 2 | **记忆面旧数据迁移**（VSC `personal` 层 md 档 · 遗留 `.json` 记忆档 · `workspaceState` 的 `thincoder.modelPrefs`） | VSC `personal` = 仓内目录（`thincoder-vscode/src/memory.mjs:26-37`）· CLI `personal` = 用户级全局 sqlite 库行（`thincoder/src/config.mjs:92`）；CLI 侧无导入命令（`thincoder/src/cli/memory-command.mjs:21-63`）· 同步只认顶层 `.md`（`thincoder/src/memory/core.mjs:205-212`）⇒ **无自动迁移路径**；`modelPrefs` 住 VS Code 状态（不在文件系统） | 左端 = VSC 现状（仓内 md 持久）· 右端 = CLI 现状（全局库 + 顶层 md）· 建议 = **① 提供一次性导入器**（md / json → `entries`）或 ② 用户手工迁移 / 丢弃 · 影响面 = 用户既有记忆 + 语义（每仓私有 → 全机共享） | **已裁（2026-09-13）· ① 一次性导入器**（**父侧代选**，已披露；落地 = S2 建 `memory import` 面。§2.5.1 A2） |
 | 3 | **会话 / 历史面** | **已兼容**（无需上抛）：两端读写同一批档同一 `version`（1 / 2）+ 各自内置旧短哈希迁移（`thincoder/src/session-migrate.mjs:10-48` · `thincoder-vscode/src/extension/session-io.mjs:92-113`）⇒ 归一后历史可直接续读 | 登记为「已兼容」· 兼容形态 = 复用现成迁移函数 | 已兼容（登记） |
 
 **裁定纪律**：本清单每行状态 ∈ {已裁（日期）, 待裁}；**未裁定不进 S1**（统一最严口径——原「待裁不空 ⇒ 不得进 S2」宽读法**不采用**；A11 / T-C17 ②）。
@@ -774,7 +914,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | 用例 | 对应需求 | 输入 | 预期输出 |
 |---|---|---|---|
 | T-C1 | F1 · N6 | 五段收口记录（批次档 §5 / §6） | 每段含验证命令 + 读数 + exit code；缺段即未完 |
-| T-C2 | F2 · F11 · F12 | 本档 §2.5 裁决表 + §2.5.1 须裁条目清单 | 覆盖 107 同路径对 + 15 镜像对 + 语义对位行；**前提校验 / 分类 / 端差处置 / 须用户裁** 四列无空白；**「须用户裁」列非空 ⇒ §2.5.1 必有对应行且状态 = 已裁**（A11——未裁完不进 S1）；行数与声明一致；**归属段列 ⇔ §2.6 席位判据一致**（取值 `S0a（首批建核）` 的行必满足「逐字节同 ∨ sim ≥ 0.90」；其余三值行必为 S0b 席位；**`S0a（首批建核）` 行（含 `sim ≥ 0.90` 非逐字节同的提示词对）的建入随 S0a 首建一并完成**——判据 5）；**语义对位遍完备性 = 定性复核**（§2.6 判据 3 覆盖程序——不判机检红） |
+| T-C2 | F2 · F11 · F12 | 本档 §2.5 裁决表 + §2.5.1 须裁条目清单 | 覆盖 107 同路径对 + 15 镜像对 + **语义对位行（§2.5（四）63 行 / 16 族——单端 239 档逐面闭合）**；**前提校验 / 分类 / 端差处置 / 须用户裁** 四列无空白；**「须用户裁」列非空 ⇒ §2.5.1 必有对应行且状态 = 已裁**（A11——未裁完不进 S1）；行数与声明一致；**归属段列 ⇔ §2.6 席位判据一致**（取值 `S0a（首批建核）` 的行必满足「逐字节同 ∨ sim ≥ 0.90」；其余三值行必为 S0b 席位；**`S0a（首批建核）` 行（含 `sim ≥ 0.90` 非逐字节同的提示词对）的建入随 S0a 首建一并完成**——判据 5）；**语义对位遍完备性 = 定性复核**（§2.6 判据 3 覆盖程序——不判机检红） |
 | T-C3 | F3 | §2.5「裁决依据 / 来源」列 | 每进核行可追溯来源侧（取一 / 融合）；零「新写」行 |
 | T-C4 | F4 · N3 | `node --test`（`core/`，独立于两产品） | exit 0；运行期不加载任一产品模块 |
 | T-C5 | F5 · N1 | 单模块 / 单档迁移后跑该产品全链 | 全 exit 0；**未涉面**用例计数与基线一致；**面内**用例按裁决结果改判并逐条登记（差异 = **变更可见性证据**，不是缺陷） |
@@ -816,5 +956,14 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 - 2026-09-13（S0b 逐条裁决轮）：§2.5 新增 **（三）S0b 行集 71 行**（同路径 68 + 中文镜像 3——席位谓词 = 非逐字节同 ∧ `sim < 0.90`；含「分类不取 ①」与「④ 只按段给」两条列值口径）· §2.5.1 重填为 **[须你拍] 清单**（甲组真选择 24 行 / 乙组方向唯一 2 行 / 丙组 S0a 已裁 2 行——四要素齐备）· §2.12.2 处置表按 ② 命中行填 10 行 · §2.12.3 第 2 行状态标注 S0b 已提交。
   **裁定 B 收正（用户 2026-09-13）**：D-C14 修订（仓根副本**建立** ✓ · 两产品同名目录**原地保留**——原「S3 删除」**作废** ✗ · 镜像面合流属文档面尾项、本批不处置）；连带收正 §2.2 形态树 · §2.8 两行（其中一行作废并登记「已撤面」）· §2.1 B19② · §2.9 第 2 / 3 条 · §3.1 T-C8（零残留口径限于实现侧）。
   **A10 收正**：§2.11 A2 旧义 F6 措辞（「向 CLI 倾斜即触 F6 / 必需注入」→ 行为变化不得作阻断理由，须逐条登记并提交裁定）。
+- 2026-09-13（**S0b 收尾轮——语义对位遍 + 裁定状态收口**）：
+  ① 新增 **§2.5（四）语义对位遍行集**（16 族 / **63 行** #123–#185——单端 **239 档**逐面闭合，含「工具实现面单端档逐档映射」与「覆盖对账」两表）；
+  ② §2.5 首注由「对位遍仍待填」改「已填」；
+  ③ **§2.5.1 裁定状态收口**：甲组 **24 行** + 乙组 **2 行** + §2.12.2 **10 行** 全部改「**已裁（2026-09-13）· 按建议**」
+  （A2 记 **① 一次性导入器（父侧代选）**）+ 新增 **丁组 D1 / D2**（对位遍新增须裁——待裁）；
+  ④ **§2.11 A8 实核修正**：VSC 引擎下限候选 **`^1.101.0` → `^1.104.0`**（新硬发现：Electron 的 GN 配置曾整体关闭 `node:sqlite`，
+  修复 PR #47706 仅回移 36 / 37 / 38-x-y）· 补 **真机测法**与**运行时护栏**建议 · 补逐档映射实查读数（Electron `DEPS` × 4 + VS Code `package.json` × 4）；
+  ⑤ §2.6 S0b 退出条件与判据 2 同步（对位遍已枚举 + 丁组 + 两项实测）；
+  ⑥ §2.10 N7 · §2.12.2（+2 行：索引存储面 / 文案面）· §2.12.3（第 1 行候选上修 · 第 2 行已裁 ①）· §2.8（+2 行：记忆面导入器 / 文案面）同步。
 
 
