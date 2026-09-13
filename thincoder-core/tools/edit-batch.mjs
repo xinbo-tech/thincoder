@@ -12,14 +12,14 @@
  */
 import { readFile } from "node:fs/promises"
 import { resolveInCwd, normalizeEOL, joinWithEol, gitDiffOne, autoSyntaxCheck } from "./shared.mjs"
-// file.mjs ↔ edit-batch.mjs 循环引用：两侧导入的都是函数声明（提升初始化），
+// edit-batch ↔ edit-diff 循环引用（#69 后同型）：两侧导入的都是函数声明（提升初始化），
 // 仅在调用期使用——ESM 循环下安全（无模块求值期取值）。
-// 写盘经单一写路径点（§2.13.5）——本档不再直调 fs。
-import { appendWriteContext } from "./file.mjs"
+// 写盘经单一写路径点（§2.13.5）——本档不再直调 fs；回执组装迁 composeEditReceipt（#69）。
 import { writeThroughPath } from "./write-path.mjs"
 // EDIT.md §6：批量条目判定+应用共用 edit-diff（EDIT.md §4 分支 0 单行替换 + 行级 LCS——零重叠→替换即删）；
 // EDIT.md §5：edits 互斥错误文本随前置校验分支迁出至 edit-diff.mjs。
-import { assertEditArgsExclusive, validateEditEntry, computeEditEntry, splitLines, EMPTY_NEW_STRING_LINE, deleteTarget } from "./edit-diff.mjs"
+// #69：回执组装共用 edit-diff 的 composeEditReceipt（回执形态按端注入——缺省 = CLI 形态）。
+import { assertEditArgsExclusive, validateEditEntry, computeEditEntry, splitLines, EMPTY_NEW_STRING_LINE, deleteTarget, composeEditReceipt } from "./edit-diff.mjs"
 
 /**
  * Apply the `edits` array form: multi-file atomic replacement. Throws on any
@@ -96,7 +96,15 @@ export async function applyEditBatch(args, ctx) {
     const base = p.deleted
       ? `Deleted ${deleteTarget(p)} of ${p.g.path}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(p.g.abs)}`
       : `Edited ${p.g.path}: replaced ${p.occurrences} occurrence(s)${p.note ? ` — ${p.note}` : ""}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(p.g.abs)}`
-    results.push(await appendWriteContext(p.g.abs, p.editStartLine, base))
+    results.push(await composeEditReceipt({
+      abs: p.g.abs,
+      path: p.g.path,
+      writeLine: p.editStartLine,
+      base,
+      deleted: p.deleted === true,
+      occurrences: p.occurrences,
+      note: p.note,
+    }))
   }
   return results.join("\n")
 }

@@ -93,17 +93,17 @@ function gateOpenDoc(impl, abs) {
 /**
  * 试注入面：命中 ⇒ 编辑器径（`{ written: true, via: "editor" }`）；未处理 ⇒ null（回默认）。
  * 未打开（`openDoc` 返回假值）/ 无注入面 / 非内容写点 ⇒ 未处理。
- * **dest 面门禁**（move / rename 的覆盖面——父侧裁定补丁）：路径操作会覆盖目标档 ⇒
- * 目标档与源档**同过门禁**（覆盖「编辑器打开且脏」的目标档 = 直接吞掉用户缓冲，
- * 与 src 面同源 split-brain 风险）⇒ 拒写。src 未打开**不豁免** dest 门（两面各问一次）。
- * copy 不写 src、覆 dest——本补丁按裁定范围只覆盖 move / rename（copy 面登记见交付报告）。
+ * **dest 面门禁**（move / rename / **copy** 的覆盖面——父侧裁定补丁，copy 扩面同批）：
+ * 路径操作会覆盖目标档 ⇒ 目标档与源档**同过门禁**（覆盖「编辑器打开且脏」的目标档 =
+ * 直接吞掉用户缓冲，与 src 面同源 split-brain 风险）⇒ 拒写。src 未打开**不豁免** dest 门
+ * （两面各问一次）。copy 不写 src、但覆 dest（`cp { force }`）⇒ 同过 dest 门。
  */
 async function tryInjectedPath(abs, content, meta) {
   const impl = injected
   if (!impl?.openDoc) return null
   const op = meta.op ?? "write"
   const doc = gateOpenDoc(impl, abs) // 每个写点都问一次（门禁面——见 configureWritePath）
-  if ((op === "move" || op === "rename") && typeof meta.dest === "string" && meta.dest.length > 0) {
+  if ((op === "move" || op === "rename" || op === "copy") && typeof meta.dest === "string" && meta.dest.length > 0) {
     gateOpenDoc(impl, meta.dest) // dest 面过门禁（覆盖目标档——与 src 同源拒写判据）
   }
   // 编辑器径只承载**内容写点**（op="write"）；delete / 路径操作（copy/move/rename）与

@@ -14,6 +14,26 @@
 import { ENG_ON_REMINDER, ENG_OFF_REMINDER } from "../agent.mjs"
 import { purgeExpiredDesignTokens } from "../token-ttl.mjs"
 
+// ─── 持久化镜像 / 面板提示注入缝（#91——「写盘镜像 / 面板提示按端注入」，形态参 §2.13.5 注入缝）──
+/**
+ * 工程模式切换通知注入位（**缺省不覆盖** = no-op——CLI 语义（只进会话），零行为变；端装配层
+ * 可覆盖为本端镜像写盘 / 面板提示）。核内零端名分支（契约 5——本档只认 `onToggle` 函数名）。
+ * 契约：`onToggle(enabled, ctx) → string | null | undefined | Promise<同>`——非空字符串 =
+ * 追加到结果文案尾（如镜像写入碰撞提示）；其余值 = 无提示。调用时机 = 状态翻转后（观察新态）。
+ */
+let injectedMirror = null
+export function configureEngMirror(impl) {
+  injectedMirror = impl && typeof impl.onToggle === "function" ? impl : null
+}
+/** 撤销注入（测试与端装配生命周期用——缺省态 = 无镜像 / 无面板提示）。 */
+export function resetEngMirror() { injectedMirror = null }
+
+/** 镜像通知串（缺省空串；仅非空字符串追加）。 */
+async function mirrorNotice(enabled, ctx) {
+  const out = await injectedMirror?.onToggle(enabled, ctx)
+  return typeof out === "string" && out.length > 0 ? ` ${out}` : ""
+}
+
 export const engTool = {
   name: "eng",
   description:
@@ -39,7 +59,7 @@ export const engTool = {
       ctx.agent._lastEngState = false
       ctx.agent._pendingReminders = ctx.agent._pendingReminders ?? []
       ctx.agent._pendingReminders.push(ENG_OFF_REMINDER)
-      return "Engineering mode exited. Standard discipline now applies. You may edit files directly."
+      return "Engineering mode exited. Standard discipline now applies. You may edit files directly." + await mirrorNotice(false, ctx)
     }
     if (args.action === "enter") {
       // Idempotent enter (v2 2026-08-25): already in engineering mode → pure no-op
@@ -60,6 +80,7 @@ export const engTool = {
       if (cleared > 0) {
         msg += ` Cleared ${cleared} expired design token${cleared === 1 ? "" : "s"} — 清 ${cleared} 个过期 token，有效 token 保留（TTL 内不重评）。`
       }
+      msg += await mirrorNotice(true, ctx)
       return msg
     }
     return "Invalid action: expected 'enter' or 'exit'"

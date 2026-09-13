@@ -12,9 +12,26 @@
  */
 
 import { isCodePath, isDocPath, loadConventions } from "../conventions.mjs"
-import { execSync, spawnSync } from "node:child_process"
+// #96（信息段与执行方式按端注入——CORE-UNIFICATION §2.13.4）：git / node --check 执行
+// 全部经核内执行面单点（默认径 = execFileSync 等价——CLI 语义零行为变；端侧 injected ⇒
+// 可中断执行器）；编辑器诊断段经 `configureVerifyDiagnostics` 注入（缺省不注入）。
+import { runCommand } from "../tools/exec-run.mjs"
 import { existsSync } from "node:fs"
 import { resolve } from "node:path"
+
+// ─── 信息段注入缝（#96——「信息段与执行方式按端注入」的信息段面）──────────────────────
+/**
+ * 报告附加段注入位（**缺省不覆盖** = 不注入——CLI 报告逐字不变，零行为变；端装配层可覆盖
+ * 为本端信息段（如编辑器诊断）。核内零端名分支（契约 5——本档只认 `section` 函数名）。
+ * 契约：`section(ctx, codeFiles) → string | string[] | null | Promise<同>`——非空字符串 /
+ * 非空数组 = 追加到报告（advisory——不进门禁）；null / 空 ⇒ 跳过。
+ */
+let injectedDiagnostics = null
+export function configureVerifyDiagnostics(impl) {
+  injectedDiagnostics = impl && typeof impl.section === "function" ? impl.section : null
+}
+/** 撤销注入（测试与端装配生命周期用——缺省态 = 不注入）。 */
+export function resetVerifyDiagnostics() { injectedDiagnostics = null }
 
 /**
  * §18.12 D-VR1 path normalization — mirrors the §20.5 file-domain handling:
@@ -96,9 +113,9 @@ export const verifyTool = {
       try {
         // Anchor the repo root FIRST (also proves git works here) — diff paths
         // are repo-root-relative, so both diff calls run at the root.
-        const gitRoot = execSync("git rev-parse --show-toplevel", { cwd: gitCwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 }).trim() || gitCwd
-        const diff = execSync("git diff --stat", { cwd: gitRoot, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 })
-        const nameOnly = execSync("git diff --name-only", { cwd: gitRoot, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 })
+        const gitRoot = (await runCommand("git", ["rev-parse", "--show-toplevel"], { cwd: gitCwd, timeout: 5000, signal: ctx.signal })).trim() || gitCwd
+        const diff = await runCommand("git", ["diff", "--stat"], { cwd: gitRoot, timeout: 5000, signal: ctx.signal })
+        const nameOnly = await runCommand("git", ["diff", "--name-only"], { cwd: gitRoot, timeout: 5000, signal: ctx.signal })
         gitOk = true
         gitStat = diff.trim()
         gitFiles = nameOnly.trim().split("\n").filter(Boolean).map((p) => normalizeChangedPath(p, gitRoot))
@@ -182,8 +199,7 @@ export const verifyTool = {
       lines.push("Advisory syntax hint (node --check — does not gate):")
       for (const f of jsFiles) {
         try {
-          const result = spawnSync("node", ["--check", f], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 10000 })
-          if (result.status !== 0) throw result
+          await runCommand("node", ["--check", f], { timeout: 10000, signal: ctx.signal })
           lines.push(`  ✓ ${f}`)
         } catch (e) {
           const errOutput = (e.stderr || e.stdout || e.message || "").toString()
@@ -192,6 +208,14 @@ export const verifyTool = {
           lines.push(`    ${errMsg.replace(/\n/g, "\n    ")}`)
         }
       }
+    }
+
+    // 2b. 端注入报告段（#96 信息段面）：缺省不注入 ⇒ 报告零变化；注入 ⇒ 追加（advisory——
+    // 不进门禁）。位置 = 语法提示之后、门禁段之前（与语法提示同属建议信息面）。
+    if (injectedDiagnostics) {
+      const extra = await injectedDiagnostics(ctx, codeFiles)
+      if (Array.isArray(extra)) { if (extra.length) lines.push(...extra.map(String)) }
+      else if (typeof extra === "string" && extra) lines.push(extra)
     }
 
     // 3. Verification gate (D-V1/D-V2): the model declares its verification status.

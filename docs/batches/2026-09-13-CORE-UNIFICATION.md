@@ -1965,6 +1965,56 @@
 2. 超软线档拆分计划（`agent.mjs`(428) 等 4 档——§2.8.1 覆盖口径「待补」在案）：设计面收口项，本轮未含。
 3. §5 越段 6（`ops.mjs:151,163` 注释含 "VS Code"）与越段 7（仓外一次性件）：本轮未动，留档。
 
+### 设计面补正轮 2 · 载体字段集 + 登记收正（2026-09-14 · eng-designer）
+
+**段位**：当前段 = **S2 之前**（设计面补正）；S2 / S3 动作零执行。本轮**只改设计档**——不写代码、不动 `thincoder-core/**`、未 commit（父侧统一）、未发起评审、未碰台账。
+
+**依据** = 批次档 §5「S1 续轮第二批」未决 1 / 2（advisor 🟡#2 / 🟡#4 · 文档锚点）+ 父侧派单 2 件——**逐条先实核再落**（任务书引用仅作线索，坐标以核内现实为准——见「实核发现」）。
+
+**本批条目（覆盖面——供三方条目一致对账）**
+
+| # | 条目 | 设计档落点 | 状态 |
+|---|---|---|---|
+| 1 | §2.3 载体字段集补正：字段集 + `_asyncQueue` / `_asyncTombstones` 两款 · 回写义务（谁写 / 何时写 · 借用规则 · VSC 绑定不变式覆盖全 7 字段）· 验收「不预置载体字段」夹具 | `docs/design/AGENT-LOOP.md` §2.3（carrier 行 :79 · 新块 :89-96 · 验收点 2 :107 · 变更记录 :148） | 已落 |
+| 2 | 设计登记滞后收正：#98 / #113 / #84 核内位改判「有」· 缺位 16 → 13（枚举同改）· 锚点 / 读数漂移收正（onToken 发射点 · 写路径簇读数 191 行 / 9-9-6 / 7 用例 / 116-116 · 补正① 改「已落」） | `docs/design/CORE-UNIFICATION.md` §2.13.3（:717 · :722）· §2.13.4（:731 · :734 · :756）· §2.13.5（:783 · :787 · :791-794）· §2.13.6（:818）· §2.13.7（:830）· 变更记录（:1165-1168） | 已落 |
+
+**本批明确不做（出批）**：`thincoder-core/**` 任何改动（队列 / 池无借用步 = 勘定注 + 上报，核未动）· `_asyncWaiters` 字段登记（同类发现——**上报待裁**，未落）· copy 面 dest 门禁扩面（在途他轮——见「实核发现」5，本档未落）· 超软线档拆分计划（另轮在案——§2.8.1）· S2 / S3 的一切动作。
+
+**受影响文件（本轮——行数口径）**
+
+| 档 | 改前 | 改后 | Δ | 变更点 |
+|---|---|---|---|---|
+| `docs/design/AGENT-LOOP.md` | 138 | **148** | +10 | §2.3：carrier 行 :79 · 新块 :89-96（9 行）· 验收点 2 :107 · 变更记录 :148 |
+| `docs/design/CORE-UNIFICATION.md` | 1167 | **1170** | +3 | §2.13.3 :717/:722 · §2.13.4 :731/:734/:756 · §2.13.5 :783/:787/:791-794 · §2.13.6 :818 · §2.13.7 :830 · 变更记录 :1165-1168 |
+
+**三机检读数（cwd = 仓根 · 终态实跑——自检两修后）**
+
+| # | 机检 | 读数 | 判 |
+|---|---|---|---|
+| 1 | `doc-anchors` | 域一（32 档）：候选 **1659** · 悬空 **0** · 注记豁免 29——**OK(V5): 0 条悬空锚**；域二（99 档）：候选 8799 · 悬空 0——**OK(V5)**；V5 命中 0 处 | ✓ exit 0 |
+| 2 | `check-doc-width` | **OK(宽度)：306 文件无 >300 字符单行**（一致性 V1/V2/V3：新增违规 0 · 存量 0） | ✓ exit 0 |
+| 3 | `check-ledger` | OK: `thincoder/docs/TODO.md` · OK: `thincoder/docs/TODO-archive.md`——**0 处违规**（基线 0） | ✓ exit 0 |
+
+> 自检两修（均已复核 · 终态全绿）：① 变更记录新行 428 字符超宽 ⇒ 折 4 行；② `escalate-async.mjs:149-150` 裸锚悬空 ⇒ 补全路径前缀。
+
+**验收判据（本轮）**：① 两档三机检 **exit 0**（上表原样读数）；② 件 2 计数与枚举同改，且与 §2.13.4「核内位 = 无」行集合**逐项等值**（#112 · #175 · #143 · #56 · #57 · #59 · #61 · #66 · #69 · #91 · #96 · #170 · #172 = **13**）；
+③ 三方条目一致：本段条目 ⇔ 设计档落点 ⇔ §5 落地实况同源。
+
+**实核发现（供父侧协调 · 含不阻断观察项）**
+
+1. **`_asyncQueue` 裸访问面实为 7 档 14 处**（任务书引 2 档 5 处为**子集**）：`subagent-scheduler.mjs:317/329/353` · `subagent-run.mjs:52/186,187` · `escalate-async.mjs:150/286,287` ·
+   `subagent-actions.mjs:110/215` · `subagent-async.mjs:186` · `subagent-panel.mjs:115` · `run-stages.mjs:170`（中止清队写）——字段集按**字段级**补正（7 档一体），未逐处列差。
+2. **`_asyncWaiters` 同类未列**（唤醒栓注册表：`thincoder-core/agent/suspension.mjs:121-122,133` 注册 / 摘除 · `thincoder-core/agent-tools/async-settle.mjs:270` 唤醒——同为裸访问 · 同属跨模块同容器面）——**与 `_asyncQueue` 同缺陷类**；派单未点名 ⇒ **未落**（若并入，字段集 = 8 款 · 绑定义务覆盖同扩）。**待裁。**
+3. **队列 / 池新建点无借用步**（`subagent-run.mjs:51-52` / `escalate-async.mjs:149-150` 对 `history` 已有容器不借用——与 pending / 墓碑单点「借用 / 新建」形态不一）——绑定不变式下不可观测；已入设计档勘定注（`AGENT-LOOP.md:94`），未动核。
+4. **`_subAgentCounter`**（`spawn-child.mjs:78` · `subagent-scheduler.mjs:391-392` 等裸访问）——判**非同类**：设计明确「载体 = agent 本体」（`escalate-async.mjs:156` 注）+ `poolMax` 兜底；VSC 端已自 history expando 移本体（`subagent-scheduler.mjs:370-371` 注）⇒ 不动。
+5. **同树在途形态（如实登记）**：工作树另含他轮在途改动（`thincoder-core/**` 13 档 M + 4 `??`——含 `write-path.mjs` 的 **copy 面 dest 门禁扩面**在途、核内一枚未跟踪散件 `_t.txt`）；**本设计轮写入面 = 仅 `docs/design/**` 两档**；本档锚（`:66` / `:83`）已按现树复核有效。
+
+**未决（记档 · 不代裁）**
+
+1. `_asyncWaiters` 是否补入 §2.3 字段集（+ 回写 / 绑定义务）——待父侧裁定。
+2. copy 面 dest 门禁扩面：工作树实见在途实现——其设计面登记（§2.13.5 补正清单 / 读数再改判）归其落轮；本档按交付态未落该扩面。
+3. 超软线档拆分计划（§2.8.1 覆盖口径在案——另轮）。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
@@ -2742,6 +2792,116 @@ VERDICT: pass
 4. **同步路径无 interrupt 豁免**（审计 Q4 · 非本批面）：`agent-tools/subagent.mjs` `armSyncChildAbort`（`:66-71`）仍无条件逐链中止——与 #98 异步面新单点不同形；同步面（sync-cancel L52）无 VSC 对位机制 ⇒ 本轮未动（记档）。
 5. **VSC `async-discard.mjs` 与核内 `parentAborted` 签名差**（S2 对位 · #111 面）：VSC 中止清池单点 = 「只清已死」+ 单参 `parentAborted(entry)`；核内守卫 = 双参 `parentAborted(ctx, entry)`（本轮加 interrupt 豁免）——S2 接线时该模块需对位改造（其 `entry.signal` 字段核内条目未持）。
 6. **落档链**：本段（上表读数）即「落态以批次档 §5 为准」（设计 §2.13.5 补正注）的对应记录——设计档侧两处计数/读数收正见未决 2。
+
+### 实施：S1 续轮第三批 —— C 类余量 9 行注入缝 + copy 面 dest 门禁（2026-09-14 · eng-coder）——**终态 = clean**
+
+**段位**：当前段 = S1 续轮第三批（承接第二轮 K4 的 C 类余量工作单 + 父侧裁定补丁）。S2 / S3 面零触碰；
+**两产品零改动**（`git status` 产品侧条目 = 0——见 K3）；未 commit（父侧统一）；未碰台账；**未改任何 docs**（设计面两档已由父侧先行提交 `f61c923d`，本段全程只读）。
+
+**改动面**（全部在 `thincoder-core/**`；13 档修改 `+321/−65` + 3 档新建；核内 `node --test` **116 → 129**）
+
+| # | 档 | 行数（改前 → 改后） | 改动 |
+|---|---|---|---|
+| 1 | `tools/exec-run.mjs` | 新建 → **43** | #61/#63/#96 执行面单点：`configureExecRun` / `resetExecRun` / `runCommand`（默认径 = execFileSync CLI 语义） |
+| 2 | `tools/tree.mjs` | 66 → **81** | #56 `configureTreeResolve`（缺省 = `resolveInCwd`） |
+| 3 | `tools/execute.mjs` | 228 → **243** | #57 `configureProcessTreeKill` + `killProcessTree` 导出（测试委托用） |
+| 4 | `tools/git.mjs` | 355 → **374** | #59 `configureGitApproval`（gate 非空串 ⇒ 拒执行原样返回） |
+| 5 | `tools/linter.mjs` | 128 → **120** | #61 全检查器经 `runCommand`；去 child_process import（净 −8） |
+| 6 | `tools/lsp.mjs` | 316 → **335** | #66 `configureLspHost`（null/undefined = 未处理 ⇒ 回核内 JSON-RPC 径） |
+| 7 | `tools/edit-diff.mjs` | 353 → **388** | #69 `configureEditReceipt` + `composeEditReceipt`（单/数组共用） |
+| 8 | `tools/edit-batch.mjs` | 196 → **204** | #69 数组形态改经 `composeEditReceipt` |
+| 9 | `tools/write-path.mjs` | 191 → **191** | 补丁：dest 门条件扩至 `copy`（行数不变） |
+| 10 | `skills.mjs` | 153 → **234** | #88 同步 loader 面 `loadSkillsSync` / `readSkillSync`（按核内结构归一） |
+| 11 | `agent-tools/skill.mjs` | 47 → **63** | #88 `configureSkillLoader`（缺省 = 核内异步 loader） |
+| 12 | `agent-tools/eng.mjs` | 67 → **88** | #91 `configureEngMirror`（`onToggle` 非空串 ⇒ 追加结果文案尾） |
+| 13 | `agent-tools/verify.mjs` | 271 → **295** | #96 `configureVerifyDiagnostics` + 执行面（git ×3 / node --check）经 `runCommand` |
+| 14 | `test/write-path.test.mjs` | 289 → **300** | copy 用例 + 计数改判 11/11/6（顶格 300——advisory 见未决 4） |
+| 15 | `test/tool-seams.test.mjs` | 新建 → **266** | 工具面双夹具 6 + 结构机检 3（缝面等值 / 零端名 / 执行面单点） |
+| 16 | `test/tool-seams-agent.test.mjs` | 新建 → **148** | agent 面双夹具 4（含 #88 同步/异步 loader 逐项等值） |
+
+**逐子系统并入（逐行 → 落点）** —— C 类余量 9 行（#56 / #57 / #59 / #61 / #66 / #69 / #88 / #91 / #96）+ 补丁（copy 面 dest 门禁）
+
+1. **#56** `tools/tree.mjs`：`configureTreeResolve`（`impl.resolve(ctx, p)`；缺省 = `resolveInCwd`）——根解析点 `(injectedResolve ?? resolveInCwd)(ctx, args.path ?? ".")`。
+2. **#57** `tools/execute.mjs`：`configureProcessTreeKill`（`impl.killTree(child)`；缺省 = 核内 `killProcessTree`）——超时/abort 唯一杀点经缝。
+3. **#59** `tools/git.mjs`：`configureGitApproval`（`gate(args, ctx)`；非空串 ⇒ 拒执行；缺省无门 = CLI 无审批面）——workdir 归一后、action 分派前恰问一次。
+4. **#61 / #63 / #96（执行面）** `tools/exec-run.mjs`（新档）：`configureExecRun({ run })` / `runCommand`；`tools/linter.mjs` 全检查器与 `agent-tools/verify.mjs` 执行全部改经单点（#63 `runInterruptible` 核内面由此补位）。
+5. **#66** `tools/lsp.mjs`：`configureLspHost`（`handle(args, ctx)`；null/undefined = 未处理 ⇒ 回核内径）。
+6. **#69** `tools/edit-diff.mjs`：`configureEditReceipt` + `composeEditReceipt`（`fields.default` = 默认回执原文）；`tools/edit-batch.mjs` 数组形态同接。
+7. **#88** `skills.mjs` 同步面（`loadSkillsSync` / `readSkillSync`——同发现规则 / 同排序 / 同层级优先）+ `agent-tools/skill.mjs` `configureSkillLoader`（缺省 = 核内异步 loader）。
+8. **#91** `agent-tools/eng.mjs`：`configureEngMirror`（状态翻转后调用，观察新态）。
+9. **#96（信息段）** `agent-tools/verify.mjs`：`configureVerifyDiagnostics`（`section(ctx, codeFiles)`；advisory——不进门禁）。
+10. **补丁**：`tools/write-path.mjs` dest 门条件扩到 `copy`（与 move/rename 同源拒写判据）；`test/write-path.test.mjs` 计数 9→**11**（9 src 面 + 2 dest 面）+ copy 拒/放行用例。
+
+**形态纪律（承写路径缝）的机械/行为面**
+
+- **缺省不覆盖 = 现行为**：9 缝全部 `(injected ?? 原函数)` / `if (injected…)` 形态；核内**零自调用**（全仓 grep 仅定义面 + 测试面）；默认径与改前（HEAD 副本）逐处对照等价。
+- **端侧覆盖接口**：全部 module-level `configure*` / `reset*`（形态承 `configureWritePath` / `configureBatchSegment`）。
+- **核内零端名（代码面）**：段内新代码零端名；结构机检② 扫描域 = 本批模块 ∪ 全部缝定义档（派生，fail-closed）。
+- **结构机检**（承 `test/write-path.test.mjs` 写法）：① 缝导出面**逐档等值**（23 名 = 11 对 configure/reset + `setWaitForConditionSource`）· ② 缝模块零端名（注释剥除后）· ③ 执行面单点（linter / verify 零直调 `child_process`）。
+
+**K1–K3 读数（cwd = 仓根 · 终态复跑）**
+
+| # | 判据 | 读数 | 判 |
+|---|---|---|---|
+| K1 | 三机检 | `doc-anchors` **exit 0**（域一 候选 1659 · 悬空 **0**；域二 候选 8799 · 悬空 **0**；`OK(V5): 0 条悬空锚`）· `check-doc-width` **exit 0**（306 档无 >300 行）· `check-ledger` **exit 0**（0 违规） | ✓ |
+| K2 | 核内 `node --test` | 基线 **116** 保持绿 + 新增 **13** 全绿 ⇒ **129/129 · fail 0 · exit 0**（新增：tool-seams 9（行为 6 + 结构 3）· tool-seams-agent 4） | ✓ |
+| K3 | 工作树 | 核内 **13 M + 3 ??**；**产品侧条目 = 0**；docs 面 = 批次档 **1 M**（设计面补正轮 2 在途——**非本段写入**）；未 commit | ✓ |
+
+**K4 更新版逐行表（C 类逐行改判——D/E/F 保持原判）**
+
+C 类 13 行原状：`#84 ✅（缝位 · 上轮）` · `#68 ✅（写路径缝 · 上轮）` · `#64 ✅（核内已承载 · 上轮）` · `#63 ⏳ 部分` · 余 9 行 ⏳。**本轮改判**：
+
+| 行 | 改判 | 落点 / 说明 |
+|---|---|---|
+| #56 | ✅ 已并入 | `configureTreeResolve`（缺省 = `resolveInCwd`，零行为变） |
+| #57 | ✅ 已并入 | `configureProcessTreeKill`（缺省 = 核内 `killProcessTree`） |
+| #59 | ✅ 已并入 | `configureGitApproval`（只读判定 / 审批门端注入面；缺省无门） |
+| #61 | ✅ 已并入 | `exec-run` 单点（linter 全检查器经 `runCommand`） |
+| #66 | ✅ 已并入 | `configureLspHost`（null 回核内 JSON-RPC 径） |
+| #69 | ✅ 已并入 | `configureEditReceipt` / `composeEditReceipt`（单形态 + 数组形态） |
+| #88 | ✅ 已并入 | 同步 loader 面归一入核 + `configureSkillLoader` |
+| #91 | ✅ 已并入 | `configureEngMirror`（写盘镜像 / 面板提示端注入面） |
+| #96 | ✅ 已并入 | `configureVerifyDiagnostics` + 执行方式经 `exec-run`（信息段 + 可中断执行双面） |
+| #63 | ✅ 核内面闭合 | 编辑器编辑 = 写路径缝（上轮）· `runInterruptible` = `exec-run` 缝（本轮）；S2 端侧接线待做 |
+
+**B 类复核（#112）**：① 编辑器上下文注入位 = `pushInjections`（上轮落核）② `read_image` 门 = 核内等价面（端供工具集 + 运行期能力拒）③ MCP 扩工具时机 = 端侧 hydrate 供给——
+**剩余面 = S2 装配轮**（核内无需补位：装配表 = `agent.tools` + `opts.injections` 端供制，本批零触碰）。
+**D/E/F 类**：保持原判（D：`#70` · `#83`；E：`#123–#127` · `#93` · `#95` · `#104–#110` · `#160` · `#161`；F：`#111` · `#149–#153` · `#155` · `#157` · `#103` · `#175` · `#81` · `#134` · `#170` · `#178` · `#179`）——本轮零触碰。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 执行面缝单档承载 #61/#63/#96（`tools/exec-run.mjs`），不逐档建缝 | 设计 §2.13.5「同源缺口」= 同一执行器面；单点 = 单一真值 + 一处测试覆盖。备选 = 逐档各自 configure（三份同形缝，漂移源） |
+| 2 | 执行面默认径 = `execFileSync` 数组形（verify 改前为 `execSync` shell 字符串形 / `spawnSync`）——**机制差登记** | shell→no-shell + stderr ignore→pipe；对既有调用点功能等价（失败被 catch 吞、成功路径同串）；不登记则「逐字等价」误读 |
+| 3 | tree 缝只包根解析点（`resolve(ctx, p)`），不包 `walk` | 两端分叉只在「根从哪来」（realpath vs join）；walk / 渲染逐字同构 |
+| 4 | #69 缝覆盖单形态 + 数组形态（回执面同源） | 两个形态产出同形回执；只改单形态会让数组形态留双实现 |
+| 5 | #88 双落 = 同步面归一入核 + tool 侧 loader 覆盖接口 | 设计行含两面要求（「取一侧（异步）」+「同步 loader 面按核内结构归一」）；缺一则 VSC 接核后仍自持副本 |
+| 6 | #96 信息段缝位 = 语法提示之后、门禁段之前；显式 failed 早退径 / doc-only 快径不经过 | 与语法提示同属 advisory 面；两个早退径与 VSC 现形一致；**代码路径阻塞三态会含该段（与 VSC 现形差）——S2 前须定（未决 2）** |
+| 7 | copy 的 **src 面**照过门禁（所有 op 统一先问 src） | 裁定范围只扩 dest 面；src 面统一性保留（拒写判据 = 「本端打开且脏」）；计数后果 = 11。审计 Q1 留档 |
+
+**内部审计轮（只读 explore 分歧审计 · 阻塞 ×1）**：结论 **DIVERGENT**（仅 doc drift 类命中；「部分实现 / 静默简化」未发现；越清单改动面审计无 git 无法判定——本段补 `git status` 实测：核内 13 M + 3 ??，零清单外）。
+- 命中 3 组 doc drift（均设计面）：① §2.13.4「核内位 = 无」9 行 + §2.13.6 缺位计数 + `:752` #63「`runInterruptible` 仍无」；
+  ② §2.13.5 计数 9/9/6 vs 现行 11/11/6 + copy 扩面未登记；③ §2.13.3 注入位表未含 `tools/exec-run.mjs`。
+- Q1 copy src 面同过门禁（既定口径——决策表 7）· Q2 #96 信息段失败径（与评审 🟡3 同源——未决 2）· Q3 执行面覆盖边界（其他模块直调 exec 属既定边界——未决 3）· Q4 执行面读数不可独立复跑（限制如实登记）。
+
+**代码评审轮（内部 advisor · `type=code`）与裁决 —— 2 轮收敛**
+
+- **轮 1 = pass**（🔴 0 · 🟡 3 · 🔵 5 = 8 条；🔴 零；doc 面滞后与其余项均为 report-only / advisory）。
+- **修复轮 1（评审后落修 3 项 · 全在测试面）**：① ② 扫描域改为「本批模块 ∪ 缝定义档」派生（fail-closed 同源）；② ① 命名闭环扩 `set[A-Z]` + 登记 `setWaitForConditionSource`（`tools/ops.mjs:129`）；③ 增结构机检③（执行面单点）。
+- **轮 2 = pass**：9 行复核——修复 3 项**实读为真**；doc 面滞后（1/2/3/7）非阻断留档；**新增 1 条 🔵**（`test/write-path.test.mjs` 顶格 300 行——再加 1 行即触 core-hygiene 红线，advisory）；**修复未引入新问题**（③ 判据对现档零命中）。
+- **裁决表（9 行）**：Fixed 4（#4 扫描域 / #5 命名闭环 / #6 结构机检③ / #7 机制差登记——落本表决策 2）· Deferred 4（#1 #2 设计档收正归设计面 · #3 verify 缝位裁定属 S2 前 · #9 顶格 advisory 留待下次动档）· Not an issue 1（#8 >300 在册不重开）。**终态 0 未决 🔴。**
+- **轮次自证**：审计 1 轮 + advisor 2 轮 + 修复轮 1。
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **设计档三组滞后收正**（§2.13.4 位列 / §2.13.6 计数 / §2.13.3 注入位表 / §2.13.5 补正清单 + 读数改判）——归设计面；其中 **copy 扩面登记 = 设计面补正轮 2「未决 2」预告项**（本段即其落轮，按本段读数收正）。
+2. **#96 信息段缝位 + 入参口径**（阻塞三态含段 vs VSC 现形不含；`codeFiles` vs `files`）与 **copy src 面同过门禁**——S2 接线前须定（建议随 §2.13.5 补正清单一并入册）。
+3. **执行面覆盖边界**：`git/checkpoint.mjs` · `tools/shared.mjs` · `tools/git.mjs` · `tools/bash.mjs` · `tools/patch.mjs` 等仍直调 `execFileSync` / `spawn`——#61/#63 只点名 linter / verify，其余属既定边界（如需全收另行裁定）。
+4. `test/write-path.test.mjs` 顶格 **300 行**（advisory——下次动该档时回压或按程序登记；同类贴近者 `agent-tools/verify.mjs` 295）。
+5. 审计 Q 项口径：Q1/Q2 并入未决 2 · Q3 并入未决 3 · Q4 限制登记（本段执行面读数 = 自跑；审计/评审席位无 shell 未独立复跑）。
+
+**轮次自证**：审计 1 轮 + advisor 2 轮 + 修复轮 1；K1/K2/K3 终态读数见上表；报告 ①–⑥ 见交付报告（父侧转呈）。
 
 ## §6 验证与收口（父代理）
 

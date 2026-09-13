@@ -31,6 +31,20 @@ function resolveBaseDir(cwd, workdir) {
   return resolve(cwd, workdir)
 }
 
+// ─── 审批门注入缝（#59——「只读判定 / 审批门按端注入」，形态参 §2.13.5 注入缝）────────
+/**
+ * 审批门注入位（**缺省不覆盖** = 无审批面：全部动作照常执行——CLI 语义，零行为变；端装配层
+ * 可覆盖为本端审批 / 只读判定。核内零端名分支（契约 5——本档只认 `gate` 函数名）。
+ * 契约：`gate(args, ctx) → string | null | Promise<同>`——非空字符串 = 拒执行（该串原样作为
+ * 工具结果返回）；null / undefined / 其他值 = 放行。每个 execute 恰问一次（workdir 归一后）。
+ */
+let injectedApproval = null
+export function configureGitApproval(impl) {
+  injectedApproval = impl && typeof impl.gate === "function" ? impl.gate : null
+}
+/** 撤销注入（测试与端装配生命周期用——缺省态 = 无审批门）。 */
+export function resetGitApproval() { injectedApproval = null }
+
 
 
 export const gitTool = {
@@ -77,6 +91,11 @@ export const gitTool = {
     // workdir: run git in a subdirectory (monorepo / multi-repo). Shadow ctx.cwd so
     // every action + snapshotBefore + checkpoint resolves against the workdir.
     if (args.workdir) ctx = { ...ctx, cwd: resolveBaseDir(ctx.cwd, args.workdir) }
+    // #59：审批门（端注入面）——缺省无门（CLI 语义）；非空字符串返回 ⇒ 拒执行。
+    if (injectedApproval) {
+      const refusal = await injectedApproval(args, ctx)
+      if (typeof refusal === "string" && refusal.length > 0) return refusal
+    }
     // git -c overrides (proxy etc.) — only network actions need them; passing to every
     // action would be harmless but noisy. cfgArgs stays [] for local ops.
     const cfgArgs = gitConfigArgs(args.config)

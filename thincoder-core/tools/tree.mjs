@@ -13,6 +13,20 @@ const DEFAULT_DEPTH = 3
 const SKIP_DIRS = new Set(["node_modules", "bin", "obj", "dist", "build", "coverage", "turbo", ".git", ".thincoder", ".vs", ".venv", "__pycache__", ".idea"])
 const BINARY_EXTS = new Set([".exe", ".dll", ".png", ".jpg", ".jpeg", ".gif", ".pdf", ".docx", ".xlsx", ".pptx", ".zip", ".7z", ".mp3", ".mp4", ".woff", ".woff2", ".ico"])
 
+// ─── cwd 归一注入缝（#56——「cwd 归一开关按端注入」，形态参 §2.13.5 注入缝）─────────
+/**
+ * 根路径解析注入位（**缺省不覆盖** = 核内 `resolveInCwd`——CLI 语义（realpath 归一），
+ * 零行为变；端装配层可覆盖为本端归一形态（如 join 式解析）。核内零端名分支（契约 5——
+ * 本档只认 `resolve` 函数名）。
+ * 契约：`resolve(ctx, p) → string`（p 缺省为 "."）。
+ */
+let injectedResolve = null
+export function configureTreeResolve(impl) {
+  injectedResolve = impl && typeof impl.resolve === "function" ? impl.resolve : null
+}
+/** 撤销注入（测试与端装配生命周期用——缺省态 = 核内 resolveInCwd）。 */
+export function resetTreeResolve() { injectedResolve = null }
+
 export const treeTool = {
   name: "tree",
   description: DESC("tree"),
@@ -26,7 +40,8 @@ export const treeTool = {
   },
   readonly: true,
   async execute(args, ctx) {
-    const root = resolveInCwd(ctx, args.path ?? ".")
+    // cwd 归一开关（#56）：注入面命中 ⇒ 端侧解析；缺省 = 核内 resolveInCwd（CLI 语义）。
+    const root = (injectedResolve ?? resolveInCwd)(ctx, args.path ?? ".")
     let st
     try { st = await stat(root) } catch { return `Error: directory not found: ${args.path ?? "."}` }
     if (!st.isDirectory()) return `Error: not a directory: ${args.path ?? "."}`

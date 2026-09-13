@@ -10,6 +10,7 @@
  */
 
 import { readFile, readdir, stat } from "node:fs/promises"
+import { readdirSync, readFileSync, statSync } from "node:fs"
 import { join } from "node:path"
 import { homedir } from "node:os"
 
@@ -149,5 +150,85 @@ export async function readSkill(cwd, name) {
     } catch { /* not found, try next directory */ }
   }
   
+  return null
+}
+
+// ─── 同步 loader 面（#88——「同步 loader 面按核内结构归一」）────────────────────────────
+// 语义与上方异步面**逐条同源**：同发现规则（扁平 `.md` + 子目录 `SKILL.md`）· 同排序
+// （localeCompare——前缀缓存要求确定性）· 同层级优先（项目层 → 用户层，按名去重）。
+// 端侧接核后若仍需同步面，直接用本面（不再自持副本——单一结构）。
+
+/** 同步版读取单个 skill 条目（描述提取规则同异步 tryReadSkill）。 */
+function tryReadSkillSync(name, filePath) {
+  try {
+    const s = statSync(filePath)
+    if (!s.isFile()) return null
+    const head = readFileSync(filePath, "utf8")
+    const body = head.slice(0, 400).split("\n")
+    let desc = ""
+    let inFrontmatter = false
+    for (const line of body) {
+      const t = line.trim()
+      if (t === "---") { inFrontmatter = !inFrontmatter; continue }
+      if (inFrontmatter) continue
+      if (t && !t.startsWith("#")) { desc = t.slice(0, 120); break }
+    }
+    return { name, path: filePath, description: desc || "(no description)" }
+  } catch {
+    return null
+  }
+}
+
+/** 同步版扫描单目录（Pass1 子目录 → Pass2 扁平；排序 / 去重规则同异步 loadSkillsFromDir）。 */
+function loadSkillsFromDirSync(dir) {
+  let entries
+  try {
+    entries = readdirSync(dir, { withFileTypes: true })
+    entries.sort((a, b) => a.name.localeCompare(b.name))
+  } catch {
+    return []
+  }
+  const skills = []
+  const added = new Set()
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue
+    if (!NAME_RE.test(entry.name)) continue
+    const skill = tryReadSkillSync(entry.name, join(dir, entry.name, "SKILL.md"))
+    if (skill) { skills.push(skill); added.add(entry.name) }
+  }
+
+  for (const entry of entries) {
+    if (!entry.isFile()) continue
+    const m = entry.name.match(/^([a-zA-Z0-9_-]+)\.md$/)
+    if (!m) continue
+    const name = m[1]
+    if (added.has(name)) continue
+    const skill = tryReadSkillSync(name, join(dir, entry.name))
+    if (skill) { skills.push(skill); added.add(name) }
+  }
+  return skills
+}
+
+/** 同步 loader（项目层优先 → 用户层；返回形态与异步 loadSkills 等价）。 */
+export function loadSkillsSync(cwd) {
+  const skills = loadSkillsFromDirSync(join(cwd, ".thincoder", "skills"))
+  const added = new Set(skills.map((s) => s.name))
+  for (const skill of loadSkillsFromDirSync(join(homedir(), ".thincoder", "skills"))) {
+    if (!added.has(skill.name)) { skills.push(skill); added.add(skill.name) }
+  }
+  return skills
+}
+
+/** 同步 readSkill（name 校验 + `name/SKILL.md` → `name.md`，项目层 → 用户层——同异步）。 */
+export function readSkillSync(cwd, name) {
+  if (!NAME_RE.test(name)) return null
+  for (const baseDir of [join(cwd, ".thincoder", "skills"), join(homedir(), ".thincoder", "skills")]) {
+    for (const filePath of [join(baseDir, name, "SKILL.md"), join(baseDir, `${name}.md`)]) {
+      try {
+        if (statSync(filePath).isFile()) return readFileSync(filePath, "utf8")
+      } catch { /* try the next candidate */ }
+    }
+  }
   return null
 }

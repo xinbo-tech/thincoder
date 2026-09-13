@@ -70,6 +70,20 @@ function killProcessTree(child) {
     try { child.kill("SIGKILL") } catch {}
   }
 }
+export { killProcessTree }
+
+// ─── 树杀注入缝（#57——「树杀实现按端注入」，形态参 §2.13.5 注入缝）───────────────
+/**
+ * 超时 / abort 树杀注入位（**缺省不覆盖** = 核内 `killProcessTree`——CLI 语义，零行为变；
+ * 端装配层可覆盖为本端树杀实现）。核内零端名分支（契约 5——本档只认 `killTree` 函数名）。
+ * 契约：`killTree(child) → void`（尽力而为——调用点已包 try/catch，抛错不阻断收尾）。
+ */
+let injectedKill = null
+export function configureProcessTreeKill(impl) {
+  injectedKill = impl && typeof impl.killTree === "function" ? impl.killTree : null
+}
+/** 撤销注入（测试与端装配生命周期用——缺省态 = 核内 killProcessTree）。 */
+export function resetProcessTreeKill() { injectedKill = null }
 
 /** Spawn node with the given args, capture stdout/stderr, enforce timeout/abort.
  *  Resolves { text, ok } — ok=false on non-zero exit / timeout / abort. */
@@ -100,8 +114,9 @@ function runNode(childArgs, baseDir, timeoutMs, signal) {
       resolvePromise({ text, ok })
     }
     // Tree kill（SIGKILL/taskkill /T——signal-trapping 脚本躲不开 watchdog；孙进程持管道
-    // 时直接 kill 不达——close 不触发拖到 kick——2026-09-05 advisor 🟡#4 对齐 bash/verify）
-    const kill = () => { killProcessTree(child) }
+    // 时直接 kill 不达——close 不触发拖到 kick——2026-09-05 advisor 🟡#4 对齐 bash/verify）。
+    // #57：树杀实现按端注入（缺省 = 核内 killProcessTree）；注入实现抛错不阻断收尾（尽力而为）。
+    const kill = () => { try { (injectedKill ?? killProcessTree)(child) } catch { /* kill is best-effort */ } }
     // After kill, wait for "close" (child fully reaped) before settling — settling
     // early races the caller deleting the cwd dir while the child still holds it.
     const armKick = () => { kickTimer = setTimeout(() => settle(mode === "abort" ? "(stopped)" : timeoutErrorText(timeoutMs), false), 3000) }

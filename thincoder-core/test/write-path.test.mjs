@@ -1,15 +1,12 @@
 /**
  * write-path.test.mjs — 单一写路径点机检（CORE-UNIFICATION §2.13.5 验收 ①②）。
  *
- * 行为面（双夹具——§2.13.5 验收 ①）：
- *   夹具一 = 假注入面（`configureWritePath`）驱动**全部 8 个写点** ⇒ 每个写点都经过注入面
- *            （openDoc 计数 = 写点数 8 + file_ops 的 **dest 面 1** = 9；内容写点 applyEdit
- *            计数 = 6）且落盘 = 交给注入面的字节；
- *   夹具二 = `resetWritePath()`（不注入）⇒ 回默认 fs 径，**产物与夹具一逐字节同**。
- * 结构面（§2.13.5 验收 ②）：8 个写点所在档零直调 `writeFile`；`tools/**` 的 `writeFile` /
- *   `writeFileSync` 调用点只许出现在单一写路径点 `tools/write-path.mjs`（白名单 1 档）。
- *   另有 `checklist-sync.mjs` 一档已登记豁免（见测试内注释——任务书「白名单 1 档」的字面形
- *   在本仓不可满足，理由与口径写在交付报告 / 批次档 §5）。
+ * 行为面（双夹具）：夹具一 = 假注入面（`configureWritePath`）驱动**全部 8 个写点** ⇒
+ * openDoc / isDirty = 11（写点 src 面 9 + file_ops dest 面 2）· applyEdit = 6 · 落盘 = 交给
+ * 注入面的字节；夹具二 = `resetWritePath()` ⇒ 回默认 fs 径，**产物与夹具一逐字节同**。
+ * 结构面：8 个写点所在档零直调 `writeFile`；`tools/**` 写 API 只许出现在单一写路径点
+ * `tools/write-path.mjs`（白名单 1 档 + `checklist-sync.mjs` 一档已登记豁免——口径与理由见
+ * 测试内注释 / 交付报告；任务书「白名单 1 档」的字面形在本仓不可满足）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
@@ -69,6 +66,9 @@ async function driveAllWritePoints(dir) {
   // ⑧ file_ops（move）
   writeFileSync(join(dir, "mv.txt"), "mv\n", "utf8")
   results.push(await fileOpsTool.execute({ action: "move", source: "mv.txt", dest: "mv2.txt" }, ctx))
+  // ⑨ file_ops（copy）——dest 面门禁扩面（copy 覆 dest，同过门禁）
+  writeFileSync(join(dir, "cp.txt"), "cp\n", "utf8")
+  results.push(await fileOpsTool.execute({ action: "copy", source: "cp.txt", dest: "cp2.txt" }, ctx))
   return results
 }
 
@@ -87,15 +87,15 @@ async function withTempDir(fn) {
   try { return await fn(dir) } finally { rmSync(dir, { recursive: true, force: true }) }
 }
 
-test("§2.13.5 验收①·夹具一（注入面）：8 个写点全经过注入面——openDoc 计数 = 9（8 写点 + file_ops dest 面）· 内容写点 applyEdit 计数 = 6", async () => {
+test("§2.13.5 验收①·夹具一（注入面）：openDoc / isDirty 计数 = 11（8 写点 src 面 + file_ops dest 面）· 内容写点 applyEdit 计数 = 6", async () => {
   await withTempDir(async (dir) => {
     const { impl, calls } = fakeInjection()
     configureWritePath(impl)
     try {
       await driveAllWritePoints(dir)
-      // 父侧裁定补丁（file_ops dest 面）：move 的 src 面 + dest 面各问一次 openDoc ⇒ 8 + 1 = 9。
-      assert.equal(calls.openDoc.length, 9, `8 个写点 + file_ops dest 面 1 ⇒ openDoc 恰 9 次（实读 ${calls.openDoc.length}）`)
-      assert.equal(calls.isDirty.length, 9, "有 doc ⇒ 每面（写点 src + file_ops dest）都过脏缓冲门禁")
+      // 补丁（file_ops dest 面 + copy 扩面）：src 面 9（8 写点 + copy src）+ dest 面 2（move / copy）⇒ 11。
+      assert.equal(calls.openDoc.length, 11, `8 写点 src 面 + move/copy 的 dest 面 ⇒ openDoc 恰 11 次（实读 ${calls.openDoc.length}）`)
+      assert.equal(calls.isDirty.length, 11, "有 doc ⇒ 每面（写点 src + file_ops move/copy 的 src/dest）都过脏缓冲门禁")
       assert.equal(calls.applyEdit.length, 6, "内容写点 6 个 ⇒ applyEdit 6 次（delete / file_ops 无端侧载体）")
       // 落盘 = 交给注入面的字节（编辑器径是真的落了盘）
       assert.equal(readFileSync(join(dir, "w.txt"), "utf8"), "alpha\nbeta\n")
@@ -103,10 +103,12 @@ test("§2.13.5 验收①·夹具一（注入面）：8 个写点全经过注入�
       assert.equal(readFileSync(join(dir, "h.txt"), "utf8"), "x\nY\nz\n")
       assert.equal(readFileSync(join(dir, "e.txt"), "utf8"), "k1\nK2b\n")
       assert.equal(readFileSync(join(dir, "p.txt"), "utf8"), "one\ntwo\n")
-      // delete / file_ops 走门禁后回默认径
+      // delete / file_ops 走门禁后回默认径；copy：源档保留、目标为副本
       assert.equal(existsSync(join(dir, "d.txt")), false)
       assert.equal(existsSync(join(dir, "mv.txt")), false)
       assert.equal(readFileSync(join(dir, "mv2.txt"), "utf8"), "mv\n")
+      assert.equal(readFileSync(join(dir, "cp.txt"), "utf8"), "cp\n")
+      assert.equal(readFileSync(join(dir, "cp2.txt"), "utf8"), "cp\n")
       // 无暂存档残留（内容写点全部即时提交）
       assert.equal(existsSync(join(dir, "p.txt" + TMP_SUFFIX)), false)
     } finally { resetWritePath() }
@@ -129,7 +131,7 @@ test("§2.13.5 验收①·夹具二（不注入）：回默认 fs 径，产物�
   })
 })
 
-test("§2.13.5 门禁（dest 面补丁）：move/rename 覆盖「打开且脏」的目标档 ⇒ 拒写；src 未打开不豁免 dest 门", async () => {
+test("§2.13.5 门禁（dest 面补丁）：move/rename/copy 覆盖「打开且脏」的目标档 ⇒ 拒写；src 未打开不豁免 dest 门", async () => {
   await withTempDir(async (dir) => {
     const src = join(dir, "src.txt"), dst = join(dir, "dst.txt")
     writeFileSync(src, "S\n", "utf8")
@@ -152,16 +154,25 @@ test("§2.13.5 门禁（dest 面补丁）：move/rename 覆盖「打开且脏」
         () => fileOpsTool.execute({ action: "rename", source: "src.txt", dest: "dst.txt" }, CTX(dir)),
         /unsaved changes in the editor/,
       )
-      assert.equal(readFileSync(src, "utf8"), "S\n")
-      assert.equal(readFileSync(dst, "utf8"), "D\n")
+      assert.equal(readFileSync(src, "utf8"), "S\n"); assert.equal(readFileSync(dst, "utf8"), "D\n")
+      // copy 同族（dest 面扩面——copy 覆 dest）——dest 脏 ⇒ 同拒；源档不受影响。
+      await assert.rejects(
+        () => fileOpsTool.execute({ action: "copy", source: "src.txt", dest: "dst.txt" }, CTX(dir)),
+        /unsaved changes in the editor/,
+      )
+      assert.equal(readFileSync(src, "utf8"), "S\n"); assert.equal(readFileSync(dst, "utf8"), "D\n", "拒拷 ⇒ 双档不变")
     } finally { resetWritePath() }
 
-    // 对照：dest 未打开（openDoc null）⇒ 门禁放行、默认径照常 move（补丁不误伤正常路径）。
+    // 对照：dest 未打开（openDoc null）⇒ 门禁放行、默认径照常 move / copy（补丁不误伤正常路径）。
     configureWritePath({ openDoc: () => null, isDirty: () => { throw new Error("isDirty must not run") }, applyEdit: async () => {} })
     try {
       await fileOpsTool.execute({ action: "move", source: "src.txt", dest: "dst2.txt" }, CTX(dir))
       assert.equal(existsSync(src), false, "放行 ⇒ 正常移动")
       assert.equal(readFileSync(join(dir, "dst2.txt"), "utf8"), "S\n")
+      // copy 放行对照：新源档 ⇒ 复制成功、源档保留（copy 不移动）。
+      writeFileSync(join(dir, "cp.txt"), "C\n", "utf8")
+      await fileOpsTool.execute({ action: "copy", source: "cp.txt", dest: "cp2.txt" }, CTX(dir))
+      assert.equal(readFileSync(join(dir, "cp.txt"), "utf8"), "C\n"); assert.equal(readFileSync(join(dir, "cp2.txt"), "utf8"), "C\n", "源档保留")
     } finally { resetWritePath() }
   })
 })

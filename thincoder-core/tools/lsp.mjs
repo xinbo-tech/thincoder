@@ -19,6 +19,20 @@ import { existsSync, readFileSync } from "node:fs"
 import { join, extname } from "node:path"
 import { DESC } from "./shared.mjs"
 
+// ─── 宿主语言服务径注入缝（#66——「宿主语言服务径按端注入」，形态参 §2.13.5 注入缝）──────
+/**
+ * 宿主语言服务桥注入位（**缺省不覆盖** = 核内 JSON-RPC over stdio 径——CLI 语义，零行为变；
+ * 端装配层可覆盖为宿主语言服务径）。核内零端名分支（契约 5——本档只认 `handle` 函数名）。
+ * 契约：`handle(args, ctx) → string | null | undefined | Promise<同>`——null / undefined =
+ * 未处理 ⇒ 回核内径（其余返回值为该次调用的工具结果）。
+ */
+let injectedHost = null
+export function configureLspHost(impl) {
+  injectedHost = impl && typeof impl.handle === "function" ? impl.handle : null
+}
+/** 撤销注入（测试与端装配生命周期用——缺省态 = 核内 JSON-RPC 径）。 */
+export function resetLspHost() { injectedHost = null }
+
 // ---- JSON-RPC transport over stdio ----
 
 /** Send a JSON-RPC request to the server via stdin */
@@ -217,6 +231,11 @@ export const lspTool = {
     const filePath = args.uri
 
     try {
+      // 宿主语言服务径（#66）：注入面命中（非 null/undefined）⇒ 以其返回值为准；未处理回核内径。
+      if (injectedHost) {
+        const out = await injectedHost(args, ctx)
+        if (out !== null && out !== undefined) return out
+      }
       const entry = await getServer(cwd, filePath, config)
       if (!entry) {
         const ext = extname(filePath).toLowerCase()
