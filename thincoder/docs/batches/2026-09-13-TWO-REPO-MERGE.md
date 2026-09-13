@@ -442,7 +442,9 @@ Added dir 'thincoder-vscode'
 
 **切点与定名依据**（实施批定案——设计档 §2.14 委托）：
 - 预设面「入口 / 域驱动 / 报告」∥「判据核（抽取与判定）」按**脚本实际结构**落为 2–4 档/族：check-doc-width / check-ledger 单档两分；doc-anchors 族 = 两引擎一体（V5 + VSC 共 679 行）需 ≥3 档 ⇒ 按引擎切（v5 / core）+ 采集面独立成档（targets）。
-- **两条既有测试锚点钉死切点**（测试零改——「全部既有测试全绿」）：① VSC `test/doc-anchors.test.mjs:124-127` 扫 `scripts/*.mjs`：`export function evidenceState` 须**恰在 `check-ledger.mjs`**，且 `doc-anchors-core.mjs` 逐字含 `import { evidenceState } from "./check-ledger.mjs"` ⇒ evidenceState 与 checkLedger 判据核分居两档；② VSC `test/doc-consistency.test.mjs:207-214`（T-MA8-2）逐字要求 `check-doc-width.mjs` 含 `const widthHits = checkDocWidths(...)` + `if (l.length > max && !isTableRow(l))`，且 `const isMain` 后零 `length > maxW` ⇒ 宽度判据与主行程同档。
+- **两条既有测试锚点钉死切点**（测试零改——「全部既有测试全绿」）：① VSC `test/doc-anchors.test.mjs:124-127` 扫 `scripts/*.mjs`：
+  `export function evidenceState` 须**恰在 `check-ledger.mjs`**，且 `doc-anchors-core.mjs` 逐字含 `import { evidenceState } from "./check-ledger.mjs"` ⇒ evidenceState 与 checkLedger 判据核分居两档；
+  ② VSC `test/doc-consistency.test.mjs:207-214`（T-MA8-2）逐字要求 `check-doc-width.mjs` 含 `const widthHits = checkDocWidths(...)` + `if (l.length > max && !isTableRow(l))`，且 `const isMain` 后零 `length > maxW` ⇒ 宽度判据与主行程同档。
 - **单源纪律**：判据 / 常量零复制——新档间以显式 import + re-export 维系（入口档 `export *` ⇒ 对外导入面不变；四档对外导出名零改，两产品测试档与 `doc-impact.mjs` / `reconcile-lookup.mjs` 零改动即接线）。`check-ledger.mjs ↔ check-ledger-core.mjs` 为**双向 import**（测试锚点所迫：evidenceState 钉在入口档、checkLedger 判据核需用）——模块级仅函数调用、无顶层求值依赖，Node ESM 求值安全（实跑全链验证）。
 
 #### 二、台账机检默认清单改指（②）
@@ -470,7 +472,8 @@ Added dir 'thincoder-vscode'
 
 #### 五、内部审计（补记 · 2026-09-13）
 
-- **内部 explore 审计 1 轮**（read-only 偏差审计，射程 = 本轮 8 档 + 上列验收标准）：**VERDICT clean**——四类偏差（半成品验收项 / 静默简化 / 文档漂移 / 越清单改动）均未发现。已核：8 档行数与语法 · `check-doc-width` T-MA8-2 三处逐字钉点（含「`const isMain` 后零 `length > maxW`」）· `evidenceState` 恰在 `check-ledger.mjs` 且 `doc-anchors-core.mjs` 含逐字导入（双向 import 顶层无求值依赖——静态安全）· 全消费者（`doc-impact.mjs` / `reconcile-lookup.mjs` / 两产品测试档）import 面全解析 · 单仓台账两路径 + SKIP 零行结构核验。
+- **内部 explore 审计 1 轮**（read-only 偏差审计，射程 = 本轮 8 档 + 上列验收标准）：**VERDICT clean**——四类偏差（半成品验收项 / 静默简化 / 文档漂移 / 越清单改动）均未发现。
+  已核：8 档行数与语法 · `check-doc-width` T-MA8-2 三处逐字钉点（含「`const isMain` 后零 `length > maxW`」）· `evidenceState` 恰在 `check-ledger.mjs` 且 `doc-anchors-core.mjs` 含逐字导入（双向 import 顶层无求值依赖——静态安全）· 全消费者（`doc-impact.mjs` / `reconcile-lookup.mjs` / 两产品测试档）import 面全解析 · 单仓台账两路径 + SKIP 零行结构核验。
 - **内部 advisor 代码评审未跑**（父侧预算指令「先提交、再报告」，优先保障交付不丢）；语义零改的替代证据 = 全域输出逐数一致（改前 = 改后：8741 / 0 / 773 + 41 / 6 / 22-0-19）+ 两产品全链复跑 + 受影响测试档直跑（含 slow）。
 - 审计附注（非偏差）：`check-doc-width.mjs` CLI 起点的 `widthFiles` + `checkDocWidths` 两次域扫描为**既有结构**（原档逐字保留，非本轮引入；`widthFiles` 仅服务「N 文件」计数）；如需收敛归后续批。
 
