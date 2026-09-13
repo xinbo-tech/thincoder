@@ -17,10 +17,11 @@
 
 
 
-## 技术待办（2 条）
+## 技术待办（3 条）
 
 - [ ] **文档↔实装漂移（类）：设计/需求档「事实句」落后于代码/测试现态**（2026-09-12 LEDGER 批串行排查暴露；当晚已清 250+ 处）→ 证据：`docs/design/ADVISOR-CONVERGENCE.md:766`（citations grep 断言面无本批段删承载）· `:913`（同族）· `docs/design/ENGINEERING-MODE.md:2221`（AC76 子串族）· `docs/design/TURN-CAP-CONTINUE.md:159` · `docs/design/ACP-CLIENT.md:435`；另见 `ADVISOR-CONVERGENCE` §14 族 / `ledger-surface` T106 面（2026-09-12 批档 §2 各轮列报）· 消解路径 = 专项「文档↔实装对账」轮（逐档逐句：事实句 ↔ 现代码/现测试）· **触发=条件（该面下次被触碰时 / 下批收口前）**
 - [ ] **`:N/:M` 多坐标形态不入 V5 射程**（DOC-CODE-RECONCILE 批外审遗留 · 2026-09-13）：`file.ext:54/:103` 类**多坐标尾**——抽取式只覆盖 `:N` / `:N-M` ⇒ 该形态不可见（无既知实例）· 证据 `scripts/doc-anchors.mjs:37`（坐标组覆盖面）· 消解路径 = 判据句扩 + 复跑（同批 `:N-M` 扩法）+ 判别夹具 · **触发=条件（该面下次被触碰时）**
+- [ ] **`doc-consistency` 探针路径写死 → 并发测试互踩（发版门实测暴露）**（2026-09-13 `npm publish` 时 prepublishOnly 全量门报 `ENOENT: docs/design/_doc-consistency-probe.md`）：本目录**另一活跃实例**同时跑同一套测试抢同一探针路径（单跑即绿、快层 611/552/0 复核通过）· 证据 `test/doc-consistency.test.mjs:41`（`PROBE` 常量）· `:160`（v2 判据）· `:167`（清理）· 消解路径 = 探针名带进程唯一标识（`process.pid`）或改系统临时目录 · **触发=条件（该档下次被触碰时）**
 
 ---
 
