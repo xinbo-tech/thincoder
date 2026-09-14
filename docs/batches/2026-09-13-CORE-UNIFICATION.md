@@ -4377,5 +4377,98 @@ CLI 三加载根 + 入口（L1–L7）：
 
 **轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 1；A1–A6 终态读数见上表；终态 = **clean**；报告 ①–⑧ 见交付报告（父侧转呈）。
 
+### 实施：S2 U3 —— TRACES 单元落轮（2026-09-14 · eng-coder）——**终态 = clean**
+
+> ⚠️ **父侧代写标记**：本段为 **eng-coder 交付原文**（运行至轮次上限 ✗、正式报告未产出 ✓）；其 §5 落在临时草稿 `docs/batches/U3-TMP-DRAFT.md` ✓ ⇒ 父侧**原样迁入**（零改写 ✗）+ 删草稿 ✓。
+
+**段位**：当前段 = **S2（CLI 迁移单元 U3）**。写域 = CLI 侧（3 档改指 + 1 档删旧 + 1 档测试改判 + 1 档文档锚改指）；**VSC 零触碰**；核内零改动（`git status` 自证）；未 commit（父侧统一单笔）；未碰台账；产品设计档只做锚改指（零语义改写——语义收正归 eng-designer）。
+
+**依据** = `docs/design/CORE-UNIFICATION.md` §2.6.3（U3 行 `:712` +（四）四步与共同验收 `:910-924` +（七）进度计数）+ §2.6.2（三）（五）（六）+ `docs/design/TRACES.md` §3.1 A21（已裁 2026-09-13 · 按建议 = 完整落盘 + 每写 prune）；父侧 U3 任务书。
+
+**改动面**（行数 = `wc -l` 口径实核；改前 = HEAD）
+
+| # | 档 | 行数（改前 → 改后） | 改动 |
+|---|---|---|---|
+| 1 | `thincoder-cli/src/provider/core.mjs` | 476 → 476 | `:12` 改指核子路径 |
+| 2 | `thincoder-cli/bin/thincoder.mjs` | 421 → 421 | `:20` 改指核子路径（`cleanupTraces`） |
+| 3 | `thincoder-cli/test/trace-bounds.test.mjs` | 141 → **122** | 改指 + 三用例改判 + 头注（−19 行） |
+| 4 | `thincoder-cli/src/traces/trace-store.mjs`（删） | 355 → 删空 | **删档**；空目录 `src/traces/` 同批移除 |
+| 5 | `thincoder-cli/docs/design/AGENT-LOOP.md` | 1785 → 1785 | 4 行锚改指（±0） |
+
+**① 逐处「改前 → 改后」**（坐标 = 终态）
+
+| # | 位置 | 改前 → 改后 |
+|---|---|---|
+| 1 | `src/provider/core.mjs:12` | `from "../traces/trace-store.mjs"` → `from "@thincoder/core/traces/trace-store.mjs"` |
+| 2 | `bin/thincoder.mjs:20` | `from "../src/traces/trace-store.mjs"` → `from "@thincoder/core/traces/trace-store.mjs"` |
+| 3 | `test/trace-bounds.test.mjs:17` | 8 名导入 → 4 名导入（`recordChatTrace` / `nextTraceSeq` / `_traceHooks` / `_resetTraceStateForTest`）· 来源 = 核子路径 |
+| 4 | `test/trace-bounds.test.mjs:86`（T-TR2） | 「单消息额度（≤64K+标记 · 首尾保真）」→「完整落盘（1MB 逐字等值——A21）」 |
+| 5 | `test/trace-bounds.test.mjs:93`（T-TR3） | 「单记录额度（stub+标记+计数）」→「完整落盘（100 条逐条保留 · 首尾逐字——A21）」 |
+| 6 | `test/trace-bounds.test.mjs:105`（T-TR4） | 「在途上界（≤8 · 丢弃 12 · 饱和行 1）」→「零丢弃（20 连发 → 20 文件全落盘——A21）」 |
+| 7 | `test/trace-bounds.test.mjs:5-6`（头注） | 「慢写/readdir 计数经 `_traceHooks` 注入缝」→「readdir 计数经 `_traceHooks` 注入缝（慢写替身随 A21 改判退场）」（评审落修） |
+| 8–11 | `docs/design/AGENT-LOOP.md` `:704` / `:1650` / `:1651` / `:1747` | 旧 `src/traces/trace-store.mjs` 形式 → `thincoder-core/traces/trace-store.mjs`（纯路径替换） |
+
+测试改判口径（A1）：T-TR1/T-TR5 语义零变（仅改来源）；T-TR2/3/4 = **语义反转的强断言**（等值 / 计数——非删除非弱化），逐条对 A21（CLI 超大轨迹不再缺内容 + 清理策略随核）。
+核档行为参照（零改动）：`thincoder-core/traces/trace-store.mjs`（完整落盘 `:22-24` · 每写 prune `:266-269` · 改判四符号导出在位）。
+
+**② 删旧三条读数（删前全过才删）**
+
+1. **改指已落盘**：3 处终态复核（见 ③A2 反向判）——0 违规。
+2. **该产品全链 exit 0（删前预跑）**：`npm test` 609/552/0/57 · `lint` 310 · `test:full` 609/609 · `integration` 25/25（均 exit 0）。
+3. **零引用反向判**（域 = `src` + `test` + `bin`；待删档本体排除；305 档全递归）：模式① 引号相对路径形 = **0 命中**；模式② 路径 token 反向判 = **0 违规**（4 条合规核 token；零裸名散文）。删后复扫同读数（0 / 0）。
+   **删后中间态**：`doc-anchors --domain thincoder-cli` = **4 悬空**（1 档 4 行，全部 `AGENT-LOOP.md`）→ 逐处改指 → **0**。
+
+**③ A1–A6 读数（终态复跑 · 原样）**
+
+| # | 判据 | 读数 | 判 |
+|---|---|---|---|
+| A1 | CLI 全链 | `npm test`：tests **609** · suites 4 · pass **552** · fail **0** · skipped **57** · exit 0；`lint`：check-syntax **309 file(s) OK**（310 − 1 删档，唯一面内差）；`test:full`：**609/609** · fail 0 · exit 0；`test:integration`：**25/25** · fail 0 · exit 0——面内改判 = T-TR2/3/4 语义反转（逐条见 ①），未涉面逐数不变 | ✓ |
+| A2 | 零引用 | 反向判两式 **0 / 0**（域 `src`+`test`+`bin` 305 档）；运行面 = 全链 exit 0；锚面 = 悬空 0 | ✓ |
+| A3 | 文档锚 | `doc-anchors --domain thincoder-cli`：候选 **8870** · 悬空 **0** · 注记豁免 878 · `OK(V5)` exit 0 | ✓ |
+| A4 | 核回归 | `node --test`（cwd = `thincoder-core/`）= **173/173** · fail 0 · exit 0（承 U2 落轮基线）；核内零改动（`git status` 自证） | ✓ |
+| A5 | 仓根三机检 | `doc-anchors`（全域）：域一 候选 2219 · 悬空 0；域二 候选 8870 · 悬空 0；VSC 域报告态 5 命中（预存）· exit 0。`check-doc-width`：**306 档无 >300 字符行** · V1/V2/V3 新增违规 0 · exit 0（§5 写入后复跑读数见段末）。`check-ledger`：0 违规 · exit 0 | ✓ |
+| A6 | 链接 L1 | `npm ls @thincoder/core --json` **exit 0** · version **0.1.0**（resolved `file:../../../thincoder-core`）；版本探针 = `recordChatTrace`/`cleanupTraces` 函数在位 · `_traceStoreStats` 零导出（核实现自证） | ✓ |
+| 专项 | 裁决落实 | 容量 / 清理 = A21（核档完整落盘 + 每写 prune）；`traces.enabled` 默认 false 未动（`src/config.mjs:109`）⇒ 默认关 · 未涉面零变 | ✓ |
+
+**进度计数（设计 §2.6.3（七）① · 可复跑命令）**：**CLI 待迁 = 128**（129 − 1）——单调递减成立。
+**工作树**：本笔 5 项（3 M + 1 D + 1 M docs）+ 1 项预存（`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`——spawn 前已在，非本笔）；未 commit。
+
+**④ 内部轮（发现与处置）**
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **DIVERGENT**——「部分实现 / 静默简化 / 越清单改动」未命中；命中文档漂移 🟡×2 + QUESTION ×6。
+- **审计命中处置**：① `AGENT-LOOP.md` §23 旧容量语义叙述 → **不改**（归设计面语义收正；登记未决 1）；② `AGENTS.md:55` 模块表滞留 → **不改**（U1 未决 1 同型；登记未决 2）；QUESTION 1（test `:69` 陈旧注释）→ **已修**；Q2–Q5 → 登记；Q6 = 审计任务书路径伪影（非发现）。
+  审计限制如实登记（该席位无 shell / 无 git / 不可执行 ⇒ 读数类未独立复跑）。
+- **advisor 代码评审 1 轮**（`type=code` · 阻塞）：**pass**（🔴 **0** · 🟡 1（可选非 must-fix）· 🔵 2）。
+- **裁决表**：🟡#1 两档超 300 软线（`bin/thincoder.mjs` 421 · `src/provider/core.mjs` 476——既有在册债务、行内替换结构零变）→ **Not an issue**（R3 不复议；零动作）；🔵#2 头注「慢写」陈旧 → **Fixed**（`test/trace-bounds.test.mjs:5-6` 订正 + 复跑）；🔵#3「每写 prune」无用例覆盖 → **Deferred**（非 U3 验收项；登记未决 7）。
+  **引证核验附注**：host 核验器报 2 条引证 mismatch——经复读复核 = **核验器 artifact**（承 U1/U2 同型附注）。
+- **轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 1；终态 **0 未决 🔴 → clean**。
+
+**⑤ 复跑波动如实登记（flake · 非本单元引入）**：`npm test` 复跑 9 次——3 次报 `fail 1`（pass 551；改前 1 · 改后 2），重跑均绿；终态 = 609/552/0/57 · exit 0。
+根因（改后一次实核捕获）＝ prompt 面测试交互竞态：`test/prompts-async-guidance.test.mjs:118` 置空核包唯一副本 `common.md`（`:125` 恢复），与 `test/prompts-dual-source.test.mjs:76/:83` 的读盘断言在 `--test-concurrency=6` 下竞争。
+该夹具问题 = U2 未决 2（「置空核包唯一副本」）；U3 零触碰 prompt 面 ⇒ **非本单元引入**；随 U2 未决 2 一并处置（设计面）。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 改指目标形态 = `@thincoder/core/traces/trace-store.mjs`（子路径直连） | §2.6.2（三）2「一律带子路径」；核 `exports` `./*` + `files` 含 `traces/` |
+| 2 | 测试改判 = 保留用例 id、**语义反转**（非删除） | A1「面内用例按裁决改判」；用例号锚保持可解析；备选 = 删用例（丢覆盖面 + 造锚悬空） |
+| 3 | T-TR4 改判形态 = 直发 20 条 → 文件计数 | 核实现零在途计数导出 ⇒ 唯一可观察面 = 落盘结果 |
+| 4 | 删前全链**预跑一轮**（四命令） | §2.6.3（四）2 字面执行（承 U1 决策 3） |
+| 5 | 文档锚 = 纯路径替换 | §2.6.2（六）CLI 域形态 + U1 先例；4 悬空 → 0 自证 |
+| 6 | 空目录 `src/traces/` 同批移除 | U2 先例；git 不跟踪空目录 |
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **文档语义收正（设计面 · eng-designer）**：`AGENT-LOOP.md` §13 `:700-705` 与 §23（`:1650-1651` · §23.5 `:1747`）仍叙已作废的「额度截断 / 在途丢弃」容量语义（与 A21 + 核档 `:22-24` 相抵）。另：设计档 §2.6.3 U3 行专项验收措辞「取并集」与 A21「取一侧」相抵（父侧簿记项）。
+2. **模块地图滞留（文档面）**：`thincoder-cli/AGENTS.md:55` 仍列 `src/traces/`（已删）；U1 未决 1 同型。
+3. **CLI 需求档滞后（需求面）**：`docs/requirements/AGENT-LOOP.md` F-O4 / F-O5 / N-O3 仍要求截断/丢弃——随需求档修订轮同步。
+4. **`已迁（<单元>）` 标记**：全库零命中（§2.6 判据 1 要求）。
+5. **（七）② 计数命令失效（工具面）**：`scripts/mirror-divergence.mjs` 在 `thincoder-cli/src/prompts` 不存在时报 `ENOENT`（U2 删档副作用）——归设计面 / 工具面。
+6. **叙事面残留（射程外）**：`src/agent.mjs:241/244` 裸词；VSC `src/traces/trace-store.mjs:4` 头注指 CLI 旧路径（VSC 轮面）。
+7. **每写 prune 覆盖缺口**（评审 🔵#3）：核档 `:266-269` 的写后 prune 两级测试面零断言——随轨迹面下次触碰补。
+
+**轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 1；A1–A6 终态读数见上表；终态 = **clean**。
+
 ## §6 验证与收口（父代理）
 

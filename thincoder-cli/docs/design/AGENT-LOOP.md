@@ -701,7 +701,7 @@ byte-identical 相关机械比对断言/同步脚本全部清理；**内容断�
 （消息内容/推理/工具参数串 > `TRACE_MESSAGE_MAX_CHARS` 64K → 头 16K + 中段标记 + 尾 48K；单记录
 > `TRACE_RECORD_MAX_CHARS` 4M → `messages` 降 stub——元数据保留、标记可断言）——上方「完整轨迹 /
 reasoning 全文」表述按此限缩（**字段集不变**——F-O4）；写入代价形态（单遍序列化/在途上界/序号
-缓存）与常量单源见 §23.3.2；`src/traces/trace-store.mjs` 头注释同批同步（「大小不限/不截断」表述
+缓存）与常量单源见 §23.3.2；`thincoder-core/traces/trace-store.mjs` 头注释同批同步（「大小不限/不截断」表述
 作废——§23.5 登记）。
 
 ## 14. 会诊 / 飞刀完全异步化（R17）
@@ -1647,8 +1647,8 @@ BATCH-3 F-2 原始事故面（1.3MB 请求体）+ 交付偏差记录（`docs/des
 | 3 | 子代理人读线 `_fullHistory` 同主 agent：永不压缩、全量常驻（每个 child 一份） | `context.mjs:163-180` · 子代理创建 `subagent-spawn.mjs:332-340` |
 | 4 | 条目对 `entry.childAgent` 的引用**从不显式释放**（grep 阴性）——释放仅靠条目对象被回收 | `subagent-run.mjs:133` · `escalate-async.mjs:198`（绑定）；`subagent-run.mjs:184`（池）· `async-settle.mjs:47-50`（pending） |
 | 5 | 消化窗口：done-in-pool 驻留至回合尾收集/run 起始注入/挂起残差三消费点；挂起期（suspDriven）settled 留池等待消化 | `run-stages.mjs:233-239` · `agent.mjs:105-113` · `suspension-drive.mjs:283-289` · `run-stages.mjs:215-218/231` |
-| 6 | 轨迹存档：单次调用**整对象图深拷贝**（redactValue 递归复制容器）+ 独立 `JSON.stringify`（第二份全尺寸字符串），在途无上限（fire-and-forget 不 await、无队列/计数）；本机实测单记录 1.0–1.9MB、分钟级连发 | `trace-store.mjs:117-126` · `:157-177` · `:171` · `:188-196`；实测（本机 traces 目录） |
-| 7 | 序号分配每次同步扫目录（`existsSync` + `readdirSync`） | `trace-store.mjs:85-106` |
+| 6 | 轨迹存档：单次调用**整对象图深拷贝**（redactValue 递归复制容器）+ 独立 `JSON.stringify`（第二份全尺寸字符串），在途无上限（fire-and-forget 不 await、无队列/计数）；本机实测单记录 1.0–1.9MB、分钟级连发 | `thincoder-core/traces/trace-store.mjs:117-126` · `:157-177` · `:171` · `:188-196`；实测（本机 traces 目录） |
+| 7 | 序号分配每次同步扫目录（`existsSync` + `readdirSync`） | `thincoder-core/traces/trace-store.mjs:85-106` |
 
 ### 23.2 方案选型对比
 
@@ -1744,7 +1744,7 @@ BATCH-3 F-2 原始事故面（1.3MB 请求体）+ 交付偏差记录（`docs/des
 | `src/agent.mjs` | 414 | +6 | run 起始注入点调用释放 |
 | `src/tui/suspension-drive.mjs` | 298 | +4 | 挂起残差消费点调用释放 |
 | `src/agent-tools/escalate-async.mjs` | 290 | +2 | 注释锚（childAgent 语义面）+ 若有族特有消费点则补调 |
-| `src/traces/trace-store.mjs` | 225 | +55 → ~280 | 单遍序列化 + 双层额度 + 在途计数 + seqCache + **头注释同步**（「不截断」表述作废——§13 修订行；修正轮 #2） |
+| `thincoder-core/traces/trace-store.mjs` | 225 | +55 → ~280 | 单遍序列化 + 双层额度 + 在途计数 + seqCache + **头注释同步**（「不截断」表述作废——§13 修订行；修正轮 #2） |
 | `test/subagent-memory-bounds.test.mjs` | 新 | +130 ± 30 | T-SM1–T-SM4 |
 | `test/trace-bounds.test.mjs` | 新 | +130 ± 30 | T-TR1–T-TR5 |
 

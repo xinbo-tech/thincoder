@@ -1,19 +1,20 @@
 /**
  * trace-bounds.test.mjs — TUI-OOM-ROOTCAUSE 批 组 2（B2-trace——AGENT-LOOP.md §23.3.2）
- * 用例表 1:1：T-TR1–T-TR5（单遍序列化等价 / 单消息额度 / 单记录额度 / 在途上界 / 序号缓存）。
+ * 用例表 1:1：T-TR1–T-TR5（单遍序列化等价 / 完整落盘 / 序号缓存）。
  *
  * 形态：快层 unit——临时 THINCODER_TRACES_DIR（写门开启——NODE_TEST_CONTEXT 下需显式
- * override）；慢写/readdir 计数经 `_traceHooks` 注入缝。
+ * override）；readdir 计数经 `_traceHooks` 注入缝（慢写替身随 A21 改判退场）。
+ *
+ * U3（CORE-UNIFICATION §2.6.3）改判登记：实现单源归核（`@thincoder/core/traces/trace-store.mjs`——
+ * CLI 副本已删）；容量 / 清理策略随 §2.5 #116 / A21 裁决（取 VSC 侧：完整落盘 + 每写 prune）
+ * ⇒ T-TR2 / T-TR3 / T-TR4 由「额度截断 / 在途丢弃」改判为「完整落盘（不截断 / 不丢弃）」。
  */
 import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, readdirSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import {
-  recordChatTrace, nextTraceSeq, _traceHooks, _resetTraceStateForTest, _traceStoreStats,
-  TRACE_MESSAGE_MAX_CHARS, TRACE_RECORD_MAX_CHARS, TRACE_PENDING_MAX,
-} from "../src/traces/trace-store.mjs"
+import { recordChatTrace, nextTraceSeq, _traceHooks, _resetTraceStateForTest } from "@thincoder/core/traces/trace-store.mjs"
 
 let dir
 let prevEnv
@@ -65,7 +66,7 @@ test("T-TR1 单遍序列化等价：字段集与既有形态同构、敏感串�
   assert.equal(rec.reasoning, "think")
   assert.deepEqual(rec.usage, { prompt_tokens: 5 })
   assert.equal(rec.finishReason, "stop")
-  // 消息体逐字同形（未超额度时零改）
+  // 消息体逐字同形（完整落盘——原样写出、不做改写）
   assert.equal(rec.messages[0].content, "hello")
   assert.equal(rec.messages[1].tool_calls[0].function.arguments, "{\"path\":\"a\"}")
   // 脱敏：形态扫描（sk-…）+ 字段名黑名单（token）
@@ -82,51 +83,32 @@ test("T-TR1 单遍序列化等价：字段集与既有形态同构、敏感串�
   assert.equal(typeof errRec.error.kind, "string")
 })
 
-test("T-TR2 单消息额度：一条 1MB content → 该串 ≤ 64K+标记；首尾保真", async () => {
+test("T-TR2 完整落盘：一条 1MB content 逐字保留（无单消息额度——A21 裁决）", async () => {
   const big = "H".repeat(500_000) + "T".repeat(500_000)
   await recordChatTrace({ name: "mock", model: "m" }, mkOpts([{ role: "tool", content: big }]), { content: "ok" }, null)
   const rec = readOnly()
-  const s = rec.messages[0].content
-  assert.ok(s.length <= TRACE_MESSAGE_MAX_CHARS + 100, `限长后 ${s.length}`)
-  assert.equal(s.startsWith("H".repeat(16_384)), true)
-  assert.equal(s.endsWith("T".repeat(49_152)), true)
-  assert.match(s, /… \[trace truncated: \d+ chars omitted\] …/)
+  assert.equal(rec.messages[0].content, big, "完整落盘（不截断、无省略标记）")
 })
 
-test("T-TR3 单记录额度：构造 >4MB → messages 为 stub、元数据字段保留、标记含计数", async () => {
+test("T-TR3 完整落盘：>4MB 记录 messages 逐条保留（无记录级降级——A21 裁决）", async () => {
   const messages = Array.from({ length: 100 }, (_, i) => ({ role: "tool", content: `#${i}#` + "z".repeat(100_000) }))
   await recordChatTrace({ name: "mock", model: "m" }, mkOpts(messages), { content: "ok", usage: { completion_tokens: 3 } }, null)
   const rec = readOnly()
-  assert.equal(typeof rec.messages, "string")
-  assert.match(rec.messages, /^\[trace record truncated for size: \d+ chars \/ 100 messages\]$/)
+  assert.equal(Array.isArray(rec.messages), true, "messages 保持数组（无 stub 降级）")
+  assert.equal(rec.messages.length, 100, "100 条消息逐条保留")
+  assert.equal(rec.messages[0].content, "#0#" + "z".repeat(100_000))
+  assert.equal(rec.messages[99].content, "#99#" + "z".repeat(100_000))
   assert.equal(rec.content, "ok")
   assert.deepEqual(rec.usage, { completion_tokens: 3 })
-  assert.equal(TRACE_RECORD_MAX_CHARS, 4_000_000)
 })
 
-test("T-TR4 在途上界：慢写替身 + 连发 20 条 → 在途 ≤ 8、丢弃 = 12、饱和行一次", async () => {
-  let release
-  let appends = 0
-  const gate = new Promise((r) => { release = r })
-  _traceHooks.append = async () => { appends++; await gate }
-  const errs = []
-  const origErr = console.error
-  console.error = (...a) => errs.push(a.join(" "))
-  try {
-    const promises = []
-    for (let i = 0; i < 20; i++) {
-      promises.push(recordChatTrace({ name: "mock", model: "m" }, mkOpts([{ role: "user", content: `m${i}` }]), { content: "x" }, null))
-    }
-    assert.equal(_traceStoreStats().pending, TRACE_PENDING_MAX, "在途 ≤ TRACE_PENDING_MAX")
-    assert.equal(_traceStoreStats().dropped, 12, "超限丢弃计数")
-    assert.equal(errs.filter((l) => l.includes("pending write queue full")).length, 1, "饱和行一次")
-    release()
-    await Promise.all(promises)
-    assert.equal(_traceStoreStats().pending, 0, "写盘收敛")
-    assert.equal(appends, TRACE_PENDING_MAX, "仅前 8 条进入写盘（其余丢弃）")
-  } finally {
-    console.error = origErr
+test("T-TR4 无在途上限：连发 20 条 → 20 条全落盘（零丢弃——A21 裁决）", async () => {
+  const promises = []
+  for (let i = 0; i < 20; i++) {
+    promises.push(recordChatTrace({ name: "mock", model: "m" }, mkOpts([{ role: "user", content: `m${i}` }]), { content: "x" }, null))
   }
+  await Promise.all(promises)
+  assert.equal(traceFiles().length, 20, "20 条全部落盘（无在途上界——零丢弃）")
 })
 
 test("T-TR5 序号缓存：连续 3 次调用 → readdirSync 恰 1 次；seq 递增且不撞号", () => {
