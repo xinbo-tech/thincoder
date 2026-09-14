@@ -152,16 +152,11 @@ thincoder/                                  ← 合并仓根（git 仓）
 > **计数收正**：需求池既有条目写「`thincoder-cli/docs/{design,requirements}/**`（86 档）」（`docs/TODO.md` 需求池第 24 条）——
 > 实核 = **84**（含 `design/prompts/` 则 99 = 机检域读数；含 `_archive/` 则 149）。差额已登记（§16 变更记录 · 报告未决）。
 
-| 面 | design | requirements | 档名 |
-|---|---|---|---|
-| **统一面**（落 `docs/core/`） | 38 | 32 | ADVISOR-CONVERGENCE · AGENT-LOOP · AGENT-PARAMS · APPLY-PATCH · ARCHITECTURE · ASYNC-RESULT-CONTAINER · CHECKPOINT · CONSULTATION · CONTEXT-COMPACTION · DESIGN-TOKEN-SETTLEMENT · EDIT · EDIT-HELPERS · ENG-TOKEN-BINDING · ENGINEERING-MODE · ESCALATE · FEATURES · HASHLINE-EDIT · INSERT-AFTER · LEDGER-SELF-CONTAINED · LOGGING · MCP · MEMORY · MULTI-INSTANCE-COLLAB · NORMAL-MODE · PHILOSOPHY · PORTABILITY · PROJECT · PROMPT-SYSTEM · PROVIDER · PROXY · RELEASE · SEND-STALL-DISTILL · SESSION · SETTINGS-TOOL · STRUCTURE-DEBT · SUBAGENT-OBSERVE-SEND · TESTING · TOOL-OUTPUT-LIMITS · TOOLS · TURN-CAP-CONTINUE · VERIFY-REDESIGN · WRITE |
-| **CLI 面**（落 `docs/cli/`） | 6 | 5 | ACP-CLIENT · CRASH-REPORTS · TUI · TUI-INPUT-BOX · TUI-TOOL-OUTPUT · TWO-REPO-MERGE · （requirements 侧：ACP-CLIENT · CRASH-REPORTS · TUI · TUI-TOOL-OUTPUT · TWO-REPO-MERGE） |
-| **待核**（代理与判读分歧） | 3 | — | `POOL-CONFIG-UNIFIED`（池配置统一——两端皆有池 ⇒ 疑 P1）· `QUICKFIX-BATCH-3`（批档形态 ⇒ 疑 P3）· `SUBAGENT-ID-COUNTER-AGENT`（子代理族已入核 ⇒ 疑 P1） |
-| **合计** | **47** | **37** | **84 档**（= 底本；三行 disjoint——待核不并入统一 / CLI 面） |
+**逐档二分（活 / 历史）与落点** → 迁移台账 `docs/core/design/DOC-MIGRATION.md`（**2026-09-15 建档**——承本节 §11 拆分规划，该表自本节搬出）。
+该台账 = 本节的**唯一执行表**：逐档一行（判 · 依据（`file:line` 实核）· 动作 / 落点）+ 对账 / 待核 / 小计闭合 / 后续批分组——本节不复制（D2 单一权威源）。
+计数口径（D3）：底本 **84** = 设计 47 + 需求 37；小计六栏与逐档表闭合（见该台账 §5）。
 
-**计数口径（D3）**：三行 **disjoint**：design **47** = 38 + 6 + 3 · requirements **37** = 32 + 5 · 合计 **84** = 70 + 11 + 3（= 底本，逐格可复核）。
-**档名口径**：三行档名列 = **逐名穷举**（并集 = 全 84 档——实核逐名闭合）；根层 `docs/{design,requirements}/` 的子系统板块档
-（如 CONFIG / TRACES / I18N / WORKSPACE / CORE-UNIFICATION——`CORE-UNIFICATION.md` `:286-305` 子系统档注册表）**不在本节底本内**——去向见 §4 表（全部 → `docs/core/`）。
+**根层既有子系统板块档**（CONFIG / TRACES / I18N / WORKSPACE / CORE-UNIFICATION 等——`CORE-UNIFICATION.md` `:286-305` 子系统档注册表）**不在二分底本内**——去向见 §4 表（全部 → `docs/core/`）。
 
 **VSC 侧同规**：`thincoder-vscode/docs/{design,requirements}/**` 按同一判据分类；其**部分独有档**（`WEBVIEW` · `PROJECT-SWITCHER` · `ACTIVITY-*` · `SESSION-FLOW-*` 等）落 `docs/vsc/`；与 CLI 同名对位者落 `docs/core/`。**本批只出判据，不逐档落**（N4）。
 
@@ -351,8 +346,8 @@ thincoder/                                  ← 合并仓根（git 仓）
 | 9 | `docs/TODO.md` | 40 | +3 | 两池判据（§10.2） | **父侧落笔**（本批不动台账） |
 | 10 | `.thincoder/docs-face.json` | 0 | +~20 | 声明面（§8.2） | 引擎化批次 |
 
-**拆分规划（R24a）**：本档实测 **423 行**（介于 300 软线与 500 硬限之间）；已含五个选型表 + 初分类表 ⇒ 已超软线，
-**拆分面 = §5 初分类表 → 随迁移批移入 `docs/core/design/` 的迁移台账**（本档只留判据句）；拆分落地时点 = 迁移批（本批不拆）。
+**拆分规划（R24a）**：本档实测 **423 行**（介于 300 软线与 500 硬限之间）；已含五个选型表 ⇒ 已超软线。
+**拆分面 = §5.2 分类表 → 迁移台账**（`docs/core/design/DOC-MIGRATION.md`）——**已于 2026-09-15 落地**（本档只留判据句与指针）。
 
 ## 12. 关键决策记录
 
@@ -379,7 +374,7 @@ thincoder/                                  ← 合并仓根（git 仓）
 |---|---|---|
 | **A1** | `docs/` 三部分目录树 + 部分 id ↔ 代码 / 产品目录对应表在档（§4）；现有 16+16 板块档与提示词正本去向逐项给出（§4 表） | FR1 |
 | **A2** | 命名规则以**判据句**给出（N-a–N-d），且每条带机检落点（§6） | FR2 · N1 |
-| **A3** | 归属判据 P1–P5 可判定；产品树文档**初分类**给出且计数自洽（84 = 统一面 70 + CLI 面 11 + 待核 3；design 47 = 38+6+3 · requirements 37 = 32+5） | FR3 |
+| **A3** | 归属判据 P1–P5 可判定；产品树文档**逐档二分表**给出且计数自洽（84 = 设计 47 + 需求 37；小计六栏与逐档表闭合——见迁移台账 §5） | FR3 |
 | **A4** | 交叉引用形态 R1–R5 逐条给判据 + 机检现状（✓ / ✗ / 须扩），并点明 R2 / R3 的引擎扩展面 | FR4 |
 | **A5** | 四条既有裁定逐条判定（✓ / ⚠）+ 冲突处给修法（§9） | FR5 |
 | **A6** | 引擎 / 路由表**逐族切分**（族 · 总行 · 引擎行 · 路由行 · 路由面逐项）；射程修法 E-1–E-4 + 零报样例（§8） | FR6 · N2 |
@@ -423,3 +418,7 @@ thincoder/                                  ← 合并仓根（git 仓）
 - 2026-09-14（**迁移批 · 板块档位移**）：根层 17 设计 + 17 需求板块档 `git mv docs/{design,requirements}/*.md` → **`docs/core/{design,requirements}/`**（落点判据 = 本档 §4 去向表 · §5.1 P1 统一面）；承第 1 批「提示词正本位移」（15 档 → `docs/core/design/prompts/`）。
   本档内现行档路径指针（含 §11 受影响文件表）随批改指新址；去向表现址列与判据句按迁移记录形态保留旧路径。
   连带登记：域一扫描域（`docs/design` + `docs/requirements`）自此无档——34 档出锚面射程（宽度面 308 → 274 档）；射程扩展与 §14 用例表（T1 / T2）读数收正归引擎批次（§8.2 声明面）。
+- 2026-09-15（**迁移批 · 二分 + 当场迁第一批**）：§5.2 分类表**搬出**至迁移台账 `docs/core/design/DOC-MIGRATION.md`（承本节 §11 拆分规划——本档自此只留判据句与指针）；
+  §13 A3 收正为「逐档二分表 + 小计闭合」；§11 拆分面标记为已落地。
+  第一批已迁 6 档（编辑工具族：WRITE / HASHLINE-EDIT / INSERT-AFTER / APPLY-PATCH / EDIT / EDIT-HELPERS）——均落 `docs/core/design/`（P1 统一面）；
+  根层 `TOOLS.md` §8.2 登记的「工具权威档」指针自此解悬。
