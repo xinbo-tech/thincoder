@@ -1123,7 +1123,7 @@ Provider 请求的头分两类来源。**内置头** = transport 协议要求（
 | 2 | 主聊天（responses） | `src/provider/responses.mjs` `chat()` 内三处 `proxyFetch(` 调用点（as-of :430/:449/:467） | `Content-Type` / `Authorization` | ✓ 本批补 |
 | 3 | 主聊天（anthropic） | `src/provider/anthropic.mjs:73-77` | `Content-Type` / `x-api-key` / `anthropic-version` | ✓ 本批补 |
 | 4 | 主聊天（google） | `src/provider/google.mjs:119` | `Content-Type` | ✓ 本批补 |
-| 5 | 会话标题生成 | `src/generate-title.mjs:47-55` | `Content-Type` / `Authorization` | ✓ 本批补 |
+| 5 | 会话标题生成 | `thincoder-core/generate-title.mjs:47-55` | `Content-Type` / `Authorization` | ✓ 本批补 |
 | 6 | 模型清单拉取（对照面） | `src/provider/list-models.mjs:52/57/73` | 按 `format` 分派 | ✓ 既有（零改） |
 
 **域外与端面**：会话动态头（`x-opencode-session` 类）不做（证据未立——批次 §1 范围口径）；embedding 独立渠道
@@ -1188,7 +1188,7 @@ provider → transport 装配（定制头前、内置头后）→ fetch / proxyF
 | 1 | `src/provider/responses.mjs`（三处 fetch） | `chat()` 内**提升单个 `const headers`**（位置 = `rateGate` 之后、首个 `requestWithRetry` 之前）——三处 `proxyFetch(` 调用点（as-of :430/:449/:467）改引用同一对象 | `{Content-Type, Authorization}` |
 | 2 | `src/provider/anthropic.mjs:73-77` | 既有 `const headers` 对象首行加 `...(provider.headers ?? {})` | `{Content-Type, x-api-key, anthropic-version}` |
 | 3 | `src/provider/google.mjs:119` | 内联展开（单调用点） | `{Content-Type}` |
-| 4 | `src/generate-title.mjs:47-55` | `opts.headers` 内联展开（:49——直连与 proxy 分支共用同一 `opts`） | `{Content-Type, Authorization}` |
+| 4 | `thincoder-core/generate-title.mjs:47-55` | `opts.headers` 内联展开（:49——直连与 proxy 分支共用同一 `opts`） | `{Content-Type, Authorization}` |
 
 - responses 三处 fetch 共享同一 `headers` 对象（重试闭包重复调用——对象只读复用，零副作用）；
 - 每点配一行注释（定制头展开 + 顺序语义 + 指针 `PROVIDER.md §21`——与 core.mjs 既有注释同风格）。
@@ -1228,7 +1228,7 @@ core / responses / generate-title 被内置头覆盖，anthropic 通路无 `Auth
 | `src/provider/responses.mjs` | 494 | +1~2 | `chat()` 内提升单 `const headers`（含展开）——三处 `proxyFetch(` 调用点（as-of :430/:449/:467）改引用 |
 | `src/provider/anthropic.mjs` | 226 | +1 | `headers` 对象首行加展开（:73-77） |
 | `src/provider/google.mjs` | 259 | ±1 | `headers` 内联展开（:119） |
-| `src/generate-title.mjs` | 83 | ±1 | `opts.headers` 内联展开（:49） |
+| `thincoder-core/generate-title.mjs` | 83 | ±1 | `opts.headers` 内联展开（:49） |
 
 **CLI 测试（thincoder-cli/test）**：
 
@@ -1263,7 +1263,7 @@ core / responses / generate-title 被内置头覆盖，anthropic 通路无 `Auth
 | 2 | `responses.mjs:432/451/469` 三处遗漏 | 本批补（§23.2 #1）——锚注：§1 行号 = `headers:` 字面行；本档 §21–§24 统一锚 `proxyFetch(` 调用起始行（同一三处——as-of :430/:449/:467） |
 | 3 | `anthropic.mjs:73-77` 字面头无展开 | 本批补（§23.2 #2） |
 | 4 | `google.mjs:119` 仅 Content-Type | 本批补（§23.2 #3） |
-| 5 | `src/agent/generate-title.mjs:47-55` 自建头 | **路径勘误**：实际 = `src/generate-title.mjs:47-55`（`headers` 行 :49；`src/agent/` 下无该档）——本批补（§23.2 #4） |
+| 5 | `src/agent/generate-title.mjs:47-55` 自建头 | **路径勘误**（该档已并入核包）：实际 = `thincoder-core/generate-title.mjs:47-55`（`headers` 行 :49；`src/agent/` 下无该档）——本批补（§23.2 #4） |
 | 6 | `list-models.mjs:52/57/73` 已展开（对照） | 对照面——零改；既有断言（T1/T2）保持绿 |
 
 **（b）既有纪律核对**：

@@ -1046,7 +1046,7 @@ if (!(incomplete && run?.reviewType !== "design")) agent._calledAdvisorThisRun =
   `src/model-specs.mjs:33`）是**遗留限制**，与用户 2026-09-11 13:18 判定一致。
 - **窗口真值源（既有）**：`providerSpec(provider)`（`src/model-specs.mjs:174-179`）——模型表前缀命中 + provider 级
   `context`（K 单位）覆盖；未知模型回退 `DEFAULT_SPEC`（128K，`:97`）。**同族同口径**（本仓「阈值跟随窗口」惯例）：
-  主循环压缩阈值 `resolveCompactThreshold`（`src/config.mjs:120-135`，`0.6 × 窗口`）、主循环尾预算（`src/context.mjs:44-58`）、
+  主循环压缩阈值 `resolveCompactThreshold`（`src/config.mjs:120-135`，`0.6 × 窗口`）、主循环尾预算（`thincoder-core/context.mjs:44-58`）、
   评审项目指南预算（`src/advisor/messages.mjs:18-19,93-96`，`5% × 窗口`——advisor 模块内同口径）、传输层窗口判定
   （`src/provider/core.mjs:126-128`）。
 - **接线可达性**：评审循环所持 `provider` 即评审真实 provider（`src/advisor/run.mjs:151` `resolveAdvisorProvider(agent)`

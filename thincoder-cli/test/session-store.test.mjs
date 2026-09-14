@@ -16,7 +16,7 @@ import {
   bindRecordStore, saveProjectedSlot, unlinkRecordStore, recordDirOf, slimForDisplay,
   RECORD_SEG_MESSAGES, RECORD_WINDOW_MESSAGES, _storeStats,
 } from "../src/session-store.mjs"
-import { pushReal } from "../src/context.mjs"
+import { pushReal } from "@thincoder/core/context.mjs"
 import { readHistoryTool } from "../src/agent-tools/read-history.mjs"
 import { deleteSlot, newSession, slotPath, applySession } from "../src/session.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/session-slots.mjs"

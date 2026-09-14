@@ -1644,7 +1644,7 @@ BATCH-3 F-2 原始事故面（1.3MB 请求体）+ 交付偏差记录（`docs/des
 |---|---|---|
 | 1 | `_capturedOutput` = 子代理流式文本的**第二份全量拷贝**：逐 token `output += …; child._capturedOutput = output`——无上限；跨 Continue 续跑继续累积 | `src/agent/spawn-child.mjs:210-212` · `:218-228` |
 | 2 | 消费面读时截断（2000/4000）——头部诊断价值有限、尾部（停在何处）优先 | `subagent-actions.mjs:445/456` · `escalate-async.mjs:242/258`；例外：`subagent.mjs:354` 停止报告内联全量（再经通用 offload ≥64K 落盘） |
-| 3 | 子代理人读线 `_fullHistory` 同主 agent：永不压缩、全量常驻（每个 child 一份） | `context.mjs:163-180` · 子代理创建 `subagent-spawn.mjs:332-340` |
+| 3 | 子代理人读线 `_fullHistory` 同主 agent：永不压缩、全量常驻（每个 child 一份） | `thincoder-core/context.mjs:163-180` · 子代理创建 `subagent-spawn.mjs:332-340` |
 | 4 | 条目对 `entry.childAgent` 的引用**从不显式释放**（grep 阴性）——释放仅靠条目对象被回收 | `subagent-run.mjs:133` · `escalate-async.mjs:198`（绑定）；`subagent-run.mjs:184`（池）· `async-settle.mjs:47-50`（pending） |
 | 5 | 消化窗口：done-in-pool 驻留至回合尾收集/run 起始注入/挂起残差三消费点；挂起期（suspDriven）settled 留池等待消化 | `run-stages.mjs:233-239` · `agent.mjs:105-113` · `suspension-drive.mjs:283-289` · `run-stages.mjs:215-218/231` |
 | 6 | 轨迹存档：单次调用**整对象图深拷贝**（redactValue 递归复制容器）+ 独立 `JSON.stringify`（第二份全尺寸字符串），在途无上限（fire-and-forget 不 await、无队列/计数）；本机实测单记录 1.0–1.9MB、分钟级连发 | `thincoder-core/traces/trace-store.mjs:117-126` · `:157-177` · `:171` · `:188-196`；实测（本机 traces 目录） |
@@ -1697,7 +1697,7 @@ BATCH-3 F-2 原始事故面（1.3MB 请求体）+ 交付偏差记录（`docs/des
 - **释放**：新 helper `releaseSettledEntry(entry)`（`async-settle.mjs`）——`entry.childAgent = null;
   entry.report = null`（幂等）；三消费点注入完成后调用：`run-stages.mjs:233-239` ·
   `agent.mjs:105-113` · `suspension-drive.mjs:283-289`。池内/挂起未消化窗口零变化。
-- **纯函数单源**：`capText` / `appendCappedText` 本体 = `src/text-budget.mjs`（零依赖纯函数；
+- **纯函数单源**：`capText` / `appendCappedText` 本体 = `thincoder-core/text-budget.mjs`（零依赖纯函数；
   TUI 面 `display-budget.mjs` 与 agent 面共用——D2）。
 
 **23.3.2 轨迹面（`trace-store.mjs`）**
@@ -1736,7 +1736,7 @@ BATCH-3 F-2 原始事故面（1.3MB 请求体）+ 交付偏差记录（`docs/des
 
 | 文件 | 当前行数 | 预计增量 | 变更点 |
 |---|---|---|---|
-| `src/text-budget.mjs` | 新 | +80 ± 20 | capText / appendCappedText（零依赖纯函数） |
+| `thincoder-core/text-budget.mjs` | 新 | +80 ± 20 | capText / appendCappedText（零依赖纯函数） |
 | `src/agent/spawn-child.mjs` | 229 | +14 | 捕获闭包截断（常量 + 标记） |
 | `src/agent-tools/subagent-spawn.mjs` | 454 | +3 | 子代理 `_historyWindow` 置位 |
 | `src/agent-tools/async-settle.mjs` | 192 | +10 | `releaseSettledEntry` helper |

@@ -19,7 +19,7 @@ import { saveSession } from "../session.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { buildToolCallbacks, sweepToolBlocks } from "./tool-events.mjs"
 import { freezeAllSubTasks } from "./subagent-blocks.mjs" // freezeReclaimDigestedBlocks 随 §17 段迁 suspension-drive.mjs
-import { ensureSessionTitle } from "../generate-title.mjs"
+import { ensureSessionTitle } from "@thincoder/core/generate-title.mjs"
 import { logEvent, errText } from "@thincoder/core/log.mjs"
 import { suspensionSession, poolLive } from "./suspension-drive.mjs"
 

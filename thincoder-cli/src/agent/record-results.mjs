@@ -23,7 +23,7 @@
  *    (no code face — settle-side `failureVerdict` parity).
  *  - Mutations feed _touchedFiles and fire-and-forget memory reindex.
  */
-import { pushReal } from "../context.mjs"
+import { pushReal } from "@thincoder/core/context.mjs"
 import { specForModel } from "../config.mjs"
 import { FILE_MUTATORS } from "./helpers.mjs"
 import { resolve } from "node:path"

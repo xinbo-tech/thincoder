@@ -14,7 +14,7 @@
  * so recomputing the frame each paint is cheap.
  */
 import { countConvLines, renderRows } from "./render-frame.mjs"
-import { estimateTokens } from "../context.mjs"
+import { estimateTokens } from "@thincoder/core/context.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { isTuiActive } from "./tui-lifecycle.mjs" // F-2 渲染抑制守卫（RESIZE-MOUSE-LEAK-FIX）
 

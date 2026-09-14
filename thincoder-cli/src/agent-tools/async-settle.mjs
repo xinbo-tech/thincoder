@@ -24,7 +24,7 @@
  * 与既有 scheduler ↔ subagent-async 同款惰性环——无求值期依赖。
  */
 import { logEvent, errText } from "@thincoder/core/log.mjs"
-import { pushReal } from "../context.mjs"
+import { pushReal } from "@thincoder/core/context.mjs"
 import { escapeXml } from "../agent/helpers.mjs"
 import { TURN_CAP_MARK } from "../agent/spawn-child.mjs"
 import { dependentLabels, maybeRefillAsync, refreshQueuedTokens } from "./subagent-scheduler.mjs"

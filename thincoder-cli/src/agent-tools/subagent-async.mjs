@@ -18,7 +18,7 @@ import {
   MIN_REPORT_CHARS, REPORT_CONTINUATION, DEFAULT_SUBAGENT_TURNS,
 } from "../agent.mjs"
 import { runWithContinue, TURN_CAP_MARK } from "../agent/spawn-child.mjs"
-import { pushReal } from "../context.mjs"
+import { pushReal } from "@thincoder/core/context.mjs"
 import { offloadToolResult } from "../agent/helpers.mjs"
 import { digestBudgetOver, persistOverflowReport } from "./digest-budget.mjs"
 // 群 B 批 B5（§22 D-DG4）：预算单源迁出（digest-budget.mjs）——原处 re-export 保测试

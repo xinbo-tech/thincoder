@@ -17,7 +17,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { chat } from "../src/provider/core.mjs"
-import { generateTitle, _deps } from "../src/generate-title.mjs"
+import { generateTitle, _deps } from "@thincoder/core/generate-title.mjs"
 import { loadConfig, _setConfigPathForTest, _resetConfigPathForTest } from "../src/config.mjs"
 
 // ─── 夹具 ───

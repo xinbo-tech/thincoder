@@ -4693,5 +4693,108 @@ CLI 三加载根 + 入口（L1–L7）：
 
 **段末复跑（§5 写入后 · 宽度闸）**：`check-doc-width` = **306 档无 >300 字符行 · exit 0**（原样读数见交付报告）。
 
+### 实施：S2 U6 —— CONTEXT-COMPACTION 单元落轮（2026-09-14 · eng-coder）——**终态 = clean**
+
+**段位**：当前段 = **S2（CLI 迁移单元 U6）**。写域 = CLI 侧（19 档 import 改指 + 3 档删旧 + 19 行文档锚改指 + 3 处同档头注订正）+ **域外一笔（已披露）**：`thincoder-cli/scripts/verify-compress.mjs:7`（产品 scripts——删档消费方，不接即破）；
+**VSC 零触碰**；核内零改动（`git status` 自证：改动集零 `thincoder-core/**`）；未 commit（父侧统一单笔）；未碰台账（`docs/TODO.md` 零改动——L4 闸无相关证据行：`:15` 指 `CONTEXT-COMPACTION.md` 文档、非删除集）；
+产品文档只做锚改指（零语义改写——语义收正归 eng-designer）。
+
+**依据** = `docs/design/CORE-UNIFICATION.md` §2.6.3 U6 行（`:715`「3 / 525 / 19」+ 专项行）+（三）逐档清单（`:792-794`）+（四）四步与 A1–A6（`:910-924`）+（七）进度计数（`:965-976`）+ §2.6.2（三）（五）（六）；`docs/design/CONTEXT-COMPACTION.md`（#162–#164 裁决行）；父侧 U6 任务书。
+
+**改动面**（行数 = `wc -l` 口径实核；改前 = HEAD）
+
+| # | 面 | 档 / 行数 | 动作 |
+|---|---|---|---|
+| 1 | CLI 源 + 测试 + 脚本 | 19 档（13 src + 5 test + 1 scripts；行数零变——纯来源串替换） | 改指 `@thincoder/core/<子路径>`（20 处：19 域内 + 1 域外） |
+| 2 | CLI 删旧 | `src/context.mjs` 392 · `src/generate-title.mjs` 87 · `src/text-budget.mjs` 46（合计 **525** 行） | **删档** |
+| 3 | CLI 文档 | 7 档（`docs/design` ×7；±0 行） | 19 行锚改指 |
+| 4 | 头注 / 注释订正 | 4 处（3 随改指同档 + 1 修复轮） | 自指路径陈述改指核（避免同档自相矛盾——U4 先例）；`verify-compress.mjs:3` 运行行旧坐标收正 |
+
+**① 逐处「改前 → 改后」（19 档 20 处 import——全部 = 来源串替换，具名导入面零改）**
+
+| # | 位置 | 改前 → 改后 |
+|---|---|---|
+| 1 | `src/agent/completion.mjs:8` | `"../context.mjs"` → `"@thincoder/core/context.mjs"` |
+| 2 | `src/agent/record-results.mjs:26` | 同上 |
+| 3 | `src/agent/run-stages.mjs:10` | `{ compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT }` 同目标 |
+| 4 | `src/agent/setup.mjs:10` | `{ pushReal }` 同目标 |
+| 5 | `src/agent/spawn-child.mjs:20` | `"../text-budget.mjs"` → `"@thincoder/core/text-budget.mjs"` |
+| 6 | `src/agent-tools/async-settle.mjs:27` | `{ pushReal }` → 核 context |
+| 7 | `src/agent-tools/consult.mjs:27` | 同上 |
+| 8 | `src/agent-tools/subagent-async.mjs:21` | 同上 |
+| 9 | `src/agent-tools/subagent-run.mjs:12` | 同上 |
+| 10 | `src/agent.mjs:7` | `"./context.mjs"` → 核路径（`{ pushReal, summarizeRunExplorations }`） |
+| 11 | `src/tui/agent-turn.mjs:22` | `"../generate-title.mjs"` → `"@thincoder/core/generate-title.mjs"` |
+| 12 | `src/tui/display-budget.mjs:16` | `{ capText, appendCappedText, fillMarker }` → 核 text-budget |
+| 13 | `src/tui/render-loop.mjs:17` | `{ estimateTokens }` → 核 context |
+| 14 | `test/integration/session-resume.test.mjs:18` | `"../../src/context.mjs"` → 核路径 |
+| 15 | `test/provider-headers.test.mjs:20` | `{ generateTitle, _deps }` → 核 generate-title |
+| 16 | `test/session-store.test.mjs:19` | `{ pushReal }` → 核 context |
+| 17 | `test/subagent-memory-bounds.test.mjs:13` | 同上 |
+| 18 | `test/tui-memory-budget.test.mjs:18` | `{ appendCappedText }` → 核 text-budget |
+| 19 | `test/tui-memory-budget.test.mjs:169` | `await import("../src/context.mjs")` → 核路径（动态） |
+| — | `scripts/verify-compress.mjs:7`（**域外**） | `{ compressIfNeeded, estimateTokens }` → 核 context |
+| — | 头注订正 | `src/tui/display-budget.mjs:6/:9`（自指路径 → 核）· `src/agent/spawn-child.mjs:170`（同上）· `scripts/verify-compress.mjs:3`（修复轮：`test/m4-compress.mjs` → `scripts/verify-compress.mjs`） |
+
+**② 删旧三条读数（删前全过才删）**
+
+1. **改指已落盘**：19 档 20 处改指落盘 + 冒烟（核三档导出面逐名在位：`pushReal`/`compressIfNeeded`/`compressFallback`/`COMPRESS_FAILURE_LIMIT`/`estimateTokens`/`summarizeRunExplorations` · `generateTitle`/`ensureSessionTitle`/`_deps` · `capText`/`appendCappedText`/`fillMarker`；
+   targeted 五测试档 = 44 用例 43 pass / 0 fail / 1 slow-skip（T-TB9 预存归册））。
+2. **该产品全链 exit 0（删前预跑）**：`npm test` 609/552/0/57 · `lint` 298 · `test:full` 609/609 · `integration` 25/25（均 exit 0）。
+3. **零引用反向判**（域 = `src` + `test` + `bin`，另扫 `scripts`；全递归）：模式① 引号相对形 = **0**；模式② 非核 import 形 = **0**（叙述面 15 处 = 射程外，登记未决 6）。
+   **删后中间态**：`doc-anchors --domain thincoder-cli` = **17 悬空**（6 档 16 行、`PROVIDER.md:1266` 一行两锚）→ 逐处改指 → **0**。
+
+**③ A1–A6 读数（终态复跑 · 原样）**
+
+| # | 判据 | 读数 | 判 |
+|---|---|---|---|
+| A1 | CLI 全链 | `npm test`：tests **609** · suites 4 · pass **552** · fail **0** · skipped **57** · exit 0；`lint`：check-syntax **295 file(s) OK**（298 − 3 删档，唯一面内差）；`test:full`：**609/609** · fail 0 · exit 0；`integration`：**25/25** · fail 0 · exit 0——**未涉面逐数不变**；面内零改判（无用例增删） | ✓ |
+| A2 | 零引用 | 反向判两式 **0 / 0**（域 `src`+`test`+`bin`+`scripts` 全递归）；运行面 = 全链 exit 0；锚面 = 悬空 0 | ✓ |
+| A3 | 文档锚 | `doc-anchors --domain thincoder-cli`：99 档 · 候选 **8871** · 悬空 **0** · 注记豁免 **880** · `OK(V5)` exit 0 | ✓ |
+| A4 | 核回归 | 核内 `node --test` = **173/173** · fail 0 · exit 0；核内零改动（`git status` 自证：`thincoder-core/**` 零项） | ✓ |
+| A5 | 仓根三机检 | `doc-anchors`（全域）：域一 32 档 候选 **2219** · 悬空 0；域二 99 档 候选 **8871** · 悬空 0 · 豁免 880；VSC 域报告态 5 命中（预存）· **exit 0**。`check-doc-width`：**306 档无 >300 字符行** · exit 0（§5 写入后复跑读数见段末）。`check-ledger`：**0 处违规** · exit 0 | ✓ |
+| A6 | 链接 L1 | `npm ls @thincoder/core --json` **exit 0** · version **0.1.0**（resolved `file:../../../thincoder-core`）；版本探针 = **0.1.0** | ✓ |
+| 专项 | `compactThreshold` 默认值口径 | **裁决落实核验**：核 `context.mjs` = CLI 删档**行集等值**（392/392，压缩口径 = CLI 侧取一侧）；核内单一 DEFAULTS 值 = **100000** = CLI 值（核 `config.mjs:41` ↔ CLI `config.mjs:67` ↔ `agent/setup.mjs:45` 兜底 100_000）——与 §2.12.2 第 1 行「已裁 · 以 CLI 为准 + 核内单一 DEFAULTS」（`docs/design/CONFIG.md:53/64`）同向；U6 对配置面零改（U14 面） | ✓ |
+
+**进度计数（设计 §2.6.3（七）① · 可复跑命令）**：**CLI 待迁 = 114**（117 − 3）——与父侧预期逐数一致，单调递减成立。
+**工作树**：本笔 **29 项**（26 M + 3 D）+ **1 项预存**（`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`——spawn 前已在，非本笔）；未 commit。
+
+**④ 内部轮（发现与处置）**
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **CLEAN**——四类偏差（部分实现 / 静默简化 / 文档漂移 / 清单外改动）均未发现（19 档 20 处改指逐点实读对上 · 核导出面逐名在位 · 三删档确缺 · 文档锚终态逐行解析在位 · 117−3 分量独立复算吻合）。
+- **advisor 代码评审 1 轮**（`type=code` · 阻塞）：**pass**（🔴 **0** · 🟡 **0** · 🔵 **4**）。
+- **裁决表（4 项）**：**Fixed 1**（🔵#1 `scripts/verify-compress.mjs:3` 档头运行行旧坐标 `test/m4-compress.mjs` → `scripts/verify-compress.mjs`；修复后复跑 `node --check` 通过 + `lint` 295 + `npm test` 609/552/0/57 + `test:full` 609/609 + `integration` 25/25 全绿）；
+  **Deferred 3**（🔵#2 `src/agent/setup.mjs:27-34` 私持 `safeSliceUTF16` 与核 `text-budget.mjs:55` 同款——非删档引用 / 非 U6 面，归 U15（该档在 U15 逐档清单）⇒ 未决 1；
+  🔵#3 §2.6.3 U6 行「改指」列域标签（`src`+`test`+`bin`）与交付集（含 `scripts` 1 档）之差——计数相符、仅域标签不含 scripts ⇒ 设计面一行收正 ⇒ 未决 2；🔵#4 `SESSION.md:570` 锚坐标微漂（`thincoder-core/context.mjs:163-180` vs 核 pushReal 定义行 `:181`）——V5-A 只判路径 token、不判坐标（纯路径替换形态保留 as-of 坐标）⇒ 随该档下次触碰重锚 ⇒ 未决 3）。
+  **引证核验附注**：host 核验器对 6 条引证报「file unreadable」——抽查复核为**核验器路径解析 artifact**（承 U1–U5 同型附注；`src/config.mjs:67` / 核 `config.mjs:41` / `AGENTS.md:61` / `SESSION.md:570` 等经复读内容与引证相符）。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 改指目标形态 = `@thincoder/core/<子路径>` | §2.6.2（三）2「一律带子路径」（裸名不可导入）；核 `exports "./*"` + 链接态实核 |
+| 2 | 域外 `scripts/verify-compress.mjs:7` 随本笔改指 | 删档 import 否则必破（活体脚本）；U5 先例（`verify-team.mjs`） |
+| 3 | 同档头注 3 处随改指订正（自指路径陈述） | U4/U2 头注订正先例——防「同档内 import 与注释自相矛盾」 |
+| 4 | 文档锚 = 纯路径替换（仓根相对形态），as-of 坐标保留 | §2.6.2（六）CLI 域形态 + U1–U5 先例；坐标张力承 U5 未决 2 |
+| 5 | `PROVIDER.md:1266` 勘误行 = 实指改指核 + 迁移标记「（该档已并入核包）」 | 该行含两个历史 token（其一为「从不存在的路径」笔误）——纯替换不可行；注记标记 = 引擎闭枚举（§2.32.3.3）合规豁免；行内实指逐字改指核 |
+| 6 | 另 3 行（`AGENT-LOOP.md:1700/:1739` · `TUI.md:1384`）主动改指 | 仅靠「仓根唯一 basename」侥幸通过（U5 决策 5 同判——避免静默残留） |
+| 7 | 删前全链**预跑一轮**（四命令） | §2.6.3（四）2 字面执行（承 U1–U5） |
+| 8 | 审计登记的模块图 / 叙述滞留（`AGENTS.md:61` · `README.md:183` · `ARCHITECTURE.md:31/:44`）**不改**（登记） | §2.6.2（五）法 1「裸词叙述射程外」+ U1–U5 同型判 + 设计归口 S2 文档工作流（`CORE-UNIFICATION.md:1046`） |
+| 9 | 修复轮只落裁决 🔵#1（不夹带） | 修正轮边界（修复轮只落评审发现与裁决导出项） |
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. `src/agent/setup.mjs:27-34` 私持 `safeSliceUTF16`（核 `text-budget.mjs:55` 同款实现）——归 U15 单源收口（评审 🔵#2）。
+2. 设计档收正（设计面 · eng-designer）：§2.6.3 U6 行「改指」列域标签补 `scripts`，或拆记「18 + 1（scripts）」（评审 🔵#3）。
+3. `thincoder-cli/docs/design/SESSION.md:570` 锚坐标微漂——随该档下次触碰重锚（评审 🔵#4）。
+4. **模块图 / 叙述滞留（文档面）**：`thincoder-cli/AGENTS.md:61`（`src/context.mjs      context compaction`）· `README.md:183`（`context.mjs` 行）· `docs/design/ARCHITECTURE.md:31`（模块树 `context.mjs`）/`:44`（`generate-title.mjs`）——U1–U5 同型滞留，归 S2 文档工作流或文档维护批。
+5. `src/explore-distill.mjs`（CLI）改指后已无 CLI 内引用者（原唯一消费者 `src/agent.mjs:7` 现取核 re-export）——过渡态，U15 删档在册（`CORE-UNIFICATION.md:897`）。
+6. 叙事面残留（射程外登记）：`src/agent.mjs:182` · `src/session-store.mjs:7` · `src/agent-tools/{goal:82,subagent-spawn:344}.mjs` · `src/tui/{cmd-mcp:185,agent-turn:9}.mjs` · `src/explore-distill.mjs:4` 等裸名提及——随所属单元或文档维护批。
+7. VSC 预存项：`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`（M）= spawn 前既存改动，非本笔（承 U0–U5 登记）。
+
+**轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 1；A1–A6 终态读数见上表；终态 = **clean**；报告 ①–⑦ 见交付报告（父侧转呈）。
+
+**收正注（同轮 · 首版后置）**：首版 §5 零语义收正已就地落——① 未决 3 的 `tshincoder-cli` 拼写笔误 → `thincoder-cli`；② ④ 块末重复的「轮次自证」行删除（以段末该行为准）；③ 宽度闸 2 行超宽行折行（`:4741` / `:4766`——仅插换行、文字零改）；④ ② 删除后标题前空行补回。
+
 ## §6 验证与收口（父代理）
 

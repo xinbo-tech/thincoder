@@ -15,7 +15,7 @@ import {
   LINE_MAX_CHARS, ARGS_JSON_MAX_CHARS, TOOL_RESULT_MAX_CHARS, TOOL_OUTPUT_ENTRY_MAX_CHARS,
   TOOL_OUTPUT_TOTAL_MAX_CHARS, SUB_BLOCK_CHAR_LIMIT, ADVISOR_TEXT_MAX_CHARS,
   STREAM_MAX_CHARS, LINES_CHAR_BUDGET, SEARCH_MATCH_CAP, LINE_TRUNC_MARKER } from "../src/tui/display-budget.mjs"
-import { appendCappedText } from "../src/text-budget.mjs"
+import { appendCappedText } from "@thincoder/core/text-budget.mjs"
 import { appendSubBlock, SUB_BLOCK_LINE_LIMIT } from "../src/tui/subagent-children.mjs"
 import { toolArgsLines } from "../src/tui/tool-args.mjs"
 import { slimToolResultForDisplay } from "../src/tui/tool-display.mjs"
@@ -166,7 +166,7 @@ test("T-TB8 state.lines 总量：各路径混合塞入至超 2M → 裁头生效
 })
 
 slow("T-TB9 翻页不无界：模拟 50 页载入 → 总量对账仍 ≤ 预算（锚定不破）", async () => {
-  const { pushReal } = await import("../src/context.mjs")
+  const { pushReal } = await import("@thincoder/core/context.mjs")
   const { restoreLines, createLoadOlder } = await import("../src/tui/startup.mjs")
   const { RECORD_WINDOW_MESSAGES } = await import("../src/session-store.mjs")
   const agent = createAgent({

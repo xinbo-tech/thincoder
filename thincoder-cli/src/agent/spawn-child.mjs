@@ -17,7 +17,7 @@
 import { specForModel } from "../config.mjs"
 import { ContinueError } from "../agent.mjs"
 import { relayPrefixOf } from "./relay-prefix.mjs"
-import { appendCappedText } from "../text-budget.mjs"
+import { appendCappedText } from "@thincoder/core/text-budget.mjs"
 // 第 27 批 §12.3①：relay 前缀文法单一权威模块（`src/agent/relay-prefix.mjs`）——
 // 生成侧枢纽再导出（TUI/ACP 消费方可经此导入；消费方按 §12.3① 直连模块亦可）。
 export { RELAY_PREFIX_RE, parseRelayPath, relayPrefixOf } from "./relay-prefix.mjs"
@@ -167,7 +167,7 @@ export function emitNestedChildEvent(ctx, relayPrefix, kind) {
  *  `_capturedOutput` 是子代理流式文本的第二份全量拷贝（原无上限——勘察 C2）；超 hard 即
  *  裁至头 16K + 标记 + 尾 48K（摊还 O(1)）——消费面读时已各自 slice(0, 2000/4000)，头尾
  *  保真覆盖；停止报告内联场景出现截断标记（可断言——D-SM1）。纯函数本体住
- *  src/text-budget.mjs（与 TUI 面共用——D2 单源）。 */
+ *  thincoder-core/text-budget.mjs（与 TUI 面共用——D2 单源）。 */
 export const CAPTURE_CAP_OPTS = {
   hard: 131_072,
   head: 16_384,

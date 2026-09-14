@@ -5,7 +5,7 @@
  * Returns { action: 'continue' | 'done', content?, guardPushbacks, honestReminderInjected, advisorPushbacks }
  */
 import { hasCodeMutations } from "../advisor/repos.mjs"
-import { pushReal } from "../context.mjs"
+import { pushReal } from "@thincoder/core/context.mjs"
 import { MAX_ADVISOR_ROUNDS } from "../advisor/run.mjs"
 import { advisorReviewPending, effectiveAdvisorRound } from "../agent-tools/advisor-async.mjs"
 

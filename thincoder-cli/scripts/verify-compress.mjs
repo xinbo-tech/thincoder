@@ -1,10 +1,10 @@
 /**
  * M4 验证：构造超长历史，触发真实压缩。
- * 运行: node test/m4-compress.mjs
+ * 运行: node scripts/verify-compress.mjs
  */
 import { createProvider } from "../src/provider/index.mjs"
 import { loadConfig } from "../src/config.mjs"
-import { compressIfNeeded, estimateTokens } from "../src/context.mjs"
+import { compressIfNeeded, estimateTokens } from "@thincoder/core/context.mjs"
 
 const config = loadConfig()
 const provider = createProvider(config.provider)

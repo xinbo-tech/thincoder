@@ -82,7 +82,7 @@
 - **CLI**：`thincoder-core/log.mjs`（新——logEvent/轮转/黑名单/seq）；`src/provider/core.mjs`
   （llm:* 统一落点）；`src/tui/agent-turn.mjs`（turn/susp/digest/err）；`src/agent.mjs`
   （chat logCtx + 中止清池 ev:stopped）；`src/agent/dispatch.mjs`（tool:*）；
-  `src/context.mjs`（compress/distill logCtx）；`src/auto-think.mjs`（logCtx）；
+  `thincoder-core/context.mjs`（compress/distill logCtx）；`src/auto-think.mjs`（logCtx）；
   `src/agent-tools/{subagent,subagent-async,consult}.mjs`（child/ev 事件 + escalate
   执行器）；测试（T-L1..L10）。
 - **VS Code**：同构镜像——新 `thincoder-vscode/src/log.mjs`（同一实现语义）；`src/provider.mjs（VSC 仓）`（llm:*）；

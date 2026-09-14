@@ -4,7 +4,7 @@
  */
 import { chat } from "./provider/index.mjs"
 import { abortError, annotateAbort } from "./abort-provenance.mjs"
-import { pushReal, summarizeRunExplorations } from "./context.mjs"
+import { pushReal, summarizeRunExplorations } from "@thincoder/core/context.mjs"
 import { specForModel } from "./config.mjs"
 import { resolve } from "node:path"
 import { executeToolCalls } from "./agent/dispatch.mjs"

@@ -7,7 +7,7 @@
  * agent.mjs 迁入，agent.mjs 内无其他引用）。verbatim 迁移 + 签名化，语义零变。
  */
 
-import { compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT } from "../context.mjs"
+import { compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT } from "@thincoder/core/context.mjs"
 import { ensureAutoReminder, injectEngineeringReminder, ContinueError } from "./helpers.mjs"
 import { cleanupConsultSessions } from "../agent-tools/consult.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"

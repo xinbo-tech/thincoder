@@ -1381,7 +1381,7 @@ lineChars(l)                                         // 一行 + 其 _toolBlock/
 syncLineBudget(state, { pushLineLike })              // state.lines 总量对账（超限裁头——复用 5000 环机制）
 ```
 
-> 纯函数本体（`capText` / `appendCappedText`）住 `src/text-budget.mjs`（零依赖）——与 agent 侧
+> 纯函数本体（`capText` / `appendCappedText`）住 `thincoder-core/text-budget.mjs`（零依赖）——与 agent 侧
 > 捕获共用（`AGENT-LOOP.md` §23.3.1，单一来源）；本模块只承载 TUI 面常量与 `lineChars`/
 > `syncLineBudget` 对账。
 

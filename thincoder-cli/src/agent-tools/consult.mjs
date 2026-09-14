@@ -24,7 +24,7 @@
  */
 import { createAgent, runAgent, readonlyToolNames } from "../agent.mjs"
 import { resolveChildProvider } from "./subagent.mjs"
-import { pushReal } from "../context.mjs"
+import { pushReal } from "@thincoder/core/context.mjs"
 import { offloadToolResult, escapeXml } from "../agent/helpers.mjs"
 import { logEvent, errText } from "@thincoder/core/log.mjs"
 import { deathLine } from "../abort-provenance.mjs"
