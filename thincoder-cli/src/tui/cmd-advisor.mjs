@@ -98,7 +98,7 @@ export async function handleAdvisorCommand(ctx) {
         pushLabel("❯ Advisor", ansi.bold + C.tool)
         pushLine("Thinking: using main model settings", C.tool)
       } else if (c.action === "think_on") {
-        const { specForModel } = await import("../config.mjs")
+        const { specForModel } = await import("@thincoder/core/config.mjs")
         const spec = specForModel(getEffectiveModel(agent, cfg))
         cfg.thinking = { type: spec.thinkEnabledValue ?? "enabled" }
         if (spec.thinkApi === "effort") delete cfg.thinking
@@ -106,7 +106,7 @@ export async function handleAdvisorCommand(ctx) {
         pushLabel("❯ Advisor", ansi.bold + C.tool)
         pushLine(`Thinking: ON`, C.tool)
       } else if (c.action === "think_off") {
-        const { specForModel } = await import("../config.mjs")
+        const { specForModel } = await import("@thincoder/core/config.mjs")
         const spec = specForModel(getEffectiveModel(agent, cfg))
         const isCustomThink = (spec.thinkEnabledValue ?? "enabled") !== "enabled"
         cfg.thinking = isCustomThink ? null : { type: "disabled" }
@@ -223,7 +223,7 @@ function buildModelEntries(agent, cfg, cache) {
 }
 
 async function buildThinkingEntries(agent, cfg) {
-  const { specForModel } = await import("../config.mjs")
+  const { specForModel } = await import("@thincoder/core/config.mjs")
   const providerForDefaults = cfg.provider
     ? agent.providers?.find(p => p.name === cfg.provider) || agent.provider
     : agent.provider

@@ -14,7 +14,7 @@
  */
 import { readFileSync } from "node:fs"
 import { resolve, join } from "node:path"
-import { loadConfig, configDir } from "./config.mjs"
+import { loadConfig, configDir } from "@thincoder/core/config.mjs"
 import { assembleAgent } from "./cli/make-agent.mjs"
 import { createAcpServer, ACP_ERRORS } from "./acp/transport.mjs"
 import { createAcpSession } from "./acp/session.mjs"

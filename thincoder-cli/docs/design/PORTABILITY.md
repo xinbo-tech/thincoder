@@ -226,7 +226,7 @@ D1–D7 全表 / 锚#1–#7 / C1–C4 / T-RO 组 / A11 的 `batchDoc` 必传句�
   R16 令牌语义与 OFF 提醒、槽持久化**零改动**。
 - `thincoder-core/agent-tools/eng.mjs:59`：消息文案去 `in docs/`（逐字见 §4.4）。
 - `dispatch.mjs:204` hint：去 `in docs/` + 未声明时的声明指引（逐字见 §4.4）。
-- `config.mjs:76` 注释随批纠正（1 行）。
+- `thincoder-core/config.mjs:76` 注释随批纠正（1 行）。
 
 ### 3.9 FR14 落实（PO-12）
 
@@ -348,7 +348,7 @@ D1–D7 全表 / 锚#1–#7 / C1–C4 / T-RO 组 / A11 的 `batchDoc` 必传句�
 | `thincoder-core/agent-tools/verify.mjs` | 修改 | 292 | ≤±10（换源 + 死代码清） |
 | `src/tui/cmd-eng.mjs` | 修改 | 94 | 净减 ~25（门禁/模板删除） |
 | `thincoder-core/agent-tools/eng.mjs` | 修改 | 67 | ±2 |
-| `src/config.mjs` | 修改 | 487 | ±1（注释） |
+| `thincoder-core/config.mjs` | 修改 | 487 | ±1（注释） |
 | `thincoder-core/agent-tools/advisor.mjs` | 修改 | 241 | ≤±6（门禁换源 + 拒绝文案 + 注释 :112） |
 | `thincoder-core/advisor.mjs` | 修改 | 290 | ±1（过期注释 :5） |
 

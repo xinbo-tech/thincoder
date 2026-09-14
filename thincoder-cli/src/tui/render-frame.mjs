@@ -9,7 +9,7 @@
 import { ansi, C, ESC } from "./ansi.mjs"
 import { convCacheKey, renderConversation, countConvLines } from "./render-conversation.mjs"
 import { sliceByWidth, stringWidth } from "./render.mjs"
-import { providerSpec } from "../config.mjs"
+import { providerSpec } from "@thincoder/core/config.mjs"
 import { computeLayout, subagentVisibleLines } from "./layout.mjs"
 import { basename } from "node:path"
 import { readFileSync } from "node:fs"

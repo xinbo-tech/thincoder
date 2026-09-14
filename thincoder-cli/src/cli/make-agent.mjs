@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process"
 import { isAbsolute, join } from "node:path"
 import { createAgent } from "../agent.mjs"
-import { loadConfig, configDir } from "../config.mjs"
+import { loadConfig, configDir } from "@thincoder/core/config.mjs"
 import { createMemory, syncDir } from "@thincoder/core/memory.mjs"
 import { discoverRules } from "@thincoder/core/rules.mjs"
 // #70（CORE-UNIFICATION TOOLS）：注册表与消费侧拼装面归位核内——单源 `assembleBuiltinTools`

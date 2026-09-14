@@ -5,7 +5,7 @@ import { ansi, C } from "./ansi.mjs"
 
 export async function handleThinkCommand(ctx, args = []) {
   const { agent, showPicker, syncProviderField, pushLine, pushLabel } = ctx
-  const { specForModel } = await import("../config.mjs")
+  const { specForModel } = await import("@thincoder/core/config.mjs")
 
   // Fast path: direct args — exit immediately
   const cur = agent.provider

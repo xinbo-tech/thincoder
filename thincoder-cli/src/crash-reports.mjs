@@ -27,7 +27,7 @@ import { chmodSync, existsSync, mkdirSync, readdirSync, statSync, unlinkSync, wr
 import { join } from "node:path"
 // F3① 命名空间 import：API 缺失（旧 Node）降级为调用期异常并被武装 try 吞掉——不做 import 期硬失败
 import * as v8 from "node:v8"
-import { configDir } from "./config.mjs"
+import { configDir } from "@thincoder/core/config.mjs"
 
 /** F3② 关值集合（trim + 大小写不敏感）；其余取值（未设 / 空串 / 未知串）默认开——fail-open 向取证。 */
 const HEAP_SNAPSHOT_OFF_VALUES = new Set(["0", "false", "off", "no"])

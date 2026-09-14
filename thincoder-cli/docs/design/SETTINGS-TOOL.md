@@ -3,7 +3,7 @@
 > 板块：工具系统（TOOLS.md 同板块独立保留——MCP.md 同规）。
 > 状态：**已实现**（2026-09-05）+ **第 8 批在途**（2026-09-11——null 默认值键形状约束：F-S1.7/F-S1.8/N-S1.5；设计见本档 §8；设计评审轮次 1 修正已落档——待复审）；**第 13 批（2026-09-11）**：parseValue 两端统一（**用户裁定 ① 去引号**——2026-09-11）+ CHANGELOG 记账更正说明（§9）。
 > （2026-09-11 更正：原“CLI settings.test 11/11 + VS Code 镜像 6/6 全绿”陈述不实——`test/settings.test.mjs` 从未落地，实证见 §5 更正注。）
-> 权威源：CLI `src/agent-tools/settings.mjs`、`src/config.mjs`（DEFAULTS / writeConfigAtomic / configPath）。
+> 权威源：CLI `thincoder-core/agent-tools/settings.mjs`、`thincoder-core/config.mjs`（DEFAULTS / writeConfigAtomic / configPath）。
 > 关联：`docs/README.md`（总地图）、`docs/design/TOOLS.md`（工具系统权威——§1 注册表/§3 门禁）、`docs/design/AGENT-PARAMS-*.md`（Agent 运行参数专题——本工具是其 agent 化调整面）。
 
 ## 变更记录
@@ -36,7 +36,7 @@ agent 工具面全量盘点（25 内置 + 12 元工具）**无任何配置调整
 
 ### 4.1 注册与动作分类
 
-CLI `src/agent-tools/settings.mjs` 导出 `settingsTool`：name `"settings"`；parameters 为 `action` enum [list/get/set] + `key` + `value`——按 action 分支必填。`src/cli/make-agent.mjs` 装配入 baseTools（与 memory/codeSearch/repoOutline 等动态工具并列）。
+CLI `thincoder-core/agent-tools/settings.mjs` 导出 `settingsTool`：name `"settings"`；parameters 为 `action` enum [list/get/set] + `key` + `value`——按 action 分支必填。`src/cli/make-agent.mjs` 装配入 baseTools（与 memory/codeSearch/repoOutline 等动态工具并列）。
 
 dispatch 动作级只读分类加 list/get（`isSubagentReadonlyAction` 扩展）：`settings` 下 `action === "list" || action === "get"` 放行，`set` 保持侧效门。工具级 `readonly: false`（set 存在——动作级分类管控）。
 
@@ -70,7 +70,7 @@ SENSITIVE_SEGMENT = /(^|[._-])(api[_-]?key|key|token|secret|password)($|[._-])/i
 
 遍历 `DEFAULTS`（config.mjs 导出）递归生成 `键路径 → 值类型` 映射（模块加载时一次构建）——set 校验用；数组不递归（`providersList` 等下无标量约束）、对象节递归到叶子；未知键跳过类型校验。null/对象/数组默认值键无标量约束（compactThreshold null=auto 等——消费方/面板层校验）。
 
-> **2026-09-11 更正**：本句与 CLI 实现不符——CLI `buildTypeMap` 对 `null` 叶子记 `typeof null === "object"`（`src/agent-tools/settings.mjs:24-32`），**并非**“无约束”；"跳过 null 叶子"是 VSC 端的写法（`src/agent-tools/settings.mjs:29`（VSC 仓））。null 叶子的口径自本批起以 `docs/design/SETTINGS-TOOL.md` §8.3 形状表为准。
+> **2026-09-11 更正**：本句与 CLI 实现不符——CLI `buildTypeMap` 对 `null` 叶子记 `typeof null === "object"`（`thincoder-core/agent-tools/settings.mjs:24-32`），**并非**“无约束”；"跳过 null 叶子"是 VSC 端的写法（`src/agent-tools/settings.mjs:29`（VSC 仓））。null 叶子的口径自本批起以 `docs/design/SETTINGS-TOOL.md` §8.3 形状表为准。
 
 **加键流程**：CLI config.mjs DEFAULTS 一处 + VS Code config-io AGENT_DEFAULTS 一处 → 类型护栏自动跟随（消除手写漂移）。
 
@@ -88,7 +88,7 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
 > 测试隔离：临时 config 用 `THINCODER_CONFIG_DIR` 或注入 configPath——以 config.mjs 现有测试隔离机制为准。
 
 > **2026-09-11 更正（勘察实证）**：下表声称的 `test/settings.test.mjs`（及 VSC 镜像档）**在工作区不存在**——`thincoder-cli/test/**` 全目录零命中字符串 `settings`；
-> `thincoder-vscode/test/**` 无 `settingsTool` / `agent-tools/settings.mjs` 引用（仅面板面 `settings-panel.test.mjs` / `smoke-settings.mjs`，与本工具无关）。
+> `thincoder-vscode/test/**` 无 `settingsTool` / `thincoder-vscode/src/agent-tools/settings.mjs` 引用（仅面板面 `settings-panel.test.mjs` / `smoke-settings.mjs`，与本工具无关）。
 > 下表保留为历史声称；实际覆盖由 §5.1 T-S2 落地（含把历史声称的核心用例补成真实回归网）。
 
 | # | 类别 | 输入 | 预期 |
@@ -108,7 +108,8 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
 
 **测试档**：CLI = `test/settings.test.mjs`（NEW——`test/run-fast.mjs` 默认 glob `test/*.test.mjs` 自动纳入，无需注册；**25 例**：T-S2.1–T-S2.24 + T-S2.17b）；VSC（W2）= `thincoder-vscode/test/settings-tool.test.mjs`（NEW——VSC 清单为显式列表，**必须**登记 `thincoder-vscode/test/files.mjs`，不登记不跑；**6 例**：T-S2.30–T-S2.35）。
 
-**测试缝（CLI——双缝并用）**：写侧 = `settingsTool({ configPath })` 临时文件 + `ctx.agent.config` 假体（`settings.mjs:90` 既有缝——set 的落盘/热应用都走它）；读侧 = `config.mjs: _setConfigPathForTest`（`:26-30`——让 `loadConfig()`（`:253-255`）真读同一个临时文件；T-S2.1/T-S2.2/T-S2.3/T-S2.5/T-S2.13 的「读回」断言用它）。
+**测试缝（CLI——双缝并用）**：写侧 = `settingsTool({ configPath })` 临时文件 + `ctx.agent.config` 假体（`thincoder-core/agent-tools/settings.mjs:90` 既有缝——set 的落盘/热应用都走它）；
+读侧 = `thincoder-core/config.mjs: _setConfigPathForTest`（`:26-30`——让 `loadConfig()`（`:253-255`）真读同一个临时文件；T-S2.1/T-S2.2/T-S2.3/T-S2.5/T-S2.13 的「读回」断言用它）。
 **两缝必须同时指向临时文件**——只注入写侧（读侧仍指真实用户配置）或只注入读侧（写侧落进真实用户配置），都会造成对真实 `~/.thincoder/config.json` 的读写。
 **测试缝（VSC——W2）**：`thincoder-vscode/src/config-io.mjs:35 _setConfigPathForTest`（本端 `_configPath()`——读写同缝）+ 形状表/校验器 `_` 前缀导出（§8.3 第 6 条）。
 
@@ -163,7 +164,7 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
 - **AC-S2.1**（→ `../requirements/SETTINGS-TOOL.md` §2 F-S1.7）：4 个 null 叶子键 + 同族 `agent.subagentModels` 的**真实消费形态值全部接受**（T-S2.1–T-S2.5、T-S2.12 绿）；**非消费形态值全部拒绝**且磁盘/内存零变化（T-S2.6–T-S2.11 绿）。
 - **AC-S2.2**（→ F-S1.8）：**无静默**——表驱动断言「接受集 == 应用侧可消费集 ∧ 拒绝集 == 应用侧不可消费集」（T-S2.13 绿）；判据逐键取自应用侧读取器（`loadConfig` / `effectiveSubagentModel` / `teamConfig` 的 `repo` 条件 / `config.shell`；`defaultModel` 串另经 `model-ref.mjs` 形态面——夹具串避开存在性层），非测试自造。逐键判据见 §8.5。
 - **AC-S2.3**（→ N-S1.5 + F-S1.5）：① **完备性锁**——`DEFAULTS` 的 null 叶子键集 == `_NULL_LEAF_SHAPES` 键集（T-S2.14 绿；夹具注入新 null 叶子 → 捕获未声明键 + 触发一次性警告）；同族键单列 `_SIBLING_SHAPES`（存在性断言——不参与集合相等）；② **语义零变**——非 null 叶子派生结果与旧实现逐键相等（T-S2.15 绿）；③ **文档一致**——本档 §4.6 与 §5 的失真陈述已更正，与实际实现一致。
-- **AC-S2.4**（→ N-S1.4）：工具描述（`src/agent-tools/settings.mjs:98`）逐字替换为 §8.6 新句（含 null 默认值键按真实消费形态校验 + 不可消费形态被拒；T-S2.24 绿）。
+- **AC-S2.4**（→ N-S1.4）：工具描述（`thincoder-core/agent-tools/settings.mjs:98`）逐字替换为 §8.6 新句（含 null 默认值键按真实消费形态校验 + 不可消费形态被拒；T-S2.24 绿）。
 - **AC-S2.5**（→ F-S1.1–F-S1.5、N-S1.2）：**回归网绿**——list 展平/类型标注、get 成功（T-S2.17b）与缺失键提示、set 正常路径（磁盘 + 热应用 + 回显）、未知键原样、类型不符拒绝、敏感键 set 回显遮罩、**敏感键错误文案零明文**（T-S2.16–T-S2.23 + T-S2.17b 绿）。
 - **AC-S2.6**（→ N-S1.3）：`node --test test/settings.test.mjs` 全绿（未标 slow 用例均 <500ms 快层线）；`cd thincoder && node scripts/check-doc-width.mjs` 新增超宽 0 / 新增违规 0。
 - **AC-S2.7**（→ F-S1.7/F-S1.8 的 VSC 面——范围项 W2，**已裁定纳入本批**——2026-09-11 用户裁定）：VSC 镜像档同源形状表落地（其 null 叶子 = `agent.subagentModel`/`agent.compactThreshold`——本端 `_NULL_LEAF_SHAPES` 2 键；跨端三键 `defaultModel`/`shell`/`memory.team` 单列 `_SIBLING_SHAPES` 3 键）
@@ -180,13 +181,13 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
 ### 7.2 第 8 批决策（D-S2——2026-09-11）
 
 - **D-S2.1 根因修法 = 自动派生 + null 叶子显式形状表**（选型对比见 §8.2）：非 null 叶子继续派生（零手写）；null 叶子 **4 条**显式声明（逐键带代码依据）+ 同族 1 条单列于兄弟结构（`_SIBLING_SHAPES`——存在性断言面）；完备性由机械锁守（测试断言 + 一次性警告）。否决：跳过 null（静默面留存 + 新增静默面，见 §8.2 候选 1）/ 记 `"any"`（换名不换义）/ 全表手写（丢防漂移，违 F-S1.5 派生条款）。
-- **D-S2.2 不可消费形态一律拒绝**（不按“形态接受”）：依据 = 应用侧对不可消费值的处置 = **读不出写入值**（折叠为未设置/回落，或远处的响亮失败——`subagentModel` 对象 → spawn 期 TypeError）而非按形态消费（`src/config.mjs:277` / `src/cli/make-agent.mjs:150` / `src/agent-tools/subagent-async.mjs:136`）——接受即等于承认静默面（违 F-S1.8）；响亮面同样写侧拒绝（错误点近写点——更便宜）。
+- **D-S2.2 不可消费形态一律拒绝**（不按“形态接受”）：依据 = 应用侧对不可消费值的处置 = **读不出写入值**（折叠为未设置/回落，或远处的响亮失败——`subagentModel` 对象 → spawn 期 TypeError）而非按形态消费（`thincoder-core/config.mjs:277` / `src/cli/make-agent.mjs:150` / `src/agent-tools/subagent-async.mjs:136`）——接受即等于承认静默面（违 F-S1.8）；响亮面同样写侧拒绝（错误点近写点——更便宜）。
 - **D-S2.3 `null` 保留为合法值**（显式清除）：四键消费面均有“未设置”态且由 TUI 使用该态（`src/tui/cmd-shell.mjs:65` reset→null · `src/tui/cmd-submodel.mjs:63` 清除→null · `memory.team: null` = 未配置团队层）——清除是**有效动作**，不属静默。
-- **D-S2.4 敏感键错误文案遮罩**（既有 N-S1.2 条款的合规化，非新行为）：现状错误句含 `JSON.stringify(args.value)`（`src/agent-tools/settings.mjs:138`）——实证 `set websearch.apiKey '{"k":"sk-SECRET"}'` → `sk-SECRET` 明文进错误文本（违 N-S1.2“错误文本永不出现明文”）；新校验器统一构造消息，敏感键命中时值位改 `••••（masked）`。取舍：不改错误句**结构**（判据/期望形态仍全量可见），只遮值。
+- **D-S2.4 敏感键错误文案遮罩**（既有 N-S1.2 条款的合规化，非新行为）：现状错误句含 `JSON.stringify(args.value)`（`thincoder-core/agent-tools/settings.mjs:138`）——实证 `set websearch.apiKey '{"k":"sk-SECRET"}'` → `sk-SECRET` 明文进错误文本（违 N-S1.2“错误文本永不出现明文”）；新校验器统一构造消息，敏感键命中时值位改 `••••（masked）`。取舍：不改错误句**结构**（判据/期望形态仍全量可见），只遮值。
 - **D-S2.5 不校验渠道/模型/可执行文件存在性**（形状层止步）：`defaultModel` 只校验 `provider:model` 形态（首冒号 idx>0 ∧ 尾段非空），不查渠道是否存在——存在性属运行期（`src/model-ref.mjs:38-43`），已有 D-S1 原因面（`providerInvalidReason`）；同理 `shell` 不查可执行文件、`memory.team.repo` 不查 git 可达。
-- **D-S2.6 不动读取侧**（零 reader 改动）：全部折叠/回落点（`config.mjs:277` / `make-agent.mjs:150` / `subagent-async.mjs:135-158` / `thincoder-core/tools/bash.mjs:131`）保持原样——本批只加写侧护栏，护栏与 reader 是「拒绝 ⊆ 不可消费」的单调关系（§8.5），不可能新增静默。
+- **D-S2.6 不动读取侧**（零 reader 改动）：全部折叠/回落点（`thincoder-core/config.mjs:277` / `make-agent.mjs:150` / `subagent-async.mjs:135-158` / `thincoder-core/tools/bash.mjs:131`）保持原样——本批只加写侧护栏，护栏与 reader 是「拒绝 ⊆ 不可消费」的单调关系（§8.5），不可能新增静默。
 - **D-S2.7 W3 同族纳入**（`agent.subagentModels`——默认 `{}` ⇒ 派生表零条目 ⇒ 零约束）：实证字符串被静默忽略（回落 `subagentModel`，`subagent-spawn.mjs:92`）——按 F-S1.8 一般表述纳入；**已裁定纳入本批**（2026-09-11 用户裁定——保留 W3 条目与用例：T-S2.12 正控 + T-S2.13 表驱动含 W3 行）。
-- **D-S2.8 `parseValue` 引号行为保持现状**（登记观察，本批不裁定）：CLI 对“JSON 解析成功但结果为字符串”返回**原始串**（`settings.mjs:83`——`set x '"abc"'` 落盘 `"abc"` 含引号），VSC 返回**解析值**（`src/agent-tools/settings.mjs:79`（VSC 仓）——落盘 `abc`）；F-S1.3 值解析条款未覆盖引号语义，差异登记 `docs/TODO.md`（父侧）——本批不修、不锁测试。
+- **D-S2.8 `parseValue` 引号行为保持现状**（登记观察，本批不裁定）：CLI 对“JSON 解析成功但结果为字符串”返回**原始串**（`thincoder-core/agent-tools/settings.mjs:83`——`set x '"abc"'` 落盘 `"abc"` 含引号），VSC 返回**解析值**（`src/agent-tools/settings.mjs:79`（VSC 仓）——落盘 `abc`）；F-S1.3 值解析条款未覆盖引号语义，差异登记 `docs/TODO.md`（父侧）——本批不修、不锁测试。
 
 ## 8. 设计追加：null 默认值键的形状约束（第 8 批——2026-09-11）
 
@@ -195,14 +196,14 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
 
 ### 8.1 问题陈述
 
-**根因**：`buildTypeMap`（`src/agent-tools/settings.mjs:24-32`）用 `typeof 默认值` 作类型，`typeof null === "object"` → **null 叶子被记成 `"object"`**；而校验器唯一的放行口是 `value === null && want === "object"`（`:137`）→ 该键**只能被置 null**。
+**根因**：`buildTypeMap`（`thincoder-core/agent-tools/settings.mjs:24-32`）用 `typeof 默认值` 作类型，`typeof null === "object"` → **null 叶子被记成 `"object"`**；而校验器唯一的放行口是 `value === null && want === "object"`（`:137`）→ 该键**只能被置 null**。
 
 **三个方向同时坏（实证——本批勘察实跑，非推断）**：
 
 | # | 方向 | 实证 | 后果 |
 |---|---|---|---|
 | ① | 合法值被拒 | `set defaultModel "deepseek:deepseek-flash"` / `set shell "pwsh"` / `set agent.subagentModel "kimi:k3"` → 全部抛 `expects object — got string` | 三键**无法经工具设置**（用户 config 的 `defaultModel` 改不动——本批来源） |
-| ② | 非法值被收 + 下游静默 | `set defaultModel '{"a":1}'` → 通过 → `src/config.mjs:277` 非串 → **静默置 null**；`set memory.team '{"name":"x"}'` → 通过 → `src/cli/make-agent.mjs:150` `!team?.repo` → **团队层静默关闭** | 写了等于没写（零提示） |
+| ② | 非法值被收 + 下游静默 | `set defaultModel '{"a":1}'` → 通过 → `thincoder-core/config.mjs:277` 非串 → **静默置 null**；`set memory.team '{"name":"x"}'` → 通过 → `src/cli/make-agent.mjs:150` `!team?.repo` → **团队层静默关闭** | 写了等于没写（零提示） |
 | ③ | 同族静默（非 null 默认值） | `set agent.subagentModels "abc"` → 通过（派生表零条目）→ `subagent-spawn.mjs:92` 索引不到角色 → **静默回落 `subagentModel`** | 同族静默面（W3） |
 
 附证（②的响亮面，非静默但更贵）：`set agent.subagentModel '{}'` → 通过 → spawn 期 `src/agent-tools/subagent-async.mjs:147` `modelArg.includes is not a function` **TypeError**（错误点远离写入点）。
@@ -226,7 +227,7 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
 
 | 键 | 真实消费形态 | 依据（代码） | 接受集 | 拒绝集（= 不可消费形态） |
 |---|---|---|---|---|
-| `defaultModel` | `"provider:model"` 复合串 | `src/config.mjs:59`（默认 null）· `:277`（非串→null）· `src/model-ref.mjs:25-36`（形态面：首冒号分割 + 尾段非空；裸名拒）· `:38-43`（存在性面——D-S2.5 不查） | `provider:model` 形态串 ∪ `null` | 对象 / 数组 / 数字 / 布尔（`:277` → 静默 null）· 空串 / 无冒号串 / 尾段空串（解析无效——运行期原因面） |
+| `defaultModel` | `"provider:model"` 复合串 | `thincoder-core/config.mjs:59`（默认 null）· `:277`（非串→null）· `src/model-ref.mjs:25-36`（形态面：首冒号分割 + 尾段非空；裸名拒）· `:38-43`（存在性面——D-S2.5 不查） | `provider:model` 形态串 ∪ `null` | 对象 / 数组 / 数字 / 布尔（`:277` → 静默 null）· 空串 / 无冒号串 / 尾段空串（解析无效——运行期原因面） |
 | `agent.subagentModel` | 非空串 = `provider:model` \| 渠道名 \| 模型名 \| `"default"` 别名 | `src/agent-tools/subagent-spawn.mjs:83-93` · `subagent-async.mjs:135-158` | 非空串 ∪ `null` | 对象 / 数组 / 数字 / 布尔（spawn 期 TypeError——远处的响亮失败）/ 空串（falsy → 回落父 provider = 静默） |
 | `shell` | 非空串 = shell 路径或命令 | `thincoder-core/tools/bash.mjs:261` → `:131`（`shell ?? true`）· `src/tui/cmd-shell.mjs:28-38`（候选值域） | 非空串 ∪ `null` | 对象 / 数字 / 布尔（执行面读不出命令串）/ 空串（falsy → 关闭 shell 包裹——行为改变，非折叠） |
 | `memory.team` | `{ repo: 非空串, name?, dir? }` | `src/cli/make-agent.mjs:148-152`（`!team?.repo → null`）· `src/distill.mjs:145` | 含非空 `repo` 的对象 ∪ `null` | 字符串 / 数组 / 数字 / 布尔（`!team?.repo` → 团队层静默关）/ 无 `repo` 或 `repo` 空/非串的对象 |
@@ -251,7 +252,7 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
    - `settings set: "<key>" expects object of role→non-empty string — got <kind> (<value>)`
 5. **`null` 语义**：显式清除 = 有效动作（消费面均有“未设置”态，见 D-S2.3）——不是静默。
 6. **测试缝导出**（`_` 前缀——同 `config.mjs _setConfigPathForTest` 口径；**6 个**——`_checkShapeCompleteness` 为交付实测补入，2026-09-11）：`_buildShapeTable` / `_nullLeafPaths` / `_NULL_LEAF_SHAPES` / `_SIBLING_SHAPES` / `_checkKnownKeyValue` / `_checkShapeCompleteness`。
-   依据注：`_checkShapeCompleteness` = T-S2.14「夹具注入未声明键被捕获 + 一次性警告列出键名」的**唯一机械缝**（导出面 `src/agent-tools/settings.mjs:263`；测试直用 `test/settings.test.mjs:284-290`；VSC 端同导出于 `thincoder-vscode/src/agent-tools/settings.mjs:249`）。
+   依据注：`_checkShapeCompleteness` = T-S2.14「夹具注入未声明键被捕获 + 一次性警告列出键名」的**唯一机械缝**（导出面 `thincoder-core/agent-tools/settings.mjs:263`；测试直用 `test/settings.test.mjs:284-290`；VSC 端同导出于 `thincoder-vscode/src/agent-tools/settings.mjs:249`）。
 7. **锁断言形态（逐字——coder 照抄；VSC 相等面 = 交付实测形态 2026-09-11）**：CLI——`assert.deepEqual(Object.keys(_NULL_LEAF_SHAPES).sort(), _nullLeafPaths(DEFAULTS).sort())`（T-S2.14 相等面）·
    `assert.ok("agent.subagentModels" in _SIBLING_SHAPES)`（存在性面）。VSC——`assert.deepEqual(Object.keys(_NULL_LEAF_SHAPES).sort(), _nullLeafPaths({ agent: AGENT_DEFAULTS }).sort())`（T-S2.33 相等面——当前 2 键；实测 `thincoder-vscode/test/settings-tool.test.mjs:106`）·
    跨端三键逐个 `assert.ok(k in _SIBLING_SHAPES)`（实测 `:107`）。
@@ -279,7 +280,7 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
 
 ### 8.6 工具描述同步（第 5 问——逐字新句）
 
-**CLI（`src/agent-tools/settings.mjs:98`，整句替换）**：
+**CLI（`thincoder-core/agent-tools/settings.mjs:98`，整句替换）**：
 
 > Known keys are type-checked: scalar keys against the built-in defaults (agent.maxTurns a number, traces.enabled a boolean); keys whose default is null against their real consumption shape —
 > defaultModel "provider:model", agent.subagentModel / shell non-empty string, memory.team object with a repo — so a value the app would silently drop is refused (null clears the key).
@@ -299,8 +300,8 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
 
 ### 8.7 边界（本批不做）
 
-- **不改 `DEFAULTS` / `AGENT_DEFAULTS` 键集与语义**（零 delta——`src/config.mjs` 本批**零改动**）。
-- **不改读取侧**（`config.mjs:277` 兜底 / `make-agent.mjs` / `bash.mjs` / `subagent-async.mjs` 全部零 delta）。
+- **不改 `DEFAULTS` / `AGENT_DEFAULTS` 键集与语义**（零 delta——`thincoder-core/config.mjs` 本批**零改动**）。
+- **不改读取侧**（`thincoder-core/config.mjs:277` 兜底 / `make-agent.mjs` / `bash.mjs` / `subagent-async.mjs` 全部零 delta）。
 - **不改其它写面**：`/config`、`/shell`、`/submodel` TUI（各自菜单值域受控，**不共用本校验**——实证：`TYPE_MAP` 全仓仅 2 处）、VSC 面板写面（`settings-panel-write.mjs` 自有一套清洗）、`persistRaw`/`writeConfigAtomic` 写链。
 - **不改** list/get、敏感键遮罩语义（D-S2.4 属既有条款合规化）、写盘最小化 D-F5b、审批门、热应用语义。
 - **不校验**渠道/模型/可执行文件存在性、角色名合法性；**不改** `parseValue` 引号行为（D-S2.8 登记观察）。
@@ -312,7 +313,7 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
 
 | 端 | 文件 | 动作 |
 |---|---|---|
-| CLI | `src/agent-tools/settings.mjs` | NEW（工具实现） |
+| CLI | `thincoder-core/agent-tools/settings.mjs` | NEW（工具实现） |
 | CLI | `src/cli/make-agent.mjs` | MODIFY（装配 baseTools） |
 | CLI | dispatch 只读动作分类 | MODIFY（list/get 放行——memory 同款处） |
 | CLI | `test/settings.test.mjs` | NEW |
@@ -325,7 +326,7 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
 
 | 端 | 文件 | 行数注记（批次前 → 交付态） | 增量（设计估 → 实测） | 动作 |
 |---|---|---|---|---|
-| CLI | `src/agent-tools/settings.mjs` | 153（批次前）→ **263**（交付态·实测） | +110（实测——设计估 +40~50；形状表 4 + 同族 1（分表）+ 校验器 + 测试缝导出 + 描述句） | MODIFY |
+| CLI | `thincoder-core/agent-tools/settings.mjs` | 153（批次前）→ **263**（交付态·实测） | +110（实测——设计估 +40~50；形状表 4 + 同族 1（分表）+ 校验器 + 测试缝导出 + 描述句） | MODIFY |
 | CLI | `test/settings.test.mjs` | ——（批次前无此档）→ **433**（交付态·实测） | 433（实测——设计估 ~163；T-S2.1–T-S2.24 + T-S2.17b——25 例，含回归网） | NEW |
 | CLI | `docs/design/SETTINGS-TOOL.md` | 121（批次前）→ **335**（交付态·实测——含交付同步） | +§8 + §5.1 + AC-S2 + §7.2 + 更正注 + 评审修正轮 + 交付同步（见行数差） | MODIFY（本设计——eng-designer 已落） |
 | CLI | `docs/requirements/SETTINGS-TOOL.md` | 22（批次前）→ 50（交付态·实测） | +F-S1.7/F-S1.8/N-S1.5（见行数差） | MODIFY（需求合并——eng-designer 已落） |
@@ -335,7 +336,7 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
 | VSC（W2） | `TOOLS（VSC 仓）` | 213（批次前）→ 222（交付态·实测） | +10（实测——设计估 +~20；settings 工具形状护栏节） | MODIFY（本设计——eng-designer 已落） |
 | 父侧 | `docs/TODO.md` / `CHANGELOG.md` | 259 / —— | —— | 核销/记账（主 agent——不入 coder files 域） |
 
-**拆分计划**：无需拆分——最大改动面 `src/agent-tools/settings.mjs` 预计 ~200 行（<300 建议线）；`src/config.mjs`（487，接近 500 硬限）本批**零改动**。
+**拆分计划**：无需拆分——最大改动面 `thincoder-core/agent-tools/settings.mjs` 预计 ~200 行（<300 建议线）；`thincoder-core/config.mjs`（487，接近 500 硬限）本批**零改动**。
 
 ## 9. 第 13 批：parseValue 两端统一（用户裁定 ① 去引号——2026-09-11）+ CHANGELOG 记账更正
 
@@ -349,7 +350,7 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
 
 | 端 | 落点 | 实现行 | 输入含引号（值串形如 `"abc"`）的落盘值 |
 |---|---|---|---|
-| CLI | `src/agent-tools/settings.mjs` | :188–198（`return s`——原始串） | `"abc"`（**含引号字面**） |
+| CLI | `thincoder-core/agent-tools/settings.mjs` | :188–198（`return s`——原始串） | `"abc"`（**含引号字面**） |
 | VSC | `thincoder-vscode/src/agent-tools/settings.mjs` | :179–188（`return v`——解析值） | `abc`（去引号） |
 
 其余形态（数字 / 布尔 / `null` / 数组 / 对象）两端一致；裸字符串（无引号）两端一致（原样字面）。

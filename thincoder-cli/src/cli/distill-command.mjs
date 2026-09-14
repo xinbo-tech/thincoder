@@ -1,5 +1,5 @@
 import { isAbsolute, join } from "node:path"
-import { loadConfig, configPath } from "../config.mjs"
+import { loadConfig, configPath } from "@thincoder/core/config.mjs"
 import { createMemory } from "@thincoder/core/memory.mjs"
 import { teamConfig, gitAuthor } from "./make-agent.mjs"
 import { setupWizard } from "./setup-wizard.mjs"

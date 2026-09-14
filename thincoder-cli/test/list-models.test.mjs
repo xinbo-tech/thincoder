@@ -6,7 +6,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { listModels } from "@thincoder/core/provider/list-models.mjs"
-import { PROVIDER_PRESETS } from "../src/config.mjs"
+import { PROVIDER_PRESETS } from "@thincoder/core/config.mjs"
 import { getProviderModels, probeChannelModels, _catalogHooks, _clearModelCatalogCache } from "../src/tui/model-catalog.mjs"
 
 /** fetch 注入：calls 记录 (url, opts)；handler 返回 {status, body} 或抛错（network）。 */

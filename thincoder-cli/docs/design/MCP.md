@@ -1,6 +1,6 @@
 # MCP 客户端设计（thincoder）
 
-> 权威源：`thincoder-core/mcp.mjs`（会话/探活/建连）+ `thincoder-core/mcp/transport-*.mjs`（stdio/HTTP/WS 传输）+ `src/tui/cmd-mcp.mjs` + `src/tui/cmd-mcp-form.mjs`（/mcp 交互）+ `src/config.mjs`（reloadMcpFromDisk）+ `src/cli/make-agent.mjs`（启动装配）。
+> 权威源：`thincoder-core/mcp.mjs`（会话/探活/建连）+ `thincoder-core/mcp/transport-*.mjs`（stdio/HTTP/WS 传输）+ `src/tui/cmd-mcp.mjs` + `src/tui/cmd-mcp-form.mjs`（/mcp 交互）+ `thincoder-core/config.mjs`（reloadMcpFromDisk）+ `src/cli/make-agent.mjs`（启动装配）。
 > 本文档描述 MCP 客户端的**当前设计**——工具如何动态展开、如何建连/热插拔、如何配置、如何探活、失败如何表现。跨文档已接管的主题只留指针，不复制。
 > 关联权威：`TOOLS.md` §8（MCP 展开并入统一工具 schema）、`AGENT-LOOP.md`（工具调度）、`PROVIDER.md`（模型/聊天调用链）。
 
@@ -246,7 +246,7 @@ finally transport.close()          // closed=true 防 onDead 重连触发
 
 用户可让 agent 用 edit/write 工具直接改 `config.json` 的 `mcp.servers`，然后 `/mcp` 菜单生效。机制：
 
-- **`reloadMcpFromDisk(agent, path?)`**（`src/config.mjs`）：读磁盘 config.json → 合并进 `agent.config.mcp`（仅替换 mcp 段）。`path` 第二参供测试注入（生产缺省 = 默认 `~/.thincoder/config.json`）。**调用点收敛到菜单打开边界**（主菜单循环顶部 + `↻ Refresh`）；`getServers()` 保持纯读不加副作用。
+- **`reloadMcpFromDisk(agent, path?)`**（`thincoder-core/config.mjs`）：读磁盘 config.json → 合并进 `agent.config.mcp`（仅替换 mcp 段）。`path` 第二参供测试注入（生产缺省 = 默认 `~/.thincoder/config.json`）。**调用点收敛到菜单打开边界**（主菜单循环顶部 + `↻ Refresh`）；`getServers()` 保持纯读不加副作用。
 - **对账规则**：disk 与内存 registry 按 fingerprint 对账——disk 删除/变更的**已连接** server：连接保持不断（避免误断正在用的），内存保留该行 + 持续标 `⚠ disk changed`（诚实报告真实漂移，直到 reconnect 回写或 remove 显式解决）；disk **新增**的 server 不是 drift（无 ⚠）；未连接且被 disk 删除的 server 随磁盘消失。
 - **畸形 config.json**（JSON 解析失败/`mcp.servers` 非数组）→ 重读失败回退内存态 + 菜单提示行告知 disk 配置不可读。
 - **config.json 文件丢失**：保留内存 mcp servers（与畸形回退同策略——不因文件消失静默清空用户配置）。

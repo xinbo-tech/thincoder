@@ -61,7 +61,7 @@ export async function handleMcpCommand(ctx, args = []) {
    *  测试注入 tmp config 路径用（生产 undefined → 默认 ~/.thincoder）。 */
   let changedNames = [] // 最近一次成功重读的对账结果（T23 ⚠ 标记）
   async function reloadFromDisk() {
-    const { reloadMcpFromDisk } = await import("../config.mjs")
+    const { reloadMcpFromDisk } = await import("@thincoder/core/config.mjs")
     const r = reloadMcpFromDisk(agent, ctx.configPath)
     diskUnreadable = !r.ok
     if (r.ok) changedNames = r.changedNames

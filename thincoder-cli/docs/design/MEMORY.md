@@ -17,7 +17,7 @@
 - **磁盘为真相**（project/team 层）：markdown 文件即知识本体，可人工编辑、可 git 管理；DB 只是可重建索引。
 - **单一 agent 工具面**：`memory` 单工具、`action` 路由五动作（search/put/list/delete/clear）——旧 memory_put/search/delete 三个裸工具已合并退役。
 
-`~/.thincoder/memory.db` 与 `{cwd}/.thincoder/memory/` 的默认位置定义于 `src/config.mjs` 的 `config.memory` 段（`dbPath` / `projectDir` / `team`），可在 `~/.thincoder/config.json` 覆盖。
+`~/.thincoder/memory.db` 与 `{cwd}/.thincoder/memory/` 的默认位置定义于 `thincoder-core/config.mjs` 的 `config.memory` 段（`dbPath` / `projectDir` / `team`），可在 `~/.thincoder/config.json` 覆盖。
 
 ## 2. 存储与分层
 
@@ -240,7 +240,7 @@ AC6 值域语义不变（提示仍 personal/project）。
 ### 9.1 问题陈述与证据（as-of 2026-09-11 实测）
 
 **病灶**：全仓无 `~` 展开逻辑（`startsWith("~")` 零命中；`~` 仅作注释/字符串出现）；
-`loadConfig()` 合并用户配置（`src/config.mjs:274-285`）后不做路径归一。
+`loadConfig()` 合并用户配置（`thincoder-core/config.mjs:274-285`）后不做路径归一。
 
 **链路（README 示例即触发）**：`README.md:138` 示例 `"dbPath": "~/.thincoder/memory.db"` → 照抄进 config.json →
 `loadConfig()` 原样返回 → `createMemory()`（`src/memory/schema.mjs:66-68`）先 `mkdirSync(dirname(dbPath), {recursive:true})`
@@ -258,7 +258,7 @@ AC6 值域语义不变（提示仍 personal/project）。
 
 **登记（本批不做——非静默）**：
 
-1. 运行时写入面的**当次**展开：TUI `/shell` 热应用（`src/tui/cmd-shell.mjs:58`）· settings 工具 set（`src/agent-tools/settings.mjs`）·
+1. 运行时写入面的**当次**展开：TUI `/shell` 热应用（`src/tui/cmd-shell.mjs:58`）· settings 工具 set（`thincoder-core/agent-tools/settings.mjs`）·
    VS Code 面板写面——落盘原文（下次启动 `loadConfig()` 即展开），但当次会话不生效（`shell` 是唯一会话内实时消费键）；
 2. `src/acp.mjs:424` 的 ACP 记忆库硬编码 `join(configDir, "memory.db")`——不读 `memory.dbPath`（既有分叉，与 `~` 无因果）；
 3. 历史受害数据：cwd 下已生成的字面 `~` 目录不自动搬移（用户手工迁移；是否随发布说明提示由父侧裁）。
@@ -311,7 +311,7 @@ export function expandHome(p, home = homedir()) {
 | `"a/~/b"` · `"x~"` | 原样 | 仅前缀形态 |
 | 非字符串（`null` / `undefined` / 数字 / 对象） | 原样 | 类型护栏——`team.dir` 未设即 `undefined` 透传 |
 
-**（b）`loadConfig()` 落点**（`src/config.mjs`）：合并块（`:274-285`）之后、providers 归一之前：
+**（b）`loadConfig()` 落点**（`thincoder-core/config.mjs`）：合并块（`:274-285`）之后、providers 归一之前：
 
 ```js
 // 家目录展开（第 29 批）：config 路径字段单一规范化点——只读归一（磁盘原文保留）
@@ -345,7 +345,7 @@ merged.shell = expandHome(merged.shell)
 | 6 | `bin/thincoder.mjs:272` | `thincoder reindex` 的 project 同步 |
 | 7 | `bin/thincoder.mjs:326` | TUI `/distill` 的 projectDir 入参 |
 
-**（d）冻结面（零改）**：`DEFAULTS` 四字段默认值（`src/config.mjs:91-95`）· `teamConfig()` 缺省 `join(configDir, "teams", name)`
+**（d）冻结面（零改）**：`DEFAULTS` 四字段默认值（`thincoder-core/config.mjs:91-95`）· `teamConfig()` 缺省 `join(configDir, "teams", name)`
 （`src/cli/make-agent.mjs:152`）· `dbPath` / `team.dir` / `shell` 的消费端（收到的值已绝对）。
 
 ### 9.4 受影响文件全清单（行数 = 批前基准 as-of 2026-09-11 实测）
@@ -353,7 +353,7 @@ merged.shell = expandHome(merged.shell)
 | # | 文件 | 现行行数 | 预计增量 | 改动 | 执行 |
 |---|---|---|---|---|---|
 | 1 | `src/expand-home.mjs` | 新 | ~+30 | 展开器（§9.3a） | eng-coder |
-| 2 | `src/config.mjs` | 487 | ≤+10 | import + 四字段归一（§9.3b） | eng-coder |
+| 2 | `thincoder-core/config.mjs` | 487 | ≤+10 | import + 四字段归一（§9.3b） | eng-coder |
 | 3 | `src/cli/make-agent.mjs` | 163 | ≤+2 | :44 基准解析 + import 增补 | eng-coder |
 | 4 | `src/cli/memory-command.mjs` | 86 | ≤+2 | :70 同式 | eng-coder |
 | 5 | `src/memory/docs.mjs` | 418 | ≤+2 | :240 同式 | eng-coder |

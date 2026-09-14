@@ -24,7 +24,7 @@
  *  - Mutations feed _touchedFiles and fire-and-forget memory reindex.
  */
 import { pushReal } from "@thincoder/core/context.mjs"
-import { specForModel } from "../config.mjs"
+import { specForModel } from "@thincoder/core/config.mjs"
 import { FILE_MUTATORS } from "./helpers.mjs"
 import { resolve } from "node:path"
 import { advisorRuns, stripApprovedSuffix } from "@thincoder/core/agent-tools/advisor-async.mjs"

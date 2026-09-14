@@ -1,5 +1,5 @@
 import { isAbsolute, join } from "node:path"
-import { loadConfig } from "../config.mjs"
+import { loadConfig } from "@thincoder/core/config.mjs"
 import { teamConfig } from "./make-agent.mjs"
 import { put, search, list } from "@thincoder/core/memory/core.mjs"
 import { deleteByUid } from "@thincoder/core/memory/delete.mjs"

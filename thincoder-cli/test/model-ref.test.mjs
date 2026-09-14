@@ -11,7 +11,7 @@ import assert from "node:assert/strict"
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync, unlinkSync, existsSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { parseModelRef, resolveRuntimeProvider, specMatch, _setConfigPathForTest, _resetConfigPathForTest } from "../src/config.mjs"
+import { parseModelRef, resolveRuntimeProvider, specMatch, _setConfigPathForTest, _resetConfigPathForTest } from "@thincoder/core/config.mjs"
 import { sessionPath as sessionFilePath } from "@thincoder/core/session.mjs"
 
 const PROVIDERS = [

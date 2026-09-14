@@ -123,7 +123,7 @@ stopped, total, received }`。settle 语义：正常回复入队；`session.stop
 | `thincoder-core/agent-tools/consult.mjs` | 两工具 + main_history + 会话状态 + runConsultChild + settle→pending 单容器（升格完整 entry——ASYNC-RESULT-CONTAINER.md D2）+ cleanupConsultSessions |
 | `src/agent/setup.mjs` | depthOnly 注册两工具 + role "consult" base prompt 分支 + `withPool` 候选池装饰 |
 | `src/agent.mjs` | `CONSULT_BASE` 加载导出 + run 首行 consult digest 注入（含 digest 消费驱动的 pending 族推广） |
-| `src/config.mjs` | DEFAULTS 加 consultModels/consultTurns/consultTimeoutMs + 校验（≤5、provider 存在） |
+| `thincoder-core/config.mjs` | DEFAULTS 加 consultModels/consultTurns/consultTimeoutMs + 校验（≤5、provider 存在） |
 | `src/tui/suspension-drive.mjs` | 挂起活度判据（consultRunningChildren / poolLive）+ digest 触发判据推广 |
 | `src/tui/cmd-config.mjs` | `/config` 候选池管理（增删改 + effort picker） |
 | `src/prompts/consult-base.md` | 会诊子任务 prompt（只读约束 + main_history + 预算引导） |

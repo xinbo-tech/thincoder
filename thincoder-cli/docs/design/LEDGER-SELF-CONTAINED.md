@@ -536,7 +536,7 @@
 | 24 | `RELEASE` | ② | 仅 design 层（202 行） | **建本仓需求档** → `docs/requirements/RELEASE.md` | 发布流程档在位；需求层无档 |
 | 25 | `SEND-STALL-DISTILL` | ② | 有档（40 行） | **已有对位** | 归位档在位 |
 | 26 | `SESSION` | ② | 仅 design 层（519 行） | **建本仓需求档** → `docs/requirements/SESSION.md` | 会话机制设计档在位；需求层无档 |
-| 27 | `SETTINGS-TOOL` | ① | 有档（37 行） | **已有对位** | 本批新建档在位（机制 = `src/agent-tools/settings.mjs`） |
+| 27 | `SETTINGS-TOOL` | ① | 有档（37 行） | **已有对位** | 本批新建档在位（机制 = `thincoder-vscode/src/agent-tools/settings.mjs`） |
 | 28 | `STRUCTURE-DEBT` | ① | 有档（34 行） | **已有对位** | 本批新建档在位 |
 | 29 | `SUBAGENT-OBSERVE-SEND` | ② | 仅 design 层（79 行） | **建本仓需求档** → `docs/requirements/SUBAGENT-OBSERVE-SEND.md` | `src/agent-tools/subagent-actions.mjs` 在位；需求层无档 |
 | 30 | `TESTING` | ② | 有档（87 行） | **已有对位** | 并行批落位档在位 |
@@ -733,7 +733,7 @@
 | 37 | `docs/requirements/LOGGING.md`（VSC 仓） | **新建（①）** | 0→~60 | 机制在位（`thincoder-vscode/src/log.mjs`）无档——兼清 `thincoder-vscode/src/log.mjs:2` 悬空指针 |
 | 38 | `docs/requirements/MULTI-INSTANCE-COLLAB.md`（VSC 仓） | **新建（①）** | 0→~60 | 机制在位（`thincoder-vscode/src/extension/peer-instances.mjs`）无档 |
 | 39 | `docs/requirements/NORMAL-MODE.md`（VSC 仓） | **新建（①）** | 0→~70 | 机制在位（提示词装配层）无档 |
-| 40 | `docs/requirements/SETTINGS-TOOL.md`（VSC 仓） | **新建（①）** | 0→~70 | 机制在位（`src/agent-tools/settings.mjs`）；部分承载 = `docs/design/TOOLS.md` §5 |
+| 40 | `docs/requirements/SETTINGS-TOOL.md`（VSC 仓） | **新建（①）** | 0→~70 | 机制在位（`thincoder-vscode/src/agent-tools/settings.mjs`）；部分承载 = `docs/design/TOOLS.md` §5 |
 | 41 | `docs/requirements/STRUCTURE-DEBT.md`（VSC 仓） | **新建（①）** | 0→~60 | 本端结构债登记面缺失 |
 | 42 | `docs/requirements/VERIFY-REDESIGN.md`（VSC 仓） | **新建（①）** | 0→~60 | 机制在位（`thincoder-vscode/src/agent-tools/verify.mjs`）无档 |
 | 43 | `thincoder-vscode/docs/batches/`（迁移 **14** 档） | 迁入 4234 行（含 10 行折行） | ±0 | §8.3 迁移表逐档 |

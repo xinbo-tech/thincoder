@@ -13,8 +13,8 @@ import assert from "node:assert/strict"
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { loadConfig, PROVIDER_PRESETS, reloadMcpFromDisk, _setConfigPathForTest, _resetConfigPathForTest } from "../src/config.mjs"
-import { migrateLegacyModelFields } from "../src/config-migrate.mjs"
+import { loadConfig, PROVIDER_PRESETS, reloadMcpFromDisk, _setConfigPathForTest, _resetConfigPathForTest } from "@thincoder/core/config.mjs"
+import { migrateLegacyModelFields } from "@thincoder/core/config-migrate.mjs"
 
 function tmpCfg(content) {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-merge-"))

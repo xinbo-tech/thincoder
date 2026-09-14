@@ -1007,7 +1007,7 @@ note: p.baseURL,
 ### 13.1 问题陈述（as-of 2026-09-11 逐条现场核实）
 
 - 根因：`src/tui/cmd-advisor.mjs:89` 调 `buildThinkingEntries(agent, cfg)`——该函数 `async`（定义 :225，
-  内部 `await import("../config.mjs")`）——**漏 `await`** → Promise 传入 `showPicker` → `src/tui/pickers.mjs:46`
+  内部 `await import("thincoder-core/config.mjs")`）——**漏 `await`** → Promise 传入 `showPicker` → `src/tui/pickers.mjs:46`
   的 `entries.filter` 抛 `TypeError: entries.filter is not a function` → 被 `src/tui/slash-commands.mjs:120-123`
   既有拦截器落为 `[error]` 行（TUI 主循环存活——但 Thinking 子菜单**必炸**、用户不可用）。
 - 对照面：Model 子面正常（`buildModelEntries` 同步——`cmd-advisor.mjs:196`）；全仓 `showPicker(` 调用点

@@ -28,7 +28,7 @@
 - 双端 `advisor-async.mjs` `ADVISOR_POOL_LIMIT` 常量（CLI :196 / VSC :39）2 → 4——评审 #6 措辞：
   常量 = 运行时回退权威——DEFAULTS/回退对象 = config 层镜像（保持逐字节同值——耦合锁测试保一致）——
   四源同改缺一即漂移
-- 默认源同步 4：CLI config.mjs:65 DEFAULTS.agent.poolLimits 加 `advisor: 4` / VSC `src/config-io.mjs:271`（VSC 仓） AGENT_DEFAULTS.poolLimits + VSC settings.mjs:96 回退对象加 `advisor: 4`
+- 默认源同步 4：CLI thincoder-core/config.mjs:65 DEFAULTS.agent.poolLimits 加 `advisor: 4` / VSC `src/config-io.mjs:271`（VSC 仓） AGENT_DEFAULTS.poolLimits + VSC thincoder-vscode/src/extension/settings.mjs:96 回退对象加 `advisor: 4`
 - **耦合锁补真空**（勘察：T-24a4 锚定测试现不存在——注释宣称锁但测试树零引用）——新测试断言 DEFAULTS ↔ 运行时常量逐键同值（3 键 4/4/4）
 
 ### 2. advisor 读取器（F-2——每端各一，放 advisor-async.mjs 判定点旁）
@@ -46,7 +46,7 @@
 - `webview/settings-agent.js:20`（VSC 仓；21 行同） Agent 卡加第三数字框 `ag-pool-advisor`——payload :91-101 加读取
 - `locales/en.json:235`（VSC 仓；至 238 行） + `locales/zh.json:235`（VSC 仓；至 238 行） 加 settings.poolAdvisor/Help
 - `src/extension/panel-messages.mjs:361`（VSC 仓；至 362 行） → `src/config-io.mjs:369`（VSC 仓；至 376 行） saveAgentSettingsFromPanel 白名单（:371 现 ["engCoder","other"]）加 "advisor"（全非法 → 删整键回退默认语义不变）
-- settings.mjs:96 回退对象加 advisor + settings-agent.js 显示 `?? 4`
+- thincoder-vscode/src/extension/settings.mjs:96 回退对象加 advisor + settings-agent.js 显示 `?? 4`
 - 运行期：effectivePoolLimits 加 advisor 键遍历（subagent-scheduler.mjs:344-360 键表 2→3——评审 #2：
   第三键**仅供面板生效值显示/读取回退**——调度路径过滤不消费（subagent 两域 engCoder/other 判定不变）——
   advisor 实际调度上限由 advisor-async 独立读取器（§2）决定——两路径各司其职）——每 run 起始
@@ -78,13 +78,13 @@
 | 文件 | 端 | 现行数（评审 #1 实测） | 预计增量 | 改动 |
 |---|---|---|---|---|
 | thincoder-core/agent-tools/advisor-async.mjs | CLI | 457（>300 审视——增量安全） | ≤±25 | 常量 4 + 读取器 + scope 守卫 + 文案生效值 |
-| src/config.mjs | CLI | 429（>300 审视——结构不变） | +1 | DEFAULTS poolLimits 加 advisor:4 |
+| thincoder-core/config.mjs | CLI | 429（>300 审视——结构不变） | +1 | DEFAULTS poolLimits 加 advisor:4 |
 | src/tui/cmd-config.mjs | CLI | 393（>300 审视——增量安全） | ≤+12 | advisor 第三项 |
 | thincoder-core/agent-tools/advisor.mjs | CLI | 211 | ≤+2 | 描述去数字化活引用 |
 | src/agent-tools/subagent-async.mjs | CLI | 417（>300 审视——仅注释） | 0（替换） | §24→§11 注释 |
 | thincoder-core/agent-tools/advisor-async.mjs | VSC | 433（>300 审视——增量安全） | ≤±25 | 常量 4 + 读取器 + scope 守卫 + 文案插值 |
 | src/config-io.mjs（VSC 仓） | VSC | 494（>300 审视——最热点 495 安全） | +1 | 默认 + 白名单加 advisor |
-| src/extension/settings.mjs | VSC | 309（>300 审视——增量安全） | +1 | 回退对象加 advisor:4 |
+| thincoder-vscode/src/extension/settings.mjs | VSC | 309（>300 审视——增量安全） | +1 | 回退对象加 advisor:4 |
 | webview/settings-agent.js（VSC 仓） | VSC | 169 | ≤+10 | 第三数字框 |
 | locales/en.json（VSC 仓） + zh.json | VSC | 240 ×2 | ≤+4 ×2 | poolAdvisor 文案 |
 | src/agent-tools/subagent-scheduler.mjs | VSC | 459（>300 审视——键表评估） | ≤+1 | 键表 + §24 注释 |

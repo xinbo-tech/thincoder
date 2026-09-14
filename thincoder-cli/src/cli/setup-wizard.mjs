@@ -1,5 +1,5 @@
 import { createInterface } from "node:readline"
-import { configPath, writeConfigAtomic, PROVIDER_PRESETS } from "../config.mjs"
+import { configPath, writeConfigAtomic, PROVIDER_PRESETS } from "@thincoder/core/config.mjs"
 import { probeChannelModels } from "../tui/model-catalog.mjs"
 
 /** First-time setup (TTY chat / distill): ask a few questions to configure a provider, save to disk, return runtime provider. Cancel returns null. */

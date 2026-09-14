@@ -14,7 +14,7 @@
  * （报告契约 MIN_REPORT_CHARS、mergeChildMutations）、escalate 专属（touched-files、
  * effortNote）、consult 专属（session 队列、watchdog、main_history 工具）。
  */
-import { specForModel } from "../config.mjs"
+import { specForModel } from "@thincoder/core/config.mjs"
 import { ContinueError } from "../agent.mjs"
 import { relayPrefixOf } from "./relay-prefix.mjs"
 import { appendCappedText } from "@thincoder/core/text-budget.mjs"

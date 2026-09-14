@@ -5,7 +5,7 @@
 import { chat } from "@thincoder/core/provider/index.mjs"
 import { abortError, annotateAbort } from "@thincoder/core/abort-provenance.mjs"
 import { pushReal, summarizeRunExplorations } from "@thincoder/core/context.mjs"
-import { specForModel } from "./config.mjs"
+import { specForModel } from "@thincoder/core/config.mjs"
 import { resolve } from "node:path"
 import { executeToolCalls } from "./agent/dispatch.mjs"
 import { recordToolResults } from "./agent/record-results.mjs"

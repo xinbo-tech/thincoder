@@ -1,7 +1,7 @@
 # 多实例协作感知（同 cwd 多副本协作）
 
 > 板块：agent 协作感知。状态：**已实现**（CLI 端 2026-09-06 落地并提交——感知 L1/L2/L3 + checklist 同步 F4 + config 原子写 F5；本文档 2026-09-07 重写为人类可读当前态）。
-> 权威源（CLI）：`thincoder-core/peer-instances.mjs`（感知面 L1/L2）、`thincoder-core/peer-domains.mjs`（域面 L3）、`thincoder-core/tools/checklist-sync.mjs`（checklist 并发同步机 F4）、`src/config.mjs` `writeConfigAtomic`（config 原子写 F5）。
+> 权威源（CLI）：`thincoder-core/peer-instances.mjs`（感知面 L1/L2）、`thincoder-core/peer-domains.mjs`（域面 L3）、`thincoder-core/tools/checklist-sync.mjs`（checklist 并发同步机 F4）、`thincoder-core/config.mjs` `writeConfigAtomic`（config 原子写 F5）。
 > 装配点（CLI）：`src/agent/setup-reminders.mjs`（L1 注入 `pushPeerReminder`）、`src/agent/setup.mjs`（回合注入时序）、`src/agent/dispatch.mjs` + `src/agent/run-stages.mjs`（L3 检测/记录/flush 钩子）、`src/cli/make-agent.mjs`（`peer_instances` 只读工具装配）、`src/tui/config-helpers.mjs` 等（F5 写点收口）。
 > 关联：`SESSION.md` §10（slotSessions/isProcessAlive/slotOccupancy——本机制上游存储层基建，复用不重造）、`SETTINGS-TOOL.md`（settings 工具走 `writeConfigAtomic` 原子写盘）。
 > 范围：CLI（thincoder）+ VS Code（thincoder-vscode）双端——同一 `~/.thincoder/sessions/` / `~/.thincoder/peers/` 目录下的多实例协作。VS Code 端按双端镜像纪律同构实现（双端逐字锚：§3.2 L1 注入文案 + §3.3 schema + §4.3 软提示文案）。
@@ -239,5 +239,5 @@ CLI 多处**整节内存写回**（读入内存的 `agent.providers` / `agent.co
 | CLI | `src/agent/setup.mjs` | MODIFY | 注入调用点（env-state 后 time 前） |
 | CLI | `src/agent/dispatch.mjs` + `src/agent/run-stages.mjs` | MODIFY | L3 写工具前检测/记录钩子 + 回合末 flush |
 | CLI | `src/cli/make-agent.mjs` | MODIFY | peer_instances 只读工具装配 |
-| CLI | `src/config.mjs` + `src/tui/config-helpers.mjs` + `src/tui/pickers.mjs` + `src/tui/cmd-mcp.mjs` + `src/tui/cmd-config.mjs` + `src/cli/setup-wizard.mjs` + `src/agent-tools/settings.mjs` | MODIFY | F5：7 处整节写回消灭 + writeConfigAtomic 收口 |
+| CLI | `thincoder-core/config.mjs` + `src/tui/config-helpers.mjs` + `src/tui/pickers.mjs` + `src/tui/cmd-mcp.mjs` + `src/tui/cmd-config.mjs` + `src/cli/setup-wizard.mjs` + `thincoder-core/agent-tools/settings.mjs` | MODIFY | F5：7 处整节写回消灭 + writeConfigAtomic 收口 |
 | VS Code | extension 同构（peer-instances/peer-domains/checklist-sync/config-io 镜像） | ADD/MODIFY | 双端镜像（`_setSessionsDirForTest` 注入缝随既有；schema/文案逐字锚见 §3/§4） |

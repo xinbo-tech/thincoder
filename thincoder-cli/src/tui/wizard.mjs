@@ -6,7 +6,7 @@
  * ctx: { agent, state, pushLine, pushLabel, render, persistRaw, openModelPicker }
  */
 
-import { PROVIDER_PRESETS as PRESETS } from "../config.mjs"
+import { PROVIDER_PRESETS as PRESETS } from "@thincoder/core/config.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { computeLayout } from "./layout.mjs"
 import { probeChannelModels } from "./model-catalog.mjs"
@@ -202,7 +202,7 @@ export function createWizard(ctx) {
     agent.provider = { ...agent.providers.find((p) => p.name === f.name) }
     agent.provider.model = agent.activeModel
     if (agent.config?.agent?.compactThresholdAuto) {
-      const { resolveCompactThreshold } = await import("../config.mjs")
+      const { resolveCompactThreshold } = await import("@thincoder/core/config.mjs")
       agent.config.agent.compactThreshold = resolveCompactThreshold(null, agent.provider).value
     }
     // agent.config 是 loadConfig merged——无 active* 键可写——defaultModel 随内存 merged 更新

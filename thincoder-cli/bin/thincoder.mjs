@@ -16,7 +16,7 @@
 import { readFileSync } from "node:fs"
 import { isAbsolute, join } from "node:path"
 import { runAgent } from "../src/agent.mjs"
-import { loadConfig, configPath } from "../src/config.mjs"
+import { loadConfig, configPath } from "@thincoder/core/config.mjs"
 import { cleanupTraces } from "@thincoder/core/traces/trace-store.mjs"
 import { createMemory, syncDir } from "@thincoder/core/memory.mjs"
 import { assembleAgent, teamConfig, gitAuthor, validateProvider } from "../src/cli/make-agent.mjs"

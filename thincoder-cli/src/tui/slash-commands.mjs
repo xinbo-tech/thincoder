@@ -9,7 +9,7 @@
  */
 
 import { C } from "./ansi.mjs"
-import { specForModel } from "../config.mjs"
+import { specForModel } from "@thincoder/core/config.mjs"
 import { handleClearCommand } from "./cmd-clear.mjs"
 import { handleNewCommand } from "./cmd-new.mjs"
 import { handleExitCommand } from "./cmd-exit.mjs"

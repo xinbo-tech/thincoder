@@ -18,7 +18,7 @@ if (process.env.THINCODER_SMOKE !== "1") {
   // (import declarations must be top-level) — the prepublishOnly glob
   // `node --test "test/*.mjs"` collects this file, parsed it, and the
   // SyntaxError aborted the npm publish prepublish gate (0.12.51, 2026-08-30).
-  const { loadConfig } = await import("../src/config.mjs")
+  const { loadConfig } = await import("@thincoder/core/config.mjs")
   const { chat } = await import("@thincoder/core/provider/index.mjs")
 
 const cfg = loadConfig()

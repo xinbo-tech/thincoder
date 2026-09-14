@@ -39,7 +39,7 @@
 
 ## 技术待办（归档 55 条——含勾销 1；VSC 端条目已迁本仓 VSC 归档档）
 
-- [x] **`parseValue` 两端不一致 + CHANGELOG 历史失真（D-S2.8 / 父侧项）**：① CLI `settings` 保留引号 vs VSC 返回解析值（同 key 两端写入语义不同）② `CHANGELOG.md:42` 记「测试 T-S1.1-11」但测试档从未落地 → 证据 `thincoder-cli/src/agent-tools/settings.mjs:196`（去引号落地）· status=已核销（第 13 批条目 E——档 `thincoder-cli/docs/batches/2026-09-11-MECH-DEBT-SWEEP.md`）
+- [x] **`parseValue` 两端不一致 + CHANGELOG 历史失真（D-S2.8 / 父侧项）**：① CLI `settings` 保留引号 vs VSC 返回解析值（同 key 两端写入语义不同）② `CHANGELOG.md:42` 记「测试 T-S1.1-11」但测试档从未落地 → 证据 `thincoder-core/agent-tools/settings.mjs:196`（去引号落地）· status=已核销（第 13 批条目 E——档 `thincoder-cli/docs/batches/2026-09-11-MECH-DEBT-SWEEP.md`）
 - [x] ~~**`thincoder-cli/docs/design/TUI.md` §1 地图行存量漂移**~~（第 7 批回写时观察）→ 证据 `thincoder-cli/docs/design/TUI.md:19`（§1 地图表）· status=已核销（第 14 批 id=13 全表实测回写——15 行改 + 表头口径注；`:25` 另有 pickers 行文字注）
 - [x] **跨批依赖：T75 守恒锁计数（第 14 批 ↔ COMMON-LAYER ↔ 第 16 批）**：第 14 批 T75 锁 `53 = 42 + 11`；COMMON-LAYER 落 3 例 → `56 = 42 + 14`；**第 16 批落 2 例（AC61/AC64）→ `58 = 42 + 16`**——守恒值已同步（2026-09-11 §6 父侧核销）
 - [x] **F16 同步面残留**（第 11 批 coder ⑤-1——父侧裁定转后续）：sync 记账无「未完成尾」判定 ⇒ 以截断尾收尾的 sync 代码评审仍计「已覆盖」；与需求 F16 行文字面有差（收录窄 vs 扩实现两路）→ 证据 `thincoder-cli/src/agent/record-results.mjs:117`（sync 记账门）· status=已核销（第 13 批条目 A 交付——T-SG1–6 绿）

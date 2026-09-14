@@ -7,7 +7,7 @@ import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { loadConfig, _setConfigPathForTest, _resetConfigPathForTest, writeConfigAtomic } from "../src/config.mjs"
+import { loadConfig, _setConfigPathForTest, _resetConfigPathForTest, writeConfigAtomic } from "@thincoder/core/config.mjs"
 import { cascadeRemoveProvider } from "../src/tui/model-picker.mjs"
 
 function tmpCfg(content) {

@@ -18,7 +18,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { chat } from "@thincoder/core/provider/core.mjs"
 import { generateTitle, _deps } from "@thincoder/core/generate-title.mjs"
-import { loadConfig, _setConfigPathForTest, _resetConfigPathForTest } from "../src/config.mjs"
+import { loadConfig, _setConfigPathForTest, _resetConfigPathForTest } from "@thincoder/core/config.mjs"
 
 // ─── 夹具 ───
 

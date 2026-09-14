@@ -5,7 +5,7 @@
  */
 
 import { chat } from "@thincoder/core/provider/index.mjs"
-import { loadConfig } from "./config.mjs"
+import { loadConfig } from "@thincoder/core/config.mjs"
 import { put, putMarkdown } from "@thincoder/core/memory.mjs"
 import { commitAndPush } from "@thincoder/core/git/gitmem.mjs"
 

@@ -13,7 +13,7 @@ import { isAbsolute, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { slow } from "./slow.mjs"
 import { expandHome } from "../src/expand-home.mjs"
-import { configDir, loadConfig, _setConfigPathForTest, _resetConfigPathForTest } from "../src/config.mjs"
+import { configDir, loadConfig, _setConfigPathForTest, _resetConfigPathForTest } from "@thincoder/core/config.mjs"
 import { teamConfig } from "../src/cli/make-agent.mjs"
 import { createMemory, memoryTools } from "@thincoder/core/memory.mjs"
 
@@ -167,7 +167,7 @@ slow("T-H14 端到端：伪 HOME 子进程——DB 落 HOME 下 ∧ <cwd>/~ 不�
   const modUrl = (rel) => JSON.stringify(pathToFileURL(join(ROOT, rel)).href)
   const coreUrl = (rel) => JSON.stringify(pathToFileURL(join(CORE_ROOT, rel)).href)
   const script = [
-    `import { loadConfig } from ${modUrl("src/config.mjs")}`,
+    `import { loadConfig } from ${modUrl("../thincoder-core/config.mjs")}`,
     `import { createMemory } from ${coreUrl("memory.mjs")}`,
     `const c = loadConfig()`,
     `createMemory({ dbPath: c.memory.dbPath })`,

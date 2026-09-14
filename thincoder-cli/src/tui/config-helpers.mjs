@@ -11,7 +11,7 @@ export function createConfigHelpers(agent, opts = {}) {
   /** 磁盘新鲜读 → mutate（单操作）→ mtime 门控写；冲突时 throw（提示语见下——TUI
    *  slash 分发层统一 [error] 行展示；调用方若自带 try/catch 展示 Save failed 同文案）。 */
   async function persistRaw(mutate) {
-    const { writeConfigAtomic, configPath } = await import("../config.mjs")
+    const { writeConfigAtomic, configPath } = await import("@thincoder/core/config.mjs")
     const r = writeConfigAtomic(cfgPath ?? configPath, mutate)
     if (!r.ok) throw new Error("config changed on disk concurrently — retry")
   }

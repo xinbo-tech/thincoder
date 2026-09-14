@@ -1,5 +1,5 @@
 import { C } from "./ansi.mjs"
-import { parseModelRef } from "../config.mjs"
+import { parseModelRef } from "@thincoder/core/config.mjs"
 
 /** /model command: open the session model picker, or switch the SESSION model directly via
  *  `/model <provider>:<model>`（MODEL-MERGE-SESSION——裁定③：裸 provider 拒——显式 p:m；

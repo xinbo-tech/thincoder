@@ -3,7 +3,7 @@
 > 本文档描述 LLM 调用层的**当前设计**：OpenAI 兼容协议为主 + Anthropic / Gemini / Responses 原生 transport；SSE 流式解析、重试/退避、TPM/RPM 闸门、截断续写、流规则、发送前载荷净化。状态：**当前态**（2026-08/09 各轮实现已合入，历史变更流水账折叠于文末「变更记录」）；§0 / §16 / §17 = 模型选择面重构增补（2026-09-10——**R1–R10 / M1–M10 均已实施并核销**）；§21–§24 = `provider.headers` 全通路铺开（第 32 批）。
 >
 > 相关权威：`thincoder-core/model-specs.mjs`（规格表中枢，`config.mjs` re-export `specForModel` / `providerSpec` / `specMatch`）；
-> `src/config.mjs`（`resolveEnableThinking` / `isBailianHost` / `PROVIDER_PRESETS` / `resolveCompactThreshold`）；
+> `thincoder-core/config.mjs`（`resolveEnableThinking` / `isBailianHost` / `PROVIDER_PRESETS` / `resolveCompactThreshold`）；
 > `thincoder-core/provider/list-models.mjs`（`/models` 拉取按 format 分派——§16）；`CONTEXT-COMPACTION.md`（压缩阈值 / tail 公式 /
 > 续写失败可见性——本文件 §14/§15 为其权威）。跨文档已接管的主题只留指针，不复制。
 
@@ -453,7 +453,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 `providers[].models[]`（MODEL-MERGE-SESSION 引入）被定为“候选硬约束”：
 
 - 一个未登记字符串就废掉整个渠道——`parseModelRef` 成员校验失败 → `resolveRuntimeProvider` 返回 `{}`
-  → `providerInvalidReason` 置位（`src/model-ref.mjs:39-43` + `src/config.mjs:332-335`）；
+  → `providerInvalidReason` 置位（`src/model-ref.mjs:39-43` + `thincoder-core/config.mjs:332-335`）；
 - `/model` 切换路径硬 `throw`（`src/tui/model-picker.mjs:238-241`）——API 已证明渠道有该模型，仍拒（建议行同拒，`:118-121`）；
 - 人工维护的清单与端点真实清单**必然漂移**——保留它就是留第二个清单来源。
 
@@ -619,8 +619,8 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 
 | 文件 | 当前行数 | 预计增量 | 改动要点 |
 |---|---|---|---|
-| `src/config.mjs` | 484 | ±0 | 预设 20 条 `models:[x]`→`model:x`；normalize 改单值；头注 |
-| `src/config-migrate.mjs` | 68 | +20 | 迁移 v2（M7） |
+| `thincoder-core/config.mjs` | 484 | ±0 | 预设 20 条 `models:[x]`→`model:x`；normalize 改单值；头注 |
+| `thincoder-core/config-migrate.mjs` | 68 | +20 | 迁移 v2（M7） |
 | `src/model-ref.mjs` | 75 | −15 | `parseModelRef` v2（M4）；删 `firstCandidate`；头注/注释改写 |
 | `src/model-specs.mjs` | 146 | +18 | `specMatch`（M5） |
 | `src/session.mjs` | 476 | ±0 | 槽位兜底改 `slotProvider.model`；注释 |
@@ -662,14 +662,14 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 | 文件 | 当前行数 | 预计增量 | 改动要点 |
 |---|---|---|---|
 | `src/config-presets.mjs`（VSC 仓） | 41 | ±0 | 预设 20 条单值化 |
-| `src/config-migrate.mjs` | 161 | +25 | 迁移 v2（M7 同规则——独立实现；含 `:110` settings 迁移写回形态核对） |
+| `thincoder-vscode/src/config-migrate.mjs` | 161 | +25 | 迁移 v2（M7 同规则——独立实现；含 `:110` settings 迁移写回形态核对） |
 | `src/config-io.mjs`（VSC 仓） | 438 | ±5 | normalize 单值；`resolveDefaultModel` 回退链（R6） |
 | `src/provider.mjs`（VSC 仓） | 456 | −15 | `listModels` 迁出/加 format 分派 |
 | `thincoder-core/provider/list-models.mjs` | **新增** | ~95 | 三 format 分派 |
 | `src/provider/transports/openai.mjs`（VSC 仓） | 308 | ±0（文案） | guard 文案（不再称 `models[]`） |
 | `src/advisor/provider.mjs`（VSC 仓） | 39 | ±0 | `models?.[0]` 兜底换父兜底 `agent._provider?.model`（与 VSC subagent 同构——M3④）；注释 |
 | `src/agent-tools/subagent.mjs` | 358 | ±0 | `models?.[0]`→`byName.model`（**保 `?? parent._provider?.model` 父兜底**）；注释 |
-| `src/extension/settings.mjs` | 332 | +20 | status payload 单值；`fullStatus` 候选=fetch（失败 = 该渠道不可选 + 明示原因——无 fallback 候选）；custom 空条目判据；准入探复用（M9——既有 `testProviderConnection` 模式） |
+| `thincoder-vscode/src/extension/settings.mjs` | 332 | +20 | status payload 单值；`fullStatus` 候选=fetch（失败 = 该渠道不可选 + 明示原因——无 fallback 候选）；custom 空条目判据；准入探复用（M9——既有 `testProviderConnection` 模式） |
 | `src/extension/settings-panel-write.mjs`（VSC 仓） | 134 | +10 | defaultModel 面板写加准入探（M9——探不通标不可用、不入可选来源） |
 | `src/extension/provider-flows.mjs`（VSC 仓） | 193 | +15 | 播种单值；`p.models?.[0]`→`p.model`；addProviderEntry / setKeyFlow 加准入探（M9——不通标不可用，不阻断保存） |
 | `src/extension/vision-channel.mjs`（VSC 仓） | 23 | +5 | 视觉候选判据改渠道默认模型（下注） |
@@ -765,7 +765,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 
 1. **契约测试第三族**：`test/provider-model-guard.test.mjs`（CLI 132 行 + VSC 149 行）同样锁定了 `models[0]` 语义与 guard 文案正则——批次档 §1 只列了 model-ref / config-merge 两族，本批一并反转（R7 覆盖）。
 2. **VSC webview 直读 config 字段**：`webview/settings-providers.js:24`（VSC 仓；余行同） 直接读 `providerStatus().providers[name].models` 与 presets payload 的 `models`——删除字段后面板显示与默认模型菜单的数据源须改（§16.5 已列）。
-3. **VSC custom 空条目判据**：`settings.mjs:249` 以 `entry.models.length` 判「空条目删除」——字段删除后判据失效，须改以 `entry.model` 为准（列表内已列）。
+3. **VSC custom 空条目判据**：`thincoder-vscode/src/extension/settings.mjs:249` 以 `entry.models.length` 判「空条目删除」——字段删除后判据失效，须改以 `entry.model` 为准（列表内已列）。
 4. **CLI `setup-wizard.mjs` 既存 bug**：`:43` 读 `presets[..].model`（MODEL-MERGE 后已不存在）——本批字段回单值后自动对上（顺带修复），列入清单。
 5. **VSC 视觉通道**：`vision-channel.mjs` 候选扫描依赖 `models[]`——判据变更与能力收窄见 §16.5。
 6. **bin 帮助文案**：`bin/thincoder.mjs:106` 用户可见帮助含 `models[] candidates` 字样——同步改。
@@ -812,7 +812,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 
 - **AC-1（R1）**：`node --test test/list-models.test.mjs` 全绿——三 format 分派（完整 URL / 请求头 / 响应解析 / 失败态 / 翻页合并——T1–T6 + T26/T27）；
   拉取失败 = 该渠道不可选 + 明示原因（T5/T20）；picker 候选行来自拉取（mock 注入断言）；VSC 静态候选来源清除：`cd thincoder-vscode && grep -rn "configCandidates" src/` → 空
-  （该标识符只存在于 VSC 仓——现状命中于 `src/extension/settings.mjs:301-317`；CLI 仓无此名——判据限定 VSC 仓方有验证力。）
+  （该标识符只存在于 VSC 仓——现状命中于 `thincoder-vscode/src/extension/settings.mjs:301-317`；CLI 仓无此名——判据限定 VSC 仓方有验证力。）
   上机验证动作（mock-only 残余风险的破解——评审修正轮记录）：实施后 claude / gemini 各一发真实 `listModels`（真 key 环境）；失败即回改 §16.2 M1 的 URL 组合。
 - **AC-2（R2）**：`node --test test/config-merge.test.mjs` 全绿——迁移后磁盘无 `models` 键；
   配置字段读写零残留：`cd thincoder && grep -rn --exclude=config-migrate.mjs --exclude=consult.mjs --exclude=cmd-advisor.mjs --exclude=model-catalog.mjs --exclude=list-models.mjs "\.models" src/` → 空
@@ -972,7 +972,7 @@ Beta / 磁盘缓存默认开 / **多模态视觉**）；旧名 `deepseek-v4-flas
 | 文件 | 当前行数 | 预计增量 | 改动要点 |
 |---|---|---|---|
 | `src/model-specs.mjs` | 172 | +10~14 | 新增 `deepseek-flash` 行；两退役名对齐（`deepseek-v4-flash` 加 `multimodal`）；`deepseek-v4-pro` 保留 + 注释；块注释改写（退役/路由/日期） |
-| `src/config.mjs` | 487 | ±0 | 预设 `deepseek.model` → `deepseek-flash`（1 行改值） |
+| `thincoder-core/config.mjs` | 487 | ±0 | 预设 `deepseek.model` → `deepseek-flash`（1 行改值） |
 
 **CLI 测试（thincoder-cli/test）**：
 
@@ -985,7 +985,7 @@ Beta / 磁盘缓存默认开 / **多模态视觉**）；旧名 `deepseek-v4-flas
 
 | 文件 | 当前行数 | 预计增量 | 改动要点 |
 |---|---|---|---|
-| `src/config.mjs` | 184 | +4~6 | 同 CLI 行集（每行多 `reasoningEffortDefault: "high"`）；块注释同步改写（`dual models` 句） |
+| `thincoder-vscode/src/config.mjs` | 184 | +4~6 | 同 CLI 行集（每行多 `reasoningEffortDefault: "high"`）；块注释同步改写（`dual models` 句） |
 | `src/config-presets.mjs`（VSC 仓） | 41 | ±0 | 预设 `deepseek.model` → `deepseek-flash`（1 行改值） |
 
 **VSC 测试（thincoder-vscode/test）**：
@@ -1021,7 +1021,7 @@ Beta / 磁盘缓存默认开 / **多模态视觉**）；旧名 `deepseek-v4-flas
 |---|---|---|
 | 1 | `thincoder-cli/src/model-specs.mjs:29-32` 三行 deepseek | 本批落点：新增 `deepseek-flash` + 两退役名对齐（含 `multimodal`）+ pro 注释（§19.2/§19.4） |
 | 2 | `thincoder-vscode/src/config.mjs:25-28` 同三行 | 同上（各端独立实现、语义同源——VSC 行多 `reasoningEffortDefault`） |
-| 3 | `thincoder-cli/src/config.mjs:36` 预设 | `model` → `deepseek-flash`（R15） |
+| 3 | `thincoder-core/config.mjs:36` 预设 | `model` → `deepseek-flash`（R15） |
 | 4 | `thincoder-vscode/src/config-presets.mjs:11` 预设同款 | 同上（R15） |
 | 5 | `PROVIDER.md` §9/§11 | 本批落点（§9 决策行 + §11 DeepSeek 条目 + §18–§20） |
 | 6 | 用户本机 config 的 `deepseek` 渠道 `model: "deepseek-v4-flash"` | 非本批代码事——用户环境（父侧经用户许可可代改；旧名仍有效） |
@@ -1041,7 +1041,7 @@ Beta / 磁盘缓存默认开 / **多模态视觉**）；旧名 `deepseek-v4-flas
 1. CLI 预设断言唯一命中 = `test/config-merge.test.mjs:31`（本批同步，T35）；VSC 侧无 deepseek 预设值断言（本批新增，T37）。
 2. `read-image-guide.test.mjs` 以 `deepseek-v4-pro` 当"非视觉"锚（`test/read-image-guide.test.mjs:20`）——本批保持 pro 非视觉 → 锚不动；若未来 pro 开放视觉，该锚须换（§19.5 #3 重评入口）。
 3. VSC 侧同型锚 = `test/image-downgrade.test.mjs`（VSC 仓） 用 `deepseek-v4-pro` 做非视觉主模型（`:24` / `:59` / `:109`）——同上保持。
-4. VSC `src/extension/settings.mjs:322` 消费 `spec.reasoningEffortDefault` 作为推理档默认——新行须携 `"high"`（VSC-only 字段）。
+4. VSC `thincoder-vscode/src/extension/settings.mjs:322` 消费 `spec.reasoningEffortDefault` 作为推理档默认——新行须携 `"high"`（VSC-only 字段）。
 5. `test/model-ref.test.mjs:66` 的 spec 断言用 `kimi-k3`——零改。
 6. 双端无 spec 表全量快照 / 跨仓逐字一致性测试——语义同源由各端行为断言守（不新建跨仓比较机制）。
 
@@ -1110,7 +1110,7 @@ Provider 请求的头分两类来源。**内置头** = transport 协议要求（
 
 **装配契约**：`{ ...(provider.headers ?? {}), ...内置头 }`——定制头在前、内置头在后：同名键**内置头胜出**
 （定制头不得覆盖 `Content-Type` 与认证头；与 `thincoder-core/provider/core.mjs:408-412` 既有语义一致）。`Authorization`
-另有装载面防线：`config.mjs` 净化器（`src/config.mjs:237-249`）在 loadConfig 时剥离该键（大小写不敏感）
+ 另有装载面防线：`config.mjs` 净化器（`thincoder-core/config.mjs:237-249`）在 loadConfig 时剥离该键（大小写不敏感）
 与非字符串值——运行期 provider 的定制头里不含 `authorization`。
 
 ### 21.2 通路一览（消费点全表）
@@ -1318,7 +1318,7 @@ provider 管理流零改）。**open 项：无。**
 > `response.output_text.delta` + `response.completed`；anthropic = `message_start` + `content_block_delta` +
 > `message_stop`；google = 单 `candidates` 帧）；OpenAI 面走非 SSE 单 chunk JSON 兜底；`generate-title` 面返回
 > `{ok:true, json:…}`。全套无定时器等待（快层直跑——超 D-T6 阈值才标 `slow`）。
-> config 面注入缝（T46）= `_setConfigPathForTest`（`src/config.mjs:28-29`）+ tmp config.json——夹具形态复用既有 `test/config-merge.test.mjs`（`tmpCfg()` :16-21；现有缝，零新夹具机制）。
+> config 面注入缝（T46）= `_setConfigPathForTest`（`thincoder-core/config.mjs:28-29`）+ tmp config.json——夹具形态复用既有 `test/config-merge.test.mjs`（`tmpCfg()` :16-21；现有缝，零新夹具机制）。
 
 ### 24.2 验收标准（逐条回指——每条可机器验证）
 

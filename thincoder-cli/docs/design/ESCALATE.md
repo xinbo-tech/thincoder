@@ -112,7 +112,7 @@ R17（2026-09-06）把 escalate 改为**缺省 async**（depth-0——唯一允�
 | `src/agent-tools/subagent-actions.mjs` | escalate 动作接线（缺省 async 分支） |
 | `thincoder-core/agent-tools/escalate-async.mjs` | async 飞刀 runner + settle 三分类 + digest 注入 |
 | `thincoder-core/agent-tools/consult.mjs` | 会诊工具（候选池同源——见 CONSULTATION.md） |
-| `src/config.mjs` | consultModels 校验 |
+| `thincoder-core/config.mjs` | consultModels 校验 |
 | `src/tui/cmd-config.mjs` | `/config` 候选池管理 |
 | `src/prompts/discipline-normal.md` | 飞刀条款（术语 + 时机 + 直接调用红线——旧 main.md 飞刀节施工③随迁于此） |
 | 测试 | escalate 家族测试（async ack / settle merge / error partial-merge / 取消 / sync 保留 / 深度护栏 / 工程模式 / 撞墙继续——用例清单权威 = AGENT-LOOP §14；T-R17a..r 编号已退役） |

@@ -23,7 +23,7 @@ export function poolCur(pl, defaults) {
 /** /config command: view and set agent/embedding/proxy config. */
 export async function handleConfigCommand(ctx, args = []) {
   const { agent, pushLine, pushLabel, showPicker, askQuestion, persistRaw, maskKey, pickModelForSlot } = ctx
-  const { configPath, DEFAULTS } = await import("../config.mjs")
+  const { configPath, DEFAULTS } = await import("@thincoder/core/config.mjs")
   let ac = agent.config?.agent ?? {}
   let ec = agent.config?.embedding ?? {}
   let tc = agent.config?.traces ?? {}
@@ -55,7 +55,7 @@ export async function handleConfigCommand(ctx, args = []) {
    *  MODEL-MERGE-SESSION 三支改写（cfg 无 active*）：运行时由「会话槽复合仍在 providers 中 →
    *  保持槽值」或「config defaultModel（新会话起点）」决定——不再有渠道默认字段可回退。 */
   async function reloadConfig() {
-    const { loadConfig } = await import("../config.mjs")
+    const { loadConfig } = await import("@thincoder/core/config.mjs")
     const { injectProxy } = await import("@thincoder/core/proxy.mjs")
     const cfg = loadConfig()
     injectProxy(cfg.providersList, cfg)
@@ -82,7 +82,7 @@ export async function handleConfigCommand(ctx, args = []) {
     // 运行时重建后同步注入结果（cfg.provider 系 loadConfig 内建——injectProxy 后建）
     agent.provider.proxyUri = cfg.providersList.find((p) => p.name === agent.activeProvider)?.proxyUri
     if (agent.config?.agent?.compactThresholdAuto) {
-      const { resolveCompactThreshold } = await import("../config.mjs")
+      const { resolveCompactThreshold } = await import("@thincoder/core/config.mjs")
       agent.config.agent.compactThreshold = resolveCompactThreshold(null, agent.provider).value
     }
   }
@@ -170,7 +170,7 @@ export async function handleConfigCommand(ctx, args = []) {
 
   /** 会诊/飞刀候选池子菜单：列出 / 添加 / 编辑 effort / 删除 consultModels 条目。 */
   async function pickEffort(current, model) {
-    const { specForModel } = await import("../config.mjs")
+    const { specForModel } = await import("@thincoder/core/config.mjs")
     const enumList = model ? specForModel(model).reasoningEffortEnum : null
     // The model's reasoning-effort enum is HETEROGENEOUS across providers (deepseek:
     // low/high/max; qwen3.8-max: xhigh/medium/low; kimi: 7 levels). A fixed

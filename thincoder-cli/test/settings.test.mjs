@@ -11,13 +11,13 @@ import assert from "node:assert/strict"
 import { mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { DEFAULTS, loadConfig, _setConfigPathForTest, _resetConfigPathForTest } from "../src/config.mjs"
+import { DEFAULTS, loadConfig, _setConfigPathForTest, _resetConfigPathForTest } from "@thincoder/core/config.mjs"
 import { parseModelRef } from "@thincoder/core/model-ref.mjs"
 import { effectiveSubagentModel } from "../src/agent-tools/subagent-spawn.mjs"
 import { teamConfig } from "../src/cli/make-agent.mjs"
 import {
   settingsTool, _buildShapeTable, _nullLeafPaths, _NULL_LEAF_SHAPES, _SIBLING_SHAPES, _checkShapeCompleteness,
-} from "../src/agent-tools/settings.mjs"
+} from "@thincoder/core/agent-tools/settings.mjs"
 
 function tmpCfg(content = {}) {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-settings-"))

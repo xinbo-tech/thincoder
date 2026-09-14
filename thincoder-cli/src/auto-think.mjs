@@ -15,7 +15,7 @@
  *   4. Set agent.provider.reasoningEffort before the real chat() call
  */
 import { chat } from "@thincoder/core/provider/core.mjs"
-import { specForModel } from "./config.mjs"
+import { specForModel } from "@thincoder/core/config.mjs"
 
 const CLASSIFY_PROMPT = `Classify this coding task's difficulty: low, medium, or high.
 

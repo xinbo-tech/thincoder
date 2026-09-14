@@ -13,7 +13,7 @@
  *      closePicker, renderPickerLines }（后三者为 pickers.mjs 通用 picker 绑定——闭包入参，环安全）。
  */
 import { sliceByWidth } from "./render.mjs"
-import { PROVIDER_PRESETS as PRESETS, providerSpec, specMatch } from "../config.mjs"
+import { PROVIDER_PRESETS as PRESETS, providerSpec, specMatch } from "@thincoder/core/config.mjs"
 import { saveSession } from "@thincoder/core/session.mjs"
 import { getProviderModels, probeChannelModels, modelListFailureText, dedupeModels } from "./model-catalog.mjs"
 
@@ -231,7 +231,7 @@ export function createModelPicker(ctx) {
     agent.provider = { ...target }
     agent.provider.model = item.model
     if (agent.config?.agent?.compactThresholdAuto) {
-      const { resolveCompactThreshold } = await import("../config.mjs")
+      const { resolveCompactThreshold } = await import("@thincoder/core/config.mjs")
       agent.config.agent.compactThreshold = resolveCompactThreshold(null, agent.provider).value
     }
     // 写会话槽（saveSession——槽双字段恒非空）——config 文件零写
@@ -460,7 +460,7 @@ export function createModelPicker(ctx) {
       if (newCtx === undefined) delete agent.provider.context
       else agent.provider.context = newCtx
       if (agent.config?.agent?.compactThresholdAuto) {
-        const { resolveCompactThreshold } = await import("../config.mjs")
+        const { resolveCompactThreshold } = await import("@thincoder/core/config.mjs")
         agent.config.agent.compactThreshold = resolveCompactThreshold(null, agent.provider).value
       }
     }

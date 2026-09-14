@@ -11,7 +11,7 @@
 | # | 现状 | 位置 | 后果 |
 |---|---|---|---|
 | P1 | 评审整体墙钟 `REVIEW_TIMEOUT_MS = 300_000`（5 分钟）**硬编码**，用户无法调整 | `thincoder-core/advisor/run.mjs` 常量 + `runAdvisorToolLoop` 循环内检查点 | 大评审（多文件、多轮工具探索、慢模型）5 分钟即被截断，返回 partial results；用户只能缩小范围或碰运气 |
-| P2 | 主 agent 轮次上限默认 `maxTurns: 100` | `src/config.mjs`（DEFAULTS）、`src/agent/helpers.mjs`（`DEFAULT_MAX_TURNS`）、读取链 | 多文件重构/修复-验证循环任务频繁撞墙，需人工 "Continue" |
+| P2 | 主 agent 轮次上限默认 `maxTurns: 100` | `thincoder-core/config.mjs`（DEFAULTS）、`src/agent/helpers.mjs`（`DEFAULT_MAX_TURNS`）、读取链 | 多文件重构/修复-验证循环任务频繁撞墙，需人工 "Continue" |
 | P3 | 文档与 UI 中 "maxTurns 默认 100" 的散落描述未同步 | 相关设计文档与 `src/tui/cmd-config.mjs` 若干 `?? 100` 显示兜底 | 改默认值后文档/显示与真实行为漂移 |
 
 ## 2. 解决方案（Solution Approach）
@@ -31,7 +31,7 @@ if (Date.now() - startTime > timeoutMs) {
 }
 ```
 
-- 读取链已验证：`src/config.mjs` `merged.advisor = { ...merged.agent.advisor }` promote 透传 →
+- 读取链已验证：`thincoder-core/config.mjs` `merged.advisor = { ...merged.agent.advisor }` promote 透传 →
   `agent.config.advisor` 天然含 `timeoutMs`；`runAdvisorToolLoop` 已接收 `agent` 参数，
   **无需改签名**。
 - **不在** `DEFAULTS.agent.advisor` 里写死 timeoutMs——保持默认值单一来源（run.mjs 常量
@@ -40,7 +40,7 @@ if (Date.now() - startTime > timeoutMs) {
 
 ### 2.2 主 agent 轮次上限默认 100→200
 
-- `src/config.mjs` DEFAULTS：`maxTurns: 100` → `maxTurns: 200`。
+- `thincoder-core/config.mjs` DEFAULTS：`maxTurns: 100` → `maxTurns: 200`。
 - `src/agent/helpers.mjs`：`DEFAULT_MAX_TURNS = 100` → `200`（prepareRun 的兜底常量）。
 - `src/tui/cmd-config.mjs` 的显示兜底 `?? 100` → `?? 200`（状态栏、配置项、详情、编辑初始值
   四处）。
@@ -59,7 +59,7 @@ explore 与其它角色一致走 `subagentTurns`（见 `src/agent-tools/subagent
 | 文件 | 动作 | 内容 |
 |---|---|---|
 | `thincoder-core/advisor/run.mjs` | MODIFY | 常量 `600_000`；检查点改读 `agent.config?.advisor?.timeoutMs ?? REVIEW_TIMEOUT_MS` |
-| `src/config.mjs` | MODIFY | `maxTurns` 200；advisor 注释补 timeoutMs |
+| `thincoder-core/config.mjs` | MODIFY | `maxTurns` 200；advisor 注释补 timeoutMs |
 | `src/agent/helpers.mjs` | MODIFY | `DEFAULT_MAX_TURNS = 200` |
 | `src/tui/cmd-config.mjs` | MODIFY | 四处显示兜底 `?? 100` → `?? 200` |
 | 相关设计文档 | MODIFY | "默认 100" 描述同步为 "默认 200" |

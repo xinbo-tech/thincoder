@@ -3,7 +3,7 @@
  * 运行: node scripts/verify-compress.mjs
  */
 import { createProvider } from "@thincoder/core/provider/index.mjs"
-import { loadConfig } from "../src/config.mjs"
+import { loadConfig } from "@thincoder/core/config.mjs"
 import { compressIfNeeded, estimateTokens } from "@thincoder/core/context.mjs"
 
 const config = loadConfig()

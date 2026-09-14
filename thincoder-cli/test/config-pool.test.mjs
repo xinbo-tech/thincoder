@@ -17,7 +17,7 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { DEFAULTS } from "../src/config.mjs"
+import { DEFAULTS } from "@thincoder/core/config.mjs"
 import { ASYNC_POOL_LIMITS } from "../src/agent-tools/subagent-async.mjs"
 import { poolCur } from "../src/tui/cmd-config.mjs"
 import {
