@@ -3,7 +3,7 @@
 > 板块 = **架构总览**（横切薄枢纽）；本档 = 合并仓的**模块地图 + 硬约束 + 设计原则 + 接口速览**的唯一权威处。
 > 逐板块机制正文各归其档（`docs/core/design/<板块>.md`）——本档**只留速览与指针，不复制**（D2 单一权威源）。
 > 需求侧 = `docs/core/requirements/PHILOSOPHY.md`（三观——最高层需求）；项目层需求 = `thincoder-cli/docs/requirements/PROJECT.md`（CLI 侧**未迁**）。
-> 双端对位 = `thincoder-vscode/docs/design/ARCHITECTURE.md`（VSC 侧**未迁**——按 P1 统一面，VSC 轮并入本档）。
+> 双端对位 = `thincoder-vscode/docs/design/ARCHITECTURE.md`（VSC 端接线面**已并入（批 6）**——§3.1 壳层装配地图 + §4.1 差异表；旧档原地一字未改、留参照历史）。
 > 建档：2026-09-15（**B 式迁移轮 · 第 2 批**——`thincoder-cli/docs/design/ARCHITECTURE.md` 内容重建入基准层；旧档原地一字不改、留作参照历史）。
 > 本档坐标与行数 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`；行数口径 = 含末行的行计数）。
 
@@ -77,6 +77,25 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
     └── webview/                    前端界面（VSC 独有面——对偶 = CLI 终端 TUI，两者不镜像）
 ```
 
+### 3.1 VSC 壳层装配地图（并入 · 批 6）
+
+> 来源 = `thincoder-vscode/docs/design/ARCHITECTURE.md` §3（指针索引——DOC-REORG-VSC 收官形态）。VSC 端实现面 = `thincoder-vscode/src/**` 全量自持（agent 主循环 / 工具 / 评审 / 记忆——未进核前的独立实现；与 CLI / 核面的差异对位见 §4.1）。
+
+| 域 | VSC 模块 | 职责 | 详细设计 → |
+|----|---------|------|-----------|
+| 入口 | `thincoder-vscode/extension.mjs` | activate / 命令注册 / 状态栏 / WebviewViewProvider | —（装配入口——命令 id 视作冻结，见 `docs/core/design/CORE-UNIFICATION.md` §2.8 命令面） |
+| 装配 | `thincoder-vscode/src/extension/chat-panel.mjs` | ChatPanel 类——面板生命周期 · 消息路由 · 会话管理 | `docs/vsc/design/WEBVIEW.md`（消息流 / 协议）+ `thincoder-vscode/docs/design/SESSION.md`（panel-session 会话面） |
+| 装配 | `thincoder-vscode/src/extension/panel-*.mjs` | 消息路由 / 回合驱动 / 会话 / 项目 / 索引 / MCP / toolPanel 载荷分模块 | `docs/vsc/design/WEBVIEW.md` · `thincoder-vscode/docs/design/{SESSION,MCP}.md` |
+| 装配 | `thincoder-vscode/src/extension/suspension.mjs` · `permission-gate.mjs` | 挂起回合驱动（digest / 排队合并 / 唤醒）· 权限弹窗门 + 批审批门 | `thincoder-vscode/docs/design/AGENT-LOOP.md`（挂起 digest）· `thincoder-vscode/docs/design/TOOLS.md`（权限审批） |
+| 装配 | `thincoder-vscode/src/extension/{settings,presets,provider-flows}.mjs` | config.json 面板读写 · preset · provider 增删流 | `thincoder-vscode/docs/design/PROVIDER.md` · `docs/vsc/design/SETTINGS.md` |
+| 核心 | `thincoder-vscode/src/agent.mjs` · `src/agent/**` · `src/agent-tools/**` | runAgent 主循环 + 工具分发 + 注入 + 收尾 · 元工具族（subagent / advisor / eng 等） | `thincoder-vscode/docs/design/AGENT-LOOP.md` · `ADVISOR-CONVERGENCE.md` · `ENGINEERING-MODE.md`（VSC 树档） |
+| 工具 | `thincoder-vscode/src/tools/**` | 内置工具实现（file / search / git / web / lsp / execute / …） | `thincoder-vscode/docs/design/TOOLS.md` · `CHECKPOINT.md`（快照子系统） |
+| LLM | `thincoder-vscode/src/provider.mjs` · `src/provider/**` | 三 transport · 重试 · 限频门 | `thincoder-vscode/docs/design/PROVIDER.md` |
+| 支撑 | `thincoder-vscode/src/{memory,embedding,indexer,mcp,repomap}.mjs` | 记忆 / 向量索引 · MCP 客户端 · 仓库大纲 | `thincoder-vscode/docs/design/MEMORY.md` · `MCP.md` · `CONTEXT-COMPACTION.md` |
+| Webview | `thincoder-vscode/webview/**`（chat/streaming/ui/activity/panels/send/md/…） | 前端渲染 / 交互（隔离 iframe——只经 postMessage、无共享状态） | `docs/vsc/design/WEBVIEW*.md`（三档——结构 ∥ 协议 ∥ 输入） |
+
+测试面：`thincoder-vscode/test/`（`package.json` `"test"` = `node test/run-fast.mjs`——显式清单 `test/files.mjs` 单一来源 · `"test:full"` = 全量层——slow-gate 分层）。
+
 ## 4. 模块接口速览
 
 | 模块 | 关键导出 | 一句话 | 详细设计 |
@@ -105,6 +124,30 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 - `reasoning_content` 必须与正文流**分开回调**（不混入正文）；
 - thinking 模式协议约束按规格表 `reasoningEcho`：required / optional / 未声明保守不回传；
 - 估算 token 计入 reasoning 字段。
+
+### 4.1 VSC ↔ CLI 差异表（对比辅助 · 并入 批 6）
+
+> 来源 = `thincoder-vscode/docs/design/ARCHITECTURE.md` §4。两端同源机制的**面差速览**（各机制逐面差异归各机制档登记——本表只留速览，D2）。
+
+| 方面 | CLI | VS Code |
+|------|-----|---------|
+| 用户界面 | 裸 ANSI TUI | Webview（隔离 iframe） |
+| 会话存储 | `~/.thincoder/sessions/`（共享同一目录；端 marker 各自 `.cli` / `.vscode`） | 同上（互读互写、跨产品接续无感） |
+| 配置存储 | `~/.thincoder/config.json`（共享） | 同上（同一文件；apiKey 回退环境变量） |
+| 工具目录约束 | 工作目录（process.cwd()） | 第一个 workspace 文件夹；两端口径均 **no directory restriction** |
+| 文件打开 | TUI 内显示 | VS Code 编辑器标签页（WorkspaceEdit undo + 立即保存） |
+| 权限审批 | TUI 内交互式（y/n/a） | webview 弹窗 + 批确认；autoApprove 会话级槽位字段两端语义一致 |
+| 记忆系统 | 3-layer FTS5 + vector | 文件式 markdown + 可选向量（无 FTS5）——统一方向见 `docs/core/requirements/MEMORY.md` §2.1（A12/A13） |
+| MCP | 支持 | 支持（stdio + HTTP——同一 config.json） |
+| lsp 工具 | 自起 LSP server（config lsp.servers） | VS Code 原生语言服务（零配置零进程） |
+| 子代理 / 后台 | 池挂 agent 对象（跨 run） | 池挂共享 depth-0 history 数组（agent per-run） |
+| 命令队列 | TUI `/cmd` 命令队列 | 无——webview 命令走 msg.type 按钮通道 |
+| 活动渲染 | TUI 面板 / 折叠动画 | 活动面板 + 冻结入流（机制语义趋同，不逐像素镜像） |
+| 验证层 | 自有测试组织 | slow-gate 分层 + `test/files.mjs` 显式清单 |
+
+**字段往返**：共享槽位文件全量覆盖写 + `...existing` 透传——CLI 写入的 `activeModel` / `engineering` / `engDesignToken` 等字段 VSC 侧往返不丢（会话面契约——`thincoder-vscode/docs/design/SESSION.md` §6）。
+
+**VSC 专属设计取向**（承 VSC 源档 §1——与 core §2 重叠者不重述）：① **薄封装**——扩展是 agent 核心的 VS Code 适配层（负责任，不是办公设备）；② **职责分离**——extension host 负责 agent 循环与工具执行，Webview 只负责 UI 渲染与用户交互（`postMessage` 单向通信）；③ **VS Code 原生能力优先**——工具执行经 VS Code API 增强（如 `workspace.openTextDocument` 写入后自动在编辑器中打开文件）。
 
 ## 5. 跨模块机制（未被板块文档分走的）
 
@@ -136,11 +179,12 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 | 旧档面 | 内容 | 何故不并（去向 / 触发） |
 |---|---|---|
 | 各板块机制的正文细节 | 主循环 / 工具 / 会话 / 记忆 / 供应商等逐机制描述 | 各自权威档（`docs/core/design/<板块>.md`）——本档只留速览（D2） |
-| VSC 端架构薄枢纽 | `thincoder-vscode/docs/design/ARCHITECTURE.md` | **P1 统一面**——按 VSC 轮并入本档（本批零触碰 VSC 树） |
+| VSC 端架构薄枢纽 | `thincoder-vscode/docs/design/ARCHITECTURE.md` | **已并入（批 6）**——§3.1 壳层装配地图 + §4.1 差异表；旧档原地一字未改、留参照历史 |
+| VSC 源档 §1 设计原则（与 core §2 重叠者） · §2 整体架构图 · 文首未决 / 待办状态行 · 变更记录 | 重叠面 / 时点面 / 流水 | **不并**——VSC 专属取向已并入 §4.1；待办状态行与变更流水 = 时点材料（(d) 类） |
 
 ## 8. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **151 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **196 行**（并入批 6 后 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
@@ -148,3 +192,4 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
   ① §3 模块地图**照现状重写**（迁移前 `src/**` 单仓树 → 「核 `thincoder-core/` + 两壳 `thincoder-cli/` `thincoder-vscode/`」三目录形态；旧树登记 §7.1 不并）；
   ② §1 硬约束按现状实核收正（Node 版本双档 · 唯一运行期依赖 = 仓内核包）；
   ③ §4 接口速览的详细设计列改指现状档址（含三档 CLI 侧未迁档的显式标注）；§7 新增不并项与历史沿革。
+- 2026-09-15（**B 式迁移轮 · VSC 第 6 批 · 并入 · eng-designer**）：新增 §3.1 VSC 壳层装配地图 + §4.1 VSC↔CLI 差异表——自 `thincoder-vscode/docs/design/ARCHITECTURE.md` §3 / §4 并入（坐标改写为仓根现状路径并实核；未迁 VSC 机制档以仓根路径指回）；VSC 专属设计取向并入 §4.1；VSC 源档重叠 / 时点面逐项登 §7.2 不并（§7.2 VSC 行同步收口）。

@@ -2,7 +2,7 @@
 
 > 板块 = **工程模式凭证链（结算面）**——评审通过后 token 的**结算 / 持久化 / 回读 / 消费**。
 > 相邻权威 = `docs/core/design/ENG-TOKEN-BINDING.md`（token 生命周期语义：TTL / 格式 / 跨模式存活——本档**不重述**，D2）· `docs/core/design/CONSULTATION.md`（评审引擎）· `docs/core/design/SESSION.md`（会话槽文件与序列化）。
-> 需求侧 = `docs/core/requirements/`（根层**无**对应档）；CLI 树需求档 `thincoder-cli/docs/requirements/DESIGN-TOKEN-SETTLEMENT.md` **未迁**（后续批）。
+> 需求侧 = `docs/core/requirements/DESIGN-TOKEN-SETTLEMENT.md`（批 5 建档——源 = VSC 树需求档）；CLI 树需求档 `thincoder-cli/docs/requirements/DESIGN-TOKEN-SETTLEMENT.md` **未迁**（后续批）。
 > 建档：2026-09-15（**B 式迁移轮 · 第 3 批**——`thincoder-cli/docs/design/DESIGN-TOKEN-SETTLEMENT.md` 内容重建入基准层；旧档原地一字不改、留作参照历史）。
 > 本档坐标 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
 
@@ -81,6 +81,24 @@
 - **已知有意差异**（非偏差）：`reconcileEngTokensFromSlot` 同 id 冲突**以槽为准**（本仓——「槽 = 权威」）；VSC 版为内存优先，且 VSC 有当场权威台账回写一步，本形态回写为**惰性**（随下次 `persistEngTokens` / `saveSession` 携带清理后的 Map）——源码注释逐字登记（`thincoder-core/token-ttl.mjs:181`–`:186`）。
 - **依赖环（有意、安全）**：`token-ttl.mjs` 只 import 底层槽 I/O（`session-slots.mjs` + `session-guard.mjs`）；`session.mjs` 同时 import `token-ttl.mjs` → 静态环，与既有 session ↔ session-slots 环同构（函数声明实例化期已初始化，环安全）。
 
+### 6.3 VSC 端结算接线（B 式并入 · 实核 as-of 2026-09-15）
+
+> 来源 = `thincoder-vscode/docs/design/DESIGN-TOKEN-SETTLEMENT.md`（VSC 产品档——旧档一字未改、留参照历史）。VSC 结构性基线不同：agent 对象**每 run 重建**（`thincoder-vscode/src/agent/setup.mjs`——非 CLI 常驻单对象）⇒ 结算面多出
+> 「死对象 / 快照 / 清零」三类 VSC 独有断点——D1–D6 全部落地后与 CLI **同机制语义**（settle 即落盘权威台账 / 门禁读权威 / 镜像退役）。生命周期语义 / TTL / 格式 = `thincoder-vscode/src/agent-tools/advisor.mjs`（基准层并入面 = `docs/core/design/ENG-TOKEN-BINDING.md` §6.3——本档不重述）。
+
+| 面 | VSC 落点（实核） |
+|---|---|
+| settle 当场同步落盘（D1——去 fire-and-forget） | `thincoder-vscode/src/agent-tools/advisor-async.mjs:364`–`:392`（settle 路径——`:369` `_engPersist` · `:375` 同步 `setSlotEngDesignTokens`——写失败即 settle 失败，可重评、不静默吞错） |
+| token 入槽 + Approved 后缀（echo 即裁决） | `thincoder-vscode/src/agent-tools/advisor-async.mjs:389`（`parent._engDesignTokens.set`）· `:392`（`buildApprovedSuffix`） |
+| 门禁读权威（miss 回读槽——D4） | `thincoder-vscode/src/agent-tools/subagent-spawn-gate.mjs:70`（`resolveDesignSlot`）· `:124`（`authorizeEngCoderDesignToken`——TTL 过滤保留） |
+| 写侧保留槽 + union 合并（D2 + D6——忙时不清 settle 落盘项） | `thincoder-vscode/src/extension/session-slot-write.mjs:166`（`engTokensMergeForSave`——`{...existing, ...incoming}`；同 key 以新 mint 者胜——比较 `:expiresAt` 尾部）· 调用 `thincoder-vscode/src/extension/panel-session.mjs:113`（键存在性写：缺键 → 保 slot——空态不钉 null） |
+| 会话内回合从槽新读（D3——快照已删） | `thincoder-vscode/src/extension/suspension.mjs:202`–`:203`（不再捕获入场 engState 快照）· `thincoder-vscode/src/extension/panel-chat.mjs:369`–`:370`（每轮从槽新读——settle 落盘后 digest 可见） |
+| 单值镜像退役（D5） | `_engDesignToken` 单值镜像**零运行时读写**（dispatch 写门资格问「任一活槽存在」——经 `resolveDesignSlot`）；仅 `thincoder-vscode/src/agent/agent-state.mjs:63` 一次性迁移读（legacy 残留——`ENG-TOKEN-BINDING.md` §6.3 已列） |
+| 消费落盘对称（consume 后不复活） | `thincoder-vscode/src/agent-tools/subagent-spawn-gate.mjs:145`（`executeConsumeDesignAction`——删内存槽 + 盘面清理，无半消费态） |
+| 测试面 | `thincoder-vscode/test/eng-settlement.test.mjs`（14 用例——settle 落盘 / union 忙时 / restore / consume 不复活） |
+
+**VSC 侧差异**（有意——§6.2「已知有意差异」的 VSC 载体坐标）：`engTokensMergeForSave` 同 key 冲突以 **expiresAt 大者胜**（新 mint——防 async 重评审同 designId 丢新 token）；CLI 侧 `reconcileEngTokensFromSlot` 同 id 冲突以槽为准（两处源码注释逐字登记）。
+
 ## 7. 并入的关键决策记录（含否决备选）
 
 | # | 决策 | 理由 / 否决备选 |
@@ -112,14 +130,16 @@
 |---|---|---|
 | 与 VSC 共享的同构语义清单（旧档 §1 末段） | 逐项镜像/对齐标准（含「D3 双端同步退役」括注） | 已被 §6.2 现行差异登记取代——旧括注为一次性镜像清单 |
 | 需求侧正文 | CLI 树需求档 | 需求档未迁——后续批并入既有档 |
-| VSC 端设计档 | VSC 树对应文档 | 按 P2 归 VSC 轮（本批零触碰 VSC 树） |
+| VSC 端设计档 | VSC 树对应文档 | **已并入（批 6）**——§6.3 VSC 结算接线（VSC 保持独立实现、语义同源） |
+| VSC 源档 §1 断点剖析（死对象 / 快照 / 清零 file:line 追查） · §2 需求 R1–R4 · §4 受影响文件 · §6 变更记录 | 一次性核实 / 批次材料 / 流水 | **不并**——断点结论已落 §6.3 各落点；R1–R4 为批次需求（机制已落地）；D1–D6 与本档 §2–§5 同源（(d) 类） |
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **119 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **145 行**（并入批 6 后 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
 - 2026-09-15（**B 式迁移轮 · 第 3 批**）：建档——`thincoder-cli/docs/design/DESIGN-TOKEN-SETTLEMENT.md` 内容重建入基准层（旧档一字未改、原地作参照历史）。
   坐标改写为现状路径并实核（`token-ttl.mjs` · `agent-tools/advisor-settle.mjs` · `agent-tools/subagent-spawn.mjs` · `agent/dispatch.mjs` · `session.mjs` · `session-guard.mjs` · `agent-tools/design-token.mjs`）。
   生命周期语义（TTL / 格式 / 跨模式存活）按 D2 归 `ENG-TOKEN-BINDING.md`，本档只留结算面；批次材料 / 状态行 / 变更流水不并（§8）。
+- 2026-09-15（**B 式迁移轮 · VSC 第 6 批 · 并入 · eng-designer**）：新增 §6.3 VSC 端结算接线——自 `thincoder-vscode/docs/design/DESIGN-TOKEN-SETTLEMENT.md` 并入（settle 同步落盘 / union 合并 / 门禁回读 / D3 每轮读槽 / 镜像退役 / 消费对称逐项实核；与 §6.2「已知有意差异」互指）；VSC 源档核实材料与批次需求登 §8.2 不并（(d) 类）；需求侧头注随批 5 建档收正。

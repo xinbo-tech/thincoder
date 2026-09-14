@@ -97,6 +97,12 @@
 
 **非功能**：N1 一致性（全链路同一阈值 64 × 1024 = 65536，不引入第二套「64K」）· N2 两端一致（同一阈值 / 同一 preview 构成 / 同一 advisor 截断）· N3 可测试（阈值边界：恰好 65536 不落盘 / 65537 落盘；preview 双端构成；advisor 截断；失败回退均有单测）· N4 可维护（常量语义注释同步；不改落盘文件保留期（3 天）/ 写时自清理 / 失败回退逻辑）· N5 零破坏（落盘全文 / 清理 / 提示语路径格式不变）。
 
+**VSC 端显示层条目（并入 · 批 6）**——VSC 树需求档 `thincoder-vscode/docs/requirements/TOOL-OUTPUT-LIMITS.md` 的**端独有条目**（其 FR1–FR3 / FR6–FR8 / N1–N5 与上列共享条目同义——不重并，D2）：
+
+- **FR-V1 · 实时面板同宽**：面板实时看到的工具结果与上下文一致到 64K——panel `onToolResult` 发 webview 前 `slice(0, 65536)`（`thincoder-vscode/src/extension/panel-callbacks.mjs:165`）+ webview DOM 上限 `MAX_TOOL_OUTPUT = 64 × 1024`（`thincoder-vscode/webview/lib.js:27` · `capText` `:30` 承接）。
+  验收语义：70 000 字符结果经 `onToolResult` 后 ≤ 65536。
+- **FR-V2 · 历史页工具卡同宽**：回看历史时工具卡内容与上下文一致到 64K——`sendHistoryPage` 工具卡 `slice(0, 65536)`（`thincoder-vscode/src/extension/panel-session.mjs:195` · `:199` 结果数组同限）。验收语义：70 000 字符工具消息经 `sendHistoryPage` 后 ≤ 65536 且 > 20000（旧 2K 限制已破）。
+
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）
 
 | 旧档节 | 内容 | 何故不并 |
@@ -106,9 +112,11 @@
 | 「来源：2026-09-10 自 `../design/TOOLS.md` 抽取」注 | 拆分来源指针 | 时点材料——需求已归位到本档 |
 | 变更记录（F6 / N8 新增行 + F7 / N9 新增行） | 逐批流水账 | 历史叙述——本档自有变更记录 |
 | `thincoder-cli/docs/requirements/TOOL-OUTPUT-LIMITS.md`（43 行） | 工具输出上限系（FR1–FR6 / N1–N5） | **已并入**本档 §4.5（2026-09-15 批 5）——不重并；旧档留参照历史 |
+| `thincoder-vscode/docs/requirements/TOOL-OUTPUT-LIMITS.md`（47 行） | VSC 端显示层条目（实时面板 / 历史页工具卡同宽） | **已并入**本档 §4.5「VSC 端显示层条目」（批 6——FR-V1 / FR-V2）；其共享条目与批 5 并入面同义不重并（D2）；旧档留参照历史 |
 
 ## 变更记录
 
 - 2026-09-13：建档——自 `docs/core/requirements/CORE-UNIFICATION.md` 拆分（来源：§1.2 第 4 条计数口径 · §2 F11 / F13 / F3 回指）+ 设计档 `TOOLS.md`（§2.1–§2.3 · §3.1 A6 / A8–A13 · §3.2 B1 / B2 · §4.1 第 5–7 行 派生）；**无新增需求**。
 - 2026-09-14（**B 轮并入 · 第 2 批**）：新增 §4 **需求条目**（总体需求 / F1–F7 / N1–N9 / 范围边界——自 `thincoder-cli/docs/requirements/TOOLS.md` 逐节比对后并入需求正文；**编号与文本承旧档**）+ §5 **不并项与历史沿革**；**本档新增需求 0**（纯回填）；首部加需求条目面指针一行。
 - 2026-09-15（**迁移批 · 第 5 批 · 并入 · eng-designer**）：新增 §4.5 **工具输出上限系**（FR1–FR6 / N1–N5——自 `thincoder-cli/docs/requirements/TOOL-OUTPUT-LIMITS.md` 并入；与 §4.3 N5 两轴并存注解）；§5 补已并入登记行；**本档新增需求 0**（纯回填）。
+- 2026-09-15（**B 式迁移轮 · VSC 第 6 批 · 并入 · eng-designer**）：新增 §4.5「VSC 端显示层条目」**FR-V1 / FR-V2**（实时面板 / 历史页工具卡同宽——自 `thincoder-vscode/docs/requirements/TOOL-OUTPUT-LIMITS.md` 并入；坐标实核）；§5 补 VSC 行登记；**本档新增需求 0**（纯回填——共享条目不重并）。

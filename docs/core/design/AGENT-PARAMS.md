@@ -3,7 +3,7 @@
 > 板块 = **agent 运行参数**——评审墙钟超时 · 主 agent 轮次上限 · 子代理轮次。
 > 本档 = 这三个参数族的**唯一权威**（默认值 / 读取链 / 坐标）。
 > 相邻权威 = `docs/core/design/AGENT-LOOP.md`（主循环机制）· `docs/core/design/CONFIG.md`（配置面总体）· `docs/core/design/TOOL-OUTPUT-LIMITS.md`（另一族上限）——本档不复制其内容（D2）。
-> 需求侧 = `docs/core/requirements/`（根层**无**对应档）；CLI 树需求档 `thincoder-cli/docs/requirements/AGENT-PARAMS.md` **未迁**（后续批）。
+> 需求侧 = `docs/core/requirements/AGENT-PARAMS.md`（批 4 建档——源 = VSC 树需求档）；CLI 树需求档 `thincoder-cli/docs/requirements/AGENT-PARAMS.md` **未迁**（后续批）。
 > 建档：2026-09-15（**B 式迁移轮 · 第 3 批**——`thincoder-cli/docs/design/AGENT-PARAMS.md` 内容重建入基准层；旧档原地一字不改、留作参照历史）。
 > 本档坐标 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
 
@@ -48,7 +48,7 @@ const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_T
 
 - 子代理轮次统一走 `agent.subagentTurns`，缺省回退 `DEFAULT_SUBAGENT_TURNS = 100`（`thincoder-core/agent/helpers.mjs:25`）。
 - 读取点（三处同形）：`thincoder-core/agent-tools/subagent-async.mjs:387` · `thincoder-core/agent-tools/subagent-actions.mjs:418` · `thincoder-core/agent-tools/escalate-async.mjs:218`。
-- 「30 硬帽」是 **VSC 端特有问题**，CLI 无（旧档语义说明，实体在 CLI 端无对应代码）。
+- 「30 硬帽」是 **VSC 端特有问题**，CLI 无（旧档语义说明，实体在 CLI 端无对应代码）。**VSC 端已移除**（批 6 并入——见 §6.3 行 5）。
 
 ## 5. 参数总表（现行默认）
 
@@ -79,6 +79,23 @@ const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_T
 
 - 评审超时：配置覆盖 / 回退 / 非法值回退三态（`thincoder-cli/test/` 的 advisor 族用例）。
 - `maxTurns`：`thincoder-core/test/config.test.mjs:37` 断言 DEFAULTS 合并后 `maxTurns === 200`。
+
+### 6.3 VSC 端接线（B 式并入 · 实核 as-of 2026-09-15）
+
+> 来源 = `thincoder-vscode/docs/design/AGENT-PARAMS-TUNING.md`（VSC 产品档——旧档一字未改、留参照历史）。VSC 端四参数与 CLI 语义同源、实现独立（各自文件清单独立）。
+
+| 面 | VSC 落点（实核） |
+|---|---|
+| 评审超时默认 + re-export | `thincoder-vscode/src/advisor/compaction.mjs:33`（`REVIEW_TIMEOUT_MS` = 600 000）· `thincoder-vscode/src/advisor/run.mjs:19` re-export |
+| 评审检查点（配置覆盖 + 非法回退） | `thincoder-vscode/src/advisor/loop.mjs:98`（`Number.isFinite(cfg) && cfg > 0` → 缺省回退常量） |
+| advisor 配置读取链 | `thincoder-vscode/src/agent/setup.mjs:210`（初始 `{ guard: false }`）· `:232`（`raw.agent?.advisor ?? { guard: false }`） |
+| 面板保存透传 timeoutMs（P4——不静默丢） | `thincoder-vscode/src/extension/settings-panel-write.mjs:45`（`saveAgentSettingsFromPanel`）· `:112`–`:116`（合法 payload 胜，否则保留 current——不合并会丢字段；`thincoder-vscode/src/config-io.mjs:26` re-export） |
+| explore 30 硬帽已移除 | `thincoder-vscode/src/agent-tools/subagent.mjs:311`（`parent.config?.agent?.subagentTurns ?? 100`——无 `Math.min(30, …)`；与 async/escalate 路径一致） |
+| maxTurns 默认 200 | `thincoder-vscode/src/agent/run-helpers.mjs:15` · `thincoder-vscode/src/config-io.mjs:313`（`AGENT_DEFAULTS`）· `thincoder-vscode/src/agent/setup.mjs:219`（初始）/ `:241`（读取兜底 `?? 200`） |
+| 面板显示兜底 | `thincoder-vscode/webview/settings-agent.js:16`（`as.maxTurns ?? 200`） |
+| 面板 UI 无 timeoutMs 输入框 | 保持现状（config.json 手写即可——保存路径已透传，见上行） |
+
+**VSC 侧不动项**：`goalTurns` / `consultTurns` / `subagentTurns` 默认值语义独立、本批不并（VSC 源档 §2.3 明载「均 100/40、本次不动」——与本档 §5 总表同构）。**默认值单一来源**纪律两端同构：VSC 评审超时默认只住 `compaction.mjs` 常量、不进 `AGENT_DEFAULTS.advisor`（`thincoder-vscode/src/config-io.mjs:323` 注释即此登记）。
 
 ## 7. 并入的关键决策记录（含否决备选）
 
@@ -111,12 +128,14 @@ const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_T
 |---|---|---|
 | 旧档 §3 表内「相关设计文档 MODIFY」 | 泛指多档的同步改动 | 无具体落点——现状散档已各自收正 |
 | 旧档引用的 `test/advisor.test.mjs` / `test/agent.test.mjs` | 已删测试（存量测试清零批） | 陈旧坐标——不并；现行测试面见 §6.2 |
-| VSC 端「30 硬帽」 | 端特有问题 | 非 CLI 机制——归 VSC 轮 |
+| VSC 端「30 硬帽」 | 端特有问题 | **已并入（批 6）**——§4 注 + §6.3 行 5（VSC 侧现状 = 无 `Math.min` 截断） |
+| VSC 旧档 `AGENT-PARAMS-TUNING.md` §3 受影响文件表 · §4 AC1–AC9 · 变更记录流水 | 批次材料（单次改动清单 / 一次性验收 / 历史流水） | **不并**——现行坐标入 §6.3；机制约束已入 §2–§4（(d) 类） |
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **117 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **141 行**（并入批 6 后 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
 - 2026-09-15（**B 式迁移轮 · 第 3 批**）：建档——`thincoder-cli/docs/design/AGENT-PARAMS.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；坐标改写为现状路径并实核（`advisor/compaction.mjs` · `advisor/loop.mjs` · `config.mjs` · `agent/helpers.mjs` · `agent/setup.mjs` · `tui/cmd-config.mjs`）；新增 §5 参数总表（本档为参数族唯一权威）；批次材料 / 状态行 / 变更流水不并（§8）。
+- 2026-09-15（**B 式迁移轮 · VSC 第 6 批 · 并入 · eng-designer**）：新增 §6.3 VSC 端接线——自 `thincoder-vscode/docs/design/AGENT-PARAMS-TUNING.md` 并入（评审超时 / 面板透传 / explore 30 硬帽移除 / maxTurns 200 逐项实核；VSC 默认落在 `advisor/compaction.mjs` 而非旧档所记 `run.mjs`——按现状收正）；§4 补 VSC 注 + §8.2 VSC 行收口（(d) 类批次材料登记）；需求侧头注随批 4 建档收正。

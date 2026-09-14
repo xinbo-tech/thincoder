@@ -2,7 +2,7 @@
 
 > 板块 = **工程模式凭证链（token 生命周期）**——token 是什么 · TTL 与格式 · 跨模式存活 · 清理时机。
 > 相邻权威 = `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md`（结算 / 持久化 / 回读 / 消费——本档**不重述**，D2）· `docs/core/design/CONSULTATION.md`（评审引擎）· `docs/core/design/ENGINEERING-MODE.md`（工程模式流程，CLI 树**未迁**）。
-> 需求侧 = `docs/core/requirements/`（根层**无**对应档）；CLI 树需求档 `thincoder-cli/docs/requirements/ENG-TOKEN-BINDING.md` **未迁**（后续批）。
+> 需求侧 = `docs/core/requirements/ENG-TOKEN-BINDING.md`（批 5 建档——源 = VSC 树需求档）；CLI 树需求档 `thincoder-cli/docs/requirements/ENG-TOKEN-BINDING.md` **未迁**（后续批）。
 > 建档：2026-09-15（**B 式迁移轮 · 第 3 批**——`thincoder-cli/docs/design/ENG-TOKEN-BINDING.md` 内容重建入基准层；旧档原地一字不改、留作参照历史；**旧档 §4/§5 口径陈旧 ⇒ 按现状收正**——见 §8.1）。
 > 本档坐标 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
 
@@ -79,6 +79,25 @@
 
 R16 语义（跨模式存活 + 三清时机 + 单一权威）**已全部落地**，与本文一致——实核于上表各坐标。
 
+### 6.3 VSC 端接线（B 式并入 · 实核 as-of 2026-09-15）
+
+> 来源 = `thincoder-vscode/docs/design/ENG-TOKEN-BINDING-TUNING.md`（VSC 产品档——旧档一字未改、留参照历史）。**语义两端 lockstep**（流程凭证 / 无签名 / 跨模式存活 / 仅 TTL 过期清 / slot 权威持久源）；VSC 模块落点与持久化面独立
+> （slot 经 `session-io` / `setSlotEngDesignTokens` 多槽写——非 CLI 单源 persistState 布局）。结算 / 持久化细节归 `thincoder-vscode/docs/design/DESIGN-TOKEN-SETTLEMENT.md`（基准层并入面 = `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` §6.3——本档不重述，D2）。
+
+| 面 | VSC 落点（实核） |
+|---|---|
+| TTL 默认 + 配置覆盖 | `thincoder-vscode/src/agent-tools/advisor.mjs:13`（`TOKEN_TTL_DEFAULT_MS` = 7 天）· `:17`（`effectiveTokenTtlMs`——`Number.isFinite(cfg) && cfg > 0`，非法回退默认） |
+| 签发（无签名 uuid:expiresAt） | `thincoder-vscode/src/agent-tools/advisor.mjs:26`（`generateDesignToken`） |
+| 格式解析单一源 | `thincoder-vscode/src/agent-tools/advisor.mjs:57`（`tokenExpiry`——fail-closed：段数≠2 / 空 uuid / isNaN 全返 null） |
+| 过期判定 + validate + 回显匹配 | `thincoder-vscode/src/agent-tools/advisor.mjs:73`（`isExpiredDesignToken`——只对格式合法者判）· `:79`（`validateDesignToken`——fail-closed）· `:94`（`makeDesignTokenRegex`——转义整 token 回显匹配） |
+| 恢复过滤（逐槽 TTL 校验） | `thincoder-vscode/src/agent/agent-state.mjs:53` · `:58`（`isExpiredDesignToken` 逐槽——过期丢弃）· `:63`（legacy 单值残留一次性迁移读） |
+| 开工程模式清过期 | `thincoder-vscode/src/agent-tools/eng.mjs:20`（`sweepExpiredDesignTokens`——仅删过期、有效保留）· `:74`（enter 真 off→on 转换调用）；ON 消息 `:79`（含清理个数文案——`Cleared N expired design token(s)` 保留） |
+| spawn 门禁族 | `thincoder-vscode/src/agent-tools/subagent-spawn-gate.mjs:70`（`resolveDesignSlot`——精确槽 / 单槽 / 多槽拒 / torn-state 拒）· `:101`（`dropExpiredTokenSlot`——仅过期拒删）· `:124`（`authorizeEngCoderDesignToken`）· `:145`（`executeConsumeDesignAction`——链终消费） |
+| 内存运行态 + 回合尾落盘 | `thincoder-vscode/src/agent/setup.mjs:105`（`_engDesignTokens` 惰性 Map——每 run 重建 agent 后水合）· `:280`（`setSlotEngDesignTokens` 回合尾 flush） |
+| 多槽持久化原语 | `thincoder-vscode/src/extension/session-slot-write.mjs:108`（`setSlotEngDesignTokens`——null → 删字段）· `thincoder-vscode/src/extension/session-io.mjs:43` re-export |
+
+**VSC 侧差异**（有意——源码注释逐字登记）：① slot 持久化 = 会话槽 + config.json mirror（eng.mjs `CONFIG_CONFLICT_HINT`——冲突时槽优先）；② spawn 门禁 `resolveDesignSlot` 读当前 run 内存 Map、**miss 时回读槽文件权威台账**（结算面——`DESIGN-TOKEN-SETTLEMENT.md` §6.3）。
+
 ## 7. 并入的关键决策记录（含否决备选）
 
 | # | 决策 | 理由 / 否决备选 |
@@ -113,11 +132,13 @@ R16 语义（跨模式存活 + 三清时机 + 单一权威）**已全部落地**
 | 工程模式流程本体 | `ENGINEERING-MODE.md` 的流程 / 判据 | CLI 树档**未迁**（后续批）——本档只留凭证链机制 |
 | `TOKEN_SECRET` / `eng(enter)` 同意门 TODO | 未做项的待办指针 | 项目技术待办面（台账 = 父侧）——本档只在 §2 登记「明确不做」 |
 | 需求侧正文 | CLI 树需求档 | 需求档未迁——后续批并入既有档 |
+| VSC 旧档 §1–§3（语义 lockstep 重述） · §4 生命周期表 · §6 AC1–AC11 · 变更记录 | 重复面 / 批次材料 / 流水 | **不并**——语义已由本档 §3–§5 承载（lockstep 表述只在 §6.3 头注保留共存锚）；AC 与变更流水 = 一次性材料（(d) 类） |
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **113 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **144 行**（并入批 6 后 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
 - 2026-09-15（**B 式迁移轮 · 第 3 批**）：建档——`thincoder-cli/docs/design/ENG-TOKEN-BINDING.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；**旧档 §4 结算语义 / §5 实现落点两处口径按现状收正**（单值镜像已退役 → 见 `DESIGN-TOKEN-SETTLEMENT.md`；签发/校验/结算宿主 = `agent-tools/design-token.mjs`；`src/**` 迁移前坐标 → 现状路径），旧句逐条登记入 §8.1；坐标全量实核；批次材料 / 状态行 / 变更流水不并（§8）。
+- 2026-09-15（**B 式迁移轮 · VSC 第 6 批 · 并入 · eng-designer**）：新增 §6.3 VSC 端接线——自 `thincoder-vscode/docs/design/ENG-TOKEN-BINDING-TUNING.md` 并入（TTL / 解析 / 过期判定 / 门禁族 / 持久化逐项实核；结算面指回 `DESIGN-TOKEN-SETTLEMENT.md` §6.3——D2）；VSC 旧档重复面与批次材料登 §8.2 不并（(d) 类）；需求侧头注随批 5 建档收正。

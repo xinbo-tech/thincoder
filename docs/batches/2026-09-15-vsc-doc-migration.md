@@ -322,6 +322,73 @@ J 个 = 各档「不并项与历史沿革」节内逐条登记（旧档节 + 何
 
 **变更记录** ✗：- 2026-09-15（**B 式迁移轮 · VSC 第 5 批** · eng-designer）：§2 append——§8A 剩余纯新建 5 档（含 PROJECT 拆分双落）+ ADVISOR-CONVERGENCE 转 §8B-26 + `VSC-MIGRATION.md` 拆分（主档 132 / INVENTORY 484）+ §8A 闭合（18 = 6 + 7 + 4 + 1）。
 
+**本批任务（B 式迁移轮 · VSC 第 6 批）**：§8B 并入清单**第一批（8 条）**逐条对账合并 ✓ + 台账 `VSC-MIGRATION-INVENTORY.md` §8B 收口 ✓ + 批前已定裁定随批落笔（D1 / D2 / D3——出处 = 父侧 02:0x 裁决）✓。
+
+**范围内（本批覆盖的需求）**：F-M9（并入面逐条：内容 → 目标 core 档 → 落节 → 实核）· F-M4（落点档不含批次材料 + (d) 类不并逐项入各档「不并项」节）· F-M5（坐标改现状路径 + `file:line` 实核）· F-M3（逐档报「源档 → 落点」）· N-M2 / N-M3 / N-M5（三闸 + 写域 + 逐档 ≤500）。批 1–5 已闭合者不重开。
+
+**① 取材清单（§8B 取 8 条 · 逐条实核目标现态）**：
+
+| 清单号 | 源档（VSC 树·一字未改） | 实核（目标 core 档现态） | 处置 |
+|---|---|---|---|
+| 2 | `design/AGENT-PARAMS-TUNING.md`（114） | `docs/core/design/AGENT-PARAMS.md` = 批 3 CLI 版；§8.2 己登「30 硬帽归 VSC 轮」、VSC 面缺 | **并入**（§4 注 + §6.3） |
+| 3 | `design/ARCHITECTURE.md`（266） | 目标 = 批 2 CLI 版；`:6` 明载「VSC 轮并入本档」、VSC 模块地图与差异表缺 | **并入**（§3.1 + §4.1） |
+| 5 | `design/PORTABILITY.md`（458） | 目标 = 批 2 CLI 版；`:6` 明载「VSC 端镜像——VSC 轮并入本档」、VSC 面缺 | **并入**（§3.6 + §5 测试面） |
+| 15 | `design/TOOL-OUTPUT-LIMITS-TUNING.md`（139） | 目标 = 批 3 CLI 版；§6.2 登「VSC 树档未迁」、VSC 坐标缺 | **并入**（§6.3） |
+| 16 | `design/ENG-TOKEN-BINDING-TUNING.md`（115） | 目标 = 批 3 CLI 版；VSC 载体未并 | **并入**（§6.3） |
+| 17 | `design/DESIGN-TOKEN-SETTLEMENT.md`（109） | 目标 = 批 3 CLI 版；§6.2 双端差异已述、VSC 根因面缺 | **并入**（§6.3） |
+| 19 | `requirements/MEMORY.md`（50） | 目标 = 拆轮需求档；§5 明载「VSC 端条目 · 触发 = §8B-19」 | **并入**（§4.7） |
+| 22 | `requirements/TOOL-OUTPUT-LIMITS.md`（47） | 目标 = `requirements/TOOLS.md`（批 5 已并 CLI 面 §4.5）；VSC 端独有条目缺 | **并入**（§4.5「VSC 端显示层条目」FR-V1 / FR-V2——共享条目不重并） |
+
+**跳过并写明**：#18（§7.1 D3——**维持现状**：VSC 面需求节留 core 档 §5 内 · 结构变更非本批题）· #25（§7.1 D2——**VSC 专有面**：另落 `docs/vsc/requirements/`，非 core 并入项）· #4 / #7（目标 = PROVIDER 两档——他线在写 · 本批跳过留待下批）。
+
+**② 并入逐节（源节 → 目标落位）+ 行数前 → 后**：
+
+| 目标档 | 源节 | 落位 | 行数 前 → 后 |
+|---|---|---|---|
+| `docs/core/design/AGENT-PARAMS.md` | 旧档 §1–§4（四参数）+ 现码核对 | §4 注 + §6.3 VSC 端接线表（8 面实核） | 123 → 142 |
+| `docs/core/design/ARCHITECTURE.md` | 旧档 §3 模块地图 / §4 差异表 | §3.1 壳层装配地图 + §4.1 差异表 + VSC 专属取向 | 151 → 196 |
+| `docs/core/design/PORTABILITY.md` | 旧档批次二机制面（分类权威 / 注入 / 索引 / 文案） | §3.6 VSC 端镜像面 + §5 测试 3 行 | 161 → 183 |
+| `docs/core/design/TOOL-OUTPUT-LIMITS.md` | 旧档 §2 现行设计（含 §2.9 read 双端） | §6.3 VSC 端实现坐标（11 面实核） | 143 → 165 |
+| `docs/core/design/ENG-TOKEN-BINDING.md` | 旧档 §3–§5（TTL / 生命周期 / 落点） | §6.3 VSC 端接线表（9 面实核——结算面指回 DTS §6.3，D2） | 124 → 145 |
+| `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` | 旧档 §1 根因 + D1–D6 | §6.3 VSC 端结算接线表（8 面实核 + 差异注） | 126 → 146 |
+| `docs/core/requirements/MEMORY.md` | 旧档 §1–§4（F-M1–F-M7 / N-M1–N-M4 / 端差登记） | §4.7 VSC 端需求条目（governing 上覆 = §2.1 归一方向） | 139 → 173 |
+| `docs/core/requirements/TOOLS.md` | 旧档 FR4 / FR5 + webview DOM 上限 | §4.5「VSC 端显示层条目」FR-V1 / FR-V2 | 115 → 123 |
+| `docs/vsc/design/VSC-MIGRATION-INVENTORY.md` | —（台账面） | §8B 八行已并入 + #18/#25 销项 + 收口句 + §4 三行裁定 + §9.6 实迁记录 + §13 体量 | 484 → 500 |
+
+**③ §8B 收口（小计闭合 · D3）**：26 = **8（批 6 已并入——#2 / #3 / #5 / #15 / #16 / #17 / #19 / #22）** + **16（未并 · 待后续批——#1 / #4 / #6 / #7 / #8 / #9 / #10 / #11 / #12 / #13 / #14 / #20 / #21 / #23 / #24 / #26）** + **2（裁定销项——#18 D3 · #25 D2）** ✓。**剩 16 条可并**（另 2 条销项不再并；#4 / #7 待 PROVIDER 线完工）。
+
+**④ 三闸读数（改后 · 实跑）**：
+`doc-anchors --domain .`（125 档）→ 候选 7621 · **悬空 0** · `OK(V5)` · exit 0 ✓（本批曾自产 2 处 V5-A 悬空——`config-io.mjs:26` / `run.mjs:19` 裸相对坐标——**已当场修**：补仓根前缀）。
+`check-doc-width` → **OK（宽度）**：402 文件无 >300 字符单行 · **一致性 V1/V2/V3 新增违规 0** · 基线 0 · exit 0 ✓（本批曾自产 5 行 >300 非表格行——**已当场折行**：零语义）。
+`check-ledger` → 两档 `OK` · **0 处违规** · 基线 0 · exit 0 ✓。
+`git status` 本批 = **9 档**（8 core 并入档 + `VSC-MIGRATION-INVENTORY.md`）⊆ 写域 ✓；另 `thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md` · `thincoder-vscode/scripts/reconcile-lookup.mjs` = **非本批写入**（工作树既有 / 父侧收正或并行线——如实报）。
+
+**⑤ 发现（逐条 · 不静默）**：
+
+- **① 源档坐标漂移 5 类（实核发现并已按现状收正）**：评审超时默认/检查点 `src/advisor/run.mjs` → `advisor/compaction.mjs:33` + `advisor/loop.mjs:98`（run.mjs:19 现为 re-export）；面板保存 `src/config-io.mjs` → `extension/settings-panel-write.mjs:45`（config-io re-export）；设计门禁 → `agent/tool-gates.mjs:78` / `:97`（非 execute-tools）；
+  恢复过滤 `src/agent/setup.mjs` → `agent/agent-state.mjs:53/:58/:63`；`setup.mjs` 现行为 200 初始 + `?? 200` 兜底（与旧档描述一致但行号漂移——按现状落笔）。
+- **② 一致性修正（本批当场修 · 报告）**：8 档中 4 档**需求侧头注过期**（AGENT-PARAMS / ENG-TOKEN-BINDING / DESIGN-TOKEN-SETTLEMENT「根层无对应档」→ 批 4/批 5 已建；TOOL-OUTPUT-LIMITS「未迁」→ 批 5 已并入 §4.5）——随本批落笔收正；ARCHITECTURE / PORTABILITY「双端对位 = 未迁」行 → 已并入；各档 §8「归 VSC 轮」登记录 → 已并入。
+- **③ 台账越线收回**：`VSC-MIGRATION-INVENTORY.md` 并入后曾达 503 行 > 500 硬限 → 压缩 §9.6 + §13 归并为 500 行（§13 标注同步）。
+- **④ 工作树 2 处非本批改动**：`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`（前批已登记）· `thincoder-vscode/scripts/reconcile-lookup.mjs`（本批未触碰——疑似父侧收正批 4 发现③ —— 非本批写入）。
+
+**⑥ 未决（真判不准）**：**无**——(a/b/c/d) 四类对账 + 归属裁定皆可判。§8B 剩余 16 条 + 主档 `VSC-MIGRATION.md`（写域外）§7.1 销项行 / 变更记录随后续批由父侧落笔。
+
+**⑦ 交付表**：
+
+| # | 需求点 | 状态 | 交付物 |
+|---|---|---|---|
+| 1 | §8B 并入 ≤8 条 · 逐条实核（目标现态为准） | ✅ Done | 8 条并入（见 ①）——未照抄拟插节、均按目标现态落位 |
+| 2 | PROVIDER 目标条目本批跳过 | ✅ Done | #4 / #7 留待下批（落笔时点实核——他线在写） |
+| 3 | D1 / D2 / D3 批前裁定随批落笔 | ✅ Done | #18 销项（D3 维持现状）· #25 销项（D2 另落 vsc）· §4 三行标记（RELEASE / AGENT-LOOP / FEATURES） |
+| 4 | 逐节对账 (a)(b)(c) 并入 · (d) 入各档「不并项」节 | ✅ Done | 8 档均 (d) 类 / 批次材料逐条登记 |
+| 5 | 坐标改现状路径 + `file:line` 实核 | ✅ Done | 全量实核 + 漂移 5 类收正（发现①）+ 裸坐标补仓根前缀 |
+| 6 | 零 `T-` 形跨域用例号 · 逐档 ≤500 | ✅ Done | 并入后 core 档 123–196 · 台账 500——均 ≤500 ✓ |
+| 7 | §8B 收口 + 剩余条数 + 小计闭合 | ✅ Done | 26 = 8 + 16 + 2（§8B 收口句）+ §9.6 + §13 体量同步 |
+| 8 | 三闸（锚 0 / 宽度新增 0 / 台账 0）· `git status` ⊆ 写域 | ✅ Done | 见 ④ |
+| 9 | 不 commit · 不发起评审 · 写域外零写入 | ✅ Done | 未 commit；`thincoder-vscode/**` / `scripts/**` / `docs/cli/**` / 台账 / prompts 零写入 |
+
+**变更记录**：- 2026-09-15（**B 式迁移轮 · VSC 第 6 批** · eng-designer）：§2 append——§8B 并入第一批 8 条（core 六设计 + 两需求）+ D2/D3 裁定销项 2 条 + 台账收口（26 = 8 + 16 + 2）+ 三闸全绿（锚 0 · 宽度 0 新增 · 台账 0）。
+
 ## §3 评审发现（评审子代理）
 
 _（待写）_

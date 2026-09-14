@@ -123,6 +123,39 @@ F8 嵌套 memory 文件 —— 连续两次 `needed:false`；两集合一致。F
 
 **范围边界（不做）**：不做向量索引 / 近似检索（另案）；不改 embedding 维度 / 模型变更失效逻辑；不改检索触发点与 limit 语义；不改 FTS 通道。
 
+### 4.7 VSC 端需求条目（并入 · 批 6）
+
+> 来源 = `thincoder-vscode/docs/requirements/MEMORY.md`（50 行 · VSC 产品需求档——旧档留参照历史）。**VSC 端当前实现面** = 文件式两层记忆（无 team 层 / 无 sqlite）；CORE-UNIFICATION 归一方向（§2.1 回填条目——以 CLI 语义为准、VSC 改接线）为 **governing 上覆**——本节登记 VSC 端现状条目与端差，不改变归一方向。
+
+**总体**：记忆系统让 agent 跨会话保存 / 检索 / 治理知识——VSC 端承载 personal / project 两层（**无 team 层**——团队记忆由 CLI 管）并提供代码 / 文档索引（code / doc chunk）。存储形态 = **markdown 文件即真相**（`cwd/.thincoder/memory/`，无独立 DB——可人工编辑、可 git 管理）。
+
+**功能条目**（VSC 端现状 · 编号承 VSC 源档）：
+
+| # | 需求（VSC 端） | 判定句（验收语义） |
+|---|---|---|
+| F-M1 | 两层记忆 + legacy 根：写入指定 layer；物理目录 = `memoryDir(cwd)/<scope>`；legacy 根目录（无 layer）参与全量读取（标 `_scope="root"`） | personal / project 写入落对应目录；legacy 根条目可被读取；`layer:"team"` 五 action 全拒并指路 |
+| F-M2 | 文件即真相（零 DB）：markdown + frontmatter（与 CLI byte-compatible 序列化）；文件名 `YYYYMMDD-<slug>-<rand4>.md`；旧 `.json` 只读兼容 | 条目文件可人工编辑 / git 管理；索引可整体重建 |
+| F-M3 | 单工具五动作：`memory` 单工具、`action` 路由（search / put / list / delete / clear）；**action 级只读**（search / list 免审批 / 并行） | 五动作分派在位；search / list 无审批门；put / delete / clear 走审批门 |
+| F-M4 | 检索双通道：向量优先（embedder + 索引在位 → `searchIndex(kind:"memory")` → 活文件 guard）→ 无命中 / 异常回退关键词（子串打分 title 3 / tag 2 / content 1） | 无 embedder 时关键词路径照常出结果（score>0）；已删条目不被向量通道重新浮出 |
+| F-M5 | 三 kind 索引 + 重建判定（memory 优先 → code / doc；`needsRebuild` reason ∈ 七词表） | 三 kind 检索面在位；重建判定可机判 |
+| F-M6 | 有效性校验（换模型不静默）：`indexCompat`（模型比对 → `model-changed`）+ 维度硬闸 + 可见面两推口（状态 + 重建提示） | 换模型后检索不产出无效结果；状态面显示「模型不匹配 + 重建入口」；失败仍静默降级关键词（两语义不冲突） |
+| F-M7 | 回合记忆召回注入：depth-0 非 resume 非 auto-turn 的回合注入召回块（关键词路径，limit 3；注入失败静默跳过） | 回合装配含召回块（可断）；注入失败不阻塞回合 |
+
+**非功能条目**（VSC 端现状）：N-M1 零依赖（纯 `node:fs`——无第三方 / 无 FTS5）；N-M2 降级可用（embedder / 索引缺失 → 关键词路径；cosine 异长返 0）；N-M3 跨端一致（frontmatter 与 CLI byte-compatible；端差登记见下）；N-M4 可机判（重 IO 用例归册慢层）。
+
+**对位与端差登记**（对位 = CLI 侧需求条目——与 CLI 语义同源、本端原文自持）：
+
+| 面 | VSC 端 | 端差（登记） |
+|---|---|---|
+| 存储 | 文件式 markdown + frontmatter（两层都是文件）；无 FTS5 / sqlite | 对端 = 单文件 `~/.thincoder/memory.db`（FTS5 + BM25 + 向量 BLOB） |
+| 层数 | personal / project 两层；无 team | 对端三层（team 由 CLI 管）；本端 `layer:"team"` 明确拒绝并指路 |
+| 索引形态 | 独立 `.thincoder/index/`（manifest + vectors.bin）+ 按 kind 单库检索 | 对端 = DB 内三表 |
+| 配置面 | 记忆锚定 cwd——无记忆路径配置字段；`~` 展开唯一接线 = `shell` 字段 | 对端四字段展开 |
+| 命名面 | 模型可见全 `layer`；内部存储 helper 仍名 scope（映射点 = 工具层） | 同源（内部词保留） |
+
+> VSC 端证据坐标（实核 as-of 2026-09-15）：`thincoder-vscode/src/memory.mjs:30`（`memoryDir`）· `:36`（`scopeDir`）· `:170`–`:177`（legacy 根 + `_scope` 标注）· `thincoder-vscode/src/memory-tool.mjs:117`（action 级只读）· `:151`（向量通道）
+> · `thincoder-vscode/src/indexer.mjs:162`（`model-changed`）· `:170`–`:258`（`needsRebuild` 七词表）· `thincoder-vscode/src/extension/panel-index.mjs:171`（未列入提示行）。
+
 ## 5. 不并项与历史沿革（批 5 · 2026-09-15）
 
 | 旧档节 | 内容 | 何故不并 |
@@ -130,9 +163,10 @@ F8 嵌套 memory 文件 —— 连续两次 `needed:false`；两集合一致。F
 | §4 头注 / §5 头注 / §6 头注 | 批次来源指针（VSC 仓批次 / TUI-OOM 批） | 一次性材料——条目已归位到本档 §4 |
 | 「来源：…」注 + 「状态：」行 | 拆分来源与状态标记 | 时点材料——归批次档 / 台账 |
 | 变更记录（2026-08 起逐批） | 历史叙述 | 本档自有变更记录 |
-| VSC 端需求条目面（`thincoder-vscode/docs/requirements/MEMORY.md`——两层记忆 / 无 team / 文件式存储 / 端差登记） | VSC 端条目 | **VSC 面**——归 `docs/vsc/requirements/` 或本档「VSC 端」节（触发 = VSC 迁移轮，`docs/vsc/design/VSC-MIGRATION.md` §8B-19 登记） |
+| VSC 端需求条目面（`thincoder-vscode/docs/requirements/MEMORY.md`——两层记忆 / 无 team / 文件式存储 / 端差登记） | VSC 端条目 | **已并入（批 6）**——本档 §4.7「VSC 端需求条目」；旧档留参照历史 |
 
 ## 变更记录
 
 - 2026-09-13：建档——自 `docs/core/requirements/CORE-UNIFICATION.md` 拆分（来源：§1.2 第 6 条 · §3 N7）+ 设计档 `MEMORY.md`（§3.1 A2）；**无新增需求**。
 - 2026-09-15（**迁移批 · 第 5 批 · 并入 · eng-designer**）：新增 §4 **需求条目**（总体 / F1–F5 / N1–N4 / 索引有效性 F6–F9 · N5–N6 / 家目录展开 F10–F14 · N7–N9 / 检索向量上界 F-M1–F-M3 · N-M1–N-M3——自 `thincoder-cli/docs/requirements/MEMORY.md` 逐节比对后并入，**编号与文本承旧档**）+ §5 **不并项与历史沿革**；**本档新增需求 0**（纯回填）。
+- 2026-09-15（**B 式迁移轮 · VSC 第 6 批 · 并入 · eng-designer**）：新增 §4.7 **VSC 端需求条目**（总体 / F-M1–F-M7 / N-M1–N-M4 / 端差登记五行——自 `thincoder-vscode/docs/requirements/MEMORY.md` 并入；coordinate 逐项实核）；§5 VSC 行收口；**本档新增需求 0**（纯回填——governing 上覆 = §2.1 归一方向）。

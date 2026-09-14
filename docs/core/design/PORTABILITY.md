@@ -3,7 +3,7 @@
 > 板块 = **可移植性**——工程模式与机检机制面向**任意项目**时不得静默失效的机制面：
 > 代码 / 文档分类裁判 · 项目声明面 · 降级可见 · 非 git 索引回退 · `/eng` 无前提开启。
 > 需求侧 = `thincoder-cli/docs/requirements/PORTABILITY.md`（CLI 侧**未迁**——FR10–FR15 组）；工作流面（工程模式本体）= `thincoder-cli/docs/design/ENGINEERING-MODE.md`（CLI 侧**未迁**）。
-> 双端对位 = `thincoder-vscode/docs/design/PORTABILITY.md`（VSC 侧**未迁**——按 P1 统一面，VSC 轮并入本档）。
+> 双端对位 = `thincoder-vscode/docs/design/PORTABILITY.md`（VSC 端镜像面**已并入（批 6）**——§3.6 坐标 + §5 测试面；旧档一字未改、留参照历史）。
 > 建档：2026-09-15（**B 式迁移轮 · 第 2 批**——`thincoder-cli/docs/design/PORTABILITY.md` 内容重建入基准层；旧档原地一字不改、留作参照历史）。
 > 本档坐标与行数 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
 
@@ -96,6 +96,23 @@
 - `thincoder-cli/src/tui/cmd-eng.mjs`：METHODOLOGY 门禁与模板分支已删——切换**无前提**；ON 提示行改述为「design-before-code enforced（design review + user approval before code）」；令牌语义与槽持久化零改。
 - 工具侧文案：`thincoder-core/agent-tools/eng.mjs`（去 `in docs/` 措辞）；门禁 hint = `thincoder-core/agent/dispatch.mjs`（同批去 `docs/` 措辞 + 未声明时的声明指引）。
 
+### 3.6 VSC 端镜像面（B 式并入 · 实核 as-of 2026-09-15）
+
+> 来源 = `thincoder-vscode/docs/design/PORTABILITY.md`（VSC 产品档·批次二——旧档一字未改、留参照历史）。VSC 端 = 同机制的第二实现面：**同语义同 schema、各自独立实现**（不做 byte-identical、不以任一端产物回改另一端——镜像纪律）；未进核前的独立实现坐标如下。
+
+| 面 | VSC 落点（实核） | 差异注 |
+|---|---|---|
+| 分类裁判（唯一实现） | `thincoder-vscode/src/conventions.mjs:76`（`classifyPath`）· `:85`（`isCodePath`）· `:91`（`isDocPath`）· `:194`（`loadConventions`） | 与核面 `thincoder-core/conventions.mjs` 同语义、独立实现（两份实现、语义同源——统一方向见 `docs/core/design/CORE-UNIFICATION.md`） |
+| 声明面 | `.thincoder/conventions.json`（与 CLI 同文件同 schema：`codePaths` / `index.*Extensions` / `advisor.docMap` / `advisor.standardsDoc`） | VSC 侧亦不建本仓自用声明（默认判据对本仓即正确——与 CLI 批同口径） |
+| 父侧设计门禁 | `thincoder-vscode/src/agent/tool-gates.mjs:78`（评审前拦截）· `:97`（hint 含未声明指路）——判定经共享谓词 | 门禁载体 = `tool-gates.mjs`（VSC 装配面；CLI 对位 = `thincoder-core/agent/dispatch.mjs:204`） |
+| 设计评审文档门禁 | `thincoder-vscode/src/agent-tools/advisor.mjs:219`–`:228`（`isDocPath`——`docs/` 前缀判据已退役） | 拒绝文案 = 产品约定指路（逐字本体住产品代码，本档不复制——D2） |
+| 变更集判据 | `thincoder-vscode/src/agent-tools/verify.mjs:95`（`isDocOnlyChange`——本地谓词副本已删、换源 conventions）· `thincoder-vscode/src/agent/run-helpers.mjs:71`（`hasCodeMutations`） | 谓词全部换源 `conventions.mjs`、不设 re-export（单一裁判纪律两端同构） |
+| 项目上下文发现与注入 | `thincoder-vscode/src/advisor/project-context.mjs:35`（`NO_GUIDE_NOTICE`）· `:39`（`NO_DOC_MAP_NOTICE`）· `:40`（`NO_STANDARDS_NOTICE`）· `:41`（`NO_GIT_NOTICE`）· `:56`（`findProjectRoot`）· `:91`（`injectProjectGuide`）· `:138`（`injectDocumentMap`）· `:176`（`injectProjectStandards`） | `messages.mjs` 注入调用 = `thincoder-vscode/src/advisor/messages.mjs:107`（guide）· `:115`（NO_GIT）· `:155` / `:240`（standards）· `:160`（docMap） |
+| 索引扩展名 + 未列入可见 | `thincoder-vscode/src/index-discover.mjs:17`（`CODE_EXTS` 26 项）· `:24`（`DOC_EXTS` 含 `.mdx/.org/.wiki/.tex`）· `:125`（`discoverFiles` `collectUnlisted`）· `:132`（`discoverFilesUnder`）· 提示行 `thincoder-vscode/src/extension/panel-index.mjs:171`–`:173` | 非 git 行为 VSC 索引**非 git 依赖型**（`indexer.mjs` 全量 walk 回退既有——批次二已对位，不重复修改） |
+| 评审侧无 git 降级句 | `NO_GIT_NOTICE` 注入（messages.mjs design / code 双路径） | 索引侧已对位——评审侧为批次二补入 |
+
+**VSC 端消息文案**与 CLI 已交付文本**逐字同文**（`NO_*_NOTICE` 四常量 + 门禁 hint + eng 工具消息 + advisor 拒绝文案——文案与端无关）；逐字本体住产品代码 / 提示词面，本档不复制（D2）。
+
 ## 4. 关键决策记录（含否决备选）
 
 | # | 决策 | 理由 / 否决备选 |
@@ -117,11 +134,14 @@
 | `thincoder-cli/test/portability-index.test.mjs` | walk 回退 / 跳过规则 / 截断 / 扩展名声明与未列入可见化 |
 | `thincoder-cli/test/portability-advisor-context.test.mjs` | 项目上下文注入与降级句 |
 | `thincoder-cli/test/cmd-eng.test.mjs` | `/eng` 无前提开启 / OFF 语义零回归 |
+| `thincoder-vscode/test/portability-vsc-classification.test.mjs` | VSC 分类裁判（正常 / 嵌套反证 / 声明替换 / 损坏回退 / 门禁三态） |
+| `thincoder-vscode/test/portability-vsc-advisor-context.test.mjs` | VSC 项目上下文注入与降级句 |
+| `thincoder-vscode/test/portability-vsc-index.test.mjs` | VSC 扩展名声明与未列入可见化 |
 
 ## 6. 边界（本档不覆盖）
 
 1. **B / C 家族剩余**（P11–P13、P16–P28 与 🔵 项）——CLI 侧后续批；其中 `thincoder-core/prompts/discipline-normal.md` 的地图引用属已登记 P11。
-2. **VSC 端镜像**——按 P1 统一面，VSC 轮并入本档（本批零触碰 VSC 树）。
+2. ~~**VSC 端镜像**~~——**已并入（批 6）**：VSC 镜像面 = §3.6（第二实现面——未进核前的独立实现坐标）；其批次材料（三态对位表 / 逐条修法流水 / 用例与 AC）逐项登 §7.2 不并。
 3. **FR10–FR15 正文搬迁归位**（CLI 侧 `design/ENGINEERING-MODE.md` 旧文 → 需求档）——父侧裁决项。
 4. **本仓自指面**（`AGENTS.md` 的检查声明）——父侧落笔。
 
@@ -146,15 +166,17 @@
 | 旧档面 | 内容 | 何故不并（去向 / 触发） |
 |---|---|---|
 | 提示词文案本体 | 六档编辑面的落地文本 | **产品代码**——落点 `thincoder-core/prompts/**`；中文正本 `docs/core/design/prompts/` |
-| VSC 端镜像实现面 | `thincoder-vscode/src/**` 同类判据 | VSC 轮（P1 并入本档 / 产品面随 VSC 批） |
+| VSC 端镜像实现面 | `thincoder-vscode/src/**` 同类判据 | **已并入（批 6）**——§3.6 坐标 + §5 测试面（VSC 保持独立实现、语义同源） |
+| VSC 批次二档 §1 三态对位表 · §3 逐条修法流水 · §4.4 逐字提示词文本 · §5 受影响文件全清单 · §6 用例 T-V01–T-V19 · §7 验收 AC-V01–AC-V14 · §9 边界 · §10 open-1–3 | 一次性批次材料（对位勘察 / 修法 as-of 行号 / 逐字施工文本 / 用例与验收）+ open 面 | **不并**——对位结论已落 §2–§3（VSC 面 §3.6）；逐字提示词文本 = 产品代码（落 `thincoder-vscode/src/prompts/**`——本体即权威，D2）；open 项归父侧（(d) 类） |
 | 实施台账指针（P1–P28 缺陷登记） | 缺陷编号登记面 | 项目台账（`docs/TODO.md`）面——本档只留机制 |
 
 ## 8. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **161 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **183 行**（并入批 6 后 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
 - 2026-09-15（**B 式迁移轮 · 第 2 批**）：建档——`thincoder-cli/docs/design/PORTABILITY.md` 内容重建入基准层（旧档一字未改、原地作参照历史）。
   ① 择**机制面**重建（分类裁判单源 / 声明面 / 降级契约 / 索引回退 / `/eng` 无前提）；批次范围裁定 · 逐条修法流水 · 逐字提示词文本 · 受影响文件清单 · 用例表与 AC · VSC 镜像面节 → §7 逐项登记不并；
   ② 坐标一律改现状路径并经实核（`thincoder-core/conventions.mjs` 等）；③ 新增 §5 测试面（回指现行测试档）、§8 体量。
+- 2026-09-15（**B 式迁移轮 · VSC 第 6 批 · 并入 · eng-designer**）：新增 §3.6 VSC 端镜像面——自 `thincoder-vscode/docs/design/PORTABILITY.md`（批次二）并入（分类裁判 / 声明面 / 门禁 / 注入 / 索引坐标按现状实核；消息文案逐字本体住产品代码不复制）；§5 补 VSC 测试档三行；§6 边界行 2 收口 + §7.2 登记 VSC 批次材料不并（(d) 类）。
