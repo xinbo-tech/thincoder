@@ -27,7 +27,7 @@
 |---|---|---|---|---|
 | 1 | ACP-CLIENT | 后续批 | 根层无同话题档；实装 `thincoder-cli/src/acp/` 在位；VSC 无实现（结构性不对称） | **P2** ⇒ 后续批 `docs/cli/design/` |
 | 2 | ADVISOR-CONVERGENCE | **本批迁** | 活——根层无对应（`docs/core/design/CONSULTATION.md` §8.2 越段登记）；= advisor 评审收敛设计权威；1570 行超硬限 ⇒ 按「收敛本体 ⇄ 边缘守卫」拆两档 | 已落 `docs/core/design/ADVISOR-CONVERGENCE.md` + `docs/core/design/ADVISOR-GUARDS.md` |
-| 3 | AGENT-LOOP | **尚有未并** | 根层已有同话题活档；未并入面 = 评审对象锚 / R1–R7 铁律 / 飞刀机制 / byte-identical 取消 / 普通模式轻量审计 | 后续批**并入既有** `docs/core/design/AGENT-LOOP.md` |
+| 3 | AGENT-LOOP | **本批迁** | 未并入面（评审对象锚 / R1–R7 铁律 / byte-identical 取消 / 普通模式轻量审计）已并入；飞刀面由 `ESCALATE.md`（第 3 批已落）承载 | 已并入 `docs/core/design/AGENT-LOOP.md` + 拆分面 `docs/core/design/AGENT-LOOP-SUBAGENT.md`（§6.17 / §6.18 / §6.19） |
 | 4 | AGENT-PARAMS | **本批迁** | 活——根层无对应（`AGENT-LOOP.md` §6.1 仅覆盖 maxTurns 默认；`timeoutMs` 面无主）；三参数默认值经实核（`thincoder-core/advisor/compaction.mjs:36` · `thincoder-core/config.mjs:36` · `thincoder-core/agent/helpers.mjs:25`） | 已落 `docs/core/design/AGENT-PARAMS.md` |
 | 5 | APPLY-PATCH | **本批迁** | 根层无正文（`TOOLS.md` §8.2 登记「正文已拆到各工具权威档」= 无档名指针）；VSC 同名对位 | 已落 `docs/core/design/APPLY-PATCH.md` |
 | 6 | ARCHITECTURE | **本批迁** | 活——根层原无架构总览载体（硬约束 / 设计原则 / 模块地图）；§3 模块地图为迁移前 `src/**` 树形态 ⇒ 照现状**重写** | 已落 `docs/core/design/ARCHITECTURE.md` |
@@ -49,9 +49,9 @@
 | 22 | MCP | 已清 | 对账：CLI §1–§9 ↔ 根层 §6.1–§6.9（文案级残余见 §4 注） | 无动作 |
 | 23 | MEMORY | 已清 | 对账：CLI §1–§10 ↔ 根层 §6.1–§6.8（常量与 `uid` 切分逐句同） | 无动作 |
 | 24 | MULTI-INSTANCE-COLLAB | 后续批 | 根层无对应（`WORKSPACE.md` §8.2 越段登记）；双端语义对位 | **P1** ⇒ 后续批 `docs/core/design/` |
-| 25 | POOL-CONFIG-UNIFIED | 后续批 | 根层无正文（`CONFIG.md` §8.2 登记「在途设计档」）；机制已实装（`thincoder-core/config.mjs:63`） | **P1** ⇒ 后续批**并入** `docs/core/design/CONFIG.md` |
+| 25 | POOL-CONFIG-UNIFIED | **本批迁** | 配置面机制已实装（`thincoder-core/config.mjs:63` 三键 4/4/4；双读取器 `subagent-async.mjs:94` / `advisor-async.mjs:168`） | 已并入 `docs/core/design/CONFIG.md` §6.1 |
 | 26 | PORTABILITY | **本批迁** | 活——可移植性机制现行且根层零覆盖（分类裁判单源 `thincoder-core/conventions.mjs` 等，逐条实核） | 已落 `docs/core/design/PORTABILITY.md`（择机制面重建） |
-| 27 | PROMPT-SYSTEM | **尚有未并** | 根层同名档仅覆盖核内裁决行；CLI 侧含分层 / 命名法 / 装配面（未并入面逐节在案） | 后续批**并入既有** `docs/core/design/PROMPT-SYSTEM.md` |
+| 27 | PROMPT-SYSTEM | **本批迁** | 未并入面（双源落地流程 / 装配实现事实 / byte-identical 取消）已并入（设计侧）；分层 / 命名法 / 装配矩阵 = 需求侧 §4（req 档同步并入） | 已并入 `docs/core/design/PROMPT-SYSTEM.md` §6–§8 |
 | 28 | PROVIDER | 已清 | 对账：CLI §1–§16 / §21 / §23 ↔ 根层 §6.1–§6.17 | 无动作 |
 | 29 | PROXY | **本批迁** | 活——根层无正文（`CONFIG.md` §8.2 越段登记）；**§TLS 段与实装相反**（实装默认全量校验 + `insecureTls` 显式放行，`thincoder-core/proxy.mjs:214`）⇒ **按实装收正**；另 §web 消费面同陈旧（实装 = 逐次调用参数） | 已落 `docs/core/design/PROXY.md`（§3 / §4 按实装收正） |
 | 30 | QUICKFIX-BATCH-3 | 历史 | 批档形态（需求→设计→用例→验收）；批已闭环；F-1 / F-2 由他批落地 | 不迁（就地留）；**F-3 / F-4 未落且无承载 ⇒ 须回写台账**（父侧） |
@@ -78,10 +78,10 @@
 | # | 档 | 判 | 依据（file:line 实核） | 动作 / 落点 |
 |---|---|---|---|---|
 | 1 | ACP-CLIENT | 后续批 | 根层无对应；单端面 | **P2** ⇒ 后续批 `docs/cli/requirements/` |
-| 2 | ADVISOR-CONVERGENCE | 后续批 | 根层面级（`CONSULTATION.md` 面清单）· 条目未并入 | **P1** ⇒ 后续批并入既有 |
-| 3 | AGENT-LOOP | **尚有未并** | 根层有活档；未并入面 = 4 个 VSC 面节（根层显式登记为不并 · 归 VSC 轮） | 对账完成（VSC 面按 P2 另判） |
+| 2 | ADVISOR-CONVERGENCE | **本批迁** | 条目未并入（F1–F17 / F27–F29 + N1–N11 / N19–N21）；VSC 端对位面（旧 §8 / §9 / §13）按 P2 不并 | 已落 `docs/core/requirements/ADVISOR-CONVERGENCE.md`（**新建**——与设计侧同名成对） |
+| 3 | AGENT-LOOP | **本批迁** | CLI 侧全并：B 轮条目面 + 本批两并入面（`SUBAGENT-OBSERVE-SEND` → §4.7 · `ASYNC-RESULT-CONTAINER` → §4.8）；4 个 VSC 面节维持 P2（归 VSC 轮） | 已并入 `docs/core/requirements/AGENT-LOOP.md` §4.7 / §4.8 |
 | 4 | AGENT-PARAMS | 后续批 | 根层无对应 | **P1** ⇒ 后续批 `docs/core/requirements/` |
-| 5 | ASYNC-RESULT-CONTAINER | 后续批 | 根层面级对位（机制本体已入设计侧 §6.7.3）· 条目未并入 | **P1** ⇒ 后续批并入既有 |
+| 5 | ASYNC-RESULT-CONTAINER | **本批迁** | 机制本体已入设计侧（现 `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.7.3）；条目并入需求侧 | 已并入 `docs/core/requirements/AGENT-LOOP.md` §4.8 |
 | 6 | CHECKPOINT | 已清 | 对账：CLI §1–§4 ↔ 根层 §4.1–§4.3 | 无动作 |
 | 7 | CONSULTATION | 已清 | 对账：CLI ↔ 根层 §4.1–§4.3 | 无动作 |
 | 8 | CONTEXT-COMPACTION | 已清 | 对账：CLI ↔ 根层 §4.1–§4.2（含 2026-09-11 修订括注） | 无动作 |
@@ -89,29 +89,29 @@
 | 10 | DESIGN-TOKEN-SETTLEMENT | 后续批 | 根层无同话题档 | **P1** ⇒ 后续批 `docs/core/requirements/` |
 | 11 | ENG-TOKEN-BINDING | 后续批 | 根层无对应 | **P1** ⇒ 后续批 `docs/core/requirements/` |
 | 12 | ENGINEERING-MODE | **本批迁** | 活——根层无对应（1003 行超硬限 ⇒ 按「工作流本体 ⇄ 机制面」拆两档） | 已落 `docs/core/requirements/ENGINEERING-MODE.md` + `docs/core/requirements/ENGINEERING-MODE-MECHANISM.md` |
-| 13 | ESCALATE | 后续批 | 根层面级（`CONSULTATION.md` + `AGENT-LOOP.md`）· 条目未并入 | **P1** ⇒ 后续批并入既有 |
+| 13 | ESCALATE | **本批迁** | 逐节比对**零实质缺口**（全部要素已由 §1 / F-E1–F-E5 / §4 承载） | 已对账并入 `docs/core/requirements/ESCALATE.md`（零新增文本） |
 | 14 | FEATURES | **本批迁** | 活 · **CLI 面（P2）**——内容为 CLI 能力全览（含 TUI / slash 命令面） | 已落 `docs/cli/requirements/FEATURES.md`（清点面按现行登记面收正） |
 | 15 | LOGGING | 已清 | 对账：CLI ↔ 根层 §4.1–§4.3（1 处文本级降级 —— 见 §4 注） | 无动作 |
 | 16 | MCP | 已清 | 对账：CLI §1–§4 ↔ 根层 §4.1–§4.4 | 无动作 |
-| 17 | MEMORY | **尚有未并** | 根层同名档无需求条目节；CLI 侧整档条目面未并（三层记忆 / N1–N4 / VSC 向量索引 / `~` 展开 / 检索上界） | 后续批**并入既有** `docs/core/requirements/MEMORY.md` |
+| 17 | MEMORY | **本批迁** | 整档条目面已并入（F1–F14 / F-M1–F-M3 + N1–N9 / N-M1–N-M3） | 已并入 `docs/core/requirements/MEMORY.md` §4 |
 | 18 | MULTI-INSTANCE-COLLAB | 后续批 | 根层越段登记（`WORKSPACE.md` §4 末 / §8.2） | **P1** ⇒ 后续批 `docs/core/requirements/` |
 | 19 | NORMAL-MODE | 后续批 | 根层无对应（与提示词系统面相邻） | **P1** ⇒ 后续批 `docs/core/requirements/` |
 | 20 | PHILOSOPHY | **本批迁** | 活 · **统一面**（三观 = 最高层需求；提示词正本已归 `docs/core/design/prompts/`） | 已落 `docs/core/requirements/PHILOSOPHY.md` |
 | 21 | PORTABILITY | 后续批 | 根层无对应（正文居 CLI `design/ENGINEERING-MODE.md` §2 FR10–FR15） | **P1** ⇒ 后续批 `docs/core/requirements/` |
 | 22 | PROJECT | 后续批 | 根层无对应；产品级定性 | **P1** ⇒ 后续批 `docs/core/requirements/` |
-| 23 | PROMPT-SYSTEM | **尚有未并** | 根层同名档仅含 F8 + 两条回填；CLI 侧分层模型 / 装配矩阵 / 命名法 / 编写纪律未并入 | 后续批**并入既有** `docs/core/requirements/PROMPT-SYSTEM.md` |
+| 23 | PROMPT-SYSTEM | **本批迁** | 蓝图条目已并入（分层模型 / 命名法 / 内容大纲 / 编写纪律 15 条 / 装配逻辑 / 归属判定）；§8–§10 批面登记不并 | 已并入 `docs/core/requirements/PROMPT-SYSTEM.md` §4 |
 | 24 | RELEASE | **本批迁** | 活 · **统一面**（发布流程 = 跨产品板块主题）；**与设计档层归属不对称**（设计 = CLI 面）——两侧档头互注配对档位置 | 已落 `docs/core/requirements/RELEASE.md` |
-| 25 | SEND-STALL-DISTILL | 后续批 | 根层部分（`CONTEXT-COMPACTION.md` §4.2 为机制本体；时序条未并入） | **P1** ⇒ 后续批并入既有 |
+| 25 | SEND-STALL-DISTILL | **本批迁** | 对账并入：N3 CLI 中止形态（退出 flush / Stop 不中止蒸馏） | 已并入 `docs/core/requirements/SEND-STALL-DISTILL.md`（余面现有正文已载） |
 | 26 | SESSION | 已清 | 对账：CLI ↔ 根层 §4.1–§4.4 | 无动作 |
 | 27 | SETTINGS-TOOL | 后续批 | 根层越段登记（`CONFIG.md` §8.2） | **P1** ⇒ 后续批 `docs/core/requirements/` |
 | 28 | STRUCTURE-DEBT | 后续批 | 根层无对应（`:29` N5 仍为合并前措辞——须随迁收正） | **P1** ⇒ 后续批 `docs/core/requirements/` |
-| 29 | SUBAGENT-OBSERVE-SEND | 后续批 | 根层面级对位 · 条目未并入 | **P1** ⇒ 后续批并入既有 |
+| 29 | SUBAGENT-OBSERVE-SEND | **本批迁** | 条目并入（F1 / F2 + N1–N4）；契约正文已入设计侧（现 `AGENT-LOOP-SUBAGENT.md` §6.7.2） | 已并入 `docs/core/requirements/AGENT-LOOP.md` §4.7 |
 | 30 | TESTING | **本批迁** | 活——根层无对应 | 已落 `docs/core/requirements/TESTING.md` |
-| 31 | TOOL-OUTPUT-LIMITS | 后续批 | 根层部分（`TOOLS.md` §4.3 N5——64K 阈值与保头保尾未并入） | **P1** ⇒ 后续批并入既有 |
+| 31 | TOOL-OUTPUT-LIMITS | **本批迁** | 条目并入（FR1–FR6 / N1–N5）；设计侧第 3 批已落 | 已并入 `docs/core/requirements/TOOLS.md` §4.5 |
 | 32 | TOOLS | 已清 | 对账：CLI §1–§4 ↔ 根层 §4.1–§4.4 | 无动作 |
 | 33 | TUI-TOOL-OUTPUT | 后续批 | 根层无对应 | **P2** ⇒ 后续批 `docs/cli/requirements/` |
 | 34 | TUI | 后续批 | 根层无对应 | **P2** ⇒ 后续批 `docs/cli/requirements/` |
-| 35 | TURN-CAP-CONTINUE | 后续批 | 根层部分 | **P1** ⇒ 后续批并入既有 |
+| 35 | TURN-CAP-CONTINUE | **本批迁** | 对账并入：F7 跨段累计编号 + N6 零机制改动（并整 F3 重复行） | 已并入 `docs/core/requirements/TURN-CAP-CONTINUE.md` §2 / §3 |
 | 36 | TWO-REPO-MERGE | **本批迁** | 活 · **统一面**（同设计侧） | 已落 `docs/core/requirements/TWO-REPO-MERGE.md` |
 | 37 | VERIFY-REDESIGN | 后续批 | 部分面已被 `TOOLS.md` D-V5 接管 | **P1** ⇒ 后续批并入既有 |
 
@@ -127,8 +127,8 @@
 
 | # | 板块 | 设计侧 | 需求侧 |
 |---|---|---|---|
-| 1 | AGENT-LOOP | **尚有未并**（评审对象锚 / 铁律 / 飞刀 / byte-identical / 轻量审计） | **尚有未并**（4 个 VSC 面节——根层登记为不并） |
-| 2 | MEMORY | 已清 | **尚有未并**（整档需求条目面未并） |
+| 1 | AGENT-LOOP | **本批迁**（对象锚 → 子档 §6.18 / 铁律 → §6.19 / 轻量审计 → §6.17 / byte-identical → 提示词板 §6.4；飞刀 → `ESCALATE.md`） | **本批迁**（CLI 侧全并；4 个 VSC 面节维持 P2） |
+| 2 | MEMORY | 已清 | **本批迁**（整档条目面并入 §4） |
 | 3 | SESSION | 已清 | 已清 |
 | 4 | PROVIDER | 已清 | CLI 侧无档（需求层同档承载） |
 | 5 | TOOLS | 已清 | 已清 |
@@ -145,24 +145,25 @@
 
 | 判 | 设计 47 | 需求 37 | 合计 |
 |---|---|---|---|
-| 本批迁（已入根层） | 21 | 6 | **27** |
+| 本批迁（已入根层） | 24 | 16 | **40** |
 | 已清 | 9 | 7 | **16** |
-| 尚有未并 | 1 | 3 | **4** |
+| 尚有未并 | 0 | 0 | **0** |
 | 历史（不迁） | 4 | 0 | **4** |
 | 待核 | 0 | 0 | **0** |
-| 后续批 | 12 | 21 | **33** |
+| 后续批 | 10 | 14 | **24** |
 | **总** | **47** | **37** | **84** |
 
-**闭合校验**：设计 21+9+1+4+0+12 = 47 ✓ · 需求 6+7+3+0+0+21 = 37 ✓ · 合计 27+16+4+4+0+33 = 84 ✓（= §1 实点；与 `DOC-SYSTEM.md` §5.2 计数口径一致）。
-**「本批迁」口径**：= 截至 2026-09-15 **已迁入根层的活档合计**（第 1 批 6 + 第 2 批 9 + 第 3 批 6 + **第 4 批 6 = 27**）——本栏随迁移推进**单调递增、不重置**；后续批执行时只递增本栏与递减「后续批」栏，其余栏不动。
+**闭合校验**：设计 24+9+0+4+0+10 = 47 ✓ · 需求 16+7+0+0+0+14 = 37 ✓ · 合计 40+16+0+4+0+24 = 84 ✓（= §1 实点；与 `DOC-SYSTEM.md` §5.2 计数口径一致）。
+**「本批迁」口径**：= 截至 2026-09-15 **已迁入根层的活档合计**（第 1 批 6 + 第 2 批 9 + 第 3 批 6 + 第 4 批 6 + **第 5 批 13 = 40**）——本栏随迁移推进**单调递增、不重置**。
+**小计收正（D3——以逐行实核为准）**：上一版印刷值「尚有未并 4 / 后续批 33」与逐行实计不符（实计 = **5 / 32**）——本版按逐行重算收正，并完成本批变化（尚有未并 5 → **0**；后续批 32 → **24**）。
 
-## 6. 后续批分组建议（活档剩余 33 档）
+## 6. 后续批分组建议（活档剩余 24 档）
 
 | 批 | 组 | 档 | 备注 |
 |---|---|---|---|
 | 批 2 | **机制小档（P1 · 各 ≤200 行）** | design：TOOL-OUTPUT-LIMITS · AGENT-PARAMS · VERIFY-REDESIGN · DESIGN-TOKEN-SETTLEMENT · ENG-TOKEN-BINDING · PROXY | **已落（2026-09-15 第 3 批）**——六档全迁 `docs/core/design/`；PROXY §TLS 安全语义已按实装收正（`thincoder-core/proxy.mjs:214`） |
 | 批 3 | **大档拆分（一档一批）** | design：ENGINEERING-MODE（3030）· ADVISOR-CONVERGENCE（1570）· LEDGER-SELF-CONTAINED（1033）· TESTING（995）· req：ENGINEERING-MODE（1003）· TESTING（177） | **已落（2026-09-15 第 4 批）**——四档设计侧拆为 9 档、需求侧拆为 3 档（均落 `docs/core/{design,requirements}/`）；逐档 ≤500 |
-| 批 4 | **并入既有档的未并面** | design：AGENT-LOOP · PROMPT-SYSTEM · POOL-CONFIG-UNIFIED ⇒ CONFIG；req：MEMORY · AGENT-LOOP · PROMPT-SYSTEM · ADVISOR-CONVERGENCE · ASYNC-RESULT-CONTAINER · ESCALATE · SEND-STALL-DISTILL · SUBAGENT-OBSERVE-SEND · TURN-CAP-CONTINUE · TOOL-OUTPUT-LIMITS | 并入面 = 追加节，不新起档（防同名分裂） |
+| 批 4 | **并入既有档的未并面** | design：AGENT-LOOP · PROMPT-SYSTEM · POOL-CONFIG-UNIFIED ⇒ CONFIG；req：MEMORY · AGENT-LOOP · PROMPT-SYSTEM · ADVISOR-CONVERGENCE · ASYNC-RESULT-CONTAINER · ESCALATE · SEND-STALL-DISTILL · SUBAGENT-OBSERVE-SEND · TURN-CAP-CONTINUE · TOOL-OUTPUT-LIMITS | **已落（2026-09-15 第 5 批）**——十三源档全并（含 AGENT-LOOP 拆分面 + ADVISOR-CONVERGENCE 需求档新建）；并入面 = 追加节，不新起档（防同名分裂） |
 | 批 5 | **CLI 专有面（P2）** | design：TUI · TUI-INPUT-BOX · TUI-TOOL-OUTPUT · ACP-CLIENT · CRASH-REPORTS；req：TUI · TUI-TOOL-OUTPUT · ACP-CLIENT · CRASH-REPORTS | **前置已满足（2026-09-15 第 2 批）**：`docs/cli/` 已建且 `docs/cli/design` + `docs/cli/requirements` 已入两扫描器射程（`V5_SCAN_DIRS` · `SCAN_DIRS`）——搬档不改射程 = 无守卫窗口 |
 | 批 6a | **其余 P1 活档（设计侧）** | MULTI-INSTANCE-COLLAB · SETTINGS-TOOL · SEND-STALL-DISTILL · TURN-CAP-CONTINUE | 逐批 ≤6 档拆细 |
 | 批 6b | **其余 P1 活档（需求侧）** | AGENT-PARAMS · DESIGN-TOKEN-SETTLEMENT · ENG-TOKEN-BINDING · MULTI-INSTANCE-COLLAB · NORMAL-MODE · PORTABILITY · PROJECT · SETTINGS-TOOL · STRUCTURE-DEBT · TESTING · VERIFY-REDESIGN | 同上（逐批 ≤6 档） |
@@ -189,9 +190,13 @@
 
 ## 8. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **214 行**（as-of 2026-09-15 第 4 批实核 · 含 84 行逐档表）——低于 300 行软线，无需拆分规划；若后续批执行记录再入本档，须改行数口径并重评。
+**实测行数**：本档 **214 行**（as-of 2026-09-15 第 5 批实核 · 含 84 行逐档表）——低于 300 行软线，无需拆分规划；若后续批执行记录再入本档，须改行数口径并重评。
 
 ## 变更记录
+
+- 2026-09-15（**迁移批 · 第 5 批 · 并入既有 · eng-designer**）：§2.1 三行（第 3 / 25 / 27 行）+ §2.2 十行（第 2 / 3 / 5 / 13 / 17 / 23 / 25 / 29 / 31 / 35 行）「尚有未并 / 后续批」→「**本批迁**」（逐行补实核依据 + 落点）；
+  §4 对账两行更新；§5 小计重算闭合（本批迁 27 → **40** · 尚有未并 5 → **0** · 后续批 32 → **24**——并将上一版印刷值 4 / 33 按逐行实计收正为 5 / 32）；§6 批 4 行标**已落**、标题 33 → **24**；§8 行数重核。
+  **本批实迁 13 源档**：design 3（AGENT-LOOP 拆分面 + PROMPT-SYSTEM + POOL-CONFIG-UNIFIED ⇒ CONFIG）· req 10（MEMORY / AGENT-LOOP / PROMPT-SYSTEM / ADVISOR-CONVERGENCE（新建）/ ESCALATE / SEND-STALL-DISTILL / SUBAGENT-OBSERVE-SEND / TURN-CAP-CONTINUE / TOOL-OUTPUT-LIMITS（⇒ req/TOOLS §4.5）/ ASYNC-RESULT-CONTAINER）。
 
 - 2026-09-15（**迁移批 · 第 4 批 · 四个大档拆分 + 实迁** · eng-designer）：§2.1 四行（第 2 / 16 / 20 / 38 行）+ §2.2 两行（第 12 / 30 行）「后续批」→「**本批迁**」（ADVISOR-CONVERGENCE · ENGINEERING-MODE · LEDGER-SELF-CONTAINED · TESTING · req/ENGINEERING-MODE · req/TESTING——逐行补现状实核依据 + 落点）；§6 批 3 行标**已落**（档名补 req 两档）、标题档数 39 → **33**。
   §5 小计重算闭合（本批迁 21 → **27** · 后续批 39 → **33**；设计 21 / 需求 6）；§5 口径行补第 4 批；§8 行数重核。

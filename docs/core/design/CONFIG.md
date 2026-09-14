@@ -102,11 +102,11 @@
 | `advisor` | **独立** advisor 读取器（每 launch 读） | 合法 ≥1 整数生效；非法 / 缺省回退 4 |
 
 - **双读取器独立不共享**（键表语义不同）：subagent 两键 = `thincoder-core/agent-tools/subagent-async.mjs:94`（`poolLimitsFor`）；advisor 第三键 = `thincoder-core/agent-tools/advisor-async.mjs:168`（`resolveAdvisorPoolLimit`）。
-- **默认值四源同改**（缺一即漂移）：DEFAULTS（`thincoder-core/config.mjs:63`）↔ 运行时常量（`subagent-async.mjs:55` · `advisor-async.mjs:166`）↔ 耦合锁（`thincoder-cli/test/config-pool.test.mjs` · `thincoder-vscode/test/config-pool.test.mjs`）。
+- **默认值四源同改**（缺一即漂移）：DEFAULTS（`thincoder-core/config.mjs:63`）↔ 运行时常量（`thincoder-core/agent-tools/subagent-async.mjs:55` · `thincoder-core/agent-tools/advisor-async.mjs:166`）↔ 耦合锁（`thincoder-cli/test/config-pool.test.mjs` · `thincoder-vscode/test/config-pool.test.mjs`）。
 - **生效时机**：变更下回合生效；运行期读取点各自校验（非法键回退默认 + 告警）。
 - **界面入口**：CLI `/config` →「并发池」子菜单（`thincoder-cli/src/tui/cmd-config.mjs:245`–`:273`——三域读写 + 主菜单 / view 摘要）；VSC 设置面板并发池三域（`thincoder-vscode/src/extension/settings-panel-write.mjs:82` 白名单 · `thincoder-vscode/src/extension/settings.mjs:107` 回退显 4/4/4）。
 - **向后兼容**：旧两键配置值零迁移（`advisor` 缺省 ⇒ 回退 4）；非法值不落盘回退；VSC 面板白名单全非法 ⇒ 删整键回退默认（语义不变）。
-- **模型可见文案去数字化**：advisor 工具描述与拒文案报**生效上限**（`thincoder-core/agent-tools/advisor.mjs:49` · `advisor-async.mjs:266`）。
+- **模型可见文案去数字化**：advisor 工具描述与拒文案报**生效上限**（`thincoder-core/agent-tools/advisor.mjs:49` · `thincoder-core/agent-tools/advisor-async.mjs:266`）。
 - **同 scope 评审并发守卫**（同批用户裁①）：容量守卫 ⇄ 同 scope 守卫**两关独立**——机制本体见 `AGENT-LOOP-SUBAGENT.md` §6.10（本档不复制）。
 - **范围边界（旧档承接）**：评审轮次上限（cap 5——见 `ADVISOR-CONVERGENCE.md` §3）与「评审不排队」语义不变；engCoder / other 两域语义不变（本批只界面 / 一致性 / 第三键）；全仓注释大扫 = 旧档挂 TODO 观察项（随两仓合并面收敛，不另立）。
 

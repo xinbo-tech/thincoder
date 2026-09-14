@@ -40,7 +40,7 @@ VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` 
 
 > **来源** = `thincoder-cli/docs/requirements/AGENT-LOOP.md`（356 行 · CLI 产品需求档）——根层裁定后该档 = **迁移期参照历史**（只读 · 不维护）。
 > **并入** = 该档中「根层所缺」的**需求条目正文**（判定句 / 范围边界 / 度量方式）——条目**编号与文本承旧档**（编号 = 既有引用锚，重编号会再制造引用漂移）。
-> **不并** = VSC 面需求节（旧档 §3 / §5 / §8 / §13——归属待收敛，见 §5）· 批次来源注 · 变更记录。
+> **批 5 补记（2026-09-15）**：另并入两份独立专题档——§4.7（`requirements/SUBAGENT-OBSERVE-SEND.md`）· §4.8（`requirements/ASYNC-RESULT-CONTAINER.md`）；本档旧档的 VSC 面需求节（§3 / §5 / §8 / §13）维持「不并」（见 §5）。
 
 ### 4.1 question 工具抑制（旧档 §1）
 
@@ -122,6 +122,38 @@ VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` 
 
 **明确不做**：不做子代理内存的全局池级上限；不做 entry / report 的落盘化；不做轨迹内容质量改写（仅截断 / 降级 + 标记）；不改 VSC 端。
 
+### 4.7 子代理观测 / 注入（旧档 `requirements/SUBAGENT-OBSERVE-SEND.md` · 22 行）
+
+**总体需求**：给父 agent 对运行中异步子代理的**运行时观测与轻量引导**能力——治「父看不到中间瞎猜 + 无法中途引导」，不改变子代理隔离模型（中间内容仍不进父上下文，按需拉取）。
+
+| # | 需求 | 判定句 |
+|---|---|---|
+| F1 | observe 查进度 | As a 父 agent, I want to query a running async subagent by id for its recent-activity snapshot（最近 N 条回合 / 动作摘要 + 当前工具 + turn / touched），so that I can judge whether it is progressing vs stuck without guessing |
+| F2 | send 注入引导 | As a 父 agent, I want to send a message to a running async subagent, which it consumes as an ordinary input at its next turn boundary, so that I can give it direction when it is stuck / off-course |
+
+**边界**：只对**异步池中未 settle** 的子代理（父自身 spawn 的 async 子代理）；sync / 阻塞（父在等、无法中转）与已 settle / 已 cancel 不可 send。observe 可查 running / queued / done 任意。注入不等同偏离豁免——子代理按普通用户回合接收，其内部收敛 / 审计纪律不变。
+
+**非功能**：N1 回合错位（父只在自身回合内能调 observe / send）· N2 隔离不破坏（observe 返回摘要非全量；send 经子回合边界注入，不打断正在跑的工具）· N3 凭证纪律不变（observe / send 不读写 token / designId）· N4 双端一致（各端独立实现）。
+
+**设计侧 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.7.2**（observe / send 契约行）——本档不复制。
+
+### 4.8 async 结果容器统一（旧档 `requirements/ASYNC-RESULT-CONTAINER.md` · 27 行）
+
+**总体需求**：统一 async 子代理结果结算的**容器与记账逻辑**——消 4 处 settle 重复 / 3 族 pending 分叉 / 3 表示 done-in-pool / 信号兜底抄，统一为**池 accessor + pending 单容器 + role + settle 共享 helper + buildChildSignal**，每次加角色不再复制整段。
+
+| # | 需求 | 说明 |
+|---|---|---|
+| F1 | 池 accessor 吸收双池 | 消费端统一经 `getAsyncPool(role)` 访问——底层保留双池（advisor 无队列独立调度），accessor 吸收差异 |
+| F2 | pending 单容器 + role | 3 族 pending 统一为单容器 `_pendingAsyncResults`，条目带 role 字段；consult 裸对象升格完整 entry；done-in-pool 统一表示（留池 done:true + `_inPending` 标记防重复移交） |
+| F3 | settle 共享 helper | `thincoder-core/agent-tools/async-settle.mjs`——`settleAsyncEntry(parent, entry, {pool, onAccounting})`；族特有段作 hook 注入 |
+| F4 | 守卫统一 | settle 守卫统一为 `!parentAborted`（严格版——覆盖 ctx.signal ∨ 条目 controller aborted） |
+| F5 | consult 补信号兑底 | consult 补 `_sessionSignal` 兑底（同其余三族——修一致性 bug） |
+| F6 | buildChildSignal | 兑底 `_sessionSignal ?? ctx.signal ?? null` 抄 3 处收单点 + consult 补上 |
+
+**非功能**：N1 一致性（四族 settle 语义一致：同守卫 / 同日志 / 同分流 / 同信号兑底）· N2 实现面收敛（accessor 吸收 vs 合并池——**不合并池**、不动调度逻辑；helper 抽取 vs 逐字重复）· N3 token 根治不冲突（settleAdvisorRun 保留为 advisor 族 hook）· N4 双端一致（各端独立实现）。
+
+**设计侧 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.7.3**（settle 统一机制）——本档不复制。
+
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）
 
 | 旧档节 | 内容 | 何故不并 |
@@ -137,3 +169,4 @@ VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` 
 
 - 2026-09-13：建档——自 `docs/core/requirements/CORE-UNIFICATION.md` 拆分（来源：§2 F11 / F6 / F12 / F13 回指）+ 设计档 `AGENT-LOOP.md`（§2.1–§2.2 · §3.1 A7 / A15 / A22 / A23 · §3.2 D2 派生）；**无新增需求**。
 - 2026-09-14（**B 轮并入 · 试点批**）：新增 §4 **需求条目**（question 工具抑制 / 顶层一律异步 / 后台评审池可观测可控 / abort 来源标注 / Stop 钩子 / 长会话内存上界——自 `thincoder-cli/docs/requirements/AGENT-LOOP.md` 逐节比对后并入需求正文；**编号与文本承旧档**）；新增 §5 **不并项与历史沿革**（VSC 面需求节 4 处 + 时点材料 + 变更记录）；**本档新增需求 0**（纯回填）。本档 41 → **140 行**。
+- 2026-09-15（**迁移批 · 第 5 批 · 并入 · eng-designer**）：新增 §4.7 **子代理观测 / 注入**（旧专题档 `requirements/SUBAGENT-OBSERVE-SEND.md`）+ §4.8 **async 结果容器统一**（旧专题档 `requirements/ASYNC-RESULT-CONTAINER.md`）——编号与文本承旧档；设计侧指针按批 5 拆分面改指（`AGENT-LOOP-SUBAGENT.md` §6.7.2 / §6.7.3）；**本档新增需求 0**（纯回填）。

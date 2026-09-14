@@ -80,7 +80,8 @@
 
 ### 6.7.4 子代理零 git
 
-**全部 explore / plan（及审计）子代理零 git**：不注入 git 上下文、不承诺 git 命令、工具集无 git——子代理证据链只含「任务书 + 磁盘当前状态（read / glob / grep）+（审计时）`_touchedFiles` 机械并集」。顶层主 agent 的 git 上下文保留（`AGENT-LOOP.md` §6.3）。动机：git 是污染源（`git diff HEAD` 不见已提交修复、untracked 新文件不可见、`status` 是全工作区脏状态）——比没有 git 更危险。与 advisor 零 git 同构——**双物理防线**（工具不存在 + 不注入）。
+**全部 explore / plan（及审计）子代理零 git**：不注入 git 上下文、不承诺 git 命令、工具集无 git——子代理证据链只含「任务书 + 磁盘当前状态（read / glob / grep）+（审计时）`_touchedFiles` 机械并集」。顶层主 agent 的 git 上下文保留（`AGENT-LOOP.md` §6.3）。
+动机：git 是污染源（`git diff HEAD` 不见已提交修复、untracked 新文件不可见、`status` 是全工作区脏状态）——比没有 git 更危险。与 advisor 零 git 同构——**双物理防线**（工具不存在 + 不注入）。
 
 ### 6.7.5 `check` 删除与 async 锚句
 
@@ -262,7 +263,7 @@ Follow this declaration — do not infer the review target from the documents.
 
 ## 档位与拆分说明（R24a）
 
-**实测行数**：本档 **约 270 行**（as-of 2026-09-15 拆分实测）——**低于 300 行软线**，无需进一步拆分规划。
+**实测行数**：本档 **272 行**（as-of 2026-09-15 拆分实测）——**低于 300 行软线**，无需进一步拆分规划。
 **拆分来源**：`docs/core/design/AGENT-LOOP.md` §6.7–§6.12（原 670 行超 500 硬限 ⇒ 拆分，2026-09-15 迁移批第 5 批）；**段零改动、只修引用**（拆分纪律）。母档 §6.13（Stop 钩子）与 §6.12 的 provider 产生点半边（→ 供应商板）两候选拆分面维持母档 §9 的**建议 / 待裁定**状态。
 
 ## 变更记录
