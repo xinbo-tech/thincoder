@@ -3336,6 +3336,72 @@ TRACES 同名旧档缺（第 2 批已实核）——**本批按父侧扩参照�
 `check-ledger` = **0 处违规** · 基线 0 —— exit 0。
 **git status 自证**：改动集 = 14 档根层档 + 本批次档（15 M）+ 1 项预存（`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`——spawn 前既存改动，非本笔）；**零旧档（`thincoder-cli/docs/**`）· 零 `src/**` · 零 `scripts/**` · 零台账 · 零 `docs/core/**`**。
 
+### §2 批次任务（eng-designer 自写）——**本批打回：目标档不存在 · 2026-09-15**
+
+**本批条目**（依据 = 用户 2026-09-15 00:18 指令 + 需求池 `docs/TODO.md:35`）：新增「工程工具 vs 产品代码」二分类**流程归属**规程，落设计档；**本轮不改提示词**（待迁移完）。
+
+**打回理由（依据与硬边界冲突 ⇒ 不执行——不自行选一种解释往下写）**
+
+1. 任务书指定的目标档 **`docs/core/design/ENGINEERING-MODE.md` 不存在**——三条独立实核：
+   ① 目录列举 `docs/core/design/` = **17 档**（`AGENT-LOOP` … `WORKSPACE`），无 `ENGINEERING-MODE.md`；
+   ② 全仓 `glob **/ENGINEERING-MODE.md` = **4 命中，全在产品树**（`thincoder-cli/docs/{design,requirements}/ENGINEERING-MODE.md` · `thincoder-vscode/docs/{design,requirements}/ENGINEERING-MODE.md`）；
+   ③ `git status --porcelain` 无该档（亦无未跟踪项）。
+2. 该档在 `docs/core/design/DOC-SYSTEM.md` §5.2 `:157` 属「**统一面**」（预期落点 `docs/core/design/`），但**尚未迁入**——迁移批第 2 批只落 34 档（设计 17 + 需求 17），不含 `ENGINEERING-MODE.md`。
+3. 三条可能路径**都要求任务书未给出的决定**：
+   ① 先迁入（`git mv` 必动两产品树）⇒ 与硬边界「**不动两产品树**」冲突；
+   ② 就地改产品树那份 ⇒ 与硬边界「**只改 `docs/core/design/ENGINEERING-MODE.md`**」冲突；
+   ③ 新建 core 档 ⇒ 与「**承该档既有节序**」矛盾，且造出第二份权威（D2 单一权威源）。
+   ⇒ **执行者拒收**（依据与硬边界冲突）：停下打回，不补造方向。
+
+**本席已完成且可复跑的实核（读数原样）**
+
+| 项 | 读数 | 命令 / 依据 |
+|---|---|---|
+| 三机检 · 锚 | 域一 **49 档** · 候选 3482 · **悬空 0** · 豁免 90 · `OK(V5)` · exit 0；域二 99 档 · 候选 8879 · 悬空 0 · 豁免 880 · `OK(V5)`；VSC 域报告态 21 / distinct 13 | `node scripts/doc-anchors.mjs`（cwd = `thincoder/`） |
+| 三机检 · 宽度 | **323 档**无 >300 字符单行 · 一致性 V1/V2/V3 **新增违规 0** · 存量 0 · exit 0 | `node scripts/check-doc-width.mjs` |
+| 三机检 · 台账 | `TODO.md` / `TODO-archive.md` 两档 `OK` · **0 处违规** · exit 0 | `node scripts/check-ledger.mjs` |
+| 写入门是否拦 `scripts/**` | **拦**——`isCodePath("scripts/check-doc-width.mjs")` = **code**（本仓默认约定，无 `.thincoder/conventions.json`） | `thincoder-core/conventions.mjs:73`（`classifyPath`）· `:82`（`isCodePath`）· `:28`（`DEFAULT_CODE_PATHS = ["src"]`）；门 = `thincoder-core/agent/dispatch.mjs:195-217`；工具面 = `thincoder-core/agent/helpers.mjs:86` |
+
+**新增节起草稿（**未落档**——待路径裁定后由 eng-designer 落设计档；此处存档以免重做）**
+
+#### §2.33 工程工具与产品代码的分流（流程归属——2026-09-15 用户裁定）
+
+**问题陈述**：为把 `docs/core` 纳入两扫描器的扫描目录（两行常量）走了完整 eng-coder 流程（designToken + 偏差审计 + advisor 代码评审）——**明显过度**。根因：工程模式的「实现只经 eng-coder」按「是不是代码」写，**未区分**「出厂并影响用户的产品代码」与「只影响本仓开发 / CI 的工程工具」。
+
+**判据表（二分类——按路径前缀可机判）**
+
+| 类 | 范围（判据句） | 走什么流程 |
+|---|---|---|
+| **产品代码** | 出厂并影响用户者：`thincoder-core/**` · `thincoder-cli/{src,bin,test}/**` · `thincoder-vscode/{src,webview,test}/**` | **现状不变**：需求 → 设计 → 设计评审 → 用户批准 → **eng-coder** 实现 |
+| **工程工具** | 只影响本仓开发 / CI 者：仓根 `scripts/**` · 两产品 `scripts/**` · `.thincoder/**` · 仓根 CI 配置（`.github/workflows/**`） | **父侧可直接改** + **门禁为准** + 显式路径提交——**不需 designToken · 不需 eng-coder** |
+
+**三条硬约束（轻流程 ≠ 无流程）**
+
+| # | 约束 | 判据 |
+|---|---|---|
+| 1 | **机械改**（扩射程 / 改路径 / 改名 / 加日志）⇒ 父侧直改 + **改完必须实跑并报读数** | 报告含「命令 + 读数」（如三机检 exit 码与计数）；无读数 = 未完成 |
+| 2 | **改判据语义**（抽取谓词 / 阈值 / 什么算违规）⇒ **仍走设计** | 判据 = 该改动是否改变「**什么会被判红**」；是 ⇒ 语义面 ⇒ 需求 → 设计 → 评审 → 批准 |
+| 3 | **凡直改** ⇒ 报告记明「**父侧直接执行**」+ 单笔可 revert | 报告含该措辞；不夹带无关面（单笔回退边界清晰） |
+
+**与既有纪律的对齐（逐条——不留矛盾）**
+
+| # | 既有纪律 | 本节的作用 |
+|---|---|---|
+| 1 | 工程模式「实现只由 `eng-coder` 子代理完成」（`prompts/persona-engineering.md:14`）·「有规模的实施批次默认由 coder 子代理实现」（`prompts/discipline-engineering.md:152`） | **收窄为「产品代码」**——工程工具不在此列（本节只改**射程**，不改流程形态） |
+| 2 | 工程工具的「元」性质 | 工程工具**本身是「产品能力」候选**（`DOC-SYSTEM.md` §8 机检的引擎 / 路由切分）⇒ 本节只定**流程归属**，**不动**射程 / 引擎化议题 |
+| 3 | 写入门（机械门按路径判代码——`dispatch.mjs:195-217`） | **如实登记摩擦**（见下节）——本节**不改门** |
+
+**写入门实核（as-of 2026-09-15——事实登记，非本节改动）**
+
+- 判据 = `isCodePath(p, conv)`（`thincoder-core/conventions.mjs:82`）→ `classifyPath`（`:73`）：声明代码段内 = code（默认 `["src"]`，`:28`）→ 临时档 → 文档扩展名 → **否则一律 code**。
+- 父侧门 = 工程模式 + depth 0 + **无活槽** + `FILE_MUTATORS`（`helpers.mjs:86`）⇒ 触及 code 即拒（`dispatch.mjs:195-217`）。
+- **实测**（本仓无 `.thincoder/conventions.json` ⇒ 纯默认）：`scripts/check-doc-width.mjs` = **code** · `.github/workflows/test.yml` = **code** · `.thincoder/conventions.json` = **code**；`docs/**` = doc（豁免）。
+- **结论**：**门拦 `scripts/**`** ⇒ 与判据表「父侧可直接改」**存在机械摩擦**；且现**无声明面可豁免**（`codePaths` 只能**加**代码段、不能减；非 doc / temp 一律 fallback 为 code）⇒ 摩擦解除（改分类器或加声明键）属**产品代码变更**，**不在本节射程**——交用户裁定。
+
+**边界（本节不做）**：只定流程归属；不改机械门 / `conventions.mjs` / `dispatch.mjs`；不改提示词（提示词落点另批）；不改产品代码的四步硬流程；不涉工程工具的射程 / 引擎化。
+
+**待裁定（主 agent / 用户）**：目标档三选一 —— ① 先做 `ENGINEERING-MODE`（设计 + 需求侧）迁入 core 的迁移轮，再落本节；② 授权改产品树那份；③ 明确新建 core 档（则该档须自带完整骨架，非仅本节）。裁定后本批可一次落完（起草稿已备）。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
@@ -6916,6 +6982,87 @@ A5 三条复跑读数与 ③ 表（§5 写入前）逐数一致。
 **段末复跑（§5 写入后 · 原样读数）**：`check-doc-width` = **274 档无 >300 字符行** · 一致性 V1/V2/V3 新增违规 **0** · exit 0；
 `doc-anchors` = 域一 **0 档** · 候选 0 · **悬空 0** · `OK(V5)`；域二 **99 档** · 候选 **8879** · **悬空 0** · 注记豁免 880 · `OK(V5)`；VSC 域报告态 21 / 13（未变）；exit 0；
 `check-ledger` = `OK: thincoder/docs/TODO.md` / `OK: thincoder/docs/TODO-archive.md` · **0 处违规** · exit 0。
+
+### 实施：补洞批 —— `docs/core/**` 纳入两机检射程（2026-09-15 · eng-coder）——**终态 = stalled（阻塞项在写域之外）**
+
+**段位**：文档体系（DOC-SYSTEM）follow-on —— **引擎补洞批**（触发 = 用户 2026-09-15 紧急指令「把 `docs/core/**` 纳入两机检射程」）。
+**背景**：HEAD `6fe581d3` 的迁移批把 34 板块档 + 15 提示词正本 `git mv` 出两机检射程 ⇒ 域一读数空化（34 → 0 档 / 宽度面 308 → 274 档）。
+**写域** = 仓根 `scripts/**`（3 档：2 处常量 + 1 处陈旧注释）。**零文档**：`docs/**` 零触碰 · `thincoder-core/**` 零触碰 · 两产品树零触碰 · 台账零触碰；**未 commit**（父侧统一）；**未发起设计评审**（发起权 = 用户）。
+
+**依据** = 父侧本批派单 + `docs/core/design/DOC-SYSTEM.md`（路由面 / 声明面 schema / §15.2 边界）+ HEAD `6fe581d3` 提交信息（「docs/core 现不在 scanner SCAN_DIRS —— boards unguarded until engine batch extends range」）。
+
+**改动面（逐档：改前 → 改后）**
+
+| # | 档 | 改前 | 改后 |
+|---|---|---|---|
+| 1 | `scripts/check-doc-width-core.mjs:15` | `SCAN_DIRS = ["docs/design", "docs/requirements", "docs/batches"]`（3 元素） | 追加两元素 ⇒ 5 元素（末两项 = `docs/core/design` · `docs/core/requirements`） |
+| 2 | `scripts/doc-anchors-v5.mjs:20` | `V5_SCAN_DIRS = ["docs/design", "docs/requirements"]`（2 元素） | 追加两元素 ⇒ 4 元素（同上两项） |
+| 3 | `scripts/check-doc-width.mjs:66-67` | 注释「扫描域 = 发现域集 … 的 docs/design + docs/requirements + docs/batches；」 | 收正为「… × SCAN_DIRS（含 `docs/core/design` + `docs/core/requirements`）」+ 折行（零语义） |
+
+**「逐个实核再改」的落点**：
+① 常量真名实核 = `SCAN_DIRS`（`check-doc-width-core.mjs:15`，经 `check-doc-width.mjs:29` 全量 re-export）与 `V5_SCAN_DIRS`（`doc-anchors-v5.mjs:20`，判中默认值在 `:188`）；
+② **`doc-anchors-targets.mjs` 无需改**——该档不枚举扫描域：其源域 `collectSourceDomain` 走 `join(root, "docs")` 全树递归，`docs/core/**` 本在射程（仅排除 `_archive` / `docs/batches` / 台账两档）；
+③ 递归采集（`collectMarkdown` / `walk`）使 `docs/core/design/prompts/`（15 档）自动入域；
+④ 另有**第三处枚举** = `doc-anchors-v5.mjs:74`（V5-B 定义面 dirs）——实测后**判定不动**（见下「口径一致性实测」）。
+
+**A5 对照读数表（改前 / 改后 · 原样）**
+
+| 域 / 机检 | 改前 | 改后 | 判 |
+|---|---|---|---|
+| 域一（仓根 · V5 锚） | **0 档** · 候选 0 · 悬空 0 · 豁免 0（空域） | **49 档** · 候选 3482 · **悬空 0** · 豁免 90 | ✓ 射程回归 |
+| 域二（thincoder-cli · V5 锚） | 99 档 · 候选 8879 · 悬空 0 · 豁免 880 | **99 档 · 候选 8879 · 悬空 0 · 豁免 880**（逐数不变） | ✓ 未涉面 |
+| VSC 域（vsc 引擎 · 报告态） | 21 处 / distinct 13 | **21 处 / distinct 13**（不变） | ✓ 未涉面 |
+| 宽度 / 一致性（`check-doc-width`） | 274 档 | **323 档**（+49）· 无 >300 字符行 · 新增违规 0 | ✓ 射程回归 |
+| 台账（`check-ledger`） | 0 处违规 | **0 处违规**（两档 `OK`） | ✓ 不变 |
+
+域一 49 档构成（实核）：`docs/core/design/` 17 板块档 + `docs/core/design/prompts/` 15 档 + `docs/core/requirements/` 17 档。域一子面读数：用例号 122 / 路径坐标 1856 / 符号窄 2 / 符号宽 1502（报告面）。
+
+**口径一致性实测（第三处枚举 · 判定不动的依据）**：把 `doc-anchors-v5.mjs:74` 的定义面 dirs 临时也扩为含 `docs/core/*` 后复跑 `--domain .` ⇒ 域一读数**逐数相同**（49 档 · 候选 3482 · 悬空 0 · 豁免 90 · 子面全同）⇒ 该处对现态**零可观察差异**；且它属「存在性判域」（判据面），按本批边界「**只扩射程 · 不改判据**」保持不动，只登记（未决 3）。**已回退该临时改动**（终态 = 上表 #1 / #2 / #3 三处）。
+
+**A4 工作树自证**：`git status --porcelain` = **3 `M`（全部 `scripts/**`）** + 2 项**预存**（`docs/TODO.md` = 父侧需求池在途编辑〔需求池 17 → 18 条〕· `thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md` = 跨批预存）；**零 `docs/**`（本笔）· 零 `src/**` · 零 `thincoder-core/**` · 零两产品树 · 零台账（本笔）**；未 commit。
+
+**④ 内部轮（发现与处置）**
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **DIVERGENT** —— ① 文件选取面扩域**完整**（`scripts/**` 全部枚举站点核对：选取面两处均已含 `docs/core`；`doc-anchors-targets.mjs` 经核**无需改**）；② 判据 / 阈值 / 规则**零改**；④ 清单外改动**未发现**；③ 文档漂移：`DOC-SYSTEM.md` 模块地图两行 + §15.2/§16 口径 + `doc-impact.mjs` 文档串 + VSC 基线注记（🔵）。
+- **advisor 代码评审 1 轮**（`type=code` · 阻塞）：**changes-required**（🟡 must-fix 1 · 🟡 报告 2 · 🔵 1）。
+- **裁决表（4 项）**
+
+| # | Action | Detail |
+|---|---|---|
+| 1 | Deferred | 🟡 **must-fix**——两产品树把旧数组钉死的断言随本笔转红（`thincoder-cli/test/doc-anchors.test.mjs:190` / `:261` · `thincoder-cli/test/doc-consistency.test.mjs:174` · `thincoder-cli/test/ledger.test.mjs:101` · `thincoder-vscode/test/doc-consistency.test.mjs:195`），连带 `thincoder-cli/docs/design/ENGINEERING-MODE.md:2486` 的 AC-V5-16 / N5 明文「`SCAN_DIRS` 三元素逐字不变」。**修点在任务书硬边界之外（两产品树禁改）** ⇒ 本席不代改，**如实上报**交父侧裁定（二选一：授权扩写域改这 5 行断言 + AC 同步；或回退本笔） |
+| 2 | Deferred | 🟡 `docs/core/design/DOC-SYSTEM.md` 仍写「`scripts/**` 零改动 · 射程扩展归引擎批次」（§15.2 / §16 / §14 T1 / §8.1 路由面行）；`docs/**` 本批禁改 ⇒ 归设计层收正；同族 🔵 = `thincoder-cli/scripts/doc-impact.mjs:73` 文档串 · `thincoder-vscode/test/fixtures/doc-consistency-baseline.json:2` 注记 |
+| 3 | Deferred | 🟡 `doc-anchors-v5.mjs:74` 定义面未随扫描面同扩（扫描面 / 定义面不对称，潜在假阳面）——**实测零可观察差异**（见上「口径一致性实测」）+ 属判据面（本批边界「不改判据」）⇒ 登记，归引擎化批次收单源 |
+| 4 | Not an issue | 🔵 「加 `docs/core`（含全部子层）」落为两个显式子目录：今日 `docs/core/` 下仅 `design/` · `requirements/`（实核）⇒ 覆盖等价；且与设计声明面 schema（`docs/core/design/DOC-SYSTEM.md:236`）逐字一致。不构成缺陷；「域清单 = 声明面单源」随未决 3 一并登记 |
+
+- **轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 0（本笔**无面内可修项**——三条 Deferred 的修点全部在写域之外）；**终态 = stalled**（唯一阻塞 = 裁决表 #1）。
+
+**决策透明表（本笔实现判断）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 两处常量**追加**新元素（保序，既有元素位置不动） | `SCAN_DIRS[0]` 被两产品测试当 `--dir` 实参消费（`doc-consistency.test.mjs` 的探针路径）；追加对既有消费点零影响 |
+| 2 | 落为两显式子目录（非整目录 `"docs/core"`） | `docs/core/` 今日仅 `design` / `requirements`（实核 ⇒ 等价）；与设计声明面 schema 逐字一致 |
+| 3 | `doc-anchors-v5.mjs:74` 定义面**不动** | 属判据面（本批「不改判据」）；实测零差异（见上）；备选 = 同扩 ⇒ 越界且零收益 |
+| 4 | `doc-anchors-targets.mjs` **不动** | 实核：该档不枚举扫描域（源域走 `docs/` 全树递归，已覆盖 `docs/core`）⇒ 改它反而错 |
+| 5 | 同批收正 `check-doc-width.mjs:66-67` 陈旧注释（零语义，仅折行） | 注释列举须与数组现文逐字一致（D6 回读核对），否则即代码 / 注释漂移 |
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **两产品树断言 + AC 矛盾（= 裁决表 #1，阻塞项）**：`thincoder-cli/test/{doc-anchors,doc-consistency,ledger}.test.mjs` ·
+  `thincoder-vscode/test/doc-consistency.test.mjs` · `thincoder-cli/docs/design/ENGINEERING-MODE.md:2486` ·
+  `thincoder-cli/docs/requirements/ENGINEERING-MODE.md:995`。修点 = 产品树（本批禁改）⇒ 本笔交付时**两产品快层为红**，须父侧裁定（改断言 / 回退）。
+2. **设计档口径滞后**（= 裁决表 #2）：`docs/core/design/DOC-SYSTEM.md` §15.2 / §16 / §14 T1 / §8.1 + 批次档 `:6793` / `:6905` 的「归引擎批次」登记。
+3. **定义面 / 扫描面不对称**（= 裁决表 #3）+ **域清单未走声明面**（🔵）⇒ 归引擎化批次（声明面落地时收单源）。
+4. **消费方连带**：`thincoder-cli/scripts/doc-impact.mjs` 复用 `V5_SCAN_DIRS`（`:23` / `:86`）⇒ 反查面随之覆盖 `docs/core/**`（与该档语义一致；两产品测试面 grep 该档报文 / `docs/core` **零命中**，实核无钉死）。
+5. **预存项（非本笔）**：`docs/TODO.md`（父侧在途）· `thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`（跨批预存）。
+
+**验证命令（可复跑）**：`node scripts/doc-anchors.mjs` · `node scripts/check-doc-width.mjs` · `node scripts/check-ledger.mjs`（cwd = `thincoder/`）；域一单跑 = `node scripts/doc-anchors.mjs --domain .`。
+
+**段末复跑（§5 写入后 · 原样读数）**：`doc-anchors` = 域一 **49 档** · 候选 **3482** · **悬空 0** · 注记豁免 90 · `OK(V5)` exit 0；域二 **99 档** · 候选 **8879** · **悬空 0** · 注记豁免 880 · `OK(V5)`；VSC 域报告态 **21 / distinct 13**（未变）；exit 0。
+`check-doc-width` = **323 档**无 >300 字符行 · 一致性 V1/V2/V3 **新增违规 0** · 存量 0 · exit 0。
+`check-ledger` = **1 处违规（非本笔 · 并发父侧）**：`thincoder/docs/TODO.md:11` [L2] 组计数不符（声明 18 条 ≠ 组内未决 19 条）——该档 mtime = **2026-09-15 00:20:11 本地**（晚于本席 spawn 00:15 与改后首轮复跑；本席零触碰台账，任务书硬边界）⇒ 改后首轮（00:1x）复跑读数 = **0 处违规**。
+
+**收正注（同轮 · 首版后置 · 零语义）**：§5 首版 2 行超宽（`:6936` 480 / `:6981` 318 字符）⇒ **仅插换行、文字零改**；复跑 = 323 档无 >300 字符行 · 一致性新增 0 · exit 0。
 
 ## §6 验证与收口（父代理）
 
