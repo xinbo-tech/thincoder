@@ -701,210 +701,211 @@ VSC（`thincoder-vscode/`）：
 
 > **口径收正（父侧派单数字）**：派单的「**104 对 + 40 档提示词**」中，**40 档是 104 对的子集**（104 = 64 `.mjs` + 40 `.md`）⇒ 两者**不可相加**；本排期以 **170 档**为分母（130 `.mjs` + 40 `.md`）。
 > **语义族不另设单元**：16 族 / 63 行的 CLI 侧已全部落在上述 130 `.mjs` 之内（逐族归属见（二）表「语义族 · 行」列）——**族 = 分析面，单元 = 执行面**，二者不并列计数。
-> 行数 = `wc -l`（本轮实核）；改指 = 该单元删除集在该产品树（`src` + `test` + `bin`）内的**外部引用档数**（**按当下坐标计**——先跑的单元可能已改掉其中若干）。
+> 行数 = `wc -l` 口径（口径锚与换算注见（二）表后「行数口径注」）；改指 = 该单元删除集在该产品树（`src` + `test` + `bin`）内的**外部引用档数**（**按当下坐标计**——先跑的单元可能已改掉其中若干）。
 
 **（二）排期主表（16 单元 · 穷举 · 执行序 = 编号序）**
 
 | 单元 | 名称 | 语义族 · 行（§2.5 行号） | 规模（档 / 行 / 改指） | 前置依赖 | 风险 | 验收要点（专项——共同验收见（四）） |
 |---|---|---|---|---|---|---|
-| **U1** | LOGGING（诊断日志） | LOGGING #42（① 近同） | 1 / 196 / 18 | —— | 低 | 面内零变（差异仅注释 · 非语义） |
-| **U2** | **提示词面**（槽位 15 + 工具描述 25 + 3 加载根 + 3 测试档 + 核内笔 1：advisor 加载面） | PROMPT-SYSTEM 全族（#2–#9 · #30–#39 · #43–#47 · #50 · #51 · #117–#122）+ TOOLS 工具描述 #10–#29 | 40 / 1452 / **6**（= 3 加载根 + 3 测试档；另**核内笔** 1 档——不占本列） | **U0（锚替换——见（八）/§2.13.8）** | 中 | 见（六） |
-| **U3** | TRACES（轨迹存储） | #116（①②③） | 1 / 356 / 3 | —— | 中 | 容量 / 清理策略 = 裁决（取并集）；默认关 ⇒ 未涉面零变 |
-| **U4** | WORKSPACE（技能 / 规则 / 同伴 / 台账） | #71–#73 · #170–#174 | 7 / 1311 / 19 | —— | 中 | #170 同步 loader 面归核；台账渲染色表 CLI 侧**不注入** |
-| **U5** | CHECKPOINT（检查点 · git 面） | #48 · #49 · #167 · #168（`gitmem` 档面——§2.5 把 #168 登记在 MEMORY 子系统名下） | 4 / 868 / 8 | —— | 中 | git 写面取一侧（近同）；`gitmem` team 层同步面 |
-| **U6** | CONTEXT-COMPACTION（压缩 / 标题 / 额度） | #162–#164 | 3 / 528 / 19 | —— | 中 | `compactThreshold` 默认值口径 = 裁决（§2.12.2 第 1 行） |
-| **U7** | MCP（客户端 + 三传输） | #81 · #144–#148 | 5 / 861 / 3 | —— | 中 | 传输面取一侧；配置面板 / 监视面 = ④（CLI 无） |
-| **U8** | MEMORY（记忆库 + 索引 + 嵌入） | #75 · #82 · #133–#137 | 10 / 2395 / 18 | —— | 中 | A12 / A13 ⇒ CLI 侧**面内零变**；`node:sqlite` 面不变 |
-| **U9** | AGENT-TOOLS 工具面（goal / plan / task / timer / verify / skill / eng / 记账…） | #85 · #86 · #88 · #90–#92 · #96 · #97 | 11 / 1041 / 10 | —— | 中 | 逐工具判定表 = 裁决；`agent-tools.mjs` 登记册单源（14 名） |
-| **U10** | PROVIDER（供应商 / 模型 / 代理） | #114 · #115 · #138–#143 | 15 / 2832 / 31 | —— | 中高 | #114 / #115 取并集（限流等待 · 模型列表失败形态）逐条登记 |
-| **U11** | SESSION（会话与历史） | #89 · #123–#127 | 9 / 2208 / 36 | —— | 中高 | 存储契约不变（同 `version` 1/2）；A14 以 CLI 为准 |
-| **U12** | CONSULTATION（advisor 余族 + 会诊 / 飞刀） | #1 · #40 · #41 · #93 · #95 · #104–#110 · #159–#161 | 16 / 3823 / 26 | —— | 中高 | 止损护栏 / 实例上下文 / `code_search` 恒在 = 裁决 |
-| **U13** | TOOLS（工具实现面 + 注册表 + 描述装载） | #52–#70 · #83 · #84 · #96 · #178 · #179 | 20 / 4861 / 18 | —— | 中高 | 逐工具行为 = 裁决；`DESC()` 装载根随 `tools/shared.mjs` 一并归核 |
-| **U14** | CONFIG（配置装载 / 迁移 + settings 工具） | #74 · #77 · #79 · #80 · #87 · #128–#132 · #177 | 3 / 834 / **51** | —— | **高** | 配置键面 / 默认值 / `$schema` / 类型校验 = 裁决；**旧键可读**（A7 兼容）用例在位 |
-| **U15** | AGENT-LOOP（主循环 + agent 装配 + 挂起 + 提示词装配面） | #76 · #78 · #94 · #98–#103 · #111–#113 · #149–#158 · #165 · #166 · #169 · #175 · #176 · #184 · #182（顶层 `markdown.mjs` 归核面） | 17 / 3217 / **49** | —— | **高** | Stop 钩子 / 中断记账 / 挂起载体 = 裁决；hooks 四事件名冻结 |
-| **U16** | 子代理 / 异步族（spawn / scheduler / async / settle / 槽台账） | #94 · #98 · #99 · #102 · #110 · #154 · #157 | 8 / 2860 / 31 | —— | **高** | 异步状态机 + 池 / 墓碑 / 载体 10 字段（`docs/design/AGENT-LOOP.md` §2.3）双夹具；`panel` 动作 CLI 侧保留 |
-| —— | **合计** | 16 族 / 63 行（#123–#185）全覆盖 | **170 / 29643 / 346** | —— | —— | —— |
+| **U1** | LOGGING（诊断日志） | LOGGING #42（① 近同） | 1 / 195 / 18 | —— | 低 | 面内零变（差异仅注释 · 非语义） |
+| **U2** | **提示词面**（槽位 15 + 工具描述 25 + 3 加载根 + 3 测试档 + 核内笔 1：advisor 加载面） | PROMPT-SYSTEM 全族（#2–#9 · #30–#39 · #43–#47 · #50 · #51 · #117–#122）+ TOOLS 工具描述 #10–#29 | 40 / 1412 / **6**（= 3 加载根 + 3 测试档；另**核内笔** 1 档——不占本列） | **U0（锚替换——见（八）/§2.13.8）** | 中 | 见（六） |
+| **U3** | TRACES（轨迹存储） | #116（①②③） | 1 / 355 / 3 | —— | 中 | 容量 / 清理策略 = 裁决（取并集）；默认关 ⇒ 未涉面零变 |
+| **U4** | WORKSPACE（技能 / 规则 / 同伴 / 台账） | #71–#73 · #170–#174 | 7 / 1304 / 19 | —— | 中 | #170 同步 loader 面归核；台账渲染色表 CLI 侧**不注入** |
+| **U5** | CHECKPOINT（检查点 · git 面） | #48 · #49 · #167 · #168（`gitmem` 档面——§2.5 把 #168 登记在 MEMORY 子系统名下） | 4 / 864 / 8 | —— | 中 | git 写面取一侧（近同）；`gitmem` team 层同步面 |
+| **U6** | CONTEXT-COMPACTION（压缩 / 标题 / 额度） | #162–#164 | 3 / 525 / 19 | —— | 中 | `compactThreshold` 默认值口径 = 裁决（§2.12.2 第 1 行） |
+| **U7** | MCP（客户端 + 三传输） | #81 · #144–#148 | 5 / 856 / 3 | —— | 中 | 传输面取一侧；配置面板 / 监视面 = ④（CLI 无） |
+| **U8** | MEMORY（记忆库 + 索引 + 嵌入） | #75 · #82 · #133–#137 | 10 / 2385 / 18 | —— | 中 | A12 / A13 ⇒ CLI 侧**面内零变**；`node:sqlite` 面不变 |
+| **U9** | AGENT-TOOLS 工具面（goal / plan / task / timer / verify / skill / eng / 记账…） | #85 · #86 · #88 · #90–#92 · #96 · #97 | 11 / 1030 / 10 | —— | 中 | 逐工具判定表 = 裁决；`agent-tools.mjs` 登记册单源（14 名） |
+| **U10** | PROVIDER（供应商 / 模型 / 代理） | #114 · #115 · #138–#143 | 15 / 2817 / 31 | —— | 中高 | #114 / #115 取并集（限流等待 · 模型列表失败形态）逐条登记 |
+| **U11** | SESSION（会话与历史） | #89 · #123–#127 | 9 / 2199 / 36 | —— | 中高 | 存储契约不变（同 `version` 1/2）；A14 以 CLI 为准 |
+| **U12** | CONSULTATION（advisor 余族 + 会诊 / 飞刀） | #1 · #40 · #41 · #93 · #95 · #104–#110 · #159–#161 | 16 / 3807 / 26 | —— | 中高 | 止损护栏 / 实例上下文 / `code_search` 恒在 = 裁决 |
+| **U13** | TOOLS（工具实现面 + 注册表 + 描述装载） | #52–#70 · #83 · #84 · #96 · #178 · #179 | 20 / 4841 / 18 | —— | 中高 | 逐工具行为 = 裁决；`DESC()` 装载根随 `tools/shared.mjs` 一并归核 |
+| **U14** | CONFIG（配置装载 / 迁移 + settings 工具） | #74 · #77 · #79 · #80 · #87 · #128–#132 · #177 | 3 / 831 / **51** | —— | **高** | 配置键面 / 默认值 / `$schema` / 类型校验 = 裁决；**旧键可读**（A7 兼容）用例在位 |
+| **U15** | AGENT-LOOP（主循环 + agent 装配 + 挂起 + 提示词装配面） | #76 · #78 · #94 · #98–#103 · #111–#113 · #149–#158 · #165 · #166 · #169 · #175 · #176 · #184 · #182（顶层 `markdown.mjs` 归核面） | 17 / 3200 / **49** | —— | **高** | Stop 钩子 / 中断记账 / 挂起载体 = 裁决；hooks 四事件名冻结 |
+| **U16** | 子代理 / 异步族（spawn / scheduler / async / settle / 槽台账） | #94 · #98 · #99 · #102 · #110 · #154 · #157 | 8 / 2852 / 31 | —— | **高** | 异步状态机 + 池 / 墓碑 / 载体 10 字段（`docs/design/AGENT-LOOP.md` §2.3）双夹具；`panel` 动作 CLI 侧保留 |
+| —— | **合计** | 16 族 / 63 行（#123–#185）全覆盖 | **170 / 29473 / 346** | —— | —— | —— |
 
 > **④ 行无单元**：④ 端特有桶 **#180–#183**（4 行）**不迁** ⇒ 无 CLI 单元（`tui/**` 68 档 · `acp.mjs` + `acp/**` 4 档 · CLI 顶层杂项 5 · VSC `extension/**` 20）；其中 **#182 的顶层 `src/markdown.mjs`（共享逻辑面）归核**——该档住 **U15**。
 
 **改指档数说明**：U14（51）· U15（49）· U11（36）· U16（31）· U10（31）为扇出前五——判据 = 该档在该产品树内的外部引用档数（含 `test/**`：U15 **23** · U16 **16** · U11 **15** · U12 **12** · U13 **10** · U14 **10**）。
 > **改指列口径注（2026-09-14 收正）**：本列 = 该单元删除集在该产品树（`src` + `test` + `bin`）内的外部引用档数（与（一）定义同域）；**U2 的 6 个改档**（3 加载根 + 3 测试档）**已折入列内**（原写在列外括注，与列定义不同基）⇒ **合计 346**（原 340）；U2 的核内笔 1 档属核内、不占本列。
-> **行数口径注（2026-09-14 实核）**：本表（二）（三）行数 = **编辑器末行口径**（= `wc -l` + 1——全表 **170/170** 档逐档复核成立：每档均以换行结尾）；本档其余读数表（§2.8 / §2.8.1）与核内机检（`thincoder-core/test/core-hygiene.test.mjs:98`）用 `wc -l` ⇒ **档位判定（≤300 / ≤500）一律以 `wc -l` 为准**，换算 = 本表读数 − 1（合计 **29643 → 29473**）；**逐档 −1 重排不在本轮**（登记待裁）。
+> **行数口径注（2026-09-14 收正）**：本表（二）（三）行数 = **`wc -l` 口径**（权威口径锚 = `thincoder-core/test/core-hygiene.test.mjs:98` 的 `split("\n").length - 1 // wc -l semantics`——与 §2.8 / §2.8.1 及档位判定（≤300 / ≤500）同源）。
+> **换算注（防再踩）**：本收正轮前的旧读数 = **编辑器末行口径 = `wc -l` + 1**（每档恒 +1——全表 170/170 已证）⇒ 遇旧读数一律**按档数减 1**（逐档 −1；单元 / 合计 − 该范围档数——合计 **29643 → 29473** · U2 **1452 → 1412**）；逐档重排已随本收正轮落地。
 
-**（三）逐档清单（170 档 · 穷举 · 行数 = `wc -l` + 1 口径实核 2026-09-14——见上「行数口径注」）**
+**（三）逐档清单（170 档 · 穷举 · 行数 = `wc -l` 口径实核 2026-09-14——口径注见（二）表后）**
 
 | 单元 | 档（`thincoder-cli/` 相对） | 行数 |
 |---|---|---|
-| U1 | `src/log.mjs` | 196 |
-| U2 | `src/prompts/advisor-design.md` | 42 |
-| U2 | `src/prompts/advisor-round1.md` | 42 |
-| U2 | `src/prompts/advisor-round2.md` | 47 |
-| U2 | `src/prompts/advisor-round3.md` | 43 |
-| U2 | `src/prompts/common.md` | 116 |
-| U2 | `src/prompts/consult-base.md` | 20 |
-| U2 | `src/prompts/discipline-engineering.md` | 260 |
-| U2 | `src/prompts/discipline-normal.md` | 185 |
-| U2 | `src/prompts/persona-coder.md` | 22 |
-| U2 | `src/prompts/persona-eng-coder.md` | 38 |
-| U2 | `src/prompts/persona-eng-designer.md` | 61 |
-| U2 | `src/prompts/persona-engineering.md` | 56 |
-| U2 | `src/prompts/persona-explore.md` | 16 |
-| U2 | `src/prompts/persona-normal.md` | 28 |
-| U2 | `src/prompts/persona-plan.md` | 27 |
-| U2 | `src/tools/apply_patch.md` | 16 |
-| U2 | `src/tools/bash.md` | 38 |
-| U2 | `src/tools/checklist.md` | 14 |
-| U2 | `src/tools/delete.md` | 14 |
-| U2 | `src/tools/edit.md` | 31 |
-| U2 | `src/tools/execute.md` | 22 |
-| U2 | `src/tools/fetch.md` | 13 |
-| U2 | `src/tools/file_ops.md` | 17 |
-| U2 | `src/tools/get_current_time.md` | 8 |
-| U2 | `src/tools/git.md` | 55 |
-| U2 | `src/tools/glob.md` | 12 |
-| U2 | `src/tools/grep.md` | 20 |
-| U2 | `src/tools/hashline_edit.md` | 15 |
-| U2 | `src/tools/insert_after.md` | 16 |
-| U2 | `src/tools/lint.md` | 11 |
-| U2 | `src/tools/ls.md` | 13 |
-| U2 | `src/tools/lsp.md` | 11 |
-| U2 | `src/tools/process.md` | 10 |
-| U2 | `src/tools/question.md` | 17 |
-| U2 | `src/tools/read.md` | 21 |
-| U2 | `src/tools/read_image.md` | 9 |
-| U2 | `src/tools/tree.md` | 14 |
-| U2 | `src/tools/wait_for.md` | 23 |
-| U2 | `src/tools/websearch.md` | 17 |
-| U2 | `src/tools/write.md` | 12 |
-| U3 | `src/traces/trace-store.mjs` | 356 |
-| U4 | `src/ledger.mjs` | 228 |
-| U4 | `src/conventions.mjs` | 224 |
-| U4 | `src/escape.mjs` | 153 |
-| U4 | `src/rules.mjs` | 54 |
-| U4 | `src/peer-instances.mjs` | 232 |
-| U4 | `src/peer-domains.mjs` | 266 |
-| U4 | `src/skills.mjs` | 154 |
-| U5 | `src/git/checkpoint.mjs` | 449 |
-| U5 | `src/git/gitmem.mjs` | 101 |
-| U5 | `src/tools/git-checkpoint.mjs` | 144 |
-| U5 | `src/tools/git-ext.mjs` | 174 |
-| U6 | `src/context.mjs` | 393 |
-| U6 | `src/generate-title.mjs` | 88 |
-| U6 | `src/text-budget.mjs` | 47 |
-| U7 | `src/mcp.mjs` | 296 |
-| U7 | `src/mcp/helpers.mjs` | 52 |
-| U7 | `src/mcp/transport-http.mjs` | 249 |
-| U7 | `src/mcp/transport-stdio.mjs` | 141 |
-| U7 | `src/mcp/transport-ws.mjs` | 123 |
-| U8 | `src/memory.mjs` | 22 |
-| U8 | `src/memory/code-index.mjs` | 220 |
-| U8 | `src/memory/code-sync.mjs` | 416 |
-| U8 | `src/memory/core.mjs` | 300 |
-| U8 | `src/memory/delete.mjs` | 237 |
-| U8 | `src/memory/docs.mjs` | 420 |
-| U8 | `src/memory/file-walk.mjs` | 110 |
-| U8 | `src/memory/scan.mjs` | 96 |
-| U8 | `src/memory/schema.mjs` | 453 |
-| U8 | `src/embedding.mjs` | 121 |
-| U9 | `src/agent-tools.mjs` | 18 |
-| U9 | `src/agent-tools/batch-segment.mjs` | 196 |
-| U9 | `src/agent-tools/digest-budget.mjs` | 77 |
-| U9 | `src/agent-tools/eng.mjs` | 68 |
-| U9 | `src/agent-tools/goal.mjs` | 120 |
-| U9 | `src/agent-tools/plan.mjs` | 82 |
-| U9 | `src/agent-tools/task.mjs` | 88 |
-| U9 | `src/agent-tools/timer.mjs` | 47 |
-| U9 | `src/agent-tools/verify.mjs` | 272 |
-| U9 | `src/agent-tools/skill.mjs` | 48 |
-| U9 | `src/agent-tools/recent-changes.mjs` | 25 |
-| U10 | `src/provider/anthropic.mjs` | 226 |
-| U10 | `src/provider/core.mjs` | 477 |
-| U10 | `src/provider/errors.mjs` | 102 |
-| U10 | `src/provider/google.mjs` | 258 |
-| U10 | `src/provider/index.mjs` | 8 |
-| U10 | `src/provider/normalize.mjs` | 82 |
-| U10 | `src/provider/responses.mjs` | 496 |
-| U10 | `src/provider/retry.mjs` | 89 |
-| U10 | `src/provider/sse.mjs` | 265 |
-| U10 | `src/provider/list-models.mjs` | 94 |
-| U10 | `src/provider/rate.mjs` | 109 |
-| U10 | `src/model-specs.mjs` | 180 |
-| U10 | `src/model-ref.mjs` | 67 |
-| U10 | `src/proxy.mjs` | 262 |
-| U10 | `src/abort-provenance.mjs` | 117 |
-| U11 | `src/session.mjs` | 493 |
-| U11 | `src/session-slots.mjs` | 493 |
-| U11 | `src/session-store.mjs` | 442 |
-| U11 | `src/session-gc.mjs` | 222 |
-| U11 | `src/session-segments.mjs` | 101 |
-| U11 | `src/session-guard.mjs` | 60 |
-| U11 | `src/session-migrate.mjs` | 48 |
-| U11 | `src/session-rename.mjs` | 39 |
-| U11 | `src/agent-tools/read-history.mjs` | 310 |
-| U12 | `src/advisor.mjs` | 291 |
-| U12 | `src/advisor/citations.mjs` | 140 |
-| U12 | `src/advisor/compaction.mjs` | 175 |
-| U12 | `src/advisor/loop.mjs` | 294 |
-| U12 | `src/advisor/messages.mjs` | 300 |
-| U12 | `src/advisor/project-context.mjs` | 195 |
-| U12 | `src/advisor/repos.mjs` | 151 |
-| U12 | `src/advisor/run.mjs` | 294 |
-| U12 | `src/agent-tools/advisor.mjs` | 261 |
-| U12 | `src/agent-tools/advisor-async.mjs` | 347 |
-| U12 | `src/agent-tools/advisor-settle.mjs` | 232 |
-| U12 | `src/agent-tools/design-token.mjs` | 118 |
-| U12 | `src/agent-tools/consult.mjs` | 474 |
-| U12 | `src/agent-tools/review-streak.mjs` | 94 |
-| U12 | `src/agent-tools/subagent-panel.mjs` | 161 |
-| U12 | `src/agent-tools/escalate-async.mjs` | 296 |
-| U13 | `src/tools/bash.mjs` | 269 |
-| U13 | `src/tools/checklist.mjs` | 300 |
-| U13 | `src/tools/checklist-sync.mjs` | 182 |
-| U13 | `src/tools/edit-batch.mjs` | 192 |
-| U13 | `src/tools/edit-diff.mjs` | 349 |
-| U13 | `src/tools/execute.mjs` | 229 |
-| U13 | `src/tools/file.mjs` | 470 |
-| U13 | `src/tools/git.mjs` | 357 |
-| U13 | `src/tools/glob-dialect.mjs` | 131 |
-| U13 | `src/tools/index.mjs` | 36 |
-| U13 | `src/tools/linter.mjs` | 129 |
-| U13 | `src/tools/lsp.mjs` | 317 |
-| U13 | `src/tools/ops.mjs` | 300 |
-| U13 | `src/tools/patch.mjs` | 283 |
-| U13 | `src/tools/question.mjs` | 27 |
-| U13 | `src/tools/repomap.mjs` | 315 |
-| U13 | `src/tools/search.mjs` | 237 |
-| U13 | `src/tools/shared.mjs` | 447 |
-| U13 | `src/tools/tree.mjs` | 66 |
-| U13 | `src/tools/web.mjs` | 225 |
-| U14 | `src/config.mjs` | 497 |
-| U14 | `src/config-migrate.mjs` | 71 |
-| U14 | `src/agent-tools/settings.mjs` | 266 |
-| U15 | `src/agent.mjs` | 418 |
-| U15 | `src/agent/completion.mjs` | 147 |
-| U15 | `src/agent/dispatch.mjs` | 490 |
-| U15 | `src/agent/helpers.mjs` | 385 |
-| U15 | `src/agent/post-turn.mjs` | 71 |
-| U15 | `src/agent/record-results.mjs` | 175 |
-| U15 | `src/agent/relay-prefix.mjs` | 40 |
-| U15 | `src/agent/run-stages.mjs` | 245 |
-| U15 | `src/agent/setup.mjs` | 355 |
-| U15 | `src/agent/setup-reminders.mjs` | 70 |
-| U15 | `src/agent/spawn-child.mjs` | 244 |
-| U15 | `src/auto-think.mjs` | 116 |
-| U15 | `src/hooks.mjs` | 98 |
-| U15 | `src/explore-distill.mjs` | 156 |
-| U15 | `src/markdown.mjs` | 107 |
-| U15 | `src/expand-home.mjs` | 17 |
-| U15 | `src/prompt-overlays.mjs` | 83 |
-| U16 | `src/agent-tools/subagent.mjs` | 405 |
-| U16 | `src/agent-tools/subagent-run.mjs` | 206 |
-| U16 | `src/agent-tools/subagent-scheduler.mjs` | 392 |
-| U16 | `src/agent-tools/subagent-async.mjs` | 435 |
-| U16 | `src/agent-tools/subagent-actions.mjs` | 482 |
-| U16 | `src/agent-tools/subagent-spawn.mjs` | 460 |
-| U16 | `src/agent-tools/async-settle.mjs` | 205 |
-| U16 | `src/token-ttl.mjs` | 275 |
+| U1 | `src/log.mjs` | 195 |
+| U2 | `src/prompts/advisor-design.md` | 41 |
+| U2 | `src/prompts/advisor-round1.md` | 41 |
+| U2 | `src/prompts/advisor-round2.md` | 46 |
+| U2 | `src/prompts/advisor-round3.md` | 42 |
+| U2 | `src/prompts/common.md` | 115 |
+| U2 | `src/prompts/consult-base.md` | 19 |
+| U2 | `src/prompts/discipline-engineering.md` | 259 |
+| U2 | `src/prompts/discipline-normal.md` | 184 |
+| U2 | `src/prompts/persona-coder.md` | 21 |
+| U2 | `src/prompts/persona-eng-coder.md` | 37 |
+| U2 | `src/prompts/persona-eng-designer.md` | 60 |
+| U2 | `src/prompts/persona-engineering.md` | 55 |
+| U2 | `src/prompts/persona-explore.md` | 15 |
+| U2 | `src/prompts/persona-normal.md` | 27 |
+| U2 | `src/prompts/persona-plan.md` | 26 |
+| U2 | `src/tools/apply_patch.md` | 15 |
+| U2 | `src/tools/bash.md` | 37 |
+| U2 | `src/tools/checklist.md` | 13 |
+| U2 | `src/tools/delete.md` | 13 |
+| U2 | `src/tools/edit.md` | 30 |
+| U2 | `src/tools/execute.md` | 21 |
+| U2 | `src/tools/fetch.md` | 12 |
+| U2 | `src/tools/file_ops.md` | 16 |
+| U2 | `src/tools/get_current_time.md` | 7 |
+| U2 | `src/tools/git.md` | 54 |
+| U2 | `src/tools/glob.md` | 11 |
+| U2 | `src/tools/grep.md` | 19 |
+| U2 | `src/tools/hashline_edit.md` | 14 |
+| U2 | `src/tools/insert_after.md` | 15 |
+| U2 | `src/tools/lint.md` | 10 |
+| U2 | `src/tools/ls.md` | 12 |
+| U2 | `src/tools/lsp.md` | 10 |
+| U2 | `src/tools/process.md` | 9 |
+| U2 | `src/tools/question.md` | 16 |
+| U2 | `src/tools/read.md` | 20 |
+| U2 | `src/tools/read_image.md` | 8 |
+| U2 | `src/tools/tree.md` | 13 |
+| U2 | `src/tools/wait_for.md` | 22 |
+| U2 | `src/tools/websearch.md` | 16 |
+| U2 | `src/tools/write.md` | 11 |
+| U3 | `src/traces/trace-store.mjs` | 355 |
+| U4 | `src/ledger.mjs` | 227 |
+| U4 | `src/conventions.mjs` | 223 |
+| U4 | `src/escape.mjs` | 152 |
+| U4 | `src/rules.mjs` | 53 |
+| U4 | `src/peer-instances.mjs` | 231 |
+| U4 | `src/peer-domains.mjs` | 265 |
+| U4 | `src/skills.mjs` | 153 |
+| U5 | `src/git/checkpoint.mjs` | 448 |
+| U5 | `src/git/gitmem.mjs` | 100 |
+| U5 | `src/tools/git-checkpoint.mjs` | 143 |
+| U5 | `src/tools/git-ext.mjs` | 173 |
+| U6 | `src/context.mjs` | 392 |
+| U6 | `src/generate-title.mjs` | 87 |
+| U6 | `src/text-budget.mjs` | 46 |
+| U7 | `src/mcp.mjs` | 295 |
+| U7 | `src/mcp/helpers.mjs` | 51 |
+| U7 | `src/mcp/transport-http.mjs` | 248 |
+| U7 | `src/mcp/transport-stdio.mjs` | 140 |
+| U7 | `src/mcp/transport-ws.mjs` | 122 |
+| U8 | `src/memory.mjs` | 21 |
+| U8 | `src/memory/code-index.mjs` | 219 |
+| U8 | `src/memory/code-sync.mjs` | 415 |
+| U8 | `src/memory/core.mjs` | 299 |
+| U8 | `src/memory/delete.mjs` | 236 |
+| U8 | `src/memory/docs.mjs` | 419 |
+| U8 | `src/memory/file-walk.mjs` | 109 |
+| U8 | `src/memory/scan.mjs` | 95 |
+| U8 | `src/memory/schema.mjs` | 452 |
+| U8 | `src/embedding.mjs` | 120 |
+| U9 | `src/agent-tools.mjs` | 17 |
+| U9 | `src/agent-tools/batch-segment.mjs` | 195 |
+| U9 | `src/agent-tools/digest-budget.mjs` | 76 |
+| U9 | `src/agent-tools/eng.mjs` | 67 |
+| U9 | `src/agent-tools/goal.mjs` | 119 |
+| U9 | `src/agent-tools/plan.mjs` | 81 |
+| U9 | `src/agent-tools/task.mjs` | 87 |
+| U9 | `src/agent-tools/timer.mjs` | 46 |
+| U9 | `src/agent-tools/verify.mjs` | 271 |
+| U9 | `src/agent-tools/skill.mjs` | 47 |
+| U9 | `src/agent-tools/recent-changes.mjs` | 24 |
+| U10 | `src/provider/anthropic.mjs` | 225 |
+| U10 | `src/provider/core.mjs` | 476 |
+| U10 | `src/provider/errors.mjs` | 101 |
+| U10 | `src/provider/google.mjs` | 257 |
+| U10 | `src/provider/index.mjs` | 7 |
+| U10 | `src/provider/normalize.mjs` | 81 |
+| U10 | `src/provider/responses.mjs` | 495 |
+| U10 | `src/provider/retry.mjs` | 88 |
+| U10 | `src/provider/sse.mjs` | 264 |
+| U10 | `src/provider/list-models.mjs` | 93 |
+| U10 | `src/provider/rate.mjs` | 108 |
+| U10 | `src/model-specs.mjs` | 179 |
+| U10 | `src/model-ref.mjs` | 66 |
+| U10 | `src/proxy.mjs` | 261 |
+| U10 | `src/abort-provenance.mjs` | 116 |
+| U11 | `src/session.mjs` | 492 |
+| U11 | `src/session-slots.mjs` | 492 |
+| U11 | `src/session-store.mjs` | 441 |
+| U11 | `src/session-gc.mjs` | 221 |
+| U11 | `src/session-segments.mjs` | 100 |
+| U11 | `src/session-guard.mjs` | 59 |
+| U11 | `src/session-migrate.mjs` | 47 |
+| U11 | `src/session-rename.mjs` | 38 |
+| U11 | `src/agent-tools/read-history.mjs` | 309 |
+| U12 | `src/advisor.mjs` | 290 |
+| U12 | `src/advisor/citations.mjs` | 139 |
+| U12 | `src/advisor/compaction.mjs` | 174 |
+| U12 | `src/advisor/loop.mjs` | 293 |
+| U12 | `src/advisor/messages.mjs` | 299 |
+| U12 | `src/advisor/project-context.mjs` | 194 |
+| U12 | `src/advisor/repos.mjs` | 150 |
+| U12 | `src/advisor/run.mjs` | 293 |
+| U12 | `src/agent-tools/advisor.mjs` | 260 |
+| U12 | `src/agent-tools/advisor-async.mjs` | 346 |
+| U12 | `src/agent-tools/advisor-settle.mjs` | 231 |
+| U12 | `src/agent-tools/design-token.mjs` | 117 |
+| U12 | `src/agent-tools/consult.mjs` | 473 |
+| U12 | `src/agent-tools/review-streak.mjs` | 93 |
+| U12 | `src/agent-tools/subagent-panel.mjs` | 160 |
+| U12 | `src/agent-tools/escalate-async.mjs` | 295 |
+| U13 | `src/tools/bash.mjs` | 268 |
+| U13 | `src/tools/checklist.mjs` | 299 |
+| U13 | `src/tools/checklist-sync.mjs` | 181 |
+| U13 | `src/tools/edit-batch.mjs` | 191 |
+| U13 | `src/tools/edit-diff.mjs` | 348 |
+| U13 | `src/tools/execute.mjs` | 228 |
+| U13 | `src/tools/file.mjs` | 469 |
+| U13 | `src/tools/git.mjs` | 356 |
+| U13 | `src/tools/glob-dialect.mjs` | 130 |
+| U13 | `src/tools/index.mjs` | 35 |
+| U13 | `src/tools/linter.mjs` | 128 |
+| U13 | `src/tools/lsp.mjs` | 316 |
+| U13 | `src/tools/ops.mjs` | 299 |
+| U13 | `src/tools/patch.mjs` | 282 |
+| U13 | `src/tools/question.mjs` | 26 |
+| U13 | `src/tools/repomap.mjs` | 314 |
+| U13 | `src/tools/search.mjs` | 236 |
+| U13 | `src/tools/shared.mjs` | 446 |
+| U13 | `src/tools/tree.mjs` | 65 |
+| U13 | `src/tools/web.mjs` | 224 |
+| U14 | `src/config.mjs` | 496 |
+| U14 | `src/config-migrate.mjs` | 70 |
+| U14 | `src/agent-tools/settings.mjs` | 265 |
+| U15 | `src/agent.mjs` | 417 |
+| U15 | `src/agent/completion.mjs` | 146 |
+| U15 | `src/agent/dispatch.mjs` | 489 |
+| U15 | `src/agent/helpers.mjs` | 384 |
+| U15 | `src/agent/post-turn.mjs` | 70 |
+| U15 | `src/agent/record-results.mjs` | 174 |
+| U15 | `src/agent/relay-prefix.mjs` | 39 |
+| U15 | `src/agent/run-stages.mjs` | 244 |
+| U15 | `src/agent/setup.mjs` | 354 |
+| U15 | `src/agent/setup-reminders.mjs` | 69 |
+| U15 | `src/agent/spawn-child.mjs` | 243 |
+| U15 | `src/auto-think.mjs` | 115 |
+| U15 | `src/hooks.mjs` | 97 |
+| U15 | `src/explore-distill.mjs` | 155 |
+| U15 | `src/markdown.mjs` | 106 |
+| U15 | `src/expand-home.mjs` | 16 |
+| U15 | `src/prompt-overlays.mjs` | 82 |
+| U16 | `src/agent-tools/subagent.mjs` | 404 |
+| U16 | `src/agent-tools/subagent-run.mjs` | 205 |
+| U16 | `src/agent-tools/subagent-scheduler.mjs` | 391 |
+| U16 | `src/agent-tools/subagent-async.mjs` | 434 |
+| U16 | `src/agent-tools/subagent-actions.mjs` | 481 |
+| U16 | `src/agent-tools/subagent-spawn.mjs` | 459 |
+| U16 | `src/agent-tools/async-settle.mjs` | 204 |
+| U16 | `src/token-ttl.mjs` | 274 |
 
 **（四）单元内固定四步与共同验收（逐单元同形）**
 
@@ -972,7 +973,7 @@ node -e "console.log(JSON.parse(require('child_process').execFileSync(process.ex
 ```
 
 **判读口径**：① = **主计数**（该产品的剩余待迁档数；**判据档 = 本档（三）逐档清单**——即清单里仍存在者的条数，随单元推进单调递减）；② = **交叉核对**（同路径对 = CLI 与 VSC 的合并读数）。
-**基线锚（as-of 2026-09-14）**：① = **170**（130 / 40）· ② = **104**；族 1（CLI 半边）已消费 **3 档 / 3 对**（起点 = 173 / 107）。
+**基线锚（as-of 2026-09-14）**：① = **170**（130 / 40）· ② = **104**；族 1（CLI 半边）已消费 **3 档 / 3 对**（起点 = 173 / 107）。**口径说明（防再踩）**：本区读数 = **档数 / 对数**（非行数——不受行数口径影响）；旧行数读数的换算 = 按档数减 1（见（二）表后「行数口径注」）。
 
 **（八）前置门与阻塞**
 
@@ -1886,5 +1887,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
   ⑤ §2.6.3（二）U2「改指」列折入 6 个改档（合计 340 → **346**）· 同节补「改指列口径注」与「行数口径注」。
   ⑥ §2.8 / §2.8.1 加 **as-of 戳**（2026-09-14）并按实核收正本档行读数 · 本档行数 329 → **1857**。
   ⑦ §2.6.3 补 **U2 专项补 ⑦**（入口面覆盖）+ §2.13.8（六）与 §2.13.7⑤ 同轮补注。
+- 2026-09-14（**行数口径收正轮 · eng-designer**——承上轮未决「§2.6.3（二）（三）行数口径待重排」、父侧裁定 = 重排）：§2.6.3 行数全表改 **`wc -l` 口径**——（三）170 档逐档 −1（合计 **29643 → 29473**）· （二）16 单元逐单元 −N（N = 该单元档数；合计行 **170 / 29473 / 346**；改指列不动）；
+  （一）行数声明改真（口径锚 = `thincoder-core/test/core-hygiene.test.mjs:98`）· 「行数口径注」改写为换算注（旧读数 = 编辑器末行口径 = `wc -l` + 1 ⇒ 按档数减 1；U2 **1452 → 1412**）· （七）补口径说明（读数 = 档数 / 对数，不受行数口径影响）。
 
 
