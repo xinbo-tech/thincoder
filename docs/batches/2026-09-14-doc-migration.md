@@ -663,6 +663,83 @@ web 工具已改**逐次调用** `args.proxy`（`thincoder-core/tools/web.mjs:10
 
 **§2 形态修正（同日 · 本角色 · 零语义）**：订正段 1 行超宽 → 纯折行（去空白逐字节相同）；§七-6 引文改写（旧形态 = 直挂已拆出的 §6.7.2/§6.7.3 节号 ⇒ 改为「母档旧节号」表述——消 V1 段引用误报（`AGENT-LOOP.md` 已无该二节）；本行亦不再携该旧形态字面）；复跑 `check-doc-width` = OK（381 文件 · 一致性新增违规 0）✓。
 
+### 尾部批 · 剩余「后续批」档实核（2026-09-15 · eng-designer · 段作者 = 本角色）
+
+**目标**：取迁移台账 §2 判为「后续批」的活档 ≤8 档实迁入基准层（重派——原 spawn 排队丢失；方法 = B 式，同前批）。
+**判据依据**：`docs/core/design/DOC-SYSTEM.md` §5.1（P1–P5）· §4 · §6——判据句住该档，本段不重述（D2）。
+**硬纪律命中**：「本批某档若已存在或与他线同名 ⇒ 跳过、留待下一批（不抢）」——**本批全程命中此条**。
+
+#### 一、取材与实核（逐档：台账行 → 实核判 → 结局）
+
+台账剩余「后续批」= **15 档**（设计 5 / 需求 10，§5 闭合 49+16+0+4+0+15=84）。逐档对根层现状实核（as-of 2026-09-15）：
+
+| # | 台账行 | 档 | 实核判 | 结局 |
+|---|---|---|---|---|
+| 1 | §2.2 #10 | req/DESIGN-TOKEN-SETTLEMENT | 活 · P1；spawn 时根层无档，**落笔窗口内 VSC 批 5 同名新建**（磁盘现态 = 他线版本，74 行） | **撞车跳过**——本角色草稿被覆盖后**不夺回** |
+| 2 | §2.2 #11 | req/ENG-TOKEN-BINDING | 同上（VSC 批 5 版 73 行在位） | **撞车跳过** |
+| 3 | §2.2 #21 | req/PORTABILITY | 同上（VSC 批 5 版 77 行在位） | **撞车跳过** |
+| 4 | §2.2 #22 | req/PROJECT | 同上（VSC 批 5 版 83 行 + 拆出 `docs/vsc/requirements/PROJECT.md`；档头自注「CLI 侧同名档未迁，迁入时对账合并」） | **撞车跳过** |
+| 5 | §2.2 #37 | req/VERIFY-REDESIGN | 活 · P1；**同名根档已由 VSC 批 5 新建**（在途未提交）⇒ 与原登记「并入既有 `req/TOOLS.md`」**两读冲突** | **撞车跳过**；本角色对 `req/TOOLS.md` 的 §4.6 并入草稿**已 restore 回转**——落点待父侧裁定 |
+| 6–10 | §2.2 #4 / #18 / #19 / #27 / #28 | req/AGENT-PARAMS · MULTI-INSTANCE-COLLAB · NORMAL-MODE · SETTINGS-TOOL · STRUCTURE-DEBT | 同名根档**已由 VSC 批 4 建**（commit `e29afe23`） | **同名跳过**（不抢） |
+| 11–13 | §2.1 #17 / #32 / #44 | design/ESCALATE · SEND-STALL-DISTILL · TURN-CAP-CONTINUE | 同名根档**已由 VSC 批 3 建**（commit `9b31da9b`） | **同名跳过**（不抢） |
+| 14–15 | §2.1 #24 / #34 | design/MULTI-INSTANCE-COLLAB · SETTINGS-TOOL | 设计侧根层仍无档，但**需求侧同名根档已由 VSC 批 4 建**（同话题他线在写面） | **同名跳过**（保守——不抢同话题） |
+
+**本批实迁 = 0 档**（15/15 全数命中「不抢」）。**撞车事件如实登记**：本角色的 4 个新建草稿在写入后被 VSC 线同路径重写覆盖（写窗撞车）；磁盘现态 = 他线完整版本，**无数据损失**；本角色未再触碰该 4 档，并把已落笔的 `req/TOOLS.md` §4.6 与本批台账判栏翻转一并 **git restore 回转**（快照 `mu1mrf49-bg4x` / `mu1mrjm1-mf1j` 在案）。
+
+#### 二、本批落笔（只剩台账转形态登记——`docs/core/design/DOC-MIGRATION.md` 一档）
+
+| 项 | 内容 |
+|---|---|
+| §2.1 五行（#17 / #24 / #32 / #34 / #44） | 判栏**保持「后续批」**；依据列补「同名根档已由 VSC 批 3 / 批 4 建」实核；动作列改「转**并入既有**，归下一批」（#24 / #34 = 下一批实核定形态） |
+| §2.2 十行（#4 / #10 / #11 / #18 / #19 / #21 / #22 / #27 / #28 / #37） | 同上（VSC 批 4 / 批 5 已建同名根档）；**#37 VERIFY-REDESIGN 落点两读待父侧裁定**（并入同名根档 ⇄ 并入 `req/TOOLS.md`） |
+| §6 批 6a 行 | **一致性收正**：补 ESCALATE（原缺分组——实核 §2.1 #17 为后续批却不在任何组）+ 转形态注记 |
+| §6 批 6b 行 | 剔 TESTING 印刷残留（第 4 批已迁）+ 注记全量 10 档转「并入既有」 |
+| §5 小计 | **不变**（49 / 15 仍闭合——本批 0 迁） |
+| §8 体量 | 214 → **218 行**（实核） |
+| 变更记录 | +1 行（本批实核与转形态登记 · 0 迁 · 撞车与回转留痕） |
+
+#### 三、受影响文件（R24a · 实核）
+
+| # | 档 | 改前→改后 | 动作 |
+|---|---|---|---|
+| 1 | `docs/core/design/DOC-MIGRATION.md` | 214 → **218** | 实修（转形态登记 + 变更记录） |
+| 2 | 本批次档 §2 | — | append 本段 |
+| — | `docs/core/requirements/{DESIGN-TOKEN-SETTLEMENT,ENG-TOKEN-BINDING,PORTABILITY,PROJECT,VERIFY-REDESIGN}.md` · `docs/vsc/requirements/PROJECT.md` | — | **他线在写档——本角色零触碰**（草稿被覆盖后不夺回） |
+| — | `docs/core/requirements/TOOLS.md` | — | 草稿 **restore 回转**（落点两读待裁） |
+| — | `thincoder-cli/docs/**` · `scripts/**` · `docs/TODO.md` · `docs/cli/**` · `docs/vsc/**` · 两产品树 · 核树 · prompts | — | **零写入**（实核 `git status`：本角色写域 = 台账一档） |
+
+#### 四、验收读数（as-of 2026-09-15 本批实测）
+
+| # | 验收标准 | 读数 | 判 |
+|---|---|---|---|
+| F1 | `node scripts/doc-anchors.mjs` 域一悬空 | **FAIL 6 条——全在他线在写档**（VSC 批 5 的 DESIGN-TOKEN-SETTLEMENT:73 · ENG-TOKEN-BINDING:54 · PORTABILITY:25 ×2 · PROJECT:59 + `docs/vsc/requirements/PROJECT.md:54`）；**本批供给 0**（本批唯一写域 = 台账，零新锚）。CLI 域 FAIL 1 = 既有（`TWO-REPO-MERGE.md:404`，前批已登记）。VSC 域 21 处报告态（非阻断） | ⚠ 他线在写 ⇒ 有变如实报 |
+| F2 | `node scripts/check-doc-width.mjs` 宽度 | `OK(宽度)` 398 文件 · 0 行 >300 字符；**一致性 V1 新增 3 条——全在他线在写档**（VSC 批 5 的 PORTABILITY ×2 · VERIFY-REDESIGN ×1——引用不存在档 / 节）；本批供给 0 | 宽度 ✓ · 一致性 ⚠（他线自产） |
+| F3 | `node scripts/check-ledger.mjs` | 两档 OK · 0 处违规 · 基线 0 条 · exit 0 | ✓ |
+| F4 | 台账小计闭合 | 49+16+0+4+0+15 = 84 ✓（设计 47 / 需求 37 双向闭合——本批 0 迁，小计不变） | ✓ |
+| F5 | 逐档 ≤500 | 本批无新档；台账 218 行 | ✓ |
+| F6 | `git status` 本批 ⊆ 写域 | 本角色写域 = `docs/core/design/DOC-MIGRATION.md` 一档 + 本段；其余改动（6 个 untracked + `COMPETITIVE_ANALYSIS.md`）皆他线 | ✓ |
+
+#### 五、未决与打回（不静默处置）
+
+| # | 项 | 归属 / 处置 |
+|---|---|---|
+| 1 | **VERIFY-REDESIGN 需求侧落点两读**：CLI 台账原登记「并入既有 `req/TOOLS.md`」（D-V5 接管面）⇄ VSC 批 5 已新建同名根档 `docs/core/requirements/VERIFY-REDESIGN.md` | **语义面——待父侧裁定**；本批已回转 `req/TOOLS.md` 草稿，台账 #37 行已登记两读 |
+| 2 | **两线撞车事实**：VSC 批 5 落点（其 §8A「待父侧另批」清单的 6 档）与 CLI 尾部批取材完全重叠——VSC-MIGRATION §8A 标注「待父侧另批」却已落笔 | **父侧**——请裁定该类档的归属线（VSC 新建 + CLI 并入既有，还是单线成对迁移）；本批已按「不抢」执行 |
+| 3 | 剩余 15 档**全部**转为「并入既有 / 待裁定」形态 ⇒ 下一批 = 逐档把 CLI 侧独有内容并入他线已建根档（含对账合并——如 PROJECT 档头自注） | 下一批取材指引已写入台账 §2 动作列 + §6 |
+| 4 | VSC 批 5 在途档自产机检红面（域一悬空 6 + 一致性 V1 新增 3） | **他线 / 父侧**——本角色零触碰，读数如实登记（§四 F1 / F2） |
+| 5 | 设计侧 4 档（`design/{DESIGN-TOKEN-SETTLEMENT,ENG-TOKEN-BINDING,PORTABILITY,VERIFY-REDESIGN}.md`）档头「CLI 树需求档未迁（后续批）」指针在下一批并入后转 stale | 下一批随迁收正（本批 0 迁，未触发） |
+
+#### 六、边界（本批不做）
+
+1. **`thincoder-cli/docs/**` 一字不改**（B 式只读参照——实核 `git status` 零改动）。
+2. **不夺回他线在写档**（4 个同名根档 + `docs/vsc/**`）；不动 `scripts/**` · `docs/TODO.md` · `docs/cli/**` · 两产品树 · 核树 · prompts。
+3. **不 commit · 不发起评审**（发起权 = 用户）。
+4. **不替他线修机检红面**（VSC 批 5 自产 6+3 条——登记上报）。
+
+#### 七、三方条目一致
+
+**本段条目（0 档实迁 + 台账转形态登记 15 行 + 批 6a/6b 收正）= 迁移台账 §2.1 / §2.2「后续批」15 行的动作列更新（判栏不变）= 需求档既有条目回指**（`docs/core/requirements/DOC-SYSTEM.md` FR1–FR8 / N1–N4）；本批**不新增需求条目、无范围增减**（实迁为 0——全部命中「不抢」纪律，留待下一批以「并入既有」形态落地）。
+
 ## §3 评审发现（评审子代理）
 
 _（待写）_
