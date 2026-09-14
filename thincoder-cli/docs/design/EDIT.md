@@ -8,7 +8,7 @@
 
 edit = **按精确区域替换/删除文件内容**——主编辑工具。两种定位形态（互斥）+ 三级匹配 + 判定序 4 分支（见 §4）+ **删行形态**（行号 + 省略 new_string——见 §5 矩阵）。面向场景：知道要改/删哪一行或哪一段、或能给出当前内容——精确改。
 
-**不是**：插入新行（→ insert_after）、按内容哈希行定位（→ hashline_edit）、整块 diff 多文件（→ apply_patch）、整文件重写（→ write）。路由在模型可见描述（`src/tools/edit.md`）的 Routing 段。
+**不是**：插入新行（→ insert_after）、按内容哈希行定位（→ hashline_edit）、整块 diff 多文件（→ apply_patch）、整文件重写（→ write）。路由在模型可见描述（`thincoder-core/tool-docs/edit.md`）的 Routing 段。
 
 ## 2. 参数与 schema
 
@@ -22,7 +22,7 @@ editTool（`file.mjs` editTool 对象）：
 - `replace_all`——字面替换每处（内容形态 only；行号形态不适用）。
 - `edits`（数组批量）——`[{path?, old_string?, new_string?, line?, startLine?, endLine?, replace_all?}]`（条目同顶层形态语义——行号条目 new_string 省略 = 删）；互斥：edits 与顶层 old/new/line/startLine/endLine。
 
-schema 与描述的逐字契约：`src/tools/edit.md` 是模型可见文本（运行时经 DESC() 加载为 description），与本文档语义一致——两处维护点，改语义须同改。
+schema 与描述的逐字契约：`thincoder-core/tool-docs/edit.md` 是模型可见文本（运行时经 DESC() 加载为 description），与本文档语义一致——两处维护点，改语义须同改。
 
 ## 3. 匹配档位（D2——内容形态）
 

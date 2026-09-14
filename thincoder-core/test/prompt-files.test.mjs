@@ -5,7 +5,8 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { readdirSync } from "node:fs"
+import { readdirSync, readFileSync } from "node:fs"
+import { join } from "node:path"
 import {
   PROMPTS_DIR,
   TOOL_DOCS_DIR,
@@ -105,9 +106,49 @@ test("user ruling #44 — advisor-design keeps the general wording 'the document
 test("user ruling #47 — persona-engineering carries the union title + the cross-end injection slot", () => {
   const s = loadSlot("persona-engineering.md")
   assert.ok(s.includes("## 与 eng-designer / eng-coder 的分工界面（设计写作面归 eng-designer）"))
-  assert.ok(s.includes("AGENT-LOOP{{inject:agent-loop-pointer}}"))
+  assert.ok(s.includes("in-child advisor code review, {{inject:agent-loop-ptr-engineering-delivery}})"))
   // 契约 10：核档不得把某一端的指针形态写死
   assert.ok(!s.includes("本端交付协议节 = §8"))
+})
+
+// ─── §2.13.7⑥ 锚名集合与指针族（核内可机判——S2 落位）────────────────────────────
+
+/** 核内全部注入锚（`{{inject:<name>}}`——合法文法面）逐名扫出。 */
+function scanAnchorNames() {
+  const names = []
+  for (const dir of [PROMPTS_DIR, TOOL_DOCS_DIR]) {
+    for (const f of readdirSync(dir)) {
+      const text = readFileSync(join(dir, f), "utf8")
+      for (const m of text.matchAll(/\{\{inject:([a-z0-9-]+)\}\}/g)) names.push(m[1])
+    }
+  }
+  return names
+}
+
+test("§2.13.7⑥ 锚名去重集合 = 13 · 旧名单锚零命中 · agent-loop-ptr-* 恰 5 名 / 5 处", () => {
+  const names = scanAnchorNames()
+  assert.equal(new Set(names).size, 13, "锚名去重集合 = 13")
+  assert.equal(names.filter((n) => n === "agent-loop-pointer").length, 0, "旧名 agent-loop-pointer 零命中")
+  const ptr = names.filter((n) => n.startsWith("agent-loop-ptr-"))
+  assert.equal(ptr.length, 5, "agent-loop-ptr-* 恰 5 处")
+  assert.deepEqual([...new Set(ptr)].sort(), [
+    "agent-loop-ptr-async-note",
+    "agent-loop-ptr-async-spawn",
+    "agent-loop-ptr-eng-coder-delivery",
+    "agent-loop-ptr-engineering-delivery",
+    "agent-loop-ptr-escalate",
+  ], "agent-loop-ptr-* 恰 5 名")
+})
+
+// ─── U2 核内笔（§2.6.3（六））：advisor 加载面走核内单一解析面（结构机检·fail-closed）──
+
+test("U2 核内笔：advisor.mjs 零私持加载器 / 四常量经 loadAdvisorPrompt（契约 8 / D-C13）", () => {
+  const src = readFileSync(new URL("../advisor.mjs", import.meta.url), "utf8")
+  assert.ok(!src.includes("function loadPrompt"), "私持 loadPrompt 已删")
+  assert.ok(!src.includes("__dirname"), "自持路径运算已删（调用方不做路径运算——契约 8）")
+  assert.ok(!/readFileSync\s*\(/.test(src), "无自持 readFileSync")
+  const uses = (src.match(/loadAdvisorPrompt\(/g) ?? []).length
+  assert.ok(uses >= 4, `四常量改经 loadAdvisorPrompt（实际命中 ${uses}）`)
 })
 
 // ─── U0 锚替换原语（CORE-UNIFICATION §2.13.8「核内缝」——三态 + 单遍 + 多余键）──────────

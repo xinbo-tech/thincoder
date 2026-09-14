@@ -229,8 +229,11 @@ test("T73 正常：宽度表格行豁免——表格行零报告 / 非表格超�
 const RETIRED_PROMPT_FILES = ["system.md", "engineering.md", "engineering-sub.md", "main.md", "discipline.md", "methodology-template.md", "eng-coder.md", "explore.md", "coder.md", "plan.md"]
 
 test("T75 防回潮（收归族）：退役提示词文件未复活（双源两面——原 async-guidance / eng-designer-role）", () => {
-  for (const dir of ["src/prompts", "docs/design/prompts"]) {
-    for (const f of RETIRED_PROMPT_FILES) assert.ok(!existsSync(join(REPO, ...dir.split("/"), f)), `${dir}/${f} 已退役——不应存在`)
+  // U2（CORE-UNIFICATION §2.6.3）：英文落地面随迁移改指核包（`thincoder-core/prompts/`）；
+  // 中文权威面 `docs/design/prompts/` 原地保留（裁定 B）。
+  const faces = [join(REPO, "..", "thincoder-core", "prompts"), join(REPO, "docs", "design", "prompts")]
+  for (const dir of faces) {
+    for (const f of RETIRED_PROMPT_FILES) assert.ok(!existsSync(join(dir, f)), `${dir}/${f} 已退役——不应存在`)
   }
 })
 

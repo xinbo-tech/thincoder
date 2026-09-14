@@ -10,6 +10,9 @@
  * 头部自持（零跨档 import——D-2 契约）：imports + read/exists 助手 + 语料读取 + NEW_PROMPTS 常量。
  * 纯文件读取 + 字符串匹配——快层 glob 自动发现直跑。
  *
+ * U2（CORE-UNIFICATION §2.6.3）：英文落地面已随迁移改指核包（`thincoder-core/prompts/`——
+ * `src/prompts/` 已删；中文权威面 `docs/design/prompts/` 原地保留，裁定 B）——本档面内改判。
+ *
  * 并档注（2026-09-11 TEST-LIFECYCLE 扫①——设计档 TESTING.md §7.2 #2）：原 prompts-normal-audit.test.mjs
  * 并入（源档随并删除）；并入条款锚族已随 2026-09-12 散文锚退役批整删。
  */
@@ -22,6 +25,9 @@ import { fileURLToPath } from "node:url"
 const __here = dirname(fileURLToPath(import.meta.url))
 const read = (rel) => readFileSync(join(__here, "..", rel), "utf8")
 const exists = (rel) => existsSync(join(__here, "..", rel))
+// U2：英文落地权威位 = 核包（`thincoder-cli/../thincoder-core/prompts/`）。
+const readCore = (name) => read(`../thincoder-core/prompts/${name}`)
+const existsCore = (name) => exists(`../thincoder-core/prompts/${name}`)
 
 // 新 15 文件全集（PROMPT-SYSTEM §2 命名法——AC21 断言面：designer 档须在册）
 const NEW_PROMPTS = [
@@ -34,12 +40,12 @@ const NEW_PROMPTS = [
 // 第 2 批锚（ENGINEERING-MODE §2.15/§2.16/§2.19）：AC21 双源槽文件存在性 + 头注格式
 // （其余锚族已随 2026-09-12 散文锚退役批整删）。
 // ─────────────────────────────────────────────────────────────────────────────
-const pdes = read("src/prompts/persona-eng-designer.md")
+const pdes = readCore("persona-eng-designer.md")
 const pdesZh = read("docs/design/prompts/persona-eng-designer.md")
 
 test("AC21 新槽文件双源齐备 + 已入 NEW_PROMPTS（首行头注合格式——漏入则格式/宽行断言不覆盖）", () => {
   assert.ok(NEW_PROMPTS.includes("persona-eng-designer.md"), "已入 NEW_PROMPTS（15 文件全集）")
-  assert.ok(exists("src/prompts/persona-eng-designer.md"), "英文落地位")
+  assert.ok(existsCore("persona-eng-designer.md"), "英文落地位（核包）")
   assert.ok(exists("docs/design/prompts/persona-eng-designer.md"), "中文权威位")
   assert.match(pdes.split("\n")[0], /^<!-- slot:\[1\] consumers:\[.+\] -->$/, "英文落地头注格式")
   assert.match(pdesZh.split("\n")[0], /^<!-- 槽位:\[1\] 消费方:\[.+\] -->$/, "中文权威头注格式")
@@ -67,9 +73,9 @@ test("T-RO6 边界：时序文本零维护者注（§2.7 #15——旧三值句/�
 // 第 15 批锚（PROMPT-SYSTEM 公共层扩容）：保留 T-CL1（## 块计数）。标题组 / 关键句 /
 // C8 人格段与旧源清零驻留断言已随 2026-09-12 散文锚退役批整删。
 // ─────────────────────────────────────────────────────────────────────────────
-const commonEn = read("src/prompts/common.md")
+const commonEn = readCore("common.md")
 const commonZh = read("docs/design/prompts/common.md")
-const COMMON_PAIR = [["src（英文落地）", commonEn], ["docs/design/prompts（中文权威）", commonZh]]
+const COMMON_PAIR = [["thincoder-core（英文落地）", commonEn], ["docs/design/prompts（中文权威）", commonZh]]
 // 计数口径（设计 §1.2）：10 节 = 内容项数；## 块 11（工具观承载 2 块：工具观 + 工具路由表）
 
 test("T-CL1 正常：common 十节标题双源驻留（11 个 ## 块 = 10 节口径——两源同一字面串）", () => {

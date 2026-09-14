@@ -8,7 +8,6 @@ Notes:
 - The agent loop pauses until the user answers
 - The answer is injected as the next user message
 - Returns the user's answer — the chosen option or free text — as the next message; the loop resumes when it arrives.
-- Availability: this tool needs an interactive UI — in contexts without one (headless runs, subagent children) it returns an error instead of asking; put the question in your reply text instead.
 {{inject:question-ui-face}}
 - Use sparingly — prefer making reasonable decisions when possible
 - Ask ONE question per call — never bundle multiple sub-questions into one question string; ask the next one after the answer arrives.

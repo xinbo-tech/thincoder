@@ -169,7 +169,7 @@
   批准请求中，裁决表的 `Dispatched` 行须已逐条收敛为 `Fixed`（随请求给出落地证据：file:line 或设计档节）。
 - 轮次衰减：Round 2 verifies the prior table + flags obvious new issues; round 3+ strictly verifies only the prior table (no new-issue hunting). Max 5 rounds total.
   When the advisor reports all clear (no 🔴 remaining), run `verify`.
-- 异步锚句：**Advisor calls are async by default at the top level (AGENT-LOOP{{inject:agent-loop-pointer}} §11.2 — R13).**（该节号 = CLI 侧；各端对应节号见本端）
+- 异步锚句：**Advisor calls are async by default at the top level ({{inject:agent-loop-ptr-async-note}} — R13).**（该节号 = CLI 侧；各端对应节号见本端）
   On approval the design token is issued to the session automatically and the digest echoes the designId for the eng-coder spawn.
 
 ### 交付链收口

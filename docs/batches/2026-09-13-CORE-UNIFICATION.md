@@ -4260,5 +4260,122 @@ D 类（#70 · #83）· F 类（#111 · #149–#153 · #155 · #157 · #103 · #
 
 **收正注（同轮 · 首版后置）**：首版 §5 的机器门命中已就地收正——V2 计数声明不符行改无计数表述（语义不变）；超宽行仅插换行、文字零改。
 
+### 实施：S2 U2 —— 提示词面单元落轮（2026-09-14 · eng-coder）——**终态 = clean**
+
+**段位**：当前段 = **S2（CLI 迁移单元 U2）**。写域 = CLI 侧（3 加载根改指 + 入口供值 + 40 档删除 + 3 测试档改指 + 2 新测试档 + 16 行文档锚改指）+ **核内**（advisor 加载面核内笔 1 档 + **锚面动作 4 档 + question 1 档 + 测试同步 1 档**——超出「核内笔 1 档」记账面，**主动披露**：理由与依据见下「③ 核内锚面动作」——U2 验收②③⑦ 的机械前提）。**VSC 零触碰**；未 commit（父侧统一）；未碰台账；未改设计 / 需求档（写权 = eng-designer）。
+**依据** = `docs/design/CORE-UNIFICATION.md` §2.6.3（U2 行 `:711` +（四）四步与共同验收 `:910-924` +（六）核内笔 `:961-963` +（七）计数）+ 专项验收①–⑦（`:930` · `:938-939`）+ §2.13.2「CLI 列」13 名（`:1272-1286`）+ §2.13.6 缺口 2 / 3 / 4 定稿形态（`:1410-1422`）+ §2.13.7（`:1430-1440`）+ §2.13.8（`:1442-1512`）；父侧 U2 任务书。
+
+**改动面**（行数 = `wc -l` 口径实核：改前 = HEAD）
+
+| # | 档 | 行数（改前 → 改后） | 改动 |
+|---|---|---|---|
+| 1 | `thincoder-cli/src/prompt-overlays.mjs` | 82 → **79** | 槽位加载根改指核（`loadSlot`）+ 两个 return 逐条经 `applyPromptInjections` |
+| 2 | `thincoder-cli/src/tools/shared.mjs` | 446 → **449** | `DESC` 改经核 `loadToolDoc`；`toOpenAISchema` 对 `description` 经原语 |
+| 3 | `thincoder-cli/src/advisor.mjs` | 290 → **280** | 私持 `loadPrompt` / fs 路径运算删除；四常量改经核 `loadAdvisorPrompt` |
+| 4 | `thincoder-cli/bin/thincoder.mjs` | 414 → **421** | 入口：任何装配之前 `configurePromptInjections(CLI_PROMPT_INJECTIONS)`（+imports） |
+| 5 | `thincoder-cli/src/prompt-injections.mjs`（新建） | 0 → **36** | §2.13.2「CLI 列」13 名取值表（含显式空串——**不是省略**） |
+| 6 | `thincoder-cli/src/prompts/*.md`（15）+ `src/tools/*.md`（25） | −**1412** | **删档**（40 档逐名对设计（三）清单逐档复核：0 不符；合计 `wc -l` = 1412 ✓） |
+| 7 | `thincoder-cli/test/prompts-dual-source.test.mjs` | 116 → **122** | 改指核（`readCore` / `existsCore` 助手 + 头注） |
+| 8 | `thincoder-cli/test/prompts-async-guidance.test.mjs` | 168 → **173** | 改指核；降级链夹具读盘目标 = 核包槽文件 |
+| 9 | `thincoder-cli/test/doc-consistency.test.mjs` | 265 → **268** | T75 双面改指（`thincoder-core/prompts/` + `docs/design/prompts/`） |
+| 10 | `thincoder-cli/test/prompt-injections-cli.test.mjs`（新建） | 0 → **97** | 快层：表⇔核锚名集合等值 / 七场景 + consult 零字面 + 取值在场 / 工具面 / 未配置恒等 |
+| 11 | `thincoder-cli/test/integration/cli-prompt-entry.test.mjs`（新建） | 0 → **99** | 集成：真 CLI 入口径（normal + engineering 两态）零字面 + 取值在场 |
+| 12 | `thincoder-cli/docs/{design×5, requirements×1}` | ±0 | 文档锚改指 **16 行**（`src/tools/*.md` → `thincoder-core/tool-docs/*.md`，仓根相对形态） |
+| 13 | `thincoder-core/advisor.mjs`（核内笔） | 294 → **283** | 私持 `loadPrompt` 删、四常量改经 `loadAdvisorPrompt`（契约 8 / D-C13；缺档语义不变 = 抛错——契约 9） |
+| 14 | `thincoder-core/prompts/{discipline-engineering,discipline-normal,persona-eng-coder,persona-engineering}.md`（核内锚面） | 263/192/39/55 → ±0 | 5 处指针锚改名（`agent-loop-ptr-*` 一处一锚）+ 删硬写 `AGENT-LOOP` 前缀与节号（整条指针语义——§2.13.6 缺口 2 定稿） |
+| 15 | `thincoder-core/tool-docs/question.md`（核内锚面） | 17 → **16** | `:11` CLI 措辞行移出正文、锚上移原位替换（缺口 4 定稿） |
+| 16 | `thincoder-core/test/prompt-files.test.mjs` | 146 → **187** | #47 断言同步新锚名 + §2.13.7⑥ 锚名集合机检 + U2 核内笔结构机检（fail-closed） |
+
+**① 逐处「改前 → 改后」**（坐标 = 终态）
+
+CLI 三加载根 + 入口（L1–L7）：
+
+| # | 位置 | 改前 → 改后 |
+|---|---|---|
+| L1 | `src/prompt-overlays.mjs:16` | 本地 `loadSlot`（`readFileSync(join(__dirname,"prompts",name))`）→ `import { loadSlot, applyPromptInjections } from "@thincoder/core/prompt-files.mjs"`（本地实现删，−9 行） |
+| L2 | `src/prompt-overlays.mjs:70` | `return { prompt: CONSULT_BASE, … }` → `… applyPromptInjections(CONSULT_BASE) …` |
+| L3 | `src/prompt-overlays.mjs:78` | `return { prompt: parts.join("\n\n"), … }` → `… applyPromptInjections(parts.join("\n\n")) …` |
+| L4 | `src/tools/shared.mjs:9,13` | `import { readFileSync, … }`+`DESC = readFileSync(join(__dirname,"..","tools",…))` → `import { loadToolDoc, applyPromptInjections } from "@thincoder/core/prompt-files.mjs"` + `export const DESC = (name) => loadToolDoc(name)` |
+| L5 | `src/tools/shared.mjs:167` | `description: tool.description,` → `description: applyPromptInjections(tool.description),` |
+| L6 | `src/advisor.mjs:45,61-72` | 私持 `loadPrompt`（`:63-69`）+ 三个 node: import + `__dirname` 删 → `const ADVISOR_ROUND1/2/3/DESIGN = loadAdvisorPrompt("advisor-roundN.md")` |
+| L7 | `bin/thincoder.mjs:30-36` | —— → 两 import + `configurePromptInjections(CLI_PROMPT_INJECTIONS)`（`const [command, …] = process.argv…` 之前） |
+| L8 | `src/prompt-injections.mjs`（新建） | 13 名键：`doc-map-path:""` · `agent-loop-ptr-async-note:"AGENT-LOOP.md"+「§11.2」` · `-async-spawn:"AGENT-LOOP.md"+「§18」` · `-escalate:"AGENT-LOOP §25"` · `-eng-coder-delivery:"AGENT-LOOP.md"+「§18」` · `-engineering-delivery:"AGENT-LOOP.md"+「§18」` · `discipline-normal-finish:""` · `discipline-normal-consult-stop:`（两句）· `discipline-engineering-change-surface-probe:`（三行节）· `-vsc-r14-pools:""` · `eng-coder-guidelines:""` · `bash-terminal-face:""` · `question-ui-face:`（CLI 措辞行）——长值逐条对 §2.13.2 CLI 列 + 档面原文交叉证（见 ④-A3） |
+
+**② 删旧三条读数（删前全过才删）**
+
+1. **改指已落盘**：L1–L7 落盘并冒烟（未配置 = 恒等 / 配置态八场景零字面 + 取值在场 / 工具面 / advisor 面——逐面实跑）。
+2. **该产品全链 exit 0（删前预跑）**：`npm test` 609/552/0/57 · `lint` 310 · `test:full` 609/609 · `integration` 24/24（均 exit 0）。
+3. **零引用反向判**（域 = `src` + `test` + `bin`，304 档全扫）：① 引号包裹本地相对路径形（`prompts/` / `tools/*.md`）= **0 违规**（4 命中全部 = `../thincoder-core/prompts/…` 新目标，合规）；② 裸 token 叙述 10 处 = 注释/来源记注/合成路径断言（登记见「未决 1」）。
+   **删后中间态**：`doc-anchors --domain thincoder-cli` = **16 悬空**（⇔ 设计预测同向；6 档 16 行，全部 `src/tools/*.md` 形态）→ 逐处改指 → **0**。
+
+**③ 核内锚面动作（超出记账面的披露 + 依据）**
+
+设计「U2 核内笔 = 1 档（advisor 加载面）」（§2.6.3（六））；本笔**另落**核内锚面 4 档改名 + question 1 档 + 核内测试 1 档，理由（逐条实核）：
+
+1. **机械前提**：CLI 表 = 13 名（§2.13.2）而核档现名 = 9 名（`agent-loop-pointer` 单锚 ×5）⇒ 只接线不落名字面装配**必抛错**（缺键 fail-loud），验收②③⑦不可能达标 ⇒ 改名/删节号/移行 = 设计登记的 **S2 动作**（§2.13.2 表后「核内须连带删节号的坐标 · 2026-09-14 登记」· 批次档 `:1935`「核内锚改名 / 删节号 / 移行（S2 动作）」），且为 VSC 列整条取值（`AGENT-LOOP（CLI 仓·设计）§18`）所必需。
+2. **形态全部取自设计定稿**（零自创）：5 锚名与逐处出现 = §2.13.2 表；删节号坐标 = 表后 5 行登记；整条指针语义 + 前缀归属 = §2.13.6 缺口 2「锚语义收窄为整条跨端指针…端侧注入完整指针」（若保留硬写 `AGENT-LOOP` 前缀，值注入即双前缀 `AGENT-LOOPAGENT-LOOP.md …`——T-04 首跑实测捕获，见「④-内部轮-审计 #1」）。
+3. **question.md** = 缺口 4 定稿形态（`:11` 行移出正文、锚上移原位替换）。
+4. **A4 口径**：本笔核内改动 = 1 笔（advisor 笔）+ 锚面 6 档，**已如实登记**为记账面收正项（未决 4）。
+
+（③ 续：**A1–A6 读数 + 内部轮 + 决策透明表 + 未决 + 轮次自证**，见下条）
+
+**④ A1–A6 读数（终态复跑 · 原样）**
+
+| # | 判据 | 读数 | 判 |
+|---|---|---|---|
+| A1 | CLI 全链 | `npm test`：tests **609** · pass **552** · fail **0** · skipped **57** · exit 0（基线 605/548/57 → +4 新用例，面内）；`lint`：check-syntax **310 file(s) OK**（307 + 3 新档；40 删档不在其内）；`test:full`：**609/609** · fail 0 · exit 0；`test:integration`：**25/25** · fail 0 · exit 0（23 + 2 新入口面用例）——**未涉面逐数不变**；改判面 = 新增 6 用例（快层 4 + 集成 2）逐条登记于改动面 #10/#11 | ✓ |
+| A2 | 零引用 | 反向判两式 **0 违规**（域 `src`+`test`+`bin` 304 档；40 档逐个实核不在树内；叙事提及 10 处 = 登记面）；运行面 = 全链 exit 0；锚面 = 悬空 0 | ✓ |
+| A3 | 文档锚 | `doc-anchors --domain thincoder-cli`：候选 **8870** · 悬空 **0** · 注记豁免 878 · `OK(V5)` exit 0 | ✓ |
+| A4 | 核内 | 除核内笔 1 档外**另有锚面 6 档**（见③披露）；核内 `node --test` = **173/173** · fail 0 · exit 0（基线 171 + §2.13.7⑥ + 核内笔结构机检 2 新用例）；核内改动逐档见改动面 #13–#16 | ✓（记账面差异已披露） |
+| A5 | 仓根三机检 | `doc-anchors`（全域）：域一 / 域二 均 `OK(V5): 0 条悬空锚` · exit 0；`check-doc-width`：**306 档无 >300 字符行** · exit 0；`check-ledger`：0 违规 · exit 0 | ✓ |
+| A6 | 链接 L1 | `npm ls @thincoder/core --json` exit 0 · version **0.1.0**；版本探针 `import('@thincoder/core/package.json')` = **0.1.0** | ✓ |
+
+**进度计数（设计 §2.6.3（七）① · 可复跑命令）**：**CLI 待迁 = 129**（169 − 40——U1 读数 169 见本档 `:4221`；U2 恰消费（三）清单 40 行）。父侧任务书的「169 − 43 = 126」与其列义不符（改指面/测试档不占（三）清单），**以实跑 129 为准**。
+
+**专项验收（①–⑦）落地读数**：① 档数 = 0（glob 零命中）② 配置态八场景 + 全部工具描述零 `{{inject:` 字面 + 未配置恒等（快层用例 + 集成入口径双证）
+③ CLI 列 13 名逐条在场且值对 §2.13.2：`discipline-normal-consult-stop` 两句与中文权威 `thincoder-cli/docs/design/prompts/discipline-normal.md:186-187` 一一对应、
+`question-ui-face` 与 `thincoder-cli/docs/design/ACP-CLIENT.md:344` **逐字同**、`change-surface-probe` 与 `thincoder-cli/docs/design/ENGINEERING-MODE.md:2217` 逐字同
+④ 三加载根全改经核 `prompt-files.mjs` ⑤ 三测试档改指落 ⑥ 核内 advisor 四常量经 `loadAdvisorPrompt` + 私持加载器零残留 ⑦ 入口面：真 CLI 子进程 + mock 端点（normal + engineering 两态）零字面 + 取值在场。
+
+**T-04 锚面缺陷与处置（首跑实测）**：5 指针锚「全名替换 + 保留硬写 `AGENT-LOOP` 前缀」组合产出前缀双写（`AGENT-LOOP` 紧贴全名 ⇒ 双份前缀 + 尾节号）——由 `prompt-injections-cli.test.mjs` 的**括号边界断言**（完整指针须以括号首尾合围的形态）首跑命中
+⇒ 按 §2.13.6「整条跨端指针」删核内硬写前缀，复跑 4/4 绿（该缺陷若只做子串断言即被掩盖——测试断言面按此加严）。
+
+**⑤ 内部轮（发现与处置）**
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **DIVERGENT** —— 命中 🔴 ×1：**U2 专项⑥ 核内笔未落**（`thincoder-core/advisor.mjs` 私持 `loadPrompt` 仍在、`loadAdvisorPrompt` 未接）——**属实**
+  （本笔初版只改了 CLI 半边 `src/advisor.mjs`，核内半边漏改；核测试面不覆盖该项故全绿未暴露）⇒ **修复轮 1 落修**（见改动面 #13）+ 补结构机检（#16 新增用例，fail-closed 防回潮）。
+  其余三类（静默简化 / 文档漂移 / 清单外改动）未命中；审计对「整条指针」改名的逐处回推与我核一致。审计限制如实登记（该席位无 shell / 无 git ⇒ 读数类未独立复跑；`_touchedFiles` 机械面失真——以本段为读数面）。
+- **advisor 代码评审 1 轮**（`type=code` · 阻塞）：**pass**（🔴 **0** · 🟡 3 · 🔵 3）。
+- **裁决表（6 项）**：**Fixed 1**（🔵#6 入口用例加 engineering 态变体——集成 25/25 复跑绿）；**Deferred 4**（🟡#1 降级链夹具置空核包唯一副本——正确修法 = 给解析面加测试缝，
+  与 D-C13「以 `import.meta.url` 为根、不依赖 cwd/环境变/包名」契约相抵 ⇒ 归设计面定夺（未决 2）；🟡#2 `AGENTS.md:21/:56/:12` 提示词面陈述滞后——设计已登记归口 `CORE-UNIFICATION.md:1046`，
+  U1 先例（本档 `:4229`）同判（未决 3）；🟡#3 设计面台账收正（消费方列 /（七）计数 / 已迁标记）（未决 4）；🔵#4 `discipline-engineering.md:172` 尾注「（该节号 = CLI 侧…）」硬写在核内——存量（S1 融合态），归 VSC 轮定夺（未决 5））；
+  **Not an issue 1**（🔵#5 CLI 半边 advisor 面未挂原语——现行锚 = 0 且该档随 U12 删，风险登记为 U12 前条件（未决 6））。
+- **轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 1（审计 🔴 落修 + 评审 #6 落修）；终态 **0 未决 🔴 → clean**。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 5 指针锚 = **整条指针值 + 核内删硬写前缀与节号**（非「保留前缀 + 后缀值」） | §2.13.6「锚语义收窄为整条跨端指针…端侧注入完整指针」+ §2.13.2 VSC 列整条取值（`AGENT-LOOP（CLI 仓·设计）§18`）；后缀读法对 VSC 必双前缀（不可行）。首跑双前缀实测佐证（T-04） |
+| 2 | 取值表落**独立模块** `src/prompt-injections.mjs` + 入口调用（非内联 bin） | 设计只定「调用时点 = 入口」；表入 bin 则测试无法 import 生产表（import 即执行入口）⇒ 表/调用分离、单一来源；「禁止别处零散配置」满足（13 名一处注册） |
+| 3 | CLI 半边 advisor 面**不挂** `applyPromptInjections` | 设计对该档只写「加载根改指」（§2.8 行 ±8）；advisor 四档现行锚 = 0（核内半边已由 U0 结构机检守）；该档随 U12 删除。备选 = 顺带挂上（无锚期纯增面） |
+| 4 | 核内锚面动作随 U2 落（非另起小单元） | 见③——验收②③⑦ 的机械前提 + S2 动作登记；单列会重演「双态存续」问题（与核内笔一致理由） |
+| 5 | 核内锚面附件（核内测试同步 + §2.13.7⑥ 机检）同批落 | 设计明写「改名后该断言须同步（S2 动作）」（`:1304`）；⑥ 系验收判据（`:1439-1440`），核内机检其自然落点 |
+| 6 | 文档锚改指 = 纯路径替换（`src/tools/*.md` → `thincoder-core/tool-docs/*.md`），as-of 语义保留 | U1 先例（本档 `:4197-4199`）；改后 `doc-anchors` 悬空 0 自证 |
+| 7 | 入口用例覆盖 normal + engineering 两态；「13 名逐条在场」由快层并集断言承载 | eng-coder 人格锚（2 名）只在子代理 spawn 可达（入口径不可达）⇒ 逐条在场的物理可达面 = 跨面并集（快层 `prompt-injections-cli.test.mjs` 全量断言）；入口径证「漏配可判」（normal 面即含 4 锚） |
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **叙事性旧路径提及（10 处 · 存量面）**：`src/advisor/{compaction:17,messages:4,repos:126}.mjs` · `src/agent/dispatch.mjs:188` · `src/agent-tools/verify.mjs:157` · `src/conventions.mjs:87` ·
+  `src/agent/setup.mjs:320`（用户可见句）+ `test/portability-classification.test.mjs:57-58`（合成路径断言，合法）——注释/文案级，非代码级引用（A2 射程外）；随各自单元（U12/U15）或文档维护批收正。
+2. **降级链夹具跨包置空面**（评审 🟡#1 · 设计面）：`test/prompts-async-guidance.test.mjs:100-110/:116-126` 置空核包唯一副本——正确修法（解析面测试缝）触 D-C13 契约 ⇒ 归设计面裁定形态。
+3. **`AGENTS.md` 提示词面陈述滞后**（评审 🟡#2 · 文档面）：`:21` 硬约束 + `:56` 模块图 + `:12` 地图行仍写「产品内双源 / `src/prompts/` 运行期落地物」——设计归口 `CORE-UNIFICATION.md:1046`（S2 文档工作流）；建议提前于 U13/U15。
+4. **设计面台账收正**（评审 🟡#3 · eng-designer）：§2.13.2「消费方」列 13 行「待 S2 接线」→ 已接线（CLI）· §2.6.3（七）计数 **129** · §2.5「已迁」标记 · §2.8 行数读数 ·（六）核内笔/锚面读数收正 + U2 记账面补登（核内锚面 6 档）。
+5. **核内 `:172` 尾注（S1 融合存量）**：`（该节号 = CLI 侧；各端对应节号见本端）` 硬写在核档；CLI 可见文本含该括注（与前态 CLI 原文有一句之差——属 S1 并集形态，随 VSC 轮按 §2.13.2 表后「并入同锚值」建议一并定夺，并登记为行为差）。
+6. **U12 前条件**：CLI `src/advisor.mjs` 的 face-4 未挂原语（现锚 = 0）——若 U12 前 advisor 档新增锚，须同批处理。
+7. **VSC 预存项**：`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`（M）= spawn 前既存改动，非本笔。
+
+**轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 1；A1–A6 终态读数见上表；终态 = **clean**；报告 ①–⑧ 见交付报告（父侧转呈）。
+
 ## §6 验证与收口（父代理）
 

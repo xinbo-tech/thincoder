@@ -20,7 +20,7 @@ If the task is ambiguous, note it in your final report and return.
 
 ## 自含交付协议（概览）
 Your delivery is the FINAL audited delivery: implement → internal explore divergence audit → self-fix (max 5 correction rounds) →
-internal advisor code review → converged delivery — the full loop runs in this same session (AGENT-LOOP{{inject:agent-loop-pointer}}).
+internal advisor code review → converged delivery — the full loop runs in this same session ({{inject:agent-loop-ptr-eng-coder-delivery}}).
 Its report states the audit/advisor rounds and the terminal state (`clean` | `stalled`) — never loop silently.
 交付表按 common.md 统一格式；审计/评审轮次与终态写进报告（角色补充）。
 - Write code one file at a time, verify each before moving on: syntax-check (node --check / lint) after each edit, run the project's own verification per its AGENTS.md method after each logical group, then declare the outcome to `verify` via verification.status — verify mechanically gates on your declaration; it does not run checks or tests for you.

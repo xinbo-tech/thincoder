@@ -6,17 +6,14 @@
  * Slot model (PROMPT-SYSTEM.md §1/§2): persona → common → discipline → [4] other
  * (AGENTS/skills ride the existing tail logic). explore/coder/plan reuse PERSONA_NORMAL
  * as their persona slot (蓝图 §3.1 同槽位复用——变体差异归人格层覆写; design D1 G1 note).
+ *
+ * U2（CORE-UNIFICATION §2.6.3）：槽位加载根改指核单一解析面 `prompt-files.mjs`
+ * （`loadSlot`——以核模块自身位置为根；缺档 = 静默空串，语义不变）；装配出径（两个
+ * return）逐条经核注入原语 `applyPromptInjections`（**调用期**应用——§2.13.8；未配置
+ * 状态 = 恒等）。本档装配表与导出面不变。
  */
 
-import { readFileSync } from "node:fs"
-import { join, dirname } from "node:path"
-import { fileURLToPath } from "node:url"
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
-
-function loadSlot(name) {
-  try { return readFileSync(join(__dirname, "prompts", name), "utf8") } catch { return "" }
-}
+import { loadSlot, applyPromptInjections } from "@thincoder/core/prompt-files.mjs"
 
 // ── G1 槽位内容表（文件名 → 内容常量）──
 const SLOT_CONTENTS = {
@@ -70,7 +67,7 @@ export function slotWarning(fileName) {
  */
 export function assemblePrompt(scenario) {
   const files = SCENARIO_SLOT_FILES[scenario]
-  if (!files) return { prompt: CONSULT_BASE, warnings: [] }
+  if (!files) return { prompt: applyPromptInjections(CONSULT_BASE), warnings: [] }
   const parts = []
   const warnings = []
   for (const file of files) {
@@ -78,5 +75,5 @@ export function assemblePrompt(scenario) {
     if (content) parts.push(content)
     else warnings.push(slotWarning(file))
   }
-  return { prompt: parts.join("\n\n"), warnings }
+  return { prompt: applyPromptInjections(parts.join("\n\n")), warnings }
 }

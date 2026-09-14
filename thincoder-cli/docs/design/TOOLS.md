@@ -195,7 +195,7 @@ websearch: {
 - **D-3 不加校验 / 特判**：`settings` 未知键原样 = 既有通用语义；不为单键引入特判（防"半接线"态）。
 - **D-4 VSC 面同批收口（已裁：纳入本批，2026-09-11）**：CLI 删、VSC 继续播种 = 死键持续被产品写入（假收口）——裁定同批收口。
 - **D-5 未来衔接（IKEI3M）**：DeepSeek 端点批以完整信息设计选择面（届时若需要）；`provider` 名为干净槽位。
-- **D-6 工具描述文本零改**：`src/tools/websearch.md` / `fetch.md` 与本键无耦合；既有 "Search the web via Bing" 与 Tavily 触发的张力 = 登记观察项（不属本批）。
+- **D-6 工具描述文本零改**：`thincoder-core/tool-docs/websearch.md` / `fetch.md` 与本键无耦合；既有 "Search the web via Bing" 与 Tavily 触发的张力 = 登记观察项（不属本批）。
 - **UI/交互决策**：无（config 键处置）；VSC 面板显示面零改（provider 从未渲染）· CLI TUI 无 websearch provider 入口（`cmd-config` 仅代理开关）——全落档于本节，无 open 项。
 
 ### 11.6 验收标准（逐条回指需求）

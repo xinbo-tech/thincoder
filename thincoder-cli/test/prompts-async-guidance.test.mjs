@@ -21,6 +21,10 @@ import { assemblePrompt, SCENARIO_SLOT_FILES, PERSONA_ENGINEERING, PERSONA_NORMA
 const __here = dirname(fileURLToPath(import.meta.url))
 const read = (rel) => readFileSync(join(__here, "..", rel), "utf8")
 const exists = (rel) => existsSync(join(__here, "..", rel))
+// U2（CORE-UNIFICATION §2.6.3）：英文落地面随迁移改指核包（`src/prompts/` 已删）。
+const readCore = (name) => read(`../thincoder-core/prompts/${name}`)
+const existsCore = (name) => exists(`../thincoder-core/prompts/${name}`)
+const corePromptPath = (name) => join(__here, "..", "..", "thincoder-core", "prompts", name)
 
 // 新 15 文件全集（PROMPT-SYSTEM §2 命名法）
 const NEW_PROMPTS = [
@@ -32,14 +36,14 @@ const NEW_PROMPTS = [
 // 退役旧件清单（AC-2）已随扫① 收归 test/doc-consistency.test.mjs T75（防回潮族——2026-09-11）——
 // 本文件不再维护退役名单副本。
 
-const pn = read("src/prompts/persona-normal.md")
+const pn = readCore("persona-normal.md")
 import { loadProjectInstructions } from "../src/agent/helpers.mjs"
 
 // 七场景装配快照（装配矩阵/降级链断言面——第 2 批新增 eng-designer）
 const engMode = Object.fromEntries(["normal", "engineering", "eng-coder", "eng-designer", "explore", "coder", "plan"].map((s) => [s, assemblePrompt(s)]))
 
 test("新 15 件在位于 prompts 树（AC-2——退役旧件不存在检查收归接收档 T75）", () => {
-  for (const f of NEW_PROMPTS) assert.ok(exists(`src/prompts/${f}`), `${f} 新集合在位`)
+  for (const f of NEW_PROMPTS) assert.ok(existsCore(f), `${f} 新集合在位（核包）`)
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -92,7 +96,8 @@ test("§3.2 consult 场景：assemblePrompt 返回 CONSULT_BASE 自含基底（�
 test("§3.4 降级链①：槽文件缺失→空缺+警告（不 fallback——层间隔离）", async () => {
   // 槽内容 = prompt-overlays 模块级 SLOT_CONTENTS 常量（byte-stable 载体）——改文件须重载新实例
   // 触发真实 loadSlot 读盘路径（cache-bust 查询串——旧实例持原快照，不动生产模块）。
-  const target = join(__here, "..", "src", "prompts", "persona-normal.md")
+  // U2：读盘目标 = 核包槽文件（加载根已改指）。
+  const target = corePromptPath("persona-normal.md")
   const bak = readFileSync(target, "utf8")
   writeFileSync(target, "")
   try {
@@ -108,7 +113,7 @@ test("§3.4 降级链①：槽文件缺失→空缺+警告（不 fallback——�
 })
 
 test("§3.4 降级链②：common.md 缺失→同款警告（四槽全覆盖——评审 round#1 补）", async () => {
-  const target = join(__here, "..", "src", "prompts", "common.md")
+  const target = corePromptPath("common.md")
   const bak = readFileSync(target, "utf8")
   writeFileSync(target, "")
   try {
@@ -135,7 +140,7 @@ test("§3.4 降级链③：AGENTS.md 缺失=静默跳过（loadProjectInstructio
 // ─────────────────────────────────────────────────────────────────────────────
 test("§2.7 #13 槽位注释：每文件头部 <!-- slot:[...] consumers:[...] -->（主链 [1]-[3] 数字槽位）", () => {
   for (const f of NEW_PROMPTS) {
-    const first = read(`src/prompts/${f}`).split("\n")[0]
+    const first = readCore(f).split("\n")[0]
     if (["consult-base.md", "advisor-design.md", "advisor-round1.md", "advisor-round2.md", "advisor-round3.md"].includes(f)) {
       // 特殊模块自含——不套前缀法（蓝图 §2 豁免从句）——头部注在即可
       assert.match(first, /^<!-- slot:.+ consumers:\[.+\] -->$/, `${f}: 头部注缺失`)
@@ -148,7 +153,7 @@ test("§2.7 #13 槽位注释：每文件头部 <!-- slot:[...] consumers:[...] -
 test("§2.7 #9 表行 >200 零命中（dn 4 处随表删源清零——第 15 批公共层扩容）", () => {
   let hits = []
   for (const f of NEW_PROMPTS) {
-    const lines = read(`src/prompts/${f}`).split("\n")
+    const lines = readCore(f).split("\n")
     lines.forEach((l, i) => { if (l.startsWith("|") && l.length > 200) hits.push(`${f}:L${i + 1}(${l.length})`) })
   }
   assert.deepStrictEqual(hits, [], "表行 >200 零命中（common 路由表逐行 ≤200）")

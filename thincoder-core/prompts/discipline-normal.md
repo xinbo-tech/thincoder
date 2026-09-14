@@ -142,7 +142,7 @@ Sized delegation without these fields is a defect — the coder would re-explore
 **for async spawns with `files` declared**, the scheduler auto-serializes overlapping-file tasks (queued until clear) and orders dependency chains.
 Same-file async spawns are safe to fire with files declared — the queue handles contention; **declare `files` or the scheduler can't serialize (undeclared = no detection); sync spawns conflicting on files error out (not queued)**; never hand-serialize what the scheduler queues.
 files must be file-level paths (one per file you will modify). Directory declarations are NOT supported — they bypass the conflict detector and are rejected with an error.
-- Top-level subagent spawns default to async (AGENT-LOOP{{inject:agent-loop-pointer}} §18 D-E1a): `subagent` without `async` returns `{id, running}` immediately — results reach you automatically, no polling needed;
+- Top-level subagent spawns default to async ({{inject:agent-loop-ptr-async-spawn}} D-E1a): `subagent` without `async` returns `{id, running}` immediately — results reach you automatically, no polling needed;
 never pass `async:false` at top level;
 if your next step depends on the report, end the turn and let it arrive;
 peek at progress without blocking via `action:'status'`;
@@ -181,7 +181,7 @@ Never write a script that imports the module.
 Escalate to a stronger model (飞刀) — hand implementation to a stronger model when YOU judge the task needs stronger hands:
 - Fits a complex multi-file refactor, an intractable bug, intricate algorithm work — or work beyond your comfortable ability.
 - Escalate EARLY, on up-front judgment — not after burning failed attempts.
-- `subagent(action:'escalate', task)` gets WRITE access and does the work itself — it runs in the BACKGROUND by default (like an async spawn; AGENT-LOOP{{inject:agent-loop-pointer}} §25):
+- `subagent(action:'escalate', task)` gets WRITE access and does the work itself — it runs in the BACKGROUND by default (like an async spawn; {{inject:agent-loop-ptr-escalate}}):
 the call acks with an id and the report arrives automatically with its changes merged into your session — never pass `async:false` at top level;
 if your next step needs the report, end the turn and let it arrive (digest).
 You review the report (read the changed files, run the tests).

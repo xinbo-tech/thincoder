@@ -4,12 +4,13 @@
  */
 
 import { spawn, execFileSync, execFile } from "node:child_process"
-import { readFileSync, existsSync, realpathSync, readdirSync, statSync, openSync, readSync, closeSync } from "node:fs"
+import { existsSync, realpathSync, readdirSync, statSync, openSync, readSync, closeSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
-import { fileURLToPath } from "node:url"
+import { loadToolDoc, applyPromptInjections } from "@thincoder/core/prompt-files.mjs"
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-export const DESC = (name) => readFileSync(join(__dirname, "..", "tools", `${name}.md`), "utf8")
+// U2（CORE-UNIFICATION §2.6.3）：工具描述解析根改指核单一解析面（`loadToolDoc`——
+// 缺档语义不变 = 抛错，契约 9）。DESC 名与调用面不变。
+export const DESC = (name) => loadToolDoc(name)
 
 export const MAX_READ_LINES = 2000
 export const MAX_OUTPUT_CHARS = 200_000
@@ -155,13 +156,15 @@ export function findCandidates(lines, oldString, topN = 3, threshold = 0.5) {
 /** Appended to hashline_edit results when the file contains U+FFFD (encoding-corruption probe). */
 export const FFFD_WARNING = "⚠ file contains U+FFFD (replacement char) — encoding may be corrupted; hash-based addressing may be unreliable. Consider fixing the file encoding first."
 
-/** Convert to OpenAI tools parameter format */
+/** Convert to OpenAI tools parameter format.
+ *  U2（§2.6.3/§2.13.8 面 3）：description 在**装配出径**经核注入原语（调用期应用；
+ *  未配置状态 = 恒等——现行行为零变）。 */
 export function toOpenAISchema(tool) {
   return {
     type: "function",
     function: {
       name: tool.name,
-      description: tool.description,
+      description: applyPromptInjections(tool.description),
       parameters: tool.parameters,
     },
   }

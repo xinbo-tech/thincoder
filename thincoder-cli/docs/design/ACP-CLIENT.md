@@ -261,7 +261,7 @@ last-write-wins 于内部状态；set 成功后 notify `config_option_update`/`c
 - ACP 会话走同一 `assembleAgent()`（`src/acp.mjs:79`；函数体 `src/cli/make-agent.mjs:14`）——工具集含
   question（`src/tools/index.mjs:22`），schema 逐请求由 `agent.tools` 派生（`src/agent/setup.mjs:293-294`）
   → 模型可见、可调、每调必错。
-- 漂移面：`src/tools/question.md` 描述对无 UI 通道作无条件承诺（"loop pauses / answer returns"）；
+- 漂移面：`thincoder-core/tool-docs/question.md` 描述对无 UI 通道作无条件承诺（"loop pauses / answer returns"）；
   本档 §6 回调映射表无该工具行（本节回填）。
 
 **A2（relay 前缀泄漏进 ACP 流）**
@@ -336,7 +336,7 @@ export function relayPrefixOf(label, id) // → `${label}#${id}/`——构造向
 | 4 | onPermissionRequest | 请求文本与 `toolCall.title` 用原样 name | 显示用 `shown`（文本 + title）；`detectDanger` 基名逻辑照旧 | `peekToolId(name)` 仍用原样名 |
 | 5 | replayHistory | `title = tc?.name` | 同取 `shown`（防御面——无前缀 → 零变化；带前缀 → 剥离——T18） | `pendingToolCalls` 配对零改 |
 
-**④ 工具描述措辞（`src/tools/question.md`——草案逐字，eng-coder 原样落）**
+**④ 工具描述措辞（`thincoder-core/tool-docs/question.md`——草案逐字，eng-coder 原样落）**
 
 Notes 第 3 条（`- Returns the user's answer …`）之后插入一行：
 
@@ -376,7 +376,7 @@ Notes 第 3 条（`- Returns the user's answer …`）之后插入一行：
 | 6 | `src/acp/bridge.mjs` | 改（import + 显示面剥离） | 355 | +20 / −10 | >300——本批不拆（无新结构体）；拆分计划（登记）：再增厚则先迁 `:98-166` edit 桥族 → `edit-bridge.mjs`（拟落 `src/acp/`） |
 | 7 | `src/acp.mjs` | 改（常量 + 传参） | 442 | +5 | >300——不拆（无结构增长）；拆分计划（登记）：handlers / M5 扩展 / 入口装配三段 |
 | 8 | `src/cli/make-agent.mjs` | 改（纯函数 + 参数） | 162 | +10 | ≤300 ✓ |
-| 9 | `src/tools/question.md` | 改（描述 +1 行） | 15 | +1 | 文档面 |
+| 9 | `thincoder-core/tool-docs/question.md` | 改（描述 +1 行） | 15 | +1 | 文档面 |
 | 10 | `test/acp-channel.test.mjs` | 新增（断言宿主——§12.7 用例 T1–T18） | 0 | ~170 | 测试档 ≤500 ✓ |
 | 11 | `docs/requirements/ACP-CLIENT.md` | 改（§13 + §12 两行） | 39 | +42（修正轮后实测） | 文档面 |
 | 12 | `docs/design/ACP-CLIENT.md` | 改（本节 + §3.3/§6/§8 回填） | 239 | +233（修正轮后实测） | 文档面 |
@@ -432,7 +432,7 @@ Notes 第 3 条（`- Returns the user's answer …`）之后插入一行：
 | AC | 判据（机器可验） | 回指 |
 |---|---|---|
 | AC1 | T14/T15 通过（+ 工具常量名单锁）；源码接线锁（`src/acp.mjs` 含 `excludeTools: ACP_EXCLUDED_TOOLS`、`src/cli/make-agent.mjs` 含 `applyToolExclusions(`）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | R-A1.1 |
-| AC2 | `src/tools/question.md` 含子串 `returns an error instead of asking` | R-A1.2 |
+| AC2 | `thincoder-core/tool-docs/question.md` 含子串 `returns an error instead of asking` | R-A1.2 |
 | AC3 | T1–T13（+T18）驱动序列中捕获的全部通知/反向请求载荷：文本与标题字段对 relay 前缀文法零命中（非锚定扫描——行首与串中均不得命中；扫描锚自模块 `RELAY_PREFIX_RE` 去 `^` 锚派生——单源 §12.3①，不复制正则字面量） | R-A2.1 |
 | AC4 | T7 / T12 配对断言通过（原样名键） | R-A2.2 |
 | AC5 | T16 / T17 通过（文法单一权威 + 语义零改） | R-A2.3 |

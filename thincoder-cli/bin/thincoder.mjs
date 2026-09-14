@@ -27,6 +27,13 @@ import { distillCommand } from "../src/cli/distill-command.mjs"
 import { prepareCrashReporting, recentCrashHint, writeCrashRecord } from "../src/crash-reports.mjs"
 import { setTuiActive, restoreTerminalAfterCrash } from "../src/tui/tui-lifecycle.mjs"
 import { spawnTuiWrapped } from "../src/tui/wrapped-spawn.mjs"
+import { configurePromptInjections } from "@thincoder/core/prompt-files.mjs"
+import { CLI_PROMPT_INJECTIONS } from "../src/prompt-injections.mjs"
+
+// U2（CORE-UNIFICATION §2.6.3 专项补⑦ / §2.13.8（六））：CLI 端锚取值表——**进程入口、
+// 任何装配之前**注册一次（调用期应用 ⇒ 无导入序要求）。漏配 = 锚字面静默进模型
+// ⇒ 入口面用例（test/integration/cli-prompt-entry.test.mjs）显式覆盖本调用路径。
+configurePromptInjections(CLI_PROMPT_INJECTIONS)
 
 const [command, ...args] = process.argv.slice(2)
 // TUI-STDERR-CAPTURE（F-1）：TUI 启动（tui/无命令）默认包装——父 spawn 子 tee stderr 落盘（外部

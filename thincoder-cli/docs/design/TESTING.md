@@ -468,7 +468,7 @@
 |---|---|---|---|---|---|
 | abort-provenance | 167 | T-AP9 合成点残留扫描：五处全经 deathLine | 整删 | 167-175 | 读 src 源码文本 + 计数 |
 | abort-provenance | 177 | T-AP10 hop 扫描：五处逐跳保 reason + 零裸 abort | 已删（整删） | 177-189 | 读 src 源码 match / includes |
-| acp-channel | 261 | AC2 question.md 含「无交互面返回错误」句 | 整删 | 261-263 | 读 `src/tools/question.md` 子串 |
+| acp-channel | 261 | AC2 question.md 含「无交互面返回错误」句 | 整删 | 261-263 | 读 `thincoder-core/tool-docs/question.md` 子串 |
 | acp-channel | 240 | T17 文法单一权威（三符号 + 消费方直连） | 段删 | 244-246 | 三行 src 文本 match / includes |
 | acp-channel | 255 | AC1 装配接线锁（acp.mjs / make-agent） | 段删 | 257-258 | 两行 src 文本 match |
 | advisor-chain-guards | 150 | T-CG5 code 守卫……旧锚零残留 | 段删 | 161-165 | 读两 src 文本 includes |

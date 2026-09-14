@@ -57,7 +57,7 @@
 
 - **R-A1.1**：ACP 会话的工具集**不含** question 工具——装配期剔除（模型 schema 不可见、不可调用、零必错回合）。
   可验判据：以 ACP 会话剔除参数装配出的工具名集合与 schema 均不含 `question`。
-- **R-A1.2**：question 工具的描述文本（`src/tools/question.md`）不得对无交互面的上下文作无条件承诺——
+- **R-A1.2**：question 工具的描述文本（`thincoder-core/tool-docs/question.md`）不得对无交互面的上下文作无条件承诺——
   须显式说明「无交互面（headless / 子代理上下文）时返回错误，问题放正文回复」。
 - **R-A1.3**：通道裁剪对位——VSC 端 question 工具有原生 UI 兜底（非 ACP 面、无此缺陷）；
   CLI 侧其余无 UI 上下文（`thincoder chat`、子代理 children）的同类缺陷为**登记项**（设计 §12.9），不在本批。
