@@ -57,7 +57,7 @@ export async function assembleAgent({ excludeTools = [] } = {}) {
   // Team layer (optional): auto-clone on first use; startup only indexes local dir, remote pull via explicit thincoder sync
   const team = teamConfig(config)
   if (team) {
-    const { ensureClone } = await import("../git/gitmem.mjs")
+    const { ensureClone } = await import("@thincoder/core/git/gitmem.mjs")
     await ensureClone(team)
     await syncDir(memory, { layer: "team", dir: team.dir })
   }

@@ -7,7 +7,7 @@
 import { chat } from "./provider/index.mjs"
 import { loadConfig } from "./config.mjs"
 import { put, putMarkdown } from "./memory.mjs"
-import { commitAndPush } from "./git/gitmem.mjs"
+import { commitAndPush } from "@thincoder/core/git/gitmem.mjs"
 
 const DISTILL_PROMPT = `You are a knowledge extractor. Read the following agent work session log and extract knowledge worth remembering across sessions.
 

@@ -5,8 +5,8 @@ import {
 } from "./shared.mjs";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
-import { filterLines, runGitStrict, validateRef, gitConfigArgs, snapshotBefore, executeExtAction } from "./git-ext.mjs";
-import { executeCheckpointAction } from "./git-checkpoint.mjs";
+import { filterLines, runGitStrict, validateRef, gitConfigArgs, snapshotBefore, executeExtAction } from "@thincoder/core/tools/git-ext.mjs";
+import { executeCheckpointAction } from "@thincoder/core/tools/git-checkpoint.mjs";
 
 
 /** Run git PRESERVING per-line leading whitespace. runGit trims the WHOLE output, which
@@ -170,7 +170,7 @@ export const gitTool = {
           // F6: commit = new safety baseline — clear this project's checkpoints
           // (best-effort per NF7: a failed cleanup never blocks the commit result).
           try {
-            const { deleteCheckpointsForCwd } = await import("../git/checkpoint.mjs")
+            const { deleteCheckpointsForCwd } = await import("@thincoder/core/git/checkpoint.mjs")
             await deleteCheckpointsForCwd(ctx.cwd)
             parts.push("(checkpoints cleared — commit is a new safety baseline)")
           } catch (e) {

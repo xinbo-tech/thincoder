@@ -255,7 +255,7 @@ switch (command) {
       break
     }
     const memory = createMemory({ dbPath: config.memory.dbPath })
-    const { ensureClone, pullTeam } = await import("../src/git/gitmem.mjs")
+    const { ensureClone, pullTeam } = await import("@thincoder/core/git/gitmem.mjs")
     try {
       const cloned = await ensureClone(team)
       if (cloned) console.log(`Cloned team repo to ${team.dir}`)
@@ -288,7 +288,7 @@ switch (command) {
     }
     const team = teamConfig(config)
     if (team) {
-      const { ensureClone } = await import("../src/git/gitmem.mjs")
+      const { ensureClone } = await import("@thincoder/core/git/gitmem.mjs")
       await ensureClone(team)
       const s = await syncDir(memory, { layer: "team", dir: team.dir })
       total.added += s.added

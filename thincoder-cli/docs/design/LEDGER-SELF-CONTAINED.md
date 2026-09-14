@@ -515,7 +515,7 @@
 | 3 | `AGENT-LOOP` | ① | **有档**（`docs/requirements/AGENT-LOOP.md`，355 行） | **已有对位**（C 桶接收档） | 本仓实际档名 = `docs/requirements/AGENT-LOOP.md` |
 | 4 | `AGENT-PARAMS` | ② | 有档（42 行） | **已有对位** | 归位档在位（原 `docs/design/AGENT-PARAMS-REQUIREMENTS.md`——已换名归位：`docs/requirements/AGENT-PARAMS.md`（VSC 仓）） |
 | 5 | `ASYNC-RESULT-CONTAINER` | ② | 仅 design 层（87 行） | **建本仓需求档** → `docs/requirements/ASYNC-RESULT-CONTAINER.md` | `src/agent-tools/async-settle.mjs` · `async-discard.mjs` 在位；需求层无档 |
-| 6 | `CHECKPOINT` | ② | 仅 design 层（105 行） | **建本仓需求档** → `docs/requirements/CHECKPOINT.md` | `src/tools/checkpoint.mjs` · `git-checkpoint.mjs` 在位；需求层无档 |
+| 6 | `CHECKPOINT` | ② | 仅 design 层（105 行） | **建本仓需求档** → `docs/requirements/CHECKPOINT.md` | `thincoder-vscode/src/tools/checkpoint.mjs` · `thincoder-vscode/src/tools/git-checkpoint.mjs` 在位；需求层无档 |
 | 7 | `CONSULTATION` | ② | 仅 design 层（161 行） | **建本仓需求档** → `docs/requirements/CONSULTATION.md` | `src/agent-tools/consult.mjs` 在位；需求层无档 |
 | 8 | `CONTEXT-COMPACTION` | ② | 仅 design 层（146 行） | **建本仓需求档** → `docs/requirements/CONTEXT-COMPACTION.md` | `src/compact.mjs`（VSC 仓） 在位；需求层无档 |
 | 9 | `CRASH-REPORTS` | ③ | 无 | **本端无此面**（保持） | 本端无崩溃取证面（`crash*.mjs` 零命中；无 `process.report` 面） |

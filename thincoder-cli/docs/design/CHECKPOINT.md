@@ -1,8 +1,8 @@
 # Checkpoint 事故恢复机制（CLI ↔ VS Code 两端）
 
 > 状态：**当前态设计**（机制已实现并定稿，2026-09-01；本文档 2026-09-07 重写为人类可读格式）。
-> 权威源（CLI）：`src/git/checkpoint.mjs`（快照存储 / rewind 单一权威）、`src/tools/git-checkpoint.mjs`
-> （git 工具 checkpoint action + F6 懒清理 + F2 提示行）、`src/tools/git-ext.mjs`（F7 扩展 action + `snapshotBefore`）、
+> 权威源（CLI）：`thincoder-core/git/checkpoint.mjs`（快照存储 / rewind 单一权威）、`thincoder-core/tools/git-checkpoint.mjs`
+> （git 工具 checkpoint action + F6 懒清理 + F2 提示行）、`thincoder-core/tools/git-ext.mjs`（F7 扩展 action + `snapshotBefore`）、
 > `src/tools/git.mjs`（commit 清理 + 核心 action）、`src/tools/bash.mjs`（bash guard `gitGuardSnapshot`——2026-09-08 批 3 拆分后）、
 > `src/tui/cmd-restore.mjs`（`/restore` 两级 picker）。
 > 关联权威：`TOOLS.md` §7（git 工具 action 集全集——本文档不列双清单，避免漂移）；两端 `AGENTS.md`（各自 Checkpoint 小节，落档用）。

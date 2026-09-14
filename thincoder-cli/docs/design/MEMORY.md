@@ -39,7 +39,7 @@
 
 - **personal**——个人记忆，**纯 `entries` 行**，无 markdown 目录；检索/清理经行触发器随行完成。
 - **project**——项目共享，`{cwd}/.thincoder/memory/` 目录，**markdown 文件为源、DB 为索引**；`putMarkdown` 写文件 + 立即索引，`syncDir` 按目录增量入 DB（按 mtime）。文件可人工编辑、可 git 管理。project 层写文件**不做** git 操作（用户的 repo 不被自动提交）。
-- **team**——团队层，git 仓库同步（`git/gitmem.mjs`）。`commitAndPush` 写文件后 `git add/commit/push`（push 失败先 `pull --rebase` 再重试一次；真冲突 `rebase --abort` 保持仓库干净并抛带人工解决指引的错误）。`pullTeam` 拉取远程。
+- **team**——团队层，git 仓库同步（`thincoder-core/git/gitmem.mjs`）。`commitAndPush` 写文件后 `git add/commit/push`（push 失败先 `pull --rebase` 再重试一次；真冲突 `rebase --abort` 保持仓库干净并抛带人工解决指引的错误）。`pullTeam` 拉取远程。
 
 **条目类型**：`rule | knowledge | decision | pattern`（四类，`VALID_TYPES`，检索/展示区分；非法 type 明确报错）。
 

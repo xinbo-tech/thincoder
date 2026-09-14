@@ -96,7 +96,7 @@ const GIT_DESTRUCTIVE_RE = /\bgit\s+(?:checkout\s+(?:[\w./-]+\s+)?--(?!\w)|check
 async function gitGuardSnapshot(command, cwd) {
   if (!GIT_DESTRUCTIVE_RE.test(command)) return null
   try {
-    const { isGitRepo, createCheckpoint } = await import("../git/checkpoint.mjs")
+    const { isGitRepo, createCheckpoint } = await import("@thincoder/core/git/checkpoint.mjs")
     if (!isGitRepo(cwd)) return null
     const cp = await createCheckpoint(cwd)
     if (!cp) return null

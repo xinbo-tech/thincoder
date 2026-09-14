@@ -268,7 +268,7 @@ D1–D7 全表 / 锚#1–#7 / C1–C4 / T-RO 组 / A11 的 `batchDoc` 必传句�
 | 设计门禁 | 未声明约定（默认判据命中） | 拒绝 hint 说明判据来源 + `.thincoder/conventions.json` 声明指路 |
 | 索引扩展名 | 文件扩展名未列入 | 同步结果 `unlistedExts` + `/reindex` 提示行 + 日志事件 |
 | 非 git | 无 git 仓库 | 索引 = walk 可用（不算降级）；评审消息 = 变更上下文降级句 |
-| 检查点 | 无 git | 已核实 = 明确报错（运行时文案 `Not a git repository — checkpoints unavailable`——`src/tools/git-checkpoint.mjs:41`）——**不改**，登记为已定义 |
+| 检查点 | 无 git | 已核实 = 明确报错（运行时文案 `Not a git repository — checkpoints unavailable`——`thincoder-core/tools/git-checkpoint.mjs:41`）——**不改**，登记为已定义 |
 
 ### 4.4 逐字文本（coder 机械落笔——EN/中文镜像对应）
 

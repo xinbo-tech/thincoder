@@ -5,14 +5,14 @@ import { ansi, C } from "./ansi.mjs"
  *  (CHECKPOINT.md D8). ctx: { agent, showPicker, pushLine, pushLabel } */
 export async function handleRestoreCommand(ctx) {
   const { agent, showPicker, pushLine, pushLabel } = ctx
-  const { listCheckpoints, rewind, isGitRepo } = await import("../git/checkpoint.mjs")
+  const { listCheckpoints, rewind, isGitRepo } = await import("@thincoder/core/git/checkpoint.mjs")
   if (!isGitRepo(agent.cwd)) {
     pushLine("[rewind] not a git repository, checkpoints unavailable", C.error)
     return
   }
   // F6 lazy fallback——与 git 工具 checkpoint list/create 入口一致（git-checkpoint.mjs）：外部
   // git commit 后（HEAD 时间 > 最新快照）先清空过期快照，/restore 不列出 commit 前状态。
-  const { lazyClearIfCommitted } = await import("../tools/git-checkpoint.mjs")
+  const { lazyClearIfCommitted } = await import("@thincoder/core/tools/git-checkpoint.mjs")
   await lazyClearIfCommitted(agent.cwd)
   const cps = await listCheckpoints(agent.cwd)
   if (cps.length === 0) {

@@ -8,7 +8,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 
 import { createMemory, memoryTools, putMarkdown, syncDir, search } from "../src/memory.mjs"
-import { ensureClone, pullTeam, commitAndPush } from "../src/git/gitmem.mjs"
+import { ensureClone, pullTeam, commitAndPush } from "@thincoder/core/git/gitmem.mjs"
 
 const base = mkdtempSync(join(tmpdir(), "thincoder-m8-"))
 const remote = join(base, "remote.git")

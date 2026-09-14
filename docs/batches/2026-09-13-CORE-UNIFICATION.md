@@ -4581,5 +4581,117 @@ CLI 三加载根 + 入口（L1–L7）：
 
 **段末复跑（§5 写入后 · 宽度闸）**：`check-doc-width` = **306 档无 >300 字符行 · exit 0**（原样读数见交付报告）。
 
+### 实施：S2 U5 —— CHECKPOINT 单元落轮（2026-09-14 · eng-coder）——**终态 = clean**
+
+**段位**：当前段 = **S2（CLI 迁移单元 U5）**。写域 = CLI 侧（8 档 import 改指 + 4 档删旧 + 6 行文档锚改指）+ **域外一笔（已披露）**：`thincoder-cli/scripts/verify-team.mjs:11`（删档 import 否则必破）；
+**VSC 零触碰**；核内零改动（`git status` 自证：改动集零 `thincoder-core/**`）；未 commit（父侧统一单笔）；未碰台账（`docs/TODO.md` 零改动——L4 闸无相关证据行）；产品文档只做锚改指（零语义改写——语义收正归 eng-designer）。
+
+**依据** = `docs/design/CORE-UNIFICATION.md` §2.6.3 U5 行（`:714`「4 / 864 / 8」）+（三）逐档清单（`:788-791`）+（四）四步与 A1–A6（`:910-924`）+（七）进度计数（`:965-976`）+ §2.6.2（三）（五）（六）；`docs/design/CHECKPOINT.md`（#48 / #49）与 `docs/design/MEMORY.md`（#168）；父侧 U5 任务书。
+
+**改动面**（行数 = `wc -l` 口径实核；改前 = HEAD）
+
+| # | 面 | 档 / 行数 | 动作 |
+|---|---|---|---|
+| 1 | CLI 源 + bin | 8 档（7 src + 1 bin；行数零变——纯来源串替换） | 改指 `@thincoder/core/<子路径>`（12 处） |
+| 2 | CLI 删旧 | `src/git/checkpoint.mjs` 448 · `src/git/gitmem.mjs` 100 · `src/tools/git-checkpoint.mjs` 143 · `src/tools/git-ext.mjs` 173（合计 **864** 行） | **删档**（+ 空目录 `src/git/` 移除） |
+| 3 | CLI 文档 | 5 档（`docs/design` ×4 + `docs/requirements` ×1；行数 ±0） | 6 行锚改指 |
+| 4 | CLI 脚本（**域外·披露**） | `thincoder-cli/scripts/verify-team.mjs`（53 → 53） | `:11` 改指 `@thincoder/core/git/gitmem.mjs` |
+
+**① 逐处「改前 → 改后」（8 档 12 处——全部 = 来源串替换，具名导入面零改）**
+
+| # | 位置 | 改前 → 改后 |
+|---|---|---|
+| 1 | `src/acp.mjs:23` | `"./git/checkpoint.mjs"` → `"@thincoder/core/git/checkpoint.mjs"` |
+| 2 | `src/tools/bash.mjs:99` | `"../git/checkpoint.mjs"`（动态 import）→ 核路径 |
+| 3 | `src/tools/git.mjs:8` | `"./git-ext.mjs"` → `"@thincoder/core/tools/git-ext.mjs"` |
+| 4 | `src/tools/git.mjs:9` | `"./git-checkpoint.mjs"` → `"@thincoder/core/tools/git-checkpoint.mjs"` |
+| 5 | `src/tools/git.mjs:173` | `"../git/checkpoint.mjs"`（动态 import）→ 核路径 |
+| 6 | `src/tui/cmd-restore.mjs:8` | `"../git/checkpoint.mjs"`（动态 import）→ 核路径 |
+| 7 | `src/tui/cmd-restore.mjs:15` | `"../tools/git-checkpoint.mjs"`（动态 import）→ 核路径 |
+| 8 | `bin/thincoder.mjs:258` | `"../src/git/gitmem.mjs"`（动态 import）→ `"@thincoder/core/git/gitmem.mjs"` |
+| 9 | `bin/thincoder.mjs:291` | 同上 |
+| 10 | `src/cli/make-agent.mjs:60` | `"../git/gitmem.mjs"`（动态 import）→ 核路径 |
+| 11 | `src/distill.mjs:10` | `"./git/gitmem.mjs"` → 核路径 |
+| 12 | `src/memory/docs.mjs:9` | `"../git/gitmem.mjs"` → 核路径 |
+| — | `scripts/verify-team.mjs:11`（**域外**） | `"../src/git/gitmem.mjs"` → 核路径 |
+
+改指档数 = **8**（7 src + 1 bin）= 设计 U5 行「改指 8」；删除集自身（`src/tools/git-checkpoint.mjs:16` / `src/tools/git-ext.mjs:56` 对 `../git/checkpoint.mjs` 的自引用）**不计**（待删档本体，随删消失）。
+
+**文档锚 6 行（5 档——删后中间态实测 = 5 悬空 ⇒ 全数改指 ⇒ 0；形态 = §2.6.2（六）CLI 域「仓根相对」）**
+
+| # | 档 | 行：改前 → 改后 |
+|---|---|---|
+| 1 | `docs/design/CHECKPOINT.md` | `:4` `src/git/checkpoint.mjs` + `src/tools/git-checkpoint.mjs` → `thincoder-core/` 同名子路径×2 |
+| 2 | `docs/design/CHECKPOINT.md` | `:5` `src/tools/git-ext.mjs` → `thincoder-core/tools/git-ext.mjs` |
+| 3 | `docs/design/LEDGER-SELF-CONTAINED.md` | `:518` `src/tools/checkpoint.mjs` · `git-checkpoint.mjs` → `thincoder-vscode/src/tools/` 同名×2（该行语义 = VSC 侧档——VSC 档未迁，指核会失真） |
+| 4 | `docs/design/MEMORY.md` | `:42` `git/gitmem.mjs` → `thincoder-core/git/gitmem.mjs` |
+| 5 | `docs/design/PORTABILITY.md` | `:271` `src/tools/git-checkpoint.mjs:41` → `thincoder-core/tools/git-checkpoint.mjs:41` |
+| 6 | `docs/requirements/PORTABILITY.md` | `:69` 同上（变更记录行） |
+
+**② 删旧三条读数（删前全过才删）**
+
+1. **改指已落盘**：12 处改指 + 域外 1 处落盘并冒烟（真子进程解析 `@thincoder/core/...` 子路径：`createCheckpoint` / `listCheckpoints` / `executeCheckpointAction(list|versions)` / `filterLines` / `deleteCheckpointsForCwd` 全跑通——见 ③ 冒烟读数）。
+2. **该产品全链 exit 0（删前预跑）**：`npm test` 609/552/0/57 · `lint` 302 · `test:full` 609/609 · `test:integration` 25/25（均 exit 0）。
+3. **零引用反向判**（域 = `src` + `test` + `bin`，298 档全递归；域外 `scripts/` 另扫）：
+   ① 引号相对路径形（`\.\.?/…(checkpoint|gitmem|git-checkpoint|git-ext)\.mjs`）= **0 违规**（2 命中全部落待删档本体自身：`src/tools/git-checkpoint.mjs:16` · `src/tools/git-ext.mjs:56`）；
+   ② 路径 token 反向判（左界非 `[-\w/.]`、token 带 `/` 且非 `@thincoder/core/` 前缀 = 违规）= **0 违规**；
+   ③ 域外 `scripts/**` 同两式 = **0 / 0**。
+   **删后中间态**：`doc-anchors --domain thincoder-cli` = **5 悬空**（4 档 5 行）→ 逐处改指 → **0**。
+
+**③ A1–A6 读数（终态复跑 · 原样）**
+
+| # | 判据 | 读数 | 判 |
+|---|---|---|---|
+| A1 | CLI 全链 | `npm test`：tests **609** · suites 4 · pass **552** · fail **0** · skipped **57** · exit 0；`lint`：check-syntax **298 file(s) OK**（302 − 4 删档，唯一面内差）；`test:full`：**609/609** · fail 0 · exit 0；`test:integration`：**25/25** · fail 0 · exit 0——**未涉面逐数不变**；面内零改判（无用例增删） | ✓ |
+| A2 | 零引用 | 反向判两式 **0 / 0**（域 `src`+`test`+`bin` 298 档；域外 `scripts` 另 0/0）；运行面 = 全链 exit 0；锚面 = 悬空 0 | ✓ |
+| A3 | 文档锚 | `doc-anchors --domain thincoder-cli`：99 档 · 候选 **8871** · 悬空 **0** · 注记豁免 878 · `OK(V5)` exit 0 | ✓ |
+| A4 | 核回归 | 核内 `node --test` = **173/173** · fail 0 · exit 0（承 U2 落轮基线）；核内零改动（`git status` 自证） | ✓ |
+| A5 | 仓根三机检 | `doc-anchors`（全域）：域一 32 档 候选 **2219** · 悬空 0 · 豁免 29；域二 99 档 候选 **8871** · 悬空 0 · 豁免 878；VSC 域报告态 5 命中（预存——非本笔）· **exit 0**。`check-doc-width`：**306 档无 >300 字符行** · V1/V2/V3 新增违规 0 · exit 0（§5 写入后复跑读数见段末）。`check-ledger`：**0 处违规** · 基线 0 · exit 0 | ✓ |
+| A6 | 链接 L1 | `npm ls @thincoder/core --json` **exit 0** · version **0.1.0**（resolved `file:../../../thincoder-core`）；版本探针 = **0.1.0** | ✓ |
+| 专项 | 裁决落实 / git 写面取一侧 | 核 `git/checkpoint.mjs` = CLI 一侧（v2 全量副本 `:144-186` · D7 提示行 `tools/git-checkpoint.mjs:97` · D3 秒×1000 对齐 `:29-32` · D1 模板 `tools/git-ext.mjs:59` · D2 文案 `src/tools/git.mjs:175` 俱在）；`gitmem` team 层三消费点（`bin/thincoder.mjs:258/291` · `cli/make-agent.mjs:60` · `distill.mjs:10` + `memory/docs.mjs:9`）全数落到核侧单源 | ✓ |
+
+**冒烟读数（删后 · 真子进程 · cwd = `thincoder-cli`）**：`@thincoder/core/git/checkpoint.mjs` 导出 9 名 · `tools/git-checkpoint.mjs` 2 名 · `tools/git-ext.mjs` 6 名 · `git/gitmem.mjs` 3 名（与 8 档具名导入面逐名对上）；
+临时 git 仓内 `createCheckpoint` → `listCheckpoints`=1 → `executeCheckpointAction(list)` 出快照行 → `versions` 出历史行 → `deleteCheckpointsForCwd` → 列表归 0——**SMOKE PASS**。
+
+**进度计数（设计 §2.6.3（七）① · 可复跑命令）**：**CLI 待迁 = 117**（121 − 4，U4 读数 121 见本档 `:4544`）——单调递减成立，与父侧预期 117 逐数一致。
+
+**工作树**：本笔 **18 项**（14 M + 4 D）+ **1 项预存**（`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`——spawn 前已在，非本笔）；未 commit。
+
+**④ 内部轮（发现与处置）**
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **CLEAN**——四类偏差（部分实现 / 静默简化 / 文档漂移 / 清单外改动）**均未发现**（4 删档全缺 · 8 档 12 处改指逐点对齐 · 16 个具名成员在核导出面逐名实核 · 计数 117 独立复算吻合）；附 5 条 QUESTION（均非偏差）。
+- **advisor 代码评审 1 轮**（`type=code` · 阻塞）：**pass**（🔴 **0** · 🟡 3 · 🔵 1）。
+- **裁决表（4 项）**：**Deferred 1**（🟡#1 `thincoder-cli/AGENTS.md:54` + `README.md:190` 模块地图仍列已删 `src/git/`——登记未决 1，承 U1 未决 1 / U4 未决 2 同型判：设计归口 = `docs/design/CORE-UNIFICATION.md:1046` S2 文档工作流 + §2.6.2（五）法 1 明写「裸词叙述射程外」）；
+  **Not an issue 3**：🟡#2「FR15 行丢出处 + 2026-09-11 变更记录被原地改写」——**前半不成立**（`git show HEAD:thincoder-cli/docs/requirements/PORTABILITY.md` `:31` = 已无出处，非本笔）、后半 = 本批既定改指形态（本笔对该档仅 `:69` 纯路径替换，`git diff` 实证；U2 决策 6「文档锚改指 = 纯路径替换，as-of 语义保留」），as-of 张力登记未决 2；
+  🟡#3 四档 >300 行软线（`acp.mjs` · `bin/thincoder.mjs` · `src/memory/docs.mjs` · `src/tools/git.mjs`）——既有结构债、本笔行内替换结构零变（R3 不复议；核侧同类债已登记 `CORE-UNIFICATION.md:1122`）；
+  🔵#4 `docs/design/CHECKPOINT.md:37/:166` 裸档名叙述（`git-ext.mjs`）——裸 basename 无坐标不落 V5-A 射程（`scripts/doc-anchors-v5.mjs:146`）+ §2.6.2（五）法 1，U1 决策 5 同判。
+- **引证核验附注**：host 核验器对 10 条引证报「file unreadable / content mismatch」——复核为**核验器路径解析 artifact**（承 U1–U4 同型附注；其点名几处经复读内容与引证相符：`requirements/PORTABILITY.md:69` · `docs/design/PORTABILITY.md:271` 均为改指后新文本）。
+- **轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 **0**（零 must-fix ⇒ 无修复轮）；终态 **0 未决 🔴 → clean**。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 改指目标形态 = `@thincoder/core/<子路径>`（如 `git/checkpoint.mjs` · `tools/git-ext.mjs`） | §2.6.2（三）2「一律带子路径」；核 `exports` `./*` + `files` 含 `git/` `tools/` 实核 |
+| 2 | 域外 `scripts/verify-team.mjs:11` 随本笔改指 | 该档 import `../src/git/gitmem.mjs`，删档后必 `ERR_MODULE_NOT_FOUND`（非机检面但属活体脚本）；备选 = 不动（破） |
+| 3 | `LEDGER-SELF-CONTAINED.md:518` 改指 VSC 路径（非核） | 该行语义 = VSC 侧档（表列「处置（VSC 仓）」）；承 U1 决策 2 先例（VSC 语义行指核会失真） |
+| 4 | `docs/design/PORTABILITY.md:271`（**机检豁免行**）同批改指 | 该行与 `requirements/PORTABILITY.md:69` 同锚同断言；豁免来源 = `isExecutableLine` 命令词谓词（行内反引号含 `git ` 触发）——留旧路径会造「同锚两态」；纯路径替换零语义改写，主动披露 |
+| 5 | `docs/design/MEMORY.md:42`（`git/gitmem.mjs`，机检靠仓根唯一 basename 侥幸通过）同批改指 | 同 4——避免「靠宽容规则侥幸通过」的静默残留 |
+| 6 | 空目录 `src/git/` 同批移除 | U3 先例（`src/traces/`）；git 不跟踪空目录 |
+| 7 | 删前全链**预跑一轮**（四命令） | §2.6.3（四）2 字面执行（承 U1 决策 3 / U3 决策 4） |
+| 8 | 模块地图 / README 叙事滞留**不改**（登记） | §2.6.2（五）法 1「裸词叙述射程外」+ U1/U4 同型判 + 设计归口 `CORE-UNIFICATION.md:1046` |
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **模块地图 / 叙事滞留（文档面 · 设计归口）**：`thincoder-cli/AGENTS.md:54`（`src/git/ git 子系统（checkpoint.mjs + gitmem.mjs）`）· `README.md:190`（模块树 `git/ checkpoint.mjs … gitmem.mjs`）· `README.md:424`（叙事）——均列已删实现；另 `docs/design/CHECKPOINT.md:37/:166` 裸档名叙述。建议随 S2 文档工作流（`CORE-UNIFICATION.md:1046`）或文档维护批一次收正。
+2. **文档锚 as-of 语义（设计面口径）**：本批既定「纯路径替换」会把历史变更记录内的路径改成当前真值（本笔 1 处：`requirements/PORTABILITY.md:69` 的 2026-09-11 条目）。U2 决策 6 已立此形；若设计面要求「历史行保 as-of + 另起一条迁移记录」，属下一轮口径裁定（本笔按既定形态执行、不代裁）。
+3. **仓根 `docs/**` as-of 记录**（射程外 · 仅登记）：`docs/design/CHECKPOINT.md:13` `:14` `:18` 等仍以 as-of 形态指 CLI 旧路径——属核化分析档的建档期记录（非 CLI 域扫描面，机检 0 悬空，见 A5 域一读数）。
+4. **VSC 预存项**：`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`（M）= spawn 前既存改动，非本笔（承 U0–U4 登记）；`doc-anchors` VSC 域报告态 5 命中同源。
+5. **`scripts/mirror-divergence.mjs` 交叉计数（（七）②）**（工具面）：U2 删 `src/prompts/` 后该命令 `ENOENT`——承 U3 未决 5，非本笔。
+
+**轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 0；A1–A6 终态读数见上表；终态 = **clean**；报告 ①–⑦ 见交付报告（父侧转呈）。
+
+**段末复跑（§5 写入后 · 宽度闸）**：`check-doc-width` = **306 档无 >300 字符行 · exit 0**（原样读数见交付报告）。
+
 ## §6 验证与收口（父代理）
 
