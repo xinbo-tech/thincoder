@@ -5,7 +5,8 @@
 > 设计侧 = `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md`（实现坐标 / 双端与依赖方向——本档不重述，D2）。
 > 关联面 = `ENG-TOKEN-BINDING.md`（凭证语义 / TTL——同层）· `docs/core/design/ENG-TOKEN-BINDING.md`。
 > 建档：2026-09-15（**B 式迁移轮 · VSC 批 5**——`thincoder-vscode/docs/requirements/DESIGN-TOKEN-SETTLEMENT.md` 内容重建入基准层；
-> 旧档原地一字不改、留作参照历史）。CLI 侧同名需求档（`thincoder-cli/docs/requirements/DESIGN-TOKEN-SETTLEMENT.md`）**未迁**。
+> 旧档原地一字不改、留作参照历史）。CLI 侧同名需求档（`thincoder-cli/docs/requirements/DESIGN-TOKEN-SETTLEMENT.md`）**已并入（2026-09-15 · CLI 尾部真批）**——
+> 逐节对账**零实质缺口**（R1–R4 ⇒ F-D1 / F-D4+F-D5 / N-D3 / N-D1 全覆），(d) 类入 §6.1。
 > 实测口径 = **as-of 2026-09-15 实核**（坐标 = 仓根相对路径 + `:行`，逐条复核）。
 
 ## 1. 总体定位
@@ -35,7 +36,7 @@ settle 即落盘权威台账；凭证值只进槽文件（会话态），永不�
 
 ## 4. 端差登记（多实现面——语义同源、各端原文自持）
 
-- 语义对位（对端 = `DESIGN-TOKEN-SETTLEMENT（CLI 仓·需求）§2`，未迁）：结算可靠（不再 `designId not found`）· 废单值镜像 · 凭证不落文档——逐条同源。
+- 语义对位（对端 = `thincoder-cli/docs/requirements/DESIGN-TOKEN-SETTLEMENT.md` §2，**已并入本档**——2026-09-15 CLI 尾部真批）：结算可靠（不再 `designId not found`）· 废单值镜像 · 凭证不落文档——逐条同源。
 - 端差（本端实况）：**结算载体** = 会话槽 `engDesignTokens` 多槽表（`thincoder-vscode/src/extension/session-slot-write.mjs:100-166`——对端 = persistState 单源面）；本端断点修复面（快照 / 写侧清零 / 落盘时序）= 本端实现史实，语义结果两端一致（settle 即落盘）。
 
 ## 5. 范围边界（不做）
@@ -56,18 +57,28 @@ settle 即落盘权威台账；凭证值只进槽文件（会话态），永不�
 | 旧档头注「实测口径 as-of 2026-09-12」 | 时点口径行 | 时点材料——本档口径行刷新为 2026-09-15 实核 |
 | 旧档 §5 变更记录（2026-09-12 建档行） | 建档流水 | 本档自有变更记录 |
 
+> **CLI 侧来源档** `thincoder-cli/docs/requirements/DESIGN-TOKEN-SETTLEMENT.md`（2026-09-15 CLI 尾部真批对账并入——零新增文本）——原地保留作参照历史。下列内容不并入本档：
+
+| 旧档位置 | 内容 | 何故不并 |
+|---|---|---|
+| 旧档头注（板块行 + 状态行「已实现」+ 来源注「2026-09-10 自设计档抽取——需求层拆分批」） | 时点状态 / 批次语境 | 现行态已入 §1–§3 |
+| 旧档 §2 R2 括注「（用户选 B）」 | 用户裁定语境 | 裁定结论已入 F-D4 / F-D5（废镜像 + 任一活槽）；「选 B」的选型语境留旧档参照 |
+
 ### 6.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
 
 | 旧档面 | 内容 | 何故不并（去向 / 触发） |
 |---|---|---|
-| 旧档 §4「对位 = `DESIGN-TOKEN-SETTLEMENT（CLI 仓·需求）§2`」指针 | 对端正文参照 | 对端档未迁——端差登记已入本档 §4；对端正文不代述（D2） |
-| CLI 侧同名需求档（`thincoder-cli/docs/requirements/DESIGN-TOKEN-SETTLEMENT.md`） | CLI 产品需求正文 | 触发 = CLI 迁移轮 |
+| 旧档 §4「对位 = `DESIGN-TOKEN-SETTLEMENT（CLI 仓·需求）§2`」指针 | 对端正文参照 | 对端档**已并入本档**（2026-09-15 CLI 尾部真批——§4 对位句已更新） |
+| CLI 侧同名需求档（`thincoder-cli/docs/requirements/DESIGN-TOKEN-SETTLEMENT.md`） | CLI 产品需求正文 | **已并入（2026-09-15 CLI 尾部真批）**——零实质缺口，(d) 类入 §6.1 |
 
 ## 7. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **74 行**（根层新建 · as-of 2026-09-15）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **约 84 行**（as-of 2026-09-15 CLI 尾部真批并入后实核）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
+- 2026-09-15（**CLI 尾部真批 · 并入既有 · eng-designer**）：`thincoder-cli/docs/requirements/DESIGN-TOKEN-SETTLEMENT.md` 逐节对账——**零实质缺口**
+  （R1 ⇒ F-D1 · R2 ⇒ F-D4 + F-D5 · R3 ⇒ N-D3 · R4 ⇒ N-D1），零新增正文；§4 对位句与 §6.2 两行销项（对端档已并）；(d) 类入 §6.1。
+  旧档原地一字不改。
 - 2026-09-15（**B 式迁移轮 · VSC 批 5**）：建档——`thincoder-vscode/docs/requirements/DESIGN-TOKEN-SETTLEMENT.md` 内容重建入基准层
   （旧档一字未改、原地作参照历史）；坐标全量改写为仓根相对路径并逐条实核（settle 落盘块起点：旧档记 364 行 → 现状 363 行起块，按现状收正）。

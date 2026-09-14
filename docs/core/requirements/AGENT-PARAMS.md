@@ -5,8 +5,8 @@
 > 设计侧 = `docs/core/design/AGENT-PARAMS.md`（默认值 / 读取链 / 实现坐标——本档不复制，D2）；
 > 相邻面 = `docs/core/design/CONFIG.md`（配置面总体）· `docs/core/design/AGENT-LOOP.md`（主循环）。
 > 建档：2026-09-15（**B 式迁移轮 · VSC 批 4**——`thincoder-vscode/docs/requirements/AGENT-PARAMS.md` 内容重建入基准层；
-> 旧档原地一字不改、留作参照历史）。CLI 侧同名需求档（`thincoder-cli/docs/requirements/AGENT-PARAMS.md`）**未迁**
-> ——CLI 迁移台账列其为后续批、落点同为本目录。
+> 旧档原地一字不改、留作参照历史）。CLI 侧同名需求档（`thincoder-cli/docs/requirements/AGENT-PARAMS.md`）**已并入（2026-09-15 · CLI 尾部真批）**——
+> 逐节对账**零实质缺口**（FR1–FR3 / N1–N4 全由 F-AP1–F-AP4 / N-AP1–N-AP4 承载），(d) 类入 §5.1。
 > 实测口径 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
 
 ## 1. 总体定位
@@ -51,19 +51,31 @@
 | 旧档「现码核对（2026-09-08）」行 | 时点核对行的旧路径与行数 | 时点坐标——现行坐标入各 F 判定句 |
 | 旧档变更记录（2026-08-24 立项行） | 立项流水 | 本档自有变更记录 |
 
+> **CLI 侧来源档** `thincoder-cli/docs/requirements/AGENT-PARAMS.md`（2026-09-15 CLI 尾部真批对账并入——零新增文本）——原地保留作参照历史。下列内容不并入本档：
+
+| 旧档位置 | 内容 | 何故不并 |
+|---|---|---|
+| 旧档头注（状态行「已实现…npm 0.12.43」+ 关联行 + 范围注「CLI 仓…VSC 有同需求独立文档」） | 时点状态 / 跨仓对位 | 批次语境——双端同源由 N-AP4 承载 |
+| 旧档「现码核对（2026-09-07）」行（`thincoder-core/advisor/run.mjs` `REVIEW_TIMEOUT_MS`） | 时点核对行的旧坐标 | 常量现居 `thincoder-core/advisor/compaction.mjs:36`（读取点 `thincoder-core/advisor/loop.mjs:106`）——现行坐标入 F-AP1（as-of 2026-09-15 实核） |
+| 旧档 §1 注（「30 硬帽仅存在于 VS Code 扩展 `subagent.mjs`；CLI 端无此项代码改动」） | 迁移前时点注 | 该硬帽形态其后已从 VSC 面移除——现行判定 = F-AP3「VSC 面源码零硬帽形态（实核）」 |
+| 旧档变更记录（含「设计细节见 TUNING.md」指针——CLI 旧树档） | 立项流水 + 旧树指针 | 旧树指针随树降格失效；本档自有变更记录 |
+
 ### 5.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
 
 | 旧档面 | 内容 | 何故不并（去向 / 触发） |
 |---|---|---|
 | 旧档「范围：本仓库（thincoder-vscode）；CLI 有同需求独立文档」注 | 跨仓对位句 | 语义同源已由本档正文承载（N-AP4） |
 | 「需求树逐档成套轮」建档批次注 | 建档批序 | 一次性材料——归批次档 |
-| CLI 侧同名需求档未迁面 | CLI 产品需求正文 | 触发 = CLI 迁移轮（落点同为本目录） |
+| CLI 侧同名需求档未迁面 | CLI 产品需求正文 | **已并入（2026-09-15 CLI 尾部真批）**——零实质缺口，(d) 类入 §5.1 |
 
 ## 6. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **70 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **约 80 行**（as-of 2026-09-15 CLI 尾部真批并入后实核）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
+- 2026-09-15（**CLI 尾部真批 · 并入既有 · eng-designer**）：`thincoder-cli/docs/requirements/AGENT-PARAMS.md` 逐节对账——**零实质缺口**
+  （§1 三项 / FR1–FR3 / N1–N4 ⇒ §1 / F-AP1–F-AP4 / N-AP1–N-AP4 全覆），零新增正文；(d) 类（状态行 / 现码核对旧坐标 / 30 硬帽时点注 / 变更流水）入 §5.1。
+  旧档原地一字不改。
 - 2026-09-15（**B 式迁移轮 · VSC 批 4**）：建档——`thincoder-vscode/docs/requirements/AGENT-PARAMS.md` 内容重建入基准层
   （旧档一字未改、原地作参照历史）；判定句坐标按现状实核改写（默认值 / 读取链改指核面 `thincoder-core/**`、显示面改指 `thincoder-cli/**`）；与既有设计档 `docs/core/design/AGENT-PARAMS.md` 成对（N-b 镜像同名）。

@@ -2,9 +2,12 @@
 
 > 板块 = **多实例协作感知**（同一工作目录多副本 agent 互相感知与避让）。
 > 本档 = 该机制的**需求层权威**（F-MI1–F-MI5 / N-MI1–N-MI5 判定句）。
-> 相邻面 = `docs/core/design/WORKSPACE.md`（工作区与会话槽）· `docs/core/design/SESSION.md`（会话存储与判活）。
+> 相邻面 = `docs/core/design/WORKSPACE.md`（工作区与会话槽）· `docs/core/design/SESSION.md`（会话存储与判活）·
+> `docs/core/design/MULTI-INSTANCE-COLLAB.md`（**设计面权威**——2026-09-15 CLI 尾部真批新建）。
 > 建档：2026-09-15（**B 式迁移轮 · VSC 批 4**——`thincoder-vscode/docs/requirements/MULTI-INSTANCE-COLLAB.md` 内容重建入基准层；
-> 旧档原地一字不改、留作参照历史）。CLI 侧同名需求档（`thincoder-cli/docs/requirements/MULTI-INSTANCE-COLLAB.md`）**未迁**。
+> 旧档原地一字不改、留作参照历史）。CLI 侧同名需求档（`thincoder-cli/docs/requirements/MULTI-INSTANCE-COLLAB.md`）**已并入（2026-09-15 · CLI 尾部真批）**——
+> 逐节对账：F1–F5 / N1–N4 全由 F-MI1–F-MI5 / N-MI1–N-MI5 承载（零实质缺口）；§2 外部写感知（F6 / N5 / N6）= VSC 设置面板面（P2）⇒ 不并（§5.2 登记）；
+> (d) 类入 §5.1。
 > 实测口径 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
 
 ## 1. 总体定位
@@ -58,19 +61,30 @@
 | 旧档「跨端：与 CLI 仓同名需求档语义同源（lockstep）」注 | 跨仓对位句 | 语义同源已由 N-MI2 承载——不另立对位节 |
 | 旧档变更记录（2026-09-12 建档行） | 建档流水 | 本档自有变更记录 |
 
+> **CLI 侧来源档** `thincoder-cli/docs/requirements/MULTI-INSTANCE-COLLAB.md`（2026-09-15 CLI 尾部真批对账并入——零新增正文）——原地保留作参照历史。下列内容不并入本档：
+
+| 旧档位置 | 内容 | 何故不并 |
+|---|---|---|
+| 旧档头注（板块行 + 状态行「已实现」+ 来源注「2026-09-10 自设计档抽取——需求层拆分批」） | 时点状态 / 批次语境 | 现行态已入 §1–§3 |
+| 旧档 §1 实况叙述（「CLI + VS Code 同开同 repo，靠口述协调」） | 立项动因叙述 | 动机已入 §1（「文件竞争要靠用户口头协调」）——同一事实不重复（D2） |
+
 ### 5.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
 
 | 旧档面 | 内容 | 何故不并（去向 / 触发） |
 |---|---|---|
 | 旧档头注对会话存储档的指针（判活 / 槽位认领机制） | 相邻机制正文 | 归 `docs/core/design/SESSION.md` 与 `docs/core/design/WORKSPACE.md`（本档只留边界句） |
 | 「机制在位无档补建」建档批注 | 建档批序 | 一次性材料——归批次档 |
-| CLI 侧同名需求档未迁面 | CLI 产品需求正文 | 触发 = CLI 迁移轮 |
+| CLI 侧旧档 §2 外部写感知（F6 面板自动刷新 / N5 事件驱动 + 自扰抑制 / N6 可降级——VSC 设置面板面，2026-09-11 第 21 批） | VSC 专有面需求（设置面板 = VSC 界面形态） | **P2 ⇒ VSC 轮**——归 VSC 侧 SETTINGS 板块承载；本档不并 |
+| CLI 侧同名需求档未迁面 | CLI 产品需求正文 | **已并入（2026-09-15 CLI 尾部真批）**——零实质缺口，(d) 类入 §5.1 |
 
 ## 6. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **77 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **约 87 行**（as-of 2026-09-15 CLI 尾部真批并入后实核）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
+- 2026-09-15（**CLI 尾部真批 · 并入既有 · eng-designer**）：`thincoder-cli/docs/requirements/MULTI-INSTANCE-COLLAB.md` 逐节对账——**零实质缺口**
+  （F1–F5 ⇒ F-MI1–F-MI5 · N1–N4 ⇒ N-MI1–N-MI5），零新增正文；§2 外部写感知（F6 / N5 / N6）= VSC 面板面（P2）登记 §5.2 不并；
+  (d) 类入 §5.1；档头补设计侧指针（本批新建 `docs/core/design/MULTI-INSTANCE-COLLAB.md`）。旧档原地一字不改。
 - 2026-09-15（**B 式迁移轮 · VSC 批 4**）：建档——`thincoder-vscode/docs/requirements/MULTI-INSTANCE-COLLAB.md` 内容重建入基准层
   （旧档一字未改、原地作参照历史）；判定句坐标按现状实核改写（实现面改指 `thincoder-vscode/**` 现状路径）。

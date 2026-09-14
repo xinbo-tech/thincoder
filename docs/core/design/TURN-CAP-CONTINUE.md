@@ -6,8 +6,8 @@
 > `docs/core/design/ESCALATE.md`（飞刀）· `docs/core/design/CONSULTATION.md`（会诊）——本档不复制其内容（D2）。
 > 需求侧 = `docs/core/requirements/TURN-CAP-CONTINUE.md`（F1–F7 / N1–N5）。
 > 建档：2026-09-15（**B 式迁移轮 · VSC 批 3**——`thincoder-vscode/docs/design/TURN-CAP-CONTINUE.md` 内容重建入基准层；
-> 旧档原地一字不改、留作参照历史）。CLI 侧同名档（`thincoder-cli/docs/design/TURN-CAP-CONTINUE.md`）**未迁**（CLI 台账列为后续批）——
-> 本档已含其已落面的双端坐标，余面随 CLI 轮并入。
+> 旧档原地一字不改、留作参照历史）。CLI 侧同名档（`thincoder-cli/docs/design/TURN-CAP-CONTINUE.md`）**已并入（2026-09-15 · CLI 尾部真批）**——
+> CLI 独有面（`runWithContinue` 骨架 / TUI 继续通道 / CLI 消费链坐标 / D-19 族决策）已入 §1–§5，(d) 类入 §6.1。
 > 本档坐标 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
 
 ## 1. 统一语义
@@ -16,7 +16,7 @@
 |---|---|---|
 | 1 | **撞墙** | `runAgent` 耗尽 `maxTurns` 抛 `ContinueError`（VSC `thincoder-vscode/src/agent.mjs:36`（类）/ `:371`（抛点）；核 `thincoder-core/agent.mjs:24`（导入）） |
 | 2 | **继续** | `resume:true` 重跑**同一执行体**：不重新注入任务文本、保留 history 与改动记录、每次全新轮数预算（VSC `thincoder-vscode/src/agent.mjs:96` 起 `resume` 参数；核 `thincoder-core/agent.mjs:96`） |
-| 3 | **拒绝 / headless** | 无 `onQuestion` 或无权限 handler → 返回部分成果 + turn-cap 标记（"work may be partial"）——报告据此判定「撞墙中断、工作可能不完整」 |
+| 3 | **拒绝 / headless** | 无 `onQuestion` 或无权限 handler → 返回部分成果 + turn-cap 标记——`TURN_CAP_MARK = "stopped: turn cap reached"`（常量单源 = `thincoder-core/agent/spawn-child.mjs:32`；尾部附 "work may be partial"）——报告据此判定「撞墙中断、工作可能不完整」 |
 | 4 | **用户 Stop 优先** | 中止路径（`AbortError` / `signal.aborted`）恒优先于继续提示——不弹卡、不自动续跑 |
 | 5 | **继续提示串行** | 按会话级队列串行（`continueQueue`）——并行执行体同时撞墙不弹多个卡 |
 | 6 | **次数不限** | 无次数帽（`MAX_RESUMES` 形态已从代码面移除——VSC 侧 `src/` 零命中实核）；防卡死靠用户 Stop |
@@ -33,6 +33,10 @@
 预算默认值单源 = `thincoder-core/agent/helpers.mjs:24`（`DEFAULT_MAX_TURNS = 200`）· `:25`（`DEFAULT_SUBAGENT_TURNS = 100`）；
 参数族权威 = `docs/core/design/AGENT-PARAMS.md`（本档只列名，不重述默认值表）。
 
+**CLI 侧继续通道**（与上表 VSC `onQuestion` 面板问题卡对位）：子 agent / 飞刀 / 会诊 = 权限请求 `onPermissionRequest("continue", …)`
+（TUI 渲染主 agent 同款 y/n Continue 面板——`thincoder-cli/src/tui/render-frame.mjs:326` / `:352`）；escalate 无 permQueue、直问用户；
+主 agent = TUI 权限面板（`src/tui/agent-turn.mjs:182` 捕 `ContinueError` → `:201` 弹 `name: "continue"` 权限卡）——AUTO 档自动 resume，每次重建 controller 续跑。
+
 ## 3. 实现坐标（双端 · as-of 2026-09-15 实核）
 
 ### 3.1 核 / CLI 面
@@ -45,6 +49,11 @@
 | 编号帧纯函数 | `thincoder-core/agent/helpers.mjs:221`（`export function turnFrame(seq, turn, maxTurns)`） | 在位 |
 | 续跑支（子代理） | `thincoder-core/agent-tools/subagent-run.mjs`（`resume` 分支） | 在位（子代理轮帽语义面） |
 | 续跑支（会诊） | `thincoder-core/agent-tools/consult.mjs:304`（注释：每次 continue = 新回合预算 + 重挂 watchdog）· `:319`（`continueQueue`）· `:322`/`:324` | 在位 |
+| **续跑骨架（三执行体共用）** | `thincoder-core/agent/spawn-child.mjs:218`（`runWithContinue(runner, child, input, callbacks, runOpts, { askContinue, onDeclined })`——`ContinueError → 询问 → resume:true 重跑`循环骨架，差异点经参数注入）· `:32`（`TURN_CAP_MARK`） | 在位 |
+| 主 agent 续跑（CLI） | `thincoder-cli/src/tui/agent-turn.mjs:182`（`ContinueError` 分支）· `:201`（`name: "continue"` 权限卡）· `:108`（续跑重建 controller 登记 abort 集合） | 在位 |
+| 编号镜像层（子代理） | `thincoder-core/agent-tools/subagent-run.mjs:105-112`（`⟦ev⟧turn` 原样正则解析 → `entry.turn` / `maxTurns` → status / observe 面） | 在位 |
+| 编号镜像层（飞刀） | `thincoder-core/agent-tools/escalate-async.mjs:207-209`（同形解析 → `entry.turn`） | 在位 |
+| CLI 消费链 | `thincoder-cli/src/tui/subagent-blocks.mjs:46`（`SUB_EVENT_RE` 块头 `turn n/max`）· `render-frame.mjs:376-377`（主会话状态行读 `_currentTurn` / `_maxTurns`） | 在位 |
 
 ### 3.2 VSC 面
 
@@ -91,6 +100,10 @@
 | D-TC5 | 段间种子经 **`opts`** 回传（VSC 修法 A） | 生成侧单点保持。否决「消费侧偏移」（累计公式在消费侧再写一遍 + 削弱生成侧单点） |
 | D-TC6 | **不建 live 头逐轮跳动**（登记保持开放） | 需桥通道（出生 / queued 事件面）；本项只修**值语义** |
 | D-TC7 | 段内帽 / 续跑循环结构 / `ContinueError` 载荷零改动 | 累计只作用于编号值 |
+| D-TC8 | **编号帧复用 `_currentTurn` / `_maxTurns`**（approval 事件读同一对字段——CLI `thincoder-core/agent/dispatch.mjs:287` 零改动） | 只改 turn 事件载荷而状态行字段仍段内 ⇒ 同链内两类事件交替驱动块头、显示值来回跳。否决「只改 turn 事件载荷」 |
+| D-TC9 | **depth 无关**（主会话续跑同构同修） | 同一缺陷结构在主会话续跑（Ctrl+I / AUTO 续跑）同存——只修 depth>0 = 留同构错误。**代价如实披露：主会话状态行编号同样累计**（同源结果） |
+| D-TC10 | **继续提示文案不动**（`Ran ${error.turn} turns (limit …)` 描述**本段**撞墙事件） | 改文案 = 动锁定串 / 提示面——`open`：是否补「累计进度」口径留待用户 / 后续批 |
+| D-TC11 | escalate 与子代理**共用 `ctx._subagentKey`**（`thincoder-core/agent-tools/subagent-actions.mjs:456-460`） | 继续 / 完成的 TUI 冻结与记账语义一致 |
 
 ## 6. 不并项与历史沿革
 
@@ -107,6 +120,15 @@
 | 旧档「显式引例（CLI 仓用例编号）」注 | 跨仓引例编号 | 跨仓指针（P3 自持纪律）——不并 |
 | 旧档变更记录（2026-08-17 起逐批流水） | 历史叙述 | 本档自有变更记录 |
 
+> **CLI 侧来源档** `thincoder-cli/docs/design/TURN-CAP-CONTINUE.md`（2026-09-15 CLI 尾部真批对账并入）——原地保留作参照历史。下列内容不并入本档：
+
+| 旧档位置 | 内容 | 何故不并 |
+|---|---|---|
+| 旧档头部状态行与权威源清单 | 时点状态行 | 批次语境——现行坐标已入 §3 |
+| 旧档 §19.1–§19.8（「第 19 批」节：现场复核 / 注①测试面分类 / §19.5 受影响文件 as-of 表 / §19.6 用例 T1–T8 / §19.7 AC1–AC9） | 单批施工叙述与一次性清单 | 批次材料——现行机制与口径已入 §3–§5；用例 / AC 由现行测试族覆盖 |
+| 旧档 §19.8 相邻登记两行（VSC 仓 `docs/design/AGENT-LOOP` / `ARCHITECTURE` 行号指针） | 跨仓登记行指针 | 跨仓指针（P3 自持纪律）——不并；「live 头逐轮跳动缺」登记保持开放（§6.2 已有行） |
+| 旧档变更记录（2026-08-17 起逐批流水） | 历史叙述 | 本档自有变更记录 |
+
 ### 6.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
 
 | 旧档面 | 内容 | 何故不并（去向 / 触发） |
@@ -114,14 +136,18 @@
 | 旧档「需求面随 CLI 仓 requirements 档」注 | 需求层承载指针 | 需求层已自持——见 `docs/core/requirements/TURN-CAP-CONTINUE.md` |
 | 登记行「live 头逐轮跳动缺」 | 未决登记（需桥通道） | **保持开放**——非本机制欠账；触发 = 桥通道批次 |
 | `AGENT-PARAMS` explore 30 硬帽沿革 | 邻板块参数沿革 | 归 `docs/core/design/AGENT-PARAMS.md` |
-| CLI 侧同名档未迁面（CLI 台账列为后续批） | CLI 产品档正文 | 触发 = CLI 迁移轮「B 式并入」 |
+| CLI 侧同名档未迁面（CLI 台账列为后续批） | CLI 产品档正文 | **已并入（2026-09-15 CLI 尾部真批）**——CLI 独有面入 §1–§5，(d) 类入 §6.1 |
 
 ## 7. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **约 120 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **155 行**（as-of 2026-09-15 CLI 尾部真批并入后实核）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
+- 2026-09-15（**CLI 尾部真批 · 并入既有 · eng-designer**）：`thincoder-cli/docs/design/TURN-CAP-CONTINUE.md` 逐节对账并入——
+  CLI 独有面入档：`TURN_CAP_MARK` 常量单源（§1 #3）· CLI 继续通道对位段（§2）· §3.1 新增 6 行坐标（`runWithContinue` 骨架 /
+  主 agent 续跑 / 编号镜像层 ×2 / CLI 消费链）· 决策补 D-TC8–D-TC11（§5）；(d) 类（§19 批次材料 / 状态行 / 跨仓登记行指针 / 逐批流水）入 §6.1。
+  旧档原地一字不改。
 - 2026-09-15（**B 式迁移轮 · VSC 批 3**）：建档——`thincoder-vscode/docs/design/TURN-CAP-CONTINUE.md` 内容重建入基准层
   （旧档一字未改、原地作参照历史）；坐标改写为现状路径并实核（`thincoder-core/agent.mjs` · `agent/helpers.mjs` · `agent-tools/{subagent-run,consult}.mjs`；
   `thincoder-vscode/src/{agent.mjs,agent/run-helpers.mjs,agent-tools/*,extension/panel-chat.mjs}`）；源档漂移按现状收正（§3.2 注）；

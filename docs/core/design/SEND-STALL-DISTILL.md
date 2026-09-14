@@ -6,7 +6,8 @@
 > 相邻权威 = `docs/core/design/AGENT-LOOP.md`（主循环轮末）· `docs/core/design/SESSION.md`（保存面）。
 > 需求侧 = `docs/core/requirements/SEND-STALL-DISTILL.md`（FR1–FR4 / N1–N5）。
 > 建档：2026-09-15（**B 式迁移轮 · VSC 批 3**——`thincoder-vscode/docs/design/SEND-STALL-DISTILL-TUNING.md` 内容重建入基准层；
-> 旧档原地一字不改、留作参照历史）。CLI 侧同名档（`thincoder-cli/docs/design/SEND-STALL-DISTILL.md`）**未迁**（CLI 台账列为后续批）。
+> 旧档原地一字不改、留作参照历史）。CLI 侧同名档（`thincoder-cli/docs/design/SEND-STALL-DISTILL.md`）**已并入（2026-09-15 · CLI 尾部真批）**——
+> CLI 独有面（TUI 保存回调接线 / 退出 flush 有界等待）已入 §2.3 / §2.6 / §3，(d) 类入 §5.1。
 > 本档坐标 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
 
 ## 1. 问题陈述
@@ -49,6 +50,8 @@
 蒸馏实际替换历史后触发 `onDistilled` → 再保存一次（`onComplete` 保存的是未压缩版）。
 
 - VSC：`thincoder-vscode/src/extension/panel-callbacks.mjs:187-189`（`onDistilled`：槽位守卫 `panel._slot !== distillSlot` 即返回；随后 `panel._saveLines(..., distillSlot)`；失败静默）。
+- CLI：`thincoder-cli/src/tui/tool-events.mjs:395`（`buildToolCallbacks` 提供 `onDistilled` → 复用现有保存逻辑 `saveSessionImpl`，try/catch 静默；
+  callbacks 由 `src/tui/agent-turn.mjs` 传入 `runAgent`）。**仅在实际替换成功时**触发（失败 / no-op 不调——历史保持原样）。
 - **槽位快照**：`distillSlot` = 回合开头、任何 await **之前**捕获的面板槽位（经 `ensureSlot` 而非裸读——裸读会把 null 冻进快照、使槽守卫恒拒绝）。
 - **工程字段复用**：`onComplete` 时捕获的 agent state 随闭包携带，供异步的 `onDistilled` 保存复用（VSC `panel-callbacks.mjs:115-116`）。
 
@@ -60,6 +63,14 @@
 - **abort 点**（运行 signal 之外的独立中止）：面板 dispose / 视图销毁 · 会话切换（新建 / 删除 / 加载）。
 - 运行 signal 只用于 abort **运行中**的回合——**不再传导到蒸馏**：用户 Stop 不影响蒸馏。
 - 核侧对照：`_pendingDistill` 的会话退出 flush（`thincoder-core/agent.mjs:84` 注释：awaited at next run start / **TUI exit flush**）。
+
+### 2.6 CLI 退出前 flush 蒸馏（FR3 补强 · CLI 专有面）
+
+进程退出（TUI 关闭 / Ctrl+C 二次确认退出）前，给在途蒸馏一个**有界等待窗口**再执行最终保存：
+窗口值 = `ctx.distillFlushTimeoutMs ?? DISTILL_FLUSH_TIMEOUT_MS`（默认 **5s**——`thincoder-cli/src/tui/agent-turn.mjs:29`；
+flush 点 = 每轮 `runAgentTurn` 的 finally——`:286-287`，render 已先行、退出场景自然覆盖）。
+
+关键点：flush **不摘除** `_pendingDistill`（`:282` NOTE）——蒸馏窗口内新一轮提交 / 退出，下一轮 `runAgent` 开头的 await 仍能看到在途蒸馏并先 await（N1）；否则用户在蒸馏窗口内退出会丢摘要。
 
 ### 2.5 失败路径（FR4）
 
@@ -77,7 +88,8 @@
 | 下一轮 await | `thincoder-core/agent.mjs:99-101` | `thincoder-vscode/src/agent.mjs`（runAgent 内）· `panel-chat.mjs:170-172` |
 | 蒸馏本体 | `thincoder-core/explore-distill.mjs:145` | `thincoder-vscode/src/explore-distill.mjs:154` |
 | re-export | `thincoder-core/context.mjs:392` | `thincoder-vscode/src/compact.mjs:388` |
-| 保存回调 | —（会话退出 flush） | `thincoder-vscode/src/extension/panel-callbacks.mjs:187-189` |
+| 保存回调 | `thincoder-cli/src/tui/tool-events.mjs:395`（`onDistilled` → `saveSessionImpl` 静默保存；callbacks 由 `src/tui/agent-turn.mjs` 传入） | `thincoder-vscode/src/extension/panel-callbacks.mjs:187-189` |
+| 退出 flush | `thincoder-cli/src/tui/agent-turn.mjs:29`（`DISTILL_FLUSH_TIMEOUT_MS = 5000`）· `:286-287`（finally 内有界等待）· `:282`（不摘除 `_pendingDistill`） | —（面板生命周期中止面替代——见 §2.4） |
 | 中止器 | —（会话退出 flush） | `panel-chat.mjs:161-162` · `chat-panel.mjs`（dispose）· `panel-session.mjs`（会话切换） |
 
 ## 4. 关键决策记录（含否决备选）
@@ -109,20 +121,33 @@
 | 旧档「评审 #1 / #2 / #5」括注 | 单批评审批注与批序 | 一次性材料——结论已入 §4 决策表 |
 | 旧档变更记录（2026-08-25 起逐批流水） | 历史叙述 | 本档自有变更记录 |
 
+> **CLI 侧来源档** `thincoder-cli/docs/design/SEND-STALL-DISTILL.md`（2026-09-15 CLI 尾部真批对账并入）——原地保留作参照历史。下列内容不并入本档：
+
+| 旧档位置 | 内容 | 何故不并 |
+|---|---|---|
+| 旧档状态行（「已实现（2026-08-25 实施；npm 0.12.43）」） | 时点状态行 + 发版号 | 批次语境——现行态已入 §2–§3 |
+| 旧档 §2.1 / §2.3 / §2.4 内嵌代码块 | 实现形态摘录 | 现态源码即权威——正文只留机制与坐标（与 VSC 侧同型判例一致） |
+| 旧档 §3 验收清单（「轮末 runAgent 不等待蒸馏（<1s 返回）…全套测试通过」） | 一次性验收清单 | 批次材料——行为面由现行测试族覆盖 |
+| 旧档变更记录（含 2026-09-05 模块拆分注） | 历史叙述 | 拆分结论已反映于 §3 坐标；本档自有变更记录 |
+
 ### 5.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
 
 | 旧档面 | 内容 | 何故不并（去向 / 触发） |
 |---|---|---|
 | 旧档 §1「评审 #4」括注（机制本体归 CLI 端） | 跨档归属指针 | 已归位——本体见 `docs/core/design/CONTEXT-COMPACTION.md` §6.9 |
 | 旧档「文档地图惯例」注 | 旧树地图惯例 | 树降格后失效——登记表已退休 |
-| CLI 侧同名档未迁面（CLI 台账列为后续批） | CLI 产品档正文 | 触发 = CLI 迁移轮「B 式并入」 |
+| CLI 侧同名档未迁面（CLI 台账列为后续批） | CLI 产品档正文 | **已并入（2026-09-15 CLI 尾部真批）**——CLI 独有面入 §2.3 / §2.6 / §3，(d) 类入 §5.1 |
 
 ## 6. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **约 105 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **约 155 行**（as-of 2026-09-15 CLI 尾部真批并入后实核）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
+- 2026-09-15（**CLI 尾部真批 · 并入既有 · eng-designer**）：`thincoder-cli/docs/design/SEND-STALL-DISTILL.md` 逐节对账并入——
+  CLI 独有面入档：TUI 保存回调接线（`tool-events.mjs:395` `onDistilled` → `saveSessionImpl`，§2.3 / §3）· **§2.6 CLI 退出前 flush**
+  （有界等待 5s · 不摘除 `_pendingDistill`）；§3 坐标表「保存回调 / 退出 flush」两行按实装收正（原核/CLI 栏仅「—（会话退出 flush）」——不完整）；
+  (d) 类（状态行 / 内嵌代码块 / 验收清单 / 逐批流水）入 §5.1。旧档原地一字不改。
 - 2026-09-15（**B 式迁移轮 · VSC 批 3**）：建档——`thincoder-vscode/docs/design/SEND-STALL-DISTILL-TUNING.md` 内容重建入基准层
   （旧档一字未改、原地作参照历史）；坐标改写为现状路径并实核（`thincoder-core/agent.mjs` · `explore-distill.mjs` · `context.mjs`；
   `thincoder-vscode/src/{agent/run-stages.mjs,explore-distill.mjs,compact.mjs,extension/panel-chat.mjs,extension/panel-callbacks.mjs}`）；

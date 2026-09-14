@@ -740,6 +740,115 @@ web 工具已改**逐次调用** `args.proxy`（`thincoder-core/tools/web.mjs:10
 
 **本段条目（0 档实迁 + 台账转形态登记 15 行 + 批 6a/6b 收正）= 迁移台账 §2.1 / §2.2「后续批」15 行的动作列更新（判栏不变）= 需求档既有条目回指**（`docs/core/requirements/DOC-SYSTEM.md` FR1–FR8 / N1–N4）；本批**不新增需求条目、无范围增减**（实迁为 0——全部命中「不抢」纪律，留待下一批以「并入既有」形态落地）。
 
+### 尾部真批 · 断点续作 + 收口（2026-09-15 · eng-designer · 段作者 = 本角色）
+
+**目标**：把迁移台账 §2 判为「后续批」的 15 档（设计 5 / 需求 10）以「并入既有 / 纯新建」形态落地并清零台账——本轮 = **断点续作**：前轮子代理（SSE idle 120s 断流）已落笔 15 档的主体但未经审计、未更新台账、未写 §2；本轮对**全量（含前任部分）逐档审计 → 就地补完 → 台账收口**。
+**判据依据**：`docs/core/design/DOC-SYSTEM.md` §5.1（P1–P5）· §4 · §6——判据句住该档，本段不重述（D2）。
+**两条已定裁定（直接执行）**：① req/VERIFY-REDESIGN 并入**同名根档**（原登记「并入 `req/TOOLS.md`」作废——当年登记时同名档不存在）；② req/PROJECT 按其档头自注「迁入时对账合并」执行。
+
+#### 一、前任部分落笔审计结论（当自己的交付核）
+
+逐档核对 15 档工作树内容 ⇄ CLI 树旧档全文（三类逐节闭合：已有 / 并入 / 不并）：
+
+- **完整闭合 13 档**：design 全 5 档（ESCALATE · SEND-STALL-DISTILL · TURN-CAP-CONTINUE · MULTI-INSTANCE-COLLAB · SETTINGS-TOOL）+ req 8 档（AGENT-PARAMS · DESIGN-TOKEN-SETTLEMENT · ENG-TOKEN-BINDING · MULTI-INSTANCE-COLLAB · NORMAL-MODE · PROJECT · SETTINGS-TOOL · STRUCTURE-DEBT）——并入内容、不并登记、档头收正、变更记录均在场。
+- **断点面两档（PORTABILITY / VERIFY-REDESIGN）重点核**：两档**主体均完整**（断流发生在写入之后——PORTABILITY §5 接受方向表 + FR14 落实文本逐字在场；VERIFY-REDESIGN 对账与落点裁定注记在场）。PORTABILITY 缺一登记行（下表）。
+- **补完项（本轮就地修——一致性面，10 处）**：
+  ① 域一悬空锚 5 处（全在 15 档内——机检实跑暴露）：ESCALATE:151 `T-R17*` 用例号形态 → 改写「R17 系用例编号」（CASE_RE 避让）；MIC:75 / SETTINGS-TOOL:99 / AGENT-PARAMS:59 三处裸 basename 坐标 → 全路径化；PROJECT:148 旧树路径 `docs/design/REQUIREMENTS.md` 引文 → 去路径化（「自旧树设计档迁入」）。
+  ② 超宽行 1 处：req/SETTINGS-TOOL §4 收正行（330 字符 · 非表格行）→ 纯折行（零文本变更）。
+  ③ V1 段引用 1 处：req/NORMAL-MODE:136 对 PROJECT.md 的旧节号引用（该节已随并入重排为 §5.5）→ 改写为「PROJECT.md 产品定性节」。
+  ④ 不并登记缺行 2 处：PORTABILITY §6.1 补「旧档 §3 尾注（建档语境）」；PROJECT §6.1 补「旧档 §3.1 渠道枚举（DeepSeek/Kimi/GLM/Qwen/MiniMax——易漂移时点枚举不并，定性句保留）」。
+  ⑤ 行数口径收正 3 处：TURN-CAP-CONTINUE §7「约165→155」· design/SETTINGS-TOOL §7「约130→140」· design/MIC §11「约200→221」（实测口径 = split("\n").length）。
+
+#### 二、15 档逐档对账表（N = 已有 K + 并入 L + 不并 M——逐档闭合）
+
+**设计侧（5 档）**
+
+| # | 档（源行数 → 落点行数） | 已有 K | 并入 L | 不并 M（登记处） | 闭合 |
+|---|---|---|---|---|---|
+| 1 | design/ESCALATE（82 → 177） | 术语 / 需求定位 / 候选池 / 契约 / async 机制 / D-E1–D-E10 / VSC 接线 | relay 前缀双端异形（§4）· 撞墙继续 CLI 通道 + Stop 传播（§5）· CLI 接线 5 行坐标（§6）· D-E11 / D-E12 | 状态行 · jsonc 示例 · 受影响文件表 · 跨仓用例编号 · 变更流水（§8.1） | ✓ |
+| 2 | design/SEND-STALL-DISTILL（55 → 155） | 问题陈述 / 时序 §2.1–§2.5 / VSC 接线 / 决策 | CLI 保存回调（§2.3）· §2.6 退出 flush · §3 坐标两行按实装收正 | 状态行 · 内嵌代码块 · 验收清单 · 变更流水（§5.1） | ✓ |
+| 3 | design/TURN-CAP-CONTINUE（100 → 155） | 统一语义 6 条 / 四执行体表 / 双端坐标 / §4 跨段累计 / D-TC1–D-TC7 | `TURN_CAP_MARK` 单源（§1#3）· CLI 继续通道段（§2）· §3.1 六行坐标 · D-TC8–D-TC11 | 状态行 · §19 批次材料 · 跨仓登记行指针 · 变更流水（§6.1） | ✓ |
+| 4 | design/MULTI-INSTANCE-COLLAB（139 → 221 · **新建**） | —（根层无档） | §1–§7 全机制面（四分类 / L1 / L2 / L3 / F4 / F5 / 坐标 / D-MI1–D-MI8） | 状态行 · 用例编号集 · 受影响文件表 · 变更流水（§10.1）· VSC 实现坐标（§10.2 · P2） | ✓ |
+| 5 | design/SETTINGS-TOOL（223 → 140 · **新建**） | —（根层无档） | §1–§4（注册 / 寻址 / 热应用 / 遮罩 / parseValue / 形状表 / 输出契约 / VSC 镜像原则 / 无静默论证）· D-ST1–D-ST12 · 边界 · 坐标 | 状态行 · T-S1 历史声称表 · T-S2 编号集 · AC 清单 · 逐字文案稿 · §8.1/§8.2/§8.4 批次材料 · §9 裁定材料 · 受影响文件表 ×2 · 变更流水（§6.1——④ 补登记） | ✓ |
+
+**需求侧（10 档——全并入 VSC 批 4 / 批 5 同名根档）**
+
+| # | 档（源行数 → 落点行数） | 已有 K | 并入 L | 不并 M（登记处） | 闭合 |
+|---|---|---|---|---|---|
+| 6 | req/AGENT-PARAMS（26 → 82） | FR1–FR3 / N1–N4 ⇒ F-AP1–F-AP4 / N-AP1–N-AP4 **全覆** | 零新增（对账销项） | 状态行 · 现码核对旧坐标 · 30 硬帽时点注 · 变更流水（§5.1——① 已修裸坐标） | ✓ |
+| 7 | req/DESIGN-TOKEN-SETTLEMENT（4 → 85） | R1–R4 ⇒ F-D1 / F-D4+F-D5 / N-D3 / N-D1 **全覆** | 零新增 + §4 对位句更新 | 头注 · R2「用户选 B」括注（§6.1） | ✓ |
+| 8 | req/ENG-TOKEN-BINDING（28 → 86） | 头注裁定块 / §1 / FR1–FR5·FR7 / N1–N4 **全覆**（编号承旧档） | 零新增；**旧 FR6 口径陈旧**（「pass 分支后签发」⇄ 现行 echo 机制）按现状收正并登记 | 状态行 · N1 旧措辞 · 变更流水（§5.1） | ✓ |
+| 9 | req/MULTI-INSTANCE-COLLAB（43 → 91） | F1–F5 / N1–N4 ⇒ F-MI1–F-MI5 / N-MI1–N-MI5 **全覆** | 零新增 + 档头补设计侧指针 | 头注 · §1 实况叙述（§5.1）· §2 外部写感知 F6/N5/N6（§5.2 · P2 ⇒ VSC 轮） | ✓ |
+| 10 | req/NORMAL-MODE（53 → 161） | —（CLI 档与装配面**不同题**） | **全量并入 §5–§6**：定性 / 总体 / F1–F10 / N1–N10 / 边界 / 开放项 / F-N1.1–F-N1.6（F7 按现行四值裁决表落笔） | 头注 · 批序旧节号 · F7 三值旧措辞（§7.1——③ 已修 V1 引用） | ✓ |
+| 11 | req/PORTABILITY（30 → 124） | §1–§4（VSC 面）；FR10–FR15 正文 = `ENGINEERING-MODE.md` §2（指针不重述——D2） | **§5**：接受方向表（逐字）+ FR14 落实文本（推进档位契约）+ §5.3 边界（搬迁归位 = 父侧裁决项） | 头注 · §2 引言行 · §4 缺陷覆盖面 + §5 批次二镜像面 · §3 尾注（④ 补登记）· 变更流水（§6.1） | ✓ |
+| 12 | req/PROJECT（72 → 175） | §1–§4（跨产品契约面） | **§5 产品级定性面全量**（品类 / 用户 / C1–C5 / 产品边界 / 定位坐标 / 两种工作模式 / 总体需求与 v1 范围 / v2 团队记忆与已细化决策 / 技术约束九项 / 质量约束四条）——按档头自注对账合并（裁定②） | 头注 · 旧树指针（§6.1——① 已修路径引文）· §3.1 渠道枚举（④ 补登记） | ✓ |
+| 13 | req/SETTINGS-TOOL（18 → 92） | F-ST1–F-ST6 / N-ST1–N-ST4 | F-ST7（值解析去引号裁定）· F-ST2 热应用细节 · F-ST4 无静默集合相等判据 · N-ST5 / N-ST6 · CLI 边界族 · 持久性边界；**§4 错误边界行按双端实装收正**（「已知键之外一律拒绝」与实装相反——证据双端 `:128` / `:135` + 描述句） | 头注 · N-S1.3 陈旧口径（收正为 N-ST5）· VSC 跨仓引例（§5.1——② 已修超宽行） | ✓ |
+| 14 | req/STRUCTURE-DEBT（19 → 82） | F1–F4 / N1–N5 ⇒ F-SD1–F-SD4 / N-SD1–N-SD5 **全覆** | 零新增；旧 N5 双树口径确认为合并前措辞（台账标注的随迁收正项销项） | 头注 · 旧 N5 作废句 · 旧 F3（§5.1） | ✓ |
+| 15 | req/VERIFY-REDESIGN（9 → 76） | 总体段 / 四条用户故事 ⇒ F1–F3 / 非功能三条 ⇒ N1–N3 **全覆**（编号承旧档） | 零新增 + **落点裁定落档**（裁定①——并入同名根档） | 头注（含「终验收待核销」状态行 = 台账面事项，已上报——§5.1） | ✓ |
+
+#### 三、台账收口（`docs/core/design/DOC-MIGRATION.md`）
+
+| 项 | 改前 | 改后 |
+|---|---|---|
+| §2.1 五行（第 17 / 24 / 32 / 34 / 44 行） | 后续批 | **本批迁**（逐行补实核依据 + 落点） |
+| §2.2 十行（第 4 / 10 / 11 / 18 / 19 / 21 / 22 / 27 / 28 / 37 行） | 后续批（#37 落点两读待裁） | **本批迁**（#37 按裁定①落同名根档；#22 按档头自注对账合并） |
+| §5 小计「本批迁」 | 设计 29 / 需求 20 = **49** | 设计 34 / 需求 30 = **64** |
+| §5 小计「后续批」 | 设计 5 / 需求 10 = **15** | **0 / 0 = 0**（清零） |
+| §5 闭合校验 | 49+16+0+4+0+15 = 84 | **64+16+0+4+0+0 = 84** ✓（设计 34+9+0+4+0+0=47 ✓ · 需求 30+7+0+0+0+0=37 ✓——双向闭合） |
+| §5 口径行 | 第 1–6 批 = 49 | 第 1–6 批 + **尾部真批 15 = 64** |
+| §6 批 6a / 6b 行 | 转形态 / 待裁 | **已落（2026-09-15 尾部真批）**；批 7 残留行销项（待核 9 档第 2 批已裁定实迁）；标题 15 → **0** |
+| §1 根层基准档数 | 17 + 17（建档时点，已陈旧） | **50 + 37**（现状实核——一致性收正） |
+| §8 体量 | 218 行 | **226 行**（本批实核） |
+| 变更记录 | — | +1 条（断点续作事实 + 逐批翻转 + 补完清单 + 三闸读数） |
+
+#### 四、受影响文件（R24a · 实核）
+
+| # | 档 | 动作 | 行数（实测） |
+|---|---|---|---|
+| 1–3 | `docs/core/design/{ESCALATE,SEND-STALL-DISTILL,TURN-CAP-CONTINUE}.md` | 并入既有（前任落笔 + 本轮审计修补 3 处） | 177 / 155 / 155 |
+| 4–5 | `docs/core/design/{MULTI-INSTANCE-COLLAB,SETTINGS-TOOL}.md` | 新建（前任落笔 + 本轮修补 3 处） | 221 / 140 |
+| 6–15 | `docs/core/requirements/{AGENT-PARAMS,DESIGN-TOKEN-SETTLEMENT,ENG-TOKEN-BINDING,MULTI-INSTANCE-COLLAB,NORMAL-MODE,PORTABILITY,PROJECT,SETTINGS-TOOL,STRUCTURE-DEBT,VERIFY-REDESIGN}.md` | 并入既有（前任落笔 + 本轮修补 5 处） | 82 / 85 / 86 / 91 / 161 / 124 / 175 / 92 / 82 / 76 |
+| 16 | `docs/core/design/DOC-MIGRATION.md` | 台账收口（218 → 226） | 226 |
+| 17 | 本批次档 §2 | append 本段（不改 §1） | — |
+| — | `thincoder-cli/docs/**`（84 档）· `scripts/**` · `docs/TODO.md` · `docs/README.md` · `docs/cli/**` · `docs/vsc/**` · 两产品树 · 核树 · prompts · PROVIDER 两档 · 陌生批次档 · COMPETITIVE_ANALYSIS.md | **零写入**（实核 `git status`） | 0 |
+
+**逐档 ≤500 ✓（最大 226）**；全部 ≤300 ⇒ 无拆分规划义务。
+
+#### 五、验收读数（as-of 2026-09-15 本轮实测 · 修补后复跑）
+
+| # | 验收标准 | 读数 | 判 |
+|---|---|---|---|
+| G1 | `node scripts/doc-anchors.mjs --domain .` 域一悬空 | **OK(V5): 0 条悬空锚**（125 档 · 闸态）——修补前 FAIL 5（全在 15 档内）→ 修补后归零。CLI 域 FAIL 1 = 既有（`thincoder-cli/docs/design/TWO-REPO-MERGE.md:404`——前批已登记，非本批写域）；VSC 域 21 处报告态（非阻断） | ✓（本批供给 0） |
+| G2 | `node scripts/check-doc-width.mjs` | **OK(宽度)**：402 文件 0 行 >300 字符 · 一致性 V1/V2/V3 **新增违规 0** · 存量 0——修补前 FAIL 2（超宽 1 + V1 引用 1，全在 15 档内）→ 修补后归零 | ✓（本批新增 0） |
+| G3 | `node scripts/check-ledger.mjs` | 两档 OK · **0 处违规** · 基线 0 条 · exit 0 | ✓ |
+| G4 | 台账小计闭合 | 64+16+0+4+0+0 = 84 ✓（设计 47 / 需求 37 双向闭合；后续批 **0**） | ✓ |
+| G5 | 逐档 ≤500 + 三层形态 | 16 档逐档 ≤226；各档含不并登记节；无状态行 / 无逐批流水入正文 | ✓ |
+| G6 | `git status` 本批 ⊆ 写域 | 本批 = 15 档 + 台账 + 本段；其余改动（PROVIDER 两档 · `docs/TODO.md` · `thincoder-core/model-specs.mjs` + 其测试 · `2026-09-15-DEEPSEEK-QWENPLAN.md` · `COMPETITIVE_ANALYSIS.md`）全为他线在写——本角色**零触碰** | ✓ |
+
+#### 六、未决与打回（不静默处置）
+
+| # | 项 | 归属 / 处置 |
+|---|---|---|
+| 1 | req/VERIFY-REDESIGN 旧档状态行「已实现（**终验收待核销**）」 | **台账面事项**——归父侧 `docs/TODO.md` 核销面；需求档不承载（§5.1 已登记，本段上报） |
+| 2 | req/PORTABILITY §5.3：FR10–FR15 正文是否自 `ENGINEERING-MODE.md` §2 **搬迁归位**入 PORTABILITY 档 | **父侧裁决项**（随档并入的既有登记）——未裁决前以 `ENGINEERING-MODE.md` §2 为权威正文 |
+| 3 | req/NORMAL-MODE §5.5 开放项两条（提示词双向核对 / 可机械化保障划界） | 随档并入的既有开放项——保持开放（非本批可决） |
+| 4 | 他线（DeepSeek 渠道名批）在写：`docs/core/{design,requirements}/PROVIDER.md` · `docs/TODO.md` · `thincoder-core/model-specs.mjs`（+ 新建测试档）· `docs/batches/2026-09-15-DEEPSEEK-QWENPLAN.md`；用户在写 `thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md` | 他线 / 用户——本角色**零触碰**；其机检红面（若有）不归本批 |
+| 5 | req/MULTI-INSTANCE-COLLAB 的 F-MI 判定句证据坐标仅引 VSC 路径（VSC 批 4 落笔形态） | 观察项——CLI 侧实现坐标已由本批新建的设计档承载；需求层补 CLI 侧证据坐标 = 后续润饰（不阻断） |
+| 6 | req/SETTINGS-TOOL 的 N-S1.5（护栏表防漂移完备性锁）未单列需求条目 | 观察项——机制判据由 `docs/core/design/SETTINGS-TOOL.md` §2.6 完备性机械锁承载（设计层在档，不阻断） |
+| 7 | §8.1 两处「按现状收正」（req/ENG-TOKEN-BINDING FR6 口径 · req/SETTINGS-TOOL §4 边界行——均与实装相反） | **一致性面判定**（文档 ⇄ 实现对齐——同类判例 = 第 3 批 PROXY §TLS），已逐条登记各档 §5.1 + 变更记录；**若父侧判为语义面 ⇒ 请打回**（两处均可独立单行 revert） |
+
+#### 七、边界（本批不做）
+
+1. **`thincoder-cli/docs/**` 一字不改**（B 式只读参照——实核 `git status` 零改动）。
+2. **不动 `scripts/**`**（机检复跑只读）；不动 `docs/cli/**` / `docs/vsc/**` / 两产品树 / 核树 / prompts / `docs/TODO.md` / `docs/README.md`。
+3. **不碰他线在写档**（PROVIDER 两档 / DEEPSEEK-QWENPLAN 批次档 / model-specs / COMPETITIVE_ANALYSIS）。
+4. **不 commit · 不发起评审**（发起权 = 用户）。
+5. 不改旧档已知错误（旧档只读——语义在落点档按现状收正并逐条登记）。
+
+#### 八、三方条目一致
+
+**本段条目（15 档并入 / 新建 + 台账收口）= 迁移台账 §2.1 第 17 / 24 / 32 / 34 / 44 行 + §2.2 第 4 / 10 / 11 / 18 / 19 / 21 / 22 / 27 / 28 / 37 行（本批迁栏——「后续批」清零）= 需求档既有条目回指**（`docs/core/requirements/DOC-SYSTEM.md` FR1–FR8 / N1–N4）；本批**不新增需求条目、无范围增减**（两条裁定 = 落点执行，非新范围）。
+
 ## §3 评审发现（评审子代理）
 
 _（待写）_
