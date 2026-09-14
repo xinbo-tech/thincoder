@@ -407,7 +407,7 @@ A8 / A9（对称面均入核）与 F3（零「新写」——不得造第三份�
 | **S0a** | **高相似面**（席位 = 本节判据 ①）：**① 度量脚本补齐**（F10——首项动作；覆盖面 / 用法契约见 §2.8 度量脚本行）· **② 逐条裁决**（零代码）· **③ 首建核并试跑**（`thincoder-core/` 首批 = 高相似面进核模块 + 提示词面 **S0a 席位全族的运行期面**（逐字节同 8 + 20，含 `sim ≥ 0.90` 非逐字节同对——判据 5；**中文设计档不在建核面**）+ 加载面）——**试跑 = 用户「先建核、试一下可用」的验证口** | 需求收口（§1）+ 本档批准（度量脚本补齐 = 首项动作，见动作列） | ① 高相似面席位在本档 §2.5 填齐、四列（前提校验 / 分类 / 端差处置 / 须用户裁）无空值；② **核独立跑绿**（`node --test` 于 `thincoder-core/` exit 0——F4 / T-C4）；③ **两产品 `git diff --stat` 为空**（T-C12）；④ 命中 A11 ②③ 的条目已裁定（未裁定不进 S0b / S1） | 删 `thincoder-core/` 即退（仓结构零改——B12） |
 | **S0b** | **低相似对称面 + 语义对位遍 + B16 点名面**（席位 = 本节判据 ②）：逐条裁决（零代码）+ 前提校验遍 + **版本下限实测**（A8 残余）+ **对外契约探测**（A7） | S0a 退出达标 | 本档 §2.5 覆盖**全席位**（107 同路径对 + 15 镜像对 + **语义对位遍 63 行 / 16 族**——单端 239 档逐面闭合，§2.5（四））；四列无空值；③ 类逐条带行为实证与建议；**§2.5.1 全部须裁条目裁定完毕**（A11——含**丁组 D1 / D2**；未裁定不进 S1）；**A8 残余真机实测**（引擎下限——测法见 §2.11 A8）+ **记忆面归一实测**；度量数字可复现（T-C10）；§2.12.3 上抛项已裁定（T-C17） | 无代码改动 ⇒ 撤回本档修订（`thincoder-core/` 不增删） |
 | **S1** | **建核补齐**：按 S0b 裁决把剩余模块 / 运行期提示词档并入 `thincoder-core/`（模块 + `prompts/` + `tool-docs/` + 加载面 + `test/`；**中文设计档不并入**——文档面）；**两产品一行不改** | S0b 退出达标（S0a 已建首批核） | 核测试独立跑绿（`node --test` 于 `thincoder-core/` exit 0）· 核内零产品 import、零裸包名 import · **核包提示词面档名集合 = 15 + 25** · 两产品 `git diff --stat` 为空 | 删 `thincoder-core/` 即退（仓结构零改——B12） |
-| **S2** | 逐模块 / 逐档迁移（一次一个模块族：接线 → 删旧 → 复跑）；接线 = 加依赖声明 + 改 import 指向包名 + （VSC 一次）装载配置 + **四个提示词加载面改指核 + 删产品内提示词档**（中文设计档不动——文档面）；**接线期该产品依赖经 `npm link` 解析**（§2.6.1） | S1 退出达标 + 该模块接线方案明确 + **开发期链接就位**（`npm link`——本地 / CI 口径见 **§2.6.1**） + **该模块所涉面内条目均已裁定 · §2.12.3 待裁为零**（未裁定不进 S1——统一口径，承 A11 / A7） | 该产品全链 exit 0（**面内**用例按裁决结果改判并登记 · **未涉面**用例逐数不变）· 该模块旧实现 / 旧提示词档零引用 · **核依赖可解析**（S2 期间 = 开发期链接口径——§2.6.1 · 机检 L1；**含 registry 存在性的面（断言 C / T-C7 的 registry 成分）验证时点 = S2 收口**——核发布后）· **产物提示词断言通过（T-C7）** | 单模块一步一提交 ⇒ `git revert` 该提交 |
+| **S2** | 逐模块 / 逐档迁移（**一次一个迁移单元——按产品解耦**：单元只含单产品半边；接线 → 删旧 → 复跑；排期见 **§2.6.3**）；接线 = 加依赖声明 + 改 import 指向包名 + （VSC 一次）装载配置 + **四个提示词加载面改指核 + 删产品内提示词档**（中文设计档不动——文档面）；**接线期该产品依赖经 `npm link` 解析**（§2.6.1） | S1 退出达标 + 该模块接线方案明确 + **开发期链接就位**（`npm link`——本地 / CI 口径见 **§2.6.1**） + **该模块所涉面内条目均已裁定 · §2.12.3 待裁为零**（未裁定不进 S1——统一口径，承 A11 / A7） | 该产品全链 exit 0（**面内**用例按裁决结果改判并登记 · **未涉面**用例逐数不变）· 该模块旧实现 / 旧提示词档零引用 · **核依赖可解析**（S2 期间 = 开发期链接口径——§2.6.1 · 机检 L1；**含 registry 存在性的面（断言 C / T-C7 的 registry 成分）验证时点 = S2 收口**——核发布后）· **产物提示词断言通过（T-C7）** | 单模块一步一提交 ⇒ `git revert` 该提交 |
 | **S3** | 收尾（残留删净 + 装载面复核 + 文档 / 机检收正 + **提示词副本唯一**——限运行期面；中文设计档按文档面计划处置、不删） | S2 全模块迁完 | 旧实现与提示词旧档零残留 · 三机检 exit 0 · 两产物生成且**含核 / 版本 / 提示词面断言**通过 · **对外契约变更已逐条登记并保留兼容（§2.12 / T-C17）** · 文档与台账收正 | 逐提交回退 |
 
 **S0a / S0b 席位判据（可机判——A5 裁定落地）**：
@@ -421,11 +421,31 @@ A8 / A9（对称面均入核）与 F3（零「新写」——不得造第三份�
 4. **结构性对称判据（与相似度互补）**：判 `不迁`（端特有）**只能**凭结构性不对称（仅单侧存在 / 依赖壳能力 + 证据——§2.4 第 3 条）；相似度高低**不构成**判据（B18 反例：单端独有档之间最高 j 仅 0.256）。
 5. **席位 ⇔ 建入（判据 5——`sim ≥ 0.90` 非逐字节同的**运行期**提示词对）**：该类对（**限 `src/prompts/` ↔ `src/prompts/`**）的「归属段」列值 = `S0a（首批建核）`，**建入随 S0a 首建一并处理**（不落 S1「补齐」）——S0a 首建的提示词面 = **S0a 席位的运行期面**（逐字节同族 + 该类对）；S1 补齐面 = S0b 席位的**运行期**档。**中文设计档不在建核面**（`docs/design/prompts/**`——归属段 = `文档面`，§2.5 列定义）。
 
-**段序纪律**：每段独立提交、独立可验；**S0a → S0b → S1 顺序推进**（S0a 的建核不改变 S0b 的分析面）；S2 内先做完一个产品（或一个模块族）再接下一个——**不做跨模块大包**；
+**段序纪律**：每段独立提交、独立可验；**S0a → S0b → S1 顺序推进**（S0a 的建核不改变 S0b 的分析面）；S2 内**按产品解耦**——一个迁移单元只含**单产品半边**，**CLI 全部单元做完并验收通过才开 VSC 单元**（用户 2026-09-14 裁定 —— §2.6.0）；**不做跨模块大包**；
 **建核段（S0a / S1）** 的「两产品一行不改」是硬判据（可用 `git diff --stat` 直接判）。
 **验收判据口径（A10）**：每段退出条件中的「全链」= exit 0 + **未涉面逐数不变**；**面内**用例随裁决改判并登记（§2.5「归一后行为说明」列）——两者不得混用措辞。
 **发布顺序（硬约束——2026-09-14 口径收正）**：**核先发布 → 产品后发布**（这条顺序不变——产品发布恒以核已发布为前提）；**核的发布时点 = S2 收口**（**不是** S2 开始前）⇒ **开发与接线期的依赖解析由 `npm link` 承载**（口径与机检见 §2.6.1）；S2 期间**不发布**（保守路线的「先建核、试一下可用」在 **S0a** 即完成验证，不需要发布）；**发布只发生一次**（核 → 产品，各一次）。
 **对外契约（A7）**：S0a / S0b 的对外契约探测结果按 **§2.12** 逐类填兼容形态；**确无法兼容者**单列 §2.12.3 上抛清单——**不得静默破**（F13 / D-C18）。
+
+#### 2.6.0「族」口径收正：按产品解耦（2026-09-14 用户裁定）
+
+**裁定**（原文见批次档 §1「追加裁定（实施顺序：CLI 先全完 ⇒ 才动 VSC · 2026-09-14）」）：
+**S2 的迁移面先把 CLI 全部接完**（同路径对 + 提示词面 + 语义对位族），**VSC 侧一律押后** ✗。
+
+**理由（登记 · 判据 = 用户裁定）**：**VSC = 当前工作台，不可自毁**——当前所有工作跑在旧的 VSC 扩展里，过早迁移 VSC 可能弄坏正在使用的工具；
+**CLI = 工作台切换后的落点**——待 **CLI 完全可用**（真机验收通过）⇒ 改用 CLI 做后续工作 ⇒ **之后**才动 VSC（届时即使 VSC 出问题仍有 CLI 可做事）。
+
+**改前 → 改后（「族」的口径）**
+
+| 项 | 改前（族 1 形态 · §2.6.2） | 改后（本收正） |
+|---|---|---|
+| 「族」的定义 | 一个模块族 = **两个产品半边**（同一组模块的 CLI 半边 + VSC 半边），两笔提交先后落地（D-F2「先 CLI 后 VSC」） | 一个**迁移单元** = **单产品半边**（CLI 单元只含 CLI；VSC 另起单元轮） |
+| 单元归属 | 族内两产品互为同一单元的两笔 | **按产品解耦**——CLI 单元与 VSC 单元**各自独立成单元**，不共单元号 |
+| 推进顺序 | 每族内「先 CLI 后 VSC」，逐族推进 | **CLI 全部单元做完并验收通过 → 才开 VSC 单元**（VSC 单元轮**本档不排期**） |
+| §2.6.2 族 1 | 两产品半边（② CLI 笔 + ③ VSC 笔） | **② CLI 笔已落**；**③ VSC 笔押后**（记录保留、不执行） |
+
+**连带**：§2.6.2 的 VSC 列 / VSC 删档 / VSC 锚改指**只作记录**；**CLI 侧排期 = §2.6.3**。
+**术语收正**：本档此后称「**迁移单元**」（简称**单元**），不再以「族」指代执行单位；「族」保留其在 §2.5 的唯一旧义 = **语义对位族**（16 族 / 63 行——**分析面**，非执行面）。
 
 #### 2.6.1 S2 期间安装口径（发布前 = `npm link`）与收口发布（2026-09-14 口径收正）
 
@@ -454,10 +474,12 @@ A8 / A9（对称面均入核）与 F3（零「新写」——不得造第三份�
 **收口动作（位置写死）**：**核发布 = S2 的收口动作**（核发布一次 → 产品发布在其后）；核发布**不是** S2 的**进入**条件（进入条件只需开发期链接就位——§2.6 段表）。
 **open（登记 · S2 收口时定）**：核发布后 CI 该 `npm link` 步骤的去留（撤 = 按契约 7 由 registry 解析 / 留 = CI 恒测本地核）——两者均不改产物与发布链。
 
-#### 2.6.2 S2 迁移单元：族 1（advisor 三档 · 2026-09-14）
+#### 2.6.2 S2 迁移单元：族 1（advisor 三档 · 2026-09-14 · **CLI 半边已落 / VSC 半边押后**——§2.6.0）
 
 **段位**：本节的写作段 = **S2 之前的出方案轮**（本轮只改设计档；S2 动作零执行）。本节 = **S2 第一个迁移单元的规格**——后续族照此形态复制（一次一族 · 接线 → 删旧 → 复跑，§2.6 段序纪律）。
 本节读数 = 本轮实核原样（sha256 / 行数 / 机检输出 / 沙箱探针），复现命令随行给出。
+
+> **VSC 半边状态（2026-09-14 · §2.6.0 收正）**：本族 step ③（VSC 族）依用户裁定 **押后、不执行**——本节（一）「VSC 内」列 ·（四）VSC 行 ·（五）第 2 行 ·（六）VSC 域 · **D-F2 的 VSC 笔** 一律**只作记录**；族 1 的 CLI 半边（step ①②）已落。CLI 侧后续单元排期见 **§2.6.3**。
 
 **（一）族清单（实核）**
 
@@ -642,6 +664,315 @@ VSC（`thincoder-vscode/`）：
 - **链接**：谁跑 / 何时跑 / 什么命令 = **逐字引 §2.6.1 表**（本地与 CI 两面）。本族**不另立**机制、不改其口径。
 - **进 / 收口条件**：本族进入条件 = §2.6 S2 行（S1 退出达标 + 本接线方案明确 + 开发期链接就位 + 涉面条目已裁定 / §2.12.3 待裁为零）；**核发布（= S2 收口动作）不在本族**。
 - **口径从属性**：§2.6.1 若随 id 77 收正（进 / 收口条件改写），**本节随之**——唯一权威源在 §2.6.1，本节只作本族的落点引用。
+
+#### 2.6.3 S2 迁移单元排期（CLI 侧 · 2026-09-14）
+
+**段位**：本节的写作段 = **S2 之前的出方案轮**（本轮只改设计档；S2 动作零执行）。依据 = §2.6.0（按产品解耦）+ §2.6 段表 + §2.6.1（安装口径）。**本排期只含 CLI 半边**。
+
+**（一）口径**
+
+| 项 | 口径 |
+|---|---|
+| **单元** | 一次「**接线 → 删旧 → 复跑**」并**单笔 revert** 的最小集；**只含 CLI 半边**（§2.6.0） |
+| **接线** | 复用依赖声明（已随族 1 装配置落地）+ 改 import 指向包名 / 加载面改指（**一律带子路径**——裸名 `@thincoder/core` 不可导入，§2.6.2（三）2）+ **测试面同批改指** |
+| **删旧** | 删 CLI 侧与核内同源档（核已持有该实现 / 内容）；**核内零改动** |
+| **复跑** | CLI 全链 + 仓根三机检 + 核回归（读数口径见（四）） |
+| **计数** | 一条可复跑命令机判「还剩几档」（见（七）） |
+| **不做** | S3 尾段项（残留复扫 / 中文设计档合流 / 发布）· VSC 单元 · 核内改动 |
+
+**读数（本轮实核 · 原样）**
+
+| # | 读数 | 来源 / 命令 |
+|---|---|---|
+| 1 | **同路径对 = 104**（`.mjs` **64** + `.md` **40**） | `node scripts/mirror-divergence.mjs`（`[1]` 行 + `[5]` 行） |
+| 2 | **CLI `src/**` 中与核内同源者 = 170 档** = `.mjs` **130** + 提示词面 `.md` **40** | 见（七）计数命令 ① |
+| 3 | `.mjs` 130 的构成 = **64** 同路径对 + **66** 路径不同者（语义对位行的 CLI 侧 + 核内取 CLI 一侧的单端路径档） | 同上（与读数 1 相减） |
+| 4 | 提示词面 40 = `src/prompts/*.md` **15** + `src/tools/*.md` **25**（核内落 `tool-docs/`） | 见（七）计数命令 ①（两面分别计数） |
+| 5 | 语义族 **16 / 63 行**（#123–#185） | §2.5（四）族清单 + 各子系统档 §2.2 |
+| 6 | 核回归基线 = **160/160 · fail 0 · exit 0**；CLI 全链基线 = 605 / 548 / 0 · lint 308 · integration 23 | 族 1 落轮读数（批次档 §5） |
+
+> **口径收正（父侧派单数字）**：派单的「**104 对 + 40 档提示词**」中，**40 档是 104 对的子集**（104 = 64 `.mjs` + 40 `.md`）⇒ 两者**不可相加**；本排期以 **170 档**为分母（130 `.mjs` + 40 `.md`）。
+> **语义族不另设单元**：16 族 / 63 行的 CLI 侧已全部落在上述 130 `.mjs` 之内（逐族归属见（二）表「语义族 · 行」列）——**族 = 分析面，单元 = 执行面**，二者不并列计数。
+> 行数 = `wc -l`（本轮实核）；改指 = 该单元删除集在该产品树（`src` + `test` + `bin`）内的**外部引用档数**（**按当下坐标计**——先跑的单元可能已改掉其中若干）。
+
+**（二）排期主表（16 单元 · 穷举 · 执行序 = 编号序）**
+
+| 单元 | 名称 | 语义族 · 行（§2.5 行号） | 规模（档 / 行 / 改指） | 前置依赖 | 风险 | 验收要点（专项——共同验收见（四）） |
+|---|---|---|---|---|---|---|
+| **U1** | LOGGING（诊断日志） | LOGGING #42（① 近同） | 1 / 196 / 18 | —— | 低 | 面内零变（差异仅注释 · 非语义） |
+| **U2** | **提示词面**（槽位 15 + 工具描述 25 + 3 加载根 + 3 测试档） | PROMPT-SYSTEM 全族（#2–#9 · #30–#39 · #43–#47 · #50 · #51 · #117–#122）+ TOOLS 工具描述 #10–#29 | 40 / 1452 / 0（另 **+6 改档**） | **U0（锚替换——见（八））** | 中 | 见（六） |
+| **U3** | TRACES（轨迹存储） | #116（①②③） | 1 / 356 / 3 | —— | 中 | 容量 / 清理策略 = 裁决（取并集）；默认关 ⇒ 未涉面零变 |
+| **U4** | WORKSPACE（技能 / 规则 / 同伴 / 台账） | #71–#73 · #170–#174 | 7 / 1311 / 19 | —— | 中 | #170 同步 loader 面归核；台账渲染色表 CLI 侧**不注入** |
+| **U5** | CHECKPOINT（检查点 · git 面） | #48 · #49 · #167 · #168（`gitmem` 档面——§2.5 把 #168 登记在 MEMORY 子系统名下） | 4 / 868 / 8 | —— | 中 | git 写面取一侧（近同）；`gitmem` team 层同步面 |
+| **U6** | CONTEXT-COMPACTION（压缩 / 标题 / 额度） | #162–#164 | 3 / 528 / 19 | —— | 中 | `compactThreshold` 默认值口径 = 裁决（§2.12.2 第 1 行） |
+| **U7** | MCP（客户端 + 三传输） | #81 · #144–#148 | 5 / 861 / 3 | —— | 中 | 传输面取一侧；配置面板 / 监视面 = ④（CLI 无） |
+| **U8** | MEMORY（记忆库 + 索引 + 嵌入） | #75 · #82 · #133–#137 | 10 / 2395 / 18 | —— | 中 | A12 / A13 ⇒ CLI 侧**面内零变**；`node:sqlite` 面不变 |
+| **U9** | AGENT-TOOLS 工具面（goal / plan / task / timer / verify / skill / eng / 记账…） | #85 · #86 · #88 · #90–#92 · #96 · #97 | 11 / 1041 / 10 | —— | 中 | 逐工具判定表 = 裁决；`agent-tools.mjs` 登记册单源（14 名） |
+| **U10** | PROVIDER（供应商 / 模型 / 代理） | #114 · #115 · #138–#143 | 15 / 2832 / 31 | —— | 中高 | #114 / #115 取并集（限流等待 · 模型列表失败形态）逐条登记 |
+| **U11** | SESSION（会话与历史） | #89 · #123–#127 | 9 / 2208 / 36 | —— | 中高 | 存储契约不变（同 `version` 1/2）；A14 以 CLI 为准 |
+| **U12** | CONSULTATION（advisor 余族 + 会诊 / 飞刀） | #1 · #40 · #41 · #93 · #95 · #104–#110 · #159–#161 | 16 / 3823 / 26 | —— | 中高 | 止损护栏 / 实例上下文 / `code_search` 恒在 = 裁决 |
+| **U13** | TOOLS（工具实现面 + 注册表 + 描述装载） | #52–#70 · #83 · #84 · #96 · #178 · #179 | 20 / 4861 / 18 | —— | 中高 | 逐工具行为 = 裁决；`DESC()` 装载根随 `tools/shared.mjs` 一并归核 |
+| **U14** | CONFIG（配置装载 / 迁移 + settings 工具） | #74 · #77 · #79 · #80 · #87 · #128–#132 · #177 | 3 / 834 / **51** | —— | **高** | 配置键面 / 默认值 / `$schema` / 类型校验 = 裁决；**旧键可读**（A7 兼容）用例在位 |
+| **U15** | AGENT-LOOP（主循环 + agent 装配 + 挂起 + 提示词装配面） | #76 · #78 · #94 · #98–#103 · #111–#113 · #149–#158 · #165 · #166 · #169 · #175 · #176 · #184 · #182（顶层 `markdown.mjs` 归核面） | 17 / 3217 / **49** | —— | **高** | Stop 钩子 / 中断记账 / 挂起载体 = 裁决；hooks 四事件名冻结 |
+| **U16** | 子代理 / 异步族（spawn / scheduler / async / settle / 槽台账） | #94 · #98 · #99 · #102 · #110 · #154 · #157 | 8 / 2860 / 31 | —— | **高** | 异步状态机 + 池 / 墓碑 / 载体 10 字段（`docs/design/AGENT-LOOP.md` §2.3）双夹具；`panel` 动作 CLI 侧保留 |
+| —— | **合计** | 16 族 / 63 行（#123–#185）全覆盖 | **170 / 29643 / 340** | —— | —— | —— |
+
+> **④ 行无单元**：④ 端特有桶 **#180–#183**（4 行）**不迁** ⇒ 无 CLI 单元（`tui/**` 68 档 · `acp.mjs` + `acp/**` 4 档 · CLI 顶层杂项 5 · VSC `extension/**` 20）；其中 **#182 的顶层 `src/markdown.mjs`（共享逻辑面）归核**——该档住 **U15**。
+
+**改指档数说明**：U14（51）· U15（49）· U11（36）· U16（31）· U10（31）为扇出前五——判据 = 该档在该产品树内的外部引用档数（含 `test/**`：U15 **23** · U16 **16** · U11 **15** · U12 **12** · U13 **10** · U14 **10**）。
+
+**（三）逐档清单（170 档 · 穷举 · 行数 = `wc -l` 实核 2026-09-14）**
+
+| 单元 | 档（`thincoder-cli/` 相对） | 行数 |
+|---|---|---|
+| U1 | `src/log.mjs` | 196 |
+| U2 | `src/prompts/advisor-design.md` | 42 |
+| U2 | `src/prompts/advisor-round1.md` | 42 |
+| U2 | `src/prompts/advisor-round2.md` | 47 |
+| U2 | `src/prompts/advisor-round3.md` | 43 |
+| U2 | `src/prompts/common.md` | 116 |
+| U2 | `src/prompts/consult-base.md` | 20 |
+| U2 | `src/prompts/discipline-engineering.md` | 260 |
+| U2 | `src/prompts/discipline-normal.md` | 185 |
+| U2 | `src/prompts/persona-coder.md` | 22 |
+| U2 | `src/prompts/persona-eng-coder.md` | 38 |
+| U2 | `src/prompts/persona-eng-designer.md` | 61 |
+| U2 | `src/prompts/persona-engineering.md` | 56 |
+| U2 | `src/prompts/persona-explore.md` | 16 |
+| U2 | `src/prompts/persona-normal.md` | 28 |
+| U2 | `src/prompts/persona-plan.md` | 27 |
+| U2 | `src/tools/apply_patch.md` | 16 |
+| U2 | `src/tools/bash.md` | 38 |
+| U2 | `src/tools/checklist.md` | 14 |
+| U2 | `src/tools/delete.md` | 14 |
+| U2 | `src/tools/edit.md` | 31 |
+| U2 | `src/tools/execute.md` | 22 |
+| U2 | `src/tools/fetch.md` | 13 |
+| U2 | `src/tools/file_ops.md` | 17 |
+| U2 | `src/tools/get_current_time.md` | 8 |
+| U2 | `src/tools/git.md` | 55 |
+| U2 | `src/tools/glob.md` | 12 |
+| U2 | `src/tools/grep.md` | 20 |
+| U2 | `src/tools/hashline_edit.md` | 15 |
+| U2 | `src/tools/insert_after.md` | 16 |
+| U2 | `src/tools/lint.md` | 11 |
+| U2 | `src/tools/ls.md` | 13 |
+| U2 | `src/tools/lsp.md` | 11 |
+| U2 | `src/tools/process.md` | 10 |
+| U2 | `src/tools/question.md` | 17 |
+| U2 | `src/tools/read.md` | 21 |
+| U2 | `src/tools/read_image.md` | 9 |
+| U2 | `src/tools/tree.md` | 14 |
+| U2 | `src/tools/wait_for.md` | 23 |
+| U2 | `src/tools/websearch.md` | 17 |
+| U2 | `src/tools/write.md` | 12 |
+| U3 | `src/traces/trace-store.mjs` | 356 |
+| U4 | `src/ledger.mjs` | 228 |
+| U4 | `src/conventions.mjs` | 224 |
+| U4 | `src/escape.mjs` | 153 |
+| U4 | `src/rules.mjs` | 54 |
+| U4 | `src/peer-instances.mjs` | 232 |
+| U4 | `src/peer-domains.mjs` | 266 |
+| U4 | `src/skills.mjs` | 154 |
+| U5 | `src/git/checkpoint.mjs` | 449 |
+| U5 | `src/git/gitmem.mjs` | 101 |
+| U5 | `src/tools/git-checkpoint.mjs` | 144 |
+| U5 | `src/tools/git-ext.mjs` | 174 |
+| U6 | `src/context.mjs` | 393 |
+| U6 | `src/generate-title.mjs` | 88 |
+| U6 | `src/text-budget.mjs` | 47 |
+| U7 | `src/mcp.mjs` | 296 |
+| U7 | `src/mcp/helpers.mjs` | 52 |
+| U7 | `src/mcp/transport-http.mjs` | 249 |
+| U7 | `src/mcp/transport-stdio.mjs` | 141 |
+| U7 | `src/mcp/transport-ws.mjs` | 123 |
+| U8 | `src/memory.mjs` | 22 |
+| U8 | `src/memory/code-index.mjs` | 220 |
+| U8 | `src/memory/code-sync.mjs` | 416 |
+| U8 | `src/memory/core.mjs` | 300 |
+| U8 | `src/memory/delete.mjs` | 237 |
+| U8 | `src/memory/docs.mjs` | 420 |
+| U8 | `src/memory/file-walk.mjs` | 110 |
+| U8 | `src/memory/scan.mjs` | 96 |
+| U8 | `src/memory/schema.mjs` | 453 |
+| U8 | `src/embedding.mjs` | 121 |
+| U9 | `src/agent-tools.mjs` | 18 |
+| U9 | `src/agent-tools/batch-segment.mjs` | 196 |
+| U9 | `src/agent-tools/digest-budget.mjs` | 77 |
+| U9 | `src/agent-tools/eng.mjs` | 68 |
+| U9 | `src/agent-tools/goal.mjs` | 120 |
+| U9 | `src/agent-tools/plan.mjs` | 82 |
+| U9 | `src/agent-tools/task.mjs` | 88 |
+| U9 | `src/agent-tools/timer.mjs` | 47 |
+| U9 | `src/agent-tools/verify.mjs` | 272 |
+| U9 | `src/agent-tools/skill.mjs` | 48 |
+| U9 | `src/agent-tools/recent-changes.mjs` | 25 |
+| U10 | `src/provider/anthropic.mjs` | 226 |
+| U10 | `src/provider/core.mjs` | 477 |
+| U10 | `src/provider/errors.mjs` | 102 |
+| U10 | `src/provider/google.mjs` | 258 |
+| U10 | `src/provider/index.mjs` | 8 |
+| U10 | `src/provider/normalize.mjs` | 82 |
+| U10 | `src/provider/responses.mjs` | 496 |
+| U10 | `src/provider/retry.mjs` | 89 |
+| U10 | `src/provider/sse.mjs` | 265 |
+| U10 | `src/provider/list-models.mjs` | 94 |
+| U10 | `src/provider/rate.mjs` | 109 |
+| U10 | `src/model-specs.mjs` | 180 |
+| U10 | `src/model-ref.mjs` | 67 |
+| U10 | `src/proxy.mjs` | 262 |
+| U10 | `src/abort-provenance.mjs` | 117 |
+| U11 | `src/session.mjs` | 493 |
+| U11 | `src/session-slots.mjs` | 493 |
+| U11 | `src/session-store.mjs` | 442 |
+| U11 | `src/session-gc.mjs` | 222 |
+| U11 | `src/session-segments.mjs` | 101 |
+| U11 | `src/session-guard.mjs` | 60 |
+| U11 | `src/session-migrate.mjs` | 48 |
+| U11 | `src/session-rename.mjs` | 39 |
+| U11 | `src/agent-tools/read-history.mjs` | 310 |
+| U12 | `src/advisor.mjs` | 291 |
+| U12 | `src/advisor/citations.mjs` | 140 |
+| U12 | `src/advisor/compaction.mjs` | 175 |
+| U12 | `src/advisor/loop.mjs` | 294 |
+| U12 | `src/advisor/messages.mjs` | 300 |
+| U12 | `src/advisor/project-context.mjs` | 195 |
+| U12 | `src/advisor/repos.mjs` | 151 |
+| U12 | `src/advisor/run.mjs` | 294 |
+| U12 | `src/agent-tools/advisor.mjs` | 261 |
+| U12 | `src/agent-tools/advisor-async.mjs` | 347 |
+| U12 | `src/agent-tools/advisor-settle.mjs` | 232 |
+| U12 | `src/agent-tools/design-token.mjs` | 118 |
+| U12 | `src/agent-tools/consult.mjs` | 474 |
+| U12 | `src/agent-tools/review-streak.mjs` | 94 |
+| U12 | `src/agent-tools/subagent-panel.mjs` | 161 |
+| U12 | `src/agent-tools/escalate-async.mjs` | 296 |
+| U13 | `src/tools/bash.mjs` | 269 |
+| U13 | `src/tools/checklist.mjs` | 300 |
+| U13 | `src/tools/checklist-sync.mjs` | 182 |
+| U13 | `src/tools/edit-batch.mjs` | 192 |
+| U13 | `src/tools/edit-diff.mjs` | 349 |
+| U13 | `src/tools/execute.mjs` | 229 |
+| U13 | `src/tools/file.mjs` | 470 |
+| U13 | `src/tools/git.mjs` | 357 |
+| U13 | `src/tools/glob-dialect.mjs` | 131 |
+| U13 | `src/tools/index.mjs` | 36 |
+| U13 | `src/tools/linter.mjs` | 129 |
+| U13 | `src/tools/lsp.mjs` | 317 |
+| U13 | `src/tools/ops.mjs` | 300 |
+| U13 | `src/tools/patch.mjs` | 283 |
+| U13 | `src/tools/question.mjs` | 27 |
+| U13 | `src/tools/repomap.mjs` | 315 |
+| U13 | `src/tools/search.mjs` | 237 |
+| U13 | `src/tools/shared.mjs` | 447 |
+| U13 | `src/tools/tree.mjs` | 66 |
+| U13 | `src/tools/web.mjs` | 225 |
+| U14 | `src/config.mjs` | 497 |
+| U14 | `src/config-migrate.mjs` | 71 |
+| U14 | `src/agent-tools/settings.mjs` | 266 |
+| U15 | `src/agent.mjs` | 418 |
+| U15 | `src/agent/completion.mjs` | 147 |
+| U15 | `src/agent/dispatch.mjs` | 490 |
+| U15 | `src/agent/helpers.mjs` | 385 |
+| U15 | `src/agent/post-turn.mjs` | 71 |
+| U15 | `src/agent/record-results.mjs` | 175 |
+| U15 | `src/agent/relay-prefix.mjs` | 40 |
+| U15 | `src/agent/run-stages.mjs` | 245 |
+| U15 | `src/agent/setup.mjs` | 355 |
+| U15 | `src/agent/setup-reminders.mjs` | 70 |
+| U15 | `src/agent/spawn-child.mjs` | 244 |
+| U15 | `src/auto-think.mjs` | 116 |
+| U15 | `src/hooks.mjs` | 98 |
+| U15 | `src/explore-distill.mjs` | 156 |
+| U15 | `src/markdown.mjs` | 107 |
+| U15 | `src/expand-home.mjs` | 17 |
+| U15 | `src/prompt-overlays.mjs` | 83 |
+| U16 | `src/agent-tools/subagent.mjs` | 405 |
+| U16 | `src/agent-tools/subagent-run.mjs` | 206 |
+| U16 | `src/agent-tools/subagent-scheduler.mjs` | 392 |
+| U16 | `src/agent-tools/subagent-async.mjs` | 435 |
+| U16 | `src/agent-tools/subagent-actions.mjs` | 482 |
+| U16 | `src/agent-tools/subagent-spawn.mjs` | 460 |
+| U16 | `src/agent-tools/async-settle.mjs` | 205 |
+| U16 | `src/token-ttl.mjs` | 275 |
+
+**（四）单元内固定四步与共同验收（逐单元同形）**
+
+1. **接线**：改 import / 加载面指向 `@thincoder/core/<子路径>`（**一律带子路径**）；**测试面同批改指**。
+2. **删旧**：删本单元「删除集」；**删前三条全过**——① 改指已落盘；② 该产品全链 exit 0；③ **零引用机判**通过（判读口径 = **反向判**两模式，§2.6.2（五）法 1）。
+3. **复跑**：CLI 四命令（`npm test` · `npm run lint` · `npm run test:full` · `npm run test:integration`，cwd = `thincoder-cli/`）· 核回归 `node --test`（cwd = `thincoder-core/`，基线 160/160）· 仓根三机检。
+4. **提交**：**单笔**（删档 + 改指 + 文档锚同批）；回退点 = `git revert <sha>`。
+
+| # | 共同验收判据 | 通过条件 |
+|---|---|---|
+| **A1** | CLI 全链 | 四命令 **exit 0**；**面内**用例按裁决改判并登记 · **未涉面**逐数不变（A10） |
+| **A2** | 零引用 | 本单元删除集在该产品树（`src` + `test`）内**零引用**（三法：文本反向判 / 运行面 / 文档锚面） |
+| **A3** | 文档锚 | 删档**同批**改指——`doc-anchors --domain thincoder-cli` 悬空 **0**（族 1 实测：3 档 ⇒ +6） |
+| **A4** | 核回归 | `thincoder-core/**` **零改动**；核内 `node --test` **160/160 · exit 0** |
+| **A5** | 仓根三机检 | `doc-anchors` · `check-doc-width` · `check-ledger` 三命令 **exit 0** |
+| **A6** | 链接 | §2.6.1 **L1**：产品目录 `npm ls @thincoder/core --json` exit 0 + 版本探针 = `0.1.0` |
+
+**逐单元专项验收（在共同验收之上）**
+
+| 单元 | 专项 |
+|---|---|
+| **U2** | ① `src/prompts/` 与 `src/tools/*.md` **档数 = 0**；② **装配后**核档文本零 `{{inject:` 字面（§2.13.7 ①）；③ 模型可见指令 = 裁决结果（并集化 + 端特有段注入值 = CLI 列，§2.13.2）；④ 3 处加载根改经核 `prompt-files.mjs`；⑤ 3 测试档改指（`test/prompts-dual-source.test.mjs` · `test/prompts-async-guidance.test.mjs` · `test/doc-consistency.test.mjs:232`） |
+| **U9** | `agent-tools.mjs` 登记册 = **14 名**逐名等值；`#84` 记账注入缝缺省 no-op |
+| **U11** | 存储契约不变（同一 `~/.thincoder/sessions/<hash>.json.{N,manifest}` · `version` 1/2）；旧短哈希迁移面在位 |
+| **U13** | 逐工具行为 = 裁决（①/②/③ 逐条）；CLI 侧注入缝**一律不注入**（默认径 = CLI 语义）；`DESC()` 经核 `tool-docs/` |
+| **U14** | 配置键面 / 默认值 / `$schema` 口径 / settings 类型校验 = 裁决；**旧键可读**用例在位（A7） |
+| **U15** | Stop 钩子 / 中断记账 / 挂起载体 = 裁决；hooks 四事件名冻结；`prompt-overlays.mjs` 与 `agent/setup.mjs` 同批 |
+| **U16** | 异步状态机 + 池 / 墓碑 / 载体 **10 字段**（`docs/design/AGENT-LOOP.md` §2.3）双夹具；`panel` 动作 CLI 侧**保留** |
+
+**（五）排序原则与理由**
+
+1. **先无依赖、无宿主面者**（派单原则①）：U1–U9 的改指面只涉同族 / 壳档，**不触宿主注入缝**（CLI 侧 = 一律不注入）。
+2. **按 §2.5 子系统成组**（派单原则②）：单元与 `docs/design/<子系统>.md` 一一对应；**三个大子系统各拆两单元**——TOOLS（U13 实现面 / U9 agent-tools 工具面）· AGENT-LOOP（U15 主循环与装配 / U16 子代理与异步族）· 余者一一对应；U12 = CONSULTATION 子系统 + advisor 装配面。
+3. **每单元独立「接线 → 删旧 → 复跑」并单笔 revert**（派单原则③）——承 §2.6 段序纪律（一次一单元 · 不做跨模块大包）。
+4. **风险升序**（判据 = 契约面 + 扇出 + 状态面三权）：低 → 中（U2–U9）→ 中高（U10–U13）→ 高（U14–U16）。
+   **例外 = U2**（风险中但排第二）——理由见（六）。
+5. **进度单调可核**：单元序 = 编号序，计数读数（（七））随单元推进单调递减。
+
+**（六）U2（提示词面）的位置与理由**
+
+**位置 = U2（第二，紧随 U1）。**
+
+1. **它是用户的首要诉求**：A7 明示「若提示词仍然分叉，**收益就会折损近半**」⇒ 尽早收口。
+2. **依赖面最干净**：40 档 `.md` 与代码面无 import 边；唯一前置 = **锚替换实现（U0——（八））**。
+3. **必须早于 U13 / U15 / U12**：其「3 处加载根改指」的落点分别是 `tools/shared.mjs`（U13 删）· `prompt-overlays.mjs`（U15 删）· `advisor.mjs`（U12 删）——**若这三单元先跑，加载根随之消失，改指动作失去对象**（U2 退化为「纯删 40 档 + 改 3 测试档」）。
+4. **代价已界定**：U2 触 **3 个测试档**（面内改判 · 逐条登记）+ 40 档删除 + 3 处加载根改指 = **46 档**。
+5. **否决备选 = 排最后**（收益 = 省去 3 处改指；代价 = 提示词分叉贯穿整个 CLI 迁移期、期间「单一权威源」不成立，与 A7 相悖）⇒ **不采用**。
+
+**（七）进度口径（可复跑计数命令 · cwd = 仓根）**
+
+```bash
+# ① 主计数：CLI 侧剩余待迁档数（分母 = 170；口径 = 本档（三）逐档清单里仍存在者）
+node -e "const f=require('fs');let n=0;for(const m of f.readFileSync('docs/design/CORE-UNIFICATION.md','utf8').matchAll(/\| U\d+ \| \x60([^\x60]+)\x60/g))if(f.existsSync('thincoder-cli/'+m[1]))n++;console.log('CLI 待迁 =',n)"
+
+# ② 交叉核对：同路径对（含 VSC 未迁半边 ⇒ 仅在 VSC 也迁完后归 0）
+node -e "console.log(JSON.parse(require('child_process').execFileSync(process.execPath,['scripts/mirror-divergence.mjs','--json'],{encoding:'utf8'})).pairs)"
+```
+
+**判读口径**：① = **主计数**（该产品的剩余待迁档数；**判据档 = 本档（三）逐档清单**——即清单里仍存在者的条数，随单元推进单调递减）；② = **交叉核对**（同路径对 = CLI 与 VSC 的合并读数）。
+**基线锚（as-of 2026-09-14）**：① = **170**（130 / 40）· ② = **104**；族 1（CLI 半边）已消费 **3 档 / 3 对**（起点 = 173 / 107）。
+
+**（八）前置门与阻塞**
+
+| # | 门前置 | 对象单元 | 状态 |
+|---|---|---|---|
+| **U0** | **提示词锚替换实现**（§2.13.6 缺口 1）：13 个 `{{inject:<name>}}` 的**替换环节**（谁替换 / 何时 / 形态）——核内 `assemblePrompt()` 现**零替换环节**（`thincoder-core/prompt-overlays.mjs:63-74`）⇒ **仅改加载根会让 `{{inject:…}}` 原样进入模型** | **U2** | **形态待定**（见下） |
+| —— | S2 通用进入条件（§2.6 S2 行）：开发期链接就位 + 该模块所涉面内条目均已裁定 / §2.12.3 待裁为零 | 全部单元 | **已达标**（族 1 装配置已落；§2.5.1 与 §2.12.3 状态 = 全「已裁」/「已兼容」） |
+
+**U0 的形态建议（只建议、不代裁）**：① **核内缝**——`assemblePrompt(scenario, { inject })` 增可选注入表（缺省 = 空表 ⇒ 现行为零变；与契约 5 / 10「核内保留注入位 · 端侧填值」同形，且核内可机判「装配输出零 `{{inject:` 字面」）；② **端侧替换**——端侧装配层取值后自行替换（核内零改动）。
+**建议 ①**（单一替换点 + 可机判）；形态定稿须随**设计面收正轮**落地（不在本排期轮）。
+
+**（九）边界（本排期不做）**
+
+- **不排 VSC 单元**（§2.6.0——VSC 押后至 CLI 全可用）；
+- **不含 S3 尾段项**（残留复扫 / 中文设计档合流 / 发布）；
+- **不含核内任何改动**（核回归 = 常数基线 160/160）；
+- **不含 U0 的实现**（前置门——（八））；
+- **不含已落单元重排**（族 1 的 CLI 半边 = 已完成，不占单元号）。
 
 ### 2.7 关键决策记录（含否决备选）
 
@@ -1440,5 +1771,9 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
   ② （四）超软线判定收正（`main.mjs` **320** = 既有超软线档 · 结构未变 · 拆分计划另议）；③ §2.6.1 CI 行改**相对 job cwd** 形态；④ CI 行（§2.8 / §2.6.2）统一为 **40 行 · +14±6**（`wc -l` 实核）；⑤ §2.2 契约 4 补锁面括注（R8④）；⑥ §2.11 A3 残余扩登 S2 期（⑤⑥⑦）。
 - 2026-09-14（**S2 族 1 接线方案 · 小收正轮 · eng-designer**——父侧裁定两件）：① §2.6.2（五）法 1 **判读口径写死 = 反向判**——两类引用形态（① 引号包裹本地相对路径 · ② `advisor/` 片段且前缀非 `core/`）各自 **0 命中**；
   改前命中并集 **16 行** ⇔（四）枚举「14 处改指 + 2 处 src 头注」逐项对应（纯子串口径不可达之证随注）；② §2.1 **B8 改名残留收正**（`working-directory: thincoder` → `thincoder-cli`——实核 `.github/workflows/test.yml:9`）；全档旧名残留逐处判读（16 处：1 改 / 15 不改——清单见批次档 §2）。
+- 2026-09-14（**CLI 侧迁移单元排期轮 · eng-designer**——用户 2026-09-14 裁定「先把 CLI 端彻底搞定」）：
+  ① 新增 **§2.6.0**（「族」口径收正 = **按产品解耦**——改前 → 改后四行对照 + 裁定理由登记）；② 新增 **§2.6.3**（**CLI 侧迁移单元排期**：口径 · 实测读数 · 主表 **16 单元** · 逐档清单 **170 档** · 单元内固定四步与共同验收 · 排序原则 · 提示词面单元（U2）位置与理由 · 进度计数命令 · 前置门 **U0** · 边界）；
+  ③ §2.6 S2 行与段序纪律改写（按产品解耦）；§2.6.2 加 VSC 半边押后状态注（记录保留 · 不执行）。
+  同轮**口径收正**（父侧派单数字）：派单的「104 对 + 40 档提示词」中 **40 档是 104 对的子集**（104 = 64 `.mjs` + 40 `.md`）⇒ **不可相加**；排期以 **170 档**为分母。
 
 
