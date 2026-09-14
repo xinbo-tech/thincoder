@@ -17,7 +17,7 @@ import {
   runWithContinue, TURN_CAP_MARK, makeRelay, wrapChildCallbacks,
   ensureChildApiKey, clampEffort,
 } from "../agent/spawn-child.mjs"
-import { logEvent, errText } from "../log.mjs"
+import { logEvent, errText } from "@thincoder/core/log.mjs"
 import { describeBlockers, detectStall, STALL_NOTE } from "./subagent-scheduler.mjs"
 import { resolveChildProvider, mergeChildMutations } from "./subagent-async.mjs"
 import { launchEscalateAsync } from "./escalate-async.mjs"

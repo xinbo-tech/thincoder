@@ -7,7 +7,7 @@
 import { providerSpec, resolveEnableThinking } from "../config.mjs"
 import { proxyFetch } from "../proxy.mjs"
 import { escapeMessages, stripLocalMessageFields } from "../escape.mjs"
-import { logEvent, errText, classifyErr, headText } from "../log.mjs"
+import { logEvent, errText, classifyErr, headText } from "@thincoder/core/log.mjs"
 import { abortError, annotateAbort, deathLine } from "../abort-provenance.mjs"
 import { recordChatTrace } from "../traces/trace-store.mjs"
 import { readSSE } from "./sse.mjs"

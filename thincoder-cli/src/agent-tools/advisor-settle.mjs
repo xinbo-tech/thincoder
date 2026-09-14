@@ -22,7 +22,7 @@ import { persistEngTokens } from "../token-ttl.mjs"
 import { settleDesignReview, makeDesignTokenRegex, stripApprovedSuffix } from "./design-token.mjs"
 import { looksLikeReviewOutput, advisorIncompleteMarker, ADVISOR_LAUNCH_REFUSAL_PREFIX } from "../advisor/run.mjs"
 import { isCodePath, loadConventions } from "../conventions.mjs"
-import { logEvent } from "../log.mjs"
+import { logEvent } from "@thincoder/core/log.mjs"
 // 第 33 批（§17.5）：`normAbs` 迁 `review-streak.mjs`（中立模块——护栏与陈旧判定共用同一归一）
 // + 结算分类 / 计数落账（异步结算计数点）。
 import { normAbs, designReviewOutcome, noteDesignReviewOutcome } from "./review-streak.mjs"

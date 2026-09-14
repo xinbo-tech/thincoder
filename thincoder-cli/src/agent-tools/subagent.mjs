@@ -20,7 +20,7 @@
  */
 
 import { gateEngCoderSpawn, TURN_CAP_MARK, STOPPED_MARK, emitNestedChildEvent } from "../agent/spawn-child.mjs"
-import { logEvent, errText } from "../log.mjs"
+import { logEvent, errText } from "@thincoder/core/log.mjs"
 import { abortError, deathLine } from "../abort-provenance.mjs"
 import {
   runChildPipeline, executeCancelAction, enqueueAsk, mergeChildMutations,

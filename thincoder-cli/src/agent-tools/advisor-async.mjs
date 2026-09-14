@@ -53,7 +53,7 @@ export {
 import { docSetKey } from "./review-streak.mjs"
 import { runAdvisorReview, resolveAdvisorProvider, ADVISOR_THINKING_PLACEHOLDER } from "../advisor/run.mjs"
 import { stripEventToken } from "../agent/spawn-child.mjs"
-import { logEvent } from "../log.mjs"
+import { logEvent } from "@thincoder/core/log.mjs"
 import { deathLine } from "../abort-provenance.mjs"
 // ASYNC-RESULT-CONTAINER.md D3/D6：settle 公共收尾单点 + child signal 构建单点
 import { buildChildSignal, settleAsyncEntry } from "./async-settle.mjs"

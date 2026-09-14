@@ -2,8 +2,8 @@
 
 > 板块：诊断事件日志。状态：**已实现**（2026-09-03 两端交付；评审 refinement 全处置）。
 > 机制级文档——功能性需求以机制约束表述。
-> 双端同构：CLI `src/log.mjs` 与 VS Code `src/log.mjs` 同一实现语义——共享日志目录、
-> 同格式、同事件面。权威实现注释见 `src/log.mjs`。
+> 双端同构：CLI `thincoder-core/log.mjs` 与 VS Code `thincoder-vscode/src/log.mjs` 同一实现语义——共享日志目录、
+> 同格式、同事件面。权威实现注释见 `thincoder-core/log.mjs`。
 
 > 需求层已迁出（2026-09-10 需求层拆分批）：本板块需求见 `../requirements/LOGGING.md`——本档保留设计+测试层。
 
@@ -15,7 +15,7 @@
   可查（用户 tail/grep）——零依赖——行 JSON 便于 grep（事件 kind/耗时）——不引入结构化存储。
 - 事件面从既有关键节点**透出**（callbacks/现有 settle 钩子处加 emit——不新造事件总线——
   最小侵入）。
-- 统一入口 `src/log.mjs`（CLI）/VS Code 同构模块——`logEvent(kind, fields)`——内部组装
+- 统一入口 `thincoder-core/log.mjs`（CLI）/VS Code 同构模块——`logEvent(kind, fields)`——内部组装
   时间戳/写文件/轮转清理。
 
 ### 2.2 架构
@@ -79,13 +79,13 @@
 
 ### 2.3 受影响文件（实现版）
 
-- **CLI**：`src/log.mjs`（新——logEvent/轮转/黑名单/seq）；`src/provider/core.mjs`
+- **CLI**：`thincoder-core/log.mjs`（新——logEvent/轮转/黑名单/seq）；`src/provider/core.mjs`
   （llm:* 统一落点）；`src/tui/agent-turn.mjs`（turn/susp/digest/err）；`src/agent.mjs`
   （chat logCtx + 中止清池 ev:stopped）；`src/agent/dispatch.mjs`（tool:*）；
   `src/context.mjs`（compress/distill logCtx）；`src/auto-think.mjs`（logCtx）；
   `src/agent-tools/{subagent,subagent-async,consult}.mjs`（child/ev 事件 + escalate
   执行器）；测试（T-L1..L10）。
-- **VS Code**：同构镜像——新 `src/log.mjs`（同一实现语义）；`src/provider.mjs（VSC 仓）`（llm:*）；
+- **VS Code**：同构镜像——新 `thincoder-vscode/src/log.mjs`（同一实现语义）；`src/provider.mjs（VSC 仓）`（llm:*）；
   `src/agent.mjs`（logCtx + ev:stopped）；`src/agent/execute-tools.mjs（VSC 仓）`（tool:*）；
   `src/extension/panel-chat.mjs（VSC 仓）`（turn/err——runPanelChat 包装）；
   `src/extension/suspension.mjs（VSC 仓）`（susp/digest/ev:stopped）；`src/agent-tools/*`（child/ev）；

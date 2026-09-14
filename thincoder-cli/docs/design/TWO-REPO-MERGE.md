@@ -16,7 +16,7 @@
 | # | 事实 | 证据 / 量化 |
 |---|---|---|
 | B1 | **跨仓机制 100% 位于 build / doc / test 期**，`src/**` 内**无任何运行期跨仓依赖** | VSC 侧侦察：扩展从不 resolve / spawn / import CLI 仓 |
-| B2 | 共享运行期状态 = 用户级 `~/.thincoder/` 面（`config.json` · `checkpoints/{cwdHash12}/` · `logs/`——用户状态）；**仓际接口为零**（无运行期跨仓调用） | VSC `package.json` 声明 shared with the CLI；`AGENTS.md:42` 快照「与 VS Code 端**同存储同格式**、跨端互通」；`src/log.mjs:51` 共享 `~/.thincoder/logs/`——**合并后原样存活**，不属跨仓机制 |
+| B2 | 共享运行期状态 = 用户级 `~/.thincoder/` 面（`config.json` · `checkpoints/{cwdHash12}/` · `logs/`——用户状态）；**仓际接口为零**（无运行期跨仓调用） | VSC `package.json` 声明 shared with the CLI；`AGENTS.md:42` 快照「与 VS Code 端**同存储同格式**、跨端互通」；`thincoder-core/log.mjs:51` 共享 `~/.thincoder/logs/`——**合并后原样存活**，不属跨仓机制 |
 | B3 | 提示词同名集合两仓各 15 档，**逐字节相同仅 8 对** | 实测 sha256：相同 8 / 不同 7 |
 | B4 | 两产品文档**大量同名撞车** | design 27 对 · requirements 31 对 · batches 20 对 |
 | B5 | 规范档（design + requirements）路径 token **128 处**；`（X 仓）` 注记约 **1031 处** | 实测 / 普查 |

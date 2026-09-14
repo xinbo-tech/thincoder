@@ -1,7 +1,7 @@
 /**
  * agent/dispatch.mjs — two-phase tool call execution
  */
-import { logEvent, errText, headText } from "../log.mjs"
+import { logEvent, errText, headText } from "@thincoder/core/log.mjs"
 import { offloadToolResult, FILE_MUTATORS } from "./helpers.mjs"
 import { runHooks } from "../hooks.mjs"
 import { snapshotForUndo } from "../tui/cmd-undo.mjs"

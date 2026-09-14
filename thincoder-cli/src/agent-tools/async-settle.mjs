@@ -23,7 +23,7 @@
  * escalate-async/consult）单向 import 本模块；scheduler 反向 import 本模块（getAsyncPool）
  * 与既有 scheduler ↔ subagent-async 同款惰性环——无求值期依赖。
  */
-import { logEvent, errText } from "../log.mjs"
+import { logEvent, errText } from "@thincoder/core/log.mjs"
 import { pushReal } from "../context.mjs"
 import { escapeXml } from "../agent/helpers.mjs"
 import { TURN_CAP_MARK } from "../agent/spawn-child.mjs"

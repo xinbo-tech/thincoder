@@ -4148,5 +4148,117 @@ D 类（#70 · #83）· F 类（#111 · #149–#153 · #155 · #157 · #103 · #
 本段 B4 读数的本笔相关面（域一 候选 2219 · 悬空 0；域二 候选 8870 · 悬空 0；宽度 / 台账 exit 0）不受影响。
 （收正注：本补记首版为单行 356 字符——超 `check-doc-width` 300 字符阈值 ⇒ 就地折行（原句**仅插换行、文字零改**）；本注 = 折行时同笔附加。）
 
+### 实施：S2 U1 —— LOGGING 单元落轮（2026-09-14 · eng-coder）——**终态 = clean**
+
+**段位**：当前段 = **S2（CLI 迁移单元 U1）**。本笔唯一写域 = CLI 侧（18 档改指 + 删 1 档 + 5 设计档 10 行锚改指）；**VSC 零触碰**（用户已裁押后）；
+核内零改动（`git status` 自证：改动集零 `thincoder-core/**`）；未 commit（父侧统一单笔）；未碰台账；5 档文档只做锚改指（零语义改写）。
+
+**依据** = `docs/design/CORE-UNIFICATION.md` §2.6.3（U1 行 `:710`「1 / 195 / 18」+（四）四步与 A1–A6 `:910-924`）+ §2.6.2（三）（五）（六）（` :509-614`）；父侧 U1 任务书。
+
+**改动面**（24 项本笔 · 行数 = `wc -l` 口径实核）
+
+| # | 面 | 档 / 行数 | 动作 |
+|---|---|---|---|
+| 1 | CLI 源 | 18 档（行数零变——纯来源串替换） | 改指 `@thincoder/core/log.mjs` |
+| 2 | CLI 源（删） | `src/log.mjs` 195 行 → 删空 | **删档** |
+| 3 | CLI 文档 | 5 档（`ADVISOR-CONVERGENCE` 1570 · `CRASH-REPORTS` 385 · `LEDGER-SELF-CONTAINED` 1033 · `LOGGING` 160 · `TWO-REPO-MERGE` 444——行数 ±0） | 10 行锚改指 |
+
+**① 逐处「改前 → 改后」（18 改指档——全部 = 来源串替换，具名导入面零改）**
+
+| # | 位置 | 改前 → 改后 |
+|---|---|---|
+| 1 | `src/agent/dispatch.mjs:4` | `"../log.mjs"` → `"@thincoder/core/log.mjs"` |
+| 2 | `src/agent/run-stages.mjs:13` | 同上 |
+| 3 | `src/agent-tools/advisor-async.mjs:56` | 同上 |
+| 4 | `src/agent-tools/advisor-settle.mjs:25` | 同上 |
+| 5 | `src/agent-tools/async-settle.mjs:26` | 同上 |
+| 6 | `src/agent-tools/consult.mjs:29` | 同上 |
+| 7 | `src/agent-tools/escalate-async.mjs:32` | 同上 |
+| 8 | `src/agent-tools/subagent-actions.mjs:20` | 同上 |
+| 9 | `src/agent-tools/subagent-run.mjs:10` | 同上 |
+| 10 | `src/agent-tools/subagent.mjs:23` | 同上 |
+| 11 | `src/conventions.mjs:25` | `"./log.mjs"` → `"@thincoder/core/log.mjs"` |
+| 12 | `src/heap-watch.mjs:19` | 同上 |
+| 13 | `src/memory/code-sync.mjs:13` | `"../log.mjs"` → 核路径 |
+| 14 | `src/memory/docs.mjs:15` | 同上 |
+| 15 | `src/provider/core.mjs:10` | 同上 |
+| 16 | `src/traces/trace-store.mjs:45` | 同上 |
+| 17 | `src/tui/agent-turn.mjs:23` | 同上 |
+| 18 | `src/tui/suspension-drive.mjs:19` | 同上 |
+
+`src/log.mjs` 自身对产品内其它档引用 = **0**（仅 `node:` 内建）——无自身改指动作；18 档扫描域 = `src`（`test` / `bin` 零引用）。
+
+**页面文档 10 行改指（5 档——删后中间态实测 = 11 悬空锚 ⇒ 全数改指；形态 = §2.6.2（六）CLI 域「仓根相对」）**
+
+| 档 | 行：改前 → 改后 |
+|---|---|
+| `docs/design/ADVISOR-CONVERGENCE.md` | `:636` `src/log.mjs:178-179` → `thincoder-core/log.mjs:178-179` |
+| `docs/design/CRASH-REPORTS.md` | `:252` `src/log.mjs` → `thincoder-core/log.mjs` |
+| `docs/design/LEDGER-SELF-CONTAINED.md` | `:527` → `thincoder-core/log.mjs`；`:733` `src/log.mjs`×2 → `thincoder-vscode/src/log.mjs`×2（该行语义 = VSC 侧档） |
+| `docs/design/LOGGING.md` | `:5` ×2 →（CLI 核路径 / VSC 路径）；`:6` · `:18` · `:82` → 核路径；`:88` → `thincoder-vscode/src/log.mjs` |
+| `docs/design/TWO-REPO-MERGE.md` | `:19` `src/log.mjs:51` → `thincoder-core/log.mjs:51` |
+
+**② 删旧三条读数（删前全过才删）**
+
+1. **改指已落盘**：18 处终态扫面复核（正/反向两模式）见下 A2——0 违规。
+2. **该产品全链 exit 0（删前预跑）**：`npm test` 605/548/0/57 · `lint` 308 · `test:full` 605/605 · `integration` 23/23（均 exit 0）。
+3. **零引用反向判**（域 = `src` + `test` + `bin`，343 档全递归）：
+   ① 引号相对路径形（`["'`](\.\.?\/)…log\.mjs["'`]`）= **0 命中**；
+   ② 路径 token 反向判（左界非 `[-\w]`、token 带 `/` 且非 `core/` = 违规）= **0 违规**（18 合规核 token；4 处裸名散文 = 射程外，见未决 1）。
+   **删后中间态**：`doc-anchors --domain thincoder-cli` = **11 悬空**（5 档 10 行；`LEDGER:733` 一行两锚）→ 逐处改指 → **0**。
+
+**③ A1–A6 读数（终态复跑 · 原样）**
+
+| # | 判据 | 读数 | 判 |
+|---|---|---|---|
+| A1 | CLI 全链 | `npm test`：tests **605** · suites 4 · pass **548** · fail **0** · skipped **57** · exit 0；`lint`：check-syntax **307 file(s) OK**（308 − 1 删档）；`test:full`：**605/605** · fail 0；`integration`：**23/23** · fail 0——与改前基线逐数一致（唯一差 = lint 档数随删档 −1，属面内） | ✓ |
+| A2 | 零引用 | 反向判两模式 **0 / 0**（域 `src`+`test`+`bin` 343 档）；运行面 = 全链 exit 0；锚面 = 悬空 0 | ✓ |
+| A3 | 文档锚 | `doc-anchors --domain thincoder-cli`：候选 **8870** · 悬空 **0** · 豁免 878 · `OK(V5)` **exit 0** | ✓ |
+| A4 | 核回归 | 核内 `node --test` = **171/171** · fail 0 · exit 0；核内零改动（`git status` 自证） | ✓ |
+| A5 | 仓根三机检 | `doc-anchors`（全域）：域一 候选 **2219** · 悬空 0；域二 候选 8870 · 悬空 0；VSC 域报告态 5 命中（预存）· **exit 0**。`check-doc-width`：**306 档无 >300 字符行** · V1/V2/V3 新增违规 0 · exit 0。`check-ledger`：**0 处违规** · exit 0 | ✓ |
+| A6 | 链接 L1 | `npm ls @thincoder/core --json` **exit 0** · version **0.1.0**（resolved `file:../../../thincoder-core`）；版本探针 = **0.1.0** | ✓ |
+
+**进度计数（设计 §2.6.3（七）① · 可复跑命令）**：**CLI 待迁 = 169**（170 − 1，U1 消费 1 档）——单调递减成立。
+
+**③b 工作树**：**24 项本笔**（18 M src + 1 D + 5 M docs）+ **1 项预存**（`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`——spawn 前已在，非本笔）；未 commit。
+
+**④ 内部轮（发现与处置）**
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **DIVERGENT**——「部分实现 / 静默简化 / 清单外改动」三类 **未命中**（18/18 改指 · 删档 · 10/10 锚逐数对齐设计 U1 行；具名成员 5 名在核导出面逐名实核）；
+  命中 **doc drift ×3**（均非锚面 / 机检射程外）：`AGENTS.md:66`（模块地图滞留，🟡）· `ARCHITECTURE.md:43`（模块树滞留，🔵）· `LOGGING.md:93`（叙事半陈旧，🔵）。
+- **审计命中处置**：**不改**（归未决 1）——依据 = ① U1 规格面不含模块地图（§2.6.3（四）四步 + A1–A6 逐条核）；② 族 1 先例（`AGENTS.md:51` 的 advisor/history|convergence 滞留同型、其轮审计判 CLEAN）；③ 设计面另有归口（S2 的 AGENTS.md 工作流——`CORE-UNIFICATION.md:1046`）。
+  **审计引用不成立如实登记**：其引「D-TS4 类 3『删档须更新模块地图』」经实核 **docs 全库零命中**（该规则不存在）——处置依据改用上文所列依据，不采该引用。
+- **advisor 代码评审 1 轮**（`type=code` · 阻塞）：**pass**（🔴 **0** · 🟡 1 · 🔵 3）。
+  🟡#1 = 10 个触碰档超 300 行软线（最大 `dispatch.mjs` 489 < 500）——**既有结构债**、U1 只做行内替换（结构零变），设计口径「结构未变 ⇒ 拆分另议」⇒ **Not an issue**（R3 不重新裁定；零动作）。
+  🔵#2 = `trace-store.mjs:9/16/17` 裸名散文 —— **Not an issue**（§2.6.2（五）法 1 射程外；族 1 先例同）。
+  🔵#3 = `LOGGING.md:93` 句 + `AGENTS.md:66` —— **Deferred**（登记未决 1）。
+  🔵#4 = 设计档台账收正（核基线 160→171 · `已迁` 标记回填 · （七）计数） —— **Deferred**（设计面；登记未决 3）。
+  **轮末 host 引证核验附注**：advisor 席位自带引证核验器对 9 条引证报「file unreadable / content mismatch」——经复读复核 = **核验器路径解析 artifact**（其多数报错行实际存在且内容相符，如 `LOGGING.md:5/:6/:18/:88`、`AGENTS.md:66`）；评审正文与结论不变。
+- **轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 **0**（零 must-fix ⇒ 无修复轮）；终态 **0 未决 🔴 → clean**。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 改指目标形态 = `@thincoder/core/log.mjs`（子路径直连；档居包根 ⇒ 子路径 = `log.mjs`） | §2.6.2（三）2：裸名不可导入、一律带子路径；exports `./*` 实核可达 |
+| 2 | VSC 侧指涉行改指 `thincoder-vscode/src/log.mjs`（非核路径） | 三处行语义 = VSC 侧档本体（`LOGGING:5/:88` · `LEDGER:733`）；指核会失真（VSC 档未迁、仍在位）。备选 = 一律指核（语义错） |
+| 3 | 删前全链**预跑一轮**（四命令） | §2.6.3（四）2「删前②全链 exit 0」字面执行；使删后任何红都可归因。备选 = 只跑快层（归因面窄） |
+| 4 | U1 版反向判形态化 = 「引号相对形（逐字沿用）+ 路径 token 反向判」两式 | 设计（五）法 1 模式②原为目录片段锚（`advisor/<名>`）；`log.mjs` 居 `src/` 根、片段化退化为裸名（会把 4 处射程外散文误纳）⇒ 取「左界非 `[-\w]`、token 带 `/` 且非 `core/`」为违规判据；裸名散文单列（4 处） |
+| 5 | `LOGGING:82`「（新——…）」历史措辞随路径替换保留 | 逐字改指、零改写口径（族 1 先例 = 纯路径替换）；措辞收正属设计面（登记未决 1） |
+| 6 | `TWO-REPO-MERGE.md:354` as-of blame 证据行不改 | 引擎实核非判定锚（`isExecutableLine` 命令词谓词射程豁免——backtick 内 `git blame`）+ T-M5 口径「as-of 证据记录不属射程」 |
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **模块地图 / 叙事滞留（设计面 / 文档维护批）**：`AGENTS.md:66`（CLI 模块表仍列已删 `src/log.mjs`）· `ARCHITECTURE.md:43`（模块树）· `LOGGING.md:93`（「两端 AGENTS.md 模块表登记 log.mjs」半陈旧）
+   · `AGENT-LOOP.md:694`（裸名）· `test/async-settle.test.mjs:7`（裸名）——族 1 的 `AGENTS.md:51` 同型滞留一并登记；建议随 S2 的 AGENTS.md 工作流（`CORE-UNIFICATION.md:1046`）或文档维护批收正。
+2. **U1 版反向判口径建议入册**（供设计面）：`log.mjs` 居 `src/` 根 ⇒ 法 1 实例须写「路径形态锚」（引号相对形 / token 反向判），裸名片段化会翻转读数——本段已按决策 4 执行并留读数。
+3. **设计档台账收正（设计面 · eng-designer）**：§2.6.3 A4 / （一）读数 6 核基线 160 → **171**（U0 已落）· §2.5「备注」`已迁（<单元>）` 标记回填（现全库零命中）· （七）计数收正（**169**）· `LOGGING.md:82` 措辞（决策 5）。
+4. **VSC 预存项**：`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`（M）= spawn 前既存改动，非本笔（承 U0 段登记）。
+5. **审计引证更正**：见 ④（「D-TS4」规则不存在——如实登记，防再引）。
+
+**轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 0；A1–A6 终态读数见上表；终态 = **clean**；报告 ①–⑦ 见交付报告（父侧转呈）。
+
+**收正注（同轮 · 首版后置）**：首版 §5 的机器门命中已就地收正——V2 计数声明不符行改无计数表述（语义不变）；超宽行仅插换行、文字零改。
+
 ## §6 验证与收口（父代理）
 

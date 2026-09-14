@@ -524,7 +524,7 @@
 | 12 | `ENGINEERING-MODE` | ② | 有档（79 行） | **已有对位** | 在位（本批首建） |
 | 13 | `ESCALATE` | ② | 仅 design 层（166 行） | **建本仓需求档** → `docs/requirements/ESCALATE.md` | `src/agent-tools/subagent-escalate.mjs`（VSC 仓） 在位；需求层无档 |
 | 14 | `FEATURES` | ② | 有档（21 行） | **已有对位** | 拆出档在位 |
-| 15 | `LOGGING` | ① | 有档（37 行） | **已有对位** | 本批新建档在位（机制 = `src/log.mjs`） |
+| 15 | `LOGGING` | ① | 有档（37 行） | **已有对位** | 本批新建档在位（机制 = `thincoder-core/log.mjs`） |
 | 16 | `MCP` | ② | 仅 design 层（170 行） | **建本仓需求档** → `docs/requirements/MCP.md` | `src/mcp/` + `config-mcp.mjs` 在位；需求层无档 |
 | 17 | `MEMORY` | ② | 仅 design 层（325 行） | **建本仓需求档** → `docs/requirements/MEMORY.md` | `src/memory.mjs` · `memory-tool.mjs` 在位；需求层无档 |
 | 18 | `MULTI-INSTANCE-COLLAB` | ① | 有档（44 行） | **已有对位** | 本批新建档在位（机制 = `src/extension/peer-instances.mjs`） |
@@ -730,7 +730,7 @@
 | 34 | `docs/requirements/PROJECT.md`（VSC 仓） | **归位**（原 `docs/design/REQUIREMENTS.md`——已换名归位（129 行）） | ±0（去 v1 功能范围节） | 二值 ②·归位异名 |
 | 35 | `docs/requirements/FEATURES.md`（VSC 仓） | **新建（拆出）** | 0→~45 | 自 `REQUIREMENTS.md` §v1 功能范围 拆出 |
 | 36 | `docs/requirements/PHILOSOPHY.md`（VSC 仓） | **归位**（原 `docs/design/PHILOSOPHY.md` 135 行） | ±0 | 二值 ②·归位（价值层需求） |
-| 37 | `docs/requirements/LOGGING.md`（VSC 仓） | **新建（①）** | 0→~60 | 机制在位（`src/log.mjs`）无档——兼清 `src/log.mjs:2` 悬空指针 |
+| 37 | `docs/requirements/LOGGING.md`（VSC 仓） | **新建（①）** | 0→~60 | 机制在位（`thincoder-vscode/src/log.mjs`）无档——兼清 `thincoder-vscode/src/log.mjs:2` 悬空指针 |
 | 38 | `docs/requirements/MULTI-INSTANCE-COLLAB.md`（VSC 仓） | **新建（①）** | 0→~60 | 机制在位（`src/extension/peer-instances.mjs`）无档 |
 | 39 | `docs/requirements/NORMAL-MODE.md`（VSC 仓） | **新建（①）** | 0→~70 | 机制在位（提示词装配层）无档 |
 | 40 | `docs/requirements/SETTINGS-TOOL.md`（VSC 仓） | **新建（①）** | 0→~70 | 机制在位（`src/agent-tools/settings.mjs`）；部分承载 = `docs/design/TOOLS.md` §5 |

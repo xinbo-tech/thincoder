@@ -16,7 +16,7 @@
 import { runAgentTurn } from "./agent-turn.mjs"
 import { freezeAllSubTasks, freezeReclaimDigestedBlocks } from "./subagent-blocks.mjs"
 import { sweepToolBlocks } from "./tool-events.mjs"
-import { logEvent } from "../log.mjs"
+import { logEvent } from "@thincoder/core/log.mjs"
 import { C } from "./ansi.mjs"
 // ASYNC-RESULT-CONTAINER.md D1/D2：池 accessor（双池 absorb）+ pending 单容器停靠
 import { getAsyncPool, parkAsyncPending, releaseSettledEntry } from "../agent-tools/async-settle.mjs"

@@ -249,7 +249,7 @@
 
 - **D-HW1 比例阈值双档 70/85**（§8.2 表 1/2）；**D-HW2 只看不治**（不强制 GC/不自动快照——
   F3 已有近上限快照）；**D-HW3 默认开 + env 可关**（与 F3 同约定）；**D-HW4 事件日志复用
-  `src/log.mjs` 事件骨架**（字段：`kind:"heap-warn"`, used/limit/ratio）；**D-HW5 零常态开销**：
+  `thincoder-core/log.mjs` 事件骨架**（字段：`kind:"heap-warn"`, used/limit/ratio）；**D-HW5 零常态开销**：
   60s 一次 `memoryUsage()`（微秒级）+ 无输出。
 
 ### 8.5 受影响文件

@@ -42,7 +42,7 @@ import { appendFile, mkdir, readdir, stat, unlink, rmdir } from "node:fs/promise
 import { join } from "node:path"
 import { createHash } from "node:crypto"
 import { configDir } from "../config.mjs"
-import { redactSecret, errText, classifyErr } from "../log.mjs"
+import { redactSecret, errText, classifyErr } from "@thincoder/core/log.mjs"
 import { normalizeCwd } from "../session-slots.mjs"
 import { capText } from "../text-budget.mjs"
 

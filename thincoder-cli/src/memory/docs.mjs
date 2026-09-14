@@ -12,7 +12,7 @@ import { buildFtsQuery, put, search, putMarkdown, clearPersonal, EMBED_TEXT_MAX_
 import { deleteByUid, matchMemoryRows, deleteWhere } from "./delete.mjs"
 import { _upsertDocFile, yieldTick } from "./code-index.mjs"
 import { markIndexedCommit, listProjectFiles, indexExtensions } from "./code-sync.mjs"
-import { logEvent } from "../log.mjs"
+import { logEvent } from "@thincoder/core/log.mjs"
 
 const DOC_EMBED_BATCH = 64
 

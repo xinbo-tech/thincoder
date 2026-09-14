@@ -633,7 +633,7 @@ Advisor: design review launch refused — {reason: no design token was minted | 
    **墙判定绑信号状态（非异常名）**：每轮 `chat` 返回或抛错后——`signal?.aborted`（用户中断）⇒ 原样上抛（中断语义零变）；
    否则「复合信号已中止且用户信号未中止」（`compositeAborted && !signal?.aborted`）⇒ 返回结构化超时尾——**两种运行时形态同判**：
    ① **抛错**——异常名接受 `AbortError` / `TimeoutError` 两名（`AbortSignal.timeout` 的 reason 是 TimeoutError DOMException——
-   本仓同款 `src/provider/sse.mjs:168-170` / `src/log.mjs:178-179`）；② **不抛错而返回 partial 结果**——流已有内容时中断
+   本仓同款 `src/provider/sse.mjs:168-170` / `thincoder-core/log.mjs:178-179`）；② **不抛错而返回 partial 结果**——流已有内容时中断
    以 `partial:true` 透传（`sse.mjs:228-235` + `src/provider/core.mjs:233-235`），该形态**不得**按普通结果收尾。
 2. **0.75 一次性预算提示**（同一检查点、每场评审至多一次；判定抽成纯函数便于机测）：注入一条 user 消息（逐字）：
 

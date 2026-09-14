@@ -7,7 +7,7 @@
 
 import { ASYNC_POOL_LIMITS, poolDomainOf, poolLimitsFor, runningPoolCount } from "./subagent-async.mjs"
 import { runChildPipeline } from "./subagent-async.mjs"
-import { logEvent } from "../log.mjs"
+import { logEvent } from "@thincoder/core/log.mjs"
 import { deathLine } from "../abort-provenance.mjs"
 import { pushReal } from "../context.mjs"
 import {

@@ -16,7 +16,7 @@
  * 直驱（零等待）；失败面全吞（采样抛错不阻断——样本失败静默跳过本次）。
  */
 import { getHeapStatistics } from "node:v8"
-import { logEvent } from "./log.mjs"
+import { logEvent } from "@thincoder/core/log.mjs"
 
 /** 关值集合（单点判定——§3.2 同约定复用）。 */
 export const HEAP_WATCH_OFF = new Set(["0", "false", "off", "no"])
