@@ -226,7 +226,7 @@ export function createWizard(ctx) {
       agent.config.embedding ??= {}
       agent.config.embedding.apiKey = f.embedkey
       if (agent.memory && !agent.memory.embedder) {
-        const { createEmbedder } = await import("../embedding.mjs")
+        const { createEmbedder } = await import("@thincoder/core/embedding.mjs")
         agent.memory.embedder = createEmbedder(agent.config.embedding)
       }
       pushLine(`Vector search enabled (${agent.config.embedding.model ?? "BAAI/bge-m3"})`, C.tool)

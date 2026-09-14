@@ -6,7 +6,7 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { scanVectors, createTopK, SCAN_CHUNK_ROWS } from "../src/memory/scan.mjs"
+import { scanVectors, createTopK, SCAN_CHUNK_ROWS } from "@thincoder/core/memory/scan.mjs"
 
 /** 假 DB：按 `rowid > ? ORDER BY rowid LIMIT ?`（末两参）分块返回——记录块大小。 */
 function fakeDb(rows, sizes) {

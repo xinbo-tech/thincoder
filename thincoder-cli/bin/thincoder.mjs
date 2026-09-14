@@ -18,7 +18,7 @@ import { isAbsolute, join } from "node:path"
 import { runAgent } from "../src/agent.mjs"
 import { loadConfig, configPath } from "../src/config.mjs"
 import { cleanupTraces } from "@thincoder/core/traces/trace-store.mjs"
-import { createMemory, syncDir } from "../src/memory.mjs"
+import { createMemory, syncDir } from "@thincoder/core/memory.mjs"
 import { assembleAgent, teamConfig, gitAuthor, validateProvider } from "../src/cli/make-agent.mjs"
 import { memoryCommand } from "../src/cli/memory-command.mjs"
 import { setupWizard } from "../src/cli/setup-wizard.mjs"
@@ -176,7 +176,7 @@ switch (command) {
       // Wizard may have configured an embedding key: attach vector search
       const fresh = loadConfig()
       if (fresh.embedding?.apiKey && agent.memory && !agent.memory.embedder) {
-        const { createEmbedder } = await import("../src/embedding.mjs")
+        const { createEmbedder } = await import("@thincoder/core/embedding.mjs")
         agent.memory.embedder = createEmbedder(fresh.embedding)
       }
     }
@@ -234,7 +234,7 @@ switch (command) {
     const config = loadConfig()
     const memory = createMemory({ dbPath: config.memory.dbPath })
     if (config.embedding?.apiKey) {
-      const { createEmbedder } = await import("../src/embedding.mjs")
+      const { createEmbedder } = await import("@thincoder/core/embedding.mjs")
       memory.embedder = createEmbedder(config.embedding)
     }
     if (config.memory.projectDir) {

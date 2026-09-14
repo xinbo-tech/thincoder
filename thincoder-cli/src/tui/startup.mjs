@@ -242,7 +242,7 @@ export function showStartup(ctx) {
  *   Prefers git diff incremental (fast); falls back to full scan when git is unavailable or on first run. */
 export async function backgroundIndex(ctx) {
   const { agent, state, render } = ctx
-  const { codeSync, docSync, gitSync } = await import("../memory.mjs")
+  const { codeSync, docSync, gitSync } = await import("@thincoder/core/memory.mjs")
   const cwd = agent.cwd
   let codeFiles = 0, docFiles = 0
 

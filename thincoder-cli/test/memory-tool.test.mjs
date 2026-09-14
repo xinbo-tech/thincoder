@@ -12,7 +12,7 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises"
 import { existsSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { createMemory, memoryTools, putMarkdown, deleteByUid, search } from "../src/memory.mjs"
+import { createMemory, memoryTools, putMarkdown, deleteByUid, search } from "@thincoder/core/memory.mjs"
 
 /** Fresh memory db + tmp dirs. t.after removes the tmp base. */
 async function fresh(t) {
@@ -201,7 +201,7 @@ test("② list 行带 [layer] 标签（与 search 行对齐），personal id 前
 })
 
 test("工具层 import 面：hub 导出与 split 后引用一致", async () => {
-  const { deleteByUid: dbu, matchMemoryRows: mmr, deleteWhere: dw, remove } = await import("../src/memory.mjs")
+  const { deleteByUid: dbu, matchMemoryRows: mmr, deleteWhere: dw, remove } = await import("@thincoder/core/memory.mjs")
   assert.equal(typeof dbu, "function")
   assert.equal(typeof mmr, "function")
   assert.equal(typeof dw, "function")

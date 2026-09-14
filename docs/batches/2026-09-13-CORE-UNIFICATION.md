@@ -4884,5 +4884,108 @@ CLI 三加载根 + 入口（L1–L7）：
 
 **段末复跑（§5 写入后 · 原样读数）**：`check-doc-width` = **306 档无 >300 字符行 · exit 0**（本段零新增超宽行）；`doc-anchors --domain thincoder-cli` = 99 档 · 候选 **8874** · 悬空 **0** · 注记豁免 880 · `OK(V5)` exit 0；`check-ledger` = `OK: thincoder/docs/TODO.md` / `OK: thincoder/docs/TODO-archive.md` · exit 0。
 
+### 实施：S2 U8 —— MEMORY 单元落轮（2026-09-14 · eng-coder）——**终态 = clean**
+
+**段位**：当前段 = **S2（CLI 迁移单元 U8）**。写域 = CLI 侧（18 档改指 + 10 档删旧 + 文档 2 处锚改指）+
+**域外两笔（已披露）**：`thincoder-cli/scripts/verify-team.mjs`（删档 import 否则必破——活体脚本）· `thincoder-cli/test-startup.mjs`（CLI 仓根 live repro 脚本——审计发现后同笔修复）；
+**边界外一笔（已披露）**：仓根台账 `docs/TODO.md:21`（4 token 改指——含 L4 证据形 `code-sync.mjs:189`，避静默残留）；
+**VSC 零触碰**；核内零改动（改动集零 `thincoder-core/**`）；未 commit（父侧统一单笔）；产品文档只做锚改指（零语义改写——语义收正归 eng-designer）。
+
+**依据** = `docs/design/CORE-UNIFICATION.md` §2.6.3 U8 行（`:717`「10 / 2385 / 18」+ 专项「A12 / A13 ⇒ CLI 侧**面内零变**；`node:sqlite` 面不变」）
++（三）逐档清单（`:800-809`）+（四）四步与 A1–A6（`:910-924`）+（七）进度计数（`:965-976`）+ §2.6.2（三）（五）（六）；核侧来源 = `docs/design/MEMORY.md`（#75 · #82 · #133–#137）；父侧 U8 任务书。
+
+**改动面**（行数 = `wc -l` 口径实核；改前 = HEAD）
+
+| # | 面 | 档 / 行数 | 动作 |
+|---|---|---|---|
+| 1 | CLI 源 + 测试 + bin + 脚本 | 19 档（12 src + 5 test + 1 bin + 1 scripts；行数零变——纯来源串替换） | 改指 `@thincoder/core/<子路径>`（29 处） |
+| 2 | CLI 域外（披露） | `test-startup.mjs`（70 → 70） | `:5` 改指核（1 处） |
+| 3 | CLI 删旧 | `src/memory.mjs` 21 · `src/memory/{code-index 219 · code-sync 415 · core 299 · delete 236 · docs 419 · file-walk 109 · scan 95 · schema 452}.mjs` · `src/embedding.mjs` 120（**10 档 / 2385 行**） | **删档**（+ 空目录 `src/memory/` 移除） |
+| 4 | CLI 文档 | `docs/design/PROVIDER.md`（±0 行） | 2 处锚改指 |
+| 5 | 仓根台账（**边界外·披露**） | `docs/TODO.md`（±0 行） | `:21` 4 token 改指 |
+
+**① 逐处「改前 → 改后」（20 档 31 处——全部 = 来源串替换，具名导入面零改）**
+
+| # | 档 | 位置：改前 → 改后 |
+|---|---|---|
+| 1 | `src/acp.mjs` | `:24` `"./memory.mjs"` → `"@thincoder/core/memory.mjs"` |
+| 2 | `src/advisor/loop.mjs` | `:24` `"../memory/code-sync.mjs"`（动态）→ 核 `memory/code-sync.mjs` |
+| 3 | `src/agent/record-results.mjs` | `:157` `"../memory.mjs"`（动态）→ 核 hub |
+| 4 | `src/agent/setup.mjs` | `:9` `"../memory.mjs"` → 核 hub |
+| 5 | `src/cli/distill-command.mjs` | `:3` `"../memory.mjs"` → 核 hub |
+| 6 | `src/cli/make-agent.mjs` | `:5` `"../memory.mjs"` → 核 hub · `:38` `"../embedding.mjs"`（动态）→ 核 `embedding.mjs` |
+| 7 | `src/cli/memory-command.mjs` | `:4` `"../memory/core.mjs"` → 核 `memory/core.mjs` · `:5` `"../memory/delete.mjs"` → 核 `memory/delete.mjs` |
+| 8 | `src/distill.mjs` | `:9` `"./memory.mjs"` → 核 hub |
+| 9 | `src/tui/cmd-config.mjs` | `:46` `"../embedding.mjs"`（动态）→ 核 |
+| 10 | `src/tui/cmd-reindex.mjs` | `:7` `"../memory.mjs"`（动态）→ 核 hub |
+| 11 | `src/tui/startup.mjs` | `:245` `"../memory.mjs"`（动态）→ 核 hub |
+| 12 | `src/tui/wizard.mjs` | `:229` `"../embedding.mjs"`（动态）→ 核 |
+| 13 | `test/helpers/memory.mjs` | `:4` `"../../src/memory.mjs"` → 核 hub |
+| 14 | `test/home-expansion.test.mjs` | `:18` `"../src/memory.mjs"` → 核 hub · `:170` 夹具生成脚本 `${modUrl("src/memory.mjs")}` → `${coreUrl("memory.mjs")}`（绝对 file URL 指核） |
+| 15 | `test/memory-scan-bounds.test.mjs` | `:9` `"../src/memory/scan.mjs"` → 核 `memory/scan.mjs` |
+| 16 | `test/memory-tool.test.mjs` | `:15`（静态）/ `:204`（动态）`"../src/memory.mjs"` ×2 → 核 hub |
+| 17 | `test/portability-index.test.mjs` | `:18-22` 五子路径 + `:24` hub 共 6 处 → 核同名子路径 |
+| 18 | `bin/thincoder.mjs` | `:21` `"../src/memory.mjs"` → 核 hub · `:179`/`:237` `"../src/embedding.mjs"` ×2（动态）→ 核 |
+| 19 | `scripts/verify-team.mjs`（**域外**） | `:10` `"../src/memory.mjs"` → 核 hub |
+| 20 | `test-startup.mjs`（**域外**） | `:5` `"./src/memory.mjs"` → 核 hub（审计发现；轮内修复） |
+
+**② 删旧三条读数（删前全过才删）**
+
+1. **改指已落盘**：20 档 31 处逐处终态复核 + 冒烟（真子进程：核 hub / 子路径逐名导入 35 名全在位；`put` / `search` / `createEmbedder` / `detectLanguage` 真跑通）；`npm ls @thincoder/core` exit 0。
+2. **该产品全链 exit 0（删前预跑）**：`npm test` 609/552/0/57 · `lint` **290** · `test:full` 609/609 · `integration` 25/25（均 exit 0）。
+3. **零引用反向判**（域 = `src` + `test` + `bin` + `scripts`，283 档全递归；两模式）：① 引号相对路径形 = **0**；② 非核前缀说明符形 = **0**。**删后复扫同读数（0 / 0）**；全 CLI 树另扫 ⇒ 唯一命中 `test-startup.mjs:5`（域外）→ 轮内修复后归 0。
+   **删后中间态**：`doc-anchors --domain thincoder-cli` = **2 悬空**（`PROVIDER.md:1130` `:1166`——`embedding.mjs` 仓内 2 份、CLI 域 0 份 ⇒ 唯一必悬空形态）→ 逐处改指 → **0**。
+
+**③ A1–A6 读数（终态复跑 · 原样）**
+
+| # | 判据 | 读数 | 判 |
+|---|---|---|---|
+| A1 | CLI 全链 | `npm test`：tests **609** · suites 4 · pass **552** · fail **0** · skipped **57** · exit 0；`lint`：check-syntax **280 file(s) OK**（290 − 10 删档，唯一面内差）；`test:full`：**609/609** · fail 0 · exit 0；`test:integration`：**25/25** · fail 0 · exit 0——**未涉面逐数不变**；面内零改判（无用例增删） | ✓ |
+| A2 | 零引用 | 反向判两式 **0 / 0**（域 `src`+`test`+`bin`+`scripts` 283 档）；运行面 = 全链 exit 0；锚面 = 悬空 0 | ✓ |
+| A3 | 文档锚 | `doc-anchors --domain thincoder-cli`：99 档 · 候选 **8874** · 悬空 **0** · 注记豁免 880 · `OK(V5)` exit 0 | ✓ |
+| A4 | 核回归 | 核内 `node --test` = **173/173** · fail 0 · exit 0；核内零改动（`git status` 自证：改动集零 `thincoder-core/**`） | ✓ |
+| A5 | 仓根三机检 | `doc-anchors`（全域）：域一 32 档 候选 2219 · 悬空 0 · 豁免 29；域二 99 档 候选 8874 · 悬空 0 · 豁免 880；VSC 域报告态 5 命中（预存）· **exit 0**。`check-doc-width`：**306 档无 >300 字符行** · V1/V2/V3 新增违规 0 · exit 0（§5 写入后复跑读数见段末）。`check-ledger`：**0 处违规** · 基线 0 · exit 0 | ✓ |
+| A6 | 链接 L1 | `npm ls @thincoder/core --json` **exit 0** · version **0.1.0**（resolved `file:../../../thincoder-core`）；版本探针 = **0.1.0** | ✓ |
+| 专项 | 裁决落实 | 核实现 = CLI 一侧（10 档与核逐档同：8 档逐字节 sha256 相等、2 档仅 import 来源行差——U4/U5 已把该 2 行改指核）；`node:sqlite` 面不变（核 `memory/schema.mjs:9` = 唯一 sqlite 引入点，CLI 侧零残留）；核闭包自洽（`node:` + 核内相对） | ✓ |
+
+**进度计数（设计 §2.6.3（七）① · 可复跑命令）**：**CLI 待迁 = 99**（109 − 10）——与父侧预期逐数一致，单调递减成立。
+**工作树**：本笔 **32 项（22 M + 10 D）**（含域外 2 + 台账 1 + 文档 1）+ **1 项预存**（`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`——spawn 前已在，非本笔）；未 commit。
+
+**④ 内部轮（发现与处置）**
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **DIVERGENT**——「部分实现（域内）/ 静默简化」未命中；命中 **1 条域外悬空**（🟡 `test-startup.mjs:5` 仍指已删 `./src/memory.mjs`——CLI 仓根 live repro 脚本，运行即崩）+ doc-miss 2 条（🔵 `README.md:172/:184-186` · `AGENTS.md:60` 模块图未随删档更新——A3 因 fenced / 通配排除未触闸）+ QUESTION ×5。
+- **审计命中处置**：① `test-startup.mjs:5` → **Fixed**（同笔改指核 + 复验语法 / 解析——见 ① 表第 20 行）；② 模块图 2 条 → **登记**（U1 / U4–U7 同型判：§2.6.2（五）法 1「裸词叙述射程外」+ 文档维护批——未决 1）。
+  QUESTION 判定：Q1（核副本与设计行数 +1）= **口径差**（设计行数 = `wc -l` 语义——本笔以同口径复核核 / CLI 逐档逐数吻合，非内容差）；Q2（`PROVIDER.md:1284` 裸档名）= 改前即裸名（非漏改——射程外）；Q3（悬空 0 vs 文档内陈旧坐标）= V5 判序基名回退所致（自洽）；Q4（域含不含仓根）= 见决策 8；Q5 = 审计席位无 shell / 无 git（读数类未独立复跑——限制如实登记）。
+- **advisor 代码评审 1 轮**（`type=code` · 阻塞）：**pass**（🔴 **0** · 🟡 0 · 🔵 2）。
+- **裁决表（2 项）**：🔵#1「交付口径 22 档 vs 实核」→ **Fixed**（口径更正为实核 **20 档 / 31 处**：域内 18 档 29 处 = 设计「改指 18」档数一致 + 域外 2 档 2 处；「22」= 派单侧转述口径差——本段以实核为准）；🔵#2 `docs/TODO.md:13` 表内 as-of 坐标陈旧 → **Deferred**（历史叙述、不触 L4 ⇒ 未决 3）。
+  **引证核验附注**：host 核验器对 1 条引证报「file unreadable」（`test/portability-index.test.mjs:5`）——复核 = **核验器路径解析 artifact**（引证面 = `thincoder-cli/test/…`；复读内容与引证相符——承 U1–U7 同型附注）。
+- **轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 1（审计命中 Fixed 1）；终态 **0 未决 🔴 → clean**。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 改指目标形态 = `@thincoder/core/<子路径>`（含 hub `memory.mjs`） | §2.6.2（三）2「一律带子路径」；核 `exports "./*"`（`thincoder-core/package.json:11`）+ 链接态实核 |
+| 2 | 域外 `scripts/verify-team.mjs:10` 随本笔改指 | 删档 import 否则必破（活体脚本）；U5 先例 |
+| 3 | 域外 `test-startup.mjs:5` 随本笔改指 | 审计发现（live repro 脚本，运行即崩）；同 2 之判 |
+| 4 | 台账 `docs/TODO.md:21` 4 token 改指（仅该行） | L4 证据形（`code-sync.mjs:189`）+「避免静默残留」（承 U5 决策 5 / U6 决策 6）；只改必要那一行 |
+| 5 | 文档锚 = 纯路径替换（CLI 域仓根相对形态） | §2.6.2（六）+ U6 / U7 先例 |
+| 6 | T-H14 夹具改 `coreUrl`（绝对 file URL 指核） | 子进程 `-e` 脚本裸说明符解析基准 = cwd（临时目录）⇒ 裸名不可用；绝对 URL 为唯一形态 |
+| 7 | 头注订正 1 处（`portability-index.test.mjs:5` 自指断言对象改指核） | U4 / U6 先例（防同档 import 与注释自相矛盾） |
+| 8 | 零引用域 = `src`+`test`+`bin`+`scripts`（不改判域定义） | §2.6.3（四）2 口径；仓根 live 档按「域外必要笔」处置（审计 Q4 之答：不扩域、以披露补） |
+| 9 | 删前全链**预跑一轮**（四命令）+ 删后终态复跑 | §2.6.3（四）2 字面执行（承 U1–U7） |
+| 10 | 空目录 `src/memory/` 同批移除 | U3 / U5 / U6 / U7 先例；git 不跟踪空目录 |
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **模块图 / 叙事滞留（文档面）**：`thincoder-cli/AGENTS.md:60` · `README.md:172/:184-186`——列已删实现；归 S2 文档工作流或文档维护批。
+2. **CLI 文档面语义残留**（advisor 附注）：`docs/design/MEMORY.md:3/:105/:246/:254/:342/:359/:474-477/:514-517` · `PORTABILITY.md:205/:359-363` · `LEDGER-SELF-CONTAINED.md:529` · `ARCHITECTURE.md:32/:43`——机检通过（基名回退），语义已陈旧；请文档维护批确认覆盖含这四档（不止 README / AGENTS）。
+3. **台账 `docs/TODO.md:13`** as-of 坐标（advisor 🔵#2）：历史叙述、不触 L4——随文档维护批加「已迁核」注（不阻断）。
+4. **宽面报告增量（报告面 · 不入闸）**：`doc-anchors` V5-C 宽面悬空 140 → **168**（+28）——U8 删除集移核后，核不在文档域扫描面（`discoverDomains` 只收含 `docs/` 的目录）⇒ 核内符号不进 code-id 集；报告面不阻断，留档。
+5. **仓根 docs 对位表**（`docs/design/MEMORY.md` 等）仍以 CLI 旧路径列两产品对位——S2/S3 文档面工作流登记项（批次档 §1「文档面与代码面同步归一」）。
+6. **VSC 预存项**：`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`（M）= spawn 前既存改动，非本笔（承 U0–U7 登记）。
+
+**段末复跑（§5 写入后 · 宽度闸）**：`check-doc-width` = **306 档无 >300 字符行 · exit 0**（原样读数见交付报告）。
+
 ## §6 验证与收口（父代理）
 

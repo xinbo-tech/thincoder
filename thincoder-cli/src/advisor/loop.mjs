@@ -21,7 +21,7 @@ import {
 
 const { readTool, globTool, grepTool, lsTool } = await import("../tools/index.mjs")
 const { lspTool } = await import("../tools/lsp.mjs")
-const { codeSearchTool } = await import("../memory/code-sync.mjs")
+const { codeSearchTool } = await import("@thincoder/core/memory/code-sync.mjs")
 
 /**
  * Advisor tool set — ZERO git, read-only ONLY, every round. The change surface

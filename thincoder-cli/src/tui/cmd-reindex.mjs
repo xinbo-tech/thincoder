@@ -4,7 +4,7 @@ import { C } from "./ansi.mjs"
  *  ctx: { agent, distillOpts, pushLine } */
 export async function handleReindexCommand(ctx) {
   const { agent, distillOpts, pushLine } = ctx
-  const { syncDir, codeSync, docSync } = await import("../memory.mjs")
+  const { syncDir, codeSync, docSync } = await import("@thincoder/core/memory.mjs")
   pushLine("[reindex] Rebuilding index...", C.tool)
   agent.memory.db.prepare("DELETE FROM files").run()
   agent.memory.db.prepare("DELETE FROM code_chunks").run()

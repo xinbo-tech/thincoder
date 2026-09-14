@@ -15,9 +15,10 @@ import { slow } from "./slow.mjs"
 import { expandHome } from "../src/expand-home.mjs"
 import { configDir, loadConfig, _setConfigPathForTest, _resetConfigPathForTest } from "../src/config.mjs"
 import { teamConfig } from "../src/cli/make-agent.mjs"
-import { createMemory, memoryTools } from "../src/memory.mjs"
+import { createMemory, memoryTools } from "@thincoder/core/memory.mjs"
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url))
+const CORE_ROOT = fileURLToPath(new URL("../../thincoder-core/", import.meta.url))
 const HOME = homedir() // 仅作字符串断言基准——本档零真实 home 写入
 
 const tmpDirs = []
@@ -164,9 +165,10 @@ slow("T-H14 端到端：伪 HOME 子进程——DB 落 HOME 下 ∧ <cwd>/~ 不�
     memory: { dbPath: "~/data/memory.db", projectDir: "~/pdata" },
   }), "utf8")
   const modUrl = (rel) => JSON.stringify(pathToFileURL(join(ROOT, rel)).href)
+  const coreUrl = (rel) => JSON.stringify(pathToFileURL(join(CORE_ROOT, rel)).href)
   const script = [
     `import { loadConfig } from ${modUrl("src/config.mjs")}`,
-    `import { createMemory } from ${modUrl("src/memory.mjs")}`,
+    `import { createMemory } from ${coreUrl("memory.mjs")}`,
     `const c = loadConfig()`,
     `createMemory({ dbPath: c.memory.dbPath })`,
     `console.log(JSON.stringify({ dbPath: c.memory.dbPath, projectDir: c.memory.projectDir }))`,

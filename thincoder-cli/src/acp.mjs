@@ -21,7 +21,7 @@ import { createAcpSession } from "./acp/session.mjs"
 import { replayHistory } from "./acp/bridge.mjs"
 import { listSlots, applySession, deleteSlot, normalizeCwd, loadSlotFile, slotOccupancy, loadManifest, saveManifest, getSessionId, newSession, slotPath, bindRecordStore } from "./session.mjs"
 import { createCheckpoint, listCheckpoints, rewind, isGitRepo } from "@thincoder/core/git/checkpoint.mjs"
-import { createMemory, list as memList, remove as memRemove } from "./memory.mjs"
+import { createMemory, list as memList, remove as memRemove } from "@thincoder/core/memory.mjs"
 
 const VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version
 

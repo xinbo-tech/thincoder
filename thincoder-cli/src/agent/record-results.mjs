@@ -154,7 +154,7 @@ export async function recordToolResults(agent, toolByName, results) {
             // Fire-and-forget: don't block the agent loop on indexing.
             // Reuses a single cached import; errors surface as pending reminders on next turn.
             if (!_reindexFile) {
-              const mod = await import("../memory.mjs")
+              const mod = await import("@thincoder/core/memory.mjs")
               _reindexFile = mod.reindexFile
             }
             _reindexFile(agent.memory, agent.cwd, abs).catch((e) => {

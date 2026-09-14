@@ -6,7 +6,7 @@ function timeNowLocal() {
   return new Date().toLocaleString("sv-SE")
 }
 
-import { search as memorySearch, docSearch } from "../memory.mjs"
+import { search as memorySearch, docSearch } from "@thincoder/core/memory.mjs"
 import { pushReal } from "@thincoder/core/context.mjs"
 import { toOpenAISchema } from "../tools/index.mjs"
 import { loadSkills, formatSkillListing } from "@thincoder/core/skills.mjs"

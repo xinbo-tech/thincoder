@@ -1,8 +1,8 @@
 import { isAbsolute, join } from "node:path"
 import { loadConfig } from "../config.mjs"
 import { teamConfig } from "./make-agent.mjs"
-import { put, search, list } from "../memory/core.mjs"
-import { deleteByUid } from "../memory/delete.mjs"
+import { put, search, list } from "@thincoder/core/memory/core.mjs"
+import { deleteByUid } from "@thincoder/core/memory/delete.mjs"
 
 /** thincoder memory <list|search|put|remove> subcommands.
  *  opts.dirs: { project, team } layer directories for project/team file deletion (tests inject their own);

@@ -1127,7 +1127,7 @@ Provider 请求的头分两类来源。**内置头** = transport 协议要求（
 | 6 | 模型清单拉取（对照面） | `src/provider/list-models.mjs:52/57/73` | 按 `format` 分派 | ✓ 既有（零改） |
 
 **域外与端面**：会话动态头（`x-opencode-session` 类）不做（证据未立——批次 §1 范围口径）；embedding 独立渠道
-（`src/embedding.mjs` 用 `embedder` 独立配置，无定制头字段）、MCP / 网络工具 / 升级检查等自有头面不属本机制；
+（`thincoder-core/embedding.mjs` 用 `embedder` 独立配置，无定制头字段）、MCP / 网络工具 / 升级检查等自有头面不属本机制；
 VS Code 端无 `providers[].headers` 概念（配置面与展开面均无）——本节为 CLI 面机制，对位引入属新需求。
 
 ## 22. 需求层（`provider.headers` 全通路铺开——2026-09-11 第 32 批）
@@ -1163,7 +1163,7 @@ responses / anthropic / google 三 transport 与会话标题生成**不携带该
 - **不**实现会话动态头（`x-opencode-session` 类——证据未立，待报告者给网关证据后另议）；
 - **不**改头语义（净化器 / 装配顺序 / 各 transport 内置头集合——只铺开）；
 - **不**动已展开面（`src/provider/core.mjs` 参照 / `src/provider/list-models.mjs` 对照——零改）；
-- **不**动 embedding 独立渠道（`src/embedding.mjs`——`embedder` 独立配置，无定制头字段）；
+- **不**动 embedding 独立渠道（`thincoder-core/embedding.mjs`——`embedder` 独立配置，无定制头字段）；
 - **不**碰 VS Code 端（无该配置概念——对位引入属新需求）；
 - **不**新建档（本档承载）。
 

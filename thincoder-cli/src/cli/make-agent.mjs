@@ -2,7 +2,7 @@ import { execSync } from "node:child_process"
 import { isAbsolute, join } from "node:path"
 import { createAgent } from "../agent.mjs"
 import { loadConfig, configDir } from "../config.mjs"
-import { createMemory, memoryTools, syncDir, codeSearchTool, docSearchTool } from "../memory.mjs"
+import { createMemory, memoryTools, syncDir, codeSearchTool, docSearchTool } from "@thincoder/core/memory.mjs"
 import { settingsTool } from "../agent-tools/settings.mjs"
 import { repoOutlineTool } from "../tools/repomap.mjs"
 import { builtinTools } from "../tools/index.mjs"
@@ -35,7 +35,7 @@ export async function assembleAgent({ excludeTools = [] } = {}) {
   const memory = createMemory({ dbPath: config.memory.dbPath })
   // Vector retrieval: enabled if embedding is configured (lazy vector generation, computed on first search)
   if (config.embedding?.apiKey) {
-    const { createEmbedder } = await import("../embedding.mjs")
+    const { createEmbedder } = await import("@thincoder/core/embedding.mjs")
     memory.embedder = createEmbedder(config.embedding)
   }
   const cwd = process.cwd()

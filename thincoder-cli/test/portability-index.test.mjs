@@ -2,7 +2,7 @@
  * portability-index.test.mjs — PORTABILITY 批（FR10–FR15 · CLI 面）面② 索引
  * 用例表 T-13–T-17（PO-8 · PO-9）。
  *
- * 断言对象 = src/memory/file-walk.mjs（walk 回退）+ code-sync/docs 接线
+ * 断言对象 = @thincoder/core/memory/file-walk.mjs（walk 回退）+ code-sync/docs 接线
  * （{entries, unlisted} / indexExtensions / unlistedExts）+ cmd-reindex 提示行。
  * 全离线：临时目录 + :memory: 库（不跑 git 索引真实仓库）。
  * 归册（2026-09-12 收尾轮 9）：T-13/T-14/T-16 为真 fs 索引构建（临时项目全遍历）——
@@ -15,13 +15,13 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { slow } from "./slow.mjs"
 
-import { walkProjectFiles, isSkippedRelPath, MAX_WALK_FILES } from "../src/memory/file-walk.mjs"
-import { listProjectFiles, indexExtensions, codeSync } from "../src/memory/code-sync.mjs"
-import { docSync } from "../src/memory/docs.mjs"
-import { CODE_EXTS, DOC_EXTS } from "../src/memory/schema.mjs"
-import { detectLanguage } from "../src/memory/code-index.mjs"
+import { walkProjectFiles, isSkippedRelPath, MAX_WALK_FILES } from "@thincoder/core/memory/file-walk.mjs"
+import { listProjectFiles, indexExtensions, codeSync } from "@thincoder/core/memory/code-sync.mjs"
+import { docSync } from "@thincoder/core/memory/docs.mjs"
+import { CODE_EXTS, DOC_EXTS } from "@thincoder/core/memory/schema.mjs"
+import { detectLanguage } from "@thincoder/core/memory/code-index.mjs"
 import { handleReindexCommand } from "../src/tui/cmd-reindex.mjs"
-import { createMemory } from "../src/memory.mjs"
+import { createMemory } from "@thincoder/core/memory.mjs"
 import { clearConventionsCache } from "@thincoder/core/conventions.mjs"
 
 let tmp

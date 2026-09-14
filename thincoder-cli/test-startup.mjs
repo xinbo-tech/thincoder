@@ -2,7 +2,7 @@
 import { loadConfig } from "./src/config.mjs"
 import { createAgent } from "./src/agent.mjs"
 import { builtinTools } from "./src/tools/index.mjs"
-import { createMemory } from "./src/memory.mjs"
+import { createMemory } from "@thincoder/core/memory.mjs"
 
 const COLS = 80, ROWS = 24
 const screen = Array.from({ length: ROWS }, () => " ".repeat(COLS))

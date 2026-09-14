@@ -7,7 +7,7 @@ import { mkdtempSync, writeFileSync, rmSync, mkdirSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
-import { createMemory, memoryTools, putMarkdown, syncDir, search } from "../src/memory.mjs"
+import { createMemory, memoryTools, putMarkdown, syncDir, search } from "@thincoder/core/memory.mjs"
 import { ensureClone, pullTeam, commitAndPush } from "@thincoder/core/git/gitmem.mjs"
 
 const base = mkdtempSync(join(tmpdir(), "thincoder-m8-"))

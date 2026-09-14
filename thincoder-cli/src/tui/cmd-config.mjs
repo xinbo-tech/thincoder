@@ -43,7 +43,7 @@ export async function handleConfigCommand(ctx, args = []) {
     agent.config.embedding ??= {}
     agent.config.embedding.apiKey = embKey
     if (agent.memory) {
-      const { createEmbedder } = await import("../embedding.mjs")
+      const { createEmbedder } = await import("@thincoder/core/embedding.mjs")
       agent.memory.embedder = createEmbedder(agent.config.embedding)
     }
     pushLabel("❯ Config", ansi.bold + C.tool)
