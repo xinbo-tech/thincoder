@@ -29,8 +29,8 @@ const found = (cfg.providers ?? []).find((p) => p.name === name)
 if (!found) { console.error(`provider "${name}" not found`); process.exit(1) }
 const provider = { ...found, baseURL: args.baseURL ?? found.baseURL, format: "responses", stateful: true }
 
-const { chat } = await import("../src/provider/core.mjs")
-const { buildBody } = await import("../src/provider/responses.mjs")
+const { chat } = await import("@thincoder/core/provider/core.mjs")
+const { buildBody } = await import("@thincoder/core/provider/responses.mjs")
 
 const tools = [{ type: "function", function: { name: "get_time", description: "获取当前时间（务必调用）", parameters: { type: "object", properties: { tz: { type: "string" } }, required: [] } } }]
 

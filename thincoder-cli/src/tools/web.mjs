@@ -1,6 +1,6 @@
 import { DESC, truncate, stripTags, htmlToText, isPrivateHost } from "./shared.mjs";
 import { URL } from "node:url";
-import { proxyFetch } from "../proxy.mjs";
+import { proxyFetch } from "@thincoder/core/proxy.mjs";
 
 export const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 const FETCH_TIMEOUT = 15_000

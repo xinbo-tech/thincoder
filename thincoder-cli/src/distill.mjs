@@ -4,7 +4,7 @@
  * Absolutely no automatic storage at session end.
  */
 
-import { chat } from "./provider/index.mjs"
+import { chat } from "@thincoder/core/provider/index.mjs"
 import { loadConfig } from "./config.mjs"
 import { put, putMarkdown } from "@thincoder/core/memory.mjs"
 import { commitAndPush } from "@thincoder/core/git/gitmem.mjs"

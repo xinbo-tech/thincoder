@@ -27,7 +27,7 @@ import { resolveChildProvider } from "./subagent.mjs"
 import { pushReal } from "@thincoder/core/context.mjs"
 import { offloadToolResult, escapeXml } from "../agent/helpers.mjs"
 import { logEvent, errText } from "@thincoder/core/log.mjs"
-import { deathLine } from "../abort-provenance.mjs"
+import { deathLine } from "@thincoder/core/abort-provenance.mjs"
 import { makeRelay, wrapChildCallbacks, runWithContinue, ensureChildApiKey, clampEffort } from "../agent/spawn-child.mjs"
 // TUI-OOM-ROOTCAUSE §23.3.1：子代理人读线窗口常量（单源——store 零依赖）。
 import { RECORD_WINDOW_MESSAGES } from "../session-store.mjs"

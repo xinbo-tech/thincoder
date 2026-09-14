@@ -9,7 +9,7 @@
  * parity anchors point here).
  */
 
-import { chat } from "./provider/index.mjs"
+import { chat } from "@thincoder/core/provider/index.mjs"
 
 /** Read-only knowledge tools counted as "exploration" (execute writes files → never exploration). */
 export const EXPLORE_TOOLS = new Set([

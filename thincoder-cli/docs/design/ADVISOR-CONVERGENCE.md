@@ -493,8 +493,8 @@ token 回显（例如模型先写完结论再继续补充检查）都会让**被
 裸路径 ⇒ `file unreadable` 误报（第 8 批 `TOOLS.md:124`、第 7 批 `AGENT-LOOP.md:714` 两处实证——父侧实文核验均存在且正确）。
 
 **D 超时零输出**：超时只在**轮间**检查——`src/advisor/run.mjs:170-172`（`Date.now() - startTime > timeoutMs`），
-单次模型请求不受评审预算约束（响应头超时同量级：`src/provider/core.mjs:77-78` 默认 600s；body idle 120s——
-`src/provider/core.mjs:72`）。预算语义 = 整场墙钟（`docs/design/AGENT-PARAMS.md:19-39`）。第 10 批设计评审 600s 超时、零产出、
+单次模型请求不受评审预算约束（响应头超时同量级：`thincoder-core/provider/core.mjs:77-78` 默认 600s；body idle 120s——
+`thincoder-core/provider/core.mjs:72`）。预算语义 = 整场墙钟（`docs/design/AGENT-PARAMS.md:19-39`）。第 10 批设计评审 600s 超时、零产出、
 父侧无部分结果可回收——根因候选（证据不足以区分，守卫对两类均有效）：① 预算被探索耗尽（大范围 + 慢模型）；
 ② 单次调用停滞吞掉预算（无预算感知 deadline）；③ 模型不知预算在烧（无中途提示），撞墙时来不及收敛产出。
 
@@ -633,8 +633,8 @@ Advisor: design review launch refused — {reason: no design token was minted | 
    **墙判定绑信号状态（非异常名）**：每轮 `chat` 返回或抛错后——`signal?.aborted`（用户中断）⇒ 原样上抛（中断语义零变）；
    否则「复合信号已中止且用户信号未中止」（`compositeAborted && !signal?.aborted`）⇒ 返回结构化超时尾——**两种运行时形态同判**：
    ① **抛错**——异常名接受 `AbortError` / `TimeoutError` 两名（`AbortSignal.timeout` 的 reason 是 TimeoutError DOMException——
-   本仓同款 `src/provider/sse.mjs:168-170` / `thincoder-core/log.mjs:178-179`）；② **不抛错而返回 partial 结果**——流已有内容时中断
-   以 `partial:true` 透传（`sse.mjs:228-235` + `src/provider/core.mjs:233-235`），该形态**不得**按普通结果收尾。
+   本仓同款 `thincoder-core/provider/sse.mjs:168-170` / `thincoder-core/log.mjs:178-179`）；② **不抛错而返回 partial 结果**——流已有内容时中断
+   以 `partial:true` 透传（`thincoder-core/provider/sse.mjs:228-235` + `thincoder-core/provider/core.mjs:233-235`），该形态**不得**按普通结果收尾。
 2. **0.75 一次性预算提示**（同一检查点、每场评审至多一次；判定抽成纯函数便于机测）：注入一条 user 消息（逐字）：
 
 ```
@@ -711,7 +711,7 @@ Advisor: review timeout after {S}s. Review incomplete — the wall-clock budget 
 | **多实现面纪律（双端）** | 不做 byte-identical 硬一致；VSC 同构缺陷**如实上报**（§14.1 证据为 CLI 侧，VSC 侧同构面见 §14.10）——不静默、不跨端追赶 |
 | **完成守卫公式（§6.2）** | 公式本体零改；F16/A3 只改"何种 settle 算有判定"的判定谓词（失败判定扩展）——与"未决不算未评审"同向 |
 | **`AGENT-PARAMS` 超时语义** | `agent.advisor.timeoutMs` 仍是整场预算（默认 600s，非法回退不变）；硬墙只是把同一预算落实为真墙（单次请求不越墙）——语义无变 |
-| **证据 / 引用纪律** | 本节全部事实带 file:line（as-of）；对既有实现的描述以磁盘为准（发现 `src/advisor/run.mjs:200-207` 注释所述 `core.mjs composes AbortSignal.any` 与 `src/provider/core.mjs` 实况不符——陈旧注释，登记 §14.10） |
+| **证据 / 引用纪律** | 本节全部事实带 file:line（as-of）；对既有实现的描述以磁盘为准（发现 `src/advisor/run.mjs:200-207` 注释所述 `core.mjs composes AbortSignal.any` 与 `thincoder-core/provider/core.mjs` 实况不符——陈旧注释，登记 §14.10） |
 
 ### 14.10 后续登记项（本批不碰——明示，不静默）
 
@@ -720,7 +720,7 @@ Advisor: review timeout after {S}s. Review incomplete — the wall-clock budget 
    VSC 新测试档须入 `thincoder-vscode/test/files.mjs` 注册。**本批不碰**（CLI 单端）。
 2. **`AGENT-LOOP.md` §11.2 settle 记账行**：A3（截断不置 `_calledAdvisorThisRun`）的判定口径同步——**待第 10 批链收口后**
    （该档正被审查，D5）。
-3. **`src/advisor/run.mjs:200-207` 陈旧注释**：与实际（`provider/core.mjs` 无 AbortSignal 组合）不符——实施时一并改正（本批 `run.mjs` 已被改写覆盖该段）。
+3. **`src/advisor/run.mjs:200-207` 陈旧注释**：与实际（`thincoder-core/provider/core.mjs` 无 AbortSignal 组合）不符——实施时一并改正（本批 `run.mjs` 已被改写覆盖该段）。
 4. **`messages.mjs` 拆分评估**（交付 413 行——402 → 413，>300 advisory）：本批净增 +11（实测）—— 不拆；若后续继续增厚，按 `loop.mjs` 同法拆分。
 5. **父侧核销面**：`docs/TODO.md` 三条目（A/B/C）status 推进 + 需求池指针——父侧写域，本设计者不动。
 6. **F16 同步面残留**（coder 披露；交付同步登记——不改语义）：`src/agent/record-results.mjs:114` 的 **sync 记账**无「未完成尾」判定
@@ -1048,7 +1048,7 @@ if (!(incomplete && run?.reviewType !== "design")) agent._calledAdvisorThisRun =
   `context`（K 单位）覆盖；未知模型回退 `DEFAULT_SPEC`（128K，`:97`）。**同族同口径**（本仓「阈值跟随窗口」惯例）：
   主循环压缩阈值 `resolveCompactThreshold`（`src/config.mjs:120-135`，`0.6 × 窗口`）、主循环尾预算（`thincoder-core/context.mjs:44-58`）、
   评审项目指南预算（`src/advisor/messages.mjs:18-19,93-96`，`5% × 窗口`——advisor 模块内同口径）、传输层窗口判定
-  （`src/provider/core.mjs:126-128`）。
+  （`thincoder-core/provider/core.mjs:126-128`）。
 - **接线可达性**：评审循环所持 `provider` 即评审真实 provider（`src/advisor/run.mjs:151` `resolveAdvisorProvider(agent)`
   → `:181` 传入循环），且循环已在该 provider 上消费 `providerSpec`（`loop.mjs:204`，`reasoningEcho` 判定）——派生值就地可得。
 - **消费面（grep 实测）**：`MAX_CONTEXT_TOKENS` 在全仓（CLI + VSC + 测试 + 脚本）定义 1 处（`compaction.mjs:19`）+
@@ -1118,7 +1118,7 @@ export function advisorContextBudget(provider) {
    与用户的模型选择承担——故 20% 头寸**不**为内存而留；旧注释的动机在本仓代码中找不到支撑（`git log -S` 溯源仅得
    2026-08-02 的原始中文注释，无对应事故记录），按实测结论改写。
 4. **头寸的真实用途**（新注释所载，三项）：① `estimateTokens` 是 `chars/4` 扁平估算——CJK 内容低估约 3-4×
-   （主循环 `estimateText` 为 ASCII/4 + 非 ASCII/1，`src/provider/rate.mjs:29-35`）；② 响应 / 推理与协议
+   （主循环 `estimateText` 为 ASCII/4 + 非 ASCII/1，`thincoder-core/provider/rate.mjs:29-35`）；② 响应 / 推理与协议
    （system/tools）在服务端计入窗口；③ 20% 是「宿主机自限线 < 服务端真窗」的安全间距。
 5. **服务端仍是最终兜底**：超窗由服务端拒绝 → `context_too_long` 分类可见（`run.mjs:222`），评审结算 fail-closed
    （§14.3 消费点）——本批不改变该兜底。
@@ -1185,10 +1185,10 @@ export function advisorContextBudget(provider) {
    （VSC 为显式清单，与 CLI glob 不同）。文档面：`ADVISOR-CONVERGENCE（VSC 仓）` 新增 §15 + 变更记录 1 行——
    VSC 档不在本批写域（本设计者未写）。
 2. **`estimateTokens` 估算器修正（CJK 低估）**：`chars/4` 扁平式 vs 主循环 `estimateText`（ASCII/4 + 非 ASCII/1，
-   `src/provider/rate.mjs:29-35`）——修正会平移全部模型的压缩时点，另批评估（本批头寸已计入误差）。**（收口 2026-09-11：群 B 批承接——本档 §18。）**
+   `thincoder-core/provider/rate.mjs:29-35`）——修正会平移全部模型的压缩时点，另批评估（本批头寸已计入误差）。**（收口 2026-09-11：群 B 批承接——本档 §18。）**
 3. **§14.3 生成点行号指针**：`context_limit` 生成点（kind 字面 = `src/advisor/run.mjs:43`；表引渲染行 = `src/advisor/loop.mjs:127`——原 :124 落笔位移 +3，已随收口并入；节内容零改——D4 as-of 口径）。
 4. **父侧核销面**：`docs/TODO.md` 需求池行（本批来源 = 用户 bug 报告）——父侧写域，本设计者不动。
-5. **tpm / rpm 交互**：`rateGate`（`src/provider/rate.mjs:52-57`）对单请求估算超 tpm 只告警放行——大窗评审的额度
+5. **tpm / rpm 交互**：`rateGate`（`thincoder-core/provider/rate.mjs:52-57`）对单请求估算超 tpm 只告警放行——大窗评审的额度
    后果由用户模型选择承担（登记；不新增闸）。
 
 ### 16.9 测试层：用例表（正常 / 边界 / 错误）
@@ -1489,7 +1489,7 @@ Options:
 ### 18.1 问题（复核 as-of 2026-09-11）
 
 `src/advisor/compaction.mjs:38-45`——`estimateTokens(messages)` = `Math.ceil((content.length + toolCalls.length) / 4)` 扁平式；
-CJK 低估 ~3-4×（主循环 `estimateText`——`src/provider/rate.mjs:30-36`，ASCII/4 + 非 ASCII/1）。
+CJK 低估 ~3-4×（主循环 `estimateText`——`thincoder-core/provider/rate.mjs:30-36`，ASCII/4 + 非 ASCII/1）。
 消费点：`src/advisor/loop.mjs:120 / 124 / 127`（compactAt / 判死线 / 判死尾计数）+ `src/advisor/run.mjs:264`（显示统计——装饰面）。
 行号实证：§16.4 #4 已如实注「20% 头寸不能完全覆盖 4× 级 CJK 低估」（§16.6 D-CB9 本批不改——另批登记）；本批即承接。
 
@@ -1497,7 +1497,7 @@ CJK 低估 ~3-4×（主循环 `estimateText`——`src/provider/rate.mjs:30-36`�
 
 | # | 候选 | 判据逐项评估 | 取舍 | 结论 |
 |---|---|---|---|---|
-| 1 | **复用 `src/provider/rate.mjs#estimateText`**（叶子模块——仅依赖 `abort-provenance.mjs`） | 单源加权公式（与主循环同口径）；纯 ASCII 逐值相等；零新配置面 | import +~1 行；公式替换 1 行 | **选定** |
+| 1 | **复用 `thincoder-core/provider/rate.mjs#estimateText`**（叶子模块——仅依赖 `thincoder-core/abort-provenance.mjs`） | 单源加权公式（与主循环同口径）；纯 ASCII 逐值相等；零新配置面 | import +~1 行；公式替换 1 行 | **选定** |
 | 2 | 本文件内联加权式（复制公式） | 零跨模块依赖；但公式双源（D2——与 rate.mjs 漂移风险） | — | 否决 |
 | 3 | 全对齐 `context.mjs` 的 estimateTokens walker（reasoning_content / 逐参 tool_calls） | 口径最全；但面大于需求（评审 messages 无 reasoning_content 持久；判死语义不变） | — | 否决 |
 

@@ -37,7 +37,7 @@ const provider = {
   stateful: true, // 默认值显式化（白名单 host 生效；灰名单自动降级）
 }
 
-const { chat } = await import("../src/provider/core.mjs")
+const { chat } = await import("@thincoder/core/provider/core.mjs")
 
 let content = ""
 let reasoning = ""

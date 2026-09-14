@@ -689,7 +689,7 @@ byte-identical 相关机械比对断言/同步脚本全部清理；**内容断�
 
 > CLI-only（VS Code 同语义约定不实现——记 docs/TODO.md）。**机制**：每个模型调用（主 agent/子代理/advisor/compress/distill/consult/auto-think）的**完整轨迹**自动落盘 `~/.thincoder/traces/YYYY-MM-DD/<sessionKey>-<seq>.jsonl`——含发往模型的输入消息、模型输出、reasoning 全文、工具调用 args、usage——供事后逐轮分析"纠结/思路反复/决策分叉"。
 
-- **采集点唯一**：`chat()` 导出（src/provider/core.mjs——所有 chat 调用经本函数）出口收集——不在四个 transport 分别埋点（续写/重试会 `result.reasoning +=`，出口收集才完整）。
+- **采集点唯一**：`chat()` 导出（thincoder-core/provider/core.mjs——所有 chat 调用经本函数）出口收集——不在四个 transport 分别埋点（续写/重试会 `result.reasoning +=`，出口收集才完整）。
 - **元数据**：ts/session（`_sessionStart`）/cwdHash/role/depth/turn/provider-model/kind/stage/**isContinuation**（续写/重试链标记）/messages/content/reasoning/toolCalls/usage/finishReason/error。日期分日按**本地日期**。
 - **脱敏**：复用 log.mjs 黑名单（apikey/designtoken/password/secret/token/authorization/proxyuri/proxy）+ SECRET_FORM 形态扫描——落盘前遮蔽。
 - **写盘**：fire-and-forget 异步（不 await——chat() 返回不被阻塞）；落盘失败静默吞错；seq = 当日目录 max+1（不覆写）。
@@ -1060,9 +1060,9 @@ A 的缺陷面在 **webview 块身份/投递链**。共性是"第二池接入面
 ### 20.1 问题陈述（现场复核——file:line as-of 2026-09-11）
 
 **F-AP1（产生点无来源）**：abort 错误在产生点只有通用文案——「哪一层、何触发」零标注。产生点全景：
-`src/provider/core.mjs:27-31`（`abortDOM`——退避 / 限流等待）· `src/provider/sse.mjs:185-189`（读循环）·
-`src/provider/anthropic.mjs:80` 与 `:187-190` · `src/provider/google.mjs:107` 与 `:210-213` ·
-`src/provider/rate.mjs:89`（`"Aborted"`——连 `signal.reason` 都未拷贝）· `src/proxy.mjs:55-59`（`abortError` 单点）·
+`thincoder-core/provider/core.mjs:27-31`（`abortDOM`——退避 / 限流等待）· `thincoder-core/provider/sse.mjs:185-189`（读循环）·
+`thincoder-core/provider/anthropic.mjs:80` 与 `:187-190` · `thincoder-core/provider/google.mjs:107` 与 `:210-213` ·
+`thincoder-core/provider/rate.mjs:89`（`"Aborted"`——连 `signal.reason` 都未拷贝）· `thincoder-core/proxy.mjs:55-59`（`abortError` 单点）·
 `src/agent.mjs:293`（`"User interrupted"`）与 `:325` · `src/agent-tools/subagent.mjs:290` 与 `:295`。
 
 **F-AP2（链式传播丢 reason——关键丢失点）**：子代理 / 评审 / 会诊 controller 链到基信号的**5 处 hop 全部以裸 `abort()` 转发**——
@@ -1084,8 +1084,8 @@ digest 原样注入 `entry.error`（`subagent-async.mjs:372-400`）——**用�
 - **CLI 请求链零绝对墙钟残留**：2026-09-01 已废除（`src/provider/core.mjs:70-71` 注——signal 只载用户 / 取消链）。
   实测（undici 7.29.0）：裸 abort 产生的文案 = `"This operation was aborted"`（**非** "aborted due to timeout"）——
   **CLI 请求链已不能产生用户实证的文案**。
-- **现存活墙钟边界 = 有意设计面**（裁定与标注见 §20.3 第 4 条）：proxy 响应头 600s（`src/provider/core.mjs:420` → `proxy.mjs:86`
-  "Response timeout"）· SSE 读侧 idle 120s（`sse.mjs:176-179`）· proxy body idle 120s（`proxy.mjs:104`）·
+- **现存活墙钟边界 = 有意设计面**（裁定与标注见 §20.3 第 4 条）：proxy 响应头 600s（`thincoder-core/provider/core.mjs:420` → `thincoder-core/proxy.mjs:86`
+  "Response timeout"）· SSE 读侧 idle 120s（`thincoder-core/provider/sse.mjs:176-179`）· proxy body idle 120s（`thincoder-core/proxy.mjs:104`）·
   consult watchdog 600s（`consult.mjs:35` 与 `:206-212`）· advisor 评审预算（`advisor/loop.mjs:141-143`——已自带
   「Advisor: review timeout」文案）。
 - **VSC 镜像残留（用户实证文案的唯一在网生产点）**：`thincoder-vscode/src/provider.mjs:28`（`FETCH_TIMEOUT_MS = 600_000`）→
@@ -1176,24 +1176,24 @@ digest 原样注入 `entry.error`（`subagent-async.mjs:372-400`）——**用�
 
 **合成点（settle 族报告面——5 档；行号 as-of 交付后实测）**：`subagent-run.mjs:162` · `advisor-async.mjs:303` ·
 `escalate-async.mjs:258` · `consult.mjs:334` 与 `:343` · `subagent.mjs:346`（sync 错误日志）。`logEvent("child:error", …)` 经 `entry.error`
-自动携带（零改动）；`llm:error` 事件面（`src/provider/core.mjs:107`）的 `err` 字段同合成器（P1）。
+自动携带（零改动）；`llm:error` 事件面（`thincoder-core/provider/core.mjs:107`）的 `err` 字段同合成器（P1）。
 
 **第 4 条 站点总表（12 行——产生 9 / 传播 1 / 取消停止 1 / 定时器 1）**
 
 | # | 面 | 站点（as-of） | 动作 |
 |---|---|---|---|
-| 1 | 产生 | `provider/core.mjs:27-31`（abortDOM——退避 / 限流等待） | `abortError(provider, "sleep")` |
-| 2 | 产生 | `provider/core.mjs:426-427`（fetch 拒否 catch） | `annotateAbort(provider, "request")` |
-| 3 | 产生 | `provider/sse.mjs:185-189`（读循环） | `abortError(provider, "stream-read")` |
-| 4 | 产生 | `provider/anthropic.mjs:80` 与 `:187-190` | `abortError(provider, "transport-anthropic")` |
-| 5 | 产生 | `provider/google.mjs:107` 与 `:210-213` | `abortError(provider, "transport-google")` |
-| 6 | 产生 | `provider/rate.mjs:89`（TPM/RPM 闸门——补 reason 透传） | `abortError(provider, "rate-gate")` |
-| 7 | 产生 | `proxy.mjs:55-59`（socket abort 单点——`:79` / `:193` / `:232` / `:239` 全走它） | `abortError(provider, "proxy")` |
+| 1 | 产生 | `thincoder-core/provider/core.mjs:27-31`（abortDOM——退避 / 限流等待） | `abortError(provider, "sleep")` |
+| 2 | 产生 | `thincoder-core/provider/core.mjs:426-427`（fetch 拒否 catch） | `annotateAbort(provider, "request")` |
+| 3 | 产生 | `thincoder-core/provider/sse.mjs:185-189`（读循环） | `abortError(provider, "stream-read")` |
+| 4 | 产生 | `thincoder-core/provider/anthropic.mjs:80` 与 `:187-190` | `abortError(provider, "transport-anthropic")` |
+| 5 | 产生 | `thincoder-core/provider/google.mjs:107` 与 `:210-213` | `abortError(provider, "transport-google")` |
+| 6 | 产生 | `thincoder-core/provider/rate.mjs:89`（TPM/RPM 闸门——补 reason 透传） | `abortError(provider, "rate-gate")` |
+| 7 | 产生 | `thincoder-core/proxy.mjs:55-59`（socket abort 单点——`:79` / `:193` / `:232` / `:239` 全走它） | `abortError(provider, "proxy")` |
 | 8 | 产生 | `agent.mjs:306`（interrupted response）与 `:338`（post-chat） | `annotateAbort` / `abortError(agent, …)` |
 | 9 | 产生 | `subagent.mjs:290` 与 `:295`（sync stopped 抛错） | `abortError(settle, "sync-stopped")` |
 | 10 | 传播 | F-AP2 五处 hop | `ctrl.abort(baseSignal.reason)`（reason 保留） |
 | 11 | 取消停止 | cancel 3 处 + stop 4 处（第 1 条表内站点） | `abort({abortTrigger:…, abortDetail:…})` |
-| 12 | 定时器 | 错误面（destroy / reject 抛错）：`sse.mjs:178` · `proxy.mjs:81` · `proxy.mjs:99` · `google.mjs:203`（google-sse-idle）；信号面（watchdog 中止 ctrl）：`consult.mjs:213` | 错误面 `timeoutError(…)`；信号面 `abort({abortTrigger:"timeout", abortDetail:"consult-watchdog"})` |
+| 12 | 定时器 | 错误面（destroy / reject 抛错）：`thincoder-core/provider/sse.mjs:178` · `thincoder-core/proxy.mjs:81` · `thincoder-core/proxy.mjs:99` · `thincoder-core/provider/google.mjs:203`（google-sse-idle）；信号面（watchdog 中止 ctrl）：`consult.mjs:213` | 错误面 `timeoutError(…)`；信号面 `abort({abortTrigger:"timeout", abortDetail:"consult-watchdog"})` |
 
 规则（覆盖勘察外的漏网站点）：**对单个任务目标的定向中止 = cancel；整批 / 会话 / 回合级停止 = stop；用户按键 = user；
 定时器 = timeout；无标注 = unknown**（unknown 即告警——不得静默）。
@@ -1206,7 +1206,7 @@ provider / agent / settle 产生或补标错误（`abortInfo`，第 4 条 #1–#
 
 ### 20.4 残留 600s 面裁定（Q3——勘察结论与证据）
 
-1. **CLI 请求链无可切除对象**：绝对墙钟已于 2026-09-01 废除（`src/provider/core.mjs:70`——71 行同段）；实测文案亦不符（F-AP5 第 1 条）；
+1. **CLI 请求链无可切除对象**：绝对墙钟已于 2026-09-01 废除（`thincoder-core/provider/core.mjs:70`——71 行同段）；实测文案亦不符（F-AP5 第 1 条）；
 2. **有意边界保留**（proxy 头 600s / 读侧 idle 120s / proxy body idle 120s / consult watchdog 600s / advisor 评审墙）——
    本批使其死亡自带 `timeout` 标注（§20.3 第 4 条 #12），不再"静默"；
 3. **VSC 镜像 600s 绝对墙钟**（用户实证文案的唯一在网生产点）——双端纪律下**登记 + 父侧排程**（§20.10），本批零碰。
@@ -1239,13 +1239,13 @@ provider / agent / settle 产生或补标错误（`abortInfo`，第 4 条 #1–#
 
 | 文件 | 批前基线 | 交付后实测 | 净变 | 变更 |
 |---|---|---|---|---|
-| `src/abort-provenance.mjs` | —（新增） | 117 | 新增（设计估 ~90） | 词汇表 + 6 导出 |
-| `src/provider/core.mjs` | 482 | 477 | -5 | 产生点 `sleep` + `request`（+ P1 llm:error 面） |
-| `src/provider/sse.mjs` | 266 | 265 | -1 | 产生点 `stream-read` + 定时器 `sse-idle` |
-| `src/provider/anthropic.mjs` | 226 | 225 | -1 | 产生点 transport 两处 |
-| `src/provider/google.mjs` | 259 | 258 | -1 | 产生点 transport 两处 + 定时器 `google-sse-idle` |
-| `src/provider/rate.mjs` | 108 | 109 | +1 | 产生点 `rate-gate`（含 reason 透传） |
-| `src/proxy.mjs` | 267 | 262 | -5 | 产生点 `proxy` 单点 + 定时器两处 |
+| `thincoder-core/abort-provenance.mjs` | —（新增） | 117 | 新增（设计估 ~90） | 词汇表 + 6 导出 |
+| `thincoder-core/provider/core.mjs` | 482 | 477 | -5 | 产生点 `sleep` + `request`（+ P1 llm:error 面） |
+| `thincoder-core/provider/sse.mjs` | 266 | 265 | -1 | 产生点 `stream-read` + 定时器 `sse-idle` |
+| `thincoder-core/provider/anthropic.mjs` | 226 | 225 | -1 | 产生点 transport 两处 |
+| `thincoder-core/provider/google.mjs` | 259 | 258 | -1 | 产生点 transport 两处 + 定时器 `google-sse-idle` |
+| `thincoder-core/provider/rate.mjs` | 108 | 109 | +1 | 产生点 `rate-gate`（含 reason 透传） |
+| `thincoder-core/proxy.mjs` | 267 | 262 | -5 | 产生点 `proxy` 单点 + 定时器两处 |
 | `src/agent.mjs` | 401 | 414 | +13 | 产生点 `agent` 两处 |
 | `src/agent-tools/subagent.mjs` | 403 | 405 | +2 | 产生点 2 + hop 1 + 合成 1 |
 | `src/agent-tools/subagent-run.mjs` | 203 | 206 | +3 | hop 1 + 合成 1 |
@@ -1308,7 +1308,7 @@ provider / agent / settle 产生或补标错误（`abortInfo`，第 4 条 #1–#
 - **VSC 残留面——父侧排程**（所需档 + 用途 + 完整修复路径）：`thincoder-vscode/src/provider.mjs`（`:324` 去绝对墙钟 /
   `:327` 头阶段语义对齐 CLI——**用户实证文案的唯一在网生产点**）+ VSC 镜像标注与合成面（`agent-tools/subagent-run.mjs` 等 `entry.error` 合成）；
   VSC 档 = `AGENT-LOOP（VSC 仓）` 与 `PROVIDER（VSC 仓）`（VSC 仓独立写域——本批零碰）；
-- **零改确认（勘察）**：`provider/responses.mjs` 无自有产生点（错误经共享 `proxyFetch` / `chat` 面）· `provider/retry.mjs` 只透传（`:36`）。
+- **零改确认（勘察）**：`thincoder-core/provider/responses.mjs` 无自有产生点（错误经共享 `proxyFetch` / `chat` 面）· `thincoder-core/provider/retry.mjs` 只透传（`:36`）。
 - **UI/交互决策（本批）**：用户可见面 = digest 中的死亡行（沿用既有注入通道——无新控件、无交互变更）；
   TUI 块状态面零改（登记①——见下 open ②）；`detail` 短串展示为自由文本（不渲染为独立 UI 元素）。
 
@@ -1319,7 +1319,7 @@ provider / agent / settle 产生或补标错误（`abortInfo`，第 4 条 #1–#
 **变更记录**：2026-09-11 第 24 批——子代理 abort 来源标注（可诊断性）（新增本节；需求档 §6 同批落地；VSC 残留 600s 面登记父侧）；
 同日评审轮次 1 后修正轮（🔴1 + 🔵4 全落）——timeout 三处对齐（判据行 `reason.abortTrigger === "timeout"` · 形态③纳 `"timeout"` · 站点 #12 分错误面/信号面）·
 求值链段（err 优先 + 三步归属）· §20.6 行数口径改「批前基线 → 落档后实测」· form ① 四站点既存证据行 · §2.1 与 `PROVIDER.md` §3 指针（LOGGING.md 核得零改）。
-同日交付后设计刷新——`annotateAbort` 签名 4 参可选形态 · 站点表 #8 行号校正（`:306`/`:338`）· 补两处同类站点（`google.mjs:203` 定时器面 / `consult.mjs:334`+`:343` 合成器面——并随行校正 #12 与合成点链行号）· §20.6 实施域行数交付后实测刷新 · §20.10 登记 ④（后缀预算——后续改进）。
+同日交付后设计刷新——`annotateAbort` 签名 4 参可选形态 · 站点表 #8 行号校正（`:306`/`:338`）· 补两处同类站点（`thincoder-core/provider/google.mjs:203` 定时器面 / `consult.mjs:334`+`:343` 合成器面——并随行校正 #12 与合成点链行号）· §20.6 实施域行数交付后实测刷新 · §20.10 登记 ④（后缀预算——后续改进）。
 
 ## 21. Stop 钩子（主会话 run 结束事件）（第 30 批——2026-09-11）
 

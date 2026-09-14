@@ -1,4 +1,4 @@
-# Proxy 支持（src/proxy.mjs）
+# Proxy 支持（thincoder-core/proxy.mjs）
 
 > 基于代码实际实现梳理。配置入口：`/config` → proxy 子菜单；配置文件 `~/.thincoder/config.json` 的 `proxy` 字段。
 > 文档格式债清理批 A2（2026-09-07）——内容完整保留，格式正常化。

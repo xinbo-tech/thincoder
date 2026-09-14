@@ -2,9 +2,9 @@
 
 > 本文档描述 LLM 调用层的**当前设计**：OpenAI 兼容协议为主 + Anthropic / Gemini / Responses 原生 transport；SSE 流式解析、重试/退避、TPM/RPM 闸门、截断续写、流规则、发送前载荷净化。状态：**当前态**（2026-08/09 各轮实现已合入，历史变更流水账折叠于文末「变更记录」）；§0 / §16 / §17 = 模型选择面重构增补（2026-09-10——**R1–R10 / M1–M10 均已实施并核销**）；§21–§24 = `provider.headers` 全通路铺开（第 32 批）。
 >
-> 相关权威：`src/model-specs.mjs`（规格表中枢，`config.mjs` re-export `specForModel` / `providerSpec` / `specMatch`）；
+> 相关权威：`thincoder-core/model-specs.mjs`（规格表中枢，`config.mjs` re-export `specForModel` / `providerSpec` / `specMatch`）；
 > `src/config.mjs`（`resolveEnableThinking` / `isBailianHost` / `PROVIDER_PRESETS` / `resolveCompactThreshold`）；
-> `src/provider/list-models.mjs`（`/models` 拉取按 format 分派——§16）；`CONTEXT-COMPACTION.md`（压缩阈值 / tail 公式 /
+> `thincoder-core/provider/list-models.mjs`（`/models` 拉取按 format 分派——§16）；`CONTEXT-COMPACTION.md`（压缩阈值 / tail 公式 /
 > 续写失败可见性——本文件 §14/§15 为其权威）。跨文档已接管的主题只留指针，不复制。
 
 ## 0. 需求层（模型选择面重构——2026-09-10）
@@ -50,18 +50,18 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`，
 
 | 文件 | 职责 |
 |---|---|
-| `src/provider/index.mjs` | re-export：`chat` / `listModels` / `estimateText` / `createProvider` / `stripImagesForTextModel`（backward-compatible 入口，调用方从 `./provider` 引用） |
-| `src/provider/core.mjs` | chat 入口（transport 分派）、OpenAI 格式 body 组装、`requestWithRetry`（OpenAI 路径）、载荷净化（stripImages / normalizeToolPairing / escapeMessages）、截断续写循环、`buildContinuationMessages`、overload 重试、Kimi 401 平台提示、`effectiveFetchTimeoutMs`、`createProvider` |
-| `src/provider/list-models.mjs` | `/models` 拉取按 `format` 分派（openai / anthropic / google——§16 M1；2026-09-10 自 core.mjs 迁出并扩两分支） |
-| `src/provider/sse.mjs` | `readSSE`：OpenAI 格式 SSE 解析、畸形 tool_calls 防御归并（§10）、usage 缓存归一、流规则触发、中断/partial、读侧 idle 超时 |
-| `src/provider/rate.mjs` | TPM/RPM 滑动窗口闸门、token 估算、重试常量（`RETRYABLE_STATUS` / `MAX_RETRIES` / `MAX_CONTINUATIONS` / `RATE_LIMIT_BACKOFF_MS`）、`_rateHooks` 测试钩子 |
-| `src/provider/errors.mjs` | OpenAI 路径错误分类族：`parseRetryAfter` / `isNonRetryableError` / `betaBaseURL` / `compileStreamRules`（2026-09-05 自 core.mjs 迁出） |
-| `src/provider/retry.mjs` | anthropic/google/responses 共用的通用退避重试链（`requestWithRetry(request, …)`） |
-| `src/provider/normalize.mjs` | 发送前净化纯函数：`stripImagesForTextModel` / `normalizeToolPairing`（2026-08-31 自 core.mjs 迁出） |
-| `src/provider/anthropic.mjs` | Claude 原生 transport（`/v1/messages` + 事件流） |
-| `src/provider/google.mjs` | Gemini 原生 transport（`generateContent` / `streamGenerateContent?alt=sse`） |
-| `src/provider/responses.mjs` | OpenAI Responses API transport（`format: "responses"`，§13） |
-| `src/model-specs.mjs` | `MODEL_SPECS` 规格表 + `specForModel` + `providerSpec`（能力中枢，2026-08-31 自 config.mjs 迁出） |
+| `thincoder-core/provider/index.mjs` | re-export：`chat` / `listModels` / `estimateText` / `createProvider` / `stripImagesForTextModel`（backward-compatible 入口，调用方从 `./provider` 引用） |
+| `thincoder-core/provider/core.mjs` | chat 入口（transport 分派）、OpenAI 格式 body 组装、`requestWithRetry`（OpenAI 路径）、载荷净化（stripImages / normalizeToolPairing / escapeMessages）、截断续写循环、`buildContinuationMessages`、overload 重试、Kimi 401 平台提示、`effectiveFetchTimeoutMs`、`createProvider` |
+| `thincoder-core/provider/list-models.mjs` | `/models` 拉取按 `format` 分派（openai / anthropic / google——§16 M1；2026-09-10 自 core.mjs 迁出并扩两分支） |
+| `thincoder-core/provider/sse.mjs` | `readSSE`：OpenAI 格式 SSE 解析、畸形 tool_calls 防御归并（§10）、usage 缓存归一、流规则触发、中断/partial、读侧 idle 超时 |
+| `thincoder-core/provider/rate.mjs` | TPM/RPM 滑动窗口闸门、token 估算、重试常量（`RETRYABLE_STATUS` / `MAX_RETRIES` / `MAX_CONTINUATIONS` / `RATE_LIMIT_BACKOFF_MS`）、`_rateHooks` 测试钩子 |
+| `thincoder-core/provider/errors.mjs` | OpenAI 路径错误分类族：`parseRetryAfter` / `isNonRetryableError` / `betaBaseURL` / `compileStreamRules`（2026-09-05 自 core.mjs 迁出） |
+| `thincoder-core/provider/retry.mjs` | anthropic/google/responses 共用的通用退避重试链（`requestWithRetry(request, …)`） |
+| `thincoder-core/provider/normalize.mjs` | 发送前净化纯函数：`stripImagesForTextModel` / `normalizeToolPairing`（2026-08-31 自 core.mjs 迁出） |
+| `thincoder-core/provider/anthropic.mjs` | Claude 原生 transport（`/v1/messages` + 事件流） |
+| `thincoder-core/provider/google.mjs` | Gemini 原生 transport（`generateContent` / `streamGenerateContent?alt=sse`） |
+| `thincoder-core/provider/responses.mjs` | OpenAI Responses API transport（`format: "responses"`，§13） |
+| `thincoder-core/model-specs.mjs` | `MODEL_SPECS` 规格表 + `specForModel` + `providerSpec`（能力中枢，2026-08-31 自 config.mjs 迁出） |
 
 规格表驱动一切能力差异：新模型只加一行 spec，transport / 续写 / thinking 全自动适配；未知模型保守回退 128K + 警告（§9）。
 
@@ -192,7 +192,7 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`，
 
 ## 9. 规格表（MODEL_SPECS）与关键设计决策
 
-**规格表中枢**（`src/model-specs.mjs`）：所有模型能力差异在此声明——`context`（上下文窗口）/
+**规格表中枢**（`thincoder-core/model-specs.mjs`）：所有模型能力差异在此声明——`context`（上下文窗口）/
 `maxOutput` / `thinking` / `partialMode` / `prefixMode` / `multimodal` / `cacheMode` /
 `thinkApi`（`type` = thinking.type 字段 / `effort` = reasoning_effort）/ `thinkEnabledValue`
 （MiniMax `adaptive`）/ `reasoningEcho`（required = 必须回传，optional = 默认不回传）/
@@ -343,7 +343,7 @@ export function resolveEnableThinking(provider, spec) {
 
 ### 13.4 实现影响与边界
 
-- 实现：`src/provider/responses.mjs`（buildBody / parseStream / normalizeUsage / 链状态机）+ `core.mjs` 分派（`format === "responses"`，先 `normalizeToolPairing`）。agent 层零改动——transport 返回既有 shape。
+- 实现：`thincoder-core/provider/responses.mjs`（buildBody / parseStream / normalizeUsage / 链状态机）+ `core.mjs` 分派（`format === "responses"`，先 `normalizeToolPairing`）。agent 层零改动——transport 返回既有 shape。
 - **已知边界**：responses 格式**不接 `agent.streamRules`**——core.mjs 分派只透传
   messages/tools/onToken/onReasoning/onWait/signal/toolChoice，`ruleTriggered` 对 responses
   永不触发（配置了 abort/warn 规则的 responses 用户该保护不生效；回应格式事件体与 sse.mjs
@@ -433,7 +433,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 - **D-C1 config 字段**（config.json `providers[].context`）：**K 单位**正整数（如 `128` = 128K）；非法值（0/负数/非数字）→ 忽略 + 警告一次（每 provider 名），用 spec 值。
 - **D-C2 解析覆盖**（model-specs.mjs）：`providerSpec(provider)` = `specForModel(provider.model)` 的 **拷贝覆盖**（`{ ...spec, context: provider.context * 1024 }`），**不污染共享 spec 对象**（跨 provider 串扰防护——T-C1〔已删：测试清零批〕）；`specForModel` 保持纯查表不变；`config.mjs` re-export `providerSpec`——既有 importers 从 config 取。
 - **D-C3 调用方改造**：需要 provider 感知的调用方用 `providerSpec`——config.mjs
-  （resolveCompactThreshold）、context（keepTailSize）、provider/core.mjs（窗口/钳制/chat spec）、
+  （resolveCompactThreshold）、context（keepTailSize）、thincoder-core/provider/core.mjs（窗口/钳制/chat spec）、
   advisor（messages/run 预算）、TUI render-frame（模型信息/状态栏 context %）、pickers
   （/model 配置界面）；纯模型查表处（无 provider）保持 `specForModel`；rate/normalize 无
   provider 感知调用点（spec 由 core 传入）。
@@ -463,7 +463,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 
 ### 16.2 机制
 
-**M1 清单拉取（按 format 分派）**——`src/provider/list-models.mjs`（新文件：自 `core.mjs` 迁出现实现 + 扩两分支）：
+**M1 清单拉取（按 format 分派）**——`thincoder-core/provider/list-models.mjs`（新文件：自 `core.mjs` 迁出现实现 + 扩两分支）：
 
 | format | 请求 | 响应解析 |
 |---|---|---|
@@ -573,7 +573,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 
 | 接口 | 变化 | 语义 |
 |---|---|---|
-| `listModels(provider, {signal})` | 实现迁 `provider/list-models.mjs`（`provider/index.mjs` re-export 不变——调用点零改） | 按 `provider.format` 分派；返回模型 ID 数组；错误抛出 |
+| `listModels(provider, {signal})` | 实现迁 `thincoder-core/provider/list-models.mjs`（`thincoder-core/provider/index.mjs` re-export 不变——调用点零改） | 按 `provider.format` 分派；返回模型 ID 数组；错误抛出 |
 | `parseModelRef(ref, providers)` | 语义收窄（M4） | `{ok:true, provider, model}` / `{ok:false, reason}` |
 | `firstCandidate(provider)` | **删除** | 调用点直读 `p.model` |
 | `specMatch(model)` | **新增** | `{ spec, matched }`——matched:false = DEFAULT 兜底 |
@@ -624,8 +624,8 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 | `src/model-ref.mjs` | 75 | −15 | `parseModelRef` v2（M4）；删 `firstCandidate`；头注/注释改写 |
 | `src/model-specs.mjs` | 146 | +18 | `specMatch`（M5） |
 | `src/session.mjs` | 476 | ±0 | 槽位兜底改 `slotProvider.model`；注释 |
-| `src/provider/core.mjs` | 498 | −20 | `listModels` 迁出（注释同步） |
-| `src/provider/list-models.mjs` | **新增** | ~95 | 三 format 分派（M1） |
+| `thincoder-core/provider/core.mjs` | 498 | −20 | `listModels` 迁出（注释同步） |
+| `thincoder-core/provider/list-models.mjs` | **新增** | ~95 | 三 format 分派（M1） |
 | `src/provider/index.mjs` | 7 | ±0 | re-export 改指 |
 | `src/provider/errors.mjs` | 102 | ±0 | F-1 guard 文案与注释（不再称 `models[]`） |
 | `src/advisor/run.mjs` | 488 | ±0 | `models?.[0]` 兜底换父兜底 `agent.provider?.model`（与 subagent 同构——M3④）；注释 |
@@ -665,7 +665,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 | `src/config-migrate.mjs` | 161 | +25 | 迁移 v2（M7 同规则——独立实现；含 `:110` settings 迁移写回形态核对） |
 | `src/config-io.mjs`（VSC 仓） | 438 | ±5 | normalize 单值；`resolveDefaultModel` 回退链（R6） |
 | `src/provider.mjs`（VSC 仓） | 456 | −15 | `listModels` 迁出/加 format 分派 |
-| `src/provider/list-models.mjs` | **新增** | ~95 | 三 format 分派 |
+| `thincoder-core/provider/list-models.mjs` | **新增** | ~95 | 三 format 分派 |
 | `src/provider/transports/openai.mjs`（VSC 仓） | 308 | ±0（文案） | guard 文案（不再称 `models[]`） |
 | `src/advisor/provider.mjs`（VSC 仓） | 39 | ±0 | `models?.[0]` 兜底换父兜底 `agent._provider?.model`（与 VSC subagent 同构——M3④）；注释 |
 | `src/agent-tools/subagent.mjs` | 358 | ±0 | `models?.[0]`→`byName.model`（**保 `?? parent._provider?.model` 父兜底**）；注释 |
@@ -1109,7 +1109,7 @@ Provider 请求的头分两类来源。**内置头** = transport 协议要求（
 （desktop proposal ④——如网关要求的 `X-Device-Id`），config 装载面净化后进入运行期 provider。
 
 **装配契约**：`{ ...(provider.headers ?? {}), ...内置头 }`——定制头在前、内置头在后：同名键**内置头胜出**
-（定制头不得覆盖 `Content-Type` 与认证头；与 `src/provider/core.mjs:408-412` 既有语义一致）。`Authorization`
+（定制头不得覆盖 `Content-Type` 与认证头；与 `thincoder-core/provider/core.mjs:408-412` 既有语义一致）。`Authorization`
 另有装载面防线：`config.mjs` 净化器（`src/config.mjs:237-249`）在 loadConfig 时剥离该键（大小写不敏感）
 与非字符串值——运行期 provider 的定制头里不含 `authorization`。
 
@@ -1119,12 +1119,12 @@ Provider 请求的头分两类来源。**内置头** = transport 协议要求（
 
 | # | 通路 | 装配点（as-of 2026-09-11） | 内置头 | 定制头展开 |
 |---|---|---|---|---|
-| 1 | 主聊天（OpenAI 兼容） | `src/provider/core.mjs:408-412` | `Content-Type` / `Authorization` | ✓ 既有（参照面） |
-| 2 | 主聊天（responses） | `src/provider/responses.mjs` `chat()` 内三处 `proxyFetch(` 调用点（as-of :430/:449/:467） | `Content-Type` / `Authorization` | ✓ 本批补 |
-| 3 | 主聊天（anthropic） | `src/provider/anthropic.mjs:73-77` | `Content-Type` / `x-api-key` / `anthropic-version` | ✓ 本批补 |
-| 4 | 主聊天（google） | `src/provider/google.mjs:119` | `Content-Type` | ✓ 本批补 |
+| 1 | 主聊天（OpenAI 兼容） | `thincoder-core/provider/core.mjs:408-412` | `Content-Type` / `Authorization` | ✓ 既有（参照面） |
+| 2 | 主聊天（responses） | `thincoder-core/provider/responses.mjs` `chat()` 内三处 `proxyFetch(` 调用点（as-of :430/:449/:467） | `Content-Type` / `Authorization` | ✓ 本批补 |
+| 3 | 主聊天（anthropic） | `thincoder-core/provider/anthropic.mjs:73-77` | `Content-Type` / `x-api-key` / `anthropic-version` | ✓ 本批补 |
+| 4 | 主聊天（google） | `thincoder-core/provider/google.mjs:119` | `Content-Type` | ✓ 本批补 |
 | 5 | 会话标题生成 | `thincoder-core/generate-title.mjs:47-55` | `Content-Type` / `Authorization` | ✓ 本批补 |
-| 6 | 模型清单拉取（对照面） | `src/provider/list-models.mjs:52/57/73` | 按 `format` 分派 | ✓ 既有（零改） |
+| 6 | 模型清单拉取（对照面） | `thincoder-core/provider/list-models.mjs:52/57/73` | 按 `format` 分派 | ✓ 既有（零改） |
 
 **域外与端面**：会话动态头（`x-opencode-session` 类）不做（证据未立——批次 §1 范围口径）；embedding 独立渠道
 （`thincoder-core/embedding.mjs` 用 `embedder` 独立配置，无定制头字段）、MCP / 网络工具 / 升级检查等自有头面不属本机制；
@@ -1162,7 +1162,7 @@ responses / anthropic / google 三 transport 与会话标题生成**不携带该
 
 - **不**实现会话动态头（`x-opencode-session` 类——证据未立，待报告者给网关证据后另议）；
 - **不**改头语义（净化器 / 装配顺序 / 各 transport 内置头集合——只铺开）；
-- **不**动已展开面（`src/provider/core.mjs` 参照 / `src/provider/list-models.mjs` 对照——零改）；
+- **不**动已展开面（`thincoder-core/provider/core.mjs` 参照 / `thincoder-core/provider/list-models.mjs` 对照——零改）；
 - **不**动 embedding 独立渠道（`thincoder-core/embedding.mjs`——`embedder` 独立配置，无定制头字段）；
 - **不**碰 VS Code 端（无该配置概念——对位引入属新需求）；
 - **不**新建档（本档承载）。
@@ -1185,9 +1185,9 @@ provider → transport 装配（定制头前、内置头后）→ fetch / proxyF
 
 | # | 通路 | 落法 | 装配后头集合（无配置时） |
 |---|---|---|---|
-| 1 | `src/provider/responses.mjs`（三处 fetch） | `chat()` 内**提升单个 `const headers`**（位置 = `rateGate` 之后、首个 `requestWithRetry` 之前）——三处 `proxyFetch(` 调用点（as-of :430/:449/:467）改引用同一对象 | `{Content-Type, Authorization}` |
-| 2 | `src/provider/anthropic.mjs:73-77` | 既有 `const headers` 对象首行加 `...(provider.headers ?? {})` | `{Content-Type, x-api-key, anthropic-version}` |
-| 3 | `src/provider/google.mjs:119` | 内联展开（单调用点） | `{Content-Type}` |
+| 1 | `thincoder-core/provider/responses.mjs`（三处 fetch） | `chat()` 内**提升单个 `const headers`**（位置 = `rateGate` 之后、首个 `requestWithRetry` 之前）——三处 `proxyFetch(` 调用点（as-of :430/:449/:467）改引用同一对象 | `{Content-Type, Authorization}` |
+| 2 | `thincoder-core/provider/anthropic.mjs:73-77` | 既有 `const headers` 对象首行加 `...(provider.headers ?? {})` | `{Content-Type, x-api-key, anthropic-version}` |
+| 3 | `thincoder-core/provider/google.mjs:119` | 内联展开（单调用点） | `{Content-Type}` |
 | 4 | `thincoder-core/generate-title.mjs:47-55` | `opts.headers` 内联展开（:49——直连与 proxy 分支共用同一 `opts`） | `{Content-Type, Authorization}` |
 
 - responses 三处 fetch 共享同一 `headers` 对象（重试闭包重复调用——对象只读复用，零副作用）；
@@ -1218,16 +1218,16 @@ core / responses / generate-title 被内置头覆盖，anthropic 通路无 `Auth
 
 ### 23.4 受影响文件全清单（行数为 2026-09-11 实测）
 
-> over-tier 说明：`src/provider/responses.mjs` 494 行逼近 500 硬限——本批净增 ≤2 行（仍 <500），不拆；
+> over-tier 说明：`thincoder-core/provider/responses.mjs` 494 行逼近 500 硬限——本批净增 ≤2 行（仍 <500），不拆；
 > 后续批次触碰该档时先执行拆分。其余文件远低于阈值。文档面（本档 + 批次档）由设计者落档——实施者面 = 源 + 测试。
 
 **CLI 源（thincoder-cli/src）**：
 
 | 文件 | 当前行数 | 预计增量 | 改动要点 |
 |---|---|---|---|
-| `src/provider/responses.mjs` | 494 | +1~2 | `chat()` 内提升单 `const headers`（含展开）——三处 `proxyFetch(` 调用点（as-of :430/:449/:467）改引用 |
-| `src/provider/anthropic.mjs` | 226 | +1 | `headers` 对象首行加展开（:73-77） |
-| `src/provider/google.mjs` | 259 | ±1 | `headers` 内联展开（:119） |
+| `thincoder-core/provider/responses.mjs` | 494 | +1~2 | `chat()` 内提升单 `const headers`（含展开）——三处 `proxyFetch(` 调用点（as-of :430/:449/:467）改引用 |
+| `thincoder-core/provider/anthropic.mjs` | 226 | +1 | `headers` 对象首行加展开（:73-77） |
+| `thincoder-core/provider/google.mjs` | 259 | ±1 | `headers` 内联展开（:119） |
 | `thincoder-core/generate-title.mjs` | 83 | ±1 | `opts.headers` 内联展开（:49） |
 
 **CLI 测试（thincoder-cli/test）**：
@@ -1259,12 +1259,12 @@ core / responses / generate-title 被内置头覆盖，anthropic 通路无 `Auth
 
 | # | §1 表述（as-of） | 处置 |
 |---|---|---|
-| 1 | `src/provider/core.mjs:405-425` 展开 ✓ | 参照面——零改；T39 锁其语义（含覆盖序） |
-| 2 | `responses.mjs:432/451/469` 三处遗漏 | 本批补（§23.2 #1）——锚注：§1 行号 = `headers:` 字面行；本档 §21–§24 统一锚 `proxyFetch(` 调用起始行（同一三处——as-of :430/:449/:467） |
-| 3 | `anthropic.mjs:73-77` 字面头无展开 | 本批补（§23.2 #2） |
-| 4 | `google.mjs:119` 仅 Content-Type | 本批补（§23.2 #3） |
+| 1 | `thincoder-core/provider/core.mjs:405-425` 展开 ✓ | 参照面——零改；T39 锁其语义（含覆盖序） |
+| 2 | `thincoder-core/provider/responses.mjs:432/451/469` 三处遗漏 | 本批补（§23.2 #1）——锚注：§1 行号 = `headers:` 字面行；本档 §21–§24 统一锚 `proxyFetch(` 调用起始行（同一三处——as-of :430/:449/:467） |
+| 3 | `thincoder-core/provider/anthropic.mjs:73-77` 字面头无展开 | 本批补（§23.2 #2） |
+| 4 | `thincoder-core/provider/google.mjs:119` 仅 Content-Type | 本批补（§23.2 #3） |
 | 5 | `src/agent/generate-title.mjs:47-55` 自建头 | **路径勘误**（该档已并入核包）：实际 = `thincoder-core/generate-title.mjs:47-55`（`headers` 行 :49；`src/agent/` 下无该档）——本批补（§23.2 #4） |
-| 6 | `list-models.mjs:52/57/73` 已展开（对照） | 对照面——零改；既有断言（T1/T2）保持绿 |
+| 6 | `thincoder-core/provider/list-models.mjs:52/57/73` 已展开（对照） | 对照面——零改；既有断言（T1/T2）保持绿 |
 
 **（b）既有纪律核对**：
 

@@ -5092,5 +5092,139 @@ CLI 三加载根 + 入口（L1–L7）：
 
 **收正注（同轮 · 首版后置）**：宽度闸 5 行超宽行折行（仅插换行、文字零改——首版行位 `:4995` / `:5026` / `:5032` / `:5058` / `:5076`）。
 
+### 实施：S2 U10 —— PROVIDER 单元落轮（2026-09-14 · eng-coder）——**终态 = clean**
+
+**段位**：当前段 = **S2（CLI 迁移单元 U10）**。写域 = CLI 侧（28 档 34 处 import 改指 + 15 档删旧 + 6 档 86 行文档锚/表改指 + 9 处头注订正）+ **域外一笔（已披露）**：`thincoder-cli/scripts/verify-compress.mjs`（删档消费方，不接即破）；+ **边界外一笔（已披露）**：仓根台账 `docs/TODO-archive.md:74`（L4 证据行，删档后必红——唯一必要行）。
+**VSC 零触碰**；核内零改动（改动集零 `thincoder-core/**`）；未 commit（父侧统一单笔）；产品文档 = 锚改指 + 半更新结构收正（零语义改写——语义收正归 eng-designer）。
+
+**依据** = `docs/design/CORE-UNIFICATION.md` §2.6.3 U10 行（`:719`「15 / 2817 / 31」+ 专项「#114 / #115 取并集逐条登记」）+（三）逐档清单（`:821-835`）+（四）四步与 A1–A6（`:910-924`）+（七）进度计数 + §2.6.2（三）（五）（六）；`docs/design/PROVIDER.md` §2.1（#114/#115）· §3.1（A19/A20 已裁 · 按建议）· §2.2（#138–#143）；父侧 U10 任务书。
+
+**改动面**（行数 = `wc -l` 口径实核；改前 = HEAD）
+
+| # | 面 | 档 / 行数 | 动作 |
+|---|---|---|---|
+| 1 | CLI 源 + 测试 + 脚本 | 28 档（19 src + 8 test + 1 scripts；行数零变——纯来源串替换） | 改指 `@thincoder/core/<子路径>`（34 处：域内 33 + 域外 1） |
+| 2 | CLI 删旧 | 15 档 / **2817 行**（`src/provider/` 11 档 **2195** 行 + `src/{model-specs,model-ref,proxy,abort-provenance}.mjs` 4 档 **622** 行） | **删档** + 空目录 `src/provider/` 移除 |
+| 3 | CLI 文档 | 6 档 / **86 行**（74 悬空锚 + 12 半更新/半陈旧收正） | 锚/述改指 `thincoder-core/…`（纯路径替换 · as-of 坐标保留） |
+| 4 | 头注 / 注释订正 | 9 处（随改指同档） | 自指路径陈述改指核（防同档自相矛盾——U4/U6 先例） |
+| 5 | 仓根台账（**边界外**） | `docs/TODO-archive.md`（±0 行） | `:74` 证据形改指 1 处 |
+| 6 | 域外脚本 | `thincoder-cli/scripts/verify-compress.mjs`（±0 行） | `:5` 改指 1 处 |
+
+**① 逐处「改前 → 改后」（28 档 34 处——全部 = 来源串替换，具名导入面零改）**
+
+| # | 档 | 位置：改前 → 改后 |
+|---|---|---|
+| 1 | `src/advisor/compaction.mjs` | `:14` `"../provider/rate.mjs"` → `"@thincoder/core/provider/rate.mjs"`（estimateText） |
+| 2 | `src/advisor/loop.mjs` | `:10` `"../provider/core.mjs"` → 核 `provider/core.mjs`（chat） |
+| 3 | `src/agent-tools/advisor-async.mjs` | `:57` `"../abort-provenance.mjs"` → 核 `abort-provenance.mjs`（deathLine） |
+| 4 | `src/agent-tools/consult.mjs` | `:30` 同上 |
+| 5 | `src/agent-tools/escalate-async.mjs` | `:33` 同上 |
+| 6 | `src/agent-tools/subagent-run.mjs` | `:11` 同上 |
+| 7 | `src/agent-tools/subagent.mjs` | `:24` `"../abort-provenance.mjs"` → 核（abortError, deathLine） |
+| 8 | `src/agent.mjs` | `:5` `"./provider/index.mjs"` → 核 `provider/index.mjs`（chat）· `:6` `"./abort-provenance.mjs"` → 核（abortError, annotateAbort） |
+| 9 | `src/auto-think.mjs` | `:17` `"./provider/core.mjs"` → 核（chat） |
+| 10 | `src/cli/make-agent.mjs` | `:30` `await import("../proxy.mjs")` → 核 `proxy.mjs`（injectProxy，动态） |
+| 11 | `src/config.mjs` | `:17` `"./model-ref.mjs"` → 核（parseModelRef, resolveRuntimeProvider, defaultModelReason）· `:117` `"./model-specs.mjs"` → 核（specForModel, providerSpec, specMatch） |
+| 12 | `src/distill.mjs` | `:7` `"./provider/index.mjs"` → 核（chat） |
+| 13 | `src/explore-distill.mjs` | `:12` 同上 |
+| 14 | `src/tools/web.mjs` | `:3` `"../proxy.mjs"` → 核 `proxy.mjs`（proxyFetch） |
+| 15 | `src/tui/cmd-advisor.mjs` | `:182` `await import("../provider/index.mjs")` → 核（listModels，动态） |
+| 16 | `src/tui/cmd-config.mjs` | `:59` `await import("../proxy.mjs")` → 核（injectProxy）· `:139` 同上（proxyFetch, resolveWebProxy） |
+| 17 | `src/tui/cmd-mcp.mjs` | `:163` `await import("../provider/index.mjs")` → 核（chat，动态） |
+| 18 | `src/tui/model-catalog.mjs` | `:14` `"../provider/list-models.mjs"` → 核（listModels） |
+| 19 | `src/tui/model-picker.mjs` | `:283` `await import("../provider/index.mjs")` → 核（listModels，动态） |
+| 20 | `test/abort-provenance.test.mjs` | `:14` `"../src/abort-provenance.mjs"` → 核（具名面零改） |
+| 21 | `test/list-models.test.mjs` | `:8` `"../src/provider/list-models.mjs"` → 核（listModels） |
+| 22 | `test/provider-headers.test.mjs` | `:19` `"../src/provider/core.mjs"` → 核（chat） |
+| 23 | `test/provider-model-guard.test.mjs` | `:21` 同上 |
+| 24 | `test/settings.test.mjs` | `:15` `"../src/model-ref.mjs"` → 核（parseModelRef） |
+| 25 | `test/smoke-qwen-thinking.mjs` | `:22` `"../src/provider/index.mjs"` → 核（chat）· `:40` `"../src/provider/normalize.mjs"` → 核 `provider/normalize.mjs` · `:72` `"../src/model-specs.mjs"` → 核（specForModel） |
+| 26 | `test/smoke-responses-chain.mjs` | `:32` `"../src/provider/core.mjs"` → 核（chat）· `:33` `"../src/provider/responses.mjs"` → 核（buildBody） |
+| 27 | `test/smoke-responses.mjs` | `:40` `"../src/provider/core.mjs"` → 核（chat） |
+| 28 | `scripts/verify-compress.mjs`（**域外**） | `:5` `"../src/provider/index.mjs"` → 核（createProvider） |
+| — | 头注订正 9 处 | `src/advisor/compaction.mjs:13` · `src/config.mjs:114/:240/:306/:357` · `src/tui/model-catalog.mjs:4/:12/:19` · `test/settings.test.mjs:220` |
+
+改指档数 = **28**（域内 27 + 域外 1）；设计「改指 31」的差额 = 4 档（`src/context.mjs` · `src/generate-title.mjs` · `src/embedding.mjs` · `src/agent-tools/goal.mjs`）已被 **U6 / U8 / U9** 删档（git 历史实核——设计（一）注「按当下坐标计…先跑的单元可能已改掉其中若干」）⇒ 逐数成立。
+
+**文档锚/表改指（6 档 86 行——删后中间态实测 = 80 悬空 ⇒ 逐处改指 ⇒ 0 + 12 行半更新收正）**
+
+- 悬空锚 74 行（6 档）：`docs/design/ADVISOR-CONVERGENCE.md` 11 · `AGENT-LOOP.md` 22 · `LOGGING.md` 3 · `MEMORY.md` 4 · `PROVIDER.md` 33 · `PROXY.md` 1。
+- 半更新/半陈旧收正 12 行（审计派生）：`PROVIDER.md` `:5` `:53` `:56` `:58` `:59` `:60` `:64` `:195`（8）· `AGENT-LOOP.md` `:1187` `:1242` `:1244`（3）· `ADVISOR-CONVERGENCE.md` `:636`（1）。
+- 形态 = §2.6.2（六）CLI 域「仓根相对」`thincoder-core/…`；坐标 as-of 保留（U2 决策 6 口径）。
+- **U8 残留 4 行同批改指**：`MEMORY.md` `:474/:476/:477/:515` 的 `src/memory/core.mjs`——U8 时靠「多命中 + 目录前缀 ⇒ 不报」宽容规则（`scripts/doc-anchors-v5.mjs:182`）侥幸通过；本笔删 `provider/core.mjs` 后 `core.mjs` basename 计数变唯一 ⇒ **硬悬空** ⇒ 同批改指核（披露）。
+
+**② 删旧三条读数（删前全过才删）**
+
+1. **改指已落盘**：28 档 34 处落盘 + 冒烟（真子进程 · cwd = `thincoder-cli`）：核 10 子路径导出面逐名在位（`provider/index.mjs` 10 名 · `provider/core.mjs` 1 · `provider/list-models.mjs` 1 · `provider/rate.mjs` 6 ·
+   `provider/normalize.mjs` 2 · `provider/responses.mjs` 1 · `model-ref.mjs` 3 · `model-specs.mjs` 3 · `proxy.mjs` 3 · `abort-provenance.mjs` 6）+ CLI 侧消费者可加载（`src/config.mjs` 21 导出 · `src/auto-think.mjs`）——**SMOKE PASS**（删后复跑同 PASS）。
+2. **该产品全链 exit 0（删前预跑）**：`npm test` 609/552/0/57 · `lint` **269** · `test:full` 609/609 · `test:integration` 25/25（均 exit 0）。
+3. **零引用反向判**（域 = `src` + `test` + `bin`，另扫 `scripts`；两模式）：① 引号包裹本地相对路径形（按解析语义判——命中删除集即违规）= **0**；② 非核前缀 token 反向判 = **3 命中（全注释叙述——射程外，登记未决 2）**。**删后复扫同读数**。
+   **删后中间态**：`doc-anchors --domain thincoder-cli` = **80 悬空**（6 档）→ 逐处改指 → **0**。
+
+**③ A1–A6 读数（终态复跑 · 原样）**
+
+| # | 判据 | 读数 | 判 |
+|---|---|---|---|
+| A1 | CLI 全链 | `npm test`：tests **609** · suites 4 · pass **552** · fail **0** · skipped **57** · exit 0；`lint`：check-syntax **254 file(s) OK**（269 − 15 删档，唯一面内差）；`test:full`：**609/609** · fail 0 · exit 0；`test:integration`：**25/25** · fail 0 · exit 0——**未涉面逐数不变**；面内零改判（union 四变（排序 / 明确报错 / `provider.headers` / 可中断限流等待）均无既有用例断言旧行为——`test/list-models.test.mjs` T1–T5/T26/T27 对双实现皆过） | ✓ |
+| A2 | 零引用 | 反向判两式 **0 / 0（违规）**（域 `src`+`test`+`bin` + 域外 `scripts`）；运行面 = 全链 exit 0 + 删后冒烟 PASS；锚面 = 悬空 0 | ✓ |
+| A3 | 文档锚 | `doc-anchors --domain thincoder-cli`：99 档 · 候选 **8875** · 悬空 **0** · 注记豁免 880 · `OK(V5)` exit 0 | ✓ |
+| A4 | 核回归 | 核内 `node --test` = **173/173** · fail 0 · exit 0；核内零改动（`git status` 自证：改动集零 `thincoder-core/**`） | ✓ |
+| A5 | 仓根三机检 | `doc-anchors`（全域）：域一 32 档 候选 2219 · 悬空 0 · 豁免 29；域二 99 档 候选 **8875** · 悬空 0 · 豁免 880；VSC 域报告态 5 命中（预存——非本笔）· **exit 0**。`check-doc-width`：**306 档无 >300 字符行** · V1/V2/V3 新增违规 0 · exit 0（§5 写入后复跑读数见段末）。`check-ledger`：**0 处违规** · 基线 0 · exit 0 | ✓ |
+| A6 | 链接 L1 | `npm ls @thincoder/core --json` **exit 0** · version **0.1.0**（resolved `file:../../../thincoder-core`）；版本探针 = **0.1.0** | ✓ |
+| 专项 | #114 / #115 取并集逐条落实 | **#114**：可中断等待 `rate.mjs:27-35`（`abortableSleep`）+ 闸门接入 `:146-149`（abort → `abortError(signal,"provider","rate-gate")`）· spec 回退 `:89-91` · 单维度补默认 `:104-105`（`1_000_000` / `500`）· 防死等守护 `:110-120` · 估算并集（image part 85 / `max_tokens`）`:51-57/:79-80`；**#115**：排序 `list-models.mjs:103-104` · 明确报错（非 2xx / 非 JSON / 缺 baseURL）`:32-37/:39-44/:98` · `provider.headers` 三格式全带 `:60/:65/:81` · VSC M8/M9 准入面并入 `:109-148`（CLI 零消费——登记未决 4）。CLI 侧行为变化四变与 A19/A20「影响面」列逐条对应（Stop 等待变快 / rpm-only 多 TPM 闸 / 清单排序 / 失败态显式） | ✓ |
+
+**进度计数（设计 §2.6.3（七）① · 可复跑命令）**：**CLI 待迁 = 73**（88 − 15）——与父侧预期逐数一致，单调递减成立。
+**工作树**：本笔 **50 项（35 M + 15 D）** + **1 项预存**（`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`——spawn 前已在，非本笔）；未 commit。
+
+**④ 内部轮（发现与处置）**
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **DIVERGENT**——「部分实现 / 静默简化 / 清单外改动」未命中（15 档删除 · 34 处改指 · 9 处头注 · 4 行 U8 残留 · 1 处台账行逐项实读对上）；命中**文档面 3 条**：① 🟡 `PROVIDER.md` §1 模块图**半更新**（同表 6 行 + `:5` 仍指已删档）；② 🟡 `AGENTS.md:57` 模块图滞留**未登记**；③ 🔵 残留 present-tense 指针清单；+ QUESTION ×5。
+- **审计命中处置**：① → **Fixed**（同轮 8 行收正：`PROVIDER.md` `:5/:53/:56/:58/:59/:60/:64` + `:195`；并同族收正 `AGENT-LOOP.md` `:1187/:1242/:1244` + `ADVISOR-CONVERGENCE.md:636`）；② → **登记**（未决 3）；③ → **登记**（未决 2）。
+  QUESTION 判定：Q1（模式②裸词叙述射程）= **Not an issue**（设计 `:591` 射程外条款 + 本笔两式反向判 0 违规）；Q2（核内 M8/M9 面 CLI 零消费）= **登记**（未决 4）；Q3（改指 31 vs 实改 28）= **Not an issue**（4 档已被 U6/U8/U9 删——git 历史实核；设计注「按当下坐标计」在案）；Q4（`recordRate` 记账门 vs `rateGate` 闸门口径）= **登记**（未决 5）；Q5 = 审计席位无 shell / git（限制如实登记）。
+- **advisor 代码评审 1 轮**（`type=code` · 阻塞）：**pass**（🔴 **0** · 🟡 1（非 must-fix）· 🔵 2）。
+- **裁决表（3 项）**：**Deferred 3**——🟡#1 `test/smoke-qwen-thinking.mjs:40` `isBailianHost` 休眠守卫（目标档只导出 `stripImagesForTextModel`（核 `provider/normalize.mjs:13`）/
+  `normalizeToolPairing`（`:45`）⇒ 谓词恒 undefined、脚本恒 skip；既有缺陷：改前说明符 `../src/provider/normalize.mjs` 同名、该档不在 S1 并集修改清单——非本笔引入；
+  修复需选定谓词源（CLI `src/config.mjs:142` ↔ 核 `config.mjs:116` 同名同实现）= 超本单元「零语义改写」边界的裁定 ⇒ 登记未决 1、交父侧定）；
+  🔵#2 `ADVISOR-CONVERGENCE.md:1500`「叶子模块——仅依赖 abort-provenance」陈旧（核 rate.mjs 实依赖 2 档：`:5` abort-provenance + `:6` model-specs，两者实测零 import ⇒ `compaction.mjs:13`「叶子向无环」仍成立）= 语义收正归文档批 ⇒ 未决 2；
+  🔵#3 文档面语义陈旧残留逐行（`ADVISOR-CONVERGENCE.md:1046/:1047` · `AGENT-LOOP.md:1084/:1128/:1157` · `PROVIDER.md:456/:624-630/:974/:1022/:1085/:1088` 等）⇒ 未决 2。
+  **引证核验附注**：host 核验器对 4 条引证报「content mismatch / file unreadable」——复核为**核验器路径解析 artifact**（承 U1–U9 同型附注；`docs/TODO-archive.md:74` 经复读为改指后新文本；对方两处 consult 引证系行号偏移）。
+- **轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 1（审计命中 Fixed 1）；终态 **0 未决 🔴 → clean**。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 改指形态 = `@thincoder/core/<子路径>`（含 hub `provider/index.mjs`） | §2.6.2（三）2「一律带子路径」（裸名不可导入）；核 `exports "./*"` + 链接态实核 |
+| 2 | 域外 `scripts/verify-compress.mjs:5` 随本笔改指 | 删档 import 否则必破（活体脚本）；U5/U6 先例 |
+| 3 | 台账 `docs/TODO-archive.md:74` 证据形改指（**边界外**） | L4 闸强制（删档后 1 处违规）；「只改必要那一行」；坐标 as-of 保留 |
+| 4 | 文档锚 = 纯路径替换（`thincoder-core/…`）+ 坐标 as-of 保留 | §2.6.2（六）CLI 域形态 + U2 决策 6 / U6–U8 先例 |
+| 5 | U8 残留 4 行（`MEMORY.md`）同批改指 | 本删档使 basename 豁免失效 ⇒ 硬悬空；「避免靠宽容规则侥幸通过」（U5 决策 5 / U6 决策 6） |
+| 6 | 半更新结构 12 行收正（审计派生） | 防「同表 / 同句两态」（U7 决策 4）；纯路径替换零语义 |
+| 7 | `smoke-qwen-thinking.mjs:40` 休眠守卫**不修**（登记） | 既有缺陷非本笔引入；修复 = 选定谓词源（跨「锚改指」边界）⇒ 交父侧裁（未决 1） |
+| 8 | 模块图 / 叙事滞留**不改**（登记） | §2.6.2（五）法 1「裸词叙述射程外」+ U1–U9 同型判 + 文档维护批归口 |
+| 9 | 删前全链**预跑一轮**（四命令）+ 删后终态复跑 | §2.6.3（四）2 字面执行（承 U1–U9） |
+| 10 | 空目录 `src/provider/` 同批移除 | U3/U5/U6/U7 先例；git 不跟踪空目录 |
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **`test/smoke-qwen-thinking.mjs:40` 休眠守卫**（评审 🟡#1）：`isBailianHost` 恒 undefined ⇒ 脚本恒 skip；修复二选一（CLI `src/config.mjs:142` / 核 `config.mjs:116`）——待父侧裁（或随 U14 配置面统一时收口）。
+2. **CLI 文档面语义陈旧残留（机检通过 · 基名回退）**（评审 🔵#2/#3 · 审计 🔵）：`ADVISOR-CONVERGENCE.md:1046/:1047/:1103/:1166/:1500` ·
+   `AGENT-LOOP.md:1084/:1128/:1157` · `PROVIDER.md:34/:434/:456/:522/:624-630/:756/:757/:974/:1022/:1085/:1088/:1337` · `SESSION.md:247` ·
+   `SETTINGS-TOOL.md:131/:164/:186/:229/:275/:276` · `requirements/SETTINGS-TOOL.md:33/:37` · `TESTING.md:316` · `TOOLS.md:224` · `ENGINEERING-MODE.md:1600` · `MEMORY.md:281/:282`——归文档维护批 / S3 残留复扫（语义收正归 eng-designer）。
+3. **模块图 / 叙述滞留**：`thincoder-cli/AGENTS.md:57`（`src/provider/` 行）· `docs/design/ARCHITECTURE.md:35/:36`（模块树）· `PROVIDER.md:53` 括注「调用方从 `./provider` 引用」——U1–U9 同型滞留，归 S2 文档工作流 / 文档维护批。
+4. **核内 M8/M9 准入面 CLI 零消费**（审计 Q2）：`thincoder-core/provider/list-models.mjs:109-148`（`channelUnavailableMessage` / `recordAdmission` / `admissionOf` / `probeChannelModels`）为 VSC 面并入件；CLI 走自有 `src/tui/model-catalog.mjs:49-69` 同文案面——属设计内（A20「配置面板」= VSC 面），登记。
+5. **`recordRate` 记账门 vs `rateGate` 闸门口径**（审计 Q4）：核 `rate.mjs:156` 只按 `provider.tpm/rpm` 记账，闸门 `:89-91/:104-105` 走 spec 回退 + 默认值——spec 表暂无 tpm/rpm 字段 ⇒ 当前惰性；字段补齐后会出现「闸门生效、记账不落」——核内 S1 建核物，非本笔面，登记。
+6. **改指口径 31 vs 实改 28**（审计 Q3）：差额 4 档 = U6/U8/U9 已删档（`context.mjs` · `generate-title.mjs` · `embedding.mjs` · `agent-tools/goal.mjs`，git 历史实核）；设计 §2.6.3（一）「按当下坐标计」在案——如需设计面逐数收正，归 eng-designer。
+7. **根 docs 对位表**（`docs/design/PROVIDER.md` §1/§2.4 · `CONFIG.md:19/:30/:33` · `AGENT-LOOP.md:20/:61` · `requirements/PROVIDER.md:11`）仍以 CLI 旧路径列两产品对位；+ 设计档 §2.8.1 拆分计划两行（`provider/responses.mjs` 495 · `provider/core.mjs` 476）随删档失效——S2/S3 文档面工作流 + 设计面收正（eng-designer）。
+8. **VSC 预存项**：`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`（M）= spawn 前既存改动，非本笔（承 U0–U9 登记）。
+
+**轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 1；A1–A6 终态读数见上表；终态 = **clean**；报告 ①–⑦ 见交付报告（父侧转呈）。
+
+**段末复跑（§5 写入后 · 原样读数）**：`check-doc-width` 复跑见交付报告；`doc-anchors --domain thincoder-cli` 与 `check-ledger` 读数见交付报告。
+
+**收正注（同轮 · 首版后置）**：宽度闸复跑命中本段 3 行超宽（`:5158` 413 字符 / `:5184` 373 / `:5208` 461）⇒ 仅插换行、文字零改（折后一处续行以 `+` 开头触发 V2 计数误判 ⇒ 就地合并同行、零语义）；复跑 = `OK(宽度)` 306 档无 >300 字符行 · 一致性 V1/V2/V3 新增违规 0 · exit 0。
+
+**段末复跑（§5 写入后 · 原样读数）**：`check-doc-width` = **306 档无 >300 字符行** · 一致性 0 违规 · exit 0；`doc-anchors --domain thincoder-cli` = 99 档 · 候选 **8875** · 悬空 **0** · 注记豁免 880 · `OK(V5)` exit 0；`doc-anchors`（全域）= 域一 32 档 候选 2219 · 悬空 0；域二 99 档 候选 8875 · 悬空 0；VSC 域报告态 5 命中（预存）· exit 0；`check-ledger` = `OK: thincoder/docs/TODO.md` / `OK: thincoder/docs/TODO-archive.md` · **0 处违规** · exit 0。
+
 ## §6 验证与收口（父代理）
 

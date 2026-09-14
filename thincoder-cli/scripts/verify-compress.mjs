@@ -2,7 +2,7 @@
  * M4 验证：构造超长历史，触发真实压缩。
  * 运行: node scripts/verify-compress.mjs
  */
-import { createProvider } from "../src/provider/index.mjs"
+import { createProvider } from "@thincoder/core/provider/index.mjs"
 import { loadConfig } from "../src/config.mjs"
 import { compressIfNeeded, estimateTokens } from "@thincoder/core/context.mjs"
 

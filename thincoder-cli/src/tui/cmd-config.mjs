@@ -56,7 +56,7 @@ export async function handleConfigCommand(ctx, args = []) {
    *  保持槽值」或「config defaultModel（新会话起点）」决定——不再有渠道默认字段可回退。 */
   async function reloadConfig() {
     const { loadConfig } = await import("../config.mjs")
-    const { injectProxy } = await import("../proxy.mjs")
+    const { injectProxy } = await import("@thincoder/core/proxy.mjs")
     const cfg = loadConfig()
     injectProxy(cfg.providersList, cfg)
     const sessionName = agent.activeProvider
@@ -136,7 +136,7 @@ export async function handleConfigCommand(ctx, args = []) {
           pushLabel("❯ Config", ansi.bold + C.tool)
           pushLine(`proxy.${key} = ${!pc[key] ? "on" : "off"}`, C.tool)
         } else if (c.action === "test") {
-          const { proxyFetch, resolveWebProxy } = await import("../proxy.mjs")
+          const { proxyFetch, resolveWebProxy } = await import("@thincoder/core/proxy.mjs")
           const { UA } = await import("../tools/web.mjs")
           const uri = resolveWebProxy({ agent })
           pushLabel("❯ Config", ansi.bold + C.tool)

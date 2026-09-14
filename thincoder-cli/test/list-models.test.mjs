@@ -5,7 +5,7 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { listModels } from "../src/provider/list-models.mjs"
+import { listModels } from "@thincoder/core/provider/list-models.mjs"
 import { PROVIDER_PRESETS } from "../src/config.mjs"
 import { getProviderModels, probeChannelModels, _catalogHooks, _clearModelCatalogCache } from "../src/tui/model-catalog.mjs"
 

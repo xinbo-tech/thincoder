@@ -71,7 +71,7 @@
 - [x] **`thincoder-cli/src/tools/read_image.md:8` 描述漂移**（第 6 批达成 vision 后描述与实现矛盾）→ 证据 `thincoder-cli/src/tools/read_image.md:8` · status=已核销（第 22 批 DOC-HYGIENE §5 C1 Done——替句已在位）
 - [x] **快层慢门 flake：`thincoder-cli/test/eng-designer-role.test.mjs` 未标 `slow`**（818.5ms 撞 D-T6）→ 证据 `thincoder-cli/test/eng-designer-role.test.mjs` · status=已核销（第 20 批 TUI-SELECTION §5 A3 Done——`slow(` 已注册 · 令牌消费）
 - [x] **需求档同步（第 4 批 C 遗留 ②——① 第 5 批已销账 · ③ 已作废）**（② 需求档 4 项同步——eng-designer 写域）→ 证据 `thincoder-cli/docs/design/ENGINEERING-MODE.md:454` · status=已核销（第 22 批 DOC-HYGIENE §5 C5 五点位已落 + §6 链终）
-- [x] **子代理 abort 无来源标注——死亡不可诊断**（用户反馈——平台可观测性缺陷）→ 证据 `thincoder-cli/src/provider/core.mjs:70` · 任务书 `thincoder-cli/docs/batches/2026-09-11-ABORT-PROVENANCE.md` §2 · status=已核销（第 24 批 §6 收口——AC-AP1–AP8 全绿 + 令牌消费）
+- [x] **子代理 abort 无来源标注——死亡不可诊断**（用户反馈——平台可观测性缺陷）→ 证据 `thincoder-core/provider/core.mjs:70` · 任务书 `thincoder-cli/docs/batches/2026-09-11-ABORT-PROVENANCE.md` §2 · status=已核销（第 24 批 §6 收口——AC-AP1–AP8 全绿 + 令牌消费）
 - [x] **TUI 开放项**（① picker item.note 渲染 bug ② question/wizard/picker 三套选择 UI 统一）→ 证据 `thincoder-cli/src/tui/model-picker.mjs:109` · status=已核销（第 20 批 TUI-SELECTION §5 A1/A4 Done + §6 收口 · 令牌消费）
 - [x] **digest 注入预算扩面**（consult 族——CLI 面）→ 任务书 `thincoder-cli/docs/batches/2026-09-11-VSC-REVIEW-ASYNC-SWEEP.md` §2（群 B 批 §5 B5 双端 21 档含 consult 族 + §6 收口；**VSC 各族注入器份**已迁本仓 VSC 归档档）· status=已核销
 - [x] **`.thincoder/index/` DB 化前死产物**（勘察外另立）→ status=已核销（第 22 批 DOC-HYGIENE §6 C6「三证齐后已删（GONE）」+ 父侧实测目录不存在）

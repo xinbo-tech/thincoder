@@ -12,7 +12,7 @@ import { mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "no
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { DEFAULTS, loadConfig, _setConfigPathForTest, _resetConfigPathForTest } from "../src/config.mjs"
-import { parseModelRef } from "../src/model-ref.mjs"
+import { parseModelRef } from "@thincoder/core/model-ref.mjs"
 import { effectiveSubagentModel } from "../src/agent-tools/subagent-spawn.mjs"
 import { teamConfig } from "../src/cli/make-agent.mjs"
 import {
@@ -217,7 +217,7 @@ test("T-S2.11 拒绝（边界）：memory.team 缺 repo / repo 空串——抛�
 
 test("T-S2.13 无静默（F-S1.8）：接受集 == 应用侧可消费集 ∧ 拒绝集 == 不可消费集（真读取器）", async () => {
   // 逐键消费判据——取自应用侧读取器本体（SETTINGS-TOOL.md §8.5）；defaultModel 串另经
-  // model-ref.mjs:25-36 形态面（夹具 provider `probe` 避开存在性层 :38-43——D-S2.5）。
+  // thincoder-core/model-ref.mjs:25-36 形态面（夹具 provider `probe` 避开存在性层 :38-43——D-S2.5）。
   const CONSUMES = {
     defaultModel: (c, v) => typeof v === "string" && v.trim() !== "" && c.defaultModel === v && parseModelRef(v, c.providers).ok,
     "agent.subagentModel": (c, v) => {

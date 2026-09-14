@@ -7,7 +7,7 @@
  * AbortSignal.timeout(remaining)])`；墙判定绑信号状态——抛错 / partial 两形态同判），
  * 并按 0.75 一次性预算提示 + 结构化超时尾收尾；守卫与限额函数在 compaction.mjs。
  */
-import { chat } from "../provider/core.mjs"
+import { chat } from "@thincoder/core/provider/core.mjs"
 import { providerSpec } from "../config.mjs"
 import { toOpenAISchema } from "../tools/index.mjs"
 import { describeToolArgs } from "../tui/tool-args.mjs"

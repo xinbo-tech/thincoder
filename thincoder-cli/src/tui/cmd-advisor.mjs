@@ -179,7 +179,7 @@ function getEffectiveModel(agent, cfg) {
 }
 
 async function fetchAdvisorModels(agent) {
-  const { listModels } = await import("../provider/index.mjs")
+  const { listModels } = await import("@thincoder/core/provider/index.mjs")
   const result = new Map()
   await Promise.all((agent.providers || []).map(async (p) => {
     try {

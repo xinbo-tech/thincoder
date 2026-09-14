@@ -14,7 +14,7 @@
  *   3. Map difficulty → reasoningEffort using the model's valid effort enum
  *   4. Set agent.provider.reasoningEffort before the real chat() call
  */
-import { chat } from "./provider/core.mjs"
+import { chat } from "@thincoder/core/provider/core.mjs"
 import { specForModel } from "./config.mjs"
 
 const CLASSIFY_PROMPT = `Classify this coding task's difficulty: low, medium, or high.

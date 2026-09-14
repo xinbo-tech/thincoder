@@ -471,10 +471,10 @@ merged.shell = expandHome(merged.shell)
 
 | # | 事实 | 证据（file:line） |
 |---|---|---|
-| 1 | 三张表的向量通道全表 `.all()` 物化后逐行 cosine + 全量排序——无 SQL LIMIT、无分块 | `src/memory/core.mjs:60-68`（entries ∪ files）· `docs.mjs:112-116` · `code-sync.mjs:294-298` |
+| 1 | 三张表的向量通道全表 `.all()` 物化后逐行 cosine + 全量排序——无 SQL LIMIT、无分块 | `thincoder-core/memory/core.mjs:60-68`（entries ∪ files）· `docs.mjs:112-116` · `code-sync.mjs:294-298` |
 | 2 | 触发面 = 每轮 run 装配（prompt 注入）+ 工具调用（doc_search/code_search）；本机 memory.db ~736MB（embedding BLOB 为体量主源） | `src/agent/setup.mjs:100-124` · `docs.mjs:185` · `code-sync.mjs:350` |
-| 3 | 结果侧本身有界（候选 = `max(limit×4, 20)`）——病灶是**扫描期**全量物化 | `src/memory/core.mjs:68` · `docs.mjs:116` |
-| 4 | FTS 通道已有 `LIMIT`（对照面） | `src/memory/core.mjs:88-104` · `docs.mjs:94-99` |
+| 3 | 结果侧本身有界（候选 = `max(limit×4, 20)`）——病灶是**扫描期**全量物化 | `thincoder-core/memory/core.mjs:68` · `docs.mjs:116` |
+| 4 | FTS 通道已有 `LIMIT`（对照面） | `thincoder-core/memory/core.mjs:88-104` · `docs.mjs:94-99` |
 
 ### 10.2 方案选型对比
 
@@ -512,7 +512,7 @@ merged.shell = expandHome(merged.shell)
 | 文件 | 当前行数 | 预计增量 | 变更点 |
 |---|---|---|---|
 | `src/memory/scan.mjs` | 新 | +90 ± 20 | `scanVectors(db, sql, params, { chunk, onRow })` + top-K helper（三处复用） |
-| `src/memory/core.mjs` | 301 | +10 → ~311（越 300 软线——登记） | search 向量通道改分块 + top-K |
+| `thincoder-core/memory/core.mjs` | 301 | +10 → ~311（越 300 软线——登记） | search 向量通道改分块 + top-K |
 | `src/memory/docs.mjs` | 418 | +8 | docSearch 向量通道同改 |
 | `src/memory/code-sync.mjs` | 414 | +8 | codeSearch 向量通道同改 |
 | `test/memory-scan-bounds.test.mjs` | 新 | +120 ± 30 | T-MS1–T-MS4 |

@@ -33,7 +33,7 @@
 
 - **`turn:start` / `turn:end`** — `src/tui/agent-turn.mjs` 回合包装器入口/finally（含嵌套
   回合独立事件）。字段：kind（user/autoTurn）、ms、result（ok/error/stopped）。
-- **`llm:start` / `llm:done` / `llm:error`** — **chat() 统一落点**（`src/provider/core.mjs`
+- **`llm:start` / `llm:done` / `llm:error`** — **chat() 统一落点**（`thincoder-core/provider/core.mjs`
   chat 包装器——所有 LLM 调用点：主回合消化轮 + digest + compress + distill +
   advisor/子代理/consult/auto-think 各回合）。字段：provider/model/ms/err/stage/turn/
   auto/child（child=CLI 子代理 id；vscode 以 role/depth 归属）；llm:done 带 head/len/finish/tools。
@@ -56,7 +56,7 @@
 **写入点落位**（在既有节点 emit，不新造总线）：
 
 - `src/tui/agent-turn.mjs`：回合包装器（turn:start/end）+ digestTurn（digest:*）+ suspensionSession（susp:*）。
-- **llm:\* 统一落 chat()**（`src/provider/core.mjs` chat 包装器——含续写嵌套对）——覆盖
+- **llm:\* 统一落 chat()**（`thincoder-core/provider/core.mjs` chat 包装器——含续写嵌套对）——覆盖
   agent.mjs 消化轮、context.mjs compress/distill、auto-think、advisor、子代理/consult 各
   回合（单点全覆盖）。
 - tool:*（`src/agent/dispatch.mjs` runOne——vscode `src/agent/execute-tools.mjs（VSC 仓）` runOne——
@@ -79,7 +79,7 @@
 
 ### 2.3 受影响文件（实现版）
 
-- **CLI**：`thincoder-core/log.mjs`（新——logEvent/轮转/黑名单/seq）；`src/provider/core.mjs`
+- **CLI**：`thincoder-core/log.mjs`（新——logEvent/轮转/黑名单/seq）；`thincoder-core/provider/core.mjs`
   （llm:* 统一落点）；`src/tui/agent-turn.mjs`（turn/susp/digest/err）；`src/agent.mjs`
   （chat logCtx + 中止清池 ev:stopped）；`src/agent/dispatch.mjs`（tool:*）；
   `thincoder-core/context.mjs`（compress/distill logCtx）；`src/auto-think.mjs`（logCtx）；

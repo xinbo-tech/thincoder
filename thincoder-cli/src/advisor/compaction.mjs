@@ -10,8 +10,8 @@
  */
 
 import { providerSpec } from "../config.mjs" // 第 25 批：预算派生（与 loop.mjs:11 同源导入）
-// B4（群 B 批，CLI §18.3——F32）：CJK 加权单源（provider/rate.mjs 叶子向无环）
-import { estimateText } from "../provider/rate.mjs"
+// B4（群 B 批，CLI §18.3——F32）：CJK 加权单源（thincoder-core/provider/rate.mjs 叶子向无环）
+import { estimateText } from "@thincoder/core/provider/rate.mjs"
 
 export const MAX_ADVISOR_TURNS = 100
 // NOTE: prompts/advisor-round{1,2,3}.md encourage the model to finish within

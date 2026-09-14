@@ -1,7 +1,7 @@
 /**
  * model-catalog.mjs — 会话级模型清单 helper（PROVIDER.md §16.2 M2/M9——2026-09-10 MODEL-SELECTION）。
  *
- * 清单唯一权威 = provider 运行期拉取（`GET /models`——provider/list-models.mjs 按 format 分派）。
+ * 清单唯一权威 = provider 运行期拉取（`GET /models`——thincoder-core/provider/list-models.mjs 按 format 分派）。
  * 本模块提供：
  * - `getProviderModels(providerConfig)`：拉取 + **会话级缓存**（TTL 60s；失败不缓存——下次重试）；
  * - `probeChannelModels(providerConfig)`：配置阶段准入探（M9——探通入缓存候选直接可用 / 探不通返回
@@ -9,14 +9,14 @@
  * - `modelListFailureText(error)`：M8 失败消息本体（逐字长句——界面明示的唯一断言对象）；
  * - `dedupeModels` / `modelSeries`：显示归并（自 model-picker.mjs 迁入——会话面与槽位面共用）。
  *
- * 缓存时钟可注入（`_catalogHooks.now`——先例 rate.mjs `_rateHooks`）：测试假时钟确定性断言 T6 不依赖壁钟。
+ * 缓存时钟可注入（`_catalogHooks.now`——先例 thincoder-core/provider/rate.mjs `_rateHooks`）：测试假时钟确定性断言 T6 不依赖壁钟。
  */
-import { listModels } from "../provider/list-models.mjs"
+import { listModels } from "@thincoder/core/provider/list-models.mjs"
 
 /** 会话级缓存 TTL（§16.4 a2：连续操作不重复付网络；60s 新鲜窗口）。 */
 const CACHE_TTL_MS = 60_000
 
-/** 测试钩子（先例 `rate.mjs` `_rateHooks`）：时钟可注入——T6 假时钟断言。 */
+/** 测试钩子（先例 thincoder-core/provider/rate.mjs `_rateHooks`）：时钟可注入——T6 假时钟断言。 */
 export const _catalogHooks = { now: () => Date.now() }
 
 /** 会话内缓存：key = name + baseURL（同渠道不同端点各自成条）；value = { models, at }。 */

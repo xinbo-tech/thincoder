@@ -14,7 +14,7 @@
 import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import { homedir } from "node:os"
 import { dirname, join } from "node:path"
-import { parseModelRef, resolveRuntimeProvider, defaultModelReason } from "./model-ref.mjs"
+import { parseModelRef, resolveRuntimeProvider, defaultModelReason } from "@thincoder/core/model-ref.mjs"
 // 老形态迁移核（M7 v2——纯函数零依赖——本文件超 500 行硬限拆分，VSC 同构文件）
 import { migrateLegacyModelFields } from "./config-migrate.mjs"
 import { expandHome } from "./expand-home.mjs"
@@ -111,10 +111,10 @@ export const DEFAULTS = {
   },
 }
 
-// Model capability table + spec lookup live in model-specs.mjs (2026-08-31
+// Model capability table + spec lookup live in thincoder-core/model-specs.mjs (2026-08-31
 // extract — config.mjs had grown past the 300-line advisory). Re-exported here
 // so the 23 existing importers keep their import paths.
-import { specForModel, providerSpec, specMatch } from "./model-specs.mjs"
+import { specForModel, providerSpec, specMatch } from "@thincoder/core/model-specs.mjs"
 export { specForModel, providerSpec, specMatch }
 
 
@@ -237,7 +237,7 @@ export function normalizeProxy(proxy) {
  */
 /** Keep only { header: "string value" } pairs from a provider's headers field — anything
  *  else (null, arrays, nested objects) is dropped so it can never reach a fetch call.
- *  Authorization is built-in and cannot be overridden from headers (core.mjs spreads first). */
+ *  Authorization is built-in and cannot be overridden from headers (thincoder-core/provider/core.mjs spreads first). */
 function sanitizeProviderHeaders(p) {
   if (p.headers == null || typeof p.headers !== "object" || Array.isArray(p.headers)) { delete p.headers; return p }
   const clean = {}
@@ -303,7 +303,7 @@ export function loadConfig() {
 
   // providers[].context (K units, PROVIDER.md §15 D-C1): positive integer only — invalid
   // values (0/negative/non-numeric) are IGNORED (spec value applies) with a ONE-TIME warn
-  // per provider name (module-level dedupe, same precedent as warnedModels in model-specs.mjs).
+  // per provider name (module-level dedupe, same precedent as warnedModels in thincoder-core/model-specs.mjs).
   for (const p of merged.providers) {
     if (p.context === undefined) continue
     if (Number.isInteger(Number(p.context)) && Number(p.context) > 0) { p.context = Number(p.context); continue } // 数字字符串（"128"）归一为数字——两端语义统一（code review #1）
@@ -354,7 +354,7 @@ export function loadConfig() {
   merged.agent.compactThresholdAuto = auto
 
   // Write back to merged for convenient access by upper layers
-  // fetch 超时可配置（2026-09-01：agent.fetchTimeoutMs——provider/core.mjs effectiveFetchTimeoutMs 消费）
+  // fetch 超时可配置（2026-09-01：agent.fetchTimeoutMs——thincoder-core/provider/core.mjs effectiveFetchTimeoutMs 消费）
   merged.provider.fetchTimeoutMs = Number.isFinite(merged.agent?.fetchTimeoutMs) && merged.agent.fetchTimeoutMs > 0
     ? merged.agent.fetchTimeoutMs : undefined
   merged.providersList = merged.providers

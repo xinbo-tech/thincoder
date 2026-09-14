@@ -160,7 +160,7 @@ export async function handleMcpCommand(ctx, args = []) {
     if (!description) return
     pushLine("[mcp] Generating config from description...", C.dim)
     try {
-      const { chat } = await import("../provider/index.mjs")
+      const { chat } = await import("@thincoder/core/provider/index.mjs")
       const res = await chat(agent.provider, {
         messages: [{
           role: "user",

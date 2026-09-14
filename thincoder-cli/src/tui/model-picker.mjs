@@ -280,7 +280,7 @@ export function createModelPicker(ctx) {
   /** Slot 面 fetch：模型直接并入可选行（旧 pickModelForSlot 语义——自由面；槽位面零改——
    *  仅随 M1 获得三 format 支持 + 占位行（同会话面：0 item 的 picker 不会打开））。 */
   async function fetchSlotModels(providerName, providerConfig, entries) {
-    const { listModels } = await import("../provider/index.mjs")
+    const { listModels } = await import("@thincoder/core/provider/index.mjs")
     let selKey = null
     try {
       const models = await listModels(

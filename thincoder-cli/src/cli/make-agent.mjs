@@ -27,7 +27,7 @@ export async function assembleAgent({ excludeTools = [] } = {}) {
   const providers = config.providersList
 
   // Inject proxy URI into providers (double opt-in: provider.proxy + config.proxy.model)
-  const { injectProxy } = await import("../proxy.mjs")
+  const { injectProxy } = await import("@thincoder/core/proxy.mjs")
   injectProxy(providers, config)
   // config.provider 是 loadConfig 里的独立拷贝，同步注入结果
   if (provider?.name) provider.proxyUri = providers.find((p) => p.name === provider.name)?.proxyUri

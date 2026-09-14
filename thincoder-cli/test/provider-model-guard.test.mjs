@@ -18,7 +18,7 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { chat } from "../src/provider/core.mjs"
+import { chat } from "@thincoder/core/provider/core.mjs"
 import { resolveAdvisorProvider } from "../src/advisor/run.mjs"
 import { resolveChildProvider } from "../src/agent-tools/subagent-async.mjs"
 import { applySession } from "../src/session.mjs"
