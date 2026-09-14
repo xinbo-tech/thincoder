@@ -16,7 +16,7 @@
  * Peer awareness (R10 L1) rides the same per-turn transient channel:
  * pushPeerReminder injects the live co-cwd instance list when present.
  */
-import { END } from "../session-slots.mjs"
+import { END } from "@thincoder/core/session-slots.mjs"
 import { peerInstances } from "@thincoder/core/peer-instances.mjs"
 
 /** env-state line builder — pure, unit-testable.

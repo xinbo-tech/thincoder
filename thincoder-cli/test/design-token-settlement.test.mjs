@@ -19,10 +19,10 @@ import { executeToolCalls } from "../src/agent/dispatch.mjs"
 import {
   restoreEngTokens, engTokenSlotFields, anyLiveDesignSlot, persistEngTokens,
 } from "../src/token-ttl.mjs"
-import { loadSlotFile } from "../src/session.mjs"
+import { loadSlotFile } from "@thincoder/core/session.mjs"
 import {
   _setSessionsDirForTest, _resetSessionsDirForTest, slotPath, writeSessionFile,
-} from "../src/session-slots.mjs"
+} from "@thincoder/core/session-slots.mjs"
 
 // 固定 cwd → 哈希固定 → 槽文件全部落隔离 sessions 目录
 const cwd = "C:/proj/eng-settlement-test"

@@ -3,7 +3,7 @@
  *  ctx: { agent, showPicker, pushLine, pushLabel, persistRaw } */
 import { readFileSync } from "node:fs"
 import { ansi, C } from "./ansi.mjs"
-import { activeSlot, slotPath } from "../session.mjs"
+import { activeSlot, slotPath } from "@thincoder/core/session.mjs"
 import { writeSessionFile } from "./cmd-eng.mjs"
 
 export async function handleAdvisorCommand(ctx) {

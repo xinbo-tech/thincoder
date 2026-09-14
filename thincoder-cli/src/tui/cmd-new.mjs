@@ -1,4 +1,4 @@
-import { newSession, resetSessionState, bindRecordStore, slotPath } from "../session.mjs"
+import { newSession, resetSessionState, bindRecordStore, slotPath } from "@thincoder/core/session.mjs"
 import { C } from "./ansi.mjs"
 
 /** /new command: start a new session in a fresh slot.

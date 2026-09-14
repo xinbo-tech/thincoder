@@ -12,7 +12,7 @@
  * - `run` is injectable for tests (defaults to the real runAgent).
  */
 import { runAgent } from "../agent.mjs"
-import { saveSession } from "../session.mjs"
+import { saveSession } from "@thincoder/core/session.mjs"
 import { buildAcpCallbacks } from "./bridge.mjs"
 
 export function createAcpSession({ id, agent, notify, request = async () => { throw new Error("no request channel") }, log = () => {}, run = runAgent, save = saveSession }) {

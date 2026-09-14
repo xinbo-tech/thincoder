@@ -2,8 +2,9 @@
 
 > 板块：会话存储。状态：**当前态规格**（2026-09-07 重写为人类可读版——DOC-REWRITE 批 A；历史变更流水折叠见下方「变更记录」）。**本文件为 CLI 会话/存储权威**——写错影响存储恢复机制。
 > CLI 与 VS Code 共享同一存储契约：文件格式、槽位认领、双线字段、并发防护全部一致（VS Code 侧为镜像实现，见下）。
-> 权威源（CLI）：`src/session.mjs`（saveSession/applySession/loadSlotFile 主体）、`src/session-slots.mjs`（槽位/manifest/认领/resumeSlot/end marker primitives）、`src/session-rename.mjs`（renameSlot——标题写契约）、`src/session-gc.mjs`（残留 GC + 冷 cwd）、`src/session-migrate.mjs`（旧短 hash 一次性迁移）。
-> 装配（CLI）：`bin/thincoder.mjs`（启动恢复 + 钉 `_slot`）、`thincoder-core/context.mjs`（pushReal——消息入线 + ts 打点）、`src/agent-tools/read-history.mjs`（read_history 工具）。
+> 权威源（CLI）：`thincoder-core/session.mjs`（saveSession/applySession/loadSlotFile 主体）、`thincoder-core/session-slots.mjs`（槽位/manifest/认领/resumeSlot/end marker primitives）、
+> `thincoder-core/session-rename.mjs`（renameSlot——标题写契约）、`thincoder-core/session-gc.mjs`（残留 GC + 冷 cwd）、`thincoder-core/session-migrate.mjs`（旧短 hash 一次性迁移）。
+> 装配（CLI）：`bin/thincoder.mjs`（启动恢复 + 钉 `_slot`）、`thincoder-core/context.mjs`（pushReal——消息入线 + ts 打点）、`thincoder-core/agent-tools/read-history.mjs`（read_history 工具）。
 > 权威源（VS Code 镜像——同契约）：thincoder-vscode `src/extension/session-io.mjs（VSC 仓）`（读写双线）、`session-slots.mjs`（槽位/认领/marker）、`session-gc.mjs`、`session-slot-write.mjs`；装配：`panel-session.mjs` / `panel-project.mjs` / `panel-messages.mjs`。
 > 关联：ARCHITECTURE.md（双结构）、CONTEXT-COMPACTION.md（压缩/机读线）、MULTI-INSTANCE-COLLAB.md（本存储层为其上游基建）、TOOLS.md（read_history 工具面——语义权威 = 本文件 §9/§13）。
 > 章节号 §1-§13 沿用原档案序号（外部文档与代码注释引用稳定），内容已按机制重组为当前态。
@@ -552,7 +553,7 @@ CLI `renameSlot`（src/session-rename.mjs）+ VS Code `setSlotTitle`（session-i
 ### 13.3 验收方向与实现提示
 
 - **AC-1** = 跨会话检索用例全绿（缺省回归 / path 单槽 / cwd: 发现——摘要含槽号+完整文件路径 / 错误路径三型 / 超限护栏断言定稿文案 / depth 门）；**AC-2** = 零回归（read_history 既有调用全绿——缺省不变）；**AC-3** = 描述锚测试绿（消歧段双端一致，锚断言）。
-- 实现批提示：实现面主文件 = 双端 `agent-tools/read-history.mjs`（path 参数 + 描述尾段族表 + 护栏）；逐个点名验证检索族描述实际位置（tools/*.md 或 .mjs 内联——含 read.md 类路由句若存），清单外新增以交付报告为准；**checkpoint "versions" 核验**：总纲句含 "checkpoint cat/versions"——实现前先核验 git 工具动作面是否含 versions——不含则总纲句改 "checkpoint（cat/list——按实际动作面）" 再定稿。
+- 实现批提示：实现面主文件 = 双端 `thincoder-core/agent-tools/read-history.mjs`（path 参数 + 描述尾段族表 + 护栏）；逐个点名验证检索族描述实际位置（tools/*.md 或 .mjs 内联——含 read.md 类路由句若存），清单外新增以交付报告为准；**checkpoint "versions" 核验**：总纲句含 "checkpoint cat/versions"——实现前先核验 git 工具动作面是否含 versions——不含则总纲句改 "checkpoint（cat/list——按实际动作面）" 再定稿。
 
 
 ---
@@ -571,8 +572,8 @@ CLI `renameSlot`（src/session-rename.mjs）+ VS Code `setSlotTitle`（session-i
 | 2 | 落盘投影（`.json.N` 的 `history`）即全量人读线（slim 后）；恢复把它整体读回内存 | `src/session.mjs:109-171`（saveSession `history = (_fullHistory ?? history)…`）· `:292`（applySession `_fullHistory = [...full]`） |
 | 3 | TUI 懒加载只懒「渲染」，分页源 `full` = 内存全量数组；翻页把行 unshift 进 `state.lines` 且无淘汰 | `src/tui/startup.mjs:142-170`（`createLoadOlder`——`full.length − loaded − PAGE`）· `:119-136`（restoreLines） |
 | 4 | 活消息增长使翻页锚点漂移（`full.length` 增长而 `_historyLoaded` 只记恢复/翻页量）——错位隐患 | `src/tui/startup.mjs:147`（`start = full.length − loaded − HISTORY_PAGE_MESSAGES`） |
-| 5 | 人读线内存消费者全清单：本会话检索 / 观察摘要 / 标题生成 / 保存 / 恢复 / 翻页（无第七方） | `src/agent-tools/read-history.mjs:290` · `src/agent-tools/subagent-actions.mjs:194` · `thincoder-core/generate-title.mjs:72` · `src/session.mjs:114` · `:292` · `:415` · `src/tui/startup.mjs:145` |
-| 6 | 槽 JSON 的跨端读面（VSC/ACP/列表）依赖 `history` 为**全量数组** | VSC：`thincoder-vscode` `src/extension/session-io.mjs:104`（VSC 仓） / `src/extension/panel-session.mjs:87`（VSC 仓）（本仓不引用——评估面）· ACP `src/acp.mjs:260` · 列表 `src/session-slots.mjs:141`/`:359` |
+| 5 | 人读线内存消费者全清单：本会话检索 / 观察摘要 / 标题生成 / 保存 / 恢复 / 翻页（无第七方） | `thincoder-core/agent-tools/read-history.mjs:290` · `src/agent-tools/subagent-actions.mjs:194` · `thincoder-core/generate-title.mjs:72` · `thincoder-core/session.mjs:114` · `:292` · `:415` · `src/tui/startup.mjs:145` |
+| 6 | 槽 JSON 的跨端读面（VSC/ACP/列表）依赖 `history` 为**全量数组** | VSC：`thincoder-vscode` `src/extension/session-io.mjs:104`（VSC 仓） / `src/extension/panel-session.mjs:87`（VSC 仓）（本仓不引用——评估面）· ACP `src/acp.mjs:260` · 列表 `thincoder-core/session-slots.mjs:141`/`:359` |
 
 事故形态：19 分钟会话 ≈ 8GB 堆（爬升型）；C1 为结构性无界之一（其余见架构批设计）。
 
@@ -723,22 +724,22 @@ unlinkRecordStore(slotFile)  // 删槽联动（deleteSlot 调用——§14.3.8�
   200k 行 / `READ_HISTORY_MAX_MESSAGES` 50k）——零改动。
 - **语义 delta 登记**（修正轮 #5——原「逐字不变」的隐藏面）：匹配基准 = **存储文本（slim 后）**——
   ① 工具结果 >500 字符、工具参数 >300 字符的尾段被 slim 丢弃（`src/session.mjs:88-98`）——落于丢弃段
-  的 keyword 不再命中（旧实现匹配未瘦身 `_fullHistory`——`read-history.mjs:290`）；② 输出截断省略数
-  N 按存储文本长度计（`read-history.mjs:78-84` 的 `t.length − end`）——对已带 `truncated for storage`
+  的 keyword 不再命中（旧实现匹配未瘦身 `_fullHistory`——`thincoder-core/agent-tools/read-history.mjs:290`）；② 输出截断省略数
+  N 按存储文本长度计（`thincoder-core/agent-tools/read-history.mjs:78-84` 的 `t.length − end`）——对已带 `truncated for storage`
   标记者 N ≈ 存储标记长，不反映原始丢弃量。修输出层（剥离存储标记/携带原长）需另存原长或回读槽
   JSON——收益低，**登记不修**；真实丢弃量以存储全文为准。
 - 未绑定（测试/模式 F）：回退内存 `_fullHistory` 过滤（既有实现保留）。
 
 **14.3.8 生命周期与移植**
 
-- 删除：`deleteSlot` → `unlinkRecordStore`（`rmSync(dir, {recursive, force})`——`src/session-slots.mjs:400-415`）。
+- 删除：`deleteSlot` → `unlinkRecordStore`（`rmSync(dir, {recursive, force})`——`thincoder-core/session-slots.mjs:400-415`）。
 - **轮转/改名路径的 sidecar 处理（修正轮 #1）**：① `.bak` 轮转（`guardForeignSlotFile`——
   `session-guard.mjs:29-35`）对**非本会话活动绑定面**联动改名 sidecar（`{p}.d → {bak}.d`，若存在；
   「本会话活动绑定面」判据 = `agent._recordStore?.dir === {p}.d`——该情形跳过，防拔掉活动存储）；
   ② `.corrupted`/`.unreadable` 改名（`session.mjs:186-230`）**不联动**——现场原地保留，该槽 sidecar
   由身份核验在槽号回收/复用时拒采纳（§14.3.4）；③ **孤儿 sidecar**（对端删除留下的——VSC 不可见/
   零改动）在 bind 身份核验处被拒并改名 `.stale-*`；stale 在冷目录随 GC。
-- 冷项目 GC：`deleteColdCwd` 对目录项用 `rmSync`（现 `unlinkSync` 对目录静默跳过——`src/session-gc.mjs:151-159`）；
+- 冷项目 GC：`deleteColdCwd` 对目录项用 `rmSync`（现 `unlinkSync` 对目录静默跳过——`thincoder-core/session-gc.mjs:151-159`）；
   `listColdCwds` 的 `files` 仍只计文件（数据文件判定不变）。
 - `/rename`：只改标题（`session-rename.mjs:16-38`）——sidecar 零动作。
 - 目录/阈值无机器特定常量（N-S5）；`_setSessionsDirForTest` 缝可注入测试目录。
@@ -773,14 +774,14 @@ unlinkRecordStore(slotFile)  // 删槽联动（deleteSlot 调用——§14.3.8�
 
 | 文件 | 当前行数 | 预计增量 | 变更点 |
 |---|---|---|---|
-| `src/session-store.mjs` | 新 → 442（交付实测） | +280 ± 40 | 全新模块：段 IO / 索引 / 窗口 / 绑定对账 / 投影写 / 流式迭代 / 生命周期。实现后同步（2026-09-12）：越 300 咨询线——登记、不拆（新增档口径——见拆分结论） |
-| `src/session-segments.mjs` | 新 → 101（交付实测） | —（拆分产物） | 段 IO 原语 + 人读线条目形态（`slimForDisplay`/`isLegacyTransient`/`shouldAppend`/`isRealUserMsg`）+ `_storeStats`；store 越 500 硬限后按职责拆出——公开名 re-export、调用面零改（实现后同步 2026-09-12） |
-| `src/session.mjs` | 476 | +8 / −26 → ~458 | `slimForDisplay`/`isLegacyTransient` 迁出（re-export）；saveSession 分支；applySession `{slot}`（bind：`slotFile` + identity——修正轮 #1）；reset 解绑；首保存补绑 |
-| `src/session-slots.mjs` | 490 | +~3 | `deleteSlot` → `unlinkRecordStore`（删除联动——修正轮 #7） |
-| `src/session-guard.mjs` | 48 | +~5 | `.bak` 轮转时 sidecar 联动改名（非活动绑定面——§14.3.8；修正轮 #1） |
+| `thincoder-core/session-store.mjs` | 新 → 442（交付实测） | +280 ± 40 | 全新模块：段 IO / 索引 / 窗口 / 绑定对账 / 投影写 / 流式迭代 / 生命周期。实现后同步（2026-09-12）：越 300 咨询线——登记、不拆（新增档口径——见拆分结论） |
+| `thincoder-core/session-segments.mjs` | 新 → 101（交付实测） | —（拆分产物） | 段 IO 原语 + 人读线条目形态（`slimForDisplay`/`isLegacyTransient`/`shouldAppend`/`isRealUserMsg`）+ `_storeStats`；store 越 500 硬限后按职责拆出——公开名 re-export、调用面零改（实现后同步 2026-09-12） |
+| `thincoder-core/session.mjs` | 476 | +8 / −26 → ~458 | `slimForDisplay`/`isLegacyTransient` 迁出（re-export）；saveSession 分支；applySession `{slot}`（bind：`slotFile` + identity——修正轮 #1）；reset 解绑；首保存补绑 |
+| `thincoder-core/session-slots.mjs` | 490 | +~3 | `deleteSlot` → `unlinkRecordStore`（删除联动——修正轮 #7） |
+| `thincoder-core/session-guard.mjs` | 48 | +~5 | `.bak` 轮转时 sidecar 联动改名（非活动绑定面——§14.3.8；修正轮 #1） |
 | `thincoder-core/context.mjs` | 382 | +12 | pushReal：窗口驱逐 + `store.append`（独立 try/catch） |
-| `src/session-gc.mjs` | 215 | +8 | `deleteColdCwd` 目录 `rmSync`（递归删除 sidecar） |
-| `src/agent-tools/read-history.mjs` | 295 | +35 → ~330（越 300 软线——登记；不拆） | 本会话走 `store.iterate`；未绑定回退保留 |
+| `thincoder-core/session-gc.mjs` | 215 | +8 | `deleteColdCwd` 目录 `rmSync`（递归删除 sidecar） |
+| `thincoder-core/agent-tools/read-history.mjs` | 295 | +35 → ~330（越 300 软线——登记；不拆） | 本会话走 `store.iterate`；未绑定回退保留 |
 | `thincoder-core/generate-title.mjs` | 83 | +4 | 首条 user 回退 `store.firstUserMessage()` |
 | `bin/thincoder.mjs` | 406 | +8 | `applySession(…, {slot})`；`restored` 描述符（尾窗+total） |
 | `src/tui/startup.mjs` | 266 | +25 → ~291（近 300——登记） | `restoreLines(state, desc)`（`desc = {history, total, base}`——§14.3.6）；`createLoadOlder` 存储读 + 绝对锚 + ±1 页沿（修正轮 #4） |

@@ -5229,5 +5229,144 @@ CLI 三加载根 + 入口（L1–L7）：
 `doc-anchors`（全域）= 域一 32 档 候选 2219 · 悬空 0；域二 99 档 候选 8875 · 悬空 0；VSC 域报告态 5 命中（预存）· exit 0；
 `check-ledger` = `OK: thincoder/docs/TODO.md` / `OK: thincoder/docs/TODO-archive.md` · **0 处违规** · exit 0。
 
+### 实施：S2 U11 —— SESSION（会话与历史）落轮（2026-09-14 · eng-coder）——**终态 = clean**
+
+**段位**：当前段 = **S2（CLI 迁移单元 U11）**。写域 = CLI 侧（32 档 43 处 import 改指 + 9 档删旧 + 文档 16 行 21 token 锚改指 + 1 处折行）+
+**边界外一笔（已披露）**：仓根台账 `docs/TODO-archive.md:95`（L4 证据行，删档后必红——唯一必要行）。
+**VSC 零触碰**；核内零改动（`git status` 自证：改动集零 `thincoder-core/**`）；未 commit（父侧统一单笔）；**无域外消费方**（仓根 `scripts/**` · 产品 `scripts/**` · `bin/**` · 产品根散档 · `.github/**` 全扫零命中）；产品文档只做锚改指（零语义改写——语义收正归 eng-designer）。
+
+**依据** = `docs/design/CORE-UNIFICATION.md` §2.6.3 U11 行（`:720`「9 / 2199 / 36」+ 专项「存储契约不变（同 `version` 1/2）；A14 以 CLI 为准」）+（三）逐档清单（`:836-844`）+（四）四步与 A1–A6（`:910-924`）+（七）进度计数 + §2.6.2（三）（五）（六）；`docs/design/SESSION.md` §2.1–§4（#89 · #123–#127 · A14）；父侧 U11 任务书。
+**改指计数收正**：设计「36」= S2 起点（1055ef84）外部引用档数；此后 U3/U4/U9 删档带走 4 档（`traces/trace-store.mjs` · `peer-domains.mjs` · `peer-instances.mjs` · `agent-tools.mjs`——各含真实会话族引用，git 历史实核）⇒ 本笔实改 **32 档 / 43 处**（42 包名 import + 1 夹具路径），与「按当下坐标计」口径一致。
+
+**改动面**（行数 = `wc -l` 口径实核；改前 = HEAD）
+
+| # | 面 | 档 / 行数 | 动作 |
+|---|---|---|---|
+| 1 | CLI 源 + 测试 + bin | 32 档（16 src + 1 bin + 15 test；行数零变——纯来源串替换） | 改指 `@thincoder/core/<子路径>`（43 处） |
+| 2 | CLI 删旧 | `src/session.mjs` 492 · `session-slots.mjs` 492 · `session-store.mjs` 441 · `session-gc.mjs` 221 · `session-segments.mjs` 100 · `session-guard.mjs` 59 · `session-migrate.mjs` 47 · `session-rename.mjs` 38 · `agent-tools/read-history.mjs` 309（**10 档 / 2199 行**——9 档 2199 行，`read-history` 含于内） | **删档**（`src/agent-tools/` 余 17 档原位；无空目录） |
+| 3 | CLI 文档 | `docs/design/SESSION.md`（16 行 / 21 token）· `docs/design/MEMORY.md`（1 token；±0 行） | 锚改指 `thincoder-core/…` + 1 处折行 |
+| 4 | 仓根台账（**边界外·披露**） | `docs/TODO-archive.md`（±0 行） | `:95` L4 证据行改指（1 处） |
+
+**① 逐处「改前 → 改后」（43 处 / 32 档——全部 = 来源串替换，具名导入面零改）**
+
+| # | 档 | 位置：改前 → 改后 |
+|---|---|---|
+| 1 | `bin/thincoder.mjs` | `:310` `await import("../src/session.mjs")` → `"@thincoder/core/session.mjs"`（resumeSlot/applySession/sessionDescriptor）· `:399` `"../src/session-gc.mjs"` → 核（runSessionGc） |
+| 2 | `src/acp.mjs` | `:22` `from "./session.mjs"` → 核（12 名面零改） |
+| 3 | `src/acp/session.mjs` | `:15` `from "../session.mjs"` → 核（saveSession） |
+| 4 | `src/agent/setup-reminders.mjs` | `:19` `from "../session-slots.mjs"` → 核（END） |
+| 5 | `src/agent-tools/consult.mjs` | `:33` `from "../session-store.mjs"` → 核（RECORD_WINDOW_MESSAGES） |
+| 6 | `src/agent-tools/escalate-async.mjs` | `:31` 同上 |
+| 7 | `src/agent-tools/subagent-actions.mjs` | `:25` 同上 |
+| 8 | `src/agent-tools/subagent-spawn.mjs` | `:19` 同上 |
+| 9 | `src/token-ttl.mjs` | `:34` `} from "./session-slots.mjs"` → 核 · `:36` `"./session-guard.mjs"` → 核（guardForeignSlotFile） |
+| 10 | `src/tui/agent-turn.mjs` | `:18` `from "../session.mjs"` → 核（saveSession） |
+| 11 | `src/tui/cmd-advisor.mjs` | `:6` 同上（activeSlot/slotPath） |
+| 12 | `src/tui/cmd-eng.mjs` | `:9` 同上（activeSlot/slotPath） |
+| 13 | `src/tui/cmd-new.mjs` | `:1` 同上（newSession/resetSessionState/bindRecordStore/slotPath） |
+| 14 | `src/tui/cmd-session.mjs` | `:1` 同上（listSlots/switchToSlot/applySession/renameSlot/activeSlot/slotOccupancy/readEndMarker/sessionDescriptor） |
+| 15 | `src/tui/index.mjs` | `:23` 同上（saveSession） |
+| 16 | `src/tui/model-picker.mjs` | `:17` 同上（saveSession） |
+| 17 | `src/tui/startup.mjs` | `:1` 同上（listSlots） |
+| 18 | `test/advisor-chain-guards.test.mjs` | `:20` `"../src/session-slots.mjs"` → 核（_setSessionsDirForTest/_resetSessionsDirForTest/slotPath） |
+| 19 | `test/cmd-eng.test.mjs` | `:17` 同上 |
+| 20 | `test/design-review-streak-guard.test.mjs` | `:24` 同上 |
+| 21 | `test/design-token-settlement.test.mjs` | `:22` `"../src/session.mjs"` → 核（loadSlotFile）· `:25` `"../src/session-slots.mjs"` → 核（4 名面零改） |
+| 22 | `test/integration/engineering-chain.test.mjs` | `:23` 核 session-slots（3 名） |
+| 23 | `test/integration/session-resume.test.mjs` | `:19` `"../../src/session.mjs"` → 核（5 名）· `:22` 核 session-slots · `:133` `url("src/session.mjs")` → `url("../thincoder-core/session.mjs")`（子进程夹具）· `:246` `await import("../../src/agent-tools/read-history.mjs")` → `"@thincoder/core/agent-tools/read-history.mjs"` |
+| 24 | `test/model-ref.test.mjs` | `:15` `"../src/session.mjs"` → 核（sessionPath）· `:302` 动态 import → 核（loadSession） |
+| 25 | `test/portability-classification.test.mjs` | `:21` 核 session-slots（2 名） |
+| 26 | `test/provider-admission.test.mjs` | `:23` 核 session.mjs（applySession） |
+| 27 | `test/provider-model-guard.test.mjs` | `:24` 同上 |
+| 28 | `test/read-history-guard.test.mjs` | `:15` `"../src/agent-tools/read-history.mjs"` → `"@thincoder/core/agent-tools/read-history.mjs"`（readHistoryTool） |
+| 29 | `test/session-store.test.mjs` | `:18` `"../src/session-store.mjs"` → 核（8 名面）· `:20` 核 read-history · `:21` 核 session.mjs（4 名）· `:22` 核 session-slots · `:23` 核 session-gc（runSessionGc/COLD_CWD_RETENTION_MS） |
+| 30 | `test/setup-reminders.test.mjs` | `:33` 核 session.mjs（applySession） |
+| 31 | `test/subagent-memory-bounds.test.mjs` | `:12` 核 session-store（RECORD_WINDOW_MESSAGES） |
+| 32 | `test/tui-memory-budget.test.mjs` | `:171` 核 session-store（动态） |
+
+**过渡期双态收口（U9 未决 1 的 U11 部分 ✓）**：U9 登记的三族本地副本消费点中属 U11 的 **3 处已收口**——`test/read-history-guard.test.mjs:15` · `test/session-store.test.mjs:20` · `test/integration/session-resume.test.mjs:246` 全部改指核；
+其余 2 处属 U12/U16（`test/batch-doc-gate.test.mjs:26` → `../src/agent-tools/subagent.mjs`（U16）· `test/advisor-chain-guards.test.mjs:21` → `../src/agent-tools/advisor.mjs`（U12））——本笔不动、留对应单元。
+
+**文档锚 23 token（悬空 14 → 0 + 同句/同表主动改指 8 + 台账 1）**
+
+- **悬空 14 锚（13 行）→ 0**：`docs/design/SESSION.md` `:5`（session-slots · session-gc）`:6` `:555` `:574`（read-history）`:575` `:726` `:727` `:734` `:741` `:779` `:782` `:783` · `docs/design/MEMORY.md:336`。
+- **主动改指 8 token（防同句/同表两态——U7 决策 4 / U10 决策 6 口径）**：`SESSION.md:5` 余 3 token（session · session-rename · session-migrate）· `:574` 1 token（session.mjs:114）· §14.5 表 4 行（`:776` `:777` `:778` `:780`）。
+- **折行 1 处**：`SESSION.md:5` 改指后 320 字符 >300 闸 ⇒ 仅插换行、文字零改（折为两行，续行带 `> ` 前缀保持 blockquote）。
+- **形态** = §2.6.2（六）CLI 域「仓根相对」`thincoder-core/…`；坐标 as-of 保留（漂移见未决 6）。
+- **台账 1 行（边界外·披露）**：`docs/TODO-archive.md:95` 证据形 `thincoder-cli/src/session.mjs:2` → `thincoder-core/session.mjs:2`（L4 闸强制；「只改必要那一行」）。
+
+**② 删旧三条读数（删前全过才删）**
+
+1. **改指已落盘**：43 处终态复核（正 / 反向两判）——0 违规；冒烟 PASS（真核导出面逐名在位：session.mjs 22 名 + session-slots 5 名 + session-store 8 名 + session-gc 2 名 + session-guard 1 名 + read-history 1 名；
+   功能链 = `newSession` → 原始 JSON 槽 → `resumeSlot`（data≠null）→ `sessionDescriptor`（total=2）→ `readHistoryTool.execute`（keyword 命中 2）；
+   宽松校验面 = 无 `version` 字段旧档仍可查（命中 1——A14 CLI 语义）。
+2. **该产品全链 exit 0（删前预跑）**：`npm test` 609/552/0/57 · `lint` **254** · `test:full` 609/609 · `test:integration` 25/25（均 exit 0）。
+3. **零引用反向判**（域 = `src` + `test` + `bin`，另扫 `scripts`；全递归；两模式）：
+   ① 引号包裹本地相对路径形（按解析语义判——命中删除集即违规）= **2 命中（均非删除集：`src/acp.mjs:20` → `./acp/session.mjs`（CLI 自有 ACP 档）· `test/integration/session-resume.test.mjs:133` → `../thincoder-core/session.mjs`（核路径））⇒ 违规 0**；
+   ② 非核前缀 token 反向判 = **17 命中（13 注释叙述——射程外 · 1 非删除集（acp/session.mjs）· 3 核前缀 `@thincoder/core/agent-tools/read-history.mjs`）⇒ 违规 0**。
+   **删后中间态**：`doc-anchors --domain thincoder-cli` = **14 悬空**（13 行）→ 逐处改指 → **0**。
+
+**③ A1–A6 读数（终态复跑 · 原样）**
+
+| # | 判据 | 读数 | 判 |
+|---|---|---|---|
+| A1 | CLI 全链 | `npm test`：tests **609** · suites 4 · pass **552** · fail **0** · skipped **57** · exit 0；`lint`：check-syntax **245 file(s) OK**（254 − 9 删档，唯一面内差）；`test:full`：**609/609** · fail 0 · exit 0；`test:integration`：**25/25** · fail 0 · exit 0——**未涉面逐数不变**；面内零改判（无用例增删） | ✓ |
+| A2 | 零引用 | 反向判两式违规 **0 / 0**（域 `src`+`test`+`bin`+`scripts` 全递归）；运行面 = 全链 exit 0 + 删后冒烟 PASS；锚面 = 悬空 0 | ✓ |
+| A3 | 文档锚 | `doc-anchors --domain thincoder-cli`：99 档 · 候选 **8875** · 悬空 **0** · 注记豁免 880 · `OK(V5)` exit 0 | ✓ |
+| A4 | 核回归 | 核内 `node --test` = **173/173** · fail 0 · exit 0；核内零改动（`git status` 自证：改动集零 `thincoder-core/**`） | ✓ |
+| A5 | 仓根三机检 | `doc-anchors`（全域）：域一 32 档 候选 **2219** · 悬空 0 · 豁免 29；域二 99 档 候选 **8875** · 悬空 0 · 豁免 880；VSC 域报告态 5 命中（预存——非本笔）· **exit 0**。`check-doc-width`：**306 档无 >300 字符行** · 一致性新增违规 0 · exit 0（§5 写入后复跑读数见段末）。`check-ledger`：**0 处违规** · exit 0 | ✓ |
+| A6 | 链接 L1 | `npm ls @thincoder/core --json` **exit 0** · version **0.1.0**（resolved `file:../../../thincoder-core`）；版本探针 = **0.1.0** | ✓ |
+| 专项 | 裁决落实 | **存储契约不变**：同一 `~/.thincoder/sessions/<hash>.json.{N,manifest}`（核 `session-slots.mjs:55-65`）· `version` 1/2 读写判（核 `session.mjs:188-191` · `session-slots.mjs:443-448`）· **旧短哈希迁移面在位**（核 `session-slots.mjs:16` import `migrateHashLength` ← `session-migrate.mjs:22`）；**A14 以 CLI 为准**：核 `agent-tools/read-history.mjs:173` 相对路径按 `baseCwd` 解析（`:283` 取 `agent.cwd`）——CLI 语义面；删除集 ↔ S1 核内逐档同源（4 档逐字节同、4 档仅注释/单源提取差——实核） | ✓ |
+
+**进度计数（设计 §2.6.3（七）① · 可复跑命令）**：**CLI 待迁 = 64**（73 − 9）——与父侧预期逐数一致，单调递减成立。② 交叉核对命令现报 ENOENT（`thincoder-cli/src/prompts` 于 U2 删除后脚本扫描面失效——预存脚本侧限制，非本笔引入；主计数不受影响，登记未决 7）。
+**工作树**：本笔 **44 项**（35 M + 9 D）+ **1 项预存**（`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`——spawn 前已在，非本笔）；未 commit。
+
+**④ 内部轮（发现与处置）**
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **CLEAN**——四类偏差（部分实现 / 静默简化 / 文档漂移 / 清单外改动）均未发现（9 删除档确缺 · 32 档 43 处逐点实读对上 · 核导出面逐名在位 · 3 处双态消费点已改指 · 文档 16 行纯路径替换 · 迁移面/A14 语义成立）；4 QUESTION。
+  QUESTION 判定：Q1（`AGENTS.md:63-64` 模块图滞留）= **登记**（未决 1，U1–U10 同型）；Q2（站点计数 41 vs 43）= **口径差**（审计单行 regex 未覆盖动态/模板形；本笔以 git diff 实核 43 = 42 包名 + 1 夹具路径）；Q3（CLI 文档面残留 as-of 提及）= **登记**（未决 2，与评审 🟡#1 同型）；Q4（无 shell/git 限制）= 如实登记。
+- **advisor 代码评审 1 轮**（`type=code` · 阻塞）：**pass**（🔴 **0** · 🟡 2（均非 must-fix）· 🔵 1）。
+- **裁决表（3 项）**：**Deferred 2**——
+  🟡#1 **CLI 文档面陈旧 as-of 锚**（`docs/design/SESSION.md:35/:410/:438/:572/:631/:701/:726/:739` · `ACP-CLIENT.md:4/:174/:175/:186` ·
+  `ENG-TOKEN-BINDING.md:7/:77` · `DESIGN-TOKEN-SETTLEMENT.md:43/:52/:54` · `PROVIDER.md:626` · `STRUCTURE-DEBT.md:87` · `TESTING.md:562` · `AGENT-LOOP.md:1692`——机检绿（基名回退宽容 `doc-anchors-v5.mjs:180-183`）；非阻断 ⇒ 未决 2（U8 未决 2 / U10 未决 2 同型）；
+  🟡#2 **根档 `docs/design/SESSION.md:13/:52`** §1 归属表与迁移证据行滞后（与 U11 落地态相抵）——语义面收正归 eng-designer ⇒ 未决 3；
+  **Not an issue 1**（🔵#3 `test/integration/session-resume.test.mjs:133` 夹具直引 `../thincoder-core/session.mjs`——子进程 cwd = 临时目录，裸说明符不可解析，绝对 file URL 为唯一形态（U8 决策 6 先例）；当前解析正确）。
+  **引证核验附注**：host 核验器对 10 条引证报「file unreadable」——复核为**核验器路径解析 artifact**（advisor 以仓库相对路径引证；承 U1–U10 同型附注）。
+- **轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 **0**（零 must-fix）；终态 **0 未决 🔴 → clean**。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 改指目标形态 = `@thincoder/core/<子路径>`（含 hub `session.mjs`） | §2.6.2（三）2「一律带子路径」（裸名不可导入）；核 `exports "./*"` + 链接态实核 |
+| 2 | 夹具路径 `url("../thincoder-core/session.mjs")`（子进程旁路包面） | 子进程 cwd = 临时目录 ⇒ 裸说明符不可解析；绝对 file URL 为唯一形态（U8 决策 6 先例） |
+| 3 | 文档锚 = 纯路径替换（`thincoder-core/…`）+ 坐标 as-of 保留 | §2.6.2（六）CLI 域形态 + U2 决策 6 / U5–U10 先例 |
+| 4 | 悬空 14 锚之外**主动改指 8 token**（同句/同表） | 防「同句 / 同表两态」（U7 决策 4 / U10 决策 6）；不含宽面扫荡（其余残留登记未决 2） |
+| 5 | 台账 `docs/TODO-archive.md:95` 随本笔改指（**边界外**） | L4 闸强制（删档后 1 处违规——“仓内同名 2 份（多义）”）；「只改必要那一行」；坐标 as-of 保留 |
+| 6 | `SESSION.md:5` 折行（续行带 `> ` 前缀） | 改指后 320 字符越 >300 闸；仅插换行、文字零改；块引用语义保持 |
+| 7 | 文档面陈旧残留（评审 🟡 两条）**登记不改** | 非阻断 + 归文档维护批 / eng-designer（U8 未决 2 / U10 未决 2 同型）；语义收正非本笔边界 |
+| 8 | 删前全链**预跑一轮**（四命令）+ 删后终态复跑 | §2.6.3（四）2 字面执行（承 U1–U10） |
+| 9 | 无空目录清理 | 删除集不构成整目录清空（`src/agent-tools/` 余 17 档原位；`src/` 余档不动） |
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **模块图 / 叙事滞留（文档面）**：`thincoder-cli/AGENTS.md:63-64`（session 两行）· `README.md:187` · `docs/design/ARCHITECTURE.md` 模块树——U1–U10 同型，归 S2 文档工作流或文档维护批（审计 Q1）。
+2. **CLI 文档面陈旧 as-of 锚**（评审 🟡#1 清单——SESSION.md 8 行 + 6 档 15 处）——机检绿（基名回退）；归文档维护批 / S3 残留复扫。
+3. **根档 `docs/design/SESSION.md:13/:52`** §1 归属表 + 迁移证据行滞后（评审 🟡#2）——归 eng-designer 文档面收正（设计面写权）。
+4. **核内 `END = "cli"` 硬编码**（评审范围外注记）：`thincoder-core/session-slots.mjs:71`——CLI 侧行为正确（应写 `.cli`），但 VSC 半边接线时须以注入/参数化承载（消费契约 5）⇒ 归 VSC 单元 / VSC 轮。
+5. **`thincoder-vscode/src/agent-tools/read-history.mjs:38`** 注释仍述镜像自 CLI 旧路径（已删）——VSC 面（本笔排除）。
+6. **坐标漂移披露（as-of 保留）**：核 `session-slots.mjs` = CLI −2 行（≈`:124` 后：单源提取）· 核 `session.mjs` = CLI **+2 行**（`:44` 后：history-window re-export）⇒ 文档内 as-of 坐标（如 `thincoder-core/session-slots.mjs:400-415` · `session.mjs:114`）实际行位漂移——随下次触碰重锚（U6 未决 3 同型）。
+7. **交叉核对命令 ② 失效（脚本侧 · 预存）**：`scripts/mirror-divergence.mjs` 扫描 `thincoder-cli/src/prompts`（U2 删除）⇒ ENOENT——非本笔引入；主计数 ① 不受影响，归机检脚本所属批次。
+8. **VSC 预存项**：`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`（M）= spawn 前既存改动，非本笔（承 U0–U10 登记）。
+
+**轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 0；A1–A6 终态读数见上表；终态 = **clean**；报告 ①–⑦ 见交付报告（父侧转呈）。
+
+**段末复跑（§5 写入后 · 原样读数）**：`check-doc-width` = **306 档无 >300 字符行** · 一致性 V1/V2/V3 新增违规 0 · exit 0；
+`doc-anchors --domain thincoder-cli` = 99 档 · 候选 8875 · 悬空 **0** · 注记豁免 880 · `OK(V5)` exit 0；`check-ledger` = `OK: thincoder/docs/TODO.md` / `OK: thincoder/docs/TODO-archive.md` · **0 处违规** · exit 0。
+
+**收正注（同轮 · 首版后置 · 零语义）**：宽度闸复跑命中本段首版 1 行超宽（`:5330` 363 字符——🟡#1 清单行）⇒ 仅插换行、文字零改
+（折后首版误删 `ENG-TOKEN-BINDING.md:7/:77` 一处清单 token ⇒ 就地补回，逐字与首版一致）；复跑 = 上表读数（全绿）。
+A5 三条复跑读数与 ③ 表（§5 写入前）逐数一致。
+
 ## §6 验证与收口（父代理）
 

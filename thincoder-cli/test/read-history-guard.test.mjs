@@ -12,7 +12,7 @@ import assert from "node:assert/strict"
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { readHistoryTool } from "../src/agent-tools/read-history.mjs"
+import { readHistoryTool } from "@thincoder/core/agent-tools/read-history.mjs"
 
 /** 超限错误文案（SESSION.md §13——逐字定稿——断言与实现同文案）。 */
 const TOO_LARGE = JSON.stringify({ error: "session too large — refine keyword or since/until" })

@@ -31,9 +31,9 @@ import { existsSync, readFileSync, statSync } from "node:fs"
 import {
   slotPath, writeSessionFile, activeSlot, loadManifest, saveManifest, slotDigest,
   writeEndMarker,
-} from "./session-slots.mjs"
+} from "@thincoder/core/session-slots.mjs"
 // F2 轮转守卫自 2026-09-08 迁至 session-guard.mjs（session-slots 再越 500 行硬限拆分）
-import { guardForeignSlotFile } from "./session-guard.mjs"
+import { guardForeignSlotFile } from "@thincoder/core/session-guard.mjs"
 
 const DESIGN_TOKEN_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 

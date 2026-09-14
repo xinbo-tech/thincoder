@@ -333,7 +333,7 @@ merged.shell = expandHome(merged.shell)
 **（c）projectDir 消费侧基准解析**（七点位：`join(cwd, p)` → `isAbsolute(p) ? p : join(cwd, p)`）：
 
 理由：`~` 展开产出**绝对路径**；`path.join(cwd, "/home/u/x")` 会拼成 `<cwd>/home/u/x`（join 不做绝对绕过）——必须绝对原样。
-**相对形态走原 `join` 分支** → 与修前逐字相同（N7 零伤硬证据）。该式为本仓既有惯用式（同款 `src/tui/cmd-undo.mjs:24`、`src/agent-tools/read-history.mjs:172`）。
+**相对形态走原 `join` 分支** → 与修前逐字相同（N7 零伤硬证据）。该式为本仓既有惯用式（同款 `src/tui/cmd-undo.mjs:24`、`thincoder-core/agent-tools/read-history.mjs:172`）。
 
 | # | 点位（as-of 2026-09-11） | 用途 |
 |---|---|---|

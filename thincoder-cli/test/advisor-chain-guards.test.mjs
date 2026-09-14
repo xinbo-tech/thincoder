@@ -17,7 +17,7 @@ import { prepareAdvisorMessages } from "../src/advisor.mjs"
 import { buildObjectDeclarationBlock, buildDesignApprovalBlock } from "../src/advisor/messages.mjs"
 import { appendCitationReport, verifyCitations } from "../src/advisor/citations.mjs"
 import { settleDesignReview, settleAdvisorRun, inflightDesignReviewConflict } from "../src/agent-tools/advisor-async.mjs"
-import { _setSessionsDirForTest, _resetSessionsDirForTest, slotPath } from "../src/session-slots.mjs"
+import { _setSessionsDirForTest, _resetSessionsDirForTest, slotPath } from "@thincoder/core/session-slots.mjs"
 import { advisorTool } from "../src/agent-tools/advisor.mjs"
 import { executeToolCalls } from "../src/agent/dispatch.mjs"
 

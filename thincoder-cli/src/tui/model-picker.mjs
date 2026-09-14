@@ -14,7 +14,7 @@
  */
 import { sliceByWidth } from "./render.mjs"
 import { PROVIDER_PRESETS as PRESETS, providerSpec, specMatch } from "../config.mjs"
-import { saveSession } from "../session.mjs"
+import { saveSession } from "@thincoder/core/session.mjs"
 import { getProviderModels, probeChannelModels, modelListFailureText, dedupeModels } from "./model-catalog.mjs"
 
 /** createModelPicker(ctx) → { openModelPicker, selectModel, setProviderKey, setContextFlow, pickModelForSlot } */

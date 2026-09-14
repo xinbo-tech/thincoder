@@ -22,7 +22,7 @@ import { describeBlockers, detectStall, STALL_NOTE } from "./subagent-scheduler.
 import { resolveChildProvider, mergeChildMutations } from "./subagent-async.mjs"
 import { launchEscalateAsync } from "./escalate-async.mjs"
 // TUI-OOM-ROOTCAUSE §23.3.1：子代理人读线窗口常量（单源——store 零依赖）。
-import { RECORD_WINDOW_MESSAGES } from "../session-store.mjs"
+import { RECORD_WINDOW_MESSAGES } from "@thincoder/core/session-store.mjs"
 // ASYNC-RESULT-CONTAINER.md D1：池 accessor（absorb 双池——advisor 独立池无队列）
 import { getAsyncPool } from "./async-settle.mjs"
 

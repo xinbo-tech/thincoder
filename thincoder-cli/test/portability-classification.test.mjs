@@ -18,7 +18,7 @@ import {
 } from "@thincoder/core/conventions.mjs"
 import { hasCodeMutations } from "../src/advisor/repos.mjs"
 import { executeToolCalls } from "../src/agent/dispatch.mjs"
-import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/session-slots.mjs"
+import { _setSessionsDirForTest, _resetSessionsDirForTest } from "@thincoder/core/session-slots.mjs"
 
 let tmp, sessionsDir
 beforeEach(() => {

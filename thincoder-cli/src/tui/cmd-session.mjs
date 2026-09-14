@@ -1,4 +1,4 @@
-import { listSlots, switchToSlot, applySession, renameSlot, activeSlot, slotOccupancy, readEndMarker, sessionDescriptor } from "../session.mjs"
+import { listSlots, switchToSlot, applySession, renameSlot, activeSlot, slotOccupancy, readEndMarker, sessionDescriptor } from "@thincoder/core/session.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { restoreLines } from "./startup.mjs"
 import { stringWidth, sliceByWidth } from "./render.mjs"

@@ -15,12 +15,12 @@ import { join } from "node:path"
 import {
   bindRecordStore, saveProjectedSlot, unlinkRecordStore, recordDirOf, slimForDisplay,
   RECORD_SEG_MESSAGES, RECORD_WINDOW_MESSAGES, _storeStats,
-} from "../src/session-store.mjs"
+} from "@thincoder/core/session-store.mjs"
 import { pushReal } from "@thincoder/core/context.mjs"
-import { readHistoryTool } from "../src/agent-tools/read-history.mjs"
-import { deleteSlot, newSession, slotPath, applySession } from "../src/session.mjs"
-import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/session-slots.mjs"
-import { runSessionGc, COLD_CWD_RETENTION_MS } from "../src/session-gc.mjs"
+import { readHistoryTool } from "@thincoder/core/agent-tools/read-history.mjs"
+import { deleteSlot, newSession, slotPath, applySession } from "@thincoder/core/session.mjs"
+import { _setSessionsDirForTest, _resetSessionsDirForTest } from "@thincoder/core/session-slots.mjs"
+import { runSessionGc, COLD_CWD_RETENTION_MS } from "@thincoder/core/session-gc.mjs"
 
 const msg = (i) => ({ role: i % 2 ? "assistant" : "user", content: `m-${i}` })
 const segLines = (store, n) =>

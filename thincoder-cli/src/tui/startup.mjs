@@ -1,4 +1,4 @@
-import { listSlots } from "../session.mjs"
+import { listSlots } from "@thincoder/core/session.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { describeToolArgs, toolArgsLines } from "./tool-args.mjs"
 import { slimToolResultForDisplay } from "./tool-events.mjs"

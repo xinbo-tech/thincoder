@@ -9,7 +9,7 @@ import assert from "node:assert/strict"
 import { runWithContinue, CAPTURE_CAP_OPTS } from "../src/agent/spawn-child.mjs"
 import { releaseSettledEntry } from "../src/agent-tools/async-settle.mjs"
 import { executeObserveAction } from "../src/agent-tools/subagent-actions.mjs"
-import { RECORD_WINDOW_MESSAGES } from "../src/session-store.mjs"
+import { RECORD_WINDOW_MESSAGES } from "@thincoder/core/session-store.mjs"
 import { pushReal } from "@thincoder/core/context.mjs"
 import { createAgent } from "../src/agent.mjs"
 

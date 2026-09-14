@@ -307,7 +307,7 @@ switch (command) {
     // 恢复上次的会话（同一项目目录）；provider 按保存的名字切回（用户上次可能换过模型）
     // 2026-09-05 §10（R4）：恢复决策按本端记录 resumeSlot（D-2 ①②③）——manifest active
     // 只作"无记录端"的一次性继承源，不再作本端恢复第一依据（D-6）。
-    const { resumeSlot, applySession, sessionDescriptor } = await import("../src/session.mjs")
+    const { resumeSlot, applySession, sessionDescriptor } = await import("@thincoder/core/session.mjs")
     const { slot, data } = resumeSlot(process.cwd())
     if (data) {
       // applySession 内部已按槽复合重算 compactThreshold（auto 时）——不再需要 switched 分支
@@ -396,7 +396,7 @@ switch (command) {
 
   case "session": {
     // SESSION.md §12：会话目录 GC 手动面（F2 冷 cwd 报告/删除——VS Code 端无 shell 通道，仅 CLI）
-    const { runSessionGc } = await import("../src/session-gc.mjs")
+    const { runSessionGc } = await import("@thincoder/core/session-gc.mjs")
     process.exitCode = runSessionGc(args)
     break
   }

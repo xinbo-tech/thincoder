@@ -20,7 +20,7 @@ import { builtinTools } from "../../src/tools/index.mjs"
 import { advisorTool } from "../../src/agent-tools/advisor.mjs"
 import { subagentTool } from "../../src/agent-tools/subagent.mjs"
 import { executeConsumeDesignAction, resolveDesignSlot } from "../../src/agent-tools/subagent-spawn.mjs"
-import { _setSessionsDirForTest, _resetSessionsDirForTest, slotPath } from "../../src/session-slots.mjs"
+import { _setSessionsDirForTest, _resetSessionsDirForTest, slotPath } from "@thincoder/core/session-slots.mjs"
 
 let sessionsDir
 beforeEach(() => {

@@ -168,7 +168,7 @@ test("T-TB8 state.lines 总量：各路径混合塞入至超 2M → 裁头生效
 slow("T-TB9 翻页不无界：模拟 50 页载入 → 总量对账仍 ≤ 预算（锚定不破）", async () => {
   const { pushReal } = await import("@thincoder/core/context.mjs")
   const { restoreLines, createLoadOlder } = await import("../src/tui/startup.mjs")
-  const { RECORD_WINDOW_MESSAGES } = await import("../src/session-store.mjs")
+  const { RECORD_WINDOW_MESSAGES } = await import("@thincoder/core/session-store.mjs")
   const agent = createAgent({
     provider: { name: "mock", model: "m", baseURL: "http://127.0.0.1:1/v1", apiKey: "k" },
     tools: [], config: { agent: {} }, cwd: process.cwd(), memory: null,

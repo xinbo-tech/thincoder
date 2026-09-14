@@ -21,7 +21,7 @@ import assert from "node:assert/strict"
 import { chat } from "@thincoder/core/provider/core.mjs"
 import { resolveAdvisorProvider } from "../src/advisor/run.mjs"
 import { resolveChildProvider } from "../src/agent-tools/subagent-async.mjs"
-import { applySession } from "../src/session.mjs"
+import { applySession } from "@thincoder/core/session.mjs"
 
 // ─── F-1 请求体断言（AC-1）───
 // 全部同步快（guard 在 body 组装前 throw——pre-network）——快层直跑不标 slow。

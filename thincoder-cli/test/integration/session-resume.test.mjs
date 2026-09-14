@@ -16,10 +16,10 @@ import { dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { createAgent } from "../../src/agent.mjs"
 import { pushReal } from "@thincoder/core/context.mjs"
-import { saveSession, resumeSlot, applySession, newSession, sessionDescriptor } from "../../src/session.mjs"
+import { saveSession, resumeSlot, applySession, newSession, sessionDescriptor } from "@thincoder/core/session.mjs"
 import { repairHistory } from "../../src/agent/helpers.mjs"
 import { restoreLines, createLoadOlder } from "../../src/tui/startup.mjs"
-import { _setSessionsDirForTest, _resetSessionsDirForTest, slotPath } from "../../src/session-slots.mjs"
+import { _setSessionsDirForTest, _resetSessionsDirForTest, slotPath } from "@thincoder/core/session-slots.mjs"
 
 const __here = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__here, "..", "..")
@@ -130,7 +130,7 @@ test("④ 错误：损坏会话档 → 真子进程恢复 —— 干净回退 + 
   const url = (rel) => JSON.stringify(pathToFileURL(join(ROOT, rel)).href)
   const script = [
     `import { existsSync, writeFileSync } from "node:fs"`,
-    `import { slotPath, newSession, resumeSlot } from ${url("src/session.mjs")}`,
+    `import { slotPath, newSession, resumeSlot } from ${url("../thincoder-core/session.mjs")}`,
     `const cwd = process.cwd()`,
     `const n = newSession(cwd)`,                                    // 一个真实会话槽
     `writeFileSync(slotPath(cwd, n), "{ this is not valid json")`,  // 坏档（半截 JSON）
@@ -243,7 +243,7 @@ test("④ 正常（T-RS10）：磁盘为准 + 内存窗口——尾窗/total、�
   assert.equal(state.scroll > 0, true, "跨页滚动补偿已生效（页插入后锚定平移）")
 
   // 本会话检索：内存窗口外命中（存储流式）
-  const { readHistoryTool } = await import("../../src/agent-tools/read-history.mjs")
+  const { readHistoryTool } = await import("@thincoder/core/agent-tools/read-history.mjs")
   const hits = JSON.parse(readHistoryTool.execute({ keyword: "result-77" }, { agent: first }))
   assert.equal(hits.length, 1, "窗口外（早期工具结果）keyword 可命中")
   assert.equal(hits[0].content, "result-77")

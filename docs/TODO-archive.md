@@ -92,7 +92,7 @@
 - [x] **CLI 侧自用首验（batchDoc 门 + 新角色）**：需 CLI 会话内真 spawn 一次验证 → 证据 `thincoder-cli/src/agent-tools/subagent.mjs:151` · status=已废弃（原状态=待讨论）
 - [x] **档位 B：subagent 工具 description 动态矩阵**（工具集变化时自动跟随）→ 证据 `thincoder-cli/src/agent-tools/subagent.mjs:114` · status=已废弃（原状态=无 status）
 - [x] **既有文档超宽行清理**（设计档侧余 5 行：`thincoder-cli/docs/design/AGENT-LOOP.md` :510/:572/:574 · `SESSION.md` :524 · `SUBAGENT-ID-COUNTER-AGENT.md` :53）→ 证据 `thincoder-cli/docs/batches/2026-09-11-SWEEP-FOLLOWUP.md` §2 · status=已废弃（原状态=在途（第 14 批））
-- [x] **session-state 诊断工具候选**：只读诊断命令 dump 当前 cwd 会话槽全貌 → 证据 `thincoder-cli/src/session.mjs:2`（slot-based 模型）· status=已废弃（原状态=无 status）
+- [x] **session-state 诊断工具候选**：只读诊断命令 dump 当前 cwd 会话槽全貌 → 证据 `thincoder-core/session.mjs:2`（slot-based 模型）· status=已废弃（原状态=无 status）
 - [x] **deepseek-v4-pro 视觉能力复检 + 发布注记**（触发 = 2026-09-14 12:00 路由生效后 / V4.1 Pro 到货——复核 `multimodal` 翻转）→ 证据 `thincoder-cli/test/read-image-guide.test.mjs:20` · status=已废弃（原状态=触发=条件）
 - [x] **advisor 池状态不可查询 + 不可取消**（用户反馈——平台机制缺陷，已实证三次）→ 证据 `thincoder-cli/src/tools/ops.mjs:195` · status=已废弃（原状态=待讨论（owner=平台））
 - [x] **§24→§11 旧锚全仓清理**（CLI src 面 28 行已落（DOC-HYGIENE C2）；VSC 面另议）→ 证据 `thincoder-cli/src/tui/suspension-drive.mjs:30` · status=已废弃（原状态=待核销）

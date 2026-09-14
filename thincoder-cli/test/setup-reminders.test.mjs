@@ -30,7 +30,7 @@ import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 import { envStateLine, pushEnvStateReminder } from "../src/agent/setup-reminders.mjs"
 import { composeGitContext, collectGitContext, _gitFailureCooldownForTests, _clearGitFailureCooldownForTests } from "../src/agent/helpers.mjs"
-import { applySession } from "../src/session.mjs"
+import { applySession } from "@thincoder/core/session.mjs"
 // prepareRun 测试走静态导入——模块求值在 leaf 用例计时之外（node --test 文件级并行，
 // 导入链（agent-tools/agent.mjs 等）只在首用例的 await import 内再付一次动态成本）
 import { prepareRun } from "../src/agent/setup.mjs"

@@ -19,7 +19,7 @@ import { assembleAgent } from "./cli/make-agent.mjs"
 import { createAcpServer, ACP_ERRORS } from "./acp/transport.mjs"
 import { createAcpSession } from "./acp/session.mjs"
 import { replayHistory } from "./acp/bridge.mjs"
-import { listSlots, applySession, deleteSlot, normalizeCwd, loadSlotFile, slotOccupancy, loadManifest, saveManifest, getSessionId, newSession, slotPath, bindRecordStore } from "./session.mjs"
+import { listSlots, applySession, deleteSlot, normalizeCwd, loadSlotFile, slotOccupancy, loadManifest, saveManifest, getSessionId, newSession, slotPath, bindRecordStore } from "@thincoder/core/session.mjs"
 import { createCheckpoint, listCheckpoints, rewind, isGitRepo } from "@thincoder/core/git/checkpoint.mjs"
 import { createMemory, list as memList, remove as memRemove } from "@thincoder/core/memory.mjs"
 

@@ -21,7 +21,7 @@ import { advisorTool } from "../src/agent-tools/advisor.mjs"
 import {
   ADVISOR_DESIGN_STREAK_STOP_PREFIX, ADVISOR_LAUNCH_REFUSAL_PREFIX, buildDesignReviewGuardMessage, runAdvisorReview,
 } from "../src/advisor/run.mjs"
-import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/session-slots.mjs"
+import { _setSessionsDirForTest, _resetSessionsDirForTest } from "@thincoder/core/session-slots.mjs"
 
 const tmpDirs = []
 after(() => { for (const d of tmpDirs) rmSync(d, { recursive: true, force: true }) })

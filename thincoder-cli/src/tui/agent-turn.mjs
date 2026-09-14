@@ -15,7 +15,7 @@
  * session.mjs 同款先例）。
  */
 import { runAgent, ContinueError } from "../agent.mjs"
-import { saveSession } from "../session.mjs"
+import { saveSession } from "@thincoder/core/session.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { buildToolCallbacks, sweepToolBlocks } from "./tool-events.mjs"
 import { freezeAllSubTasks } from "./subagent-blocks.mjs" // freezeReclaimDigestedBlocks 随 §17 段迁 suspension-drive.mjs

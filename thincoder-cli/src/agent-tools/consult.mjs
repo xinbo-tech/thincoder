@@ -30,7 +30,7 @@ import { logEvent, errText } from "@thincoder/core/log.mjs"
 import { deathLine } from "@thincoder/core/abort-provenance.mjs"
 import { makeRelay, wrapChildCallbacks, runWithContinue, ensureChildApiKey, clampEffort } from "../agent/spawn-child.mjs"
 // TUI-OOM-ROOTCAUSE §23.3.1：子代理人读线窗口常量（单源——store 零依赖）。
-import { RECORD_WINDOW_MESSAGES } from "../session-store.mjs"
+import { RECORD_WINDOW_MESSAGES } from "@thincoder/core/session-store.mjs"
 // ASYNC-RESULT-CONTAINER.md D2/D3/D6：pending 单容器停靠 + settle 公共收尾 + child signal 单点
 import { buildChildSignal, settleAsyncEntry } from "./async-settle.mjs"
 import { digestBudgetOver, persistOverflowReport } from "@thincoder/core/agent-tools/digest-budget.mjs" // B5（群 B 批 §22 D-DG2）：digest 注入预算单源

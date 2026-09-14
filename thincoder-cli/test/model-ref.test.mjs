@@ -12,7 +12,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync, unlinkSync
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { parseModelRef, resolveRuntimeProvider, specMatch, _setConfigPathForTest, _resetConfigPathForTest } from "../src/config.mjs"
-import { sessionPath as sessionFilePath } from "../src/session.mjs"
+import { sessionPath as sessionFilePath } from "@thincoder/core/session.mjs"
 
 const PROVIDERS = [
   { name: "deepseek", baseURL: "https://api.deepseek.com", model: "deepseek-v4-pro", apiKey: "sk-ds" },
@@ -299,7 +299,7 @@ test("AC-4/AC-5 selectModel：写槽不写 config（字节断言）+ 恢复 = �
     assert.equal(h.lines.length, 1, "M6 回显一行")
     assert.match(h.lines[0].text, /^Model: kimi:kimi-k3 — spec found \(ctx 1M \/ out 128K\)$/)
     assert.equal(h.lines[0].color, "T_TOOL", "正常分支走 C.tool")
-    const { loadSession } = await import("../src/session.mjs")
+    const { loadSession } = await import("@thincoder/core/session.mjs")
     const restored = loadSession(cwd)
     assert.equal(restored.activeProvider, "kimi")
     assert.equal(restored.activeModel, "kimi-k3")
