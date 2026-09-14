@@ -55,6 +55,8 @@ hashline_edit = **按内容哈希寻址编辑**（非字符串匹配）——**�
 | 描述面（模型可见） | `thincoder-core/tool-docs/hashline_edit.md` | 在位（`DESC()` 加载） |
 | VSC 对位实现 | `thincoder-vscode/src/tools/hashline-edit.mjs` | 同名机制 · 独立实现 |
 
+**VSC 端差异（并入 · 批 8）**：VSC 端 `hashline-edit.mjs` 另含——① **BOM 处理**（磁盘写回带 BOM、编辑器分支不带——防双 BOM；hash 域 = stripBom + normalizeEOL 与 CLI 同）② **编辑器路径分支**（doc 已打开 → range 编辑，偏移经 `lfOffsetToRaw`——`docs/core/design/EDIT-HELPERS.md` §6）③ 工具壳 2026-09-08 自 `file-edit.mjs` 迁出（500 硬帽拆分——`file-edit.mjs` re-export）。
+
 ### 6.2 与 edit 的差异化定位（现行口径）
 
 D1–D3（edit 自获 `line:` 与模糊匹配）后，hashline_edit 的差异面收窄为**位置无关哈希寻址**一项——该差异点即其保留理由（§1 末）；路由段两端描述同此口径。
@@ -86,11 +88,13 @@ D1–D3（edit 自获 `line:` 与模糊匹配）后，hashline_edit 的差异面
 |---|---|---|
 | 描述面正文（参数说明 / 反模式） | 模型可见文本 | **提示词面 = 产品代码**——落点 `thincoder-core/tool-docs/hashline_edit.md` |
 | 旧档「阶段 2」所引 `EDIT-TOOLS-REVIEW.md` | 批次评估档 | 一次性批次材料——已归档 CLI 树 `_archive/`（参照历史） |
+| VSC 档（`thincoder-vscode/docs/design/HASHLINE-EDIT.md`）的批次材料 / 变更记录 | 一次性材料 + 历史流水 | VSC 差异面已并 §6.1（VSC 端差异块）；批次档承载 |
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **96 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **101 行**（根层 · as-of 2026-09-15 批 8 实测）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
 - 2026-09-15（**B 式迁移轮 · 第 1 批**）：建档——`thincoder-cli/docs/design/HASHLINE-EDIT.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；坐标改写为现状路径；批次材料 / 状态行 / 变更流水不并（§8）。
+- 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：§6.1 增 **VSC 端差异块**（BOM 处理 / 编辑器路径分支 / 500 硬帽拆分史）；§8.2 登记 VSC 源档批次材料。

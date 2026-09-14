@@ -59,6 +59,13 @@
 - **N2**：两端（CLI `context.mjs` + VSC 对应 compact 模块）一致落地，两端 prompts byte-identical、有比对测试。
 - **N3**：轮末摘要失败不得阻塞 / 影响 runAgent 返回（静默跳过，原始历史保留）。
 
+### 4.3 VSC 端条目（并入 · 2026-09-15 批 8 · 自 `thincoder-vscode/docs/requirements/CONTEXT-COMPACTION.md`）
+
+语义同源——VSC 档 F-K1–F-K6 / N-K1–N-K4 与 §4.1 逐条同义（不重并）；**VSC 独有条目** = **F-K7 压缩可见性（本端）**：
+回调链 onCompressStart → onCompress / onCompressFail → webview `compress` 消息四态（start / done / fallback / failed）渲染至 `#compress-status` 状态行（仅生命周期可见——摘要正文不进前端）。坐标（实核）＝ `thincoder-vscode/src/compact.mjs:18,28,31,115`
+（THRESHOLD_FRACTION 0.60 / KEEP_HEAD 0 / COMPRESS_FAILURE_LIMIT 3 / SUMMARIZE_PROMPT）+ `src/extension/panel-callbacks.mjs:144-152`（compress 回调接线）。端差 = 呈现面（webview 状态行四态 vs TUI 压缩面板）；
+提示词（`SUMMARIZE_PROMPT`）语义同源、各端原文自持。**测试缺口（发现即报）**：VSC `test/` 对压缩面零专属用例（as-of 2026-09-12 全扫零命中）——补测触发 = 该面下次被触碰。
+
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）
 
 | 旧档节 | 内容 | 何故不并 |
@@ -67,8 +74,10 @@
 | 「来源：2026-09-10 自 `../design/CONTEXT-COMPACTION.md` 抽取」注 | 拆分来源指针 | 时点材料——需求已归位到本档 |
 | 「状态：已实现」行 | 状态标记 | 时点状态——归批次档 / 台账 |
 | 文末变更记录（2026-09-11 修订注） | 历史叙述 | 现行语义已在条目内（F3 括注） |
+| VSC 仓档（`requirements/CONTEXT-COMPACTION.md`）的「变更记录」与对位档头 | 一次性材料 + 历史流水 | VSC 独有条目 / 端差面已并 §4.3（2026-09-15 批 8）；批次档承载 |
 
 ## 变更记录
 
 - 2026-09-13：建档——自 `docs/core/requirements/CORE-UNIFICATION.md` 拆分（来源：§2 F11 / F6 回指）+ 设计档 `CONTEXT-COMPACTION.md`（§2.1 #162–#164 派生）；**无新增需求**。
 - 2026-09-14（**B 轮并入 · 第 3 批**）：新增 §4 **需求条目**（原 §8.1 压缩体验 F1–F4 + 原 §9.2 探索摘要 F1–F3 / N1–N3——自 `thincoder-cli/docs/requirements/CONTEXT-COMPACTION.md` 逐节比对后并入需求正文；**编号与文本承旧档**）+ §5 **不并项与历史沿革**；**本档新增需求 0**（纯回填）；首部加需求条目面指针一行。
+- 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：新增 §4.3 **VSC 端条目**（F-K7 压缩可见性四态 + 端差登记——自 `thincoder-vscode/docs/requirements/CONTEXT-COMPACTION.md` 并入；语义同源不重并）；§5 登记 VSC 档批次材料；**本档新增需求 0**（纯回填）。

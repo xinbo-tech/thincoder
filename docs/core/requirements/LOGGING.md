@@ -63,6 +63,10 @@
 - **NF-L3 敏感字段零落盘**：字段名精确黑名单（`apiKey` / `designToken` / `password` / `secret` / `token`，大小写不敏感 + 防御性 `authorization` / `proxy` / `proxyUri`）+ 内容只扫密钥形态——工具不记 args——URL 不入事件。
 - **NF-L4**：保留窗口最近 1 天（以文件名日期当日结束为龄基准——今天+昨天保留）。
 
+### 4.4 VSC 端条目（并入 · 2026-09-15 批 8 · 自 `thincoder-vscode/docs/requirements/LOGGING.md`）
+
+语义同源——VSC 档 F1–F7 / N1–N5 与 §4.1–§4.3 逐条同义（不重并；共享 `~/.thincoder/logs/` 同格式同事件面已载 §4.2 F-L6）；VSC 端坐标（实核）＝ `thincoder-vscode/src/log.mjs`——`_dead` 静默降级（`:46` / `:63` / `:137`）· `THINCODER_LOG_DIR` 测试隔离（`:51`）· `NODE_TEST_CONTEXT` 门（`:64`）· 每进程每日首写机会式清理（extension host 长驻兜底）。共享目录与格式 = 两端镜像实现（F6）。
+
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）
 
 | 旧档节 | 内容 | 何故不并 |
@@ -70,8 +74,10 @@
 | 各条内的实现级坐标与常量（`THINCODER_LOG_DIR` / `NODE_TEST_CONTEXT` 门 / 写入点模块名） | 实现细节与测试隔离机制 | **设计面**——已入设计档 `docs/core/design/LOGGING.md` §6.2 / §6.4 |
 | 「来源：2026-09-10 自 `../design/LOGGING.md` 抽取」注 | 拆分来源指针 | 时点材料——需求已归位到本档 |
 | 「状态：已实现」行 | 状态标记 | 时点状态——归批次档 / 台账 |
+| VSC 仓档（`requirements/LOGGING.md`）的「变更记录」 | 一次性材料 + 历史流水 | VSC 坐标面已并 §4.4（2026-09-15 批 8）；批次档承载 |
 
 ## 变更记录
 
 - 2026-09-13：建档——自 `docs/core/requirements/CORE-UNIFICATION.md` 拆分（来源：§2 F11 / F6 回指）+ 设计档 `LOGGING.md`（§2.1 #42 派生）；**无新增需求**。
 - 2026-09-14（**B 轮并入 · 第 2 批**）：新增 §4 **需求条目**（总体需求 / F-L1–F-L7 / NF-L1–NF-L4——自 `thincoder-cli/docs/requirements/LOGGING.md` 逐节比对后并入需求正文；**编号与文本承旧档**）+ §5 **不并项与历史沿革**；**本档新增需求 0**（纯回填）；首部加需求条目面指针一行。
+- 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：新增 §4.4 **VSC 端条目**（`_dead` / `THINCODER_LOG_DIR` / 机会式清理坐标——自 `thincoder-vscode/docs/requirements/LOGGING.md` 并入；语义同源不重并）；§5 登记 VSC 档批次材料；**本档新增需求 0**（纯回填）。

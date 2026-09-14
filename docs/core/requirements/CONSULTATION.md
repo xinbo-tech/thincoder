@@ -59,6 +59,16 @@ VSC 侧对应面住 `src/advisor/main.mjs` + `src/advisor/*`（拆 `provider.mjs
 
 工具内置自动验证、模型间交叉通信、会诊子 agent 改文件、部分 settle 提前注入（**全 settle 才入 digest 流**）。
 
+### 4.4 VSC 端条目（并入 · 2026-09-15 批 8 · 自 `thincoder-vscode/docs/requirements/CONSULTATION.md`）
+
+语义同源——VSC 档 F-S1–F-S6 / N-S1–N-S4 与 §4.1 / §4.2 逐条同义（不重并）；**VSC 独有条目**：
+
+- **F-S7 面板可见性**：每 consultant 一条活动块（`sub:consult` 事件）+ 回复预览（≤8KB）随 answered 事件带出；冻结入流同 subagent / escalate / advisor——呈现接线 = `docs/vsc/design/WEBVIEW.md` §14（设计侧并入 · 批 7 §6.5）。
+- **N-S1 预算**：`consultTurns` 默认 40 + 墙钟看门狗 `consultTimeoutMs` 600000ms（10min）——坐标（实核）＝ `thincoder-vscode/src/config-io.mjs:321-322`；判定权仍归主 agent（会诊 = 建议非门禁）。
+
+端差 = 呈现面（面板活动块 + 回复预览 vs TUI）+ 配置入口（Settings 面板 vs `/config`）。坐标（实核）＝ `thincoder-vscode/src/agent-tools/consult.mjs` · `config-consult.mjs`。
+**测试缺口（发现即报）**：VSC `test/` 对 `_consultSessions` / `runConsultChild` 直引零命中——既有间接回归 = `test/config-softfail.test.mjs` · `activity-flow.test.mjs` · `agent-lifecycle-singleton.test.mjs`。
+
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）
 
 | 旧档节 | 内容 | 何故不并 |
@@ -66,8 +76,10 @@ VSC 侧对应面住 `src/advisor/main.mjs` + `src/advisor/*`（拆 `provider.mjs
 | 「来源：2026-09-10 自 `../design/CONSULTATION.md` 抽取」注 | 拆分来源指针 | 时点材料——需求已归位到本档 |
 | 「状态：已实现」行 | 状态标记 | 时点状态——归批次档 / 台账 |
 | 「本档为需求权威；设计+测试见来源档」指句 | 指向旧设计档的关系注 | 设计面关系由本档首部互指行承载（`docs/core/design/CONSULTATION.md`） |
+| VSC 仓档（`requirements/CONSULTATION.md`）的「变更记录」与对位档头 | 一次性材料 + 历史流水 | VSC 独有条目 / 端差面已并 §4.4（2026-09-15 批 8）；批次档承载 |
 
 ## 变更记录
 
 - 2026-09-13：建档——自 `docs/core/requirements/CORE-UNIFICATION.md` 拆分（来源：§2 F11 / F6 / F12 回指）+ 设计档 `CONSULTATION.md`（§2.1–§2.4 · §3.1 A24 派生）；**无新增需求**。
 - 2026-09-14（**B 轮并入 · 第 3 批**）：新增 §4 **需求条目**（一句话 / 行为 / 范围边界——自 `thincoder-cli/docs/requirements/CONSULTATION.md` 逐节比对后并入需求正文；**编号与文本承旧档**）+ §5 **不并项与历史沿革**；**本档新增需求 0**（纯回填）；首部加需求条目面指针一行。
+- 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：新增 §4.4 **VSC 端条目**（F-S7 面板可见性 / N-S1 预算 + 端差登记——自 `thincoder-vscode/docs/requirements/CONSULTATION.md` 并入；语义同源不重并）；§5 登记 VSC 档批次材料；**本档新增需求 0**（纯回填）。

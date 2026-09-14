@@ -254,6 +254,16 @@ MCP 工具**动态展开**为独立原生工具（`{server}_{tool}` 前缀、完
 - **遗留值语义**：磁盘 `websearch.provider` 原样保留（零读取 / 零校验 / 零写回）；`settings` 工具类型表自动派生自 DEFAULTS——键移除即脱表（**未知键原样** = 既有通用语义，零特判）。
 - **关键决策**：D-1 选型 = 移除 · D-2 不做遗留值剥离 / 迁移 / 写回（剥离需动启动路径，收益仅内存洁癖）· D-3 不加校验 / 特判 · D-4 VSC 面同批收口（CLI 删、VSC 继续播种 = 假收口）· D-5 未来衔接（DeepSeek 端点批以完整信息设计选择面）· D-6 工具描述文本零改。**UI / 交互决策：无**（config 键处置；VSC 面板 provider 从未渲染；CLI TUI 无 websearch provider 入口）——**无 open 项**。
 
+### 6.11 VSC 端适配增强（并入 · 2026-09-15 批 8 · 自 `thincoder-vscode/docs/design/TOOLS.md` §3 / §8）
+
+VS Code 端在 extension host 内运行的**端独有增强**（CLI 无对应面——端差登记，不归核）：
+
+- **编辑器路径**：write / edit 对已打开文档经 **WorkspaceEdit** 应用（undo 集成）后立即保存（`applyEditorEdit` / `applyEditorRangeEdit`——`thincoder-vscode/src/tools/shared.mjs`）；`getOpenDoc` win32 盘符大小写归一（防 split-brain）；range 偏移经 `lfOffsetToRaw` 映射回 CRLF 原文（细则 = `docs/core/design/EDIT-HELPERS.md` §6 VSC 面）。
+- **lsp（VS Code 原生）**：语言服务直用（`executeDefinitionProvider` 等 + `languages.getDiagnostics`）——零自起进程（对端 CLI = 按需 spawn LSP server，§6.4）。
+- **bash**：继承宿主 shell 环境；`runInterruptible` spawn（非 execSync——不阻塞 extension host 事件循环）+ Stop / 超时经 `killProcessTree` 整树杀（`/T /F` 达孙进程）。
+- **权限审批面**：webview 逐工具弹窗 + 批合并询问（`permission-gate.mjs` / `batchPermissionGate`）+ 逐项 diff 预览；子代理（depth>0）审批卡（归属 `<child key> · <tool>`——`makeChildPermission`）+ Stop 释放挂起门（abort → resolve(false)/deny，循环不悬挂——接线 = `docs/core/design/AGENT-LOOP.md` §6.18）。
+- **描述装载面**：VSC 描述内嵌 `.mjs`（`DESC()`——`thincoder-vscode/src/tools/shared.mjs:15`）；CLI 为 `tool-docs/*.md`（§6.2 已列）——25 档随扩展发布（`.vscodeignore` 不排除 `src/**/*.md`——打包面 N6 需求侧承载）。
+
 ## 7. 并入的关键决策记录（含否决备选）
 
 | # | 决策 | 理由 / 否决备选 |
@@ -266,6 +276,7 @@ MCP 工具**动态展开**为独立原生工具（`{server}_{tool}` 前缀、完
 | D-TO6 | 无 UI 时降级形态按**端注入**（question / bash terminal 参数 / lsp 径） | 无 UI 抛错（CLI）与降级原生 UI（VSC）是结构性端差——以注入承载，不排除出核 |
 | D-TO7 | 逐工具动作集 / 校验取**并集或一侧**（见裁决行与须裁条目） | 各工具差异逐条裁决（如 timer 补校验、plan 未知 action 报错、task 过滤 + 截断）——行为变更须逐条登记 |
 | D-TO8 | `websearch.provider` 死键 = **移除** | 死键无消费方、零行为变更、单一权威源负担最小；否决接线为后端选择 · 保留现状（见 §6.10） |
+| D-TO9 | VSC 适配增强 = **端差登记入 §6.11**（编辑器 / 语言服务 / 审批面 / 描述装载） | 机制归核 + 端特有面注入（D-TO6 同族）——零归核、零复制（D2）；CLI 面已并 §6.1–§6.10 |
 
 ## 8. 不并项与历史沿革
 
@@ -291,6 +302,8 @@ MCP 工具**动态展开**为独立原生工具（`{server}_{tool}` 前缀、完
 | §11.6 验收标准 AC-1–AC-7 · §11.7 用例表 T1–T8 + 「扫描枚举」注 | 验收与用例（含扫描器形态枚举） | **一次性批次材料**——测试资产归测试层 |
 | §11.8 边界（本批不做） | 单批边界声明 | 批次语境——现行边界已入 §6.10 |
 | §3 hooks / undo 快照的执行细节 | 实现面细节 | 机制要点已入 §6.3；检查点 / hooks 权威归各自板块 |
+| VSC 档（`thincoder-vscode/docs/design/TOOLS.md`）各批次节（§11 / §12 选型 · 契约 · 用例表 · AC 表） | git `--only` 镜像 / 描述外部装载的批次材料与验收表 | **一次性批次材料**——结论已入 §6.7（git 路径面）/ §6.11（描述装载面）；批次档承载 |
+| VSC 档「状态行 / 变更记录」 | 时点状态 + 逐批流水 | 时点材料 / 历史叙述——归台账 / 本档变更记录 |
 
 ### 8.3 需求侧（已并入本层需求档）
 
@@ -298,7 +311,7 @@ MCP 工具**动态展开**为独立原生工具（`{server}_{tool}` 前缀、完
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **317 行**（B 轮并入前 151 行；并入前即已近 300 行软线）——**超 300 行软线**（未超 500 硬限）⇒ 须拆分规划。
+**实测行数**：本档 **330 行**（批 8 并入后；B 轮并入前 151 行）——**超 300 行软线**（未超 500 硬限）⇒ 须拆分规划。
 
 | # | 拆分面 | 去向 | 状态 |
 |---|---|---|---|

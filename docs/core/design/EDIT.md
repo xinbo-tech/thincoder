@@ -73,6 +73,10 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 | 描述面（模型可见） | `thincoder-core/tool-docs/edit.md` | 在位（`DESC()` 加载） |
 | VSC 对位实现 | `thincoder-vscode/src/tools/file-edit.mjs:78`（`edit`）· `edit-diff.mjs` · `edit-batch` 等价档（`edit-line-params.mjs` / `edit-fuzzy-match.mjs`） | 同机制 · 独立实现 |
 
+**VSC 端差异（并入 · 批 8）**：① 描述机制——VSC 无 `DESC()` md 描述（`file-edit.mjs` editTool 对象内嵌 description——与 CLI `tool-docs/edit.md` 语义一致）；
+② 编辑器路径——doc 已打开 → WorkspaceEdit range 替换（定位偏移与 `doc.positionAt` 同坐标系——`lfOffsetToRaw` 把 LF 域偏移映射回 CRLF 原文，见 `docs/core/design/EDIT-HELPERS.md` §6）；③ 测试面——VSC 侧 30 用例
+（`thincoder-vscode/test/edit-tool-improvement.test.mjs`：删行形态 / 空串拒 / normalize 逐字同算法 / 批量混用行号+内容条目）。
+
 ## 7. 测试
 
 `thincoder-cli/test/edit-tool-improvement.test.mjs`（**33 用例——29 快 + 4 slow**：删行形态全路径 / 显式空串拒含 `replace_all` / normalize 弯引号命中 + 单遍映射单元 / 防误匹配 / 批量删行 + 模糊端到端）；VSC 侧同名档 `thincoder-vscode/test/edit-tool-improvement.test.mjs`。
@@ -106,11 +110,13 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 |---|---|---|
 | 旧档「阶段 2 预告（EDIT-TOOLS-REVIEW.md）」相关注记 | 批次评估/预告 | 一次性批次材料；机制已落（§3–§5）——评估档归 CLI 树 `_archive/` |
 | 描述面正文（Routing / 反模式） | 模型可见文本 | **提示词面 = 产品代码**——落点 `thincoder-core/tool-docs/edit.md` |
+| VSC 档（`thincoder-vscode/docs/design/EDIT.md`）的批次材料（选型 / 用例表 / AC 表 / 变更记录） | 一次性材料 + 历史流水 | VSC 差异面已并 §6（VSC 端差异块）；批次档承载（D2） |
 
 ## 10. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **116 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **123 行**（根层 · as-of 2026-09-15 批 8 实测）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
 - 2026-09-15（**B 式迁移轮 · 第 1 批**）：建档——`thincoder-cli/docs/design/EDIT.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；旧结构编号统一为本文档节号；坐标改写为现状路径（`thincoder-core/tools/{edit-diff,edit-batch,file}.mjs` · VSC `file-edit.mjs`）；批次材料 / 状态行 / 变更流水不并（§9）。
+- 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：§6 增 **VSC 端差异块**（内嵌描述机制 / WorkspaceEdit 编辑器路径 / 30 用例）；§8.2 登记 VSC 源档批次材料；坐标实核。

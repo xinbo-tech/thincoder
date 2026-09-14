@@ -71,6 +71,18 @@ MCP（Model Context Protocol）客户端把外部 MCP server 的工具**动态�
 - 网关式 `mcp` 工具已废弃（从 builtinTools 移除，无残留引用）——不做「连接→列举→调用」三层路由。
 - 不做 MCP server 的托管 / 编排（只管客户端连接与展开）。
 
+### 4.5 VSC 端条目（并入 · 2026-09-15 批 8 · 自 `thincoder-vscode/docs/requirements/MCP.md`）
+
+语义同源——VSC 档 F-M1–F-M6 / N-M1–N-M5 与 §4.1–§4.3 逐条同义（不重并）；**VSC 端差（登记）**：
+
+| 面 | VSC 端 | 端差 |
+|---|---|---|
+| 配置 / 连接管理入口 | Settings 面板 MCP 页（[Add] / [Edit] / [Test] / [Reconnect]——`thincoder-vscode/src/config-mcp.mjs:12-63` · `src/extension/panel-mcp.mjs:8-68`） | 对端 = `/mcp` 表单命令——本端**无命令面**（F-M3 范围边界） |
+| 配置重读 | 每轮 `loadRaw` 即磁盘（下轮装配生效） | 对端有磁盘重读菜单面 |
+| 展开机制 / schema / 三 transport / 直调 | 同款（设计侧并入 · 批 7 `docs/core/design/MCP.md` §6.10） | 无实质差（语义同源、各端独立实现） |
+
+探活零副作用 = `src/mcp/index.mjs:129`（一次性探活、不进注册表、探完必关）。
+
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）
 
 | 旧档节 | 内容 | 何故不并 |
@@ -78,8 +90,10 @@ MCP（Model Context Protocol）客户端把外部 MCP server 的工具**动态�
 | 各条「说明」内的接口 / 字段级细节（`tools/call` 参数形态、传输实现分派） | 实现级机制 | **设计面**——已入设计档 `docs/core/design/MCP.md` §6 |
 | 「来源：2026-09-10 自 `../design/MCP.md` 抽取」注（§1.1 定位 / §1.2 当前态） | 拆分来源指针 | 时点材料——需求已归位到本档 |
 | 「状态：**现行**」行 | 状态标记 | 时点状态——归批次档 / 台账 |
+| VSC 仓档（`requirements/MCP.md`）的「变更记录」与对位档头 | 一次性材料 + 历史流水 | VSC 端差面已并 §4.5（2026-09-15 批 8）；批次档承载 |
 
 ## 变更记录
 
 - 2026-09-13：建档——自 `docs/core/requirements/CORE-UNIFICATION.md` 拆分（来源：§2 F11 / F6 回指）+ 设计档 `MCP.md`（§2.1 #81 · §2.2 #144–#148 派生）；**无新增需求**。
 - 2026-09-14（**B 轮并入 · 第 2 批**）：新增 §4 **需求条目**（总体需求 / F1–F5 / N1–N4 / 范围边界——自 `thincoder-cli/docs/requirements/MCP.md` 逐节比对后并入需求正文；**编号与文本承旧档**）+ §5 **不并项与历史沿革**；**本档新增需求 0**（纯回填）；首部加需求条目面指针一行。
+- 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：新增 §4.5 **VSC 端条目**（面板入口 / 配置重读 / 三面端差表——自 `thincoder-vscode/docs/requirements/MCP.md` 并入；语义同源不重并）；§5 登记 VSC 档批次材料；**本档新增需求 0**（纯回填）。

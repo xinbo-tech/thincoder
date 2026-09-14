@@ -56,6 +56,8 @@ hunk 按**上下文 / 删除行定位，非行号**——但上下文必须与�
 | 描述面（模型可见） | `thincoder-core/tool-docs/apply_patch.md` | 在位（`DESC()` 加载） |
 | VSC 对位实现 | `thincoder-vscode/src/tools/more-file.mjs:239`（`apply_patch`） | 同名机制 · 独立实现 |
 
+**VSC 端差异（并入 · 批 8）**：VSC 端 `more-file.mjs:239`（`apply_patch`）——同机制独立实现；EOL 写回 / 新建随目录多数派（F1 / F2）同口径（`docs/core/design/EDIT-HELPERS.md` §4）；**无编辑器路径分支**（apply_patch = 整文件域、不进编辑器 range——见 §1）；宽容格式三处（§2）双端同。
+
 ## 7. 并入的关键决策记录（含否决备选）
 
 | # | 决策 | 理由 / 否决备选 |
@@ -83,11 +85,13 @@ hunk 按**上下文 / 删除行定位，非行号**——但上下文必须与�
 |---|---|---|
 | 描述面正文（参数描述全文） | 模型可见文本 | **提示词面 = 产品代码**——落点 `thincoder-core/tool-docs/apply_patch.md` |
 | delete 工具语义 | 删除面契约 | 非编辑工具——归 `docs/core/design/TOOLS.md` §6.7 逐工具契约 |
+| VSC 档（`thincoder-vscode/docs/design/APPLY-PATCH.md`）的批次材料 / 变更记录 | 一次性材料 + 历史流水 | VSC 差异面已并 §6.1（VSC 端差异块）；批次档承载 |
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **93 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **98 行**（根层 · as-of 2026-09-15 批 8 实测）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
 - 2026-09-15（**B 式迁移轮 · 第 1 批**）：建档——`thincoder-cli/docs/design/APPLY-PATCH.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；坐标改写为现状路径（`thincoder-core/tools/patch.mjs` · VSC `more-file.mjs`）；批次材料 / 状态行 / 变更流水不并（§8）。
+- 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：§6.1 增 **VSC 端差异块**（同机制 / EOL 同口径 / 无编辑器路径分支）；§8.2 登记 VSC 源档批次材料。

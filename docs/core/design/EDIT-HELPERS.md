@@ -67,6 +67,12 @@ hashline_edit 读入含 U+FFFD 时追加（**不阻断**）：
 - **VSC**：helper 语义同、各自实现；另有 `lfOffsetToRaw`（VS Code 编辑器路径 range 偏移——**端专属**，见 VSC 树档）。
 - **消费点**：edit（失败接 `findCandidates` / 写回 `joinWithEol`）· hashline_edit（写回 + U+FFFD 警告）· apply_patch（写回 + 新建 `majorityEol`）· write（覆盖按原行尾 F1、新建按 `majorityEol` F2）。
 
+**VSC 端差异（并入 · 批 8 · 编辑器路径面）**——VSC 端 `thincoder-vscode/src/tools/shared.mjs` 另有编辑器路径专属 helper `lfOffsetToRaw`
+（CLI 无此路径——坐标系 = LF 域偏移 → CRLF 原文偏移）：非 replace_all 走 range 编辑偏移映射（保留 undo 粒度 / 光标 / 折叠 / 大文件性能——否决整文档替换）·
+replace_all 补 EOL 还原（不静默丢 CRLF）· hash 域统一（stripBom + normalizeEOL——CRLF 尾 `\r` / BOM 首行不哈希失配）· hashline_edit BOM 还原（磁盘写回带 BOM、编辑器分支不带——防双 BOM）·
+getOpenDoc win32 盘符大小写归一（消除 split-brain）· insert_after 编辑器分支换行符按 fileEol（消除 `$` 锚失配与混合 EOL 注入）。消费点 = `{file-edit,hashline-edit,more-file}.mjs`。
+本仓检出 EOL 约定（`.gitattributes` = `* text=auto eol=lf`）与 CLI 仓逐字节同源（各端自持）。
+
 ## 7. 并入的关键决策记录（含否决备选）
 
 | # | 决策 | 理由 / 否决备选 |
@@ -93,13 +99,15 @@ hashline_edit 读入含 U+FFFD 时追加（**不阻断**）：
 
 | 旧档面 | 内容 | 何故不并（去向 / 触发） |
 |---|---|---|
-| VSC 编辑器路径专属面（`lfOffsetToRaw` 细节） | 端专属机制 | VSC 文档面按 VSC 树判定（本批不含）——触发 = VSC 轮 |
+| VSC 编辑器路径专属面（`lfOffsetToRaw` 细节） | 端专属机制 | **已并入（2026-09-15 批 8）**——§6 VSC 端差异块（六条编辑器路径差异逐条登记）；VSC 源档留参照历史 |
+| VSC 档 §5 之外的批次材料 / 变更记录 | 一次性材料 + 历史流水 | 批次档承载（D2） |
 | 工具描述文本 | 模型可见文本 | **提示词面 = 产品代码**——落点 `thincoder-core/tool-docs/*.md` |
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **105 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **114 行**（根层 · as-of 2026-09-15 批 8 实测）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
 - 2026-09-15（**B 式迁移轮 · 第 1 批**）：建档——`thincoder-cli/docs/design/EDIT-HELPERS.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；「现行为 → 改后」对照矩阵（左列已废）移入 §8.1 历史沿革；坐标改写为现状路径；批次材料 / 状态行 / 变更流水不并（§8）。
+- 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：§6 增 **VSC 端差异块**（`lfOffsetToRaw` 六条编辑器路径差异 + `.gitattributes` 检出 EOL 约定）；§8.2「触发 = VSC 轮」行销项。

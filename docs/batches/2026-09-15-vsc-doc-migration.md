@@ -459,6 +459,70 @@ J 个 = 各档「不并项与历史沿革」节内逐条登记（旧档节 + 何
 
 **变更记录**：- 2026-09-15（**B 式迁移轮 · VSC 第 7 批 = §8B 并入批 2** · eng-designer）：§2 append——§8B 并入第二批（core 六设计 + RELEASE 需求 + ADVISOR-CONVERGENCE 需求 + PHILOSOPHY 销项）+ 台账收口（26 = 8 + 8 + 8 + 2）+ 三闸全绿（锚 0 · 宽度 0 新增 · 台账 0）+ INVENTORY 越线收回（533 → 490）。
 
+**本批任务（B 式迁移轮 · VSC 第 8 批 = §8B 并入批 3 · 6 条）**：§8B 并入清单第三批逐条对账合并 ✓ + 台账 `VSC-MIGRATION-INVENTORY.md` §8B 收口 ✓（非 PROVIDER 条目清零）。
+
+**范围内（本批覆盖的需求）**：F-M9（并入面逐条：内容 → 目标 core 档 → 落节 → 实核）· F-M4（落点档不含批次材料 + (d) 类不并逐项入各档「不并项」节）· F-M5（坐标改现状路径 + `file:line` 实核）· F-M3（逐档报「源档 → 落点」）· F-M8（§8B 收口 + 小计闭合）· N-M2 / N-M3 / N-M5（三闸 + 写域 + 逐档 ≤500）。批 1–7 已闭合者不重开。
+
+**① 取材清单（§8B 取 6 条 · 逐条实核目标现态）**：
+
+| 清单号 | 源档（VSC 树·一字未改） | 实核（目标 core 档现态） | 处置 |
+|---|---|---|---|
+| 1 | `design/AGENT-LOOP.md`（1571） | core 档 472 行（批 5 拆分后）；§6 = CLI 并入面、无 VSC 接线节；§3.1 `:135` 已登记 A7 未并入项 | **并入**（§6.18 VSC 侧接线面——挂起 digest / eng-coder 协议 / 活动显示 / child gate 四接线面） |
+| 13 | `design/{EDIT,EDIT-HELPERS,HASHLINE-EDIT,INSERT-AFTER,APPLY-PATCH,WRITE}.md`（79/72/45/35/41/36） | core 六档 §6 已有 VSC 对位行但缺端差细节；EDIT-HELPERS §8.2 明标「触发 = VSC 轮」 | **并入**（各档 §6「VSC 端差异」块——编辑器路径 / range 偏移映射 / 无 dirty 护栏 / BOM / 内嵌描述） |
+| 14 | `design/TOOLS.md`（382） | core 档 317 行；§6.10 止于 websearch 死键；VSC 适配增强未并 | **并入**（§6.11 VSC 端适配增强——编辑器 / lsp / bash / 审批面 / 描述装载） |
+| 20 | `requirements/SUBAGENT-OBSERVE-SEND.md`（41） | core req 档 §4.7 已并 CLI 版（22 行）；VSC 端差未并 | **并入**（§4.9 F-O3 / F-O4 + 坐标） |
+| 21 | `requirements/ASYNC-RESULT-CONTAINER.md`（45） | core req 档 §4.8 已并 CLI 版（27 行）；VSC 端差未并 | **并入**（§4.9 F-A6 + 端差：pending 5 族 / history 双查询） |
+| 23 | `requirements/{CHECKPOINT,CONSULTATION,CONTEXT-COMPACTION,MCP,SESSION,TOOLS,LOGGING}.md`（49/46/46/46/52/47/37） | 七 core req 档 §4 均为 CLI 并入面；VSC 独有条目 / 端差未并 | **并入**（各档 §4「VSC 端条目」节——语义同源不重并 + 端差登记 + 坐标 + 测试缺口） |
+
+**跳过并写明**：#4 / #7（目标 = PROVIDER 两档——并行实例在写（peer_instances 在册 pid 12984）· 让先到者不抢）· #18 / #25（批 6 已销项 D3 / D2 不重取）。
+
+**② 并入逐节（源节 → 目标落位）+ 行数前 → 后（终值实测）**：
+
+| 目标档 | 源档 | 落位 | 行数 前 → 后 |
+|---|---|---|---|
+| `docs/core/design/AGENT-LOOP.md` | 旧档 §7–§8 / §10 / §18（挂起 digest · 交付协议 · 活动显示 · child gate） | §6.18 VSC 侧接线面（四接线面表）+ §7 D-AL24/25 + §8.2 登记 | 472 → 491 |
+| `docs/core/design/TOOLS.md` | 旧档 §3 / §8（VS Code 适配增强 · 权限审批） | §6.11 VSC 端适配增强 + §7 D-TO9 + §8.2 登记 | 317 → 330 |
+| `docs/core/design/{EDIT,EDIT-HELPERS,HASHLINE-EDIT,INSERT-AFTER,APPLY-PATCH,WRITE}.md` | 六旧档（VSC 差异面） | 各档 §6「VSC 端差异」块 + §8.2 登记 / 销项 | 116/105/96/97/93/88 → 123/114/101/103/98/93 |
+| `docs/core/requirements/AGENT-LOOP.md` | 旧档两需求（VSC 仓版） | §4.9 VSC 端对位与端差（两块）+ §5 登记 | 180 → 187 |
+| `docs/core/requirements/{CHECKPOINT,CONSULTATION,CONTEXT-COMPACTION,MCP,SESSION,TOOLS,LOGGING}.md` | 七旧档（VSC 端条目面） | 各档 §4「VSC 端条目」节 + §5 登记 | 88/74/75/85/108/123/77 → 97/86/84/100/118/190/84（TOOLS req 含并行线 §4.7 TTY 面——非本批写入） |
+| `docs/vsc/design/VSC-MIGRATION-INVENTORY.md` | —（台账面） | §8B 六行标注 + 批 8 收口 · §9.8 · §10 批 8（并入 §10 批 7 归并压缩）· §13 · §15 | 491 → 496 |
+
+**③ §8B 收口（小计闭合 · D3）**：26 = **8（批 6）** + **8（批 7）** + **6（批 8 已并入——#1 / #13 / #14 / #20 / #21 / #23）** + **2（未并 · 待并行线——#4 / #7 = PROVIDER 目标）** + **2（裁定销项——#18 D3 · #25 D2）** ✓。**§8B 非 PROVIDER 条目清零**（剩 2 条 #4 / #7）。
+
+**④ 三闸读数（改后 · 实跑）**：`doc-anchors --domain .`（125 档）→ 候选 7927 · **悬空 0** · `OK(V5)` · exit 0 ✓
+（本批曾自产 0 处 V5-A 悬空——坐标全量按现状落笔）；`check-doc-width` → **OK（宽度）**：403 文件无 >300 字符单行 · **一致性 V1/V2/V3 新增违规 0** · 基线 0 · exit 0 ✓
+（本批曾自产 9 行 >300 非表格行 + 1 处字面 `\n`——**已当场折行 / 修正**：零语义）；`check-ledger` → 两档 `OK` · **0 处违规** · 基线 0 · exit 0 ✓。
+`git status` 本批 = **17 档**（16 目标 core 档 + INVENTORY）⊆ 写域 ✓（另 `PHILOSOPHY.md` / `TESTING.md` / `COMPETITIVE_ANALYSIS.md` / `reconcile-lookup.mjs` / `TTY-DRIVE.md` = **非本批写入**——并行线）。
+
+**⑤ 发现（逐条 · 不静默）**：
+
+- **① 并行线同批竞争（已实证）**：CLI 实例（pid 12984）在本批窗口内写入 `docs/core/requirements/TOOLS.md`（新增 §4.7 TTY 驱动能力 57 行）——与本批 §4.6 零重叠；其 TTY-DRIVE 批次档 V3 违规在收口前已自消。TOOLS req 终值 190 行含并行线内容（如实登记）。
+- **② 坐标漂移 0 类**——本批引用的 VSC 坐标（`subagent-actions.mjs:276` · `child-permission.mjs:17,27` · `subagent-spawn-gate.mjs:124` · `compact.mjs:18,28,31,115` · `log.mjs:46,51,64,137` 等）全部按现状实核落笔；唯一捕获 = 会诊预算常量现行住 `config-io.mjs:321-322`（旧档记 `setup.mjs:243-244`）——按现状改写。
+- **③ 台账越线收回**：INVENTORY 更新曾达 **539 行 > 500 硬限** ⇒ §10 批 7·批 8 两明细表**归并为汇总行**（明细完整保留于批次档 §2——D2）/ §12.6 验收标准随批 6 先例入批次档 §2（不居台账）/ $13 同步 → 压缩后 **496 行** ✓。
+- **④ 行数声明同步（D3）**：八设计档 §9 体量 + 台账 §13 均按终值实测更新（本次折行修复逐档同步）。
+- **⑤ 文档矛盾现况（如实报 · 非本批引入）**：`docs/batches/2026-09-15-TTY-DRIVE.md`（并行线批次档）V3 缺轮次行——观测一次（先红后自消）；core `requirements/{PHILOSOPHY,TESTING}.md` = 并行线未提交改动（非本批写域）。
+
+**⑥ 未决（真判不准）**：**无**——(a/b/c/d) 四类对账 + 归属皆可判。§8B 剩余 = #4 / #7（PROVIDER 目标——并行线完工后父侧另派）。
+
+**⑦ 交付表**：
+
+| # | 需求点 | 状态 | 交付物 |
+|---|---|---|---|
+| 1 | §8B 并入 ≤8 条 · 逐条实核（目标现态为准） | ✅ Done | 6 条并入（见 ①）——未照抄拟插节、均按目标现态落位 |
+| 2 | PROVIDER 目标条目本批跳过 | ✅ Done | #4 / #7 留待并行线完工（落笔时点实核——peer in flight，不抢） |
+| 3 | 逐节对账 (a)(b)(c) 并入 · (d) 入各档「不并项」节 | ✅ Done | 16 档均 (d) 类 / 批次材料逐条登记（含「触发 = VSC 轮」行销项 2 处） |
+| 4 | 坐标改现状路径 + `file:line` 实核 | ✅ Done | 全量实核 + 漂移 1 类按现状改写（发现②） |
+| 5 | 零 `T-` 形跨域用例号 · 逐档 ≤500 | ✅ Done | 16 档零字面跨域编号引（锚闸 0）；并入后 core 档 84–491 · 台账 496——均 ≤500 ✓ |
+| 6 | §8B 收口 + 剩余条数 + 小计闭合 | ✅ Done | 26 = 8 + 8 + 6 + 2 + 2（§8B 非 PROVIDER 清零）+ §9.8 + §10 批 8 + §13 |
+| 7 | 三闸（锚 0 / 宽度新增 0 / 台账 0）· `git status` ⊆ 写域 | ✅ Done | 见 ④（17 档 ⊆ 写域；并行线 5 项如实报） |
+| 8 | 不 commit · 不发起评审 · 写域外零写入 | ✅ Done | 未 commit；`thincoder-vscode/**` · `scripts/**` · `docs/cli/**` · 台账 · prompts 零写入 |
+
+**变更记录**：- 2026-09-15（**B 式迁移轮 · VSC 第 8 批 = §8B 并入批 3** · eng-designer）：§2 append——§8B 并入第三批 6 条（AGENT-LOOP / TOOLS 设计 + 编辑族六档 + AGENT-LOOP req（#20/#21）+ 七需求档（#23））+ 台账收口（26 = 8 + 8 + 6 + 2 + 2——非 PROVIDER 清零）+ 三闸全绿（锚 0 · 宽度 0 新增 · 台账 0）+ INVENTORY 越线收回（539 → 496）。
+
+> **补正（2026-09-15 · eng-designer · 回读核对 D6）**：上段发现③「$13 同步」系笔误——应为「§13 同步」（INVENTORY §13 体量按终值 496 同步）。侧文本语义零变化。
+
+> **折行注（2026-09-15 · eng-designer · 零语义）**：本段「④ 三闸读数」一行原 506 字符 >300 ⇒ 仅插换行（去空白后逐字节相同），文字一字未改——宽度闸恢复绿面（同批 1 §2 折行注先例）。
+
 ## §3 评审发现（评审子代理）
 
 _（待写）_

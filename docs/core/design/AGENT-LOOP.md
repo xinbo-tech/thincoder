@@ -381,6 +381,19 @@ Stop 置于收尾链**首部**（后续收尾步骤的任何异常不得吞掉�
 
 **常态化独立审计机制 = 不做**（机械论证：① 与「零额外 LLM」冲突（独立审计 = 新步骤 / 新 spawn）② 数据源无着（实况审计需轨迹 / 会话数据，轨迹默认关）③ 与既有条款语义重复——任一成立即否决）。评估证据（旧档 §19 全文）随旧档留参照历史。
 
+### 6.18 VSC 侧接线面（并入 · 2026-09-15 批 8 · 自 `thincoder-vscode/docs/design/AGENT-LOOP.md`）
+
+VSC 侧**接线**面（端装配 / 面板 / webview 呈现）——机制本体已并 §6.1–§6.17 + `AGENT-LOOP-SUBAGENT.md`；本节只登记**端侧接线事实**（不重复机制，D2）：
+
+| 接线面 | 端侧形态（实核） | 回指 |
+|---|---|---|
+| 挂起回合 digest | 面板驱动交互层：`panel._suspWake` 唤醒单槽 · `_turnState==="running"` busy 拒收（INPUT-LOCK——可录入禁发、Enter 拒发不排队）· settle 驱动 digest 轮 · 中止残余单槽消息按普通回合兜底执行（零丢失） | 机制核内形态 = §2.3（#184 注入面表）；消化面 = `AGENT-LOOP-SUBAGENT.md` §6.8；呈现 = `docs/vsc/design/WEBVIEW.md` §7.4 / §14 |
+| eng-coder 交付协议 | 本端闭环：async 缺省 · explore 受限审计（BLOCKING spawn-only + 审计预算 ≤6 · 任务书三要素机械追加）· token 门（`thincoder-vscode/src/agent-tools/subagent-spawn-gate.mjs:124` `authorizeEngCoderDesignToken`——`uuid:expiresAt` + TTL fail-closed）· 变更记账 `mergeChildMutations`（取消路径不合并——`thincoder-vscode/src/agent-tools/subagent-async.mjs:451`） | token 门机制权威 = `docs/core/design/ENGINEERING-MODE.md`；受限通道描述面 = `AGENT-LOOP-SUBAGENT.md` §6.7.6 |
+| 子代理活动显示 | webview 活动区：区驻留 → awaitingDigest → 消化归档落流（`#subagent-activity`）· 终态即时归档 | 呈现权威 = `docs/vsc/design/WEBVIEW.md` §14（C-2 / C-3 / C-8）——本档不复制 |
+| child permission gate | 子代理（depth>0）写操作走审批门：`makeChildPermission`（`thincoder-vscode/src/agent-tools/child-permission.mjs:27`——announce → ask → 清态）+ `childOwnerLabel`（`:17`——`escalate <model> #<id>` / `<role>#<id>`）· 三处 autoApprove 形参改模式继承（eng-coder 恒 true / 其余 `ctx.getAuto?.()`）· 卡释放三路（child abort / Stop / approve-all 连带 `permissionWithdrawn`）· 块头 `⏸` + 态词 `等待审批`（`webview/activity-view.js`） | §2.1 #166 裁决行 · 权限调度面 §6.4 · 呈现 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §6.2（批 2 按现状落笔） |
+
+（四面的机制 / 契约权威 = 本档 §2.3 / §6.4 / `AGENT-LOOP-SUBAGENT.md` + 工程模式板；VSC 源档 = 参照历史一字未改。）
+
 ## 7. 并入的关键决策记录（含否决备选）
 
 | # | 决策 | 理由 / 否决备选 |
@@ -408,6 +421,8 @@ Stop 置于收尾链**首部**（后续收尾步骤的任何异常不得吞掉�
 | D-AL21 | 子代理窗口复用主 agent 机制（`_historyWindow`） | 不另造第二套窗口实现 |
 | D-AL22 | 捕获 = 滞后水位截断（头 16K + 标记 + 尾 48K） | 消费面读 2K / 4K——头尾保真覆盖；否决「超限落盘全文 + 指针」（热路径 IO + 文件生命周期）·「环形窗口」（丢失「从哪开始」） |
 | D-AL23 | 释放点 = 注入完成后置空（三消费点同点 + 幂等守卫） | 池内窗口语义零变；否决「settle 时刻置空」（破坏未消化期 status / observe）·「不置空」（挂起期分钟级驻留） |
+| D-AL24 | VSC 侧接线面 = **只登记接线事实、不复制机制本体**（挂起 / 协议 / 呈现 / 权限门回指既有节） | 机制权威已单源（§2.3 / SUBAGENT 档 / WEBVIEW 档 / 工程模式板）——平行档 / 重复叙述 = 漂移源 |
+| D-AL25 | child permission gate **按现状并入**（C-2 契约——非「无此状态」） | 批 2 发现「审批态已实装」（activity-view.js ⏸ + 等待审批）——活档口径按现状（VSC 源档为参照历史） |
 
 ## 8. 不并项与历史沿革
 
@@ -440,10 +455,13 @@ Stop 置于收尾链**首部**（后续收尾步骤的任何异常不得吞掉�
 | §7.6 子代理 / 顾问人格逐字锚集 | coder / consult-base / advisor 四模板锚句 | 锚定稿源 → 已落**提示词正本**（`docs/core/design/prompts/` 同名槽位档） |
 | §18–§23 各节「用例表 / AC 表 / 受影响文件表」 | 逐批测试与文件清单 | **一次性批次材料**——文档分层纪律（不入长期档）；批次档承载 |
 | §23.3.2 轨迹面契约 | 单遍序列化 / 额度双层 / 在途上界 / 序号缓存 | 属**轨迹存储**板块（同上） |
+| VSC 档各节「用例表 / AC 表 / 受影响文件表 / 方案选型」（§12 / §15–§18） | 逐批测试 / 验收 / 文件清单与选型论证 | **一次性批次材料** + 决策结论已提炼（Q1–Q6 → 契约 C 系列已并 §6.18；KD 已入 D-AL24/25）——批次档承载 |
+| VSC 档「未决 / 待办状态行」+「变更记录」 | 时点状态行 + 逐批流水 | 时点材料——归台账 / 批次档；历史叙述——本档自有变更记录 |
+| VSC 档 §2 / §12 / §17（runAgent 主循环 · async 保真 · 上下文注入对齐） | VSC 侧实现细节叙述 | 与 §2.3 / `AGENT-LOOP-SUBAGENT.md` §6.7–§6.12 已并面同族（端差登记 = §6.18 表）——不重并（D2） |
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **472 行**（as-of 2026-09-15 批 5 实测，拆分后）——**≤500 硬限**；超 300 软线 ⇒ 拆分规划见下（主体拆分已落地）。
+**实测行数**：本档 **491 行**（as-of 2026-09-15 批 8 并入后实测）——**≤500 硬限**；超 300 软线 ⇒ 拆分规划见下（主体拆分已落地）。
 
 | # | 拆分面 | 去向 | 状态 |
 |---|---|---|---|
@@ -469,3 +487,4 @@ Stop 置于收尾链**首部**（后续收尾步骤的任何异常不得吞掉�
   来源 = `thincoder-cli/docs/design/AGENT-LOOP.md`（**旧档一字未改**——原地作参照历史）；首部加机制面指针一行。本档 161 → **670 行**。
 - 2026-09-15（**迁移批 · 第 5 批 · 并入与拆分 · eng-designer**）：**并入**——评审对象锚（旧档 §12.1）→ `AGENT-LOOP-SUBAGENT.md` §6.18 · 判定铁律 R1–R7（旧档 §12.2）→ 同档 §6.19 · 普通模式轻量审计（旧档 §8.1 后半 / §19）→ 本档 §6.17 · byte-identical 取消（旧档 §12.4）→ 并入 `PROMPT-SYSTEM.md` §6.4（均自 `thincoder-cli/docs/design/AGENT-LOOP.md`——旧档一字未改，留参照历史）。
   **拆分**——§6.7–§6.12 拆出至 `docs/core/design/AGENT-LOOP-SUBAGENT.md`（节号沿用；本档 **670 → 472 行**；引用逐处修复）；§6.16 指针表按现状收正（工程模式 / 评审收敛 / 测试 / 结果落盘 / 会诊飞刀 / 多实例指态）；§8.1 / §8.2 并入销项与指态收正；§9 拆分规划重写。
+- 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：新增 **§6.18 VSC 侧接线面**（挂起回合 digest / eng-coder 交付协议 / 子代理活动显示 / child permission gate——自 `thincoder-vscode/docs/design/AGENT-LOOP.md` 并入；坐标实核）；§7 D-AL24–25 · §8.2 登记 VSC 源档批次材料 · §9 体量更新。

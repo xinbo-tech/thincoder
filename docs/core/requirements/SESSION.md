@@ -93,6 +93,13 @@ N-S3 CLI 写出的槽文件 `history` 数组与旧实现同构（version 2 + his
 **范围边界（不做）**：不改槽 JSON 的 version / 字段形态 / 路径约定（VSC 兼容红线）；不改机器线（`contextHistory`）的压缩语义与保存策略；
 不做记录存储的跨端读取协议（VSC 读 sidecar——另案）；不做历史文件格式迁移（sidecar 只随本批新出现）；不改 `read_history` 跨会话 `path=` 的 JSON 读取路径与护栏。
 
+### 4.5 VSC 端条目（并入 · 2026-09-15 批 8 · 自 `thincoder-vscode/docs/requirements/SESSION.md`）
+
+语义同源——VSC 档 F-N1–F-N8 / N-N1–N-N5 与 §4.1–§4.4 逐条同义（不重并）；**VSC 端差（登记）**：① marker `END = "vscode"`——只写 `.manifest.vscode`、永不碰 `.cli`（认领面隔离）·
+② 历史分页步长 **200**（`HISTORY_PAGE_SIZE`——`thincoder-vscode/src/extension/history-window.mjs:18-22`，对端 20）· ③ 恢复呈现 = assistant 帧容器 + 嵌套工具卡（配对语义同源）·
+④ 冷 cwd 手动 GC 无 shell 通道（只接线自动残留 GC）· ⑤ 记录存储形态 = 本端零该机制（如实登记）· ⑥ `turnBusy()` 拒新会话 / 删除 / 切换 / 换项目（回合互斥）。坐标（实核）＝ `src/extension/session-slots.mjs`（400 行）· `session-io.mjs`（437 行）· `panel-session.mjs`（339 行）· `session-gc.mjs`。
+用例面 = `test/session-boot.test.mjs`（319 行 / 4 例）· `test/history-window.test.mjs`（192 行 / 8 例）· `test/history-restore.test.mjs`（237 行 / 9 例）· 集成 `test/integration/scenario-04-session-recovery.test.mjs`（140 行 / 5 例）。
+
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）
 
 | 旧档节 | 内容 | 何故不并 |
@@ -101,8 +108,10 @@ N-S3 CLI 写出的槽文件 `history` 数组与旧实现同构（version 2 + his
 | 各节「来源：批次 …」注 + 档首「迁移注记 + 移出清单」 | 批次来源指针与迁出记录 | 时点材料——批次档承载；迁出记录属历史留痕 |
 | §14.1 内的「设计档 §14.x」回指行 | 设计面指针 | 机制已入设计档（本档只留需求层）；指针形态随迁不逐条复制 |
 | 变更记录 | 逐批流水账 | 历史叙述——本档自有变更记录 |
+| VSC 仓档（`requirements/SESSION.md`）的「变更记录」与对位档头 | 一次性材料 + 历史流水 | VSC 端差 / 坐标 / 用例面已并 §4.5（2026-09-15 批 8）；批次档承载 |
 
 ## 变更记录
 
 - 2026-09-13：建档——自 `docs/core/requirements/CORE-UNIFICATION.md` 拆分（来源：§1 边界原则 · §3 N1–N8 回指）+ 设计档 `SESSION.md`（§2.1 #89 · §2.2 #123–#127 · §3.1 A14 派生）；**无新增需求**。
 - 2026-09-14（**B 轮并入 · 第 2 批**）：新增 §4 **需求条目**（会话恢复与端分离 / 运行环境自我感知 / 跨会话检索与消歧 / 长会话记录内存有界——自 `thincoder-cli/docs/requirements/SESSION.md` 逐节比对后并入需求正文；**编号与文本承旧档**）+ §5 **不并项与历史沿革**；**本档新增需求 0**（纯回填）；首部加需求条目面指针一行。
+- 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：新增 §4.5 **VSC 端条目**（六条端差登记 + 坐标 + 用例面——自 `thincoder-vscode/docs/requirements/SESSION.md` 并入；语义同源不重并）；§5 登记 VSC 档批次材料；**本档新增需求 0**（纯回填）。

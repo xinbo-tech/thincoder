@@ -61,6 +61,10 @@ insert_after 定位基于行号 / 正则；文件若在 `read` 之后被别的�
 
 旧档把 dirty 容器记在工具档本体坐标上；现状 = 记账面独立成档（`thincoder-core/tools/write-path.mjs`，`file.mjs:43` re-export）——跨工具（write / insert_after / 编辑族）共用。
 
+### 6.3 VSC 端差异（并入 · 批 8）
+
+VSC 端 `thincoder-vscode/src/tools/more-file.mjs:12`（`insert_after`）——① **无 dirty 护栏**（结构性端差——行号漂移靠模型自觉 re-read，见 §4）；② **编辑器分支**：doc 已打开 → 换行符按 fileEol（normalizeEOL + 消除 `$` 锚失配与混合 EOL 注入——`docs/core/design/EDIT-HELPERS.md` §6）；③ 无 `DESC()` md 描述（内嵌）；行尾写回与 CLI 同（F1——`EDIT-HELPERS.md` §4）。
+
 ## 7. 并入的关键决策记录（含否决备选）
 
 | # | 决策 | 理由 / 否决备选 |
@@ -86,12 +90,13 @@ insert_after 定位基于行号 / 正则；文件若在 `read` 之后被别的�
 | 旧档面 | 内容 | 何故不并（去向 / 触发） |
 |---|---|---|
 | 描述面正文 | 模型可见文本 | **提示词面 = 产品代码**——落点 `thincoder-core/tool-docs/insert_after.md` |
-| VSC 侧 dirty 相关叙述 | 端差细节 | VSC 文档面按 VSC 树判定（本批不含）——触发 = VSC 轮 |
+| VSC 侧 dirty 相关叙述 | 端差细节 | **已并入（2026-09-15 批 8）**——§6.3 + §4（结构性端差登记）；VSC 源档留参照历史 |
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **97 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **103 行**（根层 · as-of 2026-09-15 批 8 实测）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
 - 2026-09-15（**B 式迁移轮 · 第 1 批**）：建档——`thincoder-cli/docs/design/INSERT-AFTER.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；dirty 记账面坐标按现状收正（`write-path.mjs`）；批次材料 / 状态行 / 变更流水不并（§8）。
+- 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：§6 增 **6.3 VSC 端差异**（无 dirty 护栏 / 编辑器分支 / 内嵌描述）；§8.2「触发 = VSC 轮」行销项。

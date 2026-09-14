@@ -197,7 +197,7 @@
 
 | # | 内容（VSC 源档 · 行数） | 目标 core 档 | 拟插节 | 依据（实核） |
 |---|---|---|---|---|
-| 1 | `design/AGENT-LOOP.md`（1571）——VSC 侧接线面（挂起回合 digest / eng-coder 交付协议 / 子代理活动显示 / child permission gate） | `docs/core/design/AGENT-LOOP.md` | §6 机制面之后（新增「VSC 侧接线」节） | 该档 §6 为 CLI 档并入面、无 VSC 接线节；`:134` 已登记一条未并入项 |
+| 1 | `design/AGENT-LOOP.md`（1571）——VSC 侧接线面（挂起回合 digest / eng-coder 交付协议 / 子代理活动显示 / child permission gate） | `docs/core/design/AGENT-LOOP.md` | §6 机制面之后（新增「VSC 侧接线」节） | 该档 §6 为 CLI 档并入面、无 VSC 接线节；`:134` 已登记一条未并入项 ⇒ **已并入（批 8）**——§6.18 VSC 侧接线面（挂起 / 协议 / 活动显示 / child gate 四接线面） |
 | 2 | `design/AGENT-PARAMS-TUNING.md`（114）——VSC 端 explore「30 硬帽」移除现状 | `docs/core/design/AGENT-PARAMS.md` | §4「子代理轮次」+ §6.1 坐标表 | 该档 `:114` §8.2 登记「VSC 端 30 硬帽 ⇒ 归 VSC 轮」；§4 标题即「(CLI 端无专属代码)」⇒ **已并入（批 6）**——§4 注 + §6.3 坐标表 |
 | 3 | `design/ARCHITECTURE.md`（266）——VSC 模块地图 + 与 CLI 差异表 | `docs/core/design/ARCHITECTURE.md` | §3 模块地图 / §4 之后 | 该档 `:6` 明载「VSC 侧未迁——VSC 轮并入本档」⇒ **已并入（批 6）**——§3.1 壳层装配地图 + §4.1 差异表 |
 | 4 | `design/IMAGE-DOWNGRADE-VISION.md`（130）——贴图降级链 | `docs/core/design/PROVIDER.md` | 新增「图片输入与贴图降级链」节 | 该档 §6 节清单无图片 / 贴图面（实核）；VSC 侧降级链在现行代码在位 |
@@ -209,17 +209,17 @@
 | 10 | `design/MCP.md`（170）——VSC 提及 Settings 面板 MCP 页 | `docs/core/design/MCP.md` | §6.5 配置机制 | 该档 §6.8 为 `/mcp` TUI 面（CLI）；面板面未并 ⇒ **已并入（批 7）**——§6.10 VS Code Settings 面板 MCP 页（config-mcp 读写 / depth-0 装配 / 命连接 / 探活镜像 / 代配差异）· D-MC16 |
 | 11 | `design/CHECKPOINT.md`（105）——VSC 触发点 / 恢复入口 / 审批过滤 | `docs/core/design/CHECKPOINT.md` | §6.7 恢复入口 / §6.8 两端统一后形态 | 该档 §6 为 CLI 面；VSC 接线未并 ⇒ **已并入（批 7）**——§6.9 VS Code 端接线面（触发点坐标 / 恢复输出契约 / 只读分类）· D-CP10 |
 | 12 | `design/CONSULTATION.md`（161）——VSC 实现接线（digest 消费 / 端级接线） | `docs/core/design/CONSULTATION.md` | §6.4 CLI 实现接线之后 | 该档 §6.4 明标「CLI 实现接线」 ⇒ **已并入（批 7）**——§6.5 VS Code 端级实现接线表（子 agent 构建 / runner / 只读工具集与 main_history / 注册 / 容器 / digest / 驱动中止 / 动作域 / 面板）· D-CO7 |
-| 13 | 编辑工具六档（`EDIT` 79 · `EDIT-HELPERS` 72 · `HASHLINE-EDIT` 45 · `INSERT-AFTER` 35 · `APPLY-PATCH` 41 · `WRITE` 36）——VSC 坐标 + VSC 差异（编辑器路径 / range 偏移映射 / 无 dirty 护栏） | `docs/core/design/{EDIT,EDIT-HELPERS,HASHLINE-EDIT,INSERT-AFTER,APPLY-PATCH,WRITE}.md` | 各档「实现单一权威」节 | 该族六档均以 CLI 档并入；VSC 差异面未并 |
-| 14 | `design/TOOLS.md`（382）——VSC 适配增强（编辑器 / 语言服务 / webview 审批）+ 审批面 + 描述外部装载 | `docs/core/design/TOOLS.md` | §6.10 之后 | 该档 §6 为 CLI 面；VSC 适配增强未并 |
+| 13 | 编辑工具六档（`EDIT` 79 · `EDIT-HELPERS` 72 · `HASHLINE-EDIT` 45 · `INSERT-AFTER` 35 · `APPLY-PATCH` 41 · `WRITE` 36）——VSC 坐标 + VSC 差异（编辑器路径 / range 偏移映射 / 无 dirty 护栏） | `docs/core/design/{EDIT,EDIT-HELPERS,HASHLINE-EDIT,INSERT-AFTER,APPLY-PATCH,WRITE}.md` | 各档「实现单一权威」节 | 该族六档均以 CLI 档并入；VSC 差异面未并 ⇒ **已并入（批 8）**——各档 §6「VSC 端差异」块（编辑器路径 / 偏移映射 / 无 dirty 护栏 / BOM / EOL） |
+| 14 | `design/TOOLS.md`（382）——VSC 适配增强（编辑器 / 语言服务 / webview 审批）+ 审批面 + 描述外部装载 | `docs/core/design/TOOLS.md` | §6.10 之后 | 该档 §6 为 CLI 面；VSC 适配增强未并 ⇒ **已并入（批 8）**——§6.11 VSC 端适配增强 |
 | 15 | `design/TOOL-OUTPUT-LIMITS-TUNING.md`（139）——VSC 坐标 + 双端测试面 | `docs/core/design/TOOL-OUTPUT-LIMITS.md` | §2 常量表 / §6.2 双端与测试面 | 该档 `:99` 登记「VSC 树档未迁」⇒ **已并入（批 6）**——§6.3 坐标表 |
 | 16 | `design/ENG-TOKEN-BINDING-TUNING.md`（115）——VSC slot 多槽写 / 持久化面 | `docs/core/design/ENG-TOKEN-BINDING.md` | §6.1 实现坐标 | 该档 §6.2 为 CLI 侧落地状态；VSC 载体未并 ⇒ **已并入（批 6）**——§6.3 接线表 |
 | 17 | `design/DESIGN-TOKEN-SETTLEMENT.md`（109）——VSC 根因（每 run 重建 agent / 死对象）+ D1–D6 | `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` | §6.1 实现坐标 | 该档 §6.2「双端与依赖方向」；VSC 根因面未并 ⇒ **已并入（批 6）**——§6.3 结算接线表 |
 | 18 | `requirements/AGENT-LOOP.md`（355）——**VSC 面需求节** | ⚠ ~~归属疑变~~ → **D3 裁定（2026-09-15）：维持现状** | —— | 该 core 档 §5（`:129`-`:132`）显式登记「VSC 面需求节 ⇒ 归属 `docs/vsc/requirements/`」——与 §4.2 原判「落 core」冲突 ⇒ **本行销项不并**（结构变更非本批题·留在 core 档内） |
 | 19 | `requirements/MEMORY.md`（50）——VSC 端需求条目 | `docs/core/requirements/MEMORY.md` | §4 需求条目之后（新增「VSC 端」节） | CLI 台账同判「尚有未并 · 整档条目面」⇒ **已并入（批 6）**——§4.7 VSC 端需求条目 |
-| 20 | `requirements/SUBAGENT-OBSERVE-SEND.md`（41） | `docs/core/requirements/AGENT-LOOP.md` | §4 需求条目之后 | 该 core 档为根层面级对位；条目未并入 |
-| 21 | `requirements/ASYNC-RESULT-CONTAINER.md`（45） | `docs/core/requirements/AGENT-LOOP.md` | 同上 | 机制本体已入设计侧 §6.7.3 |
+| 20 | `requirements/SUBAGENT-OBSERVE-SEND.md`（41） | `docs/core/requirements/AGENT-LOOP.md` | §4 需求条目之后 | 该 core 档为根层面级对位；条目未并入 ⇒ **已并入（批 8）**——§4.9 VSC 端对位与端差 |
+| 21 | `requirements/ASYNC-RESULT-CONTAINER.md`（45） | `docs/core/requirements/AGENT-LOOP.md` | 同上 | 机制本体已入设计侧 §6.7.3 ⇒ **已并入（批 8）**——§4.9 VSC 端对位与端差 |
 | 22 | `requirements/TOOL-OUTPUT-LIMITS.md`（47）——64K 阈值与保头保尾条目 | `docs/core/requirements/TOOLS.md` | §4 需求条目之后 | CLI 台账同判「根层部分 · 未并入」⇒ **已并入（批 6）**——§4.5「VSC 端显示层条目」FR-V1/FR-V2（共享条目不重并） |
-| 23 | `requirements/CHECKPOINT`（49）· `CONSULTATION`（46）· `CONTEXT-COMPACTION`（46）· `MCP`（46）· `SESSION`（52）· `TOOLS`（47）· `LOGGING`（37）——VSC 端条目面 | 对应 `docs/core/requirements/<板块>.md` | §4 需求条目之后（各档新增「VSC 端」节） | 各 core 档 §4 为 CLI 需求档并入面；VSC 条目未并 |
+| 23 | `requirements/CHECKPOINT`（49）· `CONSULTATION`（46）· `CONTEXT-COMPACTION`（46）· `MCP`（46）· `SESSION`（52）· `TOOLS`（47）· `LOGGING`（37）——VSC 端条目面 | 对应 `docs/core/requirements/<板块>.md` | §4 需求条目之后（各档新增「VSC 端」节） | 各 core 档 §4 为 CLI 需求档并入面；VSC 条目未并 ⇒ **已并入（批 8）**——各档 §4「VSC 端条目」节 + 批 8 收口 |
 | 24 | `requirements/PHILOSOPHY.md`（136）· `requirements/RELEASE.md`（42）——VSC 端差异（RELEASE = 双市场通道；PHILOSOPHY = 合并前措辞对账） | `docs/core/requirements/{PHILOSOPHY,RELEASE}.md` | §5 / §4 之后 | 两 core 档为 CLI 需求档并入面 ⇒ **已并入（批 7）**——RELEASE：§5 VSC 端通道面（V-F1–V-F5 / V-N1–V-N3——双市场 = Marketplace + Open VSX）· PHILOSOPHY：**销项零并入**（VSC 版 = 本档旧措辞子集——§7.2 已核登记） |
 | 25 | `requirements/FEATURES.md`（21） | ⚠ ~~归属疑变~~ → **D2 裁定（2026-09-15）：VSC 专有面** | —— | 内容 = 本产品 v1 功能范围；CLI 同判落 `docs/cli/requirements/` ⇒ **本行销项不并**——另落 `docs/vsc/requirements/FEATURES.md`（非 core 并入项 · 落笔待父侧另派） |
 | 26 | `requirements/ADVISOR-CONVERGENCE.md`（57）——VSC 端对位面（F-A1–F-A12 / N-A1–N-A6 + 端差登记四条） | `docs/core/requirements/ADVISOR-CONVERGENCE.md` | 新增「VSC 端对位面」节（该档 §7 登记面之后） | 该档 `:8` 明载「VSC 端对位面不并入（旧档 §8 / §9 / §13——VSC 面，触发 = VSC 轮）」；§7 逐节登记在案 ⇒ **已并入（批 7）**——§8 VSC 端对位面（F-A1–F-A12 / N-A1–N-A6 + §8.3 对位与端差登记四条）· 档头声明 + §7.2 三行销项 |
@@ -231,6 +231,8 @@
 
 **批 7 收口（2026-09-15 · eng-designer）**：26 = **8（批 6）** + **8（批 7 已并入——#6 / #8 / #9 / #10 / #11 / #12 / #24 / #26）** + **8（未并 · 待后续批——#1 / #4 / #7 / #13 / #14 / #20 / #21 / #23）** + **2（裁定销项——#18 / #25）** ✓
 （#24 = RELEASE 并入 + PHILOSOPHY 销项零并入——§8B 本行；#4 / #7 = PROVIDER 目标 · 他线在写留待下批）。
+
+**批 8 收口（2026-09-15 · eng-designer）**：26 = **8（批 6）** + **8（批 7）** + **6（批 8 已并入——#1 / #13（编辑族六档）/ #14 / #20 / #21 / #23（七需求档））** + **2（未并 —— #4 / #7 = PROVIDER 目标 · 待并行线完工）** + **2（裁定销项——#18 / #25）** ✓。**§8B 非 PROVIDER 条目清零**（剩 2 条 #4 / #7）。
 
 ## 9. 实迁记录
 
@@ -354,9 +356,22 @@ settle 落盘块起点（advisor-async）旧档记 364 行 → 现状 363 行；
 | 19 | `docs/requirements/MEMORY.md` | 50 | `docs/core/requirements/MEMORY.md` §4.7 | 172 |
 | 22 | `docs/requirements/TOOL-OUTPUT-LIMITS.md` | 47 | `docs/core/requirements/TOOLS.md` §4.5「VSC 端显示层条目」 | 122 |
 
+### 9.8 批 8（§8B 并入清单第三批 · 6 条）
+
+**取面判据**：§8B 逐条落笔时点实核目标 core 档现态（不照抄拟插节）；**目标含 PROVIDER 者本批跳过**（#4 / #7——并行实例在写，让先到者不抢）；源档**一字未改**。（仍从略：逐档处置 = 逐条实核后并入——(d) 类 / 批次材料逐项入各落点档「不并项」节；坐标按现状实核；零 `T-` 形跨域用例号；并入后逐档 ≤500 ✓。）
+
+| # | 源档（`thincoder-vscode/**`·一字未改） | 行 | 落点（core 档 · 并入） | 落点行（并入后） |
+|---|---|---|---|---|
+| 1 | `docs/design/AGENT-LOOP.md` | 1571 | `docs/core/design/AGENT-LOOP.md` §6.18（VSC 侧接线面——挂起 digest / eng-coder 协议 / 活动显示 / child gate） | 491 |
+| 14 | `docs/design/TOOLS.md` | 382 | `docs/core/design/TOOLS.md` §6.11（VSC 端适配增强） | 330 |
+| 13 | `docs/design/{EDIT,EDIT-HELPERS,HASHLINE-EDIT,INSERT-AFTER,APPLY-PATCH,WRITE}.md` | 79/72/45/35/41/36 | 六编辑档 §6「VSC 端差异」块 | 123/114/101/103/98/93 |
+| 20 | `docs/requirements/SUBAGENT-OBSERVE-SEND.md` | 41 | `docs/core/requirements/AGENT-LOOP.md` §4.9（VSC 端对位与端差） | 187 |
+| 21 | `docs/requirements/ASYNC-RESULT-CONTAINER.md` | 45 | 同上（§4.9 同节两块） | 187 |
+| 23 | `docs/requirements/{CHECKPOINT,CONSULTATION,CONTEXT-COMPACTION,MCP,SESSION,TOOLS,LOGGING}.md` | 49/46/46/46/52/47/37 | 七需求档各增 §4「VSC 端条目」节 | 97/86/84/100/118/190/84 |
+
 ## 10. 受影响文件清单（R24a）
 
-> 逐批明细已完整承载于批次档 §2（D2——不重复）；本表 = 台账汇总行（档数用量 + 落点面）。批 5 后各行 = 审批式（批 7 详列）。
+> 逐批明细已完整承载于批次档 §2（D2——不重复）；本表 = 台账汇总行（档数用量 + 落点面）。批 5 后各行 = 审批式（汇总）。
 
 **批 1**（5 新建 + 2 实修 + 1 append）：`docs/vsc/{requirements/VSC-MIGRATION, design/VSC-MIGRATION, design/SETTINGS, design/PROJECT-SWITCHER, requirements/WEBVIEW}` 新建 · `scripts/{check-doc-width-core,doc-anchors-v5}.mjs` 实修（SCAN_DIRS / V5_SCAN_DIRS）· 批次档 §2 append——明细 = 批次档 §2。
 
@@ -368,22 +383,12 @@ settle 落盘块起点（advisor-async）旧档记 364 行 → 现状 363 行；
 
 **批 5**（7 新建 + 1 实修 + 1 append）：`docs/core/requirements/{DESIGN-TOKEN-SETTLEMENT,ENG-TOKEN-BINDING,PORTABILITY,VERIFY-REDESIGN,PROJECT}.md` + `docs/vsc/requirements/PROJECT.md` + `docs/vsc/design/VSC-MIGRATION-INVENTORY.md` 新建 · `docs/vsc/design/VSC-MIGRATION.md` 实修（拆分收口）· 批次档 §2 append——明细见批次档 §2。
 
-**待落（批 5 后边界外——逐条上报）**：**§8B 并入清单 26 条**（既有 `docs/core/**` 档——批 6 / 批 7 已各并 8 条，余 8 条父侧串行另派）· 待裁 D1–D3（主档 §7.1）· 镜像面判据句补条（`DOC-SYSTEM` §5.1——`docs/core/**`）。
+**待落（批 5 后边界外——逐条上报）**：**§8B 并入清单 26 条**（批 6 / 批 7 各并 8 条 · 批 8 并 6 条 · **余 2 条 #4 / #7 = PROVIDER 目标待并行线完工**）· 待裁 D1–D3（主档 §7.1——已裁 2 条）· 镜像面判据句补条（`DOC-SYSTEM` §5.1——`docs/core/**`）。
 
-**批 7（§8B 并入第二批——本批）**：
+**批 7（§8B 第二批 · 8 档并入）**：`docs/core/design/{SESSION 311→364, MEMORY 334→366, CONTEXT-COMPACTION 225→252, MCP 194→221, CHECKPOINT 185→212, CONSULTATION 235→257}.md` · `docs/core/requirements/{RELEASE 68→83, ADVISOR-CONVERGENCE 172→218}.md` 实修 + INVENTORY + 批次档 §2——明细 = 批次档 §2。
 
-| # | 档 | 当前行数 → 并入后 | 动作 |
-|---|---|---|---|
-| 40 | `docs/core/design/SESSION.md` | 311 → 364 | 实修——§6.15 新增（VSC 面板装配接线面）· §7 决策 4 行 · §8.2 不并项 4 行 |
-| 41 | `docs/core/design/MEMORY.md` | 334 → 366 | 实修——§6.9 新增（VSC 端实现面）· §7 决策 2 行 · §8.2 不并项 3 行 · §9 拆分表 +1 行 |
-| 42 | `docs/core/design/CONTEXT-COMPACTION.md` | 225 → 252 | 实修——§6.13 新增 · §7 决策 1 行 · §8.2 不并项 1 行 |
-| 43 | `docs/core/design/MCP.md` | 194 → 221 | 实修——§6.10 新增 · §7 决策 1 行 · §8.2 不并项 1 行 |
-| 44 | `docs/core/design/CHECKPOINT.md` | 185 → 212 | 实修——§6.9 新增 · §7 决策 1 行 · §8.2 不并项 1 行 |
-| 45 | `docs/core/design/CONSULTATION.md` | 235 → 257 | 实修——§6.5 新增 · §7 决策 1 行 · §8.2 不并项 1 行 |
-| 46 | `docs/core/requirements/RELEASE.md` | 68 → 83 | 实修——§5 VSC 端通道面新增 + §6 不并项 |
-| 47 | `docs/core/requirements/ADVISOR-CONVERGENCE.md` | 172 → 218 | 实修——§8 VSC 端对位面新增 + 档头 / §7.2 销项 |
-| 48 | `docs/vsc/design/VSC-MIGRATION-INVENTORY.md` | 499 | 实修——§8B 尾注 · 批 7 收口 · §9.7 · §10 批 7 · §13 |
-| 49 | `docs/batches/2026-09-15-vsc-doc-migration.md` | — | **append**——§2（不改 §1） |
+**批 8（§8B 第三批 · 16 档并入）**：设计 8 档——AGENT-LOOP 472→491 · TOOLS 317→330 · 编辑族 116/105/96/97/93/88 → 123/114/101/103/98/93（各档 §6「VSC 端差异」块）；
+需求 8 档——AGENT-LOOP req 180→187 · 七板块 88/74/75/85/108/123/77 → 97/86/84/100/118/190/84（各档 §4「VSC 端条目」节；TOOLS req 含并行线 §4.7 TTY 面）。各落点均含决策 / 不并项 / 体量同步；+ INVENTORY + 批次档 §2——明细 = 批次档 §2。
 
 ## 11. 关键决策记录
 
@@ -464,7 +469,7 @@ settle 落盘块起点（advisor-async）旧档记 364 行 → 现状 363 行；
 ## 13. 体量与拆分规划（R24a）
 
 **主档拆分（批 5 实落）**：`VSC-MIGRATION.md` 批 4 后实测 **560 行**——越 500 行硬限 ⇒ 台账面（§3–§15）移出为本档；判据 / 方案选型 / 分批计划 / 待裁 / 变更记录留主档（切法 = 候选①——台账面与规划面零交叉）。
-**拆分后实测**：主档 **131** 行 · 本档 **490 行（批 7 并入后——§10 历史批五表归并压缩为汇总行 + §8B 尾注 / 收口 / §9.7 / §10 批 7 / §12.5 + 坐标补仓根前缀折行）**——均 ≤500 ✓（as-of 2026-09-15 实核）。
+**拆分后实测**：主档 **131** 行 · 本档 **496 行（批 8 并入后——§8B 六行标注 + 批 8 收口 · §9.8 · §10 批 7·批 8 两表归并为汇总行（明细 = 批次档 §2）· §15 边界更新；批 8 验收标准 = 批次档 §2 交付表 ⑦（随批 6 先例入批次档、不居台账））**——均 ≤500 ✓（as-of 2026-09-15 实核）。
 
 ## 14. 用例表（正常 / 边界 / 错误）
 
@@ -481,7 +486,7 @@ settle 落盘块起点（advisor-async）旧档记 364 行 → 现状 363 行；
 
 ## 15. 边界（本设计不做）
 
-1. **§8B 并入 = 批 6 起逐批落笔**（父侧串行口径——批 6 = 第一批 8 条 · 批 7 = 第二批 8 条：`docs/core/{design,requirements}/` 各目标档按清单并入；余 8 条 = #1 / #4 / #7 / #13 / #14 / #20 / #21 / #23——PROVIDER 目标 #4 / #7 待他线完工）；**`thincoder-vscode/**` 仍零写入**（源档只读参照历史）。
+1. **§8B 并入 = 批 6 起逐批落笔**（父侧串行口径——批 6 = 第一批 8 条 · 批 7 = 第二批 8 条 · 批 8 = 第三批 6 条：`docs/core/{design,requirements}/` 各目标档按清单并入；**余 2 条 = #4 / #7（PROVIDER 目标——待并行线完工后另派）**）；**`thincoder-vscode/**` 仍零写入**（源档只读参照历史）。
 2. **不写产品树**：`thincoder-vscode/**` 零写入（含注释）；`thincoder-cli/**` · `thincoder-core/**` 零写入。
 3. **不写台账 / 提示词 / 批次档**：`docs/TODO.md` 零写入；提示词文件零写入；批次档只 append §2。
 4. **不 commit、不发起评审**（发起权 = 用户）。

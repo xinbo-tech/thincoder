@@ -48,6 +48,8 @@ write = **整文件替换 / 新建**——覆盖已有文件（read 后确认整
 | 注册面 | `thincoder-core/tools/index.mjs`（`builtinTools` · file 组） | 组陈述见 `docs/core/design/TOOLS.md` §6.2 |
 | VSC 对位实现 | `thincoder-vscode/src/tools/file.mjs` | 同名机制 · 独立实现 |
 
+**VSC 端差异（并入 · 批 8）**：VSC 端 `file.mjs`（`writeTool`）——① **编辑器路径**：doc 已打开 → 编辑器写（undo 单元）；否则本地写盘；② autoSyntaxCheck 与 EOL 两规则（F1 覆盖按原行尾 / F2 新建随目录多数派）双端同口径（`docs/core/design/EDIT-HELPERS.md` §4）。
+
 ### 6.2 与 edit / hashline_edit 的语义边界（迁入后收正）
 
 旧档坐标系已失效后的现行分界：write 恒为**整文件**域；edit 为**区域**域（含删行形态）；hashline_edit 为**位置无关**域（hash 寻址）；insert_after 为**纯插入**域；apply_patch 为**多文件 / 整块**域。
@@ -78,11 +80,13 @@ write = **整文件替换 / 新建**——覆盖已有文件（read 后确认整
 |---|---|---|
 | 描述面正文（Routing 段 / 参数说明） | 模型可见文本 | **提示词面 = 产品代码**（内容权归主 agent）——落点 `thincoder-core/tool-docs/write.md` |
 | read 工具语义 | 读面契约 | 非编辑工具——归 `docs/core/design/TOOLS.md` §6.7 逐工具契约 |
+| VSC 档（`thincoder-vscode/docs/design/WRITE.md`）的批次材料 / 变更记录 | 一次性材料 + 历史流水 | VSC 差异面已并 §6.1（VSC 端差异块）；批次档承载 |
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **88 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **93 行**（根层 · as-of 2026-09-15 批 8 实测）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
 - 2026-09-15（**B 式迁移轮 · 第 1 批**）：建档——`thincoder-cli/docs/design/WRITE.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；坐标一律改写为现状路径（`thincoder-core/tools/**` · `thincoder-vscode/src/tools/**`）；批次材料 / 状态行 / 变更流水不并（§8）。
+- 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：§6.1 增 **VSC 端差异块**（编辑器路径 / autoSyntaxCheck / EOL 同口径）；§8.2 登记 VSC 源档批次材料。

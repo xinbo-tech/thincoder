@@ -154,6 +154,18 @@ VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` 
 
 **设计侧 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.7.3**（settle 统一机制）——本档不复制。
 
+### 4.9 VSC 端对位与端差（SUBAGENT-OBSERVE-SEND · ASYNC-RESULT-CONTAINER——并入 · 2026-09-15 批 8）
+
+**SUBAGENT-OBSERVE-SEND（VSC 仓版）**：语义同源（F1 / F2 / N1–N4 已并 §4.7）；VSC 端条目 = ① F-O3 目标边界**逐类显式错误**（send 对 queued / settled / sync / unknown）·
+② F-O4 动作级分类（observe = readonly——planMode 放行、免审批；send = control——豁免审批、不入批审批分组）· ③ depth>0 不可用（子代理无异步池）。坐标（实核）＝
+`thincoder-vscode/src/agent-tools/subagent-actions.mjs:276`（`SUBAGENT_OBSERVE_RECENT = 5` 摘要条数 · 行截断 160/条）· send 入队 `:349-396` · `subagent-spec.mjs`（工具描述逐字）· `tool-gates.mjs`（分类钩子）：59-67。
+
+**ASYNC-RESULT-CONTAINER（VSC 仓版）**：语义同源（F1–F6 / N1–N4 已并 §4.8）；VSC 端条目 = ① F-A6 挂起期注入与消化面（settle → 单容器 → digest 轮驱动；中止 → 容器清不注入陈旧结果）·
+② 端差——统一前 pending **5 族**（对端 3 族，含 advisor 独立族）· 池载体 = 共享 history 数组双查询（`history?._X ?? agent._X`——accessor 吸收，语义同源）。坐标（实核）＝
+`thincoder-vscode/src/agent-tools/async-settle.mjs`（`settleAsyncEntry`——四族调用点 = advisor-async / consult / subagent-async / subagent-escalate-async）· `src/extension/suspension.mjs:32-55`（挂起期单容器）· `src/agent.mjs:66-74`。
+
+端差差异若有 → 逐条补登记（不静默）；本档不代述对端正文（D2）。旧档 = 各自 VSC 仓需求档（一字未改 · 参照历史）。
+
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）
 
 | 旧档节 | 内容 | 何故不并 |
@@ -163,6 +175,7 @@ VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` 
 | §8 VSC 输入面 Enter 语义 | F-F1–F-F3 / NFR-F1–F3 | 同上（VSC 面） |
 | §13 VSC 会话上下文注入面对齐 | F-Q1–F-Q13 / N-Q1–N-Q4 | 同上（VSC 面） |
 | 各节「来源：批次 …」注 + 档首「迁移注记 + 移出清单」 | 批次来源指针与七节迁出记录 | 时点材料——批次档承载；迁出记录属历史留痕 |
+| VSC 仓两档（`SUBAGENT-OBSERVE-SEND.md` / `ASYNC-RESULT-CONTAINER.md`）的「变更记录」与对位档头 | 一次性材料 + 历史流水 | VSC 端对位面已并 §4.9（2026-09-15 批 8）；批次档承载 |
 | 变更记录 | 逐批流水账 | 历史叙述——本档自有变更记录 |
 
 ## 变更记录
@@ -170,3 +183,4 @@ VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` 
 - 2026-09-13：建档——自 `docs/core/requirements/CORE-UNIFICATION.md` 拆分（来源：§2 F11 / F6 / F12 / F13 回指）+ 设计档 `AGENT-LOOP.md`（§2.1–§2.2 · §3.1 A7 / A15 / A22 / A23 · §3.2 D2 派生）；**无新增需求**。
 - 2026-09-14（**B 轮并入 · 试点批**）：新增 §4 **需求条目**（question 工具抑制 / 顶层一律异步 / 后台评审池可观测可控 / abort 来源标注 / Stop 钩子 / 长会话内存上界——自 `thincoder-cli/docs/requirements/AGENT-LOOP.md` 逐节比对后并入需求正文；**编号与文本承旧档**）；新增 §5 **不并项与历史沿革**（VSC 面需求节 4 处 + 时点材料 + 变更记录）；**本档新增需求 0**（纯回填）。本档 41 → **140 行**。
 - 2026-09-15（**迁移批 · 第 5 批 · 并入 · eng-designer**）：新增 §4.7 **子代理观测 / 注入**（旧专题档 `requirements/SUBAGENT-OBSERVE-SEND.md`）+ §4.8 **async 结果容器统一**（旧专题档 `requirements/ASYNC-RESULT-CONTAINER.md`）——编号与文本承旧档；设计侧指针按批 5 拆分面改指（`AGENT-LOOP-SUBAGENT.md` §6.7.2 / §6.7.3）；**本档新增需求 0**（纯回填）。
+- 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：新增 §4.9 **VSC 端对位与端差**（SUBAGENT-OBSERVE-SEND F-O3/F-O4 · ASYNC-RESULT-CONTAINER F-A6 + 端差——自两 VSC 仓需求档并入；坐标实核）；§5 登记 VSC 两档批次材料；**本档新增需求 0**（纯回填）。
