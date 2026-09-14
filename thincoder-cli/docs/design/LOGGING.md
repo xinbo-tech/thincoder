@@ -89,7 +89,7 @@
   `src/agent.mjs`（logCtx + ev:stopped）；`src/agent/execute-tools.mjs（VSC 仓）`（tool:*）；
   `src/extension/panel-chat.mjs（VSC 仓）`（turn/err——runPanelChat 包装）；
   `src/extension/suspension.mjs（VSC 仓）`（susp/digest/ev:stopped）；`src/agent-tools/*`（child/ev）；
-  `src/compact.mjs（VSC 仓）` + `src/advisor/run.mjs`（logCtx stage）；测试（镜像）。
+  `src/compact.mjs（VSC 仓）` + `thincoder-core/advisor/run.mjs`（logCtx stage）；测试（镜像）。
 - **文档**：本文（README 地图已注册）；两端 AGENTS.md 模块表登记 log.mjs。
 
 ### 2.4 关键决策

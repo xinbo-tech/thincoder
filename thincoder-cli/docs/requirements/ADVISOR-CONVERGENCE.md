@@ -42,7 +42,7 @@
 
 ### 5.1 评审注入的路径不得硬编码项目约定
 
-**问题（实证）**：`src/advisor/messages.mjs` 向 advisor 注入项目上下文时硬编码了路径约定：
+**问题（实证）**：`thincoder-core/advisor/messages.mjs` 向 advisor 注入项目上下文时硬编码了路径约定：
 
 | 注入面 | 硬编码 | 位置 |
 |---|---|---|
@@ -271,7 +271,7 @@ VSC 端评审链的守卫面补齐收官：设计评审**发起前的凭证信�
 - 不改服务端窗口约束语义，不改 tpm / rpm 闸门（`rateGate` 告警语义零改）——大上下文带来的单请求延迟与额度
   消耗属**模型选择后果**（登记；不另设闸）
 - **VSC 端对位**（各端独立实现、语义同源、不做 byte-identical、不建跨仓依赖）：`thincoder-vscode` 仓
-  `src/advisor/compaction.mjs`（同款常量）与 `src/advisor/loop.mjs`（同款守卫）——**本批 CLI 单端交付**；
+  `thincoder-core/advisor/compaction.mjs`（同款常量）与 `thincoder-core/advisor/loop.mjs`（同款守卫）——**本批 CLI 单端交付**；
   VSC 镜像随批（登记面：本节 + CLI 设计档 §16.8——含所需档与完整修复路径）
 - **`estimateTokens` 低保真估算**（`chars/4` 扁平式——CJK 内容低估 3-4×；主循环 `estimateText` 为 ASCII/4 +
   非 ASCII/1）：本批不改（预算头寸把误差计入——设计 §16.4），修正另批（登记）
@@ -285,7 +285,7 @@ VSC 端评审链的守卫面补齐收官：设计评审**发起前的凭证信�
 > 需求面（评审者可评估「真需求覆盖」）由现行机制承接；不改轮序/cap，不建 `advisor-context.md`。
 > 设计记录与证据（未实现证据 / 四承接机制 / 否决理由）见 `../design/AGENT-LOOP.md` §19。
 
-**判定句（承接现状——需求面）**：评审者能对照需求来源判「真需求覆盖」——来源 = ① 会话背景注入（最近 3 组交流——`src/advisor/messages.mjs` 机械提取）；
+**判定句（承接现状——需求面）**：评审者能对照需求来源判「真需求覆盖」——来源 = ① 会话背景注入（最近 3 组交流——`thincoder-core/advisor/messages.mjs` 机械提取）；
 ② 需求文档主参照（Project Guide 指向——评审工作流第 2 步必读）；③ 设计评审批次档绑定（`batchDoc`——`ENGINEERING-MODE.md` §2.20.3）；
 ④ 评审对象声明（target/status/reason/exclude——`AGENT-LOOP.md` §12.1）。round2+ 无会话考古、四模板 Neutrality 锚保留。
 
@@ -339,10 +339,10 @@ design 评审的 cap 豁免（§2 F3——2026-09-07 用户裁定）消除了「
 > （B2 / B3 / B4-VSC 面）与设计档 `ADVISOR-CONVERGENCE.md` §18（B4 语义源）。同批 B1/B5 需求落 `AGENT-LOOP（VSC 仓·需求）§11`（台账自持批迁对端——见 `AGENT-LOOP.md` 档首移出清单）。
 
 **现场复核前置（设计勘验——登记行不得直接当任务派）**：B2 残留实存——async 结算记录段对拒绝报告仍写
-`round` / `priorOutput`（VSC `advisor-async.mjs:426-435`；拒绝文案 ≥200 字符命中 `looksLikeReview` 启发式；
+`round` / `priorOutput`（VSC `thincoder-core/agent-tools/advisor-async.mjs:426-435`；拒绝文案 ≥200 字符命中 `looksLikeReview` 启发式；
 新实例 round 0→1），与「拒发不耗轮次」既有契约相悖（同步面同族语义已裁——设计 `ADVISOR-CONVERGENCE（VSC 仓）§16.1`）
-⇒ 本批修（消费点守卫——VSC）；CLI 对位结构同款（`advisor-settle.mjs:133` 无条件 `run.round++` + `:227-229`
-prior 写入）——登记（设计档 §18.4）。B4 低估实存：双端 `advisor/compaction.mjs` 的 `estimateTokens` 仍为
+⇒ 本批修（消费点守卫——VSC）；CLI 对位结构同款（`thincoder-core/agent-tools/advisor-settle.mjs:133` 无条件 `run.round++` + `:227-229`
+prior 写入）——登记（设计档 §18.4）。B4 低估实存：双端 `thincoder-core/advisor/compaction.mjs` 的 `estimateTokens` 仍为
 `chars/4` 扁平式（CJK ≈ 4× 低估）。
 
 ### 13.1 总体需求
@@ -359,7 +359,7 @@ prior 写入）——登记（设计档 §18.4）。B4 低估实存：双端 `ad
 |---|---|---|---|
 | F30 | 结算面拒发不记账 | async 结算接到 launchRefused 报告时：`_calledAdvisorThisRun` 保持 false（既有）；实例记录 `round` 与 `priorOutput` 与结算前**逐值相等**；`state = settled`（同 scope 可续跑）；随后重跑得「round = 未耗值 + 1、prior 未污染」 | 本批实现面 = VSC async 结算面；CLI 对位结构同款——登记（设计档 §18.4——语义同源、随批评估）；不改报告清洗（拒绝文原样进 digest）与 stale 分支 |
 | F31 | 冻结窗口盲区收口（VSC） | (a) file_ops（move / copy / rename）对被审文件集的写入在窗口内被拒（拒绝串逐字同 §14.4(c)）；(b) file_ops 成功写记入文件变更事件（move / rename 记源 + 目标；copy 记目标）——在途设计评审对其被审档的 file_ops 写会判 stale；(c) batch_segment 成功写入将绑定批次档记入调用者写域——经子代理合入面进入父侧变更记账（在途设计评审的 stale 判定覆盖批次档面）；(d) 参数外波及面（bash / execute / git / checkpoint）与子代理预闸不可达面（合入拦面）维持登记——逐条理由与复核触发条件落设计档 §17.2 表 | 不改 stale 判定本体；不拦登记五面；不改 §14.4 契约正文（拒绝串复用）；不改 guard / verify 的 file_ops 记账面（登记）；CLI 面零改（E-6 #3 维持——差异登记） |
-| F32 | 评审估算器 CJK 加权（双端） | 双端 `advisor/compaction.mjs` 的 `estimateTokens`：纯 ASCII 输入与旧式**逐值相等**（ceil((len−nonAscii)/4)+nonAscii 退化为旧式）；CJK 输入 = 逐字符计（「中」×N → N tokens；旧式 N/4）；advisor 循环两守卫（compactAt / 判死线）与判死尾计数随新估值自然触发 | 不改比例系数（CONTEXT_LIMIT_RATIO / COMPACT_TRIGGER_RATIO）与判定族 / 六条尾文案；不改主循环估算器（已加权）；不改 `looksLikeReviewOutput` 等长度启发式；双端各自独立实现（语义同源、零跨仓依赖） |
+| F32 | 评审估算器 CJK 加权（双端） | 双端 `thincoder-core/advisor/compaction.mjs` 的 `estimateTokens`：纯 ASCII 输入与旧式**逐值相等**（ceil((len−nonAscii)/4)+nonAscii 退化为旧式）；CJK 输入 = 逐字符计（「中」×N → N tokens；旧式 N/4）；advisor 循环两守卫（compactAt / 判死线）与判死尾计数随新估值自然触发 | 不改比例系数（CONTEXT_LIMIT_RATIO / COMPACT_TRIGGER_RATIO）与判定族 / 六条尾文案；不改主循环估算器（已加权）；不改 `looksLikeReviewOutput` 等长度启发式；双端各自独立实现（语义同源、零跨仓依赖） |
 
 ### 13.3 非功能性需求
 

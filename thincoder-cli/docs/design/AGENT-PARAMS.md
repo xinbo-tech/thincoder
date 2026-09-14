@@ -10,7 +10,7 @@
 
 | # | 现状 | 位置 | 后果 |
 |---|---|---|---|
-| P1 | 评审整体墙钟 `REVIEW_TIMEOUT_MS = 300_000`（5 分钟）**硬编码**，用户无法调整 | `src/advisor/run.mjs` 常量 + `runAdvisorToolLoop` 循环内检查点 | 大评审（多文件、多轮工具探索、慢模型）5 分钟即被截断，返回 partial results；用户只能缩小范围或碰运气 |
+| P1 | 评审整体墙钟 `REVIEW_TIMEOUT_MS = 300_000`（5 分钟）**硬编码**，用户无法调整 | `thincoder-core/advisor/run.mjs` 常量 + `runAdvisorToolLoop` 循环内检查点 | 大评审（多文件、多轮工具探索、慢模型）5 分钟即被截断，返回 partial results；用户只能缩小范围或碰运气 |
 | P2 | 主 agent 轮次上限默认 `maxTurns: 100` | `src/config.mjs`（DEFAULTS）、`src/agent/helpers.mjs`（`DEFAULT_MAX_TURNS`）、读取链 | 多文件重构/修复-验证循环任务频繁撞墙，需人工 "Continue" |
 | P3 | 文档与 UI 中 "maxTurns 默认 100" 的散落描述未同步 | 相关设计文档与 `src/tui/cmd-config.mjs` 若干 `?? 100` 显示兜底 | 改默认值后文档/显示与真实行为漂移 |
 
@@ -18,7 +18,7 @@
 
 ### 2.1 评审超时配置化 + 默认 600s
 
-- `src/advisor/run.mjs`：`REVIEW_TIMEOUT_MS = 600_000`（注释同步 "10 minutes"）。
+- `thincoder-core/advisor/run.mjs`：`REVIEW_TIMEOUT_MS = 600_000`（注释同步 "10 minutes"）。
 - 循环内检查点改为读取配置，缺省回退常量：
 
 ```js
@@ -58,7 +58,7 @@ explore 与其它角色一致走 `subagentTurns`（见 `src/agent-tools/subagent
 
 | 文件 | 动作 | 内容 |
 |---|---|---|
-| `src/advisor/run.mjs` | MODIFY | 常量 `600_000`；检查点改读 `agent.config?.advisor?.timeoutMs ?? REVIEW_TIMEOUT_MS` |
+| `thincoder-core/advisor/run.mjs` | MODIFY | 常量 `600_000`；检查点改读 `agent.config?.advisor?.timeoutMs ?? REVIEW_TIMEOUT_MS` |
 | `src/config.mjs` | MODIFY | `maxTurns` 200；advisor 注释补 timeoutMs |
 | `src/agent/helpers.mjs` | MODIFY | `DEFAULT_MAX_TURNS = 200` |
 | `src/tui/cmd-config.mjs` | MODIFY | 四处显示兜底 `?? 100` → `?? 200` |

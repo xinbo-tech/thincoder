@@ -19,7 +19,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { chat } from "@thincoder/core/provider/core.mjs"
-import { resolveAdvisorProvider } from "../src/advisor/run.mjs"
+import { resolveAdvisorProvider } from "@thincoder/core/advisor/run.mjs"
 import { resolveChildProvider } from "../src/agent-tools/subagent-async.mjs"
 import { applySession } from "@thincoder/core/session.mjs"
 

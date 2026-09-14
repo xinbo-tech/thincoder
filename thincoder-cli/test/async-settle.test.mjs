@@ -16,7 +16,7 @@ import {
   settleAsyncEntry, getAsyncPool, parkAsyncPending, parentAborted, buildChildSignal,
 } from "../src/agent-tools/async-settle.mjs"
 import { injectAsyncResult, DIGEST_INJECT_BUDGET, _setDigestOffloadDirForTest } from "../src/agent-tools/subagent-async.mjs"
-import { injectConsultResult } from "../src/agent-tools/consult.mjs"
+import { injectConsultResult } from "@thincoder/core/agent-tools/consult.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 

@@ -27,8 +27,8 @@ import { pushReal } from "@thincoder/core/context.mjs"
 import { specForModel } from "../config.mjs"
 import { FILE_MUTATORS } from "./helpers.mjs"
 import { resolve } from "node:path"
-import { advisorRuns, stripApprovedSuffix } from "../agent-tools/advisor-async.mjs"
-import { looksLikeReviewOutput, advisorIncompleteMarker } from "../advisor/run.mjs"
+import { advisorRuns, stripApprovedSuffix } from "@thincoder/core/agent-tools/advisor-async.mjs"
+import { looksLikeReviewOutput, advisorIncompleteMarker } from "@thincoder/core/advisor/run.mjs"
 
 let _reindexFile = null
 

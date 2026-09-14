@@ -18,7 +18,7 @@ import { computeLayout, subagentLineIndex } from "./layout.mjs"
 import { buildConvLines, convViewport } from "./render-conversation.mjs"
 import { toggleFoldBlock, scrollFoldBlock, foldScrollOffset } from "./fold-block.mjs"
 import { cancelAsyncSubagent, cancelSyncChild } from "../agent-tools/subagent-async.mjs"
-import { cancelAsyncAdvisor } from "../agent-tools/advisor-async.mjs"
+import { cancelAsyncAdvisor } from "@thincoder/core/agent-tools/advisor-async.mjs"
 import { maybeRefillAsync, refreshQueuedTokens } from "../agent-tools/subagent-scheduler.mjs" // F-2：queued 取消后续（补位/位置刷新）——叶子模块
 import { routeSubToken } from "./subagent-blocks.mjs" // F-2：queued 取消块移除（⟦ev⟧cancelled 就地路由——引擎动作路径同通道）
 import { denyModalForOwner } from "./key-modes.mjs"

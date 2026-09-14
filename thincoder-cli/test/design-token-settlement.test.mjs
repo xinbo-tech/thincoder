@@ -12,8 +12,8 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { randomUUID } from "node:crypto"
 
-import { settleAdvisorRun } from "../src/agent-tools/advisor-async.mjs"
-import { validateDesignToken } from "../src/agent-tools/advisor.mjs"
+import { settleAdvisorRun } from "@thincoder/core/agent-tools/advisor-async.mjs"
+import { validateDesignToken } from "@thincoder/core/agent-tools/advisor.mjs"
 import { resolveDesignSlot, executeConsumeDesignAction } from "../src/agent-tools/subagent-spawn.mjs"
 import { executeToolCalls } from "../src/agent/dispatch.mjs"
 import {

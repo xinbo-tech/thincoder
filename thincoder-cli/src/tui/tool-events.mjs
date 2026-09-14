@@ -19,7 +19,7 @@
 import { C } from "./ansi.mjs"
 import { formatToolSummary } from "./tool-summaries.mjs"
 import { describeToolArgs, toolArgsLines } from "./tool-args.mjs"
-import { ADVISOR_THINKING_PLACEHOLDER, resolveAdvisorProvider } from "../advisor/run.mjs"
+import { ADVISOR_THINKING_PLACEHOLDER, resolveAdvisorProvider } from "@thincoder/core/advisor/run.mjs"
 import {
   SUBAGENT_ROLES, routeSubToken, routeSubReasoning, routeSubToolCall,
   routeSubToolOutput, finishSubTask, finishSubTaskKey, finishSubTasksByRole, freezeDoneSubTasks,

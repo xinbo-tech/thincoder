@@ -77,7 +77,7 @@
 | 段内帽判定 | `for (let turn = 0; turn < maxTurns; turn++)`（:178）+ `throw new ContinueError(maxTurns)`（:390） | **零改动**（控制流只读段内 `turn` / `maxTurns`） |
 
 **数据流（CLI——消费点全链零改动）**：子 runAgent 发编号帧 →
-① `⟦ev⟧turn` →（镜像层 `src/agent-tools/subagent-run.mjs:110-117` / `src/agent-tools/escalate-async.mjs:203-205` 原样正则解析）→ `entry.turn` / `maxTurns` → status / observe 面；
+① `⟦ev⟧turn` →（镜像层 `src/agent-tools/subagent-run.mjs:110-117` / `thincoder-core/agent-tools/escalate-async.mjs:203-205` 原样正则解析）→ `entry.turn` / `maxTurns` → status / observe 面；
 ② TUI 路由（`src/tui/subagent-blocks.mjs`）→ 活动块头 `turn n/max`；
 ③ 终态快照 `onSubagent({turn, maxTurns})`（`subagent-run.mjs:137`）→ 冻结头；
 ④ 状态行 `render-frame.mjs:355`（主会话）。

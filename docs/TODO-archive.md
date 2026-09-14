@@ -63,7 +63,7 @@
 - [x] **subagent status touched 显示不准**（**已实落（subagent-actions:59-66/:254 实时读 `_touchedFiles`）**；原注：用户实证——已写入却显示"—（尚无改动）"）：修 = touched 从真实写入记录实时取 → 证据 `thincoder-cli/src/agent-tools/subagent-actions.mjs:59`（touchedSummary 实时读点）· status=已核销
 - [x] **advisor 评审状态查询假空**（**已实落（ops.mjs:180-198 双载体真判据）**；原注：用户判定平台 bug——池实有跑者查询返空）：修 = status 聚合纳入 advisor 池真实条目 → 证据 `thincoder-cli/src/tools/ops.mjs:181`（双池汇总面）· status=已核销
 - [x] **子代理 id 复用**（**已实落（nextSubagentId scheduler:370-391）**；原注：用户观察——平台 bug——§27.1 F4 修复洞）：真因 = `_subIdCounter` 挂 history expando、压缩随旧数组被抹 → 池空时 spawn 回 #1；已落地（2026-09-10——载体改 agent 本体 ±4 行/端；VSC clean；CLI 端在途）；遗留 = `thincoder-cli/src/agent-tools/subagent.mjs:293-294` 注释述旧前提 → 证据 `thincoder-cli/src/agent-tools/subagent-scheduler.mjs:380`（nextSubagentId）· status=已核销
-- [x] **advisor 进行中评审不可取消**（**已实落（subagent.mjs:121 cancel + cancelAsyncAdvisor AGENT-LOOP:754）**；原注：用户反馈——平台 bug）：对象漂移需杀旧重发——无 cancel 通道（同 scope 重发被拒）→ 证据 `thincoder-cli/src/agent-tools/advisor-async.mjs:254`（"settle 后逐个发起"拒绝文案）· status=已核销
+- [x] **advisor 进行中评审不可取消**（**已实落（subagent.mjs:121 cancel + cancelAsyncAdvisor AGENT-LOOP:754）**；原注：用户反馈——平台 bug）：对象漂移需杀旧重发——无 cancel 通道（同 scope 重发被拒）→ 证据 `thincoder-core/agent-tools/advisor-async.mjs:254`（"settle 后逐个发起"拒绝文案）· status=已核销
 - [x] **AGENTS.md 文档地图陈旧**（**已销账——实测 VERIFY-DOCONLY/ENGINEERING-WORKLOOP 零命中；:14 明载不逐档裸列**）；原注：:17 仍列 VERIFY-DOCONLY.md（归档后悬空）+ 整体含早已归档档（ENGINEERING-WORKLOOP 等）——父侧立项整体清扫 → 证据 `AGENTS.md:17` · status=已核销
 
 - [x] **`thincoder-cli/src/agent-tools/subagent.mjs` 受限变体 schema 补 cancel 词**（描述层同步）→ 证据 `thincoder-cli/src/agent-tools/subagent.mjs:142`（action enum）· status=已核销（第 20 批 TUI-SELECTION §5 A2 Done + §6 收口 · 令牌消费）
@@ -82,7 +82,7 @@
 - [x] **`thincoder-cli/src/tui/index.mjs` `startTUI` 单函数 400 行（L72–471）**——越函数档线（≥300 行）；单点增量不触拆分 → 拆分债 → 证据 `thincoder-cli/src/tui/index.mjs:72` · status=已废弃（原状态=待讨论）
 - [x] **需求档 FR13 行「现况」子句陈旧**（句称 `thincoder-cli/src/prompts/discipline-engineering.md:182` 教跑 `scripts/check-doc-width.mjs`——实测 `thincoder-cli/src/prompts/**` 对 `scripts/`/`check-doc-width` 零命中）→ 证据 `thincoder-cli/docs/requirements/ENGINEERING-MODE.md:723` · status=已废弃（原状态=待讨论）
 - [x] **`/undo` 快照栈字节无界**（条数封顶 50、无尺寸守卫）→ 证据 `thincoder-cli/src/tui/cmd-undo.mjs:12`（`MAX_UNDO`）· `thincoder-cli/src/agent/dispatch.mjs:357-358`（快照读整档）· status=已废弃（原状态=待讨论）
-- [x] **`_advisorRuns` 实例无逐实例删除**（仅模式切换整体重置）→ 证据 `thincoder-cli/src/agent-tools/advisor-async.mjs:104-137` · status=已废弃（原状态=待讨论）
+- [x] **`_advisorRuns` 实例无逐实例删除**（仅模式切换整体重置）→ 证据 `thincoder-core/agent-tools/advisor-async.mjs:104-137` · status=已废弃（原状态=待讨论）
 - [x] **小容器族无上界**（`_asyncTombstones`/`_turnControllers`/`_frozenSubKeys`/`expandedBlocks`；capturedConsole 拼接可突破 64K）→ 证据 `thincoder-cli/src/agent-tools/async-settle.mjs:138-139` · `thincoder-cli/src/agent/dispatch.mjs:428-432` · status=已废弃（原状态=待讨论）
 - [x] **`verify-redesign` T-V4 偶触 slow 门**（820–1031ms vs 800ms；干净 HEAD 复现/隔离跑 ~120ms）→ 证据 `thincoder-cli/test/verify-redesign.test.mjs:87` · status=已废弃（原状态=待讨论）
 - [x] **跨会话同批档案并发写风险**（两会话父侧同写批次档；无会话级写权分片）→ 证据 `thincoder-core/agent-tools/batch-segment.mjs:130` · status=已废弃（原状态=待讨论——用户 2026-09-11 曾裁定暂不开批）

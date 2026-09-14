@@ -15,7 +15,7 @@ import {
   isExpanded, foldHintLine, renderExpandedBlock, renderBlockTimeline,
   renderMathAndMarkdown, foldCapRows, renderFoldedHead, foldTailLines,
 } from "./fold-block.mjs"
-import { ADVISOR_THINKING_PLACEHOLDER } from "../advisor/run.mjs"
+import { ADVISOR_THINKING_PLACEHOLDER } from "@thincoder/core/advisor/run.mjs"
 import { frozenSubSeg, toolSeg, frozenAdvSeg } from "./render-segments.mjs"
 
 

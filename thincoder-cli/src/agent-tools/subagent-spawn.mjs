@@ -17,7 +17,7 @@ import {
 import { makeRelay, wrapChildCallbacks, relayPrefixOf } from "../agent/spawn-child.mjs"
 // TUI-OOM-ROOTCAUSE（AGENT-LOOP.md §23.3.1）：子代理人读线窗口常量单源（store 零依赖）。
 import { RECORD_WINDOW_MESSAGES } from "@thincoder/core/session-store.mjs"
-import { validateDesignToken } from "./advisor.mjs"
+import { validateDesignToken } from "@thincoder/core/agent-tools/advisor.mjs"
 import { tokenExpired, removeDesignTokenSlot, reconcileEngTokensFromSlot, persistEngTokens } from "../token-ttl.mjs"
 import { resolveChildProvider, buildChildRunOpts, enqueueAsk } from "./subagent-async.mjs"
 import { nextSubagentId } from "./subagent-scheduler.mjs"

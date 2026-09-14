@@ -126,7 +126,7 @@ FR14 落实（需求层登记）；另含 FR15 的行为面定义（P8 所在需
 
 | # | 候选 | 判据评估 | 取舍 | 结论 |
 |---|---|---|---|---|
-| 1 | **执行登记拆分计划：抽 `src/advisor/project-context.mjs`（项目上下文发现与注入簇）** | 第 13 批登记计划（`ENGINEERING-MODE.md` §2.26.3 D-1）触发条件 = "再度增厚"——本批即触发 | 兑现登记，档位债不挂账 | **选定** |
+| 1 | **执行登记拆分计划：抽 `thincoder-core/advisor/project-context.mjs`（项目上下文发现与注入簇）** | 第 13 批登记计划（`ENGINEERING-MODE.md` §2.26.3 D-1）触发条件 = "再度增厚"——本批即触发 | 兑现登记，档位债不挂账 | **选定** |
 | 2 | 不拆、直接增厚 `messages.mjs` | 少动 | 违反已登记触发——评审必抓 | 否决 |
 
 ## 3. 逐条修法
@@ -141,7 +141,7 @@ FR14 落实（需求层登记）；另含 FR15 的行为面定义（P8 所在需
 - `code` = 路径含声明代码段（默认 = 路径段 `src`；**段匹配、非锚定**）或（非文档扩展名）；
 - `doc` = 文档扩展名（沿用现行 DOC_FILE 谓词）且不落在代码段内。
 
-**变更点**：`repos.mjs` 的两条正则、`dispatch.mjs:199` 锚定式、`advisor-settle.mjs:47` 组件式全部退役，
+**变更点**：`repos.mjs` 的两条正则、`dispatch.mjs:199` 锚定式、`thincoder-core/agent-tools/advisor-settle.mjs:47` 组件式全部退役，
 统一改为 `isCodePath(p, conv)` 接线（`verify.mjs` 的 `isUnderSrc` 一并换源，死 helper 清理）。
 
 ### 3.2 项目声明面：`.thincoder/conventions.json`（PO-10 支撑）
@@ -154,20 +154,20 @@ FR14 落实（需求层登记）；另含 FR15 的行为面定义（P8 所在需
 | 调用点 | 现状 | 改法 |
 |---|---|---|
 | `src/agent/dispatch.mjs` 父侧设计门禁 | `^src[\\/]` 锚定 + isDocFile | `isCodePath(p, conv(agent.cwd))`；**保留**非字符串 → 保守拦截（`typeof p !== "string" ||` 分支 + :197-198 注释随批更新措辞——未知路径不放行）；hint 文案去「in docs/」并按是否声明给声明指引（逐字见 §4.4） |
-| `src/agent-tools/advisor.mjs` 设计评审文档门禁（:111-119） | `docs/` 前缀 + `isDocFile` | 换源 `isDocPath(doc, conv(agent.cwd))`（非文档文件 → 拒绝）；拒绝文案去 `docs/` 措辞（逐字见 §4.4）；:112 注释随批更正 |
-| `src/advisor/repos.mjs` `hasCodeMutations` | 组件式正则 | 换源 `conventions.mjs`（绝对路径）；导出签名不变 |
-| `src/advisor/repos.mjs` `isDocOnlyChange` | `^src[\\/]` 锚定 | 换源（git 相对路径）；导出签名不变 |
-| `src/agent-tools/advisor-settle.mjs` `isCodePath` | 组件式正则 | 本地实现删除，改为导入权威模块 |
+| `thincoder-core/agent-tools/advisor.mjs` 设计评审文档门禁（:111-119） | `docs/` 前缀 + `isDocFile` | 换源 `isDocPath(doc, conv(agent.cwd))`（非文档文件 → 拒绝）；拒绝文案去 `docs/` 措辞（逐字见 §4.4）；:112 注释随批更正 |
+| `thincoder-core/advisor/repos.mjs` `hasCodeMutations` | 组件式正则 | 换源 `conventions.mjs`（绝对路径）；导出签名不变 |
+| `thincoder-core/advisor/repos.mjs` `isDocOnlyChange` | `^src[\\/]` 锚定 | 换源（git 相对路径）；导出签名不变 |
+| `thincoder-core/agent-tools/advisor-settle.mjs` `isCodePath` | 组件式正则 | 本地实现删除，改为导入权威模块 |
 | `thincoder-core/agent-tools/verify.mjs` `isUnderSrc` 两处消费 | 根锚定 + 松散回退 | 换源；`findProjectRoot`/`isUnderSrc` 若仅此两处引用则删除（死代码随批清理） |
 | `src/agent/completion.mjs` | 经 `hasCodeMutations` | 零改动（签名稳定） |
 
-**导出面裁决**：`isDocFile`/`isTempFile` **迁出、不设 re-export**——四个导入方全部就地换源（`dispatch.mjs` / `advisor-settle.mjs` / `verify.mjs` / `agent-tools/advisor.mjs`）；
+**导出面裁决**：`isDocFile`/`isTempFile` **迁出、不设 re-export**——四个导入方全部就地换源（`dispatch.mjs` / `advisor-settle.mjs` / `verify.mjs` / `thincoder-core/agent-tools/advisor.mjs`）；
 保留 re-export = 制造第二个导入路径，与 §3.1「全产品唯一裁判」相抵（D2）。对照：`messages.mjs` 拆分面**保留 re-export**（结构重构 ≠ 权威迁移——§3.4）。
 **`agent-tools/advisor.mjs` 门禁的 `docs/` 前缀 = 换源退役**（非登记——FR12 类目录名硬编码，同族门禁不留半接线）。
 
 ### 3.4 评审注入面（PO-1 · PO-2 · PO-3 · PO-8——含 D8 拆分）
 
-**拆分**（D8）：`messages.mjs` 的「项目上下文发现与注入」簇迁入新档 `src/advisor/project-context.mjs`：
+**拆分**（D8）：`messages.mjs` 的「项目上下文发现与注入」簇迁入新档 `thincoder-core/advisor/project-context.mjs`：
 `findProjectRoot` + `injectProjectGuide` + 文档地图注入 + 标准文档注入 + 降级句 helper（`messages.mjs` 既有导出面**经 re-export 保持**——D-1 登记口径「import 面零改」；本档只被 messages 消费）。
 拆分后 `messages.mjs` 预计 413 → ~300 行（净减；≤500 硬限内——兑现第 13 批登记计划，档位债收口）。
 
@@ -343,14 +343,14 @@ D1–D7 全表 / 锚#1–#7 / C1–C4 / T-RO 组 / A11 的 `batchDoc` 必传句�
 |---|---|---|---|
 | `thincoder-core/conventions.mjs` | **新增** | — | ~120（300 内） |
 | `src/agent/dispatch.mjs` | 修改 | 480 | ≤±12（换源 + hint） |
-| `src/advisor/repos.mjs` | 修改 | 173 | ≤±14（谓词换源） |
-| `src/agent-tools/advisor-settle.mjs` | 修改 | 213 | ≤±5（本地谓词删除） |
+| `thincoder-core/advisor/repos.mjs` | 修改 | 173 | ≤±14（谓词换源） |
+| `thincoder-core/agent-tools/advisor-settle.mjs` | 修改 | 213 | ≤±5（本地谓词删除） |
 | `thincoder-core/agent-tools/verify.mjs` | 修改 | 292 | ≤±10（换源 + 死代码清） |
 | `src/tui/cmd-eng.mjs` | 修改 | 94 | 净减 ~25（门禁/模板删除） |
 | `thincoder-core/agent-tools/eng.mjs` | 修改 | 67 | ±2 |
 | `src/config.mjs` | 修改 | 487 | ±1（注释） |
-| `src/agent-tools/advisor.mjs` | 修改 | 241 | ≤±6（门禁换源 + 拒绝文案 + 注释 :112） |
-| `src/advisor.mjs` | 修改 | 290 | ±1（过期注释 :5） |
+| `thincoder-core/agent-tools/advisor.mjs` | 修改 | 241 | ≤±6（门禁换源 + 拒绝文案 + 注释 :112） |
+| `thincoder-core/advisor.mjs` | 修改 | 290 | ±1（过期注释 :5） |
 
 **面② 索引（PO-8/9）**
 
@@ -367,8 +367,8 @@ D1–D7 全表 / 锚#1–#7 / C1–C4 / T-RO 组 / A11 的 `batchDoc` 必传句�
 
 | 文件 | 性质 | 当前行数 | 预计增量 |
 |---|---|---|---|
-| `src/advisor/project-context.mjs` | **新增**（D8 登记计划兑现） | — | ~200（300 内） |
-| `src/advisor/messages.mjs` | 修改 | 413 | 净减 ~110（拆分迁出 + P1–P3） |
+| `thincoder-core/advisor/project-context.mjs` | **新增**（D8 登记计划兑现） | — | ~200（300 内） |
+| `thincoder-core/advisor/messages.mjs` | 修改 | 413 | 净减 ~110（拆分迁出 + P1–P3） |
 | `src/prompts/discipline-engineering.md` | 修改 | 226 | ≤±12 |
 | `docs/design/prompts/discipline-engineering.md` | 修改 | 154 | ≤±10 |
 | `src/prompts/advisor-design.md` | 修改 | 41 | ≤±6 |
@@ -447,11 +447,11 @@ D1–D7 全表 / 锚#1–#7 / C1–C4 / T-RO 组 / A11 的 `batchDoc` 必传句�
 ## 8. 关键决策记录
 
 - D1–D8 见 §2（各含被否决备选与理由）。
-- **附加决策**：① `repos.mjs` 的 `isDocFile`/`isTempFile` 谓词迁入 `conventions.mjs`（`repos.mjs` 内消费点改导入；**导出面不保留双份——不设 re-export**：四个导入方全部换源（含第 4 导入方 `src/agent-tools/advisor.mjs`——设计评审文档门禁）；裁决与接线见 §3.3）；
+- **附加决策**：① `repos.mjs` 的 `isDocFile`/`isTempFile` 谓词迁入 `conventions.mjs`（`repos.mjs` 内消费点改导入；**导出面不保留双份——不设 re-export**：四个导入方全部换源（含第 4 导入方 `thincoder-core/agent-tools/advisor.mjs`——设计评审文档门禁）；裁决与接线见 §3.3）；
   ② `verify.mjs` 换源后删除失引 helper（死代码随批清理——铁律 2）；
   ③ 本批不建本仓自用 `.thincoder/conventions.json`（默认判据对本仓即正确——docMap 探测命中、codePaths 默认命中；需要时父侧随批补，见 §10）；
   ④ 提示词文案逐字定稿于 §4.4（含中文镜像逐字目标文本），coder 机械落笔；主 agent 内容权行使 = 修正轮路径（设计档修订）；
-  ⑤ 过期注释随批更正（换源后指涉失实）：`src/agent/dispatch.mjs:186` · `src/agent-tools/advisor.mjs:112` · `src/advisor.mjs:5`。
+  ⑤ 过期注释随批更正（换源后指涉失实）：`src/agent/dispatch.mjs:186` · `thincoder-core/agent-tools/advisor.mjs:112` · `thincoder-core/advisor.mjs:5`。
 - **与既有纪律核对**：FR13 照 §3.5/§4.4 落地；双端纪律——本批 CLI 单端，VSC 镜像面按语义同源登记（§9）；
   D1 写权矩阵——提示词 = 主 agent 内容权 + coder 落笔；D2——判据单一权威 + 本档不重述 FR 正文（指针）；
   冻结窗口（D5）——本设计不触他链在途档（`docs/design/ENGINEERING-MODE.md` §2.26/§2.27 零触碰）。
@@ -459,9 +459,9 @@ D1–D7 全表 / 锚#1–#7 / C1–C4 / T-RO 组 / A11 的 `batchDoc` 必传句�
 ## 9. 边界（本批不做）
 
 - **B/C 家族剩余**（P11–P13、P16–P28 与 🔵 项）——批次三（§1.4）；其中 `src/prompts/discipline-normal.md:13/:32`（+ CN 镜像同款）的 `docs/README.md` 地图引用属**已登记 P11**（`docs/TODO.md` 勘察表；六档编辑面外——不计入 AC-06 作用域）。
-- **VSC 端实现**——批次二登记。镜像清单（勘察实测）：`advisor/messages.mjs`（METHODOLOGY/地图注入 + 指令句）·
-  `src/agent/execute-tools.mjs:108（VSC 仓）` 判据 · `advisor/repos.mjs:151` · `index-discover.mjs` 扩展名 ·
-  `agent-tools/advisor.mjs:216-225` 校验 · 六档提示词对应位 · `advisor-round1.md` 的 Project Guide 锚（VSC 缺注入实现——真缺口，随镜像批评估）。
+- **VSC 端实现**——批次二登记。镜像清单（勘察实测）：`thincoder-core/advisor/messages.mjs`（METHODOLOGY/地图注入 + 指令句）·
+  `src/agent/execute-tools.mjs:108（VSC 仓）` 判据 · `thincoder-core/advisor/repos.mjs:151` · `index-discover.mjs` 扩展名 ·
+  `thincoder-core/agent-tools/advisor.mjs:216-225` 校验 · 六档提示词对应位 · `advisor-round1.md` 的 Project Guide 锚（VSC 缺注入实现——真缺口，随镜像批评估）。
 - **FR10–FR15 正文搬迁归位**（`ENGINEERING-MODE.md` §2 → 需求档）——父侧裁决项。
 - **不触碰**：他链在途档（`docs/design/ENGINEERING-MODE.md` §2.26/§2.27、`docs/TODO.md` 自身、POOL-LEDGER 面）· 第 7–14 批已交付行为面 · `.thincoder/index` 死产物清理（另立项）· 检查点非 git 改造（已核实为明确报错）。
 - **本仓自指面**（父侧落）：`AGENTS.md` 增「文档改动跑 `node scripts/check-doc-width.mjs`」声明 + 文档规范指路（替代提示词中移除的自指句）。

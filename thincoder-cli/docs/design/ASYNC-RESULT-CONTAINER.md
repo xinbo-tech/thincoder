@@ -42,7 +42,7 @@
 - 替代 subagent-run:210 `!ctx.signal?.aborted`。
 
 ### D5 consult 补信号兜底
-- consult.mjs:404-406 补 `parent._sessionSignal ?? ctx.signal ?? null`（同其他三族）。
+- thincoder-core/agent-tools/consult.mjs:404-406 补 `parent._sessionSignal ?? ctx.signal ?? null`（同其他三族）。
 
 ### D6 buildChildSignal
 - 新建/扩展 helper（如并入 async-settle 或独立）：`buildChildSignal(parent, ctx)`——吸收 `_sessionSignal ?? ctx.signal ?? null` 兜底。
@@ -51,8 +51,8 @@
 ## 3. 受影响文件（CLI，thincoder）
 
 - 新建：`src/agent-tools/async-settle.mjs`（settle 共享 helper + buildChildSignal + 池 accessor——预估 ~150 行）
-- 修改：`src/agent-tools/subagent-run.mjs`（~200 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-30）、`src/agent-tools/advisor-async.mjs`（~490 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-20）、
-  `src/agent-tools/escalate-async.mjs`（~300 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-20）、`src/agent-tools/consult.mjs`（~450 行，settle 升格完整 entry + 信号兜底 + 改调 helper——delta ~-10）、
+- 修改：`src/agent-tools/subagent-run.mjs`（~200 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-30）、`thincoder-core/agent-tools/advisor-async.mjs`（~490 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-20）、
+  `thincoder-core/agent-tools/escalate-async.mjs`（~300 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-20）、`thincoder-core/agent-tools/consult.mjs`（~450 行，settle 升格完整 entry + 信号兜底 + 改调 helper——delta ~-10）、
   `src/agent.mjs`（~410 行，pending 消费单容器——delta ~-15）、`src/agent/run-stages.mjs`（~250 行，池 accessor + pending 清理单容器——delta ~-10）、`src/tui/suspension-drive.mjs`（~380 行，sweep 改调 helper + pending 清理单容器——delta ~-20）、
   `src/agent-tools/subagent-actions.mjs`（~500 行，池 accessor——delta ~+5，**>300 档位——拆分到 async-pool 子模块若跨 500**）、`src/agent-tools/subagent-scheduler.mjs`（~400 行，池 accessor——delta ~+5）、`src/agent-tools/subagent-async.mjs`（~450 行，pending 聚合单容器——delta ~-15）
 - 文档：本设计 + README 地图登记 + AGENT-LOOP.md 子代理/async §（settle 统一机制记录）

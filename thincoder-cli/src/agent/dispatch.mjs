@@ -16,7 +16,7 @@ import { homedir } from "node:os"
 // 批后提交（record-results noteMutations）移到执行成功即刻——唯一记账点（取代批后段
 // + agent.mjs 中断分支记账——不双计）——同消息 [写 + async advisor launch] 时 launch 前
 // 完成的写在 launchSeq 之前落地 → settle 不再误判 stale（§29 症状根因）。
-import { noteMutations, inflightDesignReviewConflict } from "../agent-tools/advisor-async.mjs"
+import { noteMutations, inflightDesignReviewConflict } from "@thincoder/core/agent-tools/advisor-async.mjs"
 import { anyLiveDesignSlot } from "../token-ttl.mjs"
 
 const ERRORS_DIR = join(homedir(), ".thincoder", "tool-errors")

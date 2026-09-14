@@ -24,7 +24,7 @@ import {
   ADVISOR_POOL_LIMIT, resolveAdvisorPoolLimit, advisorPoolLimitFor,
   runningAdvisorOfScope, runningAdvisorCount, launchAsyncAdvisor,
   resolveAdvisorLaunch,
-} from "../src/agent-tools/advisor-async.mjs"
+} from "@thincoder/core/agent-tools/advisor-async.mjs"
 
 /** 拒发测试用的最小 agent（launch 拒发路径只读这些面——成功路径不进入）。 */
 const agent = (over = {}) => ({

@@ -4,10 +4,10 @@
  * Checks: pending tasks, verify guard, advisor guard.
  * Returns { action: 'continue' | 'done', content?, guardPushbacks, honestReminderInjected, advisorPushbacks }
  */
-import { hasCodeMutations } from "../advisor/repos.mjs"
+import { hasCodeMutations } from "@thincoder/core/advisor/repos.mjs"
 import { pushReal } from "@thincoder/core/context.mjs"
-import { MAX_ADVISOR_ROUNDS } from "../advisor/run.mjs"
-import { advisorReviewPending, effectiveAdvisorRound } from "../agent-tools/advisor-async.mjs"
+import { MAX_ADVISOR_ROUNDS } from "@thincoder/core/advisor/run.mjs"
+import { advisorReviewPending, effectiveAdvisorRound } from "@thincoder/core/agent-tools/advisor-async.mjs"
 
 const MAX_VERIFY_PUSHBACKS = 2
 const MAX_VERIFY_RETRIES = 3

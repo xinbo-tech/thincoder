@@ -9,7 +9,7 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { resolveAdvisorProvider } from "../src/advisor/run.mjs"
+import { resolveAdvisorProvider } from "@thincoder/core/advisor/run.mjs"
 
 const P_MAIN = { name: "main", baseURL: "https://main.example/v1", model: "m-main" }
 const P_ALT = { name: "alt", baseURL: "https://alt.example/v1", model: "m-alt", apiKey: "k-alt" }

@@ -70,7 +70,7 @@ R17（2026-09-06）以 digest 自动注入取代旧的 `consult_check` 回合内
 }
 ```
 
-**工具**（均在 `src/agent-tools/consult.mjs`）：
+**工具**（均在 `thincoder-core/agent-tools/consult.mjs`）：
 
 ```
 consult_start
@@ -120,7 +120,7 @@ stopped, total, received }`。settle 语义：正常回复入队；`session.stop
 
 | 文件 | 动作 |
 |---|---|
-| `src/agent-tools/consult.mjs` | 两工具 + main_history + 会话状态 + runConsultChild + settle→pending 单容器（升格完整 entry——ASYNC-RESULT-CONTAINER.md D2）+ cleanupConsultSessions |
+| `thincoder-core/agent-tools/consult.mjs` | 两工具 + main_history + 会话状态 + runConsultChild + settle→pending 单容器（升格完整 entry——ASYNC-RESULT-CONTAINER.md D2）+ cleanupConsultSessions |
 | `src/agent/setup.mjs` | depthOnly 注册两工具 + role "consult" base prompt 分支 + `withPool` 候选池装饰 |
 | `src/agent.mjs` | `CONSULT_BASE` 加载导出 + run 首行 consult digest 注入（含 digest 消费驱动的 pending 族推广） |
 | `src/config.mjs` | DEFAULTS 加 consultModels/consultTurns/consultTimeoutMs + 校验（≤5、provider 存在） |

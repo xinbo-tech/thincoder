@@ -9,7 +9,7 @@
 
 import { compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT } from "@thincoder/core/context.mjs"
 import { ensureAutoReminder, injectEngineeringReminder, ContinueError } from "./helpers.mjs"
-import { cleanupConsultSessions } from "../agent-tools/consult.mjs"
+import { cleanupConsultSessions } from "@thincoder/core/agent-tools/consult.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"
 // ASYNC-RESULT-CONTAINER.md D1：池 accessor（absorb 双池——advisor 独立池无队列）
 import { getAsyncPool, releaseSettledEntry } from "../agent-tools/async-settle.mjs"
@@ -186,7 +186,7 @@ export async function finalizeAgentTurn(agent, ctx) {
     // (headless, suspDriven=false) must NOT close: the model has not digested
     // the findings yet — the fix round that follows still continues the thread.
     if (!autoTurn && !injectedAdvisor) {
-      const { closeOpenCodeAdvisorRuns } = await import("../agent-tools/advisor-async.mjs")
+      const { closeOpenCodeAdvisorRuns } = await import("@thincoder/core/agent-tools/advisor-async.mjs")
       closeOpenCodeAdvisorRuns(agent)
     }
   }

@@ -20,7 +20,7 @@ import {
 import { logEvent, errText } from "@thincoder/core/log.mjs"
 import { describeBlockers, detectStall, STALL_NOTE } from "./subagent-scheduler.mjs"
 import { resolveChildProvider, mergeChildMutations } from "./subagent-async.mjs"
-import { launchEscalateAsync } from "./escalate-async.mjs"
+import { launchEscalateAsync } from "@thincoder/core/agent-tools/escalate-async.mjs"
 // TUI-OOM-ROOTCAUSE §23.3.1：子代理人读线窗口常量（单源——store 零依赖）。
 import { RECORD_WINDOW_MESSAGES } from "@thincoder/core/session-store.mjs"
 // ASYNC-RESULT-CONTAINER.md D1：池 accessor（absorb 双池——advisor 独立池无队列）
@@ -324,10 +324,11 @@ export function executeSendAction(args, ctx) {
 // §19.6 subagent panel 检查工具（AGENT-LOOP.md §19.6——F-P1..P3/D-P1..P4）
 // ═══════════════════════════════════════════════════════════════════════════
 // 2026-09-08 拆分（Module Split Policy——601 > 500 硬限跨档）：§19.6 面板段迁至
-// ./subagent-panel.mjs（executePanelAction/panelFreezeGate/blockKeyIn——verbatim +
-// ASYNC-RESULT-CONTAINER D1/D2 落地）；本面保留 re-export 保 subagent.mjs 既有
-// import 面（subagent-async 尾部 re-export 先例）。
-export { executePanelAction } from "./subagent-panel.mjs"
+// @thincoder/core/agent-tools/subagent-panel.mjs（2026-09-14 S2 U12 迁核；
+// executePanelAction/panelFreezeGate/blockKeyIn——verbatim + ASYNC-RESULT-CONTAINER
+// D1/D2 落地）；本面保留 re-export 保 subagent.mjs 既有 import 面（subagent-async
+// 尾部 re-export 先例）。
+export { executePanelAction } from "@thincoder/core/agent-tools/subagent-panel.mjs"
 
 /**
  * subagent action:"escalate"（§19 D-M4——退役 escalate 工具语义原样，ESCALATE.md；

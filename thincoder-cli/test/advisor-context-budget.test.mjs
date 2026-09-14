@@ -10,8 +10,8 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 
-import { _runAdvisorToolLoop, advisorIncompleteMarker } from "../src/advisor/run.mjs"
-import { advisorContextBudget, estimateTokens, MAX_RESULT_CHARS } from "../src/advisor/compaction.mjs"
+import { _runAdvisorToolLoop, advisorIncompleteMarker } from "@thincoder/core/advisor/run.mjs"
+import { advisorContextBudget, estimateTokens, MAX_RESULT_CHARS } from "@thincoder/core/advisor/compaction.mjs"
 
 const TOKENS_PER_BLOB = MAX_RESULT_CHARS / 4 // 16_384（chars/4 口径——满长工具结果一条）
 const BLOB = "x".repeat(MAX_RESULT_CHARS) // 单条工具结果 = 满长截断量级（64 × 1024 字符）

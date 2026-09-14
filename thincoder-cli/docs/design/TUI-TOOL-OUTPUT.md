@@ -23,7 +23,7 @@
 
 `onToolOutput(name, chunk)` 的 chunk 两形态：
 
-- **对象形态**（正式契约）：`{ kind, text }`，kind ∈ `think | text | tool`——advisor（`advisor/run.mjs` emit() 包装）等工具使用；有序多块流（如 advisor 的 think↔tool 交替）靠 kind 区分渲染
+- **对象形态**（正式契约）：`{ kind, text }`，kind ∈ `think | text | tool`——advisor（`thincoder-core/advisor/run.mjs` emit() 包装）等工具使用；有序多块流（如 advisor 的 think↔tool 交替）靠 kind 区分渲染
 - **裸字符串**（兼容形态）：bash 等工具直接发 stdout/stderr 字符串
 - **消费端容错**：TUI 统一归一化 `typeof chunk === "string" ? { kind: "text", text } : chunk`——一行兜底，emit 端新工具应优先发对象形态
 

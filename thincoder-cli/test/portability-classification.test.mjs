@@ -16,7 +16,7 @@ import { join } from "node:path"
 import {
   classifyPath, isCodePath, isDocPath, isTempPath, loadConventions, clearConventionsCache,
 } from "@thincoder/core/conventions.mjs"
-import { hasCodeMutations } from "../src/advisor/repos.mjs"
+import { hasCodeMutations } from "@thincoder/core/advisor/repos.mjs"
 import { executeToolCalls } from "../src/agent/dispatch.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "@thincoder/core/session-slots.mjs"
 

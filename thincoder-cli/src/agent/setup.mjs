@@ -170,7 +170,7 @@ export async function prepareRun(agent, input, callbacks, {
   // task/plan tools are injected with the main loop; subagent/skill/goal/verify only at top level
   // eng-coder subagents get advisor for mandatory design review before coding
   const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool, readHistoryTool, batchSegmentTool } = await import("@thincoder/core/agent-tools.mjs")
-  const { consultStartTool, consultStopTool } = await import("../agent-tools/consult.mjs")
+  const { consultStartTool, consultStopTool } = await import("@thincoder/core/agent-tools/consult.mjs")
   // withPool: decorate the consult_start description with the CURRENT candidate pool
   // so the model knows which models it can pick (CLI parity with the plugin). The
   // retired escalate tool surface is now the subagent action:"escalate" — its pool

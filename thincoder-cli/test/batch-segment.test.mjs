@@ -19,9 +19,9 @@ import { randomUUID } from "node:crypto"
 
 import { batchSegmentTool, batchDocForReview, resolveBatchDocPath, MAX_TEXT_CHARS } from "@thincoder/core/agent-tools/batch-segment.mjs"
 import { buildSpawnChild } from "../src/agent-tools/subagent-spawn.mjs"
-import { _advisorToolsFor } from "../src/advisor/run.mjs"
-import { buildAdvisorSystemPrompt } from "../src/advisor.mjs"
-import { advisorTool } from "../src/agent-tools/advisor.mjs"
+import { _advisorToolsFor } from "@thincoder/core/advisor/run.mjs"
+import { buildAdvisorSystemPrompt } from "@thincoder/core/advisor.mjs"
+import { advisorTool } from "@thincoder/core/agent-tools/advisor.mjs"
 import { prepareRun } from "../src/agent/setup.mjs"
 
 let tmp
@@ -162,7 +162,7 @@ test("T47 错误/边界：路径门（若传则须可读）+ 代码评审工具�
   const code = _advisorToolsFor(agent, "code")
   assert.ok(!code.byName.has("batch_segment"), "代码评审工具集不含本工具")
   assert.deepEqual([...code.byName.keys()], [..._advisorToolsFor(agent).byName.keys()], "与无参调用（旧签名默认）逐字相同——代码评审零变更")
-  assert.deepEqual([...code.byName.keys()], ["read", "glob", "grep", "ls", "lsp"], "只读工具集（无 memory 时五工具）恒定")
+  assert.deepEqual([...code.byName.keys()], ["read", "glob", "grep", "ls", "lsp", "code_search"], "只读工具集（检索面恒在——六工具；未绑定索引时执行面端中立降级）恒定")
   assert.ok(!_advisorToolsFor(agent, "design", null).byName.has("batch_segment"), "设计评审未绑定 → 不挂载（fail-closed）")
   assert.ok(_advisorToolsFor(agent, "design", abs).byName.has("batch_segment"), "设计评审 + 已绑定 → 挂载")
 })

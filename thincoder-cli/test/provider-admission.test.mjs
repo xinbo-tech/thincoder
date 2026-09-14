@@ -19,7 +19,7 @@ import { createModelPicker } from "../src/tui/model-picker.mjs"
 import { createConfigHelpers } from "../src/tui/config-helpers.mjs"
 import { _clearModelCatalogCache } from "../src/tui/model-catalog.mjs"
 import { resolveChildProvider } from "../src/agent-tools/subagent-async.mjs"
-import { resolveAdvisorProvider } from "../src/advisor/run.mjs"
+import { resolveAdvisorProvider } from "@thincoder/core/advisor/run.mjs"
 import { applySession } from "@thincoder/core/session.mjs"
 
 function tmpCfg(content) {

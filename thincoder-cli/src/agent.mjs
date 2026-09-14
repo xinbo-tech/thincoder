@@ -50,8 +50,8 @@ export {
 }
 
 
-// Re-exported for API compatibility (single source of truth: advisor/repos.mjs)
-export { hasCodeMutations } from "./advisor/repos.mjs"
+// Re-exported for API compatibility (single source of truth: @thincoder/core/advisor/repos.mjs)
+export { hasCodeMutations } from "@thincoder/core/advisor/repos.mjs"
 
 /** Create a new agent state object with all fields initialized to defaults */
 export function createAgent({
@@ -105,7 +105,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
   const pendingAsync = agent._pendingAsyncResults
   if (pendingAsync?.length) {
     const { injectAsyncResult } = await import("./agent-tools/subagent.mjs")
-    const { injectConsultResult } = await import("./agent-tools/consult.mjs")
+    const { injectConsultResult } = await import("@thincoder/core/agent-tools/consult.mjs")
     // TUI-OOM-ROOTCAUSE（AGENT-LOOP.md §23.3.1 消费点②——run 起始 pending 注入）：
     // 注入完成后释放条目对子代理对象的持有（childAgent/report 置空——幂等 helper）。
     const { releaseSettledEntry } = await import("./agent-tools/async-settle.mjs")

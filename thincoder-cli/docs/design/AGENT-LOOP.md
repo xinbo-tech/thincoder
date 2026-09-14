@@ -448,7 +448,7 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
 > 4. **Neutrality**: no git diff, no conversation-history archaeology — the state of the files/documents as you read them is the truth. Do not guess author intent.
 
 **会话上下文轮（旧 §18.8.1——2026-09-04 设计）——已退役（第 23 批评估 2026-09-11）**：该设计（新第一轮 + `advisor-context.md` + cap 6）
-从未实现；其问题域（评审可评估「真需求覆盖」）现由四个机制承接：① 会话背景注入（`src/advisor/messages.mjs`——最近 3 组交流，机械提取）；
+从未实现；其问题域（评审可评估「真需求覆盖」）现由四个机制承接：① 会话背景注入（`thincoder-core/advisor/messages.mjs`——最近 3 组交流，机械提取）；
 ② 需求文档主参照（Project Guide 指向——评审工作流第 2 步必读）；③ 设计评审批次档绑定（`batchDoc`——`ENGINEERING-MODE.md` §2.20.3）；
 ④ 评审对象声明（§12.1）。round2+ 无会话考古、四模板 Neutrality 锚不变。评估与证据见 §19。
 
@@ -791,9 +791,9 @@ reasoning 全文」表述按此限缩（**字段集不变**——F-O4）；写�
 - **②** 两端同形：判据读**子代理池**里的 role===\"advisor\" 条目——CLI `src/tools/ops.mjs:223-227`、
   VSC `src/tools/wait_for.mjs:125`（VSC 仓；至 129 行）（均经 `hasRunningAsync` → `asyncPool` = `_asyncSubagents`）；
   而评审条目在 `_asyncAdvisors`（§11.2）——该池里永无 role=\"advisor\" 条目 → `!hasRunning` 恒 true → **0ms 秒过**。
-- **③** CLI：`src/agent-tools/advisor-async.mjs:247` `cancelAsyncAdvisor` + `src/agent-tools/subagent-async.mjs:249-250`
+- **③** CLI：`thincoder-core/agent-tools/advisor-async.mjs:247` `cancelAsyncAdvisor` + `src/agent-tools/subagent-async.mjs:249-250`
   （id 不在子代理池 → 落 advisor 池）+ TUI `src/tui/mouse.mjs:207`；VSC：`src/extension/panel-messages.mjs:238`（VSC 仓；至 241 行）
-  （面板 ⏹ 路由已有）+ `src/agent-tools/advisor-async.mjs:414` `cancelAdvisorReview`，但 `subagent cancel`
+  （面板 ⏹ 路由已有）+ `thincoder-core/agent-tools/advisor-async.mjs:414` `cancelAdvisorReview`，但 `subagent cancel`
   工具动作无 advisor 落点（`src/agent-tools/subagent-actions.mjs:211-216` 只查子代理池）→ **模型无法取消**。
 - **④** CLI `src/agent-tools/subagent-actions.mjs:235-236`（observe 遇 advisor id → 明确指引）；VSC 无此分支 → 回含糊 \"unknown async subagent id\"。
 
@@ -979,7 +979,7 @@ A 的缺陷面在 **webview 块身份/投递链**。共性是"第二池接入面
 5. **D2 退役记录（§7.6 行 433 替换——逐字；落文允许追加指针句）**：
 
    > **会话上下文轮（旧 §18.8.1——2026-09-04 设计）——已退役（第 23 批评估 2026-09-11）**：该设计（新第一轮 + `advisor-context.md` + cap 6）
-   > 从未实现；其问题域（评审可评估「真需求覆盖」）现由四个机制承接：① 会话背景注入（`src/advisor/messages.mjs`——最近 3 组交流，机械提取）；
+   > 从未实现；其问题域（评审可评估「真需求覆盖」）现由四个机制承接：① 会话背景注入（`thincoder-core/advisor/messages.mjs`——最近 3 组交流，机械提取）；
    > ② 需求文档主参照（Project Guide 指向——评审工作流第 2 步必读）；③ 设计评审批次档绑定（`batchDoc`——`ENGINEERING-MODE.md` §2.20.3）；
    > ④ 评审对象声明（§12.1）。round2+ 无会话考古、四模板 Neutrality 锚不变。评估与证据见 §19。
 
@@ -1067,13 +1067,13 @@ A 的缺陷面在 **webview 块身份/投递链**。共性是"第二池接入面
 
 **F-AP2（链式传播丢 reason——关键丢失点）**：子代理 / 评审 / 会诊 controller 链到基信号的**5 处 hop 全部以裸 `abort()` 转发**——
 reason 在该点丢失：`src/agent-tools/subagent-run.mjs:101-103` · `src/agent-tools/subagent.mjs:67-69`（sync 装配 `armSyncChildAbort`）·
-`escalate-async.mjs:177-178` · `advisor-async.mjs:285-286` · `consult.mjs:418-419`。
+`thincoder-core/agent-tools/escalate-async.mjs:177-178` · `thincoder-core/agent-tools/advisor-async.mjs:285-286` · `thincoder-core/agent-tools/consult.mjs:418-419`。
 实测（Node 24.19.0 / undici 7.29.0）：裸 abort 下 fetch 拒绝 = `DOMException[AbortError] "This operation was aborted"`、
 **无 `reason` 字段**——「谁杀的」在死亡现场已不可恢复。
 
 **F-AP3（报告面压成 message 单行）**：结算面把错误对象压成 message 字符串——name / cause / reason / 标注全丢：
-`src/agent-tools/subagent-run.mjs:159`（`entry.error = err?.message ?? String(err)`）· `advisor-async.mjs:299` ·
-`escalate-async.mjs:255` · `consult.mjs:341` · `subagent.mjs:344`（`errText(e, 200)`）。
+`src/agent-tools/subagent-run.mjs:159`（`entry.error = err?.message ?? String(err)`）· `thincoder-core/agent-tools/advisor-async.mjs:299` ·
+`thincoder-core/agent-tools/escalate-async.mjs:255` · `thincoder-core/agent-tools/consult.mjs:341` · `subagent.mjs:344`（`errText(e, 200)`）。
 digest 原样注入 `entry.error`（`subagent-async.mjs:372-400`）——**用户实证所见的一行即此**。
 
 **F-AP4（TUI 状态面粗粒度）**：`src/tui/subagent-freeze.mjs:143` 冻结兜底写死 `"interrupted"`；`tool-events.mjs:182` 的
@@ -1086,7 +1086,7 @@ digest 原样注入 `entry.error`（`subagent-async.mjs:372-400`）——**用�
   **CLI 请求链已不能产生用户实证的文案**。
 - **现存活墙钟边界 = 有意设计面**（裁定与标注见 §20.3 第 4 条）：proxy 响应头 600s（`thincoder-core/provider/core.mjs:420` → `thincoder-core/proxy.mjs:86`
   "Response timeout"）· SSE 读侧 idle 120s（`thincoder-core/provider/sse.mjs:176-179`）· proxy body idle 120s（`thincoder-core/proxy.mjs:104`）·
-  consult watchdog 600s（`consult.mjs:35` 与 `:206-212`）· advisor 评审预算（`advisor/loop.mjs:141-143`——已自带
+  consult watchdog 600s（`thincoder-core/agent-tools/consult.mjs:35` 与 `:206-212`）· advisor 评审预算（`thincoder-core/advisor/loop.mjs:141-143`——已自带
   「Advisor: review timeout」文案）。
 - **VSC 镜像残留（用户实证文案的唯一在网生产点）**：`thincoder-vscode/src/provider.mjs:28`（`FETCH_TIMEOUT_MS = 600_000`）→
   `:324` `AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)])` → `:327`——**每个请求**带绝对 600s 墙钟；
@@ -1133,8 +1133,8 @@ digest 原样注入 `entry.error`（`subagent-async.mjs:372-400`）——**用�
 |---|---|---|
 | `user` | `reason.interrupt === true` | Ctrl+C 停回合（`tui/key-handler.mjs:94` 与 `:114`）· Ctrl+I（`tui/key-modes.mjs:224`）· ACP cancel（`acp/session.mjs:49`） |
 | `timeout` | `reason.name === "TimeoutError"`；或 `reason.abortTrigger === "timeout"`（定时器面） | 读侧 idle / proxy 定时器 / consult watchdog（第 4 条） |
-| `cancel` | `reason.abortTrigger === "cancel"` | 池 cancel（`subagent-async.mjs:202`）· sync ⏹（`:226`）· 评审 cancel（`advisor-async.mjs:213`） |
-| `stop` | `reason.abortTrigger === "stop"` | 全停 / 清池（`tui/key-handler.mjs:62` 与 `:67`）· consult 会话停（`consult.mjs:357` 与 `:452`） |
+| `cancel` | `reason.abortTrigger === "cancel"` | 池 cancel（`subagent-async.mjs:202`）· sync ⏹（`:226`）· 评审 cancel（`thincoder-core/agent-tools/advisor-async.mjs:213`） |
+| `stop` | `reason.abortTrigger === "stop"` | 全停 / 清池（`tui/key-handler.mjs:62` 与 `:67`）· consult 会话停（`thincoder-core/agent-tools/consult.mjs:357` 与 `:452`） |
 | `unknown` | reason 缺失且错误无 `abortInfo` | **诊断告警态**（残留 / 未标注路径——必须显式呈现，不得静默） |
 
 **layer（枚举 3 值——D1 原文三分）**：`provider` / `agent` / `settle`；未标注错误回落 `unrecorded`
@@ -1174,8 +1174,8 @@ digest 原样注入 `entry.error`（`subagent-async.mjs:372-400`）——**用�
 - unknown 形态（告警）：`· abort(unknown@<layer>:no reason on signal)`；未标注回落 `unknown@unrecorded`；
 - 总长 ≤300 字符（超长优先截 detail——文档宽度判据同量级）。
 
-**合成点（settle 族报告面——5 档；行号 as-of 交付后实测）**：`subagent-run.mjs:162` · `advisor-async.mjs:303` ·
-`escalate-async.mjs:258` · `consult.mjs:334` 与 `:343` · `subagent.mjs:346`（sync 错误日志）。`logEvent("child:error", …)` 经 `entry.error`
+**合成点（settle 族报告面——5 档；行号 as-of 交付后实测）**：`subagent-run.mjs:162` · `thincoder-core/agent-tools/advisor-async.mjs:303` ·
+`thincoder-core/agent-tools/escalate-async.mjs:258` · `thincoder-core/agent-tools/consult.mjs:334` 与 `:343` · `subagent.mjs:346`（sync 错误日志）。`logEvent("child:error", …)` 经 `entry.error`
 自动携带（零改动）；`llm:error` 事件面（`thincoder-core/provider/core.mjs:107`）的 `err` 字段同合成器（P1）。
 
 **第 4 条 站点总表（12 行——产生 9 / 传播 1 / 取消停止 1 / 定时器 1）**
@@ -1193,7 +1193,7 @@ digest 原样注入 `entry.error`（`subagent-async.mjs:372-400`）——**用�
 | 9 | 产生 | `subagent.mjs:290` 与 `:295`（sync stopped 抛错） | `abortError(settle, "sync-stopped")` |
 | 10 | 传播 | F-AP2 五处 hop | `ctrl.abort(baseSignal.reason)`（reason 保留） |
 | 11 | 取消停止 | cancel 3 处 + stop 4 处（第 1 条表内站点） | `abort({abortTrigger:…, abortDetail:…})` |
-| 12 | 定时器 | 错误面（destroy / reject 抛错）：`thincoder-core/provider/sse.mjs:178` · `thincoder-core/proxy.mjs:81` · `thincoder-core/proxy.mjs:99` · `thincoder-core/provider/google.mjs:203`（google-sse-idle）；信号面（watchdog 中止 ctrl）：`consult.mjs:213` | 错误面 `timeoutError(…)`；信号面 `abort({abortTrigger:"timeout", abortDetail:"consult-watchdog"})` |
+| 12 | 定时器 | 错误面（destroy / reject 抛错）：`thincoder-core/provider/sse.mjs:178` · `thincoder-core/proxy.mjs:81` · `thincoder-core/proxy.mjs:99` · `thincoder-core/provider/google.mjs:203`（google-sse-idle）；信号面（watchdog 中止 ctrl）：`thincoder-core/agent-tools/consult.mjs:213` | 错误面 `timeoutError(…)`；信号面 `abort({abortTrigger:"timeout", abortDetail:"consult-watchdog"})` |
 
 规则（覆盖勘察外的漏网站点）：**对单个任务目标的定向中止 = cancel；整批 / 会话 / 回合级停止 = stop；用户按键 = user；
 定时器 = timeout；无标注 = unknown**（unknown 即告警——不得静默）。
@@ -1250,9 +1250,9 @@ provider / agent / settle 产生或补标错误（`abortInfo`，第 4 条 #1–#
 | `src/agent-tools/subagent.mjs` | 403 | 405 | +2 | 产生点 2 + hop 1 + 合成 1 |
 | `src/agent-tools/subagent-run.mjs` | 203 | 206 | +3 | hop 1 + 合成 1 |
 | `src/agent-tools/subagent-async.mjs` | 473 | 474 | +1 | cancel 两处 |
-| `src/agent-tools/escalate-async.mjs` | 287 | 290 | +3 | hop 1 + 合成 1 |
-| `src/agent-tools/advisor-async.mjs` | 350 | 354 | +4 | hop 1 + 合成 1 + cancel 1 |
-| `src/agent-tools/consult.mjs` | 456 | 461 | +5 | hop 1 + 定时器 1 + stop 2 + 合成 2 |
+| `thincoder-core/agent-tools/escalate-async.mjs` | 287 | 290 | +3 | hop 1 + 合成 1 |
+| `thincoder-core/agent-tools/advisor-async.mjs` | 350 | 354 | +4 | hop 1 + 合成 1 + cancel 1 |
+| `thincoder-core/agent-tools/consult.mjs` | 456 | 461 | +5 | hop 1 + 定时器 1 + stop 2 + 合成 2 |
 | `src/tui/key-handler.mjs` | 440 | 441 | +1 | stop reason 两处 |
 | `test/abort-provenance.test.mjs` | —（新增） | 190 | 新增（设计估 ~170） | T-AP1–T-AP8 在役；T-AP9/T-AP10 已退场（整删——删除记录 = `TESTING.md` §11.3） |
 
@@ -1319,7 +1319,7 @@ provider / agent / settle 产生或补标错误（`abortInfo`，第 4 条 #1–#
 **变更记录**：2026-09-11 第 24 批——子代理 abort 来源标注（可诊断性）（新增本节；需求档 §6 同批落地；VSC 残留 600s 面登记父侧）；
 同日评审轮次 1 后修正轮（🔴1 + 🔵4 全落）——timeout 三处对齐（判据行 `reason.abortTrigger === "timeout"` · 形态③纳 `"timeout"` · 站点 #12 分错误面/信号面）·
 求值链段（err 优先 + 三步归属）· §20.6 行数口径改「批前基线 → 落档后实测」· form ① 四站点既存证据行 · §2.1 与 `PROVIDER.md` §3 指针（LOGGING.md 核得零改）。
-同日交付后设计刷新——`annotateAbort` 签名 4 参可选形态 · 站点表 #8 行号校正（`:306`/`:338`）· 补两处同类站点（`thincoder-core/provider/google.mjs:203` 定时器面 / `consult.mjs:334`+`:343` 合成器面——并随行校正 #12 与合成点链行号）· §20.6 实施域行数交付后实测刷新 · §20.10 登记 ④（后缀预算——后续改进）。
+同日交付后设计刷新——`annotateAbort` 签名 4 参可选形态 · 站点表 #8 行号校正（`:306`/`:338`）· 补两处同类站点（`thincoder-core/provider/google.mjs:203` 定时器面 / `thincoder-core/agent-tools/consult.mjs:334`+`:343` 合成器面——并随行校正 #12 与合成点链行号）· §20.6 实施域行数交付后实测刷新 · §20.10 登记 ④（后缀预算——后续改进）。
 
 ## 21. Stop 钩子（主会话 run 结束事件）（第 30 批——2026-09-11）
 
@@ -1564,7 +1564,7 @@ T-HS2 改信号同步（墙钟余量消除）+ 归册按实测 · T-HS1 删「�
 ### 22.1 问题（现状复核 as-of 2026-09-11）
 
 预算现覆盖（CLI 面）= subagent / advisor / escalate 三族（共用 `injectAsyncResult`——`src/agent-tools/subagent-async.mjs:325-363 / 373-405`）；
-consult 族绕过：`injectConsultResult`（`src/agent-tools/consult.mjs:181-188`）——offload 预览只有单条保护、无轮累计。
+consult 族绕过：`injectConsultResult`（`thincoder-core/agent-tools/consult.mjs:181-188`）——offload 预览只有单条保护、无轮累计。
 注入路径：run-start 注入（`src/agent.mjs:103-110`）+ 挂起退出残余（`src/tui/suspension-drive.mjs:280-286`）——role 分支两处内联，consult 两路皆绕过。
 BATCH-3 F-2 原始事故面（1.3MB 请求体）+ 交付偏差记录（`docs/design/_archive/BATCH-3-STRUCTURE.md` 变更记录：「四族共用单点」与实际派发不符——扩面需新任务重评审）。
 多族合并轮（subagent + consult 同轮）累计超限可复现。
@@ -1599,7 +1599,7 @@ BATCH-3 F-2 原始事故面（1.3MB 请求体）+ 交付偏差记录（`docs/des
 |---|---|---|---|---|
 | 1 | `thincoder-core/agent-tools/digest-budget.mjs` | 新 | ~70 | 单源模块（D-DG1） |
 | 2 | `src/agent-tools/subagent-async.mjs` | 474 | ~450（净减） | 迁出 + re-export |
-| 3 | `src/agent-tools/consult.mjs` | 461 | ~465 | +接线 |
+| 3 | `thincoder-core/agent-tools/consult.mjs` | 461 | ~465 | +接线 |
 | 4 | `test/async-settle.test.mjs` | 349 | ~390 | T-DG1~T-DG3 |
 
 ### 22.5 用例表（T-DG1~T-DG3——CLI 面）
@@ -1643,9 +1643,9 @@ BATCH-3 F-2 原始事故面（1.3MB 请求体）+ 交付偏差记录（`docs/des
 | # | 事实 | 证据（file:line） |
 |---|---|---|
 | 1 | `_capturedOutput` = 子代理流式文本的**第二份全量拷贝**：逐 token `output += …; child._capturedOutput = output`——无上限；跨 Continue 续跑继续累积 | `src/agent/spawn-child.mjs:210-212` · `:218-228` |
-| 2 | 消费面读时截断（2000/4000）——头部诊断价值有限、尾部（停在何处）优先 | `subagent-actions.mjs:445/456` · `escalate-async.mjs:242/258`；例外：`subagent.mjs:354` 停止报告内联全量（再经通用 offload ≥64K 落盘） |
+| 2 | 消费面读时截断（2000/4000）——头部诊断价值有限、尾部（停在何处）优先 | `subagent-actions.mjs:445/456` · `thincoder-core/agent-tools/escalate-async.mjs:242/258`；例外：`subagent.mjs:354` 停止报告内联全量（再经通用 offload ≥64K 落盘） |
 | 3 | 子代理人读线 `_fullHistory` 同主 agent：永不压缩、全量常驻（每个 child 一份） | `thincoder-core/context.mjs:163-180` · 子代理创建 `subagent-spawn.mjs:332-340` |
-| 4 | 条目对 `entry.childAgent` 的引用**从不显式释放**（grep 阴性）——释放仅靠条目对象被回收 | `subagent-run.mjs:133` · `escalate-async.mjs:198`（绑定）；`subagent-run.mjs:184`（池）· `async-settle.mjs:47-50`（pending） |
+| 4 | 条目对 `entry.childAgent` 的引用**从不显式释放**（grep 阴性）——释放仅靠条目对象被回收 | `subagent-run.mjs:133` · `thincoder-core/agent-tools/escalate-async.mjs:198`（绑定）；`subagent-run.mjs:184`（池）· `async-settle.mjs:47-50`（pending） |
 | 5 | 消化窗口：done-in-pool 驻留至回合尾收集/run 起始注入/挂起残差三消费点；挂起期（suspDriven）settled 留池等待消化 | `run-stages.mjs:233-239` · `agent.mjs:105-113` · `suspension-drive.mjs:283-289` · `run-stages.mjs:215-218/231` |
 | 6 | 轨迹存档：单次调用**整对象图深拷贝**（redactValue 递归复制容器）+ 独立 `JSON.stringify`（第二份全尺寸字符串），在途无上限（fire-and-forget 不 await、无队列/计数）；本机实测单记录 1.0–1.9MB、分钟级连发 | `thincoder-core/traces/trace-store.mjs:117-126` · `:157-177` · `:171` · `:188-196`；实测（本机 traces 目录） |
 | 7 | 序号分配每次同步扫目录（`existsSync` + `readdirSync`） | `thincoder-core/traces/trace-store.mjs:85-106` |
@@ -1743,7 +1743,7 @@ BATCH-3 F-2 原始事故面（1.3MB 请求体）+ 交付偏差记录（`docs/des
 | `src/agent/run-stages.mjs` | 243 | +4 | 消费点调用释放 |
 | `src/agent.mjs` | 414 | +6 | run 起始注入点调用释放 |
 | `src/tui/suspension-drive.mjs` | 298 | +4 | 挂起残差消费点调用释放 |
-| `src/agent-tools/escalate-async.mjs` | 290 | +2 | 注释锚（childAgent 语义面）+ 若有族特有消费点则补调 |
+| `thincoder-core/agent-tools/escalate-async.mjs` | 290 | +2 | 注释锚（childAgent 语义面）+ 若有族特有消费点则补调 |
 | `thincoder-core/traces/trace-store.mjs` | 225 | +55 → ~280 | 单遍序列化 + 双层额度 + 在途计数 + seqCache + **头注释同步**（「不截断」表述作废——§13 修订行；修正轮 #2） |
 | `test/subagent-memory-bounds.test.mjs` | 新 | +130 ± 30 | T-SM1–T-SM4 |
 | `test/trace-bounds.test.mjs` | 新 | +130 ± 30 | T-TR1–T-TR5 |

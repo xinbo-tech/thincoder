@@ -5,12 +5,12 @@
 > **实现载体**：
 >
 > - `src/prompts/advisor-round1.md` / `advisor-round2.md` / `advisor-round3.md` / `advisor-design.md`——轮次提示词（硬加载——缺失即抛错，防静默降级）。
-> - `src/advisor.mjs`——system prompt 轮次选择（`buildAdvisorSystemPrompt`）、round2+ follow-up 构建（`buildAdvisorFollowUp`）、评审会话组装（`prepareAdvisorMessages`）。
-> - `src/advisor/run.mjs`——执行与机械 cap（`MAX_ADVISOR_ROUNDS`/`buildCapMessage`/`runAdvisorReview`）；拆分后（第 11 批）：工具循环居 `loop.mjs`（含硬墙 / 预算提示 / 结构化尾接线），压缩与守卫族居 `compaction.mjs`（`MAX_ADVISOR_TURNS`:12 / 六 kind 谓词 / `renderTimeline`）——既有 import 面经 re-export 保面。
+> - `thincoder-core/advisor.mjs`——system prompt 轮次选择（`buildAdvisorSystemPrompt`）、round2+ follow-up 构建（`buildAdvisorFollowUp`）、评审会话组装（`prepareAdvisorMessages`）。
+> - `thincoder-core/advisor/run.mjs`——执行与机械 cap（`MAX_ADVISOR_ROUNDS`/`buildCapMessage`/`runAdvisorReview`）；拆分后（第 11 批）：工具循环居 `loop.mjs`（含硬墙 / 预算提示 / 结构化尾接线），压缩与守卫族居 `compaction.mjs`（`MAX_ADVISOR_TURNS`:12 / 六 kind 谓词 / `renderTimeline`）——既有 import 面经 re-export 保面。
 > - `thincoder-core/advisor/convergence.mjs`——round2+ 收敛消息体（正常流与 legacy 路径的单源）。
-> - `src/advisor/messages.mjs`——user 消息构建（round1 设计/代码、legacy 收敛路径、对象声明块、Project Guide 注入）。
-> - `src/advisor/citations.mjs`——host-verified citations 机械校验；`thincoder-core/advisor/history.mjs`——响应表/对话背景提取；`src/advisor/repos.mjs`——评审范围采集 + `hasCodeMutations`。
-> - `src/agent-tools/advisor.mjs` / `advisor-async.mjs`——advisor 工具（sync 执行、async 后台池、cap 预检、per-review 实例；结算 / 陈旧判定拆出至 `advisor-settle.mjs`——第 11 批）；`src/agent/record-results.mjs`（工具结果记账）；`src/agent/completion.mjs`（完成 guard 推回）。
+> - `thincoder-core/advisor/messages.mjs`——user 消息构建（round1 设计/代码、legacy 收敛路径、对象声明块、Project Guide 注入）。
+> - `thincoder-core/advisor/citations.mjs`——host-verified citations 机械校验；`thincoder-core/advisor/history.mjs`——响应表/对话背景提取；`thincoder-core/advisor/repos.mjs`——评审范围采集 + `hasCodeMutations`。
+> - `thincoder-core/agent-tools/advisor.mjs` / `advisor-async.mjs`——advisor 工具（sync 执行、async 后台池、cap 预检、per-review 实例；结算 / 陈旧判定拆出至 `advisor-settle.mjs`——第 11 批）；`src/agent/record-results.mjs`（工具结果记账）；`src/agent/completion.mjs`（完成 guard 推回）。
 >
 > **权威边界**：
 >
@@ -58,7 +58,7 @@
 
 ### 2.3 工具轮预算
 
-提示词自报工具轮预算（防止评审者按预算花满时间的放大器）：round 1 = **20** 轮（里程碑引导 6/10/17——三分之一/一半/接近上限）；round 2/3 = **15** 轮（8 轮未验完即收尾兜底）。机械硬帽 **100 工具轮**（`MAX_ADVISOR_TURNS`——工具循环止损（`loop.mjs`；常量居 `compaction.mjs:12`）——type-agnostic，design 评审同受；评审死循环时 host 机械打断）。
+提示词自报工具轮预算（防止评审者按预算花满时间的放大器）：round 1 = **20** 轮（里程碑引导 6/10/17——三分之一/一半/接近上限）；round 2/3 = **15** 轮（8 轮未验完即收尾兜底）。机械硬帽 **100 工具轮**（`MAX_ADVISOR_TURNS`——工具循环止损（`loop.mjs`；常量居 `thincoder-core/advisor/compaction.mjs:12`）——type-agnostic，design 评审同受；评审死循环时 host 机械打断）。
 
 ### 2.4 通过 / 阻断判定
 
@@ -72,7 +72,7 @@
 
 `MAX_ADVISOR_ROUNDS = 5`（run.mjs）。**第 6 次 advisor 启动**（该实例 round ≥ 5）**直接返回终止消息、不消耗 LLM**——评审根本不启动。执行点：
 
-1. **工具层预检**（`agent-tools/advisor.mjs`——sync/async 共用的启动前检查）——cap 拒绝只标记拒发，不置 called、不耗轮次（guard 因此在 cap 后自然停止推回）。
+1. **工具层预检**（`thincoder-core/agent-tools/advisor.mjs`——sync/async 共用的启动前检查）——cap 拒绝只标记拒发，不置 called、不耗轮次（guard 因此在 cap 后自然停止推回）。
 2. **`runAdvisorReview` 内防线**（run.mjs——legacy/直接调用方防绕）。
 3. **completion guard 的 `round < MAX` 项**（§6.2）——到 cap 后不再推回。
 
@@ -467,32 +467,32 @@ VSC `src/prompts/discipline-engineering.md`（现 228 行）· VSC `docs/design/
 
 ### 14.1 问题陈述（现场复核——file:line 为 as-of 2026-09-11）
 
-**A 溢出仍签发 token**：宿主在 context 溢出时以截断尾收尾——`src/advisor/run.mjs:186` 生成
+**A 溢出仍签发 token**：宿主在 context 溢出时以截断尾收尾——`thincoder-core/advisor/run.mjs:186` 生成
 `Advisor: context window limit reached (N tokens). Review incomplete — …`；而结算只看 token 回显——
-`src/agent-tools/design-token.mjs:83`（`tokenPattern.test(rawResult)`）。两条路径独立 ⇒ 时间线里任何位置出现的
+`thincoder-core/agent-tools/design-token.mjs:83`（`tokenPattern.test(rawResult)`）。两条路径独立 ⇒ 时间线里任何位置出现的
 token 回显（例如模型先写完结论再继续补充检查）都会让**被截断的评审**拿到凭证（第 8 批轮次 2 实证）。
 
-**B approval-signal 未注入**：信号只在两条消息构建路径注入——`src/advisor/messages.mjs:273-276`（design round 0，
-分支条件 `:194` 依赖 `agent._advisorRound === 0`）与 `src/advisor.mjs:279`（design round 2+）。
+**B approval-signal 未注入**：信号只在两条消息构建路径注入——`thincoder-core/advisor/messages.mjs:273-276`（design round 0，
+分支条件 `:194` 依赖 `agent._advisorRound === 0`）与 `thincoder-core/advisor.mjs:279`（design round 2+）。
 两条独立缺口：
 
-1. **构建面**：`prepareAdvisorMessages` 的「无 prior 全新评审」路径（`src/advisor.mjs:232-257`）在
+1. **构建面**：`prepareAdvisorMessages` 的「无 prior 全新评审」路径（`thincoder-core/advisor.mjs:232-257`）在
    `reviewType === "design"` 且 `_advisorRound ≥ 1` 时落入 **code 形态分支**——`buildAdvisorUserMessage` 的 design 分支
    不再命中，用户消息**零 Approval Signal**（系统提示仍是 design 评审提示词，声称"请求内含 token"）。
    现场复核：以最小 agent 桩直调 `prepareAdvisorMessages`，`{_advisorRound:1, _lastAdvisorOutput:null, _mutatedThisRun:true}`
    → 用户消息 `## Approval Signal` 缺失、token 字面缺失（同态 `_mutatedThisRun:false` 时因 round 复位而不缺）——即该镜像态下**必现**；
-   工具路径经 `resolveAdvisorLaunch` 再 scope（`src/agent-tools/advisor-async.mjs:136-137`），正常链据此暂不可达——
+   工具路径经 `resolveAdvisorLaunch` 再 scope（`thincoder-core/agent-tools/advisor-async.mjs:136-137`），正常链据此暂不可达——
    本批以**自愈 + 启动断言**两层封死（自愈覆盖该形态、断言兜底未来路径），不依赖可达性论证。
-2. **运行面**：评审中途上下文压缩会**物理丢弃首条 user 消息**——`src/advisor/run.mjs:52-75`
+2. **运行面**：评审中途上下文压缩会**物理丢弃首条 user 消息**——`thincoder-core/advisor/run.mjs:52-75`
    （`messages.splice(0, len, system, 压缩注记, ...messages.slice(-20))`；首条 user = 评审简报，含 token）
    ⇒ 评审员此后再也无法回显 token（第 7 批轮次 1 实证：评审员原话"本次请求中 `## Approval Signal` 段未随附…无法逐字回显"，
    token/designId 为未填占位符）。
 
-**C cite 校验误报**：`verifyCitations` 只有**单一解析根** —— `src/advisor/citations.mjs:46`（`resolve(cwd, c.file)`），
-调用点 `src/advisor/run.mjs:451` 只传 cwd。而评审对象声明带仓前缀（`thincoder-cli/…`），评审员引文多为相对声明范围的
+**C cite 校验误报**：`verifyCitations` 只有**单一解析根** —— `thincoder-core/advisor/citations.mjs:46`（`resolve(cwd, c.file)`），
+调用点 `thincoder-core/advisor/run.mjs:451` 只传 cwd。而评审对象声明带仓前缀（`thincoder-cli/…`），评审员引文多为相对声明范围的
 裸路径 ⇒ `file unreadable` 误报（第 8 批 `TOOLS.md:124`、第 7 批 `AGENT-LOOP.md:714` 两处实证——父侧实文核验均存在且正确）。
 
-**D 超时零输出**：超时只在**轮间**检查——`src/advisor/run.mjs:170-172`（`Date.now() - startTime > timeoutMs`），
+**D 超时零输出**：超时只在**轮间**检查——`thincoder-core/advisor/run.mjs:170-172`（`Date.now() - startTime > timeoutMs`），
 单次模型请求不受评审预算约束（响应头超时同量级：`thincoder-core/provider/core.mjs:77-78` 默认 600s；body idle 120s——
 `thincoder-core/provider/core.mjs:72`）。预算语义 = 整场墙钟（`docs/design/AGENT-PARAMS.md:19-39`）。第 10 批设计评审 600s 超时、零产出、
 父侧无部分结果可回收——根因候选（证据不足以区分，守卫对两类均有效）：① 预算被探索耗尽（大范围 + 慢模型）；
@@ -540,25 +540,25 @@ token 回显（例如模型先写完结论再继续补充检查）都会让**被
 
 | kind | 行前缀（逐字） | 生成点（交付态·实测） |
 |---|---|---|
-| `context_limit` | `Advisor: context window limit reached (N tokens).` | `src/advisor/loop.mjs:124` |
-| `turn_cap` | `Advisor: stopped after 100 tool rounds` | `src/advisor/loop.mjs:113` |
-| `timeout` | `Advisor: review timeout after {S}s.` | `src/advisor/loop.mjs:103`（另 :172 / :180 同判；`timeoutTail` = `compaction.mjs:120`） |
-| `empty` | `Advisor: empty response — review was inconclusive` | `src/advisor/loop.mjs:187` |
-| `interrupted` | `Advisor: interrupted.` | `src/advisor/loop.mjs:92` / :176 |
-| `review_failed` | `Advisor: review failed` | `src/advisor/run.mjs:233`（catch 内字符串 resolve——不 throw） |
+| `context_limit` | `Advisor: context window limit reached (N tokens).` | `thincoder-core/advisor/loop.mjs:124` |
+| `turn_cap` | `Advisor: stopped after 100 tool rounds` | `thincoder-core/advisor/loop.mjs:113` |
+| `timeout` | `Advisor: review timeout after {S}s.` | `thincoder-core/advisor/loop.mjs:103`（另 :172 / :180 同判；`timeoutTail` = `thincoder-core/advisor/compaction.mjs:120`） |
+| `empty` | `Advisor: empty response — review was inconclusive` | `thincoder-core/advisor/loop.mjs:187` |
+| `interrupted` | `Advisor: interrupted.` | `thincoder-core/advisor/loop.mjs:92` / :176 |
+| `review_failed` | `Advisor: review failed` | `thincoder-core/advisor/run.mjs:233`（catch 内字符串 resolve——不 throw） |
 
-匹配规则：**块首行扫描**（按空行分块，逐块取首行 trim 后测前缀）——`renderTimeline`（`src/advisor/compaction.mjs:151`）
+匹配规则：**块首行扫描**（按空行分块，逐块取首行 trim 后测前缀）——`renderTimeline`（`thincoder-core/advisor/compaction.mjs:151`）
 以空行连接时间线与尾 ⇒ 六条尾均以块首行形态落地（`review_failed` 为独立返回串 = 文本首行）；
-**不得**只测首行（既有 `ADVISOR_FAILURE_TEXT` 的 `^` 锚即漏「时间线 + 尾」形态——`src/agent-tools/advisor-async.mjs:236`，本批改正）。
+**不得**只测首行（既有 `ADVISOR_FAILURE_TEXT` 的 `^` 锚即漏「时间线 + 尾」形态——`thincoder-core/agent-tools/advisor-async.mjs:236`，本批改正）。
 **负向精度**（轮次 1 修正）：引文中同串的**非块首形态**（围栏内行 / 表格行 / 引用行）**不得**判 incomplete（T-CG21 锁定）；
 块首裸行引用同串的残余误报方向安全（fail-closed——多付一轮重跑，如实登记）。
 
 **三个消费点（同谓词）**：
 
-1. **design 结算**（`settleDesignReview`，`src/agent-tools/design-token.mjs`）：`incomplete` 非空 ⇒ **一律 `passed:false`**——
+1. **design 结算**（`settleDesignReview`，`thincoder-core/agent-tools/design-token.mjs`）：`incomplete` 非空 ⇒ **一律 `passed:false`**——
    剥除全部 token 回显（既有 `makeDesignTokenRegex(…, "g")` 复用）→ 追加未签发提示（逐字见下）→ 不写槽、不关实例（可重评）。
 2. **code 完成守卫（F16/A3）**（`settleAdvisorRun`）：`failureVerdict` 判定改用同谓词（替代 `^` 锚的 `ADVISOR_FAILURE_TEXT`；
-   **六 kind 全覆盖 = 旧锚六形态语义零丢**——含 `review_failed`（`run.mjs:233` 字符串 resolve、不 throw））——
+   **六 kind 全覆盖 = 旧锚六形态语义零丢**——含 `review_failed`（`thincoder-core/advisor/run.mjs:233` 字符串 resolve、不 throw））——
    截断/失败评审不再置 `_calledAdvisorThisRun`（T-CG5 / T-CG19）。
 3. **报告提示**：结算输出携带提示 + 恢复指引（父侧据此决定重跑范围）。
 
@@ -575,10 +575,10 @@ token 回显（例如模型先写完结论再继续补充检查）都会让**被
 
 ### 14.4 契约二：凭证链启动 / 全程守卫（B / F12 / F13）
 
-1. **构建自愈**（`src/advisor/messages.mjs`）：`buildAdvisorUserMessage` 改为「内层构建 + 尾包」形态——
+1. **构建自愈**（`thincoder-core/advisor/messages.mjs`）：`buildAdvisorUserMessage` 改为「内层构建 + 尾包」形态——
    `reviewType === "design" && designToken` 且输出不含 `[DESIGN-TOKEN:{token}` 时，追加 `buildDesignApprovalBlock(designToken, designId)`。
    覆盖所有出口（含 code 形态分支降级态与 legacy 收敛分支），不改任何分支的既有语义。
-2. **启动断言（fail-closed）**（`src/advisor/run.mjs`，`prepareAdvisorMessages` 之后、发起之前）：
+2. **启动断言（fail-closed）**（`thincoder-core/advisor/run.mjs`，`prepareAdvisorMessages` 之后、发起之前）：
    `reviewType === "design"` 时校验——① 本次已签发 token（非空）；② `[DESIGN-TOKEN:{token}` 逐字在请求内。
    违反 ⇒ 返回拒绝报告（**不发请求**）：
 
@@ -587,10 +587,10 @@ Advisor: design review launch refused — {reason: no design token was minted | 
 ```
 
    可见性与记账：拒绝报告前缀 `Advisor: design review launch refused` = 稳定契约（同步工具面据此登记
-   `_advisorRefusals`——既有池满/cap 同款机制，`src/agent-tools/advisor.mjs:105/117/129`；异步结算面据此不置
+   `_advisorRefusals`——既有池满/cap 同款机制，`thincoder-core/agent-tools/advisor.mjs:105/117/129`；异步结算面据此不置
    `_calledAdvisorThisRun`）。**可达性如实注**：工具路径恒签发 token ⇒ 该拒绝为**直接调用方兜底**（防御纵深），
    正常链不可达。
-3. **压缩定锚**（`src/advisor/compaction.mjs` + 循环接线）：`compactMessages(messages, pinned)` ——
+3. **压缩定锚**（`thincoder-core/advisor/compaction.mjs` + 循环接线）：`compactMessages(messages, pinned)` ——
    压缩触发时（首条 user 消息被丢弃的同一动作内）把 `pinned` 作为一条 user 消息重新挂回。
    `pinned` 由评审参数（非模型输出）构建，逐字形态：
 
@@ -657,15 +657,15 @@ Advisor: review timeout after {S}s. Review incomplete — the wall-clock budget 
 
 | 文件 | 行数注记（批次前 → 交付态·实测） | 增量（设计估 → 实测） | 变更 | 档位结论 |
 |---|---|---|---|---|
-| `src/advisor/run.mjs` | 498 → **239** | −259（实测——设计估 −~285 迁出 + ~37 新增）：启动断言 / 定锚源 / citations 传参 / 谓词 re-export | 拆出 loop.mjs + compaction.mjs | **必拆**（498 逼近 500 硬帽，新增必越；交付清偿 498 → 239 ≤300） |
-| `src/advisor/loop.mjs` | 新 → **291** | 291（新档——设计估 ~290） | 工具循环（自 run.mjs 逐字迁出）+ 硬墙（绑信号状态）+ 0.75 提示注入 + 结构化尾 / 压缩定锚接线；**守卫族落 `compaction.mjs`**（交付拆分线——见下行） | 新文件（交付 291 ≤300） |
-| `src/advisor/compaction.mjs` | 新 → **158** | 158（新档——设计估 ~75；含守卫族） | `estimateTokens` / `compactMessages(messages, pinned)`（自 run.mjs 迁入 + 定锚 ~15）；**守卫族**：`advisorIncompleteMarker`（六 kind）/ `shouldBudgetNudge` / `budgetNudgeText` / `timeoutTail` / `renderTimeline` / 上限常量 | 新文件（交付 158 ≤300） |
-| `src/advisor/messages.mjs` | 402 → **413** | +11（实测——设计估 +~10） | `buildAdvisorUserMessage` 尾包自愈 | 不拆（净增小；>300 为存量档——拆分评估见 §14.10） |
-| `src/advisor/citations.mjs` | 78 → **140** | +62（实测——设计估 +~42） | 候选链解析 + 失败原因三分 | 不拆 |
-| `src/agent-tools/advisor.mjs` | 227 → **241** | +14（实测——设计估 +~10） | 未完成判定透传 + 同步 prior 清洗 | 不拆 |
-| `src/agent-tools/advisor-async.mjs` | 500 → **350** | −150（实测——设计估 −~150 迁出 + ~3） | 拆出 advisor-settle.mjs；settle 接线 | **必拆**（500 = 硬帽**在册**——任何新增必越；交付清偿 500 → 350；import 面经 re-export 保持） |
-| `src/agent-tools/advisor-settle.mjs` | 新 → **214** | 214（新档——设计估 ~165；含 E-2 增量） | `settleAdvisorRun` + 失败 / 截断判定块 + 陈旧判定（自 advisor-async 迁入 + 谓词消费；E 族增量见 §14.14） | 新文件（交付 214 ≤300） |
-| `src/agent-tools/design-token.mjs` | 105 → **118** | +13（实测——设计估 +~20） | settle 未完成守卫（`opts.incomplete`） | 不拆 |
+| `thincoder-core/advisor/run.mjs` | 498 → **239** | −259（实测——设计估 −~285 迁出 + ~37 新增）：启动断言 / 定锚源 / citations 传参 / 谓词 re-export | 拆出 loop.mjs + compaction.mjs | **必拆**（498 逼近 500 硬帽，新增必越；交付清偿 498 → 239 ≤300） |
+| `thincoder-core/advisor/loop.mjs` | 新 → **291** | 291（新档——设计估 ~290） | 工具循环（自 run.mjs 逐字迁出）+ 硬墙（绑信号状态）+ 0.75 提示注入 + 结构化尾 / 压缩定锚接线；**守卫族落 `compaction.mjs`**（交付拆分线——见下行） | 新文件（交付 291 ≤300） |
+| `thincoder-core/advisor/compaction.mjs` | 新 → **158** | 158（新档——设计估 ~75；含守卫族） | `estimateTokens` / `compactMessages(messages, pinned)`（自 run.mjs 迁入 + 定锚 ~15）；**守卫族**：`advisorIncompleteMarker`（六 kind）/ `shouldBudgetNudge` / `budgetNudgeText` / `timeoutTail` / `renderTimeline` / 上限常量 | 新文件（交付 158 ≤300） |
+| `thincoder-core/advisor/messages.mjs` | 402 → **413** | +11（实测——设计估 +~10） | `buildAdvisorUserMessage` 尾包自愈 | 不拆（净增小；>300 为存量档——拆分评估见 §14.10） |
+| `thincoder-core/advisor/citations.mjs` | 78 → **140** | +62（实测——设计估 +~42） | 候选链解析 + 失败原因三分 | 不拆 |
+| `thincoder-core/agent-tools/advisor.mjs` | 227 → **241** | +14（实测——设计估 +~10） | 未完成判定透传 + 同步 prior 清洗 | 不拆 |
+| `thincoder-core/agent-tools/advisor-async.mjs` | 500 → **350** | −150（实测——设计估 −~150 迁出 + ~3） | 拆出 advisor-settle.mjs；settle 接线 | **必拆**（500 = 硬帽**在册**——任何新增必越；交付清偿 500 → 350；import 面经 re-export 保持） |
+| `thincoder-core/agent-tools/advisor-settle.mjs` | 新 → **214** | 214（新档——设计估 ~165；含 E-2 增量） | `settleAdvisorRun` + 失败 / 截断判定块 + 陈旧判定（自 advisor-async 迁入 + 谓词消费；E 族增量见 §14.14） | 新文件（交付 214 ≤300） |
+| `thincoder-core/agent-tools/design-token.mjs` | 105 → **118** | +13（实测——设计估 +~20） | settle 未完成守卫（`opts.incomplete`） | 不拆 |
 | `test/advisor-chain-guards.test.mjs` | 新 → **498**（评审轮 1 🔴 压缩 513→498；21 例） | 498（新档——设计估 ~280；含 E 增量） | T-CG1–T-CG14 · T-CG19–T-CG21（修正轮） | 新档（交付 498 ≤500 帽内；>300 advisory——`test/` 存量档；CLI glob 自动发现——**登记要求 = 无**；VSC 端若有 `test/files.mjs（VSC 仓）` 才需入册，本批不涉 VSC） |
 
 > 档位依据：`discipline-engineering.md` 代码结构判据（>300 主动审视 / >500 必拆——无豁免通道）。本批两处**必拆**均为硬约束触发，
@@ -711,20 +711,20 @@ Advisor: review timeout after {S}s. Review incomplete — the wall-clock budget 
 | **多实现面纪律（双端）** | 不做 byte-identical 硬一致；VSC 同构缺陷**如实上报**（§14.1 证据为 CLI 侧，VSC 侧同构面见 §14.10）——不静默、不跨端追赶 |
 | **完成守卫公式（§6.2）** | 公式本体零改；F16/A3 只改"何种 settle 算有判定"的判定谓词（失败判定扩展）——与"未决不算未评审"同向 |
 | **`AGENT-PARAMS` 超时语义** | `agent.advisor.timeoutMs` 仍是整场预算（默认 600s，非法回退不变）；硬墙只是把同一预算落实为真墙（单次请求不越墙）——语义无变 |
-| **证据 / 引用纪律** | 本节全部事实带 file:line（as-of）；对既有实现的描述以磁盘为准（发现 `src/advisor/run.mjs:200-207` 注释所述 `core.mjs composes AbortSignal.any` 与 `thincoder-core/provider/core.mjs` 实况不符——陈旧注释，登记 §14.10） |
+| **证据 / 引用纪律** | 本节全部事实带 file:line（as-of）；对既有实现的描述以磁盘为准（发现 `thincoder-core/advisor/run.mjs:200-207` 注释所述 `core.mjs composes AbortSignal.any` 与 `thincoder-core/provider/core.mjs` 实况不符——陈旧注释，登记 §14.10） |
 
 ### 14.10 后续登记项（本批不碰——明示，不静默）
 
 1. **VSC 端对位面**（后续批建议）：`thincoder-vscode/src/advisor/{citations,messages,run}.mjs` 与本批修的三处同构
-   （citations.mjs 逐字同源副本；messages.mjs:62 信号块；run.mjs:58/166/170 压缩 / 截断尾）——按各端独立实现纪律同步，
+   （citations.mjs 逐字同源副本；thincoder-core/advisor/messages.mjs:62 信号块；thincoder-core/advisor/run.mjs:58/166/170 压缩 / 截断尾）——按各端独立实现纪律同步，
    VSC 新测试档须入 `thincoder-vscode/test/files.mjs` 注册。**本批不碰**（CLI 单端）。
 2. **`AGENT-LOOP.md` §11.2 settle 记账行**：A3（截断不置 `_calledAdvisorThisRun`）的判定口径同步——**待第 10 批链收口后**
    （该档正被审查，D5）。
-3. **`src/advisor/run.mjs:200-207` 陈旧注释**：与实际（`thincoder-core/provider/core.mjs` 无 AbortSignal 组合）不符——实施时一并改正（本批 `run.mjs` 已被改写覆盖该段）。
+3. **`thincoder-core/advisor/run.mjs:200-207` 陈旧注释**：与实际（`thincoder-core/provider/core.mjs` 无 AbortSignal 组合）不符——实施时一并改正（本批 `run.mjs` 已被改写覆盖该段）。
 4. **`messages.mjs` 拆分评估**（交付 413 行——402 → 413，>300 advisory）：本批净增 +11（实测）—— 不拆；若后续继续增厚，按 `loop.mjs` 同法拆分。
 5. **父侧核销面**：`docs/TODO.md` 三条目（A/B/C）status 推进 + 需求池指针——父侧写域，本设计者不动。
 6. **F16 同步面残留**（coder 披露；交付同步登记——不改语义）：`src/agent/record-results.mjs:114` 的 **sync 记账**无「未完成尾」判定
-   （`depth>0` 自审 / 显式 `async:false` / 无 depth 直调——消费面 `src/agent-tools/advisor.mjs:198`）——以截断尾收尾的 sync 代码评审仍置 `_calledAdvisorThisRun`（计「已覆盖」）；
+   （`depth>0` 自审 / 显式 `async:false` / 无 depth 直调——消费面 `thincoder-core/agent-tools/advisor.mjs:198`）——以截断尾收尾的 sync 代码评审仍置 `_calledAdvisorThisRun`（计「已覆盖」）；
    本批设计（§14.3 消费点 2）只限定 `settleAdvisorRun`（async 结算面），实现与设计一致；需求 F16 行文字面宽于实现范围——**扩展实现或改需求均需独立批次 / 用户裁定（另走链）**。
 
 ### 14.11 测试层：用例表（正常 / 边界 / 错误）
@@ -745,7 +745,7 @@ Advisor: review timeout after {S}s. Review incomplete — the wall-clock budget 
 | T-CG12 | 边界 | `_runAdvisorToolLoop` + chat 覆写：`advisor.timeoutMs=1`，首次返回工具调用 | 返回超时尾：族前缀 + `rounds:` / `tool calls:` / `budget:` 三要素 | F15 / N8 |
 | T-CG13 | 边界 | 同上 + **时钟注入**（`_runAdvisorToolLoop` 测试缝 `now`——默认 `Date.now`，生产路径零变）：预算 1000ms，注入序列使首调返回时 elapsed=800（≥ 0.75×1000） | 第 2 轮注入预算提示恰一次（断言提示串；仅一次出现）；**零真实等待、零 wall-clock 依赖**（余量问题消解——原「1500ms vs ~1200ms」行作废） | F15 |
 | T-CG14 | 正常 | 纯函数 `shouldBudgetNudge(elapsed, budget, nudged)`：阈值两侧 + `nudged=true` | 0.75 阈值下不提示 / 达阈值提示 / 已提示不重复 | F15 |
-| T-CG19 | 错误 | `settleAdvisorRun`：**code** entry，report = 时间线 + `Advisor: review failed (timeout) — …`（字符串 resolve 形态——`run.mjs:233`） | `_calledAdvisorThisRun` **不**置 true（旧锚六形态语义零丢；guard 可重推） | F16 |
+| T-CG19 | 错误 | `settleAdvisorRun`：**code** entry，report = 时间线 + `Advisor: review failed (timeout) — …`（字符串 resolve 形态——`thincoder-core/advisor/run.mjs:233`） | `_calledAdvisorThisRun` **不**置 true（旧锚六形态语义零丢；guard 可重推） | F16 |
 | T-CG20 | 边界 | `_runAdvisorToolLoop` + chat 覆写：预算 ~100ms；首调**阻塞至墙触发后返回 partial 形态结果（不抛错）**；另附抛 `TimeoutError` 名异常形态 | 两形态均返回结构化超时尾（族前缀 `Advisor: review timeout after ` + `rounds:` / `tool calls:` / `budget:` 三要素） | F15 / N8 |
 | T-CG21 | 边界 | 干净评审文本：含**非块首**的尾前缀引用行（围栏内行 / 表格行 / 引用行三形态）；无宿主尾 | `advisorIncompleteMarker` → `null`（负向精度锁——引文不误判 incomplete；§14.3 匹配规则） | F11（负向） |
 
@@ -790,11 +790,11 @@ Advisor: review timeout after {S}s. Review incomplete — the wall-clock budget 
 - **实证**（批次档 §1 条目 E）：评审实例**点火后、报告送达前**，父侧改被审文档（批次档 §1 写「用户授权」段）→ 结算判 stale → **整轮作废**；本轮无 token 损失（本就 changes-required），**pass 轮 = token 直接丢失**。
 - **归因**：D5 现文（`docs/design/ENGINEERING-MODE.md` §2.19 表 D5 行 :528 · 提示词 `discipline-engineering.md` D5 行 :109）只写「评审在途不改被审文档」——**未定义「在途」的下界**；父侧按「子进程退出 = 安全」执行 → 踩中。
 - **机制复核（陈旧判定的射程与时点——现行实现；file:line = 交付同步）**：
-  1. 起点 = 点火受理：异步启动快照 `launchSeq`（`src/agent-tools/advisor-async.mjs:265`）——同批中先于点火的写不计、后于点火的写计入；
-  2. 评估面 = 设计评审声明文档集 `docAbs`（`advisor-async.mjs:266-268`，即 `documents` 声明——含批次档）；
-  3. 判决 = `reviewIsStale`（`src/agent-tools/advisor-settle.mjs:58-70`——第 11 批自 advisor-async 迁出）：`seq > launchSeq` 的父侧变更命中 `docAbs` → stale；
-  4. 判决时点 = 结算记账（`settleAdvisorRun`，`advisor-settle.mjs:123`——调用点 `advisor-async.mjs:310-314`，经 `async-settle.mjs:163-177` 于评审 promise 收尾时调用）；读取的是**读取时刻**的变更日志；
-  5. 违规后果（既有行为——保留）= stale 分支：剥 token 回显 + 「评审目标已变更——token 未签发」前缀（`advisor-settle.mjs:198-204`）、不签 token、不计评审覆盖；
+  1. 起点 = 点火受理：异步启动快照 `launchSeq`（`thincoder-core/agent-tools/advisor-async.mjs:265`）——同批中先于点火的写不计、后于点火的写计入；
+  2. 评估面 = 设计评审声明文档集 `docAbs`（`thincoder-core/agent-tools/advisor-async.mjs:266-268`，即 `documents` 声明——含批次档）；
+  3. 判决 = `reviewIsStale`（`thincoder-core/agent-tools/advisor-settle.mjs:58-70`——第 11 批自 advisor-async 迁出）：`seq > launchSeq` 的父侧变更命中 `docAbs` → stale；
+  4. 判决时点 = 结算记账（`settleAdvisorRun`，`thincoder-core/agent-tools/advisor-settle.mjs:123`——调用点 `thincoder-core/agent-tools/advisor-async.mjs:310-314`，经 `async-settle.mjs:163-177` 于评审 promise 收尾时调用）；读取的是**读取时刻**的变更日志；
+  5. 违规后果（既有行为——保留）= stale 分支：剥 token 回显 + 「评审目标已变更——token 未签发」前缀（`thincoder-core/agent-tools/advisor-settle.mjs:198-204`）、不签 token、不计评审覆盖；
   6. 父侧可观察下界 = **报告送达**（结算 → 挂起移交 `_pendingAsyncResults`（`async-settle.mjs:171-174`）→ digest 注入 / 回合尾 collect）**或取消·中止**（`async-settle.mjs:134-146` / `:163`）。
 - **边界澄清**：**「子进程退出」不是窗口边界**——结算记账晚于进程收尾执行（promise 收尾微任务级）且对父侧不可观察；窗口实际射程 = **点火 → 结算读取**（进程退出后、结算读取前的写同样计入）。父侧唯一可观察的安全边界 = 报告送达。
 
@@ -823,7 +823,7 @@ E-表 3——批次档是否从快照面豁免
 |---|---|---|---|---|
 | 1 | **不豁免**（批次档保持在 `docAbs` 面内） | E 事故的保护对象恰是批次档（父侧最常写）；评审员确实读批次档 §2（实证：第 10 批评审方法行「通读四档…批次档 §2」；`ENGINEERING-MODE.md` §2.20 注「批次档本身在 documents 清单里」） | 父侧在途改批次档被拒——须等报告或先 cancel（正确行为） | **选定** |
 | 2 | 档级豁免（`docAbs` / `docSetKey` 过滤 batchDoc） | 父侧可自由写批次档；但破坏评审对象完整性（评审员读 §1 语境 + §2 任务书，在途改 = 对象变更）；且恰使 E 场景失守 | — | 否决 |
-| 3 | 节级豁免（§2 冻结、§1/§3–§6 可写） | 语义最细；但变更记账为**文件级**（`noteMutations` 记路径——`advisor-settle.mjs:36-43`），节级判定需引入解析 / 节快照新机制（成本高、无同类在案、易假阳） | — | 否决 |
+| 3 | 节级豁免（§2 冻结、§1/§3–§6 可写） | 语义最细；但变更记账为**文件级**（`noteMutations` 记路径——`thincoder-core/agent-tools/advisor-settle.mjs:36-43`），节级判定需引入解析 / 节快照新机制（成本高、无同类在案、易假阳） | — | 否决 |
 
 **E-3 契约五（逐字）**
 
@@ -868,9 +868,9 @@ Error: write refused — design review #{id} is in flight over {path} (D5 freeze
 | # | 文件 | 行数注记（批次前 → 交付态·实测） | E 增量 | 变更 | 档位 |
 |---|---|---|---|---|---|
 | E-1 | `src/agent/dispatch.mjs` | 455 → **481** | +26（实测——设计估 +~20） | Phase 1 预闸（`FILE_MUTATORS` × 冲突命中 → `denied + hint`） | 不拆（交付 481 < 500 帽） |
-| E-2 | `src/agent-tools/advisor-settle.mjs` | 新（A–D 段）→ **214** | +~22（设计估——A–D 段 ~165 增量并入） | `inflightDesignReviewConflict(agent, absPaths)`（与 `reviewIsStale` 同族、同 `normAbs` / `docAbs` 语义） | 新档（交付 214 ≤300） |
-| E-3 | `src/agent-tools/advisor-async.mjs` | 500 → **350**（拆后） | +1 行（re-export 名） | helper 经既有 re-export 面出——dispatch 的 import 路径不变 | 交付 350 ≤500 |
-| E-4 | `src/agent-tools/advisor.mjs` | 227 → **241** | +~3（设计估——A–D + E 合计 +14） | 设计评审异步 ack note 追加冻结句（E-3c 逐字） | 不拆 |
+| E-2 | `thincoder-core/agent-tools/advisor-settle.mjs` | 新（A–D 段）→ **214** | +~22（设计估——A–D 段 ~165 增量并入） | `inflightDesignReviewConflict(agent, absPaths)`（与 `reviewIsStale` 同族、同 `normAbs` / `docAbs` 语义） | 新档（交付 214 ≤300） |
+| E-3 | `thincoder-core/agent-tools/advisor-async.mjs` | 500 → **350**（拆后） | +1 行（re-export 名） | helper 经既有 re-export 面出——dispatch 的 import 路径不变 | 交付 350 ≤500 |
+| E-4 | `thincoder-core/agent-tools/advisor.mjs` | 227 → **241** | +~3（设计估——A–D + E 合计 +14） | 设计评审异步 ack note 追加冻结句（E-3c 逐字） | 不拆 |
 | E-5 | `test/advisor-chain-guards.test.mjs` | 新（A–D 段）→ **498**（21 例） | +~60（设计估——A–D 段 ~230 增量并入） | T-CG15–T-CG18（E 用例） | 新档（交付 498 ≤500） |
 
 E 增量 = 1 新行（E-1）+ 4 行内增量（E-2…E-5）；实施域与 §14.7 表合读 = 11 行。
@@ -943,7 +943,7 @@ E 增量 = 1 新行（E-1）+ 4 行内增量（E-2…E-5）；实施域与 §14.
 > 实现已交付并父侧验收通过；本注记 = 文档面同步（批次档 §2「交付同步」块——同源）：
 > ① §14.7 两行「变更」列——守卫族（六 kind 谓词 / `shouldBudgetNudge` / `budgetNudgeText` / `timeoutTail` / `renderTimeline` / 上限常量）交付落 `compaction.mjs`（非 loop.mjs——逐字迁移后 loop 承载全部守卫将超 300）；
 > ② 全表行数注记改交付态·实测（§14.7 表 + E-4 表——口径 = 批次前 → 交付态，`N lines total`）；
-> ③ 载体指针按交付态（`MAX_ADVISOR_TURNS` = `compaction.mjs:12`；§ 实现载体 header / §2.3 / §14.3 生成点 / §14.11 T-CG19 / §14.14 E-1 机制复核 / E-表3）；
+> ③ 载体指针按交付态（`MAX_ADVISOR_TURNS` = `thincoder-core/advisor/compaction.mjs:12`；§ 实现载体 header / §2.3 / §14.3 生成点 / §14.11 T-CG19 / §14.14 E-1 机制复核 / E-表3）；
 > ④ §14.10 补 #6（F16 同步面残留登记）· #4 行数按实测。
 > 未涉项照旧：§7 / §13 零碰（第 9 批链）；变更记录行待父侧收口并入（§14.9 D7）。
 
@@ -955,7 +955,7 @@ E 增量 = 1 新行（E-1）+ 4 行内增量（E-2…E-5）；实施域与 §14.
 ### 15.1 问题陈述（批次前缺陷态——as-of file:line）
 
 - sync 记账（`src/agent/record-results.mjs:114`）无「未完成尾」判定：以宿主截断尾收尾的 sync 代码评审
-  （`depth>0` 自审 / 显式 `async:false` / 无 depth 直调——同步路径 `src/agent-tools/advisor.mjs:198`）
+  （`depth>0` 自审 / 显式 `async:false` / 无 depth 直调——同步路径 `thincoder-core/agent-tools/advisor.mjs:198`）
   仍置 `_calledAdvisorThisRun`（计「已覆盖」→ guard 不重推）。
 - 同族不一致：异步结算面（`settleAdvisorRun`，§14.3 消费点 2）第 11 批已消费单谓词；sync 面遗漏。
 - guard 链（相容面）：`src/agent/completion.mjs:130`——`!pending ∧ _mutatedThisRun ∧ !_calledAdvisorThisRun ∧ hasCodeMutations ∧ pushbacks<MAX ∧ rounds<MAX` ⇒ 推回；
@@ -964,7 +964,7 @@ E 增量 = 1 新行（E-1）+ 4 行内增量（E-2…E-5）；实施域与 §14.
 ### 15.2 契约：判定点与置位语义（逐字）
 
 **判定点** = `record-results.mjs` advisor 记账分支的 sync else 分支（refused / asyncAck 两分支先行排除——零改）；
-**谓词** = `advisorIncompleteMarker`（单源——`src/advisor/compaction.mjs`；经 `src/advisor/run.mjs` re-export 消费，
+**谓词** = `advisorIncompleteMarker`（单源——`thincoder-core/advisor/compaction.mjs`；经 `thincoder-core/advisor/run.mjs` re-export 消费，
 与 §14.3 三个消费点同串）。
 
 **置位规则**（与 `settleAdvisorRun.failureVerdict` 逐条 parity）：
@@ -1036,10 +1036,10 @@ if (!(incomplete && run?.reviewType !== "design")) agent._calledAdvisorThisRun =
 
 ### 16.1 问题陈述（现场复核——file:line 为 as-of 2026-09-11）
 
-- **缺陷**：评审循环的上下文上限是固定常量 `MAX_CONTEXT_TOKENS = 120_000`（`src/advisor/compaction.mjs:19`，
-  注释 `Reserve headroom to avoid OOM`）。守卫链（`src/advisor/loop.mjs:117-126`）：估算 → `currentTokens > MAX_CONTEXT_TOKENS * 0.8`
+- **缺陷**：评审循环的上下文上限是固定常量 `MAX_CONTEXT_TOKENS = 120_000`（`thincoder-core/advisor/compaction.mjs:19`，
+  注释 `Reserve headroom to avoid OOM`）。守卫链（`thincoder-core/advisor/loop.mjs:117-126`）：估算 → `currentTokens > MAX_CONTEXT_TOKENS * 0.8`
   → 本地压缩 → 压缩后仍 `> MAX_CONTEXT_TOKENS` ⇒ 以 `Advisor: context window limit reached (N tokens).` 收尾
-  （判定族 kind `context_limit`，前缀表 `compaction.mjs:76`）。
+  （判定族 kind `context_limit`，前缀表 `thincoder-core/advisor/compaction.mjs:76`）。
 - **实证**：第 15 批轮次 2 评审实例死于 `(120225 tokens)`——与常量逐字吻合；1M 窗口模型被硬帽限死在 ~12% 窗口处。
 - **来源**：该常量自 2026-08-02 引入（`git log -S "MAX_CONTEXT_TOKENS"` → `79fc3df`，注释原文「预留 headroom，避免 OOM」）——
   当时模型档位为 128K 时代（`120_000 / 128_000 ≈ 94%`）；对现行主力 1M 档位（`deepseek-flash { context: 1_000_000 }`，
@@ -1047,12 +1047,12 @@ if (!(incomplete && run?.reviewType !== "design")) agent._calledAdvisorThisRun =
 - **窗口真值源（既有）**：`providerSpec(provider)`（`src/model-specs.mjs:174-179`）——模型表前缀命中 + provider 级
   `context`（K 单位）覆盖；未知模型回退 `DEFAULT_SPEC`（128K，`:97`）。**同族同口径**（本仓「阈值跟随窗口」惯例）：
   主循环压缩阈值 `resolveCompactThreshold`（`src/config.mjs:120-135`，`0.6 × 窗口`）、主循环尾预算（`thincoder-core/context.mjs:44-58`）、
-  评审项目指南预算（`src/advisor/messages.mjs:18-19,93-96`，`5% × 窗口`——advisor 模块内同口径）、传输层窗口判定
+  评审项目指南预算（`thincoder-core/advisor/messages.mjs:18-19,93-96`，`5% × 窗口`——advisor 模块内同口径）、传输层窗口判定
   （`thincoder-core/provider/core.mjs:126-128`）。
-- **接线可达性**：评审循环所持 `provider` 即评审真实 provider（`src/advisor/run.mjs:151` `resolveAdvisorProvider(agent)`
-  → `:181` 传入循环），且循环已在该 provider 上消费 `providerSpec`（`loop.mjs:204`，`reasoningEcho` 判定）——派生值就地可得。
-- **消费面（grep 实测）**：`MAX_CONTEXT_TOKENS` 在全仓（CLI + VSC + 测试 + 脚本）定义 1 处（`compaction.mjs:19`）+
-  导入与使用 2 处（`loop.mjs:18/118/121`）——`run.mjs:16` 的 re-export 面**不含**该常量，替换零外溢。
+- **接线可达性**：评审循环所持 `provider` 即评审真实 provider（`thincoder-core/advisor/run.mjs:151` `resolveAdvisorProvider(agent)`
+  → `:181` 传入循环），且循环已在该 provider 上消费 `providerSpec`（`thincoder-core/advisor/loop.mjs:204`，`reasoningEcho` 判定）——派生值就地可得。
+- **消费面（grep 实测）**：`MAX_CONTEXT_TOKENS` 在全仓（CLI + VSC + 测试 + 脚本）定义 1 处（`thincoder-core/advisor/compaction.mjs:19`）+
+  导入与使用 2 处（`thincoder-core/advisor/loop.mjs:18/118/121`）——`thincoder-core/advisor/run.mjs:16` 的 re-export 面**不含**该常量，替换零外溢。
 
 ### 16.2 方案选型对比
 
@@ -1068,14 +1068,14 @@ if (!(incomplete && run?.reviewType !== "design")) agent._calledAdvisorThisRun =
 
 | # | 候选方案 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
 |---|---|---|---|---|
-| 1 | **`providerSpec(provider)`（loop.mjs 函数体内、while 轮次外一次性派生——与「循环入口注入」对举）** | 与四条既有派生同族（同一真值源）；自动跟随 provider 级 `context` 覆盖（同一模型不同端点的窗口差异）；循环已持 provider 且已有同源消费点（`loop.mjs:204`）；零新参数、零新配置面 | 派生结果无回显面（不可从运行输出反查）——以纯函数单测 + provider 覆盖双向用例锁（T-CB1 / T-CB4） | **选定** |
+| 1 | **`providerSpec(provider)`（thincoder-core/advisor/loop.mjs 函数体内、while 轮次外一次性派生——与「循环入口注入」对举）** | 与四条既有派生同族（同一真值源）；自动跟随 provider 级 `context` 覆盖（同一模型不同端点的窗口差异）；循环已持 provider 且已有同源消费点（`thincoder-core/advisor/loop.mjs:204`）；零新参数、零新配置面 | 派生结果无回显面（不可从运行输出反查）——以纯函数单测 + provider 覆盖双向用例锁（T-CB1 / T-CB4） | **选定** |
 | 2 | agent 配置项（新增 `agent.advisor.maxContextTokens`） | 可显式覆盖；但与 `providers[].context`（窗口真值源）**双源**——配置高于真实窗口时产出「合规但必被服务端拒」的请求（footgun）；E1 不含新配置需求 | — | 否决（覆盖能力已由 `providers[].context` 提供） |
 | 3 | 循环入口注入（`runAdvisorReview` 算好传入） | 显式可测；但派生逻辑两处（生产 + 测试）需同步，且要动 11 参签名；循环所持 provider 即评审真实 provider ⇒ 注入 = 重复派生 | — | 否决 |
 
 ### 16.3 契约一：预算派生（两档 + 回退——逐字函数语义）
 
 `compaction.mjs` 常量族内：`MAX_CONTEXT_TOKENS` **退场**，新增常量与纯函数（`providerSpec` 自 `../config.mjs` 导入——
-与 `loop.mjs:11` 同源）：
+与 `thincoder-core/advisor/loop.mjs:11` 同源）：
 
 ```js
 // 上下文预算（第 25 批——120K 硬编码退场）：预算跟随评审模型窗口（providerSpec：
@@ -1112,7 +1112,7 @@ export function advisorContextBudget(provider) {
 
 1. **内存量级不构成约束**：预算 1M tokens ↔ `estimateTokens` 口径 ~4M 字符 ↔ JS 字符串 ~8MB（UTF-16 双字节）；
    单次请求 JSON 序列化为同量级瞬时副本 ⇒ 峰值 ≲ 20-30MB，与 Node 默认堆量级相差两个数量级。
-2. **真正的内存边界已由他处承担**：单结果截断 `MAX_RESULT_CHARS = 64K` 字符（`compaction.mjs:22`，`loop.mjs:282` 消费）；
+2. **真正的内存边界已由他处承担**：单结果截断 `MAX_RESULT_CHARS = 64K` 字符（`thincoder-core/advisor/compaction.mjs:22`，`thincoder-core/advisor/loop.mjs:282` 消费）；
    压缩后消息集 = system + 压缩注记 + 定锚简报 + 最近 20 条（`compactMessages`）——**与窗口无关的有界集**。
 3. **大窗的真实代价是延迟与 token 额度**（单请求 prefill / 计费），不是 OOM：由 `agent.advisor.timeoutMs` 硬墙（§14.6）
    与用户的模型选择承担——故 20% 头寸**不**为内存而留；旧注释的动机在本仓代码中找不到支撑（`git log -S` 溯源仅得
@@ -1120,7 +1120,7 @@ export function advisorContextBudget(provider) {
 4. **头寸的真实用途**（新注释所载，三项）：① `estimateTokens` 是 `chars/4` 扁平估算——CJK 内容低估约 3-4×
    （主循环 `estimateText` 为 ASCII/4 + 非 ASCII/1，`thincoder-core/provider/rate.mjs:29-35`）；② 响应 / 推理与协议
    （system/tools）在服务端计入窗口；③ 20% 是「宿主机自限线 < 服务端真窗」的安全间距。
-5. **服务端仍是最终兜底**：超窗由服务端拒绝 → `context_too_long` 分类可见（`run.mjs:222`），评审结算 fail-closed
+5. **服务端仍是最终兜底**：超窗由服务端拒绝 → `context_too_long` 分类可见（`thincoder-core/advisor/run.mjs:222`），评审结算 fail-closed
    （§14.3 消费点）——本批不改变该兜底。
 6. **残余如实注**：20% 头寸**不能**完全覆盖 4× 级 CJK 低估——极端中文重评审仍可能撞服务端窗（可见失败，不静默）；
    根治 = 估算器修正（§16.8 #2 登记，另批）。
@@ -1131,8 +1131,8 @@ export function advisorContextBudget(provider) {
 
 | # | 文件 | 当前行数 | 动作 | 预计增量 | 档位结论 |
 |---|---|---|---|---|---|
-| 1 | `src/advisor/compaction.mjs` | 158 | 改（常量退场 + 预算纯函数 + `providerSpec` 导入） | +~15 | 交付 ~173 ≤300 ✓ |
-| 2 | `src/advisor/loop.mjs` | 291 | 改（导入换名 + 预算一次性派生 + 两处消费） | +1~3 | 交付 ~294 ≤300（**贴线注记**——若实施越 300：按 §14.7 同口径把守卫族整体迁出本档并登记拆分计划，不硬压行） |
+| 1 | `thincoder-core/advisor/compaction.mjs` | 158 | 改（常量退场 + 预算纯函数 + `providerSpec` 导入） | +~15 | 交付 ~173 ≤300 ✓ |
+| 2 | `thincoder-core/advisor/loop.mjs` | 291 | 改（导入换名 + 预算一次性派生 + 两处消费） | +1~3 | 交付 ~294 ≤300（**贴线注记**——若实施越 300：按 §14.7 同口径把守卫族整体迁出本档并登记拆分计划，不硬压行） |
 | 3 | `test/advisor-context-budget.test.mjs` | 新 | **新增**（T-CB1–T-CB5 在役；T-CB6 已退场——整删，删除记录 = `TESTING.md` §11.3） | ~130 | 新档 ≤500 ✓ |
 
 **文档域（eng-designer 写域——本设计者已落）**
@@ -1168,7 +1168,7 @@ export function advisorContextBudget(provider) {
 | **D5 冻结窗口** | 本档只**新增节**（§16）+ 变更记录 1 行——§1–§15 零碰；改动集齐后统一入场 |
 | **D6 回读核对** | 需求 §10 与本节落笔后回读核实（写入静默失败防护）；实施面验收含回读断言（T-CB6 静态锚——已退场：整删，删除记录 = `TESTING.md` §11.3） |
 | **D7 变更留痕** | 本档变更记录追加一行（本批）；需求档按既有形态（无变更记录节）由 §10 自带日期与批次注记 |
-| **判定族 / §14.3 契约** | 六 kind 前缀与六条尾文案**逐字零改**（T-CG1 既有用例继续锁）；`context_limit` 生成点行号（§14.3 表引 `loop.mjs:124`）如因本批落笔位移，按 D4「行号 = as-of 参考」由父侧收口并入 |
+| **判定族 / §14.3 契约** | 六 kind 前缀与六条尾文案**逐字零改**（T-CG1 既有用例继续锁）；`context_limit` 生成点行号（§14.3 表引 `thincoder-core/advisor/loop.mjs:124`；kind 谓词表 = `thincoder-core/advisor/compaction.mjs:93`）如因本批落笔位移，按 D4「行号 = as-of 参考」由父侧收口并入 |
 | **§14.6 超时语义** | `agent.advisor.timeoutMs`（整场墙钟，默认 600s）零改；预算（token）与墙钟（时间）两维正交 |
 | **主循环阈值（`COMPACT_RATIO = 0.6`）** | 两个不同对象的阈值：主循环 = 会话历史压缩触发（含每轮注入上下文 ⇒ 留 40% 头寸）；评审 = 本地裁剪 + 判死。**不合并、不同步**（同 `MAX_ADVISOR_TURNS` 与提示词 ~30 轮的既有口径：职责不同不同步） |
 | **`AGENT-PARAMS.md` 超时档** | 零改（语义无变，无需改） |
@@ -1179,14 +1179,14 @@ export function advisorContextBudget(provider) {
 ### 16.8 后续登记项（本批不做——明示，不静默）
 
 1. **VSC 端镜像（后续批建议——父侧排程）**：**同款缺陷确认存在**（非推测）——`thincoder-vscode` 仓
-   `src/advisor/compaction.mjs:18`（同款常量 `MAX_CONTEXT_TOKENS = 120_000`）、`src/advisor/loop.mjs:22/116/121`
+   `thincoder-core/advisor/compaction.mjs:18`（同款常量 `MAX_CONTEXT_TOKENS = 120_000`）、`thincoder-core/advisor/loop.mjs:22/116/121`
    （导入 + 两处守卫）；VSC 侧 `providerSpec` 现成（`src/config.mjs:142-149（VSC 仓）`，经 `src/specs.mjs（VSC 仓）` re-export）——
    完整修复路径同本端（+~15 行 / +1~3 行）。测试面：新增 VSC 用例档 + **登记 `thincoder-vscode/test/files.mjs`**
    （VSC 为显式清单，与 CLI glob 不同）。文档面：`ADVISOR-CONVERGENCE（VSC 仓）` 新增 §15 + 变更记录 1 行——
    VSC 档不在本批写域（本设计者未写）。
 2. **`estimateTokens` 估算器修正（CJK 低估）**：`chars/4` 扁平式 vs 主循环 `estimateText`（ASCII/4 + 非 ASCII/1，
    `thincoder-core/provider/rate.mjs:29-35`）——修正会平移全部模型的压缩时点，另批评估（本批头寸已计入误差）。**（收口 2026-09-11：群 B 批承接——本档 §18。）**
-3. **§14.3 生成点行号指针**：`context_limit` 生成点（kind 字面 = `src/advisor/run.mjs:43`；表引渲染行 = `src/advisor/loop.mjs:127`——原 :124 落笔位移 +3，已随收口并入；节内容零改——D4 as-of 口径）。
+3. **§14.3 生成点行号指针**：`context_limit` 生成点（kind 字面 = `thincoder-core/advisor/run.mjs:43`；表引渲染行 = `thincoder-core/advisor/loop.mjs:127`——原 :124 落笔位移 +3，已随收口并入；节内容零改——D4 as-of 口径）。
 4. **父侧核销面**：`docs/TODO.md` 需求池行（本批来源 = 用户 bug 报告）——父侧写域，本设计者不动。
 5. **tpm / rpm 交互**：`rateGate`（`thincoder-core/provider/rate.mjs:52-57`）对单请求估算超 tpm 只告警放行——大窗评审的额度
    后果由用户模型选择承担（登记；不新增闸）。
@@ -1231,19 +1231,19 @@ export function advisorContextBudget(provider) {
 
 ### 17.1 问题陈述（现场复核——file:line 为 as-of 2026-09-11）
 
-- **缺陷**：design 评审 cap 豁免（`src/advisor/run.mjs:21-25`；工具层 cap 预检只走 code 分支 `src/agent-tools/advisor.mjs:165-168`）
-  ⇒ **失败路径无上界**：判死（宿主截断尾——结算不签发，`src/agent-tools/design-token.mjs:86-94`）
-  与 stale（陈旧结算——不签发，`src/agent-tools/advisor-settle.mjs:196-203`）都不产出凭证，
+- **缺陷**：design 评审 cap 豁免（`thincoder-core/advisor/run.mjs:21-25`；工具层 cap 预检只走 code 分支 `thincoder-core/agent-tools/advisor.mjs:165-168`）
+  ⇒ **失败路径无上界**：判死（宿主截断尾——结算不签发，`thincoder-core/agent-tools/design-token.mjs:86-94`）
+  与 stale（陈旧结算——不签发，`thincoder-core/agent-tools/advisor-settle.mjs:196-203`）都不产出凭证，
   而设计评审必须拿到凭证才能继续交付链 ⇒ **必然重评**，每次都是整场预算（默认 600s + 全量上下文）。
 - **既有出口盘点**：code = 5 轮 cap（cap 消息 = 收敛失败出口）；design = **无**——两条失败提示都只有
   「重跑 / 缩范围」指引，没有次数上界（病根即 issue #IKDCVV 的评估结论）。
 - **计数锚可行性（结算点三输入齐备）**：
-  1. `settleAdvisorRun`（`src/agent-tools/advisor-settle.mjs:121-211`）结算时同时持有 `stale`（:128）、
+  1. `settleAdvisorRun`（`thincoder-core/agent-tools/advisor-settle.mjs:121-211`）结算时同时持有 `stale`（:128）、
      `incomplete`（单谓词，:133）、`settled.passed` 与落盘结果（:142-168）——分类输入一处可得；
-  2. 同步面（`src/agent-tools/advisor.mjs:218-237`）在同点持有 `settled.passed` 与 `incomplete`；
-  3. 「同一 doc-set」键现成：`docSetKey`（`src/agent-tools/advisor-async.mjs:67-75`——次序无关 + ABS 归一；
+  2. 同步面（`thincoder-core/agent-tools/advisor.mjs:218-237`）在同点持有 `settled.passed` 与 `incomplete`；
+  3. 「同一 doc-set」键现成：`docSetKey`（`thincoder-core/agent-tools/advisor-async.mjs:67-75`——次序无关 + ABS 归一；
      与实例续跑同源）。
-- **既有语义可复用**：拒发语义（不置 called / 不耗轮次——`src/agent-tools/advisor.mjs:165-168` cap 款）、
+- **既有语义可复用**：拒发语义（不置 called / 不耗轮次——`thincoder-core/agent-tools/advisor.mjs:165-168` cap 款）、
   未完成判定单谓词（§14.3）、每评审实例注册表（`agent._advisorRuns`）。
 
 ### 17.2 方案选型对比
@@ -1260,7 +1260,7 @@ export function advisorContextBudget(provider) {
 
 | # | 候选 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
 |---|---|---|---|---|
-| 1 | run 实例对象（`run.incompleteStreak`） | 零新结构；但「pass 但落盘失败」路径已由 `settleDesignReview` 关闭实例（`design-token.mjs:108`）——重建实例丢计数；且「同一 doc-set」语义锚在键、不在实例 | 语义锚错位 + 已知漏面 | 否决 |
+| 1 | run 实例对象（`run.incompleteStreak`） | 零新结构；但「pass 但落盘失败」路径已由 `settleDesignReview` 关闭实例（`thincoder-core/agent-tools/design-token.mjs:108`）——重建实例丢计数；且「同一 doc-set」语义锚在键、不在实例 | 语义锚错位 + 已知漏面 | 否决 |
 | 2 | **会话级 Map<docSetKey, {count, log}>**（`agent._designReviewStreaks`） | 与「同一 doc-set」同锚（键 = 现成 `docSetKey` 单源）；跨实例重建存活（含落盘失败路径）；生命周期 = 会话级内存（重启 / `/new` 归零；重置点与 `_advisorRuns` **刻意不同步**——§17.9 #5 定案）；有界（不同 doc-set 数量级极小） | 新会话级小 Map（+1 字段） | **选定** |
 | 3 | 落盘（session 文件字段） | 跨重启存活；但与轮次 / cap 既有语义相悖（重启归零、保守重评——§2.2），且引入字段迁移 / 校验恢复面 | 面大且与既有口径相悖 | 否决 |
 
@@ -1274,7 +1274,7 @@ export function advisorContextBudget(provider) {
 
 ### 17.3 契约一：结算分类（纯函数单源）
 
-`designReviewOutcome(input)`（新模块 `src/agent-tools/review-streak.mjs`——纯函数，无 I/O / 无状态）：
+`designReviewOutcome(input)`（新模块 `thincoder-core/agent-tools/review-streak.mjs`——纯函数，无 I/O / 无状态）：
 输入 = 一次 design 结算的宿主可见事实；输出 = `{ reset, count }`（`reset=true` = 计数复位；
 `count` = 需加一的类名；两者皆空 = **neutral**——不动计数）。
 
@@ -1347,10 +1347,10 @@ Options:
 
 **检查点（cap 两点式同形）**：
 
-1. **工具层预检**（`src/agent-tools/advisor.mjs`——cap 预检邻位，`resolveAdvisorLaunch` 之后、`if (isAsync)` 之前）：
+1. **工具层预检**（`thincoder-core/agent-tools/advisor.mjs`——cap 预检邻位，`resolveAdvisorLaunch` 之后、`if (isAsync)` 之前）：
    `reviewType === "design" && designReviewStreakStopped(agent, resolved.run.docSetKey)` ⇒ 登记
    `_advisorRefusals`（`ctx._toolCallId` 存在时）+ 返回结论串。**sync / async 两路同治**（检查点在分叉前）。
-2. **`runAdvisorReview` 内防线**（`src/advisor/run.mjs`——cap 内检查邻位）：`reviewType === "design"` 且有 `documents`
+2. **`runAdvisorReview` 内防线**（`thincoder-core/advisor/run.mjs`——cap 内检查邻位）：`reviewType === "design"` 且有 `documents`
    ⇒ 算 `docSetKey` → 命中则返回结论串——**不建消息、不发起**（防直接调用方绕；零 LLM）。
 
 **计数点（分类单源 `designReviewOutcome`）**：
@@ -1358,7 +1358,7 @@ Options:
 1. **异步结算**（`settleAdvisorRun`——非陈旧 design 分支 / 陈旧 design 分支 / design 无报告分支三出口）
    ⇒ `noteDesignReviewOutcome(agent, run.docSetKey, designReviewOutcome({...}))`；
    `launchRefused` 判定上移为该结算段单点（消费点 = design 分类 + code 守卫——既有语义零变）。
-2. **同步面**（`src/agent-tools/advisor.mjs`——design 结算 `settleDesignReview` 返回后）⇒ 同函数。
+2. **同步面**（`thincoder-core/agent-tools/advisor.mjs`——design 结算 `settleDesignReview` 返回后）⇒ 同函数。
    同步面无 stale / 无落盘步骤（`persistFailed` 恒 false）。
 
 **模块图（新中立模块——打断潜在环）**：`review-streak.mjs` 不 import 任何 `src/` 模块；
@@ -1372,11 +1372,11 @@ Options:
 
 | # | 文件 | 当前行数 | 动作 | 预计增量 | 档位结论 |
 |---|---|---|---|---|---|
-| 1 | `src/agent-tools/review-streak.mjs` | 新 | 新增（常量 + `normAbs` / `docSetKey` 迁入 + 记录 API + 纯分类函数） | ~95 | 新档 ≤300 ✓ |
-| 2 | `src/advisor/run.mjs` | 239 | 改（结论串构建 + 前缀常量 + `runAdvisorReview` 内防线 + 导入） | +~42 | 交付 ~281 ≤300 ✓ |
-| 3 | `src/agent-tools/advisor.mjs` | 241 | 改（工具层预检 + 拒发登记 + 同步面计数） | +~20 | 交付 ~261 ≤300 ✓ |
-| 4 | `src/agent-tools/advisor-settle.mjs` | 212 | 改（`normAbs` 迁出 + 结算段计数接线） | 净 +~10 | 交付 ~222 ≤300 ✓ |
-| 5 | `src/agent-tools/advisor-async.mjs` | 354 | 改（`docSetKey` 迁出 + 导入） | 净 −~6 | >300 advisory（存量 354 → 交付 ~348；净减——迁出 `docSetKey`；拆分评估见 §17.9 #1） |
+| 1 | `thincoder-core/agent-tools/review-streak.mjs` | 新 | 新增（常量 + `normAbs` / `docSetKey` 迁入 + 记录 API + 纯分类函数） | ~95 | 新档 ≤300 ✓ |
+| 2 | `thincoder-core/advisor/run.mjs` | 239 | 改（结论串构建 + 前缀常量 + `runAdvisorReview` 内防线 + 导入） | +~42 | 交付 ~281 ≤300 ✓ |
+| 3 | `thincoder-core/agent-tools/advisor.mjs` | 241 | 改（工具层预检 + 拒发登记 + 同步面计数） | +~20 | 交付 ~261 ≤300 ✓ |
+| 4 | `thincoder-core/agent-tools/advisor-settle.mjs` | 212 | 改（`normAbs` 迁出 + 结算段计数接线） | 净 +~10 | 交付 ~222 ≤300 ✓ |
+| 5 | `thincoder-core/agent-tools/advisor-async.mjs` | 354 | 改（`docSetKey` 迁出 + 导入） | 净 −~6 | >300 advisory（存量 354 → 交付 ~348；净减——迁出 `docSetKey`；拆分评估见 §17.9 #1） |
 | 6 | `test/design-review-streak-guard.test.mjs` | 新 | 新增（T-SK1–T-SK8 + T-SK10 在役；T-SK9 已退场——整删，删除记录 = `TESTING.md` §11.3） | ~230 | 新档 ≤500 ✓ |
 
 **文档域（eng-designer 写域——本设计者已落）**
@@ -1488,9 +1488,9 @@ Options:
 
 ### 18.1 问题（复核 as-of 2026-09-11）
 
-`src/advisor/compaction.mjs:38-45`——`estimateTokens(messages)` = `Math.ceil((content.length + toolCalls.length) / 4)` 扁平式；
+`thincoder-core/advisor/compaction.mjs:38-45`——`estimateTokens(messages)` = `Math.ceil((content.length + toolCalls.length) / 4)` 扁平式；
 CJK 低估 ~3-4×（主循环 `estimateText`——`thincoder-core/provider/rate.mjs:30-36`，ASCII/4 + 非 ASCII/1）。
-消费点：`src/advisor/loop.mjs:120 / 124 / 127`（compactAt / 判死线 / 判死尾计数）+ `src/advisor/run.mjs:264`（显示统计——装饰面）。
+消费点：`thincoder-core/advisor/loop.mjs:120 / 124 / 127`（compactAt / 判死线 / 判死尾计数）+ `thincoder-core/advisor/run.mjs:264`（显示统计——装饰面）。
 行号实证：§16.4 #4 已如实注「20% 头寸不能完全覆盖 4× 级 CJK 低估」（§16.6 D-CB9 本批不改——另批登记）；本批即承接。
 
 ### 18.2 方案选型（候选 ≥2）
@@ -1514,7 +1514,7 @@ CJK 低估 ~3-4×（主循环 `estimateText`——`thincoder-core/provider/rate.
 
 | # | 文件 | 现 | 预计 | 动作 |
 |---|---|---|---|---|
-| 1 | `src/advisor/compaction.mjs` | 171 | ~174 | +import +加权式 |
+| 1 | `thincoder-core/advisor/compaction.mjs` | 171 | ~174 | +import +加权式 |
 | 2 | `test/advisor-context-budget.test.mjs` | 101 | ~140 | T-EST1 / T-EST2（ASCII 夹具断言逐值不变——零回归对照） |
 
 **用例表（T-EST1 / T-EST2——同 VSC §17.3 语义；CLI 面夹具同型）**：
@@ -1535,7 +1535,7 @@ CJK 低估 ~3-4×（主循环 `estimateText`——`thincoder-core/provider/rate.
 
 | # | 面 | CLI 现状（复核 as-of） | 处置 |
 |---|---|---|---|
-| 1 | B2 async 结算面拒发记账（VSC 已修） | `src/agent-tools/advisor-settle.mjs:133` `run.round++` 无条件 + `:227-229` prior 写入（launchRefused 可命中 `looksLikeReviewOutput`）——与 VSC 修复前同款 | **登记**（本批零改；语义同源指向 `ADVISOR-CONVERGENCE（VSC 仓）§17.1`；随批评估——触发 = VSC 面交付验证或用户裁定） |
+| 1 | B2 async 结算面拒发记账（VSC 已修） | `thincoder-core/agent-tools/advisor-settle.mjs:133` `run.round++` 无条件 + `:227-229` prior 写入（launchRefused 可命中 `looksLikeReviewOutput`）——与 VSC 修复前同款 | **登记**（本批零改；语义同源指向 `ADVISOR-CONVERGENCE（VSC 仓）§17.1`；随批评估——触发 = VSC 面交付验证或用户裁定） |
 | 2 | B3 冻结窗口 file_ops 面（VSC 已修） | E-6 #3 维持：bash / file_ops 不拦不记（§14.14）；子代理合入面 = E-6 #5 登记 | **登记维持**（不跨端追赶；复核条件随 `ADVISOR-CONVERGENCE（VSC 仓）§17.2` 表） |
 | 3 | B1 advisor 池中止（VSC 已修） | CLI Stop = 全停 → 清池即诚实（无孤儿） | 不需修（本端语义自洽——对位口径 `AGENT-LOOP（VSC 仓）§12.8 #2`） |
 

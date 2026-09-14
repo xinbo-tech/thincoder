@@ -15,12 +15,12 @@ import {
   MAX_DESIGN_REVIEW_STREAK, normAbs, docSetKey, designReviewOutcome,
   noteDesignReviewOutcome, designReviewStreakRecord, designReviewStreakStopped,
   designReviewStreakApplies,
-} from "../src/agent-tools/review-streak.mjs"
-import { settleAdvisorRun, normAbs as normAbsViaSettle } from "../src/agent-tools/advisor-settle.mjs"
-import { advisorTool } from "../src/agent-tools/advisor.mjs"
+} from "@thincoder/core/agent-tools/review-streak.mjs"
+import { settleAdvisorRun, normAbs as normAbsViaSettle } from "@thincoder/core/agent-tools/advisor-settle.mjs"
+import { advisorTool } from "@thincoder/core/agent-tools/advisor.mjs"
 import {
   ADVISOR_DESIGN_STREAK_STOP_PREFIX, ADVISOR_LAUNCH_REFUSAL_PREFIX, buildDesignReviewGuardMessage, runAdvisorReview,
-} from "../src/advisor/run.mjs"
+} from "@thincoder/core/advisor/run.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "@thincoder/core/session-slots.mjs"
 
 const tmpDirs = []

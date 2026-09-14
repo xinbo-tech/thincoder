@@ -5,10 +5,11 @@
 
 ## 1. 现状与差异（explore 一手核实）
 
-**结构性差异**：CLI agent 对象**进程常驻单对象**（`bin/thincoder.mjs:280` 一次创建，跨回合/挂起复用，`agent.mjs:84` 只 mutate 不重建）——settle 回调闭包持的 `parent` = 活对象（`advisor-async.mjs:466`）→ settle 写 `agent._engDesignTokens`（`advisor-async.mjs:124-125`）即时生效。**无 VSC 的死对象 bug、无挂起入场快照、无 onComplete 清零类似物。**
+**结构性差异**：CLI agent 对象**进程常驻单对象**（`bin/thincoder.mjs:280` 一次创建，跨回合/挂起复用，`agent.mjs:84` 只 mutate 不重建）——settle 回调闭包持的 `parent` = 活对象（`thincoder-core/agent-tools/advisor-async.mjs:466`）→ settle 写
+`agent._engDesignTokens`（`thincoder-core/agent-tools/advisor-async.mjs:124-125`）即时生效。**无 VSC 的死对象 bug、无挂起入场快照、无 onComplete 清零类似物。**
 
 **CLI 真实隐患（唯一）——重启序列化窗口**：
-1. 挂起期 review settle（异步 finally）→ token 已写**内存**（`advisor-async.mjs:457-504`）
+1. 挂起期 review settle（异步 finally）→ token 已写**内存**（`thincoder-core/agent-tools/advisor-async.mjs:457-504`）
 2. 但磁盘槽停留在 settle 前的上次 saveSession（`agent-turn.mjs:279` 回合尾才存；挂起驱动器不存盘）
 3. 此刻进程被杀/崩溃/OOM → 该 token 从未落盘 → 重启恢复（`token-ttl.mjs:107 restoreEngTokens`）槽旧 → token 丢
 窗口 = settle 完成 → 下个回合尾 saveSession（正常几秒内；digest 未触发/用户强杀则拉长）
@@ -27,7 +28,7 @@
 - **改**：settle 是唯一结算点 → **settle 当场持久化 token 字段到槽文件**（不等下个回合尾 saveSession）。在 `advisor-async.mjs` settle finally 后直接写（复用 `engTokenSlotFields` 序列化 + session 安全写/轮转，勿裸写文件）。agent 内存 Map 保持为当前进程缓存（常驻，与槽一致）。此消除"settle→下个 saveSession"间的重启丢 token 窗口。
   - **写失败语义（评审 #1）**：settle 的槽写须同步 await——失败即 **settle 失败**（token 不注册、无 Approved 回显、可重评），不静默吞错、不产生"内存有盘上无"态（宁可结算失败可重评，不留半结算态）。
   - **consume 落盘对称（交付 🔴 复活洞修复——D1+D2 叠加效应）**：consume-design 删内存槽后**当场同步落盘删除**（写空槽/删旧台账）——否则消费→回合尾 save 窗口内 spawn 门禁 miss 回读会从盘上复活已消费 token。落点：`subagent-spawn.mjs` consume-design 动作（或 token-ttl consume 辅助函数）调用 `persistEngTokens`（D1 同款落盘函数，写空槽）。
-- 落点：`src/agent-tools/advisor-async.mjs` settle 路径 + `src/token-ttl.mjs`（暴露可复用的落盘函数）。
+- 落点：`thincoder-core/agent-tools/advisor-async.mjs` settle 路径 + `src/token-ttl.mjs`（暴露可复用的落盘函数）。
 
 ### D2 spawn 门禁读权威（miss 回读槽）
 
@@ -40,7 +41,7 @@
 - **现状**：dispatch 写门（`dispatch.mjs:184`）读 `_engDesignToken` 镜像；settle/restore/consume/TTL/new 双写双清镜像（多处同步成本）。
 - **改（评审 #3 采纳——单条权威版）**：`_engDesignToken` 单值镜像**退役**。dispatch 写门判断资格改问权威槽"任一活槽存在"（查内存 Map 或槽文件任一未过期 designId）。**存量兼容：旧会话 slot 文件里可能残留镜像字段值——恢复时一次性读取迁移进 Map（唯一迁移读点，此后不再写镜像、不再读）**。settle/restore/consume/TTL/new 不再维护镜像。
   - 迁移读点：`token-ttl.mjs` restoreEngTokens——若 slot 有残留 `engDesignToken` 且 Map 空 → 一次性迁入 Map（标 legacy），随后 saveSession 不再写镜像字段。
-- 落点：`src/agent/dispatch.mjs` + `src/agent-tools/advisor-async.mjs` + `src/token-ttl.mjs` + `src/session.mjs`（resetSessionState）。
+- 落点：`src/agent/dispatch.mjs` + `thincoder-core/agent-tools/advisor-async.mjs` + `src/token-ttl.mjs` + `src/session.mjs`（resetSessionState）。
 
 ### D4 同机制语义对齐（与 VSC 一致）
 
@@ -48,10 +49,10 @@ settle 即落盘（D1）、门禁读权威 miss 回读（D2）、镜像退役（
 
 ## 4. 受影响文件（CLI，thincoder）
 
-- 修改：`src/agent-tools/advisor-async.mjs`（settle 当场落盘 D1/D3）、`src/agent-tools/subagent-spawn.mjs`（miss 回读 D2/D3 + **consume 落盘对称**——交付 🔴 复活洞修复）、`src/agent/dispatch.mjs`（写门问槽 D3）、
-  `src/token-ttl.mjs`（落盘函数 persistEngTokens + reconcileEngTokensFromSlot 回读 + 去镜像）、`src/session.mjs`（resetSessionState 去镜像）、**`src/agent.mjs`**（镜像初始化删——AC3 零写必需）、**`src/agent-tools/advisor.mjs`**（陈旧注释修正）、**`src/tui/cmd-new.mjs`**（陈旧注释修正）
+- 修改：`thincoder-core/agent-tools/advisor-async.mjs`（settle 当场落盘 D1/D3）、`src/agent-tools/subagent-spawn.mjs`（miss 回读 D2/D3 + **consume 落盘对称**——交付 🔴 复活洞修复）、`src/agent/dispatch.mjs`（写门问槽 D3）、
+  `src/token-ttl.mjs`（落盘函数 persistEngTokens + reconcileEngTokensFromSlot 回读 + 去镜像）、`src/session.mjs`（resetSessionState 去镜像）、**`src/agent.mjs`**（镜像初始化删——AC3 零写必需）、**`thincoder-core/agent-tools/advisor.mjs`**（陈旧注释修正）、**`src/tui/cmd-new.mjs`**（陈旧注释修正）
 - 文档：本设计 + README 地图登记
-- 新增：`src/agent-tools/design-token.mjs`（token 工具组拆分——advisor-async 577→487 行硬限内）、`src/session-guard.mjs`（轮转守卫拆分——session-slots 525→485 行）、`test/design-token-settlement.test.mjs`（AC 测试 7 用例 + consume 补充 1）
+- 新增：`thincoder-core/agent-tools/design-token.mjs`（token 工具组拆分——advisor-async 577→487 行硬限内）、`src/session-guard.mjs`（轮转守卫拆分——session-slots 525→485 行）、`test/design-token-settlement.test.mjs`（AC 测试 7 用例 + consume 补充 1）
 
 ## 5. 验收
 

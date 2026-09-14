@@ -245,7 +245,7 @@ _slot/_slotMtime 清空（切换后保存重新认领 manifest active——防�
   defaultModel 复合 + 写回失败不阻断——`PROVIDER.md` §16 M7；2026-09-10 起 `providers[].model` 回归为**单值默认模型**字段）。
 - **D-S1 启动前校验**：`loadConfig` 对 defaultModel 缺失/无效**不再抛错**——runtimeProvider 置空对象 `{}` + `providerInvalidReason`
   （"无效"判据收窄为三类：空值 / 缺冒号或段残缺 / 未知 provider——**不含"候选外"**：候选成员校验已随清单 provider 化废除，见 `PROVIDER.md` §16；
-  严格双段解析见 model-ref.mjs parseModelRef——不复用旧 findProvider 宽松三态）；`findProvider` 的 throw 契约保留（advisor/run.mjs 等直接调用方仍依赖）。
+  严格双段解析见 model-ref.mjs parseModelRef——不复用旧 findProvider 宽松三态）；`findProvider` 的 throw 契约保留（thincoder-core/advisor/run.mjs 等直接调用方仍依赖）。
   `make-agent.mjs` `assembleAgent` 末尾调用 `validateProvider(agent)`（幂等：有效时清标记；**判据不变**——仅 model/baseURL/name 缺失判 invalid——spec 表不是 allowlist）——`provider.model`/`baseURL` 缺失 → 打 `agent._providerInvalid = true` + `_providerInvalidReason`（defaultModel 原因优先覆盖——更有指导性）。
   - **model 无效判据**：仅当解析后 `provider.model` **为空/缺失**时判 invalid——**不得用 MODEL_SPECS 成员资格判无效**（自定义端点模型不在 MODEL_SPECS 是常态；spec 表不是 allowlist；未知模型 = 受支持场景）。
   - 不抛错、不退出：空 provider 不再流入 runAgent——TUI 路径在 startTUI 前置 `agent.provider = null`，由启动逻辑触发模型选择。

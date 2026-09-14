@@ -59,7 +59,7 @@ Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do 
 
 ### 2.5 advisor 截断（P3）
 
-`src/advisor/run.mjs` `MAX_RESULT_CHARS = 64 * 1024`（与主链路 64K 对齐）。**双端化截断**
+`thincoder-core/advisor/run.mjs` `MAX_RESULT_CHARS = 64 * 1024`（与主链路 64K 对齐）。**双端化截断**
 （2026-09-09 DUAL-END-TRUNCATION——评审尾部结论不再被切）：工具结果回填从"保头弃尾"
 （纯头向 line-aware 累加至 64K break）改为**头尾双保**——头行累加至预算 ~60%
 （`ADVISOR_HEAD_RATIO = 0.6`）→ 中段切 → 尾行累加至剩余预算（保尾结论——裁决/
@@ -90,7 +90,7 @@ K=0 防御不谎报截断——run.mjs 工具回填调用同函数——双端 V
 
 - `src/agent/helpers.mjs`：常量 + `safeSliceUTF16` / `safeSliceUTF16End` / `buildDualEndPreview` / `offloadToolResult` / `cleanupOldToolResults`。
 - 调用点 `src/agent/dispatch.mjs`（offloadToolResult——函数内部行为改，调用点零改）：非 read_image 工具结果统一经落盘守卫。
-- `src/advisor/run.mjs`：`MAX_RESULT_CHARS`（截断行为迁 `thincoder-core/advisor/truncate.mjs`——2026-09-09）。
+- `thincoder-core/advisor/run.mjs`：`MAX_RESULT_CHARS`（截断行为迁 `thincoder-core/advisor/truncate.mjs`——2026-09-09）。
 - `src/tools/file.mjs`：read 双端返回（§2.6——`READ_TAIL_LINES`；≤ 阈值旧路径零变化）。
 - 兼容不变量：落盘全文（磁盘全量）、清理逻辑（保留期/写时自清理/目录缺失）、失败回退、提示语与路径格式全部不变。
 

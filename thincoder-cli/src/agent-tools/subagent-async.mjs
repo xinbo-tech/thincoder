@@ -30,7 +30,7 @@ import {
 // §11.2 (R13): advisor-pool cancel fallback + mutation logging for merged
 // code（lazy function-level cycle——advisor-async → async-settle → scheduler →
 // 本模块——全函数级绑定无求值期依赖，环安全）。
-import { cancelAsyncAdvisor, noteMutations } from "./advisor-async.mjs"
+import { cancelAsyncAdvisor, noteMutations } from "@thincoder/core/agent-tools/advisor-async.mjs"
 
 // agent-tools 共享：并行子代理的审批/继续弹窗经 owner 上命名 promise 链串行——
 // 永不叠弹窗（返回链供调用方 .then 续接）。

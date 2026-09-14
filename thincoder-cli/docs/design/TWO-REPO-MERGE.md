@@ -191,7 +191,7 @@
 | # | 事实 | 落点 |
 |---|---|---|
 | P1 | CLI 运行期从**自己的** `src/prompts/` 加载——槽位面**静默空载**（缺档返回空串） | `src/prompt-overlays.mjs:18` `readFileSync(join(__dirname, "prompts", name), "utf8")` |
-| P2 | VSC 运行期加载——槽位面（两侧同型）**静默空载** / advisor 面**缺档即抛错** | 抛错面 = CLI `src/advisor.mjs:63-69` + VSC `src/advisor/main.mjs:66-71（VSC 仓）` |
+| P2 | VSC 运行期加载——槽位面（两侧同型）**静默空载** / advisor 面**缺档即抛错** | 抛错面 = CLI `thincoder-core/advisor.mjs:63-69` + VSC `src/advisor/main.mjs:66-71（VSC 仓）` |
 | P3 | 两产品的 `src/prompts/` 均**随包发布** | CLI `package.json` `files=["bin/","src/",…]`；VSC `.vscodeignore` 排 `docs/**` 但**不排 `src/**`** |
 
 **结论（机械性，非偏好）**：**「单副本」在 phase 1 不可实现**——npm tarball 与 vsix **均只收包根之内**的文件（CLI 的 `files` 无法收录父目录文件；vsix 打包根 = 扩展目录）。
@@ -425,7 +425,7 @@ phase 2 目标 = 「一个核 + 两个薄壳」：共享核心真正可 `import`
   ② §2.7 结论括注改两侧实况（槽位面缺档静默空载 / advisor 面缺档即抛错——加载面断供；结论与 D14 不动）；
   ③ R16 连带文档面口径改语义面扫描（含 §17.9 / 跨仓只读叙述段——代表点补 `:1278-1284` / `:1302`；`:48` as-of 豁免；非按坐标清单）。
 - 2026-09-13：**收口轮（评审通过后——P1/P2 面级措辞收正 + 档头状态刷新）**——① §2.7 P1 行「硬加载」收正为槽位面实况（**静默空载**——缺档返回空串；与落点 `src/prompt-overlays.mjs:18` 的 `catch { return "" }` 一致）；
-  ② §2.7 P2 行改面级表述（槽位面（两侧同型）静默空载 / advisor 面缺档即抛错——抛错面 = CLI `src/advisor.mjs:63-69` + VSC `src/advisor/main.mjs:66-71（VSC 仓）`）；档头状态行改「**设计评审通过（轮次 3 PASS）· 待用户批准**」（建档日期等信息不动）；P3 行与结论句、D14 一字不动。
+  ② §2.7 P2 行改面级表述（槽位面（两侧同型）静默空载 / advisor 面缺档即抛错——抛错面 = CLI `thincoder-core/advisor.mjs:63-69` + VSC `src/advisor/main.mjs:66-71（VSC 仓）`）；档头状态行改「**设计评审通过（轮次 3 PASS）· 待用户批准**」（建档日期等信息不动）；P3 行与结论句、D14 一字不动。
 - 2026-09-13：**批 1 实施发现收正（2 条）**——① 追溯命令形态收正为实测工作形态 `git log --follow -m -- <path>`（或 `git blame`——单 `--follow` 未给 `-m` 时在 graft 合并提交上返回空）：
   §2.3 / §2.15 S2 / §3.1 T-M4 · T-M8 同步，实测基准写入（`git rev-list --count HEAD` = 2251 · VSC tip `--is-ancestor` = YES · `--follow -m` = 234 条 · blame 归属 `^d27f773c`）；
   ② 仓根 `.gitignore` 锚定漂移（产品级规则缺位——实施批 §5 发现 #2）——增产品级 `thincoder-cli/.gitignore`（§2.10 / §2.14 / §2.15 S4 / §4；批 1 实测 `git check-ignore` 未命中），批 2 首项 = 批 1 补正：产品级 `.gitignore` 落位 + 探针验证 `git check-ignore` 命中。

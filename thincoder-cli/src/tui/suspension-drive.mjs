@@ -264,7 +264,7 @@ export async function suspensionSession(ctx) {
       // 统一一处清；consult 会话标记 stopped——settle 不入 digest 流——T-R17c）+
       // children abort。
       agent._pendingAsyncResults = []
-      const { cleanupConsultSessions } = await import("../agent-tools/consult.mjs")
+      const { cleanupConsultSessions } = await import("@thincoder/core/agent-tools/consult.mjs")
       cleanupConsultSessions(agent)
       // §17 round2 偏差 #2-CLI（code review round2 #2-CLI）+ INPUT-LOCK 单槽化：中止时
       // 不静默丢弃挂起期输入——Enter 已清空输入框并入 pendingInput（用户视为已发送）——
@@ -279,7 +279,7 @@ export async function suspensionSession(ctx) {
       // ASYNC-RESULT-CONTAINER.md D2：pending 单容器一处清——注入器按 role 分发
       // （consult → injectConsultResult；其余 → injectAsyncResult——四族同容器）。
       const { injectAsyncResult } = await import("../agent-tools/subagent.mjs")
-      const { injectConsultResult } = await import("../agent-tools/consult.mjs")
+      const { injectConsultResult } = await import("@thincoder/core/agent-tools/consult.mjs")
       const residual = agent._pendingAsyncResults
       if (residual?.length) {
         for (const e of residual.splice(0)) {
