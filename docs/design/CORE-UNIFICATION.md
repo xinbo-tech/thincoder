@@ -1437,13 +1437,13 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
    以上**S2 端侧接线仍待做**（落点 ≠ 接线）。
    **#112 定稿（`read_image` 注册门——模型热切换；2026-09-14 正本自洽轮）**：缺口事实 = 工具表**装配期一次性冻结**（`thincoder-cli/src/cli/make-agent.mjs:63` 单次调用 `assembleBuiltinTools`）⇒ 会话内 `/model` 文本→视觉 ⇒ `read_image` **整会话不可得**；非多模态 / 规格表外模型（保守判）装配期即被剔除 ⇒ 执行面 F-3 软引导句（`thincoder-core/tools/file.mjs:161-163`）**无可达路径**。
    **定稿形态（只设计不实现——S2 / 核内笔落）**：① **装配面恒含**——`thincoder-core/tools/index.mjs:62` 装配期门撤销，`assembleBuiltinTools` 恒返 `read_image`（装配面名数与模型无关）；
-   ② **run 起始重解（核内单点）**——`thincoder-core/agent/setup.mjs:293-294`（`prepareRun`——`agent.mjs:125` 唯一调用点）在 `toolSchemas` 物化前
+   ② **run 起始重解（核内单点）**——`thincoder-core/agent/setup.mjs:293-294`（`prepareRun`——`thincoder-core/agent.mjs:125` 唯一调用点）在 `toolSchemas` 物化前
    按 `specForModel(agent.provider.model)?.multimodal` 过滤 `multimodal` 标记工具（现仅 `read_image`——`thincoder-core/tools/file.mjs:138`）；实质 = 能力门**从装配期移到 run 期**、单点、调用期求值；
    ③ **何时重算**——每个 run 起始**惰性重解**（零缓存）：会话内 `/model` 切换 ⇒ 下一回合（含 digest 回合）自然生效；会话恢复 / 子代理（depth>0）各 run 同点覆盖；
    ④ **执行面第二道门不变**（`tools/file.mjs:159` 能力拒绝 + F-3 引导句保留）；
    ⑤ **与 `configurePromptInjections` 式核内缝不同轴**——零端侧输入（判据全在核内 `specForModel`）⇒ 不进 §2.13.2 / §2.13.3 注入位清单、无端供值义务；同轴的仅是「调用期求值、不做一次性物化」形态纪律。
    **与 §2.13.4 #112 行的关系 = 更新其 `read_image` 门子项**（「装配期参数化」→「装配面恒含 + run 期重解」）——非冲突形态，是同一行的门位迁移；三项条件参数化的其余两项（编辑器上下文 / MCP 扩工具时机）不变。
-   **验收（可机判——S2）**：① 核内用例（新建，如 `thincoder-core/test/tool-face-capability.test.mjs`）——假 agent 文本模型 ⇒ run 面缺 `read_image`；同一 agent 改 `provider.model` 为视觉 ⇒ **下一 run** 面含（不重建 agent）；反向 / 未知模型（DEFAULT_SPEC）⇒ 缺（保守）；
+   **验收（可机判——S2）**：① 核内用例（**S2 新建**——拟档名 `tool-face-capability.test.mjs`，落 `thincoder-core/test/`；既有 `thincoder-core/test/tool-registry.test.mjs:54` 覆盖装配期门）——假 agent 文本模型 ⇒ run 面缺 `read_image`；同一 agent 改 `provider.model` 为视觉 ⇒ **下一 run** 面含（不重建 agent）；反向 / 未知模型（DEFAULT_SPEC）⇒ 缺（保守）；
    ② 装配面恒含断言（名集与模型无关 + 静态表 24 名 ⊆ 装配面）；③ 既有 `thincoder-cli/test/read-image-guide.test.mjs` 双态零回归（执行门保留）；
    ④ 端侧（S2 接线段）——CLI `/model` 切换用例：切换后下一回合请求 `tools` 面含 `read_image`（VSC picker 同）。
 6. **`#99` 反向风险**：核内 `subagent` 动作枚举含 `panel`，VSC 端差要求「不注入该动作」——现无剔除缝 ⇒ S2 原样接线会让 VSC 凭空多一个动作（对外可见行为变化）。
