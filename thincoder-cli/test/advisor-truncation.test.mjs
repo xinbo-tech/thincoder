@@ -2,7 +2,8 @@
  * advisor-truncation.test.mjs — advisor 工具结果截断双端化（DUAL-END-TRUNCATION F-2——
  * DUAL-END-TRUNCATION.md，2026-09-09）：超限结果 头行(~60%) + 中段省略注 +
  * 尾行(余预算 ~40%)——保头上下文（评审目标/标准）+ 保尾结论（裁决不被切）——offset 续读
- * 提示在。双端（CLI/VSC）各自同名镜像且 byte-identical（含本注释）；纯函数直驱
+ * 提示在。实现单源在核包（`@thincoder/core/advisor/truncate.mjs`——2026-09-14-S2 族 1 迁入，
+ * 原「双端各自同名镜像且 byte-identical」形态随之退役）；纯函数直驱
  * （truncate.mjs——run.mjs 工具回填调用同函数，行为一致）。
  *
  * AC-2 用例：超 64K 结果头尾保 / 头部上下文尾部结论可见 / offset 提示在 / K=0 无假截断
@@ -11,7 +12,7 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { truncateAdvisorResult, ADVISOR_HEAD_RATIO } from "../src/advisor/truncate.mjs"
+import { truncateAdvisorResult, ADVISOR_HEAD_RATIO } from "@thincoder/core/advisor/truncate.mjs"
 
 const MAX_RESULT_CHARS = 64 * 1024 // run.mjs MAX_RESULT_CHARS parity（消息回填上限不动——红线）
 

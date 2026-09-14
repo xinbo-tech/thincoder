@@ -1,7 +1,7 @@
 /**
  * advisor.mjs — advisor system-prompt selection, follow-up building, session assembly.
  * User-message building lives in advisor/messages.mjs; execution (tool loop, provider
- * resolution, review entry) in advisor/run.mjs; history extraction in advisor/history.mjs.
+ * resolution, review entry) in advisor/run.mjs; history extraction in @thincoder/core/advisor/history.mjs.
  * Path classification (code / doc / temp) and the project declaration surface live in
  * ../conventions.mjs — the single authority every gate consumes (repos.mjs included).
  *
@@ -45,12 +45,12 @@
 import { readFileSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
-import { extractAgentResponseTable } from "./advisor/history.mjs"
+import { extractAgentResponseTable } from "@thincoder/core/advisor/history.mjs"
 import { buildAdvisorUserMessage, resolveScopeFiles, buildObjectDeclarationBlock, buildDesignApprovalBlock } from "./advisor/messages.mjs"
-import { buildConvergenceBody } from "./advisor/convergence.mjs"
+import { buildConvergenceBody } from "@thincoder/core/advisor/convergence.mjs"
 import { escapeLiteralEscapes } from "./escape.mjs"
 // Re-export for run.mjs and tests (keeps their imports from "../advisor.mjs" stable)
-export { ADVISOR_MD_PATH, extractAgentResponseTable, extractConversationBackground } from "./advisor/history.mjs"
+export { ADVISOR_MD_PATH, extractAgentResponseTable, extractConversationBackground } from "@thincoder/core/advisor/history.mjs"
 export { buildAdvisorUserMessage } from "./advisor/messages.mjs"
 export { buildObjectDeclarationBlock, buildDesignApprovalBlock } from "./advisor/messages.mjs"
 

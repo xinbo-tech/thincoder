@@ -11,7 +11,7 @@ import { chat } from "../provider/core.mjs"
 import { providerSpec } from "../config.mjs"
 import { toOpenAISchema } from "../tools/index.mjs"
 import { describeToolArgs } from "../tui/tool-args.mjs"
-import { truncateAdvisorResult } from "./truncate.mjs"
+import { truncateAdvisorResult } from "@thincoder/core/advisor/truncate.mjs"
 import { batchSegmentTool } from "../agent-tools/batch-segment.mjs"
 import {
   estimateTokens, compactMessages, shouldBudgetNudge, budgetNudgeText, timeoutTail, renderTimeline,

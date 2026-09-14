@@ -97,7 +97,7 @@
 ### 6.4 范围边界（不做）
 
 - 不改评审机制代码（`src/advisor/*`、`src/agent-tools/advisor*.mjs` 等）——Action 词表运行时零解析
-  （实证：`src/advisor/history.mjs:8/:29-45` 只按表头提取整表，见设计档 §13.5）
+  （实证：`thincoder-core/advisor/history.mjs:8/:29-45` 只按表头提取整表，见设计档 §13.5）
 - 不改评审侧提示词（`advisor-*.md` / `consult-base.md`）——`Fixed` 定义在彼处**无副本**（实证见设计档 §13.5）
 - 不改工程模式机制档（`design/ENGINEERING-MODE.md` 与 `requirements/ENGINEERING-MODE.md`——他链在途）
 - 不重排既有段落（除必要的措辞一致性——Action 词表句**就地改词**，不做行结构重排）

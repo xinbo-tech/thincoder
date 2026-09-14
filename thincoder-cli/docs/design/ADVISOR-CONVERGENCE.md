@@ -7,9 +7,9 @@
 > - `src/prompts/advisor-round1.md` / `advisor-round2.md` / `advisor-round3.md` / `advisor-design.md`——轮次提示词（硬加载——缺失即抛错，防静默降级）。
 > - `src/advisor.mjs`——system prompt 轮次选择（`buildAdvisorSystemPrompt`）、round2+ follow-up 构建（`buildAdvisorFollowUp`）、评审会话组装（`prepareAdvisorMessages`）。
 > - `src/advisor/run.mjs`——执行与机械 cap（`MAX_ADVISOR_ROUNDS`/`buildCapMessage`/`runAdvisorReview`）；拆分后（第 11 批）：工具循环居 `loop.mjs`（含硬墙 / 预算提示 / 结构化尾接线），压缩与守卫族居 `compaction.mjs`（`MAX_ADVISOR_TURNS`:12 / 六 kind 谓词 / `renderTimeline`）——既有 import 面经 re-export 保面。
-> - `src/advisor/convergence.mjs`——round2+ 收敛消息体（正常流与 legacy 路径的单源）。
+> - `thincoder-core/advisor/convergence.mjs`——round2+ 收敛消息体（正常流与 legacy 路径的单源）。
 > - `src/advisor/messages.mjs`——user 消息构建（round1 设计/代码、legacy 收敛路径、对象声明块、Project Guide 注入）。
-> - `src/advisor/citations.mjs`——host-verified citations 机械校验；`src/advisor/history.mjs`——响应表/对话背景提取；`src/advisor/repos.mjs`——评审范围采集 + `hasCodeMutations`。
+> - `src/advisor/citations.mjs`——host-verified citations 机械校验；`thincoder-core/advisor/history.mjs`——响应表/对话背景提取；`src/advisor/repos.mjs`——评审范围采集 + `hasCodeMutations`。
 > - `src/agent-tools/advisor.mjs` / `advisor-async.mjs`——advisor 工具（sync 执行、async 后台池、cap 预检、per-review 实例；结算 / 陈旧判定拆出至 `advisor-settle.mjs`——第 11 批）；`src/agent/record-results.mjs`（工具结果记账）；`src/agent/completion.mjs`（完成 guard 推回）。
 >
 > **权威边界**：
@@ -327,7 +327,7 @@ VSC `src/prompts/discipline-engineering.md`（现 228 行）· VSC `docs/design/
 | **双源同步机制 = 手抄/译写（无脚本）** | 同上零脚本引用；双端为**语义同源、原文自持**（多实现面纪律），跨仓逐字由锚测试守（`test/prompts-mirror-anchors.test.mjs（VSC 仓）`：A1–A8/A11/A12 + 双源同名集合各 15 档） |
 | **`Fixed` 定义副本 = 8 文件** | `discipline-engineering.md` ×4 + `discipline-normal.md` ×4（§13.3 落点表；逐文件行号） |
 | **评审侧零副本** | `advisor-design.md` / `advisor-round{1,2,3}.md` / `consult-base.md` / `persona-*.md` 对 `Fixed` 词表 grep 零命中——评审侧只描述自身输出格式（VERDICT），不定义 Action 词表 |
-| **运行时零解析（四值化无代码影响）** | `src/advisor/history.mjs:8`（`AGENT_RESPONSE_HEADER = "\| # \| Action \| Detail \|"`）+ `:29-45`（`extractAgentResponseTable` 按表头取整段、`agent.history` 只作 round2+ “聚焦参考”）——Action **值**从不解析 |
+| **运行时零解析（四值化无代码影响）** | `thincoder-core/advisor/history.mjs:8`（`AGENT_RESPONSE_HEADER = "\| # \| Action \| Detail \|"`）+ `:29-45`（`extractAgentResponseTable` 按表头取整段、`agent.history` 只作 round2+ “聚焦参考”）——Action **值**从不解析 |
 | **既有断言对词表零断言** | 双端 test 目录 grep `three values\|三值\|三选一` 零命中——改词表不破既有断言（但既有 prompts 锚测试仍须全绿——N4） |
 | **链行四面同位** | CLI zh `docs/design/prompts/persona-engineering.md:18-19` · CLI en `src/prompts/persona-engineering.md:21-22` · VSC zh `docs/design/prompts/persona-engineering.md:18-19` · VSC en `src/prompts/persona-engineering.md:21-22`（四面逐字一致——A12 断言对象） |
 | **VSC 端无 `docs/requirements/` 层** | `docs/`（VSC 仓）仅 `design/` + 三份根级 .md（三层历史形态——VSC 设计档即其权威） |

@@ -3720,5 +3720,82 @@ D 类（#70 · #83）· F 类（#111 · #149–#153 · #155 · #157 · #103 · #
 
 **轮次自证**：审计 1 轮 + advisor 2 轮 + 修复轮 1；K1/K2/K3 终态读数见上表；终态 = **clean**；报告 ①–⑥ 见交付报告（父侧转呈）。
 
+### 实施：S2 族 1 落轮前半 —— 装配置 + CLI 族接线（2026-09-14 · eng-coder）——**终态 = clean**
+
+**段位**：当前段 = **S2 族 1**（本轮只做「装配置 + CLI 族」两步；**VSC 族 = 下一轮**——VSC 三档仍在、VSC 侧零引用闸读数 8 = 对照组，非缺失）。核内零改动（`git status` 自证：改动集零 `thincoder-core/**`）；**未 commit**（父侧分两笔提交）；未碰台账；未改设计 / 需求档（写权 = eng-designer）。
+
+**改动面**（CLI 侧 4 档改 + 3 删档 + 3 文档；装配置 4 档。行数 = `wc -l` 口径实核）
+
+| # | 档 | 行数（改前 → 改后） | 改动 |
+|---|---|---|---|
+| 1 | `.github/workflows/test.yml` | 40 → **57**（+17） | 两产品 job 各 +2 link 步（`npm install` 之前 · 相对 job cwd）+ `core` job（`node --test` · wd = `thincoder-core`） |
+| 2 | `thincoder-cli/package.json` | 43 → **46**（+3） | `dependencies: { "@thincoder/core": "^0.1.0" }`（位置 = `engines` 之后；真 semver） |
+| 3 | `thincoder-vscode/package.json` | 131 → **134**（+3） | 同上 |
+| 4 | `thincoder-vscode/.vscodeignore` | 16 → **17**（+1） | 反排除行 `!node_modules/@thincoder/core/**`（置于 `node_modules/**` 之后） |
+| 5 | `thincoder-cli/src/advisor.mjs` | 290 → 290 | :4 头注订正 + :48 / :50 / :53 三处改指 |
+| 6 | `thincoder-cli/src/advisor/messages.mjs` | 299 → 299 | :10 / :11 两处改指 |
+| 7 | `thincoder-cli/src/advisor/loop.mjs` | 293 → 293 | :14 一处改指 |
+| 8 | `thincoder-cli/test/advisor-truncation.test.mjs` | 88 → **89**（+1） | 头注订正 + import 改指（改指行落位 = 删档后 :15） |
+| 9 | `thincoder-cli/src/advisor/{history,convergence,truncate}.mjs` | −214（删空） | **删档**（三档全删） |
+| 10 | `thincoder-cli/docs/design/ADVISOR-CONVERGENCE.md` | 1569 → 1569 | :10 / :12 / :330 三处锚改指 |
+| 11 | `thincoder-cli/docs/design/TOOL-OUTPUT-LIMITS.md` | 115 → 115 | :68 / :93 两处锚改指 |
+| 12 | `thincoder-cli/docs/requirements/ADVISOR-CONVERGENCE.md` | 378 → 378 | :100 一处锚改指 |
+
+**① 逐处改前 → 改后**（CLI 7 处 import / re-export + 2 处头注）
+
+| # | 位置 | 改前 → 改后 |
+|---|---|---|
+| 1 | `src/advisor.mjs:4`（头注） | `history extraction in advisor/history.mjs` → `history extraction in @thincoder/core/advisor/history.mjs` |
+| 2 | `src/advisor.mjs:48` | `from "./advisor/history.mjs"` → `from "@thincoder/core/advisor/history.mjs"` |
+| 3 | `src/advisor.mjs:50` | `from "./advisor/convergence.mjs"` → `from "@thincoder/core/advisor/convergence.mjs"` |
+| 4 | `src/advisor.mjs:53`（re-export · 原位只换来源） | `… from "./advisor/history.mjs"` → `… from "@thincoder/core/advisor/history.mjs"` |
+| 5 | `src/advisor/messages.mjs:10` | `from "./convergence.mjs"` → `from "@thincoder/core/advisor/convergence.mjs"` |
+| 6 | `src/advisor/messages.mjs:11` | `from "./history.mjs"` → `from "@thincoder/core/advisor/history.mjs"` |
+| 7 | `src/advisor/loop.mjs:14` | `from "./truncate.mjs"` → `from "@thincoder/core/advisor/truncate.mjs"` |
+| 8 | `test/advisor-truncation.test.mjs:14→15` | `from "../src/advisor/truncate.mjs"` → `from "@thincoder/core/advisor/truncate.mjs"` |
+| 9 | `test/advisor-truncation.test.mjs:4-6`（头注） | 「双端（CLI/VSC）各自同名镜像且 byte-identical（含本注释）」句 → 迁移订正（实现单源在核包 · 原镜像形态退役；+1 行） |
+
+**② 删旧 + 6 处锚改指**：删前三条确认全过——① 7 处改指已落盘；② 该产品全链 exit 0（A2）；③ 零引用机判三法（A1 / 运行面 / 锚面）。
+删后中间态实测 = `doc-anchors --domain thincoder-cli` 报 **6 条悬空**（⇔ 设计预测 +6）；6 处改指（全部 `thincoder-core/advisor/…` 仓根相对形态）：
+`docs/design/ADVISOR-CONVERGENCE.md:10`（convergence）· `:12`（history）· `:330`（history:8）· `docs/design/TOOL-OUTPUT-LIMITS.md:68` · `:93`（truncate）· `docs/requirements/ADVISOR-CONVERGENCE.md:100`（history:8/:29-45）——改后复跑悬空 **0**。
+
+**③ A1–A5 读数（cwd = 仓根 / 产品目录 · 终态实跑 · 原样）**
+
+| # | 判据 | 读数 | 判 |
+|---|---|---|---|
+| A1 | 零引用闸（反向判两模式「① 引号包裹本地相对路径 · ② `advisor/` 片段且前缀非 `core/`」· 扫描域 src + test · 排除三档本体） | **CLI 命中行 0 / VSC 命中行 8（对照组）**；改前基线 = CLI 8 / VSC 8（16 行 ⇔ 14 改指 + 2 头注逐项对应）；改后残留仅裸词叙述（设计（五）明列射程外） | ✓ |
+| A2 | CLI 全链 | `npm test`：**tests 605 · pass 548 · fail 0 · skipped 57 · exit 0**（改前基线同值；另两次预跑遇 slow-gate 负载抖动拦截 T96 1245.4ms / T-CG18 1409.7ms，非本族面）· `npm run lint`：**check-syntax: 308 file(s) OK**（311 − 3 删档）· `npm run test:full`：**605/605 · fail 0 · exit 0** · `npm run test:integration`：**23/23 · fail 0 · exit 0**——**面内 + 未涉面逐数零变** | ✓ |
+| A3 | 仓根三机检 | `doc-anchors` **exit 0**（域一 32 档：候选 1968 · 悬空 0 · 注记豁免 29；域二 99 档：候选 8870 · 悬空 0；VSC 引擎报告态命中 0）· `check-doc-width` **exit 0**（306 档无 >300 字符行）· `check-ledger` **exit 0**（0 违规） | ✓ |
+| A4 | 核回归 | `node --test`（cwd = `thincoder-core/`）**tests 160 · pass 160 · fail 0 · exit 0**；核内零改动（`git status` 自证） | ✓ |
+| A5 | 范围自证 | `git status` = **14 项 = 预期集**（CLI 源 3M + 3D + 测试 1M + CLI 文档 3M + 两产品 package.json ×2 + `.vscodeignore` + CI）；**VSC 三档仍在**（`thincoder-vscode/src/advisor/` 13 档在位）；未 commit | ✓ |
+| L1 | 链接复验（两产品） | `npm ls @thincoder/core --json` **exit 0 · version 0.1.0**（声明落地后 extraneous 问题消失）· 版本探针 `import('@thincoder/core/package.json')` = **0.1.0** ×2 | ✓ |
+
+**④ 内部轮发现与处置**
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **CLEAN**——四类偏差（部分实现 / 静默简化 / 文档漂移 / 清单外改动）均未发现；13 项对位全过（含断言 A ⇔ 核版本、反排除行顺序、CI 相对 job cwd、核内导出逐名、零引用两模式）；6 条 QUESTION 判为非偏差（Q1 陈旧叙述 → 未决 2；Q2 历史批档 → 未决 3；Q3 VSC 域另一行 → 未决 4；Q4 契约 7 措辞 → 未决 1；Q5 依赖块形态 → 决策表 1；Q6 读数落账 = 本段）。
+- **advisor 代码评审 1 轮**（`type=code` · 阻塞）：**pass**（🔴 0 · 🟡 1 · 🔵 2）。🟡#1 = 设计档 §2.2 契约 7 括注「两产品 job 内部命令不变——依赖由 `npm install` 自动解析」与 §2.6.1 CI 行 / §2.11 A3⑥ 相抵（**报告面收正 · 不阻断** R7e）→ 未决 1；
+  🔵#2 = `loop.mjs:279` 裸词叙述（设计明列射程外）；🔵#3 = 三档文档面端内名叙述（同，非锚面）。**无一 must-fix ⇒ 无修复轮**（发现均设计面 / 射程外，执行者零可行动项）。
+  轮末 host 引证核验附注（`thincoder-cli/package.json:23` 报 unreadable）经复读复核 = 机制面 artifact——该行内容 `"@thincoder/core": "^0.1.0"` 实核为真。
+- **轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 0；终态 **0 未决 🔴 → clean**。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 依赖声明块 = 标准三行展开（实际 +3 行） | 设计（三）1 内联写单条目对象、估 +5「一行块」（自相矛盾）；三行展开 = npm 惯例、与本档其它块同形。备选 = 单行块（+1 行，可读性劣） |
+| 2 | 测试档 import 落位 = `:15`（头注 +1 行所致） | 设计登记 `:14` = 改前坐标；头注订正按（四）+1 行 ⇒ 后移 1 行，与预计增量一致（审计已判非偏差） |
+| 3 | VSC 侧本轮只做装配置（依赖声明 + 反排除行），不做其改指 / 删档 / 锚 | 派单明示（VSC 族 = 下一轮）；「一次一族」段序纪律——VSC 侧零引用闸读数 8 = 对照组基线 |
+| 4 | 6 处文档锚 = 仓根相对路径形态（非迁移注记行） | 设计（六）明示 CLI 域形态；实跑悬空 6 → 0 自证 |
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **设计档 §2.2 契约 7 括注状态滞后**（advisor 🟡#1 · 设计面）：与 §2.6.1 CI 行（产品 job 必须显式 `npm link`）及 A3⑥ 相抵——归设计面收正（执行者零可行动项）。
+2. **`thincoder-cli/docs/design/TOOL-OUTPUT-LIMITS.md:69`「双端 VSC 逐字同构镜像」句**（审计 Q1）：不在（六）枚举六行内、非锚面；随 VSC 族轮或下次动档收正。
+3. **`thincoder-cli/docs/batches/2026-09-11-PROMPT-REVIEW-ORDER.md:95`** 引已删档（审计 Q2）：历史批档 as-of 记述、append-only 冻结 ⇒ 不改。
+4. **VSC 域文档另有一行引该族档**（审计 Q3：`thincoder-vscode/docs/requirements/ADVISOR-CONVERGENCE.md:21`）不在设计 VSC 5 行枚举内——留 VSC 族轮核对（VSC 锚引擎报告态、不进闸）。
+5. **A3 残余⑤（推演）**：产品 lock 与 manifest 在 S2 期不自洽（本机态，不入提交）——设计已登记（§2.6.1 锁面口径 / A3⑤），本段零动作。
+
+**本段读数收正（append-only 补记 · 无）**：上表即终态读数（§5 本段为最后一次写入）。
+
 ## §6 验证与收口（父代理）
 

@@ -65,7 +65,7 @@ Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do 
 （`ADVISOR_HEAD_RATIO = 0.6`）→ 中段切 → 尾行累加至剩余预算（保尾结论——裁决/
 结论行可见）——头尾之间省略注 `… (truncated: N more lines, N chars total)` + offset
 续读提示保留（`read(path, offset=…, limit=…)` 续中段）。实现落点：截断纯函数迁至
-`src/advisor/truncate.mjs`（`truncateAdvisorResult`——头尾预算行级累加、绝不半行切开、
+`thincoder-core/advisor/truncate.mjs`（`truncateAdvisorResult`——头尾预算行级累加、绝不半行切开、
 K=0 防御不谎报截断——run.mjs 工具回填调用同函数——双端 VSC 逐字同构镜像）。advisor
 上下文保护已有 `compactMessages` 兜底，放宽后不新增风险。
 
@@ -90,7 +90,7 @@ K=0 防御不谎报截断——run.mjs 工具回填调用同函数——双端 V
 
 - `src/agent/helpers.mjs`：常量 + `safeSliceUTF16` / `safeSliceUTF16End` / `buildDualEndPreview` / `offloadToolResult` / `cleanupOldToolResults`。
 - 调用点 `src/agent/dispatch.mjs`（offloadToolResult——函数内部行为改，调用点零改）：非 read_image 工具结果统一经落盘守卫。
-- `src/advisor/run.mjs`：`MAX_RESULT_CHARS`（截断行为迁 `src/advisor/truncate.mjs`——2026-09-09）。
+- `src/advisor/run.mjs`：`MAX_RESULT_CHARS`（截断行为迁 `thincoder-core/advisor/truncate.mjs`——2026-09-09）。
 - `src/tools/file.mjs`：read 双端返回（§2.6——`READ_TAIL_LINES`；≤ 阈值旧路径零变化）。
 - 兼容不变量：落盘全文（磁盘全量）、清理逻辑（保留期/写时自清理/目录缺失）、失败回退、提示语与路径格式全部不变。
 

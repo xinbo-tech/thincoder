@@ -7,8 +7,8 @@
  */
 import { join, relative, sep } from "node:path"
 import { findReviewRepos, collectRepoSnapshots, collectChangedFiles } from "./repos.mjs"
-import { buildConvergenceBody, buildConvergenceInstructions } from "./convergence.mjs"
-import { loadAdvisorMd, extractConversationBackground, extractAgentResponseTable } from "./history.mjs"
+import { buildConvergenceBody, buildConvergenceInstructions } from "@thincoder/core/advisor/convergence.mjs"
+import { loadAdvisorMd, extractConversationBackground, extractAgentResponseTable } from "@thincoder/core/advisor/history.mjs"
 import { injectProjectGuide, injectDocumentMap, injectProjectStandards, NO_GIT_NOTICE } from "./project-context.mjs"
 
 // Structural split (not an authority migration): the moved helpers stay reachable here.
