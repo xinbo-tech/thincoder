@@ -90,6 +90,26 @@
 **非功能**：N8 零行为回归（未配置 headers 时头集合逐字不变）· N9 覆盖语义对齐（同名时内置头胜出；`Authorization` 装载面剥离语义不变）。
 **范围边界（不做）**：不实现会话动态头；不改头语义；不动已展开面；不动 embedding 独立渠道；不碰 VS Code 端；不新建档。
 
+### 4.4 qwen-plan 渠道名接入（`deepseek-v4.1-flash` · 2026-09-15 · 用户快车道）
+
+**总体需求**：qwen-plan 渠道（provider `qwenplan`、baseURL `https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1`）上的 DeepSeek
+V4.1-Flash 模型名为 `deepseek-v4.1-flash`（2026-09-15 实测：GET /models 200 含该名 · chat 200）——该名不命中核内 MODEL_SPECS 任何前缀
+（`.1` ≠ `-`）→ 前缀查表 miss（`specForModel` 回落）→ 未知模型警告 + 回落 128K 默认 spec，1M 上下文用不上。本批在核内 MODEL_SPECS **增加该行为独立行**，
+能力位**逐字段对齐 `deepseek-flash`**（含 `multimodal: true`——用户 04:01 拍板），使 qwen-plan 渠道的该模型获得真实能力规格。
+
+| # | 需求 | 判定句（验收口径——摘要） |
+|---|---|---|
+| R21 | 核内 `MODEL_SPECS` 新增 `deepseek-v4.1-flash` 行，能力位逐字段对齐 `deepseek-flash`（1M ctx / 384K out / thinking / prefixMode / cacheMode auto / thinkApi type / reasoningEcho required / reasoningEffortEnum low·high·max / tempRange [0,2] / **multimodal true**） | `specForModel("deepseek-v4.1-flash")` 逐字段 deepEqual `specForModel("deepseek-flash")`，且 context = 1_000_000 · thinking true · prefixMode true · multimodal true · cacheMode "auto"；`specMatch` 返回 `matched: true`（未知模型兜底分支不进入） |
+
+**非功能**：N10 1M 上下文命中（specForModel 返回 context = 1_000_000——压缩阈值 / 续写协议 / 规格显示跟随真实能力）·
+N11 零前缀回归（既有 deepseek 前缀命中行为不变：`deepseek-v4-flash` / `deepseek-v4-flash-0731` 仍命中退役行、`deepseek-v4-pro` 仍保守行——新行与退役行
+前缀不相交（第 12 位 `.` 与 `-` 互不为前缀）⇒ **互不 shadow**）·
+N12 零 VSC 触碰（`thincoder-vscode/**` 一字不改——VSC 未迁移，自持副本不动）。
+
+**范围边界（不做）**：不改 spec 查表机制本体（前缀匹配 / namespace 剥离不变）；不为该名引入别名 / 归一化机制（`deepseek-v4-flash-0731`
+前缀命中实证 = 纯前缀足够；与 D-PR19 同源）；`deepseek-v4-flash-0731` **不**加行；不改其它厂商任何 spec 行；不动预设 `qwenplan`
+（默认模型 `qwen3.7-max` 与本批无关）；不改多模态消费链；不动用户本机配置；不 commit、不发起评审。
+
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）
 
 | 旧档节 | 内容 | 何故不并 |
@@ -103,3 +123,5 @@
 
 - 2026-09-13：建档——自 `docs/core/requirements/CORE-UNIFICATION.md` 拆分（来源：§2 F11 / F13 / F12 回指）+ 设计档 `PROVIDER.md`（§2.1 #114 / #115 · §2.2 #138–#143 · §3.1 A19 / A20 · §4.1 第 8 行 派生）；**无新增需求**。
 - 2026-09-14（**B 轮并入 · 第 2 批**）：新增 §4 **需求条目**（模型选择面重构 R1–R10 / N1–N4 · DeepSeek V4.1-Flash 接入 R11–R17 / N5–N7 · `provider.headers` 全通路铺开 R18–R20 / N8–N9——自旧设计档需求层节并入需求正文；**编号与文本承旧档**）+ §5 **不并项与历史沿革**；**本档新增需求 0**（纯回填）；首部加需求条目面指针一行。
+- 2026-09-15（**qwen-plan 渠道名接入批**）：新增 §4.4 需求条目 **R21** / N10–N12（`deepseek-v4.1-flash` 加行——qwen-plan 渠道实测模型名；能力位逐字段对齐 `deepseek-flash` 含 multimodal；零 VSC 触碰；零前缀回归）。
+- 2026-09-15（**评审修正轮** · eng-designer）：§4.4 总体需求段 `lookupSpec` 符号改「前缀查表 miss（`specForModel` 回落）」（与设计层统一用语）；N11 论证口径改前缀不相交（第 12 位 `.` 与 `-` 互不为前缀——长度排序既不充分也无必要）。

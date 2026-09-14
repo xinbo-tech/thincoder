@@ -31,6 +31,8 @@ const MODEL_SPECS = [
   // still accepts them and serves them from V4.1-Flash today (no switch window), so their
   // rows carry the V4.1-Flash parameters (v4-flash gains multimodal).
   ["deepseek-flash",    { context: 1_000_000, maxOutput: 384_000, thinking: true,  prefixMode: true,  cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 2], multimodal: true }],
+// deepseek-v4.1-flash = qwen-plan channel name for DeepSeek V4.1-Flash (token-plan GET /models verified 2026-09-15) — same fields as the row above; ".1" ≠ "-" so plain prefix lookup misses the existing rows (D-PR25)
+  ["deepseek-v4.1-flash", { context: 1_000_000, maxOutput: 384_000, thinking: true,  prefixMode: true,  cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 2], multimodal: true }],
   // deepseek-v4-pro (V4-Pro-0813): fields unchanged — vision capability NOT verified, so no
   // multimodal (conservative). From 2026-09-14 12:00 Beijing all requests route to V4.1-Flash.
   ["deepseek-v4-pro",   { context: 1_000_000, maxOutput: 384_000, thinking: true,  prefixMode: true,  cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 2] }],

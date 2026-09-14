@@ -161,7 +161,9 @@ name 空槽丢弃并计数、缺 id 合成 `call_N`。告警（`droppedToolCalls
 
 - **预设** `PROVIDER_PRESETS`（住 `thincoder-core/config-presets.mjs`，20 家）：按需从预设创建 provider，各预设声明 `baseURL` / **`model`（单值默认模型）** / thinking / reasoningEffort / maxTokens / desc。**预设不再携带候选清单**（原 `models` 种子已废）。
 - 能力差异全走规格表；`kimi/kimi-k3`（router 前缀）与 `k3` 保留显式 alias 行；未知模型保守 `DEFAULT_SPEC`。
-- **DeepSeek V4.1-Flash 行集**：新行 `deepseek-flash`（1M 上下文 / 384K 输出 / thinking 默认开 / 前缀补全 Beta / 磁盘缓存默认开 / `multimodal: true`）；两退役名 `deepseek-v4-flash` / `deepseek-v4-flash-vision-exp` 保留独立行、参数与能力位随新行（旧配置钉旧名仍查得真规格）；`deepseek-v4-pro` 保留 + 行注释（限期路由——**不预支视觉**：预支的硬失败风险不排除）；
+- **DeepSeek V4.1-Flash 行集**：新行 `deepseek-flash`（1M 上下文 / 384K 输出 / thinking 默认开 / 前缀补全 Beta / 磁盘缓存默认开 / `multimodal: true`）；
+qwen-plan 渠道同名模型以 `deepseek-v4.1-flash` 提供（`token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1`——2026-09-15 实测 GET /models 含该名 · chat 200）——独立行、字段逐字对齐 `deepseek-flash`（`.1` ≠ `-` ⇒ 纯前缀查表不命中既有行）；
+两退役名 `deepseek-v4-flash` / `deepseek-v4-flash-vision-exp` 保留独立行、参数与能力位随新行（旧配置钉旧名仍查得真规格）；`deepseek-v4-pro` 保留 + 行注释（限期路由——**不预支视觉**：预支的硬失败风险不排除）；
 预设 `deepseek` 默认模型 = `deepseek-flash`。
 
 ### 6.12 Qwen 思考关闭（`enable_thinking`）
@@ -240,6 +242,7 @@ qwen 系列（百炼**混合思考**模式，默认开启）需能**真正关闭
 | D-PR22 | 覆盖语义 = **内置头胜出**（定制头在前） | 对齐既有语义 + 安全（认证 / 内容类型不可被 headers 劫持） |
 | D-PR23 | `resolveEnableThinking` 白名单**双条件**（模型前缀 + 百炼 host） | `enable_thinking` 是百炼扩展参数——全局发送会污染 kimi / glm / 自定义端点 |
 | D-PR24 | Responses 链 = **单 turn + host 白名单驱动** | DeepSeek 静默忽略 = 无声丢上下文（比 404 危险）；跨 turn 重建把边界划在最稳点 |
+| D-PR25 | qwen-plan 渠道名 `deepseek-v4.1-flash` **加行对齐** `deepseek-flash`（不引入查表机制改造） | 实证 = GET /models 含该名 · chat 200（2026-09-15）；前缀不相交（第 12 位 `.` 与 `-` 互不为前缀）⇒ 互不 shadow：新行全名命中新行、`deepseek-v4-flash`(-0731) 仍命中退役行——单一 prefix 表零机制变更；排序交由既有 SORTED_SPECS 长度降序（与本批无关）；否决：别名 / namespace 归一 / 后缀剥离改造（0731 前缀命中实证说明纯前缀足够——与 D-PR19「不引入运行期机制」同源） |
 
 ## 8. 不并项与历史沿革
 
@@ -270,7 +273,7 @@ qwen 系列（百炼**混合思考**模式，默认开启）需能**真正关闭
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **289 行**（B 轮并入前 63 行）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **293 行**（B 轮并入前 63 行 · qwen-plan 渠道名接入批 +4）——**低于 300 行软线，无需拆分规划**。
 
 | # | 拆分面 | 去向 | 状态 |
 |---|---|---|---|
@@ -286,3 +289,5 @@ qwen 系列（百炼**混合思考**模式，默认开启）需能**真正关闭
 - 2026-09-14（markdown 面小收正轮）：§1 归属表与 §2.4 #138 行的 `index.mjs` 补路径前缀（`src/provider/index.mjs`——与 `src/tools/index.mjs` / `src/tui/index.mjs` 同名不同物；**消除歧义不改判据**）。
 - 2026-09-14（**B 轮并入 · 第 2 批**）：新增 §6 **机制面**（模块地图 / chat 主流程 / 重试超时错误分类 / SSE / 续写 / 闸门 / 净化 / 原生 transport / 规格表 / 畸形 tool_calls / 预设 / enable_thinking / Responses / 续写 400 根治 / providerSpec / 模型清单 provider 化 / 请求头装配）· §7 **关键决策记录（D-PR1–24）** · §8 **不并项与历史沿革** · §9 体量与拆分规划；
 来源 = `thincoder-cli/docs/design/PROVIDER.md`（**旧档一字未改**——原地作参照历史）；产品需求条目 R1–R20 / N1–N9 归本层需求档 `docs/core/requirements/PROVIDER.md`；首部加机制面指针一行。
+- 2026-09-15（**qwen-plan 渠道名接入批** · eng-designer）：§6.11 行集补 `deepseek-v4.1-flash`（qwen-plan 渠道名 · 字段逐字对齐 `deepseek-flash`）· §7 补 **D-PR25** · §9 实测行数更新；本批源码 / 测试面见批次档 `batches/2026-09-15-DEEPSEEK-QWENPLAN.md`。
+- 2026-09-15（**评审修正轮** · eng-designer）：§7 D-PR25 论证口径改「前缀不相交（第 12 位 `.` 与 `-` 互不为前缀）」——长度排序既不充分也无必要（字典序下退役行反在前），排序交由既有 SORTED_SPECS 长度降序（与本批无关）。
