@@ -2357,6 +2357,55 @@
 2. **VSC 锚引擎缺「仓根相对路径」候选**（`scripts/doc-anchors-core.mjs` A3 判序；CLI 引擎有 `env.root` 候选）⇒ 核内路径在 VSC 域一律判「仓根外前缀」；本族以**迁移注记行**绕过，根治属机检脚本面（他批）。
 3. **VSC `npm run doc:check` 为阻断态**（`--strict`，且挂在 `vscode:prepublish`）⇒ §2.6.2（六）的 5 行 VSC 文档改写**不是可选项**。
 
+### 任务书：CLI 自动验证面（端到端 harness）——勘察 + 设计（2026-09-14 · eng-designer）
+
+**段位**：当前段 = **设计轮**（本轮零实施——只改需求 / 设计档；实现由后续 eng-coder 轮执行）。设计落点 = `thincoder-cli/docs/design/TESTING.md` **§12**；需求落点 = `thincoder-cli/docs/requirements/TESTING.md` **§6**。本段 = 覆盖面与验收登记（细节住两档，不复制）。
+
+**一、本批条目（覆盖面——供三方条目一致对账）**
+
+| # | 条目 | 落点 | 状态 |
+|---|---|---|---|
+| 1 | 需求三层：总目标 / F23–F28（功能）/ N13–N18（非功能）/ §6.4 边界 | 需求档 §6 | 已落 |
+| 2 | 方案选型对比（ACP / 伪 TTY / 并用——选定 + PTY 与模块级直驱否决；判据 ①–⑦） | 设计档 §12.2 | 已落 |
+| 3 | 架构与接口契约（双驱动面 + 驱动件 + ACP 对外形态引用 + 数据流） | 设计档 §12.3 | 已落 |
+| 4 | 三守卫机制裁定（注入缝 vs 属性伪造——建议 + 5 理由 + 实核 4 探针 + 结构机检口径） | 设计档 §12.4 | 已落 |
+| 5 | 接入点（集成集收揽 / 发布门 / 慢用例归册语义 / 与既有 7 档分工） | 设计档 §12.5 | 已落 |
+| 6 | 覆盖边界（能测 9 条 / 不测 4 条——TUI 留人工真机写死） | 设计档 §12.6 | 已落 |
+| 7 | 受影响文件（现有档行数 + 新建档 fenced 清单 + 不变量 / 零改面） | 设计档 §12.7 | 已落 |
+| 8 | 验收标准 AC-E2E1–AC-E2E8 + 用例表 T-E2E1–T-E2E10 + 决策 D-E1–D-E5 + 待裁 5 项 | 设计档 §12.8–§12.11 | 已落 |
+
+**二、本批明确不做（出批）**
+
+- 不写实现代码（含测试档 / helper / 产品侧缝）——实现 = 后续 eng-coder 轮（本段零 `.mjs` 写入）。
+- 不动 `thincoder-core/**` / `thincoder-vscode/**` / 两产品运行时；不 commit（父侧统一）；不碰台账（TODO 指针 = 父侧）。
+- 不改 runner / 发布门脚本 / `package.json`（接入 = 零改动——设计 §12.5）。
+- TUI 渲染面不入自动（人工真机——用户裁定）；不发起评审（发起权在用户 / 父侧）。
+
+**三、验收判据（本轮 = 设计轮 / 落轮 = 实现轮，两段分开看）**
+
+- **本轮**：① 两档落笔：需求档 §6（+47 行 · 130→177）· 设计档 §12（+187 行 · 786→973）+ 头部登记 + 变更记录一行；② 三方条目一致（本段 ⇔ 设计档 §12.8 ⇔ 需求档 §6）；③ 三机检：`doc-anchors` exit 0 · `check-ledger` exit 0 · `check-doc-width` **1 处越段红**（见「五」——非本段写入）。
+- **落轮**（实现轮）：设计档 §12.8 的 AC-E2E1–AC-E2E8（零 TTY 实跑 / 复跑一致 / 时长读数 / 结构机检 / 缺省零行为变 / 集成集零混入）。
+
+**四、三机检读数（本轮 · cwd = 仓根 · 终态实跑）**
+
+| # | 机检 | 读数（原样） | 判 |
+|---|---|---|---|
+| 1 | `doc-anchors` | 域一 候选 **1958** · 悬空 **0** · 注记豁免 29；域二 候选 **8857** · 悬空 **0** · 注记豁免 878；`OK(V5): 0 条悬空锚（闸态——阈值 0）`×2；VSC 锚引擎 命中 0（报告态）。本批新增面：报告态「符号·宽」3 条（两档内 `ERR_TTY_INIT_FAILED`——**不入闸面**） | ✓ exit 0 |
+| 2 | `check-doc-width` | **1 文件 / 1 行超 300 字符**：`docs/batches/2026-09-13-CORE-UNIFICATION.md:2414 (584 chars)`——**越段项（非本段写入）**，见「五」 | ✗ exit 1（越段红） |
+| 3 | `check-ledger` | `OK: docs/TODO.md` · `OK: docs/TODO-archive.md` · **0 处违规** | ✓ exit 0 |
+
+**自检一修（已复跑）**：本段首跑 `check-doc-width` 报本段 §12 两行超宽（312 / 448 字符）⇒ 就地折行（**语义零改**：§12.1 缺环条目折 3 行 · §12.3 ACP 形态句改 4 行列表）⇒ 复跑后本段零超宽（余红仅剩批档案 :2414 越段项）。
+
+**五、越段发现（只记 ✗ · 未处置）**
+
+1. **`docs/batches/2026-09-13-CORE-UNIFICATION.md:2414` 超宽（584 字符 · §3 评审段内）** ⇒ `check-doc-width` exit 1。非本段写入（本轮首跑基线即同读数）；修法 = 就地折行（语义零改）；归属 = §3 段作者 / 父侧排程（本段不代改他段）。
+2. **需求池条目待父侧转在途**：`docs/TODO.md` 需求池「CLI 自动验证面（端到端 harness）」现 status=待设计——本段落笔后，「需求档节（`thincoder-cli/docs/requirements/TESTING.md` §6）+ 任务书（本档 §2）」两锚即可解析；转在途 + 指针落笔 = 父侧（台账写权）。
+3. **VSC 对位面（设计档 §12.11 待裁 5）**：F14 双端实例化口径是否要求 VSC 同期设立对位 harness——本批 CLI-only，待父侧 / 用户裁定。
+
+**轮次自证**：勘察 = 自读（测试运行器 / 集成档 / ACP 三档 / 三守卫 / 两档 / 锚引擎）+ 4 项机制探针实跑（`process.stdin.isTTY` 管道基线 / 赋值 / `--import` 预载 / `tty.ReadStream` 抛错）；实核坐标全带 `file:line`。**本段无评审轮**（评审发起权在用户 / 父侧——设计就绪待评审）。
+
+**读数收正（append-only 补记）**：上「三、验收判据」本轮行内设计档读数记 **786→973**——该数为自检折行**前**的中间态；折行（+7 行）后**终态 = 980 行（786→980 · +194）**。需求档 177 行（130→177 · +47）不变。两档终态行数以本行为准（复跑读数一致）。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
@@ -2404,6 +2453,29 @@ VERDICT: pass
 计数：🔴 0 · 🟡 5 · 🔵 2（共 7 条）。
 
 范围外提示（无严重度）：仓外的工作区级 `AGENTS.md`（`d:\teamcode\AGENTS.md`，非本仓跟踪档）把 `thincoder/` 当 CLI 项目树并给命令 `cd thincoder && npm test` —— 本子批按设计明示「仓外档不动」，故不改；改名后其表述是否仍准确，建议父侧单独核（不属本子批范围）。
+
+VERDICT: pass
+
+### 轮次 3（评审子代理）
+
+**设计评审（S2 族 1 接线方案 · 对象 = §2.6 段表 / §2.6.1 / §2.6.2 + §2.2 契约 4 / §2.8 CI 行 / §2.11 A3 · CONSULTATION §2.1–§2.2 三档行 #1/#40/#41）**
+
+实核基础（仓根 = 含 `.git` / `.github` 的 `thincoder/`）：族清单三档在核 / 两产品各在册（核 `advisor/history.mjs` 77 · `convergence.mjs` 80 · `truncate.mjs` 57，wc -l ✓）；14 处 import 改指**逐处实核命中且完整**（CLI 7 + VSC 7，全树 grep 无第 15 处代码向引用）；
+文档锚 6 + 5 处行号逐条命中（CLI `ADVISOR-CONVERGENCE.md:10/:12/:330` · `TOOL-OUTPUT-LIMITS.md:68/:93` · 需求档 `:100`；VSC `:38` · `:65/:111` · `:31/:38`）且行数逐档吻合 §（四）；
+CONSULTATION #40（差异 = 第 4/6 行端内模块名）· #41（短式 ↔ `docs/design/` 前缀式；规格档仅 CLI `_archive/` 在册）均为真；§2.6.1 的 `.vscodeignore` 16 行 / 第 3 行 `node_modules/**`、两产品 package.json 43 / 131、核 `exports = {"./*": "./*"}` + version 0.1.0 均吻合。
+
+| # | Category | Severity | Issue | Suggestion |
+|---|----------|----------|-------|------------|
+| 1 | Acceptance / Clarity | 🟡 | §2.6.2（五）法 1「文本面 → 0 命中」按字面口径**必不通过**：三模式 `advisor/{history,convergence,truncate}\.mjs` 在 `<产品>/src` 内各命中 1 处存活注释——CLI `thincoder-cli/src/advisor.mjs:4`（"history extraction in advisor/history.mjs"）、VSC `thincoder-vscode/src/advisor/main.mjs:6`（同句）；而（四）表这两档的「动作」列只写「6 处 import / re-export 改指」，未含注释订正（两产品测试档的头注订正却已登记）。⇒ 删前「三条全过」之一按枚举无法达成（或停下上报、或做枚举外手改） | 与两产品测试头注同法处理这两处注释（改指 `thincoder-core/advisor/…` 或改迁移注记形态）并在（四）动作列登记；或把法 1 的 grep 收窄为 import / re-export 语句形态，使闸与枚举的改动集一一对应 |
+| 2 | Affected-file size annotation | 🟡 | §2.6.2（四）「超软线判定」句与本表自相矛盾：句称「本族改动档**无一越过 300 行**（最高 `thincoder-cli/src/advisor/messages.mjs` 299 行）」，而同表在改档 `thincoder-vscode/src/advisor/main.mjs` = **320 行**（实核 wc -l = 320；§2.8 提示词加载面行亦记 320）⇒ 「>300 → 主动性拆分复核」档位未登记 | 收正该句（点明 main.mjs 为**既有**超软线档、本族只做行内替换 ⇒ 结构未变、拆分计划另议），与 §2.8 / §2.8.1 的超软线档处理口径对齐 |
+| 3 | Feasibility / CI | 🟡 | §2.6.1 CI 行的命令在现 workflow 结构下**不可执行**：两产品 job 设 `defaults.run.working-directory`（`.github/workflows/test.yml:9` = `thincoder-cli`；`:22` = `thincoder-vscode`），而行内命令为 `cd thincoder-core && npm link` + `cd thincoder-cli && npm link @thincoder/core`（原 `cd` 会 ENOENT） | 写成相对 job cwd 的形态（如 `cd ../thincoder-core && npm link`）或显式覆盖 `working-directory`，并在 §2.6.1 表注明「相对 job cwd」 |
+| 4 | Doc hygiene / numeric drift | 🔵 | 同一档的 CI 行数 / 增量两处不一致：§2.8 CI 行 = 40 行 · +16±6；§2.6.2（四）CI 行 = 41 行 · +12±6（实核 `.github/workflows/test.yml` = 40 行 wc -l ⇒ §2.8 为准，§2.6.2 用了「末行显示」口径） | 统一 `wc -l` 口径（40 行）；增量取一中枢值或注明两处口径差异 |
+| 5 | Doc consistency | 🔵 | §2.2 契约 4 仍作绝对陈述「零 manifest / lock 污染」，而 §2.6.1「锁面口径」写明链接就位后再跑 `npm install` 会给产品 `package-lock.json` 写入 `"link": true` 条目 ⇒ 易读成「lock 恒净」而误提交污染 lock | 在该句补同源括注（`npm link` 自身零污染；链接态下 `npm install` 会写链接条目——口径见 §2.6.1） |
+| 6 | Methodology / registration | 🔵 | §2.11 A3（代价项）未随口径收正扩列：只登记残余 ① 的收正，缺 S2 期新增代价 = ① 产品 lock 在 S2 期非权威（不入提交 / 收口重生成）② 产品 job CI 必须显式 `npm link`（否则 E404）③（推演，未实测）S2 期产品目录 `npm ci` 与已提交 lock 不自洽——A3 ② 的 `npm ci` 只覆盖收口后的发布机 | 在 A3 残余清单补登记这三条（登记口径即可）；或明文「S2 期安装 / 锁面代价由 §2.6.1 承载，A3 只留发布期代价」以免两处漂移 |
+
+**计数**：🔴 0 · 🟡 3 · 🔵 3。
+
+**范围外注册（无严重度）**：① `thincoder-vscode/test/files.mjs:39` 的注释仍守「truncate.mjs 直驱——CLI 镜像（byte-identical）」叙事（本族只订正两产品测试头注，未涉该档；且该叙事今日已不精确——两测试档第 3 行指针写法本就不同）；② §2.8 发布编排面（release-check）行「+25±10」与备注「语义不变、不改」措辞相抵（挂点不改 ≠ 档不改）；③ 本评审未评两产品实现内部与 §4 目录改名子批（按对象声明排除）。
 
 VERDICT: pass
 
