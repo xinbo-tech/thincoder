@@ -21,7 +21,7 @@
 import { emitKeypressEvents } from "node:readline"
 import { PassThrough } from "node:stream"
 import { saveSession } from "../session.mjs"
-import { closeAllMcp } from "../mcp.mjs"
+import { closeAllMcp } from "@thincoder/core/mcp.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { createRenderLoop } from "./render-loop.mjs"
 import { makeDimsState } from "./dims.mjs"

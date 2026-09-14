@@ -94,7 +94,7 @@ export async function assembleAgent({ excludeTools = [] } = {}) {
   let mcpTools = []
   const mcpWarnings = []
   if (mcpServers.length) {
-    const { connectMcpServer } = await import("../mcp.mjs")
+    const { connectMcpServer } = await import("@thincoder/core/mcp.mjs")
     const results = await Promise.allSettled(mcpServers.map((srv) => connectMcpServer(srv)))
     for (let i = 0; i < results.length; i++) {
       const r = results[i]

@@ -1,6 +1,6 @@
 # MCP 客户端设计（thincoder）
 
-> 权威源：`src/mcp.mjs`（会话/探活/建连）+ `src/mcp/transport-*.mjs`（stdio/HTTP/WS 传输）+ `src/tui/cmd-mcp.mjs` + `src/tui/cmd-mcp-form.mjs`（/mcp 交互）+ `src/config.mjs`（reloadMcpFromDisk）+ `src/cli/make-agent.mjs`（启动装配）。
+> 权威源：`thincoder-core/mcp.mjs`（会话/探活/建连）+ `thincoder-core/mcp/transport-*.mjs`（stdio/HTTP/WS 传输）+ `src/tui/cmd-mcp.mjs` + `src/tui/cmd-mcp-form.mjs`（/mcp 交互）+ `src/config.mjs`（reloadMcpFromDisk）+ `src/cli/make-agent.mjs`（启动装配）。
 > 本文档描述 MCP 客户端的**当前设计**——工具如何动态展开、如何建连/热插拔、如何配置、如何探活、失败如何表现。跨文档已接管的主题只留指针，不复制。
 > 关联权威：`TOOLS.md` §8（MCP 展开并入统一工具 schema）、`AGENT-LOOP.md`（工具调度）、`PROVIDER.md`（模型/聊天调用链）。
 
@@ -31,7 +31,7 @@ MCP（Model Context Protocol）客户端把外部 MCP server 的 `tools/list` �
 
 ## 2. 工具展开（D1）
 
-`connectMcpServer(config)` 成功后，把 server `tools/list` 返回的每个工具包装为独立工具并入 `agent.tools`。展开逻辑在 `src/mcp.mjs` `buildTools`：
+`connectMcpServer(config)` 成功后，把 server `tools/list` 返回的每个工具包装为独立工具并入 `agent.tools`。展开逻辑在 `thincoder-core/mcp.mjs` `buildTools`：
 
 ```js
 const prefix = config.name ? `${config.name}_` : "mcp_"
@@ -153,7 +153,7 @@ headers/env 的键值输入统一为**逗号分隔**（`key=value, key2=value2`�
 
 ## 6. 传输层与活性（isAlive 三态）
 
-### 6.1 HTTP/SSE transport（transport-http.mjs）
+### 6.1 HTTP/SSE transport（thincoder-core/mcp/transport-http.mjs）
 
 `httpTransport` 实现 Streamable HTTP + SSE。GET SSE 不可用（405/不支持）时降级为**纯 Streamable POST 模式**。
 
@@ -165,11 +165,11 @@ headers/env 的键值输入统一为**逗号分隔**（`key=value, key2=value2`�
 
 **Streamable POST 规范路径**（会诊 P4）：POST → 202 → GET SSE 回包。所有通道统一先注册 pending：直接 JSON body / SSE 流 / 202 等待都经 pending resolve；响应带 `Mcp-Session-Id` 记入后续请求头。legacy 模式违规 server（POST 直接回 JSON-RPC body）兼容解析。
 
-### 6.2 stdio transport（transport-stdio.mjs）
+### 6.2 stdio transport（thincoder-core/mcp/transport-stdio.mjs）
 
 本地子进程 `stdioTransport(command, args, env)`——env 合并到 `process.env` 之上。JSON-RPC over stdio。
 
-### 6.3 WS transport（transport-ws.mjs）
+### 6.3 WS transport（thincoder-core/mcp/transport-ws.mjs）
 
 `wsTransport`：`isAlive: () => !closed && ws?.readyState === WebSocket.OPEN`；连接死亡经 `onDead`/`fireDead`；认证经 subprotocol（§5.2）。上层 signal abort 即刻作废 pending + 发 `notifications/cancelled`。
 
@@ -184,7 +184,7 @@ headers/env 的键值输入统一为**逗号分隔**（`key=value, key2=value2`�
 
 ## 7. 探活（probeMcpServer）
 
-`src/mcp.mjs` 导出的 `probeMcpServer(config)` 对一份配置做**一次性探活**：
+`thincoder-core/mcp.mjs` 导出的 `probeMcpServer(config)` 对一份配置做**一次性探活**：
 
 ```js
 createConnectedTransport(config)   // initialize + tools/list（含 token 合成与 postOnly 降级链）

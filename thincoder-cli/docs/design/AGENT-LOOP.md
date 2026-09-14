@@ -1303,7 +1303,7 @@ provider / agent / settle 产生或补标错误（`abortInfo`，第 4 条 #1–#
 - **不改 abort 机制本体**（何时 abort / 谁有权 abort 零改）——只加标注与渲染（范围边界，批次 §1 明列）；
 - 不改 digest 注入格式 / 预算（`subagent-async.mjs:372-400` 契约零改）；不改提示词语义；不碰他链在途档；
 - **登记（本批不做）**：① TUI 块面错误文案（F-AP4——digest 已是首次可判载体，块面文案另行批）；
-  ② tool-result 面（`agent/dispatch.mjs:464` `Error: <message>`）与 sync 重抛面；③ MCP 家族（`mcp.mjs:23-24` / `transport-*`）同形标注
+  ② tool-result 面（`agent/dispatch.mjs:464` `Error: <message>`）与 sync 重抛面；③ MCP 家族（`thincoder-core/mcp.mjs:23-24` / `transport-*`）同形标注
   （不在子代理死亡链上——同类机制、另行批）；④ 死亡行后缀预算（超长 message 时后缀可被截尾吞——「先削 message 再拼后缀」）：后续改进（非本批——评审 🟡-2 登记）。
 - **VSC 残留面——父侧排程**（所需档 + 用途 + 完整修复路径）：`thincoder-vscode/src/provider.mjs`（`:324` 去绝对墙钟 /
   `:327` 头阶段语义对齐 CLI——**用户实证文案的唯一在网生产点**）+ VSC 镜像标注与合成面（`agent-tools/subagent-run.mjs` 等 `entry.error` 合成）；

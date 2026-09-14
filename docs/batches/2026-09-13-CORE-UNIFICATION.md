@@ -4796,5 +4796,93 @@ CLI 三加载根 + 入口（L1–L7）：
 
 **收正注（同轮 · 首版后置）**：首版 §5 零语义收正已就地落——① 未决 3 的 `tshincoder-cli` 拼写笔误 → `thincoder-cli`；② ④ 块末重复的「轮次自证」行删除（以段末该行为准）；③ 宽度闸 2 行超宽行折行（`:4741` / `:4766`——仅插换行、文字零改）；④ ② 删除后标题前空行补回。
 
+### 实施：S2 U7 —— MCP 单元落轮（2026-09-14 · eng-coder）——**终态 = clean**
+
+**段位**：当前段 = **S2（CLI 迁移单元 U7）**。写域 = CLI 侧（3 档 6 处 import 改指 + 5 档删旧 + 2 档文档 7 处锚改指）；**VSC 零触碰**；核内零改动（`git status` 自证：改动集零 `thincoder-core/**`）；未 commit（父侧统一单笔）；未碰台账（`docs/TODO.md` 零改动——L4 闸无相关证据行）；域外全扫零消费方（仓根 `scripts/**` · 产品 `scripts/**` 零命中）。产品文档只做锚改指（零语义改写——语义收正归 eng-designer）。
+
+**依据** = `docs/design/CORE-UNIFICATION.md` §2.6.3 U7 行（`:716`「5 / 856 / 3」· 专项「传输面取一侧；配置面板 / 监视面 = ④（CLI 无）」）+（三）逐档清单（`:795-799`）+（四）四步与 A1–A6（`:910-924`）+（七）进度计数 + §2.6.2（三）（五）（六）；`docs/design/MCP.md` §2.1 #81 · §2.2 #144–#148（取 CLI 实现 / 融合取一侧）。
+
+**改动面**（行数 = `wc -l` 口径实核；改前 = HEAD）
+
+| # | 面 | 档 / 行数 | 动作 |
+|---|---|---|---|
+| 1 | CLI 源 | `src/cli/make-agent.mjs` · `src/tui/cmd-mcp.mjs` · `src/tui/index.mjs`（行数零变——纯来源串替换） | 6 处改指 `@thincoder/core/mcp.mjs` |
+| 2 | CLI 删旧 | `src/mcp.mjs` 295 · `src/mcp/helpers.mjs` 51 · `src/mcp/transport-http.mjs` 248 · `src/mcp/transport-stdio.mjs` 140 · `src/mcp/transport-ws.mjs` 122（合计 **856**） | **删档**（+ 空目录 `src/mcp/` 移除） |
+| 3 | CLI 文档 | `docs/design/MCP.md` · `docs/design/AGENT-LOOP.md`（±0 行） | 7 处锚改指 |
+
+**① 逐处「改前 → 改后」（6 处——全部 = 来源串替换，具名导入面零改）**
+
+| # | 位置 | 改前 → 改后 |
+|---|---|---|
+| 1 | `src/cli/make-agent.mjs:97` | `await import("../mcp.mjs")` → `await import("@thincoder/core/mcp.mjs")`（`connectMcpServer`） |
+| 2 | `src/tui/cmd-mcp.mjs:40` | 同上（`connectMcpServer`） |
+| 3 | `src/tui/cmd-mcp.mjs:95` | 同上（`removeMcpTools`） |
+| 4 | `src/tui/cmd-mcp.mjs:102` | 同上（`removeMcpTools, connectMcpServer`） |
+| 5 | `src/tui/cmd-mcp.mjs:133` | 同上（`probeMcpServer`） |
+| 6 | `src/tui/index.mjs:24` | `import { closeAllMcp } from "../mcp.mjs"` → `from "@thincoder/core/mcp.mjs"` |
+
+**文档锚 7 处（2 档——删后中间态实测 = 4 悬空 ⇒ 全数改指 ⇒ 0；形态 = §2.6.2（六）CLI 域「仓根相对」）**
+
+- `docs/design/MCP.md`：`:3`（权威源双 token：`src/mcp.mjs` + `src/mcp/transport-*.mjs`）· `:34` · `:187` → `thincoder-core/mcp.mjs` / `thincoder-core/mcp/transport-*.mjs`
+- `docs/design/MCP.md`：`:156` `:168` `:172`（§6 三个标题行——纯 basename 侥幸通过行主动改指，承 U5 决策 5 / U6 决策 6）
+- `docs/design/AGENT-LOOP.md:1306`：`mcp.mjs:23-24` → `thincoder-core/mcp.mjs:23-24`（坐标随字节同迁仍有效）
+
+**② 删旧三条读数（删前全过才删）**
+
+1. **改指已落盘**：6 处终态复核（正 / 反向两判）——0 违规；包名冒烟 PASS（真子进程：`probeMcpServer`（`_sessions` delta **0**）→ `connectMcpServer`（1 tool）→ `tools/call` 回包 → `removeMcpTools` → `closeAllMcp`；删后复跑同 PASS）。
+2. **该产品全链 exit 0（删前预跑）**：`npm test` 609/552/0/57 · `lint` 295 · `test:full` 609/609 · `integration` 25/25（均 exit 0）。
+3. **零引用反向判**（域 = `src` + `test` + `bin` + `scripts`，298 档全扫）：模式①（引号相对说明符按解析语义判——命中删除集即违规）= **0**；模式②（反向 token 判——非 `core/` 前缀的 `mcp/*` 与 `mcp.mjs` 形态 + `-` 左界）= **0**；合规核引用 = 6 处 / 3 档；删后复扫同读数 **0 / 0**。
+   **删后中间态**：`doc-anchors --domain thincoder-cli` = **4 悬空**（`MCP.md:3/:34/:187` + `AGENT-LOOP.md:1306`）→ 逐处改指 → **0**。
+
+**③ A1–A6 读数（终态复跑 · 原样）**
+
+| # | 判据 | 读数 | 判 |
+|---|---|---|---|
+| A1 | CLI 全链 | `npm test`：tests **609** · suites 4 · pass **552** · fail **0** · skipped **57** · exit 0；`lint`：check-syntax **290 file(s) OK**（295 − 5 删档，唯一面内差）；`test:full`：**609/609** · fail 0 · exit 0；`integration`：**25/25** · fail 0 · exit 0——**未涉面逐数不变**；面内零改判（无用例增删） | ✓ |
+| A2 | 零引用 | 反向判两式 **0 / 0**（域 `src`+`test`+`bin`+`scripts` 298 档）；运行面 = 全链 exit 0 + 删后冒烟；锚面 = 悬空 0 | ✓ |
+| A3 | 文档锚 | `doc-anchors --domain thincoder-cli`：99 档 · 候选 **8874** · 悬空 **0** · 注记豁免 880 · `OK(V5)` exit 0 | ✓ |
+| A4 | 核回归 | 核内 `node --test` = **173/173** · fail 0 · exit 0；核内零改动（`git status` 自证） | ✓ |
+| A5 | 仓根三机检 | `doc-anchors`（全域）：域一 32 档 候选 2219 · 悬空 0 · 豁免 29；域二 99 档 候选 8874 · 悬空 0 · 豁免 880 · exit 0。`check-doc-width`：306 档无 >300 字符行 · exit 0（§5 后复跑见段末）。`check-ledger`：0 违规 · exit 0 | ✓ |
+| A6 | 链接 L1 | `npm ls @thincoder/core --json` **exit 0** · version **0.1.0**（resolved `file:../../../thincoder-core`）；版本探针 = **0.1.0** | ✓ |
+| 专项 | 传输面取一侧 / 面板面 | 核五档 = CLI 侧（`git show HEAD:<cli档>` blob sha 逐档复核 = 核档：`b52b27e8739b` / `dc812bf3fc42` / `c0b70844889b` / `aa4dfcc556f1` / `3520bd1c2ca4`）；面板 / 监视面 = ④（CLI 无）——`cmd-mcp.mjs` / `cmd-mcp-form.mjs` 属 `tui/**` 端特有、保留原位 | ✓ |
+
+**进度计数（设计 §2.6.3（七）① · 可复跑命令）**：**CLI 待迁 = 109**（114 − 5）——与父侧预期逐数一致，单调递减成立。
+**工作树**：本笔 **10 项**（5 M + 5 D）+ **1 项预存**（`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`——spawn 前已在，非本笔）；未 commit。
+
+**④ 内部轮（发现与处置）**
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **DIVERGENT**——「部分实现 / 静默简化 / 清单外改动」未命中；命中 doc-drift 5 条（🟡×4：`AGENTS.md:65` · `ARCHITECTURE.md:37` · `TOOLS.md:3` · `README.md:177-178`；🔵×1：`LEDGER-SELF-CONTAINED.md:528`——均删除集残留文本）+ QUESTION ×2。
+- **审计命中处置**：5 条全部**登记（未决 1）**——依据 = §2.6.2（五）法 1「裸词叙述射程外」+ §2.6.3（九）「S3 尾段项（残留复扫）」（`:689` / `:991`）+ U1–U6 同型判 + 本笔边界「只做锚改指」。QUESTION 1（归属期）= 同判（文档维护批）；QUESTION 2（MCP 零测试覆盖）= 登记（未决 3）。审计对「核 = CLI 字节同」的不可能独立复核项，由本笔 git HEAD blob sha 复核补证（上表专项行）。审计限制如实登记（无 shell / 无 git ⇒ 读数类未独立复跑）。
+- **advisor 代码评审 1 轮**（`type=code` · 阻塞）：**pass**（🔴 **0** · 🟡 2（均非 must-fix）· 🔵 2）。
+- **裁决表（4 项）**：**Deferred 3**（🟡#1 根 `docs/design/MCP.md:13` §1 归属表 as-of 陈述——文档语义收正归 eng-designer（本笔零语义改写边界）⇒ 未决 2；🔵#3 MCP 面零自动化测试——补核内用例会改 `thincoder-core/**`（违 A4 核内零改动）⇒ 未决 3（后续批次）；
+  🔵#4 CLI `MCP.md:48` 代码块与核实现非逐字（存量形态）——文档语义层归 eng-designer ⇒ 未决 4）；**Not an issue 1**（🟡#2 两档 >300 软线（`cmd-mcp.mjs` 394 · `index.mjs` 482——均 <500）——既有超软线债 · 本笔行内替换结构零变，R3 不复议（承 U3–U6 同判），零动作）。
+  **引证核验附注**：host 核验器 1 条引证 mismatch（`MCP.md:196` 被解析到根档 `thincoder/docs/design/MCP.md`；实际引证面 = `thincoder-cli/docs/design/MCP.md:196`，内容相符）= 核验器路径解析 artifact（承 U1–U6 同型附注）。
+- **轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 **0**（零 must-fix ⇒ 无修复轮）；终态 **0 未决 🔴 → clean**。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 改指目标形态 = `@thincoder/core/mcp.mjs`（子路径直连） | §2.6.2（三）2「一律带子路径」；核 `exports "./*"` + `files` 含 `mcp.mjs`/`mcp/` 实核 |
+| 2 | 零引用反向判两式 = 语义解析式（①）+ 带左界与 `core/` 前缀排除的 token 式（②） | §2.6.2（五）法 1 口径——纯 basename 式对 `helpers.mjs` 会与 `agent/helpers.mjs` 互撞、对 `cmd-mcp.mjs` 会误报 ⇒ 收窄为「指向删除集判读」（承 U2「反向判」之由） |
+| 3 | `MCP.md` §6 三标题行主动改指 | 仅靠「仓根唯一 basename」侥幸通过（U5 决策 5 / U6 决策 6 同判——避免静默残留） |
+| 4 | `MCP.md:3` 权威源行两 token 同批改指 | 机检悬空锚（`src/mcp.mjs`）+ 行内 `src/mcp/transport-*.mjs` 同源改指，防「同句两态」 |
+| 5 | 删前全链**预跑一轮**（四命令）+ 删后终态复跑 | §2.6.3（四）2 字面执行（承 U1–U6） |
+| 6 | 空目录 `src/mcp/` 同批移除 | U3/U5 先例；git 不跟踪空目录 |
+| 7 | 审计 5 条 doc-drift（模块图 / 叙述类）**不改**（登记） | §2.6.2（五）法 1「裸词叙述射程外」+ §2.6.3（九）「S3 尾段项（残留复扫）」+ U1–U6 同型判 + 本笔边界「只做锚改指」 |
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **模块图 / 叙述滞留（文档面 · 设计归口）**：`thincoder-cli/AGENTS.md:65`（`src/mcp/` 行）· `README.md:177-178`（`mcp/` + `mcp.mjs` 两行）· `docs/design/ARCHITECTURE.md:37`（`├── mcp.mjs`）· `docs/design/TOOLS.md:3`（权威源行含 `src/mcp/`）· `docs/design/LEDGER-SELF-CONTAINED.md:528`（建档轮快照，倾向冻结）；归 S3 残留复扫 / S2 文档工作流或文档维护批。
+2. **根 `docs/design/MCP.md:13`**（评审 🟡#1）：§1 归属表 as-of 陈述待收正（或加 as-of 标注）——文档语义收正归 eng-designer。
+3. **MCP 面测试覆盖缺口**（评审 🔵#3 · 审计 QUESTION 2）：核 / CLI 测试面均无 mcp 用例（`thincoder-core/test` grep 零命中；CLI `TESTING.md:26` 在册）；本笔以手工冒烟（probe / connect / call / remove / close 全链 + `_sessions` 零残留）作正面证据；补核内行为用例归后续批次。
+4. **CLI `MCP.md:48` 代码块与核实现非逐字**（评审 🔵#4）：`_mcpTransport: transport,` vs 核 `session.state.transport`（存量形态）——文档语义层归 eng-designer / 文档维护批。
+5. **叙事面残留（射程外登记）**：`src/tui/cmd-mcp-form.mjs:9/:11`（`cmd-mcp.mjs` 沿革叙述——系保留档、非删除集）· CHANGELOG `:165`（v1 沿革记录）等裸名提及——随所属单元或文档维护批。
+6. **VSC 预存项**：`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`（M）= spawn 前既存改动，非本笔（承 U0–U6 登记）。
+
+**轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 0；A1–A6 终态读数见上表；终态 = **clean**；报告 ①–⑦ 见交付报告（父侧转呈）。
+
+**段末复跑（§5 写入后 · 原样读数）**：`check-doc-width` = **306 档无 >300 字符行 · exit 0**（本段零新增超宽行）；`doc-anchors --domain thincoder-cli` = 99 档 · 候选 **8874** · 悬空 **0** · 注记豁免 880 · `OK(V5)` exit 0；`check-ledger` = `OK: thincoder/docs/TODO.md` / `OK: thincoder/docs/TODO-archive.md` · exit 0。
+
 ## §6 验证与收口（父代理）
 

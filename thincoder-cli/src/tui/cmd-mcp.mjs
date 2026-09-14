@@ -37,7 +37,7 @@ async function addAndConnect(ctx, srv) {
   agent.config.mcp.servers.push(srv)
   try {
     pushLine(`[mcp] Connecting ${srv.name}...`, C.dim)
-    const { connectMcpServer } = await import("../mcp.mjs")
+    const { connectMcpServer } = await import("@thincoder/core/mcp.mjs")
     const tools = await connectMcpServer(srv)
     agent.tools.push(...tools)
     pushLabel(`❯ MCP`, ansi.bold + C.tool)
@@ -92,14 +92,14 @@ export async function handleMcpCommand(ctx, args = []) {
     })
     agent.config.mcp.servers = getServers().filter((s) => s.name !== name)
     // Remove from tool list
-    const { removeMcpTools } = await import("../mcp.mjs")
+    const { removeMcpTools } = await import("@thincoder/core/mcp.mjs")
     removeMcpTools(agent, name)
     pushLine(`[mcp] ${name} removed`, C.tool)
   }
 
   async function connectServer(name) {
     const srv = getServers().find((s) => s.name === name)
-    const { removeMcpTools, connectMcpServer } = await import("../mcp.mjs")
+    const { removeMcpTools, connectMcpServer } = await import("@thincoder/core/mcp.mjs")
     removeMcpTools(agent, name)
     try {
       pushLine(`[mcp] Reconnecting ${name}...`, C.dim)
@@ -130,7 +130,7 @@ export async function handleMcpCommand(ctx, args = []) {
    *  agent.tools、探完即关）。未保存的临时 entry 直接传 probe（§5 D-1）。 */
   async function probeLineFor(entry) {
     pushLine(`[mcp] Probing ${entry.name}...`, C.dim)
-    const { probeMcpServer } = await import("../mcp.mjs")
+    const { probeMcpServer } = await import("@thincoder/core/mcp.mjs")
     const r = await probeMcpServer(entry)
     return r.ok ? `✓ ${r.toolCount} tools, ${r.latencyMs}ms` : `✗ ${r.error}`
   }
