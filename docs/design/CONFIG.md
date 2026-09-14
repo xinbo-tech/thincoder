@@ -5,6 +5,7 @@
 > 需求层 = `docs/requirements/CORE-UNIFICATION.md`（F1–F13 / N1–N8）。
 > 建档：2026-09-13（**文档拆分轮**——自 `CORE-UNIFICATION.md` §2.5 / §2.5.1 / §2.12.1 / §2.12.2 **逐节搬入，只搬不改语义**；行号沿用原裁定表编号）。
 > **列定义**（裁决行各列含义）→ `CORE-UNIFICATION.md` §2.5；**须裁条目的分组口径与四要素提交形式** → 该档 §2.5.1。
+> **机制面**（§6–§9 · 2026-09-14「B 轮并入」）：本板块**同名旧档缺 ⇒ 无新内容并入**（不虚构）——详见 §6 / §8。
 
 ## 1. 归属与范围（自本档行内容的路径归纳）
 
@@ -71,7 +72,47 @@
 指针（不复制）→ `CORE-UNIFICATION.md` §2.8 下列行：**产品运行期（S2 改）** · **对外契约兼容面（S0 登记 / S2 落地）**。
 **核内落点行数（R24a · S1 落地收正）** → §2.8.1「核内逐档行数与拆分计划」（本子系统面：`thincoder-core/config.mjs`（带拆分计划）· `thincoder-core/config-io.mjs` · `thincoder-core/config-presets.mjs`）。
 
+## 6. 机制面（B 轮 · 2026-09-14 · 第 3 批）
+
+**结论：本板块同名旧档缺 ⇒ 无新内容并入（不虚构）。**
+
+逐档比对前提：本批的旧档参照面 = `thincoder-cli/docs/{design,requirements}/CONFIG.md`。**实核（as-of 2026-09-14）**：
+
+| 旧档 | 状态 |
+|---|---|
+| `thincoder-cli/docs/design/CONFIG.md` | **不存在**（CLI / VSC 两树设计 / 需求两侧均无同名档；CLI 树 git 历史零命中） |
+| `thincoder-cli/docs/requirements/CONFIG.md` | **不存在**（同上） |
+
+⇒ 本批对 CONFIG 板块**无并入面**——不据其他档代拟机制文本（不虚构）。
+
+**越段发现（只记 · 未处置）**：配置面机制文本**散布于旧档**（非同板块同名档）——`thincoder-cli/docs/design/SETTINGS-TOOL.md`（`settings` 工具面 #87）· `thincoder-cli/docs/design/PROXY.md`（代理面 #74）· `thincoder-cli/docs/design/POOL-CONFIG-UNIFIED.md`（池配置面）；
+家目录展开面（#77）**已随试点批并入**本层 `MEMORY.md` §6.7（指回）；装载器 / 迁移面（#79 / #80）在旧档无专档。⇒ **触发 = 父侧另派**（若续并，参照面须按「配置面」逐档点名）。
+
+## 7. 并入的关键决策记录（含否决备选）
+
+**本批无新增**——现有决策面见 §3.1 A4 / A5 与 §4.1 第 1–4 行；本板块无未落档的旧档决策（同名旧档缺）。
+
+## 8. 不并项与历史沿革
+
+### 8.1 历史沿革（(d) 类——**不并**）
+
+**不适用**——本板块无同名旧档（无 (d) 类叙述可登记）。
+
+### 8.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
+
+| 旧档面 | 内容 | 何故不并（去向 / 触发） |
+|---|---|---|
+| `thincoder-cli/docs/design/SETTINGS-TOOL.md`（+ 同名需求档） | `settings` 工具面机制（#87） | 非同板块同名档——本批参照面不含 ⇒ **越段登记**——触发 = 父侧另派（按「配置面」点名） |
+| `thincoder-cli/docs/design/PROXY.md` | 代理面机制（#74） | 同上 |
+| `thincoder-cli/docs/design/POOL-CONFIG-UNIFIED.md` | 池配置面 | 同上（在途设计档） |
+| `thincoder-cli/docs/design/MEMORY.md` §9（家目录展开） | 展开器契约（#77） | **已并入**本层 `docs/design/MEMORY.md` §6.7（试点批）——指回；不重复（D2） |
+
+## 9. 体量与拆分规划（R24a）
+
+**实测行数**：本档 **119 行**（B 轮并入前 78 行）——**低于 300 行软线，无需拆分规划**。
+
 ## 变更记录
 
 - 2026-09-13：建档——自 `docs/design/CORE-UNIFICATION.md` 拆出（§2.5 #74 / #77 / #79 / #80 / #87 / #128–#132 / #177 · §2.5.1 A4 / A5 · §2.12.1「配置格式」类 · §2.12.2 第 1–4 行）；**语义零改**，行号沿用原编号。
 - 2026-09-14（S1 收口轮）：§5 补**核内落点行数**指针（`config.mjs` · `config-io.mjs` · `config-presets.mjs`——§2.8 新增小节）。
+- 2026-09-14（**B 轮并入 · 第 3 批**）：§6 **机制面 = 同名旧档缺**（`thincoder-cli/docs/{design,requirements}/CONFIG.md` 均不存在——两产品树实核）⇒ 无并入内容（不虚构）；§7 无新增决策；§8 登记配置面机制文本散布于旧档（越段发现 + MEMORY §6.7 指回）；§9 体量（低于软线，无需拆分）；首部加机制面指针一行。

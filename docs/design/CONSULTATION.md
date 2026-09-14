@@ -5,6 +5,7 @@
 > 需求层 = `docs/requirements/CORE-UNIFICATION.md`（F1–F13 / N1–N8）。
 > 建档：2026-09-13（**文档拆分轮**——自 `CORE-UNIFICATION.md` §2.5 / §2.5.1 **逐节搬入，只搬不改语义**；行号沿用原裁定表编号）。
 > **列定义**（裁决行各列含义）→ `CORE-UNIFICATION.md` §2.5；**须裁条目的分组口径与四要素提交形式** → 该档 §2.5.1。
+> **机制面**（§6–§9 · 2026-09-14「B 轮并入」）：机制 / 契约的实质描述 · 关键决策 · 不并项与历史沿革（自 CLI 产品档并入）——**本档 = 该板块的完整设计面**（裁决行 + 机制 + 决策 + 沿革）。
 
 ## 1. 归属与范围（自本档行内容的路径归纳）
 
@@ -89,9 +90,145 @@
 指针（不复制）→ `CORE-UNIFICATION.md` §2.8 下列行：**产品运行期（S2 改）** · **产品测试（S1 / S2 改）**。
 **核内落点行数（R24a · S1 落地收正）** → §2.8.1「核内逐档行数与拆分计划」（本子系统面：`thincoder-core/agent-tools/panel-blocks.mjs`——#159 · #180 收正）。
 
+## 6. 机制面（自 CLI 产品档并入 · 2026-09-14 · B 轮）
+
+> **来源** = `thincoder-cli/docs/design/CONSULTATION.md`（160 行 · CLI 产品档——会诊面；该档自述「与 VS Code 插件同源设计」，记录 CLI 端的实现与接线）。根层裁定后该档 = **迁移期参照历史**（只读 · 不维护 · 不参与内容同步）。
+> **本节 = 该档中「根层所缺」内容的并入面**：(a) 机制 / 契约的实质描述 · (b) 实现细节与坐标 · (c) 关键决策依据（§7）。
+> **不并**者见 §8：一次性批次材料（受影响文件表 / 测试与验收）· 头注状态行 / 变更流水账 / 需求迁出注 · 跨板面（飞刀 / advisor——见 §8.2 越段登记）。
+> **坐标口径** = as-of 2026-09-14：**旧档路径形态为迁移前**——本节一律按**现状路径**落笔（CLI 侧实现已住 `thincoder-core/**`；`thincoder-cli/src/tui/**` = CLI 壳体面；VSC 侧 = `thincoder-vscode/src/**`）。符号名与档路径为契约面，行号未逐条复核。
+> **泛化机制不复制**：digest / settle / pending 单容器的机制本体 → 本层 `AGENT-LOOP.md` §6.7.3 / §6.8（不复制）；async 结果容器契约 → `thincoder-cli/docs/design/ASYNC-RESULT-CONTAINER.md`（CLI 档 · 未迁）。
+
+### 6.1 架构与数据流
+
+```
+主 agent（turn 中，非阻塞）
+  │  consult_start(problem) → 立即返回 { id, models }
+  ▼
+consult 会话（agent._consultSessions = Map<id, Session>，跨回合存活）
+  ├─ 并发启动 N 个只读会诊子任务
+  │    （独立 AbortController + 只读工具集 + main_history）
+  ├─ 全 settle（pending=0）→ 会话升格完整 entry 移入 pending 单容器
+  │    （_pendingAsyncResults +role "consult"——async 结果容器）
+  ▼
+下回合 run 首行注入 digest：reminder + 逐条意见全文
+  ▼
+消化轮逐条判断处置（会诊 = 建议非门禁）
+```
+
+会诊 settle 在用户空闲时也触发消化轮（见「消费驱动」）。
+
+### 6.2 R17 现行机制（digest 消费模型）
+
+R17（2026-09-06）以 **digest 自动注入**取代旧的 `consult_check` 回合内轮询消费模型：
+
+- **唯一消费通道 = digest 自动注入**；`consult_check` 工具已删除（描述零残留）。
+- **settle 判定**：某 id pending=0（全部模型回复 / 失败 settle）→ 会话升格完整 entry（`{id, role:"consult", report, done:true}`）移入 pending 单容器 `_pendingAsyncResults`（+role——原 `_pendingConsultResults` 独立族流退役）
+  → 下回合（用户回合或 digest auto-turn）run 首行注入 `[System reminder: consultation #id finished — N of M models replied (F failed)]` + 逐条意见全文（失败按 per-model 标注——部分 / 全失败同规则）。
+- **部分 settle 不提前注入**——全 settle 才入 digest 流（意见全貌才可判断）。
+- **消化轮动作域**：会诊 = 建议非门禁——消化指令语义 = 「逐条判断采纳与否并处置」；**动作域按消费回合档位**（既有规则：用户回合 / AUTO 档 = 正常决策域；手动档 auto-turn = **整理禁写**——同 advisor digest，无「consult 可写」例外）。
+- **注入容量**：超长 → 既有 digest 截断 / 落盘机制（XML-escaped，>64K offload 预览 + 路径）。
+- **`consult_stop` 保留为取消语义**：`{ abandoned, cancelled: true }`——已答部分丢弃、不入 pending；会话 settle 即移出 map。
+- **消费驱动**：digest auto-turn 驱动判据 = pending 单容器非空（四族统一）；挂起活度钩子 = running 会诊会话纳入 `poolLive`——空闲 settle 也触发消化轮。
+- **每 consultant 活动块在 child settle 即冻结**（per-child key——不再经 check 消费冻结）。
+- **`wait_for "consult done"` 条件保留**（会话 settle 即移出 map）。
+
+### 6.3 工具契约
+
+**config（`~/.thincoder/config.json`）**：
+
+```jsonc
+"agent": {
+  // 候选池——会诊与飞刀共用（上限 5；缺省空数组 = 未启用）
+  "consultModels": [
+    { "provider": "deepseek", "model": "deepseek-v4-pro", "effort": "high" },
+    { "provider": "zhipu-plan", "model": "glm-5.2", "effort": "max" }
+  ],
+  "consultTurns": 40,        // 每个顾问的工具轮数预算（15 曾致读文件途中撞墙）
+  "consultTimeoutMs": 600000 // 墙钟看门狗（10 分钟；turn 上限只数 LLM 响应，不数慢工具）
+}
+```
+
+**工具**（均在 `thincoder-core/agent-tools/consult.mjs`）：
+
+```
+consult_start
+  - problem (required): 问题简报——现象 + 失败轨迹概述 + 文件入口
+    （原始报错无需粘贴——会诊子 agent 用 main_history 自行拉取）
+  - models (optional): 子集选择器——["provider:model" | 裸 provider | 裸 model]
+    （大小写不敏感），只从 agent.consultModels 里筛出子集跑；缺省/空 = 全池。
+    选择器匹配不到任何池成员 → 报错并列出可选值
+  → { id, models: ["deepseek:deepseek-v4-pro", ...] }   // 非阻塞
+
+consult_stop
+  - id (required): consult_start 返回的会话 id
+  → { abandoned: <pending>, cancelled: true }
+    // abort 剩余（terminated settle，计数不入队）；abandoned = 放弃时的 pending 数
+  → 未知 id / 已结束或已取消 → { error: "unknown consult id" }
+```
+
+**main_history**（仅会诊子 agent 可用，readonly）：`limit`（默认 20，最大 100）→ 主 agent 历史尾部窗口，多模态图片替换 `[image omitted]`、tool_calls 显形、60KB 字节预算。
+
+**会话状态**：`Session = { controllers, replies, pending, waiters, failed, terminated, stopped, total, received }`。settle 语义：正常回复入队；`session.stopped` 后被 abort 的计 `terminated`（不入队）；报错计 `failed`（入队，带失败 note）。全失败时会话照常 settle 并注入 digest（失败按 per-model 标注）——不挂死。
+
+**TUI 可观测**：每顾问一条活动卡，relay 前缀 `consult#<childRelayN>/` 复用 subagent 通道（relay 号非会话 id——会话自持 `_consultIdCounter`）；child settle 即冻结（`⟦ev⟧done`），并行顾问互不覆盖。
+
+### 6.4 CLI 实现接线（现状坐标）
+
+- **子 agent 构建**：显式 `createAgent({ provider, tools, config, cwd, memory, role: "consult" })`；**子任务 runner** = `runAgent(child, input, childCallbacks, { depth: 1, maxTurns: consultTurns, signal })`。
+- **provider 解析**：`resolveChildProvider(parent, "provider:model")`（复用 subagent——跨 provider 候选）；**API key** = `ensureChildApiKey`——缺 key 转清晰 failed reply（不裸 401）。
+- **只读工具集**：`readonlyToolNames(agent.tools)` 过滤父工具集 + `main_history`；**effort 越界防护** = `clampEffort`——池 effort 越出该模型 `reasoningEffortEnum` → 整字段丢弃（防 candidate 开跑即死）。
+- **系统 prompt**：`role: "consult"` → `CONSULT_BASE`（`thincoder-core/agent/setup.mjs` base 分支；提示词档 = `thincoder-core/prompts/consult-base.md`——提示词面内容权归主 agent）。
+- **活动流上屏**：relay 前缀 `consult#<childRelayN>/` → TUI 子 agent 活动区块；**工具注册** = `thincoder-core/agent/setup.mjs` depthOnly（depth 0 + consultModels 非空）注册 `consult_start` / `consult_stop`。
+- **会话收尾**：`cleanupConsultSessions`——仅 Ctrl+C / suspension abort 分支；标记 stopped + abort 清 map。
+- **配置入口**：`/config` 命令（`thincoder-cli/src/tui/cmd-config.mjs`——候选池增删改 + effort picker）。
+
+## 7. 并入的关键决策记录（含否决备选）
+
+| # | 决策 | 理由 / 否决备选 |
+|---|---|---|
+| D-CO1 | 判定归主 agent，工具零判定 | 采纳与否在主 agent 的 turn 里用它的工具完成——工具只负责编排与收集 |
+| D-CO2 | digest 自动注入取代 check 轮询（R17） | 发完会诊即可继续交互，判断性消费保留在消化轮；`consult_check` 退役 |
+| D-CO3 | 只读会诊 + `main_history` | 会诊子 agent 不改文件；按需拉主会话历史（失败轨迹自取证） |
+| D-CO4 | 跨 turn 生命周期 | 回合尾不再清理，仅 Ctrl+C / 会话中止时 abort（与 async 子代理同规则） |
+| D-CO5 | 独立 consult role | 不复用 explore 身份——consult-base 作裸 prompt、不背编码纪律块；工具集只读过滤 + main_history |
+| D-CO6 | CLI 复用 subagent 的 provider 解析 | `resolveChildProvider` 零新机制——跨 provider 候选天然支持 |
+
+## 8. 不并项与历史沿革
+
+### 8.1 历史沿革（(d) 类——**不并**）
+
+> 来源档 `thincoder-cli/docs/design/CONSULTATION.md`（CLI 产品档）——**原地保留作参照历史**（保留 ≠ 维护）。其下列内容**不并入本档**，理由如下：
+
+| 旧档节 | 内容 | 何故不并 |
+|---|---|---|
+| 头注（状态行「已实施 + 已异步化（R17）」+ 同源设计注 + 权威规格指针） | 交付状态 / 时点权威指针 | 时点状态——归批次档 / 台账；「与 VS Code 同源」已入 §6 首段；权威指针按现状坐标重写（§6.2） |
+| 文末「变更记录」（立项 / 会话级收尾 / R17 完全异步化 / 可读化重写） | 逐批变更流水账 | 历史叙述——本档自有变更记录 |
+| 「需求层已迁出」注 | 拆分时点注 | 时点材料——需求已归位本层同名需求档 |
+| §2.2 内「原 `_pendingConsultResults` 独立族流退役」 | 退役族流历史叙述 | (d) 类——现行形态（+role 并入单容器）已入 §6.2 |
+
+### 8.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
+
+| 旧档节 | 内容 | 何故不并（去向 / 触发） |
+|---|---|---|
+| §2.5 受影响文件表 | 逐档清单 | **一次性批次材料**——批次档承载 |
+| §3 测试与验收（T-R17a..r 编号已退役） | 用例与验收指针 | 测试资产归测试层；编号已退役，不再引用 |
+| 飞刀（escalate）面机制文本（住旧 `thincoder-cli/docs/design/ESCALATE.md`） | 升级机制 / settle 三分类 / 工程模式拒保持 | 本批参照面 = 同板块同名档；该档不在内 ⇒ **越段登记**——触发 = 父侧另派 |
+| advisor 主面机制文本（住旧 `thincoder-cli/docs/design/ADVISOR-CONVERGENCE.md`） | 评审运行 / 收敛 / 轮次语义 | 同上（参照面不含）⇒ **越段登记**——触发 = 父侧另派 |
+| 旧 `thincoder-cli/docs/design/AGENT-LOOP.md` §14（会诊 / 飞刀异步化） | consult settle / 注入时机 / escalate 三分类 | 试点批登记「属本板」；本批参照面不含该档 ⇒ **越段登记**——consult 面与旧 `CONSULTATION.md` §2.2 同源（结论已入 §6.2）；escalate 面见上行 |
+
+### 8.3 需求侧（已并入本层需求档）
+
+旧档需求面（旧同名需求档 §1：需求总述 / 行为 / 范围边界）=== 本板块需求层，已并入本层需求档 `docs/requirements/CONSULTATION.md`（**与本档同名成对**）——本档不重复。
+
+## 9. 体量与拆分规划（R24a）
+
+**实测行数**：本档 **235 行**（B 轮并入前 98 行）——**低于 300 行软线，无需拆分规划**。
+
 ## 变更记录
 
 - 2026-09-13：建档——自 `docs/design/CORE-UNIFICATION.md` 拆出（§2.5 #1 / #40 / #41 / #93 / #95 / #104–#110 / #159–#161 + 四要素明细 · §2.5.1 A24）；**语义零改**，行号沿用原编号。
 - 2026-09-14（S1 收口轮）：§5 补**核内落点行数**指针（`agent-tools/panel-blocks.mjs`——#159 · #180 收正）。
 - 2026-09-14（markdown 面小收正轮）：§1 / §2.4 裸名点名补路径前缀（`advisor/provider.mjs` · `advisor/tools.mjs` · `agent-tools/subagent-panel.mjs`——与 `src/provider.mjs` / `src/tools.mjs` / `src/tui/subagent-panel.mjs` 同名不同物；**消除歧义不改判据**）。
 - 2026-09-14（**设计面收正轮 3 · eng-designer**）：§2.3 表后补 **#106 S2 接线前口径确认项**（归一取 CLI 的核内实核坐标 + 对端严格形态 + 潜伏差异的行为差登记——只记，S2 动作）。
+- 2026-09-14（**B 轮并入 · 第 3 批**）：新增 §6 **机制面**（架构与数据流 / R17 digest 消费模型 / 工具契约 / 实现接线）· §7 **关键决策（D-CO1–6）** · §8 **不并项与历史沿革**（含飞刀 / advisor / 旧 AGENT-LOOP §14 越段登记）· §9 体量（低于软线，无需拆分）；
+  来源 = `thincoder-cli/docs/design/CONSULTATION.md`（**旧档一字未改**——原地作参照历史）；需求侧已并入本层 `docs/requirements/CONSULTATION.md`；首部加机制面指针一行。
