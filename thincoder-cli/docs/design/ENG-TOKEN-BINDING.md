@@ -3,7 +3,7 @@
 > 状态：**已实现**（v2 + R16——2026-08-25 / 2026-09-06）。
 > 需求：`../requirements/ENG-TOKEN-BINDING.md`。
 > 现码核对（2026-09-07）：`src/token-ttl.mjs`（共享 TTL 纯函数 + 槽清理 + 会话序列化/恢复面）、
-> `src/agent-tools/eng.mjs` / `src/tui/cmd-eng.mjs`（跨模式存活 + 开模式清过期）、
+> `thincoder-core/agent-tools/eng.mjs` / `src/tui/cmd-eng.mjs`（跨模式存活 + 开模式清过期）、
 > `src/agent-tools/advisor-async.mjs`（签发/校验/结算）、`src/session.mjs`（恢复过滤）、
 > `src/agent-tools/subagent-spawn.mjs`（门禁过期拒删槽）——R16 语义均已落地，与本文一致。
 
@@ -72,7 +72,7 @@
 | 模块 | 内容 |
 |---|---|
 | `src/token-ttl.mjs`（新） | 共享 TTL 纯函数 + 槽清理 + 会话序列化/恢复面——`tokenExpiryMs`/`tokenExpired`/`removeDesignTokenSlot`/`purgeExpiredDesignTokens`/`engTokenSlotFields`/`restoreEngTokens`（R16 D-R16b/D-R16c/D-R16d） |
-| `src/agent-tools/eng.mjs` | enter/exit 不清有效 token；幂等 enter（already-on）纯 no-op；enter 真转换路径 purgeExpiredDesignTokens（文案含清理个数） |
+| `thincoder-core/agent-tools/eng.mjs` | enter/exit 不清有效 token；幂等 enter（already-on）纯 no-op；enter 真转换路径 purgeExpiredDesignTokens（文案含清理个数） |
 | `src/tui/cmd-eng.mjs` | `/eng` ON 路径同 purge；OFF 路径不清 token |
 | `src/session.mjs` | applySession 恢复过滤（过期不读回）；saveSession 经 `engTokenSlotFields` 序列化 |
 | `src/agent-tools/advisor-async.mjs` | 签发（generateDesignToken）/校验（validateDesignToken）/TTL 配置（effectiveTokenTtlMs）/结算（settleDesignReview） |

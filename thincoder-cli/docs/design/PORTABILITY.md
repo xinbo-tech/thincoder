@@ -158,7 +158,7 @@ FR14 落实（需求层登记）；另含 FR15 的行为面定义（P8 所在需
 | `src/advisor/repos.mjs` `hasCodeMutations` | 组件式正则 | 换源 `conventions.mjs`（绝对路径）；导出签名不变 |
 | `src/advisor/repos.mjs` `isDocOnlyChange` | `^src[\\/]` 锚定 | 换源（git 相对路径）；导出签名不变 |
 | `src/agent-tools/advisor-settle.mjs` `isCodePath` | 组件式正则 | 本地实现删除，改为导入权威模块 |
-| `src/agent-tools/verify.mjs` `isUnderSrc` 两处消费 | 根锚定 + 松散回退 | 换源；`findProjectRoot`/`isUnderSrc` 若仅此两处引用则删除（死代码随批清理） |
+| `thincoder-core/agent-tools/verify.mjs` `isUnderSrc` 两处消费 | 根锚定 + 松散回退 | 换源；`findProjectRoot`/`isUnderSrc` 若仅此两处引用则删除（死代码随批清理） |
 | `src/agent/completion.mjs` | 经 `hasCodeMutations` | 零改动（签名稳定） |
 
 **导出面裁决**：`isDocFile`/`isTempFile` **迁出、不设 re-export**——四个导入方全部就地换源（`dispatch.mjs` / `advisor-settle.mjs` / `verify.mjs` / `agent-tools/advisor.mjs`）；
@@ -224,7 +224,7 @@ D1–D7 全表 / 锚#1–#7 / C1–C4 / T-RO 组 / A11 的 `batchDoc` 必传句�
 - `cmd-eng.mjs`：删除 METHODOLOGY 门禁与模板分支（含 `templateDir` / `existsSync` / `copyFileSync` 引用与 picker）；
   切换 = 无前提（FR11）；ON 提示行去掉 `strictly following <methodologyPath>`，改为 `→ design-before-code enforced (design review + user approval before code)`；
   R16 令牌语义与 OFF 提醒、槽持久化**零改动**。
-- `eng.mjs:59`：消息文案去 `in docs/`（逐字见 §4.4）。
+- `thincoder-core/agent-tools/eng.mjs:59`：消息文案去 `in docs/`（逐字见 §4.4）。
 - `dispatch.mjs:204` hint：去 `in docs/` + 未声明时的声明指引（逐字见 §4.4）。
 - `config.mjs:76` 注释随批纠正（1 行）。
 
@@ -345,9 +345,9 @@ D1–D7 全表 / 锚#1–#7 / C1–C4 / T-RO 组 / A11 的 `batchDoc` 必传句�
 | `src/agent/dispatch.mjs` | 修改 | 480 | ≤±12（换源 + hint） |
 | `src/advisor/repos.mjs` | 修改 | 173 | ≤±14（谓词换源） |
 | `src/agent-tools/advisor-settle.mjs` | 修改 | 213 | ≤±5（本地谓词删除） |
-| `src/agent-tools/verify.mjs` | 修改 | 292 | ≤±10（换源 + 死代码清） |
+| `thincoder-core/agent-tools/verify.mjs` | 修改 | 292 | ≤±10（换源 + 死代码清） |
 | `src/tui/cmd-eng.mjs` | 修改 | 94 | 净减 ~25（门禁/模板删除） |
-| `src/agent-tools/eng.mjs` | 修改 | 67 | ±2 |
+| `thincoder-core/agent-tools/eng.mjs` | 修改 | 67 | ±2 |
 | `src/config.mjs` | 修改 | 487 | ±1（注释） |
 | `src/agent-tools/advisor.mjs` | 修改 | 241 | ≤±6（门禁换源 + 拒绝文案 + 注释 :112） |
 | `src/advisor.mjs` | 修改 | 290 | ±1（过期注释 :5） |

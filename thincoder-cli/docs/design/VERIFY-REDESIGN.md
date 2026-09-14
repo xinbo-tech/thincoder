@@ -3,7 +3,7 @@
 > 板块：agent-tools（verify 工具）。权威源指向：TOOLS.md §1（元工具）/ §7（verify 契约，testNamePattern）+ 本文档（verify 重构设计）。
 > 状态：**相 1（verify 工具本体）已实现；相 2（guard/prompt/双端一致收口）已实现交付**——2026-09-07 用户裁定。相 1 经同步评审签发 + 双 eng-coder 交付 clean；相 2 代码面 2026-09-08 落地（STRUCTURE-DEBT-BATCH-7 收尾——代码实证见下注）。
 > DOC-SWEEP 注（2026-09-09 核验——相 2 代码面全落）：G1-G4 guard 文案双端逐字（CLI completion.mjs:81/94/109 + VSC run-stages.mjs:55/68/82——declaring the outcome via verification.status）；G5-G9 prompts 声明式语义（双端 eng-coder/engineering-sub/system/discipline/main）；G10 doc-only+failed 打回（verify 描述）；
-> G11 rejectionReport 补 node --check 软提示（VSC verify.mjs:165/269）；G12 VSC guard hasCodeMutations（run-stages.mjs:50）；G13 VSC goal.mjs 门禁（:34 注释自标）；G14 状态面已闭环——**T-V8..V11 全量验收（test:full 双端）待父侧核后正式核销**。
+> G11 rejectionReport 补 node --check 软提示（VSC thincoder-vscode/src/agent-tools/verify.mjs:165/269）；G12 VSC guard hasCodeMutations（run-stages.mjs:50）；G13 VSC goal.mjs 门禁（:34 注释自标）；G14 状态面已闭环——**T-V8..V11 全量验收（test:full 双端）待父侧核后正式核销**。
 > 背景注：async advisor 评审 token 跨会话注册 bug（designId not found）尚未修复，用户指示本轮走**同步评审**（async:false）。
 
 ## 1. 问题陈述
@@ -30,9 +30,9 @@ verify.mjs 当前把**项目特定逻辑硬编码进通用工具**：
 - **D-V6 双端**：CLI + VS Code verify 语义一致（同输入同判定）；测试纪律靠 METHODOLOGY/AGENTS.md 自然语言指导模型，不进 verify 代码。
 - **D-V7 参数清理（评审 #4）**：删除 `full`/`testNamePattern`/`filter` 参数及其拒绝分支（无测试自动跑后语义消亡）；保留 `workdir`（定位项目根/doc-only 判定）。新增 `verification` 参数（D-V1）。
 - **D-V8 受影响文件（评审 #2/#3 补——双端）**：
-  - CLI `src/agent-tools/verify.mjs`（删 MODULE_TO_TEST/related-tests/参数清理/verification 接入）
+  - CLI `thincoder-core/agent-tools/verify.mjs`（删 MODULE_TO_TEST/related-tests/参数清理/verification 接入）
   - CLI `src/agent-tools/verify-watch.mjs`（runTestFile/runTestSuite 若不被 verify 再用则删——实现时核实去留；**已删**——2026-09-07 通用验证门禁重构；runTestFile/runTestSuite 未被 verify 再用）
-  - VS Code `src/agent-tools/verify.mjs` 及 verify 相关（镜像同构）
+  - VS Code `thincoder-vscode/src/agent-tools/verify.mjs` 及 verify 相关（镜像同构）
   - 两端工具 description/schema（verify 参数改 verification）
   - `docs/design/TOOLS.md` §7 verify 契约行更新（当前写 testNamePattern——评审 #3）
   - 测试：按需加 verify 自身用例（T-V 系——CLI test/ 与 VS Code test/ 各补一）
@@ -52,7 +52,7 @@ verify.mjs 当前把**项目特定逻辑硬编码进通用工具**：
   - G10 doc-only/空改动 + 显式 failed：CLI 无条件放行 vs VS Code 打回——统一为尊重显式 failed 打回（VS Code 行为为对，改 CLI）；
   - G11 VS Code rejectionReport 打回分支补 node --check 语法提示（对齐 CLI）；
   - G12 VS Code guard 触发补 `hasCodeMutations` 层（doc-only 不再被推回，对齐 CLI）；
-  - G13 VS Code goal.mjs 补 verify 门禁（对齐 CLI goal.mjs:53）。
+  - G13 VS Code goal.mjs 补 verify 门禁（对齐 CLI thincoder-core/agent-tools/goal.mjs:53）。
 - **G14 归属注**：G14 = explore 报告的设计文档状态项。状态行（本文件 :4）已从"待评审"更新为"相 1 已实现、相 2 设计中"——G14 状态面已闭环；其受影响文件面由相 2 D-V9..V11 覆盖。
 
 ## 4. 测试

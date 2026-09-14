@@ -52,7 +52,7 @@
 ### 2. F-2 §24→§11 旧锚清理（双端——实证 68 处）
 - 实测面（评审 #4 具名族）：CLI src 29 处（advisor/messages.mjs:133、advisor/run.mjs:15/418、`src/advisor.mjs:269`、
   agent/completion.mjs:123、agent/dispatch.mjs:355、agent/record-results.mjs:99、agent/run-stages.mjs:166、
-  agent-tools/eng.mjs:37/55、escalate-async.mjs:154、subagent-actions.mjs:107、subagent-run.mjs:39/55/83、
+  thincoder-core/agent-tools/eng.mjs:37/55、escalate-async.mjs:154、subagent-actions.mjs:107、subagent-run.mjs:39/55/83、
   subagent-scheduler.mjs:341/346、subagent.mjs:130/378、agent.mjs:69/70、tui/cmd-eng.mjs:51、mouse.mjs:202、
   `src/tui/subagent-panel.mjs:112`、suspension-drive.mjs:25/30/77/133、test/advisor-description.test.mjs:18（已退场——TEST-LIFECYCLE））+ VSC src
   39 处（advisor/main.mjs:94/105/111/123/163/213/260、advisor/messages.mjs:50/78/88、advisor/run.mjs:340/362/419、

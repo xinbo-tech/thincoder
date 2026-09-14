@@ -85,7 +85,7 @@
 - [x] **`_advisorRuns` 实例无逐实例删除**（仅模式切换整体重置）→ 证据 `thincoder-cli/src/agent-tools/advisor-async.mjs:104-137` · status=已废弃（原状态=待讨论）
 - [x] **小容器族无上界**（`_asyncTombstones`/`_turnControllers`/`_frozenSubKeys`/`expandedBlocks`；capturedConsole 拼接可突破 64K）→ 证据 `thincoder-cli/src/agent-tools/async-settle.mjs:138-139` · `thincoder-cli/src/agent/dispatch.mjs:428-432` · status=已废弃（原状态=待讨论）
 - [x] **`verify-redesign` T-V4 偶触 slow 门**（820–1031ms vs 800ms；干净 HEAD 复现/隔离跑 ~120ms）→ 证据 `thincoder-cli/test/verify-redesign.test.mjs:87` · status=已废弃（原状态=待讨论）
-- [x] **跨会话同批档案并发写风险**（两会话父侧同写批次档；无会话级写权分片）→ 证据 `thincoder-cli/src/agent-tools/batch-segment.mjs:130` · status=已废弃（原状态=待讨论——用户 2026-09-11 曾裁定暂不开批）
+- [x] **跨会话同批档案并发写风险**（两会话父侧同写批次档；无会话级写权分片）→ 证据 `thincoder-core/agent-tools/batch-segment.mjs:130` · status=已废弃（原状态=待讨论——用户 2026-09-11 曾裁定暂不开批）
 - [x] **第 13 批收口遗留**（① T75/T76 无测试宿主 ② `thincoder-cli/test/settings.test.mjs` 480/500 ③ AC54 注行号 +1 ④ 存量非表格超宽 5 行）→ 证据 `thincoder-cli/docs/design/ENGINEERING-MODE.md:1406` · status=已废弃（原状态=在途（第 14 批））
 - [x] **第 9 批后续登记面（设计 §13.9）**（① 设计档新时序规则登记面 ② 双源不对称是否补镜像）→ 证据 `thincoder-cli/src/prompts/discipline-engineering.md:135` · status=已废弃（原状态=在途（第 13 批条目 F））
 - [x] **AC-OA4 统计脚本（可选仓库工具）**：统计轨迹 JSON 评审信号密度（低优先）→ 证据 `thincoder-cli/docs/design/AGENT-LOOP.md:655` · status=已废弃（原状态=无 status）

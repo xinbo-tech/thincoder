@@ -17,7 +17,7 @@ import assert from "node:assert"
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
-import { verifyTool } from "../src/agent-tools/verify.mjs"
+import { verifyTool } from "@thincoder/core/agent-tools/verify.mjs"
 
 /** mkdtemp 项目 + 写文件 + 一个最小 ctx（agent.cwd=该项目根，无 tasks）。 */
 function makeProject(fileMap) {

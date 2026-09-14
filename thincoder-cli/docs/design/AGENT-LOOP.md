@@ -1579,7 +1579,7 @@ BATCH-3 F-2 原始事故面（1.3MB 请求体）+ 交付偏差记录（`docs/des
 
 ### 22.3 契约（逐条——实现对象；VSC 面同语义）
 
-**D-DG1 单源模块（CLI 面）**：新档 `src/agent-tools/digest-budget.mjs`——导出三件：`DIGEST_INJECT_BUDGET`（64×1024）；
+**D-DG1 单源模块（CLI 面）**：新档 `thincoder-core/agent-tools/digest-budget.mjs`——导出三件：`DIGEST_INJECT_BUDGET`（64×1024）；
 `digestBudgetOver(agent, size)`（判超 + 记账——`used > 0 && used + size > BUDGET` 首条豁免保留；轮界定
 `agent.history.length !== r.len + 1` 语义逐字自 `subagent-async.mjs:330-343` 迁入，键 = agent）；
 `persistOverflowReport(raw, { tag })`（`configDir/tool-results` 落盘 + `cleanupOldToolResults` 轮转 + 清单行；失败 null——调用方回退 inline）。
@@ -1597,7 +1597,7 @@ BATCH-3 F-2 原始事故面（1.3MB 请求体）+ 交付偏差记录（`docs/des
 
 | # | 文件 | 现 | 预计 | 动作 |
 |---|---|---|---|---|
-| 1 | `src/agent-tools/digest-budget.mjs` | 新 | ~70 | 单源模块（D-DG1） |
+| 1 | `thincoder-core/agent-tools/digest-budget.mjs` | 新 | ~70 | 单源模块（D-DG1） |
 | 2 | `src/agent-tools/subagent-async.mjs` | 474 | ~450（净减） | 迁出 + re-export |
 | 3 | `src/agent-tools/consult.mjs` | 461 | ~465 | +接线 |
 | 4 | `test/async-settle.test.mjs` | 349 | ~390 | T-DG1~T-DG3 |

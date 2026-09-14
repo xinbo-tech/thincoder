@@ -4987,5 +4987,110 @@ CLI 三加载根 + 入口（L1–L7）：
 
 **段末复跑（§5 写入后 · 宽度闸）**：`check-doc-width` = **306 档无 >300 字符行 · exit 0**（原样读数见交付报告）。
 
+### 实施：S2 U9 —— AGENT-TOOLS 工具面落轮（2026-09-14 · eng-coder）——**终态 = clean**
+
+**段位**：当前段 = **S2（CLI 迁移单元 U9）**。写域 = CLI 侧（10 档 11 处 import/export 改指 + 11 档删旧 + 8 档文档锚改指）+ **边界外一笔（已披露）**：仓根 `docs/TODO-archive.md:88`（L4 证据行，删档后必红——唯一必要行）。
+**VSC 零触碰**；核内零改动（`git status` 自证：改动集零 `thincoder-core/**`）；未 commit（父侧统一单笔）；**无域外消费方**（仓根 `scripts/**` · 产品 `scripts/**` · `bin/**` · 产品根散档 · `.github/**` 全扫零命中）；产品文档只做锚改指（零语义改写——语义收正归 eng-designer）。
+
+**依据** = `docs/design/CORE-UNIFICATION.md` §2.6.3 U9 行（`:718`「11 / 1030 / 10」+ 专项「`agent-tools.mjs` 登记册 = 14 名逐名等值；`#84` 记账注入缝缺省 no-op」）+（三）逐档清单（`:810-820`）+（四）四步与 A1–A6（`:910-924`）+（七）进度计数（`:965-976`）+ §2.6.2（三）（五）（六）；
+`docs/design/TOOLS.md` §2.2（#83–#86 · #88 · #90–#92 · #96 · #97 裁决行）· §2.3（A6 / A12 / A13 / B1 / B2）；父侧 U9 任务书。
+
+**改动面**（行数 = `wc -l` 口径实核；改前 = HEAD）
+
+| # | 面 | 档 / 行数 | 动作 |
+|---|---|---|---|
+| 1 | CLI 源 + 测试 | 10 档（7 src + 3 test；行数零变——纯来源串替换） | 改指 `@thincoder/core/agent-tools/<子路径>`（11 处） |
+| 2 | CLI 删旧 | `src/agent-tools.mjs` 17 · `agent-tools/batch-segment.mjs` 195 · `digest-budget.mjs` 76 · `eng.mjs` 67 · `goal.mjs` 119 · `plan.mjs` 81 · `task.mjs` 87 · `timer.mjs` 46 · `verify.mjs` 271 · `skill.mjs` 47 · `recent-changes.mjs` 24（**合计 1030 行**） | **删档**（`src/agent-tools/` 余 17 档原位——非整目录清空） |
+| 3 | CLI 文档 | 8 档（`docs/design`；±0 行） | 29 行锚改指 |
+| 4 | 仓根台账（**边界外·披露**） | `docs/TODO-archive.md`（±0 行） | `:88` 证据行改指（1 处） |
+
+**① 逐处「改前 → 改后」（11 处——全部 = 来源串替换，具名导入面零改）**
+
+| # | 位置 | 改前 → 改后 |
+|---|---|---|
+| 1 | `src/advisor/loop.mjs:15` | `"../agent-tools/batch-segment.mjs"` → `"@thincoder/core/agent-tools/batch-segment.mjs"`（batchSegmentTool） |
+| 2 | `src/advisor/run.mjs:13` | 同上（batchDocForReview） |
+| 3 | `src/agent/run-stages.mjs:102` | `await import("../agent-tools/plan.mjs")` → 核路径（planReminderForTurn，动态） |
+| 4 | `src/agent/setup.mjs:172` | `await import("../agent-tools.mjs")` → `"@thincoder/core/agent-tools.mjs"`（12 名解构面零改） |
+| 5 | `src/agent-tools/advisor.mjs:10` | `"./batch-segment.mjs"` → 核路径（resolveBatchDocPath） |
+| 6 | `src/agent-tools/consult.mjs:36` | `"./digest-budget.mjs"` → 核路径（digestBudgetOver / persistOverflowReport） |
+| 7 | `src/agent-tools/subagent-async.mjs:23` | 同上 |
+| 8 | `src/agent-tools/subagent-async.mjs:26` | re-export 来源 `"./digest-budget.mjs"` → 核路径（DIGEST_INJECT_BUDGET / _setDigestOffloadDirForTest） |
+| 9 | `test/batch-segment.test.mjs:20` | `"../src/agent-tools/batch-segment.mjs"` → 核路径（4 名面零改） |
+| 10 | `test/integration/commit-verify-gate.test.mjs:17` | `"../../src/agent-tools/verify.mjs"` → 核路径（verifyTool） |
+| 11 | `test/verify-redesign.test.mjs:20` | `"../src/agent-tools/verify.mjs"` → 核路径（verifyTool） |
+
+改指档数 = **10**（11 处——`subagent-async.mjs` 一档两处）= 设计 U9 行「改指 10」；`setup.mjs:173` consult 本地挂载**不动**（consult.mjs 非 U9 删除集，属 U12——避免提前拆断 CLI consult 会话态）。
+
+**文档锚 29 处（8 档——删后中间态实测 = 29 悬空 ⇒ 全数改指 ⇒ 0；形态 = §2.6.2（六）CLI 域「仓根相对」）**
+
+- **CLI 语义 22 行 → `thincoder-core/agent-tools/…`**：`AGENT-LOOP.md` `:1582` `:1600` · `ENG-TOKEN-BINDING.md` `:6` `:75` · `ENGINEERING-MODE.md` `:662` `:673` `:718` `:734` `:1648` `:1649` `:2931` `:2968` ·
+  `LEDGER-SELF-CONTAINED.md` `:522` `:548` · `PORTABILITY.md` `:161` `:227` `:348` `:350` · `QUICKFIX-BATCH-3.md` `:55` · `TESTING.md` `:171` · `VERIFY-REDESIGN.md` `:33` `:55`。
+- **VSC 语义 7 行 → `thincoder-vscode/src/agent-tools/…`**（行文自述 VSC／VS Code／（VSC 仓）；VSC 档未迁、指核会失真——承 U5 决策 3 先例）：`ENGINEERING-MODE.md` `:762` `:765`（§2.22.5 VSC 段，`:765` 一行两 token）`:821` `:822`（§2.23「VSC 仓实测」表）· `LEDGER-SELF-CONTAINED.md` `:738`（行含（VSC 仓））· `VERIFY-REDESIGN.md` `:6` `:35`。
+- **台账 1 行（边界外·披露）**：`docs/TODO-archive.md:88` 证据行 `thincoder-cli/src/agent-tools/batch-segment.mjs:130` → `thincoder-core/agent-tools/batch-segment.mjs:130`（L4 闸强制；坐标按「冻结指针 as-of」保留、漂移披露见未决 3）。
+
+**② 删旧三条读数（删前全过才删）**
+
+1. **改指已落盘**：11 处终态复核（正 / 反向两判）——0 违规；包名冒烟 PASS（真子进程：核 hub 14 名逐名 = CLI HEAD hub 12 名全含 + consult 2；子路径导出面逐名在位：
+   `batchSegmentTool` / `batchDocForReview` / `resolveBatchDocPath` / `MAX_TEXT_CHARS` / `verifyTool` / `digestBudgetOver` / `persistOverflowReport` /
+   `DIGEST_INJECT_BUDGET` / `_setDigestOffloadDirForTest` / `planReminderForTurn`；#84 缝 configure→触发一次→reset→回 no-op 实测）。
+2. **该产品全链 exit 0（删前预跑）**：`npm test` 609/552/0/57 · `lint` 280 · `test:full` 609/609 · `test:integration` 25/25（均 exit 0）。
+3. **零引用反向判**（域 = `src` + `test` + `bin` + `scripts` 全递归；两模式）：① 引号包裹本地相对路径形（按解析语义判——命中删除集即违规）= **0**；② 非核前缀 `agent-tools/<name>.mjs` / `agent-tools.mjs` 引用形 = **0**（2 处注释叙述 = 射程外，登记未决 4）。**域外全扫**：仓根 `scripts/**` · 产品 `scripts/**` · 产品根散档（`test-startup.mjs` 等）· `.github/**` = **0 / 0**。
+   **删后中间态**：`doc-anchors --domain thincoder-cli` = **29 悬空**（8 档）→ 逐处改指 → **0**。
+
+**③ A1–A6 读数（终态复跑 · 原样）**
+
+| # | 判据 | 读数 | 判 |
+|---|---|---|---|
+| A1 | CLI 全链 | `npm test`：tests **609** · suites 4 · pass **552** · fail **0** · skipped **57** · exit 0；`lint`：check-syntax **269 file(s) OK**（280 − 11 删档，唯一面内差）；`test:full`：**609/609** · fail 0 · exit 0；`test:integration`：**25/25** · fail 0 · exit 0——**未涉面逐数不变**；面内零改判（无用例增删） | ✓ |
+| A2 | 零引用 | 反向判两式 **0 / 0**（域 `src`+`test`+`bin`+`scripts`）；运行面 = 全链 exit 0 + 删后冒烟；锚面 = 悬空 0 | ✓ |
+| A3 | 文档锚 | `doc-anchors --domain thincoder-cli`：99 档 · 候选 **8874** · 悬空 **0** · 注记豁免 880 · `OK(V5)` exit 0 | ✓ |
+| A4 | 核回归 | 核内 `node --test` = **173/173** · fail 0 · exit 0；核内零改动（`git status` 自证） | ✓ |
+| A5 | 仓根三机检 | `doc-anchors`（全域）：域一 32 档 候选 **2219** · 悬空 0 · 豁免 29；域二 99 档 候选 **8874** · 悬空 0 · 豁免 880；VSC 域报告态 5 命中（预存——非本笔）· **exit 0**。`check-doc-width`：**306 档无 >300 字符行** · exit 0（§5 写入后复跑读数见段末）。`check-ledger`：**0 处违规** · 基线 0 · exit 0 | ✓ |
+| A6 | 链接 L1 | `npm ls @thincoder/core --json` **exit 0** · version **0.1.0**；版本探针 = **0.1.0** | ✓ |
+| 专项 | 裁决落实 | **① 登记册 14 名逐名等值**：核 `agent-tools.mjs` 14 导出名 = CLI HEAD hub 12 名（全含，零缺）+ `consultStartTool` / `consultStopTool`；CLI 树 `agent-tools.mjs` 副本 = 0（glob 零命中）⇒ 单源成立；`setup.mjs:172` 12 名解构面零改。**② #84 缝缺省 no-op**：核 `batch-segment.mjs` `:44` / `:47`（缺省 null + reset）+ `:215`（`injectedOnWrite?.()`）；CLI 全树 `configureBatchSegment` 零命中（= CLI 语义零行为变；实核 CLI HEAD 档零 `_touchedFiles` 记账引用——该记账面属 VSC 现形） | ✓ |
+
+**进度计数（设计 §2.6.3（七）① · 可复跑命令）**：**CLI 待迁 = 88**（99 − 11）——单调递减成立，与父侧预期逐数一致。
+**工作树**：本笔 **30 项**（10 M 代码 + 11 D + 8 M 文档 + 1 M 台账）+ **1 项预存**（`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`——spawn 前已在，非本笔）；未 commit。
+
+**④ 内部轮（发现与处置）**
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **DIVERGENT**——「部分实现 / 静默简化 / 清单外改动」未命中（11 删除档全缺、其余 17 档保留、11 处改指逐点对齐、29 锚逐行在位、14 名 + #84 逐项复核成立）；命中 🔵×2（`TODO-archive.md:132` / `:141` 存量陈旧指针；`.thincoder` 临时档路径误归因）+ 🟡×1（`token-ttl.mjs:7` 注释叙述——「模式②」形）+ QUESTION ×4。
+- **审计命中处置**：🟡（`token-ttl.mjs:7`）→ **Not an issue**（判据 = §2.6.2（五）法 1「裸词叙述射程外——只判代码 / 测试面」+ U4 / U5 同型先例）+ 登记（未决 4）；🔵 两条 → **Deferred**（未决 2；审计引证更正——`thincoder-cli/.thincoder/tmp/` 实为 ENOENT，机械 union 路径误归因，承 U1–U5 附注）。
+  QUESTION 判定：Q1（CLI 侧 batch_segment 记账是否行为差）→ **Not an issue（实核反驳）**：CLI HEAD 档零 `_touchedFiles` / `recordFileMutation` 记账引用 ⇒ 缺省 no-op = CLI 语义零变（设计自承形态 ✓）；Q2（历史行改指 vs 保史实）→ 登记（未决 2，承 U5 未决 2 口径）；Q3（裸名残留）→ 登记（未决 4）；Q4 = 审计席位无执行面（读数类未独立复跑——限制如实登记）。
+- **advisor 代码评审 1 轮**（`type=code` · 阻塞）：**pass**（🔴 **0** · 🟡 2（均非 must-fix）· 🔵 3）。
+- **裁决表（5 项）**：**Fixed 1**（🟡#1 = 过渡期双态登记——落未决 1：核挂载 + 本地副本测试面）；**Not an issue 1**（🟡#2 三档 >300 软线（`setup.mjs` 354 · `subagent-async.mjs` 435 · `consult.mjs` 473）——既有结构债 · 本单元行内替换零增量，R3 不复议）；
+  **Deferred 3**（🔵#3 `TODO-archive.md:88` 坐标 as-of（冻结指针口径）→ 未决 3；🔵#4 `TODO-archive.md:132` / `:141` 存量陈旧指针（历史表行、非 L4 射程）→ 未决 2；🔵#5 叙述注记 2 处（`token-ttl.mjs:7` / `agent.mjs:44`）→ 未决 4）。
+  **引证核验附注**：host 核验器对 11 条引证报「file unreadable」——复核为**核验器路径解析 artifact**（承 U1–U8 同型附注；`setup.mjs:172` / `batch-segment.mjs:130` / `token-ttl.mjs:7` 等均经复读内容与引证相符）。
+- **轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 **0**（零 must-fix）；终态 **0 未决 🔴 → clean**。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 改指目标形态 = `@thincoder/core/agent-tools/<子路径>`（hub = `agent-tools.mjs`） | §2.6.2（三）2「一律带子路径」（裸名不可导入）；核 `exports "./*"` + 链接态实核 |
+| 2 | `setup.mjs:173` consult 本地挂载**不并入**核 hub | consult.mjs 非 U9 删除集（U12 在册）；并入会提前把 consult 执行面切核（拆断 CLI consult 会话态）；设计「改指 10」档数与本笔逐数一致 |
+| 3 | 文档锚 VSC 语义 7 行改指 `thincoder-vscode/…`（非核） | 行文自述 VSC（§2.22.5 / §2.23 段 + （VSC 仓）行）——承 U5 决策 3 先例（VSC 语义行指核会失真） |
+| 4 | `TODO-archive.md:88` 随本笔改指（**边界外**） | L4 闸强制（删档后 1 处违规）；「只改必要那一行」；`docs/TODO.md` 零命中零改动 |
+| 5 | 台账坐标 `:130` 保留（as-of） | 冻结指针口径（已废弃条目）+ U2 决策 6「纯路径替换，as-of 语义保留」；漂移披露（未决 3） |
+| 6 | 无空目录清理 | 删除集不构成整目录清空（`src/agent-tools/` 余 17 档原位） |
+| 7 | 删前全链**预跑一轮**（四命令）+ 删后终态复跑 | §2.6.3（四）2 字面执行（承 U1–U8） |
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **过渡期双态登记**（评审 🟡#1）：`setup.mjs:172` 改指后 CLI 生产面工具实现立即切核副本（含 U11 / U12 / U16 在册的 `advisorTool` / `readHistoryTool` / `subagentTool`），
+   而这三族 CLI 用例仍 import 本地副本（`test/read-history-guard.test.mjs:15` · `test/session-store.test.mjs:20` · `test/integration/session-resume.test.mjs:246` ·
+   `test/batch-doc-gate.test.mjs:26` · `test/advisor-chain-guards.test.mjs:21`）⇒ 测试改指挂 **U11 / U12 / U16** 行内跟踪；护栏 = S1「14 名逐名等值」（设计 `:718`）。
+2. **存量陈旧指针（文档面）**：`TODO-archive.md:132`（`thincoder-cli/src/agent-tools/eng.mjs:59`）· `:141`（`thincoder-cli/src/agent-tools/verify.mjs:38-58`）——历史表行、非 L4 射程；归文档卫生批（承审计 🔵）。
+3. **`TODO-archive.md:88` 坐标 as-of**：`:130` 跨档沿用（核档该行为 `nextRe.lastIndex = …`；读写面实际在 `:208-210`）——按冻结指针口径保留、本行披露（评审 🔵#3）。
+4. **叙述注记 2 处（射程外登记）**：`src/token-ttl.mjs:7`（`agent-tools/eng.mjs`——U16 档）· `src/agent.mjs:44`（`agent-tools.mjs`——U15 档）——随所属单元或文档维护批（审计 🟡 / 评审 🔵#5）。
+5. **VSC 预存项**：`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`（M）= spawn 前既存改动，非本笔（承 U0–U8 登记）。
+
+**轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 0；A1–A6 终态读数见上表；终态 = **clean**；报告 ①–⑦ 见交付报告（父侧转呈）。
+
+**段末复跑（§5 写入后 · 原样读数）**：`check-doc-width` = **306 档无 >300 字符行 · exit 0**；`doc-anchors --domain thincoder-cli` = 99 档 · 候选 8874 · 悬空 0 · 注记豁免 880 · `OK(V5)` exit 0；`check-ledger` = `OK: thincoder/docs/TODO.md` / `OK: thincoder/docs/TODO-archive.md` · 0 处违规 · exit 0。
+
+**收正注（同轮 · 首版后置）**：宽度闸 5 行超宽行折行（仅插换行、文字零改——首版行位 `:4995` / `:5026` / `:5032` / `:5058` / `:5076`）。
+
 ## §6 验证与收口（父代理）
 

@@ -10,7 +10,7 @@ import { buildObjectDeclarationBlock, buildDesignApprovalBlock } from "./message
 import { appendCitationReport } from "./citations.mjs"
 import { runAdvisorToolLoop } from "./loop.mjs"
 import { advisorIncompleteMarker, estimateTokens } from "./compaction.mjs"
-import { batchDocForReview } from "../agent-tools/batch-segment.mjs"
+import { batchDocForReview } from "@thincoder/core/agent-tools/batch-segment.mjs"
 // 第 33 批（§17.5 模块图）：护栏常量 / doc-set 键 / 记录读取——单向导入（review-streak 无回指）。
 import {
   MAX_DESIGN_REVIEW_STREAK, docSetKey, designReviewStreakRecord, designReviewStreakStopped,

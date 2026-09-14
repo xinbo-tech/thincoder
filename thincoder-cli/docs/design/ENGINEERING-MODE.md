@@ -659,7 +659,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 
 | 文件 | 性质 | as-of 行数 | 预计增量 | 拆分评审 |
 |---|---|---|---|---|
-| src/agent-tools/batch-segment.mjs | **新增** | — | +140±40 | 新工具（工具定义 + 段定位 + 剥除 + append 写入） |
+| thincoder-core/agent-tools/batch-segment.mjs | **新增** | — | +140±40 | 新工具（工具定义 + 段定位 + 剥除 + append 写入） |
 | src/agent/setup.mjs | 修改 | 353 | ≤±12 | >300 档——**不拆**：挂载链（:286-290）两分支各加一项 |
 | src/agent-tools/subagent-spawn.mjs | 修改 | 449 | ≤±6 | >300 档——**不拆**：复用已有 `batchDocAbs` 设 `_batchDoc` |
 | src/agent-tools/advisor.mjs | 修改 | 213 | ≤±14 | 参数 + 门禁 + **评审实例键绑定** |
@@ -670,7 +670,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 | docs/design/prompts/advisor-round2.md | 修改 | 57 | ≤±6 | 纯 .md（**双源**——AC35 grep 覆盖；评审 #2 补行） |
 | src/prompts/advisor-round3.md | 修改 | 37 | ≤±6 | 纯 .md（round 3+ 同） |
 | docs/design/prompts/advisor-round3.md | 修改 | 55 | ≤±6 | 纯 .md（**双源**） |
-| src/agent-tools.mjs | 修改 | 17 | ≤±2 | **barrel export（评审 #4）**——`setup.mjs:172` 从它解构工具符号；新工具必须加 export 行 |
+| thincoder-core/agent-tools.mjs | 修改 | 17 | ≤±2 | **barrel export（评审 #4）**——`setup.mjs:172` 从它解构工具符号；新工具必须加 export 行 |
 | src/prompts/discipline-engineering.md | 修改 | 219 | ≤±10 | 纯 .md（六段自写→用工具 + 失败明示） |
 | docs/design/prompts/discipline-engineering.md | 修改 | 147 | ≤±10 | 纯 .md（双源） |
 | src/prompts/persona-eng-designer.md | 修改 | 56 | ≤±6 | 纯 .md（§2 自写→用工具） |
@@ -715,7 +715,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 | A5 | **§3 写入指令句 + 适用面限定子串**（仅设计评审/工具已挂载） | `src/prompts/advisor-design.md` / `advisor-round2.md` / `advisor-round3.md`（三档） | 同名三档 |
 | A6 | **失败明示句**（“§× 未写入” + “父侧代写必须打标”） | `src/prompts/discipline-engineering.md` + 评审三档 | 同 A1 宿主 + 三档 |
 | A7 | **调用侧句**（有批次档在飞时发起设计评审必须传 `batchDoc`） | `src/prompts/discipline-engineering.md`（发起评审节） | 同 A1 宿主 |
-| A8 | **`batch_segment` 工具描述文案**（段白名单枚举 / 无路径参数 / append-only / 来源戳 / 剥凭证 / 失败明示） | `src/agent-tools/batch-segment.mjs`（描述字符串，196 行） | 新增同名档（**断言口径 = 跨仓同文件 grep**，非“双源两侧”——同 A9/A10 理由，轮次4 评审 #11） |
+| A8 | **`batch_segment` 工具描述文案**（段白名单枚举 / 无路径参数 / append-only / 来源戳 / 剥凭证 / 失败明示） | `thincoder-core/agent-tools/batch-segment.mjs`（描述字符串，196 行） | 新增同名档（**断言口径 = 跨仓同文件 grep**，非“双源两侧”——同 A9/A10 理由，轮次4 评审 #11） |
 | A9 | **来源戳形态**（`### 轮次 N（评审子代理）`、N = §3 内该形态行计数 + 1、排骨架行） | `design/ENGINEERING-MODE.md` §2.20.1 | 同上（工具实现） |
 | A10 | **V3 触发判据**（§4 或 §6 有实质内容；骨架/占位行不算） | `design/ENGINEERING-MODE.md` §2.20.6 | `scripts/check-doc-width.mjs`（V3） |
 | A11 | **spawn 样例行带 `batchDoc=`**（**发现 #14**：门禁先行而样例不教 = 每次撞墙——轮次4 评审 #9 校正编号） | `src/prompts/discipline-engineering.md`（spawn 样例节） | 同 A1 宿主（**VSC:168-169 现无 `batchDoc=`**——本批补） |
@@ -731,7 +731,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 |---|---|---|---|
 | 门落在哪 | A **两处各落 + 共享校验函数**（阻塞 `subagent.mjs` / 异步 `subagent-async.mjs` 各一个调用点，校验逻辑单份） · B 先造共享 spawn 等价点 | **A** | VSC **无** CLI 的双路装配单点（勘察实证）；B 是结构性重构（动阻塞/异步两条链的公共骨架）= 风险超出镜像范围；A 校验逻辑仍单份（语义不会漂） |
 
-- **共享校验函数落点**：`src/agent-tools/batch-segment.mjs`（`resolveBatchDocPath`——原拟 `subagent-spawn-gate` 落点未采用）；签名 `resolveBatchDocPath(cwd, given)`：空/解析失败/非文件 → throw（消息明示）。
+- **共享校验函数落点**：`thincoder-core/agent-tools/batch-segment.mjs`（`resolveBatchDocPath`——原拟 `subagent-spawn-gate` 落点未采用）；签名 `resolveBatchDocPath(cwd, given)`：空/解析失败/非文件 → throw（消息明示）。
 - **角色域（发现 #3——必须写死，否则违 N2 零回归）**：门**只对 `NEEDS_BATCH_DOC = { eng-coder, eng-designer }` 生效**——其余角色（explore / plan / coder）**零变更**（不带 batchDoc 照常 spawn）。
   AC37/T55 的“两路拒”**仅指这两个角色**；反面例（explore 不带 batchDoc 不得被拒）入 T55b。
 - **参数面（发现 #3）**：spawn schema 需新增 `batchDoc` 属性（否则参数无处传入）；受限变体（审计/勘察子代理）的 `delete props` 清单**同步加 `batchDoc`**（不得透传给子代）。
@@ -759,10 +759,10 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 
 #### 2.22.5 batch_segment 移植（F4——工具本体 + 两个适配点）
 
-- **工具本体**：新增 `src/agent-tools/batch-segment.mjs`（契约同 §2.20.1：无路径参数 / 段白名单按身份 / append-only / 来源戳仅 §3 / 剥证自有正则 / fail-closed 六条）——**无依赖冲突，可逐步移植**。
+- **工具本体**：新增 `thincoder-vscode/src/agent-tools/batch-segment.mjs`（契约同 §2.20.1：无路径参数 / 段白名单按身份 / append-only / 来源戳仅 §3 / 剥证自有正则 / fail-closed 六条）——**无依赖冲突，可逐步移植**。
 - **适配点 ①（工具集落点）**：VSC 的 `advisorToolsFor` 在 **`src/advisor/tools.mjs:26`（VSC 仓；单参，49 行）**而非 `run.mjs`——签名改 `(agent, reviewType, batchDoc)`，**仅当 `reviewType === "design"` 且 batchDoc 已绑定**时追加工具；测试缝 `_resolvedAdvisorToolsFor` 保留语义。
 - **适配点 ②（实例键通道）**：VSC 的 `runAdvisorReview`（`src/advisor/run.mjs:346`，459 行）比 CLI 多一个 `rv` 实例参数——`batchDoc` 沿 **`rv.batchDoc`** 传递（与 `rv.round`/`rv.priorOutput` 同族），**不用单值会话态**（与 §2.20.2 同口径）。
-- **挂载**：`src/agent-tools/index.mjs`（16 行）barrel export；`src/agent-tools.mjs`（2 行）为 `export * from` 不需改。
+- **挂载**：`thincoder-vscode/src/agent-tools/index.mjs`（16 行）barrel export；`thincoder-vscode/src/agent-tools.mjs`（2 行）为 `export * from` 不需改。
 
 #### 2.22.6 文档纪律与 V1/V2/V3（F5——含「接线」这一半）
 
@@ -818,8 +818,8 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 
 | 文件 | 性质 | as-of | 增量上限 |
 |---|---|---|---|
-| src/agent-tools/batch-segment.mjs | **新增** | — | +≤200（CLI 同名档 196 行） |
-| src/agent-tools/batch-segment.mjs（原拟 `subagent-spawn-gate`） | 修改 | 169 | +≤15（共享校验 `resolveBatchDocPath`） |
+| thincoder-vscode/src/agent-tools/batch-segment.mjs | **新增** | — | +≤200（CLI 同名档 196 行） |
+| thincoder-vscode/src/agent-tools/batch-segment.mjs（原拟 `subagent-spawn-gate`） | 修改 | 169 | +≤15（共享校验 `resolveBatchDocPath`） |
 | src/agent-tools/subagent.mjs | 修改 | 358 | +≤22（白名单/模式门/enum + **阻塞路 batchDoc 门调用点**〔轮次4 评审 #2〕）——**>300 档：不拆**（单点枚举与单点校验调用，无结构增长）；**函数档：无 ≥300 行单函数**（as-of） |
 | src/agent-tools/subagent-async.mjs | 修改 | 489 | **+≤10（→499，越 500 停下报告）**——含**异步路 batchDoc 门调用点**〔轮次4 评审 #2〕；>300 档：不拆；**函数档：无 ≥300 行单函数**（as-of） |
 | src/agent-tools/advisor.mjs | 修改 | 296 | +≤14（`batchDoc` 参数）——**跨 300：不拆**（单点参数新增，无结构增长；拆分留给专项债）；**函数档：无 ≥300 行单函数**（as-of） |
@@ -1645,8 +1645,8 @@ test("T112 边界：新档自持——零跨档引用；import 全 node:（D-2/A
 | 6 | `src/agent/dispatch.mjs:390` | `§24 D-24b` → `§11.2 D-24b` | B |
 | 7 | `src/agent/record-results.mjs:103` | `§24 D-24b` → `§11.2 D-24b` | B |
 | 8 | `src/agent/run-stages.mjs:166` | `§24 D-24b` → `§11.2 D-24b` | B |
-| 9 | `src/agent-tools/eng.mjs:37` | `§24 D-24b` → `§11.2 D-24b` | B |
-| 10 | `src/agent-tools/eng.mjs:55` | `§24 D-24b` → `§11.2 D-24b` | B |
+| 9 | `thincoder-core/agent-tools/eng.mjs:37` | `§24 D-24b` → `§11.2 D-24b` | B |
+| 10 | `thincoder-core/agent-tools/eng.mjs:55` | `§24 D-24b` → `§11.2 D-24b` | B |
 | 11 | `src/agent-tools/escalate-async.mjs:155` | `§24 D-24a` → `§11.1 D-24a` | A |
 | 12 | `src/agent-tools/subagent-actions.mjs:116` | `§24 D-24b` → `§11.2 D-24b` | B |
 | 13 | `src/agent-tools/subagent-run.mjs:39` | `§24 D-24a/R14` → `§11.1 D-24a/R14` | A |
@@ -2928,7 +2928,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
   **实现面拆分（选型 3）**：2 个并行 eng-coder（①代码面 ②提示词双源面，文件域不相交；锚句断言测试归面 ②）。
   **待用户裁**：无（四项选型已定，见 §2.22）；**实现未启动**（待用户发起评审 → 批准）。
 
-- 2026-09-10（晚·十三）：**第 4 批实施交付核销**（eng-coder 终态 **clean**）——交付 26 文件：新 2（`src/agent-tools/batch-segment.mjs` 196 / `test/batch-segment.test.mjs` 321），改 24（挂载三处 + advisor 参数/实例键 + run.mjs 设计分支 + V3 入 check-doc-width + 提示词双源 12 + TOOLS/AGENT-LOOP 登记）。
+- 2026-09-10（晚·十三）：**第 4 批实施交付核销**（eng-coder 终态 **clean**）——交付 26 文件：新 2（`thincoder-core/agent-tools/batch-segment.mjs` 196 / `test/batch-segment.test.mjs` 321），改 24（挂载三处 + advisor 参数/实例键 + run.mjs 设计分支 + V3 入 check-doc-width + 提示词双源 12 + TOOLS/AGENT-LOOP 登记）。
   内层 explore 审计 1 轮 + advisor 代码评审 2 轮 **pass**；父侧 L2 **324/324 全绿**；AC29–AC36/T43–T53 全绿；档位两约束未越（497/298）。**FR22 已落地**；批次档 §6 已回填（父侧验证/核销清单/遗留四项）。
 
 - 2026-09-10（晚·十二）：**第 4 批设计评审轮次 5 处置（PASS 后 advisory 全修；同链复用 token，不重评审）**（6🟡+5🔵）：
@@ -2965,7 +2965,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 - 2026-09-10（晚·八）：**第 4 批设计评审轮次 1 处置**（1🔴+6🟡+5🔵——用户裁定**全照办**）：
   🔴 来源戳——守卫表新增「**来源戳由工具生成**」（N = 计数 + 1；调用方同名标题被忽略）+ **AC34/T48**；
   🟡 评审侧门禁改「**若传则须可读**」并记取舍（不改 N5 零回归；§2.20.8 取舍记录）· 提示词面扩到 **round2/round3**（`src/advisor.mjs:109-115` 实证）+ **AC35/T49** ·
-  §2.21 补 **`src/agent-tools.mjs`（barrel）** · 需求档行改标 **eng-designer 落笔** · F4/F5 补 AC35 ·
+  §2.21 补 **`thincoder-core/agent-tools.mjs`（barrel）** · 需求档行改标 **eng-designer 落笔** · F4/F5 补 AC35 ·
   评审侧绑定改**评审实例键**（并发出隔离不变量 + **AC36/T51**）；
   🔵 run.mjs 行数写法澄清 · **骨架保护**（拒 `^## §\d`，T50）· 守卫表补「身份判据」列 · §2.21 计入 `AGENT-LOOP.md:283` 修正 · 抽查结果回记。
 

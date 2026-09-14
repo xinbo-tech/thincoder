@@ -99,7 +99,7 @@ export async function injectTurnReminders(agent, ctx) {
       && !lastMsg.content.startsWith("[System reminder:")
       && !lastMsg.content.startsWith("[User interrupt:")
     const newUserSince = realUserMsg && agent.history.length > (agent._planReminderAtLen ?? 0)
-    const { planReminderForTurn } = await import("../agent-tools/plan.mjs")
+    const { planReminderForTurn } = await import("@thincoder/core/agent-tools/plan.mjs")
     const reminder = planReminderForTurn(agent, newUserSince)
     if (reminder) {
       agent._planReminderAtLen = agent.history.length + 1

@@ -519,7 +519,7 @@
 | 7 | `CONSULTATION` | ② | 仅 design 层（161 行） | **建本仓需求档** → `docs/requirements/CONSULTATION.md` | `src/agent-tools/consult.mjs` 在位；需求层无档 |
 | 8 | `CONTEXT-COMPACTION` | ② | 仅 design 层（146 行） | **建本仓需求档** → `docs/requirements/CONTEXT-COMPACTION.md` | `src/compact.mjs`（VSC 仓） 在位；需求层无档 |
 | 9 | `CRASH-REPORTS` | ③ | 无 | **本端无此面**（保持） | 本端无崩溃取证面（`crash*.mjs` 零命中；无 `process.report` 面） |
-| 10 | `DESIGN-TOKEN-SETTLEMENT` | ② | 仅 design 层（109 行） | **建本仓需求档** → `docs/requirements/DESIGN-TOKEN-SETTLEMENT.md` | `src/agent-tools/eng.mjs`（流程凭证面）在位；需求层无档 |
+| 10 | `DESIGN-TOKEN-SETTLEMENT` | ② | 仅 design 层（109 行） | **建本仓需求档** → `docs/requirements/DESIGN-TOKEN-SETTLEMENT.md` | `thincoder-core/agent-tools/eng.mjs`（流程凭证面）在位；需求层无档 |
 | 11 | `ENG-TOKEN-BINDING` | ② | 有档（48 行） | **已有对位** | 归位档在位 |
 | 12 | `ENGINEERING-MODE` | ② | 有档（79 行） | **已有对位** | 在位（本批首建） |
 | 13 | `ESCALATE` | ② | 仅 design 层（166 行） | **建本仓需求档** → `docs/requirements/ESCALATE.md` | `src/agent-tools/subagent-escalate.mjs`（VSC 仓） 在位；需求层无档 |
@@ -545,7 +545,7 @@
 | 33 | `TUI` | ② | 仅 design 层（`docs/design/WEBVIEW.md`（VSC 仓） 1865 行） | **建本仓需求档** → `docs/requirements/WEBVIEW.md`（VSC 仓）（**异名**——本端 UI 面 = webview） | 端差已登记；需求层无档 |
 | 34 | `TUI-TOOL-OUTPUT` | ② | 仅 design 层（同上 `WEBVIEW.md`） | **建本仓需求档** → `docs/requirements/WEBVIEW.md`（VSC 仓）（**与 #33 同档承载**） | 呈现面 = webview 工具卡；行间区块机制端差已登记 |
 | 35 | `TURN-CAP-CONTINUE` | ② | 仅 design 层（208 行） | **建本仓需求档** → `docs/requirements/TURN-CAP-CONTINUE.md` | `src/agent.mjs` maxTurns / `ContinueError` 在位；需求层无档 |
-| 36 | `VERIFY-REDESIGN` | ① | 有档（34 行） | **已有对位** | 本批新建档在位（机制 = `src/agent-tools/verify.mjs`） |
+| 36 | `VERIFY-REDESIGN` | ① | 有档（34 行） | **已有对位** | 本批新建档在位（机制 = `thincoder-core/agent-tools/verify.mjs`） |
 
 **三值计数（本轮修订口径）**：① **18** · ② **16** · ③ **2** → 18+16+2 = **36** ✅
 
@@ -735,7 +735,7 @@
 | 39 | `docs/requirements/NORMAL-MODE.md`（VSC 仓） | **新建（①）** | 0→~70 | 机制在位（提示词装配层）无档 |
 | 40 | `docs/requirements/SETTINGS-TOOL.md`（VSC 仓） | **新建（①）** | 0→~70 | 机制在位（`src/agent-tools/settings.mjs`）；部分承载 = `docs/design/TOOLS.md` §5 |
 | 41 | `docs/requirements/STRUCTURE-DEBT.md`（VSC 仓） | **新建（①）** | 0→~60 | 本端结构债登记面缺失 |
-| 42 | `docs/requirements/VERIFY-REDESIGN.md`（VSC 仓） | **新建（①）** | 0→~60 | 机制在位（`src/agent-tools/verify.mjs`）无档 |
+| 42 | `docs/requirements/VERIFY-REDESIGN.md`（VSC 仓） | **新建（①）** | 0→~60 | 机制在位（`thincoder-vscode/src/agent-tools/verify.mjs`）无档 |
 | 43 | `thincoder-vscode/docs/batches/`（迁移 **14** 档） | 迁入 4234 行（含 10 行折行） | ±0 | §8.3 迁移表逐档 |
 | 44 | `thincoder-vscode/docs/batches/`（拆分 **17** 档新档·本批） | 新建 | 0→≈168 条目 | §8.3 拆分表对端份 |
 | 45 | `thincoder-vscode/docs/design/_archive/`（迁移 3 档） | 迁入 223 行 | ±0 | `DOC-REORG-VSC` 90 · `DOC-REWRITE-VSC` 74 · `TRACE-STORE-VSC` 59 |

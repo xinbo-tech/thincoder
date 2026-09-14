@@ -7,7 +7,7 @@
  * blocking review); depth>0 (eng-coder self-review) stays synchronous always.
  */
 import { runAdvisorReview, MAX_ADVISOR_ROUNDS, buildCapMessage, advisorIncompleteMarker, ADVISOR_LAUNCH_REFUSAL_PREFIX, buildDesignReviewGuardMessage } from "../advisor/run.mjs"
-import { resolveBatchDocPath } from "./batch-segment.mjs"
+import { resolveBatchDocPath } from "@thincoder/core/agent-tools/batch-segment.mjs"
 import { isDocPath, loadConventions } from "@thincoder/core/conventions.mjs"
 import {
   generateDesignToken,
