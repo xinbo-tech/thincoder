@@ -692,6 +692,65 @@ F4-3 读不懂就跑（实证优先）· F5-1 需求池攒批（登记 / 阈值�
 
 > 折行注（2026-09-15 · eng-designer · 零语义）：本段一行超宽（折行前编号 :656 · 314 字符）⇒ 仅插换行、文字零改 ✓
 
+**本批任务（B 式迁移轮 · VSC 终收批 = §8B 并入批 4 · #4 / #7）**：§8B 剩余 2 条（PROVIDER 目标）逐条对账合并 ✓ + req/TOOLS.md 核对（批 8 §4.6 完整性 + 并行线 §4.7 保留）✓ + INVENTORY §8B 行头 → 「已并入（终收）· §8B 清零」✓ + 变更记录 ✓。
+
+**范围内（本批覆盖的需求）**：F-M9（并入面逐条：内容 → 目标 core 档 → 落节 → 实核）· F-M4（落点档不含批次材料 + (d) 类不并逐项入各档「不并项」节）· F-M5（坐标改现状路径 + `file:line` 实核）· F-M3（逐档报「源档 → 落点」）· F-M8（§8B 收口 + 小计闭合）· N-M2 / N-M3 / N-M5（三闸 + 写域 + 逐档 ≤500）。批 1–8 已闭合者不重开。
+
+**① 取材清单（§8B 取 2 条 · 逐条实核目标现态——并行线已消失（TTY-DRIVE / 渠道名批完工）· PROVIDER 可写）**：
+
+| 清单号 | 源档（VSC 树·一字未改） | 实核（目标 core 档现态） | 处置 |
+|---|---|---|---|
+| 4 | `design/IMAGE-DOWNGRADE-VISION.md`（130） | core PROVIDER design 档 §6.1–§6.17 无图片 / 贴图面（实核插节 · §8B-4 原判成立） | **并入**（§6.18 图片输入与贴图降级链——与 #7 §8 合成一节） |
+| 7 | `design/PROVIDER.md`（463） | core 档 293 行（含并行线 qwen-plan 批 §6.11 / D-PR25 现态——不覆盖）；§6.17 后无 VSC 接线面 | **并入**（§6.18 图片输入面 + §6.19 VS Code 端接线——配置存储 / 预设 / 面板 / transport / 能力适配 / 标题生成） |
+
+**跳过并写明**：#18 / #25（批 6 已销项 D3 / D2 不重取）· req/TOOLS.md 核对 = 纯读确认零写入（§4.6 完整 · §4.7 TTY 面保留）。
+
+**② 并入逐节（源节 → 目标落位）+ 行数前 → 后（终值实测）**：
+
+| 目标档 | 源档 | 落位 | 行数 前 → 后 |
+|---|---|---|---|
+| `docs/core/design/PROVIDER.md` | IMAGE-DOWNGRADE 需求节 / 设计链 / A12③ 契约 + PROVIDER §8 | §6.18 图片输入与贴图降级链（输入链 / 降级链 / 降级窗 Stop 契约 / 关键决策边界）+ 来源注 | 293 → 355（折行后终值） |
+| `docs/core/design/PROVIDER.md` | PROVIDER §1–§7 的 VSC 端差面 | §6.19 VS Code 端接线（配置存储端差 / Preset 镜像 / 面板 UI / transport 端差 / 能力适配坐标 / 标题生成）+ 来源注 | （同档累计 → 355） |
+| `docs/core/design/PROVIDER.md` §7 | — | D-PR26（文本描述替换 images）· D-PR27（降级窗 Stop = 启动即中止） | 同档累计 |
+| `docs/core/design/PROVIDER.md` §8.2 | 两源档批次面 | 不并项登记 2 行（受影响文件 / 用例 / AC / 状态行 / 变更流水 + A12 契约用例字面块） | 同档累计 |
+| `docs/core/design/PROVIDER.md` §9 | — | 体量 293 → 360（高于软线、低于硬限——拆分面 3 候选 + 新面候选 一并待用户裁定） | 同档累计 |
+| `docs/core/requirements/PROVIDER.md` | IMAGE-DOWNGRADE 需求节（F-1–F-4） | §4.5 VSC 端图片输入与贴图降级条目（F-IDG-1–3 / N-IDG-1–2——编号系本子节自有 · 非核心统一面条目）+ §5 登记行 + 变更记录 | 128 → 145 |
+| `docs/vsc/design/VSC-MIGRATION-INVENTORY.md` | —（台账面） | §8B 行头 → **已并入（终收）· §8B 清零（26/26）** · #4/#7 行尾注 · §9 批 9 · §10 待落清零 · §13 / §15 同步 | 499 → 500 |
+| `docs/vsc/design/VSC-MIGRATION.md` | —（主档） | §6 批 6+ → 已落（终收）· 收尾轮状态 26/26 · 变更记录 +1 行 | 138 → 139 |
+
+**③ req/TOOLS.md 核对结论**：§4.6「VSC 端条目」（描述外部装载 / 打包面 N6 / 批合并与 child 审批——坐标 `src/tools/index.mjs:50` · `src/tools/shared.mjs` 414 行）+ 变更记录行 + §5 登记行**全数在位**（对照批 8 报告逐项 ✓）；§4.7 TTY 驱动能力（U1–U4 / N1–N5 / 范围边界 / 相容性核对 / 待定项 3 条）**逐字保留** ✓。**零写入**（未补行——批 8 已完稿）。
+
+**④ §8B 收口（小计闭合 · D3）**：26 = **8（批 6）** + **8（批 7）** + **6（批 8）** + **2（批 9 已并入——#4 / #7 = PROVIDER 目标）** + **2（裁定销项——#18 D3 · #25 D2）** ✓。**§8B 清零——26/26 全数处置**（§8B 行头终态）。
+
+**⑤ 三闸读数（改后 · 实跑）**：`doc-anchors --domain .`（125 档）→ 候选 8023 · **悬空 0** · `OK(V5)` · exit 0 ✓
+（本批曾自产 3 处悬空——§6.19 两处裸坐标（`config-io.mjs:213/230`）+ §8.2 登记字面 `T-MA12`——**已当场修**：补 `thincoder-vscode/src/` 仓根前缀 / 去字面用例号）；`check-doc-width` → **OK（宽度）**：403 文件无 >300 字符单行 · **一致性 V1/V2/V3 新增违规 0** · 基线 0 · exit 0 ✓
+（本批曾自产 24 行 >300 非表格行——**已当场折行**：零语义——§6.18/§6.19 长段 + 变更记录 + INVENTORY §13）；`check-ledger` → 两档 `OK` · **0 处违规** · 基线 0 · exit 0 ✓。
+`git status`（workdir = `thincoder`）本批 = **4 档**（core design PROVIDER · core requirements PROVIDER · INVENTORY · 主档）⊆ 写域 ✓；另 3 项（`docs/core/requirements/PHILOSOPHY.md` · `thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md` · `thincoder-vscode/scripts/reconcile-lookup.mjs`）= **并行线未提交 / 工作树既有——非本批写入**（前批已登记）。
+
+**⑥ 发现（逐条 · 不静默）**：
+
+- **① 并行线已完工（qwenplan 渠道名 + TTY-DRIVE 两线）**：PROVIDER design 档现态含 qwen-plan 批 §6.11 行集 + D-PR25 + 变更记录 2 行（评审修正轮）——本批并入均以**现态为基线落笔**（不照抄旧拟插节）；未触碰并行线产物。
+- **② 坐标实核 13 类**：`routeUserTurn` `panel-messages.mjs:59` · `runVisionReader` / `VISION_READ_TIMEOUT_MS` `image-handler.mjs:65/:64` · `appendImagePointer` `setup-reminders.mjs:216`（`setup.mjs:455` 调用）· 降级窗 `_visionAbort` `:90/:93` · abort 定向 `:236-237` · 停后闩 `:104` · `newTurnController` `panel-chat.mjs:59-60/:129` · `specForModel`/`providerSpec`/`resolveEnableThinking`/`isBailianHost` `config.mjs:106/142/183/166` · `PROVIDER_PRESETS`/`presetToEntry` `config-presets.mjs:10/35` · `resolveProviders`/`resolveDefaultModel`/`probeTargetFromEntry` `config-io.mjs:167/213/230` · `addProviderFlow` `provider-flows.mjs:106` · `fullStatus` `settings.mjs:308` · `generateTitle` `generate-title.mjs:13`（thinkingConfig `:57`）· `chat`/`TRANSPORTS` `provider.mjs:122/110`——**全部按现状实核落笔**（源档旧坐标漂移 0 类——全部命中）。
+- **③ 两源档的姿态**：`thincoder-vscode/docs/design/{PROVIDER,IMAGE-DOWNGRADE-VISION}.md` **一字未改**（参照历史；git status 无这两档）。
+- **④ 语义面零碰**：本批全部属一致性面 / 并入面；无需求矛盾 / 归属变化 / 判据缺失（任务书「(a)(b)(c) 并 · (d) 不并」判据全程可判）——**零停报**。
+- **⑤ INVENTORY 越线收回**：终收更新曾达 501 行 > 500 硬限 ⇒ 压缩 §10 批 9 独立行为「待落清零」行（D2 明细 = 批次档 §2）· §9 批 9 段行内收窄 → 500 行 ✓。
+
+**⑦ 未决（真判不准）**：**无**——两源档逐节属「并入 / (d) 不并」皆可判；唯一留给父侧 = PROVIDER design 档 360 行已越 300 软线（§9 拆分面 3 候选 + 新 VSC 面可拆候选——**需用户裁定是否拆**，本批不自行拆档）。
+
+**⑧ 交付表**：
+
+| # | 需求点 | 状态 | 交付物 |
+|---|---|---|---|
+| 1 | §8B #4 / #7 并入 · 逐条实核（目标现态为准 · 并行线完工后可写） | ✅ Done | 2 条并入（§6.18 图片输入与贴图降级链 + §6.19 VS Code 端接线 + 需求档 §4.5）——未照抄拟插节、按目标现态落位 |
+| 2 | (a)(b)(c) 并入 · (d) 入各档「不并项」节 | ✅ Done | §8.2 登记 2 行（批次面 + A12 契约施工块）+ 需求档 §5 登记 1 行 |
+| 3 | 坐标改现状路径 + `file:line` 实核 · 零 `T-` 形用例号 | ✅ Done | 13 类坐标全量实核（发现②）；3 处自产悬空当场修（裸坐标补仓根前缀 / 去字面 T-MA12） |
+| 4 | req/TOOLS.md 核对（§4.6 完整 · §4.7 保留 · 零写入） | ✅ Done | 核对结论见 ③（§4.6 全数在位对照批 8 报告 · §4.7 逐字保留）——不补行 |
+| 5 | INVENTORY §8B 行头 → 「已并入（终收）· §8B 清零」+ 变更记录 | ✅ Done | §8B 行头 26/26 清零 · §9 批 9 · §10 待落清零 · §13/§15 同步 · 主档 §6 状态行 + 变更记录 +1 |
+| 6 | 逐档 ≤500 · 三闸（锚 0 / 宽度新增 0 / 台账 0）· `git status` ⊆ 写域 | ✅ Done | 见 ⑤（360 / 145 / 500 / 139——均 ≤500 ✓ · 三闸全绿 · 本批 4 档 ⊆ 写域） |
+| 7 | 不 commit · 不发起评审 · `thincoder-vscode/**` 零写入 | ✅ Done | 未 commit；两源档一字未改（`git status` 实核）· INVENTORY 越线收回（501 → 500） |
+
+**变更记录**：- 2026-09-15（**§8B 终收批 = 并入批 4** · eng-designer）：§8B #4 / #7 并入（core PROVIDER design §6.18 图片输入与贴图降级链 + §6.19 VS Code 端接线 · D-PR26/27 · §8.2 登记 · 需求档 §4.5 F-IDG 系）+ req/TOOLS.md 核对（§4.6 完整 · §4.7 保留 · 零写入）+ INVENTORY §8B 清零（26 = 8 + 8 + 6 + 2 + 2）+ 主档状态行收口 + 三闸全绿（锚 0 · 宽度新增 0 · 台账 0）+ INVENTORY 越线收回（501 → 500）。
+
 ## §3 评审发现（评审子代理）
 
 _（待写）_

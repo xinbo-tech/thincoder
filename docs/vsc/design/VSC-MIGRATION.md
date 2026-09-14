@@ -76,10 +76,10 @@
 | **批 3** | 统一面（P1）64 档**复判** + 纯新建第一批（3 板块设计 / 需求成对） | 6 | `docs/core/{design,requirements}/{TURN-CAP-CONTINUE,SEND-STALL-DISTILL,ESCALATE}.md` | `docs/core/**` | **已落**（INVENTORY §9.3） |
 | **批 4** | 统一面**纯新建**（落笔时核层无同话题档者） | 6 | `docs/core/{design,requirements}/{DOC-CODE-RECONCILE,AGENT-PARAMS,NORMAL-MODE,MULTI-INSTANCE-COLLAB,SETTINGS-TOOL,STRUCTURE-DEBT}.md` | `docs/core/**` | **已落**（INVENTORY §9.4） |
 | **批 5** | §8A 剩余纯新建（5 档——ADVISOR-CONVERGENCE 翻转跳过 · PROJECT 拆分双落）+ 本档拆分 | 6 | `docs/core/requirements/{DESIGN-TOKEN-SETTLEMENT,ENG-TOKEN-BINDING,PORTABILITY,VERIFY-REDESIGN,PROJECT}.md` · `docs/vsc/requirements/PROJECT.md` · `docs/vsc/design/VSC-MIGRATION-INVENTORY.md` | 新建 core 需求档 + `docs/vsc/**` | **已落**（INVENTORY §9.5） |
-| **批 6+** | §8B 并入清单 **26 条**（转并入既有面）+ 待裁 D1–D3 定判后处置 | 26+ | INVENTORY §8B 逐条给定 | `docs/core/**`（+ 待裁项 `docs/vsc/**`） | **在途**（串行——避与 CLI 批同文件覆盖；批 6·7·8 已并入 24 条 → INVENTORY §8B） |
+| **批 6+** | §8B 并入清单 **26 条**（转并入既有面）+ 待裁 D1–D3 定判后处置 | 26+ | INVENTORY §8B 逐条给定 | `docs/core/**`（+ 待裁项 `docs/vsc/**`） | **已落（终收 2026-09-15）**——26 条全数并入：批 6（8）+ 批 7（8）+ 批 8（6）+ 批 9（#4 / #7）+ 裁定销项（#18 / #25）→ INVENTORY §8B |
 | **收尾批** | 产品树两份地图（`design/README.md` · `requirements/README.md`）随树降格处置 | 2 | —— | 父侧 | 待排（收尾轮 2026-09-15：产品树降格声明已落 §2.4 · 地图处置仍待父侧） |
 
-**收尾轮状态（2026-09-15 · eng-designer）**：§8A 新建面**闭合**（18 = 6 + 7 + 4 + 1——INVENTORY §8A 小计）；§8B 并入 **24/26**（批 6·7·8）· 余 **#4 / #7**（PROVIDER 目标——待并行线完工 → 父侧终收）；待裁 D1–D3 **已裁定**（§7.1）。
+**收尾轮状态（2026-09-15 · eng-designer）**：§8A 新建面**闭合**（18 = 6 + 7 + 4 + 1——INVENTORY §8A 小计）；§8B 并入 **26/26 · §8B 清零**（批 9 终收 #4 / #7 → INVENTORY §8B 行头）；待裁 D1–D3 **已裁定**（§7.1）。
 
 ## 7. 待核（**已销项**——既有裁定）
 
@@ -135,3 +135,4 @@
   **§8A 闭合**（18 = 6 + 7 + 4 + 1）；本档 560 行越硬限 ⇒ 拆出台账面 ⇒ `VSC-MIGRATION-INVENTORY.md`（两档拆分登记；§6 过期「批 3+」行并入「批 6+」行收正）。
 
 - 2026-09-15（**收尾轮 · eng-designer**）：台账状态面核对（§3–§5 实点/二分/历史档 · §4.3 小计闭合 · §6 分批行 · §7.1 待裁已裁定登记）· §8A/§8B 行头标「进行中」（INVENTORY）· 产品树降格声明落 §2.4 —— 批 6–8 变更记录 = 批次档 §2 + INVENTORY §8B/§9（D2，本档不重复）。
+- 2026-09-15（**§8B 终收批 · eng-designer**）：§8B #4 / #7 并入 `docs/core/design/PROVIDER.md`（§6.18 图片输入与贴图降级链 + §6.19 VS Code 端接线）· 需求档补 §4.5 VSC 端图片输入条目；INVENTORY §8B 行头 → **已并入（终收）· §8B 清零（26/26）**；§6 状态行收口（批 6+ → 已落）。

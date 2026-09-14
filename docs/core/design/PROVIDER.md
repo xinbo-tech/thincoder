@@ -214,6 +214,66 @@ qwen 系列（百炼**混合思考**模式，默认开启）需能**真正关闭
 - **域外与端面**：会话动态头（`x-opencode-session` 类）不做（证据未立）；embedding 独立渠道无定制头字段；**VS Code 端无 `providers[].headers` 概念**（配置面与展开面均无——对位引入属新需求）。
 - **已知边界**：大小写变体同名定制头交给 fetch 归并（不做大小写归一）；未经装载面净化而直达 `chat()` 的定制 `Authorization` 在 anthropic 通路（无内置 `Authorization`）原样透传——不在本项加第二道防线。**open 项：无**。
 
+### 6.18 图片输入与贴图降级链（VSC 端 · 终收批并入）
+
+> **来源** = `thincoder-vscode/docs/design/PROVIDER.md` §8 + `thincoder-vscode/docs/design/IMAGE-DOWNGRADE-VISION.md`（§8B #7 / #4——终收批并入）；本档 §6.1–§6.17 原无图片 / 贴图面（实核插节）。
+
+**图片输入链（VSC）**：粘贴 / 拖拽 / 附加按钮 → webview 传 dataURL → `thincoder-vscode/src/extension/panel-messages.mjs` `routeUserTurn`（`:59`）内
+`savePastedImages`（`:82`）落盘 `<cwd>/.thincoder/tmp/paste-<id>-<i>.<ext>`（`src/extension/image-handler.mjs`；raster png / jpg / gif / webp 白名单 + >15MB 跳过）→
+`thincoder-vscode/src/agent/setup-reminders.mjs:216` `appendImagePointer` 给真实 user 消息追加 `[Attached images: …] — use the read_image tool to view them before answering.`（**非多模态模型直接 throw**——可见错误不静默丢）→
+模型调 `read_image` 带图进载荷。历史内容保持字符串（不回放 images）；文件随 offload 写时自清理。
+
+**贴图降级链（非视觉模型自动降级）**：非视觉模型贴图不再硬报错——自动降级为视觉模型子代理读图、文本描述注入主会话——用户无感换模型（VSC 主；CLI 镜像软引导）。触发点 = `routeUserTurn`（savePastedImages 后、主回合 LLM 请求前）：
+非视觉模型（`specForModel(provider.model).multimodal` 假）+ images 非空 + depth-0 → ① 视觉渠道查找（`thincoder-vscode/src/extension/vision-channel.mjs`——resolveProviders 扫 multimodal；判据与 appendImagePointer / read_image 注册门同源 = MODEL_SPECS multimodal）
+② extension 内直跑一次性视觉子代理读图（`runVisionReader`——`image-handler.mjs:65`，复用 runAgent / runChild 换渠道模式；**超时 60s**（`VISION_READ_TIMEOUT_MS` `:64`）；seam = `visionReader ?? runVisionReader` 参数注入 `panel-messages.mjs:92`）
+③ 描述注入：text 改 `[图片 <路径> 描述: <视觉子代理描述>]`、images 清空（appendImagePointer throw 路径不达）④ fallback：
+无视觉渠道 / spawn 失败 / 超时 / 空返回 → 保留现可读报错（不静默丢图）。
+
+**降级窗 Stop 契约（A12③ 修复）**：窗内 await 期间 ⏹ 必须有效（原两路皆静默无效：僵尸 controller 交付无效 / 闩被无条件清）。契约 =
+① 窗前建 `AbortController` 挂 `panel._visionAbort`（`:90` · `finally` 幂等清理 `:93`）② 取消缝——`runVisionReader({ …, signal })` 内 `signal?.addEventListener("abort", () => ac.abort(), { once: true })` 桥接内部超时 controller（既有 catch → `null` 语义复用——零新返回形态）
+③ abort 定向——面板 abort case 的 running 分支**优先**判 `panel._visionAbort`（`:236-237` → `abort()` 后跳出，不再落僵尸交付路径）
+④ 停后语义 = **启动即中止**——
+await 快速返 `null` → 照常 `_chat`（用户消息入 history——at-most-half-a-turn）→ `_chat` 调用后置 `panel._abortRequested = true`（`:104`）——`newTurnController`（`panel-chat.mjs:59-60` / `:129`）消费 → 回合建立即 abort ⑤ **零新增布尔状态**（stopped 判定 = `signal.aborted`；唯一新字段 = `panel._visionAbort`——窗生命周期）⑥ 边界：
+Ctrl+I（interrupt）面与视觉模型 / 无图路径零动；`maxTurns` 不改。
+
+**关键决策与边界**：① **返回形态 = 文本描述替换 images**（与现机制完全兼容——无图污染；否决去图投喂主模型——非视觉模型无图路径）② **引擎级新 spawn 通道不建**（勘察确认不存在——降级 = extension 内 runAgent 一次性直跑，不走 agent-tools 池）③ CLI 镜像 = 软引导（read_image 工具错误文案追加「可 spawn 视觉模型子代理读图」；硬自动 CLI 不做）④ UI 前置（模型下拉 vision 标记）= UX 增强**移出本批**（后批）⑤ 边界：
+视觉模型路径零动 · 非 raster（svg / heic）现 toast 不变 · **depth>0 子代理回合非视觉贴图沿用现报错（不降级）** · retry 不回带 images（另行登记）⑥ `maxTurns` 固定 10——大贴图 / 多图可能超限落 fallback——**观察登记不改**（按图数伸缩候选在 TODO 在案）。
+
+### 6.19 VS Code 端接线（面板 / 预设 / 配置存储 / transport 端差 · 终收批并入）
+
+> **来源** = `thincoder-vscode/docs/design/PROVIDER.md`（§8B #7——终收批并入）；机制正文（chat 主流程 / 重试超时 / SSE / 续写 / 闸门 / 净化 / 规格表 / 预设 / enable_thinking / Responses / providerSpec / 模型清单 / 请求头装配）已住 §6.1–§6.17——本节只收 **VSC 端接线与端差**（同一事实不重述，D2）；坐标 = as-of 2026-09-15 实核。
+
+**配置存储端差**（`thincoder-vscode/src/config-io.mjs`）：与 CLI 共享 `~/.thincoder/config.json`（`resolveProviders` `:167`）——差异点 = ① `resolveKey` **只读 config.json `entry.apiKey`**（env 不是密钥源——与 CLI env 回退语义不同）；空 → provider 不可用（`providerFromConfig` 返回 null；模型选择走 onboarding）
+② 代理 = provider 级 `proxy: true` **且** 全局 `proxy.model === true`（`injectProxy` 语义）→ 请求经代理（单键不生效）
+③ **并发写防冲突（F5b）**：`loadRaw` 记 mtimeMs + size 基线、`saveRaw` 写前重 stat 不符 → 放弃 `{reason: "mtime-conflict"}` + `.bak-{ts}` 轮转（副本不自动合并）+ `CONFIG_CONFLICT_HINT` 提示重试 ④ 旧版迁移：
+VS Code settings 的 `thincoder.providers` + SecretStorage 一次性迁入 config.json（`thincoder-vscode/src/config-migrate.mjs` `migrateCore`——不覆盖已有 apiKey、preset 名自动重建）后清 legacy 存储；嵌入 key 一并迁移 ⑤ `resolveDefaultModel`（`thincoder-vscode/src/config-io.mjs:213`）回退链 =
+① defaultModel 复合属本渠道 ② 渠道单值 `entry.model` ③ `null`——**不再静默回退 `models[0]`**（§6.16 M7 同源 · VSC 独立实现）；v2 迁移 `delete p.models` / `p.model` 单值恢复。
+
+**Preset 预设表端差**（`thincoder-vscode/src/config-presets.mjs:10`）：`PROVIDER_PRESETS` 镜像 CLI **保持同步**——**20 preset**（deepseek / kimi / kimi-code / glm / glm-code / qwen / qwenplan / mimo / mimoplan / minimax
+/ openai / claude / gemini / grok / mistral / volcengine / hunyuan / siliconflow / openrouter / groq）；
+claude / gemini 携 `format: "anthropic" / "google"`；minimax 携 `chatPath: "/text/chatcompletion_v2"`；`presetToEntry`（`:35`）剥离 `desc` 余下发成 provider 条目
+（单值默认模型——§6.11 同源）；2026-09-11 `deepseek` 预设默认模型 → `deepseek-flash`（§6.11 同源）。
+
+**模型选择 UI（面板接线）**：主下拉列 provider 行（名 + 当前模型 + `›`）+ hover flyout 子菜单（webview 无键盘导航）；选中 = 写当前会话槽；设置面板「默认模型」项 = provider →
+运行期拉取候选两级（写 `raw.defaultModel`）。Add / Remove / Key 流 = `thincoder-vscode/src/extension/provider-flows.mjs`（`addProviderFlow` `:106`——QuickPick preset 过滤已添加或 Custom 手输 name / baseURL / model + format → `addProviderEntry` → 问 key → `setProviderKey`）；
+`settings.mjs` `fullStatus`（`:308`）单源拉取
+（逐已配置渠道各探一次——探通 → 候选行直接可选；探不通 → 不可选 + 失败消息随载荷）。**M9 准入探针（配置阶段）** = 收敛于 `thincoder-vscode/src/provider/list-models.mjs`（探针形状由 `thincoder-vscode/src/config-io.mjs:230` `probeTargetFromEntry` 组装）；探通 / 探不通两态 + **不阻断保存**；`defaultModel` 写面探针 fire-and-forget（写面为同步契约——探针绝不 reject）；**运行期零探测**（启动 / 发请求 / 面板打开不做 `/models` 探测）。候选未命中 = 保持当前选择显示与状态
+（回落会话槽复合）+ 零 `selectModel` / `selectReasoning` post（§6.16 M10 语义同源 · 独立实现）。
+
+**transport 端差**（`thincoder-vscode/src/provider.mjs:122` chat / `TRANSPORTS` `:110`）：调用链与 §6.2 同构（统一结果形态 + 净化 + 分派 + 闸门 + 重试 + 续写——不重述）。差异登记 =
+① **超时相位（CLI 对位 §6.3）**：绝对墙钟废除；响应头阶段 600s（代理路径 `_headerTimeoutMs`；直连 undici 默认）+ body 读侧空闲 120s（`READ_IDLE_MS`——**四 transport 全配**，CLI 仅 sse / google 有——差异登记）；本端无 `fetchTimeoutMs` 配置键（不加配置面——差异登记）
+② **Responses 实现差异注（CLI 对位 §6.13）**：`buildRequest` 返回 `{ url, headers, body, _chainMeta, _warnings, _previousResponseId }`
+（链决策元数据走非序列化 `_chainMeta`）；`normalizeUsageCache` 内化为私有 `normalizeUsage`；`parseStream` 额外返回 `responseId`（completed 事件）与 `builtinToolResults`；
+本地接线 = responses provider 经 config.json 手写 `format: "responses"` 或预设扩展启用（custom 表单 format 下拉未加 responses 项——显式 opt-in，CLI parity）；finishReason 区分（`response.incomplete` 非长度原因不得报成 `length`）。
+
+**能力适配端差**（语义同源不重并——坐标即指）：`specForModel` / `providerSpec` / `resolveEnableThinking` / `isBailianHost`（`thincoder-vscode/src/config.mjs:106 / :142 / :183 / :166`）·
+reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` → `thinking: null` + `reasoningEffort: null` 真 off）· escape v5 与 UTF-16 安全截断（`src/escape.mjs` + `src/agent/run-helpers.mjs` `safeSliceUTF16`——§6.7 同构）·
+畸形 tool_calls 防御（`src/provider/transports/openai.mjs`——§6.10 同构）· 前缀剥离与 `DEFAULT_SPEC` 兜底（§6.9 同构）；
+规格表每行多 `reasoningEffortDefault`（§6.9 已登记端差）。**`provider.headers`：VS Code 端无 `providers[].headers` 概念**（§6.17 域外与端面已登记——对位引入属新需求）。
+
+**LLM 标题生成**（`thincoder-vscode/src/extension/generate-title.mjs:13`；`panel-chat.mjs:334` 触发）：会话第一条 user 消息后 agent 完成回复——取首条文本（多模态 part 数组取 text）→ 用该 provider 发简短 prompt（"Generate a concise title (max 40 chars…)"），**非流式** + `max_tokens: 100` + **逐 format 禁 thinking**
+（openai `thinking:{type: "disabled"}` / anthropic 同 / google `thinkingConfig: {thinkingLevel: "none"}`——`:57`——否则 reasoning_content 吃光输出预算内容空 IK9UZ8）。失败静默降级返回 null（首条消息截断作标题兜底）；10s 超时；标题 trim 截 40 字符。headers 展开消费点已列 §6.17（⑤ 会话标题生成）。
+
 ## 7. 并入的关键决策记录（含否决备选）
 
 | # | 决策 | 理由 / 否决备选 |
@@ -243,6 +303,8 @@ qwen 系列（百炼**混合思考**模式，默认开启）需能**真正关闭
 | D-PR23 | `resolveEnableThinking` 白名单**双条件**（模型前缀 + 百炼 host） | `enable_thinking` 是百炼扩展参数——全局发送会污染 kimi / glm / 自定义端点 |
 | D-PR24 | Responses 链 = **单 turn + host 白名单驱动** | DeepSeek 静默忽略 = 无声丢上下文（比 404 危险）；跨 turn 重建把边界划在最稳点 |
 | D-PR25 | qwen-plan 渠道名 `deepseek-v4.1-flash` **加行对齐** `deepseek-flash`（不引入查表机制改造） | 实证 = GET /models 含该名 · chat 200（2026-09-15）；前缀不相交（第 12 位 `.` 与 `-` 互不为前缀）⇒ 互不 shadow：新行全名命中新行、`deepseek-v4-flash`(-0731) 仍命中退役行——单一 prefix 表零机制变更；排序交由既有 SORTED_SPECS 长度降序（与本批无关）；否决：别名 / namespace 归一 / 后缀剥离改造（0731 前缀命中实证说明纯前缀足够——与 D-PR19「不引入运行期机制」同源） |
+| D-PR26 | 贴图降级返回形态 = **文本描述替换 images**（不动主模型载荷） | 与现机制完全兼容（无图污染）；否决去图投喂 / 多模型双发 |
+| D-PR27 | 降级窗 Stop = **启动即中止**（零新增布尔状态） | Stop 在窗内必须有效；stopped 判定 = signal.aborted；唯一新字段 = panel._visionAbort（窗生命周期） |
 
 ## 8. 不并项与历史沿革
 
@@ -270,10 +332,12 @@ qwen 系列（百炼**混合思考**模式，默认开启）需能**真正关闭
 | §16.7 / §19.7 / §23.7 UI 决策表 | 逐批 UI / 交互决策与 open 项 | 结论已提炼入 §6.16 / §6.17（逐批表为批次语境；open 项均为「无」） |
 | §10 / §16.3 / §6.16 的 VSC 对位实现细节（webview / settings 面板逐档） | VSC 侧独立实现 | 属 VSC 产品树（`thincoder-vscode/src/**`）；单仓单档纪律 = 各产品级实现留各产品树 |
 | §21.2 通路表的 as-of 行号坐标 | 逐通路调用点行号 | 契约（装配顺序 / 通路集合）已入 §6.17；行号为时点坐标 |
+| `IMAGE-DOWNGRADE-VISION.md` + `PROVIDER.md`（VSC 档）的受影响文件表 / 用例表 / AC 表 / 状态行 / 变更记录 | 一次性批次材料 | 机制与契约已入 §6.18 / §6.19；测试资产归测试层（`thincoder-vscode/test/image-downgrade.test.mjs` 现体）；验收勾销归批次档；旧档 = 参照历史 |
+| `IMAGE-DOWNGRADE-VISION.md` 的群 A 批（A12）契约 / 用例施工形态字面编号块 | 批次施工骨架 | 契约语义已提炼入 §6.18（降级窗 Stop 契约）；字面编号块属一次性施工形态 |
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **293 行**（B 轮并入前 63 行 · qwen-plan 渠道名接入批 +4）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **360 行**（B 轮并入前 63 行 · qwen-plan 渠道名接入批 +4 · §6.18 / §6.19 终收批并入 +67）——**高于 300 行软线、低于 500 硬限**——拆分面见下表（现有 3 候选）；与新 VSC 图片 / 接线面的可拆候选一并由用户裁定。
 
 | # | 拆分面 | 去向 | 状态 |
 |---|---|---|---|
@@ -291,3 +355,5 @@ qwen 系列（百炼**混合思考**模式，默认开启）需能**真正关闭
 来源 = `thincoder-cli/docs/design/PROVIDER.md`（**旧档一字未改**——原地作参照历史）；产品需求条目 R1–R20 / N1–N9 归本层需求档 `docs/core/requirements/PROVIDER.md`；首部加机制面指针一行。
 - 2026-09-15（**qwen-plan 渠道名接入批** · eng-designer）：§6.11 行集补 `deepseek-v4.1-flash`（qwen-plan 渠道名 · 字段逐字对齐 `deepseek-flash`）· §7 补 **D-PR25** · §9 实测行数更新；本批源码 / 测试面见批次档 `batches/2026-09-15-DEEPSEEK-QWENPLAN.md`。
 - 2026-09-15（**评审修正轮** · eng-designer）：§7 D-PR25 论证口径改「前缀不相交（第 12 位 `.` 与 `-` 互不为前缀）」——长度排序既不充分也无必要（字典序下退役行反在前），排序交由既有 SORTED_SPECS 长度降序（与本批无关）。
+- 2026-09-15（**§8B #4 / #7 终收批** · eng-designer）：新增 §6.18 **图片输入与贴图降级链**（#4 IMAGE-DOWNGRADE-VISION + #7 PROVIDER §8 合成）+ §6.19 **VS Code 端接线**（配置存储端差 / 预设镜像 / 面板接线 / transport 端差 / 能力适配坐标 / 标题生成——#7 其余面）；§7 补 D-PR26 / D-PR27；§8.2 登记两行；§9 体量更新
+（360 行——高于软线、低于硬限）；来源 = `thincoder-vscode/docs/design/{PROVIDER,IMAGE-DOWNGRADE-VISION}.md`（一字未改——参照历史）。

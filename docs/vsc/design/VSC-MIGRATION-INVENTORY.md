@@ -191,7 +191,7 @@
 
 **批 3 已建（不在本节）**：`docs/core/{design,requirements}/{TURN-CAP-CONTINUE,SEND-STALL-DISTILL,ESCALATE}.md`——见 §9.3。
 
-### 8B 并入清单（根层已有同话题档——父侧串行另派 · 26 条）——行头状态：**进行中**（收尾轮 2026-09-15：批 6·7·8 已并入 24 条 · 余 #4/#7 待并行线 → 父侧终收写 final——本收尾轮不逐条改条目内容）
+### 8B 并入清单（根层已有同话题档——父侧串行另派 · 26 条）——行头状态：**已并入（终收 2026-09-15）· §8B 清零（26 = 批 6 八条 + 批 7 八条 + 批 8 六条 + 批 9 两条（#4 / #7）+ 裁定销项两条（#18 / #25））**
 
 **口径**（承 §4 表「动作」列的「并入既有」行）：B 式 = 只并**根层缺的内容**，追加在既有结构**之后**、不改既有节序；同一事实只详述一处（D2）。
 
@@ -200,10 +200,10 @@
 | 1 | `design/AGENT-LOOP.md`（1571）——VSC 侧接线面（挂起回合 digest / eng-coder 交付协议 / 子代理活动显示 / child permission gate） | `docs/core/design/AGENT-LOOP.md` | §6 机制面之后（新增「VSC 侧接线」节） | 该档 §6 为 CLI 档并入面、无 VSC 接线节；`:134` 已登记一条未并入项 ⇒ **已并入（批 8）**——§6.18 VSC 侧接线面（挂起 / 协议 / 活动显示 / child gate 四接线面） |
 | 2 | `design/AGENT-PARAMS-TUNING.md`（114）——VSC 端 explore「30 硬帽」移除现状 | `docs/core/design/AGENT-PARAMS.md` | §4「子代理轮次」+ §6.1 坐标表 | 该档 `:114` §8.2 登记「VSC 端 30 硬帽 ⇒ 归 VSC 轮」；§4 标题即「(CLI 端无专属代码)」⇒ **已并入（批 6）**——§4 注 + §6.3 坐标表 |
 | 3 | `design/ARCHITECTURE.md`（266）——VSC 模块地图 + 与 CLI 差异表 | `docs/core/design/ARCHITECTURE.md` | §3 模块地图 / §4 之后 | 该档 `:6` 明载「VSC 侧未迁——VSC 轮并入本档」⇒ **已并入（批 6）**——§3.1 壳层装配地图 + §4.1 差异表 |
-| 4 | `design/IMAGE-DOWNGRADE-VISION.md`（130）——贴图降级链 | `docs/core/design/PROVIDER.md` | 新增「图片输入与贴图降级链」节 | 该档 §6 节清单无图片 / 贴图面（实核）；VSC 侧降级链在现行代码在位 |
+| 4 | `design/IMAGE-DOWNGRADE-VISION.md`（130）——贴图降级链 | `docs/core/design/PROVIDER.md` | 新增「图片输入与贴图降级链」节 | 该档 §6 节清单无图片 / 贴图面（实核）；VSC 侧降级链在现行代码在位 ⇒ **已并入（终收批）**——§6.18 图片输入与贴图降级链 |
 | 5 | `design/PORTABILITY.md`（458）——VSC 镜像面（分类权威 / 评审注入 / 端差） | `docs/core/design/PORTABILITY.md` | §3 接口契约之后 | 该档 `:6` / `:124` 明载「VSC 端镜像——VSC 轮并入本档」⇒ **已并入（批 6）**——§3.6 坐标表 + §5 测试面 |
 | 6 | `design/SESSION.md`（520）——VSC 端会话槽 / 恢复 / GC 接线 | `docs/core/design/SESSION.md` | §6.10 端分离恢复之后 | 该档 §6 为 CLI 面；端差面未并 ⇒ **已并入（批 7）**——§6.15 VS Code 面板装配接线面（切换守卫 / turnSlot / 绑定入口 / 字段往返与 setSlot\* / 标题 A2 / 懒历史分页 / 注入序）· D-SE27–30 |
-| 7 | `design/PROVIDER.md`（463）——VSC 端接线（面板 / preset 表 / 编辑器路径） | `docs/core/design/PROVIDER.md` | §6.17 之后 | 同上（§6 为 CLI 面） |
+| 7 | `design/PROVIDER.md`（463）——VSC 端接线（面板 / preset 表 / 编辑器路径） | `docs/core/design/PROVIDER.md` | §6.17 之后 | 同上（§6 为 CLI 面）⇒ **已并入（终收批）**——§6.18（图片输入）+ §6.19 VS Code 端接线 |
 | 8 | `design/MEMORY.md`（325）——VSC 文件式存储 + 向量检索 | `docs/core/design/MEMORY.md` | §6.8 之后 | 该档 §6.2 / §6.3 为 CLI（FTS5 / sqlite）；VSC 实现面未并 ⇒ **已并入（批 7）**——§6.9 VSC 端实现面（文件制现状登记 / 索引有效性 B1–B4 / 工具契约端差）· D-MEM14–15 |
 | 9 | `design/CONTEXT-COMPACTION.md`（146）——VSC 端压缩接线与可见性 | `docs/core/design/CONTEXT-COMPACTION.md` | §6.12 实现位置 | 该档 §6.12 为两端落点表；VSC 侧接线未并 ⇒ **已并入（批 7）**——§6.13 VS Code 端接线面（判定点封装 / 基线 / 预算端差 / REVERSE 坐标 / 摘要锚 / 边界重置 2 / webview 四态 / 失败可见化 / 非压缩职责边界）· D-CC17 |
 | 10 | `design/MCP.md`（170）——VSC 提及 Settings 面板 MCP 页 | `docs/core/design/MCP.md` | §6.5 配置机制 | 该档 §6.8 为 `/mcp` TUI 面（CLI）；面板面未并 ⇒ **已并入（批 7）**——§6.10 VS Code Settings 面板 MCP 页（config-mcp 读写 / depth-0 装配 / 命连接 / 探活镜像 / 代配差异）· D-MC16 |
@@ -371,7 +371,7 @@ settle 落盘块起点（advisor-async）旧档记 364 行 → 现状 363 行；
 | 20 | `docs/requirements/SUBAGENT-OBSERVE-SEND.md` | 41 | `docs/core/requirements/AGENT-LOOP.md` §4.9（VSC 端对位与端差） | 187 |
 | 21 | `docs/requirements/ASYNC-RESULT-CONTAINER.md` | 45 | 同上（§4.9 同节两块） | 187 |
 | 23 | `docs/requirements/{CHECKPOINT,CONSULTATION,CONTEXT-COMPACTION,MCP,SESSION,TOOLS,LOGGING}.md` | 49/46/46/46/52/47/37 | 七需求档各增 §4「VSC 端条目」节 | 97/86/84/100/118/190/84 |
-
+**批 9（终收 · §8B 清零）**：#4（`IMAGE-DOWNGRADE-VISION.md`）+ #7（`PROVIDER.md` VSC 面）并入 `docs/core/design/PROVIDER.md`（§6.18 图片输入与贴图降级链 + §6.19 VS Code 端接线）· 需求档补 §4.5——逐节详情 = 批次档 §2。
 ## 10. 受影响文件清单（R24a）
 
 > 逐批明细已完整承载于批次档 §2（D2——不重复）；本表 = 台账汇总行（档数用量 + 落点面）。批 5 后各行 = 审批式（汇总）。
@@ -386,7 +386,7 @@ settle 落盘块起点（advisor-async）旧档记 364 行 → 现状 363 行；
 
 **批 5**（7 新建 + 1 实修 + 1 append）：`docs/core/requirements/{DESIGN-TOKEN-SETTLEMENT,ENG-TOKEN-BINDING,PORTABILITY,VERIFY-REDESIGN,PROJECT}.md` + `docs/vsc/requirements/PROJECT.md` + `docs/vsc/design/VSC-MIGRATION-INVENTORY.md` 新建 · `docs/vsc/design/VSC-MIGRATION.md` 实修（拆分收口）· 批次档 §2 append——明细见批次档 §2。
 
-**待落（批 5 后边界外——逐条上报）**：**§8B 并入清单 26 条**（批 6 / 批 7 各并 8 条 · 批 8 并 6 条 · **余 2 条 #4 / #7 = PROVIDER 目标待并行线完工**）· 待裁 D1–D3（主档 §7.1——已裁 2 条）· 镜像面判据句补条（`DOC-SYSTEM` §5.1——`docs/core/**`）。
+**待落（批 5 后边界外）——终收批已清零（2026-09-15）**：**§8B 并入清单 26 条已全数处置**（26 = 批 6·7·8 共 22 条并入 + 批 9 #4 / #7 并入 + 裁定销项 #18 / #25）· 待裁 D1–D3 已裁定（主档 §7.1）· 镜像面判据句补条（`DOC-SYSTEM` §5.1——`docs/core/**`）待父侧。
 
 **批 7（§8B 第二批 · 8 档并入）**：`docs/core/design/{SESSION 311→364, MEMORY 334→366, CONTEXT-COMPACTION 225→252, MCP 194→221, CHECKPOINT 185→212, CONSULTATION 235→257}.md` · `docs/core/requirements/{RELEASE 68→83, ADVISOR-CONVERGENCE 172→218}.md` 实修 + INVENTORY + 批次档 §2——明细 = 批次档 §2。
 
@@ -472,7 +472,8 @@ settle 落盘块起点（advisor-async）旧档记 364 行 → 现状 363 行；
 ## 13. 体量与拆分规划（R24a）
 
 **主档拆分（批 5 实落）**：`VSC-MIGRATION.md` 批 4 后实测 **560 行**——越 500 行硬限 ⇒ 台账面（§3–§15）移出为本档；判据 / 方案选型 / 分批计划 / 待裁 / 变更记录留主档（切法 = 候选①——台账面与规划面零交叉）。
-**拆分后实测**：主档 **138** 行（批 5 拆分后 132 · 批 6–8 零改动 · 收尾轮净增 6——§2.4 降格声明 2 · §7.1 裁定注 2 · 变更记录 2）· 本档 **496 行（批 8 并入后——§8B 六行标注 + 批 8 收口 · §9.8 · §10 批 7·批 8 两表归并为汇总行（明细 = 批次档 §2）· §15 边界更新；批 8 验收标准 = 批次档 §2 交付表 ⑦（随批 6 先例入批次档、不居台账）；收尾轮本档行头内联（§8A / §8B 行头标注——零净增行））**——均 ≤500 ✓（as-of 2026-09-15 收尾轮实核）。
+**拆分后实测**：主档 **138** 行（批 5 拆分后 132 · 批 6–8 零改动 · 收尾轮净增 6——§2.4 降格声明 2 · §7.1 裁定注 2 · 变更记录 2）· 本档 **496 → 500 行**（批 8 并入后 496——§8B 六行标注 + 批 8 收口 · §9.8 · §10 批 7·批 8 两表归并为汇总行（明细 = 批次档 §2）· §15 边界更新；批 8 验收标准 = 批次档 §2 交付表 ⑦（随批 6 先例入批次档、不居台账）；收尾轮本档行头内联（§8A / §8B 行头标注——零净增行）；
+终收批（2026-09-15）：§8B #4 / #7 行标注 + 行头清零 + §9 批 9 + §10 待落清零 + §13 / §15 同步——净增 1 行至 **500 行**）——均 ≤500 ✓（as-of 2026-09-15 终收批实核）。
 
 ## 14. 用例表（正常 / 边界 / 错误）
 
@@ -489,7 +490,7 @@ settle 落盘块起点（advisor-async）旧档记 364 行 → 现状 363 行；
 
 ## 15. 边界（本设计不做）
 
-1. **§8B 并入 = 批 6 起逐批落笔**（父侧串行口径——批 6 = 第一批 8 条 · 批 7 = 第二批 8 条 · 批 8 = 第三批 6 条：`docs/core/{design,requirements}/` 各目标档按清单并入；**余 2 条 = #4 / #7（PROVIDER 目标——待并行线完工后另派）**）；**`thincoder-vscode/**` 仍零写入**（源档只读参照历史）。
+1. **§8B 并入已完成（终收 2026-09-15）**：26 = 批 6（8 条）+ 批 7（8 条）+ 批 8（6 条）+ 批 9（#4 / #7——PROVIDER 目标 2 条）+ 裁定销项（#18 / #25）——**§8B 清零 · 本条不再有未并条目**；**`thincoder-vscode/**` 仍零写入**（源档只读参照历史）。
 2. **不写产品树**：`thincoder-vscode/**` 零写入（含注释）；`thincoder-cli/**` · `thincoder-core/**` 零写入。
 3. **不写台账 / 提示词 / 批次档**：`docs/TODO.md` 零写入；提示词文件零写入；批次档只 append §2。
 4. **不 commit、不发起评审**（发起权 = 用户）。
