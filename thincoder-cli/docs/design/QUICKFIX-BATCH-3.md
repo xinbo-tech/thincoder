@@ -52,12 +52,12 @@
 ### 2. F-2 §24→§11 旧锚清理（双端——实证 68 处）
 - 实测面（评审 #4 具名族）：CLI src 29 处（thincoder-core/advisor/messages.mjs:133、thincoder-core/advisor/run.mjs:15/418、`thincoder-core/advisor.mjs:269`、
   thincoder-core/agent/completion.mjs:123、thincoder-core/agent/dispatch.mjs:355、thincoder-core/agent/record-results.mjs:99、thincoder-core/agent/run-stages.mjs:166、
-  thincoder-core/agent-tools/eng.mjs:37/55、thincoder-core/agent-tools/escalate-async.mjs:154、subagent-actions.mjs:107、subagent-run.mjs:39/55/83、
-  subagent-scheduler.mjs:341/346、subagent.mjs:130/378、thincoder-core/agent.mjs:69/70、tui/cmd-eng.mjs:51、mouse.mjs:202、
+  thincoder-core/agent-tools/eng.mjs:37/55、thincoder-core/agent-tools/escalate-async.mjs:154、thincoder-core/agent-tools/subagent-actions.mjs:107、thincoder-core/agent-tools/subagent-run.mjs:39/55/83、
+  thincoder-core/agent-tools/subagent-scheduler.mjs:341/346、thincoder-core/agent-tools/subagent.mjs:130/378、thincoder-core/agent.mjs:69/70、tui/cmd-eng.mjs:51、mouse.mjs:202、
   `src/tui/subagent-panel.mjs:112`、suspension-drive.mjs:25/30/77/133、test/advisor-description.test.mjs:18（已退场——TEST-LIFECYCLE））+ VSC src
   39 处（advisor/main.mjs:94/105/111/123/163/213/260、thincoder-core/advisor/messages.mjs:50/78/88、thincoder-core/advisor/run.mjs:340/362/419、
   `src/agent/execute-tools.mjs:19`（VSC 仓）/249/410/428、thincoder-vscode/src/agent/run-stages.mjs:96/110/265、thincoder-vscode/src/agent/setup.mjs:216/238、thincoder-core/agent-tools/advisor.mjs:
-  23/91/177/187/191/221、subagent-async.mjs:304/470、`src/agent-tools/subagent-escalate-async.mjs:4`（VSC 仓）、`src/agent-tools/subagent-escalate.mjs:16`（VSC 仓）、
+  23/91/177/187/191/221、thincoder-core/agent-tools/subagent-async.mjs:304/470、`src/agent-tools/subagent-escalate-async.mjs:4`（VSC 仓）、`src/agent-tools/subagent-escalate.mjs:16`（VSC 仓）、
   thincoder-vscode/src/agent.mjs:24/110、`src/extension/panel-messages.mjs:230`（VSC 仓）、`src/extension/suspension.mjs:27`（VSC 仓；余行同））
 - 逐处替换 + 逐处核上下文（§24 引用确指旧章才换——记史/历史文档不换）——映射粒度照 POOL-CONFIG-UNIFIED
   F-7（评审 #5——§11.1/§11.2——非裸 §11）

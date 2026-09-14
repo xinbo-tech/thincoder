@@ -47,7 +47,7 @@
 - `locales/en.json:235`（VSC 仓；至 238 行） + `locales/zh.json:235`（VSC 仓；至 238 行） 加 settings.poolAdvisor/Help
 - `src/extension/panel-messages.mjs:361`（VSC 仓；至 362 行） → `src/config-io.mjs:369`（VSC 仓；至 376 行） saveAgentSettingsFromPanel 白名单（:371 现 ["engCoder","other"]）加 "advisor"（全非法 → 删整键回退默认语义不变）
 - thincoder-vscode/src/extension/settings.mjs:96 回退对象加 advisor + settings-agent.js 显示 `?? 4`
-- 运行期：effectivePoolLimits 加 advisor 键遍历（subagent-scheduler.mjs:344-360 键表 2→3——评审 #2：
+- 运行期：effectivePoolLimits 加 advisor 键遍历（thincoder-core/agent-tools/subagent-scheduler.mjs:344-360 键表 2→3——评审 #2：
   第三键**仅供面板生效值显示/读取回退**——调度路径过滤不消费（subagent 两域 engCoder/other 判定不变）——
   advisor 实际调度上限由 advisor-async 独立读取器（§2）决定——两路径各司其职）——每 run 起始
   setup 重建 cfg——下个 spawn 生效（R14 语义）
@@ -81,13 +81,13 @@
 | thincoder-core/config.mjs | CLI | 429（>300 审视——结构不变） | +1 | DEFAULTS poolLimits 加 advisor:4 |
 | src/tui/cmd-config.mjs | CLI | 393（>300 审视——增量安全） | ≤+12 | advisor 第三项 |
 | thincoder-core/agent-tools/advisor.mjs | CLI | 211 | ≤+2 | 描述去数字化活引用 |
-| src/agent-tools/subagent-async.mjs | CLI | 417（>300 审视——仅注释） | 0（替换） | §24→§11 注释 |
+| thincoder-core/agent-tools/subagent-async.mjs | CLI | 417（>300 审视——仅注释） | 0（替换） | §24→§11 注释 |
 | thincoder-core/agent-tools/advisor-async.mjs | VSC | 433（>300 审视——增量安全） | ≤±25 | 常量 4 + 读取器 + scope 守卫 + 文案插值 |
 | src/config-io.mjs（VSC 仓） | VSC | 494（>300 审视——最热点 495 安全） | +1 | 默认 + 白名单加 advisor |
 | thincoder-vscode/src/extension/settings.mjs | VSC | 309（>300 审视——增量安全） | +1 | 回退对象加 advisor:4 |
 | webview/settings-agent.js（VSC 仓） | VSC | 169 | ≤+10 | 第三数字框 |
 | locales/en.json（VSC 仓） + zh.json | VSC | 240 ×2 | ≤+4 ×2 | poolAdvisor 文案 |
-| src/agent-tools/subagent-scheduler.mjs | VSC | 459（>300 审视——键表评估） | ≤+1 | 键表 + §24 注释 |
+| thincoder-vscode/src/agent-tools/subagent-scheduler.mjs | VSC | 459（>300 审视——键表评估） | ≤+1 | 键表 + §24 注释 |
 | src/prompts/engineering.md（VSC 仓——已退役：PROMPT-SYSTEM 施工① VSC 镜像批） | VSC | 88（.md 豁免——列结构变更） | ≤+2 | 去数字化活引用 |
 | docs/design/AGENT-LOOP.md + ENGINEERING-MODE.md + ARCHITECTURE.md | 双端 | doc 豁免 | doc | 同步 |
 | docs/README.md | CLI | doc 豁免 | doc | 登记（核销时） |

@@ -11,10 +11,10 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import {
   classifySyncAbort, armSyncChildAbort, buildSyncStoppedReport,
-} from "../src/agent-tools/subagent.mjs"
+} from "@thincoder/core/agent-tools/subagent.mjs"
 import {
   cancelSyncChild, mergeChildMutations,
-} from "../src/agent-tools/subagent-async.mjs"
+} from "@thincoder/core/agent-tools/subagent-async.mjs"
 import { STOPPED_MARK } from "@thincoder/core/agent/spawn-child.mjs"
 
 /** 最小 parent agent（registry/guard 记账面——mergeChildMutations 读写）。 */

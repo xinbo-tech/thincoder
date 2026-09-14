@@ -14,11 +14,11 @@ import { randomUUID } from "node:crypto"
 
 import { settleAdvisorRun } from "@thincoder/core/agent-tools/advisor-async.mjs"
 import { validateDesignToken } from "@thincoder/core/agent-tools/advisor.mjs"
-import { resolveDesignSlot, executeConsumeDesignAction } from "../src/agent-tools/subagent-spawn.mjs"
+import { resolveDesignSlot, executeConsumeDesignAction } from "@thincoder/core/agent-tools/subagent-spawn.mjs"
 import { executeToolCalls } from "@thincoder/core/agent/dispatch.mjs"
 import {
   restoreEngTokens, engTokenSlotFields, anyLiveDesignSlot, persistEngTokens,
-} from "../src/token-ttl.mjs"
+} from "@thincoder/core/token-ttl.mjs"
 import { loadSlotFile } from "@thincoder/core/session.mjs"
 import {
   _setSessionsDirForTest, _resetSessionsDirForTest, slotPath, writeSessionFile,

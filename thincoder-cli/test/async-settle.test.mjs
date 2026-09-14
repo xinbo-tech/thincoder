@@ -14,8 +14,8 @@ import { tmpdir } from "node:os"
 import { fileURLToPath } from "node:url"
 import {
   settleAsyncEntry, getAsyncPool, parkAsyncPending, parentAborted, buildChildSignal,
-} from "../src/agent-tools/async-settle.mjs"
-import { injectAsyncResult, DIGEST_INJECT_BUDGET, _setDigestOffloadDirForTest } from "../src/agent-tools/subagent-async.mjs"
+} from "@thincoder/core/agent-tools/async-settle.mjs"
+import { injectAsyncResult, DIGEST_INJECT_BUDGET, _setDigestOffloadDirForTest } from "@thincoder/core/agent-tools/subagent-async.mjs"
 import { injectConsultResult } from "@thincoder/core/agent-tools/consult.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))

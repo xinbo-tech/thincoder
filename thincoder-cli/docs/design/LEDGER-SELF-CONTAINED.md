@@ -514,7 +514,7 @@
 | 2 | `ADVISOR-CONVERGENCE` | ② | 仅 design 层（`docs/design/ADVISOR-CONVERGENCE.md`，1426 行） | **建本仓需求档** → `docs/requirements/ADVISOR-CONVERGENCE.md` | 本端 `src/advisor/` + `src/agent-tools/advisor*.mjs` 在位；需求层无档 |
 | 3 | `AGENT-LOOP` | ① | **有档**（`docs/requirements/AGENT-LOOP.md`，355 行） | **已有对位**（C 桶接收档） | 本仓实际档名 = `docs/requirements/AGENT-LOOP.md` |
 | 4 | `AGENT-PARAMS` | ② | 有档（42 行） | **已有对位** | 归位档在位（原 `docs/design/AGENT-PARAMS-REQUIREMENTS.md`——已换名归位：`docs/requirements/AGENT-PARAMS.md`（VSC 仓）） |
-| 5 | `ASYNC-RESULT-CONTAINER` | ② | 仅 design 层（87 行） | **建本仓需求档** → `docs/requirements/ASYNC-RESULT-CONTAINER.md` | `src/agent-tools/async-settle.mjs` · `async-discard.mjs` 在位；需求层无档 |
+| 5 | `ASYNC-RESULT-CONTAINER` | ② | 仅 design 层（87 行） | **建本仓需求档** → `docs/requirements/ASYNC-RESULT-CONTAINER.md` | `thincoder-vscode/src/agent-tools/async-settle.mjs` · `async-discard.mjs` 在位；需求层无档 |
 | 6 | `CHECKPOINT` | ② | 仅 design 层（105 行） | **建本仓需求档** → `docs/requirements/CHECKPOINT.md` | `thincoder-vscode/src/tools/checkpoint.mjs` · `thincoder-vscode/src/tools/git-checkpoint.mjs` 在位；需求层无档 |
 | 7 | `CONSULTATION` | ② | 仅 design 层（161 行） | **建本仓需求档** → `docs/requirements/CONSULTATION.md` | `thincoder-core/agent-tools/consult.mjs` 在位；需求层无档 |
 | 8 | `CONTEXT-COMPACTION` | ② | 仅 design 层（146 行） | **建本仓需求档** → `docs/requirements/CONTEXT-COMPACTION.md` | `src/compact.mjs`（VSC 仓） 在位；需求层无档 |
@@ -538,7 +538,7 @@
 | 26 | `SESSION` | ② | 仅 design 层（519 行） | **建本仓需求档** → `docs/requirements/SESSION.md` | 会话机制设计档在位；需求层无档 |
 | 27 | `SETTINGS-TOOL` | ① | 有档（37 行） | **已有对位** | 本批新建档在位（机制 = `thincoder-vscode/src/agent-tools/settings.mjs`） |
 | 28 | `STRUCTURE-DEBT` | ① | 有档（34 行） | **已有对位** | 本批新建档在位 |
-| 29 | `SUBAGENT-OBSERVE-SEND` | ② | 仅 design 层（79 行） | **建本仓需求档** → `docs/requirements/SUBAGENT-OBSERVE-SEND.md` | `src/agent-tools/subagent-actions.mjs` 在位；需求层无档 |
+| 29 | `SUBAGENT-OBSERVE-SEND` | ② | 仅 design 层（79 行） | **建本仓需求档** → `docs/requirements/SUBAGENT-OBSERVE-SEND.md` | `thincoder-vscode/src/agent-tools/subagent-actions.mjs` 在位；需求层无档 |
 | 30 | `TESTING` | ② | 有档（87 行） | **已有对位** | 并行批落位档在位 |
 | 31 | `TOOL-OUTPUT-LIMITS` | ② | 有档（47 行） | **已有对位** | 归位档在位 |
 | 32 | `TOOLS` | ② | 仅 design 层（`docs/design/TOOLS.md` 381 行 + 编辑族 6 档） | **建本仓需求档** → `docs/requirements/TOOLS.md` | `src/tools/` 工具族在位；需求层无档 |

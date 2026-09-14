@@ -9,8 +9,8 @@
 ## 2. 设计（CLI 端落地）
 
 ### 现状（explore 核实）
-- `subagent` 工具动作执行器 `src/agent-tools/subagent-actions.mjs`；status(:74/:90) 只给决策字段，无内容。panel(:233) 仅 CLI 镜像 UI 块。
-- 子代理中间内容进程内可达：`entry.childAgent`（`subagent-run.mjs:111`）含 `child._fullHistory`（回合累积）、`child._capturedOutput`、`child._touchedFiles`——**父侧同进程可达，但无任何工具暴露**。
+- `subagent` 工具动作执行器 `thincoder-core/agent-tools/subagent-actions.mjs`；status(:74/:90) 只给决策字段，无内容。panel(:233) 仅 CLI 镜像 UI 块。
+- 子代理中间内容进程内可达：`entry.childAgent`（`thincoder-core/agent-tools/subagent-run.mjs:111`）含 `child._fullHistory`（回合累积）、`child._capturedOutput`、`child._touchedFiles`——**父侧同进程可达，但无任何工具暴露**。
 - 子代理只收 spawn task；无运行时外部输入。父主会话有 `pendingInput` 单槽攒批语义（AGENT-LOOP §9.2/§11.3——回合空闲把外部消息合并注入）——可镜像到子级。
 - **硬缺口**：子代理 runAgent 今日不知自己的池条目——childOpts 未携带 entry 引用，注入要在回合边界消费队列需先把输入源贯通进 runAgent opts。
 
@@ -25,7 +25,7 @@
 - **动作门禁分类（评审 #2）**：observe = **readonly**（查询不副作用）；send = **控制类豁免**（同 cancel/panel——写入子输入队列属父对子轻量引导，非产品代码写，不需 approval 门；父回合内显式调用即授权）。写 AGENT-LOOP §7.2 动作表时注明两分类。
 - **send→settle 竞态（评审 #3）**：消息入队后子代理在下一回合边界前 settle → 消息未投递——send 返回时无法预知；settle 收尾时若有未消费 `_injected` → 附入 settle 报告/错误提示（"N 条注入未投递"），防父误以为引导已落地。
 - **子侧输入源贯通（硬缺口）**：runAgent 需能读到注入队列——仿 VSC stateSink 模式，把"注入队列消费回调"塞进子 runAgent opts（childOpts 加字段），子 turn 循环头（`agent.mjs` 每轮开头，父消费 pendingInput 的同类点）消费 `entry._injected` → `pushReal` 成 user 回合进子历史 → 子 agent 当作普通指令处理。
-- 落点：`subagent-actions.mjs`（send + observe）、`agent-tools/subagent-run.mjs`/`spawn-child`（childOpts 贯通 entry）、`agent.mjs`（子回合边界消费注入点）。
+- 落点：`subagent-actions.mjs`（send + observe）、`thincoder-core/agent-tools/subagent-run.mjs`/`spawn-child`（childOpts 贯通 entry）、`agent.mjs`（子回合边界消费注入点）。
 
 ### D3 父子回合错位（N1）
 - observe/send 由父在自身回合内调用；目标是父回合内可见的异步子代理。父回合外（父空闲等子代理时）父无法执行工具——observe/send 自然不可达（与 cancel 同时序约束）。AUTO/digest 唤醒父回合时可查。
@@ -36,10 +36,10 @@
 
 ## 3. 受影响文件（CLI，thincoder）
 
-- 修改：`src/agent-tools/subagent-actions.mjs`（observe + send 动作执行器）、subagent 工具描述/schema（加两动作 + §4.1 分类）、`src/agent-tools/subagent-run.mjs` / `spawn-child`（childOpts 贯通 entry——send 消费入口）、`thincoder-core/agent.mjs`（子回合边界消费注入点）
+- 修改：`thincoder-core/agent-tools/subagent-actions.mjs`（observe + send 动作执行器）、subagent 工具描述/schema（加两动作 + §4.1 分类）、`thincoder-core/agent-tools/subagent-run.mjs` / `spawn-child`（childOpts 贯通 entry——send 消费入口）、`thincoder-core/agent.mjs`（子回合边界消费注入点）
 - 文档：本设计（CLI 细节/机制）+ README 地图登记 + **AGENT-LOOP.md §7.2 动作表加 observe/send（含两动作分类 + 契约——单一权威源，本设计不复述契约措辞——评审 #6 防双源漂移）**
-- 修改：`src/agent-tools/subagent-actions.mjs`（observe + send 动作执行器）、`src/agent-tools/subagent.mjs`（schema/enum/description + dispatch 分类）、`src/agent-tools/subagent-run.mjs`（_injected/consumeInjected/settle note + spawn-child 贯通）、`thincoder-core/agent.mjs`（回合边界消费点）、
-  **`src/agent/dispatch.mjs`**（动作分类谓词 + `_inflightTools` in-flight 记账——评审 #1 读 dispatch 状态）、**`src/tui/tool-events.mjs`**（observe/send 从 spawn-like 路由排除——防误冻子块）、**`src/agent-tools/subagent-async.mjs`**（动作数措辞同步）
+- 修改：`thincoder-core/agent-tools/subagent-actions.mjs`（observe + send 动作执行器）、`thincoder-core/agent-tools/subagent.mjs`（schema/enum/description + dispatch 分类）、`thincoder-core/agent-tools/subagent-run.mjs`（_injected/consumeInjected/settle note + spawn-child 贯通）、`thincoder-core/agent.mjs`（回合边界消费点）、
+  **`src/agent/dispatch.mjs`**（动作分类谓词 + `_inflightTools` in-flight 记账——评审 #1 读 dispatch 状态）、**`src/tui/tool-events.mjs`**（observe/send 从 spawn-like 路由排除——防误冻子块）、**`thincoder-core/agent-tools/subagent-async.mjs`**（动作数措辞同步）
 - 新增：`test/subagent-observe-send.test.mjs`（8 用例——running/queued/done/unknown/empty/cancel-race/凭证/分类/depth-gate/N=5 截断）
 - 文档：本设计（CLI 细节/机制）+ README 地图登记 + **AGENT-LOOP.md §7.2/§4.1 动作表加 observe/send + 分类 + 契约措辞（单一权威源——评审 #6 防双源漂移）**
 

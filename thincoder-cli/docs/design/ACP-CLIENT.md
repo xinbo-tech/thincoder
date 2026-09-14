@@ -273,7 +273,7 @@ last-write-wins 于内部状态；set 成功后 notify `config_option_update`/`c
   - `src/acp/bridge.mjs:183`（onReasoning）——零剥离，前缀进 `agent_thought_chunk`；
   - `src/acp/bridge.mjs:188-209`（onToolCall）——`title: name` 带前缀（`:26-34` 的 kind 推断只在 kind 侧用 `split("/")` 兜住）；
   - `src/acp/bridge.mjs:224-247`（onPermissionRequest——**勘察新增第 4 落点**）——子代理权限请求名 =
-    `${key}/${tool}`（`src/agent-tools/subagent-spawn.mjs:312-317`）→ 请求文本与 `toolCall.title` 带前缀；
+    `${key}/${tool}`（`thincoder-core/agent-tools/subagent-spawn.mjs:312-317`）→ 请求文本与 `toolCall.title` 带前缀；
   - 无 `onToolOutput`——ACP 无流式工具输出面（父工具与子代理同口径，见 §12.6）。
 - 平行文法面：TUI 自持 `src/tui/subagent-blocks.mjs:32`（`SUB_PREFIX_RE`）+ `:51-67`（`parseRelayPath`）；
   bridge 内联 `(?:[\w-]+#\d+\/)*`（:173 / :180）——两套写法同源异体、各自维护 = 漂移源。
@@ -317,7 +317,7 @@ export function relayPrefixOf(label, id) // → `${label}#${id}/`——构造向
 
 - 零依赖（不 import 任何模块）——TUI（`src/tui/`）与 ACP（`src/acp/`）双向可导入，无环。
 - `src/agent/spawn-child.mjs` **再导出**（生成侧枢纽）：`export { RELAY_PREFIX_RE, parseRelayPath, relayPrefixOf } from "./relay-prefix.mjs"`；
-  两处字面构造点改用 `relayPrefixOf`（`makeRelay` :74 与 `src/agent-tools/subagent-spawn.mjs:440` 的 async 取号分支）。
+  两处字面构造点改用 `relayPrefixOf`（`makeRelay` :74 与 `thincoder-core/agent-tools/subagent-spawn.mjs:440` 的 async 取号分支）。
 - 消费方直连模块：`subagent-blocks.mjs`（import 使用、不再本地定义）、`bridge.mjs`（import 使用）。
 
 **② TUI 侧（零语义搬迁）**
@@ -370,7 +370,7 @@ Notes 第 3 条（`- Returns the user's answer …`）之后插入一行：
 |---|---|---|---|---|---|
 | 1 | `src/agent/relay-prefix.mjs` | 新增 | 0 | ~40 | ≤500 硬限内诞生 |
 | 2 | `src/agent/spawn-child.mjs` | 改（再导出 + `makeRelay` 换 helper） | 224 | +2 | ≤300 ✓ |
-| 3 | `src/agent-tools/subagent-spawn.mjs` | 改（async 取号分支换 helper——修正轮补登） | 454 | +1 | >300 存量——零结构改动，不拆 |
+| 3 | `thincoder-core/agent-tools/subagent-spawn.mjs` | 改（async 取号分支换 helper——修正轮补登） | 454 | +1 | >300 存量——零结构改动，不拆 |
 | 4 | `src/tui/subagent-blocks.mjs` | 改（文法迁出——净减） | 453 | −22 / +4 | >300 存量（SUBAGENT-TAIL 批已登记「拆分需独立批次」）——本批不拆，方向为净减 |
 | 5 | `src/tui/tool-events.mjs` | 改（import 换名） | 405 | ±2 | >300 存量——零结构改动，不拆 |
 | 6 | `src/acp/bridge.mjs` | 改（import + 显示面剥离） | 355 | +20 / −10 | >300——本批不拆（无新结构体）；拆分计划（登记）：再增厚则先迁 `:98-166` edit 桥族 → `edit-bridge.mjs`（拟落 `src/acp/`） |
@@ -454,7 +454,7 @@ Notes 第 3 条（`- Returns the user's answer …`）之后插入一行：
 
 1. **`thincoder chat` 同缺陷**：`bin/thincoder.mjs:140` 的 `assembleAgent()` 未传剔除 → question 仍在工具集、每调必错；
    同款一行修复 = 传 `{ excludeTools: ["question"] }`（复用 `applyToolExclusions`）。待父侧裁定并入或另批。
-2. **子代理 children 同缺陷**：`src/agent-tools/subagent-spawn.mjs:447-450` 的 `childOpts` 无 `onQuestion`（也不宜有——
+2. **子代理 children 同缺陷**：`thincoder-core/agent-tools/subagent-spawn.mjs:447-450` 的 `childOpts` 无 `onQuestion`（也不宜有——
    子代理无对话面，澄清走报告回父）→ question 在 children 工具集内每调必错；建议 spawn 侧对 children 做工具剔除
    （复用 `applyToolExclusions`）。待父侧裁。
 3. **kimi 式「子代理事件整体过滤」**（§12.2 ② 候选 2）——显示语义候选，需用户裁定。

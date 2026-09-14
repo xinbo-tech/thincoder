@@ -5982,5 +5982,148 @@ A5 三条复跑读数与 ③ 表（§5 写入前）逐数一致。
 
 **收正注（同轮 · 首版后置 · 零语义）**：宽度/一致性闸复跑命中本段首版 2 行超宽（`:5909` 354 / `:5911` 327 字符 ⇒ **仅插换行、文字零改**）+ 2 处 `AGENT-LOOP.md` 连节号的引号形态触发 V1 引用匹配（改写为「AGENT-LOOP.md 的 §11.2 / §18」等非引用形态——零语义）；复跑 = 宽度面 **321 档无 >300 字符行** · 本段零新增一致性违规（余 4 条 = 并发落地物面 · 未决 6）。
 
+### 实施：S2 U16 —— 子代理 / 异步族（spawn / scheduler / async / settle / 槽台账）落轮（2026-09-14 · eng-coder）——**终态 = clean**
+
+**段位**：当前段 = **S2（CLI 迁移单元 U16——最后一个 CLI 单元）**。写域 = CLI 侧（**19 档 / 33 处改指**：src 3 档 5 处 + test 16 档 28 处 + **8 档删旧** + 文档 **23 档 152 行**锚改指）+
+**边界外一笔（已披露）**：仓根台账 `docs/TODO-archive.md`（7 行证据改指 + 1 处坐标复核）。
+**VSC 零触碰**；核内零改动（`git status -- thincoder-core` 自证空）；未 commit（父侧统一单笔）。
+**域外消费方全扫**（仓根 `scripts/**` · 产品 `scripts/**` · `bin/**` · 产品根散档 · `.github/**`）：**零命中**（无域外笔）。
+
+**依据** = `docs/design/CORE-UNIFICATION.md` §2.6.3 U16 行（`:726`「8 / 2852 / 31」+ 专项「异步状态机 + 池 / 墓碑 / 载体 10 字段（`docs/design/AGENT-LOOP.md` §2.3）双夹具；`panel` 动作 CLI 侧保留」）
++（三）逐档清单（`:902-909`）+（四）四步与 A1–A6（`:910-924`）+（七）进度计数 + §2.6.2（三）（五）（六）；父侧 U16 任务书。
+
+**改动面**（行数 = `wc -l` / `git diff --numstat` 口径实核；改前 = spawn 时工作树（HEAD `6674a8b4`））
+
+| # | 面 | 档 / 行数 | 动作 |
+|---|---|---|---|
+| 1 | CLI 源 | 3 档（行数零变——纯来源串替换） | 改指 `@thincoder/core/<子路径>`（5 处） |
+| 2 | CLI 测试 | 16 档（行数零变） | 改指（28 处） |
+| 3 | CLI 删旧 | **8 档 / 2855 行**（设计 2852——差 +3：`scheduler` 391→392 · `actions` 481→483；按当下坐标计口径） | **删档** + 空目录 `src/agent-tools/` 移除 |
+| 4 | CLI 文档 | **23 档 / 152 行**（20 design + 3 requirements；行数零变） | 锚改指 `thincoder-core/…`（116 悬空 → 0；含一致性轮 40 行 / 12 档） |
+| 5 | 仓根台账（**边界外·披露**） | `docs/TODO-archive.md`（7 行） | 7 行证据行改指（L4 闸强制）+ `:69` 坐标复核（`:142` → `:144`） |
+
+**① 逐处「改前 → 改后」（33 处 / 19 档——全部 = 来源串替换，具名导入面零改）**
+
+**src（5 处 / 3 档）**：
+
+| # | 档 | 位置：改前 → 改后 |
+|---|---|---|
+| 1 | `src/tui/cmd-eng.mjs` | `:10` `"../token-ttl.mjs"` → `"@thincoder/core/token-ttl.mjs"`（purgeExpiredDesignTokens） |
+| 2 | `src/tui/mouse.mjs` | `:20` `"../agent-tools/subagent-async.mjs"` → 核（cancelAsyncSubagent / cancelSyncChild） |
+| 3 | `src/tui/mouse.mjs` | `:22` `"../agent-tools/subagent-scheduler.mjs"` → 核（maybeRefillAsync / refreshQueuedTokens） |
+| 4 | `src/tui/suspension-drive.mjs` | `:22` `"../agent-tools/async-settle.mjs"` → 核（getAsyncPool / parkAsyncPending / releaseSettledEntry） |
+| 5 | `src/tui/suspension-drive.mjs` | `:281` 动态 `import("../agent-tools/subagent.mjs")` → 核（injectAsyncResult） |
+
+**test（28 处 / 16 档）**：
+
+| # | 档 | 位置：改前 → 改后 |
+|---|---|---|
+| 6 | `test/abort-provenance.test.mjs` | `:15` → 核 subagent（classifySyncAbort / armSyncChildAbort） |
+| 7 | `test/async-settle.test.mjs` | `:17` → 核 async-settle · `:18` → 核 subagent-async |
+| 8 | `test/batch-doc-gate.test.mjs` | `:25` → 核 subagent-spawn · `:26` → 核 subagent（**双态收口**——U9 登记 5 处双态的最后一处；护栏「导出面逐名等值」） |
+| 9 | `test/batch-segment.test.mjs` | `:21` → 核 subagent-spawn（buildSpawnChild） |
+| 10 | `test/config-pool.test.mjs` | `:21` → 核 subagent-async（ASYNC_POOL_LIMITS） |
+| 11 | `test/design-token-settlement.test.mjs` | `:17` → 核 subagent-spawn · `:21` → 核 token-ttl |
+| 12 | `test/eng-designer-role.test.mjs` | `:32` → 核 subagent · `:33` → 核 subagent-spawn |
+| 13 | `test/integration/engineering-chain.test.mjs` | `:21` → 核 subagent · `:22` → 核 subagent-spawn |
+| 14 | `test/integration/subagent-lifecycle.test.mjs` | `:18` → 核 subagent |
+| 15 | `test/provider-admission.test.mjs` | `:21` → 核 subagent-async（resolveChildProvider） |
+| 16 | `test/provider-model-guard.test.mjs` | `:23` → 核 subagent-async |
+| 17 | `test/settings.test.mjs` | `:16` → 核 subagent-spawn（effectiveSubagentModel） |
+| 18 | `test/subagent-memory-bounds.test.mjs` | `:10` → 核 async-settle · `:11` → 核 subagent-actions |
+| 19 | `test/subagent-observe-send.test.mjs` | `:10` → 核 subagent-actions · `:11` → 核 subagent-async · `:12` → 核 async-settle · `:13` → 核 subagent-run |
+| 20 | `test/subagent-scheduler.test.mjs` | `:12` → 核 scheduler（7 名） · `:13` → 核 spawn · `:14` → 核 run（executeAsyncSpawn） |
+| 21 | `test/sync-cancel.test.mjs` | `:14` → 核 subagent · `:17` → 核 subagent-async |
+
+**文档锚 152 行（23 档）· 116 悬空 → 0**
+
+- **悬空 116 锚（22 档）→ 0**：ADVISOR-CONVERGENCE 5 · AGENT-LOOP 37 · AGENT-PARAMS 1 · ASYNC-RESULT-CONTAINER 7（+req 1） · ENGINEERING-MODE 28（+req 3） ·
+  ESCALATE 1 · LEDGER-SELF-CONTAINED 2 · POOL-CONFIG-UNIFIED 3 · PROVIDER 3 · QUICKFIX-BATCH-3 5 · SESSION 1 · SETTINGS-TOOL 4 ·
+  SUBAGENT-ID-COUNTER-AGENT 1 · SUBAGENT-OBSERVE-SEND 9 · TUI 2 · TURN-CAP-CONTINUE 3。
+- **一致性轮 +40 行 / 12 档**（审计派生——同族半更新收口）：AGENT-LOOP `:65/:365/:541/:1741/:1647/:1648` ·
+  ENGINEERING-MODE `:217/:249/:284/:395/:499/:593/:664/:419/:427/:456` · SETTINGS-TOOL `:231/:239/:189/:207` ·
+  DESIGN-TOKEN-SETTLEMENT `:14/:19/:31/:35/:37/:44/:52/:53` · ENG-TOKEN-BINDING `:5/:8/:46/:74/:79/:103` ·
+  ACP-CLIENT `:276/:320/:373/:457` · requirements/SETTINGS-TOOL `:37` · PROMPT-SYSTEM `:170`。
+- **形态** = §2.6.2（六）CLI 域「仓根相对」`thincoder-core/agent-tools/…`（坐标 as-of 保留）；**VSC 语义行 → `thincoder-vscode/src/agent-tools/…`**
+  （AGENT-LOOP `:790/:1309` · POOL-CONFIG-UNIFIED `:90` · LEDGER-SELF-CONTAINED `:517/:541`）。
+- **台账 7 行（边界外·披露）**：`docs/TODO-archive.md` `:59/:63/:65/:69/:86/:92/:93` 证据行 → 核路径（L4 闸强制「仓内同名 2 份（多义）」；只改必要行）
+  + `:69` 坐标 `:142` → `:144`（核内 action enum 实位）。
+
+**② 删旧三条读数（删前全过才删）**
+
+1. **改指已落盘**：33 处终态复核（正 / 反两判）——0 违规；冒烟 PASS（真子进程 · cwd = thincoder-cli）：
+   核 8 子路径导出面逐名（CLI 静态面 ⊆ 核运行时面——subagent 12 / run 2 / scheduler 13 / async 18 / actions 5 / spawn 5 / async-settle 6⊆11 / token-ttl 10）
+   另含 33 处说明符解析命中核 + 专项（panel enum 8 项含 panel / executePanelAction re-export + 核 `subagent-panel.mjs` 在位 / 守卫 interrupt 豁免 / 链结 / settle done 记账 /
+   墓碑→depInfo cancelled / 载体双夹具同组断言 / 10 字段实扫）——读数落 `.thincoder/tmp/u16-smoke.log`。
+2. **该产品全链 exit 0（删前预跑）**：`npm test` 609 / 552 / 0 / 57 · `lint` 189 · `test:full` 609/609 · `test:integration` 25/25（均 exit 0）。
+3. **零引用反向判**（域 = `src` + `test` + `bin` + `scripts` 全递归 + 全树后缀式复扫；两模式）：
+   ① 引号包裹本地相对路径形 = 删前 24 命中（**全 = 删除集自指**，随删消退）⇒ **外部违规 0**；② 非核前缀路径段形 = 删后 **0**（夹具字符串 2 = `test/ledger.test.mjs` 自持沙箱，非引用——登记）。
+   **域外全扫**：仓根 `scripts/**` · 产品 `scripts/**` · `bin/**` · 产品根散档 · `.github/**` = **0 / 0**。
+   **删后中间态**：`doc-anchors --domain thincoder-cli` = **116 悬空**（22 档）→ 逐处改指 → **0**；`check-ledger` = **7 违规**（`TODO-archive.md:59/:63/:65/:69/:86/:92/:93`）→ 改指 → **0**。
+
+**③ A1–A6 读数（终态复跑 · 原样）**
+
+| # | 判据 | 读数 | 判 |
+|---|---|---|---|
+| A1 | CLI 全链 | `npm test`：tests **609** · pass **552** · fail **0** · skipped **57** · exit 0；`lint`：check-syntax **181 file(s) OK**（189 − 8 删档，唯一面内差）；`test:full`：**609/609** · fail 0 · exit 0；`test:integration`：**25/25** · fail 0 · exit 0——**未涉面逐数不变**；面内零改判（无用例增删 / 无断言改判） | ✓ |
+| A2 | 零引用 | 反向判两式违规 **0 / 0**；运行面 = 全链 exit 0 + 删后冒烟 PASS；锚面 = CLI 域悬空 0 | ✓ |
+| A3 | 文档锚 | `doc-anchors --domain thincoder-cli`：99 档 · 候选 **8879** · 悬空 **0** · 注记豁免 880 · `OK(V5)` exit 0 | ✓ |
+| A4 | 核回归 | 核内 `node --test` = **173/173** · fail 0 · exit 0；核内零改动（`git status -- thincoder-core` 自证空） | ✓ |
+| A5 | 仓根三机检 | `doc-anchors`（全域）：域一 47 档 · 候选 2299 · 悬空 **2**（**预存·非本笔**——HEAD worktree（`6674a8b4`）对照实证复现；详见未决 1）· FAIL；域二 99 档 · 悬空 0 · OK；VSC 域 21 处 / distinct 13 报告态。`check-doc-width`：**321 档无 >300 字符行** · exit 0。`check-ledger`：**0 处违规** · exit 0 | ⚠ 域一预存红（交父侧裁定） |
+| A6 | 链接 L1 | `npm ls @thincoder/core --json` **exit 0** · version **0.1.0**（resolved `file:../../../thincoder-core`）；版本探针 = **0.1.0** | ✓ |
+| 专项 | 裁决落实 | 异步状态机（冒烟直驱 + 面内档全绿）· 双夹具（核 `async-family.test.mjs` #94 5 例 + #98 3 例 · `suspension.test.mjs` 双夹具；173/173 全绿；冒烟另跑 CLI 形 × VSC 形同组断言）· 载体 10 字段核内 14 档实扫（U16 自持 7 款全有落点）· panel 保留（enum 8 项含 panel + re-export + 核 `subagent-panel.mjs` 在位） | ✓ |
+
+**进度计数（设计 §2.6.3（七）① · 可复跑命令）**：**CLI 待迁 = 0**（8 − 8）——**本单元落完，CLI 侧待迁清零** ✓。
+**工作树**：本笔 **51 项**（43 M = 19 代码/测试 + 23 文档 + 1 台账；8 D）+ **1 项预存**（`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`——spawn 前既存，非本笔）；
+期间父侧提交 `a3c014b3`（仅 `docs/TODO.md`——非本笔面；HEAD `6674a8b4` → `a3c014b3`）；未 commit（父侧统一单笔）。
+
+**④ 内部轮（发现与处置）**
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **四类偏差未发现**（① 部分实现 / ② 静默简化 / ③ 文档漂移 / ④ 清单外改动；③④ 受无 git 面限制做静态判读）；5 QUESTION：
+  Q1 同族半更新（机检宽容通过面）→ **Fixed**（一致性轮 40 行 / 12 档）；Q2 文档计数差（18 vs 22）→ 随一致性轮补齐（+4 档）；
+  Q3 台账 `:65/:69` 叙述/坐标 → `:69` 坐标 **Fixed**、`:65` 叙述位登记；Q4 临时产物 → **脚本删、日志留**（读数凭据）；Q5 机器验收未复跑 → 以本侧实跑读数交底。
+- **advisor 代码评审 1 轮**（`type=code` · 阻塞）：**pass**（🔴 **0** · 🟡 2 · 🔵 2）。
+- **裁决表（4 项）**：
+
+| # | Action | Detail |
+|---|---|---|
+| 1 | Deferred | 🟡 A5 根域 2 悬空锚（`CORE-UNIFICATION.md:1440/:1446`）——预存（HEAD worktree 对照实证复现，非本笔）；修复归属 = 设计档维护（eng-designer 写权）⇒ 登记未决·交父侧裁定；本笔面判据已清 |
+| 2 | Not an issue | 🟡 三档 >300 行（`async-settle.test.mjs` 412 · `settings.test.mjs` 481 · `subagent-observe-send.test.mjs` 306）——存量档（本笔零结构增量）、均 <500、项目先例测试档「无硬限约束」（R3 不复议） |
+| 3 | Fixed | 🔵 台账坐标复核：`:69` 证据坐标 `:142` → `:144`（核内 action enum 实位；原坐标在 CLI 原档同为 `type: "object",`——预存偏移，随本行收正）；`:65` 叙述位死指针（「证据」标记前段、L4 判序不判）⇒ 保留 as-of、登记未决 |
+| 4 | Not an issue | 🔵 设计行「改指 31」vs 实核 19 档 / 33 处——该列口径「**按当下坐标计**」（前序单元已消费引用档）；非笔内不一致 |
+
+- **引证核验附注**：host 核验器对 3 条引证报「content mismatch / file unreadable」——复核为**核验器路径解析 artifact**（`AGENT-LOOP.md:65` 引证丢反引号；两处裸 basename 解析）：逐条复读与引证相符（承 U1–U15 同型附注）。
+- **轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 1；终态 **0 未决 🔴 → clean**。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 改指形态 = `@thincoder/core/<子路径>`（含 hub） | §2.6.2（三）2「一律带子路径」；核 `exports "./*"` + 链接态实核 |
+| 2 | 双态收口 = `batch-doc-gate.test.mjs:25/:26`（护栏「导出面逐名等值」） | U9 登记 5 处双态最后 1 处；核 `subagent.mjs` 导出 12 名 ⊇ CLI 消费面（逐名实核） |
+| 3 | 文档锚 = 纯路径替换（`thincoder-core/…`）+ 坐标 as-of 保留；VSC 语义行 → `thincoder-vscode/src/…` | §2.6.2（六）CLI 域形态 + U13–U15 先例 |
+| 4 | 一致性轮 = 40 行 / 12 档（同族半更新 + 带坐标裸名收口） | U13/U14/U15「防同段 / 同表两态」先例；判据 = 对 8 档的「带坐标或带路径段」引用在扫描域内全部收口（56 处纯裸词叙述留登记） |
+| 5 | 台账 `:69` 坐标收正（`:142` → `:144`） | advisor 🔵 复核建议 + 「凡断言先实核」；原坐标在两端文件均非 action enum（预存偏移） |
+| 6 | 删前全链预跑一轮 + 删后终态复跑 + 三机检终态复跑 | §2.6.3（四）2 字面执行（承 U1–U15） |
+| 7 | 空目录 `src/agent-tools/` 同批移除 | 删除集构成整目录清空（7/7）；git 不跟踪空目录（U3–U15 先例） |
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **根域 2 悬空锚（预存·非本笔）**：`docs/design/CORE-UNIFICATION.md:1440`（裸名 `agent.mjs:125` 多义——core + VSC 两份）+ `:1446`（未建档 `thincoder-core/test/tool-face-capability.test.mjs`）——
+   HEAD worktree 实证复现 ⇒ 非本笔引入；A5「三机检 exit 0」根域读数非 0 ⇒ 交父侧裁定（设计档维护轮修 2 锚 / 记根域例外）。修复建议：`:1440` → `thincoder-core/agent.mjs:125`；`:1446` 改注记形态或指现存锚。
+2. **文档面存量旧指针（机检绿·叙述位）**：CLI docs 余 56 处纯裸词叙述（无坐标无路径段——doc-anchors 射程外）· `AGENT-LOOP.md:68` advisor 族 glob 行（U12 侧，同 `:65` 先例未改）· 台账 `:65` 叙述位历史指针——归文档维护批 / S3 残留复扫。
+3. **注释叙述（射程外登记）**：`src/tui/key-modes.mjs:17/:18` · `mouse.mjs:205` · `suspension-drive.mjs:194` · `test/batch-doc-gate.test.mjs:77` · `subagent-memory-bounds.test.mjs:59` · `sync-cancel.test.mjs:3`——随所属档触碰订正。
+4. **预存竞态（非本笔·登记）**：`--test-concurrency=6` × `prompts-async-guidance.test.mjs` 清档用例（U12 未决 4 延续）——本笔四轮 `npm test` 均未命中，归机检 / 测试所属批次。
+5. **VSC 预存项**：`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`（M）= spawn 前既存改动，非本笔（承 U0–U15 登记）。
+6. **并发笔（非本笔）**：`docs/TODO.md` 于本笔期间经父侧提交 `a3c014b3`（HEAD 前移）；本笔工作树相对之干净（仅本笔面 + 预存）。
+
+**轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 1；A1–A6 终态读数见上表；终态 = **clean**；报告 ①–⑦ 见交付报告（父侧转呈）。
+
+**段末复跑（§5 写入后 · 原样读数）**：`check-doc-width` = **321 档无 >300 字符行** · 一致性 V1/V2/V3 新增违规 **0** 条 · exit 0；
+`doc-anchors --domain thincoder-cli` = 99 档 · 候选 8879 · 悬空 **0** · 注记豁免 880 · `OK(V5)` exit 0；`check-ledger` = `OK: thincoder/docs/TODO.md` / `OK: thincoder/docs/TODO-archive.md` · **0 处违规** · exit 0。
+
+**收正注（同轮 · 首版后置）**：§5 首版后 `check-doc-width` 一致性闸命中本段 1 行（V2：`:6052`「删旧三条」声明 3 ≠ 枚举 4——续行 `:6056` 以 `+ ` 开头被计为第 4 列表项）⇒ 收正 = `:6056` 行首 `+ ` → 「另含 」（零语义：续行文字）；
+复跑 = 一致性新增违规 **0** 条 · 宽度 321 档无 >300 字符行 · exit 0。
+
 ## §6 验证与收口（父代理）
 

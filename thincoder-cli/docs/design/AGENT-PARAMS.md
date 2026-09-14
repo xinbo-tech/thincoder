@@ -51,7 +51,7 @@ if (Date.now() - startTime > timeoutMs) {
 
 ### 2.3 子 agent 轮次（CLI 端无代码改动）
 
-explore 与其它角色一致走 `subagentTurns`（见 `src/agent-tools/subagent.mjs`），仅在本文档与
+explore 与其它角色一致走 `subagentTurns`（见 `thincoder-core/agent-tools/subagent.mjs`），仅在本文档与
 需求文档中说明与 VS Code 端对齐的语义（30 硬帽是 VS Code 端特有问题，CLI 无）。
 
 ## 3. 受影响文件（Affected Files）

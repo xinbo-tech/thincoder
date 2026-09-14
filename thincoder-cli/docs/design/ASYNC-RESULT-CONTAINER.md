@@ -17,7 +17,7 @@
 - **池 entry 已全带 role 标签**——统一高可行。
 
 ### D1 池 accessor 吸收双池
-- 新建 accessor（落点 = `src/agent-tools/async-settle.mjs`——设计期备选 `async-pool` 未采用）：`getAsyncPool(parent, role)`——role="advisor" 返 `_asyncAdvisors`，其他返 `_asyncSubagents`。
+- 新建 accessor（落点 = `thincoder-core/agent-tools/async-settle.mjs`——设计期备选 `async-pool` 未采用）：`getAsyncPool(parent, role)`——role="advisor" 返 `_asyncAdvisors`，其他返 `_asyncSubagents`。
 - 消费端统一经 accessor（run-stages/suspension-drive/subagent-actions/subagent-scheduler/ops 等池访问点改 accessor）。
 - 底层保留双池（不动调度逻辑——advisor 无队列）。
 
@@ -28,7 +28,7 @@
 - escalate/consult 独立流删除（`_pendingEscalateResults`/`_pendingConsultResults` 废弃）。
 
 ### D3 settle 共享 helper
-- 新建 `src/agent-tools/async-settle.mjs`：`settleAsyncEntry(parent, entry, {pool, onAccounting})`（评审 #1——签名与 F3 一致：`pendingFamily` 参数删，单容器+role 后冗余）——公共收尾：
+- 新建 `thincoder-core/agent-tools/async-settle.mjs`：`settleAsyncEntry(parent, entry, {pool, onAccounting})`（评审 #1——签名与 F3 一致：`pendingFamily` 参数删，单容器+role 后冗余）——公共收尾：
   - settleSeq 递增 + entry._settle() + 唤醒 waiter（公共尾部）
   - 日志三连（ev:cancelled/child:done|error/ev:settled）
   - cancelled 分支（delete + tombstone + ⟦ev⟧stopped + pushReal 提醒）
@@ -50,11 +50,11 @@
 
 ## 3. 受影响文件（CLI，thincoder）
 
-- 新建：`src/agent-tools/async-settle.mjs`（settle 共享 helper + buildChildSignal + 池 accessor——预估 ~150 行）
-- 修改：`src/agent-tools/subagent-run.mjs`（~200 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-30）、`thincoder-core/agent-tools/advisor-async.mjs`（~490 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-20）、
+- 新建：`thincoder-core/agent-tools/async-settle.mjs`（settle 共享 helper + buildChildSignal + 池 accessor——预估 ~150 行）
+- 修改：`thincoder-core/agent-tools/subagent-run.mjs`（~200 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-30）、`thincoder-core/agent-tools/advisor-async.mjs`（~490 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-20）、
   `thincoder-core/agent-tools/escalate-async.mjs`（~300 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-20）、`thincoder-core/agent-tools/consult.mjs`（~450 行，settle 升格完整 entry + 信号兜底 + 改调 helper——delta ~-10）、
   `thincoder-core/agent.mjs`（~410 行，pending 消费单容器——delta ~-15）、`thincoder-core/agent/run-stages.mjs`（~250 行，池 accessor + pending 清理单容器——delta ~-10）、`src/tui/suspension-drive.mjs`（~380 行，sweep 改调 helper + pending 清理单容器——delta ~-20）、
-  `src/agent-tools/subagent-actions.mjs`（~500 行，池 accessor——delta ~+5，**>300 档位——拆分到 async-pool 子模块若跨 500**）、`src/agent-tools/subagent-scheduler.mjs`（~400 行，池 accessor——delta ~+5）、`src/agent-tools/subagent-async.mjs`（~450 行，pending 聚合单容器——delta ~-15）
+  `thincoder-core/agent-tools/subagent-actions.mjs`（~500 行，池 accessor——delta ~+5，**>300 档位——拆分到 async-pool 子模块若跨 500**）、`thincoder-core/agent-tools/subagent-scheduler.mjs`（~400 行，池 accessor——delta ~+5）、`thincoder-core/agent-tools/subagent-async.mjs`（~450 行，pending 聚合单容器——delta ~-15）
 - 文档：本设计 + README 地图登记 + AGENT-LOOP.md 子代理/async §（settle 统一机制记录）
 
 ## 4. 验收

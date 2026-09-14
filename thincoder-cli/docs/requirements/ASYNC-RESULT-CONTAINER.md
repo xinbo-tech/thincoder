@@ -13,7 +13,7 @@
 - **F1（池 accessor 吸收双池）**：消费端统一经 accessor（`getAsyncPool(role)`）访问池——底层保留 `_asyncSubagents`/`_asyncAdvisors` 双池（advisor 无队列独立调度），accessor 吸收差异。
 - **F2（pending 单容器+role）**：3 族 pending（`_pendingAsyncResults`/`_pendingEscalateResults`/`_pendingConsultResults`）统一为**单容器 `_pendingAsyncResults`**，条目带 role 字段；
   consult 裸对象 `{id,role,report}` 升格为完整 entry 形态（同 subagent/advisor/escalate）。**done-in-pool 统一表示（评审 #4）**：留池 done:true + pending 单容器——`_inPending` 标记保留防重复移交（同 subagent/advisor/escalate 现语义）。
-- **F3（settle 共享 helper）**：新建 `src/agent-tools/async-settle.mjs`——公共 settle 收尾（settleSeq/_settle/唤醒 waiter/日志三连/cancelled 分支/挂起分流）抽共享 helper `settleAsyncEntry(parent, entry, {pool, onAccounting})`（评审 #3——`pendingFamily` 参数删：单容器+role 后冗余，只需 `onAccounting` hook + entry.role）；
+- **F3（settle 共享 helper）**：新建 `thincoder-core/agent-tools/async-settle.mjs`——公共 settle 收尾（settleSeq/_settle/唤醒 waiter/日志三连/cancelled 分支/挂起分流）抽共享 helper `settleAsyncEntry(parent, entry, {pool, onAccounting})`（评审 #3——`pendingFamily` 参数删：单容器+role 后冗余，只需 `onAccounting` hook + entry.role）；
   族特有段（settleAdvisorRun 记账/classifyEscalateSettle/maybeRefillAsync）作 hook 注入。
 - **F4（守卫统一）**：settle 守卫统一为 `!parentAborted`（escalate 严格版——覆盖 ctx.signal ∨ entry.controller aborted），替代 subagent 的 `!ctx.signal?.aborted`（漏 controller）。
 - **F5（consult 补信号兜底）**：consult 补 `_sessionSignal` 兜底（同 subagent/advisor/escalate——修一致性 bug），统一 buildChildSignal。

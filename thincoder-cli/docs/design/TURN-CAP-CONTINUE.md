@@ -2,7 +2,7 @@
 
 > 板块：Agent 循环（`TURN-CAP-CONTINUE.md`——撞墙可继续专题，与 AGENT-LOOP 同板块独立保留，见 README 地图）。
 > 状态：**机制已实现并在现行代码生效**——主/子/飞刀/会诊四类 agent 撞轮数墙都能"继续"，且不限次数。与 VS Code 插件端同源（两端语义一致）。
-> 权威源：`thincoder-core/agent/spawn-child.mjs`（`runWithContinue` 骨架）、`src/agent-tools/subagent.mjs` / `subagent-actions.mjs` / `escalate-async.mjs` / `consult.mjs`、`src/tui/agent-turn.mjs`（主 agent 面板）、`thincoder-core/agent.mjs`（`ContinueError` / runAgent 循环）。
+> 权威源：`thincoder-core/agent/spawn-child.mjs`（`runWithContinue` 骨架）、`thincoder-core/agent-tools/subagent.mjs` / `subagent-actions.mjs` / `escalate-async.mjs` / `consult.mjs`、`src/tui/agent-turn.mjs`（主 agent 面板）、`thincoder-core/agent.mjs`（`ContinueError` / runAgent 循环）。
 
 
 > 需求层（2026-09-10 拆分批）：本板块需求见 `../requirements/TURN-CAP-CONTINUE.md`——本档保留设计与测试细节。
@@ -77,9 +77,9 @@
 | 段内帽判定 | `for (let turn = 0; turn < maxTurns; turn++)`（:178）+ `throw new ContinueError(maxTurns)`（:390） | **零改动**（控制流只读段内 `turn` / `maxTurns`） |
 
 **数据流（CLI——消费点全链零改动）**：子 runAgent 发编号帧 →
-① `⟦ev⟧turn` →（镜像层 `src/agent-tools/subagent-run.mjs:110-117` / `thincoder-core/agent-tools/escalate-async.mjs:203-205` 原样正则解析）→ `entry.turn` / `maxTurns` → status / observe 面；
+① `⟦ev⟧turn` →（镜像层 `thincoder-core/agent-tools/subagent-run.mjs:110-117` / `thincoder-core/agent-tools/escalate-async.mjs:203-205` 原样正则解析）→ `entry.turn` / `maxTurns` → status / observe 面；
 ② TUI 路由（`src/tui/subagent-blocks.mjs`）→ 活动块头 `turn n/max`；
-③ 终态快照 `onSubagent({turn, maxTurns})`（`subagent-run.mjs:137`）→ 冻结头；
+③ 终态快照 `onSubagent({turn, maxTurns})`（`thincoder-core/agent-tools/subagent-run.mjs:137`）→ 冻结头；
 ④ 状态行 `render-frame.mjs:355`（主会话）。
 
 ### 19.4 关键决策记录（含否决备选）

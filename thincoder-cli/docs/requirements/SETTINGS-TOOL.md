@@ -34,7 +34,7 @@
   - **判定句**：上列键的合法形态值 → `settings set` 接受（磁盘写入 + 内存热应用 + 回显）；不可消费形态值 → 拒绝（抛错 + 磁盘/内存零变化）。
 - **F-S1.8（无静默写入——2026-09-11 第 8 批）**：**被接受的写入不得在下游被无声置空/忽略**——“写了等于没写”不允许存在：通过校验的值要么在应用侧读取时得到与“未设置”态**可区分**的结果，要么被工具**拒绝**并给出**可操作原因**（含期望形态）。
   - **判定句**：对每个受约束键，测试断言「**接受集 == 应用侧可消费集** ∧ **拒绝集 == 应用侧不可消费集**」（表驱动集合相等），且被拒值的写入尝试不改变磁盘与内存。
-  - **机械凭据**：不可消费判据 = 应用侧读取器的真实条件（`thincoder-core/config.mjs:277` · `src/cli/make-agent.mjs:150` · `src/agent-tools/subagent-spawn.mjs:92` · `thincoder-core/tools/bash.mjs:131` · `src/model-ref.mjs:25-36` 形态面——存在性面 `:38-43` 不查），
+  - **机械凭据**：不可消费判据 = 应用侧读取器的真实条件（`thincoder-core/config.mjs:277` · `src/cli/make-agent.mjs:150` · `thincoder-core/agent-tools/subagent-spawn.mjs:92` · `thincoder-core/tools/bash.mjs:131` · `src/model-ref.mjs:25-36` 形态面——存在性面 `:38-43` 不查），
     测试以真读取器（`loadConfig` / `effectiveSubagentModel` / `model-ref` 形态判据）或逐字条件断言。
 
 ## 3. 非功能需求（N-S1）

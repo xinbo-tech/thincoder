@@ -793,9 +793,9 @@ Advisor: review timeout after {S}s. Review incomplete — the wall-clock budget 
   1. 起点 = 点火受理：异步启动快照 `launchSeq`（`thincoder-core/agent-tools/advisor-async.mjs:265`）——同批中先于点火的写不计、后于点火的写计入；
   2. 评估面 = 设计评审声明文档集 `docAbs`（`thincoder-core/agent-tools/advisor-async.mjs:266-268`，即 `documents` 声明——含批次档）；
   3. 判决 = `reviewIsStale`（`thincoder-core/agent-tools/advisor-settle.mjs:58-70`——第 11 批自 advisor-async 迁出）：`seq > launchSeq` 的父侧变更命中 `docAbs` → stale；
-  4. 判决时点 = 结算记账（`settleAdvisorRun`，`thincoder-core/agent-tools/advisor-settle.mjs:123`——调用点 `thincoder-core/agent-tools/advisor-async.mjs:310-314`，经 `async-settle.mjs:163-177` 于评审 promise 收尾时调用）；读取的是**读取时刻**的变更日志；
+  4. 判决时点 = 结算记账（`settleAdvisorRun`，`thincoder-core/agent-tools/advisor-settle.mjs:123`——调用点 `thincoder-core/agent-tools/advisor-async.mjs:310-314`，经 `thincoder-core/agent-tools/async-settle.mjs:163-177` 于评审 promise 收尾时调用）；读取的是**读取时刻**的变更日志；
   5. 违规后果（既有行为——保留）= stale 分支：剥 token 回显 + 「评审目标已变更——token 未签发」前缀（`thincoder-core/agent-tools/advisor-settle.mjs:198-204`）、不签 token、不计评审覆盖；
-  6. 父侧可观察下界 = **报告送达**（结算 → 挂起移交 `_pendingAsyncResults`（`async-settle.mjs:171-174`）→ digest 注入 / 回合尾 collect）**或取消·中止**（`async-settle.mjs:134-146` / `:163`）。
+  6. 父侧可观察下界 = **报告送达**（结算 → 挂起移交 `_pendingAsyncResults`（`thincoder-core/agent-tools/async-settle.mjs:171-174`）→ digest 注入 / 回合尾 collect）**或取消·中止**（`thincoder-core/agent-tools/async-settle.mjs:134-146` / `:163`）。
 - **边界澄清**：**「子进程退出」不是窗口边界**——结算记账晚于进程收尾执行（promise 收尾微任务级）且对父侧不可观察；窗口实际射程 = **点火 → 结算读取**（进程退出后、结算读取前的写同样计入）。父侧唯一可观察的安全边界 = 报告送达。
 
 **E-2 方案选型对比**
@@ -887,7 +887,7 @@ E 增量 = 1 新行（E-1）+ 4 行内增量（E-2…E-5）；实施域与 §14.
 | E-D3 | 批次档**不豁免**（E-表 3） | 评审对象完整性 + E 场景保护对象 + 文件级机制约束 |
 | E-D4 | 逃生门 = cancel → 改 → 重发（不自动） | 发起权在父 / 用户（同 §14.2 表 1 / 表 3 口径） |
 | E-D5 | 定义句**现落本档**、四镜像同步登记 | 他链在途（零碰）；本档 = 评审链机制权威档——定义先落，同步随批 |
-| E-D6 | 写面边界：**拦 = 父侧自身 `FILE_MUTATORS` 写面 × `docAbs`；判 stale 集 ⊇ 拦集** | 拦集 = 预闸可见的父侧自身写面；判集另含预闸不可达的**子代理合入**写入（`mergeChildMutations` → `noteMutations`，`subagent-async.mjs:446-459`——子代理无 `_asyncAdvisors` 池面）——「致 stale 却没拦」只可出自不可达面，非本可拦面之分叉；bash / file_ops 盲区不记账不判 stale（E-6 #3）；子代理合入面登记 E-6 #5 |
+| E-D6 | 写面边界：**拦 = 父侧自身 `FILE_MUTATORS` 写面 × `docAbs`；判 stale 集 ⊇ 拦集** | 拦集 = 预闸可见的父侧自身写面；判集另含预闸不可达的**子代理合入**写入（`mergeChildMutations` → `noteMutations`，`thincoder-core/agent-tools/subagent-async.mjs:446-459`——子代理无 `_asyncAdvisors` 池面）——「致 stale 却没拦」只可出自不可达面，非本可拦面之分叉；bash / file_ops 盲区不记账不判 stale（E-6 #3）；子代理合入面登记 E-6 #5 |
 
 **E-6 后续登记项（本批不碰——明示，不静默）**
 
@@ -895,7 +895,7 @@ E 增量 = 1 新行（E-1）+ 4 行内增量（E-2…E-5）；实施域与 §14.
 2. **代码评审在途写面**：未拦截（E-D2）——若后续观察显示代码评审轮次损失同样显著，再评估（含正常模式影响面）。
 3. **bash / file_ops 写入面**：陈旧扫描自身盲区（不被记账 → 不判 stale；E 拦截同界不扩大）——登记后续评估。
 4. **A–D 段计数**（轮次 1 修正轮已结）：原「7 改 + 3 新」与逐行标签口径差 1——已按裁定同改（逐行标签为准 = **6 改 + 4 新**；§14.7 表头 / §14.9 D3 行 / 批次档 §2）。
-5. **子代理合入写入面**（预闸不可达）：`mergeChildMutations` → `noteMutations`（`subagent-async.mjs:446-459`）在途写入父侧 `_mutLog`——在途设计评审期间子代理合并仍可致 stale，dispatch 预闸拦不到（子代理无 `_asyncAdvisors` 池面）。与 #3 同族（扫面盲区），后续评估随批。
+5. **子代理合入写入面**（预闸不可达）：`mergeChildMutations` → `noteMutations`（`thincoder-core/agent-tools/subagent-async.mjs:446-459`）在途写入父侧 `_mutLog`——在途设计评审期间子代理合并仍可致 stale，dispatch 预闸拦不到（子代理无 `_asyncAdvisors` 池面）。与 #3 同族（扫面盲区），后续评估随批。
 
 **E-7 测试层：用例表（正常 / 边界 / 错误）**
 

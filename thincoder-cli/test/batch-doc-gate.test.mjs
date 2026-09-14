@@ -22,8 +22,8 @@ import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { randomUUID } from "node:crypto"
 
-import { buildSpawnChild } from "../src/agent-tools/subagent-spawn.mjs"
-import { subagentTool } from "../src/agent-tools/subagent.mjs"
+import { buildSpawnChild } from "@thincoder/core/agent-tools/subagent-spawn.mjs"
+import { subagentTool } from "@thincoder/core/agent-tools/subagent.mjs"
 import { prepareRun } from "@thincoder/core/agent/setup.mjs"
 
 const DESIGN_ID = "did-batch-doc"

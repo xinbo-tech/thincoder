@@ -500,7 +500,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 - 消费：①会话槽位 `activeModel` 空/缺失 → 回落 `slotProvider.model`（`session.mjs`；VSC 对位见 §16.5 `turn-model.mjs` 行——等价语义已有）②picker/管理面显示回退（L1 行、ctx 标签、remove/set-key/context 列表）③`/config → 默认模型` 渠道行显示
   ④advisor / subagent 裸渠道名克隆时 model 重派生——两调用点语义同源（渠道单值优先 + 父兜底）：
   - `thincoder-core/advisor/run.mjs:341`：`provider.model ?? provider.models?.[0]` → **`provider.model ?? agent.provider?.model`**（`models[0]` 换为父兜底——与 subagent F-2c 同构；VSC `src/advisor/provider.mjs（VSC 仓）` 镜像同改）。
-  - `agent-tools/subagent-async.mjs:157`：`byName.models?.[0] ?? parent.provider?.model` → **`byName.model ?? parent.provider?.model`**（`models[0]` 换为渠道单值；**尾部 `?? parent.provider?.model` 父 provider 兜底保留**——兜底链尾不动）。
+  - `thincoder-core/agent-tools/subagent-async.mjs:157`：`byName.models?.[0] ?? parent.provider?.model` → **`byName.model ?? parent.provider?.model`**（`models[0]` 换为渠道单值；**尾部 `?? parent.provider?.model` 父 provider 兜底保留**——兜底链尾不动）。
   - **空值语义**（评审修正轮补）：渠道无默认模型（M3「空值合法」/ M7 空结果合法）→ 克隆取值回退主 provider model；两者皆无（极端）→ model 缺失交 chat 前 guard fail-fast（`assertProviderModel`——文案同步不再称 `models[]`）；**绝不产出静默 undefined-model 请求**。用例 T28。
 - 不承担：不是候选清单；不做成员校验；不限制显式 `p:m`；空值合法（模型选择经 `/models` 拉取候选——准入判据见 M8/M9）。
 
@@ -629,7 +629,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 | `src/provider/index.mjs` | 7 | ±0 | re-export 改指 |
 | `src/provider/errors.mjs` | 102 | ±0 | F-1 guard 文案与注释（不再称 `models[]`） |
 | `thincoder-core/advisor/run.mjs` | 488 | ±0 | `models?.[0]` 兜底换父兜底 `agent.provider?.model`（与 subagent 同构——M3④）；注释 |
-| `src/agent-tools/subagent-async.mjs` | 473 | ±0 | `models?.[0]`→`byName.model`（**保 `?? parent.provider?.model` 父兜底**）；注释 |
+| `thincoder-core/agent-tools/subagent-async.mjs` | 473 | ±0 | `models?.[0]`→`byName.model`（**保 `?? parent.provider?.model` 父兜底**）；注释 |
 | `src/cli/setup-wizard.mjs` | 80 | +10 | `preset.model` 读取修复（旧版漏改的既存 bug——本批自动对上）；落单值；首启加渠道探 `/models`（M9） |
 | `src/cli/make-agent.mjs` | 163 | ±0 | 注释 |
 | `src/tui/model-picker.mjs` | 490 | −35 | L2 候选改拉取（M2）；`selectModel` 放行+回显（M4/M6）；预设/custom 播种单值；建议位退场 |
@@ -668,7 +668,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 | `thincoder-core/provider/list-models.mjs` | **新增** | ~95 | 三 format 分派 |
 | `src/provider/transports/openai.mjs`（VSC 仓） | 308 | ±0（文案） | guard 文案（不再称 `models[]`） |
 | `src/advisor/provider.mjs`（VSC 仓） | 39 | ±0 | `models?.[0]` 兜底换父兜底 `agent._provider?.model`（与 VSC subagent 同构——M3④）；注释 |
-| `src/agent-tools/subagent.mjs` | 358 | ±0 | `models?.[0]`→`byName.model`（**保 `?? parent._provider?.model` 父兜底**）；注释 |
+| `thincoder-core/agent-tools/subagent.mjs` | 358 | ±0 | `models?.[0]`→`byName.model`（**保 `?? parent._provider?.model` 父兜底**）；注释 |
 | `thincoder-vscode/src/extension/settings.mjs` | 332 | +20 | status payload 单值；`fullStatus` 候选=fetch（失败 = 该渠道不可选 + 明示原因——无 fallback 候选）；custom 空条目判据；准入探复用（M9——既有 `testProviderConnection` 模式） |
 | `src/extension/settings-panel-write.mjs`（VSC 仓） | 134 | +10 | defaultModel 面板写加准入探（M9——探不通标不可用、不入可选来源） |
 | `src/extension/provider-flows.mjs`（VSC 仓） | 193 | +15 | 播种单值；`p.models?.[0]`→`p.model`；addProviderEntry / setKeyFlow 加准入探（M9——不通标不可用，不阻断保存） |

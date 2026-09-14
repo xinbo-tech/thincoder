@@ -12,7 +12,7 @@ import assert from "node:assert/strict"
 import {
   TRIGGERS, triggerOf, abortError, timeoutError, annotateAbort, deathLine,
 } from "@thincoder/core/abort-provenance.mjs"
-import { classifySyncAbort, armSyncChildAbort } from "../src/agent-tools/subagent.mjs"
+import { classifySyncAbort, armSyncChildAbort } from "@thincoder/core/agent-tools/subagent.mjs"
 
 test("T-AP1 词汇表：triggerOf 四形态 + TRIGGERS 计数 5（F-D1.1）", () => {
   assert.equal(TRIGGERS.length, 5)

@@ -509,8 +509,8 @@ N5（防刷屏与行额度）· N6（省略计数真值）。
   不进内容流）。
 - **已知失效前提（本批不处理——未来复核项）**：同一外层块若出现两个**并发**内层子块交错，内层输出会
   并入末块的他人工具头块（`pushBlock` 仅按 kind 合并——`subagent-children.mjs:79`）；当前不可达
-  ——depth>0 spawn 恒同步（`src/agent-tools/subagent.mjs` `wantAsync` 缺省门控，as-of :215-220；下游
-  `src/agent-tools/subagent-run.mjs` `executeAsyncSpawn` 对 depth>0 拒 async，as-of :47-48；工程子代
+  ——depth>0 spawn 恒同步（`thincoder-core/agent-tools/subagent.mjs` `wantAsync` 缺省门控，as-of :215-220；下游
+  `thincoder-core/agent-tools/subagent-run.mjs` `executeAsyncSpawn` 对 depth>0 拒 async，as-of :47-48；工程子代
   通道 `src/agent/spawn-child.mjs` `gateEngCoderSpawn` 限 sync explore，as-of :48-56），未来放开
   并行嵌套时须复核。
 - **子块载体 = 守护元数据**（key/role/model/done/stopped/currentTool/children——字段全集、类目划分见

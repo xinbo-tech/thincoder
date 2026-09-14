@@ -181,12 +181,12 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
 ### 7.2 第 8 批决策（D-S2——2026-09-11）
 
 - **D-S2.1 根因修法 = 自动派生 + null 叶子显式形状表**（选型对比见 §8.2）：非 null 叶子继续派生（零手写）；null 叶子 **4 条**显式声明（逐键带代码依据）+ 同族 1 条单列于兄弟结构（`_SIBLING_SHAPES`——存在性断言面）；完备性由机械锁守（测试断言 + 一次性警告）。否决：跳过 null（静默面留存 + 新增静默面，见 §8.2 候选 1）/ 记 `"any"`（换名不换义）/ 全表手写（丢防漂移，违 F-S1.5 派生条款）。
-- **D-S2.2 不可消费形态一律拒绝**（不按“形态接受”）：依据 = 应用侧对不可消费值的处置 = **读不出写入值**（折叠为未设置/回落，或远处的响亮失败——`subagentModel` 对象 → spawn 期 TypeError）而非按形态消费（`thincoder-core/config.mjs:277` / `src/cli/make-agent.mjs:150` / `src/agent-tools/subagent-async.mjs:136`）——接受即等于承认静默面（违 F-S1.8）；响亮面同样写侧拒绝（错误点近写点——更便宜）。
+- **D-S2.2 不可消费形态一律拒绝**（不按“形态接受”）：依据 = 应用侧对不可消费值的处置 = **读不出写入值**（折叠为未设置/回落，或远处的响亮失败——`subagentModel` 对象 → spawn 期 TypeError）而非按形态消费（`thincoder-core/config.mjs:277` / `src/cli/make-agent.mjs:150` / `thincoder-core/agent-tools/subagent-async.mjs:136`）——接受即等于承认静默面（违 F-S1.8）；响亮面同样写侧拒绝（错误点近写点——更便宜）。
 - **D-S2.3 `null` 保留为合法值**（显式清除）：四键消费面均有“未设置”态且由 TUI 使用该态（`src/tui/cmd-shell.mjs:65` reset→null · `src/tui/cmd-submodel.mjs:63` 清除→null · `memory.team: null` = 未配置团队层）——清除是**有效动作**，不属静默。
 - **D-S2.4 敏感键错误文案遮罩**（既有 N-S1.2 条款的合规化，非新行为）：现状错误句含 `JSON.stringify(args.value)`（`thincoder-core/agent-tools/settings.mjs:138`）——实证 `set websearch.apiKey '{"k":"sk-SECRET"}'` → `sk-SECRET` 明文进错误文本（违 N-S1.2“错误文本永不出现明文”）；新校验器统一构造消息，敏感键命中时值位改 `••••（masked）`。取舍：不改错误句**结构**（判据/期望形态仍全量可见），只遮值。
 - **D-S2.5 不校验渠道/模型/可执行文件存在性**（形状层止步）：`defaultModel` 只校验 `provider:model` 形态（首冒号 idx>0 ∧ 尾段非空），不查渠道是否存在——存在性属运行期（`src/model-ref.mjs:38-43`），已有 D-S1 原因面（`providerInvalidReason`）；同理 `shell` 不查可执行文件、`memory.team.repo` 不查 git 可达。
-- **D-S2.6 不动读取侧**（零 reader 改动）：全部折叠/回落点（`thincoder-core/config.mjs:277` / `make-agent.mjs:150` / `subagent-async.mjs:135-158` / `thincoder-core/tools/bash.mjs:131`）保持原样——本批只加写侧护栏，护栏与 reader 是「拒绝 ⊆ 不可消费」的单调关系（§8.5），不可能新增静默。
-- **D-S2.7 W3 同族纳入**（`agent.subagentModels`——默认 `{}` ⇒ 派生表零条目 ⇒ 零约束）：实证字符串被静默忽略（回落 `subagentModel`，`subagent-spawn.mjs:92`）——按 F-S1.8 一般表述纳入；**已裁定纳入本批**（2026-09-11 用户裁定——保留 W3 条目与用例：T-S2.12 正控 + T-S2.13 表驱动含 W3 行）。
+- **D-S2.6 不动读取侧**（零 reader 改动）：全部折叠/回落点（`thincoder-core/config.mjs:277` / `make-agent.mjs:150` / `thincoder-core/agent-tools/subagent-async.mjs:135-158` / `thincoder-core/tools/bash.mjs:131`）保持原样——本批只加写侧护栏，护栏与 reader 是「拒绝 ⊆ 不可消费」的单调关系（§8.5），不可能新增静默。
+- **D-S2.7 W3 同族纳入**（`agent.subagentModels`——默认 `{}` ⇒ 派生表零条目 ⇒ 零约束）：实证字符串被静默忽略（回落 `subagentModel`，`thincoder-core/agent-tools/subagent-spawn.mjs:92`）——按 F-S1.8 一般表述纳入；**已裁定纳入本批**（2026-09-11 用户裁定——保留 W3 条目与用例：T-S2.12 正控 + T-S2.13 表驱动含 W3 行）。
 - **D-S2.8 `parseValue` 引号行为保持现状**（登记观察，本批不裁定）：CLI 对“JSON 解析成功但结果为字符串”返回**原始串**（`thincoder-core/agent-tools/settings.mjs:83`——`set x '"abc"'` 落盘 `"abc"` 含引号），VSC 返回**解析值**（`src/agent-tools/settings.mjs:79`（VSC 仓）——落盘 `abc`）；F-S1.3 值解析条款未覆盖引号语义，差异登记 `docs/TODO.md`（父侧）——本批不修、不锁测试。
 
 ## 8. 设计追加：null 默认值键的形状约束（第 8 批——2026-09-11）
@@ -204,9 +204,9 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
 |---|---|---|---|
 | ① | 合法值被拒 | `set defaultModel "deepseek:deepseek-flash"` / `set shell "pwsh"` / `set agent.subagentModel "kimi:k3"` → 全部抛 `expects object — got string` | 三键**无法经工具设置**（用户 config 的 `defaultModel` 改不动——本批来源） |
 | ② | 非法值被收 + 下游静默 | `set defaultModel '{"a":1}'` → 通过 → `thincoder-core/config.mjs:277` 非串 → **静默置 null**；`set memory.team '{"name":"x"}'` → 通过 → `src/cli/make-agent.mjs:150` `!team?.repo` → **团队层静默关闭** | 写了等于没写（零提示） |
-| ③ | 同族静默（非 null 默认值） | `set agent.subagentModels "abc"` → 通过（派生表零条目）→ `subagent-spawn.mjs:92` 索引不到角色 → **静默回落 `subagentModel`** | 同族静默面（W3） |
+| ③ | 同族静默（非 null 默认值） | `set agent.subagentModels "abc"` → 通过（派生表零条目）→ `thincoder-core/agent-tools/subagent-spawn.mjs:92` 索引不到角色 → **静默回落 `subagentModel`** | 同族静默面（W3） |
 
-附证（②的响亮面，非静默但更贵）：`set agent.subagentModel '{}'` → 通过 → spawn 期 `src/agent-tools/subagent-async.mjs:147` `modelArg.includes is not a function` **TypeError**（错误点远离写入点）。
+附证（②的响亮面，非静默但更贵）：`set agent.subagentModel '{}'` → 通过 → spawn 期 `thincoder-core/agent-tools/subagent-async.mjs:147` `modelArg.includes is not a function` **TypeError**（错误点远离写入点）。
 
 ### 8.2 方案选型对比
 
@@ -228,7 +228,7 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
 | 键 | 真实消费形态 | 依据（代码） | 接受集 | 拒绝集（= 不可消费形态） |
 |---|---|---|---|---|
 | `defaultModel` | `"provider:model"` 复合串 | `thincoder-core/config.mjs:59`（默认 null）· `:277`（非串→null）· `src/model-ref.mjs:25-36`（形态面：首冒号分割 + 尾段非空；裸名拒）· `:38-43`（存在性面——D-S2.5 不查） | `provider:model` 形态串 ∪ `null` | 对象 / 数组 / 数字 / 布尔（`:277` → 静默 null）· 空串 / 无冒号串 / 尾段空串（解析无效——运行期原因面） |
-| `agent.subagentModel` | 非空串 = `provider:model` \| 渠道名 \| 模型名 \| `"default"` 别名 | `src/agent-tools/subagent-spawn.mjs:83-93` · `subagent-async.mjs:135-158` | 非空串 ∪ `null` | 对象 / 数组 / 数字 / 布尔（spawn 期 TypeError——远处的响亮失败）/ 空串（falsy → 回落父 provider = 静默） |
+| `agent.subagentModel` | 非空串 = `provider:model` \| 渠道名 \| 模型名 \| `"default"` 别名 | `thincoder-core/agent-tools/subagent-spawn.mjs:83-93` · `thincoder-core/agent-tools/subagent-async.mjs:135-158` | 非空串 ∪ `null` | 对象 / 数组 / 数字 / 布尔（spawn 期 TypeError——远处的响亮失败）/ 空串（falsy → 回落父 provider = 静默） |
 | `shell` | 非空串 = shell 路径或命令 | `thincoder-core/tools/bash.mjs:261` → `:131`（`shell ?? true`）· `src/tui/cmd-shell.mjs:28-38`（候选值域） | 非空串 ∪ `null` | 对象 / 数字 / 布尔（执行面读不出命令串）/ 空串（falsy → 关闭 shell 包裹——行为改变，非折叠） |
 | `memory.team` | `{ repo: 非空串, name?, dir? }` | `src/cli/make-agent.mjs:148-152`（`!team?.repo → null`）· `src/distill.mjs:145` | 含非空 `repo` 的对象 ∪ `null` | 字符串 / 数组 / 数字 / 布尔（`!team?.repo` → 团队层静默关）/ 无 `repo` 或 `repo` 空/非串的对象 |
 
@@ -236,7 +236,7 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
 
 | 键 | 真实消费形态 | 依据（代码） | 接受集 | 拒绝集（= 不可消费形态） |
 |---|---|---|---|---|
-| `agent.subagentModels`（W3 同族——默认 `{}`，非 null） | 角色→非空串映射 | `src/agent-tools/subagent-spawn.mjs:92` · `src/tui/cmd-submodel.mjs:15` | 值全为非空串的对象（`{}` = 清除）∪ `null` | 字符串 / 数组 / 数字 / 布尔（索引不到角色 → 静默回落 `subagentModel`） |
+| `agent.subagentModels`（W3 同族——默认 `{}`，非 null） | 角色→非空串映射 | `thincoder-core/agent-tools/subagent-spawn.mjs:92` · `src/tui/cmd-submodel.mjs:15` | 值全为非空串的对象（`{}` = 清除）∪ `null` | 字符串 / 数组 / 数字 / 布尔（索引不到角色 → 静默回落 `subagentModel`） |
 
 **校验语义（`_checkKnownKeyValue(path, value)`——替换现 `:134-140` 的逻辑）**：
 

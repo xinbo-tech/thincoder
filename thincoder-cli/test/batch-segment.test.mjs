@@ -18,7 +18,7 @@ import { join } from "node:path"
 import { randomUUID } from "node:crypto"
 
 import { batchSegmentTool, batchDocForReview, resolveBatchDocPath, MAX_TEXT_CHARS } from "@thincoder/core/agent-tools/batch-segment.mjs"
-import { buildSpawnChild } from "../src/agent-tools/subagent-spawn.mjs"
+import { buildSpawnChild } from "@thincoder/core/agent-tools/subagent-spawn.mjs"
 import { _advisorToolsFor } from "@thincoder/core/advisor/run.mjs"
 import { buildAdvisorSystemPrompt } from "@thincoder/core/advisor.mjs"
 import { advisorTool } from "@thincoder/core/agent-tools/advisor.mjs"

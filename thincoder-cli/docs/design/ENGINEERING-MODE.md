@@ -214,7 +214,7 @@
 **机械支撑三点**：
 
 1. **路径随件（spawn 注入）**：eng-coder spawn 时把批次档绝对路径注入 child 任务输入
-   （`src/agent-tools/subagent-spawn.mjs` 的 `_engTaskInput` 组装处——:340 `input` 组装 / :388 赋值——追加一行 `Batch record (batchDoc): <abs>`）——子代理因此"拿到本档路径"
+   （`thincoder-core/agent-tools/subagent-spawn.mjs` 的 `_engTaskInput` 组装处——:340 `input` 组装 / :388 赋值——追加一行 `Batch record (batchDoc): <abs>`）——子代理因此"拿到本档路径"
    （需求 §1.11 铁律 #5"随件传递"的机械面）。第 1 批只传路径，**不附六段行为指令**（第 2 批）。
 2. **无运行期路径字面**：`src/` 不硬编码 `docs/batches/`——批次档路径**永远是运行期输入**（`batchDoc` 参数），
    与 FR13（不假定用户项目布局）一致；`docs/batches/` 只存在于文档规范与用户项目自己的用法里。
@@ -237,7 +237,7 @@ explore / plan / coder（普通模式）**不适用**——行为零变更。
 
 **配套四点（含落点全路径）**：
 
-- **schema**（`src/agent-tools/subagent.mjs` 的 properties，designToken 邻域）：`batchDoc` string 描述含 "REQUIRED for eng-coder"——
+- **schema**（`thincoder-core/agent-tools/subagent.mjs` 的 properties，designToken 邻域）：`batchDoc` string 描述含 "REQUIRED for eng-coder"——
   schema 保持 advisory（`required:[]` 不动，机械检查在 execute 链——现行注释口径不变）。
 - **工具描述**：动作说明串加一句（batchDoc 必传 + 拒绝语义）。
 - **审计受限变体**（`thincoder-core/agent/setup.mjs` 的 eng-coder 内部审计通道）：`delete props.batchDoc`——审计子代理不派生批次参数
@@ -246,9 +246,9 @@ explore / plan / coder（普通模式）**不适用**——行为零变更。
    `docs/design/prompts/discipline-engineering.md` 的 spawn 样例行补 `batchDoc=<路径>` + 一句“必传，没传即拒”——
   **机械门禁先行而样例不教，会每次撞墙**。
 
-**落点全路径**（评审 #2）：「校验落点 = `buildSpawnChild`」指 **`src/agent-tools/subagent-spawn.mjs`**（:237 导出；
-调用点 `src/agent-tools/subagent.mjs:260`，async 分支在 :294 之后——故两端均经此处）；
-**不要**误放进 `src/agent-tools/subagent.mjs`（那里只是 schema 所在处）。
+**落点全路径**（评审 #2）：「校验落点 = `buildSpawnChild`」指 **`thincoder-core/agent-tools/subagent-spawn.mjs`**（:237 导出；
+调用点 `thincoder-core/agent-tools/subagent.mjs:260`，async 分支在 :294 之后——故两端均经此处）；
+**不要**误放进 `thincoder-core/agent-tools/subagent.mjs`（那里只是 schema 所在处）。
 
 **文案与字面的界定**（评审 #7）：错误消息里的 `docs/batches/<批>-<主题>.md` 是**提示文案**，
 **不参与路径判定、不是默认位置**（判定只看 `batchDoc` 传入值）——与 §2.11 第 2 点“不硬编码运行期路径”不矛盾；
@@ -280,8 +280,8 @@ A 胜在：**单一共用装配点 + 与 token 门同出口**（错误生命周�
 
 | 文件 | 性质 | as-of 行数 | 预计增量 | 拆分评审 |
 |---|---|---|---|---|
-| src/agent-tools/subagent.mjs | 修改 | 394 | ≤±12 | **>300 文件档**——本批不拆：单点增量（properties 一项 + 描述一句），不新增函数；若实施中发现单函数将超 300 行 → 停下报告，不静默扩 |
-| src/agent-tools/subagent-spawn.mjs | 修改 | 418 | ≤±25 | **>300 文件档**——本批不拆：门禁为 `buildSpawnChild` 内一段短判断 + 消息构造；不触发函数档但拆留待整体重构批 |
+| thincoder-core/agent-tools/subagent.mjs | 修改 | 394 | ≤±12 | **>300 文件档**——本批不拆：单点增量（properties 一项 + 描述一句），不新增函数；若实施中发现单函数将超 300 行 → 停下报告，不静默扩 |
+| thincoder-core/agent-tools/subagent-spawn.mjs | 修改 | 418 | ≤±25 | **>300 文件档**——本批不拆：门禁为 `buildSpawnChild` 内一段短判断 + 消息构造；不触发函数档但拆留待整体重构批 |
 | thincoder-core/agent/setup.mjs | 修改 | 340 | ≤±2 | **>300 文件档**——本批不拆：单行 `delete props.batchDoc` |
 | src/prompts/discipline-engineering.md | 修改 | 195 | ≤±4 | 纯 .md——免除行数标注（按评审标准） |
 | docs/design/prompts/discipline-engineering.md | 修改 | 122 | ≤±4 | 纯 .md——免除标注（中文权威模板，双源同步） |
@@ -300,7 +300,7 @@ A 胜在：**单一共用装配点 + 与 token 门同出口**（错误生命周�
 
 | 落点 | 改动 |
 |---|---|
-| `src/agent-tools/subagent.mjs:145`（schema enum） | 加 `"eng-designer"` |
+| `thincoder-core/agent-tools/subagent.mjs:145`（schema enum） | 加 `"eng-designer"` |
 | `:224` ROLES 白名单 + `:226` 错误文案 | 加角色 |
 | `:124-129` 工具描述（角色矩阵 + Mode filtering 句） | 加 designer 行；模式句改“工程模式 = explore/plan/**eng-designer**/eng-coder” |
 | `thincoder-core/agent/setup.mjs:187`（工程模式 enum）+ `:189` suffix | 加角色 |
@@ -346,11 +346,11 @@ designer 产出 = 设计档 + 回写批次档 §2；主 agent 核验（内容性
 | 8 | 提示词编写权 | ✅ 落 | §1.5 #8 注（内容权）+ A2 写权表 |
 | 9 | 设计确认门 A⊃B | ◆ 部分 | A（用户反馈迭代改稿路径）= A2 写权表（修订回 designer）；B（advisor 评审必经）= 现有流程节点 |
 
-**batchDoc 的模型面文案同步（评审 #9）**：`subagent.mjs:149` schema 描述现写“REQUIRED for role='eng-coder'…
+**batchDoc 的模型面文案同步（评审 #9）**：`thincoder-core/agent-tools/subagent.mjs:149` schema 描述现写“REQUIRED for role='eng-coder'…
 explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属句——**同批扩为角色集合**（`eng-coder`/`eng-designer`），
 并同步纪律层 spawn 样例行（含 `batchDoc=` 的 designer 例）——口径同 §2.12“提示词最小同步”（门禁先行而样例不教 = 每次撞墙）。
 
-**越界错误文案参数化（评审 #13）**：`src/agent/spawn-child.mjs:47/:50` 与 `src/agent-tools/subagent.mjs:237` 的“eng-coder”专属措辞
+**越界错误文案参数化（评审 #13）**：`src/agent/spawn-child.mjs:47/:50` 与 `thincoder-core/agent-tools/subagent.mjs:237` 的“eng-coder”专属措辞
 改为**带实际角色名**（designer 越界时不误导）。
 
 **主 agent 人格改写（评审 #1——PROMPT-SYSTEM §8.1:271 已登记；FR9 #1/#2）**：
@@ -380,7 +380,7 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 
 落点 = 双源 `discipline-engineering.md`；**三句均入锚断言家族**（AC22/T37 口径）。
 
-**模式门（对称补全）**：`subagent.mjs:236-241` 现有两门（工程禁 coder / 非工程禁 eng-coder）→ **加第三门**：
+**模式门（对称补全）**：`thincoder-core/agent-tools/subagent.mjs:236-241` 现有两门（工程禁 coder / 非工程禁 eng-coder）→ **加第三门**：
 **非工程模式 spawn eng-designer → throw**（它是工程模式专属角色，与 eng-coder 同族）。
 
 **B. 提示词装配（四处——漏一处不报错，是静默回退陷阱）**
@@ -392,7 +392,7 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 | `thincoder-core/agent/setup.mjs:295-301` 场景映射 | **外层谓词 + 内层选择器都要改（评审 #3）**：外层的 `(depth === 0 \|\| agent._role === "eng-coder")` 扩为工程角色集合；
 **内层的 `agent._role === "eng-coder" ? "eng-coder" : "engineering"`（`:299`）必须同步映射 `eng-designer → "eng-designer"`**——
 只改外层会让 designer 拿到 `assemblePrompt("engineering")`（= 主会话人格），正是本行要防的静默错配 |
-| `src/agent-tools/subagent-spawn.mjs:322-326` childConfig | `role === "eng-coder" → engineering:true` 扩为工程角色集合（designer 也必须 `engineering:true` 才能装配工程纪律槽） |
+| `thincoder-core/agent-tools/subagent-spawn.mjs:322-326` childConfig | `role === "eng-coder" → engineering:true` 扩为工程角色集合（designer 也必须 `engineering:true` 才能装配工程纪律槽） |
 
 **C. 新槽文件（双源——体例照 `persona-eng-coder.md`：头注 `slot:[1] consumers:[...]` + 身份/授权/边界/产出/纪律）**
 
@@ -416,7 +416,7 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 
 **D. spawn 面：batchDoc 同门 + 勘察能力**
 
-1. **batchDoc 门扩角色集**：`subagent-spawn.mjs:251/254` 的 `role === "eng-coder"` 精确串 → 角色集合
+1. **batchDoc 门扩角色集**：`thincoder-core/agent-tools/subagent-spawn.mjs:251/254` 的 `role === "eng-coder"` 精确串 → 角色集合
    `NEEDS_BATCH_DOC = {eng-coder, eng-designer}`；错误文案相应参数化（带实际角色名）；注入行 `:366` 同步扩。
 2. **勘察能力（§1.5 #7——设计者自己做勘察）**：新增 **designer 专属受限 subagent 变体**（explore-only）——
    镜像 `thincoder-core/agent/setup.mjs:224-257` 的 eng-coder 审计变体：`props.role = { enum: ["explore"] }` +
@@ -424,12 +424,12 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 3. **子代 spawn 门**：`src/agent/spawn-child.mjs:44-58` `gateEngCoderSpawn` 现只认父角色 eng-coder——**扩为父角色集合**
    （eng-coder / eng-designer）→ 两者都只允许 spawn `explore`；**审计预算（6）仍只计 eng-coder**（designer 勘察非审计；
    防滥用靠并发池 other≤4）。**返回值语义（评审 #4）**：designer 父路径校验通过后**必须返回 `null`**——
-   `subagent-spawn.mjs:374` 以 `engAuditAttempt !== null` 为审计任务书注入开关（`:376-393` 会追写“你在审计 eng-coder 交付”范围块）——
+   `thincoder-core/agent-tools/subagent-spawn.mjs:374` 以 `engAuditAttempt !== null` 为审计任务书注入开关（`:376-393` 会追写“你在审计 eng-coder 交付”范围块）——
    非 null 会把审计范围误注进勘察任务书。
 4. **变体实现口径（评审 #8）**：designer 变体 = **参数化复用**既有受限变体（父角色集合条件 + 描述文案分流），**不并列第二个 34 行 IIFE**——
    据此 `setup.mjs` 增量守住 ≤±20。
 5. **受限变体描述面动作清单同步（第 20 批——2026-09-11；D3 枚举纪律适用）**：受限变体（eng-coder 审计 /
-   eng-designer 勘察——参数化复用同一 IIFE）的动作拒绝清单**以机械门为唯一真值**（`src/agent-tools/subagent.mjs`
+   eng-designer 勘察——参数化复用同一 IIFE）的动作拒绝清单**以机械门为唯一真值**（`thincoder-core/agent-tools/subagent.mjs`
    execute 内受限变体动作门，as-of :175-177——门文案列 `escalate/status/cancel/panel/consume-design/observe/send`；
    工具动作面文档 = `AGENT-LOOP.md` §7.2）。3 个文案面同清单同步（`thincoder-core/agent/setup.mjs` as-of :253 action 描述 ·
    :259 勘察描述 · :260 审计描述）；**已退役动作 `check` 不得残留**（删除记录见 `AGENT-LOOP.md` §7.5）。
@@ -453,7 +453,7 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 - 事实前提（勘察实证）：现行 `dispatch.mjs` **无障碍拦 designer 写 `src/**`**（该文件的 `:172` 门只对 `agent._role === "eng-coder"` 生效、
   `:193` 门只对 depth 0 生效）——本批**有意不补门**：越界风险由提示词 + 核验承担（与“执行者拒收”同族纪律）。
 - **不新增写域门 = 不改 `src/agent/dispatch.mjs`**（从受影响文件表移除该项）。
-- **已知摩擦（评审 #7——用户 2026-09-10 裁定“接受”）**：designer 子代理**不**拿 `_engTaskAuthorized`（`subagent-spawn.mjs:345` 仅给 eng-coder），
+- **已知摩擦（评审 #7——用户 2026-09-10 裁定“接受”）**：designer 子代理**不**拿 `_engTaskAuthorized`（`thincoder-core/agent-tools/subagent-spawn.mjs:345` 仅给 eng-coder），
   故其每次写操作走 `dispatch.mjs:220` 的人工 ask；**用户裁定：接受**——授权弹窗可“全部授权/切自动”；
   设计**不为此加任务域豁免**（与“不需要机械门禁”口径一致）。用例固化该预期（T39）。
 
@@ -495,8 +495,8 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 
 | 文件 | 性质 | as-of 行数 | 预计增量 | 拆分评审 |
 |---|---|---|---|---|
-| src/agent-tools/subagent.mjs | 修改 | 395 | ≤±10 | >300 档——**不拆**：四处枚举/描述单点增量，无新函数 |
-| src/agent-tools/subagent-spawn.mjs | 修改 | 444 | ≤±15 | >300 档——**不拆**：门判据扩集合 + 注入行扩；不新增函数 |
+| thincoder-core/agent-tools/subagent.mjs | 修改 | 395 | ≤±10 | >300 档——**不拆**：四处枚举/描述单点增量，无新函数 |
+| thincoder-core/agent-tools/subagent-spawn.mjs | 修改 | 444 | ≤±15 | >300 档——**不拆**：门判据扩集合 + 注入行扩；不新增函数 |
 | src/agent/spawn-child.mjs | 修改 | 218 | ≤±12 | — |
 | thincoder-core/agent/setup.mjs | 修改 | 343 | ≤±20 | >300 档——**不拆**：枚举/变体/场景映射/工具链四处单点 |
 | thincoder-core/prompt-overlays.mjs | 修改 | 81 | ≤±4 | — |
@@ -590,7 +590,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 
 | 角色 | 绑定时机 | 落点 |
 |---|---|---|
-| `eng-designer` / `eng-coder` | spawn 时（第 1 批 `batchDoc` 门已保证「参数在 + 路径可读」）→ `child._batchDoc = batchDocAbs` | `src/agent-tools/subagent-spawn.mjs`（复用第 1 批已有的 `batchDocAbs` 变量） |
+| `eng-designer` / `eng-coder` | spawn 时（第 1 批 `batchDoc` 门已保证「参数在 + 路径可读」）→ `child._batchDoc = batchDocAbs` | `thincoder-core/agent-tools/subagent-spawn.mjs`（复用第 1 批已有的 `batchDocAbs` 变量） |
 | 设计评审 | advisor 工具**显式参数** `batchDoc`；门禁口径 = **“若传则须可读”（空/不可读 → throw）**——**不强制必传**（零回归，见 §2.20.8 不改 N5）；绑定 **按评审实例键**（`resolved.run.batchDoc`，与 `reviewType/round/designId` 同族）——**不用单值会话态** | `thincoder-core/agent-tools/advisor.mjs`（参数 + 门禁 + 实例键绑定） |
 
 **并发隔离（评审 #7）**：绑定必须**按评审实例**（顾问池默认 4，仅同 scope 拒——`thincoder-core/agent-tools/advisor-async.mjs:20-22`/`:400`）；
@@ -661,7 +661,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 |---|---|---|---|---|
 | thincoder-core/agent-tools/batch-segment.mjs | **新增** | — | +140±40 | 新工具（工具定义 + 段定位 + 剥除 + append 写入） |
 | thincoder-core/agent/setup.mjs | 修改 | 353 | ≤±12 | >300 档——**不拆**：挂载链（:286-290）两分支各加一项 |
-| src/agent-tools/subagent-spawn.mjs | 修改 | 449 | ≤±6 | >300 档——**不拆**：复用已有 `batchDocAbs` 设 `_batchDoc` |
+| thincoder-core/agent-tools/subagent-spawn.mjs | 修改 | 449 | ≤±6 | >300 档——**不拆**：复用已有 `batchDocAbs` 设 `_batchDoc` |
 | thincoder-core/agent-tools/advisor.mjs | 修改 | 213 | ≤±14 | 参数 + 门禁 + **评审实例键绑定** |
 | thincoder-core/advisor/run.mjs | 修改 | 488 | **≤±10** | **>300 档 + 逼近 500 硬顶（488 + 上限 10 = 498）——若实施中越 500，停下报告并带拆分计划（不得静默越线）** |
 | src/prompts/advisor-design.md | 修改 | 36 | ≤±8 | 纯 .md（round 1 评审者用工具写 §3） |
@@ -744,11 +744,11 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 
 | 处 | 落点（as-of） | 内容 |
 |---|---|---|
-| ① **运行期白名单** | `src/agent-tools/subagent.mjs:254-256`（`const ROLES = new Set([...])`） | 加入 `"eng-designer"`，**并改写错误文案的角色列举**（现列 4 个角色——漏改则报错信息说谎） |
-| ② **模式门（第三门）** | `src/agent-tools/subagent.mjs:267-272`（现只有 coder↔eng-coder 互斥两门） | 加：`eng-designer` 仅在工程模式可用（非工程模式 → 拒，文案同族） |
-| ③ **子代 spawn 门** | `src/agent-tools/subagent-async.mjs:47`（现 `parent._role !== "eng-coder"` 即 null 放行） | 父角色集合扩入 `eng-designer`（designer 的勘察子代 = explore-only） |
+| ① **运行期白名单** | `thincoder-core/agent-tools/subagent.mjs:254-256`（`const ROLES = new Set([...])`） | 加入 `"eng-designer"`，**并改写错误文案的角色列举**（现列 4 个角色——漏改则报错信息说谎） |
+| ② **模式门（第三门）** | `thincoder-core/agent-tools/subagent.mjs:267-272`（现只有 coder↔eng-coder 互斥两门） | 加：`eng-designer` 仅在工程模式可用（非工程模式 → 拒，文案同族） |
+| ③ **子代 spawn 门** | `thincoder-core/agent-tools/subagent-async.mjs:47`（现 `parent._role !== "eng-coder"` 即 null 放行） | 父角色集合扩入 `eng-designer`（designer 的勘察子代 = explore-only） |
 | ④ **装配分支** | `thincoder-core/agent/setup.mjs:151-160`（449 行） | 增 `eng-designer` 分支：读/搜/写设计产出 + `batch_segment` + **勘察通道工具（explore-only 受限 subagent 变体——镜像 CLI §2.15 D3 的受限变体与注册）**；**不含 advisor**（轮次3 评审 #5） |
-| ⑤ **角色 enum** | `src/agent-tools/subagent.mjs:56-74`（`modeRoleField`） | 工程模式 enum 由 `[explore, plan, eng-coder]` → 含 `eng-designer` |
+| ⑤ **角色 enum** | `thincoder-core/agent-tools/subagent.mjs:56-74`（`modeRoleField`） | 工程模式 enum 由 `[explore, plan, eng-coder]` → 含 `eng-designer` |
 | ⑥ **场景表** | `thincoder-core/prompt-overlays.mjs`（82 行） | 补 `"persona-eng-designer.md": loadSlot(...)` 与 `"eng-designer": [...]` 两行（CLI:26/CLI:52 同形——**全文逐行同构，最干净的可照抄点**） |
 | ⑦ **webview 枚举** | `webview/activity-view.js:13`（VSC 仓）（157）· `webview/activity.js:37`（VSC 仓）（205）· `webview/settings-agent.js`（VSC 仓）（175）· `webview/settings-models.js`（VSC 仓）（215） | 四处角色枚举/regex 补 `eng-designer` |
 | ⑧ **人格文件** | `src/prompts/persona-eng-designer.md`（**新增**） | 逐字源 = CLI 同名文件（56 行）；锚句 A3 |
@@ -820,8 +820,8 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 |---|---|---|---|
 | thincoder-vscode/src/agent-tools/batch-segment.mjs | **新增** | — | +≤200（CLI 同名档 196 行） |
 | thincoder-vscode/src/agent-tools/batch-segment.mjs（原拟 `subagent-spawn-gate`） | 修改 | 169 | +≤15（共享校验 `resolveBatchDocPath`） |
-| src/agent-tools/subagent.mjs | 修改 | 358 | +≤22（白名单/模式门/enum + **阻塞路 batchDoc 门调用点**〔轮次4 评审 #2〕）——**>300 档：不拆**（单点枚举与单点校验调用，无结构增长）；**函数档：无 ≥300 行单函数**（as-of） |
-| src/agent-tools/subagent-async.mjs | 修改 | 489 | **+≤10（→499，越 500 停下报告）**——含**异步路 batchDoc 门调用点**〔轮次4 评审 #2〕；>300 档：不拆；**函数档：无 ≥300 行单函数**（as-of） |
+| thincoder-core/agent-tools/subagent.mjs | 修改 | 358 | +≤22（白名单/模式门/enum + **阻塞路 batchDoc 门调用点**〔轮次4 评审 #2〕）——**>300 档：不拆**（单点枚举与单点校验调用，无结构增长）；**函数档：无 ≥300 行单函数**（as-of） |
+| thincoder-core/agent-tools/subagent-async.mjs | 修改 | 489 | **+≤10（→499，越 500 停下报告）**——含**异步路 batchDoc 门调用点**〔轮次4 评审 #2〕；>300 档：不拆；**函数档：无 ≥300 行单函数**（as-of） |
 | thincoder-core/agent-tools/advisor.mjs | 修改 | 296 | +≤14（`batchDoc` 参数）——**跨 300：不拆**（单点参数新增，无结构增长；拆分留给专项债）；**函数档：无 ≥300 行单函数**（as-of） |
 | thincoder-core/agent-tools/advisor-async.mjs | 修改 | 457 | +≤10（`rv.batchDoc` 实例字段）——>300 档：不拆（同因）；**函数档：无 ≥300 行单函数**（as-of） |
 | src/advisor/tools.mjs（VSC 仓） | 修改 | 49 | +≤10（三参签名 + 注入） |
@@ -1648,15 +1648,15 @@ test("T112 边界：新档自持——零跨档引用；import 全 node:（D-2/A
 | 9 | `thincoder-core/agent-tools/eng.mjs:37` | `§24 D-24b` → `§11.2 D-24b` | B |
 | 10 | `thincoder-core/agent-tools/eng.mjs:55` | `§24 D-24b` → `§11.2 D-24b` | B |
 | 11 | `thincoder-core/agent-tools/escalate-async.mjs:155` | `§24 D-24a` → `§11.1 D-24a` | A |
-| 12 | `src/agent-tools/subagent-actions.mjs:116` | `§24 D-24b` → `§11.2 D-24b` | B |
-| 13 | `src/agent-tools/subagent-run.mjs:39` | `§24 D-24a/R14` → `§11.1 D-24a/R14` | A |
-| 14 | `src/agent-tools/subagent-run.mjs:55` | `§24 D-24a/R14` → `§11.1 D-24a/R14` | A |
-| 15 | `src/agent-tools/subagent-run.mjs:83` | `§24 D-24a` → `§11.1 D-24a` | A |
-| 16 | `src/agent-tools/subagent-scheduler.mjs:341` | `§24 D-24a/R14` → `§11.1 D-24a/R14` | A |
-| 17 | `src/agent-tools/subagent-scheduler.mjs:346` | `§24 D-24a（R14）` → `§11.1 D-24a（R14）` | A |
-| 18 | `src/agent-tools/subagent.mjs:132`（token ①） | `§15/§18/§24` → `§15/§18/§11.1` | A |
-| 19 | `src/agent-tools/subagent.mjs:132`（token ②） | `per role domain (AGENT-LOOP.md` 句内 `§24` → `§11.1` | A |
-| 20 | `src/agent-tools/subagent.mjs:390` | `§24 拆分轮` → `§11.1 拆分轮` | A |
+| 12 | `thincoder-core/agent-tools/subagent-actions.mjs:116` | `§24 D-24b` → `§11.2 D-24b` | B |
+| 13 | `thincoder-core/agent-tools/subagent-run.mjs:39` | `§24 D-24a/R14` → `§11.1 D-24a/R14` | A |
+| 14 | `thincoder-core/agent-tools/subagent-run.mjs:55` | `§24 D-24a/R14` → `§11.1 D-24a/R14` | A |
+| 15 | `thincoder-core/agent-tools/subagent-run.mjs:83` | `§24 D-24a` → `§11.1 D-24a` | A |
+| 16 | `thincoder-core/agent-tools/subagent-scheduler.mjs:341` | `§24 D-24a/R14` → `§11.1 D-24a/R14` | A |
+| 17 | `thincoder-core/agent-tools/subagent-scheduler.mjs:346` | `§24 D-24a（R14）` → `§11.1 D-24a（R14）` | A |
+| 18 | `thincoder-core/agent-tools/subagent.mjs:132`（token ①） | `§15/§18/§24` → `§15/§18/§11.1` | A |
+| 19 | `thincoder-core/agent-tools/subagent.mjs:132`（token ②） | `per role domain (AGENT-LOOP.md` 句内 `§24` → `§11.1` | A |
+| 20 | `thincoder-core/agent-tools/subagent.mjs:390` | `§24 拆分轮` → `§11.1 拆分轮` | A |
 | 21 | `thincoder-core/agent.mjs:71` | `§24 D-24b` → `§11.2 D-24b` | B |
 | 22 | `thincoder-core/agent.mjs:72` | `§24 D-24b` → `§11.2 D-24b` | B |
 | 23 | `src/tui/cmd-eng.mjs:35` | `§24 D-24b` → `§11.2 D-24b` | B |
@@ -1667,10 +1667,10 @@ test("T112 边界：新档自持——零跨档引用；import 全 node:（D-2/A
 | 28 | `src/tui/suspension-drive.mjs:77` | `§24 D-24b` → `§11.2 D-24b` | B |
 | 29 | `src/tui/suspension-drive.mjs:133` | `§24 D-24b` → `§11.2 D-24b` | B |
 
-**执行面**：替换仅改锚文本（`§24`→`§11.x`）——其余逐字不动；`subagent.mjs:132` 为**描述串内锚文本**（模型可见面——
+**执行面**：替换仅改锚文本（`§24`→`§11.x`）——其余逐字不动；`thincoder-core/agent-tools/subagent.mjs:132` 为**描述串内锚文本**（模型可见面——
 无语义变化、零行为）。
 **同族观察（出批——登记不并修）**：① 同描述/同文件内另有同代旧编号锚（`§15/§18` 串、`§19.x`、`§20`——实测
-`src/agent-tools/subagent.mjs` 内 `§19` 21 处 / `§20` 5 处）——不属 C2（`§24`）范围，建议另立勘察做一次全描述重锚；
+`thincoder-core/agent-tools/subagent.mjs` 内 `§19` 21 处 / `§20` 5 处）——不属 C2（`§24`）范围，建议另立勘察做一次全描述重锚；
 ② `test/advisor-description.test.mjs:18`（已退场——TEST-LIFECYCLE）的「旧 §24 已更新」为**变更注**（非断链）——保留；`docs/**` 记史面照留；
 ③ VSC 仓 `src/**` `§24` 残留（实测 39 处 / 13 文件）——本批 CLI 单端，出批（TODO「双端」余 VSC 面另议）。
 
@@ -2912,7 +2912,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
   “余 14 档都改”收紧为“仅锚句宿主档”；注入行同形镜像（T54 断言，改形态须报告）；终局判据指针改 FR23/§1.17。
 
 - 2026-09-10（晚·十五）：**第 5 批设计评审轮次 1 处置**（2🔴+8🟡+4🔵，用户裁定**全修**）：
-  🔴 **F2 漏运行期门**（照设计落地则 designer 根本 spawn 不出来）——§2.22.4 由五处→**八处**（白名单 `subagent.mjs:254-256`+错误文案 / 模式门第三门 / 子代 spawn 门）+ 不变量 6 + T57 下沉运行期 + 新 **T57b**；
+  🔴 **F2 漏运行期门**（照设计落地则 designer 根本 spawn 不出来）——§2.22.4 由五处→**八处**（白名单 `thincoder-core/agent-tools/subagent.mjs:254-256`+错误文案 / 模式门第三门 / 子代 spawn 门）+ 不变量 6 + T57 下沉运行期 + 新 **T57b**；
   🔴 **档位表无拆分结论**——§2.23 逐档补“拆/不拆 + 理由”（`advisor.mjs` 296→310 **跨档：不拆**）；
   🟡 batchDoc 门补**角色域**（`{eng-coder, eng-designer}`；其余零变更）+ schema 属性 + 受限变体 delete 清单 + 新 **T55b**；
   🟡 designer **勘察通道**（CLI §2.15 D2/D3）入 §2.22.4 ⑨ + 人格文本同步要求；

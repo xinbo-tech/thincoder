@@ -18,8 +18,8 @@ import { dirname, join } from "node:path"
 import { runAgent, createAgent } from "@thincoder/core/agent.mjs"
 import { builtinTools } from "@thincoder/core/tools/index.mjs"
 import { advisorTool } from "@thincoder/core/agent-tools/advisor.mjs"
-import { subagentTool } from "../../src/agent-tools/subagent.mjs"
-import { executeConsumeDesignAction, resolveDesignSlot } from "../../src/agent-tools/subagent-spawn.mjs"
+import { subagentTool } from "@thincoder/core/agent-tools/subagent.mjs"
+import { executeConsumeDesignAction, resolveDesignSlot } from "@thincoder/core/agent-tools/subagent-spawn.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest, slotPath } from "@thincoder/core/session-slots.mjs"
 
 let sessionsDir

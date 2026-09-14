@@ -109,7 +109,7 @@ R17（2026-09-06）把 escalate 改为**缺省 async**（depth-0——唯一允�
 
 | 文件 | 动作 |
 |---|---|
-| `src/agent-tools/subagent-actions.mjs` | escalate 动作接线（缺省 async 分支） |
+| `thincoder-core/agent-tools/subagent-actions.mjs` | escalate 动作接线（缺省 async 分支） |
 | `thincoder-core/agent-tools/escalate-async.mjs` | async 飞刀 runner + settle 三分类 + digest 注入 |
 | `thincoder-core/agent-tools/consult.mjs` | 会诊工具（候选池同源——见 CONSULTATION.md） |
 | `thincoder-core/config.mjs` | consultModels 校验 |

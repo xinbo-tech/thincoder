@@ -20,7 +20,7 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import { chat } from "@thincoder/core/provider/core.mjs"
 import { resolveAdvisorProvider } from "@thincoder/core/advisor/run.mjs"
-import { resolveChildProvider } from "../src/agent-tools/subagent-async.mjs"
+import { resolveChildProvider } from "@thincoder/core/agent-tools/subagent-async.mjs"
 import { applySession } from "@thincoder/core/session.mjs"
 
 // ─── F-1 请求体断言（AC-1）───

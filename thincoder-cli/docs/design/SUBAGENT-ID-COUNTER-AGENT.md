@@ -24,7 +24,7 @@
 
 | 文件 | 端 | 现行数 | 增量 | 改动 |
 |---|---|---|---|---|
-| src/agent-tools/subagent-scheduler.mjs | 双端各一 | ~450 区 | ±4 | nextSubagentId：读/写 agent._subIdCounter——删 holder(history) expando 行（>300 档：±4 不跨 500——不涉拆分——既有债另记） |
+| thincoder-core/agent-tools/subagent-scheduler.mjs | 双端各一 | ~450 区 | ±4 | nextSubagentId：读/写 agent._subIdCounter——删 holder(history) expando 行（>300 档：±4 不跨 500——不涉拆分——既有债另记） |
 | test/subagent-scheduler.test.mjs | CLI | 待实测 | +1 组 | 压缩替换 history 后 spawn id 递增断言——评审 round2 #1 |
 | test/files.mjs（VSC 仓） | VSC | 待实测 | +1 | 新测试登记（清单外披露——eng-coder 交付补） |
 | test/subagent-id-counter.test.mjs（VSC 仓） | VSC | 新增 | +~40 行 | 同断言（VSC 无 scheduler 测试文件——新建）——评审 round2 #1 |

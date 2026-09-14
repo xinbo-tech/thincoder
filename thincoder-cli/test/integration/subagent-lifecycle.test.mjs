@@ -15,7 +15,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { runAgent, createAgent } from "@thincoder/core/agent.mjs"
 import { builtinTools } from "@thincoder/core/tools/index.mjs"
-import { subagentTool } from "../../src/agent-tools/subagent.mjs"
+import { subagentTool } from "@thincoder/core/agent-tools/subagent.mjs"
 
 const CHILD_TASK = "Survey lib/feature.mjs and report."
 const CHILD_REPORT =

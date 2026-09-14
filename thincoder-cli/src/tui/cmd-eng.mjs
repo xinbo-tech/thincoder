@@ -7,7 +7,7 @@ import { readFileSync, writeFileSync, mkdirSync, renameSync, unlinkSync } from "
 import { dirname } from "node:path"
 import { ansi, C } from "./ansi.mjs"
 import { activeSlot, slotPath } from "@thincoder/core/session.mjs"
-import { purgeExpiredDesignTokens } from "../token-ttl.mjs"
+import { purgeExpiredDesignTokens } from "@thincoder/core/token-ttl.mjs"
 
 import { ENG_OFF_REMINDER } from "@thincoder/core/agent.mjs"
 

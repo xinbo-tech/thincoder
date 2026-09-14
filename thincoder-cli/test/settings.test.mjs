@@ -13,7 +13,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { DEFAULTS, loadConfig, _setConfigPathForTest, _resetConfigPathForTest } from "@thincoder/core/config.mjs"
 import { parseModelRef } from "@thincoder/core/model-ref.mjs"
-import { effectiveSubagentModel } from "../src/agent-tools/subagent-spawn.mjs"
+import { effectiveSubagentModel } from "@thincoder/core/agent-tools/subagent-spawn.mjs"
 import { teamConfig } from "../src/cli/make-agent.mjs"
 import {
   settingsTool, _buildShapeTable, _nullLeafPaths, _NULL_LEAF_SHAPES, _SIBLING_SHAPES, _checkShapeCompleteness,

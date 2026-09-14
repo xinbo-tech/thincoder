@@ -19,7 +19,7 @@ import { sweepToolBlocks } from "./tool-events.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"
 import { C } from "./ansi.mjs"
 // ASYNC-RESULT-CONTAINER.md D1/D2：池 accessor（双池 absorb）+ pending 单容器停靠
-import { getAsyncPool, parkAsyncPending, releaseSettledEntry } from "../agent-tools/async-settle.mjs"
+import { getAsyncPool, parkAsyncPending, releaseSettledEntry } from "@thincoder/core/agent-tools/async-settle.mjs"
 
 // INPUT-LOCK-ASYNC（C'——2026-09-09，本档 INPUT-LOCK-ASYNC.md）：R15 排队
 // 用户指令合并（§11.3 D-24c——攒批计划/合并文案/上限常量）整批废弃
@@ -278,7 +278,7 @@ export async function suspensionSession(ctx) {
       // D-S3 ③ 兜底：退出前残余（极端竞态）直注入再退——结果零丢失（AC-S2；
       // ASYNC-RESULT-CONTAINER.md D2：pending 单容器一处清——注入器按 role 分发
       // （consult → injectConsultResult；其余 → injectAsyncResult——四族同容器）。
-      const { injectAsyncResult } = await import("../agent-tools/subagent.mjs")
+      const { injectAsyncResult } = await import("@thincoder/core/agent-tools/subagent.mjs")
       const { injectConsultResult } = await import("@thincoder/core/agent-tools/consult.mjs")
       const residual = agent._pendingAsyncResults
       if (residual?.length) {

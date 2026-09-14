@@ -167,7 +167,7 @@ Batch independent read-only tool calls into a single reply (they run concurrentl
 | `src/prompts/common.md` | 在「诚实原则」节后插入 §2.2 全段（6 节）——**【R-2】= 设计侧定位标注，落地剥除**（不得逐字带进本文件） | 4 节 → 10 节（40 → ≈115 行） |
 | `src/prompts/persona-engineering.md` | 在「推进档位」后、「与 eng-designer / eng-coder 的分工界面」前插入 C8 段（§2.2 C8 文本，本角色版） | +C8 |
 | `src/prompts/persona-normal.md` | 文件尾部追加 C8 段（本角色版） | +C8 |
-| `src/prompts/persona-explore.md` | ①删「权限边界（只读/不碰用户）」整节——**删除依据 = CN 权威形态 + 运行时机械承载**（角色工具面只读族：`subagent-spawn.mjs:286-288` 只读过滤 + `:301-302` 权限恒拒；父侧内容权裁定：接受删除）；②「报告义务」瘦身为 2 条（无命中显式报告 / 报告结构化+交付表按 common）；③保留「彻底度档位」节；④身份节尾补 R-1 行 | 28 → ≈19 行 |
+| `src/prompts/persona-explore.md` | ①删「权限边界（只读/不碰用户）」整节——**删除依据 = CN 权威形态 + 运行时机械承载**（角色工具面只读族：`thincoder-core/agent-tools/subagent-spawn.mjs:286-288` 只读过滤 + `:301-302` 权限恒拒；父侧内容权裁定：接受删除）；②「报告义务」瘦身为 2 条（无命中显式报告 / 报告结构化+交付表按 common）；③保留「彻底度档位」节；④身份节尾补 R-1 行 | 28 → ≈19 行 |
 | `src/prompts/persona-coder.md` | ①删旧 1-3 号条（证据/中立全文/边界）→ 中立瘦身条 + common 指针句；②删旧交付表块与报告五条清单 → 报告义务两行（路径/验证/交付表 + 上报不罚）；③保留工具权限注；④身份节尾补 R-1 行 | 47 → ≈27 行 |
 | `src/prompts/persona-plan.md` | 删「All user messages come from the parent agent…／Treat the parent as your caller.」（:7-8 的调用方句；删后由 :12 的「不问用户」句自持） | 29 → ≈27 行 |
 | `src/prompts/persona-eng-coder.md` | ①「绝不请求确认…」行尾补「（此条覆写 common 确认门）」注；②「自含交付协议」补「交付表按 common.md 统一格式；审计/评审轮次与终态写进报告（角色补充）。」 | +2 行 |

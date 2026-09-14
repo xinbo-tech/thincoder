@@ -9,9 +9,9 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { resolve } from "node:path"
-import { normalizeFileList, effectiveFiles, describeBlockers, queueRunnable, detectStall, maybeRefillAsync, nextSubagentId } from "../src/agent-tools/subagent-scheduler.mjs"
-import { buildSpawnChild } from "../src/agent-tools/subagent-spawn.mjs"
-import { executeAsyncSpawn } from "../src/agent-tools/subagent-run.mjs"
+import { normalizeFileList, effectiveFiles, describeBlockers, queueRunnable, detectStall, maybeRefillAsync, nextSubagentId } from "@thincoder/core/agent-tools/subagent-scheduler.mjs"
+import { buildSpawnChild } from "@thincoder/core/agent-tools/subagent-spawn.mjs"
+import { executeAsyncSpawn } from "@thincoder/core/agent-tools/subagent-run.mjs"
 
 test("2.7 尾随空格目录声明（\"test/ \"）被识别为目录声明 throw", () => {
   assert.throws(() => normalizeFileList(["test/ "], "C:/w"), /directory declarations are not supported/)

@@ -29,8 +29,8 @@ import { fileURLToPath } from "node:url"
 
 import { slow } from "./slow.mjs"
 
-import { subagentTool } from "../src/agent-tools/subagent.mjs"
-import { buildSpawnChild } from "../src/agent-tools/subagent-spawn.mjs"
+import { subagentTool } from "@thincoder/core/agent-tools/subagent.mjs"
+import { buildSpawnChild } from "@thincoder/core/agent-tools/subagent-spawn.mjs"
 import { gateEngCoderSpawn } from "@thincoder/core/agent/spawn-child.mjs"
 import { prepareRun } from "@thincoder/core/agent/setup.mjs"
 import { executeToolCalls } from "@thincoder/core/agent/dispatch.mjs"

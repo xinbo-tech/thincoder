@@ -56,17 +56,17 @@
 - [x] **提示词「内容权」口径三条裁定互相抵牾**（第 9 批评审范围外注记）→ 证据 `thincoder-cli/docs/requirements/ENGINEERING-MODE.md:126` · status=已核销（勾销——ROLE-REDEFINITION RF-2 / AC62 收口，§2.7 #13 已改述）
 - [x] **🔵 五项不修登记（父侧知悉——已核查：裁定留痕在 git/批次档；如需设计档登记面另行迁移）**：**CLI 侧两项** = CLI guard 文案无 async 补注 / CLI T-24b1 墙钟断言（**VSC 侧三项**已迁本仓 VSC 归档档）· （已知不修，留档）
 - [x] **processing 态 Ctrl+C 武装化 + 回合 abort 与池解耦**（**已实落（key-handler.mjs:107-122 + AGENT-LOOP:506-507 同述）**；原注：回合 abort 无条件清池连坐杀后台——首按 = interrupt 不清池 + 3s 二按 = 清池）→ 证据 `thincoder-cli/src/tui/key-handler.mjs:80`（武装窗口）
-- [x] **混合边环形等待残留**（**已实落（scheduler:171-190 D-SL2 停滞检测 + STALL_NOTE 接线）**；原注：dependsOn 边 + 文件域边混合链——建议停滞检测候选）→ 证据 `thincoder-cli/src/agent-tools/subagent-scheduler.mjs:171`（混合边环形等待停滞检测——D-SL2）
+- [x] **混合边环形等待残留**（**已实落（scheduler:171-190 D-SL2 停滞检测 + STALL_NOTE 接线）**；原注：dependsOn 边 + 文件域边混合链——建议停滞检测候选）→ 证据 `thincoder-core/agent-tools/subagent-scheduler.mjs:171`（混合边环形等待停滞检测——D-SL2）
 - [x] **check-doc-width 扫描域缺口**（**已废弃——用户 2026-09-11 裁定维持三域（T6 不采纳）**）（DOC-REORG 实施发现）：现域 = `thincoder/docs/{design,requirements,batches}`（`scripts/check-doc-width.mjs:32`）——缺口 = `thincoder/docs/TODO.md` / `thincoder/docs/README.md`；DOC-REORG §10.3 提议新增批尾项 T6（域改 `docs`）→ **用户 2026-09-11 裁定：维持三域（T6 不采纳——台账类不纳入）** · status=已废弃
 - [x] **子块「已省略 N 行」计数虚高**（2026-09-10 用户报告——主 agent 两轮实验实证：稳态显示 ≈ 真实隐藏行 ×2）→ 证据 `thincoder-cli/src/tui/subagent-children.mjs:28`（dropCarrierLines）· status=已核销（第 7 批 N6 修复交付——条件消解：用户裁「1 做了 2 就没意义了」）
 - [x] **子代理内 spawn explore 的显示与其它工具不一致**（**已交付——第 7 批 SUBAGENT-TAIL（12:00 用户真机 smoke 过 + token 已消费）**；原注：用户报告 + 澄清："子代理中 eng-coder 中再调用 explore"）——口径 C：嵌套 explore 活动行直接进父块 tail → 证据 `thincoder-cli/src/tui/subagent-panel.mjs:66` · status=已核销
-- [x] **subagent status touched 显示不准**（**已实落（subagent-actions:59-66/:254 实时读 `_touchedFiles`）**；原注：用户实证——已写入却显示"—（尚无改动）"）：修 = touched 从真实写入记录实时取 → 证据 `thincoder-cli/src/agent-tools/subagent-actions.mjs:59`（touchedSummary 实时读点）· status=已核销
+- [x] **subagent status touched 显示不准**（**已实落（subagent-actions:59-66/:254 实时读 `_touchedFiles`）**；原注：用户实证——已写入却显示"—（尚无改动）"）：修 = touched 从真实写入记录实时取 → 证据 `thincoder-core/agent-tools/subagent-actions.mjs:59`（touchedSummary 实时读点）· status=已核销
 - [x] **advisor 评审状态查询假空**（**已实落（ops.mjs:180-198 双载体真判据）**；原注：用户判定平台 bug——池实有跑者查询返空）：修 = status 聚合纳入 advisor 池真实条目 → 证据 `thincoder-core/tools/ops.mjs:181`（双池汇总面）· status=已核销
-- [x] **子代理 id 复用**（**已实落（nextSubagentId scheduler:370-391）**；原注：用户观察——平台 bug——§27.1 F4 修复洞）：真因 = `_subIdCounter` 挂 history expando、压缩随旧数组被抹 → 池空时 spawn 回 #1；已落地（2026-09-10——载体改 agent 本体 ±4 行/端；VSC clean；CLI 端在途）；遗留 = `thincoder-cli/src/agent-tools/subagent.mjs:293-294` 注释述旧前提 → 证据 `thincoder-cli/src/agent-tools/subagent-scheduler.mjs:380`（nextSubagentId）· status=已核销
+- [x] **子代理 id 复用**（**已实落（nextSubagentId scheduler:370-391）**；原注：用户观察——平台 bug——§27.1 F4 修复洞）：真因 = `_subIdCounter` 挂 history expando、压缩随旧数组被抹 → 池空时 spawn 回 #1；已落地（2026-09-10——载体改 agent 本体 ±4 行/端；VSC clean；CLI 端在途）；遗留 = `thincoder-cli/src/agent-tools/subagent.mjs:293-294` 注释述旧前提 → 证据 `thincoder-core/agent-tools/subagent-scheduler.mjs:380`（nextSubagentId）· status=已核销
 - [x] **advisor 进行中评审不可取消**（**已实落（subagent.mjs:121 cancel + cancelAsyncAdvisor AGENT-LOOP:754）**；原注：用户反馈——平台 bug）：对象漂移需杀旧重发——无 cancel 通道（同 scope 重发被拒）→ 证据 `thincoder-core/agent-tools/advisor-async.mjs:254`（"settle 后逐个发起"拒绝文案）· status=已核销
 - [x] **AGENTS.md 文档地图陈旧**（**已销账——实测 VERIFY-DOCONLY/ENGINEERING-WORKLOOP 零命中；:14 明载不逐档裸列**）；原注：:17 仍列 VERIFY-DOCONLY.md（归档后悬空）+ 整体含早已归档档（ENGINEERING-WORKLOOP 等）——父侧立项整体清扫 → 证据 `AGENTS.md:17` · status=已核销
 
-- [x] **`thincoder-cli/src/agent-tools/subagent.mjs` 受限变体 schema 补 cancel 词**（描述层同步）→ 证据 `thincoder-cli/src/agent-tools/subagent.mjs:142`（action enum）· status=已核销（第 20 批 TUI-SELECTION §5 A2 Done + §6 收口 · 令牌消费）
+- [x] **`thincoder-cli/src/agent-tools/subagent.mjs` 受限变体 schema 补 cancel 词**（描述层同步）→ 证据 `thincoder-core/agent-tools/subagent.mjs:144`（action enum）· status=已核销（第 20 批 TUI-SELECTION §5 A2 Done + §6 收口 · 令牌消费）
 - [x] **普通模式偏差审计 + 会话上下文轮**（F-N1.1..6 逐条处置；D2 会话上下文轮退役）→ 任务书 `thincoder-cli/docs/batches/2026-09-11-NORMAL-MODE-AUDIT.md` §2 · status=已核销（第 23 批 §6 收口——AC-NA1–NA8 8/8 + 令牌消费；原 status 取值「设计已落（待评审/批准）」非六态——随本次核销归一）
 - [x] **`thincoder-cli/src/tools/read_image.md:8` 描述漂移**（第 6 批达成 vision 后描述与实现矛盾）→ 证据 `thincoder-cli/src/tools/read_image.md:8` · status=已核销（第 22 批 DOC-HYGIENE §5 C1 Done——替句已在位）
 - [x] **快层慢门 flake：`thincoder-cli/test/eng-designer-role.test.mjs` 未标 `slow`**（818.5ms 撞 D-T6）→ 证据 `thincoder-cli/test/eng-designer-role.test.mjs` · status=已核销（第 20 批 TUI-SELECTION §5 A3 Done——`slow(` 已注册 · 令牌消费）
@@ -83,14 +83,14 @@
 - [x] **需求档 FR13 行「现况」子句陈旧**（句称 `thincoder-cli/src/prompts/discipline-engineering.md:182` 教跑 `scripts/check-doc-width.mjs`——实测 `thincoder-cli/src/prompts/**` 对 `scripts/`/`check-doc-width` 零命中）→ 证据 `thincoder-cli/docs/requirements/ENGINEERING-MODE.md:723` · status=已废弃（原状态=待讨论）
 - [x] **`/undo` 快照栈字节无界**（条数封顶 50、无尺寸守卫）→ 证据 `thincoder-cli/src/tui/cmd-undo.mjs:12`（`MAX_UNDO`）· `thincoder-cli/src/agent/dispatch.mjs:357-358`（快照读整档）· status=已废弃（原状态=待讨论）
 - [x] **`_advisorRuns` 实例无逐实例删除**（仅模式切换整体重置）→ 证据 `thincoder-core/agent-tools/advisor-async.mjs:104-137` · status=已废弃（原状态=待讨论）
-- [x] **小容器族无上界**（`_asyncTombstones`/`_turnControllers`/`_frozenSubKeys`/`expandedBlocks`；capturedConsole 拼接可突破 64K）→ 证据 `thincoder-cli/src/agent-tools/async-settle.mjs:138-139` · `thincoder-cli/src/agent/dispatch.mjs:428-432` · status=已废弃（原状态=待讨论）
+- [x] **小容器族无上界**（`_asyncTombstones`/`_turnControllers`/`_frozenSubKeys`/`expandedBlocks`；capturedConsole 拼接可突破 64K）→ 证据 `thincoder-core/agent-tools/async-settle.mjs:138-139` · `thincoder-cli/src/agent/dispatch.mjs:428-432` · status=已废弃（原状态=待讨论）
 - [x] **`verify-redesign` T-V4 偶触 slow 门**（820–1031ms vs 800ms；干净 HEAD 复现/隔离跑 ~120ms）→ 证据 `thincoder-cli/test/verify-redesign.test.mjs:87` · status=已废弃（原状态=待讨论）
 - [x] **跨会话同批档案并发写风险**（两会话父侧同写批次档；无会话级写权分片）→ 证据 `thincoder-core/agent-tools/batch-segment.mjs:130` · status=已废弃（原状态=待讨论——用户 2026-09-11 曾裁定暂不开批）
 - [x] **第 13 批收口遗留**（① T75/T76 无测试宿主 ② `thincoder-cli/test/settings.test.mjs` 480/500 ③ AC54 注行号 +1 ④ 存量非表格超宽 5 行）→ 证据 `thincoder-cli/docs/design/ENGINEERING-MODE.md:1406` · status=已废弃（原状态=在途（第 14 批））
 - [x] **第 9 批后续登记面（设计 §13.9）**（① 设计档新时序规则登记面 ② 双源不对称是否补镜像）→ 证据 `thincoder-cli/src/prompts/discipline-engineering.md:135` · status=已废弃（原状态=在途（第 13 批条目 F））
 - [x] **AC-OA4 统计脚本（可选仓库工具）**：统计轨迹 JSON 评审信号密度（低优先）→ 证据 `thincoder-cli/docs/design/AGENT-LOOP.md:655` · status=已废弃（原状态=无 status）
-- [x] **CLI 侧自用首验（batchDoc 门 + 新角色）**：需 CLI 会话内真 spawn 一次验证 → 证据 `thincoder-cli/src/agent-tools/subagent.mjs:151` · status=已废弃（原状态=待讨论）
-- [x] **档位 B：subagent 工具 description 动态矩阵**（工具集变化时自动跟随）→ 证据 `thincoder-cli/src/agent-tools/subagent.mjs:114` · status=已废弃（原状态=无 status）
+- [x] **CLI 侧自用首验（batchDoc 门 + 新角色）**：需 CLI 会话内真 spawn 一次验证 → 证据 `thincoder-core/agent-tools/subagent.mjs:151` · status=已废弃（原状态=待讨论）
+- [x] **档位 B：subagent 工具 description 动态矩阵**（工具集变化时自动跟随）→ 证据 `thincoder-core/agent-tools/subagent.mjs:114` · status=已废弃（原状态=无 status）
 - [x] **既有文档超宽行清理**（设计档侧余 5 行：`thincoder-cli/docs/design/AGENT-LOOP.md` :510/:572/:574 · `SESSION.md` :524 · `SUBAGENT-ID-COUNTER-AGENT.md` :53）→ 证据 `thincoder-cli/docs/batches/2026-09-11-SWEEP-FOLLOWUP.md` §2 · status=已废弃（原状态=在途（第 14 批））
 - [x] **session-state 诊断工具候选**：只读诊断命令 dump 当前 cwd 会话槽全貌 → 证据 `thincoder-core/session.mjs:2`（slot-based 模型）· status=已废弃（原状态=无 status）
 - [x] **deepseek-v4-pro 视觉能力复检 + 发布注记**（触发 = 2026-09-14 12:00 路由生效后 / V4.1 Pro 到货——复核 `multimodal` 翻转）→ 证据 `thincoder-cli/test/read-image-guide.test.mjs:20` · status=已废弃（原状态=触发=条件）

@@ -7,10 +7,10 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { executeObserveAction, executeSendAction, executeStatusAction } from "../src/agent-tools/subagent-actions.mjs"
-import { executeCancelAction } from "../src/agent-tools/subagent-async.mjs"
-import { settleAsyncEntry } from "../src/agent-tools/async-settle.mjs"
-import { drainInjectedQueue } from "../src/agent-tools/subagent-run.mjs"
+import { executeObserveAction, executeSendAction, executeStatusAction } from "@thincoder/core/agent-tools/subagent-actions.mjs"
+import { executeCancelAction } from "@thincoder/core/agent-tools/subagent-async.mjs"
+import { settleAsyncEntry } from "@thincoder/core/agent-tools/async-settle.mjs"
+import { drainInjectedQueue } from "@thincoder/core/agent-tools/subagent-run.mjs"
 import { executeToolCalls } from "@thincoder/core/agent/dispatch.mjs"
 
 /** 最小 ctx（depth 0——observe/send 仅 depth-0 池所有者可用）。 */

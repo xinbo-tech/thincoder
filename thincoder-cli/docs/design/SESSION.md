@@ -572,7 +572,7 @@ CLI `renameSlot`（src/session-rename.mjs）+ VS Code `setSlotTitle`（session-i
 | 2 | 落盘投影（`.json.N` 的 `history`）即全量人读线（slim 后）；恢复把它整体读回内存 | `src/session.mjs:109-171`（saveSession `history = (_fullHistory ?? history)…`）· `:292`（applySession `_fullHistory = [...full]`） |
 | 3 | TUI 懒加载只懒「渲染」，分页源 `full` = 内存全量数组；翻页把行 unshift 进 `state.lines` 且无淘汰 | `src/tui/startup.mjs:142-170`（`createLoadOlder`——`full.length − loaded − PAGE`）· `:119-136`（restoreLines） |
 | 4 | 活消息增长使翻页锚点漂移（`full.length` 增长而 `_historyLoaded` 只记恢复/翻页量）——错位隐患 | `src/tui/startup.mjs:147`（`start = full.length − loaded − HISTORY_PAGE_MESSAGES`） |
-| 5 | 人读线内存消费者全清单：本会话检索 / 观察摘要 / 标题生成 / 保存 / 恢复 / 翻页（无第七方） | `thincoder-core/agent-tools/read-history.mjs:290` · `src/agent-tools/subagent-actions.mjs:194` · `thincoder-core/generate-title.mjs:72` · `thincoder-core/session.mjs:114` · `:292` · `:415` · `src/tui/startup.mjs:145` |
+| 5 | 人读线内存消费者全清单：本会话检索 / 观察摘要 / 标题生成 / 保存 / 恢复 / 翻页（无第七方） | `thincoder-core/agent-tools/read-history.mjs:290` · `thincoder-core/agent-tools/subagent-actions.mjs:194` · `thincoder-core/generate-title.mjs:72` · `thincoder-core/session.mjs:114` · `:292` · `:415` · `src/tui/startup.mjs:145` |
 | 6 | 槽 JSON 的跨端读面（VSC/ACP/列表）依赖 `history` 为**全量数组** | VSC：`thincoder-vscode` `src/extension/session-io.mjs:104`（VSC 仓） / `src/extension/panel-session.mjs:87`（VSC 仓）（本仓不引用——评估面）· ACP `src/acp.mjs:260` · 列表 `thincoder-core/session-slots.mjs:141`/`:359` |
 
 事故形态：19 分钟会话 ≈ 8GB 堆（爬升型）；C1 为结构性无界之一（其余见架构批设计）。

@@ -2,10 +2,10 @@
 
 > 状态：**已实现**（v2 + R16——2026-08-25 / 2026-09-06）。
 > 需求：`../requirements/ENG-TOKEN-BINDING.md`。
-> 现码核对（2026-09-07）：`src/token-ttl.mjs`（共享 TTL 纯函数 + 槽清理 + 会话序列化/恢复面）、
+> 现码核对（2026-09-07）：`thincoder-core/token-ttl.mjs`（共享 TTL 纯函数 + 槽清理 + 会话序列化/恢复面）、
 > `thincoder-core/agent-tools/eng.mjs` / `src/tui/cmd-eng.mjs`（跨模式存活 + 开模式清过期）、
 > `thincoder-core/agent-tools/advisor-async.mjs`（签发/校验/结算）、`src/session.mjs`（恢复过滤）、
-> `src/agent-tools/subagent-spawn.mjs`（门禁过期拒删槽）——R16 语义均已落地，与本文一致。
+> `thincoder-core/agent-tools/subagent-spawn.mjs`（门禁过期拒删槽）——R16 语义均已落地，与本文一致。
 
 ## 1. designToken 是什么
 
@@ -43,7 +43,7 @@
 - 配置覆盖：`agent.engTokenTtlMs`——运行期校验（`Number.isFinite(cfg) && cfg > 0`，非法回退
   默认）——照抄 advisor timeoutMs 口径（`effectiveTokenTtlMs`）。
 - 格式：`${uuid}:${expiresAt}`，uuid 为 `[0-9a-f]{8}-…-{12}`，expiresAt 为数字毫秒时间戳。
-  格式校验 + 数值过期时刻判定集中在 `src/token-ttl.mjs`（`tokenExpiryMs`/`tokenExpired`——
+  格式校验 + 数值过期时刻判定集中在 `thincoder-core/token-ttl.mjs`（`tokenExpiryMs`/`tokenExpired`——
   与 `validateDesignToken` fail-closed 判定同源，单一权威）。
 - 过期判定**只对格式合法的 token**判过期：格式/畸形串不在此清理（恢复时读回由门禁格式拒、
   门禁拒时也不删槽——防误删有效槽）。
@@ -71,12 +71,12 @@
 
 | 模块 | 内容 |
 |---|---|
-| `src/token-ttl.mjs`（新） | 共享 TTL 纯函数 + 槽清理 + 会话序列化/恢复面——`tokenExpiryMs`/`tokenExpired`/`removeDesignTokenSlot`/`purgeExpiredDesignTokens`/`engTokenSlotFields`/`restoreEngTokens`（R16 D-R16b/D-R16c/D-R16d） |
+| `thincoder-core/token-ttl.mjs`（新） | 共享 TTL 纯函数 + 槽清理 + 会话序列化/恢复面——`tokenExpiryMs`/`tokenExpired`/`removeDesignTokenSlot`/`purgeExpiredDesignTokens`/`engTokenSlotFields`/`restoreEngTokens`（R16 D-R16b/D-R16c/D-R16d） |
 | `thincoder-core/agent-tools/eng.mjs` | enter/exit 不清有效 token；幂等 enter（already-on）纯 no-op；enter 真转换路径 purgeExpiredDesignTokens（文案含清理个数） |
 | `src/tui/cmd-eng.mjs` | `/eng` ON 路径同 purge；OFF 路径不清 token |
 | `src/session.mjs` | applySession 恢复过滤（过期不读回）；saveSession 经 `engTokenSlotFields` 序列化 |
 | `thincoder-core/agent-tools/advisor-async.mjs` | 签发（generateDesignToken）/校验（validateDesignToken）/TTL 配置（effectiveTokenTtlMs）/结算（settleDesignReview） |
-| `src/agent-tools/subagent-spawn.mjs` | 门禁过期拒删槽（仅过期拒删）；`resolveDesignSlot` 定位（designId 精确槽 / 单槽 / 多槽拒） |
+| `thincoder-core/agent-tools/subagent-spawn.mjs` | 门禁过期拒删槽（仅过期拒删）；`resolveDesignSlot` 定位（designId 精确槽 / 单槽 / 多槽拒） |
 
 ## 6. 验收标准（Acceptance Criteria）
 
@@ -100,6 +100,6 @@
   advisor.mjs 生成挪入 pass 分支）。v1「内容绑定」被否决（见 REQUIREMENTS 变更记录）。
 - 2026-09-06（R16）：token 生命周期语义修订——铁律 2/3（"内存级随会话死亡 / 单一数据源=内存"
   → 2026-09-06 早间裁定）按用户裁定修订为现行态（§1/§4）。双源 bug 修复设计（§4 旧 F-DS/
-  D-DS/T-DS/AC-DS 块）确认非 bug（双源验证代码自洽），不实施。抽取 `src/token-ttl.mjs` 共享
+  D-DS/T-DS/AC-DS 块）确认非 bug（双源验证代码自洽），不实施。抽取 `thincoder-core/token-ttl.mjs` 共享
   TTL 纯函数 + 恢复过滤 + 开模式清过期 + 门禁过期拒删槽。
 - 2026-09-07：本文档重写为人类可读当前态（折叠逐轮评审流水；活约束照抄，语义未变）。
