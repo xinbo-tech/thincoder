@@ -12,7 +12,7 @@ import assert from "node:assert/strict"
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
-import { runAgent, createAgent } from "../../src/agent.mjs"
+import { runAgent, createAgent } from "@thincoder/core/agent.mjs"
 import { builtinTools } from "@thincoder/core/tools/index.mjs"
 import { mockLLM } from "../helpers/mock-llm.mjs"
 

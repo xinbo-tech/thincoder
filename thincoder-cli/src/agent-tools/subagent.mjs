@@ -19,7 +19,7 @@
  * → ./subagent-run.mjs——execute 只保留动作分流 + 装配调用 + 阻塞路径。
  */
 
-import { gateEngCoderSpawn, TURN_CAP_MARK, STOPPED_MARK, emitNestedChildEvent } from "../agent/spawn-child.mjs"
+import { gateEngCoderSpawn, TURN_CAP_MARK, STOPPED_MARK, emitNestedChildEvent } from "@thincoder/core/agent/spawn-child.mjs"
 import { logEvent, errText } from "@thincoder/core/log.mjs"
 import { abortError, deathLine } from "@thincoder/core/abort-provenance.mjs"
 import {

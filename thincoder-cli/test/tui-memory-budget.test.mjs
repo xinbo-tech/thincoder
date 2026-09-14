@@ -23,7 +23,7 @@ import { buildToolCallbacks } from "../src/tui/tool-events.mjs"
 import { performSearch } from "../src/tui/key-handler-search.mjs"
 import { freezeSubTaskLines } from "../src/tui/subagent-freeze.mjs"
 import { shiftFreezeAnchors } from "../src/tui/subagent-blocks.mjs"
-import { createAgent } from "../src/agent.mjs"
+import { createAgent } from "@thincoder/core/agent.mjs"
 
 const chars = (arr) => arr.reduce((a, s) => a + (typeof s === "string" ? s.length : 0), 0)
 

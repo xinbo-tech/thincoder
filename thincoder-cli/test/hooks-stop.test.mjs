@@ -14,9 +14,9 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { finalizeAgentTurn } from "../src/agent/run-stages.mjs"
-import { runHooks } from "../src/hooks.mjs"
-import { ContinueError } from "../src/agent/helpers.mjs"
+import { finalizeAgentTurn } from "@thincoder/core/agent/run-stages.mjs"
+import { runHooks } from "@thincoder/core/hooks.mjs"
+import { ContinueError } from "@thincoder/core/agent/helpers.mjs"
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url))
 
@@ -249,7 +249,7 @@ slow("T-HS10 回归：工具事件 matcher 过滤语义保持（PreToolUse 直�
 })
 
 test("T-HS11 静态：事件集收口——含 Stop、不含 Notification、头部事件表四类齐 + matcher 守卫形态在位（AC-HS4）", () => {
-  const src = readFileSync(join(ROOT, "src/hooks.mjs"), "utf8")
+  const src = readFileSync(join(ROOT, "..", "thincoder-core", "hooks.mjs"), "utf8")
   const events = [...src.matchAll(/^ \*   (\w+)\s+—/gm)].map((m) => m[1])
   assert.deepEqual(events, ["PreToolUse", "PostToolUse", "PostToolUseFailure", "Stop"])
 })

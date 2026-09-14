@@ -9,7 +9,7 @@ import { ansi, C } from "./ansi.mjs"
 import { activeSlot, slotPath } from "@thincoder/core/session.mjs"
 import { purgeExpiredDesignTokens } from "../token-ttl.mjs"
 
-import { ENG_OFF_REMINDER } from "../agent.mjs"
+import { ENG_OFF_REMINDER } from "@thincoder/core/agent.mjs"
 
 /** Atomic slot write (same shape as session.mjs writeSessionFile — kept local to avoid a
  *  private-import; cmd-advisor's guard toggle shares this helper). */

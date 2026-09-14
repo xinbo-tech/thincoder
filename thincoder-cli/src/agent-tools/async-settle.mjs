@@ -25,8 +25,8 @@
  */
 import { logEvent, errText } from "@thincoder/core/log.mjs"
 import { pushReal } from "@thincoder/core/context.mjs"
-import { escapeXml } from "../agent/helpers.mjs"
-import { TURN_CAP_MARK } from "../agent/spawn-child.mjs"
+import { escapeXml } from "@thincoder/core/agent/helpers.mjs"
+import { TURN_CAP_MARK } from "@thincoder/core/agent/spawn-child.mjs"
 import { dependentLabels, maybeRefillAsync, refreshQueuedTokens } from "./subagent-scheduler.mjs"
 
 // ─── D1 池 accessor（吸收双池）────────────────────────────────────────────────

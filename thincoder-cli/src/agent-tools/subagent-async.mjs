@@ -16,10 +16,10 @@
 import {
   runAgent, escapeXml,
   MIN_REPORT_CHARS, REPORT_CONTINUATION, DEFAULT_SUBAGENT_TURNS,
-} from "../agent.mjs"
-import { runWithContinue, TURN_CAP_MARK } from "../agent/spawn-child.mjs"
+} from "@thincoder/core/agent.mjs"
+import { runWithContinue, TURN_CAP_MARK } from "@thincoder/core/agent/spawn-child.mjs"
 import { pushReal } from "@thincoder/core/context.mjs"
-import { offloadToolResult } from "../agent/helpers.mjs"
+import { offloadToolResult } from "@thincoder/core/agent/helpers.mjs"
 import { digestBudgetOver, persistOverflowReport } from "@thincoder/core/agent-tools/digest-budget.mjs"
 // 群 B 批 B5（§22 D-DG4）：预算单源迁出（digest-budget.mjs）——原处 re-export 保测试
 // 导入面零改（DIGEST_INJECT_BUDGET / _setDigestOffloadDirForTest）。

@@ -19,7 +19,7 @@ import { appendCitationReport, verifyCitations } from "@thincoder/core/advisor/c
 import { settleDesignReview, settleAdvisorRun, inflightDesignReviewConflict } from "@thincoder/core/agent-tools/advisor-async.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest, slotPath } from "@thincoder/core/session-slots.mjs"
 import { advisorTool } from "@thincoder/core/agent-tools/advisor.mjs"
-import { executeToolCalls } from "../src/agent/dispatch.mjs"
+import { executeToolCalls } from "@thincoder/core/agent/dispatch.mjs"
 
 const tmpDirs = []
 after(() => { for (const d of tmpDirs) rmSync(d, { recursive: true, force: true }) })

@@ -2,8 +2,9 @@
 
 > 板块：agent-tools（verify 工具）。权威源指向：TOOLS.md §1（元工具）/ §7（verify 契约，testNamePattern）+ 本文档（verify 重构设计）。
 > 状态：**相 1（verify 工具本体）已实现；相 2（guard/prompt/双端一致收口）已实现交付**——2026-09-07 用户裁定。相 1 经同步评审签发 + 双 eng-coder 交付 clean；相 2 代码面 2026-09-08 落地（STRUCTURE-DEBT-BATCH-7 收尾——代码实证见下注）。
-> DOC-SWEEP 注（2026-09-09 核验——相 2 代码面全落）：G1-G4 guard 文案双端逐字（CLI completion.mjs:81/94/109 + VSC run-stages.mjs:55/68/82——declaring the outcome via verification.status）；G5-G9 prompts 声明式语义（双端 eng-coder/engineering-sub/system/discipline/main）；G10 doc-only+failed 打回（verify 描述）；
-> G11 rejectionReport 补 node --check 软提示（VSC thincoder-vscode/src/agent-tools/verify.mjs:165/269）；G12 VSC guard hasCodeMutations（run-stages.mjs:50）；G13 VSC goal.mjs 门禁（:34 注释自标）；G14 状态面已闭环——**T-V8..V11 全量验收（test:full 双端）待父侧核后正式核销**。
+> DOC-SWEEP 注（2026-09-09 核验——相 2 代码面全落）：G1-G4 guard 文案双端逐字（CLI thincoder-core/agent/completion.mjs:81/94/109 + VSC thincoder-vscode/src/agent/run-stages.mjs:55/68/82——declaring the outcome via verification.status）；
+> G5-G9 prompts 声明式语义（双端 eng-coder/engineering-sub/system/discipline/main）；G10 doc-only+failed 打回（verify 描述）；
+> G11 rejectionReport 补 node --check 软提示（VSC thincoder-vscode/src/agent-tools/verify.mjs:165/269）；G12 VSC guard hasCodeMutations（thincoder-vscode/src/agent/run-stages.mjs:50）；G13 VSC goal.mjs 门禁（:34 注释自标）；G14 状态面已闭环——**T-V8..V11 全量验收（test:full 双端）待父侧核后正式核销**。
 > 背景注：async advisor 评审 token 跨会话注册 bug（designId not found）尚未修复，用户指示本轮走**同步评审**（async:false）。
 
 ## 1. 问题陈述
@@ -41,7 +42,7 @@ verify.mjs 当前把**项目特定逻辑硬编码进通用工具**：
 
 工具本体重构后，explore 审计确认整条 verify 机制另三面未跟上（相 1 只改了工具本体）。补下列设计，收口相 2：
 
-- **D-V9 guard 强制端文案（G1-G4）**：verify guard（CLI completion.mjs:81/92/107；VS Code run-stages.mjs:55/68/82）仍写"call verify to run syntax checks and tests" / "verify reported test failures"——但新 verify 不跑测试只收模型声明。改写为声明式引导。**六站点逐点定稿文案（评审 #2——双端逐字同）**：
+- **D-V9 guard 强制端文案（G1-G4）**：verify guard（CLI thincoder-core/agent/completion.mjs:81/92/107；VS Code thincoder-vscode/src/agent/run-stages.mjs:55/68/82）仍写"call verify to run syntax checks and tests" / "verify reported test failures"——但新 verify 不跑测试只收模型声明。改写为声明式引导。**六站点逐点定稿文案（评审 #2——双端逐字同）**：
   - 首个闸（CLI:81 / VS Code:55）："Before finishing: run the project's verification yourself (per its AGENTS.md test method), then call verify declaring the outcome via verification.status. verify mechanically gates on your declaration."
   - 失败重试（CLI:92 / VS Code:68）："verify was not passed — either your verification declared failed, was skipped without a reason, or was not declared. Fix or complete your verification, then call verify again declaring the outcome."
   - 耗尽诚实声明（CLI:107 / VS Code:82）："You have not passed verification. Either state explicitly that your verification could not be completed, or run verify again once it is."

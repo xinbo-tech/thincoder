@@ -10,7 +10,7 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { turnFrame } from "../src/agent/helpers.mjs"
+import { turnFrame } from "@thincoder/core/agent/helpers.mjs"
 import { routeSubToken } from "../src/tui/subagent-blocks.mjs"
 import { renderSubagentPanel } from "../src/tui/subagent-panel.mjs"
 

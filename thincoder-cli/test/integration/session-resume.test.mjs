@@ -14,10 +14,10 @@ import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync, readdirSy
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
-import { createAgent } from "../../src/agent.mjs"
+import { createAgent } from "@thincoder/core/agent.mjs"
 import { pushReal } from "@thincoder/core/context.mjs"
 import { saveSession, resumeSlot, applySession, newSession, sessionDescriptor } from "@thincoder/core/session.mjs"
-import { repairHistory } from "../../src/agent/helpers.mjs"
+import { repairHistory } from "@thincoder/core/agent/helpers.mjs"
 import { restoreLines, createLoadOlder } from "../../src/tui/startup.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest, slotPath } from "@thincoder/core/session-slots.mjs"
 

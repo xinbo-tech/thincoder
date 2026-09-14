@@ -22,7 +22,7 @@ import { buildSpawnChild } from "../src/agent-tools/subagent-spawn.mjs"
 import { _advisorToolsFor } from "@thincoder/core/advisor/run.mjs"
 import { buildAdvisorSystemPrompt } from "@thincoder/core/advisor.mjs"
 import { advisorTool } from "@thincoder/core/agent-tools/advisor.mjs"
-import { prepareRun } from "../src/agent/setup.mjs"
+import { prepareRun } from "@thincoder/core/agent/setup.mjs"
 
 let tmp
 beforeEach(() => { tmp = mkdtempSync(join(tmpdir(), "batch-segment-")) })

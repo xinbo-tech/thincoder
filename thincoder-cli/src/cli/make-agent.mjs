@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process"
 import { isAbsolute, join } from "node:path"
-import { createAgent } from "../agent.mjs"
+import { createAgent } from "@thincoder/core/agent.mjs"
 import { loadConfig, configDir } from "@thincoder/core/config.mjs"
 import { createMemory, syncDir } from "@thincoder/core/memory.mjs"
 import { discoverRules } from "@thincoder/core/rules.mjs"

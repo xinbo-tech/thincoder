@@ -322,7 +322,7 @@ VSC `src/prompts/discipline-engineering.md`（现 228 行）· VSC `docs/design/
 
 | 事实 | 证据 |
 |---|---|
-| **运行时只加载 `src/prompts/*`** | `src/prompt-overlays.mjs:17-19`（`loadSlot` = `readFileSync(join(__dirname, "prompts", name))`，模块级常量）+ `:48-57`（engineering 场景槽序 = persona-engineering → common → discipline-engineering） |
+| **运行时只加载 `src/prompts/*`** | `thincoder-core/prompt-overlays.mjs:17-19`（`loadSlot` = `readFileSync(join(__dirname, "prompts", name))`，模块级常量）+ `:48-57`（engineering 场景槽序 = persona-engineering → common → discipline-engineering） |
 | **中文权威面不参与加载（零运行时引用）** | `docs/design/prompts/*` 在 `src/**` 零引用（loader 实证——运行时只读 `src/prompts/*`）；`.mjs` 引用仅测试层（双源/跨仓断言所需——实测行位见下注）——双源流程 = 「改中文模板 → 内容把关 → 落地时译写回填 `src/prompts`」（`requirements/PROMPT-SYSTEM.md` §2） |
 | **双源同步机制 = 手抄/译写（无脚本）** | 同上零脚本引用；双端为**语义同源、原文自持**（多实现面纪律），跨仓逐字由锚测试守（`test/prompts-mirror-anchors.test.mjs（VSC 仓）`：A1–A8/A11/A12 + 双源同名集合各 15 档） |
 | **`Fixed` 定义副本 = 8 文件** | `discipline-engineering.md` ×4 + `discipline-normal.md` ×4（§13.3 落点表；逐文件行号） |

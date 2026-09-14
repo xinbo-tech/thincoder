@@ -11,7 +11,7 @@ import { executeObserveAction, executeSendAction, executeStatusAction } from "..
 import { executeCancelAction } from "../src/agent-tools/subagent-async.mjs"
 import { settleAsyncEntry } from "../src/agent-tools/async-settle.mjs"
 import { drainInjectedQueue } from "../src/agent-tools/subagent-run.mjs"
-import { executeToolCalls } from "../src/agent/dispatch.mjs"
+import { executeToolCalls } from "@thincoder/core/agent/dispatch.mjs"
 
 /** 最小 ctx（depth 0——observe/send 仅 depth-0 池所有者可用）。 */
 const depth0Ctx = (agent) => ({ depth: 0, agent, callbacks: {}, signal: null, onPermissionRequest: null })

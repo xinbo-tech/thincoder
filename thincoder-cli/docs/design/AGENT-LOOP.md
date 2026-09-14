@@ -1,6 +1,6 @@
 # Agent 主循环（agent 板块）
 
-> 板块：Agent 循环。权威源：thincoder-cli/src/agent.mjs + src/agent/ + 子代理相关（spawn-child / subagent 工具 / suspension）。本文件描述 agent 主循环的**当前设计**——回合驱动、guard 体系、中断语义、工具调度、子代理机制、挂起回合与 digest、工程交付协议、评审收敛。跨文档已接管的主题只留指针，不复制。
+> 板块：Agent 循环。权威源：thincoder-core/agent.mjs + thincoder-core/agent/ + 子代理相关（spawn-child / subagent 工具 / suspension）。本文件描述 agent 主循环的**当前设计**——回合驱动、guard 体系、中断语义、工具调度、子代理机制、挂起回合与 digest、工程交付协议、评审收敛。跨文档已接管的主题只留指针，不复制。
 > 关联权威：`ENGINEERING-MODE.md`（工程模式判定 / 铁律 / token 门）、`ADVISOR-CONVERGENCE.md`（评审轮次收敛）、`TESTING.md`（测试分层 L0/L1/L2）、`TOOLS.md`（工具系统注册/调度出口）、`TUI.md`（显示面）、`TOOL-OUTPUT-LIMITS-*.md`（落盘阈值）。
 >
 > 其余关联：`SESSION.md`（会话）、`CONTEXT-COMPACTION.md`（压缩）、`CONSULTATION.md`（会诊）、`ESCALATE.md`（飞刀）、`LOGGING.md`（事件日志）、`PROVIDER.md`（模型上下文）。
@@ -52,16 +52,16 @@
 
 | 文件 | 职责 |
 |---|---|
-| `src/agent.mjs` | `runAgent` 主循环：prepareRun → turn 循环 → chat → 分发 → 后处理；ContinueError/resume；usage 基线；回合收尾（collectSettledAsync——挂起驱动语义见 §9）；结果提交/记账在 `agent/record-results.mjs` |
-| `src/agent/setup.mjs` | prepareRun：上下文注入（git/目录/指令/记忆/文档/outline）、system prompt 组装、阈值解析、角色工具面装配（depthOnly） |
-| `src/agent/dispatch.mjs` | executeToolCalls：两段调度（权限预审 → 顺序保序执行）、hooks、错误落盘、action 级门控（子代理 readonly/控制类）、批权限合并 |
-| `src/agent/completion.mjs` | handleCompletion：零工具调用回合的 guard 链（pending → verify → advisor → 收尾） |
-| `src/agent/post-turn.mjs` | 回合后注入：停滞检测、goal 预算预警 |
-| `src/agent/helpers.mjs` | 常量（turn 上限、结果落盘阈值）、escapeXml、repairHistory、AUTO_REMINDER 单源、git 上下文、目录树 |
-| `src/agent/record-results.mjs` | 工具结果提交 + 变更记账：tool 消息落盘（多模态延迟注入）、FILE_MUTATORS 失效链、`_touchedFiles` + noteMutations |
-| `src/agent/spawn-child.mjs` | 子代理统一管线：makeRelay / wrapChildCallbacks / runWithContinue / ensureChildApiKey / clampEffort / `⟦ev⟧` strip / 嵌套 done/stopped 补发射 |
-| `src/agent/run-stages.mjs` | （拆分批）回合阶段骨架 / abort 分支 / pending 单容器过滤 |
-| `src/auto-think.mjs` | 任务难度分类 → 自动设置 reasoning effort（opt-in） |
+| `thincoder-core/agent.mjs` | `runAgent` 主循环：prepareRun → turn 循环 → chat → 分发 → 后处理；ContinueError/resume；usage 基线；回合收尾（collectSettledAsync——挂起驱动语义见 §9）；结果提交/记账在 `thincoder-core/agent/record-results.mjs` |
+| `thincoder-core/agent/setup.mjs` | prepareRun：上下文注入（git/目录/指令/记忆/文档/outline）、system prompt 组装、阈值解析、角色工具面装配（depthOnly） |
+| `thincoder-core/agent/dispatch.mjs` | executeToolCalls：两段调度（权限预审 → 顺序保序执行）、hooks、错误落盘、action 级门控（子代理 readonly/控制类）、批权限合并 |
+| `thincoder-core/agent/completion.mjs` | handleCompletion：零工具调用回合的 guard 链（pending → verify → advisor → 收尾） |
+| `thincoder-core/agent/post-turn.mjs` | 回合后注入：停滞检测、goal 预算预警 |
+| `thincoder-core/agent/helpers.mjs` | 常量（turn 上限、结果落盘阈值）、escapeXml、repairHistory、AUTO_REMINDER 单源、git 上下文、目录树 |
+| `thincoder-core/agent/record-results.mjs` | 工具结果提交 + 变更记账：tool 消息落盘（多模态延迟注入）、FILE_MUTATORS 失效链、`_touchedFiles` + noteMutations |
+| `thincoder-core/agent/spawn-child.mjs` | 子代理统一管线：makeRelay / wrapChildCallbacks / runWithContinue / ensureChildApiKey / clampEffort / `⟦ev⟧` strip / 嵌套 done/stopped 补发射 |
+| `thincoder-core/agent/run-stages.mjs` | （拆分批）回合阶段骨架 / abort 分支 / pending 单容器过滤 |
+| `thincoder-core/auto-think.mjs` | 任务难度分类 → 自动设置 reasoning effort（opt-in） |
 | `src/agent-tools/subagent*.mjs` | subagent 工具：spawn/status/escalate/cancel/panel 动作面、async 池、调度器、审计任务书（见 §7/§8/§10）；subagent-panel.mjs = §19.6 panel 执行器（2026-09-08 自 subagent-actions.mjs 二次拆分） |
 | `src/agent-tools/async-settle.mjs` | async 结果容器统一共享 helper（ASYNC-RESULT-CONTAINER D1-D6）：settleAsyncEntry（四族公共收尾单点）/ getAsyncPool（双池 accessor）/ parkAsyncPending（pending 单容器）/ parentAborted 守卫 / buildChildSignal |
 | `src/agent-tools/subagent-scheduler.mjs` | 任务调度器：normalizeFileList/filesOverlap/depInfo/queueRunnable/assertNoDepCycle/停滞检测（见 §10） |
@@ -395,13 +395,13 @@ check 删除（§7.5）——工具面六动作 → 五动作 → 2026-09-08 obs
    test/prompts-async-guidance.test.mjs（AC1-AC4 fail-when-unchanged 正向断言）。
 
 **变更记录**：2026-09-08 用户质询"平台侧不可改"→ 纠错：工具描述在项目仓 src/agent-tools/（可改）——§7.7 item 5 假设错误已注——工具描述面纳入本设计（最大引导面）。
-> 2026-09-08 交付后收尾：eng-coder 上报 run-stages.mjs:112 advisor 必审提醒串含顶层 async:false 引导——
+> 2026-09-08 交付后收尾：eng-coder 上报 thincoder-core/agent/run-stages.mjs:112 advisor 必审提醒串含顶层 async:false 引导——
 > 父侧 minor fix 已清（改一律异步——机制零触碰——只改提醒文案）+ main.md:8 上报经核为误报
 > （双端 L13/L28 已清——无残留）——commit 见 VSC 仓。2026-09-08 §7.7.1 实现交付（eng-coder——item
 > 1/4 落 §14.2 + §7.2 escalate 行注——见上）。实现核实纠正设计观察不实三处：CLI main.md:28 实含
 > 残留 / VSC engineering.md:16 advisor 段实含同步句 / advisor.mjs 描述实含同步句（CLI:44 + VSC:177——engineering.md 已退役：2026-09-10 PROMPT-SYSTEM 施工①③）
 > ——已一并清（"有则一并清并上报"）。VSC discipline.md:69 escalate 行同款残留一并清（报告项；该档已退役——2026-09-10 PROMPT-SYSTEM 施工①③）。
-> run-stages.mjs:112 提醒串父侧已清（2026-09-08 收尾 commit）。main.md:8 上报经核为误报（双端无残留）。
+> thincoder-core/agent/run-stages.mjs:112 提醒串父侧已清（2026-09-08 收尾 commit）。main.md:8 上报经核为误报（双端无残留）。
 > 待父侧核销（L2/consume——已完成 ed4fc5c/1a89da8 + L2 双端 118/111 绿）。
 
 **验收**：
@@ -1063,7 +1063,7 @@ A 的缺陷面在 **webview 块身份/投递链**。共性是"第二池接入面
 `thincoder-core/provider/core.mjs:27-31`（`abortDOM`——退避 / 限流等待）· `thincoder-core/provider/sse.mjs:185-189`（读循环）·
 `thincoder-core/provider/anthropic.mjs:80` 与 `:187-190` · `thincoder-core/provider/google.mjs:107` 与 `:210-213` ·
 `thincoder-core/provider/rate.mjs:89`（`"Aborted"`——连 `signal.reason` 都未拷贝）· `thincoder-core/proxy.mjs:55-59`（`abortError` 单点）·
-`src/agent.mjs:293`（`"User interrupted"`）与 `:325` · `src/agent-tools/subagent.mjs:290` 与 `:295`。
+`thincoder-core/agent.mjs:293`（`"User interrupted"`）与 `:325` · `src/agent-tools/subagent.mjs:290` 与 `:295`。
 
 **F-AP2（链式传播丢 reason——关键丢失点）**：子代理 / 评审 / 会诊 controller 链到基信号的**5 处 hop 全部以裸 `abort()` 转发**——
 reason 在该点丢失：`src/agent-tools/subagent-run.mjs:101-103` · `src/agent-tools/subagent.mjs:67-69`（sync 装配 `armSyncChildAbort`）·
@@ -1149,7 +1149,7 @@ digest 原样注入 `entry.error`（`subagent-async.mjs:372-400`）——**用�
 ① `{interrupt: true(, message)}`（既有——user 面）② `TimeoutError`（Node 原生——timeout 面）
 ③ `{abortTrigger: "cancel"|"stop"|"timeout"(, abortDetail)}`（新增——程序性取消 / 停止 / 定时器）④ 缺失（→ unknown）。
 
-既有 `reason.interrupt` 判据点（`agent.mjs:242` · `run-stages.mjs:147` · `agent-turn.mjs:149-164` · `agent.mjs:343`）
+既有 `reason.interrupt` 判据点（`thincoder-core/agent.mjs:242` · `thincoder-core/agent/run-stages.mjs:147` · `agent-turn.mjs:149-164` · `thincoder-core/agent.mjs:343`）
 **零触碰**——新增形态不含 `interrupt` 键，各判据行为与今日「undefined reason」逐字同构。
 
 **form ① 既存实测（修正轮 #4——只读抽查）**：四站点均自带 reason（零改动）——`key-handler.mjs:94` 与 `:114` = `{interrupt: true}` · `key-modes.mjs:224` = `{interrupt: true, message}` · `acp/session.mjs:49` = `{interrupt: true, message: "cancelled by client"}`。
@@ -1189,7 +1189,7 @@ digest 原样注入 `entry.error`（`subagent-async.mjs:372-400`）——**用�
 | 5 | 产生 | `thincoder-core/provider/google.mjs:107` 与 `:210-213` | `abortError(provider, "transport-google")` |
 | 6 | 产生 | `thincoder-core/provider/rate.mjs:89`（TPM/RPM 闸门——补 reason 透传） | `abortError(provider, "rate-gate")` |
 | 7 | 产生 | `thincoder-core/proxy.mjs:55-59`（socket abort 单点——`:79` / `:193` / `:232` / `:239` 全走它） | `abortError(provider, "proxy")` |
-| 8 | 产生 | `agent.mjs:306`（interrupted response）与 `:338`（post-chat） | `annotateAbort` / `abortError(agent, …)` |
+| 8 | 产生 | `thincoder-core/agent.mjs:306`（interrupted response）与 `:338`（post-chat） | `annotateAbort` / `abortError(agent, …)` |
 | 9 | 产生 | `subagent.mjs:290` 与 `:295`（sync stopped 抛错） | `abortError(settle, "sync-stopped")` |
 | 10 | 传播 | F-AP2 五处 hop | `ctrl.abort(baseSignal.reason)`（reason 保留） |
 | 11 | 取消停止 | cancel 3 处 + stop 4 处（第 1 条表内站点） | `abort({abortTrigger:…, abortDetail:…})` |
@@ -1246,7 +1246,7 @@ provider / agent / settle 产生或补标错误（`abortInfo`，第 4 条 #1–#
 | `thincoder-core/provider/google.mjs` | 259 | 258 | -1 | 产生点 transport 两处 + 定时器 `google-sse-idle` |
 | `thincoder-core/provider/rate.mjs` | 108 | 109 | +1 | 产生点 `rate-gate`（含 reason 透传） |
 | `thincoder-core/proxy.mjs` | 267 | 262 | -5 | 产生点 `proxy` 单点 + 定时器两处 |
-| `src/agent.mjs` | 401 | 414 | +13 | 产生点 `agent` 两处 |
+| `thincoder-core/agent.mjs` | 401 | 414 | +13 | 产生点 `agent` 两处 |
 | `src/agent-tools/subagent.mjs` | 403 | 405 | +2 | 产生点 2 + hop 1 + 合成 1 |
 | `src/agent-tools/subagent-run.mjs` | 203 | 206 | +3 | hop 1 + 合成 1 |
 | `src/agent-tools/subagent-async.mjs` | 473 | 474 | +1 | cancel 两处 |
@@ -1335,8 +1335,8 @@ provider / agent / settle 产生或补标错误（`abortInfo`，第 4 条 #1–#
   `:453`（PostToolUseFailure——fire-and-forget）。
 - **缺面 = run 终止触发点**：`callbacks.onTurnEnd?.(agent, turn)` 是**回合循环内的逐轮簿记**（TUI：流刷新 + 增量落盘，
   `src/tui/tool-events.mjs:380-401`）——调用点 `src/agent/completion.mjs:42/65/83/96/111/139`（六处 continue 路径）、
-  `src/agent/post-turn.mjs:69`（每个工具轮）、`src/agent.mjs:387`（工具期中断）——**不含** run 正常完成路径。
-  run 终止的唯一收口点 = `finally` → `await finalizeAgentTurn(...)`（`src/agent.mjs:409` → `src/agent/run-stages.mjs:121`）。
+  `thincoder-core/agent/post-turn.mjs:69`（每个工具轮）、`thincoder-core/agent.mjs:387`（工具期中断）——**不含** run 正常完成路径。
+  run 终止的唯一收口点 = `finally` → `await finalizeAgentTurn(...)`（`thincoder-core/agent.mjs:409` → `thincoder-core/agent/run-stages.mjs:121`）。
 - **死事件（已删——2026-09-11 清理）**：`Notification` 原声明于 `src/hooks.mjs:11`，**零调用点**；现已清退（全仓零命中）。存活面清点（as-of 当时）：代码注释 1 处 ·
   `docs/design/_archive/ROADMAP-0.9.0.md`（归档）· `README.md:306`（0.9.0 历史变更史）；存活文档 `docs/design/TOOLS.md:38`
   未列该事件；配置无校验（hooks 按事件名动态读取——`src/hooks.mjs:28`）。
@@ -1352,7 +1352,7 @@ provider / agent / settle 产生或补标错误（`abortInfo`，第 4 条 #1–#
 | # | 候选 | 判据逐项评估 | 取舍（选定代价 / 权衡） | 结论 |
 |---|---|---|---|---|
 | 1 | 逐内层轮（onTurnEnd 消费点） | 长任务 N 轮 → N 次通知（风暴）；「回答未结束就报结束」语义错位 | —— | **否决** |
-| 2 | run 正常完成返回点（`agent.mjs:332`） | 只覆盖 done；撞帽暂停 / 异常终止无通知——而这两态恰是用户离开时最需要被叫回的场景 | —— | **否决**（覆盖不足） |
+| 2 | run 正常完成返回点（`thincoder-core/agent.mjs:332`） | 只覆盖 done；撞帽暂停 / 异常终止无通知——而这两态恰是用户离开时最需要被叫回的场景 | —— | **否决**（覆盖不足） |
 | 3 | 收尾点 `finalizeAgentTurn` + 显式条件 | 单点覆盖全部退出路径（done / maxTurns / error / abort 分支同点分流）；条件可读（depth / abort / AbortError） | 需给收尾函数补 `depth` 入参（调用点 1 行） | **选定** |
 | 4 | TUI 层（`agent-turn.mjs` break 点） | 只覆盖交互面——headless（`-p` / runAgent 直调）丢失；引擎语义散到 TUI | —— | **否决** |
 
@@ -1373,7 +1373,7 @@ provider / agent / settle 产生或补标错误（`abortInfo`，第 4 条 #1–#
 
 ### 21.3 契约（触发判定 / 时序 / 载荷 / 引擎改动 / 事件表）
 
-**触发判定（逐字）**——`src/agent/run-stages.mjs` `finalizeAgentTurn` 首部（`flushPeerDomains(agent)` 之后）：
+**触发判定（逐字）**——`thincoder-core/agent/run-stages.mjs` `finalizeAgentTurn` 首部（`flushPeerDomains(agent)` 之后）：
 
 ```js
 // 第 30 批 D1（Stop 钩子）：主会话 run 终止 → fire-and-forget（非阻塞；失败静默——与 PostToolUse 同语义）。
@@ -1391,7 +1391,7 @@ if (depth === 0 && !signal?.aborted && thrownError?.name !== "AbortError") {
 ```
 
 - 判定语义：`depth === 0`（仅主会话——用户裁定）；`signal?.aborted` 排除 Ctrl+C（停回合）与 Ctrl+I（注入续跑）；
-  `AbortError` 名称兜底（`agent.mjs:304` 的 interrupt 合成 AbortError 不带 signal 判据——防续跑期假通知）；
+  `AbortError` 名称兜底（`thincoder-core/agent.mjs:304` 的 interrupt 合成 AbortError 不带 signal 判据——防续跑期假通知）；
 - `reason` 三态：`done`（正常完成）· `maxTurns`（`ContinueError`——撞帽暂停）· `error`（其余异常——`error` 字段带 message）；
 - 每 runAgent 调用至多一次（触发块在收尾函数内、收尾函数在 `finally` 单点调用）。
 
@@ -1470,8 +1470,8 @@ if (depth === 0 && !signal?.aborted && thrownError?.name !== "AbortError") {
 | 文件 | 当前行数 | 预计增量 | 改动面 |
 |---|---|---|---|
 | `src/hooks.mjs` | 94 | +4~6（→ ~98-100） | 头部事件表（−1 行 / +1 行）· matcher 守卫 +1 · extra 合并 +1（含注释） |
-| `src/agent/run-stages.mjs` | 228 | +9~12（→ ~237-240） | `import { runHooks }` + 触发块（§21.3 逐字）+ JSDoc（ctx.depth） |
-| `src/agent.mjs` | 412 | 0（同改 1 行） | `:409` 调用点补 `depth` 入参 |
+| `thincoder-core/agent/run-stages.mjs` | 228 | +9~12（→ ~237-240） | `import { runHooks }` + 触发块（§21.3 逐字）+ JSDoc（ctx.depth） |
+| `thincoder-core/agent.mjs` | 412 | 0（同改 1 行） | `:409` 调用点补 `depth` 入参 |
 | `test/hooks-stop.test.mjs` | 新增 | ~150-190 | 假 hook 脚本（mkdtemp 运行期生成；`process.execPath` + 脚本路径为 command / args）+ 11 用例（§21.6） |
 | `docs/requirements/AGENT-LOOP.md` | 169 | +41（→ 210，已落档） | 新 §7（需求层） |
 | `docs/design/AGENT-LOOP.md` | 1282 | +232（→ 1514，已落档——含状态行 1 条） | 新 §21（本节）+ 状态行 1 条 |
@@ -1565,7 +1565,7 @@ T-HS2 改信号同步（墙钟余量消除）+ 归册按实测 · T-HS1 删「�
 
 预算现覆盖（CLI 面）= subagent / advisor / escalate 三族（共用 `injectAsyncResult`——`src/agent-tools/subagent-async.mjs:325-363 / 373-405`）；
 consult 族绕过：`injectConsultResult`（`thincoder-core/agent-tools/consult.mjs:181-188`）——offload 预览只有单条保护、无轮累计。
-注入路径：run-start 注入（`src/agent.mjs:103-110`）+ 挂起退出残余（`src/tui/suspension-drive.mjs:280-286`）——role 分支两处内联，consult 两路皆绕过。
+注入路径：run-start 注入（`thincoder-core/agent.mjs:103-110`）+ 挂起退出残余（`src/tui/suspension-drive.mjs:280-286`）——role 分支两处内联，consult 两路皆绕过。
 BATCH-3 F-2 原始事故面（1.3MB 请求体）+ 交付偏差记录（`docs/design/_archive/BATCH-3-STRUCTURE.md` 变更记录：「四族共用单点」与实际派发不符——扩面需新任务重评审）。
 多族合并轮（subagent + consult 同轮）累计超限可复现。
 
@@ -1646,7 +1646,7 @@ BATCH-3 F-2 原始事故面（1.3MB 请求体）+ 交付偏差记录（`docs/des
 | 2 | 消费面读时截断（2000/4000）——头部诊断价值有限、尾部（停在何处）优先 | `subagent-actions.mjs:445/456` · `thincoder-core/agent-tools/escalate-async.mjs:242/258`；例外：`subagent.mjs:354` 停止报告内联全量（再经通用 offload ≥64K 落盘） |
 | 3 | 子代理人读线 `_fullHistory` 同主 agent：永不压缩、全量常驻（每个 child 一份） | `thincoder-core/context.mjs:163-180` · 子代理创建 `subagent-spawn.mjs:332-340` |
 | 4 | 条目对 `entry.childAgent` 的引用**从不显式释放**（grep 阴性）——释放仅靠条目对象被回收 | `subagent-run.mjs:133` · `thincoder-core/agent-tools/escalate-async.mjs:198`（绑定）；`subagent-run.mjs:184`（池）· `async-settle.mjs:47-50`（pending） |
-| 5 | 消化窗口：done-in-pool 驻留至回合尾收集/run 起始注入/挂起残差三消费点；挂起期（suspDriven）settled 留池等待消化 | `run-stages.mjs:233-239` · `agent.mjs:105-113` · `suspension-drive.mjs:283-289` · `run-stages.mjs:215-218/231` |
+| 5 | 消化窗口：done-in-pool 驻留至回合尾收集/run 起始注入/挂起残差三消费点；挂起期（suspDriven）settled 留池等待消化 | `thincoder-core/agent/run-stages.mjs:233-239` · `thincoder-core/agent.mjs:105-113` · `suspension-drive.mjs:283-289` · `thincoder-core/agent/run-stages.mjs:215-218/231` |
 | 6 | 轨迹存档：单次调用**整对象图深拷贝**（redactValue 递归复制容器）+ 独立 `JSON.stringify`（第二份全尺寸字符串），在途无上限（fire-and-forget 不 await、无队列/计数）；本机实测单记录 1.0–1.9MB、分钟级连发 | `thincoder-core/traces/trace-store.mjs:117-126` · `:157-177` · `:171` · `:188-196`；实测（本机 traces 目录） |
 | 7 | 序号分配每次同步扫目录（`existsSync` + `readdirSync`） | `thincoder-core/traces/trace-store.mjs:85-106` |
 
@@ -1695,8 +1695,8 @@ BATCH-3 F-2 原始事故面（1.3MB 请求体）+ 交付偏差记录（`docs/des
   marker: "… [captured output truncated: N chars omitted] …" }`（输出 ≤64K+标记；续跑同闭包累积，
   语义一致）。
 - **释放**：新 helper `releaseSettledEntry(entry)`（`async-settle.mjs`）——`entry.childAgent = null;
-  entry.report = null`（幂等）；三消费点注入完成后调用：`run-stages.mjs:233-239` ·
-  `agent.mjs:105-113` · `suspension-drive.mjs:283-289`。池内/挂起未消化窗口零变化。
+  entry.report = null`（幂等）；三消费点注入完成后调用：`thincoder-core/agent/run-stages.mjs:233-239` ·
+  `thincoder-core/agent.mjs:105-113` · `suspension-drive.mjs:283-289`。池内/挂起未消化窗口零变化。
 - **纯函数单源**：`capText` / `appendCappedText` 本体 = `thincoder-core/text-budget.mjs`（零依赖纯函数；
   TUI 面 `display-budget.mjs` 与 agent 面共用——D2）。
 
@@ -1740,8 +1740,8 @@ BATCH-3 F-2 原始事故面（1.3MB 请求体）+ 交付偏差记录（`docs/des
 | `src/agent/spawn-child.mjs` | 229 | +14 | 捕获闭包截断（常量 + 标记） |
 | `src/agent-tools/subagent-spawn.mjs` | 454 | +3 | 子代理 `_historyWindow` 置位 |
 | `src/agent-tools/async-settle.mjs` | 192 | +10 | `releaseSettledEntry` helper |
-| `src/agent/run-stages.mjs` | 243 | +4 | 消费点调用释放 |
-| `src/agent.mjs` | 414 | +6 | run 起始注入点调用释放 |
+| `thincoder-core/agent/run-stages.mjs` | 243 | +4 | 消费点调用释放 |
+| `thincoder-core/agent.mjs` | 414 | +6 | run 起始注入点调用释放 |
 | `src/tui/suspension-drive.mjs` | 298 | +4 | 挂起残差消费点调用释放 |
 | `thincoder-core/agent-tools/escalate-async.mjs` | 290 | +2 | 注释锚（childAgent 语义面）+ 若有族特有消费点则补调 |
 | `thincoder-core/traces/trace-store.mjs` | 225 | +55 → ~280 | 单遍序列化 + 双层额度 + 在途计数 + seqCache + **头注释同步**（「不截断」表述作废——§13 修订行；修正轮 #2） |

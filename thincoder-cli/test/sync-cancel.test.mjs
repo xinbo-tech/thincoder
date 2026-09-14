@@ -15,7 +15,7 @@ import {
 import {
   cancelSyncChild, mergeChildMutations,
 } from "../src/agent-tools/subagent-async.mjs"
-import { STOPPED_MARK } from "../src/agent/spawn-child.mjs"
+import { STOPPED_MARK } from "@thincoder/core/agent/spawn-child.mjs"
 
 /** 最小 parent agent（registry/guard 记账面——mergeChildMutations 读写）。 */
 function mkParent(over = {}) {

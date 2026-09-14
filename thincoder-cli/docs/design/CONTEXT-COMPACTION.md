@@ -291,7 +291,7 @@ prompt 措辞（建议）：When over budget, trim in this order: completed reca
 |---|---|---|
 | 压缩/预算/tail/截断/摘要主体（`splitHistory`/`compressIfNeeded`/`compressFallback`/`shrinkOversized`/`summarizeRunExplorations`/`tightenTailByBudget`/`repairedTailStart`/`tailBudgetTokens`） | `thincoder-core/context.mjs` | `src/compact.mjs（VSC 仓）`（`compactHistory`/`estimateTokens`/`tailStartByBudget`） |
 | 常量（`IMAGE_TOKEN_ESTIMATE`/`TAIL_BUDGET_FRACTION`/`SUMMARY_TOKEN_ESTIMATE=1000`/`TAIL_FLOOR_MESSAGES`） | `thincoder-core/context.mjs` | `src/compact.mjs（VSC 仓）`（`SUMMARY_SEGMENT_ESTIMATE=1100`） |
-| run 钩子（`_compressFailures` 重置/`_runStartHistoryLen`/onCompress* 接线） | `src/agent.mjs` + `src/agent-turn.mjs` | `src/agent.mjs` |
+| run 钩子（`_compressFailures` 重置/`_runStartHistoryLen`/onCompress* 接线） | `thincoder-core/agent.mjs` + `src/agent-turn.mjs` | `thincoder-core/agent.mjs` |
 | 压缩面板渲染 | `src/tui/tool-events.mjs` + `src/tui/subagent-blocks.mjs` | webview 会话状态渲染 |
 | SUMMARIZE_PROMPT / EXPLORE_SUMMARY_PROMPT | `thincoder-core/context.mjs`（export） | `src/compact.mjs（VSC 仓）` |
 

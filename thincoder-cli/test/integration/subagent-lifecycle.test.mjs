@@ -13,7 +13,7 @@ import { createServer } from "node:http"
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { runAgent, createAgent } from "../../src/agent.mjs"
+import { runAgent, createAgent } from "@thincoder/core/agent.mjs"
 import { builtinTools } from "@thincoder/core/tools/index.mjs"
 import { subagentTool } from "../../src/agent-tools/subagent.mjs"
 

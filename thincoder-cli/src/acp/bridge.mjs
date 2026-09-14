@@ -22,7 +22,7 @@
 import { detectDanger, normalizeEOL, joinWithEol } from "@thincoder/core/tools/shared.mjs"
 import { computeEditEntry, validateEditEntry, assertEditArgsExclusive, hasLineParams } from "@thincoder/core/tools/edit-diff.mjs"
 // 第 27 批 §12.3①/③：relay 前缀文法单一权威（模块直连——不自持正则副本）。
-import { parseRelayPath } from "../agent/relay-prefix.mjs"
+import { parseRelayPath } from "@thincoder/core/agent/relay-prefix.mjs"
 
 /** ACP ToolKind inference (schema v1 enum) — best-effort, clients render by kind. */
 function inferToolKind(name) {

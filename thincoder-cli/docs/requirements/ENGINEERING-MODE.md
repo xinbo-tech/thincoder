@@ -781,7 +781,7 @@ eng-designer 勘察）的工具描述**动作拒绝清单**与机械门（`src/a
 - **F1 batchDoc 门移植**：spawn 子代理时注入批次档路径，门禁 = 「**参数在 + 路径可读，否则拒**」（与 CLI §1.16 F1 同语义）。
   勘察事实：VSC **无 CLI 的 `subagent-spawn.mjs` 双路装配单点**——阻塞 spawn 在 `subagent.mjs:150+`、异步在 `subagent-async.spawnAsyncSubagent:216`；
   **要么两处各落，要么先造共享等价点**（选型归设计）。
-- **F2 eng-designer 角色落地**：角色判定（`agent._role`）+ 工程模式角色 enum（`src/agent-tools/subagent.mjs:56-74` 现为 `explore/plan/eng-coder`）+ 工具装配分支（`src/agent/setup.mjs:151-160` 现只有 eng-coder/coder/else）+
+- **F2 eng-designer 角色落地**：角色判定（`agent._role`）+ 工程模式角色 enum（`src/agent-tools/subagent.mjs:56-74` 现为 `explore/plan/eng-coder`）+ 工具装配分支（`thincoder-core/agent/setup.mjs:151-160` 现只有 eng-coder/coder/else）+
   **webview 角色枚举四处**（`webview/activity-view.js:13`（VSC 仓） / `webview/activity.js:37`（VSC 仓） / settings-agent.js / settings-models.js）+ 人格文件新建。
 - **F3 行为纪律移植**：六段自写 · 执行者拒收 · 澄清必经主 agent · 三方条目一致（CLI 落点：`discipline-engineering.md` / `persona-eng-coder.md` / `persona-eng-designer.md`——VSC 对等 grep **零命中**）。
 - **F4 §3 自写工具移植**：`batch_segment`（无路径参数 / 段白名单 / append-only / 工具加来源戳 / 剥凭证 / fail-closed）——本体可照搬；

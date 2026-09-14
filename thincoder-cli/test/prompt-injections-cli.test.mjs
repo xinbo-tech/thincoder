@@ -18,7 +18,7 @@ import {
   PROMPTS_DIR, TOOL_DOCS_DIR,
   configurePromptInjections, resetPromptInjections,
 } from "@thincoder/core/prompt-files.mjs"
-import { assemblePrompt } from "../src/prompt-overlays.mjs"
+import { assemblePrompt } from "@thincoder/core/prompt-overlays.mjs"
 import { toOpenAISchema, builtinTools } from "@thincoder/core/tools/index.mjs"
 import { CLI_PROMPT_INJECTIONS } from "../src/prompt-injections.mjs"
 

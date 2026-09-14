@@ -30,7 +30,7 @@
 | discipline-normal | **双端双源均仍含工具路由块**（路由 bullets + 全表 + 搜索优先级）+ 探索顺序 + 环境行段（C8 副本） | 删源（双端 × 双源） |
 | 锚测试面 | CLI `test/prompts-async-guidance.test.mjs` 断言搜索条款驻留 **de/dn**；`§2.7 #9` 表行清单锚定 dn 4 行；VSC 同款 | 断言迁宿主（common）+ 清单更新 + common 新节锚扩展 |
 
-**关键运行时事实（已核）**：装配 = 整文件拼接（`src/prompt-overlays.mjs` 槽位表驱动，common 恒第二位——
+**关键运行时事实（已核）**：装配 = 整文件拼接（`thincoder-core/prompt-overlays.mjs` 槽位表驱动，common 恒第二位——
 七场景全部注入），**零段落级解析**——增删节不影响装配代码；本批**零运行时代码改动**。
 
 ### 1.2 目标态与计数口径（D3）
@@ -375,7 +375,7 @@ R-1 逐字（插入 persona-explore / persona-coder 身份节尾——CN/EN 双�
 
 ## 6. 边界（本批不做）
 
-- 不改运行时代码（`src/prompt-overlays.mjs` / `src/agent/setup.mjs` / 装配链零碰）；
+- 不改运行时代码（`thincoder-core/prompt-overlays.mjs` / `thincoder-core/agent/setup.mjs` / 装配链零碰）；
 - 不改评审侧提示词（`advisor-*.md` / `consult-base.md`——特殊域自包含不受公共层迁移影响——受控双源在案形态）；
 - 不改 CN 定稿的其余文本（除 §2.7 四类）；不做语义新设计（本批 = 迁移落地，零新规则）；
 - 不新增提示词文件 / 不新增测试文件 / 不改文件命名法；

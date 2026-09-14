@@ -27,8 +27,8 @@ import {
   shiftFreezeAnchors,
 } from "./subagent-blocks.mjs"
 // 第 27 批 §12.3②：前缀正则换名 + import 源改文法模块（纯换名——语义零改）。
-import { RELAY_PREFIX_RE } from "../agent/relay-prefix.mjs"
-import { TURN_CAP_MARK, STOPPED_MARK } from "../agent/spawn-child.mjs"
+import { RELAY_PREFIX_RE } from "@thincoder/core/agent/relay-prefix.mjs"
+import { TURN_CAP_MARK, STOPPED_MARK } from "@thincoder/core/agent/spawn-child.mjs"
 // 2026-09-05 module-split：ticks/maps/sweep/slim/settle/探测/find 族迁 tool-display.mjs——
 // buildToolCallbacks 内部引用用本地 import；sweepToolBlocks re-export（agent-turn 消费面）
 import {

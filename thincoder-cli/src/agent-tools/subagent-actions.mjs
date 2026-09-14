@@ -12,11 +12,11 @@
  * CONTAINER.md D1 落地（池访问点改 getAsyncPool accessor）。
  */
 import { isAbsolute, relative } from "node:path"
-import { runAgent, createAgent, DEFAULT_SUBAGENT_TURNS } from "../agent.mjs"
+import { runAgent, createAgent, DEFAULT_SUBAGENT_TURNS } from "@thincoder/core/agent.mjs"
 import {
   runWithContinue, TURN_CAP_MARK, makeRelay, wrapChildCallbacks,
   ensureChildApiKey, clampEffort,
-} from "../agent/spawn-child.mjs"
+} from "@thincoder/core/agent/spawn-child.mjs"
 import { logEvent, errText } from "@thincoder/core/log.mjs"
 import { describeBlockers, detectStall, STALL_NOTE } from "./subagent-scheduler.mjs"
 import { resolveChildProvider, mergeChildMutations } from "./subagent-async.mjs"

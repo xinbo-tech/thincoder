@@ -103,7 +103,7 @@ gitignored 可索引文件的增删改不得让索引静默过期；索引自检
 
 ### 5.4 判定句（各条验收语义——设计 AC 逐条回指）
 
-- **F10**：对含 `~` 的四字段夹具 —— `loadConfig()` 返回值全部为展开后绝对路径（`startsWith("~")` 零命中）；全仓展开逻辑恰一处（`src/expand-home.mjs`）。
+- **F10**：对含 `~` 的四字段夹具 —— `loadConfig()` 返回值全部为展开后绝对路径（`startsWith("~")` 零命中）；全仓展开逻辑恰一处（`thincoder-core/expand-home.mjs`）。
 - **F11**：`~` → 主目录；`~/x` / `~\x` → 主目录/x；`~user/x`、`a~b`、非字符串 → 原样。
 - **F12**：绝对 projectDir —— `memory.projectOrigin` / memory 工具目录 / CLI 目录均为该绝对路径；相对 projectDir —— 与 `join(cwd, p)` 逐字等值。
 - **F13**：伪 HOME 子进程端到端 —— DB 落伪 HOME 下 ∧ `<cwd>/~` 不存在。

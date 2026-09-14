@@ -278,12 +278,12 @@ AC6 值域语义不变（提示仍 personal/project）。
 
 | # | 候选 | 评估 | 结论 |
 |---|---|---|---|
-| 1 | **新模块 `src/expand-home.mjs`** | `config.mjs` 已 487/500 行（近硬限；同因拆分同款 `config-migrate.mjs` / `model-specs.mjs`）；纯函数单测面干净；VSC 镜像可同构（各自独立实现，不做同步依赖） | **选定** |
+| 1 | **新模块 `thincoder-core/expand-home.mjs`** | `config.mjs` 已 487/500 行（近硬限；同因拆分同款 `config-migrate.mjs` / `model-specs.mjs`）；纯函数单测面干净；VSC 镜像可同构（各自独立实现，不做同步依赖） | **选定** |
 | 2 | `config.mjs` 内联导出 | 行数两案同末态（内联 +8–12 → ~497——同贴 500 硬限，非区分点）；真代价 = 纯函数失独立单测面（须经 `loadConfig()` 全链）+ 与同因拆分档（`config-migrate.mjs` / `model-specs.mjs`）不一致 | 否决（区分点 = 可测面 / 模块边界 / 同因拆分，非行数） |
 
 ### 9.3 接口契约
 
-**（a）展开器**——`src/expand-home.mjs`（纯函数、零依赖；逐字契约）：
+**（a）展开器**——`thincoder-core/expand-home.mjs`（纯函数、零依赖；逐字契约）：
 
 ```js
 import { homedir } from "node:os"
@@ -352,7 +352,7 @@ merged.shell = expandHome(merged.shell)
 
 | # | 文件 | 现行行数 | 预计增量 | 改动 | 执行 |
 |---|---|---|---|---|---|
-| 1 | `src/expand-home.mjs` | 新 | ~+30 | 展开器（§9.3a） | eng-coder |
+| 1 | `thincoder-core/expand-home.mjs` | 新 | ~+30 | 展开器（§9.3a） | eng-coder |
 | 2 | `thincoder-core/config.mjs` | 487 | ≤+10 | import + 四字段归一（§9.3b） | eng-coder |
 | 3 | `src/cli/make-agent.mjs` | 163 | ≤+2 | :44 基准解析 + import 增补 | eng-coder |
 | 4 | `src/cli/memory-command.mjs` | 86 | ≤+2 | :70 同式 | eng-coder |
@@ -380,7 +380,7 @@ merged.shell = expandHome(merged.shell)
 | # | 决策 | 否决备选与理由 |
 |---|---|---|
 | D-H1 | 展开点 = `loadConfig()` 单点（选型 1） | 消费点分散（漏点不可枚举）· 代理层（破坏 config 契约）· 写盘归一（毁原文 / 可移植性） |
-| D-H2 | 展开器住新模块 `src/expand-home.mjs` | config.mjs 内联（行数同贴硬限——非区分点；纯函数失独立单测面 + 违同因拆分口径） |
+| D-H2 | 展开器住新模块 `thincoder-core/expand-home.mjs` | config.mjs 内联（行数同贴硬限——非区分点；纯函数失独立单测面 + 违同因拆分口径） |
 | D-H3 | 形态面 = `~` / `~/` / `~\`，**不含** `~user` | `~user` 需 passwd / Windows 用户名解析——收益低、双平台语义不一、猜错即静默错域；不做 = 原样透传——**shell 面**响亮失败（spawn 不存在路径）；**dbPath / projectDir / team.dir 面为残余静默面**（透传建字面 `~user` 目录——同病灶，登记 §9.8） |
 | D-H4 | projectDir 消费侧 `isAbsolute ? p : join(cwd, p)`（非 `resolve(cwd, p)`） | `resolve` 对相对输入也有归一二进样（尾斜杠 / `..` 折叠）→ origin 串非零 delta；`isAbsolute` 分支下相对路径逐字同修前（N7 零伤硬证据） |
 | D-H5 | 磁盘原文不动（读时归一） | 写回绝对路径：毁可移植性 + 存量手写配置不生效 |
@@ -441,7 +441,7 @@ merged.shell = expandHome(merged.shell)
 
 | §1 待裁 | 结论 | 落点 |
 |---|---|---|
-| 1 展开点 + helper 归属 | `loadConfig()` 单点（D-H1）+ 新模块 `src/expand-home.mjs`（D-H2） | §9.2 / §9.5 |
+| 1 展开点 + helper 归属 | `loadConfig()` 单点（D-H1）+ 新模块 `thincoder-core/expand-home.mjs`（D-H2） | §9.2 / §9.5 |
 | 2 支持形态 + Windows 分隔符 | `~` / `~/` / `~\`（`\\` 归一生效）；`~user` 不做（D-H3：两平台语义不一、收益低） | §9.3a |
 | 3 四字段落法 + README + 用例/AC | 三字段 loadConfig 展开即毕 / projectDir + 七点位基准解析（§9.3c）；README 见 §9.4 行 9；用例 T-H1–T-H15 + AC-H1–AC-H9（T-H16 已退场——整删，删除记录 = `TESTING.md` §11.3；含「cwd 无字面 `~`」机验 = T-H14） | §9.3 / §9.4 / §9.6 / §9.7 |
 | 4 VSC 镜像勘察 | VSC **无** memory 字段消费（文件制记忆、`memoryDir` 硬编码 `cwd/.thincoder/memory`）；**`shell` 同病**（`thincoder-vscode/src/agent/setup.mjs:232` → `src/tools/shell.mjs:233`（VSC 仓；242 行同） `exec({shell})`）——镜像面 = 1 字段，报告父侧排程 | §9.8 |
@@ -472,7 +472,7 @@ merged.shell = expandHome(merged.shell)
 | # | 事实 | 证据（file:line） |
 |---|---|---|
 | 1 | 三张表的向量通道全表 `.all()` 物化后逐行 cosine + 全量排序——无 SQL LIMIT、无分块 | `thincoder-core/memory/core.mjs:60-68`（entries ∪ files）· `docs.mjs:112-116` · `code-sync.mjs:294-298` |
-| 2 | 触发面 = 每轮 run 装配（prompt 注入）+ 工具调用（doc_search/code_search）；本机 memory.db ~736MB（embedding BLOB 为体量主源） | `src/agent/setup.mjs:100-124` · `docs.mjs:185` · `code-sync.mjs:350` |
+| 2 | 触发面 = 每轮 run 装配（prompt 注入）+ 工具调用（doc_search/code_search）；本机 memory.db ~736MB（embedding BLOB 为体量主源） | `thincoder-core/agent/setup.mjs:100-124` · `docs.mjs:185` · `code-sync.mjs:350` |
 | 3 | 结果侧本身有界（候选 = `max(limit×4, 20)`）——病灶是**扫描期**全量物化 | `thincoder-core/memory/core.mjs:68` · `docs.mjs:116` |
 | 4 | FTS 通道已有 `LIMIT`（对照面） | `thincoder-core/memory/core.mjs:88-104` · `docs.mjs:94-99` |
 

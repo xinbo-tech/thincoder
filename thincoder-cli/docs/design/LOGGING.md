@@ -80,13 +80,13 @@
 ### 2.3 受影响文件（实现版）
 
 - **CLI**：`thincoder-core/log.mjs`（新——logEvent/轮转/黑名单/seq）；`thincoder-core/provider/core.mjs`
-  （llm:* 统一落点）；`src/tui/agent-turn.mjs`（turn/susp/digest/err）；`src/agent.mjs`
+  （llm:* 统一落点）；`src/tui/agent-turn.mjs`（turn/susp/digest/err）；`thincoder-core/agent.mjs`
   （chat logCtx + 中止清池 ev:stopped）；`src/agent/dispatch.mjs`（tool:*）；
   `thincoder-core/context.mjs`（compress/distill logCtx）；`src/auto-think.mjs`（logCtx）；
   `src/agent-tools/{subagent,subagent-async,consult}.mjs`（child/ev 事件 + escalate
   执行器）；测试（T-L1..L10）。
 - **VS Code**：同构镜像——新 `thincoder-vscode/src/log.mjs`（同一实现语义）；`src/provider.mjs（VSC 仓）`（llm:*）；
-  `src/agent.mjs`（logCtx + ev:stopped）；`src/agent/execute-tools.mjs（VSC 仓）`（tool:*）；
+  `thincoder-vscode/src/agent.mjs`（logCtx + ev:stopped）；`src/agent/execute-tools.mjs（VSC 仓）`（tool:*）；
   `src/extension/panel-chat.mjs（VSC 仓）`（turn/err——runPanelChat 包装）；
   `src/extension/suspension.mjs（VSC 仓）`（susp/digest/ev:stopped）；`src/agent-tools/*`（child/ev）；
   `src/compact.mjs（VSC 仓）` + `thincoder-core/advisor/run.mjs`（logCtx stage）；测试（镜像）。

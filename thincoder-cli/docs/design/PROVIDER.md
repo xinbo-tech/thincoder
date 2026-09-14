@@ -410,7 +410,7 @@ prefix 模式只续文本，不需要工具历史（真机矩阵实证：过滤�
 | 层 | 位置 | 内容 |
 |---|---|---|
 | 防御（发送前） | `thincoder-core/escape.mjs` v5 | `sanitizeLoneSurrogates`：孤立高/低代理 → U+FFFD（全字段：content / tool_calls[].arguments / reasoning_content / part 数组）；`escapeLiteralEscapes` 回归 v1 double 语义 + 奇数 run 修复（3+ 反斜杠后裸露的 `\u` / `\x` 也 double）；总入口 `sanitizeText` |
-| 源头（截断点） | `setup.mjs` safeSliceUTF16（doc_search 预览）+ `agent/helpers.mjs` safeSliceUTF16（offloadToolResult 预览/兜底截断） | 截断点落高代理（D800-DBFF）时向前收一个码元——不再产生孤立代理 |
+| 源头（截断点） | `thincoder-core/agent/setup.mjs` safeSliceUTF16（doc_search 预览）+ `thincoder-core/agent/helpers.mjs` safeSliceUTF16（offloadToolResult 预览/兜底截断） | 截断点落高代理（D800-DBFF）时向前收一个码元——不再产生孤立代理 |
 
 `escapeMessages` = `stripLocalMessageFields(messages).map(escapeMessageContent)`（OpenAI 路径发送前）；`stripImagesForTextModel` + `normalizeToolPairing` 在 `normalize.mjs`。仅思考模型 thinking 注入路径同样过净化。
 

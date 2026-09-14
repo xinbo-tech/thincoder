@@ -45,7 +45,7 @@ await 完成后 `agent.history` 已替换为压缩版，`prepareRun` 再 push �
 
 ### 2.3 保存回调（P2 / FR3）
 
-`summarizeRunExplorations`（现行位于 `src/explore-distill.mjs`——2026-09-05 模块拆分自 `context.mjs` 迁出）替换历史后，**仅在实际替换成功时**调 `onDistilled`：
+`summarizeRunExplorations`（现行位于 `thincoder-core/explore-distill.mjs`——2026-09-05 模块拆分自 `context.mjs` 迁出）替换历史后，**仅在实际替换成功时**调 `onDistilled`：
 
 ```js
 export async function summarizeRunExplorations(agent, callbacks, signal, depth = 0) {
@@ -84,8 +84,8 @@ try { saveSessionImpl(agent, state.lines) } catch { /* 静默 */ }
 
 ## 3. 实现落点（核销参考）
 
-- `src/agent.mjs`：轮末挂 `agent._pendingDistill`（`summarizeRunExplorations` 异步化）；`runAgent` 开头 prepareRun 前 await 上一轮蒸馏。
-- `src/explore-distill.mjs`：`summarizeRunExplorations` 替换历史后调 `callbacks.onDistilled?.()`。
+- `thincoder-core/agent.mjs`：轮末挂 `agent._pendingDistill`（`summarizeRunExplorations` 异步化）；`runAgent` 开头 prepareRun 前 await 上一轮蒸馏。
+- `thincoder-core/explore-distill.mjs`：`summarizeRunExplorations` 替换历史后调 `callbacks.onDistilled?.()`。
 - `src/tui/agent-turn.mjs`：callbacks 增加 `onDistilled` → 保存（静默）；退出 flush（≤5s 上限）。
 - `src/tui/tool-events.mjs`：callbacks（`buildToolCallbacks`）提供 `onDistilled` → `saveSessionImpl` 保存（静默）。
 - `src/tui/agent-turn.mjs`：把 callbacks 传入 runAgent；每轮退出 flush（≤5s 上限）后保存。
@@ -94,5 +94,5 @@ try { saveSessionImpl(agent, state.lines) } catch { /* 静默 */ }
 ## 变更记录
 
 - 2026-08-25：立项并实施（评审 #2 N3；#3 退出 flush）。npm 0.12.43。
-- 2026-09-05：`summarizeRunExplorations` 随模块拆分迁至 `src/explore-distill.mjs`（正文 §2.3 已更新落点）。
+- 2026-09-05：`summarizeRunExplorations` 随模块拆分迁至 `thincoder-core/explore-distill.mjs`（正文 §2.3 已更新落点）。
 - 2026-09-07：文档重写为人类可读当前态（批 A）——时序与决策值不变。

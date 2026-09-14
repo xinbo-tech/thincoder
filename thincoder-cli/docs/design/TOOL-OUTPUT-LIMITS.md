@@ -15,7 +15,7 @@
 
 统一阈值与 preview 预算：`64 * 1024 = 65536`。preview 采用**保头保尾**（与 context.mjs 压缩/蒸馏同款策略——keep head + tail + 中间省略注）。
 
-### 2.1 常量（`src/agent/helpers.mjs`）
+### 2.1 常量（`thincoder-core/agent/helpers.mjs`）
 
 ```js
 const TOOL_RESULT_OFFLOAD_LIMIT = 64 * 1024 // 65536 chars — offload only above 64K
@@ -88,7 +88,7 @@ K=0 防御不谎报截断——run.mjs 工具回填调用同函数——双端 V
 
 ## 3. 实现落点与兼容性
 
-- `src/agent/helpers.mjs`：常量 + `safeSliceUTF16` / `safeSliceUTF16End` / `buildDualEndPreview` / `offloadToolResult` / `cleanupOldToolResults`。
+- `thincoder-core/agent/helpers.mjs`：常量 + `safeSliceUTF16` / `safeSliceUTF16End` / `buildDualEndPreview` / `offloadToolResult` / `cleanupOldToolResults`。
 - 调用点 `src/agent/dispatch.mjs`（offloadToolResult——函数内部行为改，调用点零改）：非 read_image 工具结果统一经落盘守卫。
 - `thincoder-core/advisor/run.mjs`：`MAX_RESULT_CHARS`（截断行为迁 `thincoder-core/advisor/truncate.mjs`——2026-09-09）。
 - `thincoder-core/tools/file.mjs`：read 双端返回（§2.6——`READ_TAIL_LINES`；≤ 阈值旧路径零变化）。

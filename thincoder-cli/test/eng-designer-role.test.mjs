@@ -31,10 +31,10 @@ import { slow } from "./slow.mjs"
 
 import { subagentTool } from "../src/agent-tools/subagent.mjs"
 import { buildSpawnChild } from "../src/agent-tools/subagent-spawn.mjs"
-import { gateEngCoderSpawn } from "../src/agent/spawn-child.mjs"
-import { prepareRun } from "../src/agent/setup.mjs"
-import { executeToolCalls } from "../src/agent/dispatch.mjs"
-import { assemblePrompt, SCENARIO_SLOT_FILES } from "../src/prompt-overlays.mjs"
+import { gateEngCoderSpawn } from "@thincoder/core/agent/spawn-child.mjs"
+import { prepareRun } from "@thincoder/core/agent/setup.mjs"
+import { executeToolCalls } from "@thincoder/core/agent/dispatch.mjs"
+import { assemblePrompt, SCENARIO_SLOT_FILES } from "@thincoder/core/prompt-overlays.mjs"
 
 const __here = dirname(fileURLToPath(import.meta.url))
 const read = (rel) => readFileSync(join(__here, "..", rel), "utf8")

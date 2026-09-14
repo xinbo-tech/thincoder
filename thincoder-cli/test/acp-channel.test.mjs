@@ -9,7 +9,7 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import { buildAcpCallbacks, replayHistory } from "../src/acp/bridge.mjs"
-import { parseRelayPath, relayPrefixOf, RELAY_PREFIX_RE } from "../src/agent/relay-prefix.mjs"
+import { parseRelayPath, relayPrefixOf, RELAY_PREFIX_RE } from "@thincoder/core/agent/relay-prefix.mjs"
 import { applyToolExclusions } from "../src/cli/make-agent.mjs"
 import { ACP_EXCLUDED_TOOLS } from "../src/acp.mjs"
 import { builtinTools } from "@thincoder/core/tools/index.mjs"
@@ -236,7 +236,7 @@ describe("§12.7 表 2 — 装配与文法（T14–T17）", () => {
     assert.ok(RELAY_PREFIX_RE instanceof RegExp)
     assert.equal(relayPrefixOf("coder", 3), "coder#3/")
     assert.equal(typeof parseRelayPath, "function")
-    const hub = await import("../src/agent/spawn-child.mjs")
+    const hub = await import("@thincoder/core/agent/spawn-child.mjs")
     assert.equal(hub.RELAY_PREFIX_RE, RELAY_PREFIX_RE, "spawn-child 再导出正则（生成侧枢纽）")
     assert.equal(hub.parseRelayPath, parseRelayPath)
     assert.equal(hub.relayPrefixOf, relayPrefixOf)

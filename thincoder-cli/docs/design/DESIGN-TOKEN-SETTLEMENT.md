@@ -5,7 +5,7 @@
 
 ## 1. 现状与差异（explore 一手核实）
 
-**结构性差异**：CLI agent 对象**进程常驻单对象**（`bin/thincoder.mjs:280` 一次创建，跨回合/挂起复用，`agent.mjs:84` 只 mutate 不重建）——settle 回调闭包持的 `parent` = 活对象（`thincoder-core/agent-tools/advisor-async.mjs:466`）→ settle 写
+**结构性差异**：CLI agent 对象**进程常驻单对象**（`bin/thincoder.mjs:280` 一次创建，跨回合/挂起复用，`thincoder-core/agent.mjs:84` 只 mutate 不重建）——settle 回调闭包持的 `parent` = 活对象（`thincoder-core/agent-tools/advisor-async.mjs:466`）→ settle 写
 `agent._engDesignTokens`（`thincoder-core/agent-tools/advisor-async.mjs:124-125`）即时生效。**无 VSC 的死对象 bug、无挂起入场快照、无 onComplete 清零类似物。**
 
 **CLI 真实隐患（唯一）——重启序列化窗口**：
@@ -50,7 +50,7 @@ settle 即落盘（D1）、门禁读权威 miss 回读（D2）、镜像退役（
 ## 4. 受影响文件（CLI，thincoder）
 
 - 修改：`thincoder-core/agent-tools/advisor-async.mjs`（settle 当场落盘 D1/D3）、`src/agent-tools/subagent-spawn.mjs`（miss 回读 D2/D3 + **consume 落盘对称**——交付 🔴 复活洞修复）、`src/agent/dispatch.mjs`（写门问槽 D3）、
-  `src/token-ttl.mjs`（落盘函数 persistEngTokens + reconcileEngTokensFromSlot 回读 + 去镜像）、`src/session.mjs`（resetSessionState 去镜像）、**`src/agent.mjs`**（镜像初始化删——AC3 零写必需）、**`thincoder-core/agent-tools/advisor.mjs`**（陈旧注释修正）、**`src/tui/cmd-new.mjs`**（陈旧注释修正）
+  `src/token-ttl.mjs`（落盘函数 persistEngTokens + reconcileEngTokensFromSlot 回读 + 去镜像）、`src/session.mjs`（resetSessionState 去镜像）、**`thincoder-core/agent.mjs`**（镜像初始化删——AC3 零写必需）、**`thincoder-core/agent-tools/advisor.mjs`**（陈旧注释修正）、**`src/tui/cmd-new.mjs`**（陈旧注释修正）
 - 文档：本设计 + README 地图登记
 - 新增：`thincoder-core/agent-tools/design-token.mjs`（token 工具组拆分——advisor-async 577→487 行硬限内）、`src/session-guard.mjs`（轮转守卫拆分——session-slots 525→485 行）、`test/design-token-settlement.test.mjs`（AC 测试 7 用例 + consume 补充 1）
 

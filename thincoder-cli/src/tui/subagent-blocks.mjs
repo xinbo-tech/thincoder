@@ -17,7 +17,7 @@
 import { C } from "./ansi.mjs"
 // 第 27 批 §12.3①/②：relay 前缀文法单一权威 = src/agent/relay-prefix.mjs——本文件
 // 不再自持前缀正则/解析副本（防第二套平行正则再漂移）。
-import { parseRelayPath } from "../agent/relay-prefix.mjs"
+import { parseRelayPath } from "@thincoder/core/agent/relay-prefix.mjs"
 import { describeToolArgs } from "./tool-args.mjs"
 import {
   appendSubBlock, descendSubChild,

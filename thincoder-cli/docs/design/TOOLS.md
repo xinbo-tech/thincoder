@@ -133,7 +133,7 @@ MCP 工具**动态展开**为独立原生工具（`{server}_{tool}` 前缀、完
 
 - 声明面：`DEFAULTS.websearch`（`thincoder-core/config.mjs:103-106`）申报 `provider: "tavily"`——**全仓零读取点**（死键）：websearch 配置的唯一消费 = `thincoder-core/tools/web.mjs:49` 读 `apiKey`。
 - 现状后端链（本批不动）：有 `apiKey` → Tavily（`thincoder-core/tools/web.mjs:48-68`）；无 key / Tavily 失败 → Bing RSS/HTML 兜底（`thincoder-core/tools/web.mjs:12-42` 抽取 · `:70-84` 抓取 · `:109-119` 编排）。
-- 播种面（VSC 仓）：面板保存 key 时把 `provider: "tavily"` **写回用户 config.json**（`thincoder-vscode/src/extension/settings.mjs` 写点）；另三处（`:119` / `:221` / `:243`）兜底字面量同携该键（`thincoder-vscode` `src/agent/setup.mjs`）——死键还会被产品主动播种。
+- 播种面（VSC 仓）：面板保存 key 时把 `provider: "tavily"` **写回用户 config.json**（`thincoder-vscode/src/extension/settings.mjs` 写点）；另三处（`:119` / `:221` / `:243`）兜底字面量同携该键（`thincoder-vscode/src/agent/setup.mjs`）——死键还会被产品主动播种。
 - 兼容面：CLI 无写入点；磁盘遗留值零消费（不校验、不剥离、不报错）。
 
 ### 11.2 方案选型对比（候选 3——判据逐项）
@@ -161,7 +161,7 @@ MCP 工具**动态展开**为独立原生工具（`{server}_{tool}` 前缀、完
 | CLI 测试 | `test/websearch-config.test.mjs`（新建——已退场：TEST-LIFECYCLE，删除记录 = `TESTING.md` §7.1） | 见 §11.7 |
 | VSC 写面 | `thincoder-vscode/src/extension/settings.mjs:140` | 删 `ws.provider = "tavily"` 写点（停播种——防产品继续写死键） |
 | VSC 读面 | 同档 `:131-134` | 快照 `{ provider, hasKey }` → `{ hasKey }`（webview 零渲染该字段——实证 `webview/settings-tools.js（VSC 仓）`） |
-| VSC 兜底 | `thincoder-vscode` `src/agent/setup.mjs:119` / `:221` / `:243` | 兜底字面量去 `provider`（3 处字面量） |
+| VSC 兜底 | `thincoder-vscode/src/agent/setup.mjs:119` / `:221` / `:243` | 兜底字面量去 `provider`（3 处字面量） |
 | VSC 测试 | `thincoder-vscode` `test/agent-lifecycle-singleton.test.mjs:45（VSC 仓）` | 夹具同步（去 provider） |
 
 **目标形态（语义锚——措辞可微调，语义不可变）**：

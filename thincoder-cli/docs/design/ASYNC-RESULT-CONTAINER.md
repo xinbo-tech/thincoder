@@ -24,7 +24,7 @@
 ### D2 pending 单容器+role
 - 统一为 `_pendingAsyncResults` 单容器，条目带 role 字段（已带——subagent/advisor/escalate/consult 池 entry 全有 role）。
 - consult 裸对象升格：consult.mjs settle 时构造完整 entry（`{id, role:"consult", report, done:true, ...}`）替代裸 `{id, role, report}`。
-- 消费端统一（agent.mjs:97-118 注入/suspension-drive:330-362 清理/run-stages:153-155 清理）——单容器一处清，不再逐族三段。
+- 消费端统一（thincoder-core/agent.mjs:97-118 注入/suspension-drive:330-362 清理/run-stages:153-155 清理）——单容器一处清，不再逐族三段。
 - escalate/consult 独立流删除（`_pendingEscalateResults`/`_pendingConsultResults` 废弃）。
 
 ### D3 settle 共享 helper
@@ -53,7 +53,7 @@
 - 新建：`src/agent-tools/async-settle.mjs`（settle 共享 helper + buildChildSignal + 池 accessor——预估 ~150 行）
 - 修改：`src/agent-tools/subagent-run.mjs`（~200 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-30）、`thincoder-core/agent-tools/advisor-async.mjs`（~490 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-20）、
   `thincoder-core/agent-tools/escalate-async.mjs`（~300 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-20）、`thincoder-core/agent-tools/consult.mjs`（~450 行，settle 升格完整 entry + 信号兜底 + 改调 helper——delta ~-10）、
-  `src/agent.mjs`（~410 行，pending 消费单容器——delta ~-15）、`src/agent/run-stages.mjs`（~250 行，池 accessor + pending 清理单容器——delta ~-10）、`src/tui/suspension-drive.mjs`（~380 行，sweep 改调 helper + pending 清理单容器——delta ~-20）、
+  `thincoder-core/agent.mjs`（~410 行，pending 消费单容器——delta ~-15）、`thincoder-core/agent/run-stages.mjs`（~250 行，池 accessor + pending 清理单容器——delta ~-10）、`src/tui/suspension-drive.mjs`（~380 行，sweep 改调 helper + pending 清理单容器——delta ~-20）、
   `src/agent-tools/subagent-actions.mjs`（~500 行，池 accessor——delta ~+5，**>300 档位——拆分到 async-pool 子模块若跨 500**）、`src/agent-tools/subagent-scheduler.mjs`（~400 行，池 accessor——delta ~+5）、`src/agent-tools/subagent-async.mjs`（~450 行，pending 聚合单容器——delta ~-15）
 - 文档：本设计 + README 地图登记 + AGENT-LOOP.md 子代理/async §（settle 统一机制记录）
 

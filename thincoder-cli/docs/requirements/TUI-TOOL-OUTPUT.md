@@ -17,7 +17,7 @@ TUI 的工具输出统一为**行间区块**：所有工具执行时在对话区
 | FR1 | 每个工具调用产生一个行间区块，含工具名和参数摘要作为 title（`❯ write src/x.mjs` / `❯ bash npm test`） |
 | FR2 | 执行中内容以 `│ ` 前缀滚动显示，默认保留最近 N 行（N = `agent.streamPreviewLines` ?? 工具限定值 ?? 5），溢出折叠为 `│ …` |
 | FR3 | 工具完成时清掉滚动块，追加完成行 `❯ name — done (耗时) → 摘要`（含 OK/FAILED 语义） |
-| FR4 | 完整输出不受区块限制——超长结果落盘保留（阈值权威 = TOOL-OUTPUT-LIMITS-*.md，常量 `agent/helpers.mjs` TOOL_RESULT_OFFLOAD_LIMIT），行间区块只做预览；模型从 history 读取完整结果 |
+| FR4 | 完整输出不受区块限制——超长结果落盘保留（阈值权威 = TOOL-OUTPUT-LIMITS-*.md，常量 `thincoder-core/agent/helpers.mjs` TOOL_RESULT_OFFLOAD_LIMIT），行间区块只做预览；模型从 history 读取完整结果 |
 
 ### 1.3 非功能性需求
 

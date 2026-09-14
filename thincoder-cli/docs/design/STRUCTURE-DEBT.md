@@ -84,7 +84,7 @@
 ### #3 `_` 状态字段摊平面对象 + 手写生命周期（🟠 中高）
 
 **现象**：createAgent 一次性初始化 ~30 `_` 字段 + 运行期动态 ~30，无 schema/封装，摊 ≥18 文件读写。
-- reset（`src/session.mjs:424-446` 逐字段清）/继承（agent.mjs:134 for-8 键手抄）靠手写清单
+- reset（`src/session.mjs:424-446` 逐字段清）/继承（thincoder-core/agent.mjs:134 for-8 键手抄）靠手写清单
 - 新增/漏删字段即状态泄漏
 
 **方向**：归组为 run-scoped / session-scoped / guard 三 capsule，reset/继承收进 capsule 方法。

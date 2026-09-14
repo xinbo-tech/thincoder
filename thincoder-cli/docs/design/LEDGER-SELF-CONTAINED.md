@@ -544,7 +544,7 @@
 | 32 | `TOOLS` | ② | 仅 design 层（`docs/design/TOOLS.md` 381 行 + 编辑族 6 档） | **建本仓需求档** → `docs/requirements/TOOLS.md` | `src/tools/` 工具族在位；需求层无档 |
 | 33 | `TUI` | ② | 仅 design 层（`docs/design/WEBVIEW.md`（VSC 仓） 1865 行） | **建本仓需求档** → `docs/requirements/WEBVIEW.md`（VSC 仓）（**异名**——本端 UI 面 = webview） | 端差已登记；需求层无档 |
 | 34 | `TUI-TOOL-OUTPUT` | ② | 仅 design 层（同上 `WEBVIEW.md`） | **建本仓需求档** → `docs/requirements/WEBVIEW.md`（VSC 仓）（**与 #33 同档承载**） | 呈现面 = webview 工具卡；行间区块机制端差已登记 |
-| 35 | `TURN-CAP-CONTINUE` | ② | 仅 design 层（208 行） | **建本仓需求档** → `docs/requirements/TURN-CAP-CONTINUE.md` | `src/agent.mjs` maxTurns / `ContinueError` 在位；需求层无档 |
+| 35 | `TURN-CAP-CONTINUE` | ② | 仅 design 层（208 行） | **建本仓需求档** → `docs/requirements/TURN-CAP-CONTINUE.md` | `thincoder-core/agent.mjs` maxTurns / `ContinueError` 在位；需求层无档 |
 | 36 | `VERIFY-REDESIGN` | ① | 有档（34 行） | **已有对位** | 本批新建档在位（机制 = `thincoder-core/agent-tools/verify.mjs`） |
 
 **三值计数（本轮修订口径）**：① **18** · ② **16** · ③ **2** → 18+16+2 = **36** ✅

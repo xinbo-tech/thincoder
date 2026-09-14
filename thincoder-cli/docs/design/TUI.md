@@ -946,7 +946,7 @@ note: p.baseURL,
 | `src/tui/wizard.mjs` | 228 | +8 ± 4 | `renderWizard`：选中行自动滚入可视窗（winH 走 `computeLayout` + try/catch 兜底） |
 | `src/tui/layout.mjs` | 227 | 0 | 零改（overlay 合流既有——核对项） |
 | `src/tui/render-frame.mjs` | 377 | 0 | 零改（8 格余量 + 右截断既有——核对项） |
-| `src/agent/setup.mjs` | 355 | ±3 | A2：受限变体 3 个文案面同步（见 `ENGINEERING-MODE.md` §2.15 D5） |
+| `thincoder-core/agent/setup.mjs` | 355 | ±3 | A2：受限变体 3 个文案面同步（见 `ENGINEERING-MODE.md` §2.15 D5） |
 | `test/eng-designer-role.test.mjs` | 316 | ±6 | A3：T30 自 `test(` 改 `slow(` + import；A2：T32b 扩两处 description 断言 |
 | `test/tui-selection-surfaces.test.mjs` | 0（新增） | +145 ± 40 | A1/A4 用例表 1:1（新档；用例 10 = 文档面断言——已退场：整删，删除记录 = `TESTING.md` §11.3；修正轮 #2） |
 

@@ -14,7 +14,7 @@
  * 递归回本文件（函数级静态环——模块求值期无顶层调用，环安全——session-slots ↔
  * session.mjs 同款先例）。
  */
-import { runAgent, ContinueError } from "../agent.mjs"
+import { runAgent, ContinueError } from "@thincoder/core/agent.mjs"
 import { saveSession } from "@thincoder/core/session.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { buildToolCallbacks, sweepToolBlocks } from "./tool-events.mjs"

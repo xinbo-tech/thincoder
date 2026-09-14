@@ -168,7 +168,7 @@
 ### 4.5 覆盖划分（不重复纪律的落地）
 
 - ① 可断言实现内部（开发自证自由度高）；②③ **只断言业务可观察结果**——允许读状态文件/产物验证结果，不锁私有结构形状
-- **判定探针（口径内）**：`_verifyPassed`（verify 关口机械判定旗位——`src/agent.mjs` · `thincoder-core/agent-tools/verify.mjs`）属口径内判定探针——§5.1/§5.6 以其判定值断言"放行/打回"业务结果，不视为"锁私有结构形状"；机验不改挂输出串（文案随模型措辞漂移；探针 = 机械判定信号本身，更稳）
+- **判定探针（口径内）**：`_verifyPassed`（verify 关口机械判定旗位——`thincoder-core/agent.mjs` · `thincoder-core/agent-tools/verify.mjs`）属口径内判定探针——§5.1/§5.6 以其判定值断言"放行/打回"业务结果，不视为"锁私有结构形状"；机验不改挂输出串（文案随模型措辞漂移；探针 = 机械判定信号本身，更稳）
 - 禁止同断言双持；②③ 不做 ① 的机械改写（"同样的测试做两遍没有意义"）
 - 处置判据（§3.2）即该纪律在收口时的执行面：① 的业务价值只有"转化为 ②③ 场景"这一条通路
 
@@ -537,7 +537,7 @@
 | prompts-async-guidance | 318 | §3.2 consult 场景：返回 CONSULT_BASE 自含基底 | 段删 | 320 | 装配产物全文与字面常量相等——PA-A1（C1-a）；warnings 断言保留（321） |
 | prompts-async-guidance | 327 | §3.4 降级链①：槽文件缺失→空缺+警告 | 段删 | 339-341 | 装配产物 prompt 的槽句在场 / 缺席（PA-A1）；warnings 诊断串断言保留（336-338） |
 | prompts-async-guidance | 348 | §3.4 降级链②：common.md 缺失→同款警告 | 段删 | 357-358 | 同上（PA-A1）；warnings 诊断串断言保留（355-356） |
-| prompts-async-guidance | 373 | §3.4 降级链④：基底缺失→不可用报错 | 整删 | 373-377 | 读 `src/agent/setup.mjs` 两处正则 |
+| prompts-async-guidance | 373 | §3.4 降级链④：基底缺失→不可用报错 | 整删 | 373-377 | 读 `thincoder-core/agent/setup.mjs` 两处正则 |
 | prompts-async-guidance | 403 | §2.7 #5 前 20% 巡检词 | 段删 | 410 | 读 pe 断言关键词正则（411 非空守卫留） |
 | prompts-async-guidance | 196 | ASYNC 全族：AGENT-LOOP.md §14.2 陈述 | 段删 | 200-201 | 读 doc 后 slice 断言正则 |
 | prompts-dual-source | 62 | AC22① 四条行为纪律句双源驻留 | 整删 | 62-81 | 循环 includes（64-71 / 74-80） |

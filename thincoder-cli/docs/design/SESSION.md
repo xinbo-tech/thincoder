@@ -390,23 +390,23 @@ m = loadManifest(cwd)
 > 评审 #6（2026-09-08）：🔴 1 项（N6/AC4 双信号未设计——已修复：process restarted 句保留进程级信号——VSC 模块级闸不迁 + CLI 启动专用标记——resumed 用会话级信号）+ 🟡 2 + 🔵 3——🔴 修复后待重评审。
 
 **slot 注入**（F1）：
-- CLI：`pushEnvStateReminder(agent)`（setup-reminders.mjs:33-39）调用点 setup.mjs:179-182——作用域内
+- CLI：`pushEnvStateReminder(agent)`（thincoder-core/agent/setup-reminders.mjs:33-39）调用点 thincoder-core/agent/setup.mjs:179-182——作用域内
   agent 全量可用——`agent._slot` 直接可取。envStateLine 加 `slot` 参数——push 内传 `agent._slot`。
   **null 窗口**（从未落盘新会话首回合 / applySession 清槽 / resetSessionState）→ 字段如实 `slot: null`
   （N3——不读 manifest active 共享指针——避免 ACP 多会话张冠李戴——粘性 `_slot` 才是"本 agent 之槽"）。
-- VSC：hydrateRun（setup.mjs:229）内 slot = `bind?.slot`（opts.engPersist = {cwd, slot: turnSlot}——`src/extension/panel-chat.mjs:348`（VSC 仓） 回合入口捕获）——pushEnvStateReminder 签名加 `slot` 透传（沿用解构风格）。无槽绑定（直连/非面板）→ slot null 降级（同 model "unknown" 降级族）。
+- VSC：hydrateRun（thincoder-vscode/src/agent/setup.mjs:229）内 slot = `bind?.slot`（opts.engPersist = {cwd, slot: turnSlot}——`src/extension/panel-chat.mjs:348`（VSC 仓） 回合入口捕获）——pushEnvStateReminder 签名加 `slot` 透传（沿用解构风格）。无槽绑定（直连/非面板）→ slot null 降级（同 model "unknown" 降级族）。
 - 行位：`env: {END}, mode, model, slot: {N}, resumed`——slot 在 model 后 resumed 前。
 
 **resumed 按会话跟踪**（F2）：
 - **VSC（评审 🔴 修复——双信号分离）**：resumed 按会话跟踪用**新 agent 级字段**
   （如 `agent._resumedPending`——只在 agent 新建且 restore:true factory 路径、fullHistory 载入非空时
   武装——agent 每 (面板×slot) 绑定销毁重建（ensurePanelAgent `src/extension/panel-chat.mjs:60`（VSC 仓；至 63 行）——换槽即
-  `panel._agent = null`；runAgent 缺省 factory 新建 agent.mjs:85-92）——每次槽恢复进新 agent
+  `panel._agent = null`；runAgent 缺省 factory 新建 thincoder-vscode/src/agent.mjs:85-92）——每次槽恢复进新 agent
   天然得一次 resumed:yes——同绑定复用不武装。判定 `fullHistory?.length > 0`（N5）。
   **模块级 `restartDetectionDone`（:69）保留不迁**——它是 process-restarted 句的进程级闸
   （extension host 重启后模块级重置——进程内切槽不重置——N6 需）——`_resetRestartDetectionForTests`
   （:72）保留。两信号独立：resumed = agent 级每恢复；process restarted 句 = 模块级每进程一次。
-- **CLI**：现 setup.mjs:101-121 内联 `_sessionStart != null` 推断 + `agent._restartReminderInjected` 闸
+- **CLI**：现 thincoder-core/agent/setup.mjs:101-121 内联 `_sessionStart != null` 推断 + `agent._restartReminderInjected` 闸
   ——**改显式恢复事件**：恢复落点收敛 `applySession(agent, data)`（`src/session.mjs:261-325`——启动 bin:291
   + /session cmd-session:92 + ACP acp:229/276 全汇于此）——applySession 内 `data.history?.length > 0`
   时武装待发标记 + 去 `_sessionStart` 推断 + 闸改由 applySession 复位——prepareRun :115-121 消费标记。
@@ -433,12 +433,12 @@ m = loadManifest(cwd)
 **受影响文件**（双端）：
 | 文件 | 端 | 改动 |
 |---|---|---|
-| src/agent/setup-reminders.mjs | CLI | envStateLine 加 slot + push 传 agent._slot + 恢复事件消费改标记 |
-| src/agent/setup.mjs | CLI | prepareRun 恢复判定改显式事件（去 _sessionStart 推断）+ 注入句解耦 |
+| thincoder-core/agent/setup-reminders.mjs | CLI | envStateLine 加 slot + push 传 agent._slot + 恢复事件消费改标记 |
+| thincoder-core/agent/setup.mjs | CLI | prepareRun 恢复判定改显式事件（去 _sessionStart 推断）+ 注入句解耦 |
 | src/session.mjs | CLI | applySession 武装恢复事件（data.history 非空） |
 | bin/thincoder.mjs | CLI | 启动 resume 路径设 `_processRestartPending`（评审 🔴 补——句的进程级信号） |
-| src/agent/setup-reminders.mjs | VSC | envStateLine 加 slot + push 签名 + resumed 改 agent 级 `_resumedPending`（**模块级闸保留不迁——评审 #7——process restarted 句不变**） |
-| src/agent/setup.mjs | VSC | hydrateRun 传 slot + 注入句解耦（resumedSession 与 process restarted 分门） |
+| thincoder-vscode/src/agent/setup-reminders.mjs | VSC | envStateLine 加 slot + push 签名 + resumed 改 agent 级 `_resumedPending`（**模块级闸保留不迁——评审 #7——process restarted 句不变**） |
+| thincoder-vscode/src/agent/setup.mjs | VSC | hydrateRun 传 slot + 注入句解耦（resumedSession 与 process restarted 分门） |
 | test/setup-reminders.test.mjs | 双端新 | 上述用例 |
 | test/agent-lifecycle-singleton.test.mjs（VSC 仓） | VSC | 换槽重建 resumed 用例 |
 

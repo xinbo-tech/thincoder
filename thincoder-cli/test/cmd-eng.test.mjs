@@ -13,7 +13,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 
 import { handleEngCommand } from "../src/tui/cmd-eng.mjs"
-import { ENG_OFF_REMINDER } from "../src/agent.mjs"
+import { ENG_OFF_REMINDER } from "@thincoder/core/agent.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "@thincoder/core/session-slots.mjs"
 
 let tmp, sessionsDir

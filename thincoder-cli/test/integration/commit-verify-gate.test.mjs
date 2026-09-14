@@ -15,7 +15,7 @@ import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { gitTool } from "@thincoder/core/tools/git.mjs"
 import { verifyTool } from "@thincoder/core/agent-tools/verify.mjs"
-import { executeToolCalls } from "../../src/agent/dispatch.mjs"
+import { executeToolCalls } from "@thincoder/core/agent/dispatch.mjs"
 
 const git = (repo, ...args) =>
   execFileSync("git", args, { cwd: repo, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim()

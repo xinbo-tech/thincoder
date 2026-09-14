@@ -2,7 +2,7 @@
  * advisor-sync-accounting.test.mjs — 第 13 批（F16 同步面扩展）用例表 1:1 落地：T-SG1–T-SG6
  * （设计档 `docs/design/ADVISOR-CONVERGENCE.md` §15.4/§15.5——AC-SG1–AC-SG4）。
  *
- * 断言对象 = `src/agent/record-results.mjs` advisor 记账分支的 **sync else 分支**
+ * 断言对象 = `thincoder-core/agent/record-results.mjs` advisor 记账分支的 **sync else 分支**
  * （depth>0 自审 / 显式 `async:false` / 无 depth 直调——同步路径 `src/agent-tools/advisor.mjs:198`）：
  * 未完成尾（单谓词 `advisorIncompleteMarker`——六 kind）+ 非设计面（含类型不可判）⇒ **不置**
  * `_calledAdvisorThisRun`（guard 可重推）；round 进位 / prior 规则 / refused / asyncAck 语义零改
@@ -13,7 +13,7 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { recordToolResults } from "../src/agent/record-results.mjs"
+import { recordToolResults } from "@thincoder/core/agent/record-results.mjs"
 
 /** 宿主尾族六 kind 的块首行前缀（§14.3——`src/advisor/compaction.mjs` 同族逐字）。 */
 const TAILS = {

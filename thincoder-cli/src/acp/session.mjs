@@ -11,7 +11,7 @@
  *   in-flight turn; the next queued prompt starts with a clean signal.
  * - `run` is injectable for tests (defaults to the real runAgent).
  */
-import { runAgent } from "../agent.mjs"
+import { runAgent } from "@thincoder/core/agent.mjs"
 import { saveSession } from "@thincoder/core/session.mjs"
 import { buildAcpCallbacks } from "./bridge.mjs"
 

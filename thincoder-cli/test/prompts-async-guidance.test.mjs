@@ -16,7 +16,7 @@ import { readFileSync, existsSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { writeFileSync } from "node:fs"
-import { assemblePrompt, SCENARIO_SLOT_FILES, PERSONA_ENGINEERING, PERSONA_NORMAL, COMMON, DISCIPLINE_ENGINEERING, DISCIPLINE_NORMAL, CONSULT_BASE } from "../src/prompt-overlays.mjs"
+import { assemblePrompt, SCENARIO_SLOT_FILES, PERSONA_ENGINEERING, PERSONA_NORMAL, COMMON, DISCIPLINE_ENGINEERING, DISCIPLINE_NORMAL, CONSULT_BASE } from "@thincoder/core/prompt-overlays.mjs"
 
 const __here = dirname(fileURLToPath(import.meta.url))
 const read = (rel) => readFileSync(join(__here, "..", rel), "utf8")
@@ -37,7 +37,7 @@ const NEW_PROMPTS = [
 // 本文件不再维护退役名单副本。
 
 const pn = readCore("persona-normal.md")
-import { loadProjectInstructions } from "../src/agent/helpers.mjs"
+import { loadProjectInstructions } from "@thincoder/core/agent/helpers.mjs"
 
 // 七场景装配快照（装配矩阵/降级链断言面——第 2 批新增 eng-designer）
 const engMode = Object.fromEntries(["normal", "engineering", "eng-coder", "eng-designer", "explore", "coder", "plan"].map((s) => [s, assemblePrompt(s)]))
@@ -101,7 +101,7 @@ test("§3.4 降级链①：槽文件缺失→空缺+警告（不 fallback——�
   const bak = readFileSync(target, "utf8")
   writeFileSync(target, "")
   try {
-    const fresh = await import(`../src/prompt-overlays.mjs?v=${Date.now()}`)
+    const fresh = await import(`@thincoder/core/prompt-overlays.mjs?v=${Date.now()}`)
     const r = fresh.assemblePrompt("normal")
     assert.ok(r.warnings.length === 1, "恰好一条警告")
     assert.ok(r.warnings[0].includes("prompt slot file persona-normal.md missing"), "警告点名缺失文件")
@@ -117,7 +117,7 @@ test("§3.4 降级链②：common.md 缺失→同款警告（四槽全覆盖—�
   const bak = readFileSync(target, "utf8")
   writeFileSync(target, "")
   try {
-    const fresh = await import(`../src/prompt-overlays.mjs?v=${Date.now()}`)
+    const fresh = await import(`@thincoder/core/prompt-overlays.mjs?v=${Date.now()}`)
     const r = fresh.assemblePrompt("engineering")
     assert.ok(r.warnings.length === 1, "恰好一条警告")
     assert.ok(r.warnings[0].includes("common.md missing"), "警告点名 common.md")

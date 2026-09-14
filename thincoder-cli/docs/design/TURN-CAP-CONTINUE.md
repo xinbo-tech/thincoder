@@ -2,7 +2,7 @@
 
 > 板块：Agent 循环（`TURN-CAP-CONTINUE.md`——撞墙可继续专题，与 AGENT-LOOP 同板块独立保留，见 README 地图）。
 > 状态：**机制已实现并在现行代码生效**——主/子/飞刀/会诊四类 agent 撞轮数墙都能"继续"，且不限次数。与 VS Code 插件端同源（两端语义一致）。
-> 权威源：`src/agent/spawn-child.mjs`（`runWithContinue` 骨架）、`src/agent-tools/subagent.mjs` / `subagent-actions.mjs` / `escalate-async.mjs` / `consult.mjs`、`src/tui/agent-turn.mjs`（主 agent 面板）、`src/agent.mjs`（`ContinueError` / runAgent 循环）。
+> 权威源：`thincoder-core/agent/spawn-child.mjs`（`runWithContinue` 骨架）、`src/agent-tools/subagent.mjs` / `subagent-actions.mjs` / `escalate-async.mjs` / `consult.mjs`、`src/tui/agent-turn.mjs`（主 agent 面板）、`thincoder-core/agent.mjs`（`ContinueError` / runAgent 循环）。
 
 
 > 需求层（2026-09-10 拆分批）：本板块需求见 `../requirements/TURN-CAP-CONTINUE.md`——本档保留设计与测试细节。
@@ -40,7 +40,7 @@
 ### 19.1 问题陈述（现场复核——as-of 2026-09-11）
 
 续跑以 `resume:true` 重跑同一执行体（见「统一语义」）——段内循环变量 `turn` 从 0 重起，面向消费面的编号载荷随之重置：
-`⟦ev⟧turn`（`src/agent.mjs:186`——`turn + 1` / `maxTurns` 皆段内值）、状态行字段 `agent._currentTurn` / `agent._maxTurns`（`src/agent.mjs:180-181`）、approval 事件载荷（`src/agent/dispatch.mjs:287` 读同一对字段）。
+`⟦ev⟧turn`（`thincoder-core/agent.mjs:186`——`turn + 1` / `maxTurns` 皆段内值）、状态行字段 `agent._currentTurn` / `agent._maxTurns`（`thincoder-core/agent.mjs:180-181`）、approval 事件载荷（`thincoder-core/agent/dispatch.mjs:287` 读同一对字段）。
 
 消费面复核（批次 §1 待核项「渲染层是否已假设从 1 起」）：**无此假设**——`src/tui/subagent-panel.mjs:84` / `src/tui/render-segments.mjs:87` 逐字渲染载荷值；`src/tui/subagent-blocks.mjs:133-139` 从事件 token 原样解析；`TUI.md:399-400` 只定头形态。
 → 重置是**生成侧**缺陷：修在生成侧，全链消费点零改动。
@@ -60,10 +60,10 @@
 
 **唯一新增状态**：`agent._turnSeq`（链内累计序数——agent 级）。
 
-- 复位 = `src/agent.mjs` 既有 per-run 复位块内（`if (!resume)`——:126-145）`agent._turnSeq = 0`（与 mutation/guard 复位同条件同点）；
+- 复位 = `thincoder-core/agent.mjs` 既有 per-run 复位块内（`if (!resume)`——:126-145）`agent._turnSeq = 0`（与 mutation/guard 复位同条件同点）；
 - 递增 = 段内每进入一轮 +1（续跑不重置、不回退）。
 
-**编号帧**（单一计算点——纯函数；落 `src/agent/helpers.mjs`）：
+**编号帧**（单一计算点——纯函数；落 `thincoder-core/agent/helpers.mjs`）：
 `turnFrame(seq, turn, maxTurns) → { turn, maxTurns }`——`turn = seq`；`maxTurns = seq - turn - 1 + maxTurns`
 （差额项 = 本段开始前的链内累计 → max = 段前累计 + 本段预算）。段内帽判定不读它。
 
@@ -95,8 +95,8 @@
 
 | 文件 | 改动 | 行数（现 → 预计） |
 |---|---|---|
-| `src/agent.mjs` | ① `if (!resume)` 块加 `_turnSeq = 0` ② 循环内编号帧赋值 + turn 事件改发帧值 | 400 → ~406 |
-| `src/agent/helpers.mjs` | 新增 `turnFrame`（纯函数 + 注释） | 372 → ~382 |
+| `thincoder-core/agent.mjs` | ① `if (!resume)` 块加 `_turnSeq = 0` ② 循环内编号帧赋值 + turn 事件改发帧值 | 400 → ~406 |
+| `thincoder-core/agent/helpers.mjs` | 新增 `turnFrame`（纯函数 + 注释） | 372 → ~382 |
 | `test/turn-across-segments.test.mjs` | 新档——用例 T1-T7 在役（T8 已退场——整删，删除记录 = `TESTING.md` §11.3） | 新（~90） |
 | `docs/design/TURN-CAP-CONTINUE.md` | 本节（19.1-19.8） | 全档 45 → 173 行（`wc -l`；本批增补前 → 现档） |
 | `docs/requirements/TURN-CAP-CONTINUE.md` | F7 / N5 / N6 + §4 边界追加 | 全档 35 → 44 行（`wc -l` 实测） |
@@ -111,7 +111,7 @@
 | T3 | 边界 | `turnFrame(101, 0, 100)`——续跑段首轮（缺陷点；累计序数 = 101） | `{turn: 101, maxTurns: 200}`——**不回到 1** | F7 |
 | T4 | 边界 | `turnFrame(238, 37, 100)`——第 3 段中段（段前累计 200 + 段内 37 + 1） | `{turn: 238, maxTurns: 300}` | F7 |
 | T5 | 边界（不变式） | 扫描（限可达域：段内 `turn ∈ [0, max)`、`seq ≥ turn + 1`）seq∈{1, 100, 101, 250} × max∈{40, 100} | 恒 `turn ≥ 1`、`turn ≤ maxTurns`、`maxTurns = (seq - turn - 1) + max` | F7 / N5 |
-| T6 | 正常（显示面零改动） | 注入 token `explore#9/⟦ev⟧turn\x1e101\x1e200\x1ellm\x1e`（相位 `llm` = 实际发射字面 `src/agent.mjs:186`；`test/subagent-tail-merge.test.mjs:285` 载同形态——相位段不被解析消费） | 块 `turn = 101 / maxTurns = 200`；面板头含 `turn 101/200` | F7（消费点零改动机械证明） |
+| T6 | 正常（显示面零改动） | 注入 token `explore#9/⟦ev⟧turn\x1e101\x1e200\x1ellm\x1e`（相位 `llm` = 实际发射字面 `thincoder-core/agent.mjs:186`；`test/subagent-tail-merge.test.mjs:285` 载同形态——相位段不被解析消费） | 块 `turn = 101 / maxTurns = 200`；面板头含 `turn 101/200` | F7（消费点零改动机械证明） |
 | T7 | 正常（同源） | approval 载荷 `⟦ev⟧approval\x1e101\x1e200\x1e…`（与 turn 帧同值） | 块 turn / maxTurns 与 turn 事件同帧（不回落段内值） | D-19b |
 | T8 | 错误 / 回归 | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3） | N6 |
 
@@ -122,7 +122,7 @@
 | AC | 判据（机器可验证） | 回指 |
 |---|---|---|
 | AC1 | T1-T5 绿：段 2 首轮编号 = 段 1 累计 + 1（不重置、不倒退、恒 ≤ max） | 批次 §1 缺陷表两行 + F7 |
-| AC2 | `src/agent.mjs` 发射行取 `agent._currentTurn` / `_maxTurns`（源码锚——fail-when-unchanged）+ `⟦ev⟧turn\x1e` 字段形态（4 段 + phase）驻留 | 批次 §1 问 3 + N5 |
+| AC2 | `thincoder-core/agent.mjs` 发射行取 `agent._currentTurn` / `_maxTurns`（源码锚——fail-when-unchanged）+ `⟦ev⟧turn\x1e` 字段形态（4 段 + phase）驻留 | 批次 §1 问 3 + N5 |
 | AC3 | `_turnSeq = 0` 位于 `if (!resume)` 块内（源码锚）；全档无第二复位点（grep 计数 = 1） | 批次 §1 问 2 + N6 |
 | AC4 | `dispatch.mjs:287` approval 行零改动且读同对字段（源码锚）——T7 同帧 | 批次 §1 问 3 |
 | AC5 | 显示面三文件（`subagent-panel.mjs` / `render-segments.mjs` / `subagent-blocks.mjs`）diff 零行 + T6 绿 | 批次 §1 已核事实（渲染层假设复核 = 无假设） |
