@@ -1,6 +1,6 @@
 # insert_after 工具权威语义（INSERT-AFTER）
 
-> 板块：编辑工具。权威源：CLI `src/tools/file.mjs`（:270-356——after_line/after_regex + read-before-insert 护栏 dirty 跟踪 :33-67 + lastWrite 受影响区判定）。本文档是 **insert_after 语义的权威源**——`TOOLS.md` §6.2 只留地图（定位句 + 指针），不得复制本档正文。
+> 板块：编辑工具。权威源：CLI `thincoder-core/tools/file.mjs`（:270-356——after_line/after_regex + read-before-insert 护栏 dirty 跟踪 :33-67 + lastWrite 受影响区判定）。本文档是 **insert_after 语义的权威源**——`TOOLS.md` §6.2 只留地图（定位句 + 指针），不得复制本档正文。
 > 双端：CLI（本文档）与 VSC（thincoder-vscode——同机制各自实现；VSC 无 dirty 机制——见 §4 差异）。
 > 状态：**已实现**。
 

@@ -19,8 +19,8 @@
  * End-of-turn is NOT a notification: `session/prompt` resolves with
  * `{ stopReason: "end_turn" }` (kimi session.ts parity).
  */
-import { detectDanger, normalizeEOL, joinWithEol } from "../tools/shared.mjs"
-import { computeEditEntry, validateEditEntry, assertEditArgsExclusive, hasLineParams } from "../tools/edit-diff.mjs"
+import { detectDanger, normalizeEOL, joinWithEol } from "@thincoder/core/tools/shared.mjs"
+import { computeEditEntry, validateEditEntry, assertEditArgsExclusive, hasLineParams } from "@thincoder/core/tools/edit-diff.mjs"
 // 第 27 批 §12.3①/③：relay 前缀文法单一权威（模块直连——不自持正则副本）。
 import { parseRelayPath } from "../agent/relay-prefix.mjs"
 

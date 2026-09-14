@@ -8,7 +8,7 @@ function timeNowLocal() {
 
 import { search as memorySearch, docSearch } from "@thincoder/core/memory.mjs"
 import { pushReal } from "@thincoder/core/context.mjs"
-import { toOpenAISchema } from "../tools/index.mjs"
+import { toOpenAISchema } from "@thincoder/core/tools/index.mjs"
 import { loadSkills, formatSkillListing } from "@thincoder/core/skills.mjs"
 import { assemblePrompt } from "../prompt-overlays.mjs"
 import {
@@ -89,7 +89,7 @@ export async function prepareRun(agent, input, callbacks, {
       }
       if (agent.memory && !agent.history.some((m) => typeof m.content === "string" && m.content.startsWith(OUTLINE_INJECT_PREFIX))) {
         try {
-          const { buildSummary } = await import("../tools/repomap.mjs")
+          const { buildSummary } = await import("@thincoder/core/tools/repomap.mjs")
           const summary = await buildSummary(agent.memory.db, agent.cwd)
           if (summary && !summary.startsWith("(no indexed")) {
             agent.history.push({ role: "user", content: `${OUTLINE_INJECT_PREFIX}\n${summary}]`, transient: true })
@@ -126,7 +126,7 @@ export async function prepareRun(agent, input, callbacks, {
     if (depth === 0) {
       // Checklist injection: inject pending + in_progress items from .thincoder/checklist.md
       try {
-        const { pendingItems } = await import("../tools/checklist.mjs")
+        const { pendingItems } = await import("@thincoder/core/tools/checklist.mjs")
         const items = pendingItems(agent.cwd)
         if (items.length > 0) {
           agent.history.push({

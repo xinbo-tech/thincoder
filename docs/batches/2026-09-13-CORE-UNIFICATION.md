@@ -5491,5 +5491,145 @@ A5 三条复跑读数与 ③ 表（§5 写入前）逐数一致。
 
 **收正注（同轮 · 首版后置）**：宽度闸命中本段首版 4 行 + 折后复扫 1 行（`:5425` / `:5431` / `:5453` / `:5455` + `:5459`）⇒ **仅插换行、文字零改**；复跑 = `OK(宽度)` 306 档无 >300 字符行 · 一致性 V1/V2/V3 新增违规 0 · exit 0。
 
+### 实施：S2 U13 —— TOOLS（工具实现面 + 注册表 + 描述装载）落轮（2026-09-14 · eng-coder）——**终态 = clean**
+
+**段位**：当前段 = **S2（CLI 迁移单元 U13）**。写域 = CLI 侧（17 档 23 处改指 / 装配归位 + 20 档删旧 + 文档 19 档 43 行锚改指）+
+**边界外一笔（已披露）**：仓根台账 `docs/TODO-archive.md`（`:64` / `:97` L4 证据行——删档后必红，唯一必要两行）。
+**VSC 零触碰**；核内零改动（`git status` 自证：改动集零 `thincoder-core/**`）；未 commit（父侧统一单笔）；
+**无域外消费方**（仓根 `scripts/**` · 产品 `scripts/**` · `bin/**` · 产品根散档 · `.github/**` 全扫零命中）。
+
+**依据** = `docs/design/CORE-UNIFICATION.md` §2.6.3 U13 行（`:722`「20 / 4841 / 18」+ 专项「逐工具行为 = 裁决；`DESC()` 装载根随 `tools/shared.mjs` 一并归核」）+
+（三）逐档清单（`:861-880`）+（四）四步与 A1–A6（`:910-924`）+（七）进度计数 + §2.6.2（三）（五）（六）；
+根档 `docs/design/TOOLS.md` #70 行（`:72`——注册表融合 / 消费方拼装面归位 / `read_image` 门取 VSC）+ 批次档 §5 S1 未决 1（`:3974`——S2 必须 ①②）；父侧 U13 任务书。
+
+**改动面**（行数 = `wc -l` 口径实核；改前 = HEAD）
+
+| # | 面 | 档 / 行数 | 动作 |
+|---|---|---|---|
+| 1 | CLI 源 + 测试 + 产品根散档 | 17 档（6 src + 11 test；行数零变——纯来源串替换） | 改指 `@thincoder/core/tools/<子路径>`（22 处 import / 动态引用）+ 装配归位（1 处调用点） |
+| 2 | CLI 删旧 | 20 档 / **4844 行** | **删档** + 空目录 `src/tools/` 移除 |
+| 3 | CLI 文档 | **19 档 / 43 行** | 锚改指 `thincoder-core/tools/…`（22 悬空 → 0；含评审修复轮一致性 14 行 / 10 档） |
+| 4 | 仓根台账（**边界外·披露**） | `docs/TODO-archive.md`（±0 行） | `:64` / `:97` 证据行改指（2 处） |
+
+**行数口径注**：删除集实处 **4844** = 设计 4841 + 3——`shared.mjs` 446 → 449（U2 的 `DESC()` 装载根改指所致）；余 19 档逐档与设计一致。
+
+**① 逐处「改前 → 改后」（23 处 / 17 档——22 处 = 来源串替换，1 处 = 装配归位）**
+
+**src（9 处 / 5 档）**：
+
+| # | 档 | 位置：改前 → 改后 |
+|---|---|---|
+| 1 | `src/acp/bridge.mjs` | `:22` `"../tools/shared.mjs"` → 核（detectDanger/normalizeEOL/joinWithEol）· `:23` `"../tools/edit-diff.mjs"` → 核（computeEditEntry/validateEditEntry/assertEditArgsExclusive/hasLineParams） |
+| 2 | `src/agent/setup.mjs` | `:11` `"../tools/index.mjs"` → 核（toOpenAISchema）· `:92` 动态 repomap → 核（buildSummary）· `:129` 动态 checklist → 核（pendingItems） |
+| 3 | `src/cli/make-agent.mjs` | **装配归位（#70）**：删 4 直取 import（settingsTool / repoOutlineTool / builtinTools / peerInstancesTool）+ memory 面收窄 `{createMemory, syncDir}`；`:10` 新增 `assembleBuiltinTools` 单源 import；`:63` 单次调用六参（memory / cwd / projectDir / author / team / `model: provider?.model ?? null`） |
+| 4 | `src/tui/cmd-config.mjs` | `:140` 动态 `"../tools/web.mjs"` → 核（UA） |
+| 5 | `src/tui/interaction.mjs` | `:2` `"../tools/shared.mjs"` → 核（detectDanger） |
+
+**test + 产品根散档（14 处 / 12 档）**：
+
+| # | 档 | 位置：改前 → 改后 |
+|---|---|---|
+| 6 | `test/acp-channel.test.mjs` | `:15` → 核 index（builtinTools） |
+| 7 | `test/edit-tool-improvement.test.mjs` | `:17` → 核 edit-diff · `:18` → 核 edit-batch |
+| 8 | `test/git-commit-pathspec.test.mjs` | `:13` → 核 git（gitTool） |
+| 9 | `test/integration/commit-verify-gate.test.mjs` | `:16` → 核 git（gitTool） |
+| 10 | `test/integration/engineering-chain.test.mjs` | `:19` → 核 index |
+| 11 | `test/integration/normal-mode-toolflow.test.mjs` | `:16` → 核 index |
+| 12 | `test/integration/subagent-lifecycle.test.mjs` | `:17` → 核 index |
+| 13 | `test/prompt-injections-cli.test.mjs` | `:22` → 核 index（toOpenAISchema/builtinTools） |
+| 14 | `test/read-dual-end.test.mjs` | `:17` → 核 file（readTool/READ_TAIL_LINES）· `:18` → 核 shared（MAX_READ_LINES） |
+| 15 | `test/read-image-guide.test.mjs` | `:11` → 核 file（readImageTool） |
+| 16 | `test/wait-for-advisor-pool.test.mjs` | `:16` → 核 ops（evaluateWaitForCondition/parseWaitForCondition） |
+| 17 | `test-startup.mjs`（产品根散档） | `:4` `"./src/tools/index.mjs"` → 核 index（builtinTools） |
+
+**改指档数收正（设计「18」vs 实核）**：本笔实改 **17 档**；实核 CLI 树内 `@thincoder/core/tools/` 引用共 **18 档**——差额 1 =
+`src/tui/cmd-restore.mjs:15`（消费对象 = **U5 核档** `git-checkpoint.mjs`，非 U13 删除集）⇒ 17 = 18 − U5 档（承「按当下坐标计」口径）。
+
+**文档锚 43 行（19 档）**
+
+- **删后中间态实测 = 22 悬空（9 档）→ 0**：`ACP-CLIENT.md` `:258` `:353` `:449` · `AGENT-LOOP.md` `:23` `:791` `:851` · `CHECKPOINT.md` `:6` · `EDIT-HELPERS.md` `:3` `:74` ·
+  `EDIT.md` `:3` `:65` · `MULTI-INSTANCE-COLLAB.md` `:237` · `QUICKFIX-BATCH-3.md` `:18` `:41` `:89` · `STRUCTURE-DEBT.md` `:80` · `TOOLS.md` `:134` `:135` `:152` `:220` `:236`。
+- **一致性同批改指（首轮 7 行 + 修复轮 14 行 / 10 档）**：`ACP-CLIENT.md:262` · `CHECKPOINT.md:106` · `EDIT-HELPERS.md:4` · `EDIT.md:66` ·
+  `MULTI-INSTANCE-COLLAB.md:4/:133/:236` · `STRUCTURE-DEBT.md:109`；修复轮 = `HASHLINE-EDIT.md:3` · `APPLY-PATCH.md:3` · `INSERT-AFTER.md:3` · `WRITE.md:3` ·
+  `TOOL-OUTPUT-LIMITS.md:74/:94` · `CRASH-REPORTS.md:46` · `MEMORY.md:257` · `SETTINGS-TOOL.md:187/:231` · `requirements/SETTINGS-TOOL.md:37` · `ENGINEERING-MODE.md:1600/:2418/:2635`。
+- **VSC 语义 2 行 → `thincoder-vscode/src/tools/git.mjs`**：`QUICKFIX-BATCH-3.md` `:18` `:89`（行文自述 VSC——承 U5 决策 3）。
+- **形态** = §2.6.2（六）CLI 域「仓根相对」`thincoder-core/tools/…`；坐标 as-of 保留。
+- **台账 2 行（边界外·披露）**：`docs/TODO-archive.md` `:64` / `:97` 证据形 → `thincoder-core/tools/ops.mjs:181/:195`（L4 闸强制「仓内同名 2 份（多义）」；只改必要行）。
+
+**② 删旧三条读数（删前全过才删）**
+
+1. **改指已落盘**：23 处终态复核（正 / 反向两判）——0 违规；冒烟 PASS（真子进程 · cwd = `thincoder-cli`）：
+   核 20 子路径导入面全通 + 消费具名面逐名在位（toOpenAISchema / detectDanger / normalizeEOL / joinWithEol / MAX_READ_LINES / computeEditEntry /
+   validateEditEntry / assertEditArgsExclusive / hasLineParams / READ_TAIL_LINES / readImageTool / buildSummary / pendingItems / UA / gitTool / readTool / …）+
+   `assembleBuiltinTools` **31 名集合等值 / 零重名 / read_image 门两态（vision 含 · text-only 仅掉 read_image · null 模型保守）+ 静态表 24 名 ⊆ 装配面** +
+   CLI 四消费者可加载（make-agent / setup / interaction / bridge）——读数落 `.thincoder/tmp/u13-smoke.log`。
+2. **该产品全链 exit 0（删前预跑）**：`npm test` 609/552/0/57 · `lint` **229** · `test:full` 609/609 · `test:integration` 25/25（均 exit 0）。
+3. **零引用反向判**（域 = `src` + `test` + `bin` + `scripts` 全递归；两模式）：① 引号包裹本地相对路径形（按解析语义判——命中删除集即违规）= 删前 41 命中
+   （39 = 删除集自指（随删消退）+ 2 非删除集 `tui/index.mjs`）⇒ **违规 0**；② 非核前缀路径片段形 = 删后**代码面 0**（注释叙述 2 处 = 射程外，登记未决 5）。
+   **域外全扫**：仓根 `scripts/**` · 产品 `scripts/**` · 产品根散档 · `.github/**` = **0 / 0**。
+   **删后中间态**：`doc-anchors --domain thincoder-cli` = **22 悬空**（9 档）→ 逐处改指 → **0**；`check-ledger` = **2 违规**（`TODO-archive.md:64/:97`）→ 改指 → **0**。
+
+**③ A1–A6 读数（终态复跑 · 原样）**
+
+| # | 判据 | 读数 | 判 |
+|---|---|---|---|
+| A1 | CLI 全链 | `npm test`：tests **609** · suites 4 · pass **552** · fail **0** · skipped **57** · exit 0（中间一轮命中预存竞态 1 红——连跑两轮全绿，见未决 6）；`lint`：check-syntax **209 file(s) OK**（229 − 20 删档，唯一面内差）；`test:full`：**609/609** · fail 0 · exit 0；`test:integration`：**25/25** · fail 0 · exit 0——**未涉面逐数不变**；面内零改判 | ✓ |
+| A2 | 零引用 | 反向判两式违规 **0 / 0**（域 `src`+`test`+`bin`+`scripts` 全递归）；运行面 = 全链 exit 0 + 删后冒烟 PASS；锚面 = 悬空 0 | ✓ |
+| A3 | 文档锚 | `doc-anchors --domain thincoder-cli`：99 档 · 候选 **8877** · 悬空 **0** · 注记豁免 880 · `OK(V5)` exit 0 | ✓ |
+| A4 | 核回归 | 核内 `node --test` = **173/173** · fail 0 · exit 0；核内零改动（`git status` 自证） | ✓ |
+| A5 | 仓根三机检 | `doc-anchors`（全域）：域一 32 档 候选 2219 · 悬空 0 · 豁免 29；域二 99 档 候选 **8877** · 悬空 0 · 豁免 880；VSC 域报告态 10 处 / distinct 5（预存——非本笔）· **exit 0**；`check-doc-width`：**306 档无 >300 字符行** · 一致性新增违规 0 · exit 0；`check-ledger`：**0 处违规** · 基线 0 · exit 0 | ✓ |
+| A6 | 链接 L1 | `npm ls @thincoder/core --json` **exit 0** · version **0.1.0**（resolved `file:../../../thincoder-core`）；版本探针 = **0.1.0** | ✓ |
+| 专项 | 裁决落实 | **① 逐工具行为 = 裁决**：#70 注册表取核并集——`assembleBuiltinTools` 31 名 = 静态 24 ∪ 六实例面（memory / code_search / doc_search / repo_outline / settings / peer_instances）∪ 门控 read_image；门 = `Boolean(specForModel(model)?.multimodal)`（核 `tools/index.mjs:62`）——与 #70 行「注册门取 VSC」一致。**② CLI 侧注入缝一律不注入**：全树 `configure*` 工具缝（tree / processKill / gitApproval / exec-run / lspHost / editReceipt / writePath / skillLoader / engMirror / verifyDiagnostics / batchSegment）**零命中** ⇒ 默认径 = CLI 语义。**③ `DESC()` 经核**：核 `tools/shared.mjs:18` `DESC = (name) => loadToolDoc(name)`（`prompt-files.mjs` 单源；装载根 = 核 `tool-docs/`） | ✓ |
+
+**进度计数（设计 §2.6.3（七）① · 可复跑命令）**：**CLI 待迁 = 28**（48 − 20）——与父侧预期逐数一致，单调递减成立。
+**工作树**：本笔 **57 项**（37 M = 17 代码 + 19 文档 + 1 台账；20 D）+ **1 项预存**（`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`——spawn 前已在，非本笔）+
+批次档 §5 落笔（写入通道，按惯例不计入改动面）；未 commit。
+
+**④ 内部轮（发现与处置）**
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **DIVERGENT**——四类偏差中「部分实现 / 静默简化 / 清单外改动」未命中（20 删除档全缺 · 17 档 23 处逐点实读对上 · 编号/文本逐行复核）；
+  命中 2 条：🟡 `thincoder-cli/docs/design/TOOLS.md:3`（权威源行两分量已死——`thincoder-cli/src/tools/` + `src/mcp/`；同档 `:134` 等已改 ⇒ 两态）· 🔵 `docs/TODO-archive.md:71/:136-:144` 存量旧指针未登记；+ QUESTION ×6。
+- **审计命中处置**：🟡 → **Fixed**（`:3` 两分量改指 `thincoder-core/tools/` + `thincoder-core/mcp/`——同句半更新收正）；🔵 → **Deferred**（登记未决 2）。
+  QUESTION 判定：Q1（口径）→ 复算说明（23 处 = 22 import/动态引用 + 1 装配调用点）；Q2（`src/prompt-injections.mjs:12` 注释）→ 登记（未决 5）；
+  Q3（引证路径歧义——根档 vs CLI 档 `TOOLS.md`）→ 复读坐实（#70 行在根档 `docs/design/TOOLS.md:72`）；Q4（settings 过渡期双态）→ 登记（未决 1）；
+  Q5（§5 未写）→ 本段落笔；Q6（tmp 冒烟件）→ 脚本删、日志留（读数凭据）。
+- **advisor 代码评审 1 轮**（`type=code` · 阻塞）：**pass**（🔴 **0** · 🟡 4（均非 must-fix）· 🔵 4）。
+- **裁决表（8 项）**：**Fixed 2**——🟡#1 同族半更新两态（14 行 / 10 档一致性改指；复跑 anchors 悬空 0 + 宽度绿）；🔵#7 记录面（18 vs 17 逐档对照——落决策透明表 8）。
+  **Not an issue 2**——🟡#4 三档 >300 存量（`cmd-config` 463 / `bridge` 376 / `setup` 354——既有结构债 · 本单元行内替换零增量，R3 不复议）；🔵#6 read_image 数组位置（迁移前第 7 位 → 组装表尾——核内形态，非本单元边界）。
+  **Deferred 4**——🟡#2 根档 `docs/design/TOOLS.md:13/:15/:17` 归属表（eng-designer 写权）→ 未决 2；🟡#3 read_image 注册门一次性冻结 + 会话内切换路径（设计缺口）→ 未决 3；
+  🔵#5 测试夹具仍以静态表当完整表 → 未决 4；🔵#8 注释叙述（`acp.mjs:75` / `wait-for-advisor-pool.test.mjs:8`）→ 未决 5。
+  **引证核验附注**：host 核验器对 2 条引证报「content mismatch / file unreadable」——复核为**路径前缀歧义 artifact**（`TOOLS.md` 根档 vs CLI 档；`HASHLINE-EDIT.md` 相对路径）——经复读内容与引证相符（承 U1–U12 同型附注）。
+- **轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 1；终态 **0 未决 🔴 → clean**。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 改指形态 = `@thincoder/core/tools/<子路径>` | §2.6.2（三）2「一律带子路径」（裸名不可导入）；核 `exports "./*"` + 链接态实核 |
+| 2 | make-agent 装配归位 `assembleBuiltinTools`（含 `model`） | 批次档 §5 S1 未决 1（`:3974`）S2 必须 ①② + 根档 `TOOLS.md:72`；漏传 `model` ⇒ read_image 全模型静默消失——已传 |
+| 3 | 文档锚 = 纯路径替换（`thincoder-core/tools/…`）+ 坐标 as-of 保留 | §2.6.2（六）CLI 域形态 + U2 决策 6 口径 |
+| 4 | VSC 语义 2 行（`QUICKFIX-BATCH-3.md:18/:89`）→ `thincoder-vscode/src/tools/git.mjs` | 行文自述 VSC（VSC 档未迁、指核会失真）——承 U5 决策 3 先例 |
+| 5 | 台账 `:64/:97` 随本笔改指（**边界外**） | L4 闸强制（删档后 2 处违规「仓内同名 2 份（多义）」）；「只改必要那一行」；坐标 as-of 保留 |
+| 6 | `test-startup.mjs` 保持静态表夹具语义（仅改指） | 屏幕复现器（非装配面）——静态表 = 其夹具本分 |
+| 7 | tmp 冒烟件：脚本删、日志留 | U12 先例（评审 🔵 → Fixed 删脚本）；日志 = 读数凭据（同 U12 处置） |
+| 8 | 改指「18」的逐档对照 | 实核 CLI 树内 `@thincoder/core/tools/` 引用 18 档；本笔 17 = 18 − `cmd-restore.mjs:15`（U5 面核档）——「按当下坐标计」口径 |
+| 9 | 空目录 `src/tools/` 同批移除 | 删除集构成整目录清空（20/20）；git 不跟踪空目录（U3/U5–U12 先例） |
+| 10 | 删前全链**预跑一轮**（四命令）+ 删后终态复跑 + 三机检终态复跑 | §2.6.3（四）2 字面执行（承 U1–U12） |
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **settings 过渡期双态**（审计 Q4）：生产面 `settingsTool` 已取核（`assembleBuiltinTools` 内），CLI `src/agent-tools/settings.mjs` + `test/settings.test.mjs:19` 仍本地（U14 在册）——两档逐字节同（实核 265/265）⇒ 零行为变；随 U14 收口。
+2. **存量旧指针（文档面 · 机检绿）**（审计 🔵 · 评审 🟡#2）：根档 `docs/design/TOOLS.md:13/:15/:17`（归属表）· `docs/TODO-archive.md:71/:136/:137/:138/:139/:143/:144`（P19–P27 行）·
+   模块图滞留（`thincoder-cli/AGENTS.md:58` · `docs/design/ARCHITECTURE.md:28` · `README.md:176`）——归文档维护批 / S3 残留复扫（承 U10 未决 2 口径）。
+3. **read_image 注册门（评审 🟡#3 · 设计缺口）**：装配时一次性冻结（`make-agent.mjs:63`）；会话内 `/model` 切换不重建工具面 ⇒ 文本模型起会话后切视觉模型 = read_image 整会话不可得；规格表外模型失去 F-3 引导句。待父侧/设计裁（或并入 U15 装配参数化——§2.13.4 #112）。
+4. **测试夹具静态表**（评审 🔵#5）：6 档仍以静态 `builtinTools` 当完整表（`test/integration/normal-mode-toolflow.test.mjs:16` · `test/acp-channel.test.mjs:15` ·
+   `test/integration/engineering-chain.test.mjs:19` · `test/integration/subagent-lifecycle.test.mjs:17` · `test/prompt-injections-cli.test.mjs:22` · `test-startup.mjs:4`）——生产面已满足 S2 必须 ②；夹具面归夹具决策 / 后续批。
+5. **叙述注记（射程外登记）**：`src/acp.mjs:75` · `test/wait-for-advisor-pool.test.mjs:8` · `src/prompt-injections.mjs:12`（U2 期·已注明）——随所属档触碰订正。
+6. **快层预存竞态（非本笔·登记）**：`--test-concurrency=6` × `prompts-async-guidance.test.mjs` 清档用例 ⇒ 首跑 1 红（`prompt-injections-cli.test.mjs:50`）；连跑两轮全绿——承 U12 未决 4，归机检 / 测试所属批次。
+7. **VSC 预存项**：`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`（M）= spawn 前既存改动，非本笔（承 U0–U12 登记）。
+8. **read_image 数组位置（记录）**：迁移前第 7 位 → 组装表尾（评审 🔵#6）——模型可见工具数组序变化（一次性字节面，非语义）。
+
+**轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 1；A1–A6 终态读数见上表；终态 = **clean**；报告 ①–⑦ 见交付报告（父侧转呈）。
+
 ## §6 验证与收口（父代理）
 

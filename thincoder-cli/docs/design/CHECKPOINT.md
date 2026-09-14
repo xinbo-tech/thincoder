@@ -3,7 +3,7 @@
 > 状态：**当前态设计**（机制已实现并定稿，2026-09-01；本文档 2026-09-07 重写为人类可读格式）。
 > 权威源（CLI）：`thincoder-core/git/checkpoint.mjs`（快照存储 / rewind 单一权威）、`thincoder-core/tools/git-checkpoint.mjs`
 > （git 工具 checkpoint action + F6 懒清理 + F2 提示行）、`thincoder-core/tools/git-ext.mjs`（F7 扩展 action + `snapshotBefore`）、
-> `src/tools/git.mjs`（commit 清理 + 核心 action）、`src/tools/bash.mjs`（bash guard `gitGuardSnapshot`——2026-09-08 批 3 拆分后）、
+> `thincoder-core/tools/git.mjs`（commit 清理 + 核心 action）、`thincoder-core/tools/bash.mjs`（bash guard `gitGuardSnapshot`——2026-09-08 批 3 拆分后）、
 > `src/tui/cmd-restore.mjs`（`/restore` 两级 picker）。
 > 关联权威：`TOOLS.md` §7（git 工具 action 集全集——本文档不列双清单，避免漂移）；两端 `AGENTS.md`（各自 Checkpoint 小节，落档用）。
 
@@ -103,7 +103,7 @@ git 工具破坏性动作**先快照再执行 + 确认，从不拦截**（审批
 
 ### 4.4 bash guard 对齐（D4）
 
-- CLI `src/tools/bash.mjs`：`GIT_DESTRUCTIVE_RE` 宽匹配 + `gitGuardSnapshot`（2026-09-08 批 3 拆分——原 system.mjs 迁 bash.mjs）（bash 破坏性 git 命令前自动 `createCheckpoint` 全量副本 + 通知含 rewind 指引——`checkpoint action=checkpoint checkpointAction=rewind checkpointId=<id>`，即 F1/F2 事故恢复闭环的既有部分，保留不删）；
+- CLI `thincoder-core/tools/bash.mjs`：`GIT_DESTRUCTIVE_RE` 宽匹配 + `gitGuardSnapshot`（2026-09-08 批 3 拆分——原 system.mjs 迁 bash.mjs）（bash 破坏性 git 命令前自动 `createCheckpoint` 全量副本 + 通知含 rewind 指引——`checkpoint action=checkpoint checkpointAction=rewind checkpointId=<id>`，即 F1/F2 事故恢复闭环的既有部分，保留不删）；
 - VS Code `src/tools/shell.mjs` 曾用 **stash + 精确 matcher**（`git checkout HEAD -- .` 变体曾绕过）——对齐方向：改 CLI 同构——**宽匹配同款 + 全量副本（镜像 createCheckpoint）+ 通知含 rewind 指引**；**stash 从 guard 路径移除**（与 F5 存储统一一致）；存量用户 stash 不受影响。
 
 ---

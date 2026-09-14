@@ -1,6 +1,6 @@
 # 工具系统设计
 
-> 权威源：thincoder-cli/src/tools/ + src/agent-tools/ + src/mcp/。本文档描述工具系统的**当前设计**——工具如何暴露给模型、如何安全工作、如何调度。跨文档已接管的主题只留指针，不复制。
+> 权威源：thincoder-core/tools/ + src/agent-tools/ + thincoder-core/mcp/。本文档描述工具系统的**当前设计**——工具如何暴露给模型、如何安全工作、如何调度。跨文档已接管的主题只留指针，不复制。
 > 关联权威：`AGENT-LOOP.md`（调度/审批/question 抑制）、`SESSION.md`（read_history）、`MCP.md`（MCP 客户端）、`CHECKPOINT.md`（快照）、`EDIT-HELPERS.md`（编辑工具 EOL 语义——原 EDIT-TOOL-EOL-DESIGN 并入本档）、`PROVIDER.md`（模型上下文配置）、`TOOL-OUTPUT-LIMITS-*.md`（输出落盘阈值）。
 
 
@@ -131,8 +131,8 @@ MCP 工具**动态展开**为独立原生工具（`{server}_{tool}` 前缀、完
 
 ### 11.1 问题与现状（as-of 2026-09-11）
 
-- 声明面：`DEFAULTS.websearch`（`src/config.mjs:103-106`）申报 `provider: "tavily"`——**全仓零读取点**（死键）：websearch 配置的唯一消费 = `src/tools/web.mjs:49` 读 `apiKey`。
-- 现状后端链（本批不动）：有 `apiKey` → Tavily（`web.mjs:48-68`）；无 key / Tavily 失败 → Bing RSS/HTML 兜底（`web.mjs:12-42` 抽取 · `:70-84` 抓取 · `:109-119` 编排）。
+- 声明面：`DEFAULTS.websearch`（`src/config.mjs:103-106`）申报 `provider: "tavily"`——**全仓零读取点**（死键）：websearch 配置的唯一消费 = `thincoder-core/tools/web.mjs:49` 读 `apiKey`。
+- 现状后端链（本批不动）：有 `apiKey` → Tavily（`thincoder-core/tools/web.mjs:48-68`）；无 key / Tavily 失败 → Bing RSS/HTML 兜底（`thincoder-core/tools/web.mjs:12-42` 抽取 · `:70-84` 抓取 · `:109-119` 编排）。
 - 播种面（VSC 仓）：面板保存 key 时把 `provider: "tavily"` **写回用户 config.json**（`thincoder-vscode` `src/extension/settings.mjs` 写点）；另三处（`:119` / `:221` / `:243`）兜底字面量同携该键（`thincoder-vscode` `src/agent/setup.mjs`）——死键还会被产品主动播种。
 - 兼容面：CLI 无写入点；磁盘遗留值零消费（不校验、不剥离、不报错）。
 
@@ -149,7 +149,7 @@ MCP 工具**动态展开**为独立原生工具（`{server}_{tool}` 前缀、完
 ### 11.3 处置设计（选定 = 候选 2）——接口与数据流
 
 - **申报面**：`DEFAULTS.websearch = { apiKey: "" }`（`src/config.mjs`）——唯一申报键 = `apiKey`。
-- **读取面（单点，不变）**：`config.websearch.apiKey` → `agent.config`（`make-agent` 装配）→ `web.mjs:49` 触发 Tavily；无 key / 失败 → Bing 兜底。**`web.mjs` 本批零改**。
+- **读取面（单点，不变）**：`config.websearch.apiKey` → `agent.config`（`make-agent` 装配）→ `thincoder-core/tools/web.mjs:49` 触发 Tavily；无 key / 失败 → Bing 兜底。**`thincoder-core/tools/web.mjs` 本批零改**。
 - **遗留值语义**：磁盘 `websearch.provider` 原样保留（零读取 / 零校验 / 零写回）；`settings` 工具类型表自动派生自 DEFAULTS（`settings.mjs:58`）——键移除即脱表 = 未知键原样语义（既有通用行为，零特判）。
 
 **逐面改动（完整修复路径）**：
@@ -217,7 +217,7 @@ websearch: {
 | T1 | 正常 | 申报面收口 | `import { DEFAULTS }` | `websearch` deepEqual `{ apiKey: "" }` | AC-1 |
 | T2 | 边界 | 遗留键兼容（零读取——行为等价） | tmp config ×2（缝 = `_setConfigPathForTest`）：A = `{websearch:{provider:"tavily",apiKey:"tvly-x"}}` · B = `{websearch:{apiKey:"tvly-x"}}` → 各 `loadConfig()` | 均不抛；`apiKey === "tvly-x"` 原样；A 段去 `provider` 后与 B 段 deepEqual（「行为与未设置一致」机验——D-2 保留语义下整段 deepEqual 不成立，故取去键等值 + 消费位等值） | AC-4 |
 | T3 | 边界 | 读取面扫描 | 遍历 `src/**/*.mjs` 逐行（扫描器 = §11.7 注枚举） | 0 命中 | AC-2 |
-| T4 | 边界 | 触发面单点 | `src/tools/web.mjs` 文本 | 含 `config?.websearch?.apiKey` | AC-2 |
+| T4 | 边界 | 触发面单点 | `thincoder-core/tools/web.mjs` 文本 | 含 `config?.websearch?.apiKey` | AC-2 |
 | T5 | 边界 | 键表脱表 | `_buildShapeTable(DEFAULTS)`——符号面**已核**：导出 `src/agent-tools/settings.mjs:265` · 纯派生 `:54-58` · 测试同款 `test/settings.test.mjs:19` | `websearch.provider` 未定义 | AC-4 |
 | T6 | 正常 | 文档面 | `README.md` 文本 | 无 `"provider": "tavily"`；websearch 段在且含 `apiKey`（与 AC-3 逐字对齐） | AC-3 |
 | T7 | 错误（反证） | 扫描器非空转 | 探针串 = §11.7 注枚举 4 形态各一（点访问 / 括号 / 解构 / 单行申报） | 全部命中 | AC-5 |
@@ -233,7 +233,7 @@ websearch: {
 
 ### 11.8 边界（不做）
 
-- 不做 provider 枚举 / 分发 / 校验（候选 1 已否决）；`src/tools/web.mjs` 本批零改——搜索语义与兜底链不动。
+- 不做 provider 枚举 / 分发 / 校验（候选 1 已否决）；`thincoder-core/tools/web.mjs` 本批零改——搜索语义与兜底链不动。
 - 不做 DeepSeek 搜索端点（Gitee #IKEI3M 主体——待外部证据，不属本批）。
 - 不做遗留值剥离 / 迁移 / 写回（`loadConfig` 零改）。
 - 不做 `settings` 键特判（未知键原样 = 通用语义）。

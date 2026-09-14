@@ -14,8 +14,8 @@ import assert from "node:assert/strict"
 import { mkdtemp, writeFile, readFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { computeEditEntry, applyPatchLines, runSingleEdit } from "../src/tools/edit-diff.mjs"
-import { applyEditBatch, FUZZY_MATCH_NOTE, normalizeEditLine } from "../src/tools/edit-batch.mjs"
+import { computeEditEntry, applyPatchLines, runSingleEdit } from "@thincoder/core/tools/edit-diff.mjs"
+import { applyEditBatch, FUZZY_MATCH_NOTE, normalizeEditLine } from "@thincoder/core/tools/edit-batch.mjs"
 import { slow } from "./slow.mjs"
 
 const OPTS = { path: "f.txt" }

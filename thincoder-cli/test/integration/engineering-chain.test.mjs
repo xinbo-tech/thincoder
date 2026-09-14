@@ -16,7 +16,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from "nod
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { runAgent, createAgent } from "../../src/agent.mjs"
-import { builtinTools } from "../../src/tools/index.mjs"
+import { builtinTools } from "@thincoder/core/tools/index.mjs"
 import { advisorTool } from "@thincoder/core/agent-tools/advisor.mjs"
 import { subagentTool } from "../../src/agent-tools/subagent.mjs"
 import { executeConsumeDesignAction, resolveDesignSlot } from "../../src/agent-tools/subagent-spawn.mjs"

@@ -1,7 +1,7 @@
 # 编辑共享 helper 权威语义（EDIT-HELPERS）
 
-> 板块：编辑工具（共享底层）。权威源：CLI `src/tools/shared.mjs`（`detectFileEol` / `joinWithEol` / `majorityEol` / `findCandidates` / `FFFD_WARNING` 导出）
-> + 消费方 `src/tools/file.mjs` / `edit-batch.mjs` / `patch.mjs`。本文档是编辑工具族共享 helper 语义的权威源——`EDIT.md` / `HASHLINE-EDIT.md` / `APPLY-PATCH.md` / `WRITE.md` 指向此处，不得在别处复制（单一权威）。
+> 板块：编辑工具（共享底层）。权威源：CLI `thincoder-core/tools/shared.mjs`（`detectFileEol` / `joinWithEol` / `majorityEol` / `findCandidates` / `FFFD_WARNING` 导出）
+> + 消费方 `thincoder-core/tools/file.mjs` / `edit-batch.mjs` / `patch.mjs`。本文档是编辑工具族共享 helper 语义的权威源——`EDIT.md` / `HASHLINE-EDIT.md` / `APPLY-PATCH.md` / `WRITE.md` 指向此处，不得在别处复制（单一权威）。
 > 双端：CLI（本文档）与 VSC（thincoder-vscode——helper 语义同，各自实现；VSC 另有 `lfOffsetToRaw`——VS Code 编辑器路径专属）。
 > 状态：**已实现**（CLI 与 VS Code 两端落地）。历史需求/设计见文末「变更记录」。
 
@@ -71,7 +71,7 @@ U+FFFD 警告当前实现为 shared.mjs 的具名常量 `FFFD_WARNING`，由 has
 
 ## 6. 实现单一权威
 
-- CLI：`src/tools/shared.mjs`（四 helper + FFFD_WARNING）——edit/apply_patch/hashline_edit/write 同写路径共用。
+- CLI：`thincoder-core/tools/shared.mjs`（四 helper + FFFD_WARNING）——edit/apply_patch/hashline_edit/write 同写路径共用。
 - VSC：helper 语义同——另有 `lfOffsetToRaw`（VS Code 编辑器路径 range 偏移——F5，VSC 专属，见 thincoder-vscode 侧档）。
 - 消费点：edit（`file.mjs` edit 失败接 findCandidates / 写回 joinWithEol）、hashline_edit（写回 + U+FFFD 警告）、apply_patch（写回 + 新建 majorityEol）、write（覆盖按原行尾 F1、新建按 majorityEol F2）。
 

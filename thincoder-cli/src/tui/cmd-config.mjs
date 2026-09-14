@@ -137,7 +137,7 @@ export async function handleConfigCommand(ctx, args = []) {
           pushLine(`proxy.${key} = ${!pc[key] ? "on" : "off"}`, C.tool)
         } else if (c.action === "test") {
           const { proxyFetch, resolveWebProxy } = await import("@thincoder/core/proxy.mjs")
-          const { UA } = await import("../tools/web.mjs")
+          const { UA } = await import("@thincoder/core/tools/web.mjs")
           const uri = resolveWebProxy({ agent })
           pushLabel("❯ Config", ansi.bold + C.tool)
           pushLine(`Testing ${uri ? `via proxy ${uri}` : "direct (no proxy)"}...`, C.dim)

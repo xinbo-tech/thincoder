@@ -1,6 +1,6 @@
 # edit 工具权威语义（EDIT）
 
-> 板块：编辑工具。权威源：CLI `src/tools/edit-diff.mjs`（diff 内核/判定序）+ `src/tools/edit-batch.mjs`（D1/D2 纯函数）+ `src/tools/file.mjs`（editTool 壳/schema）。本文档是 **edit 工具语义的权威源**——`TOOLS.md` §6.1 只留地图（定位句 + 指针），不得复制本档正文。
+> 板块：编辑工具。权威源：CLI `thincoder-core/tools/edit-diff.mjs`（diff 内核/判定序）+ `thincoder-core/tools/edit-batch.mjs`（D1/D2 纯函数）+ `thincoder-core/tools/file.mjs`（editTool 壳/schema）。本文档是 **edit 工具语义的权威源**——`TOOLS.md` §6.1 只留地图（定位句 + 指针），不得复制本档正文。
 > 双端：CLI（本文档）与 VSC（对位档 `EDIT（VSC 仓）`）同机制各自独立实现——镜像锚：两端工具描述逐字一致（评审逐字对齐），语义正文各自落地。
 > 状态：**已实现**（D1-D3 落地 2026-09-08）。历史设计见文末「变更记录」。
 
@@ -62,8 +62,8 @@ old_string 匹配三级档序（宽容——模型差异容忍）：
 
 ## 6. 实现单一权威
 
-CLI `src/tools/edit-diff.mjs` 导出 `applyPatchLines` / `computeEditEntry` / `validateEditEntry` / `assertEditArgsExclusive` / `hasLineParams` / `splitLines` / `deleteTarget`（删行形态——2026-09-08）；
-D1/D2 纯函数落点 `src/tools/edit-batch.mjs`（`applyLineEdit` / `findFuzzyWindow` / `normalizeEditLine` / `FUZZY_MATCH_NOTE`——edit-diff 调用期导入，ESM 循环安全）；本地单形态 / edit-batch / ACP 桥三通道共用；VSC 镜像 `edit-diff.mjs`。
+CLI `thincoder-core/tools/edit-diff.mjs` 导出 `applyPatchLines` / `computeEditEntry` / `validateEditEntry` / `assertEditArgsExclusive` / `hasLineParams` / `splitLines` / `deleteTarget`（删行形态——2026-09-08）；
+D1/D2 纯函数落点 `thincoder-core/tools/edit-batch.mjs`（`applyLineEdit` / `findFuzzyWindow` / `normalizeEditLine` / `FUZZY_MATCH_NOTE`——edit-diff 调用期导入，ESM 循环安全）；本地单形态 / edit-batch / ACP 桥三通道共用；VSC 镜像 `edit-diff.mjs`。
 
 EOL 写回（detectFileEol/joinWithEol/majorityEol）与失败候选（findCandidates/FFFD_WARNING）——**共享 helper 权威见 `EDIT-HELPERS.md`**，此处不复制（单一权威）。
 

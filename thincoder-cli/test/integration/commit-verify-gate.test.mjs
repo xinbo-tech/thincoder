@@ -13,7 +13,7 @@ import { execFileSync } from "node:child_process"
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
-import { gitTool } from "../../src/tools/git.mjs"
+import { gitTool } from "@thincoder/core/tools/git.mjs"
 import { verifyTool } from "@thincoder/core/agent-tools/verify.mjs"
 import { executeToolCalls } from "../../src/agent/dispatch.mjs"
 

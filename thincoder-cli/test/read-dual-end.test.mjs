@@ -14,8 +14,8 @@ import { createHash } from "node:crypto"
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { readTool, READ_TAIL_LINES } from "../src/tools/file.mjs"
-import { MAX_READ_LINES } from "../src/tools/shared.mjs"
+import { readTool, READ_TAIL_LINES } from "@thincoder/core/tools/file.mjs"
+import { MAX_READ_LINES } from "@thincoder/core/tools/shared.mjs"
 
 /** mkdtemp 项目 + 写 n 行文件（"line N"，1-based——无尾随换行 → split("\n") = n 行）。 */
 function fixture(n) {

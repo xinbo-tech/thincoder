@@ -254,7 +254,7 @@ AC6 值域语义不变（提示仍 personal/project）。
 | `memory.dbPath` | 绝对/相对皆可 | `src/memory/schema.mjs:66-68`；调用点 `src/cli/make-agent.mjs:25` · `bin/thincoder.mjs:221/243/266` · `src/cli/distill-command.mjs:49` | cwd 下建字面 `~` 树 + 在 cwd 开新库 |
 | `memory.projectDir` | 相对项目根 | 七点位 `join(cwd, …)`（§9.3c） | cwd 下生成 `<cwd>/~/…` 并被 syncDir 索引 |
 | `memory.team.dir` | 缺省 = `<configDir>/teams/<name>` | `teamConfig()`（`src/cli/make-agent.mjs:148-152`）→ `ensureClone` / `syncDir` / `commitAndPush` | git 落到 cwd 下字面 `~` 路径 |
-| `shell` | 可执行路径或命令名 | `src/tools/bash.mjs:261` → `spawn(…, { shell })`（`src/tools/bash.mjs:131`） | spawn 不存在的 `~/…` 路径（响亮失败，但属同病） |
+| `shell` | 可执行路径或命令名 | `thincoder-core/tools/bash.mjs:261` → `spawn(…, { shell })`（`thincoder-core/tools/bash.mjs:131`） | spawn 不存在的 `~/…` 路径（响亮失败，但属同病） |
 
 **登记（本批不做——非静默）**：
 

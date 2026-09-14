@@ -2,13 +2,12 @@ import { execSync } from "node:child_process"
 import { isAbsolute, join } from "node:path"
 import { createAgent } from "../agent.mjs"
 import { loadConfig, configDir } from "../config.mjs"
-import { createMemory, memoryTools, syncDir, codeSearchTool, docSearchTool } from "@thincoder/core/memory.mjs"
-import { settingsTool } from "../agent-tools/settings.mjs"
-import { repoOutlineTool } from "../tools/repomap.mjs"
-import { builtinTools } from "../tools/index.mjs"
+import { createMemory, syncDir } from "@thincoder/core/memory.mjs"
 import { discoverRules } from "@thincoder/core/rules.mjs"
-// R10 L2（MULTI-INSTANCE-COLLAB §2a.4 D-L2b）：peer_instances 只读工具——挂感知模块导出
-import { peerInstancesTool } from "@thincoder/core/peer-instances.mjs"
+// #70（CORE-UNIFICATION TOOLS）：注册表与消费侧拼装面归位核内——单源 `assembleBuiltinTools`
+// （静态表 ∪ memory / code_search / doc_search / repo_outline / settings / peer_instances 六面 ∪ 门控 read_image）。
+// 传 `model` 必需：漏传 ⇒ `read_image` 对所有模型静默消失（门判据 = specForModel(model)?.multimodal）。
+import { assembleBuiltinTools } from "@thincoder/core/tools/index.mjs"
 
 /** 第 27 批 §12.3⑤（R-A1.1）：装配期工具剔除——按 `name` 过滤的纯函数（机验锚）。
  *  恒等语义：空列表 / 零命中 → 原数组原样返回（零意外剔除——T15）。
@@ -61,7 +60,7 @@ export async function assembleAgent({ excludeTools = [] } = {}) {
     await ensureClone(team)
     await syncDir(memory, { layer: "team", dir: team.dir })
   }
-  const baseTools = [...builtinTools, ...memoryTools(memory, { cwd, projectDir: config.memory.projectDir, author: gitAuthor(), team }), codeSearchTool(memory), docSearchTool(memory), repoOutlineTool(memory.db, cwd), settingsTool(), peerInstancesTool]
+  const baseTools = await assembleBuiltinTools({ memory, cwd, projectDir: config.memory.projectDir, author: gitAuthor(), team, model: provider?.model ?? null })
 
   // MCP servers: connect in parallel (a dead server won't block startup), collect failures as warnings (stderr invisible in TUI, passed via agent object)
   const mcpServers = config.mcp?.servers ?? []

@@ -1,7 +1,7 @@
 // Startup black-screen repro: real startTUI with mocked stdin/stdout + screen emulator.
 import { loadConfig } from "./src/config.mjs"
 import { createAgent } from "./src/agent.mjs"
-import { builtinTools } from "./src/tools/index.mjs"
+import { builtinTools } from "@thincoder/core/tools/index.mjs"
 import { createMemory } from "@thincoder/core/memory.mjs"
 
 const COLS = 80, ROWS = 24

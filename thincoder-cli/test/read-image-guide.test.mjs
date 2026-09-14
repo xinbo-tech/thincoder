@@ -8,7 +8,7 @@ import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { readImageTool } from "../src/tools/file.mjs"
+import { readImageTool } from "@thincoder/core/tools/file.mjs"
 
 // F-3 逐字锚（设计档照抄——字节级一致）
 const GUIDE = "模型不支持图像——可 spawn 一个视觉模型子代理（subagent model 参数指视觉渠道）用 read_image 读图"

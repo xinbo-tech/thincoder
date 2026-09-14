@@ -43,7 +43,7 @@
 | 1 | `wrapped-spawn` 子 argv 注入旗标（批次档 §1 候选①） | 仅 TUI 包装路径（env 门直行 / 包装失败 / 非 TUI 命令不覆盖） | 可控（再 + `--diagnostic-dir`） | 零额外进程 | 低 | **部分采用**——只承担 TUI 落点定向（武装归候选 3） |
 | 2 | `bin` 早期自 re-exec（批次档 §1 候选②） | 全路径 | 可控 | **+1 进程/命令**；与既有包装 env 门（`THINCODER_TUI_WRAPPED`）门序交错 | 中 | 否决（代价 + 复杂度；全覆盖已由候选 3 更低成本获得） |
 | 3 | 入口 `prepareCrashReporting()` 内运行时 API | **全路径**（TUI 子进程 / chat / acp / 其余——同源入口：bin 入口 `prepareCrashReporting`） | 不可控（仅 CWD——`report.directory` 无效，实测 D/E——修正轮 #1） | 零额外进程、零参数管线 | 零 | **选定（武装机制）** |
-| 4 | 包装父以 `NODE_OPTIONS` 注入子 env | TUI 子进程及其**全部后代** | 可控 | 零额外进程 | **高**——agent 的 bash 工具子进程继承 env（`src/tools/bash.mjs` `buildBashEnv` 全量透传）：用户项目里任何 node 进程都被武装 | 否决（污染面） |
+| 4 | 包装父以 `NODE_OPTIONS` 注入子 env | TUI 子进程及其**全部后代** | 可控 | 零额外进程 | **高**——agent 的 bash 工具子进程继承 env（`thincoder-core/tools/bash.mjs` `buildBashEnv` 全量透传）：用户项目里任何 node 进程都被武装 | 否决（污染面） |
 
 **选定组合 = 候选 3（武装——全路径单点）+ 候选 1 的定向变体（`--diagnostic-dir`——TUI 主路径落点）**。
 理由：单一机制无法同时做到「全路径武装」与「落点可控」——实测矩阵显示运行时 API 武装下

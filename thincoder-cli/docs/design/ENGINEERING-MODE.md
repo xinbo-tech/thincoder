@@ -1597,7 +1597,7 @@ test("T112 边界：新档自持——零跨档引用；import 全 node:（D-2/A
 
 | # | 现状缺陷 | 现场锚（as-of 2026-09-11） |
 |---|---|---|
-| C1 | `read_image` 工具描述（**模型可见面**）事实错误：点名「DeepSeek V4, GLM-5」为纯文本模型——实测 `deepseek-flash` / `deepseek-v4-flash` / `deepseek-v4-flash-vision-exp` 均 `multimodal: true`（仅 `deepseek-v4-pro` 非视觉）；能力门为 spec 驱动 | `thincoder-core/tool-docs/read_image.md:8` vs `src/model-specs.mjs:33/38/40`；门 `src/tools/file.mjs:168` |
+| C1 | `read_image` 工具描述（**模型可见面**）事实错误：点名「DeepSeek V4, GLM-5」为纯文本模型——实测 `deepseek-flash` / `deepseek-v4-flash` / `deepseek-v4-flash-vision-exp` 均 `multimodal: true`（仅 `deepseek-v4-pro` 非视觉）；能力门为 spec 驱动 | `thincoder-core/tool-docs/read_image.md:8` vs `src/model-specs.mjs:33/38/40`；门 `thincoder-core/tools/file.mjs:168` |
 | C2 | `§24` 旧锚残留（AGENT-LOOP 重排后旧节号不存 = 断链）：CLI `src/**` 实测 **28 行 / 29 处 token / 18 文件**（审计估「25 处」——以逐行枚举为准，D3） | 逐行见 §2.29.3 |
 | C3 | `AGENT-LOOP（VSC 仓）§7` 两句仍述 C' 态（busy「输入禁用」/ readOnly 锁）——与 INPUT-LOCK-BEHAVIOR-REVISED 及本端实现矛盾 | `AGENT-LOOP（VSC 仓）:290-291` / `:322-325`；实现 `webview/loading.js:38`（VSC 仓）（readOnly 锁移除）+ `webview/send.js`（VSC 仓） 出口守卫 + `locales/{zh,en}.json:13`（占位符定稿串） |
 | C4 | `wrapped-spawn.mjs:1` 注释指向已归档档 `docs/design/TUI-STDERR-CAPTURE.md`（真断链） | `src/tui/wrapped-spawn.mjs:1`；归档实况 `docs/design/_archive/TUI-STDERR-CAPTURE.md` |
@@ -2415,7 +2415,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
   批前/批后宽度命中集合差 = **仅本批 5 处**（他链在飞照报——归其链，不计入本批）；本批改动面新增一致性违规 0。机器判据：`node scripts/check-doc-width.mjs` 前后对照。
 
 - AC68（§2.29.2 C1——描述面同步；修正轮 #4）: `thincoder-core/tool-docs/read_image.md:8` 与 §2.29.2 定稿替句**逐字全等**（整行替换——逐字全等蕴含一切旧串零命中：两名单全 6 名 +「Pure text models」）；
-  `src/tools/file.mjs` 本批零改动（`git diff` 空——spec 驱动真值面）。
+  `thincoder-core/tools/file.mjs` 本批零改动（`git diff` 空——spec 驱动真值面）。
 - AC69（§2.29.3 C2——旧锚清理）: CLI `src/**` 内 `§24` 零命中（grep）；映射表 29 处逐处落位（键控 = 文件 + 新锚串——逐行对照 §2.29.3 表）；
   `§11.1`/`§11.2`/`§11.3` 在新锚位分别在位（域 A 9 处 / 域 B 19 处 / 域 C 1 处）。
 - AC70（§2.29.4 C3——VSC 机制正文同步）: `AGENT-LOOP.md`（VSC 仓）内旧串「单一判据）输入禁用」「readOnly + busy」零命中；
@@ -2632,7 +2632,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 
 | # | 场景 | 输入 | 预期输出 | 映射 |
 |---|---|---|---|---|
-| T84 | 正常：C1 描述面 | `thincoder-core/tool-docs/read_image.md:8` 与定稿替句逐字比对 + `src/tools/file.mjs` diff | `:8` 与定稿替句逐字全等（蕴含旧串零命中）；`file.mjs` diff 空 | AC68 |
+| T84 | 正常：C1 描述面 | `thincoder-core/tool-docs/read_image.md:8` 与定稿替句逐字比对 + `thincoder-core/tools/file.mjs` diff | `:8` 与定稿替句逐字全等（蕴含旧串零命中）；`file.mjs` diff 空 | AC68 |
 | T85 | 正常：C2 清理 | `src/**` grep `§24` + 逐行对照 §2.29.3 映射表 | 0 命中；29 处新锚逐处落位（域 A 9 / B 19 / C 1） | AC69 |
 | T86 | 边界：C2 扫描域 | 同 grep 于 `test/**` / `docs/**` | scope = `src/**`；`test/advisor-description.test.mjs:18`（已退场——TEST-LIFECYCLE）变更注与 `docs/**` 记史面不判 | AC69 |
 | T87 | 正常：C3 同步 | `AGENT-LOOP.md`（VSC 仓）grep（旧串 / 新串） | 旧串零命中；新子串在位 | AC70 |

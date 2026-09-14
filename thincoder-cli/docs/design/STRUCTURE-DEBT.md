@@ -77,7 +77,7 @@
 - 双查询：`history?._X ?? agent._X`（advisor-async/consult/scheduler/wait_for）
 - 双删：`_asyncAdvisors?.delete` ×2（advisor-async:272-279 同文件 4 行重复删）
 - 容器名分叉：VSC 单独 `_pendingAdvisorResults` vs CLI 折叠进 `_pendingAsyncResults`；VSC 5 pending 族 vs CLI 3
-- 共享工具 ops.mjs:157-162 被迫写死双载体分支
+- 共享工具 thincoder-core/tools/ops.mjs:157-162 被迫写死双载体分支
 
 **方向**：统一 session-scoped 单载体容器 + 只读 accessor（吸收 alias），命名对齐双端。
 
@@ -106,7 +106,7 @@
 
 ### #7 async settle 逻辑重复（🟡 中低）
 
-**现象**：settle→pending+waiter 唤醒+`_asyncSettleSeq` 同构逻辑 4 文件重复（subagent-run:181/advisor-async:480/escalate-async:271/consult:140）；kill-tree ×3；abort 双保险（`src/tools/bash.mjs:136`——原 `system.mjs:150-182`，档已拆：2026-09-08 工具面拆分）。
+**现象**：settle→pending+waiter 唤醒+`_asyncSettleSeq` 同构逻辑 4 文件重复（subagent-run:181/advisor-async:480/escalate-async:271/consult:140）；kill-tree ×3；abort 双保险（`thincoder-core/tools/bash.mjs:136`——原 `system.mjs:150-182`，档已拆：2026-09-08 工具面拆分）。
 **方向**：抽共享 settle 收尾 helper。
 
 ### #8 跨仓复制漂移（🟠 中 · 架构伞项）

@@ -12,7 +12,7 @@ import { buildAcpCallbacks, replayHistory } from "../src/acp/bridge.mjs"
 import { parseRelayPath, relayPrefixOf, RELAY_PREFIX_RE } from "../src/agent/relay-prefix.mjs"
 import { applyToolExclusions } from "../src/cli/make-agent.mjs"
 import { ACP_EXCLUDED_TOOLS } from "../src/acp.mjs"
-import { builtinTools } from "../src/tools/index.mjs"
+import { builtinTools } from "@thincoder/core/tools/index.mjs"
 
 /** 捕获式 harness：notify/request 全量留档（AC3 聚合扫描面）。 */
 function harness() {

@@ -1,6 +1,6 @@
 # hashline_edit 工具权威语义（HASHLINE-EDIT）
 
-> 板块：编辑工具。权威源：CLI `src/tools/file.mjs`（hashlineEditTool :368-449——滑窗 hash 匹配/歧义报错/U+FFFD 警告/hash 域）。本文档是 **hashline_edit 语义的权威源**——`TOOLS.md` §6.3 只留地图（定位句 + 指针），不得复制本档正文。
+> 板块：编辑工具。权威源：CLI `thincoder-core/tools/file.mjs`（hashlineEditTool :368-449——滑窗 hash 匹配/歧义报错/U+FFFD 警告/hash 域）。本文档是 **hashline_edit 语义的权威源**——`TOOLS.md` §6.3 只留地图（定位句 + 指针），不得复制本档正文。
 > 双端：CLI（本文档）与 VSC（thincoder-vscode——同机制各自实现，另含 BOM 处理/编辑器路径）。
 > 状态：**已实现**。定位判定（保留独立工具——2026-09-08 用户裁定"先保留"）：见 §5。
 

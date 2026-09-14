@@ -1,5 +1,5 @@
 import { ansi, C } from "./ansi.mjs"
-import { detectDanger } from "../tools/shared.mjs"
+import { detectDanger } from "@thincoder/core/tools/shared.mjs"
 
 /** Interaction primitives: permission approval + question input.
  *  Extracted from index.mjs, receives closure dependencies via createInteraction(ctx).

@@ -1,6 +1,6 @@
 # write 工具权威语义（WRITE）
 
-> 板块：编辑工具。权威源：CLI `src/tools/file.mjs`（:181-209——整文件 + EOL 语义 + autoSyntaxCheck）。本文档是 **write 语义的权威源**——`TOOLS.md` §6.5 write 部分只留地图（定位句 + 指针），不得复制本档正文。read 是读工具（非编辑）——语义留 TOOLS.md §7 逐工具契约。
+> 板块：编辑工具。权威源：CLI `thincoder-core/tools/file.mjs`（:181-209——整文件 + EOL 语义 + autoSyntaxCheck）。本文档是 **write 语义的权威源**——`TOOLS.md` §6.5 write 部分只留地图（定位句 + 指针），不得复制本档正文。read 是读工具（非编辑）——语义留 TOOLS.md §7 逐工具契约。
 > 双端：CLI（本文档）与 VSC（thincoder-vscode——同机制各自实现）。
 > 状态：**已实现**。
 

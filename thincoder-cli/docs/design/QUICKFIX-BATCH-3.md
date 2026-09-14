@@ -15,7 +15,7 @@
   旧锚双端注释清理（锚迁移残留——实证 68 处）③ CLEANUP_REST 常量收拢（恢复序列三源字面量）④ image-handler
   maxTurns 伸缩（大贴图落 fallback 面——实证）。
 - **功能性**：
-  - F-1（VSC git commit 镜像——L255）VSC src/tools/git.mjs（392 现）commit case（L200-207——实证：
+  - F-1（VSC git commit 镜像——L255）VSC thincoder-vscode/src/tools/git.mjs（392 现）commit case（L200-207——实证：
     granular add 后整索引 commit——同 CLI 旧版缺陷）——镜像 CLI F-3 交付形态：path 给定 →
     `commit --only -m msg -- <paths>`（`--` 分隔——原子——不再先 add——他批 staged 不混入）——
     空/空白 path 明确错误——无 path 保留 add -A 现行为
@@ -38,7 +38,7 @@
 ### 1. F-1 VSC git commit 镜像（thincoder-vscode/src/tools/git.mjs——392 现）
 - commit case（L200-207——实证现形态：path 给定 granular `add -- <paths>`（L204-205）+ 整索引
   `commit -m`（L207）——同 CLI 旧版缺陷）
-- 改（评审 #2——向量逐字对齐 CLI 交付码 src/tools/git.mjs:161）：
+- 改（评审 #2——向量逐字对齐 CLI 交付码 thincoder-core/tools/git.mjs:161）：
   - path 给定：`args.path.trim().split(/\s+/)` → `runGitStrict(cwd, ["commit", "--only", "-m", args.message, "--", ...paths])`
     ——`--` 分隔（防 dash 开头 path）——不再先 add——他批 staged 不混入——原子
   - 空/空白 path（trim 后空）→ 明确错误
@@ -86,7 +86,7 @@
 
 | 文件 | 端 | 现行数 | 预计净变 | 改动 |
 |---|---|---|---|---|
-| src/tools/git.mjs | VSC | 392 | ≤+8 | F-1 commit --only 镜像 + 描述层同步 |
+| thincoder-vscode/src/tools/git.mjs | VSC | 392 | ≤+8 | F-1 commit --only 镜像 + 描述层同步 |
 | test/git-commit-pathspec.test.mjs（评审 #3 新） | VSC | 新 | 新 ≤80 | F-1 原子/空 path/无 path 回归 + files.mjs 登记 |
 | test/files.mjs（VSC 仓） | VSC | 既有 | +1 | F-1 测试登记 |
 | src/（§24 残留族——CLI 29 处 19 文件 + VSC 39 处 13 文件——评审 #2 round2 数值校正） | 双端 | — | 各 -N | F-2 逐处替换 |

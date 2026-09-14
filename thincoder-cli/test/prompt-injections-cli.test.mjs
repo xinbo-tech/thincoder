@@ -19,7 +19,7 @@ import {
   configurePromptInjections, resetPromptInjections,
 } from "@thincoder/core/prompt-files.mjs"
 import { assemblePrompt } from "../src/prompt-overlays.mjs"
-import { toOpenAISchema, builtinTools } from "../src/tools/index.mjs"
+import { toOpenAISchema, builtinTools } from "@thincoder/core/tools/index.mjs"
 import { CLI_PROMPT_INJECTIONS } from "../src/prompt-injections.mjs"
 
 const SCENARIOS = ["normal", "engineering", "eng-coder", "eng-designer", "explore", "coder", "plan", "consult"]

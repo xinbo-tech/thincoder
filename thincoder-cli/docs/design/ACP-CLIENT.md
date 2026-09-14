@@ -255,11 +255,11 @@ last-write-wins 于内部状态；set 成功后 notify `config_option_update`/`c
 
 **A1（question 工具在 ACP 必错）**
 
-- `src/tools/question.mjs:20`：`ctx.onQuestion` 缺省即 throw——无 UI 上下文没有第二条路。
+- `thincoder-core/tools/question.mjs:20`：`ctx.onQuestion` 缺省即 throw——无 UI 上下文没有第二条路。
 - 全仓 `onQuestion` 提供者只有 TUI：装配 `src/tui/tool-events.mjs:329`、透传 `src/agent/dispatch.mjs:394`；
   ACP 回调集（`src/acp/bridge.mjs:168-285` `buildAcpCallbacks`）无该字段。
 - ACP 会话走同一 `assembleAgent()`（`src/acp.mjs:79`；函数体 `src/cli/make-agent.mjs:14`）——工具集含
-  question（`src/tools/index.mjs:22`），schema 逐请求由 `agent.tools` 派生（`src/agent/setup.mjs:293-294`）
+  question（`thincoder-core/tools/index.mjs:22`），schema 逐请求由 `agent.tools` 派生（`src/agent/setup.mjs:293-294`）
   → 模型可见、可调、每调必错。
 - 漂移面：`thincoder-core/tool-docs/question.md` 描述对无 UI 通道作无条件承诺（"loop pauses / answer returns"）；
   本档 §6 回调映射表无该工具行（本节回填）。
@@ -350,7 +350,7 @@ Notes 第 3 条（`- Returns the user's answer …`）之后插入一行：
   `assembleAgent({ excludeTools = [] } = {})` 在 `createAgent` 前应用（`:102-108` 合并 `[...baseTools, ...mcpTools]` 处）。
 - `src/acp.mjs`：`export const ACP_EXCLUDED_TOOLS = ["question"]`；`defaultCreateSession`（:78-81）传
   `assembleAgent({ excludeTools: ACP_EXCLUDED_TOOLS })`。
-- `src/tools/question.mjs` 本体零改——throw 语义 = 其余无 UI 上下文的既有兜底。
+- `thincoder-core/tools/question.mjs` 本体零改——throw 语义 = 其余无 UI 上下文的既有兜底。
 
 ### 12.4 关键决策记录（含否决备选）
 
@@ -446,7 +446,7 @@ Notes 第 3 条（`- Returns the user's answer …`）之后插入一行：
 
 - ACP 协议面——elicitation / 新通知面不改；onToolOutput 流式不补（§12.6）。
 - TUI 消费面语义（`routeSub*` / 渲染 / 事件文法）——零改；文法搬迁 = 纯迁移。
-- `src/agent/dispatch.mjs` 转发面与 `src/tools/question.mjs` throw 语义——不改。
+- `src/agent/dispatch.mjs` 转发面与 `thincoder-core/tools/question.mjs` throw 语义——不改。
 - VSC 仓——零改（无 ACP 镜像面——§12.10）。
 - 除 `src/agent/relay-prefix.mjs`（预授权档）与断言档 `test/acp-channel.test.mjs`（断言宿主——批次档 §2 声明）外不新建文件。
 

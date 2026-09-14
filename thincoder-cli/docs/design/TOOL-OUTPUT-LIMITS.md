@@ -71,7 +71,7 @@ K=0 防御不谎报截断——run.mjs 工具回填调用同函数——双端 V
 
 ### 2.6 read 双端返回（C 方案——2026-09-09 实现）
 
-`src/tools/file.mjs` read 工具对大文件/offload 产物的读回（纯头向窗口尾不可见的剩余回路）：
+`thincoder-core/tools/file.mjs` read 工具对大文件/offload 产物的读回（纯头向窗口尾不可见的剩余回路）：
 
 - **判别锚（实测）**：窗口截断（`windowEnd < total`）**且**文件行数 > `MAX_READ_LINES`（2000）
   → 双端分支。≤ 2000 行文件任何窗口走**旧头向路径**（含旧 `... (N lines total, use offset
@@ -91,7 +91,7 @@ K=0 防御不谎报截断——run.mjs 工具回填调用同函数——双端 V
 - `src/agent/helpers.mjs`：常量 + `safeSliceUTF16` / `safeSliceUTF16End` / `buildDualEndPreview` / `offloadToolResult` / `cleanupOldToolResults`。
 - 调用点 `src/agent/dispatch.mjs`（offloadToolResult——函数内部行为改，调用点零改）：非 read_image 工具结果统一经落盘守卫。
 - `thincoder-core/advisor/run.mjs`：`MAX_RESULT_CHARS`（截断行为迁 `thincoder-core/advisor/truncate.mjs`——2026-09-09）。
-- `src/tools/file.mjs`：read 双端返回（§2.6——`READ_TAIL_LINES`；≤ 阈值旧路径零变化）。
+- `thincoder-core/tools/file.mjs`：read 双端返回（§2.6——`READ_TAIL_LINES`；≤ 阈值旧路径零变化）。
 - 兼容不变量：落盘全文（磁盘全量）、清理逻辑（保留期/写时自清理/目录缺失）、失败回退、提示语与路径格式全部不变。
 
 ## 4. 验收标准（核销参考）

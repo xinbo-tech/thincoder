@@ -1,6 +1,6 @@
 # apply_patch 工具权威语义（APPLY-PATCH）
 
-> 板块：编辑工具。权威源：CLI `src/tools/patch.mjs`（无坐标 hunk 宽容/文件头容缺/多文件原子）。本文档是 **apply_patch 语义的权威源**——`TOOLS.md` §6.4 只留地图（定位句 + 指针），不得复制本档正文。
+> 板块：编辑工具。权威源：CLI `thincoder-core/tools/patch.mjs`（无坐标 hunk 宽容/文件头容缺/多文件原子）。本文档是 **apply_patch 语义的权威源**——`TOOLS.md` §6.4 只留地图（定位句 + 指针），不得复制本档正文。
 > 双端：CLI（本文档）与 VSC（thincoder-vscode——同机制各自实现）。
 > 状态：**已实现**。
 

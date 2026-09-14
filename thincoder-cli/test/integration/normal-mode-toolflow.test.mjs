@@ -13,7 +13,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from "nod
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { runAgent, createAgent } from "../../src/agent.mjs"
-import { builtinTools } from "../../src/tools/index.mjs"
+import { builtinTools } from "@thincoder/core/tools/index.mjs"
 import { mockLLM } from "../helpers/mock-llm.mjs"
 
 /** 临时工作区（真 fs——集成场景不 mock 文件系统）。 */

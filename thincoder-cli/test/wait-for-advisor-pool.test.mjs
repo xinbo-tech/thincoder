@@ -13,7 +13,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { fileURLToPath } from "node:url"
-import { evaluateWaitForCondition, parseWaitForCondition } from "../src/tools/ops.mjs"
+import { evaluateWaitForCondition, parseWaitForCondition } from "@thincoder/core/tools/ops.mjs"
 
 const PKG = fileURLToPath(new URL("../package.json", import.meta.url))
 

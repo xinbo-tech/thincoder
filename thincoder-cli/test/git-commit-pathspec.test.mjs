@@ -10,7 +10,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { slow } from "./slow.mjs"
-import { gitTool } from "../src/tools/git.mjs"
+import { gitTool } from "@thincoder/core/tools/git.mjs"
 
 function git(repo, ...args) {
   return execFileSync("git", args, { cwd: repo, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim()

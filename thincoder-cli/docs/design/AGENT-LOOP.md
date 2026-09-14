@@ -20,7 +20,7 @@
 - **子代理行数债**：subagent-async / subagent-blocks / subagent.mjs 等超 500 行硬限——拆分轮见 docs/TODO.md「拆分治理组」。
 - **混合边停滞残留意向**（P-SL2——纯文件边环已修；依赖边 × 文件域边跨类型环靠停滞检测兜底——docs/TODO.md）。
 - **后台池可观测/可控补面（第 10 批——设计已落档待评审）**：CLI 端 `wait_for "advisor settled"` 判据读错池
-  （`src/tools/ops.mjs` as-of :223-227 只查 `_asyncSubagents`）；VSC 端 `subagent status/cancel` 未接评审池（工具面）
+  （`thincoder-core/tools/ops.mjs` as-of :223-227 只查 `_asyncSubagents`）；VSC 端 `subagent status/cancel` 未接评审池（工具面）
   + 同款 wait_for 缺陷。设计见 §18；需求见 `../requirements/AGENT-LOOP.md` §4。
 - **VSC 端 600s 绝对墙钟残留（第 24 批 abort 来源标注勘察发现——2026-09-11）**：`thincoder-vscode/src/provider.mjs`
   as-of :324 每请求 `AbortSignal.timeout(600_000)`——用户实证死亡文案（"aborted due to timeout"）的唯一在网生产点；
@@ -788,7 +788,7 @@ reasoning 全文」表述按此限缩（**字段集不变**——F-O4）；写�
 
 - **①** CLI `src/agent-tools/subagent-actions.mjs:98` `:109` `:145`（双池合并——单查 fall-through + 概览并表）；
   VSC `src/agent-tools/subagent-actions.mjs:89-120`（只 `getAsyncPool(ctx.agent, \"subagent\")`）。
-- **②** 两端同形：判据读**子代理池**里的 role===\"advisor\" 条目——CLI `src/tools/ops.mjs:223-227`、
+- **②** 两端同形：判据读**子代理池**里的 role===\"advisor\" 条目——CLI `thincoder-core/tools/ops.mjs:223-227`、
   VSC `src/tools/wait_for.mjs:125`（VSC 仓；至 129 行）（均经 `hasRunningAsync` → `asyncPool` = `_asyncSubagents`）；
   而评审条目在 `_asyncAdvisors`（§11.2）——该池里永无 role=\"advisor\" 条目 → `!hasRunning` 恒 true → **0ms 秒过**。
 - **③** CLI：`thincoder-core/agent-tools/advisor-async.mjs:247` `cancelAsyncAdvisor` + `src/agent-tools/subagent-async.mjs:249-250`
@@ -848,7 +848,7 @@ A 的缺陷面在 **webview 块身份/投递链**。共性是"第二池接入面
 
 | 文件 | 现行行数 | 预计增量 | 改动 |
 |---|---|---|---|
-| `src/tools/ops.mjs` | 286 | +14 | ② `advisor` 分支改读评审池（双载体判据）+ 条件说明行同步（工具描述） |
+| `thincoder-core/tools/ops.mjs` | 286 | +14 | ② `advisor` 分支改读评审池（双载体判据）+ 条件说明行同步（工具描述） |
 | `src/agent-tools/subagent.mjs` | 402 | +4 | ⑤ 工具描述 status/cancel 句补评审面 |
 | `src/agent-tools/subagent-actions.mjs` | 479 | ±3 | ①③ 已具备（行数 2026-09-11 实测刷新——修正轮 #12；若实现中发现口径缺口 ≤+10） |
 | `test/subagent-observe-send.test.mjs` | 200 | +45 | ①③④ CLI 端 advisor 池用例（单查/概览/取消/指引） |
