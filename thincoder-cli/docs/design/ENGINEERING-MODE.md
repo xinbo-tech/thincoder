@@ -1798,7 +1798,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 | # | 候选 | 判据 | 取舍 | 结论 |
 |---|---|---|---|---|
 | 1 | 扩 `scripts/check-ledger.mjs` 为唯一实现 | 运行时可达性：npm `files=[bin/,src/,…]`（`package.json:22-28`）——**`scripts/` 不入包** | 装出来的 CLI 拿不到该模块；TUI 显示面无法消费 | **否决** |
-| 2 | 新模块 `src/ledger.mjs`（check-ledger 消费之） | 运行时可达 + 双端各自实现（N1 语义同源不共码） | check-ledger 的组扫描改 import 共享解析（L1–L3 语义零改——消费同一 `scanGroups`） | **选定** |
+| 2 | 新模块 `thincoder-core/ledger.mjs`（check-ledger 消费之） | 运行时可达 + 双端各自实现（N1 语义同源不共码） | check-ledger 的组扫描改 import 共享解析（L1–L3 语义零改——消费同一 `scanGroups`） | **选定** |
 | 3 | 各面各写一份解析 | 单源约束 | 三处口径漂移（正是 FR18 收拢前的教训） | **否决** |
 
 **D2 刷新模型**
@@ -1851,7 +1851,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 
 ##### 2.30.3.1 单源模块与导出面
 
-**CLI**：`src/ledger.mjs`（新档——纯逻辑 + 文件 I/O，无 TUI 依赖）+ `src/tui/ledger-surface.mjs`（TUI 胶水）。
+**CLI**：`thincoder-core/ledger.mjs`（新档——纯逻辑 + 文件 I/O，无 TUI 依赖）+ `src/tui/ledger-surface.mjs`（TUI 胶水）。
 **VSC**：`src/ledger.mjs`（**独立实现、语义同源**——照 N1 双端纪律；原 import 禁令随两仓合并退役——`TWO-REPO-MERGE.md` §2.4 R14）+ `src/extension/ledger-surface.mjs`（扩展胶水）。
 
 导出契约（两端同名同义；实现细节各端自持）：
@@ -1946,7 +1946,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 
 | 文件 | 动作 | 批前 | 预计增量 | 分工与档位 |
 |---|---|---|---|---|
-| `src/ledger.mjs` | **新增** | — | ~180 | eng-coder（新档 ≤300 ✓） |
+| `thincoder-core/ledger.mjs` | **新增** | — | ~180 | eng-coder（新档 ≤300 ✓） |
 | `src/tui/ledger-surface.mjs` | **新增** | — | ~80 | eng-coder ✓ |
 | `src/tui/index.mjs` | 修改 | 478 | +8 | eng-coder（≤486 / 500）——>300 档：**不拆**（state 槽 + 起动调用 + cleanup 挂接——三处单点接线，零结构增长）；函数档：**`startTUI` 400 行（既有，as-of）**——本批零新增函数；拆 = 专项债（§2.30.6） |
 | `src/tui/render-frame.mjs` | 修改 | 398 | +10 | eng-coder（≤408 / 500）——>300 档：**不拆**（`buildStatusLine` 单点注入，零结构增长）；函数档：无 ≥300 行单函数（as-of；最大 `renderInputBox` 85 行） |
@@ -1961,7 +1961,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 
 | 文件 | 动作 | 批前 | 预计增量 | 分工与档位 |
 |---|---|---|---|---|
-| `src/ledger.mjs` | **新增** | — | ~180 | eng-coder（独立实现、语义同源） |
+| `thincoder-vscode/src/ledger.mjs` | **新增** | — | ~180 | eng-coder（独立实现、语义同源） |
 | `src/extension/ledger-surface.mjs` | **新增** | — | ~120 | eng-coder ✓ |
 | `src/extension/chat-panel.mjs`（VSC 仓） | 修改 | 420 | +6 | eng-coder（≤426 / 500）——>300 档：**不拆**（`_initStatusBar` 单点初始化，零结构增长）；函数档：无 ≥300 行单函数（as-of；最大 `constructor` 74 行） |
 | `src/extension/panel-messages.mjs`（VSC 仓） | 修改 | 485 | +3 | eng-coder（**紧**——488 / 500，不得超）——>300 档：**不拆**（`webviewReady` 分支单点调用）；函数档：**`handlePanelMessage` 378 行（既有 switch 巨型函数，as-of）**——本批仅加 1 个 case 分支；拆 = 专项债（§2.30.6） |
@@ -2001,7 +2001,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 - 不做：台账内容治理（归档 / 移档 / 勾销——收口划扫职责，§1.18 范围外）。
 - 不改：`check-ledger` L1–L3 语义（仅消费共享 `scanGroups` + 新增只读 `--summary`）；`bin/thincoder.mjs` headless 面；`test/ledger.test.mjs` 既有用例。
 - **提示词面可移植性**（FR13；修正轮 #1）：四提示词文件只写「台账 `--summary` 汇总面」口径——**不含脚本名**（`src/prompts/**` `check-ledger` 零命中保持，AC48/AC80）；具体命令字面只落**批次档 §6 模板 / 本档**。用户项目无该脚本 → 收口行由主 agent 按同口径汇总输出——不阻断工作流。
-- **同级枚举上限（N2 成本有界——确定性退化；实现后同步（2026-09-12））**：同级枚举限 `MAX_SIBLING_SCAN=100`（`src/ledger.mjs:76`）——父目录的目录项数超限 → 该层候选判**空集**（不取部分结果），退化 **current-only**（`projects = [current]`）；current 缺（容器目录）→ 继续向上求候选。
+- **同级枚举上限（N2 成本有界——确定性退化；实现后同步（2026-09-12））**：同级枚举限 `MAX_SIBLING_SCAN=100`（`thincoder-core/ledger.mjs:76`）——父目录的目录项数超限 → 该层候选判**空集**（不取部分结果），退化 **current-only**（`projects = [current]`）；current 缺（容器目录）→ 继续向上求候选。
   **裁定句**：F4「项目集 = current + 同级含台账者」不设语义上限，**N2 成本有界（≤500ms）优先**——上限只约束枚举规模，不改「含台账者」判据本身；触发面 = 缓存 / 临时等非仓族形态的超大父目录（真实工作区远小于 100）。
 - **登记（不在本批）**：两处既有 ≥300 行单函数——`src/tui/index.mjs` `startTUI`（400 行）· `src/extension/panel-messages.mjs`（VSC 仓） `handlePanelMessage`（378 行）（as-of 2026-09-12 实测；本批零新增函数、零结构增长）——拆分专项另议（父侧登记台账）。
 - 不做：跨进程缓存 / 全工作区深扫 / 文件监听 / 任何网络面 / 台账档写入（唯一写面 = 去重档）。

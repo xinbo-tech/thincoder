@@ -2,7 +2,7 @@
  * portability-classification.test.mjs — PORTABILITY 批（FR10–FR15 · CLI 面）面①
  * 用例表 T-01–T-09 / T-22（PO-10 · PO-11 文案面）。
  *
- * 断言对象 = src/conventions.mjs（代码/文档/临时分类的唯一权威 + 项目声明面）
+ * 断言对象 = @thincoder/core/conventions.mjs（代码/文档/临时分类的唯一权威 + 项目声明面）
  *   + src/agent/dispatch.mjs 父侧设计门 + src/advisor/repos.mjs 守卫换源。
  * 构造手法照先例：executeToolCalls 直驱（design-token-settlement）+ sessions 目录隔离缝
  * （门禁的"任一活槽"判定会回读槽文件——隔离后不碰真实 ~/.thincoder）。
@@ -15,7 +15,7 @@ import { join } from "node:path"
 
 import {
   classifyPath, isCodePath, isDocPath, isTempPath, loadConventions, clearConventionsCache,
-} from "../src/conventions.mjs"
+} from "@thincoder/core/conventions.mjs"
 import { hasCodeMutations } from "../src/advisor/repos.mjs"
 import { executeToolCalls } from "../src/agent/dispatch.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/session-slots.mjs"

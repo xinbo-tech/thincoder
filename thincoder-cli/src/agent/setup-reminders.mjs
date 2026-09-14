@@ -17,7 +17,7 @@
  * pushPeerReminder injects the live co-cwd instance list when present.
  */
 import { END } from "../session-slots.mjs"
-import { peerInstances } from "../peer-instances.mjs"
+import { peerInstances } from "@thincoder/core/peer-instances.mjs"
 
 /** env-state line builder — pure, unit-testable.
  *  §11.2（F1）：slot 字段入行——位置在 model 后 resumed 前（N3：无绑定 → 显式 null——

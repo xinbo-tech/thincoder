@@ -11,7 +11,7 @@
  * path (doc-only changes return early) — the task list and self-review checklist.
  */
 
-import { isCodePath, isDocPath, loadConventions } from "../conventions.mjs"
+import { isCodePath, isDocPath, loadConventions } from "@thincoder/core/conventions.mjs"
 import { execSync, spawnSync } from "node:child_process"
 import { existsSync } from "node:fs"
 import { resolve } from "node:path"

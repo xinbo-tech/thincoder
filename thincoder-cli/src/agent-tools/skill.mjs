@@ -1,4 +1,4 @@
-import { loadSkills, readSkill } from "../skills.mjs"
+import { loadSkills, readSkill } from "@thincoder/core/skills.mjs"
 import { escapeXml } from "../agent.mjs"
 
 /**

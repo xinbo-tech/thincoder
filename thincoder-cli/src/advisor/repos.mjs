@@ -4,7 +4,7 @@
  */
 import { execFileSync } from "node:child_process"
 import { dirname, basename, resolve } from "node:path"
-import { loadConventions, isCodePath } from "../conventions.mjs"
+import { loadConventions, isCodePath } from "@thincoder/core/conventions.mjs"
 
 const GIT_TIMEOUT = 5_000
 const MAX_EMBEDDED_DIFF = 50_000

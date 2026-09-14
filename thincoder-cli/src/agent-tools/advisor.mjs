@@ -8,7 +8,7 @@
  */
 import { runAdvisorReview, MAX_ADVISOR_ROUNDS, buildCapMessage, advisorIncompleteMarker, ADVISOR_LAUNCH_REFUSAL_PREFIX, buildDesignReviewGuardMessage } from "../advisor/run.mjs"
 import { resolveBatchDocPath } from "./batch-segment.mjs"
-import { isDocPath, loadConventions } from "../conventions.mjs"
+import { isDocPath, loadConventions } from "@thincoder/core/conventions.mjs"
 import {
   generateDesignToken,
   settleDesignReview,

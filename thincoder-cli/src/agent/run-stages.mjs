@@ -15,7 +15,7 @@ import { logEvent } from "@thincoder/core/log.mjs"
 import { getAsyncPool, releaseSettledEntry } from "../agent-tools/async-settle.mjs"
 // R10 L3 (MULTI-INSTANCE-COLLAB §2a.5 D-L3a)：回合末域登记 flush（写工具钩子累积 →
 // 整写一次本实例 peers 文件——无写入跳过；失败容忍不抛）
-import { flushPeerDomains } from "../peer-domains.mjs"
+import { flushPeerDomains } from "@thincoder/core/peer-domains.mjs"
 // 第 30 批 D1（Stop 钩子——AGENT-LOOP.md §21）：主会话 run 终止事件（触发块见 finalizeAgentTurn）
 import { runHooks } from "../hooks.mjs"
 

@@ -1,7 +1,7 @@
 # 多实例协作感知（同 cwd 多副本协作）
 
 > 板块：agent 协作感知。状态：**已实现**（CLI 端 2026-09-06 落地并提交——感知 L1/L2/L3 + checklist 同步 F4 + config 原子写 F5；本文档 2026-09-07 重写为人类可读当前态）。
-> 权威源（CLI）：`src/peer-instances.mjs`（感知面 L1/L2）、`src/peer-domains.mjs`（域面 L3）、`src/tools/checklist-sync.mjs`（checklist 并发同步机 F4）、`src/config.mjs` `writeConfigAtomic`（config 原子写 F5）。
+> 权威源（CLI）：`thincoder-core/peer-instances.mjs`（感知面 L1/L2）、`thincoder-core/peer-domains.mjs`（域面 L3）、`src/tools/checklist-sync.mjs`（checklist 并发同步机 F4）、`src/config.mjs` `writeConfigAtomic`（config 原子写 F5）。
 > 装配点（CLI）：`src/agent/setup-reminders.mjs`（L1 注入 `pushPeerReminder`）、`src/agent/setup.mjs`（回合注入时序）、`src/agent/dispatch.mjs` + `src/agent/run-stages.mjs`（L3 检测/记录/flush 钩子）、`src/cli/make-agent.mjs`（`peer_instances` 只读工具装配）、`src/tui/config-helpers.mjs` 等（F5 写点收口）。
 > 关联：`SESSION.md` §10（slotSessions/isProcessAlive/slotOccupancy——本机制上游存储层基建，复用不重造）、`SETTINGS-TOOL.md`（settings 工具走 `writeConfigAtomic` 原子写盘）。
 > 范围：CLI（thincoder）+ VS Code（thincoder-vscode）双端——同一 `~/.thincoder/sessions/` / `~/.thincoder/peers/` 目录下的多实例协作。VS Code 端按双端镜像纪律同构实现（双端逐字锚：§3.2 L1 注入文案 + §3.3 schema + §4.3 软提示文案）。
@@ -63,7 +63,7 @@
 
 感知数据源全部复用 SESSION §10：manifest `slotSessions`（各活进程认领的槽）+ `isProcessAlive`——纯只读（N3，本模块结构化上无任何 fs 写调用）。
 
-### 3.1 `peer-instances.mjs`（`src/peer-instances.mjs`——双端同构）
+### 3.1 `peer-instances.mjs`（`thincoder-core/peer-instances.mjs`——双端同构）
 
 - **`peerInstances(cwd)`** → `[{ pid, sessionId, slots, end?, self }]`：
   - 读 manifest `slotSessions` → 按 sessionId 去重分组（sessionId = `{pid}-{ts}-{rand}` 进程级）→ slots 数组；
@@ -99,7 +99,7 @@
 
 ### 4.1 选型
 
-①sessions 目录受 cwd 分片限（登记域是任意文件路径——装不下）；②manifest 扩展被否决（SESSION §10.1 NF1：manifest 条目级合并只认已知字段、旧版整对象写丢未知字段）；③**每实例独立登记文件 + 目录扫描聚合**——end marker 单写者模式同型（写失败容忍 + 损坏按缺失降级 + 崩溃残留 isProcessAlive 判活可清）。→ `src/peer-domains.mjs`（评审修正 #8：独立文件，防 300 行超限）。
+①sessions 目录受 cwd 分片限（登记域是任意文件路径——装不下）；②manifest 扩展被否决（SESSION §10.1 NF1：manifest 条目级合并只认已知字段、旧版整对象写丢未知字段）；③**每实例独立登记文件 + 目录扫描聚合**——end marker 单写者模式同型（写失败容忍 + 损坏按缺失降级 + 崩溃残留 isProcessAlive 判活可清）。→ `thincoder-core/peer-domains.mjs`（评审修正 #8：独立文件，防 300 行超限）。
 
 ### 4.2 登记存储（D-L3a）
 
@@ -231,8 +231,8 @@ CLI 多处**整节内存写回**（读入内存的 `agent.providers` / `agent.co
 
 | 端 | 文件 | 动作 | 内容 |
 |---|---|---|---|
-| CLI | `src/peer-instances.mjs` | ADD | 感知面：peerInstances/batchAlive/probeCmdlines/惰性缓存（含测试注入缝 aliveFn/cmdlineFn） |
-| CLI | `src/peer-domains.mjs` | ADD | 域面（独立文件，防 300 行超限）：peerDomains 聚合/conflicts/登记 flush/惰性死清理 |
+| CLI | `thincoder-core/peer-instances.mjs` | ADD | 感知面：peerInstances/batchAlive/probeCmdlines/惰性缓存（含测试注入缝 aliveFn/cmdlineFn） |
+| CLI | `thincoder-core/peer-domains.mjs` | ADD | 域面（独立文件，防 300 行超限）：peerDomains 聚合/conflicts/登记 flush/惰性死清理 |
 | CLI | `src/tools/checklist-sync.mjs` | ADD | F4 同步机：flushWrite 门控 + 合并 + 基线规则 |
 | CLI | `src/tools/checklist.mjs` | MODIFY | F4 接入：parse/add/mark 走 flushWrite（同步机拆出后只留 parse/树操作与工具执行） |
 | CLI | `src/agent/setup-reminders.mjs` | MODIFY | pushPeerReminder（env-state 同文件/同纪律） |

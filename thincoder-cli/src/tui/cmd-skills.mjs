@@ -4,7 +4,7 @@ import { ansi, C } from "./ansi.mjs"
  *  ctx: { agent, pushLine, pushLabel } */
 export async function handleSkillsCommand(ctx) {
   const { agent, pushLine, pushLabel } = ctx
-  const { loadSkills } = await import("../skills.mjs")
+  const { loadSkills } = await import("@thincoder/core/skills.mjs")
   const skills = await loadSkills(agent.cwd)
   pushLabel(`❯ Skills`, ansi.bold + C.tool)
   if (skills.length === 0) {

@@ -37,7 +37,7 @@ import { execFileSync } from "node:child_process";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { MERGED_SCRIPTS } from "./check-doc-width.mjs";
 // 数字单源（F7/AC80）：台账解析 / 计数 / 老化阈值 / 显示面 formatter 按产品域取用（两产品各自实现——不跨产品混用）
-import * as cliLedgerModule from "../thincoder-cli/src/ledger.mjs";
+import * as cliLedgerModule from "../thincoder-core/ledger.mjs";
 import * as vscLedgerModule from "../thincoder-vscode/src/ledger.mjs";
 import { defaultEntries, runCheck } from "./check-ledger-core.mjs";
 

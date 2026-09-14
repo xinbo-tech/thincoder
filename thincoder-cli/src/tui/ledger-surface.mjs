@@ -6,7 +6,7 @@
  * 常驻标记，`render-frame.mjs` 消费；**不受启动行门约束**——F2 按标记态照显）。
  * 只读台账；唯一写面 = 去重档（`~/.thincoder/ledger-notify.json`）。
  */
-import { blameAges, detailScans, discoverFamily, formatDetailLine, formatMarker, loadNotifyState, NOTIFY_FILE, notifyKey, planChangeLines, REFRESH_MS, saveNotifyState, summarizeLedger } from "../ledger.mjs"
+import { blameAges, detailScans, discoverFamily, formatDetailLine, formatMarker, loadNotifyState, NOTIFY_FILE, notifyKey, planChangeLines, REFRESH_MS, saveNotifyState, summarizeLedger } from "@thincoder/core/ledger.mjs"
 import { C } from "./ansi.mjs"
 
 /** 单次扫描（直驱面——timer 包装见 `startLedgerSurface`）。

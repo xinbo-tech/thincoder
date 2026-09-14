@@ -133,7 +133,7 @@ FR14 落实（需求层登记）；另含 FR15 的行为面定义（P8 所在需
 
 ### 3.1 分类判据单一权威（PO-10——“什么算产品代码”）
 
-**结论**：新建 `src/conventions.mjs` = 全产品唯一的代码/文档/临时文件分类裁判；所有门禁与守卫改为经它判定。
+**结论**：新建 `thincoder-core/conventions.mjs` = 全产品唯一的代码/文档/临时文件分类裁判；所有门禁与守卫改为经它判定。
 
 语义（默认约定，可被项目声明覆盖——§4.1）：
 
@@ -146,7 +146,7 @@ FR14 落实（需求层登记）；另含 FR15 的行为面定义（P8 所在需
 
 ### 3.2 项目声明面：`.thincoder/conventions.json`（PO-10 支撑）
 
-可选文件（缺失 = 全默认）；schema 与解析规则见 §4.1。加载与缓存 = `src/conventions.mjs`；
+可选文件（缺失 = 全默认）；schema 与解析规则见 §4.1。加载与缓存 = `thincoder-core/conventions.mjs`；
 损坏 / 类型错 → 回退默认 + `console.warn` + 日志事件（不崩溃、不静默吞）。
 
 ### 3.3 门禁与变更判据接线（PO-10 · PO-11 文案面）
@@ -250,7 +250,7 @@ D1–D7 全表 / 锚#1–#7 / C1–C4 / T-RO 组 / A11 的 `batchDoc` 必传句�
 - `advisor.docMap` / `advisor.standardsDoc`：项目根相对路径；找不到文件时走降级句（§4.4）。
 - 解析：`JSON.parse` + 逐键类型校验；失败 → 默认 + `console.warn` + 日志事件。
 
-### 4.2 `src/conventions.mjs`（API）
+### 4.2 `thincoder-core/conventions.mjs`（API）
 
 | 导出 | 语义 |
 |---|---|
@@ -341,7 +341,7 @@ D1–D7 全表 / 锚#1–#7 / C1–C4 / T-RO 组 / A11 的 `batchDoc` 必传句�
 
 | 文件 | 性质 | 当前行数 | 预计增量 |
 |---|---|---|---|
-| `src/conventions.mjs` | **新增** | — | ~120（300 内） |
+| `thincoder-core/conventions.mjs` | **新增** | — | ~120（300 内） |
 | `src/agent/dispatch.mjs` | 修改 | 480 | ≤±12（换源 + hint） |
 | `src/advisor/repos.mjs` | 修改 | 173 | ≤±14（谓词换源） |
 | `src/agent-tools/advisor-settle.mjs` | 修改 | 213 | ≤±5（本地谓词删除） |
@@ -426,7 +426,7 @@ D1–D7 全表 / 锚#1–#7 / C1–C4 / T-RO 组 / A11 的 `batchDoc` 必传句�
 
 | # | 验收标准（机器可验证） | 回指 |
 |---|---|---|
-| AC-01 | 全仓 grep：门禁/守卫的 `^src[\\/]` 与组件式正则副本 = 0（唯一实现 = `src/conventions.mjs`） | PO-10 · FR12 |
+| AC-01 | 全仓 grep：门禁/守卫的 `^src[\\/]` 与组件式正则副本 = 0（唯一实现 = `thincoder-core/conventions.mjs`） | PO-10 · FR12 |
 | AC-02 | T-01–T-05 全绿；`packages/foo/src/x.md` 判 code（嵌套漏判消除） | PO-10 · FR12 |
 | AC-03 | T-06–T-08 + T-22 全绿（既有门禁锁保持 + 反证用例转绿方向 = 拒绝 + 未知路径保守拦截保持） | PO-10 · FR12 |
 | AC-04 | `conventions.json` 缺失/损坏不崩溃；声明后行为切换有测试 | PO-10 · FR10 |

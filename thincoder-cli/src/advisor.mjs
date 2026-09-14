@@ -46,7 +46,7 @@ import { loadAdvisorPrompt } from "@thincoder/core/prompt-files.mjs"
 import { extractAgentResponseTable } from "@thincoder/core/advisor/history.mjs"
 import { buildAdvisorUserMessage, resolveScopeFiles, buildObjectDeclarationBlock, buildDesignApprovalBlock } from "./advisor/messages.mjs"
 import { buildConvergenceBody } from "@thincoder/core/advisor/convergence.mjs"
-import { escapeLiteralEscapes } from "./escape.mjs"
+import { escapeLiteralEscapes } from "@thincoder/core/escape.mjs"
 // Re-export for run.mjs and tests (keeps their imports from "../advisor.mjs" stable)
 export { ADVISOR_MD_PATH, extractAgentResponseTable, extractConversationBackground } from "@thincoder/core/advisor/history.mjs"
 export { buildAdvisorUserMessage } from "./advisor/messages.mjs"

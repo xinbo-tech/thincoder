@@ -4470,5 +4470,116 @@ CLI 三加载根 + 入口（L1–L7）：
 
 **轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 1；A1–A6 终态读数见上表；终态 = **clean**。
 
+### 实施：S2 U4 —— WORKSPACE 单元落轮（2026-09-14 · eng-coder）——**终态 = clean**
+
+**段位**：当前段 = **S2（CLI 迁移单元 U4）**。写域 = CLI 侧（19 档改指 + 7 档删旧 + 7 档文档 23 处锚改指）+ **域外两笔（已披露）**：仓根 `scripts/check-ledger.mjs`（:40）· 仓根台账 `docs/TODO.md`（:28 证据行）；**VSC 零触碰**；核内零改动（`git status` 自证：改动集零 `thincoder-core/**`）；
+未 commit（父侧统一单笔）；产品设计/需求档只做锚改指（零语义改写——语义收正归 eng-designer）。
+
+**依据** = `docs/design/CORE-UNIFICATION.md` §2.6.3 U4 行（`:713`「7 / 1304 / 19」+ 专项行）+（四）四步与 A1–A6（`:910-924`）+ §2.6.2（三）（五）（六）+ `docs/design/WORKSPACE.md`（#71–#73 / #170–#174）；父侧 U4 任务书。
+
+**改动面**（行数 = `wc -l` 口径实核；改前 = HEAD）
+
+| # | 面 | 档 / 行数 | 动作 |
+|---|---|---|---|
+| 1 | CLI 源 + 测试 | 19 档（16 src + 3 test；行数零变——纯来源串替换） | 改指 `@thincoder/core/<子路径>`（21 处） |
+| 2 | CLI 删旧 | `src/{ledger,conventions,escape,rules,peer-instances,peer-domains,skills}.mjs` 7 档（227+223+152+53+231+265+153 = **1304** 行） | **删档** |
+| 3 | CLI 文档 | 7 档（`docs/design` ×6 + `docs/requirements` ×1；行数 ±0） | 23 处锚改指 |
+| 4 | 仓根脚本（**域外·披露**） | `scripts/check-ledger.mjs`（384 → 384） | `:40` 改指 `../thincoder-core/ledger.mjs`（删档消费方——否则 check-ledger import 失败） |
+| 5 | 仓根台账（**边界外·披露**） | `docs/TODO.md`（±0） | `:28` 证据路径 → `thincoder-core/peer-instances.mjs:185-191`（L4 闸强制：改前 = 仓内同名 2 份 ⇒ 1 处违规） |
+
+**① 逐处「改前 → 改后」（21 处 import 改指——全部 = 来源串替换，具名导入面零改）**
+
+| # | 位置 | 改前 → 改后 |
+|---|---|---|
+| 1 | `src/advisor/project-context.mjs:21` | `"../conventions.mjs"` → `"@thincoder/core/conventions.mjs"` |
+| 2 | `src/advisor/repos.mjs:7` | 同上 |
+| 3 | `src/advisor.mjs:49` | `"./escape.mjs"` → `"@thincoder/core/escape.mjs"` |
+| 4 | `src/agent/dispatch.mjs:8` | `"../conventions.mjs"` → 核路径 |
+| 5 | `src/agent/dispatch.mjs:11` | `"../peer-domains.mjs"` → 核路径 |
+| 6 | `src/agent/run-stages.mjs:18` | `"../peer-domains.mjs"` → 核路径 |
+| 7 | `src/agent/setup-reminders.mjs:20` | `"../peer-instances.mjs"` → 核路径 |
+| 8 | `src/agent/setup.mjs:12` | `"../skills.mjs"` → 核路径 |
+| 9 | `src/agent-tools/advisor-settle.mjs:24` | `"../conventions.mjs"` → 核路径 |
+| 10 | `src/agent-tools/advisor.mjs:11` | `"../conventions.mjs"` → 核路径 |
+| 11 | `src/agent-tools/skill.mjs:1` | `"../skills.mjs"` → 核路径 |
+| 12 | `src/agent-tools/verify.mjs:14` | `"../conventions.mjs"` → 核路径 |
+| 13 | `src/cli/make-agent.mjs:9` | `"../rules.mjs"` → 核路径 |
+| 14 | `src/cli/make-agent.mjs:11` | `"../peer-instances.mjs"` → 核路径 |
+| 15 | `src/memory/code-sync.mjs:12` | `"../conventions.mjs"` → 核路径 |
+| 16 | `src/provider/core.mjs:9` | `"../escape.mjs"` → 核路径 |
+| 17 | `src/tui/cmd-skills.mjs:7` | `"../skills.mjs"` → 核路径（动态 import） |
+| 18 | `src/tui/ledger-surface.mjs:9` | `"../ledger.mjs"` → 核路径 |
+| 19 | `test/ledger-surface.test.mjs:17` | `"../src/ledger.mjs"` → 核路径 |
+| 20 | `test/portability-classification.test.mjs:18` | `"../src/conventions.mjs"` → 核路径 |
+| 21 | `test/portability-index.test.mjs:25` | `"../src/conventions.mjs"` → 核路径 |
+| — | `scripts/check-ledger.mjs:40`（域外） | `"../thincoder-cli/src/ledger.mjs"` → `"../thincoder-core/ledger.mjs"` |
+
+**文档锚 23 处（7 档——删后中间态实测 = 23 悬空 ⇒ 全数改指 ⇒ 0；形态 = §2.6.2（六）CLI 域「仓根相对」）**
+
+- `docs/design/ENGINEERING-MODE.md`：`:1801` `:1854` `:1949` `:2004`（含 `ledger.mjs:76` 坐标）→ `thincoder-core/ledger.mjs`；`:1964` → `thincoder-vscode/src/ledger.mjs`（行语义 = VSC 侧档）
+- `docs/design/LEDGER-SELF-CONTAINED.md`：`:176` → `thincoder-core/ledger.mjs:6`；`:335` → `thincoder-vscode/src/ledger.mjs`；`:530` `:734` → `thincoder-vscode/src/extension/peer-instances.mjs`
+- `docs/design/MULTI-INSTANCE-COLLAB.md`：`:4`（×2）`:66` `:102` `:234` `:235` → 核路径
+- `docs/design/PORTABILITY.md`：`:136` `:149` `:253` `:344` `:429` → 核路径
+- `docs/design/PROVIDER.md`：`:412` → 核路径 · `docs/design/TWO-REPO-MERGE.md`：`:136` → 核路径 · `docs/requirements/ENGINEERING-MODE.md`：`:845` → 核路径
+
+**② 删旧三条读数（删前全过才删）**
+
+1. **改指已落盘**：21 处终态复核（正 / 反向两判）——0 违规。
+2. **该产品全链 exit 0（删前预跑）**：`npm test` 609/552/0/57 · `lint` 309 · `test:full` 609/609 · `integration` 25/25（均 exit 0）。
+3. **零引用反向判**（域 = `src` + `test` + `bin`，302 档全扫）：① 引号包裹本地相对路径形 = **0 命中**；② 路径 token 反向判 = **0 违规**（21 合规核 token；7 处注释叙述 = 射程外，登记未决 5）。
+   **删后中间态**：`doc-anchors --domain thincoder-cli` = **23 悬空**（7 档 23 处）→ 逐处改指 → **0**。
+
+**③ A1–A6 读数（终态复跑 · 原样）**
+
+| # | 判据 | 读数 | 判 |
+|---|---|---|---|
+| A1 | CLI 全链 | `npm test`：tests **609** · pass **552** · fail **0** · skipped **57** · exit 0；`lint`：check-syntax **302 file(s) OK**（309 − 7 删档）；`test:full`：**609/609** · fail 0 · exit 0；`test:integration`：**25/25** · fail 0 · exit 0——**未涉面逐数不变**；面内零改判（无用例增删） | ✓ |
+| A2 | 零引用 | 反向判两式 0 / 0（域 `src`+`test`+`bin`）；运行面 = 全链 exit 0；锚面 = 悬空 0 | ✓ |
+| A3 | 文档锚 | `doc-anchors --domain thincoder-cli`：99 档 · 候选 **8870** · 悬空 **0** · 注记豁免 878 · `OK(V5)` exit 0 | ✓ |
+| A4 | 核回归 | 核内 `node --test` = **173/173** · fail 0 · exit 0；核内零改动（`git status` 自证） | ✓ |
+| A5 | 仓根三机检 | `doc-anchors`（全域）：域一 32 档 候选 **2219** · 悬空 0 · 豁免 29；域二 99 档 候选 **8870** · 悬空 0 · 豁免 878 · exit 0。`check-doc-width`：**306 档无 >300 字符行** · exit 0。`check-ledger`：**0 违规** · 基线 0 · exit 0（§5 写入后复跑读数见段末） | ✓ |
+| A6 | 链接 L1 | `npm ls @thincoder/core --json` exit 0 · version **0.1.0**；版本探针 `import('@thincoder/core/package.json')` = **0.1.0** | ✓ |
+| 专项 | #170 · 色表 | 同步 loader 面在核（`thincoder-core/skills.mjs:214/224`：`loadSkillsSync`/`readSkillSync`）；CLI 侧零 loader 注入（`configureSkillLoader` CLI 树 0 命中）；台账渲染色表 CLI 侧零注入（CLI 对核 `ledger-surface.mjs` 消费 = 0；CLI 自有 TUI 副本用本地 `C`） | ✓ |
+
+**进度计数（设计 §2.6.3（七）① · 可复跑命令）**：**CLI 待迁 = 121**（128 − 7）——单调递减成立。
+**工作树**：本笔 **35 项**（19 档改指 + 7 删档 + 7 文档锚 + `scripts/check-ledger.mjs` + `docs/TODO.md`）+ **1 项预存**（`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`——spawn 前已在，非本笔）；`docs/TODO.md` 另含他轮在途改动（需求池 8→9 条 + worker 条目——非本笔）；未 commit。
+
+**④ 内部轮（发现与处置）**
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **DIVERGENT**——「部分实现 / 静默简化 / 清单外改动」三类**未命中**（7 档删净 · 19 档 21 处逐点对齐 · 核导出面逐名在位 · 零引用三式复扫）；命中**文档漂移 5 行**（均文本层、零代码 / 零运行期影响）+ QUESTION ×4。
+- **审计命中处置**：5 行全部 **登记**（未决 1）——依据 = 非悬空锚（机检豁免 / 叙述面）、设计（五）法 1 射程、U1–U3 先例；审计建议（登记 / 设计面收正）与本裁一致。QUESTION：Q1（§5 落账）= 本段；Q2（`_lt.txt`/`_nt.txt` 临时档）= 已删（长测试落盘日志）；Q3（as-of 口径）= 登记（未决 1）；Q4 = 审计席位无 shell / git（读数类未独立复跑）——限制如实登记。
+- **advisor 代码评审 1 轮**（`type=code` · 阻塞）：**pass**（🔴 **0** · 🟡 2（均非 must-fix）· 🔵 3）。
+- **裁决表（5 项）**：**Fixed 1**（🔵#2 点名处 = `test/portability-classification.test.mjs:5` 头注（U4 自有面，与 :18 import 自相矛盾）→ 改指 `@thincoder/core/conventions.mjs`；targeted 9/9 + 快层 609/552/0/57 复跑绿）；
+  **Deferred 3**（🟡#1 台账可见面 CLI 半边落点未闭环——核 `ledger-surface.mjs` 在 CLI / 仓根脚本侧零消费方、CLI 副本双份在树，**非交付偏差**（该档不在 U4 删除集）→ 设计面登记（未决 4）；🔵#3 `scripts/check-ledger.mjs` 头注 `:25/:28/:50` 单源叙述滞后 → 设计面 / 下次触碰（未决 2）；🔵#4「新增 / ADD」措辞保留 → 设计面（未决 3））；
+  **Not an issue 1**（🟡#5 五档 >300 软线（`dispatch.mjs` 489 等）——既有结构债 · 结构零变，R3 不复议（零动作））。
+  **引证核验附注**：host 核验器对 30+ 条引证报「file unreadable / content mismatch」——抽查复核（`verify.mjs:14` / `skill.mjs:1` / `portability-classification.test.mjs:18` 等）内容与引证**相符** = 核验器路径解析 artifact（承 U1/U2/U3 同型附注）。
+- **轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 1（裁决 Fixed 1 落修）；终态 **0 未决 🔴 → clean**。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | `scripts/check-ledger.mjs:40` 域外改指随本笔落 | 删档 import 否则机检脚本失败（check-ledger = A5 机检本体）；批次档 `:3104` 既有登记（该行跨目录 import 先例）；备选 = 不动（A5 必红） |
+| 2 | `docs/TODO.md:28` 证据行改指随本笔落（**边界外**） | check-ledger L4 闸强制（改前 = 1 处违规：仓内同名 2 份）；`:37`（VSC 档）= basename 仓内唯一 ⇒ 机检通过、非本笔面；备选 = 不动（A5 + 全链 T96 必红） |
+| 3 | 文档锚形态 = 仓根相对；4 处「VSC 语义」行改指 `thincoder-vscode/src/…` | §2.6.2（六）CLI 域形态 + U1 决策 2 先例（VSC 侧档指核会失真）；实跑 23 悬空 → 0 自证 |
+| 4 | 注释叙述面 8 处不改（登记） | 设计（五）法 1「裸词叙述射程外」；U1/U2/U3 先例；advisor 仅点名 1 处（U4 自有面）已落修 |
+| 5 | 删前全链预跑一轮（四命令） | §2.6.3（四）2 字面执行（承 U1 决策 3 / U3 决策 4） |
+| 6 | `src/tui/ledger-surface.mjs` 保留（只改指） | 该档不在 U4 删除集（（三）7 档之外）；专项「色表 CLI 侧不注入」= 状态核验项（成立）；长期处置归设计面（未决 4） |
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **文档漂移 5 行**（审计 findings · 设计面 / 文档维护批）：`ENGINEERING-MODE.md:1855` / `:2026`（VSC 语义行未同步）· `:2447`（AC80 字面「虚过」）· `TWO-REPO-MERGE.md:351`（`PEER_*` 白名单坐标失准）· `ARCHITECTURE.md:42-43`（模块地图）· `docs/design/WORKSPACE.md:13-16`（对位表）。
+2. **`scripts/check-ledger.mjs` 头注滞后**（advisor 🔵#3）：`:25` / `:28` / `:50` 仍以「产品域 `src/ledger.mjs`」描述单源（对 CLI 域已不实）——设计面 / 下次触碰收正。
+3. **「新增 / ADD」措辞保留**（advisor 🔵#4）：`PORTABILITY.md:344` · `MULTI-INSTANCE-COLLAB.md:234-235` · `ENGINEERING-MODE.md:1949`——承 U1 决策 5，措辞收正归设计面。
+4. **#174 CLI 半边落点未闭环**（advisor 🟡#1 · 设计面）：核 `ledger-surface.mjs` 在 CLI / 仓根脚本侧零消费方（CLI 走自有 `tui/ledger-surface.mjs` 副本）——建议设计面登记该档处置（保留为 TUI 胶水 vs 后续归并 + 注入点）。
+5. **注释叙述 8 处**（advisor 🔵#2 其余——射程外登记）：`repos.mjs:101/:115` · `advisor.mjs:6/:171` · `dispatch.mjs:186` · `helpers.mjs:44` · `agent-tools/advisor.mjs:114` · `advisor-settle.mjs:68`——随所属单元（U9/U12/U15）或文档维护批。
+6. **根域设计档叙述滞留**（评审批次外登记）：`docs/design/TOOLS.md:77`「CLI `../skills.mjs`」——文档维护批。
+7. **审计引证更正**（同 U1 先例）：审计机械 union 前缀失真（`d:\teamcode\thincoder-cli\…` 不存在）——如实登记，防再引。
+8. **`docs/TODO.md` 他轮在途改动**（需求池 8→9 条 + worker 条目——非本笔）：本笔仅 1 处证据行改指（决策 2，已披露）。
+
+**轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 1；A1–A6 终态读数见上表；终态 = **clean**；报告见交付报告（父侧转呈）。
+
+**段末复跑（§5 写入后 · 宽度闸）**：`check-doc-width` = **306 档无 >300 字符行 · exit 0**（原样读数见交付报告）。
+
 ## §6 验证与收口（父代理）
 

@@ -5,10 +5,10 @@ import { logEvent, errText, headText } from "@thincoder/core/log.mjs"
 import { offloadToolResult, FILE_MUTATORS } from "./helpers.mjs"
 import { runHooks } from "../hooks.mjs"
 import { snapshotForUndo } from "../tui/cmd-undo.mjs"
-import { isCodePath, loadConventions } from "../conventions.mjs"
+import { isCodePath, loadConventions } from "@thincoder/core/conventions.mjs"
 // R10 L3 (MULTI-INSTANCE-COLLAB §2a.5 D-L3b)：写工具钩子——peerCollabNote（执行前冲突
 // 检测——软提示不阻止）+ recordPeerWrites（成功后累积本回合写足迹——回合末 flush）。
-import { PEER_WRITE_TOOLS, peerCollabNote, recordPeerWrites } from "../peer-domains.mjs"
+import { PEER_WRITE_TOOLS, peerCollabNote, recordPeerWrites } from "@thincoder/core/peer-domains.mjs"
 import { writeFileSync, mkdirSync, existsSync } from "node:fs"
 import { join, resolve, relative } from "node:path"
 import { homedir } from "node:os"

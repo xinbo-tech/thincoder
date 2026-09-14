@@ -18,7 +18,7 @@
 import { readFileSync, existsSync } from "node:fs"
 import { resolve, join, relative, dirname, sep } from "node:path"
 import { providerSpec } from "../config.mjs"
-import { loadConventions } from "../conventions.mjs"
+import { loadConventions } from "@thincoder/core/conventions.mjs"
 
 /** Project guide (AGENTS.md) injection budget — decision 2026-08-08:
  *  NO fixed truncation; long-context models (1M+) get up to 5% of their context

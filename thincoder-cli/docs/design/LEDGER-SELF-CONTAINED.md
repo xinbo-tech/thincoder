@@ -173,7 +173,7 @@
 | D2 | 机检**新增 L4**、L1–L3 零改 | 守本批边界：不改既有判据语义 | 改 `refBases`（动 L1） |
 | D3 | **归档档按对端面条目逐条处置（不再整体冻结——修正轮更新）**：非对端条目零改 | 初版「两仓零改」冻结口径经 P1′ 宽口径改判修订（2026-09-12 05:08）——对端面条目按 §8.2 处置（CLI 归档 9 迁移 + 4 拆分 + 1 零改）；归档语义「保留原指针与状态」约束**非对端条目** | 初版「整体冻结」**经改判否决**（对端面条目留驻 = 病根不除）；改非对端条目（破坏历史可追溯）仍否决 |
 | D4 | 批档按**实施面仓属**分类处置 | 见 §3.3；判据可机判 | 全迁 / 全留 |
-| D5 | 对端仓**自持自己的台账检查器** | **与判据一致**（各仓自持 + 多实现面纪律「各端独立实现、语义同源」）：`src/ledger.mjs:6` 明写「VSC 端为独立实现、语义同源（不跨仓 import）」（在位事实）；且 CLI 检查器 `DEFAULT_LEDGERS` 现含对端仓台账（跨仓扫描面），与 R1 同病 | 复用 CLI 检查器扫对端（跨仓面） |
+| D5 | 对端仓**自持自己的台账检查器** | **与判据一致**（各仓自持 + 多实现面纪律「各端独立实现、语义同源」）：`thincoder-core/ledger.mjs:6` 明写「VSC 端为独立实现、语义同源（不跨仓 import）」（在位事实）；且 CLI 检查器 `DEFAULT_LEDGERS` 现含对端仓台账（跨仓扫描面），与 R1 同病 | 复用 CLI 检查器扫对端（跨仓面） |
 | D6 | 提示词**新节 + 多实现面纪律节一次改造** | R9 明令 R8/R9 同节同批；R3 行为条款需独立落点 | 只改多实现面节 / 落 persona |
 | D7 | **normal 模式覆盖面结论**：R1/R6 不适用（normal 无台账 / 批档机制）；R7 适用（normal 也写文档）→ 落 `discipline-normal.md` | 逐处判定，不默认「另一仓另说」（批次档 §1「提示词层承载」要求） | 默认不覆盖 |
 | D8 | **文件域冲突显式登记**（与并行批 `PROSE-ANCHOR-RETIRE`） | 两批同触 `test/prompts-async-guidance.test.mjs`（双端各 1 档）+ 双端 `discipline-engineering.md` | 静默并发（写冲突） |
@@ -332,7 +332,7 @@
 ### 7.5 对端仓机检落点（D5）
 
 - 对端仓**自持检查器** `thincoder-vscode/scripts/check-ledger.mjs`（独立实现、语义同源，**不跨仓 import**——**与判据一致**：各仓自持 + 多实现面纪律「各端独立实现、语义同源」）。
-- 对端已有可复用面：`src/ledger.mjs`（`scanGroups` / `summarizeLedger` / `notifyKey`）——检查器消费本端单源，不重写解析。
+- 对端已有可复用面：`thincoder-vscode/src/ledger.mjs`（`scanGroups` / `summarizeLedger` / `notifyKey`）——检查器消费本端单源，不重写解析。
 - 对端基线档 `test/fixtures/ledger-baseline.json` **当前不存在** → 首跑固化时新建。
 - CLI 侧 `check-ledger.mjs` 的 `DEFAULT_LEDGERS`（`:29`）**去掉对端仓项**——本仓检查器只扫本仓（跨仓扫描面与 R1 同病）。
 
@@ -527,7 +527,7 @@
 | 15 | `LOGGING` | ① | 有档（37 行） | **已有对位** | 本批新建档在位（机制 = `thincoder-core/log.mjs`） |
 | 16 | `MCP` | ② | 仅 design 层（170 行） | **建本仓需求档** → `docs/requirements/MCP.md` | `src/mcp/` + `config-mcp.mjs` 在位；需求层无档 |
 | 17 | `MEMORY` | ② | 仅 design 层（325 行） | **建本仓需求档** → `docs/requirements/MEMORY.md` | `src/memory.mjs` · `memory-tool.mjs` 在位；需求层无档 |
-| 18 | `MULTI-INSTANCE-COLLAB` | ① | 有档（44 行） | **已有对位** | 本批新建档在位（机制 = `src/extension/peer-instances.mjs`） |
+| 18 | `MULTI-INSTANCE-COLLAB` | ① | 有档（44 行） | **已有对位** | 本批新建档在位（机制 = `thincoder-vscode/src/extension/peer-instances.mjs`） |
 | 19 | `NORMAL-MODE` | ① | 有档（37 行） | **已有对位** | 本批新建档在位（提示词装配层） |
 | 20 | `PHILOSOPHY` | ② | 有档（136 行） | **已有对位** | 归位档在位 |
 | 21 | `PORTABILITY` | ② | 仅 design 层（458 行） | **建本仓需求档** → `docs/requirements/PORTABILITY.md` | 本端 A 家族对位设计在位；需求层无档 |
@@ -731,7 +731,7 @@
 | 35 | `docs/requirements/FEATURES.md`（VSC 仓） | **新建（拆出）** | 0→~45 | 自 `REQUIREMENTS.md` §v1 功能范围 拆出 |
 | 36 | `docs/requirements/PHILOSOPHY.md`（VSC 仓） | **归位**（原 `docs/design/PHILOSOPHY.md` 135 行） | ±0 | 二值 ②·归位（价值层需求） |
 | 37 | `docs/requirements/LOGGING.md`（VSC 仓） | **新建（①）** | 0→~60 | 机制在位（`thincoder-vscode/src/log.mjs`）无档——兼清 `thincoder-vscode/src/log.mjs:2` 悬空指针 |
-| 38 | `docs/requirements/MULTI-INSTANCE-COLLAB.md`（VSC 仓） | **新建（①）** | 0→~60 | 机制在位（`src/extension/peer-instances.mjs`）无档 |
+| 38 | `docs/requirements/MULTI-INSTANCE-COLLAB.md`（VSC 仓） | **新建（①）** | 0→~60 | 机制在位（`thincoder-vscode/src/extension/peer-instances.mjs`）无档 |
 | 39 | `docs/requirements/NORMAL-MODE.md`（VSC 仓） | **新建（①）** | 0→~70 | 机制在位（提示词装配层）无档 |
 | 40 | `docs/requirements/SETTINGS-TOOL.md`（VSC 仓） | **新建（①）** | 0→~70 | 机制在位（`src/agent-tools/settings.mjs`）；部分承载 = `docs/design/TOOLS.md` §5 |
 | 41 | `docs/requirements/STRUCTURE-DEBT.md`（VSC 仓） | **新建（①）** | 0→~60 | 本端结构债登记面缺失 |

@@ -22,7 +22,7 @@ import { CODE_EXTS, DOC_EXTS } from "../src/memory/schema.mjs"
 import { detectLanguage } from "../src/memory/code-index.mjs"
 import { handleReindexCommand } from "../src/tui/cmd-reindex.mjs"
 import { createMemory } from "../src/memory.mjs"
-import { clearConventionsCache } from "../src/conventions.mjs"
+import { clearConventionsCache } from "@thincoder/core/conventions.mjs"
 
 let tmp
 beforeEach(() => {

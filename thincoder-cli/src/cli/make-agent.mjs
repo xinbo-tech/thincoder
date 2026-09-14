@@ -6,9 +6,9 @@ import { createMemory, memoryTools, syncDir, codeSearchTool, docSearchTool } fro
 import { settingsTool } from "../agent-tools/settings.mjs"
 import { repoOutlineTool } from "../tools/repomap.mjs"
 import { builtinTools } from "../tools/index.mjs"
-import { discoverRules } from "../rules.mjs"
+import { discoverRules } from "@thincoder/core/rules.mjs"
 // R10 L2（MULTI-INSTANCE-COLLAB §2a.4 D-L2b）：peer_instances 只读工具——挂感知模块导出
-import { peerInstancesTool } from "../peer-instances.mjs"
+import { peerInstancesTool } from "@thincoder/core/peer-instances.mjs"
 
 /** 第 27 批 §12.3⑤（R-A1.1）：装配期工具剔除——按 `name` 过滤的纯函数（机验锚）。
  *  恒等语义：空列表 / 零命中 → 原数组原样返回（零意外剔除——T15）。

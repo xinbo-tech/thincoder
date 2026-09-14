@@ -9,7 +9,7 @@ function timeNowLocal() {
 import { search as memorySearch, docSearch } from "../memory.mjs"
 import { pushReal } from "../context.mjs"
 import { toOpenAISchema } from "../tools/index.mjs"
-import { loadSkills, formatSkillListing } from "../skills.mjs"
+import { loadSkills, formatSkillListing } from "@thincoder/core/skills.mjs"
 import { assemblePrompt } from "../prompt-overlays.mjs"
 import {
   escapeXml, repairHistory, listWorkDir,
