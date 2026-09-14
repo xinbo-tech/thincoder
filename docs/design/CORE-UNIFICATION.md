@@ -31,7 +31,7 @@
 | B5 | **提示词面体量（自核）** | 两产品各 **15 档槽位提示词**（`src/prompts/`）+ **25 档工具描述**（`src/tools/*.md`——**运行期加载**，见 B4）⇒ **提示词面 = 40 档 `.md`**；另有**中文设计档**（供人读・非运行期；**文档面——不进核**）各 15 档（`docs/design/prompts/`）。`src/tools/` 另含**实现面 `.mjs`**（两端合一 34 档——B18） |
 | B6 | **运行期无跨仓依赖；共享面 = 用户级状态** | 承 phase 1 B1 / B2：跨仓机制 100% 位于 build / doc / test 期；共享面 = 用户级 `~/.thincoder/`（配置 / 快照 / 日志）⇒ 核与壳的接口是**模块接口**，不涉用户状态迁移 |
 | B7 | **两产品现状零第三方运行时依赖** | CLI `thincoder-cli/package.json` 无 `dependencies` 字段（自述「zero dependencies」）；VSC `thincoder-vscode/package.json:125-130` 仅 `devDependencies`；两产品各有**一条自家核依赖**（第三方仍为零——§2.9 第 5 条） |
-| B8 | **CI 现状 = 仓根三 job** | `.github/workflows/test.yml`：`cli`（`:4`，`working-directory: thincoder`）· `vscode`（`:17`，`:22`）· `docs`（`:30`——全域三机检 `:38-40`）；两 job 各 `npm install` ⇒ **核发布后由 `npm install` 自动解析**（新增依赖面）；**S2 期间（核发布前）两产品 job 须在 `npm install` 前置一步 `npm link`**（口径与机检见 §2.6.1；核发布后该步可撤） |
+| B8 | **CI 现状 = 仓根三 job** | `.github/workflows/test.yml`：`cli`（`:4`，`:9` = `working-directory: thincoder-cli`）· `vscode`（`:17`，`:22`）· `docs`（`:30`——全域三机检 `:38-40`）；两 job 各 `npm install` ⇒ **核发布后由 `npm install` 自动解析**（新增依赖面）；**S2 期间（核发布前）两产品 job 须在 `npm install` 前置一步 `npm link`**（口径与机检见 §2.6.1；核发布后该步可撤） |
 | B9 | **同路径成对不是全部差异面** | 技术待办「CLI 无『子 agent 被丢弃』提醒（与 VSC 不对称）」：CLI 侧静默清池 `thincoder-cli/src/agent/run-stages.mjs:168-169` · `thincoder-cli/src/tui/suspension-drive.mjs:260`；VSC 对侧住**不同相对路径** `thincoder-vscode/src/agent/async-discard.mjs:57-74` ⇒ 语义对位模块可能不出现在同路径对里 |
 | B10 | **度量工具已是入库资产** | `scripts/mirror-divergence.mjs`（171 行 · 零依赖 · 口径写在头注）——S0 的度量面基线；其用法 / 退出码契约收敛 = 台账技术待办（仓根 `docs/TODO.md`，触发 = 条件：该档下次被触碰时） |
 | B11 | **装载机制已实测（2026-09-13）** | workspace 假包探针：成员内无本地链接时 `bundledDependencies` **静默跳过**；vsce 于 workspace 成员目录内三失败形态（硬拒 ×2 / 静默无核 vsix）；运行期解析通；缺核产物可「成功」产出 ⇒ 含核断言必需。**保留为对照读数**（现行读数见 B13） |
@@ -551,7 +551,14 @@ VSC（`thincoder-vscode/`）：
 
 **零引用机判（三法 · 逐条可机判）**：
 
-1. **文本面**（该产品树内）：`advisor/history\.mjs` / `advisor/convergence\.mjs` / `advisor/truncate\.mjs` 三模式 grep `<产品>/src` + `<产品>/test` → **0 命中**；再对同目录相对形 `from "\./(history|convergence|truncate)\.mjs"` 跑一遍 → 0 命中。**只判代码 / 测试面**；文档面命中归 §（六）按锚面处置。
+1. **文本面**（该产品树内 · **判读口径 = 反向判**）——三档名的两类**引用形态**各自 **0 命中**即过：
+   - **扫描域** = `<产品>/src` + `<产品>/test`（递归全档），**排除三档本体自身**（`src/advisor/{history,convergence,truncate}.mjs`——待删档的自名不构成对外引用）；
+   - **模式 ①（引号包裹的本地相对路径）**：`["'\x60](\.\.?\/)[^"'\x60\n]*?(?<![-\w])(history|convergence|truncate)\.mjs["'\x60]` → **0 命中**（`\x60` = 反引号；左界 `(?<![-\w])` 排除 `read-history.mjs` 同缀名）；
+   - **模式 ②（`advisor/` 路径片段 · 反向判）**：`(?<!core/)advisor/(history|convergence|truncate)\.mjs` → **0 命中**——命中处紧邻 `advisor/` 之前为 `core/` 者（= `@thincoder/core/…` / `thincoder-core/…`）**合规**（指向核）；裸 `advisor/history.mjs` 形态**违规**（指向产品自身）；
+   - **口径依据**：纯子串口径**不可达**——改后 14 处新引用**全部**仍含 `advisor/<档名>.mjs` 子串（`'@thincoder/core/advisor/history.mjs'.includes('advisor/history.mjs')` = **true**）⇒「三模式 = 0 命中」字面永不成立；
+   - **取「反向判」而非「只收窄本地相对引用形」之由**：只收窄形覆盖 14 处改指（2 处 src 头注留射程外——与（四）已登记的头注订正不接）；反向判按**指向**判读（指向核 = 合规 · 指向产品自身 = 违规）、16 项枚举全落判据面，改后结构性可达 0（新形态不落入两模式：① 引号后为 `@` 非 `./` / `../`；② 命中处前缀为 `core/`）；
+   - **与（四）枚举对应**：改前两模式命中并集 = **16 行**（CLI 8 / VSC 8）⇔（四）的 **14 处 import / re-export 改指** + **2 处 src 头注订正**（`src/advisor.mjs:4` / `src/advisor/main.mjs:6`）逐项一一对应（无第 17 行）；两产品**测试档头注订正**（`test/advisor-truncation.test.mjs`「byte-identical」句）为叙述面、无引用形态可命中——核对以交付 diff 为准；
+   - **射程外**：全文本的**裸词叙述**（如两产品 `src/advisor/loop.mjs` 的行内 `truncate.mjs:` 指代 · `thincoder-vscode/test/files.mjs:39` 名单注释）不构成本判据的违规（非本族改动面）；**只判代码 / 测试面**；文档面命中归 §（六）按锚面处置。
 2. **运行面**：该产品全链 exit 0——残留的旧相对 import 会以 `ERR_MODULE_NOT_FOUND` **硬失败**（模块解析失败不可静默）。
 3. **文档锚面**：`node scripts/doc-anchors.mjs` exit 0（§（六）——删档未改指即造 6 / 5 条悬空锚）。
 
@@ -1431,5 +1438,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
   **文档锚同批改指**（沙箱实核：CLI 域删档 +6 悬空 / VSC 域 +5；两域可接受形态不同——CLI 改指仓根相对路径，VSC 须走迁移注记行；VSC 引擎缺仓根候选一事登记为机检面项）· 复跑与 **T-C7 的本族跑法**（含 R11 探针挂点）· 回退（三笔提交 · 普通删除 ⇒ `git revert` 按原字节恢复）· 关键决策 **D-F1–D-F6** · 边界 · 与 §2.6.1 的接口。
 - 2026-09-14（**S2 族 1 接线方案 · 评审修正轮 · eng-designer**——评审 #80 的 3 🟡 / 3 🔵 逐条落修）：① §2.6.2（四）CLI / VSC 两源档动作列补**头注订正**（`src/advisor.mjs:4` / `src/advisor/main.mjs:6`——`advisor/history.mjs` 指针改核路径 / 注记形态，与两产品测试头注同法）⇒ 零引用闸与改动集一一对应；
   ② （四）超软线判定收正（`main.mjs` **320** = 既有超软线档 · 结构未变 · 拆分计划另议）；③ §2.6.1 CI 行改**相对 job cwd** 形态；④ CI 行（§2.8 / §2.6.2）统一为 **40 行 · +14±6**（`wc -l` 实核）；⑤ §2.2 契约 4 补锁面括注（R8④）；⑥ §2.11 A3 残余扩登 S2 期（⑤⑥⑦）。
+- 2026-09-14（**S2 族 1 接线方案 · 小收正轮 · eng-designer**——父侧裁定两件）：① §2.6.2（五）法 1 **判读口径写死 = 反向判**——两类引用形态（① 引号包裹本地相对路径 · ② `advisor/` 片段且前缀非 `core/`）各自 **0 命中**；
+  改前命中并集 **16 行** ⇔（四）枚举「14 处改指 + 2 处 src 头注」逐项对应（纯子串口径不可达之证随注）；② §2.1 **B8 改名残留收正**（`working-directory: thincoder` → `thincoder-cli`——实核 `.github/workflows/test.yml:9`）；全档旧名残留逐处判读（16 处：1 改 / 15 不改——清单见批次档 §2）。
 
 
