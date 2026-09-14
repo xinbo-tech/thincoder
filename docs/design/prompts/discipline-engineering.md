@@ -145,7 +145,7 @@
   批准请求中，裁决表的 `Dispatched` 行须已逐条收敛为 `Fixed`（随请求给出落地证据：file:line 或设计档节）。
 - 轮次衰减：Round 2 验证前表 + 标记明显新问题；round 3+ 严格只验证前表（不猎新）。总共最多 5 轮。
   当 advisor 报告全清（无剩余 🔴），运行 `verify`。
-- 异步锚句：**Advisor calls are async by default at the top level (AGENT-LOOP.md §11.2 — R13).**
+- 异步锚句：**Advisor calls are async by default at the top level (`thincoder-cli/docs/design/AGENT-LOOP.md` §11.2 — R13).**
   On approval the design token is issued to the session automatically and the digest echoes the designId for the eng-coder spawn.
 
 ## 实施委托结构化（任务书结构 + file 域语义）

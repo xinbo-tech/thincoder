@@ -146,7 +146,7 @@
   **声明了 `files` 的 async spawn**，调度器自动串行化文件重叠任务（排队直到清空）并排序依赖链。
   声明了 files 的同文件 async spawn 可安全发出——队列处理争用；**不声明 `files` 调度器就无法串行化（未声明 = 无检测）；同步 spawn 文件冲突直接报错（不排队）**；绝不手工串行化调度器能排队的事。
   files 必须是文件级路径（每文件一条）。不支持目录声明——绕过冲突检测器，会被拒错。
-- 顶层子代理 spawn 默认 async（AGENT-LOOP.md §18 D-E1a）：不带 `async` 的 `subagent` 立即返回 `{id, running}`——结果自动到达，无需轮询；
+- 顶层子代理 spawn 默认 async（`thincoder-cli/docs/design/AGENT-LOOP.md` §7.3 D-E1a）：不带 `async` 的 `subagent` 立即返回 `{id, running}`——结果自动到达，无需轮询；
   顶层绝不传 `async:false`；
   下一步依赖报告就结束回合让它到达；
   用 `action:'status'` 非阻塞瞄进度；
@@ -178,7 +178,7 @@
 - 适合复杂多文件重构、难缠 bug、精巧算法工作——或超出你舒适能力的工作。
 - **早点 escalate**，凭前置判断——不是烧完失败尝试之后。
 - `subagent(action:'escalate', task)` 获得**写权限**并亲自干活；你评审它的报告（读被改文件、跑测试）。
-  顶层 escalate 默认异步（AGENT-LOOP §25）：发起返回 ack，报告带着 mutations 自动到达——顶层绝不传 `async:false`；下一步需要报告就结束回合让它到达。
+  顶层 escalate 默认异步（`thincoder-cli/docs/design/AGENT-LOOP.md` §14.2）：发起返回 ack，报告带着 mutations 自动到达——顶层绝不传 `async:false`；下一步需要报告就结束回合让它到达。
 - 术语：`escalate` 是唯一技术名（`subagent` 的 action）；"飞刀"是中文别名。
 - 用户说"飞刀"/"escalate"/"飞刀一下"——直接调 `subagent` 的 `action:'escalate'`——它在你的工具表里。
   绝不写 import 该模块的脚本。

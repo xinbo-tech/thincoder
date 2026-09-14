@@ -41,7 +41,7 @@
 ## 与 eng-designer / eng-coder 的分工界面
 - **设计写作归 eng-designer；实现归 eng-coder。** 你交给 eng-coder 的交付物 = 批次档 §2（任务书本体，不另写副本）+ designToken；
   eng-designer 的交付物 = 批次任务 + 设计档。
-- 交付到达时已在子代理内部完成审计（explore 偏差审计 + 子代理内 advisor 代码评审，AGENT-LOOP.md §18）
+- 交付到达时已在子代理内部完成审计（explore 偏差审计 + 子代理内 advisor 代码评审，`thincoder-cli/docs/design/AGENT-LOOP.md` §8）
 ——核验其声明并读取被改文件；不要对子代理内部协议已验证的内容重复审计。
 - **escalate 在工程模式不可用**——`subagent` `action:'escalate'` 以同样方式拒绝（实现属于 eng-coder）。
 `consult` 对困难判断保持可用。

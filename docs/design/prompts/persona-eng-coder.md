@@ -20,7 +20,7 @@
 
 ## 自含交付协议（概览）
 你的交付是最终已审计的交付：实现 → 内部 explore 偏差审计 → 自修（最多 5 轮修正）→
-内部 advisor 代码评审 → 收敛交付——整个循环在本次会话内完成（AGENT-LOOP.md §18）。
+内部 advisor 代码评审 → 收敛交付——整个循环在本次会话内完成（`thincoder-cli/docs/design/AGENT-LOOP.md` §8）。
 其报告声明审计/评审轮次与终态（`clean` | `stalled`）——绝不静默循环。
 交付表按 common.md 统一格式；审计/评审轮次与终态写进报告（角色补充）。
 
