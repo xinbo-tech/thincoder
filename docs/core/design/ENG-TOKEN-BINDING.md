@@ -1,0 +1,123 @@
+# designToken 硬化与生命周期（ENG-TOKEN-BINDING）· 工程模式凭证链板块
+
+> 板块 = **工程模式凭证链（token 生命周期）**——token 是什么 · TTL 与格式 · 跨模式存活 · 清理时机。
+> 相邻权威 = `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md`（结算 / 持久化 / 回读 / 消费——本档**不重述**，D2）· `docs/core/design/CONSULTATION.md`（评审引擎）· `docs/core/design/ENGINEERING-MODE.md`（工程模式流程，CLI 树**未迁**）。
+> 需求侧 = `docs/core/requirements/`（根层**无**对应档）；CLI 树需求档 `thincoder-cli/docs/requirements/ENG-TOKEN-BINDING.md` **未迁**（后续批）。
+> 建档：2026-09-15（**B 式迁移轮 · 第 3 批**——`thincoder-cli/docs/design/ENG-TOKEN-BINDING.md` 内容重建入基准层；旧档原地一字不改、留作参照历史；**旧档 §4/§5 口径陈旧 ⇒ 按现状收正**——见 §8.1）。
+> 本档坐标 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
+
+## 1. designToken 是什么
+
+**流程凭证**——「你评审过了吗？评过才给 token，才能 spawn eng-coder」。它是**防 agent 跳过评审步骤**的机制，**不是防人 / 防仿冒的密码学安全边界**。
+
+**三条铁律（现行）**：
+
+1. **语义 = 流程凭证，非安全边界**。HMAC / 加密因子 / 签名是 **security theater**——agent 只要看到因子就能仿冒生成，但那**无所谓**（机制目标是流程门，不是密码学安全）。token 格式 = `uuid:expiresAt`，**只有格式校验 + TTL，无签名**（2026-09-01 曾加 HMAC——用户裁定删除）。
+2. **生命周期 = 会话级流程凭证，跨模式存活**。token 绑定会话、随模式存活：**ON→OFF 不清、OFF→ON 不重评**（TTL 内上次评审 token 继续有效）。**仅 TTL 过期清**（三个时机见 §4）。会话切换（`/new`）仍清——会话切换不是模式切换。
+3. **单一数据源 = 会话槽权威持久源 + 内存运行态**。slot 持久化是**跨重启 / 跨模式恢复的有意载体**，不是 bug；内存是运行态。一致性经恢复 TTL 过滤 + 清空语义保证——不得造成内存 / 文件双源不一致（结算面细节归 `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md`）。
+
+**防误用纪律（违反即 bug）**：不加 HMAC / 内容绑定；spawn 时**从内存 Map 定位**而非自行签发。
+
+## 2. 明确不做（v1 考古，勿重试）
+
+- **内容绑定全套**（`normalizeForHash` / 头部簿记剥离 / `hashDocuments` / `docKey` 映射 / 交集作废 / 路径归一化）——用户实况否决：批次间文档必然变更，内容绑定会把「偶尔重评」变成「每批必重评」（收益反转）。
+- `TOKEN_SECRET` 随机化、`eng(enter)` 用户同意门——仍留 TODO。
+
+## 3. TTL 与 token 格式
+
+- 默认 TTL **7 天**：`TOKEN_TTL_DEFAULT_MS = 7 * 24 * 3600 * 1000`（`thincoder-core/agent-tools/design-token.mjs:34`）。
+- 配置覆盖：`agent.engTokenTtlMs`——运行期校验（`Number.isFinite(cfg) && cfg > 0`，**非法回退默认**），照抄 advisor `timeoutMs` 口径：`thincoder-core/agent-tools/design-token.mjs:37`（`effectiveTokenTtlMs`）。
+- 格式：`${uuid}:${expiresAt}`——uuid 为 `[0-9a-f]{8}-…-{12}`，`expiresAt` 为数字毫秒时间戳。
+- **格式 + 过期判定的单一权威** = `thincoder-core/token-ttl.mjs:42`（`tokenExpiryMs`）/ `:55`（`tokenExpired`）——由恢复过滤、开模式清理、spawn 门禁过期拒删槽共引（`thincoder-core/token-ttl.mjs:5`–`:8` 注释即此登记）。
+- **过期判定只对格式合法的 token**判过期：格式 / 畸形串不在此清理（恢复时读回由门禁格式拒、门禁拒时也不删槽——防误删有效槽）。
+- `validateDesignToken`（`thincoder-core/agent-tools/design-token.mjs:53`）= `tokenExpiryMs(token) !== null && expiry >= Date.now()`——**fail-closed**。
+
+## 4. 生命周期（现行）
+
+| 事件 | 行为 |
+|---|---|
+| 评审通过 | token 签发入槽（settle）——advisor 回包含 token 即结算，pass 分支后签发 |
+| ON→OFF | **不清**——有效 token 跨模式存活 |
+| OFF→ON | **不重评**——上次评审 token 继续有效（TTL 内） |
+| 重启 / 恢复 | **TTL 过滤**——过期不读回内存（丢弃，下次 save 自然清字段）；有效跨重启存活 |
+| 开工程模式 | 清**过期** token（有效保留）——`eng` enter 真转换路径（`thincoder-core/agent-tools/eng.mjs:74`）· `/eng` ON 路径（`thincoder-cli/src/tui/cmd-eng.mjs:49`） |
+| spawn 门禁 | 过期拒 + **顺手删该 designId 槽**（`thincoder-core/agent-tools/subagent-spawn.mjs:281`——**仅过期拒删**；mismatch / 格式拒**不删**） |
+| 会话切换（`/new`） | 清 token（`resetSessionState`）——会话切换不是模式切换 |
+| TTL | 7 天默认（可配），fail-closed 不变 |
+
+**清理时机三处**（铁律 2）：① 恢复过滤（重启 / 恢复读回前逐槽校验，过期丢弃）；② 开工程模式清过期（遍历 Map 删过期，有效保留）；③ spawn 门禁过期拒时顺手删该 designId 槽（长跑不重启也清）。
+
+## 5. 结算语义（echo 即裁决）
+
+- **token echo 即裁决**——advisor **仅在通过时**回显 token。
+  - echo → 入槽（designId 键；**单值镜像已退役**）；非 echo → 剥离 token 文本返回 findings，**槽不动**（失败的重评不作废任何既有槽）。
+  - 实现：`thincoder-core/agent-tools/design-token.mjs:82`（`settleDesignReview`）。
+- **未完成即不签发**：结算方收到「评审未完成」kind（`opts.incomplete`）⇒ 一律不签发（无论文本是否回显 token）——剥除回显 + 追加未签发提示，**不写槽、不关实例**（可重评）。
+- 错误回包 / abort / 轮次耗尽**不作废**既有槽；`result === null` 守卫保留。
+- 签发 / 校验 / 结算三函数的**宿主模块** = `thincoder-core/agent-tools/design-token.mjs`（自 `advisor-async.mjs` 提取，verbatim 零语义变）；`advisor-async.mjs` 仍 re-export（既有 import 面不变）。
+
+## 6. 机制面（B 式迁移并入——现状路径）
+
+### 6.1 实现坐标（as-of 2026-09-15 实核）
+
+| 面 | 落点 | 实核 |
+|---|---|---|
+| TTL 默认 + 配置覆盖 | `thincoder-core/agent-tools/design-token.mjs:34` · `:37` | 在位 |
+| 签发（无签名） | `thincoder-core/agent-tools/design-token.mjs:44` | 在位 |
+| 格式 + 过期单一权威 | `thincoder-core/token-ttl.mjs:42` · `:55` | 在位 |
+| fail-closed 校验 | `thincoder-core/agent-tools/design-token.mjs:53` | 在位 |
+| 结算（echo 即裁决） | `thincoder-core/agent-tools/design-token.mjs:82` | 在位 |
+| 开模式清过期（工具面） | `thincoder-core/agent-tools/eng.mjs:74` | 在位 |
+| 开模式清过期（TUI 面） | `thincoder-cli/src/tui/cmd-eng.mjs:49` | 在位 |
+| 恢复过滤 | `thincoder-core/session.mjs:304`–`:305` | 在位 |
+| `/new` 清 token | `thincoder-core/session.mjs:437`–`:438` | 在位 |
+| 门禁过期拒删槽 | `thincoder-core/agent-tools/subagent-spawn.mjs:281` | 在位 |
+| 槽清理原语 | `thincoder-core/token-ttl.mjs:65`（`removeDesignTokenSlot`）· `:90`（`purgeExpiredDesignTokens`） | 在位 |
+| TUI OFF 不清 token | `thincoder-cli/src/tui/cmd-eng.mjs`（OFF 路径） | 在位 |
+
+### 6.2 落地状态
+
+R16 语义（跨模式存活 + 三清时机 + 单一权威）**已全部落地**，与本文一致——实核于上表各坐标。
+
+## 7. 并入的关键决策记录（含否决备选）
+
+| # | 决策 | 理由 / 否决备选 |
+|---|---|---|
+| D-E1 | token = **无签名流程凭证**（`uuid:expiresAt`） | agent 能看到因子即可仿冒——签名只是 security theater；否决 HMAC / 内容绑定 |
+| D-E2 | 内容绑定**整套否决** | 文档每批必变 ⇒ 内容绑定把「偶尔重评」变「每批必重评」（收益反转） |
+| D-E3 | 生命周期 = **跨模式存活**（ON↔OFF 不清不重评） | 模式切换不是评审失效的理由；否决「exit 清空」的旧语义 |
+| D-E4 | slot 持久化 = **有意载体**（不是 bug） | 跨重启恢复是刚需；否决「内存单源」（重启即丢） |
+| D-E5 | 过期判定**只对格式合法 token**生效；门禁拒时**仅过期拒才删槽** | 畸形串无从判定——删了会误删有效槽；否决「一律删」 |
+| D-E6 | 清过期只在**三个时机**（恢复 / 开模式 / 门禁过期拒） | 长跑不重启也要清；否决「只在恢复时清」 |
+| D-E7 | 结算三函数**拆出独立模块**（design-token.mjs）+ re-export 保 import 面 | 宿主模块超 500 行硬限；否决「挤在原文件」（越线） |
+
+## 8. 不并项与历史沿革
+
+### 8.1 历史沿革（(d) 类——**不并**）
+
+> 来源档 `thincoder-cli/docs/design/ENG-TOKEN-BINDING.md`（CLI 产品档）——**原地保留作参照历史**（保留 ≠ 维护）。下列内容不并入本档：
+
+| 旧档位置 | 内容 | 何故不并 |
+|---|---|---|
+| 旧档状态行（「已实现 v2 + R16」+ 现码核对注） | 时点状态行 / 一次性核对注 | 批次语境——现行态已入 §3–§6 |
+| **旧档 §4 结算语义括注「入槽（designId 键 + 单值镜像 + eng-coder 门禁标志）」** | 含**已退役**的单值镜像 | **已废结构**——单值镜像随结算批 D3 退役（现状见 `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` §4）；照抄即把已废结构写进权威层 |
+| **旧档 §5 实现落点表**（签发/校验/结算挂 `advisor-async.mjs`；`token-ttl.mjs` 标「（新）`」） | 迁移前宿主模块划分 | 现状 = 三函数住 `agent-tools/design-token.mjs`（`token-ttl.mjs` 仅留 TTL 纯函数 + 槽 I/O）——见 §6.1 |
+| 旧档 §4 表下的「双源 bug 修复设计（旧 F-DS / D-DS / T-DS / AC-DS 块）」与「已确认非 bug」注 | 一次性双源排查流水 | 审计材料——结论已入铁律 3（结算面细节归相邻档） |
+| 旧档 §6 验收行 AC1–AC11 | 一次性验收清单 | 批次材料——现行约束已入 §3–§5 |
+| 旧档变更记录（三条逐批流水） | v2 / R16 / 重写流水（含旧 `src/**` 坐标） | 历史叙述——本档自有变更记录；坐标按现状收正 |
+
+### 8.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
+
+| 旧档面 | 内容 | 何故不并（去向 / 触发） |
+|---|---|---|
+| 工程模式流程本体 | `ENGINEERING-MODE.md` 的流程 / 判据 | CLI 树档**未迁**（后续批）——本档只留凭证链机制 |
+| `TOKEN_SECRET` / `eng(enter)` 同意门 TODO | 未做项的待办指针 | 项目技术待办面（台账 = 父侧）——本档只在 §2 登记「明确不做」 |
+| 需求侧正文 | CLI 树需求档 | 需求档未迁——后续批并入既有档 |
+
+## 9. 体量与拆分规划（R24a）
+
+**实测行数**：本档 **113 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
+
+## 变更记录
+
+- 2026-09-15（**B 式迁移轮 · 第 3 批**）：建档——`thincoder-cli/docs/design/ENG-TOKEN-BINDING.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；**旧档 §4 结算语义 / §5 实现落点两处口径按现状收正**（单值镜像已退役 → 见 `DESIGN-TOKEN-SETTLEMENT.md`；签发/校验/结算宿主 = `agent-tools/design-token.mjs`；`src/**` 迁移前坐标 → 现状路径），旧句逐条登记入 §8.1；坐标全量实核；批次材料 / 状态行 / 变更流水不并（§8）。
