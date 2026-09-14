@@ -725,12 +725,19 @@ F4-3 读不懂就跑（实证优先）· F5-1 需求池攒批（登记 / 阈值�
 **⑤ 三闸读数（改后 · 实跑）**：`doc-anchors --domain .`（125 档）→ 候选 8023 · **悬空 0** · `OK(V5)` · exit 0 ✓
 （本批曾自产 3 处悬空——§6.19 两处裸坐标（`config-io.mjs:213/230`）+ §8.2 登记字面 `T-MA12`——**已当场修**：补 `thincoder-vscode/src/` 仓根前缀 / 去字面用例号）；`check-doc-width` → **OK（宽度）**：403 文件无 >300 字符单行 · **一致性 V1/V2/V3 新增违规 0** · 基线 0 · exit 0 ✓
 （本批曾自产 24 行 >300 非表格行——**已当场折行**：零语义——§6.18/§6.19 长段 + 变更记录 + INVENTORY §13）；`check-ledger` → 两档 `OK` · **0 处违规** · 基线 0 · exit 0 ✓。
-`git status`（workdir = `thincoder`）本批 = **4 档**（core design PROVIDER · core requirements PROVIDER · INVENTORY · 主档）⊆ 写域 ✓；另 3 项（`docs/core/requirements/PHILOSOPHY.md` · `thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md` · `thincoder-vscode/scripts/reconcile-lookup.mjs`）= **并行线未提交 / 工作树既有——非本批写入**（前批已登记）。
+`git status`（workdir = `thincoder`）本批 = **4 档**（core design PROVIDER · core requirements PROVIDER · INVENTORY · 主档）⊆ 写域 ✓；另 3 项（`docs/core/requirements/PHILOSOPHY.md` · `thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md` · `thincoder-vscode/scripts/reconcile-lookup.mjs`）=
+**并行线未提交 / 工作树既有——非本批写入**（前批已登记）。
+> 折行注（父侧 · 零语义）：原 L728 302 字符超宽 ⇒ 仅插换行（2026-09-15 总复核）
 
 **⑥ 发现（逐条 · 不静默）**：
 
 - **① 并行线已完工（qwenplan 渠道名 + TTY-DRIVE 两线）**：PROVIDER design 档现态含 qwen-plan 批 §6.11 行集 + D-PR25 + 变更记录 2 行（评审修正轮）——本批并入均以**现态为基线落笔**（不照抄旧拟插节）；未触碰并行线产物。
-- **② 坐标实核 13 类**：`routeUserTurn` `panel-messages.mjs:59` · `runVisionReader` / `VISION_READ_TIMEOUT_MS` `image-handler.mjs:65/:64` · `appendImagePointer` `setup-reminders.mjs:216`（`setup.mjs:455` 调用）· 降级窗 `_visionAbort` `:90/:93` · abort 定向 `:236-237` · 停后闩 `:104` · `newTurnController` `panel-chat.mjs:59-60/:129` · `specForModel`/`providerSpec`/`resolveEnableThinking`/`isBailianHost` `config.mjs:106/142/183/166` · `PROVIDER_PRESETS`/`presetToEntry` `config-presets.mjs:10/35` · `resolveProviders`/`resolveDefaultModel`/`probeTargetFromEntry` `config-io.mjs:167/213/230` · `addProviderFlow` `provider-flows.mjs:106` · `fullStatus` `settings.mjs:308` · `generateTitle` `generate-title.mjs:13`（thinkingConfig `:57`）· `chat`/`TRANSPORTS` `provider.mjs:122/110`——**全部按现状实核落笔**（源档旧坐标漂移 0 类——全部命中）。
+- **② 坐标实核 13 类**：`routeUserTurn` `panel-messages.mjs:59` · `runVisionReader` / `VISION_READ_TIMEOUT_MS` `image-handler.mjs:65/:64` · `appendImagePointer` `setup-reminders.mjs:216`
+  （`setup.mjs:455` 调用）· 降级窗 `_visionAbort` `:90/:93` · abort 定向 `:236-237` · 停后闩 `:104` · `newTurnController` `panel-chat.mjs:59-60/:129` ·
+  `specForModel`/`providerSpec`/`resolveEnableThinking`/`isBailianHost` `config.mjs:106/142/183/166` · `PROVIDER_PRESETS`/`presetToEntry` `config-presets.mjs:10/35` ·
+  `resolveProviders`/`resolveDefaultModel`/`probeTargetFromEntry` `config-io.mjs:167/213/230` · `addProviderFlow` `provider-flows.mjs:106` · `fullStatus` `settings.mjs:308` ·
+  `generateTitle` `generate-title.mjs:13`（thinkingConfig `:57`）· `chat`/`TRANSPORTS` `provider.mjs:122/110`——**全部按现状实核落笔**（源档旧坐标漂移 0 类——全部命中）。
+> 折行注（父侧 · 零语义）：原行 796 字符超宽 ⇒ 仅插换行（2026-09-15 总复核）
 - **③ 两源档的姿态**：`thincoder-vscode/docs/design/{PROVIDER,IMAGE-DOWNGRADE-VISION}.md` **一字未改**（参照历史；git status 无这两档）。
 - **④ 语义面零碰**：本批全部属一致性面 / 并入面；无需求矛盾 / 归属变化 / 判据缺失（任务书「(a)(b)(c) 并 · (d) 不并」判据全程可判）——**零停报**。
 - **⑤ INVENTORY 越线收回**：终收更新曾达 501 行 > 500 硬限 ⇒ 压缩 §10 批 9 独立行为「待落清零」行（D2 明细 = 批次档 §2）· §9 批 9 段行内收窄 → 500 行 ✓。
@@ -749,7 +756,9 @@ F4-3 读不懂就跑（实证优先）· F5-1 需求池攒批（登记 / 阈值�
 | 6 | 逐档 ≤500 · 三闸（锚 0 / 宽度新增 0 / 台账 0）· `git status` ⊆ 写域 | ✅ Done | 见 ⑤（360 / 145 / 500 / 139——均 ≤500 ✓ · 三闸全绿 · 本批 4 档 ⊆ 写域） |
 | 7 | 不 commit · 不发起评审 · `thincoder-vscode/**` 零写入 | ✅ Done | 未 commit；两源档一字未改（`git status` 实核）· INVENTORY 越线收回（501 → 500） |
 
-**变更记录**：- 2026-09-15（**§8B 终收批 = 并入批 4** · eng-designer）：§8B #4 / #7 并入（core PROVIDER design §6.18 图片输入与贴图降级链 + §6.19 VS Code 端接线 · D-PR26/27 · §8.2 登记 · 需求档 §4.5 F-IDG 系）+ req/TOOLS.md 核对（§4.6 完整 · §4.7 保留 · 零写入）+ INVENTORY §8B 清零（26 = 8 + 8 + 6 + 2 + 2）+ 主档状态行收口 + 三闸全绿（锚 0 · 宽度新增 0 · 台账 0）+ INVENTORY 越线收回（501 → 500）。
+**变更记录**：- 2026-09-15（**§8B 终收批 = 并入批 4** · eng-designer）：§8B #4 / #7 并入（core PROVIDER design §6.18 图片输入与贴图降级链 + §6.19 VS Code 端接线 · D-PR26/27 · §8.2 登记 · 需求档 §4.5 F-IDG 系）+ req/TOOLS.md 核对（§4.6 完整 · §4.7 保留 · 零写入）+ INVENTORY §8B 清零（26 = 8 + 8 + 6 + 2 + 2）+
+主档状态行收口 + 三闸全绿（锚 0 · 宽度新增 0 · 台账 0）+ INVENTORY 越线收回（501 → 500）。
+> 折行注（父侧 · 零语义）：原行 321 字符超宽 ⇒ 仅插换行（2026-09-15 总复核）
 
 ## §3 评审发现（评审子代理）
 
