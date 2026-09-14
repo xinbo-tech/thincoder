@@ -264,6 +264,64 @@ J 个 = 各档「不并项与历史沿革」节内逐条登记（旧档节 + 何
 
 **变更记录** ✗：- 2026-09-15（**B 式迁移轮 · VSC 第 4 批** · eng-designer）：§2 建档——统一面纯新建 6 档 + §8A 收口（小计闭合 18 = 6 + 6 + 6）。
 
+**本批任务（B 式迁移轮 · VSC 第 5 批——重派）** ✗：§8A 剩余纯新建（需求 6 档 · 逐档落笔时点实核 ✓）+ `docs/vsc/design/VSC-MIGRATION.md` **拆分**（560 行 > 500 硬限 ✓）+ §8A / §4 / §6 批 5 更新与小计闭合 ✓。
+
+**范围内（本批覆盖的需求）** ✗：F-M3（当场迁活档 + 逐档报「旧档 → 落点」）· F-M4（落点档不含批次材料 + 不并项逐项登记）· F-M5（坐标改现状路径并实核）· F-M7 / F-M8（§8A 逐档判 + 小计闭合）· F-M9（并入面逐条——ADVISOR-CONVERGENCE 转 §8B-26）· N-M1（判不准单列——本批零判不准）· N-M2 / N-M3 / N-M5（三闸 + 写域）。批 1–4 已闭合者不重开。
+
+**① 逐档「实核判 → 落点 → 并入 K / 不并 J」（§8A 剩余 6 档 · 落笔时点 = 2026-09-15 03:0x 实核）** ✗：
+
+| # | 源档（`thincoder-vscode/**`·一字未改） | 行 | 实核判（落笔时点） | 落点 | 落点行 | 并入 K / 不并 J |
+|---|---|---|---|---|---|---|
+| 1 | `requirements/ADVISOR-CONVERGENCE.md` | 57 | **转并入既有**——目标 `docs/core/requirements/ADVISOR-CONVERGENCE.md` 已由并行 CLI 批建并提交（其 `:8` / §7 登记「VSC 端对位面不并入，触发 = VSC 轮」） | **跳过新建** ⇒ §8B-26 | — | K = 0 · J = 0（本批零写入该档——不覆盖他线产物 ✓） |
+| 2 | `requirements/DESIGN-TOKEN-SETTLEMENT.md` | 42 | 活 · 核层无同名档（实核目录） | `docs/core/requirements/DESIGN-TOKEN-SETTLEMENT.md` | 74 | K = 0（纯新建）· J = 5 个（§6.1 / §6.2） |
+| 3 | `requirements/ENG-TOKEN-BINDING.md` | 48 | 同上 | `docs/core/requirements/ENG-TOKEN-BINDING.md` | 73 | K = 0 · J = 5 个 |
+| 4 | `requirements/PORTABILITY.md` | 51 | 同上 | `docs/core/requirements/PORTABILITY.md` | 77 | K = 0 · J = 5 个 |
+| 5 | `requirements/VERIFY-REDESIGN.md` | 34 | 同上（设计侧 `docs/core/design/VERIFY-REDESIGN.md` 在位） | `docs/core/requirements/VERIFY-REDESIGN.md` | 65 | K = 0 · J = 3 个 |
+| 6 | `requirements/PROJECT.md` | 118 | 活 · 档内混装（§7.2 D4）⇒ **拆分双落**（父侧任务书裁定） | `docs/core/requirements/PROJECT.md`（83 行 · 定性面）+ `docs/vsc/requirements/PROJECT.md`（72 行 · VSC 专有面） | 83 / 72 | K = 0 · J = 各 3 个（两档各有「不并项与历史沿革」） |
+
+**PROJECT 处置与依据** ✗：切分规则 = **跨产品契约（与 CLI 共享磁盘文件 / 协议 / 行为对齐）⇒ core；仅本端实现 / 界面 / 宿主面 ⇒ vsc**。
+逐条归属落两产物档「不并项与历史沿革」节（core 档 §5.2 给切分规则与去向表；vsc 档 §4.2 给反向登记）。**无判不准项**（决策表 11 行 + 待决策 7 项 + 时序节逐条可判）——Session 标题 / MODEL_SPECS / LLM 调用等边界行按「档内自述为本端决策、无跨端契约语义 ⇒ VSC 专有面」判定，判据同写于 core 档 §5.2。
+
+**② `VSC-MIGRATION.md` 拆分（批 4 未决 1 落）** ✗：切面 = 台账面整体移出（承 §13 候选①扩形）——
+§3 实点 / §4 二分表 / §5 历史档 / §8 待另批 / §9 实迁记录 / §10 受影响文件 / §11 关键决策 / §12 验收标准 / §13 体量 / §14 用例表 / §15 边界 ⇒ 新档
+**`docs/vsc/design/VSC-MIGRATION-INVENTORY.md`**（节号承原号，§8B-1 类指针不断）；主档只留 判据（§1 / §2）/ 分批计划（§6）/ 待裁（§7）/ 变更记录。
+**两档行数（实核）**：主档 **132** · INVENTORY **484** ——均 ≤500 ✓；拆分登记写进两档头注 ✓。
+
+**③ §8A / §4 / §6 更新 + 小计闭合（D3）** ✗：
+§8A 重写为批 5 收口表（14 行逐档）——**小计闭合：18 = 6（批 4 新建）+ 7（转并入既有——含批 5 翻转的 ADVISOR-CONVERGENCE）+ 4（批 5 新建）+ 1（批 5 拆分双落——源档 1 档 / 产物 2 档）** ✓
+（设计 5 = 1+4+0 · 需求 13 = 5+3+4+1）。**§8A 闭合**——新建面无剩余。
+§4.2 六行同步：ADVISOR-CONVERGENCE 转「并入既有（§8B-26）」· 四行「已迁（批 5）」· PROJECT「已迁（批 5）——拆分双落」；
+§8B +1 条（26 条——ADVISOR-CONVERGENCE VSC 端对位面 F-A1–F-A12 / N-A1–N-A6 + 端差登记四条 ⇒ `docs/core/requirements/ADVISOR-CONVERGENCE.md` 新增「VSC 端对位面」节）；
+§6 加批 5 行（已落）+ 批 6+ 行（§8B 26 条 + 待裁 D1–D3）；**批 4 发现 ⑦ 的过期「批 3+」行并入「批 6+」行收正**（计划行被取代——当场修，零语义）。
+§7.2 D4 标「批 5 已裁定并执行」（销项——父侧任务书裁定）；§9.5 / §10 批 5 / §11 D-VM10–D-VM11 / §12.4 A-VM21–A-VM26 / §13 拆分实落。
+
+**④ 三闸读数（改后 · 实跑）** ✗：
+`check-ledger` → 两档 `OK` · **0 处违规** · 基线 0 条 · exit 0 ✓。
+`check-doc-width` → **OK（宽度）**：扫描域 399 文件无 >300 字符单行 · **一致性 V1/V2/V3 新增违规 0** · 基线 0 · exit 0 ✓（本批曾自产 2 条 V1 违规——`TESTING.md §8.1` 裸名锚 + 「本档 §2」无节引用——**已当场修**：改 `TESTING（VSC 侧）§8.1` 引-2 形态 / 「批次档 §2」）。
+`doc-anchors`（域一 = 本仓基根 · 123 档）→ 候选 7126 · **悬空 0** · 注记豁免 252 · `OK(V5)` · exit 0 ✓（**本批 8 档贡献 0**——本批曾自产 8 处 V5-A 悬空：变更记录内旧坐标字面形 ×4 · 旧树归位档路径 ×2 · PORTABILITY 缩写路径 ×2——**已当场修**：改仓根全路径 / 非锚叙述形）。
+**域二（CLI 树域 · 99 档）→ FAIL 1 条**：`docs/design/TWO-REPO-MERGE.md:404` 引 `DOC-CODE-RECONCILE.md:98`——CLI 树档，**非本批写域、非本批写入**（如实报；建议随 CLI 线收正）。
+`git status`（workdir = `thincoder`）本批改动 = **8 项**（新建 7 档：5 core 需求档 + INVENTORY + vsc PROJECT · 实修 1 档：`docs/vsc/design/VSC-MIGRATION.md`）+ 批次档 §2 append ✓ ⊆ 写域；
+另 `thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md` 改动 = **非本批写入**（前批已登记的父侧 / 并行工作树状态）。
+
+**⑤ 未决（真判不准）** ✗：**无**——PROJECT 切分逐条可判（判据句落档）；§7.1 待裁 D1–D3（RELEASE / FEATURES / AGENT-LOOP 需求节归属）= 批前已登记的开放裁定项，**不属本批新产出**，仍待父侧定判（批 5 零写入）。
+
+**⑥ 交付表** ✗：
+
+| # | 需求点 | 状态 | 交付物 |
+|---|---|---|---|
+| 1 | §8A 剩余纯新建逐档实核落笔（≤6 档） | ✅ Done | 4 档新建在位（74 / 73 / 77 / 65 行）+ PROJECT 拆分双落（83 / 72 行） |
+| 2 | ADVISOR-CONVERGENCE 已建 ⇒ 转并入或跳过并写明 | ✅ Done | 跳过新建（不覆盖他线产物）· §8B-26 登记 + §4.2 / §8A 同步 |
+| 3 | PROJECT 按实测拆（定性 ⇒ core · VSC 专有 ⇒ vsc；判不准 ⇒ 停报） | ✅ Done | 双落 + 切分规则与逐条归属落档；零判不准 |
+| 4 | 已存在目标不覆盖他线产物 | ✅ Done | 既有 `docs/core/**` 档零写入（`git status` 实核） |
+| 5 | B 式（旧档一字不改）· 剔料 · (d) ⇒ 不并项节 | ✅ Done | 6 档源档零改；各落点档含「不并项与历史沿革」· 无状态行 / 无逐批流水 |
+| 6 | 坐标改现状路径 + 实核 · 不引 `T-` 形跨域用例号 | ✅ Done | 全量仓根路径 + 逐条实核（漂移 2 类按现状改写）；6 档零 `T-` 形编号（锚闸 0） |
+| 7 | `VSC-MIGRATION.md` 拆分 · 两档 ≤500 · 拆分登记两档 | ✅ Done | 主档 132 / INVENTORY 484（实核）· 登记写进两档头注 |
+| 8 | §8A / §4 / §6 批 5 更新 + 小计闭合 | ✅ Done | **18 = 6 + 7 + 4 + 1** ✓（§8A 闭合）；§6 过期行收正 |
+| 9 | 三闸（域一锚 0 / 宽度新增 0 / 台账 0）· 逐档 ≤500 · `git status` ⊆ 写域 | ✅ Done | 见 ④（域二 FAIL 1 条 = CLI 树档，非本批——如实报） |
+| 10 | 不 commit · 不发起评审 · 写域外零写入 | ✅ Done | 全程未 commit；`docs/cli/**` / `scripts/**` / 产品树 / 核树 / 台账 / prompts 零写入 |
+
+**变更记录** ✗：- 2026-09-15（**B 式迁移轮 · VSC 第 5 批** · eng-designer）：§2 append——§8A 剩余纯新建 5 档（含 PROJECT 拆分双落）+ ADVISOR-CONVERGENCE 转 §8B-26 + `VSC-MIGRATION.md` 拆分（主档 132 / INVENTORY 484）+ §8A 闭合（18 = 6 + 7 + 4 + 1）。
+
 ## §3 评审发现（评审子代理）
 
 _（待写）_
