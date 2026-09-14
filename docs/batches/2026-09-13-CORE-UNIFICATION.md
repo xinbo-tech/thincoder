@@ -2406,6 +2406,33 @@
 
 **读数收正（append-only 补记）**：上「三、验收判据」本轮行内设计档读数记 **786→973**——该数为自检折行**前**的中间态；折行（+7 行）后**终态 = 980 行（786→980 · +194）**。需求档 177 行（130→177 · +47）不变。两档终态行数以本行为准（复跑读数一致）。
 
+### 族 1 接线方案 · 评审修正轮（2026-09-14 · eng-designer）
+
+**段位**：本段 = S2 族 1 接线方案（§2.6.2）的评审修正轮——评审 #80（pass · 0 🔴 · 3 🟡 · 3 🔵）逐条落修。只改设计档 `docs/design/CORE-UNIFICATION.md`；核 / 两产品 / 机检脚本零触碰；未 commit；未碰台账；未发起评审。
+
+**六条落地（改前 → 改后）**
+
+| # | 严重度 | 落点 | 改前 → 改后 |
+|---|---|---|---|
+| 1 | 🟡 | §2.6.2（四）CLI 源 / VSC 源两行 | 「6 处 import / re-export 改指」→ 补**头注订正**（CLI `src/advisor.mjs:4` / VSC `src/advisor/main.mjs:6`——`advisor/history.mjs` 指针改核路径 / 注记形态，与两产品测试头注同法）——零引用闸与改动集一一对应 |
+| 2 | 🟡 | §2.6.2（四）超软线判定 | 「无一越过 300 行（最高 299）」→ 「`thincoder-vscode/src/advisor/main.mjs` **320** = 既有超软线档 · 本族只做行内替换 ⇒ 结构未变 · 拆分计划另议（消解条件 = 该档下次实质改动时）」 |
+| 3 | 🟡 | §2.6.1 CI 行 | `cd thincoder-core && npm link` → **相对 job cwd**：① `cd ../thincoder-core && npm link` ② `npm link @thincoder/core`（实核 `.github/workflows/test.yml:9` = `thincoder-cli` / `:22` = `thincoder-vscode`） |
+| 4 | 🔵 | §2.8 CI 行 + §2.6.2（四）CI 行 | 40 / +16±6 与 41 / +12±6 → 统一 **40 行 · +14±6**（`wc -l` 实核 = 40） |
+| 5 | 🔵 | §2.2 契约 4 | 「零 manifest / lock 污染」→ 补同源括注（R8④：`npm link` 自身零污染；链接态 `npm install` 写 `"link": true` 条目 ⇒ 该变更不入提交——口径见 §2.6.1） |
+| 6 | 🔵 | §2.11 A3 残余 | ①–④ → 补 ⑤⑥⑦（S2 期：产品 lock 非权威 / 产品 job CI 必显式 `npm link` /〔推演 · 未实测〕产品目录 `npm ci` 与已提交 lock 不自洽） |
+
+**实核读数（本段 · cwd = 仓根）**：两处存活注释逐处命中（CLI `thincoder-cli/src/advisor.mjs:4` · VSC `thincoder-vscode/src/advisor/main.mjs:6`）；`wc -l` 实核：`main.mjs` **320** · CLI `messages.mjs` **299** · 工作流 **40**（`:9` / `:22` = 两产品 job 工作目录）。
+
+**三机检读数（cwd = 仓根 · 设计档落笔后实跑）**
+
+| # | 机检 | 读数 | 判 |
+|---|---|---|---|
+| 1 | `doc-anchors` | 域一（32 档）候选 **1962** · 悬空 **0** · 注记豁免 29；域二（99 档）候选 8857 · 悬空 0；VSC 引擎报告态命中 **0**——`OK(V5): 0 条悬空锚` | ✓ exit 0 |
+| 2 | `check-doc-width` | `OK(宽度)：306 文件无 >300 字符单行`；一致性 V1/V2/V3：新增违规 **0** · 存量 0 | ✓ exit 0 |
+| 3 | `check-ledger` | `0 处违规` · 基线 0 条（TODO / TODO-archive 双 OK） | ✓ exit 0 |
+
+**观察（不阻断 · 同族口径项）**：法 1 三模式 grep 为纯子串形态 ⇒ 改后新形态行（`@thincoder/core/advisor/history.mjs`）仍含 `advisor/history.mjs` 子串（`includes` 实测 = true）——按最字面运行命中 ≠ 0；评审 #80 / 父侧口径 = 「枚举外零残存」。是否在 §2.6.2（五）法 1 补一行判读口径（或由实施轮按口径执行），待父侧定。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
