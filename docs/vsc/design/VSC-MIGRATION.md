@@ -64,6 +64,8 @@
 ### 2.4 权威性与维护（B 式的代价处置）
 
 迁移完成后：**基准层活档 = 权威**；产品树旧档 = **参照历史**（保留 ≠ 维护——`docs/README.md` §2）。同一话题在两者同时存在期间，**以基准层为准**；旧档不参与内容同步（「不逐字一致、不加跨面同步依赖」——多实现面纪律）。
+>
+> **产品树降格声明（2026-09-15 · 收尾轮）**：`thincoder-vscode/docs/**` = **迁移期参照历史**（保留 ≠ 维护 ✓ · 不迁不删 ✓ · 不进机检闸面 ✓ —— VSC 域 21 处报告态的口径依据 ✓）。
 
 ## 6. 分批计划（批序 · 每批 ≤6 档 · 写域）
 
@@ -74,10 +76,10 @@
 | **批 3** | 统一面（P1）64 档**复判** + 纯新建第一批（3 板块设计 / 需求成对） | 6 | `docs/core/{design,requirements}/{TURN-CAP-CONTINUE,SEND-STALL-DISTILL,ESCALATE}.md` | `docs/core/**` | **已落**（INVENTORY §9.3） |
 | **批 4** | 统一面**纯新建**（落笔时核层无同话题档者） | 6 | `docs/core/{design,requirements}/{DOC-CODE-RECONCILE,AGENT-PARAMS,NORMAL-MODE,MULTI-INSTANCE-COLLAB,SETTINGS-TOOL,STRUCTURE-DEBT}.md` | `docs/core/**` | **已落**（INVENTORY §9.4） |
 | **批 5** | §8A 剩余纯新建（5 档——ADVISOR-CONVERGENCE 翻转跳过 · PROJECT 拆分双落）+ 本档拆分 | 6 | `docs/core/requirements/{DESIGN-TOKEN-SETTLEMENT,ENG-TOKEN-BINDING,PORTABILITY,VERIFY-REDESIGN,PROJECT}.md` · `docs/vsc/requirements/PROJECT.md` · `docs/vsc/design/VSC-MIGRATION-INVENTORY.md` | 新建 core 需求档 + `docs/vsc/**` | **已落**（INVENTORY §9.5） |
-| **批 6+** | §8B 并入清单 **26 条**（转并入既有面）+ 待裁 D1–D3 定判后处置 | 26+ | INVENTORY §8B 逐条给定 | `docs/core/**`（+ 待裁项 `docs/vsc/**`） | **待父侧另批**（串行——避与 CLI 批同文件覆盖） |
-| **收尾批** | 产品树两份地图（`design/README.md` · `requirements/README.md`）随树降格处置 | 2 | —— | 父侧 | 待排 |
+| **批 6+** | §8B 并入清单 **26 条**（转并入既有面）+ 待裁 D1–D3 定判后处置 | 26+ | INVENTORY §8B 逐条给定 | `docs/core/**`（+ 待裁项 `docs/vsc/**`） | **在途**（串行——避与 CLI 批同文件覆盖；批 6·7·8 已并入 24 条 → INVENTORY §8B） |
+| **收尾批** | 产品树两份地图（`design/README.md` · `requirements/README.md`）随树降格处置 | 2 | —— | 父侧 | 待排（收尾轮 2026-09-15：产品树降格声明已落 §2.4 · 地图处置仍待父侧） |
 
-**批 5 后状态**：§8A 新建面**闭合**（18 = 6 + 7 + 4 + 1——INVENTORY §8A 小计）；剩余 = §8B 并入面 26 条 + 待裁 3 条（§7.1）。
+**收尾轮状态（2026-09-15 · eng-designer）**：§8A 新建面**闭合**（18 = 6 + 7 + 4 + 1——INVENTORY §8A 小计）；§8B 并入 **24/26**（批 6·7·8）· 余 **#4 / #7**（PROVIDER 目标——待并行线完工 → 父侧终收）；待裁 D1–D3 **已裁定**（§7.1）。
 
 ## 7. 待核（**已销项**——既有裁定）
 
@@ -88,7 +90,9 @@
 | 1 | `design/VSC-PROMPTS.md`（309） | **原地保留不动** | 镜像面——既有裁定（中文设计档原地保留 + VSC 全押后）；批 1 的两读法（P1 / P2）不再需要择一 |
 | 2 | `design/prompts/*.md`（15 档 · 1026 行） | **原地保留不动** | 同上（正本已在 `docs/core/design/prompts/`） |
 
-### 7.1 待裁（批 3 登记——**归属疑变 3 条**，仍开放）
+### 7.1 待裁（批 3 登记——归属疑变 3 条 · **2026-09-15 已裁定**）
+
+> **裁定（2026-09-15 · 批次档 §2 批 6 随批落笔）**：D1 / D2 = P2 成立 → 另落 `docs/vsc/` 对应层（落笔待父侧另派——INVENTORY §4.1-33 / §4.2-12 已标记）· D3 = 维持现状（VSC 面需求节留 core 档 §5 内——§8B-18 销项）。
 
 **为何入待裁而非自定**：3 条的**判**均唯一（不属「判不准」），但 3 条均改变**归属（落点）** —— 属**语义面**（「归属变化」），不得由写稿方自行定案 ⇒ 单列待裁。
 
@@ -98,7 +102,7 @@
 | D2 | `requirements/FEATURES.md`（21） | `docs/core/requirements/` | `docs/vsc/requirements/`（P2） | v1 功能范围 = 产品面清单；CLI 同判（同上 §2.2 第 14 行 → `docs/cli/requirements/FEATURES.md`） |
 | D3 | `requirements/AGENT-LOOP.md`（355） | `docs/core/requirements/AGENT-LOOP.md`（原地） | **VSC 面需求节** ⇒ `docs/vsc/requirements/` | 该 core 档 §5（`:129`-`:132`）自述「旧档 §3 / §5 / §8 / §13（VSC 面需求节）……**归属面为 VSC 部分（`docs/vsc/requirements/`）**」——与原判相悖 |
 
-**D1 / D2 的连带**：两档若定判为 P2，则 INVENTORY §4.1 / §4.2 对应行的「动作」随之改为「另落 `docs/vsc/**`」。
+**D1 / D2 的连带（已执行）**：两档已定判为 P2（2026-09-15），INVENTORY §4.1 / §4.2 对应行的「动作」已改为「另落 `docs/vsc/**`」（批 6 落笔）。
 **D3 的连带**：core 档已明载其归属，与原判相悖——**两读法均已登记，不静默归类**；定判后同批收正 core 档的登记句（触发 = 父侧）。
 
 ### 7.2 批 4 登记的归属疑变（D4——**批 5 已裁定并执行**）
@@ -129,3 +133,5 @@
   §8A 剩余 6 档逐档落笔时点实核——4 档纯新建（`DESIGN-TOKEN-SETTLEMENT` / `ENG-TOKEN-BINDING` / `PORTABILITY` / `VERIFY-REDESIGN`）·
   ADVISOR-CONVERGENCE 目标已被并行 CLI 批建成 ⇒ **跳过新建**转 §8B-26 · PROJECT 按父侧裁定**拆分双落**（core 定性面 + vsc 专有面——§7.2 D4 销项）；
   **§8A 闭合**（18 = 6 + 7 + 4 + 1）；本档 560 行越硬限 ⇒ 拆出台账面 ⇒ `VSC-MIGRATION-INVENTORY.md`（两档拆分登记；§6 过期「批 3+」行并入「批 6+」行收正）。
+
+- 2026-09-15（**收尾轮 · eng-designer**）：台账状态面核对（§3–§5 实点/二分/历史档 · §4.3 小计闭合 · §6 分批行 · §7.1 待裁已裁定登记）· §8A/§8B 行头标「进行中」（INVENTORY）· 产品树降格声明落 §2.4 —— 批 6–8 变更记录 = 批次档 §2 + INVENTORY §8B/§9（D2，本档不重复）。
