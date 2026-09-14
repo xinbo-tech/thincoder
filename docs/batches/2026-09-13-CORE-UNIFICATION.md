@@ -6266,5 +6266,156 @@ A5 三条复跑读数与 ③ 表（§5 写入前）逐数一致。
 **收正注（同轮 · 首版后置）**：§5 首版后 `check-doc-width` 一致性闸命中本段 1 行（V2：`:6052`「删旧三条」声明 3 ≠ 枚举 4——续行 `:6056` 以 `+ ` 开头被计为第 4 列表项）⇒ 收正 = `:6056` 行首 `+ ` → 「另含 」（零语义：续行文字）；
 复跑 = 一致性新增违规 **0** 条 · 宽度 321 档无 >300 字符行 · exit 0。
 
+### 实施：文档迁移 · 第 1 批 —— 提示词正本位移（2026-09-14 · eng-coder）——**终态 = clean**
+
+**段位**：文档体系板块（DOC-SYSTEM）follow-on —— **迁移批第 1 批**（触发 = 用户 21:38「cli 修改完成以后要尽快迁移进根仓」；CLI 代码面 16/16 已完工）。
+**写域** = 仓根 `docs/**`（含新建 `docs/core/**`）。**零代码**：`thincoder-core/**` 实现零改 · `scripts/**` 零改 · 两产品 `src/**` / `test/**` 零改 · VSC 零触碰；**未 commit**（父侧统一）、**未发起评审**（发起权 = 用户）。
+
+**依据** = `docs/design/DOC-SYSTEM.md` §3.1（轴向选型）/ §4（目标树 + 去向表）/ §5.1（P1 统一面判据）/ §9 修法 1（串级扫替）/ §11；父侧任务书。
+
+**改动面**
+
+| # | 面 | 档 / 量 | 动作 |
+|---|---|---|---|
+| 1 | 正本位移 | `docs/design/prompts/*.md` → `docs/core/design/prompts/*.md`（15 档） | **`git mv`**（移动非拷贝——README §2 单一实体；`git status` = 15 条 `R`） |
+| 2 | 引用改指（根仓指代） | 4 档 / 18 站（逐站点见 ②） | 改指 `docs/core/design/prompts/…` |
+| 3 | 迁移注记 | `docs/README.md` · `docs/design/CORE-UNIFICATION.md` · `docs/requirements/PROMPT-SYSTEM.md` | 各留注记行（变更记录） |
+
+**① `git mv` 逐档结果（15 档 · 全 = `R` 重命名 · 0 丢失 / 0 残留）**
+
+| # | 档名（新址 = `docs/core/design/prompts/`） | git 状态 |
+|---|---|---|
+| 1 | advisor-design.md | R |
+| 2 | advisor-round1.md | R |
+| 3 | advisor-round2.md | R |
+| 4 | advisor-round3.md | R |
+| 5 | common.md | R |
+| 6 | consult-base.md | R |
+| 7 | discipline-engineering.md | R |
+| 8 | discipline-normal.md | R |
+| 9 | persona-coder.md | R |
+| 10 | persona-eng-coder.md | R |
+| 11 | persona-eng-designer.md | R（+ 行内 1 处根仓指代改指——见 ②） |
+| 12 | persona-engineering.md | R |
+| 13 | persona-explore.md | R |
+| 14 | persona-normal.md | R |
+| 15 | persona-plan.md | R |
+
+旧址 `thincoder/docs/design/prompts/` 已不存在；档名集合与两产品树同名 15 档（`thincoder-cli/docs/design/prompts/` · `thincoder-vscode/docs/design/prompts/`）逐名一致（未触碰）。
+
+**② 引用改指逐站点清单（档 + 行 · 已改 / 无需改）**
+
+**已改（根仓指代 → `docs/core/design/prompts/…`）**
+
+| # | 档 | 行 | 站点性质 |
+|---|---|---|---|
+| 1 | `docs/README.md` | `:3` | 首部层级定位的「提示词正本 = …」指针 |
+| 2 | `docs/design/CORE-UNIFICATION.md` | `:45` | B19② 「仓根 `docs/design/prompts/`」+ 同句「根仓 `docs/` = 基准层（… = 提示词正本）」括注 |
+| 3 | 同上 | `:68` | §2.2 形态树 `docs/` 行（基准层内容列举） |
+| 4 | 同上 | `:69` | §2.2 形态树 `core/design/prompts/` 节点 |
+| 5 | 同上 | `:80` | 「运行期面 vs 文档面（硬）」· 中文设计档路径 |
+| 6 | 同上 | `:1014` | D-C14 决策记录（行内 2 处） |
+| 7 | 同上 | `:1045` | §2.8 受影响文件表「中文设计档（文档面 · 基准层正本）」行 |
+| 8 | 同上 | `:1130` | §2.9 第 3 条（单一权威源纪律） |
+| 9 | 同上 | `:1131` | 同上（内容权威面句） |
+| 10 | 同上 | `:1307` | §2.13.2 引用目标收正块（「正本 `docs/design/prompts/`」） |
+| 11 | 同上 | `:1552` | §3.1 T-C8 行「仓根 `docs/design/prompts/` 清点」 |
+| 12 | 同上 | `:1916` / `:1918` | 变更记录「正本自洽轮」块行内指代 |
+| 13 | `docs/design/DOC-SYSTEM.md` | `:99` | 目标树节点注解的「现 docs/design/prompts/」现址句（收正为「（15 档）」） |
+| 14 | 同上 | `:326` / `:349` | 待落行（正本档路径 = 可执行落点） |
+| 15 | `docs/requirements/PROMPT-SYSTEM.md` | `:29` | 回填条内「根仓 `docs/` = 基准层、… = 提示词正本」 |
+| 16 | `docs/core/design/prompts/persona-eng-designer.md` | `:13` | 正本内写域排除句（本产品自研仓 = docs/，扣除 …） |
+
+**迁移注记（同批留痕）**：`docs/README.md:78` · `docs/design/CORE-UNIFICATION.md:1920-1921` · `docs/requirements/PROMPT-SYSTEM.md:53-54`（各一行 / 一块，记位移 + 改指面 / 保留面口径）。
+
+**无需改（逐站点语义三分清点——判定与依据）**
+
+| # | 面 | 站点（档:行） | 判定依据 |
+|---|---|---|---|
+| 1 | **产品树相对形态** | `thincoder-cli/**` · `thincoder-vscode/**`（全树 346 站） | §9 修法 1 明令「**两产品树排除**（同名目录 = 迁移期参照历史，**不得改指**）」（`DOC-SYSTEM.md:297`） |
+| 2 | 产品树相对形态（根层档内） | `CORE-UNIFICATION.md` `:12` `:31` `:40` `:183` `:278` `:314` `:417` `:425` `:428` `:1046` `:1066` `:1163` `:1552`（后半）`:1554` `:1648` · `PROMPT-SYSTEM.md` `:15` `:43` `:47-56` `:67` `:68` `:97` `:102` `:115-117` · `requirements/CORE-UNIFICATION.md` `:73` `:103` · `requirements/PROMPT-SYSTEM.md` `:11` `:29` · `DOC-SYSTEM.md` `:151` `:153` `:420` | 行文自述「**两端** / **两产品** / 镜像对」或列头 = 「**相对路径** / 对位」（`PROMPT-SYSTEM.md:45`）；同一实体在同档 `:15` 用产品前缀形；产品树同名目录原地保留 ⇒ 指代仍真 |
+| 3 | 迁移记录（现址 → 去向的映射） | `DOC-SYSTEM.md` `:127`（去向表现址列）· `:290`（自洽表 ③ 既有裁定引文）· `:293` `:297`（修法 1 文本与判据句自身）· `README.md:78` · `CORE-UNIFICATION.md:1920` · `requirements/PROMPT-SYSTEM.md:53` | 这些站点**必须**写出旧路径（否则去向表 / 扫替判据失去对象）；按「记录 ≠ 引用」判保留 |
+| 4 | 运行期 / 工具面默认值 | `scripts/mirror-divergence.mjs` `:18` `:38` `:39` `:55` `:56` `:82` | `DEFAULT_MIRROR_A/B` = 产品树目录（`thincoder-cli/…` · `thincoder-vscode/…`），与仓根正本无关；`:82` 花括号简写为既有登记项（`CORE-UNIFICATION.md:1648`） |
+| 5 | 台账（硬边界） | `docs/TODO.md:17`（「`src/prompts/` 与 `docs/design/prompts/` 60 档原文不外发」） | 任务书硬边界「**不动台账**」⇒ 未动（登记未决 3） |
+| 6 | 时序日志（扫替域外） | `docs/batches/**`（`2026-09-13-CORE-UNIFICATION.md` 35 站） | §9 修法 1 扫替域明扣「时序日志 `docs/batches/`」 |
+
+**③ 三机检读数（原样）**
+
+| 机检 | 改前基线 | 终态（§5 写入后复跑见段末） |
+|---|---|---|
+| `node scripts/doc-anchors.mjs` | 域一 **49 档** · 候选 2382 · **悬空 0** · 豁免 36；域二 99 档 · 候选 8879 · 悬空 0 · 豁免 880；VSC 域报告态 21 / distinct 13；exit 0 | 域一 **34 档**（−15）· 候选 2333 · **悬空 0** · 豁免 33；域二 99 档 · 候选 **8879**（逐数不变）· 悬空 0 · 豁免 880；VSC 域报告态 21 / distinct 13（预存）；**exit 0** |
+| `node scripts/check-doc-width.mjs` | **323 档** 无 >300 字符行 · 一致性 V1/V2/V3 新增违规 0 · 存量 0 · exit 0 | **308 档**（−15）无 >300 字符行 · 一致性 **新增违规 0** · 存量 0 · **exit 0** |
+| `node scripts/check-ledger.mjs` | 台账两档 `OK` · **0 处违规** · 基线 0 · exit 0 | `OK: thincoder/docs/TODO.md` / `OK: thincoder/docs/TODO-archive.md` · **0 处违规** · **exit 0** |
+
+**A4 工作树自证**：`git status --porcelain` = **15 `R`（正本位移）+ 4 `M`（`docs/README.md` · `docs/design/CORE-UNIFICATION.md` · `docs/design/DOC-SYSTEM.md` · `docs/requirements/PROMPT-SYSTEM.md`）+ 1 项预存**。
+预存 = `thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`（`M`，spawn 前既存改动，非本笔——承 U0–U16 登记）；**零 `src/**` · 零 `thincoder-core/**` 实现 · 零产品 `test/**` · 零台账改动**。
+
+**④ 内部轮（发现与处置）**
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **DIVERGENT** —— 四类中命中三类：
+  ① **部分实现 🟡**：`docs/design/CORE-UNIFICATION.md:45` 行内**第二处**裸形 `design/prompts/`（根仓指代）漏改 —— 首扫以 `docs/design/prompts` 为口径，裸形（无 `docs/` 前缀）逃逸。
+  ② **静默简化 🟡**：15 档移出三机检射程 —— `SCAN_DIRS`（`scripts/check-doc-width-core.mjs:15`）与 `V5_SCAN_DIRS`（`scripts/doc-anchors-v5.mjs:20`）均**不含** `docs/core`，宽度面 323 → 308 档；验收声明未披露覆盖面变化。
+  ③ **文档漂移 🔵**：`docs/design/DOC-SYSTEM.md:99` 目标树注解的「现 …」现址句随位移失效。
+  ④ **清单外改动：未发现**（机械并集 = 上述 4 档 + 15 档重命名）。
+  **处置**：① → **Fixed**（同句括注改指 `core/design/prompts/`）；③ → **Fixed**（注解收正为「（15 档）」）；② → **登记未决 1**（机检域扩展 = 引擎声明面批次——`DOC-SYSTEM.md` §8.2 明写 `.thincoder/docs-face.json` 本批不落；本批不动 `scripts/**`）。
+- **advisor 代码评审 1 轮**（`type=code` · 阻塞）：**changes-required**（🔴 1 · 🟡 3 · 🔵 1）。
+  🔴 = 正本内根仓指代未改指（`docs/core/design/prompts/persona-eng-designer.md:13` —— 本批曾判为「双源句 + 正文 ⇒ 越界」而**停下登记**；advisor 引 §9 修法 1 扫替域（根层 `docs/**`）与先例（`CORE-UNIFICATION.md:1916` 记「正本 … 五处断引用收正（全路径限定）」⇒ 正本内路径 token 本在改指射程）**推翻该判定**）。
+- **裁决表（5 项）**
+
+| # | Action | Detail |
+|---|---|---|
+| 1 | Fixed | 🔴 正本写域排除句改指：`docs/core/design/prompts/persona-eng-designer.md:13` 的 `docs/design/prompts/` → **`docs/core/design/prompts/`**（正本 = **文档面**（`DOC-SYSTEM.md` §5.1 P4）⇒ 在扫替域内；先例 = 正本自洽轮同类改指）。**连带未决 2**：核内运行期落地档 `thincoder-core/prompts/persona-eng-designer.md:13` 同句须按双源链路**回写**——该处为**正文**（非注释 / 头注）⇒ 越出本批硬边界（「`thincoder-core/**` 只允许改注释 / 头注且仅限指正本的路径」），**未动、登记** |
+| 2 | Deferred | 🟡 判据自相抵：`DOC-SYSTEM.md:297` 判据「域内 `docs/design/prompts/` 计数 = 0」与同节「两产品树排除、不得改指」互斥（产品树形态含同一子串，如 `requirements/PROMPT-SYSTEM.md:29`「两产品 `docs/design/prompts/**`」）⇒ 按字面不可满足。判据句改写 = **设计档写作权**（eng-designer）且属判据变更 ⇒ 登记未决 4，本批不代改 |
+| 3 | Deferred | 🟡 授权本批的设计档自身未随批更新：`DOC-SYSTEM.md` `:127` 去向表现址列 · `:290` 自洽表 ③「⚠ 路径变更」· `:410` §15 边界 1「不建 `docs/{core,cli,vsc}/` 目录」（`docs/core/` 已实建）· `:419-422` §16 变更记录无迁移批条目 ⇒ 规划档与实况分叉。属设计档写作权 + 「执行记录归批次档」分层（`CORE-UNIFICATION.md` §1「文档分层」）⇒ 登记未决 5 |
+| 4 | Deferred | 🟡 协调项：`DOC-SYSTEM.md:298-299` 修法 2 明写 README §2.4 判据替换（改 P1–P5）「**替换动作随迁移批**」，而 `docs/README.md:20` 现文仍为旧判据句（「是否跨两产品被引用」）。本批任务书未列该项、亦未见顺延登记 ⇒ 交父侧裁定排期（登记未决 6） |
+| 5 | Deferred | 🔵 可读性：保留面裸形（`CORE-UNIFICATION.md:31` / `:45`③ / `requirements/CORE-UNIFICATION.md:73`）不带「两端 / 两产品」限定语，位移后与根仓旧路径同形不可辨；另 `DOC-SYSTEM.md:295` 的抽验清单把 `:45` 列为「根仓指代 7 处」之一，与行语义（B14 两端镜像）不符。补限定语 / 清单收正属设计档写作权 ⇒ 登记未决 7 |
+| — | Not an issue（附注） | advisor 的引证核验：host 核验器报 **0/7 citations match**（7 条全「file unreadable」）——复核为**路径解析 artifact**（advisor 无执行面且以 `thincoder/` 为根解析，其自述「Review Scope 的 `docs/…` 相对 `thincoder/`」；引证内容经本侧复读逐条相符，承 U1–U16 同型附注）。另 advisor 自述**未能实跑**三机检（无执行工具）⇒ 闸读数以本侧实跑为准 |
+
+- **修复轮 2**（审计派生 2 + 评审派生 1）：`CORE-UNIFICATION.md:45` 括注 · `DOC-SYSTEM.md:99` 注解 · 正本 `persona-eng-designer.md:13`；复跑三闸 = 见 ③ 终态列与段末复跑。
+- **轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 2；终态 **0 未决 🔴 → clean**。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 改指口径 = **根仓指代才改**（产品树相对 / 面定义 / 迁移记录 / 工具默认值不改） | §9 修法 1（扫替域 + 两产品树排除）+ 本批三分清点口径（`CORE-UNIFICATION.md:1921`）；备选 = 全量字面替换 ⇒ 会把「两产品 `docs/design/prompts/`」改成不存在的路径（否决） |
+| 2 | 迁移记录（去向表现址列 / 修法文本 / 我的注记行）**保留旧路径** | 去向表 / 判据句失去旧路径即失去对象；分层纪律 = 批次档承载执行记录、设计档承载真值 |
+| 3 | `docs/design/DOC-SYSTEM.md` 的**路径站点**随批改指（`:99` / `:326` / `:349`），**判据句与叙事不代改** | 路径改指属扫替（设计档自身亦在扫替域）；判据句改写属设计档写作权 ⇒ 交未决 4 / 5 |
+| 4 | 正本内写域排除句改指（**采纳 advisor 🔴**） | 正本 = **文档面**（P4）⇒ 在扫替域；备选 = 判「提示词正文不可动」而只登记 ⇒ 被先例（正本自洽轮同类改指）+ 设计判据否定（原判定由 advisor 复核推翻） |
+| 5 | 核内落地档同句**不动、登记** | 硬边界「`thincoder-core/**` 只允许改注释 / 头注且仅限指正本的路径」——该处为正文；双源回写 = 主 agent 内容权 + 核树授权（未决 2） |
+| 6 | `docs/TODO.md:17` **不动** | 任务书硬边界「不动台账」（登记未决 3） |
+| 7 | 撤销「跳过审计 / 评审」的念头：动文档批同样跑内部审计 + `advisor(type=code)` | 本端交付协议（AGENT-LOOP §18）——终态须报审计 / 评审轮次 |
+| 8 | 15 档档名沿用（零改名） | §3.2 命名选定「**目录即命名空间**」；否决部分前缀命名（改名风暴） |
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **机检覆盖面随位移下缩（审计 ② · 越段）**：`docs/core/**` 不在 `SCAN_DIRS`（`check-doc-width-core.mjs:15`）与 `V5_SCAN_DIRS`（`doc-anchors-v5.mjs:20`）内 ⇒
+   15 档移出宽度面 / 锚面射程（宽度面 323 → 308）。**判据**：`DOC-SYSTEM.md` §8.2 的声明面（`.thincoder/docs-face.json`，含 `core.docs = ["docs/core/design","docs/core/requirements"]`）
+   明写「**本仓尚未建**——本批只给 schema」⇒ 射程扩展归**引擎化批次**；本批 `scripts/**` 零改动。
+   **残余风险如实登记**：在声明面落地前，`docs/core/**` 的宽度 / 一致性 / 锚面**无机器守卫**。
+2. **核内运行期落地档双源回写（未决）**：`thincoder-core/prompts/persona-eng-designer.md:13` 仍为 `docs/design/prompts/`（正文，非注释 / 头注 ⇒ 越硬边界）。修复 = 同句改指 `docs/core/design/prompts/`（单行，主 agent 内容权 + 核树落笔授权）；产品两份（CLI / VSC）**不参与**（迁移期参照历史）。
+3. **台账旧指针（硬边界未动）**：`docs/TODO.md:17`（「`src/prompts/` 与 `docs/design/prompts/` 60 档原文不外发」）——位移后该路径指代失效；交父侧（台账落笔权）。另「60 档」口径 = 4 × 15（根正本 + 核落地档 + 两产品），本批后根正本已迁 ⇒ 计数口径宜随台账轮复核。
+4. **`DOC-SYSTEM.md` §9 修法 1 判据句自相抵（未决）**：见裁决表 #2 —— 建议改写为「域内**根仓指代**形态计数 = 0（产品树相对形态 / 去向表现址列 / 既有裁定引文不计）」并给可 grep 的形态定义。
+5. **`DOC-SYSTEM.md` 自身状态滞后（未决）**：见裁决表 #3（`:127` · `:290` · `:410` · §16）。
+6. **README §2.4 判据替换未落（未决）**：见裁决表 #4（修法 2「随迁移批」vs 本批任务书未列）。
+7. **保留面裸形缺限定语 + 抽验清单标注不符（未决）**：见裁决表 #5。
+8. **VSC 预存项**：`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`（`M`）= spawn 前既存改动，非本笔（承 U0–U16 登记）。
+
+**报告 ①–⑥** 见交付报告（父侧转呈）。
+
+**段末复跑（§5 写入后 · 原样读数）**：`doc-anchors` = 域一 **34 档** · 候选 **2333** · **悬空 0** · 注记豁免 33 · `OK(V5)` exit 0；
+域二 99 档 · 候选 **8879** · **悬空 0** · 注记豁免 880 · `OK(V5)` exit 0；VSC 域报告态 21 / distinct 13（预存，闸态不入）。
+`check-doc-width` = **308 档**无 >300 字符单行 · 一致性 V1/V2/V3 **新增违规 0** · 存量 0 · exit 0。
+`check-ledger` = `OK: thincoder/docs/TODO.md` / `OK: thincoder/docs/TODO-archive.md` · **0 处违规** · exit 0。
+
+**收正注（同轮 · 首版后置 · 零语义）**：§5 首版 2 行超宽（`:6361` 305 / `:6391` 412 字符）⇒ **仅插换行、文字零改**；
+复跑 = `OK(宽度)` 308 档无 >300 字符行 · 一致性新增违规 0 · exit 0。
+
+**advisor 评审第 2 轮（轮次核验 · 只核上表）**：**pass** —— 上一轮唯一 🔴（正本内根仓指代）经实读复核**已修复**；
+其余各项（🟡 报告 / 协调 + 🔵 可读性）判为**非 must-fix**；**未发现修复引入的新 🔴**。
+**引证核验附注**：host 核验器报 `0/2 citations match`（「file unreadable」）= 路径解析 artifact（同第 1 轮 0/7）。
+
+**轮次自证（终态）**：审计 1 轮 + advisor 评审 2 轮 + 修复轮 2；**0 未决 🔴 → 终态 = clean**。
+
 ## §6 验证与收口（父代理）
 

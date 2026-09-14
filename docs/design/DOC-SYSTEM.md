@@ -96,7 +96,7 @@ thincoder/                                  ← 合并仓根（git 仓）
 │   ├── core/                               ← 部分一 · core（核 = 共享实现 + 共享机制 + 工程模式）
 │   │   ├── requirements/<板块>.md
 │   │   ├── design/<板块>.md
-│   │   └── design/prompts/                 ← 提示词**中文设计档正本**（15 档——现 docs/design/prompts/）
+│   │   └── design/prompts/                 ← 提示词**中文设计档正本**（15 档）
 │   ├── cli/                                ← 部分二 · cli（CLI 壳面）
 │   │   ├── requirements/<板块>.md
 │   │   └── design/<板块>.md
@@ -323,7 +323,7 @@ thincoder/                                  ← 合并仓根（git 仓）
 
 | # | 档 | 节 | 动作 |
 |---|---|---|---|
-| 1 | `docs/design/prompts/discipline-engineering.md`（**正本**） | §「需求池攒批工作流」第 5 条**边界**（现第 176 行——「池只收用户需求点……不混池」） | 在「边界」条**追加判据句**（同 §10.1 文本，不加新节） |
+| 1 | `docs/core/design/prompts/discipline-engineering.md`（**正本**） | §「需求池攒批工作流」第 5 条**边界**（现第 176 行——「池只收用户需求点……不混池」） | 在「边界」条**追加判据句**（同 §10.1 文本，不加新节） |
 | 2 | `thincoder-core/prompts/discipline-engineering.md`（**运行期落地档**） | §「需求池攒批工作流」第 5 条（现第 220 行） | 按正本**回写**（双源链路：先改正本 → 回填落地档） |
 
 **为何落这里（实核）**：两池机制的唯一详述处 = 该节（`discipline-engineering.md` 第 169 行起）；`persona-engineering.md` 只提「台账归你」，
@@ -346,7 +346,7 @@ thincoder/                                  ← 合并仓根（git 仓）
 | # | 档 | 当前行数 | 预计增量 | 动作 | 归属 |
 |---|---|---|---|---|---|
 | 6 | `DOC-CODE-RECONCILE`（VSC 仓·设计）§4 | 488 | +~12 | 外部参照面判据（§8.4 E-1–E-4） | 产品树**只读** ⇒ 另派 VSC 轮 |
-| 7 | `docs/design/prompts/discipline-engineering.md` | 189 | +5 | 两池判据句（§10.3） | 提示词 = 产品代码 ⇒ 主 agent 内容权 |
+| 7 | `docs/core/design/prompts/discipline-engineering.md` | 189 | +5 | 两池判据句（§10.3） | 提示词 = 产品代码 ⇒ 主 agent 内容权 |
 | 8 | `thincoder-core/prompts/discipline-engineering.md` | 264 | +5 | 按正本回写 | 同上（**核树只读**） |
 | 9 | `docs/TODO.md` | 40 | +3 | 两池判据（§10.2） | **父侧落笔**（本批不动台账） |
 | 10 | `.thincoder/docs-face.json` | 0 | +~20 | 声明面（§8.2） | 引擎化批次 |
