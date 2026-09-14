@@ -265,6 +265,32 @@
 - **对外结构不变**：返回 `[{ id, score }]` 候选（既有消费面 RRF 融合不变）；FTS 通道与 `projectOrigin` 过滤零改。
 - **可测缝**：扫描器接受注入的 `runChunkedQuery`（默认真实 DB 实现——测试以假数据源直测块大小 / top-K / 等价性）。
 
+### 6.9 VS Code 端实现面（现状登记 · 归一过渡）
+
+> **来源** = `thincoder-vscode/docs/design/MEMORY.md`（325 行 · VSC 产品档——迁移期参照历史）。本节 = 该档中「根层所缺」的 **VS Code 端现状面**（(a) 机制 / (b) 坐标）。
+> **归一方向**：§2.1 #82 / A1 已裁「以 CLI 为准（`node:sqlite` 定案——A12 前提失效，非选边）」——本节为 **sqlite 归一前的 VSC 现状登记**；归一时 VSC 改接线、文件制存储细节随过渡退场（(d) 类不并——§8.2）。
+
+- **VSC 存储 = 文件制 markdown + frontmatter（无 FTS5 / 无 sqlite）**：存储根 `{cwd}/.thincoder/memory/`，
+root（legacy）+ `personal/` + `project/` 三物理目录；条目 frontmatter = `type / title / tags / author / created`
+（与 CLI 条目格式兼容，byte-exact）；文件名 `YYYYMMDD-<slug>-<rand4>.md`；旧版 `.json` 条目**只读向后兼容**。
+零依赖——纯 node:fs 同步 API。**归一后**：VSC 存储改走 `~/.thincoder/memory.db`
+（`memory import` 一次性迁移——§2.5.1 A2）。
+- **VSC 检索 = 向量优先、关键词回退**：embedder 可用（config `embedding.{baseURL,apiKey,model}`）+ 索引存在
+（`.thincoder/index/`）→ `searchIndex` 向量检索；否则关键词打分（title 3 / tag 2 / content 1 分；CJK bigram
+回退）。embedding 服务 = OpenAI 兼容 `/v1/embeddings`（SiliconFlow bge-m3 / Ollama / OpenAI），批量 32 +
+重试退避；向量归一化、点积 = 余弦。归一后：索引面进 sqlite（code_chunks / doc_chunks——§6.4 同源语义）。
+- **VSC 索引有效性面（B1–B4——归一前 VSC 特有设计，校验原则跨端保留）**：
+  - **B1 模型 / 维度不一致 → 不产出 + 状态面可见**：`indexCompat`（`thincoder-vscode/src/indexer.mjs:156`——manifest-only，不发网络）比对 `manifest.embed_model` 与 `embedder.model`；`searchIndex` 前置两道闸（相容性 + query 维度）不匹配 → 返回 `[]` → 既有回退链自动走关键词路径；可见面 = `pushIndexStatus` 追加 `mismatch` + `maybePromptIndex` 提示重建。
+  - **B2 gitignored 且非 memory 文件增删改也触发重建**：`needsRebuild`（`:170`）git 快路径改
+`git status --porcelain --ignored=traditional`（同一次调用取 dirty + ignored）；`!!` 目录条目经
+`discoverFilesUnder` 走查产出候选（SKIP_DIRS / 点目录过滤）；忽略文件**删除**经
+`git check-ignore --stdin -z` 圈定候选 + 存在性扫描（被忽略文件删除后从 git 输出彻底消失——模式匹配
++ 存在性检查是唯一可达触发）。
+  - **B3 `listMemoryFiles` 递归**＝与 `discoverFiles` 同 walk 规则共享（`index-discover.mjs`）；嵌套 memory 文件进入变更检测（恢复代码自述不变量「discovery 与 rebuild 判定不得背离」）。
+  - **B4 reason 词表单一化**：`{ no-index · new-commits · file-added · file-removed · file-missing · file-changed · up-to-date }`（`file-changes` 改 `file-changed`——2/3 多数同构）。
+  - **校验原则跨端普适**：embedding 模型/维度不一致 → 结果不可信（名称不一致即拒——不同模型向量空间不可比）→ **不产出 + 可见**（非静默错误、非自动重建）；归一时以 sqlite 索引承接同原则。
+- **VSC 工具契约端差**：`memory` 工具面（五动作 // layer 值域 personal / project——**无 team 层**，收到 team 明确拒绝并指引 CLI）；工具级 `readonly: false`、动作级只读分类（search / list 只读放行——planMode 放行、免审批、可并行；put / delete / clear 副作用门）；`delete` 尊重 uid 内嵌 origin（文件定位先查物理层目录——跨层 search 带出的行「能看到但碰不到」的修复）。
+
 ## 7. 并入的关键决策记录（含否决备选）
 
 | # | 决策 | 依据 / 否决备选 |
@@ -282,6 +308,8 @@
 | D-MEM11 | 磁盘原文不动（读时归一） | 写回绝对路径毁可移植性 + 存量手写配置永不展开 |
 | D-MEM12 | `shell` 同批同机制纳入 | 分批做 = 同 helper 分叉 / 漏点；`shell` 是 spawn 路径——同病同修 |
 | D-MEM13 | 检索向量通道 = 流式分块扫描 + 有界 top-K | 峰值 = 块 + K，召回语义不变（仍全表评分）；否决「结果缓存 / LRU」（不解首次扫描峰值）·「FTS 预筛再向量」（召回语义变化）·「ANN 向量索引」（依赖 / 架构级——登记为后续项） |
+| D-MEM14 | VSC 索引有效性 = **不产出 + 可见**（校验三条：模型 / 维度 / 名称一致性） | 静默失效 → 可见；否决自动重建（静默 30s+ 网络）· 仅报错（升级为工具故障）· 仅声明（判据不满足）；归一时以 sqlite 承接同原则 |
+| D-MEM15 | VSC 忽略文件删除检测 = **`git check-ignore` 圈定 + 存在性检查** | 被忽略文件删除后从 git 输出彻底消失——模式匹配 + 存在性是唯一可达触发；否决全 manifest 逐条扫描（等价全量 stat） |
 
 ## 8. 不并项与历史沿革
 
@@ -305,6 +333,9 @@
 | §6.5 受影响文件表 + 验收 AC1–AC6 | distill layer 统一批的文件与验收清单 | 一次性批次材料（文档分层纪律）——批次档承载 |
 | §9.4 / §9.6 / §9.7 / §9.10 | 受影响文件表 · 用例表 · AC 表 · 对账清单（家目录展开批） | 同上 |
 | §10.5 / §10.6 / §10.7 | 受影响文件表 · 用例表 · AC 表（向量上界批） | 同上 |
+| 源档 §1 文件制存储物理细节（目录形态（root/personal/project 三物理目录 · frontmatter 逐字段 · 文件名 slug/rand4 · `.json` 只读兼容） | VSC 文件制存储的逐段描述 | **(d) 类 —— 已裁归一（A1 → sqlite 定案）**：过渡态结构不作为目标形态入档；§6.9 只留现状登记 + 迁移方向；源档留参照历史 |
+| 源档 §2 向量路径逐参细节（embedding 服务 / 批量 32 / 重试退避 / 归一化） | VSC 向量服务面 | 归一后索引进 sqlite（§6.4 / §6.9）；服务面随 CLI embedding 归一——不重复登记 |
+| 源档 §3 工具契约的 VSC 字节输出串（`as of 2026-09-08` 快照） | 输出契约 VSC 侧副本 | 输出契约双端同文已入 §6.6.4（逐字）；VSC 侧副本 = 迁移期参照历史 |
 
 ### 8.3 已知限制与后续项（a 类——并入）
 
@@ -321,6 +352,7 @@
 |---|---|---|---|
 | 1 | §6.7 配置路径家目录展开 | 配置板块（本层 `CONFIG.md`）——该机制作用于 config 装载面 | **建议**（待父侧裁定——迁移批落地） |
 | 2 | §6.4 / §6.8 索引与向量上界面 | 与 §6.3 检索合族为「检索与索引」子档 | **待裁定**（与「一板块一档」惯例的关系同 `AGENT-LOOP.md` §9） |
+| 3 | §6.9 VS Code 端实现面（现状登记） | **归一后整体退场**（§2 #82 / A1——VSC 改接线，文件制 + `.thincoder/index` 面随过渡消解） | **已给去向**（随归一收窄；不另拆档） |
 
 **落地时点** = 迁移批（本批不拆）；拆分动作不得改语义（只修引用）。
 
@@ -331,3 +363,4 @@
 - 2026-09-14（**B 轮并入 · 试点批**）：新增 §6 **机制面**（总览与目标 / 存储与分层 / 检索 / 代码与文档索引 / 主循环集成与门禁 / 工具契约五动作 / 家目录展开 / 向量加载上界）·
   §7 **关键决策记录（D-MEM1–13）** · §8 **不并项与历史沿革**（含已知限制并入）· §9 体量与拆分规划；
   来源 = `thincoder-cli/docs/design/MEMORY.md`（**旧档一字未改**——原地作参照历史）；首部加机制面指针一行。本档 80 → **334 行**。
+- 2026-09-15（**VSC 轮并入 · 批 7**）：§6.9 新增 **VS Code 端实现面**（现状登记——文件制存储 / 向量优先检索 / 索引有效性 B1–B4 / 工具契约端差）· §7 补 **D-MEM14–15** · §8.2 补 3 行不并项登记（含文件制存储 (d) 类——已裁归一）· §9 拆分表 +1 行（归一退场）；来源 = `thincoder-vscode/docs/design/MEMORY.md`（**旧档一字未改**）；坐标按现状实核（`indexer.mjs:156,170` · `memory.mjs` 等）。

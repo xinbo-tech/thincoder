@@ -166,7 +166,29 @@
 | 常量（`IMAGE_TOKEN_ESTIMATE` / `TAIL_BUDGET_FRACTION` / `SUMMARY_TOKEN_ESTIMATE = 1000` / `TAIL_FLOOR_MESSAGES`） | `thincoder-core/context.mjs` | `thincoder-vscode/src/compact.mjs`（`SUMMARY_SEGMENT_ESTIMATE = 1100`） |
 | run 钩子（`_compressFailures` 重置 / `_runStartHistoryLen` / onCompress* 接线） | `thincoder-core/agent.mjs` + `thincoder-cli/src/tui/agent-turn.mjs` | `thincoder-vscode` 侧同构 |
 | 压缩面板渲染 | `thincoder-cli/src/tui/tool-events.mjs` + `thincoder-cli/src/tui/subagent-blocks.mjs` | webview 会话状态渲染 |
-| SUMMARIZE_PROMPT / EXPLORE_SUMMARY_PROMPT | `thincoder-core/context.mjs`（export） | `thincoder-vscode/src/compact.mjs` |
+| SUMMARIZE_PROMPT / EXPLORE_SUMMARY_PROMPT | `thincoder-core/context.mjs`（export） | `thincoder-vscode/src/compact.mjs`（export：`SUMMARIZE_PROMPT` = `:115`） |
+
+### 6.13 VS Code 端接线面（VSC 轮并入 · 2026-09-15）
+
+> **来源** = `thincoder-vscode/docs/design/CONTEXT-COMPACTION.md`（146 行 · VSC 产品档——迁移期参照历史）。本节 = 该档中「根层所缺」的 **VSC 专有接线细节**（(a) 机制 / (b) 坐标）。与 CLI 同源语义（触发 / 阈值 / 切割 / 预算 / 降级 / 回注 / 摘要 ≤1K）已入 §6.1–§6.10，不重复（D2）。
+
+- **判定点封装**：`checkAndCompact(agent, ctx)` 自 runAgent 按骨干—细节两层提取为模块函数（`thincoder-vscode/src/agent/run-stages.mjs`）——循环骨架只留检查调用；安全点判定 = `history.at(-1)?.role` 为 `user` / `tool`（agent.mjs 主循环 LLM 调用前检查）。与 CLI 语义一致（D1）。
+- **基线记录**：agent.mjs 记录 `agent._lastPromptTokens` 与对应 `history.length` 为 `agent._usageAtLen`；`total = lastPromptTokens + 追加消息增量估算`——无基线时 = system+tools schema 开销 + 全 history 纯估算（首轮 / 恢复场景无 baseline 会低估从而永不触发）。
+- **预算常量端差**：VSC `SUMMARY_SEGMENT_ESTIMATE = 1100`（`compact.mjs`——与 CLI `SUMMARY_TOKEN_ESTIMATE = 1000` 语义等价，<0.2% 窗口差，已记 §6.4④）；`IMAGE_TOKEN_ESTIMATE = 2000`/part（两端同值）。
+- **REVERSE 配对保护（VSC 特有——已登记 §6.11）**：`callsGapAfter` 判据（assistant 声明的 ids 未被其后**连续** tool 块全盖住）+ `reverseProtectTail` 前移覆盖；`tailStartByBudget` = 候选尾超 `ctx × 0.15`（减摘要段固定估算）→ pair-safe 前移（tool 位 / 缺口 assistant 位不停——整对同切）；保底 10 条；短历史候选 <10 → no-op 零变化。
+- **摘要段形状（VSC byte-exact 锚**，`compact.mjs`）**：压缩 note + `<handoff_notes>` 标签包摘要 + assistant 占位 `Understood. I'll continue from these notes, re-verifying anything transient.`（带压缩时刻 ts）——与 CLI 语义一致（§6.7）；VSC 侧文案 = 同一族（两端非 byte-identical，语义等价——已记 §6.11）。
+- **蒸馏 / 压缩边界重置（`_runStartHistoryLen`）**：重建（rebuild）后机读线 SHRINK → 边界重置为 **2**（`[head(空), 摘要, "Understood", …tail]`——tail 起于 index 2）；`shrinkOversized` 保持同长度（仅截 body）→ 边界不重置。轮末蒸馏与压缩共用该锚点。
+- **webview 压缩状态四态（`thincoder-vscode/src/extension/panel-callbacks.mjs:144-152` → postMessage `compress` 消息）**：`start` →
+状态行 `Compressing context… (summarizing N messages)`；`done` → `Compressed: N tokens freed (Xs)`；`fallback` →
+`Compression failed — fallback: truncated to N messages`（3 次连败后降级说明）；`failed` →
+`Compression failed: <error>`。`webview/chat.js showCompressStatus` 更新 `#compress-status` 状态行（消息流内单元素
+原地更新；会话视图清除重建 replaceChildren）。仅生命周期可见——摘要正文永远不进前端（D11 静默纪律）。
+- **失败可见化（Q3）**：run-stages.mjs catch → console.error + `onCompressFail` → webview 渲染错误文本；
+`_compressFailures` 连续 3 次（`COMPRESS_FAILURE_LIMIT`，`thincoder-vscode/src/compact.mjs:31`）后 `truncateFallback` 确定性截断
+（`thincoder-vscode/src/compact.mjs:323`——无 LLM 调用，note + "Understood" 占位，同形状 → 边界重置 2）；无 middle 可切 →
+`shrinkOversized` 单消息截断（`:367`——user/tool body >8000 字符截留 head/tail，保留 reasoning /
+tool_calls 结构，保持数组长度不变）。
+- **非压缩职责边界（原 `context.mjs`——GIT-ASYNC L21 整文件删除）**：repo outline → `repomap.mjs`（repoOutlineTool——按需工具，非回合自动注入）；git 富注入 → `agent/setup-reminders.mjs`（`collectGitContext` = `:145` / `pushGitContext` = `:163`；async）；editor / 机器注入 → `extension/editor-context.mjs` + `pushInjections`（`:194`）。
 
 ## 7. 并入的关键决策记录（含否决备选）
 
@@ -188,6 +210,7 @@
 | D-CC14 | 探索结果语义摘要 = 轮末蒸馏替换（H1） | 机器线信号密集；失败静默跳过、不阻塞 |
 | D-CC15 | 空响应自动重试 2 次（E1）——两端一致（VSC 移 CLI 语义） | 空响应是瞬时故障——重试 2 次兜底；仍空才抛错 |
 | D-CC16 | 预算测量口径 = B（history 段单独 ≤15%） | 不把 system / tools 固定开销计入（小窗口下固定开销本身可能 >15%，计入则永远不可达） |
+| D-CC17 | VSC 压缩 / 蒸馏共用 `_runStartHistoryLen` 边界重置（rebuild 后 = 2） | 压缩与轮末蒸馏对锚；共享边界避免二次压缩误判 |
 
 ## 8. 不并项与历史沿革
 
@@ -208,6 +231,7 @@
 |---|---|---|
 | 旧档内 VS Code 实现细节逐行（§2.1 / §7 / §9 等） | VSC 侧同构实现 | 属 VSC 产品树（`thincoder-vscode/**`）；同构语义已入 §6 各节 |
 | 关联旧编号指针（`AGENT-LOOP.md` §7.2.1 面板机制等） | 旧档内跨档指针 | 指针已随落位重写（§6.8 引现状坐标）；旧编号不再维护 |
+| 源档 §1–§5 纯 VSC 同构细节逐行（安全点 / 阈值 / token 判定 / 切割 / 摘要回注） | VSC 侧同构实现 | 已并入 §6.13（接线面 + 端差坐标）；同构正文不逐行复制（D2） |
 
 ### 8.3 需求侧（已并入本层需求档）
 
@@ -222,3 +246,7 @@
 - 2026-09-13：建档——自 `docs/core/design/CORE-UNIFICATION.md` 拆出（§2.5 #162–#164）；**语义零改**，行号沿用原编号。
 - 2026-09-14（**B 轮并入 · 第 3 批**）：新增 §6 **机制面**（术语与双线 / 触发 / token 判定 / 切割四约束 / 降级链 / 回注与双线 / 文案与静默 / 压缩面板 / 摘要 ≤1K 与探索摘要 / 行为契约 / parity / 实现位置）· §7 **关键决策（D-CC1–16）** · §8 **不并项与历史沿革** · §9 体量（低于软线，无需拆分）；
   来源 = `thincoder-cli/docs/design/CONTEXT-COMPACTION.md`（**旧档一字未改**——原地作参照历史）；需求侧已并入本层 `docs/core/requirements/CONTEXT-COMPACTION.md`；首部加机制面指针一行。
+- 2026-09-15（**VSC 轮并入 · 批 7**）：§6.13 新增 **VS Code 端接线面**（判定点封装 / 基线记录 / 预算端差 /
+REVERSE 保护坐标 / 摘要段形状 / 边界重置 2 / webview 四态 / 失败可见化 / 非压缩职责边界）· §7 补 **D-CC17** ·
+§8.2 补 1 行不并项登记；来源 = `thincoder-vscode/docs/design/CONTEXT-COMPACTION.md`（**旧档一字未改**）；
+坐标按现状实核（`thincoder-vscode/src/compact.mjs:31,115,323,367` · `thincoder-vscode/src/extension/panel-callbacks.mjs:144-152` · `thincoder-vscode/src/agent/setup-reminders.mjs:145,163,194`）。

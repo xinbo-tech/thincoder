@@ -228,6 +228,48 @@ TUI 路径在 `startTUI` 前置 `agent.provider = null`。
 - **生命周期联动**：`deleteSlot → unlinkRecordStore`（`rmSync` 递归）；`.bak` 轮转对**非本会话活动绑定面**联动改名 sidecar（判据 = `agent._recordStore?.dir`）；`.corrupted` / `.unreadable` 改名**不联动**（现场原地保留，由身份核验在槽号复用时拒采纳）；孤儿 sidecar 在 bind 处被拒并改名 `.stale-*`；冷项目 GC 用 `rmSync` 递归删目录；`/rename` 只改标题（sidecar 零动作）。
 - **VSC 兼容红线**：槽 JSON `version` 2 / `history` 全量数组 / `contextHistory` 逐字节保持——**VSC 零改动**；VSC 继续全量覆写槽 JSON，CLI 侧对账规则保证下次绑定时以更长者为基准或拒采纳重建。
 
+### 6.15 VS Code 面板装配接线面（VSC 轮并入 · 2026-09-15）
+
+> **来源** = `thincoder-vscode/docs/design/SESSION.md`（520 行 · VSC 产品档——迁移期参照历史）。本节 = 该档中「根层所缺」的 **VS Code 面板接线面**（(a) 机制 / (b) 实现细节与坐标）。与 CLI 共享的契约正文（存储模型 / 并发 / 双线 / end marker / GC / 检索 / 记录存储）已入 §6.1–§6.14，不重复（D2）。
+
+- **运行中禁止切换（会话切换竞态修复）**：`newSession` / `deleteSession` / `switchSession`（webview loadSession）/ 项目切换三处均以 `_turnActive` + `_susp.active` 守卫（warning 拒绝——对齐 CLI `applyProjectSwitch` 模式）。运行中放行会让旧 turn 的 stream / complete / 标题灌进新会话视图（「思考串台」）、内容落错槽。
+- **turnSlot / slotOverride（纵深防御）**：`saveLines` / `_saveLines` / `generateTitle` 带 slotOverride——`runPanelChat`（`thincoder-vscode/src/extension/panel-chat.mjs`）回合入口捕获 `turnSlot`，onComplete / abort / finally 的保存与标题一律落 `turnSlot` 而非面板当前 `_slot`——运行中即便并发切换，旧 turn 流也不灌新会话视图、内容不落错槽。
+- **绑定入口三处**：`_slot` 为 null 时经 `ensureSlot(panel)`（`thincoder-vscode/src/extension/
+panel-session.mjs:22`）一次 `resumeSlot(cwd)` 解析并钉槽——面板 `status`（激活启动）、`onProjectChanged`
+（`panel-project.mjs`——项目切换 / 多根 `setProjectFolder` 后 `panel._slot = null` 再重绑）、
+`ensureSlot`（惰性首保存）。`session-io.resumeSlot` 包装器在恢复入口顺带触发一次残留 GC 调度；
+项目切换经 `applyProjectSwitch` 守卫运行中拒绝 + `setProjectFolder` 校验 + `onProjectChanged`
+重绑，per-cwd UI 随 `_cwd()` 刷新。
+- **slot 粘性 + 钉槽检查**：面板 `_slot` 在打开 / 切换时**绑定一次**，之后所有读写不再重读共享 manifest 的 active 指针；「打开历史会话」先 `switchToSlot`（读目标槽成功才翻 active + 写 marker，文件缺失 / 损坏返回 null 且不产生幻影指针），再 `slotOccupancy` 检查目标槽被**另一活进程**占用 → 不钉槽（loadSession 立即经 ensureSlot 认领新槽）+ 提示；空闲则绑定 → `_loadSession()`。
+- **字段往返完整（key-presence 写，v2 语义）**：槽位文件**全量覆盖写**，`saveLines`
+（`thincoder-vscode/src/extension/panel-session.mjs:57`）以 `...existing` 展开式透传不认识字段、仅覆盖扩展自己拥有的字段——CLI 写入的
+`activeModel` / `engineering` / `engDesignToken(s)` 等字段在 VS Code 侧往返不丢（往返透传是契约——漏一字段即永久丢失）。
+`engDesignToken` / `engDesignTokens` 用 `"key" in extra ? extra.key : existing.key ?? null` 语义——显式 null
+（清盘）必赢、缺席保留槽值（R16 TTL 过期后 restore 清盘、turn 尾 agentState 携显式 null 必须 pin；abort /
+finally 保存无 agentState → 缺席保留槽值不误清）。
+- **`setSlot*` 写面（session-slot-write.mjs，Parnas 拆分）**：`setSlotAutoApprove`（`:59`）/ `setSlotPlanMode`
+（`:68`）/ `setSlotEngineering`（`:82`）/ `setSlotAdvisorGuard`（`:91`）/ `setSlotEngDesignTokens`（`:108`）+
+`newSlotData`（`:24`）。`loadSlotForWrite` 对「无文件但本进程刚 claim 的槽」返回 `newSlotData` 默认记录——否则
+`setSlot*` 落在「claim 先行、首保存落盘」的新槽时 `if (!data) return false` 静默丢标志（AUTO-bug 修复）；
+version>2 / 异 cwd / 损坏 / 未知槽返回 null（新版 CLI 文件不属本端覆盖——v3 interop 前保守姿态）。
+- **标题触发时机（A2——SESSION-FLOW-A 方案 Y）**：标题 await 在回合尾 finally **忙态归位之前**（stream
+完成即触发——`panel-chat.mjs` 归位分支前）；期间 `_turnState` 仍 running——标题窗口 = busy——webview Stop 显
+（running 派生）+ 路由守卫 running→拒收（修无池首回合并发——归位 idle 后标题旧序会让窗口内新消息直开并发回合与
+标题 LLM 调用赛跑）。错误路径（评审 #2）：`generateTitle` 内部全 try/catch 吞错 + 调用点兜底 try/catch——
+**归位恒执行**（标题抛错不卡永久 busy）。标题期消息拒收（routeUserTurn running 分支——无排队无回执——拒收警告明示）。
+- **懒加载历史分页（VSC 端**，`thincoder-vscode/src/extension/history-window.mjs`）**：
+`HISTORY_PAGE_SIZE = 200`（`:22`——对齐 CLI 首屏）；`historyWindow(history, before)`（`:106`）——`before == null`
+取**末页**（首屏只发末页），否则取 `before` 前结束的一页 `[s, e)` 半开区间（loadOlder 页不重渲染边界消息）
+；`idx` 为**全局** history 下标（分页永不重编号）。输出模型 = 帧容器（assistant 一帧一条消息、工具卡**嵌套**
+`tools[]` 随帧下发）+ 滚动配对（`tool_call_id` 次序——并行批乱序完成全配；未配调用 `result:null`）+
+turnStart 回扫判定（跨页一致）。发送清洗（`sendHistoryPage`）：user 消息剥离 editor-context 注入；孤儿 tool
+消息 text 截 64K；assistant 嵌套 `tools[].result` 截 64K（防未 slim 老文件超大结果进 webview）。
+- **会话上下文注入序（VSC 端富注入——CLI 同款演进）**：面板每回合重建上下文线后，会话级注入按固定序落
+机读线——**disk 历史重放（保序打头）→ git / env-state / process-restarted transient（落在重放后、最新
+user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独立锁定）**。git 富注入（GIT-ASYNC L21——2026-09-09
+双端异步化）：`collectGitContext` / `pushGitContext` → async + 失败冷却 30s（`thincoder-vscode/src/agent/setup-reminders.mjs:145` /
+`:163`）——确认序契约不变（git 仍在重放后、time 恒为最后一条）；all-or-nothing 保持。
+
 ## 7. 并入的关键决策记录（含否决备选）
 
 | # | 决策 | 理由 / 否决备选 |
@@ -258,6 +300,10 @@ TUI 路径在 `startTUI` 前置 `agent.provider = null`。
 | D-SE24 | 对账 = **计数比较**（段 vs JSON，不做逐条校验） | 成本低收益足；同长异容退化面如实登记 |
 | D-SE25 | 本会话检索走存储、跨会话保持 JSON | `path=` 换轨收益低（JSON 仍有护栏）+ 避免「外部 slot 的 sidecar 解释权」扩展面；否决「统一走存储」 |
 | D-SE26 | **模式 F（未绑定）零回归** | `thincoder chat` / 测试 / 未覆盖路径保留全量物化行为；窗口仅在绑定态或 depth>0 子代理启用 |
+| D-SE27 | VSC 运行中禁止切换 + **turnSlot 纵深防御**（保存 / 标题落回合捕获槽） | 运行中切槽 = 旧 turn 流串台 + 内容落错槽；turnSlot 使并发切换零窗口 |
+| D-SE28 | VSC `setSlot*` 写面 = **Parnas 拆分** + `loadSlotForWrite` 对新槽补默认记录 | 一次性写面档（session-slot-write.mjs）避免槽写逻辑混入既有档；新槽无记录 → 静默丢标志（AUTO-bug） |
+| D-SE29 | VSC 懒历史分页 = **帧容器 + 嵌套 tools[] + 全局 idx**（HISTORY_PAGE_SIZE 200） | 跨页消息永不重编号；工具卡随帧渲染防跨页双显；匹配 CLI 首屏 200 |
+| D-SE30 | VSC 标题触发 = **回合尾 finally 忙态归位之前**（A2 方案 Y）+ 归位恒执行 | 标题期 = busy 窗口（webview Stop 显 + 路由守卫拒收）；标题抛错不卡永久 busy |
 
 ## 8. 不并项与历史沿革
 
@@ -290,6 +336,9 @@ TUI 路径在 `startTUI` 前置 `agent.provider = null`。
 | §14.9 VSC parity 影响评估 · §14.10 物证回填钩 | 单批评估与取证钩子 | 时点材料——结论（VSC 零改动）已入 §6.14 末行 |
 | §11.2 / §11.3 受影响文件表 + 验收 AC1–AC5 / AC1–AC3 | 逐批文件与验收 | 同上（一次性批次材料） |
 | §6.1 / §6.2 契约矩阵 | 双端契约对位表 | 已并入 §6.6（同一来源，不重复登记） |
+| 源档 §4.3 `slimForDisplay` 逐字符截断值（300 / 500 / 截断标记）与 `contextHistory` 一字不动 | VSC 侧瘦身细节 | 双端同语义已入 §6.3（VSC 常量值一致；不逐字符登记） |
+| 源档 §9 懒历史分页的 webview 渲染细节（DOM 嵌容器内 / scroll 补偿前置 / `.welcome` 移除） | 前端渲染面 | 属 VSC 产品树 webview 面——§6.15 只登记契约（HISTORY_PAGE_SIZE / 输出模型 / turnStart 判定）；渲染层不并 |
+| 源档 §10 注入序的 `loadSession` 同步会话级 UI（_autoApprove/planMode 面板标志 + 工具条按钮同步） | VSC 装配细节 | 面板 UI 同步 = VSC 专有面（`thincoder-vscode/**`）；注入序本体已入 §6.15 |
 
 ## 9. 体量与拆分规划（R24a）
 
@@ -308,3 +357,8 @@ TUI 路径在 `startTUI` 前置 `agent.provider = null`。
 - 2026-09-13：建档——自 `docs/core/design/CORE-UNIFICATION.md` 拆出（§2.5 #89 / #123–#127 · §2.5.1 A14 · §2.12.3 第 3 行）；**语义零改**，行号沿用原编号。
 - 2026-09-14（**B 轮并入 · 第 2 批**）：新增 §6 **机制面**（存储模型 / 并发安全 / 双线结构 / 保存与恢复 / 切换归档 / 跨端契约 / 标题生成 / 模型重选 / 时间戳与 read_history / end marker / env-state / 残留 GC 与标题契约 / 跨会话检索 / 记录内存有界）· §7 **关键决策记录（D-SE1–26）** · §8 **不并项与历史沿革** · §9 体量与拆分规划；来源 = `thincoder-cli/docs/design/SESSION.md`（**旧档一字未改**——
 原地作参照历史）；首部加机制面指针一行。
+- 2026-09-15（**VSC 轮并入 · 批 7**）：§6.15 新增 **VS Code 面板装配接线面**（运行中禁止切换 / turnSlot /
+  绑定入口三处 / 字段往返与 setSlot\* 写面 / 标题触发时机 A2 / 懒历史分页 / 注入序）· §7 补 **D-SE27–30** ·
+  §8.2 补 4 行不并项登记；来源 = `thincoder-vscode/docs/design/SESSION.md`（**旧档一字未改**——原地作参照历史）；
+  坐标按现状实核（`thincoder-vscode/src/extension/panel-session.mjs:22` · `session-slot-write.mjs` · `thincoder-vscode/src/extension/history-window.mjs:22,106` ·
+  `thincoder-vscode/src/agent/setup-reminders.mjs:145,163`）。

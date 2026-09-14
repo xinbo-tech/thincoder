@@ -130,6 +130,31 @@ server 行 action 用 `@name:` 命名空间（与 `add` / `refresh` 保留动作
 - **`ensureAlive`（执行前活性检查）**：transport 活 → 直接用；死 → 等 / 触发一次重连；重连失败 → 抛不可用错误透给模型。
 - **握手失败防泄漏**：`connectMcpServer` 对 `createConnectedTransport` 失败 catch 中关 transport——openSSE 降级成功但 POST initialize 失败时不留悬挂流（否则 SSE reader / 请求悬挂泄漏）；probe 的 `finally close()` 同理。
 
+### 6.10 VS Code Settings 面板 MCP 页（VSC 轮并入 · 2026-09-15）
+
+> **来源** = `thincoder-vscode/docs/design/MCP.md`（170 行 · VSC 产品档——迁移期参照历史）。本节 = 该档中「根层所缺」的 **VSC 配置面板面**（(a) 机制 / (b) 坐标）。与 CLI 同源的传输 / 展开 / 幂等 / 探活 / 失效语义已入 §6.1–§6.9，不重复（D2）。
+
+- **VSC 无 `/mcp` 命令面（结构性端差）**：CLI 有 `/mcp` TUI（§6.8）；VS Code 配置 / 连接全在 **Settings 面板
+MCP 页**——`pushMcpStatus`（`thincoder-vscode/src/extension/panel-mcp.mjs:8`）推 `mcpStatus { servers: [{ name,
+desc, connected, toolCount, config }] }`（●/○ 连接态 + N tools + 原始 config 供表单预填）。动作消息 →
+`reconnectMcp`（`:28`——断开 + 重连）、`testMcp`（`probeMcpServer`）、`editMcp`（`saveMcpServer` =
+add-or-update 原位 → 推状态）。面板 [Edit] 与 [Add] 复用同一表单（add 失败（重复）则 update）。
+- **config-mcp.mjs（config.json `mcp.servers[]` 读写——纯 Node，extension host 外可单测）**：`loadMcpServers`
+（`:12`——过滤无 name / 非对象项）· `addMcpServer`（`:19`——name 重复拒）· `updateMcpServer`（`:37`——原位替换、
+数组序保持、name 不可改、transport 字段被清空时回落到既有条目的类型与值——编辑表单只改 token/headers
+不产出退化 `{name}`）· `removeMcpServer`（`:63`）；三者经 `persistRaw` + `conflictError`（并发写冲突 → 同型提示串）。
+- **启动装配（depth-0 only）**：面板回合把 `mcpServers: getMcpServers()` 注入 runAgent opts（panel-chat.mjs）；
+`setupAgentRun` 在 **depth-0** 且 `mcpServers` 非空时动态 `import("../mcp.mjs")` → `connectMcpServersExpanded`
+（`Promise.allSettled` 并发、失败隔离：每死 server 记 warning、其余照常；展开整体失败非致命——模型本轮缺
+MCP 工具、下轮重试）。**子代理不含 MCP**：装配仅 depth-0 展开；depth>0 无 MCP 工具。
+- **命连接 / 重连细节**：`mcpConnect(config)` 幂等（`_servers` Map：id = `mcp-<seq>` → entry `{ transport, tools,
+config, configFingerprint, serverName }`）；同 serverName 活连接且指纹一致 → 复用；`_reconnecting`
+（serverName → promise）去重双重建连；`transport.onDead` 死后从 registry 移除 + 后台退避重连（延迟表四轮），
+成功原位替换 entry（**id 不变**——panel / session 引用稳定）。
+- **探活（`probeMcpServer`——CLI 镜像）**：一次性 initialize + tools/list + 计时 → `{ ok, toolCount, latencyMs }` / `{ ok:false, error }`；**零副作用**（不进 `_servers`、无 onDead 挂钩、finally close；handshake 失败 catch 中 `transport?.close()` 防泄漏）；initialize 与 tools/list 分页循环每页受 `INIT_TIMEOUT_MS`(30s) 约束。
+- **生命周期与面板反馈**：`closeAllMcp()`（extension deactivate）；`mcpDisconnectByName(name)`（面板 [Reconnect] 先断开再重连）；`mcpConnectedNames()` / `mcpConnectedToolCounts()`（●/○ 状态与工具数）；连接 / 断开 / 重连变更在**下一轮 runAgent 装配**生效（热插拔）。
+- **agent 代配差异（无磁盘重读菜单）**：VSC 每轮 `loadRaw` 即磁盘——agent 用 edit 工具直接改 `mcp.servers[]` 后，下轮装配（重读 config）自然生效；无 CLI 的菜单边界磁盘重读 / fingerprint 对账交互（机制本体 = §6.4 / §6.8）。
+
 ## 7. 并入的关键决策记录（含否决备选）
 
 | # | 决策 | 理由 / 否决备选 |
@@ -149,6 +174,7 @@ server 行 action 用 `@name:` 命名空间（与 `add` / `refresh` 保留动作
 | D-MC13 | 列表即菜单 + `@name:` 命名空间 | 消灭「四个操作各自弹一次 server picker」的重复；server 可叫 add / refresh 不撞名 |
 | D-MC14 | agent 代配 = **磁盘重读 + fingerprint 对账**（漂移诚实报告） | disk 变更 / 删除已连 server 时不误断正在用的；`⚠ disk changed` 持续标记到显式解决 |
 | D-MC15 | **单写者假设**（不做双写合并） | 既有 config 写入模型；仅记录不引入新机制 |
+| D-MC16 | VSC 配置 / 连接入口 = **Settings 面板 MCP 页**（无 `/mcp` 命令面） | VSC 无 TUI 命令通道——结构性端差；面板表单 add-or-update 复用、探活确认环（§6.5 语义）对齐 CLI 保存前探活 |
 
 ## 8. 不并项与历史沿革
 
@@ -171,6 +197,7 @@ server 行 action 用 `@name:` 命名空间（与 `add` / `refresh` 保留动作
 | §2.1 网关能力的 **VS Code 内部 API**（`mcpListTools` 等） | VSC 侧保留实现 | 属 VSC 产品树（`thincoder-vscode/src/**`） |
 | §5.2 存储与 keychain 取舍 | token 明文存 config 的讨论 | 结论已入 §6.5；未步：keychain（超范围） |
 | §11 中的「评审 #7 活约束」「会诊 P4/P6」等评审标记 | 逐批评审过程标记 | 过程材料——现行约束已入 §6.2 / §6.9 |
+| 源档 §1–§3 纯 VSC 同构细节（定位 / 配置形态 / 装配热插拔——与 CLI 逐字同源部分） | VSC 侧同构实现 | 已并入 §6.10（面板面 + 端差坐标）；同构正文不逐行复制（D2） |
 
 ### 8.3 需求侧（已并入本层需求档）
 
@@ -191,3 +218,4 @@ server 行 action 用 `@name:` 命名空间（与 `add` / `refresh` 保留动作
 
 - 2026-09-13：建档——自 `docs/core/design/CORE-UNIFICATION.md` 拆出（§2.5 #81 / #144–#148）；**语义零改**，行号沿用原编号。
 - 2026-09-14（**B 轮并入 · 第 2 批**）：新增 §6 **机制面**（定位与术语 / 工具展开 / execute 契约 / 连接装配与热插拔 / 配置机制 / 传输与活性 / 探活 / `/mcp` 交互 / 失效语义）· §7 **关键决策记录（D-MC1–15）** · §8 **不并项与历史沿革** · §9 体量与拆分规划；来源 = `thincoder-cli/docs/design/MCP.md`（**旧档一字未改**——原地作参照历史）；需求侧已并入本层 `docs/core/requirements/MCP.md`；首部加机制面指针一行。
+- 2026-09-15（**VSC 轮并入 · 批 7**）：§6.10 新增 **VS Code Settings 面板 MCP 页**（无 `/mcp` 命令面端差 / config-mcp 读写 / depth-0 装配 / 命连接 / 探活镜像 / 生命周期 / agent 代配差异）· §7 补 **D-MC16** · §8.2 补 1 行不并项登记；来源 = `thincoder-vscode/docs/design/MCP.md`（**旧档一字未改**）；坐标按现状实核（`panel-mcp.mjs:8,28` · `config-mcp.mjs:12,19,37,63`）。

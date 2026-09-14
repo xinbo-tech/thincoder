@@ -36,9 +36,24 @@
 **实发跳号（0.12.54 → 0.12.58，55/56/57 永缺）**；tag 只在发布时打（缺号处无 tag）。
 F2 / F3 是此事故的直接修复产物。
 
-## 5. 不并项与历史沿革
+## 5. VSC 端通道面（VSC 轮并入 · 2026-09-15）
 
-### 5.1 历史沿革（(d) 类——**不并**）
+> **来源** = `thincoder-vscode/docs/requirements/RELEASE.md`（42 行 · VSC 产品档——迁移期参照历史）。本节 = 该档中「根层所缺」的 **VSC 端发布通道面**（双市场 = Marketplace + Open VSX——结构性端差，与 CLI npm 面同语义、异通道）。
+> **对位注**：§2 F1 / §3 N1 / N3 的语义（唯一门禁 / 编号连续 / 门禁不可绕过）双端同源——VSC 侧同一机制在本节登记**通道差异**；设计侧操作步骤 = `thincoder-vscode/docs/design/RELEASE.md`（VSC 侧未迁）——本档只留需求陈述（D2）。
+
+| # | 需求 | 说明 |
+|---|---|---|
+| **V-F1** | 发布 = 唯一门禁（VSC） | `vscode:prepublish` = `npm run lint && npm run doc:check && npm run test:full && npm run test:integration`（`thincoder-vscode/package.json`）——`vsce package` / 无参 `vsce publish` 自动执行；无独立预跑步 |
+| **V-F2** | 双源发布一条命令 | `npm run publish:all`（`scripts/publish-all.mjs`）——一次打包、双源发同一 .vsix、全量只测一次；`--skip-marketplace` / `--skip-openvsx` 显式单源 |
+| **V-F3** | 号在发布时定（VSC） | 开发期变更记录挂 `[Unreleased]`；发布 = 唯一定号动作；CalVer `0.<月>.<月内序号>` 月内计数重置 |
+| **V-F4** | 发布完成判定（VSC） | 发布命令正确返回（exit 0）= 完成——不轮询、不检查上线版本（审核队列 = 平台侧事务）；边界 = 发布前 PAT 校验照做（显式 `--pat` / `VSCE_PAT` + `OVSX_PAT`） |
+| **V-F5** | 凭据不入库（VSC） | PAT 只走环境变量 / 显式传参；仓库内零凭据（源码与发布产物同查） |
+
+**VSC 端非功能**：V-N1 编号连续不跳空（发布前核对双源最高号 + 当前月 → 期望号公式；缺口不补）· V-N2 双远端同步（发布 commit + tag 两端 origin + github 皆推——漏推即漏发布）· V-N3 发布前清单可核（变更记录已更新 / 版本号已递增 / 双源计划在位）。
+
+## 6. 不并项与历史沿革
+
+### 6.1 历史沿革（(d) 类——**不并**）
 
 > 来源档 `thincoder-cli/docs/requirements/RELEASE.md`（CLI 产品需求档）——**原地保留作参照历史**（保留 ≠ 维护）。下列内容不并入本档：
 
@@ -48,16 +63,16 @@ F2 / F3 是此事故的直接修复产物。
 | 旧档档头「状态：**现行**。设计+测试见设计档」 | 时点状态行 + 迁移前设计档址 | 批次语境——本档档头已给配对档现状路径 |
 | 旧档变更记录 | 逐批流水 | 历史叙述——本档自有变更记录 |
 
-### 5.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
+### 6.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
 
 | 旧档面 | 内容 | 何故不并（去向 / 触发） |
 |---|---|---|
 | 发布操作步骤 / 踩坑记录 / 回滚 | 命令、代理、双远端、vsce-ovsx 教训 | 设计面——`docs/cli/design/RELEASE.md`（CLI 侧）· `thincoder-vscode/docs/design/RELEASE.md`（VSC 侧未迁） |
-| VSC 侧同名档 | `thincoder-vscode/docs/requirements/RELEASE.md` | VSC 轮（`docs/core/requirements/` 并入——P1 统一面） |
+| VSC 源档 §2（F1–F5 判定句的证据列）· §3（N1–N4 度量方式——`package.json` 行号 / `CHANGELOG.md:8` / `docs/design/RELEASE.md` 节号） | VSC 实现坐标 | 时点坐标——随版本演进失真；机制面已并入 §5（只留需求陈述） |
 
-## 6. 体量与拆分规划（R24a）
+## 7. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **68 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **105 行**（根层新建 68 行 + VSC 轮并入 §5 ≈ +37）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
@@ -65,3 +80,4 @@ F2 / F3 是此事故的直接修复产物。
   ① 落点 = `docs/core/requirements/`（统一面——发布流程是跨产品板块主题）；**档头注明配对设计档位置**（设计档判 CLI 面——层归属不对称已明写）；
   ② **F1 按实核收正**：门禁链补入**集成集**环（旧档 F1 只写 lint + 全量测试——设计档 `docs/cli/design/RELEASE.md` 早已三环，需求档未同步）；
   ③ F4 措辞去「`release:check`」实现名（改为行为陈述）；④ 新增 §5 不并项与历史沿革、§6 体量。
+- 2026-09-15（**VSC 轮并入 · 批 7**）：新增 §5 **VSC 端通道面**（双市场 = Marketplace + Open VSX：V-F1–V-F5 / V-N1–V-N3——唯一门禁 / 定号 / 完成判定 / 凭据不入库；CLI npm 面不重述）· 旧 §5 → §6（不并项表更新）；来源 = `thincoder-vscode/docs/requirements/RELEASE.md`（**旧档一字未改**——原地作参照历史）。

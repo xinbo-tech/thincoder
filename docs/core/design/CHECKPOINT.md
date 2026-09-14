@@ -136,6 +136,29 @@
 
 两端能力分级（F7 P0/P1）与 action 集完全一致；CLI 建的快照 VS Code 可 list / rewind（同 cwd 同目录同格式——跨端互通）。
 
+### 6.9 VS Code 端接线面（VSC 轮并入 · 2026-09-15）
+
+> **来源** = `thincoder-vscode/docs/design/CHECKPOINT.md`（105 行 · VSC 产品档——迁移期参照历史）。本节 = 该档中「根层所缺」的 **VSC 端接线细节**（(a) 机制 / (b) 坐标）。与 CLI 同源的机制本体（v2 全量副本 / 触发三路 / 存储与 id / commit 清理 / git 纪律 / 恢复语义）已入 §6.1–§6.8，不重复（D2）。
+
+- **VSC 触发点（本端接线）**：git 破坏性 op 自动快照 = `git-ext.mjs snapshotBefore`（`:55`——reset --hard /
+checkout 文件 / restore / stash pop / branch|tag delete / clean / rebase，操作前 best-effort 快照 → 返回
+`[snapshot <id> created before <label>]\n` 注记，失败不阻塞 op，审批层才是真门）；bash git 破坏性命令 =
+`shell.mjs gitGuardSnapshot`（`:139` `GIT_DESTRUCTIVE_RE` 宽 matcher / `:148` 实现——匹配 `git checkout -- .` /
+`restore` / `reset --hard` / `clean -f` 等，命令**从不拒绝**（模型会绕），snapshot-then-proceed 全量副本 →
+返回 notice 注记含恢复入口 `checkpointAction=rewind checkpointId=<id>`，best-effort 永不 throw）；commit 后清理
+（`git.mjs` commit case）+ F6 懒清理（`git-checkpoint.mjs lazyClearIfCommitted` = `:31`——list / create 入口比对
+`git log -1 --format=%ct` ×1000 与最新快照 meta.time）。与 §6.2 / §6.5 / §6.6 统一语义同轨。
+- **恢复输出契约（VSC 侧面）**：checkpoint 子动作 = list / create / rewind / cat / versions
+（`git-checkpoint.mjs executeCheckpointAction` = `:46`）。`list`：`(no checkpoints yet)` 或每快照
+`id  ISOtime  N tracked: …  N untracked: …`；文件名单经 XML 转义（untrusted 回流模型上下文）。`create`：
+`Checkpoint <id> created (N file(s): X tracked, Y untracked)`。`versions path=<file>`：每行
+`snapshotId ISOtime sizeB sha:<sha> (tracked|untracked)` + 恢复指引行；无副本 → `No snapshot copies of … found`。
+`rewind checkpointId path=…`：**单文件 `path` 必填**（全量回滚禁用——与 `git checkout -- .` 同危险）；成功 →
+`Restored "<path>" (tracked|untracked) from checkpoint <id>.\n(The pre-restore state was snapshotted first —
+you can restore again to go back.)`；oversized / 未含文件 → 具体 Error。`cat checkpointId path=…`：只读查看
+快照内文件内容（legacy 走临时恢复 + 还原工作树）。`restoreFile(cwd,path,id)` = rewind path 模式薄封装。
+- **只读分类（审批过滤）**：git 只读 action 免审批（diff/status/log/show/ls-remote/blame）+ checkpoint 的 **list/cat**（list 的 F6 懒清理副作用已判可接受——清的是 commit 后失去意义的过期快照）；rewind/create/versions 走副作用门。F2 提示文本（`checkpointAction=list` 非空输出尾部固定一行）— 与 §6.7 D-CP7 同文本。
+
 ## 7. 并入的关键决策记录（含否决备选）
 
 | # | 决策 | 理由 / 否决备选 |
@@ -149,6 +172,7 @@
 | D-CP7 | F2 提示文本定稿（中文一行，JS 长度 41 字符）；两端共享同一固定文本（前提 = 参数名两端一致——不一致则按端定制） | 与既有英文输出混排为有意选择 |
 | D-CP8 | CLI `/restore` 改造为两级 picker（用户侧唯一恢复入口） | v2 全量回滚禁用（无 path 必抛、summary 已删）；逐文件恢复 |
 | D-CP9 | 破坏性动作「先快照再执行 + 确认，从不拦截」 | 审批层才是真实防线——快照是保险不是门禁 |
+| D-CP10 | VSC 恢复动作输出契约（list 转义 / rewind 单文件 path / versions sha 对照行）定稿 | 输出面 = 模型可见契约——untrusted 文件名单须转义；单文件 path 防静默全量回滚 |
 
 ## 8. 不并项与历史沿革
 
@@ -169,6 +193,7 @@
 |---|---|---|
 | §8 测试覆盖（含已清空引用与测试意图清单 T1–T10） | 用例 / 测试定位 | **一次性批次材料**（测试清零批后为意图清单）——测试资产归测试层 |
 | §5.5 + 附录 A（系统提示词建议文本） | 平台层交付物（用户侧） | 原文自声明「不写入任何项目代码 / 文档」——**不进本档**（F4 要点已在四层闭环，见本层需求档） |
+| 源档 §1–§5 纯 VSC 同构细节（快照机制 / 触发点 / 恢复入口 / 只读分类 / 清理原语——与 CLI 逐字同源部分） | VSC 侧同构实现 | 已并入 §6.9（接线面 + 输出契约）；同构正文不逐行复制（D2） |
 
 ### 8.3 需求侧（已并入本层需求档）
 
@@ -183,3 +208,5 @@
 - 2026-09-13：建档——自 `docs/core/design/CORE-UNIFICATION.md` 拆出（§2.5 #48 / #49 / #167 + 四要素明细 + 映射行）；**语义零改**，行号沿用原编号。
 - 2026-09-14（**B 轮并入 · 第 3 批**）：新增 §6 **机制面**（快照形态 / 触发三路 / 存储与 id / 语义边界 / commit 清理 / git 能力与纪律 / 恢复入口 / 两端统一后形态）· §7 **关键决策（D-CP1–9）** · §8 **不并项与历史沿革** · §9 体量（低于软线，无需拆分）；来源 = `thincoder-cli/docs/design/CHECKPOINT.md`（**旧档一字未改**——原地作参照历史）；
   需求侧已并入本层 `docs/core/requirements/CHECKPOINT.md`；首部加机制面指针一行。
+- 2026-09-15（**VSC 轮并入 · 批 7**）：§6.9 新增 **VS Code 端接线面**（触发点 / 恢复输出契约 / 只读分类）· §7 补 **D-CP10** · §8.2 补 1 行不并项登记；来源 = `thincoder-vscode/docs/design/CHECKPOINT.md`（**旧档一字未改**）；坐标按现状实核（`thincoder-vscode/src/tools/git-ext.mjs:55` · `thincoder-vscode/src/tools/shell.mjs:139,148` ·
+`thincoder-vscode/src/tools/git-checkpoint.mjs:31,46`）。

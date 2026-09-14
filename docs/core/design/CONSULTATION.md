@@ -182,6 +182,23 @@ consult_stop
 - **会话收尾**：`cleanupConsultSessions`——仅 Ctrl+C / suspension abort 分支；标记 stopped + abort 清 map。
 - **配置入口**：`/config` 命令（`thincoder-cli/src/tui/cmd-config.mjs`——候选池增删改 + effort picker）。
 
+### 6.5 VS Code 端级实现接线（VSC 轮并入 · 2026-09-15）
+
+> **来源** = `thincoder-vscode/docs/design/CONSULTATION.md`（161 行 · VSC 产品档——迁移期参照历史）。本节 = 该档中「根层所缺」的 **VSC 端级接线表**（(a) 机制 / (b) 坐标）；digest / settle / 单容器机制本体已入 §6.2 / §6.3 与 `AGENT-LOOP.md` §6.7.3，不重复（D2）。
+
+| 环节 | VS Code（现状坐标） |
+|---|---|
+| 子 agent 构建 | `runConsultChild`（`thincoder-vscode/src/agent-tools/consult.mjs:223`）——`buildProvider` + effort 钳制（越 `reasoningEffortEnum` 整字段丢弃——防 candidate 开跑即死）；`models` 子集选择器同 CLI（大小写不敏感） |
+| 子任务 runner | `runAgent(child, problem, childCallbacks, { depth: 1, maxTurns: consultTurns, signal })` |
+| 只读工具集 | setup.mjs role 过滤（depth>0 且 role `consult` → 只读）+ `main_history` 经 `opts.extraTools` 注入（`makeMainHistoryTool` = `thincoder-vscode/src/agent-tools/consult.mjs:29`——limit 默认 20 最大 100；多模态 base64 图片替换 `[image omitted]`、tool_calls 显形 args 截 200、60KB 字节预算） |
+| 系统 prompt | role `"consult"` → consult-base 底座（瘦——不背主 agent persona / 工具引用） |
+| 工具注册 | setup.mjs：`consultModels` 非空即注册 `consult_start` / `consult_stop`——空池不注册 |
+| 会话跨 run 容器 | `history._consultSessions`（`_asyncSubagents` 同款载体——agent per-run 重建） |
+| settle → digest | 全 settle park `history._pendingConsultResults` → agent.mjs run-start 注入（**单注入点**——splice 即 consumed）；超长走 offload + 预览；部分 settle 不提前注入 |
+| 驱动 / 中止 | `extension/suspension.mjs` poolLive + 消化判据（任一 pending 族非空）；`cleanupConsultSessions`（普通回合收尾不再 abort——仅中止分支）；`sessionSignal ?? turn signal` 逐链中止，interrupt（Ctrl+I 停回合续跑）**不**逐链中止在飞会诊（F2 同款豁免——否则意见丢为失败注记） |
+| 消化轮动作域 | 手动档 auto-turn = `AUTO_TURN_DIGEST_DOMAIN` 禁写禁 spawn（同 advisor/escalate——无「consult 可写」例外）；机械拒绝 = 手动档 auto-turn 内 `consult_start` execute 门拒绝；`consult_stop` 保留放行（控制类豁免） |
+| 面板可见性 | `onSubagent` consult 事件 → 底部活动面板 / 冻结入流（reply preview ≤8KB）；每 consultant 一条活动块、回复预览随 answered 事件 |
+
 ## 7. 并入的关键决策记录（含否决备选）
 
 | # | 决策 | 理由 / 否决备选 |
@@ -192,6 +209,7 @@ consult_stop
 | D-CO4 | 跨 turn 生命周期 | 回合尾不再清理，仅 Ctrl+C / 会话中止时 abort（与 async 子代理同规则） |
 | D-CO5 | 独立 consult role | 不复用 explore 身份——consult-base 作裸 prompt、不背编码纪律块；工具集只读过滤 + main_history |
 | D-CO6 | CLI 复用 subagent 的 provider 解析 | `resolveChildProvider` 零新机制——跨 provider 候选天然支持 |
+| D-CO7 | VSC 会诊 digest 消费 = **同一 digest 通道 + 单注入点**（手动档 auto-turn 禁写禁 spawn 零例外） | 与会诊 CLI 同语义；「consult 可写」不设例外——动作域档位制跨族一致 |
 
 ## 8. 不并项与历史沿革
 
@@ -215,6 +233,7 @@ consult_stop
 | 飞刀（escalate）面机制文本（住旧 `thincoder-cli/docs/design/ESCALATE.md`） | 升级机制 / settle 三分类 / 工程模式拒保持 | 本批参照面 = 同板块同名档；该档不在内 ⇒ **越段登记**——触发 = 父侧另派 |
 | advisor 主面机制文本（住旧 `thincoder-cli/docs/design/ADVISOR-CONVERGENCE.md`） | 评审运行 / 收敛 / 轮次语义 | 同上（参照面不含）⇒ **越段登记**——触发 = 父侧另派 |
 | 旧 `thincoder-cli/docs/design/AGENT-LOOP.md` §14（会诊 / 飞刀异步化） | consult settle / 注入时机 / escalate 三分类 | 试点批登记「属本板」；本批参照面不含该档 ⇒ **越段登记**——consult 面与旧 `CONSULTATION.md` §2.2 同源（结论已入 §6.2）；escalate 面见上行 |
+| 源档 §2 纯 VSC 同构细节（R17 语义 / 工具契约 / 会话状态 —— 与 CLI 逐字同源部分） | VSC 侧同构实现 | 已并入 §6.5（端级接线表 + 端差坐标）；同构正文不逐行复制（D2） |
 
 ### 8.3 需求侧（已并入本层需求档）
 
@@ -232,3 +251,7 @@ consult_stop
 - 2026-09-14（**设计面收正轮 3 · eng-designer**）：§2.3 表后补 **#106 S2 接线前口径确认项**（归一取 CLI 的核内实核坐标 + 对端严格形态 + 潜伏差异的行为差登记——只记，S2 动作）。
 - 2026-09-14（**B 轮并入 · 第 3 批**）：新增 §6 **机制面**（架构与数据流 / R17 digest 消费模型 / 工具契约 / 实现接线）· §7 **关键决策（D-CO1–6）** · §8 **不并项与历史沿革**（含飞刀 / advisor / 旧 AGENT-LOOP §14 越段登记）· §9 体量（低于软线，无需拆分）；
   来源 = `thincoder-cli/docs/design/CONSULTATION.md`（**旧档一字未改**——原地作参照历史）；需求侧已并入本层 `docs/core/requirements/CONSULTATION.md`；首部加机制面指针一行。
+- 2026-09-15（**VSC 轮并入 · 批 7**）：§6.5 新增 **VS Code 端级实现接线表**（子 agent 构建 / runner / 只读
+  工具集与 main_history / 系统 prompt / 注册 / 容器 / digest / 驱动中止 / 动作域 / 面板可见性）· §7 补 **D-CO7** ·
+  §8.2 补 1 行不并项登记；来源 = `thincoder-vscode/docs/design/CONSULTATION.md`（**旧档一字未改**）；坐标按现状
+  实核（`thincoder-vscode/src/agent-tools/consult.mjs:29,223`）。
