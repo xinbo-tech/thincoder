@@ -153,7 +153,7 @@
 | N5 | 视觉模型守卫 | 非视觉模型自动剥离图片部件（防 400） |
 | N6 | 供应商限速 | 本地滑动窗口限速 + 尊重重试头退避（防 429） |
 | N7 | 输出上限 | 工具输出超限落盘 + 预览（保头保尾） |
-| N8 | 崩溃可取证 | 异常终止落崩溃记录 + 近堆快照（CLI 侧面见 `thincoder-cli/docs/design/CRASH-REPORTS.md`，**未迁**） |
+| N8 | 崩溃可取证 | 异常终止落崩溃记录 + 近堆快照 + 堆预警（CLI 侧面见 `docs/cli/design/CRASH-REPORTS.md`） |
 
 ## 4. 不并项与历史沿革
 
@@ -187,6 +187,7 @@
 
 ## 变更记录
 
+- 2026-09-15（**迁移批 · 第 6 批收口同步 · eng-designer**）：§3 N8 的崩溃取证指针按**同批迁移结果**改指（`thincoder-cli/docs/design/CRASH-REPORTS.md`「未迁」→ `docs/cli/design/CRASH-REPORTS.md`——该档已由第 6 批迁入基准层）。纯指针收正、零语义。
 - 2026-09-15（**B 式迁移轮 · 第 2 批**）：建档——`thincoder-cli/docs/requirements/FEATURES.md` 内容重建入基准层（旧档一字未改、原地作参照历史）。
   ① 落点 = `docs/cli/requirements/`（P2：含 CLI 专有的终端界面 / slash 命令面）；② 清点面按**现行登记面**实核收正（补列现行能力、`escalate` 并入 `subagent` 动作、slash 命令表按实核重排、工具/命令坐标改现状路径）；
   ③ 新增 §3 非功能性需求（安全与护栏——旧档「安全与护栏」节升为 NFR 面）、§4 不并项与历史沿革、§5 体量。

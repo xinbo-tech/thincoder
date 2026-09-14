@@ -63,7 +63,8 @@ if (isMain) {
   const dirArg = argOf("--dir");
   const domainArg = argOf("--domain"); // 产品域态（门禁传参）；无域参 = 全域
 
-  // ① 宽度——扫描域 = 发现域集（或显式产品域）的 docs/design + docs/requirements + docs/batches；
+  // ① 宽度——扫描域 = 发现域集（或显式产品域）× SCAN_DIRS（docs/design + docs/requirements + docs/batches
+  //    + docs/core/design + docs/core/requirements）；
   //    扫描单源 = checkDocWidths（表格行豁免同在其中——主流程零内联重复扫描，防两处规则漂移；T74）
   const widthFiles = dirArg ? collectMarkdown(resolve(root, dirArg)) : scanDomain(root, domainArg);
   const widthHits = checkDocWidths(root, { max: maxW, dir: dirArg, domain: domainArg });

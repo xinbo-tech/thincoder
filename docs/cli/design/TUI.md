@@ -1,0 +1,426 @@
+# TUI 界面核心（渲染 / 按键 / 折叠）· CLI 面 · 设计
+
+> 板块 = **TUI（终端界面）**——CLI 终端界面的**界面骨架**：输入层 → 状态 → 渲染 → 按键。
+> 配对需求档 = `docs/cli/requirements/TUI.md`（本板块**三档设计共用一份需求档**——层归属不对称，理由见该档 §1 注）。
+> 本档 = 三档之一：**界面核心**（本档）· `docs/cli/design/TUI-COMMANDS.md`（命令层与选择面）·
+> `docs/cli/design/TUI-SESSION-VIEW.md`（会话视图 / 回合驱动 / 显示层内存）。
+> 另有输入框契约档 `docs/cli/design/TUI-INPUT-BOX.md` 与工具输出档 `docs/cli/design/TUI-TOOL-OUTPUT.md`。
+> 对位档 = `docs/vsc/design/WEBVIEW*.md`（VSC webview 族——**非同机制**：CLI 为裸 ANSI 终端渲染、VSC 为 webview DOM；差异如实登记，各端独立实现）。
+> 建档：2026-09-15（**B 式迁移轮 · 第 6 批**——`thincoder-cli/docs/design/TUI.md`（1529 行）内容重建入基准层并**按读者面拆三档**；旧档原地一字不改、留作参照历史）。
+> 本档坐标与行数 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
+
+## 1. 设计原则与模块地图
+
+**设计原则**：**纯函数可测**（渲染 / 布局抽成无副作用纯函数）；**分层**（stdin 解码 / 状态 / 渲染 / 交互 / 命令各自独立）；
+**零依赖**（裸 ANSI 转义 + `node:` 标准库，不用 ink / React、不用 termbox）。
+
+> **模块地图口径**：本表是**结构性快照**——新增 / 改名 / 删除文件时同批回写。**行数列不并**（as-of 数值随实现漂移；档位以实测为准）。
+
+### 核心管线（stdin → 状态 → 渲染 → 回合）
+
+| 文件 | 职责 |
+|---|---|
+| `thincoder-cli/src/tui/index.mjs` | `startTUI` 入口：raw mode、keyStream + readline、分块解码、粘贴协议、Shift+Enter 翻译、resize、state 对象、`pushLine` / `pushLabel`、提交门禁、行缓冲裁剪；装配归位（`createMouseDispatch` / `createLoadOlder` / update-notice re-export）；`state._agent` ↔ `agent._tuiState` 双向挂载 |
+| `thincoder-cli/src/tui/tui-lifecycle.mjs` | TUI 生命周期终端序列：`writeStartupSequence`（alt buffer + 光标 + 鼠标 / 粘贴 / 键盘增强 + **DECRST 7 禁环绕**）、`writeCleanupSequence`、`RECOVERY_SEQUENCE`（异常退出恢复序列单源——见 `docs/cli/design/CRASH-REPORTS.md` §5）、`createExitCleanup`、`setTuiActive` |
+| `thincoder-cli/src/tui/update-notice.mjs` | 后台升级提示（`upgradeFailureText` / `pendingNoticeReady` 纯函数 + `createUpdateNotice` 装配） |
+| `thincoder-cli/src/tui/key-handler.mjs` | 按键分发：模态入口（permission / question / search / picker / wizard / interruptPrompt）+ 输入编辑；**busy 门禁**；挂起空闲 Enter → pendingInput；Ctrl+C 分支；`convMaxScroll` 导出 |
+| `thincoder-cli/src/tui/key-handler-search.mjs` | 搜索模式按键子处理（Ctrl+F 分支） |
+| `thincoder-cli/src/tui/key-modes.mjs` | 按键模态层：permission / question / interruptPrompt 独占模态 handler（激活即消费全部按键） |
+| `thincoder-cli/src/tui/render-frame.mjs` | 帧布局装配：header / conversation / subagent 面板 / todo / input / status 各面板；状态栏（含 attention 态——§7）；question 自由文本态光标例外 |
+| `thincoder-cli/src/tui/render-conversation.mjs` | 对话面板行构建（纯函数）：三层缓存、搜索高亮、折叠装配、主输出前后空行、连续 dim 折叠；`convViewport` 视口数学单源导出 |
+| `thincoder-cli/src/tui/render-segments.mjs` | 对话行三类特殊段渲染：tool 块 / frozenSubTask / frozenAdvisor（各带独立段缓存 WeakMap） |
+| `thincoder-cli/src/tui/fold-block.mjs` | 公共折叠组件（§6）——`foldCapRows` / `isExpanded` / `toggleFoldBlock` / `renderFoldedHead` / `renderExpandedBlock` / `renderBlockTimeline` / `foldTailLines` / `scrollFoldBlock` |
+| `thincoder-cli/src/tui/render.mjs` | 纯函数：字符宽度（CJK / emoji / 组合字符）、`wrap` / `slice`、markdown 表格对齐、`sanitize` |
+| `thincoder-cli/src/tui/render-loop.mjs` | 渲染调度：整帧 recompute + 行 diff（只重绘变化行）+ 光标定位；`MIN_RENDER_INTERVAL_MS` 节流；每帧 write 包 `wrapOff` / `wrapOn` |
+| `thincoder-cli/src/tui/layout.mjs` | 面板布局计算（行 / 列分配）；小终端压缩链；question 自由文本态 `boxLines = layoutAnswer` |
+| `thincoder-cli/src/tui/dims.mjs` | 终端尺寸单源：`get()` 读缓存；`refresh()` 只在事件钩子（启动 seed / resize）；sane-gate（`cols >= 40` / `rows >= 10`）挡 falsy |
+
+### 渲染内容层
+
+| 文件 | 职责 |
+|---|---|
+| `thincoder-cli/src/tui/markdown.mjs` | 轻量行内 markdown → ANSI（粗体 / 下划线 / 删除线 / 标题）；code-span 不透明 |
+| `thincoder-cli/src/tui/math.mjs` | LaTeX → Unicode 近似（表驱动子集转换器——零依赖、纯函数） |
+| `thincoder-cli/src/tui/tool-summaries.mjs` | 工具完成行摘要（`formatToolSummary`——按工具特化 + 首行兜底） |
+
+### 输入与交互（基础设施）
+
+| 文件 | 职责 |
+|---|---|
+| `thincoder-cli/src/tui/mouse.mjs` | SGR 鼠标序列解析（滚轮 / 左键点击）；`handleWheel`（展开块内容行块内滚动 + 穿出语义）；点击命中（picker 选项 / 折叠块 toggle / 翻窗 / ⏹ 取消）；`createMouseDispatch` 装配簇 |
+| `thincoder-cli/src/tui/clipboard.mjs` | 剪贴板文本 / 图像读写（Win powershell 强制 UTF-8 / macOS pbpaste / Linux xclip）+ `translateShiftEnter` + `insertPastedText` 目标路由 |
+| `thincoder-cli/src/tui/ansi.mjs` | ANSI 色板 / 控制序列；键盘增强协议启停；`wrapOff` / `wrapOn`；attention 色对常量 |
+| `thincoder-cli/src/tui/config-helpers.mjs` | `persistRaw`（写配置收口——mtime 门控 + 并发冲突 throw）/ `syncProviderField` / `maskKey` |
+| `thincoder-cli/src/tui/display-budget.mjs` | 显示层字符额度常量与对账（单源）——机制面见 `docs/cli/design/TUI-SESSION-VIEW.md` §5 |
+
+**不在本档的三面**（各挂指针，D2）：命令层与选择面 → `docs/cli/design/TUI-COMMANDS.md` §1；
+会话恢复 / 回合驱动 / 显示层内存 → `docs/cli/design/TUI-SESSION-VIEW.md` §1；输入框键契约 → `docs/cli/design/TUI-INPUT-BOX.md`。
+
+## 2. stdin 输入层（`index.mjs`）
+
+- **keyStream 双流**：`emitKeypressEvents(keyStream)`（`node:readline`）把原始字节转 keypress 事件；
+  `keyStream` 是 `process.stdin` 的 PassThrough 副本——**粘贴多块数据先写入 keyStream 再交给 readline 解析**，
+  保证按键与粘贴按序到达。鼠标序列先在 data 层拦截剥离，碎片不落输入框。
+- **分块解码**：`utf8Decoder.decode(chunk, { stream: true })`——CJK 字符跨 chunk 边界时正确拼装；
+  鼠标序列可能跨 chunk 截断：`mousePending` 保存不完整尾部，下个 chunk 拼接。
+- **鼠标滚轮**：SGR 序列（上 3 行 / 下 3 行），坐标命中展开块内容行 → 块内滚动（§6）；未命中 → 会话滚动
+  （到顶触发 loadOlder，回底恢复 `_followTail`）。
+- **鼠标点击**：左键按下 → picker 选项点击选中（跳过标题行，按 `_row` 映射 filteredItems）；
+  对话区 / 面板点击带 `_foldToggle` 的行折叠 / 展开切换、控制行翻窗、子 agent 面板头 ⏹ 标记列点击 = cancel。
+  **消息行点击无动作**（行菜单已移除——终端拖选复制是原生能力）。坐标 1-based、col 在前；release / 滚轮不消费。
+- **粘贴协议（bracketed paste）**：`\x1b[200~` 进入 pasteMode、`\x1b[201~` 退出；跨多 chunk 的粘贴先写前缀 + 累积，
+  退出时一次性写入。粘贴文本**跳过按键分发**直接进输入缓冲（`insertPastedText`）。
+- **Shift+Enter**：stdin 层 `translateShiftEnter` 把 CSI-u 的 Shift+Enter 序列翻译为 `\x1b\r` → key-handler 插入 `\n`
+  （多行键三层方案见 `docs/cli/design/TUI-INPUT-BOX.md` §5）。
+- **state 对象**（渲染全部数据源）：`lines` / `streaming` / `reasoning` / `_advisorBlocks` / `input`（codepoint 数组）/
+  `cursor` / `history` / `scroll` / `_foldScroll` / `_followTail` / `processing` / `controller` / `permission` / `question` /
+  `picker` + `pickerStack` / `wizard` / `tasks` / `dims` / `tokens` / `ctxCache` / `search` / `expandedBlocks` / `foldEnabled` /
+  `exitArmed` / `suspAbortArmed` / `_lineIdCounter` / `subTasks` / `queue` / `interruptPrompt` / `pendingNotice` /
+  `pendingInput` / `attentionAwaiting`（§7）/ `_history*` 等。
+- **cleanup（退出路径统一）**：`saveSession` 同步写盘 → 关 MCP → 终端复位（alt buffer 退出、mouse / paste / keyboard /
+  modifyOtherKeys off、wrapOn、主缓冲区、显示光标）。`process.on("exit", cleanup)` 注册一次；
+  `/exit` 与 Ctrl+C 双确认最终都走 `process.exit`（`exitTimer` 延迟可注入防真退出）。
+- **行缓冲裁剪**：`lines` 超 5000 时裁掉头部 1000 行并插入裁剪标记行（freeze 锚点整体前移——净位移校正，防冻结落点漂移）。
+  字符维额度见 `docs/cli/design/TUI-SESSION-VIEW.md` §5。
+
+## 3. 行语法与逐行对齐（`_kind` 单一事实源）
+
+- **行语法单一事实源**：对话行有三个生产者——live（`tool-events.mjs` `flushStream`）、恢复（`startup.mjs` `historyToLines`）、
+  注入（session / 命令 `pushLine`）——**全部产出带 `_kind` 类型标记的行**：`"thinking"`（思考）/ `"text"`（主文本）/
+  `"tool"`（工具载体）/ 无标记 = 用户消息与标签行。`buildConvLines` 读标记判定折叠行为，不再从颜色猜
+  （颜色降级为纯视觉属性；旧无标记行的颜色启发式仅作兼容兜底）。
+  这是「恢复体验 = 执行体验」的结构保证。**新增生产者必须打 `_kind` 标记**。
+- **逐行对齐契约**：同一回合在 live 与 restore 两种管道下渲染**逐行一致**（白名单：done 行 `❯ name — done (耗时)` 为 live 独有——
+  历史不存耗时，恢复管道无此行，其完成态状态词回落 `"done"`）。为此统一的点：
+  ① 工具标题行两态同格式 `❯ name <参数摘要>`（`describeToolArgs` 单源）；
+  ② live `onToolCall` 落参数全量 JSON dim 行（= restore `toolArgsLines`）；
+  ③ live `onToolResult` 落结果正文 dim 行（= restore 全文；`slimToolResultForDisplay` 两管道共享）；
+  ④ live 不再有孤立的行数摘要行。
+- **回归 guard**：工具载体的计时与中断清扫覆盖全部工具载体来源（`docs/cli/design/TUI-TOOL-OUTPUT.md` §5）。
+
+## 4. 按键分发与中断
+
+**状态优先级**（从高到低，每个状态独占处理并 `return`）：
+
+```text
+permission（y/n/a/esc；batch a/o/n；continue y/n）
+→ question（选项 ↑↓ / enter / esc，自由文本——key-modes）
+→ search 模式（Ctrl+F 进入：Ctrl+N/P/G/R 导航、esc 退出、字符输入过滤）
+→ interruptPrompt（Ctrl+I 后输入注入消息——创建 / 模态分支先于 picker）
+→ picker 栈 / wizard（↑↓ 选择、enter 确认、esc 取消）
+→ 正常输入编辑（字符 / 退格 / Ctrl+U / Ctrl+V / ↑↓ 竖移·历史 / 多行）
+```
+
+- **模态分支**（`key-modes.mjs`）：permission / question / interruptPrompt 激活时**消费全部按键**（含未匹配键——不落入下层编辑路径）；
+  搜索模态另居 `key-handler-search.mjs`。
+- **busy 门禁**（`processing` 含 digest 单一判据）：**输入不禁**——打字照常进输入框回显（吞提交不吞字符）；
+  **Enter 提交吞 + busy 提示**；**斜杠命令同禁发**（白名单机制已删——`/exit` 也发不出，退出靠 Ctrl+C 终端层武装通道）；
+  空 Enter 静默（text 非空才吞）。
+- **挂起空闲**（`docs/core/design/AGENT-LOOP.md` §9——busy 之外）：Enter（非 slash）→ `pendingInput` **单槽**
+  （至多一条待交接——槽满吞 + 提示）+ 唤醒（`_suspWake`，不打断后台）；释放窗口期间同语义。
+- **输入编辑键表与 ↑↓ 三规则** = `docs/cli/design/TUI-INPUT-BOX.md` §2 / §3（本档不重述——D2）。
+
+### 4.1 Ctrl+C 分支（三态武装一致）
+
+1. **picker 打开 → 取消当前 picker**（等同 Esc），不杀进程。
+2. **武装窗口内二按**（状态路由前统一检查 `suspAbortArmed`——跨态桥接）→ **显式全停**：
+   当前回合平 abort（无 interrupt——走回合收尾清池分支）+ abort 集合 = 链条内全部 controller（`agent._sessionAbortAll`）
+   + **挂起态才置 `_suspAborted`** + 唤醒 driver（收尾清池）；**非挂起语境不置**（粘滞会阻塞未来挂起会话重入）。
+   无目标可停（无 processing / 无 abort 集合 / 未挂起）→ 不吞键、落空放行到下方分支。
+3. **挂起态**（`state.suspended`）→ 武装窗口两级中止：
+   - 未武装 + 有回合在跑（digest / 会话内回合）：仅中止当前回合（`abort({ interrupt: true })` 无 message——
+     interrupt 排除清池分支）——后台池保留，回挂起等待；
+   - 未武装 + 纯挂起等待：仅提示不清池（提示含运行中数量）；
+   - 武装 3s 窗口内再按 → 统一全停。
+   提示：`[stopped current turn — press Ctrl+C again within 3s to abort all background subagents]` /
+   `[abort] Press Ctrl+C again within 3s to abort all background subagents (N running)`。
+4. **processing（非挂起）→ 武装窗口两级中止**：首按 = `abort({ interrupt: true })`（无 message——停当前回合不续跑）+ 提示
+   + 武装 3s（`suspAbortArmed` + `suspArmTimer`，`ctx.exitArmDelay ?? 3000` 过期自动复位）；窗口内再按 → 统一全停。
+   （无条件平 abort 会命中清池分支误杀全部后台子代理——已实测修正。）
+5. **空闲态 → 双确认**：第一次只提示 `[exit] Press Ctrl+C again within 3s to exit` 并置 `exitArmed`
+   （超时自动解除，可注入；回合启动即清除 `exitArmed` 防跨回合残留）；窗口内再按才走 cleanup + 延迟退出。
+
+### 4.2 Ctrl+I 中断注入
+
+- processing 时进入 `interruptPrompt` 状态；输入消息 Enter 提交 → `controller.abort({ interrupt: true, message })`
+  → agent 循环把中断消息注入历史后**重开 controller 续跑**。
+- **interrupt 区分**：**有 message**（Ctrl+I）= 重建 controller 续跑；**无 message**（Ctrl+C 首按停回合）= 不续跑 break
+  ——回合层回滚无 message 注入产生的尾部垃圾（`agent` 侧零改动；partial 输出**不**回滚——interrupt 家族「提交部分输出」语义）。
+- 注入框的键集 / 光标 / 提示 = `docs/cli/design/TUI-INPUT-BOX.md` §8。
+
+## 5. 渲染管线（帧装配 / 布局 / 对话行构建）
+
+**帧装配（`render-frame.mjs`）**
+
+```text
+header（logo / 版本 / 模型 / think 徽章 / cwd）
+对话面板（renderConversation）
+子 agent 面板（运行中 / 排队 waiting 区块，会话与 todo 之间）
+todo 面板（task 列表，≤5 行，全部 done 自动收起）
+输入框（layoutInput：多行展开、光标定位、粘贴快捷键提示角标）
+状态栏（模式 / 耗时 / token / 上下文利用率 / busy 提示 / 快捷键提示；attention 态见 §7）
+```
+
+- **布局分配**（`layout.mjs` `computeLayout`）：面板高度随内容伸缩；**运行中子 agent 活动为固定底部面板**——
+  位于会话区与 todo 之间，高度完全自适应（= 全部运行中区块的渲染行数，会话区被挤小），不随会话滚动；
+  完成后立即冻结进会话流（`_frozenSubTask` 折叠块）；无驻留区块时面板不渲染（无悬空分隔线）。
+- **小终端压缩链**：subagent 面板最先让位（可至 0 隐藏——数据保留在缓冲区）→ conversation → picker → permission →
+  todo 分隔线（任务行永不压缩）。
+- **对话行构建管道**（`render-conversation.mjs` `buildConvLines`，纯函数）：
+
+```text
+原始 text → highlightSearchMatches（搜索命中：当前项反白、其余黄下划线）
+→ sanitizeDisplay（剥 ANSI / 控制字符，防网格污染）
+→ renderMathInline + renderMathBlock + markdown（先 math 后 markdown——math 把 $…$ 视为不透明段）
+→ formatTables（markdown 表格按显示宽度重排，CJK 对齐）
+→ wrapText（按 stringWidth 换行，宽度 = cols − 1）
+→ 折叠（判定与装配见 §6）
+```
+
+- **特殊段**（行对象载体分支互斥）：`_frozenSubTask` → frozenSubSeg、`_toolBlock` → toolSeg、
+  `_frozenAdvisor` → frozenAdvSeg（`render-segments.mjs`）。工具块的完整语义以 `docs/cli/design/TUI-TOOL-OUTPUT.md` 为权威。
+
+**关键约束**
+
+- **markdown / math ANSI 在 wrap 之前插入**——插入的转义序列零显示宽度（`stringWidth` 剥离 ANSI），不参与宽度计算、不破坏对齐；
+  渲染先于 wrap 保证跨 wrap 边界的公式 / 标记完整转换。窄作用域复位（`22`/`24`/`29` 而非 `0`）保证不冲掉行底色。
+- **宽度补偿**：标记（`` ` `` / `**` / `~~`）渲染后消失，含标记的表格行会比 `formatTables` 计算的列宽短——
+  `renderMarkdownPreservingWidth` 在行尾补空格恢复原宽（竖线对齐）。math 先于 `formatTables` 执行 → 表格列宽按转换后文本测量，无需补偿。
+- **缓存**：`convCacheKey`（lines 长度 / 末行长度 / streaming / reasoning 长度 + `_advisorBlocks` 摘要 + frozen 载体签名 +
+  工具块缓冲签名 + **colorSig** + foldEnabled / expandedBlocks 摘要 + cap 分量 + search 状态 + `_foldScroll` 分量）命中则跳过重建；
+  运行中区块居固定面板——子 agent 活动不再失效会话缓存。
+- **Ambiguous 宽度低估 + DECAWM 防线**：`—`（U+2014）· `│`（U+2502）· `●`（U+25CF）· `▸`（U+25B8）· `…`（U+2026）·
+  `↑↓`（U+2191/2193）属东亚 Ambiguous 宽度——`charWidth` 按 1 格算，但中文 locale 终端实际渲染 2 格 → 行宽低估 → 物理 wrap + 清错行。
+  **三层防御**：① 启动禁环绕（`writeStartupSequence` 的 DECRST 7）+ 每帧 write 包 `wrapOff` / `wrapOn`——超宽行硬截断在边距；
+  退出 `writeCleanupSequence` 恢复 DECSET 7。② picker 行与标题行右边距留 8 格余量。③ 标签截断改按显示宽度（原按 UTF-16 length 截）。
+- **渲染调度**（`render-loop.mjs`）：`scheduleRender()`（setImmediate 合并 + 16ms 节流）+ 整帧 recompute 后行 diff
+  （`rows[i] !== prevRows[i]` 只重绘变化行 + 光标定位），防闪烁。1s ticker 在回合驱动器（`docs/cli/design/TUI-SESSION-VIEW.md` §4）。
+- **宽度数学**（`render.mjs`）：`charWidth`——CJK / emoji / 全角 2 列、组合字符 / 零宽 0、其余 1；`wrap` / `slice` / `pad` 全按显示宽度。
+
+## 6. 折叠与区块交互
+
+### 6.1 公共折叠组件（`fold-block.mjs`）
+
+- **组件化**：折叠交互统一收敛到公共组件——任何「流式 / 超长输出要可折叠」的功能直接复用，不再复制渲染逻辑。
+  API：`foldCapRows`（60% 封顶数学）/ `isExpanded` / `toggleFoldBlock`（收起时同步清 `_foldScroll` 残留）/
+  `renderFoldedHead` / `renderExpandedBlock` / `renderBlockTimeline` / `foldTailLines`（tail-3 提取单源）/
+  `scrollFoldBlock` / `blankLine` / `foldHintLine`。
+- **接入面**：子 agent 区块（运行中固定面板 / 冻结流内）、advisor 块、工具块、长消息、连续 dim；鼠标点击 toggle 也走单源 `toggleFoldBlock`。
+- **接入约定**：凡「超长输出想可折叠」用本组件拼装——封顶、可达性与统一形态只在组件里有。
+
+### 6.2 统一折叠形态
+
+**「所有折叠区块 = 默认三行 tail，展开封顶 60%」**：折叠态单源为
+`renderFoldedHead` —— `▶ <身份标签> · N lines — click to expand` + 末 3 行（dim，去 gutter 后按 cols 截断）。
+身份标签按内容分类：`thinking`（思考块）/ `tool output`（dim 行与连续 dim 块）/ `message`（其余可折叠长行兜底）；
+子 agent、advisor 用各自既有的括号身份头。**折叠 / 收起标志始终在块头部同一位置**；控制行 = bold cyan `▶` / `▼`
++ 短语中 `click to expand/collapse` 下划线——**点击任意带 `_foldToggle` 的行即双向切换**。
+
+### 6.3 展开封顶与窗口（含块内滚动）
+
+- 展开态经 `renderExpandedBlock` 统一渲染，**区块总高 ≤ `floor(rows × 0.6)`**（`foldCapRows`；rows 未知 → 不封顶）；
+  高度封顶保留，内容不一次性截断——超封顶正文渲染为**窗口**（`state._foldScroll` 记每块窗口起点；
+  窗口可读行 = `cap − 5`，预留 blank + 顶部控制 + ▲ + ▼ + 底部收起开销）。
+- 窗口上下渲染 **`▲ 上方还有 N 行（点击向上翻窗）`** / **`▼ 下方还有 N 行（点击向下翻窗）`** 控制行；点击翻窗 = 一整窗；
+  越界 offset 渲染时 clamp 并写回（防滚轮 / 翻窗误判「未到边界」卡死）。
+- **滚动读全文、60% 高度内、底部 ▼ 收起控制行永远在块尾**——触封顶时区块底部追加第二个控制行（唯一保证可达的收起入口）；
+  整块 ≤ `cap − 5` 行时全量显示、无底部控制行。
+- `convCacheKey` 含 `_foldScroll` 分量（翻窗必须重渲染）；`maxRows` 由调用链贯穿；`foldEnabled = false`（/fold off）时
+  控制行与窗口一并消失（原样正文直出）。
+
+### 6.4 滚轮块内滚动 + 穿出语义
+
+- 滚轮事件带坐标 → `handleWheel` 命中展开块**内容行**（窗口行带 `_foldBlock` / `_foldWindow` / `_foldTotal` 标记——
+  每行自描述所属块，无区间簿记）→ **块内 offset ±3 行**（与会话滚动节拍一致）；未命中块 → 走会话滚动。
+- **穿出**：块顶滚上 / 块底滚下 → 返回 false 交还会话滚动（否则滚轮永远被块吃掉、会话顶懒加载不可达）；
+  ▲ / ▼ 控制行点击翻窗保留为快速跳转。子 agent 面板行默认穿出滚会话；命中面板内展开块内容行才块内滚动。
+- **视口数学单源 `convViewport(convLen, convH, scroll)`**（渲染 + 鼠标命中共用）。
+
+### 6.5 流式跟随尾部
+
+- `state._followTail` 默认 true——渲染前 `state.scroll = 0`（最新内容钉在视口底，tool 行 / pushLine 同样生效）；
+  用户上滚（PgUp / 滚轮上）→ 暂停跟随；暂停期间**锚定补偿**（渲染帧按 convLen 增量补偿 scroll，视口顶保持绝对行——
+  loadOlder 加载后同样补偿）；PgDn / 滚轮滚回底部或新提交消息 → 恢复跟随。
+- **↑ / ↓ 键是输入框内语义，不执行会话滚动**——滚动入口 = PgUp / PgDn 与滚轮。
+
+### 6.6 折叠对象与折叠决策
+
+折叠对象（要求 `foldEnabled !== false` 且 key 不在 `expandedBlocks`）：
+
+1. **长消息折叠**：思考（`C.reason`）**无条件折叠**（行数 / 字符阈值思路整体废弃——思考是过程内容，一律收进命名头）；
+   工具摘要等 dim / 工具行 > 12 行折叠（`LONG_FOLD_LINES`）；key = `long-{_lineId ?? i}`。
+2. **连续 dim 块折叠**：连续 dim 行 > 8（`FOLD_LINES`）→ 统一形态；key = `fold-{首行 _lineId ?? i}`（连续 dim 块首行即稳定锚）；
+   块内含展开块行（`_skipDimFold` 标记）时不折叠（防套叠）。
+
+- **主输出永不折叠**：`foldable = l.color !== C.text`（含用户消息）直接全量渲染——折叠会把真正的回答藏在点击之后；
+  思考 / 工具摘要才是辅助流。判定以 `_kind` 为主（`thinking` / `tool` 显式标记即折叠），颜色仅对旧无标记行兜底。
+- **折叠无例外**：思考块在 `flushStream` 完成**瞬间即折叠**（命名头 + tail 3）——与恢复路径完全同构；
+  「完成瞬间保持展开、下一轮输入收起」的旧设计（`_autoExpand` 簿记）**连根删除**，不得以任何形式写回。
+- **流式过程同框**：思考的 live 流式缓冲（`state.reasoning`）渲染为**同一只折叠框**（key = `thinking-live`）：
+  默认 `▶ thinking · N lines` + tail 3，点击展开 = 60% 封顶的实时视图；flush 后块重挂到 `long-{idx}`，形态完全一致。
+  live / 完成 / 恢复三态同构。
+- **折叠 key 稳定化**：`_lineId`（state 自增计数器——live 工具载体 / 恢复 / 懒加载统一分配）派生，位置索引只作 `??` 回退：
+  `tool-${_lineId}` / `long-${_lineId ?? i}` / `fold-{首行 _lineId ?? i}` / `advisor-done-${_lineId ?? i}`——
+  loadOlder 头部 unshift 后展开态与 `_foldScroll` offset 不串位。子代理块键 `sub-${key}` 天然身份化（key = `role#id`）。
+- **组件解耦**：`fold-block` 不 import 任何业务常量（advisor 占位符经 `strip: []` 参数注入）。
+- **组件 `cols` 纪律（教训级）**：`renderExpandedBlock` / `renderFoldedHead` / `renderBlockTimeline` 的 `cols` 是**必传语义参数**
+  （签名默认 80 只是测试兜底）——**漏传 = 全部生成行按 80 列 wrap，输入框却是全宽**（同帧宽度分裂）。
+  任何新增组件调用**必须显式传 `cols`**；排障口诀：**同帧内 A 面板正常 B 面板异常 → 先查 A/B 的输入参数差异**。
+
+### 6.7 空行分区与分隔线
+
+- **主输出前后空行**：每个主输出段（`C.text` 行连续段）**前后各插一个空行**，与思考块 / 工具块 / 子 agent 块拉开距离。
+  渲染期插入（不写 `state.lines`、不影响 `convCacheKey`）；相邻段共享一个空行；**streaming 分支同样适用**（两条渲染路径必须一致）。
+- **任务面板顶部分隔线**与**子 agent 固定面板顶部边界线**：dim `─` 线；后者**仅当存在驻留区块时渲染**（无驻留区块 → 无面板、无悬空线）。
+- **折叠控制行的空行规则**：控制行不缩进、与输出内容平齐；**空行分隔仅展开态使用**；折叠态 ▶ 头**不空行**。
+  展开态每行加 `│ ` gutter 左框线（组件拥有 gutter：统一加、行宽硬切 `cols − 2`）。
+
+### 6.8 子 agent 活动区块
+
+区块数据层在 `subagent-blocks.mjs` / `subagent-children.mjs` / `subagent-freeze.mjs` / `subagent-panel.mjs`；
+编排语义（settle 时序、async 生命周期、排队规则）以 `docs/core/design/AGENT-LOOP.md` 为权威。**显示层契约**：
+
+- **运行中 = 固定底部面板**（`subagent-panel.mjs`，会话与 todo 之间）；**冻结 = 流内折叠块**（`render-segments.mjs` `frozenSubSeg`）。
+  折叠键 `sub-${key}` 跨运行 / 冻结边界共用（折叠态无缝衔接）。
+- **折叠头形态**（显式头标）：`[▶ eng-coder#2 · async · glm-5.3 · 45s · turn 12/100] bash — npm test`
+  ——`[▶/⏸/✓ key · <mode/status 词> · model · elapsed · turn] state`；⏸ = 等待审批；✓ = 已完成。
+  **sync / async 显式词**（真实 subagent 角色与 advisor 伪角色才标；async 由 spawn 实际启动时发的 `⟦ev⟧async` 标记置位，
+  缺失 key 时缓冲 `_pendingAsyncKeys`）；**旧区块（无 async 字段）回退标 sync**。model 名先按显示宽度截断（≤ cols/3）——
+  整行 ≤ cols 铁律。
+- **⏹ 停止标记（门控）**：**仅 running ∪ queued/waiting 且属子代理角色族**的区块；
+  sync 侧由 `state._agent._syncChildAborts` live 判据置位（注册即出现、注销即消失——钉与可中止一一对应；
+  headless / 测试无 `_agent` → sync 不钉——零回归）；dim，钉在折叠头右缘**内收一列**；
+  命中区 = `col >= _stopCol`，点击 = 定向 cancel（不经模型回合、不触发折叠翻转）；左邻 padding 与无 ⏹ 块右缘点击 = 折叠切换。
+- **waiting / queued 块**：排队 spawn 返回即建面板块（不等子代理首 token）；状态词 = `waiting`（依赖未满足 / 域冲突——
+  原因恒标；依赖取消 / 失败滞留恒标 `dependency cancelled`）或 `queued`（槽满等位——`queued · position N`）；
+  **不标 sync / async**（未启动——标 sync 会误导）；**queued / waiting 块头即置取消 ⏹**；
+  启动 → 清 waiting 标转正常 running 头（同 key 不重建）；取消 / 出队 → 移除块（不冻结）。
+- **冻结头**：`[✓ explore#1 · sync · model · done 45s]`——✓ / stopped 动词按状态（cancel 冻结 → stopped；
+  interrupt 清场 → interrupted 标）；挂起期**已结算待消化中间态**驻留面板显示 `done · awaiting digestion`。
+- **advisor 块**：运行中 = 对话流内可折叠框（key = `advisor-blocks`，单实例；头 `[advisor · review] N lines` + tail 3；
+  展开 = `renderBlockTimeline` 有序块时间线——think ↔ tool 交替按发射序）；完成 → 冻结 `_frozenAdvisor` 载体；
+  async advisor ⏹ = 取消后台评审；压缩以同款面板块渲染（`docs/core/design/CONTEXT-COMPACTION.md` §8 权威）。
+
+#### 6.8.1 活动块去加戏（既有决策）
+
+- **报告 preview 已删**：sync spawn 完成不再往会话流塞 8 行 dim 摘要与 `... (N more lines)` 行——
+  冻结块是子代理报告的**唯一显示载体**（全文在 history 供模型）。
+- **`finishSubTask` 收窄为精确匹配校验**：`finishSubTask(state, roles, lastError)` 恒 no-op 返 null
+  （「最早 started」启发式支路删除——宁可 no-op 不误冻）；`finishSubTaskKey`（dispatch `ctx._subagentKey` 精确 key）
+  是**唯一完成路径**；无 key 窗口的块由回合尾 `freezeAllSubTasks` 兜底清场。
+- **面板手工镜像退役——读时现算**：`computePanelBlocks(state)`（subTasks 活值纯推导）；`agent._panelSnapshot` 读写全删，
+  `index.mjs` 反向挂载 `agent._tuiState = state`——**门控语义零动**（状态变更点不再手动刷镜——单账本）。
+- **降级路径**：无 TUI 装配（headless / VSC / 子代理）→ 现算返 null → view 降级池视图 + freeze 报不可用。
+- **已结算待消化驻留零动**：settled 三态机 / `_freezeAt` settle 锚 splice / `shiftFreezeAnchors` 头裁补偿 /
+  降序 splice / `freezeReclaimDigestedBlocks` 逐条回收 / `panelFreezeGate` 门控全部保留。
+
+#### 6.8.2 嵌套子代理：内层活动并入外层流
+
+**机制**：内层 relay 前缀（如 eng-coder 内 explore）的活动行（工具 / 输出 / 文本 / 思考）**并入外层块活动流**
+（`sub.blocks`）——与其他工具调用同款：折叠 tail 3 直达、展开全量时间线可达（任意 inner 深度）。
+内层完成 / 终止信号照旧（供子块守护定格，不再有显示面）。
+
+- **路由目标上移**：`routeSubToken` / `routeSubReasoning` / `routeSubToolCall` / `routeSubToolOutput` 的嵌套分支
+  append 目标 = 外层块（与单层分支同函数）；kind 合并 / fresh 语义照旧；内层 `[model]` token 与 `⟦ev⟧done/stopped`
+  定格照旧剥除（不进内容流）。
+- **子块载体 = 守护元数据**（key / role / model / done / stopped / currentTool / children——无内容行）：职责收窄为
+  ① done 后迟到 chunk 丢弃；② 外层冻结时未收尾子块不悬空（定格 stopped）；③ 内层工具 fresh 判别。
+  正读者只有 `done` / `currentTool` / `children`。
+- **渲染单流**：子块段 / 子块头行 / 子块折叠键全部删除——面板与冻结渲染只读 `sub.blocks`（折叠 = 头 + tail 3；
+  展开 = `renderBlockTimeline` 60% 封顶窗口——既有组件零改）。折叠键只剩 `sub-${key}`。
+- **行数额度单环**：内层内容就地计入外层 500 行环（原「子块计入外层配额」的树记账收窄为单载体记账）；
+  trim 收窄为单载体最旧先行（否决「保留子块先丢」优先级遍历——收益不值；代价如实：内层批量输出与外层叙述同环最旧先行）。
+- **省略计数真值**：`…（已省略 N 行）` 的 N 只随**内容移除**增长；标记自身不占额度、不计入 N；
+  `countBlockLines` 口径 = **显示行**（块尾 `\n` 的空元素不计）。
+- **已知失效前提（未来复核项）**：同一外层块若出现两个**并发**内层子块交错，内层输出会并入末块的他人工具头块
+  （`pushBlock` 仅按 kind 合并）；当前不可达——`depth > 0` spawn 恒同步（下游对 `depth > 0` 拒 async），
+  未来放开并行嵌套时须复核。
+- **端差异**：VSC 侧嵌套活动保留「子标」形态（行首 dim 子标）——本批后**两端不再同构**（CLI 内层行无归属标）；
+  差异如实登记，各端独立实现、互不追赶。
+
+## 7. 状态栏与用户介入提醒（attention 态）
+
+> 动机：Agent 跑长任务或弹审批 / 提问时，用户切去别处 → 需要反复切回来查看。本机制让「需要用户介入」在状态栏**可见**。
+
+### 7.1 触发集合（裁决）
+
+| 信号面 | 裁决 | 理由 |
+|---|---|---|
+| 审批卡挂起（`state.permission`） | **计**（blocked） | agent 阻塞——不回应则零进展 |
+| 提问卡挂起（`state.question`） | **计**（blocked） | 同上 |
+| 回合结束等待输入（顶层回合链尾） | **计**（awaiting） | agent 已停、无自动续跑——「不用反复切回来」的主用例 |
+| picker / wizard / search / interruptPrompt | 不计 | 用户自己发起——在场已由发起动作证明 |
+| pendingInput（挂起期输入单槽） | 不计 | 是**用户自己的**待交接输入，非 agent 需要用户 |
+| 挂起会话（池 live） | 不计 | 自动续跑中——不需要用户动作 |
+| design token 门 / 工具拒绝 | 不计 | 无独立 UI 态；其「需要用户」部分由上述三类承接 |
+
+### 7.2 契约
+
+- **派生（纯函数——`render-frame.mjs` 导出，供测试直驱）**：`attentionKind(state)` →
+  `"blocked"`（`state.permission || state.question`）∥ `"awaiting"`（`state.attentionAwaiting && !processing && !suspended && !_suspPending`）∥ `null`。
+- **提示语（chip——逐字；优先级 kind 内 blocked > awaiting；blocked 内 permission > question）**：
+  `⚠ 等待你的审批` / `⚠ 等待你的回答` / `⚠ 等待你的输入`。
+- **渲染契约（`renderStatus`）**：attention 非 null ⇒ 整行以注意力色对包裹——**背景 = ANSI 43（黄底）+ 前景 = ANSI 30（黑字）**；
+  行首 = chip，其后 ` │ ` 分隔，再接既有内容——**内容零省略**。既有内容含内部 `ansi.reset`（banner / ctx 警示段）——
+  实现须在每次内部复位后**重施加底色**（否决替代 = 剥离内部样式——会丢上下文警示色与 banner 色相）。
+- **宽度预算**：`statusMax = cols − 1 − width(bannerPrefix) − width(chip + " │ ")`——整行仍 ≤ `cols − 1`（既有口径）。
+- **稳态（不闪烁）**：attention 色随帧派生——**无空闲重绘定时器**。
+- **负向锁（零侵入）**：attention 为 null ⇒ 输出与改动前**逐字节等价**（机判口径 = 零 `\x1b[43m` 序列 + strip-ANSI 文本无 chip）。
+- **置位（1 点——回合链尾）**：`userNeededAtTurnEnd(state, agent, skipSession)`（`agent-turn.mjs` 导出纯函数，可直测）——
+  排除 `skipSession` / 挂起两态 / 池 live / 队列非空 / processing；命中 ⇒ `state.attentionAwaiting = true` + `render()`。
+  置位点 = 顶层链尾（**非回合末 finally**——finally 后还有队列续发与挂起会话，在那之后才真正「无人接手」）。
+  中断结束与错误结束同样置位（agent 已停、等用户——语义一致）。
+- **清位（2 点——输入即在场）**：**键盘** = `key-handler.mjs` `onKeypress` 入口（模态分派**之前**）清位 + 仅当原值为真时 `render()`；
+  **鼠标** = `index.mjs` stdin `data` 处理器内（滚轮分支与 `onMouseClick` 调用前——单点覆盖滚轮 / 点击）。
+  blocked 两态无需清位（实时派生——提示消解即消失，零残留）。
+- **state 字段**：`attentionAwaiting: false`（`index.mjs` state 字面量——默认关；不落盘、不进会话）。
+- **边界**：不做闪烁 / 系统级通知 / 终端标题改写 / 响铃；不引入空闲重绘定时器；不改状态栏既有信息面与既有按键 / 模态 / 挂起语义。
+  **VSC 对位**：审批 / 提问挂起已有 waiting 态；回合结束等待输入与面板内 attention 态待建——**各端独立实现**，
+  语义同源（不做 byte-identical），登记归 VSC 轮。
+
+## 8. 不并项与历史沿革
+
+### 8.1 历史沿革（(d) 类——**不并**）
+
+> 来源档 `thincoder-cli/docs/design/TUI.md`（1529 行）——**原地保留作参照历史**（保留 ≠ 维护）。下列内容不并入本档：
+
+| 旧档位置 | 内容 | 何故不并 |
+|---|---|---|
+| 旧档 §10 关键设计决策表（as-of 表） | 设计决策与理由的时点快照 | 语义已被正文 supersede——现行结论在各机制节；表本体 = 时点材料 |
+| 旧档 §11 专题完成史表 | 逐专题「日期 / 专题 / 现状」 | 历史叙述——机制已入正文 |
+| 旧档 §12.2 三面现状表 · §12.3 方案选型对比 · §12.6 决策 D-SS1–D-SS7 | 选择面收口批（第 20 批）的选型与决策材料 | 结论已入 `docs/cli/design/TUI-COMMANDS.md` §3 / §4；被否决候选理由不入活档 |
+| 旧档 §12.7 / §13.5 受影响文件表 · §12.8 / §13.6 用例表 · §12.9 / §13.7 验收标准 | 批次执行与验收材料 | 一次性——实装后已漂移 / 已验收 |
+| 旧档 §13.1 问题陈述（含 `file:line` 现场核实） · §13.2 守卫三候选择型 | 输入面小修批的勘察材料 | 结论已入 `docs/cli/design/TUI-COMMANDS.md` §5（契约句） |
+| 旧档 §14.1 现状复核 / §14.2 三表选型 / §14.4 受影响文件 / §14.5 决策 D-AT1–D-AT8 / §14.6 纪律核对 / §14.7 用例 / §14.8 AC / §14.9 边界与登记 | attention 批（第 33 批）的批次材料 | 结论已归并为 §7（触发表 + 契约）；登记项保留于 §7.2 末 |
+| 旧档 §15.1 问题陈述（十条绕过路径实测） / §15.2 选型表 / §15.4 决策 D-TB1–D-TB6 / §15.5 受影响文件 / §15.6 用例 / §15.7 AC | 内存有界批（TUI-OOM-ROOTCAUSE）的批次材料 | 结论已入 `docs/cli/design/TUI-SESSION-VIEW.md` §5 |
+| 旧档 §1 模块地图**行数列** + 表头「行数实测回写」注 + 「同批如实注（未入表三档 / pickers 行文字未随拆重写）」 | as-of 行数快照与补登注 | 行数随实现漂移（本档地图不携行数）；未入表三档已按现文件结构补入地图 |
+| 旧档变更记录（2026-08-30 起逐批流水） | 逐批流水 | 历史叙述——本档自有变更记录 |
+
+### 8.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
+
+| 旧档面 | 内容 | 何故不并（去向 / 触发） |
+|---|---|---|
+| 需求层条目 | F1–F13 / N1–N10 | 需求面——`docs/cli/requirements/TUI.md`（本档只留设计层） |
+| 输入框键契约 | 状态模型不变量 / 按键表 / ↑↓ 三规则 / Inject 框 / question 自由文本态 | `docs/cli/design/TUI-INPUT-BOX.md`（本档只挂指针） |
+| 普通工具行间区块 | 区块格式 / chunk 契约 / 参数可见性 / 收尾守卫 | `docs/cli/design/TUI-TOOL-OUTPUT.md`（本档只挂指针） |
+| 命令层与选择面 | slash 命令族 / picker / wizard / 交互桥 | `docs/cli/design/TUI-COMMANDS.md` |
+| 会话恢复 / 懒加载 / 回合驱动 / 显示层额度 | 恢复管道 / 三层缓存 / runAgentTurn / 字符额度 | `docs/cli/design/TUI-SESSION-VIEW.md` |
+| 挂起会话状态机 / 子代理编排语义 | settle 时序 / 池管理 / 调度排队 | `docs/core/design/AGENT-LOOP.md`（本档只留显示层契约） |
+| 压缩面板 / MCP 表单 / 会话存档 | 跨板块机制 | `docs/core/design/CONTEXT-COMPACTION.md` §8 · `docs/core/design/MCP.md` §5/§8 · `docs/core/design/SESSION.md` |
+| VSC webview 对位 | webview 渲染 / 消息协议 / 子标 | `docs/vsc/design/WEBVIEW*.md`——**非同机制**（端差异登记，不追赶） |
+
+## 9. 体量与拆分规划（R24a）
+
+**实测行数**：本档 **427 行**（根层新建 · as-of 2026-09-15 实核）——**超 300 行软线（未越 500 硬门），须附拆分规划**。
+**拆分沿革（本档来自一次拆分）**：源档 `thincoder-cli/docs/design/TUI.md` **1529 行**（超 500 硬门）⇒ 本批按**读者面**拆为
+本档（界面核心）+ `docs/cli/design/TUI-COMMANDS.md`（命令层与选择面）+ `docs/cli/design/TUI-SESSION-VIEW.md`（会话视图 / 回合 / 内存）。
+**拆分规划（本轮已执行 + 预置触发）**：① **已执行** = 上述三档拆分（427 / 163 / 186 行，全部 ≤500）；
+② **预置触发** = 本档再增厚时，首拆候选 = **子 agent 活动区块族**（§6.8，含嵌套并入）落一独立档 `TUI-BLOCKS`（拟落 `docs/cli/design/`，本轮未建）——其读者面（「活动区块怎么显示」）与界面骨架可分离。
+
+## 变更记录
+
+- 2026-09-15（**B 式迁移轮 · 第 6 批**）：建档——`thincoder-cli/docs/design/TUI.md`（1529 行）内容重建入基准层（旧档一字未改、原地作参照历史）。
+  ① 落点 = `docs/cli/design/`（P2：CLI 终端界面结构性只属 CLI）；② **按读者面拆三档**（承接台账「TUI 须拆分」判）+ 本档 = 界面核心；
+  ③ 模块地图按**现文件结构**重建（补入旧档未收的三档与拆分后新增的 cmd-* 族——行数列不并）；
+  ④ §12–§15 四个批次节的**机制结论**并入对应机制节（选择面 → 命令档 / attention → §7 / 内存 → 会话视图档），批次材料入 §8.1；
+  ⑤ 坐标全量改**现状路径**并实核；⑥ 「嵌套子代理」按现行机制（内层活动并入外层流）重建，旧子块小节形态入 §8.1。
