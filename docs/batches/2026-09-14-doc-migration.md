@@ -146,6 +146,132 @@
 
 **本段条目（6 档 + 台账 + 判据档实修）= 迁移台账 §2.1 第 5 / 13 / 14 / 18 / 19 / 47 行（本批迁栏）= 需求档既有条目回指**（FR1 · FR2 · FR3 · FR4 · FR5 · FR7 · N3 · N4——`docs/core/requirements/DOC-SYSTEM.md`）；本批**不新增需求条目**（执行既有 FR，无范围增减）。
 
+### 第 2 批 · 9 档「待核」收口 + 实迁（2026-09-15 · eng-designer · 段作者 = 本角色）
+
+**目标**：把迁移台账 §3 的**待核 9 档**逐档实核后定判并**同批实迁**（用户 2026-09-15 00:56 批准父侧裁定表）；同批新建 `docs/cli/` 并把新目录加进两扫描器射程。
+**判据依据**：`docs/core/design/DOC-SYSTEM.md` §5.1（P1–P5）· §4（目标目录结构）· §6（命名规则）——判据句住该档，本段不重述（D2）。
+**迁法**：**B 式**——旧档留原地一字不改 + 内容重建入落点（旧档 = 参照历史，保留 ≠ 维护）。
+**逐档实核结论**：裁定表 9 条的依据（行数 / 档首自述）**逐条与档内原句一致**——无冲突 ⇒ 未触发「停下上报」。
+
+#### 一、本批实迁（B 式 · 9 档）
+
+| # | 旧档（CLI 树 · 一字未改） | 落点（基准层活档） | 层归属 | 行数 改前→改后 | 拆分规划 |
+|---|---|---|---|---|---|
+| 1 | `thincoder-cli/docs/design/ARCHITECTURE.md` | `docs/core/design/ARCHITECTURE.md` | 统一面（P1） | 86 → 151 | ≤300 ⇒ 无需 |
+| 2 | `thincoder-cli/docs/design/PORTABILITY.md` | `docs/core/design/PORTABILITY.md` | 统一面（P1） | 499 → 161 | ≤300 ⇒ 无需 |
+| 3 | `thincoder-cli/docs/design/RELEASE.md` | `docs/cli/design/RELEASE.md` | **CLI 面（P2）** | 131 → 138 | ≤300 ⇒ 无需 |
+| 4 | `thincoder-cli/docs/design/STRUCTURE-DEBT.md` | `docs/core/design/STRUCTURE-DEBT.md` | 统一面 | 186 → 78 | ≤300 ⇒ 无需 |
+| 5 | `thincoder-cli/docs/design/TWO-REPO-MERGE.md` | `docs/core/design/TWO-REPO-MERGE.md` | 统一面 | 444 → 206 | ≤300 ⇒ 无需（含越线风险登记——见该档 §11） |
+| 6 | `thincoder-cli/docs/requirements/FEATURES.md` | `docs/cli/requirements/FEATURES.md` | **CLI 面（P2）** | 142 → 193 | ≤300 ⇒ 无需 |
+| 7 | `thincoder-cli/docs/requirements/PHILOSOPHY.md` | `docs/core/requirements/PHILOSOPHY.md` | 统一面 | 176 → 212 | ≤300 ⇒ 无需 |
+| 8 | `thincoder-cli/docs/requirements/RELEASE.md` | `docs/core/requirements/RELEASE.md` | 统一面（P5：P2 > P1） | 34 → 68 | ≤300 ⇒ 无需 |
+| 9 | `thincoder-cli/docs/requirements/TWO-REPO-MERGE.md` | `docs/core/requirements/TWO-REPO-MERGE.md` | 统一面 | 70 → 86 | ≤300 ⇒ 无需 |
+
+**行数口径** = `readFileSync(...).split("\n").length`（含末行空元素）· as-of 2026-09-15 实核。
+**落点分布**：`docs/core/design/` 4 档 · `docs/core/requirements/` 3 档 · `docs/cli/design/` 1 档 · `docs/cli/requirements/` 1 档。
+**九档全部 ≤300 行** ⇒ 无 >300 拆分规划义务；**无 >500 行档**。
+
+#### 二、台账收口（`docs/core/design/DOC-MIGRATION.md`）
+
+| 项 | 改前 | 改后 |
+|---|---|---|
+| §2.1 设计档「待核」行 | 5（ARCHITECTURE · PORTABILITY · RELEASE · STRUCTURE-DEBT · TWO-REPO-MERGE） | 0（逐行改写为「**本批迁**」+ 现状依据 + 落点） |
+| §2.2 需求档「待核」行 | 4（FEATURES · PHILOSOPHY · RELEASE · TWO-REPO-MERGE） | 0（同上） |
+| §3 待核节 | 9 行两读法表 | **已清空**——保留节头 + 去向说明（去 §2；裁定前两读法入本档 §2） |
+| §5 小计「本批迁」 | 设计 6 / 需求 0 = **6** | 设计 11 / 需求 4 = **15**（第 1 批 6 + 第 2 批 9） |
+| §5 小计「待核」 | 设计 5 / 需求 4 = **9** | **0 / 0 = 0** |
+| §5 闭合校验 | 6+16+4+4+9+45 = 84 | 15+16+4+4+0+45 = 84 ✓（设计 11+9+1+4+0+22=47 ✓ · 需求 4+7+3+0+0+23=37 ✓） |
+| §6 批 5 备注 | 「须先新建 `docs/cli/` + 扩射程」 | 「**前置已满足**」 |
+| §8 体量 | 203 行 | 199 行（收正） |
+
+#### 三、射程扩展（新建 `docs/cli/` 的连带）
+
+| 档 | 常量（**实核真名**） | 改前 | 改后 |
+|---|---|---|---|
+| `scripts/check-doc-width-core.mjs` | `SCAN_DIRS`（`:15`） | 7 项（无 `docs/cli/*`） | 9 项（插 `docs/cli/design` · `docs/cli/requirements`） |
+| `scripts/doc-anchors-v5.mjs` | `V5_SCAN_DIRS`（`:20`） | 6 项（无 `docs/cli/*`） | 8 项（同上） |
+
+**读数（改前 → 改后）**：根域扫描档数 **61 → 73**（净 +12 = 射程扩展 **+2**（`docs/cli/` 两档）· 本批实迁 **+7**（落 `docs/core/` 者）· **+3** = 并轮 VSC 实例新增档（`docs/vsc/design/WEBVIEW*.md`，他实例在写））。
+**射程扩展自身的净增 = +2 档**（两扫描器同口径）。
+
+#### 四、方案选型对比（落点：`docs/cli/` 建不建）
+
+| # | 候选 | 判据逐项评估 | 取舍 | 结论 |
+|---|---|---|---|---|
+| 1 | **同批新建 `docs/cli/` 并把两目录入射程**（本批所选） | ① #3 / #6 判 CLI 面（P2）⇒ 必须有 CLI 专有目录 ✓ ② 新建目录**同批**入射程 ⇒ 无「无守卫窗口」（搬档不改射程 = 假绿）✓ ③ 与并轮 VSC 轮已落形态一致（`docs/vsc/` 先例）✓ | 代价 = 两扫描器各改一行常量（行内改、行数不变） | **选定** |
+| 2 | 落 `docs/core/` 暂代（等批 5 再建 `docs/cli/`） | ① 免除射程改动 ✓ ② **与 P2 判据相抵**（CLI 专有面住统一面 ⇒ 部分轴失效）✗ ③ 后续还得搬一次（双倍成本 + 二次漂移）✗ | 代价 = 判据面失真 | **否决**（②③） |
+| 3 | 只迁 `docs/core/` 面板，`docs/cli/` 两档延后 | ① 本批无射程改动 ✓ ② 待核 9 档**只收口一半**（§5 小计无法闭合到 0）✗ ③ 台账仍留「待核」栏 ⇒ 判定未完成 ✗ | —— | **否决**（②③） |
+
+#### 五、关键决策记录
+
+| # | 决策 | 依据 / 否决备选 |
+|---|---|---|
+| M1 | 九档**全部实迁**（无延后） | 用户裁定的落点 + 台账收口要求（待核 9 → 0）；§四 候选 3 已否决 |
+| M2 | `docs/cli/` **同批新建 + 同批扩射程** | 与并轮 VSC 轮同型（D-VM6）；防「搬档不改射程 = 无守卫窗口」 |
+| M3 | `RELEASE` **两档跨部分成对**（设计 = CLI 面 / 需求 = 统一面） | P5 冲突序（P2 压 P1）用于设计档；需求档判统一面（跨产品板块主题）——**两侧档头互注配对档位置** |
+| M4 | 各档**（d）类内容入「不并项与历史沿革」节** | 批次材料 / 状态行 / 变更流水 / 一次性选型 / 受影响文件清单 / 用例表与 AC ——逐项登记 + 何故（防静默丢弃） |
+| M5 | 落点档**择机制面重建**（不搬批次面） | 活档形态要求；来源档留原地作参照历史（B 式） |
+| M6 | 实核发现的**陈旧断言按现状收正**并**逐条登记** | 见 §八 未决 1——三条收正处于「一致性面 ⇄ 语义面」边界，**已如实上报待裁定** |
+
+#### 六、受影响文件（R24a）
+
+| # | 档 | 当前行数 | 增量 | 动作 |
+|---|---|---|---|---|
+| 1–9 | 九档落点（见 §一表） | 0（新建） | **+1293**（合计） | **新建**（B 式重建） |
+| 10 | `docs/core/design/DOC-MIGRATION.md` | 203 | **−4**（净；含 §3 清空 + 小计重算 + 变更记录） | **实修** |
+| 11 | `scripts/check-doc-width-core.mjs` | 287 | **0**（常量行内改） | **实修** |
+| 12 | `scripts/doc-anchors-v5.mjs` | 256 | **0**（常量行内改） | **实修** |
+| 13 | `docs/batches/2026-09-14-doc-migration.md` | — | +本段 | **append §2**（不改 §1） |
+| — | `thincoder-cli/docs/**`（84 档） | —— | **0** | **一字不改**（只读参照——B 式） |
+| — | `thincoder-core/**` · `thincoder-vscode/**` · `docs/TODO.md` · `docs/core/design/prompts/**` | —— | **0** | 零写入（写域外） |
+
+#### 七、验收标准（逐条回指 · 机器可验）
+
+| # | 验收标准 | 回指 |
+|---|---|---|
+| C1 | `node scripts/doc-anchors.mjs` **根域悬空 0**（射程扩后档数 61 → 73） | FR7 · N3 |
+| C2 | `node scripts/check-doc-width.mjs` **本批新增宽度违规 0**（本批 12 档零超宽行） | N3 |
+| C3 | `node scripts/check-ledger.mjs` exit 0 · **0 处违规** | N3 |
+| C4 | 二分表**待核 9 → 0** 且小计六栏闭合（15+16+4+4+0+45 = 84；设计 47 / 需求 37） | FR3 · A3 |
+| C5 | 九档全部落位且含「不并项与历史沿革」节 + 体量节；无状态行 / 无逐批变更流水 | FR1 · FR2 |
+| C6 | 新档内坐标全为**现状路径**（0 处迁移前 `src/**` 形坐标入正文叙述面） | FR4 · FR5 |
+| C7 | `SCAN_DIRS` / `V5_SCAN_DIRS` 含 `docs/cli/design` + `docs/cli/requirements`，改后档数 > 改前 | FR6 · N2 |
+| C8 | `git status` 本角色写域 ⊆ §六 表 1–13 行 | N4 |
+
+**读数（as-of 2026-09-15 本批实测）**：
+- **C1 ✓**：根域 `OK(V5): 0 条悬空锚`（闸态）；档数 **61 → 73**。
+- **C2 ✓**：本批 12 档**零超宽行**；`check-doc-width` 全局仍红——**红面为他实例在写档**（`docs/batches/2026-09-15-vsc-doc-migration.md` 3 行 · `docs/vsc/design/WEBVIEW-PROTOCOL.md` 3 行）**+ 他实例的 V2 违规**（`docs/vsc/design/WEBVIEW.md:141`），**均不在本角色写域**（见 §八 未决 3）。
+- **C3 ✓**：台账两档 `OK` · **0 处违规** · 基线 0 条。
+- **C4 ✓**：待核 9 → **0**；小计闭合（六栏 + 设计 / 需求分列双向闭合）。
+- **C5 ✓**：九档均含 §「不并项与历史沿革」+ §「体量与拆分规划」。
+- **C6 ✓**：坐标逐条实核改写（`thincoder-core/**` · `thincoder-cli/**` · `thincoder-vscode/**` 现状形态）。
+- **C7 ✓**：两常量各加 2 项；根域档数 61 → 73（其中射程净增 **+2**）。
+- **C8 ⚠**：`git status` 另含**他实例**在写档（`docs/TODO.md` · `scripts/check-doc-width.mjs` · `thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md` · `docs/vsc/design/WEBVIEW*.md`）——本角色**零触碰**（见 §八 未决 3）。
+
+#### 八、未决与打回（不静默处置）
+
+| # | 项 | 归属 / 处置 |
+|---|---|---|
+| 1 | **三条「按现状收正」处于一致性面 ⇄ 语义面边界**：① `FEATURES` 清点面补列现行能力（12 项）并把 `escalate` 并入 `subagent` 动作；② RELEASE 需求档 F1 补入**集成集**环（设计档早已三环）；③ TWO-REPO-MERGE 需求档 N1 旁注路径 `<ws>/thincoder/thincoder` → `<ws>/thincoder/thincoder-cli` | **逐条实核为真**（`thincoder-core/tools/index.mjs` · `thincoder-core/agent-tools.mjs` · `thincoder-cli/scripts/release-check.mjs:68/:78/:82` · 现状仓形态）。**本角色判 = 一致性面（文档 ⇄ 实现对齐）并已逐条登记**（各档 §「不并项与历史沿革」+ 变更记录）；**若父侧判为语义面 ⇒ 请打回**——三条可独立单笔 revert（同批其余内容不受影响） |
+| 2 | `docs/cli/` 未登记进地图 `docs/README.md`（§1 内容表 / §5 与产品地图的关系） | **写域外**（地图 = 父侧面）——请父侧补登记行 |
+| 3 | **他实例并行在写**：`docs/TODO.md` · `scripts/check-doc-width.mjs` · `thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md` · `docs/vsc/design/{WEBVIEW,WEBVIEW-PROTOCOL,WEBVIEW-INPUT}.md` | VSC 轮 / 父侧——本角色零触碰；**其三机检红面**已如实登记（§七 C2 读数） |
+| 4 | `docs/vsc/design/VSC-MIGRATION.md` §4 的**同名档落点与本次裁定不一致**：该档给 `docs/core/design/RELEASE.md`（待建）· `docs/core/requirements/FEATURES.md`（待建）；本次裁定 = CLI 面（`docs/cli/`） | **跨部分一致性问题**——VSC 侧台账**非本角色写域**；请父侧裁决后另派收正（本批只登记，不改他档） |
+| 5 | `thincoder-cli/docs/design/PROXY.md` §TLS 段与现行实现**相反**（现行默认全量校验证书 + `insecureTls` 显式放行） | 安全语义错误——**本批不迁 PROXY**；**迁前须先更正**（照搬 = 把错误安全承诺写进权威层）；本批**不改旧档** |
+| 6 | `design/TUI-INPUT-BOX.md` 二态混装（当前态 + §8 / §9 目标态） | 台账 §3 注意项保留——批 5（P2）迁时按该档 §9.6 收口 |
+
+#### 九、边界（本批不做）
+
+1. **不写他档**：`thincoder-cli/docs/**` 一字不改（B 式只读参照）；`thincoder-core/**` · `thincoder-vscode/**` · `docs/TODO.md` · `docs/core/design/prompts/**` 零写入。
+2. **不写地图 / 台账**（`docs/README.md` · `docs/TODO.md` = 父侧面）。
+3. **不裁定他侧台账**（VSC 侧落点分歧只登记，见 §八 未决 4）。
+4. **不 commit · 不发起评审**（发起权 = 用户）。
+5. **不改旧档的已知错误**（PROXY §TLS——登记「迁前须更正」）。
+
+#### 十、三方条目一致
+
+**本段条目（九档实迁 + 台账收口 + 两射程常量）= 迁移台账 §2.1 / §2.2 本批迁栏（第 6 / 14 / 20 / 24 / 26 / 31 / 35 / 36 / 45 行）= 需求档既有条目回指**（`docs/core/requirements/DOC-SYSTEM.md` 的 FR1–FR8 / N1–N4）；本批**不新增需求条目**（执行既有 FR，无范围增减）。
+**层归属不对称一处**（`RELEASE` 两档）已在两侧档头与台账 §3 双向登记。
+
 ## §3 评审发现（评审子代理）
 
 _（待写）_

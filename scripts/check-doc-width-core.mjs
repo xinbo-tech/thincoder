@@ -12,7 +12,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 
 /** 文档一致性扫描域（排除 _archive/——历史快照豁免，同 check-doc-width 现行口径） */
-export const SCAN_DIRS = ["docs/design", "docs/requirements", "docs/batches", "docs/core/design", "docs/core/requirements", "docs/vsc/design", "docs/vsc/requirements"];
+export const SCAN_DIRS = ["docs/design", "docs/requirements", "docs/batches", "docs/core/design", "docs/core/requirements", "docs/cli/design", "docs/cli/requirements", "docs/vsc/design", "docs/vsc/requirements"];
 /** 基线文件：**必须保持为空**（新增违规一律红——入基线 = 例外 = 违规，fail-closed） */
 export const BASELINE_PATH = "test/fixtures/doc-consistency-baseline.json";
 /** V3 判据射程起点：批次档段写入工具（batch_segment）落地 = 2026-09-10（第 4 批）；
