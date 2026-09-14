@@ -8,7 +8,7 @@
  * as their persona slot (蓝图 §3.1 同槽位复用——变体差异归人格层覆写; design D1 G1 note).
  */
 
-import { loadSlot } from "./prompt-files.mjs"
+import { loadSlot, applyPromptInjections } from "./prompt-files.mjs"
 
 // ── G1 槽位内容表（文件名 → 内容常量）──
 const SLOT_CONTENTS = {
@@ -59,10 +59,14 @@ export function slotWarning(fileName) {
  * 逻辑承担). A missing slot file is SKIPPED with a prominent warning (蓝图 §3.4 降级链);
  * AGENTS.md missing = silent skip in the caller's existing tail logic. Byte-stable
  * per scenario (D3): fixed slot contents + fixed order — no timestamps here.
+ *
+ * 锚替换缝（CORE-UNIFICATION §2.13.8——U0）：**两个 return 逐条**经 `applyPromptInjections`
+ * （槽位拼接结果 / consult 基底）——未配置 = 恒等，现行行为零变；读取径（模块级缓存）不动。
+ * 结构机检（`test/prompt-injections.test.mjs`）按 return 分支逐条守。
  */
 export function assemblePrompt(scenario) {
   const files = SCENARIO_SLOT_FILES[scenario]
-  if (!files) return { prompt: CONSULT_BASE, warnings: [] }
+  if (!files) return { prompt: applyPromptInjections(CONSULT_BASE), warnings: [] }
   const parts = []
   const warnings = []
   for (const file of files) {
@@ -70,5 +74,5 @@ export function assemblePrompt(scenario) {
     if (content) parts.push(content)
     else warnings.push(slotWarning(file))
   }
-  return { prompt: parts.join("\n\n"), warnings }
+  return { prompt: applyPromptInjections(parts.join("\n\n")), warnings }
 }

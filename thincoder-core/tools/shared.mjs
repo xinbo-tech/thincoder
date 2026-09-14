@@ -7,7 +7,7 @@ import { spawn, execFileSync, execFile } from "node:child_process"
 import { readFileSync, existsSync, realpathSync, readdirSync, statSync, openSync, readSync, closeSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import { loadToolDoc } from "../prompt-files.mjs"
+import { loadToolDoc, applyPromptInjections } from "../prompt-files.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 // 工具描述加载面——**核内单一解析面**（D-C13 / 契约 8）：解析根 = `prompt-files.mjs`
@@ -161,13 +161,16 @@ export function findCandidates(lines, oldString, topN = 3, threshold = 0.5) {
 /** Appended to hashline_edit results when the file contains U+FFFD (encoding-corruption probe). */
 export const FFFD_WARNING = "⚠ file contains U+FFFD (replacement char) — encoding may be corrupted; hash-based addressing may be unreliable. Consider fixing the file encoding first."
 
-/** Convert to OpenAI tools parameter format */
+/** Convert to OpenAI tools parameter format.
+ *  锚替换缝（CORE-UNIFICATION §2.13.8——U0）：`description` 经 `applyPromptInjections`
+ *  （未配置 = 恒等）；两个调用点（`agent/setup.mjs` · `advisor/loop.mjs`）同经本函数。
+ *  非字符串 description 恒等过（无锚可替换）。*/
 export function toOpenAISchema(tool) {
   return {
     type: "function",
     function: {
       name: tool.name,
-      description: tool.description,
+      description: applyPromptInjections(tool.description),
       parameters: tool.parameters,
     },
   }

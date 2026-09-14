@@ -49,6 +49,7 @@ import { extractAgentResponseTable } from "./advisor/history.mjs"
 import { buildAdvisorUserMessage, resolveScopeFiles, buildObjectDeclarationBlock, buildDesignApprovalBlock } from "./advisor/messages.mjs"
 import { buildConvergenceBody } from "./advisor/convergence.mjs"
 import { escapeLiteralEscapes } from "./escape.mjs"
+import { applyPromptInjections } from "./prompt-files.mjs"
 // Re-export for run.mjs and tests (keeps their imports from "../advisor.mjs" stable)
 export { ADVISOR_MD_PATH, extractAgentResponseTable, extractConversationBackground } from "./advisor/history.mjs"
 export { buildAdvisorUserMessage } from "./advisor/messages.mjs"
@@ -98,6 +99,9 @@ function withTime(prompt) {
   return prompt + `\n\nCurrent time: ${new Date().toLocaleString("sv-SE")} (${timeZone}).`
 }
 
+// 锚替换缝（CORE-UNIFICATION §2.13.8——U0）：本函数**六个 return 逐条**经 `applyPromptInjections`
+// （未配置 = 恒等，现行行为零变）；读取径（模块级常量缓存）不动。结构机检
+// （`test/prompt-injections.test.mjs`）按 return 分支逐条守——新增分支未挂即红。
 export function buildAdvisorSystemPrompt(agent, prior, reviewType) {
   // Round decision is DETERMINISTIC (decision 2026-08-08): _advisorRound > 0
   // with a stored review output means convergence (round 2+); 0 means round 1.
@@ -109,16 +113,16 @@ export function buildAdvisorSystemPrompt(agent, prior, reviewType) {
   // approval token); rounds 2+ converge like code reviews (verify agent fix claims).
   if (reviewType === "design") {
     if (!hasPrior) {
-      return ADVISOR_DESIGN
+      return applyPromptInjections(ADVISOR_DESIGN)
     }
     const round = (agent._advisorRound || 0) + 1
-    if (round === 2) return ADVISOR_ROUND2
-    return ADVISOR_ROUND3
+    if (round === 2) return applyPromptInjections(ADVISOR_ROUND2)
+    return applyPromptInjections(ADVISOR_ROUND3)
   }
-  if (!hasPrior) return ADVISOR_ROUND1
+  if (!hasPrior) return applyPromptInjections(ADVISOR_ROUND1)
   const round = (agent._advisorRound || 0) + 1
-  if (round === 2) return ADVISOR_ROUND2
-  return ADVISOR_ROUND3
+  if (round === 2) return applyPromptInjections(ADVISOR_ROUND2)
+  return applyPromptInjections(ADVISOR_ROUND3)
 }
 
 // ────────────────────────────────────────

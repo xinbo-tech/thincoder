@@ -4056,5 +4056,97 @@ D 类（#70 · #83）· F 类（#111 · #149–#153 · #155 · #157 · #103 · #
 
 **本段读数收正（append-only 补记 · 无）**：上表即终态读数（§5 本段为最后一次写入）。
 
+### 实施：U0 前置笔 —— 锚替换机制落核（核内缝：原语 + 四装配面挂点 + 测试）（2026-09-14 · eng-coder）——**终态 = clean**
+
+**段位**：当前段 = **S2 之前**（U0 独立前置笔——§2.13.8（七））。本笔唯一写域 = `thincoder-core/**`；**两产品零改动**（见 B5）；未 commit（父侧统一）；未碰台账；未改设计 / 需求档（写权 = eng-designer）。
+**依据** = `docs/design/CORE-UNIFICATION.md` §2.13.8（U0 定稿全文）+ §2.8 U0 行 + §2.8.1 第 9 行 + 父侧 U0 任务书。
+
+**改动面**（全部在 `thincoder-core/**`；5 档修改 + 1 档新建；核内 `node --test` **160 → 171**）
+
+| # | 档 | 行数（改前 → 改后 · 读面口径） | 改动 |
+|---|---|---|---|
+| 1 | `prompt-files.mjs` | 66 → **113**（Δ≈+47） | U0 原语三件：`configurePromptInjections` / `resetPromptInjections` / `applyPromptInjections`（三态 + 单遍 + 多余键 no-op） |
+| 2 | `prompt-overlays.mjs` | 74 → **78**（+4） | 面 1/2 挂点：`assemblePrompt` 两个 return 逐条经原语 |
+| 3 | `tools/shared.mjs` | 452 → **455**（+3） | 面 3 挂点：`toOpenAISchema` 对 `description` 应用原语 |
+| 4 | `advisor.mjs` | 290 → **294**（+4） | 面 4 挂点：`buildAdvisorSystemPrompt` 六个 return 逐条经原语（+1 import 行） |
+| 5 | `test/prompt-files.test.mjs` | 108 → **146**（+38） | 扩：原语三态 + 单遍 / `$` 逐字 / 多余键 / `configure(null)` 撤销（4 用例） |
+| 6 | `test/prompt-injections.test.mjs`（新建） | 0 → **220** | 四装配面行为 7 用例 + 结构机检 ①/②/③ |
+
+**① 逐档改前 → 改后**（坐标 = 改后终态）
+
+| # | 位置 | 改前 → 改后 |
+|---|---|---|
+| 1 | `prompt-files.mjs:74-119`（新增段）+ 头注 `:18-22` | —— → 锚替换原语三项（含三态 / 单遍 / 多余键 JSDoc） |
+| 2 | `prompt-overlays.mjs:11` | `import { loadSlot } from "./prompt-files.mjs"` → `import { loadSlot, applyPromptInjections } from "./prompt-files.mjs"` |
+| 3 | `prompt-overlays.mjs:69` | `if (!files) return { prompt: CONSULT_BASE, warnings: [] }` → `… applyPromptInjections(CONSULT_BASE) …` |
+| 4 | `prompt-overlays.mjs:77` | `return { prompt: parts.join("\n\n"), warnings }` → `… applyPromptInjections(parts.join("\n\n")) …` |
+| 5 | `tools/shared.mjs:10` | `import { loadToolDoc } from "../prompt-files.mjs"` → `+ applyPromptInjections` |
+| 6 | `tools/shared.mjs:173` | `description: tool.description,` → `description: applyPromptInjections(tool.description),` |
+| 7 | `advisor.mjs:52` | —— → `import { applyPromptInjections } from "./prompt-files.mjs"` |
+| 8 | `advisor.mjs:116/119/120/122/124/125` | 六个 return 由 `ADVISOR_*` 直返 → `applyPromptInjections(ADVISOR_*)` |
+
+**② 原语接口与三态语义（落地形态）**：`configurePromptInjections(map)`（`{ "<锚名>": "<替换文本>" }`——注册即快照；`null`/`undefined` ⇒ 撤销）；`resetPromptInjections()`；
+`applyPromptInjections(text)`——扫 `{{inject:[a-z0-9-]+}}`。三态（无第四出口）= 未配置 ⇒ **恒等**（现行行为零变）· 命中 ⇒ 表值替换（**空串** = 显式「本端为空」）· 缺键 ⇒ **抛错**（消息含锚名——fail-loud）。
+其余：单遍替换（回调式 replace——替换值再含锚字面不二次展开）；表多余键 no-op；非字符串输入恒等（无锚可替换）；核内零端名（域内新代码零产品名）。
+
+**③ 四装配面逐面挂点**（调用期应用——读取径 / 模块级缓存不动）
+
+- 面 1 槽位 + 面 2 consult 基底（`prompt-overlays.mjs` 同函数两 return）：`:69`（consult 基底）· `:77`（拼接结果）——逐 return 结构机检守（floor = 2）。
+- 面 3 工具描述（`tools/shared.mjs:173`）：两调用点（`agent/setup.mjs:294` · `advisor/loop.mjs:46`）同经 `toOpenAISchema`；行为用例覆盖 `builtinTools` 全量（bash / question 两档真实锚作非空转证明）。
+- 面 4 顾问提示词（`advisor.mjs`）：六个 return `:116` `:119` `:120` `:122` `:124` `:125` 逐条经原语——**逐 return 证据** = 结构机检③（花括号配平取函数体 + 注释剥除 + 逐行判 `applyPromptInjections(` + 条数下限 6，fail-closed）。
+- 面 2 / 4 现行锚 = 0（§2.13.8（二）表）⇒ 行为面空验 → 由结构机检③补（4 条 / 2 条位置逐 return）；面 1 / 3 有真实锚 ⇒ 行为面自证（四档 13 处 / 两档 2 处实读复核）。
+
+**④ B1–B5 读数**（原样）
+
+| # | 判据 | 读数 | 判 |
+|---|---|---|---|
+| B1 | 核内 `node --test` | 基线 **160/160** 保持绿 + 新增 **11** 全绿 ⇒ **171/171 · fail 0 · exit 0** | ✓ |
+| B2 | 结构机检（`test/prompt-injections.test.mjs`） | ① 缝面导出面逐档等值（声明 + re-export / `as` 别名形态；域 = U0 四档 ∪ 缝定义档派生）· ② 缝模块零端名（注释剥除代码面；加收裸词 `VSC` / `CLI`）· ③ 逐 return 分支（advisor 6 条 / assemblePrompt 2 条逐条经原语）——三检全绿 | ✓ |
+| B3 | 未配置态零变 | 160 基线在未配置下全绿（B1 前半）；`applyPromptInjections` 未配置恒等（原语用例钉；既有 `prompt-overlays.test.mjs` 的 `r.prompt === CONSULT_BASE` 等断言不受影响） | ✓ |
+| B4 | 仓根三机检 | `doc-anchors` exit 0（域一 32 档 候选 2219 · 悬空 0；域二 99 档 候选 8870 · 悬空 0；VSC 域报告态命中 2 = 预存改动面，见未决 6）· `check-doc-width` exit 0（306 档无 >300 字符行 · 新增违规 0）· `check-ledger` exit 0（0 违规） | ✓ |
+| B5 | 工作树 | 核内 **5 M + 1 ??**（四模块 + `test/prompt-files.test.mjs` + 新档）；产品侧 = 1 项**预存**（`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`——spawn 前已在，非本笔）；未 commit | ✓（预存项如实登记） |
+
+**⑤ 内部轮（发现与处置）**
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：**DIVERGENT**——doc drift ×4（增量读数 / 设计行坐标；均设计面）+ 1 条 🔵（交付自加结构机检的宣称面 vs 实施面）；「部分实现 / 静默简化 / 越清单改动」未命中。限制如实登记（无 shell / 无 git）。
+- **审计命中处置（修复轮 1）**：① 结构机检①提取面扩至 re-export / `as` 别名形态（原只认声明形）；② 缝域派生改为按导出名判（形态无关）；③ 零端名检查加收裸词 `VSC` / `CLI`（四个 U0 档代码面零命中已实核）；④ 面 3 行为用例扩至 `builtinTools` 全量；⑤ 增量 / 坐标漂移归设计面（本段读数 + ①/③ 即落态）。
+- **advisor 代码评审 2 轮**（`type=code`，阻塞）：**轮 1 = pass**（🔴 0 · 🟡 3（均非 must-fix 报告项）· 🔵 3）；**修复轮 1 = 1 项落修**（🔵#5 缝派生 fail-open ⇒ 按导出名判）；**轮 2 = pass**（#5 实读为真；#1/#2/#3/#4/#6 维持原判；修复未引入新问题；未引入新 🔴）。
+- **审计 Q 项处置**：Q1（§2.8.1 #9 消解条件）→ 本段已做闭包复验 + 声明延后（见决策表 6 / 未决 1）；Q2（新测试档具名）→ 未决 2；Q3（面 3 广度）→ 已扩全量；Q4（advisor 加载面）→ 既有 U2 核内笔，非本笔。
+- **轮次自证**：审计 1 轮 + advisor 2 轮 + 修复轮 1；终态 **0 未决 🔴 → clean**。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 原语非字符串输入恒等返回 | 无锚可替换 ⇒ 不引入崩溃面；备选 = 抛错（误伤缺 description 的工具）/ `String()` 强制（把 `undefined` 变成字面 `undefined` 入文） |
+| 2 | 注入表在 configure 时快照（`new Map`） | 防端侧注册后改源对象致半程漂移；与「注册一次」契约同轴 |
+| 3 | 面 3 行为用例覆盖 `builtinTools` 全量（非仅两锚档） | 共享函数 ⇒ 未来任何工具档新增锚自动入覆盖面；两真实锚档作非空转证明 |
+| 4 | 结构机检域派生 = 按导出名（形态无关）+ 四档固定集 | 新增缝档（任意导出形态）自动入域 ⇒ fail-closed 成色与宣称一致 |
+| 5 | 全核 grep 复核 `applyPromptInjections` 定义点单源 | 仅 `prompt-files.mjs` 定义 + 三挂点 import（单点不破） |
+| 6 | U0 **不执行** `tools/shared.mjs` 拆分（§2.8.1 #9） | 消解条件 = 「U0 落笔同轮**或其后的下一次实质动档**」——取后者；拆分属独立重构（父侧任务书未含；U0 行自记增量 +3±2 即按「只加挂点」估）⇒ 本行声明延后 + 闭包复验（见下） |
+
+**§2.8.1 #9 拆块闭包复验（批次档本档 :2715「留 U0 落笔轮复验」项——本段执行）**
+
+- 两拆块**依赖闭包自洽**：命令安全面（`shellSegments` `:302` · `blankQuoted` `:311` · `isDestructiveCommand` `:342` · `DANGER_PATTERNS` `:351` · `detectDanger` `:366`；内部依赖 `detectDanger → blankQuoted + DANGER_PATTERNS`）与
+  HTML / 文本面（`decodeNumericEntity` `:393` · `stripTags` `:403` · `htmlToText` `:418`；内部依赖 `stripTags` / `htmlToText → decodeNumericEntity`）均**零块外依赖**，外提无须新增 import；外部消费面仅 `tools/web.mjs`（`stripTags` / `htmlToText`）——re-export 保面即可。
+- 补正两点：① 拆分须**连带 `DANGER_PATTERNS` 常量**（计划函数表未列，`detectDanger` 依赖它）；② 计划区间 `:299-389` 内含 **glob-dialect re-export 块**（`:375-387`——不属任何拆块，须留住 `shared.mjs`）。
+- 行数后果：两块合计 ≈120 行（72 + 48）+ re-export ≈5 行 ⇒ 首切后 ≈340（仍 >300）⇒ 二切（≈50 行）后 ≈290 ⇒ 计划结论（二切后入软线）成立。
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **§2.8.1 #9 消解条件口径待设计面定**：现文「消解条件 = U0 落笔同轮或其后的下一次实质动档（不得再增量）」有两种读法；本段取「其后」并已做闭包复验（见上）。建议设计面明确二择一；**同时**：本笔后该档 **455** 行，拆分落地前不得再增量。
+2. **新测试档具名待设计面入表**：`test/prompt-injections.test.mjs`（220 行）——§2.8 U0 行只写「新建面覆盖档」；`test/prompt-files.test.mjs` 扩面 +38（估计 +20±10，超顶）。
+3. **设计行增量读数与实测**（设计面收正项）：§2.8 U0 行（`:1035`）记 +14±6 / +10±4 / +3±2 / +8±3；实测 Δ≈**+47 / +4 / +3 / +4**（`prompt-files.mjs` 显著超顶——113 行仍 ≪300，无档位冲突；读数以本段表为准）。
+4. **§2.13.8 行号引用漂移**（+4 系）：`:1494` 六 return 坐标 · `:1470` `toOpenAISchema` `:165` · `:1468` `assemblePrompt` `:63-74`——实读见本段 ①/③；实现侧结构机检不依赖这些行号 ⇒ 不阻断（归设计面下次动档收正）。
+5. **`advisor.mjs` 私持 `loadPrompt`**（绕单一解析面）：既有 U2 核内笔（§2.6.3（六）），非本笔面——仅登记。
+6. **核外预存项**：`thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`（M）为 spawn 前既存改动；`doc-anchors` VSC 域报告态 2 条命中源自该改动面（非本笔）。
+
+**轮次自证**：审计 1 轮 + advisor 2 轮 + 修复轮 1；B1–B5 读数见上表；终态 = **clean**；报告 ①–⑧ 见交付报告（父侧转呈）。
+
+**补记（append-only · 收正 §5 一处在途读数）**：B4 详读后复跑（同轮次）`doc-anchors` 的 VSC 域报告态命中数由 **2** 变为 **5**（A2 ×2 + A3 ×3，全部落 `thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md`）——
+该档为**他方在途改动**（`git diff --stat` 由 21 插入行增至 **60** 插入行；本段从未触碰），命中数随其内容增长而动，**非本笔**；闸态结论不变（`OK(V5): 0 条悬空锚` ×2 域 + **exit 0**）。
+本段 B4 读数的本笔相关面（域一 候选 2219 · 悬空 0；域二 候选 8870 · 悬空 0；宽度 / 台账 exit 0）不受影响。
+（收正注：本补记首版为单行 356 字符——超 `check-doc-width` 300 字符阈值 ⇒ 就地折行（原句**仅插换行、文字零改**）；本注 = 折行时同笔附加。）
+
 ## §6 验证与收口（父代理）
 

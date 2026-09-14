@@ -9,10 +9,13 @@ import { readdirSync } from "node:fs"
 import {
   PROMPTS_DIR,
   TOOL_DOCS_DIR,
+  applyPromptInjections,
+  configurePromptInjections,
   loadAdvisorPrompt,
   loadConsultBase,
   loadSlot,
   loadToolDoc,
+  resetPromptInjections,
 } from "../prompt-files.mjs"
 
 /** S1 核内槽位提示词（15）= 全量（S0a 席位 12 + S1 补齐 3）。 */
@@ -105,4 +108,39 @@ test("user ruling #47 — persona-engineering carries the union title + the cros
   assert.ok(s.includes("AGENT-LOOP{{inject:agent-loop-pointer}}"))
   // 契约 10：核档不得把某一端的指针形态写死
   assert.ok(!s.includes("本端交付协议节 = §8"))
+})
+
+// ─── U0 锚替换原语（CORE-UNIFICATION §2.13.8「核内缝」——三态 + 单遍 + 多余键）──────────
+
+test("U0 原语·未配置 ⇒ 恒等（现行行为零变——零替换）", () => {
+  resetPromptInjections()
+  const text = "docs/{{inject:doc-map-path}}README.md — 未配置时原样过"
+  assert.equal(applyPromptInjections(text), text)
+  assert.equal(applyPromptInjections(""), "")
+})
+
+test("U0 原语·已配置 · 锚命中 ⇒ 表值替换（含空串 = 显式「本端为空」）", () => {
+  try {
+    configurePromptInjections({ "doc-map-path": "zh/", "finish-slot": "" })
+    assert.equal(applyPromptInjections("docs/{{inject:doc-map-path}}README.md"), "docs/zh/README.md")
+    assert.equal(applyPromptInjections("A\n{{inject:finish-slot}}\nB"), "A\n\nB", "空串值 = 删锚、不留字面")
+  } finally { resetPromptInjections() }
+})
+
+test("U0 原语·已配置 · 缺键 ⇒ 抛错（fail-loud——消息含锚名）", () => {
+  try {
+    configurePromptInjections({ "doc-map-path": "zh/" })
+    assert.throws(() => applyPromptInjections("x {{inject:no-such-anchor}} y"), /no-such-anchor/)
+  } finally { resetPromptInjections() }
+})
+
+test("U0 原语·单遍替换（替换值不再展开）· 表值逐字落（不解释 $ 序列）· 多余键 no-op · configure(null) 撤销", () => {
+  try {
+    configurePromptInjections({ a: "{{inject:b}}", b: "B", money: "$& $1 $' literal", "unused-key": "never-read" })
+    assert.equal(applyPromptInjections("{{inject:a}}"), "{{inject:b}}", "单遍：替换值含锚字面时不二次展开")
+    assert.equal(applyPromptInjections("{{inject:money}}"), "$& $1 $' literal", "表值逐字替换（非回调式 replace 会曲解 $ 序列）")
+    assert.equal(applyPromptInjections("no anchors here"), "no anchors here", "多余键不校验（no-op）")
+    configurePromptInjections(null)
+    assert.equal(applyPromptInjections("{{inject:a}}"), "{{inject:a}}", "撤销 ⇒ 回未配置态（恒等）")
+  } finally { resetPromptInjections() }
 })
