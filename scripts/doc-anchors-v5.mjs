@@ -17,7 +17,7 @@ import { discoverDomains, inCodeSpan, isExecutableLine, MERGED_SCRIPTS } from ".
 /** 两态常量（`true` = 闸态；临时放宽经 CLI `--v5-report`——§2.32.3.5 / AC-V5-11）。 */
 export const V5_GATE = true;
 /** 扫描域（文档锚判定面；不含 `docs/batches`——§2.32.3.6 V3 行；不触 `_archive/`）。 */
-export const V5_SCAN_DIRS = ["docs/design", "docs/requirements"];
+export const V5_SCAN_DIRS = ["docs/design", "docs/requirements", "docs/core/design", "docs/core/requirements", "docs/vsc/design", "docs/vsc/requirements"];
 /** 注记标记集（**闭枚举逐字**——§2.32.3.3；同行命中即通过，不做跨行语义判）。 */
 export const NOTE_MARKERS = [
   "已退场", "已退役", "已废", "已废弃", "已撤", "已收窄", "退场", "退役", "已删",
