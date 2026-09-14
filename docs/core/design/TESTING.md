@@ -2,7 +2,7 @@
 
 > 板块：测试基建——**分层纪律（L0 / L1 / L2）与 slow 门** · **测试库存治理** · **测试生命周期（三层来源）与集成集** · **散文锚退役与禁令**。
 > 需求层指针 = `requirements/TESTING.md`（§1 总体 / §2 F1–F14 / §3 N1–N9 / §5 F15–F22 · N10–N12）。
-> 兄弟档：`design/E2E-HARNESS.md`（CLI 自动验证面——端到端 harness）。
+> 兄弟档：无——原 `design/E2E-HARNESS.md`（CLI 自动验证面）**已删除**（2026-09-15 · 错轴退役；终端程序自动验证面的设计面 = 待重做另轮）。
 > 权威源（实现）：`thincoder-cli/test/slow.mjs` + `thincoder-cli/test/slow-gate.mjs` + `thincoder-cli/test/run-fast.mjs` + `thincoder-cli/test/run-full.mjs` + `thincoder-cli/test/run-integration.mjs` + `package.json` scripts。
 > 关联：本档 §1 是分层纪律的权威叙述；工程模式实现侧分级正文 = `thincoder-core/prompts/persona-eng-coder.md` + `discipline-engineering.md`。
 > 对端对位档 = 对端仓库的同名测试基建档（**语义同源、各端原文自持**）。
@@ -268,9 +268,10 @@
 
 **实测行数**：本档 **≈400 行**——超 300 软线。
 **拆分规划（登记——触发 = 再度增厚至 >470）**：候选切面 = ①**分层与寿命**（§1–§3）②**集成集与散文锚**（§4–§6）；切点零交叉（§5 引 §4.3 接口契约，以节名互挂）。**当前不拆**（≤500）。
-**本次迁移的切分理由**：原 995 行超硬限；端到端 harness（原 §12）切出为 `design/E2E-HARNESS.md`——读者面 = 「测试怎么分层 / 怎么收口」与「CLI 端到端怎么自动验证」。
+**本次迁移的切分理由**：原 995 行超硬限；端到端 harness（原 §12）切出为独立档（`design/E2E-HARNESS.md`——**该档已删除**（2026-09-15））；读者面 = 「测试怎么分层 / 怎么收口」。
 
 ## 变更记录
 
 - 2026-09-15（**迁移批 · 第 4 批 · 大档拆分实迁** · eng-designer）：自 `thincoder-cli/docs/design/TESTING.md`（995 行）切出并重建——落点判据 = `design/DOC-SYSTEM.md` §5.1 P1；
-  承载原 §1–§6 + §9–§11.10；原 §12（CLI 自动验证面）切出为 `design/E2E-HARNESS.md`；坐标全量改现状路径；首执行清单与逐条删除清单入「不并项与历史沿革」（一次性执行材料）。
+  承载原 §1–§6 + §9–§11.10；原 §12（CLI 自动验证面）切出为 `design/E2E-HARNESS.md`（**该档已删除**——2026-09-15 · 错轴退役）；坐标全量改现状路径；首执行清单与逐条删除清单入「不并项与历史沿革」（一次性执行材料）。
+- 2026-09-15（**TTY-DRIVE 批 · 错轴设计档退役轮 · eng-designer**）：兄弟档 `design/E2E-HARNESS.md` **已删除**（用户 06:02 裁定——错轴档从活档面消失）；首部兄弟档行 + 本文两处切分叙述同批收口。

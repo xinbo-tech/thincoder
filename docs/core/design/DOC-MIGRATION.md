@@ -62,7 +62,7 @@
 | 35 | STRUCTURE-DEBT | **本批迁** | 活 · **统一面**（横切总账 / 分批入口路由）——旧债逐条实核后按现状重建：现行债入「现行债」节、已消解项入「已消解」节（防回潮） | 已落 `docs/core/design/STRUCTURE-DEBT.md` |
 | 36 | SUBAGENT-ID-COUNTER-AGENT | 历史 | 已交付闭环（台账已核销）；机制已入核代码（`thincoder-core/agent-tools/subagent-scheduler.mjs`） | 不迁；取号公式句 ⇒ 后续批并入 `docs/core/design/AGENT-LOOP.md` 子代理池节 |
 | 37 | SUBAGENT-OBSERVE-SEND | 历史 | 契约正文已入 `docs/core/design/AGENT-LOOP.md` §6.7.2 | 不迁（就地留参照） |
-| 38 | TESTING | **本批迁** | 活——根层无对应（`CORE-UNIFICATION.md` 仅作跨树承载指针）；995 行超硬限 ⇒ 端到端 harness 另立一档 | 已落 `docs/core/design/TESTING.md` + `docs/core/design/E2E-HARNESS.md` |
+| 38 | TESTING | **本批迁** | 活——根层无对应（`CORE-UNIFICATION.md` 仅作跨树承载指针）；995 行超硬限 ⇒ 端到端 harness 另立一档 | 已落 `docs/core/design/TESTING.md`（+ `docs/core/design/E2E-HARNESS.md`——**该档 2026-09-15 已删除**） |
 | 39 | TOOL-OUTPUT-LIMITS | **本批迁** | 活——根层无对应（`AGENT-LOOP.md` §6.16 显式外指「工具输出上限系（CLI 仓·设计）」）；常量与坐标经实核 | 已落 `docs/core/design/TOOL-OUTPUT-LIMITS.md` |
 | 40 | TOOLS | 已清 | 对账：根层 §6.1–§6.10 ↔ CLI §1–§11（根层反多 `timer` 校验句） | 无动作 |
 | 41 | TUI-INPUT-BOX | **本批迁** | 活——根层无对应；CLI 专有面（输入框键契约）；**二态混装已收口**（第 31 批设计已实装——`state.interruptPrompt = { chars, cursor }`） | 已落 `docs/cli/design/TUI-INPUT-BOX.md` |
@@ -213,7 +213,7 @@
 - 2026-09-15（**迁移批 · 第 4 批 · 四个大档拆分 + 实迁** · eng-designer）：§2.1 四行（第 2 / 16 / 20 / 38 行）+ §2.2 两行（第 12 / 30 行）「后续批」→「**本批迁**」（ADVISOR-CONVERGENCE · ENGINEERING-MODE · LEDGER-SELF-CONTAINED · TESTING · req/ENGINEERING-MODE · req/TESTING——逐行补现状实核依据 + 落点）；§6 批 3 行标**已落**（档名补 req 两档）、标题档数 39 → **33**。
   §5 小计重算闭合（本批迁 21 → **27** · 后续批 39 → **33**；设计 21 / 需求 6）；§5 口径行补第 4 批；§8 行数重核。
   **本批实迁 6 档**（皆超 500 硬限 ⇒ 先拆后迁）——`design/ENGINEERING-MODE`（3030）⇒ `docs/core/design/` 四档（ENGINEERING-MODE · BATCH-RECORD · DOC-DISCIPLINE · LEDGER）；
-  `design/ADVISOR-CONVERGENCE`（1570）⇒ 两档（ADVISOR-CONVERGENCE · ADVISOR-GUARDS）；`design/LEDGER-SELF-CONTAINED`（1033）⇒ 一档；`design/TESTING`（995）⇒ 两档（TESTING · E2E-HARNESS）；
+  `design/ADVISOR-CONVERGENCE`（1570）⇒ 两档（ADVISOR-CONVERGENCE · ADVISOR-GUARDS）；`design/LEDGER-SELF-CONTAINED`（1033）⇒ 一档；`design/TESTING`（995）⇒ 两档（TESTING · E2E-HARNESS——后者 **2026-09-15 已删除**）；
   `req/ENGINEERING-MODE`（1003）⇒ 两档（ENGINEERING-MODE · ENGINEERING-MODE-MECHANISM）；`req/TESTING`（177）⇒ 一档。
   产物 12 档**逐档 ≤500**（实测 191–380）；坐标全量改现状路径（检查器改指仓根 `scripts/` · 运行期模块改指 `thincoder-core/**` · 测试/入口改指 `thincoder-cli/**`）；一次性材料（逐批设计记录 / 受影响文件 as-of 快照 / 用例与 AC 编号集 / 状态行）逐档登记入各档「不并项与历史沿革」。
 - 2026-09-15（**迁移批 · 第 3 批 · 机制小档 6 档实迁** · eng-designer）：§2.1 六行「后续批」→「**本批迁**」（AGENT-PARAMS · DESIGN-TOKEN-SETTLEMENT · ENG-TOKEN-BINDING · PROXY · TOOL-OUTPUT-LIMITS · VERIFY-REDESIGN——逐行补现状实核依据 + 落点）；§6 批 2 行标**已落**、标题档数 45 → 39。

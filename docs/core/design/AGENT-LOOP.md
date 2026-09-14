@@ -359,7 +359,7 @@ Stop 置于收尾链**首部**（后续收尾步骤的任何异常不得吞掉�
 | 工程模式判定 / token 门 / 主流程 | `docs/core/design/ENGINEERING-MODE.md`（`BATCH-RECORD.md` · `DOC-DISCIPLINE.md` · `LEDGER.md`——已迁） | 拆分面 §6.7.6 协议概览 + 文档纪律来源 |
 | 评审轮次收敛 | `docs/core/design/ADVISOR-CONVERGENCE.md` + `ADVISOR-GUARDS.md`（已迁） | 拆分面 §6.10 / §6.11 对象锚 + 轮次语义 |
 | 评审判定铁律 R1–R7 / 评审对象锚 | 本层 `AGENT-LOOP-SUBAGENT.md` §6.19 / §6.18 | 本批并入（2026-09-15 批 5） |
-| 测试分层 L0 / L1 / L2 | `docs/core/design/TESTING.md`（+ `E2E-HARNESS.md`——已迁） | 拆分面 §6.7.6 指注 |
+| 测试分层 L0 / L1 / L2 | `docs/core/design/TESTING.md` | 拆分面 §6.7.6 指注 |
 | 工具注册 / schema / ctx / hooks / undo | 本层 `TOOLS.md` | §6.4 调度决策语义 |
 | 结果落盘阈值 | `docs/core/design/TOOL-OUTPUT-LIMITS.md`（已迁） | §6.4 引用 |
 | TUI 显示 / 渲染 / 折叠块 | CLI 壳体面（`TUI.md`——未迁） | 拆分面 §6.7 显示面指针 |
