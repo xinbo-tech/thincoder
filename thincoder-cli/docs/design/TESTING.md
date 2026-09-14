@@ -404,7 +404,8 @@
 
 ## 变更记录
 
-- 2026-09-14（CLI 自动验证面批——E2E-HARNESS）：新增 §12（问题与现状 / 方案选型对比 / 架构与接口契约 / 三守卫机制裁定 / 接入点 / 覆盖边界 / 受影响文件 / AC-E2E1–AC-E2E8 / 用例表 T-E2E1–T-E2E10 / 关键决策 / 边界与待裁项）；需求侧同步 = `../requirements/TESTING.md` §6（F23–F28 · N13–N18）。
+- 2026-09-14（CLI 自动验证面批——E2E-HARNESS）：新增 §12（问题与现状 / 方案选型对比 / 架构与接口契约 / 四守卫机制裁定 / 接入点 / 覆盖边界 / 受影响文件 / AC-E2E1–AC-E2E10 / 用例表 T-E2E1–T-E2E10 / 关键决策 / 边界与待裁项）；需求侧同步 = `../requirements/TESTING.md` §6（F23–F28 · N13–N18）。
+- 2026-09-14（E2E-HARNESS 批评审修正轮——评审 #84 逐条落地）：§12.1 守卫 3→4（+ `bin/thincoder.mjs:157` 接缝）· §12.4 守卫表增行 / 理由 1 收窄 / 结构机检枚举与排除口径 · §12.6 #7 与 §12.9 T-E2E7 拒句观测面 · §12.8 AC-E2E6 补单用例 ≤30s + 新增 AC-E2E9（N17）/ AC-E2E10（F26）· §12.7 读数与零改面同步 · §12.11 待裁 5→4 · §12.6 增 F19 相容口径（映射见批次档 §2）。
 - 2026-09-13：**两仓合并批 3（S6）纪律句收窄**——§11.6 端差登记块按产品侧对位口径改写（R15）。
 - 2026-09-11（测试生命周期与集成集批——TEST-LIFECYCLE）：新增 §3–§10（三层来源与寿命 / 处置判据与 §6 处置行 / 承载与 runner 选型 / 双端契约与镜像 / 首批场景 + 种子用例表 / AC-TL1–AC-TL12 / 首执行清单 / 受影响文件 / 纪律核对 / 决策记录与边界）；需求侧同步 = `../requirements/TESTING.md` §2–§4（F6–F14 · N7–N9 · §2.1 维护模型）。
 - 2026-09-11（TEST-LIFECYCLE 修正轮——设计评审轮次 1 后）：§4.2 候选 2 表述修正 · §4.5 判定探针口径 · §6（AC-TL1 补 N8 子串 / AC-TL7 计数）· §7 引注 + §7.4 域外载体补录 · §8.1.1 削段/接收/并档逐行 · §8.1/§8.2 数字实测落定（7 条评审发现逐条落修——映射见批次档 §2）。
@@ -794,8 +795,9 @@ SWEEP 批先落（现盘 42 / 21 / 合计 63 成立——父侧 2026-09-12 05:12
 
 ### 12.1 问题与现状
 
-- **缺环（本批要补的）**：CLI 的 TTY 依赖面在真无 TTY 环境不可自动验证——三处 stdin 守卫
-  （`src/cli/permission.mjs:35` · `src/tui/index.mjs:74` · `src/cli/distill-command.mjs:40`）在管道环境恒走降级分支 ⇒ 交互路径（权限 y/n 等）**现只能人工**；
+- **缺环（本批要补的）**：CLI 的 TTY 依赖面在真无 TTY 环境不可自动验证——**四处** stdin 守卫
+  （`src/cli/permission.mjs:35` · `src/cli/distill-command.mjs:40` · `bin/thincoder.mjs:157` · `src/tui/index.mjs:74`）在管道环境恒走降级分支 ⇒ 交互路径（权限 y/n 等）**现只能人工**；
+  前三处 = 人机问答面（接缝目标——§12.4）；末一处 = TUI 接管硬门（保持直读——豁免，§12.4）；
   ACP 协议面亦无进程级全链用例——既有 ACP 测试为 in-process 面（假 notify/request 捕获，零子进程，`test/acp-channel.test.mjs:5-7`），集成集内 ACP 零命中（本设计轮 grep 实核）。
 - **已有基础（复用面）**：真进程驱动先例 = `test/integration/config-provider-routing.test.mjs`（伪 HOME + 真 `bin/thincoder.cjs` 子进程 + 本地 mock——`:7` 驱动句 · `:20` 入口 · `:38-50` 驱动器）；脚本化 provider = `test/helpers/mock-llm.mjs`（SSE 端点，含 toolCall 步——零改复用）。
 - **本批不做**：TUI 渲染 / 画布（人工真机）；真端点上云（smoke 独立在册——`test/smoke-qwen-thinking.mjs` 类）。
@@ -825,7 +827,7 @@ SWEEP 批先落（现盘 42 / 21 / 合计 63 成立——父侧 2026-09-12 05:12
 
 - `cli-process.mjs`（拟名）：进程驱动——`startCli({ args, home, cwd, env })`：真入口 spawn · 隔离伪 HOME/cwd（临时目录 + 自持 config.json——形态承 `test/integration/config-provider-routing.test.mjs:23-50`）· stdout/stderr 收集 · deadline 硬杀 + 可读超时句 · 返回退出码/输出。
 - `acp-client.mjs`（拟名）：最小 ACP 客户端（stdio 行协议）——请求 / 通知收发 · 按 id 配对 · reverse-RPC 应答器注入（权限 / fs 面脚本化）· 帧全量留档（断言面）。
-- 复用（零改）：`test/helpers/mock-llm.mjs`（56 行——脚本化 SSE + toolCall 步）。
+- 复用（零改）：`test/helpers/mock-llm.mjs`（56 行——脚本化 SSE + toolCall 步；**多轮步进原生支持**——按 `script` 数组逐请求步进（`:14`），两步脚本（toolCall → text）即 T-E2E10 所需，实核 `:5-14`）。
 
 **数据流**：
 
@@ -844,19 +846,22 @@ CLI → provider = 本地 mock（127.0.0.1，脚本化 SSE）→ agent 循环
 - 回合终 = prompt 返回 `{ stopReason: "end_turn" }`（`src/acp/bridge.mjs:19-20`）；取消 = `{ stopReason: "cancelled" }`（`src/acp.mjs:182`）；
 - 未认证 = `-32000 authRequired`（`src/acp.mjs:131` · `src/acp.mjs:171`）。
 
-### 12.4 与三处 TTY 守卫的关系（机制裁定：注入缝）
+### 12.4 与四处 TTY 守卫的关系（机制裁定：注入缝）
 
 | 守卫 | 语义 | 处置 | 理由 |
 |---|---|---|---|
 | `src/cli/permission.mjs:35` | 「stdin 能否承担人机问答（y/n）」 | **接缝**（改经谓词 `stdinIsTTY()`） | 问答流可被管道喂答——伪 TTY 的正当目标面 |
 | `src/cli/distill-command.mjs:40` | 「能否进交互式 wizard」 | **接缝**（同上） | 同类问答面（降级分支保留为对照组） |
+| `bin/thincoder.mjs:157` | 「（无 key 时）能否进交互式配置向导」 | **接缝**（同上） | 与 distill 守卫字面同族（同一 `!provider.apiKey` → `setupWizard()` 判定）；wizard 本体 = 管道可喂答形态（`src/cli/setup-wizard.mjs:7-8`——头注即以管道输入为支持场景） |
 | `src/tui/index.mjs:74` | 「能否接管终端（raw mode / 尺寸）」 | **不接缝**（保持真 TTY 硬门） | 伪 TTY 下 setRawMode / 尺寸不存在 = 不可发生态；TUI 渲染面留人工真机——以结构机检锚定 |
 
-**机制裁定**：前两守卫改经**单谓词**（新档 `tty.mjs`（拟名）的 `stdinIsTTY()`——env 门 `THINCODER_TEST_FAKE_TTY=1` 覆盖为 true；缺省 = 原语义）；TUI 守卫保持直读、零接缝。
+**机制裁定**：前三守卫（permission / distill / chat-wizard）改经**单谓词**（新档 `tty.mjs`（拟名）的 `stdinIsTTY()`——env 门 `THINCODER_TEST_FAKE_TTY=1` 覆盖为 true；缺省 = 原语义）；TUI 守卫保持直读、零接缝。
 
 **「注入缝」优先于「脚本自行伪造属性」——建议与理由**：
 
-1. 仓内既有约定：env 门测试缝是既定工艺——`bin/thincoder.mjs:84-90` 三缝（`THINCODER_TEST_CRASH` / `THINCODER_TEST_TUI_ACTIVE` / `THINCODER_TEST_CLEANUP_OUT`）+ `THINCODER_TEST_FULL` / `THINCODER_SLOW_GATE_MS` 同族；属性伪造无先例。
+1. 仓内既有约定：env 门测试缝是既定工艺——`bin/thincoder.mjs:84-90` 三缝（`THINCODER_TEST_CRASH` / `THINCODER_TEST_TUI_ACTIVE` / `THINCODER_TEST_CLEANUP_OUT`）
+  + `THINCODER_TEST_FULL` / `THINCODER_SLOW_GATE_MS` 同族；**属性伪造作测试缝工艺无先例**——仓内唯一同手法 = `test-startup.mjs:46`
+  （`Object.defineProperty(process.stdin, "isTTY", …)` + `:47` `setRawMode` 覆盖）＝启动黑屏手工 repro 脚本的一次性取巧，非测试套件内缝工艺（不入集成集、无断言纪律）。
 2. 语义诚实：守卫问的是「能否交互」（策略判定），非「stdin 是不是终端」（传输事实）——谓词把判定收成命名单点、契约显式。
 3. 可机检（fail-closed）：直读枚举可写死为 {谓词档 1 处 + TUI 守卫 1 处（豁免）}——新增直读即红；属性伪造面无可检之物。
 4. 入口路径全继承：env 天然随 spawn 链下传；`--import` 旗标须逐 spawn 接线（漏加 = 静默走真分支、无红）。
@@ -873,7 +878,9 @@ CLI → provider = 本地 mock（127.0.0.1，脚本化 SSE）→ agent 循环
 
 ⇒ 两机制今天**都可行**——否决属性伪造 = **设计面裁量**（上列 1–5），如实登记（可行性面不构成否决理由）。
 
-**结构机检（实现轮落测试，fail-closed）**：全仓 `process.stdin.isTTY` 直读点枚举 = {谓词档：1 处；`src/tui/index.mjs:74`：1 处（豁免——真终端硬门）}；两守卫（permission / distill）零直读；谓词缺省（无 env）= 原语义（行为用例对照：无 env + 管道 ⇒ 权限路径仍走 `[deny]` 降级）。
+**结构机检（实现轮落测试，fail-closed）**：扫描域 = 仓内代码档（`src/**` · `bin/**` · `test/**` · `scripts/**` · 仓根 `*.mjs`；`docs/**` 引述文本不入）。
+改动后 `process.stdin.isTTY` 直读枚举 = {谓词档（`tty.mjs`——拟名，落点见 §12.7 清单）：1 处；`src/tui/index.mjs:74`：1 处（豁免——真终端硬门）}；三守卫（permission / distill / bin-chat wizard）经谓词、零直读；谓词缺省（无 env）= 原语义（行为用例对照：无 env + 管道 ⇒ 权限路径仍走 `[deny]` 降级）。
+**排除口径（非直读用法——不计入枚举，防误红）**：① 属性写点 `test-startup.mjs:46`（`Object.defineProperty(process.stdin, "isTTY", …)`——测试面手工 repro 脚本的属性伪造写点；其文本不含 `process.stdin.isTTY` 子串，直读形态扫描天然不命中；宽形态（仅 `isTTY`）须显式排除该写点）；② 文档面引述（设计 / 需求档文本）与扫描器自身文件（实现轮自命中排除）。
 
 ### 12.5 接入点与分层关系
 
@@ -893,9 +900,11 @@ CLI → provider = 本地 mock（127.0.0.1，脚本化 SSE）→ agent 循环
 | 4 | ACP 工具调用 + 权限往返（approve / reject） | A | `session/request_permission` 往返 + 工具执行产物 / 拒执行 |
 | 5 | ACP 取消（session/cancel） | A | `stopReason=cancelled` + 进程超时内收束 |
 | 6 | ACP 错误面（未认证 / 坏行 / 未知方法 / 缺参数） | A | `-32000` · `-32600` · `-32601` · `-32602` |
-| 7 | 权限 y/n（chat 路径——批准 / 拒绝） | B | 工具产物在/不在 + 可读拒句 + 回合收束 |
+| 7 | 权限 y/n（chat 路径——批准 / 拒绝） | B | 工具产物在/不在 + 回合收束；**拒句观测面 = mock 侧下一轮请求体**（`test/helpers/mock-llm.mjs:8` / `:13` 的 `requests`——denied 早退不经 stdout/stderr，实核 `src/agent/dispatch.mjs:324-336`） |
 | 8 | 降级分支对照（缝未开 = 现行为） | B | `[deny]` 降级路径在位（缺省零行为变） |
 | 9 | 夹具隔离（HOME/cwd 重定向） | A+B | 断言只碰临时域（零真实配置读写） |
+
+> **与 F19 禁写散文锚的相容口径**（承 §11.1 C1 载体判据）：§12 内「可读拒句 / stdout 关键行 / 协议帧 / mock 请求体」类断言的对象 = **执行产物**（子进程输出 · 协议帧 · 测试自建临时域；含工具返回 / 拒绝文案——C1-b）——断言执行产物不命中判据 ① ⇒ 非散文锚、属 F19 允许的行为面。
 
 **不测（明确排除）**：
 
@@ -904,15 +913,16 @@ CLI → provider = 本地 mock（127.0.0.1，脚本化 SSE）→ agent 循环
 - Windows ConPTY / 终端尺寸类平台行为（真机人工）。
 - VSC 侧对位（本批仅 CLI）。
 
-### 12.7 受影响文件（as-of 2026-09-14 · 落笔前读数为准）
+### 12.7 受影响文件（as-of 2026-09-14 · 落笔前读数 + 现档实测回填）
 
 | 文件 | 现状行数 | 预计增量 | 变更 |
 |---|---|---|---|
 | `src/cli/permission.mjs` | 49 | +2 / −1 | 守卫改经谓词 `stdinIsTTY()` |
 | `src/cli/distill-command.mjs` | 92 | +2 / −1 | 同上 |
-| `test/helpers/mock-llm.mjs` | 56 | 0 | 复用（若需多轮 tool→text 步进增强，落轮登记） |
-| `docs/requirements/TESTING.md` | 130 | +~65 | §6（本批已落——实测以批次档 §2 读数为准） |
-| `docs/design/TESTING.md` | 786 | +~260 | §12（本批已落——同上） |
+| `bin/thincoder.mjs` | 415 | +2 / −1 | 同上（chat 无 key wizard 守卫——同族接缝） |
+| `test/helpers/mock-llm.mjs` | 56 | 0 | 复用（两步脚本 toolCall→text 原生支持——实核 `:5-14`；零增强） |
+| `docs/requirements/TESTING.md` | 130 | +47（本批已落——现档 **177** · 2026-09-14 实测） | §6（F23–F28 / N13–N18） |
+| `docs/design/TESTING.md` | 786 | +194（本批已落）+ 评审修正轮净增——现档 **995** · 2026-09-14 修正轮后实跑 | §12 全节（含修正轮） |
 
 **新建档（拟名——实现轮落；具体名以实现轮为准）**：
 
@@ -925,8 +935,10 @@ test/integration/e2e-interactive.test.mjs    B 面：权限 y/n + 降级对照
 test/integration/e2e-cli-surface.test.mjs    命令行面：argv / 退出码 / 分流
 ```
 
+**新建档预计规模**（实现轮实测回填）：`tty.mjs` ≈8 行 · `cli-process.mjs` ≈120 行 · `acp-client.mjs` ≈140 行 · `e2e-acp-session` ≈200 行 · `e2e-interactive` ≈110 行 · `e2e-cli-surface` ≈70 行——预计均在 300 软线内（无越档预判）。
+
 **不变量（零改，机检锚定）**：`src/tui/index.mjs`（483 行——TUI 守卫保持直读；结构机检豁免点，见 §12.4）。
-**零改面（登记）**：`test/run-integration.mjs` · `test/run-fast.mjs` · `test/run-full.mjs` · `scripts/release-check.mjs` · `package.json` · 仓根 `scripts/**`（三机检）· `bin/thincoder.mjs` · 快层 / 全量目标集合。
+**零改面（登记）**：`test/run-integration.mjs` · `test/run-fast.mjs` · `test/run-full.mjs` · `scripts/release-check.mjs` · `package.json` · 仓根 `scripts/**`（三机检）· 快层 / 全量目标集合。
 
 ### 12.8 验收标准（AC-E2E——逐条回指需求）
 
@@ -937,9 +949,11 @@ test/integration/e2e-cli-surface.test.mjs    命令行面：argv / 退出码 / �
 | AC-E2E3 | 零新增依赖：`package.json` 依赖面零变 + 仓内零原生 `.node` 模块（机检） | N13 |
 | AC-E2E4 | 零 TTY 可跑：全部新档在当前无 TTY 环境跑绿（实测读数入批次档 §5） | N14 |
 | AC-E2E5 | 确定性：全部新档 provider 一律本地 mock（结构断言）+ 重复执行一致（复跑读数） | N15 |
-| AC-E2E6 | 时长与超时保底：驱动器 deadline 实现（超时 ⇒ 可读失败句）；全档墙钟实测 ≤3 分钟（读数） | N16 / N17 |
+| AC-E2E6 | 时长与超时保底：驱动器 deadline 实现——**单用例硬超时 ≤30s**（超时 ⇒ 可读失败句 + 非零退出）；全档墙钟实测 ≤3 分钟（读数入批次档 §5） | N16 / N17 |
 | AC-E2E7 | 分层零混入：`npm test` / `test:full` 目标集合零变；新档零 `slow(`（源码断言）；只在 `test:integration` 收录 | F28 / N18 |
-| AC-E2E8 | 守卫不变量：结构机检在位——直读枚举 = {谓词档 1 处 + TUI 守卫 1 处（豁免）}；permission / distill 零直读；缺省零行为变（行为用例） | N13 / §12.4 |
+| AC-E2E8 | 守卫不变量：结构机检在位——直读枚举 = {谓词档 1 处 + `src/tui/index.mjs:74` 1 处（豁免）}；permission / distill / bin（chat wizard）三守卫零直读（枚举与排除口径 = §12.4）；缺省零行为变（行为用例） | N13 / §12.4 |
+| AC-E2E9 | 失败可诊断：断言失败输出含现场——子进程退出码 + stderr 尾段 + 协议帧 / 管道输出尾段（驱动件输出构造契约；反证用例：受控超时 / 失败探针 ⇒ 三要素在场、无静默挂起） | N17 |
+| AC-E2E10 | 覆盖边界写死落实：§12.6「能测」9 行逐条有 ≥1 用例承载（行 ↔ 用例映射 = 实现轮用例表逐条落）；「不测」面零驱动（结构断言：新档零 `src/tui/**` 引用） | F26 |
 
 ### 12.9 用例表（T-E2E——正常 / 边界 / 异常）
 
@@ -951,7 +965,7 @@ test/integration/e2e-cli-surface.test.mjs    命令行面：argv / 退出码 / �
 | T-E2E4 | 边界 | A：prompt（mock delay 步）中途 `session/cancel` | `stopReason=cancelled`；进程超时内收束（零挂死） | F24 / N16 |
 | T-E2E5 | 异常 | A：未 authenticate 即 session/new；坏行；未知方法；prompt 缺 text 块 | `-32000` / `-32600` / `-32601` / `-32602`——进程不崩栈 | F24 |
 | T-E2E6 | 正常 | B：`chat` + mock toolCall + 管道喂 `y` | 工具执行（产物出现）；退出 0；stdout 回复透传 | F25 / F23 |
-| T-E2E7 | 边界 | B：同 T-E2E6 但喂 `n` | 拒执行（零产物）+ 可读拒句；回合收束 | F25 |
+| T-E2E7 | 边界 | B：同 T-E2E6 但喂 `n` | 拒执行（零产物）+ 拒句观测 = **mock 下一轮请求体含 `Error: permission denied by user`**（`src/agent/dispatch.mjs:331-332`——denied 早退、不经 `callbacks.onToolResult`，chat 路径无 stdout/stderr 文本可判）+ 回合收束（退出 0） | F25 |
 | T-E2E8 | 边界 | B：**对照组**——缝未开（无 env）+ 管道 | 权限路径走 `[deny]` 降级（现行为零变——缝缺省证明） | N13 / §12.4 |
 | T-E2E9 | 正常 | B：`-v` / `--help` 等命令行面（隔离 HOME） | 退出码 0 / stdout 关键行；零副作用 | F23 |
 | T-E2E10 | 异常 | A：ACP 会话内连续两轮 prompt（mock 两步脚本） | 队列串行（第二回合在首回合 `end_turn` 后收帧）；帧序无交错 | F24 / F27 |
@@ -962,7 +976,7 @@ test/integration/e2e-cli-surface.test.mjs    命令行面：argv / 退出码 / �
 |---|---|---|---|
 | D-E1 | 采「ACP + 伪 TTY」两驱动面并用 | 单面 · PTY · 模块级直驱 | §12.2（用户 2026-09-14 采定 ②+③） |
 | D-E2 | 伪 TTY 机制 = 产品侧 env 门单谓词缝 | 脚本伪造属性（`--import` 预载） | §12.4 理由 1–5（可行性已实核——裁量在设计面） |
-| D-E3 | TUI 守卫不接缝（真 TTY 硬门）+ 结构机检锚定 | 三守卫一律接缝 | 伪 TTY 下 TUI 接管 = 不可发生态；渲染面人工真机（用户裁定） |
+| D-E3 | TUI 守卫不接缝（真 TTY 硬门）+ 结构机检锚定 | 守卫一律接缝 | 伪 TTY 下 TUI 接管 = 不可发生态；渲染面人工真机（用户裁定） |
 | D-E4 | 落点 = `test/integration/`（零 runner 改动） | 新 runner / 快层 + slow | §12.5；集成集纪律（F12 / 设计 §4.3） |
 | D-E5 | 断言字面 = 协议帧 / 进程输出 / 产物（零 import 业务模块） | 复用模块内部 API | e2e 纯度（F23——真进程面）；不重复纪律（§4.5） |
 
@@ -974,6 +988,7 @@ test/integration/e2e-cli-surface.test.mjs    命令行面：argv / 退出码 / �
 
 1. 缝的环境变量命名与覆盖面（`THINCODER_TEST_FAKE_TTY`——只覆盖 stdin 判定；stdout 面本批零读点不改）——评审 / 用户可改。
 2. TUI 守卫不接缝的结论——若用户希望 TUI 也自动驱动，须另设计 pty 面（本批硬约束下不可行）。
-3. mock 多轮步进是否够用（`test/helpers/mock-llm.mjs` 现支持 toolCall 步族；T-E2E10 需两步脚本——不足则实现轮登记增强）。
-4. 时长预算 3 分钟的校准（首发实测后按读数收正）。
-5. VSC 对位面（F14 双端实例化口径是否要求对端同期设立）——本批 CLI-only，待父侧 / 用户裁定。
+3. 时长预算 3 分钟的校准（首发实测后按读数收正）。
+4. VSC 对位面（F14 双端实例化口径是否要求对端同期设立）——本批 CLI-only，待父侧 / 用户裁定。
+
+**修正轮关闭项**：原「mock 多轮步进是否够用」——实核 `test/helpers/mock-llm.mjs:5-14`：按 `script` 数组逐请求步进（`:14` `script[Math.min(i++, script.length - 1)]`），两步脚本（toolCall → text）原生支持 ⇒ 判定「够用」，不再列待裁（2026-09-14 评审修正轮）。

@@ -2487,6 +2487,65 @@
 
 **补记二（append-only）**：变更记录坐标终态 = `:1441-1442`（「受影响文件」表格行记 `:1440-1441` 为折行后、补入「取反向判之由」行前坐标——补入致 +1 行）——以本行为终态真值。
 
+### CLI 自动验证面（harness）设计 · 评审修正轮（2026-09-14 · eng-designer）
+
+**段位**：当前段 = **S1（建核补齐）**；E2E-HARNESS 批**设计面评审修正轮**（评审 #84 = changes-required：🔴 1 · 🟡 3 · 🔵 4——用户已看裁决表）。
+本轮**只改设计档** `thincoder-cli/docs/design/TESTING.md`（§12 全节 + 档级变更记录）；零代码 / 零核 · 两产品改动；未 commit（父侧统一）；未发起评审；未碰台账。
+
+**八条落地（改前 → 改后 · 行号 = 落笔后坐标）**
+
+| # | 严重度 | 条目 | 落点与处置 |
+|---|---|---|---|
+| 1 | 🔴 | 守卫清单低计 | `:798` 三处→**四处** enumerat（+ `bin/thincoder.mjs:157`）；`:849` 节题 三处→四处；`:855` 守卫表新增行（处置 = **接缝**）；`:858` 机制裁定 前两→前三；`:881-883` 结构机检重写（扫描域 + 枚举 + **排除口径**）；`:954`（AC-E2E8）枚举同步；`:941` 零改面移除 `bin/thincoder.mjs`；`:922` 受影响表新增行（415 行 · +2/−1）；`:407` 档级变更记录「三守卫 / AC-E2E1–AC-E2E8」→「四守卫 / AC-E2E1–AC-E2E10」；`:979`（D-E3 否决备选）「三守卫一律接缝」→「守卫一律接缝」（计数去化） |
+| 2 | 🟡 | 「属性伪造无先例」不成立 | `:862-864` 理由 1 收窄——「**作测试缝工艺**无先例」；仓内唯一同手法 = `test-startup.mjs:46`（+`:47`）= 手工 repro 脚本一次性取巧，非测试套件内缝工艺；理由 2–5 不动 |
+| 3 | 🟡 | T-E2E7 观测面 | `:903`（§12.6 #7）+ `:968`（T-E2E7）写死观测面 = **mock 侧下一轮请求体**（`test/helpers/mock-llm.mjs:8`/`:13` 的 `requests`；拒句 = `Error: permission denied by user` ← `src/agent/dispatch.mjs:331-332` 早退、不经 `:437`）——非 stdout/stderr |
+| 4 | 🟡 | N16 / N17 覆盖 | `:952`（AC-E2E6）补 **单用例硬超时 ≤30s**（超时 ⇒ 可读失败句 + 非零退出）；新增 `:955` **AC-E2E9**（N17：失败输出含退出码 + stderr 尾段 + 帧 / 管道尾段——反证用例） |
+| 5 | 🔵 | .md 旧读数 | `:924` requirements 130→**177**（+47 · 实测）；`:925` design 786→**995**（+194 批落 + 修正轮净增——修正轮后实跑） |
+| 6 | 🔵 | 新建档无预计规模 | `:938` 补预计行数（`tty.mjs`≈8 · `cli-process`≈120 · `acp-client`≈140 · `e2e-acp-session`≈200 · `e2e-interactive`≈110 · `e2e-cli-surface`≈70——实现轮实测回填） |
+| 7 | 🔵 | 待裁 3 关闭 | `:987-994` 待裁 **5→4** + 关闭注（`mock-llm.mjs:5-14` 按 `script` 数组逐请求步进 `:14` ⇒ 两步脚本原生支持）；§12.3 `:830` 同步写明 |
+| 8 | 🔵 | F26 / F19 | 新增 `:956` **AC-E2E10**（F26：能测表 9 行逐条承载 + 不测面零驱动）；`:907` **F19 相容口径**一行（执行产物面不命中判据 ①——承 §11.1 C1） |
+
+**件 1 定稿处置 = 接缝（拒绝豁免）——理由（实核）**
+
+- ① 与 `distill-command.mjs:40` **字面同族**：同一 `!provider.apiKey` → `setupWizard()` 判定（实核 `bin/thincoder.mjs:156-175` ↔ `distill-command.mjs:39-48`）——分开处置 = 同族两制。
+- ② wizard 本体 = **管道可喂答形态**（`src/cli/setup-wizard.mjs:7-8`——头注明写管道输入支持）⇒ 属伪 TTY 正当目标面族。
+- ③ 接缝后不变量收严 = **交互判定单谓词**、唯 TUI 直读豁免（与 §12.4 理由 3 自证枚举一致）；选豁免会留第二豁免点稀释 fail-closed 闸。
+
+**修正后枚举（§12.4 `:881-883` 定稿）**：扫描域 = 仓内代码档（`src/**` · `bin/**` · `test/**` · `scripts/**` · 仓根 `*.mjs`；`docs/**` 引述不入）；
+直读枚举 = {谓词档（`tty.mjs`——拟名）1 处 + `src/tui/index.mjs:74` 1 处（豁免）}；三守卫零直读；
+排除口径 = ① `test-startup.mjs:46` 属性**写**点（文本不含 `process.stdin.isTTY` 子串——实核；宽形态须显式排除）；② 文档面 + 扫描器自命中（实现轮处理）。
+
+**实核读数（本段 · cwd = 仓根）**
+
+| # | 探针 | 读数 |
+|---|---|---|
+| 1 | 代码面 `process.stdin.isTTY`（全仓 grep） | **直读 4** = `src/cli/permission.mjs:35` · `src/cli/distill-command.mjs:40` · `bin/thincoder.mjs:157` · `src/tui/index.mjs:74`（+ 属性写点 1 = `test-startup.mjs:46`；文档面引述多处不计——扫描域口径见 §12.4） |
+| 2 | `bin/thincoder.mjs:156-161` | `if (!agent.provider.apiKey) { if (!process.stdin.isTTY) { noKeyMessage + exitSoon(1) } … setupWizard() }`——同族实证 |
+| 3 | `test-startup.mjs:46` 子串探针 | contains("process.stdin.isTTY") = **false**（`Object.defineProperty(process.stdin, "isTTY", …)`）——排除口径成立 |
+| 4 | `src/agent/dispatch.mjs` | `:301-307` denied 标记 · `:324-336` 早退构句（`:332`）· `:437` onToolResult（denied 不经）——T-E2E7 观测面依据 |
+| 5 | `test/helpers/mock-llm.mjs:5-14` | `requests` 留档 `:8`/`:13` + 逐请求步进 `:14`——待裁 3 关闭依据 |
+| 6 | 行数（read 行号口径） | 设计档 980 → **995**（+15）· 需求档 177（**不动**——N16/N17/F26 判据面由设计档 AC 承接，需求条文零改） |
+
+**三机检读数（cwd = 仓根 · 修正轮文案落笔后实跑）**
+
+| # | 机检 | 读数 | 判 |
+|---|---|---|---|
+| 1 | `doc-anchors` | 域一 `OK(V5): 0 条悬空锚` · 域二 `OK(V5): 0 条悬空锚`——`0 条悬空锚（闸态——阈值 0）`×2 | ✓ exit 0（自检一修后复跑） |
+| 2 | `check-doc-width` | **1 文件 / 1 行超 300 字符**：`docs/batches/2026-09-13-CORE-UNIFICATION.md:2580 (658 chars)`——**越段项**（§3 段内，非本段写入；见「越段发现」） | ✗ exit 1（越段红） |
+| 3 | `check-ledger` | `OK: thincoder/docs/TODO.md` · `OK: thincoder/docs/TODO-archive.md`——0 处违规（基线 0） | ✓ exit 0 |
+
+**自检一修（已复跑）**：本段首跑 `doc-anchors` 报 **1 条悬空锚**——本段新增 `src/cli/tty.mjs`（`:882`，未建档路径；锚引擎对「带斜杠路径」判存在性）⇒ 就地改拟名裸名形态（`tty.mjs`——拟名，语义零改）⇒ 复跑两域全绿（0 条悬空锚）。
+
+**三方条目一致（修正后）**：任务书条目 4「三守卫」→ **四守卫**；条目 8「AC-E2E1–AC-E2E8 / 待裁 5 项」→ **AC-E2E1–AC-E2E10 / 待裁 4**；设计档 §12.8 / §12.11 已同步；需求档条目（F23–F28 / N13–N18）零改。旧块按 append-only 留痕不改——**以本段为准**。
+
+**越段发现（只记 ✗ · 未处置）**
+
+1. `docs/batches/2026-09-13-CORE-UNIFICATION.md:2580` 单行 **658 字符**（§3 轮次 4「已核为真的引用（无发现）」行）⇒ `check-doc-width` exit 1——**非本段写入**（本段仅 §2 追加，未改他段）。修法 = 就地折行（语义零改）；归属 = §3 段作者 / 父侧排程（本段不代改他段）。
+
+**轮次自证**：本段无评审轮（发起权在用户 / 父侧）；实核坐标全带 `file:line`；报告 ①–⑧ 见交付报告（父侧转呈）。
+
+**补记（append-only · 本段自检）**：① 上方表格行 1 之「enumerat」为「枚举」之笔误（语义零改）；② 「越段发现 1」坐标 `:2580` = 本段追加前读数——本段追加后位移至 `:2637`（本条补记追加再致小幅位移）——以 `check-doc-width` 最近一次复跑输出为准（行内容 = 「已核为真的引用（无发现）」658 字符行）。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
@@ -2559,6 +2618,33 @@ CONSULTATION #40（差异 = 第 4/6 行端内模块名）· #41（短式 ↔ `do
 **范围外注册（无严重度）**：① `thincoder-vscode/test/files.mjs:39` 的注释仍守「truncate.mjs 直驱——CLI 镜像（byte-identical）」叙事（本族只订正两产品测试头注，未涉该档；且该叙事今日已不精确——两测试档第 3 行指针写法本就不同）；② §2.8 发布编排面（release-check）行「+25±10」与备注「语义不变、不改」措辞相抵（挂点不改 ≠ 档不改）；③ 本评审未评两产品实现内部与 §4 目录改名子批（按对象声明排除）。
 
 VERDICT: pass
+
+### 轮次 4（评审子代理）
+
+评审对象：设计 `thincoder-cli/docs/design/TESTING.md` §12（E2E-HARNESS）+ 需求 `../requirements/TESTING.md` §6；实测坐标：`src/cli/permission.mjs:35` · `src/tui/index.mjs:74` · `src/cli/distill-command.mjs:40` · `test/run-integration.mjs:5-6/17` · `scripts/release-check.mjs:81-83`。
+
+| # | Category | Severity | Issue | Suggestion |
+|---|----------|----------|-------|------------|
+| 1 | Feasibility / Acceptance criteria | 🔴 | 守卫清单低计：§12.1（设计 :797-798）称「三处 stdin 守卫」，§12.4 结构机检（:876）与 AC-E2E8（:942）却写死「全仓 `process.stdin.isTTY` 直读点枚举 = {谓词档 1 处 + `src/tui/index.mjs:74` 1 处（豁免）}」。全仓 grep 实测另有 `bin/thincoder.mjs:157`（`if (!process.stdin.isTTY)`——与 `src/cli/distill-command.mjs:40` 同族「能否进交互式 wizard」）与 `test-startup.mjs:46`（`Object.defineProperty(process.stdin, "isTTY", …)`）。按 fail-closed 写法 AC-E2E8 现仓必红；且 §12.7（:929）把 `bin/thincoder.mjs` 登记为「零改面」，与该枚举规则互斥 | 把 `bin/thincoder.mjs:157` 纳入守卫清单并给出处置（接缝 or 显式豁免入枚举），同步改 §12.1「三处」、§12.4/AC-E2E8 枚举（含非守卫直读如 `test-startup.mjs:46` 的排除口径）与 §12.7 零改面登记 |
+| 2 | Clarity / Evidence | 🟡 | §12.4 理由 1（:859）称「env 门测试缝是既定工艺……属性伪造无先例」——实测 `test-startup.mjs:46` 即 `Object.defineProperty(process.stdin, "isTTY", { value: true, configurable: true })`（:47 另覆盖 `setRawMode`）的仓内先例。理由 2–5 不受影响，但该条事实陈述不成立 | 更正/收窄该条（如改述为「仓内先例 = 手工 repro 脚本，非测试缝工艺」），保 D-E2 判据诚实 |
+| 3 | Acceptance criteria | 🟡 | §12.6 #7 与 T-E2E7 的「可读拒句」未指定观测通道：交互喂 `n` 的拒句源自 `src/agent/dispatch.mjs:332`（模型可见的工具结果串），denied 分支在 `:324-336` 早退、不经 `:437` 的 `callbacks.onToolResult`，chat 路径不保证有 stdout/stderr 文本；有 stderr 文本的是对照的非 TTY 分支（`src/cli/permission.mjs:36`） | 明确 T-E2E7 判据观测面（mock 侧收到的下一轮请求体——`test/helpers/mock-llm.mjs:8/13` 已留 `requests`） |
+| 4 | Requirements coverage | 🟡 | N16（需求 :165）只覆盖一半：AC-E2E6（设计 :940）写「deadline 实现 + 全档 ≤3 分钟」，未定「单用例硬超时 ≤30s」；N17（:166）「断言失败输出含现场」在 §12.3 驱动件契约与 AC 中均无对应判据 | AC-E2E6 补单用例超时上限；为 N17 加一条判据（失败输出含退出码 + stderr/帧尾段） |
+| 5 | Affected-file annotations | 🔵 | §12.7 的 .md 行为旧读数：`docs/design/TESTING.md` 记 786（实测 980）· `docs/requirements/TESTING.md` 记 130（实测 177）——纯 .md 免注释，仅数值漂移 | 落笔前读数为准（表内已自注） |
+| 6 | Affected-file annotations | 🔵 | 新建档块（设计 :919-926）无预计行数，无法预判三张 e2e 档是否越 300/500 档位线 | 补预计规模（或声明实现轮实测回填） |
+| 7 | Clarity | 🔵 | 待裁 3（设计 :977）可就现源码关闭：`test/helpers/mock-llm.mjs:5-14` 按 script 数组逐请求步进，两步脚本（toolCall→text）已支持 | 直接判定为「够用」，不再列为待裁 |
+| 8 | Requirements coverage | 🔵 | F26「覆盖边界写死」（需求 :154）无 AC 回指（仅 §12.6 正文）；另 §12 的「可读拒句/关键行」类断言与 F19 禁写散文锚的相容性未明写（按 §11.1 C1「执行产物」口径应属保留面） | F26 加 AC 回指；§12 一行说明与 F19 的相容口径 |
+
+计数：🔴 1 · 🟡 3 · 🔵 4。
+
+已核为真的引用（无发现）：`src/cli/permission.mjs:35`（:49 行）· `src/cli/distill-command.mjs:40`（:92 行）· `src/tui/index.mjs:74`（483 行）·
+`bin/thincoder.mjs:35-37 / :84-90 / :205` · `src/acp.mjs:6-8 / :131 / :171 / :182` · `src/acp/bridge.mjs:11-14 / :19-20` ·
+`src/acp/transport.mjs:14-20`（-32600/-32601/-32602/-32000）· `test/acp-channel.test.mjs:5-7`（in-process）·
+`test/integration/config-provider-routing.test.mjs:7/20/38-50` · `test/run-integration.mjs:5-6/17` · `scripts/release-check.mjs:81-83`（集成步骤已接线⇒零改成立）·
+`package.json`（零依赖 + `test:integration`）· `test/integration/` 既有 7 档 · 集成集内 ACP 零命中 · `test/run-fast.mjs:19` 单层 glob（集合零变成立）· `test/helpers/mock-llm.mjs` 56 行。
+
+out-of-scope note（不计严重度）：§8.1/§8.2（as-of 2026-09-11）仍把 `scripts/release-check.mjs`（62 → +~15）与 `package.json`（+1 行）列为待改，实测两者集成步骤均已落地（`scripts/release-check.mjs:81-83` · `package.json:39`）——属 §12 目标外节次的历史读数。
+
+VERDICT: changes-required
 
 ## §4 用户批准（主 agent）
 
