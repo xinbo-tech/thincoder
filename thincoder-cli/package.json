@@ -19,6 +19,9 @@
   "engines": {
     "node": ">=24"
   },
+  "dependencies": {
+    "@thincoder/core": "^0.1.0"
+  },
   "files": [
     "bin/",
     "src/",

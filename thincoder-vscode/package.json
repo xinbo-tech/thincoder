@@ -29,6 +29,9 @@
   "engines": {
     "vscode": "^1.85.0"
   },
+  "dependencies": {
+    "@thincoder/core": "^0.1.0"
+  },
   "type": "module",
   "main": "./extension.mjs",
   "activationEvents": [

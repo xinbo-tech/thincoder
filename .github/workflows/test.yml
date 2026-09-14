@@ -11,6 +11,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 24 }
+      # S2 期间（核发布前）：核依赖经本地链接解析——见 docs/design/CORE-UNIFICATION.md §2.6.1
+      - run: cd ../thincoder-core && npm link
+      - run: npm link @thincoder/core
       - run: npm install
       - run: npm test
       - run: npm run lint
@@ -24,9 +27,23 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 24 }
+      # S2 期间（核发布前）：核依赖经本地链接解析——见 docs/design/CORE-UNIFICATION.md §2.6.1
+      - run: cd ../thincoder-core && npm link
+      - run: npm link @thincoder/core
       - run: npm install
       - run: npm test
       - run: npm run lint
+  core:
+    name: thincoder-core (kernel)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: thincoder-core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - run: node --test
   docs:
     name: repo-wide doc machine checks
     runs-on: ubuntu-latest
