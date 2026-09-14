@@ -6,6 +6,7 @@
 > 建档：2026-09-13（**文档拆分轮**——自 `CORE-UNIFICATION.md` §2.5 / §2.5.1 / §2.12.1 / §2.12.2 **逐节搬入，只搬不改语义**；行号沿用原裁定表编号）。
 > **列定义**（裁决行各列含义）→ `CORE-UNIFICATION.md` §2.5；**须裁条目的分组口径与四要素提交形式** → 该档 §2.5.1。
 > **机制面**（§6–§9 · 2026-09-14「B 轮并入」）：本板块**同名旧档缺 ⇒ 无新内容并入**（不虚构）——详见 §6 / §8。
+> **并入面补记**（2026-09-15 批 5）：配置面机制文本散布旧档——按父侧点名并入 `POOL-CONFIG-UNIFIED`（§6.1）。
 
 ## 1. 归属与范围（自本档行内容的路径归纳）
 
@@ -86,11 +87,39 @@
 ⇒ 本批对 CONFIG 板块**无并入面**——不据其他档代拟机制文本（不虚构）。
 
 **越段发现（只记 · 未处置）**：配置面机制文本**散布于旧档**（非同板块同名档）——`thincoder-cli/docs/design/SETTINGS-TOOL.md`（`settings` 工具面 #87）· `thincoder-cli/docs/design/PROXY.md`（代理面 #74）· `thincoder-cli/docs/design/POOL-CONFIG-UNIFIED.md`（池配置面）；
-家目录展开面（#77）**已随试点批并入**本层 `MEMORY.md` §6.7（指回）；装载器 / 迁移面（#79 / #80）在旧档无专档。⇒ **触发 = 父侧另派**（若续并，参照面须按「配置面」逐档点名）。
+家目录展开面（#77）**已随试点批并入**本层 `MEMORY.md` §6.7（指回）；装载器 / 迁移面（#79 / #80）在旧档无专档。⇒ **2026-09-15 批 5**：按父侧点名并入 `POOL-CONFIG-UNIFIED`（§6.1——代理面已于第 3 批落 `docs/core/design/PROXY.md`）；其余（SETTINGS-TOOL / 装载器 / 迁移面）维持触发 = 父侧另派。
+
+### 6.1 并发池配置面（自 `POOL-CONFIG-UNIFIED` 并入 · 2026-09-15 批 5）
+
+来源 = `thincoder-cli/docs/design/POOL-CONFIG-UNIFIED.md`（130 行 · 旧档一字未改，留参照历史）。**池机制本体**（容量 / 补位 / 调度 / 评审池）住 `AGENT-LOOP-SUBAGENT.md` §6.10 / §6.11——本档只收**配置键面**（D2）。
+
+**配置键**：`agent.poolLimits = { engCoder, other, advisor }`——单对象配置键（三池统一，默认 **4 / 4 / 4**）。
+
+| 键 | 消费面 | 校验 / 回退 |
+|---|---|---|
+| `engCoder` | subagent 域读取器（运行期读） | 正整数 ≥1 生效；非法 / 缺省回退 4 |
+| `other` | 同上 | 同上 |
+| `advisor` | **独立** advisor 读取器（每 launch 读） | 合法 ≥1 整数生效；非法 / 缺省回退 4 |
+
+- **双读取器独立不共享**（键表语义不同）：subagent 两键 = `thincoder-core/agent-tools/subagent-async.mjs:94`（`poolLimitsFor`）；advisor 第三键 = `thincoder-core/agent-tools/advisor-async.mjs:168`（`resolveAdvisorPoolLimit`）。
+- **默认值四源同改**（缺一即漂移）：DEFAULTS（`thincoder-core/config.mjs:63`）↔ 运行时常量（`subagent-async.mjs:55` · `advisor-async.mjs:166`）↔ 耦合锁（`thincoder-cli/test/config-pool.test.mjs` · `thincoder-vscode/test/config-pool.test.mjs`）。
+- **生效时机**：变更下回合生效；运行期读取点各自校验（非法键回退默认 + 告警）。
+- **界面入口**：CLI `/config` →「并发池」子菜单（`thincoder-cli/src/tui/cmd-config.mjs:245`–`:273`——三域读写 + 主菜单 / view 摘要）；VSC 设置面板并发池三域（`thincoder-vscode/src/extension/settings-panel-write.mjs:82` 白名单 · `thincoder-vscode/src/extension/settings.mjs:107` 回退显 4/4/4）。
+- **向后兼容**：旧两键配置值零迁移（`advisor` 缺省 ⇒ 回退 4）；非法值不落盘回退；VSC 面板白名单全非法 ⇒ 删整键回退默认（语义不变）。
+- **模型可见文案去数字化**：advisor 工具描述与拒文案报**生效上限**（`thincoder-core/agent-tools/advisor.mjs:49` · `advisor-async.mjs:266`）。
+- **同 scope 评审并发守卫**（同批用户裁①）：容量守卫 ⇄ 同 scope 守卫**两关独立**——机制本体见 `AGENT-LOOP-SUBAGENT.md` §6.10（本档不复制）。
+- **范围边界（旧档承接）**：评审轮次上限（cap 5——见 `ADVISOR-CONVERGENCE.md` §3）与「评审不排队」语义不变；engCoder / other 两域语义不变（本批只界面 / 一致性 / 第三键）；全仓注释大扫 = 旧档挂 TODO 观察项（随两仓合并面收敛，不另立）。
 
 ## 7. 并入的关键决策记录（含否决备选）
 
-**本批无新增**——现有决策面见 §3.1 A4 / A5 与 §4.1 第 1–4 行；本板块无未落档的旧档决策（同名旧档缺）。
+现有决策面见 §3.1 A4 / A5 与 §4.1 第 1–4 行。**2026-09-15 批 5 并入**（自 `POOL-CONFIG-UNIFIED`）：
+
+| # | 决策 | 理由 / 否决备选 |
+|---|---|---|
+| D-CF1 | 三池统一默认 **4/4/4** + 可配 | 统一心智模型；否决「advisor 保持旧限 2」（旧档勘察证：100% 仓内实现——无平台面） |
+| D-CF2 | advisor 第三键 = **独立读取器**（不与 subagent 域读取器共享） | 键表语义不同（advisor 无排队——超限即拒）；否决「并入同一遍历表」（subagent 调度路径误消费） |
+| D-CF3 | **同 scope 并发守卫**（同 type+scope 有 running 评审 → 拒） | 只查 settled 会放大「并行多实例」歧义；拒文案给指引；否决「排队」（评审间有依赖语义） |
+| D-CF4 | 模型可见文案**去数字化**（活引用生效上限） | 死数字与配置实值脱节；改插值 / 描述构建时读 |
 
 ## 8. 不并项与历史沿革
 
@@ -103,16 +132,17 @@
 | 旧档面 | 内容 | 何故不并（去向 / 触发） |
 |---|---|---|
 | `thincoder-cli/docs/design/SETTINGS-TOOL.md`（+ 同名需求档） | `settings` 工具面机制（#87） | 非同板块同名档——本批参照面不含 ⇒ **越段登记**——触发 = 父侧另派（按「配置面」点名） |
-| `thincoder-cli/docs/design/PROXY.md` | 代理面机制（#74） | 同上 |
-| `thincoder-cli/docs/design/POOL-CONFIG-UNIFIED.md` | 池配置面 | 同上（在途设计档） |
+| `thincoder-cli/docs/design/PROXY.md` | 代理面机制（#74） | **已落** `docs/core/design/PROXY.md`（第 3 批——本批指态收正） |
+| `thincoder-cli/docs/design/POOL-CONFIG-UNIFIED.md` | 池配置面 | **已并入**本档 §6.1（2026-09-15 批 5——旧档一字未改，留参照历史） |
 | `thincoder-cli/docs/design/MEMORY.md` §9（家目录展开） | 展开器契约（#77） | **已并入**本层 `docs/core/design/MEMORY.md` §6.7（试点批）——指回；不重复（D2） |
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **119 行**（B 轮并入前 78 行）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **149 行**（as-of 2026-09-15 批 5 实测；B 轮并入前 78 行）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
 - 2026-09-13：建档——自 `docs/core/design/CORE-UNIFICATION.md` 拆出（§2.5 #74 / #77 / #79 / #80 / #87 / #128–#132 / #177 · §2.5.1 A4 / A5 · §2.12.1「配置格式」类 · §2.12.2 第 1–4 行）；**语义零改**，行号沿用原编号。
 - 2026-09-14（S1 收口轮）：§5 补**核内落点行数**指针（`config.mjs` · `config-io.mjs` · `config-presets.mjs`——§2.8 新增小节）。
 - 2026-09-14（**B 轮并入 · 第 3 批**）：§6 **机制面 = 同名旧档缺**（`thincoder-cli/docs/{design,requirements}/CONFIG.md` 均不存在——两产品树实核）⇒ 无并入内容（不虚构）；§7 无新增决策；§8 登记配置面机制文本散布于旧档（越段发现 + MEMORY §6.7 指回）；§9 体量（低于软线，无需拆分）；首部加机制面指针一行。
+- 2026-09-15（**迁移批 · 第 5 批 · 并入 · eng-designer**）：新增 §6.1 **并发池配置面**（自 `thincoder-cli/docs/design/POOL-CONFIG-UNIFIED.md` 并入——配置键表 / 双读取器 / 默认四源 / 界面入口 / 兼容面；机制本体指 `AGENT-LOOP-SUBAGENT.md` §6.10）；§7 补 D-CF1–D-CF4；§8.2 两行指态收正（PROXY 已落 / POOL 已并入）；§9 行数重核。
