@@ -5,6 +5,7 @@
 > 需求层 = `docs/requirements/CORE-UNIFICATION.md`（F1–F13 / N1–N8）。
 > 建档：2026-09-13（**文档拆分轮**——自 `CORE-UNIFICATION.md` §2.5 / §2.5.1 / §2.12.2 **逐节搬入，只搬不改语义**；行号沿用原裁定表编号）。
 > **列定义**（裁决行各列含义）→ `CORE-UNIFICATION.md` §2.5；**须裁条目的分组口径与四要素提交形式** → 该档 §2.5.1。
+> **机制面**（§6–§9 · 2026-09-14「B 轮并入」）：机制 / 契约的实质描述 · 关键决策 · 不并项与历史沿革（自 CLI 产品档并入）——**本档 = 该板块的完整设计面**（裁决行 + 机制 + 决策 + 沿革）。
 
 ## 1. 归属与范围（自本档行内容的路径归纳）
 
@@ -144,7 +145,172 @@
 
 指针（不复制）→ `CORE-UNIFICATION.md` §2.8 下列行：**核提示词面（S1 新建）· `thincoder-core/tool-docs/*.md`** · **产品运行期（S2 改）** · **产品测试（S1 / S2 改）** · **对外契约兼容面（S0 登记 / S2 落地）**。
 
+## 6. 机制面（自 CLI 产品档并入 · 2026-09-14 · B 轮）
+
+> **来源** = `thincoder-cli/docs/design/TOOLS.md`（247 行 · CLI 产品档）——根层裁定后该档 = **迁移期参照历史**（只读 · 不维护 · 不参与内容同步）。
+> **本节 = 该档中「根层所缺」内容的并入面**：(a) 机制 / 契约的实质描述 · (b) 实现细节与坐标 · (c) 关键决策依据（§7）。
+> **不并**者见 §8：一次性批次材料（选型对比表 / 受影响文件表 / 用例表 / AC 表 / 变更流水账）· 编辑工具逐工具正文（已拆到各工具权威档，本档只留地图与契约要点）。
+> **坐标口径** = as-of 2026-09-14：**旧档路径形态为迁移前**（CLI 侧工具实现住 `src/tools/**`）——本节一律按**现状路径**落笔（`thincoder-core/tools/**` · `thincoder-core/agent-tools/**`）。符号名与档路径为契约面，**行号未逐条复核**、仅供定位。
+
+### 6.1 总览与统一契约
+
+工具系统是 agent 与外部世界（文件 / 命令 / 网络 / git / MCP / 项目状态）交互的**唯一通道**：
+
+- **能做什么**：以统一 OpenAI function-calling schema 暴露给模型（`toOpenAISchema`，住 `thincoder-core/tools/shared.mjs`）；
+- **怎么安全做**：收口到工具内部——安全哲学 = **信任模型 + 审批门控 + 快照**（非文本拦截）；
+- **何时做**：调度层两段式（只读并行、副作用串行）。
+
+**工具分类**：内置工具（`builtinTools`）+ 元工具（agent-tools，纪律工具）+ MCP 展开工具（动态并入）。
+
+**统一契约**：`{ name, description, parameters, readonly?, sideEffectExempt?, parallel?, multimodal?, execute(args, ctx) → string }`；`ctx = { cwd, agent, depth, signal, callbacks, onOutput, onQuestion, onPermissionRequest }`。execute 必须返回字符串（undefined 视为错误，dispatch 显式检查）。
+
+### 6.2 注册与 schema
+
+- **内置工具**（`thincoder-core/tools/index.mjs` `builtinTools`）：file 6（read / write / edit / insert_after / hashline_edit / read_image）· patch 2（apply_patch / delete）· system 4（bash / glob / grep / ls）· web 2（websearch / fetch）· git 2（git / question）· 
+其余 checklist / lint / lsp / execute / tree / ops 4（file_ops / process / get_current_time / wait_for）。（read_pdf 已移除；sleep 已删——见 wait_for。）
+- **元工具**（`thincoder-core/agent-tools.mjs`）：task / plan / goal / verify / batch_segment / subagent / skill / recent_changes / advisor / eng / timer / read_history / consult_start / consult_stop——readonly 自管纪律工具；子代理按 role 过滤（explore/plan 只读，eng-coder 额外门控）
+。read_history 语义权威 = SESSION 板（本层 `SESSION.md`）。
+- **schema 生成**：`toOpenAISchema(tool)`——name / description / parameters 转 OpenAI function 格式。description 来源：CLI 用 `thincoder-core/tool-docs/*.md`（`DESC()` 机制——md 文件即描述源）；VS Code 用 `.mjs` 内嵌描述。md / 内嵌描述给模型**完整使用手册**（含参数说明 / 路由 / 反模式），非一行字符串。
+
+### 6.3 上下文与生命周期
+
+- **ctx 字段**：cwd / agent / depth / signal / callbacks / onOutput / onQuestion / onPermissionRequest。
+- **undo 快照**：副作用工具执行前 `snapshotForUndo`（写前文件内容入内存栈），`/undo` 回滚；快照为全量副本（检查点面权威 = 本层 `CHECKPOINT.md`）。
+- **hooks**：PreToolUse / PostToolUse / PostToolUseFailure 用户脚本在 `~/.thincoder/hooks/`（PreToolUse 返回 false 阻断执行）。
+- **dispatch console 回显**：工具执行期间的 console 输出回显到结果（调试价值）——调度细节权威 = AGENT-LOOP 板（本层 `AGENT-LOOP.md`）。
+
+### 6.4 安全边界
+
+安全哲学：**信任模型 + 审批门控 + 快照为真实防线**；文本匹配拦截被否定（「安全剧场」——恶意模型必然绕过，拦住的多是正常操作）。
+
+| 面 | 当前机制 |
+|---|---|
+| 路径 | **无边界解析**（取代 resolveInCwd 双重断言）：相对路径相对 cwd 解析、绝对路径原样解析、符号链接正常跟随；**无目录限制**。信任模型 + 权限门禁为唯一防线 |
+| 命令 | **零文本拦截（彻底）**：破坏性命令（rm -rf 等）一律放行，走审批 + 快照。保留 `detectDanger` 危险标注（只给人看红标，不拦截）；bash 超时 120s |
+| 网络 | `isPrivateHost`（localhost / 内网 / 云元数据 `169.254.169.254`）SSRF 防护；响应体 ≤ 5MB；HTML 转文本（`stripTags` / `htmlToText`） |
+| 文件 | `MAX_READ_LINES = 2000` / `MAX_OUTPUT_CHARS = 200_000`（超限落盘，模型见预览）；`normalizeEOL`（CRLF 统一）；write 前 `autoSyntaxCheck`（JS 文件自动 `node --check`） |
+| lint | `node --check` fast path + 语言级联（tsc / ruff / cargo / go vet）；eslint 级联已删（零依赖）——`scripts/check-syntax.mjs` 替代 |
+| lsp | 按需 spawn LSP server（`process.execPath` 直跑，无 shell），语义级诊断 / 跳转兜底 |
+
+**execute 边界**：纯净 node ESM 子进程，与 bash 同边界——顶层 await / 动态 `import()` / `require()` / `console` / `fetch` / `process` 全可用；**无 import 阻断、无 require 禁、无目录限制、无伪沙箱、无预置全局**（exec-prelude 已退役）。文件能力唯一入口 = 专用工具。超时 SIGKILL 强杀（默认 30s，上限 600s）。
+
+### 6.5 调度与权限（标记语义）
+
+调度两段式详情权威 = AGENT-LOOP 板，此处只列**工具标记语义**：
+
+- `readonly` = 无副作用、可并行；
+- `parallel: true` = 显式声明可并行（grep / glob）；
+- `sideEffectExempt` = 有副作用但豁免于「失效 advisor / verify」追踪（subagent）；
+- **审批门控**：破坏性动作（delete / 外发 / 快照类）走 `onPermissionRequest`（autoApprove 短路 / 批量确认）。
+
+### 6.6 编辑工具语义（地图——每工具权威档分拆）
+
+> 定位句 + 契约要点集中在此；逐工具详细正文住各自权威档（本批不并入）。
+
+| 工具 | 定位 |
+|---|---|
+| **edit** | 精确区域替换（主）——两种定位形态（行号 / 内容）+ 三级匹配 + 替换即删 |
+| **insert_after** | 已知行后插入新行（纯插入——不必编造上下文） |
+| **hashline_edit** | 按内容哈希寻址（位置无关——行号漂移免疫） |
+| **apply_patch** | 统一 diff 应用到一或多文件（整块 / 新建 / 跨文件） |
+| **write** | 整文件替换 / 新建（含父目录） |
+
+**契约要点**：edit——`line: N` / `startLine–endLine` 行号形态（互斥 `old_string`）或 `old_string` 内容形态；三级匹配（逐字→空白窗口→模糊 ≥ 90%）；零重叠替换即删；空 `new_string` 显式错（防静默删除）；edits 数组批（原子）。
+insert_after——`after_line` / `after_regex`（须唯一）+ read-before-insert 护栏（受影区拒绝）。hashline_edit——`old_hashes`（read hashes=true 取）+ `new_content`（空 = 删块——命名删行路径）；U+FFFD 警告。
+apply_patch——无坐标 hunk 宽容 + 文件头容缺；多文件原子。write——整文件替换（read 先）；EOL 覆盖按原行尾 / 新建随目录多数派。
+
+**路由**：edit 精确改 / insert_after 加行 / hashline 位置无关 / apply_patch 整块多文件 / write 整文件。共享 helper（EOL / 候选 / U+FFFD）权威 = 编辑辅助面；read 是读工具（非编辑）。
+
+### 6.7 逐工具契约（要旨）
+
+- **git**：action 集含 add / commit / push / tag / branch / checkout / restore / stash / fetch / pull / reset / revert / merge / cherry-pick + clone / init / rebase / remote / clean / switch / apply / worktree / archive / blame / mv。破坏性动作（reset --hard / checkout 丢改动 / rm / clean / rebase 有未提交时）
+**先快照再执行 + 确认**，从不拦截（`gitGuardSnapshot`）；status 用 `runGitRaw` 保行前导空格（防 porcelain 误分类）。
+- **checklist**：mark 支持 `id` 优先于 index（index 降级 fallback）；无显式 ID 历史条目 parse 时一次性分配落盘；`nextRootId` 扫 checklist 两档（归档 ID 恒占位不复用）；前缀归一；父 done 须子树全 done，递归归档整棵子树。
+- **execute**：`code`（inline ESM）与 `scriptFile` 二选一必填；`nodeArgs` 禁 `--eval` / `--inspect` 类；scriptFile 可指向 workspace 外；超时默认 30s / 上限 600s。
+- **glob**：`{a,b}` brace 展开；`!` 排除前缀；不支持语法（`?(x)` / `@(a|b)` / `+(x)` / 空 / 未闭合 brace）**显式报错**（不静默漏匹配）。
+- **wait_for**：条件等待（非 sleep）——条件语义化（advisor settled / subagent id:N done / consult done / file exists / port open）；未知条件显式报错；timeout 默认 30s（config 可覆盖，cap 600s）；interval 默认 1s 下限 100ms。**`advisor settled` 判据** = 后台评审池真实态（无 running / queued 评审）——修前读子代理池的 advisor 条目（该池永无此类条目）⇒ **恒真 0ms 秒过**（用户实证）
+。机制面细则归 AGENT-LOOP 板。
+- **timer**：默认 180s；`seconds` 必须为有限正数（VSC 未同步该修复——已列裁决行 #86）。
+- **task**：状态别名归一（completed / finished / …）+ warning；跨会话 / 项目级用 checklist（描述含路由）。
+- **verify**：通用验证门禁——语言 / 框架 / 项目无关，不自动跑任何测试命令；模型经 `verification:{status:"passed"|"failed"|"skipped", command?, summary?}` 声明验证状态（passed 放行 / failed 打回 / skipped 放行但须 summary 理由）；参数已删 `full` / `testNamePattern` / `filter`，保留 `workdir`。
+- **read_image**：视觉模型读图；非视觉模型拒绝 / 占位（防 image_url 毒化会话）；svg 返回文本源码、bmp 拒绝并提示转 PNG。
+- **websearch / fetch**：网络边界见 §6.4；fetch 失败错误含 proxy 提示。
+- **process / file_ops / get_current_time / tree / lsp / lint / delete / bash**：按各自描述契约。
+- **batch_segment**：批次档段写入（**无路径参数**——目标档 = spawn 绑定；身份定可写段）；append-only；写前剔凭证；工具盖轮次戳（仅 §3）；fail-closed 逐条 throw。权威 = 工程模式板。
+
+### 6.8 MCP（动态展开）
+
+MCP 工具**动态展开**为独立原生工具（`{server}_{tool}` 前缀、完整 `inputSchema`、execute → `tools/call`），并入 `builtinTools` 走统一 schema；**网关式 `mcp` 工具已废弃**。机制权威 = MCP 板（本层 `MCP.md`）。
+
+### 6.9 工具描述写作六要素
+
+工具描述（md / 内嵌）必含六要素，缺一补一：① 一句话语义（能做什么 / 不能做什么）；② 参数关系；③ 路由 / 反模式（何时用别的工具、何时不该用本工具）；④ 副作用与权限（破坏性 / 外发 / 需确认标注）；⑤ 错误形态（失败时返回什么、如何引导）；⑥ 多端一致（CLI / VS Code 描述同语义）。
+
+### 6.10 `websearch` 配置面——`provider` 死键处置
+
+- **问题**：`DEFAULTS.websearch` 曾申报 `provider: "tavily"` 但**全仓零读取点**（死键）；VSC 面板保存 key 时还把该键**写回用户 config.json**（死键被产品主动播种）。
+- **选定方案 = 移除死键**（声明 + 文档 + 两端写入面）：**零行为变更**（无读取点删除；遗留值照旧被忽略）；删 1 行 + 文档同步 + VSC 面清理——不触碰搜索语义 / 兜底链；`provider` 名保留为未来干净槽位。**否决**接线为后端选择（形状靠猜、行为变更面、双端漂移面最大）· 保留现状（配置面继续说谎）。
+- **读取面（单点不变）**：`config.websearch.apiKey` → agent.config → `thincoder-core/tools/web.mjs` 触发 Tavily；无 key / Tavily 失败 → Bing 兜底（**web.mjs 零改**）。
+- **遗留值语义**：磁盘 `websearch.provider` 原样保留（零读取 / 零校验 / 零写回）；`settings` 工具类型表自动派生自 DEFAULTS——键移除即脱表（**未知键原样** = 既有通用语义，零特判）。
+- **关键决策**：D-1 选型 = 移除 · D-2 不做遗留值剥离 / 迁移 / 写回（剥离需动启动路径，收益仅内存洁癖）· D-3 不加校验 / 特判 · D-4 VSC 面同批收口（CLI 删、VSC 继续播种 = 假收口）· D-5 未来衔接（DeepSeek 端点批以完整信息设计选择面）· D-6 工具描述文本零改。**UI / 交互决策：无**（config 键处置；VSC 面板 provider 从未渲染；CLI TUI 无 websearch provider 入口）——**无 open 项**。
+
+## 7. 并入的关键决策记录（含否决备选）
+
+| # | 决策 | 理由 / 否决备选 |
+|---|---|---|
+| D-TO1 | **md 文件即 description**（CLI 用外部 `tool-docs/*.md`） | 长描述模型才理解边界；代码 / 描述分离便于迭代不触发 schema 变更 |
+| D-TO2 | **bash 命令零文本拦截** = 安全剧场论证 | 文本匹配拦不住恶意模型（空白 / heredoc / node -e 绕过），只误伤正常操作；真实防线 = 审批层 + 快照；`detectDanger` 只给人看不构成边界 |
+| D-TO3 | **超限落盘而非截断**（模型可再 read 全量，预览够决策） | 截断丢信息；落盘 + 指针让模型自主取全量 |
+| D-TO4 | 工具**全部字符串返回** | schema 简单、dispatch 统一、流式展示统一；undefined 视为错误（显式检查） |
+| D-TO5 | 编辑工具「**一个工具一权威档**」（本档只留地图 + 契约要点） | 多工具正文塞一档会超限且难维护；共享 helper 单源 |
+| D-TO6 | 无 UI 时降级形态按**端注入**（question / bash terminal 参数 / lsp 径） | 无 UI 抛错（CLI）与降级原生 UI（VSC）是结构性端差——以注入承载，不排除出核 |
+| D-TO7 | 逐工具动作集 / 校验取**并集或一侧**（见裁决行与须裁条目） | 各工具差异逐条裁决（如 timer 补校验、plan 未知 action 报错、task 过滤 + 截断）——行为变更须逐条登记 |
+| D-TO8 | `websearch.provider` 死键 = **移除** | 死键无消费方、零行为变更、单一权威源负担最小；否决接线为后端选择 · 保留现状（见 §6.10） |
+
+## 8. 不并项与历史沿革
+
+### 8.1 历史沿革（(d) 类——**不并**）
+
+> 来源档 `thincoder-cli/docs/design/TOOLS.md`（CLI 产品档）——**原地保留作参照历史**（保留 ≠ 维护）。其下列内容**不并入本档**，理由如下：
+
+| 旧档节 | 内容 | 何故不并 |
+|---|---|---|
+| 文末「变更记录」（逐批修正轮） | 逐批变更流水账 | 历史叙述——本档自有变更记录 |
+| §6 开头的「文档重组」叙述（编辑工具自本节拆出历史） | 旧结构（拆前单节）的叙述 | 现行形态（一工具一权威档）已入 §6.6 |
+| §11 内「历史沙箱只出不进 / exec-prelude 退役」括注 | 已退役机制的历史 | 现行边界已入 §6.4（execute 与 bash 同边界） |
+| §2 「read_pdf 已移除 / sleep 已删」等括注 | 旧工具名 | 时点变更标记——现行工具集已入 §6.2 |
+
+### 8.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
+
+| 旧档节 | 内容 | 何故不并（去向 / 触发） |
+|---|---|---|
+| §6 编辑工具逐工具正文（edit / insert_after / hashline_edit / apply_patch / write） | 每工具详细约束 | 已拆到**各工具权威档**（旧档自述「不再复制正文」）——本档只留地图与契约要点（§6.6） |
+| §7 逐工具的完整动作枚举 / 参数细节 | 逐工具契约全文 | 工具描述（`tool-docs/*.md`）为**提示词面**（产品代码，内容权归主 agent）；机制要点已入 §6.7 |
+| §11.2 方案选型对比表 | 三候选逐项评估 | 结论已提炼入 §6.10 / §7（D-TO8） |
+| §11.4 受影响文件清单 | 逐档行数 | **一次性批次材料**——批次档承载 |
+| §11.6 验收标准 AC-1–AC-7 · §11.7 用例表 T1–T8 + 「扫描枚举」注 | 验收与用例（含扫描器形态枚举） | **一次性批次材料**——测试资产归测试层 |
+| §11.8 边界（本批不做） | 单批边界声明 | 批次语境——现行边界已入 §6.10 |
+| §3 hooks / undo 快照的执行细节 | 实现面细节 | 机制要点已入 §6.3；检查点 / hooks 权威归各自板块 |
+
+### 8.3 需求侧（已并入本层需求档）
+
+§1 总体需求 / §2 F1–F7 / §3 N1–N9 / §4 范围边界（旧档自身即需求层）已并入本层需求档 `docs/requirements/TOOLS.md`（**与本档同名成对**）——本档不重复。
+
+## 9. 体量与拆分规划（R24a）
+
+**实测行数**：本档 **317 行**（B 轮并入前 151 行；并入前即已近 300 行软线）——**超 300 行软线**（未超 500 硬限）⇒ 须拆分规划。
+
+| # | 拆分面 | 去向 | 状态 |
+|---|---|---|---|
+| 1 | §6.6 / §6.7 编辑与逐工具契约 | 「工具契约」子档（与工具描述面同族） | **需用户裁定**——与「一板块一档」的板块镜像惯例冲突 |
+| 2 | §2.1 工具描述档（逐字节同组 20 行） | 提示词系统板（工具描述的文本行本体已在 `PROMPT-SYSTEM.md`） | **建议**（待父侧裁定——迁移批落地） |
+| 3 | §2.3 单端档映射表 | 随 §1 归属表保留（核内归位结果表） | **保留**（映射本身是本子系统契约面） |
+
+**落地时点** = 迁移批（本批不拆）；拆分动作不得改语义（只修引用）。
+
 ## 变更记录
 
 - 2026-09-13：建档——自 `docs/design/CORE-UNIFICATION.md` 拆出（§2.5 #10–#29 / #52–#70 / #83–#86 / #88 / #90–#92 / #96 / #97 / #178 / #179 / 映射表 · §2.5.1 A6 · A8–A13 · B1 / B2 · §2.12.2 第 5–7 行）；**语义零改**，行号沿用原编号。
 - 2026-09-14（注入点清单化轮 · eng-designer）：§2.2 表后加**指针**一行——④ 段注入位的核内落点对照与「写路径缝」形态建议住 `CORE-UNIFICATION.md` §2.13.4 / §2.13.5（本节不复制行文；端差处置原文仍以本表为准）。
+- 2026-09-14（**B 轮并入 · 第 2 批**）：新增 §6 **机制面**（总览与统一契约 / 注册与 schema / 上下文与生命周期 / 安全边界 / 调度与权限 / 编辑工具地图 / 逐工具契约 / MCP / 描述六要素 / websearch 死键处置）· §7 **关键决策记录（D-TO1–8）** · §8 **不并项与历史沿革** · §9 体量与拆分规划；来源 = `thincoder-cli/docs/design/TOOLS.md`（**旧档一字未改**——原地作参照历史）；
+需求侧已并入本层 `docs/requirements/TOOLS.md`；首部加机制面指针一行。
