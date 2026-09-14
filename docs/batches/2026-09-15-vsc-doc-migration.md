@@ -29,11 +29,14 @@
 | 2 | `docs/design/PROJECT-SWITCHER.md` | 75 | `docs/vsc/design/PROJECT-SWITCHER.md` | 97 |
 | 3 | `docs/requirements/WEBVIEW.md` | 71 | `docs/vsc/requirements/WEBVIEW.md` | 91 |
 
-**受影响文件（R24a · 实核行数）** ✗：新增 5 档（`docs/vsc/design/{VSC-MIGRATION,SETTINGS,PROJECT-SWITCHER}.md` 329/128/97 + `docs/vsc/requirements/{VSC-MIGRATION,WEBVIEW}.md` 46/91）；实修 2 常量（`scripts/check-doc-width-core.mjs` `SCAN_DIRS` · `scripts/doc-anchors-v5.mjs` `V5_SCAN_DIRS`——各加 `docs/vsc/design` + `docs/vsc/requirements`）；本批次档 §2 append 1 处。
+**受影响文件（R24a · 实核行数）** ✗：新增 5 档（`docs/vsc/design/{VSC-MIGRATION,SETTINGS,PROJECT-SWITCHER}.md` 329/128/97 + `docs/vsc/requirements/{VSC-MIGRATION,WEBVIEW}.md` 46/91）；
+实修 2 常量（`scripts/check-doc-width-core.mjs` `SCAN_DIRS` · `scripts/doc-anchors-v5.mjs` `V5_SCAN_DIRS`——各加 `docs/vsc/design` + `docs/vsc/requirements`）；本批次档 §2 append 1 处。
 
-**明列批外（本批零写入）** ✗：① 统一面 64 档（P1 → `docs/core/**`）——父侧 2026-09-15 收紧写域（与并行 CLI 批同文件竞争）⇒ 列 `VSC-MIGRATION.md` §8 **待父侧另批**（串行）；② 待核 3 条（VSC-PROMPTS 设计/需求 + `design/prompts/` 15 档）——`VSC-MIGRATION.md` §7 给两种读法 + 依据，**零裁定**；③ `WEBVIEW（VSC 侧）` 1867 行——超 500 硬限**必拆**，归**批 2**（拆分规划已在 §6 给出）；④ 历史档 14 档（就地留）· `_archive/` 17 · `prompts/` 15 · 批次档 34（批次档不迁）。
+**明列批外（本批零写入）** ✗：① 统一面 64 档（P1 → `docs/core/**`）——父侧 2026-09-15 收紧写域（与并行 CLI 批同文件竞争）⇒ 列 `VSC-MIGRATION.md` §8 **待父侧另批**（串行）；
+② 待核 3 条（VSC-PROMPTS 设计/需求 + `design/prompts/` 15 档）——`VSC-MIGRATION.md` §7 给两种读法 + 依据，**零裁定**；③ `WEBVIEW（VSC 侧）` 1867 行——超 500 硬限**必拆**，归**批 2**（拆分规划已在 §6 给出）；④ 历史档 14 档（就地留）· `_archive/` 17 · `prompts/` 15 · 批次档 34（批次档不迁）。
 
-**验收标准（逐条回指需求 · 机器可验）** ✗：A-VM1 实点/二分闭合（84 = 33+3+1+13 / 31+1+1+1）✓ · A-VM2 84 行依据列非空 + 待核含两读法 ✓ · A-VM3 落点档在位 + `thincoder-vscode/**` 零改 ✓ · A-VM4 落点档无状态行/流水 + 含「不并项与历史沿革」✓ · A-VM5 坐标按现状实核（本批发现源档漂移 2 处：`setup.mjs` `:232`→`:237`、`shell.mjs` `:233`→`:229`——已按现状改写并上报）✓ · A-VM6 锚根域悬空 0 + 射程含新目录 ✓ · A-VM7 宽度无 >300 + 无 >500 档 ✓ · A-VM8 `git status` ⊆ 声明写域 ✓。
+**验收标准（逐条回指需求 · 机器可验）** ✗：A-VM1 实点/二分闭合（84 = 33+3+1+13 / 31+1+1+1）✓ · A-VM2 84 行依据列非空 + 待核含两读法 ✓ · A-VM3 落点档在位 + `thincoder-vscode/**` 零改 ✓ · A-VM4 落点档无状态行/流水 + 含「不并项与历史沿革」✓
+· A-VM5 坐标按现状实核（本批发现源档漂移 2 处：`setup.mjs` `:232`→`:237`、`shell.mjs` `:233`→`:229`——已按现状改写并上报）✓ · A-VM6 锚根域悬空 0 + 射程含新目录 ✓ · A-VM7 宽度无 >300 + 无 >500 档 ✓ · A-VM8 `git status` ⊆ 声明写域 ✓。
 
 **三闸读数（改后 · 实跑）** ✗：`doc-anchors` 根域 61 档（改前 56）· **悬空 0** · exit 0；`check-doc-width` 337 档（改前 332）· 无 >300 单行 · 一致性新增违规 0 · exit 0；`check-ledger` 0 处违规 · exit 0。
 
@@ -115,6 +118,8 @@
 - **⑤ 源档坐标漂移（实核发现并已按现状改写）**：`refreshLiveHeaders` `375`→`379` · `panel-session` `clearMessages` `155`→`157` · `input.js` Enter / 下拉判据 `73/109-111`→`77/135-138` · `activity-view.js` `tailLines` `68-78`→`86-96` · `panel-chat.mjs` 行数 `499`→`497` · `chat.css` 离屏跳过 `471`→`474-475`（完整清单见报告）。
 
 **未决（真判不准）** ✗：无（四类判据皆可判）；**唯一需人裁** = ⑦①（活档口径）与 ⑦②（批次档 §2 折行授权）。
+
+> **折行注（2026-09-15 · eng-coder · 零语义）** ✗：本段 ⑦② 所列三行超宽（**折行前**编号 `:32` / `:34` / `:36`；335 / 349 / 355 字符）⇒ **仅插换行**（去空白后逐字节相同 ✓），文字一字未改 ✓ —— 宽度闸（`scripts/check-doc-width.mjs`）恢复绿面（改后复跑 = 0 行超限 ✓）。
 
 ## §3 评审发现（评审子代理）
 

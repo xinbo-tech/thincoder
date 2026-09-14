@@ -187,7 +187,8 @@ slow("T-V5-8 边界：基线零改（两态运行后回读——V5 不入基线�
   const raw = JSON.parse(readFileSync(join(REPO, BASELINE_PATH), "utf8"));
   assert.deepStrictEqual(raw.entries, [], "基线 entries 必须为空数组");
   assert.ok(!JSON.stringify(raw).includes("V5"), "V5 不出现在条目标记（V1|/V2|/V3|/V4| 面零改）");
-  assert.deepStrictEqual(V5_SCAN_DIRS, ["docs/design", "docs/requirements"], "V5 扫描域常量（不含批档）");
+  assert.deepStrictEqual(V5_SCAN_DIRS, SCAN_DIRS.filter((d) => d !== "docs/batches"),
+    "V5 扫描域常量 = 宽度域去掉批档面（V3 面专管——防双重报告；两侧随射程扩展同步，不钉元素个数）");
 });
 
 slow("T-V5-9 正常：全量清单（逐条行 + 汇总四数；重定向落盘可读）", () => {
@@ -258,7 +259,9 @@ slow("T-V5-15② 正常：常驻接线——真实域复跑（再出现即红；
 });
 
 test("T-V5-16 正常/反证：既有判据零伤（N5 承接——SCAN_DIRS + 夹具域钉死快照）", () => {
-  assert.deepStrictEqual(SCAN_DIRS, ["docs/design", "docs/requirements", "docs/batches"], "① SCAN_DIRS 三元素逐字全等");
+  assert.deepStrictEqual(SCAN_DIRS,
+    ["docs/design", "docs/requirements", "docs/batches", "docs/core/design", "docs/core/requirements", "docs/cli/design", "docs/cli/requirements", "docs/vsc/design", "docs/vsc/requirements"],
+    "① SCAN_DIRS 九元素逐字全等（D3——射程三次扩展后按新值更新）");
   doc("docs/design/v1.md", "# 夹具\n\n合规：v1.md §1 与 本档 §1。\n\n失效节号：v1.md §99。\n\n## 1. 第一节\n");
   doc("docs/design/v2.md", "# 计数\n\n三条：\n\n- a\n- b\n");
   doc("docs/batches/2026-09-12-fixture.md", [

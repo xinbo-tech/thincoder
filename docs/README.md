@@ -11,6 +11,7 @@
 | 台账（项目级唯一） | `TODO.md` · `TODO-archive.md` | ✅ 已在位（2026-09-13 单仓单账） |
 | 板块档（需求 / 设计） | `core/requirements/` · `core/design/` | ✅ 核心统一已迁入（2026-09-13）；后续新板块档直接落此。**子系统档（设计 / 需求各 15 档）见 §4** |
 | 批次档 | `batches/` | ✅ 核心统一已迁入（2026-09-13） |
+| 部分档（CLI / VSC 面） | `cli/requirements/` · `cli/design/` · `vsc/requirements/` · `vsc/design/` | ✅ 三部分落点齐（`core/` · `cli/` · `vsc/`）——**10 档**（`cli/` 2 · `vsc/` 8；2026-09-15 建）；逐档登记见 §4 |
 
 ## 2. 迁移政策（2026-09-13 用户裁定——「逐步建立 · 旧档留参照 · 不一刀切」；2026-09-14 层级裁定——根仓 `docs/` = 基准层，产品 `docs/**` = 迁移期保留的参照历史）
 
@@ -55,6 +56,12 @@
 
 **其它板块（非核心统一拆分）**：`core/design/DOC-SYSTEM.md` + `core/requirements/DOC-SYSTEM.md`——文档体系（`docs/` 的 core / CLI / VSC 三部分落点规划）；2026-09-14 建档，**只做规划、不执行迁移**。
 
+**迁移批迁入档（2026-09-15——非核心统一拆分）**：按 §2 政策「逐档随批迁」自产品树迁入（B 式重建——源档留原地作参照历史），落点按 `core/design/DOC-SYSTEM.md` §5.1 判据（P1 统一面 ⇒ `core/` · P2 产品面 ⇒ `cli/` ∥ `vsc/`）：
+- `core/design/` **5 档**：`ARCHITECTURE.md` · `PORTABILITY.md` · `STRUCTURE-DEBT.md` · `TWO-REPO-MERGE.md` · `DOC-MIGRATION.md`（迁移台账——承 `core/design/DOC-SYSTEM.md` §11 拆分规划）；
+- `core/requirements/` **3 档**：`PHILOSOPHY.md` · `RELEASE.md` · `TWO-REPO-MERGE.md`；
+- `cli/` **2 档**：`design/RELEASE.md` · `requirements/FEATURES.md`（P2）；
+- `vsc/` **8 档**：`design/` = `VSC-MIGRATION.md` · `SETTINGS.md` · `PROJECT-SWITCHER.md` · `WEBVIEW.md` · `WEBVIEW-PROTOCOL.md` · `WEBVIEW-INPUT.md`；`requirements/` = `VSC-MIGRATION.md` · `WEBVIEW.md`。
+
 **工作流档** = `core/design/CORE-UNIFICATION.md`（注册表 · 事实基线 · 核形态 · 选型 · 分段执行 · 决策 · 验收 · 契约策略 · 测试）——子系统档由它索引、**不复制**其内容（D2 单一权威源）；裁决行的**列定义**亦住该档 §2.5。
 
 **两产品旧子系统档的处置（建议 · 未代裁）**：按本层 §2 迁移政策「**旧档不批量搬 · 保留原地作参照 · 被触碰时随批迁**」——各子系统于 **S2 迁移该子系统时**逐档 `git mv` 入本层（一次一档 + 引用改写 + 机检），并在产品地图撤登记行。
@@ -64,8 +71,11 @@
 - CLI 产品地图 = `thincoder-cli/docs/README.md`（**CLI 产品**的文档入口）——它此前登记了项目级板块（历史原因：合并前无项目级层）；板块迁入本层后，其登记行**撤除**（该板块不再属 CLI 产品树——本层为唯一登记处）。
 - VSC 产品地图 = `thincoder-vscode/docs/README.md`（VSC 产品入口）。
 - 本层**不进**两产品的文档域扫描；本层自带台账机检覆盖（`scripts/check-ledger.mjs` 默认域含本目录）。
+- **三部分不各设地图**——本 README = 三部分（`core/` · `cli/` · `vsc/`）的唯一地图（目标结构 `core/design/DOC-SYSTEM.md` §4）；`cli/` · `vsc/` 两产品面档所对应的产品树旧档（`thincoder-cli/docs/**` · `thincoder-vscode/docs/**`）= 迁移期参照历史（§2 政策——保留 ≠ 维护）。
 
 ## 变更记录
+
+- 2026-09-15：**地图补登记**（迁移批 / VSC 批随批核销）——§1 内容表补「部分档」行（`cli/` · `vsc/` 两新部分层）；§4 补「迁移批迁入档」登记（**18 档**：`core/design/` 5 · `core/requirements/` 3 · `cli/` 2 · `vsc/` 8）；§5 补三部分地图口径一行。
 
 - 2026-09-14：新增「文档体系」板块——`core/design/DOC-SYSTEM.md`（设计）+ `core/requirements/DOC-SYSTEM.md`（需求）——`docs/` 的 **core / CLI / VSC 三部分落点规划**（命名规则 / 归属判据 / 交叉引用形态 / 机检引擎·路由切分与射程）；§2 增第 6 条指针；§4 登记一行。**只做规划，不执行迁移**。
 

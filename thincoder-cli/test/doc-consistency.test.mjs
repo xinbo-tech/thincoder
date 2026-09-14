@@ -171,7 +171,9 @@ test("T41 ⑤ 基线文件与扫描域口径（AC28 判据源）", () => {
   const raw = JSON.parse(readFileSync(join(REPO, BASELINE_PATH), "utf8"))
   assert.ok(Array.isArray(raw.entries) && raw.entries.length === 0, "基线 entries 必须为空数组——入基线 = 例外 = 违规（fail-closed）")
   assert.ok(raw.entries.every((e) => /^(V1|V2|V3)\|/.test(e)), "条目标记形态 V1|/V2|/V3|（V4 随 S4 退场）")
-  assert.deepStrictEqual(SCAN_DIRS, ["docs/design", "docs/requirements", "docs/batches"], "扫描域（排除 _archive/）")
+  assert.ok(["docs/design", "docs/requirements", "docs/batches"].every((d) => SCAN_DIRS.includes(d))
+    && new Set(SCAN_DIRS).size === SCAN_DIRS.length,
+    "扫描域保留基线三域且无重复（排除 _archive/——射程扩展不红 / 删域必红）")
   // 扫描域宽度面：V1/V2 域内 _archive/ 不受约束（collectMarkdown 跳过）
   const widths = checkDocWidths(REPO, { dir: SCAN_DIRS[0] })
   assert.ok(Array.isArray(widths), "宽度检查可跑（扫描域口径同源）")

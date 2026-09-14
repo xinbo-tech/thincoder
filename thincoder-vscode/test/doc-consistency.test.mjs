@@ -192,7 +192,9 @@ slow("T64 正常：接线——5 个新 test 档入册 test/files.mjs + 校验�
   const { v1, v2, v3 } = checkDocConsistency(REPO)
   assert.ok(Array.isArray(v1) && Array.isArray(v2) && Array.isArray(v3), "仓库域扫描真跑（V1/V2/V3）——非空转判据在临时域用例（本档前四例）")
   assert.ok(Array.isArray(checkDocWidths(REPO, { dir: SCAN_DIRS[0] })), "宽度检查可跑（扫描域口径同源）")
-  assert.deepStrictEqual(SCAN_DIRS, ["docs/design", "docs/requirements", "docs/batches"], "扫描域（缺目录即跳过）")
+  assert.ok(["docs/design", "docs/requirements", "docs/batches"].every((d) => SCAN_DIRS.includes(d))
+    && new Set(SCAN_DIRS).size === SCAN_DIRS.length,
+    "扫描域保留基线三域且无重复（缺目录即跳过——射程扩展不红 / 删域必红）")
   // V3 判据行为面在 T61 临时域断言（含批档四态）；仓库域 = 本域 docs/batches 有批档则照判（零假阳前提同守）。
   const raw = JSON.parse(readFileSync(join(REPO, BASELINE_PATH), "utf8"))
   assert.ok(Array.isArray(raw.entries) && raw.entries.length === 0, "基线 entries 必须为空数组——入基线 = 例外 = 违规（fail-closed）")

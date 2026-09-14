@@ -272,6 +272,119 @@
 **本段条目（九档实迁 + 台账收口 + 两射程常量）= 迁移台账 §2.1 / §2.2 本批迁栏（第 6 / 14 / 20 / 24 / 26 / 31 / 35 / 36 / 45 行）= 需求档既有条目回指**（`docs/core/requirements/DOC-SYSTEM.md` 的 FR1–FR8 / N1–N4）；本批**不新增需求条目**（执行既有 FR，无范围增减）。
 **层归属不对称一处**（`RELEASE` 两档）已在两侧档头与台账 §3 双向登记。
 
+### 第 3 批 · 机制小档 6 档实迁（2026-09-15 · eng-designer · 段作者 = 本角色）
+
+**目标**：把迁移台账 §6「机制小档（P1）」组的 6 档实迁入 `docs/core/design/`（用户裁定「明显应该是 B」= 旧档留原地一字不改 + 内容重建入根层）。
+**判据依据**：`docs/core/design/DOC-SYSTEM.md` §5.1（P1–P5 归属判据句）· §4（目标目录结构）· §6（命名规则）——判据句住该档，本段不重述（D2）。
+**迁法**：**B 式**——逐档先**实核旧档全文**，再按三层结构重建；坐标一律改**现状路径**并经 `file:line` 实核；批次材料 / 状态行 / 变更流水入「不并项与历史沿革」节。
+
+#### 一、本批实迁（B 式 · 6 档 · 全落 `docs/core/design/`）
+
+| # | 旧档（CLI 树 · **一字未改**） | 落点（基准层活档） | 行数 改前→改后 | 并入 K / 不并 J | 拆分规划 |
+|---|---|---|---|---|---|
+| 1 | `thincoder-cli/docs/design/TOOL-OUTPUT-LIMITS.md` | `docs/core/design/TOOL-OUTPUT-LIMITS.md` | 116 → 143 | K = 阈值 / preview / 切片 / 落盘 / advisor 截断 / read 双端 · J = 状态行 · AC 表 · 受影响文件 · 变更流水 | ≤300 ⇒ 无需 |
+| 2 | `thincoder-cli/docs/design/AGENT-PARAMS.md` | `docs/core/design/AGENT-PARAMS.md` | 86 → 123 | K = 评审墙钟 / maxTurns / 子代理轮次三参数 + 新增 §5 参数总表 · J = 旧检查点代码块 · AC 表 · 已删测试档锚 · 变更流水 | ≤300 ⇒ 无需 |
+| 3 | `thincoder-cli/docs/design/VERIFY-REDESIGN.md` | `docs/core/design/VERIFY-REDESIGN.md` | 87 → 149 | K = 声明式契约 / 判定门 / guard / goal 门 / 双端一致 · J = 相 1/相 2 流水与 G 编号审计清单 · 已退场用例行 · AC 行 · 前身吸收注 | ≤300 ⇒ 无需 |
+| 4 | `thincoder-cli/docs/design/DESIGN-TOKEN-SETTLEMENT.md` | `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` | 79 → 126 | K = D1 落盘 / D2 回读 / D3 镜像退役 / consume 对称 · J = 状态行与 commit 号 · 一次性 explore 行号剖析 · 与 VSC 的镜像清单 · AC 行 · 变更流水 | ≤300 ⇒ 无需 |
+| 5 | `thincoder-cli/docs/design/ENG-TOKEN-BINDING.md` | `docs/core/design/ENG-TOKEN-BINDING.md` | 106 → 124 | K = 三铁律 / TTL 格式 / 生命周期 / 结算语义 · J = **§4 结算语义（含已退役单值镜像）** · **§5 实现落点表（迁移前宿主划分）** · 双源排查流水 · AC 行 · 变更流水 | ≤300 ⇒ 无需 |
+| 6 | `thincoder-cli/docs/design/PROXY.md` | `docs/core/design/PROXY.md` | 47 → 138 | K = 配置形态 / 传输实现 / **TLS 校验（按实装收正）** / 消费面 / 子菜单 · J = **§TLS 与 §web 两处陈旧句** · 建档语境注 · `selectModel` 剥离括注 | ≤300 ⇒ 无需 |
+
+**行数口径** = `readFileSync(...).split("\n").length`（含末行空元素）· as-of 2026-09-15 实核。
+**六档全部 ≤300 行** ⇒ 无 >300 拆分规划义务；**无 >500 行硬门档**。
+
+#### 二、PROXY 安全语义更正（**本批必做**——旧档与实装相反，不许照抄）
+
+| 面 | 内容 |
+|---|---|
+| **旧档原句**（`thincoder-cli/docs/design/PROXY.md:32`） | 「CONNECT 隧道内的 TLS 握手使用 `rejectUnauthorized: false`——**不校验目标站证书**。」 |
+| **实装事实** | `thincoder-core/proxy.mjs:214`：`rejectUnauthorized: opts?.insecureTls !== true` ⇒ **默认 true（全量校验）**；`:174`–`:175` / `:213` 注释：「TLS 默认全量证书校验……确需自签 / 内网代理时 opts.insecureTls=true 显式放行」 |
+| **新档写法** | `docs/core/design/PROXY.md` §3：**默认全量校验**；自签 / 企业 MITM 代理须**显式 `insecureTls` opt-in**（三方对照表留在该节） |
+
+**全仓 `.md` 同型「不校验证书」陈述清单（只列不改）**：**1 处**——`thincoder-cli/docs/design/PROXY.md:32`（即上述旧档原句本身；B 式下旧档一字不改）。其余命中均为迁移记录中**正确描述该不一致**的条目（本档 §1 未决 5 / 第 2 批 §八 未决 5），不属同型陈述。
+
+**第二处陈旧（本批实核发现 · 与 §web 同源）**：旧档 §「配置形态」称 `web` 开关门控 fetch / websearch 且 env「只影响 web 工具」——**实装相反**。
+web 工具已改**逐次调用** `args.proxy`（`thincoder-core/tools/web.mjs:104`–`:106`，2026-08-31 裁定「config proxy is NOT auto-applied」）。
+`web` 字段现行唯一活消费面 = `/config` 的 Test connection 探针（`thincoder-cli/src/tui/cmd-config.mjs:141` · `thincoder-core/proxy.mjs:39`）；新档 §4 按实装落笔，旧句登记该档 §8.1。**请父侧裁定**（见 §八 未决 1）。
+
+**附带实核**：`insecureTls` 目前**无 config / UI 入口**（全仓仅 `thincoder-core/proxy.mjs` 三处出现，无调用方注入）——`opts` 层契约，为测试与将来接入保留；新档 §3 如实登记。
+
+#### 三、台账收口（`docs/core/design/DOC-MIGRATION.md`）
+
+| 项 | 改前 | 改后 |
+|---|---|---|
+| §2.1 六行判栏 | 后续批（第 4 / 12 / 15 / 29 / 39 / 46 行） | **本批迁**（逐行补现状实核依据 + 落点路径） |
+| §5 小计「本批迁」 | 设计 11 / 需求 4 = **15** | 设计 17 / 需求 4 = **21** |
+| §5 小计「后续批」 | 设计 22 / 需求 23 = **45** | 设计 16 / 需求 23 = **39** |
+| §5 闭合校验 | 15+16+4+4+0+45 = 84 | **21+16+4+4+0+39 = 84** ✓（设计 17+9+1+4+0+16=47 ✓ · 需求 4+7+3+0+0+23=37 ✓） |
+| §5 口径行 | 第 1 批 6 + 第 2 批 9 = 15 | 第 1 批 6 + 第 2 批 9 + **第 3 批 6 = 21** |
+| §6 批 2 行 | 「PROXY 须先更正 §TLS 安全语义」 | **已落（2026-09-15 第 3 批）**——六档全迁；PROXY §TLS 已按实装收正 |
+| §6 标题 | 活档剩余 45 档 | 活档剩余 **39** 档 |
+| §8 体量 | 199 行 | **203 行**（本批实核） |
+
+#### 四、方案选型对比（本批批次取哪 6 档——**单方案**）
+
+**单方案——无对比**：本批批次 = 迁移台账 §6 既定「批 2 · 机制小档」组（6 档，P1 各 ≤200 行），非本批新选；候选集比较已在台账建档批完成（`DOC-MIGRATION.md` §6）。档内无 `≥2` 候选的机制决策需新选型。
+
+#### 五、关键决策记录
+
+| # | 决策 | 依据 / 否决备选 |
+|---|---|---|
+| M1 | **两处陈旧按实装收正**（PROXY §TLS / §web；ENG-TOKEN-BINDING §4 §5） | 照抄即把错误安全承诺与已废结构写进权威层；旧档原句逐条登记各档 §8.1（防静默丢弃）。否决「B 式 = 照搬」 |
+| M2 | 坐标一律**现状路径 + 实核**（含行号） | 旧档坐标为迁移前仓形态（`src/**`、`advisor/run.mjs` 常量面等）；行号漂移逐条重核（如 guard 三闸 → `completion.mjs:81/:94/:109`） |
+| M3 | 结算面 ⇄ 生命周期面**分档归位**（D2） | `DESIGN-TOKEN-SETTLEMENT` 管结算 / 持久化 / 回读；`ENG-TOKEN-BINDING` 管 TTL / 格式 / 存活——两档互挂指针不重述 |
+| M4 | 各档 (d) 类内容入「不并项与历史沿革」节 | 批次材料 / 状态行 / 变更流水 / AC 表 / 一次性审计编号——逐项登记 + 何故 |
+| M5 | 提示词逐字文案**不并**（只留语义判据） | 提示词 = 产品代码——guard 三句与消息号只留判据，逐字文案归提示词面 |
+
+#### 六、受影响文件（R24a）
+
+| # | 档 | 当前行数 | 增量 | 动作 |
+|---|---|---|---|---|
+| 1–6 | 六档落点（见 §一表） | 0（新建） | **+803**（合计） | **新建**（B 式重建） |
+| 7 | `docs/core/design/DOC-MIGRATION.md` | 199 | **+4**（净；含六行改写 + 小计 + §6 行 + §8 + 变更记录） | **实修** |
+| 8 | `docs/batches/2026-09-14-doc-migration.md` | — | +本段 | **append §2**（不改 §1） |
+| — | `thincoder-cli/docs/**`（84 档） | —— | **0** | **一字不改**（只读参照——B 式；实核 `git status` 零改动） |
+| — | `scripts/**` | —— | **0** | 零改动（射程已含 `docs/core/**`——无需扩） |
+| — | `docs/TODO.md` · `docs/README.md` · `docs/core/design/prompts/**` · `thincoder-core/**` · `thincoder-vscode/**` | —— | **0** | 零写入（写域外） |
+
+**档位判据**（>300 给拆分规划 / >500 硬门必拆）：本批 7 档实测 **143 / 123 / 149 / 126 / 124 / 138 / 203 行**——全部低于 300 行软线，无拆分规划义务。
+
+#### 七、验收标准（逐条回指 · 机器可验）
+
+| # | 验收标准 | 回指 |
+|---|---|---|
+| A1 | `node scripts/doc-anchors.mjs` **域一悬空 0** · exit 0（读数 **73 → 79 档**——本批新增 6 档全在既有射程内） | FR7 · N3 |
+| A2 | `node scripts/check-doc-width.mjs` **OK(宽度)**：355 文件 0 行 >300 字符；一致性 V1/V2/V3 **新增违规 0** | N3 |
+| A3 | `node scripts/check-ledger.mjs` exit 0 · **0 处违规** · 基线 0 条 | N3 |
+| A4 | 迁移台账小计闭合：21+16+4+4+0+39 = 84（设计 47 / 需求 37，双向闭合） | FR3 · A3 |
+| A5 | 六档落 `docs/core/design/`，逐档含「机制面（现状坐标表）」+「不并项与历史沿革」+「体量与拆分规划」节 | FR1 · FR2 |
+| A6 | 新档内坐标全为**现状路径**（0 处迁移前 `src/**` 形入正文叙述面；行号逐条实核） | FR4 · FR5 |
+| A7 | `git status` 本角色写域 = 7 档（1 改 + 6 新）⊆ `docs/core/**` + 本档 §2 | N4 |
+
+**读数（as-of 2026-09-15 本批实测）**：A1 ✓（79 档 · 悬空 0 · exit 0；域二 99 档亦 0）· A2 ✓（`OK(宽度)` 355 文件 · 新增违规 0）· A3 ✓（0 违规）· A4 ✓（84 闭合）· A5 ✓ · A6 ✓ · A7 ✓（改动集 = `docs/core/design/**` 7 档）。
+**未过项**：无。
+
+#### 八、未决与打回（不静默处置）
+
+| # | 项 | 归属 / 处置 |
+|---|---|---|
+| 1 | **PROXY §web 消费面按实装收正**（旧档称 `web` 门控 web 工具 + env 只影响 web 工具；实装 = 逐次调用 `args.proxy`，`web` 只活于 Test connection 探针） | **一致性面（文档 ⇄ 实现对齐）判定**——与用户已授权的 §TLS 收正同类，已逐条登记落点档 §8.1 + 变更记录。**若父侧判为语义面 ⇒ 请打回**：该节可独立单行 revert（同批其余内容不受影响） |
+| 2 | 6 新档未登记进地图 `docs/README.md` | **写域外**（地图 = 父侧面）——请父侧补登记 |
+| 3 | 他实例并行在写：`docs/TODO.md` · `docs/batches/2026-09-15-vsc-doc-migration.md` · `scripts/check-doc-width.mjs` · `thincoder-cli/test/doc-{anchors,consistency}.test.mjs` · `thincoder-cli/test/ledger.test.mjs` · `thincoder-vscode/test/doc-consistency.test.mjs` · `thincoder-vscode/docs/COMPETITIVE_ANALYSIS.md` · `.tmp-vscdom.json` | VSC 轮 / 父侧——本角色**零触碰**（`git status` 如实登记；其宽度红面已由他侧自修，本批读数已转绿） |
+| 4 | `insecureTls` 无 config / UI 入口（实核） | 如实登记（落点档 §3）——非缺陷、非本批可决；如需入口 = 新范围（另起批） |
+| 5 | 六档的**需求侧**同名档仍在后续批（`DOC-MIGRATION.md` §6 批 6b / §2.2 对应行） | 本批只迁设计侧（台账分组既定）；需求侧按批 6b 另轮 |
+
+#### 九、边界（本批不做）
+
+1. **`thincoder-cli/docs/**` 一字不改**（B 式只读参照——实核 `git status` 零改动）。
+2. **不动 `scripts/**`**（射程已含 `docs/core/**`，无需扩）；**不创建 `docs/cli/`**（本批无 P2 档）。
+3. **不写他档**：`docs/TODO.md` · `docs/README.md` · `docs/core/design/prompts/**` · `thincoder-core/**` · `thincoder-vscode/**` 零写入。
+4. **不 commit · 不发起评审**（发起权 = 用户）。
+5. **不改旧档的已知错误**（旧档只读——错误在落点档按现状收正并登记）。
+
+#### 十、三方条目一致
+
+**本段条目（6 档实迁 + 台账收口）= 迁移台账 §2.1 第 4 / 12 / 15 / 29 / 39 / 46 行（本批迁栏）= 需求档既有条目回指**（`docs/core/requirements/DOC-SYSTEM.md` 的 FR1–FR8 / N1–N4）；本批**不新增需求条目**（执行既有 FR，无范围增减）。
+
 ## §3 评审发现（评审子代理）
 
 _（待写）_
@@ -283,6 +396,87 @@ _（待写）_
 ## §5 实施记录（eng-coder）
 
 _（待写）_
+
+### 三件尾活收口（2026-09-15 · eng-coder · 段作者 = 本角色）
+
+**任务**（父侧派单 · 收尾轮）：① 修 5 行「扫描域常量钉死」断言（CLI 真红）；② 两批次档超宽行**纯折行**；③ `docs/README.md` 地图补登记。
+**写域** = 4 档 test + `docs/batches/2026-09-15-vsc-doc-migration.md` + `docs/README.md` + 本段（6 档 + 本段）；**未 commit · 未发起评审**（发起权 = 用户）。
+
+#### 一、① 5 行断言（改前 → 改后 · 逐处选定 (a)/(b) 及理由）
+
+| # | 位置（档:行） | 改前 | 改后 | 选定 |
+|---|---|---|---|---|
+| 1 | `thincoder-cli/test/doc-anchors.test.mjs:263`（T-V5-16 ①） | `deepStrictEqual(SCAN_DIRS, [三元素])` | `deepStrictEqual(SCAN_DIRS, [九元素])`（消息改「九元素逐字全等 · D3」） | **(b)** |
+| 2 | 同档 `:190`（T-V5-8） | `deepStrictEqual(V5_SCAN_DIRS, [两元素])` | `deepStrictEqual(V5_SCAN_DIRS, SCAN_DIRS.filter((d) => d !== "docs/batches"))` | **(a)** |
+| 3 | `thincoder-cli/test/doc-consistency.test.mjs:174`（T41 ⑤） | `deepStrictEqual(SCAN_DIRS, [三元素])` | 三基线域 `includes` + 无重复（关系式） | **(a)** |
+| 4 | `thincoder-cli/test/ledger.test.mjs:101`（T71②） | 同上 | 同上（并注 AC51 子句 1） | **(a)** |
+| 5 | `thincoder-vscode/test/doc-consistency.test.mjs:195`（T64） | 同上 | 同上 | **(a)** |
+
+**逐处理由（先实核后判定）**：
+
+- **#1 取 (b)**：设计档**明文要求逐字快照**——`thincoder-cli/docs/design/ENGINEERING-MODE.md:2486`「AC-V5-16 …… `SCAN_DIRS` 三元素逐字不变」· `:2694`「T-V5-16 …… ① `SCAN_DIRS` 断言（import——逐字三元素全等）」。结构式改写 = 偏离设计声明形态，而设计档在写域外、无法同批同步 ⇒ 只按新值更新（D3：计数与列表同改）。
+- **#2/#3/#4/#5 取 (a)**：这四行**设计档未声明逐字快照**（T-V5-8 / T41⑤ / T71② / T64 的设计行只述语义 = 基线零改 / 扫描域零违规 / 两域互不侵入 / 接线），钉死系实现期自加；其声明意图是**可机判属性** ⇒ 按属性断言（基线三域在 + 无重复）。
+- **#2 另取关系式**（V5 域 = 宽度域 − 批档面）：因 `V5_SCAN_DIRS` 全仓无第二处钉死，仅取子集会丢覆盖守卫（内部审计发现，见 §五）。
+- **残留**：#1 仍是逐字快照 ⇒ 射程再扩会再红；AC-V5-16 / T-V5-16 的「三元素」文本未同步（写域外）⇒ 见 §六 未决 1。
+
+#### 二、② 纯折行（零文本变更）
+
+| 档 | 折行前 | 折行后 + 自证 |
+|---|---|---|
+| `docs/batches/2026-09-15-vsc-doc-migration.md` | `:32` 335 · `:34` 349 · `:36` 355 字符 | 3 行折断为 6 行（166+169 / 125+224 / 173+182）；**去空白后与 HEAD 逐字节相同**（7221 = 7221 字符）；折行注落该档 `:122` |
+| `docs/batches/2026-09-14-doc-migration.md` | `:85`（375）· `:255`（467）等 | **不动**——实核为**表格行**（宽度判据豁免，谓词 `isTableRow`）⇒ 判「非同型」 |
+
+**复跑读数**：`node scripts/check-doc-width.mjs` → `OK(宽度): 扫描域全部 .md 无 >300 字符单行（355 文件）` · 宽度面归零 · exit 0。
+
+#### 三、③ `docs/README.md` 地图补登记（按该档现有结构补三行登记）
+
+- **§1 内容表 +1 行**：新增「部分档（CLI / VSC 面）」= `cli/{requirements,design}/` · `vsc/{requirements,design}/`（10 档 = `cli/` 2 · `vsc/` 8）。
+- **§4 +1 段**：「迁移批迁入档（2026-09-15——非核心统一拆分）」= 18 档（`core/design/` 5 · `core/requirements/` 3 · `cli/` 2 · `vsc/` 8），逐档档名在行。
+- **§5 +1 行**：三部分（`core/` · `cli/` · `vsc/`）不各设地图——本 README = 唯一地图（目标结构指针 = `core/design/DOC-SYSTEM.md` §4）。
+- **变更记录 +1 行**（2026-09-15 地图补登记）。
+
+18 档逐档路径经实核在位；**只登记父侧列出的 18 档**，未自行扩列（见 §六 未决 2）。
+
+#### 四、决策透明表
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| D1 | 断言按「该测试原有意图」**逐处**判 (a)/(b)，不搞一刀切 | 判据 = 设计档是否声明逐字快照（见 §一）；备选 = 全 (b)（不改形态但留钉死类）/ 全 (a)（改形态但偏离 AC-V5-16）——均否决 |
+| D2 | 判定 `2026-09-14-doc-migration.md` 的 >300 行「非同型」 | 宽度判据表格行豁免（实核谓词 `isTableRow`，非估计）⇒ 不折行 |
+| D3 | 折行**只插换行**、不动字词；折行注一行 | 父侧令「零文本变更」；自证 = 去空白逐字节相同（已实测） |
+| D4 | README 只登记父侧列举的 18 档 | 任务书列举为准；`docs/core/design/` 另有 12 档（工具族 6 + 机制小档 6）未在被列清单内 ⇒ 登记为未决 2（不自行扩列） |
+
+#### 五、审计与代码评审轮次与终态
+
+- **内部审计 1 轮**（只读 explore 分歧审计 · 阻塞）：**DIVERGENT**——🟡「§5 未落笔」· 🟡「AC-V5-16 三元素未同步」· 🔵「临时产物 `.tmp-vscdom.json`」；另 4 行 QUESTION（含「`V5_SCAN_DIRS` 全仓无第二处钉死 ⇒ 覆盖守卫缺位」的边界）。
+  **自修（本轮内）**：临时产物已删（零残留）· #2 断言升级为**关系式**（补回覆盖守卫）· 折行注补「**折行前**编号」限定 · §5 = 本段。
+- **advisor 代码评审 1 轮**（`type=code` · 阻塞）：**pass**——0 🔴 · 5 🟡 · 3 🔵（含「#1 逐字快照与其余四行口径不一」「AC 文本滞后」「`:190` 守卫只住 slow 例」「README 悬空自指『本节 §11』」「地图漏登 12 档」「折行注落 §2」「旧读数与折行注并置」「§3 待迁行与 §4 新登记并置」）。
+- **修复轮 0**（无 🔴）：域内唯一 🟡 已就地修——README 悬空自指改为明指 `core/design/DOC-SYSTEM.md` §11；余下各条按「写域外 / 越出『修 5 处』授权 / 口径待裁」三类**如实登记**，见 §六。
+- **终态 = clean**（本写域内：审计 1 轮 + 评审 1 轮，逐条已落地或登记；无阻塞项）。
+
+#### 六、未决与打回（不静默处置）
+
+| # | 项 | 归属 / 处置 |
+|---|---|---|
+| 1 | AC-V5-16 / T-V5-16 的「三元素」文本与实装九元素不符（`thincoder-cli/docs/design/ENGINEERING-MODE.md:2486` / `:2694`）——本交付 #1 正按该 AC 行事 | **写域外**（`thincoder-cli/docs/**` 禁改）⇒ 请父侧 / designer 同步文本（或标 as-of 并指向批次档读数） |
+| 2 | 地图未登 `docs/core/design/` 的另 12 档（工具族 6 + 机制小档 6；同一迁移轮新建） | **父侧裁**——任务书只列 18 档，本交付照列；补登 or 在 §4 明写「族档归 `core/design/DOC-MIGRATION.md`」边界 |
+| 3 | VSC 全量红 1 例：`thincoder-vscode/test/doc-anchors.test.mjs:173`（T-DC6②「清账收口…零命中」；VSC 域报告态命中 21 · distinct 13） | **非本交付写域**（既有红；VSC 批 §2 ⑦④ 已登「产品树旧档随树降格批处置」）⇒ 读数如实上报（VSC 全量 621 pass / 1 fail） |
+| 4 | `:190` 的域关系守卫仍住 `slow()` 例（`npm test` 不跑） | 原断言本就在该例（非本次引入）；补入快层属「修 5 行」之外 ⇒ 待父侧点头 |
+| 5 | `docs/batches/2026-09-15-vsc-doc-migration.md` 的旧读数（宽度闸「常红」）与折行注并置 | 该档 §2 = 他作者段，本交付只获「纯折行 + 一行注」授权 ⇒ 余下标记由父侧 / designer 落 |
+
+#### 七、验收读数（原样 · 本交付实跑）
+
+| 项 | 读数 | 判 |
+|---|---|---|
+| `cd thincoder-cli && npm test` | pass 552 · fail **0** · skipped 57 | ✓ |
+| `cd thincoder-cli && npm run test:full` | pass 609 · fail **0** · skipped 0 | ✓ |
+| `cd thincoder-vscode && npm test` | pass 581 · fail **0** · skipped 41 | ✓ |
+| `cd thincoder-vscode && npm run test:full` | pass 621 · fail **1**（既有红，见 §六 未决 3） | ⚠ |
+| `node scripts/doc-anchors.mjs` | 根域 79 档 悬空 0 `OK(V5)` · CLI 域 99 档 悬空 0 `OK(V5)` · exit 0 | ✓ |
+| `node scripts/check-doc-width.mjs` | `OK(宽度)…（355 文件）` · 一致性新增 0 · exit 0 | ✓ |
+| `node scripts/check-ledger.mjs` | 两档 OK · 0 处违规 · 基线 0 条 · exit 0 | ✓ |
+
+**同类扫描结论**：全仓再扫「扫描域常量钉死」类断言——除本交付 5 行外**无其他实例**（两产品 test 树 `SCAN_DIRS` / `V5_SCAN_DIRS` 只此 5 处消费）；**仓外 1 处**：`d:\teamcode\thincoder-vscode\test\doc-consistency.test.mjs:169`（合并前独立仓副本，非本仓写域）——列表上报，未动。
 
 ## §6 收口与核销（父代理）
 

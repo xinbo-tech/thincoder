@@ -98,7 +98,9 @@ test("T71 边界：基线不得再设（非空即 FAIL）+ 扫描域互不侵入
   assert.equal(second.fresh.length, 1, "基线不再分流——违规照报（不再降报告）")
   assert.deepStrictEqual(second.baseline, [first.fresh[0].key], "非空基线 = FAIL 面")
   assert.equal(code(["--root", tmp]), 1, "非空基线 ⇒ 退出码 1（fail-closed）")
-  assert.deepStrictEqual(SCAN_DIRS, ["docs/design", "docs/requirements", "docs/batches"], "宽度扫描域未扩（AC51）")
+  assert.ok(["docs/design", "docs/requirements", "docs/batches"].every((d) => SCAN_DIRS.includes(d))
+    && new Set(SCAN_DIRS).size === SCAN_DIRS.length,
+    "宽度扫描域保留基线三域且无重复（AC51 子句 1「维持 docs/{design,requirements,batches} 不变」——射程扩展不红 / 删域必红）")
   assert.ok(!SCAN_DIRS.some((d) => d === "docs"), "台账档不在宽度域——两扫描域互不侵入")
   mk("docs/design/X.md", "# x\n\n- [ ] **假技术条**（无证据）· status=在途\n")
   assert.ok(!runTmp().fresh.some((v) => v.msg.includes("docs/design")), "台账检查只扫显式清单（不递归发现）")
