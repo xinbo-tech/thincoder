@@ -5224,7 +5224,10 @@ CLI 三加载根 + 入口（L1–L7）：
 
 **收正注（同轮 · 首版后置）**：宽度闸复跑命中本段 3 行超宽（`:5158` 413 字符 / `:5184` 373 / `:5208` 461）⇒ 仅插换行、文字零改（折后一处续行以 `+` 开头触发 V2 计数误判 ⇒ 就地合并同行、零语义）；复跑 = `OK(宽度)` 306 档无 >300 字符行 · 一致性 V1/V2/V3 新增违规 0 · exit 0。
 
-**段末复跑（§5 写入后 · 原样读数）**：`check-doc-width` = **306 档无 >300 字符行** · 一致性 0 违规 · exit 0；`doc-anchors --domain thincoder-cli` = 99 档 · 候选 **8875** · 悬空 **0** · 注记豁免 880 · `OK(V5)` exit 0；`doc-anchors`（全域）= 域一 32 档 候选 2219 · 悬空 0；域二 99 档 候选 8875 · 悬空 0；VSC 域报告态 5 命中（预存）· exit 0；`check-ledger` = `OK: thincoder/docs/TODO.md` / `OK: thincoder/docs/TODO-archive.md` · **0 处违规** · exit 0。
+**段末复跑（§5 写入后 · 原样读数）**：`check-doc-width` = **306 档无 >300 字符行** · 一致性 0 违规 · exit 0；
+`doc-anchors --domain thincoder-cli` = 99 档 · 候选 **8875** · 悬空 **0** · 注记豁免 880 · `OK(V5)` exit 0；
+`doc-anchors`（全域）= 域一 32 档 候选 2219 · 悬空 0；域二 99 档 候选 8875 · 悬空 0；VSC 域报告态 5 命中（预存）· exit 0；
+`check-ledger` = `OK: thincoder/docs/TODO.md` / `OK: thincoder/docs/TODO-archive.md` · **0 处违规** · exit 0。
 
 ## §6 验证与收口（父代理）
 
