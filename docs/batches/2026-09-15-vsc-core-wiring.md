@@ -1481,4 +1481,105 @@ AGENT-LOOP §2.2 #175 / §3.2 D2（状态不变）/ §9（493 行）均在位。
 
 **段末复跑（§5 写入后 · 原样读数）**：见「收正注」段（写后即跑三闸复读）。
 
+### 实施：S2 W6 —— CONTEXT-COMPACTION 单元落轮（2026-09-15 · eng-coder）——**终态 = clean**
+
+**段位**：实施第二波 · 当前段 = S2（VSC 迁移单元 W6 · CONTEXT-COMPACTION）。写域 = VSC 树 7 档（删 1 + 改 6）+ 文档 10 档（核档 3 + VSC 产品档 5 + 仓根 `docs/vsc` 1 + 核需求 1）；**核内实现零触碰**（`thincoder-core/**` 只读消费）· `thincoder-cli/**` 零触碰 · 台账 `docs/TODO.md` 与仓根 `scripts/**` 零触碰；本档 §1–§4/§6 零触碰（本条 = §5）。
+
+**依据** = 本档 §2「W6 · CONTEXT-COMPACTION」段（`:146`–`:149`）+ 逐单元任务书四步块（`:121`–`:122`）+ 脚注注 1（`:117`–`:118`）+ 判据 A-K1/A-K2/A-K3/A-K4/A-K8/A-K10；上游 = §4 用户批准（2026-09-15 15:12）；模块权威档同步面 = `docs/core/design/CONTEXT-COMPACTION.md`（§6.13）· `docs/core/requirements/CONTEXT-COMPACTION.md` · `docs/core/design/SEND-STALL-DISTILL.md`。
+
+**超声明披露**（预期触碰面之外 · 均已如实登记）：① `thincoder-vscode/src/explore-distill.mjs`（头注订正 1 处——W15 面，随删档改指前收正）；② 文档面 10 档（四步块 ④「文档锚同批」+ 模块权威档同步计划 `:237` 强制面：核档 3 + VSC 产品档 5 + 仓根 `docs/vsc/design/VSC-MIGRATION-INVENTORY.md` + 核需求档）——W1/W5/W7 先例同型。
+
+**改动面**（行数 = `wc -l` 口径实核；改前 HEAD = `1dc43f2f`）
+
+| # | 档 | 行数（改前 → 改后） | 动作 |
+|---|---|---|---|
+| 1 | `thincoder-vscode/src/compact.mjs`（删） | 388 → **0** | **删档**（`git rm`） |
+| 2 | `thincoder-vscode/src/agent/run-stages.mjs` | 339 → **350** | 压缩面整面改指核 `@thincoder/core/context.mjs` + 端差适配（见 ①） |
+| 3 | `thincoder-vscode/src/agent/run-helpers.mjs` | 297 → **269** | `reinjectAfterCompaction` 收窄为端侧 AUTO 面（task/plan 回注归核）+ 删 `TASK_REINJECT_PREFIX` + 死 import 清理（修正轮 1） |
+| 4 | `thincoder-vscode/src/extension/history-window.mjs` | 175 → **12** | 端壳转口：`export { … } from "@thincoder/core/history-window.mjs"`（#123 归核面单源） |
+| 5 | `thincoder-vscode/src/extension/generate-title.mjs` | 87 → **25** | 端壳薄壳：key/provider 解析（presets）→ 委核 `generateTitle`（三格式分派 = 核内实现） |
+| 6 | `thincoder-vscode/test/history-window.test.mjs` | 192 → **192** | import 改指核面（用例零增删） |
+| 7 | `thincoder-vscode/src/explore-distill.mjs` | 156 → **157** | 头注订正（删档引用收正；W15 面·披露） |
+| 8 | `docs/core/design/CONTEXT-COMPACTION.md` | 225 → **254** | W6 迁核收正（§6.13/§6.12/§6.11/§6.4④/§1/§9/变更记录——机制条文零改） |
+| 9 | `docs/core/requirements/CONTEXT-COMPACTION.md` | — → **83** | §1/§4.3 迁核注 |
+| 10 | `docs/core/design/SEND-STALL-DISTILL.md` | — → **154** | re-export 锚改指（2 处） |
+| 11 | VSC 产品档 5 档（`docs/design/{CONTEXT-COMPACTION,ADVISOR-CONVERGENCE,ARCHITECTURE,SEND-STALL-DISTILL-TUNING}.md` · `docs/requirements/CONTEXT-COMPACTION.md`） | 逐档 ±N | 门控强制迁核注记（18 处悬空锚 → 0；机制条文零改） |
+| 12 | `docs/vsc/design/VSC-MIGRATION-INVENTORY.md` | 499 | A-VM28 坐标注（1 行） |
+
+**① 改指逐处（改前 → 改后；run-stages = 核心面）**
+
+- `:16` 删 `import { compactHistory, truncateFallback, COMPRESS_FAILURE_LIMIT, summarizeRunExplorations } from "../compact.mjs"` → `import { compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT } from "@thincoder/core/context.mjs"` + `resolveCompactThreshold`（`@thincoder/core/config.mjs`）+ `summarizeRunExplorations`（**`../explore-distill.mjs` 直引**——核 re-export 面签名不同，改指随 W15）。
+- `checkAndCompact` 重写为端侧判定点封装（§2.13.4 #56 类）：阈值 = `resolveCompactThreshold(cfgCompactThreshold, provider).value`（档位随回合模型）；机制全归核（触发/摘要/降级截断/尾部预算/task+plan 回注/重建边界/基线失效）；**端差适配（调用期）**：核读 CLI 载体名 `provider`/`tasks`/`planMode` ⇒ `agent.provider = provider` · `agent.tasks = agent._tasks ?? []` · `agent.planMode = agent._planMode === true`（核只读三键）；核以新数组替换 `agent.history` ⇒ 端侧原位回收共享数组（面板同一引用；自定义属性随原位回收保留）；失败计数 + `onCompressFail` + `COMPRESS_FAILURE_LIMIT` 连败 → `compressFallback`（AbortError 透传保持）。
+- `run-helpers.reinjectAfterCompaction`：task 列表 + plan 回注（含旧注入去重）归核 `applyCompression`；本函数只留端侧 AUTO 回注（`getAuto()` live 标志）；`TASK_REINJECT_PREFIX` 退休。
+
+**② 删旧三条读数（删前全过才删）**
+
+1. **改指已落盘**：run-stages/run-helpers/两转口/测试改指 + 文档面先落；删前快层实跑 = **633 / 592 / 0 / 41**。
+2. **零引用机判**（域 = `src/` + `test/` + `extension.mjs` + `webview/` + `integration/` + `scripts/`；`*.mjs/*.js/*.json` 全递归）：模式①（引号相对说明符落删除集）= **0 命中**；模式②（非核指向 `compact.mjs` 提及）= 0（残留 4 处 = 注释——第 7 行档已收正 + explore-distill 2 处 + advisor/compaction.mjs 异档（W12 面））。
+3. **文档锚**：删后中间态 VSC 域 `doc:check` = **18 处悬空（A2 6 + A3 12）** → 逐处迁核注 → **0 命中**；仓根域 `doc-anchors --domain .` = 悬空 **0**（中间态 2 处已收正）。
+
+**③ A-K 读数（终态复跑 · 原样 · cwd = `thincoder-vscode/`）**
+
+| # | 命令 | 读数 | 判 |
+|---|---|---|---|
+| A-K1 | `npm test`（fast） | **633 / 592 pass / fail 0 / skip 41** | ✓（= 基线） |
+| A-K1 | `npm run lint` | `check-syntax: 278 JS files OK`（修正轮后 271——并行线删档浮动） | ✓ |
+| A-K1 | `npm run test:full` | **633 / 633 pass / fail 0** | ✓（T-DC6② 中程红随文档面收正归零） |
+| A-K1 | `npm run test:integration` | **28 / 28 · fail 0** | ✓（= 基线） |
+| A-K1 | `npm run doc:check` | `V5: 命中 0 处 · distinct 0` | ✓（18 → 0） |
+| A-K2 | 核回归 `node --test`（cwd = `thincoder-core`） | **178 / 178 · fail 0** | ✓（核零改动） |
+| A-K3 | 仓根三机检 | 宽度 **OK**（404 档零 >300）· 锚 **0 悬空** · 台账 **0 违规** | ✓ |
+| A-K4 | 删除集零引用 | 模式① 0 / 模式② 0（见 ②.2） | ✓ |
+| A-K10 | 模块权威档 | 核档 3 档收正在位 + 变更记录在案；锚 0 悬空 | ✓ |
+
+**专项验收（机判 + 冒烟）**：① 压缩判定点封装 = 端侧接线（`checkAndCompact` 直驱核 `compressIfNeeded`——两径冒烟见 ⑤）；② **预算端差收正**：VSC 旧 `SUMMARY_SEGMENT_ESTIMATE = 1100` 退场、单源 = 核 `SUMMARY_TOKEN_ESTIMATE = 1000`（核档 §6.4④/§6.12/§6.13 已收正）；③ webview 四态现状登记（核档 §6.13 `:182`–`:186`：四态文案 + 回调链 + 坐标不变）。
+
+**④ 提交（主体单笔 + 修正轮 1 · 均 `git commit --only`）**
+
+1. **`c90ddbdf`**（16 档 / +151 −776 · 含删档）：`refactor(vsc): W6 context-compaction - delete src/compact.mjs, repoint compaction/title/history-window to @thincoder/core + module docs`；回滚点 = `git revert c90ddbdf`。
+2. `e9ea9bd1`（修正轮 1 · 2 档 / +3 −4）：`fix(vsc): W6 review round-1 - dead imports in run-helpers, core doc line-count re-anchor`。
+
+**⑤ 内部轮（发现与处置）**
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **DEVIATIONS（0 🔴 · 1 🟡 · 2 🔵）**——部分实现/静默简化/断链三项全未命中（六面行为保真逐点实核：重建↔shrink 边界重置/基线失效/失败计数与 onCompressFail/onCompressStart→onCompress 转发/abort 透传/AUTO 回注）；命中 = ① §5 未落（🟡 · 本条即落）② turn-model 未触碰且无可触碰面（🔵 · 任务书误归属——见「未决 2」）③ explore-distill + 文档面 = 非声明列档披露（🔵 · 见顶部披露）。
+- **advisor 代码评审 1 轮**（`type=code` · 阻塞）：**pass**（🔴 **0** · 🟡 7 · 🔵 3）。
+- **裁决表（10 项）**：
+
+| # | Action | Detail |
+|---|---|---|
+| 1 | Deferred | 🟡 REVERSE 保护退场可达性：核面 `splitHistory` 无 VSC 旧档的 REVERSE 判据；核档 §6.11 的「CLI 侧有 `repairHistory` 保证顺序」论据**在本端不成立**（实核：全 `thincoder/**` 仅核 `agent/setup.mjs:49`/`helpers.mjs:226`/CLI 测试命中，VSC 零调用），且 VSC 设计档自述「VSC 历史流可产生倒序形状」⇒ 前提未证成。修点 = 核内笔（超本单元写域）或端侧切割前修复 ⇒ **上抛 1**；本段已登记回植候选 |
+| 2 | Not an issue | 🟡 任务书「端壳改指 3」含 `extension/turn-model.mjs`——该档 27 行**零 import** 纯函数（模型/stamp 决策，与压缩面零依赖），无 compact 入边可改指 ⇒ 非漏项而是任务书该列与实况不符；§2 收正归 designer/父侧 ⇒ **上抛 2** |
+| 3 | Fixed | 🟡 压缩后 task 回注端差（未登记）：核 `applyCompression` 回注 = 全量 `agent.tasks`（核 task 工具写时裁剪 done ≤3 支撑）；本端 task 工具尚不裁剪（W9 面）⇒ W9 前回注带全部 done 项。已在本段登记为过渡差（W9 后自消） |
+| 4 | Deferred | 🟡 VSC 产品档残句（`:95` 回注段 / `:89` `<handoff_notes>` 形状 / requirements `:21` F-K5 判定句）仍述退场形态——档性 = 迁移期参照历史（保留 ≠ 维护）⇒ 文档层收正（父侧/维护批） |
+| 5 | Deferred | 🟡 压缩面补测触发已燃（需求档 `:34` 自记口径）；本单元测试面口径 = 「改指 + context-parity 随 W15」⇒ 补测随 W15；两径冒烟读数入本段（见专项） |
+| 6 | Fixed | 🟡 §5 缺 W6 段（核档 §6.13 前进引用悬空）⇒ 本条即落 |
+| 7 | Not an issue | 🟡 `run-stages.mjs` 350 行 > 300 软线——advisory（R3：既有测试面同判不升级）；W15 删档 ⇒ 本段记「339 → 350 → 0（W15）」 |
+| 8 | Deferred | 🔵 `explore-distill.mjs` 注释残留（`:4/:11/:106/:153` 提及已删档/CLI 路径）——W15 删档面，随该单元收正 |
+| 9 | Fixed | 🔵 `run-helpers.mjs` 死 import（`readFileSync`/`resolve`/`dirname`/`fileURLToPath`）⇒ `e9ea9bd1` 清理（lint 复跑 OK） |
+| 10 | Deferred | 🔵 VSC `test/history-window.test.mjs` 与核内同名测试近重复（改指核面后同断言）——本单元任务书指定「改指」；退役评估归测试纪律批/W15 |
+
+- **两径冒烟（端差适配实驱 · 原样读数）**：① summary 径（stub SSE）——`agent.history === history` 原位回收 ✓ · 自定义属性保留 ✓ · 摘要 note + core 回注（task/plan）+ AUTO ✓ · `_runStartHistoryLen = 2` ✓ · `_lastCompressInfo.mode = "summary"` ✓ · 回调 start→done ✓；② fallback 径（连接拒绝逼 3 连败）——`onCompressFail` → 计数达 3 → `compressFallback` ✓ · `mode: "fallback"` + tailMessages ✓ · 任务回注 + 基线失效归核 ✓。
+- **轮次自证**：审计 1 轮 + advisor 1 轮 + 修正轮 1；终态 **0 未决 🔴 → clean**。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 压缩面 = **整面取核**（`compressIfNeeded`/`compressFallback`）+ 端侧判定点封装 | §2.5 #162「融合：取一侧」+ 核面为 CLI 单源（U6 行集等值）；备选 = 端侧留副本（F9 双源——否决） |
+| 2 | 端差适配三键 + 共享数组回收 = 调用期同指（非改 agent 载体） | 核读 CLI 载体名（`provider`/`tasks`/`planMode`）；本端载体 `_tasks`/`_planMode` 归 W9/W11/W15 归一 ⇒ 调用期适配面最小、W15 后自然退场；先例 = `agent.mjs:347-349`（W9 段同款调用期镜像） |
+| 3 | `summarizeRunExplorations` 直引 `../explore-distill.mjs`（不取核 re-export） | 核 re-export 面签名不同（agent 载体 vs history 入参）⇒ 取核即须整面改写蒸馏面 = W15 职责（任务书「context-parity 族随 W15」同向） |
+| 4 | `turn-model` 零改 + 上抛 | 该档无 compact 依赖（实核）——「按核 context 面接线」无可落地对象（见裁决表 2） |
+| 5 | VSC 产品档 = 门控强制迁核注记（不改写正文结构） | 档性 = 迁移期参照历史 + W1/W5/W7 先例 |
+| 6 | 核档 §6.13 收正为迁核后现状（含端差适配五面） | 07:08 裁定「改到哪模块收正哪模块的档」；机制条文零改（§6.11/§6.4④ 仅状态/坐标面） |
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **REVERSE 回植候选**（裁决表 1）：可达性前提未证成（本端零 `repairHistory` + VSC 设计档自述倒序可产）——父侧裁（核内笔 / 端侧前修 / 监看登记）。
+2. **任务书 W6 行误归属**（裁决表 2）：`§2 :146/:148 + 表 5 :432` 的 `turn-model` 项——designer/父侧收正。
+3. **done-cap 过渡差**（裁决表 3）：W9 前回注全量 done——随 W9 自消（如需即时收口 ⇒ 端壳 task 工具补裁剪 = W9 面）。
+4. **压缩面补测**（裁决表 5）：随 W15（context-parity 族）；冒烟读数已在案。
+5. **VSC 产品档残句**（裁决表 4）+ `SEND-STALL-DISTILL-TUNING.md:11` 等裸名叙事残留：文档层收正（维护批）。
+6. **孪生树陷阱（非本仓）**：`D:\teamcode\thincoder-vscode` 为未迁移陈旧树（`src/compact.mjs` 仍在）——工具/评审路径解析易落该树（本轮 advisor 引证核验 0/1 = 该 artifact），任务书已令全绝对路径（承前例）。
+7. **并行线在途**：复跑期树内并行单元改动（advisor/* · config-io · settings* 等）未混入本笔（`git commit --only` 逐档核验）；lint 计数随并行删档浮动（278 → 271）。
+
 ## §6 验证与收口（父代理）
