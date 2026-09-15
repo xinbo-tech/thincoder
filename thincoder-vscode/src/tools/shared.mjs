@@ -2,17 +2,17 @@
  * shared.mjs — Helper functions and constants shared across tool modules
  */
 
-import { join, isAbsolute, dirname } from "node:path"
-import { readdirSync, statSync, openSync, readSync, closeSync, readFileSync } from "node:fs"
-import { fileURLToPath } from "node:url"
+import { join, isAbsolute } from "node:path"
+import { readdirSync, statSync, openSync, readSync, closeSync } from "node:fs"
 import * as vscode from "vscode"
+import { loadToolDoc } from "@thincoder/core/prompt-files.mjs"
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-
-/** Load a tool's external description file (`<name>.md`, sibling of this module) —
- *  D-TD2（VSC-CONTEXT-PARITY R4，镜像 CLI shared.mjs:12 同语义）：同步读、无缓存、
- *  缺失即抛（fail-visible——描述文件是发布物的一部分，静默空描述不可接受）。 */
-export const DESC = (name) => readFileSync(join(__dirname, `${name}.md`), "utf8")
+/** Load a tool's external description file (`<name>.md`) — **本端描述装载面**。
+ *  W2（2026-09-15）：承载面 = 核包 `tool-docs/`（`loadToolDoc`——契约 8：调用方不做路径运算；
+ *  本端 25 档 `src/tools/*.md` 已删）。同步读、无缓存、缺失即抛（fail-visible——描述文件是
+ *  发布物的一部分，静默空描述不可接受）。`{{inject:…}}` 锚 = 装配面调用期应用
+ *  （`tools/index.mjs` `toOpenAISchema`——CORE-UNIFICATION §2.13.8）。 */
+export const DESC = (name) => loadToolDoc(name)
 
 export const BASH_TIMEOUT_MS = 120000
 

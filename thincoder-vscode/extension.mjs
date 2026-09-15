@@ -3,11 +3,13 @@
  * Registers ChatPanel as a WebviewViewProvider (sidebar on the right).
  */
 import * as vscode from "vscode"
+import { configurePromptInjections } from "@thincoder/core/prompt-files.mjs"
 import { ChatPanel } from "./src/extension/chat-panel.mjs"
 import { closeAllMcp } from "./src/mcp.mjs"
 import { initLocale } from "./src/i18n.mjs"
 import { registerDiffPreviewProvider } from "./src/extension/diff-preview.mjs"
 import { startConfigWatch } from "./src/extension/config-watch.mjs"
+import { VSC_PROMPT_INJECTIONS } from "./src/prompt-injections.mjs"
 
 /** @type {ChatPanel} */
 let _panel
@@ -71,6 +73,10 @@ export async function applyEngineFloorGuard(options) {
 }
 
 export async function activate(context) {
+  // W2 入口注入接线（CORE-UNIFICATION §2.13.2「VSC 列」· §2.13.8（六））：任何装配之前注册
+  // 本端 13 名锚取值表——替换在四装配面**调用期**应用（§2.13.8）⇒ 此为唯一顺序要求；
+  // 未注册 ⇒ 锚字面静默进模型（fail-loud 只在已注册而缺键时生效）。
+  configurePromptInjections(VSC_PROMPT_INJECTIONS)
   console.warn("[thincoder] activate starting, globalStorageUri =", context.globalStorageUri?.fsPath)
   // W8 pre-pen engine-floor guard (A8 ruling 2026-09-15) — first step; never throws.
   await applyEngineFloorGuard()

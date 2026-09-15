@@ -1,23 +1,41 @@
 /**
- * prompts-async-guidance.test.mjs — prompts 结构面测试（VSC 端——PROMPT-SYSTEM 施工③ 2026-09-10
- * 重写，与 CLI test/prompts-async-guidance.test.mjs 同构）。断言对象 = 本端 src/prompts/ 新 15 文件
- * + 装配代码（src/prompt-overlays.mjs）。
+ * prompts-async-guidance.test.mjs — prompts 结构面 + 锚注入接线面测试（VSC 端——PROMPT-SYSTEM 施工③
+ * 2026-09-10 重写，与 CLI test/prompts-async-guidance.test.mjs 同构）。
+ *
+ * W2（2026-09-15 · `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W2）：本端 `src/prompts/` 15 档 +
+ * `src/prompt-overlays.mjs` 已删 ⇒ 断言面改指核（槽位装配面 = 核内单点 `@thincoder/core/prompt-overlays.mjs`）：
+ *   ① 删净面：本端 `src/prompts/` / `src/prompt-overlays.mjs` 不存在；核包 `prompts/` 15 档在位；
+ *   ② 装配矩阵 / 降级链 / 结构巡检（槽位注释、表行宽、非空）——对象 = 核包槽文件；
+ *   ③ 锚注入接线面（A-K5 / §2.13.2「VSC 列」）：表 ⇔ 核锚名集合等值 + 配置态四装配面零 `{{inject:`
+ *      字面 + 13 锚 VSC 值逐锚在场 + 入口径（`activate()` 直调）同断言。
  * 2026-09-12 PROSE-ANCHOR-RETIRE：读档锚句断言（MAIN-DESIGN-ENHANCE A1–A4 / 锚#1–#7 / 开关段 C1–C4 /
  * ASYNC-RESIDUE / ADVISOR-VERDICT / 搜索条款 / 第 9 批 T-RO1–T-RO4 / 语料修复 T-PC-1~T-PC-3 /
  * 降级链①② 篇句面）整删·段删——读非测试档文本 = 散文锚（判据见 CLI 侧设计档 TESTING.md §11）。
- * 存留面 = 结构自洽（旧件退役 / 槽表 / warnings 结构 / 降级链警告 / 注释头 / 行宽 / 非空）+
+ * 存留面 = 结构自洽（删净面 / 槽表 / warnings 结构 / 降级链警告 / 注释头 / 行宽 / 非空）+
  * T-RO5/T-RO6 残余（测试内常量零维护者注——§2.7 #15）。
  */
 import { test } from "node:test"
 import assert from "node:assert"
-import { readFileSync, existsSync, writeFileSync } from "node:fs"
+import { readFileSync, existsSync, writeFileSync, readdirSync } from "node:fs"
 import { dirname, join } from "node:path"
-import { fileURLToPath } from "node:url"
-import { assemblePrompt, SCENARIO_SLOT_FILES, PERSONA_ENGINEERING, PERSONA_NORMAL, COMMON, DISCIPLINE_ENGINEERING, DISCIPLINE_NORMAL, CONSULT_BASE } from "../src/prompt-overlays.mjs"
+import { fileURLToPath, pathToFileURL } from "node:url"
+import { tmpdir } from "node:os"
+import { env as vscodeEnv, window as vscodeWindow } from "vscode"
+import {
+  PROMPTS_DIR, TOOL_DOCS_DIR, loadSlot, configurePromptInjections, resetPromptInjections,
+} from "@thincoder/core/prompt-files.mjs"
+import {
+  assemblePrompt, SCENARIO_SLOT_FILES, PERSONA_ENGINEERING, PERSONA_NORMAL, COMMON,
+  DISCIPLINE_ENGINEERING, DISCIPLINE_NORMAL, CONSULT_BASE,
+} from "@thincoder/core/prompt-overlays.mjs"
+import { toOpenAISchema, builtinTools } from "../src/tools/index.mjs"
+import { buildAdvisorSystemPrompt } from "../src/advisor/main.mjs"
+import { VSC_PROMPT_INJECTIONS } from "../src/prompt-injections.mjs"
+import { activate } from "../extension.mjs"
 
 const __here = dirname(fileURLToPath(import.meta.url))
-const read = (rel) => readFileSync(join(__here, "..", rel), "utf8")
-const exists = (rel) => existsSync(join(__here, "..", rel))
+const REPO = join(__here, "..")
+const exists = (rel) => existsSync(join(REPO, rel))
 
 const NEW_PROMPTS = [
   "persona-engineering.md", "persona-normal.md", "persona-eng-coder.md", "persona-eng-designer.md",
@@ -25,15 +43,39 @@ const NEW_PROMPTS = [
   "common.md", "discipline-engineering.md", "discipline-normal.md",
   "consult-base.md", "advisor-design.md", "advisor-round1.md", "advisor-round2.md", "advisor-round3.md",
 ]
-const RETIRED_PROMPTS = ["system.md", "engineering.md", "engineering-sub.md", "main.md", "discipline.md", "methodology-template.md", "eng-coder.md", "explore.md", "coder.md", "plan.md"]
+const SCENARIOS = ["normal", "engineering", "eng-coder", "eng-designer", "explore", "coder", "plan", "consult"]
+const ANCHOR_RE = /\{\{inject:([a-z0-9-]+)\}\}/g
+const LITERAL = "{{inject:"
 
-const pn = read("src/prompts/persona-normal.md")
+const pn = loadSlot("persona-normal.md")
 // 六场景装配快照（装配矩阵/降级链断言面）
 const engMode = Object.fromEntries(["normal", "engineering", "eng-coder", "explore", "coder", "plan"].map((s) => [s, assemblePrompt(s)]))
 
-test("退役旧件不存在于 prompts 树（AC-2——退役七件+main/discipline/explore/coder/plan 旧件）", () => {
-  for (const f of RETIRED_PROMPTS) assert.ok(!exists(`src/prompts/${f}`), `${f} 已退役——不应存在`)
-  for (const f of NEW_PROMPTS) assert.ok(exists(`src/prompts/${f}`), `${f} 新集合在位`)
+/** 核内全部注入锚名（去重；扫描对象 = 核包 prompts/ + tool-docs/——与 VSC 表同源）。 */
+function coreAnchorNames() {
+  const names = new Set()
+  for (const dir of [PROMPTS_DIR, TOOL_DOCS_DIR]) {
+    for (const f of readdirSync(dir)) {
+      if (!f.endsWith(".md")) continue
+      for (const m of readFileSync(join(dir, f), "utf8").matchAll(ANCHOR_RE)) names.add(m[1])
+    }
+  }
+  return [...names].sort()
+}
+
+/** 四装配面输出（槽位+consult / 工具描述 / 顾问提示词）——锚面断言共用。 */
+function assemblyFaces() {
+  const prompts = SCENARIOS.map((s) => assemblePrompt(s).prompt)
+  const tools = builtinTools.map((t) => String(toOpenAISchema(t).function.description))
+  const advisor = buildAdvisorSystemPrompt({ _advisorRound: 0 }, null, "design")
+  return { prompts, tools, advisor, union: [...prompts, ...tools, advisor].join("\n────────\n") }
+}
+
+test("W2 删净面：本端 src/prompts/ + src/prompt-overlays.mjs 不存在（核包 15 档在位——装配面 = 核单点）", () => {
+  assert.ok(!exists("src/prompts"), "src/prompts/ 已随 W2 删除（F9 残留删净）")
+  assert.ok(!exists("src/prompt-overlays.mjs"), "src/prompt-overlays.mjs 已删（槽位装配 = 核内单点）")
+  assert.ok(!exists("src/tools/bash.md"), "src/tools/*.md 已删（描述面 = 核 tool-docs/）")
+  for (const f of NEW_PROMPTS) assert.ok(existsSync(join(PROMPTS_DIR, f)), `${f} 核包（英文落地）在位`)
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -71,16 +113,18 @@ test("§3.2 consult 场景：assemblePrompt 返回 CONSULT_BASE 自含基底（�
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 降级链断言（§3.4：槽缺失→警告；common 缺失→同款；AGENTS/[4] 层缺失=静默跳过）。
+// W2：夹具读盘目标 = 核包槽文件（CLI U2 同法——本端副本已删）。
 // 2026-09-12 PROSE-ANCHOR-RETIRE：原「特殊模块→报错不自降级」条（降级链④，读 setup.mjs 源码）整删；
 // AGENTS 层静默跳过语义由 T-CI-2 机判（test/context-parity.test.mjs——[4] 层已真实落位）。
 // ─────────────────────────────────────────────────────────────────────────────
 test("§3.4 降级链①：槽文件缺失→空缺+警告（不 fallback——层间隔离）", async () => {
   // 槽内容 = prompt-overlays 模块级 SLOT_CONTENTS 常量——改文件须重载新实例触发真实 loadSlot 读盘。
-  const target = join(__here, "..", "src", "prompts", "persona-normal.md")
+  const target = join(PROMPTS_DIR, "persona-normal.md")
   const bak = readFileSync(target, "utf8")
   writeFileSync(target, "")
   try {
-    const fresh = await import(`../src/prompt-overlays.mjs?v=${Date.now()}`)
+    const freshUrl = pathToFileURL(join(PROMPTS_DIR, "..", "prompt-overlays.mjs")).href + `?v=${Date.now()}`
+    const fresh = await import(freshUrl)
     const r = fresh.assemblePrompt("normal")
     assert.ok(r.warnings.length === 1, "恰好一条警告")
     assert.ok(r.warnings[0].includes("prompt slot file persona-normal.md missing"), "警告点名缺失文件")
@@ -92,11 +136,12 @@ test("§3.4 降级链①：槽文件缺失→空缺+警告（不 fallback——�
 })
 
 test("§3.4 降级链②：common.md 缺失→同款警告（四槽全覆盖——评审 round#1 补）", async () => {
-  const target = join(__here, "..", "src", "prompts", "common.md")
+  const target = join(PROMPTS_DIR, "common.md")
   const bak = readFileSync(target, "utf8")
   writeFileSync(target, "")
   try {
-    const fresh = await import(`../src/prompt-overlays.mjs?v=${Date.now()}`)
+    const freshUrl = pathToFileURL(join(PROMPTS_DIR, "..", "prompt-overlays.mjs")).href + `?v=${Date.now()}`
+    const fresh = await import(freshUrl)
     const r = fresh.assemblePrompt("engineering")
     assert.ok(r.warnings.length === 1, "恰好一条警告")
     assert.ok(r.warnings[0].includes("common.md missing"), "警告点名 common.md")
@@ -119,11 +164,11 @@ test("§3.4 降级链③：AGENTS.md 缺失=静默跳过（[4] 层真实注入�
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// §2.7 编写纪律巡检（机械扫——15 文件 + 14 条纪律可机械部分）。
+// §2.7 编写纪律巡检（机械扫——核包 15 文件 + 14 条纪律可机械部分；W2 改指核）。
 // ─────────────────────────────────────────────────────────────────────────────
 test("§2.7 #13 槽位注释：每文件头部 <!-- slot:[...] consumers:[...] -->（主链 [1]-[3] 数字槽位）", () => {
   for (const f of NEW_PROMPTS) {
-    const first = read(`src/prompts/${f}`).split("\n")[0]
+    const first = loadSlot(f).split("\n")[0]
     if (["consult-base.md", "advisor-design.md", "advisor-round1.md", "advisor-round2.md", "advisor-round3.md"].includes(f)) {
       // 特殊模块自含——不套前缀法（蓝图 §2 豁免从句）——头部注在即可
       assert.match(first, /^<!-- slot:.+ consumers:\[.+\] -->$/, `${f}: 头部注缺失`)
@@ -136,7 +181,7 @@ test("§2.7 #13 槽位注释：每文件头部 <!-- slot:[...] consumers:[...] -
 test("§2.7 #9 表行 >200 零命中（dn 4 处随表删源清零——公共层扩容）", () => {
   const hits = []
   for (const f of NEW_PROMPTS) {
-    const lines = read(`src/prompts/${f}`).split("\n")
+    const lines = loadSlot(f).split("\n")
     lines.forEach((l, i) => { if (l.startsWith("|") && l.length > 200) hits.push(`${f}:L${i + 1}(${l.length})`) })
   }
   assert.deepStrictEqual(hits, [], "表行 >200 零命中（common 路由表逐行 ≤200）")
@@ -174,3 +219,108 @@ test("T-RO5/T-RO6 反例+边界：旧三值句/旧相邻形态零残留（本端
   for (const lit of [...ROPE_CHAIN, ROPE_LABEL, ...ROPE_BULLET.split("\n")]) assert.ok(!/\d{4}-\d{2}-\d{2}|第\s*\d+\s*批|评审\s*#/.test(lit), `新增文本含维护者注: ${lit.slice(0, 26)}…`)
 })
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 锚注入接线面（W2 · CORE-UNIFICATION §2.13.2「VSC 列」/ §2.13.7 · A-K5）：
+// ① 表 ⇔ 核锚名集合逐名等值（fail-closed）；② 配置态四装配面零 `{{inject:` 字面 + 13 锚 VSC 值在场；
+// ③ 工具描述面特有形态；④ 未配置态恒等；⑤ 入口径（activate() 直调）同断言（A-K5）。
+// ─────────────────────────────────────────────────────────────────────────────
+test("锚面①：VSC 表 ⇔ 核锚名集合逐名等值（13 名 · 旧名单锚零命中 · ptr 族恰 5 名）", () => {
+  const core = coreAnchorNames()
+  assert.deepStrictEqual(core, Object.keys(VSC_PROMPT_INJECTIONS).sort(), "VSC 表键 ⇔ 核内锚名（逐名等值——新增/缺失即红）")
+  assert.equal(core.length, 13, "锚名去重集合 = 13（§2.13.7⑥）")
+  assert.ok(!core.includes("agent-loop-pointer"), "旧名单锚零命中")
+  assert.equal(core.filter((n) => n.startsWith("agent-loop-ptr-")).length, 5, "agent-loop-ptr-* 恰 5 名")
+})
+
+test("锚面①b：顾问提示词面零锚（本端该面直读核档、不过注入原语——新增锚即红）", () => {
+  // 本端 `advisor/main.mjs` 四常量经 `loadAdvisorPrompt` 直读，不经 `applyPromptInjections`（核内
+  // `advisor.mjs` 面 4 才有挂点——本端镜像面随 W12 并入核）⇒「四装配面零字面」在该面靠「核内
+  // advisor 档零锚」成立；本断言 = 该前提的 fail-closed 机检（W12 后由核内结构机检承接——§2.13.8（五）6）。
+  for (const f of ["advisor-design.md", "advisor-round1.md", "advisor-round2.md", "advisor-round3.md"]) {
+    assert.ok(!loadSlot(f).includes(LITERAL), `核内 ${f} 零锚（本端该面无注入位——新增锚即红）`)
+  }
+})
+
+test("锚面②：配置态四装配面零锚字面 + 「VSC 列」取值逐条在场（场景面特有形态逐条）", () => {
+  try {
+    configurePromptInjections(VSC_PROMPT_INJECTIONS)
+    const { prompts, tools, advisor, union } = assemblyFaces()
+    for (const s of SCENARIOS) {
+      const r = assemblePrompt(s)
+      assert.ok(!r.prompt.includes(LITERAL), `${s}: 装配输出零 ${LITERAL} 字面`)
+      assert.deepEqual(r.warnings, [], `${s}: 全槽在位（核包）`)
+    }
+    for (const t of tools) assert.ok(!t.includes(LITERAL), "工具描述面零锚字面")
+    assert.ok(!advisor.includes(LITERAL), "顾问提示词面零锚字面")
+    // 全 13 名取值在场（空串 = 显式「本端为空」⇒ 该处零字面，由上一断言覆盖）
+    for (const [name, value] of Object.entries(VSC_PROMPT_INJECTIONS)) {
+      if (value === "") continue
+      assert.ok(union.includes(value), `§2.13.2「VSC 列」取值在场：${name}`)
+    }
+    // 场景面特有形态（取值落点逐条——含括号 / 后缀边界：前缀重复类缺陷即红）
+    const eng = prompts[SCENARIOS.indexOf("engineering")]
+    const normal = prompts[SCENARIOS.indexOf("normal")]
+    const engCoder = prompts[SCENARIOS.indexOf("eng-coder")]
+    assert.ok(eng.includes("docs/design/README.md"), "engineering: 文档地图 docs/design/README.md")
+    assert.ok(eng.includes("(AGENT-LOOP（CLI 仓·设计）§11.2（该节号 = CLI 侧；本端对应节 = §9 会诊/飞刀/advisor 异步化） — R13)"), "engineering: 异步锚句指针（整条 + 端说明括注）")
+    assert.ok(eng.includes("### VSC 端特有段：R14 池规则"), "engineering: R14 端特有段（本端独有之注入段）")
+    assert.ok(!eng.includes("## 改动面反查（文档影响面）"), "engineering: 改动面反查节不在场（VSC = 空串）")
+    assert.ok(eng.includes("review, AGENT-LOOP（CLI 仓·设计）§8（本端交付协议节 = §8）)"), "engineering: 交付链指针（整条）")
+    assert.ok(normal.includes("(AGENT-LOOP（CLI 仓·设计）§7.3（本端交付协议节 = §8） D-E1a)"), "normal: 顶层异步 spawn 指针（整条）")
+    assert.ok(normal.includes("(like an async spawn; AGENT-LOOP（CLI 仓·设计）§14.2（本端异步化节 = §9）)"), "normal: 飞刀指针（整条）")
+    assert.equal((normal.match(/^## 收尾验收$/gm) ?? []).length, 1, "normal: `## 收尾验收` 节标题恰一份（VSC 侧独有）")
+    assert.ok(!normal.includes("Ctrl+I"), "normal: 会诊终止口径不在场（VSC = 空串）")
+    assert.ok(engCoder.includes("session (AGENT-LOOP（CLI 仓·设计）§8（本端交付协议节 = §8）)."), "eng-coder: 交付协议指针（整条）")
+    assert.ok(engCoder.includes("## Guidelines - Work independently."), "eng-coder: Guidelines 块（端特有段）")
+    assert.equal((engCoder.match(/one file at a time/g) ?? []).length, 1, "eng-coder: 核内已承载项不重复注入（缺口 3 去重口径）")
+    assert.equal((engCoder.match(/Out-of-file-list changes/g) ?? []).length, 1, "eng-coder: file 域项不重复注入（同上）")
+    assert.ok(!union.includes("AGENT-LOOPAGENT-LOOP"), "整条指针替换（前缀不重复）")
+  } finally { resetPromptInjections() }
+})
+
+test("锚面③：未配置态恒等（原文过——U0 三态基线「未配置零变」）", () => {
+  resetPromptInjections()
+  assert.ok(assemblePrompt("engineering").prompt.includes(LITERAL), "未配置 ⇒ 锚字面原样过（零替换）")
+  assert.ok(builtinTools.map(toOpenAISchema).some((s) => String(s.function.description).includes(LITERAL)), "工具描述面同（未配置恒等）")
+})
+
+/** 入口径宿主桩（`test/vscode-mock` 的 `env/ window` 缺两件——测试内补桩并还原：A-K5 驱动面）。 */
+function mockContext() {
+  return {
+    subscriptions: [],
+    globalStorageUri: { fsPath: join(tmpdir(), "thincoder-w2-entry-storage") },
+    extensionUri: { fsPath: REPO },
+    extensionPath: REPO,
+    workspaceState: { get: () => undefined, update: async () => {} },
+    globalState: { get: () => undefined, update: async () => {} },
+    secrets: { get: async () => undefined, store: async () => {}, delete: async () => {} },
+  }
+}
+
+test("锚面④ A-K5 入口径：activate() 首步配置本端表 ⇒ 四装配面零字面 + 13 锚 VSC 值在场", async () => {
+  // mock 补桩面：`vscode-mock` 的 `env/ window` 缺 `language` / `registerWebviewViewProvider` 两件
+  // （activate() 全链仅此两处需要）——读-改-还按「原属性是否存在」还原（免留残属性）。
+  const hadLang = "language" in vscodeEnv
+  const origLang = vscodeEnv.language
+  const hadProvider = "registerWebviewViewProvider" in vscodeWindow
+  const origProvider = vscodeWindow.registerWebviewViewProvider
+  vscodeEnv.language = "en"
+  vscodeWindow.registerWebviewViewProvider = () => ({ dispose: () => {} })
+  try {
+    await activate(mockContext())
+    const { prompts, tools, advisor, union } = assemblyFaces()
+    for (const t of [...prompts, ...tools, advisor]) assert.ok(!t.includes(LITERAL), "入口径：装配输出零锚字面")
+    for (const [name, value] of Object.entries(VSC_PROMPT_INJECTIONS)) {
+      if (value === "") continue
+      assert.ok(union.includes(value), `入口径：§2.13.2「VSC 列」取值在场：${name}`)
+    }
+    assert.equal((prompts[SCENARIOS.indexOf("normal")].match(/^## 收尾验收$/gm) ?? []).length, 1, "入口径：收尾验收节标题恰一份")
+    assert.ok(prompts[SCENARIOS.indexOf("normal")].includes("docs/design/README.md"), "入口径：文档地图路径在场")
+  } finally {
+    if (hadLang) vscodeEnv.language = origLang
+    else delete vscodeEnv.language
+    if (hadProvider) vscodeWindow.registerWebviewViewProvider = origProvider
+    else delete vscodeWindow.registerWebviewViewProvider
+    resetPromptInjections()
+  }
+})

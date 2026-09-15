@@ -11,10 +11,10 @@
 
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
-| 槽位提示词（运行期加载） | `thincoder-cli/src/prompts/*.md`（15 档） | 同名 |
-| 工具描述（运行期加载） | `thincoder-cli/src/tools/*.md`（25 档） | 同名 |
+| 槽位提示词（运行期加载） | `thincoder-cli/src/prompts/*.md`（15 档——已随 U2 删，实核空） | 同名（已随 W2 删——实核空）；**运行期面 = 核包 `thincoder-core/prompts/*.md`** |
+| 工具描述（运行期加载） | `thincoder-cli/src/tools/*.md`（25 档——已随 U2 删，实核空） | 同名（已随 W2 删——实核空）；**运行期面 = 核包 `thincoder-core/tool-docs/*.md`** |
 | **中文设计档（供人读・非运行期——与运行期档同源）** | `thincoder-cli/docs/design/prompts/*.md`（15 档） | `thincoder-vscode/docs/design/prompts/*.md`（15 档） |
-| 槽位加载面 | `src/prompt-overlays.mjs`（**S2 删**——CLI 已随 U15 落地〔实核档不存在〕/ VSC 随 `2026-09-15-vsc-core-wiring` W2；删后装配面 = 核内单点 `thincoder-core/prompt-overlays.mjs`） | 同名（同路径对） |
+| 槽位加载面 | `src/prompt-overlays.mjs`（**S2 删**——CLI 已随 U15 落地〔实核档不存在〕/ VSC 已随 `2026-09-15-vsc-core-wiring` W2 落地〔实核档不存在〕；删后装配面 = 核内单点 `thincoder-core/prompt-overlays.mjs`） | 同名（同路径对） |
 
 **核内落点**：`thincoder-core/prompts/`（15 档槽位）+ `thincoder-core/tool-docs/`（25 档工具描述）+ 单一解析面 `prompt-files.mjs`（落 `thincoder-core/`）——**核内唯一副本**（用户裁定 A7）。
 
@@ -178,6 +178,8 @@
 
 - 运行期槽位 = `thincoder-core/prompts/*.md`（15 档）· 工具描述 = `thincoder-core/tool-docs/*.md`（25 档）；加载面 = `thincoder-core/prompt-files.mjs` + `thincoder-core/prompt-overlays.mjs`。
 - 中文正本 = `docs/core/design/prompts/*.md`（15 档——2026-09-15 批 1 位移落位）。
+- **端侧装配面（S2 接线落地读数）**：CLI = `thincoder-cli/bin/thincoder.mjs` 入口首步 `configurePromptInjections(CLI 表)` + `thincoder-cli/src/prompt-injections.mjs`（随 U2 落）；
+  VSC = `thincoder-vscode/extension.mjs` `activate()` 首步 `configurePromptInjections(VSC 表)` + `thincoder-vscode/src/prompt-injections.mjs`（随 W2 落）；工具描述装载根两产品同指核 `loadToolDoc`（CORE-UNIFICATION §2.13.2 / §2.13.8）。
 
 ## 7. 并入的关键决策记录（含否决备选）
 
@@ -224,3 +226,4 @@
 - 2026-09-15（**提示词加载面收正 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮 finding 13）：§1 表「槽位加载面」行与 §5 指针注同轮收正——`src/prompt-overlays.mjs` 两产品侧 = **S2 删**（CLI 已随 U15 落地〔实核档不存在〕；VSC 随 W2）；权威 §2.8 `:1037` / `:1038` 两行同批由「S2 改 · ±6」收正为「S2 删」。
 - 2026-09-15（**提示词加载面同族 5 行收正 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮-4 发现 #3）：权威 §2.8 `:1039`–`:1043` 逐行择一收正——CLI `advisor.mjs` / `tools/shared.mjs` / `agent/setup.mjs` 与 VSC `advisor/main.mjs` = **「S2 删」**（CLI 实核档不存在 · VSC 随 W12/W15 删除集）；
   VSC `tools/shared.mjs` = **「S2 改——拆壳薄壳保留」**（与 W14 口径一致）；本档 §5 指针注同轮同步。
+- 2026-09-15（**S2 W2 落地 · eng-coder**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W2）：VSC 侧接线落地读数收正——§1 表三行状态行（槽位提示词 / 工具描述 / 槽位加载面：VSC 副本已随 W2 删〔实核空〕，运行期面 = 核包）；§6.5 补端侧装配面坐标（VSC = `extension.mjs` `activate()` 首步 + `src/prompt-injections.mjs` 取值表；工具描述装载根同指核 `loadToolDoc`）。

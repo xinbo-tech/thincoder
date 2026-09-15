@@ -20,7 +20,7 @@ import { fileURLToPath } from "node:url"
 import { subagentTool, modeRoleField } from "../src/agent-tools/subagent.mjs"
 import { gateEngCoderSpawn } from "../src/agent-tools/subagent-async.mjs"
 import { setupAgentRun } from "../src/agent/setup.mjs"
-import { SCENARIO_SLOT_FILES, assemblePrompt } from "../src/prompt-overlays.mjs"
+import { SCENARIO_SLOT_FILES, assemblePrompt } from "@thincoder/core/prompt-overlays.mjs"
 import { setupWebview, installChatFixture } from "./helpers/webview-env.mjs"
 
 const REPO = resolve(fileURLToPath(import.meta.url), "..", "..")

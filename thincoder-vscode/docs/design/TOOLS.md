@@ -267,7 +267,7 @@ approve / deny / approve-all + diff 预览（`diff-preview.mjs` 虚拟文档原�
 
 - CLI：25 档 `src/tools/*.md`（合计 39,106 字符 ≈ 39.1KB——**计数更正 D3**：批次 §1 E4 「26 档」= 笔误，
   实测 25 档/25 工具）经 `src/tools/shared.mjs:12`（CLI 仓） `DESC()` 运行时装载，含 Routing / Notes 段
-  （如 `read.md` 21 行含「不要用 bash cat」路由与 `repo_outline`/`code_search`/`lsp` 指向）。
+  （如 `thincoder-core/tool-docs/read.md`——已迁核，现体 21 行含「不要用 bash cat」路由与 `repo_outline`/`code_search`/`lsp` 指向）。
 - VSC：`src/tools/` 全 `.mjs`、零 `.md`；31 个 builtinTools 描述全为内联字符串，无 Routing/Notes 结构段；
   `src/tools/file.mjs:22-29` read 描述 7 行（CLI 21 行）；装载机制不存在（`DESC(` 零命中；`checklist.mjs:3`
   注释自述「DESC file-read replaced with inline description」= 施工期简化）。
@@ -356,7 +356,7 @@ approve / deny / approve-all + diff 预览（`diff-preview.mjs` 虚拟文档原�
 | AC | 判据 | 回指 |
 |---|---|---|
 | AC-TD-1 | T-TD-2/T-TD-3 绿（T-TD-1 已退场——整删，删除记录 = `TESTING.md` §8.1（`:202`）） + `node test/run-fast.mjs` 全绿（新档登记） | F7 |
-| AC-TD-2 | T-TD-4 已退场（整删——删除记录 = `TESTING.md` §8.1（`:203`））+ `description: DESC(` 命中 25 处（grep 点数）+ **N9 落点 = 发布前清单核对**（`npx @vscode/vsce ls`（或打包后 `unzip -l <vsix>`）输出含 `src/tools/*.md` 25 档在位——打包忽略表实效核对；修正轮 #3） | F7/N9 |
+| AC-TD-2 | T-TD-4 已退场（整删——删除记录 = `TESTING.md` §8.1（`:203`））+ `description: DESC(` 命中 25 处（grep 点数）+ **N9 落点 = 发布前清单核对**（`npx @vscode/vsce ls`（或打包后 `unzip -l <vsix>`）输出含 25 档描述在位——W2 已迁核，现体 = 核包 `tool-docs/` 25 档；打包忽略表实效核对；修正轮 #3） | F7/N9 |
 | AC-TD-3 | 行数实测对表（§12.4）+ `check-doc-width` 新增违规 0 | — |
 
 ### 12.7 边界

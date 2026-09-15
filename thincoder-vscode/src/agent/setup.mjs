@@ -8,8 +8,6 @@
  * applySlotSessionState 已拆 agent-state.mjs（§11.2 A 复位清单与 §11.2.1 槽↔hydrate
  * 映射——500 行硬限——test/agent-lifecycle-singleton.test.mjs 单测锚点）。
  */
-import { join, dirname } from "node:path"
-import { fileURLToPath } from "node:url"
 import * as os from "node:os"
 import { builtinTools, toOpenAISchema, readImageTool } from "../tools.mjs"
 import {
@@ -26,14 +24,16 @@ import { modeRoleField } from "../agent-tools/subagent.mjs"
 import { loadRaw, loadConsultPool, normalizeProxy, resolveProviders, TRACES_DEFAULTS } from "../config-io.mjs"
 import { expandHome } from "../expand-home.mjs"
 import { escapeXml, pushReal } from "./run-helpers.mjs"
-import { assemblePrompt } from "../prompt-overlays.mjs"
+import { applyPromptInjections } from "@thincoder/core/prompt-files.mjs"
+import { assemblePrompt } from "@thincoder/core/prompt-overlays.mjs"
 import { loadSkills, formatSkillListing } from "../extension/skills.mjs"
 import { injectRunContext, loadProjectInstructions } from "./context-injections.mjs"
 import { pushTimeReminder, pushInjections, appendImagePointer, pushEnvStateReminder, pushPeerReminder } from "./setup-reminders.mjs"
 
 // PROMPT-SYSTEM 施工② G1（2026-09-10）：旧三件（system.md/discipline.md/main.md）退役——
 // 六件槽位常量装载收口 prompt-overlays.mjs（mod 为槽位内容新家）；本文件不再各自读取。
-const __dirname = dirname(fileURLToPath(import.meta.url))
+// W2（2026-09-15）：槽位装配面 = **核内单点**（`@thincoder/core/prompt-overlays.mjs`）——本端
+// 镜像已删（本地路径运算随之为零）。
 
 /** AUTO mode reminder lives in setup-reminders.mjs (single source of truth —
  *  D-CI6: the agent loop head pushes it; agent.mjs imports it from there for the dedupe check). */
@@ -289,7 +289,8 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     if (depth === 0 && t.name === "subagent") {
       const { role: roleField, suffix } = modeRoleField(engineering)
       const schema = toOpenAISchema(t)
-      schema.function.description = t.description + (suffix ? "\n" + suffix : "")
+      // 重组后的描述仍经锚替换原语（§2.13.8 面 3 单出口——本行不得以裸描述覆写注入结果）
+      schema.function.description = applyPromptInjections(t.description + (suffix ? "\n" + suffix : ""))
       schema.function.parameters = {
         ...t.parameters,
         properties: { ...t.parameters.properties, role: roleField },

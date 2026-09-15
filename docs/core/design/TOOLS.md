@@ -12,12 +12,12 @@
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
 | 工具实现（同路径对） | `thincoder-cli/src/tools/{question,bash,tree,execute,linter,ops,shared,search,lsp,web,file,edit-diff,index}.mjs` | 同名（多为拆档：`shell` / `more-file` / `file-edit` / `edit-fuzzy-match` / `edit-line-params` / `wait_for` 等） |
-| 工具描述（提示词面） | `src/tools/*.md`（25 档） | 同名 | 
+| 工具描述（提示词面） | `thincoder-cli/src/tools/*.md`（25 档——已随 CLI U2 删，实核档不在） | 同名（已随 W2 删——实核空）；**运行期面 = 核包 `thincoder-core/tool-docs/*.md`** |
 | 注册表 | `src/agent-tools.mjs` + `src/cli/make-agent.mjs` | `src/agent-tools/index.mjs` |
 | agent-tools 工具面 | `src/agent-tools/*.mjs` | 同名 / 拆分档 |
 | 单端独有实现 | `tools/{bash,checklist-sync,edit-batch,glob-dialect,patch,repomap}.mjs` | `tools/{checkpoint,code,context,edit-fuzzy-match,edit-line-params,file-edit,focus,hashline-edit,more-file,read_image,shell,wait_for}.mjs` |
 
-> 工具**描述文本**（`src/tools/*.md`）的行本体住 `docs/core/design/PROMPT-SYSTEM.md`（提示词面）；本档只收**实现面**与工具行为契约。
+> 工具**描述文本**（运行期面 = 核包 `thincoder-core/tool-docs/*.md`；两产品原副本已删——CLI U2 / VSC W2）的行本体住 `docs/core/design/PROMPT-SYSTEM.md`（提示词面）；本档只收**实现面**与工具行为契约。
 
 ## 2. 核模块裁决行（自 `CORE-UNIFICATION.md` §2.5 搬入 · 逐字）
 
@@ -170,7 +170,7 @@
 其余 checklist / lint / lsp / execute / tree / ops 4（file_ops / process / get_current_time / wait_for）。（read_pdf 已移除；sleep 已删——见 wait_for。）
 - **元工具**（`thincoder-core/agent-tools.mjs`）：task / plan / goal / verify / batch_segment / subagent / skill / recent_changes / advisor / eng / timer / read_history / consult_start / consult_stop——readonly 自管纪律工具；子代理按 role 过滤（explore/plan 只读，eng-coder 额外门控）
 。read_history 语义权威 = SESSION 板（本层 `SESSION.md`）。
-- **schema 生成**：`toOpenAISchema(tool)`——name / description / parameters 转 OpenAI function 格式。description 来源：CLI 用 `thincoder-core/tool-docs/*.md`（`DESC()` 机制——md 文件即描述源）；VS Code 用 `.mjs` 内嵌描述。md / 内嵌描述给模型**完整使用手册**（含参数说明 / 路由 / 反模式），非一行字符串。
+- **schema 生成**：`toOpenAISchema(tool)`——name / description / parameters 转 OpenAI function 格式。description 来源：两端均用 `thincoder-core/tool-docs/*.md`（`DESC()` 机制——md 文件即描述源；VSC 经核 `loadToolDoc`、`toOpenAISchema` 调用期过锚替换原语——W2 落）。md 描述给模型**完整使用手册**（含参数说明 / 路由 / 反模式），非一行字符串。
 
 ### 6.3 上下文与生命周期
 
@@ -262,7 +262,7 @@ VS Code 端在 extension host 内运行的**端独有增强**（CLI 无对应面
 - **lsp（VS Code 原生）**：语言服务直用（`executeDefinitionProvider` 等 + `languages.getDiagnostics`）——零自起进程（对端 CLI = 按需 spawn LSP server，§6.4）。
 - **bash**：继承宿主 shell 环境；`runInterruptible` spawn（非 execSync——不阻塞 extension host 事件循环）+ Stop / 超时经 `killProcessTree` 整树杀（`/T /F` 达孙进程）。
 - **权限审批面**：webview 逐工具弹窗 + 批合并询问（`permission-gate.mjs` / `batchPermissionGate`）+ 逐项 diff 预览；子代理（depth>0）审批卡（归属 `<child key> · <tool>`——`makeChildPermission`）+ Stop 释放挂起门（abort → resolve(false)/deny，循环不悬挂——接线 = `docs/core/design/AGENT-LOOP.md` §6.18）。
-- **描述装载面**：VSC 描述内嵌 `.mjs`（`DESC()`——`thincoder-vscode/src/tools/shared.mjs:15`）；CLI 为 `tool-docs/*.md`（§6.2 已列）——25 档随扩展发布（`.vscodeignore` 不排除 `src/**/*.md`——打包面 N6 需求侧承载）。
+- **描述装载面**：两端同源 = 核包 `tool-docs/*.md`（`DESC()` = 核 `loadToolDoc` 单一解析面；CLI 随 U2 / VSC 随 W2 落——VSC 原 `.mjs` 内嵌面已退场；锚替换调用期应用）；25 档随包发布（`.vscodeignore` 不排除 `node_modules/@thincoder/core/**`——打包面 N6 需求侧承载）。
 
 ## 7. 并入的关键决策记录（含否决备选）
 
@@ -327,3 +327,4 @@ VS Code 端在 extension host 内运行的**端独有增强**（CLI 无对应面
 - 2026-09-14（注入点清单化轮 · eng-designer）：§2.2 表后加**指针**一行——④ 段注入位的核内落点对照与「写路径缝」形态建议住 `CORE-UNIFICATION.md` §2.13.4 / §2.13.5（本节不复制行文；端差处置原文仍以本表为准）。
 - 2026-09-14（**B 轮并入 · 第 2 批**）：新增 §6 **机制面**（总览与统一契约 / 注册与 schema / 上下文与生命周期 / 安全边界 / 调度与权限 / 编辑工具地图 / 逐工具契约 / MCP / 描述六要素 / websearch 死键处置）· §7 **关键决策记录（D-TO1–8）** · §8 **不并项与历史沿革** · §9 体量与拆分规划；来源 = `thincoder-cli/docs/design/TOOLS.md`（**旧档一字未改**——原地作参照历史）；
 需求侧已并入本层 `docs/core/requirements/TOOLS.md`；首部加机制面指针一行。
+- 2026-09-15（**S2 W2 落地 · eng-coder**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W2）：VSC 描述装载面收正——§1 表「工具描述」行（两产品副本已删〔CLI U2 / VSC W2 实核〕，运行期面 = 核包 `tool-docs/*.md`）· §6.2 schema 生成行 + §6.11「描述装载面」行（VSC 原 `.mjs` 内嵌面退场，两端同指核 `loadToolDoc`；锚替换调用期应用）。

@@ -1,9 +1,9 @@
 # Normal 模式（NORMAL-MODE）— 需求
 
 > 板块：提示词装配层（槽位模型 + 场景装配矩阵——机制在位）。需求层文档（`docs/requirements/`）。
-> 定位：本仓机制实况登记——装配单源 = `src/prompt-overlays.mjs`（84 行）；槽位内容 = `src/prompts/` 15 档；
+> 定位：本仓机制实况登记——装配单源 `thincoder-core/prompt-overlays.mjs`（W2 已迁核——现体核内单点；79 行）；槽位内容 = 核包 `prompts/` 15 档；
 > 项目层尾部（AGENTS / skills）由既有注入逻辑承担（`src/agent/context-injections.mjs`）。
-> 设计面：`docs/design/VSC-PROMPTS.md`（双源：`docs/design/prompts/` 中文权威 ↔ `src/prompts/` 英文落地）。
+> 设计面：`docs/design/VSC-PROMPTS.md`（双源：`docs/design/prompts/` 中文权威 ↔ 英文落地——W2 已迁核，现体 = 核包 `prompts/` 15 档）。
 
 ## 1. 总体目标
 
@@ -27,7 +27,7 @@ Normal 模式 = 默认（非工程模式）会话的提示词基底。装配层�
 | # | 维度 | 标准 |
 |---|---|---|
 | N1 | 单一权威源 | 槽位文件路径字符串以装配表为唯一权威；装配链序固定（人格 → 公共 → 纪律 → 项目层尾部） |
-| N2 | 双源对位 | `src/prompts/`（英文落地）与 `docs/design/prompts/`（中文权威）各 15 档对位；跨端语义同源、各端原文自持 |
+| N2 | 双源对位 | 英文落地面（W2 已迁核——现体 = 核包 `prompts/` 15 档）与 `docs/design/prompts/`（中文权威）各 15 档对位；跨端语义同源、各端原文自持 |
 | N3 | 隔离性 | 槽位间不回退（missing = skip + warning）——防止「看似正常」的静默内容降级 |
 | N4 | 可测试 | 装配结果、缺失降级、场景映射由用例断言（含字节稳定性断言） |
 

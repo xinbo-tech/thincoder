@@ -1,14 +1,14 @@
 # VSC 提示词（VSC-PROMPTS）
 
-> 板块：VSC 端提示词（src/prompts/ 新 15 文件——本端独立实现面）。权威关系：机制语义与施工设计源自
+> 板块：VSC 端提示词（原 src/prompts/ 15 文件——W2 已迁核：现体 = 核包 `prompts/` + 本端 `src/prompt-injections.mjs` 取值表）。权威关系：机制语义与施工设计源自
 > CLI 仓 `PROMPT-SYSTEM（CLI 仓）`（分层模型/命名法/装配矩阵/编写纪律权威蓝图）及三施工
 > 档（PROMPT-IMPL-1-TEXT/2-CODE/3-TEST-MIGRATE）——**本端文本以本端原文为准**（多实现面纪律——
 > byte-identical 已废——端特有段各端保留）。状态：**槽位化现行态已落地**（2026-09-10 施工①②③双端
 > 同批——旧 10 文件退役）。注入路径：`src/agent/setup.mjs` assemblePrompt 场景装配。
 
-## 加载拼装机制（施工②四槽位装配——setup.mjs + prompt-overlays.mjs）
+## 加载拼装机制（施工②四槽位装配——setup.mjs + 已迁核的 prompt-overlays.mjs）
 
-### 场景→槽位链（蓝图 §3.2 装配矩阵——`src/prompt-overlays.mjs` SCENARIO_SLOT_FILES）
+### 场景→槽位链（蓝图 §3.2 装配矩阵——已迁核：现体 `thincoder-core/prompt-overlays.mjs` 的 SCENARIO_SLOT_FILES）
 
 | 场景 | 装配链 |
 |---|---|
@@ -19,7 +19,7 @@
 | 特殊·consult | consult-base.md（自含——不入主链） |
 | 特殊·advisor | advisor-design.md / advisor-round{1,2,3}.md（setup 不拼装——advisor/main.mjs 独立注入） |
 
-### 降级链（蓝图 §3.4——setup.mjs + prompt-overlays.mjs）
+### 降级链（蓝图 §3.4——setup.mjs + 已迁核的 prompt-overlays.mjs）
 
 - 人格/纪律/common 槽文件缺失 → 该槽空缺跳过 + 醒目警告（`slotWarning`——depth 0 才注入 history——不
   fallback 其他槽——层间隔离）。

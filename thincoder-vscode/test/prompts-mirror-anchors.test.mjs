@@ -8,8 +8,13 @@
  * 自指防护 / 跨仓读取与比对）；本端单仓版守卫 = ① 双源同名集合各 15 相等 + ② 本端镜像节引用
  * 可解析——**读取面限于本端文件**（零跨仓读取）。
  *
+ * 2026-09-15 W2（`docs/batches/2026-09-15-vsc-core-wiring.md` §2 W2）：英文落地面 `src/prompts/`
+ * 已删 ⇒ ① / T-DC16 的英文侧改指**核包**（`@thincoder/core/prompt-files.mjs` 单一解析面——
+ * 契约 8：调用方不做路径运算）；中文权威面 `docs/design/prompts/` 原地保留（裁定 B——
+ * 迁移期参照历史）⇒ 「双源」= 核包落地面 ↔ 本端中文镜像。
+ *
  * 断言面（2026-09-12 PROSE-ANCHOR-RETIRE 后存留）：
- *   ① 双源同名集合各 15（src/prompts 与 docs/design/prompts——本端两目录对位）；
+ *   ① 双源同名集合各 15（核包 prompts/ 与 docs/design/prompts——落地 ↔ 镜像对位）；
  *   ② 本端镜像节引用不悬空（本端可解析，或以「（CLI 侧）」注记豁免——§2.22.7 V1 判据）；
  *   ③ 机制纪律锚串零维护者注（测试内常量面——T-TD3/T-TD4/T-TD7 残余）。
  * 2026-09-12 PROSE-ANCHOR-RETIRE：原 A1–A12 文本类锚 / A8 工具描述 / 端特有段 / 同文组 / 公共层 /
@@ -21,17 +26,19 @@ import assert from "node:assert"
 import { readFileSync, readdirSync, statSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
+import { PROMPTS_DIR as CORE_PROMPTS_DIR, loadSlot } from "@thincoder/core/prompt-files.mjs"
 
 const VSC = join(dirname(fileURLToPath(import.meta.url)), "..")
 const readVsc = (rel) => readFileSync(join(VSC, rel), "utf8")
 const mdSet = (rel) => readdirSync(join(VSC, rel)).filter((f) => f.endsWith(".md")).sort()
+/** 英文落地面 = 核包 `prompts/`（W2 改指——单一解析面导出的目录常量）。 */
+const mdSetCore = () => readdirSync(CORE_PROMPTS_DIR).filter((f) => f.endsWith(".md")).sort()
 
-test("③ 双源同名集合本端各 15（AC43/T62）", () => {
-  for (const rel of ["src/prompts", "docs/design/prompts"]) {
-    const files = mdSet(rel)
-    assert.equal(files.length, 15, `${rel}: 本端应为 15 档（实 ${files.length}）`)
-  }
-  assert.deepStrictEqual(mdSet("docs/design/prompts"), mdSet("src/prompts"), "本端双源同名集合相等")
+test("③ 双源同名集合各 15（AC43/T62）", () => {
+  assert.equal(mdSetCore().length, 15, `核包 prompts/: 应为 15 档（实 ${mdSetCore().length}）`)
+  const mirror = mdSet("docs/design/prompts")
+  assert.equal(mirror.length, 15, `docs/design/prompts: 本端应为 15 档（实 ${mirror.length}）`)
+  assert.deepStrictEqual(mirror, mdSetCore(), "核包落地 ↔ 本端镜像同名集合相等")
 })
 
 test("⑤ 本端镜像节引用不悬空（本端可解析，或「（CLI 侧）」注记豁免——§2.22.7 V1 判据）", () => {
@@ -111,10 +118,16 @@ test("⑨-3 正常+边界：pe 双源归属句 + 新增锚串零维护者注（T
 // 锚类裁定 = `docs/design/DOC-CODE-RECONCILE.md` §7：本锚类 = **纪律条文 fail-when-unchanged 锚**
 // （被锚文本 = 本批落笔的纪律行为面条文——代理运行期实际执行的条文；断言 = 其**逐字在位性**，脱字即红；
 // **非退役散文锚类**——2026-09-12 PROSE-ANCHOR-RETIRE 删的 = 读非测试档文本的叙述性转述核对）。
+// W2（2026-09-15）：本端英文落地面 `src/prompts/` 已删 ⇒ 被锚文本 = **运行期落地档 = 核包
+// `prompts/discipline-engineering.md`**（本端装配实际执行面）；同节逐字同源断言退场——
+// 核包 ↔ 中文镜像属**不同实现面**（多实现面纪律：语义同源、不做 byte-identical 硬一致），
+// 镜像（`docs/design/prompts/`）为裁定 B 保留的参照历史、非运行期面。
 const F20_LINES = [
-  "6. **批 = 一次实现轮、各带本批批次档**：一批 = 一次实现轮——每轮带**本批的批次档**",
-  "   （`batchDoc` = 本批的批次档）；**子代理只写本仓文件**（含本仓批次档里自己那一段）；",
-  "   确需本仓之外的改动 → **停下上报**，由父侧另起一轮。",
+  "6. **批 = 一次实现轮、各带自己的批次档**：一批 = 一次实现轮——每轮带**本批的批次档**（`batchDoc` = 本批的批次档）。",
+  "7. **子代理只写本仓**：任何子代理（eng-designer / eng-coder）**只写本仓文件**——含本仓批次档里自己那一段；",
+  "   写本仓之外的任何档（含代写、顺手改、路径指向本仓之外的写入）= **违规**。",
+  "8. **需本仓之外的改动 = 停下上报**：本轮确需动本仓之外的档时，**停下报告**（改什么 / 为什么），",
+  "   由主 agent **另起一轮处置**——不得在本轮落笔本仓之外。",
 ]
 const F20_SECTION = "## 文档与台账自持（本仓记本仓的）"
 
@@ -127,17 +140,11 @@ function f20Section(text) {
   return lines.slice(i + 1, j === -1 ? lines.length : j)
 }
 
-test("T-DC16 正常：F20 批轮次与写域纪律——双源同节逐字在位（脱字即红）+ 零维护者注", () => {
-  const secs = {}
-  for (const rel of ["src/prompts/discipline-engineering.md", "docs/design/prompts/discipline-engineering.md"]) {
-    const sec = f20Section(readVsc(rel))
-    const i = sec.indexOf(F20_LINES[0])
-    assert.ok(i >= 0, `${rel}: F20 条 6 在位（删除 / 改写即行为面失守）`)
-    assert.deepStrictEqual(sec.slice(i, i + F20_LINES.length), F20_LINES, `${rel}: F20 三条逐字在位（fail-when-unchanged）`)
-    secs[rel] = sec.slice(i, i + F20_LINES.length)
-  }
-  assert.deepStrictEqual(secs["src/prompts/discipline-engineering.md"], secs["docs/design/prompts/discipline-engineering.md"],
-    "双源同节同行逐字同源（各端原文自持——语义同源）")
+test("T-DC16 正常：F20 批轮次与写域纪律——运行期落地档（核包）同节逐字在位（脱字即红）+ 零维护者注", () => {
+  const sec = f20Section(loadSlot("discipline-engineering.md"))
+  const i = sec.indexOf(F20_LINES[0])
+  assert.ok(i >= 0, "thincoder-core/prompts: F20 条 6 在位（删除 / 改写即行为面失守）")
+  assert.deepStrictEqual(sec.slice(i, i + F20_LINES.length), F20_LINES, "thincoder-core/prompts: F20 三条逐字在位（fail-when-unchanged）")
   for (const s of F20_LINES) {
     assert.ok(!/\d{4}-\d{2}-\d{2}|第\s*\d+\s*批|评审\s*#/.test(s), `锚文本零维护者注：${s.slice(0, 20)}…`)
     assert.ok(s.length <= 300, `行宽 ≤300：${s.length}`)

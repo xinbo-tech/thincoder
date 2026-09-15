@@ -16,7 +16,7 @@
 |---|---|---|
 | F1 | 注册面单一 | `builtinTools`（`src/tools/index.mjs:50`）为权威列举面——新增 / 删除工具改一处且可被探针枚举（`read_image` 例外：按 multimodal 装配单独挂载） |
 | F2 | 统一契约 | 每工具 = `{name, description, parameters, readonly, …, execute}` → `toOpenAISchema`（OpenAI function schema）；execute 返回字符串（dispatch `String(raw)`、AbortError 重抛） |
-| F3 | 描述外部装载（25 档） | `DESC(name)` 运行时装载（`src/tools/shared.mjs:15`）；`src/tools/*.md` 25 档在位、`description: DESC(` 接线命中 25 处——描述含参数 / 路由 / 反模式（工具选择面与对端同构） |
+| F3 | 描述外部装载（25 档） | `DESC(name)` 运行时装载（原 `src/tools/shared.mjs:15`——W2 已迁核：核 `loadToolDoc` + 本端 `toOpenAISchema` 注入）；25 档描述在位（W2 已迁核——现体 = 核包 `tool-docs/`）、`description: DESC(` 接线命中 25 处——描述含参数 / 路由 / 反模式（工具选择面与对端同构） |
 | F4 | 工具面按角色 / 深度缩减 | 只读角色（explore / plan / consult，depth>0）仅只读集（`src/agent/setup.mjs:195`）；`question` 全 depth>0 剔除（后台子代理永不弹用户）；eng-coder spawn 机械门禁（token） |
 | F5 | 调度确定 | 连续只读工具并行、连续 subagent 并行（上限 `MAX_PARALLEL_SUBAGENTS`）、其余单条；**批间串行**、结果按调用序提交；前置门禁单点判定（批扫描 + 逐项共用） |
 | F6 | 权限审批 | 逐工具弹窗（approve / deny / approve-all）+ 批合并询问 + diff 预览（原生 diff）；`autoApprove` = 活事实源（轮中翻转下一条即生效） |

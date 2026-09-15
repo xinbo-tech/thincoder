@@ -44,9 +44,7 @@
  *
  * Project customisation: .thincoder/advisor.md in the project root.
  */
-import { readFileSync } from "node:fs"
-import { join, dirname } from "node:path"
-import { fileURLToPath } from "node:url"
+import { loadAdvisorPrompt } from "@thincoder/core/prompt-files.mjs"
 import { extractAgentResponseTable } from "./history.mjs"
 import { buildAdvisorUserMessage, resolveScopeFiles, buildDesignApprovalBlock } from "./messages.mjs"
 import { buildConvergenceBody } from "./convergence.mjs"
@@ -57,32 +55,23 @@ export { escapeLiteralEscapes }
 export { ADVISOR_MD_PATH, extractAgentResponseTable, extractConversationBackground } from "./history.mjs"
 export { buildAdvisorUserMessage } from "./messages.mjs"
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-
 // ────────────────────────────────────────
-// Prompt files — loaded at module init
+// Prompt files — loaded at module init（W2：加载根 = 核包单一解析面 `loadAdvisorPrompt`；
+// 本端 `src/prompts/` 已删——缺档语义不变 = 抛错（契约 9 / D-C13；CLI U2 同法））
 // ────────────────────────────────────────
 
-function loadPrompt(file, name) {
-  try {
-    return readFileSync(join(__dirname, "..", "prompts", file), "utf8")
-  } catch {
-    throw new Error(`${name} missing from the installation (prompts/${file}) — reinstall thincoder or restore the file`)
-  }
-}
-
-const ADVISOR_ROUND1 = loadPrompt("advisor-round1.md", "advisor-round1.md")
+const ADVISOR_ROUND1 = loadAdvisorPrompt("advisor-round1.md")
 // ROUND2/3 are used whenever a convergence round (round 2+) is being built:
 // in-run session continuation replaces the system prompt with them, and a
 // rebuilt fresh session (e.g. after a failed review) also selects them via
 // buildAdvisorSystemPrompt when _advisorRound > 0.
-const ADVISOR_ROUND2 = loadPrompt("advisor-round2.md", "advisor-round2.md")
-const ADVISOR_ROUND3 = loadPrompt("advisor-round3.md", "advisor-round3.md")
+const ADVISOR_ROUND2 = loadAdvisorPrompt("advisor-round2.md")
+const ADVISOR_ROUND3 = loadAdvisorPrompt("advisor-round3.md")
 // Design-review prompt — hard-loaded like the round prompts (decision
 // 2026-08-21): a missing file means a broken installation, and silently
 // degrading to a lesser in-code prompt would quietly strip the approval-signal
-// and citation rules, disabling design approval entirely. loadPrompt throws.
-const ADVISOR_DESIGN = loadPrompt("advisor-design.md", "advisor-design.md")
+// and citation rules, disabling design approval entirely. loadAdvisorPrompt throws.
+const ADVISOR_DESIGN = loadAdvisorPrompt("advisor-design.md")
 
 // ────────────────────────────────────────
 // System prompt building

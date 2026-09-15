@@ -2,6 +2,7 @@
  * index.mjs — Tools module index: imports, re-exports, and tool registry
  */
 
+import { applyPromptInjections } from "@thincoder/core/prompt-files.mjs"
 import { readTool, writeTool, editTool, hashlineEditTool } from "./file.mjs"
 import { globTool, grepTool } from "./search.mjs"
 import { bashTool } from "./shell.mjs"
@@ -63,13 +64,15 @@ export const builtinTools = [
   peerInstancesTool, // R10 L2——只读（纯查询——不认领不写）
 ]
 
-/** Convert a tool definition to OpenAI function schema */
+/** Convert a tool definition to OpenAI function schema；`description` 经锚替换原语
+ *  （CORE-UNIFICATION §2.13.8——W2 接线：`bash-terminal-face` / `question-ui-face` 两锚在本端
+ *  描述面；未注册 = 恒等，现行行为零变）。 */
 export function toOpenAISchema(tool) {
   return {
     type: "function",
     function: {
       name: tool.name,
-      description: tool.description,
+      description: applyPromptInjections(tool.description),
       parameters: tool.parameters,
     },
   }

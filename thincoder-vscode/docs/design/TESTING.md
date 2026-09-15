@@ -201,7 +201,7 @@
 | status-line | 169 | T-CL24 端差登记（悬浮回底钮在位） | 段删 | 177-179 | 读 `webview` js / index.html 子串 |
 | tool-descriptions | 40 | T-TD-1 描述 = DESC 读出（与 .md 全文相等） | 整删 | 40-50 | 读 `src/tools/*.md` 全文等 + 子串（已删除——删除记录 = 本档 §8.1） |
 | tool-descriptions | 77 | T-TD-4 打包面：`.vscodeignore` 无 `*.md` 排除 | 整删 | 77-85 | 读仓根 `.vscodeignore` 文本（已删除——删除记录 = 本档 §8.1） |
-| tool-descriptions | 52 | T-TD-2 read.md 含 Routing 段与指向句 | 段删 | 54-59 | 读 `src/tools/read.md` 子串 / 正则 |
+| tool-descriptions | 52 | T-TD-2 read.md 含 Routing 段与指向句 | 段删 | 54-59 | 读 `thincoder-core/tool-docs/read.md` 子串 / 正则（W2 已迁核——现体 = `thincoder-core/tool-docs/read.md`） |
 | tool-descriptions | 62 | T-TD-3 内联描述块零残留 | 段删 | 66-72 | 读 `src/tools/*.mjs` 行文本 |
 | turn-across-segments | 191 | T11 种子锚：escalate-async 续跑支种子传参驻留 | 段删 | 194-195 | 读 src 子串在场 + 出现计数（C3） |
 | verify-redesign | 149 | T-V10 prompts 验声明参数名驻留（旧语义负向锚已裁） | 整删 | 149-160 | 读 `src/prompts/*.md` 正则在场（唯一断言）（已删除——删除记录 = 本档 §8.1） |
