@@ -65,8 +65,8 @@
 | 帧纯函数 / 消费 helper | `thincoder-vscode/src/agent/run-helpers.mjs:29`（`turnFrame`）· `:37`（`applyTurnFrame`） | 在位 |
 | 子代理续跑循环 | `thincoder-vscode/src/agent-tools/subagent-run.mjs:85`（`for (let resume = false; ; resume = true)`）· `:132`（`applyTurnFrame`）· `:141`（`resume` → `history` + `_turnSeqBase`）· `:175`（`ContinueError` 分支） | 在位 |
 | 撞墙终态文案 | `thincoder-vscode/src/agent-tools/subagent-run.mjs:195`（`onSubagent` error）· `:199`（返回文本） | 在位 |
-| 飞刀同步续跑 | `thincoder-vscode/src/agent-tools/subagent-escalate.mjs:153`（`runOpts(resume)`）· `:158`/`:161` · `:163`（`for (let resumes = 0; ; resumes++)`）· `:177`（`runOpts(resumes > 0)`）· `:197`（`ContinueError` 分支） | 在位 |
-| 飞刀 async 面 | `thincoder-vscode/src/agent-tools/subagent-escalate-async.mjs:76`（注释：续跑支当前休眠——`ContinueError` 全走 error-class return） | 在位（同构契约驻留） |
+| 飞刀同步续跑 | `thincoder-vscode/src/agent-tools/subagent-escalate.mjs:153`（`runOpts(resume)`）· `:158`/`:161` · `:163`（`for (let resumes = 0; ; resumes++)`）· `:177`（`runOpts(resumes > 0)`）· `:197`（`ContinueError` 分支）——**该端档已退役**（W12 删除集；现体 = 核 `thincoder-core/agent-tools/subagent-actions.mjs`） | 在位 |
+| 飞刀 async 面 | `thincoder-vscode/src/agent-tools/subagent-escalate-async.mjs:76`（注释：续跑支当前休眠——`ContinueError` 全走 error-class return）——**该端档已退役**（W12 删除集） | 在位（同构契约驻留） |
 | 会诊续跑 | `thincoder-vscode/src/agent-tools/consult.mjs:300`（`consultTurns ?? 40`）· `:310`（`ContinueError`）· `:319-325`（队列 + watchdog 重挂） | 在位 |
 | 主 agent 回合循环 | `thincoder-vscode/src/extension/panel-chat.mjs`（回合循环） | 在位 |
 

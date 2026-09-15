@@ -6,9 +6,13 @@
  * **只跑一次**（2026-09-06 用户裁定："双源都是一起发的，不必测两次"）。
  *
  * 流程（两段——每段各自可见于下方输出，任何一步失败即中止发布）：
+ *   段 0  核版本存在性预检：registry 上须已有 vsix 将内嵌的核版本（核先发——A6 / §2.6.1）。
  *   段 1  打包一次：`vsce package` 自动跑 `vscode:prepublish` = lint + test:full 全量
  *         （~72s）——全量门禁仅此 1 跑。无 <vsix> 参数时本脚本自跑该段；
  *         给了 <vsix>（已 `npm run package` 过）则整段跳过。
+ *   段 1.5 vsix 含核断言：`scripts/check-vsix.mjs`（T-C7 vsix 域 = 断言 B + D——含核 +
+ *         版本逐字相等 + 提示词面完备性）；fail-closed，不过即中止（vsce 自身对无核产物
+ *         仍 exit 0——R6 / R8① 实证）。
  *   段 2  双源发同一 .vsix：`vsce publish -i <vsix>` + `ovsx publish <vsix>`——发已打包
  *         文件，vsce/ovsx 都不再触发打包/测试（代码实证：vsce publish -i 直传 vsix 跳过
  *         prepublish；ovsx 仅无参时经 createVSIX 再打包再跑 prepublish——单源/补源场景
@@ -25,8 +29,10 @@
  * Usage:
  *   node scripts/publish-all.mjs            # 段1 vsce package（全量 1 跑）→ 双源发同一 vsix
  *   node scripts/publish-all.mjs <vsix>     # 已打包：跳过段1——双源直发该 vsix
+ *   node scripts/publish-all.mjs [<vsix>] --dry-run   # 干跑：段 0 / 1 / 1.5 照跑，段 2 不执行
+ *                                                     # （零发布副作用；PAT 预检免 —— 不发布无需凭据）
  *
- * Required env: VSCE_PAT (marketplace), OVSX_PAT (open-vsx).
+ * Required env: VSCE_PAT (marketplace), OVSX_PAT (open-vsx) —— 真实发布必需（--dry-run 免）。
  * Skipped steps must be explicit: --skip-marketplace / --skip-openvsx (each prints a loud
  * warning; skipping BOTH aborts).
  */
@@ -42,18 +48,20 @@ const vsixArg = args.find((a) => !a.startsWith("--"))
 const vsix = vsixArg ? resolve(vsixArg) : undefined
 const skipMarketplace = args.includes("--skip-marketplace")
 const skipOpenvsx = args.includes("--skip-openvsx")
+const dryRun = args.includes("--dry-run")
 
-if (skipMarketplace && skipOpenvsx) {
+if (skipMarketplace && skipOpenvsx && !dryRun) {
   console.error("❌ both registries skipped — nothing to publish. Aborting.")
   process.exit(1)
 }
 
 // ── PAT 预检（先于打包/发布——缺 PAT 立即中止，不做半个发布）──
-if (!skipMarketplace && !process.env.VSCE_PAT) {
+// dry 面不发布 ⇒ 免检（否则干跑要传占位凭据才能过门）。
+if (!dryRun && !skipMarketplace && !process.env.VSCE_PAT) {
   console.error("❌ VSCE_PAT not set — cannot publish to the marketplace")
   process.exit(1)
 }
-if (!skipOpenvsx && !process.env.OVSX_PAT) {
+if (!dryRun && !skipOpenvsx && !process.env.OVSX_PAT) {
   console.error("❌ OVSX_PAT not set — cannot publish to Open VSX")
   process.exit(1)
 }
@@ -63,6 +71,18 @@ const run = (cmd, label) => {
   // execSync throws on non-zero exit — a failed step must fail the release,
   // never look like progress.
   return execSync(cmd, { cwd: ROOT, stdio: "inherit", timeout: 600_000, env: process.env })
+}
+
+// ── 段 0：核版本存在性预检（核先发——vsix 将内嵌该版本，registry 上须已有）──
+const CORE_VERSION = JSON.parse(readFileSync(join(ROOT, "..", "thincoder-core", "package.json"), "utf8")).version
+console.log(`\n▶ ⓪ 核版本存在性预检\n  $ npm view @thincoder/core@${CORE_VERSION} version`)
+try {
+  execSync(`npm view @thincoder/core@${CORE_VERSION} version`, { cwd: ROOT, stdio: "pipe", timeout: 120_000 })
+  console.log(`  ✔ registry 上存在 @thincoder/core@${CORE_VERSION}`)
+} catch {
+  console.error(`  ✘ registry 上找不到 @thincoder/core@${CORE_VERSION} —— 核须先发布（A6 / §2.6.1）`)
+  if (!dryRun) process.exit(1)
+  console.warn("  ⚠️ --dry-run：预检失败不中止（本次不发布；真实发布会在此 exit 1）")
 }
 
 // ── 段 1：打包（仅未提供 vsix 时）——vscode:prepublish 全量门禁仅此 1 跑 ──
@@ -76,30 +96,41 @@ if (!existsSync(artifact)) {
   process.exit(1)
 }
 
-// ── 段 2：双源发同一 .vsix（已打包文件——不再触发打包/测试）──
-if (skipMarketplace) {
-  console.log("\n⚠️  --skip-marketplace: NOT publishing to the Microsoft Marketplace (explicit flag).")
-} else {
-  // vsce reads VSCE_PAT natively — keep the PAT off the command line (process-list / crash-log leak).
-  run(`npx @vscode/vsce publish -i "${artifact}"`, "② Microsoft Marketplace (vsce publish -i <vsix> — 不触发打包/测试)")
-}
+// ── 段 1.5：vsix 含核断言（T-C7 vsix 域 = 断言 B + D——fail-closed，不过即中止）──
+run(`node scripts/check-vsix.mjs "${artifact}"`, "①.5 vsix 含核断言 (check-vsix — 含核 + 版本逐字 + 提示词面完备)")
 
-if (skipOpenvsx) {
-  console.log("\n⚠️  --skip-openvsx: NOT publishing to Open VSX (explicit flag).")
+// ── 段 2：双源发同一 .vsix（已打包文件——不再触发打包/测试）──
+if (dryRun) {
+  console.log("\n🧪 --dry-run：跳过段 2 双源发布（段 0 / 1 / 1.5 已实跑——零发布副作用）。")
 } else {
-  // ovsx reads OVSX_PAT natively (util.addEnvOptions) — keep the PAT off the command line.
-  run(`npx ovsx publish "${artifact}"`, "③ Open VSX (ovsx publish <vsix> — 不再打包/不触发测试)")
+  if (skipMarketplace) {
+    console.log("\n⚠️  --skip-marketplace: NOT publishing to the Microsoft Marketplace (explicit flag).")
+  } else {
+    // vsce reads VSCE_PAT natively — keep the PAT off the command line (process-list / crash-log leak).
+    run(`npx @vscode/vsce publish -i "${artifact}"`, "② Microsoft Marketplace (vsce publish -i <vsix> — 不触发打包/测试)")
+  }
+
+  if (skipOpenvsx) {
+    console.log("\n⚠️  --skip-openvsx: NOT publishing to Open VSX (explicit flag).")
+  } else {
+    // ovsx reads OVSX_PAT natively (util.addEnvOptions) — keep the PAT off the command line.
+    run(`npx ovsx publish "${artifact}"`, "③ Open VSX (ovsx publish <vsix> — 不再打包/不触发测试)")
+  }
 }
 
 // ── Verdict ──
 // Reaching this line means every requested publish command exited 0 — that IS the
 // release verdict (2026-08-31 ruling; F-R7e 2026-09-06 重申). Any failure above
 // (step throw / PAT preflight / artifact check) exited before this line.
-const done = [`marketplace : ${skipMarketplace ? "⏭️ skipped (explicit)" : "✅ published"}`,
-  `open-vsx    : ${skipOpenvsx ? "⏭️ skipped (explicit)" : "✅ published"}`]
+const done = [`marketplace : ${dryRun ? "🧪 dry-run (未发布)" : skipMarketplace ? "⏭️ skipped (explicit)" : "✅ published"}`,
+  `open-vsx    : ${dryRun ? "🧪 dry-run (未发布)" : skipOpenvsx ? "⏭️ skipped (explicit)" : "✅ published"}`]
 console.log("\n──────── publish-all summary ────────")
 console.log(done.join("\n"))
-console.log(`\n🚀 release ${PKG.version} submitted to the requested registries.`)
+if (dryRun) {
+  console.log(`\n🧪 dry-run 完成：段 0（核版本预检）+ 段 1${vsix ? "⏭️（vsix 已提供）" : ""} + 段 1.5（断言 B + D）已实跑，段 2 未执行——零发布副作用。`)
+} else {
+  console.log(`\n🚀 release ${PKG.version} submitted to the requested registries.`)
+}
 console.log(`   全量门禁:${vsix ? " 跳过（vsix 已打包）" : ` 打包 ${PKG.name}-${PKG.version}.vsix 时 1 跑`}——双源发同一 .vsix`)
 console.log("   Per RELEASE.md: publish exit-0 = release done; review queues are the registries' business.")
 process.exit(0)

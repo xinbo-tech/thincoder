@@ -36,7 +36,7 @@
 | 1 | `A2-SUMMARY-PARITY.md` | 66 | 历史 | ② 档头自述「已交付核销」——正文 = 施工骨架（需求/设计/受影响文件/验收） | 不迁（就地留） |
 | 2 | `ACTIVITY-REWRITE-SIMPLE.md` | 154 | 历史 | ② 档头 `:10` 自述「位置形态已被取代」（2026-09-11 活动区回归批） | 不迁（就地留） |
 | 3 | `ACTIVITY-SPLIT.md` | 97 | 历史 | ② 档头自述「已交付核销」；现态 = `thincoder-vscode/webview/activity.js` | 不迁（就地留） |
-| 4 | `ADVISOR-CONVERGENCE.md` | 1426 | 活 · 统一面 | ① **核层同名档已由并行 CLI 批建**（`docs/core/design/ADVISOR-CONVERGENCE.md` + `ADVISOR-GUARDS.md`）；机制在现行代码在位（`thincoder-vscode/src/advisor/`） | **并入既有**——VSC 面内容未并 ⇒ 转 §8B（须拆分） |
+| 4 | `ADVISOR-CONVERGENCE.md` | 1426 | 活 · 统一面 | ① **核层同名档已由并行 CLI 批建**（`docs/core/design/ADVISOR-CONVERGENCE.md` + `ADVISOR-GUARDS.md`）；机制在现行代码在位（W12 已迁核——`thincoder-vscode/src/advisor/` 端自持镜像已删；现体 = 核 `thincoder-core/advisor/**` + `agent-tools/`） | **并入既有**——VSC 面内容未并 ⇒ 转 §8B（须拆分） |
 | 5 | `AGENT-LOOP.md` | 1571 | 活 · 统一面 | ① `docs/core/design/AGENT-LOOP.md` 在位（670 行）——其 §6 为 CLI 档并入面 | **并入既有** → 待父侧另批（§8B-1） |
 | 6 | `AGENT-PARAMS-TUNING.md` | 114 | 活 · 统一面 | ① `docs/core/design/AGENT-PARAMS.md` 在位；该档 `:114` 登记「VSC 端 30 硬帽 ⇒ 归 VSC 轮」 | **并入既有** → 待父侧另批（§8B-2） |
 | 7 | `APPLY-PATCH.md` | 41 | 活 · 统一面 | ① `docs/core/design/APPLY-PATCH.md` 在位 | **并入既有**（§8B-13） |
@@ -465,7 +465,7 @@ settle 落盘块起点（advisor-async）旧档记 364 行 → 现状 363 行；
 | # | 验收标准（机器可验） | 回指 |
 |---|---|---|
 | **A-VM27** | 批 7 并入 8 档逐档 ≤500 行（实测见 §10 批 7：364 / 366 / 252 / 221 / 212 / 257 / 83 / 218）· 各含「不并项与历史沿革」追加（(d) 类逐项登记） | F-M3 · F-M4 · N-M3 |
-| **A-VM28** | 坐标按现状实核（本批实核 `thincoder-vscode/src/extension/panel-session.mjs:22,57` · `thincoder-vscode/src/extension/session-slot-write.mjs` · `thincoder-vscode/src/extension/history-window.mjs:22,106` · `thincoder-vscode/src/indexer.mjs:156,170` · `thincoder-vscode/src/compact.mjs:31,115,323,367`——该档 **W6 已删**、现体 `thincoder-vscode/src/agent/run-stages.mjs` · `thincoder-vscode/src/extension/panel-callbacks.mjs:144-152` · `thincoder-vscode/src/agent/setup-reminders.mjs:145,163,194` · `thincoder-vscode/src/tools/git-ext.mjs:55` · `thincoder-vscode/src/tools/shell.mjs:139,148` · `thincoder-vscode/src/tools/git-checkpoint.mjs:31,46` · `thincoder-vscode/src/agent-tools/consult.mjs:29,223` · `thincoder-vscode/src/config-mcp.mjs:12,19,37,63` · `thincoder-vscode/src/extension/panel-mcp.mjs:8,28`） | F-M5 |
+| **A-VM28** | 坐标按现状实核（本批实核 `thincoder-vscode/src/extension/panel-session.mjs:22,57` · `thincoder-vscode/src/extension/session-slot-write.mjs` · `thincoder-vscode/src/extension/history-window.mjs:22,106` · `thincoder-vscode/src/indexer.mjs:156,170`〔W8 已删——现体 = 核 `thincoder-core/memory/**`〕 · `thincoder-vscode/src/compact.mjs:31,115,323,367`——该档 **W6 已删**、现体 `thincoder-vscode/src/agent/run-stages.mjs` · `thincoder-vscode/src/extension/panel-callbacks.mjs:144-152` · `thincoder-vscode/src/agent/setup-reminders.mjs:145,163,194` · `thincoder-vscode/src/tools/git-ext.mjs:55`〔W5 已删——现体 = 核 `thincoder-core/tools/git-ext.mjs`〕 · `thincoder-vscode/src/tools/shell.mjs:139,148` · `thincoder-vscode/src/tools/git-checkpoint.mjs:31,46`〔W5 已删——现体 = 核 `thincoder-core/tools/git-checkpoint.mjs`〕 · `thincoder-vscode/src/agent-tools/consult.mjs:29,223`〔W12 已删——现体 = 核 `thincoder-core/agent-tools/consult.mjs`〕 · `thincoder-vscode/src/config-mcp.mjs:12,19,37,63` · `thincoder-vscode/src/extension/panel-mcp.mjs:8,28`） | F-M5 |
 | **A-VM29** | 零 `T-` 形跨域用例号（八档零字面跨域编号引）；PHILOSOPHY 销项零并入已核（VSC 版 = core 档子集） | F-M9 · F-M2 |
 | **A-VM30** | 三机检：域一锚悬空 0 · 宽度新增违规 0 · 台账 0；`git status` 本批 ⊆ 写域（8 目标 core 档 + INVENTORY + 批次档 §2 append） | N-M2 · N-M3 · N-M5 |
 

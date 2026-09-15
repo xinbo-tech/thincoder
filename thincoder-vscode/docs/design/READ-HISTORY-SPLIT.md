@@ -27,7 +27,7 @@
 
 ### 文件划分
 1. **read-history.mjs（核心——382 → ~280）保留**：头文档 + 常量错误 + 消息助手（③）+ queryMessages + scanLinesSync + loadSessionHistory + 工具导出 execute + import 发现面 + re-export（若外部消费）
-2. **read-history-discovery.mjs（新 ~110）**：listCwdSessions + slotMeta/tidyCwd/sha1hex（:201-307 verbatim 迁入）
+2. **read-history-discovery.mjs（新 ~110）**：listCwdSessions + slotMeta/tidyCwd/sha1hex（:201-307 verbatim 迁入）——〔**W17 已退役**：W9 删 `read-history.mjs` 后零消费者——孤儿档清退（核 `thincoder-core/agent-tools/read-history.mjs` 单源承接；删除记录见批次档 §5）〕
    ——依赖核（评审 #2 设计时定 + 勘误：勘察确认发现面仅引用 node:fs/node:path + 自带工具——实现期实测
    发现实含 **node:crypto（sha1hex createHash）+ session-io.mjs（tidyCwd normalizeCwd/listCwdSessions
    sessionsDir）**——verbatim 强制非静默扩展——5300f09 交付报告三处上报——零核心私有引用约束成立）
@@ -48,7 +48,7 @@
 | 文件 | 改动 | 行数 |
 |---|---|---|
 | src/agent-tools/read-history.mjs | 核心保留 + import/reexport （W9 已迁核——本端该档已删；现体 `thincoder-core/agent-tools/read-history.mjs`） | 382 现（≈−100±5 → ~280——评审 #1 实测） |
-| src/agent-tools/read-history-discovery.mjs | 新建——发现面 | 新（~110±5——评审 #1） |
+| src/agent-tools/read-history-discovery.mjs | 新建——发现面（**W17 已退役**——孤儿档删除，删除记录见批次档 §5） | 新（~110±5——评审 #1）；现 **0** |
 | AGENTS.md 模块图 | 如涉及同步 | doc |
 | docs/TODO.md L25 | 勾销（父侧核销时） | doc |
 

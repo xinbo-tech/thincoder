@@ -19,9 +19,9 @@ VS Code 扩展 = ThinCoder 产品族的独立产品之一（与 CLI 同级——
 | 宿主 API | VS Code Extension API | 零 npm 运行时依赖的宿主面（产品族定性 = `docs/core/requirements/PROJECT.md §2`） |
 | LLM 调用 | 原生 `fetch` + SSE 流式 | OpenAI 兼容协议，支持 reasoning / thinking |
 | 工具审批 | `autoApprove` 会话级槽位字段，默认 `false` | AUTO 按钮 / approve-all 翻转；agent 循环 live 读取，mid-turn 立即生效 |
-| 模型能力 | 自包含 `thincoder-vscode/src/config.mjs` | MODEL_SPECS 表本端独立维护（preset 表权威 = CLI——见 core 档 C3） |
+| 模型能力 | 核规格表 + 端侧增补面（`thincoder-vscode/src/specs.mjs`——W16 已迁核，原自包含 `thincoder-vscode/src/config.mjs` 镜像已删；现体 = 核 `thincoder-core/model-specs.mjs`） | MODEL_SPECS 表由核维护，端侧仅 `reasoningEffortDefault` 增补面（preset 表权威 = CLI——见 core 档 C3） |
 | Session 标题 | LLM 自动生成（首条消息后触发） | 失败静默降级为截断消息 |
-| 协议 transport | 三协议均已实现 | `thincoder-vscode/src/provider/transports/`（openai / anthropic / google——契约 = core 档 C4） |
+| 协议 transport | 三协议均已实现 | 核 `thincoder-core/provider/**`（openai / anthropic / google——契约 = core 档 C4；W10 已迁核，端自持 `thincoder-vscode/src/provider/transports/` 已删） |
 | 模型选择 webview 形态 | hover flyout 子菜单 | 两级语义对齐 CLI（契约 = core 档 C5）；webview 无键盘导航 ⇒ 主下拉列 provider 行 + hover 弹出模型子菜单 |
 | 安全边界 | 透明 + 默认保守 + 信任用户判断 | 不搞命令级沙箱；开启 AUTO 时弹一次性警告；审计靠 git + 聊天历史（不建独立审计日志）；prompt injection 防御 v2 再议 |
 | Multi-root 策略 | 目标 = 所有文件夹对 Agent 可见 | 现状 = `workspaceFolders[0]`；状态栏标明工作目录（用户知道限制） |

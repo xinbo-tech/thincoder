@@ -35,7 +35,7 @@
 
 ### 2.3 Agent 运行参数（写盘链与合并语义）
 
-- 写入链：面板 → `saveAgentSettingsFromPanel`（**单写通道**，`thincoder-vscode/src/extension/settings.mjs:122` 自 `config-io` 转出）→ config.json `agent.*`。
+- 写入链：面板 → `saveAgentSettingsFromPanel`（**单写通道**，`thincoder-vscode/src/extension/settings.mjs:122` 转出——W16 已迁核，原 `config-io` 自持面已删；现体 = 核 `thincoder-core/config-io.mjs`）→ config.json `agent.*`。
 - **advisor 字段级合并**（GitHub #3 修复）：payload 缺键**从磁盘回填**（对端写入的 provider / model / thinking / reasoningEffort 在面板保存后存活）；显式 `null` / `''` = 清空删除；wire 层空槽位必须发 `null` 而非 `undefined`（postMessage JSON 会丢弃 `undefined` 键——**缺失与清空必须可区分**）。`timeoutMs` 透传保留手写值。
 - 面板打开即拉新：`openSettings` → `getAgentSettings`（webview → extension）→ extension 重读盘推送 `agentSettings`（extension → webview）→ 收到后渲染（250ms 超时回退快照）。对端写盘后打开面板即可见。
 - `subagentModels` 优先级：工具 model 参数 > `subagentModels[role]` > `subagentModel` > 父 provider。
@@ -55,7 +55,7 @@ embedding key + 构建按钮 + 状态；向量维度 / 模型切换的校验与�
 - **机制单源** = `docs/core/design/MEMORY.md` §6.7（家目录展开——单一规范化点 / 只读归一）。本档**不重述机制**，只登记 VSC 端的事实与端差。
 - **VSC 端事实**：本端仅 `shell` 字段同病（无 `memory.dbPath` / `projectDir` / `team.dir` 对位）。
   - 归一落点 = **读取点展开**：`thincoder-vscode/src/agent/setup.mjs:237`（`cfgShell = … expandHome(raw.shell) : null`）。
-  - 消费端 `thincoder-vscode/src/tools/shell.mjs:229`（`exec`）**零改**；展开器 = `thincoder-vscode/src/expand-home.mjs:16`（`expandHome`）。
+  - 消费端 `thincoder-vscode/src/tools/shell.mjs:229`（`exec`）**零改**；展开器 = 核 `thincoder-core/expand-home.mjs:11`（`expandHome`——W4 已迁核，端自持镜像已删）。
 - **只读归一**：磁盘原文保留（不写回）；面板与 `settings` 工具写面不展开（运行时当次展开缺口 = 已知限制，见 §3）。
 
 ### 2.7 外部写感知（config.json 事件驱动刷新）
@@ -65,9 +65,9 @@ embedding key + 构建按钮 + 状态；向量维度 / 模型切换的校验与�
 **契约**：`startConfigWatch({ onChange, debounceMs = 300, configPath }) → { dispose, noteSelfWrite }`
 （`thincoder-vscode/src/extension/config-watch.mjs:35`——纯装配模块，不含业务）：
 
-- 注册 `createFileSystemWatcher(new RelativePattern(Uri.file(dirname(configPath)), basename(configPath)))`，监听 change / create / delete 三类事件；`configPath` 缺省 = `config-io` 的 `_configPath()` 当前值。
+- 注册 `createFileSystemWatcher(new RelativePattern(Uri.file(dirname(configPath)), basename(configPath)))`，监听 change / create / delete 三类事件；`configPath` 缺省 = `config-io` 的 `_configPath()` 当前值（W16 已迁核——现体 = 核 `thincoder-core/config-io.mjs`）。
 - 事件 → 去抖（`debounceMs`）→ **stat 元组（mtimeMs + size）与基线比对**：同 → 零推送；异 → `onChange()`（比对后基线更新为当前元组）；启动时基线 = 启动时 stat。
-- **自写抑制（基线回填）**：`noteSelfWrite()` = 重取当前元组置为基线（`config-watch.mjs:49`）；时机 = 本进程写盘成功后——`saveRaw`（`thincoder-vscode/src/config-io.mjs:96`——写盘唯一通道）在写成功路径上经 `onConfigSelfWrite(fn)`（`config-io` 导出，`:52`）同步回调，`startConfigWatch` 内部订阅（退订随 `dispose`）。
+- **自写抑制（基线回填）**：`noteSelfWrite()` = 重取当前元组置为基线（`config-watch.mjs:49`）；时机 = 本进程写盘成功后——`saveRaw`（核 `thincoder-core/config-io.mjs`——写盘唯一通道；W16 已迁核，端自持镜像 `thincoder-vscode/src/config-io.mjs` 已删）在写成功路径上经 `onConfigSelfWrite(fn)`（核同档 `:107`）同步回调，`startConfigWatch` 内部订阅（退订随 `dispose`）。
   ⇒ 扩展自写 = 事件到达时元组已等于基线 ⇒ **零推送**（不抖动面板）；外部写 = 元组异于基线 ⇒ `onChange()`。
 - `dispose()` 释放 watcher 与挂起定时器（含自写订阅退订）。
 - **降级**：宿主 API 缺失或构造抛错 → 返回 no-op `{ dispose(){}, noteSelfWrite(){} }`（不阻断激活——面板打开拉新的既有路径兜底）。

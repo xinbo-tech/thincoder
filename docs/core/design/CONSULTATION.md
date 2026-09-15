@@ -11,7 +11,7 @@
 
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
-| advisor 主面 | `thincoder-cli/src/advisor.mjs` + `src/advisor/*`（`run` · `loop` · `messages` · `compaction` · `project-context` · `repos` · `citations` · `history` · `truncate` · `convergence`） | `thincoder-vscode/src/advisor/main.mjs` + `src/advisor/*`（拆档：`advisor/provider.mjs` · `advisor/tools.mjs`） |
+| advisor 主面 | `thincoder-cli/src/advisor.mjs` + `src/advisor/*`（`run` · `loop` · `messages` · `compaction` · `project-context` · `repos` · `citations` · `history` · `truncate` · `convergence`） | `thincoder-vscode/src/advisor/main.mjs` + `src/advisor/*`（拆档：`advisor/provider.mjs` · `advisor/tools.mjs`）——**VSC 侧已退役**（W12 删除集；现体 = 核 `thincoder-core/advisor/**` + `thincoder-core/agent-tools/consult.mjs`） |
 | 工具面 | `src/agent-tools/advisor.mjs` · `src/agent-tools/consult.mjs` · `src/agent-tools/advisor-settle.mjs` · `src/agent-tools/review-streak.mjs` · `agent-tools/subagent-panel.mjs` | 同名 / 拆分档（`subagent-escalate-async` 等） |
 | 飞刀（升级） | `src/agent-tools/escalate-async.mjs` | `src/agent-tools/subagent-escalate*.mjs` |
 
@@ -71,7 +71,7 @@
 |---|---|---|---|---|---|---|
 | 159 | `src/agent-tools/review-streak.mjs` + `src/agent-tools/subagent-panel.mjs` ↔ 核内（VSC 零 `review-streak` / `panel` 动作） | ③ | 以 CLI 为准（评审连续失败止损 / `panel` 动作）——VSC 接线后生效 | 分叉 ＝ VSC 未实现（零命中）；**承 §2.5 #110（止损）/ #99（panel 端特有段）** | —（承 #110 / #99） | S1（建核补齐） |
 | 160 | `src/advisor.mjs` ↔ `src/advisor/main.mjs` | ② | 融合：取一侧（advisor 提示词选择 / 跟进构建 / 会话装配） | 分叉 ＝ 档名与目录（VSC 头注自述「VS Code port of thincoder CLI src/advisor.mjs」`:3`）⇒ 前提成立 | — | S1（建核补齐） |
-| 161 | （CLI 侧内联于 `advisor/run.mjs`）↔ `src/advisor/provider.mjs` + `advisor/tools.mjs` | ② | 融合：评审 provider 解析 / 工具集按核内结构归位 | 分叉 ＝ 拆档（VSC 拆 2 档）；工具集差异（`code_search` 挂载条件）**已由 §2.5 #109 裁决** ⇒ 前提成立 | —（承 #109） | S1（建核补齐） |
+| 161 | （CLI 侧内联于 `advisor/run.mjs`）↔ `src/advisor/provider.mjs` + `advisor/tools.mjs` | ② | 融合：评审 provider 解析 / 工具集按核内结构归位 | 分叉 ＝ 拆档（VSC 拆 2 档）；工具集差异（`code_search` 挂载条件）**已由 §2.5 #109 裁决** ⇒ 前提成立（VSC 两档已退役——W12 删除集；现体 = 核 `thincoder-core/advisor/**`） | —（承 #109） | S1（建核补齐） |
 
 ## 3. 须用户裁条目（自 `CORE-UNIFICATION.md` §2.5.1 搬入 · 逐字）
 
@@ -248,7 +248,7 @@ consult_stop
 
 - 2026-09-13：建档——自 `docs/core/design/CORE-UNIFICATION.md` 拆出（§2.5 #1 / #40 / #41 / #93 / #95 / #104–#110 / #159–#161 + 四要素明细 · §2.5.1 A24）；**语义零改**，行号沿用原编号。
 - 2026-09-14（S1 收口轮）：§5 补**核内落点行数**指针（`agent-tools/panel-blocks.mjs`——#159 · #180 收正）。
-- 2026-09-14（markdown 面小收正轮）：§1 / §2.4 裸名点名补路径前缀（`advisor/provider.mjs` · `advisor/tools.mjs` · `agent-tools/subagent-panel.mjs`——与 `src/provider.mjs` / `src/tools.mjs` / `src/tui/subagent-panel.mjs` 同名不同物；**消除歧义不改判据**）。
+- 2026-09-14（markdown 面小收正轮）：§1 / §2.4 裸名点名补路径前缀（`advisor/provider.mjs` · `advisor/tools.mjs` · `agent-tools/subagent-panel.mjs`——与 `src/provider.mjs` / `src/tools.mjs` / `src/tui/subagent-panel.mjs` 同名不同物；**消除歧义不改判据**）〔W10/W12 后该轮点名端点已退役——本条为历史记录〕
 - 2026-09-14（**设计面收正轮 3 · eng-designer**）：§2.3 表后补 **#106 S2 接线前口径确认项**（归一取 CLI 的核内实核坐标 + 对端严格形态 + 潜伏差异的行为差登记——只记，S2 动作）。
 - 2026-09-14（**B 轮并入 · 第 3 批**）：新增 §6 **机制面**（架构与数据流 / R17 digest 消费模型 / 工具契约 / 实现接线）· §7 **关键决策（D-CO1–6）** · §8 **不并项与历史沿革**（含飞刀 / advisor / 旧 AGENT-LOOP §14 越段登记）· §9 体量（低于软线，无需拆分）；
   来源 = `thincoder-cli/docs/design/CONSULTATION.md`（**旧档一字未改**——原地作参照历史）；需求侧已并入本层 `docs/core/requirements/CONSULTATION.md`；首部加机制面指针一行。

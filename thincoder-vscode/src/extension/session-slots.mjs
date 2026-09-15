@@ -37,7 +37,7 @@ export { slotOccupancy } from "@thincoder/core/session.mjs"
 
 /** 本端 sessions 根目录（核未导出根访问器——核 `sessionPath` 去掉 hash 文件名即根）。
  *  单源：核 `configDir` 变更与核 `_setSessionsDirForTest` 沙箱缝自动随动（本档零副本）。
- *  消费方 = `read-history-discovery.mjs`（跨 cwd 发现）/ `peer-domains.mjs`（peers 根 = 其父目录）。 */
+ *  消费方 = `peer-domains.mjs`（peers 根 = 其父目录）。W17 前另列 `read-history-discovery.mjs`（跨 cwd 发现）——该档已退役删旧（孤儿档清退），消费方面随之退场。 */
 export function sessionsDir() {
   return dirname(sessionPath(process.cwd()))
 }

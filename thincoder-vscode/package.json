@@ -116,6 +116,7 @@
   "scripts": {
     "vscode:prepublish": "npm run lint && npm run doc:check && npm run test:full && npm run test:integration",
     "package": "vsce package",
+    "postpackage": "node scripts/check-vsix.mjs",
     "publish": "vsce publish",
     "publish:ovsx": "ovsx publish",
     "publish:all": "node scripts/publish-all.mjs",
@@ -129,6 +130,7 @@
     "@happy-dom/global-registrator": "^20.11.2",
     "@vscode/vsce": "^3.4.0",
     "ovsx": "^1.1.1",
-    "vscode": "file:test/vscode-mock"
+    "vscode": "file:test/vscode-mock",
+    "yauzl": "^3.4.0"
   }
 }

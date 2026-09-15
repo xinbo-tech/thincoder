@@ -18,7 +18,7 @@
 | # | 债 | 现状判 | 证据（实核） |
 |---|---|---|---|
 | **#3** | **`_` 状态字段摊平 + 手写生命周期清单**：agent 对象的运行态字段无 schema / 无封装，复位与继承靠**手写键清单**；新增或漏删字段即状态泄漏 | **现行** | 继承 = 手写键清单：`thincoder-core/agent.mjs:147`（`_inheritedGuard` 逐键回灌）；复位 = 逐字段块：`thincoder-core/agent.mjs:142`–`:159` |
-| **#4** | **eng-token 语义跨端重复**：核内已单点化，VSC 端无同名实现——自持槽语义与校验副本 | **跨端仍分叉**（CLI / 核侧已消解） | 核内单点 = `thincoder-core/token-ttl.mjs`（286 行）；VSC 侧自持面 = `thincoder-vscode/src/agent-tools/subagent-spawn-gate.mjs` |
+| **#4** | **eng-token 语义跨端重复**：核内已单点化，VSC 端无同名实现——自持槽语义与校验副本 | **跨端仍分叉**（CLI / 核侧已消解） | 核内单点 = `thincoder-core/token-ttl.mjs`（286 行）；VSC 侧自持面 = `thincoder-vscode/src/agent-tools/subagent-spawn-gate.mjs`（**该端档已退役**——W12 删除集：端面收留 = `thincoder-vscode/src/agent/tool-gates.mjs` 核 `design-token.mjs` 消费面） |
 | **#8** | **跨仓复制漂移**（架构伞项）：state / tools / prompts / advisor 层双端整片存在 | **收敛中**（核统一批推进） | 「一个核 + 两个薄壳」= `docs/core/design/CORE-UNIFICATION.md`；跨端剩余差面登记 = `docs/vsc/design/VSC-MIGRATION.md` |
 
 **注**：`#6` 的 VSC 侧对位面仍开放——`thincoder-vscode/src/tools/more-file.mjs`（多工具合装）；**CLI / 核侧已归位**（见 §3）。该面归 VSC 轮，不计入核面债。（W14 已迁核——自持镜像已删，现体 = 核 `thincoder-core/tools/{file.mjs, patch.mjs, search.mjs}`）

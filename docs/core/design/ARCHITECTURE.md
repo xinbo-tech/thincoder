@@ -73,13 +73,13 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 │
 └── thincoder-vscode/               ← VSC 产品（vsix）
     ├── extension.mjs               扩展入口
-    ├── src/                        壳面——extension/ · agent/ · tools/ · advisor/ · provider/ · memory/ · prompts/
+    ├── src/                        壳面——extension/ · agent/ · agent-tools/ · tools/（advisor/ · provider/ · memory/ · prompts/ 四目录随 W2/W8/W10/W12 迁核删旧）
     └── webview/                    前端界面（VSC 独有面——对偶 = CLI 终端 TUI，两者不镜像）
 ```
 
 ### 3.1 VSC 壳层装配地图（并入 · 批 6）
 
-> 来源 = `thincoder-vscode/docs/design/ARCHITECTURE.md` §3（指针索引——DOC-REORG-VSC 收官形态）。VSC 端实现面 = `thincoder-vscode/src/**` 全量自持（agent 主循环 / 工具 / 评审 / 记忆——未进核前的独立实现；与 CLI / 核面的差异对位见 §4.1）。
+> 来源 = `thincoder-vscode/docs/design/ARCHITECTURE.md` §3（指针索引——DOC-REORG-VSC 收官形态）。VSC 端实现面 = `thincoder-vscode/src/**`——**W17 收口后 = 端壳 / 装配面**（机制本体经 `@thincoder/core` 引用；W1–W16 逐单元迁核删旧——逐行现体见 §3.1 表注与各模块权威档）。
 
 | 域 | VSC 模块 | 职责 | 详细设计 → |
 |----|---------|------|-----------|
@@ -90,8 +90,8 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 | 装配 | `thincoder-vscode/src/extension/{settings,presets,provider-flows}.mjs` | config.json 面板读写 · preset · provider 增删流 | `thincoder-vscode/docs/design/PROVIDER.md` · `docs/vsc/design/SETTINGS.md` |
 | 核心 | `thincoder-vscode/src/agent.mjs` · `src/agent/**` · `src/agent-tools/**` | runAgent 主循环 + 工具分发 + 注入 + 收尾 · 元工具族（subagent / advisor / eng 等） | `thincoder-vscode/docs/design/AGENT-LOOP.md` · `ADVISOR-CONVERGENCE.md` · `ENGINEERING-MODE.md`（VSC 树档） |
 | 工具 | `thincoder-vscode/src/tools/**` | 内置工具实现（file / search / git / web / lsp / execute / …） | `thincoder-vscode/docs/design/TOOLS.md` · `CHECKPOINT.md`（快照子系统） |
-| LLM | `thincoder-vscode/src/provider.mjs` · `src/provider/**` | 三 transport · 重试 · 限频门 | `thincoder-vscode/docs/design/PROVIDER.md` |
-| 支撑 | `thincoder-vscode/src/{memory,embedding,indexer,mcp,repomap}.mjs` | 记忆 / 向量索引 · MCP 客户端 · 仓库大纲 | `thincoder-vscode/docs/design/MEMORY.md` · `MCP.md` · `CONTEXT-COMPACTION.md` |
+| LLM | `thincoder-core/provider/**`（VSC 侧经 `@thincoder/core` 引用——自持镜像 `thincoder-vscode/src/provider.mjs`/`src/provider/**` 已退役〔W10〕） | 三 transport · 重试 · 限频门 | `thincoder-vscode/docs/design/PROVIDER.md` |
+| 支撑 | `thincoder-vscode/src/repomap.mjs`（余为核单源——`memory`/`embedding`/`indexer`/`mcp` 端侧镜像已退役〔W7/W8〕，现体经 `@thincoder/core` 引用） | 记忆 / 向量索引 · MCP 客户端 · 仓库大纲 | `thincoder-vscode/docs/design/MEMORY.md` · `MCP.md` · `CONTEXT-COMPACTION.md` |
 | Webview | `thincoder-vscode/webview/**`（chat/streaming/ui/activity/panels/send/md/…） | 前端渲染 / 交互（隔离 iframe——只经 postMessage、无共享状态） | `docs/vsc/design/WEBVIEW*.md`（三档——结构 ∥ 协议 ∥ 输入） |
 
 测试面：`thincoder-vscode/test/`（`package.json` `"test"` = `node test/run-fast.mjs`——显式清单 `test/files.mjs` 单一来源 · `"test:full"` = 全量层——slow-gate 分层）。
@@ -137,7 +137,7 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 | 工具目录约束 | 工作目录（process.cwd()） | 第一个 workspace 文件夹；两端口径均 **no directory restriction** |
 | 文件打开 | TUI 内显示 | VS Code 编辑器标签页（WorkspaceEdit undo + 立即保存） |
 | 权限审批 | TUI 内交互式（y/n/a） | webview 弹窗 + 批确认；autoApprove 会话级槽位字段两端语义一致 |
-| 记忆系统 | 3-layer FTS5 + vector | 文件式 markdown + 可选向量（无 FTS5）——统一方向见 `docs/core/requirements/MEMORY.md` §2.1（A12/A13） |
+| 记忆系统 | 3-layer FTS5 + vector | 核单源（W8 已迁核——现体 = 核 `thincoder-core/memory/**`；旧端「文件式 markdown + 可选向量（无 FTS5）」已退役）；统一方向见 `docs/core/requirements/MEMORY.md` §2.1（A12/A13） |
 | MCP | 支持 | 支持（stdio + HTTP——同一 config.json） |
 | lsp 工具 | 自起 LSP server（config lsp.servers） | VS Code 原生语言服务（零配置零进程） |
 | 子代理 / 后台 | 池挂 agent 对象（跨 run） | 池挂共享 depth-0 history 数组（agent per-run） |

@@ -67,7 +67,7 @@ reasoning, provider, images? } → extension _chat()
 
 新增**展示**字段必须同时落三个点——**发射端 chunk / 桥 postMessage 载荷 / webview 渲染端**：
 
-1. 发射端（如 `thincoder-vscode/src/agent-tools/subagent-run.mjs:106` 的 tool chunk）；
+1. 发射端（如 `thincoder-vscode/src/agent-tools/subagent-run.mjs:106`〔W13 已退役——端自持档已删；现体 = 核 `thincoder-core/agent-tools/subagent-run.mjs`〕 的 tool chunk）；
 2. 桥的**白名单纯函数** `toolPanelPayload`（`thincoder-vscode/src/extension/panel-toolpanel.mjs:14-21`）；
 3. webview 渲染端（`thincoder-vscode/webview/activity-view.js`）。
 

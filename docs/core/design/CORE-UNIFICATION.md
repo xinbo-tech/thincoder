@@ -361,7 +361,7 @@ A8 / A9（对称面均入核）与 F3（零「新写」——不得造第三份�
 | CLI `tools/**` 单端 | 6 | 对位（#178 + 映射表） | — |
 | VSC `advisor/**` 单端 | 6 | 对位（#160 / #161 + #1 / #40 / #41——族 1 已消费 3 对：`advisor/{history,convergence,truncate}.mjs`＝CLI 半边已归核删档、VSC 半边待 VSC 轮） | — |
 | VSC `agent/**` 单端 | 5 | 对位（#149 / #150 / #154 / #155） | — |
-| VSC `agent-tools/**` 单端 | 9 | 对位（#155–#157 / #166）+ 四档随对应同路径对（`index`→#83 · `read-history-discovery`→#89 · `subagent-spec`→#99 · `async-discard`→#111） | — |
+| VSC `agent-tools/**` 单端 | 9 | 对位（#155–#157 / #166）+ 四档随对应同路径对（`index`→#83 · `read-history-discovery`→#89〔W17 已退役——孤儿档删除〕· `subagent-spec`→#99〔W12 已退役——删除集〕· `async-discard`→#111） | — |
 | VSC 顶层单端（compact · config-consult/-io/-mcp/-presets · embed-config · i18n · index-bin/-discover/-indexer · memory-tool · repomap · specs · tools.mjs） | 14 | 对位（#128–#131 / #136–#138 / #144 / #148 / #162 / #167 / #176 / #177 / #185） | — |
 | VSC `extension/**`（38 档） | 38 | 对位 **18** 档（#123–#126 / #131 / #163 / #165 / #170–#174 / #175 / #177 / #184）+ ④ **20** 档（#132 两档 + #183 十八档） | — |
 | VSC `mcp/**` | 5 | 对位（#144–#148） | — |
@@ -1406,7 +1406,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
   `thincoder-core/test/write-path.test.mjs`（**300 行 · 7 用例**——S1 续轮第三批读数）——核内 `node --test` **160/160 · exit 0**（S1 收口读数——明细见批次档 §5「S1 续轮第五批」K2）。**S2 端侧接线仍待做**（CLI 不注入 / VSC 注入编辑器径 = S2 动作——落点 ≠ 接线）。
 - **补正①（已落 2026-09-14）**：`file_ops` 的 **`dest` 面门禁**——原 `writeThroughPath` 只对 `src` 问 `openDoc`（move / rename / copy **覆盖到「编辑器打开且脏」的目标档**时不拒写）。
   落态 = `gateOpenDoc` 单点（`thincoder-core/tools/write-path.mjs:83`——src / dest 两面共用；`src` 未打开不豁免 dest 门）；**dest 门条件已扩至 `copy`**（2026-09-14 · S1 续轮第三批——批次档 §5）；验收① 基数改判为 `openDoc` / `isDirty` 各 **11** · `applyEdit` **6**——计数与用例已同步。
-- **补正②（文案对齐口径——S2 接线时）**：核内拒写文案（`thincoder-core/tools/write-path.mjs:72-73`）= VSC 主句（同句——`thincoder-vscode/src/tools/file.mjs:99` · `edit-line-params.mjs:124`（W14 已迁核——现体 = 核 `write-path.mjs`） ·
+- **补正②（文案对齐口径——S2 接线时）**：核内拒写文案（`thincoder-core/tools/write-path.mjs:72-73`）= VSC 主句（同句——`thincoder-vscode/src/tools/file.mjs:99` · `edit-line-params.mjs:124`（W14 已退役——端档已删；现体 = 核 `thincoder-core/tools/write-path.mjs`） ·
   `file-edit.mjs:396` · `hashline-edit.mjs:91` · `more-file.mjs:55` 5 处；VSC 侧带 `Error: ` 前缀）。（W14 已迁核——上述 VSC 自持档已删；现体 = 核 `write-path.mjs` 的拒写文案单点）
   VSC 另有 2 处尾句为 `Save or discard first.`（`thincoder-vscode/src/tools/more-file.mjs:266,380`）⇒ **S2 接线后该两处用户可见文案随核内句统一**（本项只登记口径——端侧改动属 S2）。（W14 已迁核——该档已删，文案统一已在 W14 随核单源落地）
 - **补正③（登记——S2 接线前须定，2026-09-14）**：① `#96` 信息段缝位与入参口径（阻塞三态含段 vs VSC 现形不含；`codeFiles` vs `files`）；② `copy` 面门禁口径（src / dest 两面照过门禁——「所有 op 统一先问 src」；dest 面覆盖 move / rename / copy）。既定口径见批次档 §5「S1 续轮第三批」决策表 7 / 未决 2。
