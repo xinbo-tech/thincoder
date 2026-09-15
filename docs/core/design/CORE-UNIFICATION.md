@@ -1040,7 +1040,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | **提示词加载面（S2 删）** | `thincoder-vscode/src/advisor/main.mjs` | 320 | **−320（删）** | advisor 加载面 = 核 `advisor.mjs`（VSC 侧随 `2026-09-15-vsc-core-wiring` W12 删除集；2026-09-15 修正轮-4 收正） |
 | **提示词加载面（S2 删）** | `thincoder-cli/src/tools/shared.mjs` | 446 | **−446（删）** | `DESC()` 解析根 = 核 `tool-docs/`（已随 CLI 侧接线落地；实核：档不存在；2026-09-15 修正轮-4 收正） |
 | **提示词加载面（S2 改——拆壳薄壳保留）** | `thincoder-vscode/src/tools/shared.mjs` | 413 | **413 → 约 150±50（净减）** | 通用面改指核 `tools/shared.mjs`；端侧缝供值留该档（W14——拆壳薄壳、非删；2026-09-15 修正轮-4 收正） |
-| **提示词加载面（S2 删）** | `thincoder-cli/src/agent/setup.mjs` · `thincoder-vscode/src/agent/setup.mjs` | 354 / 464 | **−354 / −464（删）** | consult 消费点 = 核面（缺档抛错语义不变——契约 9；CLI 已落地〔实核：档不存在〕· VSC 随 W15 删除集；2026-09-15 修正轮-4 收正） |
+| **提示词加载面（S2 删〔CLI〕/ 重定保留〔VSC〕）** | `thincoder-cli/src/agent/setup.mjs` · `thincoder-vscode/src/agent/setup.mjs` | 354 / **668** | CLI **−354（删）** · VSC **净减方向（保留——装配面瘦身 + 核原语改指；零删）** | consult 消费点 = 核面（缺档抛错语义不变——契约 9）；CLI 已落地〔实核：档不存在〕；**VSC 半 = W15 重定（2026-09-15 修正轮-7）：「同路径 ≠ 同内容」⇒ 端壳装配面保留（行数 464 → 668 实测）；修正轮-4 原句「VSC 随 W15 删除集 · −464（删）」已被取代** |
 | **提示词副本删除（S2 / S3）** | 两产品 `src/prompts/*.md`（15×2）· `src/tools/*.md`（25×2） | — | 逐档见 §2.5 | 迁移后删空（S3 零残留——T-C8） |
 | **中文设计档（文档面 · 基准层正本）** | 仓根 `docs/core/design/prompts/*.md`（15 档——2026-09-14 已在位；同日迁入 `docs/core/`） | **15** | 逐档见 §2.5 | **D-C14 修订（裁定 B + 2026-09-14 层级口径）**：根仓 = **基准层正本** ✓；两产品同名目录 = **迁移期保留的参照历史记录**（保留 ≠ 维护）、**不迁不删**；合流归属层 = 根仓 `docs/` 基准层（本批不处置）；中文设计档行读数 = §2.5 #120–#122（两面已分叉 3 档） |
 | **中文设计档（删除）** | ~~`thincoder-cli/docs/design/prompts/**` · `thincoder-vscode/docs/design/prompts/**`（各 15 档）~~ | — | **作废 ✗** | **该面已撤**（用户裁定 B——两产品同名目录**原地保留**；2026-09-14 收正 = **迁移期保留的参照历史记录**、保留 ≠ 维护；见「已撤面」行 + D-C14） |
@@ -1447,7 +1447,8 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
    **验收（可机判——S2）**：① 核内用例（**S2 新建**——拟档名 `tool-face-capability.test.mjs`，落 `thincoder-core/test/`；既有 `thincoder-core/test/tool-registry.test.mjs:54` 覆盖装配期门）——假 agent 文本模型 ⇒ run 面缺 `read_image`；同一 agent 改 `provider.model` 为视觉 ⇒ **下一 run** 面含（不重建 agent）；反向 / 未知模型（DEFAULT_SPEC）⇒ 缺（保守）；
    ② 装配面恒含断言（名集与模型无关 + 静态表 24 名 ⊆ 装配面）；③ 既有 `thincoder-cli/test/read-image-guide.test.mjs` 双态零回归（执行门保留）；
    ④ 端侧（S2 接线段）——CLI `/model` 切换用例：切换后下一回合请求 `tools` 面含 `read_image`（VSC picker 同）。
-6. **`#99` 反向风险**：核内 `subagent` 动作枚举含 `panel`，VSC 端差要求「不注入该动作」——现无剔除缝 ⇒ S2 原样接线会让 VSC 凭空多一个动作（对外可见行为变化）。
+6. **`#99` 反向风险**：核内 `subagent` 动作枚举含 `panel`，VSC 端差要求「不注入该动作」——**落点 = 端装配面（端侧装饰 · 非核内缝）· 已落**
+   （W13 `thincoder-vscode/src/agent/setup.mjs` `vscSubagentFace`：panel 剔除 + C-5 终态回显 + `isReadonlyAction`/`isControlAction` 谓词；原则 = 端差走端侧装饰/注入 · 零核改——2026-09-15 修正轮-7 收正；原「现无剔除缝」句随落地取代）。
 
 #### 2.13.7 验收（可机判——S2 落位与接线）
 
@@ -1939,5 +1940,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
   收正面 = §2.13.4 #143 行（处置列收正——原「端侧派生面按端注入」表述退场；裁定锚 + 实核坐标见行内）· §2.13.4 表头注（补「端侧自有类不计缺位」子句）· §2.13.6 缺口 5（**缺位 3 → 2**——#143 移出、枚举同改；#112 / #172 保持）。
 - 2026-09-15（**VSC 修正轮-6 权威面收正 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮-6）：§2.1 B20「VSC 现声明」→「**原声明**（迁移前）」（引擎下限已裁 `^1.104.0`——值面见 §2.11 A8 已收口注）；零语义（形态收正）。
 - 2026-09-15（**S2 W14 落地 · eng-coder**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W14）：§2.13.5 补正②段两行（拒写文案对齐口径 / 尾句 2 处）补 W14 迁核注——VSC 自持编辑档已删，本项随核单源落地；§2.13.5 消费者行（编辑器径消费面）补迁核注；机制条文零改。
+- 2026-09-15（**VSC 修正轮-7 权威面收正 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮-7）：① §2.13.6 #6 落点句收正（#99 panel 剔除 = **端装配面 · 已落**〔W13 `vscSubagentFace`——R2〕；原「现无剔除缝」句取代）；
+  ② §2.8 `:1043` 行 VSC 半收正（`thincoder-vscode/src/agent/setup.mjs` = **W15 重定保留**〔零删——「同路径 ≠ 同内容」〕· 行数 464 → 668 实测——R1 联改；原「VSC 随 W15 删除集 · −464（删）」句取代）。机制条文零改。
 
 

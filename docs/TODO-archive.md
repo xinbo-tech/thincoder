@@ -185,7 +185,7 @@
 
 - [x] **VSC 端守卫收尾（F12 启动断言面 + 冻结窗口 E 对位 + 收敛路径信号面）**（2026-09-11 用户裁定「开」）→ 任务书 `thincoder-vscode/docs/batches/2026-09-11-VSC-GUARD-COMPLETION.md` §2 · （三面交付：6 文件 + 改 + 新测档 6 例 + 快层 414/413/0 · 修正轮 3+1 · §6 收口 + 令牌消费）· status=已核销
 
-- [x] **VSC 写面 `agent.subagentModels` 零约束残留**（第 8 批交付 ⑤-1——coder 提出）：`_SIBLING_SHAPES` 补第 4 条 = 设计变更 → 证据 `thincoder-vscode/src/agent-tools/settings.mjs:35`（`_SIBLING_SHAPES`）· status=已核销（第 12 批交付——T-S2.36/T-S2.37 绿）
+- [x] **VSC 写面 `agent.subagentModels` 零约束残留**（第 8 批交付 ⑤-1——coder 提出）：`_SIBLING_SHAPES` 补第 4 条 = 设计变更 → 证据 `thincoder-core/agent-tools/settings.mjs:38`（`_SIBLING_SHAPES`；原 VSC 面已随 W16 迁核 · 2026-09-15）· status=已核销（第 12 批交付——T-S2.36/T-S2.37 绿）
 
 - [x] **评审链守卫镜像**（第 11 批 VSC 对位面——designer 裁定 CLI 单端，父侧接受·可翻转）：三处同构（`thincoder-vscode/src/advisor/citations.mjs` · `thincoder-vscode/src/advisor/messages.mjs:62` · `thincoder-vscode/src/advisor/run.mjs:58/166/170`）→ 证据 `thincoder-vscode/src/advisor/run.mjs:58` · status=已核销（第 12 批交付——AC-VG1–AC-VG8 全过 8/8）
 

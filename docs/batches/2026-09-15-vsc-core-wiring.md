@@ -67,11 +67,11 @@
 |---|---|---|
 | 1 | VSC src `.mjs` 共 **158 档 / 30,323 行**（wc -l 口径） | 机械枚举 |
 | 2 | 其中**核内同路径档 73**（路径对）· **非同路径 85**（extension/ 40 + 其余 45→实 47） | 路径集合比对 |
-| 3 | 非同路径 47 档逐档读档分类：**M（核内语义镜像）28** · **S（VSC 特有薄壳/编排）19** · U 0（**修正轮-2**：`indexer.mjs` 改入删除集——保留 S 面 = **18**）—— 逐档证据见勘察记录（`advisor/main`→核 `advisor.mjs` · `mcp/{http,stdio,ws,utils}`→核 `mcp/transport-*`+`helpers`（前两者逐字同源）· `tools/checkpoint`→核 `git/checkpoint.mjs` · `tools/{wait_for,read_image,more-file,file-edit,hashline-edit,edit-fuzzy-match,edit-line-params}`→核 `tools/{ops,file,patch,edit-batch,edit-diff}` 等） | explore 子代理 · 逐档 file:line |
+| 3 | 非同路径 47 档逐档读档分类：**M（核内语义镜像）28** · **S（VSC 特有薄壳/编排）19** · U 0（**修正轮-2**：`indexer.mjs` 改入删除集——保留 S 面 = **18**；**修正轮-7**：+ W15 六档〔同路径 ≠ 同内容〕→ **25**——薄壳面清单）—— 逐档证据见勘察记录（`advisor/main`→核 `advisor.mjs` · `mcp/{http,stdio,ws,utils}`→核 `mcp/transport-*`+`helpers`（前两者逐字同源）· `tools/checkpoint`→核 `git/checkpoint.mjs` · `tools/{wait_for,read_image,more-file,file-edit,hashline-edit,edit-fuzzy-match,edit-line-params}`→核 `tools/{ops,file,patch,edit-batch,edit-diff}` 等） | explore 子代理 · 逐档 file:line |
 | 4 | 提示词面：`src/prompts/` **15 档 / 1,015 行** + `src/tools/*.md` **25 档 / 420 行** = 40 档 / 1,435 行（核内唯一副本 = `prompts/` 15 + `tool-docs/` 25） | 机械枚举 |
 | 5 | **登记册差异实证**：`src/tools/index.mjs`（76 行）与核同路径但**内容为 VSC 装配面**（含 VSC 宿主工具 context/focus/shell/code/read_image/wait_for + 自持 builtinTools）⇒ 该档**保留**（同路径 ≠ 同内容——B1 分叉面实证）；`src/agent-tools.mjs`（1 行 barrel）vs 核 17 行登记册 ⇒ 删 | 逐档读档 |
-| 6 | **删除集 = 100 档 .mjs / 20,706 行**（73 同路径 + 28 M − 保留 2 档〔`tools/index.mjs` · 拆壳薄壳 `tools/shared.mjs`〕 + 1 S 改判〔`indexer.mjs`——2026-09-15 裁定〕）+ **40 档 .md / 1,435 行** ⇒ 合计 **140 档 / 22,141 行**（修正轮-2 同步——见修正轮-2 块） | 上述 2/3/4/5 合成 |
-| 7 | **存活改指面**：删除集的存活入边（排除同为删除档者）去重 = **34 档**（src/ **33** = extension **17** · agent 5 · agent-tools 2 · tools **5** · 根档 **4**；+ 端点 `extension.mjs` **1**——逐档底账 = 修正块表 4〔修正轮 #4 / 修正轮-2 同步〕）——逐单元见（三） | import 扇入图谱（机器自核） |
+| 6 | **删除集 = 94 档 .mjs / 19,052 行**（73 同路径 + 28 M − 保留 2 档〔`tools/index.mjs` · 拆壳薄壳 `tools/shared.mjs`〕 + 1 S 改判〔`indexer.mjs`——2026-09-15 裁定〕 − W15 六档〔重定零删——修正轮-7；删列口径 1,654〕）+ **40 档 .md / 1,435 行** ⇒ 合计 **134 档 / 20,487 行**（修正轮-2 同步——见修正轮-2 块；修正轮-7 同步——见修正轮-7 块） | 上述 2/3/4/5 合成 |
+| 7 | **存活改指面**：删除集的存活入边（排除同为删除档者）去重 = **32 档**（src/ **31** = extension **15** · agent 5 · agent-tools 2 · tools **5** · 根档 **4**；+ 端点 `extension.mjs` **1**——逐档底账 = 修正块表 4〔修正轮 #4 / 修正轮-2 同步；**修正轮-7**：W15 边退场——`notify`/`panel-project` 移出〕）——逐单元见（三） | import 扇入图谱（机器自核） |
 | 8 | **装载面已在位**：`thincoder-vscode/package.json:33` 依赖 `@thincoder/core ^0.1.0` · `node_modules/@thincoder/core` = JUNCTION → `thincoder-core/`（开发期链接）· `.vscodeignore:4` 反排除行在位 ⇒ **接线零装载动作**（CLI 轮已配置） | 实读三处 |
 | 9 | 基线读数：核回归 **178/178 · fail 0 · exit 0**；VSC fast `npm test` **622 tests / 581 pass · fail 0**（41 慢测快层跳过）；仓根三机检 = 锚 **0 悬空** · 台账 **0 违规** · 宽度**基线红 1 档**（`docs/core/design/PROVIDER.md` 5 行 >300——并行线遗留，非本批写域） | 实跑（本设计轮改前） |
 
@@ -112,9 +112,9 @@
 | W12 | ADVISOR/会诊/飞刀 | 20/4,111 | 5 | — | 中高 | `CONSULTATION.md` §6.5 · `ADVISOR-CONVERGENCE.md`(requirements) |
 | W13 | 子代理/异步族 | 6/2,133 | 3 | — | 高 | `AGENT-LOOP.md` §6.18（异步载体 §2.3） |
 | W14 | TOOLS 实现面（编辑径 + 工具表） | 19/3,605 | 5 | — | 中高 | `TOOLS.md` §6.11 · EDIT 六档 §6 · `TOOL-OUTPUT-LIMITS.md` §6.3 · `CHECKPOINT.md`（checkpoint 工具） |
-| W15 | AGENT-LOOP（主循环 + 装配 + 注入面） | 6/1,654 | 7 | — | 高 | `AGENT-LOOP.md` §6.18 · `I18N.md` · `PORTABILITY.md` §3.6 |
+| W15 | AGENT-LOOP（主循环 + 装配 + 注入面 · **重定 2026-09-15**） | **0/0**（零删重定——六档按「同路径 ≠ 同内容」入端壳面：装配面瘦身 + 核原语改指 + 端壳缝四条落地〔修正轮-7〕） | **1**（W6 跨单元笔——`agent/run-helpers.mjs` compact 入边 → 核 `context.mjs`·已落〔脚注注 1〕；删除集入边改指 = 0——零删重定） | — | 高 | `AGENT-LOOP.md` §6.18 · `I18N.md` · `PORTABILITY.md` §3.6 |
 | W16 | CONFIG（配置/迁移/settings 工具） | 6/1,223 | 16 | — | 高 | `CONFIG.md` · `SETTINGS-TOOL.md` · `DESIGN-TOKEN-SETTLEMENT.md` §6.3 · `ENG-TOKEN-BINDING.md` §6.3 |
-| **合计** | 16 单元 · 删除集去重 **100 .mjs / 20,706 行** + 40 .md / 1,435 行 = **140 档 / 22,141 行**（`tools/shared.mjs` 413 移出——拆壳薄壳保留〔修正轮 #6〕） | 140 | 存活改指去重 **34**（删除集扇入——逐档底账 = 修正块表 4；端壳/核心面改指类另计；修正轮-2 同步） | —— | —— | —— |
+| **合计** | 16 单元 · 删除集去重 **94 .mjs / 19,052 行** + 40 .md / 1,435 行 = **134 档 / 20,487 行**（`tools/shared.mjs` 413 移出——拆壳薄壳保留〔修正轮 #6〕；W15 六档移出——重定零删〔修正轮-7〕） | 134 | 存活改指去重 **32**（删除集扇入——逐档底账 = 修正块表 4 + 口径注⑤；端壳/核心面改指类另计；修正轮-2/7 同步） | —— | —— | —— |
 
 > \* **W5 / W6 跨单元改指（口径写死 · 修正轮 #7）**：两处改指**均在删除单元（W5 / W6）同笔落地**——删档单元自洽（中间态零 `ERR_MODULE_NOT_FOUND` · A-K4 逐单元可达）；**计数归其存活面单元列（W14 / W15）· 不双计**。
 > W5 = `tools/shell.mjs`（`./checkpoint.mjs` → 核 `git/checkpoint.mjs`，计数在 W14 列）；W6 = `agent/run-helpers.mjs`（compact 入边 → 核 `context.mjs`，计数在 W15 列）。W5 / W6 正文按本注同批收正。
@@ -212,14 +212,19 @@
   wait-for-advisor-pool, git-commit-pathspec, tool-descriptions}.test.mjs`（核面改指）· integration/scenario-01/06（.src 前缀 import 修正为核子路径——.src 兼容前缀发现见「发现」5）。专项验收：W14 删除集零引用 · 写路径缝双夹具 + 结构机检（`thincoder-core/test/write-path.test.mjs` 已绿）·
   编辑工具 VSC 端差异按 EDIT 六档 §6 现状登记收正（编辑器路径/range 偏移/无 dirty 护栏/BOM/内嵌描述）· vscode 编辑器读写行为 = VSC 面（fuzz/line-params 核算法 + 端壳写回）。
 
-**W15 · AGENT-LOOP**：删 `src/agent.mjs`（387）· `agent/{setup 464, setup-reminders 252, run-stages 339}.mjs` · `src/explore-distill.mjs`（156）· `src/i18n.mjs`（56）→ 核 `@thincoder/core/{agent.mjs, agent/*, explore-distill.mjs, i18n.mjs}`。保留 `agent/{agent-state 111,
-  context-injections 227, execute-tools 363, run-helpers 297, tool-gates 159}.mjs`（S 编排——内部改指核 agent 面）。存活改指 7：`agent/{agent-state, context-injections, execute-tools, run-helpers}.mjs` + `extension/{chat-panel, notify, panel-messages}.mjs` 等（i18n 入边）。
-  **端壳缝接线**：`projectDictionary(locale)`（VSC `locales/{en,zh}.json` 投影——核 i18n 消费，投影逐字冻结）· #112 read_image 门（核内装配面恒含 + run 起始能力面重解——定稿 §2.13.6 缺口 5·VSC 零动作，核对核内已落〔未落 = 上报——核内笔超本批写域〕）·
-  #113 编辑器上下文采集（VSC 端供给——现形 agent/setup 面迁 injection 端壳）· #175 推理档位面（`extension/reasoning-mode.mjs` · 34 行）——**D2 已裁**（2026-09-13 · 按建议——`AGENT-LOOP.md` §3.2）+ **推理档位面 = 端侧自有（核内无需位 · 正常落地形态、非缺位——2026-09-15 裁定 · 裁 ②）**：
+**W15 · AGENT-LOOP（重定——零删 · 修正轮-7）**：原「删 6 档」按本批自身判据「同路径 ≠ 同内容」重判——`src/agent.mjs`（460）· `agent/{setup 668, run-stages 382, setup-reminders 252}.mjs` = **S 端壳装配面**（非删除集）· `src/explore-distill.mjs`（157）= 端壳/适配器（核 re-export 签名异——W6 已登记）· `src/i18n.mjs`（56）= `t()` 壳（`I18N.md` D1 已裁）。
+  **单元目标（重定）= 装配面瘦身 + 核原语改指 + 端壳缝四条落地**；**新家 = 原地**（不搬家——F6 定形）。保留 `agent/{agent-state 111, context-injections 227, execute-tools 363, run-helpers 297, tool-gates 159}.mjs`（S 编排——内部改指核 agent 面）。
+  六档内部改指 = 核 `@thincoder/core/{agent.mjs, agent/*, explore-distill.mjs, i18n.mjs}` 单源（端特有面保留）；**循环契约位移 = 调用期适配**（承 W6 先例——F7 定形：live `autoApprove` getter · `opts.distillState`↔核 `agent._pendingDistill` · `opts.turnInput`↔核 `consumeInjected` · 载体 10 字段宿主〔VSC 住 history、核住 agent〕）。
+  适配面清单随实施落 §5；存活改指 = 0（零删——删除集入边零改指；六档 = 端壳改核心面类——R24a 另计）。
+  **端壳缝四条落地（R2–R5 裁定面）**：① 工具登记面端侧装饰（R2——`vscSubagentFace` 已落 `setup.mjs`〔W13〕：#99 panel 剔除 · C-5 终态回显 · `isReadonlyAction`/`isControlAction` 谓词；核内缝不新增〔端差走端侧装饰/注入 · 零核改〕——W15 保留该面）；
+  ② #113 编辑器上下文采集（R3——端侧供给：端装配面围绕核 `prepareRun` 注入；前置推送形态须按 `context-parity` 序表实证收正〔序表 = VSC 产品档 `AGENT-LOOP.md` §17.4；断言面 = 端测试〕；核内补位不取）；
+  ③ 端身份面（R4——**VSC 自持**〔承 W11 marker 层先例：端 `END = "vscode"`〔`src/extension/session-slots.mjs:49`〕+ env 行端生成；断言面 = `context-parity` T-CI-1 / `setup-reminders`〕；核 `END` 参数化 = 核内笔）；④ ⏹ queued 事件面（R5——等待头回收并入本单元验收）；续行项 = `projectDictionary(locale)`（VSC `locales/{en,zh}.json` 投影——核 i18n 消费，投影逐字冻结）。
+  #112 read_image 门（定稿 = 核内装配面恒含 + run 期重解——**核对未落**〔三处实证 = 修正轮-7 块「核内笔清单」节 §1〕⇒ 核内笔登记 · VSC 零动作不变）· #175 推理档位面（`extension/reasoning-mode.mjs` · 34 行）——**D2 已裁**（2026-09-13 · 按建议——`AGENT-LOOP.md` §3.2）+ **端侧自有（核内无需位 · 正常落地形态、非缺位——2026-09-15 裁定 · 裁 ②）**：
   两半路径 =（a）`autoThink` 键随 config 归一（VSC 死键复活；默认 `false` ⇒ 无行为变化）（b）档位 patch 全程端侧（经 provider 字段数据面——核 `thincoder-core/provider/core.mjs:52-53` 读 · 同档 `:193-204` 落请求 body）。
-  **兜底句**：实施期实核发现核内确需新缝 ⇒ 停下上抛（不自行改核）。关联注：VSC 面板 Auto 入口 = 需求池条目（`docs/TODO.md` 需求池「VSC 端暴露 Auto（`autoThink`）推理档位开关」——**另批**，不属本批）。
-  测试面：`test/{context-parity, setup-reminders, eng-designer-role, image-downgrade, digest-visibility, status-line, turn-across-segments, session-boot}.test.mjs` + integration/scenario-01/05/07（核面改指；`.src` 前缀 import 修正）。专项验收：W15 删除集零引用 · 装配输出零字面（与 W2 同门）·
-  提示词装配面（assemblePrompt 挂点经核——§2.13.8 结构机检已核内绿）· hooks 四事件名冻结（未涉面）· 载体 10 字段端壳双侧化。
+  **兜底句**：实施期实核发现核内确需新缝 ⇒ 停下上抛（不自行改核）。关联注：VSC 面板 Auto 入口 = 需求池条目（`docs/TODO.md` 需求池「VSC 端暴露 Auto（`autoThink`）推理档位开关」——**另批**，不属本批）。**核内笔**（#112 / 核 `END` 参数化 / `depInfo`·C-6）= 上抛登记——见下修正轮-7 块「核内笔清单」节。
+  测试面：`test/{context-parity, setup-reminders, eng-designer-role, image-downgrade, digest-visibility, status-line, turn-across-segments, session-boot}.test.mjs` + 装配面消费档（`agent-lifecycle-singleton` · `expand-home` · `async-parity` · `subagent-observe-send`——F6 实测补列）+
+  integration/scenario-01/05/07（**端壳断言保留**〔档不删——原「核面改指」口径退场〕；`.src` 前缀 import 修正）。
+  专项验收：W15 面（六档）零断链（反向判零口径——零删不适用）· 装配输出零字面（与 W2 同门）· 提示词装配面（assemblePrompt 挂点经核——§2.13.8 结构机检已核内绿）· hooks 四事件名冻结（未涉面）· 载体 10 字段端壳双侧化 · ⏹ queued 等待头回收（事件面——R5 并入）。
 
 **W16 · CONFIG**：删 `src/config.mjs`（190）· `config-io.mjs`（470）· `config-migrate.mjs`（185）· `config-presets.mjs`（40）· `config-consult.mjs`（78 → 核 `config-io.mjs:178` `cascadeRemoveProvider`）· `agent-tools/settings.mjs`（260）→ 核 `@thincoder/core/{config.mjs, config-io.mjs,
   config-migrate.mjs, config-presets.mjs, agent-tools/settings.mjs}`。存活改指 16（最大扇出——config-io 25 入边中存活者）：`agent/{agent-state, run-helpers}.mjs` · `config-mcp.mjs` · `extension/{chat-panel, config-watch, image-handler, migrate-settings, panel-callbacks, panel-chat, panel-index,
@@ -233,7 +238,7 @@
 |---|---|---|
 | 面板/宿主层 | `src/extension/**` 40 档（chat-panel · panel-* 20 · 会话端壳 session-* · 设置/预设/流 · 权限/挂起/停止 trace） | 结构性不对称（§2.5 ④ 端特有桶 VSC extension/**——B17） |
 | 前端面 | `webview/**`（ui/chat/activity*/mcp/settings 等前端档——经 postMessage 协议，不经 src import） | 端特有；`docs/vsc/design/WEBVIEW{,-PROTOCOL,-INPUT}.md` 契约档 |
-| VSC 特有编排（src 内 S 档 **19**） | `agent/{agent-state,context-injections,execute-tools,run-helpers,tool-gates}`（VSC 循环装配/门禁/peer 冲突）· `agent-tools/{async-discard,read-history-discovery}` · `config-mcp.mjs` · `embed-config.mjs` · `memory-tool.mjs`（W8 后改指核 memory 面）· `repomap.mjs`（workspace.fs 数据源）· `specs.mjs`·`tools.mjs`（barrel）· `tools/{index,shell,code,context,focus}.mjs` · **`prompt-injections.mjs`**（W2 新建——锚取值表 · 数据面） | 逐档证据 = 修正块 #2 表（对位行取值 + file:line——勘察 3 上收）；**修正轮-2：`indexer.mjs` 改入删除集——保留 S 面 18；修正轮-6：+ `prompt-injections.mjs`（W2 新建）→ 19** |
+| VSC 特有编排（src 内 S 档 **25**） | `agent/{agent-state,context-injections,execute-tools,run-helpers,tool-gates}`（VSC 循环装配/门禁/peer 冲突）· `agent-tools/{async-discard,read-history-discovery}` · `config-mcp.mjs` · `embed-config.mjs` · `memory-tool.mjs`（W8 后改指核 memory 面）· `repomap.mjs`（workspace.fs 数据源）· `specs.mjs`·`tools.mjs`（barrel）· `tools/{index,shell,code,context,focus}.mjs` · **`prompt-injections.mjs`**（W2 新建——锚取值表 · 数据面）· **`agent.mjs` · `agent/{setup,run-stages,setup-reminders}.mjs`**（端壳装配面——W15 重定）· **`explore-distill.mjs`（157）· `i18n.mjs`（56）**（端壳/壳——W15 重定） | 逐档证据 = 修正块 #2 表（对位行取值 + file:line——勘察 3 上收）；**修正轮-2：`indexer.mjs` 改入删除集——保留 S 面 18；修正轮-6：+ `prompt-injections.mjs`（W2 新建）→ 19；修正轮-7：+ W15 六档（同路径 ≠ 同内容）→ 25**（新增六档证据 = 表 2 增补节） |
 | 文本面 | `locales/{en,zh}.json`（projectDictionary 投影面）· `assets/**` | VSC 显示/图标面 |
 
 #### 模块权威档同步计划（实施时逐单元按现状收正 · 一致性面 · 不改机制）
@@ -246,18 +251,19 @@
 
 | 面 | 构成 | 当前行数 → 预计 | 处置 |
 |---|---|---|---|
-| VSC 删除集（.mjs） | W1–W16 删除集 **100 档**（101 − `tools/shared.mjs`〔拆壳薄壳保留——修正轮 #6〕；逐档行数见各单元删列） | 20,706 → **0**（删除） | 接线改指核后删除 |
+| VSC 删除集（.mjs） | W1–W16 删除集 **94 档**（101 − `tools/shared.mjs`〔拆壳薄壳保留——修正轮 #6〕 − W15 六档〔重定零删——修正轮-7〕；逐档行数见各单元删列） | **19,052** → **0**（删除；W15 六档按删列口径 1,654 减列） | 接线改指核后删除 |
 | VSC 删除集（.md） | `src/prompts/` 15 + `src/tools/*.md` 25 | 1,435 → **0**（删除） | W2 删 |
-| VSC 端壳改指面 | **删除集扇入 34 档**（src/ 33 + 端点 `extension.mjs` 1——逐档清单 = 修正块表 4）+ **改核心面类**（W11 五档 · W14 拆壳薄壳 `tools/shared.mjs` · W6 三档——同属端壳改指总账） | 扇入 34 档合计 **6,102 行**（逐档读数 = 修正块表 5；修正轮-2：`indexer` 456 移出〔入删除集〕· `tools/code` 165 补入；W11 五档另计 1,493 行）→ 逐档 ±0～±N（真增行面 = 表 5 例外列） | 改指核子路径（>300 行档超软线判定 = 修正块表 5） |
+| VSC 端壳改指面 | **删除集扇入 32 档**（src/ 31 + 端点 `extension.mjs` 1——逐档清单 = 修正块表 4 + 口径注⑤〔`notify`·`panel-project` 移出——修正轮-7〕）+ **改核心面类**（W11 五档 · W14 拆壳薄壳 `tools/shared.mjs` · W6 三档 · **W15 六档**——同属端壳改指总账） | 扇入 32 档合计 **5,991 行**（逐档读数 = 修正块表 5；修正轮-2：`indexer` 456 移出〔入删除集〕· `tools/code` 165 补入；W11 五档另计 1,493 行 · W15 六档另计 **1,975 行**）→ 逐档 ±0～±N（真增行面 = 表 5 例外列） | 改指核子路径（>300 行档超软线判定 = 修正块表 5） |
+| W15 装配面（重定保留 6 档——修正轮-7） | `src/agent.mjs` **460** · `agent/{setup 668, run-stages 382, setup-reminders 252}.mjs`（端壳装配面 S ×4）· `src/explore-distill.mjs` **157**（端壳适配器）· `src/i18n.mjs` **56**（`t()` 壳） | **1,975** → 净减（装配面瘦身 + 核原语改指 + 端壳缝四条落地——逐档读数落 §5） | 保留（零删——重定；>300 行档超软线判定 = 表 5 追加行） |
 | VSC 测试面 | 60 档直连 src（逐档见各单元测试面行） | 逐档 0 ～ −N（例外：W2 `prompts-async-guidance` **176 → 326**——锚面重写；< 500 硬限〔§5 W2 收正注〕——修正轮-6 增补） | 核面改指 ∥ 退役（测试纪律①默认退役判据） |
 | W8 前置笔测试面 | `test/engine-floor-guard.test.mjs`（新建 · 5 用例）· `test/files.mjs`（入册 `:84`） | **0 → 93**（新建 · wc -l 口径；§5 记 94 = 编辑器口径）· **84 → 85**（+1） | 已落地（`051b21a9`/`e0234ee1`——修正轮-6 补登） |
 | W2 取值表（新建） | `src/prompt-injections.mjs`（13 名锚取值表——数据面 · 可测试性分离） | **0 → 65**（新建 · 实测） | 已落地（`0ee40682`——口径 = 端壳缝不新增档 · 取值表分离新建〔修正轮-6〕） |
-| VSC 端点 | `extension.mjs`（**91 → 157**——W8 前置笔 + W2 均已落）· `package.json`（**134** · 值变更 +0 净行）· `.vscodeignore`（**17**） | `extension.mjs` = **合计实测 +66**（91 → 157 · wc -l 口径）= **W8 前置笔 +60**（§5 记 92 → 152 = 编辑器口径；设计估 +10±5 收正）+ **W2 入口注入 +6**（`0ee40682`——+2 import + 4 行注；设计估 +0~2 收正）+ 改指 2 处（i18n / mcp 入边——修正块表 4）；`package.json` = 下限值变更 `^1.85.0` → `^1.104.0`（已落 `051b21a9`——**+0 净行实测**；W17 收口笔 +8±3 以表 3 为账）；`.vscodeignore` 零改（装载面已在位） | W2 入口接线 + W8 前置笔（修正轮-6 收正） |
+| VSC 端点 | `extension.mjs`（**91 → 157**——W8 前置笔 + W2 均已落）· `package.json`（**134** · 值变更 +0 净行）· `.vscodeignore`（**17**） | `extension.mjs` = **合计实测 +66**（91 → 157 · wc -l 口径）= **W8 前置笔 +60**（§5 记 92 → 152 = 编辑器口径；设计估 +10±5 收正）+ **W2 入口注入 +6**（`0ee40682`——+2 import + 4 行注；设计估 +0~2 收正）+ 改指 **1 处**（mcp 入边——W7；i18n 半随 W15 重定退场〔壳保留——修正轮-7〕）；`package.json` = 下限值变更 `^1.85.0` → `^1.104.0`（已落 `051b21a9`——**+0 净行实测**；W17 收口笔 +8±3 以表 3 为账）；`.vscodeignore` 零改（装载面已在位） | W2 入口接线 + W8 前置笔（修正轮-6 收正） |
 | W8 收正面（索引面归一——webview / 文案） | `webview/status-bar.js`（**101**）· `locales/{en,zh}.json`（**259 / 259**） | 101 → ±10 · 259 → ±5（逐档——相位渲染 + 键面收正：`status.indexEmbed` 退场 · `status.indexProgress` 新键） | W8 同批收正（修正轮-4 补登） |
 | 模块权威档 | （三）总表映射 ≈ 24 档 `docs/core/design/*.md` + 子系统需求档端对位面 | 逐档 ±1~6 行（收正注记） | 按单元同步收正（一致性面） |
 | 既有基线 | PROVIDER.md L260（336 chars——折行前实判 1 行 >300） | **已清**（父侧 `60f8bab2` 折行落地——宽度闸归 0） | 收口（修正轮-6——原「交父侧 / 未决 5」退场） |
 
-> **不新增 `.mjs` 口径（修正轮-6 收正 = 父侧裁定）**：**端壳缝不新增档**（全部并入既有端壳档——方案选型 4(a)）；**取值表分离新建 = 允许**（`src/prompt-injections.mjs`——数据面 · 可测试性；`0ee40682` 落地）；VSC `src/` 收口后 = **19 S 档** + 40 extension + tools/index + `locales/` 前端面外的装配/端壳面（薄壳面清单）。
+> **不新增 `.mjs` 口径（修正轮-6 收正 = 父侧裁定）**：**端壳缝不新增档**（全部并入既有端壳档——方案选型 4(a)）；**取值表分离新建 = 允许**（`src/prompt-injections.mjs`——数据面 · 可测试性；`0ee40682` 落地）；VSC `src/` 收口后 = **25 S 档**（修正轮-7：+ W15 六档——端壳装配面 4 + 端壳/壳 2）+ 40 extension + tools/index + `locales/` 前端面外的装配/端壳面（薄壳面清单）。
 
 #### 验收判据（回指需求条目 · 逐条可机器验证）
 
@@ -292,14 +298,14 @@
 1. **度量脚本与现况冲突**：`scripts/mirror-divergence.mjs` 对 `thincoder-cli/src/prompts`（CLI 已删）报 ENOENT——默认面过时（**2026-09-15 修正轮复跑仍 ENOENT**）。scripts/** = 父侧工程面 ⇒ 上报，本批零写入。
 2. **PROVIDER.md 宽度基线红**：实为 **5 行** >300（L27/47/48/260/305——含并行线 qwen-plan 批产物；其中 4 行为闸豁免表格行，实判 1 行 L260）。非本批写域 ⇒ 报父侧（未决 5）。**结局（修正轮-6）**：已由父侧 `60f8bab2` 折行清零（宽度闸归 0）——未决 5 收口退场。
 3. **同路径 ≠ 同内容实证**：`tools/index.mjs` = 同路径但 VSC 装配面（保留该档——删除集 −1）。⇒ 删除集判定按**内容实核**而非路径（本批 47 档逐档读档 + 登记册实读完成）。
-4. **任务书清单计数差**：探勘清单写 45 档实为 **47 档**（3+5+8+5+5+6+3+12=47）——按 47 执行完毕（分类 M 28 / S 19 / U 0——`indexer` 随修正轮-2 改入删除集，保留 S = 18），如实登记。
+4. **任务书清单计数差**：探勘清单写 45 档实为 **47 档**（3+5+8+5+5+6+3+12=47）——按 47 执行完毕（分类 M 28 / S 19 / U 0——`indexer` 随修正轮-2 改入删除集，保留 S = 18；**修正轮-7**：+ W15 六档〔同路径 ≠ 同内容〕→ **25**——薄壳面清单），如实登记。
 5. **`.src` 前缀 import 面**：`test/integration/scenario-*.test.mjs` 内现用 `.src/xxx` 形态 import（如 `.src/agent.mjs`）——集成测试改指核时该前缀形态一并修正（或改仓根路径），登 W14/W15 验收面。
 6. **advisor/main.mjs 的 rv async 隔离参数**（VSC 增量）：核 `advisor.mjs` 无同名参数，等效面 = 核 `agent-tools/advisor-async.mjs` `_advisorRuns` 注册表——删除时确认 VSC 侧该隔离语义由核注册表等效承载，零行为差（面内按裁决）。
 7. **既有红三处（VSC 域锚面 · 2026-09-15 修正轮实跑）**：① `npm run doc:check`（VSC 域 · `--strict`）= **exit 1**——V5 命中 **21 处 / distinct 13**（A2 18 / A3 3 · **阻断态**）；
   ② `npm run test:full` = **2 fail**——`T-DC6②`（doc-anchors 源域实跑「真仓复跑零命中」断言——与 ① 同源）· `T-DC15`（reconcile-lookup 反查夹具——**由在途未提交改动 `thincoder-vscode/scripts/reconcile-lookup.mjs` 引入**〔git status 实核〕）；
   ③ 档头注「VSC 域 21 处报告态（非阻断 · 已登记）」与 ① 实跑（**阻断态**）相抵。以上对象 = VSC 产品档（D-C14 迁移期参照历史 · 保留 ≠ 维护）+ 并行线 WIP——非本批写域 ⇒ 口径与消解归属上抛（未决 7）。**结局（修正轮-6）**：口径已裁 = 零新增 + 基线登记（§1 :41）· 红线清扫闭环（VSC `doc:check` 0 命中 · `test:full` 627/627 全绿——`60f8bab2`）——未决 7 收口退场。
 8. **§2.8 同族 5 行同题（finding 13 类 · 已收正 2026-09-15 修正轮-4）**：§2.8「提示词加载面（S2 改）」另有 5 行（`:1039`–`:1043`：CLI/VSC 的 advisor 加载面 · `tools/shared.mjs`〔CLI/VSC〕· `agent/setup.mjs`〔CLI/VSC〕）与 finding 13 同题（「S2 改」 vs 执行实况「删」互斥）：
-  CLI 侧四档实核均已删（`thincoder-cli/src/{advisor.mjs, tools/shared.mjs, agent/setup.mjs, prompt-overlays.mjs}` 不存在）；VSC 侧对应档均在 W12/W14/W15 删除集内（`tools/shared.mjs` 例外 = 判定拆壳薄壳保留）。
+  CLI 侧四档实核均已删（`thincoder-cli/src/{advisor.mjs, tools/shared.mjs, agent/setup.mjs, prompt-overlays.mjs}` 不存在）；VSC 侧对应档 = 逐单元收正（W12 删 `advisor/main.mjs` · W14 拆壳薄壳保留 `tools/shared.mjs` · **W15 重定保留 `agent/setup.mjs`〔修正轮-7——原「随 W15 删除集」句已取代〕**）。
   **修正轮-4 已按 finding 13 同法择一收正**——CLI 三档 + VSC `advisor/main.mjs` = 「S2 删」· VSC `tools/shared.mjs` = 「S2 改——拆壳薄壳保留」（权威档 · `PROMPT-SYSTEM.md` 同批——见修正轮-4 块）。
 9. **`read-history-discovery.mjs` 改指对象观察**（W9 文本 vs 实况）：W9 写「内部改指核 read-history 面」，而实核其 import 面 = `../extension/session-io.mjs`（W11 端壳档——非删除集扇入、无核 read-history import）⇒ 实施时按核 read-history 接线形态核认（登记观察项，不代改）。
 10. **记忆句柄装配点未在案（本轮补点）**：VSC 端 `createMemory` 落点在既有设计与权威档零命中（grep `createMemory` = 0）——本轮在 W8 索引面写明装配形态（随端壳装配面〔W15 面〕创建持有）；若父侧认定应独立成项（装配契约），可移。
@@ -310,7 +316,6 @@
 
 1. **A8 引擎下限（W8 前置门 · 已裁 2026-09-15）**：用户裁定 **值 = `^1.104.0`**（贴最低线案——覆盖 1.104–1.131 用户群）；**不另做真机实测**（资料 / 推导链已查尽——Electron #47706 回移线 = 36/37/38-x-y；1.104 = Electron 37.3.1 / Node 22.18.0 ≥ 22.13）；
   运行期核验 = `activate()` 护栏（不满足 ⇒ showErrorMessage 停用记忆面、不崩）。**落点 = W8 前置笔**（独立单笔 · 承 U0 前置笔形态）。**本项清**（权威档同批收正：设计 A8 · §2.12.3 第 1 行 · 设计 `MEMORY.md` · 需求 `N7`——见修正块）。
-3. **#99 panel 动作剔除缝形态（§2.13.4）**：本批按**端侧过滤**执行（VSC 装配层删 `panel`，零核改动）。若实施中发现核侧不可滤（需核内缝）⇒ 属核内改动 = 超本批写域，停下上抛，不自行改核。
 4. **§2.13.2 核内测试同步坐标**（`thincoder-core/test/prompt-files.test.mjs:105` 旧锚名断言）：CLI U2 应已收正——W2 实施时核对；未收正 = 发现上报（不代改核）。
 
 #### 交付表
@@ -318,12 +323,12 @@
 | # | 需求点 | 状态 | 交付物 |
 |---|---|---|---|
 | 1 | §2 任务书写入（单元划分/删旧/复跑/回滚/权威档/验收） | ✅ Done | 本段（W1–W16 逐单元 + 总表 + R24a + 验收判据） |
-| 2 | 勘察实核（import 现状/分类/登记册/装载面） | ✅ Done | 158 档全分类（73 同路径 + 85 非同路径）· 删除集 **140 档 / 22,141 行** · 扇入 **34**（修正轮底账——修正块表 4；修正轮-2：`indexer` 移入删除集〔S 保留 18〕） |
+| 2 | 勘察实核（import 现状/分类/登记册/装载面） | ✅ Done | 158 档全分类（73 同路径 + 85 非同路径）· 删除集 **134 档 / 20,487 行**（修正轮-7：W15 六档移出——零删重定）· 扇入 **32**（修正轮底账——修正块表 4 + 口径注⑤；修正轮-2：`indexer` 移入删除集〔S 保留 18〕；修正轮-7：`notify`/`panel-project` 移出） |
 | 3 | 方案选型对比（≥2 候选含否决理由） | ✅ Done | 7 候选（1 选定 + 2 整树/双源否决 + 2 端壳缝子选型 + 2 索引面驱动子选型——修正轮-2 补） |
-| 4 | 薄壳面清单 | ✅ Done | 面板/宿主 40 · webview · S **19** · locales/assets（修正轮-2：S19→18；修正轮-6：+ `prompt-injections.mjs` → 19） |
+| 4 | 薄壳面清单 | ✅ Done | 面板/宿主 40 · webview · S **25** · locales/assets（修正轮-2：S19→18；修正轮-6：+ `prompt-injections.mjs` → 19；修正轮-7：+ W15 六档 → 25） |
 | 5 | 模块权威档同步计划 | ✅ Done | 逐单元映射 + 总则（收正·一致性面·不改机制） |
 | 6 | 验收标准逐条回指需求 · 机器可验 | ✅ Done | A-K1–A-K14（回指 F5/F8/F9/N1-N6/07:08 裁定 + 本裁定〔A-K12–A-K14〕；A-K11 = N4·F7——修正轮 #3） |
-| 7 | 未决（真判不准/需人裁） | ✅ Done | **3 条**（引擎下限〔已裁 2026-09-15〕· panel 缝 · 核内测试核对；索引存储面收口退场——修正轮-2 块；#175 收口退场——修正轮-3 块；宽度基线红 / 既有红口径收口退场——修正轮-6 块） |
+| 7 | 未决（真判不准/需人裁） | ✅ Done | **2 条**（引擎下限〔已裁 2026-09-15〕· 核内测试核对；索引存储面收口退场——修正轮-2 块；#175 收口退场——修正轮-3 块；宽度基线红 / 既有红口径收口退场——修正轮-6 块；**#99 panel 缝收口退场——修正轮-7 块〔端侧装饰已落 W13〕**） |
 | 8 | 三闸读数 · 零落盘文档档 | ✅ Done | 锚 0 · 台账 0 · 宽度新增 0（基线红 1 档已随 `60f8bab2` 清——修正轮-6）· 核/VSC/CLI 各树零触碰 |
 | 9 | 不 commit · 不发起评审 | ✅ Done | 未 commit · 未发起（用户定后另行） |
 
@@ -343,6 +348,8 @@
   镜像措辞现状注（LOGGING 设计/需求档 + VSC 档 F6）· B20 历史形态收正 · 表 3 行 1 范围收正（AGENTS.md）· `ARCHITECTURE.md:117` 参照面登记——全量见下修正轮-6 块。
 - 2026-09-15（**修正轮-6 增补（W2 档案并入）** · eng-designer）：R24a 收正（`extension.mjs` 91 → 157〔合计实测 +66 = W8 前置笔 +60 + W2 +6〕· 新建 `src/prompt-injections.mjs` 0 → 65 补登 · 测试面 `prompts-async-guidance` 176 → 326 例外）；
   「不新增 `.mjs`」口径收正（端壳缝不新增档 · 取值表分离新建）+ S 计数 18 → 19（D3 联改：薄壳面清单 / 交付表 #4 / R24a 注）+ A-K8 基线再推进（+6 用例 ⇒ 633/592 · `test:full` 633/633）+ 「activate() 首步」两裁文案统一（注入 = 入口首语句 · 护栏 = 首步守卫）——见下修正轮-6 块增补。
+- 2026-09-15（**修正轮-7 · W15 设计前提修正（实施打回落地）** · eng-designer）：W15 重定（零删——装配面 4 档重分类 + 端壳/壳 2 档保留 · 单元目标 = 装配面瘦身 + 核原语改指 + 端壳缝四条落地）；R1–R5 全文落地 + D3 联改（总表 W15/合计 · 勘察 #3/#6/#7 · 薄壳面清单 S 19→25 · `:260` · R24a 三行 + 新增行 · 表 2/4/5 · 发现 4/8 · 未决 3 收口〔3→2〕· 交付表 #2/#4/#7）；
+  权威档收正 = `CORE-UNIFICATION.md`（§2.13.6 #6 落点句 · §2.8 `:1043` VSC 半）；核内笔清单上抛（#112 / 核 `END` 参数化 / `depInfo`·C-6）——全量见下修正轮-7 块。
 
 ### §2 修正块（评审修正轮 · 2026-09-15 · eng-designer）
 
@@ -388,7 +395,7 @@
   连带核对：删除集（73 同路径 + M28 − 保留 2 档 = **99 档**——修正轮 #6）内不含 `agent/async-discard.mjs`（该路径不存在）⇒ **删除集无缺**。
   **附加注（报而未改）**：§2.5.1 索引（设计档 `:402`）与设计档变更记录（`:1852` 只回声 D1）未回声 D2「已裁（2026-09-13）」——本轮已核对定论；是否给设计档索引/变更记录补录回声 = **上抛**（D2 实体状态已裁、不阻塞实施）。
 
-**表 2 · 保留 S 档 18 逐档证据（finding 2 落点 · 对位行取值 + file:line 实核 · as-of 2026-09-15；修正轮-2：`indexer.mjs` 改入删除集——移出本表）**
+**表 2 · 保留 S 档 25 逐档证据（finding 2 落点 · 对位行取值 + file:line 实核 · as-of 2026-09-15；修正轮-2：`indexer.mjs` 改入删除集——移出本表；修正轮-7：S 计数 19 → 25——本表 18 档 + 增补六档〔本表末〕+ `prompt-injections.mjs`〔修正轮-6 面〕）**
 
 > 判据 = 「保留 = 裁决结果，非差异入桶」：逐档引**对位行「端差处置」取值** + **结构性证据（file:line / 实核）**；「核内无同路径对位档」= 2026-09-15 逐档实核（`thincoder-core/**` 对照）。
 
@@ -410,28 +417,35 @@
 - **`tools/code.mjs`（165）**：对位 = MEMORY §2.3 映射（「`tools/code.mjs` ↔ CLI `memory/docs.mjs` 的 `codeSearchTool`/`docSearchTool` ⇒ 随 #82」）；import `vscode` + `../embed-config` + `../indexer` + `../agent/run-helpers`——向量检索面（旧文件制驱动——**修正轮-2：已裁归一、改指核 `codeSearch`/`docSearch`**）。
 - **`tools/context.mjs`（139）** · **`tools/focus.mjs`（51）**：④ 端特有桶（覆盖对账 `:369`/`:373`——「对位 10 + ④ 2 档（context / focus）」）；import `vscode`（宿主 IDE 面）——结构性不对称（依赖壳能力——A9 第 1 条）。
 
+**增补（修正轮-7 · W15 重定 6 档——判据 = 「同路径 ≠ 同内容」）**：
+`src/agent.mjs`（460——签名异〔`runAgent(provider, cwd, input, callbacks, signal, autoApprove, opts)` `:56` vs 核 `runAgent(agent, input, callbacks, opts)` 核 `agent.mjs:96`〕· 载体 10 字段访问器别名 `:137-150` · live autoApprove getter `:64` · `opts.agent` 单例复用）·
+`agent/setup.mjs`（668——导出面异：`buildTopLevelAgent`/`hydrateRun`/`setupAgentRun`/`vscSubagentFace`/`modeRoleField` 核无对应物）·
+`agent/run-stages.mjs`（382——函数面异）· `agent/setup-reminders.mjs`（252——端特有四名）· `src/explore-distill.mjs`（157——核 re-export 签名异〔W6 已登记〕）· `src/i18n.mjs`（56——`t()` 壳〔I18N D1〕）；逐档分叉实核 = §5 W15 段「一、删除集前提失效（F1）」档级对照表；`prompt-injections.mjs`（W2 面）证据 = 修正轮-6 增补（R24a 行）。
+
 **表 4 · 删除集扇入底账（finding 4 落点 · 机器扫描 2026-09-15 · cwd = `thincoder-vscode`）**
 
-> 口径 = 删除集（**100** .mjs 档）在 `src/**` + 端点 `extension.mjs` 的静态 import / `export … from` / `import(...)` 扇入去重（排除同为删除档者）；数值 = 该档当前行数（`wc -l`）〔并入单元〕。**共 34 档 = src/ 33 + 端点 1**——与 :65 / :105 / :214 同源（本表 = 唯一底账；修正轮-2 组成更新——总数不变）。
+> 口径 = 删除集（**94** .mjs 档——修正轮-7：W15 六档移出）在 `src/**` + 端点 `extension.mjs` 的静态 import / `export … from` / `import(...)` 扇入去重（排除同为删除档者）；数值 = 该档当前行数（`wc -l`）〔并入单元〕。**共 32 档 = src/ 31 + 端点 1**——与 :65 / :105 / :214 同源（本表 = 唯一底账；修正轮-2 组成更新——总数不变；修正轮-7 总数 34 → 32——见口径注⑤）。
 
-- **extension/（17）**：`chat-panel` 422〔W7·W15·W16〕· `config-watch` 77〔W16〕· `image-handler` 86〔W15·W16〕· `ledger-surface` 111〔W4〕· `migrate-settings` 27〔W16〕· `notify` 18〔W15〕· `panel-callbacks` 209〔W1·W16〕· `panel-chat` 496〔W1·W15·W16〕
-- （extension/ 续）：`panel-index` 191〔W8·W16〕· `panel-mcp` 68〔W7〕· `panel-messages` 498〔W7·W12·W13·W15·W16〕· `panel-project` 93〔W15〕· `presets` 85〔W16〕· `provider-flows` 220〔W10·W16〕· `settings-panel-write` 153〔W10·W16〕· `settings` 348〔W7·W10·W16〕· `suspension` 362〔W1·W12·W13〕
-- **agent/（5）**：`agent-state` 111〔W12·W16〕· `context-injections` 227〔W8·W14·W15〕· `execute-tools` 363〔W1·W12〕· `run-helpers` 297〔W4·W16〕· `tool-gates` 159〔W4·W12〕
+- **extension/（15）**：`chat-panel` 422〔W7·W16〕· `config-watch` 77〔W16〕· `image-handler` 86〔W16〕· `ledger-surface` 111〔W4〕· `migrate-settings` 27〔W16〕· `panel-callbacks` 209〔W1·W16〕· `panel-chat` 496〔W1·W16〕
+- （extension/ 续）：`panel-index` 191〔W8·W16〕· `panel-mcp` 68〔W7〕· `panel-messages` 498〔W7·W12·W13·W16〕· `presets` 85〔W16〕· `provider-flows` 220〔W10·W16〕· `settings-panel-write` 153〔W10·W16〕· `settings` 348〔W7·W10·W16〕· `suspension` 362〔W1·W12·W13〕
+- **agent/（5）**：`agent-state` 111〔W12·W16〕· `context-injections` 227〔W8·W14〕· `execute-tools` 363〔W1·W12〕· `run-helpers` 297〔W4·W16〕· `tool-gates` 159〔W4·W12〕
 - **agent-tools/（2）**：`async-discard` 113〔W1·W13〕· `index` 16〔W9·W12·W13〕
 - **tools/（5）**：`code` 165〔W8〕· `context` 139〔W14〕· `focus` 51〔W14〕· `index` 76〔W14〕· `shell` 317〔W5·W14〕
 - **根档（4）**：`config-mcp` 71〔W16〕· `embed-config` 51〔W8〕· `memory-tool` 386〔W8〕· `specs` 5〔W16〕
-- **端点（1）**：`extension.mjs` 91〔W7·W15〕
-- 口径注：① 与 :65 / :105 / :214 三处计数同源（原 33 的分组口径〔extension 20 / tools 5 / 根档仅 specs〕经复跑证伪——以本表为准）；② 「改核心面」类（W11 五档 / W14 `tools/shared.mjs` / W6 三档——非删除集扇入）另列（R24a 行）；
-  ③ `panel-project`（原 prose 未列）与 `extension.mjs` 为本轮机器扫描补入；④ **修正轮-2**：`indexer` 移出〔入删除集 W8〕· `tools/code` 165〔W8〕补入 · `panel-index` 补 W8 边——总数不变。
+- **端点（1）**：`extension.mjs` **157**〔W7〕
+- 口径注：① 与 :65 / :105 / :214 三处计数同源（原 33 的分组口径〔extension 20 / tools 5 / 根档仅 specs〕经复跑证伪——以本表为准）；② 「改核心面」类（W11 五档 / W14 `tools/shared.mjs` / W6 三档 / **W15 六档**〔修正轮-7〕——非删除集扇入）另列（R24a 行）；③ `panel-project`（原 prose 未列）与 `extension.mjs` 为本轮机器扫描补入（**修正轮-7：`panel-project` 移出——见⑤**）；
+  ④ **修正轮-2**：`indexer` 移出〔入删除集 W8〕· `tools/code` 165〔W8〕补入 · `panel-index` 补 W8 边——总数不变；⑤ **修正轮-7**：W15 重定零删 ⇒ 「W15」边全面退场——`notify`（唯一入边 = `i18n.mjs`）· `panel-project`（唯一入边 = `i18n.mjs`）移出本表；
+  `chat-panel`/`image-handler`/`panel-chat`/`panel-messages`/`context-injections`/`extension.mjs` 各档表列已去「W15」项（余边保留）；总数 34 → **32**（src 31 + 端点 1）；`extension.mjs` 行数 91 → **157**（修正轮-6 实测同步——表 5 同批）。
 
 **表 5 · 端壳改动面逐档行数 → 预计增量 · 超软线判定（finding 5 落点 · as-of 2026-09-15 `wc -l` 实核）**
 
-- **删除集扇入 34 档**（逐档当前行数 = 表 4）：预计 = **±0（import 行替换 · 结构未变）**；例外 **8 档**——
-  ① `extension.mjs` 91：入口注入 +0~2 行 + 2 处改指；② `extension/panel-mcp.mjs` 68 → **约 130±30**（`mcp/index.mjs` 注册表段〔`:84` 起〕+ 面板状态接口〔`:399-418`〕迁入——W7）；
+- **删除集扇入 32 档**（逐档当前行数 = 表 4——修正轮-7：34 → 32）：预计 = **±0（import 行替换 · 结构未变）**；例外 **8 档**——
+  ① `extension.mjs` **157**（修正轮-6 实测——原 91）：W8 前置笔 +60 / W2 入口注入 +6 已落 + 改指 1 处（mcp 边——W7）；W15 面零动作（i18n 壳保留——修正轮-7）；② `extension/panel-mcp.mjs` 68 → **约 130±30**（`mcp/index.mjs` 注册表段〔`:84` 起〕+ 面板状态接口〔`:399-418`〕迁入——W7）；
   ③ `extension/settings-panel-write.mjs` 153 → **+10±10**（`$schema` 供值——W11/W16 缝）；④ `extension/suspension.mjs` 362 → **+0~8**（io.ask / onToken / 载体缝适配）；⑤ `tools/code.mjs` 165 → **约 90±30**（核检索替换 + 宿主 regex 回退退役——修正轮-2 补）；
   ⑥ `extension/panel-index.mjs` 191 → **约 200±35**（核面读数/触发/相位 + 清退告示——修正轮-2 补）；⑦ `memory-tool.mjs` 386 → **约 320±80**（存储/检索换核面——工具面保留、净减；修正轮-2 补）；⑧ `agent/context-injections.mjs` 227 → **±0~+20**（召回块换源——修正轮-2 补）。（原 ⑤ `indexer.mjs` 456 随裁定入删除集——移出本表。）
 - **改核心面类（非删除集扇入）**：W11 五档 `session-io 436` / `session-slots 399` / `session-slot-write 178` / `session-gc 142` / `panel-session 338`：改指 + 缝适配 ⇒ **+0~+40/档**（真增行点 = 适配面；实施读数落 §5）；
   W14 `tools/shared.mjs` **413 → 约 150±50**（拆壳净减）；W6 三档（`history-window` **175** / `generate-title` **87** / `turn-model` **27**——≤300 · 结构未变）改指 ⇒ **±0**。
+  **W15 六档**（`src/agent.mjs` **460** · `agent/{setup 668, run-stages 382, setup-reminders 252}.mjs` · `src/explore-distill.mjs` **157** · `src/i18n.mjs` **56**——修正轮-7）：装配面瘦身 + 核原语改指 + 端壳缝四条落地 ⇒ **净减方向**（逐档读数落 §5）。
 - **超软线判定（>300 行被改档 · 承设计档 §2.6.2（四）:571 先例）**：
 
 | 档（行数） | 判定 |
@@ -439,6 +453,7 @@
 | `chat-panel` 422 · `panel-chat` 496 · `panel-messages` 498 · `suspension` 362 · `execute-tools` 363 · `memory-tool` 386 · `settings` 348 · `shell` 317 | **既有超软线档 · 结构未变**（改指 / 行内替换为主）⇒ **拆分计划另议**（消解条件 = 该档下次实质改动时；修正轮-2：`indexer` 入删除集——移出本表） |
 | `session-io` 436 · `session-slots` 399 · `panel-session` 338 | 既有超软线档 · 改指 + 适配（结构未变）⇒ 拆分计划另议（同前） |
 | `tools/shared.mjs` 413 | 拆壳后 **约 150**（收口到线下）⇒ 拆壳即消解 |
+| W15 保留六档：`agent.mjs` 460 · `agent/setup.mjs` **668（>500 硬限）** · `agent/run-stages.mjs` 382 | 重定保留档（修正轮-7）——本单元装配面瘦身；`setup.mjs` 目标落 500 内（未落 ⇒ 拆分计划另议——消解条件 = 该档下次实质改动时；承本表先例） |
 
 **「S2 收口笔（W17）」专节（finding 3 落点 · 修正轮）**
 
@@ -745,6 +760,70 @@
 - ① `node scripts/check-doc-width.mjs` → **1 文件 / 7 行**超 300——**皆 §5 W2 段**（W2 在写段 · 非本侧写域 · §5 零触碰 ⇒ 登记，折行归 W2 / 父侧）；**本侧收正档 0 行**（自造 1 行〔原 `:170` 门 1〕已就地折行收正）；`一致性 V1/V2/V3：新增违规 0 条 · 存量（基线内）0 条。`
 - ② `node scripts/doc-anchors.mjs --domain .`（exit 0）→ `V5 汇总：候选 8101 · 悬空 0 · 注记豁免 416`；`OK(V5): 0 条悬空锚（闸态——阈值 0）`。
 - ③ `node scripts/check-ledger.mjs` → `OK` 两档 · `0 处违规 · 基线 0 条`（exit 0）。
+
+### §2 修正轮-7 块（W15 设计前提修正——实施打回落地 · 2026-09-15 · eng-designer）
+
+**来源** = W15 实施开工前打回（本档 §5「实施：S2 W15 —— AGENT-LOOP · 开工前打回」——逐档 file:line 实证 + R1–R5 呈请）+ 父侧裁定 R1–R5（落 §2）。
+**边界** = 文档面修正：`thincoder-vscode/**` / `thincoder-core/**` / `thincoder-cli/**` 实现零触碰（只读核对）· 台账与仓根 `scripts/**` 零触碰 · §1/§3/§5/§6 零触碰（本块为其下追加）。**形态** = 「段内就地订正 + 本块逐条记录」并用（订正点已在正文注明）；**凭证纪律** = 本块零 token/designId 值。
+
+**一、R1 · W15 重定（零删——装配面重判）**
+
+- 判据 = 本批自身判据「同路径 ≠ 同内容」（勘察 3 / 发现 3）+ 删除集判定按内容实核；CLI U15「删 → 核」的核镜像前提不成立于 VSC 六档（独立分叉——§5 W15 段 F1 表逐档实证）。
+- 六档重判：`src/agent.mjs`（460）· `agent/{setup 668, run-stages 382, setup-reminders 252}.mjs` = **S 端壳装配面**（非删除集）；`src/explore-distill.mjs`（157）= 端壳/适配器（W6 已登记核 re-export 签名异）；`src/i18n.mjs`（56）= `t()` 壳（I18N D1 已裁）。
+- 单元目标重定 = 装配面瘦身 + 核原语改指 + 端壳缝四条落地；新家 = 原地（F6 定形——不搬家）；循环契约位移 = 调用期适配（F7 定形——live autoApprove getter / distillState / turnInput / 载体 10 字段宿主；承 W6 先例）。
+- 读数（实测 · wc -l · 2026-09-15）：六档 = 460+668+382+252+157+56 = **1,975**；删除集 100 → **94 档** · 20,706 → **19,052 行**（按删列口径 1,654 减列）；合计 140/22,141 → **134 档 / 20,487 行**；扇入 34 → **32**（`notify`·`panel-project` 唯一入边 = `i18n.mjs`）；S 计数 19 → **25**。
+
+**落点（就地订正 · file:line as-of 本块落盘时）**：
+
+| # | 落点 | 订正面 |
+|---|---|---|
+| 1 | §2 W15 段（`:215`–`:227`） | 整段重写（重定声明 / 单元目标 / 端壳缝四条 / #112 核对未落 / 测试面 + 专项验收收正） |
+| 2 | （三）总表 W15 行 `:115` · 合计行 `:117` | 删 6/1,654 → **0/0**；存活改指 → **1**（W6 跨单元笔·已落）；合计联改（94/19,052 · 134/20,487 · 扇入 32） |
+| 3 | 勘察 #3 `:70` · #6 `:73` · #7 `:74` | S 25 / 删除集 94·19,052 / 扇入 32（各就地增补） |
+| 4 | 薄壳面清单 S 行 `:241` · `:266` | S 19 → **25**（+W15 六档——端壳装配面 4 + 端壳/壳 2） |
+| 5 | R24a `:254`（删除集）/ `:256`（端壳改指面）/ `:257`（**新增行**——W15 装配面 6 档）/ `:261`（端点行） | 逐行收正（94 档 · 32 档/5,991 行 · 六档 1,975 行 · 改指 2 处 → 1 处） |
+| 6 | 表 2 标题 `:398` + 增补节 `:420`–`:424` | S 档 25 逐档证据（新增六档逐档分叉证据） |
+| 7 | 表 4 口径 `:427` · 条目 `:429`–`:435` · 注 `:436`–`:438` | 94 档 · 32 档（extension 15）· 注⑤（W15 边退场——`notify`/`panel-project` 移出） |
+| 8 | 表 5 `:440` 起 · 改核心面类 `:446` 区 · 超软线判定追加行 `:456` | 32 档 · W15 六档净减方向 · `setup.mjs` 668（>500 硬限）拆分计划行 |
+| 9 | 发现 4 `:301` · 发现 8 `:308` | S 25 增补 / W15 半收正（原「随 W15 删除集」句取代） |
+| 10 | 未决 3（`:315` 区——**收口退场**）· 交付表 #2 `:326` / #4 `:328` / #7 `:331` | D3 联改（3 → 2 条；删除集/扇入/S 计数） |
+| 11 | §2 变更记录 `:351`–`:352`（+1 行） | 修正轮-7 摘要 |
+| 12 | `docs/core/design/CORE-UNIFICATION.md`：§2.13.6 #6 `:1450`–`:1451` · §2.8 `:1043` · 变更记录 `:1943`–`:1944` | R2 点名面 + R1 联改面（见二） |
+
+**二、R2–R5 逐条落地**
+
+| # | 裁定 | 落地 |
+|---|---|---|
+| R2 | 工具登记面 = **端侧装配期装饰**（`vscSubagentFace`——W13 已落： #99 panel 剔除 · C-5 终态回显 · `isReadonlyAction`/`isControlAction` 谓词）；核内缝不新增（端差走端侧装饰/注入 · 零核改）；W15 保留该面 | §2 W15 段端壳缝① + `CORE-UNIFICATION.md` §2.13.6 #6 落点句收正（「现无剔除缝」→「落点 = 端装配面 · 已落」）+ 未决 3 收口退场 |
+| R3 | #113 = **端侧供给**（端装配面围绕核 `prepareRun` 注入；前置推送形态按 `context-parity` 序表实证收正〔序表 = VSC 产品档 `AGENT-LOOP.md` §17.4；断言面 = 端测试〕；核内补位不取） | §2 W15 段端壳缝② |
+| R4 | 端身份面 = **VSC 自持**（端 `END = "vscode"`〔`thincoder-vscode/src/extension/session-slots.mjs:49` 实核〕+ env 行端生成——承 W11 marker 层先例）；核 `END` 参数化 = 核内笔登记 | §2 W15 段端壳缝③ + 核内笔清单 #2 |
+| R5 | #112 = 核对未落 ⇒ 核内笔登记（三处实证）；i18n 壳 = 保留（见 R1）；`depInfo`·C-6 差异 = 核内笔登记（W13 已锁核语义现态）；⏹ queued 等待头回收 = W15 事件面（并入其验收条目） | §2 W15 段（#112 行 + 专项验收）+ 核内笔清单 #1/#3 |
+
+**三、核内笔清单（上抛父侧排期——超本批写域 · `thincoder-core/**` 零触碰）**
+
+| # | 笔 | 现状 / 实证（file:line · 2026-09-15 实核） | 来源 |
+|---|---|---|---|
+| 1 | **#112 `read_image` 门位迁移**（定稿 = 装配面恒含 + run 期重解——`CORE-UNIFICATION.md` §2.13.6 缺口 5 #112 块） | **未落**（三处）：① 核 `tools/index.mjs:62` 装配期门仍在（`imageOk = Boolean(specForModel(model)?.multimodal)`）② 核 `agent/setup.mjs:293-294` 无 run 期能力重解（`tools`/`toolSchemas` 物化处零过滤）③ 拟档 `thincoder-core/test/tool-face-capability.test.mjs` 不存在 | R5 · §5 W15 三 |
+| 2 | **核 `END` 参数化**（`resumeSlot(cwd, { end })` 形态候选） | 核 `END = "cli"` 编译期单值（核 `session-slots.mjs:71` 实核）+ env 行硬编码 `${END}`（核 `agent/setup-reminders.mjs:31` 实核）⇒ 端壳无法零行为差消费核件 | R4 · W11 §5 未决 1 |
+| 3 | **`depInfo`·C-6 差异** | 核 `depInfo` 判 `discarded` 墓碑 `ok`（核 `agent-tools/subagent-scheduler.mjs:111`——`depc` 判定 `:167`）vs 端设计 §12.6 C-6（`discarded → cancelled` depc 停靠）；消费面在核 scheduler 内（`describeBlockers` `:133` / `queueRunnable` `:266`）——端装配层无法补齐 | R5 · W13 §5 未决 1 |
+
+**四、核对与发现**
+
+1. `docs/core/design/{AGENT-LOOP.md,I18N.md}` 核对结论 = **无失准 W15 行（零动作——「如需」不触发）**：`I18N.md` §3.1 D1「VSC 保留 `t()` 壳」与 R1 同向；`AGENT-LOOP.md` §2.5 #112/#113 行「端差注入」表述与 R2/R3 同向、§6.18 = W15 实施期同步面（`vscSubagentFace` 等 W13 已收正）。
+2. `CORE-UNIFICATION.md` 两处收正（落点表 #12——R2 点名 + R1 联改）；该档其余 W15 陈述（§2.13.6 #112 块「只设计不实现——S2 / 核内笔落」· §2.13.4 #112 行）现行态与 R5 一致——零改。
+3. 修正轮-4 块内「VSC 随 W12 / W15 删除集」句（`:588` 块区）**历史保留 as-of 语义**——其 W15 半已由本轮取代（`agent/setup.mjs` VSC = 重定保留）。
+4. **发现（上抛 · 非本笔面）**：① 台账闸 = **1 处违规**（`docs/TODO-archive.md:188` 证据 `thincoder-vscode/src/agent-tools/settings.mjs:35`——该档 = **W16 删除集**〔工作区已删，实核 MISSING；核 `agent-tools/settings.mjs` 在册且含 `_SIBLING_SHAPES`〕⇒ 建议 W16 收口 / 父侧按「迁核注记」形态改证据）；
+  ② 锚闸 = **35 悬空**（存量面 = W10/W12/W14 删除集在核心 docs 的未收口坐标——本笔两档零新增〔逐条核验：本笔编辑行均不在悬空清单〕——同 W12 补轮「交文档收口批」口径）。
+
+**五、自检读数（三闸复跑 · cwd = 仓根 · 2026-09-15 修正轮-7）**
+
+- ① `node scripts/check-doc-width.mjs` → `OK(宽度): 404 文件零 >300 字符行`（exit 0）；`一致性 V1/V2/V3：新增违规 0 条`（本席首版 3 行超宽〔`:225`/`:421`/`:437` 区〕已就地机械折行——仅插换行 · 文字零改）。
+- ② `node scripts/check-ledger.mjs` → **1 处违规**（`TODO-archive.md:188`——W16 在途面，见四.4①；本笔零触碰台账）。
+- ③ `node scripts/doc-anchors.mjs --domain .` → **FAIL(35 悬空)**（存量面——见四.4②；`CORE-UNIFICATION.md` 本笔三处编辑均不在悬空清单内）。
+
+**状态**：R1–R5 全文落地 ✓ · D3 联改 ✓ · 核内笔清单在案（上抛父侧排期）✓；W15 可重派（同一 designToken 修正轮；docs FIRST）。
+
+**收正注（同轮 · 零语义）**：本块首版 2 行长行（`:766`/`:814`——折行前坐标）经本席就地机械折行（仅插换行 · 文字零改）；同批 `:766` 的 §5 引用改节题锚（原 as-of 行号随本块追加漂移——形态收正）。
 
 ## §3 设计评审（评审子代理）
 
