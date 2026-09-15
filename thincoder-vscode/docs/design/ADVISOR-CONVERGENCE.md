@@ -1113,7 +1113,7 @@ export function advisorContextBudget(provider) {
 | **多实现面纪律（双端）** | 语义同源 + 本端原文自持；不做 byte-identical、不建依赖；差异 3 处如实登记（§15.7） |
 | **R24a/R24b 行数与档位** | §15.8 逐文件当前行数 + 预计增量 + 档位（loop 注记越线停下） |
 | **文档宽度 / 一致性** | VSC 仓 `check-doc-width` 宽度 + V1/V2 新增违规 0（落档后实跑） |
-| **判定族 / §13.4 契约四** | 六 kind 前缀与六条尾文案逐字零改；kind 表指针（`loop.mjs` 溢出尾——文件不变）不受影响；T-VG1 既有回归锁继续绿 |
+| **判定族 / §13.4 契约四** | 六 kind 前缀与六条尾文案逐字零改；kind 表指针（`loop.mjs` 溢出尾——文件不变）不受影响；T-VG1（W12 已退役——删除记录见批次档 §5） 既有回归锁继续绿 |
 | **§14.6 超时语义** | `agent.advisor.timeoutMs` 零改；预算（token）与墙钟（时间）两维正交 |
 | **主循环阈值** | 主循环压缩阈值（旧档 `src/compact.mjs`——60% 窗口；W6 已迁核——现体 `thincoder-core/context.mjs`）与评审预算职责不同——不合并、不同步（CLI 同裁定） |
 

@@ -28,7 +28,7 @@
 | F-A9 | **启动断言**：design 评审请求必须携带与本次 token 精确对应的 Approval Signal——缺失即拒绝启动（fail-closed，固定前缀 `ADVISOR_LAUNCH_REFUSAL_PREFIX`）。证据 = `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）:45,151-163` | 伪造 / 缺失 Signal → 启动拒绝串；零发送 | 不放行无 Signal 的 design 评审 |
 | F-A10 | **轮次重置语义**：无 prior 且本 run 未改代码 → 轮次归零（新周期完整预算）；本 run 改过代码 → **保留轮次**。证据 = `src/advisor/main.mjs（W12 已迁核——现体见批次档 §5）:254-267` | 改码后再评审 → 轮次不重置（收敛预算不可刷）；未改码 → 重置 | 不做无条件重置 |
 | F-A11 | **guard 推回（可配，缺省 OFF）**：`advisor.guard=true` 且非工程模式且 depth0 且改码未评审 → 工具调用被推回（pushback < 3 且 round < 5）；FILE_MUTATORS 重置评审标记 | 开启 guard + 改码未评审 → 推回串；FILE_MUTATORS 触发重置 | 缺省 OFF；工程模式不适用 |
-| F-A12 | **响应表纪律**：裁决表表头逐字 `\| # \| Action \| Detail \|`；Action 四值（Fixed / Dispatched / Not an issue / Deferred）——提示词纪律，**不驱动控制流**。证据 = `src/advisor/history.mjs:8` | 输出含合规表头；机制层零表解析 | 不做表解析驱动逻辑 |
+| F-A12 | **响应表纪律**：裁决表表头逐字 `\| # \| Action \| Detail \|`；Action 四值（Fixed / Dispatched / Not an issue / Deferred）——提示词纪律，**不驱动控制流**。证据 = `src/advisor/history.mjs（W12 已迁核——现体见批次档 §5）:8` | 输出含合规表头；机制层零表解析 | 不做表解析驱动逻辑 |
 
 ## 3. 非功能性需求
 

@@ -89,7 +89,7 @@ consult 会话（history._consultSessions = Map<id, Session>，跨 run 存活）
 }
 ```
 
-**工具**（均在 `src/agent-tools/consult.mjs`）：
+**工具**（均在 `src/agent-tools/consult.mjs`（W12 已迁核——现体见批次档 §5））：
 
 ```
 consult_start

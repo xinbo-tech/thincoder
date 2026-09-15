@@ -7,7 +7,7 @@
 > 范围：配置与 preset、Provider 增删与模型选择 UI、transport 分派与调用链、能力适配
 > （spec/thinking/escape/续写）、Responses transport、LLM 标题生成、图片输入。
 >
-> 相关权威：`src/provider.mjs`（W10 已迁核——现体 `thincoder-core/provider/core.mjs`；chat/transport 分派）、`src/provider/transports/*`（四
+> 相关权威：`src/provider.mjs（W10 已迁核——现体 `thincoder-core/provider/core.mjs`）`（W10 已迁核——现体 `thincoder-core/provider/core.mjs`；chat/transport 分派）、`src/provider/transports/*`（四
 > transport；W10 已迁核——现体核 `provider/{anthropic,google,sse,responses}.mjs`）、`src/config.mjs`（MODEL_SPECS / specForModel / resolveEnableThinking）、
 > `src/config-presets.mjs`（PROVIDER_PRESETS）、`src/config-io.mjs`（config.json 读写）、
 > `src/escape.mjs`（W4 已迁核——现体 `thincoder-core/escape.mjs`）、`src/extension/{settings,presets,provider-flows,reasoning-mode,
@@ -185,15 +185,15 @@ chars/token、CJK ≈1），超预算 `sleep`（onWait 通知）；未配则关�
 >
 > **W10 已迁核（2026-09-15）**：本节 = 群 A 批历史契约（镜像面）；VSC provider 镜像已删——
 > 实现体 = 核（`thincoder-core/provider/`），驱动面 = `test/provider-timeout-semantics.test.mjs`
-> （保留 2 例经核 `chat`；退役 3 例见该文件头注）。本节下文对 `src/provider.mjs` / 四 transport
+> （保留 2 例经核 `chat`；退役 3 例见该文件头注）。本节下文对 `src/provider.mjs（W10 已迁核——现体 `thincoder-core/provider/core.mjs`）` / 四 transport
 > 的行号引用均为迁核前 as-of 坐标，不再指向现态档。
 
 **（a）问题陈述（现场复核——as-of 2026-09-11）**：
 
 | # | 现状 | 现场锚 |
 |---|---|---|
-| 1 | 每请求合成绝对墙钟：`signal ? _anySignal([signal, AbortSignal.timeout(600_000)]) : AbortSignal.timeout(600_000)`——**头+body 全程 600s 绝对上限** | `src/provider.mjs:324`（`:28` 常量声明；`:23-27` 注释自称 "CLI parity" = 陈旧——CLI 废掉的正是此物） |
-| 2 | 直连路径 body 无读侧守卫（仅代理路径 `_bodyIdleMs`）——墙钟拆除后静默流无显式兜底 | `src/provider.mjs:328`；四 transport 读循环无 idle（`openai.mjs:245-255` / `anthropic.mjs:147+` / `google.mjs:190+` / `responses.mjs:252-257`） |
+| 1 | 每请求合成绝对墙钟：`signal ? _anySignal([signal, AbortSignal.timeout(600_000)]) : AbortSignal.timeout(600_000)`——**头+body 全程 600s 绝对上限** | `src/provider.mjs（W10 已迁核——现体 `thincoder-core/provider/core.mjs`）:324`（`:28` 常量声明；`:23-27` 注释自称 "CLI parity" = 陈旧——CLI 废掉的正是此物） |
+| 2 | 直连路径 body 无读侧守卫（仅代理路径 `_bodyIdleMs`）——墙钟拆除后静默流无显式兜底 | `src/provider.mjs（W10 已迁核——现体 `thincoder-core/provider/core.mjs`）:328`；四 transport 读循环无 idle（`openai.mjs:245-255` / `anthropic.mjs:147+` / `google.mjs:190+` / `responses.mjs:252-257`） |
 | 3 | 文档句与相位语义不符（"响应头阶段" 实为全程绝对上限） | 本档 §4.2（改前句） |
 
 **（b）方案选型对比**（判据 = 用户实证文案闭源 / 长请求不腰斩 / 无新挂起窗口 / 可测 / 与代理路径一致）：
@@ -206,7 +206,7 @@ chars/token、CJK ≈1），超预算 `sleep`（onWait 通知）；未配则关�
 
 **（c）契约（逐条——实现对象）**：
 
-1. `src/provider.mjs:324`：`signal: signal ?? undefined`（**去合成**——不再叠加 `AbortSignal.timeout`）；
+1. `src/provider.mjs（W10 已迁核——现体 `thincoder-core/provider/core.mjs`）:324`：`signal: signal ?? undefined`（**去合成**——不再叠加 `AbortSignal.timeout`）；
    `:31` `_anySignal` polyfill 随唯一使用点退场（删除）；`:23-28` 注释改写（W10 已迁核——现体 `thincoder-core/provider/core.mjs`）；
 2. `:327` `_headerTimeoutMs: FETCH_TIMEOUT_MS` 保留（代理路径头阶段 600s——与 CLI 同值；本端无 `fetchTimeoutMs` 配置键——不加新配置面）；`:328` `_bodyIdleMs: 120_000` 保留；
 3. **读侧 idle（本端补齐——CLI 对位 = `sse.mjs:169-182` / `google.mjs:197-207`）**：四 transport 的读循环各加
@@ -223,7 +223,7 @@ chars/token、CJK ≈1），超预算 `sleep`（onWait 通知）；未配则关�
 | T-MA1-2 | 边界 | 无用户 signal（`undefined`）（W10 后 = 核 `chat` 驱动） | `options.signal === undefined`（不再合成 `AbortSignal.timeout`）；请求照发 | AC-MA1-1 |
 | T-MA1-3 | 错误 | 假流：两 chunk 后静默挂起 + `parseStream(..., { idleMs: 40 })` | 读循环以 `TimeoutError` 终止（name 判定）；错误消息含 `SSE idle timeout` | AC-MA1-2（W10 已退役——随镜像删档；删除记录 = 批次档 `2026-09-15-vsc-core-wiring.md` §5） |
 | T-MA1-4 | 边界（对照） | 假流：每 20ms 持续有 chunk 至完成（idleMs=40） | **零误杀**——正常完成；timer 已清理（无悬挂 handle） | AC-MA1-2（W10 已退役——同前注；删除记录 = 批次档 §5） |
-| T-MA1-5 | 边界（静态） | `src/provider.mjs` 源文本 grep | `AbortSignal.timeout(FETCH_TIMEOUT_MS)` 零命中；`_anySignal` 零残留（或定义即可见零调用——取删除） | AC-MA1-3 |
+| T-MA1-5 | 边界（静态） | `src/provider.mjs（W10 已迁核——现体 `thincoder-core/provider/core.mjs`）` 源文本 grep | `AbortSignal.timeout(FETCH_TIMEOUT_MS)` 零命中；`_anySignal` 零残留（或定义即可见零调用——取删除） | AC-MA1-3 |
 
 **（e）AC（机判）**：
 
