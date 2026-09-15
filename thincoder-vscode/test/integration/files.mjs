@@ -15,4 +15,5 @@ export default [
   "test/integration/scenario-05-panel-basics.test.mjs",
   "test/integration/scenario-06-commit-verify.test.mjs",
   "test/integration/scenario-07-config-routing.test.mjs",
+  "test/integration/host-shape-spawn.test.mjs",
 ]

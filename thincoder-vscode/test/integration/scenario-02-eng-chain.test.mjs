@@ -23,6 +23,7 @@ import { advisorTool } from "@thincoder/core/agent-tools/advisor.mjs" // W12：�
 // 夹具改驱真链路：mock provider（本地 SSE 零外网））。
 import { subagentTool } from "@thincoder/core/agent-tools/subagent.mjs"
 import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
+import { buildTopLevelAgent, hydrateRun } from "../../src/agent/setup.mjs" // W18：生产宿主形状父对象（拆手工 tools:[] 补丁）
 import { mockLLM, providerFor } from "./helpers/mock-llm.mjs"
 
 let work
@@ -57,26 +58,24 @@ const reviewerStep = (body) => {
   }
 }
 
-/** 工程模式父 agent（最小真形状：cwd/config/provider/history/_engDesignTokens）。
- *  W12（2026-09-15）：advisor 工具/解析面改指核单源——核 `resolveAdvisorProvider` 读
- *  `agent.provider`（回退分支）与 `agent.config.providersList`；夹具同批适配（`_provider` 端侧遗留载体保留）。 */
-function engParent(llm) {
+/** 工程模式父 agent —— 生产宿主形状（`hydrateRun(buildTopLevelAgent(), …)` 产物）。
+ *  W18（2026-09-15）：拆除手工 `tools: []` 补丁（夹具替宿主补缺字段 = 缺陷漏网根因，§1.4）——
+ *  装配面 = 修复点本体（回归守卫：`agent.tools` 绑定行移除 ⇒ 本档 spawn 例红）。
+ *  调用期载体两处照搬（生产面同款、非修复面）：① `agent.provider`（agent.mjs 调用期回填——
+ *  核 `resolveChildProvider` / `resolveAdvisorProvider` 读 `parent.provider`）；
+ *  ② async 池两字段（原夹具同款载体行）。 */
+async function engParent(llm) {
   const provider = providerFor(llm)
-  return {
-    cwd: work,
-    config: { agent: { engineering: true }, advisor: { guard: false }, providersList: [provider] },
-    history: [],
-    _role: null,
-    provider,
-    _provider: provider,
-    _engDesignTokens: null,
-    _advisorRound: 0,
-    _lastAdvisorOutput: null,
-    _asyncSubagents: new Map(),
-    _asyncQueue: [],
-    tools: [], // W13：子代理装配读 parent.tools（真跑夹具——无工具子代理仅产报告）
-    _subAgentCounter: 0,
-  }
+  const run = await hydrateRun(buildTopLevelAgent(), {
+    provider, cwd: work, input: "parent turn (production host shape)", depth: 0, role: null,
+    getAuto: () => false,
+    opts: { engState: { enabled: true } }, // 槽权威缺席 → engState 镜像（工程模式）
+  })
+  const agent = run.agent
+  agent.provider = provider
+  agent._asyncSubagents = new Map()
+  agent._asyncQueue = []
+  return agent
 }
 
 function advisorCtx(agent) {
@@ -111,7 +110,7 @@ async function until(pred, ms = 1000) {
 test("② 正常：设计评审结算 → token 签发 → spawn 放行（两路）→ 链终 consume 消费", async () => {
   const llm = await mockLLM([reviewerStep, reviewerStep, reviewerStep, reviewerStep, { content: CHILD_REPORT }])
   try {
-    const agent = engParent(llm)
+    const agent = await engParent(llm)
     const review = await advisorTool.execute({ type: "design", documents: [DESIGN], async: false }, advisorCtx(agent))
     assert.match(review, /Approved\. Pass this exact token to eng-coder/, "评审通过：签发 token（Approved 回执）")
     const tokenMatch = review.match(/designToken parameter\): (\S+)/)
@@ -144,7 +143,7 @@ test("② 正常：设计评审结算 → token 签发 → spawn 放行（两路
 test("② 边界：链未收口——同 designId 修正复用放行；消费后再 spawn → 机械拒", async () => {
   const llm = await mockLLM([reviewerStep, reviewerStep, reviewerStep, { content: CHILD_REPORT }])
   try {
-    const agent = engParent(llm)
+    const agent = await engParent(llm)
     const review = await advisorTool.execute({ type: "design", documents: [DESIGN], async: false }, advisorCtx(agent))
     const tokenMatch = review.match(/designToken parameter\): (\S+)/)
     assert.ok(tokenMatch, "回执含 designToken 参数名与值（格式契约）")
@@ -176,7 +175,7 @@ test("② 边界：链未收口——同 designId 修正复用放行；消费后
 test("② 错误：无 token spawn eng-coder → 机械拒绝 + 零 spawn（不产生子代理）", async () => {
   const llm = await mockLLM([reviewerStep])
   try {
-    const agent = engParent(llm)
+    const agent = await engParent(llm)
     const h = spawnHarness()
     const calls0 = llm.calls
     await assert.rejects(

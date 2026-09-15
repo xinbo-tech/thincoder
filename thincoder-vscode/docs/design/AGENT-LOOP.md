@@ -38,6 +38,7 @@
   CLI 一致）——#subagent-panel 自 index.html/CSS/panels.js 零残留（⑮ grep 锁）。
 
 ## 变更记录（历史折叠——详见 git log）
+- 2026-09-15（子代理 spawn 装配缺陷修复）：§11.2 B 类绑定清单补 `tools`——`hydrateRun` 每轮绑定工具表（核 spawn 父对象读点 `parent.tools` / 子代装配展开面；VSC 宿主工厂此前从未提供该字段，子代理装配即崩；批次档 = `docs/batches/2026-09-15-vsc-agent-tools-spawn-fix.md`）。
 - 2026-09-12（VSC-CHILD-PERMISSION 批——子代理审批面对齐）：新增 §18（C-1..C-13 · KD-1..KD-8 · 用例 19 条 · AC-CP1..AC-CP9）；§1 模块地图两行（`tool-gates.mjs` / `child-permission.mjs`）与 execute-tools 行改写；R2 修正随批（`ESCALATE.md` 4 处 / `ENGINEERING-MODE.md` / `TOOLS.md` §8 / 本档 §8 同族句）。（修正轮 #3）
 - 2026-09-12（活动区收口批——A 方案反转 + digest/块头/状态行/Send 对齐）：§1 模块地图行 · §7 挂起 UI / 中止语义 · §10 全节改写——权威 = `WEBVIEW.md` §14（§12 为沿革与反转注）；未决行「live 头逐轮 turn 段」加收口注（C-11③ 履行——修正轮 #2）。
 - 2026-09-12（VSC-CONTEXT-PARITY 批·实现后同步——交付实测态对齐）：§17.6 行 12/13 实测回填（`repomap.mjs` 304 →
@@ -460,7 +461,7 @@ webview 输入面见下方 UI 段）；settle
   - _lastEngState（**必须复位 false**——eng 进出重通知语义）。
   **顺序纪律**：复位清单先于 inheritedGuard 应用（:87-89——guard 标记继承到"复位过的"下一 run）。
 
-**B. run 绑定每轮重指**（覆盖即可）：_provider/_role/cwd/history/_fullHistory/_planMode/config/_engPersist。
+**B. run 绑定每轮重指**（覆盖即可）：_provider/_role/cwd/history/_fullHistory/_planMode/config/_engPersist/tools（每轮绑定工具表——核 spawn 父对象读点 `parent.tools`）。
 
 **C. 会话级保留（单例收益本体）**：_engDesignTokens（Map——hydrate reconcile + TTL，**永不复位清空**）/config 的 engineering+advisor.guard（槽权威）/ _engPersist（绑定键）/ _engDesignReviewed（顶层恒 false 无影响）/ **_tasks/_goal（评审 #5——会话级不复位）** / **_pendingReminders（SESSION §6 槽字段——会话级）**。
 

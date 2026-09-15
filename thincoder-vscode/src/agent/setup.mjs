@@ -519,6 +519,8 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   agent._role = role
   agent._depth = depth // TRACE-STORE-VSC（D-TR4）：compress/distill 等内嵌 chat 调用点的 depth 归属
   agent._provider = provider
+  // 核 spawn 父对象读点（parent.tools——角色过滤/直传 + 子代装配展开）：每轮重指装配数组（:408），不拷贝
+  agent.tools = tools
   agent._engTaskInput = opts.engTaskInput ?? null
   // §2.22.3（第 5 批）：spawn 侧批次档绑定上车（batch_segment 的唯一路径来源；无 path 参数——
   // 目标档由 spawn 绑定 / 评审实例键提供）。顶层/非工程角色恒 null（不挂载工具）。
