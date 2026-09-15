@@ -187,4 +187,4 @@ export const languages = { createDiagnosticCollection: () => ({ dispose: () => {
 
 export const ExtensionMode = { Production: 1, Development: 2, Test: 3 }
 
-export const version = "1.85.0-mock"
+export const version = "1.104.0-mock"

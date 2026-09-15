@@ -60,7 +60,7 @@ embedding key + 构建按钮 + 状态；向量维度/模型切换的校验与可
 
 | # | 候选方案 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
 |---|---|---|---|---|
-| 1 | **宿主文件系统事件（`createFileSystemWatcher`）+ 去抖 + stat 元组抑制** | 可见：✅（事件到达即推）；代价：新模块 ~55 行 + 生命周期（activate 注册 / dispose 释放） | 事件驱动零空转；`RelativePattern(Uri.file(configDir), "config.json")` 覆盖工作区外路径（engines ^1.85.0 支持 Uri 基座） | **选定** |
+| 1 | **宿主文件系统事件（`createFileSystemWatcher`）+ 去抖 + stat 元组抑制** | 可见：✅（事件到达即推）；代价：新模块 ~55 行 + 生命周期（activate 注册 / dispose 释放） | 事件驱动零空转；`RelativePattern(Uri.file(configDir), "config.json")` 覆盖工作区外路径（engines ^1.104.0 支持 Uri 基座） | **选定** |
 | 2 | 常驻轮询（stat 比对） | 可见：⚠️（延迟 = 轮询间隔）；代价：稳态唤醒（写盘是低频事件——收益为负） | — | 否决 |
 | 3 | 仅窗口焦点回归时刷新 | 覆盖：❌（主场景 = VSC 前台 + 集成终端里 CLI 写盘——窗口不失焦） | — | 否决 |
 | 4 | 手动刷新按钮 | 手动 ≠ 感知（现状等价） | — | 否决 |

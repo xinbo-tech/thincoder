@@ -27,7 +27,7 @@ Like the CLI, it's pure `.mjs`, zero npm dependencies, and connects directly to 
 
 ## Requirements
 
-- VS Code >= 1.85.0
+- VS Code >= 1.104.0
 - An API key for at least one supported provider
 
 ## Quick Start
