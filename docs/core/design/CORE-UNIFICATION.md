@@ -74,7 +74,7 @@
 └── thincoder-vscode/                  ← VSC 壳（独立包 · 自己的 lock）
     ├── package.json                   ← + dependencies（同上）+ postpackage 断言挂点（S2）
     ├── .vscodeignore                  ← 保留 node_modules/** + 加反排除行（S2）
-    └── scripts/check-vsix.mjs         ← 新建：vsix 含核 + 版本 + 提示词面断言（S2）
+    └── scripts/check-vsix.mjs         ← 新建：vsix 断言 B + D（含核 + 版本 + 提示词面完备性）（S2）
 ```
 
 **运行期面 vs 文档面（硬）**：核内**只有运行期面**——`thincoder-core/prompts/`（15 档槽位）+ `thincoder-core/tool-docs/`（25 档工具描述）；**中文设计档（`docs/core/design/prompts/**`）永进核** ✗——其改名 / 移动**只在文档面**（归属层 = **根仓 `docs/` 基准层**；迁移未完成的旧档逐档随批迁——`docs/README.md` §2；本批两产品同名目录 = **迁移期保留的参照历史记录**、不迁不删——D-C14）。
@@ -1036,11 +1036,11 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | **核内锚替换缝（U0 前置笔 · 2026-09-14 定稿）** | `thincoder-core/prompt-files.mjs` · `prompt-overlays.mjs` · `tools/shared.mjs` · `advisor.mjs`；核内测试 = 扩 `test/prompt-files.test.mjs` + 新建面覆盖档 | 66 / 74 / **452** / 290（`wc -l` 实核）· 测试 108 / 新建 0 | +14±6 / +10±4 / +3±2 / +8±3 · 测试 +20±10 / +120±40 | §2.13.8（U0）——注入原语 + 三装配面挂点（四装配面）；**`tools/shared.mjs` 452 行 >300 ⇒ 拆分计划随本行补登 §2.8.1** |
 | **提示词加载面（S2 删）** | `thincoder-cli/src/prompt-overlays.mjs` | 82 | **−82（删）** | 槽位装配面 = 核 `prompt-overlays.mjs` 单点——已随 CLI U15 落地（实核：档不存在；2026-09-15 修正轮收正） |
 | **提示词加载面（S2 删）** | `thincoder-vscode/src/prompt-overlays.mjs` | 83 | **−83（删）** | 同上——VSC 随 `2026-09-15-vsc-core-wiring` W2 落地（2026-09-15 修正轮收正） |
-| **提示词加载面（S2 改）** | `thincoder-cli/src/advisor.mjs` | 290 | ±8 | advisor 加载面改指核（4 档硬加载语义不变） |
-| **提示词加载面（S2 改）** | `thincoder-vscode/src/advisor/main.mjs` | 320 | ±8 | 同上 |
-| **提示词加载面（S2 改）** | `thincoder-cli/src/tools/shared.mjs` | 446 | ±6 | `DESC()` 解析根改指核 `tool-docs/` |
-| **提示词加载面（S2 改）** | `thincoder-vscode/src/tools/shared.mjs` | 413 | ±6 | 同上 |
-| **提示词加载面（S2 改）** | `thincoder-cli/src/agent/setup.mjs` · `thincoder-vscode/src/agent/setup.mjs` | 354 / 464 | ±6 / ±6 | consult 消费点（缺档抛错语义不变——契约 9） |
+| **提示词加载面（S2 删）** | `thincoder-cli/src/advisor.mjs` | 290 | **−290（删）** | advisor 加载面 = 核 `advisor.mjs`（4 档硬加载语义不变——已随 CLI 侧接线落地；实核：档不存在；2026-09-15 修正轮-4 收正） |
+| **提示词加载面（S2 删）** | `thincoder-vscode/src/advisor/main.mjs` | 320 | **−320（删）** | advisor 加载面 = 核 `advisor.mjs`（VSC 侧随 `2026-09-15-vsc-core-wiring` W12 删除集；2026-09-15 修正轮-4 收正） |
+| **提示词加载面（S2 删）** | `thincoder-cli/src/tools/shared.mjs` | 446 | **−446（删）** | `DESC()` 解析根 = 核 `tool-docs/`（已随 CLI 侧接线落地；实核：档不存在；2026-09-15 修正轮-4 收正） |
+| **提示词加载面（S2 改——拆壳薄壳保留）** | `thincoder-vscode/src/tools/shared.mjs` | 413 | **413 → 约 150±50（净减）** | 通用面改指核 `tools/shared.mjs`；端侧缝供值留该档（W14——拆壳薄壳、非删；2026-09-15 修正轮-4 收正） |
+| **提示词加载面（S2 删）** | `thincoder-cli/src/agent/setup.mjs` · `thincoder-vscode/src/agent/setup.mjs` | 354 / 464 | **−354 / −464（删）** | consult 消费点 = 核面（缺档抛错语义不变——契约 9；CLI 已落地〔实核：档不存在〕· VSC 随 W15 删除集；2026-09-15 修正轮-4 收正） |
 | **提示词副本删除（S2 / S3）** | 两产品 `src/prompts/*.md`（15×2）· `src/tools/*.md`（25×2） | — | 逐档见 §2.5 | 迁移后删空（S3 零残留——T-C8） |
 | **中文设计档（文档面 · 基准层正本）** | 仓根 `docs/core/design/prompts/*.md`（15 档——2026-09-14 已在位；同日迁入 `docs/core/`） | **15** | 逐档见 §2.5 | **D-C14 修订（裁定 B + 2026-09-14 层级口径）**：根仓 = **基准层正本** ✓；两产品同名目录 = **迁移期保留的参照历史记录**（保留 ≠ 维护）、**不迁不删**；合流归属层 = 根仓 `docs/` 基准层（本批不处置）；中文设计档行读数 = §2.5 #120–#122（两面已分叉 3 档） |
 | **中文设计档（删除）** | ~~`thincoder-cli/docs/design/prompts/**` · `thincoder-vscode/docs/design/prompts/**`（各 15 档）~~ | — | **作废 ✗** | **该面已撤**（用户裁定 B——两产品同名目录**原地保留**；2026-09-14 收正 = **迁移期保留的参照历史记录**、保留 ≠ 维护；见「已撤面」行 + D-C14） |
@@ -1054,7 +1054,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | **发布编排面（S2 改）** | `thincoder-cli/scripts/release-check.mjs` | 85 | +25±10 | 发布预检：断言 C（核版本已发布 + 装入版本一致）；挂在已有 `prepublishOnly`（`thincoder-cli/package.json:35`）——**属发布期预检（验证时点 = 产品发布，恒在核发布之后）⇒ 语义不变、不改**（§2.6.1） |
 | **真依赖面（S2 改）** | `thincoder-vscode/package.json` | 131 | +8±3 | `dependencies`（同左）· `postpackage` = 断言脚本 · devDeps + `yauzl`（读 vsix 条目——R10 实测树内已有 3.4.0） |
 | **装载配置（S2 改）** | `thincoder-vscode/.vscodeignore` | 16 | **+1** | 追加 `!node_modules/@thincoder/core/**`；**第 3 行 `node_modules/**` 保留**（R8① ⇒ 删除会外泄 devDeps） |
-| **含核断言（S2 新建）** | `check-vsix.mjs`（落 `thincoder-vscode/scripts/`） | 0 | +50±15 | 解 vsix 断言 B（含核 + 版本逐字相等）；零构建、只读 |
+| **含核断言（S2 新建）** | `check-vsix.mjs`（落 `thincoder-vscode/scripts/`） | 0 | +50±15 | 解 vsix 断言 **B + D**（含核 + 版本逐字相等 + 提示词面完备性〔`prompts/` 15 + `tool-docs/` 25 档名集合逐字相等〕）；零构建、只读（2026-09-15 修正轮-4 与 §2.2 形态树口径统一） |
 | **发布编排面（S2 改）** | `thincoder-vscode/scripts/publish-all.mjs` | 105 | +8±4 | 新增段 0（核版本存在性预检）+ 段 1.5（调 `check-vsix.mjs`）；段 1 / 段 2 与 PAT 预检原样 |
 | **CI（S1 / S2 改）** | `.github/workflows/test.yml` | 40 | +14±6 | 增设 `core` job（核测试）；**两产品 job 在 `npm install` 前置一步 `npm link`**（S2 期间必需——§2.6.1；核发布后可撤）；其余命令不变 |
 | **度量脚本（已改）** | `scripts/mirror-divergence.mjs` | 171 | **480（Δ+309）**：新面 = 按类型 / 按目录拆分 · 分布分档 · 中文设计档对 · 提示词面逐档 sha256 / 档名枚举 · 单端枚举 · S0a / S0b 席位判定 + 用法 / 退出码契约（F10）；超软线处置见下表后注 |
@@ -1225,7 +1225,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | 8 | `provider/list-models` 失败形态（空清单 → 明确报错） | 输出 | `docs/core/design/PROVIDER.md` §4 |
 | 9 | 提示词面指令集（`discipline-engineering` · `discipline-normal` · `persona-eng-coder` 三档 + 中文设计档） | 输出（模型可见指令） | `docs/core/design/PROMPT-SYSTEM.md` §4 |
 | 10 | `traces` 的容量 / 清理策略（默认关） | 事件 / 数据面 | `docs/core/design/TRACES.md` §4 |
-| 11 | **代码索引存储面**（VSC `.thincoder/index/{manifest.json,vectors.bin}` 文件 ↔ CLI `node:sqlite` 库内索引） | 数据面 / 文件格式 | `docs/core/design/MEMORY.md` §4 |
+| 11 | **代码索引存储面**（VSC `.thincoder/index/{manifest.json,vectors.bin}` 文件 ↔ CLI `node:sqlite` 库内索引；**含 VSC 索引可见面**〔状态面 / 重建入口 / 进度文案键 `status.indexEmbed` → `status.indexProgress`——2026-09-15 修正轮-4 补登记〕） | 数据面 / 文件格式 · 输出文案 | `docs/core/design/MEMORY.md` §4（可见面承接 = §6.9 / D-MEM14） |
 | 12 | **文案面**（VSC `src/i18n.mjs` + `locales/{en,zh}.json` ↔ CLI 内联字面量） | 输出文案 | `docs/core/design/I18N.md` §4 |
 
 **纪律**：`§2.5「对外契约影响」列非空 ⇒ 本表必有行`（T-C17 ①）——（三）表以**「须用户裁」列的 ② 标记**承载该列（② 非空行 ⇔ 本表有行；未命中 ② 者对外契约无涉，登记口径、非遗漏）；**无契约变更 ⇒ 零改**（登记口径，非遗漏）。
@@ -1930,5 +1930,9 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 - 2026-09-15（**VSC 修正轮-3 权威面收正 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮-3）：用户 2026-09-15 裁定 **#175 推理档位面 = 端侧自有（核内无需位——「核内位 = 无」为正常落地形态、非缺位）**；
   收正面 = §2.13.4 #175 行（处置列收正——原「端侧选择面按端注入」表述退场；锚 = CLI `/think` 同构先例 `thincoder-cli/src/tui/cmd-think.mjs:52`）· §2.13.6 缺口 5（**缺位 4 → 3**——#175 移出、枚举同改；#112 / #143 / #172 保持）。
   **D2 状态回声**：已裁（2026-09-13 · 按建议）——本行不变；同轮 `docs/core/design/AGENT-LOOP.md`（§2.2 #175 行 · §3.2 D2 行——见该档变更记录）。
+- 2026-09-15（**VSC 修正轮-4 权威面收正 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮-4）：
+  ① **§2.8 提示词加载面同族 5 行择一收正**（`:1039`–`:1043`）——CLI `advisor.mjs` / VSC `advisor/main.mjs` / CLI `tools/shared.mjs` / CLI+VSC `agent/setup.mjs` → **「S2 删」**（CLI 侧实核档不存在；VSC 随 W12 / W15 删除集）；VSC `tools/shared.mjs` → **「S2 改——拆壳薄壳保留」**（W14 拆壳、净减 413 → 约 150±50）；相应模块权威档 `PROMPT-SYSTEM.md` §5 同批同步。
+  ② **§2.2 形态树 ↔ §2.8 `:1057` 口径统一**：`check-vsix.mjs` 断言面 = **B + D**（含核 + 版本逐字相等 + 提示词面完备性〔`prompts/` 15 + `tool-docs/` 25 档名集合逐字相等〕——T-C7 vsix 域）。
+  ③ **§2.12.2 第 11 行补登记**（对外可见面）：含 VSC 索引状态面 / 重建入口 / 进度文案键随 W8 归一退场（懒回填自然化——`MEMORY.md` §6.9 / D-MEM14）。
 
 

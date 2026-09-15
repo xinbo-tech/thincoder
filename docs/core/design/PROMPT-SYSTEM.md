@@ -142,7 +142,10 @@
 
 ## 5. 受影响文件（该子系统）
 
-指针（不复制）→ `CORE-UNIFICATION.md` §2.8 下列行：**核提示词面（S1 新建）** · **核提示词加载面（S0a 首建 · S1 随裁决面补齐）** · **提示词加载面（S2 删 / S2 改）**（7 行——其中 `prompt-overlays.mjs` 两行由本修正轮收正为「删」）· **提示词副本删除（S2 / S3）** · **中文设计档（文档面 · 基准层正本）** · **中文设计档（删除 · 作废）** · **产品文档（S2 改）** · **产品测试（S2 改）**。
+指针（不复制）→ `CORE-UNIFICATION.md` §2.8 下列行：
+**核提示词面（S1 新建）** · **核提示词加载面（S0a 首建 · S1 随裁决面补齐）** · **提示词加载面（S2 删 / S2 改）**（7 行——**6 行「S2 删」**〔`prompt-overlays.mjs` 两行（2026-09-15 修正轮）+
+`advisor.mjs` / `advisor/main.mjs` / CLI `tools/shared.mjs` / `agent/setup.mjs` 四行（2026-09-15 修正轮-4）〕· **1 行「S2 改」**〔VSC `tools/shared.mjs`——拆壳薄壳保留〕）·
+**提示词副本删除（S2 / S3）** · **中文设计档（文档面 · 基准层正本）** · **中文设计档（删除 · 作废）** · **产品文档（S2 改）** · **产品测试（S2 改）**。
 
 ## 6. 机制面（自 CLI 产品档并入 · 2026-09-15 · 批 5）
 
@@ -219,3 +222,5 @@
 - 2026-09-15（**迁移批 · 第 5 批 · 并入 · eng-designer**）：新增 §6 **机制面**（双源落地流程 / 装配实现事实 / 端特有段纪律 / **byte-identical 取消**——自 `thincoder-cli/docs/design/AGENT-LOOP.md` 旧 §12.4 并入 / 现状坐标）· §7 **并入的关键决策记录**（D-PS1–D-PS4）·
   §8 **不并项与历史沿革**（旧档一次性材料逐项登记）· §9 体量（低于软线）；来源 = `thincoder-cli/docs/design/PROMPT-SYSTEM.md`（旧档一字未改，留参照历史）。本档 150 → **221 行**。
 - 2026-09-15（**提示词加载面收正 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮 finding 13）：§1 表「槽位加载面」行与 §5 指针注同轮收正——`src/prompt-overlays.mjs` 两产品侧 = **S2 删**（CLI 已随 U15 落地〔实核档不存在〕；VSC 随 W2）；权威 §2.8 `:1037` / `:1038` 两行同批由「S2 改 · ±6」收正为「S2 删」。
+- 2026-09-15（**提示词加载面同族 5 行收正 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮-4 发现 #3）：权威 §2.8 `:1039`–`:1043` 逐行择一收正——CLI `advisor.mjs` / `tools/shared.mjs` / `agent/setup.mjs` 与 VSC `advisor/main.mjs` = **「S2 删」**（CLI 实核档不存在 · VSC 随 W12/W15 删除集）；
+  VSC `tools/shared.mjs` = **「S2 改——拆壳薄壳保留」**（与 W14 口径一致）；本档 §5 指针注同轮同步。
