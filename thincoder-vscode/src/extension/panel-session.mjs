@@ -2,6 +2,11 @@
  * panel-session.mjs — ChatPanel session persistence + history paging (split out of
  * chat-panel.mjs). Every function takes the ChatPanel instance as `panel` and
  * mutates panel._slot / panel._autoApprove exactly like the former methods did.
+ *
+ * W11（CORE-UNIFICATION · VSC 接线 · 2026-09-15）：会话机制面**单源 = 核会话面**——本档的
+ * 槽读写 / 列表 / 标题 / 恢复 / 双线瘦身调用全部经端壳（`session-io.mjs` → 核
+ * `@thincoder/core/session.mjs` 族）转口，本档只承载**面板装配面**（槽绑定 / 消息族 /
+ * 双线组装 / webview 分页），不持有会话存储算法。存储契约 version 1/2 不变。
  */
 import { loadSlot, saveSessionToSlot, newSlot, deleteSlotAndUpdate, setSlotTitle, loadModelPrefs as loadStoredModelPrefs, historyWindow, listSlots, slimForDisplay, isLegacyTransient, stripTruncatedToolArgs, resumeSlot, readEndMarker, writeEndMarker } from "./session-io.mjs"
 import { ensureMemoryHandle } from "../embed-config.mjs"

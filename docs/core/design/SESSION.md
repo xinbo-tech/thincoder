@@ -50,7 +50,7 @@
 
 | # | 项 | 为何无法兼容（实测 / 证据） | 上抛形态（四要素） | 裁定状态 |
 |---|---|---|---|---|
-| 3 | **会话 / 历史面** | **已兼容**（无需上抛）：两端读写同一批档同一 `version`（1 / 2）+ 各自内置旧短哈希迁移（`thincoder-cli/src/session-migrate.mjs:10-48` · `thincoder-vscode/src/extension/session-io.mjs:92-113`）⇒ 归一后历史可直接续读 | 登记为「已兼容」· 兼容形态 = 复用现成迁移函数 | 已兼容（登记） |
+| 3 | **会话 / 历史面** | **已兼容**（无需上抛）：两端读写同一批档同一 `version`（1 / 2）+ 旧短哈希迁移面**单源**（核 `session-migrate.mjs`——经核 `sessionPath` 首次访问时调用，`thincoder-core/session-slots.mjs:58-61`）⇒ 归一后历史可直接续读 | 登记为「已兼容」· 兼容形态 = 复用现成迁移函数 | 已兼容（登记） |
 
 ## 5. 受影响文件（该子系统）
 
@@ -232,24 +232,43 @@ TUI 路径在 `startTUI` 前置 `agent.provider = null`。
 
 > **来源** = `thincoder-vscode/docs/design/SESSION.md`（520 行 · VSC 产品档——迁移期参照历史）。本节 = 该档中「根层所缺」的 **VS Code 面板接线面**（(a) 机制 / (b) 实现细节与坐标）。与 CLI 共享的契约正文（存储模型 / 并发 / 双线 / end marker / GC / 检索 / 记录存储）已入 §6.1–§6.14，不重复（D2）。
 
+- **W11 接线面（2026-09-15 · CORE-UNIFICATION VSC 单元 W11——本节会话机制面单源 = 核）**：VSC 端壳五档
+（`session-io` · `session-slots` · `session-slot-write` · `session-gc` · `panel-session`，均住 `thincoder-vscode/src/extension/`）
+内部改指 `@thincoder/core/session.mjs` 族（`loadSlotFile` / `saveSlotData` / `listSlots` / `renameSlot` /
+`slimForDisplay` / `isLegacyTransient` + `session-slots` / `session-gc` / `session-slot-write` 各面）；
+存储契约 version 1/2 不变（同一 `~/.thincoder/sessions/<hash>.json.{N,manifest}`，与 CLI 共文件）。
+`session-gc` 面（含启动钩子 `scheduleSessionGC`）**纯转口**——核钩子 `dir` / `prefix` 由 `sessionPath(cwd)` 派生
+（随核 `_setSessionsDirForTest` 沙箱缝）；核 `gcResidue` / `listColdCwds` / `deleteColdCwd` 的默认 `dir` 为核内
+configDir 版（端侧无直调点）。`sessionsDir()`（`thincoder-vscode/src/extension/session-slots.mjs:41`）= 核 `sessionPath` 反推
+（核未导出根访问器）。
+**端壳保留 = 端差两款**：
+① end marker 层（`END = "vscode"` · `readEndMarker` / `writeEndMarker`——`thincoder-vscode/src/extension/session-slots.mjs:49`）
+与其四个维护落点（`resumeSlot` / `newSlot` / `switchToSlot` / `deleteSlotAndUpdate`——`thincoder-vscode/src/extension/session-io.mjs:55` 起；
+§6.10 D-4「VSC 镜像」——核对应件写死核端 marker `.cli`，直接消费 = 跨端互写；数据层 = 核 `loadSlotFile`，
+端壳无核 `resumeSlot` 的裸 v1 单文件兜底——差异登记见批次档 §5）；`deleteSlotAndUpdate` 随槽删记录存储 sidecar
+（核 `deleteSlot` 同源步 `unlinkRecordStore`——`thincoder-core/session-store.mjs:376`）；
+② **（cwd, slot）型** token 台账三式（`thincoder-vscode/src/extension/session-slot-write.mjs:48` 起——核 token 面为 agent 型）。
+
 - **运行中禁止切换（会话切换竞态修复）**：`newSession` / `deleteSession` / `switchSession`（webview loadSession）/ 项目切换三处均以 `_turnActive` + `_susp.active` 守卫（warning 拒绝——对齐 CLI `applyProjectSwitch` 模式）。运行中放行会让旧 turn 的 stream / complete / 标题灌进新会话视图（「思考串台」）、内容落错槽。
 - **turnSlot / slotOverride（纵深防御）**：`saveLines` / `_saveLines` / `generateTitle` 带 slotOverride——`runPanelChat`（`thincoder-vscode/src/extension/panel-chat.mjs`）回合入口捕获 `turnSlot`，onComplete / abort / finally 的保存与标题一律落 `turnSlot` 而非面板当前 `_slot`——运行中即便并发切换，旧 turn 流也不灌新会话视图、内容不落错槽。
-- **绑定入口三处**：`_slot` 为 null 时经 `ensureSlot(panel)`（`thincoder-vscode/src/extension/
-panel-session.mjs:22`）一次 `resumeSlot(cwd)` 解析并钉槽——面板 `status`（激活启动）、`onProjectChanged`
+- **绑定入口三处**：`_slot` 为 null 时经 `ensureSlot(panel)`（`thincoder-vscode/src/extension/panel-session.mjs:28`）
+一次 `resumeSlot(cwd)` 解析并钉槽——面板 `openSessionContent`（webviewReady 快段——B2 后绑槽归快段，
+`status` 慢段不绑槽）、`onProjectChanged`
 （`panel-project.mjs`——项目切换 / 多根 `setProjectFolder` 后 `panel._slot = null` 再重绑）、
 `ensureSlot`（惰性首保存）。`session-io.resumeSlot` 包装器在恢复入口顺带触发一次残留 GC 调度；
 项目切换经 `applyProjectSwitch` 守卫运行中拒绝 + `setProjectFolder` 校验 + `onProjectChanged`
 重绑，per-cwd UI 随 `_cwd()` 刷新。
 - **slot 粘性 + 钉槽检查**：面板 `_slot` 在打开 / 切换时**绑定一次**，之后所有读写不再重读共享 manifest 的 active 指针；「打开历史会话」先 `switchToSlot`（读目标槽成功才翻 active + 写 marker，文件缺失 / 损坏返回 null 且不产生幻影指针），再 `slotOccupancy` 检查目标槽被**另一活进程**占用 → 不钉槽（loadSession 立即经 ensureSlot 认领新槽）+ 提示；空闲则绑定 → `_loadSession()`。
 - **字段往返完整（key-presence 写，v2 语义）**：槽位文件**全量覆盖写**，`saveLines`
-（`thincoder-vscode/src/extension/panel-session.mjs:57`）以 `...existing` 展开式透传不认识字段、仅覆盖扩展自己拥有的字段——CLI 写入的
+（`thincoder-vscode/src/extension/panel-session.mjs:63`）以 `...existing` 展开式透传不认识字段、仅覆盖扩展自己拥有的字段——CLI 写入的
 `activeModel` / `engineering` / `engDesignToken(s)` 等字段在 VS Code 侧往返不丢（往返透传是契约——漏一字段即永久丢失）。
 `engDesignToken` / `engDesignTokens` 用 `"key" in extra ? extra.key : existing.key ?? null` 语义——显式 null
 （清盘）必赢、缺席保留槽值（R16 TTL 过期后 restore 清盘、turn 尾 agentState 携显式 null 必须 pin；abort /
 finally 保存无 agentState → 缺席保留槽值不误清）。
-- **`setSlot*` 写面（session-slot-write.mjs，Parnas 拆分）**：`setSlotAutoApprove`（`:59`）/ `setSlotPlanMode`
-（`:68`）/ `setSlotEngineering`（`:82`）/ `setSlotAdvisorGuard`（`:91`）/ `setSlotEngDesignTokens`（`:108`）+
-`newSlotData`（`:24`）。`loadSlotForWrite` 对「无文件但本进程刚 claim 的槽」返回 `newSlotData` 默认记录——否则
+- **`setSlot*` 写面（W11 起单源 = 核 `thincoder-core/session-slot-write.mjs`；端壳转口）**：`setSlotAutoApprove`（`:126`）/
+`setSlotPlanMode`（`:131`）/ `setSlotEngineering`（`:136`）/ `setSlotAdvisorGuard`（`:141`）/ `newSlotData`（`:38`）；
+端壳 `thincoder-vscode/src/extension/session-slot-write.mjs` = 转口 + **（cwd, slot）型 token 台账三式**（见上 W11 接线面）。
+`loadSlotForWrite` 对「无文件但本进程刚 claim 的槽」返回 `newSlotData` 默认记录——否则
 `setSlot*` 落在「claim 先行、首保存落盘」的新槽时 `if (!data) return false` 静默丢标志（AUTO-bug 修复）；
 version>2 / 异 cwd / 损坏 / 未知槽返回 null（新版 CLI 文件不属本端覆盖——v3 interop 前保守姿态）。
 - **标题触发时机（A2——SESSION-FLOW-A 方案 Y）**：标题 await 在回合尾 finally **忙态归位之前**（stream
@@ -362,3 +381,7 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
   §8.2 补 4 行不并项登记；来源 = `thincoder-vscode/docs/design/SESSION.md`（**旧档一字未改**——原地作参照历史）；
   坐标按现状实核（`thincoder-vscode/src/extension/panel-session.mjs:22` · `session-slot-write.mjs` · `thincoder-vscode/src/extension/history-window.mjs:22,106` ·
   `thincoder-vscode/src/agent/setup-reminders.mjs:145,163`）。
+- 2026-09-15（**W11 · VSC 端壳改指核会话面**）：§6.15 补 W11 接线面（端壳五档内部改指核会话面 + 端差保留两款 + 全量转口面）；
+  绑定入口 / `saveLines` / `setSlot*` 写面坐标按实核收正（端壳 `thincoder-vscode/src/extension/session-slots.mjs:41/49` ·
+  `thincoder-vscode/src/extension/session-io.mjs:55` · `thincoder-vscode/src/extension/session-slot-write.mjs:48` ·
+  `thincoder-vscode/src/extension/panel-session.mjs:28/63`）；§4 第 3 行迁移面收正为核单源坐标；机制条文零改。
