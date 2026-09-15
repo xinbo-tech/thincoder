@@ -1158,4 +1158,327 @@ AGENT-LOOP §2.2 #175 / §3.2 D2（状态不变）/ §9（493 行）均在位。
 ① `extension.mjs` **151 → 157**（原书 152 → 158）；② `src/agent/setup.mjs` **464 → 465**（原书 465 → 465）；③ `src/tools/shared.mjs` **413 → 413**（原书 413 → 414）；④ `src/tools/index.mjs` **76 → 79**（原书 76 → 80）。
 另补两档读数（表行 8 免重述）：`test/prompts-async-guidance.test.mjs` **176 → 326**（< 500 硬限；测试档档位口径）· `src/advisor/main.mjs` **320 → 309**（= 原书，复核实测一致）。
 
+### 实施：S2 W5 —— CHECKPOINT 单元落轮（2026-09-15 · eng-coder）——**终态 = clean**
+
+**段位**：当前段 = **S2（VSC 迁移单元 W5 · 实施第二波）**。写域 = VSC 侧（删 3 档 / 改指 2 档）+ 核文档 2 档 + VSC 产品档 3 档；核包 `thincoder-core/**`、`thincoder-cli/**` 实现零触碰；台账 `docs/TODO.md` 与仓根 `scripts/**` 零触碰；本档 §1–§4/§6 零触碰。
+
+**依据** = 本档 §2「W5 · CHECKPOINT」（`:141`）＋ 脚注注 1（`:116`）＋ 逐单元任务书四步块（`:121`）＋ 判据 A-K2/A-K4/A-K7/A-K8/A-K10；上游 = 本档 §4 用户批准（2026-09-15 15:12）；模块权威档同步面 = `docs/core/design/CHECKPOINT.md`（§6.9）。
+
+**超声明披露（预期触碰面之外 · 均已如实登记）**：① `src/tools/git.mjs`（全入边扩面改指——决策透明表 1/2，任务书账面列「存活改指 0*」）；② `thincoder-vscode/docs/design/ADVISOR-CONVERGENCE.md:1314`（删档锚致门控强制迁核注记）。
+
+**改动面**（行数 = `wc -l` 口径实核；改前 = 父侧 `81288f77`）
+
+| # | 档 | 行数（改前 → 改后） | 动作 |
+|---|---|---|---|
+| 1 | `thincoder-vscode/src/tools/checkpoint.mjs`（删） | 451 → **0** | **删档**（核 `@thincoder/core/git/checkpoint.mjs`） |
+| 2 | `thincoder-vscode/src/tools/git-checkpoint.mjs`（删） | 150 → **0** | **删档**（核 `@thincoder/core/tools/git-checkpoint.mjs`） |
+| 3 | `thincoder-vscode/src/tools/git-ext.mjs`（删） | 174 → **0** | **删档**（核 `@thincoder/core/tools/git-ext.mjs`） |
+| 4 | `thincoder-vscode/src/tools/git.mjs` | 378 → 378 | 3 处改指核 + 头注/注释收正（W14 存活面） |
+| 5 | `thincoder-vscode/src/tools/shell.mjs` | 317 → 317 | 1 处改指核（脚注注 1 同笔）+ 头注与 guard 出处收正 |
+| 6 | `docs/core/design/CHECKPOINT.md` | 212 → **216** | §1 两格 · §6.9 接线状态行与实现坐标 · §9 体量 · 变更记录 |
+| 7 | `docs/core/requirements/CHECKPOINT.md` | 96 → **97** | §1 基线句 · §4.4 坐标 · 变更记录 |
+| 8 | `thincoder-vscode/docs/design/CHECKPOINT.md` | 104 → 104 | 档头状态降级（迁移期参照历史）+ 迁核注记（行内，零行增） |
+| 9 | `thincoder-vscode/docs/requirements/CHECKPOINT.md` | 48 → 49 | 权威源行 + 证据格迁核注记（含一处折行） |
+| 10 | `thincoder-vscode/docs/design/ADVISOR-CONVERGENCE.md` | 1425 → 1425 | `:1314` 迁核注记（零行增） |
+
+**① 改指逐处（改前 → 改后）**
+
+| # | 位置 | 改前 → 改后 |
+|---|---|---|
+| 1 | `src/tools/git.mjs:12` | `"./git-ext.mjs"` → `"@thincoder/core/tools/git-ext.mjs"` |
+| 2 | `src/tools/git.mjs:13` | `"./git-checkpoint.mjs"` → `"@thincoder/core/tools/git-checkpoint.mjs"` |
+| 3 | `src/tools/git.mjs:200` | 动态 `"./checkpoint.mjs"` → `"@thincoder/core/git/checkpoint.mjs"` |
+| 4 | `src/tools/git.mjs:4-7/:359` | 头注「MIRROR of the CLI…」→ 核引用表述；尾注 → 「实现住核 `@thincoder/core/tools/{git-ext,git-checkpoint}.mjs`」 |
+| 5 | `src/tools/shell.mjs:151` | 动态 `"./checkpoint.mjs"` → `"@thincoder/core/git/checkpoint.mjs"`（脚注注 1 同笔；计数归 W14 列） |
+| 6 | `src/tools/shell.mjs:3/:6-7/:142-143` | 头注与 guard 出处 → 核表述（评审轮 1 收正：`@thincoder/core/tools/bash.mjs:96`） |
+
+**② 删旧三条读数（删前全过才删）**
+
+1. **改指已落盘**：全 4 入边（`git.mjs` ×3 + `shell.mjs` ×1）先落；删前快层实跑 = **633 / 592 pass / fail 0**。
+2. **零引用机判**（域 = `src/` + `test/` + `scripts/` + `webview/` + `extension.mjs` + `extension.mjs`，282 档全递归；待删档本体排除）：模式① 引号相对形 = **0 命中**；模式② 行内基名提及（非核指向行）= **0**。
+3. **文档锚**：VSC 域 `doc:check` 删后中间态 = **9 处悬空（A3，落 3 档 8 行）** → 逐处迁核注记 → **0 命中 / exit 0**；根域 `doc-anchors --domain .` = 悬空 **0**（候选 8131 · 注记豁免 457）。
+
+**③ 复跑读数（终态实跑 · 原样 · cwd = `thincoder-vscode/`）**
+
+| # | 命令 | 读数 | 判 |
+|---|---|---|---|
+| A | `npm test`（fast） | 633 / **592 pass / fail 0** / skip 41 | ✓（= 基线 633/592） |
+| B | `npm run lint` | `check-syntax: 279 JS files OK` | ✓（基线 292 → −13 = 本笔 −3 + 并行 W7 −6 / W4 −4，皆删档） |
+| C | `npm run test:full` | **633 / 633 pass / fail 0** | ✓（= 基线；中程 3 红皆并行 W4 在途，随其修复归零） |
+| D | `npm run test:integration` | **28 / 28 · fail 0** | ✓（= 基线） |
+| E | `npm run doc:check` | **命中 0 处 / distinct 0 · exit 0** | ✓ |
+| F | 核回归 `node --test`（cwd = `thincoder-core`） | **178 / 178 · fail 0** | ✓（核零改动） |
+| G | 仓根三机检 | 宽度 OK（404 档 · V1/V2/V3 新增 0）· 锚 悬空 0 · 台账 0 违规 | ✓ |
+
+> **在途归因（读数如实登记）**：复跑期树内并行 W4/W7 在途（`src/ledger.mjs` · `src/mcp/*` 删除中）——中程出现 3 处测试档加载失败（`doc-anchors` / `ledger-check` / `reconcile-lookup`；根因 = 仓根 `scripts/check-ledger.mjs` 静态引 VSC 镜像，随后由父侧转为改态）与 VSC 域 18–27 处悬空（皆 ledger/MCP 面）——**本笔面全程零命中**；终态各读数已全部归位（见上表）。
+
+**④ 专项验收（checkpoint 工具注册后行为 = 核实现 · 冒烟原样读数）**
+
+- 注册面：`src/tools/index.mjs` `builtinTools` 含 `git` ✓（改指后实驱）。
+- 工具行为（临时真 git 仓直驱 `gitTool.execute`）：
+  `create` → `Checkpoint <id> created (2 file(s): 1 tracked, 1 untracked)`；`list` → 快照行 + F2 提示行；
+  `versions` → `Historical versions of "readme.txt" (1, newest first):`；`cat` → 快照内原文；
+  `rewind` → `Restored "readme.txt" (tracked) from checkpoint <id>.`；`commit` → 尾行 `(checkpoints cleared — commit is a new safety baseline)`。
+- bash guard（`shell.mjs` 动态核导入路径实驱）：`git checkout -- .` → `[auto-protection] … snapshot <id> created BEFORE execution (1 file(s): 1 tracked, 0 untracked)…` ✓。
+- 存储面 = 核 `configDir`（`~/.thincoder/checkpoints/<cwdHash12>/`）✓；冒烟产物已清理。
+- 装载面：`package.json:33` 依赖在位 + 核 `exports: "./*"` ⇒ 子路径可解；新边静态闭包不触达 `node:sqlite`（全核仅 `memory/schema.mjs:9`）✓。
+
+**⑤ 提交（单笔主体 + 两笔修正轮 · 均 `git commit --only`）**
+
+1. **`a72f0fe8`**（单笔主体 · 10 档 / +35 −804 · 含 3 删档）：`refactor(vsc): W5 checkpoint - delete src/tools/{checkpoint,git-checkpoint,git-ext}.mjs, repoint git+shell to @thincoder/core, sync module docs`；回滚点 = `git revert a72f0fe8`。
+2. `7bde488a`（审计轮 1 修正 · 3 档 / +8 −8）：VSC 两档迁核注记补齐 + 核档 §9 行数收正。
+3. `de245d4c`（评审轮 1 修正 · 1 档 / +3 −3）：`shell.mjs` guard 出处收正为核 `tools/bash.mjs:96`。
+
+**⑥ 内部轮（发现与处置）**
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **DEVIATIONS**（4×🔵 · 0 🟡/🔴）——部分实现 0 / 静默简化 0；四项 = ① 核档 §9 行数（214 vs 216 · **Fixed**）② VSC 产品档注记面未覆盖行（**Fixed**）③ `AGENTS.md` 文件地图（W17 面 · 登记）④ §5 缺口（本条即落）。
+- **advisor 代码评审 1 轮**（`type=code` · 阻塞）：**pass**（🔴 **0** · 🟡 4 · 🔵 1）。
+- **裁决表（5 项）**：
+
+| # | Action | Detail |
+|---|---|---|
+| 1 | Fixed | 🟡 `shell.mjs:3`/`:142-143` 出处旧引（`thincoder src/tools/system.mjs:128`）——改指核 `@thincoder/core/tools/bash.mjs:96`（实核该行 = `gitGuardSnapshot`）；落 `de245d4c` |
+| 2 | Deferred | 🟡 `docs/core/design/CHECKPOINT.md:131-132`（§6.8 统一后形态表「同（镜像实现）/（镜像）」残留）——与既有已登记 Deferred 同类（本档 `:1016` · 非 must-fix）⇒ 交父侧文档层一并裁 |
+| 3 | Deferred | 🔵 冻结基线正文残留（VSC 设计档 `:7-9`/§5 标题裸名 · 核档 `:213-214` 历史条目）——两档自声明「迁移期参照历史 · 保留 ≠ 维护」，门禁零影响 ⇒ 随文档维护批可选收正 |
+| 4 | Not an issue | 🟡 根闸中程 FAIL 7 悬空——逐行实核皆并行 W7 MCP 面（`docs/core/design/MCP.md:15/16/32/33/34/35`）；本笔面在两闸均 0 悬空，终态两闸已归零 |
+| 5 | Deferred | 🟡 测试缺口触发（VSC 需求档 `:37`「补测触发 = 该面下次被触碰」）——任务书明写 W5 测试面随 W14、验收 = 核 178 用例 ⇒ 上抛父侧二选一（关闭触发注 ∥ W14 补 VSC 冒烟） |
+
+- **修复轮 2**（审计轮 1 + 评审轮 1 各一波；皆已落盘并复跑）。
+- **轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 2；终态 **0 未决 🔴 → clean**。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 改指面按 A-K4 反向判零扩至**全入边**（含 `git.mjs` 3 处；账面「存活改指 0*」= 扇入底账口径） | 删旧门强制「改指已落盘 ∧ 全链 exit 0 ∧ 零引用」；先例 = CLI U1 / 同批 W1「全入边 15 档」；备选 = 只改 shell ⇒ `git.mjs` 静态断链、全链红（否决） |
+| 2 | `git.mjs` 改指在本单元同笔落（计数归 W14 列不双计） | 本档 §2 脚注注 1 口径（`:116`） |
+| 3 | VSC 产品档 = 门控强制迁核注记（W1 先例形态），不改写正文 | 档性 = 迁移期参照历史（保留 ≠ 维护）+ 07:10 裁定；注记行经 P3 谓词实核豁免 |
+| 4 | 核档同步只动 §1 两格 + §6.9 坐标/状态行 + §9 + 变更记录（机制条文零改） | 07:08 裁定「只收正形态」；§6.8 措辞残留另项（裁决表 2） |
+| 5 | `shell.mjs` guard 出处按核实读收正 | 同批先例 = W1 决策表 2（注释非核指向 → Fixed · 复扫 0） |
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **`thincoder-vscode/AGENTS.md:34/46/47`** 仍列被删三档（约定段「镜像实现」+ 文件地图行）——本档 `:449`/`:687` 已归 **W17 收口笔**（AGENTS.md 本体零触碰）；本单元零动作。
+2. **`thincoder-vscode/docs/design/TOOLS.md:44/56/72` · `ARCHITECTURE.md:108`** 仍以 `git-ext`/`git-checkpoint` 指名——归 W14（`TOOLS.md §6.11`）/ W17 文档维护面。
+3. **测试缺口触发已燃**（见裁决表 5）——上抛父侧。
+4. **跨树引用观察（非本笔）**：复跑中程命中 `scripts/check-ledger.mjs` 静态引 `thincoder-vscode/src/ledger.mjs`（W4 删档致根脚本加载失败、连带 3 测试档红）——观测时点父侧已在转改态；本笔零触碰。
+5. **孪生树陷阱（非本仓）**：`D:\teamcode\thincoder-vscode` 为未迁移陈旧树——工具/评审路径解析易落该树（本轮实测：相对路径首读即命中），建议后续任务书一律绝对路径（承 §5 W1 上抛 4 同型）。
+
+### 实施：S2 W7 —— MCP 单元落轮（2026-09-15 · eng-coder）——**终态 = clean**
+
+**段位**：实施第二波 · 当前段 = S2（VSC 迁移单元 W7）。写域 = VSC 侧（删 6 档 / 端壳改指 5 档 / 端壳增量迁入 `panel-mcp.mjs` / VSC 产品档 4 档 + 1 行〔被并行笔顺带收录〕）+ 核仓模块权威档 `docs/core/design/MCP.md`。**核内实现零触碰**（`thincoder-core/**` 未动）；`thincoder-cli/**` 零触碰；台账 `docs/TODO.md` 与仓根 `scripts/**` 零触碰；本档 §1–§4/§6 零触碰（本条 = §5）。
+**同批披露（共档/收录面）**：① `thincoder-vscode/src/agent/setup.mjs` 同档另含并行 W4 单元 expand-home 改指（收录时已在途）⇒ 本笔整档收录（承 W3 决策 1 先例）；② `thincoder-vscode/docs/design/ADVISOR-CONVERGENCE.md:488` 的 W7 迁核注记随并行单元提交 `a72f0fe8`（W5）入库——本笔 `33a9e0a7` 未收录该档。
+**依据** = 本档 §2「W7 · MCP」段（`:149`–`:151`）+「逐单元任务书」四步块（`:121`–`:122`）+ 验收判据 A-K1 · A-K3 · A-K4 · A-K8 · A-K10；模块权威档同步面 = `docs/core/design/MCP.md`（§6.10）；上游 = §4 用户批准（2026-09-15 15:12）。
+
+**改动面**（行数 = `git show` / `wc -l` 口径实核）
+
+| # | 档 / 集合 | 行数（改前 → 改后） | 动作 |
+|---|---|---|---|
+| 1 | `thincoder-vscode/src/mcp.mjs`（删） | 12 → **0** | **删档**（re-export shim） |
+| 2 | `thincoder-vscode/src/mcp/index.mjs`（删） | 420 → **0** | **删档**（客户端面——注册表/展开/调用/断开） |
+| 3 | `thincoder-vscode/src/mcp/{http 256, stdio 140, utils 49, ws 130}.mjs`（删） | 575 → **0** | **删档**（三传输 + 基础件；空目录 `src/mcp/` 同批移除） |
+| 4 | `thincoder-vscode/src/extension/panel-mcp.mjs` | 68 → **166**（+98） | **端壳增量迁入** + 面板契约投影（设计估「约 130±30」⇒ 实测 +6 超上限，如实登记） |
+| 5 | `thincoder-vscode/src/extension/chat-panel.mjs` | 422 → 421 | 改指（`closeAllMcp` 并入 `./panel-mcp.mjs` import 行） |
+| 6 | `thincoder-vscode/src/extension/panel-messages.mjs` | 498 → 498 | 改指（`:411` 动态 import → `./panel-mcp.mjs`——行数零变） |
+| 7 | `thincoder-vscode/src/extension/settings.mjs` | 348 → 342 | 删 `../mcp.mjs` import + 删孤儿包装 `connectedMcpServers()`（唯一消费者 = panel-mcp，现直用 `mcpConnectedNames`） |
+| 8 | `thincoder-vscode/src/agent/setup.mjs` | 465 → 465 | 改指（`:184` 动态 import → `../extension/panel-mcp.mjs` + `:178` 注释收正；同档含并行 W4 改指） |
+| 9 | `thincoder-vscode/extension.mjs` | 157 → 157 | 改指（`:8` `closeAllMcp` → `./src/extension/panel-mcp.mjs`） |
+| 10 | VSC 产品档 4 档（`docs/design/{MCP,AGENT-LOOP,ARCHITECTURE}.md` · `docs/requirements/MCP.md`） | MCP.md 169 → 177；余 3 档 ±0 | 悬空锚收正 + W7 迁核注记（详 ①） |
+| 11 | `docs/core/design/MCP.md`（模块权威档） | 221 → **224** | §1 归属表 / §2.2 #144–#147 现状注 / §6.2 / §6.10（坐标 + payload 契约）/ §7 D-MC2 / §8.2 / 变更记录 |
+
+**① 逐处「改前 → 改后」（改指 5 处 + 端壳增量）**
+
+| # | 位置 | 改前 → 改后 |
+|---|---|---|
+| 1 | `src/extension/chat-panel.mjs:13`/`:23` | `from "../mcp.mjs"` 行删；`closeAllMcp` 并入 `from "./panel-mcp.mjs"` |
+| 2 | `src/extension/panel-mcp.mjs:5` | `from "../mcp.mjs"`（4 名）→ 端壳自持：`import { connectMcpServer, probeMcpServer, _sessions } from "@thincoder/core/mcp.mjs"` |
+| 3 | `src/extension/panel-messages.mjs:411` | `await import("../mcp.mjs")` → `await import("./panel-mcp.mjs")` |
+| 4 | `src/extension/settings.mjs:16`/`:285` | `import { mcpConnectedNames } from "../mcp.mjs"` 删 + `connectedMcpServers()` 包装删 |
+| 5 | `src/agent/setup.mjs:184` | `await import("../mcp.mjs")` → `await import("../extension/panel-mcp.mjs")` |
+| 6 | `extension.mjs:8` | `import { closeAllMcp } from "./src/mcp.mjs"` → `from "./src/extension/panel-mcp.mjs"` |
+
+端壳增量（`panel-mcp.mjs`：原 `src/mcp/index.mjs` 迁入面）＝ client-id 注册表（`clientIdFor`——id 按 name 稳定）·
+`panelToolList`（**面板契约投影** `{ name, description, inputSchema }`——核原生工具 schema 取 `parameters`）·
+`mcpConnect`（核 `connectMcpServer` 幂等 + 投影）· `connectMcpServersExpanded`（核原生工具面——depth-0 装配）·
+`mcpConnectedNames` / `mcpConnectedToolCounts` / `mcpDisconnectByName` / `closeAllMcp`（按核 name-key `_sessions` 读/关；
+关闭语义 = closed 标记 + transport close + 注册表移除，与核内 closeSession 同语义）。
+
+**② 删旧三条读数（删前全过才删）**
+
+1. **改指已落盘**：5 处改指 + 端壳面先落，其后删除、复跑——中间态零 `ERR_MODULE_NOT_FOUND`（端到端冒烟：批量装配 / 探活 / 计数 / 断开 / closeAll 全过）。
+2. **零引用机判**（域 = `src/` + `test/` + `scripts/` + `webview/` + `extension.mjs` · 292 档全递归）：模式①（引号相对说明符解析落删除集）= **0 命中**（删后复扫同）；模式②（非 `core/` 前缀的 mcp 路径 token）= **1 处**——`src/advisor/loop.mjs:27` 注释历史叙事提及 `src/mcp/http.mjs`（他单元档、非引用——见「未决」2）。
+3. **文档锚**：删前 VSC 域 `doc:check` 15 处悬空（本删除集 6 处 + 连带的 `_servers`/`anySignal` 符号锚）→ 逐处收正后 **0 命中 / exit 0**；根域锚同步收正（`docs/core/design/MCP.md` 7 锚悬空 → **0 悬空**）。
+
+**③ A-K 读数（终态复跑 · cwd = `thincoder-vscode/`）**
+
+| # | 命令 | 读数 | 判 |
+|---|---|---|---|
+| A-K1 | `npm test`（fast） | 633 / **592 pass** / fail 0 / skip 41 | ✓（= 基线 633/592/0） |
+| A-K1 | `npm run lint` | `check-syntax: 279 JS files OK` | ✓（292 − 本单元 6 删档 − 并行单元在途删档） |
+| A-K1 | `npm run test:full` | **633 / 633 pass / fail 0** | ✓（= 基线；中途一跑曾 632/1 fail——`T-DC6②` 源域零命中断言，归因并行 W4 在途文档面，其收尾后复跑全绿） |
+| A-K1 | `npm run test:integration` | 28 / 28 · fail 0 · exit 0 | ✓（= 基线） |
+| A-K1 | `npm run doc:check` | `V5: 命中 0 处 · distinct 0` · exit 0 | ✓（删前本单元面 15 处 → 0） |
+| A-K2 | 核回归 `node --test`（cwd = `thincoder-core`） | **178/178** · fail 0 | ✓（核零改动） |
+| A-K3 | 仓根三机检 | 宽度 **OK**（404 档零 >300）· 台账 **0 违规** · 锚 **0 悬空** | ✓ |
+| A-K4 | 删除集零引用 | 模式① 0 / 模式② 1（登记项） | ✓（见 ②.2） |
+| A-K10 | 模块权威档 | `docs/core/design/MCP.md` 收正在位（§1/§2.2/§6.2/§6.10/§7/§8.2/变更记录）+ 锚 0 悬空 | ✓ |
+
+**④ 提交**：单笔 `git commit --only` ⇒ **`33a9e0a7`**（17 档 / +177 −1082 / 6 删档；`refactor(vsc): W7 mcp - delete src/mcp mirror, repoint to @thincoder/core + shell MCP face (panel-mcp)`）；回退点 = `git revert 33a9e0a7`。批次档未入本笔（父侧在途）。
+
+**⑤ 内部轮（发现与处置）**
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **DEVIATIONS（2 🟡）**——① `docs/design/MCP.md` §7 段头三 transport 路径/档名未随收正；② §5 空白（本档未写 ⇒ 两处「删除记录 = 批次档 §5」指针暂悬）+ `loop.mjs` 残留无登记落点。两类均当轮落修（① 就地收正；② 本条即落）。
+- **advisor 代码评审 1 轮**（`type=code` · 阻塞）：**changes-required**（🔴 1 · 🟡 4 · 🔵 2）。
+- **裁决表（7 项）**：
+
+| # | Action | Detail |
+|---|---|---|
+| 1 | **Fixed** | 🔴 面板展开器 payload 契约静默换形：`mcpConnect` 原样透传核原生工具（`parameters`、无 `inputSchema`）⇒ webview `settings-tools.js:284` 的 params 行消失。修 = 新增 `panelToolList` 面板契约投影（`inputSchema: t.parameters`、剔除 `execute`/`_mcpTransport`），`mcpConnect` 走投影、`connectMcpServersExpanded` 直达核 `connectMcpServer`（原生面不受影响）；冒烟复验（params 行回显 `text, n`；装配面原生工具 execute 可调）。 |
+| 2 | Deferred | 🟡 端壳 reach-in 核私有面（`_sessions` + 自实现 closeSessionByName；核内 `closeSession` 未导出）——修点 = 核包（本批「不碰核一字」）⇒ 登记上抛（未决 3）。 |
+| 3 | Deferred | 🟡 `thincoder-vscode/AGENTS.md:48` 文件地图行仍述删档（`src/mcp.mjs` + `src/mcp/`）——W1 同型（未决 1）登记，随 W17 收口笔范围核对。 |
+| 4 | Fixed | 🟡 §2 W7 计数「存活改指 3」vs 实交付 5 档——本条 §5 改动面表按全入边 5 档登记（+ setup.mjs / panel-messages.mjs 两条动态 import 改指 + settings.mjs 删面）。 |
+| 5 | Not an issue | 🟡 触碰档位软线（`panel-messages` 498 · `setup` 465 · `chat-panel` 421 · `settings` 342——均 >300 既有档）：本笔单行/单块替换，结构未变，R3 不升级（承 W1–W3 同判）；`panel-mcp` 166 为真增行面（表 5 已在册）。 |
+| 6 | Deferred | 🔵 端壳 MCP 面无注册测试（`test/files.mjs` 无 mcp 条目；`test/fixtures/fake-mcp-server.mjs` 孤儿夹具）——既有缺口（删前镜像同零直连测试）、任务书无测试面条款 ⇒ 登记（未决 4）。 |
+| 7 | Deferred | 🔵 `src/advisor/loop.mjs:27` 注释残留（他单元档）——登记（未决 2）。 |
+
+- **修复轮 1**（🔴 收正 + 审计 ① 收正）：`panel-mcp.mjs` 68 → 166（含投影）；`docs/core/design/MCP.md` §6.10 + VSC `docs/design/MCP.md` §2 补 payload 契约登记。
+- **轮次自证**：审计 1 轮（DEVIATIONS · 2🟡 全落）+ advisor 1 轮（changes-required · 1🔴 落修 + 4🟡/2🔵 裁决）+ 修复轮 1；终态 **0 未决 🔴 → clean**。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 改指面 = 全入边 5 档（任务书计数列 = 3） | A-K4 零引用 + 删后中间态零断链；先例 = W1（18 档全改指）/ W3 决策 1；备选 = 只改 3 ⇒ `setup.mjs` 动态 import 静默失败（`catch` 吞——MCP 工具全轮缺失）。 |
+| 2 | `settings.mjs` 删 `connectedMcpServers()` 而非改指 | 该包装唯一消费者 = panel-mcp（现直用 `mcpConnectedNames`）；保留 = 制造 settings ↔ panel-mcp 循环依赖；全域 grep 零引用实核。备选 = 保留包装并自 panel-mcp import（循环——否决）。 |
+| 3 | 端壳面落 `panel-mcp.mjs`（任务书点名）承载全部端壳 MCP 增量 | §2 :255「不新增任何 .mjs（端壳缝全部并入既有端壳档）」；`connectMcpServersExpanded` 亦落此（agent 装配动态 import 可达）。备选 = 新建缝模块（违 §2 注——否决）。 |
+| 4 | `mcpConnect` 返回 `tools` = 面板契约投影（非核原生工具） | 迁移前契约即 `{name, description, inputSchema}`（面板展开器消费面）；原生工具面归 `connectMcpServersExpanded`。代价 = 工具名显示为原生 `{server}_{tool}` 名（核面无原始工具表面）——已登记入 `docs/core/design/MCP.md` §6.10 + VSC docs/design/MCP.md §2。 |
+| 5 | 端壳关闭按核 `_sessions` 办理（closed 标记 + transport close + 注册表移除） | 核为 name-key session 面、未导出 close-by-name（`removeMcpTools` 依赖工具表匹配——零工具 server 有洞）；备选 = `removeMcpTools` 合成 agent（洞：零工具/未命名 server 关不掉——否决）。 |
+| 6 | 核 `_mcpHooks.reconnectDelays` 测试钩子随 `connectMcpServersExpanded` 不再显式引用 | 核内 scheduleReconnect 自持该表；端壳无叠加面（原 VSC 镜像的钩子导出无消费者）。 |
+| 7 | VSC 产品档 = 门控强制锚收正 + W7 迁核注记（`已迁核——现体 …` 形态） | VSC 产品档 = 迁移期参照历史（D-C14）；锚门禁实数 15 处 → 0；注记形态经 `doc:check` 实核豁免。 |
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **`thincoder-vscode/AGENTS.md:48` 文件地图行**（`src/mcp.mjs` + `src/mcp/` 两 token）仍述删档——承 W1 未决 1 同型；请父侧核对 W17 收口笔（A-K11 `AGENTS.md ±4`）是否覆盖文件地图段。
+2. **`src/advisor/loop.mjs:27` 注释残留**（「本仓 `src/mcp/http.mjs` 同款 fallback 先例」——历史叙事、非引用）：该档属 W12 面，随所属单元触碰订正（承 W2 未决 5 同型）；A-K4 模式①零命中不受影响。
+3. **核侧待补位：public close-by-name（+ 只读状态查询）**：端壳以 `_sessions` 读/关（与核内 closeSession 逐句同义，但为 reach-in）——建议后续核内笔导出公共面（端壳改为委托）；当前耦合形状已登记 `docs/core/design/MCP.md` §6.10。
+4. **端壳 MCP 面零注册测试**（`test/fixtures/fake-mcp-server.mjs` 孤儿夹具）：任务书无测试面条款；是否登记冒烟用例 / 退役夹具请父侧裁量。
+5. **并行面读数归因**：本笔复跑期恰逢并行 W4/W5 在途（中途一跑 `test:full` 632/1 fail = 其文档面未收尾），终态复跑全绿；`lint` 档数 −13 为并行删档合计（非本单元面）。
+
+**§5 收正注（同轮 · 零语义）**：本段首版「端壳增量」散文行 1 行超宽（`docs/batches/2026-09-15-vsc-core-wiring.md` 落档时 :1300 · 461 chars）经**本席就地机械折行**（仅插换行 · 去空白逐字节相等 · 零语义）——承父侧折行先例（§2/§3）；批次档宽度/台账/锚三闸折行后复跑归 0。
+
+### 实施：S2 W4 —— WORKSPACE 单元落轮（2026-09-15 · eng-coder）——**终态 = clean**
+
+**段位**：当前段 = **S2（VSC 迁移单元 W4）**。写域 = VSC 树（删 4 档 / 改指 12 档 / 重写 1 档 / 测试 5 档 / 产品文档 8 档）+ 核模块档 3 档 + **域外一笔（已披露）**：仓根 `scripts/check-ledger.mjs`（单行改指 + 注释面同步）。
+**零触碰**：核内实现 `thincoder-core/**`（只读消费）· `thincoder-cli/**` · 台账 `docs/TODO.md` · 本档 §1–§4/§6 · 他单元文件。
+
+**依据** = 本档 §2「W4 · WORKSPACE」行 +「逐单元任务书」四步块 + 验收判据 A-K1/A-K3/A-K4/A-K8/A-K10；上游 = `docs/core/design/CORE-UNIFICATION.md` §2.13.3（台账渲染面三缝值 `colors/pushLine/render`）· §2.6.2（五）零引用机判两模式。
+**模块权威档同步面** = `WORKSPACE.md`（设计点名）+ `MULTI-INSTANCE-COLLAB.md`（实核零引用 ⇒ 零动作）+ `PORTABILITY.md` 两档（`conventions.mjs` 的模块档——07:08 裁定「改到哪模块收正哪模块的档」）；同批对齐（如实披露扩展面）+ `CORE-UNIFICATION.md` §2.8.1 指针面。
+
+**改动面**（行数 = `git show 5faa4e0a --stat` / `wc -l` 口径实核；改前基准 = `33a9e0a7`）
+
+| # | 面 | 档 / 量 | 动作 |
+|---|---|---|---|
+| 1 | VSC 删旧 | `src/{ledger,conventions,escape,expand-home}.mjs`（227+226+153+21 = **627 行**） | **删档**（`git rm`） |
+| 2 | VSC 改指 | 12 档（来源串替换；具名导入面零改）——逐处见 ① | 改指 `@thincoder/core/<子路径>` |
+| 3 | VSC 重写 | `src/extension/ledger-surface.mjs`（111 → 115） | 核机制 `runLedgerScan` + 三缝值注入（缝装配） |
+| 4 | VSC 测试面 | 5 档——逐处见 ① | 改指核 + 缝注入断言（推送计数 = 行数） |
+| 5 | VSC 产品文档 | 8 档（design 6 + requirements 2） | 迁核注记（19 处悬空锚 → 0；机制条文零改） |
+| 6 | 核模块档 | 3 档 = `docs/core/design/WORKSPACE.md` · `docs/core/design/PORTABILITY.md` · `docs/core/requirements/PORTABILITY.md` | 状态行/坐标收正 + 变更记录行（机制条文零改） |
+| 7 | 仓根脚本（**域外·披露**） | `scripts/check-ledger.mjs`（+5 −5 行面） | `:41` 改指核 + 注释面同步（决策透明表 1） |
+| 8 | 共档披露 | `src/agent/setup.mjs`（`:25` expand-home 入边） | 该笔随 **W7 提交 `33a9e0a7`** 整档收录（本笔不含该档） |
+
+**① 逐处「改前 → 改后」（来源串替换 + 注释同步——具名导入面零改）**
+
+| # | 档 | 位置：改前 → 改后 |
+|---|---|---|
+| 1 | `src/advisor/main.mjs` | `:51` `"../escape.mjs"` → `"@thincoder/core/escape.mjs"`（`escapeLiteralEscapes`）；注释 `:7` / `:188` 同批换源 |
+| 2 | `src/advisor/project-context.mjs` | `:24` `"../conventions.mjs"` → 核（`loadConventions`） |
+| 3 | `src/advisor/repos.mjs` | `:12` → 核（`isCodePath`/`isDocPath`/`loadConventions`）；注释 `:5` / `:107` 同批换源 |
+| 4 | `src/agent/run-helpers.mjs` | `:9` → 核（`isCodePath`/`loadConventions`）；注释 `:67` 同批换源 |
+| 5 | `src/agent/setup.mjs` | `:25` `"../expand-home.mjs"` → `"@thincoder/core/expand-home.mjs"`（随 W7 笔收录） |
+| 6 | `src/agent/tool-gates.mjs` | `:10` → 核；注释 `:84` 同批换源 |
+| 7 | `src/agent-tools/advisor-async.mjs` | `:32` → 核；注释 `:124` 同批换源 |
+| 8 | `src/agent-tools/advisor.mjs` | `:10` → 核；注释 `:220` 同批换源 |
+| 9 | `src/agent-tools/verify.mjs` | `:31` → 核；注释 `:86` 同批换源 |
+| 10 | `src/index-discover.mjs` | `:15` `"./conventions.mjs"` → 核（`DEFAULT_CONVENTIONS`/`loadConventions`） |
+| 11 | `src/indexer.mjs` | `:20` → 核（`loadConventions`） |
+| 12 | `src/provider.mjs` | `:9` + `:12`（import / re-export 两行）→ 核（`escapeMessages`；`stripLocalMessageFields` 转口） |
+| 13 | `test/expand-home.test.mjs` | `:15` → 核（`expandHome`） |
+| 14 | `test/ledger.test.mjs` | `:21` → 核（15 名：解析/计数/阈值/formatter/去重面） |
+| 15 | `test/portability-vsc-classification.test.mjs` | `:15` → 核（7 名） |
+| 16 | `test/portability-vsc-advisor-context.test.mjs` | `:17` → 核（3 名） |
+| 17 | `test/portability-vsc-index.test.mjs` | `:20` → 核（2 名） |
+
+**端壳缝装配（`src/extension/ledger-surface.mjs` 重写——§2.13.3 三缝值）**
+
+- `colors`：`SEAM_COLORS = { warn: true, dim: false }`（面板渲染面无 ANSI——两值 = payload `warn` 位哨兵）。
+- `pushLine`：逐行 `post(panel, { type: "ledgerNotice", lines: [{ text, warn }] })`；未送达 → 抛出 ⇒ 核内 `delivered=false` + 不记账（送达门保留；**推送计数 = 行数**）。
+- `render`：item 刷新（text = L1 / tooltip = 明细行集 / aged>0 → 警示底 / 无台账 → hide；零点击命令）。
+- 机制面（族扫描 / 变化行 / 送达门 / 记账）归核 `runLedgerScan`；端侧自持 item 明细面（tooltip 行集）+ 测试缝（`_setLedgerSurfaceForTest` 三键）+ item 建立/周期/释放生命周期。
+
+**② 删旧三条读数（删前全过才删）**
+
+1. **改指已落盘**：先改指、后删档、再复跑——中间态零 `ERR_MODULE_NOT_FOUND`（唯一例外 = 仓根 `scripts/check-ledger.mjs` 的跨目录入边，随本笔 `:41` 同落——见决策透明表 1）。
+2. **零引用机判**（域 = `src/` + `test/` + `extension.mjs` + `scripts/` + `webview/`；删后复扫）：① 引号相对路径形 = **0 命中**；② 路径片段反向判 = 非核指向 **0**（余留 6 处 = 合成夹具 / 检查器脚本名 token，非引用——登记见「未决」4）。
+3. **文档锚**：VSC 域 `doc:check` 删后中间态 = **19 处悬空**（本单元面）→ 逐处迁核注记 → **0**；仓根域一锚 = **悬空 0**。
+
+**③ 复跑读数（终态实跑 · 原样 · cwd = `thincoder-vscode/`）**
+
+| # | 命令 | 读数 | 判 |
+|---|---|---|---|
+| A | `npm test`（fast） | **633 / 592 pass / fail 0 / skip 41** | ✓（= 基线；用例零增删） |
+| B | `npm run test:full` | **633 / 633 pass / fail 0** | ✓（= 基线） |
+| C | `npm run test:integration` | **28 / 28 · fail 0** | ✓（= 基线） |
+| D | `npm run lint` | `check-syntax: 279 JS files OK` | ✓（292 基线 − 4 本单元删 − 3 W5 − 6 W7） |
+| E | `npm run doc:check` | `V5: 命中 0 处 · distinct 0` · exit 0 | ✓（本单元 19 处 → 0） |
+| F | 核回归 `node --test`（cwd = `thincoder-core`） | **178 / 178 · fail 0** | ✓（= 基线；核零改动） |
+| G | 仓根三机检 | 锚 候选 8130 · **悬空 0** · 豁免 457；宽度 404 档无 >300 · **新增 0**；台账 **0 处违规** · 基线 0 | ✓ |
+
+**专项验收（A-K4 / 缝注入断言）**：① W4 删除集零引用 ✅（两模式复扫 0 / 0，见 ②）；② `ledger-surface` 面板推送计数 = 行数 ✅（`test/ledger.test.mjs` T107/T103：启动拍 2 行 → 2 条 `ledgerNotice` 逐行投放；第二拍变化行去重后 = 1 条）；
+③ 三缝值逐缝在场 ✅（`colors` 哨兵 / `pushLine` 逐行抛出 / `render` item 刷新——行为六项：启动行门 · 送达门 · 去重记账 · item 形态 · `emit:false` 仅 item 径 · 测试缝三键全保留）。
+
+**收正注（同轮 · 首版后置 · 零语义）**：本节首版 1 行超宽（`:1437` 302 字符）⇒ **仅插换行、文字零改**；复跑 = 宽度闸 0 行超 · 一致性新增 0。
+
+**④ 提交**：单笔 `git commit --only` ⇒ **`5faa4e0a`**（33 档 / +101 −717；含 4 删档）；回滚点 = `git revert 5faa4e0a`。
+（`src/agent/setup.mjs` 一档不在本笔——其两处改动随 W7 笔 `33a9e0a7` 收录，本单元 `:25` 行在其实内。）
+
+**⑤ 内部轮（发现与处置）**
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **DEVIATIONS**——PARTIAL / SILENT-SIMPLIFICATION / 第三类未披露改动 三项未命中；命中 **OUT-OF-LIST 🟡**（`scripts/check-ledger.mjs:41` 域外一笔）+ **DOC-DRIFT 🔵**（同档注释面残留旧口径）。
+- **advisor 代码评审 2 轮**（第 1 轮全量超时 ⇒ 第 2 轮窄化至三档 + 生产接线取证）：**pass**（🔴 **0** · 🟡 1（optional）· 🔵 3 + 域外备注 3）。
+- **裁决表（4 项）**：
+
+| # | Action | Detail |
+|---|---|---|
+| 1 | Deferred | 🟡（optional）emit 径族扫描翻倍：端侧明细面 + 核机制各扫一拍（每项目至多 2× `git blame`；无 view 照跑）。属缝设计固有（`render` 缝不带数据、端须自持明细面）——核侧收窄 = 核内笔超本批写域 ⇒ 登记（未决 1）；AC89 计数断言射程 = `emit:false` 径，维持不 pin 成本。 |
+| 2 | Not an issue | 🔵 `_state.ledger` 在本端无读点：核签名要求 `state` 载体（`state.ledger` = L1 状态位）；本端 item 经 `render` 缝驱动 ⇒ 空转为无害形态。 |
+| 3 | Not an issue | 🔵 AC89 计数断言只覆盖 `emit:false` 径：射程与判据句一致（该径即成本界值径）；pin 住 emit 径次数会阻碍将来核侧收窄 ⇒ 维持。 |
+| 4 | Fixed | 🔵 测试标题陈旧（「四处挂载 + 样式族 + 本档入册」体仅断言入册——静态面随后续批次退役、标题未同步）：标题收正为「本档入册（files.mjs 显式清单——未入册 = 不跑）」（同批复跑 fast 633/592/0）。 |
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 仓根 `scripts/check-ledger.mjs:41` **域外一笔随本笔落**（`:41` 改指核 + 注释面同步） | 该行 import 被删档（VSC `src/ledger.mjs`）⇒ 不改则三处红：仓根台账闸 / VSC `doc:check`（引擎经 check-ledger 取判序）/ `test/ledger-check.test.mjs`。判据 = 审计「必要且最小」（1 行改指）+ 先例 = CLI U4 同档「域外·披露」+ 系统纪律「超声明 ≠ 越权，如实披露」。**备选** = 上报待父侧落笔（三闸维持红——否决）。如父侧裁「应由父侧落笔」⇒ 单笔 revert 该档即可。 |
+| 2 | 改指面扩至删除集**全入边**（12 档 src + 5 档 test；设计点名 3 档存活面） | A-K4 反向判零 + 中间态零 `ERR_MODULE_NOT_FOUND`；先例 = W1（5→15 判定 CLEAN）· W3（改指 W10 目标）。含后续删除目标（`indexer`/`index-discover`〔W8〕· `provider`〔W10〕· `advisor/*`〔W12〕· `agent-tools/verify`〔W9〕· `agent/setup`〔W15〕）。 |
+| 3 | 端壳缝 = 消费核 `runLedgerScan` + 三缝值注入（非「保留端侧副本 + 只改数据面」） | §2 W4「改指核 `ledger-surface.mjs` 后按缝装配」+ 专项「缝注入断言」；备选 = 照 CLI U4 保留本端机制副本（证伪：专项验收不可满足、F9 残留双份）。 |
+| 4 | `pushLine` 逐行 post（非「单报文多行」批投） | 缝契约「每行以注入函数推送（计数 = 行数）」；送达门单相形态唯一保真（批投须两相投递 ⇒ 记账时序破）。webview 面零影响（T108 直驱两形态皆受）。 |
+| 5 | item 面（tooltip 行集）端侧自扫一拍 | 核 `render` 缝不带数据（`state.ledger` 仅 L1）；端侧 tooltip 需族明细 ⇒ 端自扫（成本见裁决表 1）。 |
+| 6 | 文档面扩至 `PORTABILITY.md` 两档（设计点名面外） | 07:08 裁定「改了哪模块收正哪模块的档」——`conventions.mjs` 的模块档 = PORTABILITY（§3.6 VSC 端镜像面 + 需求 F1/F2）；A-K10「VSC 端节坐标/状态行更新」；只落状态行/坐标，机制条文零改。 |
+| 7 | VSC 产品档 = 迁核注记（「W4 已迁核——现体 `thincoder-core/…`」形态），不逐档加变更记录行 | 档性 = 迁移期参照历史（D-C14）+ 锚闸强制改指；先例 = W1/W2 同法。 |
+| 8 | `MULTI-INSTANCE-COLLAB.md` 零动作 | 实核该档对本单元四档零引用（技能/规则/同伴面 ≠ 本单元删除集）——非缺，登记以免误判（审计同判）。 |
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **emit 径双扫描成本**（裁决表 1）：核侧收窄（`render` 缝带 scans / 端侧免扫）为候选核内笔——超本批写域（核包禁碰）⇒ 上抛。
+2. **核内注释滞后**：`thincoder-core/ledger.mjs:6`「VSC 端为独立实现、语义同源（不跨仓 import）」随 W4 失效（VSC 现经核单源）；同句被 VSC 需求档引为「在位事实」⇒ 核内注释收正 = 核内笔 / 父侧协调（审计 + advisor 双报）。
+3. **CLI 侧同机制副本仍在**：`thincoder-cli/src/tui/ledger-surface.mjs:14` 自持 `runLedgerScan` 定义（数据面已走核 `:9`，机制面未并）——S2 单源化收尾面，非本批写域 ⇒ 上抛。
+4. **合成夹具 / 脚本名 token（非引用 · 登记）**：`test/reconcile-lookup.test.mjs:59/61/66`（自建 tmp 夹具写出 `src/ledger.mjs` 供反查器用例）· `test/doc-anchors.test.mjs:126` · `test/fixtures/ledger-baseline.json:4` · `test/ledger-check.test.mjs:14`（皆为仓根检查器脚本名，非同档）。反向判两模式均不构成违规。
+5. **设计档表行滞后**：`docs/core/design/CORE-UNIFICATION.md` §2.8.1 表 `:1719`（`thincoder-vscode/src/conventions.mjs` 226 行行）随删档失效；`docs/vsc/design/SETTINGS.md:58`（expand-home 坐标）同族 ⇒ 归设计面 / 文档维护批（非本批写域；根域锚闸零命中）。
+6. **VSC 产品档未注记面**：`docs/design/ARCHITECTURE.md`（裸名 `escape.mjs` 等）· `docs/requirements/PORTABILITY.md` F4/F5 等档 — 实核零门影响（A3 判据射程外），登记为收口/文档维护批可选收正面（承 W1/W2 先例）。
+
+**轮次自证**：审计 1 轮 + advisor 2 轮（含 1 轮超时重跑）+ 修复轮 1（裁决表 Fixed 1 项：测试标题收正；审计 DOC-DRIFT 注释面同轮收正）；终态 **0 未决 🔴 → clean**。
+
+**段末复跑（§5 写入后 · 原样读数）**：见「收正注」段（写后即跑三闸复读）。
+
 ## §6 验证与收口（父代理）
