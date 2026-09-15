@@ -185,12 +185,13 @@ consult_stop
 ### 6.5 VS Code 端级实现接线（VSC 轮并入 · 2026-09-15）
 
 > **来源** = `thincoder-vscode/docs/design/CONSULTATION.md`（161 行 · VSC 产品档——迁移期参照历史）。本节 = 该档中「根层所缺」的 **VSC 端级接线表**（(a) 机制 / (b) 坐标）；digest / settle / 单容器机制本体已入 §6.2 / §6.3 与 `AGENT-LOOP.md` §6.7.3，不重复（D2）。
+> **W12 收正（2026-09-15——VSC 壳接线批）**：VSC 端实现面迁核（端 `thincoder-vscode/src/agent-tools/consult.mjs` 删旧退役）——下表坐标现体 = 核 `thincoder-core/agent-tools/consult.mjs`（删除记录 = 批次档 §5，`2026-09-15-vsc-core-wiring.md`）；只收正坐标/状态行，机制条文零改。
 
 | 环节 | VS Code（现状坐标） |
 |---|---|
-| 子 agent 构建 | `runConsultChild`（`thincoder-vscode/src/agent-tools/consult.mjs:223`）——`buildProvider` + effort 钳制（越 `reasoningEffortEnum` 整字段丢弃——防 candidate 开跑即死）；`models` 子集选择器同 CLI（大小写不敏感） |
+| 子 agent 构建 | `runConsultChild`（`thincoder-core/agent-tools/consult.mjs:215`）——`buildProvider` + effort 钳制（越 `reasoningEffortEnum` 整字段丢弃——防 candidate 开跑即死）；`models` 子集选择器同 CLI（大小写不敏感） |
 | 子任务 runner | `runAgent(child, problem, childCallbacks, { depth: 1, maxTurns: consultTurns, signal })` |
-| 只读工具集 | setup.mjs role 过滤（depth>0 且 role `consult` → 只读）+ `main_history` 经 `opts.extraTools` 注入（`makeMainHistoryTool` = `thincoder-vscode/src/agent-tools/consult.mjs:29`——limit 默认 20 最大 100；多模态 base64 图片替换 `[image omitted]`、tool_calls 显形 args 截 200、60KB 字节预算） |
+| 只读工具集 | setup.mjs role 过滤（depth>0 且 role `consult` → 只读）+ `main_history` 经 `opts.extraTools` 注入（`makeMainHistoryTool` = `thincoder-core/agent-tools/consult.mjs:82`——limit 默认 20 最大 100；多模态 base64 图片替换 `[image omitted]`、tool_calls 显形 args 截 200、60KB 字节预算） |
 | 系统 prompt | role `"consult"` → consult-base 底座（瘦——不背主 agent persona / 工具引用） |
 | 工具注册 | setup.mjs：`consultModels` 非空即注册 `consult_start` / `consult_stop`——空池不注册 |
 | 会话跨 run 容器 | `history._consultSessions`（`_asyncSubagents` 同款载体——agent per-run 重建） |
@@ -241,7 +242,7 @@ consult_stop
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **235 行**（B 轮并入前 98 行）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **260 行**（口径 = `split("\n").length` 含末行空元素；W12 收正——2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
@@ -255,3 +256,4 @@ consult_stop
   工具集与 main_history / 系统 prompt / 注册 / 容器 / digest / 驱动中止 / 动作域 / 面板可见性）· §7 补 **D-CO7** ·
   §8.2 补 1 行不并项登记；来源 = `thincoder-vscode/docs/design/CONSULTATION.md`（**旧档一字未改**）；坐标按现状
   实核（`thincoder-vscode/src/agent-tools/consult.mjs:29,223`）。
+- 2026-09-15（**W12 收正 · VSC 壳接线批**）：§6.5 加 W12 状态行；坐标收正：`runConsultChild` = 核 `thincoder-core/agent-tools/consult.mjs:215`、`makeMainHistoryTool` = 同档 `:82`（端档删旧退役）；§9 实测行数同步。机制条文零改。

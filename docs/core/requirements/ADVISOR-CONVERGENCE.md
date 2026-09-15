@@ -165,17 +165,17 @@
 
 > **来源** = `thincoder-vscode/docs/requirements/ADVISOR-CONVERGENCE.md`（57 行 · VSC 产品需求档——迁移期参照历史）。
 > 本节 = 该档中「根层所缺」的 **VSC 端对位面**（F-A1–F-A12 / N-A1–N-A6 + 端差登记四条）——语义与 §2 / §3 同源（CLI
-> 🚄 VSC 同机制），本端为**独立原文**（不做逐字一致）；**VSC 端权威源** = `thincoder-vscode/src/advisor/`（13 档）+
-> `src/agent-tools/advisor.mjs` / `advisor-async.mjs`。
-> **证据坐标** = VSC 源档实测（as-of 2026-09-12——坐标随实现演进；机制语义为契约面）。
+> 🚄 VSC 同机制），本端为**独立原文**（不做逐字一致）；**VSC 端实现面（W12 收正 · 2026-09-15）** = 核单源（`thincoder-core/advisor.mjs` +
+> `advisor/*` + `agent-tools/{advisor,advisor-async}.mjs`）——原 `thincoder-vscode/src/advisor/` 13 档与端 `src/agent-tools/{advisor,advisor-async}.mjs` 删旧退役（删除记录 = 批次档 §5，`2026-09-15-vsc-core-wiring.md`）。
+> **证据坐标** = VSC 源档实测（as-of 2026-09-12——坐标随实现演进；机制语义为契约面）；**W12 后** = 端实现面迁核——§8.1 证据坐标现体 = 核同路径（见各格）。
 
 ### 8.1 功能性需求（F-A1–F-A12）
 
 | # | 需求 | 判定句（验收语义） | 范围边界（不做） |
 |---|---|---|---|
-| F-A1 | **工具面**：`advisor` 工具——`type`（code / design）· `paths[]` / `documents[]` / `batchDoc` / `object` / `async` 参数；工具声明 readonly + 副作用豁免。证据 = `src/agent-tools/advisor.mjs` | 参数形态可机判（enum / 数组）；空范围（code 无 paths / documents）→ 拒；design documents 须为文档 | 不做范围自动推断（paths 缺省回落 `_touchedFiles`） |
-| F-A2 | **轮次衰减**：评审系统提示按轮次确定性替换——round 1 全量；round 2 验 prior 为主 + 允许新问题；round 3+ 严格只验 prior。证据 = `src/advisor/main.mjs` · `src/advisor/convergence.mjs` | 第 N 轮系统提示 = 对应轮次档（硬加载、缺失即抛错）；轮次判定由状态位决定，**零输出解析** | 不做 LLM 输出解析判状态；不做每轮全量重扫 |
-| F-A3 | **机械 cap（code）**：`MAX_ADVISOR_ROUNDS = 5`——第 6 次启动机械终止（不消耗 LLM）；design 豁免。证据 = `src/advisor/run.mjs` | `_advisorRound >= 5` 再发起 → 返回 cap 消息；design 请求不受该分支 | 不对 design 评审施加 cap |
+| F-A1 | **工具面**：`advisor` 工具——`type`（code / design）· `paths[]` / `documents[]` / `batchDoc` / `object` / `async` 参数；工具声明 readonly + 副作用豁免。证据 = `thincoder-core/agent-tools/advisor.mjs` | 参数形态可机判（enum / 数组）；空范围（code 无 paths / documents）→ 拒；design documents 须为文档 | 不做范围自动推断（paths 缺省回落 `_touchedFiles`） |
+| F-A2 | **轮次衰减**：评审系统提示按轮次确定性替换——round 1 全量；round 2 验 prior 为主 + 允许新问题；round 3+ 严格只验 prior。证据 = `thincoder-core/advisor.mjs`（`main.mjs` 同源重组）· `thincoder-core/advisor/convergence.mjs` | 第 N 轮系统提示 = 对应轮次档（硬加载、缺失即抛错）；轮次判定由状态位决定，**零输出解析** | 不做 LLM 输出解析判状态；不做每轮全量重扫 |
+| F-A3 | **机械 cap（code）**：`MAX_ADVISOR_ROUNDS = 5`——第 6 次启动机械终止（不消耗 LLM）；design 豁免。证据 = `thincoder-core/advisor/run.mjs` | `_advisorRound >= 5` 再发起 → 返回 cap 消息；design 请求不受该分支 | 不对 design 评审施加 cap |
 | F-A4 | **会话隔离**：每轮 fresh session（旧轮 read 数据物理不在上下文）；prior 仅以注入文本存在 | 单轮会话不携带上轮工具尾 | 不复用上轮会话上下文 |
 | F-A5 | **证据机械校验（citations）**：模型引用 `file:line` 逐条比对磁盘——白名单扩展名 + 内容匹配 + 路径围栏；报告 `[host-verified] N/M citations match` | 失真引用 → 失败清单可见；越界路径 → path traversal 判败 | 不做语义级正确性判定 |
 | F-A6 | **失败护栏（六 kind）**：context_limit / turn_cap / timeout / empty / interrupted / review_failed——命中标记块首行前缀族；design 命中**一律不签发 token** | 触发六类之一 → 报告携标记（固定字面）；design 请求不产出可用凭证 | 不把失败静默为通过 |
@@ -200,19 +200,20 @@
 ### 8.3 对位与端差登记
 
 - 语义对位：收敛四件套（轮次衰减 / 机械 cap / 会话隔离 / 证据校验）+ 六 kind 护栏 + 异步池 + 冻结窗口 + 启动断言——逐条同源（CLI = §2 / §3 / ADVISOR-GUARDS.md）。
-- 端差登记（VSC 端实况，逐条）：
+- 端差登记（迁移前 VSC 端实况，逐条；**W12 收正**：端侧实现面已迁核删旧（删除记录 = 批次档 §5，`2026-09-15-vsc-core-wiring.md`）——指向已删端档的坐标自此为迁移前实况，仍有端侧落点者照旧）：
   1. **硬墙中止形态**：VSC 中止返回 `interrupted` 字段（非抛错）——墙判定以信号状态为主判据（`thincoder-vscode/src/advisor/` 设计档 §13.6 / §13.10）。
   2. **结算拒发不记账载体** = per-call `ctx._advisorRefused`（CLI 用 `agent._advisorRefusals` Set）——载体差异，语义零差。
-  3. **冻结窗口实现点** = `src/agent/execute-tools.mjs`（单一预闸点——VSC 无独立 dispatch 模块）；事件面 = `_fileMutEvents`。
+  3. **冻结窗口实现点** = `src/agent/execute-tools.mjs`（单一预闸点——VSC 无独立 dispatch 模块）；事件面 = 核 `_mutLog`（`noteMutations`——W12 改指；原端侧 `_fileMutEvents` 已随删旧退役）。
   4. **项目方法论指针** = 仅声明（`advisor.standardsDoc`——硬探针已退役）；文档地图 = 声明优先 → 兜底链。
 - 差异若有 → 逐条补登记（不静默）；本档不代述对端正文。
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **245 行**（根层新建 172 行 + VSC 端对位面 §8 ≈ +73）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **220 行**（口径 = `split("\n").length` 含末行空元素；W12 收正——2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
 - 2026-09-15（**B 式迁移轮 · CLI 批 5**）：建档——`thincoder-cli/docs/requirements/ADVISOR-CONVERGENCE.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；
   并入 §2.1 收敛本体（F1–F6 / N1–N3）· §2.2 修正轮时序（F7–F10 / N4–N6）· §2.3 边缘守卫（F11–F17 / N7–N11）· §5 待设计需求（旧 §5）· §6 上下文预算与失败护栏（F27–F29 / N19–N21）；VSC 端对位面（旧 §8 / §9 / §13）与退役评估（旧 §11）登记不并（§7）；坐标按现状路径实核。
 - 2026-09-15（**VSC 轮并入 · 批 7**）：新增 §8 **VSC 端对位面**（F-A1–F-A12 / N-A1–N-A6 + 对位与端差登记四条——源 = `thincoder-vscode/docs/requirements/ADVISOR-CONVERGENCE.md`；档头「不并入」声明 + §7.2 三行登记销项）；§8（体量）→ §9。来源档**一字未改**——留参照历史。
+- 2026-09-15（**W12 收正 · VSC 壳接线批**）：§8 坐标/状态行收正——VSC 端实现面迁核（端 `src/advisor/` 13 档 + 端 `agent-tools/{advisor,advisor-async}.mjs` 删旧退役）；§8.1 证据坐标（F-A1/F-A2/F-A3）改指核同路径；§8.3 端差登记加 W12 状态行 + 冻结窗口事件面坐标收正（核 `_mutLog`/`noteMutations`）；§9 实测行数同步收正。机制条文零改。
