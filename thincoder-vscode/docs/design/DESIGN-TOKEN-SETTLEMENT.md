@@ -34,7 +34,7 @@ async design 评审（`advisor async:true`）在**挂起会话**期间 settle（
 
 - **现状**：token 结算写"评审运行时死对象"内存 + F2g fire-and-forget 槽写（不 await）。
 - **改**：settle 是唯一结算点 → **settle 当场同步写槽文件权威台账**（designId 键控持久，token 随会话 slot 持久化跨进程）。F2g 的 `_engPersist` 直写**去 fire-and-forget**：改同步 `await setSlotEngDesignTokens`，写失败即 settle 失败（可重评，不静默吞错）。agent 内存 Map 降级为**当前进程缓存**（每次 run 从权威水合）。
-- 落点：`src/agent-tools/advisor-async.mjs` settle 路径 + `src/extension/session-slot-write.mjs`。
+- 落点：`src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）` settle 路径 + `src/extension/session-slot-write.mjs`。
 
 ### D2 修写侧清零器（断点②b）
 
@@ -54,7 +54,7 @@ async design 评审（`advisor async:true`）在**挂起会话**期间 settle（
 
 - **现状**：resolveDesignSlot 只读当前 run 内存 Map（会话内回合 = 空快照 → 拒）。
 - **改**：门禁读内存 Map，**miss 时回读槽文件权威台账**（reconcile 内存缓存 + 判定）——会话内回合也能从槽读到 settle 落盘的 token。TTL 过滤保留。
-- 落点：`src/agent-tools/subagent-spawn-gate.mjs`。
+- 落点：`src/agent-tools/subagent-spawn-gate.mjs（W12 已迁核——现体见批次档 §5）`。
 
 ### D6 写侧 merge 补 union（2026-09-08 二次观察实证——D2 只修半边）
 
@@ -85,7 +85,7 @@ async design 评审（`advisor async:true`）在**挂起会话**期间 settle（
 
 ## 4. 受影响文件（VSC，thincoder-vscode）
 
-- 修改：`src/agent-tools/advisor-async.mjs`（settle 同步落盘 D1/D5）、`src/agent-tools/subagent-spawn-gate.mjs`（miss 回读 D4/D5）、
+- 修改：`src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）`（settle 同步落盘 D1/D5）、`src/agent-tools/subagent-spawn-gate.mjs（W12 已迁核——现体见批次档 §5）`（miss 回读 D4/D5）、
   `src/agent/execute-tools.mjs`（写门问槽 D5）、`src/agent/run-helpers.mjs`（agentState 去镜像 D5）、`src/agent/setup.mjs`（水合去镜像 D1/D5）、
   `src/extension/panel-callbacks.mjs`（onComplete 保留槽 D2）、`src/extension/panel-session.mjs`（saveLines 合并调用点 D2——**评审 #1：仅调用不变**）、
   **`src/extension/session-slot-write.mjs`（engTokensMergeForSave union 改造——D6 实际改动文件——评审 #1 补入；当前 168 行——delta ≤±10——评审 #4）**、

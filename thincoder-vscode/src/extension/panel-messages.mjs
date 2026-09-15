@@ -259,8 +259,11 @@ export async function handlePanelMessage(panel, msg) {
         break
       }
       if (entry.role === "advisor") {
-        const { cancelAdvisorReview } = await import("../agent-tools/advisor-async.mjs")
-        cancelAdvisorReview({ _asyncAdvisors: lines.history._asyncAdvisors, history: lines.history }, id)
+        // W12（2026-09-15）：原端侧 `cancelAdvisorReview`（advisor-async.mjs）退役——改指核
+        // `cancelAsyncAdvisor`（`@thincoder/core/agent-tools/advisor-async.mjs`——同一池
+        // `_asyncAdvisors` 的核条目；cancelled settle 不入 pending、不签发 token）。
+        const { cancelAsyncAdvisor } = await import("@thincoder/core/agent-tools/advisor-async.mjs")
+        cancelAsyncAdvisor({ _asyncAdvisors: lines.history._asyncAdvisors, history: lines.history }, id)
         break
       }
       const { cancelSubagent } = await import("../agent-tools/subagent.mjs")

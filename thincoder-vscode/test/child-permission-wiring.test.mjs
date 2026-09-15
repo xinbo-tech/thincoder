@@ -7,9 +7,9 @@
  * 需求：`docs/requirements/AGENT-LOOP.md` §17（F-CP1/F-CP2）；批次档
  * `2026-09-12-VSC-CHILD-PERMISSION.md` §2（任务书）。
  *
- * 手法（§18.7）：引擎接线——escalate sync 直驱（引擎 callbacks 捕获 + 通道直驱）；
- * escalate async 真启动（真 launchEscalateAsync + 假 runner + 真池条目——⏹ / Stop 两路释放）；
- * runChild 真接线（假 runAgent 捕获 callbacks + autoApprove 实参）。
+ * 手法（§18.7）：引擎接线——runChild 真接线（假 runAgent 捕获 callbacks + autoApprove 实参）。
+ * W12（2026-09-15）改判：escalate 引擎接线组（T-CP6/T-CP7/T-CP19）退役——执行面 = 核
+ * 引擎（见下方退役注）；本档保留 T-CP10/T-CP11/T-CP15（角色域与无通道）。
  * 夹具自持（零跨档 import——不引 `./child-permission.test.mjs`）：stubPanel / writeToolSink /
  * settleMsgs + tmp config/sessions 隔离——零 webview / DOM 依赖（两档各自可单独跑）。
  */
@@ -18,12 +18,16 @@ import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { permissionGate } from "../src/extension/permission-gate.mjs"
-import { makeChildPermission, childOwnerLabel } from "@thincoder/core/agent-tools/child-permission.mjs"
+import { makeChildPermission } from "@thincoder/core/agent-tools/child-permission.mjs"
 import { executeToolBatches } from "../src/agent/execute-tools.mjs"
 import { runChild } from "../src/agent-tools/subagent-run.mjs"
-import { escalateAction } from "../src/agent-tools/subagent-escalate.mjs"
-import { launchEscalateAsync } from "../src/agent-tools/subagent-escalate-async.mjs"
+// W12（2026-09-15）改判：escalate 引擎（sync `escalateAction` / async `launchEscalateAsync`）随
+// advisor 镜像批删旧退役——执行面 = 核 `executeEscalateAction` / `launchEscalateAsync`
+// （`@thincoder/core/agent-tools/{subagent-actions,escalate-async}.mjs`；签名/缝形不同）⇒
+// T-CP6 / T-CP7 / T-CP19（escalate 引擎接线组）退役：其断言对象（端侧引擎的 ctx.runAgent /
+// buildProvider 缝与池条目形态）已不存在；escalate 族的子代理权限通道生产链 = 核引擎 →
+// 核 `child-permission.mjs` → 本端 `permission-gate`（调用面断言由 T-CP10/T-CP11/T-CP15 的
+// runChild 真接线面继续承载；核侧引擎覆盖归核测试树）。
 import { cancelSubagent } from "../src/agent-tools/subagent-actions.mjs"
 import { _setConfigPathForTest } from "../src/config-io.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-io.mjs"
@@ -85,84 +89,6 @@ function writeToolSink(executed) {
 const settleMsgs = (list, type) => list.filter((m) => m.type === type)
 
 // ─── T-CP6/T-CP7/T-CP19：escalate sync/async + 释放两路 ────────────────
-
-test("T-CP6 escalate sync（AC-CP4）：引擎 callbacks 直驱 → 通道在位 + owner = `escalate <tag> #<id>`", async () => {
-  const seen = []
-  let started = null
-  const captured = {}
-  const parent = { config: { agent: { consultModels: [{ provider: "p1", model: "m1" }], subagentTurns: 5 } }, history: [], _provider: { model: "pm" }, _touchedFiles: [] }
-  const ctx = {
-    agent: parent, cwd: _ws, depth: 0, signal: null, getAuto: () => false,
-    buildProvider: async () => ({ apiKey: "k", model: "m1" }),
-    callbacks: {
-      onSubagent: (i) => { if (i.status === "started") started = i },
-      onToolPanel: () => {},
-      onPermissionRequired: (tool, args, diff, opts) => { seen.push({ tool, opts }); return false },
-    },
-    runAgent: async (provider, cwd, task, callbacks, signal, auto) => { captured.callbacks = callbacks; captured.auto = auto; return "post-op report" },
-  }
-  const out = await escalateAction({ task: "surgery", async: false }, ctx)
-  assert.ok(out.startsWith("escalate (p1:m1)"), `sync 引擎返回报告（实到 ${JSON.stringify(out.slice(0, 40))}）`)
-  assert.equal(typeof captured.callbacks.onPermissionRequired, "function", "sync callbacks 挂权限通道（C-9）")
-  assert.equal(typeof captured.auto, "function", "autoApprove = live getter（C-3）")
-  assert.equal(captured.auto(), false, "手动档 false")
-  // 通道直驱：owner label（escalate + tag + id）
-  assert.equal(await captured.callbacks.onPermissionRequired("write", {}, null), false, "deny 透传（resolve(false)）")
-  assert.equal(seen[0].opts.owner.label, `escalate <p1:m1> #${started.id}`, "owner label 逐字（KD-8 同源）")
-  assert.equal(seen[0].opts.signal, null, "sync signal = ctx.signal（null）")
-  assert.equal(childOwnerLabel("escalate", 3, "glm-5.3"), "escalate <glm-5.3> #3", "label 生成器：带模型")
-  assert.equal(childOwnerLabel("coder", 3, null), "coder#3", "label 生成器：family 角色不带模型")
-})
-
-/** escalate async 真启动（真 launchEscalateAsync + 假 runner）+ pending ask。 */
-async function launchEscalateWithAsk() {
-  const panel = stubPanel({ _abortController: new AbortController() })
-  const gate = permissionGate(panel)
-  const parent = { config: { agent: { consultModels: [{ provider: "p1", model: "m1" }], subagentTurns: 5 } }, history: [], _provider: { model: "pm" }, _touchedFiles: [] }
-  let capturedCb = null
-  let finishRunner = null
-  const runnerPromise = new Promise((r) => { finishRunner = r })
-  const ctx = {
-    agent: parent, cwd: _ws, depth: 0, signal: null, getAuto: () => false,
-    buildProvider: async () => ({ apiKey: "k", model: "m1" }),
-    callbacks: { onSubagent: () => {}, onToolPanel: () => {}, onPermissionRequired: gate, onAsyncSettled: () => {} },
-    runAgent: async (provider, cwd, task, callbacks) => { capturedCb = callbacks; return runnerPromise },
-  }
-  const ack = JSON.parse(await launchEscalateAsync({ parent, ctx, task: "surgery", pick: { provider: "p1", model: "m1" } }))
-  const entry = parent._asyncSubagents.get(ack.id)
-  await until(() => capturedCb != null)
-  const ask = capturedCb.onPermissionRequired("write", { path: "x.mjs" }, null)
-  await until(() => panel._permissionQueue.length === 1)
-  return { panel, parent, entry, ask, finish: () => finishRunner("post-op report") }
-}
-
-test("T-CP7 escalate async + ⏹（AC-CP4）：池条目 controller.abort() → ask resolve(false) + permissionWithdrawn + 卡移除；无悬挂", async () => {
-  const { panel, parent, entry, ask, finish } = await launchEscalateWithAsk()
-  assert.equal(entry.controller.signal.aborted, false, "起始未中止")
-  const n = panel.posted.length
-  const id = panel._permissionQueue[0].id
-  cancelSubagent(parent, entry.id) // ⏹ / 模型 cancel 同路径（entry.cancelled + controller.abort）
-  assert.equal(await ask, false, "ask resolve(false)（deny）")
-  const wd = panel.posted.slice(n).filter((m) => m.type === "permissionWithdrawn")
-  assert.deepEqual(wd.map((m) => m.promptId), [id], "permissionWithdrawn 携该卡 promptId")
-  assert.equal(panel._permissionQueue.length, 0, "卡移除（无悬挂）")
-  finish()
-  await entry.settled
-  assert.equal(entry.cancelled, true, "cancelled 终态")
-})
-
-test("T-CP19 Stop 释放（AC-CP4）：panel._abortController.abort() → deny + withdrawal；child 未被 abort（F-6 不停池——存活继续）", async () => {
-  const { panel, entry, ask, finish } = await launchEscalateWithAsk()
-  const n = panel.posted.length
-  panel._abortController.abort()
-  assert.equal(await ask, false, "Stop → deny（C-6 ②）")
-  assert.equal(panel.posted.slice(n).filter((m) => m.type === "permissionWithdrawn").length, 1, "permissionWithdrawn 发出")
-  assert.equal(entry.controller.signal.aborted, false, "child 未被 abort（F-6——Stop 只停主会话 controller）")
-  assert.equal(entry.cancelled, false, "非 cancel 路径")
-  finish()
-  await entry.settled
-  assert.equal(entry.done, true, "child 沿常态继续并收尾（存活）")
-})
 
 // ─── T-CP10/T-CP11/T-CP15：角色域与无通道（runChild 真接线）──────────
 

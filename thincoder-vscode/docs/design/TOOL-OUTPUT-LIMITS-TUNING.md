@@ -56,13 +56,13 @@ export const TOOL_RESULT_PREVIEW_TAIL = 48 * 1024 // §5 D-4.1 nominal tail — 
 
 ### 2.5 advisor 截断（P3）
 
-`src/advisor/run.mjs` `MAX_RESULT_CHARS = 64 * 1024`（与主链路 64K 对齐）。**双端化截断**
+`src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）` `MAX_RESULT_CHARS = 64 * 1024`（与主链路 64K 对齐）。**双端化截断**
 （2026-09-09 DUAL-END-TRUNCATION——评审尾部结论不再被切）：工具结果回填从"保头弃尾"
 （纯头向 line-aware 累加至 64K break）改为**头尾双保**——头行累加至预算 ~60%
 （`ADVISOR_HEAD_RATIO = 0.6`）→ 中段切 → 尾行累加至剩余预算（保尾结论——裁决/
 结论行可见）——头尾之间省略注 `… (truncated: N more lines, N chars total)` + offset
 续读提示保留（`read(path, offset=…, limit=…)` 续中段）。实现落点：截断纯函数迁至
-`src/advisor/truncate.mjs`（`truncateAdvisorResult`——头尾预算行级累加、绝不半行切开、
+`src/advisor/truncate.mjs（W12 已迁核——现体见批次档 §5）`（`truncateAdvisorResult`——头尾预算行级累加、绝不半行切开、
 K=0 防御不谎报截断——run.mjs 工具回填调用同函数——CLI truncate.mjs 逐字同构镜像，
 byte-identical）。advisor 上下文保护已有 `compactMessages` 兜底，放宽后不新增风险。
 
@@ -108,7 +108,7 @@ preview 放大后每次落盘结果最多 64K 进模型上下文，由既有 com
 
 - `src/agent/run-helpers.mjs`：常量（`MAX_TOOL_RESULT`/`TOOL_RESULT_PREVIEW_HEAD`/`TOOL_RESULT_PREVIEW_TAIL`）+ `safeSliceUTF16`/`safeSliceUTF16Tail`/`buildHeadTailPreview`/`offloadToolResult`（含写时自清理）。
 - 调用点 `src/agent/execute-tools.mjs`：`offloadToolResult`（行为改、调用零改）。
-- `src/advisor/run.mjs`：`MAX_RESULT_CHARS`（截断行为迁 `src/advisor/truncate.mjs`——2026-09-09）。
+- `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）`：`MAX_RESULT_CHARS`（截断行为迁 `src/advisor/truncate.mjs（W12 已迁核——现体见批次档 §5）`——2026-09-09）。
 - `src/tools/shared.mjs`：`MAX_READ_LINES`（补 2000 上限——CLI parity）。`src/tools/file.mjs`：read 双端返回（§2.9——`READ_TAIL_LINES`）。（W14 已迁核——`file.mjs` 现体 `thincoder-core/tools/file.mjs`；`shared.mjs` 端壳薄壳保留）
 - `src/extension/panel-callbacks.mjs`：`onToolResult` `slice(0, 64 * 1024)`。
 - `src/extension/panel-session.mjs`：历史页工具卡 `slice(0, 64 * 1024)`。
@@ -127,7 +127,7 @@ preview 放大后每次落盘结果最多 64K 进模型上下文，由既有 com
 - AC8 `npm test` 全套通过。
 - AC9 `src/` 无 16000/20000/2000/12000（工具输出相关）残留（grep 验证；区分业务常量——12000 为 advisor 截断，已改 65536）。
 - AC10 read 双端（2026-09-09 C 方案）：大文件窗口截断返回 头 + 省略注 + 真实尾（`test/read-dual-end.test.mjs`——CLI 镜像——K=0 无假注/重叠不重复/≤阈值零变化/hashes）。
-- AC11 advisor 截断双端化（2026-09-09）：超 64K 结果头尾保 + 中段注 + offset 提示（`test/advisor-truncation.test.mjs`——truncate.mjs 直驱——与 CLI byte-identical）。
+- AC11 advisor 截断双端化（2026-09-09）：超 64K 结果头尾保 + 中段注 + offset 提示（`test/advisor-truncation.test.mjs（W12 已退役——删除记录见批次档 §5）`——truncate.mjs 直驱——与 CLI byte-identical）。
 
 ## 变更记录
 

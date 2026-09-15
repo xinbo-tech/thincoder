@@ -10,7 +10,7 @@ import {
   configuredMaxTurns, hasCodeMutations,
   pushReal, agentState, turnFrame,
 } from "./agent/run-helpers.mjs"
-import { MAX_ADVISOR_ROUNDS } from "./advisor/run.mjs"
+import { MAX_ADVISOR_ROUNDS } from "@thincoder/core/advisor/run.mjs" // W12：advisor 镜像删旧——核单源
 import { executeToolBatches } from "./agent/execute-tools.mjs"
 import { hydrateRun, setupAgentRun } from "./agent/setup.mjs"
 import { AUTO_REMINDER, ENG_OFF_REMINDER, ENG_ON_REMINDER, injectEngineeringReminder } from "./agent/setup-reminders.mjs"

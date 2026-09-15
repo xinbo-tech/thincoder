@@ -5,8 +5,8 @@
 
 > 权威源：`src/agent.mjs`（`ContinueError`）、`src/agent/run-helpers.mjs` / `src/agent/setup.mjs`
 > （预算 + `stateSink.history` / resume）、`src/extension/panel-chat.mjs`（主 agent 回合循环）、
-> `src/agent-tools/subagent.mjs`（子 agent）、`src/agent-tools/subagent-escalate.mjs` /
-> `subagent-escalate-async.mjs`（飞刀）、`src/agent-tools/consult.mjs`（会诊）。
+> `src/agent-tools/subagent.mjs`（子 agent）、`src/agent-tools/subagent-escalate.mjs（W12 已迁核——现体见批次档 §5）` /
+> `subagent-escalate-async.mjs`（飞刀）、`src/agent-tools/consult.mjs（W12 已迁核——现体见批次档 §5）`（会诊）。
 > 文档格式债清理批 V2（2026-09-08）——整文件单物理行 demux 为多行 + 漂移修正（explore-30 表述已随 AGENT-PARAMS 取消）。
 
 ## 统一语义
@@ -45,14 +45,14 @@
 
 ### 飞刀 escalate
 
-- `src/agent-tools/subagent-escalate.mjs`（同步）：循环捕获 `ContinueError` → `ctx.callbacks.onQuestion(["Continue","Stop"])` → continue 时 `resume:true`。
+- `src/agent-tools/subagent-escalate.mjs（W12 已迁核——现体见批次档 §5）`（同步）：循环捕获 `ContinueError` → `ctx.callbacks.onQuestion(["Continue","Stop"])` → continue 时 `resume:true`。
 - `MAX_RESUMES` 已删除——不限次数（源 = 本仓代码面零命中）。
 - 后台 async 飞刀（`subagent-escalate-async.mjs`）：无面板值守，撞 turn cap 归 error-class 自动降级 partial（消化轮处置）。
 - 无墙钟 watchdog——仅 turn cap（hang 防护 = per-LLM-call FETCH_TIMEOUT + 用户 Stop）。
 
 ### 会诊 consult
 
-- `src/agent-tools/consult.mjs` runConsultant 循环，捕获 `ContinueError`。
+- `src/agent-tools/consult.mjs（W12 已迁核——现体见批次档 §5）` runConsultant 循环，捕获 `ContinueError`。
 - 前台回合内：`session.continueQueue = (session.continueQueue ?? …).then(ask, ask)` 串行排队询问（`["Continue","Stop"]`）→ continue 时 `clearTimeout(watchdog)` + `timedOut=false` + 重挂 watchdog（每次继续 = 新预算 = 墙钟重起）。
 - 挂起期（`_suspended`，后台）consult 撞 turn 帽**不再弹继续卡**——自动降级 partial（消化轮处置）。
 - consult 预算 `consultTurns ?? 40`；墙钟 `agent.consultTimeoutMs ?? 600_000`（10min）。
@@ -135,7 +135,7 @@
 | `src/agent.mjs` | ① `!opts.resume` 复位 `_turnSeq` ② resume 支种子落点（`opts._turnSeqBase`——载体缺口修正轮）③ 循环内编号帧 → `onAgentTurn(turn, maxTurns)` | 353 → ~362 |
 | `src/agent/run-helpers.mjs` | `turnFrame` + `applyTurnFrame`（+ 注释） | 276 → ~292 |
 | `src/agent-tools/subagent-run.mjs` | ① 消费点改 `applyTurnFrame` ② 段前累计捕获 + 续跑支种子传参 | 184 → ~190 |
-| `src/agent-tools/subagent-escalate-async.mjs` | 同（种子挂续跑支——当前休眠，见 19.3） | 216 → ~220 |
+| `src/agent-tools/subagent-escalate-async.mjs（W12 已迁核——现体见批次档 §5）` | 同（种子挂续跑支——当前休眠，见 19.3） | 216 → ~220 |
 | `test/turn-across-segments.test.mjs` | 新档——用例 T1-T11（T9-T11 = 载体缺口修正轮新增） | 新（~140） |
 | `docs/design/TURN-CAP-CONTINUE.md` | 本节 | 全档 70 → 206 行（`wc -l`；本批增补前 → 载体缺口修正轮落档后） |
 | （父侧排程）`docs/design/AGENT-LOOP` · `docs/design/ARCHITECTURE` | 登记行指针 + hook 措辞同步（他批在途——见 19.8） | — |

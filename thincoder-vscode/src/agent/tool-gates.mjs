@@ -8,10 +8,12 @@
 import { resolve, relative } from "node:path"
 import { FILE_MUTATORS } from "./run-helpers.mjs"
 import { isCodePath, loadConventions } from "@thincoder/core/conventions.mjs"
-import { validateDesignToken } from "../agent-tools/advisor.mjs"
+import { validateDesignToken } from "@thincoder/core/agent-tools/design-token.mjs"
 import { readSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
-// §9 D-24b：文件变更事件记账（async 评审陈旧判定数据源——跨 run 载体）
-import { inflightDesignReviewConflict } from "../agent-tools/advisor-async.mjs"
+// §9 D-24b：冻结窗口冲突判定——W12（2026-09-15）：原端侧 `advisor-async.mjs` 副本退役，
+// 改指核 `advisor-settle.mjs`（同读池条目 `docAbs`/`launchSeq`/`_mutLog`——核 launchAsyncAdvisor
+// 建条目的形态；端侧旧副本读 `entry.documents`/`_fileMutEvents` 与核条目已不同形）。
+import { inflightDesignReviewConflict } from "@thincoder/core/agent-tools/advisor-settle.mjs"
 
 /** L3 触达路径（绝对）：FILE_MUTATORS 走 tool.touchedPaths（既有收口）；file_ops 按动作
  *  取源/目标（move/rename 动两端；copy 只写目标——源仅读取不算写域）。 */

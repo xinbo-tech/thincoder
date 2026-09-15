@@ -35,7 +35,6 @@ export default [
   "test/trace-store.test.mjs", // TRACE-STORE-VSC（2026-09-09）：VSC 轨迹存档同构——recordChatTrace 字段集/脱敏/fire-and-forget/seq/清理/禁用/写失败/保留边界 + per-caller 形状 + chat() 出口采集
   "test/subagent-audit-summary.test.mjs", // A2-SUMMARY-PARITY（2026-09-09）：A2 摘要对齐 CLI——auditTaskBook seam 驱动 _engTaskInput fixture——flat inline 兜底/结构化节摘/marker 缺失 (not found)/单可保留节无整书回退
   "test/read-dual-end.test.mjs", // DUAL-END-TRUNCATION F-1（2026-09-09）：read 双端——大文件头+省略注+尾 / K=0 无假注 / 重叠不重复 / ≤阈值零变化 / hashes——CLI 镜像
-  "test/advisor-truncation.test.mjs", // DUAL-END-TRUNCATION F-2（2026-09-09）：advisor 截断双端化——超 64K 头尾保/中段注/offset 提示/K=0 透传——truncate.mjs 直驱——CLI 镜像（byte-identical）
   "test/config-pool.test.mjs", // POOL-CONFIG-UNIFIED（2026-09-09）：耦合锁三键 4/4/4 + advisor 读取器 + 容量拒/scope 守卫 + 白名单 + 落盘——纯单元（拒发路径——config 测试缝隔离）+ 面板显示面（2026-09-11 扫① 合档：settings-panel 并入——agentSettings() 快照回退 + agentCardHtml() 三数字框 + poolAdvisor 双语）
   "test/config-softfail.test.mjs", // ISSUE-FIX-BATCH F-4（2026-09-09，IKCDMR）：consultModels 软失败（读面过滤 + 一次性警告——CLI 同规则双端锁步）+ 面板写路径对齐 + removeProvider 级联清理（consultModels/subagentModels/advisor.provider）
   "test/settings-tool.test.mjs", // SETTINGS-TOOL 第 8 批 + 第 12 批（2026-09-11）：settings 工具形状护栏 VSC 面——本端 null 叶子 2 键 + 跨端 3 + 同族 1 = 4 键 + 防漂移锁 + 描述句逐字（T-S2.30–T-S2.37）；登记即跑（清单为显式列表）
@@ -48,9 +47,6 @@ export default [
   "test/doc-consistency.test.mjs", // 文档一致性 V1/V2/V3 + 基线 + 接线（§2.22.6）：零新增、V1「（CLI 侧）」豁免、V3 三态零假阳（T61/T63/T64）
   // 「5 新档全入册」之第五档（面② 的锚句断言档——文件域属面②，入册归本表）
   "test/prompts-mirror-anchors.test.mjs", // 提示词双源镜像锚（§2.22.2/§2.22.7）：A1-A8/A11/A12 逐字 + 双源 15 档集合 + 端特有段（T62/T65）
-  "test/advisor-chain-guards.test.mjs", // 第 12 批（2026-09-11）：VSC 评审链边缘守卫镜像——谓词族六 kind + 双结算面不签发 + 信号自愈 + 压缩定锚 + 引文候选链 + 硬墙/提示/结构化尾（T-VG1–T-VG15；ADVISOR-CONVERGENCE.md §13）
-  "test/advisor-guard-completion.test.mjs", // 第 18 批（2026-09-11）：VSC 守卫收尾——启动断言 + 异步结算消费（launchRefused 不计覆盖）+ 冻结窗口冲突 helper/预闸拦截/回执冻结句 + 收敛信号两形态锁定（T-VG16–T-VG21；ADVISOR-CONVERGENCE.md §14——同族档 427 行已满，独立成档 D-VGC8）
-  "test/advisor-context-budget.test.mjs", // 第 26 批（2026-09-11）：评审上下文预算 VSC 镜像——120K 常量退场 + providerSpec 派生两档（limit/compactAt）+ 循环两处消费 + 静态锚（T-CB1–T-CB6；ADVISOR-CONVERGENCE.md §15——镜像口径语义同源、本端原文自持）
   "test/config-watch.test.mjs", // 第 21 批（2026-09-11）：外部 config.json 写盘感知 B5——watcher 注册形状/去抖合并/自写基线回填抑制/稳态零推送/create·delete/dispose/降级（T-S1~T-S6；SETTINGS.md §2.6）
   "test/digest-visibility.test.mjs", // 第 21 批（2026-09-11）：消化轮起跑可见指示 B6——起止两态+ok 旗标时序（host）+ #digest-status 三态渲染与幂等（真 chat.js——happy-dom）（T-D1~T-D5；WEBVIEW.md §7.4）
   "test/turn-across-segments.test.mjs", // 第 19 批（2026-09-11）：跨段累计编号 VSC 面——turnFrame 帧向量/不变式扫描 + applyTurnFrame 消费助手 + webview 冻结头消费累计值 + 真 runAgent 直驱段间断言/真 runChild 接线 + 种子源码锚（T1–T11；TURN-CAP-CONTINUE.md §19）
@@ -63,7 +59,6 @@ export default [
   // 2026-09-15 W8（索引面归一核面）：`portability-vsc-index.test.mjs` 随文件制索引删旧退役（测试纪律①）——unlisted 可见化等业务面按核面承接重述入 `test/memory-index-face.test.mjs`（D3 计数同步）
   "test/provider-timeout-semantics.test.mjs", // 群 A 批 A1（2026-09-11）· W10 改判（2026-09-15）：保留 2 例——调用面 signal 原样/零合成 + 相位参数（经核 chat）；退役 3 例——镜像 parseStream idle 缝随删档（不可稳定驱动）/ 静态源文本断言（PROVIDER.md §4.3）
   "test/expand-home.test.mjs", // 群 A 批 A2（2026-09-11）：`shell` 字段 `~` 展开——形态矩阵（前缀/裸/尾分隔/非分隔符/类型护栏）+ setup 读取点接线与只读归一——T-MA2-1–5（SETTINGS.md §2.7）
-  "test/advisor-refusal-accounting.test.mjs", // 群 A 批 A6（2026-09-11）：同步记账面拒绝登记——六类拒绝置位 + 记账零写 + builder 单源 + 对照零回归——T-MA6-1–9（ADVISOR-CONVERGENCE.md §16.1）
   "test/git-commit-pathspec.test.mjs", // 群 A 批 A9（2026-09-11）：commit `--only` 镜像——列文件提交（他批 staged 不混入）+ 空/空白 path 明确错误 + 无 path 全量零回归（真 git 子进程——slow 归册；TOOLS.md §11）
   "test/webview-input-history.test.mjs", // 群 A 批 A10（2026-09-11）：↑/↓ 契约——连续上溯/↓ 回落+草稿恢复/单行任意位置/多行边界门零劫持/IME 守卫/下拉让位——T-MA10-1..8（WEBVIEW.md §11.1）
   "test/context-parity.test.mjs", // VSC-CONTEXT-PARITY 批（2026-09-11）：会话上下文注入面对齐——块序/尾块/缓存契约/plan 节律/响应提醒/skill 形态——T-CI-1~T-CI-11（14 条；AGENT-LOOP.md §17）

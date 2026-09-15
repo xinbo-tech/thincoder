@@ -4,7 +4,7 @@
 > 状态：**已实现**（2026-08-24 评审修订后实施；marketplace / Open VSX 0.1.49 发布）。
 > 关联：`docs/design/AGENT-PARAMS-TUNING.md`（设计）、`docs/design/README.md`（文档地图）。
 > 范围：本仓库（thincoder-vscode）；CLI（thincoder）有同需求独立文档（`AGENT-PARAMS（CLI 仓）`），两端语义一致。
-> 现码核对（2026-09-08）：`src/advisor/run.mjs` `REVIEW_TIMEOUT_MS = 600_000` + 配置覆盖读取在位；`src/config-io.mjs` `AGENT_DEFAULTS.maxTurns = 200`、`src/agent/run-helpers.mjs` `DEFAULT_MAX_TURNS = 200`；`src/agent-tools/subagent.mjs` explore 与其它角色统一走 `subagentTurns`（无 `Math.min(30, …)` 硬帽）。本文档描述与实现一致。
+> 现码核对（2026-09-08）：`src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）` `REVIEW_TIMEOUT_MS = 600_000` + 配置覆盖读取在位；`src/config-io.mjs` `AGENT_DEFAULTS.maxTurns = 200`、`src/agent/run-helpers.mjs` `DEFAULT_MAX_TURNS = 200`；`src/agent-tools/subagent.mjs` explore 与其它角色统一走 `subagentTurns`（无 `Math.min(30, …)` 硬帽）。本文档描述与实现一致。
 
 ## 1. 总体目标
 
@@ -32,7 +32,7 @@
 |---|---|---|
 | N1 | 向后兼容 | `agent.advisor.timeoutMs` 缺省回退默认常量；`TOOL_TIMEOUT_MS`（单工具 30s）不动；`consultTurns`/`consultTimeoutMs` 不动 |
 | N2 | 两端一致 | CLI 与 VS Code 扩展同一配置项（`agent.advisor.timeoutMs`）、同一默认值（`600_000`）、同一 maxTurns 默认（200）；共享 `~/.thincoder/config.json` 读写 |
-| N3 | 可维护 | 默认值集中维护、改动时全量同步：timeoutMs 兜底在 `src/advisor/run.mjs` 常量、maxTurns 在 `src/config-io.mjs` `AGENT_DEFAULTS`、`src/agent/run-helpers.mjs` `DEFAULT_MAX_TURNS` 与 `src/agent/setup.mjs` 读取兜底（多处同步改）；设置面板显示默认同步（`webview/settings-agent.js`） |
+| N3 | 可维护 | 默认值集中维护、改动时全量同步：timeoutMs 兜底在 `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）` 常量、maxTurns 在 `src/config-io.mjs` `AGENT_DEFAULTS`、`src/agent/run-helpers.mjs` `DEFAULT_MAX_TURNS` 与 `src/agent/setup.mjs` 读取兜底（多处同步改）；设置面板显示默认同步（`webview/settings-agent.js`） |
 | N4 | 可测试 | 每个改动点有对应单元测试断言（配置覆盖生效 / 缺省回退 / 面板保存不丢 timeoutMs / explore 用满预算） |
 
 ## 变更记录

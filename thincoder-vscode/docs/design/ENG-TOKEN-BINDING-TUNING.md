@@ -38,17 +38,17 @@
 
 ## 3. TTL 与 token 格式
 
-- 默认 TTL **7 天**（`TOKEN_TTL_DEFAULT_MS = 7 * 24 * 3600 * 1000`，`src/agent-tools/advisor.mjs`）。
+- 默认 TTL **7 天**（`TOKEN_TTL_DEFAULT_MS = 7 * 24 * 3600 * 1000`，`src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）`）。
 - 配置覆盖：`agent.engTokenTtlMs`——运行期校验（`Number.isFinite(cfg) && cfg > 0`，非法回退
   默认）——照抄 advisor timeoutMs 口径（`effectiveTokenTtlMs`）。
 - 格式：`${uuid}:${expiresAt}`，uuid 为 `[0-9a-f]{8}-…-{12}`，expiresAt 为数字毫秒时间戳。
 - 过期判定**只对格式合法的 token**判过期：格式/畸形串不在此清理（恢复时读回由门禁格式拒、
   门禁拒时也不删槽——防误删有效槽）。
-- 判定集中 `src/agent-tools/advisor.mjs`：
-  - `tokenExpiry(token)` — 单一解析源，`parts.length !== 2` / uuid 空 / `isNaN(exp)` 全返回
+- 判定集中 `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）`：
+  - `tokenExpiry（W12 已迁核——现体见批次档 §5）(token)` — 单一解析源，`parts.length !== 2` / uuid 空 / `isNaN(exp)` 全返回
     null（fail-closed；旧 3 段签名 token `uuid:expiresAt:HMAC` 现为格式错——一次性失效）。
   - `isExpiredDesignToken(token)` — 仅对格式合法者判 `Date.now() > exp`；畸形串不算 expired。
-  - `validateDesignToken(token)` — `tokenExpiry(token) !== null && !isExpiredDesignToken(token)`
+  - `validateDesignToken(token)` — `tokenExpiry（W12 已迁核——现体见批次档 §5）(token) !== null && !isExpiredDesignToken(token)`
     ——fail-closed。
   - `generateDesignToken(agent)` — 无签名 `uuid:expiresAt`（HMAC 层删除后）。
   - `makeDesignTokenRegex(token)` — 转义整 token 构造回显匹配（UUID 段单独匹配永不可能命中，
@@ -76,15 +76,15 @@
 
 | 模块 | 内容 |
 |---|---|
-| `src/agent-tools/advisor.mjs` | TTL 常量 + `effectiveTokenTtlMs`（可配校验）/ `generateDesignToken` / `tokenExpiry` / `isExpiredDesignToken` / `validateDesignToken` / `makeDesignTokenRegex` / `buildApprovedSuffix`+`stripApprovedSuffix` / sync 签发判定（echo 匹配 → 入槽 + 后缀） |
-| `src/agent-tools/advisor-async.mjs` | async 评审（§9 D-24b）settle 面——launch 时登记 scope→designId、续跑现铸同 id token；通过判定 echo 匹配 → 入槽 + `buildApprovedSuffix`；非 echo 剥离返回；错误回包/取消不清槽 |
+| `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）` | TTL 常量 + `effectiveTokenTtlMs`（可配校验）/ `generateDesignToken` / `tokenExpiry（W12 已迁核——现体见批次档 §5）` / `isExpiredDesignToken` / `validateDesignToken` / `makeDesignTokenRegex` / `buildApprovedSuffix`+`stripApprovedSuffix` / sync 签发判定（echo 匹配 → 入槽 + 后缀） |
+| `src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）` | async 评审（§9 D-24b）settle 面——launch 时登记 scope→designId、续跑现铸同 id token；通过判定 echo 匹配 → 入槽 + `buildApprovedSuffix`；非 echo 剥离返回；错误回包/取消不清槽 |
 | `src/agent-tools/eng.mjs`（W9 已迁核——现体 `thincoder-core/agent-tools/eng.mjs`） | enter 幂等（already-on 纯 no-op，不清 token）；真 off→on 转换路径 `purgeExpiredDesignTokens`（核内名；原镜像名 sweepExpiredDesignTokens——仅删过期，文案含清理个数）；exit 不清 token；slot + config.json 双持久化（config 为 mirror） |
-| `src/agent-tools/subagent-spawn-gate.mjs` | 门禁族：`resolveDesignSlot`（designId 精确槽 / 单槽 / 多槽拒 / torn-state 拒）/ `dropExpiredTokenSlot`（仅过期拒删）/ `authorizeEngCoderDesignToken` / `executeConsumeDesignAction`（chain 终消费） |
+| `src/agent-tools/subagent-spawn-gate.mjs（W12 已迁核——现体见批次档 §5）` | 门禁族：`resolveDesignSlot`（designId 精确槽 / 单槽 / 多槽拒 / torn-state 拒）/ `dropExpiredTokenSlot`（仅过期拒删）/ `authorizeEngCoderDesignToken` / `executeConsumeDesignAction`（chain 终消费） |
 | `src/agent/setup.mjs` | 恢复过滤（`isExpiredDesignToken` 逐槽校验，过期丢弃）+ 镜像同步不变量（过期镜像不落 null 而重指存活槽——防 torn-state） |
 | `src/extension/panel-session.mjs` | 键存在性写：`engDesignToken`/`engDesignTokens` 字段"键在 extra → 取 extra；缺键 → 保 slot"——显式 null 不再被 `??` 跳过（复活陷阱修复）；过期槽经恢复丢弃后下一次 turn-end agentState 带显式 null 钉清 slot 字段 |
 | `src/extension/session-io.mjs` + `session-slot-write.mjs` | `setSlotEngDesignTokens(cwd, slot, tokensObj, mirror)` — 会话 slot 持久面多槽 `{designId: token}` 写（null → 删字段；mirror 显式置） |
 | `src/agent-tools/subagent.mjs` | spawn 时 `authorizeEngCoderDesignToken(parent, designId, designToken)` 门禁调用（执行器已抽至 subagent-spawn-gate） |
-| `src/advisor/run.mjs` / `messages.mjs` | 评审运行注入 designToken 到 prompt / Approved 回显块 |
+| `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）` / `messages.mjs` | 评审运行注入 designToken 到 prompt / Approved 回显块 |
 
 ## 6. 验收标准（Acceptance Criteria）
 

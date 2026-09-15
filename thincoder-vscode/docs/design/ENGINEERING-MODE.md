@@ -100,7 +100,7 @@
 
 ## 4. design token（无签名流程凭证 uuid:expiresAt）
 
-- **签发**（`src/agent-tools/advisor.mjs`）：评审 0🔴 时 reviewer 以 `[DESIGN-TOKEN:…]`
+- **签发**（`src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）`）：评审 0🔴 时 reviewer 以 `[DESIGN-TOKEN:…]`
   + designId 回显；引擎在通过时附 **Approved 后缀**（`buildApprovedSuffix`——sync
   settle 与 async settle 共用 builder）。token 由 `generateDesignToken` 生成 =
   `uuid:expiresAt`（无 HMAC 防伪层——2026-09-06 用户裁定"安全剧场"）；TTL 默认
@@ -111,7 +111,7 @@
   畸形/NaN 一律判错（旧 fail-open 后门已封）。
 - **多槽 Map + 槽文件权威台账（D5 2026-09-08——单值镜像已退役）**：通过后写 `agent._engDesignTokens.set(designId, token)`（多设计并行互不覆盖）+ **settle 当场同步写槽权威台账**（DESIGN-TOKEN-SETTLEMENT.md D1）。复审失败
   不碰任何槽（旧 token 存活至 TTL）；同 scope 复审沿用会话内同 designId
-  （`designIdForScope`——sync/async 同构于 scope 记录）。旧 slot 残留单值镜像值由 `setup.mjs` **一次性迁移读**进 Map（legacy 兼容），此后零写。
+  （`designIdForScope（W12 已迁核——现体见批次档 §5）`——sync/async 同构于 scope 记录）。旧 slot 残留单值镜像值由 `setup.mjs` **一次性迁移读**进 Map（legacy 兼容），此后零写。
 - **R16 清理只删过期、三时机**：过期 token（格式有效且 TTL 已过）在
   (a) restore filter（`setup.mjs`——过期不入 Map/槽）、(b) `eng(enter)` sweep
   （`eng.mjs` purgeExpiredDesignTokens——核内名；W9 已迁核，原镜像名 sweepExpiredDesignTokens）、(c) spawn-gate slot 删除
@@ -153,7 +153,7 @@
   （`/^src[\\/]/` 或 `!isDocFile(p)`——未知/缺路径保守视为代码）→ 拦，文案：
   `Error: engineering design gate — write the design document in docs/ first, then call advisor with type='design' to review it, and wait for user approval. Implementation is done by eng-coder subagents.`
 - **豁免边界**：`docs/**` 与根级文档（写文档即设计步骤）放行；`src/` 下一切（含
-  `src/prompts/*.md`）为产品代码，需 token。判定 `isDocFile` 在 `src/advisor/repos.mjs`。
+  `src/prompts/*.md`）为产品代码，需 token。判定 `isDocFile` 在 `src/advisor/repos.mjs（W12 已迁核——现体见批次档 §5）`。
 - **D5 冻结窗口预闸（第 15 批 §14.4——本端）**：设计评审在途期间，父侧对被审文件集（含批次档）的写入被拒
   （`preGateBlocked` × `inflightDesignReviewConflict`——拒绝串见 `ADVISOR-CONVERGENCE.md` §14.4（c））。
   **在途下界 = 报告送达（digest 注入 / 回合尾 collect）或取消·中止**——「子进程退出」不是窗口边界

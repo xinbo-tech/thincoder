@@ -49,8 +49,8 @@
 
 ## 3. 受影响文件（VSC，thincoder-vscode）
 
-- 修改：`src/agent-tools/subagent-actions.mjs`（observe+send）、`src/agent-tools/subagent-spec.mjs`（schema 描述加两动作 + isReadonlyAction/isControlAction 分类——observe=readonly/send=control）、`src/agent-tools/subagent.mjs` runChild（stateSink 扩注入队列消费入口 + onToolCall 记当前工具）、子 runAgent 回合边界消费
-- 修改：`src/agent-tools/subagent-actions.mjs`（observe+send）、`src/agent-tools/subagent-spec.mjs`（schema 描述加两动作 + isReadonlyAction/isControlAction 分类——observe=readonly/send=control）、`src/agent-tools/subagent.mjs` runChild（stateSink 扩注入队列消费入口 + onToolCall 记当前工具）、
+- 修改：`src/agent-tools/subagent-actions.mjs`（observe+send）、`src/agent-tools/subagent-spec.mjs（W12 已迁核——现体见批次档 §5）`（schema 描述加两动作 + isReadonlyAction/isControlAction 分类——observe=readonly/send=control）、`src/agent-tools/subagent.mjs` runChild（stateSink 扩注入队列消费入口 + onToolCall 记当前工具）、子 runAgent 回合边界消费
+- 修改：`src/agent-tools/subagent-actions.mjs`（observe+send）、`src/agent-tools/subagent-spec.mjs（W12 已迁核——现体见批次档 §5）`（schema 描述加两动作 + isReadonlyAction/isControlAction 分类——observe=readonly/send=control）、`src/agent-tools/subagent.mjs` runChild（stateSink 扩注入队列消费入口 + onToolCall 记当前工具）、
   **`src/agent-tools/subagent-async.mjs` + `subagent-escalate-async.mjs`**（池条目 `_injected` 载体 + settle "未投递"注——escalate 与 spawn 同池须同构）、**`src/agent.mjs`**（子 runAgent 回合边界消费——注入队列消费落点）、子 runAgent 回合边界消费
 - 新增：`test/subagent-observe-send.test.mjs`（14 用例——running/queued/done/unknown/empty/cancel-race/凭证/分类/depth-gate/N=5 截断）+ `test/files.mjs` 登记
 - 文档：本设计 + README 地图登记 + AGENT-LOOP.md 子代理 §

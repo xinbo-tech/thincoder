@@ -15,8 +15,10 @@
 import { escapeXml } from "../agent/run-helpers.mjs"
 import { relative, isAbsolute } from "node:path"
 import { describeBlockers, detectStall, dependentLabels, getAsyncPool, queuePosition, refillPool, refreshQueuedRows, stallErrorText, tombstoneOf, writeTombstone } from "./subagent-scheduler.mjs"
-// 第 10 批 ③（§18.3 #3——D-B3 本端原名）：评审取消路由（advisor id → cancelAdvisorReview）
-import { cancelAdvisorReview } from "./advisor-async.mjs"
+// 第 10 批 ③（§18.3 #3——D-B3 本端原名）：评审取消路由（advisor id → cancelAdvisorReview）。
+// W12（2026-09-15）：原 `./advisor-async.mjs` 的取消器随 advisor 镜像删旧退役——本端消费面
+// （评审池兜底取消 + JSON 工具文案契约）为 VSC 特有形态，按「增量迁入端壳」就地收留——
+// 见下方 cancelAdvisorReview（下走 cancelSubagent 的评审池兜底分支）。
 
 /**
  * §19 action:'status' handler — NON-BLOCKING pool query（AGENT-LOOP.md §19 D-M2：
@@ -167,6 +169,31 @@ export function subagentStatus({ id }, ctx) {
 }
 
 // ─── §19.5 cancel 动作（AGENT-LOOP.md §19.5 D-M6——定向中止 + 控制面）───
+
+/**
+ * W12（2026-09-15）：评审池定向取消（原 advisor-async.mjs `cancelAdvisorReview` 迁入本档——
+ * 唯一 src 消费点 = cancelSubagent 的评审池兜底分支）：running 评审置 `cancelled` + 条目
+ * controller 定向 abort（与核 `cancelAsyncAdvisor` 同形）；取消事实/未签发 token 提醒由
+ * **核 settle 的 cancelled 分支**注入（核 `settleAsyncEntry`——本处不重复注入），
+ * cancelled settle 不入 pending、不签发 token。返回 JSON 字符串（工具面文案契约——与子代理
+ * cancel 同形；核 `cancelAsyncAdvisor` 返对象直供 CLI 调用面）。
+ */
+function cancelAdvisorReview(parent, id) {
+  const map = getAsyncPool(parent, "advisor")
+  const idNum = typeof id === "string" && /^\d+$/.test(id) ? Number(id) : id
+  if (idNum == null || !map || !map.has(idNum)) {
+    return JSON.stringify({ id, status: "error", error: `unknown async advisor review id: ${id}` })
+  }
+  const entry = map.get(idNum)
+  if (entry.done) {
+    return JSON.stringify({ id, status: "error", error: `advisor review #${id} has already finished — nothing to cancel` })
+  }
+  if (!entry.cancelled) {
+    entry.cancelled = true
+    entry.controller?.abort?.({ abortTrigger: "cancel", abortDetail: "advisor-cancel" })
+  }
+  return JSON.stringify({ id, status: "cancelled" })
+}
 
 /** §19.5 模型可见取消提醒（D-M6 round2 #3——形态仿 injectAsyncResult：短 user-role
  *  提醒、XML 转义；cancelled settle 不入 pending/不直注入（无错误报告）——取消事实与

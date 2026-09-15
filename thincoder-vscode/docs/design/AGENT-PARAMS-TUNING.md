@@ -11,7 +11,7 @@
 
 | # | 现状 | 位置 | 后果 |
 |---|---|---|---|
-| P1 | 评审整体墙钟 `REVIEW_TIMEOUT_MS = 300_000`（5 分钟）**硬编码**，用户无法调整 | `src/advisor/run.mjs` 常量 + `runAdvisorToolLoop` 循环内检查点 | 大评审（多文件、多轮工具探索、慢模型）5 分钟即被截断，返回 partial results |
+| P1 | 评审整体墙钟 `REVIEW_TIMEOUT_MS = 300_000`（5 分钟）**硬编码**，用户无法调整 | `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）` 常量 + `runAdvisorToolLoop` 循环内检查点 | 大评审（多文件、多轮工具探索、慢模型）5 分钟即被截断，返回 partial results |
 | P2 | explore 子 agent 轮次被 `Math.min(30, …)` 硬帽 | `src/agent-tools/subagent.mjs` | explore 深入探索（大仓库、多文件追溯）30 轮即停，仅返回 partial work |
 | P3 | 主 agent 轮次上限默认 `maxTurns: 100` | `src/config-io.mjs` `AGENT_DEFAULTS`、`src/agent/run-helpers.mjs` `DEFAULT_MAX_TURNS`、`src/agent/setup.mjs`（初始值 + 读取兜底）、`webview/settings-agent.js`（面板显示兜底） | 多文件重构/修复-验证循环任务频繁撞墙 |
 | P4 | 设置面板保存 advisor 字段时**静默丢弃** timeoutMs（仅保留 guard/effort/provider/model 四字段） | `src/config-io.mjs` `saveAgentSettingsFromPanel` | 用户手写 config.json 的 timeoutMs 一旦经面板保存即丢失；面板显示默认 `?? 100`（`webview/settings-agent.js`）也会与真实默认漂移 |
@@ -20,7 +20,7 @@
 
 ### 2.1 评审超时配置化 + 默认 600s
 
-- `src/advisor/run.mjs`：`REVIEW_TIMEOUT_MS = 600_000`（注释同步 "10 minutes"）。
+- `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）`：`REVIEW_TIMEOUT_MS = 600_000`（注释同步 "10 minutes"）。
 - 检查点改为读取配置，缺省回退常量——运行时校验：手写 config.json 的非法值（0/负数/字符串）
   不得静默禁用或立即触发超时——非法一律回退默认：
 
@@ -84,7 +84,7 @@ whole-object 覆盖写，不合并会丢字段——与现有 guard/effort/provi
 
 | 文件 | 动作 | 内容 |
 |---|---|---|
-| `src/advisor/run.mjs` | MODIFY | 常量 `600_000`；检查点改读 `agent.config?.advisor?.timeoutMs ?? REVIEW_TIMEOUT_MS` |
+| `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）` | MODIFY | 常量 `600_000`；检查点改读 `agent.config?.advisor?.timeoutMs ?? REVIEW_TIMEOUT_MS` |
 | `src/agent-tools/subagent.mjs` | MODIFY | 删除 explore 的 `Math.min(30, …)`，统一 `subagentTurns ?? 100` |
 | `src/agent/run-helpers.mjs` | MODIFY | `DEFAULT_MAX_TURNS = 200` |
 | `src/agent/setup.mjs` | MODIFY | `cfgMaxTurns` 初始 200；读取兜底 `?? 200` |

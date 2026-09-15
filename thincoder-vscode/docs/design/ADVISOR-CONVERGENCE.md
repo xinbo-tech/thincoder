@@ -28,19 +28,19 @@
 
 - `src/prompts/advisor-round1.md` / `advisor-round2.md` / `advisor-round3.md` /
   `advisor-design.md`——轮次提示词（**硬加载**——缺失即抛错，防静默降级）。
-- `src/advisor/main.mjs（W12 已迁核——现体见批次档 §5）`——system prompt 轮次选择（`buildAdvisorSystemPrompt`）、
+- `src/advisor/main.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`——system prompt 轮次选择（`buildAdvisorSystemPrompt`）、
   round2+ follow-up 构建（`buildAdvisorFollowUp`）、评审会话组装
   （`prepareAdvisorMessages`）。
-- `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）`——组装入口与机械 cap（`MAX_ADVISOR_ROUNDS` / `buildCapMessage` /
+- `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`——组装入口与机械 cap（`MAX_ADVISOR_ROUNDS` / `buildCapMessage` /
   `runAdvisorReview` / `resolveAdvisorProvider`）；**第 12 批拆分**：工具循环与墙/提示接线在
-  `src/advisor/loop.mjs（W12 已迁核——现体见批次档 §5）`、上下文限额/压缩定锚与守卫族（谓词族 / 提示文案 / 结构化尾）在
-  `src/advisor/compaction.mjs（W12 已迁核——现体见批次档 §5）`——run.mjs 保持 re-export 面（import 兼容零改；行数见 §13.5）；**第 15 批增补**：设计评审启动断言（`ADVISOR_LAUNCH_REFUSAL_PREFIX` + 拒绝报告——§14.3）；**第 26 批增补**：评审上下文预算跟随模型窗口（`advisorContextBudget`——120K 常量退场——本档 §15）。
-- `src/advisor/convergence.mjs（W12 已迁核——现体见批次档 §5）`——round2+ 收敛消息体单源（`buildConvergenceBody` /
+  `src/advisor/loop.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`、上下文限额/压缩定锚与守卫族（谓词族 / 提示文案 / 结构化尾）在
+  `src/advisor/compaction.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`——run.mjs 保持 re-export 面（import 兼容零改；行数见 §13.5）；**第 15 批增补**：设计评审启动断言（`ADVISOR_LAUNCH_REFUSAL_PREFIX` + 拒绝报告——§14.3）；**第 26 批增补**：评审上下文预算跟随模型窗口（`advisorContextBudget`——120K 常量退场——本档 §15）。
+- `src/advisor/convergence.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`——round2+ 收敛消息体单源（`buildConvergenceBody` /
   `buildConvergenceInstructions`）。
-- `src/advisor/messages.mjs（W12 已迁核——现体见批次档 §5）`——user 消息构建（`buildAdvisorUserMessage` / review-object
-  declaration / 文档清单注入）、`src/advisor/citations.mjs（W12 已迁核——现体见批次档 §5）`——host-verified citations
-  机械校验、`src/advisor/repos.mjs（W12 已迁核——现体见批次档 §5）`——doc-file 分类（isDocFile）。
-- `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）` / `advisor-async.mjs`——advisor 工具（sync 执行 / async
+- `src/advisor/messages.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`——user 消息构建（`buildAdvisorUserMessage` / review-object
+  declaration / 文档清单注入）、`src/advisor/citations.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`——host-verified citations
+  机械校验、`src/advisor/repos.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`——doc-file 分类（isDocFile）。
+- `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）` / `advisor-async.mjs`——advisor 工具（sync 执行 / async
   后台池 / design token 入槽）；`src/agent/run-stages.mjs`——completion guard 推回
   （`maybeGuardPushbacks`）；**第 15 批增补**：`inflightDesignReviewConflict`（D5 冻结窗口冲突
   helper——§14.4）+ 设计评审 ack 冻结句 + 启动拒绝结算消费（§14.3）；**群 B 增补**：结算面拒发不记账（§17.1）+ 注入预算接线（`AGENT-LOOP.md §16`）。
@@ -59,8 +59,8 @@
 
 - **评审对象锚**：round1 与 round2+ 的用户消息都以机械生成的 **Review-object
   declaration** 块开头（`{type, target, status, reason, exclude}`——每轮注入）；
-  评审员不推断"评谁/为什么评"。块生成 = `messages.mjs` `buildReviewObjectDeclaration（W12 已迁核——现体见批次档 §5）`，
-  注入点 = `run.mjs` `injectObjectDeclaration（W12 已迁核——现体见批次档 §5）`（评审消息构建后一个机械点覆盖全部轮次）。
+  评审员不推断"评谁/为什么评"。块生成 = `messages.mjs` `buildReviewObjectDeclaration（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`，
+  注入点 = `run.mjs` `injectObjectDeclaration（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`（评审消息构建后一个机械点覆盖全部轮次）。
 - **design 评审**（`reviewType="design"`）与代码评审共用收敛提示词轮换：round 1 用
   `advisor-design.md`（设计评审标准 + **Approval Signal**——无 🔴 时回显
   `[DESIGN-TOKEN:…]` + designId 双值逐字）；round 2/3+ 用 `advisor-round*.md` 收敛提示
@@ -104,7 +104,7 @@
 `MAX_ADVISOR_ROUNDS = 5`（`run.mjs`）。**第 6 次 advisor 启动**（该实例 round ≥ 5）
 **直接返回终止消息、不消耗 LLM**——评审根本不启动。执行点：
 
-1. **工具层预检**（`src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）`——sync/async 共用启动前检查）——cap 拒
+1. **工具层预检**（`src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`——sync/async 共用启动前检查）——cap 拒
    绝只标记拒发，不置 called、不耗轮次（guard 因此在 cap 后自然停止推回）；
 2. **`runAdvisorReview` 内防线**（`run.mjs`——legacy/直接调用方防绕）；
 3. **completion guard 的 `round < MAX` 项**（§6）——到 cap 后不再推回。
@@ -329,7 +329,7 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
 | 1 | 三处对位的镜像口径 | 语义同源 + 本端原文自持 + 零跨仓依赖；范围 = F18–F23 语义面；启动断言 / 冻结窗口不进本批（§13.10 登记）——§13.2 / §13.4 |
 | 2 | VSC 是否需 loop/compaction 拆分 | **必拆**（468 + 预计新增 ~100–140 行必越 500 硬帽）——拆线 = `loop.mjs`（工具循环 + 墙/提示接线）+ `compaction.mjs`（限额 / 压缩+定锚 / 谓词族 / 文案 / 结构化尾）——§13.3 表 1 |
 | 3 | 条目 B 落点 | `_SIBLING_SHAPES` 补第 4 条 + `_checkShape` 增 `roleMap` 分支 + 计数/测试/文档同步；键空间 = 工具寻址完整点分路径——§13.4 契约六 |
-| 4 | 测试面与编号 | 新档 `test/advisor-chain-guards.test.mjs（W12 已退役——删除记录见批次档 §5）`（入 `test/files.mjs` 登记——显式清单硬项）；编号 **VSC 自持**（T-VG1–T-VG15（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） / AC-VG1–AC-VG8；映射列回指需求条目——CLI 对位经 §13.1 对位列）——§13.8 / §13.9 |
+| 4 | 测试面与编号 | 新档 `test/advisor-chain-guards.test.mjs（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）`（入 `test/files.mjs` 登记——显式清单硬项）；编号 **VSC 自持**（T-VG1–T-VG15（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） / AC-VG1–AC-VG8；映射列回指需求条目——CLI 对位经 §13.1 对位列）——§13.8 / §13.9 |
 | 5 | 需求层落点 | CLI 需求档（同板块 §8 新节 + SETTINGS-TOOL F-S1.7 VSC 对位行——批 10 / 批 8 同口径）（CLI 侧）；本仓无 requirements 树——本档持指针（§13.1） |
 
 ### 13.1 需求层（指针 + 对位索引）
@@ -357,21 +357,21 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
 
 ### 13.2 问题陈述（现场复核——file:line 为 as-of 2026-09-11，本端）
 
-1. **引用解析单根**：`src/advisor/citations.mjs（W12 已迁核——现体见批次档 §5）:34`（`verifyCitations` 只以 cwd 单根解析）+ 调用点
-   `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）:418`（`appendCitationReport(result, advisorCwd)` 不传 scope）——声明带仓前缀 /
+1. **引用解析单根**：`src/advisor/citations.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:34`（`verifyCitations` 只以 cwd 单根解析）+ 调用点
+   `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:418`（`appendCitationReport(result, advisorCwd)` 不传 scope）——声明带仓前缀 /
    裸文件名引文 → `file unreadable` 误报（CLI 两处实证的 VSC 同构面；本端为 CLI 修复前逐字副本：78 行）。
-2. **信号注入面缺口**：`src/advisor/messages.mjs（W12 已迁核——现体见批次档 §5）:173-176` 的 Approval Signal 只在 design round1 分支注入；
+2. **信号注入面缺口**：`src/advisor/messages.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:173-176` 的 Approval Signal 只在 design round1 分支注入；
    降级路径（`reviewType="design"` 且 round ≥1 无 prior → 落入 code 形态构建）**零信号**——评审员无法
-   回显 token（CLI 同族缺陷；本端 `src/advisor/main.mjs（W12 已迁核——现体见批次档 §5）:261-286` 的构建面同构）。
-3. **压缩吞锚**：`src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）:58-81`（`compactMessages` 物理丢弃首条 user 消息——design 评审时
+   回显 token（CLI 同族缺陷；本端 `src/advisor/main.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:261-286` 的构建面同构）。
+3. **压缩吞锚**：`src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:58-81`（`compactMessages` 物理丢弃首条 user 消息——design 评审时
    其内含 token）+ `:166`（触发点）——压缩后评审员再也不见 Approval Signal，永不 re-approve。
 4. **截断尾无判定族**：本端六 kind 宿主尾（按 kind 计；现行各一站点——`:146` 中断 / `:155` 超时 /
    `:159` 轮上限 / `:170` context 溢出 / `:210` 空响应 / `:462` 失败 resolve）无聚合谓词；
-   `src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）:61`
+   `src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:61`
    （旧 `ADVISOR_FAILURE_TEXT`〔已退场——现体 = `advisorIncompleteMarker`〕——`^` 锚）对「时间线 + 尾」形态（尾不在文本首行）**不命中** → 截断代码
-   评审仍置 `_calledAdvisorThisRun`（`:372`）；且 design 结算（sync `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）:275-294` /
+   评审仍置 `_calledAdvisorThisRun`（`:372`）；且 design 结算（sync `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:275-294` /
    async `advisor-async.mjs:330`）只看 token 回显——截断评审回显 token 即签发。
-5. **无硬墙**：`src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）:144-172` 的超时只在**轮间**检查——单次 `chat` 不受剩余预算约束
+5. **无硬墙**：`src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:144-172` 的超时只在**轮间**检查——单次 `chat` 不受剩余预算约束
    （默认 600s 与传输层硬顶同量级）→ 停滞吞掉全预算、零输出（CLI 第 10 批实证的同构面）。
 6. **settings 写面残留**：`src/agent-tools/settings.mjs:33-37`（`_SIBLING_SHAPES` 3 条）不含同族键
    `agent.subagentModels`——字符串形态被接受并落盘，而本端读侧（`subagent.mjs:87-90`）以
@@ -391,7 +391,7 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
 
 | # | 候选方案 | 判据逐项评估 | 取舍 | 结论 |
 |---|---|---|---|---|
-| 1 | **谓词 + 三消费点 + 定锚**（design sync/async 不签发 · code 守卫换谓词 · 报告提示 · 压缩定锚） | 语义同源 = 守卫生效（CLI 三消费点同构）；本端同构缺陷（§13.2 #3/#4）全部消除 | 触及 `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）` / `advisor-async.mjs` / `run.mjs`（+~30 行） | **选定** |
+| 1 | **谓词 + 三消费点 + 定锚**（design sync/async 不签发 · code 守卫换谓词 · 报告提示 · 压缩定锚） | 语义同源 = 守卫生效（CLI 三消费点同构）；本端同构缺陷（§13.2 #3/#4）全部消除 | 触及 `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）` / `advisor-async.mjs` / `run.mjs`（+~30 行） | **选定** |
 | 2 | 只落谓词（不接线消费） | 死码——截断评审签发 / 计数缺陷仍在 | — | 否决（缺陷本体未除） |
 
 **表 3——需求层落点**
@@ -436,7 +436,7 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
 - `run.mjs`：`buildPinnedBrief(reviewType, documents, object, designToken, designId)`（**评审参数构建——
   非模型输出**）：首行逐字
   `[review brief — re-attached after context compaction; the original review request is no longer in the context]`
-  + 对象声明块（`buildReviewObjectDeclaration（W12 已迁核——现体见批次档 §5）`）+ `## Documents to Review` 清单 + design+token 时
+  + 对象声明块（`buildReviewObjectDeclaration（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`）+ `## Documents to Review` 清单 + design+token 时
   `buildDesignApprovalBlock`。重内容（项目指南 / 方法论 / 文档地图）不入 pin。
 
 **契约四：不完整判定族 + 三消费点（F18 / F23 / 对位 CLI §14.3）**
@@ -457,11 +457,11 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
   §13.2 #4 的六锚 = 现行代码站点枚举（非交付态站点总数）。
 - 负向精度：非块首形态（围栏内行 / 表格行 / 引用行）**不判** incomplete（残余方向 fail-closed——
   多付一轮重跑，如实登记）；块首裸行引用同串的残余误报方向安全。
-- 消费点 1（design sync 结算，`src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）`）：`incomplete = advisorIncompleteMarker(result)`；
+- 消费点 1（design sync 结算，`src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`）：`incomplete = advisorIncompleteMarker(result)`；
   非空 ⇒ **不签发**——剥 token 回显（`makeDesignTokenRegex(token, "g")`）→ 输出 = 剥后文本 + 未签发
   提示（逐字见下）→ `_engDesignTokens` 零写（槽零写）；F2h 映射登记保留；`_lastAdvisorOutput` 覆写为
   清洗后输出（防未注册 token 进 prior）。
-- 消费点 2（design async 结算，`advisor-async.mjs` `advisorSettleAccounting（W12 已迁核——现体见批次档 §5）`）：同上判据；`passed=false`、
+- 消费点 2（design async 结算，`advisor-async.mjs` `advisorSettleAccounting（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`）：同上判据；`passed=false`、
   D1 台账零写、`entry.report` = 剥后文本 + 未签发提示；stale 分支在外层优先保留。**N14 三面同源（report /
   digest / prior）**：digest（`injectAdvisorResult` 原样注入 `entry.report`——as-of `advisor-async.mjs:438-447`）
   与 prior（唯一写点 `record.priorOutput = stripApprovedSuffix(entry.report, …)`——as-of `:399-400`，取
@@ -481,9 +481,9 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
 
 - 硬墙：轮内 `remaining = timeoutMs - elapsed`；`remaining <= 0` ⇒ 结构化超时尾；否则每次调用信号 = 用户信号 ×
   本调用 deadline（复合信号无条件传入——语义零变）：
-  `callSignal = signal ? combineSignals（W12 已迁核——现体见批次档 §5）([signal, AbortSignal.timeout(remaining)]) : AbortSignal.timeout(remaining)`。
+  `callSignal = signal ? combineSignals（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）([signal, AbortSignal.timeout(remaining)]) : AbortSignal.timeout(remaining)`。
   **交付实现形态（第 12 批交付同步——只记形态、不改语义）**：`AbortSignal.any` **不可直接依赖**（本端
-  `provider.mjs:31` 载荷 polyfill 为非导出局部 const；仓内无裸调在案）⇒ 组合经 `loop.mjs:29-38` `combineSignals（W12 已迁核——现体见批次档 §5）` =
+  `provider.mjs:31` 载荷 polyfill 为非导出局部 const；仓内无裸调在案）⇒ 组合经 `loop.mjs:29-38` `combineSignals（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）` =
   **特征检测**（`typeof AbortSignal.any === "function"` 走原生）+ **本地兜底**（AbortController 包装——任一输入
   abort 即触发、已 aborted 立即生效、reason 透传；形态同形 `src/mcp/http.mjs:14-22`〔W7 迁移——现体 `thincoder-core/mcp/transport-http.mjs:72`〕）——语义一致。
   `.timeout` 原生——VS Code 运行环境兼容。
@@ -495,7 +495,7 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
   `e.name === "AbortError" && signal.reason?.interrupt`——`anthropic.mjs:187` / `google.mjs:213` /
   `openai.mjs:268` / `responses.mjs:349`）；彼时 `signal.aborted` 先命中 ②1 中断尾（顺序敏感——
   `loop.mjs:176` → `:179`）⇒ ②2 可达性存疑（实施前锚点核验 id=7 结论）；**保留**（防御分支，实现按
-  契约原样落）+ 用例经 seams 构造（T-VG13（W12 已退役——删除记录见批次档 §5））。
+  契约原样落）+ 用例经 seams 构造（T-VG13（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5））。
 - 0.75 一次性提示：`shouldBudgetNudge(elapsed, timeoutMs, nudged)` 纯函数 + `budgetNudgeText(...)` 注入
   一条 user 消息（每场评审至多一次）。
 - 结构化超时尾 `timeoutTail(timeoutMs, rounds, toolCalls, producedText)`：族前缀
@@ -503,7 +503,7 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
   （`Partial results may be available. Try again with a narrower scope.`）为**机读统计行三要素**
   （`rounds:` / `tool calls:` / `review text produced:`）+ **`budget:` 预算指引行**——D3 口径：「三要素」在本档
   一律指统计行（budget 为独立行；与 F22 枚举四项同指）。
-- **逐字抄写源（D-VG6——预算提示 / 结构化尾不逐字重述）**：CLI 仓 `src/advisor/compaction.mjs（W12 已迁核——现体见批次档 §5）`
+- **逐字抄写源（D-VG6——预算提示 / 结构化尾不逐字重述）**：CLI 仓 `src/advisor/compaction.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`
   `budgetNudgeText`（提示串）/ `timeoutTail`（三段式尾：族前缀 + 统计行 + budget 行；CLI 仓设计档
   `docs/design/ADVISOR-CONVERGENCE` §14.6 同文）——本端逐字同文。
 - 计数器：`turns` / `toolCallCount` / `reviewTextProduced`（onToken 非空白 ⇒ true）/ `budgetNudged`。
@@ -525,23 +525,23 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
 
 | # | 文件（VSC 仓） | 行数注记 | 变更 | 档位结论 |
 |---|---|---|---|---|
-| 1 | `src/advisor/citations.mjs（W12 已迁核——现体见批次档 §5）` | 78 → **143** | 候选链 + 三分 + 命中根透明 | 不拆（≤300） |
-| 2 | `src/advisor/messages.mjs（W12 已迁核——现体见批次档 §5）` | 285 → **296** | 自愈尾包（内层 + 外层） | 不拆（≤300；**实测 296 贴线未越线**——无新增 >300 advisory 债） |
-| 3 | `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）` | 468 → **221** | 组装入口 + 定锚构建 + scope 传参 + re-export 面 | **拆分后** ≤300 |
-| 4 | `src/advisor/loop.mjs（W12 已迁核——现体见批次档 §5）` | 新 → **278** | 工具循环（迁出）+ 硬墙 / 提示 / 结构化尾接线 + 循环测试缝 `seams`（`{now, chat}`——`??` 默认回退，生产路径零变） | 新档（≤300） |
-| 5 | `src/advisor/compaction.mjs（W12 已迁核——现体见批次档 §5）` | 新 → **160** | 限额 / `compactMessages`（+定锚）/ `renderTimeline` / 谓词族 / `shouldBudgetNudge` / `budgetNudgeText` / `timeoutTail` | 新档（≤300） |
-| 6 | `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）` | 310 → **321** | sync design 未完成守卫 | 不拆（<500；>300 存量档） |
-| 7 | `src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）` | 460 → **463** | async 未完成守卫 + `failureVerdict` 换谓词（旧正则退场） | 不拆（<500） |
+| 1 | `src/advisor/citations.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）` | 78 → **143** | 候选链 + 三分 + 命中根透明 | 不拆（≤300） |
+| 2 | `src/advisor/messages.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）` | 285 → **296** | 自愈尾包（内层 + 外层） | 不拆（≤300；**实测 296 贴线未越线**——无新增 >300 advisory 债） |
+| 3 | `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）` | 468 → **221** | 组装入口 + 定锚构建 + scope 传参 + re-export 面 | **拆分后** ≤300 |
+| 4 | `src/advisor/loop.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）` | 新 → **278** | 工具循环（迁出）+ 硬墙 / 提示 / 结构化尾接线 + 循环测试缝 `seams`（`{now, chat}`——`??` 默认回退，生产路径零变） | 新档（≤300） |
+| 5 | `src/advisor/compaction.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）` | 新 → **160** | 限额 / `compactMessages`（+定锚）/ `renderTimeline` / 谓词族 / `shouldBudgetNudge` / `budgetNudgeText` / `timeoutTail` | 新档（≤300） |
+| 6 | `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）` | 310 → **321** | sync design 未完成守卫 | 不拆（<500；>300 存量档） |
+| 7 | `src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）` | 460 → **463** | async 未完成守卫 + `failureVerdict` 换谓词（旧正则退场） | 不拆（<500） |
 | 8 | `src/agent-tools/settings.mjs` | 250 → **261** | 第 4 条形状 + `roleMap` 分支 + 头注计数 | 不拆（≤300） |
-| 9 | `test/advisor-chain-guards.test.mjs（W12 已退役——删除记录见批次档 §5）` | 新 → **427** | T-VG1–T-VG15（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）（15 例） | 新档（≤500；**入 `test/files.mjs` 登记**） |
+| 9 | `test/advisor-chain-guards.test.mjs（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）` | 新 → **427** | T-VG1–T-VG15（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）（15 例） | 新档（≤500；**入 `test/files.mjs` 登记**） |
 | 10 | `test/settings-tool.test.mjs` | 149 → **192** | T-S2.33 扩 + T-S2.36 / T-S2.37（2 例） | 不拆 |
 | 11 | `test/files.mjs` | 53 → 54 | 登记新测试档 | — |
 
 > 行数注记口径 = `N lines total`（右值 = **交付实测**——第 12 批交付同步复写；对照见下）。re-export 面零改 =
 > 既有消费经 run.mjs 保持：`agent.mjs` / `run-stages.mjs` 的 `MAX_ADVISOR_ROUNDS`；`advisor.mjs` /
-> `advisor-async.mjs` 的 `runAdvisorReview` + `resolveAdvisorProvider`。`_setAdvisorToolSetForTest（W12 已迁核——现体见批次档 §5）` 消费面实况
+> `advisor-async.mjs` 的 `runAdvisorReview` + `resolveAdvisorProvider`。`_setAdvisorToolSetForTest（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）` 消费面实况
 > （交付同步校正·D3）：`advisor-chain-guards.test.mjs:18` 经 run.mjs re-export（`run.mjs:25`）；
-> **`batch-segment.test.mjs:20` 直连 `src/advisor/tools.mjs（W12 已迁核——现体见批次档 §5）`（不经 run.mjs）**——拆分保留 re-export 即可，
+> **`batch-segment.test.mjs:20` 直连 `src/advisor/tools.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`（不经 run.mjs）**——拆分保留 re-export 即可，
 > 两者均不受拆分影响（消费面零改）。
 >
 > **交付实测 vs 预计**：11 项全落地（8 改 + 3 新）；正偏差 `loop.mjs` +28（~250 → 278）· 新测档 +27（~400 → 427）·
@@ -575,7 +575,7 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
 | 纪律 / 既有节 | 核对结论 |
 |---|---|
 | **D2 单一权威源** | 契约详文 = 本节（VSC 端）；需求详文 = CLI 需求档同板块 §8（CLI 侧）；本档持索引不重述 |
-| **D3 计数·枚举** | 六 kind（表 6 行同改）· 用例 17（T-VG1–T-VG15（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） + T-S2.36/T-S2.37）· AC 8（AC-VG1–AC-VG8）· 受影响文件 11 实施 + 4 文档（§13.5） |
+| **D3 计数·枚举** | 六 kind（表 6 行同改）· 用例 17（T-VG1–T-VG15（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） + T-S2.36/T-S2.37）· AC 8（AC-VG1–AC-VG8）· 受影响文件 11 实施 + 4 文档（§13.5） |
 | **D5 冻结窗口** | §7 / §12 零碰（第 9 批链落档件）；CLI 仓代码零改（第 11 批已闭）；本档改动集齐后统一入场 |
 | **D6 回读核对** | 设计落档后回读核实（本节 + §2 + 两份需求档）；实施面验收含读回断言 |
 | **D7 变更留痕** | 本节落档 + 变更记录行（本批） |
@@ -588,49 +588,49 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
 
 | 用例 | 类别 | 输入 | 预期输出（断言） | 映射 |
 |---|---|---|---|---|
-| T-VG1 | 正常 | 谓词输入：六形态尾（各一，块首行）+ 干净文本 + 空串 | 六 kind 逐一命中；干净 / 空 → null（块首行锚——尾不在首行也命中） | F18 / F23 |
+| T-VG1（W12 已退役——删除记录见批次档 §5） | 正常 | 谓词输入：六形态尾（各一，块首行）+ 干净文本 + 空串 | 六 kind 逐一命中；干净 / 空 → null（块首行锚——尾不在首行也命中） | F18 / F23 |
 | T-VG2（W12 已退役——删除记录见批次档 §5） | 边界 | 非块首的尾前缀引用行（围栏内 / 表格行 / 引用行） | null（负向精度锁——引文不误判 incomplete） | F18（负向） |
-| T-VG3（W12 已退役——删除记录见批次档 §5） | 正常 | sync design 结算：时间线（含 token 回显）+ context 尾 | 不签发：报告零 token 字面 + 提示串在位 + 槽零写 | F18 |
-| T-VG4（W12 已退役——删除记录见批次档 §5） | 正常 | async design 结算（fixture entry，report 同 T-VG3（W12 已退役——删除记录见批次档 §5）） | 同 T-VG3（W12 已退役——删除记录见批次档 §5）（`entry.report` 含提示；D1 台账零写） | F18 |
-| T-VG5（W12 已退役——删除记录见批次档 §5） | 边界 | 干净通过（无尾 + token 回显） | 签发零回归：槽写入 + Approved 后缀 | F18（负向） |
+| T-VG3（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 正常 | sync design 结算：时间线（含 token 回显）+ context 尾 | 不签发：报告零 token 字面 + 提示串在位 + 槽零写 | F18 |
+| T-VG4（W12 已退役——删除记录见批次档 §5） | 正常 | async design 结算（fixture entry，report 同 T-VG3（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）） | 同 T-VG3（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）（`entry.report` 含提示；D1 台账零写） | F18 |
+| T-VG5（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 边界 | 干净通过（无尾 + token 回显） | 签发零回归：槽写入 + Approved 后缀 | F18（负向） |
 | T-VG6 | 错误 | code 守卫：时间线 + context 尾；另一例 `review failed (…)` 字符串形态 | `_calledAdvisorThisRun` **不**置 true（行为面保留）；旧正则定义 / 消费零残留（grep 面）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1） | F23 |
-| T-VG7（W12 已退役——删除记录见批次档 §5） | 边界 | 构建自愈：design + round ≥1 + 无 prior（降级形态）；幂等复测 | 输出含 `## Approval Signal` + 精确 token 字面；已含时不重复 | F19 |
-| T-VG8（W12 已退役——删除记录见批次档 §5） | 边界 | `compactMessages(>20 条, pinned)` / `(≤20 条, pinned)` | 前者压缩后含 pinned 三锚；后者原样返回 | F20 |
-| T-VG9（W12 已退役——删除记录见批次档 §5） | 正常 | 夹具双仓；scope 声明 VSC 档；引文 = 裸文件名 | 命中 1/1 + 报告注明解析路径 | F21 |
-| T-VG10（W12 已退役——删除记录见批次档 §5） | 边界 | 引文 = 仓根相对路径；另一仓存在同名文件 | 经声明仓根命中；另一仓不被误命中（内容判据） | F21 |
-| T-VG11（W12 已退役——删除记录见批次档 §5） | 错误 | 三形态：不存在 / 行内容不符 / `../` 越围栏 | `file unreadable` / `content mismatch @ {path}` / `path traversal` | F21 |
-| T-VG12（W12 已退役——删除记录见批次档 §5） | 边界 | `_runAdvisorToolLoop` + seams：预算用尽（首调返回工具调用） | 结构化尾（族前缀 + 统计行三要素 `rounds:` / `tool calls:` / `review text produced:` + `budget:` 行——口径同 §13.4 契约五） | F22 |
-| T-VG13（W12 已退役——删除记录见批次档 §5） | 边界 | 墙在调用中触发：抛错形态（AbortError / TimeoutError 名）+ `interrupted` 返回形态 | 两形态同判结构化尾（族前缀 + 统计行三要素 + budget 行——口径同契约五） | F22 |
-| T-VG14（W12 已退役——删除记录见批次档 §5） | 边界 | 时钟注入（`seams.now` 序列）：0.75 阈值后第 2 轮 | 预算提示恰一次（断言串；仅一次出现；零真实等待） | F22 |
-| T-VG15（W12 已退役——删除记录见批次档 §5） | 正常 | 纯函数 `shouldBudgetNudge`：阈值两侧 + `nudged=true` | 不提示 / 提示 / 已提示不重复 | F22 |
+| T-VG7（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 边界 | 构建自愈：design + round ≥1 + 无 prior（降级形态）；幂等复测 | 输出含 `## Approval Signal` + 精确 token 字面；已含时不重复 | F19 |
+| T-VG8（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 边界 | `compactMessages(>20 条, pinned)` / `(≤20 条, pinned)` | 前者压缩后含 pinned 三锚；后者原样返回 | F20 |
+| T-VG9（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 正常 | 夹具双仓；scope 声明 VSC 档；引文 = 裸文件名 | 命中 1/1 + 报告注明解析路径 | F21 |
+| T-VG10（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 边界 | 引文 = 仓根相对路径；另一仓存在同名文件 | 经声明仓根命中；另一仓不被误命中（内容判据） | F21 |
+| T-VG11（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 错误 | 三形态：不存在 / 行内容不符 / `../` 越围栏 | `file unreadable` / `content mismatch @ {path}` / `path traversal` | F21 |
+| T-VG12（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 边界 | `_runAdvisorToolLoop` + seams：预算用尽（首调返回工具调用） | 结构化尾（族前缀 + 统计行三要素 `rounds:` / `tool calls:` / `review text produced:` + `budget:` 行——口径同 §13.4 契约五） | F22 |
+| T-VG13（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 边界 | 墙在调用中触发：抛错形态（AbortError / TimeoutError 名）+ `interrupted` 返回形态 | 两形态同判结构化尾（族前缀 + 统计行三要素 + budget 行——口径同契约五） | F22 |
+| T-VG14（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 边界 | 时钟注入（`seams.now` 序列）：0.75 阈值后第 2 轮 | 预算提示恰一次（断言串；仅一次出现；零真实等待） | F22 |
+| T-VG15（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 正常 | 纯函数 `shouldBudgetNudge`：阈值两侧 + `nudged=true` | 不提示 / 提示 / 已提示不重复 | F22 |
 | T-S2.36 | 正常 | `set agent.subagentModels`：`{"coder":"x"}` 接受落盘；字符串 / 数组 / 含空串值拒绝（磁盘零变化） | 接受 + roleMap 拒例（`expects object of role→non-empty string`） | F-S1.7 |
 | T-S2.37 | 边界 | `null` 显式清除 / `{}` 清除态 / 消费面探针 | 清除回未设置；`{}` 接受；`effectiveSubagentModel` 命中 | F-S1.7 |
 
 > 测试基建：单测零网络、零真实 LLM（`seams.chat` / `seams.now` 参数覆写 + `??` 默认回退——
-> 生产路径不可达）、零长等待（T-VG14（W12 已退役——删除记录见批次档 §5） 时钟注入零真实等待；T-VG13（W12 已退役——删除记录见批次档 §5） 真实墙定时器 ~0.1s 级；
+> 生产路径不可达）、零长等待（T-VG14（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 时钟注入零真实等待；T-VG13（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 真实墙定时器 ~0.1s 级；
 > 余皆微秒级——快层 800ms 拦截线内）。新档入 `test/files.mjs` 登记后随 `npm test` 跑。
 
 ### 13.9 验收标准（逐条回指——每条可机器验证）
 
 | AC | 验收内容（机判） | 回指 |
 |---|---|---|
-| AC-VG1 | 候选链零假命中：T-VG9（W12 已退役——删除记录见批次档 §5） / T-VG10（W12 已退役——删除记录见批次档 §5） / T-VG11（W12 已退役——删除记录见批次档 §5） 绿（行为面）；`citations.mjs` 无全盘扫描（grep）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；命中根报告段在位 | F21 |
-| AC-VG2 | 信号必达：T-VG7（W12 已退役——删除记录见批次档 §5） 绿（自愈 + 幂等） | F19 |
-| AC-VG3 | 压缩不吞锚：T-VG8（W12 已退役——删除记录见批次档 §5） 绿（行为面）；pin 来源 = 评审参数（grep 判据三式）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1） | F20 |
-| AC-VG4 | 未完成不签发：T-VG3（W12 已退役——删除记录见批次档 §5） / T-VG4（W12 已退役——删除记录见批次档 §5） 绿（`passed=false` + 槽 / 台账零写 + 报告零 token 字面 + 提示串在位）；T-VG5（W12 已退役——删除记录见批次档 §5） 零回归（正常批准不变） | F18 |
+| AC-VG1 | 候选链零假命中：T-VG9（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） / T-VG10（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） / T-VG11（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 绿（行为面）；`citations.mjs` 无全盘扫描（grep）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；命中根报告段在位 | F21 |
+| AC-VG2 | 信号必达：T-VG7（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 绿（自愈 + 幂等） | F19 |
+| AC-VG3 | 压缩不吞锚：T-VG8（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 绿（行为面）；pin 来源 = 评审参数（grep 判据三式）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1） | F20 |
+| AC-VG4 | 未完成不签发：T-VG3（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） / T-VG4（W12 已退役——删除记录见批次档 §5） 绿（`passed=false` + 槽 / 台账零写 + 报告零 token 字面 + 提示串在位）；T-VG5（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 零回归（正常批准不变） | F18 |
 | AC-VG5 | 同谓词守卫：T-VG6 绿（行为面）；`ADVISOR_FAILURE_TEXT` 定义 / 消费 grep 零命中（六 kind 全覆盖）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1） | F23 |
-| AC-VG6 | 硬墙 + 结构收尾 + 提示：T-VG12（W12 已退役——删除记录见批次档 §5） / T-VG13（W12 已退役——删除记录见批次档 §5） 绿（族前缀逐字 + 统计行三要素 + budget 行；两形态同判）；T-VG14（W12 已退役——删除记录见批次档 §5） / T-VG15（W12 已退役——删除记录见批次档 §5） 绿（0.75 阈值、一次性、时钟注入零真实等待） | F22 |
+| AC-VG6 | 硬墙 + 结构收尾 + 提示：T-VG12（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） / T-VG13（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 绿（族前缀逐字 + 统计行三要素 + budget 行；两形态同判）；T-VG14（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） / T-VG15（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 绿（0.75 阈值、一次性、时钟注入零真实等待） | F22 |
 | AC-VG7 | 形状表第 4 条：T-S2.36 / T-S2.37 绿；`_SIBLING_SHAPES` 键数 = 4 与 TOOLS 档计数一致；roleMap 拒 / 接受集 == `effectiveSubagentModel` 可消费集（表驱动） | F-S1.7 |
 | AC-VG8 | 零回归 + 档位 + 登记：VSC `npm test` 全绿；`test/files.mjs` 清单含新档（+1）；行数实测对表（loop / compaction / run ≤300；advisor-async ≤500；新测试档 ≤500）；两仓 `check-doc-width` 新增违规 0 + 新增超宽 0；CLI 仓代码零改动（`git status` 判据——本批不碰 CLI 实施面） | N15 |
 
 ### 13.10 边界（本批不做 + 登记项）
 
 - **启动断言面（F12 的 fail-closed 层）——已收口（第 15 批，见 §14.3）**：原登记 = VSC 设计评审链路
-  恒签发 token（`src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）:254`——as-of 2026-09-11）⇒ 正常链不可达；第 15 批裁定 = **实现直接
+  恒签发 token（`src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:254`——as-of 2026-09-11）⇒ 正常链不可达；第 15 批裁定 = **实现直接
   调用方兜底**（断言 + 异步结算消费——CLI §14.4 #2 语义同源，「不依赖可达性论证」）→ 契约 §14.3 / AC-VG9。
 - **收敛路径信号面——已复核收口（第 15 批，见 §14.5）**：原登记（交付披露 ③）表述为「收敛路径不含
   Approval Signal」——第 15 批复核**不成立**（normal chain 已携带：`main.mjs:308`/`:311` 显式尾包；三形态探针
-  + T-VG21（W12 已退役——删除记录见批次档 §5） 回归锁）；`buildAdvisorFollowUp` 本体无信号 = 设计使然（信号 = 调用面评审参数注入，CLI 同构）。
+  + T-VG21（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 回归锁）；`buildAdvisorFollowUp` 本体无信号 = 设计使然（信号 = 调用面评审参数注入，CLI 同构）。
   登记描述按本行更正。
 - **冻结窗口 E 面——已收口（第 15 批，见 §14.4）**：实现点 = `execute-tools.mjs` `preGateBlocked`
   （VSC 无 `dispatch.mjs`——单一预闸点）；口径 = 本端特有形态（事件面 `_fileMutEvents`；判据同源 `advisorStale`
@@ -647,7 +647,7 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
 > 来源：批次档 `2026-09-11-VSC-GUARD-COMPLETION.md` §1（用户 12:35「这三条都重新核实一下，然后按照你的
 > 意见办」→ 裁定开批）。三面 = §13.10 登记项原位收口：①启动断言面 ②冻结窗口 E 面 ③收敛路径信号面。
 > 语义源（CLI 侧）：CLI 设计档（ADVISOR-CONVERGENCE）§14.4 #2（启动断言）与 §14.14（冻结窗口 E）、
-> CLI `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）:162-171`（断言实现）；需求 = CLI 需求档 §9（F24–F26 / N16–N18——本批新增节）。
+> CLI `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:162-171`（断言实现）；需求 = CLI 需求档 §9（F24–F26 / N16–N18——本批新增节）。
 > **冻结面**：§13 已交付契约文本零碰（本批只新增本节 + §13.10 登记项原位收口 + §2 载体表同步 + 变更记录行）；
 > §7 / §12 零碰。**镜像口径**：语义同源、本端原文自持、零跨仓依赖（无 import / 无同步脚本）——一致由本端
 > 用例断言守；跨端差异 3 处如实登记（判官 legacy 分支 / 面①消费面 / 事件面形态——§14.7 D-VGC3）。
@@ -659,13 +659,13 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
 |---|---|---|
 | 1 | 面①启动断言：实现 vs 维持登记 | **实现**（直接调用方兜底——CLI §14.4 #2 语义同源，"不依赖可达性论证"）；实现点 = `run.mjs` 断言 + 异步结算消费——§14.3 |
 | 2 | 面②冻结窗口：实现点 + 口径 | 实现点 = `execute-tools.mjs` `preGateBlocked`（**单一预闸点**——VSC 无 dispatch.mjs）；口径 = 本端特有形态（事件面 `_fileMutEvents` / 判官同源含 legacy 面）——§14.4 |
-| 3 | 面③收敛信号：补齐 vs 维持 | **维持（不补）——登记描述不成立**：normal chain 已携带信号（`main.mjs:308`/`:311` 显式尾包；三形态探针 + T-VG21（W12 已退役——删除记录见批次档 §5） 回归锁）；`buildAdvisorFollowUp` 本体无信号 = 设计使然（信号 = 调用面评审参数）——§14.5 |
+| 3 | 面③收敛信号：补齐 vs 维持 | **维持（不补）——登记描述不成立**：normal chain 已携带信号（`main.mjs:308`/`:311` 显式尾包；三形态探针 + T-VG21（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 回归锁）；`buildAdvisorFollowUp` 本体无信号 = 设计使然（信号 = 调用面评审参数）——§14.5 |
 | 4 | 受影响文件 / 用例 / AC | 实施域 6 项（4 改 + 1 新测档 + 1 登记）——§14.6 / §14.9 / §14.10 |
 
 ### 14.1 登记复核（三面现场复核——file:line as-of 2026-09-11，本端）
 
-1. **①启动断言面**：`src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）:254`（sync——`reviewType === "design"` 恒铸 token）与
-   `src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）:202`（async——`launchAsyncAdvisor` 恒铸；拒发分支 `:192`/`:196` 早于铸码
+1. **①启动断言面**：`src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:254`（sync——`reviewType === "design"` 恒铸 token）与
+   `src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:202`（async——`launchAsyncAdvisor` 恒铸；拒发分支 `:192`/`:196` 早于铸码
    ——拒发不丢码）⇒ 两个生产调用点（`advisor.mjs:265-270` / `advisor-async.mjs:253-259`）**恒携带 token**。
    `run.mjs:95` 的 `runAdvisorReview` **无启动断言**（对照 CLI `run.mjs:162-171`）；全仓无拒绝记账机制
    （`_advisorRefusals` / `ADVISOR_LAUNCH_REFUSAL_PREFIX` 零命中）。
@@ -714,7 +714,7 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
 
 ### 14.3 契约一：启动断言（① / F24 / AC-VG9）
 
-- `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）`：导出 `ADVISOR_LAUNCH_REFUSAL_PREFIX = "Advisor: design review launch refused"`
+- `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`：导出 `ADVISOR_LAUNCH_REFUSAL_PREFIX = "Advisor: design review launch refused"`
   （稳定契约——结算消费面据此判）。
 - `runAdvisorReview`：`prepareAdvisorMessages` 之后、发起之前，`reviewType === "design"` 时断言——
   ① 本次已签发 token 非空；② user 消息内逐字含 `[DESIGN-TOKEN:{token}`。违反 ⇒ **返回拒绝报告**
@@ -724,7 +724,7 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
 Advisor: design review launch refused — {reason: no design token was minted | the request does not carry the approval signal}. Nothing was sent: a request that asks the reviewer to echo a token it cannot see would break the credential chain. Re-run advisor(type='design') to mint a fresh token.
 ```
 
-- 异步结算消费（`advisor-async.mjs` `advisorSettleAccounting（W12 已迁核——现体见批次档 §5）`）：拒绝报告前缀 ⇒ `launchRefused` 入
+- 异步结算消费（`advisor-async.mjs` `advisorSettleAccounting（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`）：拒绝报告前缀 ⇒ `launchRefused` 入
   `failureVerdict` ⇒ **不置 `_calledAdvisorThisRun`**（未发起 = 无产出——CLI §14.4 记账面同源）。
 - **可达性如实注**：两个生产调用点恒铸 token ⇒ 正常链不可达（表 1 候选 2 的论证成立）——本断言 =
   **直接调用方兜底（防御纵深）**（CLI 明载同款口径）。
@@ -757,8 +757,8 @@ Advisor: design review launch refused — {reason: no design token was minted | 
 - 实现点：`src/agent/execute-tools.mjs` `preGateBlocked`（工程门后、权限阶段前）——`FILE_MUTATORS` ×
   `inflightDesignReviewConflict(agent, absPaths)` 命中 ⇒ blocked（content = 拒绝串）。路径提取同既有语义
   （`tool.touchedPaths(args)`；取不到路径不拦——与变更记账同界）。
-- 冲突 helper（`src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）`——与 `advisorStale` 同模块、同源）：
-  `inflightDesignReviewConflict(parent, absPaths) → {id, path} | null`——D1 accessor（`advisorPoolMap（W12 已迁核——现体见批次档 §5）`）读池；
+- 冲突 helper（`src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`——与 `advisorStale` 同模块、同源）：
+  `inflightDesignReviewConflict(parent, absPaths) → {id, path} | null`——D1 accessor（`advisorPoolMap（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`）读池；
   筛选 **design × running × 未取消 × 未结算**；射程与归一 = `advisorStale` 设计面全同源（`entry.documents` +
   legacy 面；路径归一 `\` → `/` + cwd 前缀剥离）。
 - 拒绝文案（逐字，与 CLI §14.14 E-3c 同文——本批同文字面枚举 #2；`{path}` = cwd 相对）：
@@ -779,7 +779,7 @@ Error: write refused — design review #{id} is in flight over {path} (D5 freeze
 ；D5 冻结窗口：被审文档（含批次档）在报告送达前零写入——在途写入会被拒绝，写入将使本轮结算为陈旧 (pass 不发 token)
 ```
 
-落点 = `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）` 异步分支 ack 串尾（design 分支）。
+落点 = `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）` 异步分支 ack 串尾（design 分支）。
 
 **（e）残余（如实登记——与 CLI E-6 同族，本端实况）**
 
@@ -797,8 +797,8 @@ async 点火路径；同步评审阻塞回合、父侧无并发写时刻）。
   3. rv.round ≥ 2 且无 prior（降级形态）→ `:261-286` 分支 → `buildAdvisorUserMessage` 自愈尾包
      （F19/契约二——第 12 批）。
 - `buildAdvisorFollowUp` 本体不含信号 = **设计使然**：它是纯构建器（无 token 参数），信号由调用面以评审参数
-  注入（评审参数 ≠ 模型输出——与 F20 定锚同口径）；CLI 同构（CLI `src/advisor.mjs（W12 已迁核——现体见批次档 §5）:279`）。
-- 本批动作 = **回归锁**（T-VG21（W12 已退役——删除记录见批次档 §5）——覆盖前两形态；第三形态（rv.round≥2 无 prior 降级）由既有 T-VG7（W12 已退役——删除记录见批次档 §5） 的 `buildAdvisorUserMessage` 自愈锁（`messages.mjs:274-275`）覆盖）+ 登记描述原位更正（§13.10）——防未来按错误描述重开评估。
+  注入（评审参数 ≠ 模型输出——与 F20 定锚同口径）；CLI 同构（CLI `src/advisor.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:279`）。
+- 本批动作 = **回归锁**（T-VG21（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）——覆盖前两形态；第三形态（rv.round≥2 无 prior 降级）由既有 T-VG7（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 的 `buildAdvisorUserMessage` 自愈锁（`messages.mjs:274-275`）覆盖）+ 登记描述原位更正（§13.10）——防未来按错误描述重开评估。
 - 残余：直接调用 `buildAdvisorFollowUp` 的外部方（该函数无信号参数）——非产品路径（全仓唯一调用点 =
   `prepareAdvisorMessages`）；CLI 同况（不跨端追赶）。
 
@@ -808,14 +808,14 @@ async 点火路径；同步评审阻塞回合、父侧无并发写时刻）。
 
 | # | 文件（VSC 仓） | 行数注记 | 变更 | 档位结论 |
 |---|---|---|---|---|
-| 1 | `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）` | 221 → ~236 | 启动断言 + `ADVISOR_LAUNCH_REFUSAL_PREFIX` 导出 | ≤300 |
-| 2 | `src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）` | 463 → ~489 | 冻结冲突 helper（~22）+ 启动拒绝结算消费（~4）——合计 ~26 | ≤500（**贴线注记**：余量 ~11 行——先落 helper 实测行数再落消费项；越 500 须停下报告——不得静默越线） |
+| 1 | `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）` | 221 → ~236 | 启动断言 + `ADVISOR_LAUNCH_REFUSAL_PREFIX` 导出 | ≤300 |
+| 2 | `src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）` | 463 → ~489 | 冻结冲突 helper（~22）+ 启动拒绝结算消费（~4）——合计 ~26 | ≤500（**贴线注记**：余量 ~11 行——先落 helper 实测行数再落消费项；越 500 须停下报告——不得静默越线） |
 | 3 | `src/agent/execute-tools.mjs` | 468 → ~482 | `preGateBlocked` 冻结分支 + `relative` import | <500（>300 存量档） |
-| 4 | `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）` | 321 → ~324 | 设计评审 ack 冻结句 | <500（>300 存量档） |
-| 5 | `test/advisor-guard-completion.test.mjs（W12 已退役——删除记录见批次档 §5）` | 新 → ~170 | T-VG16（W12 已退役——删除记录见批次档 §5）–T-VG21（W12 已退役——删除记录见批次档 §5）（6 例） | 新档（≤500；**入 `test/files.mjs` 登记**） |
+| 4 | `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）` | 321 → ~324 | 设计评审 ack 冻结句 | <500（>300 存量档） |
+| 5 | `test/advisor-guard-completion.test.mjs（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）` | 新 → ~170 | T-VG16（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）–T-VG21（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）（6 例） | 新档（≤500；**入 `test/files.mjs` 登记**） |
 | 6 | `test/files.mjs` | 54 → 55 | 新测档登记（显式清单 +1） | — |
 
-> 新档说明（**测试档——非文档档**；同款 = 第 12 批 `test/advisor-chain-guards.test.mjs（W12 已退役——删除记录见批次档 §5）`）：既有同族测试档
+> 新档说明（**测试档——非文档档**；同款 = 第 12 批 `test/advisor-chain-guards.test.mjs（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）`）：既有同族测试档
 > 427 行——追加 ~130 行必越 500 硬帽 ⇒ 新建独立测档（域同族、编号续 T-VG）。若父侧判「不得新建」含测试档
 > → 本项停下打回（designer 已留翻转口）。
 > 行数锚（as-of）：run 221 · advisor-async 463 · execute-tools 468 · advisor 321 · 同族测档 427 · files 54
@@ -840,7 +840,7 @@ async 点火路径；同步评审阻塞回合、父侧无并发写时刻）。
 | D-VGC5 | 批次档：不豁免、经 documents 纪律入射程 | CLI E-表 3 同裁定；口径 = 同源（不单边扩大——未列 documents 则两面同界） |
 | D-VGC6 | 同文字面（D-VG6 族）本批 3 处 = 启动拒绝串 / 冻结拒绝串 / 回执冻结句 | 同文 ≠ 依赖（无同步脚本；各端自持语义锚断言）；两仓用户读到同一指引 |
 | D-VGC7 | 残余如实登记（bash / file_ops / execute / git / checkpoint / batch_segment / 子代理合入 / sync 面） | 与 CLI E-6 #2/#3/#5 同族；不静默、不跨端追赶 |
-| D-VGC8 | 测档新立（`test/advisor-guard-completion.test.mjs（W12 已退役——删除记录见批次档 §5）`） | 既有同族档 427 行——追加必越 500（硬约束触发）；非文档档（同款 = 第 12 批） |
+| D-VGC8 | 测档新立（`test/advisor-guard-completion.test.mjs（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）`） | 既有同族档 427 行——追加必越 500（硬约束触发）；非文档档（同款 = 第 12 批） |
 
 ### 14.8 与既有纪律的冲突点核对
 
@@ -848,7 +848,7 @@ async 点火路径；同步评审阻塞回合、父侧无并发写时刻）。
 |---|---|
 | **D1 写权矩阵** | 实施 = eng-coder；本设计者只落设计 / 需求 / 批次档（+ TODO 状态推进 = 提示词规定动作） |
 | **D2 单一权威源** | 契约详文 = 本节；需求详文 = CLI 需求档 §9；CLI 机制详文 = CLI 设计档 §14.4/§14.14（指针不重述） |
-| **D3 计数·枚举** | 三面列表与计数同改；同文字面 3 处枚举；用例 6（T-VG16（W12 已退役——删除记录见批次档 §5）–T-VG21（W12 已退役——删除记录见批次档 §5））· AC 4（AC-VG9–AC-VG12）· 实施域 6 项 |
+| **D3 计数·枚举** | 三面列表与计数同改；同文字面 3 处枚举；用例 6（T-VG16（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）–T-VG21（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5））· AC 4（AC-VG9–AC-VG12）· 实施域 6 项 |
 | **D5 冻结窗口** | §13 已交付契约零碰（本批只新增 §14 + §13.10 原位收口）；CLI 仓零改；改动集齐后统一入场 |
 | **D6 回读核对** | 设计落档后回读核实（本节 + §13.10 + 需求 §9 + §2）；实施面验收含读回断言 |
 | **D7 变更留痕** | 本节落档 + 变更记录行（本批）；TODO 状态推进（池） |
@@ -861,25 +861,25 @@ async 点火路径；同步评审阻塞回合、父侧无并发写时刻）。
 
 | 用例 | 类别 | 输入 | 预期输出（断言） | 映射 |
 |---|---|---|---|---|
-| T-VG16（W12 已退役——删除记录见批次档 §5） | 错误 | `runAdvisorReview(agent, "design", {}, null, ["docs/design/X.md"], …)`（无 token 直调；agent 桩含 `_provider`） | 返回以 `Advisor: design review launch refused` 开头；含 `no design token was minted`；零请求（未触 provider）；槽零写 | F24 / AC-VG9 |
-| T-VG17（W12 已退役——删除记录见批次档 §5） | 边界 | async 结算：entry.report = 拒绝报告串；对照 = 普通 design 报告 | 前者 `_calledAdvisorThisRun` 保持 false；对照组照常置位（零回归） | F24 / AC-VG9 |
-| T-VG18（W12 已退役——删除记录见批次档 §5） | 正常 | `inflightDesignReviewConflict`：running design entry（`documents=[X]`）× wanted=[abs(X)]；负向族 = 已结算 / 已取消 / code 评审 / 射程外路径 / 空池 | 命中 `{id, path}`；负向族全 null | F25 / N16 / AC-VG10 |
-| T-VG19（W12 已退役——删除记录见批次档 §5） | 错误 | `executeToolBatches` 集成：在途设计评审 × `write` → 射程内档；对照 = 射程外写 | 结果逐字含 `write refused — design review` + `action:'cancel'` 指引 + 评审 id；**文件零落地**（读回断言）；对照写放行（成对） | F25 / N17 / AC-VG10 |
-| T-VG20（W12 已退役——删除记录见批次档 §5） | 边界 | `advisorTool.execute`（design；`ctx.runAdvisorReview` seam = pending promise）× 对照 code | ack 含冻结句（`D5 冻结窗口` 逐字）；code ack 不含（不对称锁定；零真实 LLM / 零挂起句柄） | F25 / N17 / AC-VG11 |
-| T-VG21（W12 已退役——删除记录见批次档 §5） | 正常 | `prepareAdvisorMessages`：design + rv={round:2, priorOutput}（RV 形态）/ sync 持久 prior 形态 | user 消息含 `## Approval Signal` + 逐字 `[DESIGN-TOKEN:{token}` + designId；各恰一次（无重复）——现状锁定（零代码改动） | F26 / AC-VG12 |
+| T-VG16（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 错误 | `runAdvisorReview(agent, "design", {}, null, ["docs/design/X.md"], …)`（无 token 直调；agent 桩含 `_provider`） | 返回以 `Advisor: design review launch refused` 开头；含 `no design token was minted`；零请求（未触 provider）；槽零写 | F24 / AC-VG9 |
+| T-VG17（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 边界 | async 结算：entry.report = 拒绝报告串；对照 = 普通 design 报告 | 前者 `_calledAdvisorThisRun` 保持 false；对照组照常置位（零回归） | F24 / AC-VG9 |
+| T-VG18（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 正常 | `inflightDesignReviewConflict`：running design entry（`documents=[X]`）× wanted=[abs(X)]；负向族 = 已结算 / 已取消 / code 评审 / 射程外路径 / 空池 | 命中 `{id, path}`；负向族全 null | F25 / N16 / AC-VG10 |
+| T-VG19（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 错误 | `executeToolBatches` 集成：在途设计评审 × `write` → 射程内档；对照 = 射程外写 | 结果逐字含 `write refused — design review` + `action:'cancel'` 指引 + 评审 id；**文件零落地**（读回断言）；对照写放行（成对） | F25 / N17 / AC-VG10 |
+| T-VG20（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 边界 | `advisorTool.execute`（design；`ctx.runAdvisorReview` seam = pending promise）× 对照 code | ack 含冻结句（`D5 冻结窗口` 逐字）；code ack 不含（不对称锁定；零真实 LLM / 零挂起句柄） | F25 / N17 / AC-VG11 |
+| T-VG21（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 正常 | `prepareAdvisorMessages`：design + rv={round:2, priorOutput}（RV 形态）/ sync 持久 prior 形态 | user 消息含 `## Approval Signal` + 逐字 `[DESIGN-TOKEN:{token}` + designId；各恰一次（无重复）——现状锁定（零代码改动） | F26 / AC-VG12 |
 
-> 测试基建：零网络 / 零真实 LLM / 零长等待（T-VG20（W12 已退役——删除记录见批次档 §5） seam = pending promise——不 settle、无副作用）；
-> T-VG19（W12 已退役——删除记录见批次档 §5） 经 `executeToolBatches`（autoApprove 夹具短路权限——预闸不受影响）；新档登记 `test/files.mjs` 后随
+> 测试基建：零网络 / 零真实 LLM / 零长等待（T-VG20（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） seam = pending promise——不 settle、无副作用）；
+> T-VG19（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 经 `executeToolBatches`（autoApprove 夹具短路权限——预闸不受影响）；新档登记 `test/files.mjs` 后随
 > `npm test` 快层跑。
 
 ### 14.10 验收标准（逐条回指需求——每条可机器验证）
 
 | AC | 验收内容（机判） | 回指 |
 |---|---|---|
-| AC-VG9 | 启动断言：T-VG16（W12 已退役——删除记录见批次档 §5） / T-VG17（W12 已退役——删除记录见批次档 §5） 绿（行为面逐字断言保留）；拒绝前缀 `Advisor: design review launch refused` 实现 grep——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；正常链零回归（既有 design 用例全绿）；拒绝不写槽 / 不写 prior | F24 |
-| AC-VG10 | 冻结拦截：T-VG18（W12 已退役——删除记录见批次档 §5） / T-VG19（W12 已退役——删除记录见批次档 §5） 绿（行为面）；拒绝文案锚（`write refused — design review` + `D5 freeze window` + `action:'cancel'`）grep——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；被拒写入零落地（读回断言）；射程外写放行（成对） | F25 / N16 / N17 |
-| AC-VG11 | 边界可观察：T-VG20（W12 已退役——删除记录见批次档 §5） 绿（行为面）；§14.4（a）定义句与实现锚（`eventsAtLaunch` / `advisorStale` / `settleAdvisorReview（W12 已迁核——现体见批次档 §5）`）grep——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；回执冻结句逐字在位 | F25 / N17 |
-| AC-VG12 | 收敛信号锁定 + 零回归：T-VG21（W12 已退役——删除记录见批次档 §5） 绿；VSC `npm test` 快层全绿；新档登记 `test/files.mjs`（+1）；行数实测对表（run ≤300 · execute-tools / advisor / advisor-async ≤500——贴线项注记）；两仓 `check-doc-width` 新增违规 0 + 新增超宽 0；CLI 仓代码与已交付面零改动（`git status` 判据） | F26 / N18 |
+| AC-VG9 | 启动断言：T-VG16（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） / T-VG17（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 绿（行为面逐字断言保留）；拒绝前缀 `Advisor: design review launch refused` 实现 grep——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；正常链零回归（既有 design 用例全绿）；拒绝不写槽 / 不写 prior | F24 |
+| AC-VG10 | 冻结拦截：T-VG18（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） / T-VG19（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 绿（行为面）；拒绝文案锚（`write refused — design review` + `D5 freeze window` + `action:'cancel'`）grep——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；被拒写入零落地（读回断言）；射程外写放行（成对） | F25 / N16 / N17 |
+| AC-VG11 | 边界可观察：T-VG20（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 绿（行为面）；§14.4（a）定义句与实现锚（`eventsAtLaunch` / `advisorStale` / `settleAdvisorReview（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`）grep——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；回执冻结句逐字在位 | F25 / N17 |
+| AC-VG12 | 收敛信号锁定 + 零回归：T-VG21（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 绿；VSC `npm test` 快层全绿；新档登记 `test/files.mjs`（+1）；行数实测对表（run ≤300 · execute-tools / advisor / advisor-async ≤500——贴线项注记）；两仓 `check-doc-width` 新增违规 0 + 新增超宽 0；CLI 仓代码与已交付面零改动（`git status` 判据） | F26 / N18 |
 
 ### 14.11 后续登记项（本批不碰——明示，不静默）
 
@@ -907,7 +907,7 @@ async 点火路径；同步评审阻塞回合、父侧无并发写时刻）。
 
 > 来源：批次档 `2026-09-11-ADVISOR-BUDGET-VSC-MIRROR`（CLI 仓 docs/batches）§1——用户 2026-09-11 13:18
 > 「120K 那个是 bug…你检查一下」的 **VSC 镜像面**（CLI 第 25 批对位批）。语义源（CLI 侧）：设计档
-> `ADVISOR-CONVERGENCE（CLI 仓）§16`（比例式派生 / 契约 / OOM 论证 / D-CB1–D-CB9 / T-CB1（W12 已退役——删除记录见批次档 §5）–T-CB5（W12 已退役——删除记录见批次档 §5）（T-CB6 已退场——整删；删除记录 = `TESTING（CLI 仓）§11.3`）/ AC-CB1–AC-CB5）；
+> `ADVISOR-CONVERGENCE（CLI 仓）§16`（比例式派生 / 契约 / OOM 论证 / D-CB1–D-CB9 / T-CB1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）–T-CB5（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）（T-CB6 已退场——整删；删除记录 = `TESTING（CLI 仓）§11.3`）/ AC-CB1–AC-CB5）；
 > 需求 = `docs/requirements/ADVISOR-CONVERGENCE（CLI 仓）§10`（F27 / N19——**指针不重述**）。
 > **冻结面**：本档 §13 / §14 已交付契约文本零碰；CLI 仓零写入；本批只新增本节 + §2 载体表同步 + 变更记录行。
 > **镜像口径**：语义同源、本端原文自持、不做 byte-identical、零跨仓依赖（无 import / 无同步脚本）——一致由
@@ -919,7 +919,7 @@ async 点火路径；同步评审阻塞回合、父侧无并发写时刻）。
 |---|---|---|
 | 1 | 派生实现面（语义对齐 + 本端形态） | `providerSpec` 经 `../specs.mjs` 现成面（本模块惯例——`loop.mjs:17` 同源）；`advisorContextBudget(provider)` 单参数、两档命名 `{limit, compactAt}` 照 CLI；OOM = 本端一句 + CLI 指针——§15.3 表 1 / §15.4 / §15.6 |
 | 2 | 两处消费点逐点落法 | 循环体外一次性派生 `const budget = advisorContextBudget(provider)`；`loop.mjs:116` → `budget.compactAt`；`:121` → `budget.limit`——§15.5 |
-| 3 | 受影响文件 / 用例 / AC | 实施域 4 项（2 改 + 1 新测档 + 1 登记）；T-CB1（W12 已退役——删除记录见批次档 §5）–T-CB5（W12 已退役——删除记录见批次档 §5） 同型化（T-CB6 已退场——整删，删除记录 = `TESTING.md` §8.1（`:118`））；AC-CB1–AC-CB5 回指 F27 / N19——§15.8 / §15.11 / §15.12 |
+| 3 | 受影响文件 / 用例 / AC | 实施域 4 项（2 改 + 1 新测档 + 1 登记）；T-CB1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）–T-CB5（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 同型化（T-CB6 已退场——整删，删除记录 = `TESTING.md` §8.1（`:118`））；AC-CB1–AC-CB5 回指 F27 / N19——§15.8 / §15.11 / §15.12 |
 | 4 | 与 CLI 语义差异 | **零语义差异**（逐面核对 §15.7）；形态差异 3 处如实注 |
 | 5 | 纪律核对 | 双端纪律 / 既有锁零伤（常量消费面仅 `loop.mjs`；测试零引用）/ `test/files.mjs` 登记——§15.10 |
 
@@ -931,11 +931,11 @@ async 点火路径；同步评审阻塞回合、父侧无并发写时刻）。
 
 | 本批需求（CLI 侧文档 ID） | 语义标题 | 对位（CLI 第 25 批） |
 |---|---|---|
-| F27 | 预算派生（评审上下文——双端同源）的 **VSC 端** | 设计档 §16.3 / §16.9（T-CB1（W12 已退役——删除记录见批次档 §5）–T-CB5（W12 已退役——删除记录见批次档 §5）；T-CB6 已退场——整删，删除记录 = `TESTING.md` §8.1（`:118`）） |
+| F27 | 预算派生（评审上下文——双端同源）的 **VSC 端** | 设计档 §16.3 / §16.9（T-CB1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）–T-CB5（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）；T-CB6 已退场——整删，删除记录 = `TESTING.md` §8.1（`:118`）） |
 | N19 | 零回归 + 可机判（VSC 端） | 设计档 §16.10（AC-CB1–AC-CB5） |
 
 - 判定句（执行面）：需求 §10.2 F27 行三段——① 1M 大窗在 ~19.7 万 tokens 下**不再**判死 ② 128K / 未知模型
-  同量上下文**仍**截断 ③ provider 级覆盖**双向**翻转——本档 §15.11 逐条同型化（T-CB2（W12 已退役——删除记录见批次档 §5） / T-CB3（W12 已退役——删除记录见批次档 §5） / T-CB4（W12 已退役——删除记录见批次档 §5））。
+  同量上下文**仍**截断 ③ provider 级覆盖**双向**翻转——本档 §15.11 逐条同型化（T-CB2（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） / T-CB3（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） / T-CB4（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5））。
 - 本批**零写入**需求档：§10 为第 25 批已落（批次 §1 裁定「引用不重述」——双端同源需求单载体）；其 §10.4
   「VSC 镜像随批」登记行的收口 = 父侧排程（§15.13 #1）。
 - **明确不做（提要——详 §15.13）**：不改判定族六 kind / 六条尾文案 / 压缩本体 / 结算·凭证·超时语义；
@@ -943,22 +943,22 @@ async 点火路径；同步评审阻塞回合、父侧无并发写时刻）。
 
 ### 15.2 问题陈述（现场复核——file:line 为 as-of 2026-09-11，本端）
 
-1. **缺陷（同款）**：`src/advisor/compaction.mjs（W12 已迁核——现体见批次档 §5）:18`——`export const MAX_CONTEXT_TOKENS = 120_000`
+1. **缺陷（同款）**：`src/advisor/compaction.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:18`——`export const MAX_CONTEXT_TOKENS = 120_000`
    （注释 `Reserve headroom to avoid OOM`；CLI 第 25 批逐字同款——128K 时代遗留，本端主力模型同为 1M 档位）。
-2. **守卫链（同款）**：`src/advisor/loop.mjs（W12 已迁核——现体见批次档 §5）:116`（`currentTokens > MAX_CONTEXT_TOKENS * 0.8` → 本地压缩）+
+2. **守卫链（同款）**：`src/advisor/loop.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:116`（`currentTokens > MAX_CONTEXT_TOKENS * 0.8` → 本地压缩）+
    `:121`（压缩后仍 `> MAX_CONTEXT_TOKENS` → `Advisor: context window limit reached …` 判死尾）。CLI 侧实证死因
    `(120225 tokens)` 与该常量逐字吻合 ⇒ 1M 窗口模型被硬帽限死在 ~12% 窗口处（缺陷本体 = 上限来源，非守卫结构）。
 3. **窗口真值源（现成）**：`providerSpec(provider)`（`src/config.mjs:142-149`——模型表前缀命中 + provider 级
    `context`（K 单位 ×1024）覆盖；非法值 / 缺省 → 模型表原值；未知模型 → 一次性告警 + `DEFAULT_SPEC` 128K）
    经 `src/specs.mjs:5` re-export——本批接线面（§15.3 表 1）。
-4. **接线可达性**：评审循环所持 `provider` 即评审真实 provider（`src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）:137` `resolveAdvisorProvider(agent)`
+4. **接线可达性**：评审循环所持 `provider` 即评审真实 provider（`src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:137` `resolveAdvisorProvider(agent)`
    → `:181` 传入循环）；且循环已在该 provider 上消费 `specForModel`（`loop.mjs:202`，reasoningEcho 判定）——派生值就地可得。
 5. **同族同款（本端）**：主循环阈值跟随窗口——旧档 `src/compact.mjs:51-54`（压缩阈值 = 窗口 × 60%）、`src/compact.mjs:98-99`（W6 已迁核——现体 `thincoder-core/context.mjs`）
    （尾预算 = 窗口 × 15% − 摘要段估算）——「阈值跟随窗口」为本端既有惯例（CLI 同族同口径 = 其 §16.1 四条）。
 6. **消费面（grep 实测）**：`MAX_CONTEXT_TOKENS`（已退场——现体 = `advisorContextBudget`）在 VSC 仓定义 1 处（`compaction.mjs:18`）+ 导入与使用 2 处
    （`loop.mjs:22/116/121`）；`run.mjs:19-20` 的 re-export 面**不含**该常量——替换零外溢。
-7. **既有锁零伤**：`test/advisor-chain-guards.test.mjs（W12 已退役——删除记录见批次档 §5）`（T-VG1–T-VG15（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5））与 `test/advisor-guard-completion.test.mjs（W12 已退役——删除记录见批次档 §5）`
-   （T-VG16（W12 已退役——删除记录见批次档 §5）–T-VG21（W12 已退役——删除记录见批次档 §5））零引用该常量；AC-VG3 的 grep 锚 `compactMessages(messages, pinned)`（`loop.mjs:120` 调用点）
+7. **既有锁零伤**：`test/advisor-chain-guards.test.mjs（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）`（T-VG1–T-VG15（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5））与 `test/advisor-guard-completion.test.mjs（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）`
+   （T-VG16（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）–T-VG21（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5））零引用该常量；AC-VG3 的 grep 锚 `compactMessages(messages, pinned)`（`loop.mjs:120` 调用点）
    原位不动 ⇒ 继续命中。
 
 ### 15.3 方案选型对比
@@ -971,7 +971,7 @@ async 点火路径；同步评审阻塞回合、父侧无并发写时刻）。
 
 | # | 候选方案 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
 |---|---|---|---|---|
-| 1 | **`providerSpec` 经 `../specs.mjs`** | 与 CLI 同真值源（模型表 × provider 级覆盖）；本模块惯例——`loop.mjs:17` 的 `specForModel` 同面；零新参数 / 零新配置面 | 派生结果无回显面——以纯函数单测 + provider 覆盖双向用例锁（T-CB1（W12 已退役——删除记录见批次档 §5） / T-CB4（W12 已退役——删除记录见批次档 §5）） | **选定** |
+| 1 | **`providerSpec` 经 `../specs.mjs`** | 与 CLI 同真值源（模型表 × provider 级覆盖）；本模块惯例——`loop.mjs:17` 的 `specForModel` 同面；零新参数 / 零新配置面 | 派生结果无回显面——以纯函数单测 + provider 覆盖双向用例锁（T-CB1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） / T-CB4（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）） | **选定** |
 | 2 | `../config.mjs` 直连（同函数另一再导出面） | 同一函数对象、语义零差；但与本模块既有 import 惯例（specs.mjs 面）不一致——跨端对读多一处形式歧义 | — | 否决（无收益的形式偏离） |
 | 3 | 循环入口注入（`runAdvisorReview` 算好传入） | 显式可测；但派生逻辑两处（生产 + 测试）需同步，且要动 11 参签名；循环所持 provider 即评审真实 provider ⇒ 注入 = 重复派生 | — | 否决（CLI D-CB2 同款否决） |
 
@@ -985,7 +985,7 @@ async 点火路径；同步评审阻塞回合、父侧无并发写时刻）。
 
 ### 15.4 契约一：预算派生（本端原文——逐字函数语义）
 
-`src/advisor/compaction.mjs（W12 已迁核——现体见批次档 §5）` 限额族内：`MAX_CONTEXT_TOKENS` **已退场**（现体 = `advisorContextBudget`），新增常量与纯函数（`providerSpec` 自
+`src/advisor/compaction.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）` 限额族内：`MAX_CONTEXT_TOKENS` **已退场**（现体 = `advisorContextBudget`），新增常量与纯函数（`providerSpec` 自
 `../specs.mjs` 导入——与 `loop.mjs:17` 同源面）：
 
 ```js
@@ -1030,7 +1030,7 @@ export function advisorContextBudget(provider) {
 | 1 | 压缩触发 | `loop.mjs:116`——`currentTokens > MAX_CONTEXT_TOKENS * 0.8` | `currentTokens > budget.compactAt` | 触发线 = 判死线 × 0.8（关系零改） |
 | 2 | 判死 | `loop.mjs:121`——`estimateTokens(messages) > MAX_CONTEXT_TOKENS` | `estimateTokens(messages) > budget.limit` | 压缩后仍超 ⇒ `context_limit` 尾（逐字零改） |
 
-- 导入面：`loop.mjs:20-24` 导入块——`MAX_CONTEXT_TOKENS` 已退场、`advisorContextBudget` 入列（同块其余零改；源 = `src/advisor/compaction.mjs（W12 已迁核——现体见批次档 §5）`）。
+- 导入面：`loop.mjs:20-24` 导入块——`MAX_CONTEXT_TOKENS` 已退场、`advisorContextBudget` 入列（同块其余零改；源 = `src/advisor/compaction.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`）。
 - **零改余项**（逐字不动）：`[Context compacted:` 提示（`:117`）、`compactMessages(messages, pinned)` 调用点
   （`:120`）、二次估算与分支结构、判死尾文案（`:124`）、`turns` / `toolCallCount` / `reviewTextProduced` 计数、
   超时 / 中止 / 硬墙面（§13.4 契约五）。
@@ -1062,7 +1062,7 @@ export function advisorContextBudget(provider) {
    （`loop.mjs:17` 的 `specForModel` 同面）。
 2. **`providerSpec` 实现形**：本端 `config.mjs:142-149` 对 `context == null` 提前返回；CLI `model-specs.mjs:174-179`
    经 `Number()` + NaN 兜底——实测等价（非法 / 缺省 / `null` 三态均回落模型表原值；整数 > 0 → ×1024）。
-3. **文本与行位自持**：注释与行号为 VSC 原文（非逐字拷贝）；一致由本端 T-CB1（W12 已退役——删除记录见批次档 §5）–T-CB5（W12 已退役——删除记录见批次档 §5） 断言守（T-CB6 已退场——整删，删除记录 = `TESTING.md` §8.1（`:118`））。
+3. **文本与行位自持**：注释与行号为 VSC 原文（非逐字拷贝）；一致由本端 T-CB1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）–T-CB5（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 断言守（T-CB6 已退场——整删，删除记录 = `TESTING.md` §8.1（`:118`））。
 
 ### 15.8 受影响文件全清单（行数注记 = 当前 → 预计；口径 = `N lines total`）
 
@@ -1070,9 +1070,9 @@ export function advisorContextBudget(provider) {
 
 | # | 文件（VSC 仓） | 行数注记 | 变更 | 档位结论 |
 |---|---|---|---|---|
-| 1 | `src/advisor/compaction.mjs（W12 已迁核——现体见批次档 §5）` | 160 → ~176 | 常量退场 + 预算纯函数 + `providerSpec` 导入 | ≤300 ✓（余量充裕） |
-| 2 | `src/advisor/loop.mjs（W12 已迁核——现体见批次档 §5）` | 278 → ~280 | 导入换名 + 预算一次性派生 + 两处消费 | ≤300 ✓（余量 ~20；越 300 须停下报告——不硬压行） |
-| 3 | `test/advisor-context-budget.test.mjs（W12 已退役——删除记录见批次档 §5）` | 新 → ~130–140 | T-CB1（W12 已退役——删除记录见批次档 §5）–T-CB5（W12 已退役——删除记录见批次档 §5）（5 例在役；T-CB6 已退场——整删，删除记录 = `TESTING.md` §8.1（`:118`）） | 新档（≤500；**入 `test/files.mjs` 登记**） |
+| 1 | `src/advisor/compaction.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）` | 160 → ~176 | 常量退场 + 预算纯函数 + `providerSpec` 导入 | ≤300 ✓（余量充裕） |
+| 2 | `src/advisor/loop.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）` | 278 → ~280 | 导入换名 + 预算一次性派生 + 两处消费 | ≤300 ✓（余量 ~20；越 300 须停下报告——不硬压行） |
+| 3 | `test/advisor-context-budget.test.mjs（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）` | 新 → ~130–140 | T-CB1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）–T-CB5（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）（5 例在役；T-CB6 已退场——整删，删除记录 = `TESTING.md` §8.1（`:118`）） | 新档（≤500；**入 `test/files.mjs` 登记**） |
 | 4 | `test/files.mjs` | 55 → 56 | 新测档登记（显式清单 +1） | — |
 
 **文档域（eng-designer 写域——本设计者已落）**
@@ -1094,7 +1094,7 @@ export function advisorContextBudget(provider) {
 | D-CBV3 | 导出形态照 CLI（`CONTEXT_LIMIT_RATIO` 导出 / `COMPACT_TRIGGER_RATIO` 私有） | 跨端对读零歧义 + 契约面同形。否决：两系数全私有（无收益的形式偏离） |
 | D-CBV4 | **原地替换常量、零别名** | 表 2——消费面 grep 实测单点。否决：别名 / 保留常量 + 并列函数 |
 | D-CBV5 | 128K 档线位变化**采纳**（触发 96K → 81.92K；判死 120K → 102.4K） | CLI D-CB6 同源理由（现状 93.75% 窗占比对估算误差无头寸）；本端独立复核：`providerSpec` 语义一致 ⇒ 同结论 |
-| D-CBV6 | 判定族 / 尾文案 / 压缩规则**零改** | 缺陷本体是「上限来源」；§13.4 契约四已被 T-VG1–T-VG15（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 锁 |
+| D-CBV6 | 判定族 / 尾文案 / 压缩规则**零改** | 缺陷本体是「上限来源」；§13.4 契约四已被 T-VG1–T-VG15（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 锁 |
 | D-CBV7 | **不新增 advisor 专用配置项** | 覆盖能力已由 `providers[].context` 提供（`config.mjs:142-149`）；advisor 专属旋钮 = 第二真值源（CLI D-CB3 同款） |
 | D-CBV8 | 测试档**独立新立** + `test/files.mjs` 登记 | VSC 显式清单纪律（不登记不跑）；新档 ≤500（同口径 §13.5 #9 / #11） |
 | D-CBV9 | 本批 **VSC 单端**；CLI 仓零写入 | 各端独立实现纪律；CLI 档登记收口 = 父侧（§15.13 #1 / #2） |
@@ -1121,11 +1121,11 @@ export function advisorContextBudget(provider) {
 
 | 用例 | 类别 | 输入 | 预期输出（断言） | 映射 |
 |---|---|---|---|---|
-| T-CB1（W12 已退役——删除记录见批次档 §5） | 正常 | 纯函数 `advisorContextBudget(x)`：1M 模型 / 128K 模型 / 未知模型名 / provider 级 `context:64` / `null` | `{limit:800_000, compactAt:640_000}`；`{102_400, 81_920}`（128K）；未知 → 回退同值；`{52_428, 41_942}`；`null` → 默认回退不抛（五组逐一断言） | F27 |
-| T-CB2（W12 已退役——删除记录见批次档 §5） | 错误（回归锁） | `_runAdvisorToolLoop` + 1M 模型 provider + ~19.7 万 tokens 上下文（12 × 64K 字符工具结果，消息数 ≤20）+ `seams.chat` 返回终稿 | 输出**不含** `Advisor: context window limit`；含终稿文本；`advisorIncompleteMarker(out) === null`（改前该形态必判死——120K 帽） | F27 |
-| T-CB3（W12 已退役——删除记录见批次档 §5） | 对照 | 同上下文 + 128K 模型 provider；同上下文 + 未知模型名 provider | 两者均以截断尾收尾（族前缀 `Advisor: context window limit reached (` 逐字）；`advisorIncompleteMarker → "context_limit"`（机械线不失效 + 未知模型回退判据） | F27 |
-| T-CB4（W12 已退役——删除记录见批次档 §5） | 边界 | 同上下文 + `{model:"deepseek-flash", context:64}`（收紧）；同上下文 + `{model:"glm-4", context:1024}`（放宽） | 前者判死、后者不判死（**同量上下文两结果**——provider 级覆盖双向生效，证 `providerSpec` 接线面而非 `specForModel` 单源） | F27 |
-| T-CB5（W12 已退役——删除记录见批次档 §5） | 边界 | 1M 模型 provider + ~73.7 万 tokens（45 × 64K 字符工具结果——消息数 > 20，触发压缩真裁剪） | 输出含 `[Context compacted:`（派生触发线在位）且不含截断尾；压缩后估算 < 判死线（就地断言 `estimateTokens(messages) < 800_000`）；评审正常收尾 | F27 |
+| T-CB1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 正常 | 纯函数 `advisorContextBudget(x)`：1M 模型 / 128K 模型 / 未知模型名 / provider 级 `context:64` / `null` | `{limit:800_000, compactAt:640_000}`；`{102_400, 81_920}`（128K）；未知 → 回退同值；`{52_428, 41_942}`；`null` → 默认回退不抛（五组逐一断言） | F27 |
+| T-CB2（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 错误（回归锁） | `_runAdvisorToolLoop` + 1M 模型 provider + ~19.7 万 tokens 上下文（12 × 64K 字符工具结果，消息数 ≤20）+ `seams.chat` 返回终稿 | 输出**不含** `Advisor: context window limit`；含终稿文本；`advisorIncompleteMarker(out) === null`（改前该形态必判死——120K 帽） | F27 |
+| T-CB3（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 对照 | 同上下文 + 128K 模型 provider；同上下文 + 未知模型名 provider | 两者均以截断尾收尾（族前缀 `Advisor: context window limit reached (` 逐字）；`advisorIncompleteMarker → "context_limit"`（机械线不失效 + 未知模型回退判据） | F27 |
+| T-CB4（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 边界 | 同上下文 + `{model:"deepseek-flash", context:64}`（收紧）；同上下文 + `{model:"glm-4", context:1024}`（放宽） | 前者判死、后者不判死（**同量上下文两结果**——provider 级覆盖双向生效，证 `providerSpec` 接线面而非 `specForModel` 单源） | F27 |
+| T-CB5（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 边界 | 1M 模型 provider + ~73.7 万 tokens（45 × 64K 字符工具结果——消息数 > 20，触发压缩真裁剪） | 输出含 `[Context compacted:`（派生触发线在位）且不含截断尾；压缩后估算 < 判死线（就地断言 `estimateTokens(messages) < 800_000`）；评审正常收尾 | F27 |
 | T-CB6 | 正常（静态锚） | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:118`）） | F27 / N19 |
 
 > 测试基建：单测零网络（循环 `seams.chat` 覆写——`??` 默认回退，生产路径不可达）、零真实 LLM、零长等待
@@ -1135,10 +1135,10 @@ export function advisorContextBudget(provider) {
 
 | AC | 验收内容（机判） | 回指 |
 |---|---|---|
-| AC-CB1 | 派生与两档：T-CB1（W12 已退役——删除记录见批次档 §5） 绿（五组输入 × `{limit, compactAt}` 逐断言 + 确定性）；`advisorContextBudget` 纯函数静态面（`compaction.mjs` 内无 I/O、无状态写入）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1） | F27 |
-| AC-CB2 | 核心缺陷闭合：T-CB2（W12 已退役——删除记录见批次档 §5） 绿（1M 模型 ~19.7 万 tokens **不以** `context_limit` 收尾）+ T-CB3（W12 已退役——删除记录见批次档 §5） 绿（128K / 未知模型同量上下文仍以截断尾收尾——机械线与回退判据双锁） | F27 |
-| AC-CB3 | 接线面 = `providerSpec`：T-CB4（W12 已退役——删除记录见批次档 §5） 绿（provider 级 `context` 覆盖**双向**翻转判定结果） | F27 |
-| AC-CB4 | 零回归：T-CB5（W12 已退役——删除记录见批次档 §5） 绿（派生触发线在位）；既有 `advisor-chain-guards`（T-VG1–T-VG15（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5））+ `advisor-guard-completion`（T-VG16（W12 已退役——删除记录见批次档 §5）–T-VG21（W12 已退役——删除记录见批次档 §5））全绿；`npm test` 快层全绿；CLI 仓零改动（`git status` 判据） | N19 |
+| AC-CB1 | 派生与两档：T-CB1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 绿（五组输入 × `{limit, compactAt}` 逐断言 + 确定性）；`advisorContextBudget` 纯函数静态面（`compaction.mjs` 内无 I/O、无状态写入）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1） | F27 |
+| AC-CB2 | 核心缺陷闭合：T-CB2（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 绿（1M 模型 ~19.7 万 tokens **不以** `context_limit` 收尾）+ T-CB3（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 绿（128K / 未知模型同量上下文仍以截断尾收尾——机械线与回退判据双锁） | F27 |
+| AC-CB3 | 接线面 = `providerSpec`：T-CB4（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 绿（provider 级 `context` 覆盖**双向**翻转判定结果） | F27 |
+| AC-CB4 | 零回归：T-CB5（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 绿（派生触发线在位）；既有 `advisor-chain-guards`（T-VG1–T-VG15（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5））+ `advisor-guard-completion`（T-VG16（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）–T-VG21（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5））全绿；`npm test` 快层全绿；CLI 仓零改动（`git status` 判据） | N19 |
 | AC-CB5 | 文档-实现一致 + 旧帽退场：旧帽面随 T-CB6 整删退场（删除记录 = `TESTING.md` §8.1（`:118`））；VSC 仓 `node scripts/check-doc-width.mjs` 新增违规 0（宽度 + V1/V2） | N19 |
 
 ### 15.13 边界（本批不做 + 登记项）
@@ -1153,7 +1153,7 @@ export function advisorContextBudget(provider) {
   3. `docs/TODO.md` 需求池行状态推进（CLI 仓——父侧写域；CLI §16.8 #4 已注）
   4. `estimateTokens` CJK 低估修正（CLI §16.8 #2 同族——另批评估）
 
-**计数（D3）**：用例 6（编号 T-CB1（W12 已退役——删除记录见批次档 §5）–T-CB6；在役 5——T-CB6 已退场，删除记录 = `TESTING.md` §8.1（`:118`））· AC 5（AC-CB1–AC-CB5）· 契约 2 条（§15.4 / §15.5）· 实施域 4 项
+**计数（D3）**：用例 6（编号 T-CB1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）–T-CB6；在役 5——T-CB6 已退场，删除记录 = `TESTING.md` §8.1（`:118`））· AC 5（AC-CB1–AC-CB5）· 契约 2 条（§15.4 / §15.5）· 实施域 4 项
 （2 改 + 1 新测档 + 1 登记）· 文档域 1 档；需求 = F27 / N19（§10，CLI 仓）。
 
 ## 16. 同源镜像收口（群 A——同步记账拒绝登记 + D5 下界定义句同步）（2026-09-11）
@@ -1173,12 +1173,12 @@ CLI 第 13 批已裁（refused launch 既不记调用也不记轮次）；本端
 
 | # | 拒绝点 | 现状行为 | 处置 |
 |---|---|---|---|
-| 1 | `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）:197`（async 只限 depth-0——depth>0 显式 async 拒） | 返回拒文；记账分支按 `advisorAsync` 谓词通常跳过 | 登记（统一形态） |
+| 1 | `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:197`（async 只限 depth-0——depth>0 显式 async 拒） | 返回拒文；记账分支按 `advisorAsync` 谓词通常跳过 | 登记（统一形态） |
 | 2 | `:213`（code 评审无 scope） | 返回拒文；sync 路径被误记 | 登记（本类核心） |
 | 3 | `:223`（design 文档非法） | 同上 | 登记（本类核心） |
 | 4 | `:240`（async 启动拒——`launchAsyncAdvisor` 返回 `r.error`：池满 / 同 scope 等） | 返回拒文；记账通常跳过 | 登记（统一形态） |
-| 5 | sync 启动拒（`runAdvisorReview` 返回 `ADVISOR_LAUNCH_REFUSAL_PREFIX` 开头——`src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）:153`） | 被误记 | 登记（前缀判定——与 CLI 同款） |
-| 6 | sync cap 拒（`src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）:120-135`——「convergence cap reached」） | 被误记 | 登记（新增工具层预检——与 CLI 同位同谓词） |
+| 5 | sync 启动拒（`runAdvisorReview` 返回 `ADVISOR_LAUNCH_REFUSAL_PREFIX` 开头——`src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:153`） | 被误记 | 登记（前缀判定——与 CLI 同款） |
+| 6 | sync cap 拒（`src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:120-135`——「convergence cap reached」） | 被误记 | 登记（新增工具层预检——与 CLI 同位同谓词） |
 
 **载体（VSC 自持形态——语义同源、实现独立）**：per-call `ctx._advisorRefused = true`（工具调用上下文标记）。
 CLI 用 `_toolCallId` + `agent._advisorRefusals` Set；本端无 `_toolCallId` 线程，且消费点与调用点在**同一循环**内（单点消费）——
@@ -1190,29 +1190,29 @@ CLI 用 `_toolCallId` + `agent._advisorRefusals` Set；本端无 `_toolCallId` �
 2. `advisor.mjs` 各拒绝 return 之前置位（#1–#4）；#5 = run 调用后对结果前缀判定（`String(result).startsWith(ADVISOR_LAUNCH_REFUSAL_PREFIX)`）置位；
 3. #6 = 新增工具层 cap 预检（位置 = **async 分支之后、sync 启动之前（sync-only——async 分支先返回，不经此预检）**——与 CLI 同位；**同谓词** = `reviewType !== "design" && (agent._advisorRound || 0) >= MAX_ADVISOR_ROUNDS`），
    返回 `buildCapMessage(agent)` 并置位；
-4. `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）`：抽取**导出** `buildCapMessage(agent)`（现值 = `:126-134` 拼装）——`runAdvisorReview` 内部改用同一 builder，**输出逐字零变**（双源消解）；
+4. `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`：抽取**导出** `buildCapMessage(agent)`（现值 = `:126-134` 拼装）——`runAdvisorReview` 内部改用同一 builder，**输出逐字零变**（双源消解）；
 5. 记账块（sync 分支）：`toolCtx._advisorRefused === true` → **不置 called / 不推 round**（拒绝 = 未跑）；否则既有置位（零回归）。
    async ack 路径零改（既有 `advisorAsync` 谓词继续跳过记账——settle 面记账不动）。
 
-**用例表（T-MA6-1（W12 已退役——删除记录见批次档 §5）–9——正常 / 边界 / 错误）**：
+**用例表（T-MA6-1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）–9——正常 / 边界 / 错误）**：
 
 | # | 类 | 输入 | 预期输出（断言） | 映射 |
 |---|---|---|---|---|
-| T-MA6-1（W12 已退役——删除记录见批次档 §5） | 错误 | sync code 评审无 scope（stub agent + depth 0 + `async:false`）→ 走记账块 | 拒文原样返回；`_calledAdvisorThisRun === false`；`_advisorRound` 不变 | AC-MA6-1 |
-| T-MA6-2（W12 已退役——删除记录见批次档 §5） | 错误 | sync design 评审文档非法 | 同上（拒 + 零记账） | AC-MA6-1 |
-| T-MA6-3（W12 已退役——删除记录见批次档 §5） | 错误 | sync 启动拒（run 返回前缀串——seam 覆写） | 拒文返回；零记账 | AC-MA6-1 |
-| T-MA6-4（W12 已退役——删除记录见批次档 §5） | 错误 | cap 拒（`_advisorRound = MAX_ADVISOR_ROUNDS` + sync code） | 返回 `buildCapMessage` 逐字；零记账；零 LLM（run 未被调） | AC-MA6-1 |
-| T-MA6-5（W12 已退役——删除记录见批次档 §5） | 边界 | async 启动拒（池满模拟 `r.error`） | 拒文返回；零记账（既有跳过行为不回归） | AC-MA6-1 |
-| T-MA6-6（W12 已退役——删除记录见批次档 §5） | 正常 | sync code 评审正常完成（seam 终稿） | `_calledAdvisorThisRun === true`；`_advisorRound` +1（零回归对照） | AC-MA6-2 |
-| T-MA6-7（W12 已退役——删除记录见批次档 §5） | 边界 | `buildCapMessage` 直调对拍：run.mjs 内部拒绝与工具层预检 | 两处输出逐字相等（builder 单源） | AC-MA6-3 |
-| T-MA6-8（W12 已退役——删除记录见批次档 §5） | 边界 | async 对照：`_advisorRound = MAX_ADVISOR_ROUNDS` + `async:true` + depth 0 → 走 async 分支 | cap 预检**不触发**（sync-only——无 `buildCapMessage` 文案、零误拒）；async 启动路径照常（seam 判定） | AC-MA6-1 |
-| T-MA6-9（W12 已退役——删除记录见批次档 §5） | 边界 | async 且 depth>0（显式 async 拒——类 #1；stub agent） | 拒文原样返回；零记账锁定（既有 `advisorAsync` 跳过路径：`_calledAdvisorThisRun === false`、`_advisorRound` 不变） | AC-MA6-1 |
+| T-MA6-1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 错误 | sync code 评审无 scope（stub agent + depth 0 + `async:false`）→ 走记账块 | 拒文原样返回；`_calledAdvisorThisRun === false`；`_advisorRound` 不变 | AC-MA6-1 |
+| T-MA6-2（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 错误 | sync design 评审文档非法 | 同上（拒 + 零记账） | AC-MA6-1 |
+| T-MA6-3（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 错误 | sync 启动拒（run 返回前缀串——seam 覆写） | 拒文返回；零记账 | AC-MA6-1 |
+| T-MA6-4（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 错误 | cap 拒（`_advisorRound = MAX_ADVISOR_ROUNDS` + sync code） | 返回 `buildCapMessage` 逐字；零记账；零 LLM（run 未被调） | AC-MA6-1 |
+| T-MA6-5（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 边界 | async 启动拒（池满模拟 `r.error`） | 拒文返回；零记账（既有跳过行为不回归） | AC-MA6-1 |
+| T-MA6-6（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 正常 | sync code 评审正常完成（seam 终稿） | `_calledAdvisorThisRun === true`；`_advisorRound` +1（零回归对照） | AC-MA6-2 |
+| T-MA6-7（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 边界 | `buildCapMessage` 直调对拍：run.mjs 内部拒绝与工具层预检 | 两处输出逐字相等（builder 单源） | AC-MA6-3 |
+| T-MA6-8（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 边界 | async 对照：`_advisorRound = MAX_ADVISOR_ROUNDS` + `async:true` + depth 0 → 走 async 分支 | cap 预检**不触发**（sync-only——无 `buildCapMessage` 文案、零误拒）；async 启动路径照常（seam 判定） | AC-MA6-1 |
+| T-MA6-9（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 边界 | async 且 depth>0（显式 async 拒——类 #1；stub agent） | 拒文原样返回；零记账锁定（既有 `advisorAsync` 跳过路径：`_calledAdvisorThisRun === false`、`_advisorRound` 不变） | AC-MA6-1 |
 
 **AC（机判）**：
 
-- AC-MA6-1：T-MA6-1（W12 已退役——删除记录见批次档 §5）–T-MA6-5（W12 已退役——删除记录见批次档 §5） + T-MA6-9（W12 已退役——删除记录见批次档 §5） 绿（六类拒绝全覆盖：置位否 ∧ 轮次不变 ∧ 文案原样——类 #1 = T-MA6-9（W12 已退役——删除记录见批次档 §5） 走既有跳过路径）；T-MA6-8（W12 已退役——删除记录见批次档 §5） 绿（async 对照——cap 预检 sync-only）；
-- AC-MA6-2：T-MA6-6（W12 已退役——删除记录见批次档 §5） 绿（对照零回归——正常 sync 仍记账）；
-- AC-MA6-3：T-MA6-7（W12 已退役——删除记录见批次档 §5） 绿（builder 单源）；既有 `advisor-chain-guards` / `advisor-guard-completion` / `eng-settlement` 族全绿 + VSC 快层全绿。
+- AC-MA6-1：T-MA6-1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）–T-MA6-5（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） + T-MA6-9（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 绿（六类拒绝全覆盖：置位否 ∧ 轮次不变 ∧ 文案原样——类 #1 = T-MA6-9（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 走既有跳过路径）；T-MA6-8（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 绿（async 对照——cap 预检 sync-only）；
+- AC-MA6-2：T-MA6-6（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 绿（对照零回归——正常 sync 仍记账）；
+- AC-MA6-3：T-MA6-7（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 绿（builder 单源）；既有 `advisor-chain-guards` / `advisor-guard-completion` / `eng-settlement` 族全绿 + VSC 快层全绿。
 
 ### 16.2 条目 A7：D5 下界定义句同步（提示词双源 + ENGINEERING-MODE）
 
@@ -1258,7 +1258,7 @@ CLI 用 `_toolCallId` + `agent._advisorRefusals` Set；本端无 `_toolCallId` �
 - 子代理合入面 / bash 等拒绝盲区（§14.11 #3/#4）不在本批（群 B 承接）；
 - **零 UI 面**（全部落工具返回值与 doc/prompt 文本——无面板 / webview 改动；无 `open` 项）。
 
-**计数（D3）**：条目 2（A6 / A7）· 用例 13（T-MA6-1（W12 已退役——删除记录见批次档 §5）–9 + T-MA7-1–4（已退场——设计期编号；现态不在册））· AC 6（AC-MA6-1–3 · AC-MA7-1–3）·
+**计数（D3）**：条目 2（A6 / A7）· 用例 13（T-MA6-1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）–9 + T-MA7-1–4（已退场——设计期编号；现态不在册））· AC 6（AC-MA6-1–3 · AC-MA7-1–3）·
 实施域 coder 触面 = `execute-tools.mjs` / `advisor.mjs` / `run.mjs` / 双源 `discipline-engineering.md`（4 档 + 测试）；
 设计者已落 = 本档 §16 + §14.11 收口注 + `ENGINEERING-MODE.md` §6 bullet。
 
@@ -1278,12 +1278,12 @@ CLI 用 `_toolCallId` + `agent._advisorRefusals` Set；本端无 `_toolCallId` �
 
 ### 17.1 条目 B2：结算面拒发不记账（消费点守卫）
 
-**问题（复核 as-of 2026-09-11）**：`advisorSettleAccounting（W12 已迁核——现体见批次档 §5）`（`src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）:345-441`）已对启动拒绝报告做两处守卫——
+**问题（复核 as-of 2026-09-11）**：`advisorSettleAccounting（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）`（`src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:345-441`）已对启动拒绝报告做两处守卫——
 `_calledAdvisorThisRun` 不置位（`:396-401`——F24/§14.3 语义：未发起 = 无评审产出）；但记录段整段执行：
 `record.round = Math.max(record.round ?? 0, entry.round ?? 1)`（`:426-427`——拒绝的新实例 0→1）与 `record.priorOutput`
 （拒绝文案 ≥200 字符命中 `looksLikeReview` 启发式——`:430-433`）⇒ **「未发起请求」被记成「有轮次、有前轮输出」**：
 后续同 scope 续跑在数值上多耗一轮、prior 上下文被拒文污染（续跑的评审者把拒绝说明当「前轮评审输出」读）。
-拒绝可达性 = 防御纵深（工具路径恒签发 token ⇒ 正常链不可达——`src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）:41-45` 自注）；但该面的正确性应与
+拒绝可达性 = 防御纵深（工具路径恒签发 token ⇒ 正常链不可达——`src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:41-45` 自注）；但该面的正确性应与
 同步面（§16.1：`ctx._advisorRefused` 不记轮）同构。CLI 对位结构同款（`advisor-settle.mjs:133` 无条件 `run.round++` +
 `:227-229` prior 写入）——本批零改 CLI（§17.7 登记）。
 
@@ -1328,8 +1328,8 @@ CLI 用 `_toolCallId` + `agent._advisorRefusals` Set；本端无 `_toolCallId` �
 
 ### 17.3 条目 B4：评审估算器 CJK 加权（VSC 面）
 
-**问题**：`src/advisor/compaction.mjs（W12 已迁核——现体见批次档 §5）:38-44`——`Math.ceil((content.length + toolCalls.length) / 4)` 扁平式；CJK 低估 ~3-4×。
-消费点：`src/advisor/loop.mjs（W12 已迁核——现体见批次档 §5）:117 / 123 / 126`（compactAt / limit / 判死尾计数）+ `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）:212`（显示统计）。
+**问题**：`src/advisor/compaction.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:38-44`——`Math.ceil((content.length + toolCalls.length) / 4)` 扁平式；CJK 低估 ~3-4×。
+消费点：`src/advisor/loop.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:117 / 123 / 126`（compactAt / limit / 判死尾计数）+ `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）:212`（显示统计）。
 
 **修**：`estimateText`（`src/provider/rate.mjs:68-86`——已导出，ASCII/4 + 非 ASCII/1）替换扁平式：`estimateText(content + toolCalls)`——（W10 已迁核——现体 `thincoder-core/provider/rate.mjs`）
 纯 ASCII 与旧式**逐值相等**（同 ceil 式）；CJK 升档；微差为零（空串 → 0 与旧式一致）。import 面：`src/provider/rate.mjs` 仅依赖 `specs.mjs`——叶子向无环。（W10 已迁核——现体 `thincoder-core/provider/rate.mjs`）
@@ -1344,13 +1344,13 @@ CLI 用 `_toolCallId` + `agent._advisorRefusals` Set；本端无 `_toolCallId` �
 
 | # | 文件 | 现 | 预计 | 改动点 |
 |---|---|---|---|---|
-| 1 | `src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）` | 493 | ≤498（**贴线注记**——越 500 停下报告） | B2 守卫（+~3）+ B5 接线（`AGENT-LOOP.md §16`——+~3） |
+| 1 | `src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）` | 493 | ≤498（**贴线注记**——越 500 停下报告） | B2 守卫（+~3）+ B5 接线（`AGENT-LOOP.md §16`——+~3） |
 | 2 | `src/agent/execute-tools.mjs` | 483 | ~489 | B3 契约 1/2（+~6） |
 | 3 | `src/agent-tools/batch-segment.mjs`（W9 已迁核——现体 `thincoder-core/agent-tools/batch-segment.mjs`） | 185 | ~188 | B3 契约 3（+~3） |
-| 4 | `src/advisor/compaction.mjs（W12 已迁核——现体见批次档 §5）` | 171 | ~174 | B4（+3） |
-| 5 | `test/advisor-guard-completion.test.mjs（W12 已退役——删除记录见批次档 §5）` | 221 | ~290 | T-RS1（W12 已退役——删除记录见批次档 §5）~2 + T-FZ1（W12 已退役——删除记录见批次档 §5）~2 + T-FZ4（W12 已退役——删除记录见批次档 §5） |
+| 4 | `src/advisor/compaction.mjs（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）` | 171 | ~174 | B4（+3） |
+| 5 | `test/advisor-guard-completion.test.mjs（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）` | 221 | ~290 | T-RS1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）~2 + T-FZ1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）~2 + T-FZ4（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） |
 | 6 | `test/batch-segment.test.mjs` | 221 | ~245 | T-FZ3 |
-| 7 | `test/advisor-context-budget.test.mjs（W12 已退役——删除记录见批次档 §5）` | 155 | ~190 | T-EST1（W12 已退役——删除记录见批次档 §5）~2 |
+| 7 | `test/advisor-context-budget.test.mjs（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）` | 155 | ~190 | T-EST1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）~2 |
 
 **贴线注记（advisor-async.mjs——三处改动叠加）**：若实施越 500：先落 B2+B5 实测行数；越线即停下报告（备选拆分面 = `inflightDesignReviewConflict`
 对位 CLI `advisor-settle.mjs` 拆出——由评审裁定，不硬压）。
@@ -1361,22 +1361,22 @@ CLI 用 `_toolCallId` + `agent._advisorRefusals` Set；本端无 `_toolCallId` �
 
 | # | 类型 | 输入 | 预期输出（断言） | 映射 |
 |---|---|---|---|---|
-| T-RS1（W12 已退役——删除记录见批次档 §5） | 正常 | `settleAdvisorReview（W12 已迁核——现体见批次档 §5）` 直驱（桩 parent + 新实例 record round=0 / prior=null；report = 拒绝前缀串） | `record.round === 0`、`record.priorOutput === null`、`record.state === "settled"`、`_calledAdvisorThisRun === false` | F30 |
-| T-RS2（W12 已退役——删除记录见批次档 §5） | 边界 | 续跑实例（record round=3 / prior="PRIOR"）拒绝结算；对照：普通 design 报告 | 前者 `round === 3` 且 `priorOutput === "PRIOR"`（逐值不变）；对照照常推进（零回归） | F30 |
-| T-FZ1（W12 已退役——删除记录见批次档 §5） | 错误 | `executeToolBatches` 集成：在途设计评审 × `file_ops`（move / copy 目标 = 被审档） | 结果逐字含 `write refused — design review`；源 / 目标零变动（读回断言）；射程外 file_ops 放行（成对） | F31 |
-| T-FZ2（W12 已退役——删除记录见批次档 §5） | 正常 | 成功 `file_ops`（move / copy 两形态）+ 读 `_fileMutEvents` | move / rename 记源 + 目标；copy 仅目标（记账断言） | F31 |
+| T-RS1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 正常 | `settleAdvisorReview（W12 已迁核——现体见批次档 §5）（W12 已迁核——现体见批次档 §5）` 直驱（桩 parent + 新实例 record round=0 / prior=null；report = 拒绝前缀串） | `record.round === 0`、`record.priorOutput === null`、`record.state === "settled"`、`_calledAdvisorThisRun === false` | F30 |
+| T-RS2（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 边界 | 续跑实例（record round=3 / prior="PRIOR"）拒绝结算；对照：普通 design 报告 | 前者 `round === 3` 且 `priorOutput === "PRIOR"`（逐值不变）；对照照常推进（零回归） | F30 |
+| T-FZ1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 错误 | `executeToolBatches` 集成：在途设计评审 × `file_ops`（move / copy 目标 = 被审档） | 结果逐字含 `write refused — design review`；源 / 目标零变动（读回断言）；射程外 file_ops 放行（成对） | F31 |
+| T-FZ2（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 正常 | 成功 `file_ops`（move / copy 两形态）+ 读 `_fileMutEvents` | move / rename 记源 + 目标；copy 仅目标（记账断言） | F31 |
 | T-FZ3 | 正常 | `batch_segment` 成功写入（桩 agent 带 `_touchedFiles`）；错误路径对照 | 成功：`_touchedFiles` 含绑定档绝对路径；失败 / 拒绝路径零记账 | F31 |
-| T-FZ4（W12 已退役——删除记录见批次档 §5） | 正常 | 子代 file_ops（桩 child agent——`executeToolBatches` 驱动 move 成功）→ `mergeChildMutations(parent, { touchedFiles: child._touchedFiles })` | 子代 `_touchedFiles` 含源 + 目标（契约 2 同点）；合入后父侧 `_touchedFiles` 同含 + `history._fileMutEvents` 含二者（合入即记账——#7 判面判据） | F31 |
-| T-EST1（W12 已退役——删除记录见批次档 §5） | 正常 | `estimateTokens`：纯 ASCII 400 字符 | 100（与旧式逐值相等——零回归） | F32 |
-| T-EST2（W12 已退役——删除记录见批次档 §5） | 正常 | `estimateTokens`：CJK「中」×400；混合 200 ASCII + 200 CJK | 400（旧式 100）；混合 = 50 + 200 = 250 | F32 |
+| T-FZ4（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 正常 | 子代 file_ops（桩 child agent——`executeToolBatches` 驱动 move 成功）→ `mergeChildMutations(parent, { touchedFiles: child._touchedFiles })` | 子代 `_touchedFiles` 含源 + 目标（契约 2 同点）；合入后父侧 `_touchedFiles` 同含 + `history._fileMutEvents` 含二者（合入即记账——#7 判面判据） | F31 |
+| T-EST1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 正常 | `estimateTokens`：纯 ASCII 400 字符 | 100（与旧式逐值相等——零回归） | F32 |
+| T-EST2（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） | 正常 | `estimateTokens`：CJK「中」×400；混合 200 ASCII + 200 CJK | 400（旧式 100）；混合 = 50 + 200 = 250 | F32 |
 
 ### 17.6 验收标准（逐条回指需求——可机判）
 
 | AC | 判据 | 回指 |
 |---|---|---|
-| AC-B2-1 | T-RS1（W12 已退役——删除记录见批次档 §5） / T-RS2（W12 已退役——删除记录见批次档 §5） 绿（拒绝零记账 + 对照零回归） | F30 |
-| AC-B3-1 | T-FZ1（W12 已退役——删除记录见批次档 §5） / T-FZ2（W12 已退役——删除记录见批次档 §5） / T-FZ3 / T-FZ4（W12 已退役——删除记录见批次档 §5） 绿（拦 / 判两面 + 零落地断言 + 子代理合入） | F31 |
-| AC-B4-1 | T-EST1（W12 已退役——删除记录见批次档 §5） / T-EST2（W12 已退役——删除记录见批次档 §5） 绿（ASCII 逐值不变 + CJK 加权） | F32 |
+| AC-B2-1 | T-RS1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） / T-RS2（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 绿（拒绝零记账 + 对照零回归） | F30 |
+| AC-B3-1 | T-FZ1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） / T-FZ2（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） / T-FZ3 / T-FZ4（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 绿（拦 / 判两面 + 零落地断言 + 子代理合入） | F31 |
+| AC-B4-1 | T-EST1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） / T-EST2（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 绿（ASCII 逐值不变 + CJK 加权） | F32 |
 | AC-R-1 | 既有 `advisor-guard-completion` / `advisor-chain-guards` / `batch-segment` / `advisor-context-budget` 族全绿；VSC 快层全绿 | N22 |
 | AC-R-2 | 行数实测对表（advisor-async ≤500 贴线）；两仓 `check-doc-width` 新增违规 0；CLI 仓 B2 / B3 面零改动（`git status`） | N24 |
 
@@ -1389,7 +1389,7 @@ CLI 用 `_toolCallId` + `agent._advisorRefusals` Set；本端无 `_toolCallId` �
 - 不改 §15 预算两档比例；不改提示词 / ENGINEERING-MODE 档；§14.11 #3（sync 无在途窗口）不在本批（登记维持）；
 - **零 UI 面**（全部落拒绝串 / 记账面——无面板 / webview 改动；无 `open` 项）。
 
-**计数（D3）**：条目 3（B2 / B3 / B4-VSC）· 用例 8（T-RS1（W12 已退役——删除记录见批次档 §5）~2 + T-FZ1（W12 已退役——删除记录见批次档 §5）~4 + T-EST1（W12 已退役——删除记录见批次档 §5）~2）· AC 5（AC-B2-1 / AC-B3-1 / AC-B4-1 / AC-R-1 / AC-R-2）·
+**计数（D3）**：条目 3（B2 / B3 / B4-VSC）· 用例 8（T-RS1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）~2 + T-FZ1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）~4 + T-EST1（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）~2）· AC 5（AC-B2-1 / AC-B3-1 / AC-B4-1 / AC-R-1 / AC-R-2）·
 实施域 4 档改（advisor-async / execute-tools / batch-segment / advisor-compaction）+ 测试 3 档扩例；文档域已落（本节 + 收口注 + 载体表 + 变更记录）。
 
 ## 变更记录（历史折叠——详见 git log）
@@ -1416,10 +1416,10 @@ CLI 用 `_toolCallId` + `agent._advisorRefusals` Set；本端无 `_toolCallId` �
   compaction.mjs（§2 载体表同步）。
 - 2026-09-11（第 15 批——VSC 守卫收尾）：新增 §14（启动断言 / 冻结窗口 E 对位 / 收敛信号锁定）；
   §13.10 三面登记原位收口；§2 载体表同步。
-- 2026-09-11（VSC-GUARD-COMPLETION 批·修正轮）：评审后文档修正——三形态锁口径交叉引用（§14.5——第三形态归既有 T-VG7（W12 已退役——删除记录见批次档 §5） 自愈锁）· D-VGC3 跨端差异 3 处全列 + 登记位 · §14.2↔§14.6 行数口径统一 + 贴线预案（先落 helper 实测行数）；零契约语义变动。
+- 2026-09-11（VSC-GUARD-COMPLETION 批·修正轮）：评审后文档修正——三形态锁口径交叉引用（§14.5——第三形态归既有 T-VG7（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5） 自愈锁）· D-VGC3 跨端差异 3 处全列 + 登记位 · §14.2↔§14.6 行数口径统一 + 贴线预案（先落 helper 实测行数）；零契约语义变动。
 - 2026-09-11（VSC-GUARD-COMPLETION 批·交付后修正轮）：§14.3 尾句限定为同步面语义 · §14.11 #5 登记 async 结算面 launchRefused 残留（priorOutput / round 推进——与 CLI 对位一致，维持实现）；零契约语义变动。
 - 2026-09-11（ADVISOR-BUDGET-VSC-MIRROR 批——VSC 评审上下文预算镜像）：新增 §15（预算跟随模型窗口——`MAX_CONTEXT_TOKENS = 120_000` 退场；判死线 / 压缩触发改由 `providerSpec` 派生；判定族与六条尾文案零改）；§2 载体表同步。
 - 2026-09-11（群 A 批——VSC-MIRROR-SWEEP）：**新增 §16**（A6 同步记账拒绝登记——`ctx._advisorRefused` 载体 + 六类拒绝点 + cap 工具层预检 + `buildCapMessage` 单源；A7 D5 下界定义句三落点）；§14.11 #1/#2 原位收口注；零契约正文改动。
 - 2026-09-11（群 B 批——VSC-REVIEW-ASYNC-SWEEP）：**新增 §17**（B2 结算面拒发不记账——消费点守卫；B3 冻结窗口盲区收口——file_ops 拦 + 记 / batch_segment 记 / 五面登记；B4 评审估算器 CJK 加权 VSC 面）；§14.11 #4/#5 原位收口注；§2 载体表同步（advisor-async / execute-tools 两行）。
-- 2026-09-11（群 A 批·修正轮——设计评审轮次 1 #3/#4 落修）：§16.1 契约 #6 位置措辞定型（async 分支之后、sync 启动之前——sync-only 消歧）+ 用例补 T-MA6-8（W12 已退役——删除记录见批次档 §5）（async 对照）/ T-MA6-9（W12 已退役——删除记录见批次档 §5）（类 #1）；AC-MA6-1 覆盖闭口。纯措辞与用例补充、零语义。
-- 2026-09-11（群 B 批·修正轮——设计评审轮次 1 #1/#4 落修）：§17.2 契约 2 补 `_touchedFiles` 同点记账（子代理 file_ops 合入面闭合）+ 表 #7 理由句定型 + 用例补 T-FZ4（W12 已退役——删除记录见批次档 §5）（§17.5——7→8）；§17.4 贴线注「B2+B5」正名。纯覆盖补全与措辞、零语义。
+- 2026-09-11（群 A 批·修正轮——设计评审轮次 1 #3/#4 落修）：§16.1 契约 #6 位置措辞定型（async 分支之后、sync 启动之前——sync-only 消歧）+ 用例补 T-MA6-8（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）（async 对照）/ T-MA6-9（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）（类 #1）；AC-MA6-1 覆盖闭口。纯措辞与用例补充、零语义。
+- 2026-09-11（群 B 批·修正轮——设计评审轮次 1 #1/#4 落修）：§17.2 契约 2 补 `_touchedFiles` 同点记账（子代理 file_ops 合入面闭合）+ 表 #7 理由句定型 + 用例补 T-FZ4（W12 已退役——删除记录见批次档 §5）（W12 已退役——删除记录见批次档 §5）（§17.5——7→8）；§17.4 贴线注「B2+B5」正名。纯覆盖补全与措辞、零语义。

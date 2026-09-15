@@ -112,20 +112,20 @@
 | activity-flow | 196 | T-R9 150 消息裁 + 归档块入窗 | 段删 | 216-221 | 读 `history.js` / `ui.js` 源 grep + 计数 |
 | activity-flow | 224 | T-R10 区自滚 | 段删 | 247-251 | 读 `base.css` + 三条样式 match |
 | activity-live-ux | 134 | T-LU5 CSS 高度（契约静态） | 整删 | 134-143 | 全为 `webview/chat.css` 文本在场断言（已删除——删除记录 = 本档 §8.1） |
-| advisor-chain-guards | 214 | T-VG6 code 守卫……旧锚正则零残留 | 段删 | 225-227 | 读 `advisor-async.mjs` includes |
-| advisor-chain-guards | 251 | T-VG8 压缩定锚（pinned 三锚） | 段删 | 277-286 | 读 `run.mjs` / `loop.mjs` 切片 grep |
-| advisor-chain-guards | 320 | T-VG11 失败原因三分 | 段删 | 339-340 | 读 citations 源正则缺席 |
+| advisor-chain-guards | 214 | T-VG6（W12 已退役——删除记录见批次档 §5） code 守卫……旧锚正则零残留 | 段删 | 225-227 | 读 `advisor-async.mjs` includes |
+| advisor-chain-guards | 251 | T-VG8（W12 已退役——删除记录见批次档 §5） 压缩定锚（pinned 三锚） | 段删 | 277-286 | 读 `run.mjs` / `loop.mjs` 切片 grep |
+| advisor-chain-guards | 320 | T-VG11（W12 已退役——删除记录见批次档 §5） 失败原因三分 | 段删 | 339-340 | 读 citations 源正则缺席 |
 | advisor-context-budget | 151 | T-CB6 静态锚：旧 OOM 注释与常量零残留 | 整删 | 151-158 | 全为 src 源文本在场 / 缺席断言（已删除——删除记录 = 本档 §8.1） |
-| advisor-context-budget | 75 | T-CB1 纯函数 advisorContextBudget | 段删 | 88-94 | 读 readSrc + split 派生 import 表比对 |
-| advisor-guard-completion | 55 | T-VG16 启动断言 | 段删 | 71-74 | 读 run / advisor-async grep |
-| advisor-guard-completion | 135 | T-VG19 冻结拦截（集成） | 段删 | 178-180 | 读 tool-gates 调用点 / 文案 grep |
-| advisor-guard-completion | 183 | T-VG20 点火回执冻结句 | 段删 | 195-198 | 读 advisor-async 实现锚 grep |
+| advisor-context-budget | 75 | T-CB1（W12 已退役——删除记录见批次档 §5） 纯函数 advisorContextBudget | 段删 | 88-94 | 读 readSrc + split 派生 import 表比对 |
+| advisor-guard-completion | 55 | T-VG16（W12 已退役——删除记录见批次档 §5） 启动断言 | 段删 | 71-74 | 读 run / advisor-async grep |
+| advisor-guard-completion | 135 | T-VG19（W12 已退役——删除记录见批次档 §5） 冻结拦截（集成） | 段删 | 178-180 | 读 tool-gates 调用点 / 文案 grep |
+| advisor-guard-completion | 183 | T-VG20（W12 已退役——删除记录见批次档 §5） 点火回执冻结句 | 段删 | 195-198 | 读 advisor-async 实现锚 grep |
 | advisor-refusal-accounting | 230 | AC-MA6-3 静态：builder 导出 + 旧内联零残留 | 整删 | 230-238 | 全为三档 src 源文本 grep |
 | async-visibility | 399 | AC-A6/A7 机检：REMOVE 面零复活 + 登记 + 调用点 | 段删 | 400-407 | 读六档源 includes |
 | batch-doc-gate | 105 | T54 边界：校验逻辑单份 | 整删 | 105-115 | 全为三档 src grep + 计数 |
 | batch-doc-gate | 173 | T54 边界：schema 含 batchDoc 属性 | 段删 | 175-176 | 读 `src/setup.mjs` 正则在场 |
 | child-permission | 494 | T-CP17 R2 措辞锚（四处逐字在位） | 整删 | 494-516 | 全为 `docs/design/*.md` 文本在场 / 缺席（已删除——删除记录 = 本档 §8.1） |
-| child-permission | 520 | T-CP18 结构（AC-CP8）：execute-tools ≤500、tool-gates ≤300 | 段删 | 527-530 | 函数名 src grep + 旧定义零残留（均已退场）；对拍行（原 :531，清单外）随 T-VG19 段删同步退场（`2026-09-12-PROSE-ANCHOR-RETIRE.md` §5）；余两断言保留 |
+| child-permission | 520 | T-CP18 结构（AC-CP8）：execute-tools ≤500、tool-gates ≤300 | 段删 | 527-530 | 函数名 src grep + 旧定义零残留（均已退场）；对拍行（原 :531，清单外）随 T-VG19（W12 已退役——删除记录见批次档 §5） 段删同步退场（`2026-09-12-PROSE-ANCHOR-RETIRE.md` §5）；余两断言保留 |
 | context-parity | 363 | T-CI-11 双端对照：CLI 序锚字面在源 | 段删 | 367-384 | 读 `../thincoder` 源 + indexOf 序（T-CI-11 已退场——整删——两仓合并批 2；删除记录 = 2026-09-13-TWO-REPO-MERGE §5） |
 | digest-visibility | 78 | T-D6 digest cap 发射 + 两调用点机检 | 段删 | 86-88 | 读 `panel-chat.mjs` 调用点计数 |
 | digest-visibility | 192 | T-D8 接线机检 | 段删 | 194-197 | 读 `webview` CSS 常量子串 |

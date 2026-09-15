@@ -20,9 +20,12 @@ import {
   AGENT_DEFAULTS, loadAgentSettings, loadRaw,
   saveAgentSettingsFromPanel, _setConfigPathForTest,
 } from "../src/config-io.mjs"
+// W12（2026-09-15）：advisor 池面改指核单源（原 `../src/agent-tools/advisor-async.mjs` 随镜像
+// 删旧退役）——`launchAsyncAdvisor(parent, ctx, launch)` 核签名（拒发路径文案 = 核逐字）。
 import {
-  ADVISOR_POOL_LIMIT, resolveAdvisorPoolLimit, advisorPoolLimitFor, launchAsyncAdvisor,
-} from "../src/agent-tools/advisor-async.mjs"
+  ADVISOR_POOL_LIMIT, resolveAdvisorPoolLimit, advisorPoolLimitFor, launchAsyncAdvisor, resolveAdvisorLaunch,
+} from "@thincoder/core/agent-tools/advisor-async.mjs"
+import { docSetKey } from "@thincoder/core/agent-tools/review-streak.mjs"
 import { ASYNC_POOL_LIMITS, effectivePoolLimits } from "../src/agent-tools/subagent-scheduler.mjs"
 
 // ─── config 隔离（无真实 ~/.thincoder 触碰）+ webview 环境（happy-dom + en locale + vscode stub）──
@@ -41,16 +44,17 @@ after(() => {
 })
 
 const mkParent = (over = {}) => ({
-  config: { agent: {} }, history: {}, _asyncAdvisors: new Map(), ...over,
+  cwd: "C:/proj", config: { agent: {} }, history: {}, _asyncAdvisors: new Map(), ...over,
 })
 
-/** 拒发路径的 launch 请求（进入 entry.start 前即返回——不触真评审）。 */
+/** 拒发路径的 launch 请求（核签名——拒发在 entry.start 前返回，不触真评审）。 */
 function tryLaunch(parent, reviewType, documents, poolLimits) {
   const cfg = { config: { agent: { ...(poolLimits ? { poolLimits } : {}) } } }
-  return launchAsyncAdvisor({
-    parent: { ...parent, ...cfg },
-    ctx: { cwd: "C:/proj" },
-    reviewType, documents, paths: null, object: null,
+  const p = { ...parent, ...cfg }
+  // 核 launch 需解析后的实例（`run`）——同源解析面（不另建分叉）。
+  const inst = resolveAdvisorLaunch(p, reviewType, { documents })
+  return launchAsyncAdvisor(p, { cwd: "C:/proj" }, {
+    reviewType, documents, paths: null, object: null, run: inst.run, designId: inst.designId, designToken: null,
   })
 }
 
@@ -81,31 +85,32 @@ test("F-2 读取器：合法覆盖生效 / 非法与缺省回退 4", () => {
 })
 
 test("F-2 判定点：容量拒发读生效上限——缺省 4（4 running + 第 5 拒——文案报 4）", () => {
-  const pool = new Map([1, 2, 3, 4].map((i) => [`e${i}`, { id: i, status: "running" }]))
+  const pool = new Map([1, 2, 3, 4].map((i) => [`e${i}`, { id: i, role: "advisor", status: "running" }]))
   const parent = mkParent({ _asyncAdvisors: pool })
   const r = tryLaunch(parent, "design", ["docs/a.md"])
   assert.ok(r.error, "第 5 并发被拒")
-  assert.ok(r.error.includes("pool limit 4"), `文案报生效值 4: ${r.error}`)
+  assert.ok(r.error.includes("4 reviews at most"), `文案报生效值 4: ${r.error}`)
   assert.ok(r.error.includes("agent.poolLimits.advisor"), "文案含可配键引用")
 })
 
 test("F-2 判定点：配置覆盖后按生效上限拒（advisor=1——第 2 个拒——文案报 1）", () => {
-  const pool = new Map([["e1", { id: 1, status: "running" }]])
+  const pool = new Map([["e1", { id: 1, role: "advisor", status: "running" }]])
   const parent = mkParent({ _asyncAdvisors: pool })
   const r = tryLaunch(parent, "design", ["docs/a.md"], { advisor: 1 })
   assert.ok(r.error, "配置 advisor=1 时第 2 个评审被拒")
-  assert.ok(r.error.includes("pool limit 1"), `文案报生效值 1（读 config——非死常量）: ${r.error}`)
+  assert.ok(r.error.includes("1 reviews at most"), `文案报生效值 1（读 config——非死常量）: ${r.error}`)
 })
 
-test("F-5 同 scope 守卫：_advisorRuns running 记录同 scope 拒——scope 语义文案", () => {
-  const key = JSON.stringify([resolve("C:/proj", "docs/x.md")])
-  const parent = mkParent({
-    history: { _advisorRuns: new Map([["rv1", { reviewId: "rv1", reviewType: "design", scopeKey: key, state: "running", round: 1 }]]) },
-  })
+test("F-5 同 scope 守卫：同 type+scope running 池条目 → 拒（核 runningAdvisorOfScope 语义）", () => {
+  // W12 改判：核同 scope 守卫读**池条目**（`run.docSetKey`），非端侧 `_advisorRuns` 记录。
+  const parent = mkParent({ cwd: "C:/proj", _asyncAdvisors: new Map([["1", {
+    id: 1, role: "advisor", status: "running", reviewType: "design",
+    run: { docSetKey: docSetKey(["docs/x.md"], "C:/proj") },
+  }]]) })
   const r = tryLaunch(parent, "design", ["docs/x.md"])
-  assert.ok(r.error, "同 scope running 记录 → 拒")
-  assert.ok(r.error.includes("settle 后逐个发起"), "拒文案含指引")
-  assert.ok(r.error.includes("same documents/paths"), "scope 语义")
+  assert.ok(r.error, "同 scope running 条目 → 拒")
+  assert.ok(r.error.includes("此 scope 已有评审在跑"), "拒文案含指引")
+  assert.ok(r.error.includes("still running"), "scope 语义")
 })
 
 test("F-4 白名单：panel 写面三键——非法键丢弃——全非法删整键（saveAgentSettingsFromPanel 直写盘——断言落盘结果）", () => {

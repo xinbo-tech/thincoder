@@ -22,9 +22,15 @@
 import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"
 import { describeBlockers, effectivePoolLimits, entryDomain, nextSubagentId, refreshQueuedRows, runningByDomain, writeTombstoneTo } from "./subagent-scheduler.mjs"
-import { resolveBatchDoc, NEEDS_BATCH_DOC } from "./subagent-spawn-gate.mjs"
+import { existsSync, statSync } from "node:fs"
+import { resolve } from "node:path"
+// W12（2026-09-15）：batchDoc 门族原居 `subagent-spawn-gate.mjs`（删旧）——本档与 `subagent.mjs`
+// 两消费面共用，按「增量迁入端壳」就地收留（定义见本档 spawnAsyncSubagent 上方，逐字搬迁零语义变）。
 import { settleAsyncEntry, digestBudgetKey } from "./async-settle.mjs"
-import { recordFileMutation } from "./advisor-async.mjs"
+// W12（2026-09-15）：原 `./advisor-async.mjs` 的 `recordFileMutation`（history._fileMutEvents）随
+// 镜像删旧退役——改指核 `noteMutations`（advisor-settle——`agent._mutLog`/`_mutationSeq`，核
+// `reviewIsStale`/`inflightDesignReviewConflict` 同读同一账本；叶子模块不入 node:sqlite 链）。
+import { noteMutations } from "@thincoder/core/agent-tools/advisor-settle.mjs"
 // 群 B 批 B5（§16）：digest 注入预算单源迁出（W9 起 = 核 agent-tools/digest-budget.mjs）——保留 re-export
 // （`DIGEST_INJECT_BUDGET` 测试导入面零改；单条 offload 预览路径零改）。
 import { digestBudgetOver, persistOverflowReport } from "@thincoder/core/agent-tools/digest-budget.mjs"
@@ -32,6 +38,21 @@ export { DIGEST_INJECT_BUDGET } from "@thincoder/core/agent-tools/digest-budget.
 // 测试 import 面（test/subagent-scheduler.test.mjs——测试文件零改动约束）：§20 调度符号经
 // 本模块 re-export 保持可导入——src 侧消费者（subagent.mjs）已改指 subagent-scheduler.mjs 直连。
 export { describeBlockers, queueRunnable, nextSubagentId } from "./subagent-scheduler.mjs"
+
+/** batchDoc 门（§2.22.3；W12 自 `subagent-spawn-gate.mjs` 逐字迁入）：工程角色必传可读批次档
+ *  路径（空/非文件 → throw）——校验单份、同步/异步两路各一调用点（`subagent.mjs` / 本档
+ *  `spawnAsyncSubagent`）；其余角色 explore/plan/coder 零变更（调用点按 NEEDS_BATCH_DOC 判定）。 */
+export const NEEDS_BATCH_DOC = new Set(["eng-coder", "eng-designer"])
+export function resolveBatchDoc(parent, batchDoc) {
+  const given = typeof batchDoc === "string" ? batchDoc.trim() : ""
+  const bad = (s = "") => new Error("batchDoc is required for an engineering-role spawn (eng-coder / eng-designer) — pass the batch record path (docs/batches/<batch>-<topic>.md); spawn refused without it." + s)
+  if (!given) throw bad()
+  const abs = resolve(parent?.cwd ?? process.cwd(), given.replace(/\\/g, "/"))
+  let ok = false
+  try { ok = existsSync(abs) && statSync(abs).isFile() } catch { ok = false }
+  if (!ok) throw bad(` (given path is not a readable file: ${given})`)
+  return abs
+}
 
 /**
  * §18 D-E3 eng-coder internal-spawn mechanical gate (AGENT-LOOP.md §18 D-E2 round5 #2
@@ -452,9 +473,10 @@ export function mergeChildMutations(parent, sink) {
   const touched = sink?.touchedFiles ?? []
   if (touched.length === 0) return
   parent._mutatedThisRun = true
+  // W12：核 `noteMutations` 单点记账（一笔 seq——paths 数组）；原逐路径 recordFileMutation 退役。
+  noteMutations(parent, touched)
   for (const abs of touched) {
     if (!parent._touchedFiles.includes(abs)) parent._touchedFiles.push(abs)
-    recordFileMutation(parent, abs)
   }
   if (parent._calledAdvisorThisRun) parent._calledAdvisorThisRun = false
   if (parent._verifiedThisRun) {

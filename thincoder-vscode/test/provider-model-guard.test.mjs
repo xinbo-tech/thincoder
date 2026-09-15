@@ -113,24 +113,31 @@ test("F-1 有 model 不拦——线上请求体照常带 model 键", async () =>
 
 // F-2b advisor：cfg.provider 命中渠道（新 schema——渠道默认单值）但无 cfg.model
 const MAIN = { name: "deepseek", baseURL: "https://api.deepseek.com", model: "deepseek-v4-flash", apiKey: "k-main" }
+// W12（2026-09-15）：核 `resolveAdvisorProvider`（`@thincoder/core/advisor/run.mjs`）读
+// `agent.provider` + `agent.config.providersList`（核载体——非端侧 `_provider` + 磁盘 config-io）；
+// 夹具同批适配（生产装配面 = `agent-state.mjs` 的 `providersList: cfg.providersList` 同形）。
+const PROVIDERS_LIST = [
+  { name: "deepseek", baseURL: "https://api.deepseek.com", model: "deepseek-v4-pro", apiKey: "k1" },
+  { name: "kimi", baseURL: "https://x", model: "kimi-k3", apiKey: "k2" },
+]
 
-test("F-2b advisor 跨渠道 无 cfg.model → model = 命中渠道默认单值（非主 provider model——M3④）", async () => {
-  const { resolveAdvisorProvider } = await import("../src/advisor/provider.mjs")
-  const r = resolveAdvisorProvider({ _provider: MAIN, config: { advisor: { provider: "kimi" } } })
+ test("F-2b advisor 跨渠道 无 cfg.model → model = 命中渠道默认单值（非主 provider model——M3④）", async () => {
+  const { resolveAdvisorProvider } = await import("@thincoder/core/advisor/run.mjs") // W12：advisor 镜像删旧——核单源
+  const r = resolveAdvisorProvider({ provider: MAIN, config: { advisor: { provider: "kimi" }, providersList: PROVIDERS_LIST } })
   assert.equal(r.name, "kimi", "渠道命中")
   assert.equal(r.baseURL, "https://x", "端点=advisor 渠道——model 重派生不换端点")
   assert.equal(r.model, "kimi-k3", "model = 命中渠道（kimi 渠道）默认单值——非主 provider model")
 })
 
 test("F-2b cfg.model 显式 → override 不变（model: cfg.model 分支零回归）", async () => {
-  const { resolveAdvisorProvider } = await import("../src/advisor/provider.mjs")
-  const r = resolveAdvisorProvider({ _provider: MAIN, config: { advisor: { provider: "kimi", model: "kimi-k3" } } })
+  const { resolveAdvisorProvider } = await import("@thincoder/core/advisor/run.mjs") // W12：advisor 镜像删旧——核单源
+  const r = resolveAdvisorProvider({ provider: MAIN, config: { advisor: { provider: "kimi", model: "kimi-k3" }, providersList: PROVIDERS_LIST } })
   assert.equal(r.model, "kimi-k3")
 })
 
 test("F-2b 同渠道（cfg.provider=主渠道）无 cfg.model → model = 主渠道默认单值（渠道自己的模型——不回归）", async () => {
-  const { resolveAdvisorProvider } = await import("../src/advisor/provider.mjs")
-  const r = resolveAdvisorProvider({ _provider: MAIN, config: { advisor: { provider: "deepseek" } } })
+  const { resolveAdvisorProvider } = await import("@thincoder/core/advisor/run.mjs") // W12：advisor 镜像删旧——核单源
+  const r = resolveAdvisorProvider({ provider: MAIN, config: { advisor: { provider: "deepseek" }, providersList: PROVIDERS_LIST } })
   assert.equal(r.model, "deepseek-v4-pro", "config deepseek 渠道默认单值（非 MAIN.model）——主渠道自己的模型")
 })
 
@@ -141,27 +148,20 @@ test("F-1 byName 裸渠道名 → model = 渠道默认单值（克隆重派生�
   assert.equal(resolveChildProvider({ _provider: MAIN, config: { providersList: [{ name: "kimi", baseURL: "https://x", apiKey: "k2" }] } }, "kimi").model, MAIN.model, "渠道无默认模型 → parent model 兜底")
 })
 
-test("T28 渠道无默认模型时 advisor 克隆：provider.model ?? agent._provider.model（父兜底——无 undefined-model 请求）", async () => {
-  const { resolveAdvisorProvider } = await import("../src/advisor/provider.mjs")
-  writeFileSync(cfgPath, JSON.stringify({ providers: [
+test("T28 渠道无默认模型时 advisor 克隆：provider.model ?? agent.provider.model（父兜底——无 undefined-model 请求）", async () => {
+  const { resolveAdvisorProvider } = await import("@thincoder/core/advisor/run.mjs") // W12：advisor 镜像删旧——核单源
+  // W12：核解析面读 `agent.config.providersList`（不经磁盘 config-io）——夹具直供无默认模型渠道
+  const r = resolveAdvisorProvider({ provider: MAIN, config: { advisor: { provider: "kimi" }, providersList: [
     { name: "deepseek", baseURL: "https://api.deepseek.com", model: "deepseek-v4-pro", apiKey: "k1" },
     { name: "kimi", baseURL: "https://x", apiKey: "k2" },
-  ] }, null, 2) + "\n", "utf8")
-  const r = resolveAdvisorProvider({ _provider: MAIN, config: { advisor: { provider: "kimi" } } })
+  ] } })
   assert.equal(r.name, "kimi")
   assert.equal(r.model, MAIN.model, "渠道无默认单值 → 父 provider 兜底（不产出 undefined-model）")
-  writeFileSync(cfgPath, JSON.stringify({
-    defaultModel: "deepseek:deepseek-v4-pro",
-    providers: [
-      { name: "deepseek", baseURL: "https://api.deepseek.com", model: "deepseek-v4-pro", apiKey: "k1" },
-      { name: "kimi", baseURL: "https://x", model: "kimi-k3", apiKey: "k2" },
-    ],
-  }, null, 2) + "\n", "utf8")
 })
 
 test("F-2b 无 cfg.provider → 主 provider 原样（含 model——fallback 分支零回归）", async () => {
-  const { resolveAdvisorProvider } = await import("../src/advisor/provider.mjs")
-  const r = resolveAdvisorProvider({ _provider: MAIN, config: { advisor: {} } })
+  const { resolveAdvisorProvider } = await import("@thincoder/core/advisor/run.mjs") // W12：advisor 镜像删旧——核单源
+  const r = resolveAdvisorProvider({ provider: MAIN, config: { advisor: {}, providersList: PROVIDERS_LIST } })
   assert.equal(r.model, MAIN.model)
 })
 

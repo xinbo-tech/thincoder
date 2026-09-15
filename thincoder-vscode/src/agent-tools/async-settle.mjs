@@ -60,24 +60,23 @@ export function parkAsyncPending(parent, entry) {
   pend.push(entry)
 }
 
-/** pending 注入器分发（role → 族注入器——动态 import 防环）：subagent 族（explore/plan/
- *  coder/eng-coder 等）→ injectAsyncResult；advisor → injectAdvisorResult；escalate →
- *  injectEscalateResult；consult → injectConsultResult。注入即消费（调用方 splice）。 */
+/** pending 注入器分发（W12 起 = 核统一注入器单源）：`@thincoder/core/agent-tools/subagent.mjs`
+ *  的 `injectAsyncResult` 按 `entry.role` 自分发（advisor / escalate / consult / subagent 四族
+ *  标签分支同源）——原端侧四族注入器（advisor-async / subagent-escalate-async / consult /
+ *  subagent-async 的 `injectXResult`）随 advisor 镜像删旧退役。动态 import：核链可达
+ *  `node:sqlite`（W8 契约②——静态引会入端壳静态链）。注入即消费（调用方 splice）。
+ *  载体适配：核 `pushReal` 消费 `{ history, _fullHistory }` 形态（VSC ctx 给双线数组）——
+ *  稳定载体 = 同 ctx 对象复用（核 digest 轮预算按载体键累计——同轮多条累计面保持）。 */
 export async function injectPendingAsync(entry, ctx) {
-  if (entry?.role === "advisor") {
-    const { injectAdvisorResult } = await import("./advisor-async.mjs")
-    return injectAdvisorResult(entry, ctx)
-  }
-  if (entry?.role === "escalate") {
-    const { injectEscalateResult } = await import("./subagent-escalate-async.mjs")
-    return injectEscalateResult(entry, ctx)
-  }
+  ctx._coreCarrier ??= { history: ctx.history, _fullHistory: ctx.fullHistory }
+  const carrier = ctx._coreCarrier
+  // consult 族分支与核 `agent.mjs` 同构（§25 D-R17a/b）：核统一注入器不含 consult 标签分支。
   if (entry?.role === "consult") {
-    const { injectConsultResult } = await import("./consult.mjs")
-    return injectConsultResult(entry, ctx)
+    const { injectConsultResult } = await import("@thincoder/core/agent-tools/consult.mjs")
+    return injectConsultResult(carrier, entry)
   }
-  const { injectAsyncResult } = await import("./subagent-async.mjs")
-  return injectAsyncResult(entry, ctx)
+  const { injectAsyncResult } = await import("@thincoder/core/agent-tools/subagent.mjs")
+  return injectAsyncResult(carrier, entry)
 }
 
 // ─── D4 守卫统一（严格版）+ D6 信号兜底单点 ───

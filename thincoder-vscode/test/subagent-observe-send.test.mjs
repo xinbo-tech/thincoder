@@ -229,7 +229,7 @@ test("T-B2b（跨端同判定锁）：cancel→settle 窗口（cancelled=true、
   assert.equal(one.round, 2)
 })
 
-test("T-B6/T-B7（AC-B3）：cancel 落评审池——abort + 机读线提醒 + 幂等 + 已完成/未知/缺 id 既有错误行", () => {
+test("T-B6/T-B7（AC-B3）：cancel 落评审池——abort + 零直接注入（提醒归核 settle）+ 幂等 + 已完成/未知/缺 id 既有错误行", () => {
   const parent = dualParent()
   const adv = advisorEntry()
   parent.history._asyncAdvisors.set(9, adv)
@@ -238,10 +238,12 @@ test("T-B6/T-B7（AC-B3）：cancel 落评审池——abort + 机读线提醒 + 
   assert.equal(r1.status, "cancelled")
   assert.equal(adv.controller.signal.aborted, true, "条目 controller 已 abort（与面板 ⏹ 同源）")
   assert.equal(adv.cancelled, true)
-  assert.match(parent.history.at(-1).content, /cancelled/, "机读线提醒注入（取消事实对模型可见）")
+  // W12（2026-09-15）改判：取消本身**不注入提醒**（原端侧行为）——核 entry 的 settle 在
+  // cancelled 分支注入「评审已取消——token 未签发」（settleAsyncEntry——本端重复注入即双报）。
+  assert.equal(parent.history.length, 0, "取消本身零注入（提醒归核 settle cancelled 分支）")
   const r2 = JSON.parse(cancelSubagentAction({ id: 9 }, { agent: parent, depth: 0, cwd: "/proj" }))
   assert.deepEqual(r2, r1, "重复取消幂等（同一确认）")
-  assert.equal(parent.history.filter((m) => typeof m?.content === "string" && m.content.includes("advisor review #9")).length, 1, "幂等——不重复注入提醒")
+  assert.equal(parent.history.length, 0, "幂等——零注入")
   // 已完成评审 → already finished
   parent.history._asyncAdvisors.set(11, advisorEntry({ id: 11, status: "done", done: true }))
   assert.match(JSON.parse(cancelSubagentAction({ id: 11 }, { agent: parent, depth: 0, cwd: "/proj" })).error, /already finished/)

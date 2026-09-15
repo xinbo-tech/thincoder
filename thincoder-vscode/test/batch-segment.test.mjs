@@ -17,9 +17,9 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 
 import { batchSegmentTool, resolveBatchDocPath, MAX_TEXT_CHARS, configureBatchSegment, resetBatchSegment } from "@thincoder/core/agent-tools/batch-segment.mjs"
-import { readFileSync as readSource } from "node:fs"
-import { _resolvedAdvisorToolsFor, _setAdvisorToolSetForTest } from "../src/advisor/tools.mjs"
-import { launchAsyncAdvisor } from "../src/agent-tools/advisor-async.mjs"
+// W12（2026-09-15）：工具集面改指核单源（原 `../src/advisor/tools.mjs` 的 `_resolvedAdvisorToolsFor`
+// 与端侧 `launchAsyncAdvisor` 随 advisor 镜像删旧退役——核 `advisorToolsFor` 同形 `{schemas, byName}`）。
+import { advisorToolsFor } from "@thincoder/core/advisor/loop.mjs"
 
 let tmp
 beforeEach(() => { tmp = mkdtempSync(join(tmpdir(), "batch-segment-")) })
@@ -174,51 +174,24 @@ test("T59 边界：评审侧 batchDoc 路径门（空/不可读 → throw；可�
   assert.equal(resolveBatchDocPath(tmp, "docs/batches/b.md"), abs, "可读路径 → 绝对路径（\\ 归一）")
 })
 
-// ── T60 只读面零变更 ────────────────────────────────────────────────────────
+// ── T60 只读面零变更（W12 改指核 `advisorToolsFor`——同形 `{schemas, byName}`）─────────
 test("T60 错误/边界：只读面——代码评审工具集逐字节不变；设计评审+绑定才追加写通道", () => {
   const abs = makeDoc()
   const agent = { cwd: tmp }
-  const code = _resolvedAdvisorToolsFor(agent, "code")
-  const noArgs = _resolvedAdvisorToolsFor(agent)
+  const code = advisorToolsFor(agent, "code")
+  const noArgs = advisorToolsFor(agent)
   assert.ok(!code.byName.has("batch_segment"), "代码评审工具集不含本工具（零 git + 只读不变量）")
   assert.deepEqual([...code.byName.keys()], [...noArgs.byName.keys()], "与无参调用（默认 code）逐字相同——零变更")
   assert.deepEqual([...code.byName.keys()], ["read", "glob", "grep", "ls", "lsp", "code_search"], "只读工具集恒定")
-  assert.ok(_resolvedAdvisorToolsFor(agent, "design", abs).byName.has("batch_segment"), "设计评审 + 已绑定 → 挂载")
-  assert.ok(!_resolvedAdvisorToolsFor(agent, "design", null).byName.has("batch_segment"), "设计评审未绑定 → 不挂载（fail-closed）")
-  assert.ok(!_resolvedAdvisorToolsFor(agent, "code", abs).byName.has("batch_segment"), "代码评审即便传 batchDoc 也不含（reviewType 门）")
-  _setAdvisorToolSetForTest(null) // 清理测试覆写 seam（若有）
+  assert.ok(advisorToolsFor(agent, "design", abs).byName.has("batch_segment"), "设计评审 + 已绑定 → 挂载")
+  assert.ok(!advisorToolsFor(agent, "design", null).byName.has("batch_segment"), "设计评审未绑定 → 不挂载（fail-closed）")
+  assert.ok(!advisorToolsFor(agent, "code", abs).byName.has("batch_segment"), "代码评审即便传 batchDoc 也不含（reviewType 门）")
 })
 
-// ── T66 实例键通道（并发不串档） ────────────────────────────────────────────
-test("T66 边界：两设计评审并发——batchDoc 沿 rv 实例键传递，各自落自档", async () => {
-  const docA = makeDoc(skeleton(), "a.md")
-  const docB = makeDoc(skeleton(), "b.md")
-  const seen = []
-  const agent = { cwd: tmp, config: {}, history: [], _asyncAdvisors: new Map(), _advisorRuns: new Map() }
-  const ctx = {
-    agent, cwd: tmp, callbacks: {},
-    // 测试缝：替身评审（不发网络）——记录 rv 实例参数（本用例的断言对象）
-    runAdvisorReview: (parent, reviewType, callbacks, designToken, documents, paths, object, rv) => {
-      seen.push({ documents, rv })
-      return Promise.resolve("Advisor: stub review (no token echo)")
-    },
-  }
-  const a = launchAsyncAdvisor({ parent: agent, ctx, reviewType: "design", documents: ["docs/design/A.md"], paths: null, object: null, batchDoc: docA })
-  const b = launchAsyncAdvisor({ parent: agent, ctx, reviewType: "design", documents: ["docs/design/B.md"], paths: null, object: null, batchDoc: docB })
-  assert.ok(!a.error && !b.error, "两评审各起（不同 scope → 实例独立）")
-  assert.equal(seen.length, 2, "两次 launch 均进入评审 runner")
-  const rvA = seen.find((s) => s.documents[0] === "docs/design/A.md").rv
-  const rvB = seen.find((s) => s.documents[0] === "docs/design/B.md").rv
-  assert.equal(rvA.batchDoc, docA, "A 评审实例 rv 携带 A 档")
-  assert.equal(rvB.batchDoc, docB, "B 评审实例 rv 携带 B 档（实例键——非单值会话态）")
-  // 各自的工具集取各自的绑定 → 各写各档（不串档）
-  const write = (bound, text) => _resolvedAdvisorToolsFor(agent, "design", bound).byName.get("batch_segment")
-    .execute({ segment: "§3", text }, { agent: { cwd: tmp } })
-  await write(rvA.batchDoc, "A 轮发现")
-  await write(rvB.batchDoc, "B 轮发现")
-  assert.ok(read(docA).includes("A 轮发现") && !read(docA).includes("B 轮发现"), "A 档只含 A 的发现")
-  assert.ok(read(docB).includes("B 轮发现") && !read(docB).includes("A 轮发现"), "B 档只含 B 的发现")
-})
+// ── T66（W12 退役登记）──────────
+// 原用例 = 端侧 `launchAsyncAdvisor` 的实例键通道断言（测试缝 `ctx.runAdvisorReview`）。该端侧
+// launch 随 advisor 镜像删旧退役，核 `launchAsyncAdvisor(parent, ctx, launch)` 无同形缝（真跑评审）
+// 且实例键绑定（`batchDocForReview`）为核实现——该面覆盖归核测试（`thincoder-core/test/batch-segment.test.mjs`）。
 
 // ── T-FZ3（群 B 批 B3 §17.2 E-扩 3）：成功写入记写域 / 失败零记账 ─────────────
 // W9（2026-09-15）：记账面 = 核注入缝 #84（公开删除前的内联直写——本端装配层注册
@@ -252,10 +225,8 @@ test("T-FZ3 正常/错误：成功写入记绑定档绝对路径入 _touchedFile
   }
 })
 
-// ── W9 装配在位（结构机检——核 #83 同款形态）：端装配层注册记账缝 ─────────────
-test("W9 装配在位：src/agent/setup.mjs 注册 configureBatchSegment 记账回调（_touchedFiles）", () => {
-  const setup = readSource(new URL("../src/agent/setup.mjs", import.meta.url), "utf8")
-  assert.match(setup, /configureBatchSegment\(\{/, "装配层注册记账缝（核缝 #84 端侧消费）")
-  assert.match(setup, /agent\._touchedFiles\.push\(abs\)/, "回调体 = _touchedFiles 记账（与删除前内联面逐字同形）")
-})
+// ── W9 装配在位（原案退役——W12 登记）────────────
+// 原案 = 读 `src/agent/setup.mjs` 源文本的「某句在场」断言（configureBatchSegment 注册行）——
+// 散文锚形态（判据见本仓 TESTING 纪律；读非测试档断文本一律不做）。装配面行为由上方 T-FZ3
+// 自注册回调的行为断言承载；真实装配点（setup.mjs:46）由 W9 交付读数在案。
 

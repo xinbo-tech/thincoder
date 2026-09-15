@@ -83,12 +83,12 @@
 | `src/agent-tools/async-settle.mjs` | async 结果容器统一共享 helper（ASYNC-RESULT-CONTAINER D1-D6）：settleAsyncEntry（四族公共收尾单点）/ pending 单容器（parkAsyncPending/injectPendingAsync role 分发）/ parentAborted 守卫 / buildChildSignal |
 | `src/agent-tools/digest-budget.mjs`（W9 已迁核——现体 `thincoder-core/agent-tools/digest-budget.mjs`） | digest 注入预算单源（§16）：常量 / 轮记账（digestBudgetOver）/ 超限落盘（persistOverflowReport）——四族注入器共用 |
 | `src/agent-tools/subagent-actions.mjs` | status/cancel/escalate/consume-design/observe/send 动作执行器（observe/send——SUBAGENT-OBSERVE-SEND 2026-09-08） |
-| `src/agent-tools/subagent-spawn-gate.mjs` | authorizeEngCoderDesignToken/executeConsumeDesignAction/resolveDesignSlot/dropExpiredTokenSlot |
-| `src/agent-tools/subagent-spec.mjs` | description 面 / modeRoleField（schema enum）；observe/send 动作描述 + 枚举（SUBAGENT-OBSERVE-SEND） |
-| `src/agent-tools/subagent-escalate-async.mjs` | 飞刀 async 引擎：turnInput 消费回调 + onToolCall 记当前工具 + settle 未投递注记（SUBAGENT-OBSERVE-SEND——与 spawn 同池 send 一致性，out-of-list） |
+| `src/agent-tools/subagent-spawn-gate.mjs（W12 已迁核——现体见批次档 §5）` | authorizeEngCoderDesignToken/executeConsumeDesignAction/resolveDesignSlot/dropExpiredTokenSlot |
+| `src/agent-tools/subagent-spec.mjs（W12 已迁核——现体见批次档 §5）` | description 面 / modeRoleField（schema enum）；observe/send 动作描述 + 枚举（SUBAGENT-OBSERVE-SEND） |
+| `src/agent-tools/subagent-escalate-async.mjs（W12 已迁核——现体见批次档 §5）` | 飞刀 async 引擎：turnInput 消费回调 + onToolCall 记当前工具 + settle 未投递注记（SUBAGENT-OBSERVE-SEND——与 spawn 同池 send 一致性，out-of-list） |
 | `src/agent-tools/child-permission.mjs`（W9 已迁核——现体 `thincoder-core/agent-tools/child-permission.mjs`） | child 审批通道（§18 C-2）：`makeChildPermission` / `childOwnerLabel`（owner label 与活动块同源）（修正轮 #3） |
-| `src/agent-tools/advisor-async.mjs` | 后台评审池（`_asyncAdvisors`，ADVISOR_POOL_LIMIT=4——可配 agent.poolLimits.advisor——同 scope 守卫）+ launchAsyncAdvisor |
-| `src/agent-tools/consult.mjs` / `subagent-escalate(-async).mjs` | consult_start/stop / escalate sync+async 路径 |
+| `src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）` | 后台评审池（`_asyncAdvisors`，ADVISOR_POOL_LIMIT=4——可配 agent.poolLimits.advisor——同 scope 守卫）+ launchAsyncAdvisor |
+| `src/agent-tools/consult.mjs（W12 已迁核——现体见批次档 §5）` / `subagent-escalate(-async).mjs` | consult_start/stop / escalate sync+async 路径 |
 | `src/extension/chat-panel.mjs` / `panel-chat.mjs` | ChatPanel 生命周期；回合驱动经 `runAgent(p, cwd, text, callbacks, panel._abortController.signal, () => panel._autoApprove, runOpts(resume))`；INPUT-LOCK-ASYNC（C'——2026-09-09）：busy 拒收分流（_chat 单槽 pendingInput——挂起空闲） |
 | `src/extension/suspension.mjs` | 挂起会话驱动：waitForSettleOrWake（`panel._suspWake` 单槽）、单槽 pendingInput 消费（R15 排队合并已废——INPUT-LOCK-ASYNC——2026-09-09） |
 | `webview/activity.js` / `panels.js` | 子代理活动块**区驻留 → 消化后归档落流**（消息与输入之间的固定活动区 `#subagent-activity`——live 固定可见；2026-09-12 收口批：终态清退 + 消化回收归档 `#messages`——权威 `WEBVIEW.md` §14，§12 为沿革）；panels.js 行面板已撤 + goal/task 面板 + 桥路由 |
@@ -412,7 +412,7 @@ webview 输入面见下方 UI 段）；settle
 
 - ① `subagent status` 双池合并（本端 `src/agent-tools/subagent-actions.mjs` as-of :89-120 现只查子代理池——本批补）；
 - ② `wait_for "advisor settled"` 判据改读评审池（本端 `src/tools/wait_for.mjs` as-of :125-129（W14 已迁核——现体 `thincoder-core/tools/ops.mjs` 的 wait_for 分支） 同缺陷——修前恒 0ms 秒过；
-  复用本端已导出 `advisorReviewInFlight`（`src/agent-tools/advisor-async.mjs:92`——双载体判据））；
+  复用本端已导出 `advisorReviewInFlight`（`src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）:92`——双载体判据））；
 - ③ `subagent cancel <advisor id>` 落评审池（面板 ⏹ 路由已有——`src/extension/panel-messages.mjs:238-241`；
   工具动作缺落点——本批补）+ ④ observe/send 遇 advisor id 明确指引；
 - 命名差异登记：本端 `cancelAdvisorReview` ↔ CLI `cancelAsyncAdvisor`（语义同源；**各端原名不改**——D-B3）。
@@ -768,19 +768,19 @@ Partial changes from discarded children stay unmerged/unaudited; re-spawn if the
 
 | # | 文件:行（as-of） | 旧锚 → 新锚 | 域 |
 |---|---|---|---|
-| 1 | `src/advisor/main.mjs:94` | `§24 D-24b` → `§9 D-24b` | B |
-| 2 | `src/advisor/main.mjs:105` | `§24 D-24b` → `§9 D-24b` | B |
-| 3 | `src/advisor/main.mjs:111` | `§24 D-24b` → `§9 D-24b` | B |
-| 4 | `src/advisor/main.mjs:123` | `§24 D-24b` → `§9 D-24b` | B |
-| 5 | `src/advisor/main.mjs:163` | `§24 D-24b` → `§9 D-24b` | B |
-| 6 | `src/advisor/main.mjs:213` | `§24 D-24b` → `§9 D-24b` | B |
-| 7 | `src/advisor/main.mjs:260` | `§24 D-24b` → `§9 D-24b` | B |
-| 8 | `src/advisor/messages.mjs:50` | `§24 D-24b` → `§9 D-24b` | B |
-| 9 | `src/advisor/messages.mjs:80` | `§24 D-24b` → `§9 D-24b` | B |
-| 10 | `src/advisor/messages.mjs:90` | `§24 D-24b` → `§9 D-24b` | B |
-| 11 | `src/advisor/run.mjs:96` | `§24 D-24b` → `§9 D-24b` | B |
-| 12 | `src/advisor/run.mjs:118` | `§24 D-24b` → `§9 D-24b` | B |
-| 13 | `src/advisor/run.mjs:202` | `§24 D-24b` → `§9 D-24b` | B |
+| 1 | `src/advisor/main.mjs（W12 已迁核——现体见批次档 §5）:94` | `§24 D-24b` → `§9 D-24b` | B |
+| 2 | `src/advisor/main.mjs（W12 已迁核——现体见批次档 §5）:105` | `§24 D-24b` → `§9 D-24b` | B |
+| 3 | `src/advisor/main.mjs（W12 已迁核——现体见批次档 §5）:111` | `§24 D-24b` → `§9 D-24b` | B |
+| 4 | `src/advisor/main.mjs（W12 已迁核——现体见批次档 §5）:123` | `§24 D-24b` → `§9 D-24b` | B |
+| 5 | `src/advisor/main.mjs（W12 已迁核——现体见批次档 §5）:163` | `§24 D-24b` → `§9 D-24b` | B |
+| 6 | `src/advisor/main.mjs（W12 已迁核——现体见批次档 §5）:213` | `§24 D-24b` → `§9 D-24b` | B |
+| 7 | `src/advisor/main.mjs（W12 已迁核——现体见批次档 §5）:260` | `§24 D-24b` → `§9 D-24b` | B |
+| 8 | `src/advisor/messages.mjs（W12 已迁核——现体见批次档 §5）:50` | `§24 D-24b` → `§9 D-24b` | B |
+| 9 | `src/advisor/messages.mjs（W12 已迁核——现体见批次档 §5）:80` | `§24 D-24b` → `§9 D-24b` | B |
+| 10 | `src/advisor/messages.mjs（W12 已迁核——现体见批次档 §5）:90` | `§24 D-24b` → `§9 D-24b` | B |
+| 11 | `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）:96` | `§24 D-24b` → `§9 D-24b` | B |
+| 12 | `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）:118` | `§24 D-24b` → `§9 D-24b` | B |
+| 13 | `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）:202` | `§24 D-24b` → `§9 D-24b` | B |
 | 14 | `src/agent/execute-tools.mjs:19` | `§24 D-24b` → `§9 D-24b` | B |
 | 15 | `src/agent/execute-tools.mjs:261` | `AGENT-LOOP.md §24 尾修复注——` 短语删除（保 `2026-09-06` 日期） | C |
 | 16 | `src/agent/execute-tools.mjs:425` | 同 15 | C |
@@ -790,17 +790,17 @@ Partial changes from discarded children stay unmerged/unaudited; re-spawn if the
 | 20 | `src/agent/run-stages.mjs:269` | `§24 D-24b` → `§9 D-24b` | B |
 | 21 | `src/agent/setup.mjs:218` | `§24 D-24a` → `§5 D-24a`（`（R14）` 保留） | A |
 | 22 | `src/agent/setup.mjs:240` | `§24 D-24a` → `§5 D-24a` | A |
-| 23 | `src/agent-tools/advisor.mjs:25` | `§24 D-24b` → `§9 D-24b` | B |
-| 24 | `src/agent-tools/advisor.mjs:93` | `§24 D-24b` → `§9 D-24b` | B |
-| 25 | `src/agent-tools/advisor.mjs:183`（token ①） | `§24 D-24b` → `§9 D-24b` | B |
-| 26 | `src/agent-tools/advisor.mjs:183`（token ②） | `§24 R12` → `§5 R12` | A′ |
-| 27 | `src/agent-tools/advisor.mjs:193` | `§24 D-24b` → `§9 D-24b` | B |
-| 28 | `src/agent-tools/advisor.mjs:197` | `§24 D-24b` → `§9 D-24b` | B |
-| 29 | `src/agent-tools/advisor.mjs:234` | `§24 D-24b` → `§9 D-24b` | B |
+| 23 | `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）:25` | `§24 D-24b` → `§9 D-24b` | B |
+| 24 | `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）:93` | `§24 D-24b` → `§9 D-24b` | B |
+| 25 | `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）:183`（token ①） | `§24 D-24b` → `§9 D-24b` | B |
+| 26 | `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）:183`（token ②） | `§24 R12` → `§5 R12` | A′ |
+| 27 | `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）:193` | `§24 D-24b` → `§9 D-24b` | B |
+| 28 | `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）:197` | `§24 D-24b` → `§9 D-24b` | B |
+| 29 | `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）:234` | `§24 D-24b` → `§9 D-24b` | B |
 | 30 | `src/agent-tools/subagent-async.mjs:314` | `§24 D-24a` → `§5 D-24a`（`（R14）` 保留） | A |
 | 31 | `src/agent-tools/subagent-async.mjs:480` | `§24 D-24b` → `§9 D-24b` | B |
-| 32 | `src/agent-tools/subagent-escalate-async.mjs:4` | `§24 D-24a` → `§5 D-24a` | A |
-| 33 | `src/agent-tools/subagent-escalate.mjs:16` | `§24 D-24a` → `§5 D-24a` | A |
+| 32 | `src/agent-tools/subagent-escalate-async.mjs（W12 已迁核——现体见批次档 §5）:4` | `§24 D-24a` → `§5 D-24a` | A |
+| 33 | `src/agent-tools/subagent-escalate.mjs（W12 已迁核——现体见批次档 §5）:16` | `§24 D-24a` → `§5 D-24a` | A |
 | 34 | `src/agent.mjs:24` | `§24 D-24b` → `§9 D-24b` | B |
 | 35 | `src/agent.mjs:110` | `§24 D-24b` → `§9 D-24b` | B |
 | 36 | `src/extension/panel-messages.mjs:228` | `§24 D-24b` → `§9 D-24b` | B |
@@ -886,7 +886,7 @@ Partial changes from discarded children stay unmerged/unaudited; re-spawn if the
 **结论 = 修**（复用 C-1~C-4 判定与动作序，扩展至 advisor 池）。理由三条：
 
 1. **缺陷实存**（复核 as-of 2026-09-11）：中止分支 `src/agent/run-stages.mjs:271-277` 对 `_asyncAdvisors` 仍 `advMap.clear()`；
-   评审条目 controller 经 `buildChildSignal` 链到会话 signal（`src/agent-tools/advisor-async.mjs:259-268`）——与子代理同款
+   评审条目 controller 经 `buildChildSignal` 链到会话 signal（`src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）:259-268`）——与子代理同款
    「子代持会话 signal」前提（§12.1 ③；F-6 裁定：Stop 只停轮 controller）⇒ 轮级中止时**存活评审被静默清出池**：
    其 settle 时 `removeFromAsyncPools`（`subagent-scheduler.mjs:62-66`）作用在已空 Map——报告不可达；同时
    **done-in-pool 条目（已完成待收集的报告）一并被清**——报告真丢失。两类损失与 §12.1 ②③ 逐条同构。
@@ -1021,10 +1021,10 @@ No design token was issued for a discarded design review; launch the review agai
 |---|---|---|---|---|
 | 1 | `src/agent-tools/digest-budget.mjs`（W9 已迁核——现体 `thincoder-core/agent-tools/digest-budget.mjs`） | 新 | ~70 | 单源模块（D-DG1） |
 | 2 | `src/agent-tools/subagent-async.mjs` | 499 | ~470（净减） | 迁出 + re-export（**贴线缓解**） |
-| 3 | `src/agent-tools/advisor-async.mjs` | 493 | ≤498（**贴线注记**——越 500 停下报告） | +接线 |
-| 4 | `src/agent-tools/subagent-escalate-async.mjs` | 221 | ~224 | +接线 |
-| 5 | `src/agent-tools/consult.mjs` | 469 | ~473 | +接线 |
-| 6 | `test/eng-settlement.test.mjs` | 290 | ~330 | T-DG1~T-DG3（§16.6） |
+| 3 | `src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）` | 493 | ≤498（**贴线注记**——越 500 停下报告） | +接线 |
+| 4 | `src/agent-tools/subagent-escalate-async.mjs（W12 已迁核——现体见批次档 §5）` | 221 | ~224 | +接线 |
+| 5 | `src/agent-tools/consult.mjs（W12 已迁核——现体见批次档 §5）` | 469 | ~473 | +接线 |
+| 6 | `test/eng-settlement.test.mjs` | 290 | ~330 | T-DG1（W12 已退役——删除记录见批次档 §5）~T-DG3（§16.6） |
 
 ### 16.5 双端差异登记（语义零差——实现形态差异）
 
@@ -1036,15 +1036,15 @@ No design token was issued for a discarded design review; launch the review agai
 
 | # | 类型 | 输入 | 预期输出（断言） | 需求 |
 |---|---|---|---|---|
-| T-DG1 | 正常 | 同轮两条 advisor 条目（各 40K 正文——合计 80K > 64K）直驱 `injectAdvisorResult` | 首条 inline 预览；次条 = 清单行（全文落盘——读档断言）+ 不 inline 全文 | F-I2 |
-| T-DG2 | 正常 | escalate / consult 族各一（超限形态） | 同规清单行（两族接线生效） | F-I2 |
+| T-DG1（W12 已退役——删除记录见批次档 §5） | 正常 | 同轮两条 advisor 条目（各 40K 正文——合计 80K > 64K）直驱 `injectAdvisorResult` | 首条 inline 预览；次条 = 清单行（全文落盘——读档断言）+ 不 inline 全文 | F-I2 |
+| T-DG2（W12 已退役——删除记录见批次档 §5） | 正常 | escalate / consult 族各一（超限形态） | 同规清单行（两族接线生效） | F-I2 |
 | T-DG3 | 边界 | 跨族同轮：subagent 40K + advisor 40K | 次条判超（**共享预算**——单源记账） | F-I2 |
 
 ### 16.7 验收标准（逐条回指需求——可机判）
 
 | AC | 判据 | 回指 |
 |---|---|---|
-| AC-B5-1 | T-DG1 / T-DG2 / T-DG3 绿 | F-I2 |
+| AC-B5-1 | T-DG1（W12 已退役——删除记录见批次档 §5） / T-DG2（W12 已退役——删除记录见批次档 §5） / T-DG3 绿 | F-I2 |
 | AC-B5-2 | 既有预算用例零回归（eng-settlement 全绿；`DIGEST_INJECT_BUDGET` re-export 恒等） | N-I1 |
 | AC-B5-3 | 行数实测对表（subagent-async 净减；advisor-async ≤500）+ 两仓快层全绿 + check-doc-width 新增违规 0 | N-I3 |
 
@@ -1054,7 +1054,7 @@ No design token was issued for a discarded design review; launch the review agai
 - 不做跨轮累计/全局配额；不改 CLI 仓（镜像各自实现）；
 - **零 UI 面**（预算行为不影响片/面板呈现——无 webview 改动）。
 
-**计数（D3）**：用例 3（T-DG1~T-DG3）· AC 3（AC-B5-1~AC-B5-3）· 实施域 4 档改 + 1 档新
+**计数（D3）**：用例 3（T-DG1（W12 已退役——删除记录见批次档 §5）~T-DG3）· AC 3（AC-B5-1~AC-B5-3）· 实施域 4 档改 + 1 档新
 （subagent-async / advisor-async / subagent-escalate-async / consult / 测试档 + digest-budget 新档）。
 
 ## 17. 会话上下文注入面对齐（VSC-CONTEXT-PARITY 批——2026-09-11）
@@ -1347,7 +1347,7 @@ AC 5（AC-CI-1~AC-CI-5）· 关键决策 10（KD-1~KD-10）· 实施域 15 档 =
 
 | 需求 | 判定句要点 | 本档契约 | 用例 | 验收 |
 |---|---|---|---|---|
-| F-CP1（R1） | ask 弹卡带归属 `{child key} · {tool}` / auto·approve-all 静默 / 块头 ⏸ + 等待审批 / 覆盖 escalate / 取消释放 | §18.4 C-1..C-10/C-12 | T-CP1..T-CP16、T-CP18、T-CP19 | AC-CP1..AC-CP6、AC-CP8/9 |
+| F-CP1（R1） | ask 弹卡带归属 `{child key} · {tool}` / auto·approve-all 静默 / 块头 ⏸ + 等待审批 / 覆盖 escalate / 取消释放 | §18.4 C-1..C-10/C-12 | T-CP1..T-CP16、T-CP18、T-CP19（W12 已退役——删除记录见批次档 §5） | AC-CP1..AC-CP6、AC-CP8/9 |
 | F-CP2（R2） | 四处同族句改后与实现语义一致（机检措辞） | §18.4 C-13 | T-CP17 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:127`）） | AC-CP7 已退场（随 T-CP17 整删——删除记录 = `TESTING.md` §8.1（`:127`）） |
 
 ### 18.2 问题陈述（现状复核——as-of 2026-09-12，file:line 实测）
@@ -1446,7 +1446,7 @@ callbacks 对象——`id: entry.id`）各加 `onPermissionRequired: makeChildPe
 **C-11 结构拆分（execute-tools 越硬限归位）**：`src/agent/execute-tools.mjs` 506（实测口径——> 500 硬限；MIRROR-SWEEP 批
 交付表已记录 506 漂移）→ 拆出 `agentHasLiveEngSlot` / `l3TouchedPaths` / `preGateBlocked` / `isSubagentConsumeDesignAction` /
 `collectBatchPermission` 至新档 `src/agent/tool-gates.mjs`（verbatim 迁移，零语义；execute-tools import 新档——无环；
-`executeToolBatches` 与 L3 记账面留原档）。测档 `test/advisor-guard-completion.test.mjs:176-177` 的源读路径随迁改指新档。
+`executeToolBatches` 与 L3 记账面留原档）。测档 `test/advisor-guard-completion.test.mjs（W12 已退役——删除记录见批次档 §5）:176-177` 的源读路径随迁改指新档。
 
 **C-12 i18n**：新键 `sub.awaitingApproval`——zh `等待审批: ${tool}`（CLI 面板同文逐字）/ en `Awaiting approval: ${tool}`；两 locale 同步。
 
@@ -1480,8 +1480,8 @@ callbacks 对象——`id: entry.id`）各加 `onPermissionRequired: makeChildPe
 | 2 | `src/agent/tool-gates.mjs`（新） | — | ~155 | C-11 verbatim 迁入 |
 | 3 | `src/agent-tools/child-permission.mjs`（新）（W9 已迁核——现体 `thincoder-core/agent-tools/child-permission.mjs`） | — | ~55 | C-2 helper |
 | 4 | `src/agent-tools/subagent-run.mjs` | 190 | ~206 | C-2/C-3 接线（callbacks + autoApprove） |
-| 5 | `src/agent-tools/subagent-escalate.mjs` | 219 | ~233 | C-9 |
-| 6 | `src/agent-tools/subagent-escalate-async.mjs` | 226 | ~240 | C-9 |
+| 5 | `src/agent-tools/subagent-escalate.mjs（W12 已迁核——现体见批次档 §5）` | 219 | ~233 | C-9 |
+| 6 | `src/agent-tools/subagent-escalate-async.mjs（W12 已迁核——现体见批次档 §5）` | 226 | ~240 | C-9 |
 | 7 | `src/extension/permission-gate.mjs` | 71 | ~115 | C-4/C-6 |
 | 8 | `src/extension/panel-callbacks.mjs` | 186 | ~190 | C-8 回调 |
 | 9 | `src/extension/panel-messages.mjs` | 485 | ~492（<500） | C-5 路由 + approve-all 连带 |
@@ -1490,8 +1490,8 @@ callbacks 对象——`id: entry.id`）各加 `onPermissionRequired: makeChildPe
 | 12 | `webview/permission.js` | 108 | ~122 | C-7 + data-prompt-id |
 | 13 | `webview/chat.js` | 355 | ~363 | C-8 路由 + C-6 移除 case |
 | 14 | `locales/en.json` + `locales/zh.json` | 248 ×2 | +1 ×2 | C-12 |
-| 15 | `test/child-permission.test.mjs`（新） | — | ~380 | T-CP1..T-CP16 + T-CP18 + T-CP19 主力（T-CP17 已退场——整删，删除记录 = `TESTING.md` §8.1（`:127`））；**测试档登记**（**拆分已落**——500 行硬限无豁免：余档 **368** / 新档 `test/child-permission-wiring.test.mjs` **218**，守恒 **18 = 12 + 6**；拆分方案 = `LEDGER-SELF-CONTAINED.md §9`） |
-| 16 | `test/advisor-guard-completion.test.mjs` | 339 | ±1 | C-11 源读改指（修正轮 #7 补 as-of） |
+| 15 | `test/child-permission.test.mjs`（新） | — | ~380 | T-CP1..T-CP16 + T-CP18 + T-CP19（W12 已退役——删除记录见批次档 §5） 主力（T-CP17 已退场——整删，删除记录 = `TESTING.md` §8.1（`:127`））；**测试档登记**（**拆分已落**——500 行硬限无豁免：余档 **368** / 新档 `test/child-permission-wiring.test.mjs` **218**，守恒 **18 = 12 + 6**；拆分方案 = `LEDGER-SELF-CONTAINED.md §9`） |
+| 16 | `test/advisor-guard-completion.test.mjs（W12 已退役——删除记录见批次档 §5）` | 339 | ±1 | C-11 源读改指（修正轮 #7 补 as-of） |
 | 17 | `test/files.mjs` | 75 | +1 | 新测档登记 |
 | 18 | 文档域：`docs/design/AGENT-LOOP.md`（本 §18）/ `TOOLS.md` §8 / `WEBVIEW.md` §7.2 / `ESCALATE.md` / `ENGINEERING-MODE.md` / `README.md` 变更记录 | — | — | 设计者已落（本批） |
 
@@ -1510,8 +1510,8 @@ callbacks 对象——`id: entry.id`）各加 `onPermissionRequired: makeChildPe
 | T-CP3 | deny 语义 | T-CP1 卡上 deny | resolve(false)；child 工具结果 = `Denied by user (permission mode).` | F-CP1 |
 | T-CP4 | AUTO 直通 | getAuto() 真；child 写 | 零卡、零 approval 事件、工具执行 | F-CP1 |
 | T-CP5 | 轮中 approve-all | 两 child 挂起 → 其一卡 approve-all | 全队列 resolve(true) + AUTO 置位；其余卡 permissionWithdrawn 移除；后续 child 写零卡 | F-CP1 |
-| T-CP6 | escalate sync | escalate 引擎 callbacks 直驱（subId） | ask 到达面板；owner = `escalate <tag> #<id>` | F-CP1 |
-| T-CP7 | escalate async + ⏹ | 池条目 controller.abort() | ask resolve(false) + permissionWithdrawn 发出 + 卡移除；无悬挂 | F-CP1 |
+| T-CP6（W12 已退役——删除记录见批次档 §5） | escalate sync | escalate 引擎 callbacks 直驱（subId） | ask 到达面板；owner = `escalate <tag> #<id>` | F-CP1 |
+| T-CP7（W12 已退役——删除记录见批次档 §5） | escalate async + ⏹ | 池条目 controller.abort() | ask resolve(false) + permissionWithdrawn 发出 + 卡移除；无悬挂 | F-CP1 |
 | T-CP8 | 双 child 路由 | 两卡并存；先点第二张 | 第二条目 resolve（promptId 匹配——非队头） | F-CP1 |
 | T-CP9 | 陈旧/无 id 响应 | 无 promptId 响应 / 未知 promptId 响应 | 前者回退队头；后者 no-op（零 resolve） | F-CP1 |
 | T-CP10 | eng-coder 零卡 | eng-coder child（ask 档）写 | 零卡、零 approval 事件（C-3/KD-2 保持） | F-CP1 |
@@ -1523,7 +1523,7 @@ callbacks 对象——`id: entry.id`）各加 `onPermissionRequired: makeChildPe
 | T-CP16 | 态词清除 + i18n | 事件 tool=null；两 locale 文件 | 态词回落 chunk 态（或 thinking…）；zh/en 键在位且插值正确 | F-CP1 |
 | T-CP17 | R2 措辞锚 | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:127`）） | F-CP2 |
 | T-CP18 | 结构 | 行数实测 + 源读 | execute-tools ≤500；tool-gates ≤300 | N-CP2 |
-| T-CP19 | Stop 释放 | escalate async ask pending（T-CP7 同夹具）+ `panel._abortController.abort()` | ask resolve(false)（deny）+ `permissionWithdrawn` 发出 + 卡移除；child 未被 abort（F-6 不停池——存活继续） | F-CP1 |
+| T-CP19（W12 已退役——删除记录见批次档 §5） | Stop 释放 | escalate async ask pending（T-CP7（W12 已退役——删除记录见批次档 §5） 同夹具）+ `panel._abortController.abort()` | ask resolve(false)（deny）+ `permissionWithdrawn` 发出 + 卡移除；child 未被 abort（F-6 不停池——存活继续） | F-CP1 |
 
 **测试族写法**：新档 `test/child-permission.test.mjs`——host 面直驱 `permission-gate.mjs` / `panel-messages.mjs`
 （panel 假体——同 `chat-panel-messages.test.mjs` 模式）+ webview 面 `installChatFixture`（happy-dom——同 `activity-flow.test.mjs` 模式）；
@@ -1536,7 +1536,7 @@ i18n/文档锚用 fs 直读。
 | AC-CP1 | F-CP1（机制） | T-CP1/T-CP2/T-CP3/T-CP5 全绿：卡 + 归属逐字 + approve/deny 语义 + approve-all 连带 |
 | AC-CP2 | F-CP1（模式继承） | T-CP4/T-CP5 全绿：AUTO 零卡；轮中翻转后续零卡 |
 | AC-CP3 | F-CP1（角色域） | T-CP10/T-CP11/T-CP12/T-CP15 全绿：eng-coder/explore/plan/无通道零卡；depth-0 零回归 |
-| AC-CP4 | F-CP1（escalate/释放） | T-CP6/T-CP7/T-CP19 全绿：sync/async ask + 归属 + 取消释放（⏹/Stop——deny） |
+| AC-CP4 | F-CP1（escalate/释放） | T-CP6（W12 已退役——删除记录见批次档 §5）/T-CP7（W12 已退役——删除记录见批次档 §5）/T-CP19（W12 已退役——删除记录见批次档 §5） 全绿：sync/async ask + 归属 + 取消释放（⏹/Stop——deny） |
 | AC-CP5 | F-CP1（块头） | T-CP1/T-CP13/T-CP16 全绿：⏸ + 态词、冻结丢弃、两 locale |
 | AC-CP6 | F-CP1（路由/释放） | T-CP8/T-CP9/T-CP14 全绿：promptId 匹配 + 回退 + 逐项形态 |
 | AC-CP7 | F-CP2 | 已退场（随 T-CP17 整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:127`）） |
@@ -1567,5 +1567,5 @@ i18n/文档锚用 fs 直读。
 | U-5 | 焦点/按键 | deny 仍获焦点（既有）；不新造快捷键；⏹ 语义不改（取消 = 定向 abort——C-10） |
 | U-6 | open 项 | 无（全部定稿） |
 
-**计数（D3）**：用例 19 条（编号 T-CP1..T-CP19；在役 18——T-CP17 已退场，删除记录 = `TESTING.md` §8.1（`:127`））· 验收 9（编号 AC-CP1..AC-CP9；在役 8——AC-CP7 随 T-CP17 退场）·
+**计数（D3）**：用例 19 条（编号 T-CP1..T-CP19（W12 已退役——删除记录见批次档 §5）；在役 18——T-CP17 已退场，删除记录 = `TESTING.md` §8.1（`:127`））· 验收 9（编号 AC-CP1..AC-CP9；在役 8——AC-CP7 随 T-CP17 退场）·
 关键决策 8（KD-1..KD-8）· 方案选型问 6（Q1–Q6）· 契约 13（C-1..C-13）· 实施域 17 档（源 13：2 新 + 11 改；测 3：1 新 + 1 改 + 1 登记；含文档域 6 档随批落档）。

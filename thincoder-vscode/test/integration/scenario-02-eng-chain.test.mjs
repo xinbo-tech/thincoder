@@ -17,7 +17,7 @@ import assert from "node:assert/strict"
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
-import { advisorTool } from "../../src/agent-tools/advisor.mjs"
+import { advisorTool } from "@thincoder/core/agent-tools/advisor.mjs" // W12：端侧 advisor 工具随镜像删旧退役——工具面改指核单源
 import { subagentTool } from "../../src/agent-tools/subagent.mjs"
 import { _setConfigPathForTest } from "../../src/config-io.mjs"
 import { mockLLM, providerFor } from "./helpers/mock-llm.mjs"
@@ -54,14 +54,18 @@ const reviewerStep = (body) => {
   }
 }
 
-/** 工程模式父 agent（最小真形状：cwd/config/_provider/history/_engDesignTokens）。 */
+/** 工程模式父 agent（最小真形状：cwd/config/provider/history/_engDesignTokens）。
+ *  W12（2026-09-15）：advisor 工具/解析面改指核单源——核 `resolveAdvisorProvider` 读
+ *  `agent.provider`（回退分支）与 `agent.config.providersList`；夹具同批适配（`_provider` 端侧遗留载体保留）。 */
 function engParent(llm) {
+  const provider = providerFor(llm)
   return {
     cwd: work,
-    config: { agent: { engineering: true }, advisor: { guard: false }, providersList: [] },
+    config: { agent: { engineering: true }, advisor: { guard: false }, providersList: [provider] },
     history: [],
     _role: null,
-    _provider: providerFor(llm),
+    provider,
+    _provider: provider,
     _engDesignTokens: null,
     _advisorRound: 0,
     _lastAdvisorOutput: null,

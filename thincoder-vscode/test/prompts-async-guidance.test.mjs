@@ -29,7 +29,7 @@ import {
   DISCIPLINE_ENGINEERING, DISCIPLINE_NORMAL, CONSULT_BASE,
 } from "@thincoder/core/prompt-overlays.mjs"
 import { toOpenAISchema, builtinTools } from "../src/tools/index.mjs"
-import { buildAdvisorSystemPrompt } from "../src/advisor/main.mjs"
+import { buildAdvisorSystemPrompt } from "@thincoder/core/advisor.mjs" // W12：advisor 镜像删旧——核单源（原 ../src/advisor/main.mjs）
 import { VSC_PROMPT_INJECTIONS } from "../src/prompt-injections.mjs"
 import { activate } from "../extension.mjs"
 

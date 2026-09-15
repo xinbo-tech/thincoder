@@ -15,8 +15,10 @@
  * 驱动不 import runPanelChat（循环依赖）：回合执行器经 runTurn 注入（panel-chat.mjs
  * 装配真实实现，测试注入 mock——CLI agent-turn ctx.runAgent 同款手法）。
  */
+// W12（2026-09-15）：`../agent-tools/async-settle.mjs`（W13 面）继续提供 pending 单容器；
+// 会诊会话清理 = 核单源（`@thincoder/core/agent-tools/consult.mjs`）——动态 import（核链可达
+// node:sqlite，W8 契约②；静态引会入端壳静态链）——已移至 abort 分支引用点（原静态行退役）。
 import { injectPendingAsync, parkAsyncPending } from "../agent-tools/async-settle.mjs" // D2/D3 共享：pending 单容器注入分发 + 停靠统一表示
-import { cleanupConsultSessions } from "../agent-tools/consult.mjs" // §25 R17：会诊会话中止清理（挂起活度见 poolLive 内联读）
 import { logEvent } from "@thincoder/core/log.mjs"
 // 任务可见性族投递通道（第 10 批 §5.1.4 第 3 条）：环 import（panel-callbacks ↔ 本模块——
 // B2 panel-messages↔panel-session 同款）——postSubagentEvent 为函数声明（hoist）——只在
@@ -308,7 +310,12 @@ export async function suspensionSession(panel, entry) {
       // pending 单容器同清（中止清池不注入陈旧结果——四族同池语义——D2）。
       history._asyncSubagents?.clear()
       history._asyncAdvisors?.clear()
-      cleanupConsultSessions({ history })
+      // §25 R17：会诊会话中止清理（核单源——W12 改指；载体读 = history._consultSessions
+      // 优先，回落 agent 字段面：核 consult 会话池挂 agent，端侧旧镜像挂 history）。
+      {
+        const { cleanupConsultSessions } = await import("@thincoder/core/agent-tools/consult.mjs")
+        cleanupConsultSessions({ _consultSessions: history?._consultSessions ?? panel?._agent?._consultSessions })
+      }
       history._pendingAsyncResults = [] // D2 pending 单容器——中止清容器不注入陈旧结果
     } else {
       // D-S3 ③ 兜底：退出前残余（极端竞态）直注入再退——结果零丢失（AC-S2）
@@ -316,8 +323,11 @@ export async function suspensionSession(panel, entry) {
       // subagent/advisor/escalate/consult 各族注入器文案各自保留）
       const residual = history._pendingAsyncResults
       if (residual?.length) {
+        // W12：注入载体稳定化——同一 ctx 对象跨本轮全部残余（核 `injectAsyncResult` 的 digest
+        // 轮预算按载体键累计——同轮多条累计面保持；见 async-settle.mjs injectPendingAsync）。
+        const injectCtx = { history, fullHistory: lines.fullHistory, cwd: entry.cwd }
         for (const e of residual.splice(0)) {
-          await injectPendingAsync(e, { history, fullHistory: lines.fullHistory, cwd: entry.cwd })
+          await injectPendingAsync(e, injectCtx)
         }
       }
       // 残余注入落盘（在-memory 双线已改——防会话文件缺最后几条 reminder）

@@ -1686,9 +1686,9 @@ status:"cap", mode:"auto"|"stop", turns}`；webview 尾追 `.digest-cap` 行（`
 | `src/provider/transports/responses.mjs` | 415 | +~1 | 同上（`output_tokens_details`）（W10 已迁核——现体 `thincoder-core/provider/responses.mjs`） |
 | `src/provider/transports/google.mjs` | 264 | +~1 | 同上（`thoughtsTokenCount`——有则映射）（W10 已迁核——现体 `thincoder-core/provider/google.mjs`） |
 | `src/agent-tools/subagent-run.mjs` | 190 | +~4 | tool chunk 增 `tool`/`cmd`；onAgentTurn→`status:"turn"`；:136-139 注释同步（「逐轮跳动需新通道——不建」已履行——C-11③；修正轮 #2） |
-| `src/agent-tools/subagent-escalate.mjs` | 219 | +~2 | tool chunk 增字段 |
-| `src/agent-tools/subagent-escalate-async.mjs` | 226 | +~2 | tool chunk 增字段 |
-| `src/agent-tools/consult.mjs` | 474 | +~2 | tool chunk 增字段 |
+| `src/agent-tools/subagent-escalate.mjs（W12 已迁核——现体见批次档 §5）` | 219 | +~2 | tool chunk 增字段 |
+| `src/agent-tools/subagent-escalate-async.mjs（W12 已迁核——现体见批次档 §5）` | 226 | +~2 | tool chunk 增字段 |
+| `src/agent-tools/consult.mjs（W12 已迁核——现体见批次档 §5）` | 474 | +~2 | tool chunk 增字段 |
 | `src/extension/panel-toolpanel.mjs` | 21 | +~2 | payload 白名单 + `tool`/`cmd` |
 
 **测试域（VSC——逐档预计增量已补；修正轮 #6）**：`test/activity-flow.test.mjs`（486 → **≤+10**——区语义期望

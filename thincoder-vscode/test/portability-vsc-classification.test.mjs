@@ -13,9 +13,11 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 
 import { classifyPath, clearConventionsCache, isCodePath, isDocPath, isTempPath, loadConventions } from "@thincoder/core/conventions.mjs"
-import { isDocOnlyChange } from "../src/advisor/repos.mjs"
+// W12（2026-09-15）：advisor 镜像删旧——`isDocOnlyChange` / 陈旧判定改指核单源
+// （`@thincoder/core/advisor/repos.mjs` / `advisor-settle.mjs` 的 `reviewIsStale`——读 `_mutLog`）。
+import { isDocOnlyChange } from "@thincoder/core/advisor/repos.mjs"
 import { hasCodeMutations } from "../src/agent/run-helpers.mjs"
-import { advisorStale } from "../src/agent-tools/advisor-async.mjs"
+import { reviewIsStale } from "@thincoder/core/agent-tools/advisor-settle.mjs"
 import { executeToolBatches } from "../src/agent/execute-tools.mjs"
 
 // ─── 夹具 ─────────────────────────────────────────────────────────────────────
@@ -84,9 +86,12 @@ test("T-V03 边界：声明 codePaths:[\"lib\"] —— lib/a.md=code / src/a.md=
   // 全接线（VP-10）：声明面同样驱动变更记账 guard 与在途评审陈旧判定
   assert.equal(hasCodeMutations({ cwd: ws, _touchedFiles: [join(ws, "lib", "notes.md")] }), true, "声明段文件计入代码变更（guard 接声明）")
   assert.equal(hasCodeMutations({ cwd: ws, _touchedFiles: [join(ws, "src", "notes.md")] }), false, "默认段被替换后不再计入（非死记 src）")
-  const staleEntry = { reviewType: "code", eventsAtLaunch: 0, cwd: ws }
-  assert.equal(advisorStale({ history: { _fileMutEvents: [join(ws, "lib", "notes.md")] } }, staleEntry), true, "在途评审陈旧判定按声明段")
-  assert.equal(advisorStale({ history: { _fileMutEvents: [join(ws, "src", "notes.md")] } }, staleEntry), false, "声明替换后 src/notes.md 不判陈旧")
+  // W12：陈旧判定 = 核 `reviewIsStale`（`_mutLog` 账本——launchSeq 后变更按 code 面判）；
+  // 声明面（codePaths）由核 conventions 单源消费。
+  const staleEntry = { reviewType: "code", launchSeq: 0, cwd: ws }
+  const mutAfter = (abs) => ({ cwd: ws, _mutLog: [{ seq: 1, paths: [abs] }] })
+  assert.equal(reviewIsStale(mutAfter(join(ws, "lib", "notes.md")), staleEntry), true, "在途评审陈旧判定按声明段")
+  assert.equal(reviewIsStale(mutAfter(join(ws, "src", "notes.md")), staleEntry), false, "声明替换后 src/notes.md 不判陈旧")
 })
 
 test("T-V04 错误：conventions.json 非法 JSON / 类型错 → 回退默认 + warn + 不抛；clearConventionsCache() 后重读生效", () => {

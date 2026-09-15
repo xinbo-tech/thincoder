@@ -5,8 +5,14 @@
  * engDesignTokens 水合）/ applySlotSessionState（§11.2.1 槽字段 ↔ hydrate 映射）——
  * 纯函数、无 IO（test/agent-lifecycle-singleton.test.mjs 单测锚点）。
  */
-import { isExpiredDesignToken, extractTokenUUID } from "../agent-tools/advisor.mjs"
+// W12（2026-09-15）：原 `../agent-tools/advisor.mjs` 的 token 工具随 advisor 镜像删旧退役——
+// 过期判定改指核 `@thincoder/core/token-ttl.mjs`（`tokenExpired`——单一权威；畸形 token 不判过期
+// = 核语义：门禁格式拒、不主动删）。`extractTokenUUID` 核无同名导出 ⇒ 本地一行式（uuid 段）。
+import { tokenExpired } from "@thincoder/core/token-ttl.mjs"
 import { TRACES_DEFAULTS } from "../config-io.mjs"
+
+/** designId 键 = token 的 uuid 段（原 `advisor.mjs` extractTokenUUID 语义逐字）。 */
+const tokenUUID = (token) => String(token).split(":")[0]
 
 /**
  * §11.2 A —— per-run 复位清单（现靠重建清零的字段回合边界显式复位——预算/守卫不跨回合
@@ -50,18 +56,18 @@ export function reconcileEngDesignTokens(existing, slotTokens, legacyToken) {
   const map = existing instanceof Map ? existing : new Map()
   let droppedExpired = false
   for (const [id, tok] of [...map]) {
-    if (typeof tok === "string" && isExpiredDesignToken(tok)) { map.delete(id); droppedExpired = true }
+    if (typeof tok === "string" && tokenExpired(tok)) { map.delete(id); droppedExpired = true }
   }
   if (slotTokens && typeof slotTokens === "object" && !Array.isArray(slotTokens)) {
     for (const [id, tok] of Object.entries(slotTokens)) {
       if (typeof tok !== "string" || map.has(id)) continue
-      if (isExpiredDesignToken(tok)) { droppedExpired = true; continue }
+      if (tokenExpired(tok)) { droppedExpired = true; continue }
       map.set(id, tok)
     }
   }
   // 迁移读（AC3）：Map 空（TTL 清后）且镜像为有效格式 token → 一次性迁入
-  if (map.size === 0 && typeof legacyToken === "string" && !isExpiredDesignToken(legacyToken)) {
-    map.set(extractTokenUUID(legacyToken), legacyToken)
+  if (map.size === 0 && typeof legacyToken === "string" && !tokenExpired(legacyToken)) {
+    map.set(tokenUUID(legacyToken), legacyToken)
   }
   return { map, droppedExpired }
 }

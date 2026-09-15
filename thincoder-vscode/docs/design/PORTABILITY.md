@@ -15,10 +15,10 @@
 VSC 端（`thincoder-vscode/`）是同一产品的第二实现面、承载同一套工程模式机制——但 VSC 仓**零提及**可移植性，
 A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族的缺陷：
 
-- **判据副本四处散落**（P10）：`src/advisor/repos.mjs:130/:151`（组件式 + 锚定式）+ `src/agent/execute-tools.mjs:108`（锚定式）
-  + `thincoder-core/agent-tools/verify.mjs:114`（W9 已迁核——原 `src/agent-tools/verify.mjs`；松散回退）+ `src/agent-tools/advisor.mjs:219`（`docs/` 前缀）——
+- **判据副本四处散落**（P10）：`src/advisor/repos.mjs（W12 已迁核——现体见批次档 §5）:130/:151`（组件式 + 锚定式）+ `src/agent/execute-tools.mjs:108`（锚定式）
+  + `thincoder-core/agent-tools/verify.mjs:114`（W9 已迁核——原 `src/agent-tools/verify.mjs`；松散回退）+ `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）:219`（`docs/` 前缀）——
   嵌套布局漏判 / 项目约定不可诉 / 无声明面；
-- **评审注入静默跳过**（P1/P2）：`src/advisor/messages.mjs:141-150` + `:236-246` METHODOLOGY 注入（空 catch）、
+- **评审注入静默跳过**（P1/P2）：`src/advisor/messages.mjs（W12 已迁核——现体见批次档 §5）:141-150` + `:236-246` METHODOLOGY 注入（空 catch）、
   `:152-164` 固定 `docs/design/README.md` 文档地图（缺失即 skip）；
 - **Project Guide 注入缺失**（§9 真缺口）：`advisor-round1.md:7` 的 `## Project Guide (AGENTS.md)` 锚引用一个 VSC 从未注入的上下文段；
 - **索引扩展名表窄**（P9）：`index-discover.mjs:8-9`（14 代码 + 5 文档）——无声明面、未列入不可见；
@@ -28,8 +28,8 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 
 | CLI 条 | CLI 批修法（语义源——`PORTABILITY（CLI 仓）`） | VSC 对位点（勘察实测） | 三态结论 |
 |---|---|---|---|
-| P1 | 文档地图声明键 + 显式降级句（project-context.mjs） | `src/advisor/messages.mjs:152-164`（固定路径 + 缺失 skip） | **需修** |
-| P2 | 标准文档声明制 + 降级句（METHODOLOGY 注入移除） | `src/advisor/messages.mjs:141-150` · `:236-246`（注入 ×2、空 catch） | **需修** |
+| P1 | 文档地图声明键 + 显式降级句（project-context.mjs） | `src/advisor/messages.mjs（W12 已迁核——现体见批次档 §5）:152-164`（固定路径 + 缺失 skip） | **需修** |
+| P2 | 标准文档声明制 + 降级句（METHODOLOGY 注入移除） | `src/advisor/messages.mjs（W12 已迁核——现体见批次档 §5）:141-150` · `:236-246`（注入 ×2、空 catch） | **需修** |
 | P3 | 评审指令文本去 `METHODOLOGY.md`（已退役——归位 `docs/design/_archive/METHODOLOGY.md`（CLI 仓）） | `messages.mjs:168/:170/:172` · `src/prompts/advisor-design.md:5` | **需修** |
 | P4 | advisor-design 提示词去本仓引用（EN 逐字 + CN 镜像） | EN `:9/:10/:18/:24` + CN `:20/:21/:39/:54` | **需修** |
 | P5 | 纪律层去「docs/design/<TOPIC>.md 树形状」教条 | `discipline-engineering.md` EN `:45/:60/:74` + CN `:37` | **需修** |
@@ -82,7 +82,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 | # | 候选 | 判据（FR12：单一权威 + 声明可诉 + 不漏判 + VSC 体量） | 取舍 | 结论 |
 |---|---|---|---|---|
 | 1 | **新建 `src/conventions.mjs`（镜像 CLI 语义；W4 已迁核——现体 `thincoder-core/conventions.mjs`）** | 单一权威；声明面一处；消费方全部换源 | 与 CLI 并行实现（语义同源、文本自持） | **选定** |
-| 2 | 修 `src/advisor/repos.mjs` 为权威、其余换源 | 少一个新档 | 分类权威藏于 advisor 子模块——门禁面（`agent/`）反向依赖 advisor/——层向倒挂 | 否决 |
+| 2 | 修 `src/advisor/repos.mjs（W12 已迁核——现体见批次档 §5）` 为权威、其余换源 | 少一个新档 | 分类权威藏于 advisor 子模块——门禁面（`agent/`）反向依赖 advisor/——层向倒挂 | 否决 |
 | 3 | 各副本就地修（不建权威） | 零结构变更 | 四副本漂移已被本批实证——正是 P10 的教训 | 否决 |
 
 ### D2 声明面载体
@@ -97,7 +97,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 
 | # | 候选 | 判据评估 | 取舍 | 结论 |
 |---|---|---|---|---|
-| 1 | **新建 `src/advisor/project-context.mjs`（镜像 CLI 拆分）** | `messages.mjs` 净减；新档 ~190 行；与 CLI 结构同构 | 多一新档（D8 类结构操作，VSC 无既有登记债） | **选定** |
+| 1 | **新建 `src/advisor/project-context.mjs（W12 已迁核——现体见批次档 §5）`（镜像 CLI 拆分）** | `messages.mjs` 净减；新档 ~190 行；与 CLI 结构同构 | 多一新档（D8 类结构操作，VSC 无既有登记债） | **选定** |
 | 2 | 内联进 `messages.mjs` | 少一档 | messages 296 → ~420（超 300 软限 40%）；注入面与消息组装混杂 | 否决 |
 
 ### D4 提示词编辑范围（R24 行）
@@ -137,19 +137,19 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 
 | 调用点 | 现状 | 改法 |
 |---|---|---|
-| `src/advisor/repos.mjs:100-131` | `DOC_FILE`/`TEMP_FILE`/`isDocFile`/`isTempFile`/`isCodePath` 本地定义（导出给 4 消费方） | 谓词迁出至 `conventions.mjs`（**不留 re-export**——消费方全部就地换源）；本档剩 `findReviewRepos`/`collectRepoSnapshots`/`collectChangedFiles`/`isDocOnlyChange` |
-| `src/advisor/repos.mjs:151` `isDocOnlyChange` | `/^src[\\/]/` 锚定 + `DOC_FILE.test` | `isCodePath(filePath, conv)` / `isDocPath(filePath, conv)`（`conv = loadConventions(cwd)`） |
+| `src/advisor/repos.mjs（W12 已迁核——现体见批次档 §5）:100-131` | `DOC_FILE`/`TEMP_FILE`/`isDocFile`/`isTempFile`/`isCodePath` 本地定义（导出给 4 消费方） | 谓词迁出至 `conventions.mjs`（**不留 re-export**——消费方全部就地换源）；本档剩 `findReviewRepos`/`collectRepoSnapshots`/`collectChangedFiles`/`isDocOnlyChange` |
+| `src/advisor/repos.mjs（W12 已迁核——现体见批次档 §5）:151` `isDocOnlyChange` | `/^src[\\/]/` 锚定 + `DOC_FILE.test` | `isCodePath(filePath, conv)` / `isDocPath(filePath, conv)`（`conv = loadConventions(cwd)`） |
 | `src/agent/execute-tools.mjs:108` 父侧门禁 | `typeof p !== "string" \|\| /^src[\\/]/.test(p) \|\| !isDocFile(p)` | `typeof p !== "string" \|\| isCodePath(p, conv(agent.cwd))`——**保留非字符串保守拦截**（未知路径不放行） |
-| `src/agent-tools/advisor.mjs:219` 设计评审文档校验 | `doc.startsWith("docs/")` 放行 + `isDocFile` | `!isDocPath(doc, conv(agent.cwd))` → invalid（`docs/` 前缀判据**退役**） |
+| `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）:219` 设计评审文档校验 | `doc.startsWith("docs/")` 放行 + `isDocFile` | `!isDocPath(doc, conv(agent.cwd))` → invalid（`docs/` 前缀判据**退役**） |
 | `thincoder-core/agent-tools/verify.mjs:90-121`（W9 已迁核——原 `src/agent-tools/verify.mjs`） | 本地 `DOC_FILE`/`isDocFile` 副本 + `findProjectRoot`/`isUnderSrc` | 引用域已核（各仅链式一处引用）——**死代码全删**；`isDocOnlyChange(files, cwd)` 换源 |
 | `src/agent/run-helpers.mjs:9` · `:68-71` `hasCodeMutations` | 经 `repos.mjs` `isCodePath` | import 换源（导出签名不变） |
-| `src/agent-tools/advisor-async.mjs:32` · `:123-124` | 经 `repos.mjs` `isCodePath` | import 换源 |
-| 消费方收口 | `src/agent/execute-tools.mjs:13` · `src/agent-tools/advisor.mjs:10` import `isDocFile` | 换源 `conventions.mjs` |
-| 过期注释随批更正 | `src/advisor/main.mjs:6`（"repos.mjs still hosts the doc-file classifier"）· `repos.mjs:104-106/:127-128` · `verify.mjs:87` · `advisor-async.mjs:123` | 换源后指涉失实——随批改正 |
+| `src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）:32` · `:123-124` | 经 `repos.mjs` `isCodePath` | import 换源 |
+| 消费方收口 | `src/agent/execute-tools.mjs:13` · `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）:10` import `isDocFile` | 换源 `conventions.mjs` |
+| 过期注释随批更正 | `src/advisor/main.mjs（W12 已迁核——现体见批次档 §5）:6`（"repos.mjs still hosts the doc-file classifier"）· `repos.mjs:104-106/:127-128` · `verify.mjs:87` · `advisor-async.mjs:123` | 换源后指涉失实——随批改正 |
 
-### 3.3 评审注入面（VP-1 · VP-2 · VP-3 · VP-8 · VP-12——新建 `src/advisor/project-context.mjs`）
+### 3.3 评审注入面（VP-1 · VP-2 · VP-3 · VP-8 · VP-12——新建 `src/advisor/project-context.mjs（W12 已迁核——现体见批次档 §5）`）
 
-镜像 CLI `src/advisor/project-context.mjs`（195 行）语义。导出面：
+镜像 CLI `src/advisor/project-context.mjs（W12 已迁核——现体见批次档 §5）`（195 行）语义。导出面：
 
 | 导出 | 语义 |
 |---|---|
@@ -182,7 +182,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 
 - `src/agent/execute-tools.mjs:110` 门禁 hint → §4.3 逐字（含未声明时声明指路）；
 - `thincoder-core/agent-tools/eng.mjs:79`（W9 已迁核——原 `src/agent-tools/eng.mjs`） → §4.3 逐字（旧镜像文案 `in docs/`）；W9 单源后核内文案为准；
-- `src/agent-tools/advisor.mjs:216-223` 拒绝文案 + 注释 → §4.3 逐字；
+- `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）:216-223` 拒绝文案 + 注释 → §4.3 逐字；
 - `src/agent/execute-tools.mjs:103` 注释（"under src/ … needs a live design slot"）随换源更正。
 
 ### 3.6 提示词六档（VP-3 · VP-4 · VP-5 · VP-6 · VP-7——逐字见 §4.4）
@@ -234,7 +234,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 - `1. Read the design document fully. Read METHODOLOGY.md to understand the project's standards.` → `1. Read the design document fully.`
 - `methodology compliance (does it follow the project's METHODOLOGY.md?)` → `methodology compliance (does it follow the project's standards as provided?)`
 - 追加句（design）：`3. If the ## Project Guide (AGENTS.md) section above is present, also check requirement fit: does the design match what the requirements documents it points to actually ask for?`
-- **落笔边界（design 分支编号）**：追加句插为第 `3.` 项——原 `3. Do NOT run git diff …`（`src/advisor/messages.mjs:173`）顺延为 `4.`、原 `4.` 顺延为 `5.`（CLI 已交付口径——`src/advisor/messages.mjs:175`（CLI 仓））。
+- **落笔边界（design 分支编号）**：追加句插为第 `3.` 项——原 `3. Do NOT run git diff …`（`src/advisor/messages.mjs（W12 已迁核——现体见批次档 §5）:173`）顺延为 `4.`、原 `4.` 顺延为 `5.`（CLI 已交付口径——`src/advisor/messages.mjs（W12 已迁核——现体见批次档 §5）:175`（CLI 仓））。
 
 **评审指令（`messages.mjs` code 路径）**：
 
@@ -251,7 +251,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 
 `Engineering mode activated. Design-before-code enforced: write a design document first (location per your project's document conventions), run advisor with type='design', get user approval, then implement via eng-coder subagents.`
 
-**advisor 文档门禁拒绝文案（`src/agent-tools/advisor.mjs:223`）**：`Advisor: design review documents must be documentation files (per the project's conventions). Invalid: <invalid list>`
+**advisor 文档门禁拒绝文案（`src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）:223`）**：`Advisor: design review documents must be documentation files (per the project's conventions). Invalid: <invalid list>`
 
 **索引可见化提示行（`panel-index.mjs`）**：`Index built: N files, M chunks. Semantic search is now active.` →
 （unlisted 非空时追加）` K file(s) skipped — extensions not indexed: .xyz, …; declare index.codeExtensions in .thincoder/conventions.json to include them.`
@@ -338,14 +338,14 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 | 文件 | 性质 | 当前行数 | 预计增量 |
 |---|---|---|---|
 | `src/conventions.mjs`（W4 已迁核——现体 `thincoder-core/conventions.mjs`） | **新增** | — | ~220（300 内） |
-| `src/advisor/project-context.mjs` | **新增** | — | ~190（300 内） |
-| `src/advisor/messages.mjs` | 修改 | 296 | 净减 ~30（内联迁出 + 调用） |
-| `src/advisor/repos.mjs` | 修改 | 156 | 净减 ~45（谓词迁出） |
-| `src/advisor/main.mjs` | 修改 | 319 | ±1（过期注释 :6） |
+| `src/advisor/project-context.mjs（W12 已迁核——现体见批次档 §5）` | **新增** | — | ~190（300 内） |
+| `src/advisor/messages.mjs（W12 已迁核——现体见批次档 §5）` | 修改 | 296 | 净减 ~30（内联迁出 + 调用） |
+| `src/advisor/repos.mjs（W12 已迁核——现体见批次档 §5）` | 修改 | 156 | 净减 ~45（谓词迁出） |
+| `src/advisor/main.mjs（W12 已迁核——现体见批次档 §5）` | 修改 | 319 | ±1（过期注释 :6） |
 | `src/agent/execute-tools.mjs` | 修改 | 483 | ≤±8（换源 + hint + 注释） |
 | `src/agent/run-helpers.mjs` | 修改 | 297 | ≤±3（import 换源） |
-| `src/agent-tools/advisor.mjs` | 修改 | 325 | ≤±8（校验换源 + 文案 + 注释） |
-| `src/agent-tools/advisor-async.mjs` | 修改 | 493 | ≤±3（import 换源 + 注释——**近 500 硬限，净零方向**） |
+| `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）` | 修改 | 325 | ≤±8（校验换源 + 文案 + 注释） |
+| `src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）` | 修改 | 493 | ≤±3（import 换源 + 注释——**近 500 硬限，净零方向**） |
 | `src/agent-tools/verify.mjs` | 修改 | 335 | 净减 ~15（本地谓词/死代码删 + 换源） （W9 已迁核——实现体 `thincoder-core/agent-tools/verify.mjs`；本端镜像已删） |
 | `src/agent-tools/eng.mjs` | 修改 | 106 | ±2（文案 :79） （W9 已迁核——实现体 `thincoder-core/agent-tools/eng.mjs`；本端镜像已删） |
 | `src/index-discover.mjs` | 修改 | 88 | ≤+30（扩表 + 声明并集 + unlisted 收集） （W8 已迁核——现体 `thincoder-core/memory/file-walk.mjs`）|

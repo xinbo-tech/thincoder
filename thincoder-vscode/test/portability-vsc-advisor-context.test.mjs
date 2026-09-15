@@ -13,9 +13,9 @@ import { mkdtempSync, rmSync, writeFileSync, mkdirSync, readFileSync } from "nod
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
-import { findProjectRoot } from "../src/advisor/project-context.mjs"
+import { findProjectRoot } from "@thincoder/core/advisor/project-context.mjs" // W12：advisor 镜像删旧——核单源
 import { clearConventionsCache, isDocPath, loadConventions } from "@thincoder/core/conventions.mjs"
-import { advisorTool } from "../src/agent-tools/advisor.mjs"
+import { advisorTool } from "@thincoder/core/agent-tools/advisor.mjs" // W12：端侧 advisor 工具退役（W9 起登记册 = 核）——工具面直驱改指核实现
 import { engTool } from "@thincoder/core/agent-tools/eng.mjs"
 import { _setConfigPathForTest } from "../src/config-io.mjs"
 
@@ -88,14 +88,10 @@ test("T-V13 错误（文案）：advisor 文档门禁拒绝 + eng 工具 enter �
   assert.ok(!engMsg.includes("in docs/"), "eng 文案无 `in docs/`（AC-V09）")
 })
 
-// ─── AC-V11：拆分兑现 + 静态接线面 ─────────────────────────────────────────
+// ─── AC-V11：拆分兑现（W12 改判：messages 镜像档随删旧退役——档级结构断言失去对象，
+// 保留 findProjectRoot 直驱面（VP-10 行为面）〕────────────────────────────────
 
-test("AC-V11 拆分兑现：project-context.mjs 在位（四降级句 + 四导出）；messages.mjs ≤500 且较 296 净减；旧内联面零残留", () => {
-  const msgs = readFileSync(new URL("../src/advisor/messages.mjs", import.meta.url), "utf8")
-  const lines = msgs.split("\n").length
-  assert.ok(lines <= 500, `messages.mjs ≤500（实 ${lines}）`)
-  assert.ok(lines < 296, `messages.mjs 较 296 净减（实 ${lines}）`)
-  // findProjectRoot 直驱（NEAREST 胜 + cwd 为界）
+test("AC-V11 拆分兑现：project-context 定位面（findProjectRoot 直驱——NEAREST 胜 + cwd 为界）", () => {
   const nested = join(ws2(), "pkg")
   write(nested, "AGENTS.md", "# pkg guide\n")
   write(nested, "src/x.mjs", "x\n")

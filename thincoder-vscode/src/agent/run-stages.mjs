@@ -18,8 +18,22 @@ import { resolveCompactThreshold } from "@thincoder/core/config.mjs"
 import { summarizeRunExplorations } from "../explore-distill.mjs"
 import { pushReal, reinjectAfterCompaction, MAX_VERIFY_PUSHBACKS, MAX_VERIFY_RETRIES, hasCodeMutations } from "./run-helpers.mjs"
 import { MAX_ADVISOR_PUSHBACKS } from "./run-helpers.mjs"
-import { MAX_ADVISOR_ROUNDS } from "../advisor/run.mjs"
-import { advisorReviewInFlight } from "../agent-tools/advisor-async.mjs"
+import { MAX_ADVISOR_ROUNDS } from "@thincoder/core/advisor/run.mjs"
+
+/**
+ * W12（2026-09-15）：未决评审判定——原端侧 `../agent-tools/advisor-async.mjs` 的
+ * `advisorReviewInFlight` 随镜像删旧退役。语义 = 核 `advisorReviewPending`（advisor-async.mjs——
+ * 池内任一 `!done`）；本处内联而不静态引核（W8 契约②：端壳静态链不得到达 `node:sqlite`——
+ * 核 advisor-async 经 `agent/spawn-child.mjs→agent.mjs→agent/setup.mjs→memory.mjs` 可达），
+ * 载体读 = 端侧双载体（`agent._asyncAdvisors` ∪ `history._asyncAdvisors`）。
+ * 评审池条目由核 `launchAsyncAdvisor` 建立（W9 起 advisor 工具 = 核面）——读侧同池。
+ */
+function advisorReviewInFlight(parent) {
+  for (const map of [parent?._asyncAdvisors, parent?.history?._asyncAdvisors]) {
+    if (map instanceof Map) for (const e of map.values()) if (!e?.done) return true
+  }
+  return false
+}
 import { logEvent } from "@thincoder/core/log.mjs"
 import { ContinueError, INHERITED_GUARD_KEYS } from "../agent.mjs"
 import { flushDomains } from "../extension/peer-domains.mjs"
@@ -276,7 +290,7 @@ export async function finalizeAgentTurn(agent, ctx) {
     // Turn-bound abort (CONSULTATION.md semantics kept for STOP only): mark stopped
     // (children settle as TERMINATED — grey card) + abort all leftover session
     // controllers + clear the session map — no orphan consultants past an abort.
-    const { cleanupConsultSessions } = await import("../agent-tools/consult.mjs")
+    const { cleanupConsultSessions } = await import("@thincoder/core/agent-tools/consult.mjs")
     cleanupConsultSessions(agent)
     // pending 单容器（D2）——中止清理会诊/飞刀停靠条目（停 = 弃——不注入陈旧结果——
     // 子代理池同款）；subagent/advisor 条目保留（turn-end abort 无挂起会话兜底——保留下个
@@ -323,8 +337,18 @@ export async function finalizeAgentTurn(agent, ctx) {
       const { discardAbortedAdvisors } = await import("../agent-tools/async-discard.mjs")
       discardAbortedAdvisors(agent)
     } else if (!(thrownError instanceof ContinueError)) {
-      const { collectSettledAdvisors } = await import("../agent-tools/advisor-async.mjs")
-      await collectSettledAdvisors(agent, { history, fullHistory, cwd, suspDriven: suspDriven === true })
+      // W12（2026-09-15）：原端侧 `collectSettledAdvisors`（advisor-async.mjs）退役——改指核
+      // 统一注入器 `injectAsyncResult`（`@thincoder/core/agent-tools/subagent.mjs`——按 role
+      // 分发，advisor 报告形状与核 CLI 同源）。动态 import：核链可达 node:sqlite（W8 契约②）。
+      // 语义对齐原收集器：suspDriven ⇒ settled 留池（挂起会话 sweep 消化）；否则 settled 直注入 + 出池。
+      if (suspDriven !== true) {
+        const { injectAsyncResult } = await import("@thincoder/core/agent-tools/subagent.mjs")
+        for (const e of [...advMap.values()]) {
+          if (!e.done) continue
+          await injectAsyncResult(agent, e)
+          advMap.delete(String(e.id))
+        }
+      }
     }
   }
   // The pool rides the shared depth-0 history array across runAgent calls (the agent
