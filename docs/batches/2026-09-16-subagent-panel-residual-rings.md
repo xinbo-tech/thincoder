@@ -404,9 +404,12 @@ B5 单列并入面三 A 行：`model: entry?.model ?? null` 无条件供给—�
 
 ### 6.1 实施与验证（父侧实核）
 
-- 实施提交 `752fe592`（11 档 / +476−32）：供给三补（`thincoder-vscode/src/extension/panel-callbacks.mjs:348-377`——键形解析单点 + 池条目两读 `signal`/`model`）· 核侧名形态（`thincoder-core/agent-tools/escalate-async.mjs:231`）· sync 包装 + continue 键形（`thincoder-core/agent-tools/subagent-actions.mjs:429/441/446`）· consult 键形（`consult.mjs:320`）· 新档两（核 145 行 `child-ask-attribution.test.mjs` / 端 251 行 `vsc-panel-rings.test.mjs`）+ `files.mjs` 11 条 · 三权威档坐标重锚（机制条文零改，如实披露）。
-- **反证三段（原样在案）**：RED = 核 4 例 fail（T-A1 `'escalate/write'` vs `'escalate#1/write'` · T-A2 `'write'` · T-A3 `agent: 'mockprov:mock-model'` · T-A4n `[null]` vs `[false]`）+ 端 4 例 fail（T-R1/T-R4 `until: timeout`〔卡悬挂〕· T-R2 `'escalate#3'` vs `'escalate <glm-5.3> #3'` · T-R3 `null` vs `'coder#7'`；T-R5n 反证锚两态绿）→ GREEN 全绿。
-- 终态链：核 **199/199/0** · VSC lint 198 / fast 560/525/0/35 / full 560/560/0 / integration **53/53/0** / `doc:check` 0 · CLI lint 181 / fast 612/553/0 / full 612/611/1（唯一 fail = `T-V5-15②` 报 37 = **存量基线**、零新增）/ integration 25/25/0 · 三闸：ledger 0 · 锚 `.` 域 0 悬空（CLI 域 37 = 存量基线）· width 仅他批在途 1 行（TUI 批 → 其收口折）。
+- 实施提交 `752fe592`（11 档 / +476−32）：供给三补（`thincoder-vscode/src/extension/panel-callbacks.mjs:348-377`——键形解析单点 + 池条目两读 `signal`/`model`）· 核侧名形态（`thincoder-core/agent-tools/escalate-async.mjs:231`）· sync 包装 + continue 键形（`thincoder-core/agent-tools/subagent-actions.mjs:429/441/446`）
+  · consult 键形（`consult.mjs:320`）· 新档两（核 145 行 `child-ask-attribution.test.mjs` / 端 251 行 `vsc-panel-rings.test.mjs`）+ `files.mjs` 11 条 · 三权威档坐标重锚（机制条文零改，如实披露）。
+- **反证三段（原样在案）**：RED = 核 4 例 fail（T-A1 `'escalate/write'` vs `'escalate#1/write'` · T-A2 `'write'` · T-A3 `agent: 'mockprov:mock-model'` · T-A4n `[null]` vs `[false]`）+ 端 4 例 fail
+  （T-R1/T-R4 `until: timeout`〔卡悬挂〕· T-R2 `'escalate#3'` vs `'escalate <glm-5.3> #3'` · T-R3 `null` vs `'coder#7'`；T-R5n 反证锚两态绿）→ GREEN 全绿。
+- 终态链：核 **199/199/0** · VSC lint 198 / fast 560/525/0/35 / full 560/560/0 / integration **53/53/0** / `doc:check` 0
+  · CLI lint 181 / fast 612/553/0 / full 612/611/1（唯一 fail = `T-V5-15②` 报 37 = **存量基线**、零新增）/ integration 25/25/0 · 三闸：ledger 0 · 锚 `.` 域 0 悬空（CLI 域 37 = 存量基线）· width 仅他批在途 1 行（TUI 批 → 其收口折）。
 - 自含交付协议：审计 1 轮（🔴×1 处置 + 设计档坐标漂移 Fixed）+ 代码评审 1 轮 = **pass**（🔴 0 · 🟡 5 非 must-fix · 🔵 5）⇒ 终态 **clean**。
 
 ### 6.2 评审发现处置（父侧裁定）

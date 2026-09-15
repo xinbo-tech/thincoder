@@ -7,7 +7,7 @@
 > 对位档 = **无**（VSC webview 的历史窗口显示面独立——端差异登记、各端独立实现）。
 > 建档：2026-09-15（**B 式迁移轮 · 第 6 批**——`thincoder-cli/docs/design/TUI.md` 的 §7 / §8 / §15 面重建入本档；
 > 旧档原地一字不改、留作参照历史）。
-> 本档坐标与行数 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
+> 本档坐标与行数 = **as-of 2026-09-16 实核**（仓根 = `thincoder/`）。
 
 ## 1. 定位与模块地图
 
@@ -103,7 +103,8 @@
 | `SUB_BLOCK_CHAR_LIMIT` | 128_000 | 子代理块单环（与 500 显示行双维；裁最旧——省略标记语义不变） |
 | `ADVISOR_TEXT_MAX_CHARS` | 128_000 | 评审载体（头 32K + 尾 96K 保裁决尾部 + 中段标记） |
 | `STREAM_MAX_CHARS` | 256_000 | `state.streaming` / `state.reasoning` 累积（头尾保真；flush 行再受 `LINE_MAX_CHARS`） |
-| `LINES_CHAR_BUDGET` | 2_000_000 | `state.lines` 全部行与载体文本总量（超出：与 5000 行环同款裁头 + 冻结锚点平移 + 收据行） |
+| `LINES_CHAR_BUDGET` | 2_000_000 | `state.lines` 全部行与载体文本总量（超出：最小步进裁头 + 冻结锚点平移 + 收据行——保底见下行） |
+| `LINES_TRIM_FLOOR` | 200 | 字符超额裁剪保底行数——裁剪不得使 `state.lines` 低于该值；触底仍未脱额即停（接受超额——上界 = 保底 × 单行上限） |
 | `SEARCH_MATCH_CAP` | 10_000 | 搜索匹配计数（超出截断 + 提示行） |
 
 **标记形态（逐字——进测试断言）**：行截断 `… [line truncated: N chars omitted]`；子块沿用 `…（已省略 N 行）`（口径不变）；
@@ -115,12 +116,15 @@
 capText(text, { max, keepHead, keepTail, marker })   // 头尾保真 + 中段标记；≤ max 时零拷贝返回
 appendCapped(prev, add, opts)                        // 流式累积（滞后水位：超 hard 裁至 keep——摊还 O(1)）
 lineChars(l)                                         // 一行 + 其 _toolBlock / _frozenSubTask / _frozenAdvisor 字段计长
-syncLineBudget(state, { pushLineLike })              // state.lines 总量对账（超限裁头——复用 5000 行环机制）
+syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账（超限裁头——最小步进 + 保底；onTrim 注入冻结锚点平移）
 ```
 
 - 纯函数本体（`capText` / `appendCappedText`）住 `thincoder-core/text-budget.mjs`（零依赖）——与 agent 侧捕获共用（单一来源）；
   本模块只承载 TUI 面常量与 `lineChars` / `syncLineBudget` 对账。
 - `state._linesChars`（TUI state 内部账）为唯一新增状态位；agent 状态对象零新增语义字段。
+- **裁剪策略（2026-09-16 修订）**：超限按**最小步进**裁剪——只裁至额度内所需的最少行数（非固定 1000 行颗粒）；
+  且不得使 `lines.length` 低于 `LINES_TRIM_FLOOR`——触底仍未脱额即停（接受超额，上界 = 保底 × 单行上限）。
+  收据行文本与计数口径不变（`N` = 裁后 `lines.length`——插收据前）。
 
 ### 5.3 落点（逐路径）
 
@@ -140,9 +144,23 @@ syncLineBudget(state, { pushLineLike })              // state.lines 总量对账
 
 - 每个环 / 块：**行数维与字符维同时满足**（先到先裁）；被裁内容计入既有省略 N（行）——字符维裁剪时按被裁文本行数折算 N（无幽灵计数）。
 - `state.lines` 总量 = Σ `lineChars(l)`——在 push / splice / unshift 后对账（增量维护：push 加分、裁头减分；测试直算对照）。
+- **裁剪终态不变量**：单次对账后恒满足 `_linesChars ≤ LINES_CHAR_BUDGET` **或** `lines.length ≤ LINES_TRIM_FLOOR + 1`
+  （第二支 = 保底态——行数下限成立时字符上界改由「保底 × 单行上限」兜）；「不清到近空」判据 = 裁剪后可见行数 ≥ `LINES_TRIM_FLOOR`。
 - **不碰行数口径**：5000 行环 / 500 行块环 / 200 条目环原样保留，字符维为**第二维**——既有 N5 / N6 语义与既有测试锁逐字不动。
 - **不做**：显示层按需回读交互（截断全文在会话记录——回读面另案）；渲染期裁剪 / 虚拟滚动；不改折叠 / 展开 / 锚定语义；
   不改对话缓存结构（其随 `state.lines` 有界化自然有界）；VSC webview 面零改动。
+
+### 5.5 保底与视口语义（2026-09-16 修订）
+
+- **保底修订**：旧裁剪颗粒（`take = min(1000, lines.length − 1)`）在行数 ≤1001 且字符超额时**一轮裁到 1 行**
+  （收据「1 lines remaining」——用户实测 2026-09-16）；最小步进下常规内容稳态窗口 ≈ 额度/行宽 ≈ 1000 行，
+  胖行场景下限 = `LINES_TRIM_FLOOR`（200 行——≥8 屏@24 行制）。
+- **恢复 / 翻页记账**：恢复 / 翻页 / 切槽 / 清空路径全部经既有对账（直算重对账或逐行入账 + 重跑对账 / 同步归零）——
+  「恢复路径绕过记账」不成立；「裁了又回来」的循环 = 每次恢复 / 翻页 materialize 后立即对账裁剪，旧颗粒下每次裁到近空。
+- **限定（父侧 2026-09-16 实施回读）**：`loadOlder` 占位行移除（`thincoder-cli/src/tui/startup.mjs:170`）未走入账 ⇒ 直算账对 Σ占位行有高估（数十码元 / 页）——**存量漂移**、本批零改（记账面零改动边界）；修复另立技术待办（触发=条件）。
+- **两层 scrollback**：TUI 全程 alt screen（`\x1b[?1049h`——`thincoder-cli/src/tui/tui-lifecycle.mjs` 启动序列）——终端自身
+  scrollback 不承载会话（退出即弃）；滚轮 / 键面滚动全走内层 `state.lines` ⇒ **单层可见历史**。视口 = 内层自底偏移
+  （增长补偿 + clamp，`thincoder-cli/src/tui/render-loop.mjs`）——不改、不加外层锚定 / 提示。
 
 ## 6. 不并项与历史沿革
 
@@ -173,11 +191,14 @@ syncLineBudget(state, { pushLineLike })              // state.lines 总量对账
 
 ## 7. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **186 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **206 行**（TUI-HISTORY-TRIM 批设计轮修订后 · as-of 2026-09-16 实核）——**低于 300 行软线，无需拆分规划**。
 **拆分沿革**：本档自源档 `thincoder-cli/docs/design/TUI.md`（1529 行，超 500 硬门）按读者面拆出（见 `docs/cli/design/TUI.md` §9）。
 
 ## 变更记录
 
+- 2026-09-16（**TUI-HISTORY-TRIM 批 · 设计轮**）：§5 裁剪策略修订——新增 `LINES_TRIM_FLOOR`（保底 200 行）+ **最小步进裁剪**
+  （超限只裁至额度内所需最少行数；保底触底即停——接受超额）；新增 §5.5（保底与视口语义：恢复 / 翻页记账在册、单层可见历史）。
+  动机 = 旧颗粒在行数 ≤1001 且超额时一轮裁到 1 行（用户实测收据「1 lines remaining」）。
 - 2026-09-15（**B 式迁移轮 · 第 6 批**）：建档——`thincoder-cli/docs/design/TUI.md` 的 §7（会话恢复与懒加载）/ §8（回合驱动与挂起会话）/
   §15（长会话内存有界）三面内容重建入本档（旧档一字未改、原地作参照历史）。
   ① 落点 = `docs/cli/design/TUI-SESSION-VIEW.md`（P2 板块内的**读者面拆分档**——由 `docs/cli/design/TUI.md` §9 拆分沿革登记）；
