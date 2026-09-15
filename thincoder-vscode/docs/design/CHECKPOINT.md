@@ -1,6 +1,6 @@
 # VS Code 快照与回滚（CHECKPOINT）
 
-> 板块：checkpoint 快照/回滚（VS Code 端实现）。状态：**当前态规格**（2026-09-08
+> 板块：checkpoint 快照/回滚（VS Code 端实现）。状态：**迁移期参照历史**（S2 W5 · 2026-09-15 后 VSC 自持实现已迁核——现体 `thincoder-core/{git/checkpoint.mjs, tools/git-checkpoint.mjs, tools/git-ext.mjs}`；本档保留作迁移前基线——保留 ≠ 维护）。原记（2026-09-08
 > 由 ARCHITECTURE §13 Checkpoint 行展开并对照 `src/tools/checkpoint.mjs`（W5 已迁核——现体 `thincoder-core/git/checkpoint.mjs:1`）/
 > `git-checkpoint.mjs`/`git-ext.mjs`/`git.mjs`/`shell.mjs` 核实写全——DOC-REORG-VSC
 > 批 6）。
@@ -10,10 +10,10 @@
 > 端接线与 git 工具面。
 > 权威源（VS Code）：`src/tools/checkpoint.mjs`（W5 已迁核——现体 `thincoder-core/git/checkpoint.mjs:1`；全量副本快照 v2——create/list/
 > rewind/restoreFile/listFileVersions/catFile/deleteCheckpointsForCwd/
-> deleteCheckpointsOlderThan）、`git-checkpoint.mjs`（git 工具 checkpoint action 子
+> deleteCheckpointsOlderThan）、`git-checkpoint.mjs`（W5 已迁核——现体 `thincoder-core/tools/git-checkpoint.mjs:1`；git 工具 checkpoint action 子
 > 系统 + F6 懒清理 + D7 提示行）。
 > 装配（VS Code）：`src/tools/git.mjs`（checkpoint action 路由/只读分类/commit 清
-> 理）、`git-ext.mjs`（破坏性 op 前 snapshotBefore）、`shell.mjs`（bash git 破坏性
+> 理）、`git-ext.mjs`（W5 已迁核——现体 `thincoder-core/tools/git-ext.mjs:1`；破坏性 op 前 snapshotBefore）、`shell.mjs`（bash git 破坏性
 > 命令 gitGuardSnapshot）、`src/config-io.mjs`（configDir 定位）。
 > 关联：ARCHITECTURE.md（原 §13 源行——ARCHITECTURE 2026-09-08 瘦身收官，源行已删）、TOOLS.md（git/shell
 > 工具）。
