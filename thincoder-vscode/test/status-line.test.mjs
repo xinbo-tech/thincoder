@@ -97,8 +97,8 @@ test("T-CL21b 状态文本段（AC-CL6）：五 kind 两 locale 逐字；活动�
   assert.ok(line().includes("quota exhausted: balance"), "quota en（原文）")
   send({ type: "statusText", kind: "index", phase: "scan", total: 42 })
   assert.ok(line().includes("Indexing: scanning 42 files…"), "index scan en")
-  send({ type: "statusText", kind: "index", phase: "embed", done: 3, total: 9 })
-  assert.ok(line().includes("Indexing: embedding 3/9…"), "index embed en")
+  send({ type: "statusText", kind: "index", phase: "index", done: 3, total: 9 })
+  assert.ok(line().includes("Indexing: 3/9…"), "index progress en（W8：核 sync 相位——原 embed 相位退场）")
   // zh（两 locale 同步）
   setStrings(zh)
   send({ type: "statusText", kind: "rateWait", seconds: 5 })
@@ -107,8 +107,8 @@ test("T-CL21b 状态文本段（AC-CL6）：五 kind 两 locale 逐字；活动�
   assert.ok(line().includes("限流 429，9s 后重试"), "rateLimited zh")
   send({ type: "statusText", kind: "overloaded", seconds: 2 })
   assert.ok(line().includes("服务过载，2s 后重试"), "overloaded zh")
-  send({ type: "statusText", kind: "index", phase: "embed", done: 3, total: 9 })
-  assert.ok(line().includes("索引：嵌入 3/9…"), "index embed zh")
+  send({ type: "statusText", kind: "index", phase: "index", done: 3, total: 9 })
+  assert.ok(line().includes("索引：3/9…"), "index progress zh")
   // index done 相位 → 清段
   send({ type: "statusText", kind: "index", phase: "done" })
   assert.ok(!line().includes("索引"), "index done → 状态段清除")

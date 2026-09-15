@@ -4,6 +4,7 @@
  */
 import * as vscode from "vscode"
 import { configurePromptInjections } from "@thincoder/core/prompt-files.mjs"
+import { setMemoryFaceGate } from "./src/embed-config.mjs"
 import { ChatPanel } from "./src/extension/chat-panel.mjs"
 import { closeAllMcp } from "./src/extension/panel-mcp.mjs"
 import { initLocale } from "./src/i18n.mjs"
@@ -46,6 +47,11 @@ export async function engineFloorMet({ version = process.versions.node, loadSqli
 export function isMemoryFaceEnabled() {
   return _memoryFaceEnabled
 }
+
+// W8 接线：把本档的护栏访问器接入端壳句柄模块（`src/embed-config.mjs`）——该面在“造记忆面”
+// 前读此旗标（消费契约 = 上面两行）；反向 import 会形成环（tools/index 读 `memoryTool` 的
+// 求值期 TDZ），故接线由入口侧注入。
+setMemoryFaceGate(isMemoryFaceEnabled)
 
 /** activate() first-step guard. Below the floor: clear notice + memory face off; never
  *  throws — the rest of the extension keeps working. Returns the floor state. */

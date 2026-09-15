@@ -158,7 +158,7 @@ F8 嵌套 memory 文件 —— 连续两次 `needed:false`；两集合一致。F
 | 命名面 | 模型可见全 `layer`；内部存储 helper 仍名 scope（映射点 = 工具层） | 同源（内部词保留） |
 
 > VSC 端证据坐标（实核 as-of 2026-09-15）：`thincoder-vscode/src/memory.mjs:30`（`memoryDir`）· `:36`（`scopeDir`）· `:170`–`:177`（legacy 根 + `_scope` 标注）· `thincoder-vscode/src/memory-tool.mjs:117`（action 级只读）· `:151`（向量通道）
-> · `thincoder-vscode/src/indexer.mjs:162`（`model-changed`）· `:170`–`:258`（`needsRebuild` 七词表）· `thincoder-vscode/src/extension/panel-index.mjs:171`（未列入提示行）。
+> · `thincoder-vscode/src/indexer.mjs:162`（`model-changed`；W8 已退役——核面现体 `thincoder-core/memory/code-sync.mjs`）· `:170`–`:258`（`needsRebuild` 七词表）· `thincoder-vscode/src/extension/panel-index.mjs:171`（未列入提示行）。
 
 ## 5. 不并项与历史沿革（批 5 · 2026-09-15）
 

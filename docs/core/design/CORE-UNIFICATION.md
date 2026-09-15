@@ -1731,7 +1731,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 | VSC test | `thincoder-vscode/test/async-visibility.test.mjs` | 401 | 0（结构未变） |
 | VSC test | `thincoder-vscode/test/config-watch.test.mjs` | 156 | 0（结构未变） |
 | VSC test | `thincoder-vscode/test/doc-anchors.test.mjs` | 329 | 0（结构未变） |
-| VSC test | `thincoder-vscode/test/index-perception.test.mjs` | 237 | 0（结构未变） |
+| VSC test | `thincoder-vscode/test/index-perception.test.mjs` | 237 | 0（结构未变）（W8 已退役——用例核面承接入 `thincoder-vscode/test/memory-index-face.test.mjs`；机制见 `docs/core/design/MEMORY.md` §6.9） |
 | VSC test | `thincoder-vscode/test/ledger-check.test.mjs` | 150 | 0（结构未变） |
 | VSC test | `thincoder-vscode/test/md-render-escape.test.mjs` | 174 | 0（结构未变） |
 | VSC test | `thincoder-vscode/test/status-line.test.mjs` | 157 | 0（结构未变） |

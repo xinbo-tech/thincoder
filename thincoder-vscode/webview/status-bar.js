@@ -86,15 +86,16 @@ export function handleUsageMessage(m) {
 }
 
 /** statusText 段文案（C-12#1/C-15——host 发结构化 kind；webview 按 locale 渲染）：
- *  rateWait/rateLimited/overloaded/quota/index（scan·embed 两相）；未知 kind → null（不渲染）。 */
+ *  rateWait/rateLimited/overloaded/quota/index（scan·index 两相——W8：核 sync 相位，原 embed
+ *  相位退场）；未知 kind → null（不渲染）。 */
 function statusTextText(st) {
   switch (st?.kind) {
     case "rateWait": return t("status.rateWait", { s: st.seconds ?? "?" })
     case "rateLimited": return t("status.rateLimited", { s: st.seconds ?? "?" })
     case "overloaded": return t("status.overloaded", { s: st.seconds ?? "?" })
     case "quota": return t("status.quota", { msg: st.message ?? "" })
-    case "index": return st.phase === "embed"
-      ? t("status.indexEmbed", { done: st.done ?? "?", total: st.total ?? "?" })
+    case "index": return st.phase === "index"
+      ? t("status.indexProgress", { done: st.done ?? "?", total: st.total ?? "?" })
       : t("status.indexScan", { n: st.total ?? "?" })
     default: return null
   }

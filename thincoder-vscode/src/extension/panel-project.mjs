@@ -7,6 +7,7 @@ import { t } from "../i18n.mjs"
 import { resumeSlot } from "./session-io.mjs"
 import { _cwd, setProjectFolder } from "./panel-messages.mjs"
 import { loadSession } from "./panel-session.mjs"
+import { ensureMemoryHandle } from "../embed-config.mjs"
 import { pushIndexStatus, maybePromptIndex } from "./panel-index.mjs"
 import { refreshLedger } from "./ledger-surface.mjs" // LEDGER-SURFACE（§2.30.3.5）
 
@@ -52,6 +53,8 @@ export async function onProjectChanged(panel) {
     panel._slot = resumeSlot(cwd).slot
     pushProject(panel)
     loadSession(panel)   // clearMessages + new project's history + sessions + autoApprove/planMode
+    // W8：核记忆面就绪（句柄创建——换项目后索引读数/构建入口同源可用）
+    await ensureMemoryHandle()
     pushIndexStatus(panel)
     maybePromptIndex(panel)
     refreshLedger(panel, { emit: false }) // LEDGER-SURFACE：换项目即时刷新 item（不投递不记账）

@@ -1621,9 +1621,10 @@ status:"cap", mode:"auto"|"stop", turns}`；webview 尾追 `.digest-cap` 行（`
 | `status.overloaded` | 服务过载，{s}s 后重试 | Server overloaded, retrying in {s}s |
 | `status.quota` | 配额耗尽：{msg} | quota exhausted: {msg} |
 | `status.indexScan` | 索引：扫描 {n} 文件… | Indexing: scanning {n} files… |
-| `status.indexEmbed` | 索引：嵌入 {done}/{total}… | Indexing: embedding {done}/{total}… |
+| `status.indexEmbed`（W8 已退役——核面新键 = `status.indexProgress`，见下两行） | 索引：嵌入 {done}/{total}… | Indexing: embedding {done}/{total}… |
+| `status.indexProgress`（W8 新键——相位与读数取核面；消费 `webview/status-bar.js:98`） | 索引：{phase}（{n} 文件） | Indexing: {phase} ({n} files) |
 
-（`status.turns` 键随段退役删除；`digest.start/done/aborted` 与其余既有键不动。）
+（`status.turns` 键随段退役删除；`status.indexEmbed` 随 W8 索引面归一退场（核面进展面 = `status.indexProgress`）；`digest.start/done/aborted` 与其余既有键不动。）
 
 **i18n 记法校准——实现后同步（2026-09-12）**：表内占位符 `{n}`/`{m}`/`{s}`/`{turns}`/`{msg}`/`{done}`/`{total}` 为简写——
 实落一律 `${…}` 形态（本端引擎仅认 `${k}`——`webview/i18n.js:30`；照抄 `{n}` 将向用户显示字面占位符）；
@@ -1680,10 +1681,10 @@ status:"cap", mode:"auto"|"stop", turns}`；webview 尾追 `.digest-cap` 行（`
 | `src/extension/panel-callbacks.mjs` | 186 | +~16 | onWait→statusText · onAgentTurn→turnFrame · reasoning_tokens 累计 · postDigestCap helper |
 | `src/extension/panel-index.mjs` | 183 | +~9 | 索引进度→statusText（scan/embed/done） |
 | `src/extension/suspension.mjs` | 363 | ±2 | 注释同步（reclaim 语义「折叠回收」→「归档落流」——零逻辑） |
-| `src/provider.mjs` | 424 | +~6 | 429 onWait 携 status；5xx 重试等待上报（overloaded 相位） |
-| `src/provider/transports/openai.mjs` | 347 | +~2 | usage 映射 `reasoning_tokens`（`completion_tokens_details`） |
-| `src/provider/transports/responses.mjs` | 415 | +~1 | 同上（`output_tokens_details`） |
-| `src/provider/transports/google.mjs` | 264 | +~1 | 同上（`thoughtsTokenCount`——有则映射） |
+| `src/provider.mjs` | 424 | +~6 | 429 onWait 携 status；5xx 重试等待上报（overloaded 相位）（W10 已迁核——现体 `thincoder-core/provider/core.mjs`） |
+| `src/provider/transports/openai.mjs` | 347 | +~2 | usage 映射 `reasoning_tokens`（`completion_tokens_details`）（W10 已迁核——现体 `thincoder-core/provider/sse.mjs`） |
+| `src/provider/transports/responses.mjs` | 415 | +~1 | 同上（`output_tokens_details`）（W10 已迁核——现体 `thincoder-core/provider/responses.mjs`） |
+| `src/provider/transports/google.mjs` | 264 | +~1 | 同上（`thoughtsTokenCount`——有则映射）（W10 已迁核——现体 `thincoder-core/provider/google.mjs`） |
 | `src/agent-tools/subagent-run.mjs` | 190 | +~4 | tool chunk 增 `tool`/`cmd`；onAgentTurn→`status:"turn"`；:136-139 注释同步（「逐轮跳动需新通道——不建」已履行——C-11③；修正轮 #2） |
 | `src/agent-tools/subagent-escalate.mjs` | 219 | +~2 | tool chunk 增字段 |
 | `src/agent-tools/subagent-escalate-async.mjs` | 226 | +~2 | tool chunk 增字段 |

@@ -27,8 +27,8 @@ import { _resetRestartDetectionForTests } from "../src/agent/setup-reminders.mjs
 import { assemblePrompt } from "@thincoder/core/prompt-overlays.mjs"
 import { _setConfigPathForTest } from "../src/config-io.mjs"
 import { loadSkills, formatSkillListing } from "../src/extension/skills.mjs"
-import { planTool, planReminderForTurn } from "../src/agent-tools/plan.mjs"
-import { skillTool } from "../src/agent-tools/skill.mjs"
+import { planTool, planReminderForTurn } from "@thincoder/core/agent-tools/plan.mjs"
+import { skillTool } from "@thincoder/core/agent-tools/skill.mjs"
 import { injectResponseReminders } from "../src/agent/run-stages.mjs"
 
 const __here = dirname(fileURLToPath(import.meta.url))
@@ -71,16 +71,16 @@ const bag = (over = {}) => ({ skills: [], ...over })
 const runOnce = (agent, b, { restore = true, input = "hello" } = {}) =>
   hydrateRun(agent, { provider, cwd, input, opts: b, depth: 0, role: null, getAuto: () => false, restore })
 
-/** 生产块依赖的确定性替身（计数/失败另行包装）。 */
+/** 生产块依赖的确定性替身（计数/失败另行包装）。W8：召回面依赖 = 核面句柄 + 核检索函数
+ *  （`getMemory` → 句柄；`docSearch`/`memorySearch` → 核 `docSearch`/`search` 签名同形）。 */
 const depsFor = (over = {}) => ({
   pushGitContext: async (history) => {
     history.push({ role: "user", content: "[System reminder: git context:\nGit context: on branch `main`, working tree clean.]", transient: true })
   },
   buildSummary: async () => "42 source files indexed.\nHub files (by inbound dependencies, top 1):\n  src/a.mjs — imported by: src/b.mjs",
-  getEmbedder: () => ({ stub: true }),
-  loadIndexManifest: () => ({ version: 1, files: {} }),
-  searchIndex: async () => [{ file: "docs/design/X.md", kind: "doc", startLine: 1, endLine: 1, score: 0.9, snippet: "1: hello doc" }],
-  memorySearch: () => [{ type: "rule", title: "T", content: "C" }],
+  getMemory: () => ({ stub: true }),
+  docSearch: async () => [{ path: "docs/design/X.md", heading: null, content: "1: hello doc" }],
+  memorySearch: async () => [{ type: "rule", title: "T", content: "C" }],
   pendingItems: () => [{ status: "in_progress", text: "do the thing" }],
   ...over,
 })
@@ -189,21 +189,22 @@ test("T-CI-2c 边界（截断）：skills 5 档（>3）——尾块恰 3 条 + `
 
 // ─── T-CI-3 / T-CI-3b 召回负面态 ─────────────────────────────────────────────
 
-test("T-CI-3 边界：索引缺失 / embedder 缺——文档召回块零注入（其余块在）", async () => {
-  _setInjectionDepsForTests(depsFor({ getEmbedder: () => null }))
+test("T-CI-3 边界：句柄缺 / 检索零命中——文档召回块零注入（其余块在）", async () => {
+  _setInjectionDepsForTests(depsFor({ getMemory: () => null }))
   const r1 = await runOnce(buildTopLevelAgent(), bag())
-  assert.equal(firstIdx(r1.history, "[Relevant documentation"), -1, "embedder 缺 → 零注入")
-  assert.ok(firstIdx(r1.history, "[Relevant memories from previous sessions") >= 0, "其余块在（记忆召回仍走）")
+  assert.equal(firstIdx(r1.history, "[Relevant documentation"), -1, "句柄缺（记忆面停用）→ 文档召回零注入")
+  assert.equal(firstIdx(r1.history, "[Relevant memories from previous sessions"), -1, "句柄缺 → 记忆召回同样零注入（同句柄面）")
   assert.ok(firstIdx(r1.history, "[System reminder: task checklist (pending/in-progress):") >= 0, "其余块在（checklist）")
 
-  _setInjectionDepsForTests(depsFor({ loadIndexManifest: () => null }))
+  _setInjectionDepsForTests(depsFor({ docSearch: async () => [] }))
   const r2 = await runOnce(buildTopLevelAgent(), bag())
-  assert.equal(firstIdx(r2.history, "[Relevant documentation"), -1, "索引缺失 → 零注入")
+  assert.equal(firstIdx(r2.history, "[Relevant documentation"), -1, "零命中 → 零注入")
+  assert.ok(firstIdx(r2.history, "[Relevant memories from previous sessions") >= 0, "其余块在（记忆召回）")
   assert.ok(firstIdx(r2.history, "[System reminder: project dependency outline:") >= 0, "其余块在（大纲）")
 })
 
 test("T-CI-3b 边界：记忆 search 零命中（索引在位）——记忆召回块零注入（其余块在）", async () => {
-  _setInjectionDepsForTests(depsFor({ memorySearch: () => [] }))
+  _setInjectionDepsForTests(depsFor({ memorySearch: async () => [] }))
   const r = await runOnce(buildTopLevelAgent(), bag())
   assert.equal(firstIdx(r.history, "[Relevant memories from previous sessions"), -1, "零命中 → 零注入")
   assert.ok(firstIdx(r.history, "[Relevant documentation") >= 0, "其余块在（文档召回）")
@@ -254,7 +255,7 @@ test("T-CI-5 边界：第二 run——快照/大纲不重注 + 各恰 1 次调�
 test("T-CI-6 正常：plan enter/exit + 节律语义（稀疏 2 / 满 5 / 新消息）", async () => {
   const agent = buildTopLevelAgent()
   await planTool.execute({ action: "enter" }, { agent, callbacks: {} })
-  assert.equal(agent._planMode, true, "enter 置位（本端 _planMode）")
+  assert.equal(agent.planMode, true, "enter 置位（W9 起 = 核载体名 planMode；端壳镜像 _planMode 由 agent.mjs 工具批后回填）")
   assert.equal(agent._pendingReminders.length, 1, "enter 先置 pending 再返包（cli :78）")
   assert.match(agent._pendingReminders[0], /^\[System reminder: plan mode is ON\. Workflow: \(1\) explore\/read codebase with read-only tools,/)
 
@@ -266,7 +267,7 @@ test("T-CI-6 正常：plan enter/exit + 节律语义（稀疏 2 / 满 5 / 新消
   assert.match(planReminderForTurn(agent, true), /^\[System reminder: plan mode is ON\./, "新用户消息 → 全量句")
 
   await planTool.execute({ action: "exit" }, { agent, callbacks: {} })
-  assert.equal(agent._planMode, false, "exit 清位")
+  assert.equal(agent.planMode, false, "exit 清位（核载体名）")
   assert.equal(agent._pendingReminders.at(-1), "[System reminder: plan mode is now OFF. Start implementing your plan — edit files, run commands. No need for a task list (plan already covered that) or further confirmation.]", "exit pending 句逐字")
   assert.equal(planReminderForTurn(agent, false), null, "退出后节律归零")
 })
@@ -299,7 +300,7 @@ test("T-CI-8 正常：skill load（name/SKILL.md 形态）——<skill-loaded> +
   const demoDir = join(cwd, ".thincoder", "skills", "demo")
   mkdirSync(demoDir, { recursive: true })
   writeFileSync(join(demoDir, "SKILL.md"), `# Demo\nDesc line\n<tag> & "quote"\n${"x".repeat(8100)}\nTAIL-MARKER\n`)
-  const agent = { history: [], _pendingReminders: [] }
+  const agent = { cwd, history: [], _pendingReminders: [] } // W9：核 skill 工具读 ctx.agent.cwd（原端面兼容 ctx.cwd）
   const ctx = { cwd, agent, callbacks: {} }
 
   const out = await skillTool.execute({ action: "load", name: "demo" }, ctx)
@@ -307,7 +308,7 @@ test("T-CI-8 正常：skill load（name/SKILL.md 形态）——<skill-loaded> +
   assert.equal(agent._pendingReminders.length, 1, "注入 = _pendingReminders（user 消息——下回合可见）")
   const msg = agent._pendingReminders[0]
   assert.ok(msg.startsWith(`<skill-loaded name="demo" source=".thincoder/skills/demo.md">\n`), "包裹头逐字")
-  assert.ok(msg.includes("&lt;tag&gt; &amp; &quot;quote&quot;"), "XML 转义（无撇号集——端差异 §17.10）")
+  assert.ok(msg.includes("&lt;tag&gt; &amp; &quot;quote&quot;"), "XML 转义（核转义集含撇号——本夹具无撇号，子串同形）")
   assert.ok(msg.includes("TAIL-MARKER"), "不截断（>8000 字符全文——旧 slice(0,8000) 退役）")
   assert.ok(msg.endsWith(`</skill-loaded>\n\nFollow the skill's instructions above for the current task.`), "包裹尾逐字")
 
@@ -342,19 +343,18 @@ test("T-CI-9 边界：连续两 run——前一请求体是后一请求体的逐
 // ─── T-CI-10 失败静默 + 失败不重试（N-Q2）───────────────────────────────────
 
 test("T-CI-10 错误：块 I/O 失败 → 该块静默跳过；各恰 1 次调用/run（失败不重试）", async () => {
-  const counts = { pushGitContext: 0, listWorkDir: 0, buildSummary: 0, searchIndex: 0, memorySearch: 0 }
+  const counts = { pushGitContext: 0, listWorkDir: 0, buildSummary: 0, docSearch: 0, memorySearch: 0 }
   _setInjectionDepsForTests({
     pushGitContext: async () => { counts.pushGitContext++; throw new Error("git boom") },
     listWorkDir: () => { counts.listWorkDir++; throw new Error("tree boom") },
     buildSummary: async () => { counts.buildSummary++; throw new Error("outline boom") },
-    getEmbedder: () => ({}),
-    loadIndexManifest: () => ({}),
-    searchIndex: async () => { counts.searchIndex++; throw new Error("recall boom") },
-    memorySearch: () => { counts.memorySearch++; throw new Error("memory boom") },
+    getMemory: () => ({ stub: true }),
+    docSearch: async () => { counts.docSearch++; throw new Error("recall boom") },
+    memorySearch: async () => { counts.memorySearch++; throw new Error("memory boom") },
     pendingItems: () => { throw new Error("checklist boom") },
   })
   const r = await runOnce(buildTopLevelAgent(), bag())
-  assert.deepEqual(counts, { pushGitContext: 1, listWorkDir: 1, buildSummary: 1, searchIndex: 1, memorySearch: 1 }, "各恰 1 次调用/run——失败不重试")
+  assert.deepEqual(counts, { pushGitContext: 1, listWorkDir: 1, buildSummary: 1, docSearch: 1, memorySearch: 1 }, "各恰 1 次调用/run——失败不重试")
   for (const p of ["[System reminder: git context:", "[System reminder: OS: ", "[System reminder: project dependency outline:", "[Relevant documentation", "[Relevant memories from previous sessions", "[System reminder: task checklist"]) {
     assert.equal(firstIdx(r.history, p), -1, `失败块静默跳过：${p}`)
   }

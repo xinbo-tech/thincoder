@@ -4,6 +4,7 @@
  * mutates panel._slot / panel._autoApprove exactly like the former methods did.
  */
 import { loadSlot, saveSessionToSlot, newSlot, deleteSlotAndUpdate, setSlotTitle, loadModelPrefs as loadStoredModelPrefs, historyWindow, listSlots, slimForDisplay, isLegacyTransient, stripTruncatedToolArgs, resumeSlot, readEndMarker, writeEndMarker } from "./session-io.mjs"
+import { ensureMemoryHandle } from "../embed-config.mjs"
 import { engTokensMergeForSave } from "./session-slot-write.mjs"
 import { fullStatus, lastModelsPayload } from "./settings.mjs"
 import { migrateLegacySettings } from "./migrate-settings.mjs"
@@ -333,6 +334,10 @@ export async function status(panel) {
     const prefs = loadModelPrefs(panel)
     if (prefs.model && panel._statusBar) panel._statusBar.text = `$(hubot) ${prefs.model}`
 
+    // W8：核记忆面就绪（句柄创建——面板打开即建；设置/索引读数与构建入口不落空）
+    await ensureMemoryHandle()
+    // W8 旧目录清退：告示一次（用户动作 = 唯一删除路径——零自动删除）
+    void panel._maybePromptLegacyIndexRemoval()
     // Auto-check: prompt to build vector index if available but missing
     panel._maybePromptIndex()
   }

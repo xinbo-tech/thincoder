@@ -24,8 +24,8 @@
 | F2 | 项目约定可声明 | 声明文件 = `.thincoder/conventions.json`（`src/conventions.mjs:34`；W4 已迁核——现体 `thincoder-core/conventions.mjs`）；`codePaths` 声明替换默认、`index.*Extensions` 追加入并集；损坏 / 类型错 → 回退默认 + 警告 + 不崩（`src/conventions.mjs:194-220`） |
 | F3 | 嵌套布局不漏判 | 段匹配非锚定、大小写不敏感、`/` 与 `\` 通吃——`packages/foo/src/x.md` 判 code（分类优先级 = 代码段 > temp > 文档扩展名 > code） |
 | F4 | 评审注入降级可见 | 降级句常量四句在位（`src/advisor/project-context.mjs:35` / `:39` / `:40` / `:41`）；缺 AGENTS.md / 地图 / 标准文档 / git 时各注入对应句、从不静默——`injectProjectGuide` `:91` · `injectDocumentMap` `:138` · `injectProjectStandards` `:176` · `messages.mjs:115` |
-| F5 | 索引面可声明、未列入可见 | 扩展名表 + 声明并集（`src/index-discover.mjs:17` / `:24` / `:126` / `:135`）；构建返回 `unlistedExts`（`src/indexer.mjs:113`）+ 面板提示行（`src/extension/panel-index.mjs:171`） |
-| F6 | 非 git 项目行为有定义 | 索引：无 git → 全量 walk + per-file mtime 回退（`src/indexer.mjs:185-186` / `:241`）；评审：`NO_GIT_NOTICE` 降级句、评审照常 |
+| F5 | 索引面可声明、未列入可见 | 扩展名表 + 声明并集（`src/index-discover.mjs:17` / `:24` / `:126` / `:135`）；构建返回 `unlistedExts`（`src/indexer.mjs:113`）+ 面板提示行（`src/extension/panel-index.mjs:171`） （W8 已迁核——现体 `thincoder-core/memory/file-walk.mjs`）（W8 已迁核——现体 `thincoder-core/memory/code-sync.mjs`（codeSync/检索））|
+| F6 | 非 git 项目行为有定义 | 索引：无 git → 全量 walk + per-file mtime 回退（`src/indexer.mjs:185-186` / `:241`）；评审：`NO_GIT_NOTICE` 降级句、评审照常 （W8 已迁核——现体 `thincoder-core/memory/code-sync.mjs`（codeSync/检索））|
 | F7 | 门禁面同源 | 工程写门禁按声明分类判定（`src/agent/tool-gates.mjs:89-91`）——不以 `src/` 硬编码 / `docs/` 前缀放行 |
 | F8 | 提示词面不假定本仓形态 | 提示词内指令性引用零本仓指涉（机判面 = `docs/design/PORTABILITY.md` AC-V07——「本产品自研仓 =」标注形态除外） |
 
@@ -36,7 +36,7 @@
 | N1 | 零假阳 | 默认判据（`src` 为代码面）对既有项目行为与修复前一致——专项用例零误报 + 全量回归全绿 |
 | N2 | 降级不崩溃 | 声明损坏 / 不可读 → 默认 + `console.warn` + `logEvent`（不抛）；注入缺失 → 降级句（不抛） |
 | N3 | 全接线 | 消费点逐处换源（评审 / 门禁 / 索引 / 提示词四族）——「修一处漏三处」在用例面反证 |
-| N4 | 测试面 | 专项用例三档在位且快层全绿：`test/portability-vsc-classification.test.mjs` · `test/portability-vsc-advisor-context.test.mjs` · `test/portability-vsc-index.test.mjs` |
+| N4 | 测试面 | 专项用例三档在位且快层全绿：`test/portability-vsc-classification.test.mjs` · `test/portability-vsc-advisor-context.test.mjs` · `test/portability-vsc-index.test.mjs` （W8 已退役——用例核面承接入 `test/memory-index-face.test.mjs`，机制见 `docs/core/design/MEMORY.md` §6.9）|
 
 ## 4. 范围边界（不做）
 

@@ -12,6 +12,8 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
+import { createRequire } from "node:module"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import { window as vscodeWindow } from "vscode"
 import files from "./files.mjs"
 import { nodeFloorMet, engineFloorMet, applyEngineFloorGuard, isMemoryFaceEnabled } from "../extension.mjs"
@@ -90,4 +92,64 @@ test("engine floor wiring: activate() runs the guard first + engines.vscode pinn
   assert.ok(guardAt < body.indexOf("new ChatPanel("), "护栏先于面板构建（首步）")
   const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"))
   assert.equal(pkg.engines.vscode, "^1.104.0", "引擎下限值 = 用户裁定 ^1.104.0")
+})
+
+// ─── W8 接线契约机判（§2 W8——引擎护栏接线契约①/②）────────────────
+
+/** 静态 import 闭包：{ files, builtins, unresolved }。只走静态 import/export-from 边
+ *  （动态 `import()` 不入闭包——与运行时加载语义一致）；注释先剥离。 */
+function staticClosure(entryPath) {
+  const files = new Set()
+  const builtins = new Set()
+  const unresolved = new Set()
+  const queue = [entryPath]
+  const re = /(?:^|[\s;])(?:import|export)\s+(?!\()([^;"'`]{0,400}?)\bfrom\s*["']([^"']+)["']|(?:^|[\s;])import\s*["']([^"']+)["']/g
+  while (queue.length) {
+    const file = queue.pop()
+    if (files.has(file)) continue
+    let src
+    try { src = readFileSync(file, "utf8") } catch { continue }
+    files.add(file)
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ \t]*\/\/.*$/gm, "")
+    let m
+    while ((m = re.exec(code))) {
+      const spec = m[2] ?? m[3]
+      if (!spec) continue
+      if (spec.startsWith("node:")) { builtins.add(spec); continue }
+      try {
+        queue.push(spec.startsWith(".")
+          ? fileURLToPath(new URL(spec, pathToFileURL(file)))
+          : createRequire(file).resolve(spec))
+      } catch { unresolved.add(spec) }
+    }
+  }
+  return { files, builtins, unresolved }
+}
+
+test("W8 contract②: extension.mjs static closure never reaches node:sqlite + lazy-import face pinned", () => {
+  const entry = fileURLToPath(new URL("../extension.mjs", import.meta.url))
+  const { files, builtins, unresolved } = staticClosure(entry)
+  // 非空证明（闭包真走了）：入口 + 句柄档 + 工具装配面均在；无法解析的裸包 = 仅外部面
+  const has = (suffix) => [...files].some((f) => f.replaceAll("\\", "/").endsWith(suffix))
+  assert.ok(has("extension.mjs"), "入口在闭包内")
+  assert.ok(has("thincoder-vscode/src/embed-config.mjs"), "句柄档（embed-config）在闭包内（正控）")
+  assert.ok(has("thincoder-vscode/src/tools/index.mjs"), "工具装配面在闭包内（正控：memoryTool 求值面）")
+  assert.ok(files.size > 30, `闭包非平凡（实 ${files.size} 档）`)
+  assert.deepEqual([...unresolved], [], "闭包内零不可解析裸包（vscode / @thincoder/core 均可达）")
+  // 契约②本体：端壳静态链不得到达 node:sqlite（否则低宿主模块加载期硬失败、护栏静默失效）
+  assert.ok(!builtins.has("node:sqlite"), `端壳静态链到达 node:sqlite（实 ${[...builtins].join(", ")}）`)
+  // 反证（防假绿）：动态载入目标（核记忆面）自身静态链**是**可达 node:sqlite 的——
+  // 把动态 import 改成静态，上一条即红。
+  const coreMemory = createRequire(entry).resolve("@thincoder/core/memory.mjs")
+  const core = staticClosure(coreMemory)
+  assert.ok(core.builtins.has("node:sqlite"), "核记忆面静态链可达 node:sqlite（动态载入必要性反证）")
+  // 载入形态 = 动态 import（embed-config 内）+ 旗标接线（extension.mjs 注入）+ 创建点在装配面
+  const embedSrc = readFileSync(new URL("../src/embed-config.mjs", import.meta.url), "utf8")
+  assert.ok(/await import\("@thincoder\/core\/memory\.mjs"\)/.test(embedSrc), "核记忆面经动态 import() 载入（embed-config）")
+  assert.ok(/if \(!_faceGate\?\.\(\)\)/.test(embedSrc) || /memoryFaceEnabled\(\)/.test(embedSrc), "造记忆面前读护栏旗标")
+  const extSrc = readFileSync(new URL("../extension.mjs", import.meta.url), "utf8")
+  assert.ok(extSrc.includes("setMemoryFaceGate(isMemoryFaceEnabled)"), "入口把 isMemoryFaceEnabled 接入句柄模块（旗标消费接线）")
+  const chatSrc = readFileSync(new URL("../src/extension/panel-chat.mjs", import.meta.url), "utf8")
+  const site = chatSrc.slice(chatSrc.indexOf("ensurePanelAgent(panel, turnSlot)"))
+  assert.ok(site.indexOf("ensurePanelAgent(panel, turnSlot)") >= 0 && site.includes("ensureMemoryHandle()"), "句柄创建点在 ensurePanelAgent 同址（装配面）")
 })

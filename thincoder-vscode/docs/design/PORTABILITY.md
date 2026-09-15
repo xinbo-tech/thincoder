@@ -16,7 +16,7 @@ VSC 端（`thincoder-vscode/`）是同一产品的第二实现面、承载同一
 A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族的缺陷：
 
 - **判据副本四处散落**（P10）：`src/advisor/repos.mjs:130/:151`（组件式 + 锚定式）+ `src/agent/execute-tools.mjs:108`（锚定式）
-  + `src/agent-tools/verify.mjs:114`（松散回退）+ `src/agent-tools/advisor.mjs:219`（`docs/` 前缀）——
+  + `thincoder-core/agent-tools/verify.mjs:114`（W9 已迁核——原 `src/agent-tools/verify.mjs`；松散回退）+ `src/agent-tools/advisor.mjs:219`（`docs/` 前缀）——
   嵌套布局漏判 / 项目约定不可诉 / 无声明面；
 - **评审注入静默跳过**（P1/P2）：`src/advisor/messages.mjs:141-150` + `:236-246` METHODOLOGY 注入（空 catch）、
   `:152-164` 固定 `docs/design/README.md` 文档地图（缺失即 skip）；
@@ -38,7 +38,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 | P8 | 非 git：索引 walk 回退 + 评审侧降级句 | 索引：`indexer.mjs:231-246` **已有 walk 回退（已对位）**；评审侧：无降级句 | **索引已对位；评审侧需修** |
 | P9 | 索引扩表 / 声明 / 未列入可见 | `index-discover.mjs:8-9`（14/5 项）· 无声明面 · 无 unlisted | **需修** |
 | P10 · P25 | 判据单一权威 + 声明面 + 全接线 | 副本 4 处（上 §1.1）+ 消费 2 处（`run-helpers.mjs:9/:71` · `advisor-async.mjs:32/:124`） | **需修** |
-| P14 | `/eng` 无前提（删 METHODOLOGY 门禁） | `src/agent-tools/eng.mjs:64-80` enter 直接翻转——**无门禁（已对位）**；差：`:79` 文案 `in docs/` | **本体已对位；文案需修** |
+| P14 | `/eng` 无前提（删 METHODOLOGY 门禁） | `thincoder-core/agent-tools/eng.mjs:64-80`（W9 已迁核——原 `src/agent-tools/eng.mjs`）enter 直接翻转——**无门禁（已对位）**；差：`:79` 文案 `in docs/` | **本体已对位；文案需修** |
 | §9 缺口 | （CLI 有 `injectProjectGuide`——VSC 缺） | `advisor-round1.md:7` 锚 + 全 `src/` 无注入实现 | **需修（真缺口）** |
 
 ### 1.3 本批条目清单（三方一致锚——批次档 §2 = 本表 = 验收标准回指）
@@ -141,7 +141,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 | `src/advisor/repos.mjs:151` `isDocOnlyChange` | `/^src[\\/]/` 锚定 + `DOC_FILE.test` | `isCodePath(filePath, conv)` / `isDocPath(filePath, conv)`（`conv = loadConventions(cwd)`） |
 | `src/agent/execute-tools.mjs:108` 父侧门禁 | `typeof p !== "string" \|\| /^src[\\/]/.test(p) \|\| !isDocFile(p)` | `typeof p !== "string" \|\| isCodePath(p, conv(agent.cwd))`——**保留非字符串保守拦截**（未知路径不放行） |
 | `src/agent-tools/advisor.mjs:219` 设计评审文档校验 | `doc.startsWith("docs/")` 放行 + `isDocFile` | `!isDocPath(doc, conv(agent.cwd))` → invalid（`docs/` 前缀判据**退役**） |
-| `src/agent-tools/verify.mjs:90-121` | 本地 `DOC_FILE`/`isDocFile` 副本 + `findProjectRoot`/`isUnderSrc` | 引用域已核（各仅链式一处引用）——**死代码全删**；`isDocOnlyChange(files, cwd)` 换源 |
+| `thincoder-core/agent-tools/verify.mjs:90-121`（W9 已迁核——原 `src/agent-tools/verify.mjs`） | 本地 `DOC_FILE`/`isDocFile` 副本 + `findProjectRoot`/`isUnderSrc` | 引用域已核（各仅链式一处引用）——**死代码全删**；`isDocOnlyChange(files, cwd)` 换源 |
 | `src/agent/run-helpers.mjs:9` · `:68-71` `hasCodeMutations` | 经 `repos.mjs` `isCodePath` | import 换源（导出签名不变） |
 | `src/agent-tools/advisor-async.mjs:32` · `:123-124` | 经 `repos.mjs` `isCodePath` | import 换源 |
 | 消费方收口 | `src/agent/execute-tools.mjs:13` · `src/agent-tools/advisor.mjs:10` import `isDocFile` | 换源 `conventions.mjs` |
@@ -181,7 +181,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 ### 3.5 文案面（VP-11 · VP-3 收尾）
 
 - `src/agent/execute-tools.mjs:110` 门禁 hint → §4.3 逐字（含未声明时声明指路）；
-- `src/agent-tools/eng.mjs:79` → §4.3 逐字；
+- `thincoder-core/agent-tools/eng.mjs:79`（W9 已迁核——原 `src/agent-tools/eng.mjs`） → §4.3 逐字（旧镜像文案 `in docs/`）；W9 单源后核内文案为准；
 - `src/agent-tools/advisor.mjs:216-223` 拒绝文案 + 注释 → §4.3 逐字；
 - `src/agent/execute-tools.mjs:103` 注释（"under src/ … needs a live design slot"）随换源更正。
 
@@ -346,10 +346,10 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 | `src/agent/run-helpers.mjs` | 修改 | 297 | ≤±3（import 换源） |
 | `src/agent-tools/advisor.mjs` | 修改 | 325 | ≤±8（校验换源 + 文案 + 注释） |
 | `src/agent-tools/advisor-async.mjs` | 修改 | 493 | ≤±3（import 换源 + 注释——**近 500 硬限，净零方向**） |
-| `src/agent-tools/verify.mjs` | 修改 | 335 | 净减 ~15（本地谓词/死代码删 + 换源） |
-| `src/agent-tools/eng.mjs` | 修改 | 106 | ±2（文案 :79） |
-| `src/index-discover.mjs` | 修改 | 88 | ≤+30（扩表 + 声明并集 + unlisted 收集） |
-| `src/indexer.mjs` | 修改 | 445 | ≤+18（unlisted 统计 + 返回 + 事件） |
+| `src/agent-tools/verify.mjs` | 修改 | 335 | 净减 ~15（本地谓词/死代码删 + 换源） （W9 已迁核——实现体 `thincoder-core/agent-tools/verify.mjs`；本端镜像已删） |
+| `src/agent-tools/eng.mjs` | 修改 | 106 | ±2（文案 :79） （W9 已迁核——实现体 `thincoder-core/agent-tools/eng.mjs`；本端镜像已删） |
+| `src/index-discover.mjs` | 修改 | 88 | ≤+30（扩表 + 声明并集 + unlisted 收集） （W8 已迁核——现体 `thincoder-core/memory/file-walk.mjs`）|
+| `src/indexer.mjs` | 修改 | 445 | ≤+18（unlisted 统计 + 返回 + 事件） （W8 已迁核——现体 `thincoder-core/memory/code-sync.mjs`（codeSync/检索））|
 | `src/extension/panel-index.mjs` | 修改 | 178 | ≤+6（提示行） |
 
 **VSC 提示词（面 V——六档）**
@@ -401,12 +401,12 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 | T-V11 | 正常（校验） | design 评审传 `documents:["docs/design/x.md"]` | 通过（isDocPath） | VP-10 |
 | T-V12 | 边界（校验） | 传 `["src/prompts/x.md"]` / `["x.mjs"]` | 拒绝（非文档——`docs/` 前缀不再放行） | VP-10 |
 | T-V13 | 错误（文案） | advisor 文档门禁拒绝 + eng 工具 enter | 两条文案均无 `in docs/`；与 §4.3 逐字一致 | VP-11 |
-| T-V14 | 正常（扩展名） | `.dart`/`.lua`/`.cs`/`.org` 文件 | 默认可索引 | VP-9 |
-| T-V15 | 边界（声明） | `index.codeExtensions:[".xyz"]` | `.xyz` 入索引；未列入 → `unlistedExts` 计数 | VP-9 |
-| T-V16 | 正常（可见化） | 含未索引扩展名文件的构建 | `buildIndex` 返回 `unlistedExts`；面板消息含提示行 | VP-9 |
+| T-V14 | 正常（扩展名） | `.dart`/`.lua`/`.cs`/`.org` 文件 | 默认可索引 | VP-9 （W8 已退役——核面承接见 `docs/core/design/MEMORY.md` §6.9）|
+| T-V15 | 边界（声明） | `index.codeExtensions:[".xyz"]` | `.xyz` 入索引；未列入 → `unlistedExts` 计数 | VP-9 （W8 已退役——核面承接见 `docs/core/design/MEMORY.md` §6.9）|
+| T-V16 | 正常（可见化） | 含未索引扩展名文件的构建 | `buildIndex` 返回 `unlistedExts`；面板消息含提示行 | VP-9 （W8 已退役——核面承接见 `docs/core/design/MEMORY.md` §6.9）|
 | T-V17 | 正常（提示词） | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:143`）） | VP-3–VP-7 |
 | T-V18 | 边界（R24 对齐） | — | 已退场（整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:144`）） | VP-7 |
-| T-V19 | 正常（索引回归） | 既有 `needsRebuild` 路径 | 行为零回归（非 git 回退保持） | VP-9（回归锁） |
+| T-V19 | 正常（索引回归） | 既有 `needsRebuild` 路径 | 行为零回归（非 git 回退保持） | VP-9（回归锁） （W8 已退役——核面承接见 `docs/core/design/MEMORY.md` §6.9）|
 
 ## 7. 验收标准（AC-V01–AC-V14——逐条回指）
 
@@ -417,7 +417,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 | AC-V03 | T-V05–T-V06 全绿（门禁拒绝保持 + 非字符串保守拦截保持 + 声明后行为切换） | VP-10 · FR12 |
 | AC-V04 | 判据面已退场（T-V07–T-V09 均整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:137`–`:139`）） | VP-1 · VP-2 · VP-3 · VP-12 · FR10/11 |
 | AC-V05 | 判据面已退场（T-V10 整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:140`）） | VP-8 · FR15 |
-| AC-V06 | T-V14–T-V16 全绿；`unlistedExts` 字段与面板提示行存在 | VP-9 · FR10 |
+| AC-V06 | T-V14–T-V16 全绿；`unlistedExts` 字段与面板提示行存在 | VP-9 · FR10 （W8 已退役——核面承接见 `docs/core/design/MEMORY.md` §6.9）|
 | AC-V07 | T-V17 已退场（整删——删除记录 = `TESTING.md` §8.1（`:143`））；六档编辑面内指令性引用 = 0（`docs/design/README.md` / `docs/design/<TOPIC>.md`——「本产品自研仓 =」标注形态除外）；`check-doc-width` 零指涉（全形态） | VP-3–VP-7 · FR13 |
 | AC-V08 | 既有提示词锚测试全绿（`prompts-mirror-anchors` + `prompts-async-guidance` + `doc-consistency`）；红线锚句逐一在位 | VP-3–VP-7 · FR13 |
 | AC-V09 | T-V11–T-V13 全绿；门禁/工具文案 `in docs/` grep 0（VSC `src/`） | VP-10 · VP-11 |

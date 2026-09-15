@@ -13,7 +13,7 @@
 |---|---|---|
 | 记忆库 | `thincoder-cli/src/memory.mjs`（转口）+ `src/memory/**`（8 档） | `thincoder-vscode/src/memory.mjs` · `memory-tool.mjs` |
 | 工具面 | `src/memory/docs.mjs` 的 `memoryTools` | `src/memory-tool.mjs` |
-| 索引（代码 / 文档） | `src/memory/code-index.mjs` · `code-sync.mjs` | `src/indexer.mjs` · `index-bin.mjs` · `index-discover.mjs` · `tools/code.mjs` |
+| 索引（代码 / 文档） | `src/memory/code-index.mjs` · `code-sync.mjs` | `src/indexer.mjs` · `index-bin.mjs` · `index-discover.mjs` · `tools/code.mjs`（VSC 侧四档 W8 已退役——核面现体 `thincoder-core/memory/code-sync.mjs` / `file-walk.mjs`；`tools/code.mjs` = 端壳改指面） |
 | 嵌入 | `src/embedding.mjs` | 同（同路径对） |
 | team 层同步 | `src/git/gitmem.mjs` | —（无对位） |
 | 子命令面 | `src/cli/memory-command.mjs` | —（无对位） |
@@ -36,7 +36,7 @@
 | 133 | `src/memory.mjs` + `src/memory/**`（8 档）↔ `src/memory.mjs` + `memory-tool.mjs` | ③ | 以 CLI 为准（A12——**前提失效，非选边**） | 分叉 ＝ **前提已失效**（「VS Code 内置 Node 不支持 sqlite」不成立；CLI `node:sqlite`+FTS5 `src/memory/schema.mjs:9,68` / VSC 零 sqlite）⇒ 直接归一；**承 §2.5 #82** | —（承 #82） | S1（建核补齐） |
 | 134 | `src/memory/docs.mjs`（`memoryTools`）↔ `src/memory-tool.mjs` | ② | 融合：核内单一 memory 工具面（动作集 / schema / 文案取一侧） | 分叉 ＝ 拆档位置（CLI 工具面住 `memory/docs.mjs:241`）；两端动作集同规格（五动作 / layer 词面）⇒ 前提成立；**随 #82 / A1 归一** | —（承 #82） | S1（建核补齐） |
 | 135 | `src/cli/memory-command.mjs` ↔ 核内（VSC 无对位） | ④ | 端特有段：CLI `memory` 子命令面（shell 通道） | 结构性不对称 = **仅 CLI 有 shell 子命令通道**（VSC 无终端子命令面——与 #125 冷 cwd 面同源）；**非**「差异」排除（A9） | — | 不迁（端特有） |
-| 136 | `src/memory/code-index.mjs` + `code-sync.mjs` ↔ `src/indexer.mjs` | ③ | 以 CLI 为准（**同一 A12 前提失效**；进核） | 分叉 ＝ 索引存储（VSC `.thincoder/index/{manifest.json,vectors.bin}` 文件 ↔ CLI sqlite 库——CLI `src/**` 零 `.thincoder/index` 命中）；前提同 #82 ⇒ 失效；**随 A1 归一** | —（承 #82） | S1（建核补齐） |
+| 136 | `src/memory/code-index.mjs` + `code-sync.mjs` ↔ `src/indexer.mjs` | ③ | 以 CLI 为准（**同一 A12 前提失效**；进核） | 分叉 ＝ 索引存储（VSC `.thincoder/index/{manifest.json,vectors.bin}` 文件 ↔ CLI sqlite 库——CLI `src/**` 零 `.thincoder/index` 命中）；前提同 #82 ⇒ 失效；**随 A1 归一**（W8 已落地 2026-09-15——VSC 侧已退役删旧，核面现体 `thincoder-core/memory/code-sync.mjs`） | —（承 #82） | S1（建核补齐） |
 | 137 | （CLI 无切分档）↔ `src/index-bin.mjs` · `index-discover.mjs` | ② | 融合：随核内索引面一并归位（向量编解码 / 走查规则） | 分叉 ＝ 拆档（VSC 拆 3 档 / CLI 2 档）；走查规则（`SKIP_DIRS` / 点目录 / `.thincoder` 特例）两端同源（VSC `thincoder-vscode/src/index-discover.mjs:5-8` 自述「CLI-aligned」）⇒ 前提成立 | — | S1（建核补齐） |
 | 168 | `src/git/gitmem.mjs` ↔ 核内（VSC 侧无 team 层同步面） | ③ | 以 CLI 为准（team 层记忆 git 同步）；VSC team 层现行「明确拒绝、指向 CLI」⇒ 随 A1 归一 | 分叉 ＝ team 层处置（VSC 无该层）；**承 #82 / A1** | —（承 #82） | S1（建核补齐） |
 
@@ -265,33 +265,32 @@
 - **对外结构不变**：返回 `[{ id, score }]` 候选（既有消费面 RRF 融合不变）；FTS 通道与 `projectOrigin` 过滤零改。
 - **可测缝**：扫描器接受注入的 `runChunkedQuery`（默认真实 DB 实现——测试以假数据源直测块大小 / top-K / 等价性）。
 
-### 6.9 VS Code 端实现面（现状登记 · 归一过渡）
+### 6.9 VS Code 端实现面（W8 归一落地 · 2026-09-15）
 
 > **来源** = `thincoder-vscode/docs/design/MEMORY.md`（325 行 · VSC 产品档——迁移期参照历史）。本节 = 该档中「根层所缺」的 **VS Code 端现状面**（(a) 机制 / (b) 坐标）。
-> **归一方向**：§2.1 #82 / A1 已裁「以 CLI 为准（`node:sqlite` 定案——A12 前提失效，非选边）」——本节为 **sqlite 归一前的 VSC 现状登记**；归一时 VSC 改接线、文件制存储细节随过渡退场（(d) 类不并——§8.2）。**索引面裁定收口（2026-09-15 用户）**：索引面归一 = 并核 sqlite；**数据面零迁移 / 零兼容**（不写导入器——重新索引 = 正当路径）——
-> 本节文件制索引面（`.thincoder/index/` 与 `indexer` 族）随 `2026-09-15-vsc-core-wiring` W8 接线删旧退场。
+> **归一落地**（2026-09-15 · `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W8）：§2.1 #82 / A1「以 CLI 为准（`node:sqlite` 定案）」+ 索引面裁定（归一 = 并核 sqlite · **数据面零迁移 / 零兼容**——重新索引 = 正当路径）已由 W8 接线落地——
+> VSC 改接线核面；文件制存储与索引面（`.thincoder/index/` · `indexer` 族）**已删旧退场**（(d) 类不并——§8.2）。
 
-- **VSC 存储 = 文件制 markdown + frontmatter（无 FTS5 / 无 sqlite）**：存储根 `{cwd}/.thincoder/memory/`，
-root（legacy）+ `personal/` + `project/` 三物理目录；条目 frontmatter = `type / title / tags / author / created`
-（与 CLI 条目格式兼容，byte-exact）；文件名 `YYYYMMDD-<slug>-<rand4>.md`；旧版 `.json` 条目**只读向后兼容**。
-零依赖——纯 node:fs 同步 API。**归一后**：VSC 存储改走 `~/.thincoder/memory.db`
-（`memory import` 一次性迁移——§2.5.1 A2）。
-- **VSC 检索 = 向量优先、关键词回退**：embedder 可用（config `embedding.{baseURL,apiKey,model}`）+ 索引存在
-（`.thincoder/index/`）→ `searchIndex` 向量检索；否则关键词打分（title 3 / tag 2 / content 1 分；CJK bigram
-回退）。embedding 服务 = OpenAI 兼容 `/v1/embeddings`（SiliconFlow bge-m3 / Ollama / OpenAI），批量 32 +
-重试退避；向量归一化、点积 = 余弦。归一后：索引面进 sqlite（code_chunks / doc_chunks——§6.4 同源语义）；**检索 = 核 `codeSearch` / `docSearch` + 惰性向量回填；文件制驱动（`indexer.mjs` 族）删旧；数据面零迁移 / 零兼容（2026-09-15 裁定收口）**。
-- **VSC 索引有效性面（B1–B4——归一前 VSC 特有设计，校验原则跨端保留）**：
-  - **B1 模型 / 维度不一致 → 不产出 + 状态面可见**：`indexCompat`（`thincoder-vscode/src/indexer.mjs:156`——manifest-only，不发网络）比对 `manifest.embed_model` 与 `embedder.model`；`searchIndex` 前置两道闸（相容性 + query 维度）不匹配 → 返回 `[]` → 既有回退链自动走关键词路径；可见面 = `pushIndexStatus` 追加 `mismatch` + `maybePromptIndex` 提示重建。
-  - **B2 gitignored 且非 memory 文件增删改也触发重建**：`needsRebuild`（`:170`）git 快路径改
-`git status --porcelain --ignored=traditional`（同一次调用取 dirty + ignored）；`!!` 目录条目经
-`discoverFilesUnder` 走查产出候选（SKIP_DIRS / 点目录过滤）；忽略文件**删除**经
-`git check-ignore --stdin -z` 圈定候选 + 存在性扫描（被忽略文件删除后从 git 输出彻底消失——模式匹配
-+ 存在性检查是唯一可达触发）。
-  - **B3 `listMemoryFiles` 递归**＝与 `discoverFiles` 同 walk 规则共享（`index-discover.mjs`）；嵌套 memory 文件进入变更检测（恢复代码自述不变量「discovery 与 rebuild 判定不得背离」）。
-  - **B4 reason 词表单一化**：`{ no-index · new-commits · file-added · file-removed · file-missing · file-changed · up-to-date }`（`file-changes` 改 `file-changed`——2/3 多数同构）。
-  - **校验原则跨端普适**：embedding 模型/维度不一致 → 结果不可信（名称不一致即拒——不同模型向量空间不可比）→ **不产出 + 可见**（非静默错误、非自动重建）；归一时以 sqlite 索引承接同原则。**收口（2026-09-15）**：B1–B4 为 VSC 文件制索引特有设计——随驱动删旧退场；核面承接形态 = 模型变更 ⇒ 该表向量置空 + 检索时惰性回填（失效向量绝不进评分——「不产出」；
-  「可见」面自然化 = 无 mismatch 提示——`code-sync.mjs` `ensureCodeEmbeddings` / `docs.mjs` `ensureDocEmbeddings`）。
-- **VSC 工具契约端差**：`memory` 工具面（五动作 // layer 值域 personal / project——**无 team 层**，收到 team 明确拒绝并指引 CLI）；工具级 `readonly: false`、动作级只读分类（search / list 只读放行——planMode 放行、免审批、可并行；put / delete / clear 副作用门）；`delete` 尊重 uid 内嵌 origin（文件定位先查物理层目录——跨层 search 带出的行「能看到但碰不到」的修复）。
+**当前实现面（W8 后）**：
+
+- **存储 = 核 sqlite（与 CLI 同库）**：`~/.thincoder/memory.db`（共享配置 `memory.dbPath`；缺省 = `<configDir>/memory.db`）。
+  句柄 `createMemory` 由端壳装配面创建持有（`thincoder-vscode/src/embed-config.mjs`——`ensurePanelAgent` 同址惰性创建）；
+  护栏 = `isMemoryFaceEnabled()`（`extension.mjs`）前置——停用/创建失败 ⇒ 句柄 null、消费点全部零崩；
+  **端壳静态 import 链零 `node:sqlite`**（核面经动态 `import()` 载入——静态可达 = 低宿主模块加载期硬失败；机判 = `thincoder-vscode/test/engine-floor-guard.test.mjs`）。
+  `embedder` 经 getter 跟随共享 config（惰性向量回填）；`codeOrigin` = 当前项目根（逐调用限定——多项目单库）；`projectOrigin` = `memory.projectDir`（缺省 `.thincoder/memory`，首次逐项目 `syncDir`——CLI 启动同形）。
+- **检索 = 核 `codeSearch` / `docSearch` / `search`**（FTS5 + 惰性向量，无 embedder → 纯 FTS 回退非空〔限非空 query〕）；
+  端壳文件制索引（`indexer` 族）与宿主 regex 回退**退役**——`code_search` / `doc_search` 面经核工具生成器调用（描述/输出契约同文）。
+- **迁移路径**：VSC 老用户文件制 personal 记忆 = `memory import` 一次性导入器（CLI 面——**未落**，登记于该批次档「发现」清单）；project 层 = `.thincoder/memory/*.md`（双端同目录，磁盘为真相）。
+- **重建面（端壳）**：入口 = 面板「构建索引」（`thincoder.buildIndex`）→ 核序 `gitSync` → 回退 `codeSync`+`docSync`（并行）；
+  进度 = Notification + 状态行段（`scan` / `index` 相位）；取消面 = `cancellable: false`（核 sync 无中断缝——端差收正）；
+  模型变更**零手动重建**（失效向量置空 + 检索懒回填——不产无效结果）；`mismatch` 载荷与「Rebuild now?」提示**退场**；
+  旧目录 `.thincoder/index/` 清退 = 告示 + 显式删除动作（每项目一次 · 零自动删除路径）。
+- **工具契约端差**：`memory` 五动作（search / put / list / delete / clear）；layer 值域 personal / project——**无 team 层**（收到 team 明确拒绝并指引 CLI）；
+  工具级 `readonly: false`、动作级只读分类（search / list 只读放行——planMode 放行、免审批、可并行）；put / delete / clear 副作用门；
+  执行器 / 输出契约 = 核工具生成器（§6.6.4 同文——单一实现）。
+
+**退场登记（文件制面——(d) 类不并）**：文件制 markdown 存储（root / personal / project 三物理目录 · 旧 `.json` 只读兼容）与向量优先 + 关键词回退的检索链（title 3 / tag 2 / content 1 分 · CJK bigram）随 W8 删旧退场（坐标见该批次档 W8 段）；
+B1–B4（`indexCompat` 模型/维度校验 · gitignored 触发重建 · `listMemoryFiles` 递归自检 · reason 词表）为文件制索引特有设计——核面承接 = 模型变更 ⇒ 该表向量置空 + 检索懒回填（失效向量绝不进评分）；
 
 ## 7. 并入的关键决策记录（含否决备选）
 
@@ -348,13 +347,13 @@ root（legacy）+ `personal/` + `project/` 三物理目录；条目 frontmatter 
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **334 行**（B 轮并入前 80 行）——**超 300 行软线**（未超 500 硬限）⇒ 须拆分规划。
+**实测行数**：本档 **374 行**（W8 归一落地轮前 334 行）——**超 300 行软线**（未超 500 硬限）⇒ 须拆分规划。
 
 | # | 拆分面 | 去向 | 状态 |
 |---|---|---|---|
 | 1 | §6.7 配置路径家目录展开 | 配置板块（本层 `CONFIG.md`）——该机制作用于 config 装载面 | **建议**（待父侧裁定——迁移批落地） |
 | 2 | §6.4 / §6.8 索引与向量上界面 | 与 §6.3 检索合族为「检索与索引」子档 | **待裁定**（与「一板块一档」惯例的关系同 `AGENT-LOOP.md` §9） |
-| 3 | §6.9 VS Code 端实现面（现状登记） | **归一后整体退场**（§2 #82 / A1——VSC 改接线，文件制 + `.thincoder/index` 面随过渡消解） | **已给去向**（随归一收窄；不另拆档） |
+| 3 | §6.9 VS Code 端实现面（W8 归一落地） | 归一落地后 = VSC 端当前实现面登记（接入核面）；VSC 收口批后整体退场（§2 #82 / A1——不再保留过渡登记） | **已给去向**（随归一收窄；不另拆档） |
 
 **落地时点** = 迁移批（本批不拆）；拆分动作不得改语义（只修引用）。
 
@@ -368,3 +367,7 @@ root（legacy）+ `personal/` + `project/` 三物理目录；条目 frontmatter 
 - 2026-09-15（**VSC 轮并入 · 批 7**）：§6.9 新增 **VS Code 端实现面**（现状登记——文件制存储 / 向量优先检索 / 索引有效性 B1–B4 / 工具契约端差）· §7 补 **D-MEM14–15** · §8.2 补 3 行不并项登记（含文件制存储 (d) 类——已裁归一）· §9 拆分表 +1 行（归一退场）；来源 = `thincoder-vscode/docs/design/MEMORY.md`（**旧档一字未改**）；坐标按现状实核（`indexer.mjs:156,170` · `memory.mjs` 等）。
 - 2026-09-15（**引擎下限裁定收口 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮）：§3.1 A3 行与 §4.1 第 1 行同轮收正——用户 2026-09-15 裁定：值 = **`^1.104.0`** · **不另做真机实测**（资料推导链 + `activate()` 护栏兜底）；原「待真机实测 + 过目 / 经真机实测确认后定值」口径作废。
 - 2026-09-15（**索引存储面裁定收口 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮-2）：用户 2026-09-15 裁定：索引面归一 = 并核 sqlite；**数据面零迁移 / 零兼容**（不写导入器——重新索引 = 正当路径）。收正面 = §6.9（现状登记 → 裁定收口注——文件制存储/检索 + B1–B4 随驱动删旧退场）· §4 第 11 行（兼容形态 + 裁定状态）· §3.1 A2（迁移边界注）· §7 D-MEM14（承接形态收口）。
+- 2026-09-15（**W8 归一落地 · eng-coder**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W8）：§6.9 现状登记收正为**W8 后实现面**
+  （核 sqlite 句柄 / 护栏接线 / 检索面 / 重建面 / 工具契约端差 + 文件制面退场登记）；§9 行数实测 334 → **374**、拆分表第 3 行措辞随落地收正。
+  VSC 侧删除集（`src/memory.mjs` · `embedding.mjs` · `index-bin.mjs` · `index-discover.mjs` · `indexer.mjs`）与核面接线均已落地
+  （机判 = `thincoder-vscode/test/memory-index-face.test.mjs` · `engine-floor-guard.test.mjs`）。

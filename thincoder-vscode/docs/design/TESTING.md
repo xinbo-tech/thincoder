@@ -131,7 +131,7 @@
 | digest-visibility | 192 | T-D8 接线机检 | 段删 | 194-197 | 读 `webview` CSS 常量子串 |
 | doc-consistency | 185 | T-MA8-2 主流程零内联 width 扫描 + 规则 6 子串 | 段删 | 192-194 | 读 `docs/design/README.md` 子串 |
 | eng-designer-role | 118 | T57 边界：场景表（不静默回退）+ 人格槽位 + 纪律槽 | 段删 | 121 · 123 | 装配产物 `assemblePrompt(...).prompt` 的常量全文比对与槽句在场——PA-A1（C1-a）；槽表 / 长度 / warnings 断言保留（119 · 122 · 125-128） |
-| index-perception | 244 | T-I9 词表锁（七词表） | 段删 | 249-253 | 读 `src/indexer.mjs` 字面量集比对 |
+| index-perception | 244 | T-I9 词表锁（七词表） | 段删 | 249-253 | 读 `src/indexer.mjs` 字面量集比对 （W8 已退役——核面承接见 `docs/core/design/MEMORY.md` §6.9）（W8 已迁核——现体 `thincoder-core/memory/code-sync.mjs`（codeSync/检索））|
 | ledger | 194 | T105 VSC 提示词双源两锚在位 | 整删 | 194-201 | 双源提示词 includes / 反向（已删除——删除记录 = 本档 §8.1） |
 | ledger | 182 | 接线机检：四处挂载 + 样式族 | 段删 | 184-191 | 读 `src/` `webview/` 源码文本 |
 | portability-vsc-advisor-context | 46 | T-V07 正常（注入）：指南 + 文档地图注入在场 | 整删 | 46-65 | 装配器出口（`buildAdvisorUserMessage` 返回值）提示词句子断言——PA-A1（C1-a）（已删除——删除记录 = 本档 §8.1） |

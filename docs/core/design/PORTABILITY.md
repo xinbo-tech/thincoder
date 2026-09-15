@@ -136,7 +136,7 @@
 | `thincoder-cli/test/cmd-eng.test.mjs` | `/eng` 无前提开启 / OFF 语义零回归 |
 | `thincoder-vscode/test/portability-vsc-classification.test.mjs` | VSC 分类裁判（正常 / 嵌套反证 / 声明替换 / 损坏回退 / 门禁三态） |
 | `thincoder-vscode/test/portability-vsc-advisor-context.test.mjs` | VSC 项目上下文注入与降级句 |
-| `thincoder-vscode/test/portability-vsc-index.test.mjs` | VSC 扩展名声明与未列入可见化 |
+| `thincoder-vscode/test/portability-vsc-index.test.mjs` | VSC 扩展名声明与未列入可见化（W8 已退役——用例核面承接入 `thincoder-vscode/test/memory-index-face.test.mjs`；机制见 `docs/core/design/MEMORY.md` §6.9） |
 
 ## 6. 边界（本档不覆盖）
 

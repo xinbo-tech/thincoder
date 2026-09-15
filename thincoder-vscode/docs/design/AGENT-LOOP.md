@@ -81,12 +81,12 @@
 | `src/agent-tools/async-discard.mjs` | 中止丢弃单点（§12）：丢弃判定（只清已死）+ 终态记录 `discarded` + 模型可见丢弃提醒；**群 B 增补**：advisor 池同构（§15——`discardAbortedAdvisors`） |
 | `src/agent-tools/subagent-scheduler.mjs` | 任务调度器：filesOverlap/depInfo/queueRunnable/assertNoDepCycle/refillPool/nextSubagentId/停滞检测 + D1 池 accessor（getAsyncPool/removeFromAsyncPools——ASYNC-RESULT-CONTAINER） |
 | `src/agent-tools/async-settle.mjs` | async 结果容器统一共享 helper（ASYNC-RESULT-CONTAINER D1-D6）：settleAsyncEntry（四族公共收尾单点）/ pending 单容器（parkAsyncPending/injectPendingAsync role 分发）/ parentAborted 守卫 / buildChildSignal |
-| `src/agent-tools/digest-budget.mjs` | digest 注入预算单源（§16）：常量 / 轮记账（digestBudgetOver）/ 超限落盘（persistOverflowReport）——四族注入器共用 |
+| `src/agent-tools/digest-budget.mjs`（W9 已迁核——现体 `thincoder-core/agent-tools/digest-budget.mjs`） | digest 注入预算单源（§16）：常量 / 轮记账（digestBudgetOver）/ 超限落盘（persistOverflowReport）——四族注入器共用 |
 | `src/agent-tools/subagent-actions.mjs` | status/cancel/escalate/consume-design/observe/send 动作执行器（observe/send——SUBAGENT-OBSERVE-SEND 2026-09-08） |
 | `src/agent-tools/subagent-spawn-gate.mjs` | authorizeEngCoderDesignToken/executeConsumeDesignAction/resolveDesignSlot/dropExpiredTokenSlot |
 | `src/agent-tools/subagent-spec.mjs` | description 面 / modeRoleField（schema enum）；observe/send 动作描述 + 枚举（SUBAGENT-OBSERVE-SEND） |
 | `src/agent-tools/subagent-escalate-async.mjs` | 飞刀 async 引擎：turnInput 消费回调 + onToolCall 记当前工具 + settle 未投递注记（SUBAGENT-OBSERVE-SEND——与 spawn 同池 send 一致性，out-of-list） |
-| `src/agent-tools/child-permission.mjs` | child 审批通道（§18 C-2）：`makeChildPermission` / `childOwnerLabel`（owner label 与活动块同源）（修正轮 #3） |
+| `src/agent-tools/child-permission.mjs`（W9 已迁核——现体 `thincoder-core/agent-tools/child-permission.mjs`） | child 审批通道（§18 C-2）：`makeChildPermission` / `childOwnerLabel`（owner label 与活动块同源）（修正轮 #3） |
 | `src/agent-tools/advisor-async.mjs` | 后台评审池（`_asyncAdvisors`，ADVISOR_POOL_LIMIT=4——可配 agent.poolLimits.advisor——同 scope 守卫）+ launchAsyncAdvisor |
 | `src/agent-tools/consult.mjs` / `subagent-escalate(-async).mjs` | consult_start/stop / escalate sync+async 路径 |
 | `src/extension/chat-panel.mjs` / `panel-chat.mjs` | ChatPanel 生命周期；回合驱动经 `runAgent(p, cwd, text, callbacks, panel._abortController.signal, () => panel._autoApprove, runOpts(resume))`；INPUT-LOCK-ASYNC（C'——2026-09-09）：busy 拒收分流（_chat 单槽 pendingInput——挂起空闲） |
@@ -1000,7 +1000,7 @@ No design token was issued for a discarded design review; launch the review agai
 
 ### 16.3 契约（逐条——实现对象）
 
-**D-DG1 单源模块**：新档 `src/agent-tools/digest-budget.mjs`——导出三件：`DIGEST_INJECT_BUDGET`（64×1024）；
+**D-DG1 单源模块**：新档 `src/agent-tools/digest-budget.mjs`（W9 已迁核——现体 `thincoder-core/agent-tools/digest-budget.mjs`）——导出三件：`DIGEST_INJECT_BUDGET`（64×1024）；
 `digestBudgetOver(history, size)`（判超 + 记账——`used > 0 && used + size > BUDGET` 首条豁免保留；轮界定
 `history.length !== r.len + 1` 语义逐字自 `subagent-async.mjs:381-390` 迁入，键 = history）；`persistOverflowReport(raw, { cwd, tag })`
 （`.thincoder/tmp` 落盘——落盘名 `tool-<ts><rand>-<tag>.txt`（`tag` = 溯源标签：写入族 + 条目 id——文件名后缀）；清单行；失败 null——调用方回退 inline）。
@@ -1019,7 +1019,7 @@ No design token was issued for a discarded design review; launch the review agai
 
 | # | 文件 | 现 | 预计 | 动作 |
 |---|---|---|---|---|
-| 1 | `src/agent-tools/digest-budget.mjs` | 新 | ~70 | 单源模块（D-DG1） |
+| 1 | `src/agent-tools/digest-budget.mjs`（W9 已迁核——现体 `thincoder-core/agent-tools/digest-budget.mjs`） | 新 | ~70 | 单源模块（D-DG1） |
 | 2 | `src/agent-tools/subagent-async.mjs` | 499 | ~470（净减） | 迁出 + re-export（**贴线缓解**） |
 | 3 | `src/agent-tools/advisor-async.mjs` | 493 | ≤498（**贴线注记**——越 500 停下报告） | +接线 |
 | 4 | `src/agent-tools/subagent-escalate-async.mjs` | 221 | ~224 | +接线 |
@@ -1082,7 +1082,7 @@ CLI 主会话每 run 有 10 类上下文注入块，VSC 端缺失 10 项中的 8
 | 5 | 工作目录快照（OS/cwd/Session start/目录树） | `setup.mjs:64-79` + `helpers.mjs:275-312` | 无（仅 systemPrompt 尾一行 `OS:/Working directory:`——`setup.mjs:338`） |
 | 6 | 依赖大纲推送 | `setup.mjs:90-98` + `tools/repomap.mjs:185 buildSummary` | 无（`repomap.mjs` 仅工具面、无 summary 导出——`repoOutlineTool:121`） |
 | 7 | skills 清单注入 | `setup.mjs:345-349` + `skills.mjs:116-122` | **载荷已传被丢弃**：`panel-chat.mjs:401` 算好传入 → `setup.mjs:133` 解构后无引用（死参数） |
-| 8 | plan 节律重注（稀疏 2/满 5/新消息 + 进出 pending 句） | `src/agent-tools/plan.mjs:11-53` + `run-stages.mjs:91-108` | 仅压缩后重注一版（`run-helpers.mjs:280-285`）；`src/agent-tools/plan.mjs` 无提醒常量/pending 注入 |
+| 8 | plan 节律重注（稀疏 2/满 5/新消息 + 进出 pending 句） | `src/agent-tools/plan.mjs:11-53`（W9 已迁核——现体 `thincoder-core/agent-tools/plan.mjs`） + `run-stages.mjs:91-108` | 仅压缩后重注一版（`run-helpers.mjs:280-285`）；`src/agent-tools/plan.mjs` 无提醒常量/pending 注入 |
 | 9 | 异常 finish reason / 警告注入 | `run-stages.mjs:27-51` | 无（`ended abnormally` 零命中；`provider.mjs:244 _warnings` 通道存在但无注入消费） |
 | 10 | skill 注入形态（`<skill-loaded>` + 转义 + 去重 + 不截断） | `src/agent-tools/skill.mjs:30-45`（CLI 仓） | 工具结果返回 + `slice(0,8000)` 截断 + 无转义 + 无去重（`skill.mjs:38-45`） |
 | 附 A | MCP 警告（收集后无消费） | CLI 亦无 history 注入——可见面 = 采集点 `console.error` + `agent._mcpWarnings`（`cli/make-agent.mjs:104-109,124`） | `setup.mjs:177-184` 收集后无消费、无 console 可见面；注释自称「injected as a reminder」= 失真 |
@@ -1140,7 +1140,7 @@ CLI 对位——`pushModeReminders` else 分支）、粘贴图指针。
 `  ... and N more`；前缀 `DISREGARD any earlier skill listings. Current available skills (use the skill tool to load one):`）。
 `panel-chat.mjs:401` 载荷保留（消费面 = D-CI2 尾块——死参数消除）。
 
-**D-CI4 plan 节律（`src/agent-tools/plan.mjs` + `agent.mjs` 接线）**：port cli `plan.mjs` 全部件——
+**D-CI4 plan 节律（`src/agent-tools/plan.mjs`（W9 已迁核——现体 `thincoder-core/agent-tools/plan.mjs`） + `agent.mjs` 接线）**：port cli `plan.mjs` 全部件——
 三常量文案逐字（FULL/SPARSE/EXIT）；`SPARSE_INTERVAL=2` / `FULL_INTERVAL=5`；`planReminderForTurn(agent,
 userMessageSince)` 计数语义逐条；`execute` 中 enter/exit 先置 `_pendingReminders` 再返包（cli `:72/:78`；
 本端字段 = `ctx.agent._planMode`——既有差异，沿用）；`agent.mjs` 循环头接线（位置 = `injectEngineeringReminder`
@@ -1159,7 +1159,7 @@ userMessageSince)` 计数语义逐条；`execute` 中 enter/exit 先置 `_pendin
 `make-agent.mjs:106` 同前缀）；`setup.mjs:174-175` 注释修正（删除「injected as a reminder」不实句）；
 `mcpWarnings` 字段保留（消费面 = console；不发明 history 注入）。
 
-**D-CI8 skill 工具注入形态（`src/agent-tools/skill.mjs`——cli `skill.mjs:23-46` 对齐）**：load = 走 loader 语义
+**D-CI8 skill 工具注入形态（`src/agent-tools/skill.mjs`（W9 已迁核——现体 `thincoder-core/agent-tools/skill.mjs`）——cli `skill.mjs:23-46` 对齐）**：load = 走 loader 语义
 （含 `name/SKILL.md`）→ 去重（history 含 `<skill-loaded name="X"` → 逐字返回 cli `:33` 句）→ `_pendingReminders.push`
 `<skill-loaded name="X" source=".thincoder/skills/X.md">\n${escapeXml(content)}\n</skill-loaded>\n\nFollow the
 skill's instructions above for the current task.`（cli `:43` 逐字）→ 工具返回 `Skill "X" loaded. Instructions
@@ -1233,8 +1233,8 @@ VSC 现序违反了它（`:448` time → `:450` pushInjections）。**取「time
 | 4 | `src/agent/run-helpers.mjs` | 301 | ~295 | 删 permission 分支 |
 | 5 | `src/agent/run-stages.mjs` | 306 | ~340 | +injectResponseReminders |
 | 6 | `src/agent.mjs` | 366 | ~382 | plan cadence 接线 + 异常提醒调用 |
-| 7 | `src/agent-tools/plan.mjs` | 33 | ~90 | D-CI4 port |
-| 8 | `src/agent-tools/skill.mjs` | 53 | ~62 | D-CI8 |
+| 7 | `src/agent-tools/plan.mjs`（W9 已迁核——现体 `thincoder-core/agent-tools/plan.mjs`） | 33 | ~90 | D-CI4 port |
+| 8 | `src/agent-tools/skill.mjs`（W9 已迁核——现体 `thincoder-core/agent-tools/skill.mjs`） | 53 | ~62 | D-CI8 |
 | 9 | `src/extension/skills.mjs` | 30 | ~95 | loader 语义 + formatSkillListing |
 | 10 | `src/extension/panel-chat.mjs` | 499 | 499（载荷不变；**贴线注记**——不得加行） | 仅注释 |
 | 11 | `src/mcp/index.mjs` | 417 | ~419 → **0（W7 迁移——原档已删；现体 = 端壳 `src/extension/panel-mcp.mjs`）** | console 可见面 |
@@ -1310,7 +1310,7 @@ N-P1 同款。
   `depth===0` 门（本端索引/记忆为 cwd 级模块态，无门则子代理每 run 召回——语义对齐）。
 - 文档召回后缀 `(N chunks indexed total — call doc_search if you need more)`：本端索引无全局 chunk 计数 → 省略。
 - 文档召回行内 `> heading` 段：CLI 行模板含 ` > heading`（数据 = `doc_chunks.heading`——按 `##` 切块）；本端
-  `searchIndex` 结果无 heading 字段（`{file, kind, startLine, endLine, score}`——`indexer.mjs:370`）→ 该段**恒缺**；
+  `searchIndex` 结果无 heading 字段（`{file, kind, startLine, endLine, score}`——`indexer.mjs:370`）→ 该段**恒缺**；（W8 已退役——核面承接见 `docs/core/design/MEMORY.md` §6.9）
   行模板逐字实现、条件段恒省（`context-injections.mjs:151`）〔实现后同步（2026-09-12）登记〕。
 - 大纲生成：CLI = 索引 DB 断点（`doc_chunks`）；本端 = live `buildDepGraph`（workspace.findFiles ≤5000）——内容格式同构。
 - warnings 行：CLI = `stream rule warnings`；本端 = `warnings`（无 stream rules——PROVIDER 传输面）。
@@ -1389,7 +1389,7 @@ AC 5（AC-CI-1~AC-CI-5）· 关键决策 10（KD-1~KD-10）· 实施域 15 档 =
 批扫描（`:157`）保持 `depth !== 0` 短路（child 不入批合并——Q1）。depth-0 行为零变化。
 注释面同步：`:93-96` / `:243-256` 的「eng-coder children never reach this stage / Non-eng-coder children keep the pre-existing semantics」两段改写为 post-R1 语义（eng-coder 仍不达——autoApprove 预授权；写权 child 手动档抵达）。
 
-**C-2 child 通道（新档 `src/agent-tools/child-permission.mjs`）**：导出
+**C-2 child 通道（新档 `src/agent-tools/child-permission.mjs`——W9 已迁核：现体 `thincoder-core/agent-tools/child-permission.mjs`）**：导出
 `makeChildPermission({ ctx, id, role, model, signal })` → `null`（无 `ctx.callbacks.onPermissionRequired`——headless/AUTO 构建期）
 或 `async (toolName, args, diffInfo) => boolean`。语义（顺序定死）：
 ① announce `ctx.callbacks.onSubagentApproval?.({ id, role, model, tool: toolName })`；
@@ -1478,7 +1478,7 @@ callbacks 对象——`id: entry.id`）各加 `onPermissionRequired: makeChildPe
 |---|---|---|---|---|
 | 1 | `src/agent/execute-tools.mjs` | 506 | ~385（净减——C-11 拆出 + C-1） | C-1 条件/注释；拆出五函数 |
 | 2 | `src/agent/tool-gates.mjs`（新） | — | ~155 | C-11 verbatim 迁入 |
-| 3 | `src/agent-tools/child-permission.mjs`（新） | — | ~55 | C-2 helper |
+| 3 | `src/agent-tools/child-permission.mjs`（新）（W9 已迁核——现体 `thincoder-core/agent-tools/child-permission.mjs`） | — | ~55 | C-2 helper |
 | 4 | `src/agent-tools/subagent-run.mjs` | 190 | ~206 | C-2/C-3 接线（callbacks + autoApprove） |
 | 5 | `src/agent-tools/subagent-escalate.mjs` | 219 | ~233 | C-9 |
 | 6 | `src/agent-tools/subagent-escalate-async.mjs` | 226 | ~240 | C-9 |

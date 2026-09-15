@@ -18,6 +18,7 @@
  * finally 忙态归位前（running 窗口——修 R3 并发/消化劫持——错误不外抛归位恒执行）。
  */
 import * as vscode from "vscode"
+import { ensureMemoryHandle } from "../embed-config.mjs"
 import { resolveProviders } from "../config-io.mjs"
 import { providerNames, getKey, buildProvider } from "./presets.mjs"
 import { saveModelPrefs } from "./session-io.mjs"
@@ -143,6 +144,8 @@ async function runPanelChatImpl(panel, opts = {}) {
   // 存在且 _engPersist cwd×slot 匹配 → 复用（同 panel 连续多回合同一对象——AC1）；否则销毁，
   // 本回合 runAgent 经 opts.agent 缺省路径 factory 新建（首轮/换槽/destroy 重建同路径）。
   ensurePanelAgent(panel, turnSlot)
+  // W8 §2「记忆句柄」：装配点惰性建核记忆面（护栏 + 静态闭包零 node:sqlite——见 embed-config.mjs 头注；停用/建败 = null，消费点零崩）
+  await ensureMemoryHandle()
   const distillSlot = turnSlot
   const suspLines = susp?.lines ?? null // suspension turns keep the LIVE lines (pool/pending ride them)
   let isFirstMessage // assigned inside the try (needs the loaded lines); read after finally

@@ -109,10 +109,10 @@ AGENTS.md 模块清单为维护寄存器；本节为分组总览 + 「详细设�
 | 元工具 | `src/agent-tools/`（task/recent_changes/plan/goal/skill/verify/timer/advisor/eng/read_history/consult + subagent 族） | 自律/子 agent/评审工具族 | `AGENT-LOOP.md`（子代理族）、`ADVISOR-CONVERGENCE.md`（advisor）、`ENGINEERING-MODE.md`（eng 门禁） |
 | 子 agent | `src/agent-tools/subagent.mjs` + `-spec/-async/-actions/-scheduler/-escalate/-escalate-async/-spawn-gate.mjs` | 单工具动作面/描述载荷/后台池/调度/飞刀/门禁（2026-09-05 拆分） | `AGENT-LOOP.md`（§4 动作面/§5 async 池/§6 调度器） |
 | 子 agent | `src/agent-tools/advisor-async.mjs` | 后台设计评审池 | `AGENT-LOOP.md`（§9 async 化）、`ADVISOR-CONVERGENCE.md`（评审协议） |
-| LLM | `src/provider.mjs` + `src/provider/rate.mjs` + `src/provider/transports/` | 三 transport、重试、限频门 | `PROVIDER.md`（§4 transport 调用链） |
+| LLM | `src/provider.mjs` + `src/provider/rate.mjs` + `src/provider/transports/`（W10 已迁核——现体 `thincoder-core/provider/{core,rate,anthropic,google,sse,responses}.mjs`） | 三 transport、重试、限频门 | `PROVIDER.md`（§4 transport 调用链） |
 | LLM | `src/config.mjs` / `specs.mjs` / `config-presets.mjs` / `config-io.mjs` / `config-migrate.mjs` | 模型能力 spec、preset 表、config.json 读写/迁移 | `PROVIDER.md`（§1 配置/§2 preset/§6 spec） |
 | 上下文 | `src/agent/setup-reminders.mjs`（回合注入——git/editor 富注入）/ 旧档 `src/compact.mjs`（W6 已迁核——现体 `thincoder-core/context.mjs`）/ `src/explore-distill.mjs` / `src/repomap.mjs`（repo_outline 工具——原 `src/context.mjs` 载体 GIT-ASYNC L21 删除） | 注入、压缩/摘要/蒸馏 | `CONTEXT-COMPACTION.md` |
-| 支撑 | `src/memory.mjs`/`embedding.mjs`/`indexer.mjs` | 记忆/向量索引 | `MEMORY.md` |
+| 支撑 | `src/memory.mjs`/`embedding.mjs`/`indexer.mjs` | 记忆/向量索引 | `MEMORY.md` （W8 已迁核——现体 `thincoder-core/memory.mjs`）|
 | 支撑 | 核 `thincoder-core/mcp.mjs`+`thincoder-core/mcp/`（W7 迁移——原 `src/mcp.mjs`+`mcp/` 已删；端壳增量 = `src/extension/panel-mcp.mjs`） | MCP 客户端 | `MCP.md` |
 | 支撑 | `src/repomap.mjs`/`escape.mjs`/`i18n.mjs`/`log.mjs`/`proxy.mjs` | 仓库大纲/转义/国际化/日志/代理 | —（无机制档——见 AGENTS.md 寄存器） |
 | Webview | `webview/chat.js`/`streaming.js`/`ui.js`/`activity.js`/`panels.js`/`state.js`/`send.js`/`loading.js`/`mode-buttons.js`/`permission.js`/`question.js`/`md.js`/`settings-*.js`/`model-picker.js`/`history.js`/`diff.js`/`autocomplete.js`/… | 前端渲染/交互 | `WEBVIEW.md` |

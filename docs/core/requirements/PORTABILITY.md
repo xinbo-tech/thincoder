@@ -27,8 +27,8 @@
 | **F2** | 项目约定可声明 | 声明文件 = `.thincoder/conventions.json`（`thincoder-vscode/src/conventions.mjs:34`；W4 已迁核——现体 `thincoder-core/conventions.mjs`）；`codePaths` 声明替换默认、`index.*Extensions` 追加入并集；损坏 / 类型错 → 回退默认 + 警告 + 不崩（`thincoder-vscode/src/conventions.mjs:189-220`） |
 | **F3** | 嵌套布局不漏判 | 段匹配非锚定、大小写不敏感、`/` 与 `\` 通吃——`packages/foo/src/x.md` 判 code（分类优先级 = 代码段 > temp > 文档扩展名 > code） |
 | **F4** | 评审注入降级可见 | 降级句常量四句在位（`thincoder-vscode/src/advisor/project-context.mjs:35` · `:39` · `:40` · `:41`）；缺 AGENTS.md / 地图 / 标准文档 / git 时各注入对应句、从不静默——`injectProjectGuide` `:91` · `injectDocumentMap` `:138` · `injectProjectStandards` `:176` · `thincoder-vscode/src/advisor/messages.mjs:115` |
-| **F5** | 索引面可声明、未列入可见 | 扩展名表 + 声明并集（`thincoder-vscode/src/index-discover.mjs:17` · `:24` · `:125` · `:132`）；构建返回 `unlistedExts`（`thincoder-vscode/src/indexer.mjs:113`）+ 面板提示行（`thincoder-vscode/src/extension/panel-index.mjs:171`） |
-| **F6** | 非 git 项目行为有定义 | 索引：无 git → 全量 walk + per-file mtime 回退（`thincoder-vscode/src/indexer.mjs:185-186` · `:241`）；评审：`NO_GIT_NOTICE` 降级句、评审照常 |
+| **F5** | 索引面可声明、未列入可见 | 扩展名表 + 声明并集（`thincoder-vscode/src/index-discover.mjs:17` · `:24` · `:125` · `:132`；W8 已退役——核面现体 `thincoder-core/memory/file-walk.mjs`）；构建返回 `unlistedExts`（`thincoder-vscode/src/indexer.mjs:113`；W8 已退役——核面现体 `thincoder-core/memory/code-sync.mjs`）+ 面板提示行（`thincoder-vscode/src/extension/panel-index.mjs:171`） |
+| **F6** | 非 git 项目行为有定义 | 索引：无 git → 全量 walk + per-file mtime 回退（`thincoder-vscode/src/indexer.mjs:185-186` · `:241`；W8 已退役——核面现体 `thincoder-core/memory/code-sync.mjs`）；评审：`NO_GIT_NOTICE` 降级句、评审照常 |
 | **F7** | 门禁面同源 | 工程写门禁按声明分类判定（`thincoder-vscode/src/agent/tool-gates.mjs:89-91`）——不以 `src/` 硬编码 / `docs/` 前缀放行 |
 | **F8** | 提示词面不假定本仓形态 | 提示词内指令性引用零本仓指涉（「本产品自研仓 =」标注形态除外——判据式见 `PORTABILITY（VSC 侧）`） |
 

@@ -309,14 +309,8 @@ function renderIndexStatus() {
     return
   }
   if (SS.indexStatus.built) {
-    const mm = SS.indexStatus.mismatch
-    if (mm) {
-      // B1（MEMORY.md §4.2 契约四）：索引在但由另一模型构建——状态行直说两个模型名 + 保留
-      // 重建入口（否则用户只看到"搜不到"，看不到"给了错结果"）。
-      el.textContent = t("settings.indexMismatch", { index: mm.indexModel, current: mm.currentModel })
-    } else {
-      el.textContent = t("settings.indexBuilt", { files: SS.indexStatus.files, chunks: SS.indexStatus.chunks })
-    }
+    // W8（索引面归一）：mismatch 分支退场——核面 = 失效向量置空 + 检索懒回填（模型变更零手动重建）。
+    el.textContent = t("settings.indexBuilt", { files: SS.indexStatus.files, chunks: SS.indexStatus.chunks })
     if (btn) { btn.textContent = t("settings.indexRebuild") || "Rebuild Index"; btn.disabled = false }
   } else {
     el.textContent = t("settings.indexNotBuilt")
