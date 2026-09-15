@@ -78,6 +78,9 @@ const COMPACTION_PREFIX =
   "Treat it as notes, not proof — trust its conclusions (don't redo what it reports as done) " +
   "but re-verify transient state with tools. Check memory search for any missing decisions.]\n\n"
 
+/** Placeholder assistant reply committed right after compaction (D9); D-CC18 merges it into an adjacent tail assistant instead of emitting it as a separate message */
+const COMPACTION_PLACEHOLDER = "Understood. I'll continue from these notes, re-verifying anything transient."
+
 /** After this many consecutive compaction summary failures, degrade to deterministic truncation (losing info is better than task-killing 400 errors) */
 export const COMPRESS_FAILURE_LIMIT = 3
 
@@ -190,6 +193,17 @@ export function pushReal(agent, msg) {
   agent.history.push(msg)
 }
 
+/**
+ * D-CC18 echo safety: prefix the placeholder onto an existing assistant message's content.
+ * string → placeholder + blank line + original; multimodal array → placeholder text part prepended;
+ * empty string / null / undefined / other → placeholder alone.
+ */
+function withPlaceholderPrefix(content) {
+  if (typeof content === "string" && content.length > 0) return `${COMPACTION_PLACEHOLDER}\n\n${content}`
+  if (Array.isArray(content)) return [{ type: "text", text: COMPACTION_PLACEHOLDER }, ...content]
+  return COMPACTION_PLACEHOLDER
+}
+
 /** Replace middle with a note, then re-inject task/plan state (shared by LLM summary and truncation fallback) */
 function applyCompression(agent, headEnd, tailStart, note) {
   // _fullHistory already holds every real message (written at the source via pushReal),
@@ -199,25 +213,49 @@ function applyCompression(agent, headEnd, tailStart, note) {
   // possibly-completed earlier requests.
   const head = agent.history.slice(0, headEnd)
   const tail = agent.history.slice(tailStart)
-  // SESSION.md §9 D-S1: compaction-injected messages (note + "Understood") carry a ts —
-  // Date.now() at the compaction moment. They are machine-only (never in _fullHistory),
-  // but the machine-line timeline stays consistent for any audit use.
+  // SESSION.md §9 D-S1: compaction-injected messages carry a ts — Date.now() at the compaction
+  // moment (the note below; and the separate "Understood" placeholder in the non-merge branch).
+  // They are machine-only (never in _fullHistory), but the machine-line timeline stays consistent
+  // for any audit use. D-CC18 exception: in the merge branch the placeholder rides inside a REAL
+  // tail message, which keeps its OWN ts — merging must not rewrite that message's time semantics
+  // (and must not backfill ts-less restored messages either, D-S3).
   const now = Date.now()
-  agent.history = [
-    ...head,
-    { role: "user", content: note, ts: now },
-    { role: "assistant", content: "Understood. I'll continue from these notes, re-verifying anything transient.", ts: now },
-    ...tail,
-  ]
-  // Compaction REBUILDS the machine line (head + note + "Understood" + tail), so the pre-compaction
+  // D-CC18 echo safety: an assistant WITHOUT reasoning_content directly followed by another
+  // assistant is rejected 400 by DeepSeek-family thinking mode ("The `reasoning_content` in the
+  // thinking mode must be passed back to the API." — traced from a subagent's first post-compaction
+  // request, 2026-09-16). The synthetic placeholder has no reasoning to echo, so when the tail
+  // starts with an assistant the placeholder is merged INTO that message — copy-on-write, because
+  // pushReal shares message objects with _fullHistory (never mutate in place) — instead of being
+  // emitted as a separate message.
+  //
+  // Compaction REBUILDS the machine line (head + note + placeholder + tail), so the pre-compaction
   // _runStartHistoryLen index is stale — a longer array shrank beneath it, and end-of-run exploration
   // distillation would then silently skip or slice from the wrong offset. Reset the boundary to the
-  // verbatim tail start (head.length + 2: the note and the "Understood" placeholder sit between head
-  // and tail). Exploration before the tail was already covered by the compaction summary, so only the
-  // still-raw tail needs distilling. `head` is empty today (KEEP_HEAD = 0) — the formula stays
-  // correct if KEEP_HEAD ever grows. (shrinkOversized only truncates message bodies in place and
-  // leaves the array length unchanged, so this boundary stays valid there — no reset needed.)
-  agent._runStartHistoryLen = head.length + 2
+  // first verbatim tail message: head.length + 1 in the merge branch (the placeholder rides inside
+  // the rewritten tail[0], which keeps its index), head.length + 2 otherwise (the note and the
+  // separate "Understood" placeholder sit between head and tail). Exploration before the tail was
+  // already covered by the compaction summary, so only the still-raw tail needs distilling. `head`
+  // is empty today (KEEP_HEAD = 0) — the formula stays correct if KEEP_HEAD ever grows.
+  // (shrinkOversized only truncates message bodies in place and leaves the array length unchanged,
+  // so this boundary stays valid there — no reset needed.)
+  if (tail[0]?.role === "assistant") {
+    const merged = { ...tail[0], content: withPlaceholderPrefix(tail[0].content) }
+    agent.history = [
+      ...head,
+      { role: "user", content: note, ts: now },
+      merged,
+      ...tail.slice(1),
+    ]
+    agent._runStartHistoryLen = head.length + 1
+  } else {
+    agent.history = [
+      ...head,
+      { role: "user", content: note, ts: now },
+      { role: "assistant", content: COMPACTION_PLACEHOLDER, ts: now },
+      ...tail,
+    ]
+    agent._runStartHistoryLen = head.length + 2
+  }
   // Measured token baseline is invalidated along with old history (prompt_tokens were for pre-compaction context), fall back to estimation until next response
   agent._lastPromptTokens = null
   agent._usageAtLen = null
@@ -351,7 +389,9 @@ const OVERSIZE_CONTENT_LIMIT = 8_000
 /**
  * Deterministic shrinking: last resort when splitHistory can't find a middle section (history too short) but threshold is exceeded. No LLM call.
  * Truncates user/tool message bodies exceeding OVERSIZE_CONTENT_LIMIT to a stub (keeps head + tail);
- * does not touch reasoning_content (DeepSeek/Kimi echo protocol) or tool_calls pairing structure — no protocol 400 risk.
+ * does not touch reasoning_content (DeepSeek/Kimi echo protocol) or tool_calls pairing structure — no protocol 400
+ * risk from this path (this module's echo-safety face is `applyCompression`: the compaction placeholder is never
+ * committed as a separate reasoning-less assistant next to another assistant — D-CC18, 2026-09-16 batch).
  * Only called after compressIfNeeded determines threshold is exceeded. Returns whether any message was truncated.
  */
 function shrinkOversized(agent, limit = OVERSIZE_CONTENT_LIMIT) {

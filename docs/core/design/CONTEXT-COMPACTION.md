@@ -77,7 +77,7 @@
 
 - 历史：`KEEP_HEAD = 2`（「保留最初意图」）——单任务会话假设。
 - 问题（用户反馈实证）：多任务连续会话中最早消息是**已完成的旧任务**——压缩后模型注意力被旧事锚住（「AI 忽然转向以前的旧事」）。
-- 决策：摘要提示词增加「已完成 vs 进行中」区分；压缩后上下文 = 摘要注记 + 占位 + tail——锚点天然是当前任务。协议安全：head 为空后配对保护只剩 tail 侧；中段序列化为文本（`[assistant][ called tools: …]`）——无 orphan 风险。人读线不变。
+- 决策：摘要提示词增加「已完成 vs 进行中」区分；压缩后上下文 = 摘要注记 + 占位 + tail（tail 首条为 assistant 时占位并入该条——§7 D-CC18）——锚点天然是当前任务。协议安全：head 为空后配对保护只剩 tail 侧；中段序列化为文本（`[assistant][ called tools: …]`）——无 orphan 风险。人读线不变。
 
 **③ 切割配对保护（D5）——双侧**：head 侧 head 不以 `tool_calls` 结尾（CLI——并行工具结果被摘要吞掉是修过的真实 400 场景）；tail 侧 orphan tool 拉回其 owner（两端版——工具配对边界不被切断）。
 
@@ -111,7 +111,8 @@
 
 ### 6.7 文案与静默（D9 / D11）
 
-- **D9 文案与形状**：摘要调用 `thinking: null` / `reasoningEffort: null`；占位回复固定 `"Understood. I'll continue from these notes, re-verifying anything transient."`；COMPACTION_PREFIX 文案两端一致（`[Context was automatically compacted…]`）；序列化格式 `[role][ called tools: …] content`。
+- **D9 文案与形状**：摘要调用 `thinking: null` / `reasoningEffort: null`；占位回复固定 `"Understood. I'll continue from these notes, re-verifying anything transient."`；
+  （tail 首条为 assistant 时并入该条——回声安全，§6.10 #7 / §7 D-CC18）；COMPACTION_PREFIX 文案两端一致（`[Context was automatically compacted…]`）；序列化格式 `[role][ called tools: …] content`。
 - **D11 对前端静默**：摘要调用不传 `onToken` / `onReasoning`（CLI 曾透传导致摘要像回复一样流式显示——用户看到非回复陌生文本；VSC 本无此问题）。压缩发生只经既有状态提示（CLI `onCompress` 回调 `"[context] Context too long, auto-compacted…"`）；恢复渲染读人读线、压缩 note 不在其中——天然不显示。
 
 ### 6.8 压缩体验：进度感知 + 失败可见性（压缩面板）
@@ -146,11 +147,12 @@
 ### 6.10 行为契约（验收口径）
 
 1. 仅当 history 末尾为 user / tool 且完整 prompt 估算 ≥ threshold 时触发；
-2. 压缩结果 = 摘要 note + "Understood" 占位 + tail（§6.4④ 预算 + 保底 10；KEEP_HEAD = 0），任意切割不产生孤儿 tool_calls / tool 消息；
+2. 压缩结果 = 摘要 note + "Understood" 占位 + tail（§6.4④ 预算 + 保底 10；KEEP_HEAD = 0）——tail 首条为 assistant 时占位并入该条（copy-on-write；§7 D-CC18），任意切割不产生孤儿 tool_calls / tool 消息；
 3. 摘要失败：连续 3 次（每次 runAgent 重置计数）后确定性截断；历史过短时单消息截断；
 4. 压缩后回注齐全（task 去重 / plan / AUTO）、实测基线失效；
 5. 人读线全程不动、落盘双字段；
 6. 空响应：自动重试 2 次仍空抛错（E1——`MAX_EMPTY_RETRIES = 2`，空响应注入 `[System reminder: your last response was empty…]`；VSC 原直接 throw——移 CLI 语义）。
+7. **回声安全（D-CC18）**：压缩注入不产出「无 `reasoning_content` 的 assistant 紧邻 assistant」形态——DeepSeek 系（`reasoningEcho:"required"`）对压缩后首发请求 400 的成因形态（子代理触发压缩后必死——轨迹实证）；占位并入时尾首的 `tool_calls` / `reasoning_content` / 其余字段原样保留。
 
 ### 6.11 已知 parity 说明
 
@@ -162,7 +164,7 @@
 
 | 机制 | CLI | VS Code |
 |---|---|---|
-| 压缩 / 预算 / tail / 截断 / 摘要主体（`splitHistory` / `compressIfNeeded` / `compressFallback` / `shrinkOversized` / `summarizeRunExplorations` / `tightenTailByBudget` / `repairedTailStart` / `tailBudgetTokens`） | `thincoder-core/context.mjs` | `thincoder-vscode/src/compact.mjs` **已删**（W6 迁核——旧 `compactHistory` / `estimateTokens` / `tailStartByBudget` 退场）；端侧判定点封装 = `thincoder-vscode/src/agent/run-stages.mjs` |
+| 压缩 / 预算 / tail / 截断 / 摘要主体（`applyCompression` / `splitHistory` / `compressIfNeeded` / `compressFallback` / `shrinkOversized` / `summarizeRunExplorations` / `tightenTailByBudget` / `repairedTailStart` / `tailBudgetTokens`） | `thincoder-core/context.mjs` | `thincoder-vscode/src/compact.mjs` **已删**（W6 迁核——旧 `compactHistory` / `estimateTokens` / `tailStartByBudget` 退场）；端侧判定点封装 = `thincoder-vscode/src/agent/run-stages.mjs` |
 | 常量（`IMAGE_TOKEN_ESTIMATE` / `TAIL_BUDGET_FRACTION` / `SUMMARY_TOKEN_ESTIMATE = 1000` / `TAIL_FLOOR_MESSAGES`） | `thincoder-core/context.mjs` | 旧档 `thincoder-vscode/src/compact.mjs`（`SUMMARY_SEGMENT_ESTIMATE = 1100`）**已删**——W6 端差退场、单源 = 核列常量 |
 | run 钩子（`_compressFailures` 重置 / `_runStartHistoryLen` / onCompress* 接线） | `thincoder-core/agent.mjs` + `thincoder-cli/src/tui/agent-turn.mjs` | W6 后：`thincoder-vscode/src/agent/run-stages.mjs`（判定点转发）+ `thincoder-vscode/src/agent.mjs`（安全点调用） |
 | 压缩面板渲染 | `thincoder-cli/src/tui/tool-events.mjs` + `thincoder-cli/src/tui/subagent-blocks.mjs` | webview 会话状态渲染 |
@@ -184,8 +186,8 @@
   `fallback` → `Compression failed — fallback: truncated to N messages`；`failed` → `Compression failed: <error>`。
   `webview/chat.js showCompressStatus` 原地更新 `#compress-status`；摘要正文永不进前端（D11 静默纪律）。
   回调链（onCompressStart / onCompress / onCompressFail）由端侧判定点转发——语义同 §6.8（D-C3）。
-- **摘要段形状（迁核后）**：压缩 note + 摘要 + assistant 占位（带压缩时刻 ts）——VSC 旧档的 `<handoff_notes>` 标签形态随迁核退场，现体 = 核段落形状（§6.7 文案族；两端非 byte-identical 注见 §6.11）。
-- **失败可见化（Q3）**：`run-stages.mjs` catch → console.error + `onCompressFail` → webview 渲染错误文本；`_compressFailures` 连续 3 次（核 `COMPRESS_FAILURE_LIMIT`）后 `compressFallback` 确定性截断；无 middle 可切 → `shrinkOversized` 单消息截断（核内承载——边界重置 2 / 基线失效由核 applyCompression / shrinkOversized 自理）。
+- **摘要段形状（迁核后）**：压缩 note + 摘要 + assistant 占位（tail 首条为 assistant 时占位并入该条——§6.10 #7）——VSC 旧档的 `<handoff_notes>` 标签形态随迁核退场，现体 = 核段落形状（§6.7 文案族；两端非 byte-identical 注见 §6.11）。
+- **失败可见化（Q3）**：`run-stages.mjs` catch → console.error + `onCompressFail` → webview 渲染错误文本；`_compressFailures` 连续 3 次（核 `COMPRESS_FAILURE_LIMIT`）后 `compressFallback` 确定性截断；无 middle 可切 → `shrinkOversized` 单消息截断（核内承载——边界重置 2（并入分支 1）/ 基线失效由核 applyCompression / shrinkOversized 自理）。
 - **非压缩职责边界（原 `context.mjs`——GIT-ASYNC L21 整文件删除；不变）**：repo outline → `repomap.mjs`（repoOutlineTool——按需工具，非回合自动注入）；git 富注入 → `agent/setup-reminders.mjs`（`collectGitContext` = `:145` / `pushGitContext` = `:163`；async）；editor / 机器注入 → `extension/editor-context.mjs` + `pushInjections`（`:194`）。
 
 ## 7. 并入的关键决策记录（含否决备选）
@@ -208,7 +210,8 @@
 | D-CC14 | 探索结果语义摘要 = 轮末蒸馏替换（H1） | 机器线信号密集；失败静默跳过、不阻塞 |
 | D-CC15 | 空响应自动重试 2 次（E1）——两端一致（VSC 移 CLI 语义） | 空响应是瞬时故障——重试 2 次兜底；仍空才抛错 |
 | D-CC16 | 预算测量口径 = B（history 段单独 ≤15%） | 不把 system / tools 固定开销计入（小窗口下固定开销本身可能 >15%，计入则永远不可达） |
-| D-CC17 | VSC 压缩 / 蒸馏共用 `_runStartHistoryLen` 边界重置（rebuild 后 = 2） | 压缩与轮末蒸馏对锚；共享边界避免二次压缩误判 |
+| D-CC17 | VSC 压缩 / 蒸馏共用 `_runStartHistoryLen` 边界重置（rebuild 后 = head + 2；占位并入分支 = head + 1——D-CC18） | 压缩与轮末蒸馏对锚；共享边界避免二次压缩误判 |
+| D-CC18 | 压缩注入回声安全：tail 首条为 assistant ⇒ 占位并入该条（copy-on-write） | 「无 reasoning 的 assistant 紧邻 assistant」= 压缩后首发 400 成因形态（DeepSeek 系——子代理压缩后必死，轨迹实证）；占位为合成消息、无推理可回声 ⇒ 并入 = 消形态且零文本丢失（其 `tool_calls` / `reasoning_content` 原样保留）。**否决**：全量去占位（超发病面 + 推翻 D9）· 丢弃占位变体（丢确认锚）· 伪造 `reasoning_content`（污染 + 服务端接受度不可离线证）· tail 边界强制 user（与 D-T1 / D-T2 / 配对安全三约束互斥、不可保证） |
 
 ## 8. 不并项与历史沿革
 
@@ -237,7 +240,7 @@
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **254 行**（B 轮并入前 42 行；W6 收正后读数）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **260 行**（as-of 2026-09-16 实测；B 轮并入前 42 行）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
@@ -252,3 +255,6 @@ REVERSE 保护坐标 / 摘要段形状 / 边界重置 2 / webview 四态 / 失�
   阈值档位经核 `resolveCompactThreshold` · 端差适配（`provider` / `tasks` / `planMode` 调用期同指 + 共享数组回收）· 预算端差退场 ·
   REVERSE 保护退场（回植候选记核内笔）· webview 四态现状登记 · 摘要段形状取核）· §6.12 实现位置 VSC 列改指核面 ·
   §6.11 REVERSE 差异注收正 · §6.4④ 预算常量端差注收正 · §1 归属表补迁核注（旧档 `thincoder-vscode/src/compact.mjs` **已删**、现体 `thincoder-core/context.mjs`）；§9 体量重锚。
+- 2026-09-16（**子代理压缩后推理链回传断裂修复 · eng-designer**——承 `docs/batches/2026-09-16-subagent-reasoning-echo.md`）：新增 **D-CC18**（压缩注入回声安全——tail 首条为 assistant 时占位并入该条）· §6.10 #2 形状句修正 + 新增 **#7 回声安全契约** · §6.7 D9 注 · §6.12 符号列补 `applyCompression` · §6.13 边界重置注收正；
+  来源 = 轨迹档离线解剖（`reasoningEcho:"required"` 压缩后首发 400——同链 5 子代理全灭实证）；修复落点 = `thincoder-core/context.mjs` `applyCompression`（反向用例 = 核单测，§2 任务书）。
+- 2026-09-16（**实施轮收正 · eng-coder**——评审发现 🟡#3 / 父侧裁决「同轮收正失效文本」）：§6.4② 形状句补并入分支注 · §6.13 摘要段形状注删「带压缩时刻 ts」（并入分支保留尾首原 ts——D-S1 例外）；实现面 = `thincoder-core/context.mjs` `applyCompression` 并入分支 + 核单测 `thincoder-core/test/compaction-echo.test.mjs`。
