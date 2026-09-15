@@ -4,6 +4,7 @@
 > §4 用户批准（主 agent）· §5 实施记录（eng-coder）· §6 验证与收口（父代理）。
 > 编制：主 agent · 2026-09-15 · 来源 = 用户「开始吧」（2026-09-15 06:46）+ 文档面迁移定稿（`2026-09-15-vsc-doc-migration.md` ✓）。
 > 六段骨架头常驻（各段 append 的锚点；段内无内容 = 该段尚未发生——不另加「待写」式占位文本）。
+> **状态：已收口**（2026-09-15——全 16 单元 + 2 前置笔 + W17 收口笔落地核验；终态全链绿：VSC 553/553 · 核 178/178 · 仓根三闸 0——详见 §6）。
 >
 > **导航（父侧维护）**：§1（裁定与讨论）→ 本档 §1；§2 当前任务书 → 本档 §2（designer 追加面）。
 > **父侧折行·收正注（2026-09-15）**：§2 的 19 行长散文行经父侧机械折行（仅插换行 · 去空白逐字节相等 23,960 chars ✓ 零语义改动）——batch_segment append-only 无法自修，承迁移批先例「纯折行后重跑」。
@@ -2551,4 +2552,177 @@ VSC 同名 6 档 = **独立分叉实现**（逐档实核）：
 
 **收正注（同轮 · 首版后置 · 零语义）**：本段首版 3 行超宽（`:2441` 556 / `:2442` 306 / `:2470` 379 字符）经本席就地机械折行（仅插换行 · 文字零改）；复跑 = 本档 0 行 >300（`check-doc-width` OK）。
 
+### 实施：S2 W17 —— 收口笔（vsix 断言 / AGENTS.md / 锚扫 / 孤儿档）——**终态 = clean**（2026-09-15 · eng-coder）
+
+**段位**：实施第 8 波 · W17（**不占单元号**——承 U0 前置笔形态）。任务书 = 本档 §2 A-K11（`:282`）+ 表 3 四行（`:462`–`:469`）+ 修正块「S2 收口笔」专节（`:458`–`:476`）+ 父侧增补 ⑤–⑧。
+**写域** = 表 3 四档（`thincoder-vscode/{AGENTS.md, package.json, scripts/check-vsix.mjs（新）, scripts/publish-all.mjs}`）+ 锚扫面（`docs/core/**` 10 档 + `docs/vsc/**` 4 档）+ ⑥⑦⑧ 落点（孤儿档删除 + 产品档两行 + `session-slots.mjs:40` 注释 + `ARCHITECTURE.md` 模块图行）。
+**零触碰**：`thincoder-core/**` 实现（只读消费）· `thincoder-cli/**` · 台账 `docs/TODO.md` · 仓根 `scripts/**` · 本档 §1–§4/§6 · 他单元段。批次档本体不入提交（父侧统一）。凭据纪律：本段零 token/designId 值。
+
+#### 一、交付摘要（逐件 · file:line 读数）
+
+① **`thincoder-vscode/AGENTS.md`**（125 → **122** 行 · wc -l）：约定段核化改述 4 处——`:5`（概览：机制本体 = `@thincoder/core`，本树 = 端壳/装配面）· `:7`（设计档归属：`docs/design/` = 迁移期参照历史；正本 = 仓根 `docs/core/design/`）
+  · `:11`（HC 句：「Zero **third-party** npm runtime dependencies」+ `@thincoder/core` 一条在册 + dev-only `yauzl` 括注）· `:15`（提示词面 = 核内唯一副本 15 + 25，`src/prompts/` 与 `src/tools/*.md` 已删 · F9）。
+  文件地图段：**删 15 行**已删档行（`agent-tools.mjs` · `subagent-{actions,async,scheduler}.mjs` · `read-history-discovery` · `batch-segment` · `tools/checkpoint` · `tools/git-ext|git-checkpoint` · `mcp.mjs` · `provider.mjs` · `provider/rate` · `log.mjs` · `memory.mjs` · `config.mjs` · `prompts/`）
+  + **增 11 行**现体面（`src/agent/**` · `agent-tools/{index,async-discard}.mjs` · `config-mcp` · `embed-config` · `explore-distill` · `i18n` · `memory-tool` · `prompt-injections` · `tools/{index,shell,code,context,focus,shared}` · 地图头注「机制本体 = 核——已删自持镜像不再列行」）。
+  同批陈旧坐标收正 6 处：`:23`（config-migrate/PROVIDER_PRESETS → 核）· `:26`（specs.mjs = 核 model-specs + 端增补面）· `:27`（`applyEditorRangeEdit` 标 retired（W14））· `:30`（isNonRetryableError/readSSE → 核 `provider/`）· `:34`（checkpoint 实现 → 核 `git/checkpoint.mjs`）
+  · `:117`（测试段：删档名清单 → `test/files.mjs` 单一来源指针 + 例数 1060+ → **553**）。**实核**：地图所列 25 项逐条 `statSync` 在场；已删档族零列行。
+
+② **`thincoder-vscode/scripts/check-vsix.mjs`（新建 · 72 行）**：解 vsix 断言 **B + D**——B = `:48` 取 `extension/node_modules/@thincoder/core/package.json`，`:51`–`:53` 其 `version` 与**仓内** `thincoder-core/package.json` 逐字比对（`CORE_PKG` = `:24`）；
+  D = `:57`–`:67` 逐目录（`prompts` / `tool-docs`）判 ① 档数硬等口径（`:29` `EXPECT = {prompts:15, "tool-docs":25}`）② 档名集合逐字 ③ 逐档 sha256。
+  fail-closed：`:27` 缺档/`:43` 解包失败/`:69` 断言失败 → exit 1。零构建 · 只读（`lazyEntries + autoClose:false`，`yauzl` 为 devDependency）。
+  **机判实证（真安装态夹具）**：core tarball（`npm pack` · 190 档）`npm install` 进 VSC 树拷贝（非 junction——对齐发布机 `npm ci` 口径，§2.2.1 R8③）→ `npm run package`（315 档 vsix · 1.19 MB）→ npm 生命周期 **postpackage** 自动跑断言
+  ⇒ `✔ 断言 B（@thincoder/core 0.1.0）` + `✔ 断言 D/prompts（仓内 15 档 · 口径 15）` + `✔ 断言 D/tool-docs（仓内 25 档 · 口径 25）` = **exit 0**。
+  **反证（T-C11①）**：夹具 `.vscodeignore` 去掉 `!node_modules/@thincoder/core/**` 重打包 ⇒ vsce 仍 `DONE` exit 0 但 vsix 125 档无核 ⇒ 断言 B 缺条目 + 断言 D 缺 15/25 全量 ⇒ **exit 1**。
+
+③ **`thincoder-vscode/package.json`**（134 → **136** 行 · +2）：`:119` `"postpackage": "node scripts/check-vsix.mjs"`；`:134` devDeps `"yauzl": "^3.4.0"`（树内实装 3.4.0 同值）。真依赖面核对 ✓：`dependencies = {"@thincoder/core": "^0.1.0"}`，去 `^` 后 = 核 version `0.1.0`（断言 A 口径成立）。
+
+④ **`thincoder-vscode/scripts/publish-all.mjs`**（105 → **137** 行 · +32 · 表 3 估 +8±4 —— 按实收正）：**段 0** = `:76`–`:86` 核版本存在性预检（`npm view @thincoder/core@<仓内核版本> version`；真跑缺版本 ⇒ `:86` exit 1——fail-closed；dry 面降级为警告）；
+  **段 1.5** = `:99`–`:100` 调 `check-vsix.mjs`（经 `run()` = execSync 非零即抛）；段 1（`:89`）· 段 2（`:106`–`:118`）· PAT 预检（`:60`–`:67`）语义原样；
+  新增 `--dry-run`（`:51` · A-K11 机判面「发布编排 dry 面」）——段 2 不执行（`:103`–`:104`）、PAT 预检免（dry = 零发布）。
+  **实证**：`node scripts/publish-all.mjs <vsix> --dry-run` ⇒ **exit 0**（段 0 报 ✘+⚠️ 继续 · 段 1⏭️ · 段 1.5 断言 B+D 全过 · 段 2 🧪）；真跑（无 dry-run + 占位 PAT）⇒ 段 0 缺核版本 ⇒ **exit 1**（核先发门在位）。
+
+⑤ **根域锚闸 27 → 0**（`node scripts/doc-anchors.mjs --domain .` ⇒ **`OK(V5): 0 条悬空锚` · exit 0**）：27 行逐处注记（形态 = 「已迁核/已退役——现体 = `<核路径>`」）分布于 10 档——
+  `AGENT-LOOP.md` ×4 · `ARCHITECTURE.md` ×1 · `CONSULTATION.md` ×4 · `CORE-UNIFICATION.md` ×1 · `ESCALATE.md` ×5 · `PROVIDER.md` ×3 · `STRUCTURE-DEBT.md` ×1 · `TURN-CAP-CONTINUE.md` ×2 · `requirements/ESCALATE.md` ×4 · `requirements/TURN-CAP-CONTINUE.md` ×2。
+  指向坐标逐条实核在场（`thincoder-core/{advisor,agent-tools,provider,memory,git,tools}/**` · `model-specs.mjs` · `token-ttl.mjs` · `config-io.mjs`）。
+  `docs/design/EDIT.md` 类同扫：产品树编辑族六档（`EDIT/EDIT-HELPERS/WRITE/HASHLINE-EDIT/INSERT-AFTER/APPLY-PATCH.md`）实核 **已带 W14 迁核注**（零动作）。
+
+⑥ **孤儿档清退**：删 `thincoder-vscode/src/agent-tools/read-history-discovery.mjs`（118 行 · W9 删 `read-history.mjs` 后零消费者；全树 grep basename + 四导出名 = 代码面 0 命中）+ `thincoder-vscode/docs/design/READ-HISTORY-SPLIT.md:30/:51` 两行收正（「W17 已退役——孤儿档删除」）+ `src/extension/session-slots.mjs:40` 注释消费方面收正。
+
+⑦ **`docs/core/design/ARCHITECTURE.md` 模块图行**：`:93`（LLM 行 → 核 `thincoder-core/provider/**` + W10 退役注）· `:94`（支撑行 —— memory/embedding/indexer/mcp 四镜像已退役〔W7/W8〕，存 `repomap.mjs`）；fix 轮增补 `:76`（壳面目录清单收正）· `:82`（§3.1 头句「全量自持」→ W17 收口后 = 端壳/装配面）· `:140`（§4.1 记忆行 → 核单源）。
+
+⑧ **`docs/vsc/**` D-C14 类残留坐标** 9 处 / 4 档：`SETTINGS.md:58`（expand-home → 核）· `:38`/`:68`/`:70`（config-io → 核 + 写盘通道）· `VSC-MIGRATION-INVENTORY.md:39`（advisor 面 → 核）· `:468`（W5/W8/W12 五档坐标逐条注）
+  · `WEBVIEW-PROTOCOL.md:70`（subagent-run → 核）· `requirements/PROJECT.md:22`（模型能力 → 核 specs）· `:24`（provider transport → 核）。
+
+#### 二、决策透明表（设计未明写者）
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | `publish-all.mjs` 新增 `--dry-run`（表 3 未列） | 依据 = A-K11 机判面「发布编排 dry 面」（无该面则预检段不可在非发布态实跑）；代价 = 表 3 估 +8±4 收正为 **+32**（读数表在案）；备选（不加标志、以段 0/1.5 直跑代替）= 机判面缺失，否决 |
+| 2 | vsix 断言验证走**真安装态夹具**（core tarball `npm install` 进 VSC 树拷贝） | §2.2.1 R8③：dev 链接态（junction）打包语义 ≠ 发布机；发布机口径 = 真实安装态（§2.6.1）；备选（仓内直跑 `npm run package`）= 链接态、非发布机形态，否决 |
+| 3 | 夹具落点 = **仓库树外**（OS temp） | 首版落 `.thincoder/tmp/w17-pkg/` 时锚引擎 basename 索引被污染（`.thincoder` 不在 `SKIP_DIRS`：`doc-anchors-v5.mjs:48`），悬空数 27 → 89 假警；移出后 0。如实登记为该轮操作教训 |
+| 4 | ⑥ 范围 = 删档 + 两文档行 + `session-slots.mjs:40` 注释 | 父侧增补面（超表 3 —— 如实披露）；判据 = 零消费者实核 + 不留「在位」形态叙述 |
+| 5 | ⑦ 扩至 `:94` + fix 轮 `:76`/`:82`/`:140` | W10 登记句（批次档 `:1848`）明含「+ `{memory,embedding,indexer,mcp,repomap}.mjs` 等 W7/W8 面」——同族同批收正；`ARCHITECTURE.md` = 07:08 裁定的模块权威档面 |
+| 6 | ⑧ 范围 = `docs/vsc/**`（基准层活档）**不含** `thincoder-vscode/docs/**` 产品树 | D-C14「迁移期参照历史·保留 ≠ 维护」+ W16 决策表 #5（产品档归文档维护批）；产品树 376 处提及 / ~50 档未逐处收口 ⇒ 上抛（未决 3） |
+| 7 | 台账/设计档零触碰 | 台账 = 父侧写域；本档 §2 的两处保留句（`:180`/`:241`）收正 = 设计面动作 ⇒ 上抛（未决 1） |
+
+#### 三、审计与代码评审轮次（终态）
+
+- **审计（explore · 只读 · 阻塞）1 轮**：**四类偏差零**（PARTIAL 0 · DOC-DRIFT 0 · OUT-OF-LIST 0 · SILENT-SIMPLIFICATION 0）。观察项 5（O1–O5），其中 O1（`src/tools.mjs` 行括注）/O5（`CORE-UNIFICATION.md:364` 裸名）已在 fix 轮收正。
+- **advisor 代码评审 1 轮**（`type=code` · sync · 对象声明 = W17 交付面）：**VERDICT: pass**（🔴 **0** · 🟡 3 · 🔵 7）。评审限制（如实登记）：只读取证、未复跑；`## Project Standards` 未声明档。
+
+**裁决表（10 项评审发现）**
+
+| # | Action | Detail |
+|---|---|---|
+| 1 | **Not an issue** | 🟡 lock 未随新 devDep `yauzl` 重生成（`package-lock.json:11-16` 根条目无 yauzl；唯一 yauzl 节点 `:5184` = `@vscode/vsce` 传递依赖）——**设计口径内**：`CORE-UNIFICATION.md:470`「S2 期间的产品 lock 变更**不入提交**；权威形态 = S2 收口（核发布后 · 真实安装态）生成并提交」；本笔不跑 `npm install`（会写入链接态 lock，属不入提交形态）⇒ 刷新动作归发布运行面 |
+| 2 | **Fixed** | 🟡 `ARCHITECTURE.md` 收正未闭环 —— `:76`（壳面目录清单去 advisor/provider/memory/prompts）· `:82`（§3.1 头句改 W17 现况）· `:140`（记忆行改核单源）三处已落（本笔提交内，`ARCHITECTURE.md` 10 行变更） |
+| 3 | **Fixed** | 🟡 孤儿档清退无授权/登记（§2 `:180` 保留句 + 表 3 未列 + 「§5 指针」）—— 本段即登记面（④/⑥ 明文 + 决策表 #4 超声明）；设计面 §2 两处收正 = 上抛（未决 1） |
+| 4 | **Fixed** | 🔵 断言 D 无档数锚 —— `check-vsix.mjs:29` 加 `EXPECT = {prompts:15,"tool-docs":25}` + `:65` 档数硬等；夹具复跑 = 「档数达标 + 档名集合逐字相等 + sha256 逐档相同」全过 |
+| 5 | **Fixed** | 🔵 AGENTS.md 未记新发布门 —— `:121` 加 Packaging assertion 行（postpackage = check-vsix · fail-closed）+ `:11` 加 dev-only `yauzl` 括注 |
+| 6 | **Fixed** | 🔵 终态复验覆盖 + postpackage 触发链无留痕 —— fix 后冻结态复跑：VSC 五命令 + 核回归 + 仓根三闸（读数见四）；夹具 `npm run package` ⇒ **postpackage 自动触发 ⇒ 断言 B+D exit 0**（日志 `w17-postpackage2.log`） |
+| 7 | **Fixed** | 🔵 `SETTINGS.md:38`/`:68` 裸名 `config-io` 无迁核注 —— 两处补 W16 注（现体 = 核 `thincoder-core/config-io.mjs`） |
+| 8 | **Fixed** | 🔵 行数台账未按实收正 —— 本段收正：`publish-all.mjs` **+32**（估 +8±4）· `package.json` **+2**（估 +8±3）；`AGENTS.md` 122 行（估 ±4+≈15 行档行——净减 3，带内） |
+| 9 | **Deferred** | 🔵 锚扫收正未留变更记录行（模块权威档 vs VSC 产品档「免记」两先例并存）—— 口径待父侧定；本段已全量登记点名与注记形态，可作统一收口面（未决 4） |
+| 10 | **Not an issue** | 🔵 `check-vsix.mjs` 随 vsix 打包（`scripts/**` 未在 `.vscodeignore` 排除）—— 表 3 明记 `.vscodeignore` 零改；与既有三档（`check-syntax`/`publish-all`/`reconcile-lookup`）同形态 |
+
+#### 四、验证读数（基线 → 终态 · 冻结态复跑 · 原样）
+
+| # | 命令 | 基线（开工实测） | 终态 |
+|---|---|---|---|
+| 1 | VSC `npm test`（快层） | 553 / 518 / 0 / 35 | **553 / 518 / 0 / 35** |
+| 2 | VSC `npm run lint` | 193 JS OK | **193 JS OK**（+1 新档 −1 孤儿档） |
+| 3 | VSC `npm run test:full` | 553 / 553 / 0 | **553 / 553 / 0** |
+| 4 | VSC `npm run test:integration` | 29 / 29 / 0 | **29 / 29 / 0** |
+| 5 | VSC `npm run doc:check`（VSC 域 strict） | 0 命中 | **0 命中** |
+| 6 | 核回归 `node --test`（cwd = `thincoder-core`） | 178 / 178 / 0 | **178 / 178 / 0**（核零改动） |
+| 7 | 仓根 `check-doc-width` | OK（404 档） | **OK（404 档 · 一致性 V1/V2/V3 新增 0）** |
+| 8 | 仓根 `check-ledger` | OK（0 违规） | **OK（0 违规）** |
+| 9 | 仓根 `doc-anchors --domain .` | **27 悬空**（FAIL 闸态） | **0 悬空 —— `OK(V5): 0 条悬空锚`（exit 0）** |
+| 10 | vsix 断言（真安装态夹具 · postpackage） | — | **断言 B + D 全过 · exit 0**（315 档 vsix；反证无核盘 ⇒ exit 1） |
+| 11 | 发布编排 dry 面 | — | **exit 0**（段 0 ⚠️/段 1⏭️/段 1.5 ✔/段 2 🧪）；真跑 ⇒ 段 0 fail-closed exit 1 |
+
+**判据注**：A-K1 口径 = **零新增**（用户裁定 2026-09-15 15:12）；本笔改动 = 脚本档 + 文档档（src/test 零变更，测试读数与基线逐数一致）。长测试先落盘（`.thincoder/tmp/`）后读摘要。
+
+#### 五、未决 / 上抛（父侧 / 设计面）
+
+1. **§2 两处收正（设计面）**：`:180`（W9 行「read-history-discovery 保留」）与 `:241`（薄壳面清单含 `read-history-discovery`）——本笔已删该档 ⇒ 建议 eng-designer 修正轮注（收正两处，或在 §5 明文承接，二选一）。
+2. **lock 刷新 + 发布机 `npm ci`**（评审 #1）：归核发布后的发布运行面（§2.6.1 锁面口径）；本笔零触碰。
+3. **产品树 D-C14 残留**（评审范围外同题）：`thincoder-vscode/docs/**` 376 处提及 / ~50 档 + `thincoder-cli/docs/**` —— 归文档维护批（W16 未决 5）。
+4. **变更记录行口径**（评审 #9）：`docs/core/**` 模块权威档补 W17 行 vs 统一免记——请父侧定后一次落定（避免半维护形态）。
+5. **前序单元遗留**：仓根与产品树约 90 档未跟踪临时 `*.txt`（`core-regress.txt` · `w12-*.txt` · `w14-*.txt` 等，W12/W13/W14 面）——非本笔写域，建议父侧清运（本笔临时物全落 `.thincoder/tmp/`）。
+6. **核内笔清单**（承 W15 未决 4 · 本笔零触碰）：#112 read_image run 期重解 · 核 `END` 参数化 · `depInfo` C-6 差异。
+
+#### 六、提交（单笔）
+
+`git commit --only` ⇒ **`da9101fe`**（21 档 · **+189/−206** · `chore(vsc): W17 close-out - vsix check, AGENTS.md map, anchor sweep, orphan drop`）。
+含：`AGENTS.md` · `package.json` · `scripts/check-vsix.mjs`（新）· `scripts/publish-all.mjs` · `src/agent-tools/read-history-discovery.mjs`（删）· `src/extension/session-slots.mjs` · `docs/design/READ-HISTORY-SPLIT.md` ·
+  `docs/core/{design ×8, requirements ×2}` · `docs/vsc/{design ×3, requirements ×1}`。**批次档本体未入本笔**（父侧统一）；`thincoder-core/**` 零改动。
+回滚点 = `git revert da9101fe`。
+
+**轮次自证**：审计 1 轮（四类偏差零）+ advisor 代码评审 1 轮（pass · 🔴 0）+ 修复轮 1（评审派生 7 修 / 2 判非问题 / 1 缓办——均已落盘并复跑）；终态 **0 未决 🔴 → clean**（未决 1–6 为上抛登记：设计面 2 处收正 · lock/发布面 · 产品树维护批 · 变更记录口径 · 前序遗留临时文件 · 核内笔）。
+
+**收正注（同轮 · 首版后置 · 零语义）**：本段首版 9 行超宽（`:2562`–`:2564` · `:2566`–`:2567` · `:2572` · `:2575` · `:2582` · 首版提交行）经本席就地机械折行（仅插换行 · 去空白逐字节相等）；复跑 = 本档 0 行 >300（`check-doc-width` OK · 404 档）。
+
 ## §6 验证与收口（父代理）
+
+**状态：已收口**（2026-09-15 · 全 16 单元 + 2 前置笔 + W17 收口笔落地核验；终态 = 全链绿）。
+
+### 6.1 交付总账（逐单元 → 提交）
+
+| 单元 | 提交 | 状态 |
+|---|---|---|
+| W8 前置笔（引擎下限 + 护栏） | `051b21a9` · `e0234ee1` · `c85f2d44`（父侧收尾） | ✅ |
+| W1 LOGGING | `3a1ef09b` | ✅ |
+| W2 提示词面 | `0ee40682` | ✅ |
+| W3 TRACES | `c1256ef6` | ✅ |
+| W4 WORKSPACE | `5faa4e0a` | ✅ |
+| W5 CHECKPOINT | `a72f0fe8` · `7bde488a` · `de245d4c` | ✅ |
+| W6 COMPACTION | `c90ddbdf` · `e9ea9bd1` | ✅ |
+| W7 MCP | `33a9e0a7` | ✅ |
+| W8 MEMORY | `a8d9e865` · `1decd99b` | ✅ |
+| W9 AGENT-TOOLS | `99d2824b` · `ff7ff42a` | ✅ |
+| W10 PROVIDER | `81e4b4c9` | ✅ |
+| W11 SESSION | `168f8037` | ✅ |
+| W12 ADVISOR | `67883dc0` · `5aebbcdb` · `99c9dafe`（评审补轮） | ✅ |
+| W13 子代理/异步 | `c38dada0` | ✅ |
+| W14 TOOLS | `06686ecb` · `a354e026` | ✅ |
+| W15 AGENT-LOOP（重定 · 零删） | `00b3dc83` | ✅ |
+| W16 CONFIG | `488c86c9` · `04157c71` · `c4f4330` | ✅ |
+| W17 收口笔 | `da9101fe` | ✅ |
+| 父侧/designer 线（记录面 · 档案轮 · 红线清扫 · 修正轮）= 14 笔 | 见 `git log`（如 `60f8bab2` · `cd00915` · `7b41767`） | ✅ |
+
+### 6.2 终态全链读数（冻结 HEAD · 父侧实跑）
+- VSC：`npm test` 553/518/0/35 · `test:full` **553/553/0** · `test:integration` **29/29/0** · `lint` 193 OK · `doc:check` **0 命中**
+- 核：`node --test` **178/178/0**
+- 仓根三闸：宽度 **OK**（404 档）· 台帐 **0 违规**（基线 0）· 锚 **0 悬空**（`OK(V5)` · exit 0）
+- 收口行（台帐汇总）：`OK: thincoder/docs/TODO.md` · `OK: thincoder/docs/TODO-archive.md` · `0 处违规（阻断——修掉）· 基线 0 条`
+- **vsix 断言 B+D**：真安装态夹具 `npm run package` → postpackage **exit 0**（315 档 vsix）；反证（去 .vscodeignore 反排除）⇒ **exit 1** ✓
+
+### 6.3 删除集总帐
+**94 档 / 19,052 行**退役（原 100 档——6 档经修正轮-7 重判为端壳保留）；VSC `src/` 存活 = S 端壳 25 + extension 40 + webview/locales 面；核为机制单源。
+
+### 6.4 验收对照（A-K1–K14 · 逐单元 §5 在案）
+A-K1 零新增 ✓（各单元终态读数全绿；基线随单元推进的收缩逐笔登记）· A-K2 核零改 ✓ · A-K3 三闸 ✓ · A-K4 删除集零引用 ✓ · A-K5/K6 装配零字面/枚举空 ✓ · A-K7 单笔可 revert ✓（回滚点逐单元登记；共档 3 例已注）· A-K8 计数归因 ✓ · A-K10 模块权威档 ✓ · A-K11（W17）✓ · A-K12–K14（W8 专项）✓。
+
+### 6.5 过程纪律记录（透明）
+- **共档提交 3 例**：`provider.mjs`（W1 边随 W3 笔）· `setup.mjs`（W4 边随 W7 笔）· `agent.mjs`（W10 边随 W9 笔）——均如实披露；父侧 steer 后序单元按口径跳过。
+- **孪生树事故 2 起**（W8 前置笔 3 档 / W12 24 档）：均自回滚 + 父侧独立复核干净；**旧树已改名 `_retired-thincoder-vscode`** + 工作区 AGENTS.md 零引用 ✓。
+- **评审缺口 1 起**（W12 in-child advisor 未跑）⇒ 补轮补跑：抓出 **3 🔴（顾问池键形失配）** ⇒ 由 W13 收口（String 单源 + 夹具 + 回归断言）✓。
+- **设计前提失效 1 起**（W15 打回）⇒ 修正轮-7 重定（零删重分类 + R1–R5）⇒ 重派落地 ✓。
+- **域外一笔**（W4 改仓根 `scripts/check-ledger.mjs`）= 父侧追认（必要且最小；口径 = 同类先停下上报）✓。
+- **父侧机械修**：记录面折行 ×5 批 · 重复注记折叠 208 处 · 台帐证据 re-point ×3 · 宽度闸 404 档全绿 ✓。
+
+### 6.6 未决/移交（收口时点）
+- **核内笔清单**（9 条 · 附实证坐标——详见各 §5）：① #112 read_image run 期能力重解 ② 核 `END` 参数化 ③ `depInfo`·C-6 差异 ④ 核 marker 面参数化（`resumeSlot(cwd,{end})`）⑤（cwd,slot）型 token 台帐补位 ⑥ `applySession` 机读线规则导出位 ⑦ idle 看门狗覆盖核对 ⑧ `recordChatTrace` 同步段 try 兜底（W3）⑨ `settingsTool` 测试缝（W16）。
+- **文档维护批**：`thincoder-vscode/docs/**` D-C14 类 376 处/~50 档 + `thincoder-cli/docs/**` + 变更记录行口径。
+- **技术待办 +2 行**（6→8）：`setup.mjs` 681>500 拆分 · 子代理内容 chunk 通道（W15 评审 #4）。
+- **发现 11**（CLI `memory import` 导入器未落）——时序 ≤ 落地版本发布前。
+- W12 评审残余（收留面回滚/注释/产品档注记）· W5 证据面（按「行为面归核测试承接」收口 ✓）。
+
+### 6.7 收口动作（已完成）
+- 工作区清理：~126 个 coder 临时 `*.txt` 已清运（仓根 + 产品树）✓
+- 台帐：技术待办 6→8 行（计数联改 ✓）；需求池 23 条（VSC Auto 开关 = 本批关联条目· 待讨论）✓
+- 凭证链：设计 token 终消费（`consume-design`）✓
+- 本档状态行（档头）✓
+
+**收口裁定**：本批验收依据 = 6.2 全链读数 + W17 断言 B+D 正/反实证 + 各单元 §5 专项验收在案 ⇒ **通过**。
