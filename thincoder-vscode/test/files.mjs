@@ -79,6 +79,6 @@ export default [
   "test/doc-anchors.test.mjs", // DOC-CODE-RECONCILE 批·期 1（2026-09-12；S4 单仓化）：V5 文档锚一致性机检——A1/A2/A3 三类锚存在性 + 假阳八类零报 + 注记 + 射程边界 + 报告态/阻断态（T-DC1–T-DC14；跨仓域外 / 自指段已随 S4 删；设计档 §4/§10）
   "test/reconcile-lookup.test.mjs", // DOC-CODE-RECONCILE 批·期 1（2026-09-12）：层 3 反查——变更 token → 设计/需求档清单；只读不阻断 + 零写 + 抽取器单源（T-DC15；设计档 §5）
   "test/engine-floor-guard.test.mjs", // W8 前置笔（2026-09-15）：引擎下限护栏（A8 裁定）——版本闸 22.13 + node:sqlite 探针 + 低于下限提示/记忆面停用/不抛（批次档 §2 W8「门 1」）
-  "test/agent-tools-registry.test.mjs", // W9（2026-09-15）：登记册 14 名装配断言（引核册——核 agent-tools.mjs 名集 / 端侧转口面同集 / setup.mjs 动态装配 14 名；CORE-UNIFICATION §2.13.4 #83）+ W8 接线契约机判（静态闭包零 node:sqlite）
+  "test/agent-tools-registry.test.mjs", // W9（2026-09-15）：登记册 14 名装配断言（引核册——核 agent-tools.mjs 名集 / 端侧转口面同集 / setup.mjs 动态装配 14 名；CORE-UNIFICATION §2.13.4 #83）+ W8 契约②形态面（静态闭包零 node:sqlite 扫描在 `test/engine-floor-guard.test.mjs`）
   "test/memory-index-face.test.mjs", // W8（2026-09-15）：索引面归一核面专项验收——A-K12（反向判零 + 检索 = 核面 FTS 回退非空 + 面板读数 = 核库计数）· A-K13（相位序列 scan→index→done + 完成提示 = 核读数 + 模型变更零手动重建/懒回填）· A-K14（旧目录清退：告示一次 + 显式删除 + 零自动删除路径）· VP-9 可见化核面承接（快层：A-K12 反向判零 + A-K14 两档；慢档：真 fs/sqlite 四档——A-K12 检索 / A-K13 相位 / A-K13 懒回填 / VP-9 可见化）
 ]
