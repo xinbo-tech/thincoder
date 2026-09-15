@@ -481,7 +481,7 @@ ThinCoder 的 session bar 是差异化的 UI 亮点，但用户是否真的理�
 - 2025-12-10 v2.0.64：异步 agents + bash（后台运行 + 发消息唤醒主 agent）——**首发**；
 - 2026-01-07 v2.1.0：Ctrl+B 统一后台化（bash + agents 一键转后台）；
 - 2026-08 前后 v2.1.232：交互会话 subagent **默认后台**（+ fork 模式默认开）；
-- 现态（官方文档 2026-09 核实）：后台 subagent 为默认执行形态；SDK 面 `run_in_background` 缺省即后台。
+- 现态（官方文档 2026-09 核实）：后台 subagent 为默认执行形态；SDK 面 `run_in_background` 缺省即后台（Claude Code 面引例——不在册）。
 
 **与 §3 的关系**：印证「后台/云端 agent 是下一个主战场」——Claude Code 已把后台化做成默认形态。机制差异：其走「后台 agent + SendMessage 唤醒/回传」，ThinCoder R17 走「池 + digest 注入」——目的同（不阻塞主循环）、通路不同。
 
@@ -501,7 +501,7 @@ ThinCoder 的 session bar 是差异化的 UI 亮点，但用户是否真的理�
 
 自定义角色 = `.claude/agents/*.md`（项目级）/ `~/.claude/agents/`（用户级）——frontmatter 钉 `name/description/tools/disallowedTools/model/permissionMode/maxTurns/skills/mcpServers/hooks/memory/background/effort/isolation/color`；作用域优先级：组织 > CLI `--agents` > 项目 > 用户 > plugin。
 
-版本注：v2.1.63 起 `Task` 工具更名 `Agent`（旧 `Task(...)` 仍作别名）；嵌套深度默认 3（v2.1.219 起；v2.1.172–216 为 5、v2.1.217–218 为 1）；并发上限默认 20（`CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` 可调）。
+版本注：v2.1.63 起 `Task` 工具更名 `Agent`（旧 `Task(...)` 仍作别名）；嵌套深度默认 3（v2.1.219 起；v2.1.172–216 为 5、v2.1.217–218 为 1）；并发上限默认 20（`CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` 可调——Claude Code 面引例，不在册）。
 
 **对位观察**：其内置角色轴 = 只读探索 / 只读规划 / 通用执行 + 三枚杂务；ThinCoder 的轴 = 探索·规划 / 设计·实现·编码 / 评审·会诊·飞刀——纪律角色（advisor/verify/eng-*）那一列它仍无对应物（证实 §2）。
 
@@ -514,10 +514,10 @@ ThinCoder 的 session bar 是差异化的 UI 亮点，但用户是否真的理�
 | advisor 评审（第二模型审稿） | **Advisor tool**（实验性，仅 Anthropic API）：主模型配更强顾问模型，关键决策点被咨询（定方案前 / 卡住 / 宣布完成前）；顾问收全文、返 guidance、有 `Reviewed/Declined` 行 | 我们 = 流程门（评审过才发 token、才准动代码）；它 = 咨询（模型自决何时问；文档明说可依自身证据违逆顾问建议——无否决权） |
 | Goal 工具（机器可验证判据） | **`/goal`**：每回合由独立小模型判 met / not-yet / impossible；未达自动续跑 + 重试/暂停/30 分钟 check-in | 语义接近；它 = 会话级临时条件（≤4000 字符），非落档资产 |
 | 设计先行（设计档→批准→才写码） | **Plan mode** + `opusplan`（Opus 规划 / Sonnet 执行）+ Ultraplan（云端规划）；VS Code plan review | 它的 plan 易逝（会话内）；无「设计文档 + 评审通过门」 |
-| 评审收敛协议（裁决表 / 轮次衰减 / 修正轮） | **Code Review / `/code-review` / ultrareview**：多 agent 并行 + **验证步去伪** + 分级（🔴/🟡/🟣 pre-existing）+ 去重排序；`REVIEW.md` 可写收敛规则（首轮后只报重要项等） | 它 = PR/代码级、opt-in、**刻意不阻塞**（check run 恒 neutral；要门禁自己去 CI 读 severity）；我们 = 机制化收敛（轮次衰减 + 裁决表） |
+| 评审收敛协议（裁决表 / 轮次衰减 / 修正轮） | **Code Review / `/code-review` / ultrareview**：多 agent 并行 + **验证步去伪** + 分级（🔴/🟡/🟣 pre-existing）+ 去重排序；`REVIEW.md`（Claude Code 面引例——不在册）可写收敛规则（首轮后只报重要项等） | 它 = PR/代码级、opt-in、**刻意不阻塞**（check run 恒 neutral；要门禁自己去 CI 读 severity）；我们 = 机制化收敛（轮次衰减 + 裁决表） |
 | verify 守卫（声称完成前必真跑） | 捆绑 **`/verify`** skill（文档：只有用户可运行） | 它 = 用户手按验证；我们 = 流程硬节点 |
 | 门禁 / 钩子 | **Hooks**（PreToolUse exit 2 阻断 / Stop / SubagentStop / prompt-based——`/goal` 即 Stop hook 封装）+ permissions/deny/沙箱/auto-mode 分类器 | 机制齐备但是「零件箱」——要自写脚本成门 |
-| 台账 / 批次档 | 无对应物（最近 = `CLAUDE.md` / `REVIEW.md` / plans） | — |
+| 台账 / 批次档 | 无对应物（最近 = `CLAUDE.md` / `REVIEW.md` / plans——皆 Claude Code 面引例，不在册） | — |
 | 角色分离（唯一写设计档 / token 门才能改码） | 自定义 subagent + tools 白名单可近似（设计者只给文档工具） | **无 token 门**——没有任何机制强制「评审不过不能改码」 |
 
 **它明确没有的三样**：① 设计评审→token→实现的硬链（评审为建议性前缀）；② 批次档/需求池台账类流程资产；③ 发起权纪律——其审查可被 push/PR 自动触发，本仓 = 用户发起评审为铁律（取向相反）。

@@ -12,7 +12,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
-const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", "coverage", ".turbo"])
+const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", "coverage", ".turbo", ".thincoder"])
 /** 台账两档（L1–L4 专判面——不入本检查源域，避免重复报行）。 */
 export const LEDGER_FILES = ["docs/TODO.md", "docs/TODO-archive.md"]
 
@@ -60,8 +60,12 @@ export function collectDocStems(root) {
   return stems
 }
 
-/** 代码面标识符集（A2 在册判据：词界命中 ⇔ 标识符集含该名）。 */
-export function collectCodeTokens(root, dirs = ["src", "webview", "scripts", "test"], files = ["extension.mjs"]) {
+/** 代码面标识符集（A2 在册判据：词界命中 ⇔ 标识符集含该名）。
+ *  采集 = **根树全深走**（SKIP_DIRS 排除）——域形态两制并容：产品树（`src/` 等子目录）与**核树**
+ *  （`thincoder-core/` 无 `src/`：根级模块 + 领域子目录）。判据句 = 合并仓代码面（域集并集）实装符号
+ *  （两仓合并后「对端」并入仓内）。修复来源 = `2026-09-13-CORE-UNIFICATION.md:6432` 登记项
+ *  （「核根文件不入 VSC 引擎代码面 ⇒ 硬悬空」——修复面 = 本函数）。 */
+export function collectCodeTokens(root) {
   const set = new Set()
   const add = (p) => {
     let text = ""
@@ -80,8 +84,7 @@ export function collectCodeTokens(root, dirs = ["src", "webview", "scripts", "te
       else if (/\.(?:mjs|js|cjs|json)$/.test(n)) add(p)
     }
   }
-  for (const d of dirs) walk(join(root, d))
-  for (const f of files) add(join(root, f))
+  walk(root)
   return set
 }
 

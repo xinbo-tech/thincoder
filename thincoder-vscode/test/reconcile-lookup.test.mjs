@@ -1,7 +1,7 @@
 /**
  * reconcile-lookup.test.mjs — 层 3 反查用例（DOC-CODE-RECONCILE 批 §5 · T-DC15）。
  *
- * 判据权威 = `docs/design/DOC-CODE-RECONCILE.md` §5（输入 / 变更抽取 / 反查 / 输出 / 判据句 / 边界）。
+ * 判据权威 = `docs/core/design/DOC-CODE-RECONCILE.md` §5（输入 / 变更抽取 / 反查 / 输出 / 判据句 / 边界）。
  * 夹具 = 临时 **git 仓**（`git init` + 两次提交——夹具 diff 改 `scanGroups` 定义）。
  * 慢层（slow()）：真 git 子进程（单例 >500ms——快层 skip、全量照跑）。
  * 边界硬项：**只读、不写、不阻断**（退出码恒 0）；跑前后 `git status --porcelain` 同集；只读本域（S4 单仓化——对端面并入仓内）。
@@ -56,8 +56,8 @@ test("T-DC15 静态：抽取器单源（复用 V5 `extractTokens`——无第二
 // ── T-DC15 错误 / 边界：夹具 diff → 档清单；空 diff；非仓路径；零写 ──────────
 slow("T-DC15 错误/边界：反查——夹具 diff 改 `scanGroups` ⇒ 档清单含设计档；空 diff 零输出；非仓路径不报错；零写", () => {
   const dir = gitRepo({
-    "docs/design/LEDGER-SELF-CONTAINED.md": "# LEDGER\n\n数字单源 = `scanGroups`（本仓 `src/ledger.mjs`）\n",
-    "docs/requirements/ENGINEERING-MODE.md": "# 需求\n\n零锚正文。\n",
+    "docs/core/design/LEDGER-SELF-CONTAINED.md": "# LEDGER\n\n数字单源 = `scanGroups`（本仓 `src/ledger.mjs`）\n",
+    "docs/core/requirements/ENGINEERING-MODE.md": "# 需求\n\n零锚正文。\n",
     "src/ledger.mjs": "export function scanGroups(lines) { return [] }\n",
   })
   const outsider = mkdtempSync(join(tmpdir(), "reconcile-outside-"))
@@ -69,7 +69,7 @@ slow("T-DC15 错误/边界：反查——夹具 diff 改 `scanGroups` ⇒ 档清
 
     const hit = runMain(["--repo", dir, "--range", "HEAD~1..HEAD"])
     assert.equal(hit.code, 0, "反查不阻断（退出码恒 0）")
-    assert.ok(hit.out.some((l) => l.startsWith("docs/design/LEDGER-SELF-CONTAINED.md — 命中 scanGroups（:")), hit.text)
+    assert.ok(hit.out.some((l) => l.startsWith("docs/core/design/LEDGER-SELF-CONTAINED.md — 命中 scanGroups（:")), hit.text)
     assert.ok(/反查: \d+ 档 \/ \d+ 行 · 变更 token \d+ 处（只读不阻断）$/.test(hit.text.trim().split("\n").slice(-1)[0]), hit.text)
 
     // 空 diff ⇒ 零输出不报错
@@ -89,7 +89,7 @@ slow("T-DC15 错误/边界：反查——夹具 diff 改 `scanGroups` ⇒ 档清
     // `--json` 同形机读 + 进程面（真 spawn——shebang / 入口活）
     const j = lookup({ repo: dir, range: "HEAD~1..HEAD" })
     assert.deepStrictEqual(Object.keys(j).sort(), ["counts", "files", "range", "repo", "tokens"])
-    assert.ok(j.files.some((f) => f.file === "docs/design/LEDGER-SELF-CONTAINED.md"))
+    assert.ok(j.files.some((f) => f.file === "docs/core/design/LEDGER-SELF-CONTAINED.md"))
     const spawned = spawnSync(process.execPath, [join(REPO, "scripts", "reconcile-lookup.mjs"), "--repo", dir, "--range", "HEAD~1..HEAD", "--json"], { encoding: "utf8" })
     assert.equal(spawned.status, 0, spawned.stderr)
     assert.equal(JSON.parse(spawned.stdout).counts.files, j.counts.files, "CLI 与 API 同形")

@@ -257,7 +257,8 @@ claude / gemini 携 `format: "anthropic" / "google"`；minimax 携 `chatPath: "/
 **模型选择 UI（面板接线）**：主下拉列 provider 行（名 + 当前模型 + `›`）+ hover flyout 子菜单（webview 无键盘导航）；选中 = 写当前会话槽；设置面板「默认模型」项 = provider →
 运行期拉取候选两级（写 `raw.defaultModel`）。Add / Remove / Key 流 = `thincoder-vscode/src/extension/provider-flows.mjs`（`addProviderFlow` `:106`——QuickPick preset 过滤已添加或 Custom 手输 name / baseURL / model + format → `addProviderEntry` → 问 key → `setProviderKey`）；
 `settings.mjs` `fullStatus`（`:308`）单源拉取
-（逐已配置渠道各探一次——探通 → 候选行直接可选；探不通 → 不可选 + 失败消息随载荷）。**M9 准入探针（配置阶段）** = 收敛于 `thincoder-vscode/src/provider/list-models.mjs`（探针形状由 `thincoder-vscode/src/config-io.mjs:230` `probeTargetFromEntry` 组装）；探通 / 探不通两态 + **不阻断保存**；`defaultModel` 写面探针 fire-and-forget（写面为同步契约——探针绝不 reject）；**运行期零探测**（启动 / 发请求 / 面板打开不做 `/models` 探测）。候选未命中 = 保持当前选择显示与状态
+（逐已配置渠道各探一次——探通 → 候选行直接可选；探不通 → 不可选 + 失败消息随载荷）。**M9 准入探针（配置阶段）** = 收敛于 `thincoder-vscode/src/provider/list-models.mjs`
+（探针形状由 `thincoder-vscode/src/config-io.mjs:230` `probeTargetFromEntry` 组装）；探通 / 探不通两态 + **不阻断保存**；`defaultModel` 写面探针 fire-and-forget（写面为同步契约——探针绝不 reject）；**运行期零探测**（启动 / 发请求 / 面板打开不做 `/models` 探测）。候选未命中 = 保持当前选择显示与状态
 （回落会话槽复合）+ 零 `selectModel` / `selectReasoning` post（§6.16 M10 语义同源 · 独立实现）。
 
 **transport 端差**（`thincoder-vscode/src/provider.mjs:122` chat / `TRANSPORTS` `:110`）：调用链与 §6.2 同构（统一结果形态 + 净化 + 分派 + 闸门 + 重试 + 续写——不重述）。差异登记 =
