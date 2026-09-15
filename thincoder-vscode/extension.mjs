@@ -5,7 +5,7 @@
 import * as vscode from "vscode"
 import { configurePromptInjections } from "@thincoder/core/prompt-files.mjs"
 import { ChatPanel } from "./src/extension/chat-panel.mjs"
-import { closeAllMcp } from "./src/mcp.mjs"
+import { closeAllMcp } from "./src/extension/panel-mcp.mjs"
 import { initLocale } from "./src/i18n.mjs"
 import { registerDiffPreviewProvider } from "./src/extension/diff-preview.mjs"
 import { startConfigWatch } from "./src/extension/config-watch.mjs"

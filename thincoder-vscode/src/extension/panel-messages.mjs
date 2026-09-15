@@ -408,7 +408,7 @@ export async function handlePanelMessage(panel, msg) {
       // Probe/expand: connect (idempotent — reuses the live connection) and return the
       // tool list for the settings panel's per-server expander.
       try {
-        const { mcpConnect } = await import("../mcp.mjs")
+        const { mcpConnect } = await import("./panel-mcp.mjs")
         const servers = loadMcpServers()
         const cfg = servers.find((x) => x.name === msg.name)
         if (!cfg) throw new Error(`no MCP server named "${msg.name}"`)

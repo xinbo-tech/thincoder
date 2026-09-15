@@ -13,7 +13,6 @@ import {
   loadAgentSettings, loadRaw, normalizeProxy,
 } from "../config-io.mjs"
 import { addProviderEntry, removeProviderEntry, probeProviderAdmission } from "./provider-flows.mjs"
-import { mcpConnectedNames } from "../mcp.mjs"
 import { listModels, admissionOf, channelUnavailableMessage, recordAdmission } from "../provider/list-models.mjs"
 import { specForModel } from "../specs.mjs"
 import { loadModelPrefs, loadSlot } from "./session-io.mjs"
@@ -279,11 +278,6 @@ export function saveMcpServer(name, config) {
 
 export function deleteMcpServer(name) {
   return removeMcpServer(name)
-}
-
-/** Connected-server names for status display (●/○ + tool counts). */
-export function connectedMcpServers() {
-  return mcpConnectedNames()
 }
 
 export function pushStatus(panel) {

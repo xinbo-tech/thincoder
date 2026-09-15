@@ -1155,7 +1155,7 @@ userMessageSince)` 计数语义逐条；`execute` 中 enter/exit 先置 `_pendin
 循环检查（语义 = `getAuto() && !history.some(AUTO_REMINDER)`——cli `ensureAutoReminder` 同语义）；位置 = hydrate
 全部注入之后（cli `setup.mjs:351` 尾位同构）。`run-helpers.mjs:289-299` 压缩重注删 permission 分支（保留 AUTO）。
 
-**D-CI7 MCP 警告收口（F-Q11）**：`src/mcp/index.mjs:330-337` 失败分支加 `console.error("[mcp] " + msg)`（cli
+**D-CI7 MCP 警告收口（F-Q11）**：`src/mcp/index.mjs:330-337`〔W7 迁移——现体 `src/extension/panel-mcp.mjs:55`〕失败分支加 `console.error("[mcp] " + msg)`（cli
 `make-agent.mjs:106` 同前缀）；`setup.mjs:174-175` 注释修正（删除「injected as a reminder」不实句）；
 `mcpWarnings` 字段保留（消费面 = console；不发明 history 注入）。
 
@@ -1237,7 +1237,7 @@ VSC 现序违反了它（`:448` time → `:450` pushInjections）。**取「time
 | 8 | `src/agent-tools/skill.mjs` | 53 | ~62 | D-CI8 |
 | 9 | `src/extension/skills.mjs` | 30 | ~95 | loader 语义 + formatSkillListing |
 | 10 | `src/extension/panel-chat.mjs` | 499 | 499（载荷不变；**贴线注记**——不得加行） | 仅注释 |
-| 11 | `src/mcp/index.mjs` | 417 | ~419 | console 可见面 |
+| 11 | `src/mcp/index.mjs` | 417 | ~419 → **0（W7 迁移——原档已删；现体 = 端壳 `src/extension/panel-mcp.mjs`）** | console 可见面 |
 | 12 | `src/repomap.mjs` | 225 | ~245 → **304（实测）** | +buildSummary 导出；**结构债候选**〔实现后同步（2026-09-12）〕 |
 | 13 | `test/context-parity.test.mjs` | 新 | ~260 → **385（实测）** | T-CI-1~T-CI-11（含子态 T-CI-2a/b/c、T-CI-3b——修正轮 #4）机判；**登记**（>300 咨询线）〔实现后同步（2026-09-12）〕——T-CI-11 已退场（整删——两仓合并批 2；删除记录 = 2026-09-13-TWO-REPO-MERGE §5） |
 | 14 | `test/files.mjs` | 72 | 73 | 新档登记 |
@@ -1292,7 +1292,7 @@ N-P1 同款。
 | AC | 判据 | 回指 |
 |---|---|---|
 | AC-CI-1 | T-CI-1~T-CI-11 全绿（`node test/run-fast.mjs`）——T-CI-11 已退场（整删——两仓合并批 2；删除记录 = 2026-09-13-TWO-REPO-MERGE §5） | F-Q1~F-Q13 / N-Q1~N-Q4 |
-| AC-CI-2 | 机检：`pushModeReminders` 全仓零命中；`Permission mode` 零命中；`slice(0, 8000)` 于 skill.mjs 零命中；`[mcp] ` 于 `src/mcp/index.mjs` 命中 | F-Q9/F-Q10/F-Q11 |
+| AC-CI-2 | 机检：`pushModeReminders` 全仓零命中；`Permission mode` 零命中；`slice(0, 8000)` 于 skill.mjs 零命中；`[mcp] ` 于 `src/mcp/index.mjs` 命中（W7 迁移——现体 = 端壳 `src/extension/panel-mcp.mjs`） | F-Q9/F-Q10/F-Q11 |
 | AC-CI-3 | systemPrompt 两态：有 AGENTS → `<untrusted_project_instructions>` 在、`OS:` 尾行不在；无 → 两者均不在；skills 空 → 零追加 | F-Q1/F-Q5/F-Q7 |
 | AC-CI-4 | 行数实测对表（§17.6）+ 两仓快层全绿（VSC 含新档登记）+ `check-doc-width` 新增违规 0 | N-Q3/N-Q4 |
 | AC-CI-5 | T-CI-11 绿（跨仓只读兄弟仓 `../thincoder`；**fail-closed**：缺仓/异位 = 失败不 skip——修正轮 #1）；双端序锚漂移检测（CLI 侧序变即红）——已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1）；残部（跨仓只读源在位守卫）已退场（整删——两仓合并批 2；删除记录 = 2026-09-13-TWO-REPO-MERGE §5） | F-Q13 |

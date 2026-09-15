@@ -22,7 +22,7 @@ import { loadSlot } from "../extension/session-io.mjs"
 import { specForModel } from "../specs.mjs"
 import { modeRoleField } from "../agent-tools/subagent.mjs"
 import { loadRaw, loadConsultPool, normalizeProxy, resolveProviders, TRACES_DEFAULTS } from "../config-io.mjs"
-import { expandHome } from "../expand-home.mjs"
+import { expandHome } from "@thincoder/core/expand-home.mjs"
 import { escapeXml, pushReal } from "./run-helpers.mjs"
 import { applyPromptInjections } from "@thincoder/core/prompt-files.mjs"
 import { assemblePrompt } from "@thincoder/core/prompt-overlays.mjs"
@@ -175,13 +175,13 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
 
   // MCP tools: idempotent connect + expand into NATIVE tools (CLI parity, MCP.md D1/D2).
   // Top level only; failures never block — D-CI7（F-Q11）：警告可见面 = console
-  // （mcp/index.mjs `[mcp] ` 前缀——cli make-agent.mjs 同）；不是 history 注入（CLI 无此
+  // （端壳 MCP 面 `panel-mcp.mjs` / cli make-agent.mjs 同前缀）；不是 history 注入（CLI 无此
   // 行为）——mcpWarnings 字段保留为采集面。
   let mcpTools = []
   const mcpWarnings = []
   if (depth === 0 && Array.isArray(mcpServers) && mcpServers.length > 0) {
     try {
-      const { connectMcpServersExpanded } = await import("../mcp.mjs")
+      const { connectMcpServersExpanded } = await import("../extension/panel-mcp.mjs")
       const r = await connectMcpServersExpanded(mcpServers)
       mcpTools = r.tools
       mcpWarnings.push(...r.warnings)

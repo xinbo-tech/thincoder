@@ -4,10 +4,11 @@
 > 计**——server 工具如何动态展开为原生工具、如何配置与在设置面板管理、如何建连/热插拔/
 > 探活、失效如何表现。与 CLI 同名文档对应同一机制板块——各端独立实现，内容以本端代码为
 > 准（CLI 有 `/mcp` TUI 命令交互，本端无——配置/连接全在 **Settings 面板 MCP 页**）。
-> 权威源：`src/mcp.mjs`（re-export shim）+ `src/mcp/index.mjs`（生命周期/注册表/展开）+
-> `src/mcp/{stdio,http,ws}.mjs`（三 transport）+ `src/mcp/utils.mjs`（常量/工具）+
+> 权威源（W7 迁移后现体）：核 `thincoder-core/mcp.mjs`（客户端入口——生命周期/注册表/展开；端壳经
+> `@thincoder/core` 子路径引用）+ 核 `thincoder-core/mcp/transport-{stdio,http,ws}.mjs`（三 transport）+
+> 核 `thincoder-core/mcp/helpers.mjs`（常量/工具——W7 迁移后现体）+
 > `src/config-mcp.mjs`（config.json mcp.servers[] 管理）+ `src/extension/settings.mjs`/
-> `panel-mcp.mjs`（面板接线）。实现为唯一事实源。
+> `src/extension/panel-mcp.mjs`（面板接线 + 端壳增量：client-id 注册表与面板状态接口）。实现为唯一事实源。
 > 关联：`TOOLS.md`（MCP 展开并入统一工具表/装配）、`SETTINGS.md`（面板 MCP 页）。
 > 2026-09-08：从 `ARCHITECTURE.md` §13 MCP 行展开成立本档（DOC-REORG-VSC 第 5 批）——写全
 > VSC 独立实现；ARCH 瘦身由后续批统一做。
@@ -53,12 +54,14 @@ config.json 读写（纯 Node——`vscode` 无关，可在 extension host 外�
 （●/○ 连接态 + N tools + 原始 config 供表单预填）；动作消息 → `reconnectMcp`（断开 + 重连 →
 `mcpReconnected { name, tools }`）、`testMcp`（`probeMcpServer` → `mcpTestResult`，§7）、
 `editMcp`（`saveMcpServer` = add-or-update 原位 → 推状态）。`saveMcpServer(name, config)` =
-add 失败（重复）则 update——面板 [Edit] 与 [Add] 复用同一表单。
+add 失败（重复）则 update——面板 [Edit] 与 [Add] 复用同一表单。工具展开器（行内 [tools]）：
+`mcpTools` 载荷 = 面板契约投影 `{ name, description, inputSchema }`（W7 迁移：端壳 `panelToolList`
+自核原生工具投影——schema 取 `parameters`，运行期字段（`execute`/`_mcpTransport`）不带出端壳）。
 
 ## 3. 启动装配与热插拔（每轮重建）
 
 面板回合把 `mcpServers: getMcpServers()` 注入 runAgent opts（panel-chat.mjs）；`setupAgentRun`
-在 **depth-0** 且 `mcpServers` 非空时动态 `import("../mcp.mjs")` →
+在 **depth-0** 且 `mcpServers` 非空时动态 `import("../extension/panel-mcp.mjs")` →
 `connectMcpServersExpanded(mcpServers)`：
 
 - **并发连接**：`Promise.allSettled`（逐 server 失败隔离）；`_mcpHooks.reconnectDelays` 测试钩子。
@@ -70,18 +73,19 @@ add 失败（重复）则 update——面板 [Edit] 与 [Add] 复用同一表单
 - **子代理不含 MCP**：装配仅 depth-0 展开；depth>0 无 MCP 工具（readonly 过滤与 question 剔除
   不涉 MCP）。
 
-## 4. 幂等连接与注册表（mcp/index.mjs）
+## 4. 幂等连接与注册表（核 mcp.mjs——W7 迁移后现体）
 
-`mcpConnect(config)` 幂等：`_servers` Map（id=`mcp-<seq>` → entry `{ transport, tools, config,
-configFingerprint, serverName }`）已存在**同 serverName 活连接且指纹一致** → 复用已展开工
-具，不重建（重复连接不泄漏 transport）。建连前：
+`mcpConnect(config)` 幂等（核实现）：核 `_sessions` Map（**name 键控**——serverName → session
+`{ config, configFingerprint, state: { transport, tools } }`；端壳 `panel-mcp.mjs` 只保 client-id
+面 `{ id, serverName, tools }`）已存在**同 name 活连接且指纹一致** → 复用已展开工具，不重建
+（重复连接不泄漏 transport）。建连前：
 
 - **活连接 + 指纹比对**：指纹 = `JSON.stringify([command, args, url, wsUrl, env, headers,
   token])`。同 name 但 transport 死（`!isAlive()`）或指纹不一致 → 断开旧连接 + 走全新连。
 - **重连去重**：`_reconnecting`（serverName → promise）进行中 → 等它完成，避免双重建连。
-- **onDead 自愈**：entry 注册 `transport.onDead` → 死后从 registry 移除 + 后台退避重连
-  `scheduleReconnect`（延迟表 `[1000, 2000, 4000, 8000]`ms）；成功原位替换 entry（**id 不变**
-  ——panel/session 引用稳定）；四轮耗尽 console.error + 静默（下次 mcpConnect 全新连）。
+- **onDead 自愈**：session 挂 `transport.onDead` → 死后后台退避重连 `scheduleReconnect`
+  （延迟表 `[1000, 2000, 4000, 8000]`ms）；成功原位替换 `session.state.transport`（**name 键不变**
+  ——工具闭包动态取 transport，工具表无需重建）；四轮耗尽 console.error + 静默（下次连接走全新连）。
 - **token 一等字段**：`withBearerToken` 合成 `Authorization: Bearer <token>`——仅当 headers 未
   显式给 Authorization（显式优先）；发生在传给 transport 前，**不写回 config**。fingerprint
   计入 token——面板改 token → 指纹变更 → 重连。
@@ -114,29 +118,30 @@ description 类型守卫回退默认。扩展元字段供按 server 归类（连
 - **输出截断**（`truncateMcpOutput`）：32_000 字符上限，超出 → 前 32_000 + `"\n[… truncated:
   N chars omitted]"`（防 server 回 10MB 撑爆上下文）。
 
-内部保留网关 API（不暴露给模型）：`mcpListTools(client)`/`mcpCallTool(client, name, args)`/
-`mcpDisconnect(client)`——CLI 镜像的**内部 API**，供面板/工具展开内部用。
+内部网关 API（`mcpListTools` / `mcpCallTool` / `mcpDisconnect`）——W7 迁移已移除：删除记录 = 本档变更记录 /
+批次档 §5；核无对位三函数、端侧零消费 ⇒ 不再保留（核档 `MCP.md` §7 D-MC2 现状注同批）。
 
 ## 7. 传输层与探活
 
-三 transport（`src/mcp/`，每份自带 `send/notify/close` + `onDead` 注册 + `isAlive`）：
+三 transport（核 `thincoder-core/mcp/transport-{stdio,http,ws}.mjs`（W7 迁移后现体——原 `src/mcp/` 子树已删），每份自带 `send/notify/close` + `onDead` 注册 + `isAlive`）：
 
-- **http.mjs**（Streamable HTTP + SSE）：GET SSE 不可用（405）时降级纯 **postOnly** 模式
+- **transport-http.mjs（核）**（Streamable HTTP + SSE）：GET SSE 不可用（405）时降级纯 **postOnly** 模式
   （`markPostOnly`）——`isAlive: () => !closed && (eventSource != null || postOnly)`（降级后不
   因 eventSource==null 误判死）；Streamable POST 规范路径（POST→202→GET SSE 回包，`Mcp-
   Session-Id` 记入后续头）；legacy 违规 server（POST 直接回 body）兼容解析；GET SSE 用
-  `anySignal`（Node 18 无 AbortSignal.any polyfill）+ INIT_TIMEOUT 防挂起。
-- **stdio.mjs**：本地子进程，env 合并 `process.env` 之上；JSON-RPC over stdio。
-- **ws.mjs**：`isAlive` 按 `readyState === OPEN`；认证经 **subprotocol**（`bearer.<token>`，
+  `AbortSignal.any`（核现体；原本端 `anySignal` polyfill 已迁移删除）+ INIT_TIMEOUT 防挂起。
+- **transport-stdio.mjs（核）**：本地子进程，env 合并 `process.env` 之上；JSON-RPC over stdio。
+- **transport-ws.mjs（核）**：`isAlive` 按 `readyState === OPEN`；认证经 **subprotocol**（`bearer.<token>`，
   Node 内置 WebSocket 无法自定义请求头——不注入 URL query 防代理日志泄凭证）。
 - **探活 probeMcpServer(config)**（`testMcp` 用——CLI 镜像）：一次性 initialize + tools/list
-  + 计时 → `{ ok, toolCount, latencyMs }` / `{ ok:false, error }`。**零副作用**：不进 `_servers`、
+  + 计时 → `{ ok, toolCount, latencyMs }` / `{ ok:false, error }`。**零副作用**：不进 `_sessions`、
   无 onDead 挂钩、finally close（handshake 失败 catch 中 `transport?.close()` 防泄漏）。
   initialize 与 tools/list 分页循环每页受 `INIT_TIMEOUT_MS`(30s) 约束。
 
 ## 8. 生命周期收口
 
-- `closeAllMcp()`：extension deactivate 时关闭全部（extension.mjs）；逐 entry close + 清表。
+- `closeAllMcp()`：extension deactivate / 面板 view dispose 时关闭全部（端壳 `panel-mcp.mjs`——逐核
+  session close〔closed 标记 + transport close + 注册表移除〕）。
 - `mcpDisconnectByName(name)`：面板 [Reconnect] 先断开该 server 再重连。
 - `mcpConnectedNames()` / `mcpConnectedToolCounts()`：面板 ●/○ 状态与工具数。
 - 连接/断开/重连变更在**下一轮 runAgent 装配**生效（热插拔）。
@@ -158,7 +163,7 @@ description 类型守卫回退默认。扩展元字段供按 server 归类（连
 - 子代理不继承 MCP 工具（仅 depth-0 展开）；readonly 过滤不涉（readonly: false）。
 - POST-only server 全链路（405 降级 → POST 初始化成功 → isAlive true → 无 reconnect failed）
   不误判死。
-- probe/test 零副作用：不进 `_servers`、不动本轮工具、探完必关。
+- probe/test 零副作用：不进 `_sessions`、不动本轮工具、探完必关。
 - 面板 [Edit] 只动所选字段；name 不可改；token/headers 变更经指纹触发重连。
 - config.json 由 agent 用 edit 工具直接改 `mcp.servers[]` 后，下轮装配（重读 config）生效
   （本端无 CLI 的磁盘重读菜单——每轮 loadRaw 即磁盘）。
@@ -167,3 +172,6 @@ description 类型守卫回退默认。扩展元字段供按 server 归类（连
 
 - 2026-09-08：从 ARCHITECTURE §13 MCP 行展开成立本档——写全 VSC 独立实现（mcp/ 模块 +
   config-mcp + settings/panel-mcp 接线核对），去 CLI 镜像指针。
+- 2026-09-15（**S2 W7**）：MCP 客户端自持镜像已迁核删除（6 档；删除记录 = 批次档 §5）——
+  本端经核引用（现体 = 核 `thincoder-core/mcp.mjs`，已迁移落位）；端壳增量（client-id 注册表 +
+  面板状态接口）迁入 `src/extension/panel-mcp.mjs`；§3/§4/§6/§7/§8/§10 按现态收正。

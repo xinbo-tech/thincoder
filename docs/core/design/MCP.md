@@ -11,9 +11,9 @@
 
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
-| 客户端入口 | `thincoder-cli/src/mcp.mjs`（真实现） | `thincoder-vscode/src/mcp.mjs`（12 行转口）+ `src/mcp/index.mjs` |
-| 基础件 | `src/mcp/helpers.mjs` | `src/mcp/utils.mjs` |
-| 传输 | `src/mcp/transport-stdio.mjs` · `transport-http.mjs` · `transport-ws.mjs` | `src/mcp/stdio.mjs` · `http.mjs` · `ws.mjs` |
+| 客户端入口 | 核 `thincoder-core/mcp.mjs`（唯一实现——CLI 侧 S2 U7 已迁核，自持镜像已删） | 同核（VSC 侧 S2 W7 已迁核——自持镜像已删；端壳增量 = `thincoder-vscode/src/extension/panel-mcp.mjs`） |
+| 基础件 | 核 `mcp/helpers.mjs`（自持镜像已删——S2 U7 / S2 W7） | 同核 |
+| 传输 | 核 `mcp/transport-stdio.mjs` · `transport-http.mjs` · `transport-ws.mjs`（自持镜像已删——S2 U7 / S2 W7） | 同核 |
 
 **共同契约**：可配项（三种传输）与 `mcp.servers[]` 同源。
 
@@ -29,10 +29,10 @@
 
 | # | 对位（CLI ↔ VSC） | 分类 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|
-| 144 | `src/mcp/helpers.mjs` ↔ `src/mcp/utils.mjs` | ② | 融合：取一侧（常量 + RPC id 生成） | 分叉 ＝ 档名（helpers / utils）；常量逐条同值（`INIT_TIMEOUT_MS` / `CALL_TIMEOUT_MS` / `ENDPOINT_WAIT_MS`）⇒ 前提成立 | — | S1（建核补齐） |
-| 145 | `src/mcp/transport-stdio.mjs` ↔ `src/mcp/stdio.mjs` | ② | 融合：取一侧 + 核内 `mcp/` 切分归位 | 分叉 ＝ 档名与目录；同源自述 ⇒ 前提成立 | — | S1（建核补齐） |
-| 146 | `src/mcp/transport-http.mjs` ↔ `src/mcp/http.mjs` | ② | 融合：同 #145 | 同 #145（VSC `http.mjs:252` 自述「与 CLI 语义同构」）⇒ 前提成立 | — | S1（建核补齐） |
-| 147 | `src/mcp/transport-ws.mjs` ↔ `src/mcp/ws.mjs` | ② | 融合：同 #145 | 同 #145 ⇒ 前提成立 | — | S1（建核补齐） |
+| 144 | `src/mcp/helpers.mjs` ↔ `src/mcp/utils.mjs`（两侧自持镜像已删——S2 U7 / W7） | ② | 融合：取一侧（常量 + RPC id 生成） | 分叉 ＝ 档名（helpers / utils）；常量逐条同值（`INIT_TIMEOUT_MS` / `CALL_TIMEOUT_MS` / `ENDPOINT_WAIT_MS`）⇒ 前提成立 | — | S1（建核补齐） |
+| 145 | `src/mcp/transport-stdio.mjs` ↔ `src/mcp/stdio.mjs`（两侧自持镜像已删——S2 U7 / W7） | ② | 融合：取一侧 + 核内 `mcp/` 切分归位 | 分叉 ＝ 档名与目录；同源自述 ⇒ 前提成立 | — | S1（建核补齐） |
+| 146 | `src/mcp/transport-http.mjs` ↔ `src/mcp/http.mjs`（两侧自持镜像已删——S2 U7 / W7） | ② | 融合：同 #145 | 同 #145（VSC `http.mjs:252` 自述「与 CLI 语义同构」）⇒ 前提成立 | — | S1（建核补齐） |
+| 147 | `src/mcp/transport-ws.mjs` ↔ `src/mcp/ws.mjs`（两侧自持镜像已删——S2 U7 / W7） | ② | 融合：同 #145 | 同 #145 ⇒ 前提成立 | — | S1（建核补齐） |
 | 148 | `src/mcp.mjs` ↔ `src/mcp/index.mjs` | ② | 融合：核内单一切分 + 端侧配置面板 / 监视面按端注入 | 分叉 ＝ 组织（VSC 2 行转口 + `mcp/index.mjs`）；可配项（三种传输）与 `mcp.servers[]` 同源；**承 §2.5 #81** | —（承 #81） | S1（建核补齐） |
 
 ## 3. 须用户裁条目
@@ -69,7 +69,7 @@ MCP（Model Context Protocol）客户端把外部 MCP server 的 `tools/list` �
 - **命名**：前缀 = `` `${config.name}_` ``；config 无 name 用 `mcp_`；`sanitizeToolName` 把 `[^a-zA-Z0-9_-]` 清成 `_`、截断 64 字符；碰撞（同 server 工具重名 / sanitize 后重名）追加 `_2` / `_3`… 去重；空名或清成裸 `mcp_` 的工具跳过。
 - **守卫**：description 非字符串 → 回退 `` `MCP tool: ${t.name}` ``；`inputSchema` 非对象 → 回退 `{ type: "object", properties: {} }`。
 - **扩展元字段**：每个展开工具携带 `_mcpTransport`（所属 transport）与 `_mcpName`（server 名）——供连接状态展示与 `removeMcpTools` / `closeAllMcp` 按 server 归类。
-- **网关废弃**：旧 `mcpTool`（connect / list / call / disconnect 四动作网关）**已废弃移除**；该网关的 list / call / disconnect 能力在 **VS Code 镜像**保留为**内部 API**（不暴露给模型）。**CLI 侧从无网关**——MCP 工具始终经展开为原生工具；连接状态展示不变。
+- **网关废弃**：旧 `mcpTool`（connect / list / call / disconnect 四动作网关）**已废弃移除**；该网关的 list / call / disconnect 能力在 **VS Code 镜像**保留为**内部 API**（不暴露给模型）。**CLI 侧从无网关**——MCP 工具始终经展开为原生工具；连接状态展示不变。（S2 W7：VSC 内部 API 随自持镜像删除退役——核无对位、端侧零消费；现体 = 核 `mcp.mjs` 展开面 + 端壳面板状态接口。）
 
 ### 6.3 工具调用（execute 契约）
 
@@ -130,29 +130,31 @@ server 行 action 用 `@name:` 命名空间（与 `add` / `refresh` 保留动作
 - **`ensureAlive`（执行前活性检查）**：transport 活 → 直接用；死 → 等 / 触发一次重连；重连失败 → 抛不可用错误透给模型。
 - **握手失败防泄漏**：`connectMcpServer` 对 `createConnectedTransport` 失败 catch 中关 transport——openSSE 降级成功但 POST initialize 失败时不留悬挂流（否则 SSE reader / 请求悬挂泄漏）；probe 的 `finally close()` 同理。
 
-### 6.10 VS Code Settings 面板 MCP 页（VSC 轮并入 · 2026-09-15）
+### 6.10 VS Code Settings 面板 MCP 页（VSC 轮并入 · 2026-09-15；S2 W7 迁移后状态注）
 
 > **来源** = `thincoder-vscode/docs/design/MCP.md`（170 行 · VSC 产品档——迁移期参照历史）。本节 = 该档中「根层所缺」的 **VSC 配置面板面**（(a) 机制 / (b) 坐标）。与 CLI 同源的传输 / 展开 / 幂等 / 探活 / 失效语义已入 §6.1–§6.9，不重复（D2）。
+> **S2 W7 状态注**：VSC 自持镜像已迁核删除——接入/展开/幂等/探活/自愈均走核 `thincoder-core/mcp.mjs`（name 键 session 面）；端壳增量（client-id 注册表 + 面板状态接口）迁入 `thincoder-vscode/src/extension/panel-mcp.mjs`（自上而下三节坐标本节已收正）。
 
 - **VSC 无 `/mcp` 命令面（结构性端差）**：CLI 有 `/mcp` TUI（§6.8）；VS Code 配置 / 连接全在 **Settings 面板
-MCP 页**——`pushMcpStatus`（`thincoder-vscode/src/extension/panel-mcp.mjs:8`）推 `mcpStatus { servers: [{ name,
+MCP 页**——`pushMcpStatus`（`thincoder-vscode/src/extension/panel-mcp.mjs:96`）推 `mcpStatus { servers: [{ name,
 desc, connected, toolCount, config }] }`（●/○ 连接态 + N tools + 原始 config 供表单预填）。动作消息 →
-`reconnectMcp`（`:28`——断开 + 重连）、`testMcp`（`probeMcpServer`）、`editMcp`（`saveMcpServer` =
-add-or-update 原位 → 推状态）。面板 [Edit] 与 [Add] 复用同一表单（add 失败（重复）则 update）。
+`reconnectMcp`（`:116`——断开 + 重连）、`testMcp`（核 `probeMcpServer`）、`editMcp`（`saveMcpServer` =
+add-or-update 原位 → 推状态）。面板 [Edit] 与 [Add] 复用同一表单（add 失败（重复）则 update）。工具展开器
+（行内 [tools]）载荷 = 面板契约投影 `{ name, description, inputSchema }`（S2 W7：端壳 `panelToolList` 自核原生
+工具投影——schema 取 `parameters`；工具名 = 原生 `{server}_{tool}` 名）。
 - **config-mcp.mjs（config.json `mcp.servers[]` 读写——纯 Node，extension host 外可单测）**：`loadMcpServers`
 （`:12`——过滤无 name / 非对象项）· `addMcpServer`（`:19`——name 重复拒）· `updateMcpServer`（`:37`——原位替换、
 数组序保持、name 不可改、transport 字段被清空时回落到既有条目的类型与值——编辑表单只改 token/headers
 不产出退化 `{name}`）· `removeMcpServer`（`:63`）；三者经 `persistRaw` + `conflictError`（并发写冲突 → 同型提示串）。
 - **启动装配（depth-0 only）**：面板回合把 `mcpServers: getMcpServers()` 注入 runAgent opts（panel-chat.mjs）；
-`setupAgentRun` 在 **depth-0** 且 `mcpServers` 非空时动态 `import("../mcp.mjs")` → `connectMcpServersExpanded`
+`setupAgentRun` 在 **depth-0** 且 `mcpServers` 非空时动态 import 端壳 MCP 面 `thincoder-vscode/src/extension/panel-mcp.mjs` → `connectMcpServersExpanded`
 （`Promise.allSettled` 并发、失败隔离：每死 server 记 warning、其余照常；展开整体失败非致命——模型本轮缺
 MCP 工具、下轮重试）。**子代理不含 MCP**：装配仅 depth-0 展开；depth>0 无 MCP 工具。
-- **命连接 / 重连细节**：`mcpConnect(config)` 幂等（`_servers` Map：id = `mcp-<seq>` → entry `{ transport, tools,
-config, configFingerprint, serverName }`）；同 serverName 活连接且指纹一致 → 复用；`_reconnecting`
-（serverName → promise）去重双重建连；`transport.onDead` 死后从 registry 移除 + 后台退避重连（延迟表四轮），
-成功原位替换 entry（**id 不变**——panel / session 引用稳定）。
-- **探活（`probeMcpServer`——CLI 镜像）**：一次性 initialize + tools/list + 计时 → `{ ok, toolCount, latencyMs }` / `{ ok:false, error }`；**零副作用**（不进 `_servers`、无 onDead 挂钩、finally close；handshake 失败 catch 中 `transport?.close()` 防泄漏）；initialize 与 tools/list 分页循环每页受 `INIT_TIMEOUT_MS`(30s) 约束。
-- **生命周期与面板反馈**：`closeAllMcp()`（extension deactivate）；`mcpDisconnectByName(name)`（面板 [Reconnect] 先断开再重连）；`mcpConnectedNames()` / `mcpConnectedToolCounts()`（●/○ 状态与工具数）；连接 / 断开 / 重连变更在**下一轮 runAgent 装配**生效（热插拔）。
+- **命连接 / 重连细节（核 `mcp.mjs` name 键 session 面）**：`mcpConnect(config)` 幂等（核 `_sessions` Map：serverName → session `{ config, configFingerprint, state: { transport, tools } }`；端壳只保 client-id 面 `{ id, serverName, tools }`）；同 name 活连接且指纹一致 → 复用；`_reconnecting`
+（serverName → promise）去重双重建连；`transport.onDead` 死后后台退避重连（延迟表四轮），
+成功原位替换 `session.state.transport`（**name 键不变**——工具闭包动态取 transport）。
+- **探活（核 `probeMcpServer`——CLI 镜像）**：一次性 initialize + tools/list + 计时 → `{ ok, toolCount, latencyMs }` / `{ ok:false, error }`；**零副作用**（不进 `_sessions`、无 onDead 挂钩、finally close；handshake 失败 catch 中 `transport?.close()` 防泄漏）；initialize 与 tools/list 分页循环每页受 `INIT_TIMEOUT_MS`(30s) 约束。
+- **生命周期与面板反馈（端壳 `panel-mcp.mjs`）**：`closeAllMcp()`（extension deactivate / 面板 view dispose——逐核 session close）；`mcpDisconnectByName(name)`（面板 [Reconnect] 先断开再重连）；`mcpConnectedNames()` / `mcpConnectedToolCounts()`（●/○ 状态与工具数——读核 name 键 session 注册表）；连接 / 断开 / 重连变更在**下一轮 runAgent 装配**生效（热插拔）。
 - **agent 代配差异（无磁盘重读菜单）**：VSC 每轮 `loadRaw` 即磁盘——agent 用 edit 工具直接改 `mcp.servers[]` 后，下轮装配（重读 config）自然生效；无 CLI 的菜单边界磁盘重读 / fingerprint 对账交互（机制本体 = §6.4 / §6.8）。
 
 ## 7. 并入的关键决策记录（含否决备选）
@@ -160,7 +162,7 @@ config, configFingerprint, serverName }`）；同 serverName 活连接且指纹�
 | # | 决策 | 理由 / 否决备选 |
 |---|---|---|
 | D-MC1 | 工具**动态展开为原生工具**（非网关式） | 模型无需学习 MCP 专用路由；已连接 server 的工具就像内建工具一样可用（schema 完整、可并行） |
-| D-MC2 | **网关式 `mcp` 工具废弃删除** | 三层路由对模型是额外学习成本；list/call/disconnect 能力保留为 VSC 内部 API（不暴露） |
+| D-MC2 | **网关式 `mcp` 工具废弃删除** | 三层路由对模型是额外学习成本；list/call/disconnect 能力保留为 VSC 内部 API（不暴露）（S2 W7 现状注：该内部 API 已随 VSC 自持镜像删除退役——核无对位、端侧零消费） |
 | D-MC3 | 命名 = `{server}_{tool}` + sanitize + 碰撞去重 | 跨 server 工具名必须唯一可寻址；空名 / 裸 `mcp_` 跳过 |
 | D-MC4 | 输出截断 = **32,000 字符** | 防 server 回超大响应撑爆上下文 |
 | D-MC5 | **失败不阻塞对话**（warning + 下一条 user 消息注入） | 一个死 server 不得拦整个会话；其余 server 照常 |
@@ -194,7 +196,7 @@ config, configFingerprint, serverName }`）；同 serverName 活连接且指纹�
 |---|---|---|
 | §2（工具展开）的并入位 | MCP 工具并入 `builtinTools` 走统一 schema | 属**工具系统**板（本层 `TOOLS.md`）—— MCP 侧只留指针 |
 | §3 / §6 的 `ctx.signal` / dispatch 捕获面 | 工具调度与权限 | 属**工具系统** / **AGENT-LOOP** 板 |
-| §2.1 网关能力的 **VS Code 内部 API**（`mcpListTools` 等） | VSC 侧保留实现 | 属 VSC 产品树（`thincoder-vscode/src/**`） |
+| §2.1 网关能力的 **VS Code 内部 API**（`mcpListTools` 等） | VSC 侧保留实现（S2 W7 已删除退役——自持镜像已删） | 属 VSC 产品树（`thincoder-vscode/src/**`） |
 | §5.2 存储与 keychain 取舍 | token 明文存 config 的讨论 | 结论已入 §6.5；未步：keychain（超范围） |
 | §11 中的「评审 #7 活约束」「会诊 P4/P6」等评审标记 | 逐批评审过程标记 | 过程材料——现行约束已入 §6.2 / §6.9 |
 | 源档 §1–§3 纯 VSC 同构细节（定位 / 配置形态 / 装配热插拔——与 CLI 逐字同源部分） | VSC 侧同构实现 | 已并入 §6.10（面板面 + 端差坐标）；同构正文不逐行复制（D2） |
@@ -219,3 +221,4 @@ config, configFingerprint, serverName }`）；同 serverName 活连接且指纹�
 - 2026-09-13：建档——自 `docs/core/design/CORE-UNIFICATION.md` 拆出（§2.5 #81 / #144–#148）；**语义零改**，行号沿用原编号。
 - 2026-09-14（**B 轮并入 · 第 2 批**）：新增 §6 **机制面**（定位与术语 / 工具展开 / execute 契约 / 连接装配与热插拔 / 配置机制 / 传输与活性 / 探活 / `/mcp` 交互 / 失效语义）· §7 **关键决策记录（D-MC1–15）** · §8 **不并项与历史沿革** · §9 体量与拆分规划；来源 = `thincoder-cli/docs/design/MCP.md`（**旧档一字未改**——原地作参照历史）；需求侧已并入本层 `docs/core/requirements/MCP.md`；首部加机制面指针一行。
 - 2026-09-15（**VSC 轮并入 · 批 7**）：§6.10 新增 **VS Code Settings 面板 MCP 页**（无 `/mcp` 命令面端差 / config-mcp 读写 / depth-0 装配 / 命连接 / 探活镜像 / 生命周期 / agent 代配差异）· §7 补 **D-MC16** · §8.2 补 1 行不并项登记；来源 = `thincoder-vscode/docs/design/MCP.md`（**旧档一字未改**）；坐标按现状实核（`panel-mcp.mjs:8,28` · `config-mcp.mjs:12,19,37,63`）。
+- 2026-09-15（**S2 W7 落地**）：VSC 自持镜像已迁核删除（`thincoder-vscode/src/mcp.mjs` + `src/mcp/**` 6 档——删除记录 = 批次档 `2026-09-15-vsc-core-wiring.md` §5）；§1 归属表两列收正（两侧同核单源）· §2.2 #144–#147 行加现状注 · §6.2 网关废弃行 / §6.10（坐标 + name 键 session 面 + 端壳增量 + 面板展开器载荷契约）/ §7 D-MC2 / §8.2 同批收正（只收正形态，机制条文零改）。

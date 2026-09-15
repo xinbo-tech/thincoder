@@ -10,7 +10,6 @@ import * as vscode from "vscode"
 import { readFileSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
-import { closeAllMcp } from "../mcp.mjs"
 import { setSlotAutoApprove, setSlotPlanMode } from "./session-io.mjs"
 import { providerStatus, saveProviderKey, saveCustomProvider, deleteProviderKey, pushStatus, fullStatus, agentSettings, proxySettings, shellCandidates, websearchSettings, saveMcpServer, deleteMcpServer } from "./settings.mjs"
 import { loadLocaleStrings } from "../i18n.mjs"
@@ -21,7 +20,7 @@ import { initStopTrace } from "./stop-trace.mjs"
 import { ensureSlot, activeData, activeHistory, activeLines, saveLines, loadModelPrefs, loadSession, loadOlder, newSession, deleteSession, pushSessions, generateTitle, status as bootstrapStatus } from "./panel-session.mjs"
 import { projectInfo, pushProject, applyProjectSwitch, onProjectChanged, pickProject } from "./panel-project.mjs"
 import { pushIndexStatus, atComplete, saveEmbeddingConfig, maybePromptIndex, buildIndex } from "./panel-index.mjs"
-import { pushMcpStatus, reconnectMcp, editMcp, testMcp } from "./panel-mcp.mjs"
+import { closeAllMcp, pushMcpStatus, reconnectMcp, editMcp, testMcp } from "./panel-mcp.mjs"
 import { initLedgerSurface, dispose as disposeLedgerSurface } from "./ledger-surface.mjs" // LEDGER-SURFACE（§2.30.3.5）
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
