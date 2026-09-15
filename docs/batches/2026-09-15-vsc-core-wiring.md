@@ -1827,4 +1827,129 @@ digest 预算四族同键且四处 `persistOverflowReport` 皆 `await`（核侧 
 
 **终态**：审计 1 轮（2 🟡 全 Fixed）+ 评审 1 轮（pass；#3 同轮 Fixed，#1/#2/#4/#5 登记待父侧裁）——**clean**（无未决 🔴；待裁项已上抛父侧）。
 
+### 实施：S2 W11 —— SESSION 单元落轮（2026-09-15 · eng-coder）——**终态 = clean**
+
+**段位**：实施第三波 · 当前段 = S2（VSC 迁移单元 W11 · SESSION · 端壳改指面 · **零删**）。写域 = VSC 树 5 档
+（`thincoder-vscode/src/extension/{session-io, session-slots, session-slot-write, session-gc, panel-session}.mjs`）+ 模块权威档 1 档（`docs/core/design/SESSION.md`）。
+**核内实现零触碰**（`thincoder-core/**` 只读消费）· `thincoder-cli/**` 零触碰 · 台账 `docs/TODO.md` 与仓根 `scripts/**` 零触碰 ·
+本档 §1–§4/§6 零触碰（本条 = §5）；并行在途单元（W9/W10/W12/W14 面）档零触碰。
+
+**依据** = 本档 §2「W11 · SESSION」段（`:185`–`:188`）+ 逐单元任务书四步块（`:121`–`:123`）+ 判据 A-K1/A-K2/A-K3/A-K8/A-K10；
+上游 = `docs/core/design/CORE-UNIFICATION.md` §2.6.3 U11 行（「存储契约不变 · A14 以 CLI 为准」）；
+模块权威档同步面 = `docs/core/design/SESSION.md`（§6.15）；§4 用户批准（2026-09-15 15:12）。
+
+**超声明披露**（设计点名面之外 · 均已如实登记）：① `docs/core/design/SESSION.md` 另含 §4 第 3 行坐标收正（1 行——决策透明表 8）；
+② `panel-session.mjs` = 头注 +5 行（零逻辑改——决策透明表 2）；③ `deleteSlotAndUpdate` 补核同源步 `unlinkRecordStore`（决策透明表 1）。
+
+**改动面**（行数 = `wc -l` 口径实核；改前 = 提交前 HEAD `1decd99b`）
+
+| # | 档 | 行数（改前 → 改后） | 动作 |
+|---|---|---|---|
+| 1 | `thincoder-vscode/src/extension/session-io.mjs` | 436 → **169** | 自持会话实现退场（读槽/写槽/列表/标题/双线工具转口核面）+ 端壳四落点保留 |
+| 2 | `thincoder-vscode/src/extension/session-slots.mjs` | 399 → **138** | 同上（路径/manifest/属主/认领全量转口）+ marker 层保留 |
+| 3 | `thincoder-vscode/src/extension/session-slot-write.mjs` | 177 → **91** | 开关写面转口核 + （cwd, slot）型 token 台账三式保留 |
+| 4 | `thincoder-vscode/src/extension/session-gc.mjs` | 142 → **16** | **纯转口**（含启动钩子——见 ②） |
+| 5 | `thincoder-vscode/src/extension/panel-session.mjs` | 343 → **348** | 头注（W11 接线面说明）+0 逻辑改——会话调用面经端壳转口核面 |
+| 6 | `docs/core/design/SESSION.md` | 365 → **387** | §6.15 补「W11 接线面」+ 坐标收正 + §4 第 3 行 + 变更记录一行 |
+
+**① 改指逐处（改前 → 改后——来源串替换 / 实现体转口）**
+
+| # | 位置 | 改前 → 改后 |
+|---|---|---|
+| 1 | `session-io.mjs` 头 | 自持实现（`loadSlot`/`saveSessionToSlot`/`setSlotTitle`/`listSlots`/`slimForDisplay`…）→ 转口核：`loadSlotFile as loadSlot` · `saveSlotData as saveSessionToSlot` · `renameSlot as setSlotTitle` · `listSlots` · `slimForDisplay` · `isLegacyTransient`（核 `@thincoder/core/session.mjs` + `session-slot-write.mjs`） |
+| 2 | `session-io.mjs` 端壳四落点 | `resumeSlot` / `newSlot` / `switchToSlot` / `deleteSlotAndUpdate` 保留自持**但改核原语**：`loadSlotFile`（核）· `slotOccupancy`（核）· `loadManifest/saveManifest/writeSessionFile/slotDigest`（核经端壳）+ 端壳 marker 写 |
+| 3 | `session-slots.mjs` | 自持 manifest/认领/哈希/迁移（399 行）→ 15 名核转口（`export … from "@thincoder/core/session-slots.mjs"`）+ `slotOccupancy` 自核 `session.mjs`；保留 = marker 层 + `sessionsDir()` + `resumeSlot` |
+| 4 | `session-slot-write.mjs` | 四个 `setSlot*` + `newSlotData` → 核转口；`engTokensMergeForSave` → `mergeEngTokensForSave`（核名）；保留 = token 三式 + `loadSlotForWrite` |
+| 5 | `session-gc.mjs` | 全量转口（三保留期常量 + `gcResidue` / `listColdCwds` / `deleteColdCwd` / `runSessionGc` / `scheduleSessionGC`） |
+| 6 | `panel-session.mjs` | 头注说明（会话机制面单源 = 核，本档只承面板装配/消息面）+ import 面零改（全部名面仍自 `session-io` 端壳解析） |
+
+**② 端壳保留面（端差两款 + 端侧自有 ×3）**（详 `docs/core/design/SESSION.md` §6.15「W11 接线面」）：
+① end marker 层（`END = "vscode"` · `endMarkerPath` / `readEndMarker` / `writeEndMarker`）+ 四个维护落点——核对应件（`resumeSlot` / `newSession` / `switchToSlot` / `deleteSlot`）写死核端 marker `.cli`，直接消费 = **跨端互写**（§6.10 D-1/D-4/D-SE9/D-SE10 反例）⇒ 端壳按本端 marker 自持；
+② （cwd, slot）型 token 台账三式（`setSlotEngDesignTokens` / `readSlotEngDesignTokens` / `clearSlotEngDesignToken`）——核 token 面为 **agent 型**（`token-ttl.mjs`），无核对位件；
+端侧自有：`loadModelPrefs`/`saveModelPrefs`（workspaceState 非会话文件）· `stripTruncatedToolArgs`（核内私有件、未导出——与核 `applySession` 机读线播种同规则）· 面板装配面（`panel-session.mjs` 全档）。
+
+**③ A-K 读数（终态复跑 · 原样 · cwd = `thincoder-vscode/`；读数随并行在途浮动，逐列归因）**
+
+| # | 判据 | 读数（本笔窗口） | 现态复跑（并行在途） | 判 |
+|---|---|---|---|---|
+| A-K1 | `npm test`（fast） | 633 基线口径 → 树内实际 **618 / 581 pass / 0 fail / 37 skip**（改造前后逐数一致） | 614 / 566 pass / **11 fail** / 37 skip | ✓ 本笔面（11 全 = W9/W10/W12/W14 面：`batch-segment.test.mjs` 的 `readSource is not defined` · `provider-model-guard` F-2b/T28 驱动核 `advisor/run.mjs` · T-VG19/T-FZ*/T-B6 族） |
+| A-K1 | `npm run lint` | `check-syntax: 250 JS files OK` | 231 JS OK（在途删档） | ✓ |
+| A-K1 | `npm run test:full` | **618 / 618 pass / 0 fail** | 612 / 600 / 12 fail（同上族） | ✓ |
+| A-K1 | `npm run test:integration` | **29 / 29 · fail 0** | 29 / 29 · fail 0 | ✓ |
+| A-K1 | `npm run doc:check` | **V5 命中 0 处 · exit 0** | 66 命中——**全 = `src/tools/*`（W14 在途删档）**，本笔面 0 | ✓ |
+| A-K2 | 核回归 `node --test`（cwd = `thincoder-core`） | **178 / 178 · fail 0** | 178 / 178 · fail 0 | ✓（核零改动） |
+| A-K3 | 仓根三机检 | 宽度 **OK**（404 档零 >300）· 台账 **0 违规**· 锚（域一 · `--domain .`）**0 悬空** | 锚全域 28 悬空（全 = `src/tools/*` 面 W14 在途）· 宽度/台账照旧 ✓ | ✓（本笔面 0） |
+| A-K8 | 未涉面用例逐数不变 | 本单元面 6 档 **61 / 59 pass / 0 / 2 skip**（= 改造前基线）· 消费方 7 档 67 / 65 / 0 / 2（= 基线）· 合并 13 档 123 / 115 / 4（4 = 在途面） | — | ✓ |
+
+**专项验收（机判 + 冒烟 · 原样读数）**：
+① **会话开关/恢复/GC 行为 = 核面**：`newSlot` → 槽文件在盘 + 本端 marker `.vscode` 写入 + **核端 `.cli` 未写** ✓；`gcResidue`（核实现 · 端壳沙箱缝）→ 40 日残留删除、活跃槽现场保留 ✓；`listSlots` 读数（messageCount/turnCount）✓；`sessionsDir()` 命中沙箱且 = `dirname(sessionPath)` 单源 ✓。
+② **载体双夹具跑 `AGENT-LOOP.md` §2.3 状态机断言**：核 `test/suspension.test.mjs`（CLI 形 `agent` 字段对象 / VSC 形 `history` 字段对象两夹具）+ `test/async-family.test.mjs` 复跑 **14 / 14 · fail 0** ✓；另机判 = 槽文件序列化零载体键（`_asyncSubagents`/`_asyncQueue` 等 10 字段不入 v2 槽文件）✓。
+③ **存储契约 version 1/2 不变**：路径/字段集/双线结构/marker 后缀 `.vscode` 逐项实核 ✓（与 CLI 共文件）。
+
+**④ 提交（单笔）**：`git commit --only` ⇒ **`168f8037`**（6 档 / +225 −938；
+`refactor(vsc): W11 session - repoint session-*/panel-session shell to @thincoder/core (keep VSC end-marker layer), sync module doc`）；
+回滚点 = `git revert 168f8037`。批次档未入本笔（父侧在途）。
+
+**⑤ 内部轮（发现与处置）**
+
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **DEVIATIONS**——AC1（改进指）/ AC2（零删档 + 消费面完整）/ AC3（存储契约）/
+AC4（跨端 marker 隔离：VSC 码路径不可达 `.cli` 写者）/ AC6（§6.15 坐标可达）**CLEAN**；AC5/AC7（测试档零改写 / 清单外改动）
+受无 git 面限制**未独立复验**（如实登记）。四项 = ① `deleteSlotAndUpdate` 缺核同源步 `unlinkRecordStore`（🟡）
+② `scheduleSessionGC` 保留副本的正当性待核（🔵）③ 端壳 `resumeSlot` 无裸 v1 单文件兜底未入 §6.15 端差登记（🔵）
+④ 代码头注「见 §5」登记面待落（🔵）。
+- **advisor 代码评审 1 轮**（`type=code` · 阻塞）：**pass**（🔴 **0** · 🟡 3 · 🔵 3）。评审独立复验：核符号逐名在场 + 签名相符
+（含 `slotOccupancy` 返回 `{occupied}` · `renameSlot` `{ok,reason}` · `gcResidue({dir,prefix})`）· 与 W11 前孪生树逐函数行为等价
+（四落点 / `saveLines` 字段集 · `slimForDisplay` 300/500 · `stripTruncatedToolArgs`）· 静态闭包不达 `node:sqlite`
+（核内仅 `memory/schema.mjs:9`）· `unlinkRecordStore` 具 try/catch 无抛错风险。
+- **裁决表（10 项 —— 审计 4 + 评审 6）**：
+
+| # | Action | Detail |
+|---|---|---|
+| 1 | **Fixed** | 🟡（审计①/评审）`deleteSlotAndUpdate` 缺核同源步：补 `unlinkRecordStore(slotPath(cwd, slot))`（核 `deleteSlot` §14.3.8 同源步——共享会话目录卫生语义单源；核内件 `session-store.mjs:376` 具 try/catch + `force` 无抛错风险）+ §6.15 登记 |
+| 2 | **Fixed** | 🟡（评审①/审计②）`session-gc.mjs` 保留副本理由与核实现不符：核 `scheduleSessionGC` 实为沙箱感知（`base = sessionPath(cwd)` → `gcResidue({ dir: dirname(base), prefix: basename(base) })`——核 `session-gc.mjs:100-108`）⇒ 端壳副本零行为差 ⇒ **整档改纯转口**（含钩子；142 → 16 行）+ §6.15 ② 改述（原「核钩子沙箱盲」句删除；真端差 = 核原语**默认参数** `dir` 为核内 configDir 版） |
+| 3 | **Fixed** | 🟡（审计④/评审②）「见 §5」登记面：本段同批落三条（未决 1–3）+ §6.15 端差 ① 补注「端壳无核 `resumeSlot` 的裸 v1 单文件兜底」 |
+| 4 | **Fixed** | 🔵（评审④/审计③）死 import（双清单漂移面）：`session-io.mjs` 10 名 + `session-slots.mjs` 6 名清理——本地 import 只留体内使用者，转口统一 `export … from`（导出面逐名零变） |
+| 5 | **Fixed** | 🔵（评审⑤）`SESSION.md` §4 第 3 行坐标失效（原指 CLI/VSC 各自内置迁移，W11 后端壳面已无该实现）⇒ 收正为核单源坐标（`thincoder-core/session-slots.mjs:58-61`） |
+| 6 | **Fixed** | 🔵（评审⑥）`SESSION.md` §6.15 两处：绑定入口「面板 `status`（激活启动）」→「`openSessionContent`（webviewReady 快段——B2 后绑槽归快段，`status` 慢段不绑槽）」；GC 目录缝行号表述随 ② 改述 |
+| 7 | Deferred | 🟡（评审③）`panel-session.mjs` 348 行 > 300 软线——**既有超软线档**（本档 §2 表 5 已登记「拆分计划另议 · 消解条件 = 下次实质改动」；本笔零逻辑改、仅头注 +5）⇒ 维持登记（未决 4），R3 不升级 |
+| 8 | Not an issue | 🔵（评审）孪生树 `D:\teamcode\thincoder-vscode` 作为「W11 前基线」取证 —— 非本仓、非评审对象；其对照结论已并入 ①–⑥ 证据链 |
+| 9 | Not an issue | 🔵（审计）`resumeSlot` 数据层无裸 v1 兜底 = **非回归**（W11 前孪生树同缺）——登记为端差（未决 3） |
+| 10 | Not an issue | 🔵（审计）`usableSlot` 用核 `slotOccupancy` 表达（同进程属主排除语义一致）——行为等价，非简化 |
+
+- **修复轮 2**（审计派生一波 + 评审派生一波；皆已落盘并复跑）——本笔窗口内 `npm test` / `test:full` / `test:integration` / 核回归逐数仍与基线一致。
+- **轮次自证**：审计 1 轮 + advisor 1 轮 + 修复轮 2；终态 **0 未决 🔴 → clean**。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | `deleteSlotAndUpdate` 补 `unlinkRecordStore`（核同源步） | 审计派生；核 `deleteSlot` 的 §14.3.8 联动步（共享会话目录卫生单源）；备选 = 维持基线（孤儿 sidecar 残留）——核语义已定，取对齐 |
+| 2 | `panel-session.mjs` 零逻辑改（仅头注） | 五档「内部改指核面」的组合经 `session-io` 端壳转口达成（本档 = 面板装配/消息面，零自持会话算法；机读线选择规则与核 `applySession` 同规则但核未导出该内联件——见未决 5） |
+| 3 | 四落点 = 核原语 + 端壳 marker（非消费核 `resumeSlot`/`newSession`/`switchToSlot`/`deleteSlot`） | 核件写死 `END = "cli"`（核 `session-slots.mjs:71`）⇒ 直接消费 = 跨端互写；§6.10 D-4 明列「VSC 镜像」= 设计内形态；备选（消费核件）违 D-SE9/D-SE10 |
+| 4 | `setSlotTitle` → 核 `renameSlot`（manifest 摘要由「合并 title」改核 `slotDigest` 全量重算 + `ts` 刷新） | 核契约 `{ok, reason}` 逐项同枚举；差异 = 摘要刷新面（无测试断言；`listSlots` 消费面零变）——如实登记 |
+| 5 | `saveSessionToSlot` → 核 `saveSlotData`（轮转判据多 `diskForeign` 一项 + 原子写） | 核面 = 单源；`diskForeign` 为**增强**（异 cwd 现场先轮转不覆盖）；`activeModel` 键在场性改为「非空才写」（`listSlots` 复合判 falsy——显示等价） |
+| 6 | `sessionsDir()` = 核 `sessionPath` 反推（`dirname`） | 核未导出根访问器；替代原硬编码 `join(homedir(), ".thincoder", "sessions")`——生产同径（核 `configDir` = `config-io.mjs:32`）且随核 `_setSessionsDirForTest` 沙箱缝；消费方 = 跨 cwd 发现 / peers 根 |
+| 7 | `switchToSlot` 占用判定改用核 `slotOccupancy` | 同语义（排除本进程属主）；核版重读 manifest = 更新视图（并发窗口更准） |
+| 8 | `SESSION.md` §4 第 3 行随笔收正 | 「改到哪模块收正哪模块的档」（07:08 裁定）+ 该行坐标随 W11 失效；只收正形态、机制条文零改（如实披露于段首） |
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **核 marker 面参数化候选**：核 `END`/`endMarkerPath`/`readEndMarker`/`writeEndMarker` 为编译期单值 + `cleanDeadOwners`/`usableSlot` 私有 ⇒ 端壳无法零行为差消费核 `resumeSlot`。候选核内笔 = `resumeSlot(cwd, { end })` 形态；落点 = 后续核内笔（本批核内零触碰）。
+2. **（cwd, slot）型 token 台账三式的核内补位候选**：核 token 面为 agent 型（`persistEngTokens(agent)` / `readEngTokensFromSlot(agent)` / `reconcileEngTokensFromSlot(agent)`）——端壳保留该三式（§6.15 端差 ②）。
+3. **端壳 `resumeSlot` 无裸 v1 单文件兜底**（核 `loadLegacyFile`）——**已实证非回归**（W11 前孪生树同缺）；是否补齐 = 设计面裁定（登记于 §6.15 端差 ①）。
+4. **`panel-session.mjs` 348 行 > 300 软线**——既有超软线档（`thincoder-vscode/docs` 台账 + 本档 §2 表 5 在案）；消解条件 = 该档下次实质改动时拆分。
+5. **面板机读线选择规则未转口**：`activeLines` 的「`contextHistory` 长 > 0 才当机读线，否则 `history.map(stripTruncatedToolArgs)`」= 核 `applySession` 内联规则（核未导出该件）⇒ 端壳保留同形副本（`session-io.mjs` `stripTruncatedToolArgs`）——候选核内导出位。
+6. **并行在途面读数**（见 ③ 现态列）：W9（`batch-segment.test.mjs` 的 `readSource` 未定义）· W10/W12（`provider-model-guard` F-2b/T28 驱动核 `advisor/run.mjs`）· W14（`src/tools/**` 20 档删除致 doc:check 66 命中 + 锚 28 悬空）——**本笔面全程零命中**；交父侧归因。
+7. **VSC 产品档坐标残留**：`thincoder-vscode/docs/{design,requirements}/SESSION.md` 的证据列（`session-slots.mjs:47-60` 等）随 W11 失效——档性 = 迁移期参照历史（D-C14 保留 ≠ 维护）⇒ 可选收正面归文档维护批（承 W1/W5/W7 先例）。
+8. **`read-history-discovery.mjs` 现为孤儿档**（W9 删 `agent-tools/read-history.mjs` 后无入边）——W9 面；本笔保持其 import 面（`sessionsDir` / `normalizeCwd`）在位。
+9. **实施读数收正**：本档 §2 表 5 对 W11 五档估「+0~+40/档」，实测为**强净减**（436→169 · 399→138 · 177→91 · 142→16 · 343→348）——§2 表自注「实施读数落 §5」，此处如实登记。
+
+**段末复跑（§5 写入后 · 原样读数）**：见「收正注」段（写后即跑三闸复读）。
+
+**收正注（同轮 · 首版后置 · 零语义）**：本段首版 2 行超宽（批次档 `:1895` 369 / `:1896` 372 字符）经**本席就地机械折行**（仅插换行 · 文字零改）——承父侧折行先例（§2/§3/§5 W2 块）；复跑 = 批次档宽度 0 行超 · 一致性 V1/V2/V3 新增 0 条。
+
+**段末复跑（§5 写入后 · 原样读数）**：`check-doc-width` = 本档 **0 行 >300**（余 1 行 = `thincoder-vscode/docs/design/EDIT.md:3`——W14 在途面）· 一致性新增违规 **0**；
+`check-ledger` = `OK: thincoder/docs/TODO.md` / `OK: thincoder/docs/TODO-archive.md` · **0 处违规** · exit 0；
+`doc-anchors --domain .`（域一）= 0 悬空（本笔面；全域复跑 28 悬空 = `src/tools/*` W14 在途面）。
+
 ## §6 验证与收口（父代理）
