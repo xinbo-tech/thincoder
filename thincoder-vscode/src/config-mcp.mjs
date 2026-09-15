@@ -1,9 +1,9 @@
 /**
  * config-mcp.mjs — shared config.json mcp.servers[] management (VS Code side).
  * Split out of config-io.mjs (2026-09-06: the file crossed the 500-line hard limit —
- * same pattern as the earlier config-presets.mjs / config-migrate.mjs splits; re-exported
- * from config-io.mjs so existing `from "../config-io.mjs"` import sites keep working).
- * Pure Node — no `vscode` import — unit tests can run outside the extension host.
+ * same pattern as the earlier config-presets.mjs / config-migrate.mjs splits).
+ * W16 config-face consolidation: the VSC config-io.mjs mirror (and its re-export) is deleted —
+ * this file's entry points are now the end-shell consumers (extension/settings.mjs / panel-messages.mjs).
  */
 
 import { loadRaw, conflictError } from "@thincoder/core/config-io.mjs"

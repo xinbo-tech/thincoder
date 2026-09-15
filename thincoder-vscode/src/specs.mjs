@@ -12,8 +12,9 @@ import { specForModel as coreSpecForModel, providerSpec } from "@thincoder/core/
 
 export { providerSpec }
 
-/** 端差字段表（`reasoningEffortDefault`）：前缀匹配、最长优先；未命中 → undefined
- *  （webview 侧「最高档」兜底——`webview/settings-state.js`）。行为 = 旧 VSC 规格表逐行同值。 */
+/** 端差字段表（`reasoningEffortDefault`）：前缀匹配、最长优先；未命中且 ID 含 `vendor/` 命名空间
+ *  时按裸模型段重试（与核 `lookupSpec` 命名空间剥离同法——聚合网关惯例 `vendor/model`）；仍未命中 → undefined
+ *  （webview 侧取枚举**首项**兑底——`webview/settings-state.js:48`）。行为 = 旧 VSC 规格表逐行同值。 */
 const EFFORT_DEFAULT_PREFIXES = [
   ["deepseek-v4-flash-vision-exp", "high"],
   ["deepseek-v4-flash", "high"],
@@ -27,11 +28,18 @@ const EFFORT_DEFAULT_PREFIXES = [
 
 function effortDefaultFor(model) {
   const m = (model ?? "").toLowerCase()
-  let best = null
-  for (const [prefix, value] of EFFORT_DEFAULT_PREFIXES) {
-    if (m.startsWith(prefix) && (best === null || prefix.length > best[0].length)) best = [prefix, value]
+  const scan = (s) => {
+    let best = null
+    for (const [prefix, value] of EFFORT_DEFAULT_PREFIXES) {
+      if (s.startsWith(prefix) && (best === null || prefix.length > best[0].length)) best = [prefix, value]
+    }
+    return best ? best[1] : undefined
   }
-  return best ? best[1] : undefined
+  const hit = scan(m)
+  if (hit !== undefined) return hit
+  // 聚合网关惯例 `vendor/model`：原文未命中 ⇒ 按裸模型段重试（与核 `lookupSpec` 剥离同法）
+  const slash = m.indexOf("/")
+  return slash >= 0 ? scan(m.slice(slash + 1)) : undefined
 }
 
 /** 规格查找（核表单源 + 端差字段覆盖——命中端差行时返回拷贝，未命中 = 核返回值原样）。 */

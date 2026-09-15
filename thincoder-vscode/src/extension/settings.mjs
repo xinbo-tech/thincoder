@@ -283,7 +283,7 @@ export async function testProxyConnection(uri) {
   }
 }
 
-/** Persist agent settings from the panel — implemented in settings-panel-write.mjs (pure Node, testable). */
+/** Store a provider API key (settings provider command face — writes go through the panel write channel). */
 export async function saveProviderKey(name, key) {
   // storeProviderKey performs the same !key || !key.trim() guard — delegate only.
   await storeProviderKey(name, key)

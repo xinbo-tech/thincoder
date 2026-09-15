@@ -131,6 +131,16 @@ test("T36 第 6 批：DeepSeek V4.1-Flash 三行 = 契约（R11–R13）+ 新名
     { provider: "ds", model: "deepseek-v4-flash" }, "退役名渠道进入视觉判据（R12——行为变化）")
 })
 
+test("W16 回归（评审 🟡）：端差默认档查找复刻核命名空间剥离——`vendor/model` 形态命中央同族行", async () => {
+  const { specForModel } = await import("../src/specs.mjs")
+  assert.equal(specForModel("glm-5.3").reasoningEffortDefault, "max", "裸名命中端差行（基线不变）")
+  const ns = specForModel("zhipu/glm-5.3")
+  assert.deepEqual(ns.reasoningEffortEnum, ["low", "high", "max"], "核表经命名空间剥离命中（枚举在场——证明该形态入表）")
+  assert.equal(ns.reasoningEffortDefault, "max", "端差行同法剥离命中（原返 undefined ⇒ webview 预选退到枚举首项）")
+  assert.equal(specForModel("moonshot/kimi-k3").reasoningEffortDefault, "max", "kimi 族同规则")
+  assert.equal(specForModel("unknown/whatever").reasoningEffortDefault, undefined, "未知族仍未命中（兑底语义零变）")
+})
+
 test("T38 第 6 批：pro 只读字段锚（R14——字段零改 + 非视觉保守——防误改）", async () => {
   const { specForModel } = await import("../src/specs.mjs")
   const pro = specForModel("deepseek-v4-pro")

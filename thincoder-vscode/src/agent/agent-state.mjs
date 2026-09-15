@@ -76,7 +76,7 @@ export function reconcileEngDesignTokens(existing, slotTokens, legacyToken) {
 /**
  * §11.2.1 槽字段 ↔ hydrate 映射（纯函数——单测锚点）。槽 = 权威（每轮 apply）：
  * engineering/advisor.guard → agent.config（槽字段钉；缺席 → engState（子代理镜像）→ cfg）；
- * traces → agent.config.traces（cfg.traces 或 TRACES_DEFAULTS 合并——TRACE-STORE-VSC
+ * traces → agent.config.traces（cfg.traces 或核 DEFAULTS.traces 合并——TRACE-STORE-VSC
  * D-TR6——恒有定义——chat 调用点开关读 agent.config.traces.enabled）；
  * planMode → agent._planMode（B 类每轮重指；opts.planMode 覆盖优先）；
  * engDesignTokens → reconcile（C 类永不清空）。restore=true（factory 新建——首轮/destroy
@@ -98,8 +98,8 @@ export function applySlotSessionState(agent, { slot, engState, planModeOverride 
     agent: { ...(cfg.agentFields ?? {}), engineering },
     proxy: cfg.proxy, shell: cfg.shell, providersList: cfg.providersList, websearch: cfg.websearch,
     // traces（TRACE-STORE-VSC D-TR6——镜像 CLI loadConfig().traces 合并）：cfg.traces 由
-    // hydrate cfgBag 携带（raw.traces 合并 TRACES_DEFAULTS——默认 off——2026-09-05 发布
-    // 隐私裁定）；直呼/旧 cfgBag（缺 traces）→ TRACES_DEFAULTS——agent.config.traces 恒有
+    // hydrate cfgBag 携带（raw.traces 合并核 DEFAULTS.traces——默认 off——2026-09-05 发布
+    // 隐私裁定）；直呼/旧 cfgBag（缺 traces）→ DEFAULTS.traces（核单源——W16 后无端侧同名件）——agent.config.traces 恒有
     // 定义——chat 调用点 `agent.config.traces.enabled !== false` 反映真实开关（缺省 off，
     // 记录绝不因 cfg 缺键意外开启）。settings 工具 hot-apply（setKeyPath → config 对象）
     // 对 traces.enabled 同键生效。

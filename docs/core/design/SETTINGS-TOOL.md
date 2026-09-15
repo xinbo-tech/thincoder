@@ -67,6 +67,9 @@ parse 失败 → 字符串字面（`:198` `return s`——裸 `abc`）。两端�
 W16（2026-09-15）：VSC 端 = **同一核工具实例化**（`thincoder-vscode/src/agent/setup.mjs` 取 `settingsTool(opts)` 工厂；写盘 = 核 `writeConfigAtomic`）；热应用 = `ctx.agent.config` 内存对象；注册于 depth-0 agentTools（动作级只读分类同款机制，`isReadonlyAction` 端面）。
 键空间 = 核 `DEFAULTS` 全量（A5 已裁「以 CLI 为准（全量类型校验）」——原端侧窄表 `thincoder-vscode/src/agent-tools/settings.mjs:39-40`（已删）的 `AGENT_DEFAULTS`/`TRACES_DEFAULTS` 键空间退场）；
 VSC 端测试坐标 = `thincoder-vscode/test/settings-tool.test.mjs`（8 例——双缝并用：写侧 `settingsTool({ configPath })` + 读侧 `_setConfigPathForTest`）。
+**端差（W16 登记——热应用载体键面）**：热应用落点 = 端 `ctx.agent.config` 载体，而 VSC 载体键面 = `{advisor, agent, proxy, shell, providersList, websearch, traces}`
+（`thincoder-vscode/src/agent/agent-state.mjs:96-107`）——无 `providers` / `memory` / `embedding` / `mcp` 段 ⇒ 这些键在 VSC 端的「运行中已生效」回显不落端侧运行读取源
+（端侧运行读盘面 `loadRaw()`，如 `resolveProviders`）；该面以「写盘为准」（持久化生效，进程内热应用仅限上列键面）。
 
 ### 2.9 无静默论证（判据形式——要点）
 
