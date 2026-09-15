@@ -12,7 +12,7 @@
 | # | 现状 | 位置 | 后果 |
 |---|---|---|---|
 | P1 | 评审整体墙钟 `REVIEW_TIMEOUT_MS = 300_000`（5 分钟）**硬编码**，用户无法调整 | `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）` 常量 + `runAdvisorToolLoop` 循环内检查点 | 大评审（多文件、多轮工具探索、慢模型）5 分钟即被截断，返回 partial results |
-| P2 | explore 子 agent 轮次被 `Math.min(30, …)` 硬帽 | `src/agent-tools/subagent.mjs` | explore 深入探索（大仓库、多文件追溯）30 轮即停，仅返回 partial work |
+| P2 | explore 子 agent 轮次被 `Math.min(30, …)` 硬帽 | `@thincoder/core/agent-tools/subagent.mjs`（W13 已迁核收口——现体见批次档 §5） | explore 深入探索（大仓库、多文件追溯）30 轮即停，仅返回 partial work |
 | P3 | 主 agent 轮次上限默认 `maxTurns: 100` | `src/config-io.mjs` `AGENT_DEFAULTS`、`src/agent/run-helpers.mjs` `DEFAULT_MAX_TURNS`、`src/agent/setup.mjs`（初始值 + 读取兜底）、`webview/settings-agent.js`（面板显示兜底） | 多文件重构/修复-验证循环任务频繁撞墙 |
 | P4 | 设置面板保存 advisor 字段时**静默丢弃** timeoutMs（仅保留 guard/effort/provider/model 四字段） | `src/config-io.mjs` `saveAgentSettingsFromPanel` | 用户手写 config.json 的 timeoutMs 一旦经面板保存即丢失；面板显示默认 `?? 100`（`webview/settings-agent.js`）也会与真实默认漂移 |
 
@@ -45,10 +45,10 @@ if (Date.now() - startTime > timeoutMs) {
 
 ### 2.2 explore 子 agent 去掉 30 轮硬帽
 
-- `src/agent-tools/subagent.mjs`：删除 `Math.min(30, …)` 分支，explore 与其它角色统一：
+- `@thincoder/core/agent-tools/subagent.mjs`：删除 `Math.min(30, …)` 分支，explore 与其它角色统一：（W13 已迁核收口——现体见批次档 §5）
   `const maxTurns = parent.config?.agent?.subagentTurns ?? 100`（注释同步——原 "explore
   stays capped lower (read-only search)" 删除或改写）。
-- 现码核对（2026-09-08）：`src/agent-tools/subagent.mjs` 现行为
+- 现码核对（2026-09-08）：`@thincoder/core/agent-tools/subagent.mjs` 现行为（W13 已迁核收口——现体见批次档 §5）
   `maxTurns: parent.config?.agent?.subagentTurns ?? 100`（无 `Math.min(30, …)` 截断），
   与 async/escalate 子 agent 路径一致。
 
@@ -85,7 +85,7 @@ whole-object 覆盖写，不合并会丢字段——与现有 guard/effort/provi
 | 文件 | 动作 | 内容 |
 |---|---|---|
 | `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）` | MODIFY | 常量 `600_000`；检查点改读 `agent.config?.advisor?.timeoutMs ?? REVIEW_TIMEOUT_MS` |
-| `src/agent-tools/subagent.mjs` | MODIFY | 删除 explore 的 `Math.min(30, …)`，统一 `subagentTurns ?? 100` |
+| `@thincoder/core/agent-tools/subagent.mjs` | MODIFY | 删除 explore 的 `Math.min(30, …)`，统一 `subagentTurns ?? 100`（W13 已迁核收口——现体见批次档 §5） |
 | `src/agent/run-helpers.mjs` | MODIFY | `DEFAULT_MAX_TURNS = 200` |
 | `src/agent/setup.mjs` | MODIFY | `cfgMaxTurns` 初始 200；读取兜底 `?? 200` |
 | `src/config-io.mjs` | MODIFY | `AGENT_DEFAULTS` `maxTurns: 200` + advisor 注释；advisor 合并透传 timeoutMs |

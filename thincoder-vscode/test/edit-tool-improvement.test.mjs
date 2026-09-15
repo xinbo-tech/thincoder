@@ -15,6 +15,10 @@
  */
 import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
+// W13（2026-09-15 · 快层 slow 门 D-T6 收口）：AC2/stage2 变体例 = 真 fs fixture × 4 变体——
+// 并行快层负载下实测 >500ms（独立跑 ~360ms）⇒ 按「重 IO 用例归册」入慢层（快层 skip；
+// test:full 照跑——不删用例）。
+import { slow } from "./slow.mjs"
 import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -125,7 +129,7 @@ test("AC2: fuzzy match tolerates whitespace/quote differences", async () => {
 })
 
 // AC2/stage2 — normalize 统一（EDIT.md §8.2）：弯引号/反引号/ASCII 单引号差异 → 直双引号单遍命中
-test("AC2/stage2: curly/backtick/single-quote variants all fuzzy-match", async () => {
+slow("AC2/stage2: curly/backtick/single-quote variants all fuzzy-match", async () => {
   const content = 'const x = "a"\n'
   const variants = ["const x = \u2018a\u2019", "const x = \u201ca\u201d", "const x = `a`", "const x = 'a'"]
   for (const variant of variants) {

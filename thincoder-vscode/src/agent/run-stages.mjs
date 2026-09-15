@@ -301,8 +301,7 @@ export async function finalizeAgentTurn(agent, ctx) {
     }
   }
   // Async subagent turn-end handling (AGENT-LOOP.md §15 D-A3 + §17 D-S1 + §17.5
-  // supersede; the collector lives in agent-tools/subagent-async.mjs with the async
-  // machinery — 500-line split):
+  // supersede; the collector has moved to the core single-source injector — 500-line split):
   // Stop (plain abort) → clear WITHOUT injecting stale errors (Ctrl+I keeps the pool);
   // ContinueError → no wait/no injection; else → collect SETTLED entries (D-S3 ①) —
   // running/queued STAY (no allSettled wait) — the suspension session digests them (D-S2).
@@ -320,9 +319,18 @@ export async function finalizeAgentTurn(agent, ctx) {
       // signal** 的存活子代清成孤儿（§12.1 ③）。
       const { discardAbortedPool } = await import("../agent-tools/async-discard.mjs")
       discardAbortedPool(agent)
-    } else if (!(thrownError instanceof ContinueError)) {
-      const { collectSettledAsync } = await import("../agent-tools/subagent.mjs")
-      await collectSettledAsync(agent, { history, fullHistory, cwd, suspDriven: suspDriven === true })
+    } else if (!(thrownError instanceof ContinueError) && suspDriven !== true) {
+      // W13（2026-09-15）：原端侧 `collectSettledAsync`（subagent-async.mjs）随镜像删旧退役
+      // ——改指核统一注入器 `injectAsyncResult`（`@thincoder/core/agent-tools/subagent.mjs`——
+      // 按 role 分发，报告形状与核 CLI 同源）。语义对齐原收集器：settled 直注入 + 出池
+      //（suspDriven 支在条件外——settled 留池由挂起会话 sweep 消化）。动态 import：核链可达
+      // node:sqlite（W8 契约②）。
+      const { injectAsyncResult } = await import("@thincoder/core/agent-tools/subagent.mjs")
+      for (const e of [...asyncMap.values()]) {
+        if (!e.done) continue // still running — stays in the pool (D-S1)
+        await injectAsyncResult(agent, e)
+        asyncMap.delete(String(e.id)) // W13 键形单源：核池键恒 String(id)（旧端侧数字键面随镜像删旧退役）
+      }
     }
   }
   // §9 D-24b（R13——2026-09-06）：async advisor 池同款回合尾处理（独立池——

@@ -196,6 +196,11 @@ export async function executeToolBatches(agent, { response, history, fullHistory
           // 在其上置拒绝标记（`_advisorRefused`），记账块同对象读取（per-call 载体；拒绝 = 未跑）。
           toolCtx = {
             cwd, agent, callbacks, signal, depth,
+            // A6（群 A 批）+ W13 收口：调用 id 随 ctx 下发——核工具（advisor 等）的拒绝/收发
+            // 登记面 (`agent._advisorRefusals` / `_advisorAsyncAcks` / `_advisorSyncCalls`) 恒
+            // 以 `ctx._toolCallId` 为键（核 `advisor.mjs:109` 等 10 处）；缺失 ⇒ 核侧登记空转 +
+            // 端侧记账错记（显式 async:false 拒绝被误计 called/round——评审 🔴）。
+            _toolCallId: tc.id,
             // §17 D-S7/D-S9 tool-context passthrough: the subagent tool's manual-tier
             // spawn gate reads the LIVE autoApprove (ctx.getAuto), and children spawned
             // during a suspension session share the session signal (ctx.sessionSignal).
@@ -333,10 +338,13 @@ export async function executeToolBatches(agent, { response, history, fullHistory
         // sync（async:false / depth>0 缺省）走既有记账。
         const advisorAsync = toolName === "advisor" && (args.async ?? depth === 0)
         if (toolName === "advisor" && !advisorAsync) {
-          // A6（群 A 批）：拒绝登记——工具置 `toolCtx._advisorRefused` ⇒ 未跑 ⇒ 不置 called /
-          // 不推轮次（拒绝 = 无评审产出；否则 guard 不再推回、轮次被无谓消耗）。零回归：未置位
-          // 走既有记账。async ack 路径不在此（既有 advisorAsync 谓词继续跳过）。
-          if (toolCtx?._advisorRefused !== true) {
+          // A6（群 A 批）+ W13 收口：拒绝登记——读面双源：① 端档遗留直置标记
+          // `toolCtx._advisorRefused`（向后兼容——旧端工具面）；② 核工具面真源
+          // `agent._advisorRefusals`（Set<toolCallId>——核 `advisor.mjs` 拒绝分支写入）。
+          // 任一命中 = 未跑 ⇒ 不置 called / 不推轮次（拒绝 = 无评审产出）。零回归：未置位走既有记账。
+          const refused = toolCtx?._advisorRefused === true
+            || (toolCtx?._toolCallId !== undefined && agent._advisorRefusals?.has(toolCtx._toolCallId) === true)
+          if (!refused) {
             agent._calledAdvisorThisRun = true
             // Design reviews are a separate gate with no convergence protocol —
             // they must not consume code-review rounds. A failed/interrupted review

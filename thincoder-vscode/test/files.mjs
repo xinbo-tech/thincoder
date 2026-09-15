@@ -41,7 +41,9 @@ export default [
   "test/provider-model-guard.test.mjs", // MODEL-400-FIX/QUICKFIX-BATCH-2（2026-09-09）+ MODEL-SELECTION（2026-09-10）：双端 guard 镜像——F-1 model 缺失可读 throw + F-2b advisor 跨渠道渠道默认单值（无则父兜底——T28）+ F-1 byName 单值/父兜底；W10（2026-09-15）改判：F-1 经核 chat 真路驱动（原 buildRequest 直驱面随删档）
   "test/image-downgrade.test.mjs", // IMAGE-DOWNGRADE-VISION（2026-09-09）：非视觉贴图自动降级视觉子代理——F-1 描述注入/images 清空 + F-2 fallback 三态 + AC-2 视觉零回归 + runner seam 缺省回落生产（mock 跑者/keyless 短路——零网络）
   // VSC 端镜像（2026-09-11 第 5 批 · ENGINEERING-MODE.md §2.22/§2.23——新档一律入册，否则接线没活）
-  "test/batch-doc-gate.test.mjs", // batchDoc spawn 门（§2.22.3）：两路各一调用点 + 校验逻辑单份 + 角色域（T54/T55/T55b/T56）
+  // W13（2026-09-15）退役：`test/batch-doc-gate.test.mjs`——其断言对象 = 端侧工具 `ctx.runAgent` 缝下
+  // 的两路门（镜像删旧后不存在；同门恒等面由 CLI 侧 `thincoder-cli/test/batch-doc-gate.test.mjs`
+  // 直驱核 `buildSpawnChild` 覆盖——两路/角色域/可读性矩阵同表）。
   "test/batch-segment.test.mjs", // 批次档段写入工具 VSC 面（§2.22.5）：工具契约 + 只读面零变更 + rv 实例键不串档（T59/T60/T66）
   "test/eng-designer-role.test.mjs", // eng-designer 运行期八处（§2.22.4）：白名单/模式门/子代门/装配/枚举/场景/webview/勘察通道（T57/T57b/T57c/T58）
   "test/doc-consistency.test.mjs", // 文档一致性 V1/V2/V3 + 基线 + 接线（§2.22.6）：零新增、V1「（CLI 侧）」豁免、V3 三态零假阳（T61/T63/T64）

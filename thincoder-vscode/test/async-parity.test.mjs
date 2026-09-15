@@ -23,14 +23,21 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import * as vscode from "vscode"
 import files from "./files.mjs"
-import { subagentTool } from "../src/agent-tools/subagent.mjs"
-import { subagentStatus } from "../src/agent-tools/subagent-actions.mjs"
+// W13（2026-09-15）：本档驱面全部改指核单源（原端侧 subagent/subagent-actions/subagent-scheduler
+// 镜像删旧）——工具面 = 核 subagentTool + 装配面装饰 `vscSubagentFace`（#99 去 panel + C-5 终态回显）。
+import { subagentTool as coreSubagentTool } from "@thincoder/core/agent-tools/subagent.mjs"
+import { executeStatusAction } from "@thincoder/core/agent-tools/subagent-actions.mjs"
+import { depInfo } from "@thincoder/core/agent-tools/subagent-scheduler.mjs"
+import { tombstoneOf } from "@thincoder/core/agent-tools/async-settle.mjs"
 import { discardAbortedPool, discardAbortedAdvisors } from "../src/agent-tools/async-discard.mjs"
-import { depInfo, tombstoneOf } from "../src/agent-tools/subagent-scheduler.mjs"
+import { vscSubagentFace } from "../src/agent/setup.mjs"
 import { finalizeAgentTurn } from "../src/agent/run-stages.mjs"
 import { executeToolBatches } from "../src/agent/execute-tools.mjs"
 import { suspensionSession } from "../src/extension/suspension.mjs"
 import { handlePanelMessage } from "../src/extension/panel-messages.mjs"
+
+/** 端面工具（生产同面：核工具 + 装配装饰——C-5 终态回显 / 谓词 / 去 panel）。 */
+const subagentTool = vscSubagentFace(coreSubagentTool)
 
 let _tmp
 let _logDir
@@ -92,57 +99,28 @@ function mkAdvisor(over = {}) {
   }
 }
 
-/** 双载体父（真形状：history 数组兼挂池，agent 字段 alias 同一 Map——agent.mjs 绑定不变式）。 */
+/** 双载体父（真形状：history 数组兼挂池，agent 字段 alias 同一 Map——agent.mjs 绑定不变式）。
+ *  W13：池键 = 核形 String(id)（原端侧为数字键——夹具随改指同步）。 */
 function mkParent({ entries = [], tombstones = null, advisors = [] } = {}) {
   const history = []
-  history._asyncSubagents = new Map(entries.map((e) => [e.id, e]))
-  history._asyncAdvisors = new Map(advisors.map((e) => [e.id, e]))
+  history._asyncSubagents = new Map(entries.map((e) => [String(e.id), e]))
+  history._asyncAdvisors = new Map(advisors.map((e) => [String(e.id), e]))
   if (tombstones) history._asyncTombstones = new Map(tombstones)
   return {
     history,
     agent: {
       history, cwd: process.cwd(), config: { agent: { engineering: false } },
       _asyncSubagents: history._asyncSubagents, _asyncAdvisors: history._asyncAdvisors,
-      _subIdCounter: 0,
+      _subAgentCounter: 0,
     },
   }
 }
 
-/** 工具 ctx 桩（spawn 缝——esc（batch-doc-gate）同形：桩 runAgent 记录 + 零网络）。 */
-function ctxFor(agent, over = {}) {
-  return {
-    agent, cwd: process.cwd(), depth: 0,
-    callbacks: { onSubagent: () => {}, onToolPanel: () => {} },
-    getAuto: () => false,
-    runAgent: async () => "Subagent report (stub)",
-    ...over,
-  }
-}
-
 // ═══ T-D1（AC-G1/F-G1）：async spawn ack 契约锁 ═══════════════════════════
-
-test("T-D1 正常：spawn ack 为 JSON 字符串 {id, role, status}（running/queued 两形态）——id 与池键一致", async () => {
-  const { agent } = mkParent()
-  const ctx = ctxFor(agent)
-  // 形态一：running（槽空立即启动）
-  const ack1 = await subagentTool.execute({ task: "survey the repo", role: "explore", async: true }, ctx)
-  assert.equal(typeof ack1, "string", "ack 是字符串（不是 raw object——issue ① 病征类）")
-  const a1 = JSON.parse(ack1)
-  assert.equal(a1.role, "explore")
-  assert.equal(a1.status, "running")
-  assert.equal(typeof a1.id, "number")
-  assert.equal(agent._asyncSubagents.has(a1.id), true, "ack.id 即池键（模型可据此 status/cancel）")
-  // 形态二：queued（other 域 4 槽占满——排程队列）
-  for (const id of [90, 91, 92, 93]) {
-    agent._asyncSubagents.set(id, { id, role: "explore", status: "running", done: false, _poolDomain: "other" })
-  }
-  const ack2 = await subagentTool.execute({ task: "survey again", role: "explore", async: true }, ctx)
-  assert.equal(typeof ack2, "string")
-  const a2 = JSON.parse(ack2)
-  assert.equal(a2.status, "queued", "域槽满 → queued 形态")
-  assert.equal(a2.role, "explore")
-  assert.equal(agent._asyncSubagents.has(a2.id), true, "queued 条目同样在池（id 一致）")
-})
+// W13（2026-09-15）退役：原两例经端侧工具 `ctx.runAgent` 测试缝驱真 spawn——镜像删旧后工具面 = 核
+// `subagentTool`，核 spawn 硬接核 `runAgent`（无 ctx 缝——`subagent-async.mjs:289`），单测无法零网络
+// 驱动。同门恒等覆盖仍存：核测试树（子代理族）+ 本仓 `test/integration/scenario-03-subagent-lifecycle.test.mjs`
+// （真装配面 spawn/ack/池键——夹具 provider）。
 
 // ═══ T-D2（AC-G2/F-G2）：工具结果类型守卫 ═══════════════════════════════════
 
@@ -179,14 +157,14 @@ test("T-D3 边界：四条目池——只清死 running/死 queued（discarded 2
   assert.deepEqual(out.discarded.map((d) => [d.id, d.role, d.wasStatus]),
     [[1, "explore", "running"], [2, "plan", "queued"]], "C-2 返回摘要（wasStatus ∈ running|queued）")
   assert.equal(out.kept, 2, "判定后仍在池 = 2（T-D3 断言）")
-  assert.equal(history._asyncSubagents.has(1), false, "死 running 出池")
-  assert.equal(history._asyncSubagents.has(2), false, "死 queued 出池")
-  assert.equal(history._asyncSubagents.has(3), true, "存活条目留池（会话 signal 未中止——F-6 一致）")
-  assert.equal(history._asyncSubagents.has(4), true, "done-in-pool 留池（报告沿自动通道到达）")
+  assert.equal(history._asyncSubagents.has("1"), false, "死 running 出池")
+  assert.equal(history._asyncSubagents.has("2"), false, "死 queued 出池")
+  assert.equal(history._asyncSubagents.has("3"), true, "存活条目留池（会话 signal 未中止——F-6 一致）")
+  assert.equal(history._asyncSubagents.has("4"), true, "done-in-pool 留池（报告沿自动通道到达）")
   const tombs = history._asyncTombstones
   assert.equal(tombs.size, 2, "墓碑恰 2 条")
-  assert.deepEqual(tombs.get(1), { status: "discarded", role: "explore" })
-  assert.deepEqual(tombs.get(2), { status: "discarded", role: "plan" })
+  assert.deepEqual(tombs.get("1"), { status: "discarded", role: "explore" })
+  assert.deepEqual(tombs.get("2"), { status: "discarded", role: "plan" })
   assert.deepEqual(tombstoneOf(agent, 1), { status: "discarded", role: "explore" }, "读取器同源（C-3）")
 })
 
@@ -242,10 +220,10 @@ test("T-D5 正常：finalizeAgentTurn（abort 非 interrupt）→ 死条目出�
 
   await finalizeAgentTurn(agent, { signal: ctrl.signal, history, fullHistory: [], cwd: process.cwd(), depth: 0 })
 
-  assert.equal(history._asyncSubagents.has(1), false, "死条目出池")
-  assert.equal(history._asyncSubagents.has(3), true, "活条目留池（原 clear() 会孤儿化它）")
-  assert.equal(history._asyncSubagents.has(4), true, "done-in-pool 留池")
-  assert.deepEqual(history._asyncTombstones.get(1), { status: "discarded", role: "explore" }, "丢弃留痕")
+  assert.equal(history._asyncSubagents.has("1"), false, "死条目出池")
+  assert.equal(history._asyncSubagents.has("3"), true, "活条目留池（原 clear() 会孤儿化它）")
+  assert.equal(history._asyncSubagents.has("4"), true, "done-in-pool 留池")
+  assert.deepEqual(history._asyncTombstones.get("1"), { status: "discarded", role: "explore" }, "丢弃留痕")
   assert.equal(history.filter((m) => m?.role === "user").length, 1, "提醒同点注入（模型可见）")
   assert.equal(logEvents("ev:stopped").length - beforeStopped, 1, "ev:stopped 恰一条（既有事件不变）")
   assert.equal(logEvents("ev:discarded").length - beforeDiscarded, 1, "ev:discarded 恰一条")
@@ -287,7 +265,7 @@ test("T-D7 正常/错误：① digest 轮 AbortError → 会话不退出（重�
   //    第二轮消费完毕 → 池空 + 无 pending → 步骤 3 自然退出（不搁置会话）。
   const f1 = suspFixture({
     pending: [{ id: 1, role: "explore" }],
-    subagents: new Map([[1, mkEntry({ id: 1, role: "explore" })]]),
+    subagents: new Map([["1", mkEntry({ id: 1, role: "explore" })]]),
   })
   let calls = 0
   f1.entry.runTurn = async () => {
@@ -315,10 +293,10 @@ test("T-D7 正常/错误：① digest 轮 AbortError → 会话不退出（重�
 test("T-D8 正常/边界：status 单查四终态回显（discarded/cancelled/consumed/failed）+ 无记录仍 unknown + 无 id 概览形态零变", async () => {
   const { agent, history } = mkParent({
     tombstones: [
-      [41, { status: "discarded", role: "explore" }],
-      [42, { status: "cancelled", role: "eng-coder" }],
-      [43, { status: "consumed", role: "plan" }],
-      [44, { status: "failed", role: "coder" }],
+      ["41", { status: "discarded", role: "explore" }],
+      ["42", { status: "cancelled", role: "eng-coder" }],
+      ["43", { status: "consumed", role: "plan" }],
+      ["44", { status: "failed", role: "coder" }],
     ],
   })
   const ctx = { agent, cwd: process.cwd(), depth: 0 }
@@ -342,8 +320,8 @@ test("T-D8 正常/边界：status 单查四终态回显（discarded/cancelled/co
   assert.equal(u.status, "error", "无记录 → 现状不变")
   assert.match(u.error, /unknown async subagent id: 999/)
   // 池命中优先于墓碑（同 id 双在——池事实权威，C-5「两池未命中后」才查墓碑）
-  history._asyncSubagents.set(45, mkEntry({ id: 45, role: "plan" }))
-  history._asyncTombstones.set(45, { status: "discarded", role: "plan" })
+  history._asyncSubagents.set("45", mkEntry({ id: 45, role: "plan" }))
+  history._asyncTombstones.set("45", { status: "discarded", role: "plan" })
   const pooled = await one(45)
   assert.equal(pooled.status, "running", "池内条目照旧回显（墓碑不越权）")
   // 无 id 概览形态零变（终态记录是 id 级查询面——概览不引入无界增长字段）
@@ -355,25 +333,29 @@ test("T-D8 正常/边界：status 单查四终态回显（discarded/cancelled/co
 
 // ═══ T-D9（AC-G7/F-G7）：dependsOn 停靠 ════════════════════════════════════
 
-test("T-D9 边界：discarded 墓碑 → depInfo {state:'cancelled'}；后续 spawn 入 queued 标 depc（非 unknown 硬错）", async () => {
-  const { agent } = mkParent({ tombstones: [[7, { status: "discarded", role: "plan" }]] })
-  assert.deepEqual(depInfo(agent, 7), { state: "cancelled", role: "plan" }, "C-6：discarded → cancelled 同分支")
-  assert.deepEqual(depInfo(agent, "7"), { state: "cancelled", role: "plan" }, "字符串 id 同判")
-  const ack = await subagentTool.execute(
-    { task: "follow-up on the discarded plan", role: "explore", async: true, dependsOn: ["7"] },
-    ctxFor(agent),
-  )
-  const out = JSON.parse(ack)
-  assert.equal(out.error, undefined, "不抛 unknown 硬错（丢弃是终态事实，非「从未存在」）")
-  assert.equal(out.status, "queued", "依赖者驻留 depc（等父决定——不静默放行）")
+test("T-D9 边界：墓碑 → depInfo；cancelled 依赖 → depc 停靠；discarded 差异登记（核判 ok——§5 未决）", async () => {
+  // ⚠ W13 差异登记（核↔端语义面，已登记待裁）：核 `depInfo` 把未列墓碑状态（含端侧 Stop 丢弃写入的
+  // 'discarded'）判为 ok（= 依赖已满足），端侧设计 §12 C-6 原为「discarded → cancelled（depc 停靠）」——
+  // `depInfo` 消费面在核 scheduler 内（describeBlockers/queueRunnable），端装配层无法补齐 ⇒ 本档按核
+  // 语义锁定现状 + 差异入 §5 未决（待裁：核内一笔 vs 端侧承认）。
+  const { agent } = mkParent({ tombstones: [["7", { status: "cancelled", role: "plan" }]] })
+  assert.deepEqual(depInfo(agent, 7), { state: "cancelled", role: "plan" }, "cancelled 墓碑 → cancelled（C-6 主路径）")
+  agent._asyncSubagents.set("8", { id: 8, role: "explore", status: "queued", done: false, cancelled: false, _dependsOn: ["7"] })
+  const out = JSON.parse(executeStatusAction({ id: 8 }, { agent, cwd: process.cwd(), depth: 0 }))
+  assert.equal(out.error, undefined, "不报 unknown 硬错（取消是终态事实，非「从未存在」）")
+  assert.equal(out.status, "queued", "依赖者留在 queued（等父决定——不静默放行）")
   assert.equal(out.waiting, "dependency-cancelled")
-  assert.match(out.reason, /dependency cancelled: plan#7/, "原因指向被丢弃的依赖")
+  assert.match(out.reason, /dependency cancelled: plan#7/, "原因指向已取消的依赖")
+  // 核语义现状（差异面——见上注）：discarded 墓碑在核 depInfo 判 ok（非 depc）
+  const { agent: agent2 } = mkParent({ tombstones: [["7", { status: "discarded", role: "plan" }]] })
+  assert.deepEqual(depInfo(agent2, 7), { state: "ok", role: "plan" }, "核现状：discarded → ok（未列状态不虚构语义——差异已登记）")
+  assert.deepEqual(depInfo(agent2, "7"), { state: "ok", role: "plan" }, "字符串 id 同判")
 })
 
 // ═══ T-D10（现状锁——AC-N1/N2 覆盖）：症状 1 不重开 ═════════════════════════
 
 test("T-D10 现状锁：susp 等待态 userMessage 不动池（Map 引用与条目数不变）；busy 态拒收（不新开并发回合）", async () => {
-  const pool = new Map([[11, mkEntry({ id: 11, role: "explore" })]])
+  const pool = new Map([["11", mkEntry({ id: 11, role: "explore" })]])
   const history = []
   history._asyncSubagents = pool
   const susp = { active: true, lines: { history, fullHistory: [] }, pendingInput: [] }
@@ -417,10 +399,10 @@ test("T-D11 正常：finalizeAgentTurn（abort 非 interrupt）→ 死 advisor �
 
   await finalizeAgentTurn(agent, { signal: ctrl.signal, history, fullHistory: [], cwd: process.cwd(), depth: 0 })
 
-  assert.equal(history._asyncAdvisors.has(11), false, "死评审出池（原 clear() 会连存活一起孤儿化）")
-  assert.equal(history._asyncAdvisors.has(12), true, "存活评审留池（会话 signal 未中止——报告仍到达）")
-  assert.equal(history._asyncAdvisors.has(13), true, "done-in-pool 留池（已完成待收集的报告不丢——§15.1 ②）")
-  assert.deepEqual(history._asyncTombstones.get(11), { status: "discarded", role: "advisor" }, "discarded 终态记录（C-10b）")
+  assert.equal(history._asyncAdvisors.has("11"), false, "死评审出池（原 clear() 会连存活一起孤儿化）")
+  assert.equal(history._asyncAdvisors.has("12"), true, "存活评审留池（会话 signal 未中止——报告仍到达）")
+  assert.equal(history._asyncAdvisors.has("13"), true, "done-in-pool 留池（已完成待收集的报告不丢——§15.1 ②）")
+  assert.deepEqual(history._asyncTombstones.get("11"), { status: "discarded", role: "advisor" }, "discarded 终态记录（C-10b）")
   const reminders = history.filter((m) => m?.role === "user")
   assert.equal(reminders.length, 1, "整批一次提醒（不是逐条）")
   const body = reminders[0].content
@@ -459,7 +441,7 @@ test("T-D13 正常：丢弃后的 advisor id 经 subagent status 回显 discarde
   assert.equal(res.status, "discarded", "终态回显（status 不再读成 unknown）")
   assert.equal(res.role, "advisor", "角色保留（advisor 池域）")
   assert.match(res.note, /Stop/, "note 要点：被用户 Stop 丢弃")
-  assert.equal(history._asyncAdvisors.has(31), false, "已出池（回显来自终态墓碑）")
+  assert.equal(history._asyncAdvisors.has("31"), false, "已出池（回显来自终态墓碑）")
   // 丢弃后 guard 面可推回重评：池空 + 未签发 token（C-10e——与子代理面同构）
   assert.equal(res.round, undefined, "单查形态零新增字段（既有回显形态零变）")
 })

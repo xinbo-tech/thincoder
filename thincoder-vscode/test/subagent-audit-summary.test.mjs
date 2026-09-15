@@ -1,33 +1,48 @@
 /**
  * subagent-audit-summary.test.mjs — A2-SUMMARY-PARITY (docs/design/A2-SUMMARY-PARITY.md,
- * 2026-09-09): VSC summarizeEngTaskInput is verbatim-isomorphic with the CLI's
- * summarizeEngTaskBook (thincoder-cli/src/agent-tools/subagent-spawn.mjs) — the A2 mechanical
- * summary keeps only the three audit-relevant sections VERBATIM (design docs involved /
- * affected-file list / acceptance criteria), dropping verbose context. Locks the
- * alignment surface via the auditTaskBook seam (summarizeEngTaskInput is module-private —
- * driven through agent._engTaskInput fixtures):
+ * 2026-09-09): the A2 mechanical summary keeps only the three audit-relevant sections
+ * VERBATIM (design docs involved / affected-file list / acceptance criteria), dropping
+ * verbose context.
+ *
+ * W13（2026-09-15）：摘要实现 = 核单源（`@thincoder/core/agent-tools/subagent-spawn.mjs`
+ * `summarizeEngTaskBook`——原端侧 `summarizeEngTaskInput` / `auditTaskBook` 镜像删旧）。
+ * 对齐面由「双实现同构」事实收为「单实现」（比较对象不复存在）；本档改以**核真装配面**
+ * `buildSpawnChild`（审计 spawn 任务书注入点——depth-1 eng-coder 父 + role='explore' 同步 +
+ * 审计尝试序号非 null）驱动同一批断言：
  *  - structured "## " task books → the marker sections verbatim, verbose sections dropped;
  *  - flat task books without "## " headers → the summary still triggers via the
- *    inline-marker fallback (CLI shape: a section runs from its marker line to the next
- *    header — with no headers present it runs to the book end, so sections overlap);
+ *    inline-marker fallback (a section runs from its marker line to the next header —
+ *    with no headers present it runs to the book end, so sections overlap);
  *  - markers missing → "(not found in the parent task book)" (never fabricated);
- *  - "## " present but only one keepable section → that section is emitted — the deleted
- *    <2-sections whole-book verbatim guard must NOT come back.
+ *  - "## " present but only one keepable section → that section is emitted — no
+ *    whole-book verbatim fallback.
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { auditTaskBook } from "../src/agent-tools/subagent-async.mjs"
+import { buildSpawnChild } from "@thincoder/core/agent-tools/subagent-spawn.mjs"
+import { gateEngCoderSpawn } from "@thincoder/core/agent/spawn-child.mjs"
 
-const A2_ANCHOR = "Parent spawn task book — mechanical summary (docs involved / file list / acceptance criteria, verbatim):\n"
+/** A2 摘要块前导锚（核逐字文本——`[^\\n]*` 容措辞微调，块的起点/终点形态不变）。 */
+const A2_MARK_RE = /\[Parent spawn task book — mechanical summary[^\n]*\]\n/
 const A2_END = "\nFiles actually touched by the eng-coder"
 
-/** Run auditTaskBook over an _engTaskInput fixture and return the embedded A2 summary. */
+/** Run the real audit-spawn assembly over an _engTaskInput fixture and return the embedded A2 summary. */
 function summaryOf(book) {
-  const out = auditTaskBook("audit a delivery", { _engTaskInput: book, _touchedFiles: [] }, 1)
-  const start = out.indexOf(A2_ANCHOR)
-  assert.notEqual(start, -1, "A2 summary block must be appended for an audit spawn")
-  const end = out.indexOf(A2_END, start)
-  return out.slice(start + A2_ANCHOR.length, end)
+  const parent = {
+    cwd: "/proj", _role: "eng-coder", _engTaskInput: book, _touchedFiles: [],
+    tools: [], provider: { name: "p", baseURL: "https://x", model: "m", apiKey: "k" },
+    config: { agent: {} },
+  }
+  const ctx = { agent: parent, depth: 1, callbacks: {}, cwd: "/proj" }
+  const attempt = gateEngCoderSpawn(parent, 1, "explore", false) // 审计尝试序号（非 null ⇒ 任务书摘要注入开关）
+  assert.equal(attempt, 1, "eng-coder 父审计 spawn 通过机械门")
+  const { input } = buildSpawnChild(parent, ctx, { task: "audit a delivery" }, "explore", false, [], [], attempt)
+  const m = A2_MARK_RE.exec(input)
+  assert.ok(m, "A2 summary block must be appended for an audit spawn")
+  const start = m.index + m[0].length
+  const end = input.indexOf(A2_END, start)
+  assert.notEqual(end, -1, "A2 块以 touched-files 段收尾")
+  return input.slice(start, end)
 }
 
 test("A2 structured book: marker sections verbatim, verbose sections dropped", () => {
@@ -61,10 +76,9 @@ test("A2 flat book (no ## headers): summary triggers via the inline-marker fallb
 文件清单: src/agent-tools/subagent-async.mjs
 验收标准: AC-1 绿（测试锁）`
   const summary = summaryOf(book)
-  // CLI inline semantics: each section runs from its marker line to the next header —
+  // inline semantics: each section runs from its marker line to the next header —
   // none exist in a flat book, so each section runs to the book end (docs ⊇ files ⊇
-  // acceptance). Old VSC behavior returned the whole book once — the overlap proves the
-  // CLI-parity summary triggered.
+  // acceptance). The overlap proves the inline fallback triggered.
   assert.notEqual(summary, book, "flat book must NOT come back whole-book verbatim")
   assert.equal(summary, `涉及文档: docs/design/A2-SUMMARY-PARITY.md
 文件清单: src/agent-tools/subagent-async.mjs

@@ -463,7 +463,7 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
   清洗后输出（防未注册 token 进 prior）。
 - 消费点 2（design async 结算，`advisor-async.mjs` `advisorSettleAccounting（W12 已迁核——现体见批次档 §5）`）：同上判据；`passed=false`、
   D1 台账零写、`entry.report` = 剥后文本 + 未签发提示；stale 分支在外层优先保留。**N14 三面同源（report /
-  digest / prior）**：digest（`injectAdvisorResult` 原样注入 `entry.report`——as-of `advisor-async.mjs:438-447`）
+  digest / prior）**：digest（`injectAdvisorResult` 原样注入 `entry.report`——as-of `advisor-async.mjs:438-447`）——（W13 已迁核收口——现体见批次档 §5；advisor 逐族注入器已随镜像删旧退役）
   与 prior（唯一写点 `record.priorOutput = stripApprovedSuffix(entry.report, …)`——as-of `:399-400`，取
   **清洗后**报告）均与 report 同源 ⇒ 剥除结果自动传导——async 面无需另设清洗（对偶 = sync 面
   `_lastAdvisorOutput` 显式覆写——消费点 1）。
@@ -516,7 +516,7 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
   有效清除态）；头注「跨端三键」措辞同步为「跨端 3 + 同族 1 = 4 条」。
 - 计数与文档同步：本仓 TOOLS 档「3 键」→「4 键」+ 新增条目行；测试 T-S2.33 存在性断言扩为 4 键 +
   新增 T-S2.36 / T-S2.37（见 §13.8）。
-- 消费面证据（拒绝依据）：`src/agent-tools/subagent.mjs:87-90`（`effectiveSubagentModel`——
+- 消费面证据（拒绝依据）：`@thincoder/core/agent-tools/subagent.mjs:87-90`（`effectiveSubagentModel`——W13 已迁核收口——现体见批次档 §5）
   `cfg.subagentModels?.[role]`；字符串形态静默回 undefined）。
 
 ### 13.5 受影响文件全清单（行数注记 = 批次前 → 交付实测）
@@ -1313,7 +1313,7 @@ CLI 用 `_toolCallId` + `agent._advisorRefusals` Set；本端无 `_toolCallId` �
 | 4 | git | `src/tools/git.mjs`（W14 已迁核——现体 `thincoder-core/tools/git.mjs`） 21 动作；写入面 ref / 索引 / 工作树混合；路参子集仅 checkout(path) / restore / mv；reset / pull / merge / revert / cherry-pick / rebase / apply / stash / clean 波及面在参数外 | **部分** | 无 | 登记（拦 3/21 = 假安全 + 判集无法同闭；复核触发 = 实战在途 git 还原被审档事故） |
 | 5 | checkpoint | `src/tools/checkpoint.mjs`（W5 已迁核——现体 `thincoder-core/git/checkpoint.mjs:1`）——rewind 恢复快照清单内文件（清单在快照内，参数仅 id） | 不可 | 无 | 登记（拦须预闸同步读盘枚举快照——代价 vs 场景不成比例；复核触发同上） |
 | 6 | batch_segment | `thincoder-core/agent-tools/batch-segment.mjs:178-181`（W9 已迁核——原 `src/agent-tools/batch-segment.mjs`）直写绑定批次档（§2 / §5——子代理通道；批次档 ∈ 设计评审 docAbs——§14.4 口径「含批次档」） | 完备（工具自持单一路径） | 现无 → 本批补 | **修**（契约 3） |
-| 7 | 子代理合入面 | `mergeChildMutations`（`src/agent-tools/subagent-async.mjs:483-498`）——子代理磁盘写入在完成点合入父侧记账 | 预闸不可达（子代理无父侧评审池面） | **已有 + 本批补 file_ops 支**（合入即记账——随契约 2） | 登记维持（拦面不可达；判面 = FILE_MUTATORS + batch_segment + file_ops 已覆盖（合入即记账）——E-6 #5 同族） |
+| 7 | 子代理合入面 | `mergeChildMutations`（`@thincoder/core/agent-tools/subagent-async.mjs:483-498`）——子代理磁盘写入在完成点合入父侧记账 | 预闸不可达（子代理无父侧评审池面） | **已有 + 本批补 file_ops 支**（合入即记账——随契约 2） | 登记维持（拦面不可达；判面 = FILE_MUTATORS + batch_segment + file_ops 已覆盖（合入即记账）——E-6 #5 同族） |（W13 已迁核收口——现体见批次档 §5）
 
 **契约（逐条）**：
 

@@ -24,11 +24,12 @@
  * ——T-D3/T-D4 断言零回归）+ `discardAbortedAdvisors`（C-10 新面）；判定/出池/墓碑/汇总
  * 单核承载（D2——实现单核无重复）。
  *
- * 模块图：单向 import async-settle.mjs（parentAborted）/ subagent-scheduler.mjs（池与墓碑
- * accessor）/ ../agent/run-helpers.mjs（escapeXml）/ @thincoder/core/log.mjs——叶子向、无环。
+ * 模块图：单向 import 核 `@thincoder/core/agent-tools/async-settle.mjs`（parentAborted 守卫单点 /
+ * getAsyncPool 池 accessor / writeTombstoneTo 墓碑写点——W13（2026-09-15）：原端侧
+ * `async-settle.mjs`+`subagent-scheduler.mjs` 镜像删旧，改指核单源）+ ../agent/run-helpers.mjs
+ * （escapeXml）/ @thincoder/core/log.mjs——叶子向、无环。
  */
-import { parentAborted } from "./async-settle.mjs"
-import { getAsyncPool, removeFromAsyncPools, writeTombstoneTo } from "./subagent-scheduler.mjs"
+import { getAsyncPool, parentAborted, writeTombstoneTo } from "@thincoder/core/agent-tools/async-settle.mjs"
 import { escapeXml } from "../agent/run-helpers.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"
 
@@ -45,9 +46,21 @@ const advisorReminderText = (n, list) =>
 /** C-4 列表词（wasStatus 数据源）：queued → "(was queued — never started)"；其余 "(was running)"。 */
 const wasPhrase = (wasStatus) => (wasStatus === "queued" ? " (was queued — never started)" : " (was running)")
 
-/** C-1 / C-10a 丢弃判定（单点复用——advisor 无 signal 字段，天然 controller 支）。 */
+/** C-1 / C-10a 丢弃判定（单点复用）。
+ *  W13：守卫改指核 `parentAborted(ctx, entry)` 单点（核签名 ctx 先行）。语义注意（代码评审 🔵 收正）：
+ *  核建条目**无 `signal` 字段**（`subagent-run.mjs` / `advisor-async.mjs` 仅 `controller`）⇒ 传入的
+ *  `{ signal: entry.signal }` 实为死参，实际判据 = controller 支（`entry.controller.signal.aborted`）——
+ *  与基信号同链（核 `bindChildController` 带活 abort 监听）⇒ 与「父已中止」同判，行为等价；
+ *  controller 支同核。 */
 const discardable = (entry) =>
-  entry.done !== true && entry.cancelled !== true && parentAborted(entry)
+  entry.done !== true && entry.cancelled !== true && parentAborted({ signal: entry.signal }, entry)
+
+/** 池条目出池（settle/cancel 同款删除语义——W13 键形单源：核与端写侧均 `Map.set(String(id))`
+ *  ⇒ 读删一律 String 归一，数字键面随镜像删旧退役——双形兼容 = 两形状共存的掩盖面，不保留）。 */
+function removeFromPool(map, id) {
+  if (!map) return
+  map.delete(String(id))
+}
 
 /**
  * 私有共享核（C-10——双池同构面单核）：判定 → 墓碑 → 出池 → 汇总 → 整批一次提醒 +
@@ -62,7 +75,7 @@ function discardRole(parent, spec) {
     if (!discardable(entry)) continue
     out.discarded.push(spec.describe(entry))
     writeTombstoneTo(parent.history ?? parent, entry.id, "discarded", spec.roleOf(entry))
-    removeFromAsyncPools(parent, spec.pool, entry.id)
+    removeFromPool(map, entry.id)
   }
   out.kept = map.size
   if (out.discarded.length > 0) {

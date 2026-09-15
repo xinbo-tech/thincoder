@@ -18,11 +18,13 @@ import { builtinTools, toOpenAISchema, readImageTool } from "../tools.mjs"
 // 核侧同款先例 = 核 `agent-tools.mjs` 头注「Loaded from agent.mjs via dynamic import」；
 // 动态 import 不入静态闭包（扫描语义同 W8 契约）。
 import { configureBatchSegment } from "@thincoder/core/agent-tools/batch-segment.mjs" // 叶子（node:fs/node:path）——静态面安全
+// W13 ④ C-5 终态回显读面（核墓碑单点）——**动态** import：核 `async-settle.mjs` 静态链可达
+// `node:sqlite`（scheduler→subagent-async→核 agent 栈——W8 契约②机判），静态引入会破端壳静态闭包；
+// 读点见 `vscStatusTerminalEcho`。
 import { settingsTool } from "../agent-tools/settings.mjs"
 import { resetRunState, reconcileEngDesignTokens, applySlotSessionState } from "./agent-state.mjs"
 import { loadSlot } from "../extension/session-io.mjs"
 import { specForModel } from "../specs.mjs"
-import { modeRoleField } from "../agent-tools/subagent.mjs"
 import { escapeXml, pushReal } from "./run-helpers.mjs"
 import { expandHome } from "@thincoder/core/expand-home.mjs"
 import { applyPromptInjections } from "@thincoder/core/prompt-files.mjs"
@@ -151,6 +153,105 @@ function withPool(tool) {
 }
 
 /**
+ * W13（2026-09-15 · S2 · `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W13）：VSC subagent
+ * 工具面装饰（原 `src/agent-tools/subagent.mjs` 的端侧面随镜像删旧迁入本档——同一份装配面，
+ * 不另立档；承 W14 `gitTool` 装饰先例）：
+ *   ① `modeRoleField`（模式互斥 role enum + suffix）——原档 verbatim 迁入（核 `agent/setup.mjs`
+ *      同族逻辑在核内装配面，未导出 ⇒ 端侧装配面自持该面至 W15 收敛）。
+ *   ② #99（CORE-UNIFICATION §2.13.4 / AGENT-LOOP.md §19.6 AC-P4）：核登记册的工具面含 `panel`
+ *      动作（CLI TUI 面板镜像），VSC 载荷面不存在 ⇒ **装配层剔除**（端侧过滤、零核改动）——
+ *      action enum 去项 + 描述去 panel 段 + view/freeze 两参数（仅 panel 消费）移除。
+ *   ③ 动作级分类（`isReadonlyAction` status/observe · `isControlAction` cancel/send）——端审批面
+ *      （execute-tools 权限门/批分组 + tool-gates planMode 门）按谓词读；核 subagent 工具无该钩子
+ *      （核内零端名/零端概念）⇒ 装饰面承载（逐字同删除档谓词）。
+ *   ④ C-5 终态回显（AGENT-LOOP（VSC 仓）§12.3）：核 `status` 不读墓碑（未命中即 unknown），
+ *      端契约要求 discarded/cancelled/consumed/failed 四态回显 ⇒ 装配面接管 `execute`（仅在核
+ *      输出为 unknown-错误时查核墓碑单点 `tombstoneOf` 补回显——其余输出原样透传）。
+ */
+export function vscSubagentFace(tool) {
+  const { view, freeze, ...props } = tool.parameters.properties
+  const actionProp = props.action
+  return {
+    ...tool,
+    description: tool.description.split("\n").filter((l) => !l.startsWith("- action:'panel'")).join("\n"),
+    parameters: {
+      ...tool.parameters,
+      properties: {
+        ...props,
+        action: {
+          ...actionProp,
+          enum: (actionProp.enum ?? []).filter((a) => a !== "panel"),
+          description: actionProp.description.replace(/panel \(view the live subagent panel \/ freeze a digested-stuck block — §19\.6\), /, ""),
+        },
+      },
+    },
+    async execute(args, ctx) {
+      return vscStatusTerminalEcho(args, ctx, await tool.execute(args, ctx))
+    },
+    isReadonlyAction(args) {
+      const action = args?.action
+      return action === "status" || action === "observe"
+    },
+    isControlAction(args) {
+      const action = args?.action
+      return action === "cancel" || action === "send"
+    },
+  }
+}
+
+/** C-5 终态回显表（墓碑 status → 返回 status + note；未列值不入表——不虚构语义）。
+ *  文案 = 删除前端侧同表逐字（§12.3 C-5 四态：discarded/cancelled/consumed→done/failed）。 */
+const VSC_TERMINAL_ECHO = {
+  discarded: { status: "discarded", note: "discarded by the user's Stop — its report will NOT arrive (partial changes stay unmerged/unaudited; re-spawn if the work is still needed)" },
+  cancelled: { status: "cancelled", note: "cancelled — its report will NOT arrive (its work was stopped; partial changes stay unmerged/unaudited)" },
+  consumed: { status: "done", note: "delivered — the report was injected into the session" },
+  failed: { status: "failed", note: "settled with an error — the error report was injected; nothing is pending" },
+}
+
+/** C-5 终态回显（两池未命中 → 查墓碑；无记录/未列墓碑值照旧 unknown）。核 `status` 单查
+ *  未命中返回 unknown-错误串——本函数仅接管该形态（`status` + 带 id + 输出含 unknown）。 */
+async function vscStatusTerminalEcho(args, ctx, out) {
+  if (args?.action !== "status") return out
+  const id = args?.id
+  if (id === undefined || id === null || String(id) === "") return out
+  if (typeof out !== "string" || !out.includes("unknown async subagent id")) return out
+  const { tombstoneOf } = await import("@thincoder/core/agent-tools/async-settle.mjs") // 动态（W8 契约②）
+  const t = tombstoneOf(ctx?.agent, id)
+  const echo = t ? VSC_TERMINAL_ECHO[t.status] : null
+  if (!echo) return out
+  return JSON.stringify({ id, role: t.role, status: echo.status, note: echo.note })
+}
+
+/**
+ * Mode-dependent subagent role schema field (原 `src/agent-tools/subagent.mjs` verbatim 迁入
+ * ——W13；CLI setup.mjs parity）。The role enum is mutually exclusive per mode: normal mode
+ * advertises "coder", engineering mode advertises "eng-coder". The schema filter is the FIRST
+ * line of defense — the model never sees the disabled role as legal; the runtime throws in
+ * execute() stay as the hard gate. Returns { role, suffix }: `role` replaces
+ * parameters.properties.role wholesale; `suffix` appends to the tool-level description
+ * ("" in normal mode).
+ */
+export function modeRoleField(engineering) {
+  return engineering
+    ? {
+        role: {
+          type: "string",
+          enum: ["explore", "plan", "eng-coder", "eng-designer"],
+          description: "The sub-agent role — see the tool description for the role capability matrix. Exact spelling required.",
+        },
+        suffix: "In engineering mode, use role='eng-coder' for implementation (coder is disabled) and role='eng-designer' for design writing.",
+      }
+    : {
+        role: {
+          type: "string",
+          enum: ["explore", "plan", "coder"],
+          description: "The sub-agent role — see the tool description for the role capability matrix. Exact spelling required.",
+        },
+        suffix: "",
+      }
+}
+
+/**
  * §18 D-E3 + ENGINEERING-MODE.md §2.15 D（第 5 批 VSC 镜像 §2.22.4 ④/⑨）：工程子代理的受限
  * subagent 通道——eng-coder 的偏差审计（explore）与 eng-designer 的勘察（explore）。
  * Schema 层：role enum 仅 explore、async 参数删除（sync only）、action 参数删除（spawn-only）、
@@ -248,7 +349,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
       // The escalate action errors when the pool is empty (existing error semantics);
       // with a pool configured the tool description lists the current candidates
       // (withPool — escalate picks 'provider:model' from it), same as consult_start.
-      ...(loadConsultPool().length ? [withPool(subagentTool)] : [subagentTool]),
+      ...(loadConsultPool().length ? [withPool(vscSubagentFace(subagentTool))] : [vscSubagentFace(subagentTool)]),
       planTool, goalTool, skillTool, verifyTool, timerTool, advisorTool, engTool,
       // consult tools registered only when configured — an unconfigured model would otherwise
       // see the tool, call it, and eat an error turn (prompt-system review 2026-08-15).

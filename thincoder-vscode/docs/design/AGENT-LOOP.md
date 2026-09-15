@@ -76,13 +76,13 @@
 | `src/agent/run-stages.mjs` | checkAndCompact/fireEndOfRunDistill/finalizeAgentTurn/maybeGuardPushbacks（收尾 guard 推回） |
 | `src/agent/run-helpers.mjs` | 常量（turn 上限/落盘阈值/结果落盘 64K）、pushReal/agentState、工具结果 offload |
 | `src/agent/setup-reminders.mjs` | AUTO_REMINDER / ENG 提醒族 / injectEngineeringReminder |
-| `src/agent-tools/subagent.mjs` | subagent 单工具动作面 + spawn 门 + 引擎（审计受限通道、token 门接点）；observe/send dispatch + readonly/control 分类 + runChild onToolCall 记当前工具 / turnInput 注入消费回调（SUBAGENT-OBSERVE-SEND） |
-| `src/agent-tools/subagent-async.mjs` | async 池/collectSettledAsync/mergeChildMutations/gateEngCoderSpawn |
+| `src/agent-tools/subagent.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/subagent.mjs`） | subagent 单工具动作面 + spawn 门 + 引擎（审计受限通道、token 门接点）；observe/send dispatch + readonly/control 分类 + runChild onToolCall 记当前工具 / turnInput 注入消费回调（SUBAGENT-OBSERVE-SEND） |
+| `src/agent-tools/subagent-async.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/subagent-async.mjs`） | async 池/collectSettledAsync/mergeChildMutations/gateEngCoderSpawn |
 | `src/agent-tools/async-discard.mjs` | 中止丢弃单点（§12）：丢弃判定（只清已死）+ 终态记录 `discarded` + 模型可见丢弃提醒；**群 B 增补**：advisor 池同构（§15——`discardAbortedAdvisors`） |
-| `src/agent-tools/subagent-scheduler.mjs` | 任务调度器：filesOverlap/depInfo/queueRunnable/assertNoDepCycle/refillPool/nextSubagentId/停滞检测 + D1 池 accessor（getAsyncPool/removeFromAsyncPools——ASYNC-RESULT-CONTAINER） |
-| `src/agent-tools/async-settle.mjs` | async 结果容器统一共享 helper（ASYNC-RESULT-CONTAINER D1-D6）：settleAsyncEntry（四族公共收尾单点）/ pending 单容器（parkAsyncPending/injectPendingAsync role 分发）/ parentAborted 守卫 / buildChildSignal |
+| `src/agent-tools/subagent-scheduler.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/subagent-scheduler.mjs`） | 任务调度器：filesOverlap/depInfo/queueRunnable/assertNoDepCycle/refillPool/nextSubagentId/停滞检测 + D1 池 accessor（getAsyncPool/removeFromAsyncPools——ASYNC-RESULT-CONTAINER） |
+| `src/agent-tools/async-settle.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/async-settle.mjs`） | async 结果容器统一共享 helper（ASYNC-RESULT-CONTAINER D1-D6）：settleAsyncEntry（四族公共收尾单点）/ pending 单容器（parkAsyncPending/injectAsyncResult role 分发）/ parentAborted 守卫 / buildChildSignal |
 | `src/agent-tools/digest-budget.mjs`（W9 已迁核——现体 `thincoder-core/agent-tools/digest-budget.mjs`） | digest 注入预算单源（§16）：常量 / 轮记账（digestBudgetOver）/ 超限落盘（persistOverflowReport）——四族注入器共用 |
-| `src/agent-tools/subagent-actions.mjs` | status/cancel/escalate/consume-design/observe/send 动作执行器（observe/send——SUBAGENT-OBSERVE-SEND 2026-09-08） |
+| `src/agent-tools/subagent-actions.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/subagent-actions.mjs`） | status/cancel/escalate/consume-design/observe/send 动作执行器（observe/send——SUBAGENT-OBSERVE-SEND 2026-09-08） |
 | `src/agent-tools/subagent-spawn-gate.mjs（W12 已迁核——现体见批次档 §5）` | authorizeEngCoderDesignToken/executeConsumeDesignAction/resolveDesignSlot/dropExpiredTokenSlot |
 | `src/agent-tools/subagent-spec.mjs（W12 已迁核——现体见批次档 §5）` | description 面 / modeRoleField（schema enum）；observe/send 动作描述 + 枚举（SUBAGENT-OBSERVE-SEND） |
 | `src/agent-tools/subagent-escalate-async.mjs（W12 已迁核——现体见批次档 §5）` | 飞刀 async 引擎：turnInput 消费回调 + onToolCall 记当前工具 + settle 未投递注记（SUBAGENT-OBSERVE-SEND——与 spawn 同池 send 一致性，out-of-list） |
@@ -271,14 +271,14 @@ session — so end the turn; do not poll or wait for the result."（本体在 sp
   回显终态（不再 unknown）。详见 §12.3 契约（本处只留指针——单一权威源）。
 - **settle 统一机制（ASYNC-RESULT-CONTAINER.md D1-D6，2026-09-08）**：四族（subagent/
   advisor/escalate/consult）settle 公共收尾单点 = `settleAsyncEntry`
-  （`src/agent-tools/async-settle.mjs`——落 report/error/done/status、日志三连
+  （`src/agent-tools/async-settle.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/async-settle.mjs`）——落 report/error/done/status、日志三连
   （ev:cancelled / {child|advisor}:done|:error + ev:settled）、cancelled/parentAborted/
-  挂起分流、`_resolve` 唤醒 waiter、腾槽补位、notifySettle）；守卫统一
+  挂起分流、settle waiter 唤醒（`_settle`/`_asyncWaiters`）、腾槽补位、notifySettle）；守卫统一
   `!parentAborted`（严格版——signal aborted 非 interrupt 或 controller aborted 非
   cancel）；族特有段作 `onAccounting` hook（advisor 陈旧判定/token D1 落盘；escalate
   三分类 merge 决策）。**pending 单容器** `_pendingAsyncResults` +role（五族分叉废弃
-  ——`_pendingAdvisorResults`/`_pendingEscalateResults`/`_pendingConsultResults`
-  退役）；**done-in-pool 统一表示**：留池 done:true + pending 单容器——`_inPending`
+  ——`_pendingAdvisorResults`/`_pendingEscalateResults`/`_pendingConsultResults`（旧独立族名——W13 已迁核收口/已退役——现体见批次档 §5）
+  旧独立族名随单容器化退役（W12/W13 收口——运行时零用））；**done-in-pool 统一表示**：留池 done:true + pending 单容器——`_inPending`
   标记保留（settle/sweep 同一表示防重复移交）。**池 accessor** `getAsyncPool(parent,
   role)`（subagent-scheduler.mjs——吸收 `history?._X ?? agent._X` 双查询）。
   **buildChildSignal**（async-settle.mjs——`sessionSignal ?? agent._sessionSignal ??
@@ -410,7 +410,7 @@ webview 输入面见下方 UI 段）；settle
 
 **§11.2 接入面补全（2026-09-11 第 10 批——本端镜像；CLI 端权威 = `AGENT-LOOP（CLI 仓）` §18）**：
 
-- ① `subagent status` 双池合并（本端 `src/agent-tools/subagent-actions.mjs` as-of :89-120 现只查子代理池——本批补）；
+- ① `subagent status` 双池合并（本端 `src/agent-tools/subagent-actions.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/subagent-actions.mjs`） as-of :89-120 现只查子代理池——本批补）；
 - ② `wait_for "advisor settled"` 判据改读评审池（本端 `src/tools/wait_for.mjs` as-of :125-129（W14 已迁核——现体 `thincoder-core/tools/ops.mjs` 的 wait_for 分支） 同缺陷——修前恒 0ms 秒过；
   复用本端已导出 `advisorReviewInFlight`（`src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）:92`——双载体判据））；
 - ③ `subagent cancel <advisor id>` 落评审池（面板 ⏹ 路由已有——`src/extension/panel-messages.mjs:238-241`；
@@ -464,7 +464,7 @@ webview 输入面见下方 UI 段）；settle
 
 **C. 会话级保留（单例收益本体）**：_engDesignTokens（Map——hydrate reconcile + TTL，**永不复位清空**）/config 的 engineering+advisor.guard（槽权威）/ _engPersist（绑定键）/ _engDesignReviewed（顶层恒 false 无影响）/ **_tasks/_goal（评审 #5——会话级不复位）** / **_pendingReminders（SESSION §6 槽字段——会话级）**。
 
-**D. 池载体仍挂共享 history 数组**（_asyncSubagents/_asyncAdvisors/_pendingAsyncResults/_consultSessions/_suspended/_asyncTombstones——agent.mjs:97-99 仅 run 期 attach）——单例不复用这些字段做持久化载体。
+**D. 跨 run 载体仍挂共享 depth-0 history 数组**（**W13 修正（2026-09-15）**：字段集 = `docs/core/design/AGENT-LOOP.md`（CLI 侧）§2.3 :93 **十字段全集**——`_asyncSubagents`/`_asyncAdvisors`/`_asyncTombstones`/`_pendingAsyncResults`/`_consultSessions`/`_engDesignTokens`/`_suspended`/`_asyncWaiters`/`_advisorRuns`/`_mutLog` + `_asyncQueue`；`agent.mjs` run 期以**访问器**把 agent 字段全量别名到 history）——单例不复用这些字段做持久化载体。
 
 ### 11.2.1 槽字段 ↔ hydrate 恢复映射（评审 #2——关闭 F4/AC3 恢复缺口）
 
@@ -561,8 +561,8 @@ destroy 边界（loadSession/project-switch/dispose/reload）重建单例时，�
 ### 12.1 issue 四根因现场复核（as-of 2026-09-11——修前必读；issue file:line 与现行树多处不符）
 
 **① async spawn 返回 raw object → `[object Object]`（模型拿不到 id）——机制不成立。**
-spawn ack 早已是 JSON 字符串：`src/agent-tools/subagent-async.mjs:324-326`（running）/ `:336-342`（queued），
-与 CLI 对位一致（`src/agent-tools/subagent-run.mjs:193/201`），且被契约测试断言（`test/batch-doc-gate.test.mjs:79-89` 的 `JSON.parse(ack)`）。
+ spawn ack 早已是 JSON 字符串：`src/agent-tools/subagent-async.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/subagent-async.mjs`）as-of :324-326（running）/ `:336-342`（queued），
+ 与 CLI 对位一致（`src/agent-tools/subagent-run.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/subagent-run.mjs`）as-of :193/201），且被契约测试断言（端侧 `test/batch-doc-gate.test.mjs` 已退役——同门用例现居 `thincoder-core/test/` 子代理族：`JSON.parse(ack)` 断言面）。
 → 修 ① 会改错东西；本批只做纵深防御 = F-G1 契约锁 + F-G2 类型守卫。
 
 **② abort 时 `asyncMap.clear()` 静默清池、无注入通知——成立。**
@@ -571,13 +571,13 @@ spawn ack 早已是 JSON 字符串：`src/agent-tools/subagent-async.mjs:324-326
 会话收尾站 `src/extension/suspension.mjs:299-308` 形似——**评审轮次 1 #1 复核裁定：非本批修复面**（F-6 后仅面板销毁路径驱动、清池时条目已全死、无活消费方——需求 §9.4 跨会话排除面；机理与归属见 §12.8 #6），勿顺手接线。
 
 **③ 回合非正常结束 → 孤儿 / 报告静默丢失——成立（会话内路径）。**
-会话子代持**会话 signal**（`src/agent-tools/async-settle.mjs:86-88` buildChildSignal；`src/extension/panel-chat.mjs:411` sessionSignal），
+ 会话子代持**会话 signal**（`src/agent-tools/async-settle.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/async-settle.mjs`）:86-88 buildChildSignal；`src/extension/panel-chat.mjs:411` sessionSignal），
 而 F-6（2026-09-09 用户裁定）后 Stop 只停当前轮 controller（`src/extension/panel-messages.mjs:218-221`）——
 digest 轮被 Stop 时出现「子代存活 ∧ 池被 clear」：子代成孤儿，其 settle 的 `removeFromAsyncPools` 作用于已空 Map，报告无人消费。
 → 修：F-G4（清池只清已死）+ F-G5（会话不搁置后台池）。
 
 **④ 空池恒返 `{done:true}` → abort-discard 后读成「已消费」——机制不成立、语义面残留。**
-`check` 动作已随 §19.8（2026-09-06）删除（`src/agent-tools/subagent-actions.mjs:4-5`——结果仅自动通道）；
+ `check` 动作已随 §19.8（2026-09-06）删除（`src/agent-tools/subagent-actions.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/subagent-actions.mjs`）as-of :4-5——结果仅自动通道）；
 残留 = 已丢弃 / 已取消的 id 在 `status` 面回 `unknown async subagent id`（同文件 `:116`）——同样读作「从未存在 / 已消费」。
 → 修：F-G6/F-G7（终态记录 + `status` 终态回显 + dependsOn 停靠）。
 
@@ -596,7 +596,7 @@ busy 拒收（`src/extension/panel-messages.mjs:56-61`）+ 挂起期消息走单
 |---|---|---|---|---|
 | a1 | 结果面（附在某个工具结果上） | 中止发生在工具调用**之外**（回合收尾/会话驱动）——无在飞工具结果可附；模型此刻不在等任何工具回执 | 不可实现 | 否决 |
 | a2 | 块面（webview ⟦ev⟧ 事件族） | 只达**用户**（webview 渲染），模型看不到；且块面已被 F-6/活动区分支占位（他批） | 不达模型 + 越界他批 | 否决 |
-| a3 | 消息面（user-role system reminder 注入 history） | 唯一可达模型的通道；同形：cancel 提醒 `src/agent-tools/subagent-actions.mjs:161-174`（`injectCancelReminder`——取消注入的既有形态）；中止 = 全池取消，形态对称 | 选定形态；实现单点放新模块，不复制既有函数 | **选定 a3** |
+| a3 | 消息面（user-role system reminder 注入 history） | 唯一可达模型的通道；同形：cancel 提醒 `src/agent-tools/subagent-actions.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/subagent-actions.mjs`）as-of :161-174（取消注入的既有形态）；中止 = 全池取消，形态对称 | 选定形态；实现单点放新模块，不复制既有函数 | **选定 a3** |
 
 **(b) 「已丢弃」的表示形态**（待裁 2——`{done:true}` 的现代表达）：
 
@@ -604,7 +604,7 @@ busy 拒收（`src/extension/panel-messages.mjs:56-61`）+ 挂起期消息走单
 |---|---|---|---|---|
 | b1 | 池内新 state（如 `status:"discarded"`） | 池条目状态机是**在飞**语义（refill/准入/域冲突全读它）；新增终态值会渗进调度与 webview 行派生 | 改动面大且与 done-in-pool 统一表示冲突 | 否决 |
 | b2 | 旁路记录 Map（`_asyncDiscarded`——引例：否决备选名，两仓皆无） | 第二份终态账（与墓碑语义重叠）——违反 D2 单一权威源 | 双账本 | 否决 |
-| b3 | 既有终态记录（墓碑）扩展 + `status` 回显 | 墓碑已是**跨 run 存活的终态单一记录**（`src/agent-tools/subagent-scheduler.mjs:69-88`，dependsOn 消费 `:165-178`）；只需新增 status 值 `discarded` 与一个读取器 | 单账本、零池态改动、零调度面扩散（depInfo 映射见契约 12.3） | **选定 b3** |
+| b3 | 既有终态记录（墓碑）扩展 + `status` 回显 | 墓碑已是**跨 run 存活的终态单一记录**（`src/agent-tools/subagent-scheduler.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/subagent-scheduler.mjs`）as-of :69-88，dependsOn 消费 `:165-178`）；只需新增 status 值 `discarded` 与一个读取器 | 单账本、零池态改动、零调度面扩散（depInfo 映射见契约 12.3） | **选定 b3** |
 
 **(c) 中止时池的生命周期**（待裁 3）：
 
@@ -623,7 +623,7 @@ busy 拒收（`src/extension/panel-messages.mjs:56-61`）+ 挂起期消息走单
 保留 ⟺ 其余（含：存活子代（会话 signal 未中止）/ done-in-pool / cancelled 条目——各由既有路径收尾）
 ```
 
-- `parentAborted` 复用 `src/agent-tools/async-settle.mjs:76-80`（既有单点守卫，不新造谓词）。
+- `parentAborted` 复用 `src/agent-tools/async-settle.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/async-settle.mjs`）as-of :76-80（既有单点守卫，不新造谓词）。
 - 判定读 `entry.signal`（子代有效信号——会话 signal 优先）与 `entry.controller`——与 settle/inject 同源。
 
 **C-2 丢弃动作序（每条目）**：写终态记录 → 出池（`removeFromAsyncPools(parent, "subagent", entry.id)`）→ 汇总 → 整批**一次**注入提醒 + 一条 `ev:discarded` 日志。
@@ -631,7 +631,7 @@ busy 拒收（`src/extension/panel-messages.mjs:56-61`）+ 挂起期消息走单
 - **签名与返回结构（评审轮次 1 #6 补——T-D3 消费）**：`discardAbortedPool(parent)`——`parent` 取 agent 形态（双载体同 `removeFromAsyncPools`：`parent.history ?? parent`）。
 - 返回 `{ discarded, kept }`：`discarded` = 丢弃条目摘要数组 `[{id, role, wasStatus}]`（`wasStatus ∈ running|queued`——C-4 列表括号词的数据源）；`kept` = 判定后仍在子代理池的条目数（数字——T-D3 断言 `kept === 2`）。
 
-**C-3 终态记录**：`writeTombstoneTo(history ?? parent, entry.id, "discarded", entry.role)`（既有写口，`src/agent-tools/subagent-scheduler.mjs:79-88`）。
+**C-3 终态记录**：`writeTombstoneTo(history ?? parent, entry.id, "discarded", entry.role)`（既有写口，`src/agent-tools/subagent-scheduler.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/subagent-scheduler.mjs`）as-of :79-88）。
 新增读取器 `tombstoneOf(parent, id)`（同模块导出，status 动作消费）。
 
 **C-4 提醒文案（verbatim 模板——测试断关键子串）**：
@@ -646,7 +646,7 @@ Partial changes from discarded children stay unmerged/unaudited; re-spawn if the
 - 整条经 `escapeXml`（`src/agent/run-helpers.mjs`）后 `history.push({role:"user", content: ...})`——与 cancel 提醒同形态同注入面。
 - **零丢弃 → 零注入**（零噪音；中止但无可丢弃条目时不产生提醒）。
 
-**C-5 `status` 终态回显（`src/agent-tools/subagent-actions.mjs` 单查分支——池两查未命中后）**：
+**C-5 `status` 终态回显（`src/agent-tools/subagent-actions.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/subagent-actions.mjs`；端侧回显面 = 装配层 `vscSubagentFace` 补）单查分支——池两查未命中后）**：
 
 | 终态记录 | 返回 | note（要点） |
 |---|---|---|
@@ -658,7 +658,7 @@ Partial changes from discarded children stay unmerged/unaudited; re-spawn if the
 
 无 id 概览（`overview.running/queued/done`）**形态零变**（终态记录是 id 级查询面；概览不引入无界增长字段）。
 
-**C-6 dependsOn 停靠（`src/agent-tools/subagent-scheduler.mjs` depInfo）**：墓碑 `discarded` → 返回 `{state:"cancelled", role}`（与取消同分支：依赖者驻留 depc、等父决定）——
+**C-6 dependsOn 停靠（`src/agent-tools/subagent-scheduler.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/subagent-scheduler.mjs`）depInfo）**：墓碑 `discarded` → 返回 `{state:"cancelled", role}`（与取消同分支：依赖者驻留 depc、等父决定）——
 不新增调度器 state 值、不改 AUTO 放行规则。理由：丢弃 = 依赖未交付，静默放行是错的；冒 `unknown` 硬错同样失真。
 
 **C-7 工具结果类型守卫（`src/agent/execute-tools.mjs`）**：工具 `execute` 返回**非字符串** → `throw`（既有一层 catch 转 `Error: ...` 可见结果，模型读得到）——
@@ -678,8 +678,8 @@ Partial changes from discarded children stay unmerged/unaudited; re-spawn if the
 | `src/agent-tools/async-discard.mjs` | 新 | ~75 | 丢弃判定/出池/墓碑/提醒（C-1~C-4） |
 | `src/agent/run-stages.mjs` | 298 | ~+8（≤306） | 中止分支：`clear()` → `discardAbortedPool` + `ev:discarded`（含 advisor 池留原样注释） |
 | `src/agent/execute-tools.mjs` | 480 | ~+5（≤485） | C-7 类型守卫（**他批在写——排程串行**） |
-| `src/agent-tools/subagent-actions.mjs` | 384 | ~+18（≤402） | C-5 终态回显分支 |
-| `src/agent-tools/subagent-scheduler.mjs` | 491 | ~+7（**≤498 贴线**） | `tombstoneOf` 导出 + depInfo `discarded` 映射（C-6）——越 500 停下报告 |
+| `src/agent-tools/subagent-actions.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/subagent-actions.mjs`） | 384 | ~+18（≤402） | C-5 终态回显分支 |
+| `src/agent-tools/subagent-scheduler.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/subagent-scheduler.mjs`） | 491 | ~+7（**≤498 贴线**） | `tombstoneOf` 导出 + depInfo `discarded` 映射（C-6）——越 500 停下报告 |
 | `src/extension/suspension.mjs` | 359 | ~+7（≤366） | C-8 digest 轮 AbortError 容忍 |
 | `test/async-parity.test.mjs` | 新 | ~200 | T-D1~T-D10（§12.5） |
 | `test/files.mjs` | 59 | +1 | 新档登记 |
@@ -797,8 +797,8 @@ Partial changes from discarded children stay unmerged/unaudited; re-spawn if the
 | 27 | `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）:193` | `§24 D-24b` → `§9 D-24b` | B |
 | 28 | `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）:197` | `§24 D-24b` → `§9 D-24b` | B |
 | 29 | `src/agent-tools/advisor.mjs（W12 已迁核——现体见批次档 §5）:234` | `§24 D-24b` → `§9 D-24b` | B |
-| 30 | `src/agent-tools/subagent-async.mjs:314` | `§24 D-24a` → `§5 D-24a`（`（R14）` 保留） | A |
-| 31 | `src/agent-tools/subagent-async.mjs:480` | `§24 D-24b` → `§9 D-24b` | B |
+| 30 | `src/agent-tools/subagent-async.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/subagent-async.mjs`）as-of :314 | `§24 D-24a` → `§5 D-24a`（`（R14）` 保留） | A |
+| 31 | `src/agent-tools/subagent-async.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/subagent-async.mjs`）as-of :480 | `§24 D-24b` → `§9 D-24b` | B |
 | 32 | `src/agent-tools/subagent-escalate-async.mjs（W12 已迁核——现体见批次档 §5）:4` | `§24 D-24a` → `§5 D-24a` | A |
 | 33 | `src/agent-tools/subagent-escalate.mjs（W12 已迁核——现体见批次档 §5）:16` | `§24 D-24a` → `§5 D-24a` | A |
 | 34 | `src/agent.mjs:24` | `§24 D-24b` → `§9 D-24b` | B |
@@ -983,8 +983,8 @@ No design token was issued for a discarded design review; launch the review agai
 ### 16.1 问题（现状复核 as-of 2026-09-11）
 
 预算现覆盖 = 仅 subagent 族：`DIGEST_INJECT_BUDGET` + `digestRoundFor` + `persistDigestReport` 全在
-`src/agent-tools/subagent-async.mjs:372-437`，判超只在 `injectAsyncResult` 内联。三族绕过：
-`injectAdvisorResult`（`advisor-async.mjs:471-480`）、`injectEscalateResult`（`subagent-escalate-async.mjs:210-220`）、
+ `src/agent-tools/subagent-async.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/subagent-async.mjs`）as-of :372-437，判超只在 `injectAsyncResult` 内联。三族绕过：
+ advisor 逐族注入器（`advisor-async.mjs:471-480`）、escalate 逐族注入器（`subagent-escalate-async.mjs:210-220`）、
 `injectConsultResult`（`consult.mjs:118-134`）——派发点 `injectPendingAsync`（`async-settle.mjs:54-69`）按 role 分流，
 各族注入器不经 subagent 预算路径。多族条目同轮合并注入（挂起 digest 轮 `suspension.mjs:259-284` 与退出残余
 `:313-322`、run-start 注入 `agent.mjs:70-75`、回合尾直采 `subagent-async.mjs:456-465` / `advisor-async.mjs:483-492`）
@@ -1006,7 +1006,7 @@ No design token was issued for a discarded design review; launch the review agai
 （`.thincoder/tmp` 落盘——落盘名 `tool-<ts><rand>-<tag>.txt`（`tag` = 溯源标签：写入族 + 条目 id——文件名后缀）；清单行；失败 null——调用方回退 inline）。
 
 **D-DG2 四接线点**：`injectAsyncResult`（subagent 族——判超/落盘改调共享模块，标签与墓碑语义零变）；
-`injectAdvisorResult` / `injectEscalateResult` / `injectConsultResult`（三族新接线——统一形态：raw 计入预算 → 超限
+ 逐族注入器（advisor / escalate 两族已随镜像删旧退役——本批改指核统一入口；consult 为 `injectConsultResult`——三族新接线——统一形态：raw 计入预算 → 超限
 → 落盘清单行（失败回退 inline 预览））。
 
 **D-DG3 计数口径**：计入预算的 `raw` = 报告/错误正文（不含 `[System reminder: …]` 标签行——与既有 subagent 口径一致）；
@@ -1020,7 +1020,7 @@ No design token was issued for a discarded design review; launch the review agai
 | # | 文件 | 现 | 预计 | 动作 |
 |---|---|---|---|---|
 | 1 | `src/agent-tools/digest-budget.mjs`（W9 已迁核——现体 `thincoder-core/agent-tools/digest-budget.mjs`） | 新 | ~70 | 单源模块（D-DG1） |
-| 2 | `src/agent-tools/subagent-async.mjs` | 499 | ~470（净减） | 迁出 + re-export（**贴线缓解**） |
+| 2 | `src/agent-tools/subagent-async.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/subagent-async.mjs`） | 499 | ~470（净减） | 迁出 + re-export（**贴线缓解**） |
 | 3 | `src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）` | 493 | ≤498（**贴线注记**——越 500 停下报告） | +接线 |
 | 4 | `src/agent-tools/subagent-escalate-async.mjs（W12 已迁核——现体见批次档 §5）` | 221 | ~224 | +接线 |
 | 5 | `src/agent-tools/consult.mjs（W12 已迁核——现体见批次档 §5）` | 469 | ~473 | +接线 |
@@ -1357,7 +1357,7 @@ AC 5（AC-CI-1~AC-CI-5）· 关键决策 10（KD-1~KD-10）· 实施域 15 档 =
 | # | 闸 | 位置 | 事实 |
 |---|---|---|---|
 | ① | 深度门 | `src/agent/execute-tools.mjs:258`（批扫描 `:157` 同族） | 权限条件含 `depth === 0` → depth>0 永不进入权限阶段 |
-| ② | 无通道 | `src/agent-tools/subagent-run.mjs:87-126` | child callbacks 八项（onToken/onReasoning/onToolCall/onToolResult/onToolPanel/onAgentTurn/onComplete/onQuestion）——无 permission 回调 |
+| ② | 无通道 | `src/agent-tools/subagent-run.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/subagent-run.mjs`）as-of :87-126 | child callbacks 八项（onToken/onReasoning/onToolCall/onToolResult/onToolPanel/onAgentTurn/onComplete/onQuestion）——无 permission 回调 |
 | ③ | 预授权过宽 | `subagent-run.mjs:126` · `subagent-escalate.mjs:170` · `subagent-escalate-async.mjs:111` | 三处 child `runAgent(..., true, opts)` 的 `autoApprove` 形参恒 `true` → child `getAuto()` 恒真 → 权限阶段整段跳过（含 eng-coder 以外的写角色） |
 
 **可写面**：写权 child = `coder` / `eng-designer`（`subagent.mjs` 角色白名单）；`explore`/`plan` 工具集限只读
@@ -1479,7 +1479,7 @@ callbacks 对象——`id: entry.id`）各加 `onPermissionRequired: makeChildPe
 | 1 | `src/agent/execute-tools.mjs` | 506 | ~385（净减——C-11 拆出 + C-1） | C-1 条件/注释；拆出五函数 |
 | 2 | `src/agent/tool-gates.mjs`（新） | — | ~155 | C-11 verbatim 迁入 |
 | 3 | `src/agent-tools/child-permission.mjs`（新）（W9 已迁核——现体 `thincoder-core/agent-tools/child-permission.mjs`） | — | ~55 | C-2 helper |
-| 4 | `src/agent-tools/subagent-run.mjs` | 190 | ~206 | C-2/C-3 接线（callbacks + autoApprove） |
+| 4 | `src/agent-tools/subagent-run.mjs`（W13 已迁核——现体 `@thincoder/core/agent-tools/subagent-run.mjs`） | 190 | ~206 | C-2/C-3 接线（callbacks + autoApprove——W13 后端侧执行面改指核；角色域通道由核 `buildSpawnChild` 判） |
 | 5 | `src/agent-tools/subagent-escalate.mjs（W12 已迁核——现体见批次档 §5）` | 219 | ~233 | C-9 |
 | 6 | `src/agent-tools/subagent-escalate-async.mjs（W12 已迁核——现体见批次档 §5）` | 226 | ~240 | C-9 |
 | 7 | `src/extension/permission-gate.mjs` | 71 | ~115 | C-4/C-6 |
@@ -1514,8 +1514,7 @@ callbacks 对象——`id: entry.id`）各加 `onPermissionRequired: makeChildPe
 | T-CP7（W12 已退役——删除记录见批次档 §5） | escalate async + ⏹ | 池条目 controller.abort() | ask resolve(false) + permissionWithdrawn 发出 + 卡移除；无悬挂 | F-CP1 |
 | T-CP8 | 双 child 路由 | 两卡并存；先点第二张 | 第二条目 resolve（promptId 匹配——非队头） | F-CP1 |
 | T-CP9 | 陈旧/无 id 响应 | 无 promptId 响应 / 未知 promptId 响应 | 前者回退队头；后者 no-op（零 resolve） | F-CP1 |
-| T-CP10 | eng-coder 零卡 | eng-coder child（ask 档）写 | 零卡、零 approval 事件（C-3/KD-2 保持） | F-CP1 |
-| T-CP11 | 只读角色零卡 | explore/plan child | 零卡（无通道） | F-CP1 |
+| T-CP15 | 无通道静默 | headless（无 onPermissionRequired） | 通道 null → child 静默直通零回归 | F-CP1 |
 | T-CP12 | depth-0 零回归 | 顶层逐项 + 批合并既有路径 | 既有语义/文案/队列零变化（T-E14 族全绿——T-E14 已退场：设计期编号，现态不在册；行为面测试在位） | F-CP1 |
 | T-CP13 | 冻结块迟来事件 | 冻结块 + approval 事件 | 丢弃（meta 零写、零复活） | F-CP1 |
 | T-CP14 | child 多写 | child 单响应 ≥2 非只读工具 | 逐项两卡（批合并分支零进入） | F-CP1 |
@@ -1535,7 +1534,7 @@ i18n/文档锚用 fs 直读。
 |---|---|---|
 | AC-CP1 | F-CP1（机制） | T-CP1/T-CP2/T-CP3/T-CP5 全绿：卡 + 归属逐字 + approve/deny 语义 + approve-all 连带 |
 | AC-CP2 | F-CP1（模式继承） | T-CP4/T-CP5 全绿：AUTO 零卡；轮中翻转后续零卡 |
-| AC-CP3 | F-CP1（角色域） | T-CP10/T-CP11/T-CP12/T-CP15 全绿：eng-coder/explore/plan/无通道零卡；depth-0 零回归 |
+| AC-CP3 | F-CP1（角色域） | T-CP12/T-CP15 全绿（角色域零卡两例已退役——同门面由核 `buildSpawnChild` 角色分支测试树承载，删除记录见批次档 §5）：无通道零卡；depth-0 零回归 |
 | AC-CP4 | F-CP1（escalate/释放） | T-CP6（W12 已退役——删除记录见批次档 §5）/T-CP7（W12 已退役——删除记录见批次档 §5）/T-CP19（W12 已退役——删除记录见批次档 §5） 全绿：sync/async ask + 归属 + 取消释放（⏹/Stop——deny） |
 | AC-CP5 | F-CP1（块头） | T-CP1/T-CP13/T-CP16 全绿：⏸ + 态词、冻结丢弃、两 locale |
 | AC-CP6 | F-CP1（路由/释放） | T-CP8/T-CP9/T-CP14 全绿：promptId 匹配 + 回退 + 逐项形态 |
@@ -1554,7 +1553,7 @@ i18n/文档锚用 fs 直读。
 - **端差登记（语义同源、形态端差）**：CLI child 审批经 TUI 模态（`_permQueue` 串行 + owner key `${key}/${tool}` + `⟦ev⟧approval`
   头标）；VSC 经面板卡栈（promptId 路由 + owner 标签 + `subagentApproval` 事件）——本端原文自持。
 - **遗留登记**：KD-7（AUTO 提醒句删除）；KD-2（不引入 `_engTaskAuthorized`）；C-11 拆分后 `tool-gates.mjs` 的模块图登记——本档 §1 两条新行已补（修正轮 #3）；README/ARCHITECTURE/AGENTS 模块地图面如需 = 父侧。
-- **旧标出处（修正轮 #6）**：`§18 D-E3` 系源注释沿用的旧锚标签（§18 旧编号族——同族观察登记见本档 §13 边界 (e)，另批勘察）；本档两处引用已改指 C-3/KD-2（§18.2 可写面句 / §18.7 T-CP10）。
+- **旧标出处（修正轮 #6）**：`§18 D-E3` 系源注释沿用的旧锚标签（§18 旧编号族——同族观察登记见本档 §13 边界 (e)，另批勘察）；本档两处引用已改指 C-3/KD-2（§18.2 可写面句 / §18.7 子代理权限组用例表——T-CP10 已退役，同门用例见批次档 `docs/batches/2026-09-15-vsc-core-wiring.md`）。
 
 ### 18.10 UI / 交互决策落档
 

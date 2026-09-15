@@ -40,7 +40,7 @@
 
 **现场复核前置（2026-09-11 设计勘验——issue 断言不得直接当任务派）**：issue 四根因中两条的**机制面在现行树已不成立**——
 ① 「async spawn 返回 raw object」：spawn ack 早已是 JSON 字符串（`src/agent-tools/subagent-async.mjs:326/342`（本仓），
-与 CLI `src/agent-tools/subagent-run.mjs:193/201`（CLI 仓）对位），且被工具契约测试锁定（`test/batch-doc-gate.test.mjs:79`）；
+ 与 CLI `src/agent-tools/subagent-run.mjs:193/201`（CLI 仓）对位），且被工具契约测试锁定（`test/batch-doc-gate.test.mjs:79` 已退役——删除记录见批次档 §5）；
 ④ 「空池恒返 `{done:true}`」：`check` 动作已随 §19.8（2026-09-06）删除（结果仅自动通道）。
 而**症状面仍真实**：中止（Stop）导致的丢弃静默、孤儿（存活子代理脱离池）报告静默丢失、终态误读——
 落点即下列 F-G1~F-G7（逐条机制证据见设计档 §12.1 复核表）。

@@ -350,23 +350,24 @@ function poolHistory() {
   return history
 }
 
-test("⑫ F-2 cancelSubagent 路由（queued 目标）：引擎出队 + was:\"queued\" 通知 + 墓碑——陈旧 ⏹ no-op（用例表 F-2 错误行）", async () => {
+test("⑫ F-2 cancelSubagent 路由（queued 目标）：引擎出队 + 墓碑——陈旧 ⏹ no-op（用例表 F-2 错误行）", async () => {
   const notified = []
   const history = poolHistory()
   const e9 = { id: 9, role: "eng-coder", status: "queued", done: false, cancelled: false, _files: [], _dependsOn: [] }
+  // W13 键形单源（评审 🔴 收口）：核池键恒 `String(id)`（写侧 `set(String(id))`）——夹具锁 String 键，
+  // 防读键形回归被数字键夹具掩盖（原 `Number(msg.id)` 归一在生产恒 miss 的旧病理）。
   e9._onCancelled = (wasQueued) => notified.push({ id: 9, role: "eng-coder", status: "cancelled", ...(wasQueued ? { was: "queued" } : {}) })
-  history._asyncSubagents.set(9, e9)
+  history._asyncSubagents.set("9", e9)
   const p = stubPanel({ _liveLines: { history, fullHistory: history, cwd: "C:/ws" } })
 
   await handlePanelMessage(p, { type: "cancelSubagent", id: "9", role: "eng-coder" })
 
-  assert.equal(history._asyncSubagents.has(9), false, "queued 目标出队（map 移除——引擎 cancelSubagent）")
-  assert.deepEqual(history._asyncTombstones.get(9), { status: "cancelled", role: "eng-coder" }, "出队即终态 → cancelled 墓碑（依赖者查得）")
-  assert.equal(notified.length, 1, "was:\"queued\" 通知发出（生产 = entry._onCancelled → onSubagent → webview 移除等待头）")
-  assert.equal(notified[0].was, "queued", "webview 消费形状（activity.js cancelled+was 分支——块移除）")
+  assert.equal(history._asyncSubagents.has(9), false, "queued 目标出队（map 移除——核 executeCancelAction）")
+  assert.equal(history._asyncSubagents.has("9"), false, "String 键形出池（键形单源——回归锁）")
+  assert.deepEqual(history._asyncTombstones.get("9"), { status: "cancelled", role: "eng-coder" }, "出队即终态 → cancelled 墓碑（依赖者查得；键形 = String 归一）")
+  assert.equal(notified.length, 0, "W13：端侧 `_onCancelled` 通知缝（旧镜像私有）已随删旧退役——webview 等待头移除归事件中继面（见 §5 未决登记）")
 
   // 陈旧 ⏹（块已出队残留点击——用例表 F-2 错误行）→ 路由 no-op（未知 id——无虚构状态）
   await handlePanelMessage(p, { type: "cancelSubagent", id: "9", role: "eng-coder" })
-  assert.equal(notified.length, 1, "陈旧点击零通知（引擎 error 路径——块已移除无副作用）")
   assert.equal(history._asyncTombstones.size, 1, "无新墓碑（幂等）")
 })

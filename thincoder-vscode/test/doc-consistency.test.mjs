@@ -174,10 +174,12 @@ test("T63 ③ 正常：基线机制（夹具域——可读可写 · 过滤语�
 })
 
 // ── ⑥ 接线（T64） ──────────────────────────────────────────────────────────
-slow("T64 正常：接线——5 个新 test 档入册 test/files.mjs + 校验器真被跑到", () => {
+slow("T64 正常：新 test 档入册 test/files.mjs + 校验器真被跑到", () => {
   const list = readFileSync(join(REPO, "test", "files.mjs"), "utf8")
   const own = [
-    "test/batch-segment.test.mjs", "test/batch-doc-gate.test.mjs",
+    // W13（2026-09-15）收正：`test/batch-doc-gate.test.mjs` 随子代理族镜像删旧退役（入册面退场）
+    // ——同门恒等用例现居 CLI 侧 `thincoder-cli/test/batch-doc-gate.test.mjs`（删除记录见批次档 §5）。
+    "test/batch-segment.test.mjs",
     "test/eng-designer-role.test.mjs", "test/doc-consistency.test.mjs",
   ]
   for (const f of own) {

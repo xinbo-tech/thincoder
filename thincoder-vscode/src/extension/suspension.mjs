@@ -15,10 +15,11 @@
  * 驱动不 import runPanelChat（循环依赖）：回合执行器经 runTurn 注入（panel-chat.mjs
  * 装配真实实现，测试注入 mock——CLI agent-turn ctx.runAgent 同款手法）。
  */
-// W12（2026-09-15）：`../agent-tools/async-settle.mjs`（W13 面）继续提供 pending 单容器；
-// 会诊会话清理 = 核单源（`@thincoder/core/agent-tools/consult.mjs`）——动态 import（核链可达
-// node:sqlite，W8 契约②；静态引会入端壳静态链）——已移至 abort 分支引用点（原静态行退役）。
-import { injectPendingAsync, parkAsyncPending } from "../agent-tools/async-settle.mjs" // D2/D3 共享：pending 单容器注入分发 + 停靠统一表示
+// W13（2026-09-15）：核单源接线——pending 单容器停靠 = 核 `parkAsyncPending`（动态 import，
+// 停靠点见 sweepSettledToPending）；残余注入 = 核统一注入器（`injectAsyncResult` /
+// `injectConsultResult`，注入点见 finally 残余段）；会诊会话清理 = 核单源
+// （`@thincoder/core/agent-tools/consult.mjs`）——均动态 import（核链可达 node:sqlite，W8 契约②；
+// 静态引会入端壳静态链）。原静态行（`../agent-tools/async-settle.mjs`）随 W13 镜像删旧退役。
 import { logEvent } from "@thincoder/core/log.mjs"
 // 任务可见性族投递通道（第 10 批 §5.1.4 第 3 条）：环 import（panel-callbacks ↔ 本模块——
 // B2 panel-messages↔panel-session 同款）——postSubagentEvent 为函数声明（hoist）——只在
@@ -63,14 +64,20 @@ export function poolLive(history) {
  *  D2 done-in-pool 统一），不会重复入列。
  *  §9 D-24b：advisor 池同扫（同机制角色无关）；D2：两池统一扫入 pending 单容器
  *  （_pendingAsyncResults +role）。 */
-export function sweepSettledToPending(history) {
+export async function sweepSettledToPending(history) {
+  // W13（2026-09-15）：pending 单容器停靠 = 核单源（`@thincoder/core/agent-tools/async-settle.mjs`
+  // `parkAsyncPending`）。动态 import：核链经 subagent-scheduler→subagent-async→核 agent 栈可达
+  // node:sqlite（W8 契约②——静态引会破端壳静态闭包机判）。载体形态：核 `parkAsyncPending(parent, entry)`
+  // 写侧以「父对象字段优先、缺则借 history」落容器——此处传 history 本体（VSC 载体面 = history 数组；
+  // 若传 `{history}` 包装，数组未建窗口会在包装对象上落错容器 ⇒ 直接以数组为 parent，两窗口同落 history）。
+  const { parkAsyncPending } = await import("@thincoder/core/agent-tools/async-settle.mjs")
   for (const key of ["_asyncSubagents", "_asyncAdvisors"]) {
     const map = history?.[key]
     if (!map || map.size === 0) continue
     for (const e of [...map.values()]) {
       if (e.done && !e._inPending) {
-        parkAsyncPending({ history }, e) // 统一表示：_inPending 标记 + 单容器 push（D2）
-        map.delete(e.id) // map keys are the spawn-time id (number)
+        parkAsyncPending(history, e) // 统一表示：_inPending 标记 + 单容器 push（D2）
+        map.delete(String(e.id)) // W13 键形单源：核池键恒 String(id)（数字键面随镜像删旧退役）
       }
     }
   }
@@ -156,8 +163,20 @@ export function reassertLiveChildren(panel) {
 function waitForSettleOrWake(panel, susp) {
   return new Promise((resolve) => {
     let finished = false
+    // W13（2026-09-15）挂起唤醒面收口：核 settle 尾部（`async-settle.mjs` 公共尾 ④）唤醒面
+    // = `parent._asyncWaiters.splice(0)`（子 agent 的 settle 回调以 `ctx.agent` 为 parent——
+    // 生产 = 面板会话单例 agent）；端侧旧 `onAsyncSettled` 回执面（panel-callbacks 仍有定义）
+    // 在核 settle 路径无调用点 ⇒ 只等 `_suspWake` 会挂到下一用户输入/中止。双注册：
+    // ① 核 waiter 数组（真唤醒——与核 CLI 同缝）；② `panel._suspWake`（端侧兼容面保留）。
+    const carriers = [panel._agent, susp.lines?.history].filter((o) => o && typeof o === "object")
     const cleanup = () => {
       panel._suspWake = null
+      for (const c of carriers) {
+        const list = c._asyncWaiters
+        if (!Array.isArray(list)) continue
+        const i = list.indexOf(wake)
+        if (i >= 0) list.splice(i, 1)
+      }
       susp.abort?.signal.removeEventListener("abort", onAbort)
     }
     const finish = (why) => {
@@ -168,6 +187,7 @@ function waitForSettleOrWake(panel, susp) {
     }
     const wake = () => finish("wake")
     const onAbort = () => finish("aborted")
+    for (const c of carriers) (c._asyncWaiters ??= []).push(wake)
     panel._suspWake = wake
     if (susp.abort?.signal.aborted) { onAbort(); return }
     susp.abort?.signal.addEventListener("abort", onAbort, { once: true })
@@ -235,7 +255,7 @@ export async function suspensionSession(panel, entry) {
   logEvent("susp:enter", poolCounts(history))
   try {
     while (!susp.aborted && !susp.abort.signal.aborted) {
-      sweepSettledToPending(history)
+      await sweepSettledToPending(history)
       // 1. 用户输入优先（D-S5）：pendingInput 单槽——INPUT-LOCK-ASYNC（C'——2026-09-09）：
       //    busy（running 含 digest）输入禁用（routeUserTurn 拒收 + loading.js 锁）——消息只
       //   可能落在挂起空闲（driver 纯等待期——唤醒即消费）——至多一条待交接——消费清槽即
@@ -319,15 +339,20 @@ export async function suspensionSession(panel, entry) {
       history._pendingAsyncResults = [] // D2 pending 单容器——中止清容器不注入陈旧结果
     } else {
       // D-S3 ③ 兜底：退出前残余（极端竞态）直注入再退——结果零丢失（AC-S2）
-      // D2 pending 单容器：四族残余同点分发注入（injectPendingAsync 按 role 分发——
+      // D2 pending 单容器：四族残余同点分发注入（W13 起 = 核统一注入器按 role 分发——
       // subagent/advisor/escalate/consult 各族注入器文案各自保留）
       const residual = history._pendingAsyncResults
       if (residual?.length) {
-        // W12：注入载体稳定化——同一 ctx 对象跨本轮全部残余（核 `injectAsyncResult` 的 digest
-        // 轮预算按载体键累计——同轮多条累计面保持；见 async-settle.mjs injectPendingAsync）。
-        const injectCtx = { history, fullHistory: lines.fullHistory, cwd: entry.cwd }
+        // W13（2026-09-15）：核统一注入器单源（原端侧 `injectPendingAsync` 适配器随镜像删旧退役）
+        // ——consult 族按核 `agent.mjs` 同构分派（§25 D-R17a/b）。动态 import：核链可达 node:sqlite
+        //（W8 契约②）。载体稳定化：同一 `{history, _fullHistory}` 对象跨本轮全部残余（核
+        // `injectAsyncResult` 的 digest 轮预算按载体键累计——同轮多条累计面保持）。
+        const injectCtx = { history, _fullHistory: lines.fullHistory }
+        const { injectAsyncResult } = await import("@thincoder/core/agent-tools/subagent.mjs")
+        const { injectConsultResult } = await import("@thincoder/core/agent-tools/consult.mjs")
         for (const e of residual.splice(0)) {
-          await injectPendingAsync(e, injectCtx)
+          if (e.role === "consult") await injectConsultResult(injectCtx, e)
+          else await injectAsyncResult(injectCtx, e)
         }
       }
       // 残余注入落盘（在-memory 双线已改——防会话文件缺最后几条 reminder）

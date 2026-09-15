@@ -83,16 +83,16 @@ function stubPanel(extra = {}) {
   return p
 }
 
-/** 池 fixture（与 ⏹ 路由/投影同源形状）：running/queued 各一。 */
+/** 池 fixture（与 ⏹ 路由/投影同源形状）：running/queued 各一。W13 键形单源：池键恒 String(id)。 */
 function liveLines(extra = {}) {
   return {
     history: {
       _asyncSubagents: new Map([
-        [1, { id: 1, role: "explore", status: "running", pool: true, model: "glm-5.3", startedAt: 111 }],
-        [2, { id: 2, role: "eng-coder", status: "queued", position: 2 }],
+        ["1", { id: 1, role: "explore", status: "running", pool: true, model: "glm-5.3", startedAt: 111 }],
+        ["2", { id: 2, role: "eng-coder", status: "queued", position: 2 }],
       ]),
       _asyncAdvisors: new Map([
-        [3, { id: 3, role: "advisor", status: "running", reviewType: "design", model: "glm-5.3", startedAt: 222 }],
+        ["3", { id: 3, role: "advisor", status: "running", reviewType: "design", model: "glm-5.3", startedAt: 222 }],
       ]),
       ...extra,
     },

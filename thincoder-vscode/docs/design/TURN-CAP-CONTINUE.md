@@ -5,7 +5,7 @@
 
 > 权威源：`src/agent.mjs`（`ContinueError`）、`src/agent/run-helpers.mjs` / `src/agent/setup.mjs`
 > （预算 + `stateSink.history` / resume）、`src/extension/panel-chat.mjs`（主 agent 回合循环）、
-> `src/agent-tools/subagent.mjs`（子 agent）、`src/agent-tools/subagent-escalate.mjs（W12 已迁核——现体见批次档 §5）` /
+> `@thincoder/core/agent-tools/subagent.mjs`（子 agent）、`src/agent-tools/subagent-escalate.mjs（W12 已迁核——现体见批次档 §5）` /
 > `subagent-escalate-async.mjs`（飞刀）、`src/agent-tools/consult.mjs（W12 已迁核——现体见批次档 §5）`（会诊）。
 > 文档格式债清理批 V2（2026-09-08）——整文件单物理行 demux 为多行 + 漂移修正（explore-30 表述已随 AGENT-PARAMS 取消）。
 
@@ -38,7 +38,7 @@
 
 ### 子 agent
 
-- `src/agent-tools/subagent.mjs` execute 内 `for (let resume = false; ; resume = true)` 循环，捕获 `ContinueError`。
+- `@thincoder/core/agent-tools/subagent.mjs` execute 内 `for (let resume = false; ; resume = true)` 循环，捕获 `ContinueError`。（W13 已迁核收口——现体见批次档 §5）
 - 前台（非 asyncFlag）且有 `ctx.callbacks.onQuestion`：弹 `["Continue","Stop"]` → continue 时 `{ ...baseOpts, resume, history: sink.history }`。
 - 后台 async 子代理（`asyncFlag`）**永不弹卡**（§15 D-A3）——engineering && AUTO 时经 `shouldAutoResume`（subagent-async.mjs）自动续跑，否则降级 partial。
 - 拒绝 / headless / 无法续跑 → 返回 `turn cap reached (N turns) — work may be partial`（eng-coder 附带 designId 注记供重派）。
@@ -65,7 +65,7 @@
 
 ### 19.1 问题陈述（现场复核——as-of 2026-09-11）
 
-本端续跑循环内联在各执行体模块（子代理：`src/agent-tools/subagent-run.mjs:76`——`for (let resume = false; ; resume = true)`；
+本端续跑循环内联在各执行体模块（子代理：`@thincoder/core/agent-tools/subagent-run.mjs:76`——`for (let resume = false; ; resume = true)`；（W13 已迁核收口——现体见批次档 §5）
 飞刀同款：`subagent-escalate.mjs` / `subagent-escalate-async.mjs`）——每次续跑重进 `runAgent`，段内 `turn` 从 0 重起，
 `callbacks.onAgentTurn?.(turn + 1)`（`src/agent.mjs:125-129`）写入池条目的 `entry.turn`（`subagent-run.mjs:113-118`）随之重置。
 
@@ -134,7 +134,7 @@
 |---|---|---|
 | `src/agent.mjs` | ① `!opts.resume` 复位 `_turnSeq` ② resume 支种子落点（`opts._turnSeqBase`——载体缺口修正轮）③ 循环内编号帧 → `onAgentTurn(turn, maxTurns)` | 353 → ~362 |
 | `src/agent/run-helpers.mjs` | `turnFrame` + `applyTurnFrame`（+ 注释） | 276 → ~292 |
-| `src/agent-tools/subagent-run.mjs` | ① 消费点改 `applyTurnFrame` ② 段前累计捕获 + 续跑支种子传参 | 184 → ~190 |
+| `@thincoder/core/agent-tools/subagent-run.mjs` | ① 消费点改 `applyTurnFrame` ② 段前累计捕获 + 续跑支种子传参 | 184 → ~190（W13 已迁核收口——现体见批次档 §5） |
 | `src/agent-tools/subagent-escalate-async.mjs（W12 已迁核——现体见批次档 §5）` | 同（种子挂续跑支——当前休眠，见 19.3） | 216 → ~220 |
 | `test/turn-across-segments.test.mjs` | 新档——用例 T1-T11（T9-T11 = 载体缺口修正轮新增） | 新（~140） |
 | `docs/design/TURN-CAP-CONTINUE.md` | 本节 | 全档 70 → 206 行（`wc -l`；本批增补前 → 载体缺口修正轮落档后） |

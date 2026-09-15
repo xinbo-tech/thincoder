@@ -110,7 +110,7 @@ R17（2026-09-06）把 escalate 改为**缺省 async**（escalate depth-0 only �
 
 | 环节 | VS Code |
 |---|---|
-| 引擎 | `subagent-escalate.mjs`（sync 路径 verbatim——`escalateAction`）+ `subagent-escalate-async.mjs`（async——入池 + settle 三分类 + 飞刀 digest 注入文案） |
+| 引擎 | `subagent-escalate.mjs`（sync 路径 verbatim——`escalateAction`）+ `subagent-escalate-async.mjs`（async——入池 + settle 三分类 + 飞刀 digest 注入文案）（W12 已迁核收口——现体见批次档 §5；`escalateAction` 已退役为核 `executeEscalateAction`） |
 | 子 agent 构建 | `prepareEscalateProvider（W12 已迁核——现体见批次档 §5）`（buildProvider + effort 钳制 + apiKey 预检——缺 key 提前报错不裸 401） |
 | 子任务 runner | 同步：`runAgent(child, task, …)`；异步：经 `spawnAsyncSubagent` 入 other 池 |
 | 改动合并 | `mergeChildMutations(parent, child)`（重置父级 verify/advisor 收敛预算——飞刀不能绕过父级门） |

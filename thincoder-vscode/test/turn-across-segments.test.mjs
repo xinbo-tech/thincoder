@@ -23,7 +23,9 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { turnFrame, applyTurnFrame } from "../src/agent/run-helpers.mjs"
 import { runAgent, ContinueError } from "../src/agent.mjs"
-import { runChild } from "../src/agent-tools/subagent-run.mjs"
+// W13（2026-09-15）：`runChild`（端侧子代理执行器）随镜像删旧退役——子代理执行面 = 核
+// `runChildPipeline`（子 agent 进程内自持 `_turnSeq`，无 `_turnSeqBase` 种子面；端 `_turnSeqBase`
+// 机制仅由已删执行器喂入——本档 T10 随之退役，见下方退役注）。
 import { setupWebview, installChatFixture } from "./helpers/webview-env.mjs"
 
 /** 池条目最小形状（fixture——mkEntry 风格，test/subagent-observe-send.test.mjs 先例）。 */
@@ -136,51 +138,12 @@ test("T9 段间生产断言（边界——本缺口核心）：段 2 首帧 = �
   }
 })
 
-// ─── T10：消费侧接线（边界——真 runChild + 假 runAgent）─────────────────────
-
-test("T10 消费侧接线（边界）：段前累计 → 续跑段 opts 种子；entry/终态通知携累计值", async () => {
-  const entry = {} // 空对象夹具（接缝注）——applyTurnFrame 直接写字段
-  const calls = []
-  const notifications = []
-  const fakeRunAgent = async (p, cwd, input, callbacks, signal, flag, opts) => {
-    calls.push({ opts: { ...opts } })
-    if (calls.length === 1) {
-      callbacks.onAgentTurn(1, 100) // 段 1 帧（生成侧口径）
-      throw new ContinueError(100)
-    }
-    callbacks.onAgentTurn(2, 101) // 段 2 首帧 = turnFrame(2, 0, 100)（与 T9 同口径）
-    return "stub report"
-  }
-  const out = await runChild(entry, {
-    parent: {},
-    ctx: { callbacks: { onQuestion: async () => "Continue", onSubagent: (m) => notifications.push(m) } },
-    cwd: tmpCwd,
-    runAgent: fakeRunAgent,
-    role: "explore",
-    subId: 7,
-    maxTurns: 100,
-    childInput: "task",
-    provider: { name: "stub", model: "stub-model" },
-    designId: null,
-    task: "task",
-    asyncFlag: false,
-    childSignal: undefined,
-  })
-  assert.equal(calls.length, 2, "ContinueError → onQuestion Continue → 续跑（两段）")
-  assert.equal(calls[0].opts.resume, false, "段 1 非续跑")
-  assert.equal("_turnSeqBase" in calls[0].opts, false, "种子仅挂续跑支（段 1 不携）")
-  assert.equal(calls[1].opts.resume, true, "段 2 resume:true")
-  assert.equal(calls[1].opts._turnSeqBase, 1, "续跑段种子 = 段前累计（段 1 帧第一参）")
-  assert.equal(entry.turn, 2, "entry.turn = 段 2 帧第一参（累计）")
-  assert.equal(entry.maxTurns, 101, "entry.maxTurns = 段 2 帧第二参（累计预算）")
-  const tail = notifications.at(-1)
-  assert.deepEqual(
-    { id: tail?.id, role: tail?.role, status: tail?.status, turn: tail?.turn, maxTurns: tail?.maxTurns },
-    { id: 7, role: "explore", status: "done", turn: 2, maxTurns: 101 },
-    "终态通知 {turn: 2, maxTurns: 101}（webview 冻结头数据源）",
-  )
-  assert.match(out, /^Subagent \(explore\) completed/, "正常完成报告")
-})
+// ─── T10：消费侧接线（W13 退役）────────────────────────────────
+// W13（2026-09-15）退役：原例驱端侧 `runChild(entry, {...})`（镜像删旧）断言续跑段 opts 种子
+// `_turnSeqBase` + entry/终态通知携累计值。核执行面（`runChildPipeline`/`runWithContinue`）
+// 的跨段种子 = 子 agent 本体 `_turnSeq`（`core/agent.mjs:142/200`，无 opts 种子面）；端
+// `_turnSeqBase` 消费点仅存于已删执行器。同门恒等覆盖：T9（端 runAgent 种子面——仍存且绿）
+// + 核测试树（TURN-CAP-CONTINUE 段间帧）+ 本仓 integration/scenario-03（真装配面续跑）。
 
 // ─── T11：escalate 种子锚（错误——唯一驻留锁）──────────────────────────────
 

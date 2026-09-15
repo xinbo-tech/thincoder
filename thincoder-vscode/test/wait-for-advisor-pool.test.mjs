@@ -23,7 +23,8 @@ const advisorEntry = (over = {}) => ({
 })
 
 test("T-B4（AC-B2 红→绿）：池内评审 running → 条件为假；池空 → 真", async () => {
-  const agent = { _asyncAdvisors: new Map([[7, advisorEntry()]]) }
+  // W13 键形单源：池键恒 String(id)（写侧 `set(String(id))`）——夹具锁 String 键
+  const agent = { _asyncAdvisors: new Map([["7", advisorEntry()]]) }
   assert.equal(await evaluateWaitForCondition("advisor settled", { agent }), false,
     "有 running 评审 → 未 settle（修前此处恒真 0ms 秒过——用户实证缺陷）")
   agent._asyncAdvisors.clear()
@@ -31,20 +32,20 @@ test("T-B4（AC-B2 红→绿）：池内评审 running → 条件为假；池空
 })
 
 test("T-B4b：判据只读评审池——子代理池的同名 role=advisor 条目不入判据", async () => {
-  const agent = { _asyncSubagents: new Map([[7, { id: 7, role: "advisor", status: "running", done: false }]]) }
+  const agent = { _asyncSubagents: new Map([["7", { id: 7, role: "advisor", status: "running", done: false }]]) }
   assert.equal(await evaluateWaitForCondition("advisor settled", { agent }), true,
     "子代理池里的 role=advisor 条目不影响判据（评审池才是事实源）")
 })
 
 test("T-B5（AC-B2）：池内 done:true 未消化 → 判为 settled（不阻塞）；queued 算在飞", async () => {
-  const agent = { _asyncAdvisors: new Map([[7, advisorEntry({ status: "done", done: true })]]) }
+  const agent = { _asyncAdvisors: new Map([["7", advisorEntry({ status: "done", done: true })]]) }
   assert.equal(await evaluateWaitForCondition("advisor settled", { agent }), true, "仅 done（未消化）→ settled（不阻塞）")
-  agent._asyncAdvisors.set(8, advisorEntry({ id: 8, status: "queued" }))
+  agent._asyncAdvisors.set("8", advisorEntry({ id: 8, status: "queued" }))
   assert.equal(await evaluateWaitForCondition("advisor settled", { agent }), false, "queued 算在飞（未 settle）")
 })
 
 test("T-B4c 双载体：history._asyncAdvisors 载体同判（advisorReviewInFlight 双载体已具备）", async () => {
-  const agent = { history: { _asyncAdvisors: new Map([[9, advisorEntry({ id: 9 })]]) } }
+  const agent = { history: { _asyncAdvisors: new Map([["9", advisorEntry({ id: 9 })]]) } }
   assert.equal(await evaluateWaitForCondition("advisor settled", { agent }), false, "history 载体 running → 假")
   agent.history._asyncAdvisors.clear()
   assert.equal(await evaluateWaitForCondition("advisor settled", { agent }), true, "history 载体空 → 真")

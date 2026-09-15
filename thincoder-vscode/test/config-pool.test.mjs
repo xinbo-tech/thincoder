@@ -26,7 +26,9 @@ import {
   ADVISOR_POOL_LIMIT, resolveAdvisorPoolLimit, advisorPoolLimitFor, launchAsyncAdvisor, resolveAdvisorLaunch,
 } from "@thincoder/core/agent-tools/advisor-async.mjs"
 import { docSetKey } from "@thincoder/core/agent-tools/review-streak.mjs"
-import { ASYNC_POOL_LIMITS, effectivePoolLimits } from "../src/agent-tools/subagent-scheduler.mjs"
+// W13（2026-09-15）：池常量/回归读取器 = 核单源（原 `../src/agent-tools/subagent-scheduler.mjs`
+// 镜像删旧）；核 `poolLimitsFor` 两域键（engCoder/other）+ advisor 第三键归核 advisor-async 读取器。
+import { ASYNC_POOL_LIMITS, poolLimitsFor } from "@thincoder/core/agent-tools/subagent-async.mjs"
 
 // ─── config 隔离（无真实 ~/.thincoder 触碰）+ webview 环境（happy-dom + en locale + vscode stub）──
 let _cfg
@@ -66,9 +68,9 @@ test("F-1 耦合锁：AGENT_DEFAULTS/常量/scheduler 回退三键 4/4/4（默�
   assert.equal(ASYNC_POOL_LIMITS.engCoder, d.engCoder)
   assert.equal(ASYNC_POOL_LIMITS.other, d.other)
   assert.deepEqual(Object.keys(ASYNC_POOL_LIMITS).sort(), ["engCoder", "other"], "subagent 常量表两键不变")
-  // scheduler effectivePoolLimits 第三键回退（显示/读取回退面——调度路径不消费）
-  const eff = effectivePoolLimits(null).limits
-  assert.deepEqual(eff, { engCoder: 4, other: 4, advisor: 4 })
+  // 核读面：`poolLimitsFor` 两域键回退 + advisor 第三键经核 advisor 读取器（W13 形式）
+  const eff = poolLimitsFor(null)
+  assert.deepEqual({ ...eff, advisor: advisorPoolLimitFor(null) }, { engCoder: 4, other: 4, advisor: 4 })
 })
 
 test("F-1 无配置 → loadAgentSettings 回退三键默认 4/4/4", () => {

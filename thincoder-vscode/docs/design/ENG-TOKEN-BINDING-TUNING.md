@@ -83,7 +83,7 @@
 | `src/agent/setup.mjs` | 恢复过滤（`isExpiredDesignToken` 逐槽校验，过期丢弃）+ 镜像同步不变量（过期镜像不落 null 而重指存活槽——防 torn-state） |
 | `src/extension/panel-session.mjs` | 键存在性写：`engDesignToken`/`engDesignTokens` 字段"键在 extra → 取 extra；缺键 → 保 slot"——显式 null 不再被 `??` 跳过（复活陷阱修复）；过期槽经恢复丢弃后下一次 turn-end agentState 带显式 null 钉清 slot 字段 |
 | `src/extension/session-io.mjs` + `session-slot-write.mjs` | `setSlotEngDesignTokens(cwd, slot, tokensObj, mirror)` — 会话 slot 持久面多槽 `{designId: token}` 写（null → 删字段；mirror 显式置） |
-| `src/agent-tools/subagent.mjs` | spawn 时 `authorizeEngCoderDesignToken(parent, designId, designToken)` 门禁调用（执行器已抽至 subagent-spawn-gate） |
+| `@thincoder/core/agent-tools/subagent.mjs` | spawn 时 `authorizeEngCoderDesignToken(parent, designId, designToken)` 门禁调用（执行器已抽至 subagent-spawn-gate）（W13 已迁核收口——现体见批次档 §5） |
 | `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）` / `messages.mjs` | 评审运行注入 designToken 到 prompt / Approved 回显块 |
 
 ## 6. 验收标准（Acceptance Criteria）

@@ -115,7 +115,7 @@
 - **R16 清理只删过期、三时机**：过期 token（格式有效且 TTL 已过）在
   (a) restore filter（`setup.mjs`——过期不入 Map/槽）、(b) `eng(enter)` sweep
   （`eng.mjs` purgeExpiredDesignTokens——核内名；W9 已迁核，原镜像名 sweepExpiredDesignTokens）、(c) spawn-gate slot 删除
-  （`subagent-spawn-gate.mjs` `dropExpiredTokenSlot`）被删；畸形/不匹配只拒不删。
+  （`subagent-spawn-gate.mjs` `dropExpiredTokenSlot`）被删；畸形/不匹配只拒不删。（W12/W13 已迁核收口——现体见批次档 §5；端侧旧执行器已退役）
   token **跨模式开关存活**（OFF→ON/OFF 不清有效 token——mode toggle 不烧凭证）。
 - **持久化**：多槽表随 `agentState()`（`engDesignTokens` 键）写槽 + async settle **当场同步 await 写槽**（D1——失败即 settle 失败，不 fire-and-forget）；`setup.mjs` restore filter 按 TTL 过滤读
   回 → 跨进程（重进/挂起后）TTL 内恢复。**会话内回合从槽新读 engState**（D3——弃入场快照）；spawn 门禁 miss 时回读槽 reconcile（D4）。

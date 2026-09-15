@@ -1,7 +1,7 @@
 # async 结果容器统一（VSC 端）
 
 > 板块：Agent 循环 · 异步子代理结果结算。状态：**已实现**（2026-09-08——async-settle.mjs 单点 + 测试交付——档头随核销更新——CLI 同名对应各自实现）。立项：2026-09-08 Top-8 #2。CLI 同名对应（ASYNC-RESULT-CONTAINER.md CLI 端）——同一机制各自独立实现。用户裁定 4 决策：池保留双池 accessor 吸收 / pending 单容器+role / 守卫统一 !parentAborted / consult 补 _sessionSignal 兜底。
-> 背景：async 子代理结果 settle 记账在 subagent/advisor/escalate/consult **4 处逐字重复** + pending 5 族分叉（VSC `_pendingAdvisorResults` 独立）+ done-in-pool 双表示 + `_sessionSignal` 兜底抄 4 处——最深状态债。VSC token 根治（159a39f）只加落盘未统一 settle。
+> 背景：async 子代理结果 settle 记账在 subagent/advisor/escalate/consult **4 处逐字重复** + pending 5 族分叉（VSC `_pendingAdvisorResults` 独立）+ done-in-pool 双表示 + `_sessionSignal` 兜底抄 4 处——最深状态债。VSC token 根治（159a39f）只加落盘未统一 settle。（W13 已迁核收口——现体见批次档 §5）
 > 范围：VSC 端 async 结果容器统一（池/pending/settle helper/buildChildSignal）；CLI 同名对应（各自独立实现）。
 
 ## 1. 需求
@@ -11,8 +11,9 @@
 
 ### 功能性需求
 - **F1（池 accessor 吸收）**：消费端统一经 accessor 访问池——VSC 池挂共享 history 数组 + alias（双查询 `history?._X ?? agent._X`），accessor 吸收差异。
-- **F2（pending 单容器+role）**：5 族 pending（含 `_pendingAdvisorResults` 独立）统一为**单容器 `_pendingAsyncResults`**（评审 #3——容器名定稿），条目带 role 字段；consult 裸对象升格为完整 entry 形态（同 subagent/advisor/escalate）。**done-in-pool 统一表示（评审 #1）**：留池 done:true + pending 单容器——`_inPending` 标记保留防重复移交（同 subagent/advisor/escalate 现语义）。
-- **F3（settle 共享 helper）**：新建 `src/agent-tools/async-settle.mjs`——公共 settle 收尾抽共享 helper；族特有段作 hook 注入。
+- **F2（pending 单容器+role）**：5 族 pending（含 `_pendingAdvisorResults` 独立——W13 已迁核收口，现体见 §5）统一为**单容器 `_pendingAsyncResults`**（评审 #3——容器名定稿），条目带 role 字段；
+  consult 裸对象升格为完整 entry 形态（同 subagent/advisor/escalate）。**done-in-pool 统一表示（评审 #1）**：留池 done:true + pending 单容器——`_inPending` 标记保留防重复移交（同 subagent/advisor/escalate 现语义）。
+- **F3（settle 共享 helper）**：新建 `@thincoder/core/agent-tools/async-settle.mjs`——公共 settle 收尾抽共享 helper；族特有段作 hook 注入。（W13 已迁核收口——现体见批次档 §5）
 - **F4（守卫统一）**：settle 守卫统一为 `!parentAborted`（严格版）。
 - **F5（consult 补信号兜底）**：consult 补 `_sessionSignal` 兜底（修一致性 bug）。
 - **F6（buildChildSignal）**：helper 吸收 `_sessionSignal ?? ctx.signal ?? null` 兜底抄 4 处。
@@ -27,7 +28,7 @@
 
 ### 现状（explore 核实 + STRUCTURE-DEBT §4-#2）
 - **settle 重复 4 处**：公共尾部/日志三连/cancelled/挂起分流逐字重复（subagent/advisor/escalate/consult）。
-- **pending 5 族分叉**：`_pendingAsyncResults`/`_pendingAdvisorResults`（独立）/`_pendingEscalateResults`/`_pendingConsultResults` 等（VSC 比 CLI 多 advisor 独立族）。
+- **pending 5 族分叉**：`_pendingAsyncResults`/`_pendingAdvisorResults`（独立）/`_pendingEscalateResults`/`_pendingConsultResults` 等（VSC 比 CLI 多 advisor 独立族）。（W13 已迁核收口——现体见批次档 §5）
 - **done-in-pool 双表示**（已退役——AC3 统一表示落地；现体 = 单容器 role 条目）：`_doneInPool` 独立表示 + pending 数组。
 - **`_sessionSignal` 兜底抄 4 处**（subagent/advisor/escalate/consult——VSC consult 也无兜底或抄法不同）。
 - **池挂共享 history 数组 + alias**（双查询 `history?._X ?? agent._X`——与 CLI 挂 agent.* 不同）。
@@ -38,11 +39,11 @@
 
 ### D2 pending 单容器+role
 - 统一为单容器（如 `_pendingAsyncResults`），条目带 role；consult 升格完整 entry。
-- 5 族统一（`_pendingAdvisorResults` 等独立族废弃）。
+- 5 族统一（`_pendingAdvisorResults` 等独立族废弃）。（W13 已迁核收口——现体见批次档 §5）
 - 消费端统一（注入/清理单容器一处清）。
 
 ### D3 settle 共享 helper
-- 新建 `src/agent-tools/async-settle.mjs`：`settleAsyncEntry(parent, entry, {pool, pendingFamily, onAccounting})`——公共收尾（settleSeq/日志三连/cancelled/挂起分流——统一守卫 `!parentAborted`）。
+- 新建 `@thincoder/core/agent-tools/async-settle.mjs`：`settleAsyncEntry(parent, entry, {pool, pendingFamily, onAccounting})`——公共收尾（settleSeq/日志三连/cancelled/挂起分流——统一守卫 `!parentAborted`）。（W13 已迁核收口——现体见批次档 §5）
 - 族特有 hook（advisor 调 settleAdvisorRun 记账——D1 落盘保留）。
 - 调用点改：subagent/advisor/escalate/consult settle 回调改调 helper。
 
@@ -57,11 +58,11 @@
 
 ## 3. 受影响文件（VSC，thincoder-vscode）
 
-- 新建：`src/agent-tools/async-settle.mjs`（settle 共享 helper + buildChildSignal + 池 accessor——预估 ~150 行）
+- 新建：`@thincoder/core/agent-tools/async-settle.mjs`（settle 共享 helper + buildChildSignal + 池 accessor——预估 ~150 行）（W13 已迁核收口——现体见批次档 §5）
 - 修改：`src/agent-tools/subagent-async.mjs`（~450 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-20）、`src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）`（~400 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-20）、
   `src/agent-tools/subagent-escalate-async.mjs（W12 已迁核——现体见批次档 §5）`（~250 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-20）、`src/agent-tools/consult.mjs（W12 已迁核——现体见批次档 §5）`（~300 行，settle 升格完整 entry + 信号兜底 + 改调 helper——delta ~-10）、
-  `src/agent.mjs`（~200 行，pending 消费单容器——delta ~-15）、`src/agent/run-stages.mjs`（~300 行，池 accessor + pending 清理——delta ~-10）、`src/extension/suspension.mjs`（~350 行，sweep 改调 helper + pending 清理——delta ~-20）、
-  `src/agent-tools/subagent-actions.mjs`（~400 行，池 accessor——delta ~+5）、`src/agent-tools/subagent-scheduler.mjs`（~350 行，池 accessor——delta ~+5）、**`src/agent-tools/subagent.mjs`（~500 行，buildChildSignal 吸收的 4 处兜底抄之一在 execute :240——D6 必需——delta ~+2）**
+  `@thincoder/core/agent-tools/subagent-actions.mjs`（~400 行，池 accessor——delta ~+5）、`@thincoder/core/agent-tools/subagent-scheduler.mjs`（~350 行，池 accessor——delta ~+5）（W13 已迁核收口——现体见 §5）、
+  **`@thincoder/core/agent-tools/subagent.mjs`（~500 行，buildChildSignal 吸收的 4 处兜底抄之一在 execute :240——D6 必需——delta ~+2）**（W13 已迁核收口——现体见 §5）
 - 文档：本设计 + README 地图登记 + AGENT-LOOP.md 子代理/async §
 
 ## 4. 验收

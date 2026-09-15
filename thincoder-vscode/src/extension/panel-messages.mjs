@@ -250,7 +250,10 @@ export async function handlePanelMessage(panel, msg) {
     // ⏹ 路由到 cancelAdvisorReview（②-6b——controller abort——取消不入 pending/不签发 token）。
     case "cancelSubagent": {
       const lines = panel._liveLines ?? panel._susp?.lines
-      const id = Number(msg.id)
+      // W13 键形单源（评审 🔴 收口）：核池键恒 `String(id)`（核 spawn/launch 写侧 `set(String(id))`
+      // ——`advisor-async.mjs:326` / `subagent-run.mjs`；旧端侧 `Number(msg.id)` 归一在生产恒 miss
+      // ⇒ ⏹ 路由失效面）。读键 = String 归一，与核 `getAsyncPool`/`cancelAsyncSubagent` 同形。
+      const id = String(msg.id)
       const entry = lines?.history?._asyncSubagents?.get(id) ?? lines?.history?._asyncAdvisors?.get(id)
       // advisor round 2 #6：role 交叉校验——陈旧按钮命中同 id 异 role 的极端情况防御
       // （webview ⏹ 携带 block 的 role——消息契约不设死参数）
@@ -266,8 +269,23 @@ export async function handlePanelMessage(panel, msg) {
         cancelAsyncAdvisor({ _asyncAdvisors: lines.history._asyncAdvisors, history: lines.history }, id)
         break
       }
-      const { cancelSubagent } = await import("../agent-tools/subagent.mjs")
-      cancelSubagent({ _asyncSubagents: lines.history._asyncSubagents, history: lines.history }, id)
+      // W13（2026-09-15）：原端侧 `cancelSubagent`（subagent.mjs/subagent-actions.mjs）随镜像
+      // 删旧退役——改指核 cancel 动作执行器 `executeCancelAction`（`@thincoder/core/agent-tools/subagent-async.mjs`
+      // ——与工具 action:'cancel' 同实现路径：running 定向 abort（settle
+      // cancelled 分支收尾）/ queued 出队 + 位置前移 + 补位；含 advisor 池 fallback）。动态
+      // import：核链可达 node:sqlite（W8 契约②）。合成 parent 携双池 + history + 队列
+      //（`_asyncQueue` 核侧载体——面板 agent 槽；缺则核内按空队处理）。
+      const { executeCancelAction } = await import("@thincoder/core/agent-tools/subagent-async.mjs")
+      executeCancelAction({ id }, {
+        agent: {
+          _asyncSubagents: lines.history._asyncSubagents,
+          _asyncAdvisors: lines.history._asyncAdvisors,
+          history: lines.history,
+          _asyncQueue: lines.history._asyncQueue ?? panel._agent?._asyncQueue,
+        },
+        depth: 0,
+        callbacks: {},
+      })
       break
     }
     // Ctrl+I inject (CLI parity): abort with an interrupt reason — the agent loop

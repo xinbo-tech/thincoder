@@ -77,7 +77,7 @@
 **用例**：T-MA4-1（正常：6 行逐字替换——键控=文件+行）；T-MA4-2（边界：`grep -rn '§21 ' src test` 零命中——模式含尾空格、域 = 代码域 src/test）；T-MA4-3（错误/反证：合成含 `§21 ` 行 → 断言捕获）。
 
 **边界（同族观察——另批，本批零动）**：冻结模式 = `§21 `（含尾空格）+ 域 = `src` / `test`——同族 `§21.1` 形态**不匹配**（空格差异——自然隔离）。
-残余登记：`src/agent-tools/subagent-scheduler.mjs` 10 处（:10 / :206 / :230 / :245 / :256 / :257 / :293 / :310 / :311 / :313）+ `src/agent-tools/subagent-actions.mjs:161`；
+残余登记：`@thincoder/core/agent-tools/subagent-scheduler.mjs` 10 处（:10 / :206 / :230 / :245 / :256 / :257 / :293 / :310 / :311 / :313）+ `@thincoder/core/agent-tools/subagent-actions.mjs:161`；（W13 已迁核收口——现体见批次档 §5）
 记史面 `CHANGELOG.md:37/:43/:44`（域外——不参与代码域机检）。同族观察登记，另批勘察（格式同 A3（e）边界——`AGENT-LOOP.md` §13）。
 
 ### A5：R24 死指针修复（**增补裁定——纳入本批；原「PORTABILITY 承接」登记改判**）（2026-09-11 增补）

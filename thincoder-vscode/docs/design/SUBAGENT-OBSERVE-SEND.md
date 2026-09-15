@@ -23,7 +23,7 @@
 ## 2. 设计（VSC 端落地）
 
 ### 现状（explore 核实）
-- VSC `subagent` 动作：`src/agent-tools/subagent-actions.mjs` status(:87) 只给决策字段；无 panel 动作（AC-P4）。子代理回调经 `subagent.mjs:305-397 runChild` → webview activity。
+- VSC `subagent` 动作：`@thincoder/core/agent-tools/subagent-actions.mjs` status(:87) 只给决策字段；无 panel 动作（AC-P4）。子代理回调经 `subagent.mjs:305-397 runChild` → webview activity。（W13 已迁核收口——现体见批次档 §5）
 - VSC child 历史在 runChild 闭包 `sink.history`（`subagent.mjs:389-393`），`setup.mjs:343` 只 depth0 挂 `_fullHistory`——**父进程内可达 sink.agent/sink.history，但薄、无工具暴露**。
 - 子代理只收 spawn task，无外部输入。父 `pendingInput` 语义同 CLI 可镜像。
 - **VSC 有 stateSink 模式同款**（runChild 已把 onAgentTurn/输出回调注入子 runAgent）——send 的输入源贯通可顺延该模式，比 CLI 顺。
@@ -49,9 +49,9 @@
 
 ## 3. 受影响文件（VSC，thincoder-vscode）
 
-- 修改：`src/agent-tools/subagent-actions.mjs`（observe+send）、`src/agent-tools/subagent-spec.mjs（W12 已迁核——现体见批次档 §5）`（schema 描述加两动作 + isReadonlyAction/isControlAction 分类——observe=readonly/send=control）、`src/agent-tools/subagent.mjs` runChild（stateSink 扩注入队列消费入口 + onToolCall 记当前工具）、子 runAgent 回合边界消费
-- 修改：`src/agent-tools/subagent-actions.mjs`（observe+send）、`src/agent-tools/subagent-spec.mjs（W12 已迁核——现体见批次档 §5）`（schema 描述加两动作 + isReadonlyAction/isControlAction 分类——observe=readonly/send=control）、`src/agent-tools/subagent.mjs` runChild（stateSink 扩注入队列消费入口 + onToolCall 记当前工具）、
-  **`src/agent-tools/subagent-async.mjs` + `subagent-escalate-async.mjs`**（池条目 `_injected` 载体 + settle "未投递"注——escalate 与 spawn 同池须同构）、**`src/agent.mjs`**（子 runAgent 回合边界消费——注入队列消费落点）、子 runAgent 回合边界消费
+- 修改：`@thincoder/core/agent-tools/subagent-actions.mjs`（observe+send）、`src/agent-tools/subagent-spec.mjs（W12 已迁核——现体见批次档 §5）`（schema 描述加两动作 + isReadonlyAction/isControlAction 分类——observe=readonly/send=control）、
+  `src/agent-tools/subagent.mjs`（W13 已迁核——现体见批次档 §5） runChild（stateSink 扩注入队列消费入口 + onToolCall 记当前工具）、子 runAgent 回合边界消费
+  **`@thincoder/core/agent-tools/subagent-async.mjs` + `subagent-escalate-async.mjs`**（池条目 `_injected` 载体 + settle "未投递"注——escalate 与 spawn 同池须同构）、**`src/agent.mjs`**（子 runAgent 回合边界消费——注入队列消费落点）、子 runAgent 回合边界消费（W13 已迁核收口——现体见批次档 §5）
 - 新增：`test/subagent-observe-send.test.mjs`（14 用例——running/queued/done/unknown/empty/cancel-race/凭证/分类/depth-gate/N=5 截断）+ `test/files.mjs` 登记
 - 文档：本设计 + README 地图登记 + AGENT-LOOP.md 子代理 §
 

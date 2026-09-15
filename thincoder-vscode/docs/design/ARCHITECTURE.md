@@ -110,7 +110,7 @@ AGENTS.md 模块清单为维护寄存器；本节为分组总览 + 「详细设�
 | 核心 | `src/agent/execute-tools.mjs` / `setup.mjs` / `run-stages.mjs` / `run-helpers.mjs` / `setup-reminders.mjs` | 工具调度/门禁/批审批、装配、收尾 guard 推回、offload/截断助手、提醒注入 | `AGENT-LOOP.md`（§3 控制/guard）、`TOOLS.md`（§5 装配/§6 调度） |
 | 工具 | `src/tools/`（file/search/more-file/linter/checklist/git/git-ext/git-checkpoint/shell/web/lsp/execute/question/read_image/code/context/focus/ops/wait_for/tree/shared/edit-diff/file-edit…） | 内置工具实现 | `TOOLS.md`（§2/§9）、`CHECKPOINT.md`（快照子系统） |
 | 元工具 | `src/agent-tools/`（task/recent_changes/plan/goal/skill/verify/timer/advisor/eng/read_history/consult + subagent 族） | 自律/子 agent/评审工具族 | `AGENT-LOOP.md`（子代理族）、`ADVISOR-CONVERGENCE.md`（advisor）、`ENGINEERING-MODE.md`（eng 门禁） |
-| 子 agent | `src/agent-tools/subagent.mjs` + `-spec/-async/-actions/-scheduler/-escalate/-escalate-async/-spawn-gate.mjs` | 单工具动作面/描述载荷/后台池/调度/飞刀/门禁（2026-09-05 拆分） | `AGENT-LOOP.md`（§4 动作面/§5 async 池/§6 调度器） |
+| 子 agent | `@thincoder/core/agent-tools/subagent.mjs` + `-spec/-async/-actions/-scheduler/-escalate/-escalate-async/-spawn-gate.mjs` | 单工具动作面/描述载荷/后台池/调度/飞刀/门禁（2026-09-05 拆分；W13 已迁核收口——现体见批次档 §5） | `AGENT-LOOP.md`（§4 动作面/§5 async 池/§6 调度器） |
 | 子 agent | `src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）` | 后台设计评审池 | `AGENT-LOOP.md`（§9 async 化）、`ADVISOR-CONVERGENCE.md`（评审协议） |
 | LLM | `src/provider.mjs` + `src/provider/rate.mjs` + `src/provider/transports/`（W10 已迁核——现体 `thincoder-core/provider/{core,rate,anthropic,google,sse,responses}.mjs`） | 三 transport、重试、限频门 | `PROVIDER.md`（§4 transport 调用链） |
 | LLM | `src/config.mjs` / `specs.mjs` / `config-presets.mjs` / `config-io.mjs` / `config-migrate.mjs` | 模型能力 spec、preset 表、config.json 读写/迁移 | `PROVIDER.md`（§1 配置/§2 preset/§6 spec） |

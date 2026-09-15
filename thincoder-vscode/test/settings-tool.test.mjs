@@ -175,8 +175,8 @@ test("T-S2.37 同族键（边界）：null 显式清除 / {} 清除态接受 / �
     const empty = await trySet("agent.subagentModels", "{}", ctx)
     assert.equal(empty.ok, true, empty.message)
     assert.deepEqual(diskOf(p).agent.subagentModels, {}, "{} = 有效清除态（非对象拒绝的反面——空对象接受）")
-    // 消费面探针（表驱动）：接受集 == 读侧可消费集（`subagent.mjs` effectiveSubagentModel）
-    const { effectiveSubagentModel } = await import("../src/agent-tools/subagent.mjs")
+    // 消费面探针（表驱动）：接受集 == 读侧可消费集（W13：核单源 `subagent-spawn.mjs` effectiveSubagentModel）
+    const { effectiveSubagentModel } = await import("@thincoder/core/agent-tools/subagent-spawn.mjs")
     for (const [value, role, want] of [
       [{ coder: "x:m1" }, "coder", "x:m1"],
       [{}, "coder", null],

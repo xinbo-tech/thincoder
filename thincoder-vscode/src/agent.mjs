@@ -32,6 +32,16 @@ const AUTO_TURN_DIGEST_DOMAIN =
  *  (§17 D-S6 — auto-turn changes never escape the verify/advisor guards silently). */
 export const INHERITED_GUARD_KEYS = ["_mutatedThisRun", "_verifiedThisRun", "_verifyPassed", "_calledAdvisorThisRun", "_touchedFiles", "_verifyRetries", "_advisorRound"]
 
+/** W13 载体字段集（跨 run 存活——住共享 depth-0 history；`docs/core/design/AGENT-LOOP.md §2.3` :93 十字段全集）。
+ *  `_mutLog` = 核 `advisor-settle.noteMutations` 写点（VSC 旧对位名 `_fileMutEvents`——核名单源）；
+ *  `_asyncWaiters` = 核 settle 尾部唤醒数组（`async-settle.mjs:270` `splice(0)` 全唤醒）；
+ *  `_advisorRuns` = 核评审实例登记册（`advisor-async.mjs:69-82`）。 */
+const CARRIER_FIELDS = [
+  "_asyncSubagents", "_asyncAdvisors", "_asyncTombstones", "_pendingAsyncResults",
+  "_consultSessions", "_engDesignTokens", "_suspended", "_asyncQueue",
+  "_asyncWaiters", "_advisorRuns", "_mutLog",
+]
+
 /** Typed error for turn-limit exhaustion — consumers can detect and offer "Continue?" prompt */
 export class ContinueError extends Error {
   constructor(turns) { super(`Agent reached max turns (${turns}).`); this.turns = turns }
@@ -66,15 +76,23 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
   // history._pendingAsyncResults are consumed BEFORE setupAgentRun pushes this run's
   // input (spliced = consumed — single injection point; turn-end pool entries are ①).
   // ASYNC-RESULT-CONTAINER.md D2（2026-09-08）：pending 单容器 +role——四族（subagent/
-  // advisor/escalate/consult）统一停靠同一容器（_pendingAdvisorResults/
-  // _pendingEscalateResults/_pendingConsultResults 独立族废弃），注入器按 role 分发
-  // （injectPendingAsync——async-settle.mjs）。splice 即 consumed——单注入点——注入一次。
+  // advisor/escalate/consult）统一停靠同一容器（独立族废弃），注入器按 role 分发。
+  // W13（2026-09-15）：注入器 = 核单源（`@thincoder/core/agent-tools/subagent.mjs`
+  // `injectAsyncResult`；consult 族按核 agent.mjs 同构分派 `injectConsultResult`——§25
+  // D-R17a/b）——原端侧适配器随镜像删旧退役。动态 import：核链可达 node:sqlite（W8
+  // 契约②）。载体 = 同一 `{history, _fullHistory}` 对象（核 digest 轮预算按载体键累计）。
+  // splice 即 consumed——单注入点——注入一次。
   if (depth === 0 && Array.isArray(opts.history?._pendingAsyncResults)) {
     const hist = opts.history
     const pend = hist._pendingAsyncResults
     if (pend.length > 0) {
-      const { injectPendingAsync } = await import("./agent-tools/async-settle.mjs")
-      for (const e of pend.splice(0)) await injectPendingAsync(e, { history: hist, fullHistory: opts.fullHistory ?? hist, cwd })
+      const carrier = { history: hist, _fullHistory: opts.fullHistory ?? hist }
+      const { injectAsyncResult } = await import("@thincoder/core/agent-tools/subagent.mjs")
+      const { injectConsultResult } = await import("@thincoder/core/agent-tools/consult.mjs")
+      for (const e of pend.splice(0)) {
+        if (e.role === "consult") await injectConsultResult(carrier, e)
+        else await injectAsyncResult(carrier, e)
+      }
     }
   }
 
@@ -106,11 +124,34 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
     history.push({ role: "user", content: AUTO_TURN_DIGEST_DOMAIN, transient: true })
   }
 
-  // §15 D-A3（VS Code 对齐）：async 注册表挂 agent 上；depth-0 的 map 沿共享 history
+  // §15 D-A3（VS Code 对齐）：async 注册表挂 agent 上；depth-0 的容器沿共享 history
   // 数组跨 runAgent 调用存活。
-  agent._asyncSubagents = (depth === 0 && history._asyncSubagents instanceof Map) ? history._asyncSubagents : new Map()
-  // §9 D-24b（R13）：async advisor 池同款载体（独立池——角色无关消费机制）。
-  agent._asyncAdvisors = (depth === 0 && history._asyncAdvisors instanceof Map) ? history._asyncAdvisors : new Map()
+  // W13（2026-09-15）载体绑定不变式收口（`docs/core/design/AGENT-LOOP.md §2.3` :93/:107——**十字段**
+  // 全集 + `_asyncQueue`）：核写侧**以父对象字段为入口**（`async-settle.mjs`「写侧不变——绑定
+  // 不变式下与 history 同一容器」；`carrierField` 只是读侧吸收）——只绑两池时，核 settle 的
+  // `parkAsyncPending(parent=agent)` / 墓碑 / 队列 / 唤醒数组会落在 **per-run agent** 上（挂起期 settle
+  // 报告丢投、digest 永不见 pending、`_asyncWaiters` 唤醒双径不同容器——种子 S1 病征类）。
+  // 绑定形态 = **访问器别名**（非快照拷贝）：容器的替换（`history._pendingAsyncResults = []` 中止
+  // 清容器等）两向同步可见。列表/Map 三类先在 history 侧建齐（核 spawn 直写 `parent._asyncSubagents` /
+  // settle 尾部读 `_asyncWaiters` / 评审登记册 `_advisorRuns` / 变更日志 `_mutLog`）。
+  if (depth === 0) {
+    if (!(history._asyncSubagents instanceof Map)) history._asyncSubagents = new Map()
+    if (!(history._asyncAdvisors instanceof Map)) history._asyncAdvisors = new Map()
+    if (!Array.isArray(history._pendingAsyncResults)) history._pendingAsyncResults = []
+    if (!Array.isArray(history._asyncWaiters)) history._asyncWaiters = []
+    if (!Array.isArray(history._mutLog)) history._mutLog = []
+    if (!(history._advisorRuns instanceof Map)) history._advisorRuns = new Map()
+    for (const f of CARRIER_FIELDS) {
+      Object.defineProperty(agent, f, {
+        configurable: true,
+        get() { return history[f] },
+        set(v) { history[f] = v },
+      })
+    }
+  } else {
+    agent._asyncSubagents = new Map()
+    agent._asyncAdvisors = new Map()
+  }
 
   // End-of-run exploration distillation boundary (CONTEXT-COMPACTION §5): setupAgentRun has already
   // pushed the user input + injections, so everything appended from here is "this run's" work.

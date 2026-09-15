@@ -122,8 +122,8 @@
 | advisor-guard-completion | 183 | T-VG20（W12 已退役——删除记录见批次档 §5） 点火回执冻结句 | 段删 | 195-198 | 读 advisor-async 实现锚 grep |
 | advisor-refusal-accounting | 230 | AC-MA6-3 静态：builder 导出 + 旧内联零残留 | 整删 | 230-238 | 全为三档 src 源文本 grep |
 | async-visibility | 399 | AC-A6/A7 机检：REMOVE 面零复活 + 登记 + 调用点 | 段删 | 400-407 | 读六档源 includes |
-| batch-doc-gate | 105 | T54 边界：校验逻辑单份 | 整删 | 105-115 | 全为三档 src grep + 计数 |
-| batch-doc-gate | 173 | T54 边界：schema 含 batchDoc 属性 | 段删 | 175-176 | 读 `src/setup.mjs` 正则在场 |
+| batch-doc-gate | 105 | T54 边界：校验逻辑单份 | 整删 | 105-115 | 全为三档 src grep + 计数（W13 已退役——删除记录见批次档 §5） |
+| batch-doc-gate | 173 | T54 边界：schema 含 batchDoc 属性 | 段删 | 175-176 | 读 `src/setup.mjs` 正则在场（W13 已退役——删除记录见批次档 §5） |
 | child-permission | 494 | T-CP17 R2 措辞锚（四处逐字在位） | 整删 | 494-516 | 全为 `docs/design/*.md` 文本在场 / 缺席（已删除——删除记录 = 本档 §8.1） |
 | child-permission | 520 | T-CP18 结构（AC-CP8）：execute-tools ≤500、tool-gates ≤300 | 段删 | 527-530 | 函数名 src grep + 旧定义零残留（均已退场）；对拍行（原 :531，清单外）随 T-VG19（W12 已退役——删除记录见批次档 §5） 段删同步退场（`2026-09-12-PROSE-ANCHOR-RETIRE.md` §5）；余两断言保留 |
 | context-parity | 363 | T-CI-11 双端对照：CLI 序锚字面在源 | 段删 | 367-384 | 读 `../thincoder` 源 + indexOf 序（T-CI-11 已退场——整删——两仓合并批 2；删除记录 = 2026-09-13-TWO-REPO-MERGE §5） |

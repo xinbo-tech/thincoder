@@ -142,10 +142,12 @@ test("F-2b 同渠道（cfg.provider=主渠道）无 cfg.model → model = 主渠
 })
 
 test("F-1 byName 裸渠道名 → model = 渠道默认单值（克隆重派生——CLI F-2c 镜像）；渠道无默认模型 → parent model 兜底（T28）", async () => {
-  const { resolveChildProvider } = await import("../src/agent-tools/subagent.mjs")
-  const parent = { _provider: MAIN, config: { providersList: [{ name: "kimi", baseURL: "https://x", model: "kimi-k3", apiKey: "k2" }] } }
+  // W13（2026-09-15）：解析器 = 核单源（`@thincoder/core/agent-tools/subagent-async.mjs`——原端侧
+  // `subagent.mjs` 镜像删旧）；核载体名 = `parent.provider`（端名 `_provider` 为 W15 载体归一面）。
+  const { resolveChildProvider } = await import("@thincoder/core/agent-tools/subagent-async.mjs")
+  const parent = { provider: MAIN, config: { providersList: [{ name: "kimi", baseURL: "https://x", model: "kimi-k3", apiKey: "k2" }] } }
   assert.equal(resolveChildProvider(parent, "kimi").model, "kimi-k3", "渠道默认单值命中")
-  assert.equal(resolveChildProvider({ _provider: MAIN, config: { providersList: [{ name: "kimi", baseURL: "https://x", apiKey: "k2" }] } }, "kimi").model, MAIN.model, "渠道无默认模型 → parent model 兜底")
+  assert.equal(resolveChildProvider({ provider: MAIN, config: { providersList: [{ name: "kimi", baseURL: "https://x", apiKey: "k2" }] } }, "kimi").model, MAIN.model, "渠道无默认模型 → parent model 兜底")
 })
 
 test("T28 渠道无默认模型时 advisor 克隆：provider.model ?? agent.provider.model（父兜底——无 undefined-model 请求）", async () => {
