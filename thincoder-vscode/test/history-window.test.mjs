@@ -1,13 +1,14 @@
 /**
  * history-window.test.mjs — SESSION-RESTORE-PARITY ① historyWindow 直驱组（extension 层纯函数）。
  * docs/design/SESSION-RESTORE-PARITY.md §1（规则 1-6 + C/A/B/E/F/G/H——AC-C/A/B/E/F/H 锁）。
- * 手法：直驱 ../src/extension/history-window.mjs（无 fs/vscode 依赖——node --test 快层直跑）；
- * fixture = 真实形状混排（pushReal 打点 ts / role 键 / tool_calls{id,function:{name,arguments}} /
+ * 手法：直驱核面 `@thincoder/core/history-window.mjs`（窗口算法单源——W6 起本端
+ * `../src/extension/history-window.mjs` = 端壳转口 re-export）；fixture = 真实形状混排（pushReal 打点 ts / role 键 /
+ * tool_calls{id,function:{name,arguments}} /
  * tool{tool_call_id,name,content}——老文件 timestamp 键 / 更老缺失）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { historyWindow, HISTORY_PAGE_SIZE, isRealUserMsg } from "../src/extension/history-window.mjs"
+import { historyWindow, HISTORY_PAGE_SIZE, isRealUserMsg } from "@thincoder/core/history-window.mjs"
 
 // ─── fixture 构建器（真实形状）────────────────────
 

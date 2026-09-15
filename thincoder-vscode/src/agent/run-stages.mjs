@@ -10,7 +10,12 @@
  * 同款先例）。
  */
 
-import { compactHistory, truncateFallback, COMPRESS_FAILURE_LIMIT, summarizeRunExplorations } from "../compact.mjs"
+// W6（压缩面取核单源）：压缩触发 / 摘要 / 降级截断 / 尾部预算 = @thincoder/core/context.mjs
+// （§2.5 #162 融合「取一侧」）；阈值档位 = 核 config.mjs resolveCompactThreshold。
+// 蒸馏本体仍住 ../explore-distill.mjs（核面 re-export 面不同——改指随 W15）。
+import { compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT } from "@thincoder/core/context.mjs"
+import { resolveCompactThreshold } from "@thincoder/core/config.mjs"
+import { summarizeRunExplorations } from "../explore-distill.mjs"
 import { pushReal, reinjectAfterCompaction, MAX_VERIFY_PUSHBACKS, MAX_VERIFY_RETRIES, hasCodeMutations } from "./run-helpers.mjs"
 import { MAX_ADVISOR_PUSHBACKS } from "./run-helpers.mjs"
 import { MAX_ADVISOR_ROUNDS } from "../advisor/run.mjs"
@@ -149,41 +154,47 @@ export async function maybeGuardPushbacks(agent, st) {
 }
 
 /**
- * Context compaction check（2026-09-05 实践轮——自 runAgent 主循环按骨干—细节两层
- * 提取，verbatim + 签名化，语义零变）：仅安全点调用（history 以完整交换结尾——
- * user 或 tool 位，CLI parity D1）。内部：measured-baseline 压缩（CLI parity D3——
- * prompt_tokens 为全上下文实测、追加消息按增量估算；tools schemas 作纯估算开销；
- * signal 在 Stop 时取消在途摘要请求）→ 重建边界/基线失效/任务再注入 → 失败可见化
- * （Q3：onCompressFail）+ COMPRESS_FAILURE_LIMIT 连续失败降级 truncateFallback。
+ * Context compaction check（W6 起 = 端侧判定点封装 · §2.13.4 #56-类端接线）：仅安全点调用
+ * （history 以完整交换结尾——user 或 tool 位，CLI parity D1）。机制全归核
+ * `@thincoder/core/context.mjs`（compressIfNeeded / compressFallback——触发 / 摘要 / 降级
+ * 截断 / 尾部预算 / 回注 task+plan / 重建边界 / 基线失效）。本函数保留端面：阈值档位
+ * （核 resolveCompactThreshold——显式优先 / auto = 窗口 × 0.6，随回合模型）、共享数组回收、
+ * 失败计数与可见化（onCompressFail + COMPRESS_FAILURE_LIMIT 连败降级）、AUTO 回注、
+ * completion info 转发（onCompress）。
+ * 端差适配（调用期，W11/W15 前载体形态）：核读 CLI 字段名 provider / tasks / planMode——
+ * 本端载体为 _provider 语义的显式入参 / _tasks / _planMode；核以新数组替换 agent.history
+ * （applyCompression / shrinkOversized 均 copy-on-write）⇒ 回收本端共享数组（面板持有同一
+ * 引用，数组自定义属性随原位回收保留）。
  */
 export async function checkAndCompact(agent, ctx) {
   const { history, provider, systemPrompt, toolSchemas, cfgCompactThreshold, signal, callbacks, getAuto } = ctx
   try {
-    const compacted = await compactHistory(history, systemPrompt, provider, cfgCompactThreshold, {
-      lastPromptTokens: agent._lastPromptTokens,
-      usageAtLen: agent._usageAtLen,
-    }, toolSchemas, signal, callbacks, agent)
+    // 阈值（核 face）：显式 agent.compactThreshold 优先；否则 auto = provider 窗口 × 0.6。
+    const threshold = resolveCompactThreshold(cfgCompactThreshold, provider).value
+    // 核压缩面读 agent.provider / agent.tasks / agent.planMode（CLI 载体名）——调用期同指
+    // （核只读这三键；写面 = history / 边界 / 基线 / _lastCompressInfo，落在真 agent 上）。
+    agent.provider = provider
+    agent.tasks = agent._tasks ?? []
+    agent.planMode = agent._planMode === true
+    agent.history = history
+    const compacted = await compressIfNeeded(agent, threshold, callbacks, {
+      systemPrompt, tools: toolSchemas, traceDepth: agent?._depth ?? null,
+    }, signal)
     if (compacted) {
-      // Only reset the end-of-run distillation boundary when the machine line was REBUILT —
-      // a rebuild inserts a summary note + "Understood" placeholder and collapses the middle,
-      // so the array SHRINKS; the shrink path (shrinkOversized) keeps the SAME length (it only
-      // truncates bodies in place), so a same-length result means the boundary is still valid
-      // and must NOT be reset. Reset to 2 = the verbatim tail start ([head(empty), note,
-      // "Understood", ...tail] → tail begins after the two inserted messages).
-      const rebuilt = compacted.length !== history.length
-      history.length = 0
-      history.push(...compacted)
-      if (rebuilt) agent._runStartHistoryLen = 2
-      // Measured baseline is invalidated along with old history — fall back to estimation
-      agent._lastPromptTokens = null
-      agent._usageAtLen = null
+      // 核 applyCompression（重建）以新数组替换 agent.history——回收共享数组；shrinkOversized
+      // 同款（长度不变、仅截 body——边界 / 基线失效由核自理，与旧语义逐点同）。
+      if (agent.history !== history) {
+        history.length = 0
+        history.push(...agent.history)
+        agent.history = history
+      }
       agent._compressFailures = 0
       // D-CI4 / CLI run-stages.mjs:65 对位：压缩后历史缩短——plan 节律复位，提醒恢复
       // （不复位则 _planReminderAtLen 陈旧阈值压制「新用户消息 → 全量句」触发判据）。
       agent._planReminderAtLen = 0
       reinjectAfterCompaction(history, agent, getAuto)
       // Completion info (CONTEXT-COMPACTION §7 D-C1): { mode: "summary", tokensFreed,
-      // elapsedMs } from compactHistory — the webview renders "Compressed: N tokens
+      // elapsedMs } set by the core — the webview renders "Compressed: N tokens
       // freed (Xs)". Existing callers that ignore onCompress keep the old semantics.
       callbacks.onCompress?.(agent._lastCompressInfo ?? {})
     }
@@ -193,7 +204,7 @@ export async function checkAndCompact(agent, ctx) {
     // Q3 visibility (CONTEXT-COMPACTION §7 D-C1): a failed compression is no longer silent —
     // console.error + onCompressFail let the webview render the error text. Failure
     // STRATEGY is unchanged: COMPRESS_FAILURE_LIMIT consecutive failures still degrade
-    // to truncateFallback — this only adds observability.
+    // to deterministic truncation — this only adds observability.
     console.error("[context] compression failed:", e)
     callbacks?.onCompressFail?.(e)
     // Summary LLM failed — count consecutive failures; after the limit degrade to
@@ -201,21 +212,21 @@ export async function checkAndCompact(agent, ctx) {
     agent._compressFailures = (agent._compressFailures ?? 0) + 1
     if (agent._compressFailures >= COMPRESS_FAILURE_LIMIT) {
       agent._compressFailures = 0
-      const truncated = truncateFallback(history, provider)
-      if (truncated) {
-        history.length = 0
-        history.push(...truncated)
-        // Same boundary reset as the compacted path: truncateFallback returns the same
-        // [head(empty), note, "Understood", ...verbatim tail] shape — tail starts at index 2.
-        agent._runStartHistoryLen = 2
-        agent._lastPromptTokens = null
-        agent._usageAtLen = null
+      agent.history = history
+      if (compressFallback(agent)) {
+        // Same shape as the compacted path: core applyCompression rebuilds [head(empty),
+        // note, "Understood", ...verbatim tail] + re-injections — boundary reset to 2 and
+        // baseline invalidation live inside the core.
+        if (agent.history !== history) {
+          history.length = 0
+          history.push(...agent.history)
+          agent.history = history
+        }
         reinjectAfterCompaction(history, agent, getAuto)
         // Fallback completion info (D-C2/D-C3): mode marks the deterministic-truncation
         // path — the status line shows the degradation note ("truncated to N messages")
         // ONLY after 3 consecutive failures (the caller reached this branch).
-        agent._lastCompressInfo = { mode: "fallback", tailMessages: Math.max(0, truncated.length - 2) }
-        callbacks.onCompress?.(agent._lastCompressInfo)
+        callbacks.onCompress?.(agent._lastCompressInfo ?? {})
       }
     }
   }

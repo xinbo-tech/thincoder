@@ -1,18 +1,17 @@
 # VS Code 上下文压缩与回注（CONTEXT-COMPACTION）
 
-> 板块：上下文压缩（VS Code 端实现）。状态：**当前态规格**（2026-09-08 由
-> ARCHITECTURE §10 迁出并对照 `src/compact.mjs`/`src/agent/`（原
-> `src/context.mjs` 亦在列——GIT-ASYNC L21 整文件删除后剔除）
-> 核实写全——DOC-REORG-VSC 批 6）。
+> 板块：上下文压缩（VS Code 端实现）。状态：**迁移期参照历史**（2026-09-08 由
+> ARCHITECTURE §10 迁出并对照旧压缩档核实写全——DOC-REORG-VSC 批 6；W6 已迁核：旧档
+> `src/compact.mjs` 已删除、压缩面现体 = `thincoder-core/context.mjs`（W6 已迁核）；原 `src/context.mjs`
+> 亦在列——GIT-ASYNC L21 整文件删除后剔除）。
 > 与 `CONTEXT-COMPACTION（CLI 仓·设计）` 同名对应同一"上下文压缩"机制板块——各端独立实
 > 现，内容以本端代码为准（用户裁定：两端文档各自独立完整，不互指、不复制共享正
 > 文）。本档只写 VSC 端真实接线；CLI 端 TUI 压缩面板等差异在此不表。
-> 权威源（VS Code）：`src/compact.mjs`（压缩/降级全逻辑——
-> compactHistory/truncateFallback/shrinkOversized/tailStartByBudget/REVERSE 配对保
-> 护 + explore-distill 再导出）、`src/repomap.mjs`（repo_outline 工具）/`src/agent/
-> setup-reminders.mjs`（非压缩职责：repo outline 按需工具 + git/editor 富注入——
-> 原 `src/context.mjs` 载体已删，GIT-ASYNC L21）、`src/agent/run-stages.mjs`
-> （checkAndCompact 判定点）、`src/agent.mjs`（主循环安全点调用）。
+> 权威源（VS Code，W6 已迁核）：压缩面现体 = `thincoder-core/context.mjs`（压缩/降级全逻辑——
+> 触发 / 摘要 / 降级截断 / 尾部预算 + explore-distill 再导出）；本端判定点封装 + 主循环安全点
+> 调用 = `src/agent/run-stages.mjs` / `src/agent.mjs`；另 `src/repomap.mjs`（repo_outline 工具）
+> / `src/agent/setup-reminders.mjs`（非压缩职责：按需工具 + git/editor 富注入——原
+> `src/context.mjs` 载体已删，GIT-ASYNC L21）。
 > 装配（VS Code）：`src/extension/panel-callbacks.mjs`（onCompressStart/onCompress/
 > onCompressFail → webview `compress` 消息四态）、`webview/chat.js`（#compress-status
 > 状态行渲染）、`src/explore-distill.mjs`（轮末蒸馏）。
@@ -70,10 +69,11 @@
     tool 结果全留在 head。
   - **tail 侧**：切割点不得拆散 tool_calls 与结果——tail 首位为 tool 而 owner 在
     oldMessages 时把 owner 拉回 tail（防协议 400 orphan tool）。
-  - **REVERSE 保护（2026-08-16 400 事故实证）**：VSC 历史流可产生 tool 结果在
-    assistant 前的倒序形状——`callsGapAfter`（assistant 声明的 ids 未被其后**连
-    续** tool 块全盖住）判据 + `reverseProtectTail` 前移覆盖。收紧判据 = REVERSE
-    保护同源单一实现，CLI 端无此类别。
+  - **REVERSE 保护（2026-08-16 400 事故实证；W6 已迁核退场——旧档 `src/compact.mjs` 已删，现体见下行）**：
+    已迁核后现体 = `thincoder-core/context.mjs`（无本判据——若 VSC 侧倒序来源仍可达 ⇒ 回植候选记
+    `CONTEXT-COMPACTION（CLI 仓·设计）` 的 §6.11）。VSC 历史流可产生 tool 结果在
+    assistant 前的倒序形状——原判据 = assistant 声明的 ids 未被其后**连续** tool 块全盖住
+    （缺口判 + 前移覆盖），已随旧档删除退场。收紧判据 = REVERSE 保护同源单一实现，CLI 端无此类别。
 - **tail token 预算（tailStartByBudget）**：候选尾超 `ctx × 0.15`（再减
   `SUMMARY_SEGMENT_ESTIMATE = 1100` 的摘要段固定估算）→ pair-safe 前移 tailStart
   （tool 位 / 缺口 assistant 位不停——整对同切）；保底 10 条；短历史候选 <10 →
@@ -102,7 +102,8 @@
 ## 6. 降级链（compact.mjs / run-stages.mjs）
 
 - **摘要 LLM 失败** → `_compressFailures` 计数，连续 3 次
-  （`COMPRESS_FAILURE_LIMIT`）后 `truncateFallback` 确定性截断（无 LLM 调用，note
+  （`COMPRESS_FAILURE_LIMIT`）后由核 `compressFallback` 确定性截断（W6 已迁核——旧档
+  `src/compact.mjs` 已删除、现体 `thincoder-core/context.mjs`；无 LLM 调用，note
   + "Understood" 占位，同形状 → 边界重置 2）。
 - **无 middle 可切**（history 太短但超阈值——typically 单个巨消息）→
   `shrinkOversized` 单消息截断：user/tool body >8000 字符截留 head/tail，保留

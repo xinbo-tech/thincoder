@@ -953,7 +953,7 @@ async 点火路径；同步评审阻塞回合、父侧无并发写时刻）。
    经 `src/specs.mjs:5` re-export——本批接线面（§15.3 表 1）。
 4. **接线可达性**：评审循环所持 `provider` 即评审真实 provider（`src/advisor/run.mjs:137` `resolveAdvisorProvider(agent)`
    → `:181` 传入循环）；且循环已在该 provider 上消费 `specForModel`（`loop.mjs:202`，reasoningEcho 判定）——派生值就地可得。
-5. **同族同款（本端）**：主循环阈值跟随窗口——`src/compact.mjs:51-54`（压缩阈值 = 窗口 × 60%）、`src/compact.mjs:98-99`
+5. **同族同款（本端）**：主循环阈值跟随窗口——旧档 `src/compact.mjs:51-54`（压缩阈值 = 窗口 × 60%）、`src/compact.mjs:98-99`（W6 已迁核——现体 `thincoder-core/context.mjs`）
    （尾预算 = 窗口 × 15% − 摘要段估算）——「阈值跟随窗口」为本端既有惯例（CLI 同族同口径 = 其 §16.1 四条）。
 6. **消费面（grep 实测）**：`MAX_CONTEXT_TOKENS`（已退场——现体 = `advisorContextBudget`）在 VSC 仓定义 1 处（`compaction.mjs:18`）+ 导入与使用 2 处
    （`loop.mjs:22/116/121`）；`run.mjs:19-20` 的 re-export 面**不含**该常量——替换零外溢。
@@ -1115,7 +1115,7 @@ export function advisorContextBudget(provider) {
 | **文档宽度 / 一致性** | VSC 仓 `check-doc-width` 宽度 + V1/V2 新增违规 0（落档后实跑） |
 | **判定族 / §13.4 契约四** | 六 kind 前缀与六条尾文案逐字零改；kind 表指针（`loop.mjs` 溢出尾——文件不变）不受影响；T-VG1 既有回归锁继续绿 |
 | **§14.6 超时语义** | `agent.advisor.timeoutMs` 零改；预算（token）与墙钟（时间）两维正交 |
-| **主循环阈值** | 主循环压缩阈值（`src/compact.mjs`——60% 窗口）与评审预算职责不同——不合并、不同步（CLI 同裁定） |
+| **主循环阈值** | 主循环压缩阈值（旧档 `src/compact.mjs`——60% 窗口；W6 已迁核——现体 `thincoder-core/context.mjs`）与评审预算职责不同——不合并、不同步（CLI 同裁定） |
 
 ### 15.11 测试层：用例表（正常 / 边界 / 错误）
 

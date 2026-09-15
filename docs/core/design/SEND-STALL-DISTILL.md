@@ -33,7 +33,7 @@
 - **depth 守卫**：子轮（`depth > 0`）不得创建蒸馏——否则先创建者晚 resolve 会 clobber 历史（竞态）。
 - 落位时 **原地改保持 history 引用**（同一数组），并失效 token 基线（机器行形状变了）；随后调 `onDistilled`。
 - 蒸馏本体 = `summarizeRunExplorations`（VSC `thincoder-vscode/src/explore-distill.mjs:154`；核 `thincoder-core/explore-distill.mjs:145`）——
-  两档为**同名同源模块**（各端自持、语义同源），VSC 侧经 `thincoder-vscode/src/compact.mjs:388` re-export 保持消费方 import 面不变（核侧同款联动见 `thincoder-core/context.mjs:392`）。
+  两档为**同名同源模块**（各端自持、语义同源）；旧 VSC re-export 中转档 `thincoder-vscode/src/compact.mjs:388` **已删**（W6 迁核——现体消费 = `thincoder-vscode/src/agent/run-stages.mjs` 直引 VSC 蒸馏本体；核侧 re-export 见 `thincoder-core/context.mjs:392`）。
 
 ### 2.2 下一轮开头 await（FR2 / N1）
 
@@ -87,7 +87,7 @@ flush 点 = 每轮 `runAgentTurn` 的 finally——`:286-287`，render 已先行
 | 跨轮挂载点 | `thincoder-core/agent.mjs:84`（`_pendingDistill`） | `thincoder-vscode/src/extension/panel-chat.mjs:157`（`_distillState`） |
 | 下一轮 await | `thincoder-core/agent.mjs:99-101` | `thincoder-vscode/src/agent.mjs`（runAgent 内）· `panel-chat.mjs:170-172` |
 | 蒸馏本体 | `thincoder-core/explore-distill.mjs:145` | `thincoder-vscode/src/explore-distill.mjs:154` |
-| re-export | `thincoder-core/context.mjs:392` | `thincoder-vscode/src/compact.mjs:388` |
+| re-export | `thincoder-core/context.mjs:392` | 旧档 `thincoder-vscode/src/compact.mjs:388` **已删**（W6 迁核——现体消费 = `thincoder-vscode/src/agent/run-stages.mjs`） |
 | 保存回调 | `thincoder-cli/src/tui/tool-events.mjs:395`（`onDistilled` → `saveSessionImpl` 静默保存；callbacks 由 `src/tui/agent-turn.mjs` 传入） | `thincoder-vscode/src/extension/panel-callbacks.mjs:187-189` |
 | 退出 flush | `thincoder-cli/src/tui/agent-turn.mjs:29`（`DISTILL_FLUSH_TIMEOUT_MS = 5000`）· `:286-287`（finally 内有界等待）· `:282`（不摘除 `_pendingDistill`） | —（面板生命周期中止面替代——见 §2.4） |
 | 中止器 | —（会话退出 flush） | `panel-chat.mjs:161-162` · `chat-panel.mjs`（dispose）· `panel-session.mjs`（会话切换） |

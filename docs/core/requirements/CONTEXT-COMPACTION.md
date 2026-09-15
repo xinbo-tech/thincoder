@@ -9,7 +9,7 @@
 
 ## 1. 总体定位
 
-上下文压缩 · 标题 · 文本额度 = 上下文压缩（`src/context.mjs` ↔ VSC `src/compact.mjs`）**+** 会话标题（`src/generate-title.mjs`）**+** 文本额度（`src/text-budget.mjs` ↔ VSC `agent/run-helpers.mjs` 的 `safeSliceUTF16` 族）。
+上下文压缩 · 标题 · 文本额度 = 上下文压缩（`src/context.mjs` ↔ VSC `src/compact.mjs`；两旧档**已删**——现体 `thincoder-core/context.mjs`）**+** 会话标题（`src/generate-title.mjs`；已迁核）**+** 文本额度（`src/text-budget.mjs` ↔ VSC `agent/run-helpers.mjs` 的 `safeSliceUTF16` 族）。
 本板块对本子系统的要求 = 该面归一为**核内单一纯函数面**，标题生成的格式分派作**端差注入**。
 
 > 面清单与逐面裁决（分类 / 端差处置 / 前提校验 / 归属段）→ `docs/core/design/CONTEXT-COMPACTION.md` §1–§2（不复制）。
@@ -62,7 +62,7 @@
 ### 4.3 VSC 端条目（并入 · 2026-09-15 批 8 · 自 `thincoder-vscode/docs/requirements/CONTEXT-COMPACTION.md`）
 
 语义同源——VSC 档 F-K1–F-K6 / N-K1–N-K4 与 §4.1 逐条同义（不重并）；**VSC 独有条目** = **F-K7 压缩可见性（本端）**：
-回调链 onCompressStart → onCompress / onCompressFail → webview `compress` 消息四态（start / done / fallback / failed）渲染至 `#compress-status` 状态行（仅生命周期可见——摘要正文不进前端）。坐标（实核）＝ `thincoder-vscode/src/compact.mjs:18,28,31,115`
+回调链 onCompressStart → onCompress / onCompressFail → webview `compress` 消息四态（start / done / fallback / failed）渲染至 `#compress-status` 状态行（仅生命周期可见——摘要正文不进前端）。坐标（实核）＝ 旧档 `thincoder-vscode/src/compact.mjs:18,28,31,115`（**W6 已删**——现体 `thincoder-core/context.mjs`）
 （THRESHOLD_FRACTION 0.60 / KEEP_HEAD 0 / COMPRESS_FAILURE_LIMIT 3 / SUMMARIZE_PROMPT）+ `src/extension/panel-callbacks.mjs:144-152`（compress 回调接线）。端差 = 呈现面（webview 状态行四态 vs TUI 压缩面板）；
 提示词（`SUMMARIZE_PROMPT`）语义同源、各端原文自持。**测试缺口（发现即报）**：VSC `test/` 对压缩面零专属用例（as-of 2026-09-12 全扫零命中）——补测触发 = 该面下次被触碰。
 

@@ -50,7 +50,7 @@ export function fireEndOfRunDistill(agent, history, provider, signal, callbacks)
 }
 ```
 
-`summarizeRunExplorations` 本体在 `src/explore-distill.mjs`（`src/compact.mjs:374` re-export 向后兼容）。
+`summarizeRunExplorations` 本体在 `src/explore-distill.mjs`（旧 `src/compact.mjs:374` re-export 已随 W6 删除退场——W6 已迁核，现体消费 = `src/agent/run-stages.mjs` 直引本档）。
 
 ### 2.2 下一轮开头 await（N1 / FR2）
 
@@ -110,7 +110,7 @@ abort 点（运行 signal 之外的独立中止）：
 
 - `src/agent.mjs`：轮末 `depth===0`（onComplete 先行 + `fireEndOfRunDistill` 发射 + `distillState` 挂 pending）；`runAgent` 开头 await 上一轮蒸馏。
 - `src/agent/run-stages.mjs`：`fireEndOfRunDistill`（发射/落位回写/onDistilled/失败静默）。
-- `src/explore-distill.mjs`：`summarizeRunExplorations`（蒸馏本体）；`src/compact.mjs` re-export。
+- `src/explore-distill.mjs`：`summarizeRunExplorations`（蒸馏本体）；旧 `src/compact.mjs` re-export 已随 W6 删除退场（W6 已迁核，现体消费 = `src/agent/run-stages.mjs` 直引本档）。
 - `src/extension/panel-chat.mjs`：`panel._distillState` 初始化；`panel._distillController` 惰性创建；distillSlot 快照；runOpts 传 distillState + distillSignal；runPanelChat 级 await 上一轮蒸馏。
 - `src/extension/chat-panel.mjs`：panel dispose / 视图销毁 abort distillSignal。
 - `src/extension/panel-session.mjs`：会话切换 abort distillSignal。

@@ -46,8 +46,8 @@ export const MAX_VERIFY_PUSHBACKS = 2
 export const MAX_VERIFY_RETRIES = 3
 export const MAX_EMPTY_RETRIES = 2 // empty-response retry budget (CLI parity, IK60QP)
 
-/** Task re-injection reminder prefix — stale copies are filtered before re-injecting (CLI parity D7). */
-export const TASK_REINJECT_PREFIX = "[System reminder: your current task list after compaction:"
+// W6（压缩面取核单源）：task 回注前缀常量退休——去重 + 回注单点 = 核
+// `@thincoder/core/context.mjs`（TASK_REINJECT_PREFIX / applyCompression）。
 
 // Engineering-mode prompt templates retired (PROMPT-SYSTEM 施工② G4, 2026-09-10):
 // the per-run engineering prompt builder and its methodology warning machinery
@@ -250,40 +250,12 @@ export function agentState(agent) {
 }
 
 /**
- * Re-inject state reminders after the machine line was rewritten by compaction or truncation.
- * Task list is the single source of truth: stale re-injections are filtered FIRST, then the
- * latest version is appended (CLI parity D7 — otherwise old copies accumulate and grow stale).
+ * Re-inject the end-side state reminders after the machine line was rewritten by compaction.
+ * W6：任务列表 + plan mode 回注（含旧注入去重）已归核 `@thincoder/core/context.mjs` 的
+ * applyCompression（本单元同笔改指——单一回注点）；本函数只留端侧 AUTO 面：AUTO 提醒在
+ * 压缩后重注一遍（getAuto() 是端侧 live 标志——核内无此面）。
  */
 export function reinjectAfterCompaction(history, agent, getAuto) {
-  for (let i = history.length - 1; i >= 0; i--) {
-    const m = history[i]
-    if (m.role === "user" && typeof m.content === "string" && m.content.startsWith(TASK_REINJECT_PREFIX)) {
-      history.splice(i, 1)
-    }
-  }
-
-  // Re-inject task list after compaction (single source of truth)
-  if (agent._tasks?.length > 0) {
-    const pending = agent._tasks.filter((t) => t.status !== "done")
-    const done = agent._tasks.filter((t) => t.status === "done")
-    const taskSummary = [
-      ...pending.map((t) => `- [${t.status}] ${t.title}`),
-      ...done.slice(0, 3).map((t) => `- [done] ${t.title}`),
-    ].join("\n")
-    history.push({
-      role: "user",
-      content: `[System reminder: your current task list after compaction:\n${taskSummary}\nContinue from where you left off.]`,
-    })
-  }
-
-  // Re-inject plan mode if active
-  if (agent._planMode) {
-    history.push({
-      role: "user",
-      content: "[System reminder: plan mode is active. Explore the codebase read-only, design your solution, then call plan with action='exit' to present it for user approval.]",
-    })
-  }
-
   // Re-inject AUTO mode reminder — getAuto() is the live flag (CLI parity), so a
   // mid-turn approve-all that survives compression re-injects the reminder. D-CI6
   // (VSC-CONTEXT-PARITY §17.3): the permission sentence retired — the CLI has no
