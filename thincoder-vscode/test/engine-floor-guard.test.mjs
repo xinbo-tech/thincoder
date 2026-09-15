@@ -6,11 +6,14 @@
  *
  * 覆盖：版本闸边界（22.13）/ 探针分支（Node 够而 sqlite 缺——Electron #47706 形态）/
  * 低于下限 → 提示恰一次（含所需下限 + 实探测版本）+ 记忆面停用 + 不抛 / 本机真探针过闸
- * （兼作环境契约：测试机即产品下限面——dev 机须满足 22.13+）。
+ * （兼作环境契约：测试机即产品下限面——dev 机须满足 22.13+）/ 接线机检（`activate()`
+ * 护栏挂点先于 locale/面板 + `engines.vscode` 下限值锁 + 本档入册）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
 import { window as vscodeWindow } from "vscode"
+import files from "./files.mjs"
 import { nodeFloorMet, engineFloorMet, applyEngineFloorGuard, isMemoryFaceEnabled } from "../extension.mjs"
 
 /** 提示捕获（mock `window` 是共享对象——临时换 showErrorMessage，finally 还原）。 */
@@ -73,4 +76,18 @@ test("engine floor: this host passes (real node:sqlite probe)", async () => {
   const ok = await applyEngineFloorGuard()
   assert.equal(ok, true)
   assert.equal(isMemoryFaceEnabled(), true)
+})
+
+// ─── 接线机检：护栏挂点 + 下限值锁 + 本档入册（删挂点/降值即红）───
+
+test("engine floor wiring: activate() runs the guard first + engines.vscode pinned + file registered", () => {
+  assert.ok(files.includes("test/engine-floor-guard.test.mjs"), "本档已登记 test/files.mjs（未登记 = 不跑）")
+  const extSrc = readFileSync(new URL("../extension.mjs", import.meta.url), "utf8")
+  const body = extSrc.slice(extSrc.indexOf("export async function activate("))
+  const guardAt = body.indexOf("await applyEngineFloorGuard()")
+  assert.ok(guardAt > -1, "activate() 首步调用护栏（挂点缺失 ⇒ 引擎下限运行期核验失效）")
+  assert.ok(guardAt < body.indexOf("initLocale("), "护栏先于 initLocale（首步）")
+  assert.ok(guardAt < body.indexOf("new ChatPanel("), "护栏先于面板构建（首步）")
+  const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"))
+  assert.equal(pkg.engines.vscode, "^1.104.0", "引擎下限值 = 用户裁定 ^1.104.0")
 })

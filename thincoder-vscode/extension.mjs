@@ -19,7 +19,7 @@ let _panel
 /** Node.js floor [major, minor] — node:sqlite is unflagged since 22.13 / 23.4. */
 const NODE_FLOOR = [22, 13]
 
-let _memoryFaceEnabled = true
+let _memoryFaceEnabled = false // fail-closed until applyEngineFloorGuard() lands the real state
 
 /** true when `version` (default: the running Node.js) meets the 22.13 floor. */
 export function nodeFloorMet(version = process.versions.node) {
