@@ -64,7 +64,7 @@ export function updateMcpServer(name, config) {
 export function removeMcpServer(name) {
   const servers = loadMcpServers()
   if (!servers.some((s) => s.name === name)) return `No MCP server named "${name}"`
-  const r = persistRaw((raw) => {
+  const r = vscPersistRaw((raw) => {
     raw.mcp = raw.mcp && typeof raw.mcp === "object" ? raw.mcp : {}
     raw.mcp.servers = (raw.mcp.servers ?? []).filter((s) => s?.name !== name)
   })

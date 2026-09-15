@@ -15,6 +15,7 @@ import { saveAgentSettingsFromPanel, VSC_CONFIG_SCHEMA } from "../src/extension/
 import { _setProbeImplForTest } from "@thincoder/core/provider/list-models.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest, slotPath } from "../src/extension/session-io.mjs"
 import { handlePanelMessage } from "../src/extension/panel-messages.mjs"
+import { addMcpServer, removeMcpServer, loadMcpServers } from "../src/config-mcp.mjs"
 
 let dir
 let cfgPath
@@ -102,4 +103,13 @@ test("AC-4 VSC：selectModel 消息 = 写当前会话槽——config 内容字�
   assert.equal(m.slots[slot].activeProvider, "deepseek")
   assert.equal(m.slots[slot].activeModel, "deepseek-v4-flash")
   assert.equal(readFileSync(cfgPath, "utf8"), before, "再次确认 config 零写")
+})
+
+test("W16 回归（审计 🔴）：MCP 删条目走端壳写盘通道——可达 + config.json 更新 + $schema 保留", () => {
+  assert.equal(addMcpServer("ctx7", { command: "npx", args: ["-y", "ctx7"] }), null)
+  assert.equal(loadMcpServers().some((s) => s.name === "ctx7"), true, "写入后条目在场")
+  assert.equal(removeMcpServer("ctx7"), null, "removeMcpServer 成功返回 null（不得 ReferenceError）")
+  assert.equal(loadMcpServers().some((s) => s.name === "ctx7"), false, "条目已移除（盘面）")
+  assert.equal(removeMcpServer("ctx7"), 'No MCP server named "ctx7"', "未知名 → 错误串（不抛）")
+  assert.equal(loadRaw().$schema, VSC_CONFIG_SCHEMA, "MCP 写面同样注入/保留 $schema 指针")
 })

@@ -1324,7 +1324,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 | `ctx.onPermissionRequest`（子代理权限通道） | `agent-tools/consult.mjs:317` · `agent-tools/escalate-async.mjs:232` · `agent-tools/subagent-actions.mjs:437` | 端装配层 | CLI = 主 agent 同一 y/N 面板 · VSC = 合并面板（`batchPermissionGate` / `permissionGate`） | 未注入 ⇒ 视为拒绝（`thincoder-core/agent-tools/subagent-actions.mjs:281`）；注入 ⇒ 逐次询问且并发只弹一个 |
 | `ctx.callbacks.onToken`（事件承载面） | `agent/spawn-child.mjs:134-135`（包装转发）· `agent-tools/async-settle.mjs:228,262-264`（stopped / settled / done 发射点；补位刷新 :277） | 端装配层 | CLI = `⟦ev⟧` 文本 token（`thincoder-cli/src/tui/subagent-blocks.mjs`）· VSC = `postMessage`（`thincoder-vscode/src/extension/panel-callbacks.mjs`） | 注入假 `onToken` ⇒ 收到的 token 序列两端各自断言（各自面原文为准） |
 | `ctx.carrier` · `ctx.runTurn` · `ctx.hooks`（挂起 / 唤醒载体） | `agent/suspension.mjs:151,216`（形态见 `AGENT-LOOP.md` §2.3） | 端装配层 | CLI = `agent` 字段对象（池 / pending / `_suspended` 挂 agent）· VSC = `history` 字段对象 | 载体双夹具（CLI 形 / VSC 形）各跑同组状态机断言（`AGENT-LOOP.md` §2.3 验收点 1–2） |
-| `opts.schema`（`$schema` 写盘注入） | `thincoder-core/config-io.mjs:57,74` | 端装配层 | CLI = 不传（写盘无 `$schema`）· VSC = `$schema` 指针（现形：`thincoder-vscode/src/config-io.mjs:108`） | 未注入 ⇒ 产物无 `$schema` 键；注入 ⇒ 键在场且值 = 注入值 |
+| `opts.schema`（`$schema` 写盘注入） | `thincoder-core/config-io.mjs:57,74` | 端装配层 | CLI = 不传（写盘无 `$schema`）· VSC = `$schema` 指针（W16 已迁核——现体 `thincoder-vscode/src/extension/settings-panel-write.mjs:15` `VSC_CONFIG_SCHEMA` + `:20-22` `vscPersistRaw` 注入；原 `thincoder-vscode/src/config-io.mjs:108` 已删） | 未注入 ⇒ 产物无 `$schema` 键；注入 ⇒ 键在场且值 = 注入值 |
 | `projectDictionary(locale)`（文案字典投影） | `thincoder-core/i18n.mjs:87` | 端消费者 | CLI = 不用（直接读核内常量）· VSC = `locales/{en,zh}.json` 投影（逐字一致） | 投影结果与 VSC 现 `locales/*.json` 逐字相同（机器消费面冻结） |
 | `config-migrate` 注入参数（`loadRaw`/`saveRaw`/`conflictError`） | `thincoder-core/config-migrate.mjs:83` | **核内 `config.mjs`**（非端侧注入） | 两端同（核内调用点） | 核内测试：假 `saveRaw` 注入 ⇒ 写回失败不阻断（`conflictError` 路径） |
 | `writeThroughPath` / `configureWritePath`（编辑器写路径缝） | `thincoder-core/tools/write-path.mjs:66`（`configureWritePath`；191 行 · **已落 2026-09-14** · §5 交付读数） | 端装配层 | CLI = 不注入（默认 fs 径） · VSC = `{openDoc, isDirty, applyEdit}`（W14 已迁核——薄壳现体 `thincoder-vscode/src/tools/shared.mjs`；`isDirty` = 核 fail-closed 必需字段，`applyEditorRangeEdit` 随 range 径退场） | 双夹具 + 结构机检——见 §2.13.5（`thincoder-core/test/write-path.test.mjs`） |
@@ -1349,13 +1349,13 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 | #165 权限闸展示面 | **有**（`io.ask`） | 端侧接线 |
 | #175 `auto-think.mjs` ↔ VSC 推理档位面 | 无（核内 = CLI 自动难度分级） | 端侧自有 · 经 provider 字段数据面（核内位 = 无 为正常形态、非缺位——2026-09-15 裁定；D2 已裁 2026-09-13；CLI `/think` 同构先例 `thincoder-cli/src/tui/cmd-think.mjs:52`（Auto 项 · `:95` 切换）） |
 | #184 挂起 / 唤醒池载体 | **有**（`ctx.carrier` 等） | 端侧接线（`AGENT-LOOP.md` §2.3） |
-| #80 / #128 `$schema` 注入 | **有**（`opts.schema`） | 端侧接线 |
+| #80 / #128 `$schema` 注入 | **有**（`opts.schema`） | 端侧接线（W16 现体 = `thincoder-vscode/src/extension/settings-panel-write.mjs:15,20-22`） |
 | #130 config 三段端侧消费面 | 端侧自有 | 无（核内无位——消费面在端） |
 | #81 / #148 MCP 配置面板 / 监视面 | 端侧自有 | 无（核内无位——面板与监视面在端） |
 | #131 面板写面 | **部分**（自写通知订阅在核内 `thincoder-core/config-io.mjs:101`） | UI 壳按端注入（端侧） |
 | #177 provider 纯持久化 + UI 壳 | **部分**（纯持久化已落核 `thincoder-core/config-io.mjs:198`） | UI 壳按端注入（端侧） |
 | #109 评审进度行 | **有**（`seams.describeArgs`） | 端侧接线 |
-| #143 模型规格端侧派生面 | 无 | 端侧自有 · 经 provider 字段数据面（核内位 = 无 为正常形态、非缺位——2026-09-15 裁定〔与 #175 同案〕；数据源 = 核内规格表 `thincoder-core/model-specs.mjs`（`reasoningEffortEnum` 已落）；端侧派生面消费 = `thincoder-vscode/src/extension/settings.mjs:321`；端差字段 `reasoningEffortDefault` = 端侧扩展（CLI 无——`thincoder-vscode/src/config.mjs:104`）；CLI 同构先例 = `thincoder-cli/src/tui/cmd-think.mjs:16,118`） |
+| #143 模型规格端侧派生面 | 无 | 端侧自有 · 经 provider 字段数据面（核内位 = 无 为正常形态、非缺位——2026-09-15 裁定〔与 #175 同案〕；数据源 = 核内规格表 `thincoder-core/model-specs.mjs`（`reasoningEffortEnum` 已落）；端侧派生面消费 = `thincoder-vscode/src/extension/settings.mjs:321`；端差字段 `reasoningEffortDefault` = 端侧扩展（CLI 无——W16 现体 = `thincoder-vscode/src/specs.mjs:17-26,38-42`，原 `thincoder-vscode/src/config.mjs:104` 已删）；CLI 同构先例 = `thincoder-cli/src/tui/cmd-think.mjs:16,118`） |
 | #163 标题生成三格式分派 | 核内按 `provider.format` 分派（端无关实现） | 无（已满足；如需端差再补位） |
 | #52 / #64 question 无 UI 降级径 | **有**（`ctx.onQuestion`） | 端侧接线 |
 | #53 bash `terminal` 参数段 | 文档面**有**（锚）；实现面在端 | 端侧接线（实现面） |

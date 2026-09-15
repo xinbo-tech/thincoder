@@ -113,7 +113,7 @@ AGENTS.md 模块清单为维护寄存器；本节为分组总览 + 「详细设�
 | 子 agent | `@thincoder/core/agent-tools/subagent.mjs` + `-spec/-async/-actions/-scheduler/-escalate/-escalate-async/-spawn-gate.mjs` | 单工具动作面/描述载荷/后台池/调度/飞刀/门禁（2026-09-05 拆分；W13 已迁核收口——现体见批次档 §5） | `AGENT-LOOP.md`（§4 动作面/§5 async 池/§6 调度器） |
 | 子 agent | `src/agent-tools/advisor-async.mjs（W12 已迁核——现体见批次档 §5）` | 后台设计评审池 | `AGENT-LOOP.md`（§9 async 化）、`ADVISOR-CONVERGENCE.md`（评审协议） |
 | LLM | `src/provider.mjs` + `src/provider/rate.mjs` + `src/provider/transports/`（W10 已迁核——现体 `thincoder-core/provider/{core,rate,anthropic,google,sse,responses}.mjs`） | 三 transport、重试、限频门 | `PROVIDER.md`（§4 transport 调用链） |
-| LLM | `src/config.mjs` / `specs.mjs` / `config-presets.mjs` / `config-io.mjs` / `config-migrate.mjs` | 模型能力 spec、preset 表、config.json 读写/迁移 | `PROVIDER.md`（§1 配置/§2 preset/§6 spec） |
+| LLM | `src/config.mjs` / `specs.mjs` / `config-presets.mjs` / `config-io.mjs` / `config-migrate.mjs`（W16 已迁核收口——现体 `thincoder-core/{config,config-io,config-presets,config-migrate}.mjs` + 端侧模型规格增补面 `src/specs.mjs`；端壳消费面 = `src/extension/presets.mjs` · `src/extension/settings.mjs`；删除记录见批次档 §5） | 模型能力 spec、preset 表、config.json 读写/迁移 | `PROVIDER.md`（§1 配置/§2 preset/§6 spec） |
 | 上下文 | `src/agent/setup-reminders.mjs`（回合注入——git/editor 富注入）/ 旧档 `src/compact.mjs`（W6 已迁核——现体 `thincoder-core/context.mjs`）/ `src/explore-distill.mjs` / `src/repomap.mjs`（repo_outline 工具——原 `src/context.mjs` 载体 GIT-ASYNC L21 删除） | 注入、压缩/摘要/蒸馏 | `CONTEXT-COMPACTION.md` |
 | 支撑 | `src/memory.mjs`/`embedding.mjs`/`indexer.mjs` | 记忆/向量索引 | `MEMORY.md` （W8 已迁核——现体 `thincoder-core/memory.mjs`）|
 | 支撑 | 核 `thincoder-core/mcp.mjs`+`thincoder-core/mcp/`（W7 迁移——原 `src/mcp.mjs`+`mcp/` 已删；端壳增量 = `src/extension/panel-mcp.mjs`） | MCP 客户端 | `MCP.md` |
