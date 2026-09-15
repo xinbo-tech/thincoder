@@ -1770,4 +1770,61 @@ AGENT-LOOP §2.2 #175 / §3.2 D2（状态不变）/ §9（493 行）均在位。
 
 **轮次自证**：审计 1 轮（NO-DIVERGENCE）+ advisor 1 轮（pass · 0🔴）+ 修复轮 1（Fixed 4 / Deferred 3）；终态 **0 未决 🔴 → clean**。
 
+### W9 · AGENT-TOOLS 登记面（eng-coder 交付记录 · 2026-09-15）
+
+**交付摘要**：删 VSC 自持工具登记面 13 档（`src/agent-tools.mjs` barrel + 12 子档），全面改指核登记册 `@thincoder/core/agent-tools.mjs`（§2.13.4 #83 单一来源）；装配面 `src/agent/setup.mjs` 以**动态** `await import()` 取核册 14 名（静态链会经 consult/subagent 族触达 `node:sqlite` ⇒ 破 W8 契约②，engine-floor-guard 机判）；
+载体镜像（plan/task/goal 三族 CLI 名 ⇄ 端名，调用期镜像）· digest 预算单源（键适配 `digestBudgetKey(history)`）· batch_segment 记账缝（`configureBatchSegment({ onWrite })` ⇒ `_touchedFiles`）落地；
+测试面改指核（batch-segment / verify-redesign 保留、read-history-guard 退役）+ 新增登记册装配断言档 `test/agent-tools-registry.test.mjs`；VSC 产品档 9 档补「W9 已迁核」注记（判据零改）；根档 `docs/core/design/AGENT-LOOP.md` §6.18 增「自持工具登记面（#83）」行 + 变更记录。
+
+**提交**：`99d2824b`（43 档 · +299 / −1527）。单笔 `git commit --only`；脚本复读确认 `git status` 本单元面清零。
+
+**验收读数（绿态采集时点 · 提交前）**
+- `npm test`（快层）= 618 tests / 581 pass / **0 fail**
+- `npm run test:full` = 618 / 618 / **0 fail**
+- `npm run test:integration` = 29 / 29 / **0 fail**（含本单元新增 goal 载体镜像用例）
+- `npm run lint`（check-syntax）= 250 JS 档 OK
+- `npm run doc:check`（VSC 域 · strict）= **0 命中**
+- 核回归 `node --test`（cwd = thincoder-core）= 178 / 178
+- 删除集零引用机判（自写反向扫描：src + test + scripts + webview + extension.mjs = 250 档）= **0 悬空 import**
+- 根域三闸：`check-doc-width` OK · `check-ledger`（TODO.md）OK · `doc-anchors --domain .` = 1 悬空（`docs/core/design/PROVIDER.md:266 core.mjs:414-415`——W10 在途面；本单元名下锚已清零）
+- **共享工作树观察（非本单元面）**：上列读数采集后，W11（SESSION）在途编辑使 `src/extension/session-slots.mjs:24` 引核 `slotOccupancy`（核无此导出）⇒ 快层 41 红，**同一根因**；与 W9 面无关（W11 落地后应自消）。
+
+**决策透明表**
+| 决策点 | 取值 | 理由 / 否决替代 |
+|---|---|---|
+| 核册载入形态 | `hydrateRun` 内 `await import()`（动态） | 静态 import 令核登记册入端壳静态闭包 ⇒ 经 consult→subagent-async→spawn-child→core/agent.mjs→memory.mjs 可达 `node:sqlite`（W8 契约②）；核册头注同款动态先例 |
+| 载体差处置 | 调用期镜像（批前写 CLI 名 / 批后回填端名） | 承 W6 `run-stages.mjs:174-178` 先例；门禁 / 槽持久化 / 面板回调三消费面零改；W11/W15 载体归一后退场 |
+| goal 回填判定 | 引用不等 **或** status 值变化（双判据） | 审计 finding #2：核 goal 工具**原地**改状态 ⇒ 纯引用判定恒假、终态词（complete→done / blocked）不可达、面板不推 |
+| digest 预算键 | `digestBudgetKey(history)`（WeakMap 合成稳定键） | 核键 = 传入对象、以 `history.length` 判轮；端历史逐轮新建 ⇒ 需稳定键承载轮界定语义 |
+| 落盘目录 / tag | 核 `configDir/tool-results` + tag `#`→`_` 净化 | 核单源；旧端面 `<cwd>/.thincoder/tmp` 退役 |
+| 测试退役面 | `test/read-history-guard.test.mjs` 退役 | 自述「CLI 镜像」、零端侧内容、核单源后与本端面同驱动 ⇒ 冗余即删（测试纪律①默认退役）；behavior 面由核测试 + 集成承接 |
+| 产品档处置 | 9 档仅加「W9 已迁核」注（判据零改） | 迁移期参照档须去「在位」形态（残留即示范）；且 doc:check A3 须可解析 |
+| `read-history-discovery.mjs` | 未触碰 | 批次档 §2 观察项 9：其 import 面 = `extension/session-io.mjs`（W11 端壳档）——非删除集扇入，不代改 |
+
+**内部审计（explore 分歧审计 · BLOCKING）= 1 轮 · DEVIATIONS 2（均 🟡）——全 Fixed**
+| # | 类别 | 位置 | 期望 vs 实得 | 处置 |
+|---|---|---|---|---|
+| 1 | DOC-DRIFT | `thincoder-vscode/docs/design/READ-HISTORY-SPLIT.md:50` / `:71` | 以「在位」形态登记已删实现（read-history 档）与已退役测试（read-history-guard）| **Fixed**——两行补「W9 已迁核」注 + 变更记录行（判据零改） |
+| 2 | PARTIAL | `thincoder-vscode/src/agent.mjs:364`（原守卫） | 守卫 = 引用不等；核 goal **原地**改状态且前置镜像已令 `goal === _goal` ⇒ 恒假 ⇒ `onGoal` 终态推送不可达 | **Fixed**——值变化双判据（`_goal` 引用 ≠ 或 status ≠）+ 新增集成用例 `scenario-01`「goal set→complete ⇒ onGoal active→done」 |
+
+**审查对象声明**：target = W9 交付面（13 删档 + 12 改指源档 + 6 测试档〔含 1 新增〕 + 9 文档档）；reason = 交付验证；exclude = 他单元在途面（W8/W10/W11/W12/W13 各自清单）。
+
+**内部代码评审（advisor · code · 同步内评）= 1 轮 · VERDICT: pass（无 🔴）· 引用校验 1/1 通过**
+
+发现处置（5 项：2 🟡 非 must-fix + 3 🔵）：
+| # | 级别 | 位置 | 处置 |
+|---|---|---|---|
+| 1 | 🟡 | `src/agent-tools/read-history-discovery.mjs`（118 行）在 W9 后零消费者（唯一入边 = 被删的 VSC `read-history.mjs`；核 `agent-tools/read-history.mjs:42` 取核自有 session-slots）——档头 `:5` 自述与 `AGENTS.md:43` 叙述同时失效；该档不在删除集 ⇒ 不入反向判零机检 | **Deferred（父侧裁）**——任务书 §2:179 写「保留」；删除 = 设计面动作，须父侧/设计择一（① 随 W9 同笔删〔核单源已承接，与 W8 索引族同判〕② 保留则登记孤儿态 + 指派 W11/W15 消费点并去「在位」叙述） |
+| 2 | 🟡 | `agent.mjs` ≈419 / `agent/setup.mjs` ≈488 / `subagent-async.mjs` ≈467 行（超 300 软线，非本单元引入） | **Deferred（登记）**——三档皆在 W13/W15 删除集，随删档清零；承 W6 段判例不升级 |
+| 3 | 🔵 | `test/files.mjs:82` 注记把「静态闭包零 node:sqlite」机判记在登记册测试档名下（实指 `test/engine-floor-guard.test.mjs:81`） | **Fixed**——同笔注释收正（`git` 小笔：单档 1 行） |
+| 4 | 🔵 | `AGENTS.md:39` 模块图仍列已删 `src/agent-tools.mjs` barrel（`:43` 同族叙述亦失效） | **Deferred（登记）**——归 W17 收口笔（W8 §5 ⑦ 先例；W10 未决 5 同题在请父侧确认文件地图是否入 W17 范围） |
+| 5 | 🔵 | `docs/design/READ-HISTORY-SPLIT.md:30` / `:51` 发现面两行仍「在位」形态（:`50`/`:71` 已补注） | **Deferred（同 #1 同笔）**——随 #1 裁决一并落注 |
+
+**评审给证面（advisor 实核通过，摘录）**：13 档确删且全树无残留相对 import（命中全为 `@thincoder/core/...`）· `src/agent/setup.mjs:160` 动态载核册 14 名 · `src/agent-tools/index.mjs:8` = 纯 `export *` 转口 · 记账缝签名与核 `agent-tools/batch-segment.mjs:215 injectedOnWrite?.(agent, abs)` 一致（`ctx.agent` 由 `execute-tools.mjs:195` 供）·
+digest 预算四族同键且四处 `persistOverflowReport` 皆 `await`（核侧 async——不漏 await 为正确点）· W9 载体镜像双判据（`agent.mjs:369`）与集成用例在位 · `tool-gates.mjs:70` 门禁读双键闭合同批窗口 · §6.18 + 变更记录收正 · 专项验收三项（删除集零引用 / 登记册 14 名断言 / verify·batch-segment 行为面）逐条可证。
+
+**评审环境说明（advisor 登记）**：孪生陈旧树 `D:\teamcode\thincoder-vscode` 未迁移——按相对路径解析会读入 W9 前镜像（评者首轮即命中），评审已改以真实树 `D:\teamcode\thincoder\thincoder-vscode` 绝对路径取证；评审期 `## Project Standards` 未声明档 ⇒ 方法学合规按 Project Guide + 评审标准判（限制如实登记）。
+
+**终态**：审计 1 轮（2 🟡 全 Fixed）+ 评审 1 轮（pass；#3 同轮 Fixed，#1/#2/#4/#5 登记待父侧裁）——**clean**（无未决 🔴；待裁项已上抛父侧）。
+
 ## §6 验证与收口（父代理）
