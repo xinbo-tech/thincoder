@@ -1,271 +1,190 @@
 /**
- * memory-tool.test.mjs — memory tool layer unification + delete semantics fix
- * (docs/design/MEMORY.md §3 —— 2026-09-08 采纳 #1/#2/#5; 验收测试表 9 用例).
+ * memory-tool.test.mjs — memory tool 五动作面（layer 统一 + 删除语义）· 核面直驱。
  *
- * Covers the acceptance table:
- *   layer 可选单删 / layer 省略单删按 origin 路由 / layer 不匹配报错 / 批删必填 layer /
- *   list 补 [layer] 标签 / 输出无 scope 词 / delete 尊重 origin /
- *   边界 本地无 origin 目录 ENOENT 容错 / clear project 拒绝
- * plus schema + description assertions (model-visible surface speaks `layer` only).
+ * W8（`docs/batches/2026-09-15-vsc-core-wiring.md` §2 · 2026-09-15）：存储 / 检索已归一核面
+ * （`@thincoder/core/memory.mjs`——sqlite）；本档按核面**重述**：工具面（五动作 · layer 值域
+ * personal/project · 无 team）仍是本端自持面，执行器 / 输出契约来自核工具生成器
+ * （MEMORY.md §6.6.4——两端同文）。
  *
- * No embedder configured in tests → search exercises the keyword path (deterministic).
+ * 覆盖（逐条回指 W8 §2「逐档判定 · memory-tool 改指」+ MEMORY.md §6.6）：
+ *   put/search/list/delete/clear 五动作端到端（personal 行 + project markdown 文件）·
+ *   team 明确拒绝（指引 CLI）· layer 值域 / schema 面（无 team、无 scope 词）·
+ *   单删 layer 不匹配拒绝（防误删）· 批删门禁（layer 必填 + 过滤必填 + confirm 预览/执行）·
+ *   clear 仅 personal · 降级面（记忆面停用 ⇒ 明确 Error、零崩）。
+ *
+ * 环境隔离：config 路径 + HOME 均指向 tmp（memory.db 落 tmp；embedder 恒 null ⇒ 纯 FTS
+ * 检索——确定性、零网络）；句柄经 `_resetMemoryHandleForTest` 逐测重建。
  */
-import { test } from "node:test"
+import { test, before, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from "node:fs"
+import { existsSync, mkdtempSync, mkdirSync, readdirSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { memoryTool, filterAliveFiles } from "../src/memory-tool.mjs"
-import { serializeEntry, entryFilename } from "../src/memory.mjs"
+import { memoryTool } from "../src/memory-tool.mjs"
+import { applyEngineFloorGuard } from "../extension.mjs"
+import { _resetMemoryHandleForTest, ensureMemoryHandle, memoryFor, projectMemoryDir } from "../src/embed-config.mjs"
+import { _setConfigPathForTest } from "../src/config-io.mjs"
 
-function freshCwd() {
-  return mkdtempSync(join(tmpdir(), "mem-layer-test-"))
-}
+let root, home, cwd
+const savedEnv = {}
 
-function cleanup(cwd) {
-  try { rmSync(cwd, { recursive: true, force: true }) } catch { /* ignore */ }
-}
-
-/** Execute the memory tool against a temp cwd. */
-function run(args, cwd) {
-  return memoryTool.execute(args, { cwd })
-}
-
-/** put via the tool and return the entry id (filename) it created. */
-function putId(cwd, { layer = "personal", type = "rule", title, content, tags } = {}) {
-  const out = run({ action: "put", layer, type, title, content, tags }, cwd)
-  assert.match(out, /^Saved memory entry/, `put failed: ${out}`)
-  const m = out.match(/id=([A-Za-z0-9._-]+)/)
-  assert.ok(m, `no id in put output: ${out}`)
-  return m[1]
-}
-
-/** Write a memory entry file directly at a physical dir (root when layerDir is null). */
-function writeEntry(cwd, layerDir, { type = "rule", title, content } = {}) {
-  const dir = layerDir ? join(cwd, ".thincoder", "memory", layerDir) : join(cwd, ".thincoder", "memory")
-  mkdirSync(dir, { recursive: true })
-  const filename = entryFilename(title)
-  writeFileSync(join(dir, filename), serializeEntry({ type, title, content }), "utf8")
-  return filename
-}
-
-function memPath(cwd, ...rest) {
-  return join(cwd, ".thincoder", "memory", ...rest)
-}
-
-// ── 用例 1: layer 可选单删（id 在 project 层, layer: "project" 校验通过 → 删）──
-
-test("AC1 layer 可选单删: delete {id, layer} 校验通过即删", () => {
-  const cwd = freshCwd()
-  try {
-    const id = putId(cwd, { layer: "project", type: "rule", title: "project layer rule", content: "project content" })
-    const out = run({ action: "delete", id, layer: "project" }, cwd)
-    assert.match(out, new RegExp(`^Deleted ${id}: project layer rule`), `delete failed: ${out}`)
-    assert.equal(existsSync(memPath(cwd, "project", id)), false, "file must be gone")
-  } finally { cleanup(cwd) }
+before(async () => {
+  const ok = await applyEngineFloorGuard() // 真实探针：本机过闸 ⇒ 记忆面启用
+  assert.equal(ok, true, "测试机须满足引擎下限（22.13+ / node:sqlite）——否则本档面不可测")
 })
 
-// ── 用例 2: layer 省略单删（id 在 project 层, 无 layer → 按 origin 路由 → 删）──
-
-test("AC2 layer 省略单删: delete {id} 按 id origin 路由删除（不报 layer 错）", () => {
-  const cwd = freshCwd()
-  try {
-    const id = putId(cwd, { layer: "project", type: "rule", title: "orphan project rule", content: "project content" })
-    const out = run({ action: "delete", id }, cwd)
-    assert.match(out, new RegExp(`^Deleted ${id}: orphan project rule`), `delete failed: ${out}`)
-    assert.equal(existsSync(memPath(cwd, "project", id)), false, "file must be gone from its origin dir")
-  } finally { cleanup(cwd) }
+beforeEach(() => {
+  root = mkdtempSync(join(tmpdir(), "mem-tool-"))
+  home = join(root, "home")
+  cwd = join(root, "project")
+  mkdirSync(home, { recursive: true })
+  mkdirSync(cwd, { recursive: true })
+  savedEnv.USERPROFILE = process.env.USERPROFILE
+  savedEnv.HOME = process.env.HOME
+  process.env.USERPROFILE = home // homedir() 读 env ⇒ embed-config 的 config 读取落在 tmp（无 embedding ⇒ 纯 FTS）
+  process.env.HOME = home
+  _setConfigPathForTest(join(home, ".thincoder", "config.json")) // memoryDbPath = tmp home 下（逐测新库）
+  _resetMemoryHandleForTest()
 })
 
-// ── 用例 3: layer 不匹配单删（id 在 project, layer: "personal" → 明确错误, 不删）──
-
-test("AC3 layer 不匹配单删: delete {id, layer} 与 id 实际所在层不符 → 明确错误（防误删）", () => {
-  const cwd = freshCwd()
-  try {
-    const id = putId(cwd, { layer: "project", type: "rule", title: "mismatch victim", content: "project content" })
-    const out = run({ action: "delete", id, layer: "personal" }, cwd)
-    assert.match(out, /不匹配/, `expected a mismatch error, got: ${out}`)
-    assert.match(out, /layer personal/, `error should name the requested layer: ${out}`)
-    assert.equal(existsSync(memPath(cwd, "project", id)), true, "file must NOT be deleted on mismatch")
-  } finally { cleanup(cwd) }
+afterEach(() => {
+  _setConfigPathForTest(null)
+  _resetMemoryHandleForTest()
+  if (savedEnv.USERPROFILE === undefined) delete process.env.USERPROFILE
+  else process.env.USERPROFILE = savedEnv.USERPROFILE
+  if (savedEnv.HOME === undefined) delete process.env.HOME
+  else process.env.HOME = savedEnv.HOME
+  try { rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }) } catch { /* Windows handle lag */ }
 })
 
-// ── 用例 4: 批删必填 layer（无 layer → 明确错误）──
+/** Execute the memory tool against the temp cwd (core face ensured). */
+const run = (args) => memoryTool.execute(args, { cwd })
 
-test("AC4 批删必填 layer: delete {type, keyword} 无 layer → 明确错误", () => {
-  const cwd = freshCwd()
-  try {
-    putId(cwd, { layer: "project", type: "rule", title: "cleanup target", content: "to be wiped" })
-    const out = run({ action: "delete", type: "rule", keyword: "cleanup" }, cwd)
-    assert.match(out, /batch delete requires layer/, `expected layer-required error, got: ${out}`)
-    assert.doesNotMatch(out, /^Deleted/, "nothing may be deleted without layer")
-    assert.equal(existsSync(memPath(cwd, "project")), true)
-  } finally { cleanup(cwd) }
+// ── 用例 1: 五动作端到端（personal 行 + project markdown 文件）──
+
+test("五动作端到端（核面）：put/search/list/delete/clear —— personal 行 + project 文件", async () => {
+  const stored = await run({ action: "put", layer: "personal", type: "rule", title: "personal habit", content: "never block on network", tags: "style" })
+  assert.match(stored, /^Saved to personal memory \(id=personal:\d+\): \[rule\] personal habit$/, `personal put 输出契约: ${stored}`)
+
+  const toProject = await run({ action: "put", layer: "project", type: "knowledge", title: "project fact", content: "the db lives in memory.db" })
+  assert.match(toProject, /^Saved to project memory \(id=project:.+\): \[knowledge\] project fact$/, `project put 输出契约: ${toProject}`)
+  const dir = projectMemoryDir(cwd)
+  const files = readdirSync(dir).filter((n) => n.endsWith(".md"))
+  assert.equal(files.length, 1, "project 层 = markdown 文件写入项目记忆目录（磁盘为真相）")
+
+  // search：personal 行进 FTS（无 embedder ⇒ 纯 FTS 回退，非空 query 不空回）
+  const hit = await run({ action: "search", query: "network block" })
+  assert.match(hit, /^\[personal\]\[rule\] personal habit \(id=personal:\d+\)/, `search 行契约: ${hit}`)
+
+  // list：两行带 [layer] 标签 + uid
+  const list = await run({ action: "list" })
+  assert.match(list, /^\[personal\] personal:\d+ \[rule\] personal habit（\d{4}-\d{2}-\d{2}）$/m, `list personal 行: ${list}`)
+  assert.match(list, /^\[project\] project:.+\.md \[knowledge\] project fact/m, `list project 行: ${list}`)
+
+  // delete（单条 · project）：文件 + 索引行同步清掉
+  const uid = toProject.match(/id=(project:[^)]+)\)/)[1]
+  const deleted = await run({ action: "delete", id: uid })
+  assert.match(deleted, /^Deleted project:.+: project fact/, `delete 输出契约: ${deleted}`)
+  assert.equal(existsSync(join(dir, uid.split(":").pop())), false, "project 文件已删")
+
+  // clear（personal-only）：清空 personal 全部
+  const cleared = await run({ action: "clear", layer: "personal", confirm: true })
+  assert.match(cleared, /^Cleared personal memory \(\d+ entries deleted\)$/, `clear 输出契约: ${cleared}`)
+  assert.equal(await run({ action: "list", layer: "personal" }), "0 条匹配", "personal 层已空")
 })
 
-// ── 用例 5: list 补独立 [layer] 标签列（与 search 行对齐）──
+// ── 用例 2: team 明确拒绝（无 team 层——指引 CLI；schema 值域同规）──
 
-test("AC5 list 每行含 [layer] 标签列（search 行同样对齐）", () => {
-  const cwd = freshCwd()
-  try {
-    putId(cwd, { layer: "personal", type: "rule", title: "personal habit rule", content: "personal habit content" })
-    putId(cwd, { layer: "project", type: "knowledge", title: "project knowledge", content: "project knowledge content" })
-    // all-layer list tags each row with its layer
-    const all = run({ action: "list" }, cwd)
-    const allLines = all.split("\n").filter(Boolean)
-    assert.ok(allLines.some((l) => /^\[personal\] \S+\.md \[rule\] personal habit rule/.test(l)), `personal row untagged: ${all}`)
-    assert.ok(allLines.some((l) => /^\[project\] \S+\.md \[knowledge\] project knowledge/.test(l)), `project row untagged: ${all}`)
-    // layer-restricted list: every row carries that layer's tag
-    const proj = run({ action: "list", layer: "project" }, cwd)
-    const rows = proj.split("\n").filter(Boolean)
-    assert.ok(rows.length >= 1, "project layer has entries")
-    for (const r of rows) {
-      assert.match(r, /^\[project\] /, `row lacks [project] tag: ${r}`)
-    }
-    // search rows align: each hit starts with the [layer] tag + carries the id
-    const s = run({ action: "search", query: "project knowledge" }, cwd)
-    assert.match(s, /^\[project\] \[knowledge\] project knowledge \(id=\S+\.md\)/, `search row not tagged: ${s}`)
-  } finally { cleanup(cwd) }
+test("team 拒绝 + schema 值域：五动作 layer=team → 明确错误（指引 CLI）；schema/enum 无 team", async () => {
+  const actions = ["search", "put", "list", "delete", "clear"]
+  for (const action of actions) {
+    const out = await run({ action, layer: "team", query: "x", type: "rule", title: "t", content: "c", confirm: true })
+    assert.match(out, /^Error: memory (search|put|list|delete|clear): VS Code memory has no team layer — team memory is managed by the CLI$/, `${action}: ${out}`)
+  }
+  assert.deepEqual(memoryTool.parameters.properties.layer.enum, ["personal", "project"], "schema 值域按端（无 team）")
+  assert.equal("scope" in memoryTool.parameters.properties, false, "schema 不暴露 scope")
+  assert.ok(memoryTool.description.includes("layer"), "描述面说 layer")
+  assert.ok(!/scope/i.test(memoryTool.description + JSON.stringify(memoryTool.parameters)), "模型可见文本无 scope 词")
 })
 
-// ── 用例 6: 模型可见文本（schema/描述/结果/错误）无 scope 词（全 layer）──
+// ── 用例 3: 单删 layer 不匹配拒绝（防误删）──
 
-test("AC6 输出无 scope 词: 全动作模型可见文本（含 schema/描述/错误串）", () => {
-  const cwd = freshCwd()
-  try {
-    const outputs = []
-    const collect = (s) => { outputs.push(s); return s }
-
-    // schema + description are model-visible
-    const schemaText = JSON.stringify(memoryTool.parameters)
-    collect(memoryTool.description)
-    collect(schemaText)
-    assert.ok(JSON.parse(JSON.stringify(memoryTool.parameters.properties)).layer, "schema must expose `layer`")
-    assert.equal("scope" in memoryTool.parameters.properties, false, "schema must not expose `scope`")
-
-    // success paths
-    const id = putId(cwd, { layer: "project", type: "rule", title: "clean sweep", content: "clean content" })
-    collect(run({ action: "search", query: "clean" }, cwd))
-    collect(run({ action: "search", query: "zzz-none-matching" }, cwd))
-    collect(run({ action: "list" }, cwd))
-    collect(run({ action: "list", layer: "personal" }, cwd)) // 0 条匹配
-    collect(run({ action: "delete", id, layer: "project" }, cwd))
-    putId(cwd, { layer: "project", type: "rule", title: "batch wipe rule", content: "batch wipe content" })
-    putId(cwd, { layer: "project", type: "rule", title: "batch wipe rule", content: "batch wipe content" })
-    collect(run({ action: "delete", layer: "project", type: "rule", keyword: "batch", confirm: false }, cwd)) // preview
-    collect(run({ action: "delete", layer: "project", type: "rule", keyword: "batch", confirm: true }, cwd))
-    putId(cwd, { layer: "personal", type: "knowledge", title: "personal snippet", content: "personal snippet content" })
-    collect(run({ action: "clear", layer: "personal", confirm: true }, cwd))
-
-    // error paths
-    collect(run({ action: "search", layer: "team", query: "x" }, cwd))
-    collect(run({ action: "search", layer: "bogus", query: "x" }, cwd))
-    collect(run({ action: "put", layer: "bogus", type: "rule", title: "t", content: "c" }, cwd))
-    collect(run({ action: "list", layer: "team" }, cwd))
-    collect(run({ action: "delete", type: "rule", keyword: "x" }, cwd))
-    collect(run({ action: "delete", layer: "project", type: "rule" }, cwd)) // no filter
-    collect(run({ action: "delete", layer: "bogus", type: "rule", keyword: "x" }, cwd))
-    collect(run({ action: "delete", id: "20260101-ghost-aaaa.md", layer: "personal" }, cwd)) // not found
-    collect(run({ action: "delete", id: "20260101-ghost-aaaa.md" }, cwd)) // not found, no layer
-    collect(run({ action: "clear" }, cwd))
-    collect(run({ action: "clear", layer: "project", confirm: true }, cwd))
-    collect(run({ action: "clear", layer: "personal" }, cwd)) // missing confirm
-    collect(run({ action: "nonsense" }, cwd))
-    // mismatch + team error paths (full coverage of model-visible error strings)
-    const probe = putId(cwd, { layer: "project", type: "rule", title: "mismatch probe", content: "probe content" })
-    collect(run({ action: "delete", id: probe, layer: "personal" }, cwd)) // layer mismatch error
-    collect(run({ action: "put", layer: "team", type: "rule", title: "t", content: "c" }, cwd))
-    collect(run({ action: "delete", id: probe, layer: "team" }, cwd))
-    collect(run({ action: "delete", layer: "team", type: "rule", keyword: "x" }, cwd))
-
-    for (const [i, o] of outputs.entries()) {
-      assert.doesNotMatch(o, /scope/i, `model-visible text #${i} still contains "scope": ${JSON.stringify(o)}`)
-    }
-  } finally { cleanup(cwd) }
+test("单删 layer 不匹配：id 实际层 ≠ 传入 layer → 明确拒绝且不删", async () => {
+  const out0 = await run({ action: "put", layer: "project", type: "rule", title: "mismatch victim", content: "keep me" })
+  const uid = out0.match(/id=(project:[^)]+)\)/)[1]
+  const out = await run({ action: "delete", id: uid, layer: "personal" })
+  assert.match(out, /^Error: id prefix project: 与 layer personal 不匹配$/, `mismatch 拒绝: ${out}`)
+  assert.equal(existsSync(join(projectMemoryDir(cwd), uid.split(":").pop())), true, "文件未被删（防误删）")
+  // layer 省略 → 按 id 前缀路由删除（同一 uid 直接可删——与 search/list 行对接）
+  const ok = await run({ action: "delete", id: uid })
+  assert.match(ok, /^Deleted /, `省略 layer 按前缀路由: ${ok}`)
 })
 
-// ── 用例 7: delete 尊重 origin（非当前 dirs[layer] 假设；legacy 根目录文件亦可路由）──
+// ── 用例 4: 批删门禁（layer 必填 + 过滤必填 + confirm 预览/执行）──
 
-test("AC7 delete 尊重 origin: 按 id 物理层目录定位（含 legacy 根目录），非 dirs[layer] 假设", () => {
-  const cwd = freshCwd()
-  try {
-    // 1) personal entry deleted by bare id via its own origin dir
-    const pid = putId(cwd, { layer: "personal", type: "rule", title: "origin personal", content: "personal content" })
-    const pOut = run({ action: "delete", id: pid }, cwd)
-    assert.match(pOut, new RegExp(`^Deleted ${pid}: origin personal`), `personal origin delete failed: ${pOut}`)
-    assert.equal(existsSync(memPath(cwd, "personal", pid)), false)
-    // 2) legacy file physically at the memory root (no layer) — delete {id} routes to the root dir
-    const rid = writeEntry(cwd, null, { type: "knowledge", title: "legacy root entry", content: "legacy content" })
-    const rOut = run({ action: "delete", id: rid }, cwd)
-    assert.match(rOut, new RegExp(`^Deleted ${rid}: legacy root entry`), `legacy root delete failed: ${rOut}`)
-    assert.equal(existsSync(memPath(cwd, rid)), false)
-    // 3) deleting by origin does not touch an identical-name file in another layer (no false cross-delete)
-    const a = putId(cwd, { layer: "personal", type: "rule", title: "same title in personal", content: "personal content" })
-    const b = putId(cwd, { layer: "project", type: "rule", title: "same title in project", content: "project content" })
-    assert.notEqual(a, b)
-    run({ action: "delete", id: a, layer: "personal" }, cwd)
-    assert.equal(existsSync(memPath(cwd, "personal", a)), false)
-    assert.equal(existsSync(memPath(cwd, "project", b)), true, "other-layer file must survive")
-  } finally { cleanup(cwd) }
+test("批删门禁：无 layer / 无过滤 / 无 confirm 三态拒绝；confirm:true 执行输出契约", async () => {
+  await run({ action: "put", layer: "project", type: "rule", title: "batch one", content: "batch" })
+  await run({ action: "put", layer: "project", type: "rule", title: "batch two", content: "batch" })
+  await run({ action: "put", layer: "project", type: "knowledge", title: "batch keeper", content: "batch" })
+
+  const noLayer = await run({ action: "delete", type: "rule", keyword: "batch" })
+  assert.match(noLayer, /^Error: batch delete requires layer plus type and\/or keyword filter$/, `layer 必填: ${noLayer}`)
+
+  const noFilter = await run({ action: "delete", layer: "project" })
+  assert.match(noFilter, /^Error: batch delete requires type and\/or keyword filter/, `过滤必填: ${noFilter}`)
+
+  const preview = await run({ action: "delete", layer: "project", type: "rule", keyword: "batch" })
+  assert.match(preview, /^将删 2 条\n\[project\] /, `预览（不删）: ${preview}`)
+  assert.match(preview, /confirm:true required — re-send with it to execute the deletion$/, "预览尾句")
+
+  const done = await run({ action: "delete", layer: "project", type: "rule", keyword: "batch", confirm: true })
+  assert.equal(done, "Deleted 2 entries in layer project", `执行输出契约: ${done}`)
+  const after = await run({ action: "list", layer: "project" })
+  assert.match(after, /batch keeper/, "未匹配项存活")
+  assert.doesNotMatch(after, /batch (one|two)/, "匹配项已删")
 })
 
-// ── 用例 8: 边界 本地无 origin 目录 → ENOENT 容错（不报假成功）──
+// ── 用例 5: clear 仅 personal（project 拒绝）──
 
-test("AC8 本地无 origin 目录: 不存在/无目录的 id 删除 → 优雅 not-found, 不报假成功", () => {
-  const cwd = freshCwd() // no memory dirs at all yet
-  try {
-    const out = run({ action: "delete", id: "20260101-ghost-aaaa.md" }, cwd)
-    assert.match(out, /^Error: memory .* not found/, `expected graceful not-found, got: ${out}`)
-    assert.doesNotMatch(out, /^Deleted/, "no false success")
-    const outLayer = run({ action: "delete", id: "20260101-ghost-aaaa.md", layer: "personal" }, cwd)
-    assert.match(outLayer, /not found in layer personal/, `expected layer not-found, got: ${outLayer}`)
-    assert.doesNotMatch(outLayer, /^Deleted/, "no false success")
-  } finally { cleanup(cwd) }
+test("clear 仅 personal：project → 拒绝且不删；缺 confirm → 拒绝", async () => {
+  await run({ action: "put", layer: "project", type: "rule", title: "untouchable", content: "x" })
+  const refused = await run({ action: "clear", layer: "project", confirm: true })
+  assert.match(refused, /^Error: shared layers don't support clear/, `project 拒绝: ${refused}`)
+  const noConfirm = await run({ action: "clear", layer: "personal" })
+  assert.match(noConfirm, /^Error: clear requires confirm:true/, `confirm 门: ${noConfirm}`)
+  assert.match(await run({ action: "list", layer: "project" }), /untouchable/, "project 条目存活")
 })
 
-// ── 用例 9: clear project 拒绝（clear 仅 personal）──
+// ── 用例 6: 错误面（未知 action / 非法 layer / 空 query 短路）──
 
-test("AC9 clear project 拒绝: clear {layer: project, confirm: true} → 明确拒绝且不删", () => {
-  const cwd = freshCwd()
-  try {
-    putId(cwd, { layer: "project", type: "rule", title: "untouchable project rule", content: "project content" })
-    const files = run({ action: "list", layer: "project" }, cwd)
-    assert.match(files, /untouchable project rule/)
-    const out = run({ action: "clear", layer: "project", confirm: true }, cwd)
-    assert.match(out, /clear is personal-only/, `expected personal-only refusal, got: ${out}`)
-    const after = run({ action: "list", layer: "project" }, cwd)
-    assert.match(after, /untouchable project rule/, "project entries must survive a refused clear")
-  } finally { cleanup(cwd) }
+test("错误面：未知 action / 非法 layer / 空 query 短路——输出为 Error/空文案（零崩）", async () => {
+  assert.match(await run({ action: "nonsense" }), /^Error: memory: unknown action "nonsense" — expected one of: search\/put\/list\/delete\/clear$/)
+  assert.match(await run({ action: "search", layer: "bogus", query: "x" }), /^Error: .*invalid layer "bogus"/)
+  assert.equal(await run({ action: "search", query: "  " }), "(no matching memories)", "空 query 短路返回空文案（核口径）")
 })
 
-// ── 补充: 向量路径 stale-index guard（filterAliveFiles）——已删条目不得经向量路径复现 ──
+// ── 用例 7: 降级面（引擎护栏停用 ⇒ 明确 Error、零崩）──
 
-test("vector stale-index guard: 已删除文件的向量命中行被丢弃（活文件保留）", () => {
-  const cwd = freshCwd()
+test("降级面：记忆面停用（引擎护栏不满足）→ 工具明确报不可用，不抛", async () => {
   try {
-    const liveId = writeEntry(cwd, "project", { type: "rule", title: "live entry", content: "still here" })
-    const rows = [
-      { file: `.thincoder/memory/project/${liveId}`, score: 0.9 }, // live
-      { file: ".thincoder/memory/project/20260101-ghost-aaaa.md", score: 0.8 }, // deleted since last rebuild
-    ]
-    const alive = filterAliveFiles(cwd, rows)
-    assert.equal(alive.length, 1, `only the live file row may survive: ${JSON.stringify(alive)}`)
-    assert.equal(alive[0].file, `.thincoder/memory/project/${liveId}`)
-  } finally { cleanup(cwd) }
+    await applyEngineFloorGuard({ version: "20.18.1" }) // 低于下限 ⇒ 旗标 false
+    _resetMemoryHandleForTest()
+    assert.equal(await memoryFor(cwd), null, "停用 ⇒ 零句柄")
+    const out = await run({ action: "search", query: "x" })
+    assert.match(out, /^Error: memory is unavailable on this host/, `停用输出: ${out}`)
+  } finally {
+    const ok = await applyEngineFloorGuard() // 还原：本机过闸
+    assert.equal(ok, true)
+  }
 })
 
-// ── 额外: 批删确认 + 输出契约（Deleted N entries in layer X）──
+// ── 用例 8: 句柄面（装配点创建 + 单例 + codeOrigin 限定）──
 
-test("批删（layer + filter + confirm:true）→ 'Deleted N entries in layer X'", () => {
-  const cwd = freshCwd()
-  try {
-    putId(cwd, { layer: "project", type: "rule", title: "batch target one", content: "batch content" })
-    putId(cwd, { layer: "project", type: "rule", title: "batch target two", content: "batch content" })
-    putId(cwd, { layer: "project", type: "knowledge", title: "batch keeper", content: "batch content" })
-    const out = run({ action: "delete", layer: "project", type: "rule", keyword: "batch", confirm: true }, cwd)
-    assert.equal(out, "Deleted 2 entries in layer project", `batch delete output contract: ${out}`)
-    const after = run({ action: "list", layer: "project" }, cwd)
-    assert.match(after, /batch keeper/)
-    assert.doesNotMatch(after, /batch target/)
-  } finally { cleanup(cwd) }
+test("句柄面：ensureMemoryHandle 单例 + codeOrigin 逐 cwd 限定（核面按 origin 过滤）", async () => {
+  const a = await ensureMemoryHandle()
+  const b = await ensureMemoryHandle()
+  assert.ok(a && a === b, "句柄单例（幂等创建）")
+  assert.equal(await memoryFor(cwd), a, "memoryFor 返回同句柄并限 origin")
+  assert.equal(a.codeOrigin, cwd, "codeOrigin = 当前项目根")
+  assert.equal(a.projectOrigin, projectMemoryDir(cwd), "projectOrigin = 共享配置 projectDir（CLI 同源）")
 })

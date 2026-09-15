@@ -19,7 +19,7 @@ import { loadRaw } from "../config-io.mjs"
 import { initStopTrace } from "./stop-trace.mjs"
 import { ensureSlot, activeData, activeHistory, activeLines, saveLines, loadModelPrefs, loadSession, loadOlder, newSession, deleteSession, pushSessions, generateTitle, status as bootstrapStatus } from "./panel-session.mjs"
 import { projectInfo, pushProject, applyProjectSwitch, onProjectChanged, pickProject } from "./panel-project.mjs"
-import { pushIndexStatus, atComplete, saveEmbeddingConfig, maybePromptIndex, buildIndex } from "./panel-index.mjs"
+import { pushIndexStatus, atComplete, saveEmbeddingConfig, maybePromptIndex, buildIndex, maybePromptLegacyIndexRemoval } from "./panel-index.mjs"
 import { closeAllMcp, pushMcpStatus, reconnectMcp, editMcp, testMcp } from "./panel-mcp.mjs"
 import { initLedgerSurface, dispose as disposeLedgerSurface } from "./ledger-surface.mjs" // LEDGER-SURFACE（§2.30.3.5）
 
@@ -352,6 +352,7 @@ export class ChatPanel {
   async _atComplete(query, cwd, seq) { return atComplete(this, query, cwd, seq) }
   async _saveEmbeddingConfig(config) { return saveEmbeddingConfig(this, config) }
   async _maybePromptIndex() { return maybePromptIndex(this) }
+  async _maybePromptLegacyIndexRemoval() { return maybePromptLegacyIndexRemoval(this) }
   async _buildIndex() { return buildIndex(this) }
 
   // ─── Chat ─────────────────────────────────────
