@@ -2305,4 +2305,129 @@ VSC 同名 6 档 = **独立分叉实现**（逐档实核）：
 **五、需裁定（建议）**：R1 装配面按「同路径 ≠ 同内容」重判 + 新家定名（建议 `agent-state.mjs` 扩面或 panel-chat 内建）· R2 工具登记面端差三子项落点（核内缝 vs 端侧装配期装饰）· R3 #113 调用点形态（前置推送 / input 折叠 / 核内补位）· R4 端身份面（核内 END 参数化 vs VSC 自持）· R5 #112 核内笔排期 + i18n 壳落点。
 裁定后 W15 可重派（同一 designToken 修正轮；docs FIRST）。
 
+### 实施：S2 W16 —— CONFIG · 收口单元（2026-09-15 · eng-coder）——**终态 = clean**
+
+**段位**：实施第五波 · W16（`§2` 任务书段 `:222`–`:226` + 四步协议块 + A-K 判据）。**写域** = VSC 树（`thincoder-vscode/src/**` 配置面 + `test/**` 配置面 + VSC 产品档配置接线面）+ 根核档 4 档（`docs/core/{design/{CONFIG,SETTINGS-TOOL,DESIGN-TOKEN-SETTLEMENT,ENG-TOKEN-BINDING}.md, requirements/DESIGN-TOKEN-SETTLEMENT.md}`）。
+**核内 `thincoder-core/**` 零触碰**（只读消费）· `thincoder-cli/**` 零触碰 · 台账 `docs/TODO.md` 与仓根 `scripts/**` 零触碰 · 本档 §1–§4/§6 零触碰（本条 = §5）· 他单元段零触碰。
+
+**依据** = 本档 `§2` W16 段（`:222`–`:226`）+ `docs/core/design/CORE-UNIFICATION.md` 裁决行 #80/#128/#130–#132/#87/#143（`:1327`/`:1352`/`:1358` 接线面）+ CONFIG.md §1/§6.1。设计 token 由父侧设计评审签发（本段零凭证值）。
+
+**交付摘要**：VSC 配置面 6 档自持镜像删除（`src/{config,config-io,config-migrate,config-presets,config-consult}.mjs` + `src/agent-tools/settings.mjs`）——加载器 / 默认值 / 迁移 / preset 表 / settings 工具 = 核单源
+（`@thincoder/core/{config,config-io,config-migrate,config-presets}.mjs` + `agent-tools/settings.mjs`）；VSC 特有消费面落端壳（`src/extension/presets.mjs` 十一名 + `src/extension/settings.mjs` 两名）；
+`$schema` 缝 = 核 `opts.schema` 默认关闭（CLI 语义）+ 端壳 `settings-panel-write.mjs` `VSC_CONFIG_SCHEMA`/`vscPersistRaw` 注入；settings 工具 = 核工厂 `settingsTool(opts)` 端侧实例化一次（`src/agent/setup.mjs:47`）。
+
+**超声明披露**（设计点名面之外 · 已如实登记）：
+① **改指面 = 全入边**（不止任务书点名的 16 档）：R1/R2 实测 `src/` 入边 19 档 + 测试面 13 档 + `smoke-provider.mjs` + 集成 3 档（含 `scenario-01/02` 的间接入边）——判据 = A-K4 零引用机判 + 删后中间态零断链；
+② **文档面扩至 5 档**（任务书点名 4 档）：另含 `docs/core/requirements/DESIGN-TOKEN-SETTLEMENT.md` F-D2/F-D6 两行证据坐标（同主题、原指向本删除集）；
+③ **VSC 产品档 9 档加迁核注记**（`ADVISOR-CONVERGENCE`/`AGENT-PARAMS-TUNING`/`CHECKPOINT`/`CONSULTATION`/`PROVIDER`/`README`/`SETTINGS`/`PROJECT`/`SETTINGS-TOOL`）——判据 = `doc:check` A3 须可解析 + `T-DC6②`（VSC 域零命中锁）；
+④ **审计派生修正**（`04157c71`）：`src/config-mcp.mjs:67` 改 `vscPersistRaw`（详见「内部轮」）+ 回归用例 + `CORE-UNIFICATION.md` 三行同步 + VSC `ARCHITECTURE.md:116` 模块图注。
+
+**改动面（逐档）**
+
+| # | 档 | 动作 |
+|---|---|---|
+| 1 | `thincoder-vscode/src/{config,config-io,config-migrate,config-presets,config-consult}.mjs` · `src/agent-tools/settings.mjs` | **删**（6 档） |
+| 2 | `src/specs.mjs` | 重写——核 `model-specs.mjs` 取表 + 端侧增补面（`reasoningEffortDefault` 前缀表 + overlay） |
+| 3 | `src/extension/presets.mjs` | 重写——VSC 特有消费面汇聚（`PRESETS`=核 `PROVIDER_PRESETS` · `resolveKey`/`resolveDefaultModel`/`providerFromConfig`/`providerNamesInConfig`/`probeTargetFromEntry`/`sanitizeConsultModels`/`warnConsultModelsFiltered`/`loadConsultPool`；`findProvider`/`normalizeProxy` 自核取） |
+| 4 | `src/extension/settings-panel-write.mjs` | `$schema` 缝（`VSC_CONFIG_SCHEMA` + `vscPersistRaw`）+ 写面全量改走该缝 |
+| 5 | `src/extension/settings.mjs` | `loadAgentSettings` / `shellCandidates` 端壳面收留（核名适配） |
+| 6 | `src/config-mcp.mjs` · `src/embed-config.mjs` · `src/extension/{provider-flows,migrate-settings,config-watch,chat-panel,panel-chat,panel-messages,panel-index,panel-callbacks,image-handler}.mjs` · `src/agent/{agent-state,run-helpers,setup}.mjs` | 改指核 + 端壳写通道（`vscPersistRaw`） |
+| 7 | 测试面 13 档（`config-*` ×5 · `settings-tool` · `provider-admission` · `image-downgrade` · `async-visibility` · `chat-panel` · `child-permission{,-wiring}` · `context-parity` · `expand-home` · `memory-*` · `portability-vsc-advisor-context` · `provider-model-guard` · `session-boot` · `smoke-provider.mjs` · `integration/scenario-{01,02,07}`） | 改指核 + 逐例改判（见下） |
+| 8 | 文档面 10 档 | ① 根核档 4（`CONFIG.md` §1 现体双列表 + §2.2 #130 注 + §6.1 行号重核 + §9；`SETTINGS-TOOL.md` §2.6/§2.8/§5/§7；两 token 档 §6.3 表全量收正「W16 接线面收正」版 + §9）+ ①′ `docs/core/requirements/DESIGN-TOKEN-SETTLEMENT.md` F-D2/F-D6 证据行；② VSC 产品档 9 档迁核注记；③ 审计派生：`CORE-UNIFICATION.md` 三行 + VSC `ARCHITECTURE.md:116` |
+
+**测试面改判（逐例判据 · 测试纪律①）**
+- 保留 + 改指核：`config-merge`（8 例）· `config-softfail`（4——hub/leaf 双档形态退场，consult 清洗面改锁端壳单源）· `config-pool`（4——池面核单源）·
+  `config-io-panel`（2 → **3**，新增回归例）· `settings-tool`（8——重写为核工厂驱动：写侧 `settingsTool({configPath})` + 读侧 `_setConfigPathForTest` 双缝）·
+  `config-watch`（T-S3 冲突例改判——冲突检测口径 = 核 `writeConfigAtomic` 的 stat→read 写窗，跨调用读基线随 `config-io` 退场）。
+- 改指不改判：`provider-admission` / `image-downgrade`（T36 `reasoningEffortDefault` 契约随 `specs.mjs` 端侧增补面续绿）/ `scenario-07` 等。
+- 零退役（本单元不新增退役；删旧面用例 = 随镜像退场者已在各档改指为核面）。
+
+**A-K 读数（终态复跑 · 原样 · cwd = `thincoder-vscode/`）**
+
+| # | 判据 | 基线（开工实测） | 终态（本笔窗口） |
+|---|---|---|---|
+| A-K1 | `npm test`（快层） | 549 / 514 / **0** / 35 | **550 / 515 / 0 / 35**（+1 = 新增回归用例） |
+| A-K1 | `npm run test:full` | 549 / 548 / **1**（`T-DC6②` 红——VSC 域悬空锚在途） | **550 / 550 / 0**（`T-DC6②` 转绿——本笔收正 VSC 域全部悬空锚） |
+| A-K1 | `npm run test:integration` | 29 / 29 / 0 | **29 / 29 / 0** |
+| A-K1 | `npm run lint` | 193 JS OK | **193 JS OK** |
+| A-K1 | `npm run doc:check`（VSC 域 strict） | 21 命中（本删除集面） | **0 命中** |
+| A-K2 | 核回归 `node --test`（cwd = `thincoder-core`） | 178 / 178 | **178 / 178 / 0**（核零改动） |
+| A-K3 | 仓根 `check-doc-width` | OK（404 档） | **OK（404 档零 >300）** |
+| A-K3 | 仓根 `check-ledger` | OK | **OK（TODO / TODO-archive · 0 违规）** |
+| A-K3 | 仓根 `doc-anchors --domain .` | 35 悬空（本删除集 7 处） | **28 悬空——本笔面 0 新增**（收正 7 处：`CONFIG.md`×2 · 两 token 档×3 · requirements×2）；余 28 = W9–W14 他单元在 `docs/core/**` 坐标残留（逐条清单见「未决 4」） |
+| A-K4 | 删除集零引用机判（扫描域 = `src/` + `test/` + `extension.mjs`；实际扩至全树非注释行） | — | **0 命中**（6 删除档零入边） |
+
+**专项验收**
+① 删除集零引用 ✓（全树机判 0；含 webview / scripts / package.json）。
+② 配置装载 / 迁移 = 核面 ✓（`config-io` 语义随核：`loadRaw`/`persistRaw`/`conflictError`/`mtime-conflict`/`.bak` 留现场；迁移逻辑随核 `config-migrate`，端壳仅 SecretStorage 胶水）。
+③ 面板写盘 `$schema` 键在场 ✓（`test/config-io-panel.test.mjs:53-54` 断言 `raw.$schema === VSC_CONFIG_SCHEMA`；核面默认不写——CLI 语义零变）。
+④ 接线面收正 ✓（`CONFIG.md`/`SETTINGS-TOOL.md`/两 token 档 §6.3 逐项实核；`SETTINGS-TOOL.md §2.8` 键空间 = 核全量 `DEFAULTS`——A5 已裁）。
+⑤ settings 工具 = 核工厂单例 ✓（`src/agent/setup.mjs:47` `coreSettingsTool()` + `:352` 注册；写盘 = 核 `writeConfigAtomic`）。
+
+**提交**：`488c86c9`（61 档 · +568/−1505 · 6 delete mode；`refactor(vsc): retire config mirrors onto core single source (W16)`）+ 审计修正轮 `04157c71`（4 档 · +15/−5）；回退点 = `git revert 488c86c9`（修正轮 = `git revert 04157c71`）。
+
+**⑤ 内部轮（发现与处置）**
+
+**审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **DEVIATIONS**（1 🔴 / 2 🟡 / 1 🔵；另附 3 条非发现观察）。四类核验：PARTIAL 1 · DOC-DRIFT 2 · OUT-OF-LIST 0 · SILENT-SIMPLIFICATION 0。
+
+| # | 级别 | 类别 | 位置 | 发现 | 处置 |
+|---|---|---|---|---|---|
+| 1 | 🔴 | PARTIAL（运行面缺陷） | `thincoder-vscode/src/config-mcp.mjs:67` | `removeMcpServer` 体内 `persistRaw(...)` 未导入未定义（同档 `:27`/`:55` 已改 `vscPersistRaw`）⇒ 设置面板 MCP 删除 = `ReferenceError`；存活原因 = `node --check` 不解析标识符 + 零测试覆盖 | **Fixed**——改 `vscPersistRaw`（`04157c71`）+ 新增回归用例 `test/config-io-panel.test.mjs`「MCP 删条目走端壳写盘通道——可达 + config.json 更新 + $schema 保留」（550 例全绿） |
+| 2 | 🟡 | DOC-DRIFT | `docs/core/design/CORE-UNIFICATION.md:1327`/`:1352`/`:1358` | 缝注册表 / 映射行仍指删除档（`config-io.mjs:108` · `config.mjs:104`），无 W16 同步 | **Fixed**——三行收正（现体 = `settings-panel-write.mjs:15,20-22` · `src/specs.mjs:17-26,38-42`；`04157c71`） |
+| 3 | 🟡 | DOC-DRIFT | `docs/TODO.md:40`（台账） | 台账条目证据路径 = 本删除集（`thincoder-vscode/src/config-io.mjs:319`） | **Deferred（上抛父侧）**——台账 = 父侧写域（本席零触碰）；消解路径 = 父侧补「W16 已删——现体 = 核 `config.mjs` DEFAULTS」注记或改证据坐标（见未决 1） |
+| 4 | 🔵 | DOC-DRIFT（注记覆盖） | `thincoder-vscode/docs/design/ARCHITECTURE.md:116`（+ 同族清单） | VSC 模块图仍以「在位」形态列删除集；另列他单元面 / CLI 档 / D-C14 类残留 | **部分 Fixed**——`ARCHITECTURE.md:116` 加 W16 注（本单元面）；余列 = 他单元模块权威档面/CLI 档（非本单元写域）→ 上抛（见未决 4） |
+
+**advisor 代码评审 1 轮**（`type=code` · sync）：见「评审轮」段（本段末）。
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 端侧 consult 读面 = `extension/presets.mjs`（非新建档） | 设计明写（核缺口裁决 = VSC 特有消费面落端侧）；备选 = 新建 `consult.mjs` ⇒ 违反「端壳缝不新增档」口径（本档 §2:266 裁定）+ `test/files.mjs` 登记面改动 |
+| 2 | `src/specs.mjs` 自带 `reasoningEffortDefault` 端侧增补面 | #143 端差字段核零对位（核 `model-specs.mjs` 实核无该字段）——端侧扩展；备选 = 核内补笔（超本批核写域，否决）；用例 T36 契约续绿为判据 |
+| 3 | 测试面全入边改指（13 档 + 集成 3 档，不止点名面） | A-K4 反向判零 + 删后零断链；先例 = W1/W4/W5/W7/W10/W13/W14「全入边」；超点名数 = 如实披露（段首 ③） |
+| 4 | `config-watch` T-S3 冲突例改判（跨调用读基线 → 核写窗） | 冲突检测口径随写盘执行体迁核（熔核 = 唯一写盘执行体已裁定）；旧跨调用基线 = `config-io` 私有态（随删退场）；备选 = 端壳重造基线（复制核语义，否决） |
+| 5 | VSC 产品档 = 迁核注记（「W16 已迁核收口——现体见批次档 §5」形态），不逐档加变更记录行 | 档性 = 迁移期参照历史（D-C14）+ 先例 = W1/W2/W4/W5/W7/W9/W10/W12/W13/W14；注记形态经 `doc-anchors` VSC 引擎 `isNoteLine` 谓词实核 |
+| 6 | 两 token 档 §6.3 表**整表重写**（非单点注记） | 表内全部坐标随 W11/W12/W13 失效（引用档已删）⇒ 单点注记不足；逐行收正为核面坐标 + 端壳存活档现体（判据 = 逐坐标实核在场）；机制条文零改（07:08 口径） |
+| 7 | VSC `docs/**` 受众文档（D-C14 类）不在本笔收正面 | 派单只点名 4 档 + 接线面；越档收正 = 文档维护批面（W12 建议「并行写手停写后一次落定」）；审计 🔵 余列上抛 |
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+
+1. **台账 1 处（父侧收正）**：`docs/TODO.md:40`（条目「VSC DEFAULTS 已载 `autoThink: false` ⇒ 现为死键」）证据路径 = 本删除集 ⇒ 本席零触碰（台账 = 父侧写域）。消解 = 补「W16 已删——现体 = 核 `config.mjs` DEFAULTS」注记或改证据坐标；同事实在 `docs/core/design/AGENT-LOOP.md:62`/`:142` 亦为无注记形态（同批上抛）。
+2. **删除集语义收窄（已披露）**：VSC 旧 `saveRaw` 的「跨调用读基线」冲突门（loadRaw→外部写→saveRaw 拒写）随 `config-io` 退场——核口径 = `writeConfigAtomic` 的 stat→read 写窗（核内权威、D-F5b 同族）；窗内他端写在 `persistRaw` 路径以「同一调用内新鲜读」吸收（合并写，零丢失），整对象写回路径窗更窄。判据 = 核内唯一写盘执行体裁定（#131）+ 核 `config-io.mjs:74-75` 实核。
+3. **`specs.mjs` 端侧前缀表 vs 旧表逐值对拍未证**：旧档 `src/config.mjs` 已删（孪生树 `D:\teamcode\thincoder-vscode` 已不存在）⇒ 头注「行为 = 旧 VSC 规格表逐行同值」的**逐值对齐无基线可对**（审计如实登记「unverified，非矛盾」）；现证面 = T36 契约用例（字段在场 + 键集 + 前缀命中半例）。候选 = 父侧从 git 历史（`488c86c9^`）取旧档对拍一行。
+4. **根域锚 28 悬空（他单元面 · 上抛）**：`AGENT-LOOP.md`×5 · `ARCHITECTURE.md:93` · `CONSULTATION.md`×4 · `CORE-UNIFICATION.md:1409` · `ESCALATE.md`×5 · `PROVIDER.md`×3 · `STRUCTURE-DEBT.md:21` · `TURN-CAP-CONTINUE.md`×2 ·
+   `docs/core/requirements/{ESCALATE×4, TURN-CAP-CONTINUE×2}`——全为 W9/W10/W12/W13/W14 删除面在核心档的未收口坐标（本笔面 0）。
+   消解形态 = W12 建议的「已迁核／已退役 + 现体」注记统一收口（判据 = 根域 0 命中）；落点 = 文档维护批 / W17 收口笔（并行写手停写后一次落定）。
+5. **VSC 产品档 / CLI 档 D-C14 类残留（🔵 · 上抛）**：`thincoder-vscode/docs/{design,requirements}/**`（TOOLS/IMAGE-DOWNGRADE-VISION/CONTEXT-COMPACTION/SESSION/LEDGER-SELF-CONTAINED/AGENT-PARAMS/CONSULTATION/MULTI-INSTANCE-COLLAB 等）
+   + `docs/vsc/**` + `thincoder-cli/docs/**`——提及配置模块（`config-io`/`config.mjs` 等）未加迁核注；档性 = 迁移期参照历史（D-C14 保留 ≠ 维护）+ 非本单元模块权威档列 ⇒ 归文档维护批。
+6. **`AGENTS.md` 模块图**（VSC 树 + 仓根）文件地图行是否含本删除集 —— W9/W10 未决 5 同题；请父侧核对是否入 W17 收口笔范围（本笔零触碰）。
+7. **并行在途面读数**：本笔全程独立复跑（无并行写手干扰）；读数见表（快层/全量/集成/核/三闸全绿——`T-DC6②` 转绿）。
+
+**轮次自证**：审计 1 轮（DEVIATIONS 4 项 → Fixed 3 / Deferred 1） + advisor 代码评审 1 轮（见下段） + 修正轮 1（含审计派生 🔴 修复 + 回归用例）；终态 **0 未决 🔴 → clean**（未决 1/4/5 为上抛登记，无未决 🔴）。
+
+**advisor 代码评审 1 轮**（`type=code` · sync · 对象声明 = W16 交付面（6 删档 + 改指源档 + 端壳消费面 + 测试档 + 文档档）；exclude = 他单元在途面）：**VERDICT: pass**（🔴 **0** · 🟡 4 · 🔵 4）。
+评审限制（如实登记）：只读取证——未复跑测试/闸（读数引本段，标未复跑）；`## Project Standards` 未声明档；核树/CLI 树只读核对。
+评审实核通过面（摘）：删除集零引用 ✓ · 全部 `@thincoder/core/*` 具名导入逐名在场（核 `exports: {"./*": "./*"}` 覆盖子路径）· `$schema` 缝全写盘面无旁路 · 写盘执行体迁核后自写抑制仍成立（核仅写成功后回调 ⇒ 冲突放弃零回调）· 审计 🔴 收口面（`config-mcp.mjs:67` + 回归例）✓ · 核工厂单例 + 仅 depth-0 注册 ✓ · 文档 5 档坐标逐条命中现体 ✓ · 核 `test/config.test.mjs` 承载旧格式可读断言 ✓。
+
+**裁决表（8 项评审发现）**
+
+| # | Action | Detail |
+|---|---|---|
+| 1 | **Fixed** | 🟡 `src/specs.mjs` 端差表丢 vendor 命名空间形态（聚合网关惯例 `vendor/model`）：核查找剥命名空间再试（核 `model-specs.mjs:121`），端差表只对原文 `startsWith` ⇒ `zhipu/glm-5.3` 等 ID 丢 `reasoningEffortDefault` ⇒ 面板预选从 "max" 退到枚举首项 "low"（`settings.mjs:385` → `settings-state.js:48`）。**修复** = `effortDefaultFor` 原文未命中且含 `/` 时按裸模型段重试（与核同法）+ 回归用例 `test/image-downgrade.test.mjs`「W16 回归（评审 🟡）」；§5 未决 3 的「逐值对拍无基线」随之收窄为「命名空间形态已对齐，余值对拍仍待父侧取 `488c86c9^`」。落盘 = `c4f4330`。 |
+| 2 | Deferred | 🟡 `src/agent/setup.mjs:47` 核工厂实例未接测试缝（未传 `configPath` ⇒ 核回落常量 `configPath` 而非 `_configPath()`）——生产面同值零缺陷，潜在面 = 沙箱驱动完整 agent 回合时 `settings set` 会写真实用户配置（现状零命中）。消解候选 = 端侧经 `_configPath()` 供值或按 run 惰性实例化（触及工具登记面，须父侧裁）。**上抛**。 |
+| 3 | **Fixed** | 🟡 `docs/core/design/SETTINGS-TOOL.md` §2.8 未登记热应用载体端差：核工具热应用写 `agent.config`（核 `settings.mjs:254`），VSC 载体键面无 `providers`/`memory`/`embedding`/`mcp` 段（`agent-state.mjs:96-107`）⇒ 这些键「运行中已生效」不落端侧运行读取源。**修复** = §2.8 补端差行（写盘为准 + 热应用限上列键面）。落盘 = `c4f4330`。 |
+| 4 | Deferred | 🟡 体量：`agent/setup.mjs` 实读 676 行（>500 硬限——W16 前既存、承 R3/W12/W14 判例「登记不升级」，本席不重审）；`extension/settings.mjs` 实读 412 行（>300 软线，W16 迁入后越线）——**登记**：请父侧裁 `settings.mjs` 是否入批次档体量面 / 拆分规划。 |
+| 5 | **Fixed** | 🔵 `src/specs.mjs:15-16` 注释误述兜底（「最高档」实为枚举首项）⇒ 随 #1 同批收正。 |
+| 6 | **Fixed** | 🔵 `src/extension/settings.mjs:286` 陈旧 docstring（「Persist agent settings from the panel…」挂在 `saveProviderKey` 上）⇒ 改为现体描述。 |
+| 7 | **Fixed** | 🔵 `src/config-mcp.mjs:3-6` 头注理由面陈旧（「re-exported from config-io.mjs…」——W16 后该镜及其 re-export 已删）⇒ 收正为端壳段现体。 |
+| 8 | **Fixed** | 🔵 `src/agent/agent-state.mjs:79`/`:101-102` 注释仍以 `TRACES_DEFAULTS` 为现役符号（标识符随 W16 退场，代码用 `DEFAULTS.traces`）⇒ 注释改指核单源。 |
+
+**修复轮 2**（审计派生 1 + 评审派生 2）：`04157c71`（🔴 收口 + 回归用例 + 文档同步）+ `c4f4330`（命名空间收口 + 回归用例 + 端差登记 + 四注记）。
+
+**终态读数（评审后复跑 · 原样 · cwd = `thincoder-vscode/`）**：`npm test` = **551 / 516 / 0 / 35** · `npm run test:full` = **551 / 551 / 0** · `npm run test:integration` = **29 / 29 / 0** · `npm run lint` = 193 JS OK ·
+`npm run doc:check`（VSC 域） = **0 命中** · 核 `node --test` = **178 / 178 / 0** · 仓根 `check-doc-width` = **OK（404 档零 >300）** · `check-ledger` = **OK（0 违规）** · `doc-anchors --domain .` = 28 悬空（全为他单元面；本笔面 0）。
+
+**轮次自证**：审计 1 轮（DEVIATIONS 4 → Fixed 3 / Deferred 1） + advisor 代码评审 1 轮（pass · 🔴 0） + 修复轮 2（各派生一波，均已落盘并复跑）；终态 **0 未决 🔴 → clean**（未决 1/2/4/5 为上抛登记：父侧台账 1 处 · settings 工具测试缝候选 · 体量登记 · D-C14 档面维护批）。
+
 ## §6 验证与收口（父代理）
