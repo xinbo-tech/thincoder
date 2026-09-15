@@ -107,15 +107,21 @@ workspace" 已改为 **"no directory restriction"**（权威源 = CLI TOOLS.md�
 // tools = baseTools + readImage + agentTools + mcpTools + extraTools
 ```
 
-**agentTools 按 role/depth 分派**（agent-tools.mjs + agent-tools/settings.mjs）：
+**agentTools 按 role/depth 分派**（VSC-TOOL-TABLE-DUP 2026-09-15：矩阵本体 = 核单源
+`assembleFamilyTools`——`thincoder-core/agent/family-tools.mjs`（核仓）；CLI 与 VSC 同调，端差经参数注入）：
 
-- depth-0：task/recent_changes/read_history/settings +（consultModels 配置时）subagent（withPool
-  描述附当前 consultant 池）/plan/goal/skill/verify/timer/advisor/eng + consult_start/consult_stop
-  （仅配置时注册）；read_history 为 depth-0 ONLY（SESSION.md §9 D-S2）。
-- eng-coder：task/recent_changes/plan/timer/advisor/verify + **engAuditSubagentTool**（受限
-  explore + sync + spawn-only 审计通道，schema 层过滤；机械门禁在 subagent.mjs gateEngCoderSpawn）。
-- coder：task/recent_changes/verify/advisor；其余只读子代理：task/recent_changes。
+- depth-0：task/plan/timer + subagent（withPool 描述附当前 consultant 池）/skill/goal/eng/verify/
+  recent_changes/read_history/advisor + settings（端侧注入）+（consultModels 配置时）
+  consult_start/consult_stop；read_history 为 depth-0 ONLY（SESSION.md §9 D-S2）。
+- eng-coder：task/plan/timer + advisor/verify/batch_segment + 受限 `subagent` 变体（explore + sync +
+  spawn-only 审计通道，schema 层过滤；机械门禁在 subagent.mjs gateEngCoderSpawn）；端侧实现原名
+  `engChildSubagentTool`（旧名 `engAuditSubagentTool`——第 5 批更名）已退场（删除记录 = 批次档 §5，语义由核版承载）；
+  eng-designer = task/plan/timer + batch_segment + 同受限变体（勘察语义——**不含 advisor**）。
+- coder：task/plan/timer + verify/advisor；read-only 子代理：explore/plan = task/plan/timer；consult =
+  task/plan/timer + recent_changes（核契约——原 `[task, recent_changes]` 面随单源化对齐）。
 - `settings` 工具（depth-0）提供 settings list/get 只读动作（isReadonlyAction）。
+- 绑定面：`agent.tools` = **基础集**（`baseSet`——除 agentTools 外的装配项）；核子代装配追加家族段
+  ——不相交式 = 追加家族 ∥ 绑定值（基础集）（防子代装配重名——2026-09-15 修复）。
 
 **`settings` 工具的形状护栏（2026-09-11 第 8 批——与 CLI 同源；范围项 W2（第 8 批待裁定项「VSC 镜像是否纳入」——裁定 = 纳入）已裁定纳入本批——2026-09-11 用户裁定，依据 = 本端同一缺陷完整存在 + 两端共享 `~/.thincoder/config.json`）**：
 

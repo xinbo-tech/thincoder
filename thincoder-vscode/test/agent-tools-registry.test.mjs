@@ -6,9 +6,10 @@
  *  ① 核登记册 = 14 名（名集逐字钉死——新增/删除名在此显性失败，不得静默漂移）；
  *  ② 端侧转口面 `src/agent-tools/index.mjs` 与核登记册**同集**（`export * from` 形态——
  *     VSC 侧不再自持工具集清单）；
- *  ③ 装配消费者 `src/agent/setup.mjs`（结构机检——核 #83 同款形态）**动态**取自核登记册且
- *     恰 14 名（静态引入会经 consult/subagent 族触达 node:sqlite——W8 契约②，
- *     test/engine-floor-guard.test.mjs）。
+ *  ③ 装配消费者 `src/agent/setup.mjs`（结构机检——核 #83 同款形态）**动态**取自核登记册——
+ *     解构面 = 装饰所需实例三名（VSC-TOOL-TABLE-DUP 2026-09-15 §2.3C：家族矩阵单源化后角色
+ *     矩阵不再自持，装配改调核 `agent/family-tools.mjs`）；静态引入会经 consult/subagent 族
+ *     触达 node:sqlite——W8 契约②，test/engine-floor-guard.test.mjs。
  * 纯单元：零网络、零 vscode。
  */
 import { test } from "node:test"
@@ -43,7 +44,7 @@ test("W9 ② 端侧转口面：src/agent-tools/index.mjs 与核登记册同集",
   assert.deepEqual(Object.keys(face).sort(), Object.keys(reg).sort(), "转口面 = 核登记册（同集——非自持清单）")
 })
 
-test("W9 ③ 装配消费者（结构机检）：setup.mjs 自核登记册动态取 14 名", () => {
+test("W9 ③ 装配消费者（结构机检）：setup.mjs 自核登记册动态取装饰实例三名 + 家族段经核单源", () => {
   const setup = readFileSync(join(VSC_ROOT, "src", "agent", "setup.mjs"), "utf8")
   const m = setup.match(/const\s*\{([^}]*)\}\s*=\s*await import\("@thincoder\/core\/agent-tools\.mjs"\)/)
   assert.ok(m, "setup.mjs 必须以 await import() 动态载入核登记册（静态链破 W8 契约②）")
@@ -51,7 +52,17 @@ test("W9 ③ 装配消费者（结构机检）：setup.mjs 自核登记册动态
     .split(",")
     .map((s) => s.replace(/\/\/.*$/s, "").trim()) // 行内注释剥离（§25 R17 句）
     .filter(Boolean)
-  assert.deepEqual(imported.sort(), [...REGISTRY_NAMES].sort(), "装配面恰取登记册 14 名（无缺无余）")
+  // VSC-TOOL-TABLE-DUP（2026-09-15 §2.3C）：解构面收窄——本端只需装饰实例
+  // （subagent/consult 装饰链；settings 为端自持工厂）——角色矩阵不再自持。
+  const DECORATION_INSTANCES = ["subagentTool", "consultStartTool", "consultStopTool"]
+  assert.deepEqual(imported.sort(), [...DECORATION_INSTANCES].sort(), "装配面恰取装饰实例三名（无缺无余）")
+  for (const n of imported) assert.ok(REGISTRY_NAMES.includes(n), `${n} 必须来自核登记册名集`)
+  // 家族段（本批）：装配改调核单源函数——同样动态（W8 契约②）
+  assert.match(
+    setup,
+    /await import\("@thincoder\/core\/agent\/family-tools\.mjs"\)/,
+    "家族矩阵经核单源档取用（动态——静态链破 W8 契约②）",
+  )
   // 负控：端侧不得再自持逐档 re-export 面（W9 删旧面）
   assert.ok(!/from\s+"\.\.\/agent-tools\.mjs"/.test(setup), "setup.mjs 不得再指向已退役的端侧 barrel")
 })

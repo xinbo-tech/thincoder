@@ -38,6 +38,9 @@
   CLI 一致）——#subagent-panel 自 index.html/CSS/panels.js 零残留（⑮ grep 锁）。
 
 ## 变更记录（历史折叠——详见 git log）
+- 2026-09-15（子代理工具表重名修复 + 家族矩阵单源化）：§11.2 B 类绑定值收正——`tools` 绑定面 = **基础集**（除端侧 meta 工具族 `agentTools` 外的装配项）；`agent/setup.mjs:293`（核仓）追加 task/plan/timer 等 depth 家族由核负责（**不相交式 = 追加家族 ∥ 绑定值（基础集）**——端侧 meta 族与追加家族实测重叠 11 名，故其不得入绑定值；防子代装配重名）。
+  **家族矩阵单源化（同批）**：端侧角色分支链（depth>0 各分支）删除——家族装配改调核侧单源实现（CLI 与 VSC 同调；端差装饰留端：subagent 装饰链 / settings 追加经参数注入）；全表（含 `agentTools`）保留供端侧 schema/执行面；§1 模块地图同收（setup 行 = 装配改调核单源 + 端差装饰）。批次档 = `docs/batches/2026-09-15-vsc-tool-table-dup.md`（根仓）。
+  **修正轮-1（评审 #37 落修）**：不相交式表述收正（追加家族 ∥ 绑定值（基础集））；§8 受限 spawn 条收正（`engAuditSubagentTool` 原名——同物已退场，删除记录 = §8 / §14 注）；§14 加退场注。
 - 2026-09-15（子代理 spawn 装配缺陷修复）：§11.2 B 类绑定清单补 `tools`——`hydrateRun` 每轮绑定工具表（核 spawn 父对象读点 `parent.tools` / 子代装配展开面；VSC 宿主工厂此前从未提供该字段，子代理装配即崩；批次档 = `docs/batches/2026-09-15-vsc-agent-tools-spawn-fix.md`）。
 - 2026-09-12（VSC-CHILD-PERMISSION 批——子代理审批面对齐）：新增 §18（C-1..C-13 · KD-1..KD-8 · 用例 19 条 · AC-CP1..AC-CP9）；§1 模块地图两行（`tool-gates.mjs` / `child-permission.mjs`）与 execute-tools 行改写；R2 修正随批（`ESCALATE.md` 4 处 / `ENGINEERING-MODE.md` / `TOOLS.md` §8 / 本档 §8 同族句）。（修正轮 #3）
 - 2026-09-12（活动区收口批——A 方案反转 + digest/块头/状态行/Send 对齐）：§1 模块地图行 · §7 挂起 UI / 中止语义 · §10 全节改写——权威 = `WEBVIEW.md` §14（§12 为沿革与反转注）；未决行「live 头逐轮 turn 段」加收口注（C-11③ 履行——修正轮 #2）。
@@ -71,7 +74,7 @@
 | 文件 | 职责 |
 |---|---|
 | `src/agent.mjs` | `runAgent` 主循环：run-start pending 注入 → turn 循环 → chat → 工具批 → 收尾；ContinueError/resume；usage 基线；回合收尾 finalizeAgentTurn；回合头 turnInput 注入消费（SUBAGENT-OBSERVE-SEND D2——下回合边界消化 send 队列） |
-| `src/agent/setup.mjs` | setupAgentRun：注入上下文/system prompt、阈值解析、角色工具面装配、`getAuto` 注入 |
+| `src/agent/setup.mjs` | setupAgentRun：注入上下文/system prompt、阈值解析、角色工具面装配（改调核单源 `family-tools.mjs` + 端差装饰）、`getAuto` 注入 |
 | `src/agent/execute-tools.mjs` | 工具调度/批执行（并行批执行）；门禁谓词族拆出 → `src/agent/tool-gates.mjs`（§18 C-11）（修正轮 #3） |
 | `src/agent/tool-gates.mjs` | 前置门族（§18 C-11 拆出——verbatim）：`agentHasLiveEngSlot` / `l3TouchedPaths` / `preGateBlocked` / `isSubagentConsumeDesignAction` / `collectBatchPermission`（修正轮 #3） |
 | `src/agent/run-stages.mjs` | checkAndCompact/fireEndOfRunDistill/finalizeAgentTurn/maybeGuardPushbacks（收尾 guard 推回） |
@@ -377,11 +380,11 @@ webview 输入面见下方 UI 段）；settle
 - 变更记账：`_touchedFiles` 机械跟踪；`mergeChildMutations`——**取消路径不合并**（磁盘
   半成品不入父 guard 记账，不触发 verify/advisor 推回）；成功路径合并入父 `_fileMutEvents`
   供 guard 推回判定。delivery 报告含轮次/终态/audit 记录（修正轮 ≤5；stalled 不静默）。
-- 受限 spawn（engAuditSubagentTool）：eng-coder / eng-designer ctx 内 subagent
-   schema = role 仅 explore、async 参数移除（同步强制）、**action 参数整体移除**
-   （spawn-only——escalate/status/cancel/consume-design/observe/send 不可用）、描述点名
-   SURVEY/AUDIT + BLOCKING ONLY；机械层 gateEngCoderSpawn 在 mode 门之前执行
-   （eng-coder 专属错误先于通用工程模式错误）。A11 描述面清单同步（群 A 批）见 §14。
+- 受限 spawn（受限通道；端侧实现 `engChildSubagentTool`（旧名 `engAuditSubagentTool`——第 5 批更名）**已退场**（随本批死支删除——删除记录 = 批次档 §5；语义由核版承载））：eng-coder / eng-designer ctx 内 subagent
+  schema = role 仅 explore、async 参数移除（同步强制）、**action 参数整体移除**
+  （spawn-only——escalate/status/cancel/consume-design/observe/send 不可用）、描述点名
+  SURVEY/AUDIT + BLOCKING ONLY；机械层 gateEngCoderSpawn 在 mode 门之前执行
+  （eng-coder 专属错误先于通用工程模式错误）。A11 描述面清单同步（群 A 批）见 §14（含退场注）。
 
 ## 9. 会诊 / 飞刀 / advisor 完全异步化
 
@@ -461,7 +464,8 @@ webview 输入面见下方 UI 段）；settle
   - _lastEngState（**必须复位 false**——eng 进出重通知语义）。
   **顺序纪律**：复位清单先于 inheritedGuard 应用（:87-89——guard 标记继承到"复位过的"下一 run）。
 
-**B. run 绑定每轮重指**（覆盖即可）：_provider/_role/cwd/history/_fullHistory/_planMode/config/_engPersist/tools（每轮绑定工具表——核 spawn 父对象读点 `parent.tools`）。
+**B. run 绑定每轮重指**（覆盖即可）：_provider/_role/cwd/history/_fullHistory/_planMode/config/_engPersist/tools（每轮绑定**基础集**——除端侧 meta 工具族 `agentTools` 外的装配项；核 spawn 父对象读点 `parent.tools` / 子代装配展开——`agent/setup.mjs:293`（核仓）追加 task/plan/timer 等 depth 家族由其负责
+（**不相交式 = 追加家族 ∥ 绑定值（基础集）**——端侧 meta 族与追加家族实测重叠 11 名，故其不得入绑定值；防子代装配重名；2026-09-15 重名修复）。
 
 **C. 会话级保留（单例收益本体）**：_engDesignTokens（Map——hydrate reconcile + TTL，**永不复位清空**）/config 的 engineering+advisor.guard（槽权威）/ _engPersist（绑定键）/ _engDesignReviewed（顶层恒 false 无影响）/ **_tasks/_goal（评审 #5——会话级不复位）** / **_pendingReminders（SESSION §6 槽字段——会话级）**。
 
@@ -843,6 +847,10 @@ Partial changes from discarded children stay unmerged/unaudited; re-spawn if the
 > `2026-09-11-TUI-SELECTION.md:96`（CLI 仓）——CLI 批 20 A2 的 VSC 镜像候选；处置 =「取同源语义」）。
 > 语义源：CLI 批 20 的受限变体动作清单（7 动作含 panel）；VSC 端独立落——**本端无 panel 动作**
 > （`subagent.mjs:2-3`——§19.6 AC-P4），清单 = 本端全部动作减 spawn。
+>
+> **2026-09-15 退场注（承 `docs/batches/2026-09-15-vsc-tool-table-dup.md`（根仓）——评审 #37 修正轮-1）**：本节承载对象 = 端侧
+> `engChildSubagentTool`（旧名 `engAuditSubagentTool`——第 5 批更名）随本批死支删除**已退场**——删除记录 = 批次档 §5；
+> 受限通道语义由核版承载（`thincoder-core/agent/setup.mjs:226-263`（核仓））。本节逐字表与 §8 面留档——行号 as-of 保留（坐标已漂移）。
 
 **（a）逐字表（`src/agent/setup.mjs`——受限变体 description 两行；行号 as-of 2026-09-11）**：
 

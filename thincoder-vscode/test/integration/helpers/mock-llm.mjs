@@ -13,6 +13,10 @@
  * 脚本步（按调用序消费；调用数超出脚本 → 重复末步——CLI 侧 mock-llm 同规）：
  *   { content, reasoning?, toolCall?:{name,arguments}, finishReason?, usage?, fail?, delay? }
  *   或函数步 `(body) => stepObj`（按当次请求动态生成——如设计评审回显它收到的 token）。
+ *
+ * 重名校验（VSC-TOOL-TABLE-DUP §2.5——本批）：默认**开**——`body.tools` 名数组有重名即返回
+ * 逐字 400 `{"error":{"message":"Tool names must be unique."}}`（贴真 provider——用户报错
+ * 路径的复现面；mock 不校重名正是本批缺陷的盲区教训）。显式 `{ validateToolNames: false }` 可关。
  */
 import { createServer } from "node:http"
 
@@ -35,7 +39,7 @@ const frameFinish = (reason) => sse({ choices: [{ index: 0, delta: {}, finish_re
 const frameUsage = (usage) => sse({ choices: [], usage })
 
 /** 启动 mock：返回 { server, port, baseURL, requests, calls, close }。 */
-export async function mockLLM(script) {
+export async function mockLLM(script, { validateToolNames = true } = {}) {
   const steps = Array.isArray(script) ? script : [script]
   const requests = []
   let i = 0
@@ -46,6 +50,17 @@ export async function mockLLM(script) {
       let body = {}
       try { body = JSON.parse(raw) } catch { /* 非 JSON 请求体照收（断言面记录原文） */ }
       requests.push({ url: req.url, headers: req.headers, body, raw })
+      // 重名校验（默认启用——VSC-TOOL-TABLE-DUP §2.5）：真 provider 逐字 400（fail-closed）。
+      // 请求本身已被记录（断言面可读原文）；不消费脚本步（无效请求不落模型）。
+      if (validateToolNames) {
+        const names = (Array.isArray(body.tools) ? body.tools : []).map((t) => t?.function?.name)
+        const dup = [...new Set(names.filter((n, idx) => names.indexOf(n) !== idx))]
+        if (dup.length > 0) {
+          res.writeHead(400, { "content-type": "application/json" })
+          res.end(JSON.stringify({ error: { message: "Tool names must be unique." } }))
+          return
+        }
+      }
       const at = Math.min(i++, steps.length - 1)
       const step = typeof steps[at] === "function" ? steps[at](body, req) : steps[at]
       if (step?.delay) await new Promise((r) => setTimeout(r, step.delay))

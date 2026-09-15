@@ -260,37 +260,6 @@ export function modeRoleField(engineering) {
 }
 
 /**
- * §18 D-E3 + ENGINEERING-MODE.md §2.15 D（第 5 批 VSC 镜像 §2.22.4 ④/⑨）：工程子代理的受限
- * subagent 通道——eng-coder 的偏差审计（explore）与 eng-designer 的勘察（explore）。
- * Schema 层：role enum 仅 explore、async 参数删除（sync only）、action 参数删除（spawn-only）、
- * **batchDoc 删除**（受限变体不得透传——与 async/id/n/designToken/designId 同清单语义）；
- * 机械强制在 subagent.mjs execute → gateEngCoderSpawn（role/async）+ §19 受限变体 action 门
- * （schema 枚举只是给模型的提示，provider 不强制）。
- */
-function engChildSubagentTool(childRole, subagentTool) {
-  const props = { ...subagentTool.parameters.properties }
-  delete props.async // sync only — the eng child blocks on the report
-  delete props.action // spawn-only — the restricted channel has no status/escalate（§19.8 check 已删）
-  delete props.batchDoc // §2.22.3：受限变体 delete 清单同步加 batchDoc（不透传给子代）
-  const designer = childRole === "eng-designer"
-  props.role = {
-    type: "string",
-    enum: ["explore"],
-    description: designer
-      ? "explore only — the eng-designer's internal spawn channel is reserved for read-only surveys of the current state (ENGINEERING-MODE.md §2.15 D; ≤6 spawns per batch)."
-      : "explore only — the eng-coder's internal spawn channel is reserved for read-only divergence audits (AGENT-LOOP.md §18 D-E3).",
-  }
-  return {
-    ...subagentTool,
-    name: "subagent",
-    description: designer
-      ? "Spawn a read-only `explore` sub-agent to SURVEY the current state for the design (ENGINEERING-MODE.md §2.15 D): it reads code / docs / existing designs and reports evidence with file:line. BLOCKING ONLY — spawn-only: the restricted channel has no action parameter (escalate/status/cancel/consume-design/observe/send are not available) and no async. Survey budget: ≤6 explore spawns per batch — the main agent's survey result is reference only; do your own."
-      : "Spawn a read-only `explore` sub-agent to AUDIT your delivery against the design (AGENT-LOOP.md §18 D-E2 ③): it compares the delivered code with the design for divergence — partially implemented acceptance criteria, silent simplifications, doc drift, changes outside the approved file list. BLOCKING ONLY — spawn-only: the restricted channel has no action parameter (escalate/status/cancel/consume-design/observe/send are not available) and no async — the audit report decides your next protocol step. The audit task book is appended MECHANICALLY — your own spawn task (docs involved / acceptance criteria / file list) plus the files you actually touched; never hand the audit a self-written file list (a self-report could omit exactly the out-of-scope file it must catch).",
-    parameters: { ...subagentTool.parameters, properties: props },
-  }
-}
-
-/**
  * §11.2 agent 对象工厂——首轮-only（hydrateRun 每轮 reconcile）。归类：A = 回合级预算/守卫
  * （resetRunState 每 runAgent 清零——AC6）；C = 会话级保留（_tasks/_goal/_engDesignTokens
  * 不复位，hydrate 槽 reconcile）；_pendingReminders = A 复位 + restore 槽回填（A/C 双列注）；
@@ -340,49 +309,28 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // 幂等一次；先于工具装配（skill / eng / verify 工具本轮即可用上端侧形态）。
   await wireAgentToolSeams()
 
-  // W9（2026-09-15）：14 名装配面 = 核登记册（单一来源 #83）——**动态**载入（顶部注释：
-  // 静态引入会经 consult/subagent 族触达 node:sqlite，破 W8 契约②）；模块缓存 ⇒ 每轮零成本。
-  const {
-    taskTool, recentChangesTool, subagentTool, batchSegmentTool,
-    planTool, goalTool, skillTool, verifyTool, timerTool,
-    advisorTool, engTool, readHistoryTool, consultStartTool, consultStopTool, // §25 R17: consult_check 退役
-  } = await import("@thincoder/core/agent-tools.mjs")
-
-  const agentTools = depth === 0
-    ? [taskTool, recentChangesTool, readHistoryTool, settingsTool, // SETTINGS-TOOL.md（2026-09-05）：settings list/get 只读动作（isReadonlyAction）——depth-0 主 agent 面（与 memory 同分类）
-      // SESSION.md §9 D-S2: read_history is depth-0 ONLY — a subagent querying "the session" would mix its throwaway lines with the parent record (semantic confusion); readonly → planMode pass / no permission ask (T-S9)
-      // §19 (2026-09-03): the subagent family is ONE resident tool — subagent_check and
-      // the standalone escalate tool retired (status/escalate are action params;
-      // §19.8 check 已删——四动作).
-      // The escalate action errors when the pool is empty (existing error semantics);
-      // with a pool configured the tool description lists the current candidates
-      // (withPool — escalate picks 'provider:model' from it), same as consult_start.
-      ...(loadConsultPool().length ? [withPool(vscSubagentFace(subagentTool))] : [vscSubagentFace(subagentTool)]),
-      planTool, goalTool, skillTool, verifyTool, timerTool, advisorTool, engTool,
-      // consult tools registered only when configured — an unconfigured model would otherwise
-      // see the tool, call it, and eat an error turn (prompt-system review 2026-08-15).
-      // F-4：注册门经清洗后池（悬挂-only 配置不注册——防"注册了但跑不了"）
-      ...(loadConsultPool().length
-        ? [withPool(consultStartTool), consultStopTool] // §25 R17: consult_check 退役——结果经自动 digest 通道
-        : [])]
-    : role === "eng-coder"
-      ? [taskTool, recentChangesTool, planTool, timerTool, advisorTool, verifyTool,
-         batchSegmentTool(batchDoc), // 目标档 = 本次 spawn 绑定（同下 agent._batchDoc；装配先于 B 类赋值——直接取 opts 值）
-         engChildSubagentTool("eng-coder", subagentTool)] // §18 D-E3: the audit-only restricted subagent channel (explore + sync + spawn-only — schema level; the mechanical gates are subagent.mjs gateEngCoderSpawn + the §19 restricted-variant action gate)
-    // eng-designer（ENGINEERING-MODE.md §2.15 D / §2.22.4 ④）：读/搜/写设计产出（builtin 读写工具
-    // 随 baseTools 注入）+ batch_segment 段写入通道（§2，目标档 = spawn 绑定 agent._batchDoc）+
-    // 勘察通道（explore-only 受限变体）；**不含 advisor**（设计师不发起评审）。
-    : role === "eng-designer"
-      ? [taskTool, planTool, timerTool,
-         batchSegmentTool(batchDoc),
-         engChildSubagentTool("eng-designer", subagentTool)]
-    // Write-permission coder sub-agents: their system prompt names verify (system.md)
-    // and advisor (discipline.md) — without them the escalate/coder hit "unknown tool"
-    // and fell back to bash node --check / npm test to self-verify (2026-08-16 deepseek
-    // escalate diagnosis). eng-coder already had both; plain coder was the missed branch.
-    : role === "coder"
-      ? [taskTool, recentChangesTool, verifyTool, advisorTool]
-      : [taskTool, recentChangesTool] // read-only subagents get fewer meta-tools
+  // W9/W13 → 本批（2026-09-15 · VSC-TOOL-TABLE-DUP §2.3C）：装配改调**核家族单源**——
+  // 登记册解构面收窄至装饰所需实例（3 名）；角色分支链（原 `:351-385` depth/role 矩阵）
+  // 整体退场（两边各一份的矩阵消灭——本批缺陷的类根因）。两档均**动态**载入（静态引入会经
+  // consult/subagent 族触达 node:sqlite，破 W8 契约②；模块缓存 ⇒ 每轮零成本）。
+  const { subagentTool, consultStartTool, consultStopTool } = await import("@thincoder/core/agent-tools.mjs") // ← 解构面收窄（装饰所需实例）
+  const { assembleFamilyTools } = await import("@thincoder/core/agent/family-tools.mjs") // ← 动态（W8 契约②）
+  const pool = loadConsultPool()
+  // 端差不传 `engineering`：核内该参数唯一消费点 = filteredSubagent（depth-0 角色 enum +
+  // escalate 池装饰），而本端恒以 `decorate.subagent`（vscSubagentFace）替换该实例——端侧
+  // 同语义由 schema 面 `modeRoleField(engineering)` 承载（下方 `:503` 段）。将来去 decorate
+  // 收敛时须随 `:487` 的 engineering 赋值阶段补传（§2.10.1 收敛通道同款残留项）。
+  const agentTools = await assembleFamilyTools({
+    depth, role,
+    consultModels: pool,
+    batchDoc,
+    decorate: {
+      subagent: pool.length ? withPool(vscSubagentFace(subagentTool)) : vscSubagentFace(subagentTool),
+      consultStart: pool.length ? withPool(consultStartTool) : consultStartTool,
+      consultStop: consultStopTool,
+      settings: settingsTool,
+    },
+  })
 
   // MCP tools: idempotent connect + expand into NATIVE tools (CLI parity, MCP.md D1/D2).
   // Top level only; failures never block — D-CI7（F-Q11）：警告可见面 = console
@@ -405,9 +353,21 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   const isReadOnlyRole = depth > 0 && (role === "explore" || role === "plan" || role === "consult")
   const baseTools = (isReadOnlyRole ? builtinTools.filter((t) => t.readonly) : builtinTools)
     .filter((t) => depth === 0 || t.name !== "question")
+  // L1 契约（VSC-TOOL-TABLE-DUP §2.1A）：`agent.tools` 绑定值 = **基础集**（下方 `baseSet`）
+  // ——不含端侧 meta 工具族 `agentTools`（核 `assembleFamilyTools` 追加族与端侧 meta 族实测
+  // 重叠 11 名 ⇒ 入绑定值必致子代装配重名）；全表 `tools` 原样保留（端侧 schema `:503` /
+  // 执行面 `toolByName`）。多模态项抽 `mm` 局部（§2.1A 认可消重形态——行为等价）。
+  const mm = specForModel(provider.model).multimodal ? [readImageTool] : []
+  const baseSet = [
+    ...baseTools,
+    ...mm,
+    ...mcpTools,
+    // caller-injected tools (e.g. consult's main_history)——注入方承担「与核追加家族不重名」义务（§2.3F）
+    ...(opts.extraTools ?? []),
+  ]
   const tools = [
     ...baseTools,
-    ...(specForModel(provider.model).multimodal ? [readImageTool] : []),
+    ...mm,
     ...agentTools,
     ...mcpTools,
     ...(opts.extraTools ?? []), // caller-injected tools (e.g. consult's main_history)
@@ -519,8 +479,10 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   agent._role = role
   agent._depth = depth // TRACE-STORE-VSC（D-TR4）：compress/distill 等内嵌 chat 调用点的 depth 归属
   agent._provider = provider
-  // 核 spawn 父对象读点（parent.tools——角色过滤/直传 + 子代装配展开）：每轮重指装配数组（:408），不拷贝
-  agent.tools = tools
+  // 核 spawn 父对象读点（parent.tools——角色过滤/直传 + 子代装配展开）：每轮重指**基础集**
+  // （`baseSet`——不含端侧 meta 工具族 `agentTools`；家族段由核 `assembleFamilyTools` 追加
+  // ——不相交式 = 追加家族 ∥ 绑定值；VSC-TOOL-TABLE-DUP §2.1A），不拷贝。
+  agent.tools = baseSet
   agent._engTaskInput = opts.engTaskInput ?? null
   // §2.22.3（第 5 批）：spawn 侧批次档绑定上车（batch_segment 的唯一路径来源；无 path 参数——
   // 目标档由 spawn 绑定 / 评审实例键提供）。顶层/非工程角色恒 null（不挂载工具）。

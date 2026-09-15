@@ -10,7 +10,9 @@
  *   T1 explore（结构）——只读过滤分支（修复前更早一步崩：`readonlyToolNames` → `filter`）；
  *   T2 coder（结构）——非只读分支直传（同一引用）；
  *   T3 eng-designer（结构）——工程装配 + batchDoc 绑定（用户实测角色同支）；
- *   T4 coder（行为）——真跑 sync spawn（用户报错路径：非只读分支子代装配展开 `[...agent.tools]`）。
+ *   T4 coder（行为）——真跑 sync spawn + 断言 A（工具名唯一性——本批 L1）；
+ *   T5 eng-designer（行为 + 断言 A/B）——真跑（用户实测角色）+ 断言 A（工具名唯一）+
+ *     断言 B（矩阵同源：5 角色 fixture——depth-0 默认 / eng-designer / eng-coder / coder / explore）。
  * 门族调用形态 = `gateEngCoderSpawn` + `buildSpawnChild`（真门序 + 真装配，零网络——
  * 承 `test/eng-designer-role.test.mjs` buildProbe 先例）。
  */
@@ -21,9 +23,12 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
 import { subagentTool } from "@thincoder/core/agent-tools/subagent.mjs"
+import { settingsTool as coreSettingsTool } from "@thincoder/core/agent-tools/settings.mjs"
 import { buildSpawnChild } from "@thincoder/core/agent-tools/subagent-spawn.mjs"
 import { gateEngCoderSpawn } from "@thincoder/core/agent/spawn-child.mjs"
-import { buildTopLevelAgent, hydrateRun } from "../../src/agent/setup.mjs"
+import { assembleFamilyTools } from "@thincoder/core/agent/family-tools.mjs"
+import { buildTopLevelAgent, hydrateRun, vscSubagentFace } from "../../src/agent/setup.mjs"
+import { loadConsultPool } from "../../src/extension/presets.mjs"
 import { mockLLM, providerFor } from "./helpers/mock-llm.mjs"
 
 let work
@@ -84,6 +89,46 @@ function buildProbe(parent, args, role) {
   return buildSpawnChild(parent, spawnCtx(parent), args, role, args.async === true, [], [], attempt)
 }
 
+const BATCH = "docs/batches/2026-09-15-demo.md"
+
+/** 断言 A（L1——工具名唯一性，§2.5）：mock 收到的本用例**新增**请求，`body.tools` 名数组无重名。
+ *  起点 = spawn 前的 `llm.calls`（父级 hydrateRun 不触达 provider）；重名即真 provider 逐字
+ *  400 `Tool names must be unique.`——本批缺陷本体的机械复现面。 */
+function assertToolNamesUnique(llm, from) {
+  const fresh = llm.requests.slice(from)
+  assert.ok(fresh.length > 0, "断言范围非空：spawn 已触达 provider（零请求 ⇒ 断言无意义）")
+  for (const r of fresh) {
+    const names = (r.body?.tools ?? []).map((t) => t?.function?.name)
+    const dup = [...new Set(names.filter((n, i) => names.indexOf(n) !== i))]
+    assert.deepEqual(dup, [], `provider 请求工具名唯一（实测重名集 = ${JSON.stringify(dup)} ⇒ provider 逐字 400 Tool names must be unique.）`)
+  }
+}
+
+/** 断言 B (a) 读数（§2.5）：家族段名集 = 全表（`toolByName`）− 基础集（`agent.tools`——L1 后 = baseSet）。 */
+function familyNames(run) {
+  const base = new Set(run.agent.tools.map((t) => t.name))
+  return [...run.toolByName.keys()].filter((n) => !base.has(n)).sort()
+}
+
+/** 断言 B fixture (c)——必备 5 角色期望名集（§2.5）：depth-0 例 = 改前基线实读（⓪，落 §5）+ 端差
+ *  settings；4 子角色 = 核矩阵语义（§2.3A——家族段名集，不含基础集）。 */
+const FAMILY_FIXTURE = {
+  "depth-0": ["advisor", "eng", "goal", "plan", "read_history", "recent_changes", "settings", "skill", "subagent", "task", "timer", "verify"],
+  "eng-designer": ["batch_segment", "plan", "subagent", "task", "timer"],
+  "eng-coder": ["advisor", "batch_segment", "plan", "subagent", "task", "timer", "verify"],
+  coder: ["advisor", "plan", "task", "timer", "verify"],
+  explore: ["plan", "task", "timer"],
+}
+
+/** 生产装配形状逐角色（`hydrateRun` = 生产入口 `setupAgentRun` 同函数；depth/role 同生产调用）。 */
+function hostShape({ depth, role, engineering = false }) {
+  return hydrateRun(buildTopLevelAgent(), {
+    provider, cwd: work, input: "host-shape matrix", depth, role,
+    getAuto: () => false,
+    opts: { ...(engineering ? { engState: { enabled: true } } : {}), batchDoc: BATCH },
+  })
+}
+
 test("T1 explore（结构）：生产形状父表非空；只读过滤分支产出独立数组", async () => {
   const parent = await hostParent()
   assert.ok(
@@ -121,4 +166,37 @@ test("T4 coder（行为——用户报错路径）：真跑 sync spawn 正常返
   const report = await subagentTool.execute({ task: "实现小功能", role: "coder", async: false }, spawnCtx(parent))
   assert.ok(llm.calls > calls0, "真子运行触达 mock provider（llm.calls ≥ 1）")
   assert.match(String(report), /host-shape spawn verified/, "子代报告返回（修复前：spawn 抛 agent.tools is not iterable）")
+  assertToolNamesUnique(llm, calls0) // 断言 A（L1）——非只读分支子代真跑的工具名唯一性
+})
+
+test("T5 eng-designer（行为——用户实测角色）：真跑 + 断言 A（工具名唯一）+ 断言 B（矩阵同源，5 角色）", async () => {
+  // ── 断言 A：真跑（用户报错路径——工程模式 spawn eng-designer）──
+  const parent = await hostParent({ engineering: true })
+  const calls0 = llm.calls
+  const report = await subagentTool.execute(
+    { task: "写批次 §2", role: "eng-designer", batchDoc: BATCH, async: false },
+    spawnCtx(parent),
+  )
+  assert.ok(llm.calls > calls0, "真子运行触达 mock provider（llm.calls ≥ 1）")
+  assert.match(String(report), /host-shape spawn verified/, "子代报告返回（修复前：重名 ⇒ provider 逐字 400 Tool names must be unique.）")
+  assertToolNamesUnique(llm, calls0)
+
+  // ── 断言 B：(a) VSC 生产装配家族名集 ≡ (c) 5 角色 fixture ──
+  const depth0 = await hostShape({ depth: 0, role: null })
+  assert.deepEqual(familyNames(depth0), [...FAMILY_FIXTURE["depth-0"]].sort(), "(a)≡(c) depth-0 默认（携改前基线锚）")
+  const childCases = [
+    ["eng-designer", "eng-designer", true], ["eng-coder", "eng-coder", true],
+    ["coder", "coder", false], ["explore", "explore", false],
+  ]
+  for (const [label, role, engineering] of childCases) {
+    const run = await hostShape({ depth: 1, role, engineering })
+    assert.deepEqual(familyNames(run), [...FAMILY_FIXTURE[label]].sort(), `(a)≡(c) ${label}`)
+  }
+  // ── 断言 B：(a) ≡ (b) 直接调用核单源（同参 + 端差装饰）——防「VSC 绕过核函数」──
+  // 同参口径 = 生产面取值源同款（consultModels = 端侧 loadConsultPool()；batchDoc = 本用例 BATCH）。
+  const direct = await assembleFamilyTools({
+    depth: 0, role: null, consultModels: loadConsultPool(), batchDoc: BATCH,
+    decorate: { subagent: vscSubagentFace(subagentTool), settings: coreSettingsTool() },
+  })
+  assert.deepEqual(direct.map((t) => t.name).sort(), familyNames(depth0), "(a)≡(b) 生产装配 ≡ 核单源直调（同参）")
 })

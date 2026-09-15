@@ -105,10 +105,13 @@ test("T57 正常：装配分支——batch_segment 在、advisor 不在、绑定
   // 挂载的工具真能写进绑定的档（绑定不是摆设）
   await run.toolByName.get("batch_segment").execute({ segment: "§2", text: "### 本批任务" }, { agent: run.agent, cwd })
   assert.ok(readFileSync(abs, "utf8").includes("### 本批任务"), "designer 工具写 §2 落到绑定档")
-  // 受限变体的 schema 面：explore-only + 无 batchDoc/async/action
+  // 受限变体的 schema 面：explore-only + 无 async/batchDoc（delete 清单）；action 显式
+  // spawn-only（核版形态——VSC 旧 engChildSubagentTool 的 delete-action 微差随死支删除消解，
+  // VSC-TOOL-TABLE-DUP §2.10.6）
   const props = run.toolByName.get("subagent").parameters.properties
   assert.deepEqual(props.role.enum, ["explore"], "勘察通道 role 仅 explore")
-  assert.ok(!("async" in props) && !("action" in props) && !("batchDoc" in props), "受限变体 delete 清单（含 batchDoc）")
+  assert.deepEqual(props.action.enum, ["spawn"], "受限变体 action 仅 spawn（核版形态——机械门在 execute 层）")
+  assert.ok(!("async" in props) && !("batchDoc" in props), "受限变体 delete 清单（含 batchDoc）")
 })
 
 test("T57 零回归：eng-coder 装配面不变（advisor/verify 在，batch_segment 仍挂）", async () => {

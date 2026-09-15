@@ -17,6 +17,7 @@ import {
   DEFAULT_MAX_TURNS, ensureAutoReminder,
 } from "./helpers.mjs"
 import { pushEnvStateReminder, pushPeerReminder } from "./setup-reminders.mjs"
+import { assembleFamilyTools } from "./family-tools.mjs"
 
 const DEFAULT_COMPACT_THRESHOLD = 100_000
 const DOC_SEARCH_LIMIT = 5
@@ -169,128 +170,16 @@ export async function prepareRun(agent, input, callbacks, {
 
   // task/plan tools are injected with the main loop; subagent/skill/goal/verify only at top level
   // eng-coder subagents get advisor for mandatory design review before coding
-  // CORE-UNIFICATION TOOLS #83：consult 家族随统一登记册自 `../agent-tools.mjs` 取用（单一来源）
-  const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool, readHistoryTool, batchSegmentTool, consultStartTool, consultStopTool } = await import("../agent-tools.mjs")
-  // withPool: decorate the consult_start description with the CURRENT candidate pool
-  // so the model knows which models it can pick (CLI parity with the plugin). The
-  // retired escalate tool surface is now the subagent action:"escalate" — its pool
-  // list is decorated onto the action property description below (same intent).
-  const withPool = (tool) => {
-    const models = agent.config?.agent?.consultModels ?? []
-    const list = models.map((m) => `${m.provider}:${m.model}${m.effort ? ` (${m.effort})` : ""}`).join(", ")
-    if (!list) return tool
-    return { ...tool, description: tool.description + `\nCurrently configured consultants (this tool's pool): ${list}` }
-  }
-  // Role enum is mutually exclusive: normal mode has "coder", engineering mode has "eng-coder"/"eng-designer"
-  const subagentRoles = (depth === 0 && agent.config?.agent?.engineering)
-    ? {
-        enum: ["explore", "plan", "eng-designer", "eng-coder"],
-        description: "The sub-agent role — see the tool description for the role capability matrix. Exact spelling required.",
-        suffix: " In engineering mode, use role='eng-coder' for implementation (coder is disabled) and role='eng-designer' for writing the requirements/design documents.",
-      }
-    : {
-        enum: ["explore", "plan", "coder"],
-        description: "The sub-agent role — see the tool description for the role capability matrix. Exact spelling required.",
-        suffix: "",
-      }
-  const filteredSubagent = depth === 0 ? {
-    ...subagentTool,
-    description: subagentTool.description + subagentRoles.suffix,
-    parameters: {
-      ...subagentTool.parameters,
-      properties: {
-        ...subagentTool.parameters.properties,
-        role: { ...subagentTool.parameters.properties.role, ...subagentRoles },
-        // §19: escalate 动作的候选池 = consultModels（缺省池首 / 指定 provider:model）。
-        // 池装饰挂在 action 属性描述（原 escalate 工具注册时 withPool 同款意图——模型
-        // 需要知道可选候选人）。escalate 在工程模式禁用——装饰只对正常模式有意义。
-        action: (agent.config?.agent?.consultModels?.length && !agent.config?.agent?.engineering)
-          ? {
-              ...subagentTool.parameters.properties.action,
-              description: subagentTool.parameters.properties.action.description +
-                `\nCurrently configured escalate candidates (agent.consultModels pool): ${agent.config.agent.consultModels.map((m) => `${m.provider}:${m.model}${m.effort ? ` (${m.effort})` : ""}`).join(", ")}`,
-            }
-          : subagentTool.parameters.properties.action,
-      },
-    },
-  } : subagentTool
-
-  // §18 D-E3 + ENGINEERING-MODE.md §2.15 D（第 2 批——参数化复用，不并列第二个 IIFE）：
-  // 工程子代理（depth>0；eng-coder = 偏差审计 / eng-designer = 自己勘察）get a restricted
-  // spawn channel — role enum limited to explore, NO async parameter (sync only) and action
-  // pinned to spawn（§19 D-M3 restricted-variant action gate——escalate/check/status are
-  // refused here at the schema level too；the mechanical re-check lives in subagent.mjs
-  // execute → the §19 action gate + gateEngCoderSpawn (spawn-child.mjs) — schema enums are
-  // advisory, providers don't enforce them）。描述文案按父角色分流（审计 vs 勘察）。
-  const engChildRole = depth > 0 && (agent._role === "eng-coder" || agent._role === "eng-designer") ? agent._role : null
-  const engChildSubagent = engChildRole
-    ? (() => {
-        const props = { ...subagentTool.parameters.properties }
-        // §19 review hygiene: the child channel is spawn-only sync explore — drop
-        // async, the check/status params (id/n), the eng-coder token params
-        // (designToken/designId are meaningless for a read-only spawn; the parent
-        // spawn already carried the token) and batchDoc (an audit child derives no
-        // batch parameter — its task book rides the mechanical summary of the
-        // parent's _engTaskInput instead). Schema noise would invite the
-        // model to pass irrelevant args.
-        delete props.async // sync only — the parent blocks on the child's report
-        delete props.id
-        delete props.n
-        delete props.designToken
-        delete props.designId
-        delete props.batchDoc
-        const designer = engChildRole === "eng-designer"
-        props.role = {
-          type: "string",
-          enum: ["explore"],
-          description: designer
-            ? "explore only — the eng-designer's internal spawn channel is reserved for read-only surveys of the current state (ENGINEERING-MODE.md §2.15 D; ≤6 spawns per batch)."
-            : "explore only — the eng-coder's internal spawn channel is reserved for read-only divergence audits (AGENT-LOOP.md §18 D-E3).",
-        }
-        props.action = {
-          type: "string",
-          enum: ["spawn"],
-          description: `spawn only — the ${engChildRole}'s internal spawn channel is read-only (escalate/status/cancel/panel/consume-design/observe/send are refused: escalate spawns a coder+WRITE child, and the pool/panel actions have no async pool or panel mirror in a child context).`,
-        }
-        return {
-          ...subagentTool,
-          name: "subagent",
-          description: designer
-            ? "Spawn a read-only `explore` sub-agent to SURVEY the current state for the design (ENGINEERING-MODE.md §2.15 D): it reads code / docs / existing designs and reports evidence with file:line. BLOCKING ONLY (no async) and action:'spawn' ONLY — the survey channel is read-only; escalate/status/cancel/panel/consume-design/observe/send are not available (AGENT-LOOP.md §19). Survey budget: ≤6 explore spawns per batch — the main agent's survey result is reference only; do your own."
-            : "Spawn a read-only `explore` sub-agent to AUDIT your delivery against the design (AGENT-LOOP.md §18 D-E2 ③): it compares the delivered code with the design for divergence — partially implemented acceptance criteria, silent simplifications, doc drift, changes outside the approved file list. BLOCKING ONLY (no async — the audit report decides your next protocol step). action:'spawn' ONLY — the audit channel is a read-only spawn; escalate/status/cancel/panel/consume-design/observe/send are not available (AGENT-LOOP.md §19). The audit task book is appended MECHANICALLY — your own spawn task (docs involved / acceptance criteria / file list) plus the files you actually touched; never hand the audit a self-written file list (a self-report could omit exactly the out-of-scope file it must catch).",
-          parameters: { ...subagentTool.parameters, properties: props },
-        }
-      })()
-    : null
-
-  // consult 工具仅在配置时注册（consultModels 空池时注册会让模型调用后吃一个错误回合）——
-  // §19: escalate 已并入常驻 subagent 的 action:"escalate"（无空池注册问题——动作在
-  // 池空时返回既有错误语义，工程模式 fail-closed 在 execute 内拒绝）。
-  // §25 D-R17a: consult_check 已退役（digest 自动注入是唯一消费通道）——consult 家族
-  // 只剩 2 工具（consult_start/consult_stop——setup 注册点与描述面同步清零）。
-  const consultModels = agent.config?.agent?.consultModels ?? []
-  const consultTools = consultModels.length
-    ? [withPool(consultStartTool), consultStopTool]
-    : []
-  const depthOnly = depth === 0 ? [filteredSubagent, skillTool, goalTool, engTool, verifyTool, recentChangesTool, readHistoryTool, advisorTool, ...consultTools]
-    // SESSION.md §9 D-S2: read_history is depth-0 ONLY — a subagent querying "the session"
-    // would mix its throwaway context with the parent's record (semantic confusion).
-    // It is readonly:true, so planMode pass and no permission ask come automatically (T-S9).
-    // Write-permission coder sub-agents (subagent role="coder" + escalate action):
-    // the system prompt names verify (system.md) and advisor (discipline.md) — without them an
-    // escalate hit "unknown tool" and fell back to bash node --check / npm test to
-    // self-verify (2026-08-16 deepseek escalate diagnosis; plugin parity).
-    // eng-coder: advisor + verify + the §18 audit-only subagent channel (D-E3).
-    // eng-designer (§2.15 D): the survey-only subagent channel alone — no advisor
-    // (it does not fire reviews) and no verify (its deliverable is documents, not code).
-    // §2.20.3（第 4 批）：两分支各追加 batch_segment——目标档 = spawn 时绑定的
-    // `agent._batchDoc`（§2.20.2）；主 agent 不挂载（§1/§4/§6 走普通文档写）。
-    : engChildRole === "eng-coder" ? [advisorTool, verifyTool, batchSegmentTool(agent._batchDoc ?? null), ...(engChildSubagent ? [engChildSubagent] : [])]
-    : engChildRole === "eng-designer" ? [batchSegmentTool(agent._batchDoc ?? null), ...(engChildSubagent ? [engChildSubagent] : [])]
-    : agent._role === "coder" ? [verifyTool, advisorTool]
-    : agent._role === "consult" ? [recentChangesTool]
-    : []
-  const tools = [...agent.tools, taskTool, planTool, timerTool, ...depthOnly, ...(Array.isArray(extraTools) ? extraTools : [])]
+  // 家族矩阵单源（VSC-TOOL-TABLE-DUP §2.3D + CORE-UNIFICATION TOOLS #83）：矩阵本体 =
+  // `./family-tools.mjs`（CLI/VSC 同调一份实现；端差经 decorate 注入——核调用不传 = 核默认逐字）。
+  const familyTools = await assembleFamilyTools({
+    depth, role: agent._role ?? null,
+    engineering: agent.config?.agent?.engineering === true,
+    consultModels: agent.config?.agent?.consultModels ?? [],
+    batchDoc: agent._batchDoc ?? null,
+  })
+  // 两段式：绑定值（基础集）→ 家族段 → caller 注入面（§2.3F 不相交义务在注入方）。
+  const tools = [...agent.tools, ...familyTools, ...(Array.isArray(extraTools) ? extraTools : [])]
   const toolSchemas = tools.map(toOpenAISchema)
   const toolByName = new Map(tools.map((t) => [t.name, t]))
   agent._onTaskUpdate = callbacks.onTaskUpdate
@@ -304,6 +193,9 @@ export async function prepareRun(agent, input, callbacks, {
   // consult = 特殊模块（§3.3）——CONSULT_BASE 自含基底直接返回，不入主链、无四槽。
   // eng-coder 场景即工程纪律（G6——subagent-spawn 的 childConfig engineering=true
   // 强制语义由此表行承载：scenario=eng-coder → discipline-engineering 槽）。
+  // 工程子代理角色判定（家族段迁出 `./family-tools.mjs` 后本处保留——下方 prompt 场景映射
+  // 消费；矩阵内的同判在单源档内。）
+  const engChildRole = depth > 0 && (agent._role === "eng-coder" || agent._role === "eng-designer") ? agent._role : null
   const { prompt: base, warnings: slotWarnings } = assemblePrompt(
     agent._role === "consult"
       ? "consult"

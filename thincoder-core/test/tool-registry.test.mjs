@@ -76,17 +76,30 @@ test("#83 registry: the unified agent-tools registry exports the consult family"
   assert.equal(at.consultStartTool.name, "consult_start")
 })
 
-test("#83 structural: the consult family comes from the unified registry (setup.mjs has no separate mount)", () => {
-  const setup = readFileSync(join(ROOT, "agent/setup.mjs"), "utf8")
-  // positive: agent/setup.mjs destructures BOTH consult tools straight from ../agent-tools.mjs
+test("#83 structural: the consult family comes from the unified registry (family-tools.mjs has no separate mount)", () => {
+  // VSC-TOOL-TABLE-DUP（2026-09-15）：家族矩阵单源化——登记册消费点随矩阵迁出 setup.mjs
+  // → `agent/family-tools.mjs`（`assembleFamilyTools`）；setup.mjs 只经该单源档取家族段。
+  const familyTools = readFileSync(join(ROOT, "agent/family-tools.mjs"), "utf8")
+  // positive: agent/family-tools.mjs destructures BOTH consult tools straight from ../agent-tools.mjs
   assert.match(
-    setup,
+    familyTools,
     /\{[^}]*consultStartTool\s*,\s*consultStopTool[^}]*\}\s*=\s*await import\("\.\.\/agent-tools\.mjs"\)/,
-    "agent/setup.mjs must take the consult family from the unified registry",
+    "agent/family-tools.mjs must take the consult family from the unified registry",
   )
   // negative: no second registration source for the consult tools
   assert.ok(
-    !/consult(Start|Stop)Tool[^\n]*agent-tools\/consult\.mjs/.test(setup),
-    "agent/setup.mjs must not mount consult directly — the unified registry is the single source",
+    !/consult(Start|Stop)Tool[^\n]*agent-tools\/consult\.mjs/.test(familyTools),
+    "agent/family-tools.mjs must not mount consult directly — the unified registry is the single source",
+  )
+  // 装配面（setup.mjs）：不再直取登记册——家族段一律经单源档（两段式调用）
+  const setup = readFileSync(join(ROOT, "agent/setup.mjs"), "utf8")
+  assert.match(
+    setup,
+    /assembleFamilyTools[^\n]*family-tools\.mjs/,
+    "agent/setup.mjs must take the family segment from the single-source module",
+  )
+  assert.ok(
+    !/\{\s*planTool[^}]*\}\s*=\s*await import\("\.\.\/agent-tools\.mjs"\)/.test(setup),
+    "agent/setup.mjs must not mount the registry itself — the matrix lives in family-tools.mjs",
   )
 })
