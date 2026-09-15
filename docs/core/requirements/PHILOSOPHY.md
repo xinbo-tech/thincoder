@@ -198,7 +198,7 @@ Agent 永远比人快，速度根本不是瓶颈。唯一能坏事的，是匆�
 | 旧档面 | 内容 | 何故不并（去向 / 触发） |
 |---|---|---|
 | 提示词分层 / 槽位 / 装配的机制细节 | 蓝图 §1–§2 本体 | `docs/core/design/PROMPT-SYSTEM.md`（并入既有活档，不复制） |
-| VSC 侧同名档 | `thincoder-vscode/docs/requirements/PHILOSOPHY.md` | VSC 轮（`docs/core/requirements/` 并入——P1 统一面） |
+| VSC 侧同名档 | `thincoder-vscode/docs/requirements/PHILOSOPHY.md` | **已核（批 7）：内容为旧措辞子集**——世界观 6 / 人生观 5 / 价值观 4 / 方法论 2 全被本档超集承载（本档含「说了就要做到 / 做到最好 / 交付透明 / 拆解与交代」等后续补充）⇒ **零并入** · 源档留参照历史 |
 
 ## 8. 体量与拆分规划（R24a）
 
@@ -209,3 +209,4 @@ Agent 永远比人快，速度根本不是瓶颈。唯一能坏事的，是匆�
 - 2026-09-15（**B 式迁移轮 · 第 2 批**）：建档——`thincoder-cli/docs/requirements/PHILOSOPHY.md` 内容重建入基准层（旧档一字未改、原地作参照历史）。
   ① 三观条文（世界观 6 条 / 人生观 7 条 / 价值观 5 条 / 方法论 3 条）**内容完整保留**，仅按本档节号重排（旧档无序节 → §2–§4 / §6）；
   ② §5 提示词落点路径改现状（`thincoder-core/prompts/**` · `thincoder-core/tool-docs/**` · 正本 `docs/core/design/prompts/**`）；③ 新增 §7 不并项与历史沿革、§8 体量。
+- 2026-09-15（**VSC 轮并入 · 批 7**）：§7.2 VSC 侧同名档登记销项——**已核零并入**（VSC 版 = 本档旧措辞子集；世界观 6 / 人生观 5 / 价值观 4 / 方法论 2 ⊂ 本档）；源档 `thincoder-vscode/docs/requirements/PHILOSOPHY.md` 一字未改、留参照历史。
