@@ -1952,4 +1952,57 @@ AC4（跨端 marker 隔离：VSC 码路径不可达 `.cli` 写者）/ AC6（§6.
 `check-ledger` = `OK: thincoder/docs/TODO.md` / `OK: thincoder/docs/TODO-archive.md` · **0 处违规** · exit 0；
 `doc-anchors --domain .`（域一）= 0 悬空（本笔面；全域复跑 28 悬空 = `src/tools/*` W14 在途面）。
 
+### W14 · VSC 工具实现面迁核 + `shared.mjs` 拆壳（eng-coder 实施轮 · 2026-09-15）
+
+**交付摘要**：VSC 端 19 档工具自持镜像删除、装配面/薄壳改指核单源、端侧 10 缝按端注入、测试改指、模块权威档同步收正。
+提交：`06686ecb`（代码面 32 档 · +403/−3992）· `a354e026`（文档面 24 档 · +255/−234）。
+
+**改动面（逐项）**
+
+1. **删（19 档）**：`thincoder-vscode/src/tools/{checklist,edit-diff,edit-fuzzy-match,edit-line-params,execute,file-edit,file,git,hashline-edit,linter,lsp,more-file,ops,question,read_image,search,tree,wait_for,web}.mjs` → 核 `@thincoder/core/tools/{file,edit-diff,edit-batch,patch,search,ops,git,lsp,execute,question,tree,web,linter,checklist}.mjs`。
+2. **保留（6 档）**：`tools/{index,shell,code,context,focus}.mjs` = VSC 装配面（`index.mjs` 承载工具清单 + git 只读分类端装饰 + LSP 宿主桥）；`tools/shared.mjs` = **拆壳薄壳 200 行**（413 → 200，设计目标「约 150±50」内）：端侧 4 缝供值 `configureWritePath{openDoc,isDirty,applyEdit}` / `configureExecRun{run}` / `configureProcessTreeKill{killTree}` / `configureTreeResolve{resolve}` + VSC 专属 helper（getOpenDoc/refreshMarkdownPreview/applyEditorEdit/applyEditorRangeEdit/killProcessTree/runInterruptible/resolvePath/MAX_STREAM_BUF）。
+3. **缝接线（agent 面）**：`agent/setup.mjs` 增 `wireAgentToolSeams()`（hydrateRun 内调用）——`configureSkillLoader{loadSkills,readSkill}` / `configureEngMirror{onToggle}` / `configureVerifyDiagnostics{section}`；`agent/execute-tools.mjs` toolCtx 补 `onQuestion`（核 question 工具读点）；`agent/context-injections.mjs` 的 `pendingItems` 改指核 checklist。
+4. **未注入两缝（登记形态）**：`configureGitApproval` / `configureEditReceipt` 按缺省不覆盖（端审批在工具执行前）——已写入 `docs/core/design/TOOLS.md` §6.11。
+5. **测试改指（6 档）**：`test/{edit-tool-improvement,read-dual-end,git-commit-pathspec,tool-descriptions,wait-for-advisor-pool}.test.mjs` + `test/integration/scenario-06-commit-verify.test.mjs`——全指核面；`edit-tool-improvement` 按核实现重写（断言串与核 read 行号格式 `<ln>\t<line>` 收正）。
+6. **模块权威档同步（24 档）**：核 `docs/core/design/{TOOLS §2.2 三行/§2.5 #62,#68/§6.11 五条端差行,EDIT,HASHLINE-EDIT,INSERT-AFTER,APPLY-PATCH,CHECKPOINT §6.9,TOOL-OUTPUT-LIMITS §6.3,DOC-MIGRATION,STRUCTURE-DEBT,CORE-UNIFICATION §2.13.3/§2.13.5}` + VSC 产品档 14 档（补「W14 已迁核——现体 <核路径>」注记，判据零改）——均追加变更记录行。
+
+**删旧三条读数（A-K2/K5）**：① 扫描域 = `thincoder-vscode/src/**` + `test/**`：对 19 删除档的相对 import 命中 **0**；② `src/tools/*.mjs` 实存 **6 档** = 保留面；③ `src/tools.mjs` barrel 经 `./tools/index.mjs` 转口核子路径全绿。
+
+**决策透明表**
+
+| # | 决策 | 理由 / 备选 |
+|---|---|---|
+| 1 | 薄壳保留 `applyEditorRangeEdit`（零消费者） | W14 任务书把「现形 getOpenDoc/applyEditorEdit/applyEditorRangeEdit」列为本档保留面；核写路径缝只承载全文写回 ⇒ 加 `retired（W14）` 注而非删（删 = 偏离任务书保留面） |
+| 2 | `formatSize` 从薄壳删除（含 index.mjs re-export） | 迁移后零消费者（全树 grep 仅定义处 + re-export）= 死代码；删后薄壳 205 → 200 行进设计带内 |
+| 3 | `update.d.ts` / 端壳 bash 面 | 不动——`shell.mjs` 的 `MAX_STREAM_BUF` 留端（核 bash.mjs 同名未导出，端自持属装配面形态） |
+| 4 | 主进程 `git` 工具只读分类 | 迁入端装配面装饰（核 git 工具无 `isReadonlyAction` 概念）——逐字同前态 `src/tools/git.mjs:81-93`；审批层消费点 `execute-tools.mjs:65,117` · `tool-gates.mjs:72,149` 无旁路 |
+
+**复跑读数（复跑时点 2026-09-15 18:3x · 与他单元在途共存）**
+- `npm run lint`（cwd = thincoder-vscode）= **206 JS files OK**
+- `npm test`（快层）= **562 / 528 通过 / 0 失败 / 34 skip**
+- `npm run test:full` = **562 / 561 通过 / 1 失败 / 0 skip**——唯一失败 = `T-DC6②`（doc-anchors 真仓零命中锁），cause = 他单元在途删除致根域 33 条悬空锚（非 W14 面：悬空清单含 `src/agent-tools/subagent-*` · `src/advisor/*` · `src/provider.mjs`，W14 面 **0 条**）
+- `npm run test:integration` = **29 / 27 通过 / 2 失败**——两条 = `scenario-02-eng-chain`（cause = advisor model re-derivation 迁移在途，`provider "unknown": model is undefined`；非 W14 面）
+- `npm run doc:check`（VSC 域）= 263 命中——**其中涉 `src/tools/` 者 0**；余为他单元在途面（`advisor/*` · `agent-tools/subagent-*` · `test/advisor-*`）
+- 仓根三机检：`check-doc-width --domain .` = **OK**（131 档，新增违规 0）· `check-ledger` = **OK**（TODO/TODO-archive）· `doc-anchors --domain .` = 33 悬空（同上，W14 面 0）
+- 核回归：`thincoder-core` `node --test` = **178 / 178 / 0 失败**
+
+**审计与代码评审轮次（AGENT-LOOP §18 D-E2/D-E4）**
+- **D-E2 内部 explore 背离审计**：1 轮（blocking）→ 终态 **DEVIATIONS**（2 条登记级：§5 未落〔即本段〕· 薄壳 205 行越 ±50 上界 5 行〔🔵 估计值〕）；逐项 1–10 面全 ✅。
+- **D-E4 内部 advisor 代码评审**：1 轮（sync）→ **VERDICT: pass**（🔴 0）；发现 5 条（🟡 2 / 🔵 3）。
+- **fix round（评审后发现 → 修正，1 轮）**：
+
+| # | 级别 | 评审发现 | 处置（file:line） |
+|---|---|---|---|
+| 1 | 🟡 | question 工具 VSC 无回调降级径退场未登记（权威档仍记 QuickPick/InputBox ④ 段） | **Fixed（文档侧）**——`docs/core/design/TOOLS.md:55`(#52) / `:67`(#64) 补 W14 注（降级径退场 · 现体 = 端 `onQuestion` 通道）；行为态维持（面板路径恒有通道——`panel-callbacks.mjs:195`；auto-turn 显式 `() => null` 新旧同返回 `(user cancelled)`） |
+| 2 | 🟡 | 文件体量：`agent/setup.mjs` 566 行 > 500 硬限；`execute-tools.mjs` 375 / `tools/shell.mjs` 318 > 300 软线 | **登记（R3 不复审）**——承 W9 §5 判例「不升级——`setup.mjs` 随 W15 删除集清零」；本表登记在案 |
+| 3 | 🔵 | `applyEditorRangeEdit` 零消费者（死代码疑） | **Fixed**——`src/tools/shared.mjs:62-68` 补 `retired（W14）` 注（勿再接线） |
+| 4 | 🔵 | `wireAgentToolSeams` 幂等旗置位早于 `await import`（载入 reject ⇒ 后续轮静默不补接） | **Fixed**——`src/agent/setup.mjs:122-124` 旗标移至两处 `configure*` 之后 |
+| 5 | 🔵 | `CORE-UNIFICATION.md:1330`/`:1398` 写路径缝行未收正（缺 `isDirty` 必需字段、坐标陈旧） | **Fixed**——两行改为 `{openDoc, isDirty, applyEdit}` + W14 注（`applyEditorRangeEdit` 退场标注） |
+- **终态 = `clean`（收敛）**：修正轮内 4 修 1 登记，无 🔴 留存；修正后复跑：lint OK · 快层 562/528/**0 失败** · 重点面 58 例全绿（`edit-tool-improvement`/`read-dual-end`/`wait-for-advisor-pool`/`tool-descriptions`/`engine-floor-guard`/`scenario-06`/`child-permission-wiring`）。
+
+**披露（透明面）**
+- 共享档：`thincoder-vscode/src/agent/setup.mjs` · `agent/execute-tools.mjs` 含他单元（W9/W12/W13）在途编辑——`git commit --only` 语义 = 提交该两档**工作区当前内容**（本批提交快照含其部分改动，文件本身未被本批改动覆盖）。
+- 出列表改动（均与本单元直接相关、随报告披露）：`thincoder-vscode/src/tools/index.mjs` 的 `formatSize` re-export 删（决策表 #2）；`docs/core/design/TOOL-OUTPUT-LIMITS.md:117` 行收正（未在 W14 具名文档面内，属同机制权威档同步）。
+- 未决（交父侧）：① question 降级径是否需保留（本批按核单源收敛，仅文档登记；若设计要保留 ⇒ 端壳经缝补值，另起修正）；② 根域/`doc:check` 他单元在途红（清单见上）非本批面；③ 批次档 §5 外其余段未动。
+
 ## §6 验证与收口（父代理）
