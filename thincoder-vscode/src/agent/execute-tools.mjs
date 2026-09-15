@@ -10,7 +10,7 @@ import {
   FILE_MUTATORS, STALL_WINDOW, STALL_THRESHOLD, MAX_PARALLEL_SUBAGENTS,
   offloadToolResult, pushReal, runWithLimit,
 } from "./run-helpers.mjs"
-import { logEvent, errText, headText } from "../log.mjs"
+import { logEvent, errText, headText } from "@thincoder/core/log.mjs"
 import { manifestPath } from "../extension/session-slots.mjs"
 import { peerDomains, registerDomains } from "../extension/peer-domains.mjs"
 // §9 D-24b：文件变更事件记账（async 评审陈旧判定数据源——跨 run 载体）

@@ -25,12 +25,12 @@
  * 单核承载（D2——实现单核无重复）。
  *
  * 模块图：单向 import async-settle.mjs（parentAborted）/ subagent-scheduler.mjs（池与墓碑
- * accessor）/ ../agent/run-helpers.mjs（escapeXml）/ ../log.mjs——叶子向、无环。
+ * accessor）/ ../agent/run-helpers.mjs（escapeXml）/ @thincoder/core/log.mjs——叶子向、无环。
  */
 import { parentAborted } from "./async-settle.mjs"
 import { getAsyncPool, removeFromAsyncPools, writeTombstoneTo } from "./subagent-scheduler.mjs"
 import { escapeXml } from "../agent/run-helpers.mjs"
-import { logEvent } from "../log.mjs"
+import { logEvent } from "@thincoder/core/log.mjs"
 
 /** C-4 提醒模板（verbatim——单条文本、词间单空格；测试断关键子串，不逐字断行）。 */
 const subagentReminderText = (n, list) =>

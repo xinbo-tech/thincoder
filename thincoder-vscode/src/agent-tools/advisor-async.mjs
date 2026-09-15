@@ -32,7 +32,7 @@ import { advisorIncompleteMarker, incompleteNotice } from "../advisor/compaction
 import { isCodePath, loadConventions } from "../conventions.mjs"
 import { generateDesignToken, makeDesignTokenRegex, buildApprovedSuffix, stripApprovedSuffix } from "./advisor.mjs"
 import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
-import { logEvent } from "../log.mjs"
+import { logEvent } from "@thincoder/core/log.mjs"
 import { nextSubagentId, getAsyncPool } from "./subagent-scheduler.mjs"
 import { settleAsyncEntry, buildChildSignal } from "./async-settle.mjs"
 import { setSlotEngDesignTokens } from "../extension/session-slot-write.mjs"

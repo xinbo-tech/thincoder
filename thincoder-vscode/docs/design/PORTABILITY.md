@@ -131,7 +131,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 - 分类词表（优先级 = 代码段 > temp > 文档扩展名 > code）：`isTempPath(p)` / `isDocPath(p, conv)` / `isCodePath(p, conv)` / `classifyPath(p, conv)`；
 - 段匹配（非锚定）、大小写不敏感、`/` 与 `\\` 通吃——`packages/foo/src/x.md` 判 code（嵌套漏判消除）;
 - `loadConventions(cwd)`（按 root 缓存）/ `clearConventionsCache()`（测试 seam）；
-- 损坏 / 类型错 → 默认 + `console.warn` + `logEvent("conventions:error", …)`（不崩溃、不静默——VSC `src/log.mjs` 既有 `logEvent`）。
+- 损坏 / 类型错 → 默认 + `console.warn` + `logEvent("conventions:error", …)`（不崩溃、不静默——VSC `src/log.mjs` 既有 `logEvent`；W1 已迁核——现体 `thincoder-core/log.mjs:1`）。
 
 ### 3.2 门禁与接线（VP-10 续——全表）
 

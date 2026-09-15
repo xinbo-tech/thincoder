@@ -26,7 +26,7 @@ import { isAbsolute, relative } from "node:path"
 import { buildProvider } from "../extension/presets.mjs"
 import { specForModel } from "../specs.mjs"
 import { mergeChildMutations, nextSubagentId } from "./subagent-async.mjs"
-import { logEvent, errText } from "../log.mjs"
+import { logEvent, errText } from "@thincoder/core/log.mjs"
 import { makeChildPermission } from "./child-permission.mjs" // §18 C-2/C-9：child 权限通道（2026-09-12）
 
 // ─── §19 escalate 动作（AGENT-LOOP.md §19 D-M4/F7——escalate.mjs 退役，执行逻辑 verbatim 并入）───

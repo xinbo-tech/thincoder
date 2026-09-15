@@ -18,7 +18,7 @@ import { embed, cosine } from "./embedding.mjs"
 import { encodeVectors, decodeVectors } from "./index-bin.mjs"
 import { discoverFiles, discoverFilesUnder, kindFor, shouldIndexFile, listMemoryFiles, SKIP_DIRS } from "./index-discover.mjs"
 import { loadConventions } from "./conventions.mjs"
-import { logEvent } from "./log.mjs"
+import { logEvent } from "@thincoder/core/log.mjs"
 
 const INDEX_DIR = ".thincoder/index"
 const CHUNK_LINES_CODE = 30

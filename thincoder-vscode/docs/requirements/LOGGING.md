@@ -1,8 +1,8 @@
 # 日志（LOGGING）— 需求
 
 > 板块：诊断事件日志（常驻事件骨架日志——机制在位）。需求层文档（`docs/requirements/`）。
-> 定位：本仓 `src/log.mjs`（197 行）的**需求层登记**——机制实况记录；实现契约逐条住该模块头注（`src/log.mjs:1-30`）。
-> 跨端：与 CLI 仓 `src/log.mjs` 同构镜像（语义同源、各自实现）——共享 `~/.thincoder/logs/`、同格式、同事件面。
+> 定位：本仓 `src/log.mjs`（197 行）的**需求层登记**——机制实况记录；实现契约逐条住该模块头注（`src/log.mjs:1-30`）。W1 已迁核——现体 `thincoder-core/log.mjs:1`。
+> 跨端：与 CLI 仓 `src/log.mjs` 同构镜像（语义同源、各自实现）——共享 `~/.thincoder/logs/`、同格式、同事件面。W1 已迁核——现体 `thincoder-core/log.mjs:1`。
 
 ## 1. 总体目标
 

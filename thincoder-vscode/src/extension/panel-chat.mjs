@@ -33,7 +33,7 @@ import { resolveReasoningMode } from "./reasoning-mode.mjs"
 import { t } from "../i18n.mjs"
 import { _cwd } from "./panel-messages.mjs"
 import { suspensionSession, poolLive, backgroundStatus } from "./suspension.mjs"
-import { logEvent, errText } from "../log.mjs"
+import { logEvent, errText } from "@thincoder/core/log.mjs"
 // MODEL-MERGE-SESSION 模型/stamp 决策纯函数（500 行硬限拆分——turn-model.mjs）
 import { resolveTurnModelAndStamp } from "./turn-model.mjs"
 // 2026-09-05 实践轮 module-split：回调工厂迁 panel-callbacks.mjs（webview 桥接面独立决策）

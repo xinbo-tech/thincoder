@@ -17,7 +17,7 @@
  */
 import { injectPendingAsync, parkAsyncPending } from "../agent-tools/async-settle.mjs" // D2/D3 共享：pending 单容器注入分发 + 停靠统一表示
 import { cleanupConsultSessions } from "../agent-tools/consult.mjs" // §25 R17：会诊会话中止清理（挂起活度见 poolLive 内联读）
-import { logEvent } from "../log.mjs"
+import { logEvent } from "@thincoder/core/log.mjs"
 // 任务可见性族投递通道（第 10 批 §5.1.4 第 3 条）：环 import（panel-callbacks ↔ 本模块——
 // B2 panel-messages↔panel-session 同款）——postSubagentEvent 为函数声明（hoist）——只在
 // 调用期读——环安全（两模块无顶层跨环读取）。

@@ -21,7 +21,7 @@
  * 批 6：runChild 巨型闭包（子代理执行闭环本体）→ ./subagent-run.mjs（CLI 同名对齐——
  * 自由变量收编参数对象——verbatim 迁移零行为变化——原私有非导出——消费面零影响）。
  */
-import { logEvent, errText } from "../log.mjs"
+import { logEvent, errText } from "@thincoder/core/log.mjs"
 import { auditTaskBook, gateEngCoderSpawn, spawnAsyncSubagent, nextSubagentId } from "./subagent-async.mjs"
 import { buildChildSignal } from "./async-settle.mjs"
 import { subagentStatus, cancelSubagentAction, subagentObserve, subagentSend } from "./subagent-actions.mjs" // §19/§19.5 动作执行器（2026-09-05 拆分轮迁出；§19.8 删 check——subagentCheck 退役；2026-09-08 SUBAGENT-OBSERVE-SEND：+observe/send 执行器）

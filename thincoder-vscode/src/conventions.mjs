@@ -25,7 +25,7 @@
  */
 import { readFileSync } from "node:fs"
 import { join, resolve } from "node:path"
-import { logEvent } from "./log.mjs"
+import { logEvent } from "@thincoder/core/log.mjs"
 
 /** Default code-path segments (data, not logic — a project may replace them). */
 export const DEFAULT_CODE_PATHS = ["src"]

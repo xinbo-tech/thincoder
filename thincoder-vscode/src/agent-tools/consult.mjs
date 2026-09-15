@@ -17,7 +17,7 @@
  */
 import { buildProvider } from "../extension/presets.mjs"
 import { specForModel } from "../specs.mjs"
-import { logEvent, errText } from "../log.mjs"
+import { logEvent, errText } from "@thincoder/core/log.mjs"
 import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
 import { getAsyncPool, removeFromAsyncPools } from "./subagent-scheduler.mjs"
 import { settleAsyncEntry, buildChildSignal } from "./async-settle.mjs"

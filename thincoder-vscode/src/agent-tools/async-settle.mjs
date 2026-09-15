@@ -18,11 +18,11 @@
  * - D6 buildChildSignal：`ctx.sessionSignal ?? ctx.agent?._sessionSignal ?? ctx.signal
  *   ?? null` 单点（原 4 处逐字抄；consult 补 _sessionSignal 兜底——D5）。
  * 模块图：单向 import subagent-scheduler.mjs（getAsyncPool/removeFromAsyncPools/
- * refillPool/refreshQueuedRows/writeTombstone）+ log.mjs——叶子级共享模块；四族 settle
+ * refillPool/refreshQueuedRows/writeTombstone）+ @thincoder/core/log.mjs——叶子级共享模块；四族 settle
  * 回调（subagent-async/advisor-async/subagent-escalate-async/consult）单向 import 本
  * 模块；注入器分发 injectPendingAsync 动态 import 各族注入器（防环）。
  */
-import { logEvent, errText } from "../log.mjs"
+import { logEvent, errText } from "@thincoder/core/log.mjs"
 import { getAsyncPool, removeFromAsyncPools, refillPool, refreshQueuedRows, writeTombstone } from "./subagent-scheduler.mjs"
 
 // ─── D2 pending 单容器（+role）───

@@ -207,7 +207,7 @@ chars/token、CJK ≈1），超预算 `sleep`（onWait 通知）；未配则关�
 3. **读侧 idle（本端补齐——CLI 对位 = `sse.mjs:169-182` / `google.mjs:197-207`）**：四 transport 的读循环各加
    `READ_IDLE_MS = 120_000` 空闲看门狗——每 chunk 重置；连续无数据 120s → `response.body.destroy(new DOMException("SSE idle timeout: no data for 120s", "TimeoutError"))`；
    读毕清理 timer。测试缝 = `parseStream(response, { …, idleMs })`（生产缺省 `READ_IDLE_MS`——调用方零改）；
-4. 错误分类不变：idle 消息含 "timeout" → `classifyErr` 归 `timeout`（`src/log.mjs:178`）——llm:error 可判来源；
+4. 错误分类不变：idle 消息含 "timeout" → `classifyErr` 归 `timeout`（`src/log.mjs:178`；W1 已迁核——现体 `thincoder-core/log.mjs:1`）——llm:error 可判来源；
 5. 文档：本档 §4.2 改写（已落）+ 本 §4.3 + 变更记录一行。
 
 **（d）用例表（T-MA1-1–5——正常 / 边界 / 错误；零网络——fetch / proxyFetch 桩 + 假流）**：

@@ -377,7 +377,7 @@
 | **B 跨仓指针** | 命中行含对端路径（受影响文件表 / 证据 / 指针） | **逐条改指本仓 / 规范形态化**（对端路径形态 → `名称（CLI 仓）§N`——目标 = 本端对位档；本仓无对位档者按 §8.6 ① 建） | 35 档（最重 `ADVISOR-CONVERGENCE` 61 · `AGENT-LOOP` 42 · `WEBVIEW` 39） |
 | **C 托管内容** | 命中行为「对端需求落本档」类托管声明 | **迁移**（对端需求迁对端；本档留本仓面） | **0 档**（实测本仓无托管声明） |
 | **C 托管内容（接收面）** | 对端（CLI）需求档 / 设计档的托管声明所承载的**本仓需求** | **接收**：落本仓**需求层**（本批建 `docs/requirements/AGENT-LOOP.md`——7 节逐字迁移；CLI 设计档 1 处登记行 → `docs/requirements/ENGINEERING-MODE.md` §1.7）——裁定与逐处表见 §8.9 | 源处 2 档（CLI `requirements/AGENT-LOOP` 7 节 · CLI `design/ENGINEERING-MODE` 1 线）→ 接收档 **1 新建 + 1 就地** |
-| **D 源码内悬空跨仓指针** | 源码注释指对端路径（如 `src/log.mjs:2` 指对端 `docs/design/LOGGING.md`） | **改指本端对位档**（随 §8.6 ① 档建立后同轮落地） | 2 处（`src/log.mjs:2` · `src/compact.mjs:5`——后者本仓已有同名权威档，属陈旧指针） |
+| **D 源码内悬空跨仓指针** | 源码注释指对端路径（如 `src/log.mjs:2` 指对端 `docs/design/LOGGING.md`） | **改指本端对位档**（随 §8.6 ① 档建立后同轮落地） | 2 处（`src/log.mjs:2` · `src/compact.mjs:5`——后者本仓已有同名权威档，属陈旧指针；`src/log.mjs` 本体 W1 已迁核：现体 `thincoder-core/log.mjs:1`） |
 
 ### 8.5 分期表（每期带触发条件——不以「量大」停在待议）
 
@@ -560,7 +560,7 @@
 | 21 | `docs/requirements/PROJECT.md` | **归位**（原 `docs/design/REQUIREMENTS.md` 129 行） | ±0（去 v1 功能范围节） | ②·归位异名 |
 | 22 | `docs/requirements/FEATURES.md` | **新建（拆出）** | 0→~45 | 自 `REQUIREMENTS.md`（已退役——归位 `docs/requirements/PROJECT.md`）§v1 功能范围 拆出 |
 | 23 | `docs/requirements/PHILOSOPHY.md` | **归位**（原 `docs/design/PHILOSOPHY.md` 135 行） | ±0 | ②·归位（价值层需求） |
-| 24 | `docs/requirements/LOGGING.md` | **新建（①）** | 0→~60 | 机制在位无档；兼清 `src/log.mjs:2` 悬空指针 |
+| 24 | `docs/requirements/LOGGING.md` | **新建（①）** | 0→~60 | 机制在位无档；兼清 `src/log.mjs:2` 悬空指针（W1 已迁核——现体 `thincoder-core/log.mjs:1`） |
 | 25 | `docs/requirements/MULTI-INSTANCE-COLLAB.md` | **新建（①）** | 0→~60 | 机制在位（`peer-instances.mjs`） |
 | 26 | `docs/requirements/NORMAL-MODE.md` | **新建（①）** | 0→~70 | 提示词装配层在位 |
 | 27 | `docs/requirements/SETTINGS-TOOL.md` | **新建（①）** | 0→~70 | `src/agent-tools/settings.mjs` 在位；部分承载 = `docs/design/TOOLS.md` §5 |
@@ -569,7 +569,7 @@
 | 30 | `docs/batches/`（迁移 **14** 档） | 迁入 4234 行（含 10 行折行） | ±0 | §8.3 迁移清单 |
 | 31 | `docs/batches/`（拆分 **17** 档本仓承载档） | **新建** | 0→≈168 条目 | §8.3 拆分清单 |
 | 32 | `docs/design/_archive/`（迁移 3 + 拆分 2） | 迁入 223 行 | ±0 | §8.4 D 类 |
-| 33 | 本仓 `docs/design/` 反向写痕（35 档） | — | ±0（改指） | §8.4 B 类（含 `src/log.mjs:2` · `src/compact.mjs:5` 源注释 2 处） |
+| 33 | 本仓 `docs/design/` 反向写痕（35 档） | — | ±0（改指） | §8.4 B 类（含 `src/log.mjs:2` · `src/compact.mjs:5` 源注释 2 处——`src/log.mjs` 本体 W1 已迁核：现体 `thincoder-core/log.mjs:1`） |
 | 34 | `docs/design/prompts/discipline-normal.md` | 184 | +10±4 | §6.2 条 3 / 条 4（CN 镜像面——修正轮纳入） |
 | 35 | （原拟 `test/prompts-carryover-anchors.test.mjs`——引例：原拟档名，现态不在册） | — | **不建** | as-built 核对：拆分面经并行批先落消解（余档 177 ≤500——拆分不适用） |
 

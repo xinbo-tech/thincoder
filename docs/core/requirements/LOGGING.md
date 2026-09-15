@@ -9,7 +9,7 @@
 
 ## 1. 总体定位
 
-诊断日志 = 常驻事件骨架日志（两端同路径档 `src/log.mjs`——CLI `thincoder-cli/src/log.mjs` ↔ VSC 同名档）。
+诊断日志 = 常驻事件骨架日志（迁移前基线 = 两端同路径档 `src/log.mjs`——CLI `thincoder-cli/src/log.mjs` ↔ VSC 同名档；两端已随 S2 U1 / W1 迁核）。
 本板块对本子系统的要求 = 该面归一为**核内单一实现**（语义与密钥脱敏同构）。
 
 > 面清单与逐面裁决（分类 / 端差处置 / 前提校验 / 归属段）→ `docs/core/design/LOGGING.md` §1–§2（不复制）。
@@ -65,7 +65,8 @@
 
 ### 4.4 VSC 端条目（并入 · 2026-09-15 批 8 · 自 `thincoder-vscode/docs/requirements/LOGGING.md`）
 
-语义同源——VSC 档 F1–F7 / N1–N5 与 §4.1–§4.3 逐条同义（不重并；共享 `~/.thincoder/logs/` 同格式同事件面已载 §4.2 F-L6）；VSC 端坐标（实核）＝ `thincoder-vscode/src/log.mjs`——`_dead` 静默降级（`:46` / `:63` / `:137`）· `THINCODER_LOG_DIR` 测试隔离（`:51`）· `NODE_TEST_CONTEXT` 门（`:64`）· 每进程每日首写机会式清理（extension host 长驻兜底）。共享目录与格式 = 两端镜像实现（F6）。
+语义同源——VSC 档 F1–F7 / N1–N5 与 §4.1–§4.3 逐条同义（不重并；共享 `~/.thincoder/logs/` 同格式同事件面已载 §4.2 F-L6）；VSC 端坐标（实核 · W1 收正——自持镜像已删）＝ `@thincoder/core/log.mjs`——
+`_dead` 静默降级（`:46` / `:63` / `:137`）· `THINCODER_LOG_DIR` 测试隔离（`:51`）· `NODE_TEST_CONTEXT` 门（`:64`）· 每进程每日首写机会式清理（extension host 长驻兜底）。共享目录与格式 = 两端镜像实现（F6）。
 
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）
 
@@ -81,3 +82,4 @@
 - 2026-09-13：建档——自 `docs/core/requirements/CORE-UNIFICATION.md` 拆分（来源：§2 F11 / F6 回指）+ 设计档 `LOGGING.md`（§2.1 #42 派生）；**无新增需求**。
 - 2026-09-14（**B 轮并入 · 第 2 批**）：新增 §4 **需求条目**（总体需求 / F-L1–F-L7 / NF-L1–NF-L4——自 `thincoder-cli/docs/requirements/LOGGING.md` 逐节比对后并入需求正文；**编号与文本承旧档**）+ §5 **不并项与历史沿革**；**本档新增需求 0**（纯回填）；首部加需求条目面指针一行。
 - 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：新增 §4.4 **VSC 端条目**（`_dead` / `THINCODER_LOG_DIR` / 机会式清理坐标——自 `thincoder-vscode/docs/requirements/LOGGING.md` 并入；语义同源不重并）；§5 登记 VSC 档批次材料；**本档新增需求 0**（纯回填）。
+- 2026-09-15（**S2 W1 接线 · VSC 端** · eng-coder 实施轮）：§1 基线句标记「迁移前基线」（两端已迁核——CLI U1 / VSC W1）+ §4.4 VSC 端坐标收正——`thincoder-vscode/src/log.mjs`（自持镜像）随 W1 删档，改「经 `@thincoder/core/log.mjs` 引用」；**本档新增需求 0**（纯坐标收正）。

@@ -15,7 +15,7 @@ import { pushReal, reinjectAfterCompaction, MAX_VERIFY_PUSHBACKS, MAX_VERIFY_RET
 import { MAX_ADVISOR_PUSHBACKS } from "./run-helpers.mjs"
 import { MAX_ADVISOR_ROUNDS } from "../advisor/run.mjs"
 import { advisorReviewInFlight } from "../agent-tools/advisor-async.mjs"
-import { logEvent } from "../log.mjs"
+import { logEvent } from "@thincoder/core/log.mjs"
 import { ContinueError, INHERITED_GUARD_KEYS } from "../agent.mjs"
 import { flushDomains } from "../extension/peer-domains.mjs"
 // 2026-09-05 实践轮：maybeGuardPushbacks——收尾前 guard 推回组（自 runAgent 无工具分支）

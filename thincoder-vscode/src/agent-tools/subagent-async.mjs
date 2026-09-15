@@ -20,7 +20,7 @@
  * mergeChildMutations（eng-coder spawn merge 与 escalate 引擎共享——重开会话清理）。
  */
 import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
-import { logEvent } from "../log.mjs"
+import { logEvent } from "@thincoder/core/log.mjs"
 import { describeBlockers, effectivePoolLimits, entryDomain, nextSubagentId, refreshQueuedRows, runningByDomain, writeTombstoneTo } from "./subagent-scheduler.mjs"
 import { resolveBatchDoc, NEEDS_BATCH_DOC } from "./subagent-spawn-gate.mjs"
 import { settleAsyncEntry } from "./async-settle.mjs"

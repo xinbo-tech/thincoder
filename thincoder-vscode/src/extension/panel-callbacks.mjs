@@ -12,7 +12,7 @@ import { permissionGate, batchPermissionGate } from "./permission-gate.mjs"
 import { notifyCompletionIfUnfocused } from "./notify.mjs"
 import { toolPanelPayload } from "./panel-toolpanel.mjs"
 import { backgroundStatus } from "./suspension.mjs"
-import { logEvent } from "../log.mjs"
+import { logEvent } from "@thincoder/core/log.mjs"
 
 // ─── 任务可见性族投递队列（2026-09-11 第 10 批——WEBVIEW.md §5.1.4 第 1 条）———
 /** 队列上界（§5.1.4 第 1 条——溢出丢最旧 + 留痕）。 */
