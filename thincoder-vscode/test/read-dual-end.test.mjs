@@ -1,12 +1,15 @@
 /**
  * read-dual-end.test.mjs — read 工具双端返回（DUAL-END-TRUNCATION F-1，C 方案——
  * docs/design/DUAL-END-TRUNCATION.md，2026-09-09——CLI test/read-dual-end.test.mjs
- * 同构镜像，编号格式按 VSC 侧 padStart(6)）：
+ * 同构镜像）：
  * 大文件（> MAX_READ_LINES=2000 行）窗口截断时返回 头（请求窗口）+ `…(truncated:
  * K lines in middle, use offset to continue)` + 尾（末 READ_TAIL_LINES=500 行）——
- * 行数/total 注补（VSC 现无 2000 上限无 total 尾注——本实现补 default 2000 上限 +
- * 窗口截断时的 total 尾注 + 双端形态）。AC-1 边沿：offset 窗口与尾区重叠不重复 /
- * 无中段 K=0 无假省略注 / ≤ 阈值文件走旧路径零变化。hashes 模式照常（AC-3）。
+ * AC-1 边沿：offset 窗口与尾区重叠不重复 / 无中段 K=0 无假省略注 / ≤ 阈值文件走旧路径零变化。
+ * hashes 模式照常（AC-3）。
+ *
+ * W14（2026-09-15 · `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W14）：本档改指**核面**
+ * （`@thincoder/core/tools/file.mjs` / `shared.mjs`——端自持镜像 `src/tools/file.mjs` 已删）；
+ * 行号格式按核实现收正 = `<ln>\t<line>`（无 padStart(6)；hashes = `<ln>\t[<hash>] <line>`）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
@@ -14,8 +17,8 @@ import { createHash } from "node:crypto"
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { readTool, READ_TAIL_LINES } from "../src/tools/file.mjs"
-import { MAX_READ_LINES } from "../src/tools/shared.mjs"
+import { readTool, READ_TAIL_LINES } from "@thincoder/core/tools/file.mjs" // W14：核面单源（本端镜像已删）
+import { MAX_READ_LINES } from "@thincoder/core/tools/shared.mjs"
 
 /** mkdtemp 项目 + 写 n 行文件（"line N"，1-based——无尾随换行 → split("\n") = n 行）。 */
 function fixture(n) {
@@ -25,7 +28,7 @@ function fixture(n) {
   writeFileSync(join(dir, name), lines.join("\n"), "utf8")
   return { dir, name, lines, cleanup: () => { try { rmSync(dir, { recursive: true, force: true }) } catch {} } }
 }
-const num = (ln) => String(ln).padStart(6, " ")
+const num = (ln) => String(ln) // 核面格式（W14 改判）：`<ln>\t<line>`——无 padStart
 const listing = (lines, from, to) => lines.slice(from - 1, to).map((l, i) => `${num(from + i)}\t${l}`).join("\n")
 const run = (f, args) => readTool.execute({ path: f.name, ...args }, { cwd: f.dir })
 
@@ -100,7 +103,7 @@ test("AC-3: hashes 模式头尾行 hash 照常", async (t) => {
   const out = await run(f, { hashes: true })
   const h1 = createHash("sha256").update(f.lines[0]).digest("hex").slice(0, 12)
   const hN = createHash("sha256").update(f.lines[2599]).digest("hex").slice(0, 12)
-  assert.ok(out.startsWith(`${num(1)}${h1}  line 1`), "头行 hash 在")
-  assert.ok(out.endsWith(`${num(2600)}${hN}  line 2600`), "尾行 hash 在")
+  assert.ok(out.startsWith(`${num(1)}\t[${h1}] line 1`), "头行 hash 在")
+  assert.ok(out.endsWith(`${num(2600)}\t[${hN}] line 2600`), "尾行 hash 在")
   assert.ok(out.includes(`…(truncated: 100 lines in middle, use offset to continue)`), "hashes 模式省略注在")
 })

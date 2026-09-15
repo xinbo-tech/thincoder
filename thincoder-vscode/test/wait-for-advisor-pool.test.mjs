@@ -12,7 +12,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { fileURLToPath } from "node:url"
-import { evaluateWaitForCondition, parseWaitForCondition } from "../src/tools/wait_for.mjs"
+import { evaluateWaitForCondition, parseWaitForCondition } from "@thincoder/core/tools/ops.mjs" // W14：核面单源（本端镜像已删）
 
 const PKG = fileURLToPath(new URL("../package.json", import.meta.url))
 

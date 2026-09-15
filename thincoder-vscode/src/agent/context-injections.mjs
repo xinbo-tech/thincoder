@@ -18,7 +18,7 @@ import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { homedir } from "node:os"
 import { loadMemoryFace, memoryFor } from "../embed-config.mjs"
-import { pendingItems } from "../tools/checklist.mjs"
+import { pendingItems } from "@thincoder/core/tools/checklist.mjs" // W14：checklist 面核单源（本端镜像已删）
 import { buildSummary } from "../repomap.mjs"
 import { detectRestoredSession, pushGitContext } from "./setup-reminders.mjs"
 import { escapeXml, safeSliceUTF16 } from "./run-helpers.mjs"

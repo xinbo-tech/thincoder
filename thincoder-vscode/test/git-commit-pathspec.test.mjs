@@ -13,7 +13,7 @@ import { execFileSync } from "node:child_process"
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { gitTool } from "../src/tools/git.mjs"
+import { gitTool } from "@thincoder/core/tools/git.mjs" // W14：核面单源（本端镜像已删）
 
 const dirs = []
 after(() => { for (const d of dirs) { try { rmSync(d, { recursive: true, force: true }) } catch { /* Windows 句柄滞后——tmp 自回收 */ } } })

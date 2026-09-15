@@ -13,8 +13,11 @@ import {
 import { logEvent, errText, headText } from "@thincoder/core/log.mjs"
 import { manifestPath } from "../extension/session-slots.mjs"
 import { peerDomains, registerDomains } from "../extension/peer-domains.mjs"
-// §9 D-24b：文件变更事件记账（async 评审陈旧判定数据源——跨 run 载体）
-import { recordFileMutation } from "../agent-tools/advisor-async.mjs"
+// §9 D-24b：文件变更事件记账（async 评审陈旧判定数据源）——W12（2026-09-15）：原端侧
+// `advisor-async.mjs` 的 `recordFileMutation`（history._fileMutEvents）随镜像删旧退役，改指核
+// `noteMutations`（`advisor-settle.mjs`——写 `agent._mutLog`/`_mutationSeq`，核 `reviewIsStale` /
+// `inflightDesignReviewConflict` 同读同一账本；载体 = 顶层 agent（会话级单例））。
+import { noteMutations } from "@thincoder/core/agent-tools/advisor-settle.mjs"
 // §18 C-11（2026-09-12——500 硬限归位）：前置门禁族 + 批权限扫描自本档 verbatim 迁至 tool-gates
 import { l3TouchedPaths, preGateBlocked, isSubagentConsumeDesignAction, collectBatchPermission } from "./tool-gates.mjs"
 
@@ -198,6 +201,13 @@ export async function executeToolBatches(agent, { response, history, fullHistory
             // during a suspension session share the session signal (ctx.sessionSignal).
             getAuto,
             sessionSignal,
+            // W14（2026-09-15）：question 工具面——核 `tools/question.mjs` 读 `ctx.onQuestion`
+            //（§2.13.3）；端侧通道 = callbacks.onQuestion（面板卡片）。取消/Stop（askInPanel
+            // resolve null）归一为旧端文案 "(user cancelled)"（承删除档 question.mjs:29-31 语义）；
+            // 无通道（headless）⇒ undefined ⇒ 核内抛 "not supported in this context"。
+            onQuestion: callbacks.onQuestion
+              ? async (q, o) => (await callbacks.onQuestion(q, o)) ?? "(user cancelled)"
+              : undefined,
             // Live output streaming (bash etc.) — mirrors CLI dispatch's onOutput;
             // the id lets the webview route chunks to the right tool card.
             onOutput: (chunk) => callbacks.onToolOutput?.(toolName, chunk, tc.id),
@@ -222,8 +232,10 @@ export async function executeToolBatches(agent, { response, history, fullHistory
           // B3 契约 2（群 B 批 §17.2 E-扩 2——F31(b)）：键同扩 file_ops + 同点把 l3Paths 逐项
           // 记入 _touchedFiles（includes 去重守卫——子代理合入载体；评审实例面未挂数组 → 零记账）。
           if ((FILE_MUTATORS.has(toolName) || toolName === "file_ops") && !result.startsWith("Error:") && l3Paths.length > 0) {
+            // W12：核 `noteMutations` 单点记账（一次提交一笔 seq——paths 数组）；原逐路径
+            // `recordFileMutation` 随端侧 advisor-async 退役。
+            noteMutations(agent, l3Paths)
             for (const abs of l3Paths) {
-              recordFileMutation(agent, abs)
               if (Array.isArray(agent._touchedFiles) && !agent._touchedFiles.includes(abs)) agent._touchedFiles.push(abs)
             }
           }
@@ -289,7 +301,7 @@ export async function executeToolBatches(agent, { response, history, fullHistory
           // verify are stale: a review that ran before the edit no longer
           // covers the current file state (user decision 2026-08-08: the review
           // is triggered by CODE MUTATIONS only).
-          // §29 fix A（2026-09-07）：文件变更事件（recordFileMutation）已移到 runOne 执行
+          // §29 fix A（2026-09-07）：文件变更事件（核 noteMutations）已移到 runOne 执行
           // 成功即刻（唯一记账点）——此处仅剩 guard 标志 + touchedFiles（不双计）。
           agent._mutatedThisRun = true
           agent._calledAdvisorThisRun = false

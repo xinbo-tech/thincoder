@@ -9,7 +9,7 @@
  * too noisy to inject eagerly.
  */
 import * as vscode from "vscode"
-import { runGit, truncate } from "./shared.mjs"
+import { runGit, truncate } from "@thincoder/core/tools/shared.mjs" // W14：通用面核单源（本端镜像已删）
 
 /** Relative path inside cwd, else the absolute path unchanged. */
 function rel(cwd, fsPath) {

@@ -18,6 +18,7 @@ import assert from "node:assert/strict"
 import { existsSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
+import { createRequire } from "node:module"
 import { TOOL_DOCS_DIR, configurePromptInjections, resetPromptInjections } from "@thincoder/core/prompt-files.mjs"
 import { toOpenAISchema, builtinTools } from "../src/tools/index.mjs"
 import { VSC_PROMPT_INJECTIONS } from "../src/prompt-injections.mjs"
@@ -25,6 +26,8 @@ import { VSC_PROMPT_INJECTIONS } from "../src/prompt-injections.mjs"
 const __here = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__here, "..")
 const TOOLS_DIR = join(ROOT, "src", "tools")
+/** 核工具实现面目录（W14 改判的接线落点——25 工具级 DESC 行的新承载面）。 */
+const CORE_TOOLS_DIR = dirname(createRequire(import.meta.url).resolve("@thincoder/core/tools/index.mjs"))
 
 /** D-TD1：25 档迁移面（文件名 = 工具名）——W2 起读核包 `tool-docs/`。 */
 const MIGRATED = [
@@ -34,11 +37,11 @@ const MIGRATED = [
 ]
 /** D-TD3：非迁移面（保持内联——本批零改）。 */
 const INLINE_KEPT = ["repo_outline", "code_search", "doc_search", "memory", "context", "focus", "peer_instances"]
-/** D-TD2 接线落点（实现自扫——工具级 `description:` 全量扫描面）。 */
-const WIRING_FILES = [
-  "read_image.mjs", "file.mjs", "file-edit.mjs", "hashline-edit.mjs", "more-file.mjs",
-  "search.mjs", "shell.mjs", "git.mjs", "web.mjs", "linter.mjs", "lsp.mjs", "execute.mjs",
-  "question.mjs", "tree.mjs", "wait_for.mjs", "ops.mjs", "checklist.mjs",
+/** D-TD2 接线落点（W14 改判——工具实现面核单源）：25 工具级 DESC 行现住核 `tools/*.mjs`
+ *  （端侧 17 档接线文件中的 16 档已随 W14 删除——`shell.mjs` 保留但描述亦引核 DESC）。 */
+const CORE_WIRING_FILES = [
+  "bash.mjs", "checklist.mjs", "execute.mjs", "file.mjs", "git.mjs", "linter.mjs", "lsp.mjs",
+  "ops.mjs", "patch.mjs", "question.mjs", "search.mjs", "tree.mjs", "web.mjs",
 ]
 
 test("T-TD-2 边界：核包 tool-docs/ 25 档在位（本端 src/tools/*.md 已删——描述面 = 核单点）", () => {
@@ -46,14 +49,14 @@ test("T-TD-2 边界：核包 tool-docs/ 25 档在位（本端 src/tools/*.md 已
   for (const name of MIGRATED) assert.ok(!existsSync(join(TOOLS_DIR, `${name}.md`)), `${name}.md 本端副本未删净`)
 })
 
-test("T-TD-3 错误（全量扫描）：17 档接线文件对 25 工具的内联描述块零残留", () => {
-  assert.equal(WIRING_FILES.length, 17, "接线文件清单 = D-TD2 落点（edit 宿主 = file-edit.mjs）")
+test("T-TD-3（W14 改判）：25 工具级描述 = 核工具模块 DESC 行（端侧镜像已删）", () => {
+  assert.equal(CORE_WIRING_FILES.length, 13, "核接线文件清单 = 13 档（承载 25 工具级 DESC）")
   let descHits = 0
-  for (const f of WIRING_FILES) {
-    const lines = readFileSync(join(TOOLS_DIR, f), "utf8").split("\n")
-    descHits += lines.filter((l) => /^  description:/.test(l)).length
+  for (const f of CORE_WIRING_FILES) {
+    const lines = readFileSync(join(CORE_TOOLS_DIR, f), "utf8").split("\n")
+    descHits += lines.filter((l) => /^  description: DESC\("/.test(l)).length
   }
-  assert.equal(descHits, 25, `工具级 description 命中数 = 25（实 ${descHits}）`)
+  assert.equal(descHits, 25, `工具级 DESC 命中数 = 25（实 ${descHits}）`)
 })
 
 test("T-TD-4' 描述面注入值：配置态 25 工具描述零锚字面 + 本端两锚值在场（§2.13.2「VSC 列」）", () => {

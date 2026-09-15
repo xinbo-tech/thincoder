@@ -18,7 +18,7 @@ import { execFileSync } from "node:child_process"
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { gitTool } from "../../src/tools/git.mjs"
+import { gitTool } from "@thincoder/core/tools/git.mjs" // W14：核面单源（本端镜像已删）
 import { verifyTool } from "@thincoder/core/agent-tools/verify.mjs"
 
 const git = (cwd, ...args) => execFileSync("git", args, { cwd, encoding: "utf8" }).trim()

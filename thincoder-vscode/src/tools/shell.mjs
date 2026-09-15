@@ -11,7 +11,8 @@
 
 import { exec, execFileSync } from "node:child_process"
 import * as vscode from "vscode"
-import { DESC, BASH_TIMEOUT_MS, MAX_STREAM_BUF, makeDecoder, sanitizeOutput, truncate } from "./shared.mjs"
+import { DESC, BASH_TIMEOUT_MS, makeDecoder, sanitizeOutput, truncate } from "@thincoder/core/tools/shared.mjs"
+import { MAX_STREAM_BUF } from "./shared.mjs" // W14 拆壳薄壳（端壳常量——核内无此值）
 
 // ─── Terminal modes (A: visible / B: inject) ─────────────────
 

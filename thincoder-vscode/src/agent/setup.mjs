@@ -20,16 +20,19 @@ import { builtinTools, toOpenAISchema, readImageTool } from "../tools.mjs"
 import { configureBatchSegment } from "@thincoder/core/agent-tools/batch-segment.mjs" // 叶子（node:fs/node:path）——静态面安全
 import { settingsTool } from "../agent-tools/settings.mjs"
 import { resetRunState, reconcileEngDesignTokens, applySlotSessionState } from "./agent-state.mjs"
-import { setSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
 import { loadSlot } from "../extension/session-io.mjs"
 import { specForModel } from "../specs.mjs"
 import { modeRoleField } from "../agent-tools/subagent.mjs"
-import { loadRaw, loadConsultPool, normalizeProxy, resolveProviders, TRACES_DEFAULTS } from "../config-io.mjs"
-import { expandHome } from "@thincoder/core/expand-home.mjs"
 import { escapeXml, pushReal } from "./run-helpers.mjs"
+import { expandHome } from "@thincoder/core/expand-home.mjs"
 import { applyPromptInjections } from "@thincoder/core/prompt-files.mjs"
 import { assemblePrompt } from "@thincoder/core/prompt-overlays.mjs"
-import { loadSkills, formatSkillListing } from "../extension/skills.mjs"
+import { loadSkills, formatSkillListing, readSkill } from "../extension/skills.mjs"
+import { persistRaw, conflictError, CONFIG_CONFLICT_HINT, loadRaw, loadConsultPool, normalizeProxy, resolveProviders, TRACES_DEFAULTS } from "../config-io.mjs"
+import { setSlotEngineering, setSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
+import { configureVerifyDiagnostics } from "@thincoder/core/agent-tools/verify.mjs" // 叶子面（闭包 4 档零 node:sqlite）——静态面安全
+import * as vscode from "vscode"
+import { resolve } from "node:path"
 import { injectRunContext, loadProjectInstructions } from "./context-injections.mjs"
 import { pushTimeReminder, pushInjections, appendImagePointer, pushEnvStateReminder, pushPeerReminder } from "./setup-reminders.mjs"
 
@@ -48,6 +51,79 @@ configureBatchSegment({
     if (Array.isArray(agent._touchedFiles) && !agent._touchedFiles.includes(abs)) agent._touchedFiles.push(abs)
   },
 })
+// ─── W14（2026-09-15）：agent-tools 三缝端侧接线（#88 skill loader / #91 eng mirror / #96 verify 诊断段）──
+// 端侧供值随删旧迁入装配层（同 W9 先例）：① `configureSkillLoader` —— 本端 loader 形态 = 同步
+// 实现（`src/extension/skills.mjs`，D-CI3 与核 skills.mjs 同构语义）；② `configureEngMirror` ——
+// 工程模式翻转后的双持久化镜像（槽权威 + config.json CLI 兼容镜像——迁自删除档
+// `src/agent-tools/eng.mjs:92-105`，逐字同语义）；③ `configureVerifyDiagnostics` —— 编辑器诊断
+// 段（advisory——迁自删除档 `src/agent-tools/verify.mjs:250-275`，逐字同语义）。
+// skill / eng 两缝**动态**载入（核 `agent-tools/skill.mjs` / `eng.mjs` 静态链经核 agent 栈可达
+// `node:sqlite`——W8 契约②机判；verify 闭包 4 档零 sqlite ⇒ 静态面安全）。
+
+/** VSC 编辑器诊断段（#96 信息段——advisory，不进门禁；`codeFiles` = 本轮代码变更集，绝对路径）。
+ *  逐档取 VS Code 语言服务诊断（Error/Warning 两类），每档前 15 条；零诊断且存在代码档 ⇒ 明示
+ *  "none"。返回行数组（核缝契约 `section(ctx, codeFiles) → string[] | null`）。 */
+function vscodeDiagnosticsSection(ctx, codeFiles) {
+  const key = (p) => (process.platform === "win32" ? p.toLowerCase() : p)
+  const diagByFile = new Map()
+  for (const [uri, diags] of vscode.languages.getDiagnostics()) {
+    if (diags.length > 0) diagByFile.set(key(uri.fsPath.replace(/\\/g, "/")), diags)
+  }
+  const lines = []
+  let advisoryDiag = 0
+  for (const f of codeFiles) {
+    const abs = resolve(ctx.cwd, f)
+    const diags = diagByFile.get(key(abs.replace(/\\/g, "/")))
+    if (!diags?.length) continue
+    const errors = diags.filter((d) => d.severity === vscode.DiagnosticSeverity.Error)
+    const warnings = diags.filter((d) => d.severity === vscode.DiagnosticSeverity.Warning)
+    if (!errors.length && !warnings.length) continue
+    advisoryDiag += errors.length + warnings.length
+    lines.push(`\nEditor diagnostics (advisory — informational only, not a gate):`)
+    lines.push(`── ${f} (${errors.length} errors, ${warnings.length} warnings) ──`)
+    for (const d of [...errors, ...warnings].slice(0, 15)) {
+      const sev = d.severity === vscode.DiagnosticSeverity.Error ? "E" : "W"
+      const line = d.range.start.line + 1
+      const col = d.range.start.character + 1
+      lines.push(`  ${sev} ${line}:${col}  ${d.message}${d.source ? ` [${d.source}]` : ""}`)
+    }
+  }
+  if (advisoryDiag === 0 && codeFiles.some((f) => /\.(m?js|cjs|ts|tsx|mts|cts|rs|go|py)$/i.test(f))) {
+    lines.push("\nEditor diagnostics: none for the changed code files.")
+  }
+  return lines.length ? lines : null
+}
+configureVerifyDiagnostics({ section: vscodeDiagnosticsSection })
+
+/** skill / eng 两缝动态接线（模块缓存 ⇒ 每 run 零成本；幂等——只接一次）。 */
+let agentToolSeamsWired = false
+async function wireAgentToolSeams() {
+  if (agentToolSeamsWired) return
+  const { configureSkillLoader } = await import("@thincoder/core/agent-tools/skill.mjs")
+  configureSkillLoader({ loadSkills, readSkill })
+  const { configureEngMirror } = await import("@thincoder/core/agent-tools/eng.mjs")
+  configureEngMirror({
+    onToggle: (enabled, ctx) => {
+      const agent = ctx?.agent
+      try {
+        const p = agent?._engPersist
+        if (p) setSlotEngineering(p.cwd, p.slot, enabled)
+      } catch { /* slot unwritable — config mirror still written */ }
+      try {
+        const r = persistRaw((raw) => {
+          raw.agent = raw.agent && typeof raw.agent === "object" ? raw.agent : {}
+          raw.agent.engineering = enabled
+        })
+        // F5b：config 并发被改 → 放弃镜像写（槽权威仍持态）；提示串由核缝追加到结果尾
+        return conflictError(r) ? `${CONFIG_CONFLICT_HINT} — config.json mirror not written (slot state still holds for this session).` : null
+      } catch { return null /* config unreadable — in-memory state still holds for this run */ }
+    },
+  })
+  // 旗标在两处 configure* 之后置位（评审修正）：载入中途 reject 时下一轮仍会补接，
+  // 不留下「旗标已置、两缝未接」的静默降级态。
+  agentToolSeamsWired = true
+}
+
 
 /** AUTO mode reminder lives in setup-reminders.mjs (single source of truth —
  *  D-CI6: the agent loop head pushes it; agent.mjs imports it from there for the dedupe check). */
@@ -150,6 +226,10 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
 
   // §11.2 A —— per-run 复位先于一切 reconcile（含 inheritedGuard 的 agent.mjs 侧应用）
   resetRunState(agent)
+
+  // W14（2026-09-15）：agent-tools 三缝（skill loader / eng mirror / verify 诊断段）接线——
+  // 幂等一次；先于工具装配（skill / eng / verify 工具本轮即可用上端侧形态）。
+  await wireAgentToolSeams()
 
   // W9（2026-09-15）：14 名装配面 = 核登记册（单一来源 #83）——**动态**载入（顶部注释：
   // 静态引入会经 consult/subagent 族触达 node:sqlite，破 W8 契约②）；模块缓存 ⇒ 每轮零成本。
