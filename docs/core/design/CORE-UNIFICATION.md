@@ -1046,7 +1046,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | **中文设计档（删除）** | ~~`thincoder-cli/docs/design/prompts/**` · `thincoder-vscode/docs/design/prompts/**`（各 15 档）~~ | — | **作废 ✗** | **该面已撤**（用户裁定 B——两产品同名目录**原地保留**；2026-09-14 收正 = **迁移期保留的参照历史记录**、保留 ≠ 维护；见「已撤面」行 + D-C14） |
 | **产品文档（S2 改）** | `thincoder-cli/AGENTS.md`（`:21`）· `thincoder-vscode/AGENTS.md`（`:15`） | 68 / 125 | ±4 / ±4 | 「产品内双源」约定段改述为「核内落地 + 仓根中文设计档」 |
 | **产品测试（S2 改）** | `thincoder-cli/test/{prompts-dual-source,prompts-async-guidance,doc-consistency}.test.mjs` · `thincoder-vscode/test/prompts-mirror-anchors.test.mjs` · `files.mjs` | 116 / 168 / 265 / 145 / 84 | 逐档 ±10 | 双源断言改指新落点（含档名集合断言——随接线改） |
-| **记忆面（S2 改）** | `thincoder-cli/src/memory/**`（8 档：`schema` 452 · `docs` 419 · `code-sync` 415 · `core` 299 · `delete` 236 · `code-index` 219 · `file-walk` 109 · `scan` 95）· `thincoder-vscode/src/memory.mjs`（273）· `memory-tool.mjs`（386） | — | 逐档见 §2.5 | **A12**：面向 CLI 语义归一（CLI 为准）；VSC 两档改 / 删依 S0 裁决；**旧数据迁移面**（VSC `personal` 层 md / 遗留 `.json` / `modelPrefs`——无自动迁移路径——§2.12.3 上抛清单） |
+| **记忆面（S2 改）** | `thincoder-cli/src/memory/**`（8 档：`schema` 452 · `docs` 419 · `code-sync` 415 · `core` 299 · `delete` 236 · `code-index` 219 · `file-walk` 109 · `scan` 95）· `thincoder-vscode/src/memory.mjs`（273）· `memory-tool.mjs`（386） | — | 逐档见 §2.5 | **A12**：面向 CLI 语义归一（CLI 为准）；VSC 两档改 / 删依 S0 裁决；**旧数据迁移面**（VSC `personal` 层 md / 遗留 `.json` / `modelPrefs`——无自动迁移路径——§2.12.3 上抛清单）；**索引面收口（2026-09-15 裁定）**：VSC 文件制索引档（`indexer` / `index-bin` / `index-discover` / `embed-config` + `tools/code.mjs`）随 W8 删旧、归一核 sqlite；**索引数据面零迁移 / 零兼容**（不写导入器——重新索引 = 正当路径；`design/MEMORY.md` §4 #11） |
 | **记忆面导入器（S2 新建）** | CLI `memory import` 子命令面（落 `thincoder-cli/src/cli/`） | 0 | +60±20 | **§2.5.1 A2 已裁 ①**（一次性导入器：VSC `personal` 层 md / 遗留 `.json` → CLI `entries`）；`modelPrefs` 无文件系统载体 ⇒ 不迁 |
 | **文案面（S1 建核 · S2 接线）** | 核内文案常量档（落 `thincoder-core/`）· `thincoder-vscode/src/i18n.mjs` + `locales/{en,zh}.json` | 0 / 57 / — | +40±15 / ±6 | **§2.5 #185 / 丁组 D1（已裁 · 按建议——2026-09-13）**：容器归一 + 投影端差；机器消费面冻结（§2.12.2 第 12 行） |
 | **版本下限面（S2 改——已裁 2026-09-15）** | `thincoder-vscode/package.json` 的 `engines.vscode`（`^1.85.0` → **`^1.104.0`**）· `thincoder-cli/package.json` 的 `engines.node`（当前 `>=24`） | 131 / 43 | ±2 / ±2（下限行 +1） | **A8 / A13 / 2026-09-15 用户裁定**：**采纳 `node:sqlite`（定案）**、抬下限、不保留降级路径；**值 = `^1.104.0` · 不另做真机实测**（资料推导链 + `activate()` 护栏兜底——§2.11 A8）；**配套运行时护栏**（`activate()` 自检 + 提示，不崩） |
@@ -1347,7 +1347,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 | #112 `agent/setup.mjs`（编辑器上下文 / `read_image` 门 / MCP 扩工具时机） | 无 | 装配表按端注入（三项条件参数化）+ **`read_image` 门位迁移：装配面恒含 + run 起始能力面重解（模型热切换——定稿见 §2.13.6 缺口 5 之 #112 块）** |
 | #113 `agent/setup-reminders.mjs`（编辑器上下文 / 贴图指引） | **有**（并集面已落 2026-09-14——`pushInjections` / `appendImagePointer`；`thincoder-core/agent/setup-reminders.mjs:83,98`） | 端侧接线（编辑器上下文采集内容与贴图事件按端供给——④ 段） |
 | #165 权限闸展示面 | **有**（`io.ask`） | 端侧接线 |
-| #175 `auto-think.mjs` ↔ VSC 推理档位面 | 无（核内 = CLI 自动难度分级） | 端侧选择面按端注入 |
+| #175 `auto-think.mjs` ↔ VSC 推理档位面 | 无（核内 = CLI 自动难度分级） | 端侧自有 · 经 provider 字段数据面（核内位 = 无 为正常形态、非缺位——2026-09-15 裁定；D2 已裁 2026-09-13；CLI `/think` 同构先例 `thincoder-cli/src/tui/cmd-think.mjs:52`（Auto 项 · `:95` 切换）） |
 | #184 挂起 / 唤醒池载体 | **有**（`ctx.carrier` 等） | 端侧接线（`AGENT-LOOP.md` §2.3） |
 | #80 / #128 `$schema` 注入 | **有**（`opts.schema`） | 端侧接线 |
 | #130 config 三段端侧消费面 | 端侧自有 | 无（核内无位——消费面在端） |
@@ -1430,7 +1430,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
    **定稿形态**：核内 `:11` 的 CLI 措辞行**移出核内正文**，锚上移到 `:11` 位并改为**替换**该行（非追加）。
    CLI 值 = 现核内 `:11` 原文（与 `thincoder-cli/src/tools/question.md:11` 逐字同）· VSC 值 = 面板版 `Availability` 行（`thincoder-vscode/src/tools/question.md:11`）。
    验收：两端装配后 `Availability` 行各**恰一份**；核内正文零 CLI 措辞 `Availability` 行。
-5. **函数面 ④ 缺位 4 处**：§2.13.4「核内位 = 无」的行（#112 · #175 · #143 · #172）。
+5. **函数面 ④ 缺位 3 处**：§2.13.4「核内位 = 无」的行（#112 · #143 · #172）——**#175 已移出**（2026-09-15 裁定：推理档位面 = 端侧自有 · 经 provider 字段数据面 ⇒「核内位 = 无」为正常落地形态、非缺位；行内收正见 §2.13.4）。
    已获核内位者不再计缺位（§2.13.4 对应行逐行改判）：**#98 / #113 / #84**（2026-09-14——统一守卫 / 提醒并集面 / 记账注入缝）·
    **#68 / #63（写路径）**（2026-09-14 · `tools/write-path.mjs` · §2.13.5——原为**阻断级**：不补即 VSC 丢编辑器径）·
    **#56 / #57 / #59 / #61 / #66 / #69 / #91 / #96 / #170**（2026-09-14 · S1 续轮第三批落地后改判——逐处见 §2.13.4）。
@@ -1926,5 +1926,9 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
   同批对齐需求档 N7（`requirements/CORE-UNIFICATION.md` :88/:120）与 `design/MEMORY.md`（§3.1 A3 / §4.1 第 1 行）——闭合 09-13 批档 :1690 登记的三处不一致。
   ② **B9 坐标收正**（:35）：`thincoder-vscode/src/agent/async-discard.mjs:57-74` → `.../agent-tools/async-discard.mjs:57-74`（实核在册；`:57-74` = `discardRole` 共享核）。
   ③ **§2.8 提示词加载面两行收正**（:1037 / :1038）：「S2 改 · ±6」→「**S2 删**」（CLI 已随 U15 落地——实核档不存在；VSC 随 W2）；相应模块权威档 `PROMPT-SYSTEM.md` §1 / §5 同批收正。
+- 2026-09-15（**VSC 修正轮-2 权威面收正 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮-2）：用户 2026-09-15 裁定**索引存储面收口**——索引面归一 = 并核 sqlite；**数据面零迁移 / 零兼容**（不写导入器；重新索引 = 正当路径）。收正面 = §2.8「记忆面（S2 改）」行（VSC 索引面档 + 数据面边界注）；行本体收正 = `design/MEMORY.md` §4 第 11 行（§2.12.2 第 11 行的落点——同轮）。
+- 2026-09-15（**VSC 修正轮-3 权威面收正 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮-3）：用户 2026-09-15 裁定 **#175 推理档位面 = 端侧自有（核内无需位——「核内位 = 无」为正常落地形态、非缺位）**；
+  收正面 = §2.13.4 #175 行（处置列收正——原「端侧选择面按端注入」表述退场；锚 = CLI `/think` 同构先例 `thincoder-cli/src/tui/cmd-think.mjs:52`）· §2.13.6 缺口 5（**缺位 4 → 3**——#175 移出、枚举同改；#112 / #143 / #172 保持）。
+  **D2 状态回声**：已裁（2026-09-13 · 按建议）——本行不变；同轮 `docs/core/design/AGENT-LOOP.md`（§2.2 #175 行 · §3.2 D2 行——见该档变更记录）。
 
 

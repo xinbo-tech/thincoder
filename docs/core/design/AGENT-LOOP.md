@@ -59,7 +59,7 @@
 | 165 | `src/cli/permission.mjs` ↔ `src/extension/permission-gate.mjs` | ② | 融合：权限闸按核内结构归位 + 展示面按端注入 | 分叉 ＝ 目录与展示形态（TUI 卡 / webview 卡）；闸语义（每回合 `autoApprove` 快照 + 中途 live 标志）同 ⇒ 前提成立 | — | S1（建核补齐） |
 | 166 | （CLI 无独立档）↔ `src/agent-tools/child-permission.mjs` | ② | 融合：子代理权限通道按核内结构归位（父卡归属 + 定向 signal） | 分叉 ＝ 拆档（VSC 独有拆面）；**承 §2.5 #112（装配）/ §2.12.1 事件语义面** | —（承 #112） | S1（建核补齐） |
 | 169 | `src/hooks.mjs` ↔ 核内（VSC 侧零 `runHooks`） | ③ | 以 CLI 为准（Stop 等四事件）——VSC 接线后开始触发（外部副作用随 #111 登记） | 分叉 ＝ VSC 未实现（零命中）；**承 §2.5 #111** | —（承 #111） | S1（建核补齐） |
-| 175 | `src/auto-think.mjs` ↔ `src/extension/reasoning-mode.mjs` | ② | 融合：核内推理档位面 + 端侧选择面（UI 下拉 / 自动分级）按端注入 | 分叉 ＝ 落点（CLI 自动难度分级 / VSC UI→provider 字段映射）；VSC DEFAULTS 已载 `autoThink`（`thincoder-vscode/src/config-io.mjs:319`）但**全仓无消费方** ⇒ 归一后接线（默认 `false` ⇒ 默认无行为变化） | **②**（丁组 D2） | S1（建核补齐） |
+| 175 | `src/auto-think.mjs` ↔ `src/extension/reasoning-mode.mjs` | ② | 融合：核内自动难度分级 + 端侧推理档位面——**端侧自有 · 经 provider 字段数据面**（UI 下拉 / 档位 patch；核内无需位——2026-09-15 裁定） | 分叉 ＝ 落点（CLI 自动难度分级 / VSC UI→provider 字段映射）；VSC DEFAULTS 已载 `autoThink`（`thincoder-vscode/src/config-io.mjs:319`）但**全仓无消费方** ⇒ 归一后接线（默认 `false` ⇒ 默认无行为变化） | **②**（丁组 D2） | S1（建核补齐） |
 | 176 | `src/model-ref.mjs` ↔ `src/config.mjs`（模型引用解析段）+ `specs.mjs` | ② | 融合：核内单一 `provider:model` 解析 | 分叉 ＝ 落点；解析口径（首冒号切分 / 双段非空 / 显式 `p:m` 一律放行）两端同源 ⇒ 前提成立 | — | S1（建核补齐） |
 | 184 | `src/extension/suspension.mjs` ↔ `src/tui/suspension-drive.mjs` | ② | 融合：挂起 / 唤醒机制按核内结构归位（池载体按端注入） | 分叉 ＝ 目录（CLI 住 `tui/`）；VSC 头注自述「与 CLI 的结构差异（同语义移植）——CLI 的池 / pending / _suspended 挂 agent 对象」`:9` ⇒ 前提成立 | — | S1（建核补齐） |
 
@@ -139,7 +139,7 @@
 
 | # | 条目（路径 / 对位） | 命中 | 左端行为（CLI） | 右端行为（VSC） | 建议归一形态 | 影响面 | 裁定状态 |
 |---|---|---|---|---|---|---|---|
-| D2 | `src/auto-think.mjs` ↔ `src/extension/reasoning-mode.mjs`（§2.5 #175） | ② | 自动难度分级 → 推理档位（`config.agent.autoThink` 为开关，CLI 有消费方） | VSC DEFAULTS **已载** `autoThink`（`thincoder-vscode/src/config-io.mjs:319`）但**全仓零消费方** ⇒ 该键在 VSC 是**死键** | **建议（方向唯一）**：核内实现 + VSC 接线（死键恢复语义）；默认 `false` ⇒ **默认无行为变化**；面板推理档位面按端注入 | ① 在 VSC 显式设过 `autoThink: true` 的用户：该键从「无效」变「生效」（行为变化，但 = 恢复 CLI parity 的既定语义）；② 默认配置下无变化 | **已裁（2026-09-13）· 按建议** |
+| D2 | `src/auto-think.mjs` ↔ `src/extension/reasoning-mode.mjs`（§2.5 #175） | ② | 自动难度分级 → 推理档位（`config.agent.autoThink` 为开关，CLI 有消费方） | VSC DEFAULTS **已载** `autoThink`（`thincoder-vscode/src/config-io.mjs:319`）但**全仓零消费方** ⇒ 该键在 VSC 是**死键** | **建议（方向唯一）**：核内实现 + VSC 接线（死键恢复语义）；默认 `false` ⇒ **默认无行为变化**；面板推理档位面**端侧自有 · 经 provider 字段数据面**（核内无需位——2026-09-15 裁定） | ① 在 VSC 显式设过 `autoThink: true` 的用户：该键从「无效」变「生效」（行为变化，但 = 恢复 CLI parity 的既定语义）；② 默认配置下无变化 | **已裁（2026-09-13）· 按建议** |
 
 ## 4. 对外契约影响
 
@@ -461,7 +461,7 @@ VSC 侧**接线**面（端装配 / 面板 / webview 呈现）——机制本体�
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **491 行**（as-of 2026-09-15 批 8 并入后实测）——**≤500 硬限**；超 300 软线 ⇒ 拆分规划见下（主体拆分已落地）。
+**实测行数**：本档 **493 行**（as-of 2026-09-15 · 修正轮-3 实测）——**≤500 硬限**；超 300 软线 ⇒ 拆分规划见下（主体拆分已落地）。
 
 | # | 拆分面 | 去向 | 状态 |
 |---|---|---|---|
@@ -488,3 +488,5 @@ VSC 侧**接线**面（端装配 / 面板 / webview 呈现）——机制本体�
 - 2026-09-15（**迁移批 · 第 5 批 · 并入与拆分 · eng-designer**）：**并入**——评审对象锚（旧档 §12.1）→ `AGENT-LOOP-SUBAGENT.md` §6.18 · 判定铁律 R1–R7（旧档 §12.2）→ 同档 §6.19 · 普通模式轻量审计（旧档 §8.1 后半 / §19）→ 本档 §6.17 · byte-identical 取消（旧档 §12.4）→ 并入 `PROMPT-SYSTEM.md` §6.4（均自 `thincoder-cli/docs/design/AGENT-LOOP.md`——旧档一字未改，留参照历史）。
   **拆分**——§6.7–§6.12 拆出至 `docs/core/design/AGENT-LOOP-SUBAGENT.md`（节号沿用；本档 **670 → 472 行**；引用逐处修复）；§6.16 指针表按现状收正（工程模式 / 评审收敛 / 测试 / 结果落盘 / 会诊飞刀 / 多实例指态）；§8.1 / §8.2 并入销项与指态收正；§9 拆分规划重写。
 - 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：新增 **§6.18 VSC 侧接线面**（挂起回合 digest / eng-coder 交付协议 / 子代理活动显示 / child permission gate——自 `thincoder-vscode/docs/design/AGENT-LOOP.md` 并入；坐标实核）；§7 D-AL24–25 · §8.2 登记 VSC 源档批次材料 · §9 体量更新。
+- 2026-09-15（**#175 推理档位面裁定收正 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮-3）：用户 2026-09-15 裁定 **推理档位面 = 端侧自有 · 经 provider 字段数据面（核内无需位）**——
+  §2.2 #175 行端差处置与 §3.2 D2 行「按端注入」表述收正退场（D2「已裁（2026-09-13）· 按建议」状态不变）；§9 行数读数随收。

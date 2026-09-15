@@ -126,6 +126,7 @@ F8 嵌套 memory 文件 —— 连续两次 `needed:false`；两集合一致。F
 ### 4.7 VSC 端需求条目（并入 · 批 6）
 
 > 来源 = `thincoder-vscode/docs/requirements/MEMORY.md`（50 行 · VSC 产品需求档——旧档留参照历史）。**VSC 端当前实现面** = 文件式两层记忆（无 team 层 / 无 sqlite）；CORE-UNIFICATION 归一方向（§2.1 回填条目——以 CLI 语义为准、VSC 改接线）为 **governing 上覆**——本节登记 VSC 端现状条目与端差，不改变归一方向。
+> **索引存储面裁定收口（2026-09-15 用户）**：索引面归一 = 并核 sqlite；**数据面零迁移 / 零兼容**（不写导入器——重新索引 = 正当路径）——本节 F-M5 / F-M6 与端差「索引形态」行所述文件制索引面（`.thincoder/index/` · `indexer` 族）随 W8 接线删旧退场。
 
 **总体**：记忆系统让 agent 跨会话保存 / 检索 / 治理知识——VSC 端承载 personal / project 两层（**无 team 层**——团队记忆由 CLI 管）并提供代码 / 文档索引（code / doc chunk）。存储形态 = **markdown 文件即真相**（`cwd/.thincoder/memory/`，无独立 DB——可人工编辑、可 git 管理）。
 
@@ -137,8 +138,8 @@ F8 嵌套 memory 文件 —— 连续两次 `needed:false`；两集合一致。F
 | F-M2 | 文件即真相（零 DB）：markdown + frontmatter（与 CLI byte-compatible 序列化）；文件名 `YYYYMMDD-<slug>-<rand4>.md`；旧 `.json` 只读兼容 | 条目文件可人工编辑 / git 管理；索引可整体重建 |
 | F-M3 | 单工具五动作：`memory` 单工具、`action` 路由（search / put / list / delete / clear）；**action 级只读**（search / list 免审批 / 并行） | 五动作分派在位；search / list 无审批门；put / delete / clear 走审批门 |
 | F-M4 | 检索双通道：向量优先（embedder + 索引在位 → `searchIndex(kind:"memory")` → 活文件 guard）→ 无命中 / 异常回退关键词（子串打分 title 3 / tag 2 / content 1） | 无 embedder 时关键词路径照常出结果（score>0）；已删条目不被向量通道重新浮出 |
-| F-M5 | 三 kind 索引 + 重建判定（memory 优先 → code / doc；`needsRebuild` reason ∈ 七词表） | 三 kind 检索面在位；重建判定可机判 |
-| F-M6 | 有效性校验（换模型不静默）：`indexCompat`（模型比对 → `model-changed`）+ 维度硬闸 + 可见面两推口（状态 + 重建提示） | 换模型后检索不产出无效结果；状态面显示「模型不匹配 + 重建入口」；失败仍静默降级关键词（两语义不冲突） |
+| F-M5 | 三 kind 索引 + 重建判定（memory 优先 → code / doc；`needsRebuild` reason ∈ 七词表） | 三 kind 检索面在位；重建判定可机判（**随归一退场**——2026-09-15：核面 sync 承接） |
+| F-M6 | 有效性校验（换模型不静默）：`indexCompat`（模型比对 → `model-changed`）+ 维度硬闸 + 可见面两推口（状态 + 重建提示） | 换模型后检索不产出无效结果；状态面显示「模型不匹配 + 重建入口」；失败仍静默降级关键词（两语义不冲突）（**随归一退场**——2026-09-15：核面承接 = 失效向量置空 + 检索懒回填） |
 | F-M7 | 回合记忆召回注入：depth-0 非 resume 非 auto-turn 的回合注入召回块（关键词路径，limit 3；注入失败静默跳过） | 回合装配含召回块（可断）；注入失败不阻塞回合 |
 
 **非功能条目**（VSC 端现状）：N-M1 零依赖（纯 `node:fs`——无第三方 / 无 FTS5）；N-M2 降级可用（embedder / 索引缺失 → 关键词路径；cosine 异长返 0）；N-M3 跨端一致（frontmatter 与 CLI byte-compatible；端差登记见下）；N-M4 可机判（重 IO 用例归册慢层）。
@@ -149,7 +150,7 @@ F8 嵌套 memory 文件 —— 连续两次 `needed:false`；两集合一致。F
 |---|---|---|
 | 存储 | 文件式 markdown + frontmatter（两层都是文件）；无 FTS5 / sqlite | 对端 = 单文件 `~/.thincoder/memory.db`（FTS5 + BM25 + 向量 BLOB） |
 | 层数 | personal / project 两层；无 team | 对端三层（team 由 CLI 管）；本端 `layer:"team"` 明确拒绝并指路 |
-| 索引形态 | 独立 `.thincoder/index/`（manifest + vectors.bin）+ 按 kind 单库检索 | 对端 = DB 内三表 |
+| 索引形态 | 独立 `.thincoder/index/`（manifest + vectors.bin）+ 按 kind 单库检索（**已裁归一 2026-09-15——随 W8 删旧退场；数据面零迁移 / 零兼容**） | 对端 = DB 内三表 |
 | 配置面 | 记忆锚定 cwd——无记忆路径配置字段；`~` 展开唯一接线 = `shell` 字段 | 对端四字段展开 |
 | 命名面 | 模型可见全 `layer`；内部存储 helper 仍名 scope（映射点 = 工具层） | 同源（内部词保留） |
 
@@ -171,3 +172,4 @@ F8 嵌套 memory 文件 —— 连续两次 `needed:false`；两集合一致。F
 - 2026-09-15（**迁移批 · 第 5 批 · 并入 · eng-designer**）：新增 §4 **需求条目**（总体 / F1–F5 / N1–N4 / 索引有效性 F6–F9 · N5–N6 / 家目录展开 F10–F14 · N7–N9 / 检索向量上界 F-M1–F-M3 · N-M1–N-M3——自 `thincoder-cli/docs/requirements/MEMORY.md` 逐节比对后并入，**编号与文本承旧档**）+ §5 **不并项与历史沿革**；**本档新增需求 0**（纯回填）。
 - 2026-09-15（**B 式迁移轮 · VSC 第 6 批 · 并入 · eng-designer**）：新增 §4.7 **VSC 端需求条目**（总体 / F-M1–F-M7 / N-M1–N-M4 / 端差登记五行——自 `thincoder-vscode/docs/requirements/MEMORY.md` 并入；coordinate 逐项实核）；§5 VSC 行收口；**本档新增需求 0**（纯回填——governing 上覆 = §2.1 归一方向）。
 - 2026-09-15（**引擎下限裁定收口**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮）：§2.1「VSC 引擎下限随之抬升」条收正——「经真机实测确认后定值并提交用户过目」→「**已裁（2026-09-15）：`^1.104.0` · 不另做真机实测**（已过目）」。
+- 2026-09-15（**索引存储面裁定收口**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮-2）：§4.7 加裁定收口注 + F-M5/F-M6 与端差「索引形态」行同轮标注（文件制索引面随 W8 删旧退场——数据面零迁移 / 零兼容）。
