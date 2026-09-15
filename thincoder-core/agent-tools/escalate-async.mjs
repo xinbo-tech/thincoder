@@ -226,7 +226,9 @@ export function launchEscalateAsync(parent, ctx, launch) {
       ? async () => true
       : async (name, toolArgs) => {
           if (!ctx.onPermissionRequest) return false
-          const ask = () => ctx.onPermissionRequest(`escalate/${name}`, toolArgs)
+          // 残环批（2026-09-16）：询问名携归属键（`escalate#<id>/<tool>`——端侧键形解析的
+          // 输入契约；原裸 `escalate/${tool}` 无 id ⇒ 并行条目归属歧义）
+          const ask = () => ctx.onPermissionRequest(`${entry.relayPrefix.slice(0, -1)}/${name}`, toolArgs)
           return enqueueAsk(parent, "_permQueue", ask)
         }
     const report = await runWithContinue(

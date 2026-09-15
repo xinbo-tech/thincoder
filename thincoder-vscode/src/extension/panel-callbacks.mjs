@@ -333,24 +333,43 @@ export function buildPanelCallbacks(panel, deps) {
   // ─── F1（2026-09-16 缺陷修复——承批次档 §2 F1）：child 权限通道**端侧供给** ─────────────
   // 核 spawn / escalate / continue 三族经 `ctx.onPermissionRequest(name, args)` 询问（缝契约 =
   // `CORE-UNIFICATION.md` §2.13.3）：name = `${key}/${tool}`（子代写——`subagent-spawn.mjs:319`；
-  // key = relayPrefix 去尾 = `<role>#<id>`）· `escalate/${tool}`（飞刀写）· `continue`（撞帽续跑）。
-  // 形态 = 按次解析归属键 ⇒ `makeChildPermission` 按次构造（announce → ask → 清态 + owner 归属——
-  // 面板卡带 `coder#7` 归属、与活动块同源）；键不符（escalate/continue——核名不携 id）⇒ 回退面板
-  // gate **原样名**询问（卡可达 · 无归属标签）；AUTO（live）⇒ 直返 true 零卡。缺失本供给 ⇒ 核
-  // spawn 分支静默 `return false`、不出卡（`subagent-spawn.mjs:308-309`——手动档子代写症状源）。
+  // key = relayPrefix 去尾 = `<role>#<id>`）· `escalate#<id>/${tool}`（飞刀写）· `continue`
+  // （撞帽续跑——归属键在 args.agent）。形态 = 按次解析归属键 ⇒ `makeChildPermission` 按次构造
+  // （announce → ask → 清态 + owner 归属——面板卡带 `<role>#<id>` 归属、与活动块同源）；
+  // 键不符（嵌套 relay 等）⇒ 回退面板 gate **原样名**询问（卡可达 · 无归属标签）；
+  // AUTO（live）⇒ 直返 true 零卡。核分支：缺失本供给 ⇒ 核 spawn 分支静默 `return false`、
+  // 不出卡（`subagent-spawn.mjs:308-309`——手动档子代写症状源）。
+  // 残环批（2026-09-16——承 `docs/batches/2026-09-16-subagent-panel-residual-rings.md` §2）：
+  // ① 条目级 signal 接回——按归属键 id 读池条目（与 ⏹ 路由同源同式：`panel._liveLines ??
+  //    panel._susp?.lines` → `history._asyncSubagents.get(String(id))`）⇒ `signal: entry.controller.signal`
+  //    ——gate 路径①（child abort）VSC 转实态（⏹ / `action:'cancel'` / 会话链中止一律 deny 释放 +
+  //    `permissionWithdrawn`；迟到弹卡 sig 已 abort ⇒ 即释放）；② model 供给（`escalate <model> #<id>`）；
+  // ③ continue 键形解析（「键形才归属」单规则——文法单源 `parseRelayPath`）。
   cbs.onPermissionRequest = async (name, args) => {
     if (panel._autoApprove) return true // live AUTO（`permissionGate` 同款 mid-turn 语义）
+    // 归属键解析（单规则「键形才归属」——文法单源）：relay 名（`<role>#<id>/<tool>`）；
+    // continue = 名锁死、键在 args.agent（全消耗才认——`zhipu:glm-5.2` 等非键形态回退）。
+    let ownerKey = null
+    let tool = null
     const path = parseRelayPath(String(name ?? ""))
-    if (path && path.inner.length === 0) {
-      const hash = path.head.indexOf("#")
+    if (path && path.inner.length === 0) { ownerKey = path.head; tool = path.rest }
+    else if (String(name) === "continue") {
+      const p = parseRelayPath(String(args?.agent ?? "") + "/")
+      if (p && p.inner.length === 0 && p.rest === "") { ownerKey = p.head; tool = "continue" }
+    }
+    if (ownerKey) {
+      const hash = ownerKey.indexOf("#")
+      const id = Number(ownerKey.slice(hash + 1))
+      // 池条目两读（signal / model——读面与 ⏹ 路由同源；非池子代（sync / 嵌套回退）entry 缺失 ⇒ 双 null）
+      const entry = (panel._liveLines ?? panel._susp?.lines)?.history?._asyncSubagents?.get(String(id))
       const perm = makeChildPermission({
         ctx: { callbacks: cbs },
-        id: Number(path.head.slice(hash + 1)),
-        role: path.head.slice(0, hash),
-        // 条目级 signal 无来源（核闭包不携——2.16 行 9 登记面，本批不修）⇒ null
-        signal: null,
+        id,
+        role: ownerKey.slice(0, hash),
+        model: entry?.model ?? null,
+        signal: entry?.controller?.signal ?? null,
       })
-      if (perm) return (await perm(path.rest, args, null)) === true
+      if (perm) return (await perm(tool, args, null)) === true
     }
     // 回退：面板 gate 原样名询问；无 gate（headless / AUTO 构建期）⇒ false（核分支同语义）
     const ask = cbs.onPermissionRequired

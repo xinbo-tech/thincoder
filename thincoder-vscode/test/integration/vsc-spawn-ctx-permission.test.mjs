@@ -148,28 +148,41 @@ test("T5 供给（正常 · owner + ⏸）：coder#7/write → announce(write) �
   )
 })
 
-// ─── T6：供给面（边界 · 回退分支 + AUTO 直通）────────────────────────────
+// ─── T6：供给面（边界 · 键形归属 / 回退 + AUTO）─────────────────────────────
 
-test("T6 供给（边界 · 回退 + AUTO）：continue / escalate → 原样名回退卡（owner=null、零 announce）；AUTO 直返 true 零卡", async () => {
+test("T6 供给（边界 · 键形归属 / 回退 + AUTO）：continue 键形 ⇒ 归属卡；非键 / 嵌套 ⇒ 原样名回退（owner=null、零 announce）；AUTO 直返 true 零卡", async () => {
   const panel = stubPanel()
   const cbs = buildPanelCallbacks(panel, { cwd: work, autoTurn: false })
 
-  // ① 撞帽续跑（`continue`——键不符 ⇒ 回退）
+  // ① 撞帽续跑（`continue`——两态：键形 args.agent ⇒ 归属 / 非键 ⇒ 回退；残环批收正）
   const p1 = cbs.onPermissionRequest("continue", { turns: 3, agent: "coder#7" })
   await until(() => panel._permissionQueue.length === 1)
   const c1 = panel.posted.findLast((m) => m.type === "permissionRequest")
-  assert.equal(c1.tool, "continue", "回退分支 = 原样名（卡可达）")
-  assert.equal(c1.owner, null, "无归属标签（回退语义——登记面 2.16 行 10）")
+  assert.equal(c1.tool, "continue", "键形卡工具名 = continue（原样）")
+  assert.equal(c1.owner, "coder#7", "键形 ⇒ 归属标签（文法单源——端侧解析）")
+  const a1 = panel.posted.filter((m) => m.type === "subagentApproval")
+  assert.deepEqual(a1.map((m) => m.tool), ["continue"], "键形 ⇒ announce 先于卡（块头 ⏸ 对位）")
+  assert.deepEqual(a1.map((m) => m.id), [7], "announce 归属 id = 键内 id")
   await handlePanelMessage(panel, { type: "permissionResponse", approved: true, promptId: c1.promptId })
-  assert.equal(await p1, true, "① 批复 → true")
+  assert.equal(await p1, true, "① 键形批复 → true")
+  assert.deepEqual(panel.posted.filter((m) => m.type === "subagentApproval").map((m) => m.tool), ["continue", null], "announce → 清态随行（顺序单源）")
 
-  // ② 飞刀写询问（`escalate/<tool>`——键不符 ⇒ 回退）
-  const p2 = cbs.onPermissionRequest("escalate/read", { path: "z" })
+  const p1b = cbs.onPermissionRequest("continue", { turns: 3, agent: "zhipu:glm-5.2" })
+  await until(() => panel._permissionQueue.length === 1)
+  const c1b = panel.posted.findLast((m) => m.type === "permissionRequest")
+  assert.equal(c1b.tool, "continue", "非键 ⇒ 原样名（卡可达）")
+  assert.equal(c1b.owner, null, "非键 ⇒ 无归属（回退语义）")
+  await handlePanelMessage(panel, { type: "permissionResponse", approved: false, promptId: c1b.promptId })
+  assert.equal(await p1b, false, "① 非键拒绝 → false")
+
+  // ② 嵌套 relay 形态（inner 非空——本批后仍可达的回退面）⇒ 原样名回退
+  const annBefore = panel.posted.filter((m) => m.type === "subagentApproval").length
+  const p2 = cbs.onPermissionRequest("coder#7/explore#1/read", { path: "z" })
   await until(() => panel._permissionQueue.length === 1)
   const c2 = panel.posted.findLast((m) => m.type === "permissionRequest")
-  assert.equal(c2.tool, "escalate/read", "原样名（归属标签不闭——登记面 2.16 行 10）")
+  assert.equal(c2.tool, "coder#7/explore#1/read", "嵌套形态 = 原样名（不归属）")
   assert.equal(c2.owner, null, "无归属标签")
-  assert.equal(panel.posted.filter((m) => m.type === "subagentApproval").length, 0, "回退分支零 announce")
+  assert.equal(panel.posted.filter((m) => m.type === "subagentApproval").length, annBefore, "回退分支零 announce")
   await handlePanelMessage(panel, { type: "permissionResponse", approved: true, promptId: c2.promptId })
   assert.equal(await p2, true, "② 批复 → true")
 

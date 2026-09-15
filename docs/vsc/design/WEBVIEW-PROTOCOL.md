@@ -50,9 +50,9 @@ reasoning, provider, images? } → extension _chat()
 | `subagent` | ext → wv | `{ ...info }` 展开透传——`started`（池条目带 `pool: true`）/ `settled` / `done` / `error` / `cancelled` / `terminated` / `failed` / `answered` 终态 + turn / maxTurns 终值快照；**增 status 值** `"turn"`（`{ id, role, turn, maxTurns }` 逐轮进展帧） |
 | `subagentApproval` | ext → wv | `{ id, role, model?, tool }`——审批态（`tool = null` 清除）→ 块头 `⏸` + 态词 `等待审批: <tool>` |
 | `cancelSubagent` | wv → ext | `{ id, role }`——⏹ 点击路由 → 池条目定向 abort（role 交叉校验防陈旧按钮误停；未知 no-op；advisor role 复用同路由） |
-| `permissionRequest` | ext → wv | `{ tool, args, diff, owner, promptId }`——逐项权限卡；`owner` = 子代理归属标签（`<role>#<id>` / `escalate <tag> #<id>`——depth-0 为 `null`）；`promptId` = 响应匹配键 |
+| `permissionRequest` | ext → wv | `{ tool, args, diff, owner, promptId }`——逐项权限卡；`owner` = 子代理归属标签（`<role>#<id>` / `escalate <model> #<id>`（尖括号为字面 · model = 池条目值——2026-09-16 残环批收正：前引 `<tag>` = 前引擎值；`continue` 询问卡 = `<role>#<id>`〔args.agent 机器键——同批〕）——depth-0 为 `null`）；`promptId` = 响应匹配键 |
 | `permissionResponse` | wv → ext | `{ approved, promptId }`——按 promptId 精确匹配队列条目（无 promptId 回退队头——旧 webview） |
-| `permissionWithdrawn` | ext → wv | `{ promptId }`——host 侧释放（中止 / approve-all 连带）→ 移除对应卡 |
+| `permissionWithdrawn` | ext → wv | `{ promptId }`——host 侧释放（条目取消（⏹/cancel——signal 链）/ 中止 / approve-all 连带）→ 移除对应卡 |
 | `batchPermissionResponse` | wv → ext | approveAll / oneByOne / deny |
 | `compress` | ext → wv | start / done / failed / fallback 四态（压缩状态行） |
 | `digest` | ext → wv | `{ status:"start"/"end"/"cap", n, ok?, ms?, mode?, turns? }`——消化轮起跑 / 收尾 / turn-cap 指示（呈现契约见 §5） |
@@ -249,7 +249,7 @@ reasoning, provider, images? } → extension _chat()
 
 ## 10. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **272 行**（as-of 2026-09-16 实测——协议面收正增行后）——低于 300 行软线，**无需拆分**。
+**实测行数**：本档 **273 行**（as-of 2026-09-16 实测——协议面收正增行后 + 残环批收正 +1）——低于 300 行软线，**无需拆分**。
 **拆分来源**：源档 §7/§8 与 §14.3 的协议面部分独立成档——理由 = 读者面不同（改 host 发射端 / webview 接收端者）且与结构面（`WEBVIEW.md`）无共享回指；切面取舍总表见 `WEBVIEW.md` §9。
 
 ## 11. 验收与需求回指
@@ -269,3 +269,4 @@ reasoning, provider, images? } → extension _chat()
 - 2026-09-15（**B 式迁移轮 · VSC 第 2 批**）：建档——源档 §4 / §7 / §8 / §14.3 的协议面内容重建入基准层（旧档一字未改）；坐标按 as-of 2026-09-15 实核改写；批次材料（问题陈述 / 选型 / 受影响文件 / 用例表 / 验收标准 / 边界）入 §8.1。
 - 2026-09-15：**按现状收正 1 处**——旧档 §14 C-13 表「审批态 = 无此状态（子代理不经权限门）· 端差登记（不做）」与现行实现冲突（审批态族已实装：`subagentApproval` 消息 + 块头 `⏸`）——本档 §6.2 按现状落笔并与 §3 消息表口径一致；冲突已上报批次（主 agent 裁定）。
 - 2026-09-16（**子代理面板通道恢复批 · 协议面收正**）：§3 `toolPanel` 行补**生产者双源**与 `cmd` ≤60 截断落层（webview 块头渲染——桥/生产者透传原串）；§3.1 三落点发射端例补现体（`relaySubagentContentChunk`）；§3.2 #3 发射点随收——payload 字段零变（只增不改纪律保持）。
+- 2026-09-16（**子代理面板残环修复 · 协议面收正**——承 `docs/batches/2026-09-16-subagent-panel-residual-rings.md` §2）：§3 `permissionRequest` 行 owner 形态收正（`escalate <model> #<id>`——前 `<tag>` 为前引擎形态 + `continue` 键形归属）；§3 `permissionWithdrawn` 行释放来源补条目取消（⏹/cancel signal 链）。

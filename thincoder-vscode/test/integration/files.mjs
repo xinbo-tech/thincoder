@@ -18,4 +18,5 @@ export default [
   "test/integration/host-shape-spawn.test.mjs",
   "test/integration/vsc-autoapprove-field.test.mjs",
   "test/integration/vsc-spawn-ctx-permission.test.mjs",
+  "test/integration/vsc-panel-rings.test.mjs",
 ]

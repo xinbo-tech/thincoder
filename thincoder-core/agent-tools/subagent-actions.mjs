@@ -423,6 +423,10 @@ export async function executeEscalateAction(args, ctx) {
     // Continue 经 runWithContinue（§7.2 D3，主会话同等 y/n 面板）：resume:true 不重注入
     // task 文本（setup 跳 input）且保留 child history + mutation 记账，刷新 turn 预算；
     // 无权限 handler（headless）或拒绝 → 部分工作返回；continue 次数无限（每轮可拒）。
+    // 残环批（2026-09-16）：飞刀询问名同规包装（`escalate#<id>/<tool>`——端侧键形解析的
+    // 输入契约；原裸工具名直通无归属）；无权限通道 ⇒ 退化 false（`Promise.resolve(false)`——
+    // 与 async 路 guard 同语义，T-A4n）。
+    const askPermission = (n, a) => (ctx.onPermissionRequest ? ctx.onPermissionRequest(`${escId}/${n}`, a) : Promise.resolve(false))
     const report = await runWithContinue(
       async (childAgent, input, cbs, opts) => {
         // Merge mid-run mutations even when the run throws — the outer catch keeps
@@ -434,12 +438,12 @@ export async function executeEscalateAction(args, ctx) {
           throw e
         }
       },
-      child, task, { ...childCallbacks, onPermissionRequest: parent.autoApprove ? async () => true : (ctx.onPermissionRequest ?? null) },
+      child, task, { ...childCallbacks, onPermissionRequest: parent.autoApprove ? async () => true : askPermission },
       runOpts,
       {
         // sync escalate has NO permQueue——async 飞行权限走 _permQueue（escalate-async.mjs）: prompts go straight to the user (T-L spec).
         askContinue: (e) => (ctx.onPermissionRequest
-          ? ctx.onPermissionRequest("continue", { turns: e.turn, agent: tag })
+          ? ctx.onPermissionRequest("continue", { turns: e.turn, agent: escId })
           : Promise.resolve(false)),
         onDeclined: (e, output) => `escalate (${tag}) ${TURN_CAP_MARK} (${e.turn} turns) — work may be partial; review recent_changes before deciding next steps.\nPartial output: ${output.slice(0, 2000)}`,
       },

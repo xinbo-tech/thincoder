@@ -315,7 +315,9 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
         {
           askContinue: (e) => {
             if (!ctx.onPermissionRequest) return Promise.resolve(false)
-            const ask = () => ctx.onPermissionRequest("continue", { turns: e.turn, agent: label })
+            // 残环批（2026-09-16）：归属键形态（`consult#<relayN>`——端侧键形解析的输入契约；
+            // 原 label = 显示名不携 id）；relay 未建立（spawn 前失败路径不可达此 ask）时回落 label。
+            const ask = () => ctx.onPermissionRequest("continue", { turns: e.turn, agent: relayPrefix ? relayPrefix.slice(0, -1) : label })
             session.continueQueue = (session.continueQueue ?? Promise.resolve()).then(ask, ask)
             return session.continueQueue.then((go) => {
               if (go) {
