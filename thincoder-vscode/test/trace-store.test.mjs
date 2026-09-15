@@ -1,7 +1,11 @@
 /**
- * trace-store.test.mjs — VSC 轨迹存档同构测试（docs/design/TRACE-STORE-VSC.md——
- * 验收 AC1/AC3/AC4/AC5 + F6 边沿——CLI trace-store 测试语义参照——NODE_TEST_CONTEXT
+ * trace-store.test.mjs — 轨迹存档测试（实现单源 = `@thincoder/core/traces/trace-store.mjs`——
+ * 验收 AC1/AC3/AC4/AC5 + F6 边沿——CLI test/trace-bounds.test.mjs 语义参照——NODE_TEST_CONTEXT
  * 写门 + THINCODER_TRACES_DIR 隔离临时目录，同 CLI traces 测试惯例）。
+ *
+ * S2 W3（CORE-UNIFICATION §2.6.3）改判登记：实现单源归核（VSC 副本已删）——
+ * 容量 / 清理策略随 §2.5 #116 / A21 裁决（取 VSC 侧：完整落盘 + 每写 prune）；
+ * 行为面用例逐条保留（承 CLI U3 同法）。
  *
  * 覆盖：写门（测试进程默认不写真实轨迹目录）/D-TR1 字段集（含 error 路径 D-TR5）/
  * D-TR2 脱敏（黑名单字段 + 密钥形态——文件全文无原始密钥）/D-TR3 fire-and-forget
@@ -20,9 +24,9 @@ import http from "node:http"
 import {
   recordChatTrace, cleanupTraces, localDateStr,
   traceSessionKey, nextTraceSeq, tracesDirFor,
-} from "../src/traces/trace-store.mjs"
+} from "@thincoder/core/traces/trace-store.mjs"
 import { chat } from "../src/provider.mjs"
-import { _setConfigPathForTest } from "../src/config-io.mjs"
+import { _resetConfigPathForTest, _setConfigPathForTest } from "@thincoder/core/config.mjs"
 
 // ─── 环境隔离 helpers ─────────────────────────────
 
@@ -30,7 +34,7 @@ let _prevTracesDir
 let _cfgTmp
 
 before(() => {
-  // 隔离 config（loadTracesSettings 读它——per-write prune 的 retentionHours 确定化）
+  // 隔离 config（核 loadConfig 读它——per-write prune 的 retentionHours 确定化）
   _cfgTmp = mkdtempSync(join(tmpdir(), "tc-trace-cfg-"))
   writeFileSync(join(_cfgTmp, "config.json"), JSON.stringify({ traces: { enabled: false, retentionHours: 24 } }))
   _setConfigPathForTest(join(_cfgTmp, "config.json"))
@@ -40,7 +44,7 @@ before(() => {
 after(() => {
   if (_prevTracesDir === undefined) delete process.env.THINCODER_TRACES_DIR
   else process.env.THINCODER_TRACES_DIR = _prevTracesDir
-  _setConfigPathForTest(null)
+  _resetConfigPathForTest()
   try { rmSync(_cfgTmp, { recursive: true, force: true }) } catch { /* ignore */ }
 })
 

@@ -7,8 +7,8 @@ import { specForModel } from "./specs.mjs"
 import { proxyFetch } from "./proxy.mjs"
 import { traceStop } from "./extension/stop-trace.mjs"
 import { escapeMessages } from "./escape.mjs"
-import { logEvent, errText, classifyErr, headText } from "./log.mjs"
-import { recordChatTrace } from "./traces/trace-store.mjs"
+import { logEvent, errText, classifyErr, headText } from "@thincoder/core/log.mjs"
+import { recordChatTrace } from "@thincoder/core/traces/trace-store.mjs"
 export { stripLocalMessageFields } from "./escape.mjs"
 import {
   RETRYABLE_STATUS, MAX_RETRIES, MAX_CONTINUATIONS,

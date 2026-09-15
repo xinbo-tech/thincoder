@@ -11,7 +11,7 @@
 
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
-| 轨迹存储 | `thincoder-cli/src/traces/trace-store.mjs` | 同名（同路径对） |
+| 轨迹存储 | 经 `@thincoder/core/traces/trace-store.mjs` 引用（自持镜像已删——S2 U3） | 经 `@thincoder/core/traces/trace-store.mjs` 引用（自持镜像已删——S2 W3） |
 
 **共同基线**：目录 / 命名 / 字段两端已一致；默认开关两端皆 `false`。
 
@@ -113,3 +113,4 @@
 - 2026-09-13：建档——自 `docs/core/design/CORE-UNIFICATION.md` 拆出（§2.5 #116 · §2.5.1 A21 · §2.12.2 第 10 行）；**语义零改**，行号沿用原编号。
 - 2026-09-14（**B 轮并入 · 第 2 批**）：§6 **机制面 = 旧档缺**（`thincoder-cli/docs/{design,requirements}/TRACES.md` 均不存在）⇒ 无并入内容（不虚构）；§7 无新增决策；§8 登记轨迹面机制文本住旧 AGENT-LOOP 档（越段发现）；§9 体量（低于软线，无需拆分）；首部加机制面指针一行。
 - 2026-09-14（**B 轮并入 · 第 3 批补源**）：§6 机制面 = 自 `thincoder-cli/docs/design/AGENT-LOOP.md` §13 / §23.3.2 轨迹面节并入（同名旧档仍缺——扩参照面来源；**旧档一字未改**）· §7 决策（D-TR1–4 · D-TR6 / D-TR10）· §8.2「越段登记」两行收口为「已并入」· §9 体量收正；首部指针一行收正。
+- 2026-09-15（**S2 W3 接线 · VSC 端** · eng-coder 实施轮）：§1 表两格（CLI / VSC）收正为「经 `@thincoder/core/traces/trace-store.mjs` 引用」——VSC 自持镜像随 W3 删档（坐标 + 状态面收正）；同格 CLI 端为 U3 已删档的滞后坐标，随本笔一并收正（实核：`thincoder-cli/src/traces/trace-store.mjs` 不存在）。机制条文（§6–§9）零改。
