@@ -2,13 +2,13 @@
 /**
  * reconcile-lookup.mjs — 层 3 · 反查（文档↔实装对账批 · 本仓自持独立实现 · 语义同源）。
  *
- * 判据权威 = `docs/design/DOC-CODE-RECONCILE.md` §5（本档不重述判据——单一权威源）。
+ * 判据权威 = `docs/core/design/DOC-CODE-RECONCILE.md` §5（本档不重述判据——单一权威源）。
  * 判据句：本域改动触及的 token 若被某设计 / 需求档锚定，**该档必须出现在输出清单里**——
  * 供批次「受影响文件表」收录（补批次档 §1 病根表第 1 行：描述被改面的设计档不在表里）。
  * 抽取器 **单源**：变更 token 的强形态与排除式 = V5 `extractTokens`（同一函数，不发明第二套抽取式；
  * S4 单仓化后改指仓根统一版 `doc-anchors.mjs`）。
  * 边界（硬）：**只读、不写、不阻断**（产出是人与父侧判断的输入——不是闸；退出码恒 0）；
- * **不自动改档**；**只读本域**（`docs/design` + `docs/requirements`——单仓化后「对端面」并入仓内）。不写台账。
+ * **不自动改档**；**只读本域**（基准层三部分：`docs/core/{design,requirements}` + `docs/cli/{design,requirements}` + `docs/vsc/{design,requirements}`——2026-09-15 迁移批后形态）。不写台账。
  * 输入：`--range <git 范围>`（默认 `HEAD~1..HEAD`）· `--repo <路径>`（默认 = 仓根）。
  * 输出：逐档逐 token 一行 `docs/design/<X>.md — 命中 <token>（:<行>）× n` + 尾行计数；`--json` 同形机读。
  * 用法：`node scripts/reconcile-lookup.mjs [--range <range>] [--repo <路径>] [--json]`。
@@ -21,8 +21,12 @@ import { collectDocStems, extractTokens } from "../../scripts/doc-anchors.mjs"
 
 /** 默认 git 范围（设计 §5 #1）。 */
 export const DEFAULT_RANGE = "HEAD~1..HEAD"
-/** 反查域：本仓设计档 + 需求档（设计 §5 #3——排除归档）。 */
-export const LOOKUP_DIRS = ["docs/design", "docs/requirements"]
+/** 反查域：基准层设计 + 需求档（2026-09-15 迁移批后 = 三部分；排除归档——设计 §5 #3）。 */
+export const LOOKUP_DIRS = [
+  "docs/core/design", "docs/core/requirements",
+  "docs/cli/design", "docs/cli/requirements",
+  "docs/vsc/design", "docs/vsc/requirements",
+]
 const SKIP_DIRS = new Set(["node_modules", ".git", "_archive"])
 
 /**
@@ -62,7 +66,7 @@ function tokenRegex(token) {
   return new RegExp(`(?<![A-Za-z0-9_$])${esc}(?![A-Za-z0-9_$])`)
 }
 
-/** 反查域档清单（`docs/design` + `docs/requirements`，排除归档）。 */
+/** 反查域档清单（基准层三部分，排除归档）。 */
 export function lookupDocs(root) {
   const out = []
   const walk = (dir) => {
