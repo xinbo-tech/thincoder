@@ -54,7 +54,7 @@
 |---|---|---|---|---|---|---|---|
 | A1 | `memory.mjs`（席位 #82；实为 CLI `src/memory/**` 8 档 ↔ VSC `memory.mjs` + `memory-tool.mjs`） | ①②③ | `node:sqlite` `DatabaseSync` + FTS5（`src/memory/schema.mjs:9,68`）；库 = `~/.thincoder/memory.db`；三层 `personal` / `project` / `team`，**personal = 全机共享的库行**；project 层 = `.thincoder/memory/*.md`（**只扫顶层** `src/memory/core.mjs:205-212`） | 零 sqlite——纯仓内 md（`.thincoder/memory/{personal,project}/*.md`，`:26-37`）+ 遗留 `.json` 读兼容（`:150-162`）；两层（`team` 明确拒绝、指向 CLI）；`personal` 落在**仓库目录内** | **以 CLI 为准**（A12——前提失效，非选边）；`node:sqlite` 采纳为定案（§2.11 A8） | ① 记忆存哪变了（VSC 的 personal 由仓内目录 → 全机库）；② 两端**从此可互读**（现状：VSC 读不到 CLI 的库、CLI 不递归读 VSC 的子目录）；③ 旧数据要搬（见 A2）；④ 检索能力（FTS5 + 中文逐字分段）随之而来；⑤ 两侧测试面 | **已裁（2026-09-13）· 按建议** |
 | A2 | 记忆面旧数据迁移（§2.12.3 第 2 行） | ②③ | 有 `memory` 子命令（list / search / put / remove）与 `/reindex`；**无 md / json 导入命令** | 用户既有记忆 = 仓内 `personal` 层 md + 遗留 `.json` + `workspaceState` 的 `thincoder.modelPrefs` | **已裁（2026-09-13）：① 提供一次性导入器**（md / json → `entries`）——**父侧代选**（用户 2026-09-13「全部按建议」未逐字指定本行，已披露 ✓；理由：选 ② 会让 VSC 老用户记忆清空，与「不丢用户数据」相悖）。**落地** = S2 建一次性导入器（`memory import` 子命令面；`modelPrefs` 仍取不到——住 VS Code 状态，不在文件系统） | 用户既有记忆保留（md / json → `entries`）；`modelPrefs` 明确不迁（无文件系统载体） | **已裁（2026-09-13）· ① 一次性导入器（父侧代选）** |
-| A3 | VSC 引擎下限（§2.12.3 第 1 行） | ② | `engines.node = >=24` | `engines.vscode = ^1.85.0` | 抬到 **候选 `^1.104.0`**（A13 已裁「可抬」；**原候选 `^1.101.0` 经本轮实核不成立** ✗——见下行与 §2.11 A8）；**须真机实测确认 + 用户过目** | 放弃 VS Code < 新下限的用户（A13 已接受该代价）；装上旧宿主 ⇒ 扩展不可用 | 已裁（「可抬」）· **值换候选 `^1.104.0` + 待真机实测 + 过目** |
+| A3 | VSC 引擎下限（§2.12.3 第 1 行） | ② | `engines.node = >=24` | `engines.vscode = ^1.85.0` | 抬到 **`^1.104.0`（已裁 2026-09-15）**（A13 已裁「可抬」；**原候选 `^1.101.0` 经实核不成立** ✗——见下行与 §2.11 A8）；**不另做真机实测**（资料推导链 + `activate()` 护栏兜底） | 放弃 VS Code < 新下限的用户（A13 已接受该代价）；装上旧宿主 ⇒ 扩展不可用 | **已裁（2026-09-15 用户）：`^1.104.0` · 不另实测** |
 
 ## 4. 对外契约影响（自 `CORE-UNIFICATION.md` §2.12.2 搬入 · 逐字）
 
@@ -66,7 +66,7 @@
 
 | # | 项 | 为何无法兼容（实测 / 证据） | 上抛形态（四要素） | 裁定状态 |
 |---|---|---|---|---|
-| 1 | **VSC 引擎下限抬升**（`engines.vscode` `^1.85.0` → **候选 `^1.104.0`**） | 旧宿主内置 Node < 22.13 ⇒ 无 `node:sqlite`；**且 Electron 35.x（= VS Code 1.101 / 1.102）未获 sqlite 内置修复**（electron/electron #47706 回移分支 = 36 / 37 / 38-x-y）⇒ 原候选 `^1.101.0` 不成立；A13 已裁「抬高、不保留降级路径」⇒ **无兼容路径可给**（给降级路径 = 两套逻辑再现 ✗） | 左端 = VSC 现状（`thincoder-vscode/package.json` 的 `engines.vscode: ^1.85.0`）· 右端 = 新下限 **`^1.104.0`（候选，经真机实测确认后定值）** · 建议 = 采纳（A13）· 影响面 = < 新下限用户不可用；**配套护栏** = `activate()` 自检 + 明确提示（不崩） | 已裁（「可抬」· 2026-09-13）· **候选上修 `^1.101.0` → `^1.104.0` · 值待真机实测 + 过目**（§2.5.1 A3 / §2.11 A8） |
+| 1 | **VSC 引擎下限抬升**（`engines.vscode` `^1.85.0` → **`^1.104.0`（已裁 2026-09-15）**） | 旧宿主内置 Node < 22.13 ⇒ 无 `node:sqlite`；**且 Electron 35.x（= VS Code 1.101 / 1.102）未获 sqlite 内置修复**（electron/electron #47706 回移分支 = 36 / 37 / 38-x-y）⇒ 原候选 `^1.101.0` 不成立；A13 已裁「抬高、不保留降级路径」⇒ **无兼容路径可给**（给降级路径 = 两套逻辑再现 ✗） | 左端 = VSC 现状（`thincoder-vscode/package.json` 的 `engines.vscode: ^1.85.0`）· 右端 = 新下限 **`^1.104.0`（已裁 2026-09-15）** · 建议 = 采纳（A13）· 影响面 = < 新下限用户不可用；**配套护栏** = `activate()` 自检 + 明确提示（不崩） | **已裁（2026-09-15 用户）：`^1.104.0` · 不另做真机实测**（资料推导链 + `activate()` 护栏兜底）（§2.5.1 A3 / §2.11 A8） |
 | 2 | **记忆面旧数据迁移**（VSC `personal` 层 md 档 · 遗留 `.json` 记忆档 · `workspaceState` 的 `thincoder.modelPrefs`） | VSC `personal` = 仓内目录（`thincoder-vscode/src/memory.mjs:26-37`）· CLI `personal` = 用户级全局 sqlite 库行（`thincoder-cli/src/config.mjs:92`）；CLI 侧无导入命令（`thincoder-cli/src/cli/memory-command.mjs:21-63`）· 同步只认顶层 `.md`（`thincoder-cli/src/memory/core.mjs:205-212`）⇒ **无自动迁移路径**；`modelPrefs` 住 VS Code 状态（不在文件系统） | 左端 = VSC 现状（仓内 md 持久）· 右端 = CLI 现状（全局库 + 顶层 md）· 建议 = **① 提供一次性导入器**（md / json → `entries`）或 ② 用户手工迁移 / 丢弃 · 影响面 = 用户既有记忆 + 语义（每仓私有 → 全机共享） | **已裁（2026-09-13）· ① 一次性导入器**（**父侧代选**，已披露；落地 = S2 建 `memory import` 面。§2.5.1 A2） |
 
 ## 5. 受影响文件（该子系统）
@@ -364,3 +364,4 @@ root（legacy）+ `personal/` + `project/` 三物理目录；条目 frontmatter 
   §7 **关键决策记录（D-MEM1–13）** · §8 **不并项与历史沿革**（含已知限制并入）· §9 体量与拆分规划；
   来源 = `thincoder-cli/docs/design/MEMORY.md`（**旧档一字未改**——原地作参照历史）；首部加机制面指针一行。本档 80 → **334 行**。
 - 2026-09-15（**VSC 轮并入 · 批 7**）：§6.9 新增 **VS Code 端实现面**（现状登记——文件制存储 / 向量优先检索 / 索引有效性 B1–B4 / 工具契约端差）· §7 补 **D-MEM14–15** · §8.2 补 3 行不并项登记（含文件制存储 (d) 类——已裁归一）· §9 拆分表 +1 行（归一退场）；来源 = `thincoder-vscode/docs/design/MEMORY.md`（**旧档一字未改**）；坐标按现状实核（`indexer.mjs:156,170` · `memory.mjs` 等）。
+- 2026-09-15（**引擎下限裁定收口 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮）：§3.1 A3 行与 §4.1 第 1 行同轮收正——用户 2026-09-15 裁定：值 = **`^1.104.0`** · **不另做真机实测**（资料推导链 + `activate()` 护栏兜底）；原「待真机实测 + 过目 / 经真机实测确认后定值」口径作废。
