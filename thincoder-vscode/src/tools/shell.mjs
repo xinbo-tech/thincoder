@@ -1,6 +1,6 @@
 /**
  * shell.mjs — Shell command execution tool: bash
- * Includes the CLI git-destruction protection (parity with thincoder src/tools/system.mjs):
+ * Includes the CLI git-destruction protection (parity with the core guard — @thincoder/core/tools/bash.mjs):
  *   1. Layer 1 — WIDE auto-snapshot before destructive git commands (covers variants
  *      the exact matcher misses, e.g. `git checkout HEAD -- .`). Snapshot = FULL-COPY
  *      checkpoint（核实现 `@thincoder/core/git/checkpoint.mjs`——自持镜像已删〔S2 W5〕，CHECKPOINT.md F5
@@ -139,8 +139,8 @@ if (process.platform === "win32") SAFE_ENV.PYTHONIOENCODING = "utf-8"
 const GIT_DESTRUCTIVE_RE = /\bgit\s+(?:checkout\s+(?:[\w./-]+\s+)?--(?!\w)|checkout\s+\.|restore\s+(?!--help\b)(?!--staged\b(?!.*--worktree))|reset\s+--hard|clean\s+-(?=\S*f)(?!\S*n))/i
 
 /**
- * Auto-snapshot current uncommitted work as a FULL-COPY checkpoint — mirror of the CLI
- * gitGuardSnapshot (thincoder src/tools/system.mjs:128，CHECKPOINT.md D4 两端 guard 对齐：
+ * Auto-snapshot current uncommitted work as a FULL-COPY checkpoint — parity with the core
+ * gitGuardSnapshot (@thincoder/core/tools/bash.mjs:96，CHECKPOINT.md D4 两端 guard 对齐：
  * 不再是 git stash)。快照覆盖 `git checkout -- .` / `restore` / `reset --hard` / `clean -f`
  * 会毁掉的一切（含 untracked）；恢复入口 = checkpoint 工具 checkpointAction=rewind。
  * Returns { id, notice } or null. Never throws.
