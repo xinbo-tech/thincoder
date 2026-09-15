@@ -98,7 +98,10 @@
 
 ### 3.6 VSC 端镜像面（B 式并入 · 实核 as-of 2026-09-15）
 
-> 来源 = `thincoder-vscode/docs/design/PORTABILITY.md`（VSC 产品档·批次二——旧档一字未改、留参照历史）。VSC 端 = 同机制的第二实现面：**同语义同 schema、各自独立实现**（不做 byte-identical、不以任一端产物回改另一端——镜像纪律）；未进核前的独立实现坐标如下。**W4 状态注（2026-09-15）**：VSC 端镜像实现已删——VSC 经 `@thincoder/core/conventions.mjs` 引用（单源；下表坐标 = 迁移前 as-of）。
+> 来源 = `thincoder-vscode/docs/design/PORTABILITY.md`（VSC 产品档·批次二——旧档一字未改、留参照历史）。VSC 端 = 同机制的第二实现面：**同语义同 schema、各自独立实现**（不做 byte-identical、不以任一端产物回改另一端——镜像纪律）；未进核前的独立实现坐标如下。
+> **W4 状态注（2026-09-15）**：VSC 端镜像实现已删——VSC 经 `@thincoder/core/conventions.mjs` 引用（单源；下表坐标 = 迁移前 as-of）。
+> **W15 状态注（2026-09-15）**：VSC 端装配/注入面（i18n 投影 · 提醒转口 · 蒸馏适配 · 事件中继）随 W15 核单源化收口；
+> 本节坐标逐个可达（实核：`agent/tool-gates.mjs:78` 落在 eng-coder 子门注释段 · `:81-84` = eng-coder 子门实体 · `:92` = 父门（门条件）/`:97` = 其 hint 分支 · `agent/run-helpers.mjs:71` = `hasCodeMutations` 体内〔声明 `:70`〕）。
 
 | 面 | VSC 落点（实核） | 差异注 |
 |---|---|---|
@@ -181,3 +184,4 @@
   ② 坐标一律改现状路径并经实核（`thincoder-core/conventions.mjs` 等）；③ 新增 §5 测试面（回指现行测试档）、§8 体量。
 - 2026-09-15（**B 式迁移轮 · VSC 第 6 批 · 并入 · eng-designer**）：新增 §3.6 VSC 端镜像面——自 `thincoder-vscode/docs/design/PORTABILITY.md`（批次二）并入（分类裁判 / 声明面 / 门禁 / 注入 / 索引坐标按现状实核；消息文案逐字本体住产品代码不复制）；§5 补 VSC 测试档三行；§6 边界行 2 收口 + §7.2 登记 VSC 批次材料不并（(d) 类）。
 - 2026-09-15（**S2 W4 · VSC 单元**）：§3.6 状态收正——VSC 端镜像实现已删（`thincoder-vscode/src/conventions.mjs`；现体 = `thincoder-core/conventions.mjs`，VSC 经核单源引用）；分类裁判 / 变更集判据两行坐标收正（只落状态行，机制条文零改）。
+- 2026-09-15（**S2 W15 · VSC 单元 · eng-coder**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W15〔重定版〕）：§3.6 头部加 W15 状态注（装配/注入面核单源化收口；本节坐标逐处实核仍在位——`tool-gates.mjs:78/:97` · `run-helpers.mjs:71`）；机制条文零改。

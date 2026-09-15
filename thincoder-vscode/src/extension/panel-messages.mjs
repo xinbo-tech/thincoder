@@ -19,7 +19,8 @@ import { savePastedImages, runVisionReader } from "./image-handler.mjs"
 import { specForModel } from "../specs.mjs"
 import { backgroundStatus, reassertLiveChildren } from "./suspension.mjs"
 // 2026-09-11 第 10 批（§5.1.4 第 1/2 条）：任务可见性族投递通道（队列 flush 拍）
-import { flushSubagentOutbox } from "./panel-callbacks.mjs"
+// W15：+ 事件中继面（⏹ queued 取消路径的核 ⟦ev⟧ 事件 → webview 协议消息）。
+import { flushSubagentOutbox, relaySubagentEventToken } from "./panel-callbacks.mjs"
 // §18 C-5/C-6（2026-09-12）：permissionResponse 按 promptId 路由 + approve-all 连带释放（同一 release helper）
 import { releasePermission } from "./permission-gate.mjs"
 // LEDGER-SURFACE（§2.30.3.5）：台账启动行投递（webviewReady 时机）
@@ -276,6 +277,12 @@ export async function handlePanelMessage(panel, msg) {
       // cancelled 分支收尾）/ queued 出队 + 位置前移 + 补位；含 advisor 池 fallback）。动态
       // import：核链可达 node:sqlite（W8 契约②）。合成 parent 携双池 + history + 队列
       //（`_asyncQueue` 核侧载体——面板 agent 槽；缺则核内按空队处理）。
+      // W15（R5——等待头回收 + W12/W13 遗留「合成 parent 三缺」收口）：
+      //   ① config / autoApprove 由面板活 agent / 会话标志供给（核 `poolLimitsFor` 按生效值
+      //      判定补位；AUTO 档依赖者自动启动判定按真值——不再回退默认 4/4 + 不启动）；
+      //   ② callbacks 携事件中继——核 queued 取消路径的 `⟦ev⟧cancelled`（等待头移除）与
+      //      `refreshQueuedTokens`（剩余排队位置前移）经 `relaySubagentEventToken` 转 webview
+      //      协议消息（原 `callbacks: {}` = 两者 no-op——webview 等待头悬留）。
       const { executeCancelAction } = await import("@thincoder/core/agent-tools/subagent-async.mjs")
       executeCancelAction({ id }, {
         agent: {
@@ -283,9 +290,11 @@ export async function handlePanelMessage(panel, msg) {
           _asyncAdvisors: lines.history._asyncAdvisors,
           history: lines.history,
           _asyncQueue: lines.history._asyncQueue ?? panel._agent?._asyncQueue,
+          config: panel._agent?.config,
+          autoApprove: panel._autoApprove === true,
         },
         depth: 0,
-        callbacks: {},
+        callbacks: { onToken: (tok) => { relaySubagentEventToken(panel, tok) } },
       })
       break
     }

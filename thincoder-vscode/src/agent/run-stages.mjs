@@ -12,7 +12,8 @@
 
 // W6（压缩面取核单源）：压缩触发 / 摘要 / 降级截断 / 尾部预算 = @thincoder/core/context.mjs
 // （§2.5 #162 融合「取一侧」）；阈值档位 = 核 config.mjs resolveCompactThreshold。
-// 蒸馏本体仍住 ../explore-distill.mjs（核面 re-export 面不同——改指随 W15）。
+// W15（2026-09-15）：蒸馏本体 = 核单源 @thincoder/core/explore-distill.mjs——本档经
+// ../explore-distill.mjs 端壳适配器调用（agent 载体 ↔ 共享数组引用的调用期适配）。
 import { compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT } from "@thincoder/core/context.mjs"
 import { resolveCompactThreshold } from "@thincoder/core/config.mjs"
 import { summarizeRunExplorations } from "../explore-distill.mjs"
@@ -248,25 +249,21 @@ export async function checkAndCompact(agent, ctx) {
 
 /**
  * End-of-run exploration distillation 发射（2026-09-05 实践轮——自 runAgent 提取，
- * verbatim + 签名化）：仅顶层轮末调用（深度守卫——子轮创建会晚 resolve clobber 历史，
- * N1 竞态）。专用 distillSignal（与运行 signal 分离——新消息/下一轮 abort 运行
- * controller 时蒸馏继续完成；用户 Stop 同样不影响；panel dispose/会话切换才 abort）。
- * 落位后失效 token 基线 + onDistilled（调用方应持久化——评审 #5）。失败静默（N3）——
- * 原历史保留，永不阻塞返回。@returns {Promise} 蒸馏 promise（调用方挂 distillState）。
+ * verbatim + 签名化；W15：本体改指核单源——`../explore-distill.mjs` 适配器见其头注）：
+ * 仅顶层轮末调用（深度守卫——子轮创建会晚 resolve clobber 历史，N1 竞态）。专用
+ * distillSignal（与运行 signal 分离——新消息/下一轮 abort 运行 controller 时蒸馏继续
+ * 完成；用户 Stop 同样不影响；panel dispose/会话切换才 abort）。收缩落位 = 适配器原位
+ * 回收（共享数组引用不失效）+ 核内基线失效；本函数只剩 onDistilled 触发（落地才算——
+ * 调用方应持久化——评审 #5）。失败静默（N3）——原历史保留，永不阻塞返回。
+ * @returns {Promise} 蒸馏 promise（调用方挂 distillState）。
  */
 export function fireEndOfRunDistill(agent, history, provider, signal, callbacks) {
   // TRACE-STORE-VSC（D-TR4）：agent 尾参线程化——蒸馏轨迹带 cwd/session/kind 元数据
   return summarizeRunExplorations(history, agent._runStartHistoryLen ?? 0, provider, signal, agent)
     .then((shrunk) => {
-      if (shrunk) {
-        history.length = 0
-        history.push(...shrunk)
-        // The machine line changed shape — the measured token baseline was for the pre-shrink
-        // context, so invalidate it (next compaction check falls back to re-estimation).
-        agent._lastPromptTokens = null
-        agent._usageAtLen = null
-        callbacks.onDistilled?.()   // 压缩已落位 → 调用方应持久化（评审 #5）
-      }
+      // W15：收缩已由适配器原位回收（核 write-replace → 共享数组），`_lastPromptTokens` /
+      // `_usageAtLen` 基线失效由核内完成——此处只剩落地持久化信号。
+      if (shrunk) callbacks.onDistilled?.()
       return shrunk
     })
     .catch(() => null)

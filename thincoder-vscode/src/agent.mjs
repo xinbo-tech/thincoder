@@ -240,6 +240,17 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
 
     const messages = [{ role: "system", content: systemPrompt }, ...history]
     traceStop(`turn ${turn}: calling LLM (history ${history.length} msgs)`)
+    // #175（W15 · a 半——推理档位面端侧自有，用户 2026-09-15 裁定「核内无需位」）：
+    // `autoThink` 键随 config 归一（hydrate cfgBag → `agent.config.agent.autoThink`）到此
+    // 消费——死键复活；分类器 = 核单源 `@thincoder/core/auto-think.mjs`（写
+    // `agent.provider.reasoningEffort`——与面板档位共用 provider 字段数据面；核
+    // `provider/core.mjs:193-204` 落请求 body）。默认 false ⇒ 无行为变化；失败静默
+    // （核内 catch 回退当前档位）。首轮面与核 agent.mjs 同点（turn 0 / chat 之前）。
+    if (agent.config?.agent?.autoThink && turn === 0) {
+      agent.provider = provider // 核分类器读 agent.provider——此处前置同指（工具批后的载体回填同源）
+      const { classifyAndApply } = await import("@thincoder/core/auto-think.mjs")
+      await classifyAndApply(agent, turn).catch(() => {})
+    }
     const response = await chat(provider, {
       messages,
       tools: toolSchemas,
@@ -380,7 +391,10 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
       })
     }
 
-    // ─── W9 端差适配（调用期载体镜像——承 W6 run-stages.mjs:174-178 先例；W11/W15 载体归一后退场）───
+    // ─── W9 端差适配（调用期载体镜像——承 W6 run-stages.mjs:174-178 先例；W15 定形：
+    // 双载体（端壳 `_tasks`/`_planMode`/`_goal`/callbacks 回调面 ↔ 核工具读写的
+    // `agent.tasks`/`agent.planMode`/`agent.goal`/`agent._onTaskUpdate`）= **调用期适配面**
+    // （F7「循环契约位移」——端特有面保留，不并载体）───
     // 核 agent-tools 工具族（plan / task / goal / verify）读/写 CLI 载体名
     // （agent.provider / agent.tasks / agent.planMode / agent.goal / agent._onTaskUpdate）；
     // 本端载体 = _provider 语义的显式入参 / _tasks / _planMode / _goal / callbacks.onTaskUpdate

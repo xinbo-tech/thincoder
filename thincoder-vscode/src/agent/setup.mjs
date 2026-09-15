@@ -438,6 +438,9 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // TRACE-STORE-VSC（D-TR6 镜像——核 config.mjs DEFAULTS.traces 合并同语义）：traces 段
   // 默认 OFF（2026-09-05 发布隐私裁定）——agent.config.traces 由此整建——每轮拾取外部变更
   let cfgTraces = { ...DEFAULTS.traces }
+  // #175（W15 · a 半）：autoThink 键随 config 归一（默认 false——核 DEFAULTS.agent.autoThink；
+  // 消费点 = agent.mjs 循环首轮核分类器调用）——W16 前为死键（全仓零消费）。
+  let cfgAutoThink = DEFAULTS.agent?.autoThink === true
   try {
     const raw = loadRaw()
     advisorCfg = raw.agent?.advisor ?? { guard: false }
@@ -458,6 +461,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     cfgProviders = resolveProviders().providers // for subagent model overrides
     cfgWebsearch = raw.websearch ?? { apiKey: "" }
     cfgTraces = { ...DEFAULTS.traces, ...(raw.traces ?? {}) }
+    cfgAutoThink = raw.agent?.autoThink ?? cfgAutoThink // #175a：显式键优先（缺省 = 核 DEFAULTS）
   } catch { /* config unreadable — defaults */ }
 
   // §11.2.1 槽 reconcile：顶层会话绑定（opts.engPersist = {cwd, slot}）每轮读权威槽（settle
@@ -475,7 +479,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
       subagentModel: cfgSubagentModel, subagentModels: cfgSubagentModels, subagentTurns: cfgSubagentTurns,
       maxTurns: cfgMaxTurns, verifyGuard: cfgVerifyGuard, compactThreshold: cfgCompactThreshold,
       consultModels: cfgConsultModels, consultTurns: cfgConsultTurns, consultTimeoutMs: cfgConsultTimeoutMs,
-      waitForTimeoutMs: cfgWaitForTimeoutMs, poolLimits: cfgPoolLimits,
+      waitForTimeoutMs: cfgWaitForTimeoutMs, poolLimits: cfgPoolLimits, autoThink: cfgAutoThink,
     },
     proxy: cfgProxy, shell: cfgShell, providersList: cfgProviders, websearch: cfgWebsearch,
     traces: cfgTraces,

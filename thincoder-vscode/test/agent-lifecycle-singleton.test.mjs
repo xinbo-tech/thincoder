@@ -18,11 +18,12 @@
 import { test, beforeEach, afterEach } from "node:test"
 import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { randomUUID } from "node:crypto"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-slots.mjs"
+import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
 import {
   buildTopLevelAgent, hydrateRun,
 } from "../src/agent/setup.mjs"
@@ -41,7 +42,7 @@ const expiredTok = () => `${randomUUID()}:${Date.now() - 3600e3}`
 const cfgBag = (over = {}) => ({
   engineering: false,
   advisor: { guard: false },
-  agentFields: { subagentModel: null, subagentModels: {}, subagentTurns: 100, maxTurns: 200, verifyGuard: false, compactThreshold: null, consultModels: [], consultTurns: 40, consultTimeoutMs: 600000, waitForTimeoutMs: undefined, poolLimits: null },
+  agentFields: { subagentModel: null, subagentModels: {}, subagentTurns: 100, maxTurns: 200, verifyGuard: false, compactThreshold: null, consultModels: [], consultTurns: 40, consultTimeoutMs: 600000, waitForTimeoutMs: undefined, poolLimits: null, autoThink: false },
   proxy: undefined, shell: null, providersList: [], websearch: { apiKey: "" },
   ...over,
 })
@@ -293,6 +294,31 @@ test("hydrateRun: 复用同一 agent 对象——A 复位回合边界、B 每轮
   assert.equal(agent._lastEngState, false)
   assert.equal(agent._tasks[0].title, "carry", "C 类 _tasks 会话级不复位（F1）")
   assert.equal(agent._fullHistory, r2.fullHistory, "history 每轮重指")
+})
+
+// ─── #175a（W15 · a 半）：autoThink 键随 config 归一（死键复活——默认 false ⇒ 无行为变化）───
+
+test("hydrateRun #175a: agent.config.agent.autoThink 随 config 归一（显式键生效 / 缺省 = 核 DEFAULTS false）", async () => {
+  const project = join(sessionsDir, "project-175")
+  const run = (agent) => hydrateRun(agent, { provider: { model: "deepseek-v4-pro" }, cwd: project, input: "hi", opts: {}, depth: 0, role: null, getAuto: () => false })
+  try {
+    // 显式 true：config.json agent.autoThink → cfgBag.agentFields → agent.config.agent（消费点 = agent.mjs 首轮核分类器）
+    const dirA = join(sessionsDir, "cfg-175a")
+    mkdirSync(dirA, { recursive: true })
+    writeFileSync(join(dirA, "config.json"), JSON.stringify({ agent: { autoThink: true } }), "utf8")
+    _setConfigPathForTest(join(dirA, "config.json"))
+    const r1 = await run(buildTopLevelAgent())
+    assert.equal(r1.agent.config.agent.autoThink, true, "显式键归一（死键复活——原全仓零消费）")
+    // 缺省：键缺席 → 核 DEFAULTS.agent.autoThink = false（无行为变化）
+    const dirB = join(sessionsDir, "cfg-175b")
+    mkdirSync(dirB, { recursive: true })
+    writeFileSync(join(dirB, "config.json"), JSON.stringify({}), "utf8")
+    _setConfigPathForTest(join(dirB, "config.json"))
+    const r2 = await run(buildTopLevelAgent())
+    assert.equal(r2.agent.config.agent.autoThink, false, "缺省 false（核 DEFAULTS——零行为变化）")
+  } finally {
+    _setConfigPathForTest(null)
+  }
 })
 
 test("agentState §11.7: 6 fields — tasks/goal/pendingReminders ride the slot round-trip", () => {

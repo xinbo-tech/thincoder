@@ -350,24 +350,70 @@ function poolHistory() {
   return history
 }
 
-test("⑫ F-2 cancelSubagent 路由（queued 目标）：引擎出队 + 墓碑——陈旧 ⏹ no-op（用例表 F-2 错误行）", async () => {
-  const notified = []
+test("⑫ F-2 cancelSubagent 路由（queued 目标）：引擎出队 + 墓碑 + W15 等待头回收事件——陈旧 ⏹ no-op（用例表 F-2 错误行）", async () => {
   const history = poolHistory()
-  const e9 = { id: 9, role: "eng-coder", status: "queued", done: false, cancelled: false, _files: [], _dependsOn: [] }
+  // relayPrefix 必携（生产池条目形状——executeAsyncSpawn 写侧恒有；事件中继面据此解析 role/id）
+  const e9 = { id: 9, role: "eng-coder", status: "queued", done: false, cancelled: false, _files: [], _dependsOn: [], relayPrefix: "eng-coder#9/" }
   // W13 键形单源（评审 🔴 收口）：核池键恒 `String(id)`（写侧 `set(String(id))`）——夹具锁 String 键，
   // 防读键形回归被数字键夹具掩盖（原 `Number(msg.id)` 归一在生产恒 miss 的旧病理）。
-  e9._onCancelled = (wasQueued) => notified.push({ id: 9, role: "eng-coder", status: "cancelled", ...(wasQueued ? { was: "queued" } : {}) })
   history._asyncSubagents.set("9", e9)
-  const p = stubPanel({ _liveLines: { history, fullHistory: history, cwd: "C:/ws" } })
+  const p = stubPanel({ _liveLines: { history, fullHistory: history, cwd: "C:/ws" }, _wvReady: true })
 
   await handlePanelMessage(p, { type: "cancelSubagent", id: "9", role: "eng-coder" })
 
   assert.equal(history._asyncSubagents.has(9), false, "queued 目标出队（map 移除——核 executeCancelAction）")
   assert.equal(history._asyncSubagents.has("9"), false, "String 键形出池（键形单源——回归锁）")
   assert.deepEqual(history._asyncTombstones.get("9"), { status: "cancelled", role: "eng-coder" }, "出队即终态 → cancelled 墓碑（依赖者查得；键形 = String 归一）")
-  assert.equal(notified.length, 0, "W13：端侧 `_onCancelled` 通知缝（旧镜像私有）已随删旧退役——webview 等待头移除归事件中继面（见 §5 未决登记）")
+  // W15（R5——等待头回收 + W13 观察项）：核 `⟦ev⟧cancelled` 经事件中继面 → webview 协议消息
+  // （原 `callbacks: {}` = 该事件 no-op——webview ⏳ 等待块悬留）。`_onCancelled` 端侧旧缝已退役（W13）
+  // ——本面为唯一通道。
+  assert.deepEqual(
+    p.posted.filter((m) => m.type === "subagent" && m.status === "cancelled"),
+    [{ type: "subagent", role: "eng-coder", id: 9, status: "cancelled", was: "queued" }],
+    "queued 取消 → cancelled(was:'queued') 事件（webview activity.js 移除 ⏳ 等待块）",
+  )
+  assert.equal(p.posted.filter((m) => m.type === "token").length, 0, "事件 token 零裸文本泄漏（识别即消费）")
 
   // 陈旧 ⏹（块已出队残留点击——用例表 F-2 错误行）→ 路由 no-op（未知 id——无虚构状态）
   await handlePanelMessage(p, { type: "cancelSubagent", id: "9", role: "eng-coder" })
   assert.equal(history._asyncTombstones.size, 1, "无新墓碑（幂等）")
+  assert.equal(p.posted.filter((m) => m.type === "subagent" && m.status === "cancelled").length, 1, "陈旧点击零新事件（no-op）")
+})
+
+// ─── ⑬ W15 事件中继面（R5）：核 ⟦ev⟧ 事件 token → webview 活动区协议消息映射单点 ────
+
+test("⑬ W15 事件中继：queued/cancelled/stopped/turn/done/settled/async+[model] 映射；非事件不消费", async () => {
+  const { relaySubagentEventToken } = await import("../src/extension/panel-callbacks.mjs")
+  const posted = []
+  const p = { _wvReady: true, _panel: { webview: { postMessage: (m) => { posted.push(m); return Promise.resolve(true) } } } }
+  const consume = (tok) => relaySubagentEventToken(p, tok)
+  const RS = "\x1e"
+
+  // 池生命周期事件（核发射面：subagent-run / subagent-scheduler / subagent-async / async-settle / 核 agent.mjs 子代 turn）
+  assert.equal(consume(`eng-coder#4/⟦ev⟧queued${RS}slot${RS}3${RS}queued${RS}`), true)
+  assert.equal(consume(`explore#2/⟦ev⟧queued${RS}depc${RS}1${RS}queued${RS}dependency cancelled`), true)
+  assert.equal(consume(`eng-coder#5/⟦ev⟧async${RS}`), true)
+  assert.equal(consume("eng-coder#5/[model]glm-5.3"), true)
+  assert.equal(consume(`eng-coder#5/⟦ev⟧turn${RS}7${RS}100${RS}llm${RS}`), true)
+  assert.equal(consume(`eng-coder#5/⟦ev⟧cancelled${RS}`), true)
+  assert.equal(consume(`eng-coder#5/⟦ev⟧stopped${RS}0${RS}0${RS}stopped${RS}`), true)
+  assert.equal(consume(`eng-coder#5/⟦ev⟧settled${RS}0${RS}0${RS}settled${RS}`), true)
+  assert.equal(consume(`eng-coder#5/⟦ev⟧done${RS}0${RS}0${RS}done${RS}`), true)
+  // 非事件面：主会话普通 token / 无前缀 [model] / relay 前缀内容 chunk——一律不消费（原样转发）
+  assert.equal(consume("plain main-agent token"), false)
+  assert.equal(consume("[model]glm-5.3"), false)
+  assert.equal(consume("eng-coder#5/hello chunk"), false)
+
+  const [q1, q2, started, turn, cancelled, stopped, settled, done] = posted
+  assert.deepEqual(q1, { type: "subagent", role: "eng-coder", id: 4, status: "queued", position: 3, waiting: null, reason: null })
+  assert.deepEqual(q2, { type: "subagent", role: "explore", id: 2, status: "queued", position: 1, waiting: "dependency-cancelled", reason: "dependency cancelled" })
+  assert.equal(started.status, "started")
+  assert.equal(started.pool, true, "async 标记 → pool:true（webview ⏹/接管判据）")
+  assert.equal(started.model, "glm-5.3")
+  assert.ok(typeof started.startedAt === "number", "startedAt 随行（elapsed 不丢）")
+  assert.deepEqual(turn, { type: "subagent", role: "eng-coder", id: 5, status: "turn", turn: 7, maxTurns: 100 })
+  assert.deepEqual(cancelled, { type: "subagent", role: "eng-coder", id: 5, status: "cancelled", was: "queued" })
+  assert.deepEqual(stopped, { type: "subagent", role: "eng-coder", id: 5, status: "cancelled" })
+  assert.deepEqual(settled, { type: "subagent", role: "eng-coder", id: 5, status: "settled" })
+  assert.deepEqual(done, { type: "subagent", role: "eng-coder", id: 5, status: "done" })
 })

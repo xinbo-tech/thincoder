@@ -13,6 +13,74 @@ import { notifyCompletionIfUnfocused } from "./notify.mjs"
 import { toolPanelPayload } from "./panel-toolpanel.mjs"
 import { backgroundStatus } from "./suspension.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"
+// W15（R5 · 事件中继面）：核 relay 前缀解析（`role#id/` 文法单一权威——零依赖）。
+import { parseRelayPath } from "@thincoder/core/agent/relay-prefix.mjs"
+
+// ─── W15（2026-09-15 · R5「⏹ queued 等待头回收」+ W13 观察项收口）事件中继面 ───────────
+// 核异步族（spawn/settle/cancel）经 `ctx.callbacks.onToken` 发 **relay 前缀 ⟦ev⟧ 事件 token**
+// （TUI routeSubToken 消费面；`subagent-run.mjs:143` `⟦ev⟧async` · `subagent-scheduler.mjs:337`
+// `⟦ev⟧queued` · `subagent-async.mjs:262` `⟦ev⟧cancelled` · `async-settle.mjs:228/262/264`
+// `⟦ev⟧stopped/⟦ev⟧settled/⟦ev⟧done` · 核 `agent.mjs:207` 子代 `⟦ev⟧turn`）。VSC 消费面 =
+// `{type:"subagent", …}` 状态消息（webview `activity.js` `applySubagentStatus`）——原 W12/W13
+// 镜像删旧后该转换面缺失（事件以裸文本泄漏 / ⏹ queued 取消无等待头回收事件）。
+//
+// `relaySubagentEventToken` = 转换单点：识别（relay 前缀 + ⟦ev⟧/[model] 形态）即**消费**
+// （返回 true——不再以裸 token 文本泄漏）；未识别 → false（调用方原样转发）。两类调用面：
+//   ① 面板 `onToken` 包装（buildPanelCallbacks）——运行期事件流；
+//   ② ⏹/取消路径的合成 callbacks（panel-messages `cancelSubagent`——核 `executeCancelAction`
+//      的 `⟦ev⟧cancelled` + `refreshQueuedTokens` 中继）。
+// `⟦ev⟧async` → 记 pending（started 载荷 pool:true 判定）；尾随 `[model]` → `started` 载荷
+// （model 入块头）。pending 表挂 panel 弱映射（多面板互不串味）。
+const _relayAsyncPending = new WeakMap() // panel → Set<`role#id`>
+
+/** 事件 token → webview 活动区状态消息（映射表：queued / cancelled / stopped / settled /
+ *  done / turn / async+[model]）。识别返回 true；未知形态（非本面事件）返回 false。 */
+export function relaySubagentEventToken(panel, tok) {
+  const text = String(tok ?? "")
+  if (!text.includes("⟦ev⟧") && !text.includes("[model]")) return false
+  const path = parseRelayPath(text)
+  if (!path) return false
+  const hash = path.head.indexOf("#")
+  const role = path.head.slice(0, hash)
+  const id = Number(path.head.slice(hash + 1))
+  const rest = path.rest
+  const emit = (payload) => { postSubagentEvent(panel, { type: "subagent", role, id, ...payload }); return true }
+  if (rest.startsWith("⟦ev⟧async")) {
+    let set = _relayAsyncPending.get(panel)
+    if (!set) { set = new Set(); _relayAsyncPending.set(panel, set) }
+    set.add(path.head)
+    return true // [model] 随行补发 started
+  }
+  if (rest.startsWith("[model]")) {
+    const pool = _relayAsyncPending.get(panel)?.delete(path.head) === true
+    return emit({ status: "started", pool, model: rest.slice("[model]".length) || null, startedAt: Date.now() })
+  }
+  if (rest.startsWith("⟦ev⟧queued")) {
+    // 载荷：⟦ev⟧queued \x1e kind \x1e position \x1e queued \x1e detail（subagent-scheduler 发射面）
+    const parts = rest.split("\x1e")
+    const kind = parts[1]
+    const detail = parts.slice(4).join("\x1e")
+    return emit({
+      status: "queued",
+      position: Number(parts[2]) || null,
+      waiting: kind === "slot" ? null : (kind === "depc" ? "dependency-cancelled" : "waiting-deps"),
+      reason: kind === "slot" ? null : (detail || null),
+    })
+  }
+  if (rest.startsWith("⟦ev⟧cancelled")) {
+    // 核仅在 queued 取消路径发（subagent-async executeCancelAction——出队即终态）
+    return emit({ status: "cancelled", was: "queued" })
+  }
+  if (rest.startsWith("⟦ev⟧stopped")) return emit({ status: "cancelled" }) // 运行中取消 → 冻结 stopped
+  if (rest.startsWith("⟦ev⟧settled")) return emit({ status: "settled" })
+  if (rest.startsWith("⟦ev⟧done")) return emit({ status: "done" })
+  if (rest.startsWith("⟦ev⟧turn")) {
+    const parts = rest.split("\x1e")
+    return emit({ status: "turn", turn: Number(parts[1]) || 0, maxTurns: Number(parts[2]) || 0 })
+  }
+  if (rest.startsWith("⟦ev⟧")) return true // 其余核事件（approval 等——VSC 另有通道）：消费不泄漏
+  return false
+}
 
 // ─── 任务可见性族投递队列（2026-09-11 第 10 批——WEBVIEW.md §5.1.4 第 1 条）———
 /** 队列上界（§5.1.4 第 1 条——溢出丢最旧 + 留痕）。 */
@@ -116,7 +184,12 @@ export function buildPanelCallbacks(panel, deps) {
   // onDistilled without args, so the persisted engineering fields ride the closure.
   let lastAgentState = {}
   return {
-    onToken: (tok) => { panel._panel?.webview.postMessage({ type: "token", text: tok }) },
+    onToken: (tok) => {
+      // W15（事件中继面）：核 relay ⟦ev⟧ 事件 token → webview 活动区协议消息（识别即消费
+      // ——不再以裸文本泄漏）；普通 token 原样转发。
+      if (relaySubagentEventToken(panel, tok)) return
+      panel._panel?.webview.postMessage({ type: "token", text: tok })
+    },
     onReasoning: (r) => { panel._panel?.webview.postMessage({ type: "reasoning", text: r }) },
     // Machine-only sub-turn boundary (advisor/verify/pending-task guard pushback
     // + continue): the webview resets its block pointers so the next reasoning/
