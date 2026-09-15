@@ -108,7 +108,7 @@
 
 - **双线写入契约**：真实消息（用户输入 / assistant 回复 / tool 结果 / 多模态图像）走 `pushReal` → 同时进 `history` 与 `contextHistory`；**机读消息**（`[System reminder:` / `[User interrupt:` / 压缩 note / task·plan 回注）只进机读线；**transient 消息**（编辑器上下文注入等）**人读线落盘时过滤**、**机读线保留**——恢复必须逐字节重建 provider 前缀缓存所见的序列。
 - **`slimForDisplay`（人读线落盘瘦身）**：copy-on-write 映射（**绝不原地改**——两线共享对象引用）；assistant `tool_calls[].function.arguments` 截 300 字符；`tool` 消息 content 截 500 字符（head + 截断标记）；多模态 user content 数组保留 text part、**丢弃 image_url base64 part**；**`contextHistory` 一字不动**。
-- **消息时间戳 `ts`**：每条真实消息 `pushReal` 单点打点（epoch ms）；压缩重建注入的 note /「Understood」同刻打点；**旧消息（恢复自存档）不补 ts**（补近似值误导取证）；`slimForDisplay` 保留 ts；ts 是**本地字段**（发送层剥离、UI 不渲染——仅 read_history 输出 / 会话 JSON 可见）。
+- **消息时间戳 `ts`**：每条真实消息 `pushReal` 单点打点（epoch ms）；压缩重建注入的 note 同刻打点；**「Understood」占位并入尾首 assistant 时随该条原 ts**（2026-09-16 并入分支——`thincoder-core/context.mjs` 并入分支）；**旧消息（恢复自存档）不补 ts**（补近似值误导取证）；`slimForDisplay` 保留 ts；ts 是**本地字段**（发送层剥离、UI 不渲染——仅 read_history 输出 / 会话 JSON 可见）。
 
 ### 6.4 保存与恢复
 
