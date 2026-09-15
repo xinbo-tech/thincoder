@@ -465,3 +465,63 @@ ThinCoder 的 session bar 是差异化的 UI 亮点，但用户是否真的理�
 - 勘误：会话区欢迎横幅未移除（此前误判），@ 补全提示仍常驻渲染快捷键行（§7.2）；"切换会话清空输入框"为基线事实错误，实测不清空（§8.4）。
 - 新增结构性威胁：VS Code 1.131 Agent Host Protocol（AHP）平台化 + 后台/云端 agent 主战场 + 商业模式差距（正文 §3）。
 - 结论（正文 §1 引用）：真实位置 = 纪律工程（advisor/verify/goal/eng-mode）+ CLI 双端 + 工程密度是独家且扎实的利基；agent 基础能力已商品化、分发为零、VS Code 平台化是结构性威胁。下一步杠杆 = 认知负荷、分发、评估是否接入 AHP 而非对抗它。
+
+### 2026-09-14 — 竞品事实补记：Claude Code 异步能力时间线 + 内置角色面（联网核实）
+
+网友称「Claude 去年就支持异步」——联网核实**属实**。三层证据：
+
+| 证据 | 内容 |
+|---|---|
+| 官方 CHANGELOG（`anthropics/claude-code`） | `2.0.64 — Agents and bash commands can run asynchronously and send messages to wake up the main agent`（逐字） |
+| npm registry 版本时间戳 | `@anthropic-ai/claude-code` **2.0.64 → 2025-12-10T01:15Z**（2.0.63=12-09 · 2.0.65=12-11，版本序吻合） |
+| 同期官方宣传 | @claudeai（2025-12-10）：「Tasks can now spawn async subagents that move to the background and continue working independently」 |
+
+后续演进（同一 CHANGELOG 核实）：
+
+- 2025-12-10 v2.0.64：异步 agents + bash（后台运行 + 发消息唤醒主 agent）——**首发**；
+- 2026-01-07 v2.1.0：Ctrl+B 统一后台化（bash + agents 一键转后台）；
+- 2026-08 前后 v2.1.232：交互会话 subagent **默认后台**（+ fork 模式默认开）；
+- 现态（官方文档 2026-09 核实）：后台 subagent 为默认执行形态；SDK 面 `run_in_background` 缺省即后台。
+
+**与 §3 的关系**：印证「后台/云端 agent 是下一个主战场」——Claude Code 已把后台化做成默认形态。机制差异：其走「后台 agent + SendMessage 唤醒/回传」，ThinCoder R17 走「池 + digest 注入」——目的同（不阻塞主循环）、通路不同。
+
+#### 同批核实：内置角色面（预定义 subagents）
+
+| 内置 | 定位 | 工具面 | 模型 |
+|---|---|---|---|
+| **Explore** | 代码库搜索/分析（只读） | 只读；**拒绝 Write/Edit** | 继承主对话（v2.1.198 起；此前恒 Haiku；Claude API 上封顶 Opus）；调用带彻底度 quick/medium/very thorough |
+| **Plan** | plan 模式研究代理（只读） | 只读；拒绝 Write/Edit | 继承主对话 |
+| **General-purpose** | 复杂多步（探索**+修改**） | subagent 可用工具全集 | 按模型解析顺序 |
+
+辅助三枚（一般自动调用）：`claude`（通用/全工具——后台会话默认代理）· `statusline-setup`（Sonnet——`/statusline`）· `claude-code-guide`（Haiku——问 Claude Code 功能时）。
+
+上下文差异：**Explore/Plan 跳过 CLAUDE.md 与 git 状态**（保研究轻快）；其余内置与自定义都加载两者。
+
+控制面：`permissions.deny: ["Agent(Explore)"]` 禁单个（内置与自定义同规）；`CLAUDE_CODE_DISABLE_EXPLORE_PLAN_AGENTS=1` 仅移除 Explore+Plan（v2.1.198+）；`CLAUDE_AGENT_SDK_DISABLE_BUILTIN_AGENTS=1` 非交互/SDK 面移除全部内置。
+
+自定义角色 = `.claude/agents/*.md`（项目级）/ `~/.claude/agents/`（用户级）——frontmatter 钉 `name/description/tools/disallowedTools/model/permissionMode/maxTurns/skills/mcpServers/hooks/memory/background/effort/isolation/color`；作用域优先级：组织 > CLI `--agents` > 项目 > 用户 > plugin。
+
+版本注：v2.1.63 起 `Task` 工具更名 `Agent`（旧 `Task(...)` 仍作别名）；嵌套深度默认 3（v2.1.219 起；v2.1.172–216 为 5、v2.1.217–218 为 1）；并发上限默认 20（`CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` 可调）。
+
+**对位观察**：其内置角色轴 = 只读探索 / 只读规划 / 通用执行 + 三枚杂务；ThinCoder 的轴 = 探索·规划 / 设计·实现·编码 / 评审·会诊·飞刀——纪律角色（advisor/verify/eng-*）那一列它仍无对应物（证实 §2）。
+
+#### 同批核实：Claude Code 的「工程模式类比物」对位
+
+工程模式各元素 vs Claude Code 最近物（本日官方文档核实；§2「纪律工具链独家」的边界细化）：
+
+| 本仓工程模式 | Claude Code 对应物 | 差在哪 |
+|---|---|---|
+| advisor 评审（第二模型审稿） | **Advisor tool**（实验性，仅 Anthropic API）：主模型配更强顾问模型，关键决策点被咨询（定方案前 / 卡住 / 宣布完成前）；顾问收全文、返 guidance、有 `Reviewed/Declined` 行 | 我们 = 流程门（评审过才发 token、才准动代码）；它 = 咨询（模型自决何时问；文档明说可依自身证据违逆顾问建议——无否决权） |
+| Goal 工具（机器可验证判据） | **`/goal`**：每回合由独立小模型判 met / not-yet / impossible；未达自动续跑 + 重试/暂停/30 分钟 check-in | 语义接近；它 = 会话级临时条件（≤4000 字符），非落档资产 |
+| 设计先行（设计档→批准→才写码） | **Plan mode** + `opusplan`（Opus 规划 / Sonnet 执行）+ Ultraplan（云端规划）；VS Code plan review | 它的 plan 易逝（会话内）；无「设计文档 + 评审通过门」 |
+| 评审收敛协议（裁决表 / 轮次衰减 / 修正轮） | **Code Review / `/code-review` / ultrareview**：多 agent 并行 + **验证步去伪** + 分级（🔴/🟡/🟣 pre-existing）+ 去重排序；`REVIEW.md` 可写收敛规则（首轮后只报重要项等） | 它 = PR/代码级、opt-in、**刻意不阻塞**（check run 恒 neutral；要门禁自己去 CI 读 severity）；我们 = 机制化收敛（轮次衰减 + 裁决表） |
+| verify 守卫（声称完成前必真跑） | 捆绑 **`/verify`** skill（文档：只有用户可运行） | 它 = 用户手按验证；我们 = 流程硬节点 |
+| 门禁 / 钩子 | **Hooks**（PreToolUse exit 2 阻断 / Stop / SubagentStop / prompt-based——`/goal` 即 Stop hook 封装）+ permissions/deny/沙箱/auto-mode 分类器 | 机制齐备但是「零件箱」——要自写脚本成门 |
+| 台账 / 批次档 | 无对应物（最近 = `CLAUDE.md` / `REVIEW.md` / plans） | — |
+| 角色分离（唯一写设计档 / token 门才能改码） | 自定义 subagent + tools 白名单可近似（设计者只给文档工具） | **无 token 门**——没有任何机制强制「评审不过不能改码」 |
+
+**它明确没有的三样**：① 设计评审→token→实现的硬链（评审为建议性前缀）；② 批次档/需求池台账类流程资产；③ 发起权纪律——其审查可被 push/PR 自动触发，本仓 = 用户发起评审为铁律（取向相反）。
+
+**判断**：Claude Code 路线 = 「权限/沙箱 + 编排（subagents/teams/workflows）+ 可选评审服务」——纪律在机制里、流程在用户手里；本仓 = 「流程本身产品化」（设计档/批次档/token 门皆产品功能）。其零件（hooks + 自定义 subagent + skill）**够拼**出近似工程模式，但**开箱不带**。
+
+> as-of 2026-09-14（联网核实）——版本号与日期属发布史事实，不随演进失效。
