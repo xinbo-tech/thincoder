@@ -1,14 +1,14 @@
 # VS Code 快照与回滚（CHECKPOINT）
 
 > 板块：checkpoint 快照/回滚（VS Code 端实现）。状态：**当前态规格**（2026-09-08
-> 由 ARCHITECTURE §13 Checkpoint 行展开并对照 `src/tools/checkpoint.mjs`/
+> 由 ARCHITECTURE §13 Checkpoint 行展开并对照 `src/tools/checkpoint.mjs`（W5 已迁核——现体 `thincoder-core/git/checkpoint.mjs:1`）/
 > `git-checkpoint.mjs`/`git-ext.mjs`/`git.mjs`/`shell.mjs` 核实写全——DOC-REORG-VSC
 > 批 6）。
 > 与 `CHECKPOINT（CLI 仓·设计）` 同名对应同一"快照/回滚"机制板块——**存储同一目录同一格
 > 式**（`~/.thincoder/checkpoints/{cwdHash12}/`，快照跨端互通），本端为 CLI
-> `src/git/checkpoint.mjs` 的 MIRROR（行为逐项对齐，修改须两端同批）。本档写 VSC
+> `src/git/checkpoint.mjs` 的 MIRROR（行为逐项对齐，修改须两端同批；W5 已迁核——现体 `thincoder-core/git/checkpoint.mjs:1`）。本档写 VSC
 > 端接线与 git 工具面。
-> 权威源（VS Code）：`src/tools/checkpoint.mjs`（全量副本快照 v2——create/list/
+> 权威源（VS Code）：`src/tools/checkpoint.mjs`（W5 已迁核——现体 `thincoder-core/git/checkpoint.mjs:1`；全量副本快照 v2——create/list/
 > rewind/restoreFile/listFileVersions/catFile/deleteCheckpointsForCwd/
 > deleteCheckpointsOlderThan）、`git-checkpoint.mjs`（git 工具 checkpoint action 子
 > 系统 + F6 懒清理 + D7 提示行）。

@@ -11,8 +11,8 @@
 
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
-| 检查点核心 | `thincoder-cli/src/git/checkpoint.mjs` | `thincoder-vscode/src/tools/checkpoint.mjs` |
-| 检查点工具面 | `src/tools/git-checkpoint.mjs` · `src/tools/git-ext.mjs` | 同名（同路径对） |
+| 检查点核心 | 经 `@thincoder/core/git/checkpoint.mjs` 引用（自持镜像已删——S2 U5） | 经 `@thincoder/core/git/checkpoint.mjs` 引用（自持镜像已删——S2 W5） |
+| 检查点工具面 | 经 `@thincoder/core/tools/git-checkpoint.mjs` · `@thincoder/core/tools/git-ext.mjs` 引用（自持镜像已删——S2 U5） | 经核同路径引用（`@thincoder/core/tools/git-checkpoint.mjs` · `@thincoder/core/tools/git-ext.mjs`——自持镜像已删 · S2 W5） |
 
 **共同契约**：同一目录同一格式、快照跨端互通。
 
@@ -139,17 +139,19 @@
 ### 6.9 VS Code 端接线面（VSC 轮并入 · 2026-09-15）
 
 > **来源** = `thincoder-vscode/docs/design/CHECKPOINT.md`（105 行 · VSC 产品档——迁移期参照历史）。本节 = 该档中「根层所缺」的 **VSC 端接线细节**（(a) 机制 / (b) 坐标）。与 CLI 同源的机制本体（v2 全量副本 / 触发三路 / 存储与 id / commit 清理 / git 纪律 / 恢复语义）已入 §6.1–§6.8，不重复（D2）。
+> **接线状态（S2 W5 · 2026-09-15）**：VSC 自持镜像（`src/tools/checkpoint.mjs` · `git-checkpoint.mjs` · `git-ext.mjs`）已删——下列实现坐标现经核单源引用
+> （`@thincoder/core/git/checkpoint.mjs` · `@thincoder/core/tools/git-checkpoint.mjs` · `@thincoder/core/tools/git-ext.mjs`）；VSC 侧保留装配面 = `src/tools/git.mjs`（checkpoint 路由 / 只读分类 / commit 清理——至 W14 单元）与 `src/tools/shell.mjs`（bash guard——快照经核）。
 
-- **VSC 触发点（本端接线）**：git 破坏性 op 自动快照 = `git-ext.mjs snapshotBefore`（`:55`——reset --hard /
+- **VSC 触发点（本端接线）**：git 破坏性 op 自动快照 = 核 `tools/git-ext.mjs` `snapshotBefore`（`:54`——reset --hard /
 checkout 文件 / restore / stash pop / branch|tag delete / clean / rebase，操作前 best-effort 快照 → 返回
 `[snapshot <id> created before <label>]\n` 注记，失败不阻塞 op，审批层才是真门）；bash git 破坏性命令 =
-`shell.mjs gitGuardSnapshot`（`:139` `GIT_DESTRUCTIVE_RE` 宽 matcher / `:148` 实现——匹配 `git checkout -- .` /
+`shell.mjs gitGuardSnapshot`（`:139` `GIT_DESTRUCTIVE_RE` 宽 matcher / `:148` 实现——快照经核 `git/checkpoint.mjs`；匹配 `git checkout -- .` /
 `restore` / `reset --hard` / `clean -f` 等，命令**从不拒绝**（模型会绕），snapshot-then-proceed 全量副本 →
 返回 notice 注记含恢复入口 `checkpointAction=rewind checkpointId=<id>`，best-effort 永不 throw）；commit 后清理
-（`git.mjs` commit case）+ F6 懒清理（`git-checkpoint.mjs lazyClearIfCommitted` = `:31`——list / create 入口比对
+（`git.mjs` commit case——清理经核 `git/checkpoint.mjs`）+ F6 懒清理（核 `tools/git-checkpoint.mjs` `lazyClearIfCommitted` = `:24`——list / create 入口比对
 `git log -1 --format=%ct` ×1000 与最新快照 meta.time）。与 §6.2 / §6.5 / §6.6 统一语义同轨。
 - **恢复输出契约（VSC 侧面）**：checkpoint 子动作 = list / create / rewind / cat / versions
-（`git-checkpoint.mjs executeCheckpointAction` = `:46`）。`list`：`(no checkpoints yet)` 或每快照
+（核 `tools/git-checkpoint.mjs` `executeCheckpointAction` = `:39`）。`list`：`(no checkpoints yet)` 或每快照
 `id  ISOtime  N tracked: …  N untracked: …`；文件名单经 XML 转义（untrusted 回流模型上下文）。`create`：
 `Checkpoint <id> created (N file(s): X tracked, Y untracked)`。`versions path=<file>`：每行
 `snapshotId ISOtime sizeB sha:<sha> (tracked|untracked)` + 恢复指引行；无副本 → `No snapshot copies of … found`。
@@ -201,7 +203,7 @@ you can restore again to go back.)`；oversized / 未含文件 → 具体 Error�
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **185 行**（B 轮并入前 69 行）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **214 行**（B 轮并入前 69 行——S2 W5 复跑收正，原记 185 为 B 轮/批 7 前读数）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
@@ -210,3 +212,5 @@ you can restore again to go back.)`；oversized / 未含文件 → 具体 Error�
   需求侧已并入本层 `docs/core/requirements/CHECKPOINT.md`；首部加机制面指针一行。
 - 2026-09-15（**VSC 轮并入 · 批 7**）：§6.9 新增 **VS Code 端接线面**（触发点 / 恢复输出契约 / 只读分类）· §7 补 **D-CP10** · §8.2 补 1 行不并项登记；来源 = `thincoder-vscode/docs/design/CHECKPOINT.md`（**旧档一字未改**）；坐标按现状实核（`thincoder-vscode/src/tools/git-ext.mjs:55` · `thincoder-vscode/src/tools/shell.mjs:139,148` ·
 `thincoder-vscode/src/tools/git-checkpoint.mjs:31,46`）。
+- 2026-09-15（**S2 W5 接线 · VSC 端** · eng-coder 实施轮）：§1 表两格（CLI / VSC）收正为「经 `@thincoder/core/...` 引用」——VSC 自持镜像（`src/tools/checkpoint.mjs` · `git-checkpoint.mjs` · `git-ext.mjs`）随 W5 删档；
+  §6.9 补接线状态行 + 实现坐标收正为核（`@thincoder/core/tools/git-ext.mjs:54` · `tools/git-checkpoint.mjs:24/:39`）；§9 体量读数复跑收正；机制条文（§6.1–§6.8 · §7 · §8）零改。

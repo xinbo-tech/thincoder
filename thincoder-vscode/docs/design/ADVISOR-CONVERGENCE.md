@@ -485,7 +485,7 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
   **交付实现形态（第 12 批交付同步——只记形态、不改语义）**：`AbortSignal.any` **不可直接依赖**（本端
   `provider.mjs:31` 载荷 polyfill 为非导出局部 const；仓内无裸调在案）⇒ 组合经 `loop.mjs:29-38` `combineSignals` =
   **特征检测**（`typeof AbortSignal.any === "function"` 走原生）+ **本地兜底**（AbortController 包装——任一输入
-  abort 即触发、已 aborted 立即生效、reason 透传；形态同形 `src/mcp/http.mjs:14-22`）——语义一致。
+  abort 即触发、已 aborted 立即生效、reason 透传；形态同形 `src/mcp/http.mjs:14-22`〔W7 迁移——现体 `thincoder-core/mcp/transport-http.mjs:72`〕）——语义一致。
   `.timeout` 原生——VS Code 运行环境兼容。
 - 墙判定**绑信号状态**（非异常名）：① 抛错路径——`signal?.aborted` ⇒ 原样上抛（用户中断语义零变）；
   `callSignal.aborted || e.name ∈ {AbortError, TimeoutError}` ⇒ 结构化超时尾；其余错误上抛。② 不抛错
@@ -1311,7 +1311,7 @@ CLI 用 `_toolCallId` + `agent._advisorRefusals` Set；本端无 `_toolCallId` �
 | 2 | execute | `src/tools/execute.mjs`——任意脚本 | 不可 | 无 | 登记（同上） |
 | 3 | file_ops | `src/tools/ops.mjs:32-52` move / copy / rename；L3 触达面已派生（`execute-tools.mjs:24-36`：copy→[dest]；move/rename→[source,dest]） | **完备**（动作全集） | 现无 → 本批补 | **修**（契约 1/2） |
 | 4 | git | `src/tools/git.mjs` 21 动作；写入面 ref / 索引 / 工作树混合；路参子集仅 checkout(path) / restore / mv；reset / pull / merge / revert / cherry-pick / rebase / apply / stash / clean 波及面在参数外 | **部分** | 无 | 登记（拦 3/21 = 假安全 + 判集无法同闭；复核触发 = 实战在途 git 还原被审档事故） |
-| 5 | checkpoint | `src/tools/checkpoint.mjs`——rewind 恢复快照清单内文件（清单在快照内，参数仅 id） | 不可 | 无 | 登记（拦须预闸同步读盘枚举快照——代价 vs 场景不成比例；复核触发同上） |
+| 5 | checkpoint | `src/tools/checkpoint.mjs`（W5 已迁核——现体 `thincoder-core/git/checkpoint.mjs:1`）——rewind 恢复快照清单内文件（清单在快照内，参数仅 id） | 不可 | 无 | 登记（拦须预闸同步读盘枚举快照——代价 vs 场景不成比例；复核触发同上） |
 | 6 | batch_segment | `src/agent-tools/batch-segment.mjs:178-181` 直写绑定批次档（§2 / §5——子代理通道；批次档 ∈ 设计评审 docAbs——§14.4 口径「含批次档」） | 完备（工具自持单一路径） | 现无 → 本批补 | **修**（契约 3） |
 | 7 | 子代理合入面 | `mergeChildMutations`（`src/agent-tools/subagent-async.mjs:483-498`）——子代理磁盘写入在完成点合入父侧记账 | 预闸不可达（子代理无父侧评审池面） | **已有 + 本批补 file_ops 支**（合入即记账——随契约 2） | 登记维持（拦面不可达；判面 = FILE_MUTATORS + batch_segment + file_ops 已覆盖（合入即记账）——E-6 #5 同族） |
 

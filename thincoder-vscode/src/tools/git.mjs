@@ -1,16 +1,16 @@
 /**
  * git.mjs — Git tool (CLI parity: single `git` tool with action subcommands).
  * diff / status / log follow the CLI implementation byte-for-byte;
- * checkpoint uses the full-copy snapshot mechanism MIRRORED from the CLI
- * (thincoder src/git/checkpoint.mjs → 本仓库 src/tools/checkpoint.mjs，CHECKPOINT.md F5
- * 存储统一：同一目录同一格式，快照跨端互通)。F7 扩展 action 与 checkpoint 子系统分别拆在
- * git-ext.mjs / git-checkpoint.mjs（500 行硬限）。
+ * checkpoint uses the full-copy snapshot mechanism from the core
+ * (`@thincoder/core/git/checkpoint.mjs`——自持镜像已删〔S2 W5〕，CHECKPOINT.md F5
+ * 存储统一：同一目录同一格式，快照跨端互通)。F7 扩展 action 与 checkpoint 子系统分别住核
+ * `@thincoder/core/tools/git-ext.mjs` / `tools/git-checkpoint.mjs`（500 行硬限）。
  */
 import { DESC, runGit, truncate } from "./shared.mjs"
 import { execFileSync } from "node:child_process"
 import { resolve } from "node:path"
-import { runGitStrict, validateRef, gitConfigArgs, snapshotBefore, executeExtAction } from "./git-ext.mjs"
-import { executeCheckpointAction } from "./git-checkpoint.mjs"
+import { runGitStrict, validateRef, gitConfigArgs, snapshotBefore, executeExtAction } from "@thincoder/core/tools/git-ext.mjs"
+import { executeCheckpointAction } from "@thincoder/core/tools/git-checkpoint.mjs"
 
 /** Run git PRESERVING per-line leading whitespace — porcelain " M"/"M " staged/unstaged markers
  *  are significant (runGit trims the whole output's leading space, corrupting an unstaged-first-line). */
@@ -197,7 +197,7 @@ export const gitTool = {
         // F6: commit = new safety baseline — clear this project's checkpoints
         // (best-effort per NF7: a failed cleanup never blocks the commit result).
         try {
-          const { deleteCheckpointsForCwd } = await import("./checkpoint.mjs")
+          const { deleteCheckpointsForCwd } = await import("@thincoder/core/git/checkpoint.mjs")
           await deleteCheckpointsForCwd(ctx.cwd)
           out += "\n(checkpoints cleared — commit is a new safety baseline)"
         } catch (e) {
@@ -356,7 +356,7 @@ export const gitTool = {
         const r = runGitStrict(ctx.cwd, ["cherry-pick", args.ref])
         return r.ok ? (r.out || `Cherry-picked ${args.ref}`) : `git cherry-pick failed: ${r.err || r.out}`
       }
-      // F7 扩展 action + checkpoint：实现拆在 git-ext.mjs / git-checkpoint.mjs（500 行硬限）
+      // F7 扩展 action + checkpoint：实现住核 @thincoder/core/tools/{git-ext,git-checkpoint}.mjs（500 行硬限）
       case "clone":
       case "init":
       case "rebase":

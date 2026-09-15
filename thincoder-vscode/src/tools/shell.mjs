@@ -3,8 +3,8 @@
  * Includes the CLI git-destruction protection (parity with thincoder src/tools/system.mjs):
  *   1. Layer 1 — WIDE auto-snapshot before destructive git commands (covers variants
  *      the exact matcher misses, e.g. `git checkout HEAD -- .`). Snapshot = FULL-COPY
- *      checkpoint（mirror of CLI src/git/checkpoint.mjs，CHECKPOINT.md F5 存储统一——
- *      不再是 git stash），未提交工作（含 untracked）在执行前落入
+ *      checkpoint（核实现 `@thincoder/core/git/checkpoint.mjs`——自持镜像已删〔S2 W5〕，CHECKPOINT.md F5
+ *      存储统一——不再是 git stash），未提交工作（含 untracked）在执行前落入
  *      ~/.thincoder/checkpoints/{cwdHash12}/，恢复入口：checkpointAction=rewind。
  *   2. Layer 2 — 命令永不拦截（与 CLI 一致：文本拦截是安全剧场，真实防线 = 审批层 + 快照）。
  */
@@ -148,7 +148,7 @@ const GIT_DESTRUCTIVE_RE = /\bgit\s+(?:checkout\s+(?:[\w./-]+\s+)?--(?!\w)|check
 async function gitGuardSnapshot(command, cwd) {
   if (!GIT_DESTRUCTIVE_RE.test(command)) return null
   try {
-    const { isGitRepo, createCheckpoint } = await import("./checkpoint.mjs")
+    const { isGitRepo, createCheckpoint } = await import("@thincoder/core/git/checkpoint.mjs")
     if (!isGitRepo(cwd)) return null
     const cp = await createCheckpoint(cwd)
     if (!cp) return null

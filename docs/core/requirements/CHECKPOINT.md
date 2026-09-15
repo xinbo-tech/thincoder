@@ -9,7 +9,7 @@
 
 ## 1. 总体定位
 
-检查点与 git 面 = 检查点核心（`src/git/checkpoint.mjs` ↔ VSC `src/tools/checkpoint.mjs`）**+** 检查点工具面（`tools/git-checkpoint.mjs` · `tools/git-ext.mjs`）。
+检查点与 git 面 = 检查点核心（迁移前基线 = `src/git/checkpoint.mjs` ↔ VSC `src/tools/checkpoint.mjs`——两端自持镜像已删〔S2 U5 / W5〕，现经 `@thincoder/core/git/checkpoint.mjs` 引用）**+** 检查点工具面（`tools/git-checkpoint.mjs` · `tools/git-ext.mjs`——核内单源 `@thincoder/core/tools/*`）。
 共同契约 = 同一目录同一格式、**快照跨端互通**。
 另住他档的相关面：hooks 四事件 → 子系统档 `AGENT-LOOP.md` **#169**；team 层记忆 git 同步 → 子系统档 `MEMORY.md` **#168**。
 本板块对本子系统的要求 = 该面归一为**核内单一实现**（共享函数下沉、消除端内副本）。
@@ -77,7 +77,7 @@
 
 语义同源——VSC 档 F-C1–F-C7 / N-C1–N-C4 与上列条目逐条同义（机制体 = 设计档 §6 承载），**不重并**（D2）。VSC 端差 = ① **共享存储**
 （`~/.thincoder/checkpoints/{cwdHash12}/`——与 CLI 同目录同格式、快照跨端互通；盘符归一后同 cwdHash12——core §1.1 已载）· ② **非 git cwd 变体**
-（`createNonGitCheckpoint` 全目录拷贝 + SKIP 集——core §4.2 已载）。坐标（实核）＝ `thincoder-vscode/src/tools/checkpoint.mjs`（452 行）· `git-checkpoint.mjs`（151 行）· `git.mjs`（379 行）· `shell.mjs`（318 行）。
+（`createNonGitCheckpoint` 全目录拷贝 + SKIP 集——core §4.2 已载）。坐标（实核 · W5 收正——自持镜像已删）＝ `@thincoder/core/git/checkpoint.mjs` · `@thincoder/core/tools/git-checkpoint.mjs` · `thincoder-vscode/src/tools/git.mjs`（379 行 · 本端装配面保留）· `thincoder-vscode/src/tools/shell.mjs`（318 行 · 本端装配面保留）。
 **测试缺口（发现即报）**：VSC `test/` 对 checkpoint 面零专属用例（as-of 2026-09-12 全扫零命中）——补测触发 = 该面下次被触碰。
 
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）
@@ -94,3 +94,4 @@
 - 2026-09-13：建档——自 `docs/core/requirements/CORE-UNIFICATION.md` 拆分（来源：§2 F11 / F6 / F3 回指）+ 设计档 `CHECKPOINT.md`（§2.1 #48 / #49 · §2.2 #167 派生）；**无新增需求**。
 - 2026-09-14（**B 轮并入 · 第 3 批**）：新增 §4 **需求条目**（四层闭环 / 范围与接受风险 / NF1–NF7——自 `thincoder-cli/docs/requirements/CHECKPOINT.md` 逐节比对后并入需求正文；**编号与文本承旧档**）+ §5 **不并项与历史沿革**；**本档新增需求 0**（纯回填）；首部加需求条目面指针一行。
 - 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：新增 §4.4 **VSC 端条目**（共享存储 / 非 git cwd 变体已载注 + 坐标 + 测试缺口——自 `thincoder-vscode/docs/requirements/CHECKPOINT.md` 并入；语义同源不重并）；§5 登记 VSC 档批次材料；**本档新增需求 0**（纯回填）。
+- 2026-09-15（**S2 W5 接线 · VSC 端** · eng-coder 实施轮）：§1 基线句标记「迁移前基线」（两端已迁核——CLI U5 / VSC W5）+ §4.4 VSC 端坐标收正——`src/tools/checkpoint.mjs` / `git-checkpoint.mjs` / `git-ext.mjs` 随 W5 删档，改引核子路径；**本档新增需求 0**（纯坐标收正）。
