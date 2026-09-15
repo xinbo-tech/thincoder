@@ -2,9 +2,8 @@
  * run-helpers.mjs — agent loop helpers (split out of agent.mjs for the 500-line limit).
  * Constants + pure helpers shared by runAgent and executeToolBatches.
  */
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSync, unlinkSync } from "node:fs"
-import { join, resolve, dirname } from "node:path"
-import { fileURLToPath } from "node:url"
+import { writeFileSync, mkdirSync, existsSync, readdirSync, statSync, unlinkSync } from "node:fs"
+import { join } from "node:path"
 import { loadAgentSettings } from "../config-io.mjs"
 import { isCodePath, loadConventions } from "@thincoder/core/conventions.mjs"
 
