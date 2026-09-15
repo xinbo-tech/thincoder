@@ -35,8 +35,10 @@ export const SUB_BLOCK_CHAR_LIMIT = 128_000
 export const ADVISOR_TEXT_MAX_CHARS = 128_000
 /** 流式缓冲（`state.streaming` / `state.reasoning`）累积额度。 */
 export const STREAM_MAX_CHARS = 256_000
-/** `state.lines` 全部行与载体文本总量（超出：与 5000 行环同款裁头 1000 行 + 收据行）。 */
+/** `state.lines` 全部行与载体文本总量（超出：最小步进裁头 + 冻结锚点平移 + 收据行——保底见下行）。 */
 export const LINES_CHAR_BUDGET = 2_000_000
+/** 字符超额裁剪保底行数——裁剪不得使 `state.lines` 低于该值；触底仍未脱额即停（接受超额——上界 = 保底 × 单行上限）。 */
+export const LINES_TRIM_FLOOR = 200
 /** 搜索匹配计数上限（超出截断 + 提示行）。 */
 export const SEARCH_MATCH_CAP = 10_000
 
@@ -152,10 +154,19 @@ export function accountAll(state) {
   return total
 }
 
+/** 收据行长度预留（`syncLineBudget` 单轮 need 计入的收据余量：前缀 32 + N 数字位 + 尾 17 < 96——覆 7 位数余量）。 */
+const RECEIPT_RESERVE_CHARS = 96
+
 /**
- * `state.lines` 总量对账（§15.3.3 落点表末行）：超 `LINES_CHAR_BUDGET` → 与 5000 行环
- * 同款裁头 1000 行 + 收据行；`onTrim(state, removedCount)` 由调用方注入冻结锚点平移
- * （display-budget 不引 subagent 族——避环）。幂等（未超限零动作）。
+ * `state.lines` 总量对账（§15.3.3 落点表末行）：超 `LINES_CHAR_BUDGET` → **最小步进**裁头 +
+ * 收据行，且不使 `lines.length` 低于 `LINES_TRIM_FLOOR`（触底 = 内层 break——接受超额，
+ * 不靠守卫退出：FLOOR+1 且残余超额时守卫仍为真）。每轮裁「至额度内所需最少行数」
+ * （need = 超额 + 收据上界预留；上限 = 可裁至保底的行数）；`onTrim(state, removedCount)` 由
+ * 调用方注入冻结锚点平移（display-budget 不引 subagent 族——避环）。`pushLineLike` 注入面（无生产调用）：
+ * 仅**头插**语义下自洽——尾插会使收据位置、收据 N 口径与「净位移 = 丢行数 − 1」约定失真。
+ * 幂等（未超限 / 行数 ≤ 保底）。
+ * 旧颗粒 `min(1000, lines.length-1)` 在行数 ≤1001 且超额时一轮裁到 1 行（用户实测收据
+ * 「1 lines remaining」——TUI-HISTORY-TRIM 批修复：保底 200 + 最小步进）。
  * @returns {number} 本轮裁掉的行数
  */
 export function syncLineBudget(state, { pushLineLike = null, onTrim = null } = {}) {
@@ -163,11 +174,13 @@ export function syncLineBudget(state, { pushLineLike = null, onTrim = null } = {
   if (!Array.isArray(lines)) return 0
   if (!Number.isFinite(state._linesChars)) accountAll(state)
   let removed = 0
-  while (state._linesChars > LINES_CHAR_BUDGET && lines.length > 1) {
-    const take = Math.min(1000, lines.length - 1)
-    const dropped = lines.splice(0, take)
+  while (state._linesChars > LINES_CHAR_BUDGET && lines.length > LINES_TRIM_FLOOR) {
+    const limit = lines.length - LINES_TRIM_FLOOR
+    const need = state._linesChars - LINES_CHAR_BUDGET + RECEIPT_RESERVE_CHARS
+    let take = 0
     let freed = 0
-    for (const l of dropped) freed += lineChars(l)
+    while (take < limit && freed < need) { freed += lineChars(lines[take]); take++ }
+    lines.splice(0, take)
     state._linesChars = Math.max(0, state._linesChars - freed)
     removed += take
     const receipt = `... [earlier messages trimmed — ${lines.length} lines remaining]`
@@ -179,6 +192,7 @@ export function syncLineBudget(state, { pushLineLike = null, onTrim = null } = {
       state._linesChars += receipt.length
     }
     if (typeof onTrim === "function") onTrim(state, take)
+    if (take >= limit) break // 触底（可裁上限用尽）——接受超额；收敛靠本 break，不靠守卫退出
   }
   return removed
 }
