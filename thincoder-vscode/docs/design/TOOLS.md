@@ -64,7 +64,7 @@ shim）；`read_image` **不进 builtinTools**——由装配按 `spec.multimoda
   isDirty 守卫自锁下次编辑并产生外部写者竞态；保存后刷新 Markdown 预览
   （`refreshMarkdownPreview`）并在编辑器中自动打开文件。`getOpenDoc` 定位打开文档时
   **win32 盘符大小写归一**（`d:\` vs `D:\` 不一致会走磁盘写路径造成 split-brain）。
-  文件落盘带 EOL 检测/保持（`detectFileEol`/`joinWithEol`/`majorityEol`）+ `stripBom`
+  文件落盘带 EOL 检测/保持（`detectFileEol`/`joinWithEol`/`majorityEol`）+ `stripBom`（W14 已迁核——`stripBom` 随自持工具面退场；现体读取面 = 核 `thincoder-core/tools/file.mjs`）
   归一。
 - **bash**：继承终端 shell 环境（`process.env`）；`cwd` 缺省第一个 workspace 文件夹；
   `runInterruptible` spawn（非 execSync——避免阻塞 extension host 事件循环），Stop 中断/
@@ -88,7 +88,7 @@ workspace" 已改为 **"no directory restriction"**（权威源 = CLI TOOLS.md�
 | 面 | 机制 |
 |---|---|
 | 命令 | 零文本拦截（破坏性命令走审批 + 快照）；bash 超时 `BASH_TIMEOUT_MS`=120s；`runInterruptible` |
-| 文件 | read 分页 `offset`/`limit`（limit 默认 2000——非全局硬限）；工具结果超 `MAX_TOOL_RESULT`=64K 落盘、模型见双端预览（§7）；`MAX_OUTPUT_CHARS`=200_000 为 `truncate` 截断默认；`normalizeEOL`/`stripBom` 归一 |
+| 文件 | read 分页 `offset`/`limit`（limit 默认 2000——非全局硬限）；工具结果超 `MAX_TOOL_RESULT`=64K 落盘、模型见双端预览（§7）；`MAX_OUTPUT_CHARS`=200_000 为 `truncate` 截断默认；`normalizeEOL`/`stripBom`（W14 已迁核退场——`stripBom` 无核内对应件；现体读取面 = 核 `thincoder-core/tools/file.mjs`）归一 |
 | 网络 | `isPrivateHost`（localhost/内网/云元数据 169.254.169.254）SSRF 防护；`truncate` 截断提示 |
 | execute | 纯净 node ESM 子进程（零预置全局、零伪沙箱）；scriptFile/nodeArgs；顶层 await/动态 import 可用；超时 30s 上限 600s |
 | git | 破坏性动作先快照再执行 + 确认，从不拦截（`gitGuardSnapshot`——全量副本，CHECKPOINT.md 权威） |
@@ -222,9 +222,9 @@ approve / deny / approve-all + diff 预览（`diff-preview.mjs` 虚拟文档原�
 
 > 来源：批次档 `2026-09-11-VSC-MIRROR-SWEEP（本仓）` §1 条目 A9
 > （指针 = `docs/TODO.md:167`「QUICKFIX-2 交付注——后批镜像 F-3」；产品级台账已退役——台账单仓化：现体 = 仓根 `docs/TODO.md`）。语义源：CLI
-> `src/tools/git.mjs:150-181`（F-3——`commit --only`）；双端纪律：语义同源、本端独立实现。
+> `src/tools/git.mjs:150-181`（W14 已迁核——现体 `thincoder-core/tools/git.mjs`）（F-3——`commit --only`）；双端纪律：语义同源、本端独立实现。
 
-**问题（现状——as-of 2026-09-11）**：`src/tools/git.mjs:200-219` commit 走**双层混扫**——
+**问题（现状——as-of 2026-09-11）**：`src/tools/git.mjs:200-219`（W14 已迁核——现体 `thincoder-core/tools/git.mjs`） commit 走**双层混扫**——
 `path` 给定时先 `git add -- <paths>`（granular）再 `git commit -m`（整索引提交）——索引中他批已暂存的文件会被卷入本次提交（与 granular 意图相悖）。
 
 **契约（逐条——镜像 CLI F-3——实现对象）**：
@@ -270,7 +270,7 @@ approve / deny / approve-all + diff 预览（`diff-preview.mjs` 虚拟文档原�
   实测 25 档/25 工具）经 `src/tools/shared.mjs:12`（CLI 仓） `DESC()` 运行时装载，含 Routing / Notes 段
   （如 `thincoder-core/tool-docs/read.md`——已迁核，现体 21 行含「不要用 bash cat」路由与 `repo_outline`/`code_search`/`lsp` 指向）。
 - VSC：`src/tools/` 全 `.mjs`、零 `.md`；31 个 builtinTools 描述全为内联字符串，无 Routing/Notes 结构段；
-  `src/tools/file.mjs:22-29` read 描述 7 行（CLI 21 行）；装载机制不存在（`DESC(` 零命中；`checklist.mjs:3`
+  `src/tools/file.mjs:22-29`（W14 已迁核——现体 `thincoder-core/tools/file.mjs`） read 描述 7 行（CLI 21 行）；装载机制不存在（`DESC(` 零命中；`checklist.mjs:3`
   注释自述「DESC file-read replaced with inline description」= 施工期简化）。
 - 后果：模型在 VSC 面拿到的路由/反模式信息系统性少于 CLI——工具选择与反模式规避面同族差。
 
@@ -313,23 +313,23 @@ approve / deny / approve-all + diff 预览（`diff-preview.mjs` 虚拟文档原�
 |---|---|---|---|---|
 | 1–25 | `src/tools/<name>.md` ×25 | 新 | 合 ≈39K 字符（照 CLI） | D-TD1（新档） |
 | 26 | `src/tools/shared.mjs` | 406 | ~420 | +DESC |
-| 27 | `src/tools/file.mjs` | 136 | ~124（净减） | 2 工具接线（read/write） |
-| 28 | `src/tools/file-edit.mjs` | 452 | 435（实测） | 1 工具接线（edit）〔实现后同步（2026-09-12）补列〕 |
-| 29 | `src/tools/more-file.mjs` | 415 | ~385（净减） | 4 工具接线 |
-| 30 | `src/tools/search.mjs` | 308 | ~285 | 2 |
+| 27 | `src/tools/file.mjs` | 136 | ~124（净减） | 2 工具接线（read/write）（W14 已迁核——现体 `thincoder-core/tools/file.mjs`） |
+| 28 | `src/tools/file-edit.mjs` | 452 | 435（实测） | 1 工具接线（edit）〔实现后同步（2026-09-12）补列〕（W14 已迁核——现体 `thincoder-core/tools/file.mjs`） |
+| 29 | `src/tools/more-file.mjs` | 415 | ~385（净减） | 4 工具接线（W14 已迁核——现体 `thincoder-core/tools/{patch.mjs, search.mjs, file.mjs}`） |
+| 30 | `src/tools/search.mjs` | 308 | ~285 | 2（W14 已迁核——现体 `thincoder-core/tools/search.mjs`） |
 | 31 | `src/tools/shell.mjs` | 326 | ~308 | 1 |
-| 32 | `src/tools/git.mjs` | 402 | ~392 | 1 |
-| 33 | `src/tools/web.mjs` | 146 | ~130 | 2 |
-| 34 | `src/tools/linter.mjs` | 136 | ~125 | 1 |
-| 35 | `src/tools/lsp.mjs` | 136 | ~125 | 1 |
-| 36 | `src/tools/execute.mjs` | 222 | ~212 | 1 |
-| 37 | `src/tools/question.mjs` | 71 | ~62 | 1 |
-| 38 | `src/tools/tree.mjs` | 71 | ~62 | 1 |
-| 39 | `src/tools/wait_for.mjs` | 198 | ~188 | 1 |
-| 40 | `src/tools/ops.mjs` | 125 | ~105 | 3 |
-| 41 | `src/tools/checklist.mjs` | 450 | ~440 | 1 |
-| 42 | `src/tools/read_image.mjs` | 71 | ~62 | 1 |
-| 43 | `src/tools/hashline-edit.mjs` | 114 | ~105 | 1 |
+| 32 | `src/tools/git.mjs` | 402 | ~392 | 1（W14 已迁核——现体 `thincoder-core/tools/git.mjs`） |
+| 33 | `src/tools/web.mjs` | 146 | ~130 | 2（W14 已迁核——现体 `thincoder-core/tools/web.mjs`） |
+| 34 | `src/tools/linter.mjs` | 136 | ~125 | 1（W14 已迁核——现体 `thincoder-core/tools/linter.mjs`） |
+| 35 | `src/tools/lsp.mjs` | 136 | ~125 | 1（W14 已迁核——现体 `thincoder-core/tools/lsp.mjs`） |
+| 36 | `src/tools/execute.mjs` | 222 | ~212 | 1（W14 已迁核——现体 `thincoder-core/tools/execute.mjs`） |
+| 37 | `src/tools/question.mjs` | 71 | ~62 | 1（W14 已迁核——现体 `thincoder-core/tools/question.mjs`） |
+| 38 | `src/tools/tree.mjs` | 71 | ~62 | 1（W14 已迁核——现体 `thincoder-core/tools/tree.mjs`） |
+| 39 | `src/tools/wait_for.mjs` | 198 | ~188 | 1（W14 已迁核——现体 `thincoder-core/tools/ops.mjs` 的 wait_for 分支） |
+| 40 | `src/tools/ops.mjs` | 125 | ~105 | 3（W14 已迁核——现体 `thincoder-core/tools/ops.mjs`） |
+| 41 | `src/tools/checklist.mjs` | 450 | ~440 | 1（W14 已迁核——现体 `thincoder-core/tools/checklist.mjs`） |
+| 42 | `src/tools/read_image.mjs` | 71 | ~62 | 1（W14 已迁核——现体 `thincoder-core/tools/file.mjs`） |
+| 43 | `src/tools/hashline-edit.mjs` | 114 | ~105 | 1（W14 已迁核——现体 `thincoder-core/tools/file.mjs`） |
 | 44 | `test/tool-descriptions.test.mjs` | 新 | ~120 | T-TD-2/T-TD-3 在役；T-TD-1/T-TD-4 已退场（整删——删除记录 = `TESTING.md` §8.1（`:202`–`:203`）） |
 | 45 | `test/files.mjs` | 72 | 73 | 登记 |
 

@@ -21,7 +21,7 @@
 | **#4** | **eng-token 语义跨端重复**：核内已单点化，VSC 端无同名实现——自持槽语义与校验副本 | **跨端仍分叉**（CLI / 核侧已消解） | 核内单点 = `thincoder-core/token-ttl.mjs`（286 行）；VSC 侧自持面 = `thincoder-vscode/src/agent-tools/subagent-spawn-gate.mjs` |
 | **#8** | **跨仓复制漂移**（架构伞项）：state / tools / prompts / advisor 层双端整片存在 | **收敛中**（核统一批推进） | 「一个核 + 两个薄壳」= `docs/core/design/CORE-UNIFICATION.md`；跨端剩余差面登记 = `docs/vsc/design/VSC-MIGRATION.md` |
 
-**注**：`#6` 的 VSC 侧对位面仍开放——`thincoder-vscode/src/tools/more-file.mjs`（多工具合装）；**CLI / 核侧已归位**（见 §3）。该面归 VSC 轮，不计入核面债。
+**注**：`#6` 的 VSC 侧对位面仍开放——`thincoder-vscode/src/tools/more-file.mjs`（多工具合装）；**CLI / 核侧已归位**（见 §3）。该面归 VSC 轮，不计入核面债。（W14 已迁核——自持镜像已删，现体 = 核 `thincoder-core/tools/{file.mjs, patch.mjs, search.mjs}`）
 
 ## 3. 已消解（勿当债）
 
@@ -75,3 +75,4 @@
   ① 择**现行债账**重建：§2 现行债（逐条实核现状判 + 证据）· §3 已消解（留证据行防回潮）· §4 清理纪律；
   ② 旧档 §2 评估方法 · §3 前身评估 · §6 as-of 行数清单 · §7 分批路线 · §8 批 A 计划 · 状态行与变更流水 → §5 逐项登记不并；
   ③ 全部坐标改现状路径并经实核（`thincoder-core/**` · 两产品 `src/**`）；④ 新增 §6 体量与拆分规划。
+- 2026-09-15（**S2 W14 落地 · eng-coder**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W14）：§2 注行（`#6` VSC 侧对位面）补迁核注——VSC 自持 `more-file.mjs`（多工具合装面）已删，现体 = 核 `thincoder-core/tools/{file.mjs, patch.mjs, search.mjs}`；机制条文零改。

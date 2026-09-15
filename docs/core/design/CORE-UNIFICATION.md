@@ -1327,7 +1327,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 | `opts.schema`（`$schema` 写盘注入） | `thincoder-core/config-io.mjs:57,74` | 端装配层 | CLI = 不传（写盘无 `$schema`）· VSC = `$schema` 指针（现形：`thincoder-vscode/src/config-io.mjs:108`） | 未注入 ⇒ 产物无 `$schema` 键；注入 ⇒ 键在场且值 = 注入值 |
 | `projectDictionary(locale)`（文案字典投影） | `thincoder-core/i18n.mjs:87` | 端消费者 | CLI = 不用（直接读核内常量）· VSC = `locales/{en,zh}.json` 投影（逐字一致） | 投影结果与 VSC 现 `locales/*.json` 逐字相同（机器消费面冻结） |
 | `config-migrate` 注入参数（`loadRaw`/`saveRaw`/`conflictError`） | `thincoder-core/config-migrate.mjs:83` | **核内 `config.mjs`**（非端侧注入） | 两端同（核内调用点） | 核内测试：假 `saveRaw` 注入 ⇒ 写回失败不阻断（`conflictError` 路径） |
-| `writeThroughPath` / `configureWritePath`（编辑器写路径缝） | `thincoder-core/tools/write-path.mjs:66`（`configureWritePath`；191 行 · **已落 2026-09-14** · §5 交付读数） | 端装配层 | CLI = 不注入（默认 fs 径） · VSC = `getOpenDoc` / `applyEditorEdit` / `applyEditorRangeEdit`（迁 `thincoder-vscode/src/tools/shared.mjs:66-106` 进端壳） | 双夹具 + 结构机检——见 §2.13.5（`thincoder-core/test/write-path.test.mjs`） |
+| `writeThroughPath` / `configureWritePath`（编辑器写路径缝） | `thincoder-core/tools/write-path.mjs:66`（`configureWritePath`；191 行 · **已落 2026-09-14** · §5 交付读数） | 端装配层 | CLI = 不注入（默认 fs 径） · VSC = `{openDoc, isDirty, applyEdit}`（W14 已迁核——薄壳现体 `thincoder-vscode/src/tools/shared.mjs`；`isDirty` = 核 fail-closed 必需字段，`applyEditorRangeEdit` 随 range 径退场） | 双夹具 + 结构机检——见 §2.13.5（`thincoder-core/test/write-path.test.mjs`） |
 | `configureExecRun` / `runCommand`（执行面单点） | `thincoder-core/tools/exec-run.mjs:25`（`configureExecRun`；43 行 · **已落 2026-09-14** · §5 交付读数） | 端装配层 | CLI = 不注入（默认径 = `execFileSync` CLI 语义） · VSC = 可中断执行器（现形 = `runInterruptible`——`thincoder-vscode/src/tools/shared.mjs:148`；VSC 侧 linter / verify / ops 消费） | 双夹具 + 结构机检（执行面单点：linter / verify 零直调 `child_process`）——见 `thincoder-core/test/tool-seams.test.mjs` |
 
 **族余项（登记——S2 取值补登）**：同款 module-level `configure*` 缝另有 **9 组**已物化（本轮实核坐标）：
@@ -1383,7 +1383,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 
 **一端现状（实测）**：VSC 的写路径**已把编辑器径做成规格**——
 `getOpenDoc(abs)` 取同路径已打开文档（`thincoder-vscode/src/tools/shared.mjs:66`）；命中则 `applyEditorEdit` 全量替换 / `applyEditorRangeEdit` 区间替换（`:87` / `:99`），二者**先 `applyEdit` 再 `doc.save()`**；注释自述其理由 = 「不保存会让缓冲变脏而磁盘仍旧 ⇒ 下一次编辑撞上我们自己的 `isDirty` 护栏，外部写入又和用户随后的保存互相竞写（split-brain 数据丢失）」（`:83-86`）。
-消费者 = `file.mjs:94-104` · `file-edit.mjs:178,282,299,303,396,403,416` · `more-file.mjs:55,61,65,266,294,380` · `hashline-edit.mjs:91-93` · `edit-line-params.mjs:124-125`；打开且脏 ⇒ 一律拒写（回错误串）。
+消费者 = `file.mjs:94-104` · `file-edit.mjs:178,282,299,303,396,403,416` · `more-file.mjs:55,61,65,266,294,380` · `hashline-edit.mjs:91-93` · `edit-line-params.mjs:124-125`（W14 已迁核——上述 VSC 自持档已删，现体 = 核 `thincoder-core/tools/{file.mjs, edit-batch.mjs, patch.mjs}` 的写点）；打开且脏 ⇒ 一律拒写（回错误串）。
 
 **另一端现状（实测 · 缝落地前 = 缺口成因）**：核内 `thincoder-core/tools/` 原先没有任何编辑器面，写盘**直调 `node:fs/promises`**（下列坐标为**落地前**写点位置）：
 `tools/file.mjs:224`（write）· `:369`（insert_after）· `:462`（hashline_edit）· `tools/edit-diff.mjs:341`（单形态 edit）· `tools/edit-batch.mjs:83`（edits 数组）· `tools/patch.mjs:214,218`（apply_patch 走 `.thincoder-tmp` + rename）· `:276`（delete）· `tools/ops.mjs:42`（move / copy / rename）。
@@ -1395,7 +1395,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 | 项 | 建议 |
 |---|---|
 | 注入面 | 工具写面单点 `tools/write-path.mjs`（**已落 2026-09-14 · 191 行**（含 dest 面门禁补丁）· §5 交付读数）：`writeThroughPath(abs, content, meta)`——**8 写点全改调它**；默认实现 = `writeFile` + `recordWrite`（= CLI 语义，零行为变）；端侧可 `configureWritePath({ openDoc, applyEdit, isDirty })` 覆盖 |
-| 端侧填什么 | **CLI = 不注入**（默认 fs 径）· **VSC = `getOpenDoc` / `applyEditorEdit` / `applyEditorRangeEdit`**（迁 `thincoder-vscode/src/tools/shared.mjs:66-106` 进端壳），脏缓冲 ⇒ 拒写 |
+| 端侧填什么 | **CLI = 不注入**（默认 fs 径）· **VSC = `{openDoc, isDirty, applyEdit}`**（W14 已迁核——薄壳现体 `thincoder-vscode/src/tools/shared.mjs`；`isDirty` = 核 fail-closed 必需字段），脏缓冲 ⇒ 拒写 |
 | 契约 | 注入实现返回 `{ written: true, via: "editor" }` 或 `null`（未处理 ⇒ 回退默认）；缺省 = 现状；核内零端名分支（契约 5） |
 | 覆盖点 | §2.13.5 上列 8 个写点（write / insert_after / hashline_edit / edit / edits 数组 / apply_patch / delete / file_ops）——`ctx` 已透传到各 `execute(args, ctx)`，可行 |
 | 验收（可机判） | ① 核内测试：假注入面驱动全部 8 个写点 ⇒ 全部经过注入面 + 未注入 ⇒ 回 fs 径（双夹具；交付读数：`openDoc` / `isDirty` 各 **11**（8 写点 src 面 + `file_ops` 面 dest 扩 `copy` 后——补正① 终态；改判落轮 = S1 续轮第三批）· 内容写点 `applyEdit` **6**；用例见 `thincoder-core/test/write-path.test.mjs` 夹具一 / 二）；② 结构机检（**落地口径**）：**扫描域 = `tools/**`**；检测面 = `writeFile(Sync)` / `appendFile(Sync)` / `createWriteStream` / `writeSync`；白名单 1 档 = `tools/write-path.mjs`；**已登记豁免 1 档 = `tools/checklist-sync.mjs:88`**（checklist 状态档同步机——非模型面文件编辑写点）；白名单外**命中集合逐档等值（fail-closed——新增命中即红、豁免消失亦红）**；8 写点所在 5 档**零直调 fs 写（无豁免）**；豁免登记位置 = `thincoder-core/test/write-path.test.mjs` 结构机检用例的 `EXEMPT` 表（`WHITELIST` 白名单同处）；③ VSC 侧（S2）：对已打开文件执行 write ⇒ 断言 `applyEdit` 被调 + `doc.isDirty === false` + 磁盘内容 = 缓冲内容 |
@@ -1406,8 +1406,9 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
   `thincoder-core/test/write-path.test.mjs`（**300 行 · 7 用例**——S1 续轮第三批读数）——核内 `node --test` **160/160 · exit 0**（S1 收口读数——明细见批次档 §5「S1 续轮第五批」K2）。**S2 端侧接线仍待做**（CLI 不注入 / VSC 注入编辑器径 = S2 动作——落点 ≠ 接线）。
 - **补正①（已落 2026-09-14）**：`file_ops` 的 **`dest` 面门禁**——原 `writeThroughPath` 只对 `src` 问 `openDoc`（move / rename / copy **覆盖到「编辑器打开且脏」的目标档**时不拒写）。
   落态 = `gateOpenDoc` 单点（`thincoder-core/tools/write-path.mjs:83`——src / dest 两面共用；`src` 未打开不豁免 dest 门）；**dest 门条件已扩至 `copy`**（2026-09-14 · S1 续轮第三批——批次档 §5）；验收① 基数改判为 `openDoc` / `isDirty` 各 **11** · `applyEdit` **6**——计数与用例已同步。
-- **补正②（文案对齐口径——S2 接线时）**：核内拒写文案（`thincoder-core/tools/write-path.mjs:72-73`）= VSC 主句（同句——`thincoder-vscode/src/tools/file.mjs:99` · `edit-line-params.mjs:124` · `file-edit.mjs:396` · `hashline-edit.mjs:91` · `more-file.mjs:55` 5 处；VSC 侧带 `Error: ` 前缀）。
-  VSC 另有 2 处尾句为 `Save or discard first.`（`thincoder-vscode/src/tools/more-file.mjs:266,380`）⇒ **S2 接线后该两处用户可见文案随核内句统一**（本项只登记口径——端侧改动属 S2）。
+- **补正②（文案对齐口径——S2 接线时）**：核内拒写文案（`thincoder-core/tools/write-path.mjs:72-73`）= VSC 主句（同句——`thincoder-vscode/src/tools/file.mjs:99` · `edit-line-params.mjs:124`（W14 已迁核——现体 = 核 `write-path.mjs`） ·
+  `file-edit.mjs:396` · `hashline-edit.mjs:91` · `more-file.mjs:55` 5 处；VSC 侧带 `Error: ` 前缀）。（W14 已迁核——上述 VSC 自持档已删；现体 = 核 `write-path.mjs` 的拒写文案单点）
+  VSC 另有 2 处尾句为 `Save or discard first.`（`thincoder-vscode/src/tools/more-file.mjs:266,380`）⇒ **S2 接线后该两处用户可见文案随核内句统一**（本项只登记口径——端侧改动属 S2）。（W14 已迁核——该档已删，文案统一已在 W14 随核单源落地）
 - **补正③（登记——S2 接线前须定，2026-09-14）**：① `#96` 信息段缝位与入参口径（阻塞三态含段 vs VSC 现形不含；`codeFiles` vs `files`）；② `copy` 面门禁口径（src / dest 两面照过门禁——「所有 op 统一先问 src」；dest 面覆盖 move / rename / copy）。既定口径见批次档 §5「S1 续轮第三批」决策表 7 / 未决 2。
 - **范围注（结构机检域）**：验收② 机检域 = `tools/**`（工具写面）。核内域外档（存储 / 日志 / 快照 / trace / 配置等面 + 测试夹具）另含 fs 写、**不在本机检域**；
   其中**模型面直写 `agent-tools/batch-segment.mjs`（#84）**已单列 **S2 前置门**（见 §2.13.4 #84 行 / §2.13.6 第 5 条）。原「核内单点」字样按落地口径收正为「**工具写面单点**（8 写点全经缝）+ `tools/**` 白名单机检」。
@@ -1937,5 +1938,6 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 - 2026-09-15（**VSC 修正轮-5 权威面收正 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮-5）：用户 2026-09-15 15:12 裁定 **#143 模型规格端侧派生面 = 同案处理（端侧自有 · 非缺位计——与 #175 同法）**；
   收正面 = §2.13.4 #143 行（处置列收正——原「端侧派生面按端注入」表述退场；裁定锚 + 实核坐标见行内）· §2.13.4 表头注（补「端侧自有类不计缺位」子句）· §2.13.6 缺口 5（**缺位 3 → 2**——#143 移出、枚举同改；#112 / #172 保持）。
 - 2026-09-15（**VSC 修正轮-6 权威面收正 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮-6）：§2.1 B20「VSC 现声明」→「**原声明**（迁移前）」（引擎下限已裁 `^1.104.0`——值面见 §2.11 A8 已收口注）；零语义（形态收正）。
+- 2026-09-15（**S2 W14 落地 · eng-coder**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W14）：§2.13.5 补正②段两行（拒写文案对齐口径 / 尾句 2 处）补 W14 迁核注——VSC 自持编辑档已删，本项随核单源落地；§2.13.5 消费者行（编辑器径消费面）补迁核注；机制条文零改。
 
 

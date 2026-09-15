@@ -411,7 +411,7 @@ webview 输入面见下方 UI 段）；settle
 **§11.2 接入面补全（2026-09-11 第 10 批——本端镜像；CLI 端权威 = `AGENT-LOOP（CLI 仓）` §18）**：
 
 - ① `subagent status` 双池合并（本端 `src/agent-tools/subagent-actions.mjs` as-of :89-120 现只查子代理池——本批补）；
-- ② `wait_for "advisor settled"` 判据改读评审池（本端 `src/tools/wait_for.mjs` as-of :125-129 同缺陷——修前恒 0ms 秒过；
+- ② `wait_for "advisor settled"` 判据改读评审池（本端 `src/tools/wait_for.mjs` as-of :125-129（W14 已迁核——现体 `thincoder-core/tools/ops.mjs` 的 wait_for 分支） 同缺陷——修前恒 0ms 秒过；
   复用本端已导出 `advisorReviewInFlight`（`src/agent-tools/advisor-async.mjs:92`——双载体判据））；
 - ③ `subagent cancel <advisor id>` 落评审池（面板 ⏹ 路由已有——`src/extension/panel-messages.mjs:238-241`；
   工具动作缺落点——本批补）+ ④ observe/send 遇 advisor id 明确指引；

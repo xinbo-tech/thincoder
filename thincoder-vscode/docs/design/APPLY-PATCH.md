@@ -1,6 +1,6 @@
 # apply_patch 工具权威语义（APPLY-PATCH）
 
-> 板块：编辑工具。权威源：VSC `src/tools/more-file.mjs`（apply_patch 工具——无坐标 hunk/文件头容缺/多文件原子）。本文档是 **apply_patch 语义的权威源**——VSC `TOOLS.md` §9 只留地图（定位句 + 指针），不得复制本档正文。
+> 板块：编辑工具。权威源：VSC `src/tools/more-file.mjs`（W14 已迁核——现体 `thincoder-core/tools/patch.mjs`）（apply_patch 工具——无坐标 hunk/文件头容缺/多文件原子）。本文档是 **apply_patch 语义的权威源**——VSC `TOOLS.md` §9 只留地图（定位句 + 指针），不得复制本档正文。
 > 双端：VSC（本文档）与 CLI（thincoder——同机制各自实现）。
 > 状态：**已实现**。
 

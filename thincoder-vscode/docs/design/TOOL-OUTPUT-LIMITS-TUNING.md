@@ -92,7 +92,7 @@ preview 放大后每次落盘结果最多 64K 进模型上下文，由既有 com
 
 ### 2.9 read 双端返回（C 方案——2026-09-09 实现，CLI TUNING §2.6 同构）
 
-`src/tools/file.mjs` read 工具对大文件/offload 产物的读回（VSC 侧同时补行数提示：default 2000 上限
+`src/tools/file.mjs`（W14 已迁核——现体 `thincoder-core/tools/file.mjs`） read 工具对大文件/offload 产物的读回（VSC 侧同时补行数提示：default 2000 上限
 此前有描述无实现——`MAX_READ_LINES` 补入 `src/tools/shared.mjs`（CLI parity）——窗口截断时补 total 尾注）：
 
 - **判别锚（实测）**：窗口截断（`windowEnd < total`）**且**文件行数 > `MAX_READ_LINES`（2000）
@@ -109,7 +109,7 @@ preview 放大后每次落盘结果最多 64K 进模型上下文，由既有 com
 - `src/agent/run-helpers.mjs`：常量（`MAX_TOOL_RESULT`/`TOOL_RESULT_PREVIEW_HEAD`/`TOOL_RESULT_PREVIEW_TAIL`）+ `safeSliceUTF16`/`safeSliceUTF16Tail`/`buildHeadTailPreview`/`offloadToolResult`（含写时自清理）。
 - 调用点 `src/agent/execute-tools.mjs`：`offloadToolResult`（行为改、调用零改）。
 - `src/advisor/run.mjs`：`MAX_RESULT_CHARS`（截断行为迁 `src/advisor/truncate.mjs`——2026-09-09）。
-- `src/tools/shared.mjs`：`MAX_READ_LINES`（补 2000 上限——CLI parity）。`src/tools/file.mjs`：read 双端返回（§2.9——`READ_TAIL_LINES`）。
+- `src/tools/shared.mjs`：`MAX_READ_LINES`（补 2000 上限——CLI parity）。`src/tools/file.mjs`：read 双端返回（§2.9——`READ_TAIL_LINES`）。（W14 已迁核——`file.mjs` 现体 `thincoder-core/tools/file.mjs`；`shared.mjs` 端壳薄壳保留）
 - `src/extension/panel-callbacks.mjs`：`onToolResult` `slice(0, 64 * 1024)`。
 - `src/extension/panel-session.mjs`：历史页工具卡 `slice(0, 64 * 1024)`。
 - `webview/lib.js`：`MAX_TOOL_OUTPUT = 64 * 1024` 已达标，不动。

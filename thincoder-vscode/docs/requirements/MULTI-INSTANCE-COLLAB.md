@@ -2,7 +2,7 @@
 
 > 板块：多实例协作感知（同一 cwd 多副本 agent 互相感知与避让）。需求层文档（`docs/requirements/`）。
 > 定位：本仓机制实况登记——感知面 `src/extension/peer-instances.mjs`（191 行）+ 文件域面 `src/extension/peer-domains.mjs`；
-> 写入侧避让提示 = `src/agent/execute-tools.mjs`；清单写面 = `src/tools/checklist.mjs`；配置写面 = `src/config-io.mjs`。
+> 写入侧避让提示 = `src/agent/execute-tools.mjs`；清单写面 = `src/tools/checklist.mjs`（W14 已迁核——现体 `thincoder-core/tools/checklist.mjs`）；配置写面 = `src/config-io.mjs`。
 > 跨端：与 CLI 仓同名需求档语义同源（lockstep）；实现各自独立。
 
 ## 1. 定位与总体目标

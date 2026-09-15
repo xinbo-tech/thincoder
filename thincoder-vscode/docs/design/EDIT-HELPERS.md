@@ -1,8 +1,8 @@
 # 编辑共享 helper 权威语义（EDIT-HELPERS）
 
 > 板块：编辑工具（共享底层）。权威源：VSC `src/tools/shared.mjs`（`detectFileEol` / `joinWithEol` / `majorityEol` / `findCandidates` / `FFFD_WARNING`）
-> + 消费方 `src/tools/file-edit.mjs` / `more-file.mjs` + `lfOffsetToRaw`（VSC 编辑器路径专属——CRLF 原文偏移映射）。本文档是编辑工具族共享 helper 语义的权威源——`EDIT.md` / `HASHLINE-EDIT.md` / `APPLY-PATCH.md` / `WRITE.md` 指向此处，不得在别处复制（单一权威）。
-> 双端：VSC（本文档）与 CLI（thincoder——helper 语义同，各自实现；**VSC 独有差异**：编辑器路径（doc 已打开）的 range 偏移坐标系映射 `lfOffsetToRaw`——CLI 无此路径）。
+> + 消费方 `src/tools/file-edit.mjs` / `more-file.mjs`（W14 已迁核——现体 `thincoder-core/tools/file.mjs`）+ `lfOffsetToRaw`（VSC 编辑器路径专属——CRLF 原文偏移映射）。本文档是编辑工具族共享 helper 语义的权威源——`EDIT.md` / `HASHLINE-EDIT.md` / `APPLY-PATCH.md` / `WRITE.md` 指向此处，不得在别处复制（单一权威）。
+> 双端：VSC（本文档）与 CLI（thincoder——helper 语义同，各自实现；**VSC 独有差异**：编辑器路径（doc 已打开）的 range 偏移坐标系映射 `lfOffsetToRaw`——CLI 无此路径）（W14 已迁核退场——`lfOffsetToRaw` 随 VSC 自持编辑工具面删除；现体 = 核全文写路径）。
 > 状态：**已实现**。历史需求/设计见文末「变更记录」。
 
 ## 1. 定位
@@ -32,7 +32,7 @@ U+FFFD 警告（FFFD_WARNING）——hashline_edit 读入含 U+FFFD 追加（不
 
 ## 5. VS Code 编辑器路径差异（F5——VSC 专属）
 
-edit 在编辑器路径（doc 已打开）的 range 编辑，其定位偏移必须与 doc.positionAt 同坐标系——**`lfOffsetToRaw`** 把 LF 域偏移映射回 CRLF 原文偏移，再做 range 替换：
+edit 在编辑器路径（doc 已打开）的 range 编辑，其定位偏移必须与 doc.positionAt 同坐标系——**`lfOffsetToRaw`** 把 LF 域偏移映射回 CRLF 原文偏移，再做 range 替换（W14 已迁核退场——端侧 range 编辑面随自持工具删除；现体 = 核 `writeThroughPath` 注入全文替换）：
 
 - 非 replace_all：偏移映射（保留 range 编辑——undo 粒度/光标/折叠/大文件性能/并发冲突面；否决整文档替换）。
 - replace_all：补 EOL 还原（不再静默丢 CRLF）。

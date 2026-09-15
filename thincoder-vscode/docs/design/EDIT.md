@@ -1,6 +1,6 @@
 # edit 工具权威语义（EDIT）
 
-> 板块：编辑工具。权威源：VSC `src/tools/file-edit.mjs`（editTool 壳/schema/描述内嵌）+ `src/tools/edit-line-params.mjs`（D1 子模块）+ `src/tools/edit-fuzzy-match.mjs`（D2 子模块）+ `src/tools/edit-diff.mjs`（diff 内核/判定序）。本文档是 **edit 工具语义的权威源**——VSC `TOOLS.md` §9 只留地图（定位句 + 指针），不得复制本档正文。
+> 板块：编辑工具。权威源：VSC `src/tools/file-edit.mjs`（W14 已迁核——现体 `thincoder-core/tools/file.mjs`）（editTool 壳/schema/描述内嵌）+ `src/tools/edit-line-params.mjs`（D1 子模块）+ `src/tools/edit-fuzzy-match.mjs`（D2 子模块）+ `src/tools/edit-diff.mjs`（diff 内核/判定序）。本文档是 **edit 工具语义的权威源**——VSC `TOOLS.md` §9 只留地图（定位句 + 指针），不得复制本档正文。
 > 双端：VSC（本文档）与 CLI（`EDIT（CLI 仓·设计）`）同机制各自独立实现——镜像锚：两端工具描述逐字一致（评审逐字对齐），语义正文各自落地。**VSC 差异**：无 CLI 的 DESC() md 描述机制——描述内嵌 `.mjs`（file-edit.mjs editTool 对象）；编辑器路径（doc 已打开）走 WorkspaceEdit + range 偏移映射。
 > 状态：**已实现**（D1-D3 落地 2026-09-08）。历史设计见文末「变更记录」。
 
@@ -61,11 +61,11 @@ old_string 匹配三级档序（宽容——模型差异容忍）：
 
 ## 6. 实现单一权威
 
-VSC 实现模块族：`src/tools/edit-diff.mjs`（applyRegion/applyPatchLines/lcsReplace——判定序）+ `src/tools/edit-line-params.mjs`（D1：computeLineEdit/executeLineEdit/EMPTY_NEW_STRING_LINE——含编辑器 WorkspaceEdit 路径）
-+ `src/tools/edit-fuzzy-match.mjs`（D2：findFuzzyMatch——与 CLI normalizeEditLine 逐字同算法）+ `src/tools/file-edit.mjs`（壳/schema/批量/单形态——同 execute 内双路径）
-+ `src/tools/hashline-edit.mjs`（hashlineEditTool——2026-09-08 500 硬帽拆分，file-edit re-export）；CLI 镜像 edit-diff.mjs。
+VSC 实现模块族：`src/tools/edit-diff.mjs`（applyRegion/applyPatchLines/lcsReplace——判定序）+ `src/tools/edit-line-params.mjs`（D1：computeLineEdit/executeLineEdit/EMPTY_NEW_STRING_LINE——含编辑器 WorkspaceEdit 路径）（W14 已迁核——现体 `thincoder-core/tools/{edit-diff.mjs, edit-batch.mjs}`）
++ `src/tools/edit-fuzzy-match.mjs`（D2：findFuzzyMatch——与 CLI normalizeEditLine 逐字同算法）+ `src/tools/file-edit.mjs`（壳/schema/批量/单形态——同 execute 内双路径）（W14 已迁核——现体 `thincoder-core/tools/{edit-batch.mjs, file.mjs}`）
++ `src/tools/hashline-edit.mjs`（hashlineEditTool——2026-09-08 500 硬帽拆分，file-edit re-export）；CLI 镜像 edit-diff.mjs。（W14 已迁核——现体 `thincoder-core/tools/file.mjs`）
 
-EOL 写回与失败候选——**共享 helper 权威见 `EDIT-HELPERS.md`**（VSC 另有 `lfOffsetToRaw`——编辑器路径专属），此处不复制。
+EOL 写回与失败候选——**共享 helper 权威见 `EDIT-HELPERS.md`**（VSC 另有 `lfOffsetToRaw`——W14 已迁核退场，随自持编辑工具面删除；现体 = 核全文写路径），此处不复制。
 
 ## 7. 测试
 

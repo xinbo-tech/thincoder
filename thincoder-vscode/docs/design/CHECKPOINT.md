@@ -12,7 +12,7 @@
 > rewind/restoreFile/listFileVersions/catFile/deleteCheckpointsForCwd/
 > deleteCheckpointsOlderThan）、`git-checkpoint.mjs`（W5 已迁核——现体 `thincoder-core/tools/git-checkpoint.mjs:1`；git 工具 checkpoint action 子
 > 系统 + F6 懒清理 + D7 提示行）。
-> 装配（VS Code）：`src/tools/git.mjs`（checkpoint action 路由/只读分类/commit 清
+> 装配（VS Code）：`src/tools/git.mjs`（W14 已迁核——现体 `thincoder-core/tools/git.mjs`）（checkpoint action 路由/只读分类/commit 清
 > 理）、`git-ext.mjs`（W5 已迁核——现体 `thincoder-core/tools/git-ext.mjs:1`；破坏性 op 前 snapshotBefore）、`shell.mjs`（bash git 破坏性
 > 命令 gitGuardSnapshot）、`src/config-io.mjs`（configDir 定位）。
 > 关联：ARCHITECTURE.md（原 §13 源行——ARCHITECTURE 2026-09-08 瘦身收官，源行已删）、TOOLS.md（git/shell

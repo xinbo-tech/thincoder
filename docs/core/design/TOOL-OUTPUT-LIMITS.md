@@ -114,7 +114,7 @@ Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do 
 | 实时显示同宽 | `thincoder-vscode/src/extension/panel-callbacks.mjs:165`（`onToolResult` `slice(0, 64 * 1024)`） |
 | 历史页工具卡同宽 | `thincoder-vscode/src/extension/panel-session.mjs:195`（tool 卡）· `:199`（tool 结果数组同限） |
 | webview DOM 上限 | `thincoder-vscode/webview/lib.js:27`（`MAX_TOOL_OUTPUT` = 64 × 1024）· `:30`（`capText`） |
-| read 双端返回 | `thincoder-vscode/src/tools/file.mjs:17`（`READ_TAIL_LINES` = 500）· `:58`（旧路径 total 尾注）· `:64`（尾区起点——重叠不重复）· `:68`（头 + 省略注 + 尾形态）；`MAX_READ_LINES` = `thincoder-vscode/src/tools/shared.mjs:27` |
+| read 双端返回 | （W14 已迁核——VSC 自持 `thincoder-vscode/src/tools/file.mjs` 与 `tools/shared.mjs` 已删，现体 = 核 `thincoder-core/tools/file.mjs`：`READ_TAIL_LINES` / 双端返回形态；`MAX_READ_LINES` = 核 `thincoder-core/tools/shared.mjs`） |
 | 失败回退 | `thincoder-vscode/src/agent/run-helpers.mjs:196`（双端切片 + 无路径 + 原文总长——`offload to disk failed`） |
 
 **VSC 侧差异注**：提示语 / 路径格式与 CLI 契约**同形**（`[Large output saved. Read the full result with the read tool: …]`——模型契约稳定需双端一致）；`tail` **绝不硬编码**（实际 = 预算余量）两端同律。

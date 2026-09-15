@@ -42,8 +42,8 @@
 | 15 | ENG-TOKEN-BINDING | **本批迁** | 活——根层无对应；旧档 §4/§5 口径陈旧（单值镜像 vs D3 已退役）——**已随迁按现状收正**（旧句入落点档 §8.1） | 已落 `docs/core/design/ENG-TOKEN-BINDING.md` |
 | 16 | ENGINEERING-MODE | **本批迁** | 活——根层无对应（`AGENT-LOOP.md` §8.2 缺档登记）；= 工作流机制判据权威；3030 行超硬限 ⇒ 按机制族拆四档 | 已落 `docs/core/design/{ENGINEERING-MODE,BATCH-RECORD,DOC-DISCIPLINE,LEDGER}.md` |
 | 17 | ESCALATE | **本批迁** | 同名根档已由 VSC 批 3 建；CLI 侧独有面（TUI 接线 / relay 前缀 CLI 形 / 撞墙继续 CLI 通道）逐节对账并入 | 已并入 `docs/core/design/ESCALATE.md`（§5 / §6；(d) 类入 §8.1） |
-| 18 | HASHLINE-EDIT | **本批迁** | 同编辑族；VSC 同名对位（`thincoder-vscode/src/tools/hashline-edit.mjs:12`） | 已落 `docs/core/design/HASHLINE-EDIT.md` |
-| 19 | INSERT-AFTER | **本批迁** | 同编辑族；VSC 同名对位（`thincoder-vscode/src/tools/more-file.mjs:12`） | 已落 `docs/core/design/INSERT-AFTER.md` |
+| 18 | HASHLINE-EDIT | **本批迁** | 同编辑族；VSC 同名对位（`thincoder-vscode/src/tools/hashline-edit.mjs:12`）（W14 已迁核——自持镜像已删，现体 = 核 `thincoder-core/tools/file.mjs`） | 已落 `docs/core/design/HASHLINE-EDIT.md` |
+| 19 | INSERT-AFTER | **本批迁** | 同编辑族；VSC 同名对位（`thincoder-vscode/src/tools/more-file.mjs:12`）（W14 已迁核——自持镜像已删，现体 = 核 `thincoder-core/tools/file.mjs`） | 已落 `docs/core/design/INSERT-AFTER.md` |
 | 20 | LEDGER-SELF-CONTAINED | **本批迁** | 活——根层无对应（`WORKSPACE.md` §8.2 越段登记）；自持机制的唯一活载体；1033 行超硬限 ⇒ 台账机制面（L1–L3 与可见面）另立 `docs/core/design/LEDGER.md` | 已落 `docs/core/design/LEDGER-SELF-CONTAINED.md` |
 | 21 | LOGGING | 已清 | 对账：CLI §2.1–§2.5 ↔ 根层 §6.1–§6.4（未并面已登记） | 无动作 |
 | 22 | MCP | 已清 | 对账：CLI §1–§9 ↔ 根层 §6.1–§6.9（文案级残余见 §4 注） | 无动作 |
@@ -203,6 +203,8 @@
   §2.1 五行（第 17 / 24 / 32 / 34 / 44 行）+ §2.2 十行（第 4 / 10 / 11 / 18 / 19 / 21 / 22 / 27 / 28 / 37 行）判栏**保持「后续批」**，动作列按现状改写为「**并入既有**（同名根档已由 VSC 批 3 / 批 4 / 批 5 建）」；§2.2 第 37 行（VERIFY-REDESIGN）落点两读**待父侧裁定**。
   §6 批 6a 补 ESCALATE（一致性收正——原缺分组）· 批 6b 剔 TESTING 印刷残留并注记全量转形态；§5 小计**不变**（49 / 15 仍闭合）；§8 行数重核。
 - 2026-09-15（**迁移批 · 第 6 批 · CLI 专有面（P2）· eng-designer**）：§2.1 五行（第 1 / 11 / 41 / 42 / 43 行）+ §2.2 四行（第 1 / 9 / 33 / 34 行）「后续批」→「**本批迁**」（逐行补现状实核依据 + 落点）；§3 迁移注意项标**已收口**（TUI-INPUT-BOX 二态混装）；§5 小计重算闭合（本批迁 40 → **49** · 后续批 24 → **15**）；§6 批 5 行标**已落**、标题 24 → **15 档**；§8 行数重核。
+- 2026-09-15（**S2 W14 落地 · eng-coder**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W14）：§2.1 表第 18 / 19 行（HASHLINE-EDIT / INSERT-AFTER）VSC 对位坐标补迁核注——VSC 自持档
+  （`thincoder-vscode/src/tools/{hashline-edit.mjs, more-file.mjs}`）随 W14 删，现体 = 核 `thincoder-core/tools/file.mjs`；S2 W14 单元 = VSC 工具实现面迁核（批次档 §2）；机制条文零改。
   **本批实迁 9 源档 ⇒ 11 产物档**（全落 `docs/cli/`）：设计 7（TUI 按读者面**拆三档** + TUI-INPUT-BOX + TUI-TOOL-OUTPUT + ACP-CLIENT + CRASH-REPORTS）· 需求 4（TUI / TUI-TOOL-OUTPUT / ACP-CLIENT / CRASH-REPORTS）。
   **逐档要点**：TUI（1529 行超硬门）⇒ 拆 `TUI` / `TUI-COMMANDS` / `TUI-SESSION-VIEW`；TUI-INPUT-BOX 二态混装按「第 31 批已实装」收口为**单态现行契约**；CRASH-REPORTS 状态行漂移按现状收正；ACP-CLIENT 两处坐标按现状收正（question 可用性行载体 = `thincoder-cli/src/prompt-injections.mjs`；relay 文法模块 = `thincoder-core/agent/relay-prefix.mjs`）。
   **层归属不对称登记**：TUI 设计侧 5 档（含既有的 TUI-INPUT-BOX / TUI-TOOL-OUTPUT）⇄ 需求侧 1 档——双侧档头互注。

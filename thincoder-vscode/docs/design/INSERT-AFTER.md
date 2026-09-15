@@ -1,6 +1,6 @@
 # insert_after 工具权威语义（INSERT-AFTER）
 
-> 板块：编辑工具。权威源：VSC `src/tools/more-file.mjs`（insert_after 工具——after_line/after_regex）。本文档是 **insert_after 语义的权威源**——VSC `TOOLS.md` §9 只留地图（定位句 + 指针），不得复制本档正文。
+> 板块：编辑工具。权威源：VSC `src/tools/more-file.mjs`（W14 已迁核——现体 `thincoder-core/tools/file.mjs`）（insert_after 工具——after_line/after_regex）。本文档是 **insert_after 语义的权威源**——VSC `TOOLS.md` §9 只留地图（定位句 + 指针），不得复制本档正文。
 > 双端：VSC（本文档）与 CLI（thincoder——同机制各自实现；**VSC 差异**：无 CLI 的 dirty read-before-insert 护栏——见 §3）。
 > 状态：**已实现**。
 
