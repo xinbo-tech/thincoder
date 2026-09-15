@@ -23,7 +23,7 @@ import { executeToolBatches } from "../src/agent/execute-tools.mjs"
 // W13（2026-09-15）：`runChild` / `cancelSubagent`（端侧执行面）随镜像删旧退役——子代理引擎 = 核
 // `buildSpawnChild`（childPermission 分支——核测试树锁定）+ 本端 `permission-gate`。T-CP10/T-CP11
 // （runChild 真接线角色域）随之退役（见下方退役注）。
-import { _setConfigPathForTest } from "../src/config-io.mjs"
+import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-io.mjs"
 
 let _tmp, _ws

@@ -6,7 +6,8 @@
  * Pure Node — no `vscode` import — unit tests can run outside the extension host.
  */
 
-import { loadRaw, persistRaw, conflictError } from "./config-io.mjs"
+import { loadRaw, conflictError } from "@thincoder/core/config-io.mjs"
+import { vscPersistRaw } from "./extension/settings-panel-write.mjs"
 
 /** Load MCP server configs: array of { name, command?, args?, env?, url?, wsUrl?, headers? }. */
 export function loadMcpServers() {
@@ -23,7 +24,7 @@ export function addMcpServer(name, config) {
   if (config.url) { entry.url = config.url; if (config.token) entry.token = config.token; if (config.headers) entry.headers = config.headers }
   else if (config.wsUrl) { entry.wsUrl = config.wsUrl; if (config.token) entry.token = config.token; if (config.headers) entry.headers = config.headers }
   else { entry.command = config.command; if (config.args) entry.args = config.args; if (config.env) entry.env = config.env }
-  const r = persistRaw((raw) => {
+  const r = vscPersistRaw((raw) => {
     raw.mcp = raw.mcp && typeof raw.mcp === "object" ? raw.mcp : {}
     raw.mcp.servers = Array.isArray(raw.mcp.servers) ? raw.mcp.servers : []
     raw.mcp.servers.push(entry)
@@ -51,7 +52,7 @@ export function updateMcpServer(name, config) {
   if (cfg.url) { entry.url = cfg.url; if (cfg.token) entry.token = cfg.token; if (cfg.headers) entry.headers = cfg.headers }
   else if (cfg.wsUrl) { entry.wsUrl = cfg.wsUrl; if (cfg.token) entry.token = cfg.token; if (cfg.headers) entry.headers = cfg.headers }
   else { entry.command = cfg.command; if (cfg.args) entry.args = cfg.args; if (cfg.env) entry.env = cfg.env }
-  const r = persistRaw((raw) => {
+  const r = vscPersistRaw((raw) => {
     raw.mcp = raw.mcp && typeof raw.mcp === "object" ? raw.mcp : {}
     raw.mcp.servers = Array.isArray(raw.mcp.servers) ? raw.mcp.servers : []
     raw.mcp.servers[idx] = entry

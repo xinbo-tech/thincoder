@@ -13,8 +13,8 @@
 |---|---|---|---|
 | P1 | 评审整体墙钟 `REVIEW_TIMEOUT_MS = 300_000`（5 分钟）**硬编码**，用户无法调整 | `src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）` 常量 + `runAdvisorToolLoop` 循环内检查点 | 大评审（多文件、多轮工具探索、慢模型）5 分钟即被截断，返回 partial results |
 | P2 | explore 子 agent 轮次被 `Math.min(30, …)` 硬帽 | `@thincoder/core/agent-tools/subagent.mjs`（W13 已迁核收口——现体见批次档 §5） | explore 深入探索（大仓库、多文件追溯）30 轮即停，仅返回 partial work |
-| P3 | 主 agent 轮次上限默认 `maxTurns: 100` | `src/config-io.mjs` `AGENT_DEFAULTS`、`src/agent/run-helpers.mjs` `DEFAULT_MAX_TURNS`、`src/agent/setup.mjs`（初始值 + 读取兜底）、`webview/settings-agent.js`（面板显示兜底） | 多文件重构/修复-验证循环任务频繁撞墙 |
-| P4 | 设置面板保存 advisor 字段时**静默丢弃** timeoutMs（仅保留 guard/effort/provider/model 四字段） | `src/config-io.mjs` `saveAgentSettingsFromPanel` | 用户手写 config.json 的 timeoutMs 一旦经面板保存即丢失；面板显示默认 `?? 100`（`webview/settings-agent.js`）也会与真实默认漂移 |
+| P3 | 主 agent 轮次上限默认 `maxTurns: 100` | `src/config-io.mjs`（W16 已迁核收口——现体见批次档 §5）`AGENT_DEFAULTS`、`src/agent/run-helpers.mjs` `DEFAULT_MAX_TURNS`、`src/agent/setup.mjs`（初始值 + 读取兜底）、`webview/settings-agent.js`（面板显示兜底） | 多文件重构/修复-验证循环任务频繁撞墙 |
+| P4 | 设置面板保存 advisor 字段时**静默丢弃** timeoutMs（仅保留 guard/effort/provider/model 四字段） | `src/config-io.mjs`（W16 已迁核收口——现体见批次档 §5）`saveAgentSettingsFromPanel` | 用户手写 config.json 的 timeoutMs 一旦经面板保存即丢失；面板显示默认 `?? 100`（`webview/settings-agent.js`）也会与真实默认漂移 |
 
 ## 2. 解决方案（Solution Approach）
 
@@ -38,7 +38,7 @@ if (Date.now() - startTime > timeoutMs) {
   `agent.config.advisor` 天然含 timeoutMs；`runAdvisorToolLoop` 已接收 `agent` 参数，
   **无需改签名**。
 - **不在** `loadAgentSettings` 的 advisor 默认里写死 timeoutMs——保持默认值单一来源
-  （run.mjs 常量兜底）。`src/config-io.mjs` `AGENT_DEFAULTS.advisor` 注释补充 timeoutMs
+  （run.mjs 常量兜底）。`src/config-io.mjs`（W16 已迁核收口——现体见批次档 §5）`AGENT_DEFAULTS.advisor` 注释补充 timeoutMs
   字段说明（"timeoutMs 面板直传；运行默认 600_000（advisor/run.mjs）"）。
 - **设置面板 UI 不加 timeoutMs 输入框**（保持现状，config.json 手写即可）——但**保存路径
   必须透传**（见 2.4，P4 修复）。
@@ -56,7 +56,7 @@ if (Date.now() - startTime > timeoutMs) {
 
 - `src/agent/run-helpers.mjs`：`DEFAULT_MAX_TURNS = 100` → `200`（`configuredMaxTurns()`
   兜底）。现码：`DEFAULT_MAX_TURNS = 200`。
-- `src/config-io.mjs` `AGENT_DEFAULTS`：`maxTurns: 100` → `200`。现码：`maxTurns: 200`；
+- `src/config-io.mjs`（W16 已迁核收口——现体见批次档 §5）`AGENT_DEFAULTS`：`maxTurns: 100` → `200`。现码：`maxTurns: 200`；
   advisor 默认注释 "maxTurns 200" 已同步。
 - `src/agent/setup.mjs`：`cfgMaxTurns` 初始值 100 → 200；读取兜底 `raw.agent?.maxTurns ?? 100`
   → `?? 200`。现码核对：初始 200、读取兜底 `?? 200`。
@@ -65,7 +65,7 @@ if (Date.now() - startTime > timeoutMs) {
 
 ### 2.4 面板保存 advisor 时透传 timeoutMs（P4 修复）
 
-`src/config-io.mjs` 的 `saveAgentSettingsFromPanel`：advisor 合并对象透传 timeoutMs——payload
+`src/config-io.mjs`（W16 已迁核收口——现体见批次档 §5）的 `saveAgentSettingsFromPanel`：advisor 合并对象透传 timeoutMs——payload
 显式给了合法 timeoutMs 时写入，否则**保留 current 里的值**（避免面板保存任意 advisor 字段时把
 用户手写的 timeoutMs 冲掉）：
 
@@ -88,7 +88,7 @@ whole-object 覆盖写，不合并会丢字段——与现有 guard/effort/provi
 | `@thincoder/core/agent-tools/subagent.mjs` | MODIFY | 删除 explore 的 `Math.min(30, …)`，统一 `subagentTurns ?? 100`（W13 已迁核收口——现体见批次档 §5） |
 | `src/agent/run-helpers.mjs` | MODIFY | `DEFAULT_MAX_TURNS = 200` |
 | `src/agent/setup.mjs` | MODIFY | `cfgMaxTurns` 初始 200；读取兜底 `?? 200` |
-| `src/config-io.mjs` | MODIFY | `AGENT_DEFAULTS` `maxTurns: 200` + advisor 注释；advisor 合并透传 timeoutMs |
+| `src/config-io.mjs`（W16 已迁核收口——现体见批次档 §5） | MODIFY | `AGENT_DEFAULTS` `maxTurns: 200` + advisor 注释；advisor 合并透传 timeoutMs |
 | `webview/settings-agent.js` | MODIFY | 显示兜底 `?? 200` |
 | 相关设计文档 | MODIFY | "默认 100" 描述同步为 "默认 200" |
 | 测试 | MODIFY | timeoutMs 配置覆盖/回退；面板保存保留 timeoutMs；explore 用满 subagentTurns；默认 200 断言 |

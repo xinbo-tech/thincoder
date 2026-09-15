@@ -17,12 +17,12 @@
 | 模型配置 | `~/.thincoder/config.json`（与 CLI 共享） | providers[] + activeProvider，见「与 CLI 的关系」 |
 | 会话存储 | `~/.thincoder/sessions/`（与 CLI 共享） | 完整 sha1(cwd) + 槽位，两端互读 |
 | 工具审批 | `autoApprove` 会话级槽位字段，默认 `false` | AUTO 按钮 / approve-all 翻转；agent 循环 live 读取，mid-turn 立即生效 |
-| 模型能力 | 自包含 `src/config.mjs` | MODEL_SPECS 表独立维护 |
+| 模型能力 | 自包含 `src/config.mjs`（W16 已迁核收口——现体见批次档 §5） | MODEL_SPECS 表独立维护 |
 | Session 标题 | LLM 自动生成（首条消息后触发） | 失败静默降级为截断消息 |
 
 ### Provider 预设（以 CLI 为唯一权威）
 
-**权威来源**：preset 表以 CLI `src/config.mjs` 的 `PROVIDER_PRESETS` 为唯一权威，VS Code 不再各自硬编码（避免漂移）。当前全集 20 个，含 `kimi-code`（Kimi For Coding 独立平台）、`glm-code`（GLM Coding Plan）、`mimo`/`mimoplan`（MiMo / MiMo Token Plan）、`claude`（format: anthropic）与 `gemini`（format: google）：
+**权威来源**：preset 表以 CLI `src/config.mjs`（W16 已迁核收口——现体见批次档 §5）的 `PROVIDER_PRESETS` 为唯一权威，VS Code 不再各自硬编码（避免漂移）。当前全集 20 个，含 `kimi-code`（Kimi For Coding 独立平台）、`glm-code`（GLM Coding Plan）、`mimo`/`mimoplan`（MiMo / MiMo Token Plan）、`claude`（format: anthropic）与 `gemini`（format: google）：
 
 | 类别 | Provider |
 |---|---|
@@ -30,7 +30,7 @@
 | Anthropic 协议 | claude（`format: "anthropic"`，Messages API） |
 | Google 协议 | gemini（`format: "google"`，streamGenerateContent） |
 
-每个 Provider 的能力参数（context window、maxOutput、thinking API 类型、温度范围）存在 `src/config.mjs` 的 MODEL_SPECS 表里，`specForModel(model)` 按模型名前缀匹配。
+每个 Provider 的能力参数（context window、maxOutput、thinking API 类型、温度范围）存在 `src/config.mjs`（W16 已迁核收口——现体见批次档 §5）的 MODEL_SPECS 表里，`specForModel(model)` 按模型名前缀匹配。
 
 ### Provider 与模型选择（对齐 CLI，✅ 已定）
 

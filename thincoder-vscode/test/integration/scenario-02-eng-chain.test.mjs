@@ -22,7 +22,7 @@ import { advisorTool } from "@thincoder/core/agent-tools/advisor.mjs" // W12：�
 // 子代理执行 = 核 `runChildPipeline` → 核 `runAgent`（原端侧 `ctx.runAgent` 测试缝不存在于核工具——
 // 夹具改驱真链路：mock provider（本地 SSE 零外网））。
 import { subagentTool } from "@thincoder/core/agent-tools/subagent.mjs"
-import { _setConfigPathForTest } from "../../src/config-io.mjs"
+import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
 import { mockLLM, providerFor } from "./helpers/mock-llm.mjs"
 
 let work

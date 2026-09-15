@@ -17,9 +17,10 @@ import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { setupWebview } from "./helpers/webview-env.mjs"
 import {
-  AGENT_DEFAULTS, loadAgentSettings, loadRaw,
-  saveAgentSettingsFromPanel, _setConfigPathForTest,
-} from "../src/config-io.mjs"
+  DEFAULTS, _setConfigPathForTest,
+} from "@thincoder/core/config.mjs"
+import { loadAgentSettings, saveAgentSettingsFromPanel } from "../src/extension/settings.mjs"
+import { loadRaw } from "@thincoder/core/config-io.mjs"
 // W12（2026-09-15）：advisor 池面改指核单源（原 `../src/agent-tools/advisor-async.mjs` 随镜像
 // 删旧退役）——`launchAsyncAdvisor(parent, ctx, launch)` 核签名（拒发路径文案 = 核逐字）。
 import {
@@ -60,9 +61,9 @@ function tryLaunch(parent, reviewType, documents, poolLimits) {
   })
 }
 
-test("F-1 耦合锁：AGENT_DEFAULTS/常量/scheduler 回退三键 4/4/4（默认全链路真实）", () => {
-  const d = AGENT_DEFAULTS.poolLimits
-  assert.deepEqual(d, { engCoder: 4, other: 4, advisor: 4 }, "AGENT_DEFAULTS.poolLimits 三键 4/4/4")
+test("F-1 耦合锁：DEFAULTS.agent.poolLimits/常量/scheduler 回退三键 4/4/4（默认全链路真实）", () => {
+  const d = DEFAULTS.agent.poolLimits
+  assert.deepEqual(d, { engCoder: 4, other: 4, advisor: 4 }, "DEFAULTS.agent.poolLimits 三键 4/4/4")
   assert.equal(ADVISOR_POOL_LIMIT, 4, "ADVISOR_POOL_LIMIT = 4（2 → 4）")
   assert.equal(d.advisor, ADVISOR_POOL_LIMIT, "默认与运行时常量同值")
   assert.equal(ASYNC_POOL_LIMITS.engCoder, d.engCoder)

@@ -9,9 +9,10 @@ import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { _setConfigPathForTest, loadAgentSettings, loadConsultPool, loadRaw } from "../src/config-io.mjs"
+import { _setConfigPathForTest, loadRaw, removeProviderEntry } from "@thincoder/core/config-io.mjs"
+import { loadConsultPool } from "../src/extension/presets.mjs"
+import { loadAgentSettings } from "../src/extension/settings.mjs"
 import { saveAgentSettingsFromPanel } from "../src/extension/settings-panel-write.mjs"
-import { removeProviderEntry } from "../src/extension/provider-flows.mjs"
 
 let dir
 let cfgPath
@@ -99,15 +100,11 @@ test("AC-4 级联清理：removeProviderEntry 删渠道清悬挂引用——下�
   assert.match(removeProviderEntry("deepseek"), /active provider cannot be removed/, "active 渠道保护回归")
 })
 
-test("F-1 hub re-export 面：consult 符号经 config-io 同源 re-export（hub 断链 = import 响亮失败）", async () => {
-  // BATCH-3-STRUCTURE F-1（config-io 预拆——config-consult.mjs leaf）：调用方 import 面
-  // 不变——四符号仍从 config-io 导出且同源（re-export 非影子实现）。hub/leaf 断链时静态
-  // import 方在模块装载期即响亮失败（"does not provide an export"）——本文件顶部 import
-  // 即该错误行守卫；此处锁同源面。
-  const hub = await import("../src/config-io.mjs")
-  const leaf = await import("../src/config-consult.mjs")
-  for (const name of ["sanitizeConsultModels", "warnConsultModelsFiltered", "loadConsultPool", "cascadeRemoveProvider"]) {
-    assert.equal(typeof hub[name], "function", `config-io 仍导出 ${name}（hub API 面不变）`)
-    assert.equal(hub[name], leaf[name], `${name} 同源 re-export——config-io 非影子实现`)
+test("W16 面：consult 读/清洗面 = VSC 端单源（presets.mjs——hub/leaf 双档形态随 config-io 删旧退场）", async () => {
+  // W16：config-io / config-consult 双档退场——consult 读面/清洗面单源 = `src/extension/presets.mjs`
+  // （核无对位件——CORE-UNIFICATION §2.5 #130 端侧消费面）；消费方（agent/setup · 面板 · 本档）同源。
+  const mod = await import("../src/extension/presets.mjs")
+  for (const name of ["sanitizeConsultModels", "warnConsultModelsFiltered", "loadConsultPool"]) {
+    assert.equal(typeof mod[name], "function", `presets 导出 ${name}`)
   }
 })

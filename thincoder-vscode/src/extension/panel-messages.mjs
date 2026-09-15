@@ -6,7 +6,8 @@ import * as vscode from "vscode"
 import { t, loadLocaleStrings } from "../i18n.mjs"
 import { saveModelPrefs, switchToSlot, setSlotTitle, setSlotAdvisorGuard, setSlotEngineering, slotOccupancy, loadSlot } from "./session-io.mjs"
 import { handleAddProvider, handleRemoveProvider, handleSetProviderProxy, agentSettings, saveAgentSettingsFromPanel, saveProxySettingsFromPanel, testProxyConnection, shellCandidates, saveShellSettingsFromPanel, saveWebsearchKeyFromPanel, deleteWebsearchKeyFromPanel, testProviderConnection } from "./settings.mjs"
-import { loadRaw, loadMcpServers } from "../config-io.mjs"
+import { loadRaw } from "@thincoder/core/config-io.mjs"
+import { loadMcpServers } from "../config-mcp.mjs"
 import { openSessionContent } from "./panel-session.mjs"
 // B2（SESSION-FLOW-B——2026-09-09）：panel-messages ↔ panel-session 环 import（panel-session
 // 头部 import 本文件 _cwd）——openSessionContent 只在 webviewReady case 函数体内使用（延迟

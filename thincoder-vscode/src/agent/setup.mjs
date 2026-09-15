@@ -21,7 +21,7 @@ import { configureBatchSegment } from "@thincoder/core/agent-tools/batch-segment
 // W13 ④ C-5 终态回显读面（核墓碑单点）——**动态** import：核 `async-settle.mjs` 静态链可达
 // `node:sqlite`（scheduler→subagent-async→核 agent 栈——W8 契约②机判），静态引入会破端壳静态闭包；
 // 读点见 `vscStatusTerminalEcho`。
-import { settingsTool } from "../agent-tools/settings.mjs"
+import { settingsTool as coreSettingsTool } from "@thincoder/core/agent-tools/settings.mjs"
 import { resetRunState, reconcileEngDesignTokens, applySlotSessionState } from "./agent-state.mjs"
 import { loadSlot } from "../extension/session-io.mjs"
 import { specForModel } from "../specs.mjs"
@@ -30,13 +30,21 @@ import { expandHome } from "@thincoder/core/expand-home.mjs"
 import { applyPromptInjections } from "@thincoder/core/prompt-files.mjs"
 import { assemblePrompt } from "@thincoder/core/prompt-overlays.mjs"
 import { loadSkills, formatSkillListing, readSkill } from "../extension/skills.mjs"
-import { persistRaw, conflictError, CONFIG_CONFLICT_HINT, loadRaw, loadConsultPool, normalizeProxy, resolveProviders, TRACES_DEFAULTS } from "../config-io.mjs"
+import { vscPersistRaw } from "../extension/settings-panel-write.mjs"
+import { CONFIG_CONFLICT_HINT, conflictError, loadRaw, resolveProviders } from "@thincoder/core/config-io.mjs"
+import { DEFAULTS, normalizeProxy } from "@thincoder/core/config.mjs"
+import { loadConsultPool } from "../extension/presets.mjs"
 import { setSlotEngineering, setSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
 import { configureVerifyDiagnostics } from "@thincoder/core/agent-tools/verify.mjs" // 叶子面（闭包 4 档零 node:sqlite）——静态面安全
 import * as vscode from "vscode"
 import { resolve } from "node:path"
 import { injectRunContext, loadProjectInstructions } from "./context-injections.mjs"
 import { pushTimeReminder, pushInjections, appendImagePointer, pushEnvStateReminder, pushPeerReminder } from "./setup-reminders.mjs"
+
+// W16（2026-09-15）：settings 工具 = 核工厂单源（`@thincoder/core/agent-tools/settings.mjs`
+// `settingsTool(opts)`——本端实例化一次；写盘 = 核 `writeConfigAtomic`（DEFAULTS 全量类型表
+// = A5 已裁「以 CLI 为准」——错类型拒写不再是端侧窄表）。
+const settingsTool = coreSettingsTool()
 
 // PROMPT-SYSTEM 施工② G1（2026-09-10）：旧三件（system.md/discipline.md/main.md）退役——
 // 六件槽位常量装载收口 prompt-overlays.mjs（mod 为槽位内容新家）；本文件不再各自读取。
@@ -112,7 +120,7 @@ async function wireAgentToolSeams() {
         if (p) setSlotEngineering(p.cwd, p.slot, enabled)
       } catch { /* slot unwritable — config mirror still written */ }
       try {
-        const r = persistRaw((raw) => {
+        const r = vscPersistRaw((raw) => {
           raw.agent = raw.agent && typeof raw.agent === "object" ? raw.agent : {}
           raw.agent.engineering = enabled
         })
@@ -427,9 +435,9 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   let cfgWaitForTimeoutMs = undefined // wait_for default override (TOOLS.md §16 — CLI parity); undefined → tool default 30s
   let cfgProviders = []
   let cfgWebsearch = { apiKey: "" } // structured search; empty key → Bing fallback
-  // TRACE-STORE-VSC（D-TR6 镜像——CLI config.mjs DEFAULTS.traces 合并同语义）：traces 段
+  // TRACE-STORE-VSC（D-TR6 镜像——核 config.mjs DEFAULTS.traces 合并同语义）：traces 段
   // 默认 OFF（2026-09-05 发布隐私裁定）——agent.config.traces 由此整建——每轮拾取外部变更
-  let cfgTraces = { ...TRACES_DEFAULTS }
+  let cfgTraces = { ...DEFAULTS.traces }
   try {
     const raw = loadRaw()
     advisorCfg = raw.agent?.advisor ?? { guard: false }
@@ -449,7 +457,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     cfgWaitForTimeoutMs = raw.agent?.waitForTimeoutMs ?? undefined // wait_for timeout override — tool applies its own default/cap when absent
     cfgProviders = resolveProviders().providers // for subagent model overrides
     cfgWebsearch = raw.websearch ?? { apiKey: "" }
-    cfgTraces = { ...TRACES_DEFAULTS, ...(raw.traces ?? {}) }
+    cfgTraces = { ...DEFAULTS.traces, ...(raw.traces ?? {}) }
   } catch { /* config unreadable — defaults */ }
 
   // §11.2.1 槽 reconcile：顶层会话绑定（opts.engPersist = {cwd, slot}）每轮读权威槽（settle

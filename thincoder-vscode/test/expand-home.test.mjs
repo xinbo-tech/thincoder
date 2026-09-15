@@ -14,7 +14,7 @@ import { tmpdir, homedir } from "node:os"
 import { join } from "node:path"
 import { expandHome } from "@thincoder/core/expand-home.mjs"
 import { buildTopLevelAgent, hydrateRun } from "../src/agent/setup.mjs"
-import { _setConfigPathForTest } from "../src/config-io.mjs"
+import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-slots.mjs"
 
 const HOME = join("/home", "u") // 形态断言用注入 home（不依赖真实主目录）

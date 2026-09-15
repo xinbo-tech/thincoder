@@ -19,7 +19,7 @@
  */
 import * as vscode from "vscode"
 import { ensureMemoryHandle } from "../embed-config.mjs"
-import { resolveProviders } from "../config-io.mjs"
+import { resolveProviders } from "@thincoder/core/config-io.mjs"
 import { providerNames, getKey, buildProvider } from "./presets.mjs"
 import { saveModelPrefs } from "./session-io.mjs"
 import { ensureSlot } from "./panel-session.mjs"

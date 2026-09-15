@@ -7,7 +7,7 @@
  */
 
 import { chat } from "@thincoder/core/provider/core.mjs"
-import { PROVIDER_PRESETS } from "../src/config-io.mjs"
+import { PROVIDER_PRESETS } from "@thincoder/core/config.mjs"
 
 // Single source of truth — do NOT hand-maintain a duplicate table (it drifted:
 // deepseek baseURL gained "/v1", minimax pointed at the old .chat host).

@@ -9,13 +9,13 @@
 >
 > 相关权威：`src/provider.mjs（W10 已迁核——现体 `thincoder-core/provider/core.mjs`）`（W10 已迁核——现体 `thincoder-core/provider/core.mjs`；chat/transport 分派）、`src/provider/transports/*`（四
 > transport；W10 已迁核——现体核 `provider/{anthropic,google,sse,responses}.mjs`）、`src/config.mjs`（MODEL_SPECS / specForModel / resolveEnableThinking）、
-> `src/config-presets.mjs`（PROVIDER_PRESETS）、`src/config-io.mjs`（config.json 读写）、
+> `src/config-presets.mjs`（W16 已迁核收口——现体见批次档 §5）（PROVIDER_PRESETS）、`src/config-io.mjs`（W16 已迁核收口——现体见批次档 §5）（config.json 读写）、
 > `src/escape.mjs`（W4 已迁核——现体 `thincoder-core/escape.mjs`）、`src/extension/{settings,presets,provider-flows,reasoning-mode,
 > generate-title,image-handler}.mjs`。
 
 ## 1. 配置存储（共享 config.json）
 
-与 CLI 共享 `~/.thincoder/config.json`。读写核心 `src/config-io.mjs`（纯 Node、无
+与 CLI 共享 `~/.thincoder/config.json`。读写核心 `src/config-io.mjs`（W16 已迁核收口——现体见批次档 §5）（纯 Node、无
 `vscode` 依赖，可单测），面板读写面 `src/extension/settings.mjs` / `presets.mjs`。
 
 - **providers[]**：每项 `{ name, baseURL, model, apiKey?, chatPath?, maxTokens?,
@@ -53,7 +53,7 @@
 
 ## 2. Preset 预设表
 
-`src/config-presets.mjs` `PROVIDER_PRESETS`（镜像 CLI PROVIDER_PRESETS，保持同步）——
+`src/config-presets.mjs`（W16 已迁核收口——现体见批次档 §5）`PROVIDER_PRESETS`（镜像 CLI PROVIDER_PRESETS，保持同步）——
 **20 preset**：deepseek / kimi / kimi-code / glm / glm-code / qwen / qwenplan / mimo /
 mimoplan / minimax / openai / claude / gemini / grok / mistral / volcengine / hunyuan /
 siliconflow / openrouter / groq。claude / gemini 携 `format: "anthropic"` / `"google"`；
@@ -348,7 +348,7 @@ arguments }` 与 openai transport 输出一致，agent 循环零改动。
 
 ### 6.1 MODEL_SPECS / specForModel
 
-`src/config.mjs` MODEL_SPECS 自包含（无外部产品依赖）：`context` / `maxOutput` / `thinking`
+`src/config.mjs`（W16 已迁核收口——现体见批次档 §5）MODEL_SPECS 自包含（无外部产品依赖）：`context` / `maxOutput` / `thinking`
 / `multimodal` / `partialMode` / `prefixMode` / `cacheMode` / `thinkApi`（type/effort）/
 `thinkEnabledValue`（MiniMax `adaptive`）/ `reasoningEcho`（required 必须回传）/
 `reasoningEffortEnum` + `reasoningEffortDefault` / `tempRange` / `noUsageStream` / `format`。

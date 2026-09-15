@@ -18,7 +18,8 @@
 
 import { writeFileSync, mkdirSync } from "node:fs"
 import { join } from "node:path"
-import { resolveProviders, providerFromConfig } from "../config-io.mjs"
+import { resolveProviders } from "@thincoder/core/config-io.mjs"
+import { providerFromConfig } from "./presets.mjs"
 import { findVisionChannel } from "./vision-channel.mjs"
 import { runAgent } from "../agent.mjs"
 

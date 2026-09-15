@@ -54,7 +54,7 @@ parse 失败 → 字符串字面（`:198` `return s`——裸 `abc`）。两端�
 - **校验语义**（`_checkKnownKeyValue`）：未知键原样通过；非 null 叶子 typeof 语义逐字保留；形状表命中键 = `null` 放行（显式清除——消费面均有「未设置」态）+
   不可消费形态抛错（字符串类键拒空串 / 纯空白，`defaultModel` 另需 `provider:model` 形态；`memory.team` 须 `repo` 非空串、额外键放行；`agent.subagentModels` 值须非空串、角色名不校验）；
   错误消息模板值位在敏感键命中时替换为 `••••（masked）`。
-- **加键流程**：`config.mjs` DEFAULTS 一处 + VSC config-io `AGENT_DEFAULTS` 一处 → 护栏自动跟随（消除手写漂移）。
+- **加键流程**：核 `config.mjs` DEFAULTS 一处 → 护栏自动跟随（消除手写漂移——W16：VSC 端侧窄表 `AGENT_DEFAULTS` 已删，双源面收单）。
 - **测试缝导出**（`_` 前缀——`:265`）：`_buildShapeTable` / `_nullLeafPaths` / `_NULL_LEAF_SHAPES` / `_SIBLING_SHAPES` / `_checkKnownKeyValue` / `_checkShapeCompleteness`。
 
 ### 2.7 输出契约
@@ -64,9 +64,9 @@ parse 失败 → 字符串字面（`:198` `return s`——裸 `abc`）。两端�
 
 ### 2.8 VSC 镜像（原则面）
 
-同构移植：config-io 与 CLI 同读共享 `~/.thincoder/config.json`；热应用 = `ctx.agent.config` 内存对象；注册于 depth-0 agentTools（动作级只读分类同款机制）。
-VSC 派生表键空间 = `{ agent: AGENT_DEFAULTS, traces: TRACES_DEFAULTS }`（工具寻址的完整点分路径——`thincoder-vscode/src/agent-tools/settings.mjs:39-40`）；
-VSC 侧逐文件坐标归 VSC 轮（P2）。
+W16（2026-09-15）：VSC 端 = **同一核工具实例化**（`thincoder-vscode/src/agent/setup.mjs` 取 `settingsTool(opts)` 工厂；写盘 = 核 `writeConfigAtomic`）；热应用 = `ctx.agent.config` 内存对象；注册于 depth-0 agentTools（动作级只读分类同款机制，`isReadonlyAction` 端面）。
+键空间 = 核 `DEFAULTS` 全量（A5 已裁「以 CLI 为准（全量类型校验）」——原端侧窄表 `thincoder-vscode/src/agent-tools/settings.mjs:39-40`（已删）的 `AGENT_DEFAULTS`/`TRACES_DEFAULTS` 键空间退场）；
+VSC 端测试坐标 = `thincoder-vscode/test/settings-tool.test.mjs`（8 例——双缝并用：写侧 `settingsTool({ configPath })` + 读侧 `_setConfigPathForTest`）。
 
 ### 2.9 无静默论证（判据形式——要点）
 
@@ -106,7 +106,7 @@ VSC 侧逐文件坐标归 VSC 轮（P2）。
 | 原子写盘 | `thincoder-core/config.mjs`（`writeConfigAtomic`——`:29` export；DEFAULTS / configPath 同档） |
 | CLI 装配 | `thincoder-cli/src/cli/make-agent.mjs`（baseTools）；dispatch 动作级只读分类（list/get 放行） |
 | 读取器判据点 | `thincoder-core/config.mjs:277`（defaultModel 非串→null）· `thincoder-cli/src/cli/make-agent.mjs:150`（`!team?.repo`）· `thincoder-core/agent-tools/subagent-spawn.mjs:92`（subagentModels 回落）· `thincoder-core/tools/bash.mjs:131`（`shell ?? true`） |
-| 测试档 | `thincoder-cli/test/settings.test.mjs`（T-S2 族 25 例）· VSC 镜像 `thincoder-vscode/test/settings-tool.test.mjs`（6 例——VSC 轮坐标） |
+| 测试档 | `thincoder-cli/test/settings.test.mjs`（T-S2 族 25 例）· VSC 端 `thincoder-vscode/test/settings-tool.test.mjs`（8 例——W16 已改指核工具；双缝并用） |
 
 ## 6. 不并项与历史沿革
 
@@ -129,7 +129,7 @@ VSC 侧逐文件坐标归 VSC 轮（P2）。
 
 ## 7. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **140 行**（根层新建 · as-of 2026-09-15）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **142 行**（as-of 2026-09-15 W16 实测）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
@@ -137,3 +137,4 @@ VSC 侧逐文件坐标归 VSC 轮（P2）。
   （旧档一字未改、原地作参照历史）；坐标改写为现状路径并逐条实核（`thincoder-core/agent-tools/settings.mjs` · `thincoder-core/config.mjs` ·
   `thincoder-cli/src/cli/make-agent.mjs` 等）；null 形状表 / 完备性锁 / parseValue 去引号裁定按现行实装落笔；批次材料 / 用例与 AC 编号集 /
   逐字文案稿 / 受影响文件快照不并（§6）；VSC 逐文件坐标归 VSC 轮（P2）。
+- 2026-09-15（**W16 实施轮 · eng-coder**）：§2.6 加键流程收单（核 DEFAULTS 一处——端侧窄表已删）；§2.8 VSC 镜像改「同一核工具实例化」现状（键空间 = 核全量 DEFAULTS；端侧测试坐标改指）；§5 测试坐标收正；§7 行数重核。

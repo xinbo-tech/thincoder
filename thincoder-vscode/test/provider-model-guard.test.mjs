@@ -26,7 +26,7 @@ import assert from "node:assert/strict"
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { _setConfigPathForTest } from "../src/config-io.mjs"
+import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest, slotPath } from "../src/extension/session-io.mjs"
 
 let dir

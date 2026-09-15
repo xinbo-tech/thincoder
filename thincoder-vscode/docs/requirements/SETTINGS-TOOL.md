@@ -2,7 +2,7 @@
 
 > 板块：`settings` 工具（agent 可调的配置面）。需求层文档（`docs/requirements/`）。
 > 定位：本仓机制实况登记——实现 `src/agent-tools/settings.mjs`（261 行）；注册面 `src/agent/setup.mjs`（主 agent 只读动作集）；
-> 写盘面 = 共享 `~/.thincoder/config.json`（`src/config-io.mjs`）；部分承载 = `docs/design/TOOLS.md` §5。
+> 写盘面 = 共享 `~/.thincoder/config.json`（`src/config-io.mjs`（W16 已迁核收口——现体见批次档 §5））；部分承载 = `docs/design/TOOLS.md` §5。
 > 跨端：与 CLI 仓同名需求档语义同源（同源形状表）；本端独立实现。
 
 ## 1. 总体目标

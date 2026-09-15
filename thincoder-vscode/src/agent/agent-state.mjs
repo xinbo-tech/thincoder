@@ -9,7 +9,8 @@
 // 过期判定改指核 `@thincoder/core/token-ttl.mjs`（`tokenExpired`——单一权威；畸形 token 不判过期
 // = 核语义：门禁格式拒、不主动删）。`extractTokenUUID` 核无同名导出 ⇒ 本地一行式（uuid 段）。
 import { tokenExpired } from "@thincoder/core/token-ttl.mjs"
-import { TRACES_DEFAULTS } from "../config-io.mjs"
+// W16：traces 默认值 = 核 DEFAULTS.traces（单一来源——原 config-io TRACES_DEFAULTS 随删旧退场）。
+import { DEFAULTS } from "@thincoder/core/config.mjs"
 
 /** designId 键 = token 的 uuid 段（原 `advisor.mjs` extractTokenUUID 语义逐字）。 */
 const tokenUUID = (token) => String(token).split(":")[0]
@@ -102,7 +103,7 @@ export function applySlotSessionState(agent, { slot, engState, planModeOverride 
     // 定义——chat 调用点 `agent.config.traces.enabled !== false` 反映真实开关（缺省 off，
     // 记录绝不因 cfg 缺键意外开启）。settings 工具 hot-apply（setKeyPath → config 对象）
     // 对 traces.enabled 同键生效。
-    traces: cfg.traces ? { ...cfg.traces } : { ...TRACES_DEFAULTS },
+    traces: cfg.traces ? { ...cfg.traces } : { ...DEFAULTS.traces },
   }
   agent._planMode = planModeOverride !== undefined ? planModeOverride === true : (slot?.planMode === true)
   // engDesignTokens：内存保留 + 槽权威合入（slot 优先；无槽绑定（子代理/直连）回退 opts.engState 载体）

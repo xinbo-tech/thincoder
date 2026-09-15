@@ -11,9 +11,10 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync, readFileSync } from "nod
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import {
-  loadRaw, resolveProviders, providerFromConfig, resolveDefaultModel,
-  _setConfigPathForTest, migrateLegacyModelFields, PROVIDER_PRESETS,
-} from "../src/config-io.mjs"
+  loadRaw, resolveProviders, _setConfigPathForTest,
+} from "@thincoder/core/config-io.mjs"
+import { migrateLegacyModelFields, PROVIDER_PRESETS } from "@thincoder/core/config.mjs"
+import { providerFromConfig, resolveDefaultModel } from "../src/extension/presets.mjs"
 
 let dir
 function tmpCfg(content) {

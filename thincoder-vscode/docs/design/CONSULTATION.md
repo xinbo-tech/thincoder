@@ -129,7 +129,7 @@ received, total, models }`。settle 语义：正常回复入队；`session.stopp
 | settle → digest | 全 settle park `history._pendingConsultResults` → agent.mjs run-start 注入（splice 即 consumed——单注入点） |
 | 驱动/中止 | extension/suspension.mjs poolLive + 消化判据推广；`cleanupConsultSessions`（普通回合收尾不再 abort——仅中止分支） |
 | 面板 | `onSubagent` consult 事件 → R22 底部活动面板/冻结入流（回复 preview ≤8KB） |
-| 配置入口 | Settings 面板（`src/config-io.mjs` 默认/透传 consultTurns/consultTimeoutMs/consultModels） |
+| 配置入口 | Settings 面板（`src/config-io.mjs`（W16 已迁核收口——现体见批次档 §5）默认/透传 consultTurns/consultTimeoutMs/consultModels） |
 
 ### 2.5 关键决策记录
 

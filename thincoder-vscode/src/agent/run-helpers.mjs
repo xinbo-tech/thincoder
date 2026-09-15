@@ -4,7 +4,7 @@
  */
 import { writeFileSync, mkdirSync, existsSync, readdirSync, statSync, unlinkSync } from "node:fs"
 import { join } from "node:path"
-import { loadAgentSettings } from "../config-io.mjs"
+import { loadRaw } from "@thincoder/core/config-io.mjs"
 import { isCodePath, loadConventions } from "@thincoder/core/conventions.mjs"
 
 /** File-modifying tools — the engineering design gate blocks these before review passes (CLI parity). */
@@ -16,7 +16,7 @@ const DEFAULT_MAX_TURNS = 200
 /** Top-level turn limit from the shared config.json (CLI agent.maxTurns), with local default fallback. */
 export function configuredMaxTurns() {
   try {
-    return loadAgentSettings().maxTurns
+    return loadRaw().agent?.maxTurns ?? DEFAULT_MAX_TURNS
   } catch { return DEFAULT_MAX_TURNS }
 }
 

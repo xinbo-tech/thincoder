@@ -18,7 +18,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { runAgent } from "../../src/agent.mjs"
-import { _setConfigPathForTest } from "../../src/config-io.mjs"
+import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
 import { mockLLM, providerFor } from "./helpers/mock-llm.mjs"
 
 let work

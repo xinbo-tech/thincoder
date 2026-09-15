@@ -1,13 +1,25 @@
 /**
- * settings-panel-write.mjs — ChatPanel 面板写面（MODEL-MERGE-SESSION 拆分产物：自
- * config-io.mjs 迁出——config-io 需容纳 schema 镜像/迁移/解析增长——拆分先行）。
+ * settings-panel-write.mjs — ChatPanel 面板写面（MODEL-MERGE-SESSION 拆分产物）+
+ * VSC 端写盘通道（W16：`$schema` 注入缝供值)。
  * 纯 Node——无 vscode import——单测可在 extension host 外运行。
- * 面板写面 = saveAgentSettingsFromPanel（agent.* + defaultModel 顶层单写通道）+ 
- * saveShellSettingsFromPanel——config-io.mjs hub re-export（import 面不变——
- * settings.mjs/tests 照旧）。
+ * 面板写面 = saveAgentSettingsFromPanel（agent.* + defaultModel 顶层单写通道）+
+ * saveShellSettingsFromPanel；
+ * 写盘通道 = `vscPersistRaw`（核 persistRaw + 本端 `$schema` 指针注入——CORE-UNIFICATION
+ * §2.13.3 `opts.schema` 缝；本端直写面统一经此）。
  */
-import { persistRaw, conflictError, loadAgentSettings, loadRaw, sanitizeConsultModels, probeTargetFromEntry } from "../config-io.mjs"
+import { persistRaw, conflictError, loadRaw } from "@thincoder/core/config-io.mjs"
+import { probeTargetFromEntry, sanitizeConsultModels } from "./presets.mjs"
 import { probeChannelModels } from "@thincoder/core/provider/list-models.mjs"
+
+/** VSC 端 `$schema` 指针（§2.5 #80 端差——本端写盘注入；CLI 不注入）。 */
+export const VSC_CONFIG_SCHEMA = "https://thincoder.dev/schemas/config.json"
+
+/** VSC 端写盘通道：核单一写盘执行体 + 本端 `$schema` 指针注入（CORE-UNIFICATION §2.13.3
+ *  `opts.schema` 缝——未注入 ⇒ 无 `$schema` 键；注入 ⇒ 键在场且值 = 注入值）。
+ *  本端各直写面（面板写面 / MCP 段 / 迁移写回 / eng 镜像）统一经此。 */
+export function vscPersistRaw(mutate) {
+  return persistRaw(mutate, { schema: VSC_CONFIG_SCHEMA })
+}
 
 /** 单写通道：agent.* 键合并语义 = config-io saveAgentSettings（delete on
  *  undefined/null/""/空对象）——同文件内联执行（defaultModel 顶层 + agent 一次落盘——
@@ -98,7 +110,7 @@ export function saveAgentSettingsFromPanel(payload) {
     // keys — "slot missing" and "explicitly cleared" must stay distinguishable on the wire).
     // advisor.enabled is deprecated (2026-08-21) — never written; guard defaults OFF.
     const adv = payload.advisor ?? {}
-    const current = loadAgentSettings().advisor ?? {}
+    const current = loadRaw().agent?.advisor ?? {}
     // Seed from disk: every scalar/plain-object advisor key survives the merge.
     // Arrays (and functions, which JSON files can't have) are never written by either
     // side — don't resurrect them.
@@ -127,7 +139,7 @@ export function saveAgentSettingsFromPanel(payload) {
     delete merged.enabled // deprecated 2026-08-21 — never resurrect a stale key
     patch.advisor = merged
   }
-  const r = persistRaw((raw) => {
+  const r = vscPersistRaw((raw) => {
     // defaultModel = 顶层键（F-5 VSC 面板入口——provider:model 复合）
     if ("defaultModel" in payload) {
       const v = payload.defaultModel
@@ -145,7 +157,7 @@ export function saveAgentSettingsFromPanel(payload) {
  *  F5b 冲突提示同 saveAgentSettings。 */
 export function saveShellSettingsFromPanel(value) {
   const v = typeof value === "string" ? value.trim() : ""
-  const r = persistRaw((raw) => {
+  const r = vscPersistRaw((raw) => {
     if (!v) delete raw.shell
     else raw.shell = v
   })

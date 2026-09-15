@@ -23,7 +23,7 @@ import { join } from "node:path"
 import { memoryTool } from "../src/memory-tool.mjs"
 import { applyEngineFloorGuard } from "../extension.mjs"
 import { _resetMemoryHandleForTest, ensureMemoryHandle, memoryFor, projectMemoryDir } from "../src/embed-config.mjs"
-import { _setConfigPathForTest } from "../src/config-io.mjs"
+import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
 
 let root, home, cwd
 const savedEnv = {}

@@ -17,11 +17,17 @@ import * as vscode from "vscode"
 import files from "./files.mjs"
 import { startConfigWatch } from "../src/extension/config-watch.mjs"
 import { RelativePattern } from "vscode"
-import { _setConfigPathForTest, loadRaw, saveRaw, onConfigSelfWrite } from "../src/config-io.mjs"
+import { _setConfigPathForTest, loadRaw, persistRaw, onConfigSelfWrite } from "@thincoder/core/config-io.mjs"
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const watchers = () => vscode.workspace.fileSystemWatchers
 const lastWatcher = () => watchers().at(-1)
+
+/** 整对象写回（旧 VSC config-io `saveRaw(raw)` 语义——W16 后本端写盘执行体 = 核 persistRaw）。 */
+const saveRaw = (raw) => persistRaw((r) => {
+  for (const k of Object.keys(r)) delete r[k]
+  Object.assign(r, raw)
+})
 
 let _tmp
 let _cfg
@@ -70,17 +76,20 @@ test("T-S3 自写抑制（N5/AC-S2）：saveRaw 自写成功 → 事件零推送
   const w = startConfigWatch({ onChange: () => { n++ }, configPath: _cfg, debounceMs: 20 })
   const raw = loadRaw()
   raw.marker = "self"
-  assert.equal(saveRaw(raw), undefined, "写成功（无冲突对象）")
+  assert.deepEqual(saveRaw(raw), { ok: true }, "写成功（无冲突）")
   lastWatcher()._fire("change")
   await sleep(70)
   assert.equal(n, 0, "自写 → 基线已随 saveRaw 刷新 → 事件到达零推送（不抖动面板）")
 
-  // 冲突放弃路径（无写即无自写）：loadRaw 记基线 → 外部改 → saveRaw 放弃 → 零自写回调
+  // 冲突放弃路径（无写即无自写）——W16 收正：冲突检测口径 = 核 writeConfigAtomic 的
+  // stat→read 写窗（跨调用读基线随 config-io 退场——核内唯一写盘执行体已裁）；
+  // 驱动：写窗内他端改盘（mutate 内写文件）→ t1 ≠ t0 → 放弃 + 零自写回调。
   const probes = []
   const unsub = onConfigSelfWrite(() => probes.push(1))
-  loadRaw()
-  writeFileSync(_cfg, JSON.stringify({ v: 3, ext: true })) // 外部写
-  const r2 = saveRaw({ v: 4, marker: "clash" })
+  const r2 = persistRaw((r) => {
+    writeFileSync(_cfg, JSON.stringify({ v: 3, ext: true })) // 他端在本次写窗内改盘（模拟并发）
+    r.marker = "clash"
+  })
   unsub()
   assert.deepEqual(r2, { ok: false, reason: "mtime-conflict" }, "冲突 → 放弃不写")
   assert.equal(probes.length, 0, "放弃路径零自写回调")

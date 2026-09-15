@@ -92,7 +92,7 @@ embedding key + 构建按钮 + 状态；向量维度/模型切换的校验与可
 | D-S2 | 去抖 + stat 元组抑制 + **自写后基线回填**（契约——评审 #2 采纳 ①） | 裸推送：扩展自写与外部写不可区分——面板会在用户编辑中被快照重建（`_pushSettingsLight` 注释明载该风险） |
 | D-S3 | 新模块 + `extension.mjs` 装配（不塞入 `chat-panel.mjs`/`panel-messages.mjs`） | 后两者 420/468 行贴线；watcher 生命周期属扩展宿主级（非面板级） |
 
-**受影响文件（实施域）**：`src/extension/config-watch.mjs`（新 → ~65——含基线/自写订阅面）· `src/config-io.mjs`
+**受影响文件（实施域）**：`src/extension/config-watch.mjs`（新 → ~65——含基线/自写订阅面）· `src/config-io.mjs`（W16 已迁核收口——现体见批次档 §5）
 （455 → ~465——`onConfigSelfWrite` 订阅面 + `saveRaw` 写成功回调）· `extension.mjs`（83 → ~92）·
 `test/config-watch.test.mjs`（新 → ~110）· `test/vscode-mock/index.mjs`（141 → ~162——补 `createFileSystemWatcher` + `RelativePattern` 两枚 mock）· `test/files.mjs`（55 → 58——本批三新档合计 +3；本面 +1）。
 
@@ -174,4 +174,4 @@ embedding key + 构建按钮 + 状态；向量维度/模型切换的校验与可
 - 2026-09-11：第 21 批（VSC 设置面）——新增 §2.6 外部写感知（config.json 事件驱动刷新——B5）；
   §2.5 校验缺口指针由 `docs/TODO.md` 改指 `MEMORY.md` §4（本批收口）。
 - 2026-09-11：第 21 批修正轮（设计评审轮次 1——#2 采纳 ① 基线回填）：§2.6 契约补 `noteSelfWrite`/`onConfigSelfWrite`
-  接口与时机 + D-S2 注记 + T-S3 改真实自写序列（+T-S3b）+ 受影响文件 +`src/config-io.mjs`。
+  接口与时机 + D-S2 注记 + T-S3 改真实自写序列（+T-S3b）+ 受影响文件 +`src/config-io.mjs`（W16 已迁核收口——现体见批次档 §5）。

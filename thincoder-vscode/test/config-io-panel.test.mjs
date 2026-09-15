@@ -10,12 +10,11 @@ import assert from "node:assert/strict"
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { _setConfigPathForTest } from "../src/config-io.mjs"
-import { saveAgentSettingsFromPanel } from "../src/extension/settings-panel-write.mjs"
+import { _setConfigPathForTest, loadRaw } from "@thincoder/core/config-io.mjs"
+import { saveAgentSettingsFromPanel, VSC_CONFIG_SCHEMA } from "../src/extension/settings-panel-write.mjs"
 import { _setProbeImplForTest } from "@thincoder/core/provider/list-models.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest, slotPath } from "../src/extension/session-io.mjs"
 import { handlePanelMessage } from "../src/extension/panel-messages.mjs"
-import { loadRaw } from "../src/config-io.mjs"
 
 let dir
 let cfgPath
@@ -51,6 +50,8 @@ test("白名单：defaultModel 面板键写 raw.defaultModel（顶层——非 a
   const raw = loadRaw()
   assert.equal(raw.defaultModel, "kimi:kimi-k3")
   assert.equal(raw.agent.maxTurns, 99, "agent.* 合并语义不变")
+  // W16：面板写盘 = 本端写盘通道——`$schema` 指针在场（CORE-UNIFICATION §2.13.3 `opts.schema` 缝注入断言）
+  assert.equal(raw.$schema, VSC_CONFIG_SCHEMA, "面板写盘注入 $schema 指针")
   // 清空（'' = 显式删除）
   saveAgentSettingsFromPanel({ defaultModel: "" })
   assert.equal("defaultModel" in loadRaw(), false)

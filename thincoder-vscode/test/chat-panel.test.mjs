@@ -28,7 +28,7 @@ import { runPanelChat } from "../src/extension/panel-chat.mjs"
 import { resolveTurnModelAndStamp } from "../src/extension/turn-model.mjs"
 import { atComplete } from "../src/extension/panel-index.mjs"
 import { ChatPanel } from "../src/extension/chat-panel.mjs"
-import { _setConfigPathForTest } from "../src/config-io.mjs"
+import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-io.mjs"
 
 // ─── 环境隔离（组④ 走真实 runPanelChat——provider 解析 + 会话目录读全部指向临时目录）───

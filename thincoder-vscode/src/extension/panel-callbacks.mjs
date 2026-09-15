@@ -6,7 +6,7 @@
  * panel + 阶段产物（cwd/p/lines/槽位/autoTurn）作 deps——verbatim 移动，语义零变。
  */
 
-import { ctxPercentForModel } from "../config.mjs"
+import { ctxPercentForModel } from "../specs.mjs"
 import { extractFileLinks } from "./file-links.mjs"
 import { permissionGate, batchPermissionGate } from "./permission-gate.mjs"
 import { notifyCompletionIfUnfocused } from "./notify.mjs"

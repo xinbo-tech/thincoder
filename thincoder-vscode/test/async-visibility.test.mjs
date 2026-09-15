@@ -27,7 +27,7 @@ import { handlePanelMessage, _cwd } from "../src/extension/panel-messages.mjs"
 import { loadSession } from "../src/extension/panel-session.mjs"
 import { ChatPanel } from "../src/extension/chat-panel.mjs"
 import { newSlot, _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-io.mjs"
-import { _setConfigPathForTest } from "../src/config-io.mjs"
+import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
 import { setupWebview, installChatFixture } from "./helpers/webview-env.mjs"
 
 let _tmp

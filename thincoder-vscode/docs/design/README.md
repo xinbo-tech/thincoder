@@ -93,7 +93,7 @@
 - 2026-08-21：初版（文档归属纪律，规格见 CLI `docs/design/AGENT-LOOP.md` §12 及本仓库 `ARCHITECTURE.md` 同步段）
 - 2026-08-24：新增板块「Agent 运行参数」（AGENT-PARAMS-*）与「工具输出限制」（TOOL-OUTPUT-LIMITS-*）
 - 2026-08-25：新增「轮末蒸馏异步化」（SEND-STALL-DISTILL-*）、「工具移除」（SLEEP-REMOVAL-*）、「覆盖率缺口修复」（COVERAGE-GAPS-*）；Settings 6 份历史批次文档合并入 `SETTINGS.md`
-- 2026-09-06：README provider 数量修正（17→20——补 GLM Coding Plan / MiMo / MiMo Token Plan，与 `src/config-presets.mjs` PROVIDER_PRESETS 对齐）；其余文档质量观察项见会话记录，未入库
+- 2026-09-06：README provider 数量修正（17→20——补 GLM Coding Plan / MiMo / MiMo Token Plan，与 `src/config-presets.mjs`（W16 已迁核收口——现体见批次档 §5）PROVIDER_PRESETS 对齐）；其余文档质量观察项见会话记录，未入库
 - 2026-09-06：会话目录残留 GC + 标题写显性化（机制权威源 `SESSION（CLI 仓·设计）` §12）——VSC 端 eng-coder 交付：`src/extension/session-gc.mjs`（残留 GC + 冷 cwd 原语，CLI 同源移植；F2 手动执行面仅 CLI `thincoder session gc`）+ setSlotTitle `{ok, reason}` 契约（session-io.mjs）+ 面板调用方适配（panel-messages/panel-session）+
   `test/session-gc.test.mjs`（已删除——删除记录 = 3b974ae · 2026-09-07「测试清空」批）
 - 2026-09-08：文档格式债清理批——**归档 11 件移 `_archive/`**（SETTINGS-PANEL(-2)/PROXY-ROW/REORG/SUBMODEL-SHELL/MODEL-PICKER-UNIFY + COVERAGE-GAPS 对 + SLEEP-REMOVAL 对 + webview-input-lag）并更新登记；整文件单行 demux 为多行 markdown；归属规则加**规则 6（文档人类可读防复发）**——配 `scripts/check-doc-width.mjs` 批量检查。

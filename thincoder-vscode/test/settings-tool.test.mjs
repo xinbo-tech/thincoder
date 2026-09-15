@@ -1,30 +1,37 @@
 /**
  * settings-tool.test.mjs — SETTINGS-TOOL 第 8 批（null 默认值键形状约束——2026-09-11）VS Code 面
- * + 第 12 批（同族键 `agent.subagentModels` 第 4 条——2026-09-11）。
- * 用例 T-S2.30–T-S2.37（8 例）：本端 null 叶子（`agent.subagentModel` / `agent.compactThreshold`）
- * + 跨端 3 键（`defaultModel` / `shell` / `memory.team`——住在共享 config.json，由 CLI 读侧消费）
- * + 同族 1 键（`agent.subagentModels` roleMap——本端读侧消费）+ 防漂移锁 + 描述句逐字（N-S1.4）。
- * 测试缝：`config-io.mjs _setConfigPathForTest`（本端读写同缝——无需双缝）+ `_` 形状表/校验器导出。
+ * + 第 12 批（同族键 `agent.subagentModels`——2026-09-11）。
+ * W16（2026-09-15）：settings 工具 = **核单源工厂**（`@thincoder/core/agent-tools/settings.mjs`
+ * `settingsTool(opts)`——#87/A5 已裁「以 CLI 为准」：类型表由核全量 DEFAULTS 派生）；本档改判
+ * 逐例：核形状表四键（`defaultModel` / `agent.subagentModel` / `shell` / `memory.team`）+
+ * 同族一键（`agent.subagentModels`）+ 派生表逐键对拍 + 描述句（核逐字）。
+ * 测试缝（双缝并用）：写侧 = `settingsTool({ configPath })`；读侧 = `_setConfigPathForTest`——
+ * 同一临时文件（CLI 先例 `thincoder-cli/test/settings.test.mjs`）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { AGENT_DEFAULTS, TRACES_DEFAULTS, _setConfigPathForTest } from "../src/config-io.mjs"
-import {
-  settingsTool, _buildShapeTable, _nullLeafPaths, _NULL_LEAF_SHAPES, _SIBLING_SHAPES, _checkShapeCompleteness,
-} from "../src/agent-tools/settings.mjs"
+import { settingsTool, _buildShapeTable, _nullLeafPaths, _NULL_LEAF_SHAPES, _SIBLING_SHAPES, _checkShapeCompleteness } from "@thincoder/core/agent-tools/settings.mjs"
+import { DEFAULTS, _setConfigPathForTest } from "@thincoder/core/config.mjs"
+
+/** 当前沙箱 config 路径（写侧工具实例化用——双缝同指）。 */
+let _cfgPath = null
+/** 写侧：核工厂实例（configPath = 当前沙箱——不触真实用户配置）。 */
+const tool = () => settingsTool({ configPath: _cfgPath })
 
 async function withCfg(content, fn) {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-vsc-settings-tool-"))
   const p = join(dir, "config.json")
   writeFileSync(p, JSON.stringify(content, null, 2) + "\n", "utf8")
   _setConfigPathForTest(p)
+  _cfgPath = p
   try {
     return await fn(p)
   } finally {
     _setConfigPathForTest(null)
+    _cfgPath = null
     rmSync(dir, { recursive: true, force: true })
   }
 }
@@ -34,7 +41,7 @@ const diskOf = (p) => JSON.parse(readText(p))
 
 async function trySet(key, value, ctx) {
   try {
-    return { ok: true, message: await settingsTool.execute({ action: "set", key, value }, ctx) }
+    return { ok: true, message: await tool().execute({ action: "set", key, value }, ctx) }
   } catch (e) {
     return { ok: false, message: e.message }
   }
@@ -57,17 +64,17 @@ test("T-S2.30 本端 null 叶子：set agent.subagentModel 非空串接受；对
   })
 })
 
-test("T-S2.31 本端 null 叶子（边界）：agent.compactThreshold number ∪ null 接受；字符串/对象拒绝", async () => {
+test("T-S2.31 派生表 number 叶子：agent.compactThreshold number 接受；字符串/对象/null 拒绝（W16 改判）", async () => {
   await withCfg({}, async (p) => {
     const ctx = { agent: { config: {} } }
     const ok = await trySet("agent.compactThreshold", "100000", ctx)
     assert.equal(ok.ok, true, ok.message)
     assert.equal(diskOf(p).agent.compactThreshold, 100000)
-    const nul = await trySet("agent.compactThreshold", "null", ctx)
-    assert.equal(nul.ok, true, nul.message)
-    assert.equal(diskOf(p).agent.compactThreshold, null, "null = auto（显式清除态）")
     const before = readText(p)
-    for (const v of ['"100000"', "{}"]) { // '"100000"' → 解析为字符串（VSC parseValue 返回解析值）
+    // W16 改判：核 DEFAULTS.agent.compactThreshold = 100000（number 叶子——非 null 形状表），
+    // 故 `null` 现按类型拒（原 VSC 窄表把该键列为 null 叶子收 null=auto——A4/A5 已裁「以 CLI
+    // 为准（全量类型表）」；VSC 面板清空路径 = undefined 删键，不经该值）。
+    for (const v of ['"100000"', "{}", "null"]) {
       const r = await trySet("agent.compactThreshold", v, ctx)
       assert.equal(r.ok, false, `${v} 应拒绝`)
       assert.match(r.message, /expects number/)
@@ -103,12 +110,13 @@ test("T-S2.32 跨端三键：不可消费形态拒绝（未落地前零条目 = 
   })
 })
 
-test("T-S2.33 防漂移（N-S1.5）：本端 null 叶子锁（2 键）+ 跨端/同族 4 键存在性 + 未声明键捕获", () => {
-  assert.deepEqual(Object.keys(_NULL_LEAF_SHAPES).sort(), _nullLeafPaths({ agent: AGENT_DEFAULTS }).sort(), "本端 null 叶子键集 == _NULL_LEAF_SHAPES 键集")
-  for (const k of ["defaultModel", "shell", "memory.team", "agent.subagentModels"]) assert.ok(k in _SIBLING_SHAPES, `${k} ∈ _SIBLING_SHAPES（存在性断言——不参与集合相等）`)
-  assert.equal(Object.keys(_SIBLING_SHAPES).length, 4, "跨端 3 + 同族 1 = 4 条（第 12 批第 4 条；与 TOOLS 档计数一致）")
+test("T-S2.33 防漂移（N-S1.5）：核 null 叶子锁（4 键）+ 同族 1 键存在性 + 未声明键捕获", () => {
+  assert.deepEqual(Object.keys(_NULL_LEAF_SHAPES).sort(), _nullLeafPaths(DEFAULTS).sort(), "核 null 叶子键集 == _NULL_LEAF_SHAPES 键集（相等面）")
+  for (const k of ["defaultModel", "agent.subagentModel", "shell", "memory.team"]) assert.ok(k in _NULL_LEAF_SHAPES, `${k} ∈ _NULL_LEAF_SHAPES（W16：跨端三键与本端键同居核表）`)
+  for (const k of ["agent.subagentModels"]) assert.ok(k in _SIBLING_SHAPES, `${k} ∈ _SIBLING_SHAPES（存在性断言——不参与集合相等）`)
+  assert.equal(Object.keys(_SIBLING_SHAPES).length, 1, "同族 1 条（与核 TOOLS 档计数一致）")
   const warns = []
-  const missing = _checkShapeCompleteness({ agent: { compactThreshold: null, freshKey: null } }, (m) => warns.push(m))
+  const missing = _checkShapeCompleteness({ agent: { freshKey: null } }, (m) => warns.push(m))
   assert.deepEqual(missing, ["agent.freshKey"], "未声明 null 叶子被捕获")
   assert.equal(warns.length, 1, "一次性警告")
   assert.match(warns[0], /agent\.freshKey/, "警告列出键名")
@@ -123,20 +131,19 @@ test("T-S2.34 防漂移：派生表非 null 叶子逐键对拍旧实现（agent.
     }
     return out
   }
-  const root = { agent: AGENT_DEFAULTS, traces: TRACES_DEFAULTS } // 与类型表同根（键空间 = 工具寻址路径）
-  const derived = _buildShapeTable(root)
-  for (const [k, v] of Object.entries(oldBuildTypeMap(root))) {
+  const derived = _buildShapeTable(DEFAULTS) // 派生根 = 核全量 DEFAULTS（工具寻址路径）
+  for (const [k, v] of Object.entries(oldBuildTypeMap(DEFAULTS))) {
     if (v === "object") continue // null 叶子（派生规则未变——其约束由形状表接管）
     assert.equal(derived[k], v, `${k} 派生结果与旧实现逐键相等`)
   }
   assert.equal(derived["agent.maxTurns"], "number")
   assert.equal(derived["traces.enabled"], "boolean")
   assert.equal(derived["agent.consultModels"], "array")
-  // 键空间归一（裸名 → `agent.*` 全路径——本批，CLI parity）后：非 null 叶子类型校验在 VSC 实际生效
+  // 非 null 叶子类型校验实际生效（核全量域路径归一）
   await withCfg({}, async (p) => {
     const ctx = { agent: { config: {} } }
     const bad = await trySet("agent.maxTurns", "abc", ctx)
-    assert.equal(bad.ok, false, "非 null 叶子类型不符 → 拒（归一后生效）")
+    assert.equal(bad.ok, false, "非 null 叶子类型不符 → 拒")
     assert.match(bad.message, /expects number/)
     const good = await trySet("agent.maxTurns", "200", ctx)
     assert.equal(good.ok, true, good.message)
@@ -144,9 +151,9 @@ test("T-S2.34 防漂移：派生表非 null 叶子逐键对拍旧实现（agent.
   })
 })
 
-test("T-S2.35 文案：工具 description 逐字断言（§8.6 VSC 新句——整句出现）", () => {
-  const NEW_SENTENCE = "Known keys are type-checked: scalar keys against the built-in defaults (agent.maxTurns a number, traces.enabled a boolean); keys whose default is null (or that live only in the shared config.json) against their real consumption shape — defaultModel \"provider:model\", agent.subagentModel / shell non-empty string, agent.compactThreshold a number, memory.team object with a repo — so a value the app would silently drop is refused (null clears the key). Unknown keys under a known section are stored as given. Values parse as JSON first (true/false/numbers/objects/arrays), else stay strings."
-  assert.ok(settingsTool.description.includes(NEW_SENTENCE), "新句整句逐字出现")
+test("T-S2.35 文案：核工具 description 逐字断言（W16 收正——以 CLI 为准；原 VSC 括注句退场）", () => {
+  const NEW_SENTENCE = "Known keys are type-checked: scalar keys against the built-in defaults (agent.maxTurns a number, traces.enabled a boolean); keys whose default is null against their real consumption shape — defaultModel \"provider:model\", agent.subagentModel / shell non-empty string, memory.team object with a repo — so a value the app would silently drop is refused (null clears the key). Unknown keys under a known section are stored as given. Values parse as JSON first (true/false/numbers/objects/arrays), else stay strings."
+  assert.ok(settingsTool({ configPath: "x" }).description.includes(NEW_SENTENCE), "核句整句逐字出现")
 })
 
 test("T-S2.36 同族键（角色映射）：roleMap 接受落盘；字符串 / 数组 / 含空串值拒绝（磁盘零变化）", async () => {

@@ -10,16 +10,18 @@
 
 ## 1. 归属与范围（自本档行内容的路径归纳）
 
-| 面 | CLI 档 | VSC 档 |
+> **W16 现况（2026-09-15）**：配置面两端均已迁核——加载器 / 迁移 / 预设表 = 核单源；VSC 端侧镜像（`src/config-io.mjs` 等 6 档）**已删**，端侧只留消费面（写盘通道 / 监视 / 迁移 glue / provider 访问层）。下表“现体”列 = 当前落点；历史映射（U14 前 / W16 前）见各单元批次档。
+
+| 面 | CLI 档（现体） | VSC 档（现体） |
 |---|---|---|
-| 装载器 / 默认值 | `thincoder-cli/src/config.mjs` | `thincoder-vscode/src/config-io.mjs` |
-| 迁移 | `src/config-migrate.mjs` | `src/config-migrate.mjs` |
-| 分段配置 | （内联于 `config.mjs`） | `src/config-presets.mjs` · `config-consult.mjs` · `config-mcp.mjs` · `embed-config.mjs` |
-| 写盘面 / 面板 | `src/cli/`（TUI 侧） | `src/extension/settings-panel-write.mjs` · `extension/settings.mjs` · `config-watch.mjs` · `migrate-settings.mjs` |
-| settings 工具 | `src/agent-tools/settings.mjs` | 同名（同路径对） |
-| 路径展开 | `src/expand-home.mjs` | 同名（同路径对） |
-| 代理 | `src/proxy.mjs` | 同名（同路径对） |
-| 供应商增删 / 密钥 / 激活 | `src/cli/setup-wizard.mjs` · `src/tui/model-picker.mjs` | `src/extension/settings.mjs` · `provider-flows.mjs` · `presets.mjs` |
+| 装载器 / 默认值 | `thincoder-core/config.mjs`（U14 已迁核） | `thincoder-core/config-io.mjs` + `thincoder-core/config.mjs`（W16 已迁核——端侧镜像 `src/config-io.mjs` 已删；端壳读面 = `src/extension/presets.mjs`） |
+| 迁移 | `thincoder-core/config-migrate.mjs`（U14 已迁核） | `thincoder-core/config-migrate.mjs`（W16 已迁核——端侧 VS Code glue = `src/extension/migrate-settings.mjs`） |
+| 分段配置 | （内联于核 `config.mjs`） | `thincoder-core/config-presets.mjs`（W16 已迁核——VSC `config-presets.mjs` 已删）· 端壳段 = `config-mcp.mjs` · `embed-config.mjs` · 端侧 consult 读面 = `extension/presets.mjs` |
+| 写盘面 / 面板 | `src/cli/`（TUI 侧） | `src/extension/settings-panel-write.mjs`（`$schema` 缝供值）· `extension/settings.mjs` · `config-watch.mjs` · `migrate-settings.mjs` |
+| settings 工具 | `thincoder-core/agent-tools/settings.mjs`（U14 已迁核） | 同核面（W16 已迁核——端侧实例化于 `src/agent/setup.mjs`；类型表 = 核全量 DEFAULTS 派生，A5） |
+| 路径展开 | `thincoder-core/expand-home.mjs`（U14 已迁核） | `@thincoder/core/expand-home.mjs`（W4 已迁核） |
+| 代理 | `thincoder-core/proxy.mjs`（U14 已迁核） | `@thincoder/core/proxy.mjs`（W10 已迁核） |
+| 供应商增删 / 密钥 / 激活 | `thincoder-core/config-io.mjs` 纯持久化面（U14 已迁核）+ `src/cli/setup-wizard.mjs` · `src/tui/model-picker.mjs`（UI 壳） | `src/extension/settings.mjs` · `provider-flows.mjs`（UI 壳）· `presets.mjs`（端侧访问层）；纯持久化面 W16 已取核面 |
 
 **共同基线**：两端**同一文件同一格式**——`~/.thincoder/config.json`（严格 `JSON.parse`，无 JSONC）。
 
@@ -41,7 +43,7 @@
 |---|---|---|---|---|---|---|
 | 128 | `src/config.mjs`（装载器 + DEFAULTS）↔ `src/config-io.mjs` | ② | 融合：以 CLI 装载器为准 + `$schema` 注入按端差注入 | 分叉 ＝ 拆分（VSC 拆 8 档）；同一 `~/.thincoder/config.json`、同一 v2 架构 ⇒ 前提成立；**承 §2.5 #80** | —（承 #80） | S1（建核补齐） |
 | 129 | `src/config.mjs`（`PROVIDER_PRESETS`）↔ `src/config-presets.mjs` | ② | 融合：取一侧（逐条同值） | 分叉 ＝ 拆档；VSC 头注自述「mirrors CLI PROVIDER_PRESETS…双端逐条同值」（`:2,7`）⇒ 前提成立 | — | S1（建核补齐） |
-| 130 | `src/config.mjs`（consult / mcp / embedding 三段）↔ `src/config-consult.mjs` · `config-mcp.mjs` · `embed-config.mjs` | ② | 融合：核内单一 DEFAULTS + 三段的端侧消费面按端注入 | 分叉 ＝ 拆档；三段均以同一 `config.json` 为源（VSC `config-consult.mjs:8` 自述「镜像 CLI config.mjs 同规则」）⇒ 前提成立 | — | S1（建核补齐） |
+| 130 | `src/config.mjs`（consult / mcp / embedding 三段）↔ `src/config-consult.mjs`（W16 已删——端侧 consult 读面现体 = `thincoder-vscode/src/extension/presets.mjs`） · `config-mcp.mjs` · `embed-config.mjs` | ② | 融合：核内单一 DEFAULTS + 三段的端侧消费面按端注入 | 分叉 ＝ 拆档；三段均以同一 `config.json` 为源（VSC `config-consult.mjs:8` 自述「镜像 CLI config.mjs 同规则」）⇒ 前提成立 | — | S1（建核补齐） |
 | 131 | `src/config.mjs`（写盘面）↔ `src/extension/settings-panel-write.mjs` · `extension/settings.mjs` | ② | 融合：核内单一读写 + 面板写面按端注入；**MCP 配置留 VS Code 设置** ＝ 端特有段 | 分叉 ＝ 写入口（VSC 设置面板 / CLI TUI）；写盘产物同一 `config.json`（VSC `thincoder-vscode/src/extension/settings.mjs:2` 自述「Backed by the shared ~/.thincoder/config.json」）⇒ 前提成立 | — | S1（建核补齐） |
 | 132 | （CLI 无监视面）↔ `src/extension/config-watch.mjs` · `extension/migrate-settings.mjs` | ④ | 端特有段：配置监视（宿主 `workspace` 事件）+ VS Code 旧设置 / 密钥库迁移 | 结构性不对称 = **依赖壳能力**（宿主文件监视 / `SecretStorage`）——CLI 无对应宿主面（B17）；依据是「**只在单侧存在**」，**非**「差异」（A9） | — | S1（建核补齐） |
 | 177 | `src/cli/setup-wizard.mjs` + `src/tui/model-picker.mjs` ↔ `src/extension/settings.mjs` + `provider-flows.mjs` + `presets.mjs` | ② | 融合：provider 增删 / 密钥 / 激活的**纯持久化函数**取一侧 + UI 壳按端注入 | 分叉 ＝ UI 壳（QuickPick / TUI picker）+ 目录；持久化语义两端同（`config.json` `providers[]` + 单值 `model`——VSC `provider-flows.mjs:10` 自述「identical to the CLI」）⇒ 前提成立 | — | S1（建核补齐） |
@@ -104,7 +106,7 @@
 - **双读取器独立不共享**（键表语义不同）：subagent 两键 = `thincoder-core/agent-tools/subagent-async.mjs:94`（`poolLimitsFor`）；advisor 第三键 = `thincoder-core/agent-tools/advisor-async.mjs:168`（`resolveAdvisorPoolLimit`）。
 - **默认值四源同改**（缺一即漂移）：DEFAULTS（`thincoder-core/config.mjs:63`）↔ 运行时常量（`thincoder-core/agent-tools/subagent-async.mjs:55` · `thincoder-core/agent-tools/advisor-async.mjs:166`）↔ 耦合锁（`thincoder-cli/test/config-pool.test.mjs` · `thincoder-vscode/test/config-pool.test.mjs`）。
 - **生效时机**：变更下回合生效；运行期读取点各自校验（非法键回退默认 + 告警）。
-- **界面入口**：CLI `/config` →「并发池」子菜单（`thincoder-cli/src/tui/cmd-config.mjs:245`–`:273`——三域读写 + 主菜单 / view 摘要）；VSC 设置面板并发池三域（`thincoder-vscode/src/extension/settings-panel-write.mjs:82` 白名单 · `thincoder-vscode/src/extension/settings.mjs:107` 回退显 4/4/4）。
+- **界面入口**：CLI `/config` →「并发池」子菜单（`thincoder-cli/src/tui/cmd-config.mjs:245`–`:273`——三域读写 + 主菜单 / view 摘要）；VSC 设置面板并发池三域（`thincoder-vscode/src/extension/settings-panel-write.mjs:94` 白名单 · `thincoder-vscode/src/extension/settings.mjs:176` 回退显 4/4/4——W16 行号重核）。
 - **向后兼容**：旧两键配置值零迁移（`advisor` 缺省 ⇒ 回退 4）；非法值不落盘回退；VSC 面板白名单全非法 ⇒ 删整键回退默认（语义不变）。
 - **模型可见文案去数字化**：advisor 工具描述与拒文案报**生效上限**（`thincoder-core/agent-tools/advisor.mjs:49` · `thincoder-core/agent-tools/advisor-async.mjs:266`）。
 - **同 scope 评审并发守卫**（同批用户裁①）：容量守卫 ⇄ 同 scope 守卫**两关独立**——机制本体见 `AGENT-LOOP-SUBAGENT.md` §6.10（本档不复制）。
@@ -138,7 +140,7 @@
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **149 行**（as-of 2026-09-15 批 5 实测；B 轮并入前 78 行）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **150 行**（as-of 2026-09-15 W16 实测；B 轮并入前 78 行）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
@@ -146,3 +148,4 @@
 - 2026-09-14（S1 收口轮）：§5 补**核内落点行数**指针（`config.mjs` · `config-io.mjs` · `config-presets.mjs`——§2.8 新增小节）。
 - 2026-09-14（**B 轮并入 · 第 3 批**）：§6 **机制面 = 同名旧档缺**（`thincoder-cli/docs/{design,requirements}/CONFIG.md` 均不存在——两产品树实核）⇒ 无并入内容（不虚构）；§7 无新增决策；§8 登记配置面机制文本散布于旧档（越段发现 + MEMORY §6.7 指回）；§9 体量（低于软线，无需拆分）；首部加机制面指针一行。
 - 2026-09-15（**迁移批 · 第 5 批 · 并入 · eng-designer**）：新增 §6.1 **并发池配置面**（自 `thincoder-cli/docs/design/POOL-CONFIG-UNIFIED.md` 并入——配置键表 / 双读取器 / 默认四源 / 界面入口 / 兼容面；机制本体指 `AGENT-LOOP-SUBAGENT.md` §6.10）；§7 补 D-CF1–D-CF4；§8.2 两行指态收正（PROXY 已落 / POOL 已并入）；§9 行数重核。
+- 2026-09-15（**W16 实施轮 · eng-coder**）：§1 归属表改「现体」双列（加载器 / 迁移 / 预设 / settings 工具 / 供应持久化面 = 核单源；VSC 端侧镜像 6 档已删——端壳保留写盘通道 / 监视 / 迁移 glue / provider 访问层）+ W16 现况注；§2.2 #130 行注 W16 端侧 consult 读面现体；§6.1 界面入口行号重核（`settings-panel-write.mjs:94` · `settings.mjs:176`）；§9 行数重核。

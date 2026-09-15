@@ -17,7 +17,7 @@ import { findProjectRoot } from "@thincoder/core/advisor/project-context.mjs" //
 import { clearConventionsCache, isDocPath, loadConventions } from "@thincoder/core/conventions.mjs"
 import { advisorTool } from "@thincoder/core/agent-tools/advisor.mjs" // W12：端侧 advisor 工具退役（W9 起登记册 = 核）——工具面直驱改指核实现
 import { engTool } from "@thincoder/core/agent-tools/eng.mjs"
-import { _setConfigPathForTest } from "../src/config-io.mjs"
+import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
 
 // ─── 夹具 ─────────────────────────────────────────────────────────────────────
 

@@ -82,21 +82,21 @@ R16 语义（跨模式存活 + 三清时机 + 单一权威）**已全部落地**
 ### 6.3 VSC 端接线（B 式并入 · 实核 as-of 2026-09-15）
 
 > 来源 = `thincoder-vscode/docs/design/ENG-TOKEN-BINDING-TUNING.md`（VSC 产品档——旧档一字未改、留参照历史）。**语义两端 lockstep**（流程凭证 / 无签名 / 跨模式存活 / 仅 TTL 过期清 / slot 权威持久源）；VSC 模块落点与持久化面独立
-> （slot 经 `session-io` / `setSlotEngDesignTokens` 多槽写——非 CLI 单源 persistState 布局）。结算 / 持久化细节归 `thincoder-vscode/docs/design/DESIGN-TOKEN-SETTLEMENT.md`（基准层并入面 = `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` §6.3——本档不重述，D2）。
+> （slot 经 `session-io` / `setSlotEngDesignTokens` 多槽写——非 CLI 单源 persistState 布局）。结算 / 持久化细节归 `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` §6.3（本档不重述，D2）；原 VSC 镜像 `src/agent-tools/{advisor,subagent-spawn-gate,eng}.mjs` 等随 W9/W12/W13 已删（删除记录见批次档 §5）。
 
-| 面 | VSC 落点（实核） |
+| 面 | VSC 落点（实核 · W16 接线面收正） |
 |---|---|
-| TTL 默认 + 配置覆盖 | `thincoder-vscode/src/agent-tools/advisor.mjs:13`（`TOKEN_TTL_DEFAULT_MS` = 7 天）· `:17`（`effectiveTokenTtlMs`——`Number.isFinite(cfg) && cfg > 0`，非法回退默认） |
-| 签发（无签名 uuid:expiresAt） | `thincoder-vscode/src/agent-tools/advisor.mjs:26`（`generateDesignToken`） |
-| 格式解析单一源 | `thincoder-vscode/src/agent-tools/advisor.mjs:57`（`tokenExpiry`——fail-closed：段数≠2 / 空 uuid / isNaN 全返 null） |
-| 过期判定 + validate + 回显匹配 | `thincoder-vscode/src/agent-tools/advisor.mjs:73`（`isExpiredDesignToken`——只对格式合法者判）· `:79`（`validateDesignToken`——fail-closed）· `:94`（`makeDesignTokenRegex`——转义整 token 回显匹配） |
-| 恢复过滤（逐槽 TTL 校验） | `thincoder-vscode/src/agent/agent-state.mjs:53` · `:58`（`isExpiredDesignToken` 逐槽——过期丢弃）· `:63`（legacy 单值残留一次性迁移读） |
-| 开工程模式清过期 | `thincoder-vscode/src/agent-tools/eng.mjs:20`（`sweepExpiredDesignTokens`——仅删过期、有效保留）· `:74`（enter 真 off→on 转换调用）；ON 消息 `:79`（含清理个数文案——`Cleared N expired design token(s)` 保留） |
-| spawn 门禁族 | `thincoder-vscode/src/agent-tools/subagent-spawn-gate.mjs:70`（`resolveDesignSlot`——精确槽 / 单槽 / 多槽拒 / torn-state 拒）· `:101`（`dropExpiredTokenSlot`——仅过期拒删）· `:124`（`authorizeEngCoderDesignToken`）· `:145`（`executeConsumeDesignAction`——链终消费） |
-| 内存运行态 + 回合尾落盘 | `thincoder-vscode/src/agent/setup.mjs:105`（`_engDesignTokens` 惰性 Map——每 run 重建 agent 后水合）· `:280`（`setSlotEngDesignTokens` 回合尾 flush） |
-| 多槽持久化原语 | `thincoder-vscode/src/extension/session-slot-write.mjs:108`（`setSlotEngDesignTokens`——null → 删字段）· `thincoder-vscode/src/extension/session-io.mjs:43` re-export |
+| TTL 默认 + 配置覆盖 | **W12 已迁核**——现体 = 核 `thincoder-core/agent-tools/design-token.mjs:34`（`TOKEN_TTL_DEFAULT_MS` = 7 天）· `:37`（`effectiveTokenTtlMs`——`Number.isFinite(cfg) && cfg > 0`，非法回退默认） |
+| 签发（无签名 uuid:expiresAt） | 核 `thincoder-core/agent-tools/design-token.mjs:44`（`generateDesignToken`） |
+| 格式解析单一源 | 核 `thincoder-core/token-ttl.mjs:42`（`tokenExpiry`——fail-closed：段数≠2 / 空 uuid / isNaN 全返 null）· `:55` |
+| 过期判定 + validate + 回显匹配 | 核 `thincoder-core/agent-tools/design-token.mjs:53`（`validateDesignToken`——fail-closed）· `:59`（`makeDesignTokenRegex`——转义整 token 回显匹配） |
+| 恢复过滤（逐槽 TTL 校验） | 端壳 hydrate：`thincoder-vscode/src/agent/agent-state.mjs:56-72`（`reconcileEngDesignTokens`——逐槽 TTL 校验、过期丢弃、内存项保留）· `:70-71`（legacy 单值一次性迁移读） |
+| 开工程模式清过期 | **W9 已迁核**——现体 = 核 `thincoder-core/agent-tools/eng.mjs:74`（`purgeExpiredDesignTokens`——仅删过期、有效保留）；原端侧 `eng.mjs:20/:74/:79` 已删 |
+| spawn 门禁族 | **W12/W13 已迁核**——现体 = 核 `thincoder-core/agent-tools/subagent-spawn.mjs:112`（`resolveDesignSlot`——精确槽 / 单槽 / 多槽拒；内存 miss 回读槽）· `:158-169`（仅过期拒才删槽——`removeDesignTokenSlot`）· `:152`（`executeConsumeDesignAction`——链终消费 + 落盘对称）；原端侧 `subagent-spawn-gate.mjs:70/:101/:124/:145` 已删 |
+| 内存运行态 + 回合尾落盘 | 端壳 `thincoder-vscode/src/agent/setup.mjs:304`（`_engDesignTokens` 惰性 Map——每 run 重建 agent 后水合）· `:491`（`setSlotEngDesignTokens` 回合尾 flush） |
+| 多槽持久化原语 | 端壳 `thincoder-vscode/src/extension/session-slot-write.mjs:23`（`setSlotEngDesignTokens` / `mergeEngTokensForSave` 核转口 re-export）→ 核 `thincoder-core/session-slot-write.mjs:156`；原 `session-io.mjs:43` re-export 行随 W11 重排 |
 
-**VSC 侧差异**（有意——源码注释逐字登记）：① slot 持久化 = 会话槽 + config.json mirror（eng.mjs `CONFIG_CONFLICT_HINT`——冲突时槽优先）；② spawn 门禁 `resolveDesignSlot` 读当前 run 内存 Map、**miss 时回读槽文件权威台账**（结算面——`DESIGN-TOKEN-SETTLEMENT.md` §6.3）。
+**VSC 侧差异**（有意——源码注释逐字登记）：① slot 持久化 = 会话槽 + config.json mirror（端壳 `src/agent/setup.mjs` `configureEngMirror` onToggle——冲突时槽优先）；② spawn 门禁 `resolveDesignSlot` 读当前 run 内存 Map、**miss 时回读槽文件权威台账**（结算面——`DESIGN-TOKEN-SETTLEMENT.md` §6.3）。
 
 ## 7. 并入的关键决策记录（含否决备选）
 
@@ -136,9 +136,13 @@ R16 语义（跨模式存活 + 三清时机 + 单一权威）**已全部落地**
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **144 行**（并入批 6 后 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **148 行**（W16 接线面收正后 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
 - 2026-09-15（**B 式迁移轮 · 第 3 批**）：建档——`thincoder-cli/docs/design/ENG-TOKEN-BINDING.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；**旧档 §4 结算语义 / §5 实现落点两处口径按现状收正**（单值镜像已退役 → 见 `DESIGN-TOKEN-SETTLEMENT.md`；签发/校验/结算宿主 = `agent-tools/design-token.mjs`；`src/**` 迁移前坐标 → 现状路径），旧句逐条登记入 §8.1；坐标全量实核；批次材料 / 状态行 / 变更流水不并（§8）。
 - 2026-09-15（**B 式迁移轮 · VSC 第 6 批 · 并入 · eng-designer**）：新增 §6.3 VSC 端接线——自 `thincoder-vscode/docs/design/ENG-TOKEN-BINDING-TUNING.md` 并入（TTL / 解析 / 过期判定 / 门禁族 / 持久化逐项实核；结算面指回 `DESIGN-TOKEN-SETTLEMENT.md` §6.3——D2）；VSC 旧档重复面与批次材料登 §8.2 不并（(d) 类）；需求侧头注随批 5 建档收正。
+- 2026-09-15（**W16 实施轮 · eng-coder · 接线面收正**）：§6.3 表换「实核 · W16 接线面收正」版——TTL/签发/解析/validate/回显匹配/门禁族全部收为核面坐标
+  （`thincoder-core/agent-tools/design-token.mjs` · `thincoder-core/token-ttl.mjs` · `thincoder-core/agent-tools/subagent-spawn.mjs` · `thincoder-core/agent-tools/eng.mjs`）；
+  恢复过滤/内存运行态/多槽原语 = 端壳存活档行号重核（`thincoder-vscode/src/agent/agent-state.mjs:56-72` · `thincoder-vscode/src/agent/setup.mjs:304` / `:491` · `thincoder-vscode/src/extension/session-slot-write.mjs:23`）；
+  侧差异① mirror 行改指现体 `configureEngMirror`；§9 行数重核。

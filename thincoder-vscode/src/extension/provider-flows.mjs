@@ -7,16 +7,22 @@
  *  2. Settings panel messages (addProvider / removeProvider / setProviderProxy) — the
  *     panel posts a payload straight to the pure functions (no UI round-trip on the host).
  *
+ * W16：纯持久化函数（addProviderEntry / removeProviderEntry / setProviderKey / cascadeRemoveProvider）
+ * = **核单源**（`@thincoder/core/config-io.mjs`——CORE-UNIFICATION §2.5 #177「纯持久化函数取
+ * 一侧 + UI 壳按端注入」）；本档只保留 UI 壳（QuickPick/InputBox）与 M9 准入探。
  * Persistence semantics are identical to the CLI (config.json providers[] with a single
  * `model` default per channel + defaultModel — MODEL-SELECTION（2026-09-10）：候选清单字段
  * `models[]` 已退场——候选面 = 运行期 `/models` 拉取）。
  */
 
 import * as vscode from "vscode"
-import { PROVIDER_PRESETS, presetToEntry, resolveProviders, persistRaw, conflictError, setProviderKey, cascadeRemoveProvider, probeTargetFromEntry } from "../config-io.mjs"
+import { PROVIDER_PRESETS } from "@thincoder/core/config.mjs"
+import { addProviderEntry, removeProviderEntry, setProviderKey, resolveProviders } from "@thincoder/core/config-io.mjs"
+import { probeTargetFromEntry } from "./presets.mjs"
 import { probeChannelModels, channelUnavailableMessage } from "@thincoder/core/provider/list-models.mjs"
 
-const FORMATS = ["openai", "anthropic", "google"]
+// 纯持久化函数面：核单源 re-export（既有调用方 import 面不变——settings.mjs / 测试）。
+export { addProviderEntry, removeProviderEntry }
 
 /** M9 渠道准入探（配置写入面）：对目标渠道探一次 `GET /models`。
  *  探通 → 渠道可用（探得候选可直接用）；探不通 → 记录失败展示态（providerStatus 行
@@ -41,66 +47,9 @@ async function reportAdmission(name) {
   return probe
 }
 
-// ─── Pure persistence (no UI) — return an error string, or null on success ───
-
-/** Add a provider entry. payload: { preset?: name, custom?: { name, baseURL, model, format }, key? } */
-export function addProviderEntry({ preset, custom, key } = {}) {
-  let providers
-  try {
-    ({ providers } = resolveProviders())
-  } catch (e) {
-    return e.message
-  }
-  const existing = new Set(providers.map((p) => p.name))
-
-  let entry
-  if (preset) {
-    if (!PROVIDER_PRESETS[preset]) return `Unknown preset: ${preset}`
-    if (existing.has(preset)) return `Provider "${preset}" already exists`
-    entry = presetToEntry(preset)
-  } else if (custom) {
-    const name = (custom.name || "").trim()
-    if (!name) return "Provider name is required"
-    if (existing.has(name) || PROVIDER_PRESETS[name]) return `Name "${name}" is already in use`
-    const baseURL = (custom.baseURL || "").trim().replace(/\/+$/, "")
-    if (!baseURL) return "Base URL is required"
-    const model = (custom.model || "").trim()
-    if (!model) return "Model is required"
-    const format = (custom.format || "openai").trim()
-    if (!FORMATS.includes(format)) return `Unknown API format: ${format} (expected ${FORMATS.join("/")})`
-    entry = { name, baseURL, model } // MODEL-SELECTION：渠道单值默认模型（候选清单字段已退场）
-    if (format !== "openai") entry.format = format
-  } else {
-    return "Add provider needs a preset or a custom config"
-  }
-
-  const r = persistRaw((raw) => { (raw.providers ??= []).push(entry) })
-  const err = conflictError(r)
-  if (err) return err // F5b：config 被并发方改过——放弃 + 提示重试（决策① A）
-  const k = (key || "").trim()
-  if (k) setProviderKey(entry.name, k)
-  return null
-}
-
-/** Remove a provider entry. The active provider is protected (CLI parity). */
-export function removeProviderEntry(name) {
-  let providers, activeProvider
-  try {
-    ({ providers, activeProvider } = resolveProviders())
-  } catch (e) {
-    return e.message
-  }
-  if (!providers.some((p) => p.name === name)) return `No provider named "${name}"`
-  if (name === activeProvider) return "The active provider cannot be removed — switch active first"
-  const r = persistRaw((raw) => {
-    raw.providers = (raw.providers ?? []).filter((p) => p?.name !== name)
-    // F-4 (IKCDMR——AC-4 级联)：删渠道同步清 consultModels/subagentModels/advisor.provider 悬挂引用
-    cascadeRemoveProvider(raw, name)
-  })
-  return conflictError(r) // F5b：冲突 → 错误串提示（调用方 providerError 通道展示）
-}
-
 // ─── QuickPick flows (model dropdown shortcuts) ───
+
+const FORMATS = ["openai", "anthropic", "google"]
 
 /** Add a provider interactively: pick an unused preset or configure custom manually. */
 export async function addProviderFlow(refresh) {

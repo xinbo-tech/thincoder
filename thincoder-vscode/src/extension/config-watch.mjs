@@ -15,7 +15,7 @@
 import * as vscode from "vscode"
 import { basename, dirname } from "node:path"
 import { statSync } from "node:fs"
-import { _configPath, onConfigSelfWrite } from "../config-io.mjs"
+import { _configPath, onConfigSelfWrite } from "@thincoder/core/config-io.mjs"
 
 /** stat 元组（mtimeMs + size——同 tick 快写 mtime 可同，size 兜底）；缺失/不可读 → null。 */
 function tupleOf(path) {

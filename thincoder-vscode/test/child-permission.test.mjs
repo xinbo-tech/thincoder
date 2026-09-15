@@ -22,7 +22,7 @@ import { permissionGate, batchPermissionGate } from "../src/extension/permission
 import { handlePanelMessage } from "../src/extension/panel-messages.mjs"
 import { makeChildPermission } from "@thincoder/core/agent-tools/child-permission.mjs"
 import { executeToolBatches } from "../src/agent/execute-tools.mjs"
-import { _setConfigPathForTest } from "../src/config-io.mjs"
+import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-io.mjs"
 
 let _tmp, _ws, _capturedPosts, _cleanupEnv

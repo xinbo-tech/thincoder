@@ -15,7 +15,7 @@ import { providerStatus, saveProviderKey, saveCustomProvider, deleteProviderKey,
 import { loadLocaleStrings } from "../i18n.mjs"
 import { handlePanelMessage, routeUserTurn, _cwd, setProjectFolder, clearProjectOverride } from "./panel-messages.mjs"
 import { runPanelChat } from "./panel-chat.mjs"
-import { loadRaw } from "../config-io.mjs"
+import { loadRaw } from "@thincoder/core/config-io.mjs"
 import { initStopTrace } from "./stop-trace.mjs"
 import { ensureSlot, activeData, activeHistory, activeLines, saveLines, loadModelPrefs, loadSession, loadOlder, newSession, deleteSession, pushSessions, generateTitle, status as bootstrapStatus } from "./panel-session.mjs"
 import { projectInfo, pushProject, applyProjectSwitch, onProjectChanged, pickProject } from "./panel-project.mjs"

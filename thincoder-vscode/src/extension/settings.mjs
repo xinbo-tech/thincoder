@@ -1,21 +1,91 @@
 /**
  * settings.mjs — provider settings and key management
- * Backed by the shared ~/.thincoder/config.json (see src/config-io.mjs).
+ * Backed by the shared ~/.thincoder/config.json（W16：读面 = 核 `config-io.mjs`/`config.mjs` 单源；
+ * provider 访问层 = `./presets.mjs`）。
  * MCP server config stays in VS Code settings (extension-local concern).
  */
 
 import {
   PRESETS, providerNames, isProviderConfigured, storeProviderKey, removeProviderKey,
-  buildProvider, providerLabel, readProviders,
+  buildProvider, providerLabel, readProviders, sanitizeConsultModels, warnConsultModelsFiltered,
 } from "./presets.mjs"
-import {
-  persistRaw, resolveProviders, loadMcpServers, addMcpServer, updateMcpServer, removeMcpServer,
-  loadAgentSettings, loadRaw, normalizeProxy,
-} from "../config-io.mjs"
-import { addProviderEntry, removeProviderEntry, probeProviderAdmission } from "./provider-flows.mjs"
+import { loadRaw, resolveProviders, addProviderEntry, removeProviderEntry } from "@thincoder/core/config-io.mjs"
+import { DEFAULTS, normalizeProxy } from "@thincoder/core/config.mjs"
+import { loadMcpServers, addMcpServer, updateMcpServer, removeMcpServer } from "../config-mcp.mjs"
+import { vscPersistRaw, saveAgentSettingsFromPanel, saveShellSettingsFromPanel } from "./settings-panel-write.mjs"
+import { probeProviderAdmission } from "./provider-flows.mjs"
 import { listModels, admissionOf, channelUnavailableMessage, recordAdmission } from "@thincoder/core/provider/list-models.mjs"
 import { specForModel } from "../specs.mjs"
 import { loadModelPrefs, loadSlot } from "./session-io.mjs"
+import { existsSync } from "node:fs"
+import { spawnSync } from "node:child_process"
+
+/** Agent settings merged view（W16：自 config-io 迁入——本端面板/运行读面）。默认值 = 核
+ *  `DEFAULTS.agent`（单一来源）；compactThreshold 保持本端**显示口径**：null = auto
+ *  （面板空串清除键 → 读取侧 null → 消费方 auto 推断）。consultModels = F-4 清洗后合法池
+ *  （悬挂条目不进面板/运行态——一次性警告）。 */
+export function loadAgentSettings() {
+  const raw = loadRaw()
+  const a = raw.agent
+  const d = DEFAULTS.agent
+  const { keep, dropped } = sanitizeConsultModels(
+    a?.consultModels,
+    (Array.isArray(raw.providers) ? raw.providers : []).map((p) => p?.name).filter(Boolean))
+  warnConsultModelsFiltered(dropped)
+  return {
+    maxTurns: a?.maxTurns ?? d.maxTurns,
+    subagentTurns: a?.subagentTurns ?? d.subagentTurns,
+    subagentModel: a?.subagentModel ?? d.subagentModel,
+    subagentModels: a?.subagentModels ?? d.subagentModels,
+    compactThreshold: a?.compactThreshold ?? null, // null = auto（本端面板显示口径）
+    verifyGuard: a?.verifyGuard ?? d.verifyGuard,
+    autoThink: a?.autoThink ?? d.autoThink,
+    engineering: a?.engineering ?? d.engineering,
+    consultTurns: a?.consultTurns ?? d.consultTurns,
+    consultTimeoutMs: a?.consultTimeoutMs ?? d.consultTimeoutMs,
+    advisor: a?.advisor ?? d.advisor,
+    consultModels: keep, // F-4：过滤后合法池（未知渠道条目不进面板/运行态）
+    poolLimits: a?.poolLimits ?? d.poolLimits,
+  }
+}
+
+// ─── Shell candidates（W16 自 config-io 迁入——面板消费面）─────────────────────
+let _shellCandidatesCache = null
+
+/** Detect available shells for this platform. Cached: shell availability does not
+ *  change during a session, and spawnSync on every panel open would freeze the UI. */
+export function shellCandidates() {
+  if (_shellCandidatesCache !== null) return _shellCandidatesCache
+  const win = process.platform === "win32"
+  const commandExists = (cmd) => {
+    try {
+      // 'command -v' is a POSIX shell builtin; sh -c runs it (Windows uses `where`)
+      const r = spawnSync(win ? "where" : "sh", win ? [cmd] : ["-c", `command -v ${cmd}`], { encoding: "utf8", timeout: 3000 })
+      return r.status === 0 && r.stdout.trim().length > 0
+    } catch { return false }
+  }
+  const GIT_BASH_PATHS = [
+    "C:\\Program Files\\Git\\bin\\bash.exe",
+    "C:\\Program Files (x86)\\Git\\bin\\bash.exe",
+    `${process.env.LOCALAPPDATA ?? ""}\\Programs\\Git\\bin\\bash.exe`,
+  ]
+  const candidates = []
+  // System default always first
+  candidates.push({ name: "System default", value: null, detect: () => true })
+  if (win) {
+    candidates.push({ name: "PowerShell (pwsh)", value: "pwsh", detect: () => commandExists("pwsh") })
+    candidates.push({ name: "Windows PowerShell (powershell)", value: "powershell", detect: () => commandExists("powershell") })
+    const gb = GIT_BASH_PATHS.find((p) => existsSync(p))
+    if (gb) candidates.push({ name: `Git Bash (${gb})`, value: gb, detect: () => true })
+    candidates.push({ name: "WSL bash (wsl)", value: "wsl", detect: () => commandExists("wsl") })
+  } else {
+    for (const sh of ["bash", "zsh", "fish"]) {
+      candidates.push({ name: sh, value: sh, detect: () => commandExists(sh) })
+    }
+  }
+  _shellCandidatesCache = candidates.filter((c) => c.detect())
+  return _shellCandidatesCache
+}
 
 /**
  * Status snapshot for the settings panel. Shape consumed by webview/settings.js:
@@ -67,7 +137,7 @@ export function handleRemoveProvider(name) { return removeProviderEntry(name) }
 
 /** Set/clear a provider's per-provider proxy flag (false → delete the field, CLI injectProxy parity). */
 export function handleSetProviderProxy(name, proxy) {
-  persistRaw((raw) => {
+  vscPersistRaw((raw) => {
     const entry = Array.isArray(raw.providers) ? raw.providers.find((p) => p?.name === name) : null
     if (!entry) return
     if (proxy === true) entry.proxy = true
@@ -116,9 +186,9 @@ export function agentSettings(session) {
   }
 }
 
-// Panel persistence + shell candidates live in config-io.mjs (pure Node, testable
-// outside the extension host) — re-exported here to keep the panel import surface.
-export { saveAgentSettingsFromPanel, saveShellSettingsFromPanel, shellCandidates } from "../config-io.mjs"
+// Panel persistence lives in settings-panel-write.mjs (pure Node, testable outside the
+// extension host) — re-exported here to keep the panel import surface.
+export { saveAgentSettingsFromPanel, saveShellSettingsFromPanel }
 
 /** Proxy settings snapshot for the panel (normalized { uri, web, model } | null). */
 export function proxySettings() {
@@ -134,7 +204,7 @@ export function websearchSettings() {
 
 /** Persist the Tavily web-search API key (empty → clear). */
 export function saveWebsearchKeyFromPanel(key) {
-  persistRaw((raw) => {
+  vscPersistRaw((raw) => {
     const ws = raw.websearch ?? {}
     ws.apiKey = key?.trim() || ""
     if (!ws.apiKey) delete ws.apiKey
@@ -144,7 +214,7 @@ export function saveWebsearchKeyFromPanel(key) {
 
 /** Remove the Tavily web-search API key. */
 export function deleteWebsearchKeyFromPanel() {
-  persistRaw((raw) => {
+  vscPersistRaw((raw) => {
     const ws = raw.websearch ?? {}
     delete ws.apiKey
     raw.websearch = ws
@@ -174,7 +244,7 @@ export async function testProviderConnection({ baseURL, apiKey, format }) {
 
 /** Persist proxy settings from the panel. payload: { uri?, web?, model? } (uri '' = clear). */
 export function saveProxySettingsFromPanel(payload) {
-  persistRaw((raw) => {
+  vscPersistRaw((raw) => {
     const current = normalizeProxy(raw.proxy) ?? { uri: "", web: true, model: false }
     const uri = payload.uri !== undefined ? payload.uri.trim() : current.uri
     if (!uri) { delete raw.proxy; return }
@@ -213,7 +283,7 @@ export async function testProxyConnection(uri) {
   }
 }
 
-/** Persist agent settings from the panel — implemented in config-io.mjs (pure Node, testable). */
+/** Persist agent settings from the panel — implemented in settings-panel-write.mjs (pure Node, testable). */
 export async function saveProviderKey(name, key) {
   // storeProviderKey performs the same !key || !key.trim() guard — delegate only.
   await storeProviderKey(name, key)
@@ -228,7 +298,7 @@ export async function saveCustomProvider({ key, baseURL, model }) {
   const url = (baseURL || "").trim().replace(/\/+$/, "")
   const mdl = (model || "").trim()
   const k = (key || "").trim() // trimmed FIRST — a whitespace-only key must not land as an empty apiKey
-  persistRaw((raw) => {
+  vscPersistRaw((raw) => {
     raw.providers = Array.isArray(raw.providers) ? raw.providers : []
     let entry = raw.providers.find((p) => p?.name === "custom")
     if (k) {
@@ -254,7 +324,7 @@ export async function deleteProviderKey(name) {
   await removeProviderKey(name)
   // A bare "custom" entry with no baseURL/model is useless — drop it entirely
   if (name === "custom") {
-    persistRaw((raw) => {
+    vscPersistRaw((raw) => {
       const entry = Array.isArray(raw.providers) ? raw.providers.find((p) => p?.name === "custom") : null
       if (entry && !entry.baseURL && !entry.model && !entry.apiKey) {
         raw.providers = raw.providers.filter((p) => p?.name !== "custom")

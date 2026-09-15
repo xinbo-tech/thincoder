@@ -16,7 +16,7 @@ import * as vscode from "vscode"
 import { existsSync, rmSync } from "node:fs"
 import { join, relative } from "node:path"
 import { getEmbedder as getSharedEmbedder, getMemoryHandle, loadMemoryFace, memoryFor, setVSCodeEmbedder, resetEmbedder } from "../embed-config.mjs"
-import { loadEmbeddingConfig, saveEmbeddingConfig as saveEmbeddingConfigToFile } from "../config-io.mjs"
+import { loadEmbeddingConfig, saveEmbeddingConfig as saveEmbeddingConfigToFile } from "../embed-config.mjs"
 import { _cwd } from "./panel-messages.mjs"
 
 /** §14 C-12#1/C-15：索引进度 → statusText（webview 状态行段——scan/index/done 三相位；

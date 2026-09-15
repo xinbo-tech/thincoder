@@ -13,7 +13,7 @@ import { join } from "node:path"
 import * as vscode from "vscode"
 import { routeUserTurn, setProjectFolder, clearProjectOverride, handlePanelMessage } from "../src/extension/panel-messages.mjs"
 import { runVisionReader, VISION_READ_TIMEOUT_MS } from "../src/extension/image-handler.mjs"
-import { _setConfigPathForTest } from "../src/config-io.mjs"
+import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
 
 const DATAURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
 let _tmp, _conf1, _conf2, _savedWs
@@ -112,7 +112,7 @@ test("视觉判据（MODEL-SELECTION）：判据 = 渠道默认单值模型的 s
 })
 
 test("T36 第 6 批：DeepSeek V4.1-Flash 三行 = 契约（R11–R13）+ 新名/退役名渠道入视觉判据", async () => {
-  const { specForModel } = await import("../src/config.mjs")
+  const { specForModel } = await import("../src/specs.mjs")
   const { findVisionChannel } = await import("../src/extension/vision-channel.mjs")
   // §19.2（a）契约（VSC 侧——每行多 reasoningEffortDefault: "high"）
   const CONTRACT = {
@@ -132,7 +132,7 @@ test("T36 第 6 批：DeepSeek V4.1-Flash 三行 = 契约（R11–R13）+ 新名
 })
 
 test("T38 第 6 批：pro 只读字段锚（R14——字段零改 + 非视觉保守——防误改）", async () => {
-  const { specForModel } = await import("../src/config.mjs")
+  const { specForModel } = await import("../src/specs.mjs")
   const pro = specForModel("deepseek-v4-pro")
   assert.ok(!pro.multimodal, "不加 multimodal（视觉能力未核实——保守）")
   assert.equal(pro.context, 1_000_000, "context 零改")

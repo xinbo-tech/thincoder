@@ -20,7 +20,7 @@ import { handlePanelMessage, _cwd } from "../src/extension/panel-messages.mjs"
 import { ChatPanel } from "../src/extension/chat-panel.mjs"
 import { openSessionContent, loadOlder, status as bootstrapStatus } from "../src/extension/panel-session.mjs"
 import { newSlot, loadSlot, saveSessionToSlot, _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-io.mjs"
-import { _setConfigPathForTest } from "../src/config-io.mjs"
+import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
 
 // ─── 环境隔离（真实槽/配置读写全部指向临时目录——同 chat-panel.test.mjs）───
 

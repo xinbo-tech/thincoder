@@ -948,7 +948,7 @@ async 点火路径；同步评审阻塞回合、父侧无并发写时刻）。
 2. **守卫链（同款）**：`src/advisor/loop.mjs（W12 已迁核——现体见批次档 §5）:116`（`currentTokens > MAX_CONTEXT_TOKENS * 0.8` → 本地压缩）+
    `:121`（压缩后仍 `> MAX_CONTEXT_TOKENS` → `Advisor: context window limit reached …` 判死尾）。CLI 侧实证死因
    `(120225 tokens)` 与该常量逐字吻合 ⇒ 1M 窗口模型被硬帽限死在 ~12% 窗口处（缺陷本体 = 上限来源，非守卫结构）。
-3. **窗口真值源（现成）**：`providerSpec(provider)`（`src/config.mjs:142-149`——模型表前缀命中 + provider 级
+3. **窗口真值源（现成）**：`providerSpec(provider)`（`src/config.mjs:142-149`（W16 已迁核收口——现体见批次档 §5）——模型表前缀命中 + provider 级
    `context`（K 单位 ×1024）覆盖；非法值 / 缺省 → 模型表原值；未知模型 → 一次性告警 + `DEFAULT_SPEC` 128K）
    经 `src/specs.mjs:5` re-export——本批接线面（§15.3 表 1）。
 4. **接线可达性**：评审循环所持 `provider` 即评审真实 provider（`src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）:137` `resolveAdvisorProvider(agent)`

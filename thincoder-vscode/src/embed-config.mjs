@@ -12,12 +12,12 @@
  * 扫 `node:sqlite` 可达性 = 0。
  */
 
-import { readFileSync, existsSync } from "node:fs"
 import { dirname, isAbsolute, join } from "node:path"
-import { homedir } from "node:os"
 import { createEmbedder } from "@thincoder/core/embedding.mjs"
 import { expandHome } from "@thincoder/core/expand-home.mjs"
-import { _configPath, loadRaw } from "./config-io.mjs"
+import { _configPath, loadRaw } from "@thincoder/core/config-io.mjs"
+import { conflictError } from "@thincoder/core/config-io.mjs"
+import { vscPersistRaw } from "./extension/settings-panel-write.mjs"
 
 let _embedder = null
 let _tried = false
@@ -27,17 +27,14 @@ export function getEmbedder() {
   if (_tried) return _embedder
   _tried = true
 
-  // 1) CLI config
-  const configPath = join(homedir(), ".thincoder", "config.json")
+  // 1) shared config.json（W16 config 归一：唯一读面 = 核 loadRaw——原裸 readFileSync 副本退场）
   try {
-    if (existsSync(configPath)) {
-      const cfg = JSON.parse(readFileSync(configPath, "utf8"))
-      if (cfg.embedding?.apiKey && cfg.embedding?.baseURL && cfg.embedding?.model) {
-        _embedder = createEmbedder(cfg.embedding)
-        return _embedder
-      }
+    const emb = loadRaw().embedding
+    if (emb?.apiKey && emb?.baseURL && emb?.model) {
+      _embedder = createEmbedder(emb)
+      return _embedder
     }
-  } catch {}
+  } catch { /* unreadable config → no embedder */ }
 
   return _embedder
 }
@@ -110,6 +107,28 @@ export function projectMemoryDir(cwd) {
   } catch { /* unreadable config → core default */ }
   p = expandHome(p) // 核 config 单点同形（`thincoder-core/config.mjs:264`）
   return isAbsolute(p) ? p : join(cwd ?? process.cwd(), p)
+}
+
+// ─── embedding 配置段（W16 迁入——原 config-io.mjs；#130 端侧消费面）────────────
+
+/** Embedding config from config.json (CLI: config.embedding { baseURL, model, apiKey }). */
+export function loadEmbeddingConfig() {
+  const emb = loadRaw().embedding
+  return emb && typeof emb === "object" ? emb : null
+}
+
+/** Persist embedding fields into config.json (merge, drop empties). F5b 冲突提示同面板写面。 */
+export function saveEmbeddingConfig(patch) {
+  const r = vscPersistRaw((raw) => {
+    const emb = raw.embedding && typeof raw.embedding === "object" ? raw.embedding : {}
+    for (const [k, v] of Object.entries(patch || {})) {
+      if (v == null || v === "") delete emb[k]
+      else emb[k] = v
+    }
+    if (Object.keys(emb).length) raw.embedding = emb
+    else delete raw.embedding
+  })
+  return conflictError(r)
 }
 
 /**
