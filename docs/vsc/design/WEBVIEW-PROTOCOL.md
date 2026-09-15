@@ -46,7 +46,7 @@ reasoning, provider, images? } → extension _chat()
 
 | 消息 | 方向 | 载荷 / 语义 |
 |---|---|---|
-| `toolPanel` | ext → wv | `{ type, name, kind, text, round, model, sub }`——活动流 chunk（advisor / 子代理 / consult / escalate）；`kind` = start / think / text / tool；`sub` = 嵌套子标（string chunk 分支恒 `undefined`）；**增字段** `tool`（工具名）/ `cmd`（参数摘要 ≤60——无则不携） |
+| `toolPanel` | ext → wv | `{ type, name, kind, text, round, model, sub }`——活动流 chunk（advisor / 子代理 / consult / escalate）；`kind` = start / think / text / tool；`sub` = 嵌套子标（string chunk 分支恒 `undefined`）；**增字段** `tool`（工具名）/ `cmd`（参数摘要 ≤60——无则不携）。**生产者双源** = `onToolPanel` 缝 + 子代内容 chunk 中继（relay 前缀分流——`panel-callbacks.mjs` `relaySubagentContentChunk`）；`cmd` ≤60 截断落层 = **webview 块头渲染**（`activity-view.js` `noteChunk`——超 60 截为 59+…），桥与生产者透传原串 |
 | `subagent` | ext → wv | `{ ...info }` 展开透传——`started`（池条目带 `pool: true`）/ `settled` / `done` / `error` / `cancelled` / `terminated` / `failed` / `answered` 终态 + turn / maxTurns 终值快照；**增 status 值** `"turn"`（`{ id, role, turn, maxTurns }` 逐轮进展帧） |
 | `subagentApproval` | ext → wv | `{ id, role, model?, tool }`——审批态（`tool = null` 清除）→ 块头 `⏸` + 态词 `等待审批: <tool>` |
 | `cancelSubagent` | wv → ext | `{ id, role }`——⏹ 点击路由 → 池条目定向 abort（role 交叉校验防陈旧按钮误停；未知 no-op；advisor role 复用同路由） |
@@ -67,7 +67,7 @@ reasoning, provider, images? } → extension _chat()
 
 新增**展示**字段必须同时落三个点——**发射端 chunk / 桥 postMessage 载荷 / webview 渲染端**：
 
-1. 发射端（如 `thincoder-vscode/src/agent-tools/subagent-run.mjs:106`〔W13 已退役——端自持档已删；现体 = 核 `thincoder-core/agent-tools/subagent-run.mjs`〕 的 tool chunk）；
+1. 发射端（子代内容 chunk 现体 = 端壳中继 `thincoder-vscode/src/extension/panel-callbacks.mjs` `relaySubagentContentChunk`；旧例 `thincoder-vscode/src/agent-tools/subagent-run.mjs:106`〔W13 已退役——端自持档已删；现体 = 核 `thincoder-core/agent-tools/subagent-run.mjs`〕 的 tool chunk）；
 2. 桥的**白名单纯函数** `toolPanelPayload`（`thincoder-vscode/src/extension/panel-toolpanel.mjs:14-21`）；
 3. webview 渲染端（`thincoder-vscode/webview/activity-view.js`）。
 
@@ -79,7 +79,7 @@ reasoning, provider, images? } → extension _chat()
 |---|---|---|---|---|
 | 1 | `statusText`（新消息） | 五 kind 载荷（见 §3 表） | `panel-callbacks.mjs` onWait 映射；`panel-index.mjs` 索引进度 | `chat.js` case → `S._statusText` → 状态行段 |
 | 2 | `turnFrame`（新消息） | `{ turn, maxTurns }` | `panel-callbacks.mjs` onAgentTurn（顶层） | 同上 → 状态行 `turn N/M` 段 |
-| 3 | `toolPanel`（增字段） | `tool` / `cmd` | 四 chunk 生产者 + payload 白名单 | `activity-view.js` 块头 |
+| 3 | `toolPanel`（增字段） | `tool` / `cmd` | `relaySubagentContentChunk`（子代内容中继——2026-09-16 补）+ payload 白名单 | `activity-view.js` 块头 |
 | 4 | `subagent`（增 status 值） | `status:"turn"` + `{ id, role, turn, maxTurns }` | `subagent-run.mjs` onAgentTurn | `applySubagentStatus` 进展分支 |
 | 5 | `digest`（增 status 值） | `status:"cap"` + `{ mode, turns }` | `panel-chat.mjs` ContinueError 分支 | `chat.js` case → `.digest-cap` 行 |
 | 6 | `usage`（增字段） | `reasoning_tokens` | `panel-callbacks.mjs` 累计（transports 映射补全） | `status-bar.js` ✦ 段 |
@@ -249,7 +249,7 @@ reasoning, provider, images? } → extension _chat()
 
 ## 10. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **271 行**（新建 · 终稿实核）——低于 300 行软线，**无需拆分**。
+**实测行数**：本档 **272 行**（as-of 2026-09-16 实测——协议面收正增行后）——低于 300 行软线，**无需拆分**。
 **拆分来源**：源档 §7/§8 与 §14.3 的协议面部分独立成档——理由 = 读者面不同（改 host 发射端 / webview 接收端者）且与结构面（`WEBVIEW.md`）无共享回指；切面取舍总表见 `WEBVIEW.md` §9。
 
 ## 11. 验收与需求回指
@@ -268,3 +268,4 @@ reasoning, provider, images? } → extension _chat()
 
 - 2026-09-15（**B 式迁移轮 · VSC 第 2 批**）：建档——源档 §4 / §7 / §8 / §14.3 的协议面内容重建入基准层（旧档一字未改）；坐标按 as-of 2026-09-15 实核改写；批次材料（问题陈述 / 选型 / 受影响文件 / 用例表 / 验收标准 / 边界）入 §8.1。
 - 2026-09-15：**按现状收正 1 处**——旧档 §14 C-13 表「审批态 = 无此状态（子代理不经权限门）· 端差登记（不做）」与现行实现冲突（审批态族已实装：`subagentApproval` 消息 + 块头 `⏸`）——本档 §6.2 按现状落笔并与 §3 消息表口径一致；冲突已上报批次（主 agent 裁定）。
+- 2026-09-16（**子代理面板通道恢复批 · 协议面收正**）：§3 `toolPanel` 行补**生产者双源**与 `cmd` ≤60 截断落层（webview 块头渲染——桥/生产者透传原串）；§3.1 三落点发射端例补现体（`relaySubagentContentChunk`）；§3.2 #3 发射点随收——payload 字段零变（只增不改纪律保持）。

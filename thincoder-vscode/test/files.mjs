@@ -78,4 +78,5 @@ export default [
   "test/engine-floor-guard.test.mjs", // W8 前置笔（2026-09-15）：引擎下限护栏（A8 裁定）——版本闸 22.13 + node:sqlite 探针 + 低于下限提示/记忆面停用/不抛（批次档 §2 W8「门 1」）
   "test/agent-tools-registry.test.mjs", // W9（2026-09-15）：登记册 14 名装配断言（引核册——核 agent-tools.mjs 名集 / 端侧转口面同集 / setup.mjs 动态装配 14 名；CORE-UNIFICATION §2.13.4 #83）+ W8 契约②形态面（静态闭包零 node:sqlite 扫描在 `test/engine-floor-guard.test.mjs`）
   "test/memory-index-face.test.mjs", // W8（2026-09-15）：索引面归一核面专项验收——A-K12（反向判零 + 检索 = 核面 FTS 回退非空 + 面板读数 = 核库计数）· A-K13（相位序列 scan→index→done + 完成提示 = 核读数 + 模型变更零手动重建/懒回填）· A-K14（旧目录清退：告示一次 + 显式删除 + 零自动删除路径）· VP-9 可见化核面承接（快层：A-K12 反向判零 + A-K14 两档；慢档：真 fs/sqlite 四档——A-K12 检索 / A-K13 相位 / A-K13 懒回填 / VP-9 可见化）
+  "test/subagent-content-relay.test.mjs", // VSC 子代理面板通道恢复批（2026-09-16）：端壳内容中继面——子代内容 chunk（核 relay 前缀）四路分流 → `toolPanel` `sub:<role>#<id>` 频道（T1–T7：块内命中 / 主流零命中 / 嵌套子标 / 无前缀正控 / 事件面零回归 / escalate·consult 同族 / 误伤形态锁定）
 ]

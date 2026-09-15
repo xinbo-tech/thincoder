@@ -145,6 +145,11 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
 - **就绪握手（两拍）**：webview 起手投 `webviewReady`（`chat.js:413`）→ host case（`thincoder-vscode/src/extension/panel-messages.mjs:428-460`）置 `_wvReady = true`，**排在** `openSessionContent`（内部含 `clearMessages` + `resetActivity`）**之后**执行 ① flush 队列（保持入队序）→ ② `reassertLiveChildren`（`:457-458`）。后置理由：先投的出生事件必被清屏抹掉。
 - **存活投影**：`thincoder-vscode/src/extension/suspension.mjs:131-148` 读 `panel._liveLines ?? panel._susp?.lines` 的 `_asyncSubagents` / `_asyncAdvisors`（与 ⏹ 路由同源），**只发 live**——`running` → `started` + `pool: true`，`queued` → `queued`（两侧 role/id 必带）。
 
+**内容面投递（W15 内容面——2026-09-16 补）**：子代内容 chunk（text / think / 工具调用行 / 工具输出行）经 relay 前缀文法
+（`role#id/`——嵌套链子标随行）在端壳分流 → `toolPanel` `sub:<role>#<id>` 载荷（`panel-callbacks.mjs` `relaySubagentContentChunk`）；
+**直投**（`emitToolPanel` 单点——与 `onToolPanel` 同缝，非 outbox 族）。次序 = 事件面先吃、内容面后判；前缀由核逐 chunk 重加 ⇒
+端侧逐 chunk 独立解析（无跨 chunk 重组）。
+
 **同族配套（非上述三面）**：
 
 - **清屏后再断言**：`loadSession`（`thincoder-vscode/src/extension/panel-session.mjs:133-166`）在 `clearMessages`（`:157`）与 `historyPage`（`:160-161`）**之后同 tick** 调 `reassertLiveChildren`（`:165`）——重建块恒落区尾。
@@ -227,7 +232,7 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **262 行**（新建 · 终稿实核）——低于 300 行软线，**无需拆分**。
+**实测行数**：本档 **269 行**（as-of 2026-09-16 实测——内容中继面收正增行后）——低于 300 行软线，**无需拆分**。
 
 **拆分来源**（本档何以与其同胞两档分家）：源档 1867 行（超 500 硬限）按面拆三档——取舍理由：
 
@@ -248,7 +253,8 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
 | 3 | 历史懒加载（首窗 200 · `loadOlder` · prepend 补偿 · 归档块入锚） | F-W3 · N-W4 |
 | 4 | 工具调用卡（卡片形态 · 卡体 64K 上限 · 恢复卡对齐） | F-W4 · N-W2 |
 | 5 | 活动块可靠性（投递队列 · 就绪/清屏后再断言 · 新代接管 · 终态补桩 · 痕迹） | F-W1 · N-W5 |
-| 6 | 机检面（新增档 ≤500 行 · 无 >300 字符单行 · 文档锚零悬空） | N-M3 · N-M2 |
+| 6 | 内容面投递（子代内容 chunk relay 前缀分流 → `sub:<role>#<id>` · 事件面/内容面次序 · 嵌套子标） | F-W1 · N-W5 |
+| 7 | 机检面（新增档 ≤500 行 · 无 >300 字符单行 · 文档锚零悬空） | N-M3 · N-M2 |
 
 **用例面**：本板块的测试资产在 `thincoder-vscode/test/`（`activity-flow` · `activity-closure` · `activity-live-ux` ·
 `async-visibility` · `history-window` · `history-restore` · `session-boot`）——用例表归测试层，本档不复制（D2）。
@@ -259,3 +265,4 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
 
 - 2026-09-15（**B 式迁移轮 · VSC 第 2 批**）：建档——`thincoder-vscode/docs/design/WEBVIEW.md` 内容按面重建入基准层三档（旧档一字未改、原地作参照历史；切面取舍见 §9）；坐标改写为仓根相对现状路径（全部按 as-of 2026-09-15 实核）；批次材料（问题陈述 / 方案选型 / 受影响文件 / 用例表 / 验收标准 / 边界 / 变更流水）入 §7.1。
 - 2026-09-15：**源档与现状冲突 1 处按现状落笔**——旧档 §14 C-13 表「审批态 = 无此状态（子代理不经权限门）」与现行实现冲突：审批态块头（`⏸` + `等待审批: <tool>`）已实装（`activity-view.js:45` · `:75` · `activity.js:390`）——本档按现状落笔，冲突已上报批次（主 agent 裁定）。
+- 2026-09-16（**子代理面板通道恢复批 · 内容中继面**）：§5.3 增「内容面投递」——子代内容 chunk（text / think / 工具行）经 relay 前缀文法端壳分流 → `toolPanel` `sub:<role>#<id>`（含嵌套子标；事件面/内容面次序）；§10 回指表增行（机检面行顺延为 7）。

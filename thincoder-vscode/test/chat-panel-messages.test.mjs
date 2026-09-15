@@ -399,7 +399,9 @@ test("⑬ W15 事件中继：queued/cancelled/stopped/turn/done/settled/async+[m
   assert.equal(consume(`eng-coder#5/⟦ev⟧stopped${RS}0${RS}0${RS}stopped${RS}`), true)
   assert.equal(consume(`eng-coder#5/⟦ev⟧settled${RS}0${RS}0${RS}settled${RS}`), true)
   assert.equal(consume(`eng-coder#5/⟦ev⟧done${RS}0${RS}0${RS}done${RS}`), true)
-  // 非事件面：主会话普通 token / 无前缀 [model] / relay 前缀内容 chunk——一律不消费（原样转发）
+  // 非事件面：主会话普通 token / 无前缀 [model]——不消费（原样转发）；relay 前缀内容 chunk
+  // 事件中继不消费（由内容中继面 relaySubagentContentChunk 接管 → `sub:` 面板频道——
+  // 见 test/subagent-content-relay.test.mjs T1–T7）。
   assert.equal(consume("plain main-agent token"), false)
   assert.equal(consume("[model]glm-5.3"), false)
   assert.equal(consume("eng-coder#5/hello chunk"), false)

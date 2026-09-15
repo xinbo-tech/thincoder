@@ -82,6 +82,43 @@ export function relaySubagentEventToken(panel, tok) {
   return false
 }
 
+// ─── W15 内容中继面（2026-09-16 子代理面板通道恢复批——子代理内容回流 `sub:` 块）────────
+// 核迁移版子代回调（`wrapChildCallbacks`——`thincoder-core/agent/spawn-child.mjs:131-148`）带
+// relay 前缀（`role#id/`）到达端壳；事件面（`relaySubagentEventToken`）只吃 `⟦ev⟧`/`[model]`，
+// 其余前缀 chunk（text / think / tool 调用行 / tool 输出行）原走主流 ⇒ 面板通道缺生产者
+//（迁前端侧自持面丢失——子代理内容被塞进主会话流）。本面 = **内容分流单点**：前缀 chunk →
+// `toolPanel` `sub:<role>#<id>` 载荷（webview `activity.js` 子代理块接收面；文法与 CLI
+// `routeSub*` 同源——`thincoder-core/agent/relay-prefix.mjs`）。次序：事件面先吃、内容面后判
+//（`onToken` 内——事件面 return 之后、主流 postMessage 之前）；前缀由核逐 chunk 重加 ⇒
+// 端侧逐 chunk 独立解析（无跨 chunk 重组、无半前缀）。
+
+/** `toolPanel` 载荷发射单点：`buildPanelCallbacks` 的 `onToolPanel` 处理器与
+ *  `relaySubagentContentChunk` 共用——全档唯一 `toolPanelPayload` 构造点（§3.1 三落点②）。 */
+export function emitToolPanel(panel, name, chunk) {
+  panel._panel?.webview.postMessage(toolPanelPayload(name, chunk))
+}
+
+/** 子代内容 chunk 分流：relay 前缀（含嵌套链——D-M8 子标）→ 面板载荷。无前缀 → false
+ *  （调用方原样转发）。face ∈ text / think / toolCall / toolOutput（四路调用面）：
+ *  toolCall = CLI 同构（工具名 + args JSON ≤120；结构化 tool/cmd 随行）；toolOutput = 输出行。 */
+export function relaySubagentContentChunk(panel, face, a, b) {
+  const path = parseRelayPath(String(a ?? ""))
+  if (!path) return false
+  const sub = path.inner.length > 0 ? path.inner.join("/") : undefined // D-M8 嵌套子标
+  let chunk
+  if (face === "toolCall") {
+    const argsJson = JSON.stringify(b) || ""
+    chunk = { kind: "tool", text: `${path.rest} ${argsJson.slice(0, 120)}`, tool: path.rest,
+      cmd: typeof b?.command === "string" ? b.command : undefined, sub }
+  } else if (face === "toolOutput") {
+    chunk = { kind: "tool", text: typeof b === "string" ? b : String(b?.text ?? ""), sub }
+  } else {
+    chunk = { kind: face === "think" ? "think" : "text", text: path.rest, sub }
+  }
+  emitToolPanel(panel, "sub:" + path.head, chunk)
+  return true
+}
+
 // ─── 任务可见性族投递队列（2026-09-11 第 10 批——WEBVIEW.md §5.1.4 第 1 条）———
 /** 队列上界（§5.1.4 第 1 条——溢出丢最旧 + 留痕）。 */
 export const WV_OUTBOX_MAX = 200
@@ -186,11 +223,16 @@ export function buildPanelCallbacks(panel, deps) {
   return {
     onToken: (tok) => {
       // W15（事件中继面）：核 relay ⟦ev⟧ 事件 token → webview 活动区协议消息（识别即消费
-      // ——不再以裸文本泄漏）；普通 token 原样转发。
+      // ——不再以裸文本泄漏）；事件面之后 = 内容中继面（子代内容 chunk → 面板 `sub:` 频道——
+      // 不再落主流）；其余普通 token 原样转发。
       if (relaySubagentEventToken(panel, tok)) return
+      if (relaySubagentContentChunk(panel, "text", tok)) return
       panel._panel?.webview.postMessage({ type: "token", text: tok })
     },
-    onReasoning: (r) => { panel._panel?.webview.postMessage({ type: "reasoning", text: r }) },
+    onReasoning: (r) => {
+      if (relaySubagentContentChunk(panel, "think", r)) return
+      panel._panel?.webview.postMessage({ type: "reasoning", text: r })
+    },
     // Machine-only sub-turn boundary (advisor/verify/pending-task guard pushback
     // + continue): the webview resets its block pointers so the next reasoning/
     // content starts fresh — covers non-thinking models too (no reasoning stream
@@ -233,7 +275,10 @@ export function buildPanelCallbacks(panel, deps) {
       const ctxPct = ctxPercentForModel(u.prompt_tokens, p)
       panel._panel?.webview.postMessage({ type: "usage", usage: { ...totalUsage }, ctxPct })
     },
-    onToolCall: (n, a, id) => panel._panel?.webview.postMessage({ type: "toolCall", name: n, args: JSON.stringify(a, null, 2), id }),
+    onToolCall: (n, a, id) => {
+      if (relaySubagentContentChunk(panel, "toolCall", n, a)) return
+      panel._panel?.webview.postMessage({ type: "toolCall", name: n, args: JSON.stringify(a, null, 2), id })
+    },
     onToolResult: (n, r, id) => {
       const text = (r || "").slice(0, 64 * 1024)
       // Verified workspace-real paths ride along so the webview can linkify them.
@@ -241,8 +286,11 @@ export function buildPanelCallbacks(panel, deps) {
       panel._panel?.webview.postMessage({ type: "toolResult", name: n, text, id, links })
     },
     // Live output streaming (bash etc.) — chunks append to the running tool card.
-    onToolOutput: (n, chunk, id) => panel._panel?.webview.postMessage({ type: "toolOutput", name: n, text: chunk, id }),
-    onToolPanel: (name, chunk) => panel._panel?.webview.postMessage(toolPanelPayload(name, chunk)),
+    onToolOutput: (n, chunk, id) => {
+      if (relaySubagentContentChunk(panel, "toolOutput", n, chunk)) return
+      panel._panel?.webview.postMessage({ type: "toolOutput", name: n, text: chunk, id })
+    },
+    onToolPanel: (name, chunk) => emitToolPanel(panel, name, chunk),
     onComplete: (content, agentState) => {
       lastAgentState = agentState ?? {}
       panel._saveLines(fullHistory, history, { ...slotStamp, ...agentState }, turnSlot)
