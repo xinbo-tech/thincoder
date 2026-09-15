@@ -477,6 +477,16 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
 
   // B 类 run 绑定（每轮重指——复用 agent 不残留上轮引用）+ opts 派生字段
   agent._role = role
+  // autoApprove 字段接线（2026-09-16 缺陷修复——承 `docs/batches/2026-09-16-vsc-autoapprove-misalign.md`
+  // §2 A′）：核侧读**父对象字段** `parent.autoApprove`（spawn 门 `subagent.mjs:258` · escalate 门
+  // `:184` · 子代权限继承 `subagent-spawn.mjs:305` · 读点族 `subagent-async.mjs:272` 等），而本端
+  // live AUTO 值只走 `getAuto` 闭包 ⇒ 宿主曾缺该字段、核读点恒判非 AUTO（自动轮 spawn 恒拒 +
+  // 子代理写恒拒 + 报告必待用户再发一句）。形态 = **访问器**（每轮重定义——复用单例换轮换闭包）：
+  // 取值恒 live（轮中翻转同读——与端面板 mid-turn doctrine `permission-gate.mjs:5-10` 及 CLI
+  // 字段翻转语义一致）；**无 setter** ⇒ 面板 flag 为唯一来源、未来写入方失败显性（fail-loud）。
+  // 先例 = `agent.mjs:144-150` 载体访问器别名（同文件同形态）。
+  const autoProbe = typeof getAuto === "function" ? getAuto : () => false // 归一（同 agent.mjs:64）
+  Object.defineProperty(agent, "autoApprove", { configurable: true, enumerable: true, get: () => autoProbe() === true })
   agent._depth = depth // TRACE-STORE-VSC（D-TR4）：compress/distill 等内嵌 chat 调用点的 depth 归属
   agent._provider = provider
   // 核 spawn 父对象读点（parent.tools——角色过滤/直传 + 子代装配展开）：每轮重指**基础集**

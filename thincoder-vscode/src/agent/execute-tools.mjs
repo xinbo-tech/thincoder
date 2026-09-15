@@ -201,11 +201,20 @@ export async function executeToolBatches(agent, { response, history, fullHistory
             // 以 `ctx._toolCallId` 为键（核 `advisor.mjs:109` 等 10 处）；缺失 ⇒ 核侧登记空转 +
             // 端侧记账错记（显式 async:false 拒绝被误计 called/round——评审 🔴）。
             _toolCallId: tc.id,
-            // §17 D-S7/D-S9 tool-context passthrough: the subagent tool's manual-tier
-            // spawn gate reads the LIVE autoApprove (ctx.getAuto), and children spawned
-            // during a suspension session share the session signal (ctx.sessionSignal).
+            // tool-ctx 透传账（F2 收正——2026-09-16）：旧注曾把 spawn 门写成读 `getAuto`、子代 signal
+            // 写成共享 `sessionSignal` 字段——两说均与实现不符、旧句已删（收正不得保留旧句——批次档 §2.15）。现行实态：
+            // ① 核消费面 = `onPermissionRequest`（下行 F1 新供给——缝表 `CORE-UNIFICATION（核仓·设计）` §2.13.3）；
+            // ② `getAuto` / `sessionSignal` 两透传 = 历史残留、核侧零消费者（核树 grep 零命中）——核
+            // spawn 门读**父对象字段** `parent.autoApprove`（`subagent-spawn.mjs:305`）；会话 signal 达核
+            // 经 `agent._sessionSignal`（`subagent-async.mjs:388`）——零回归保留（消解路径 = 报告项，另案清理）。
             getAuto,
             sessionSignal,
+            // F1（2026-09-16 缺陷修复——承 `docs/batches/2026-09-16-vsc-autoapprove-misalign.md` §2 F1）：
+            // child 权限通道透传（核同范式 = `thincoder-core/agent/dispatch.mjs:395`）——手动档子代写
+            // 询问（`subagent-spawn.mjs:319` `${key}/${tool}`）经此达端装配层供给面（`panel-callbacks.mjs`
+            // ——owner 归属 + `⏸` 态）；缺失（headless / 无 gate）⇒ 核分支静默 `return false`
+            // （`subagent-spawn.mjs:308-309`）。
+            onPermissionRequest: callbacks.onPermissionRequest,
             // W14（2026-09-15）：question 工具面——核 `tools/question.mjs` 读 `ctx.onQuestion`
             //（§2.13.3）；端侧通道 = callbacks.onQuestion（面板卡片）。取消/Stop（askInPanel
             // resolve null）归一为旧端文案 "(user cancelled)"（承删除档 question.mjs:29-31 语义）；

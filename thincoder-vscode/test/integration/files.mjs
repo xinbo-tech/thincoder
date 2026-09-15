@@ -16,4 +16,6 @@ export default [
   "test/integration/scenario-06-commit-verify.test.mjs",
   "test/integration/scenario-07-config-routing.test.mjs",
   "test/integration/host-shape-spawn.test.mjs",
+  "test/integration/vsc-autoapprove-field.test.mjs",
+  "test/integration/vsc-spawn-ctx-permission.test.mjs",
 ]

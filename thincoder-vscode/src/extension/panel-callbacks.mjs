@@ -15,6 +15,10 @@ import { backgroundStatus } from "./suspension.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"
 // W15（R5 · 事件中继面）：核 relay 前缀解析（`role#id/` 文法单一权威——零依赖）。
 import { parseRelayPath } from "@thincoder/core/agent/relay-prefix.mjs"
+// F1（2026-09-16 缺陷修复——承 `docs/batches/2026-09-16-vsc-autoapprove-misalign.md` §2 F1）：child
+// 权限通道供给面复用核 `makeChildPermission`（announce → ask → 清态语义单源 + owner label 与活动
+// 块同源 KD-8）——叶子档（零依赖、静态链不达 node:sqlite）⇒ 静态引入安全。
+import { makeChildPermission } from "@thincoder/core/agent-tools/child-permission.mjs"
 
 // ─── W15（2026-09-15 · R5「⏹ queued 等待头回收」+ W13 观察项收口）事件中继面 ───────────
 // 核异步族（spawn/settle/cancel）经 `ctx.callbacks.onToken` 发 **relay 前缀 ⟦ev⟧ 事件 token**
@@ -220,7 +224,7 @@ export function buildPanelCallbacks(panel, deps) {
   // Agent state captured at onComplete, reused by the async onDistilled save — agent.mjs calls
   // onDistilled without args, so the persisted engineering fields ride the closure.
   let lastAgentState = {}
-  return {
+  const cbs = {
     onToken: (tok) => {
       // W15（事件中继面）：核 relay ⟦ev⟧ 事件 token → webview 活动区协议消息（识别即消费
       // ——不再以裸文本泄漏）；事件面之后 = 内容中继面（子代内容 chunk → 面板 `sub:` 频道——
@@ -326,5 +330,32 @@ export function buildPanelCallbacks(panel, deps) {
       if (susp?.active) panel._publishTurnState?.(panel._turnState ?? "susp", backgroundStatus(susp.lines.history))
     },
   }
+  // ─── F1（2026-09-16 缺陷修复——承批次档 §2 F1）：child 权限通道**端侧供给** ─────────────
+  // 核 spawn / escalate / continue 三族经 `ctx.onPermissionRequest(name, args)` 询问（缝契约 =
+  // `CORE-UNIFICATION.md` §2.13.3）：name = `${key}/${tool}`（子代写——`subagent-spawn.mjs:319`；
+  // key = relayPrefix 去尾 = `<role>#<id>`）· `escalate/${tool}`（飞刀写）· `continue`（撞帽续跑）。
+  // 形态 = 按次解析归属键 ⇒ `makeChildPermission` 按次构造（announce → ask → 清态 + owner 归属——
+  // 面板卡带 `coder#7` 归属、与活动块同源）；键不符（escalate/continue——核名不携 id）⇒ 回退面板
+  // gate **原样名**询问（卡可达 · 无归属标签）；AUTO（live）⇒ 直返 true 零卡。缺失本供给 ⇒ 核
+  // spawn 分支静默 `return false`、不出卡（`subagent-spawn.mjs:308-309`——手动档子代写症状源）。
+  cbs.onPermissionRequest = async (name, args) => {
+    if (panel._autoApprove) return true // live AUTO（`permissionGate` 同款 mid-turn 语义）
+    const path = parseRelayPath(String(name ?? ""))
+    if (path && path.inner.length === 0) {
+      const hash = path.head.indexOf("#")
+      const perm = makeChildPermission({
+        ctx: { callbacks: cbs },
+        id: Number(path.head.slice(hash + 1)),
+        role: path.head.slice(0, hash),
+        // 条目级 signal 无来源（核闭包不携——2.16 行 9 登记面，本批不修）⇒ null
+        signal: null,
+      })
+      if (perm) return (await perm(path.rest, args, null)) === true
+    }
+    // 回退：面板 gate 原样名询问；无 gate（headless / AUTO 构建期）⇒ false（核分支同语义）
+    const ask = cbs.onPermissionRequired
+    return ask ? (await ask(name, args, null)) === true : false
+  }
+  return cbs
 }
 

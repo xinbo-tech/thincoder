@@ -55,8 +55,11 @@ before(async () => {
 after(async () => {
   _setConfigPathForTest(null)
   await llm?.close()
-  rmSync(work, { recursive: true, force: true })
-  rmSync(cfgDir, { recursive: true, force: true })
+  // Windows 临时区句柄滞后（并行档位下的瞬时空占——2026-09-16 实施轮实测间歇 EPERM，见该批 §5）：
+  // 重试 + 兜底——teardown 抖动不得把测试变红；残留仅落在 OS 临时区。
+  for (const d of [work, cfgDir]) {
+    try { rmSync(d, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 }) } catch { /* OS temp — best effort */ }
+  }
 })
 
 /** 生产宿主形状父对象：`hydrateRun(buildTopLevelAgent(), …)` 产物 + 调用期载体照搬。
