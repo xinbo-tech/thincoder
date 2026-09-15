@@ -303,7 +303,7 @@ A 胜在：**单一共用装配点 + 与 token 门同出口**（错误生命周�
 | `thincoder-core/agent-tools/subagent.mjs:145`（schema enum） | 加 `"eng-designer"` |
 | `:224` ROLES 白名单 + `:226` 错误文案 | 加角色 |
 | `:124-129` 工具描述（角色矩阵 + Mode filtering 句） | 加 designer 行；模式句改“工程模式 = explore/plan/**eng-designer**/eng-coder” |
-| `thincoder-core/agent/setup.mjs:187`（工程模式 enum）+ `:189` suffix | 加角色 |
+| `thincoder-core/agent/setup.mjs:187`（工程模式 enum）+ `:189` suffix（迁出前坐标——现居 `thincoder-core/agent/family-tools.mjs:43` / `:45`，2026-09-15 实读） | 加角色 |
 | `src/tui/tool-args.mjs:44`（显示 case） | 加 `case "eng-designer"` |
 
 **角色注册共 5 处**（上表 5 行）——AC16/T30 按“**五处**”计数。
@@ -389,8 +389,8 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 |---|---|
 | `thincoder-core/prompt-overlays.mjs:22-32` SLOT_CONTENTS | 加 `loadSlot("persona-eng-designer.md")`（不登记 → `:77` 缺槽告警路径） |
 | `:47-55` SCENARIO_SLOT_FILES | 加 `"eng-designer": ["persona-eng-designer.md", "common.md", "discipline-engineering.md"]`（不登记 → `:70-71` **静默返回 CONSULT_BASE 且零警告**） |
-| `thincoder-core/agent/setup.mjs:295-301` 场景映射 | **外层谓词 + 内层选择器都要改（评审 #3）**：外层的 `(depth === 0 \|\| agent._role === "eng-coder")` 扩为工程角色集合；
-**内层的 `agent._role === "eng-coder" ? "eng-coder" : "engineering"`（`:299`）必须同步映射 `eng-designer → "eng-designer"`**——
+| `thincoder-core/agent/setup.mjs:199-205` 场景映射 | **外层谓词 + 内层选择器都要改（评审 #3）**：外层的 `(depth === 0 \|\| agent._role === "eng-coder")` 扩为工程角色集合；
+**内层的 `agent._role === "eng-coder" ? "eng-coder" : "engineering"`（`:203`）必须同步映射 `eng-designer → "eng-designer"`**——
 只改外层会让 designer 拿到 `assemblePrompt("engineering")`（= 主会话人格），正是本行要防的静默错配 |
 | `thincoder-core/agent-tools/subagent-spawn.mjs:322-326` childConfig | `role === "eng-coder" → engineering:true` 扩为工程角色集合（designer 也必须 `engineering:true` 才能装配工程纪律槽） |
 
@@ -419,8 +419,8 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 1. **batchDoc 门扩角色集**：`thincoder-core/agent-tools/subagent-spawn.mjs:251/254` 的 `role === "eng-coder"` 精确串 → 角色集合
    `NEEDS_BATCH_DOC = {eng-coder, eng-designer}`；错误文案相应参数化（带实际角色名）；注入行 `:366` 同步扩。
 2. **勘察能力（§1.5 #7——设计者自己做勘察）**：新增 **designer 专属受限 subagent 变体**（explore-only）——
-   镜像 `thincoder-core/agent/setup.mjs:224-257` 的 eng-coder 审计变体：`props.role = { enum: ["explore"] }` +
-   `delete props.async/id/n/designToken/designId/batchDoc`；注入点同族（`thincoder-core/agent/setup.mjs:277` 的 depthOnly 链，`designer` 行加入该变体）。
+   镜像 `thincoder-core/agent/setup.mjs:224-257`（迁出前坐标——现居 `thincoder-core/agent/family-tools.mjs:83-121`，2026-09-15 实读）的 eng-coder 审计变体：`props.role = { enum: ["explore"] }` +
+   `delete props.async/id/n/designToken/designId/batchDoc`；注入点同族（`thincoder-core/agent/setup.mjs:277`（迁出前坐标——现居 `thincoder-core/agent/family-tools.mjs:132-155`，2026-09-15 实读）的 depthOnly 链，`designer` 行加入该变体）。
 3. **子代 spawn 门**：`src/agent/spawn-child.mjs:44-58` `gateEngCoderSpawn` 现只认父角色 eng-coder——**扩为父角色集合**
    （eng-coder / eng-designer）→ 两者都只允许 spawn `explore`；**审计预算（6）仍只计 eng-coder**（designer 勘察非审计；
    防滥用靠并发池 other≤4）。**返回值语义（评审 #4）**：designer 父路径校验通过后**必须返回 `null`**——
@@ -431,12 +431,12 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 5. **受限变体描述面动作清单同步（第 20 批——2026-09-11；D3 枚举纪律适用）**：受限变体（eng-coder 审计 /
    eng-designer 勘察——参数化复用同一 IIFE）的动作拒绝清单**以机械门为唯一真值**（`thincoder-core/agent-tools/subagent.mjs`
    execute 内受限变体动作门，as-of :175-177——门文案列 `escalate/status/cancel/panel/consume-design/observe/send`；
-   工具动作面文档 = `AGENT-LOOP.md` §7.2）。3 个文案面同清单同步（`thincoder-core/agent/setup.mjs` as-of :253 action 描述 ·
-   :259 勘察描述 · :260 审计描述）；**已退役动作 `check` 不得残留**（删除记录见 `AGENT-LOOP.md` §7.5）。
-   - 逐字草案（`thincoder-core/agent/setup.mjs:253`，action 描述）：`spawn only — the ${engChildRole}'s internal spawn channel is
+   工具动作面文档 = `AGENT-LOOP.md` §7.2）。3 个文案面同清单同步（`thincoder-core/agent/setup.mjs` as-of :253 action 描述（迁出前坐标——现居 `thincoder-core/agent/family-tools.mjs:110`，2026-09-15 实读） ·
+   :259 勘察描述 · :260 审计描述（迁出前坐标——现居 `thincoder-core/agent/family-tools.mjs:116` / `:117`，2026-09-15 实读））；**已退役动作 `check` 不得残留**（删除记录见 `AGENT-LOOP.md` §7.5）。
+   - 逐字草案（`thincoder-core/agent/setup.mjs:253`（迁出前坐标——现居 `thincoder-core/agent/family-tools.mjs:110`，2026-09-15 实读），action 描述）：`spawn only — the ${engChildRole}'s internal spawn channel is
      read-only (escalate/status/cancel/panel/consume-design/observe/send are refused: escalate spawns a
      coder+WRITE child, and the pool/panel actions have no async pool or panel mirror in a child context).`
-   - 逐字草案（`thincoder-core/agent/setup.mjs:259` / `:260`）：串 `escalate/check/status are not available` →
+   - 逐字草案（`thincoder-core/agent/setup.mjs:259` / `:260`（迁出前坐标——现居 `thincoder-core/agent/family-tools.mjs:116` / `:117`，2026-09-15 实读））：串 `escalate/check/status are not available` →
      `escalate/status/cancel/panel/consume-design/observe/send are not available`（两处同串替换）。
    - **AC-A2-1**（机验）：`test/eng-designer-role.test.mjs` **T32b 扩断言**（该例双端 `prepareRun` 装配既有
      ——零新增装配调用，规避慢门）：designer / eng-coder 两处 description 各含上列 7 个动作名、不含
@@ -607,7 +607,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 | 调用方 | 挂载落点 | 路径来源 |
 |---|---|---|
 | **设计评审** | `thincoder-core/advisor/run.mjs:91-97` `advisorToolsFor(agent)` → `advisorToolsFor(agent, reviewType, batchDoc)`：**仅当 `reviewType === "design"` 且 batchDoc 已绑定（可读）时**追加 `batch_segment`；代码评审分支零变更（零 git、只读不变）；测试缝 `_advisorToolsFor` 保留 | 评审实例键（§2.20.2） |
-| **eng-designer / eng-coder** | `thincoder-core/agent/setup.mjs:286-290` 挂载链：`eng-coder`（:286）/`eng-designer`（:287）两分支各追加 `batch_segment` | `agent._batchDoc`（spawn 时由 §2.20.2 绑定） |
+| **eng-designer / eng-coder** | `thincoder-core/agent/setup.mjs:286-290` 挂载链：`eng-coder`（:286）/`eng-designer`（:287）两分支各追加 `batch_segment`（迁出前坐标——现居 `thincoder-core/agent/family-tools.mjs:151` / `:152`，2026-09-15 实读） | `agent._batchDoc`（spawn 时由 §2.20.2 绑定） |
 | **主 agent** | **不挂载**（不变量 3——§1/§4/§6 走普通文档写；机械上：主 agent 工具链无此项，身份判据亦拒） | — |
 ——与 §2.20.2 的“不强制必传”口径一致（**非死条件**：未传 → 工具不挂载，设计评审照常跑）。
 
@@ -651,7 +651,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 5. **来源戳不可伪造**（工具生成标题与 N——N4）。
 6. **并发隔离**：异批次并发的设计评审**各自正确落档**（实例键绑定），不得串档。
 
-**取舍记录（评审 #2）**：评审侧 `batchDoc` 定为**“若传则须可读”而非“必传”**——理由：`type="design"` 无工程模式门（`thincoder-core/agent-tools/advisor.mjs:85-115`；advisor 工具两侧模式均挂载 `thincoder-core/agent/setup.mjs:275`），
+**取舍记录（评审 #2）**：评审侧 `batchDoc` 定为**“若传则须可读”而非“必传”**——理由：`type="design"` 无工程模式门（`thincoder-core/agent-tools/advisor.mjs:85-115`；advisor 工具两侧模式均挂载 `thincoder-core/agent/setup.mjs:275`（迁出前坐标——现居 `thincoder-core/agent/family-tools.mjs:132-133`，2026-09-15 实读）），
 “必传”会改变**无批次档场景下的设计评审行为**（本仓 `docs/README.md:174` 即列三份“设计待评审”在途设计档）——与 **N5 零回归**冲突。
 本设计**不扩大、也不收窄**既有评审路径：无批次档 → 工具不挂载，评审照常跑。
 
@@ -670,7 +670,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 | docs/design/prompts/advisor-round2.md | 修改 | 57 | ≤±6 | 纯 .md（**双源**——AC35 grep 覆盖；评审 #2 补行） |
 | src/prompts/advisor-round3.md | 修改 | 37 | ≤±6 | 纯 .md（round 3+ 同） |
 | docs/design/prompts/advisor-round3.md | 修改 | 55 | ≤±6 | 纯 .md（**双源**） |
-| thincoder-core/agent-tools.mjs | 修改 | 17 | ≤±2 | **barrel export（评审 #4）**——`thincoder-core/agent/setup.mjs:172` 从它解构工具符号；新工具必须加 export 行 |
+| thincoder-core/agent-tools.mjs | 修改 | 17 | ≤±2 | **barrel export（评审 #4）**——`thincoder-core/agent/setup.mjs:172`（迁出前坐标——现居 `thincoder-core/agent/family-tools.mjs:27`，2026-09-15 实读） 从它解构工具符号；新工具必须加 export 行 |
 | src/prompts/discipline-engineering.md | 修改 | 219 | ≤±10 | 纯 .md（六段自写→用工具 + 失败明示） |
 | docs/design/prompts/discipline-engineering.md | 修改 | 147 | ≤±10 | 纯 .md（双源） |
 | src/prompts/persona-eng-designer.md | 修改 | 56 | ≤±6 | 纯 .md（§2 自写→用工具） |
@@ -747,7 +747,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 | ① **运行期白名单** | `thincoder-core/agent-tools/subagent.mjs:254-256`（`const ROLES = new Set([...])`） | 加入 `"eng-designer"`，**并改写错误文案的角色列举**（现列 4 个角色——漏改则报错信息说谎） |
 | ② **模式门（第三门）** | `thincoder-core/agent-tools/subagent.mjs:267-272`（现只有 coder↔eng-coder 互斥两门） | 加：`eng-designer` 仅在工程模式可用（非工程模式 → 拒，文案同族） |
 | ③ **子代 spawn 门** | `thincoder-core/agent-tools/subagent-async.mjs:47`（现 `parent._role !== "eng-coder"` 即 null 放行） | 父角色集合扩入 `eng-designer`（designer 的勘察子代 = explore-only） |
-| ④ **装配分支** | `thincoder-core/agent/setup.mjs:151-160`（449 行） | 增 `eng-designer` 分支：读/搜/写设计产出 + `batch_segment` + **勘察通道工具（explore-only 受限 subagent 变体——镜像 CLI §2.15 D3 的受限变体与注册）**；**不含 advisor**（轮次3 评审 #5） |
+| ④ **装配分支** | `thincoder-vscode/src/agent/setup.mjs:151-160`（449 行——as-of 2026-09-10 VSC 端实读〔时名 `src/agent/setup.mjs`（VSC 仓）〕；U15 锚收正误指核档——2026-09-15 实读收正，核档历读数 354→246、从未 449） | 增 `eng-designer` 分支：读/搜/写设计产出 + `batch_segment` + **勘察通道工具（explore-only 受限 subagent 变体——镜像 CLI §2.15 D3 的受限变体与注册）**；**不含 advisor**（轮次3 评审 #5） |
 | ⑤ **角色 enum** | `thincoder-core/agent-tools/subagent.mjs:56-74`（`modeRoleField`） | 工程模式 enum 由 `[explore, plan, eng-coder]` → 含 `eng-designer` |
 | ⑥ **场景表** | `thincoder-core/prompt-overlays.mjs`（82 行） | 补 `"persona-eng-designer.md": loadSlot(...)` 与 `"eng-designer": [...]` 两行（CLI:26/CLI:52 同形——**全文逐行同构，最干净的可照抄点**） |
 | ⑦ **webview 枚举** | `webview/activity-view.js:13`（VSC 仓）（157）· `webview/activity.js:37`（VSC 仓）（205）· `webview/settings-agent.js`（VSC 仓）（175）· `webview/settings-models.js`（VSC 仓）（215） | 四处角色枚举/regex 补 `eng-designer` |
@@ -826,7 +826,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 | thincoder-core/agent-tools/advisor-async.mjs | 修改 | 457 | +≤10（`rv.batchDoc` 实例字段）——>300 档：不拆（同因）；**函数档：无 ≥300 行单函数**（as-of） |
 | src/advisor/tools.mjs（VSC 仓） | 修改 | 49 | +≤10（三参签名 + 注入） |
 | thincoder-core/advisor/run.mjs | 修改 | 459 | +≤10（调用点 / rv 透传）——>300 档：不拆；**函数档：无 ≥300 行单函数**（as-of） |
-| thincoder-core/agent/setup.mjs | 修改 | 449 | +≤24（eng-designer 分支 + 勘察变体）——>300 档：不拆；**函数档：无 ≥300 行单函数**（as-of） |
+| thincoder-vscode/src/agent/setup.mjs | 修改 | 449（as-of 2026-09-10 VSC 端实读〔时名 `src/agent/setup.mjs`（VSC 仓）〕；曾误指核档——2026-09-15 实读收正） | +≤24（eng-designer 分支 + 勘察变体）——>300 档：不拆；**函数档：无 ≥300 行单函数**（as-of） |
 | src/agent-tools/index.mjs | 修改 | 16 | +≤2（barrel） |
 | thincoder-core/prompt-overlays.mjs | 修改 | 82 | +≤4（两行 eng-designer 条目） |
 | scripts/check-doc-width.mjs | 修改 | 51 | **+≤247（→298，对齐 CLI 同机制实测 298 行；≤300）；若超 300 即拆独立档（二选一——实际落 = 留单档 + 拆分计划登记）** |
@@ -1272,7 +1272,7 @@ D-2 契约「禁新档增例」），交付时仅一次性人工核验——**�
 **登记集 = 5 处**（存量漂移——如实登记本批不修）：
 
 1. `src/agent/dispatch.mjs:220`（AC26）——现 :244 豁免条件行 / :254 入 ask 队列（批 11 位移）；
-2. `thincoder-core/agent/setup.mjs:299`（AC17）——装配调用现 :307–313、内层条件 :310–312；
+2. `thincoder-core/agent/setup.mjs:299`（AC17）——装配调用现 :199–205、内层条件 :202–204；
 3. `thincoder-core/prompt-overlays.mjs:70-71`（AC17）——所述「静默回退陷阱」现 :73；
 4. 需求档 `ENGINEERING-MODE.md` §1.15:614（AC28）——非功能段现 :635–636；
 5. `docs/README.md:174`（§2.20.8）——在途设计档行现 :175。
@@ -2290,7 +2290,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 - AC16（§2.15 A）: `eng-designer` 入**五处**硬清单（subagent.mjs 的 schema/ROLES/描述 + setup.mjs 工程模式枚举 + tool-args 显示）——五处在位且可分别断言；非工程模式 spawn 它 → throw。
 - AC17（§2.15 B——**防静默回退**）: designer 场景**已登记**装配——`assemblePrompt("eng-designer")` 返回的 prompt **非空且 ≠ CONSULT_BASE**（`≠ CONSULT_BASE` 断言面已退场（段删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §11.3）；现体 = 非空（>500）+ warnings=[]）；
   槽序 = `persona-eng-designer → common → discipline-engineering`，warnings 为空（盖 `thincoder-core/prompt-overlays.mjs:70-71` 的静默回退陷阱）；
-  **且接线断言（评审 #3）**：designer 子代理**实选场景 = `eng-designer`**（非 `engineering`/`normal`）——盖 `thincoder-core/agent/setup.mjs:299` 内层选择器。
+  **且接线断言（评审 #3）**：designer 子代理**实选场景 = `eng-designer`**（非 `engineering`/`normal`）——盖 `thincoder-core/agent/setup.mjs:203` 内层选择器。
 - AC18（§2.15 D）: designer spawn **必传 `batchDoc`**（与 eng-coder 同门；不带→throw、带可读路径→通过且任务输入含 `Batch record` 行）；错误文案**含实际角色名**。
 - AC19（§2.15 E）: **写域边界为提示词级（无机械门——用户裁定）**——`persona-eng-designer.md`（双源）**明写写域**（`docs/` 且不写 `docs/design/prompts/`）；`src/agent/dispatch.mjs` **保持不变**（不新增写域判定；其他角色行为零变更）。
 - AC20（§2.15 D2/D3）: designer 的勘察变体 = **explore-only**（无法 spawn 其他角色）；且**无 designToken 需求**（设计师不需要凭证——§1.5 #4）。

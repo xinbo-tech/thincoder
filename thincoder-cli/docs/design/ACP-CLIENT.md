@@ -259,7 +259,7 @@ last-write-wins 于内部状态；set 成功后 notify `config_option_update`/`c
 - 全仓 `onQuestion` 提供者只有 TUI：装配 `src/tui/tool-events.mjs:329`、透传 `src/agent/dispatch.mjs:394`；
   ACP 回调集（`src/acp/bridge.mjs:168-285` `buildAcpCallbacks`）无该字段。
 - ACP 会话走同一 `assembleAgent()`（`src/acp.mjs:79`；函数体 `src/cli/make-agent.mjs:14`）——工具集含
-  question（`thincoder-core/tools/index.mjs:22`），schema 逐请求由 `agent.tools` 派生（`thincoder-core/agent/setup.mjs:293-294`）
+  question（`thincoder-core/tools/index.mjs:22`），schema 逐请求由 `agent.tools` 派生（`thincoder-core/agent/setup.mjs:182-183`）
   → 模型可见、可调、每调必错。
 - 漂移面：`thincoder-core/tool-docs/question.md` 描述对无 UI 通道作无条件承诺（"loop pauses / answer returns"）；
   本档 §6 回调映射表无该工具行（本节回填）。
