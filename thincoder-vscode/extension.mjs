@@ -12,8 +12,68 @@ import { startConfigWatch } from "./src/extension/config-watch.mjs"
 /** @type {ChatPanel} */
 let _panel
 
+// ─── Engine-floor guard (W8 pre-pen · ruling 2026-09-15: engines.vscode ^1.104.0) ───
+// The core memory face speaks node:sqlite (Node.js >= 22.13); below the floor the
+// extension reports it and turns the memory face off — no downgrade path (A13).
+
+/** Node.js floor [major, minor] — node:sqlite is unflagged since 22.13 / 23.4. */
+const NODE_FLOOR = [22, 13]
+
+let _memoryFaceEnabled = true
+
+/** true when `version` (default: the running Node.js) meets the 22.13 floor. */
+export function nodeFloorMet(version = process.versions.node) {
+  const [major, minor] = String(version).split(".").map(Number)
+  return major > NODE_FLOOR[0] || (major === NODE_FLOOR[0] && minor >= NODE_FLOOR[1])
+}
+
+/** Runtime floor check: version gate + `node:sqlite` loadable; never throws.
+ *  `loadSqlite` = probe seam (tests inject a failing probe for the Electron-without-sqlite case). */
+export async function engineFloorMet({ version = process.versions.node, loadSqlite = () => import("node:sqlite") } = {}) {
+  if (!nodeFloorMet(version)) return false
+  try {
+    await loadSqlite()
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Memory-face switch — W8's memory wiring reads this before creating the memory handle
+ *  (and before loading any core module that statically imports node:sqlite). */
+export function isMemoryFaceEnabled() {
+  return _memoryFaceEnabled
+}
+
+/** activate() first-step guard. Below the floor: clear notice + memory face off; never
+ *  throws — the rest of the extension keeps working. Returns the floor state. */
+export async function applyEngineFloorGuard(options) {
+  try {
+    _memoryFaceEnabled = await engineFloorMet(options)
+  } catch {
+    _memoryFaceEnabled = false // unknown host state → treat as below floor; activation must not fail
+  }
+  if (_memoryFaceEnabled) return true
+
+  const version = options?.version ?? process.versions.node
+  console.warn(`[thincoder] engine floor not met (Node.js ${version}) — memory face disabled`)
+  try {
+    vscode.window
+      .showErrorMessage(
+        `ThinCoder: unsupported host runtime — VS Code 1.104+ (Node.js 22.13+ with node:sqlite) is required; this host runs Node.js ${version}. ` +
+          "Memory features are disabled; the rest of ThinCoder keeps working.",
+      )
+      .then(undefined, logFireAndForget)
+  } catch {
+    /* the notice is best-effort — activation itself must never fail */
+  }
+  return false
+}
+
 export async function activate(context) {
   console.warn("[thincoder] activate starting, globalStorageUri =", context.globalStorageUri?.fsPath)
+  // W8 pre-pen engine-floor guard (A8 ruling 2026-09-15) — first step; never throws.
+  await applyEngineFloorGuard()
   initLocale(vscode.env.language)
   _panel = new ChatPanel(context)
 

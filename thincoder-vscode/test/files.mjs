@@ -81,4 +81,5 @@ export default [
   "test/slow-gate.test.mjs", // D-T6 机制自验（2026-09-12 收尾轮 9 补建——原引用悬空修复）：红/绿两端 + 文件级合成条目跳过分支（slow() 门控：快层 skip、test:full 跑）
   "test/doc-anchors.test.mjs", // DOC-CODE-RECONCILE 批·期 1（2026-09-12；S4 单仓化）：V5 文档锚一致性机检——A1/A2/A3 三类锚存在性 + 假阳八类零报 + 注记 + 射程边界 + 报告态/阻断态（T-DC1–T-DC14；跨仓域外 / 自指段已随 S4 删；设计档 §4/§10）
   "test/reconcile-lookup.test.mjs", // DOC-CODE-RECONCILE 批·期 1（2026-09-12）：层 3 反查——变更 token → 设计/需求档清单；只读不阻断 + 零写 + 抽取器单源（T-DC15；设计档 §5）
+  "test/engine-floor-guard.test.mjs", // W8 前置笔（2026-09-15）：引擎下限护栏（A8 裁定）——版本闸 22.13 + node:sqlite 探针 + 低于下限提示/记忆面停用/不抛（批次档 §2 W8「门 1」）
 ]
