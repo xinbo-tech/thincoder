@@ -8,7 +8,7 @@ import { resolve } from "node:path"
 import { runAdvisorReview, resolveAdvisorProvider, buildCapMessage, MAX_ADVISOR_ROUNDS, ADVISOR_LAUNCH_REFUSAL_PREFIX } from "../advisor/run.mjs"
 import { advisorIncompleteMarker, incompleteNotice } from "../advisor/compaction.mjs"
 import { isDocPath, loadConventions } from "@thincoder/core/conventions.mjs"
-import { resolveBatchDocPath } from "./batch-segment.mjs"
+import { resolveBatchDocPath } from "@thincoder/core/agent-tools/batch-segment.mjs"
 
 const TOKEN_TTL_DEFAULT_MS = 7 * 24 * 3600 * 1000 // 7-day ceiling (v2 2026-08-25): multi-batch delivery must not re-review an unchanged design within a week; agent.engTokenTtlMs overrides. 2026-09-06 设计 B: HMAC 防伪层删除——token = 无签名流程凭证 uuid:expiresAt（public-default-secret 警告一并移除——安全剧场——见 ENGINEERING-MODE.md 2026-09-06 段）
 

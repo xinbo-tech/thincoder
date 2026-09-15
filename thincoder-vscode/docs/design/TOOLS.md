@@ -179,7 +179,8 @@ approve / deny / approve-all + diff 预览（`diff-preview.mjs` 虚拟文档原�
 - **eng-coder 子代理**：spawn 时经 design token 预授权（runChild 传 autoApprove=true）——
   免逐写询问：权限询问阶段整体跳过；JSON 解析/未知工具/planMode/design-token 前置门先
   行且原样生效（修正轮 #1）。
-- **子代理（depth>0）审批**：ask 模式经父面板弹卡——卡带归属（`<child key> · <tool>`）；AUTO（含轮中 approve-all）整树直通；eng-coder spawn 预授权（上条）与 explore/plan 只读集不变。机制/用例 = `AGENT-LOOP.md §18`（实现 `src/agent-tools/child-permission.mjs` + `src/extension/permission-gate.mjs`）。
+- **子代理（depth>0）审批**：ask 模式经父面板弹卡——卡带归属（`<child key> · <tool>`）；AUTO（含轮中 approve-all）整树直通；eng-coder spawn 预授权（上条）与 explore/plan 只读集不变。
+  机制/用例 = `AGENT-LOOP.md §18`（实现 `@thincoder/core/agent-tools/child-permission.mjs`（W9 已迁核——原 `src/agent-tools/child-permission.mjs`） + `src/extension/permission-gate.mjs`）。
 - **Stop 释放挂起门**：permission 挂起的回合被 abort → resolve(false)/deny，循环不悬挂。
 
 ## 9. 逐工具契约要点

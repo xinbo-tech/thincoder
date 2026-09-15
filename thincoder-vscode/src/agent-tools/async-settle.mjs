@@ -25,6 +25,18 @@
 import { logEvent, errText } from "@thincoder/core/log.mjs"
 import { getAsyncPool, removeFromAsyncPools, refillPool, refreshQueuedRows, writeTombstone } from "./subagent-scheduler.mjs"
 
+// ─── W9 端差适配：digest 预算键（2026-09-15）──────────────────────────────────
+// 核 `agent-tools/digest-budget.mjs` 以传入对象（CLI 面 = agent）为预算键、经 `键.history.length`
+// 判轮；VSC 四族注入器持有的载体 = history 数组（无 agent）——本 helper 以 history 为
+// WeakMap 键合成稳定 agent 形（同 history ⇒ 同键；语义 = 本端原面「键 = history 对象」
+// 逐字保持）。W11/W15 载体归一后退场。
+const _digestKeys = new WeakMap()
+export function digestBudgetKey(history) {
+  let k = _digestKeys.get(history)
+  if (!k) { k = { history }; _digestKeys.set(history, k) }
+  return k
+}
+
 // ─── D2 pending 单容器（+role）───
 
 /** pending 单容器键（评审 #3 定稿名——`_pendingAdvisorResults`/`_pendingEscalateResults`/

@@ -64,7 +64,10 @@ export function preGateBlocked(agent, { tool, toolName, args, depth }) {
   // §19.5 D-M6 round2 #4: control actions (isControlAction — subagent action:'cancel')
   // are a separate exemption class: 只停不启（无新副作用）——planMode 放行（取消既有
   // 子代理——spawn 仍拒）、免权限审批、批审批分组不入组、手动档 digest 放行。
-  if (agent._planMode && tool && !tool.readonly && !(tool.isReadonlyAction?.(args) ?? false) && !(tool.isControlAction?.(args) ?? false)) {
+  // W9（2026-09-15）端差适配：plan 工具已换核实现（写 CLI 载体名 `agent.planMode`）——
+  // 门禁同读两键（agent.mjs 工具批后回填 `_planMode`；两键同值——批内 plan{enter} 后的
+  // 写操作即拦，不留同批窗口）。W11/W15 载体归一后收敛单键。
+  if ((agent._planMode || agent.planMode) && tool && !tool.readonly && !(tool.isReadonlyAction?.(args) ?? false) && !(tool.isControlAction?.(args) ?? false)) {
     return { blocked: true, content: "Error: plan mode active" }
   }
   // Engineering coder hard gate: no file modification before the design review passed (CLI dispatch.mjs parity).

@@ -1,7 +1,7 @@
 # verify 重构（VERIFY-REDESIGN）— 需求
 
 > 板块：verify 完成前门禁（声明式门）。需求层文档（`docs/requirements/`）。
-> 定位：本仓机制实况登记——实现 `src/agent-tools/verify.mjs`（311 行）；部分承载 = `docs/design/AGENT-LOOP.md` verify guard 节。
+> 定位：本仓机制实况登记——实现 `src/agent-tools/verify.mjs`（W9 已迁核——现体 `thincoder-core/agent-tools/verify.mjs:1`；311 行）；部分承载 = `docs/design/AGENT-LOOP.md` verify guard 节。
 > 跨端：与 CLI 仓同名需求档语义同源；实现各自独立。
 
 ## 1. 总体目标

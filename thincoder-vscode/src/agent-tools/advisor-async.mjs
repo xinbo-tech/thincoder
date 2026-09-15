@@ -34,9 +34,9 @@ import { generateDesignToken, makeDesignTokenRegex, buildApprovedSuffix, stripAp
 import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"
 import { nextSubagentId, getAsyncPool } from "./subagent-scheduler.mjs"
-import { settleAsyncEntry, buildChildSignal } from "./async-settle.mjs"
+import { settleAsyncEntry, buildChildSignal, digestBudgetKey } from "./async-settle.mjs"
 import { setSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
-import { digestBudgetOver, persistOverflowReport } from "./digest-budget.mjs" // B5（群 B 批 §16 D-DG2）：digest 注入预算单源
+import { digestBudgetOver, persistOverflowReport } from "@thincoder/core/agent-tools/digest-budget.mjs" // B5（群 B 批 §16 D-DG2）：digest 注入预算单源
 
 /** §11.2（②-6a）：并行评审上限默认 4（2 → 4——POOL-CONFIG-UNIFIED F-1——三池统一
  *  默认——运行时回退权威——config-io AGENT_DEFAULTS.poolLimits.advisor 为 config 层
@@ -474,7 +474,7 @@ export function cancelAdvisorReview(parent, id) {
  *  原样注入、不再附 designId 注记（未通过/未签发的 digest 附 spawn 指引会误导模型——指引已由通过分支的 Approved 后缀自含）；§16 D-DG2（群 B 批 B5）：raw 计入轮预算（四族共享单源）——超限改清单行（全文落盘）+ 首条豁免。 */
 export async function injectAdvisorResult(entry, { history, fullHistory, cwd }) {
   const raw = String(entry.error ?? entry.report ?? "")
-  const saved = digestBudgetOver(history, raw.length) ? persistOverflowReport(raw, { cwd: cwd ?? process.cwd(), tag: `advisor#${entry.id}` }) : null
+  const saved = digestBudgetOver(digestBudgetKey(history), raw.length) ? await persistOverflowReport(raw, { cwd: cwd ?? process.cwd(), tag: `advisor#${entry.id}` }) : null
   const body = saved != null ? escapeXml(saved) : (entry.error != null ? `error: ${escapeXml(entry.error)}` : escapeXml(offloadToolResult(cwd, entry.report ?? "")))
   const kind = entry.reviewType === "design" ? "design" : "code"
   pushReal(history, fullHistory, {

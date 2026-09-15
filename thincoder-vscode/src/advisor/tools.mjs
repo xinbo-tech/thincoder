@@ -6,7 +6,7 @@
  * _resolvedAdvisorToolsFor — production path unchanged (override ?? advisorToolsFor).
  */
 import { toOpenAISchema } from "../tools/index.mjs"
-import { batchSegmentTool } from "../agent-tools/batch-segment.mjs"
+import { batchSegmentTool } from "@thincoder/core/agent-tools/batch-segment.mjs"
 
 const { readTool, globTool, grepTool, lsTool } = await import("../tools/index.mjs")
 const { lspTool } = await import("../tools/lsp.mjs")

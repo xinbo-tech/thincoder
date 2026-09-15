@@ -10,11 +10,14 @@
  */
 import * as os from "node:os"
 import { builtinTools, toOpenAISchema, readImageTool } from "../tools.mjs"
-import {
-  taskTool, recentChangesTool, subagentTool, batchSegmentTool,
-  planTool, goalTool, skillTool, verifyTool, timerTool,
-  advisorTool, engTool, readHistoryTool, consultStartTool, consultStopTool, // §25 R17: consult_check 退役
-} from "../agent-tools.mjs"
+// W9（2026-09-15）：工具集 re-export 面退役——14 名装配面**动态载入核登记册**
+// `@thincoder/core/agent-tools.mjs`（登记册单一来源 #83；载入点 = hydrateRun——见下）。
+// 形式 = 动态 import()（**非**静态）：核登记册静态图经 consult/subagent 族可达核 agent 栈
+// （`core/agent/setup.mjs:9` → `memory.mjs` → `node:sqlite`）——静态引入会破坏 W8 契约②
+// （`test/engine-floor-guard.test.mjs:129`：端壳静态链不得到达 node:sqlite，低宿主加载期硬失败）。
+// 核侧同款先例 = 核 `agent-tools.mjs` 头注「Loaded from agent.mjs via dynamic import」；
+// 动态 import 不入静态闭包（扫描语义同 W8 契约）。
+import { configureBatchSegment } from "@thincoder/core/agent-tools/batch-segment.mjs" // 叶子（node:fs/node:path）——静态面安全
 import { settingsTool } from "../agent-tools/settings.mjs"
 import { resetRunState, reconcileEngDesignTokens, applySlotSessionState } from "./agent-state.mjs"
 import { setSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
@@ -34,6 +37,17 @@ import { pushTimeReminder, pushInjections, appendImagePointer, pushEnvStateRemin
 // 六件槽位常量装载收口 prompt-overlays.mjs（mod 为槽位内容新家）；本文件不再各自读取。
 // W2（2026-09-15）：槽位装配面 = **核内单点**（`@thincoder/core/prompt-overlays.mjs`）——本端
 // 镜像已删（本地路径运算随之为零）。
+
+// ─── W9（2026-09-15）：batch_segment 记账面注入（核缝 #84 —— `configureBatchSegment`）──────────
+// VSC 特有增量随删旧迁入端壳（四步协议 ②）：核 `agent-tools/batch-segment.mjs` 的写入回调默认
+// no-op；本端在装配层注册 = 写入成功即记绑定档绝对路径入 `agent._touchedFiles`（与删除前
+// `src/agent-tools/batch-segment.mjs:184` 逐字同语义——Array.isArray 守卫 + includes 去重）——
+// 冻结窗口 / 子代理合入记账（execute-tools 的 recordFileMutation 同一载体）行为不变。
+configureBatchSegment({
+  onWrite: (agent, abs) => {
+    if (Array.isArray(agent._touchedFiles) && !agent._touchedFiles.includes(abs)) agent._touchedFiles.push(abs)
+  },
+})
 
 /** AUTO mode reminder lives in setup-reminders.mjs (single source of truth —
  *  D-CI6: the agent loop head pushes it; agent.mjs imports it from there for the dedupe check). */
@@ -68,7 +82,7 @@ function withPool(tool) {
  * 机械强制在 subagent.mjs execute → gateEngCoderSpawn（role/async）+ §19 受限变体 action 门
  * （schema 枚举只是给模型的提示，provider 不强制）。
  */
-function engChildSubagentTool(childRole) {
+function engChildSubagentTool(childRole, subagentTool) {
   const props = { ...subagentTool.parameters.properties }
   delete props.async // sync only — the eng child blocks on the report
   delete props.action // spawn-only — the restricted channel has no status/escalate（§19.8 check 已删）
@@ -137,6 +151,14 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // §11.2 A —— per-run 复位先于一切 reconcile（含 inheritedGuard 的 agent.mjs 侧应用）
   resetRunState(agent)
 
+  // W9（2026-09-15）：14 名装配面 = 核登记册（单一来源 #83）——**动态**载入（顶部注释：
+  // 静态引入会经 consult/subagent 族触达 node:sqlite，破 W8 契约②）；模块缓存 ⇒ 每轮零成本。
+  const {
+    taskTool, recentChangesTool, subagentTool, batchSegmentTool,
+    planTool, goalTool, skillTool, verifyTool, timerTool,
+    advisorTool, engTool, readHistoryTool, consultStartTool, consultStopTool, // §25 R17: consult_check 退役
+  } = await import("@thincoder/core/agent-tools.mjs")
+
   const agentTools = depth === 0
     ? [taskTool, recentChangesTool, readHistoryTool, settingsTool, // SETTINGS-TOOL.md（2026-09-05）：settings list/get 只读动作（isReadonlyAction）——depth-0 主 agent 面（与 memory 同分类）
       // SESSION.md §9 D-S2: read_history is depth-0 ONLY — a subagent querying "the session" would mix its throwaway lines with the parent record (semantic confusion); readonly → planMode pass / no permission ask (T-S9)
@@ -157,14 +179,14 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     : role === "eng-coder"
       ? [taskTool, recentChangesTool, planTool, timerTool, advisorTool, verifyTool,
          batchSegmentTool(batchDoc), // 目标档 = 本次 spawn 绑定（同下 agent._batchDoc；装配先于 B 类赋值——直接取 opts 值）
-         engChildSubagentTool("eng-coder")] // §18 D-E3: the audit-only restricted subagent channel (explore + sync + spawn-only — schema level; the mechanical gates are subagent.mjs gateEngCoderSpawn + the §19 restricted-variant action gate)
+         engChildSubagentTool("eng-coder", subagentTool)] // §18 D-E3: the audit-only restricted subagent channel (explore + sync + spawn-only — schema level; the mechanical gates are subagent.mjs gateEngCoderSpawn + the §19 restricted-variant action gate)
     // eng-designer（ENGINEERING-MODE.md §2.15 D / §2.22.4 ④）：读/搜/写设计产出（builtin 读写工具
     // 随 baseTools 注入）+ batch_segment 段写入通道（§2，目标档 = spawn 绑定 agent._batchDoc）+
     // 勘察通道（explore-only 受限变体）；**不含 advisor**（设计师不发起评审）。
     : role === "eng-designer"
       ? [taskTool, planTool, timerTool,
          batchSegmentTool(batchDoc),
-         engChildSubagentTool("eng-designer")]
+         engChildSubagentTool("eng-designer", subagentTool)]
     // Write-permission coder sub-agents: their system prompt names verify (system.md)
     // and advisor (discipline.md) — without them the escalate/coder hit "unknown tool"
     // and fell back to bash node --check / npm test to self-verify (2026-08-16 deepseek

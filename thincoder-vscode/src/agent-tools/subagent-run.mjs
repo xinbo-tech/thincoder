@@ -13,7 +13,7 @@
  */
 import { shouldAutoResume, mergeChildMutations } from "./subagent-async.mjs"
 import { applyTurnFrame } from "../agent/run-helpers.mjs"
-import { makeChildPermission } from "./child-permission.mjs" // §18 C-2：child 权限通道（2026-09-12）
+import { makeChildPermission } from "@thincoder/core/agent-tools/child-permission.mjs" // §18 C-2：child 权限通道（2026-09-12）
 
 export async function runChild(entry, { parent, ctx, cwd, runAgent, role, subId, maxTurns, childInput, provider, designId, task, asyncFlag, childSignal, batchDoc = null }) {
       let output = ""

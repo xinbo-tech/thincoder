@@ -47,7 +47,7 @@
 
 | 文件 | 改动 | 行数 |
 |---|---|---|
-| src/agent-tools/read-history.mjs | 核心保留 + import/reexport | 382 现（≈−100±5 → ~280——评审 #1 实测） |
+| src/agent-tools/read-history.mjs | 核心保留 + import/reexport （W9 已迁核——本端该档已删；现体 `thincoder-core/agent-tools/read-history.mjs`） | 382 现（≈−100±5 → ~280——评审 #1 实测） |
 | src/agent-tools/read-history-discovery.mjs | 新建——发现面 | 新（~110±5——评审 #1） |
 | AGENTS.md 模块图 | 如涉及同步 | doc |
 | docs/TODO.md L25 | 勾销（父侧核销时） | doc |
@@ -68,8 +68,9 @@
 - AC-1 两文件拆分（read-history ~280 / discovery ~110——实测 ±10）
 - AC-2 verbatim 移动（git diff 函数体零改——仅 imports/头——测试断言数 parity——基线开工记）
 - AC-3 外部消费方零破坏（import 面核对——hub or 直改按消费方数）
-- AC-4 测试绿（read-history-guard 测试 + 既有——VSC npm test 快层——断言计数 = 基线）
+- AC-4 测试绿（read-history-guard 测试 + 既有——VSC npm test 快层——断言计数 = 基线）（W9 已迁核——read-history-guard 测试档已退役〔测试纪律①默认退役判〕，本端 read_history 行为面由核测试 + 集成面承接）
 - AC 红线：行为零改（纯重构——护栏/窗口/装载逻辑零变——CLI 零触碰）
 
 ## 变更记录
 - 2026-09-09：read-history 拆分落档（代码正确性核实一手——382 行实读 + 段分类 + 发现面 107 行拆出候选——机械拆分纪律同 ACTIVITY-SPLIT）。
+- 2026-09-15（W9 迁核注记 · eng-coder）：受影响文件表 `read-history.mjs` 行与 AC-4 行补「W9 已迁核」注（本端档已删 = 核单源；`read-history-guard` 测试退役）——判据不改，仅去「在位」形态。

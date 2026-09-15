@@ -28,6 +28,10 @@ import { injectAsyncResult, DIGEST_INJECT_BUDGET } from "../src/agent-tools/suba
 import { injectAdvisorResult } from "../src/agent-tools/advisor-async.mjs"
 import { injectEscalateResult } from "../src/agent-tools/subagent-escalate-async.mjs"
 import { injectConsultResult } from "../src/agent-tools/consult.mjs"
+// W9（2026-09-15）：digest 预算单源 = 核 `agent-tools/digest-budget.mjs`——落盘目录 = 核
+// `configDir/tool-results`（原 VSC 面 `<cwd>/.thincoder/tmp` 退役）；测试沙箱 = 核缝
+// `_setDigestOffloadDirForTest`（原「cwd 即沙箱」形状随之退役）。
+import { _setDigestOffloadDirForTest } from "@thincoder/core/agent-tools/digest-budget.mjs"
 
 let sessionsDir
 const cwd = "/proj/eng-settlement" // session filename is keyed by hash(cwd) under the isolated sessions dir
@@ -202,8 +206,10 @@ test("clearSlotEngDesignToken removes one designId, keeps siblings", () => {
 // 用例表 1:1（与 CLI async-settle.test.mjs 同尺寸钉死）：3 条 pending 30K+30K+40K（合计
 // 100K > 64K）→ 后条清单行（报告已落盘 <path>——不 inline 全文——path 来源钉死）；累计恰
 // 64K → 全部 inline（预算含边界）；单条 ≤64K 不回归 + 空轮 no-op。digest 轮 = 同 history
-// 连续注入（无他人落史——pushReal 每次恰 +1）；预算状态键 history 对象。VSC 落盘目录 =
-// <cwd>/.thincoder/tmp（offload 同目录约定）——cwd 用 mkdtemp 沙箱。
+// 连续注入（无他人落史——pushReal 每次恰 +1）；预算状态键 = 载体（W9 起：核 digest-budget
+// 以传入对象为键、经 `键.history.length` 判轮；VSC 注入器以 history 为 WeakMap 键合成
+// 稳定键——见 async-settle.mjs digestBudgetKey）。落盘目录 = 核 `configDir/tool-results`
+// （W9 单源化——原 VSC 面 `<cwd>/.thincoder/tmp` 退役）——沙箱经核缝 `_setDigestOffloadDirForTest`。
 
 /** 最小 history 载体（数组 + 墓碑 Map——injectAsyncResult 读写的面）。 */
 function mkHistory() {
@@ -214,6 +220,8 @@ function mkHistory() {
 
 test("F-2 超预算：单 digest 轮 30K+30K+40K（100K > 64K）→ 后条清单行不 inline（全文落盘 path 钉死）", async () => {
   const cwd = mkdtempSync(join(tmpdir(), "eng-digest-"))
+  const offload = join(cwd, "tool-results")
+  _setDigestOffloadDirForTest(offload) // 沙箱（核缝；落盘目录 = 核 configDir/tool-results 的测试替代）
   try {
     const history = mkHistory()
     const ctx = { history, fullHistory: [], cwd }
@@ -229,7 +237,7 @@ test("F-2 超预算：单 digest 轮 30K+30K+40K（100K > 64K）→ 后条清单
     const m = third.match(/saved to disk[^:]*: (.+)/)
     assert.ok(m, "清单行含落盘 path（报告已落盘 <path> 形态）")
     const file = m[1].trim().split(/\n/)[0]
-    assert.ok(file.startsWith(join(cwd, ".thincoder", "tmp")), "path 来源 = cwd/.thincoder/tmp（offload 同目录）")
+    assert.ok(file.startsWith(offload), "path 来源 = 核落盘目录（沙箱 override 下）")
     assert.equal(readFileSync(file, "utf8"), "C".repeat(40000), "清单行指向的文件 = 第三条全文")
     // 轮复位：他人落史（下一请求窗口）→ 预算清零——后续单条照旧 inline
     history.push({ role: "user", content: "next turn" })
@@ -237,6 +245,7 @@ test("F-2 超预算：单 digest 轮 30K+30K+40K（100K > 64K）→ 后条清单
     assert.equal(history.length, 5)
     assert.ok(history[4].content.includes("D".repeat(200)), "新轮（累计不跨轮残留）")
   } finally {
+    _setDigestOffloadDirForTest(null)
     rmSync(cwd, { recursive: true, force: true })
   }
 })
@@ -277,8 +286,10 @@ test("F-2 单条 ≤64K 不回归 + 空轮 no-op：预算不跨 history 残留�
 test("F-2 落盘失败兜底：persist 失败 → 回退常规 inline（不吞报告不抛——结果零丢失）", async () => {
   const cwd = mkdtempSync(join(tmpdir(), "eng-digest-"))
   try {
-    mkdirSync(join(cwd, ".thincoder"), { recursive: true })
-    writeFileSync(join(cwd, ".thincoder", "tmp"), "blocker", "utf8") // tmp 位置为文件——mkdir 必败
+    // W9：落盘目录 = 核落盘根（override 沙箱）——「目录不可建」构造：父路径是文件
+    const blocker = join(cwd, "offload-blocker")
+    writeFileSync(blocker, "blocker", "utf8")
+    _setDigestOffloadDirForTest(join(blocker, "sub"))
     const history = mkHistory()
     const ctx = { history, fullHistory: [], cwd }
     await injectAsyncResult({ id: 1, role: "explore", report: "A".repeat(30000), error: null }, ctx)
@@ -287,17 +298,20 @@ test("F-2 落盘失败兜底：persist 失败 → 回退常规 inline（不吞�
     assert.ok(history[0].content.includes("A".repeat(200)), "首条 inline")
     assert.ok(history[1].content.includes("C".repeat(200)), "兜底：全文 inline——报告不丢")
   } finally {
+    _setDigestOffloadDirForTest(null)
     rmSync(cwd, { recursive: true, force: true })
   }
 })
 
 // ─── 群 B 批 B5（§16 D-DG2——AGENT-LOOP.md §16）：四族接线（T-DG1~T-DG3）───
-// 预算单源 = digest-budget.mjs（常量/判超/记账/落盘四处合一）——四族注入器共用同一轮累计
-// （跨族合计生效）；raw = 报告正文（不含 `[System reminder: …]` 标签行）；首条豁免保留；
-// 落盘 tag = 写入族 + 条目 id（文件名后缀）。
+// 预算单源 = 核 digest-budget.mjs（常量/判超/记账/落盘四处合一——W9 起端侧镜像退役）
+// ——四族注入器共用同一轮累计（跨族合计生效）；raw = 报告正文（不含 `[System reminder: …]` 标签行）；
+// 首条豁免保留；落盘 tag = 写入族 + 条目 id（核名净化 `#`→`_`——文件名后缀）。
 
 test("T-DG1 正常：同轮两条 advisor（各 40K——合计 80K > 64K）→ 首条 inline、次条清单行 + 全文落盘", async () => {
   const cwd = mkdtempSync(join(tmpdir(), "eng-digest-"))
+  const offload = join(cwd, "tool-results")
+  _setDigestOffloadDirForTest(offload)
   try {
     const history = mkHistory()
     const ctx = { history, fullHistory: [], cwd }
@@ -311,17 +325,20 @@ test("T-DG1 正常：同轮两条 advisor（各 40K——合计 80K > 64K）→ 
     const m = second.match(/saved to disk[^:]*: (.+)/)
     assert.ok(m, "清单行含落盘 path（报告已落盘 <path> 形态）")
     const file = m[1].trim().split(/\n/)[0]
-    assert.ok(file.startsWith(join(cwd, ".thincoder", "tmp")), "path 来源 = cwd/.thincoder/tmp（offload 同目录）")
-    assert.ok(file.includes("advisor#2"), "tag 入文件名（写入族 + 条目 id）")
+    assert.ok(file.startsWith(offload), "path 来源 = 核落盘目录（沙箱 override 下）")
+    assert.ok(file.includes("advisor_2"), "tag 入文件名（写入族 + 条目 id——核名净化 #→_）")
     assert.equal(readFileSync(file, "utf8"), "A".repeat(40000), "清单行指向的文件 = 次条全文")
     assert.ok(second.includes("async advisor design review #2 finished"), "族标签行保留（文案零变）")
   } finally {
+    _setDigestOffloadDirForTest(null)
     rmSync(cwd, { recursive: true, force: true })
   }
 })
 
 test("T-DG2 正常：escalate / consult 两族接线生效（超限 → 同规清单行 + 全文落盘）", async () => {
   const cwd = mkdtempSync(join(tmpdir(), "eng-digest-"))
+  const offload = join(cwd, "tool-results")
+  _setDigestOffloadDirForTest(offload)
   try {
     const history = mkHistory()
     const ctx = { history, fullHistory: [], cwd }
@@ -331,23 +348,26 @@ test("T-DG2 正常：escalate / consult 两族接线生效（超限 → 同规�
     assert.ok(history[0].content.includes("B".repeat(200)), "escalate 首条 inline")
     assert.ok(!history[1].content.includes("C".repeat(200)), "escalate 次条不 inline 全文（族接线生效）")
     const eFile = history[1].content.match(/saved to disk[^:]*: (.+)/)[1].trim().split(/\n/)[0]
-    assert.ok(eFile.includes("escalate#12"), "escalate tag 入名")
+    assert.ok(eFile.includes("escalate_12"), "escalate tag 入名（核名净化 #→_）")
     assert.equal(readFileSync(eFile, "utf8"), "C".repeat(40000), "escalate 全文落盘")
     // consult：同轮继续（预算共享）——40K 必超
     await injectConsultResult({ id: "c1", replies: [{ model: "m1", reply: "D".repeat(40000) }], failed: 0, total: 1 }, ctx)
     const c = history[2].content
     assert.ok(!c.includes("D".repeat(200)), "consult 次条不 inline 全文（族接线生效）")
     const cFile = c.match(/saved to disk[^:]*: (.+)/)[1].trim().split(/\n/)[0]
-    assert.ok(cFile.includes("consult#c1"), "consult tag 入名")
+    assert.ok(cFile.includes("consult_c1"), "consult tag 入名（核名净化 #→_）")
     assert.ok(readFileSync(cFile, "utf8").includes("D".repeat(200)), "consult 全文落盘（replies 正文）")
     assert.ok(c.includes("consultation #c1 finished"), "会诊标签行保留（文案零变）")
   } finally {
+    _setDigestOffloadDirForTest(null)
     rmSync(cwd, { recursive: true, force: true })
   }
 })
 
 test("T-DG3 边界：跨族同轮共享预算（subagent 40K + advisor 40K）→ 次条判超（单源记账）", async () => {
   const cwd = mkdtempSync(join(tmpdir(), "eng-digest-"))
+  const offload = join(cwd, "tool-results")
+  _setDigestOffloadDirForTest(offload)
   try {
     const history = mkHistory()
     const ctx = { history, fullHistory: [], cwd }
@@ -356,9 +376,10 @@ test("T-DG3 边界：跨族同轮共享预算（subagent 40K + advisor 40K）→
     assert.ok(history[0].content.includes("E".repeat(200)), "首条（subagent）inline")
     assert.ok(!history[1].content.includes("F".repeat(200)), "次条（advisor）判超——跨族合计（共享预算单源）")
     const file = history[1].content.match(/saved to disk[^:]*: (.+)/)[1].trim().split(/\n/)[0]
-    assert.ok(file.includes("advisor#22"))
+    assert.ok(file.includes("advisor_22"))
     assert.equal(readFileSync(file, "utf8"), "F".repeat(40000), "次条全文落盘")
   } finally {
+    _setDigestOffloadDirForTest(null)
     rmSync(cwd, { recursive: true, force: true })
   }
 })

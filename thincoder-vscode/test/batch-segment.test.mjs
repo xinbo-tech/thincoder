@@ -16,7 +16,8 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from "nod
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
-import { batchSegmentTool, resolveBatchDocPath, MAX_TEXT_CHARS } from "../src/agent-tools/batch-segment.mjs"
+import { batchSegmentTool, resolveBatchDocPath, MAX_TEXT_CHARS, configureBatchSegment, resetBatchSegment } from "@thincoder/core/agent-tools/batch-segment.mjs"
+import { readFileSync as readSource } from "node:fs"
 import { _resolvedAdvisorToolsFor, _setAdvisorToolSetForTest } from "../src/advisor/tools.mjs"
 import { launchAsyncAdvisor } from "../src/agent-tools/advisor-async.mjs"
 
@@ -220,24 +221,41 @@ test("T66 边界：两设计评审并发——batchDoc 沿 rv 实例键传递，
 })
 
 // ── T-FZ3（群 B 批 B3 §17.2 E-扩 3）：成功写入记写域 / 失败零记账 ─────────────
+// W9（2026-09-15）：记账面 = 核注入缝 #84（公开删除前的内联直写——本端装配层注册
+// `configureBatchSegment({ onWrite })`，见 src/agent/setup.mjs）；测试侧注册镜像端壳回调
+// （与 setup.mjs 同形）验工具契约；装配在位由本文末结构机检钉死。
 test("T-FZ3 正常/错误：成功写入记绑定档绝对路径入 _touchedFiles；拒绝路径与未挂载体零记账零抛错", async () => {
   const abs = makeDoc()
   const agent = { cwd: tmp, _role: "eng-designer", _touchedFiles: [] }
   const ctx = { agent, cwd: tmp }
-  const out = await batchSegmentTool(abs).execute({ segment: "§2", text: "F31(c) 记账面" }, ctx)
-  assert.match(out, /appended .* to §2/, "写入成功（正控）")
-  assert.deepEqual(agent._touchedFiles, [abs], "成功：绑定档绝对路径入调用者写域（mergeChildMutations 合入载体）")
-  // 去重守卫：同档二次写入不重复入列
-  await batchSegmentTool(abs).execute({ segment: "§2", text: "第二段" }, ctx)
-  assert.deepEqual(agent._touchedFiles, [abs], "includes 去重守卫（同路径不重复）")
-  // 错误路径对照：越段拒绝 → 零记账（fail-closed 不写不记）
-  const before = [...agent._touchedFiles]
-  await catchErr(() => batchSegmentTool(abs).execute({ segment: "§9", text: "越段" }, ctx))
-  assert.deepEqual(agent._touchedFiles, before, "拒绝路径零记账")
-  // 评审实例面（未挂 _touchedFiles）：Array.isArray 守卫——写入成功但不抛错不记账
-  const bare = { cwd: tmp, _role: "eng-designer" }
-  const out2 = await batchSegmentTool(abs).execute({ segment: "§2", text: "无载体写入" }, { agent: bare, cwd: tmp })
-  assert.match(out2, /appended .* to §2/, "未挂载体写入照常成功")
-  assert.equal(bare._touchedFiles, undefined, "未挂载体零记账零抛错（Array.isArray 守卫）")
+  configureBatchSegment({
+    onWrite: (a, p) => { if (Array.isArray(a._touchedFiles) && !a._touchedFiles.includes(p)) a._touchedFiles.push(p) },
+  })
+  try {
+    const out = await batchSegmentTool(abs).execute({ segment: "§2", text: "F31(c) 记账面" }, ctx)
+    assert.match(out, /appended .* to §2/, "写入成功（正控）")
+    assert.deepEqual(agent._touchedFiles, [abs], "成功：绑定档绝对路径入调用者写域（mergeChildMutations 合入载体）")
+    // 去重守卫：同档二次写入不重复入列
+    await batchSegmentTool(abs).execute({ segment: "§2", text: "第二段" }, ctx)
+    assert.deepEqual(agent._touchedFiles, [abs], "includes 去重守卫（同路径不重复）")
+    // 错误路径对照：越段拒绝 → 零记账（fail-closed 不写不记）
+    const before = [...agent._touchedFiles]
+    await catchErr(() => batchSegmentTool(abs).execute({ segment: "§9", text: "越段" }, ctx))
+    assert.deepEqual(agent._touchedFiles, before, "拒绝路径零记账")
+    // 评审实例面（未挂 _touchedFiles）：Array.isArray 守卫——写入成功但不抛错不记账
+    const bare = { cwd: tmp, _role: "eng-designer" }
+    const out2 = await batchSegmentTool(abs).execute({ segment: "§2", text: "无载体写入" }, { agent: bare, cwd: tmp })
+    assert.match(out2, /appended .* to §2/, "未挂载体写入照常成功")
+    assert.equal(bare._touchedFiles, undefined, "未挂载体零记账零抛错（Array.isArray 守卫）")
+  } finally {
+    resetBatchSegment()
+  }
+})
+
+// ── W9 装配在位（结构机检——核 #83 同款形态）：端装配层注册记账缝 ─────────────
+test("W9 装配在位：src/agent/setup.mjs 注册 configureBatchSegment 记账回调（_touchedFiles）", () => {
+  const setup = readSource(new URL("../src/agent/setup.mjs", import.meta.url), "utf8")
+  assert.match(setup, /configureBatchSegment\(\{/, "装配层注册记账缝（核缝 #84 端侧消费）")
+  assert.match(setup, /agent\._touchedFiles\.push\(abs\)/, "回调体 = _touchedFiles 记账（与删除前内联面逐字同形）")
 })
 

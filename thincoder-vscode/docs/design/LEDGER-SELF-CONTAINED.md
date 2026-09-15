@@ -565,7 +565,7 @@
 | 26 | `docs/requirements/NORMAL-MODE.md` | **新建（①）** | 0→~70 | 提示词装配层在位 |
 | 27 | `docs/requirements/SETTINGS-TOOL.md` | **新建（①）** | 0→~70 | `src/agent-tools/settings.mjs` 在位；部分承载 = `docs/design/TOOLS.md` §5 |
 | 28 | `docs/requirements/STRUCTURE-DEBT.md` | **新建（①）** | 0→~60 | 本端结构债登记面缺失 |
-| 29 | `docs/requirements/VERIFY-REDESIGN.md` | **新建（①）** | 0→~60 | `src/agent-tools/verify.mjs` 在位 |
+| 29 | `docs/requirements/VERIFY-REDESIGN.md` | **新建（①）** | 0→~60 | `thincoder-core/agent-tools/verify.mjs` 在位（W9 已迁核——原 `src/agent-tools/verify.mjs`） |
 | 30 | `docs/batches/`（迁移 **14** 档） | 迁入 4234 行（含 10 行折行） | ±0 | §8.3 迁移清单 |
 | 31 | `docs/batches/`（拆分 **17** 档本仓承载档） | **新建** | 0→≈168 条目 | §8.3 拆分清单 |
 | 32 | `docs/design/_archive/`（迁移 3 + 拆分 2） | 迁入 223 行 | ±0 | §8.4 D 类 |

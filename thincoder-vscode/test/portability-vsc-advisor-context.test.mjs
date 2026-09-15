@@ -16,7 +16,7 @@ import { join } from "node:path"
 import { findProjectRoot } from "../src/advisor/project-context.mjs"
 import { clearConventionsCache, isDocPath, loadConventions } from "@thincoder/core/conventions.mjs"
 import { advisorTool } from "../src/agent-tools/advisor.mjs"
-import { engTool } from "../src/agent-tools/eng.mjs"
+import { engTool } from "@thincoder/core/agent-tools/eng.mjs"
 import { _setConfigPathForTest } from "../src/config-io.mjs"
 
 // ─── 夹具 ─────────────────────────────────────────────────────────────────────

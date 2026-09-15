@@ -49,7 +49,7 @@
   `setupAgentRun` → 构造 agent 的 `config.agent.engineering` /
   `config.advisor.guard`。
 - **写入路径（双写：slot 先、config 镜像后——slot 写失败不阻断 config 写）**：
-  - `eng(enter/exit)` 工具（`src/agent-tools/eng.mjs`）：经 `_engPersist: {cwd,
+  - `eng(enter/exit)` 工具（`src/agent-tools/eng.mjs`——W9 已迁核：现体 `thincoder-core/agent-tools/eng.mjs`）：经 `_engPersist: {cwd,
     slot}` 通道（`setup.mjs` 从 opts 注入；**仅顶层**——子代理无 engPersist）→
     `setSlotEngineering` 写 slot；再 `persistRaw` 写 config 镜像。
   - 设置面板 ENG/GUARD toggle：`panel-messages.mjs` `setAdvisorGuard` /
@@ -114,7 +114,7 @@
   （`designIdForScope`——sync/async 同构于 scope 记录）。旧 slot 残留单值镜像值由 `setup.mjs` **一次性迁移读**进 Map（legacy 兼容），此后零写。
 - **R16 清理只删过期、三时机**：过期 token（格式有效且 TTL 已过）在
   (a) restore filter（`setup.mjs`——过期不入 Map/槽）、(b) `eng(enter)` sweep
-  （`eng.mjs` `sweepExpiredDesignTokens`）、(c) spawn-gate slot 删除
+  （`eng.mjs` purgeExpiredDesignTokens——核内名；W9 已迁核，原镜像名 sweepExpiredDesignTokens）、(c) spawn-gate slot 删除
   （`subagent-spawn-gate.mjs` `dropExpiredTokenSlot`）被删；畸形/不匹配只拒不删。
   token **跨模式开关存活**（OFF→ON/OFF 不清有效 token——mode toggle 不烧凭证）。
 - **持久化**：多槽表随 `agentState()`（`engDesignTokens` 键）写槽 + async settle **当场同步 await 写槽**（D1——失败即 settle 失败，不 fire-and-forget）；`setup.mjs` restore filter 按 TTL 过滤读
@@ -181,7 +181,7 @@
 
 | 域 | 文件 |
 |---|---|
-| 工具 | `src/agent-tools/eng.mjs`（enter/exit + sweep + 双写）、`advisor.mjs`（签发/校验/Approved）、`subagent.mjs`（role 门/互斥）、`subagent-spawn-gate.mjs`（resolveDesignSlot/authorize/consume） |
+| 工具 | `src/agent-tools/eng.mjs`（W9 已迁核——现体 `thincoder-core/agent-tools/eng.mjs`；enter/exit + sweep + 双写）、`advisor.mjs`（签发/校验/Approved）、`subagent.mjs`（role 门/互斥）、`subagent-spawn-gate.mjs`（resolveDesignSlot/authorize/consume） |
 | agent 装配 | `src/agent/setup.mjs`（engState 读/restore filter/modeRoleField）、`run-helpers.mjs`（agentState/hasCodeMutations/上限）、`execute-tools.mjs`（dispatch 门禁）、`run-stages.mjs`（guard 推回） |
 | 会话/面板 | `src/extension/session-slot-write.mjs`（setSlot*）、`session-io.mjs`、`panel-chat.mjs`（engState 读）、`panel-messages.mjs`（ENG/GUARD 消息） |
 | 提示词 | `src/prompts/persona-engineering.md`、`persona-eng-coder.md`、`persona-eng-designer.md`、`discipline-engineering.md`、`common.md`（工程锚落点——旧 engineering.md/engineering-sub.md 已退役——PROMPT-SYSTEM 施工①③） |

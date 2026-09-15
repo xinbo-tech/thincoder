@@ -23,12 +23,12 @@ import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs
 import { logEvent } from "@thincoder/core/log.mjs"
 import { describeBlockers, effectivePoolLimits, entryDomain, nextSubagentId, refreshQueuedRows, runningByDomain, writeTombstoneTo } from "./subagent-scheduler.mjs"
 import { resolveBatchDoc, NEEDS_BATCH_DOC } from "./subagent-spawn-gate.mjs"
-import { settleAsyncEntry } from "./async-settle.mjs"
+import { settleAsyncEntry, digestBudgetKey } from "./async-settle.mjs"
 import { recordFileMutation } from "./advisor-async.mjs"
-// 群 B 批 B5（§16）：digest 注入预算单源迁出（digest-budget.mjs）——保留 re-export
+// 群 B 批 B5（§16）：digest 注入预算单源迁出（W9 起 = 核 agent-tools/digest-budget.mjs）——保留 re-export
 // （`DIGEST_INJECT_BUDGET` 测试导入面零改；单条 offload 预览路径零改）。
-import { digestBudgetOver, persistOverflowReport } from "./digest-budget.mjs"
-export { DIGEST_INJECT_BUDGET } from "./digest-budget.mjs"
+import { digestBudgetOver, persistOverflowReport } from "@thincoder/core/agent-tools/digest-budget.mjs"
+export { DIGEST_INJECT_BUDGET } from "@thincoder/core/agent-tools/digest-budget.mjs"
 // 测试 import 面（test/subagent-scheduler.test.mjs——测试文件零改动约束）：§20 调度符号经
 // 本模块 re-export 保持可导入——src 侧消费者（subagent.mjs）已改指 subagent-scheduler.mjs 直连。
 export { describeBlockers, queueRunnable, nextSubagentId } from "./subagent-scheduler.mjs"
@@ -389,11 +389,11 @@ function settleSubagentEntry(parent, entry, report, error, notifySettle) {
  */
 export async function injectAsyncResult(entry, { history, fullHistory, cwd }) {
   const raw = String(entry.error ?? entry.report ?? "")
-  const over = digestBudgetOver(history, raw.length)
+  const over = digestBudgetOver(digestBudgetKey(history), raw.length)
   const inlineBody = () => entry.error != null
     ? `error: ${escapeXml(entry.error)}`
     : escapeXml(offloadToolResult(cwd, entry.report ?? ""))
-  const body = (over && persistOverflowReport(raw, { cwd, tag: `subagent#${entry.id}` })) || inlineBody()
+  const body = (over && (await persistOverflowReport(raw, { cwd, tag: `subagent#${entry.id}` }))) || inlineBody()
   pushReal(history, fullHistory, {
     role: "user",
     content: `[System reminder: async subagent #${entry.id} (${entry.role}) finished]\n\n${body}`,

@@ -349,6 +349,10 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
     agent.planMode = agent._planMode === true
     if (agent._goal) agent.goal = agent._goal
     agent._onTaskUpdate = (items) => callbacks.onTaskUpdate?.(items)
+    // goal 回填判定基准（核 goal 工具**原地**改 `agent.goal` 的状态——引用同一性不可用，故取值快照；
+    // 审计修正轮-1：原「引用不等」守卫在 _goal === goal 同引用下恒假 ⇒ 完成/受阻终态不推面板）
+    const goalRefBefore = agent._goal ?? null
+    const goalStatusBefore = agent._goal?.status ?? null
 
     await executeToolBatches(agent, { response, history, fullHistory, toolByName, getAuto, callbacks, signal, sessionSignal: opts.sessionSignal ?? null, cwd, recentSigs, depth })
     traceStop(`turn ${turn}: tool batches complete`)
@@ -361,9 +365,10 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
       agent._planMode = agent.planMode
       callbacks.onPlanMode?.(agent.planMode)
     }
-    if (agent.goal !== undefined && agent.goal !== agent._goal) {
-      agent._goal = agent.goal
-      const g = agent.goal
+    if (agent.goal !== undefined && agent.goal !== agent._goal) agent._goal = agent.goal
+    const goalChanged = agent._goal !== goalRefBefore || (agent._goal?.status ?? null) !== goalStatusBefore
+    if (goalChanged) {
+      const g = agent._goal
       callbacks.onGoal?.(g
         ? { status: g.status === "active" ? "active" : g.status === "complete" ? "done" : g.status, objective: g.objective, criteria: g.criteria }
         : { status: "cancelled" })

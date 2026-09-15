@@ -20,8 +20,8 @@ import { specForModel } from "../specs.mjs"
 import { logEvent, errText } from "@thincoder/core/log.mjs"
 import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
 import { getAsyncPool, removeFromAsyncPools } from "./subagent-scheduler.mjs"
-import { settleAsyncEntry, buildChildSignal } from "./async-settle.mjs"
-import { digestBudgetOver, persistOverflowReport } from "./digest-budget.mjs" // B5（群 B 批 §16 D-DG2）：digest 注入预算单源
+import { settleAsyncEntry, buildChildSignal, digestBudgetKey } from "./async-settle.mjs"
+import { digestBudgetOver, persistOverflowReport } from "@thincoder/core/agent-tools/digest-budget.mjs" // B5（群 B 批 §16 D-DG2）：digest 注入预算单源
 
 /** Read-only tool injected into consultation children (via runAgent opts.extraTools).
  *  Lets the consultant pull the main agent's conversation history on demand —
@@ -118,7 +118,7 @@ function nextConsultId(parent) {
  *  （调用方从容器移除——run-start 单注入点 + 挂起退出残留兜底两消费点共用）。
  *  §16 D-DG2（群 B 批 B5）：raw（replies 正文——标签行不计）计入轮预算（四族共享单源）
  *  ——超限改清单行（全文落盘）；首条豁免保留。 */
-export function injectConsultResult(session, { history, fullHistory, cwd }) {
+export async function injectConsultResult(session, { history, fullHistory, cwd }) {
   const n = session?.replies?.length ?? 0
   const failed = session.failed ?? 0
   const total = session.total ?? n
@@ -128,7 +128,7 @@ export function injectConsultResult(session, { history, fullHistory, cwd }) {
     return `--- ${label}${mark} ---\n${String(r.reply ?? "")}`
   })
   const raw = parts.join("\n\n")
-  const saved = digestBudgetOver(history, raw.length) ? persistOverflowReport(raw, { cwd: cwd ?? process.cwd(), tag: `consult#${session?.id ?? "session"}` }) : null
+  const saved = digestBudgetOver(digestBudgetKey(history), raw.length) ? await persistOverflowReport(raw, { cwd: cwd ?? process.cwd(), tag: `consult#${session?.id ?? "session"}` }) : null
   const body =
     `[System reminder: consultation #${session?.id} finished — ${n} replies received (${failed} failed / ${total} models):\n` +
     `${saved ?? raw}]`

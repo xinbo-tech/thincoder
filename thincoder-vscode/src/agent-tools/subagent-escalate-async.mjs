@@ -27,12 +27,12 @@
  * subagent-escalate.mjs 动态 import 本模块（防环）。
  */
 import { applyTurnFrame, escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
-import { digestBudgetOver, persistOverflowReport } from "./digest-budget.mjs" // B5（群 B 批 §16 D-DG2）：digest 注入预算单源
+import { digestBudgetOver, persistOverflowReport } from "@thincoder/core/agent-tools/digest-budget.mjs" // B5（群 B 批 §16 D-DG2）：digest 注入预算单源
 import { spawnAsyncSubagent, mergeChildMutations } from "./subagent-async.mjs"
 import { nextSubagentId } from "./subagent-scheduler.mjs"
-import { settleAsyncEntry, buildChildSignal } from "./async-settle.mjs"
+import { settleAsyncEntry, buildChildSignal, digestBudgetKey } from "./async-settle.mjs"
 import { escalateLabel, prepareEscalateProvider, touchedFilesNote } from "./subagent-escalate.mjs"
-import { makeChildPermission } from "./child-permission.mjs" // §18 C-2/C-9：child 权限通道（2026-09-12）
+import { makeChildPermission } from "@thincoder/core/agent-tools/child-permission.mjs" // §18 C-2/C-9：child 权限通道（2026-09-12）
 
 /** 飞刀 async 发起（§25 D-R17b——escalateAction async 分支调用）：入 other 池——
  *  spawnAsyncSubagent 全权处理槽位/排队/条目级 controller/停止冻结通知——自定义 settle
@@ -223,7 +223,7 @@ export async function injectEscalateResult(entry, { history, fullHistory, cwd })
     ? `[System reminder: async escalate #${entry.id} (${tag}) FAILED — error report below; partial changes were ${entry.mergeSkipped?.length ? `NOT merged (overlap: ${entry.mergeSkipped.join(", ")})` : "merged (no overlap with your own edits)"}]:`
     : `[System reminder: async escalate #${entry.id} (${tag}) finished — its changes were merged into your session${entry.overlapWarning?.length ? " (⚠ overlap — see report)" : ""}; post-op report:`
   const raw = String(entry.injectBody ?? "")
-  const saved = digestBudgetOver(history, raw.length) ? persistOverflowReport(raw, { cwd: cwd ?? process.cwd(), tag: `escalate#${entry.id}` }) : null
+  const saved = digestBudgetOver(digestBudgetKey(history), raw.length) ? await persistOverflowReport(raw, { cwd: cwd ?? process.cwd(), tag: `escalate#${entry.id}` }) : null
   const body = `${head}\n\n${saved ?? raw}]`
   pushReal(history, fullHistory, {
     role: "user",

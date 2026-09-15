@@ -19,7 +19,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { gitTool } from "../../src/tools/git.mjs"
-import { verifyTool } from "../../src/agent-tools/verify.mjs"
+import { verifyTool } from "@thincoder/core/agent-tools/verify.mjs"
 
 const git = (cwd, ...args) => execFileSync("git", args, { cwd, encoding: "utf8" }).trim()
 
@@ -61,47 +61,49 @@ test("⑥ 正常：commit 带 path——列出的改动入 HEAD，他批未暂�
 test("⑥ 边界：verify skipped 带理由 → 放行（标记理由）；不带理由 → 拒绝（空跳过不允许）", async () => {
   const file = join(plain, "app.js")
   writeFileSync(file, "export const x = 1\n", "utf8")
-  const agent = { _touchedFiles: [file] }
+  // W9：核 verify 载体面 = `ctx.agent.cwd` + `agent.tasks`（原端面 ctx.cwd/_tasks）；文案随核实现（W9 单源）
+  const agent = { cwd: plain, _touchedFiles: [file], tasks: [] }
 
   const released = await verifyTool.execute(
     { verification: { status: "skipped", summary: "本项目无自动化检查——已人工通读改动" } },
     { agent, cwd: plain },
   )
-  assert.match(released, /✓ Verification skipped with reason: 本项目无自动化检查/, "带理由放行并标记理由")
+  assert.match(released, /Verification skipped with reason: 本项目无自动化检查/, "带理由放行并标记理由")
   assert.equal(agent._verifyPassed, true, "放行旗位")
 
   const rejected = await verifyTool.execute(
     { verification: { status: "skipped" } },
-    { agent: { _touchedFiles: [file] }, cwd: plain },
+    { agent: { cwd: plain, _touchedFiles: [file], tasks: [] }, cwd: plain },
   )
-  assert.match(rejected, /✗ NOT VERIFIED/, "空跳过拒绝")
-  assert.match(rejected, /An empty skip is not allowed/, "拒绝理由可读（引导补 summary）")
+  assert.match(rejected, /VERIFY BLOCKED/, "空跳过拒绝")
+  assert.match(rejected, /empty skip is not allowed/, "拒绝理由可读（引导补 summary）")
 })
 
 test("⑥ 错误：verify failed → 拒绝（不得声称完成：旗位 false + 修复引导）", async () => {
   const file = join(plain, "app.js")
   writeFileSync(file, "export const x = 1\n", "utf8")
-  const agent = { _touchedFiles: [file] }
+  const agent = { cwd: plain, _touchedFiles: [file], tasks: [] }
 
   const rejected = await verifyTool.execute(
     { verification: { status: "failed", summary: "语法检查未过" } },
     { agent, cwd: plain },
   )
-  assert.match(rejected, /✗ NOT VERIFIED — verify rejected the change/, "打回报告（模型可见）")
-  assert.match(rejected, /You declared verification as failed/, "失败引导串")
+  assert.match(rejected, /VERIFY BLOCKED: you declared verification failed/, "打回报告（模型可见）")
   assert.match(rejected, /app\.js/, "列出改动文件（模型据此修）")
   assert.equal(agent._verifyPassed, false, "判定旗位 false（验收面机械信号）")
-  assert.equal(agent._verifiedThisRun, true, "被拒也是本轮已验动作（守卫不重复推）")
+  // W9：「被拒也是本轮已验动作（守卫不重复推）」的 `_verifiedThisRun` 置位随端镜像退役 ⇒ 壳侧记账
+  // （`src/agent/execute-tools.mjs:318` toolName==="verify"；核 record-results 同款）；本场景直驱工具、不经壳，
+  // 故此处不断言该旗位（真实链路由 agent 主循环集成面覆盖）。
 })
 
 test("⑥ 正常：代码声明 passed → 放行（同一关口的正控分支）", async () => {
   const file = join(plain, "ok.js")
   writeFileSync(file, "export const ok = true\n", "utf8")
-  const agent = { _touchedFiles: [file] }
+  const agent = { cwd: plain, _touchedFiles: [file], tasks: [] }
   const released = await verifyTool.execute(
     { verification: { status: "passed", command: "node --check ok.js" } },
     { agent, cwd: plain },
   )
-  assert.match(released, /✓ Verification passed/, "放行输出")
+  assert.match(released, /Verification declared passed/, "放行输出")
   assert.equal(agent._verifyPassed, true, "旗位 true")
 })
