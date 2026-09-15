@@ -22,10 +22,10 @@
  * ② 基根组直接解析 ⇒ 通过；③ 前缀排除（相对路径——绝对路径由 ①/② 处置）：前缀首段须为基根条目；不现存 ⇒ 违规（不回退 basename）；
  * ④ 文档行坐标（`.md` + 行号）按同名 `.md` 域内定位（≥1 通过）；⑤ 域内定位（裸 basename / 陈旧前缀——首段现存）
  * 按 basename 域内唯一定位 ⇒ 通过；0 / ≥2 命中 ⇒ 违规。**全匹配**：证据场内多处证据逐处判（`matchAll`——首匹配实现会漏）。
- * 产品源码依赖（`src/ledger.mjs` 台账解析 / 数字单源）按**产品域**取用——两产品各自实现，不跨产品混用（设计档 §2.5）。
+ * 产品源码依赖（台账解析 / 数字单源）按产品域取用——W4 后两域同引核单源（`thincoder-core/ledger.mjs`；两产品自持镜像已删，设计档 §2.5）。
  * 输出：红 = `<档>:<行号> [L1|L2|L3|L4] <症状> — 期望 … · 实得 …` + `<n> 处违规`；绿 = 每档一行 `OK: <档>`。
  * 审计（`--audit`）：技术组无触发条目的「待处置清单」（行龄 > N 天标「老化」）——只读、退出码 0。
- * 汇总（`--summary`）：L2 明细行序列（每项目一行——产品域 `src/ledger.mjs` 口径 + 同 formatter）——只读、退出码 0（收口行）。
+ * 汇总（`--summary`）：L2 明细行序列（每项目一行——核单源口径 + 同 formatter）——只读、退出码 0（收口行）。
  * 用法：`node scripts/check-ledger.mjs [--root <仓根>] [--domain <产品域>] [--ledger <档>]... [--audit] [--summary] [--days N]`；
  * 扫描域 = 显式台账清单（默认 = **单仓唯一台账**——仓根 `docs/` 活档 + 归档档两档：活档判 L3⑤、归档档不判（`live:false`——
  * 归档口径本就含已完成项）；域参不改变台账位置——单仓一账，产品门禁传参面保留）——
@@ -36,9 +36,9 @@ import { basename, dirname, isAbsolute, join, relative, resolve } from "node:pat
 import { execFileSync } from "node:child_process";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { MERGED_SCRIPTS } from "./check-doc-width.mjs";
-// 数字单源（F7/AC80）：台账解析 / 计数 / 老化阈值 / 显示面 formatter 按产品域取用（两产品各自实现——不跨产品混用）
+// 数字单源（F7/AC80）：台账解析 / 计数 / 老化阈值 / 显示面 formatter——W4 后两域同引核单源（thincoder-core/ledger.mjs）
 import * as cliLedgerModule from "../thincoder-core/ledger.mjs";
-import * as vscLedgerModule from "../thincoder-vscode/src/ledger.mjs";
+import * as vscLedgerModule from "../thincoder-core/ledger.mjs"; // W4：VSC 镜像已删——域表两枚同引核单源
 import { defaultEntries, runCheck } from "./check-ledger-core.mjs";
 
 export * from "./check-ledger-core.mjs";
@@ -47,7 +47,7 @@ export * from "./check-ledger-core.mjs";
 export const SIX_STATES = ["待讨论", "待设计", "在途", "待核销", "已核销", "已废弃"];
 /** 触发字段三枚举（§2.24.9②） */
 export const TRIGGERS = ["归批", "条件", "认账不排期"];
-/** 老化阈值（天）——单源 = 产品域 `src/ledger.mjs`（`--days` 可覆盖） */
+/** 老化阈值（天）——单源 = `thincoder-core/ledger.mjs`（`--days` 可覆盖） */
 export const AGING_DAYS = cliLedgerModule.AGING_DAYS;
 /** 基线档（键稳定、不含行号；**必须保持为空**——非空即 FAIL）。 */
 export const BASELINE_PATH = "test/fixtures/ledger-baseline.json";
@@ -57,7 +57,7 @@ export const DEFAULT_LEDGERS = [
   { path: "docs/TODO.md", live: true },
   { path: "docs/TODO-archive.md", live: false },
 ];
-/** 域 → 产品 ledger 模块表（按域根目录名匹配；未列名域回退 CLI 模块——测试夹具域语义与 CLI 同源）。 */
+/** 域 → 产品 ledger 模块表（按域根目录名匹配；未列名域回退 CLI 模块——测试夹具域语义与 CLI 同源；W4 后两域枚同引核单源）。 */
 const LEDGER_MODULES = [
   { dir: "thincoder-vscode", mod: vscLedgerModule },
   { dir: "thincoder", mod: cliLedgerModule },

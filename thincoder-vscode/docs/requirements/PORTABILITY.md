@@ -1,7 +1,7 @@
 # 可移植性（PORTABILITY）— 需求
 
 > 板块：可移植性——工程模式机制在**任意用户项目**上的可用性（不假定项目形如本产品自研仓）。需求层文档（`docs/requirements/`）。
-> 定位：本仓机制实况登记——分类权威 `src/conventions.mjs`（227 行）；评审注入面 `src/advisor/project-context.mjs`（199 行）；部分承载 = `docs/design/PORTABILITY.md`（VSC 镜像面设计）。
+> 定位：本仓机制实况登记——分类权威 `src/conventions.mjs`（227 行；W4 已迁核——现体 `thincoder-core/conventions.mjs`）；评审注入面 `src/advisor/project-context.mjs`（199 行）；部分承载 = `docs/design/PORTABILITY.md`（VSC 镜像面设计）。
 > 对位注记：与对端同名需求档 `PORTABILITY（CLI 仓·需求）`（需求组 FR10–FR15）**语义同源、本端原文自持**；两实现面各自独立。
 > 状态：**现行**。
 
@@ -20,8 +20,8 @@
 
 | # | 需求 | 判定句（可机器验证——证据均为本仓实测） |
 |---|---|---|
-| F1 | 分类判据单一权威 | `src/conventions.mjs` 为唯一裁判实现（`classifyPath` `:76` / `isCodePath` `:85` / `isDocPath` `:91`）；全仓**零分散副本**（组件式 / 锚定式正则副本、`docs/` 前缀判据副本零命中——机判式见 `docs/design/PORTABILITY.md` AC-V01；该判据面已退场（整删——删除记录 = `TESTING.md` §8.1）） |
-| F2 | 项目约定可声明 | 声明文件 = `.thincoder/conventions.json`（`src/conventions.mjs:34`）；`codePaths` 声明替换默认、`index.*Extensions` 追加入并集；损坏 / 类型错 → 回退默认 + 警告 + 不崩（`src/conventions.mjs:194-220`） |
+| F1 | 分类判据单一权威 | `src/conventions.mjs`（W4 已迁核——现体 `thincoder-core/conventions.mjs`）为唯一裁判实现（`classifyPath` `:76` / `isCodePath` `:85` / `isDocPath` `:91`）；全仓**零分散副本**（组件式 / 锚定式正则副本、`docs/` 前缀判据副本零命中——机判式见 `docs/design/PORTABILITY.md` AC-V01；该判据面已退场（整删——删除记录 = `TESTING.md` §8.1）） |
+| F2 | 项目约定可声明 | 声明文件 = `.thincoder/conventions.json`（`src/conventions.mjs:34`；W4 已迁核——现体 `thincoder-core/conventions.mjs`）；`codePaths` 声明替换默认、`index.*Extensions` 追加入并集；损坏 / 类型错 → 回退默认 + 警告 + 不崩（`src/conventions.mjs:194-220`） |
 | F3 | 嵌套布局不漏判 | 段匹配非锚定、大小写不敏感、`/` 与 `\` 通吃——`packages/foo/src/x.md` 判 code（分类优先级 = 代码段 > temp > 文档扩展名 > code） |
 | F4 | 评审注入降级可见 | 降级句常量四句在位（`src/advisor/project-context.mjs:35` / `:39` / `:40` / `:41`）；缺 AGENTS.md / 地图 / 标准文档 / git 时各注入对应句、从不静默——`injectProjectGuide` `:91` · `injectDocumentMap` `:138` · `injectProjectStandards` `:176` · `messages.mjs:115` |
 | F5 | 索引面可声明、未列入可见 | 扩展名表 + 声明并集（`src/index-discover.mjs:17` / `:24` / `:126` / `:135`）；构建返回 `unlistedExts`（`src/indexer.mjs:113`）+ 面板提示行（`src/extension/panel-index.mjs:171`） |

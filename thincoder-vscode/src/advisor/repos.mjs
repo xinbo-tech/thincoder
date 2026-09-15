@@ -2,14 +2,14 @@
  * advisor/repos.mjs — git repository discovery and change collection for advisor reviews.
  * Shared by message building (advisor.mjs) and the review runner (advisor/run.mjs).
  *
- * Path classification (code/doc/temp) lives in src/conventions.mjs — the single
+ * Path classification (code/doc/temp) lives in @thincoder/core/conventions.mjs — the single
  * authority (PORTABILITY VSC mirror · VP-10). This module keeps only the git-side
  * surface; `isDocOnlyChange` consults the shared classifier instead of a local
  * `^src/` regex (nested layouts used to slip through).
  */
 import { execFileSync } from "node:child_process"
 import { dirname, basename, resolve } from "node:path"
-import { isCodePath, isDocPath, loadConventions } from "../conventions.mjs"
+import { isCodePath, isDocPath, loadConventions } from "@thincoder/core/conventions.mjs"
 
 export const GIT_TIMEOUT = 5_000
 export const MAX_EMBEDDED_DIFF = 50_000
@@ -104,7 +104,7 @@ export function collectChangedFiles(repos, cwd) {
 }
 
 /** True when all changed files across repos are documentation. Classification
- *  comes from the single authority (src/conventions.mjs): a documentation
+ *  comes from the single authority (@thincoder/core/conventions.mjs): a documentation
  *  extension OUTSIDE any declared code segment (default: `src`, at any depth —
  *  src/prompts/*.md and packages/foo/src/x.md are product code); temp files are
  *  neither code nor doc, so they end the doc-only run exactly as before. */

@@ -81,7 +81,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 
 | # | 候选 | 判据（FR12：单一权威 + 声明可诉 + 不漏判 + VSC 体量） | 取舍 | 结论 |
 |---|---|---|---|---|
-| 1 | **新建 `src/conventions.mjs`（镜像 CLI 语义）** | 单一权威；声明面一处；消费方全部换源 | 与 CLI 并行实现（语义同源、文本自持） | **选定** |
+| 1 | **新建 `src/conventions.mjs`（镜像 CLI 语义；W4 已迁核——现体 `thincoder-core/conventions.mjs`）** | 单一权威；声明面一处；消费方全部换源 | 与 CLI 并行实现（语义同源、文本自持） | **选定** |
 | 2 | 修 `src/advisor/repos.mjs` 为权威、其余换源 | 少一个新档 | 分类权威藏于 advisor 子模块——门禁面（`agent/`）反向依赖 advisor/——层向倒挂 | 否决 |
 | 3 | 各副本就地修（不建权威） | 零结构变更 | 四副本漂移已被本批实证——正是 P10 的教训 | 否决 |
 
@@ -123,9 +123,9 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 
 ## 3. 逐条修法
 
-### 3.1 VSC 分类权威（VP-10——新建 `src/conventions.mjs`）
+### 3.1 VSC 分类权威（VP-10——新建 `src/conventions.mjs`；W4 已迁核——现体 `thincoder-core/conventions.mjs`）
 
-语义与 CLI `src/conventions.mjs`（224 行）同源：同词表、同优先级、同声明 schema、同降级可见纪律。
+语义与 CLI `src/conventions.mjs`（224 行）同源：同词表、同优先级、同声明 schema、同降级可见纪律。（W4 已迁核——VSC 端现体 `thincoder-core/conventions.mjs`）
 
 - `DEFAULT_CODE_PATHS = ["src"]` · `CONVENTIONS_REL_PATH = ".thincoder/conventions.json"` · `DEFAULT_CONVENTIONS`；
 - 分类词表（优先级 = 代码段 > temp > 文档扩展名 > code）：`isTempPath(p)` / `isDocPath(p, conv)` / `isCodePath(p, conv)` / `classifyPath(p, conv)`；
@@ -194,7 +194,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 
 ## 4. 接口契约
 
-### 4.1 `src/conventions.mjs`（VSC——API 表）
+### 4.1 `src/conventions.mjs`（VSC——API 表；W4 已迁核——现体 `thincoder-core/conventions.mjs`）
 
 | 导出 | 语义 |
 |---|---|
@@ -337,7 +337,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 
 | 文件 | 性质 | 当前行数 | 预计增量 |
 |---|---|---|---|
-| `src/conventions.mjs` | **新增** | — | ~220（300 内） |
+| `src/conventions.mjs`（W4 已迁核——现体 `thincoder-core/conventions.mjs`） | **新增** | — | ~220（300 内） |
 | `src/advisor/project-context.mjs` | **新增** | — | ~190（300 内） |
 | `src/advisor/messages.mjs` | 修改 | 296 | 净减 ~30（内联迁出 + 调用） |
 | `src/advisor/repos.mjs` | 修改 | 156 | 净减 ~45（谓词迁出） |
@@ -412,7 +412,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 
 | # | 验收标准（机器可验证） | 回指 |
 |---|---|---|
-| AC-V01 | 判据面退场（随 AC-V01 静态面整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:142`））；需求本体（唯一实现 = `src/conventions.mjs`——副本 = 0）不变 | VP-10 · FR12 |
+| AC-V01 | 判据面退场（随 AC-V01 静态面整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:142`））；需求本体（唯一实现 = `src/conventions.mjs`——副本 = 0；W4 已迁核——现体 `thincoder-core/conventions.mjs`）不变 | VP-10 · FR12 |
 | AC-V02 | T-V01–T-V04 全绿；`packages/foo/src/x.md` 判 code（嵌套漏判消除） | VP-10 · FR12 |
 | AC-V03 | T-V05–T-V06 全绿（门禁拒绝保持 + 非字符串保守拦截保持 + 声明后行为切换） | VP-10 · FR12 |
 | AC-V04 | 判据面已退场（T-V07–T-V09 均整删——2026-09-12-PROSE-ANCHOR-RETIRE；删除记录 = `TESTING.md` §8.1（`:137`–`:139`）） | VP-1 · VP-2 · VP-3 · VP-12 · FR10/11 |

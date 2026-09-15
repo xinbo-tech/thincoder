@@ -12,7 +12,7 @@ import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
-import { classifyPath, clearConventionsCache, isCodePath, isDocPath, isTempPath, loadConventions } from "../src/conventions.mjs"
+import { classifyPath, clearConventionsCache, isCodePath, isDocPath, isTempPath, loadConventions } from "@thincoder/core/conventions.mjs"
 import { isDocOnlyChange } from "../src/advisor/repos.mjs"
 import { hasCodeMutations } from "../src/agent/run-helpers.mjs"
 import { advisorStale } from "../src/agent-tools/advisor-async.mjs"

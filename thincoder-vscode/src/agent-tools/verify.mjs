@@ -28,7 +28,7 @@
 import { resolvePath, runInterruptible } from "../tools/shared.mjs"
 import * as vscode from "vscode"
 import { existsSync } from "node:fs"
-import { isDocPath, loadConventions } from "../conventions.mjs"
+import { isDocPath, loadConventions } from "@thincoder/core/conventions.mjs"
 
 /**
  * §18.12 D-VR1 path normalization — mirrors the §20.5 file-domain handling:
@@ -83,7 +83,7 @@ async function resolveChangedFiles(ctx, testCwd) {
 }
 
 // ─── Doc-only detection (VERIFY-REDESIGN D-V5: 保留 doc-only 快路径) ─────────
-// Classification comes from the single authority (src/conventions.mjs): a doc
+// Classification comes from the single authority (@thincoder/core/conventions.mjs): a doc
 // extension that does NOT live inside a declared code segment (default: `src` —
 // incl. prompts/*.md, at ANY depth). The former local DOC_FILE copy plus the
 // anchored findProjectRoot/isUnderSrc walk are deleted with it (VP-10 — the local

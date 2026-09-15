@@ -138,7 +138,7 @@ embedding key + 构建按钮 + 状态；向量维度/模型切换的校验与可
 
 **契约（逐条）**：
 
-1. 新模块 `src/expand-home.mjs`（本端独立实现，语义同 CLI）：`export function expandHome(p, home = homedir())`——
+1. 新模块 `src/expand-home.mjs`（本端独立实现，语义同 CLI；W4 已迁核——现体 `thincoder-core/expand-home.mjs`）：`export function expandHome(p, home = homedir())`——
    `~` / `~/…` / `~\…` 前缀展开为主目录绝对路径；`~user` 等非分隔符形态原样；非字符串原样；余段分隔符归一（`\` → `/`）；
 2. `src/agent/setup.mjs:232`：`cfgShell = s ? expandHome(s) : null`（`s` = 原判据值）——**唯一归一落点**；
 3. **只读归一**：磁盘原文保留（不做写回）；面板 / settings 工具写面不展开（与 CLI 同 posture——运行时当次展开缺口 = 登记）；

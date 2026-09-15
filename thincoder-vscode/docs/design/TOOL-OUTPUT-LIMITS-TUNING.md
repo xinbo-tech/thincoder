@@ -32,7 +32,7 @@ export const TOOL_RESULT_PREVIEW_TAIL = 48 * 1024 // §5 D-4.1 nominal tail — 
 
 - `safeSliceUTF16(text, max)`：头部截断——截断点落在高代理（D800–DBFF）上时向前收一个码元，防把 emoji 代理对切成孤立高代理。
 - `safeSliceUTF16Tail(text, max)`：尾部切片起点落在低代理（DC00–DFFF）上时前移一个码元，防孤立低代理开头。
-- 两端均 UTF-16 安全，与 `src/agent/run-helpers.mjs` 的 `safeSliceUTF16`/`safeSliceUTF16Tail` 同语义（`src/escape.mjs` 的 sanitizeLoneSurrogates 是发送兜底，此处是源头——原 `src/context.mjs` 引用随 GIT-ASYNC L21 删除；CLI `helpers.mjs` 同规则，两端独立实现）。
+- 两端均 UTF-16 安全，与 `src/agent/run-helpers.mjs` 的 `safeSliceUTF16`/`safeSliceUTF16Tail` 同语义（`src/escape.mjs` 的 sanitizeLoneSurrogates 是发送兜底，此处是源头——原 `src/context.mjs` 引用随 GIT-ASYNC L21 删除；CLI `helpers.mjs` 同规则，两端独立实现；W4 已迁核——现体 `thincoder-core/escape.mjs`）。
 
 ### 2.3 preview 构成（`buildHeadTailPreview`）
 

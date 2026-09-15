@@ -6,7 +6,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSy
 import { join, resolve, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 import { loadAgentSettings } from "../config-io.mjs"
-import { isCodePath, loadConventions } from "../conventions.mjs"
+import { isCodePath, loadConventions } from "@thincoder/core/conventions.mjs"
 
 /** File-modifying tools — the engineering design gate blocks these before review passes (CLI parity). */
 export const FILE_MUTATORS = new Set(["write", "edit", "insert_after", "apply_patch", "delete", "hashline_edit"])
@@ -64,7 +64,7 @@ export function escapeXml(s) {
  * at ANY depth) OR anything that is neither a doc file nor a temp file (tmp-*,
  * .tmp/.temp — L58 附带差：scratch 脚本不触发 guard——CLI isTempFile 同规则).
  * _touchedFiles stores absolute paths; classification comes from the single
- * authority (src/conventions.mjs) and honors the project declaration
+ * authority (@thincoder/core/conventions.mjs) and honors the project declaration
  * (.thincoder/conventions.json) — the same judge as the design gate, never a
  * second copy of the default list.
  */

@@ -4,7 +4,7 @@
  * User-message building lives in advisor/messages.mjs; project-context discovery in
  * advisor/project-context.mjs; execution (tool loop, provider resolution, review entry)
  * in advisor/run.mjs; history extraction in advisor/history.mjs.
- * Path classification (code/doc/temp) lives in src/conventions.mjs — the single
+ * Path classification (code/doc/temp) lives in @thincoder/core/conventions.mjs — the single
  * authority the gates and guards consume (PORTABILITY VSC mirror · VP-10).
  *
  * The advisor runs as a read-only exploration sub-agent with tools
@@ -48,7 +48,7 @@ import { loadAdvisorPrompt } from "@thincoder/core/prompt-files.mjs"
 import { extractAgentResponseTable } from "./history.mjs"
 import { buildAdvisorUserMessage, resolveScopeFiles, buildDesignApprovalBlock } from "./messages.mjs"
 import { buildConvergenceBody } from "./convergence.mjs"
-import { escapeLiteralEscapes } from "../escape.mjs"
+import { escapeLiteralEscapes } from "@thincoder/core/escape.mjs"
 // re-export：历史调用方（advisor.test.mjs 等）从本模块 import escapeLiteralEscapes
 export { escapeLiteralEscapes }
 // Re-exported for callers that import from this module (tests, run.mjs).
@@ -185,7 +185,7 @@ export function buildAdvisorFollowUp(agent, prior, scopeFiles = null, rv = null)
  * quoted "\\x" literals). Only sequences that would be INVALID when expanded
  * are doubled ("\\x" → literal "\\x" after server expansion); well-formed
  * "\\xNN" / "\\uNNNN" pass through untouched (they expand to a byte/codepoint).
- * Implementation lives in ../escape.mjs (CLI parity — the main-agent send path
+ * Implementation lives in @thincoder/core/escape.mjs (CLI parity — the main-agent send path
  * src/provider.mjs applies it via escapeMessages since 2026-08-31).
  */
 

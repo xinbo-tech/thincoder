@@ -23,8 +23,8 @@
 
 | # | 需求 | 判定句（可机器验证——证据均为本仓实测） |
 |---|---|---|
-| **F1** | 分类判据单一权威 | `thincoder-vscode/src/conventions.mjs`（227 行）为唯一裁判实现（`classifyPath` `:76` / `isCodePath` `:85` / `isDocPath` `:91`）；全仓**零分散副本**（机判 = 组件式 / 锚定式正则副本、`docs/` 前缀判据副本 grep 零命中——判据式见 `PORTABILITY（VSC 侧）`） |
-| **F2** | 项目约定可声明 | 声明文件 = `.thincoder/conventions.json`（`thincoder-vscode/src/conventions.mjs:34`）；`codePaths` 声明替换默认、`index.*Extensions` 追加入并集；损坏 / 类型错 → 回退默认 + 警告 + 不崩（`thincoder-vscode/src/conventions.mjs:189-220`） |
+| **F1** | 分类判据单一权威 | `thincoder-vscode/src/conventions.mjs`（227 行；W4 已迁核——现体 `thincoder-core/conventions.mjs`）为唯一裁判实现（`classifyPath` `:76` / `isCodePath` `:85` / `isDocPath` `:91`）；全仓**零分散副本**（机判 = 组件式 / 锚定式正则副本、`docs/` 前缀判据副本 grep 零命中——判据式见 `PORTABILITY（VSC 侧）`） |
+| **F2** | 项目约定可声明 | 声明文件 = `.thincoder/conventions.json`（`thincoder-vscode/src/conventions.mjs:34`；W4 已迁核——现体 `thincoder-core/conventions.mjs`）；`codePaths` 声明替换默认、`index.*Extensions` 追加入并集；损坏 / 类型错 → 回退默认 + 警告 + 不崩（`thincoder-vscode/src/conventions.mjs:189-220`） |
 | **F3** | 嵌套布局不漏判 | 段匹配非锚定、大小写不敏感、`/` 与 `\` 通吃——`packages/foo/src/x.md` 判 code（分类优先级 = 代码段 > temp > 文档扩展名 > code） |
 | **F4** | 评审注入降级可见 | 降级句常量四句在位（`thincoder-vscode/src/advisor/project-context.mjs:35` · `:39` · `:40` · `:41`）；缺 AGENTS.md / 地图 / 标准文档 / git 时各注入对应句、从不静默——`injectProjectGuide` `:91` · `injectDocumentMap` `:138` · `injectProjectStandards` `:176` · `thincoder-vscode/src/advisor/messages.mjs:115` |
 | **F5** | 索引面可声明、未列入可见 | 扩展名表 + 声明并集（`thincoder-vscode/src/index-discover.mjs:17` · `:24` · `:125` · `:132`）；构建返回 `unlistedExts`（`thincoder-vscode/src/indexer.mjs:113`）+ 面板提示行（`thincoder-vscode/src/extension/panel-index.mjs:171`） |
@@ -122,3 +122,4 @@
 - 2026-09-15（**B 式迁移轮 · VSC 批 5**）：建档——`thincoder-vscode/docs/requirements/PORTABILITY.md` 内容重建入基准层
   （旧档一字未改、原地作参照历史）；坐标全量改写为仓根相对路径并逐条实核（`index-discover.mjs` `:126`/`:135` → 现 `:125`/`:132`，按现状收正）；
   设计档 AC 锚改 `PORTABILITY（VSC 侧）` 参照（§6.2——原 §5.2，CLI 尾部真批节号顺延）。
+- 2026-09-15（**S2 W4 · VSC 单元**）：F1 / F2 状态收正——VSC 端 `src/conventions.mjs` 自持镜像已删，现经 `thincoder-core/conventions.mjs` 引用（判据 / 行为零改）。

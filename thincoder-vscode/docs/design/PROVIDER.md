@@ -10,7 +10,7 @@
 > 相关权威：`src/provider.mjs`（chat/transport 分派）、`src/provider/transports/*`（四
 > transport）、`src/config.mjs`（MODEL_SPECS / specForModel / resolveEnableThinking）、
 > `src/config-presets.mjs`（PROVIDER_PRESETS）、`src/config-io.mjs`（config.json 读写）、
-> `src/escape.mjs`、`src/extension/{settings,presets,provider-flows,reasoning-mode,
+> `src/escape.mjs`（W4 已迁核——现体 `thincoder-core/escape.mjs`）、`src/extension/{settings,presets,provider-flows,reasoning-mode,
 > generate-title,image-handler}.mjs`。
 
 ## 1. 配置存储（共享 config.json）
@@ -384,7 +384,7 @@ arguments }` 与 openai transport 输出一致，agent 循环零改动。
 
 ### 6.3 escape v5 与 UTF-16 安全截断
 
-`src/escape.mjs`（CLI v5 同构）两个毒源：①字面 hex 转义二次解析（Kimi/deepseek 把 content
+`src/escape.mjs`（CLI v5 同构；W4 已迁核——现体 `thincoder-core/escape.mjs`）两个毒源：①字面 hex 转义二次解析（Kimi/deepseek 把 content
 里的 `\x`/`\u` 再解释一遍，不足位 400）——`escapeLiteralEscapes` 按反斜杠 run 奇偶 double
 （odd-run 修复）；②孤立 UTF-16 代理（emoji 截断切出孤立高代理 → deepseek `unexpected end of
 hex escape`）——`sanitizeLoneSurrogates` 替换 U+FFFD。总入口 `sanitizeText`；

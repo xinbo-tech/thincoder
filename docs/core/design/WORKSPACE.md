@@ -14,8 +14,8 @@
 | 技能发现 | `thincoder-cli/src/skills.mjs` | `thincoder-vscode/src/extension/skills.mjs` |
 | 规则发现 | `src/rules.mjs` | `src/extension/rules.mjs` |
 | 同伴实例 / 域 | `src/peer-instances.mjs` · `src/peer-domains.mjs` | `src/extension/peer-instances.mjs` · `peer-domains.mjs` |
-| 台账规则 / 路径约定 | `src/ledger.mjs` · `src/conventions.mjs` · `src/escape.mjs` | 同名（同路径对） |
-| 台账展示面 | `src/tui/ledger-surface.mjs` | `src/extension/ledger-surface.mjs` |
+| 台账规则 / 路径约定 | 已迁核——经 `@thincoder/core/{ledger,conventions,escape}.mjs` 引用（S2 U4） | 已迁核——同引核单源（S2 W4 · 自持镜像已删） |
+| 台账展示面 | `src/tui/ledger-surface.mjs` | 端壳缝——核机制 `@thincoder/core/ledger-surface.mjs` + 面板推送供值（S2 W4） |
 
 ## 2. 核模块裁决行（自 `CORE-UNIFICATION.md` §2.5 搬入 · 逐字）
 
@@ -92,3 +92,4 @@
 - 2026-09-13：建档——自 `docs/core/design/CORE-UNIFICATION.md` 拆出（§2.5 #71–#73 / #170–#174）；**语义零改**，行号沿用原编号。
 - 2026-09-14（S1 收口轮）：§5 补**核内落点行数**指针（`ledger-surface.mjs`——#174）。
 - 2026-09-14（**B 轮并入 · 第 3 批**）：§6 **机制面 = 同名旧档缺**（`thincoder-cli/docs/{design,requirements}/WORKSPACE.md` 均不存在——两产品树实核）⇒ 无并入内容（不虚构）；§7 无新增决策；§8 登记工作区约定面机制文本散布于旧档（越段发现）；§9 体量（低于软线，无需拆分）；首部加机制面指针一行。
+- 2026-09-15（**S2 W4 · VSC 单元**）：§1 两行收正——台账规则 / 路径约定（两产品均已迁核：CLI = S2 U4 · VSC = S2 W4）· 台账展示面（VSC = 端壳缝：核机制 + 面板推送供值）；机制条文零改。

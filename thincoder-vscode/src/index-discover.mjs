@@ -12,7 +12,7 @@
  */
 import { readdirSync } from "node:fs"
 import { join, relative } from "node:path"
-import { DEFAULT_CONVENTIONS, loadConventions } from "./conventions.mjs"
+import { DEFAULT_CONVENTIONS, loadConventions } from "@thincoder/core/conventions.mjs"
 
 const CODE_EXTS = new Set([
   ".js", ".mjs", ".cjs", ".jsx", ".ts", ".tsx", ".py", ".rs", ".go", ".java", ".c", ".cpp", ".h", ".hpp",

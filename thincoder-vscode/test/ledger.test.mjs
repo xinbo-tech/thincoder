@@ -1,6 +1,6 @@
 /**
  * ledger.test.mjs — VSC 台账可见面用例（LEDGER-SURFACE 批——设计档 §3.2 T97–T110 / §3.1 AC80–AC90；VSC 端）。
- * 面：语义同源（解析 / 计数 / 阈值 / 行文本 / 去重——本端独立实现）· 跨端去重档键等价 · item 形态（T107）·
+ * 面：数据面 / 机制面归核（`@thincoder/core/ledger.mjs` + `ledger-surface.mjs`——W4 单源）· 跨端去重档键等价 · item 形态（T107）·
  * webview 渲染（T108，真 chat.js + happy-dom）· 启动行 post 门 + 送达门 · 接线机检 · 老化界值（慢层 git）。
  * 手法：tmp 夹具 + 注入 ageOf（确定性）；vscode-mock（`test/vscode-mock`——最小扩展面）。
  * 归册（2026-09-12 收尾轮 9）：T107 观测 619ms——slow() 门控；AC89/T102 原已归册，其余用例留快层。
@@ -18,7 +18,7 @@ import { slow } from "./slow.mjs"
 import {
   blameAges, discoverFamily, detailScans, entryTitle, findProject, formatAgingLine, formatDetailLine, formatMarker,
   formatThresholdLine, loadNotifyState, normalizeEntry, notifyKey, planChangeLines, scanGroups, summarizeLedger,
-} from "../src/ledger.mjs"
+} from "@thincoder/core/ledger.mjs"
 import { _setLedgerSurfaceForTest, dispose as disposeLedgerSurface, initLedgerSurface, pushLedgerStartup, refreshLedger } from "../src/extension/ledger-surface.mjs"
 
 const lineOf = (text, needle) => text.split("\n").findIndex((l) => l.includes(needle)) + 1
@@ -120,32 +120,33 @@ slow("T107 正常：item text = L1 / tooltip = 明细行集 / aged>0 → warning
 })
 
 // ── 启动行 post 门 + 送达门（AC82/F5） ──────────────────────────────────────
-test("T107/T103 边界：post 门（可动作才 post）+ 送达门（未就绪不记账、就绪后重报）", () => {
+test("T107/T103 边界：post 门（可动作才 post）+ 送达门（未就绪不记账、就绪后重报）+ 缝推送计数 = 行数", () => {
   const alpha = join(tmp, "ws", "alpha")
   const text = ledgerText([], [techEntry("丙")])
   mk(join("ws", "alpha", "docs", "TODO.md"), text)
   const ageOf = () => new Map([[lineOf(text, "**丙**"), 40]])
   _setLedgerSurfaceForTest({ cwd: alpha, notifyFile: join(tmp, "n.json"), ageOf })
+  const notices = (p) => p.posted.filter((m) => m.type === "ledgerNotice")
+  const pushed = (p) => notices(p).flatMap((m) => m.lines)
   // 未就绪（_wvReady=false）→ 不 post、不记账
   const cold = fakePanel({ ready: false })
   initLedgerSurface(cold)
   pushLedgerStartup(cold)
   assert.deepStrictEqual(cold.posted, [], "webview 未就绪 → 零 post")
   assert.deepStrictEqual(loadNotifyState(join(tmp, "n.json")).ledgers, {}, "未送达不记账")
-  // 就绪 → 变化行 + 启动行（明细行集）落地
+  // 就绪 → 变化行 + 启动行（明细行集）逐行推送（缝注入：推送计数 = 行数）
   const warm = fakePanel()
   pushLedgerStartup(warm)
-  const notice = warm.posted.find((m) => m.type === "ledgerNotice")
-  assert.ok(notice, "ledgerNotice 投递")
-  assert.deepStrictEqual(notice.lines.map((l) => l.text), [
+  assert.equal(notices(warm).length, 2, "缝推送计数 = 行数（2 行 → 2 次 pushLine）")
+  assert.deepStrictEqual(pushed(warm).map((l) => l.text), [
     "台账变化：alpha 老化首次越线 1 条（超 30 天未处置）：丙",
     "台账 alpha：需求池 0 · 技术待办 1（老化 1）",
   ], "变化行在前、明细行在后")
-  assert.ok(notice.lines.every((l) => l.warn === true), "warn 档（该项目 actionable）")
+  assert.ok(pushed(warm).every((l) => l.warn === true), "warn 档（该项目 actionable）")
   assert.equal(loadNotifyState(join(tmp, "n.json")).ledgers[notifyKey(join(alpha, "docs", "TODO.md"))].aged.length, 1, "送达后记账")
   pushLedgerStartup(warm)
-  assert.equal(warm.posted.filter((m) => m.type === "ledgerNotice").length, 2, "第二拍 = 启动行（K2 不去重）")
-  assert.equal(warm.posted.at(-1).lines.length, 1, "变化行已去重（只剩明细行）")
+  assert.equal(notices(warm).length, 3, "第二拍 = 启动行（K2 不去重）")
+  assert.equal(notices(warm).at(-1).lines.length, 1, "变化行已去重（只剩明细行）")
 })
 
 // ── T108 webview 渲染（AC87/F8——真 chat.js + happy-dom） ────────────────────
@@ -176,7 +177,7 @@ test("T108 正常：`ledgerNotice` 逐行 `.ledger-line` 入 #messages；warn �
 })
 
 // ── 接线机检（AC87/AC90） ───────────────────────────────────────────────────
-test("接线机检：四处挂载 + 样式族 + 本档入册（未入册 = 不跑）", () => {
+test("接线机检：本档入册（files.mjs 显式清单——未入册 = 不跑）", () => {
   assert.ok(files.includes("test/ledger.test.mjs"), "本档已登记 test/files.mjs（VSC 显式清单）")
 })
 

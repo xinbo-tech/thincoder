@@ -220,7 +220,7 @@ V3 判据射程 = 工具落地后（2026-09-11 起）创建的批次档（更早
 - 2026-09-12：文档↔实装对账批（DOC-CODE-RECONCILE）——§9 补 V5 指针行（判据权威 = `DOC-CODE-RECONCILE.md`）+ 锚断言状态句收正（散文锚退役后存留面——旧逐字锚句已与现态相抵）；V1–V3 判据语义**零改**。
 
 - 2026-09-12：台账可见面批（LEDGER-SURFACE）——本端增量面登记：状态栏 item（含原生 tooltip）+ chat 流文本行
-  （`ledgerNotice`）+ `src/ledger.mjs` / `src/extension/ledger-surface.mjs` / `webview/ledger-line.js`；
+  （`ledgerNotice`）+ `src/ledger.mjs`（W4 已迁核——现体 `thincoder-core/ledger.mjs`）/ `src/extension/ledger-surface.mjs` / `webview/ledger-line.js`；
   机制与行文本权威 = `ENGINEERING-MODE（CLI 仓·设计）` §2.30（本端不重述）。
 
 - 2026-09-11：群 A 批（VSC-MIRROR-SWEEP）——§6 补「D5 冻结窗口预闸」bullet（下界定义句入行——同步面 3/3；见 `ADVISOR-CONVERGENCE.md` §16.2）。

@@ -29,7 +29,7 @@ import { randomUUID } from "node:crypto"
 import { resolve } from "node:path"
 import { runAdvisorReview, resolveAdvisorProvider, ADVISOR_LAUNCH_REFUSAL_PREFIX } from "../advisor/run.mjs"
 import { advisorIncompleteMarker, incompleteNotice } from "../advisor/compaction.mjs"
-import { isCodePath, loadConventions } from "../conventions.mjs"
+import { isCodePath, loadConventions } from "@thincoder/core/conventions.mjs"
 import { generateDesignToken, makeDesignTokenRegex, buildApprovedSuffix, stripApprovedSuffix } from "./advisor.mjs"
 import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"
@@ -121,7 +121,7 @@ export function advisorStale(parent, entry) {
   if (after.length === 0) return false
   if (entry.reviewType !== "design") {
     // code 面：仅 code-path 变更判陈旧（doc/temp 编辑不触发）。events 为绝对路径——
-    // isCodePath（src/conventions.mjs 单一权威）按实例 cwd 取声明（与设计门禁同源判据——
+    // isCodePath（@thincoder/core/conventions.mjs 单一权威）按实例 cwd 取声明（与设计门禁同源判据——
     // 声明 codePaths 后 lib/*.md 的变更同样入陈旧判定）。
     const conv = loadConventions(entry.cwd ?? process.cwd())
     return after.some((p) => isCodePath(p, conv))

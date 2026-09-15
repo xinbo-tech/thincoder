@@ -7,7 +7,7 @@
  */
 import { resolve, relative } from "node:path"
 import { FILE_MUTATORS } from "./run-helpers.mjs"
-import { isCodePath, loadConventions } from "../conventions.mjs"
+import { isCodePath, loadConventions } from "@thincoder/core/conventions.mjs"
 import { validateDesignToken } from "../agent-tools/advisor.mjs"
 import { readSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
 // §9 D-24b：文件变更事件记账（async 评审陈旧判定数据源——跨 run 载体）
@@ -81,7 +81,7 @@ export function preGateBlocked(agent, { tool, toolName, args, depth }) {
   // Document/temp paths are exempt (writing the design document IS the design step);
   // every path inside a declared code segment (default: src — incl. src/prompts/*.md,
   // at ANY depth) is product code and needs a live design slot. The classifier is the
-  // single authority (src/conventions.mjs) — the old anchored ^src/ regex here was the
+  // single authority (@thincoder/core/conventions.mjs) — the old anchored ^src/ regex here was the
   // copy that let a nested layout (packages/foo/src/x.md) slip through the gate.
   // AC4: 判定资格 = "任一活槽存在"（内存 Map / 权威槽回读）——单值镜像已退役（D5）。
   if (agent.config?.agent?.engineering && depth === 0 && FILE_MUTATORS.has(toolName)) {

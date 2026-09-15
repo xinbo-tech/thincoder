@@ -14,7 +14,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 
 import { findProjectRoot } from "../src/advisor/project-context.mjs"
-import { clearConventionsCache, isDocPath, loadConventions } from "../src/conventions.mjs"
+import { clearConventionsCache, isDocPath, loadConventions } from "@thincoder/core/conventions.mjs"
 import { advisorTool } from "../src/agent-tools/advisor.mjs"
 import { engTool } from "../src/agent-tools/eng.mjs"
 import { _setConfigPathForTest } from "../src/config-io.mjs"
