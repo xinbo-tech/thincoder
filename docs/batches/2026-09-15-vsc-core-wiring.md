@@ -2430,4 +2430,125 @@ VSC 同名 6 档 = **独立分叉实现**（逐档实核）：
 
 **轮次自证**：审计 1 轮（DEVIATIONS 4 → Fixed 3 / Deferred 1） + advisor 代码评审 1 轮（pass · 🔴 0） + 修复轮 2（各派生一波，均已落盘并复跑）；终态 **0 未决 🔴 → clean**（未决 1/2/4/5 为上抛登记：父侧台账 1 处 · settings 工具测试缝候选 · 体量登记 · D-C14 档面维护批）。
 
+### 实施：S2 W15 · AGENT-LOOP（重定 · 零删）——**终态 = clean**（2026-09-15 · eng-coder）
+
+**段位**：实施第 7 波 · W15（重定——零删 · 修正轮-7）。任务书 = 本档 §2 W15（`:215`–`:227`）+ 四步协议 + A-K 判据 + 兜底句；设计面依据 = `AGENT-LOOP.md §6.18` · `I18N.md §3.1 D1` · `PORTABILITY.md §3.6` · `CORE-UNIFICATION.md §2.8`（`:1043`）。设计 token 由父侧设计评审签发（本段零凭证值）。
+**写域** = 六档本体（`src/agent.mjs` · `agent/{setup,run-stages,setup-reminders}.mjs` · `explore-distill.mjs` · `i18n.mjs`）+ R5 落点两档（`extension/{panel-callbacks,panel-messages}.mjs`）+ 测试两档 + 根核档三档（三档均为「坐标/状态行」收正）。
+**零触碰**：`thincoder-core/**` · `thincoder-cli/**` · 台账 `docs/TODO.md` · 仓根 `scripts/**` · 本档 §1–§4/§6 · 他单元段。
+
+#### 一、交付摘要（重定四目标）
+
+1. **核原语改指（六档，零删）**：`i18n.mjs` = 核 `projectDictionary` 投影底座 + 本地端特有键（webview 面）叠加（本地键恒胜）；
+  `explore-distill.mjs` = 核 `summarizeRunExplorations` **端壳适配器**（agent 载体 ↔ 共享数组原位回收——面板/槽持引用不失效）；
+  `setup-reminders.mjs` = 端特有面（env 行端身份 R4 · peer 感知 · 重启检测闸 · time 尾位）+ 核转口（`AUTO_REMINDER`/`ENG_*`/`injectEngineeringReminder`/`composeGitContext`/`collectGitContext` + 失败冷却测试缝 + `pushInjections`/`appendImagePointer`）；
+  `agent.mjs` = #175a `autoThink` 消费点 + 载体镜像注收正；`run-stages.mjs` = `fireEndOfRunDistill` 改经适配器（核内基线失效/回收——端侧双重回收退场）；`setup.mjs` = `autoThink` 键随 cfgBag 归一。
+2. **端壳缝四条落地（R2–R5）**：① **R2** `vscSubagentFace`（W13 落）**保留未动**；② **R3** #113 编辑器上下文/贴图注入面（`pushInjections(history, opts.injections)` 端壳调用位 = peer 之后、time 之前——序表断言面 `context-parity` 绿）；
+  ③ **R4** 端身份行 VSC 自持（`END="vscode"` + env 行端生成；核 `END` 参数化 = 核内笔**未落**——见未决 4）；④ **R5** ⏹ queued 等待头回收 = **事件中继面**（新，见三）。
+3. **循环契约位移 = 调用期适配（F7 定形）**：live `autoApprove` getter · `opts.distillState` ↔ 核 `agent._pendingDistill` · `opts.turnInput` ↔ 核 `consumeInjected` · 载体访问器别名（设计十款 + 端自持 `_engDesignTokens` = 十一绑定，住共享 `history`）——端形不变、核面零缝。
+4. **#175 推理档位面**：(a) `autoThink` 死键复活（config → `agent.config.agent.autoThink` → 首轮核 `auto-think.mjs` 分类器；默认 false ⇒ **零行为变化**）；(b) 档位 patch **全程端侧**（`extension/reasoning-mode.mjs` → provider 字段数据面；核读点 `provider/core.mjs:52-53` · 落 body `:193-204`；核内零缝、零改动）。
+
+#### 二、改动面（逐档 · 行数读数为 split('\n').length 口径）
+
+| # | 档 | 动 | 读数（设计 → 现体） | 要点 |
+|---|---|---|---|---|
+| 1 | `src/i18n.mjs` | 改 | 56 → **72** | `_load` = 核投影底座 + 本地叠加；`loadLocaleStrings`/`initLocale`/`t()` 形不变（`t()` 回退 :65） |
+| 2 | `src/explore-distill.mjs` | 重写 | 157 → **54** | 核适配器（入参换道 + 出参原位回收 + 载体兜底还原；核回调不代传 ⇒ 不双份持久化） |
+| 3 | `src/agent/run-stages.mjs` | 改 | 382 → **380** | `fireEndOfRunDistill` 只剩 `onDistilled` 触发；头注改指核 `agent/helpers.mjs`（`:4`） |
+| 4 | `src/agent/setup-reminders.mjs` | 重写 | 252 → **130** | 端特有六名自持 + 核转口八名；删端侧 git/ENG 同构副本（冷却/maxBuffer/compose 语义随核） |
+| 5 | `src/agent/setup.mjs` | 改 | 668 → **681** | `+autoThink` 归一（config → cfgBag → agentFields）；`vscSubagentFace`/hydrate 零动 |
+| 6 | `src/agent.mjs` | 改 | 460 → **475** | `+autoThink` 消费（turn 0 / chat 前，核同点）；W9 载体镜像注收正（W15 定形 = 调用期适配面） |
+| 7 | `src/extension/panel-callbacks.mjs` | 改 | 208 → **283** | `+relaySubagentEventToken`（事件中继单点）+ `onToken` 包装（识别即消费） |
+| 8 | `src/extension/panel-messages.mjs` | 改 | 519 → **530** | ⏹ 路由合成 parent 补 `config`/`autoApprove` + `callbacks` 携事件中继（W12/W13「合成 parent 三缺」收口） |
+| 9 | `test/agent-lifecycle-singleton.test.mjs` | 改 | +30 | #175a 归一用例（显式键 true / 缺省 false——`_setConfigPathForTest` 沙箱） |
+| 10 | `test/chat-panel-messages.test.mjs` | 改 | +58 | ⑫ 增「cancelled(was:'queued') 事件 + 零裸文本泄漏」断言；⑬ 新增中继单测（9 事件 + 3 not-consumed） |
+| 11 | `docs/core/design/AGENT-LOOP.md` | 改 | +8/− | §6.18 新增 W15 行（六面结句联改）+ eng-coder 行两坐标随 W12/W13 迁核收正 + 变更记录行 |
+| 12 | `docs/core/design/I18N.md` | 改 | +4/− | §3.1 D1 状态列「S2 接线已落」+ `t()` 坐标 51→65 + 断言收正（见六·修复②） |
+| 13 | `docs/core/design/PORTABILITY.md` | 改 | +6/− | §3.6 头部 W15 状态注 + 变更记录行 |
+
+六档合计 **1975 → 1792（−183）**——装配面净减（设计表 5 口径「净减」达成；`setup.mjs` 单档 +13 为 `autoThink` 归一，<500 目标未落 ⇒ 未决 2）。
+
+#### 三、事件中继面（新——R5 · ⏹ queued 等待头回收）
+
+核异步族经 `ctx.callbacks.onToken` 发 **relay 前缀 `⟦ev⟧` 事件 token**（TUI 消费面）；VSC 消费面 = `{type:"subagent"}` 状态消息（webview `activity.js applySubagentStatus`）。W12/W13 镜像删旧后该转换面缺失 ⇒ 本笔落**单点** `relaySubagentEventToken(panel, tok)`（`panel-callbacks.mjs:38-83`）：
+
+- 映射（逐格式与核发射面对拍一致）：`⟦ev⟧queued` → `queued`（position/waiting/reason；kind `slot`/`depc`/余 · 载荷 `\x1e` 分隔）· `⟦ev⟧async`+`[model]` → `started`（pool:true + model + startedAt；pending 表挂 panel 弱映射）·
+  `⟦ev⟧turn` → `turn`（turn/maxTurns）· `⟦ev⟧cancelled` → `cancelled(was:"queued")`（等待头移除）· `⟦ev⟧stopped` → `cancelled`（冻结 stopped）· `⟦ev⟧settled` → `settled`（驻留待消化）· `⟦ev⟧done` → `done`（归档）。
+- **策略**（已写入 `AGENT-LOOP.md:395`）：未映射 `⟦ev⟧` 事件静默消费（不泄漏进聊天文本；`⟦ev⟧approval` 走 `onSubagentApproval` 结构化通道）；嵌套 relay 前缀按 head 折叠到外层块；非事件 token 原样转发。
+- **⏹ 路径**（`panel-messages.mjs:286-299`）：核 `executeCancelAction` 的 `⟦ev⟧cancelled` + `refreshQueuedTokens`（队列位次前移）经合成 `callbacks.onToken` → 中继 → webview；合成 parent 同批补 `config`（`poolLimitsFor` 按生效值补位——不再回退默认 4/4）与 `autoApprove`（AUTO 档依赖者自动启动真值）。
+
+#### 四、决策透明表（设计未明写者）
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 删除集 → 零删、新家 = 原地（F6） | 修正轮-7 裁定（同路径 ≠ 同内容：六档 = 独立分叉实现）；备选（直删）= 静默丢弃端装配面/端特有提醒/注入序/身份行 |
+| 2 | i18n = 核投影底座 + 本地叠加（本地键恒胜） | I18N D1「容器归一、投影端差」；值面冻结（32 核域键本地副本逐字同值实核）；备选（摘除本地核域键）= 与直读 `locales/*.json` 的测试面同批才可 ⇒ 登记未决 3 |
+| 3 | `setup-reminders` 端特有面自持 + 核转口（非整档转口） | 核同名档含端不需要件（核路径解析/端名零）；端特有六名（env/peer/重启闸/time/…）核无对位件；端差登记 = R4 身份行 |
+| 4 | 蒸馏适配器用**共享数组原位回收** | 面板/槽持同一 history 引用（核 write-replace 换数组会让引用失效）；备选（改调用方持新引用）= 触及面板/槽面（否决） |
+| 5 | 事件中继落端壳单点（`panel-callbacks`），核内零缝 | R5 端差走端侧装饰/注入（承 W13 判例）；核内加缝 = 越核写域（否决） |
+| 6 | ⏹ 路径合成 parent 补 `config`/`autoApprove` + 事件回调 | W12 评审 #1 Deferred「合成 parent 三缺」收口；核读点实核（`subagent-async.mjs:95`/`:272`） |
+| 7 | `autoThink` 消费点 = 首轮 chat 前（核 `agent.mjs` 同点） | 核单源分类器（`auto-think.mjs`）+ 面板档位共用 provider 字段面；默认 false ⇒ 无行为变化 |
+| 8 | 未映射 `⟦ev⟧` 静默消费 + 嵌套前缀折叠 | 防协议 token 泄漏进聊天文本；VSC 另有结构化通道者不受影响（审计 O5/O6 已并入设计行） |
+| 9 | 六档外改动 = R5 落点两档 + 两测试档 | 事件面落点由 R5 任务书指名（「等待头回收并入本单元验收」）；如实披露（超六档声明面） |
+
+#### 五、验证读数（终态复跑 · 原样 · cwd = `thincoder-vscode/`）
+
+| # | 判据 | 开工基线（本笔实测） | 终态 |
+|---|---|---|---|
+| A-K1 | `npm test`（快层） | 551 / 516 / **0** / 35 | **553 / 518 / 0 / 35**（+2 = 新增用例） |
+| A-K1 | `npm run lint` | 193 JS OK | **193 JS OK** |
+| A-K1 | `npm run test:full` | 551 / 551 / 0 | **553 / 553 / 0** |
+| A-K1 | `npm run test:integration` | 29 / 29 / 0 | **29 / 29 / 0** |
+| A-K1 | `npm run doc:check`（VSC 域） | 0 命中 | **0 命中** |
+| A-K2 | 核回归 `node --test`（cwd = `thincoder-core`） | 178 / 178 / 0 | **178 / 178 / 0**（核零改动） |
+| A-K3 | 仓根 `check-doc-width` | OK（404 档） | **OK（404 档零 >300）** |
+| A-K3 | 仓根 `check-ledger` | OK（0 违规） | **OK（0 违规）** |
+| A-K3 | 仓根 `doc-anchors --domain .` | **28 悬空**（全 = W9–W14 他单元面） | **27 悬空——本笔零新增**（顺带收正 1：`AGENT-LOOP.md:391` token 门坐标 → 现体核坐标） |
+
+**基线口径注**：任务书 A-K8 表记「633/592（W2 落地时点）」与本笔开工实测 551/516 **不符**（其后单元删除/退役数轮）——本段以**开工实测**为基线（改造前后逐数一致，增量可归因）。
+
+**专项验收（逐条机判）**：
+① **六档零断链（反向判零口径）**：消费面逐名在场（`audit` 独立复验 + 全量套件绿）；六档无删除、无重命名导出面缺失。
+② **装配输出零字面**（与 W2 同门）：本笔未触碰 prompts 装配面；既有门在全量套件内绿（553/553）。
+③ **提示词装配面（assemblePrompt 挂点经核）**：未触碰（W2 已收）；
+④ **hooks 四事件名冻结（未涉面）**：hooks 面在核（`hooks.mjs` + `dispatch.mjs`），本笔核零改动；VSC `src/` 对四名零命中实核。
+⑤ **载体 10 字段端壳双侧化**：访问器别名 11 绑定在位（设计十款 + `_engDesignTokens`），核写侧经父对象入口落共享 `history`；`async-parity`/`suspension` 面套件绿。
+⑥ **⏹ queued 等待头回收（事件面）**：`chat-panel-messages.test.mjs` ⑫/⑬ 断言 = 出队 + 墓碑 + `cancelled(was:'queued')` 事件 + 零裸文本泄漏；中继映射逐格式与核发射面（scheduler `:337` / async `:262` / settle `:228,:262,:264` / run `:143,:145`）对拍一致。
+
+#### 六、内部轮（审计 + 代码评审）
+
+- **审计 1 轮**（explore · 只读 · 阻塞）：**VERDICT: CLEAN**（四类偏差零）——逐条实核 A–F 六判据 + 五条对抗性风险（适配器回收 / 提醒转口碰撞 / i18n 叠加 / 静态闭包不达 `node:sqlite` / 未映射事件策略）；附观察项 7（O1–O7，见未决 5/6）。零 git 限制如审计自述（删除面/核零改动按磁盘实读辅助）。
+- **advisor 代码评审 1 轮**（type=code · sync · 对象声明 = W15 交付面 10 档）：**VERDICT: pass**（🔴 **0** · 🟡 4 · 🔵 2）。评审实核通过面摘：事件中继链逐环对拍 ✓ · ⏹ 路由真值供给与核读点同形 ✓ · 核原语转口符号逐名在场 ✓ · 三份模块权威档与码一致 ✓。
+
+**裁决表（6 项）**
+
+| # | Action | Detail |
+|---|---|---|
+| 1 | Deferred | 🟡 `agent/setup.mjs` 681 行 >500 硬限且本单元「目标落 500 内」未达成（设计表 5 自注「未落 ⇒ 拆分计划另议」）。与 W12/W14/W16 同判例 **R3 登记不升级、不阻断**；消解路径 = 该档下次实质改动时拆分（父侧裁定面）。 |
+| 2 | Deferred | 🟡 `extension/panel-messages.mjs` 530 行 >500 硬限（W13 已登记「不升级」；本笔 +11）。维持登记；同表 5「消解条件 = 下次实质改动」。 |
+| 3 | **Fixed** | 🟡 i18n 断言与现状不符：核域键在 `locales/{en,zh}.json` 仍有 32 键同值副本 ⇒「壳内零核域文案副本」不成立。**修复（文档侧）**：`src/i18n.mjs:17-20` 头注 + `I18N.md §3.1 D1` 状态列收正为「双源冻结（32 键逐字同值；摘除候选登记）」；值面零改（摘除与直读 locales 的测试面同批——未决 3）。 |
+| 4 | Deferred | 🟡（协调项）子代理**内容面** chunk 通道在现体无 host 侧数据源：中继只消费事件、其余原样转发（`panel-callbacks.mjs:190-191`），而 webview 活动区块入口要求 `sub:role#id` 频道名（`webview/chat.js:295`）——`src/` 零生产点（W13/W14 删旧后未补）。子代理流式正文/推理/工具事件现以 `role#id/` 前缀裸投主气泡。**不在 W15 验收面** ⇒ 不作 🔴；归属待父侧裁（W13 残留一笔 vs 本面扩一条映射）——未决 1。 |
+| 5 | **Fixed** | 🔵 载体面两项如实登记：① `_engDesignTokens` 别名晚于 hydrate（已登记批次档 `:2261`，不重审）；② 设计句「全部 10 字段先在 history 侧补建」现体预建 6 档（余 5 档靠 setter 落 `history`——**行为等价**）。**修复（文档侧）**：本段 + `AGENT-LOOP.md:395` 记等价说明（十一绑定）。 |
+| 6 | **Fixed** | 🔵 `PORTABILITY.md:104` 新注锚定误标（「`:81-84` = 父门实体」实为 eng-coder **子门**实体；父门实体 = `:92`）。**修复**：该行改「`:78` 子门注释段 · `:81-84` 子门实体 · `:92` 父门（门条件）/`:97` hint 分支」。 |
+
+**修复轮 1**（评审派生 · 文档侧 2 项 + 说明面 2 项）：落盘后复跑全链读数见五（快层 553/518/0 · 全量 553/553 · 集成 29/29 · 核 178/178 · `doc:check` 0 · 三闸 0 新增）。
+**轮次自证**：审计 1 轮（CLEAN）+ advisor 1 轮（pass）+ 修复轮 1；终态 **0 未决 🔴 → clean**（未决 1/2 为登记/协调、3–6 为转口登记，无阻断项）。
+
+#### 七、未决 / 越段发现（只记 ✗ · 未处置）
+
+1. **子代理内容面 chunk 通道**（评审 #4）：`relay 前缀 → sub:role#id` 频道名生产者缺失（`webview/chat.js:295` 入口在位）；消解 = 补 host 侧生产者（复用 `toolPanelPayload`/`onToolPanel`）或登记为后续单元面。
+2. **体量两档**：`agent/setup.mjs` 681（>500 硬限；W15 目标未落 ⇒ 拆分另议）· `extension/panel-messages.mjs` 530（登记维持）。
+3. **i18n 本地核域键副本**（32 键 ×2 档，逐字同值）：摘除候选——须与直读 `locales/*.json` 的测试面（`digest-visibility`/`status-line`/`child-permission`/`config-pool`/`activity-flow`）同批；本笔仅收正断言。
+4. **核内笔（本批零触碰 · 未落）**：#112 read_image 门（运行期能力重解）· 核 `END` 参数化（端身份面）· `depInfo` C-6 差异——承修正轮-7「核内笔清单」。
+5. **审计观察项 O1/O2**（载体面 · 已登记/等价）——见裁决表 #5；**O7**：VSC 产品档（`thincoder-vscode/docs/**`）与 `docs/design/AGENT-LOOP.md:452` 的「蒸馏本体住 `src/explore-distill.mjs`」类陈旧归属 = 迁移期参照历史（D-C14），归文档维护批。
+6. **根域锚 27 悬空**（基线 28）：全 = W9–W14 他单元删除面在核心档的未收口坐标；本笔零新增、顺带收正 1（`AGENT-LOOP.md:391`）；消解形态 = 文档维护批统一注记。
+7. **越段发现**：无（本笔未触碰本档 §1–§4/§6 与他单元段；`.thincoder/tmp/` 临时日志 = 本笔窗口读数落点，不入提交）。
+
+#### 八、提交（单笔）
+
+`git commit --only` ⇒ **`00b3dc83`**（13 档 · **+305/−338**；`refactor(vsc): W15 agent-loop - core single-source repoint, subagent event relay, autoThink key`）。
+含：六档本体 + R5 落点两档 + 测试两档 + 模块权威档三档。**批次档本体未入本笔**（父侧统一）；`thincoder-core/**` 零改动。
+回滚点 = `git revert 00b3dc83`。凭据纪律：本段零 token/designId 值。
+
+**收正注（同轮 · 首版后置 · 零语义）**：本段首版 3 行超宽（`:2441` 556 / `:2442` 306 / `:2470` 379 字符）经本席就地机械折行（仅插换行 · 文字零改）；复跑 = 本档 0 行 >300（`check-doc-width` OK）。
+
 ## §6 验证与收口（父代理）
