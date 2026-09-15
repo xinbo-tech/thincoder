@@ -7,7 +7,7 @@
  * settings.mjs/tests 照旧）。
  */
 import { persistRaw, conflictError, loadAgentSettings, loadRaw, sanitizeConsultModels, probeTargetFromEntry } from "../config-io.mjs"
-import { probeChannelModels } from "../provider/list-models.mjs"
+import { probeChannelModels } from "@thincoder/core/provider/list-models.mjs"
 
 /** 单写通道：agent.* 键合并语义 = config-io saveAgentSettings（delete on
  *  undefined/null/""/空对象）——同文件内联执行（defaultModel 顶层 + agent 一次落盘——

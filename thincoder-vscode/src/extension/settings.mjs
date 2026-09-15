@@ -13,7 +13,7 @@ import {
   loadAgentSettings, loadRaw, normalizeProxy,
 } from "../config-io.mjs"
 import { addProviderEntry, removeProviderEntry, probeProviderAdmission } from "./provider-flows.mjs"
-import { listModels, admissionOf, channelUnavailableMessage, recordAdmission } from "../provider/list-models.mjs"
+import { listModels, admissionOf, channelUnavailableMessage, recordAdmission } from "@thincoder/core/provider/list-models.mjs"
 import { specForModel } from "../specs.mjs"
 import { loadModelPrefs, loadSlot } from "./session-io.mjs"
 
@@ -189,7 +189,7 @@ export function saveProxySettingsFromPanel(payload) {
 /** Test the proxy connection from the extension host (webview cannot run Node code).
  *  Returns { ok, status } or { ok: false, error }. */
 export async function testProxyConnection(uri) {
-  const { proxyFetch } = await import("../proxy.mjs")
+  const { proxyFetch } = await import("@thincoder/core/proxy.mjs")
   const proxyUri = (uri || "").trim() || null
   // Validate the URI format up front so an empty/blank field isn't tested, and a
   // malformed URI gets a clear message instead of "Invalid URL" from deep inside.

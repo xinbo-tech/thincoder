@@ -1,14 +1,14 @@
 # Provider 面与配置（thincoder-vscode）
 
-> 状态：**当前态**（2026-09-08 DOC-REORG 第 2 批——ARCHITECTURE §5 迁出 + RESPONSES-TRANSPORT
-> 并入合并为独立档；以本端代码为准）。与 CLI 同名文档 `PROVIDER.md` 对应同一机制板块——各端
+> 状态：**迁移期参照历史**（2026-09-08 DOC-REORG 第 2 批——ARCHITECTURE §5 迁出 + RESPONSES-TRANSPORT
+> 并入合并为独立档；以本端代码为准）。**W10 已迁核**（2026-09-15——provider 实现面：chat/transport 分派 / 限流 / 模型清单 / 代理；现体 = `thincoder-core/provider/` + `thincoder-core/proxy.mjs`）。与 CLI 同名文档 `PROVIDER.md` 对应同一机制板块——各端
 > 独立实现，内容以本端代码为准。
 >
 > 范围：配置与 preset、Provider 增删与模型选择 UI、transport 分派与调用链、能力适配
 > （spec/thinking/escape/续写）、Responses transport、LLM 标题生成、图片输入。
 >
-> 相关权威：`src/provider.mjs`（chat/transport 分派）、`src/provider/transports/*`（四
-> transport）、`src/config.mjs`（MODEL_SPECS / specForModel / resolveEnableThinking）、
+> 相关权威：`src/provider.mjs`（W10 已迁核——现体 `thincoder-core/provider/core.mjs`；chat/transport 分派）、`src/provider/transports/*`（四
+> transport；W10 已迁核——现体核 `provider/{anthropic,google,sse,responses}.mjs`）、`src/config.mjs`（MODEL_SPECS / specForModel / resolveEnableThinking）、
 > `src/config-presets.mjs`（PROVIDER_PRESETS）、`src/config-io.mjs`（config.json 读写）、
 > `src/escape.mjs`（W4 已迁核——现体 `thincoder-core/escape.mjs`）、`src/extension/{settings,presets,provider-flows,reasoning-mode,
 > generate-title,image-handler}.mjs`。
@@ -87,7 +87,7 @@ minimax 携 `chatPath: "/text/chatcompletion_v2"`。
 
 ### 3.1 清单来源与渠道准入（MODEL-SELECTION v2）
 
-- **清单来源 = provider 运行期拉取**（`GET /models`；本端独立实现 `src/provider/list-models.mjs`）：
+- **清单来源 = provider 运行期拉取**（`GET /models`；本端独立实现 `src/provider/list-models.mjs`——W10 已迁核：现体 `thincoder-core/provider/list-models.mjs`）：
   `listModels(provider, { signal })` 按 `provider.format` 三格式分派——openai（缺省/未知）：
   `GET {baseURL}/models` + `Authorization: Bearer`；anthropic：`GET {baseURL}/models?limit=1000`
   + `x-api-key` + `anthropic-version: 2023-06-01`；google：`GET {baseURL}/models?key=…&pageSize=1000`
@@ -98,8 +98,8 @@ minimax 携 `chatPath: "/text/chatcompletion_v2"`。
   候选行 = 拉取结果（直接可选）；探不通 → 该渠道不可选 + 失败消息本体随载荷下发。webview 默认
   模型菜单与预设行改消费**运行期载荷**（`SS.getModels`——不再直读 config 字段）；`providerStatus`
   行显单值默认模型（`models[]` 退场）；失败渠道经 `available:false` / `unavailableReason` 标注。
-- **M9 配置阶段准入**（探针 `probeChannelModels` + 展示态 `recordAdmission` / `admissionOf`，
-  收敛于 `src/provider/list-models.mjs`；探针形状由 `config-io.mjs` `probeTargetFromEntry` 组装）：
+- **M9 配置阶段准入**（探针 `probeChannelModels` + 展示态 `recordAdmission` / `admissionOf`
+  收敛于 `src/provider/list-models.mjs`——W10 已迁核：现体 `thincoder-core/provider/list-models.mjs`；探针形状由 `config-io.mjs` `probeTargetFromEntry` 组装）：
   加渠道（`addProviderFlow` / 面板 `addProvider`）/ 设 API key（`setKeyFlow` / `saveProviderKey`）/
   设默认模型（`settings-panel-write.mjs` defaultModel 写面）时对目标渠道探一次 `GET /models`。
   探不通 → 失败消息逐字长句 `该渠道不提供模型列表（GET /models {状态}）——无法选择模型，请改用
@@ -116,9 +116,9 @@ minimax 携 `chatPath: "/text/chatcompletion_v2"`。
 | 面 | CLI | 本端（VSC） | 说明 |
 |---|---|---|---|
 | 切换回显 spec 来源 | 有 | **无**（本批不加） | O2 已裁——批范围第 ⑥ 面字面仅含「候选同源 + resolveDefaultModel」 |
-| 拉取实现 | `src/provider/list-models.mjs`（CLI 仓） + `src/tui/model-catalog.mjs`（CLI 仓）（会话缓存 TTL 60s / 失败不缓存） | `src/provider/list-models.mjs`（本端独立；`fullStatus` 每次拉取——**无会话级 TTL 缓存**） | 已知不对称（后续可选） |
+| 拉取实现 | `src/provider/list-models.mjs`（CLI 仓） + `src/tui/model-catalog.mjs`（CLI 仓）（会话缓存 TTL 60s / 失败不缓存） | `src/provider/list-models.mjs`（本端独立——W10 已迁核：现体 `thincoder-core/provider/list-models.mjs`；`fullStatus` 每次拉取——**无会话级 TTL 缓存**） | 已知不对称（后续可选） |
 | 拉取结果排序 | 调用方 | `listModels` 内部排序保留（既有行为） | 双端允许差异 |
-| 准入探针宿主 | `src/tui/model-catalog.mjs`（CLI 仓） + `model-picker.mjs` 落点 | `src/provider/list-models.mjs`（探针 + 展示态） | 设计未钉宿主，两端各自落地 |
+| 准入探针宿主 | `src/tui/model-catalog.mjs`（CLI 仓） + `model-picker.mjs` 落点 | `src/provider/list-models.mjs`（探针 + 展示态；W10 已迁核——现体 `thincoder-core/provider/list-models.mjs`） | 设计未钉宿主，两端各自落地 |
 | 失败诊断载荷 | —— | `models` 载荷附 `unavailable[{provider,reason}]` | 本端自定（测试/排障面） |
 | webview 下拉兜底 | 会话重载 = **会话值优先**（`cmd-config.mjs:67-71` `sessionModel ?? dm.model ?? keep.model`——`keep.model` 仅链尾兜底；不读候选清单） | 候选未命中 = **保持当前选择显示与状态（回落会话槽复合）+ 零 `selectModel` / `selectReasoning` post**（不再取候选首项写会话槽）——**本批处置**（用户 2026-09-11 裁定；M10） | 语义同源（双端独立实现）；T29 / AC-10 锁定（T29 = 引例：批级编号；现体 = `test/model-picker-fallback.test.mjs`） |
 
@@ -137,7 +137,7 @@ droppedToolCalls? }`。
 2. **reasoning effort 校验**：非 anthropic/google 时 `reasoningEffort` 不在
    `spec.reasoningEffortEnum` → 抛错（router 模型 ID 含 `/` 时不发）。
 3. **format 分派**：`TRANSPORTS = { openai, anthropic, google, responses }`，
-   `getTransport` = `TRANSPORTS[provider.format] || openai`。每 transport 实现
+   `getTransport` = `TRANSPORTS[provider.format] || openai`（W10 已迁核——现体 `thincoder-core/provider/core.mjs` 的 format 分派）。每 transport 实现
    `{ normalizeTools, buildRequest, parseStream }`。
 4. **请求组装**：`transport.buildRequest(provider, messages, normalizedTools, { toolChoice,
    parallelToolCalls })` → `{ url, headers, body }`。
@@ -182,6 +182,11 @@ chars/token、CJK ≈1），超预算 `sleep`（onWait 通知）；未配则关�
 > 来源：批次档 `2026-09-11-VSC-MIRROR-SWEEP（本仓）` §1 条目 A1（指针 = CLI 批
 > `2026-09-11-ABORT-PROVENANCE.md`（CLI 仓）§20.10「VSC 镜像 600s 绝对墙钟残留——用户实证文案的唯一在网生产点」）。
 > 语义源：CLI `src/provider/core.mjs:408-415`（CLI 仓）（相位拆分——绝对墙钟废除后的现行语义）；双端纪律：语义同源、本端原文自持。
+>
+> **W10 已迁核（2026-09-15）**：本节 = 群 A 批历史契约（镜像面）；VSC provider 镜像已删——
+> 实现体 = 核（`thincoder-core/provider/`），驱动面 = `test/provider-timeout-semantics.test.mjs`
+> （保留 2 例经核 `chat`；退役 3 例见该文件头注）。本节下文对 `src/provider.mjs` / 四 transport
+> 的行号引用均为迁核前 as-of 坐标，不再指向现态档。
 
 **（a）问题陈述（现场复核——as-of 2026-09-11）**：
 
@@ -195,14 +200,14 @@ chars/token、CJK ≈1），超预算 `sleep`（onWait 通知）；未配则关�
 
 | # | 候选 | 判据逐项评估 | 取舍（选定代价 / 权衡） | 结论 |
 |---|---|---|---|---|
-| 1 | **去绝对墙钟 + 头相位保留（`_headerTimeoutMs`）+ 四 transport 读侧 idle 120s 补齐** | 误报闭源（无 600s 绝对钟）；长思考请求不再被腰斩；body 停摆 120s 内判死（无新挂起窗口）；idle 可经 seam 注入短值测试；代理 / 直连同语义（120s） | 四 transport 各 +~10 行（timer 臂/清/销毁）+ seam 参数；`_anySignal` polyfill 退场 | **选定** |
+| 1 | **去绝对墙钟 + 头相位保留（`_headerTimeoutMs`）+ 四 transport 读侧 idle 120s 补齐** | 误报闭源（无 600s 绝对钟）；长思考请求不再被腰斩；body 停摆 120s 内判死（无新挂起窗口）；idle 可经 seam 注入短值测试；代理 / 直连同语义（120s） | 四 transport 各 +~10 行（timer 臂/清/销毁）+ seam 参数；`_anySignal` polyfill 退场（W10 已迁核——现体 `thincoder-core/provider/core.mjs`） | **选定** |
 | 2 | 仅去 `:324`（不补直连 idle） | 改动范围 = 仅去 `:324`；但直连静默流无显式守卫（仅 undici 隐式默认——未承诺 / 不可测 / 与代理路径 120s 不一致）——原 600s 兜底拆除后无替身 | — | 否决 |
 | 3 | 保留绝对墙钟（改值 / 改语义） | CLI 已废（长上下文子代理被腰斩的根因）；用户实证文案同源——复现即回归 | — | 否决 |
 
 **（c）契约（逐条——实现对象）**：
 
 1. `src/provider.mjs:324`：`signal: signal ?? undefined`（**去合成**——不再叠加 `AbortSignal.timeout`）；
-   `:31` `_anySignal` polyfill 随唯一使用点退场（删除）；`:23-28` 注释改写（语义 = 「响应头阶段默认上限（代理路径消费）」）；
+   `:31` `_anySignal` polyfill 随唯一使用点退场（删除）；`:23-28` 注释改写（W10 已迁核——现体 `thincoder-core/provider/core.mjs`）；
 2. `:327` `_headerTimeoutMs: FETCH_TIMEOUT_MS` 保留（代理路径头阶段 600s——与 CLI 同值；本端无 `fetchTimeoutMs` 配置键——不加新配置面）；`:328` `_bodyIdleMs: 120_000` 保留；
 3. **读侧 idle（本端补齐——CLI 对位 = `sse.mjs:169-182` / `google.mjs:197-207`）**：四 transport 的读循环各加
    `READ_IDLE_MS = 120_000` 空闲看门狗——每 chunk 重置；连续无数据 120s → `response.body.destroy(new DOMException("SSE idle timeout: no data for 120s", "TimeoutError"))`；
@@ -214,17 +219,17 @@ chars/token、CJK ≈1），超预算 `sleep`（onWait 通知）；未配则关�
 
 | # | 类 | 输入 | 预期输出（断言） | 映射 |
 |---|---|---|---|---|
-| T-MA1-1 | 正常 | 桩 proxyFetch 捕获请求 options；调用链带用户 signal | `options.signal === 用户 signal`（**非复合**）；`options._headerTimeoutMs === 600_000`；`_bodyIdleMs === 120_000` | AC-MA1-1 |
-| T-MA1-2 | 边界 | 无用户 signal（`undefined`） | `options.signal === undefined`（不再合成 `AbortSignal.timeout`）；请求照发 | AC-MA1-1 |
-| T-MA1-3 | 错误 | 假流：两 chunk 后静默挂起 + `parseStream(..., { idleMs: 40 })` | 读循环以 `TimeoutError` 终止（name 判定）；错误消息含 `SSE idle timeout` | AC-MA1-2 |
-| T-MA1-4 | 边界（对照） | 假流：每 20ms 持续有 chunk 至完成（idleMs=40） | **零误杀**——正常完成；timer 已清理（无悬挂 handle） | AC-MA1-2 |
+| T-MA1-1 | 正常 | `globalThis.fetch` 桩捕获请求 options（W10 后 = 核 `chat` 驱动）；调用链带用户 signal | `options.signal === 用户 signal`（**非复合**）；`options._headerTimeoutMs === 600_000`；`_bodyIdleMs === 120_000` | AC-MA1-1 |
+| T-MA1-2 | 边界 | 无用户 signal（`undefined`）（W10 后 = 核 `chat` 驱动） | `options.signal === undefined`（不再合成 `AbortSignal.timeout`）；请求照发 | AC-MA1-1 |
+| T-MA1-3 | 错误 | 假流：两 chunk 后静默挂起 + `parseStream(..., { idleMs: 40 })` | 读循环以 `TimeoutError` 终止（name 判定）；错误消息含 `SSE idle timeout` | AC-MA1-2（W10 已退役——随镜像删档；删除记录 = 批次档 `2026-09-15-vsc-core-wiring.md` §5） |
+| T-MA1-4 | 边界（对照） | 假流：每 20ms 持续有 chunk 至完成（idleMs=40） | **零误杀**——正常完成；timer 已清理（无悬挂 handle） | AC-MA1-2（W10 已退役——同前注；删除记录 = 批次档 §5） |
 | T-MA1-5 | 边界（静态） | `src/provider.mjs` 源文本 grep | `AbortSignal.timeout(FETCH_TIMEOUT_MS)` 零命中；`_anySignal` 零残留（或定义即可见零调用——取删除） | AC-MA1-3 |
 
 **（e）AC（机判）**：
 
 - AC-MA1-1：T-MA1-1 / T-MA1-2 绿（请求信号 = 用户信号；头/body 相位参数在位）；
-- AC-MA1-2：T-MA1-3 / T-MA1-4 绿（idle 判死 + 零误杀成对）；
-- AC-MA1-3：T-MA1-5 绿（源文本零残留）+ 既有 provider 测试族零回归 + VSC 快层全绿 + 两仓 `check-doc-width` 新增违规 0。
+- AC-MA1-2：T-MA1-3 / T-MA1-4 绿（idle 判死 + 零误杀成对）；（W10 已退役——删除记录 = 批次档 §5；现体 = 核 sse 读侧看门狗）
+- AC-MA1-3：T-MA1-5 绿（源文本零残留）+ 既有 provider 测试族零回归 + VSC 快层全绿 + 两仓 `check-doc-width` 新增违规 0。（W10 已退役——同前注；删除记录 = 批次档 §5）
 
 **（f）差异登记（如实——不追赶）**：① CLI `anthropic.mjs` / `responses.mjs` 读循环无 idle（仅 sse / google 有）——本端四 transport 全配（本端自持选择，差异登记）；
 ② CLI 有 `agent.fetchTimeoutMs` 配置键（`effectiveFetchTimeoutMs`）——本端无（不加配置面，差异登记）；③ undici 直连隐式 bodyTimeout（≈300s）非本端承诺语义——**不依赖**（只作背景注）。
@@ -235,7 +240,7 @@ chars/token、CJK ≈1），超预算 `sleep`（onWait 通知）；未配则关�
 
 ## 5. Responses API transport（并入自 RESPONSES-TRANSPORT.md）
 
-`format: "responses"`（四值之一，`src/provider/transports/responses.mjs`）。双轨：本地
+`format: "responses"`（四值之一，`src/provider/transports/responses.mjs`——W10 已迁核：现体 `thincoder-core/provider/responses.mjs`）。双轨：本地
 会话/历史是唯一事实源（压缩/落档/恢复/跨端零变化）；`previous_response_id` 链只是**发送层
 优化**，`store` 按 host 规则。流以 `response.completed/incomplete/failed` 结束，无
 `data: [DONE]`。
@@ -300,7 +305,7 @@ export async function parseStream(response, { onToken, onReasoning, signal }) //
 
 **实现差异注（vs 契约）**：responses transport 的 `buildRequest` 为满足链/白名单，返回
 `{ url, headers, body, _chainMeta, _warnings, _previousResponseId }`（非纯 body）——链决策
-元数据走非序列化 `_chainMeta`（chat() 读取推进）。`normalizeUsageCache` 在本 transport 内化
+元数据走非序列化 `_chainMeta`（chat() 读取推进；W10 已迁核——现体 `thincoder-core/provider/responses.mjs`）。`normalizeUsageCache` 在本 transport 内化
 为私有 `normalizeUsage`（OpenAI 形态归一 DeepSeek 风格 cache 字段）。`parseStream` 额外返回
 `responseId`（completed 事件）与 `builtinToolResults`（web_search_call）。`store` 顶层按
 `wantStateful && hostStateful && isStoreRequiredHost` 判定。
@@ -313,8 +318,7 @@ arguments }` 与 openai transport 输出一致，agent 循环零改动。
 
 ### 5.4 注册与格式选择
 
-- `TRANSPORTS.responses = responsesTransport`（provider.mjs `getTransport` 按
-  `provider.format` 分派）。
+- `TRANSPORTS.responses = responsesTransport`（provider.mjs `getTransport` 按 `provider.format` 分派——W10 已迁核，现体 = `thincoder-core/provider/core.mjs` 的 format 分派）。
 - provider 配置 `format: "responses"`。**本端接线**：custom Add-provider 表单 format 下拉现
   列 openai/anthropic/google（未加 responses 项）——responses provider 经 config.json 手写
   `format:"responses"` 或预设扩展启用；preset 不改（默认稳态 chat completions，responses

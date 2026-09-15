@@ -186,7 +186,7 @@ export function buildAdvisorFollowUp(agent, prior, scopeFiles = null, rv = null)
  * are doubled ("\\x" → literal "\\x" after server expansion); well-formed
  * "\\xNN" / "\\uNNNN" pass through untouched (they expand to a byte/codepoint).
  * Implementation lives in @thincoder/core/escape.mjs (CLI parity — the main-agent send path
- * src/provider.mjs applies it via escapeMessages since 2026-08-31).
+ * @thincoder/core/provider/core.mjs applies it via escapeMessages since 2026-08-31; W10 repointed).
  */
 
 

@@ -5,7 +5,7 @@
  * sites (gitee unreachable via foreign proxy), per-call lets the model pick by target.
  */
 
-import { proxyFetch } from "../proxy.mjs"
+import { proxyFetch } from "@thincoder/core/proxy.mjs"
 import { DESC, isPrivateHost } from "./shared.mjs"
 import { URL } from "node:url"
 // §14 D-TF3（2026-09-04）：网络失败错误文本追加 proxy 提示——纯文本提示行，不自动路由（2026-08-31 裁定：proxy 显式传不自动应用）

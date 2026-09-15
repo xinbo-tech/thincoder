@@ -2,7 +2,7 @@
  * mock-llm.mjs — 集成集共享夹具：脚本化 provider（本地 HTTP + OpenAI SSE，零外网）。
  *
  * 定位（`docs/design/TESTING.md` §4）：集成场景的「脚本化 provider」——真 provider 链路
- * （`src/provider.mjs` 的 fetch → SSE 解析）打到 127.0.0.1 的本地 mock，模型输出由脚本
+ * （W10 已迁核——核 `@thincoder/core/provider/core.mjs` 的 fetch → SSE 解析）打到 127.0.0.1 的本地 mock，模型输出由脚本
  * 逐调用给出；断言面 = 业务可观察结果（产物 / 调用方可见文本），不锁内部结构。
  *
  * 用法：

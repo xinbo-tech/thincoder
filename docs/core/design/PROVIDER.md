@@ -11,12 +11,12 @@
 
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
-| 调用核心 | `thincoder-cli/src/provider/core.mjs` + `src/provider/index.mjs` | `thincoder-vscode/src/provider.mjs` |
-| 传输 | `src/provider/{anthropic,google,responses}.mjs` | `src/provider/transports/{anthropic,google,responses}.mjs` |
-| 基础件 | `src/provider/{sse,retry,normalize,errors,abort-provenance}.mjs` | 内联 / 无独立档 |
-| 限流 | `src/provider/rate.mjs` | 同名（同路径对） |
-| 模型清单 | `src/provider/list-models.mjs` | 同名（同路径对） |
-| 模型规格 | `src/model-specs.mjs` | `src/config.mjs`（模型规格段）+ `specs.mjs` |
+| 调用核心 | `thincoder-cli/src/provider/core.mjs` + `src/provider/index.mjs` | 经 `@thincoder/core/provider/core.mjs` 引用（W10 已迁核——自持镜像已删） |
+| 传输 | `src/provider/{anthropic,google,responses}.mjs` | 经核 `provider/{anthropic,google,sse,responses}.mjs` 引用（W10 已迁核——`transports/` 镜像已删） |
+| 基础件 | `src/provider/{sse,retry,normalize,errors,abort-provenance}.mjs` | 经核同列引用（W10 已迁核——内联面已归核） |
+| 限流 | `src/provider/rate.mjs` | 经 `@thincoder/core/provider/rate.mjs` 引用（W10 已迁核——同名镜像已删） |
+| 模型清单 | `src/provider/list-models.mjs` | 经 `@thincoder/core/provider/list-models.mjs` 引用（W10 已迁核——同名镜像已删） |
+| 模型规格 | `src/model-specs.mjs` | `src/config.mjs`（模型规格段）+ `specs.mjs`（W16 面——本批零动作） |
 
 ## 2. 核模块裁决行（自 `CORE-UNIFICATION.md` §2.5 搬入 · 逐字）
 
@@ -257,19 +257,20 @@ claude / gemini 携 `format: "anthropic" / "google"`；minimax 携 `chatPath: "/
 **模型选择 UI（面板接线）**：主下拉列 provider 行（名 + 当前模型 + `›`）+ hover flyout 子菜单（webview 无键盘导航）；选中 = 写当前会话槽；设置面板「默认模型」项 = provider →
 运行期拉取候选两级（写 `raw.defaultModel`）。Add / Remove / Key 流 = `thincoder-vscode/src/extension/provider-flows.mjs`（`addProviderFlow` `:106`——QuickPick preset 过滤已添加或 Custom 手输 name / baseURL / model + format → `addProviderEntry` → 问 key → `setProviderKey`）；
 `settings.mjs` `fullStatus`（`:308`）单源拉取
-（逐已配置渠道各探一次——探通 → 候选行直接可选；探不通 → 不可选 + 失败消息随载荷）。**M9 准入探针（配置阶段）** = 收敛于 `thincoder-vscode/src/provider/list-models.mjs`
-（探针形状由 `thincoder-vscode/src/config-io.mjs:230` `probeTargetFromEntry` 组装）；探通 / 探不通两态 + **不阻断保存**；`defaultModel` 写面探针 fire-and-forget（写面为同步契约——探针绝不 reject）；**运行期零探测**（启动 / 发请求 / 面板打开不做 `/models` 探测）。候选未命中 = 保持当前选择显示与状态
+（逐已配置渠道各探一次——探通 → 候选行直接可选；探不通 → 不可选 + 失败消息随载荷）。**M9 准入探针（配置阶段）** = 收敛于核 `@thincoder/core/provider/list-models.mjs`（W10 已迁核——同名镜像已删；消费面 = `thincoder-vscode/src/extension/{provider-flows,settings,settings-panel-write}.mjs` 经核面引用）
+（探针形状由 `thincoder-vscode/src/config-io.mjs:230` `probeTargetFromEntry` 组装——端侧缝保留）；探通 / 探不通两态 + **不阻断保存**；`defaultModel` 写面探针 fire-and-forget（写面为同步契约——探针绝不 reject）；**运行期零探测**（启动 / 发请求 / 面板打开不做 `/models` 探测）。候选未命中 = 保持当前选择显示与状态
 （回落会话槽复合）+ 零 `selectModel` / `selectReasoning` post（§6.16 M10 语义同源 · 独立实现）。
 
-**transport 端差**（`thincoder-vscode/src/provider.mjs:122` chat / `TRANSPORTS` `:110`）：调用链与 §6.2 同构（统一结果形态 + 净化 + 分派 + 闸门 + 重试 + 续写——不重述）。差异登记 =
-① **超时相位（CLI 对位 §6.3）**：绝对墙钟废除；响应头阶段 600s（代理路径 `_headerTimeoutMs`；直连 undici 默认）+ body 读侧空闲 120s（`READ_IDLE_MS`——**四 transport 全配**，CLI 仅 sse / google 有——差异登记）；本端无 `fetchTimeoutMs` 配置键（不加配置面——差异登记）
-② **Responses 实现差异注（CLI 对位 §6.13）**：`buildRequest` 返回 `{ url, headers, body, _chainMeta, _warnings, _previousResponseId }`
-（链决策元数据走非序列化 `_chainMeta`）；`normalizeUsageCache` 内化为私有 `normalizeUsage`；`parseStream` 额外返回 `responseId`（completed 事件）与 `builtinToolResults`；
-本地接线 = responses provider 经 config.json 手写 `format: "responses"` 或预设扩展启用（custom 表单 format 下拉未加 responses 项——显式 opt-in，CLI parity）；finishReason 区分（`response.incomplete` 非长度原因不得报成 `length`）。
+**transport 端差**（W10 已迁核——自持镜像已删）：VSC 经 `@thincoder/core/provider/core.mjs` 引用（原 `thincoder-vscode/src/provider.mjs` chat / `TRANSPORTS` 面已删）——调用链 = 核单实现（§6.2 不重述）；下列原 VSC 端差登记随迁核退役：
+① **超时相位**（原登记：四 transport 读侧 idle 全配 / 本端无 `fetchTimeoutMs` 配置键）——现体 = 核 §6.3 超时制度（sse / google 读侧 idle + `effectiveFetchTimeoutMs`）；
+VSC 调用面已无相位传参点（W10 已迁核）——相位参数由核 chat 装配（核 `thincoder-core/provider/core.mjs:414-415` 实核）；端侧用例 `provider-timeout-semantics` 锁该跨端契约（相位参数在位）；
+② **Responses 实现差异注**（链元数据 / usage 归一 / `responseId` / `builtinToolResults`）——现体 = 核 §6.13（核面已承载同列语义）；
+本地接线不变 = responses provider 经 config.json 手写 `format: "responses"` 或预设扩展启用（custom 表单 format 下拉未加 responses 项——显式 opt-in，CLI parity）；
+finishReason 区分（`response.incomplete` 非长度原因不得报成 `length`）**保留为端侧验收面**。
 
-**能力适配端差**（语义同源不重并——坐标即指）：`specForModel` / `providerSpec` / `resolveEnableThinking` / `isBailianHost`（`thincoder-vscode/src/config.mjs:106 / :142 / :183 / :166`）·
-reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` → `thinking: null` + `reasoningEffort: null` 真 off）· escape v5 与 UTF-16 安全截断（`src/escape.mjs` + `src/agent/run-helpers.mjs` `safeSliceUTF16`——§6.7 同构）·
-畸形 tool_calls 防御（`src/provider/transports/openai.mjs`——§6.10 同构）· 前缀剥离与 `DEFAULT_SPEC` 兜底（§6.9 同构）；
+**能力适配端差**（语义同源不重并——坐标即指）：`specForModel` / `providerSpec` / `resolveEnableThinking` / `isBailianHost`（`thincoder-vscode/src/config.mjs:106 / :142 / :183 / :166`——W16 面）·
+reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` → `thinking: null` + `reasoningEffort: null` 真 off）· escape v5 与 UTF-16 安全截断（核 `escape.mjs` + 端 `src/agent/run-helpers.mjs` `safeSliceUTF16`——§6.7 同构）·
+畸形 tool_calls 防御（W10 已迁核——现体 = 核 `provider/sse.mjs`；§6.10 同构）· 前缀剥离与 `DEFAULT_SPEC` 兜底（§6.9 同构）；
 规格表每行多 `reasoningEffortDefault`（§6.9 已登记端差）。**`provider.headers`：VS Code 端无 `providers[].headers` 概念**（§6.17 域外与端面已登记——对位引入属新需求）。
 
 **LLM 标题生成**（`thincoder-vscode/src/extension/generate-title.mjs:13`；`panel-chat.mjs:334` 触发）：会话第一条 user 消息后 agent 完成回复——取首条文本（多模态 part 数组取 text）→ 用该 provider 发简短 prompt（"Generate a concise title (max 40 chars…)"），**非流式** + `max_tokens: 100` + **逐 format 禁 thinking**
@@ -338,7 +339,7 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` → 
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **360 行**（B 轮并入前 63 行 · qwen-plan 渠道名接入批 +4 · §6.18 / §6.19 终收批并入 +67）——**高于 300 行软线、低于 500 硬限**——拆分面见下表（现有 3 候选）；与新 VSC 图片 / 接线面的可拆候选一并由用户裁定。
+**实测行数**：本档 **363 行**（B 轮并入前 63 行 · qwen-plan 渠道名接入批 +4 · §6.18 / §6.19 终收批并入 +67 · S2 W10 VSC 接线收正 +3）——**高于 300 行软线、低于 500 硬限**——拆分面见下表（现有 3 候选）；与新 VSC 图片 / 接线面的可拆候选一并由用户裁定。
 
 | # | 拆分面 | 去向 | 状态 |
 |---|---|---|---|
@@ -358,3 +359,5 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` → 
 - 2026-09-15（**评审修正轮** · eng-designer）：§7 D-PR25 论证口径改「前缀不相交（第 12 位 `.` 与 `-` 互不为前缀）」——长度排序既不充分也无必要（字典序下退役行反在前），排序交由既有 SORTED_SPECS 长度降序（与本批无关）。
 - 2026-09-15（**§8B #4 / #7 终收批** · eng-designer）：新增 §6.18 **图片输入与贴图降级链**（#4 IMAGE-DOWNGRADE-VISION + #7 PROVIDER §8 合成）+ §6.19 **VS Code 端接线**（配置存储端差 / 预设镜像 / 面板接线 / transport 端差 / 能力适配坐标 / 标题生成——#7 其余面）；§7 补 D-PR26 / D-PR27；§8.2 登记两行；§9 体量更新
 （360 行——高于软线、低于硬限）；来源 = `thincoder-vscode/docs/design/{PROVIDER,IMAGE-DOWNGRADE-VISION}.md`（一字未改——参照历史）。
+- 2026-09-15（**S2 W10 · VSC provider 接线批** · eng-coder）：§1 归属表 VSC 列改述（「经 `@thincoder/core/...` 引用」——自持镜像已删）；§6.19 transport 端差 / M9 探针 / 能力适配坐标收正（迁核退役登记；机制条文零改）；§9 体量更新。
+  VSC 侧删除集、改指面与测试面（含 `provider-timeout-semantics` 改判）见批次档 `batches/2026-09-15-vsc-core-wiring.md` §5。

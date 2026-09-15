@@ -3,7 +3,7 @@
  * MODEL-SELECTION schema（2026-09-10——mirrors CLI `thincoder-cli/src/config.mjs`）：providers[]
  * with a single `model` default per channel + config.defaultModel top-level composite；
  * `providers[].models[]` 候选清单字段已退场（清单权威 = provider 运行期 `/models` 拉取——
- * `provider/list-models.mjs`）；legacy shapes migrate on loadRaw (config-migrate.mjs
+ * 核 `thincoder-core/provider/list-models.mjs`（W10 已迁核））；legacy shapes migrate on loadRaw (config-migrate.mjs
  * migrateLegacyModelFields — same rule both ends).
  *
  * Pure Node — no `vscode` import — so unit tests can run outside the extension host.

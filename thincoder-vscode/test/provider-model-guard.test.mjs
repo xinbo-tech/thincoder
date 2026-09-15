@@ -1,6 +1,9 @@
 /**
  * provider-model-guard.test.mjs — MODEL-400-FIX（docs/design/MODEL-400-FIX.md——评审采纳版）
  * F-1 请求体断言 + F-2 克隆现场 model 重派生（VSC 面——CLI test/provider-model-guard 镜像）。
+ * W10 改判（2026-09-15）：F-1 guard 随 provider 面迁核（核 `@thincoder/core/provider/errors.mjs`
+ * `assertProviderModel`——核 chat 在 body 组装前调用）；本档 F-1 直驱面由 `buildRequest`（已删档）
+ * 改为经核 `chat()` 真路驱动（守卫在 fetch 之前生效——零网络）；F-2 家族模块未迁、原文保留。
  *
  * 根因：渠道裸克隆（`{...渠道}`）不重派生 .model → model 键缺失 → JSON.stringify 丢
  * undefined 键 → 无 model 请求 → serde 400（digest/advisor 无 echo 走克隆链落空）。
@@ -8,7 +11,7 @@
  * provider 兜底（`_provider.model`）——绝不产出 undefined-model 请求。
  *
  * 覆盖（用例表 + 验收 AC-1/AC-2）：
- * - F-1 provider.model undefined/null/空串 → buildRequest 可读 throw（ProviderError——带
+ * - F-1 provider.model undefined/null/空串 → 核 chat 可读 throw（ProviderError——带
  *   provider 名 + 修复线索）——不发病体（guard 在 body 组装前——不 mock fetch）
  * - F-2b resolveAdvisorProvider：cfg.provider 命中但无 cfg.model → model = 命中渠道默认单值；
  *   渠道无默认模型 → 父 provider 兜底（T28）；cfg.model 显式 → override 不变
@@ -54,29 +57,56 @@ after(() => {
 
 // ─── F-1 请求体断言（AC-1）───
 
-const { buildRequest } = await import("../src/provider/transports/openai.mjs")
+import { chat } from "@thincoder/core/provider/core.mjs"
 
-const F1_RE = /provider "deepseek": model is undefined — the provider clone has no model; set providers\[\]\.model, the session model, or an explicit provider:model/
+const F1_RE = /provider "deepseek": model is undefined — provider cloned without model re-derivation/
 
 function runProvider(model) {
   return { name: "deepseek", baseURL: "https://api.deepseek.com/v1", apiKey: "k-test", model }
 }
 
-test("F-1 model undefined → 可读 throw（带 provider 名 + 修复线索）——不发病体", () => {
-  assert.throws(() => buildRequest(runProvider(undefined), [{ role: "user", content: "hi" }]), F1_RE)
+const enc = new TextEncoder()
+/** 成功路径桩：closed SSE 流（仅「有 model 不拦」用例需要——捕获请求体）。 */
+function stubFetchOk() {
+  const orig = globalThis.fetch
+  const reqs = []
+  globalThis.fetch = async (url, opts) => {
+    reqs.push({ url: String(url), ...opts })
+    const frames = [
+      `data: ${JSON.stringify({ choices: [{ delta: { content: "ok" }, finish_reason: "stop" }] })}\n\n`,
+      "data: [DONE]\n\n",
+    ]
+    let i = 0
+    return {
+      ok: true,
+      status: 200,
+      headers: new Headers({ "content-type": "text/event-stream" }),
+      body: new ReadableStream({ pull(c) { if (i < frames.length) c.enqueue(enc.encode(frames[i++])); else c.close() } }),
+      text: async () => "",
+    }
+  }
+  return { reqs, restore: () => { globalThis.fetch = orig } }
+}
+
+test("F-1 model undefined → 可读 throw（带 provider 名 + 修复线索）——不发病体", async () => {
+  await assert.rejects(() => chat(runProvider(undefined), { messages: [{ role: "user", content: "hi" }] }), F1_RE)
 })
 
-test("F-1 model null → 同 throw（另一类 serde 错防住）", () => {
-  assert.throws(() => buildRequest(runProvider(null), [{ role: "user", content: "hi" }]), F1_RE)
+test("F-1 model null → 同 throw（另一类 serde 错防住）", async () => {
+  await assert.rejects(() => chat(runProvider(null), { messages: [{ role: "user", content: "hi" }] }), F1_RE)
 })
 
-test("F-1 model 空串 → 同 throw（falsy 全拦）", () => {
-  assert.throws(() => buildRequest(runProvider(""), [{ role: "user", content: "hi" }]), F1_RE)
+test("F-1 model 空串 → 同 throw（falsy 全拦）", async () => {
+  await assert.rejects(() => chat(runProvider(""), { messages: [{ role: "user", content: "hi" }] }), F1_RE)
 })
 
-test("F-1 有 model 不拦——body 照常带 model 键", () => {
-  const req = buildRequest(runProvider("deepseek-v4-flash"), [{ role: "user", content: "hi" }])
-  assert.equal(JSON.parse(req.body).model, "deepseek-v4-flash")
+test("F-1 有 model 不拦——线上请求体照常带 model 键", async () => {
+  const stub = stubFetchOk()
+  try {
+    await chat(runProvider("deepseek-v4-flash"), { messages: [{ role: "user", content: "hi" }] })
+    assert.equal(stub.reqs.length, 1, "请求照发")
+    assert.equal(JSON.parse(stub.reqs[0].body).model, "deepseek-v4-flash")
+  } finally { stub.restore() }
 })
 
 // ─── F-2 克隆现场 model 重派生（AC-2）───

@@ -2,7 +2,7 @@
  * agent.mjs — Agent loop for VS Code context (full thincoder feature set: subagents,
  * plan mode, goal tracking, verify guard; setup lives in agent/setup.mjs).
  */
-import { chat } from "./provider.mjs"
+import { chat } from "@thincoder/core/provider/core.mjs"
 import { specForModel } from "./specs.mjs"
 import { traceStop } from "./extension/stop-trace.mjs"
 import {
@@ -16,8 +16,8 @@ import { hydrateRun, setupAgentRun } from "./agent/setup.mjs"
 import { AUTO_REMINDER, ENG_OFF_REMINDER, ENG_ON_REMINDER, injectEngineeringReminder } from "./agent/setup-reminders.mjs"
 // 主循环阶段函数（压缩检查/蒸馏发射/回合收尾/响应提醒）2026-09-05 实践轮迁 agent/run-stages.mjs
 import { checkAndCompact, fireEndOfRunDistill, finalizeAgentTurn, injectResponseReminders, maybeGuardPushbacks } from "./agent/run-stages.mjs"
-// D-CI4（VSC-CONTEXT-PARITY §17.3）：plan-mode 节律常量/计数（cli agent-tools/plan.mjs 同构）
-import { planReminderForTurn } from "./agent-tools/plan.mjs"
+// D-CI4（VSC-CONTEXT-PARITY §17.3）：plan-mode 节律常量/计数（W9 起 = 核单源 agent-tools/plan.mjs）
+import { planReminderForTurn } from "@thincoder/core/agent-tools/plan.mjs"
 
 /** Manual-tier auto-turn digest domain (AGENT-LOOP.md §17 D-S6): organize-only.
  *  Injected per manual auto-turn run — writes/execute/spawns/questions are also
@@ -339,8 +339,35 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
       })
     }
 
+    // ─── W9 端差适配（调用期载体镜像——承 W6 run-stages.mjs:174-178 先例；W11/W15 载体归一后退场）───
+    // 核 agent-tools 工具族（plan / task / goal / verify）读/写 CLI 载体名
+    // （agent.provider / agent.tasks / agent.planMode / agent.goal / agent._onTaskUpdate）；
+    // 本端载体 = _provider 语义的显式入参 / _tasks / _planMode / _goal / callbacks.onTaskUpdate
+    // ——门禁（tool-gates）/ 槽持久化（run-helpers）/ 面板回调（panel-callbacks）消费面不变。
+    agent.provider = provider
+    agent.tasks = agent._tasks ?? []
+    agent.planMode = agent._planMode === true
+    if (agent._goal) agent.goal = agent._goal
+    agent._onTaskUpdate = (items) => callbacks.onTaskUpdate?.(items)
+
     await executeToolBatches(agent, { response, history, fullHistory, toolByName, getAuto, callbacks, signal, sessionSignal: opts.sessionSignal ?? null, cwd, recentSigs, depth })
     traceStop(`turn ${turn}: tool batches complete`)
+
+    // W9 载体镜像回填：工具族的 CLI 名写入 → 本端载体（同值同判；未写则维持本端值）。
+    // task：槽持久化 + 待办提醒读 _tasks；plan：门禁/槽/面板读 _planMode（并推 onPlanMode）；
+    // goal：goal 面板 + 槽读 _goal（核状态词 complete/blocked → 面板词 done/blocked）。
+    if (Array.isArray(agent.tasks) && agent.tasks !== agent._tasks) agent._tasks = agent.tasks
+    if (typeof agent.planMode === "boolean" && agent.planMode !== agent._planMode) {
+      agent._planMode = agent.planMode
+      callbacks.onPlanMode?.(agent.planMode)
+    }
+    if (agent.goal !== undefined && agent.goal !== agent._goal) {
+      agent._goal = agent.goal
+      const g = agent.goal
+      callbacks.onGoal?.(g
+        ? { status: g.status === "active" ? "active" : g.status === "complete" ? "done" : g.status, objective: g.objective, criteria: g.criteria }
+        : { status: "cancelled" })
+    }
 
     // Ctrl+I interrupt during tool execution (CLI agent.mjs parity): skip committing
     // partial tool results — they'd mislead the model. Inject the interrupt and retry.

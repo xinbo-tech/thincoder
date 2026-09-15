@@ -2,7 +2,7 @@
 
 > 板块 = **网络出口（代理）**——配置形态 · 传输实现 · TLS 校验 · 消费面。实现 = `thincoder-core/proxy.mjs`（融合后形态）。
 > 地图与相邻权威 = `docs/core/design/CONFIG.md`（§「越段发现」登记：代理面机制居 `PROXY.md`，本档即其落点）；provider 面 = `docs/core/design/PROVIDER.md`（本档不复制，D2）。
-> 双端：CLI 用核内 `thincoder-core/proxy.mjs`（**融合形态**——取 CLI 的 abort 来源标注 + VSC 的坏代理串友好报错，见 `CONFIG.md` 融合表 `proxy.mjs` 行）；VSC 侧 `thincoder-vscode/src/proxy.mjs` 为**独立实现**（VSC 树档未迁——按 P2 归 VSC 轮）。
+> 双端：CLI 用核内 `thincoder-core/proxy.mjs`（**融合形态**——取 CLI 的 abort 来源标注 + VSC 的坏代理串友好报错，见 `CONFIG.md` 融合表 `proxy.mjs` 行）；VSC 侧经 `@thincoder/core/proxy.mjs` 引用（W10 已迁核——自持镜像 `thincoder-vscode/src/proxy.mjs` 已删）。
 > 需求侧 = `docs/core/requirements/CONFIG.md`（代理字段面承载）；CLI 树无逐档需求档（实核）。
 > 建档：2026-09-15（**B 式迁移轮 · 第 3 批**——`thincoder-cli/docs/design/PROXY.md` 内容重建入基准层；旧档原地一字不改、留作参照历史；**旧档 §TLS 段与实装相反 ⇒ 按实装现状落笔**——见 §3 与 §8.1）。
 > 本档坐标 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
@@ -86,7 +86,7 @@ Clear proxy
 | 统一出口 | `thincoder-core/proxy.mjs:265`（`proxyFetch`） | 在位 |
 | web 工具代理参数 | `thincoder-core/tools/web.mjs:96` · `:188` | 逐次调用参数 |
 | TUI 子菜单 | `thincoder-cli/src/tui/cmd-config.mjs:104`–`:114` | 在位 |
-| VSC 对位实现 | `thincoder-vscode/src/proxy.mjs` · 配置面 `thincoder-vscode/src/config-io.mjs:146` | 独立实现（同机制） |
+| VSC 对位实现 | 经 `@thincoder/core/proxy.mjs` 引用（W10 已迁核——镜像已删） · 配置面 `thincoder-vscode/src/config-io.mjs:146` | 同实现 |
 
 ### 6.2 测试面
 
@@ -128,10 +128,11 @@ Clear proxy
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **103 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
+**实测行数**：本档 **138 行**（根层新建 · W10 实核收正：原记 103 → 实测 138）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 
+- 2026-09-15（**S2 W10 · VSC 接线**）：§1 与 §6.1 的 VSC 对位行改述为「经核引用」——自持镜像已删（删除记录 = 批次档 `batches/2026-09-15-vsc-core-wiring.md` §5）；机制条文零改。
 - 2026-09-15（**B 式迁移轮 · 第 3 批**）：建档——`thincoder-cli/docs/design/PROXY.md` 内容重建入基准层（旧档一字未改、原地作参照历史）。
   **§3 TLS 段按实装收正**（默认全量校验 + `insecureTls` 显式放行——旧档原句与实装相反，三方对照留在 §3 表）。
   **§4 消费面按实装收正**（`web` 字段对 web 工具的门控已由 2026-08-31 裁定取消，现行只活于 Test connection 探针）；坐标改写为现状路径并实核；批次材料 / 状态行 / 变更流水不并（§8）。

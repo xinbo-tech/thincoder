@@ -85,8 +85,11 @@
 └────────────────────────────────────────────────────────────────┘
 ```
 
-两个产品共享设计理念、提示词体系，以及**会话数据与配置数据**（同一磁盘位置、互相
-读写）。代码各自独立、安装独立、无运行时依赖（详见 §4 差异表）。
+> 两个产品共享设计理念、提示词体系，以及**会话数据与配置数据**（同一磁盘位置、互相
+> 读写）。代码各自独立、安装独立、无运行时依赖（详见 §4 差异表）。
+>
+> 图注（W10 已迁核——2026-09-15）：上图 `provider.mjs`（三 transport）现体 = 核
+> `thincoder-core/provider/`（core/sse/anthropic/google/responses + rate/list-models）；端侧自持镜像已删。
 
 ## 3. 模块地图（指针索引——DOC-REORG 收官 2026-09-08 刷新）
 
@@ -114,7 +117,7 @@ AGENTS.md 模块清单为维护寄存器；本节为分组总览 + 「详细设�
 | 上下文 | `src/agent/setup-reminders.mjs`（回合注入——git/editor 富注入）/ 旧档 `src/compact.mjs`（W6 已迁核——现体 `thincoder-core/context.mjs`）/ `src/explore-distill.mjs` / `src/repomap.mjs`（repo_outline 工具——原 `src/context.mjs` 载体 GIT-ASYNC L21 删除） | 注入、压缩/摘要/蒸馏 | `CONTEXT-COMPACTION.md` |
 | 支撑 | `src/memory.mjs`/`embedding.mjs`/`indexer.mjs` | 记忆/向量索引 | `MEMORY.md` （W8 已迁核——现体 `thincoder-core/memory.mjs`）|
 | 支撑 | 核 `thincoder-core/mcp.mjs`+`thincoder-core/mcp/`（W7 迁移——原 `src/mcp.mjs`+`mcp/` 已删；端壳增量 = `src/extension/panel-mcp.mjs`） | MCP 客户端 | `MCP.md` |
-| 支撑 | `src/repomap.mjs`/`escape.mjs`/`i18n.mjs`/`log.mjs`/`proxy.mjs` | 仓库大纲/转义/国际化/日志/代理 | —（无机制档——见 AGENTS.md 寄存器） |
+| 支撑 | `src/repomap.mjs` / `src/i18n.mjs` / `src/extension/*` 端壳面（`escape.mjs`（W4 已迁核——现体 `thincoder-core/escape.mjs`）/ `log.mjs`（W1 已迁核——现体 `thincoder-core/log.mjs`）/ `proxy.mjs`（W10 已迁核——现体 `thincoder-core/proxy.mjs`）） | 仓库大纲/国际化/转义/日志/代理 | —（无机制档——见 AGENTS.md 寄存器） |
 | Webview | `webview/chat.js`/`streaming.js`/`ui.js`/`activity.js`/`panels.js`/`state.js`/`send.js`/`loading.js`/`mode-buttons.js`/`permission.js`/`question.js`/`md.js`/`settings-*.js`/`model-picker.js`/`history.js`/`diff.js`/`autocomplete.js`/… | 前端渲染/交互 | `WEBVIEW.md` |
 
 测试域：`test/`（`package.json` `"test"` = `node test/run-fast.mjs`，显式清单
@@ -157,7 +160,7 @@ AGENTS.md 模块清单为维护寄存器；本节为分组总览 + 「详细设�
 > 档「变更记录」为准。
 
 - 2026-08-22/23：GLM 5.3 畸形 tool_calls 防御——parseStream 单点防御 + 机读线
-  告警（PROVIDER（CLI 仓）§10 权威；src/provider/transports/openai.mjs + agent.mjs）。
+  告警（PROVIDER（CLI 仓）§10 权威；src/provider/transports/openai.mjs + agent.mjs——W10 已迁核：现体 = 核 `provider/sse.mjs`）。
 - 2026-08-22：LLM 标题生成同修（IK9UZ8——thinking 关闭，SESSION.md 变更段权
   威；src/extension/generate-title.mjs）。
 - 2026-08-26：子 agent/advisor 模型显示——桥丢字段断链修复 + **三落点纪律**确

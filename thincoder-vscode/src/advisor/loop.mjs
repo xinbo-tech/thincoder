@@ -13,7 +13,7 @@
  * `interrupted` 字段，非 interrupt 中止抛错），并按 0.75 一次性预算提示 + 结构化超时尾
  * 收尾（守卫函数与文案在 compaction.mjs）。
  */
-import { chat } from "../provider.mjs"
+import { chat } from "@thincoder/core/provider/core.mjs"
 import { specForModel } from "../specs.mjs"
 import { truncateAdvisorResult } from "./truncate.mjs"
 import { _resolvedAdvisorToolsFor } from "./tools.mjs"

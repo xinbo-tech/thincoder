@@ -25,7 +25,7 @@ import {
   recordChatTrace, cleanupTraces, localDateStr,
   traceSessionKey, nextTraceSeq, tracesDirFor,
 } from "@thincoder/core/traces/trace-store.mjs"
-import { chat } from "../src/provider.mjs"
+import { chat } from "@thincoder/core/provider/core.mjs"
 import { _resetConfigPathForTest, _setConfigPathForTest } from "@thincoder/core/config.mjs"
 
 // ─── 环境隔离 helpers ─────────────────────────────
@@ -138,7 +138,7 @@ test("D-TR1 字段集：成功路径逐字段落档（JSONL 单行 + 命名 sess
     assert.equal(record.usage.total_tokens, 42)
     assert.equal(record.finishReason, "stop")
     assert.equal("error" in record, false, "成功路径无 error 字段")
-    // 续写链标记（D-TR1）：同字段集下 isContinuation:true 透传（provider.mjs 续写递归传出）
+    // 续写链标记（D-TR1）：同字段集下 isContinuation:true 透传（核 core.mjs 续写递归传出）
     await recordChatTrace(P, {
       messages: [{ role: "user", content: "cont" }],
       logCtx: { cwd: CWD, traces: true, isContinuation: true, stage: "turn", kind: "turn" },

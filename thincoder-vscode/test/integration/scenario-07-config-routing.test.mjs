@@ -16,7 +16,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { _setConfigPathForTest, resolveProviders, providerFromConfig, loadRaw, providerNamesInConfig, resolveDefaultModel } from "../../src/config-io.mjs"
-import { chat } from "../../src/provider.mjs"
+import { chat } from "@thincoder/core/provider/core.mjs"
 import { mockLLM } from "./helpers/mock-llm.mjs"
 
 let dir

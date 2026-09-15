@@ -2,7 +2,7 @@
  * provider-admission.test.mjs — MODEL-SELECTION VSC 面：清单拉取（T1–T4/T26/T27——双端本端）
  * + 渠道准入两态（T23/T24）+ 运行期零探测（T25——M9/N2）。
  *
- * 探针路径全部走**真实实现**（provider/list-models.mjs 三 format 分派 → proxy.mjs →
+ * 探针路径全部走**真实实现**（W10 已迁核——`thincoder-core/provider/list-models.mjs` 三 format 分派 → `thincoder-core/proxy.mjs` →
  * globalThis.fetch——测试经 fetch 替身拦截，不碰网络）。config 沙箱经 _setConfigPathForTest。
  */
 import { test, before, after, afterEach } from "node:test"
@@ -11,7 +11,7 @@ import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { _setConfigPathForTest, providerFromConfig, resolveProviders } from "../src/config-io.mjs"
-import { listModels, channelUnavailableMessage, probeChannelModels, admissionOf, _resetAdmissionForTest } from "../src/provider/list-models.mjs"
+import { listModels, channelUnavailableMessage, probeChannelModels, admissionOf, _resetAdmissionForTest } from "@thincoder/core/provider/list-models.mjs"
 import { probeProviderAdmission } from "../src/extension/provider-flows.mjs"
 import { providerStatus, fullStatus, saveProviderKey } from "../src/extension/settings.mjs"
 import { saveAgentSettingsFromPanel } from "../src/extension/settings-panel-write.mjs"

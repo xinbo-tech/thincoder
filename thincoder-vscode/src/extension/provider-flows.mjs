@@ -14,7 +14,7 @@
 
 import * as vscode from "vscode"
 import { PROVIDER_PRESETS, presetToEntry, resolveProviders, persistRaw, conflictError, setProviderKey, cascadeRemoveProvider, probeTargetFromEntry } from "../config-io.mjs"
-import { probeChannelModels, channelUnavailableMessage } from "../provider/list-models.mjs"
+import { probeChannelModels, channelUnavailableMessage } from "@thincoder/core/provider/list-models.mjs"
 
 const FORMATS = ["openai", "anthropic", "google"]
 

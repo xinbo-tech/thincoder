@@ -6,7 +6,7 @@
  * Does NOT import any VS Code modules — pure Node.js.
  */
 
-import { chat } from "../src/provider.mjs"
+import { chat } from "@thincoder/core/provider/core.mjs"
 import { PROVIDER_PRESETS } from "../src/config-io.mjs"
 
 // Single source of truth — do NOT hand-maintain a duplicate table (it drifted:

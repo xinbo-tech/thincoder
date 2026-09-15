@@ -1,20 +1,22 @@
 /**
- * provider-timeout-semantics.test.mjs — 群 A 批 A1（VSC-MIRROR-SWEEP）。
- * 设计权威：`docs/design/PROVIDER.md` §4.3（契约（c）1–4 / 用例 T-MA1-1–5 / AC-MA1-1–3）。
+ * provider-timeout-semantics.test.mjs — 群 A 批 A1（VSC-MIRROR-SWEEP）· W10 改判登记（2026-09-15）。
  *
- * 覆盖：绝对墙钟废除（请求 signal = 用户 signal 原样；不再合成 AbortSignal.timeout）+
- * 头/body 相位参数在位 + 四 transport 读侧 idle 看门狗（判死 + 零误杀成对）+ 源文本零残留。
- * 零网络：globalThis.fetch 桩（proxyFetch 无代理 → 单测唯一网络面）+ 假流。
- * 2026-09-12 收尾轮 9：T-MA1-4 原余量（chunk 20ms / idle 40ms = 2×）在并发负载下
- * 真判死（20ms 定时器被拖过 40ms）——idleMs 放宽至 300（余量 15×，语义零改：
- * 持续有数据的零误杀不变量与 timer 清理断言原样保留——非断言放宽，是抗负载硬化）。
+ * W10（PROVIDER 单元）后 LLM 调用 = 核实现（`@thincoder/core/provider/core.mjs`——原 VSC provider
+ * 镜像与四 transport 已删）⇒ 本档由「VSC 镜像超时语义」改判为
+ * 「VSC 调用面契约」（测试纪律① 逐条判）：
+ * - 保留 2 例：T-MA1-1 / T-MA1-2——VSC 调用面不合成绝对墙钟（用户 signal 原样透传、零合成）
+ *   + 头/body 相位参数在位（群 A 批 A1 核心契约）。驱动面 = 核 `chat`（VSC 实际消费面）。
+ * - 退役 3 例：T-MA1-3 / T-MA1-4（镜像 `parseStream` 的 `idleMs` 测试缝随删档消失；核
+ *   `readSSE` 看门狗无测试缝、不可稳定驱动）· T-MA1-5（源文本 grep 静态断言——镜像档已删，
+ *   且属「散文锚」禁止形态）。
+ * 零网络：globalThis.fetch 桩（无代理 → 核 chat 直连 fetch）+ 假流。
+ * 射程注（内部评审轮 1 · 🔵#7）：两例锁的是核装配面的 fetch 选项形状（跨端契约锁）——
+ * 实现体在核（`@thincoder/core/provider/core.mjs:414-415`）；核侧若有对位用例，可考虑并入核测试树。
  */
 import test from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
-import { PassThrough } from "node:stream"
-import { chat } from "../src/provider.mjs"
-import { parseStream as openaiParseStream } from "../src/provider/transports/openai.mjs"
+
+import { chat } from "@thincoder/core/provider/core.mjs"
 
 const enc = new TextEncoder()
 
@@ -79,87 +81,4 @@ test("T-MA1-2 无用户 signal：options.signal === undefined（零合成）+ �
     assert.equal(reqs[0].signal, undefined, "零合成 AbortSignal.timeout")
     assert.equal(result.content, "ok")
   })
-})
-
-// ─── T-MA1-3 错误：静默挂起 → idle 判死（AC-MA1-2）─────────────────────────────
-
-test("T-MA1-3 两 chunk 后静默挂起 + idleMs=40 → TimeoutError（消息含 SSE idle timeout）", async () => {
-  // ① 直连形态（Web 流——undici ReadableStream）：静默挂起 → race 判死
-  const frames = [contentFrame("a"), contentFrame("b")]
-  let i = 0
-  const hanging = new ReadableStream({
-    pull(controller) { if (i < frames.length) controller.enqueue(enc.encode(frames[i++])) /* 之后既不 enqueue 也不 close——静默挂起 */ },
-  })
-  await assert.rejects(
-    () => openaiParseStream(sseResponse(hanging), { onToken: () => {}, idleMs: 40 }),
-    (e) => {
-      assert.equal(e.name, "TimeoutError", "idle 判死以 TimeoutError 终止")
-      assert.match(String(e.message), /SSE idle timeout/, "消息含 SSE idle timeout")
-      return true
-    },
-  )
-
-  // ② 代理形态（Node 流——PassThrough 有 destroy）：释放路径真达（destroy(err)）
-  const pt = new PassThrough()
-  pt.write(contentFrame("a"))
-  let destroyed = null
-  const origDestroy = pt.destroy.bind(pt)
-  pt.destroy = (err) => { destroyed = err; return origDestroy(err) }
-  await assert.rejects(
-    () => openaiParseStream(sseResponse(pt), { onToken: () => {}, idleMs: 40 }),
-    (e) => {
-      assert.equal(e.name, "TimeoutError", "代理形态同样以 TimeoutError 判死")
-      assert.match(String(e.message), /SSE idle timeout/)
-      return true
-    },
-  )
-  assert.equal(destroyed?.name, "TimeoutError", "Node 流释放 = destroy(idle 错误)")
-})
-
-// ─── T-MA1-4 边界（对照）：持续有数据 → 零误杀 + timer 已清理（AC-MA1-2）────────
-
-test("T-MA1-4 每 20ms 持续有 chunk（idleMs=300——余量 15×，抗负载抖动）→ 正常完成零误杀 + timer 清理", async () => {
-  const frames = [contentFrame("x"), contentFrame("y"), "data: [DONE]\n\n"]
-  let i = 0
-  const paced = new ReadableStream({
-    pull(controller) {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          if (i < frames.length) { controller.enqueue(enc.encode(frames[i++])); resolve() }
-          else { controller.close(); resolve() }
-        }, 20)
-      })
-    },
-  })
-
-  // timer 记账（idleMs=300 的 timer 全部被 clear——无悬挂 handle）
-  const origSet = globalThis.setTimeout
-  const origClear = globalThis.clearTimeout
-  const idleTimers = []
-  const cleared = new Set()
-  globalThis.setTimeout = (fn, delay, ...rest) => { const id = origSet(fn, delay, ...rest); if (delay === 300) idleTimers.push(id); return id }
-  globalThis.clearTimeout = (id) => { cleared.add(id); return origClear(id) }
-  let result
-  try {
-    result = await openaiParseStream(sseResponse(paced), { onToken: () => {}, idleMs: 300 })
-  } finally {
-    globalThis.setTimeout = origSet
-    globalThis.clearTimeout = origClear
-  }
-
-  assert.equal(result.content, "xy", "零误杀——正常完成")
-  assert.ok(idleTimers.length >= 2, "每 chunk 重置（≥2 次臂）")
-  assert.ok(idleTimers.every((t) => cleared.has(t)), "idle timer 全部清理（无悬挂 handle）")
-})
-
-// ─── T-MA1-5 边界（静态）：源文本零残留 + 四 transport 看门狗在位（AC-MA1-3）────
-
-test("T-MA1-5 源文本：绝对墙钟零残留 + _anySignal 退场 + 四 transport READ_IDLE_MS 在位", () => {
-  const providerSrc = readFileSync(new URL("../src/provider.mjs", import.meta.url), "utf8")
-  assert.ok(!providerSrc.includes("AbortSignal.timeout(FETCH_TIMEOUT_MS)"), "绝对墙钟零命中")
-  assert.ok(!/_anySignal/.test(providerSrc), "_anySignal 零残留（polyfill 退场）")
-  for (const f of ["openai", "anthropic", "google", "responses"]) {
-    const src = readFileSync(new URL(`../src/provider/transports/${f}.mjs`, import.meta.url), "utf8")
-    assert.ok(src.includes("READ_IDLE_MS = 120_000"), `${f}.mjs 读侧 idle 120s 在位`)
-  }
 })

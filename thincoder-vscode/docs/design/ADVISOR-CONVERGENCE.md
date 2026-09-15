@@ -1312,7 +1312,7 @@ CLI 用 `_toolCallId` + `agent._advisorRefusals` Set；本端无 `_toolCallId` �
 | 3 | file_ops | `src/tools/ops.mjs:32-52` move / copy / rename；L3 触达面已派生（`execute-tools.mjs:24-36`：copy→[dest]；move/rename→[source,dest]） | **完备**（动作全集） | 现无 → 本批补 | **修**（契约 1/2） |
 | 4 | git | `src/tools/git.mjs` 21 动作；写入面 ref / 索引 / 工作树混合；路参子集仅 checkout(path) / restore / mv；reset / pull / merge / revert / cherry-pick / rebase / apply / stash / clean 波及面在参数外 | **部分** | 无 | 登记（拦 3/21 = 假安全 + 判集无法同闭；复核触发 = 实战在途 git 还原被审档事故） |
 | 5 | checkpoint | `src/tools/checkpoint.mjs`（W5 已迁核——现体 `thincoder-core/git/checkpoint.mjs:1`）——rewind 恢复快照清单内文件（清单在快照内，参数仅 id） | 不可 | 无 | 登记（拦须预闸同步读盘枚举快照——代价 vs 场景不成比例；复核触发同上） |
-| 6 | batch_segment | `src/agent-tools/batch-segment.mjs:178-181` 直写绑定批次档（§2 / §5——子代理通道；批次档 ∈ 设计评审 docAbs——§14.4 口径「含批次档」） | 完备（工具自持单一路径） | 现无 → 本批补 | **修**（契约 3） |
+| 6 | batch_segment | `thincoder-core/agent-tools/batch-segment.mjs:178-181`（W9 已迁核——原 `src/agent-tools/batch-segment.mjs`）直写绑定批次档（§2 / §5——子代理通道；批次档 ∈ 设计评审 docAbs——§14.4 口径「含批次档」） | 完备（工具自持单一路径） | 现无 → 本批补 | **修**（契约 3） |
 | 7 | 子代理合入面 | `mergeChildMutations`（`src/agent-tools/subagent-async.mjs:483-498`）——子代理磁盘写入在完成点合入父侧记账 | 预闸不可达（子代理无父侧评审池面） | **已有 + 本批补 file_ops 支**（合入即记账——随契约 2） | 登记维持（拦面不可达；判面 = FILE_MUTATORS + batch_segment + file_ops 已覆盖（合入即记账）——E-6 #5 同族） |
 
 **契约（逐条）**：
@@ -1331,8 +1331,8 @@ CLI 用 `_toolCallId` + `agent._advisorRefusals` Set；本端无 `_toolCallId` �
 **问题**：`src/advisor/compaction.mjs:38-44`——`Math.ceil((content.length + toolCalls.length) / 4)` 扁平式；CJK 低估 ~3-4×。
 消费点：`src/advisor/loop.mjs:117 / 123 / 126`（compactAt / limit / 判死尾计数）+ `src/advisor/run.mjs:212`（显示统计）。
 
-**修**：`estimateText`（`src/provider/rate.mjs:68-86`——已导出，ASCII/4 + 非 ASCII/1）替换扁平式：`estimateText(content + toolCalls)`——
-纯 ASCII 与旧式**逐值相等**（同 ceil 式）；CJK 升档；微差为零（空串 → 0 与旧式一致）。import 面：`src/provider/rate.mjs` 仅依赖 `specs.mjs`——叶子向无环。
+**修**：`estimateText`（`src/provider/rate.mjs:68-86`——已导出，ASCII/4 + 非 ASCII/1）替换扁平式：`estimateText(content + toolCalls)`——（W10 已迁核——现体 `thincoder-core/provider/rate.mjs`）
+纯 ASCII 与旧式**逐值相等**（同 ceil 式）；CJK 升档；微差为零（空串 → 0 与旧式一致）。import 面：`src/provider/rate.mjs` 仅依赖 `specs.mjs`——叶子向无环。（W10 已迁核——现体 `thincoder-core/provider/rate.mjs`）
 
 **选型**：候选 1 = 复用 `provider/rate.mjs#estimateText`（选定——单源加权公式，与主循环同口径）；
 候选 2 = 本文件内联加权式（复制公式 = D2 双源）；候选 3 = 全对齐 `compact.mjs` / `context.mjs` 消息 walker（加 reasoning_content / 逐参 tool_calls——面大于需求）。否决 2/3。
@@ -1346,7 +1346,7 @@ CLI 用 `_toolCallId` + `agent._advisorRefusals` Set；本端无 `_toolCallId` �
 |---|---|---|---|---|
 | 1 | `src/agent-tools/advisor-async.mjs` | 493 | ≤498（**贴线注记**——越 500 停下报告） | B2 守卫（+~3）+ B5 接线（`AGENT-LOOP.md §16`——+~3） |
 | 2 | `src/agent/execute-tools.mjs` | 483 | ~489 | B3 契约 1/2（+~6） |
-| 3 | `src/agent-tools/batch-segment.mjs` | 185 | ~188 | B3 契约 3（+~3） |
+| 3 | `src/agent-tools/batch-segment.mjs`（W9 已迁核——现体 `thincoder-core/agent-tools/batch-segment.mjs`） | 185 | ~188 | B3 契约 3（+~3） |
 | 4 | `src/advisor/compaction.mjs` | 171 | ~174 | B4（+3） |
 | 5 | `test/advisor-guard-completion.test.mjs` | 221 | ~290 | T-RS1~2 + T-FZ1~2 + T-FZ4 |
 | 6 | `test/batch-segment.test.mjs` | 221 | ~245 | T-FZ3 |

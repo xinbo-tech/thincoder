@@ -8,8 +8,8 @@
  * 装配同档——字面漂移面收在一处（生成 ⟷ 判定 ⟷ 装配）。
  */
 import { providerSpec } from "../specs.mjs"
-// B4（群 B 批 §17.3——F32）：CJK 加权单源（provider/rate.mjs 叶子向无环——仅依赖 specs.mjs）
-import { estimateText } from "../provider/rate.mjs"
+// B4（群 B 批 §17.3——F32）：CJK 加权单源（W10 已迁核——现体 thincoder-core/provider/rate.mjs）
+import { estimateText } from "@thincoder/core/provider/rate.mjs"
 
 // ─── 限额 ─────────────────────────────────────────────────────────────────────
 
