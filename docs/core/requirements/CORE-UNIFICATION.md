@@ -83,7 +83,7 @@ phase 1 的实测（口径与复现命令 = `thincoder-cli/docs/requirements/TWO
    **计数口径**：两端合一 = **59** 档（41 同名 + 仅 CLI 6 + 仅 VSC 12）——勿与**仅 CLI 侧计数**混用（20 同 + 21 异 + 6 仅 CLI = 47，漏 VSC 独有 12 档）。
 5. **实测口径**：逐字节 = sha256 文件比对；档名集合 = 目录枚举。**复现命令** = `node -e` 内联脚本（F10：该口径并入 `scripts/mirror-divergence.mjs`）。
 6. **记忆面（A12 点名面）**：CLI `thincoder-cli/src/memory/**`（8 档）用 **`node:sqlite` 的 `DatabaseSync` + FTS5**（`thincoder-cli/src/memory/schema.mjs:9` / `:68`——零第三方依赖 ✓）；
-   VSC `thincoder-vscode/src/memory.mjs` + `memory-tool.mjs` **零 sqlite 用法**（两套逻辑）✗；VSC 包声明 `engines.vscode = ^1.85.0`，CLI 声明 `engines.node = >=24`。
+   VSC `thincoder-vscode/src/memory.mjs` + `memory-tool.mjs` **零 sqlite 用法**（两套逻辑）✗；VSC 包**原声明**（迁移前）`engines.vscode = ^1.85.0`，CLI 声明 `engines.node = >=24`。
    ⇒ 分叉源于**已失效的前提**（「VS Code 内置 Node 不支持 sqlite」）⇒ 用户 2026-09-13 裁定 **A12：记忆面向 CLI 语义归一**（CLI 为准）。
    **（A8 残余 · 定案）**：**`node:sqlite` 采纳为定案** ✓；VSC 引擎下限 = **`^1.104.0`（已裁 2026-09-15——不另做真机实测；资料推导链 + `activate()` 护栏兜底）**（设计档 §2.11 A8）；
    下限值属对外契约变更 ⇒ **已过目（2026-09-15 用户裁定）**（F13 / F12 ②）。**旧数据迁移面**（VSC `personal` 层 md 档 / 遗留 `.json` / `modelPrefs`——无自动迁移路径）⇒ 逐条上抛（设计档 §2.12.3）。
@@ -196,4 +196,5 @@ phase 1 的实测（口径与复现命令 = `thincoder-cli/docs/requirements/TWO
 - 2026-09-13（目录改名子批 · 评审修正轮）：**新增 F14**（CLI 产品目录与核目录改名——用户故事 + 范围边界）。**来源** = 批次档 §1「追加裁定（目录改名）」用户裁定；**验收回指** = 设计档 §4.5 K1–K8。**注**：上条「不新增需求」限需求侧拆分轮自身范围；本条 = 目录改名子批的条目登记（来源 = 用户裁定）。
 - 2026-09-14（S1 收口轮）：§5 登记表「文案与本地化」行**裁定状态收正**（待裁 → **已裁 · 按建议**——批次档 §1「收口：同类项一并按建议」）。
 - 2026-09-15（**引擎下限裁定收口**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮）：§1.2 与 N7 的「候选 `^1.101.0`，经 S0 实测确认后定值」句收正为「**已裁（2026-09-15）：`^1.104.0` · 不另做真机实测**（资料推导链 + `activate()` 护栏兜底；已过目）」；闭合 09-13 批档 :1690 登记的跨档不一致。
+- 2026-09-15（**修正轮-6 · 同形态收正 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮-6）：§1.2 要点 6「VSC 包声明」→「包**原声明**（迁移前）」（下限已裁 `^1.104.0`——见同节「A8 残余 · 定案」行）；零语义。
 
