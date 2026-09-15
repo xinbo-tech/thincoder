@@ -1,6 +1,7 @@
 # edit 工具权威语义（EDIT）
 
-> 板块：编辑工具。权威源：VSC `src/tools/file-edit.mjs`（W14 已迁核——现体 `thincoder-core/tools/file.mjs`）（editTool 壳/schema/描述内嵌）+ `src/tools/edit-line-params.mjs`（D1 子模块）+ `src/tools/edit-fuzzy-match.mjs`（D2 子模块）+ `src/tools/edit-diff.mjs`（diff 内核/判定序）。本文档是 **edit 工具语义的权威源**——VSC `TOOLS.md` §9 只留地图（定位句 + 指针），不得复制本档正文。
+> 板块：编辑工具。权威源：VSC `src/tools/file-edit.mjs`（W14 已迁核——现体 `thincoder-core/tools/file.mjs`）（editTool 壳/schema/描述内嵌）+ `src/tools/edit-line-params.mjs`（D1 子模块）+ `src/tools/edit-fuzzy-match.mjs`（D2 子模块）+ `src/tools/edit-diff.mjs`（diff 内核/判定序）。
+> 本文档是 **edit 工具语义的权威源**——VSC `TOOLS.md` §9 只留地图（定位句 + 指针），不得复制本档正文。
 > 双端：VSC（本文档）与 CLI（`EDIT（CLI 仓·设计）`）同机制各自独立实现——镜像锚：两端工具描述逐字一致（评审逐字对齐），语义正文各自落地。**VSC 差异**：无 CLI 的 DESC() md 描述机制——描述内嵌 `.mjs`（file-edit.mjs editTool 对象）；编辑器路径（doc 已打开）走 WorkspaceEdit + range 偏移映射。
 > 状态：**已实现**（D1-D3 落地 2026-09-08）。历史设计见文末「变更记录」。
 

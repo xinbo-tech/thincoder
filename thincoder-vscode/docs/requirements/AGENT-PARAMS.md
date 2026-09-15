@@ -4,7 +4,8 @@
 > 状态：**已实现**（2026-08-24 评审修订后实施；marketplace / Open VSX 0.1.49 发布）。
 > 关联：`docs/design/AGENT-PARAMS-TUNING.md`（设计）、`docs/design/README.md`（文档地图）。
 > 范围：本仓库（thincoder-vscode）；CLI（thincoder）有同需求独立文档（`AGENT-PARAMS（CLI 仓）`），两端语义一致。
-> 现码核对（2026-09-08）：`src/advisor/run.mjs（W12 已迁核——现体见批次档 §5）` `REVIEW_TIMEOUT_MS = 600_000` + 配置覆盖读取在位；`src/config-io.mjs` `AGENT_DEFAULTS.maxTurns = 200`、`src/agent/run-helpers.mjs` `DEFAULT_MAX_TURNS = 200`；`src/agent-tools/subagent.mjs` explore 与其它角色统一走 `subagentTurns`（无 `Math.min(30, …)` 硬帽）。本文档描述与实现一致。
+> 现码核对（2026-09-08）：`src/advisor/run.mjs`（W12 已迁核——现体见批次档 §5）· `REVIEW_TIMEOUT_MS = 600_000` + 配置覆盖读取在位；`src/config-io.mjs` `AGENT_DEFAULTS.maxTurns = 200`、`src/agent/run-helpers.mjs` `DEFAULT_MAX_TURNS = 200`；`src/agent-tools/subagent.mjs` explore 与其它角色统一走 `subagentTurns`（无 `Math.min(30, …)` 硬帽）。
+> 本文档描述与实现一致。
 
 ## 1. 总体目标
 
