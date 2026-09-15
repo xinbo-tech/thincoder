@@ -160,6 +160,21 @@ F8 嵌套 memory 文件 —— 连续两次 `needed:false`；两集合一致。F
 > VSC 端证据坐标（实核 as-of 2026-09-15）：`thincoder-vscode/src/memory.mjs:30`（`memoryDir`）· `:36`（`scopeDir`）· `:170`–`:177`（legacy 根 + `_scope` 标注）· `thincoder-vscode/src/memory-tool.mjs:117`（action 级只读）· `:151`（向量通道）
 > · `thincoder-vscode/src/indexer.mjs:162`（`model-changed`；W8 已退役——核面现体 `thincoder-core/memory/code-sync.mjs`）· `:170`–`:258`（`needsRebuild` 七词表）· `thincoder-vscode/src/extension/panel-index.mjs:171`（未列入提示行）。
 
+### 4.8 嵌入输入编码安全（缺陷修复 · 2026-09-15）
+
+> 来源 = 网友实测（硅基流动 embedding `400 / 20015`）+ 父侧实核根因（三处 UTF-16 码元截断）；缺陷批 = `docs/batches/2026-09-15-embedding-utf16-truncation.md`；设计面 = 设计档 MEMORY.md 的 §6.3「嵌入输入文本（三路）」+ D-MEM16。
+
+**总体**：送嵌入服务的批量文本必须**码点安全**——截断不得把代理对切成孤立代理；请求体零孤立代理（严格 UTF-16 解析端此前因此 400）。
+
+| # | 需求 | 说明 | 范围边界（不做） |
+|---|---|---|---|
+| F-EM1 | 码点安全截断 | 三路嵌入输入（`entries`/`files` · `code_chunks` · `doc_chunks`）的 `content` 截断复用核级单一来源（`thincoder-core/text-budget.mjs` 的 `safeSliceUTF16`）——截点落高代理时丢整对 | 不扩面修其他截断点（同链登记）；不改查询侧（原样不截断）；不改截断上限与前缀拼接 |
+| N-EM1 | 零行为变化 | 非边界文本（截点非代理对）与短文本**逐字不变**（与裸 `slice(0, N)` 逐字相等）；上限 / 前缀 / 查询侧零触碰 | —— |
+
+**判定句**：emoji 恰落截断上限边界 ⇒ 送 embed 的请求体**零孤立代理**（`JSON.parse(请求体).input[]` 逐条过孤立代理正则 ⇒ 0 命中；
+**勿用原串扫法**——`JSON.stringify` 已把孤立代理转义为 `\ud83d` 文本、对原串恒不命中）∧ 送文本 = 前缀 + `content` 前 `EMBED_TEXT_MAX_LEN − 1` 码元（整对丢弃）。
+ASCII / BMP 跨界 · emoji 全内（代理对完整）· 短文本 ⇒ 与裸 `slice(0, EMBED_TEXT_MAX_LEN)` 逐字相等。
+
 ## 5. 不并项与历史沿革（批 5 · 2026-09-15）
 
 | 旧档节 | 内容 | 何故不并 |
@@ -177,3 +192,4 @@ F8 嵌套 memory 文件 —— 连续两次 `needed:false`；两集合一致。F
 - 2026-09-15（**引擎下限裁定收口**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮）：§2.1「VSC 引擎下限随之抬升」条收正——「经真机实测确认后定值并提交用户过目」→「**已裁（2026-09-15）：`^1.104.0` · 不另做真机实测**（已过目）」。
 - 2026-09-15（**索引存储面裁定收口**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮-2）：§4.7 加裁定收口注 + F-M5/F-M6 与端差「索引形态」行同轮标注（文件制索引面随 W8 删旧退场——数据面零迁移 / 零兼容）。
 - 2026-09-15（**索引面覆退场注 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮-4 发现 #4）：§4.4 F6–F9 逐行加「随归一退场」标 + 章头裁定收口注 + 判定句退场注（核面承接 = `docs/core/design/MEMORY.md` §6.9 / D-MEM14）；对外可见面变更在 `docs/core/design/CORE-UNIFICATION.md` §2.12.2 第 11 行同批补登记。
+- 2026-09-15（**embedding UTF-16 截断缺陷批 · eng-designer**——承 `docs/batches/2026-09-15-embedding-utf16-truncation.md` 的 §2）：新增 §4.8「嵌入输入编码安全」（F-EM1 / N-EM1 + 判定句）；设计面 = 设计档 MEMORY.md 的 §6.3 / §7 D-MEM16。

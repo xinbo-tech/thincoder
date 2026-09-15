@@ -13,6 +13,7 @@ import { deleteByUid, matchMemoryRows, deleteWhere } from "./delete.mjs"
 import { _upsertDocFile, yieldTick } from "./code-index.mjs"
 import { markIndexedCommit, listProjectFiles, indexExtensions } from "./code-sync.mjs"
 import { logEvent } from "../log.mjs"
+import { safeSliceUTF16 } from "../text-budget.mjs"
 
 const DOC_EMBED_BATCH = 64
 
@@ -159,7 +160,7 @@ async function _runEnsureDocEmbeddings(memory) {
   const pending = memory.db.prepare(`SELECT rowid, path, heading, content FROM doc_chunks WHERE embedding IS NULL LIMIT ${DOC_EMBED_BATCH}`).all()
   if (pending.length === 0) return
 
-  const texts = pending.map((r) => `${r.heading || r.path}\n${r.content.slice(0, EMBED_TEXT_MAX_LEN)}`)
+  const texts = pending.map((r) => `${r.heading || r.path}\n${safeSliceUTF16(r.content, EMBED_TEXT_MAX_LEN)}`)
   const vecs = await embed(memory.embedder, texts)
 
   const update = memory.db.prepare(`UPDATE doc_chunks SET embedding = ? WHERE rowid = ?`)

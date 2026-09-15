@@ -11,6 +11,7 @@ import { detectLanguage, _upsertCodeFile, _upsertDocFile, yieldTick } from "./co
 import { walkProjectFiles, isSkippedRelPath, extensionOf, createUnlistedTally, MAX_WALK_FILES } from "./file-walk.mjs"
 import { loadConventions } from "../conventions.mjs"
 import { logEvent } from "../log.mjs"
+import { safeSliceUTF16 } from "../text-budget.mjs"
 
 const DIFF_FULL_SYNC_THRESHOLD = 200
 const CODE_EMBED_BATCH = 64
@@ -341,7 +342,7 @@ async function _runEnsureCodeEmbeddings(memory) {
   const pending = memory.db.prepare(`SELECT rowid, path, symbol_name, content FROM code_chunks WHERE embedding IS NULL LIMIT ${CODE_EMBED_BATCH}`).all()
   if (pending.length === 0) return
 
-  const texts = pending.map((r) => `${r.path}${r.symbol_name ? " :: " + r.symbol_name : ""}\n${r.content.slice(0, EMBED_TEXT_MAX_LEN)}`)
+  const texts = pending.map((r) => `${r.path}${r.symbol_name ? " :: " + r.symbol_name : ""}\n${safeSliceUTF16(r.content, EMBED_TEXT_MAX_LEN)}`)
   const vecs = await embed(memory.embedder, texts)
 
   const update = memory.db.prepare(`UPDATE code_chunks SET embedding = ? WHERE rowid = ?`)

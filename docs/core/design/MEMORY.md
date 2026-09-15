@@ -134,6 +134,11 @@
 2. **向量通道**——`ensureEmbeddings` 懒构建：首次检索时批量嵌入存量（`EMBED_BATCH_SIZE = 256`），增量条目单独嵌；嵌入模型变更时清空四表向量重建。候选 cosine 取 top（窗口 `max(limit*4, 20)`）。
 3. **RRF（k = 60）合并去重**——FTS 优先、向量补齐；按合并分排序取 `limit`。
 
+**嵌入输入文本（三路）**：`entries`/`files`（`memory/core.mjs` 的 `ensureEmbeddings`）· `code_chunks`（`memory/code-sync.mjs`）· `doc_chunks`（`memory/docs.mjs`）送 embedding 的文本 =
+前缀（`title` / `heading || path` / `path :: symbol`）+ `content` 截断至 `EMBED_TEXT_MAX_LEN = 2000`。
+截断 = 核级单一来源 `thincoder-core/text-budget.mjs` 的 `safeSliceUTF16`（UTF-16 码元安全——截点落高代理时整对丢弃）。
+2026-09-15 缺陷修复：emoji 恰跨界曾被切成孤立代理 ⇒ 严格 UTF-16 解析端（硅基流动）400 / 20015；查询侧 `query` 不截断、原样送（非孤立代理生成点）。
+
 **CJK 分段**（`segmentCJK`）：FTS5 的 unicode61 无中文分词器，将汉字 / 假名 / 谚文逐字以空格分隔；**写入与查询两侧用同一处理**才可召回（两字词如「分号」→「分 号」短语仍命中；ASCII 保持整词）。
 
 **失败静默降级**：无嵌入 key / 嵌入调用失败 → 回退**纯 FTS**（检索不阻塞、不报错，console 记一条降级日志）。纯 FTS 下 `docSearch` / `codeSearch` 的 ftsQuery 为空且无 embedder 时返回 `[]`。
@@ -311,6 +316,7 @@ B1–B4（`indexCompat` 模型/维度校验 · gitignored 触发重建 · `listM
 | D-MEM13 | 检索向量通道 = 流式分块扫描 + 有界 top-K | 峰值 = 块 + K，召回语义不变（仍全表评分）；否决「结果缓存 / LRU」（不解首次扫描峰值）·「FTS 预筛再向量」（召回语义变化）·「ANN 向量索引」（依赖 / 架构级——登记为后续项） |
 | D-MEM14 | VSC 索引有效性 = **不产出 + 可见**（校验三条：模型 / 维度 / 名称一致性） | 静默失效 → 可见；否决自动重建（静默 30s+ 网络）· 仅报错（升级为工具故障）· 仅声明（判据不满足）；归一时以 sqlite 承接同原则（**2026-09-15 裁定收口**：承接形态 = 失效向量置空 + 检索懒回填——不产出无效结果；面板 mismatch 可见面自然化——§6.9） |
 | D-MEM15 | VSC 忽略文件删除检测 = **`git check-ignore` 圈定 + 存在性检查** | 被忽略文件删除后从 git 输出彻底消失——模式匹配 + 存在性是唯一可达触发；否决全 manifest 逐条扫描（等价全量 stat） |
+| D-MEM16 | 嵌入输入截断 = 复用核级单一来源（`thincoder-core/text-budget.mjs` 的 `safeSliceUTF16`，三处统一） | 该函数已有共享单一来源声明 · 零 import 叶档（可被任意层引用）· 已有消费先例（`thincoder-core/explore-distill.mjs:13`）；否决引 `agent/helpers.mjs` 私持复本（子系统反向依赖 + 并行批写域）· 否决新档（与既有单一来源同函数双份） |
 
 ## 8. 不并项与历史沿革
 
@@ -347,7 +353,7 @@ B1–B4（`indexCompat` 模型/维度校验 · gitignored 触发重建 · `listM
 
 ## 9. 体量与拆分规划（R24a）
 
-**实测行数**：本档 **374 行**（W8 归一落地轮前 334 行）——**超 300 行软线**（未超 500 硬限）⇒ 须拆分规划。
+**实测行数**：本档 **380 行**（`wc -l` 口径实核 · 2026-09-15；W8 归一落地轮前 334 行）——**超 300 行软线**（未超 500 硬限）⇒ 须拆分规划。
 
 | # | 拆分面 | 去向 | 状态 |
 |---|---|---|---|
@@ -371,3 +377,4 @@ B1–B4（`indexCompat` 模型/维度校验 · gitignored 触发重建 · `listM
   （核 sqlite 句柄 / 护栏接线 / 检索面 / 重建面 / 工具契约端差 + 文件制面退场登记）；§9 行数实测 334 → **374**、拆分表第 3 行措辞随落地收正。
   VSC 侧删除集（`src/memory.mjs` · `embedding.mjs` · `index-bin.mjs` · `index-discover.mjs` · `indexer.mjs`）与核面接线均已落地
   （机判 = `thincoder-vscode/test/memory-index-face.test.mjs` · `engine-floor-guard.test.mjs`）。
+- 2026-09-15（**embedding UTF-16 截断缺陷批 · eng-designer**——承 `docs/batches/2026-09-15-embedding-utf16-truncation.md` 的 §2）：§6.3 补「嵌入输入文本（三路）」段（三处截断统一走 `text-budget.mjs` 的 `safeSliceUTF16`）；§7 补 D-MEM16；§9 行数复测收正（`wc -l` 口径——与核内机检同源；旧读数 374 系显示行号口径）。

@@ -11,6 +11,7 @@ import { scanVectors, createTopK } from "./scan.mjs"
 import { readFile, stat, readdir, writeFile, mkdir } from "node:fs/promises"
 import { join } from "node:path"
 import { segmentCJK, VALID_TYPES, SCHEMA_VERSION } from "./schema.mjs"
+import { safeSliceUTF16 } from "../text-budget.mjs"
 
 const EMBED_BATCH_SIZE = 256
 export const EMBED_TEXT_MAX_LEN = 2000
@@ -169,7 +170,7 @@ async function _runEnsureEmbeddings(memory) {
   }
 
   const items = [...pendingEntries, ...pendingFiles]
-  const texts = items.map((r) => `${r.title}\n${r.content.slice(0, EMBED_TEXT_MAX_LEN)}`)
+  const texts = items.map((r) => `${r.title}\n${safeSliceUTF16(r.content, EMBED_TEXT_MAX_LEN)}`)
   const vecs = await embed(memory.embedder, texts)
 
   const updateEntry = memory.db.prepare(`UPDATE entries SET embedding = ? WHERE id = ?`)
