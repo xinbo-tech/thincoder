@@ -10,6 +10,7 @@
 > 同批收正 3 项：`STRUCUTRE-DEBT` → `STRUCTURE-DEBT` · `十字段` → `10 字段`（×4 · 对齐 `CORE-UNIFICATION.md` §2.6.3 U16 行权威写法）· `VSC-MIGRATION.md` 旧 §9 → `VSC-MIGRATION-INVENTORY.md §9`（V1 指针）。
 > **同法（§3 · 2026-09-15 修正轮-4 后）**：§3 轮次 2 前言行父侧机械折行（**仅插换行**）+ 2 处形态收正——① 检索锚裸名引用 → 仓名限定形态（终态 = `AGENT-LOOP（CLI 仓·设计）§11.2`）；② 计数句去数字声明（终态 = 「残遗 = 计数面（见 #1 / #2）」）。零语义。
 > **同法（§5 · 2026-09-15 · W2 实施段）**：§5 W2 块 7 行父侧机械折行（**仅插换行** · 零语义）——宽度闸复跑归零。
+> **同法（§5 · 2026-09-15 · W6 段）**：§5 W6 块 5 行父侧机械折行（**仅插换行** · 零语义）——宽度闸复跑归零。
 > **父侧三闸读数复核（2026-09-15 · 实跑）**：
 > ① 宽度：本档 0；PROVIDER.md >300 实测 **5 行**（4 表格行闸豁免 + 实判 1 行 = L260/336 chars）——§2 两处「6 行」已就地更正；折行与否仍待裁（该档并行线在写——本批零触碰）。
 > ② 锚（§2「锚 0」= 域一口径）：域一（根域 · 125 档）**0 悬空** ✓；域二（CLI 树 · 99 档 · 迁移期参照历史）存量 **1 条**（`thincoder-cli/docs/design/TWO-REPO-MERGE.md:404` → `DOC-CODE-RECONCILE.md:98`——前批已登记 · 非本批）；VSC 域 21 处报告态（非阻断 · 已登记）。
@@ -1485,7 +1486,8 @@ AGENT-LOOP §2.2 #175 / §3.2 D2（状态不变）/ §9（493 行）均在位。
 
 **段位**：实施第二波 · 当前段 = S2（VSC 迁移单元 W6 · CONTEXT-COMPACTION）。写域 = VSC 树 7 档（删 1 + 改 6）+ 文档 10 档（核档 3 + VSC 产品档 5 + 仓根 `docs/vsc` 1 + 核需求 1）；**核内实现零触碰**（`thincoder-core/**` 只读消费）· `thincoder-cli/**` 零触碰 · 台账 `docs/TODO.md` 与仓根 `scripts/**` 零触碰；本档 §1–§4/§6 零触碰（本条 = §5）。
 
-**依据** = 本档 §2「W6 · CONTEXT-COMPACTION」段（`:146`–`:149`）+ 逐单元任务书四步块（`:121`–`:122`）+ 脚注注 1（`:117`–`:118`）+ 判据 A-K1/A-K2/A-K3/A-K4/A-K8/A-K10；上游 = §4 用户批准（2026-09-15 15:12）；模块权威档同步面 = `docs/core/design/CONTEXT-COMPACTION.md`（§6.13）· `docs/core/requirements/CONTEXT-COMPACTION.md` · `docs/core/design/SEND-STALL-DISTILL.md`。
+**依据** = 本档 §2「W6 · CONTEXT-COMPACTION」段（`:146`–`:149`）+ 逐单元任务书四步块（`:121`–`:122`）+ 脚注注 1（`:117`–`:118`）+ 判据 A-K1/A-K2/A-K3/A-K4/A-K8/A-K10；上游 = §4 用户批准（2026-09-15 15:12）；
+模块权威档同步面 = `docs/core/design/CONTEXT-COMPACTION.md`（§6.13）· `docs/core/requirements/CONTEXT-COMPACTION.md` · `docs/core/design/SEND-STALL-DISTILL.md`。
 
 **超声明披露**（预期触碰面之外 · 均已如实登记）：① `thincoder-vscode/src/explore-distill.mjs`（头注订正 1 处——W15 面，随删档改指前收正）；② 文档面 10 档（四步块 ④「文档锚同批」+ 模块权威档同步计划 `:237` 强制面：核档 3 + VSC 产品档 5 + 仓根 `docs/vsc/design/VSC-MIGRATION-INVENTORY.md` + 核需求档）——W1/W5/W7 先例同型。
 
@@ -1508,8 +1510,11 @@ AGENT-LOOP §2.2 #175 / §3.2 D2（状态不变）/ §9（493 行）均在位。
 
 **① 改指逐处（改前 → 改后；run-stages = 核心面）**
 
-- `:16` 删 `import { compactHistory, truncateFallback, COMPRESS_FAILURE_LIMIT, summarizeRunExplorations } from "../compact.mjs"` → `import { compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT } from "@thincoder/core/context.mjs"` + `resolveCompactThreshold`（`@thincoder/core/config.mjs`）+ `summarizeRunExplorations`（**`../explore-distill.mjs` 直引**——核 re-export 面签名不同，改指随 W15）。
-- `checkAndCompact` 重写为端侧判定点封装（§2.13.4 #56 类）：阈值 = `resolveCompactThreshold(cfgCompactThreshold, provider).value`（档位随回合模型）；机制全归核（触发/摘要/降级截断/尾部预算/task+plan 回注/重建边界/基线失效）；**端差适配（调用期）**：核读 CLI 载体名 `provider`/`tasks`/`planMode` ⇒ `agent.provider = provider` · `agent.tasks = agent._tasks ?? []` · `agent.planMode = agent._planMode === true`（核只读三键）；核以新数组替换 `agent.history` ⇒ 端侧原位回收共享数组（面板同一引用；自定义属性随原位回收保留）；失败计数 + `onCompressFail` + `COMPRESS_FAILURE_LIMIT` 连败 → `compressFallback`（AbortError 透传保持）。
+- `:16` 删 `import { compactHistory, truncateFallback, COMPRESS_FAILURE_LIMIT, summarizeRunExplorations } from "../compact.mjs"` → `import { compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT } from "@thincoder/core/context.mjs"`
++ `resolveCompactThreshold`（`@thincoder/core/config.mjs`）+ `summarizeRunExplorations`（**`../explore-distill.mjs` 直引**——核 re-export 面签名不同，改指随 W15）。
+- `checkAndCompact` 重写为端侧判定点封装（§2.13.4 #56 类）：阈值 = `resolveCompactThreshold(cfgCompactThreshold, provider).value`（档位随回合模型）；机制全归核（触发/摘要/降级截断/尾部预算/task+plan 回注/重建边界/基线失效）；
+**端差适配（调用期）**：核读 CLI 载体名 `provider`/`tasks`/`planMode` ⇒ `agent.provider = provider` · `agent.tasks = agent._tasks ?? []` · `agent.planMode = agent._planMode === true`（核只读三键）；
+核以新数组替换 `agent.history` ⇒ 端侧原位回收共享数组（面板同一引用；自定义属性随原位回收保留）；失败计数 + `onCompressFail` + `COMPRESS_FAILURE_LIMIT` 连败 → `compressFallback`（AbortError 透传保持）。
 - `run-helpers.reinjectAfterCompaction`：task 列表 + plan 回注（含旧注入去重）归核 `applyCompression`；本函数只留端侧 AUTO 回注（`getAuto()` live 标志）；`TASK_REINJECT_PREFIX` 退休。
 
 **② 删旧三条读数（删前全过才删）**
@@ -1541,7 +1546,8 @@ AGENT-LOOP §2.2 #175 / §3.2 D2（状态不变）/ §9（493 行）均在位。
 
 **⑤ 内部轮（发现与处置）**
 
-- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **DEVIATIONS（0 🔴 · 1 🟡 · 2 🔵）**——部分实现/静默简化/断链三项全未命中（六面行为保真逐点实核：重建↔shrink 边界重置/基线失效/失败计数与 onCompressFail/onCompressStart→onCompress 转发/abort 透传/AUTO 回注）；命中 = ① §5 未落（🟡 · 本条即落）② turn-model 未触碰且无可触碰面（🔵 · 任务书误归属——见「未决 2」）③ explore-distill + 文档面 = 非声明列档披露（🔵 · 见顶部披露）。
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **DEVIATIONS（0 🔴 · 1 🟡 · 2 🔵）**——部分实现/静默简化/断链三项全未命中（六面行为保真逐点实核：重建↔shrink 边界重置/基线失效/失败计数与 onCompressFail/onCompressStart→onCompress 转发/abort 透传/AUTO 回注）；
+命中 = ① §5 未落（🟡 · 本条即落）② turn-model 未触碰且无可触碰面（🔵 · 任务书误归属——见「未决 2」）③ explore-distill + 文档面 = 非声明列档披露（🔵 · 见顶部披露）。
 - **advisor 代码评审 1 轮**（`type=code` · 阻塞）：**pass**（🔴 **0** · 🟡 7 · 🔵 3）。
 - **裁决表（10 项）**：
 
@@ -1558,7 +1564,8 @@ AGENT-LOOP §2.2 #175 / §3.2 D2（状态不变）/ §9（493 行）均在位。
 | 9 | Fixed | 🔵 `run-helpers.mjs` 死 import（`readFileSync`/`resolve`/`dirname`/`fileURLToPath`）⇒ `e9ea9bd1` 清理（lint 复跑 OK） |
 | 10 | Deferred | 🔵 VSC `test/history-window.test.mjs` 与核内同名测试近重复（改指核面后同断言）——本单元任务书指定「改指」；退役评估归测试纪律批/W15 |
 
-- **两径冒烟（端差适配实驱 · 原样读数）**：① summary 径（stub SSE）——`agent.history === history` 原位回收 ✓ · 自定义属性保留 ✓ · 摘要 note + core 回注（task/plan）+ AUTO ✓ · `_runStartHistoryLen = 2` ✓ · `_lastCompressInfo.mode = "summary"` ✓ · 回调 start→done ✓；② fallback 径（连接拒绝逼 3 连败）——`onCompressFail` → 计数达 3 → `compressFallback` ✓ · `mode: "fallback"` + tailMessages ✓ · 任务回注 + 基线失效归核 ✓。
+- **两径冒烟（端差适配实驱 · 原样读数）**：① summary 径（stub SSE）——`agent.history === history` 原位回收 ✓ · 自定义属性保留 ✓ · 摘要 note + core 回注（task/plan）+ AUTO ✓ · `_runStartHistoryLen = 2` ✓ · `_lastCompressInfo.mode = "summary"` ✓ · 回调 start→done ✓；
+② fallback 径（连接拒绝逼 3 连败）——`onCompressFail` → 计数达 3 → `compressFallback` ✓ · `mode: "fallback"` + tailMessages ✓ · 任务回注 + 基线失效归核 ✓。
 - **轮次自证**：审计 1 轮 + advisor 1 轮 + 修正轮 1；终态 **0 未决 🔴 → clean**。
 
 **决策透明表（设计未明写者）**
@@ -1581,5 +1588,83 @@ AGENT-LOOP §2.2 #175 / §3.2 D2（状态不变）/ §9（493 行）均在位。
 5. **VSC 产品档残句**（裁决表 4）+ `SEND-STALL-DISTILL-TUNING.md:11` 等裸名叙事残留：文档层收正（维护批）。
 6. **孪生树陷阱（非本仓）**：`D:\teamcode\thincoder-vscode` 为未迁移陈旧树（`src/compact.mjs` 仍在）——工具/评审路径解析易落该树（本轮 advisor 引证核验 0/1 = 该 artifact），任务书已令全绝对路径（承前例）。
 7. **并行线在途**：复跑期树内并行单元改动（advisor/* · config-io · settings* 等）未混入本笔（`git commit --only` 逐档核验）；lint 计数随并行删档浮动（278 → 271）。
+
+### 实施：S2 W8 —— MEMORY 单元落轮（2026-09-15 · eng-coder）——**终态 = clean**
+
+**提交** = `a8d9e865`（单笔 · 40 档 · +852 / −2283 · 英文一行）；行数 = `git show a8d9e865 --stat` / `wc -l` 口径实核。
+**写域** = VSC 树（删 5 源 + 3 测试 · 改 17 档 · 新建 1 档）+ VSC 产品档 9 档（退场注记）+ 根权威档 5 档（§6.9 收正 + 锚注）。
+**零触碰** = 核内实现 `thincoder-core/**`（只读消费）· `thincoder-cli/**` · 台账 · 本档 §1–§4/§6 · 他单元文件。
+**依据** = 本档 §2「W8 · MEMORY」+ A-K1/A-K2/A-K10/A-K12/A-K13/A-K14 · `docs/core/design/MEMORY.md` §3.1 A2 / §6.6–6.9 / §7 D-MEM14。
+
+**改动面**
+
+| # | 面 | 档 / 量 | 动作 |
+|---|---|---|---|
+| 1 | 删除集（源） | `src/{memory,embedding,index-bin,index-discover,indexer}.mjs`（273+102+44+173+456 = **1048 行**） | **删档** |
+| 2 | 删除集（测试 —— 测试纪律①退役） | `test/{index-perception,index-ignored-slow,portability-vsc-index}.test.mjs`（237+122+156 = **515 行**） | **删档** |
+| 3 | 句柄 / 护栏 | `src/embed-config.mjs`（+118）· `extension.mjs`（+6） | 重写句柄面 + 护栏接线 |
+| 4 | 核面工具面 | `src/memory-tool.mjs`（365 → 92）· `src/tools/code.mjs`（153 → 65） | 执行器换核工具生成器 + 检索改写 |
+| 5 | 面板 / 召回缝 | `src/extension/panel-index.mjs`（185 行面——读数换源 / 清退 / 重建 UX）· `src/agent/context-injections.mjs`（43 行面——`getMemory`/`docSearch`/`memorySearch`） | 换核面 |
+| 6 | 端壳挂点 | `src/extension/{panel-chat,panel-session,panel-project}.mjs`（+3 / +5 / +3——`ensureMemoryHandle()`） | 句柄创建点 |
+| 7 | 设置面 / webview | `webview/status-bar.js`（7）· `webview/settings-tools.js`（10——mismatch 分支退场）· `locales/{en,zh}.json`（各 3——`status.indexProgress`） | 收正 |
+| 8 | 测试面 | 改 4 = `test/{context-parity,status-line,engine-floor-guard,files}.mjs` · 新 1 = `test/memory-index-face.test.mjs`（297 行 · 快 3 + 慢 4） | 缝名同步 / 机判新增 |
+| 9 | 文档面 | VSC 产品档 9 档（退场注记 56 行面）· 根权威档 5 档 | 见 ① |
+
+**① 文档面收正（逐处）**
+- `docs/core/design/MEMORY.md`：§6.9 现状登记 → **W8 后实现面**（核 sqlite 句柄 / 护栏接线 / 检索面 / 重建面 / 工具契约端差 + 文件制面退场登记）· §9 行数 334 → **374** · 变更记录 W8 行。
+- 根档锚注（W8 面悬空锚 8 → 0）：`design/MEMORY.md:16`/`:39` · `design/CORE-UNIFICATION.md:1734` · `design/PORTABILITY.md:139` · `requirements/MEMORY.md:161` · `requirements/PORTABILITY.md:30`/`:31`（注记形态 = 「W8 已退役 + 核面现体 `<路径>`」——根域 V5 注记标记集闭枚举内）。
+- VSC 产品档退场注 56 行 / 8 档（design/{MEMORY,PORTABILITY,AGENT-LOOP,ARCHITECTURE,TESTING,WEBVIEW} · requirements/{MEMORY,PORTABILITY} · CAPABILITY_GAP——与 W1/W5/W7 同法）；`npm run doc:check`（VSC 域 · `--strict`）**W8 面命中 0**（余 52 = W9/W10 在途面）。
+
+**② 验证读数（实测 · 2026-09-15）**
+- `npm test`（快层）= **618 / 581 pass / 0 fail / 37 skip** ✓
+- `npm run test:full` = 618 / 611 / **7 fail**——7 全 = `test/verify-redesign.test.mjs` × `thincoder-core/agent-tools/verify.mjs:266`（TypeError `reading 'length'`；**W9 在途核面笔**，非本单元面）
+- `npm run lint` = 250 JS OK ✓
+- `npm run test:integration` = 28 / 22 / **6 fail**——6 全 = scenario-01/06 × `verify` 工具文案（核 verify 文案 vs 端侧逐字断言；**W9 在途面**）
+- `thincoder-core` `node --test` = **178 / 178 / 0**（A-K2 ✓ 核零改）
+- 根域机检（本笔后）：`check-ledger` **0 违规** ✓ · `check-doc-width` 本档新增 0（余 5 行超宽 = 本档自身〔§3 轮次表〕——非本笔面）· `doc-anchors`（域一 · strict）**2 条**（=`design/AGENT-LOOP.md:56`〔W9〕· `design/PROVIDER.md:272`〔W10〕——本笔面 0）
+- 本单元专项：`memory-index-face.test.mjs` 快 3 + 慢 4 全绿 · `memory-tool.test.mjs` 8/8 ✓ · `engine-floor-guard.test.mjs` 6/6 ✓（含「W8 契约②」静态闭包零 `node:sqlite` + 反证核记忆面自身可达）
+
+**③ 审计与代码评审（会话内环 · AGENT-LOOP §18）**
+- **内部分歧审计**（explore · 只读 · 1 轮）：代码面 8/8 兑现（护栏 / 句柄五件套 / 缝改名 / 清退 / 读数换源 / 设置面 / 删除集 / 用例面）；发现 3 条文档面偏差 → **全修**：`docs/design/WEBVIEW.md` 键面（新增 `status.indexProgress` 行 + 退场注）· `docs/requirements/MEMORY.md`（F-M5 证据列 + §4.7 端差「索引形态」行退场注）· `test/files.mjs` 注记计数（慢档三档 → 四档）。
+- **内部 advisor 代码评审**（type=code · 1 轮）：终判 = **changes-required**（1🔴 + 3 必改/建议面 + 7🔵 · 总 12 行）。
+- **fix round（评审后 · 同 token）**：🔴 档行数 501 → **499**（`panel-chat.mjs` 注释 3 → 1 行压缩；内容零删、句柄挂点不变）· `~` 展开缺陷修复（`embed-config.mjs` 两读点 + 守卫用例「①b」）· `memory-tool.mjs` 按名取核工具（抗核侧数组顺序变化）· 头注坐标收正（`extension.mjs:44-48` → `:47`）。
+- **终态 = clean**（评审发现全收敛；余 optional 面按 Deferred 上抛父侧——见 ④/⑤）。
+
+**④ 评审裁决表（12 行）**
+
+| # | Action | Detail |
+|---|--------|--------|
+| 1 | Fixed | `panel-chat.mjs` 越 500 硬限（表 5 记 496 → 落笔后 501）——注释压缩 ⇒ **499 行**（`wc` 口径实核） |
+| 2 | Fixed | `embed-config.mjs` `memoryDbPath()`/`projectMemoryDir()` 缺 `~` 展开（静默换库：与 CLI 不同库 + cwd 落 `~` 字面树）——补核展开器 `@thincoder/core/expand-home.mjs`（与 `thincoder-core/config.mjs:263-264` 同点）+ 用例 |
+| 3 | Deferred | W8 实际触碰三档未登记（表 4 归位边 + 表 5 行数）——批次档写域属 designer/父侧 ⇒ ⑤ 上抛 |
+| 4 | Deferred | `pushIndexStatus` null 语义（句柄未建窗口复用 webview「无 key」态 + 构建入口禁用）——设计面空白 ⇒ ⑤ 上抛 |
+| 5 | Deferred | `maybePromptIndex` 无 embedder 门（提示条件变化未入设计档）——同上 |
+| 6 | Deferred | A-K12 判据文本与「清退面必须引用 `.thincoder/index`」矛盾——文档层 ⇒ ⑤ 上抛 |
+| 7 | Deferred | `docs/core/design/MEMORY.md` §6.6 vs §6.9「描述/参数面住哪」口径不一——设计档写域 ⇒ ⑤ 上抛 |
+| 8 | Fixed | `memory-tool.mjs` 位置取工具 → 按 `name === "memory"` 取（抗顺序变化） |
+| 9 | Deferred | `embed-config.mjs` 两套 config 读法（既有形态 · 非 W8 引入）——归 W16 config 归一 |
+| 10 | Fixed | 头注坐标漂移（`extension.mjs:44-48` → `:47`） |
+| 11 | Deferred | 超 300 软线被改档（`panel-session` 344 · `settings-tools.js` 368）——承表 5「拆分计划另议 / 消解条件 = 下次实质改动」，本 §5 即登记面 |
+| 12 | Not an issue | 「A2 导入器未落」——设计裁定在案（§6.9 + 本档发现 11），非缺陷 |
+
+**⑤ 上抛（父侧）**
+- 批次档表 4/表 5/W8 受影响文件行请补登三档端壳触碰面：`src/extension/panel-chat.mjs`（496 → **499**）· `panel-session.mjs`（338 → **343**）· `panel-project.mjs`（93 → **94**）——归位边加〔·W8〕（W8 设计 :171 本身点名 `panel-chat.mjs` 句柄创建点）。
+- 设计/文档面 optional 3 条：`pushIndexStatus` null 语义 + 构建入口显示 · `maybePromptIndex` 提示条件（无 key 亦弹、无去重）· A-K12 判据文本与清退面矛盾 ·（另）§6.6/§6.9 口径不一。
+- **共档披露**：`docs/design/{AGENT-LOOP,WEBVIEW,PORTABILITY,ARCHITECTURE}.md` · `docs/CAPABILITY_GAP.md` · `test/{context-parity,files}.mjs` 含 **W9/W10 在途注记**（非本笔作者）——本笔按 W4 先例整档收录，如实披露。
+
+**⑥ 决策透明表（实现期自决）**
+
+| # | 决策 | 理由 | 备选 / 代价 |
+|---|---|---|---|
+| 1 | 旧目录清退 = 告示（memento 去重 · 恰一次）+ 显式 Delete 才递归删 · **零自动删除** | 用户裁定口径（§2 W8「零自动删除」）；不可逆操作须显式 | 备选：自动删（违裁定） |
+| 2 | 构建入口 = 核 `gitSync` → 回退 `codeSync + docSync` | 与 CLI 启动同序（核 §6.4）；无锚时核侧返 null | 备选：仅 codeSync+docSync（丢 git 快路径 + 语义不同源） |
+| 3 | `memory-tool.mjs` 自持描述/参数面（layer 两值端差）· 执行器取核生成器（按名） | 端差需要 + 执行语义单源 | 备选：全文取核（丢端差）；位置取（评审 #8 已否） |
+| 4 | `~` 展开落端侧读取点 | 核展开器已导出 + 与核 config 同点（最小改） | 备选：等 W16 config 归一（其间静默换库——评审 #2 判不可） |
+
+**⑦ 未落（如实）**
+- A2 一次性导入器（`memory import`）——设计裁定「未落」（§6.9:283 + 本档发现 11 在案）；时序 = ≤ 落地版本发布前。
+- VSC `AGENTS.md` 模块图（`src/memory.mjs` 等旧条目）未动——归 W17 收口笔（先例：W1–W7 皆未动）。
+
+**补录笔（如实登记）** = `1decd99b`（2 档 · +148 / −228）——`src/extension/chat-panel.mjs`（清退告示委派 `_maybePromptLegacyIndexRemoval` + `maybePromptIndex` 入口）：`test/memory-tool.test.mjs`（核面重述 8 例）。首笔 `a8d9e865` 遗漏此二档 ⇒ 本单元提交形态 = **两笔**（主笔 40 档 + 补录 2 档；「单笔」形态偏离如实登记，内容零缺）。
 
 ## §6 验证与收口（父代理）
