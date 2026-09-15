@@ -464,7 +464,9 @@ webview 输入面见下方 UI 段）；settle
 
 **C. 会话级保留（单例收益本体）**：_engDesignTokens（Map——hydrate reconcile + TTL，**永不复位清空**）/config 的 engineering+advisor.guard（槽权威）/ _engPersist（绑定键）/ _engDesignReviewed（顶层恒 false 无影响）/ **_tasks/_goal（评审 #5——会话级不复位）** / **_pendingReminders（SESSION §6 槽字段——会话级）**。
 
-**D. 跨 run 载体仍挂共享 depth-0 history 数组**（**W13 修正（2026-09-15）**：字段集 = `docs/core/design/AGENT-LOOP.md`（CLI 侧）§2.3 :93 **十字段全集**——`_asyncSubagents`/`_asyncAdvisors`/`_asyncTombstones`/`_pendingAsyncResults`/`_consultSessions`/`_engDesignTokens`/`_suspended`/`_asyncWaiters`/`_advisorRuns`/`_mutLog` + `_asyncQueue`；`agent.mjs` run 期以**访问器**把 agent 字段全量别名到 history）——单例不复用这些字段做持久化载体。
+**D. 跨 run 载体仍挂共享 depth-0 history 数组**（**W13 修正（2026-09-15）**：
+字段集 = `docs/core/design/AGENT-LOOP.md`（CLI 侧）§2.3 :93 **十字段全集**——`_asyncSubagents`/`_asyncAdvisors`/`_asyncTombstones`/`_pendingAsyncResults`/`_consultSessions`/`_engDesignTokens`/`_suspended`/`_asyncWaiters`/`_advisorRuns`/`_mutLog` + `_asyncQueue`；
+`agent.mjs` run 期以**访问器**把 agent 字段全量别名到 history）——单例不复用这些字段做持久化载体。
 
 ### 11.2.1 槽字段 ↔ hydrate 恢复映射（评审 #2——关闭 F4/AC3 恢复缺口）
 
