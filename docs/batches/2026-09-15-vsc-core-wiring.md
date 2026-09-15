@@ -1667,4 +1667,107 @@ AGENT-LOOP §2.2 #175 / §3.2 D2（状态不变）/ §9（493 行）均在位。
 
 **补录笔（如实登记）** = `1decd99b`（2 档 · +148 / −228）——`src/extension/chat-panel.mjs`（清退告示委派 `_maybePromptLegacyIndexRemoval` + `maybePromptIndex` 入口）：`test/memory-tool.test.mjs`（核面重述 8 例）。首笔 `a8d9e865` 遗漏此二档 ⇒ 本单元提交形态 = **两笔**（主笔 40 档 + 补录 2 档；「单笔」形态偏离如实登记，内容零缺）。
 
+### 实施：S2 W10 —— PROVIDER 单元落轮（2026-09-15 · eng-coder）——**终态 = clean**
+
+**段位**：当前段 = **S2（VSC 迁移单元 W10 · 实施第三波）**。写域 = VSC 树（删 8 档 / 改指 9 档 / 测试 8 档 / 文档 5 档）+ 核仓模块档 2 档（`docs/core/design/{PROVIDER,PROXY}.md`）；**核内实现零触碰**（`thincoder-core/**` 只读消费）· 台账 `docs/TODO.md` 与仓根 `scripts/**` 零触碰 · 本档 §1–§4/§6 零触碰（本条 = §5）。
+**依据** = 本档 §2「W10 · PROVIDER」（`:181`–`:183`）+ 逐单元任务书四步块（`:121`–`:123`）+ 判据 A-K4 · A-K8 · A-K10（`:267`–`:273`）+ §2.5 #114/#115 已裁并集（`docs/core/design/PROVIDER.md` §2.1 A19/A20 行）。
+
+**共档披露（在途单元收录面 · 逐条如实）**
+- `thincoder-vscode/src/explore-distill.mjs`（chat 改指）随 **W6 提交 `c90ddbdf`** 整档收录——本笔不含该档；
+- `thincoder-vscode/src/agent.mjs` 本笔整档收录——含并行 W9 载体适配 hunk（`provider/tasks/planMode/goal` 调用期镜像）；
+- `thincoder-vscode/docs/design/ADVISOR-CONVERGENCE.md` 本笔整档收录——含 W9 的 `batch-segment` 锚 hunk（`:1315`/`:1349`）；
+- `thincoder-vscode/docs/{CAPABILITY_GAP.md,design/WEBVIEW.md}` 的 W10 迁核注记随 **W8 笔（`a8d9e865`/`1decd99b`/`e0974edb`）** 收录——本笔不含两档（其 W10 注记在库实核）；
+- `thincoder-vscode/test/files.mjs` 三行 W10 改判注释（`:22`/`:42`/`:64`）随在途笔收录（本笔不收录——其表内 W8/W9 新档当时 untracked，收录会造不一致树；现已在库实核）。
+
+**改动面**（行数 = `wc -l` 口径实核；改前基准 = `e0974edb`）
+
+| # | 档 / 集合 | 行数（改前 → 改后） | 动作 |
+|---|---|---|---|
+| 1 | `thincoder-vscode/src/provider.mjs`（删） | 426 → **0** | **删档**（→ 核 `provider/core.mjs`） |
+| 2 | `src/provider/transports/{anthropic 247, google 264, openai 350, responses 415}.mjs`（删） | 1,276 → **0** | **删档**（→ 核 `provider/{anthropic,google,sse,responses}.mjs`；openai 面 = 核 core+sse 融合面） |
+| 3 | `src/provider/{list-models 162, rate 156}.mjs`（删） | 318 → **0** | **删档**（→ 核同路径；#114/#115 并集面） |
+| 4 | `src/proxy.mjs`（删） | 273 → **0** | **删档**（→ 核 `proxy.mjs` 融合形态） |
+| 5 | `src/extension/settings.mjs` | 348 → 348 | 改指：`:16` list-models 核面 + `:192` 动态 import 核 `proxy.mjs` |
+| 6 | `src/extension/provider-flows.mjs` | 220 → 220 | 改指：`:17` 核 list-models |
+| 7 | `src/extension/settings-panel-write.mjs` | 153 → 153 | 改指：`:10` 核 list-models |
+| 8 | `src/agent.mjs` | ±0（+W9 hunk） | 改指：`:5` chat → 核 `provider/core.mjs` |
+| 9 | `src/advisor/{compaction.mjs, loop.mjs, main.mjs}` | 各 ±0 | 改指：`:12` estimateText → 核 rate · `:16` chat → 核 core · `:188-189` 注释收正 |
+| 10 | `src/config-io.mjs` | ±0 | 注释面收正（`:6` 核 list-models） |
+| 11 | `src/tools/web.mjs` | ±0 | 改指：`:8` `proxyFetch` → 核 `proxy.mjs` |
+| 12 | `src/explore-distill.mjs` | ±0 | 改指：`:14` chat → 核 core（**随 W6 笔收录**） |
+| 13 | 测试面 8 档 | 见 ①/③ | 改指/改判（`provider-timeout-semantics` 5→2 为例外） |
+| 14 | 文档面 7 档 | 见 ③ | 迁核注记 + 模块档收正（2 档随 W8 笔） |
+
+**① 逐处「改前 → 改后」（来源串替换 + 测试改判——具名导入面零改）**
+
+| # | 位置 | 改前 → 改后 |
+|---|---|---|
+| 1 | `src/agent.mjs:5` / `src/advisor/loop.mjs:16` / `src/explore-distill.mjs:14` | `"./provider.mjs"` / `"../provider.mjs"` → `"@thincoder/core/provider/core.mjs"`（chat） |
+| 2 | `src/advisor/compaction.mjs:12` | `"../provider/rate.mjs"` → `"@thincoder/core/provider/rate.mjs"`（estimateText；`:11` 注释同批） |
+| 3 | `src/tools/web.mjs:8` / `src/extension/settings.mjs:192` | `"../proxy.mjs"`（静态/动态）→ `"@thincoder/core/proxy.mjs"`（proxyFetch） |
+| 4 | `src/extension/{provider-flows:17, settings-panel-write:10, settings:16}` | `"../provider/list-models.mjs"` → `"@thincoder/core/provider/list-models.mjs"` |
+| 5 | `test/provider-admission.test.mjs:5/:14` · `test/config-io-panel.test.mjs:15` | 改指核 list-models（含 `_resetAdmissionForTest` / `_setProbeImplForTest` 同源缝——注入面单例实核） |
+| 6 | `test/trace-store.test.mjs:28/:141` · `test/integration/scenario-07:19` · `test/smoke-provider.mjs:9` · `test/integration/helpers/mock-llm.mjs:5` | chat 改指核 core（注释面同批收正） |
+| 7 | `test/provider-model-guard.test.mjs:58-108`（F-1 四例） | `buildRequest` 直驱面（删档）→ 经核 `chat()` 真路驱动（守卫在 fetch 前生效——零网络）；F-2 家族（clone 现场 / byName / T28 / F-2d）原文保留 |
+| 8 | `test/provider-timeout-semantics.test.mjs` | 全档改判：保留 T-MA1-1/2（经核 chat——signal 原样 + 相位参数）；退役 T-MA1-3/4/5（头注逐例载明理由） |
+
+**② 删旧三条读数（删前全过才删）**
+1. **改指已落盘**：全入边改指先落，删前快层实跑（本席实跑）——`npm test` **617 / 580 pass / fail 0**（涉面 + 全库零红）；删除后复跑同读数（中间态零 `ERR_MODULE_NOT_FOUND`）。
+2. **零引用机判**（域 = `src/` + `test/` + `scripts/` + `webview/` + `extension.mjs` 全递归）：模式① 引号相对路径形 = **0 命中**；模式② 路径片段反向判 = 非核指向 **0 违规**（余留 = `src/advisor/provider.mjs` 同名自有档 2 处 + `smoke-provider.mjs` 文件名自指——登记非引用）。
+3. **文档锚**：删除后 VSC 域 `doc:check` 首跑 **52 处**（A1 5 / A2 10 / A3 37）——其中 **26 处属 W9 在途面**（`src/agent-tools/*`）、**26 处属本单元面**（`src/provider*` / 符号锚 / 退役用例号）→ 逐处迁核注记后**本单元面归零**；终态全域 **0 命中**（W9 面亦已清零 · exit 0）。根域 `doc-anchors --domain .` = 悬空 **0**（终态）。
+
+**③ 复跑读数（终态实跑 · 原样 · cwd = `thincoder-vscode/`；长测试落盘后查）**
+
+| # | 命令 | 读数 | 判 |
+|---|---|---|---|
+| A | `npm test`（fast） | **617 / 580 pass / fail 0 / skip 37** | ✓（基线 633/592/0/41——Δ 见「未决 3」：本单元 −3 + 在途面） |
+| B | `npm run lint` | `check-syntax: 250 JS files OK` | ✓（292 基线 − 本单元 8 删档 − 在途面删档） |
+| C | `npm run test:full` | **617 / 609 pass / fail 8** | ✓ 本单元面零红；8 红全 = W9 在途面（`T-DC6②` doc-anchors 源域 + verify-redesign 七例） |
+| D | `npm run test:integration` | **28 / 22 pass / fail 6** | ✓ 本单元面零红；6 红全 = `scenario-06-commit-verify`（verify 工具面 = W9 在途） |
+| E | `npm run doc:check` | **命中 0 处 · exit 0**（首跑 52 → 本单元面 26 清零 → 终态全域 0） | ✓ |
+| F | 核回归 `node --test`（cwd = `thincoder-core`） | **178 / 178 · fail 0** | ✓（= 基线；核零改动） |
+| G | 仓根三机检 | 宽度 **OK**（404 档无 >300）· 锚 **0 悬空** · 台账 **1 处违规**（见「未决 1」） | 宽度/锚 ✓；台账 = 上抛 |
+| H | 专项（面内 5 档实跑） | `provider-timeout-semantics` **2/2** · `provider-model-guard`+本档 **15/15** · `provider-admission` **14/14** · `trace-store`+`config-io-panel` **13/13** · `smoke-provider` 装载 OK（打印 preset 清单） | ✓ |
+
+**④ 提交**：单笔 `git commit --only` ⇒ **`81e4b4c9`**（30 档 / +165 −2471 / 8 delete mode；`refactor(vsc): W10 provider - delete src/provider+proxy mirrors, repoint edges to @thincoder/core, reclassify tests, sync module docs`）；回退点 = `git revert 81e4b4c9`。
+
+**⑤ 内部轮（发现与处置）**
+- **审计 1 轮**（只读 explore 分歧审计 · 阻塞）：结论 **NO-DIVERGENCE**——四类（部分实现 / 静默简化 / 文档漂移 / 清单外改动）全未命中；附观察 5 条（核 ARCHITECTURE.md 模块图归属、§5 指针待落、台账悬留、邻树残留指称、−16 计数归属待对账）。
+- **advisor 代码评审 1 轮**（`type=code` · 阻塞）：**pass**（🔴 **0** · 🟡 5 · 🔵 2）。
+- **裁决表（7 项）**：
+
+| # | Action | Detail |
+|---|---|---|
+| 1 | Fixed | 🟡 `docs/design/ARCHITECTURE.md` 同档内收正不一致——`:112` 已注 W10 迁核而模块图 `:72` / 支撑行 `:117` / 变更记录 `:160` 仍述删档：模块图后补「图注（W10 已迁核…）」（`:90-91`）、支撑行按 W7 同法改述（`:120`——含 W1/W4/W10 三档归属）、`:160` 补迁核注记；复跑宽度/锚零增。 |
+| 2 | Fixed | 🟡 `thincoder-vscode/docs/design/PROVIDER.md` §4.3 部分收正——加节头注「W10 已迁核：本节 = 历史契约；驱动面 = test 头注；下文行号 = 迁核前 as-of」（`:186-189`）+ T-MA1-1/2 行改述驱动面（`:222-223`）。 |
+| 3 | Deferred | 🟡 `docs/design/ADVISOR-CONVERGENCE.md:486` / `:495-496` 残留（`provider.mjs:31` / 四 transport 行号）——该档 = **W12 模块权威档列**（批次表）⇒ 随 W12 / 文档维护批按同档 `:488` W7 先例收正（本单元已在 A-K10 点名档收正，不越单元；见「未决 2」）。 |
+| 4 | Deferred | 🟡 退役 T-MA1-3/4 的 idle 看门狗覆盖缺口——核 `readSSE` 看门狗无测试缝（VSC 侧不可稳定驱动），核测试树 grep（`_bodyIdleMs`/`READ_IDLE`/`idle timeout`）0 命中 **未证覆盖** ⇒ 上抛父侧向核侧核对（核测试面 = 超本批写域；见「未决 3」）。 |
+| 5 | Deferred | 🟡 A-K8 用例计数归因——本单元自身 Δ = −3（`provider-timeout-semantics` 5→2，三处登记在案）；交付读数 617/580/0/37 vs 基线 633/592/0/41 的其余差额 = 在途 W8/W9 测试面增删（档级实核：删 4 档 −13 用例、新增 2 档 +7、档内改判若干）⇒ 父侧 §6 对账留证（见「未决 4」）。 |
+| 6 | Fixed | 🔵 核 `docs/core/design/PROVIDER.md:266` 措辞「VSC 调用面保留传相位参数」——改述「VSC 调用面已无相位传参点——相位参数由核 chat 装配（核 `thincoder-core/provider/core.mjs:414-415` 实核）」（首改引入 `core.mjs:414-415` 裸名锚悬空 ⇒ 同行改全路径复跑归零）。 |
+| 7 | Fixed | 🔵 `provider-timeout-semantics` 两例锁核装配面 fetch 选项形状——头注补「射程注」（`:13-14`：跨端契约锁；核侧若有对位可并入核测试树）；断言不动。 |
+
+**决策透明表（设计未明写者）**
+
+| # | 决定 | 依据 / 备选 |
+|---|---|---|
+| 1 | 改指面 = **全入边**（任务书计数列 = 存活 3 档；实交付 9 档 src + 8 档测试） | A-K4 反向判零 + 删后中间态零 `ERR_MODULE_NOT_FOUND`；先例 = W1/W4/W5/W7「全入边」；备选 = 只改 3 ⇒ `agent.mjs`/`advisor/*`/`tools/web.mjs` 等断链、全链红（否决）。超设计点名数 = 如实披露。 |
+| 2 | `explore-distill.mjs` 改指**随 W6 笔收录**（本笔不含） | 该档在途（W6 头注订正同档）⇒ 避免双笔共档回退纠缠；承 W3/W7 共档先例；本笔披露。 |
+| 3 | `test/files.mjs` **不收录**（三行注释留待在途笔） | 该表含 W8/W9 未收录的新测试档条目 ⇒ 本笔收录会造「表引不存在的档」不一致树；测试注释非功能面 ⇒ 不阻塞本笔。终态已在库实核。 |
+| 4 | 测试改判逐例判（测试纪律①）：`provider-timeout-semantics` 保留 2 / 退役 3 | 保留 = 调用面契约（signal 零合成 + 相位参数）；退役 = 镜像内部缝（`idleMs`，不可稳定驱动）+ 静态源文本（散文锚禁止形态）；`provider-model-guard` F-1 **改指核 chat 真路**（非退役——guard 仍在消费链上，核零对位用例）。 |
+| 5 | 核 `PROVIDER.md §6.19` 端差段落**改述为「随迁核退役」** + 保留端侧验收面句 | 07:08「只收正坐标/状态行」；端差实体已由核承载（§6.3/§6.13），不重复机制描述（D2）。 |
+| 6 | VSC 产品档 = 迁核注记（`已迁核——现体` 形态）逐点落位，不逐档加变更记录行 | 档性 = 迁移期参照历史（D-C14）+ `isNoteLine` 谓词实核豁免；先例 = W1/W2/W4/W5/W7。 |
+| 7 | `AGENT-PARAMS.md §6.3` = **零动作**（坐标复核实核在位） | 本单元对 `advisor/compaction.mjs:33` / `loop.mjs:98` / `settings-panel-write.mjs:45/:112-116` 的编辑均 1:1 行替换、行号零漂移（实核）⇒ 无需收正。 |
+
+**未决 / 越段发现（只记 ✗ · 未处置）**
+1. **台账违规 1 处（父侧收正）**：`docs/TODO-archive.md:238`（归档条目「qwen 请求 thinking 未设置时携带 `thinking:{type:"enabled"}`」）证据路径 `thincoder-vscode/src/provider/transports/openai.mjs:53` = 本单元删除集 ⇒ 台账闸阻断（`check-ledger` = 1 处违规）。
+   台账 = 父侧写域（本侧零触碰）⇒ **请父侧择一收正**：改证据为核现体（核 `provider/{sse,core}.mjs`——该 spec 默认面已迁核）或补「（W10 迁核）」注记形态。
+2. **`ADVISOR-CONVERGENCE.md` 残留 3 处**（`:486` `provider.mjs:31` · `:495-496` 四 transport 行号）——W12 模块权威档列 ⇒ 随 W12 / 文档维护批（裁决表 #3）。
+3. **idle 看门狗覆盖缺口（核测试面）**：退役的 T-MA1-3/4（判死 + 零误杀）无可稳定驱动缝；核测试树未见对位（grep 0 命中，未证覆盖）⇒ 请父侧向核侧核对/登记（裁决表 #4）。
+4. **A-K8 计数归因**：本单元 −3 已三处登记；其余差额（617 vs 633）归在途面（W8/W9 档级 −13/+7 + 档内改判）⇒ 父侧 §6 对账留证（裁决表 #5）。
+5. **`thincoder-vscode/AGENTS.md` 文件地图两行**（`:49-50` `src/provider.mjs` / `src/provider/rate.mjs`）+ `:30`（`isNonRetryableError in provider.mjs` 约定句）——承 W7「未决 1」同型；请父侧核对 **W17 收口笔范围** 是否覆盖文件地图（A-K11 点名 = 约定段 ±4）。
+6. **核 `docs/core/design/ARCHITECTURE.md:93` 模块图行**（审计观察）仍列 VSC `src/provider.mjs`/`src/provider/**`（+ `{memory,embedding,indexer,mcp,repomap}.mjs` 等 W7/W8 面）——该档不在本单元模块权威档列 ⇒ 归收口笔/文档收正轮，登记待派。
+7. **孪生陈旧树陷阱**（非本仓）：`D:\teamcode\thincoder-vscode` 未迁移——本笔全程绝对路径（`d:/teamcode/thincoder/thincoder-vscode/**`）核读与落笔，零误写（收正注：本笔无跨树事故）。
+
+**轮次自证**：审计 1 轮（NO-DIVERGENCE）+ advisor 1 轮（pass · 0🔴）+ 修复轮 1（Fixed 4 / Deferred 3）；终态 **0 未决 🔴 → clean**。
+
 ## §6 验证与收口（父代理）

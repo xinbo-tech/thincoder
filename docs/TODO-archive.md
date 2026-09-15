@@ -235,7 +235,7 @@
 - [x] **`thincoder-vscode/src/extension/panel-messages.mjs` `handlePanelMessage` 单函数 378 行（L107–484）**——越函数档线（≥300 行）→ 拆分债 → 证据 `thincoder-vscode/src/extension/panel-messages.mjs:107` · status=已废弃（原状态=待讨论）
 - [x] **发布排期（VSC 0.8.11）——用户 2026-09-11 17:16 裁定挂起等指示**：webview 转义 #7 / async 保真 #6 / 输入面 / 死键等修复仍在工作树；流程 = 备包（版本号 + CHANGELOG + 构建 vsix）→ 用户测试 → 发布 → 证据 `thincoder-vscode/docs/design/RELEASE.md` · status=已废弃（原状态=待讨论（挂起））
 - [x] **VSC 文档补 NFR 小节**（design round2 提示词 · ARCHITECTURE 补 NFR · 原则 2 改述 · PROVIDER_PRESETS 静态镜像说明 · 模块小节补 memory/repomap/specs/extension/prompts · §6§3§4 补懒历史·双通道·Ctrl+I·readSSE · runAgent 签名 input→text · §4 补 thinkEnabledValue·noUsageStream · advisor 工具补 lsp）→ 证据 `thincoder-vscode/docs/design/ARCHITECTURE.md:34`（§1）· status=已废弃（原状态=无 status）
-- [x] **qwen 请求 thinking 未设置时携带 `thinking:{type:"enabled"}`**（智谱式参数，GLM 修复引入的通用 spec 默认注入；百炼兼容性属 Qwen `enable_thinking` 范畴——知悉观察）→ 证据 `thincoder-vscode/src/provider/transports/openai.mjs:53` · status=已废弃（原状态=无 status）
+- [x] **qwen 请求 thinking 未设置时携带 `thinking:{type:"enabled"}`**（智谱式参数，GLM 修复引入的通用 spec 默认注入；百炼兼容性属 Qwen `enable_thinking` 范畴——知悉观察）→ 证据 `thincoder-core/provider/core.mjs:193`（原 VSC 面已随 W10 迁核 · 2026-09-15）· status=已废弃（原状态=无 status）
 - [x] **对端仓不可达口径待裁（用户 ④）**（DOC-CODE-RECONCILE · 2026-09-13）→ 用户 07:52 裁定 **B′**（域外标记、不阻断）· 链路 = 设计改（#99）+ 评审 #101 pass + 修正轮 #102 + 实施轮 #103 · 实证（真仓）= 缺仓 ⇒ 域外 37 条 + exit 0 ✓ · 自指（含异体大小写 d:\…\THINCODER-VSCODE）⇒ exit 1 ✓ · 自指判定盘符大小写 bug 已于实施轮发现并修正 · 发布门 `--strict` 已接线（`thincoder-vscode/package.json:123`）· 两端口径自此一致（对端 CLI 已注销其 §2.32.8 端差条）· status=已核销
 
 ---
