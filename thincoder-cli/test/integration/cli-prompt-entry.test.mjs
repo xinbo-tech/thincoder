@@ -11,7 +11,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { spawn } from "node:child_process"
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, existsSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -20,10 +20,12 @@ import { mockLLM } from "../helpers/mock-llm.mjs"
 const __here = dirname(fileURLToPath(import.meta.url))
 const BIN = join(__here, "..", "..", "bin", "thincoder.cjs")
 
-/** 伪 HOME（含 .thincoder/config.json）+ 独立工作目录；两者随 t 清理。 */
-function mkEnv(t, configText) {
+/** 伪 HOME（含 .thincoder/config.json）+ 独立工作目录；两者随 t 清理。
+ *  `repo: false` → 非仓 cwd 变体（不建 .git——#30 回归面：普通会话零门禁）。 */
+function mkEnv(t, configText, { repo = true } = {}) {
   const home = mkdtempSync(join(tmpdir(), "tc-int-pinj-home-"))
   const cwd = mkdtempSync(join(tmpdir(), "tc-int-pinj-cwd-"))
+  if (repo) mkdirSync(join(cwd, ".git"), { recursive: true }) // 项目根判据（.git 仓根——2026-09-17）
   t.after(() => {
     try { rmSync(home, { recursive: true, force: true }) } catch { /* ignore */ }
     try { rmSync(cwd, { recursive: true, force: true }) } catch { /* ignore */ }
@@ -70,8 +72,8 @@ test("入口面：真 CLI 装配 ⇒ 系统提示 + 工具描述零锚字面 + �
 
   // §2.13.2「CLI 列」取值在场（normal 场景可达面：空串项 ⇒ 该处零字面，由上一断言覆盖）
   assert.ok(system.includes("docs/README.md"), "doc-map-path = 空串 ⇒ docs/README.md")
-  assert.ok(system.includes("AGENT-LOOP.md §18 D-E1a"), "agent-loop-ptr-async-spawn 取值在场")
-  assert.ok(system.includes("AGENT-LOOP §25"), "agent-loop-ptr-escalate 取值在场")
+  assert.ok(system.includes("Top-level subagent spawns default to async"), "async spawn 语义正文在场")
+  assert.ok(system.includes("Top-level escalate defaults to async"), "escalate 异步语义正文在场")
   assert.ok(system.includes("Ctrl+I interrupt does not"), "discipline-normal-consult-stop 取值在场")
 
   // 工具描述面（同一送往 provider 的请求体）
@@ -93,7 +95,21 @@ test("入口面（engineering 态）：engineering 场景 ⇒ 零锚字面 + eng
   assert.ok(mock.requests.length >= 1, "请求抵达 mock 端点")
   const system = String((mock.requests[0].messages ?? []).find((m) => m.role === "system")?.content ?? "")
   assert.ok(!system.includes("{{inject:"), "engineering 态系统提示零锚字面")
-  assert.ok(system.includes("(AGENT-LOOP.md §11.2 — R13)"), "agent-loop-ptr-async-note 取值在场")
-  assert.ok(system.includes("## 改动面反查（文档影响面）"), "discipline-engineering-change-surface-probe 取值在场")
-  assert.ok(system.includes("review, AGENT-LOOP.md §18)"), "agent-loop-ptr-engineering-delivery 取值在场")
+  assert.ok(system.includes("advisor calls are async by default at the top level"), "advisor 异步语义正文在场")
+  assert.ok(!system.includes("## 改动面反查（文档影响面）"), "改动面反查节已删（消端差）")
+  assert.ok(system.includes("in-child advisor code review"), "交付链正文自足")
+})
+
+// ── #30 回归（AC-14 / T31）：normal + 非仓 cwd 启动——装配门禁不拦普通会话 ──────────────
+
+test("入口面（normal + 非仓 cwd）：启动零门禁——退出码 0、无『工程模式启动拒绝』、不建档", async (t) => {
+  const mock = await mockLLM([{ content: "hello from mock" }])
+  t.after(() => { try { mock.server.close() } catch { /* ignore */ } })
+  const { home, cwd } = mkEnv(t, providerConfig(mock.port), { repo: false })
+
+  const r = await runCli(["chat", "hello"], { home, cwd })
+  assert.equal(r.code, 0, `chat 正常退出（stderr: ${r.stderr}）`)
+  assert.ok(!r.stderr.includes("工程模式启动拒绝"), "stderr 无「工程模式启动拒绝」（普通会话零 manifest I/O）")
+  assert.ok(mock.requests.length >= 1, "请求抵达 mock 端点（进入了正常循环）")
+  assert.equal(existsSync(join(cwd, "PROJECT-MANIFEST.json")), false, "普通会话不自动建档")
 })

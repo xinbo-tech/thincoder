@@ -3,7 +3,8 @@
  * 用户裁定：全量 config.json 任意键（点分路径）+ 单工具多动作 list/get/set + 双端同批。
  * 语义：set = 写盘（config.json——磁盘真相最小化：只写被设的键——默认值不固化）+
  * 热应用（ctx.agent.config 内存对象立即更新——回合边界键下回合生效）。
- * 护栏：敏感键（路径段含 apiKey/key/token/secret/password）回显/错误文本永不出现明文
+ * 护栏：敏感键（路径段命中词表 apiKey/key/token/secret/password/authorization/auth/cookie/credential，
+ * 或段名 headers/env 整族）回显/错误文本永不出现明文
  * （••••（masked）——防密钥泄漏进会话历史/trace）；已知键类型校验——非 null 叶子类型表
  * 自动派生自 config.mjs DEFAULTS（不手写防漂移——F-S1.5/N-S1.5）；null 默认值键与同族键
  * 走显式形状表（_NULL_LEAF_SHAPES 相等面 / _SIBLING_SHAPES 存在性面——按各自真实消费形态
@@ -11,12 +12,14 @@
  */
 import { DEFAULTS, configPath, writeConfigAtomic } from "../config.mjs"
 
-/** 敏感键段判定（完整点分路径的段级匹配——apiKey/api_key/api-key/token/secret/password 形态） */
-const SENSITIVE_SEGMENT = /(^|[._-])(api[_-]?key|key|token|secret|password)($|[._-])/i
+/** 敏感键段判定（完整点分路径的段级匹配——两句取或：词表段 ∨ 开口键族段；SETTINGS-TOOL.md §2.4） */
+const SENSITIVE_SEGMENT = /(^|[._-])(api[_-]?key|key|token|secret|password|authorization|auth|cookie|credential)($|[._-])/i
+/** 开口键族段判定（headers / env——段名命中 ⇒ 其下全部子键整族遮罩：头名 / 变量名不可枚举） */
+const SENSITIVE_FAMILY = /(^|[._-])(headers|env)($|[._-])/i
 const MASKED = "••••（masked）"
 
 function isSensitiveKey(path) {
-  return SENSITIVE_SEGMENT.test(path)
+  return SENSITIVE_SEGMENT.test(path) || SENSITIVE_FAMILY.test(path)
 }
 
 /* ─── 形状层（第 8 批 2026-09-11——SETTINGS-TOOL.md §8.3；两表结构：相等面 / 存在性面） ─── */
@@ -209,7 +212,7 @@ export function settingsTool(opts = {}) {
       "Actions: list (all keys + values, flattened) | get <key> | set <key> <value> — dot paths into config.json (agent.maxTurns, traces.enabled, providers.0.model, any nesting).\n" +
       "set persists to disk (only the set key is written — defaults are never baked in) and takes effect in the running session immediately (turn-boundary keys apply next turn); the value survives restarts.\n" +
       "Known keys are type-checked: scalar keys against the built-in defaults (agent.maxTurns a number, traces.enabled a boolean); keys whose default is null against their real consumption shape — defaultModel \"provider:model\", agent.subagentModel / shell non-empty string, memory.team object with a repo — so a value the app would silently drop is refused (null clears the key). Unknown keys under a known section are stored as given. Values parse as JSON first (true/false/numbers/objects/arrays), else stay strings.\n" +
-      "SENSITIVE keys (path segment contains apiKey/key/token/secret/password) are NEVER echoed in plaintext — list/get/set replies show ••••（masked）; setting a sensitive key is allowed and stored, but never echoed back.\n" +
+      "SENSITIVE keys (path segment matching apiKey/key/token/secret/password/authorization/auth/cookie/credential, or any key under a headers/env segment) are NEVER echoed in plaintext — list/get/set replies show ••••（masked）; setting a sensitive key is allowed and stored, but never echoed back.\n" +
       "list/get are read-only (planMode ok, no approval); set is a side effect (approval gate). The /config TUI command is the human equivalent.",
     parameters: {
       type: "object",

@@ -173,6 +173,57 @@ for (const [label, make] of Object.entries(FIXTURES)) {
   })
 }
 
+// ── 上行通道唤醒面（批 2026-09-19-upstream-channel-availability · 设计 §6.27.12.9 T23 / T24）──────
+// 第 2 步判据 = `pending 非空 || upstreamWaiting(carrier)`：未 drain 的 ask 是第二开轮源
+// （只补唤醒不够——唤醒后只重新求值、不直接开轮，§6.27.12.3）。双夹具各跑同组断言。
+test("T23 正常·核驱动开轮（假 carrier）：ask ⇒ runTurn(\"\", { autoTurn: true, upstreamTurn: true }) 恰 1 次", async () => {
+  for (const [label, make] of Object.entries(FIXTURES)) {
+    const carrier = makeCarrier(make)
+    carrier._asyncSubagents.set("s1", { id: "s1", status: "running" })
+    carrier._childUpstream = [{ seq: 1, from: "eng-coder#57", kind: "ask", message: "is premise X live?" }]
+    const runs = []
+    const digests = []
+    const h = startSuspension({
+      carrier,
+      runTurn: async (text, opts) => {
+        runs.push({ text, opts })
+        carrier._childUpstream = []     // 模拟 runAgent 回合头 drain（消费即清——谓词随之转假）
+        carrier._asyncSubagents.clear() // 模拟子代理 settle 出池
+      },
+      hooks: { onDigest: (phase) => digests.push(phase) },
+    })
+    const res = await h.done
+    assert.equal(runs.length, 1, `[${label}] 未 drain 的 ask ⇒ 恰 1 轮（谓词开轮）`)
+    assert.equal(runs[0].text, "", `[${label}] auto 轮 text = 空串（同消化轮）`)
+    assert.deepEqual(
+      runs[0].opts, { autoTurn: true, upstreamTurn: true },
+      `[${label}] 旗标贯通（§6.27.12.9 T23：res.upstreamTurn === true）`,
+    )
+    assert.deepEqual(digests, ["start", "end"], `[${label}] 轮边界 hook 同既有（onDigest start/end）`)
+    assert.equal(res.reason, "idle", `[${label}] 轮后池空自然退出`)
+    assert.deepEqual(res, { reason: "idle", residualInput: [] }, `[${label}] 退出回执形状零改（不含新旗标）`)
+  }
+})
+
+test("T24 边界·核驱动 note 不开轮：零 runTurn；note 不阻止池空退出（idle）；留队等下拐点", async () => {
+  for (const [label, make] of Object.entries(FIXTURES)) {
+    const carrier = makeCarrier(make)
+    carrier._asyncSubagents.set("s1", { id: "s1", status: "running" })
+    carrier._childUpstream = [{ seq: 1, from: "eng-coder#57", kind: "note", message: "premise X broke" }]
+    let runs = 0
+    const h = startSuspension({ carrier, runTurn: async () => { runs++ } })
+    await tick() // 进入纯等待：note 落入判据但不为真 ⇒ 不开轮
+    assert.equal(runs, 0, `[${label}] note 不开轮（谓词假）`)
+    assert.equal(carrier._asyncWaiters?.length, 1, `[${label}] 等待栓照常注册（W1 面零改）`)
+    carrier._asyncSubagents.clear() // 模拟 settle 出池
+    carrier._asyncWaiters.splice(0).forEach((w) => w()) // settle 尾唤醒（wakeAsyncWaiters 同形）
+    const res = await h.done
+    assert.equal(res.reason, "idle", `[${label}] 池空即退出`)
+    assert.equal(runs, 0, `[${label}] 唤醒后仍零轮（note 无时效义务）`)
+    assert.equal(carrier._childUpstream.length, 1, `[${label}] note 留队等下拐点（F13——今日语义零变）`)
+  }
+})
+
 test("sweepSettledToPending：已 settle 条目入 pending，幂等（_inPending 防重复）", () => {
   const carrier = makeCarrier(FIXTURES["CLI 形（agent 字段对象）"])
   const e = { id: 7, done: true }

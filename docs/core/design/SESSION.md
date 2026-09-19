@@ -11,9 +11,9 @@
 
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
-| 会话数据层 | `thincoder-cli/src/session.mjs` · `session-store.mjs` · `session-segments.mjs` · `session-guard.mjs` · `session-migrate.mjs` · `session-rename.mjs` | `thincoder-vscode/src/extension/session-io.mjs` · `session-slot-write.mjs`（记录存储内联） |
-| 槽位 | `src/session-slots.mjs` | `src/extension/session-slots.mjs` |
-| 清理 | `src/session-gc.mjs`（+ `session gc` 子命令） | `src/extension/session-gc.mjs` |
+| 会话数据层 | `thincoder-core/session.mjs` · `session-store.mjs` · `session-segments.mjs` · `session-guard.mjs` · `session-migrate.mjs` · `session-rename.mjs` | `thincoder-vscode/src/extension/session-io.mjs` · `session-slot-write.mjs`（记录存储内联） |
+| 槽位 | `thincoder-core/session-slots.mjs` | `thincoder-vscode/src/extension/session-slots.mjs` |
+| 清理 | `thincoder-core/session-gc.mjs`（+ `session gc` 子命令） | `thincoder-vscode/src/extension/session-gc.mjs` |
 | 历史读取工具 | `src/agent-tools/read-history.mjs` | 同名（同路径对） |
 
 **存储契约**：两端读写同一批档同一 `version`（1 / 2）——同一 `~/.thincoder/sessions/<hash>.json.{N,manifest}`。
@@ -30,10 +30,10 @@
 
 | # | 对位（CLI ↔ VSC） | 分类 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|
-| 123 | `src/session.mjs` ↔ `src/extension/session-io.mjs` | ② | 融合：数据层取一侧 + VSC 的 `history-window` 拆面按核内结构归位 | 分叉 ＝ 目录归属（VSC 住 `extension/`）；存储契约两端自述同格式（同一 `~/.thincoder/sessions/<hash>.json.{N,manifest}`——VSC 头注 `:2-8`）⇒ 前提成立 | — | S1（建核补齐） |
-| 124 | `src/session-slots.mjs` ↔ `src/extension/session-slots.mjs` | ② | 融合：取一侧（slot / manifest / 认领 / 属主判定） | 分叉 ＝ 目录归属；头注互指「同构镜像」（CLI `src/session-slots.mjs:19` / VSC `:21`）⇒ 前提成立 | — | S1（建核补齐） |
-| 125 | `src/session-gc.mjs` ↔ `src/extension/session-gc.mjs` | ② | 融合：取一侧；**冷 cwd 手动执行面**（`session gc` 子命令）仅 CLI ⇒ 端差段 | 分叉 ＝ 目录归属 + VSC 无 shell 通道（VSC 头注 `:3-5` 自述）；保留期 / 阈值两端同值 ⇒ 前提成立 | — | S1（建核补齐） |
-| 126 | `src/session-store.mjs` ↔ `src/extension/session-slot-write.mjs` | ② | 融合：核内单一记录存储 + 槽写入面归位 | 分叉 ＝ 切分与目录归属（VSC 记录存储内联于槽写面）；槽写语义两端同 ⇒ 前提成立 | — | S1（建核补齐） |
+| 123 | `thincoder-core/session.mjs` ↔ `src/extension/session-io.mjs` | ② | 融合：数据层取一侧 + VSC 的 `history-window` 拆面按核内结构归位 | 分叉 ＝ 目录归属（VSC 住 `extension/`）；存储契约两端自述同格式（同一 `~/.thincoder/sessions/<hash>.json.{N,manifest}`——VSC 头注 `:2-8`）⇒ 前提成立 | — | S1（建核补齐） |
+| 124 | `src/session-slots.mjs` ↔ `thincoder-vscode/src/extension/session-slots.mjs` | ② | 融合：取一侧（slot / manifest / 认领 / 属主判定） | 分叉 ＝ 目录归属；头注互指「同构镜像」（CLI `src/session-slots.mjs:19` / VSC `:21`）⇒ 前提成立 | — | S1（建核补齐） （迁移期引文） |
+| 125 | `thincoder-core/session-gc.mjs` ↔ `thincoder-vscode/src/extension/session-gc.mjs` | ② | 融合：取一侧；**冷 cwd 手动执行面**（`session gc` 子命令）仅 CLI ⇒ 端差段 | 分叉 ＝ 目录归属 + VSC 无 shell 通道（VSC 头注 `:3-5` 自述）；保留期 / 阈值两端同值 ⇒ 前提成立 | — | S1（建核补齐） |
+| 126 | `src/session-store.mjs` ↔ `thincoder-vscode/src/extension/session-slot-write.mjs` | ② | 融合：核内单一记录存储 + 槽写入面归位 | 分叉 ＝ 切分与目录归属（VSC 记录存储内联于槽写面）；槽写语义两端同 ⇒ 前提成立 | — | S1（建核补齐） |
 | 127 | `src/session-segments.mjs` · `session-guard.mjs` · `session-rename.mjs` · `session-migrate.mjs` ↔ 核内（VSC 侧内联于 `session-io` / `session-slots`） | ② | 融合：按核内结构归位（段 / 归属守卫 / 改名 / 旧短哈希迁移四面各保留） | 分叉 ＝ 拆档粒度（VSC 未拆）；能力面逐条对位（VSC `session-io.mjs:92-113` 迁移遍 / `:399` 改名枚举同构）⇒ 前提成立 | — | S1（建核补齐） |
 
 ## 3. 须用户裁条目（自 `CORE-UNIFICATION.md` §2.5.1 搬入 · 逐字）
@@ -88,11 +88,16 @@
 
 - **sessionId** = 每进程唯一 `pid-timestamp-random`（manifest `slotSessions` 的认领值）。
 - **ensureActive 认领序**：① 当前 active 空闲 → ② **文件缺失的空槽号**（不认「最小空闲号」——死主的旧槽文件仍在，会 resume 进陌生会话且退出时覆盖）→ ③ 全被活进程占用时开新槽（新号从 max+1 起，跳过活认领号 / 现存文件号；max 取 `allSlots[last]` 而非 spread——数万槽位时 RangeError 风险）。
-- **死主条目清理**：`ensureActive` 开头删除 owner 已死的 `slotSessions` 条目。纪律：死主判定**必须跑 `isProcessAlive`**（不能以「文件缺失」短路——活进程在「认领→首次保存」窗口文件暂缺，误删会致双进程同槽）；清理落盘**必须传 `deletions` 参数**（条目级合并会把磁盘上仍存在的死条目从 fresh 复活回写）；`deadParam` 按调用时状态过滤刚重新认领的槽。
-- **`isProcessAlive(pid)`**：Windows `tasklist /FO CSV`（PID 列精确比对） / Unix `kill(pid, 0)`。
+- **死主条目清理**：`ensureActive` 开头删除 owner 已死的 `slotSessions` 条目。纪律：死主判定**必须跑批量判活 + 三态判据 `ownerState`**（不能以「文件缺失」短路——活进程在「认领→首次保存」窗口文件暂缺，误删会致双进程同槽；**不得以探测失败当死**）；清理落盘**必须传 `deletions` 参数**（条目级合并会把磁盘上仍存在的死条目从 fresh 复活回写）；`deadParam` 按调用时状态过滤刚重新认领的槽。
+  **批 1 扩（2026-09-16）**：死主判定 = 身份复核双条件——pid 死 ⇒ 删（既有）；pid 活 + 命令行**明确可得且不命中本产品标记族** ⇒ 同判可删（pid 复用即此场景）；探测失败 / 缺行 ⇒ **保守保留**（探测失败 ≠ 死）。判据单源 = `process-probe.mjs` `filterDeadOwners`（本模块只调一行——详面 = `MULTI-INSTANCE-COLLAB.md` §3.1 / D-MI11）。
+  **探测形态（2026-09-18 · F-MI7）**：判活 = **入口一次探测束**（`probeOwnersAsync` / `probeOwnersSync`）+ `ownerState` 查表——本模块 `cleanDeadOwners` / `usableSlot` / `allocateFresh` / `ensureActive` **零自有 exec**；认领链 `resumeSlot` 为 **async**；探测失败 / 缺行 ⇒ **未知 ⇒ 保守保留**（D-MI10 同向）。
+- **`isProcessAlive(pid)`**：Windows `tasklist /FO CSV`（PID 列精确比对） / Unix `kill(pid, 0)`；**实现住 `process-probe.mjs`**（本模块 re-export 保 import 面零变）；同步有界 2 s，**返回 `true | false | undefined` 三态**（`undefined` = 未知——超时 / 探测失败；未知不作「死」判据，与 D-MI10 同向）。
+  **认领 / 占用 / 清理 / 新会话死主四路不经它**：改经批量束 + `ownerState` 三态判据；**「假 ⇒ 判死」形态的调用点一律改经 `ownerState`**（未知 ⇒ 保守保留）——不得布尔化消费三态结果。
+  **消费面全枚举（本批改经束）**：核内 `session.mjs`（`:385` / `:400` / `:497`——含 `slotOccupancy`）· `session-slots.mjs`（`:213` / `:248` / `:275` / `:301` / `:436`）· `session-gc.mjs`（`:25` / `:70` / `:116` / `:151` / `:179`——**未知 ⇒ 不判冷 / 保留**）⇒ 全部改经束 + `ownerState`（零判定消费残留）；
+  端侧 `thincoder-vscode/src/extension/session-io.mjs:91` / `:100`（+ 镜像档）= 随 F-MI6 引核收正（判定收归核束；端侧薄壳只留 END / 命名空间面）。
 - **slot 粘性**：`saveSession` 首次认领后缓存 `agent._slot`，**永不重跑** ensureActive（原实现每次保存重推——manifest active 被并发方翻动时会话静默迁移 → 双副本 / 覆盖他人）；`applySession` 清空缓存；ACP 加载路径显式钉回目标槽。
 - **ACP 同进程多会话**：`session/new` 立即钉独立槽；load/resume 钉槽前查 `sameProcessPinned`（同槽占用 → 显式 fork 新槽）；**绝不 `_slot = null` 等下次保存**（会落回同进程 active 槽即他人槽）；`session/delete` 删非 active 槽时立即重钉。
-- **`slotOccupancy`**：目标槽是否被**另一活进程**占用——**排除本进程属主**。
+- **`slotOccupancy`**：目标槽是否被**另一活进程**占用——**排除本进程属主**；探测 = **入口一次有界批量束**（`probeOwnersSync`，零逐 pid exec）；**探测失败 ⇒ `{ occupied: true, unknown: true }`（保守：未知不得认领、不报空闲——D-MI10 同向）**。
 
 **写盘防护**：
 
@@ -114,7 +119,7 @@
 
 - **`saveSession`**：`history = (_fullHistory ?? history).filter(非 transient + 非 legacy-transient)`；`contextHistory = agent.history.filter(非 legacy-transient)`（**机读线保留 transient**）；写 `agent._slot` 槽 + 更新 manifest 摘要（`slotDigest`：messageCount / turnCount / firstMessage / activeProvider / title）；
 返回轮转的 `.bak` 路径或 null。TUI 每次回合结束保存（崩溃最多丢半轮）。
-- **恢复入口**：启动恢复（TUI）= `resumeSlot(process.cwd())`（三支决策 + 认领 + 写本端 marker）→ `applySession` → `agent._slot = slot`（**首保存必落恢复槽**）；headless `thincoder chat` 不恢复。`loadSlotFile` = **无认领副作用**的槽文件读取器（version 1/2 + history 数组 + cwd 匹配）：结构不符 → `.unreadable`；解析失败 → `.tmp` 备份优先回退（回退成功则提升为正主）；
+- **恢复入口**：启动恢复（TUI）= `await resumeSlot(process.cwd())`（三支决策 + 认领 + 写本端 marker）→ `applySession` → `agent._slot = slot`（**首保存必落恢复槽**）；headless `thincoder chat` 不恢复。`loadSlotFile` = **无认领副作用**的槽文件读取器（version 1/2 + history 数组 + cwd 匹配）：结构不符 → `.unreadable`；解析失败 → `.tmp` 备份优先回退（回退成功则提升为正主）；
 **主文件缺失时恢复孤儿 `.tmp`**。
 - **`applySession`**：人读线 `_fullHistory` ← `data.history`；机读线 `agent.history` ← `data.contextHistory`（缺失/为空才回退 history 播种）；title / tasks / planMode / autoApprove / goal / pendingReminders / sessionStart / advisor 逐字段；`activeProvider ≠ 当前` 按名切回（找不到不回切）；
 清 `_slot` / `_slotMtime` 与 `_compressFailures` / `_verifyRetries`。
@@ -131,7 +136,7 @@
 
 ### 6.6 与 VS Code 的契约对齐点
 
-- **基础契约**：cwd hash（40 位 sha1 + 盘符大写）· 槽位认领（slotSessions + isProcessAlive）· 双线落盘（`history` + `contextHistory`）· 旧格式回退（无 contextHistory → 从 history 播种）· transient 过滤（人读线过滤、机读线保留）· 本端记录 marker（形态 / 写者 / 置空语义双端一致）。
+- **基础契约**：cwd hash（40 位 sha1 + 盘符大写）· 槽位认领（slotSessions + 判活束 / `ownerState` 三态）· 双线落盘（`history` + `contextHistory`）· 旧格式回退（无 contextHistory → 从 history 播种）· transient 过滤（人读线过滤、机读线保留）· 本端记录 marker（形态 / 写者 / 置空语义双端一致）。
 - **跨端共享契约增补**（2026-09-01 四模型共识）：`sessionStart` 打点（CLI `setup.mjs` 赋一次 / VSC `saveLines` 赋一次——**VSC 恒 null 则覆盖防护永不触发**）· legacy transient 过滤（读 loadSlotFile + 写 saveSession 双点）· 机读线判定（`contextHistory.length > 0`，否则 VSC 恢复空机器线）· v1 回退剥离截断 args · 同会话并发追加检测（VSC 磁盘 history 比待写快照长 → 轮转 `.bak`）· 
 `activeModel` 双向 · manifest 死主清理（`deletions`）· `loadManifest` 容错（`!m.slots` → `{}`）· 读校验顺序（**cwd 先行**——「别人的文件不动」优先于结构校验）。
 - **新字段双端同步条款**：CLI `saveSession` 全量覆盖写、VSC `saveLines` `...existing` 保留未知字段 ⇒ 两端字段集必须同步演进；任一端新增槽内字段须在同一变更中双端实现，否则 CLI 保存会**静默删除 VSC 侧新字段**。
@@ -167,11 +172,13 @@ TUI 路径在 `startTUI` 前置 `agent.provider = null`。
 
 - **D-1 记录形态**：路径 `{hash}.json.manifest.cli|.vscode`（manifest 旁的独立小文件——**非 manifest 内嵌字段**）；内容 `{"slot": <number|null>, "updatedAt": <epoch ms>}`；**文件缺失 = 从未记录**（迁移窗口，可继承一次）；**`slot: null` = 显式置空**（删过本端槽）——两者必须区分；读侧降级 = 缺失或解析失败一律按「缺失」处理（不 rename 不 unlink），`slot: null` 除外（**绝不继承**）；写者仅本端；
 端常量 CLI `"cli"` / VSC `"vscode"`。
-- **D-2 恢复决策**（`resumeSlot(cwd) → {slot, data}`）：① 本端记录可用（slot ≠ null 且 ∈ m.slots 且槽文件在盘 且属主 空/死/本进程）→ 认领 + 读槽；② 记录缺失 → 一次性继承（m.active 在且 ∈ m.slots 且文件在盘 且属主 空/死）→ 认领 + 写记录；③ 其余一切（slot:null / 槽已被删 / 属主为活外人 / 继承失败）→ 全新分配 + 写记录 + data = null。
+- **D-2 恢复决策**（`await resumeSlot(cwd) → {slot, data}`——**async**，2026-09-18 起）：① 本端记录可用（slot ≠ null 且 ∈ m.slots 且槽文件在盘 且属主 空/死/本进程）→ 认领 + 读槽；② 记录缺失 → 一次性继承（m.active 在且 ∈ m.slots 且文件在盘 且属主 空/死）→ 认领 + 写记录；③ 其余一切（slot:null / 槽已被删 / 属主为活外人 / 继承失败）→ 全新分配 + 写记录 + data = null。
 - **claim 后读槽失败**（解析失败 / `.unreadable`）→ **保持已 claim 槽 + data:null**——不回滚认领、不改 marker；下次保存原地重建该槽。
 - **missing → 继承、null → 全新**的区分理由：删槽后置 null 使「删过」可辨认——用户删除自己会话后重开 = 全新起步，不继承对方遗留、不复活被删会话。
-- **D-3 启动钉 `_slot`**：`resumeSlot` → `applySession` 之后 `agent._slot = slot`——否则并发方在首回合前翻 active，首次保存会静默迁移到新槽（恢复确定性要求**首保存必落恢复槽**）。
-- **D-4 marker 维护点**（每次落点原子写，失败容忍）：CLI `resumeSlot` 各步 / `saveSession` 首认领之后 / `newSession` 成功后 / `switchToSlot` 成功后 / `deleteSlot` 删到本端记录槽 → 置 null（文件保留）；VSC 镜像（ensureSlot·status / newSlot / 打开历史会话 / deleteSlotAndUpdate）。**非维护点**：日常保存（`_slot` 粘性已定，不写 marker）。
+- **D-3 启动钉 `_slot`**：`await resumeSlot` → `applySession` 之后 `agent._slot = slot`——否则并发方在首回合前翻 active，首次保存会静默迁移到新槽（恢复确定性要求**首保存必落恢复槽**）。
+- **D-4 marker 维护点**（每次落点原子写，失败容忍）：CLI `resumeSlot` 各步 / `saveSession` 首认领之后 / `newSession` 成功后 / `switchToSlot` 成功后 / `deleteSlot` 删到本端记录槽 → 置 null（文件保留）；
+  VSC 镜像（ensureSlot·status / newSlot / 打开历史会话 / deleteSlotAndUpdate；**2026-09-18 起 `ensureSlot` 冷路径零探测**——收敛成功落 marker，维护点语义不变；**打开历史会话 = 未占目标槽才写**——端差判据见 §6.15）。
+  **非维护点**：日常保存（`_slot` 粘性已定，不写 marker）。
 - **D-5 listSlots 高亮按端**：`listSlots` 保持 manifest active 语义（ACP session/list 零变化）；TUI `/session` 与面板高亮改以本端记录槽为准；manifest active 保留为跨端回退高亮。
 - **D-6 manifest.active 定位修订**：认领 / 新建 / 切换 / 删除的 setActive 纪律**原样保留**（旧版端互操作 + ACP + 继承读取 + 列表回退）；仅新型恢复决策不再以它为第一依据。
 - **D-7 混合版本矩阵**：新版 + 新版 = 完整分离（目标态）；新版 + 旧版（任一方向）= 旧版仍翻 active / 抢死槽，数据安全但退化为现状形态（建议同步升级）；旧版 + 旧版 = 现状。升级过渡首日仅先启动端能继承共享 active 死槽——一次性继承的固有代价。
@@ -233,17 +240,19 @@ TUI 路径在 `startTUI` 前置 `agent.provider = null`。
 > **来源** = `thincoder-vscode/docs/design/SESSION.md`（520 行 · VSC 产品档——迁移期参照历史）。本节 = 该档中「根层所缺」的 **VS Code 面板接线面**（(a) 机制 / (b) 实现细节与坐标）。与 CLI 共享的契约正文（存储模型 / 并发 / 双线 / end marker / GC / 检索 / 记录存储）已入 §6.1–§6.14，不重复（D2）。
 
 - **W11 接线面（2026-09-15 · CORE-UNIFICATION VSC 单元 W11——本节会话机制面单源 = 核）**：VSC 端壳五档
-（`session-io` · `session-slots` · `session-slot-write` · `session-gc` · `panel-session`，均住 `thincoder-vscode/src/extension/`）
+（`session-io` · `session-slots` · `session-slot-write` · `session-gc` · `panel-session`，均住 `thincoder-vscode/src/extension/`；
+2026-09-16 VSC-DEBT 批（D-3）起 `panel-messages` 会话族 handler 另立 `panel-messages-session.mjs`——同属本面；
+2026-09-18 拆分批起 `panel-session` 写面另立 `panel-session-write.mjs`——同属本面）
 内部改指 `@thincoder/core/session.mjs` 族（`loadSlotFile` / `saveSlotData` / `listSlots` / `renameSlot` /
 `slimForDisplay` / `isLegacyTransient` + `session-slots` / `session-gc` / `session-slot-write` 各面）；
 存储契约 version 1/2 不变（同一 `~/.thincoder/sessions/<hash>.json.{N,manifest}`，与 CLI 共文件）。
 `session-gc` 面（含启动钩子 `scheduleSessionGC`）**纯转口**——核钩子 `dir` / `prefix` 由 `sessionPath(cwd)` 派生
 （随核 `_setSessionsDirForTest` 沙箱缝）；核 `gcResidue` / `listColdCwds` / `deleteColdCwd` 的默认 `dir` 为核内
-configDir 版（端侧无直调点）。`sessionsDir()`（`thincoder-vscode/src/extension/session-slots.mjs:41`）= 核 `sessionPath` 反推
+configDir 版（端侧无直调点）。`sessionsDir()`（`thincoder-vscode/src/extension/session-slots.mjs:52`）= 核 `sessionPath` 反推
 （核未导出根访问器）。
 **端壳保留 = 端差两款**：
-① end marker 层（`END = "vscode"` · `readEndMarker` / `writeEndMarker`——`thincoder-vscode/src/extension/session-slots.mjs:49`）
-与其四个维护落点（`resumeSlot` / `newSlot` / `switchToSlot` / `deleteSlotAndUpdate`——`thincoder-vscode/src/extension/session-io.mjs:55` 起；
+① end marker 层（`thincoder-vscode/src/extension/session-slots.mjs`：`END = "vscode"` `:60` · `readEndMarker` `:69` · `writeEndMarker` `:82`）
+与其四个维护落点（`resumeSlot` / `newSlot` / `switchToSlot` / `deleteSlotAndUpdate`——`thincoder-vscode/src/extension/session-io.mjs`：`:88` / `:123` / `:169` / `:195`；
 §6.10 D-4「VSC 镜像」——核对应件写死核端 marker `.cli`，直接消费 = 跨端互写；数据层 = 核 `loadSlotFile`，
 端壳无核 `resumeSlot` 的裸 v1 单文件兜底——差异登记见批次档 §5）；`deleteSlotAndUpdate` 随槽删记录存储 sidecar
 （核 `deleteSlot` 同源步 `unlinkRecordStore`——`thincoder-core/session-store.mjs:376`）；
@@ -251,16 +260,39 @@ configDir 版（端侧无直调点）。`sessionsDir()`（`thincoder-vscode/src/
 
 - **运行中禁止切换（会话切换竞态修复）**：`newSession` / `deleteSession` / `switchSession`（webview loadSession）/ 项目切换三处均以 `_turnActive` + `_susp.active` 守卫（warning 拒绝——对齐 CLI `applyProjectSwitch` 模式）。运行中放行会让旧 turn 的 stream / complete / 标题灌进新会话视图（「思考串台」）、内容落错槽。
 - **turnSlot / slotOverride（纵深防御）**：`saveLines` / `_saveLines` / `generateTitle` 带 slotOverride——`runPanelChat`（`thincoder-vscode/src/extension/panel-chat.mjs`）回合入口捕获 `turnSlot`，onComplete / abort / finally 的保存与标题一律落 `turnSlot` 而非面板当前 `_slot`——运行中即便并发切换，旧 turn 流也不灌新会话视图、内容不落错槽。
-- **绑定入口三处**：`_slot` 为 null 时经 `ensureSlot(panel)`（`thincoder-vscode/src/extension/panel-session.mjs:28`）
-一次 `resumeSlot(cwd)` 解析并钉槽——面板 `openSessionContent`（webviewReady 快段——B2 后绑槽归快段，
+- **绑定入口三处**：`_slot` 为 null 时经 `ensureSlotAsync(panel)`（`thincoder-vscode/src/extension/panel-session.mjs:42`）
+一次 `await resumeSlot(cwd)` 解析并钉槽（**async**，2026-09-18 起——boot 快段与 F-W18 后的 settings 推送链两处 `await`；`session-io.resumeSlot` 包装器在恢复入口顺带触发一次残留 GC 调度）——面板 `openSessionContent`（webviewReady 快段——B2 后绑槽归快段，
 `status` 慢段不绑槽）、`onProjectChanged`
 （`panel-project.mjs`——项目切换 / 多根 `setProjectFolder` 后 `panel._slot = null` 再重绑）、
-`ensureSlot`（惰性首保存）。`session-io.resumeSlot` 包装器在恢复入口顺带触发一次残留 GC 调度；
+`ensureSlot(panel)`（`thincoder-vscode/src/extension/panel-session.mjs:63`）= **零探测冷路径**（读缓存 / `panel._slot` 现值——可能 null + 后台收敛）；
 项目切换经 `applyProjectSwitch` 守卫运行中拒绝 + `setProjectFolder` 校验 + `onProjectChanged`
 重绑，per-cwd UI 随 `_cwd()` 刷新。
-- **slot 粘性 + 钉槽检查**：面板 `_slot` 在打开 / 切换时**绑定一次**，之后所有读写不再重读共享 manifest 的 active 指针；「打开历史会话」先 `switchToSlot`（读目标槽成功才翻 active + 写 marker，文件缺失 / 损坏返回 null 且不产生幻影指针），再 `slotOccupancy` 检查目标槽被**另一活进程**占用 → 不钉槽（loadSession 立即经 ensureSlot 认领新槽）+ 提示；空闲则绑定 → `_loadSession()`。
+- **slot 粘性 + 钉槽检查**：面板 `_slot` 在打开 / 切换时**绑定一次**，之后所有读写不再重读共享 manifest 的 active 指针；「打开历史会话」先 `switchToSlot`（读目标槽成功才翻 active；记录 / 缓存仅未占才写穿——`session-io.mjs:182-185`；文件缺失/损坏 → null 不产生幻影指针），再 `slotOccupancy` 检查目标槽被另一活进程占用 → 不钉槽（`_slot = null`）+ 提示 → `loadSession` 经缓存重绑本端原槽；空闲则绑定 → `_loadSession()`。
+- **跨端 `m.active` 与「他端翻指针」语义（2026-09-19 裁定 · 本节单源）**：`m.active` = **跨端共享当前指针**（D-SE1）——**他端翻动 = 合法事件 + 本进程零运行时效果**：
+绑定点（`panel._slot`）与解析缓存（`session-io` 的 `slotCache`）**永不因外部翻指针迁移**——只在**本进程四落点**维护
+（`thincoder-vscode/src/extension/session-io.mjs`：`resumeSlot` `:88` / `newSlot` `:123` / `switchToSlot` `:169` / `deleteSlotAndUpdate` `:195`——皆本端动作）；
+本端记录（end marker）同理——只由本端落点写（§6.10 D-4）。
+  - **P1 写面**：他端 `saveManifest(setActive)` 翻 `m.active` 后，本进程 `slotCache(cwd)` / `panel._slot` 逐字不变（零写穿、零回读 `m.active`）——缓存写穿仅限上列四落点。
+  - **P2 读面**：缓存未命中 ⇒ **null**（零探测；不回退读 `m.active`）——`ensureSlot` 冷路径照此消费（返 null 属契约，后台收敛由 `ensureSlotAsync` 单飞承担）。
+  - **P3 释放**：删掉**本进程已绑定**的槽 ⇒ 绑定随槽释放（`panel._slot = null` · 本 cwd 缓存条目删——落点 = `deleteSlotAndUpdate` 缓存块 + `deleteSession` 重绑分支）——**不收养**他端 / 幸存 `m.active`；下次 `ensureSlotAsync` → `resumeSlot` 见本端记录**显式 `slot: null`** ⇒ 跳过一次性继承 ⇒ **全新分配**（D-SE11——不复活被删会话、不粘他端活槽）。
+  - **P4 记录面**：仅当被删槽 = **本端记录槽** ⇒ 记录显式置空（`{slot: null}`——「删过」可辨认，免继承）；他端活槽 / 幸存 active 绝不进本端记录。
+  - **P5 展示面例外（只读）**：会话列表高亮可回退共享 active（`thincoder-vscode/src/extension/panel-session.mjs:219-222`——本端记录槽命中优先）；只读展示，零绑定 / 零写面效果（D-SE1）。
+- **跨端翻指针行为场景（与上条 P1–P5 对位）**：
+
+| 场景 | 输入 | 期望 |
+|---|---|---|
+| 他端翻指针 | 另一进程 `saveManifest(setActive)` 翻 `m.active` | 本进程 `slotCache` / `panel._slot` 逐字不变（P1） |
+| 冷路径未命中 | 本进程未解析 + 缓存空 | `ensureSlot` 返 null（不回退读 `m.active`）；`ensureSlotAsync` 随后正常认领（P2） |
+| 删本端绑定槽 | `deleteSession(panel, panel._slot)` | `_slot = null` + 缓存条目删 + 本端记录槽 ⇒ 记录显式置空；再解析 ⇒ 全新分配（P3 / P4） |
+| 删非绑定槽 | `deleteSession(panel, 其他槽)` | 绑定 / 缓存 / 记录三者零变 |
+| 列表高亮回退 | 本端记录槽被对端删除 | 高亮回退共享 active——只读、零绑定效果（P5） |
+
+- **端差登记 · 记录面写条件（2026-09-19 · init-block 批）**：目标槽被另一活进程占用时——核 = **无条件写**记录（`thincoder-core/session-lifecycle.mjs:284-285`——D-2① 不满足 ⇒ 落 D-2③ 全新分配）；端 = **条件写**（`thincoder-vscode/src/extension/session-io.mjs:182-185`——仅未占才写记录 / 缓存）。
+- 场景：打开被另一活进程占用的历史槽 ⇒ 核落 D-2③ 并写新槽记录；端不写 + `_slot = null` → 经缓存重绑本端原槽（占槽判定 `panel-messages-session.mjs:48-55`）。
+
+- **否决备选（跨端翻指针）**：删绑定槽时**收养幸存 active**（绑定点 / 缓存 / 记录任一面）——绕开 `usableSlot` / `slotOccupancy` 守卫（可能收养另一活进程的槽 ⇒ 双端双写互覆盖），且与 D-SE2 粘性同病灶（并发翻动被静默跟随）——见 §7 D-SE31。
 - **字段往返完整（key-presence 写，v2 语义）**：槽位文件**全量覆盖写**，`saveLines`
-（`thincoder-vscode/src/extension/panel-session.mjs:63`）以 `...existing` 展开式透传不认识字段、仅覆盖扩展自己拥有的字段——CLI 写入的
+（`thincoder-vscode/src/extension/panel-session-write.mjs:34`）以 `...existing` 展开式透传不认识字段、仅覆盖扩展自己拥有的字段——CLI 写入的
 `activeModel` / `engineering` / `engDesignToken(s)` 等字段在 VS Code 侧往返不丢（往返透传是契约——漏一字段即永久丢失）。
 `engDesignToken` / `engDesignTokens` 用 `"key" in extra ? extra.key : existing.key ?? null` 语义——显式 null
 （清盘）必赢、缺席保留槽值（R16 TTL 过期后 restore 清盘、turn 尾 agentState 携显式 null 必须 pin；abort /
@@ -276,8 +308,8 @@ version>2 / 异 cwd / 损坏 / 未知槽返回 null（新版 CLI 文件不属本
 （running 派生）+ 路由守卫 running→拒收（修无池首回合并发——归位 idle 后标题旧序会让窗口内新消息直开并发回合与
 标题 LLM 调用赛跑）。错误路径（评审 #2）：`generateTitle` 内部全 try/catch 吞错 + 调用点兜底 try/catch——
 **归位恒执行**（标题抛错不卡永久 busy）。标题期消息拒收（routeUserTurn running 分支——无排队无回执——拒收警告明示）。
-- **懒加载历史分页（VSC 端**，`thincoder-vscode/src/extension/history-window.mjs`）**：
-`HISTORY_PAGE_SIZE = 200`（`:22`——对齐 CLI 首屏）；`historyWindow(history, before)`（`:106`）——`before == null`
+- **懒加载历史分页（VSC 端**，端壳 `thincoder-vscode/src/extension/history-window.mjs` = 纯转口（`:12`）⇒ 核 `thincoder-core/history-window.mjs`）**：
+`HISTORY_PAGE_SIZE = 200`（核 `:24`——对齐 CLI 首屏）；`historyWindow(history, before)`（核 `:107`）——`before == null`
 取**末页**（首屏只发末页），否则取 `before` 前结束的一页 `[s, e)` 半开区间（loadOlder 页不重渲染边界消息）
 ；`idx` 为**全局** history 下标（分页永不重编号）。输出模型 = 帧容器（assistant 一帧一条消息、工具卡**嵌套**
 `tools[]` 随帧下发）+ 滚动配对（`tool_call_id` 次序——并行批乱序完成全配；未配调用 `result:null`）+
@@ -286,8 +318,8 @@ turnStart 回扫判定（跨页一致）。发送清洗（`sendHistoryPage`）�
 - **会话上下文注入序（VSC 端富注入——CLI 同款演进）**：面板每回合重建上下文线后，会话级注入按固定序落
 机读线——**disk 历史重放（保序打头）→ git / env-state / process-restarted transient（落在重放后、最新
 user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独立锁定）**。git 富注入（GIT-ASYNC L21——2026-09-09
-双端异步化）：`collectGitContext` / `pushGitContext` → async + 失败冷却 30s（`thincoder-vscode/src/agent/setup-reminders.mjs:145` /
-`:163`）——确认序契约不变（git 仍在重放后、time 恒为最后一条）；all-or-nothing 保持。
+双端异步化）：`collectGitContext` / `pushGitContext` → async + 失败冷却 30s（端 `thincoder-vscode/src/agent/setup-reminders.mjs:115` `pushGitContext` ·
+核 `thincoder-core/agent/helpers.mjs:189` `collectGitContext`——采集 / 冷却随核单源）——确认序契约不变（git 仍在重放后、time 恒为最后一条）；all-or-nothing 保持。
 
 ## 7. 并入的关键决策记录（含否决备选）
 
@@ -295,7 +327,7 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 |---|---|---|
 | D-SE1 | 槽位制 + **active = 共享当前指针 ≠ 当前会话** | 旧版端互操作 + ACP + 列表回退需要；本端恢复另设 end marker（D-SE9） |
 | D-SE2 | **slot 粘性**（首次认领后缓存 `agent._slot`，永不重跑 ensureActive） | 每次保存重推会被并发翻动的 active 静默迁移 → 双副本 / 覆盖他人 |
-| D-SE3 | 死主判定**必须跑 `isProcessAlive`**，不得以「文件缺失」短路 | 活进程「认领→首次保存」窗口文件暂缺，误删致双进程同槽 |
+| D-SE3 | 死主判定**必须跑批量判活 + 三态判据**（`ownerState`；单 pid 兼容面 = `isProcessAlive`），不得以「文件缺失」短路；**批 1 扩（2026-09-16）**：pid 活 + 身份不符（命令明确可得且非本产品）同判可删 | 活进程「认领→首次保存」窗口文件暂缺，误删致双进程同槽；pid 复用 ⇒ 陈旧记录不清理——补身份复核（判据单源 = `process-probe.mjs`，详面见 §6.2） |
 | D-SE4 | manifest **条目级合并** + 删除意图经 `deletions` 显式表达 | 否则磁盘死条目从 fresh 复活回写；`active` 单值只由显式翻指针调用点写 |
 | D-SE5 | 覆盖防护 = `.bak` 轮转（按 `sessionStart`；`version > 2` 一律轮转） | 跨端 / 跨进程覆盖对方现场的实锤防线；mtime 缓存避免每次保存全量解析 |
 | D-SE6 | 会话文件 = **双线结构**（`history` 人读 / `contextHistory` 机读） | 机读线须与 provider 前缀缓存逐字节一致；人读线可按显示需要瘦身 |
@@ -323,6 +355,7 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 | D-SE28 | VSC `setSlot*` 写面 = **Parnas 拆分** + `loadSlotForWrite` 对新槽补默认记录 | 一次性写面档（session-slot-write.mjs）避免槽写逻辑混入既有档；新槽无记录 → 静默丢标志（AUTO-bug） |
 | D-SE29 | VSC 懒历史分页 = **帧容器 + 嵌套 tools[] + 全局 idx**（HISTORY_PAGE_SIZE 200） | 跨页消息永不重编号；工具卡随帧渲染防跨页双显；匹配 CLI 首屏 200 |
 | D-SE30 | VSC 标题触发 = **回合尾 finally 忙态归位之前**（A2 方案 Y）+ 归位恒执行 | 标题期 = busy 窗口（webview Stop 显 + 路由守卫拒收）；标题抛错不卡永久 busy |
+| D-SE31 | 跨端 `m.active` 翻动 = **他端合法事件、本进程零效果**（绑定 / 缓存 / 记录不因外部翻指针迁移；释放时**不收养幸存 active**——§6.15 裁定条 P1–P5） | 收养绕开 `usableSlot` / `slotOccupancy` 守卫（可能接手另一活进程的槽 ⇒ 双端双写互覆盖）；且与 D-SE2 粘性同病灶——本端绑定只在四个本端落点维护 |
 
 ## 8. 不并项与历史沿革
 
@@ -359,22 +392,10 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 | 源档 §9 懒历史分页的 webview 渲染细节（DOM 嵌容器内 / scroll 补偿前置 / `.welcome` 移除） | 前端渲染面 | 属 VSC 产品树 webview 面——§6.15 只登记契约（HISTORY_PAGE_SIZE / 输出模型 / turnStart 判定）；渲染层不并 |
 | 源档 §10 注入序的 `loadSession` 同步会话级 UI（_autoApprove/planMode 面板标志 + 工具条按钮同步） | VSC 装配细节 | 面板 UI 同步 = VSC 专有面（`thincoder-vscode/**`）；注入序本体已入 §6.15 |
 
-## 9. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **311 行**（B 轮并入前 61 行）——**超 300 行软线**（未超 500 硬限）⇒ 须拆分规划。
-
-| # | 拆分面 | 去向 | 状态 |
-|---|---|---|---|
-| 1 | §6.14 长会话记录内存有界（段存储 / 窗口 / 投影 / 对账） | 独立「记录存储」子档（同板块二级档） | **需用户裁定**——与「一板块一档」的板块镜像惯例冲突 |
-| 2 | §6.11 env-state reminder（运行环境自我感知） | 提示词系统板 / 提醒面（归属见 §8.2 首行） | **建议**（待父侧裁定——迁移批落地） |
-| 3 | §6.8 会话恢复时的模型重选 | 供应商与模型板（本层 `PROVIDER.md`）——跨板拆分 | **建议**（会话恢复侧留在本档，模型面已在 `PROVIDER.md`） |
-
-**落地时点** = 迁移批（本批不拆）；拆分动作不得改语义（只修引用）。
-
 ## 变更记录
 
 - 2026-09-13：建档——自 `docs/core/design/CORE-UNIFICATION.md` 拆出（§2.5 #89 / #123–#127 · §2.5.1 A14 · §2.12.3 第 3 行）；**语义零改**，行号沿用原编号。
-- 2026-09-14（**B 轮并入 · 第 2 批**）：新增 §6 **机制面**（存储模型 / 并发安全 / 双线结构 / 保存与恢复 / 切换归档 / 跨端契约 / 标题生成 / 模型重选 / 时间戳与 read_history / end marker / env-state / 残留 GC 与标题契约 / 跨会话检索 / 记录内存有界）· §7 **关键决策记录（D-SE1–26）** · §8 **不并项与历史沿革** · §9 体量与拆分规划；来源 = `thincoder-cli/docs/design/SESSION.md`（**旧档一字未改**——
+- 2026-09-14（**B 轮并入 · 第 2 批**）：新增 §6 **机制面**（存储模型 / 并发安全 / 双线结构 / 保存与恢复 / 切换归档 / 跨端契约 / 标题生成 / 模型重选 / 时间戳与 read_history / end marker / env-state / 残留 GC 与标题契约 / 跨会话检索 / 记录内存有界）· §7 **关键决策记录（D-SE1–26）** · §8 **不并项与历史沿革** · 来源 = `thincoder-cli/docs/design/SESSION.md`（**旧档一字未改**——
 原地作参照历史）；首部加机制面指针一行。
 - 2026-09-15（**VSC 轮并入 · 批 7**）：§6.15 新增 **VS Code 面板装配接线面**（运行中禁止切换 / turnSlot /
   绑定入口三处 / 字段往返与 setSlot\* 写面 / 标题触发时机 A2 / 懒历史分页 / 注入序）· §7 补 **D-SE27–30** ·
@@ -385,3 +406,16 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
   绑定入口 / `saveLines` / `setSlot*` 写面坐标按实核收正（端壳 `thincoder-vscode/src/extension/session-slots.mjs:41/49` ·
   `thincoder-vscode/src/extension/session-io.mjs:55` · `thincoder-vscode/src/extension/session-slot-write.mjs:48` ·
   `thincoder-vscode/src/extension/panel-session.mjs:28/63`）；§4 第 3 行迁移面收正为核单源坐标；机制条文零改。
+- 2026-09-16（**批 1 CORE-DEFECT-FIXES · eng-designer · 含复审修正轮**）：§6.2 / D-SE3 面补**死主判定身份复核**条（判据单源 = `thincoder-core/process-probe.mjs` `filterDeadOwners`）；体量读数刷新 **311 → 389**。
+- 2026-09-18（**init-block 批 · eng-designer**——承 `docs/batches/2026-09-18-init-block.md` §1）：§6.2 死主判定纪律改「批量判活 + 三态判据 `ownerState`」（不得以探测失败当死）
+  + 补**探测形态**条（入口一次探测束 · 四路零自有 exec · `resumeSlot` async）；`isProcessAlive` 条改述（实现移居 `thincoder-core/process-probe.mjs` · 同步有界 2 s · 本档 re-export 保 import 面）；
+  `slotOccupancy` 条补有界束 + 失败 ⇒ `{occupied:true,unknown:true}`；§6.3 恢复入口 / §6.15 绑定入口三处改 `await resumeSlot`（`ensureSlot` 冷路径零探测）；D-SE3 判据句同步。
+- 2026-09-18（**init-block 批 · 设计评审轮 1 修正** · eng-designer——fix 轮；承 `docs/batches/2026-09-18-init-block.md` §3 发现 8 / 10）：
+  §6.2 `isProcessAlive` 条改三态契约（`true | false | undefined`；超时 / 探测失败 = 未知——对齐 D-MI10/D-MI16，未知不作死判据）+ **消费面全枚举**（核内三档逐坐标 + 端侧两处引核收正）+ 「假 ⇒ 判死」改法纪律；§6.6 基础契约槽位认领行收正（`isProcessAlive` → 判活束 / `ownerState`）；删修订式表达（探测形态条「逐 pid 探测已删」）。**零新语义**（三态 = 评审发现 8 的直接导出项）。
+- 2026-09-19（**init-block 批 · eng-designer fix 轮**——承 `docs/batches/2026-09-18-init-block.md` §6 第 2・5 项；裁定 = 父侧 2026-09-19）：§6.15 新增**跨端 `m.active` / 他端翻指针裁定条**
+  （P1–P5 判据句 + 五场景表 + 否决备选）+ §7 补 **D-SE31**；§6.15 引行收正（`session-slots.mjs` `:41→52` · `:49→60/69/82` · `session-io.mjs:55→89/124/166/188` · 绑定入口
+  `ensureSlot→ensureSlotAsync`（`panel-session.mjs:42`）+ `ensureSlot:63` · `saveLines` → `panel-session-write.mjs:34` · 历史分页 → 核 `:24/107` · git 注入 `setup-reminders.mjs:145/163→115` + 核 `helpers.mjs:189`）；
+  W11 名册补 `panel-session-write.mjs` 注（2026-09-18 拆分批产物——同属本面）。**零新语义**（裁定 = §6 第 2 项派单兑现；引行 = 第 5 项）。
+- 2026-09-19（**init-block 批 · fix 轮 5** · eng-designer——承批次档 §6 · fix 轮 4 上抛 3 裁定）：W11 名册补 `panel-messages-session.mjs` 注（2026-09-16 VSC-DEBT 批 D-3 产物——同属本面）。**零新语义**。
+- 2026-09-19（**init-block 批 · fix 轮** · eng-designer——承批次档 §6）：§6.15 裁定条补**端差登记**（切槽记录面写条件：核无条件 / 端条件写）+ 场景行；§6.15 两处引行收正（`session-io.mjs` `:89/124/166/188` → `:88/123/169/195`）；
+  §6.10 镜像表补端差句（打开历史会话 = 未占才写 → 判据见 §6.15）· 占槽句改述（`_slot = null` + 经缓存重绑本端原槽）· P5 引行收正（`panel-session.mjs:225-228` → `:219-222`）。**零新语义**。

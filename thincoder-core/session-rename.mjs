@@ -1,7 +1,7 @@
 /**
  * session-rename.mjs — 槽位重命名（标题写路径）。2026-09-06 自 session-slots.mjs 拆出：
- * §12.2.5 契约改（boolean → { ok, reason }）使 session-slots.mjs 超 500 行硬限
- *（§12.3 授权——"若 >500 则按 §10.6 先例拆文件，一并拆出 renameSlot"）。
+ * §6.12 标题写契约（boolean → { ok, reason }）使 session-slots.mjs 超 500 行硬限
+ *（§6.12 模块与实现约束——超 500 行硬限即拆文件，renameSlot 一并拆出）。
  * 原语（slotPath/manifest 读写）自 session-slots.mjs import；session.mjs re-export
  * renameSlot 保持既有调用点（cmd-session.mjs / 测试经 session.mjs）不变。
  */
@@ -12,7 +12,7 @@ import { slotPath, loadManifest, saveManifest, slotDigest, writeSessionFile } fr
 /** Rename a slot: update the slot file's title + the manifest metadata (shared with VS Code).
  *  2026-09-01 会诊 glm 🟡：写回前按 mtime 门控重读——原实现读全量→改 title→整文件写回，
  *  窗口内并发方的最新保存会被旧数据覆盖（丢消息）；mtime 变了即放弃本次重命名。
- *  2026-09-06 §12.2.5：契约 boolean → { ok, reason? }（file-missing/parse-failure/mtime-conflict/invalid-slot，F3 失败可见）；_stat = mtime-conflict 测试缝（默认 statSync）。 */
+ *  2026-09-06 §6.12 标题写契约：契约 boolean → { ok, reason? }（file-missing/parse-failure/mtime-conflict/invalid-slot，F3 失败可见）；_stat = mtime-conflict 测试缝（默认 statSync）。 */
 export function renameSlot(cwd, slot, title, _stat = statSync) {
   const n = Number(slot)
   if (!Number.isInteger(n) || n < 1) return { ok: false, reason: "invalid-slot" }

@@ -1,6 +1,0 @@
-{
-  "note": "文档一致性机检基线（V1/V2/V3 · §2.22.6 VSC 镜像）。**必须保持为空**——新增违规一律红，不得再入基线：入基线 = 例外 = 违规（fail-closed；检查器对非空基线直接 FAIL，见 scripts/check-doc-width.mjs）。历史存量已于 2026-09-12 清零轮逐条处置（VSC 31 条）：V1 引用已可解析或已改写/档已迁移（自消）· V2 键失效 · V3 工具前时代批次档由判据射程排除（V3_ERA_START = 2026-09-11）。VSC 侧扫描域 = docs/design + docs/requirements + docs/batches（目录缺失即跳过）；V1 对含「（CLI 侧）」注记的行/引用豁免（§2.22.7 VSC 独有语义）。键按 (kind|file|ref/声明) 生成，不含行号。",
-  "generatedAt": "2026-09-12",
-  "source": "node -e \"import('./scripts/check-doc-width.mjs').then(m=>{const r=m.checkDocConsistency(process.cwd());console.log(JSON.stringify([...r.v1.map(m.v1Key),...r.v2.map(m.v2Key),...r.v3.map(m.v3Key)],null,2))})\"",
-  "entries": []
-}

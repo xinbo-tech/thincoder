@@ -17,8 +17,8 @@
 | 步 | 命令 / 落点 | 说明 |
 |---|---|---|
 | 1 · lint | `thincoder-cli/scripts/check-syntax.mjs` | 语法检查（`node --check` 系） |
-| 2 · 全量测试 | `thincoder-cli/test/run-full.mjs` | 全量集（slow 全放行） |
-| 3 · 集成集 | `thincoder-cli/test/run-integration.mjs` | 业务验收场景（`docs/core/design/TESTING.md` 发布门节） |
+| 2 · 全量测试 | `thincoder-cli/test/run-full.mjs` | 全量集（slow 全放行） （迁移期引文——入口已并入） |
+| 3 · 集成集 | `thincoder-cli/test/run-integration.mjs` | 业务验收场景（`docs/core/design/TESTING.md` 发布门节） （迁移期引文——入口已并入） |
 
 **接线**：`thincoder-cli/package.json:38`（`prepublishOnly` → `npm run release:check`）→ `thincoder-cli/package.json:40`（`release:check` → `node scripts/release-check.mjs`）→ 顺序编排见 `thincoder-cli/scripts/release-check.mjs:68`（lint）· `:78`（全量）· `:82`（集成集）。
 
@@ -125,10 +125,6 @@ vsce / ovsx 的坑（`vsce publish patch` 自动再 bump、Open VSX 异步激活
 |---|---|---|
 | VS Code 端发布教训全文（旧档 §5.3） | vsce / ovsx 逐条教训 | 对位档 = `thincoder-vscode/docs/design/RELEASE.md`（VSC 侧未迁）——本档只留一句边界（§6.3） |
 | 门禁脚本内部实现细节 | 输出摘要 / 失败块提取算法 | 实现面——落点 `thincoder-cli/scripts/release-check.mjs`（本档只留行为契约） |
-
-## 9. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **138 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 

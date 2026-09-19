@@ -18,12 +18,14 @@
 import { test, beforeEach, afterEach } from "node:test"
 import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { randomUUID } from "node:crypto"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-slots.mjs"
+import { _gitFailureCooldownForTests, _clearGitFailureCooldownForTests } from "../src/agent/setup-reminders.mjs"
 import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
+import { _setProjectRootForTest } from "@thincoder/core/manifest.mjs"
 import {
   buildTopLevelAgent, hydrateRun,
 } from "../src/agent/setup.mjs"
@@ -35,6 +37,9 @@ import { saveLines } from "../src/extension/panel-session.mjs"
 import { loadSlot } from "../src/extension/session-io.mjs"
 
 let sessionsDir
+// M1-manifest 钩子副产物守卫：slow hydrateRun 用例 cwd = _cwd()（真仓根）——缺档初始化会写
+// PROJECT-MANIFEST.json；afterEach 只清「本用例新建」者（预先存在 = 不删——不代管真实档）。
+let manifestPreexisted = false
 
 const liveTok = () => `${randomUUID()}:${Date.now() + 3600e3}`
 const expiredTok = () => `${randomUUID()}:${Date.now() - 3600e3}`
@@ -50,10 +55,30 @@ const cfgBag = (over = {}) => ({
 beforeEach(() => {
   sessionsDir = mkdtempSync(join(tmpdir(), "agentlc-sess-"))
   _setSessionsDirForTest(sessionsDir)
+  manifestPreexisted = existsSync(join(_cwd(), "PROJECT-MANIFEST.json"))
 })
-afterEach(() => {
+// Windows 实测：git 子进程退出后其 cwd 目录句柄释放滞后 close 事件 ~300ms——rmSync 偶发
+// EPERM（rmSync maxRetries 不覆盖此窗）——短重试兜底（同 setup-reminders.test.mjs rmGitCwdDir）。
+async function rmDirRetry(dir) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      rmSync(dir, { recursive: true, force: true })
+      return
+    } catch {
+      if (attempt >= 10) throw new Error(`rmDirRetry: dir still locked after retries: ${dir}`)
+      await new Promise((r) => setTimeout(r, 250))
+    }
+  }
+}
+afterEach(async () => {
   _resetSessionsDirForTest()
-  rmSync(sessionsDir, { recursive: true, force: true })
+  // 清理 git 冷却预填条目（每用例路径独立）
+  _clearGitFailureCooldownForTests(join(sessionsDir, "project"))
+  _clearGitFailureCooldownForTests(join(sessionsDir, "project-175"))
+  await rmDirRetry(sessionsDir)
+  // M1 副产物守卫：真仓根 manifest 仅清本用例新建者（预先存在 = 真实档——不代删）
+  const manifestPath = join(_cwd(), "PROJECT-MANIFEST.json")
+  if (!manifestPreexisted && existsSync(manifestPath)) rmSync(manifestPath, { force: true })
 })
 
 test("buildTopLevelAgent: A/C/B field defaults for the singleton loop", () => {
@@ -265,8 +290,13 @@ test("agentSlotMatches / ensurePanelAgent: cwd×slot 匹配复用、不匹配销
 })
 
 test("hydrateRun: 复用同一 agent 对象——A 复位回合边界、B 每轮重指、无 per-run 重建（AC1/AC2/AC6）", async () => {
-  // 无 git 的临时 cwd——hydrate 的 git/env/peer 注入零 IO 快速路径（git 失败静默）
+  // 临时 cwd 无 git——预填失败冷却（评审 #2 正向锁 seam）→ hydrate 的 git 注入零 spawn
+  // （本用例面 = 生命周期语义，非 git；真 git 行为由 setup-reminders slow() 冷却用例锁）
   const project = join(sessionsDir, "project")
+  // M1-manifest 钩子前置：缺档初始化写 cwd 根 PROJECT-MANIFEST.json，需先建目录（设计 §1.4）。
+  mkdirSync(project, { recursive: true })
+  mkdirSync(join(project, ".git"), { recursive: true }) // 项目根判据（.git 仓根——2026-09-17）
+  _gitFailureCooldownForTests(project, Date.now())
   const agent = buildTopLevelAgent()
   const provider = { model: "deepseek-v4-pro" }
   const optsFor = (over = {}) => ({ provider, cwd: project, input: "hi", opts: {}, depth: 0, role: null, getAuto: () => false, ...over })
@@ -300,6 +330,9 @@ test("hydrateRun: 复用同一 agent 对象——A 复位回合边界、B 每轮
 
 test("hydrateRun #175a: agent.config.agent.autoThink 随 config 归一（显式键生效 / 缺省 = 核 DEFAULTS false）", async () => {
   const project = join(sessionsDir, "project-175")
+  mkdirSync(project, { recursive: true }) // M1-manifest 钩子前置（同下）
+  mkdirSync(join(project, ".git"), { recursive: true }) // 项目根判据（.git 仓根——2026-09-17）
+  _gitFailureCooldownForTests(project, Date.now()) // git 零 spawn（同上一个 hydrateRun 用例）
   const run = (agent) => hydrateRun(agent, { provider: { model: "deepseek-v4-pro" }, cwd: project, input: "hi", opts: {}, depth: 0, role: null, getAuto: () => false })
   try {
     // 显式 true：config.json agent.autoThink → cfgBag.agentFields → agent.config.agent（消费点 = agent.mjs 首轮核分类器）
@@ -414,6 +447,8 @@ test("saveLines: 干净完成空态即权威——无任务/无目标写 []/null
 
 slow("§11.2 resumed 随绑定新生：换槽销毁重建 → 恢复事件每 (面板×槽) 绑定一次——同绑定复用不重复（AC2）", async () => {
   const cwd = _cwd() // vscode mock workspaceFolders=[] → process.cwd()；sessions dir 已隔离
+  // 测试注入面钉项目根（本用例面 = 恢复事件语义，非项目根判定）
+  _setProjectRootForTest(cwd)
   const provider = { model: "deepseek-v4-pro" }
   const envOf = (hist) => {
     for (let i = hist.length - 1; i >= 0; i--) {

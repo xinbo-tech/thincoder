@@ -11,10 +11,6 @@ import { appendCitationReport } from "./citations.mjs"
 import { runAdvisorToolLoop } from "./loop.mjs"
 import { advisorIncompleteMarker, estimateTokens } from "./compaction.mjs"
 import { batchDocForReview } from "../agent-tools/batch-segment.mjs"
-// 第 33 批（§17.5 模块图）：护栏常量 / doc-set 键 / 记录读取——单向导入（review-streak 无回指）。
-import {
-  MAX_DESIGN_REVIEW_STREAK, docSetKey, designReviewStreakRecord, designReviewStreakStopped,
-} from "../agent-tools/review-streak.mjs"
 
 // 拆分后 import 面（既有导出名逐一保面——re-export；谓词为本批新增）。
 export { ADVISOR_THINKING_PLACEHOLDER, MAX_RESULT_CHARS, renderTimeline as _renderTimeline } from "./compaction.mjs"
@@ -22,59 +18,9 @@ export { advisorToolsFor, advisorToolsFor as _advisorToolsFor } from "./loop.mjs
 export { runAdvisorToolLoop as _runAdvisorToolLoop } from "./loop.mjs"
 export { advisorIncompleteMarker } from "./compaction.mjs"
 
-// Mechanical convergence cap: up to 5 rounds suffice; a 6th call means the model
-// is looping — refuse it instead of burning tokens. §11.2 D-24b (2026-09-06): PER
-// REVIEW INSTANCE (agent._advisorRuns); CODE REVIEWS ONLY (2026-09-07 §8 ruling)
-// — design reviews are EXEMPT: their rounds keep advancing, the cap never refuses.
-export const MAX_ADVISOR_ROUNDS = 5
-
 /** B 启动拒绝前缀（§14.4 #2）——稳定契约单源（三消费点同串）：run.mjs 生成；同步工具面
  *  据此登记 `_advisorRefusals`；异步结算面据此不置 `_calledAdvisorThisRun`。 */
 export const ADVISOR_LAUNCH_REFUSAL_PREFIX = "Advisor: design review launch refused"
-
-/** 评审失败护栏稳定前缀（第 33 批 §17.4——与 `ADVISOR_LAUNCH_REFUSAL_PREFIX` 同族；
- *  实现 grep / 用例断言锚）。凭证卫生：串内零 token / designId 值。 */
-export const ADVISOR_DESIGN_STREAK_STOP_PREFIX = "Advisor: design review stopped"
-
-/** kind → 人读说明（第 33 批 §17.4 逐字——结论表第三列；八类 = 五 kind + stale +
- *  no_credential + no_report，与 review-streak.mjs 分类输出同集）。 */
-const DESIGN_REVIEW_OUTCOME_MEANINGS = {
-  timeout: "review exceeded the wall-clock budget (agent.advisor.timeoutMs)",
-  context_limit: "review exceeded the model context budget",
-  turn_cap: "review exceeded the tool-round limit",
-  empty: "the provider returned an empty response",
-  review_failed: "provider / transport error",
-  stale: "the reviewed documents changed while the review was in flight",
-  no_credential: "the token could not be written to the session ledger",
-  no_report: "the review settled without a report",
-}
-
-/**
- * 停止结论串（第 33 批 §17.4 逐字；F29）：稳定前缀 + 停止的 doc-set 清单 + 失败尝试表
- * （记录逐条——kind + 人读说明）+ 三选项（接受现状 / 改变或缩小范围后重跑 / /new 重置）。
- * 全文零凭证值；不自动执行任何恢复动作（发起权在父代理 / 用户）。
- * @param {{count: number, log: string[]}|null} record — 护栏记录（`designReviewStreakRecord`）
- * @param {string[]|null} documents — 被停的文档集（结论清单数据源）
- */
-export function buildDesignReviewGuardMessage(record, documents) {
-  const log = Array.isArray(record?.log) ? record.log : []
-  const docList = Array.isArray(documents) ? documents.filter((d) => typeof d === "string" && d.trim()) : []
-  return [
-    `${ADVISOR_DESIGN_STREAK_STOP_PREFIX} — ${MAX_DESIGN_REVIEW_STREAK} consecutive attempts on this document set produced no design token (repeated failed settlements; no further reviews will start for this set in this session).`,
-    "Document set (1 design instance — no token issued):",
-    ...docList.map((d) => `- ${d}`),
-    "Attempts (most recent last):",
-    "| # | outcome | meaning |",
-    "|---|---|---|",
-    ...log.map((kind, i) => `| ${i + 1} | ${kind} | ${DESIGN_REVIEW_OUTCOME_MEANINGS[kind] ?? kind} |`),
-    "Options:",
-    "1. Accept the current state and proceed — implementation for this document set stays gated (no design token).",
-    "2. Narrow or change the scope: a different document set starts a fresh budget — fix the cause first (agent.advisor.timeoutMs / advisor model / provider).",
-    "3. Start a new session (/new) to reset the guard.",
-  ].join("\n")
-}
-
-const MAX_UNFIXED_DISPLAY = 10 // unfixed issues shown in the cap message
 
 /** Resolve the advisor's provider: cfg.provider/model when set, otherwise the main agent's provider */
 export function resolveAdvisorProvider(agent) {
@@ -109,45 +55,10 @@ export function resolveAdvisorProvider(agent) {
   return provider
 }
 
-/**
- * Extract unfixed issues from prior review text (for the cap message).
- * Input: an advisor review markdown table (`| # | … |` rows). A row counts as
- * unfixed unless its line carries a resolved-status word (fixed/resolved/done/
- * addressed/corrected, ✓/✔). Returns at most MAX_UNFIXED_DISPLAY plain
- * (pipe-stripped) row strings.
- */
-function extractUnfixedIssues(priorText) {
-  if (!priorText) return []
-  const lines = priorText.split("\n")
-  // Resolved-status words: fixed/resolved/done/addressed/corrected (+ ✓/✔).
-  // \b prevents "unfixed"/"prefixed" from matching "fixed".
-  const resolvedRe = /\b(?:fixed|resolved|done|addressed|corrected)\b|✓|✔/i
-  return lines
-    .filter((line) => /\|\s*\d+\s*\|/.test(line)) // 匹配表格行
-    .filter((line) => !resolvedRe.test(line))
-    // Strip only the leading/trailing table pipes — inner pipes (escaped or
-    // in-cell content) stay intact instead of garbling the cap message.
-    .map((line) => line.trim().replace(/^\|/, "").replace(/\|$/, "").trim())
-    .filter(Boolean)
-    .slice(0, MAX_UNFIXED_DISPLAY)
-}
 /** Review-looking guard (async settle parity): a markdown table row or ≥200 chars of prose counts as a prior. */
 export function looksLikeReviewOutput(text) {
   const trimmed = String(text ?? "").trim()
   return /\|.*\|.*\|/.test(trimmed) || trimmed.length >= 200
-}
-/** Cap message (shared by runAdvisorReview and the async pre-check — per-review refusal). */
-export function buildCapMessage(agent) {
-  const prior = agent._lastAdvisorOutput
-  const unfixed = prior ? extractUnfixedIssues(prior) : []
-  let message = `Advisor: convergence cap reached after ${MAX_ADVISOR_ROUNDS} rounds.\n`
-  if (unfixed.length > 0) {
-    message += `\nUnresolved issues from prior rounds:\n${unfixed.map((i) => `- ${i}`).join("\n")}\n`
-  } else {
-    message += "\nAll prior issues appear resolved.\n"
-  }
-  message += "\nOptions:\n1. Accept current state and proceed\n2. Manually review specific concerns with read/grep\n3. Start a new session (/new) to reset the advisor"
-  return message
 }
 
 /**
@@ -169,7 +80,7 @@ function buildPinnedBrief(reviewType, documents, object, designToken, designId) 
 }
 
 /**
- * Run an advisor review. reviewType: "code" (default) or "design". Returns review text or null when skipped.
+ * Run an advisor review. reviewType: "code" or "design" (the top-level type is validated at the tool gate — F30; this entry point consumes the already-decided value). Returns review text or null when skipped.
  * @param {string|null} [designToken] — injected into the design-review prompt; the advisor echoes it only on approval.
  * @param {string[]|null} [documents] — design review only: explicit list of doc paths to review; passed through to the message builder.
  * @param {string[]|null} [paths] — code review only: explicit list of file/dir paths to review.
@@ -186,23 +97,9 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
   // former advisor.enabled gate is removed — review capability has no off
   // switch; only the guard (completion pushback) is opt-in via advisor.guard.
 
-  // Mechanical convergence cap — CODE REVIEWS ONLY (2026-09-07 §8 ruling: design
-  // reviews are exempt). _advisorRound is scoped to the current review instance
-  // (§11.2 D-24b ③), so >= MAX_ADVISOR_ROUNDS blocks the next call of THIS instance.
-  // 5 rounds max; after that the review is never pushed back.
-  if (reviewType !== "design" && (agent._advisorRound || 0) >= MAX_ADVISOR_ROUNDS) {
-    return buildCapMessage(agent)
-  }
-
-  // 第 33 批（§17.5 检查点 2——内防线）：同一 doc-set 连续未产出可用结算达阈值 ⇒ 直接拒绝
-  // （不建消息、不发起、零 LLM）——防直接调用方绕过工具层预检（正常工具链在预检已拒）。
-  if (reviewType === "design" && Array.isArray(documents) && documents.length > 0) {
-    const streakKey = docSetKey(documents, agent.cwd)
-    if (designReviewStreakStopped(agent, streakKey)) {
-      return buildDesignReviewGuardMessage(designReviewStreakRecord(agent, streakKey), documents)
-    }
-  }
-
+  // 撤 cap / 撤计数据（2026-09-18 用户裁定——ADVISOR-CONVERGENCE.md §3.1）：本执行体**无任何按计数
+  // 拒发预检**（原 cap 内防线 + 同 doc-set 连败停止内防线整体退场；轮次仅作提示词衰减与显示）。
+  // 失败路径的出口 = 失败结论块（`advisor-settle.mjs` 结算出口，两轨共用——ADVISOR-GUARDS.md §7）。
   const provider = resolveAdvisorProvider(agent)
   // Advisor always works in the agent's cwd — scope is defined by paths/documents.
   const advisorCwd = agent.cwd

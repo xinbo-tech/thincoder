@@ -10,7 +10,7 @@
  * 渠道管理流（add/remove/key/context）是 provider 级 config 写——语义不变。F-4 (ISSUE-FIX-BATCH)：
  * removeProviderFlow 级联清理悬挂引用（cascadeRemoveProvider——文件尾导出）。
  * ctx: { agent, state, render, ansi, C, pushLine, persistRaw, askQuestion, maskKey, showPicker,
- *      closePicker, renderPickerLines }（后三者为 pickers.mjs 通用 picker 绑定——闭包入参，环安全）。
+ *      closePicker, renderPickerLines, confirmDelete }（后四者为 pickers.mjs 通用 picker 绑定——闭包入参，环安全）。
  */
 import { sliceByWidth } from "./render.mjs"
 import { PROVIDER_PRESETS as PRESETS, providerSpec, specMatch } from "@thincoder/core/config.mjs"
@@ -19,7 +19,7 @@ import { getProviderModels, probeChannelModels, modelListFailureText, dedupeMode
 
 /** createModelPicker(ctx) → { openModelPicker, selectModel, setProviderKey, setContextFlow, pickModelForSlot } */
 export function createModelPicker(ctx) {
-  const { agent, state, pushLine, persistRaw, askQuestion, maskKey, showPicker, closePicker, renderPickerLines } = ctx
+  const { agent, state, pushLine, persistRaw, askQuestion, maskKey, showPicker, closePicker, renderPickerLines, confirmDelete = () => { throw new Error("ctx.confirmDelete missing — deletion refused (fail-closed)") } } = ctx
   const { ansi, C } = ctx
 
   /** entry 唯一标识：异步更新 entries 后按它恢复选中项 */
@@ -379,6 +379,7 @@ export function createModelPicker(ctx) {
       ...candidates.map((p) => ({ type: "item", text: `${p.name} (${defaultModelLabel(p)})`, name: p.name })),
     ])
     if (!se) return
+    if (!(await confirmDelete(`Remove provider ${se.name}?`))) return
     await persistRaw((raw) => {
       raw.providers ??= []
       const idx = raw.providers.findIndex((p) => p?.name === se.name)

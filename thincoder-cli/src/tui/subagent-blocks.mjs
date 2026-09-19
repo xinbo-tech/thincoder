@@ -18,6 +18,8 @@ import { C } from "./ansi.mjs"
 // 第 27 批 §12.3①/②：relay 前缀文法单一权威 = src/agent/relay-prefix.mjs——本文件
 // 不再自持前缀正则/解析副本（防第二套平行正则再漂移）。
 import { parseRelayPath } from "@thincoder/core/agent/relay-prefix.mjs"
+// zero-block 批（TUI.md §6.8.3.2 P1）：墓碑存活闸复活分支留痕——日志面（零新增 UI 形态）。
+import { logEvent } from "@thincoder/core/log.mjs"
 import { describeToolArgs } from "./tool-args.mjs"
 import {
   appendSubBlock, descendSubChild,
@@ -28,7 +30,7 @@ export { SUB_BLOCK_LINE_LIMIT, appendSubBlock } from "./subagent-children.mjs"
 // routeSub*/compression panel 内部用本地 import；re-export 保外部 import 面（index.mjs 等）
 // CLI-ACTIVITY-DEBLOAT F-3（2026-09-10）：面板手工镜像退役——re-export 面换现算导出
 // computePanelBlocks（读时现算），本文件全部刷镜调用点删除（单账本——变更点不再手动同步）。
-import { freezeSubTaskLines, finishSubTaskKey, finishSubTask, freezeDoneSubTasks, finishSubTasksByRole, freezeAllSubTasks, freezeReclaimDigestedBlocks, shiftFreezeAnchors } from "./subagent-freeze.mjs"
+import { freezeSubTaskLines, finishSubTaskKey, finishSubTask, freezeDoneSubTasks, finishSubTasksByRole, freezeAllSubTasks, freezeReclaimDigestedBlocks, shiftFreezeAnchors, livePoolHas, removeFrozenSubTaskLine, tombstoneSubKey } from "./subagent-freeze.mjs"
 export { computePanelBlocks, finishSubTask, finishSubTaskKey, freezeSubTaskLines, shiftFreezeAnchors, freezeDoneSubTasks, finishSubTasksByRole, freezeAllSubTasks, freezeReclaimDigestedBlocks } from "./subagent-freeze.mjs"
 
 // 前缀文法/解析已迁 src/agent/relay-prefix.mjs（第 27 批 §12.3②）——本文件不自持副本。
@@ -80,7 +82,18 @@ export function throttleSubRender(scheduleRender) {
 export function ensureSubTaskKey(state, key, role) {
   // Tombstone guard：abort 子代理冻结后晚到 token 不得复活区块（2026-08-30 残项）
   state._frozenSubKeys ??= new Set()
-  if (state._frozenSubKeys.has(key)) return null
+  if (state._frozenSubKeys.has(key)) {
+    // 墓碑存活闸 P0-a（§6.8.3.2——zero-block 批）：**墓碑只能断言「此块已终」，不得对
+    // 「仍在池中存活」的条目生效**——存活判据（逐字）见 livePoolHas（条目在池 ∧
+    // done !== true ∧ cancelled !== true）。存活 ⇒ ① 摘墓碑；② 摘旧冻结载体行
+    // （免一 key 两载体——折叠键共用）；③ 照常建块（model / async 由后续 token 重填）
+    // + 留痕（**每次复活记一条（无去重状态）**）。不存活（池外 / done / cancelled
+    // ——含 done-in-pool）⇒ 维持丢弃（迟到 chunk 正常高频面——不留痕，D-ZB5）。
+    if (!livePoolHas(state, key)) return null
+    state._frozenSubKeys.delete(key)
+    removeFrozenSubTaskLine(state, key)
+    logEvent("ev:subagent-block-revived", { id: key })
+  }
   state.subTasks ??= {}
   if (!state.subTasks[key]) {
     state.subTasks[key] = {
@@ -173,6 +186,10 @@ export function routeSubToken(state, t, scheduleRender) {
     const live = state.subTasks?.[path.head]
     if (live && !live.done && live.async !== true) {
       delete state.subTasks[path.head]
+      // c2（af 批——§6.8.2「已移除块不复建」）：**与移除同一守卫**（命中移除才写）落键级墓碑
+      // ⇒ 后续 ⟦ev⟧stopped 经 ensureSubTaskKey 直接丢弃（零幻影冻结块——探针实证的
+      // state.lines 0 → 1 路径封死）；no-block 面不写（无可防之幻影——语义零扩）。
+      tombstoneSubKey(state, path.head)
     }
     scheduleRender()
     return true

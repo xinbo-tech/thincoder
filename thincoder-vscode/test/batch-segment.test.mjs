@@ -1,5 +1,5 @@
 /**
- * batch-segment.test.mjs — 批次档段写入工具 VSC 面（ENGINEERING-MODE.md §2.20 · §2.22.5 第 5 批
+ * batch-segment.test.mjs — 批次档段写入工具 VSC 面（现行权威 = BATCH-RECORD.md §4 · 第 5 批
  * 镜像 · FR23 F4；用例 T59/T60/T66）。锁三件：
  *   ① **工具契约**（T59——同 CLI T43–T52 口径）：无 `path` 参数 / 段白名单按身份 / append-only
  *      （既有行字节不变）/ 来源戳仅 §3（N = §3 内该形态行 + 1，骨架行不计，调用方自带标题被丢）/
@@ -28,7 +28,7 @@ afterEach(() => { rmSync(tmp, { recursive: true, force: true }) })
 /** 六段骨架夹具（§1.12 模板形态）。 */
 const skeleton = (over = {}) => [
   "# 批次记录（测试夹具）", "",
-  "## §1 讨论（主 agent）", "", "讨论内容", "",
+  "## §1 讨论（主 agent）", "", over.s1Status ?? "**状态行**：🔄 进行中（测试夹具）", "", "讨论内容", "",
   "## §2 批次任务（eng-designer 自写）", "", over.s2 ?? "_（待实施）_", "",
   "## §3 设计评审（评审子代理自写）", "", "### 轮次与发现（发现摘要 / 🔴 处置）", "", over.s3 ?? "_（待实施）_", "",
   "## §4 用户批准（主 agent 记）", "", "_（待批准）_", "",
@@ -81,7 +81,7 @@ test("T59 正常：designer 写 §2——段尾追加 + 既有行字节不变（
 
 // ── T59 fail-closed：段标题缺失 ─────────────────────────────────────────────
 test("T59 错误：目标段标题缺失 → throw（纠正动作 = 创建方先补骨架）", async () => {
-  const abs = makeDoc("# 批次\n\n## §1 讨论（主 agent）\n\n内容\n\n## §3 设计评审\n\n_（待实施）_\n")
+  const abs = makeDoc("# 批次\n\n## §1 讨论（主 agent）\n\n**状态行**：🔄 进行中（夹具）\n\n内容\n\n## §3 设计评审\n\n_（待实施）_\n")
   const before = read(abs)
   const e = await catchErr(() => designer(abs).execute({ segment: "§2", text: "x" }, ctxFor("eng-designer")))
   assert.ok(e instanceof Error, "无 §2 标题 → 必须 throw")

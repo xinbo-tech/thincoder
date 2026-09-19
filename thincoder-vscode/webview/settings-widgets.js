@@ -68,3 +68,42 @@ export function markInputError(el, ms = 2500) {
   el.classList.add("input-error")
   setTimeout(() => el.classList.remove("input-error"), ms)
 }
+
+/** Confirm popover for irreversible actions (F-W17 — `SETTINGS.md` §2.10)。复用既有
+ *  `.auto-confirm` / `.auto-backdrop` 件（零新增 CSS）；挂 `document.body` ⇒ 键行重绘不打断
+ *  在位态。`onConfirm` = **开框时捕获**的载荷闭包（不读确认时的 DOM）⇒ 确认期间的行重绘
+ *  不改删除目标、不吞确认。 */
+export function showConfirmPopover({ text, yesLabel, noLabel, onConfirm }) {
+  closeConfirmPopover() // 单例：开框前清既有（全局同名——与 session-bar / mode-buttons 两处同规）
+  const backdrop = document.createElement("div")
+  backdrop.className = "auto-backdrop"
+  backdrop.addEventListener("click", closeConfirmPopover)
+  const popover = document.createElement("div")
+  popover.className = "auto-confirm"
+  popover.setAttribute("role", "alertdialog")
+  popover.setAttribute("aria-label", yesLabel)
+  popover.innerHTML = `<div class="auto-confirm-text">${escHtml(text)}</div>
+    <div class="auto-confirm-actions">
+      <button class="auto-confirm-yes" aria-label="${escHtml(yesLabel)}">${escHtml(yesLabel)}</button>
+      <button class="auto-confirm-no" aria-label="${escHtml(noLabel)}">${escHtml(noLabel)}</button>
+    </div>`
+  popover.querySelector(".auto-confirm-yes").addEventListener("click", (e) => {
+    if (e.detail > 1) return // 连点护栏：双击第二击（detail > 1）不得误确认
+    closeConfirmPopover()
+    onConfirm()
+  })
+  popover.querySelector(".auto-confirm-no").addEventListener("click", closeConfirmPopover)
+  // 框内 Escape：拦截冒泡 ⇒ 不连带执行 chat.js 的「关设置面板」分支（面板保持打开）
+  popover.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return
+    e.stopPropagation()
+    closeConfirmPopover()
+  })
+  document.body.append(backdrop, popover)
+  setTimeout(() => popover.querySelector(".auto-confirm-no")?.focus(), 50) // 安全默认：焦点落「取消」
+}
+
+/** 弹框清除入口（弹框 DOM 触点收敛为 1）：开框前单例清理 · 框内三条取消 · `closeSettings()` 同清。 */
+export function closeConfirmPopover() {
+  document.querySelectorAll(".auto-confirm, .auto-backdrop").forEach((el) => el.remove())
+}

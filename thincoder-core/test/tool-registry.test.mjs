@@ -26,12 +26,12 @@ const mod = (rel) => import(pathToFileURL(join(ROOT, rel)).href)
 const SHARED_FACE = [
   "read", "write", "edit", "insert_after", "hashline_edit", "apply_patch",
   "read_image", "bash", "glob", "grep", "websearch", "ls", "fetch", "delete",
-  "git", "question", "checklist", "lint", "lsp", "execute", "file_ops",
+  "git", "question", "lint", "lsp", "execute", "file_ops",
   "process", "get_current_time", "wait_for", "tree",
 ]
 // Instance-bound faces the consumer assembly adds (factories need the shell's
 // memory handle at run time — they cannot be static entries).
-const INSTANCE_BOUND = ["memory", "code_search", "doc_search", "repo_outline", "settings", "peer_instances"]
+const INSTANCE_BOUND = ["memory", "code_search", "doc_search", "repo_outline", "settings", "peer_instances", "ledger_query", "ledger_count"]
 // Host-capability tools — ④ (TOOLS #179): the VS Code shell owns them.
 const HOST_ONLY = ["context", "focus"]
 const TEXT_ONLY_MODEL = "qwen3.7-max" // spec row carries no `multimodal` (image parts rejected)

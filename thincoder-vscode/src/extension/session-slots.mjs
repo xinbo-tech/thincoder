@@ -1,30 +1,41 @@
 /**
- * session-slots.mjs — 端壳：会话槽路径 / manifest / 认领面（VS Code 端）。
+ * session-slots.mjs — 端壳：本端记录（end marker）+ 恢复决策（VS Code 端）。
  *
- * W11（CORE-UNIFICATION · VSC 接线 · 2026-09-15）：本档自持实现退场——slot / manifest /
- * 路径 / 属主判定 / 认领面**单源 = 核** `@thincoder/core/session-slots.mjs`（存储契约
- * version 1/2 不变：同一 `~/.thincoder/sessions/<sha1(cwd)>.json.{N,manifest}`，与 CLI 共文件；
- * 旧短哈希迁移面随核 `session-migrate` 在位）。
+ * W11（CORE-UNIFICATION · VSC 接线 · 2026-09-15）：slot / manifest / 路径 / 属主判定 / 认领面
+ * **单源 = 核**（`@thincoder/core/session-slots.mjs` · `session-slots-manifest.mjs` ·
+ * `session.mjs`——存储契约 version 1/2 不变：同一
+ * `~/.thincoder/sessions/<sha1(cwd)>.json.{N,manifest}`，与 CLI 共文件；旧短哈希迁移面随核
+ * `session-migrate` 在位）。
  * 本档保留 = 真端差面（`docs/core/design/SESSION.md` §6.10 D-1/D-4「VSC 镜像」）：
  *   ① 本端记录（end marker）后缀 `END = "vscode"`——核 = `"cli"`：两端各写各的文件（NF1
  *      本端记录 = 本端单写者文件；跨端互写正是端分离恢复要消的病——D-SE9/D-SE10）；
- *   ② `resumeSlot` 恢复决策（D-2 ①②③）读**本端**记录——算法与核 `resumeSlot` 同源，
- *      差异只在 marker（核实现把 `END` 写死）。
+ *   ② `resumeSlot` 恢复决策（D-2 ①②③）读**本端**记录——算法与核 `resumeSlot` 同源同步骤，
+ *      差异只在 marker（核实现把 `END` 写死）；
  *   ③ `sessionsDir` 访问器（核未导出根目录访问器——由核 `sessionPath` 反推，保持单源：
  *      随核 `configDir` 与核 `_setSessionsDirForTest` 沙箱缝走，本档零副本）。
  *
- * 核缺口（本档登记 · 见 §5 未决）：核 marker 面为编译期单值（`END = "cli"`），
- * `cleanDeadOwners` / `usableSlot` 为核内私有件 ⇒ 端壳无法零行为差地直接消费核 `resumeSlot`
- * （消费即写核端 marker = 跨端互写）。候选核内笔 = `resumeSlot(cwd, { end })` 形态。
+ * F-MI7（2026-09-18 · MULTI-INSTANCE-COLLAB §3.1——端侧探测收口）：
+ *   ① 本档**零自有探测**——死主清理改核 `cleanDeadOwners(m, bundle)`（本档私有副本退场）；
+ *      可用判据 `usableSlot` = 核内同名件镜像（核内私有未导出），入参改**判据束**；
+ *   ② `resumeSlot` → **async**：入口一次 `probeOwnersAsync(ownerPids(m))` 拿束（清单空 ⇒
+ *      探测面零 exec 早退），清理 / 占用 / 分配全部查表——与核 `resumeSlot` 同形。
+ *      三态（D-MI10/D-MI11）：属主 unknown（探测失败 / 缺行）⇒ 槽**不可用**——保守回落到
+ *      `allocateFresh` 取全新号，绝不与「可能活着」的属主同槽（核 `usableSlot` 同判据）。
+ * 核缺口（本档登记 · 见 §5 未决）：核 marker 面为编译期单值（`END = "cli"`）⇒ 端壳无法零行为差
+ * 地直接消费核 `resumeSlot`（消费即写核端 marker = 跨端互写）。候选核内笔 =
+ * `resumeSlot(cwd, { end })` 形态。
  */
 import { existsSync, readFileSync } from "node:fs"
 import { dirname } from "node:path"
-// 本档体内使用（其余核名 = 纯转口，见下 `export … from`）；属主 / 占用判定住核 `session.mjs`。
+// 本档体内使用（其余核名 = 纯转口，见下 `export … from`）。
 import {
-  getSessionId, sessionPath, slotPath, manifestPath, loadManifest, isProcessAlive,
+  getSessionId, sessionPath, slotPath, manifestPath, loadManifest,
   writeSessionFile, claimSlot, allocateFresh,
 } from "@thincoder/core/session-slots.mjs"
-import { loadSlotFile, slotOccupancy } from "@thincoder/core/session.mjs"
+import { loadSlotFile } from "@thincoder/core/session.mjs"
+// F-MI7 判据面（单源 = 核）：探测束 + 属主三态 / 死主清理 / pid 清单。
+import { probeOwnersAsync } from "@thincoder/core/process-probe.mjs"
+import { ownerPids, ownerStateOf, cleanDeadOwners } from "@thincoder/core/session-slots-manifest.mjs"
 
 // 单源转口（核面——调用方 import 路径与名面不变）：路径 / manifest / 属主 / 认领 / 沙箱缝。
 // （原端壳导出名 `writeFile` → 核名 `writeSessionFile`——原子写单点；0 外部消费方。）
@@ -76,33 +87,16 @@ export function writeEndMarker(cwd, slot) {
 
 // ─── 恢复决策（D-2——读本端记录；核 `resumeSlot` 同算法 · 异 marker）────────────
 
-/** 死主条目清理（核 `cleanDeadOwners` 同语义——核内私有件、未导出）：删除 owner 进程已死的
- *  slotSessions 条目。死主判定必须跑 `isProcessAlive`——不得以「文件缺失」短路（活进程在
- *  「认领 → 首次保存」窗口文件暂缺，误删致双进程同槽）。返回 deletions 计算函数（调用时按
- *  m 当前状态过滤刚重新认领的槽——防删掉自己的新属主），无清理返回 null。删除须经
- *  `saveManifest` 的 deletions 显式落盘（条目级合并会把磁盘死条目从 fresh 复活回写）。 */
-function cleanDeadOwners(m) {
-  const mySessionId = getSessionId()
-  const deadSlots = []
-  for (const [slot, owner] of Object.entries(m.slotSessions ?? {})) {
-    if (owner && owner !== mySessionId) {
-      const pid = parseInt(owner.split("-")[0])
-      if (!pid || !isProcessAlive(pid)) {
-        delete m.slotSessions[slot]
-        deadSlots.push(slot)
-      }
-    }
-  }
-  return deadSlots.length === 0
-    ? null
-    : () => ({ slotSessions: deadSlots.filter((s) => m.slotSessions[s] !== mySessionId) })
-}
-
 /** 本端记录槽可用判据（D-2）：slot ∈ m.slots + 槽文件在盘 + 属主 空/死/本进程。
- *  属主判定单源 = 核 `slotOccupancy`（同进程属主排除语义一致）。 */
-function usableSlot(cwd, m, slot) {
+ *  F-MI7：属主判定查**判据束**（零自有探测——与核内同名件逐字同判据）；属主 unknown
+ *  （探测失败 / 缺行）⇒ **不可用**（不认领——保守：回落到 allocateFresh 取全新号）。
+ *  注意判据不得以「文件缺失」短路死主判定（活进程在「认领 → 首次保存」窗口文件暂缺——
+ *  误删致双进程同槽）：本函数只判**可用性**，不删条目；删除归核 `cleanDeadOwners`。 */
+function usableSlot(cwd, m, slot, bundle = null) {
   if (!m.slots[slot] || !existsSync(slotPath(cwd, slot))) return false
-  return !slotOccupancy(cwd, slot).occupied
+  const owner = m.slotSessions?.[slot]
+  if (!owner || owner === getSessionId()) return true
+  return ownerStateOf(owner, bundle) === "dead"
 }
 
 /**
@@ -117,21 +111,25 @@ function usableSlot(cwd, m, slot) {
  * 每次落点都写本端记录；claim 后读槽失败（.corrupted/.unreadable——`loadSlotFile` 既有改名
  * 保全语义）→ 保持已 claim 槽 + data:null——不回滚认领、不改 marker——下次保存原地重建（T-M15）。
  * 读槽 = 核 `loadSlotFile`（端侧无裸 v1 单文件兜底——核 `resumeSlot` 有该兜底，见 §5 登记）。
+ *
+ * F-MI7：**async**——入口一次 `probeOwnersAsync(ownerPids(m))` 拿判据束（死主清理 / 可用
+ * 判据 / 空闲分配三面共用一束——零逐 pid exec；ownerPids 清单空 ⇒ 探测面零 exec 早退）。
  */
-export function resumeSlot(cwd) {
+export async function resumeSlot(cwd) {
   const m = loadManifest(cwd)
   m.slotSessions ??= {}
+  const bundle = await probeOwnersAsync(ownerPids(m)) // F-MI7：入口一次异步束
   // 与核 ensureActive 同型的死主清理（认领路径持久化——仅传 m 等于没删）
-  const deadParam = cleanDeadOwners(m)
+  const deadParam = cleanDeadOwners(m, bundle)
   const rec = readEndMarker(cwd) // null = 缺失/损坏；{slot:null|N} = 文件在（D-1）
   let slot = null
-  if (rec?.slot != null && usableSlot(cwd, m, rec.slot)) slot = rec.slot // ① 本端记录可用
+  if (rec?.slot != null && usableSlot(cwd, m, rec.slot, bundle)) slot = rec.slot // ① 本端记录可用
   else if (rec === null) {
     if (m.active && m.slotSessions?.[m.active] === getSessionId()) slot = m.active // ②a 同进程重入
-    else if (m.active && usableSlot(cwd, m, m.active)) slot = m.active // ②b 一次性继承
+    else if (m.active && usableSlot(cwd, m, m.active, bundle)) slot = m.active // ②b 一次性继承
   }
   if (slot !== null) claimSlot(cwd, slot, m, deadParam)
-  else slot = allocateFresh(cwd, m, deadParam) // ③ 全新分配（slot:null 绝不继承——T-M4）
+  else slot = allocateFresh(cwd, m, deadParam, bundle) // ③ 全新分配（slot:null 绝不继承——T-M4）
   const data = loadSlotFile(cwd, slot)
   writeEndMarker(cwd, slot)
   return { slot, data }

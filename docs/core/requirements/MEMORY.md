@@ -9,7 +9,7 @@
 ## 1. 总体定位
 
 记忆系统 = 三层记忆（`personal` / `project` / `team`）的存取 **+** 代码 / 文档索引 **+** 嵌入面。
-CLI 侧住 `thincoder-cli/src/memory/**`（8 档）与 `memory.mjs` 转口；VSC 侧住 `thincoder-vscode/src/memory.mjs` + `memory-tool.mjs`。
+CLI 侧住 `thincoder-cli/src/memory/**`（8 档）与 `memory.mjs` 转口；VSC 侧住 `thincoder-core/memory.mjs` + `memory-tool.mjs`。
 本板块对本子系统的要求 = 该面归一为**核内单一实现**，方向 = **CLI 语义**（承用户裁定 A12 / A13）。
 
 > 面清单与逐面裁决（分类 / 端差处置 / 前提校验 / 归属段）→ `docs/core/design/MEMORY.md` §1–§2（不复制）。
@@ -120,7 +120,8 @@ F8 嵌套 memory 文件 —— 连续两次 `needed:false`；两集合一致。F
 | F-M2 | top-K 选择 | 排序改为有界选择（堆 / 插入序）——结果集 ≤ `max(limit×4, 20)` 既有候选口径不变 |
 | F-M3 | 召回语义不变 | 仍对全表评分（无近似 / 剪枝）——只是内存形态改变；FTS 通道与 RRF 融合不变 |
 
-**非功能**：N-M1 峰值有界（扫描期驻留 ≤ 块上界 + 候选，不随表行数线性增长）· N-M2 语义等价（同数据 / 查询下与全量排序逐条等价，除并列序按稳定规则）· N-M3 零依赖 / 可移植（无迭代器则 rowid 分页）。
+**非功能**：N-M1 峰值有界（扫描期驻留 ≤ 块上界 + 候选，不随表行数线性增长）· N-M2 语义等价（同数据 / 查询下与全量排序逐条等价，除并列序按稳定规则）·
+N-M3 零依赖 / 可移植（无迭代器则**键序分页**——游标键随各表 PK 选取：`doc_chunks` / `code_chunks` = `(path, line_start)`，`entries` / `files` = `id`；语义 = 可移植分页不变）。**2026-09-18 收正**（承 TUI 假死批 §6.10 修法 A1；父侧直接执行）。
 
 **判定句**：F-M1 预置 N 行向量 → 扫描中单次物化 ≤ 分块常量 ∧ 最终结果与修复前逐条相等。F-M2 候选集数量 = `max(limit×4, 20)` ∧ 排序次序一致。F-M3 全表评分数 = 表行数；FTS 通道零改。
 
@@ -157,8 +158,8 @@ F8 嵌套 memory 文件 —— 连续两次 `needed:false`；两集合一致。F
 | 配置面 | 记忆锚定 cwd——无记忆路径配置字段；`~` 展开唯一接线 = `shell` 字段 | 对端四字段展开 |
 | 命名面 | 模型可见全 `layer`；内部存储 helper 仍名 scope（映射点 = 工具层） | 同源（内部词保留） |
 
-> VSC 端证据坐标（实核 as-of 2026-09-15）：`thincoder-vscode/src/memory.mjs:30`（`memoryDir`）· `:36`（`scopeDir`）· `:170`–`:177`（legacy 根 + `_scope` 标注）· `thincoder-vscode/src/memory-tool.mjs:117`（action 级只读）· `:151`（向量通道）
-> · `thincoder-vscode/src/indexer.mjs:162`（`model-changed`；W8 已退役——核面现体 `thincoder-core/memory/code-sync.mjs`）· `:170`–`:258`（`needsRebuild` 七词表）· `thincoder-vscode/src/extension/panel-index.mjs:171`（未列入提示行）。
+> VSC 端证据坐标（实核 as-of 2026-09-15）：`thincoder-vscode/src/memory.mjs:30`（`memoryDir`）· `:36`（`scopeDir`）· `:170`–`:177`（legacy 根 + `_scope` 标注）· `thincoder-vscode/src/memory-tool.mjs:117`（action 级只读）· `:151`（向量通道） （迁移期引文——档已删）
+> · `thincoder-vscode/src/indexer.mjs:162`（`model-changed`；W8 已退役——核面现体 `thincoder-core/memory/code-sync.mjs`）· `:170`–`:258`（`needsRebuild` 七词表）· `thincoder-vscode/src/extension/panel-index.mjs:171`（未列入提示行）。 （迁移期引文）
 
 ### 4.8 嵌入输入编码安全（缺陷修复 · 2026-09-15）
 
@@ -174,6 +175,24 @@ F8 嵌套 memory 文件 —— 连续两次 `needed:false`；两集合一致。F
 **判定句**：emoji 恰落截断上限边界 ⇒ 送 embed 的请求体**零孤立代理**（`JSON.parse(请求体).input[]` 逐条过孤立代理正则 ⇒ 0 命中；
 **勿用原串扫法**——`JSON.stringify` 已把孤立代理转义为 `\ud83d` 文本、对原串恒不命中）∧ 送文本 = 前缀 + `content` 前 `EMBED_TEXT_MAX_LEN − 1` 码元（整对丢弃）。
 ASCII / BMP 跨界 · emoji 全内（代理对完整）· 短文本 ⇒ 与裸 `slice(0, EMBED_TEXT_MAX_LEN)` 逐字相等。
+
+### 4.9 扫描面响应性 / origin 归一 / WAL 卫生（TUI 假死批——新增 · 2026-09-18 · F-S / N-S 编号族 = 扫描面，避免与 §4.6 / §4.7 的 F-M 族重号）
+
+**总体需求**：作为**长时间使用 CLI 的开发者**，我想要**回合装配与子代理 spawn 期间界面保持可交互**、**同一项目树不因路径书写差异被重复索引**、**WAL 不无限膨胀**，以便**不被数十秒的假死打断，且检索面不出现「半可见」**。
+
+来源 = 用户报告（主 agent 发起会话 / 子 agent spawn 时 TUI 假死数秒、不能滚动）+ 实测（`memory.db` 2.80 GB · 单次全表向量扫描 29.4 s · `node:sqlite` 同步 API ⇒ 事件循环独占；重复 origin 族 `D:\…` vs `d:\…` 各约 7 万行）。
+
+| # | 需求（能力逐条可交付） | 范围边界（明确不做什么） |
+|---|---|---|
+| F-S1 扫描期可响应 | 向量扫描在**分块间让出事件循环**（时间片预算）——扫描期间输入 / 渲染回调可被处理 | 不改召回语义（仍全表评分、无近似 / 剪枝）；不改块大小常量语义 |
+| F-S2 键序游标（墙钟） | 分块游标取**各表 PK 键序**（`doc_chunks` / `code_chunks` = `(path, line_start)`）——消「每块重排全量」的二次方形态（实测 29.4 s → 1.7 s，同覆盖） | 不改召回语义；不建索引、不改 schema；`entries` / `files` 现有 rowid 序即其 PK 序（零改） |
+| F-S3 子代不注入召回 | 回合记忆召回注入限 **depth-0**（子代理 spawn 的子代回合不注入；子代仍可按需调 readonly 检索工具） | 不加配置开关；不改注入内容 / limit / 失败静默语义 |
+| F-S4 origin 归一 | 检索库 origin 键**入口归一**（盘符大小写 / 分隔符）——同一树不双份索引、不半可见 | 不做 `realpath`（subst / junction / 8.3 短名不在覆盖面）；不改端**装配**文件（核库**读数点**例外——如 VSC 面板索引计数取归一值，见设计档 §6.11） |
+| F-S5 WAL 卫生 | 开库一次性 `wal_checkpoint(TRUNCATE)` + `journal_size_limit` 上界 | 不做写侧逐次 checkpoint；不改 `journal_mode` |
+
+**非功能**：N-S1 **可响应性可判**（让出事件可确定性断言，不依赖真实时钟）· N-S2 **二次方零容忍**（游标形须走索引直扫，计划面可机判——等值前缀列不得带进元组游标）· N-S3 **边界写实**（开库回收最坏等待上界 = `busy_timeout`，非「不阻塞」）。
+
+**设计侧 = `docs/core/design/MEMORY.md` §6.10–§6.12 + `MULTI-INSTANCE-COLLAB.md` §3.1 / §3.2**（批次档 `2026-09-18-tui-freeze.md` §2 **三方一致**）——本档不复制。
 
 ## 5. 不并项与历史沿革（批 5 · 2026-09-15）
 
@@ -193,3 +212,4 @@ ASCII / BMP 跨界 · emoji 全内（代理对完整）· 短文本 ⇒ 与裸 `
 - 2026-09-15（**索引存储面裁定收口**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮-2）：§4.7 加裁定收口注 + F-M5/F-M6 与端差「索引形态」行同轮标注（文件制索引面随 W8 删旧退场——数据面零迁移 / 零兼容）。
 - 2026-09-15（**索引面覆退场注 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮-4 发现 #4）：§4.4 F6–F9 逐行加「随归一退场」标 + 章头裁定收口注 + 判定句退场注（核面承接 = `docs/core/design/MEMORY.md` §6.9 / D-MEM14）；对外可见面变更在 `docs/core/design/CORE-UNIFICATION.md` §2.12.2 第 11 行同批补登记。
 - 2026-09-15（**embedding UTF-16 截断缺陷批 · eng-designer**——承 `docs/batches/2026-09-15-embedding-utf16-truncation.md` 的 §2）：新增 §4.8「嵌入输入编码安全」（F-EM1 / N-EM1 + 判定句）；设计面 = 设计档 MEMORY.md 的 §6.3 / §7 D-MEM16。
+- 2026-09-18（**TUI 假死批 · 父侧直接执行**）：新增 §4.9「扫描面响应性 / origin 归一 / WAL 卫生」（F-S1–F-S5 / N-S1–N-S3——评审 §3 发现的 3 项缺位条目补齐）；另 §4.6 **N-M3 措辞收正**（「无迭代器则 rowid 分页」→「键序分页」，语义 = 可移植分页不变）；源 = 批次档 `docs/batches/2026-09-18-tui-freeze.md` §2 与设计档 `MEMORY.md` §6.10–§6.12。

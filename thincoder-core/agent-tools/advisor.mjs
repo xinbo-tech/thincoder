@@ -1,14 +1,19 @@
 /**
  * agent-tools/advisor.mjs — advisor tool wrapper.
  * The agent calls this explicitly to get an independent review.
- * type="design" for design doc review, type="code" for code review (default).
+ * The top-level `type` is REQUIRED and must be exactly "code" or "design"
+ * (F30 fail-closed — no silent default; ADVISOR-GUARDS.md §2.4).
  * §11.2 (R13 — async advisor): at depth 0 the review launches into the
  * background pool by DEFAULT (async:true / omitted; async:false forces the
  * blocking review); depth>0 (eng-coder self-review) stays synchronous always.
  */
-import { runAdvisorReview, MAX_ADVISOR_ROUNDS, buildCapMessage, advisorIncompleteMarker, ADVISOR_LAUNCH_REFUSAL_PREFIX, buildDesignReviewGuardMessage } from "../advisor/run.mjs"
+import { runAdvisorReview, advisorIncompleteMarker, ADVISOR_LAUNCH_REFUSAL_PREFIX } from "../advisor/run.mjs"
 import { resolveBatchDocPath } from "./batch-segment.mjs"
-import { isDocPath, loadConventions } from "../conventions.mjs"
+// M6（模块设计 §2.1 F3）：评审对象来源读 manifest docRoot（声明面）——复用 M4 的
+// write-gate.mjs 单一权威源（KD-M6-1），替代 v1 的 loadConventions/isDocPath 分类；
+// normAbs 同源 re-export（指针非副本）。不 import dispatch.mjs（簇间回边，环风险）。
+import { resolveReviewTargetPaths, normAbs } from "../agent/write-gate.mjs"
+import { sep } from "node:path"
 import {
   generateDesignToken,
   settleDesignReview,
@@ -16,10 +21,9 @@ import {
   launchAsyncAdvisor,
   stripApprovedSuffix,
 } from "./advisor-async.mjs"
-// 第 33 批（§17.5）：护栏消费面——工具层预检（检查点 1）+ 同步面计数（计数点 2）。
-import {
-  designReviewOutcome, designReviewStreakRecord, designReviewStreakStopped, noteDesignReviewOutcome,
-} from "./review-streak.mjs"
+// F30/F31（2026-09-18 顾问面治理批）：类型门判定 / 拒发串 / 对象标识行——单源 `advisor/notice.mjs`
+// （文案逐字 = ADVISOR-GUARDS.md §2.4 / §2.5）；零计数载体（计数护栏随撤 cap 整体退场）。
+import { typeGateCriterion, buildTypeGateRefusal, scopeSummary, withIdentityLine } from "../advisor/notice.mjs"
 
 // Design-token utilities moved to advisor-async.mjs (the async settle shares
 // them — no wrapper↔runner module cycle); validateDesignToken stays exported
@@ -30,8 +34,8 @@ export const advisorTool = {
   name: "advisor",
   description:
     "Run an independent review on your work. " +
-    "Use type='design' to review design documents before implementation — pass documents=[...] with the explicit list of doc paths to review; use documents in code review too (the task's Docs involved list). " +
-    "Use type='code' (default) to review code changes after implementation — pass paths=[...] to specify which files or directories to review, or documents=[...] for acceptance criteria context. " +
+    "type is REQUIRED — exactly one of the two legal values: type='design' reviews design / requirement documents before implementation (pass documents=[...] with the explicit list of doc paths; plus batchDoc when a batch record is in flight); type='code' reviews the code you changed after implementation (pass paths=[...] to scope files/directories — documents=[...] adds acceptance-criteria context). " +
+    "A call without a type (or with a conflicting object.type) is refused — there is no default and no silent fallback. " +
     "The advisor is an independent read-only sub-agent that explores the codebase, " +
     "reads files, and traces callers via grep/lsp. " +
     "For code review: round 1 does a full review, round 2 verifies the agent's fix claims, " +
@@ -54,7 +58,7 @@ export const advisorTool = {
   parameters: {
     type: "object",
     properties: {
-      type: { type: "string", enum: ["code", "design"], description: "Review type: 'design' for design doc review, 'code' for code review (default)" },
+      type: { type: "string", enum: ["code", "design"], description: "Review type (required): 'design' for design doc review, 'code' for code review. Omitting it is refused — there is no default." },
       async: {
         type: "boolean",
         description: "Background review: default at depth 0 = true (async — ack now, report via digest); async:false forces the blocking review (mechanism parameter — top-level launches are async by default). depth>0 → always sync (async:true rejected).",
@@ -85,14 +89,13 @@ export const advisorTool = {
         description: "Design review only: path to the batch record currently in flight. Validated WHENEVER passed (any review type) — a value that is not a readable file is refused with an error rather than ignored; for design reviews the reviewer then ALSO gets the batch_segment write channel to record its findings table + VERDICT + counts into §3 (ENGINEERING-MODE.md §2.20). Omit when no batch record is in flight — the review then runs unchanged with no write channel (zero regression).",
       },
     },
+    required: ["type"],
   },
   readonly: true,
   sideEffectExempt: true,
   outputPanel: true,
   async execute(args, ctx) {
     const agent = ctx.agent
-    const reviewType = args.type || "code"
-    const documents = args.documents || null
     // Review-object declaration (§18.8 D-OA3): the PARENT constructs it and the
     // advisor tool passes it through — mechanical anchoring, not model inference.
     // Any non-object value (string/array/primitive, possibly from a malformed
@@ -100,6 +103,20 @@ export const advisorTool = {
     const reviewObject = args.object && typeof args.object === "object" && !Array.isArray(args.object)
       ? args.object
       : null
+    // F30 类型门（**最早判定**——先于范围判定 / 实例解析 / 一切拒发族）：顶层 `type` 必须逐字
+    // ∈ {"code","design"}——缺失 / 空串 / 非法值 / 非字符串 / 与 `object.type` 声明冲突 ⇒ 拒发
+    // （前缀 `Advisor: launch refused` + Why + 两个合法值行 + 标识行），登记 `_advisorRefusals`；
+    // **零实例 / 零 token / 零 LLM**（不静默降级——用户 2026-09-18 裁定）。
+    const gateCriterion = typeGateCriterion(args.type, reviewObject?.type)
+    if (gateCriterion) {
+      if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
+      return buildTypeGateRefusal({
+        criterion: gateCriterion, received: args.type, declared: reviewObject?.type ?? null,
+        scope: scopeSummary(args.documents?.length ? args.documents : args.paths),
+      })
+    }
+    const reviewType = args.type
+    const documents = args.documents || null
     // Scope fallback: the runtime mutation record (zero git) covers guard-triggered
     // reviews where the model did not pass explicit paths.
     const paths = args.paths || (agent._touchedFiles?.length ? [...agent._touchedFiles] : null)
@@ -107,19 +124,29 @@ export const advisorTool = {
     // Code review must have a scope — no implicit fallback.
     if (reviewType !== "design" && !paths && !documents) {
       if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
-      return "Advisor: no review scope specified. Provide paths (files/directories to review) or documents (acceptance criteria context)."
+      // F31：既有稳定前缀逐字（行首）+ 标识块尾随（单源 notice.mjs）。
+      return withIdentityLine(
+        "Advisor: no review scope specified. Provide paths (files/directories to review) or documents (acceptance criteria context).",
+        { type: reviewType, scope: "none", round: "—", criterion: "scope-missing" },
+      )
     }
 
     // Design review: the review scope must be documentation files. Classification
-    // comes from the single authority (src/conventions.mjs) — the old `docs/`
-    // prefix test is retired with it (FR12: no directory-name hardcoding in the
-    // gate; a project whose docs live elsewhere just declares its code paths).
+    // comes from the manifest-declared review-target roots (M4 write-gate.mjs single
+    // authority — FR12: no directory-name hardcoding; a project whose docs live
+    // elsewhere declares them in PROJECT-MANIFEST.json docRoot).
     if (reviewType === "design" && documents) {
-      const conv = loadConventions(agent.cwd)
-      const invalidDocs = documents.filter((doc) => !isDocPath(doc, conv))
+      const roots = resolveReviewTargetPaths(agent).map((r) => r.replace(/[\\/]/g, sep))
+      const invalidDocs = documents.filter((doc) => {
+        const n = normAbs(doc, agent.cwd).replace(/[\\/]/g, sep)
+        return !roots.some((r) => n === r || n.startsWith(r + sep))
+      })
       if (invalidDocs.length > 0) {
         if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
-        return `Advisor: design review documents must be documentation files (per the project's conventions). Invalid: ${invalidDocs.join(", ")}`
+        return withIdentityLine(
+          `Advisor: design review documents must be documentation files (per the project's conventions). Invalid: ${invalidDocs.join(", ")}`,
+          { type: reviewType, scope: scopeSummary(documents), round: "—", criterion: "scope-not-doc" },
+        )
       }
     }
 
@@ -137,7 +164,7 @@ export const advisorTool = {
       // 拒发登记（与 cap/池满拒同款）：评审未跑——不置 called/不耗轮次（record-results
       // 的 REFUSED 契约——advisor 评审发现 #1：拒发不得静默满足 guard）。
       if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
-      return "Advisor: async reviews are only available at depth 0 — the top-level session owns the background pool (AGENT-LOOP.md §11.2); inside a child (eng-coder self-review) reviews run synchronously. Call advisor again without async:true (or with async:false)."
+      return "Advisor: async reviews are only available at depth 0 — the top-level session owns the background pool (AGENT-LOOP-SUBAGENT.md §6.10); inside a child (eng-coder self-review) reviews run synchronously. Call advisor again without async:true (or with async:false)."
     }
     const isAsync = asyncRequested || (depth === 0 && args.async !== false)
 
@@ -162,26 +189,9 @@ export const advisorTool = {
     const designToken = reviewType === "design" ? generateDesignToken(agent) : null
     const designId = reviewType === "design" ? resolved.designId : null
 
-    // Cap pre-check (T-24b11 — per-review ≤5 rounds, CODE REVIEWS ONLY): a 6th
-    // launch of a capped CODE instance is refused synchronously — the review
-    // never starts (sync and async alike; runAdvisorReview's own cap check stays
-    // for legacy direct callers). DESIGN reviews are EXEMPT (2026-09-07 §8
-    // ruling): their rounds keep advancing (ROUND2/3 convergence prompts + TUI
-    // round display) but the cap never refuses them. The refusal marks no
-    // called/round state (guard keeps pushing only while a review can still run
-    // — at the cap the round check stops it).
-    if (resolved.run.reviewType !== "design" && resolved.run.round >= MAX_ADVISOR_ROUNDS) {
-      if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
-      return buildCapMessage(agent)
-    }
-
-    // 第 33 批（§17.5 检查点 1——工具层预检；cap 预检邻位 / sync / async 分叉前）：同一 doc-set
-    // 连续 `MAX_DESIGN_REVIEW_STREAK` 次未产出可用结算 ⇒ 拒发（登记 `_advisorRefusals` 同 cap /
-    // 池满款——不置 called / 不耗轮次 / **零 LLM**），返回结论串。
-    if (reviewType === "design" && designReviewStreakStopped(agent, resolved.run.docSetKey)) {
-      if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
-      return buildDesignReviewGuardMessage(designReviewStreakRecord(agent, resolved.run.docSetKey), documents ?? [])
-    }
+    // 撤 cap 预检 / 撤停止预检（2026-09-18 用户裁定——ADVISOR-CONVERGENCE.md §3.1）：本工具层
+    // **无任何按计数拒发**——第 6 次及以后的发起照常受理（轮次仅作提示词衰减与显示）；失败路径
+    // 的出口 = 结算出口的失败结论块（F28/F29——两轨共用，ADVISOR-GUARDS.md §7）。
 
     if (isAsync) {
       const ack = launchAsyncAdvisor(agent, ctx, {
@@ -204,6 +214,15 @@ export const advisorTool = {
       const freezeNote = reviewType === "design"
         ? "；D5 冻结窗口：被审文档（含批次档）在报告送达前零写入——在途写入会被拒绝，写入将使本轮结算为陈旧 (pass 不发 token)"
         : ""
+      if (ack.queued) {
+        // ED-4（2026-09-16 · AGENT-LOOP.md §6.10）：排队 ack——模型可见状态如实 queued +
+        // position（评审槽空自动启动——不误导模型等待即刻 digest）。
+        return JSON.stringify({
+          id: ack.id, kind: "advisor", status: "queued", position: ack.position,
+          reviewId: resolved.reviewId,
+          note: `评审已排队（第 ${ack.position} 位）——评审槽空自动启动，完成自动回来 (review queued at position ${ack.position} — it starts automatically when a pool slot frees; the report arrives in a digest turn automatically; pass this id to cancel if needed)` + freezeNote,
+        })
+      }
       return JSON.stringify({
         id: ack.id, kind: "advisor", status: "running",
         reviewId: resolved.reviewId,
@@ -244,11 +263,8 @@ export const advisorTool = {
       // (shared with the async settle — fix #2).
       const incomplete = advisorIncompleteMarker(result)
       const settled = settleDesignReview(agent, resolved.run, designToken, result, { incomplete })
-      // 第 33 批（§17.5 计数点 2——同步面）：同分类单源落账（同步面无 stale / 无落盘步骤
-      // ⇒ persistFailed 恒 false）。
-      noteDesignReviewOutcome(agent, resolved.run.docSetKey, designReviewOutcome({
-        launchRefused, stale: false, hasResult: result != null, incomplete, persistFailed: false,
-      }))
+      // 撤计数（2026-09-18 用户裁定）：原同步面“分类落账”随会话级计数器整体退场（零载体——F28③）；
+      // 失败结论块由**结算出口**产出（异步结算 `settleAdvisorRun`——两轨共用，ADVISOR-GUARDS.md §7）。
       // F2e (§29.1): the sync prior mirror must not carry the raw echo the runner
       // stored — overwrite with the clean settled form (exact-suffix truncation).
       if (settled.passed) {

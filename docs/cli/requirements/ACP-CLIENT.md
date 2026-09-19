@@ -28,9 +28,11 @@ ACP 一次实现即可接通多家编辑器（桌面 + Web + 移动自托管编�
 | **F1** | 协议接入（schema v1 方法覆盖） | agent 侧 `initialize` / `authenticate` / `session/{new,load,resume,list,delete,prompt,cancel,close,set_mode,set_config_option}` 全接通；`logout` 不做（无账号体系）；unstable 扩展不做 |
 | **F2** | 事件流与工具桥 | agent 输出以 `session/update` 事件块流式送达；**写路径走 IDE**（`fs/write_text_file`）——agent 编辑以 IDE 原生 diff 应用；edit 的判定委派本地单一权威（双通道同语义） |
 | **F3** | 审批弹在 IDE | 工具审批经 `session/request_permission`；响应缺失 / 取消 / 未知 → 拒绝（安全优先） |
-| **F4** | 登录态与会话复用 | 复用终端配置（`~/.thincoder/config.json`）；会话存档按槽位 load / resume / list / delete；每回合末存档 |
+| **F4** | 登录态与会话复用 | 复用终端配置（`~/.thincoder/config.json`）；会话存档按槽位 load / resume / list / delete；每回合末存档；**并提供 `thincoder acp --login` 入口**（判定句见下） |
 | **F5** | **headless 通道不提供不存在的交互能力** | 见下判定句 |
 | **F6** | **TUI 显示路由信号零进 ACP 客户端可见面** | 见下判定句 |
+| **F7** | **核事件 token（`⟦ev⟧…`）零进 ACP 客户端可见面** | 见下判定句 |
+| **F8** | **ACP v1 契约形状合规（外部编排器可挂可用）** | 见下判定句 |
 
 **F5 判定句（通道裁剪——question 工具）**
 
@@ -52,6 +54,37 @@ ACP 一次实现即可接通多家编辑器（桌面 + Web + 移动自托管编�
 - **R-A2.4**：`onToolOutput`（工具输出流式增量）**明示缺**——ACP 不转发流式输出（父工具与子代理工具同口径）；
   工具卡承载参数与最终结果（能力缺口条款见设计档）。
 
+**F7 判定句（核事件 token 剥离——形态判据）**
+
+- **R-A3.1**：核事件 token（形态 `⟦ev⟧<事件名>\x1e<payload>`）**零进入** ACP 客户端可见面（面同 R-A2.1 所列）——
+  识别 = **形态判据**（ASCII 小写事件名 + 终止符 `\x1e`），**不得**用事件名枚举白名单（枚举 = 漏项发生器：
+  新增事件名静默泄漏——`queued` / `cancelled` 已在发射面而旧六名白名单未跟，经 `agent_message_chunk` 泄漏）。
+- **R-A3.2**：剥离**不得**误伤正文——载荷含 `⟦ev⟧` 而**无** `\x1e` 终止符 ⇒ 仍转发（判据要求终止符同现）。
+- **R-A3.3**：判据与**既有形态判据对齐**（VSC 宿主消费面 `panel-callbacks.mjs:44,85` 的形态兜底）——核生成侧
+  `thincoder-core/agent/spawn-child.mjs:99-101` 系**枚举**放行判据、**不在本批修法范围**；不自造第三套文法（relay 前缀文法单源见 R-A2.3）。
+- **R-A3.4**（可验判据）：带 `queued` / `cancelled` 事件名（含 relay 前缀形态）驱动的通道用例**零通知**；
+  载荷含 `⟦ev⟧` 无终止符的用例**照常转发**；既有 T9 信号 token 用例不退红。
+
+**F4 判定句（登录入口 · R-A4）**
+
+- **R-A4.1**：`thincoder acp --login` = 终端认证流程入口（`initialize.authMethods` 的 `terminal` 项 `args = ["--login"]` 即指向它）：进入设置向导 → 校验并补齐 `defaultModel` → 成功 **exit 0**；
+  失败或非交互终端 ⇒ stderr 一行可行动文案 + **非 0 退出**（不静默挂死）。
+- **R-A4.2**：`--login` **不进 stdio 服务模式**；不带 `--login` 的 `thincoder acp` 行为零变。
+- **R-A4.3**：CLI `USAGE` 列出该入口（`thincoder acp --login` + 一句用途）。
+
+**F8 判定句（契约形状合规 · R-A5）**
+
+- **R-A5.1**：`initialize` 响应**只**含契约字段（`protocolVersion` / `agentCapabilities` / `authMethods` / `agentInfo` / `_meta`）；能力面**如实声明**
+  （`loadSession` + `sessionCapabilities{list,resume,delete,close}`；不虚报 image / audio / embeddedContext；未实现的 `mcpCapabilities` / `additionalDirectories` 不声明）。
+- **R-A5.2**：`protocolVersion` 按「支持则回同版本、否则回最新支持」协商（当前支持集 = `{1}`）。
+- **R-A5.3**：`authMethods` = **对象数组**（`id` / `name` 齐备）；含 `terminal` 项 **⟺** `clientCapabilities.auth.terminal === true`（契约 MUST）。
+- **R-A5.4**：会话方法响应形状——`session/new` 含 `sessionId`；`session/list` 条目含 `sessionId` + `cwd`；`configOptions` 条目含 `id` + `name`；`session/prompt` 入参取自 `params.prompt`。
+- **R-A5.5**：`fs/*` 反向 RPC 发出前必过客户端能力位（`readTextFile` / `writeTextFile`）；未宣告 ⇒ 回落本地（不得干等超时）。
+- **R-A5.6**：认证语义 = **凭据即时判据**（无跨调用闩锁）：`authenticate` 是**可选确认动作**（成功返回 `{}`；契约**禁止**客户端以 `terminal` 方法调它）；
+  凭据不可解析 ⇒ `-32000` 且文案可行动（无 key ⇒ 指向 config 与 `--login`；key 在位而 `defaultModel` 不可解析 ⇒ **点名 `defaultModel`**）。
+- **R-A5.7**（可验判据）：无 TTY 的脚本化 stdio 客户端**全程不发 `authenticate`** 可完成 `initialize → session/new → session/prompt`（`stopReason:"end_turn"`）；
+  非 TTY 下 `thincoder acp --login` **不挂死**（快速退出码非 0）。
+
 ## 3. 非功能性需求
 
 | # | 维度 | 标准 |
@@ -63,6 +96,7 @@ ACP 一次实现即可接通多家编辑器（桌面 + Web + 移动自托管编�
 | **N5** | 零语义改动面 | TUI 块路由 / 渲染语义零改——文法抽出为纯搬迁 + 再导出 |
 | **N6** | 可验证性 | 新增断言档锁定三面——前缀零泄漏 / question 不在 ACP 工具集 / 文法单一权威 |
 | **N7** | 无回归 | 既有 TUI 用例档零修改通过；ACP 工具 id 配对（FIFO）语义不变 |
+| **N8** | 无 TTY 可驱动 | 认证路径不依赖交互终端：脚本化 stdio 客户端（不发 `authenticate`、无 TTY）可完成 `initialize → session/new → session/prompt`；`thincoder acp --login` 在非 TTY 下快速退出（非 0）而非挂死 |
 
 ## 4. 不做项（明确裁剪）
 
@@ -79,7 +113,7 @@ ACP 一次实现即可接通多家编辑器（桌面 + Web + 移动自托管编�
 
 ## 5. 范围边界（不做）
 
-- **不改 ACP 协议面**——不接通 elicitation / 不新增提问通道 / 不改事件通知面。
+- **不改 ACP 协议面**——不接通 elicitation / 不新增提问通道 / 不改事件通知面。（**形状合规 ≠ 协议面变更**：响应字段按 schema v1 收敛，落在 F8 / R-A5。）
 - 不改 TUI 消费面语义（`routeSub*` / 渲染 / 事件文法零改——文法搬迁 = 纯迁移）。
 - 不改 VSC 仓（无 ACP 镜像面）。
 - 不做「子代理事件整体过滤」与「onToolOutput 流式补齐」（两者为登记候选——需用户裁定 / 独立设计面）。
@@ -105,13 +139,12 @@ ACP 一次实现即可接通多家编辑器（桌面 + Web + 移动自托管编�
 | 工具 id 配对的通用语义 | 模型级工具 id 跨轮不唯一 | `docs/core/design/TOOLS.md`（工具契约）——本档只留「配对键原样」这一本板块要求 |
 | VSC 侧 | 无 ACP 实现 | 登记「无镜像面」；VSC 轮 |
 
-## 7. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **118 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
-
 ## 变更记录
 
+- 2026-09-18（**ACP 外部编排器兼容批 · 父侧直接执行 · 可 revert**——承设计审计 id=70 发现 12 的建议文本；批档 = `docs/batches/2026-09-18-acp-external-drivers.md`）：**F4 补登录入口**（改述 + R-A4.1–A4.3）· **新增 F8**（ACP v1 契约形状合规 · R-A5.1–A5.7）· **新增 N8**（无 TTY 可驱动）· §5 范围边界补半句（形状合规 ≠ 协议面变更）· 变更记录两处「§7 体量」自指收正（本档止于 §6）。
+- 2026-09-16（**批 1 CORE-DEFECT-FIXES** · eng-designer）：新增 **F7** 核事件 token 零进 ACP 客户端可见面（判定句 R-A3.1–A3.4——**形态判据取代事件名枚举**）；
+  §1 批 1 实测：`queued` / `cancelled` 已在发射面（`subagent-scheduler.mjs:337` / `subagent-async.mjs:262`）而旧六名白名单未跟 ⇒ 经 `agent_message_chunk` 泄漏（体量读数随 §7 未落一并撤除——本档现止于 §6）。
 - 2026-09-15（**B 式迁移轮 · 第 6 批**）：建档——`thincoder-cli/docs/requirements/ACP-CLIENT.md` 内容重建入基准层（旧档一字未改、原地作参照历史）。
   ① 落点 = `docs/cli/requirements/`（P2）；② §1 / §9 / §12 / §13 四面归并为 §1–§5（需求语义零改，节序按现行重排）；
   ③ F1–F4 由旧档定位段与核心体验段提炼为逐条需求；F5 / F6 = 旧档通道修整两条不变量的原样承接；
-  ④ 补 §6 不并项与历史沿革、§7 体量；⑤ 实现坐标去迁移前形态（挂设计档指针——D2）。
+  ④ 补 §6 不并项与历史沿革（**§7 体量节未落——本档现止于 §6**；体量读数归配对设计档与批次档）；⑤ 实现坐标去迁移前形态（挂设计档指针——D2）。

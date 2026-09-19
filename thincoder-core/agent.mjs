@@ -26,6 +26,7 @@ import {
   DEFAULT_MAX_TURNS, DEFAULT_SUBAGENT_TURNS,
   MIN_REPORT_CHARS, REPORT_CONTINUATION,
   AUTO_TURN_DIGEST_DOMAIN,
+  UPSTREAM_TURN_DOMAIN, // §6.27.12.8：上行唤醒轮域文本（手动档——ask 轮不沿用 digest 域文本）
 } from "./agent/helpers.mjs"
 // ENG 提醒族 + auto-turn domain 2026-09-05 迁 agent/helpers.mjs（agent.mjs 530 > 500 硬限）
 // PROMPT-SYSTEM 施工② G1（2026-09-10）：六件槽位常量装载收口 prompt-overlays.mjs
@@ -93,7 +94,7 @@ export function streamOutputAllowed(depth, role, streamOutput = false) {
 }
 
 /** Run the agent loop: LLM ↔ tool-call cycle until task completion or turn limit. Returns final text content. */
-export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal, maxTurns: overrideTurns, resume = false, autoTurn = false, suspDriven = false, consumeInjected = null, streamOutput = false, extraTools = null } = {}) {
+export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal, maxTurns: overrideTurns, resume = false, autoTurn = false, upstreamTurn = false, suspDriven = false, consumeInjected = null, streamOutput = false, extraTools = null } = {}) {
   // Previous run's async exploration distillation must settle before this run pushes
   // input (SEND-STALL-DISTILL §2.2 N1) — await first, or its history replace wipes it.
   if (agent._pendingDistill) {
@@ -121,7 +122,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
       releaseSettledEntry(e)
     }
   }
-  agent._inAutoTurn = autoTurn // spawn gate for manual-tier digests (§17 D-S6/N3)
+  agent._inAutoTurn = autoTurn // spawn gate for manual-tier digests (§17 D-S6/N3；上行唤醒轮同持 autoTurn——§6.27.12.4 ①)
   const { maxTurns, threshold, tools, toolSchemas, toolByName, systemPrompt } = await prepareRun(
     // G1/G2（施工②）：prompt 装配收口 prepareRun 内部（assemblePrompt——prompt-overlays.mjs
     // 槽位常量，与子代理角色常量同源——单一权威锚 D1）；本调用不再携带 prompt 常量。
@@ -160,8 +161,10 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     }
   }
   // §17 D-S6 manual tier: digest action-domain reminder (system-driven turn — organize only).
-  if (autoTurn && !agent.autoApprove) {
-    agent.history.push({ role: "user", content: AUTO_TURN_DIGEST_DOMAIN, transient: true })
+  // §6.27.12.4 ②: an up-stream wake turn answers a RUNNING subagent waiting for the reply — it
+  // must not reuse the digest text ("no one is waiting" is the opposite of the truth).
+  if ((autoTurn || upstreamTurn) && !agent.autoApprove) {
+    agent.history.push({ role: "user", content: upstreamTurn ? UPSTREAM_TURN_DOMAIN : AUTO_TURN_DIGEST_DOMAIN, transient: true })
   }
   // eng-coder authorization (_engDesignReviewed) is eng-coder-only: set by subagent-spawn.mjs
   // (spawn gate) / design-token.mjs (design review pass) BEFORE the child runAgent — the
@@ -188,6 +191,11 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     // context.mjs compressIfNeeded 经 extras 透出到 logCtx）
     traceDepth: depth,
   }
+
+  // SUBAGENT-UPSTREAM-CHANNEL（AGENT-LOOP-SUBAGENT.md §6.27.4 消费点）：子 → 父在飞消息的
+  // 回合边界注入单点取用一次（模块缓存 ⇒ 每 run 一次代价）；动态 import = 零新增静态边
+  // （先例 = 上方 injectAsyncResult :113-117）。
+  const { drainChildUpstream } = await import("./agent-tools/parent-channel.mjs")
 
   let thrownError = null
   try {
@@ -216,6 +224,8 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     // （pushReal → 下一轮 chat 即含该指令）。由 executeAsyncSpawn 经 childRunOpts 贯通的
     // consumeInjected 回调承载（异步子代理专属——缺省 null：主会话/阻塞子代理零开销）。
     consumeInjected?.(agent)
+    // 子代理在飞消息（子 → 父；§6.27）：空队列 no-op；非空 ⇒ 恰一条合并 user 消息注入。
+    drainChildUpstream(agent)
 
     const lastRole = agent.history.at(-1)?.role
     if (lastRole === "user" || lastRole === "tool") {
@@ -342,8 +352,9 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
         // End-of-run exploration distillation (CONTEXT-COMPACTION §5 + SEND-STALL-DISTILL
         // §2.1): async — the promise hangs on _pendingDistill, settling at the next run's
         // start or the TUI exit flush. Silent (N3): failure never blocks return/history.
-        // §18.6 D-TR4：depth 透传（distill 轨迹元数据——与 compress 同通道）
-        const distill = summarizeRunExplorations(agent, callbacks, signal, depth).catch(() => {})
+        // §18.6 D-TR4：depth 透传（distill 轨迹元数据——与 compress 同通道）；extras = 会话续写前缀面（§6.15）
+        const distill = summarizeRunExplorations(agent, callbacks, signal, depth,
+          { systemPrompt, tools: toolSchemas }).catch(() => {}) // 与回合请求同源（无第二构造点）
         agent._pendingDistill = distill
       }
       return cr.content

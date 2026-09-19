@@ -1,10 +1,12 @@
 /**
  * config-pool.test.mjs — 并发池统一可配置（POOL-CONFIG-UNIFIED，2026-09-09——VSC 端）：
  * F-1 耦合锁（AGENT_DEFAULTS ↔ 运行时常量/回退 ↔ 调度器 effectivePoolLimits 第三键
- * 4/4/4）/ F-2 advisor 读取器（合法覆盖/非法回退——判定点读生效上限——拒文案报生效值）/
- * F-5 同 scope 守卫（_advisorRuns running 记录同 scope 拒）/ F-4 白名单（panel 写面
- * 三键——非法键丢弃——全非法删整键）+ 落盘 + 读取回退。纯单元：拒发路径在 entry.start
- * 前返回（成功路径不驱动 launch——无真实评审）——config 经 _setConfigPathForTest 隔离。
+ * 4/4/4）/ F-2 advisor 读取器（合法覆盖/非法回退——判定点读生效上限——ED-4 后池满 +
+ * 异 scope ⇒ 排队——ack 含 queued + position）/ F-5 同 scope 守卫（_advisorRuns running
+ * 记录同 scope 拒）/ F-4 白名单（panel 写面
+ * 三键——非法键丢弃——全非法删整键）+ 落盘 + 读取回退。纯单元：拒发/排队路径在
+ * entry.start 前返回（成功路径不驱动 launch——无真实评审）——config 经
+ * _setConfigPathForTest 隔离。
  *
  * 面板显示面（合并自 settings-panel.test.mjs——2026-09-11 TEST-LIFECYCLE 扫① 合档）：同
  * 板块凝聚——extension 面 agentSettings() 快照回退 + webview 面 agentCardHtml() 三数字框
@@ -26,7 +28,7 @@ import { loadRaw } from "@thincoder/core/config-io.mjs"
 import {
   ADVISOR_POOL_LIMIT, resolveAdvisorPoolLimit, advisorPoolLimitFor, launchAsyncAdvisor, resolveAdvisorLaunch,
 } from "@thincoder/core/agent-tools/advisor-async.mjs"
-import { docSetKey } from "@thincoder/core/agent-tools/review-streak.mjs"
+import { docSetKey } from "@thincoder/core/agent-tools/review-facts.mjs"
 // W13（2026-09-15）：池常量/回归读取器 = 核单源（原 `../src/agent-tools/subagent-scheduler.mjs`
 // 镜像删旧）；核 `poolLimitsFor` 两域键（engCoder/other）+ advisor 第三键归核 advisor-async 读取器。
 import { ASYNC_POOL_LIMITS, poolLimitsFor } from "@thincoder/core/agent-tools/subagent-async.mjs"
@@ -87,21 +89,22 @@ test("F-2 读取器：合法覆盖生效 / 非法与缺省回退 4", () => {
   }
 })
 
-test("F-2 判定点：容量拒发读生效上限——缺省 4（4 running + 第 5 拒——文案报 4）", () => {
+test("F-2 判定点：池满 + 异 scope ⇒ 排队——缺省 4（4 running + 第 5 排队——ack 含 queued + position）", () => {
   const pool = new Map([1, 2, 3, 4].map((i) => [`e${i}`, { id: i, role: "advisor", status: "running" }]))
   const parent = mkParent({ _asyncAdvisors: pool })
   const r = tryLaunch(parent, "design", ["docs/a.md"])
-  assert.ok(r.error, "第 5 并发被拒")
-  assert.ok(r.error.includes("4 reviews at most"), `文案报生效值 4: ${r.error}`)
-  assert.ok(r.error.includes("agent.poolLimits.advisor"), "文案含可配键引用")
+  assert.equal(r.error, undefined, "异 scope 池满 → 排队非拒（ED-4——原 ②-6a 拒发退役）")
+  assert.equal(r.queued, true, "ack 含 queued")
+  assert.equal(r.position, 1, "ack 含 position")
 })
 
-test("F-2 判定点：配置覆盖后按生效上限拒（advisor=1——第 2 个拒——文案报 1）", () => {
+test("F-2 判定点：配置覆盖后按生效上限排队（advisor=1——第 2 个排队——ack 报 position）", () => {
   const pool = new Map([["e1", { id: 1, role: "advisor", status: "running" }]])
   const parent = mkParent({ _asyncAdvisors: pool })
   const r = tryLaunch(parent, "design", ["docs/a.md"], { advisor: 1 })
-  assert.ok(r.error, "配置 advisor=1 时第 2 个评审被拒")
-  assert.ok(r.error.includes("1 reviews at most"), `文案报生效值 1（读 config——非死常量）: ${r.error}`)
+  assert.equal(r.error, undefined, "配置 advisor=1 池满 + 异 scope → 排队非拒")
+  assert.equal(r.queued, true, "ack 含 queued")
+  assert.equal(r.position, 1, "ack 报 position（读 config——非死常量）")
 })
 
 test("F-5 同 scope 守卫：同 type+scope running 池条目 → 拒（核 runningAdvisorOfScope 语义）", () => {

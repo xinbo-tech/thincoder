@@ -4,7 +4,7 @@ import { describeToolArgs, toolArgsLines } from "./tool-args.mjs"
 import { slimToolResultForDisplay } from "./tool-events.mjs"
 import { countConvLines } from "./render-conversation.mjs"
 // TUI-OOM-ROOTCAUSE（TUI.md §15.3.3）：恢复/翻页行过额度 + state.lines 总量对账。
-import { capLine, accountLine, accountAll, syncLineBudget } from "./display-budget.mjs"
+import { capLine, accountLine, accountAll, releaseLine, syncLineBudget } from "./display-budget.mjs"
 import { shiftFreezeAnchors } from "./subagent-blocks.mjs"
 
 /** Lazy history window (parity with VS Code HISTORY_PAGE_SIZE): first paint loads
@@ -167,7 +167,7 @@ export function createLoadOlder({ agent, state, render }) {
     const cols = d.cols ?? ((state.dims?.get() ?? {}).cols ?? (process.stdout.columns || 80))
     const before = countConvLines(state, cols, d.rows ?? (process.stdout.rows || 24))
 
-    if (state.lines[0]?.text?.startsWith("… ")) state.lines.shift()
+    if (state.lines[0]?.text?.startsWith("… ")) releaseLine(state, state.lines.shift()) // 移除必出账（§5.5 记账口径——releaseLine 同额负向）
     state._lineIdCounter = state._lineIdCounter ?? 0
     // 页源（§14.3.6）：绑定态 → store.page 绝对区间 + ±1 页沿（页前一消息供跨页回合
     // 标签判定、页后一消息供 tool_result 配对）；未绑定（模式 F）→ 内存全量数组回退。

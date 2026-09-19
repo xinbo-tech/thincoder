@@ -33,15 +33,16 @@ import { setupWebview, installChatFixture } from "./helpers/webview-env.mjs"
 let _tmp
 let _logDir
 let cleanupEnv
+let _diag // 痕迹面（2026-09-19 批起由 activity-diag.js 持环载体）
 
-before(() => {
+before(async () => {
   _tmp = mkdtempSync(join(tmpdir(), "tc-asyncvis-"))
   _logDir = join(_tmp, "logs")
   _setConfigPathForTest(join(_tmp, "config.json"))
   _setSessionsDirForTest(join(_tmp, "sessions"))
   process.env.THINCODER_LOG_DIR = _logDir // logEvent 写门（NODE_TEST_CONTEXT 下默认跳过）——ev:subdeliver 断言用
   vscode.env.language = "en" // vscode mock 无 env.language——webviewReady 的 i18n 推送需要
-  newSlot(_cwd()) // fixture 槽 1（loadSession/resumeSlot 认领确定性）
+  await newSlot(_cwd()) // fixture 槽 1（loadSession/resumeSlot 认领确定性）
   const env = setupWebview()
   cleanupEnv = env.cleanup
   installChatFixture()
@@ -127,7 +128,9 @@ function deliverEvents() {
 // 注：boot 路径上 openSessionContent → loadSession 内部还含 §5.1.4 第 4 条的清屏再断言
 // （幂等；先于 case 两拍）；本用例断言 flush 的**段内序**与“flush 在末次再断言之前”。
 test("T-V6 队列：未就绪期零直投全入队——就绪按序 flush 3 条 + 其后落再断言 + ev:subdeliver 计数", async () => {
-  const p = stubPanel({ _liveLines: liveLines() })
+  // 源 fixture = `_susp.lines`（D-W24 收正：`loadSession` 入口置空 `_liveLines`——存活投影回落
+  // `_susp?.lines`；面板挂起期真源即此。投影断言本身零改）。
+  const p = stubPanel({ _susp: { lines: liveLines() } })
   assert.equal(p._wvReady, undefined, "冷启未就绪（直投闸门关）")
   postSubagentEvent(p, { type: "subagent", status: "started", role: "explore", id: 11, pool: true })
   postSubagentEvent(p, { type: "subagent", status: "started", role: "eng-coder", id: 12, pool: true })
@@ -186,8 +189,8 @@ test("T-V7 溢出与清队：超上界丢最旧 + ev:subdeliver 记丢弃计数�
   assert.equal(p._wvOutbox[0].id, 1005, "溢出丢最旧（头 5 条出队）")
   assert.equal(p._wvOutbox.at(-1).id, 1000 + WV_OUTBOX_MAX + 4, "尾条保留（新条入队）")
   assert.equal(p._wvOutboxDropped, 5, "丢弃计数留痕（面板字段）")
-  const drop = deliverEvents().filter((e) => e.action === "enqueue" && e.dropped > 0).at(-1)
-  assert.equal(drop?.dropped, 5, "ev:subdeliver 报丢弃计数（NFR-A2 可诊断）")
+  const drop = deliverEvents().filter((e) => e.action === "drop-overflow").at(-1)
+  assert.equal(drop?.dropped, 5, "ev:subdeliver drop-overflow 报丢弃计数（NFR-A2 可诊断——本批五处置分列）")
 
   // view dispose（真实 dispose 路径——resolveWebviewView 注册的 onDidDispose 回调）
   const realOnCfg = vscode.workspace.onDidChangeConfiguration
@@ -215,7 +218,7 @@ test("T-V7 溢出与清队：超上界丢最旧 + ev:subdeliver 记丢弃计数�
 
 // T-V3（主侧半——AC-A4）：清屏后再断言排在 clearMessages 与 historyPage 之后（期望位置 = 区尾——§12 修订）。
 test("T-V3 清屏后再断言（主侧定序）：clearMessages → historyPage → 再断言——排在两者之后（期望位置=活动区尾）", () => {
-  const p = stubPanel({ _slot: 1, _wvReady: true, _liveLines: liveLines() })
+  const p = stubPanel({ _slot: 1, _wvReady: true, _susp: { lines: liveLines() } }) // 源 = `_susp.lines`（D-W24）
   loadSession(p)
   const types = typesOf(p)
   const iClear = types.indexOf("clearMessages")
@@ -237,6 +240,7 @@ async function loadWebview() {
   const state = await import("../webview/state.js")
   const activity = await import("../webview/activity.js")
   const streaming = await import("../webview/streaming.js")
+  _diag = await import("../webview/activity-diag.js")
   return { S: state.S, ctx: state.ctx, ...activity, subagentChunk: streaming.subagentChunk }
 }
 
@@ -244,7 +248,7 @@ function fresh({ S, ctx }) {
   ctx.messagesEl.replaceChildren()
   ctx.activityEl.replaceChildren()
   S._subBlocks.clear()
-  S._subTraceLog = []
+  _diag.resetSubTrace() // 痕迹面（环载体 = activity-diag.js——2026-09-19 批迁出 state.js）
   ctx._pinBottom = undefined
   ctx._pinActivity = undefined
 }
@@ -301,7 +305,7 @@ test("T-V2 重名新代接管（AC-A2）：冻结 #4 在场 → 新 started #4 �
   assert.equal(subBlocks(ctx).length, 1, "区内单块（新 live）")
   assert.equal(streamBlocks(ctx).length, 1, "流内一块（旧已归档）")
   assert.equal(old.parentNode, ctx.messagesEl, "旧块位置 = #messages（不回流）")
-  assert.ok(S._subTraceLog.some((e) => e.kind === "takeover"), "takeover 痕迹在位")
+  assert.ok(_diag.subTraceEntries().some((e) => e.kind === "takeover"), "takeover 痕迹在位")
   // 接管后迟到 chunk 落新块（§5.1.4 第 5 条显式取舍）
   subagentChunk({ name: "sub:eng-coder#4", kind: "text", text: "late-generation chunk" })
   assert.ok(next.querySelector(".advisor-content").textContent.includes("late-generation chunk"), "迟到 chunk 落新块（取舍登记）")
@@ -316,7 +320,6 @@ test("T-V3 清屏恢复（AC-A4）：clearMessages+historyPage 之后再断言 �
   applySubagentStatus({ type: "subagent", status: "started", role: "explore", id: 1, pool: true, model: "glm-5.3" })
   applySubagentStatus({ type: "subagent", status: "started", role: "eng-coder", id: 2, pool: true })
   ctx.messagesEl.replaceChildren() // clearMessages（chat.js case：replaceChildren + resetActivity）
-  S._advisorBlock = null
   resetActivity()
   assert.equal(subBlocks(ctx).length, 0, "清屏抹块 + 清簿记")
   assert.equal(ctx.activityEl.children.length, 0, "区零残留（live + 折叠全清）")
@@ -367,16 +370,16 @@ test("T-V4 终态补桩（AC-A3）：never-born done/error/运行中 cancelled/t
     const hdr = block.querySelector(".sub-hdr").textContent
     assert.ok(hdr.includes(word), `${m.status} 头词含 ${word}（断言用：${hdr}）`)
   }
-  assert.equal(S._subTraceLog.filter((e) => e.kind === "late-terminal-stub").length, cases.length, "late-terminal-stub 逐条留痕")
+  assert.equal(_diag.subTraceEntries().filter((e) => e.kind === "late-terminal-stub").length, cases.length, "late-terminal-stub 逐条留痕")
 })
 
-test("T-V5 补桩边界（AC-A3 不补行）：role 未知/id 缺失/非法频道/answered 无块/queued-cancel 无块 → 一律 no-op", async () => {
+test("T-V5 补桩边界（AC-A3 不补行）：角色段非法/id 缺失/非法频道/answered 无块/queued-cancel 无块 → 一律 no-op", async () => {
   const { S, ctx, applySubagentStatus } = await loadWebview()
   fresh({ S, ctx })
   const total = () => subBlocks(ctx).length + streamBlocks(ctx).length
   const before = total()
-  // ① role 未知 ② id 缺失 ③ 非法频道名（id 非数字）
-  applySubagentStatus({ type: "subagent", status: "done", role: "bogus", id: 3 })
+  // ① 角色段非法（含空格——2026-09-19 射程收正：白名单退场后非法段才是拒绝面）② id 缺失 ③ 非法频道名（id 非数字）
+  applySubagentStatus({ type: "subagent", status: "done", role: "bogus role", id: 3 })
   applySubagentStatus({ type: "subagent", status: "done", role: "explore" })
   applySubagentStatus({ type: "subagent", status: "done", role: "explore", id: "abc" })
   // ④ answered 无块（§5 既有裁决：回复走 digest——不补）⑤ cancelled(was:"queued") 无块（从未启动——不补）
@@ -384,14 +387,14 @@ test("T-V5 补桩边界（AC-A3 不补行）：role 未知/id 缺失/非法频�
   applySubagentStatus({ type: "subagent", status: "cancelled", role: "explore", id: 42, was: "queued" })
   assert.equal(total(), before, "五例一律零新块（区 + 流合计）")
   assert.equal(S._subBlocks.size, 0, "map 零新增条目")
-  const traces = S._subTraceLog
+  const traces = _diag.subTraceEntries()
   assert.equal(traces.filter((e) => e.kind === "drop-unknown-role").length, 3, "①②③ 各留一条 drop-unknown-role")
   assert.equal(traces.filter((e) => e.kind === "late-terminal-stub").length, 0, "不补行零补桩痕迹")
   // 有 map 条目者不受表影响：已冻结块再收终态 → no-op 且不补
   applySubagentStatus({ type: "subagent", status: "done", role: "explore", id: 7 })
   applySubagentStatus({ type: "subagent", status: "error", role: "explore", id: 7, error: "late" })
   assert.equal(total(), before + 1, "补桩块单一（不重复建——流内）")
-  assert.equal(S._subTraceLog.filter((e) => e.kind === "late-terminal-stub").length, 1, "重复终态不重复补桩")
+  assert.equal(_diag.subTraceEntries().filter((e) => e.kind === "late-terminal-stub").length, 1, "重复终态不重复补桩")
 })
 
 // ═══ ③ 机检：本档在册（AC-A6/A7 的仓库面） ═══════════════════════════

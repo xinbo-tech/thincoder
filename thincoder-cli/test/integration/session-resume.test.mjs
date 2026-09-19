@@ -48,7 +48,7 @@ function mkAgent(cwd) {
 
 const relay = (agent, msg) => pushReal(agent, msg)
 
-test("④ 正常：写入含计数的会话 → 重载 —— 计数不重置、历史完整", (t) => {
+test("④ 正常：写入含计数的会话 → 重载 —— 计数不重置、历史完整", async (t) => {
   const cwd = mkdtempSync(join(tmpdir(), "tc-int-sess-proj-"))
   t.after(() => { try { rmSync(cwd, { recursive: true, force: true }) } catch { /* ignore */ } })
 
@@ -67,7 +67,7 @@ test("④ 正常：写入含计数的会话 → 重载 —— 计数不重置、
 
   // "kill → restart"：新进程从同一目录恢复
   const fresh = mkAgent(cwd)
-  const { slot, data } = resumeSlot(cwd)
+  const { slot, data } = await resumeSlot(cwd)
   assert.ok(data, "会话记录存在并被恢复")
   applySession(fresh, data)
   assert.equal(fresh.history.length, frameCount, "重载后帧数不重置")
@@ -81,7 +81,7 @@ test("④ 正常：写入含计数的会话 → 重载 —— 计数不重置、
   assert.equal(slot, agent._slot, "恢复的是原会话槽")
 })
 
-test("④ 边界：中断半程落盘 → 恢复 —— 已知前缀保留、无重复帧、孤儿被干净接上", (t) => {
+test("④ 边界：中断半程落盘 → 恢复 —— 已知前缀保留、无重复帧、孤儿被干净接上", async (t) => {
   const cwd = mkdtempSync(join(tmpdir(), "tc-int-sess-proj-"))
   t.after(() => { try { rmSync(cwd, { recursive: true, force: true }) } catch { /* ignore */ } })
 
@@ -95,7 +95,7 @@ test("④ 边界：中断半程落盘 → 恢复 —— 已知前缀保留、无
   saveSession(agent)
 
   const fresh = mkAgent(cwd)
-  const { data } = resumeSlot(cwd)
+  const { data } = await resumeSlot(cwd)
   const savedFrames = data.history
   applySession(fresh, data)
   assert.equal(fresh.history.length, 5, "已落盘的 5 帧全在（已知前缀保留）")
@@ -114,7 +114,7 @@ test("④ 边界：中断半程落盘 → 恢复 —— 已知前缀保留、无
   fresh._fullHistory = repaired
   saveSession(fresh)
   const second = mkAgent(cwd)
-  applySession(second, resumeSlot(cwd).data)
+  applySession(second, (await resumeSlot(cwd)).data)
   assert.equal(second.history.length, 6, "往返后帧数稳定")
   assert.equal(second.history.filter((m) => m.tool_call_id === "call_cut").length, 1, "往返后无重复帧")
 })
@@ -132,9 +132,9 @@ test("④ 错误：损坏会话档 → 真子进程恢复 —— 干净回退 + 
     `import { existsSync, writeFileSync } from "node:fs"`,
     `import { slotPath, newSession, resumeSlot } from ${url("../thincoder-core/session.mjs")}`,
     `const cwd = process.cwd()`,
-    `const n = newSession(cwd)`,                                    // 一个真实会话槽
+    `const n = await newSession(cwd)`,                          // 一个真实会话槽
     `writeFileSync(slotPath(cwd, n), "{ this is not valid json")`,  // 坏档（半截 JSON）
-    `const { slot, data } = resumeSlot(cwd)`,                       // 恢复 = 干净回退
+    `const { slot, data } = await resumeSlot(cwd)`,               // 恢复 = 干净回退
     `console.log(JSON.stringify({ slot, hasData: data !== null, preserved: existsSync(slotPath(cwd, n) + ".corrupted") }))`,
   ].join("\n")
   const r = spawnSync(process.execPath, ["--input-type=module", "-e", script], {
@@ -174,7 +174,7 @@ test("④ 正常（T-RS10）：磁盘为准 + 内存窗口——尾窗/total、�
   assert.equal(agent._recordStore.total(), TOTAL, "保存：sidecar total 不缩")
 
   // 恢复（真槽文件 → applySession 钉槽 → 绑定）
-  const { slot, data } = resumeSlot(cwd)
+  const { slot, data } = await resumeSlot(cwd)
   const first = mkAgent(cwd)
   applySession(first, data, { slot })
   assert.equal(first._fullHistory.length, 200, "恢复：人读线 = 尾窗 200")

@@ -9,6 +9,9 @@
  * digest）输入禁用（INPUT-LOCK-ASYNC C'——提交吞——2026-09-09）、settle 事件驱动
  * auto-turn 消化（手动档 organize-only / AUTO 档全语义）、池空 + 无待处理输入 → 补发
  * done 冻结自然退出。状态机行表见 AGENT-LOOP.md §9.2。
+ * F-UC7（2026-09-19 批，AGENT-LOOP-SUBAGENT.md §6.27.12）：第二开轮源 = 未 drain 的上行
+ * ask（`upstreamWaiting` 谓词——ask 入队即唤醒本驱动）；唤醒轮同走 auto-turn（旗标
+ * `upstreamTurn` 供核域文本选择，提示行走第三档）。
  */
 
 // 函数级静态环（2026-09-05）：drive 的 digestTurn/用户回合经 runAgentTurn 递归进入
@@ -20,6 +23,10 @@ import { logEvent } from "@thincoder/core/log.mjs"
 import { C } from "./ansi.mjs"
 // ASYNC-RESULT-CONTAINER.md D1/D2：池 accessor（双池 absorb）+ pending 单容器停靠
 import { getAsyncPool, parkAsyncPending, releaseSettledEntry } from "@thincoder/core/agent-tools/async-settle.mjs"
+// F-UC7（AGENT-LOOP-SUBAGENT.md §6.27.12——2026-09-19 批）：上行 ask 开轮谓词单点（核导出）
+import { upstreamWaiting } from "@thincoder/core/agent-tools/parent-channel.mjs"
+// 批 4 CLI-ASYNC-DISCARD（AGENT-LOOP-SUBAGENT.md §6.20）：中止分支「只清已死」收尾单点
+import { discardAbortedPool, discardAbortedAdvisors } from "@thincoder/core/agent-tools/async-discard.mjs"
 
 // INPUT-LOCK-ASYNC（C'——2026-09-09，本档 INPUT-LOCK-ASYNC.md）：R15 排队
 // 用户指令合并（§11.3 D-24c——攒批计划/合并文案/上限常量）整批废弃
@@ -153,27 +160,34 @@ function backgroundStatusText(agent) {
 /** 消化轮：系统驱动的 auto-turn（D-S6）。手动档不传权限/问答 handler（D-S7 装配
  *  契约——denied 不弹面板、不悬挂）；AUTO 档沿用普通回调（autoApprove 短路自动
  *  执行）。_suspended 保持 true：消化中 settle 延迟冻结 + 移交 pending。R17：pending
- *  计数/消化触发 = 任一 pending 族（T-R17j——consult/escalate 空闲 settle 也触发消化轮）。 */
-async function digestTurn(ctx) {
+ *  计数/消化触发 = 任一 pending 族（T-R17j——consult/escalate 空闲 settle 也触发消化轮）。
+ *  F-UC7（§6.27.12.5 D）：`upstream` = 未 drain 的 ask 在场（唤醒轮）——提示行走第三
+ *  档、旗标随 auto 轮贯通到核 `runAgent`（域文本选择面）、`digest:*` 载荷条件携带
+ *  `upstream: true`（宿主日志区分唤醒轮与 digest 轮——两端同规）。 */
+async function digestTurn(ctx, upstream = false) {
   const { agent, pushLine } = ctx
   const manual = !agent.autoApprove
-  pushLine(manual
-    ? "[auto-turn: digesting finished subagent reports…]"
-    : "[auto-turn: continuing background work…]", C.dim)
+  // 提示行三分（§6.27.12.5 D）：manual 档 ask 轮 = 第三档（「消化已完成的报告」字面在
+  // ask 轮相抵——本轮主事 = 答复子代理在飞提问）；既有两档字面零改。
+  const label = manual
+    ? (upstream ? "[auto-turn: answering a subagent's in-flight message…]" : "[auto-turn: digesting finished subagent reports…]")
+    : "[auto-turn: continuing background work…]"
+  pushLine(label, C.dim)
   const digestCtx = manual
     ? { ...ctx, askPermission: null, askBatchPermission: null, askQuestion: null }
     : ctx
   // LOGGING：digest:* 事件（D-S9 消化轮边界——LOGGING.md F-L4 挂起态覆盖）
   const d0 = Date.now()
   const pend0 = pendingFamilyCount(agent)
-  logEvent("digest:start", { pendingN: pend0 })
-  await runAgentTurn(digestCtx, "", { autoTurn: true, skipSession: true })
-  logEvent("digest:end", { pendingN: pendingFamilyCount(agent), ms: Date.now() - d0 })
+  logEvent("digest:start", { pendingN: pend0, ...(upstream ? { upstream: true } : {}) })
+  await runAgentTurn(digestCtx, "", { autoTurn: true, upstreamTurn: upstream, skipSession: true })
+  logEvent("digest:end", { pendingN: pendingFamilyCount(agent), ms: Date.now() - d0, ...(upstream ? { upstream: true } : {}) })
 }
 
 /**
  * §17 挂起会话驱动（D-S9 行表；由 runAgentTurn 回合尾进入，池空自然退出）：
  * - suspension：池项 settle → 入 pending → 开 auto-turn（合并消化近邻 settle）；
+ *   上行 ask 入队 → 唤醒 + 谓词 → 开唤醒轮（F-UC7——谓词先于池空退出判，见第 2 步）；
  *   挂起空闲用户 Enter → pendingInput 单槽（busy 含 digest 提交吞——INPUT-LOCK-ASYNC）
  *   ——用户输入优先于 digest；
  * - auto-turn：消化中 settle 不并发开新轮（单 runAgent 循环），轮末按 pending/池态
@@ -224,10 +238,13 @@ export async function suspensionSession(ctx) {
         state.status = backgroundStatusText(agent)
         continue
       }
-      // 2. pending 任一族非空 → 合并消化轮（注入由 runAgent 首行统一完成——D-S3 单注入点；
-      //    R17 判据推广——consult/escalate 族同样触发——T-R17j）
-      if (pendingFamiliesNonEmpty(agent)) {
-        await digestTurn(ctx)
+      // 2. pending 任一族非空**或存在未 drain 的 ask** → 合并消化轮 / 唤醒轮（注入由 runAgent
+      //    首行 + 循环头统一完成——D-S3 单注入点；R17 判据推广——consult/escalate 族同样触发
+      //    ——T-R17j。F-UC7（§6.27.12.5 D）：谓词**必须先于第 3 步池空退出判**——「池空 +
+      //    队列留 ask」（子代理已 settle 且报告已消化）仍须开一轮把它 drain 出来）
+      const upstream = upstreamWaiting(agent)
+      if (pendingFamiliesNonEmpty(agent) || upstream) {
+        await digestTurn(ctx, upstream)
         // §17.5.5 实测修订（2026-09-03）：digest 消化完成（pending 条目已注入）→ 逐条补发
         // done 冻结回收——不等池空——块从面板移除进流（settle 锚点 splice 落位——digest
         // 总览文本之前——round1 #1 裁定）；池空 freeze-out 仅兜底未消化残项（挂起会话
@@ -256,10 +273,10 @@ export async function suspensionSession(ctx) {
     state._suspWake = null
     state.suspAbortArmed = false // round2 偏差 #4：会话退出即解除挂起中止武装（防跨会话粘滞）
     if (aborted) {
-      // §15 abort 语义：清池不注入（用户显式停——不注入陈旧错误）
-      agent._asyncSubagents?.clear()
-      agent._asyncAdvisors?.clear()
-      agent._asyncQueue = []
+      // §15 abort 语义：只清已死条目（AGENT-LOOP-SUBAGENT.md §6.20——墓碑/出池/队列剔除/
+      // 整批一次提醒；存活与已 settle 者留池消化——不注入陈旧错误）。
+      discardAbortedPool(agent)
+      discardAbortedAdvisors(agent)
       // ASYNC-RESULT-CONTAINER.md D2：pending 单容器——中止清容器不注入陈旧结果（四族
       // 统一一处清；consult 会话标记 stopped——settle 不入 digest 流——T-R17c）+
       // children abort。

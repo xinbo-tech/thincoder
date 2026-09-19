@@ -14,20 +14,21 @@ import { applyToolExclusions } from "../src/cli/make-agent.mjs"
 import { ACP_EXCLUDED_TOOLS } from "../src/acp.mjs"
 import { builtinTools } from "@thincoder/core/tools/index.mjs"
 
-/** 捕获式 harness：notify/request 全量留档（AC3 聚合扫描面）。 */
+/** 捕获式 harness：notify/request/log 全量留档（AC3 聚合扫描面）。 */
 function harness() {
   const notifications = []
   const requests = []
+  const logs = []
   const notify = (method, params) => notifications.push({ method, params })
   const request = async (method, params) => {
     requests.push({ method, params })
     return { outcome: { outcome: "selected", optionId: "approve_once" } }
   }
-  const cb = buildAcpCallbacks({ sessionId: "s1", notify, request })
+  const cb = buildAcpCallbacks({ sessionId: "s1", notify, request, log: (s) => logs.push(s) })
   /** 全部 session/update 载荷（可按 sessionUpdate 类筛）。 */
   const updates = (kind) =>
     notifications.filter((n) => n.method === "session/update").map((n) => n.params.update).filter((u) => !kind || u.sessionUpdate === kind)
-  return { cb, notify, notifications, requests, updates }
+  return { cb, notify, notifications, requests, updates, logs }
 }
 
 describe("§12.7 表 1 — ACP 桥：relay 前缀零进显示面（T1–T13 · T18）", () => {
@@ -109,6 +110,33 @@ describe("§12.7 表 1 — ACP 桥：relay 前缀零进显示面（T1–T13 · T
     h.cb.onToken("a#1/[model]gpt-x")
     h.cb.onToken("a#1/⟦ev⟧turn\x1e1\x1e5\x1ellm\x1e")
     assert.equal(h.notifications.length, 0)
+  })
+
+  it("V4 ⟦ev⟧ 形态判据：queued / cancelled（含嵌套前缀）零通知 · 过剥护栏", () => {
+    const h = harness()
+    // 发射面实况（thincoder-core/agent-tools/subagent-scheduler.mjs:342 /
+    // subagent-async.mjs:262）：queued 带载荷、cancelled 空载荷，均可能带 relay 前缀
+    // （`coder#9/…`）——桥剥前缀后哨兵落在 payload 首。
+    h.cb.onToken("⟦ev⟧queued\x1eslot\x1e1\x1equeued\x1ewaiting for: x")
+    h.cb.onToken("coder#9/⟦ev⟧queued\x1eslot\x1e2\x1equeued\x1e")
+    h.cb.onToken("⟦ev⟧cancelled\x1e")
+    h.cb.onToken("coder#9/⟦ev⟧cancelled\x1e")
+    // 既有五名（+approval）⇒ 仍剥离（形态判据不得漏既有相）。
+    for (const name of ["turn", "approval", "done", "settled", "stopped", "async"]) {
+      h.cb.onToken(`a#1/⟦ev⟧${name}\x1e1\x1e5\x1ellm\x1e`)
+    }
+    assert.equal(h.notifications.length, 0, "⟦ev⟧ 事件 token 零进 ACP 客户端可见面")
+
+    // 过剥护栏（render.mjs:250 记载的否决形态教训）：正文含哨兵但无 RS 终止符 ⇒ 仍转发。
+    const g = harness()
+    g.cb.onToken("⟦ev⟧turn 这个哨兵在正文里被讨论")
+    g.cb.onToken("a#1/正文：⟦ev⟧queued\x1e 形态说明")
+    const chunks = g.updates("agent_message_chunk")
+    assert.deepEqual(
+      chunks.map((c) => c.content.text),
+      ["⟦ev⟧turn 这个哨兵在正文里被讨论", "正文：⟦ev⟧queued\x1e 形态说明"],
+      "无 RS 终止符 ⇒ 零过剥（正文不被吞）",
+    )
   })
 
   it("T10 裸信号（无前缀）→ 零通知（既有语义保持）", () => {
@@ -246,5 +274,29 @@ describe("§12.7 表 2 — 装配与文法（T14–T17）", () => {
 describe("§12.8 AC1 — 装配接线锁", () => {
   it("AC1 装配接线锁：acp.mjs 传 excludeTools · make-agent 含 applyToolExclusions", () => {
     assert.deepEqual(ACP_EXCLUDED_TOOLS, ["question"])
+  })
+})
+
+describe("PROVIDER.md §6.20 — B3 onWait 桥面（仅日志 · 相位单源）", () => {
+  it("B3 四可显示相落日志 · warn/未知相零日志（不落 undefined 兜底）", () => {
+    const h = harness()
+    h.cb.onWait({ phase: "gate", seconds: 7 })
+    h.cb.onWait({ phase: "retry", seconds: 3 })
+    h.cb.onWait({ phase: "overloaded", seconds: 3 })
+    h.cb.onWait({ phase: "quota", message: "quota exhausted: insufficient_quota" })
+    assert.deepEqual(h.logs, [
+      "[rate-limit] TPM throttle wait ~7s",
+      "[rate-limit] Rate-limited 429, retry in 3s",
+      "[rate-limit] Server overloaded, retrying in 3s",
+      "[rate-limit] quota exhausted: insufficient_quota",
+    ])
+
+    // 不显示相：warn（前置告警）/ 未知相位 / 秒缺失 —— 零日志、零 undefined。
+    const g = harness()
+    g.cb.onWait({ phase: "warn", message: "estimated 5000 tokens > tpm 1000" })
+    g.cb.onWait({ phase: "retry" })
+    g.cb.onWait({ phase: "nope" })
+    assert.deepEqual(g.logs, [])
+    assert.equal(h.notifications.length, 0, "onWait 不进 ACP 客户端可见面（仅服务端日志）")
   })
 })

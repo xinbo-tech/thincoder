@@ -13,6 +13,8 @@ import { dirname } from "node:path"
 export const VALID_TYPES = new Set(["rule", "knowledge", "decision", "pattern"])
 export const SCHEMA_VERSION = 9
 export const SQLITE_BUSY_TIMEOUT = 3000
+/** WAL 回收后的文件截断上界（§6.12 修法①——防复胀；实测曾达 587 MB）。 */
+export const WAL_SIZE_LIMIT_BYTES = 64 * 1024 * 1024
 
 // Code index: source file extensions. Curated DEFAULTS — a project can declare
 // more (union) through .thincoder/conventions.json → index.codeExtensions
@@ -69,6 +71,12 @@ export function createMemory({ dbPath }) {
   // WAL: reads and writes don't block each other (TUI search and background indexing can run concurrently); busy_timeout prevents SQLITE_BUSY from multi-process same-db access
   db.exec(`PRAGMA journal_mode = WAL`)
   db.exec(`PRAGMA busy_timeout = ${SQLITE_BUSY_TIMEOUT}`)
+  // §6.12 WAL 卫生（TUI 假死批）：① `journal_size_limit` = 回收后 WAL 文件截断上界（防复胀）；
+  // ② 开库**一次性** `wal_checkpoint(TRUNCATE)`——失败容忍（另一实例持读事务 ⇒ busy：静默跳过，
+  // 不重试不报错）。边界写实：最坏等待上界 = 连接上的 `busy_timeout`（**不是**「不阻塞」；
+  // `wal_checkpoint` 是否走 busy handler = unverified——判据面 = 批档 §2.5 T-W2）。
+  db.exec(`PRAGMA journal_size_limit = ${WAL_SIZE_LIMIT_BYTES}`)
+  try { db.exec(`PRAGMA wal_checkpoint(TRUNCATE)`) } catch { /* busy / 非 WAL（内存库）⇒ 保持现状 */ }
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS entries (

@@ -8,12 +8,14 @@
  * 守卫 + QUEUED-VISIBILITY F-2 取消路由。
  *
  * 手法：桩面板驱动（`stubPanel` 桩方法记录 + 字段直控）——不跑真实回合。组①-⑫ 全部
- * <800ms——快层直跑不标 slow（test/slow.mjs 归册阈值纪律）。
+ * <800ms——直跑即可（slow ≡ test，无归册阈值）。
  *
  * 夹具自持（D18②）：本档自带 `stubPanel`——零跨档 import、零余档真实回合夹具依赖
  * （余档 `chat-panel.test.mjs` = 真实模块直驱面：`runPanelChat` 回合执行 / `atComplete`
  * 索引补全 / `resolveTurnModelAndStamp` 模型决策）。
- * 用例名 / 编号自原档逐字保留；`test(` 计数守恒 17 = 8（本档）+ 9（余档）。
+ * 用例名 / 编号自原档逐字保留；`test(` 计数守恒 **19 = 10（本档）+ 9（余档）**
+ *（2026-09-17 af 批 +T-AF11（F-11 VSC ⏹ advisor 目标并入共用路径）——原句「17 = 8（本档）+ 9（余档）」
+ *  为拆分时点值，其后 W15 事件中继例（⑬）已使本档实档 +1；本行按实档收正）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
@@ -418,4 +420,39 @@ test("⑬ W15 事件中继：queued/cancelled/stopped/turn/done/settled/async+[m
   assert.deepEqual(stopped, { type: "subagent", role: "eng-coder", id: 5, status: "cancelled" })
   assert.deepEqual(settled, { type: "subagent", role: "eng-coder", id: 5, status: "settled" })
   assert.deepEqual(done, { type: "subagent", role: "eng-coder", id: 5, status: "done" })
+})
+
+// ─── ⑭ af 批 T-AF11：VSC ⏹ advisor 目标并入共用路径（F-11——原 advisor 专用分支退役）────
+
+/** advisor 池 queued 条目最小形（核 launch 写侧形状——`advisor-async.mjs:414` 入队 +
+ *  relayPrefix / position / run.docSetKey 齐；合成 parent 读取面）。 */
+function advisorQueuedEntry(id, docSetKey) {
+  return {
+    id, role: "advisor", reviewType: "design", run: { reviewType: "design", docSetKey, round: 0 },
+    reviewId: `r${id}`, designId: null, designToken: null, documents: null, paths: null, object: null,
+    relayPrefix: `advisor#${id}/`, status: "queued", position: 1,
+    report: null, error: null, done: false, cancelled: false, promise: null, _settle: null,
+    startedAt: null, controller: { signal: { aborted: false } },
+  }
+}
+
+test("⑭ T-AF11 cancelSubagent 路由（advisor 目标·queued）：并入共用路径 ⇒ cancelled(was:'queued') 中继 + 队列零残留 + 墓碑（先红：零消息——等待头悬留）", async () => {
+  const history = poolHistory()
+  const e5 = advisorQueuedEntry(5, "K1")
+  history._asyncAdvisors.set("5", e5)
+  history._asyncAdvisorQueue = [e5] // 核写侧载体（VSC 形 = history——CARRIER_FIELDS 绑定面）
+  const p = stubPanel({ _liveLines: { history, fullHistory: history, cwd: "C:/ws" }, _wvReady: true })
+
+  await handlePanelMessage(p, { type: "cancelSubagent", id: "5", role: "advisor" })
+
+  assert.equal(history._asyncAdvisorQueue.length, 0, "队列零残留（核 dequeueAdvisor 经载体吸收命中）")
+  assert.equal(history._asyncAdvisors.has("5"), false, "出池")
+  assert.deepEqual(history._asyncTombstones.get("5"), { status: "cancelled", role: "advisor" }, "出队即终态 → cancelled 墓碑")
+  assert.deepEqual(
+    p.posted.filter((m) => m.type === "subagent"),
+    [{ type: "subagent", role: "advisor", id: 5, status: "cancelled", was: "queued" }],
+    "恰 1 条 cancelled(was:'queued')（webview 等待头移除；零 ⟦ev⟧stopped ⇒ 无第二条 cancelled）",
+  )
+  assert.equal(p.posted.filter((m) => m.type === "token").length, 0, "事件 token 零裸文本泄漏（识别即消费）")
+  assert.equal(history.filter((m) => m.role === "user").length, 1, "机读线提醒恰 1 条（评审已取消——token 未签发）")
 })

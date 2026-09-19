@@ -294,7 +294,16 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 - **waiting / queued 块**：排队 spawn 返回即建面板块（不等子代理首 token）；状态词 = `waiting`（依赖未满足 / 域冲突——
   原因恒标；依赖取消 / 失败滞留恒标 `dependency cancelled`）或 `queued`（槽满等位——`queued · position N`）；
   **不标 sync / async**（未启动——标 sync 会误导）；**queued / waiting 块头即置取消 ⏹**；
-  启动 → 清 waiting 标转正常 running 头（同 key 不重建）；取消 / 出队 → 移除块（不冻结）。
+   启动 → 清 waiting 标转正常 running 头（同 key 不重建）；取消 / 出队 → 移除块（不冻结）。**`⟦ev⟧cancelled` 发射源（按族 × 落点逐条列名）**：
+   - **子代理族**：`executeCancelAction` 工具路径与 mouse ⏹ 直连路径（`thincoder-core/agent-tools/subagent-async.mjs` · `thincoder-cli/src/tui/mouse.mjs`）——两路互斥（同一事件只有其中一路在链上），通道分别是 `ctx.callbacks.onToken` 与 `routeSubToken` 就地路由。
+   - **评审族**：核 `cancelAsyncAdvisor` queued 分支 = **唯一发射点**（2026-09-18 设计评审轮 1 #1 裁定单源化；工具路径 / mouse ⏹ / VSC ⏹ 三路各传本层通道、均不另发）——
+     此前缺发射源，评审排队块孤悬不移除（2026-09-17 af 批补；机制细节见 `AGENT-LOOP-SUBAGENT.md` §6.11 第 3 条）。
+   **已移除块不复建（2026-09-17 af 批 c2——裁定落条文）**：`⟦ev⟧cancelled` 移除分支**同址落键级墓碑**——经**新增 helper** `tombstoneSubKey(state, key)`（定义于 `subagent-freeze.mjs`，与墓碑写点 `freezeSubTaskLines` 同址
+   ⇒ **墓碑写入单一权威**保持〔§6.8.3.3〕；**只写** `_frozenSubKeys`、**不写** `_frozenSubTask` 载体行）⇒ 后续 `⟦ev⟧stopped` 经 `ensureSubTaskKey` 直接丢弃（零幻影块——af 批探针实证的 `state.lines` 0 → 1 路径封死）；
+   写入条件 = **与移除同一守卫**（`live && !live.done && live.async !== true`——命中即移除 + 写墓碑；无块可移除的 no-op 面不写，语义零扩）。
+   **与墓碑存活闸（§6.8.3.2 P0-a）的交互**：写入时该条目已终态（`cancelled` + `done` + 出池）⇒ 存活判据 false ⇒ 维持丢弃（不再建块）；
+   若同 key 条目仍存活（未来重启路径清终态位）⇒ 闸门摘墓碑 + 重建块（`ev:subagent-block-revived` 留痕）——**不构成永久失明**。
+   同一幻影的**另一面已同批封死（c1）**：补位不启动终态条目（`AGENT-LOOP-SUBAGENT.md` §6.9）——「取消后仍被 settle」的燃料族无关消失。
 - **冻结头**：`[✓ explore#1 · sync · model · done 45s]`——✓ / stopped 动词按状态（cancel 冻结 → stopped；
   interrupt 清场 → interrupted 标）；挂起期**已结算待消化中间态**驻留面板显示 `done · awaiting digestion`。
 - **advisor 块**：运行中 = 对话流内可折叠框（key = `advisor-blocks`，单实例；头 `[advisor · review] N lines` + tail 3；
@@ -308,6 +317,8 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 - **`finishSubTask` 收窄为精确匹配校验**：`finishSubTask(state, roles, lastError)` 恒 no-op 返 null
   （「最早 started」启发式支路删除——宁可 no-op 不误冻）；`finishSubTaskKey`（dispatch `ctx._subagentKey` 精确 key）
   是**唯一完成路径**；无 key 窗口的块由回合尾 `freezeAllSubTasks` 兜底清场。
+- **墓碑存活闸（2026-09-17——zero-block 批）**：「回合尾 `freezeAllSubTasks` 兜底清场」的兜底面**收窄为仅非存活块**——
+  池内仍存活的条目不得被冻结 / 写墓碑；墓碑生效点与复活语义见 **§6.8.3**（本节不重述）。
 - **面板手工镜像退役——读时现算**：`computePanelBlocks(state)`（subTasks 活值纯推导）；`agent._panelSnapshot` 读写全删，
   `index.mjs` 反向挂载 `agent._tuiState = state`——**门控语义零动**（状态变更点不再手动刷镜——单账本）。
 - **降级路径**：无 TUI 装配（headless / VSC / 子代理）→ 现算返 null → view 降级池视图 + freeze 报不可用。
@@ -337,6 +348,152 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
   未来放开并行嵌套时须复核。
 - **端差异**：VSC 侧嵌套活动保留「子标」形态（行首 dim 子标）——本批后**两端不再同构**（CLI 内层行无归属标）；
   差异如实登记，各端独立实现、互不追赶。
+
+#### 6.8.3 异步子代理「零块」修复（subagent-zero-block——2026-09-17）
+
+> 需求锚：台账技术待办 **#19**（异步子代理「零块」）；批次档 `docs/batches/2026-09-17-subagent-zero-block.md`（§2 任务书 + §2.0 复现读数）。
+> 范围：块生命周期的**墓碑存活闸**（显示面）+ 静默面留痕；**发射面零改**。
+> 本节 = 本批设计落点（canonical 基准层）；受影响文件 / 用例 / 验收面为本批**执行与验收材料**（时点值随实装漂移）。
+
+**6.8.3.1 问题陈述与根因（复现实测——非推断）**
+
+**症状**：已起跑的异步子代理在活动面板**永久零块**——2026-09-16 活体样本 `eng-coder#20`
+（域冲突排队 → 域释放后起跑）**56 回合 24 分钟在跑、面板零块**；同批直发 `#4/#6/#8` 均有块。
+
+**根因 RC-1（正证——已复现）**：墓碑 `_frozenSubKeys` 一旦写入某 key，`ensureSubTaskKey` 对该 key
+**永久返回 null**（`subagent-blocks.mjs:82-83`）⇒ 该条目**此后全部 token 被静默丢弃** ⇒ 面板零块，
+而子代理照常跑完（`subagent-blocks.mjs:181` 丢弃分支无痕）。
+
+**证据链**（设计轮 read 实读 + 定向复现试跑；读数原文 = 批次档 §2.0）：
+
+| # | 证据 | 结论 |
+|---|---|---|
+| E1 | 定向复现①：真实链路 撞域 → queued → 域释放 → `maybeRefillAsync` → `entry.start()`，捕获 token = `["explore#2/⟦ev⟧async\x1e","explore#2/[model]m"]`；真实 TUI 侧 waiting 块 → running 块 | 批次档 §1.1 假设「域释放补位路径缺发射」**= 证伪**（起跑链无缺陷） |
+| E2 | 定向复现②：`⟦ev⟧queued` 建块（panel 1 块）→ 墓碑 → 后续 `⟦ev⟧async` / `[model]` / turn / 文本 / 工具全投 | **panel 0 块、`subTasks` 空、`_pendingAsyncKeys` 缓冲不落地**——症状逐条复现 |
+| E3 | 逻辑必然：运行中子代理自身 token 流（turn / approval / 文本 / 工具）经 `ensureSubTaskKey` 即可建块 | 零块 ⇒ 必为**墓碑命中**（否则首个子 token 即建块）——排除「只是两个建块 token 丢了」 |
+| E4 | 同类失效**已被承认**：`tool-events.mjs:202-204` 注释逐字「it would tombstone a live block and drop its relay stream」+ `isAsyncSpawnResult` 守卫（`tool-display.mjs:119-126`） | 危险已被识别，但**只在 tool 结果一个入口设防**；墓碑本身**无存活条件** |
+
+**触发源归属（如实标注——不可重建）**：2026-09-16 事故中**哪一个**墓碑源触发**不可重建**
+（丢弃面按设计无痕，且当时无 log）。已实核存在的墓碑入口三条（**非**归属结论，而是「修法必须与触发源无关」的依据）：
+
+| 入口 | 落点 | 存活闸 |
+|---|---|---|
+| 回合尾 / 会话退出清扫 `freezeAllSubTasks` | `agent-turn.mjs:244` · `suspension-drive.mjs:296` → `subagent-freeze.mjs:142-154` | **无**——对 `state.subTasks` 全部条目无条件冻结 〔① 注〕 |
+| `⟦ev⟧done` / `⟦ev⟧stopped` 事件分支 | `subagent-blocks.mjs:235-257` | **无**——按 key 直接冻结 |
+| tool 结果面 `finishSubTaskKey` + `freezeDoneSubTasks` | `tool-events.mjs:219-221` | **有**（async ack 守卫 `isAsyncSpawnResult`——`running` / `queued`） |
+
+⇒ 修法落在**墓碑生效点单一收口**，不逐触发源打补丁（D-ZB1）。
+
+**① 行可达条件（评审 #11 收正——落点不改）**：`agent-turn.mjs:244` 站点仅在 `!willSuspend && !inSessionTurn` 时执行
+（`:232` / `:240`；`willSuspend = poolLive(agent)`）⇒ 执行时两池必空 ⇒ P0-b 对该站点恒 no-op（存活条目**不可达**）；
+**P0-b 真实生效面 = `suspension-drive.mjs:296`**（挂起会话退出：中止路径经 discard 只清已死条目 ⇒ 池内存活者在场）。
+
+**6.8.3.2 设计与逐字契约**
+
+**不变量（本批立）**：**墓碑只能断言「此块已终」，不得对「仍在池中存活」的条目生效。**
+
+```text
+spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiting 块             [不变·E1 证无缺陷]
+域释放   → maybeRefillAsync → entry.start() → ⟦ev⟧async + [model] → 同 key 转 running  [不变]
+墓碑源   → freezeSubTaskLines（写 _frozenSubKeys）                                     [不变]
+后续 token → ensureSubTaskKey：墓碑命中 → ★存活闸（新）
+              存活   → 摘墓碑 + 重建块 + 摘旧冻结载体行 + 留痕（日志面一行 / 每次复活一条）                    [P0-a 复活]
+              不存活（池外 / done / cancelled）→ 丢弃（现状——迟到 chunk 正常面，不留痕）               [不变]
+回合尾清扫 freezeAllSubTasks → ★存活跳过（新）：池内存活条目保留 live 驻留（已终态照旧冻结）                     [P0-b]
+```
+
+**P0-a 存活复活**（`subagent-blocks.mjs:80-99` `ensureSubTaskKey`）：墓碑命中时，先以 key（`role#id`）调
+`livePoolHas(state, key)`（活池查询面与 key 映射见 §6.8.3.3）——**存活判据（逐字）**：**条目在池 ∧ `entry.done !== true` ∧ `entry.cancelled !== true`（running/queued）**〔判据先例 = `thincoder-core/agent-tools/async-discard.mjs:55`——零新谓词；仅「键在池内」会违 `subagent-blocks.mjs:81` 守卫原意〕；
+命中存活 ⇒ ① `_frozenSubKeys.delete(key)`；② **摘旧冻结载体行**（见下）；③ 照常建块（model / async 由后续
+`⟦ev⟧async` / `[model]` 重填）+ 留痕；**否则维持现状丢弃**。
+**旧载体行处置（评审 #2 收正——二选一取「摘除」）**：墓碑源已把 `_frozenSubTask` 行 splice 进 `state.lines`
+（`subagent-freeze.mjs:88-92`）；不摘则一 key 两载体、折叠键 `sub-${key}` 两处共用
+（`thincoder-cli/src/tui/render-segments.mjs:76` / `thincoder-cli/src/tui/subagent-panel.mjs:50`）⇒ 旧块永久留流。**取摘除**：`removeFrozenSubTaskLine(state, key)` = 摘该 key 全部
+`_frozenSubTask` 载体行 + `releaseLine` 负向出账（增删均须过账——`display-budget.mjs:145-151`）+ 摘除位之后
+`_freezeAt` 在途锚点 −1（`shiftFreezeAnchors` 同款语义）。
+**helper 归址**：`livePoolHas` / `removeFrozenSubTaskLine` 定义于 `subagent-freeze.mjs`（与墓碑写点 `freezeSubTaskLines` 同址——
+墓碑条件 / 墓碑写入 / 载体行增删单一权威）。import 方向 blocks → freeze 既存（`subagent-blocks.mjs:31`）⇒ **无环**。
+
+**P0-b 清扫存活跳过**（`subagent-freeze.mjs:142-154` `freezeAllSubTasks`）：遍历时对**存活** key **跳过**（不置 done、
+不 `freezeSubTaskLines`、不出 `subTasks`）——**存活判据（逐字）**：**条目在池 ∧ `entry.done !== true` ∧ `entry.cancelled !== true`（running/queued）**；
+**已终态（含 done-in-pool——`entry.done` 置位 = `async-settle.mjs:194`，settle 后未收集条目仍留池：`async-settle.mjs:259` / `thincoder-core/agent-tools/async-discard.mjs:13-14`）照旧冻结清场**；
+池外条目照旧冻结（中断 ghost 语义不变）。
+
+**P1 禁静默留痕**（批次档 §1.3 判据 3）：① 复活分支留痕——**走日志面** `logEvent("ev:subagent-block-revived")`；
+**每次复活记一条（无去重状态）**——墓碑删后可再次命中复活，逐次留痕；若要「同 key 去重」须新增载体 = 第二份存活账，
+否决（D-ZB3 同源）。② `refreshQueuedTokens` 的 `catch {}`（`subagent-scheduler.mjs:340-342`）保持不破坏池状态，
+补 `logEvent("ev:queued-paint-failed")` 留痕。
+**UI 决策（已定——不悬空）**：本批**不新增**会话流提示行与面板形态——用户的可见证据 = **块回归本身**
+（活动流恢复跟随）；留痕只走日志面（机判可查）。
+
+**降级**：`state._agent` 缺省（headless / 子代理内 / 测试夹具）⇒ 无存活信息 ⇒ 与批前**逐字等价**（丢弃），零回归。
+
+**6.8.3.3 接口契约（读取面）**
+
+| 面 | 形态 | 说明 |
+|---|---|---|
+| 池读取 | `state._agent?._asyncSubagents` / `_asyncAdvisors`（Map） | 存活单一事实源；键 `String(id)`；**存活判据（逐字）**：**条目在池 ∧ `entry.done !== true` ∧ `entry.cancelled !== true`（running/queued）**（done-in-pool 留池 = `async-settle.mjs:259` / `thincoder-core/agent-tools/async-discard.mjs:13-14`） |
+| helper 归址 | `livePoolHas(state, key)` / `removeFrozenSubTaskLine(state, key)` 定义于 `subagent-freeze.mjs`，导出供 `subagent-blocks.mjs` import | import 方向 blocks → freeze 既存（`subagent-blocks.mjs:31`）——**无环** |
+| key 匹配 | **写死映射**：最后 `#` 切分 → `role` + `id`；命中 = `pool.has(String(id))` ∧ `entry.role === role`；非池键（`compress#N` 等）= false | 池键 = `String(id)`（`subagent-run.mjs:187` / `advisor-async.mjs:410`）⇒ `pool.has(key)` 恒 miss；与 `_frozenSubKeys` / `subTasks` 同命名空间；存活判据（逐字）同 §6.8.3.2 P0-a |
+| 挂载 | `index.mjs` 已挂 `state._agent`（§6.8.1 降级路径条） | 既有先例：`thincoder-cli/src/tui/subagent-panel.mjs:123` 读 `_syncChildAborts` |
+| 降级 | `state._agent` 缺省 ⇒ 无存活信息 | 维持丢弃（零回归） |
+
+**6.8.3.4 受影响文件（当前行数 = 设计轮 read 实测，含尾行）**
+
+| # | 档 | 文件 | 现况 | 本批动作（file:line） | 预计后 |
+|---|---|---|---|---|---|
+| 1 | CLI·源 | `thincoder-cli/src/tui/subagent-blocks.mjs` | 437 | `:31` import 面加 `livePoolHas` / `removeFrozenSubTaskLine` · `:80-99` `ensureSubTaskKey` 墓碑分支加存活复活 + 旧载体行摘除 + 留痕 | ~460 |
+| 2 | CLI·源 | `thincoder-cli/src/tui/subagent-freeze.mjs` | 176 | `:142-154` `freezeAllSubTasks` 加存活跳过 + 新增导出 `livePoolHas(state, key)` / `removeFrozenSubTaskLine(state, key)`（与墓碑写点同址） | ~205 |
+| 3 | 核·源 | `thincoder-core/agent-tools/subagent-scheduler.mjs` | 429 | `:340-342` catch 补 `logEvent`（+ 顶注 import 面 `:12-22` 补 `logEvent`——现未 import） | ~437 |
+| 4 | CLI·测（**拟新增**） | `thincoder-cli/test/subagent-zero-block.test.mjs` | 新 | T-ZB1–T-ZB6（§6.8.3.6）；直驱 `routeSubToken` / `freezeAllSubTasks` / `refreshQueuedTokens`——零网络、零定时器 | ~120 |
+| 5 | 设计档 | `docs/cli/design/TUI.md` | 555 | 本节（§6.8.3）+ §6.8.1 指针行 + 变更记录一行 | 本档已落（→ 576 行——本 fix 轮后） |
+
+**跨文件限**：三份源档预计后均 < 500 硬限（460 / 205 / 437）——**无拆分需要**。
+
+**>300 advisory 档审视结论（F-R24a——评审 #6 收正）**：
+- `subagent-blocks.mjs`（437 → ~460）：改动面 = 既有 `ensureSubTaskKey` 内一分支 + 一条摘行调用（未新增职责 / 未新增模块级函数）⇒ **无需拆分**；>300 为存量（2026-09-05 由 625 行拆出后的漂移）——登记存量债。
+- `subagent-scheduler.mjs`（429 → ~437）：改动面 = 既有 `catch` 内补一条 `logEvent` + 顶注 import（未新增职责）⇒ **无需拆分**；>300 为存量——登记存量债。
+
+**6.8.3.5 关键决策记录（含否决备选）**
+
+| # | 决定 | 理由 | 否决备选 |
+|---|---|---|---|
+| D-ZB1 | 落点 = **墓碑生效点单一收口** | 触发源 ≥2 且会增；单点 = 存活性判据一处（单一权威源） | 逐触发源加守卫（`agent-turn:244` + `suspension-drive:296` + 事件分支）——漏第三个源即复发 |
+| D-ZB2 | 存活 ⇒ **复活建块**（非仅留痕） | 块是子代理活动的唯一显示载体；复活让运行重新可见并继续跟随活动流 | 只留一行警告——用户仍看不到 56 回合的活动流 |
+| D-ZB3 | 存活判据（逐字）= **条目在池 ∧ `entry.done !== true` ∧ `entry.cancelled !== true`（running/queued）**——取 `state._agent` 活池 | 池即存活单一事实源；**done-in-pool 常态留池**（`async-settle.mjs:259` / `thincoder-core/agent-tools/async-discard.mjs:13-14`）⇒ 仅「键在池内」会误判已终态为存活 | TUI 侧自维护 `liveKeys` 集合 = 第二份存活账（违单一权威源） |
+| D-ZB4 | **发射面零改** | E1 复现已证 `⟦ev⟧async` / `[model]` 锚点无缺陷；by-design「queued 不发 `[model]`」保持 | 把建块 token 提前到入队（改 by-design 语义）——否决 |
+| D-ZB5 | 不存活 ⇒ 维持丢弃**且不留痕** | 迟到 chunk 是**正常高频面**（§6.8.1 定格丢弃）；留痕会刷屏 | 全部丢弃都留痕——噪声 |
+
+**6.8.3.6 用例表（正常 / 边界 / 错误）**
+
+| # | 类 | 输入 | 期望输出 |
+|---|---|---|---|
+| T-ZB1 | 正常 | `⟦ev⟧queued` 建块 → 墓碑（`freezeSubTaskLines`）→ **池内该条目仍存活**（真实池键形 `set("2", entry)`；`done` / `cancelled` 非 true）→ `⟦ev⟧async` + `[model]` | 块复活：`subTasks[key]` 存在、`_frozenSubKeys` 无该 key、`async === true`、`model` 落位（`[model]` 面）；**旧 `_frozenSubTask` 载体行已摘除 + 账不飘** |
+| T-ZB2 | 正常 | 接 T-ZB1 → 文本 + `⟦ev⟧turn` + 工具 token | 全部入块（活动流跟随；面板渲染 1 块） |
+| T-ZB3 | 边界 | 墓碑命中 + **不存活两形**：① 池外真终态 ② 池内 done-in-pool（`entry.done === true`——settle 后未收集）→ 迟到 chunk | 维持丢弃（两形同判）：`_frozenSubKeys` 仍含该 key、`subTasks` 无该 key（不复活幽灵块） |
+| T-ZB4 | 边界 | `freezeAllSubTasks`：池内存活块 + 池外已终块 + **池内 done-in-pool 块** | 存活块保留在 `subTasks`（未置 done、未写墓碑）；池外已终块与池内 done-in-pool 块照旧冻结进流（已终态不被跳过） |
+| T-ZB5 | 错误 | `state._agent` 缺省（headless / 夹具）→ 墓碑命中 | 与批前逐字等价（丢弃）——零回归 |
+| T-ZB6 | 错误 | `refreshQueuedTokens` 的 `onToken` 抛错 | 池状态不被破坏（现状）；留痕一条（新） |
+
+**6.8.3.7 验收标准（逐条回指；每条可机判）**
+
+| # | 验收标准 | 机判 | 回指 |
+|---|---|---|---|
+| AC-ZB1 | 墓碑命中且条目**存活** ⇒ 复活建块 | T-ZB1 / T-ZB2 | 台账 #19 症状 |
+| AC-ZB2 | 墓碑命中且条目**不存活**（池外 / `entry.done === true`〔含 done-in-pool〕/ `entry.cancelled === true`）⇒ 维持丢弃（迟到 chunk 丢弃语义不回归） | T-ZB3 | 批次档 §1.1 by-design 面 |
+| AC-ZB3 | `freezeAllSubTasks` 不冻存活条目；已终态（含 done-in-pool）照旧冻结 | T-ZB4 | 批次档 §1.2 ②（清扫面） |
+| AC-ZB4 | 发射面零改：域释放补位仍发 `⟦ev⟧async` + `[model]`；queued 仍不发 `[model]` | 既有断言（`advisor-pool-queue.test.mjs:86/211`——**仅 async 面**）+ T-ZB1（**`[model]` 面**落位断言） | 批次档 §1.3 判据 2 |
+| AC-ZB5 | 降级面（无 `state._agent`）行为与批前逐字一致 | T-ZB5 | §6.8.1 降级路径条 |
+| AC-ZB6 | 留痕：复活分支与 relay 异常各留一条可观测痕（禁静默） | T-ZB6 | 批次档 §1.3 判据 3 |
+| AC-ZB7 | 两端全量 `npm test` 绿 | `npm test`（cli + core） | 常规门 |
+
+**6.8.3.8 边界（本批不做）**
+
+- **不改发射面**：`subagent-run.mjs:147-149` 两 token 锚点、`subagent-scheduler.mjs:331-344` queued 发射——E1 已证无缺陷。
+- **不新增按族分支**：墓碑是共享单点，修复天然覆盖 subagent / escalate / advisor / consult / compress 五族，但**不新增任何按族代码**（非「扩族」）；**复活可达面** = 键可映射到 §6.8.3.3 两池条目者（subagent / escalate / advisor）；非池键（`compress#N` 等）判 false ⇒ 维持既有丢弃语义（零回归——非本批修面）。
+- **不改**：`isAsyncSpawnResult` 判定面（`tool-display.mjs:119-126`）· `⟦ev⟧cancelled` 出队语义（`subagent-blocks.mjs:180-192`）· awaitingDigest 驻留与 `_freezeAt` 锚点（§6.8.1 已结算待消化驻留零动——用户裁定）· `computePanelBlocks` 现算面。
+- **不引入**块落盘恢复；不改提示词 / 需求档 / `_archive/**`。
+- **VSC 对位不在本批**（VSC `panel-callbacks.mjs` / `suspension.mjs` 为独立实现）——登记为观察项（批次档 §2.7 同源）。
 
 ## 7. 状态栏与用户介入提醒（attention 态）
 
@@ -378,6 +535,17 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
   **VSC 对位**：审批 / 提问挂起已有 waiting 态；回合结束等待输入与面板内 attention 态待建——**各端独立实现**，
   语义同源（不做 byte-identical），登记归 VSC 轮。
 
+### 7.3 模式 banner（ENG / PLAN / AUTO / ADVISOR）——工具驱动变更的显示契约（#45）
+
+- **位置**：`renderStatus` 行首 banner 段（`thincoder-cli/src/tui/render-frame.mjs:220-224`）——`AUTO│` / `PLAN│` / `ADVISOR│` / `ENG│` 四段，其中 PLAN / ENG 即**模式指示器**。
+- **契约（每帧 recompute——本批登记的结构性属性）**：banner 从**活对象**直读（`agent.planMode` / `agent.config.agent.engineering` / `agent.autoApprove` / `agent.config.advisor.guard`），**零缓存副本、零推送链**。
+- **后果（本批核实）**：agent 经工具翻转模式（`eng` / `plan` 工具）⇒ banner 在帧内反映——回合中 1s ticker + 行 diff 重绘（`thincoder-cli/src/tui/agent-turn.mjs` 回合驱动器）⇒ **CLI 端无需任何联动改动**（台账 #45 的 CLI 半）。
+- **参数面同款（本批补核——设计评审轮 1 发现 8）**：状态栏 turn / token / context 段与模型段同取**活对象 / TUI 状态**
+  （`thincoder-cli/src/tui/render-frame.mjs` 的 `:376-392` 段——`agent._currentTurn` / `agent._maxTurns` / `agent.provider` / `state.tokens` / `state.ctxCache`）；
+  **零 `config.json` 镜像链** ⇒ `settings` 工具驱动的参数变更在 CLI 侧**无端显示待联动项**（其生效点 = 装配期读盘，与模式面不同族）——参数面**零改**（结论同模式面）。
+- **边界（负向锁）**：**不得**为模式再引入缓存副本（引入即须自建失效链——本面因此天然免维护）；本面**不入推送链**（VSC 端另有多文件推送链——单一权威源 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §3.3，本档不重述——D2）。
+- **可机判**：`renderStatus(state, agent, cols, slashCommands)` 为纯函数（既有导出）——改 `agent.config.agent.engineering` / `agent.planMode` 后重调 ⇒ banner 段随变（同调用内零状态）。
+
 ## 8. 不并项与历史沿革
 
 ### 8.1 历史沿革（(d) 类——**不并**）
@@ -400,7 +568,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 
 | 旧档面 | 内容 | 何故不并（去向 / 触发） |
 |---|---|---|
-| 需求层条目 | F1–F13 / N1–N10 | 需求面——`docs/cli/requirements/TUI.md`（本档只留设计层） |
+| 需求层条目 | F1–F13 / N1–N11 | 需求面——`docs/cli/requirements/TUI.md`（本档只留设计层） |
 | 输入框键契约 | 状态模型不变量 / 按键表 / ↑↓ 三规则 / Inject 框 / question 自由文本态 | `docs/cli/design/TUI-INPUT-BOX.md`（本档只挂指针） |
 | 普通工具行间区块 | 区块格式 / chunk 契约 / 参数可见性 / 收尾守卫 | `docs/cli/design/TUI-TOOL-OUTPUT.md`（本档只挂指针） |
 | 命令层与选择面 | slash 命令族 / picker / wizard / 交互桥 | `docs/cli/design/TUI-COMMANDS.md` |
@@ -409,16 +577,31 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 | 压缩面板 / MCP 表单 / 会话存档 | 跨板块机制 | `docs/core/design/CONTEXT-COMPACTION.md` §8 · `docs/core/design/MCP.md` §5/§8 · `docs/core/design/SESSION.md` |
 | VSC webview 对位 | webview 渲染 / 消息协议 / 子标 | `docs/vsc/design/WEBVIEW*.md`——**非同机制**（端差异登记，不追赶） |
 
-## 9. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **427 行**（根层新建 · as-of 2026-09-15 实核）——**超 300 行软线（未越 500 硬门），须附拆分规划**。
-**拆分沿革（本档来自一次拆分）**：源档 `thincoder-cli/docs/design/TUI.md` **1529 行**（超 500 硬门）⇒ 本批按**读者面**拆为
-本档（界面核心）+ `docs/cli/design/TUI-COMMANDS.md`（命令层与选择面）+ `docs/cli/design/TUI-SESSION-VIEW.md`（会话视图 / 回合 / 内存）。
-**拆分规划（本轮已执行 + 预置触发）**：① **已执行** = 上述三档拆分（427 / 163 / 186 行，全部 ≤500）；
-② **预置触发** = 本档再增厚时，首拆候选 = **子 agent 活动区块族**（§6.8，含嵌套并入）落一独立档 `TUI-BLOCKS`（拟落 `docs/cli/design/`，本轮未建）——其读者面（「活动区块怎么显示」）与界面骨架可分离。
-
 ## 变更记录
 
+- 2026-09-18（**失效表达清理批 · 本批直接执行 · 可 revert**——承用户 2026-09-18 裁定「修订式表达很害人，失效的表达一定要删掉」）：§6.8.3.8 边界「不改」行删 `⟦ev⟧cancelled` 坐标的「原记 `:167-179` 系…非机制变更」句。历史沿革 = 本档既有历史段 + 批档 `docs/batches/2026-09-18-stale-expression-purge.md`。
+
+- 2026-09-18（**模式联动批 · #45 CLI 半** · eng-designer——承 `docs/batches/2026-09-18-mode-propagation.md` §1.1）：新增 **§7.3**（banner 每帧 recompute 契约 + 「不得引入缓存副本」负向锁 + 可机判句）；CLI 端经核实**零改动**（结构性属性成文，非新机制）。
+- 2026-09-18（**模式联动批 · 设计评审轮 1 修正** · eng-designer——fix 轮；承批档 §3 发现 8）：§7.3 补**参数面同款**条（turn / token / context / 模型段同取活对象 / TUI 状态——`render-frame.mjs:376-392`；`settings` 工具驱动面**无待联动项**，CLI 参数面零改）——与核实表行 4 同口径。
+
+- 2026-09-17（**zero-block 批 · 设计评审轮次 1 修正轮 · eng-designer**）：承 §3 发现表 11 条（🔴1 / 🟡5 / 🔵5）——
+  存活判据收窄为「条目在池 ∧ `entry.done !== true` ∧ `entry.cancelled !== true`（running/queued）」（四处同文：P0-a / P0-b / 接口契约 / D-ZB3——done-in-pool 不再误判存活）；
+  P0-a 增旧冻结载体行摘除（`removeFrozenSubTaskLine` + `releaseLine` + 锚点 −1）；接口契约写死 key 映射（最后 `#` 切分 + `pool.has(String(id))` ∧ `entry.role === role`）；
+  T-ZB1 / T-ZB3 / T-ZB4 断言增补；AC-ZB2 / AC-ZB3 / AC-ZB4 收窄；入口表①行可达条件注（P0-b 真实生效面 = `suspension-drive.mjs:296`）；
+  受影响文件表数值 / 坐标收正（`:12-22`）+ >300 两档审视结论。发现 #5（LOGGING 字段面）缓办（实装后回填）。
+- 2026-09-17（**zero-block 批 · 设计轮 · eng-designer · 收正重落**）：§6.8 新增 **§6.8.3**（异步子代理「零块」修复——
+  根因 RC-1 = 墓碑对存活条目生效致全 token 流被静默丢弃〔复现正证；「域释放补位缺发射」假设经定向复现**证伪**〕/
+  墓碑存活闸 P0-a + 清扫存活跳过 P0-b + 禁静默留痕 P1 / 接口契约 / 受影响文件 / D-ZB1–D-ZB5 / T-ZB1–T-ZB6 /
+  AC-ZB1–AC-ZB7 / 边界）；§6.8.1 补墓碑存活闸指针一行；需求锚 = 台账 #19；批次档 `docs/batches/2026-09-17-subagent-zero-block.md`。
+   **收正说明**：本节原误落参照档 `thincoder-cli/docs/design/TUI.md`（迁移期参照历史——保留 ≠ 维护）——本批收割重落本档。
+
+- 2026-09-17（**af 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-17-async-face-fixes.md` §2）：§6.8.2 排队块条补**取消 / 出队发射源两处**（子代理族 / 评审族）+
+  **已移除块不复建**风险行（`⟦ev⟧stopped` 对已移除块建幻影冻结块——可达面 = 取消后补位重启；台账 #31 判「CLI 不可复现」+ 加固候选）。
+- 2026-09-17（**af 批 · fix 轮 · eng-designer**——承 `docs/batches/2026-09-17-async-face-fixes.md` §2.12）：§6.8.2 排队块条**风险行收正为已裁设计**——
+  「已移除块不复建」由加固候选改落**键级墓碑**（c2：`⟦ev⟧cancelled` 移除分支同址写 `_frozenSubKeys`，无载体行；写入条件 = 与移除同一守卫）；补写与 §6.8.3.2 存活闸的交互（终态 ⇒ 丢弃；同 key 存活 ⇒ 复活不失明）；
+  发射源句补评审族**工具路径**（`executeCancelAction` 落池分支——fix 轮收口）；c1 落 `AGENT-LOOP-SUBAGENT.md` §6.9。
+- 2026-09-18（**af 批 · 三轮 fix 轮 · eng-designer**——承 `docs/batches/2026-09-17-async-face-fixes.md` §2.14 · 设计评审轮 1）：§6.8.2 排队块条**发射源句改写为「族 × 落点逐条列名」**（#7——原「发射源两处」与其后枚举计数不符）；
+  评审族改述为**唯一发射点**（核 `cancelAsyncAdvisor` queued 分支——#1 单源化裁定）；§6.8.3.8 边界行 `⟦ev⟧cancelled` 坐标收正为 `subagent-blocks.mjs:180-192` 并标 **as-of**（#6——原 `:167-179` 系 implementation 后漂移）。
 - 2026-09-15（**B 式迁移轮 · 第 6 批**）：建档——`thincoder-cli/docs/design/TUI.md`（1529 行）内容重建入基准层（旧档一字未改、原地作参照历史）。
   ① 落点 = `docs/cli/design/`（P2：CLI 终端界面结构性只属 CLI）；② **按读者面拆三档**（承接台账「TUI 须拆分」判）+ 本档 = 界面核心；
   ③ 模块地图按**现文件结构**重建（补入旧档未收的三档与拆分后新增的 cmd-* 族——行数列不并）；

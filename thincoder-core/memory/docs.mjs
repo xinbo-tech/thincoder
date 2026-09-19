@@ -6,6 +6,7 @@ import { readFile, stat } from "node:fs/promises"
 import { isAbsolute, join } from "node:path"
 import { embed, cosine, toBlob, fromBlob } from "../embedding.mjs"
 import { scanVectors, createTopK } from "./scan.mjs"
+import { normalizeOrigin } from "./origin.mjs"
 import { commitAndPush } from "../git/gitmem.mjs"
 import { MAX_DOC_FILE_BYTES } from "./schema.mjs"
 import { buildFtsQuery, put, search, putMarkdown, clearPersonal, EMBED_TEXT_MAX_LEN } from "./core.mjs"
@@ -22,6 +23,7 @@ const DOC_EMBED_BATCH = 64
  * Incremental by mtime.
  */
 export async function docSync(memory, dir, { onProgress } = {}) {
+  const origin = normalizeOrigin(dir) // §6.11 写缝归一（目录/git I/O 用原样 dir；库面 origin 一律归一值）
   const { entries, unlisted } = await listProjectFiles(dir, indexExtensions(dir).doc)
   const files = [] // { abs, rel, mtimeMs }
   let overSizeSkipped = 0
@@ -33,7 +35,7 @@ export async function docSync(memory, dir, { onProgress } = {}) {
   }
 
   const indexed = new Map(
-    memory.db.prepare(`SELECT path, mtime_ms FROM doc_chunks WHERE origin = ?`).all(dir).map((r) => [r.path, r.mtime_ms])
+    memory.db.prepare(`SELECT path, mtime_ms FROM doc_chunks WHERE origin = ?`).all(origin).map((r) => [r.path, r.mtime_ms])
   )
   const seen = new Set()
 
@@ -53,7 +55,7 @@ export async function docSync(memory, dir, { onProgress } = {}) {
     try {
       const text = await readFile(abs, "utf8")
       const lines = text.split("\n")
-      _upsertDocFile(memory, dir, rel, lines, mtimeMs)
+      _upsertDocFile(memory, origin, rel, lines, mtimeMs)
       updated++
     } catch (e) {
       failed++
@@ -68,7 +70,7 @@ export async function docSync(memory, dir, { onProgress } = {}) {
 
   for (const stale of indexed.keys()) {
     if (!seen.has(stale)) {
-      memory.db.prepare(`DELETE FROM doc_chunks WHERE origin = ? AND path = ?`).run(dir, stale)
+      memory.db.prepare(`DELETE FROM doc_chunks WHERE origin = ? AND path = ?`).run(origin, stale)
       removed++
     }
   }
@@ -89,9 +91,11 @@ export async function docSearch(memory, query, { limit = 5 } = {}) {
   const ftsQuery = buildFtsQuery(query)
   if (!ftsQuery && !memory.embedder) return []
 
-  const ftsOriginFilter = memory.codeOrigin ? `AND d.origin = ?` : ""
-  const vecOriginFilter = memory.codeOrigin ? `AND origin = ?` : ""
-  const originParams = memory.codeOrigin ? [memory.codeOrigin] : []
+  // §6.11 读缝归一（单点取名——函数体内一律用归一值）
+  const codeOrigin = normalizeOrigin(memory.codeOrigin)
+  const ftsOriginFilter = codeOrigin ? `AND d.origin = ?` : ""
+  const vecOriginFilter = codeOrigin ? `AND origin = ?` : ""
+  const originParams = codeOrigin ? [codeOrigin] : []
 
   const ftsList = ftsQuery ? memory.db.prepare(`
     SELECT d.rowid, d.path, d.language, d.heading, d.content, d.line_start, d.line_end, bm25(doc_chunks_fts) AS rank
@@ -112,8 +116,13 @@ export async function docSearch(memory, query, { limit = 5 } = {}) {
     return ftsList.slice(0, limit)
   }
   // TUI-OOM-ROOTCAUSE（MEMORY.md §10.3）：分块扫描 + 有界 top-K（原全表 .all()——峰值 = 块 + K）
+  // TUI 假死批（§6.10 修法 A1/A2）：游标 = PK 去等值过滤前缀列（有 origin 过滤 ⇒ 2 元组；
+  // 无过滤 ⇒ 全 PK）；scanVectors = async（让出）。SELECT 须携键列（游标值源）。
+  const cursorKey = codeOrigin ? ["path", "line_start"] : ["origin", "path", "line_start"]
+  const keyCols = cursorKey.join(", ")
   const top = createTopK(Math.max(limit * 4, 20))
-  scanVectors(memory.db, `SELECT rowid, embedding FROM doc_chunks WHERE embedding IS NOT NULL ${vecOriginFilter}`, originParams, {
+  await scanVectors(memory.db, `SELECT rowid, ${keyCols}, embedding FROM doc_chunks WHERE embedding IS NOT NULL ${vecOriginFilter}`, originParams, {
+    cursorKey,
     onRow: (r) => top.push({ id: r.rowid, rowid: r.rowid, score: cosine(qvec, fromBlob(r.embedding)) }),
   })
   const vecList = top.list().map((c) => ({ rowid: c.id, score: c.score }))
@@ -241,6 +250,8 @@ const listRowLine = (r) => `[${r.layer}] ${r.id} [${r.type}] ${r.title}（${fmtD
  */
 export function memoryTools(memory, opts = {}) {
   const projectDir = opts.projectDir ? (isAbsolute(opts.projectDir) ? opts.projectDir : join(opts.cwd ?? process.cwd(), opts.projectDir)) : null
+  // §6.11：dirs 保持原样（目录 I/O 基准）——归一落在各公共入口内（写缝 syncDir / indexMarkdownFile、
+  // 删缝 deleteByUid / matchMemoryRows、读缝 search / fetchEntry）⇒ 逐入口一行，非工具层预归一。
   const dirs = { project: projectDir, team: opts.team?.dir ?? null }
   return [
     {

@@ -62,9 +62,9 @@ test("T-V12 边界（校验）：传 [\"src/prompts/x.md\"] / [\"x.mjs\"] → �
   const agent = { cwd: ws, history: [], config: {}, _touchedFiles: [], _engDesignTokens: new Map() }
   const ctx = { agent, cwd: ws, depth: 0, callbacks: {}, signal: undefined }
   const r1 = await advisorTool.execute({ type: "design", documents: ["src/prompts/x.md"] }, ctx)
-  assert.equal(r1, "Advisor: design review documents must be documentation files (per the project's conventions). Invalid: src/prompts/x.md", "拒绝文案逐字（§4.3）")
+  assert.equal(r1, "Advisor: design review documents must be documentation files (per the project's conventions). Invalid: src/prompts/x.md [type=design · scope=src/prompts/x.md · round=— · criterion=scope-not-doc]", "拒绝文案逐字（§4.3 + F31 对象标识行）")
   const r2 = await advisorTool.execute({ type: "design", documents: ["x.mjs"] }, ctx)
-  assert.equal(r2, "Advisor: design review documents must be documentation files (per the project's conventions). Invalid: x.mjs", "非文档扩展名同拒")
+  assert.equal(r2, "Advisor: design review documents must be documentation files (per the project's conventions). Invalid: x.mjs [type=design · scope=x.mjs · round=— · criterion=scope-not-doc]", "非文档扩展名同拒（F31 标识行同式）")
   assert.ok(!r1.includes("in docs/") && !r2.includes("in docs/"), "旧 `in docs/` 指路零残留（AC-V09）")
 })
 
@@ -77,8 +77,11 @@ test("T-V13 错误（文案）：advisor 文档门禁拒绝 + eng 工具 enter �
   assert.ok(refusal.startsWith("Advisor: design review documents must be documentation files (per the project's conventions)."), "拒绝文案锚（§4.3）")
   assert.ok(!refusal.includes("in docs/"), "拒绝文案无 `in docs/`")
   // eng 工具 enter（config 写路径隔离——不动真实 ~/.thincoder/config.json）
+  // #41：enter = 「先判后翻」（入口决策树单源）——夹具须给锚（`ws` 加 .git：缺档 + 根可解析
+  // ⇒ 就地建档放行；文案面零改）。非锚 cwd 现为拒翻（拒翻格见 batch/seams 两组用例）。
   _setConfigPathForTest(join(ws, "config.json"))
-  const engAgent = { config: {}, _engDesignTokens: new Map() }
+  mkdirSync(join(ws, ".git"), { recursive: true })
+  const engAgent = { cwd: ws, config: {}, _engDesignTokens: new Map() }
   const engMsg = await engTool.execute({ action: "enter" }, { agent: engAgent, cwd: ws, callbacks: {} })
   assert.equal(
     engMsg,

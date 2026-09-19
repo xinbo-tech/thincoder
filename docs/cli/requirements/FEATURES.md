@@ -84,7 +84,6 @@
 | `advisor` | 独立设计 / 代码评审（只读子代理） |
 | `eng` | 工程模式开关 |
 | `question` | 向用户提问并暂停等待回复 |
-| `checklist` | 项目级任务清单（跨会话跟踪） |
 | `skill` | 项目技能列出 / 调用 |
 | `read_history` | 读会话历史（检索会话面消息） |
 | `recent_changes` | 显示本次运行改过的文件 |
@@ -142,6 +141,29 @@
 | 检查点 | 版本控制快照，退出前自动存，回滚可逆 |
 | 跨 cwd 隔离 | 不同目录各自独立 session |
 
+### 2.13 对外文档契约面（README ↔ 实装）
+
+**总体需求**：README / `USAGE` / 用户可见提示串所描述的**命令 · 子命令 · 配置键 · 文件格式 · 环境变量 · 机制事件**，必须与实装可达面一致——文档说得到、敲得通。
+
+| # | 用户故事（作为一个 [角色]，我想要 [功能]，以便 [目的]） | 范围边界（明确不做什么） |
+|---|---|---|
+| US-DOC1 | 作为一个 CLI 使用者，我想要 README里**现态**列出的 slash 命令都是实装确实提供的，以便我照着 README 敲命令不会撞到「无此命令」 | 不含历史流水句（release note 记述旧流程）——历史语义可保留 |
+| US-DOC2 | 作为一个 CLI 使用者，我想要 README / `USAGE` 对子命令与配置项的说明与实装一致（配置键 / 文件格式 / 环境变量 / 字段名），以便我按文档配置不会被静默忽略 | 不覆盖实装的私有内部选项 |
+| US-DOC3 | 作为一个 CLI 使用者，我想要 README / 设计档对 hooks 机制（事件集 / 配置位置 / 阻断判据）的描述与引擎实现一致，以便我照文档写的 hook 真的会触发、真的能阻断 | 不含引擎判据本身（归 `docs/core/design/TOOLS.md`） |
+| US-DOC4 | 作为一个产品维护者，我想要对外文档契约面的每处漂移都有「哪边为准」的单向判定规则，以便同形态漂移按同一判据处置、不靠撞见即清 | 不含**内部**机制描述句的全量巡检（归 §1.20 F9 面） |
+
+**判定规则（单向——本节判据句）**：
+
+| # | 规则 | 判据 |
+|---|---|---|
+| 1 | 对外契约以**实装可达能力**为准 | 能力在位 ⇒ **改文档**；能力缺失 ⇒ 走需求变更全链（不得以改文档掩盖） |
+| 2 | 历史流水句不受现态判据约束 | release note / 沿革句记述旧流程——保留原样 |
+| 3 | **改文档不改能力面** | 反向「删实装以对齐文档」= 能力回归，一律判违规 |
+
+**落点坐标（as-of 2026-09-16）**：`thincoder-cli/README.md` · `thincoder-cli/bin/thincoder.mjs`（`USAGE`）· `thincoder-cli/src/completions.mjs`（补全词表）· `thincoder-cli/src/**` 用户可见提示串。机制面权威 = `thincoder-core/hooks.mjs` + `docs/core/requirements/AGENT-LOOP.md`。
+
+**与本节对应的对账执行**（层 0 重锚 + 逐条判定 + 验收用例）= `docs/core/design/DOC-CODE-RECONCILE.md` §5.1（单一权威源——本节只给需求面，不重述对账明细）。
+
 ## 3. 非功能性需求（安全与护栏）
 
 | # | 机制 | 标准 |
@@ -154,6 +176,7 @@
 | N6 | 供应商限速 | 本地滑动窗口限速 + 尊重重试头退避（防 429） |
 | N7 | 输出上限 | 工具输出超限落盘 + 预览（保头保尾） |
 | N8 | 崩溃可取证 | 异常终止落崩溃记录 + 近堆快照 + 堆预警（CLI 侧面见 `docs/cli/design/CRASH-REPORTS.md`） |
+| N9 | 对外文档契约面 | README / `USAGE` / 用户可见提示串对 slash 命令 · 子命令 · 配置键 · 机制事件的列举须与实装可达面一致（判据句见 §2.13）。**度量方式**：无机检门——对外文本面不在 V5 源域（`docs/**`）内、`scripts/doc-check-anchors.mjs` 不覆盖 ⇒ 守护 = 同批改动 + 人巡；漂移处置 = 能力在位 ⇒ 改文档（反向删实装 = 违规） |
 
 ## 4. 不并项与历史沿革
 
@@ -169,7 +192,7 @@
 | 旧档各行的迁移前路径 | `src/` 形坐标 | 迁移前仓形态——§2 已按现状清点面重写 |
 
 **清点面收正（本批 · 实核）**：旧档清单基于 2026-09-07 时点，与现行登记面相比**缺列现行能力**——
-`checklist` · `lsp` · `execute` · `file_ops` · `process` · `get_current_time` · `wait_for` · `tree` ·
+`lsp` · `execute` · `file_ops` · `process` · `get_current_time` · `wait_for` · `tree` ·
 `settings` · `peer_instances` · `read_history` · `batch_segment`；且 `escalate` 已并入 `subagent` 动作（不再独立成工具）。
 本批按**现行登记面**清点（§2），逐项坐标 = `thincoder-core/tools/index.mjs` · `thincoder-core/agent-tools.mjs`。
 
@@ -181,13 +204,11 @@
 | 工具描述文本 | 模型可见描述 | **产品代码**——落点 `thincoder-core/tool-docs/**` |
 | VSC 侧同名档 | `thincoder-vscode/docs/requirements/FEATURES.md` | VSC 轮（`docs/vsc/`）——本档只收 CLI 面 |
 
-## 5. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **193 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
-
 ## 变更记录
 
 - 2026-09-15（**迁移批 · 第 6 批收口同步 · eng-designer**）：§3 N8 的崩溃取证指针按**同批迁移结果**改指（`thincoder-cli/docs/design/CRASH-REPORTS.md`「未迁」→ `docs/cli/design/CRASH-REPORTS.md`——该档已由第 6 批迁入基准层）。纯指针收正、零语义。
 - 2026-09-15（**B 式迁移轮 · 第 2 批**）：建档——`thincoder-cli/docs/requirements/FEATURES.md` 内容重建入基准层（旧档一字未改、原地作参照历史）。
   ① 落点 = `docs/cli/requirements/`（P2：含 CLI 专有的终端界面 / slash 命令面）；② 清点面按**现行登记面**实核收正（补列现行能力、`escalate` 并入 `subagent` 动作、slash 命令表按实核重排、工具/命令坐标改现状路径）；
   ③ 新增 §3 非功能性需求（安全与护栏——旧档「安全与护栏」节升为 NFR 面）、§4 不并项与历史沿革、§5 体量。
+- 2026-09-16（**批 5 · DOC-CONTRACT-RECONCILE** · eng-designer）：新增 **§2.13 对外文档契约面（README ↔ 实装）**（用户故事 US-DOC1–4 + 范围边界 + 三条单向判定规则 + 落点坐标）；§3 增 **N9** 行（口径 = 对外文本面无机检门、守护 = 同批改动 + 人巡）；§5 体量收正。
+  对账执行明细 = `docs/core/design/DOC-CODE-RECONCILE.md` §5.1；层 0 判据句 = `docs/core/requirements/_archive/ENGINEERING-MODE-MECHANISM.md` §1.20。

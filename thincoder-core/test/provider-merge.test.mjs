@@ -95,13 +95,23 @@ test("probeChannelModels：探针不抛 + 准入展示态记录（成功 / 失�
     globalThis.fetch = async () => ({ ok: true, text: async () => JSON.stringify({ data: [{ id: "m2" }, { id: "m1" }] }) })
     const ok = await probeChannelModels("good", { baseURL: "https://x.test/v1", apiKey: "k" })
     assert.deepEqual(ok, { ok: true, models: ["m1", "m2"] })
-    assert.deepEqual(admissionOf("good"), { ok: true })
+    const okRec = admissionOf("good")
+    assert.equal(okRec.ok, true, "探通 ⇒ 准入记录 ok")
+    assert.equal("failure" in okRec, false, "成功记录不携带失败分类（§6.16 M8/M9 补）")
+    assert.ok(Number.isFinite(okRec.ts), "落账统一盖 ts（F-W19）")
 
     globalThis.fetch = async () => ({ ok: false, status: 503, text: async () => "down" })
     const bad = await probeChannelModels("bad", { baseURL: "https://x.test/v1", apiKey: "k" })
     assert.equal(bad.ok, false, "探针失败不抛（不阻断配置写）")
-    assert.equal(admissionOf("bad").ok, false)
-    assert.match(admissionOf("bad").reason, /不可用|不提供模型列表/)
+    const badRec = admissionOf("bad")
+    assert.equal(badRec.ok, false)
+    assert.equal(badRec.failure, "malformed", "HTTP 503 非超时族 ⇒ 核侧两档归 malformed")
+    assert.ok(Number.isFinite(badRec.ts), "失败记录亦盖 ts")
+    assert.match(badRec.reason, /不可用|不提供模型列表/)
+
+    globalThis.fetch = async () => { const e = new Error("The operation was aborted due to timeout"); e.name = "TimeoutError"; throw e }
+    await probeChannelModels("slow", { baseURL: "https://x.test/v1", apiKey: "k" })
+    assert.equal(admissionOf("slow").failure, "timeout", "超时族 ⇒ timeout（hostBusy 不由核判——端侧采样器证据覆盖）")
   } finally {
     globalThis.fetch = savedFetch
     _resetAdmissionForTest()

@@ -25,6 +25,7 @@ import { randomUUID } from "node:crypto"
 import { buildSpawnChild } from "@thincoder/core/agent-tools/subagent-spawn.mjs"
 import { subagentTool } from "@thincoder/core/agent-tools/subagent.mjs"
 import { prepareRun } from "@thincoder/core/agent/setup.mjs"
+import { ENG_TASK_BOOK_MIN } from "@thincoder/core/agent-tools/spawn-gates.mjs"
 
 const DESIGN_ID = "did-batch-doc"
 const liveTok = () => `${randomUUID()}:${Date.now() + 3600e3}`
@@ -46,7 +47,7 @@ function engSpawnArgs() {
     tools: [{ name: "read", readonly: true }],
     _engDesignTokens: new Map([[DESIGN_ID, token]]),
   }
-  return { parent, args: { task: "实现批次档门禁", designId: DESIGN_ID, designToken: token } }
+  return { parent, args: { task: ENG_TASK_BOOK_MIN, round: "initial", designId: DESIGN_ID, designToken: token } }
 }
 
 /** 直驱装配（role=eng-coder——门禁命中即 throw，不返回）。 */
@@ -83,7 +84,7 @@ test("T25 错误：eng-coder 无 batchDoc → throw（消息含纠正动作 + �
   // 反证（上一条断言非空转）：过期 token + **有效** batchDoc → 走到 token 门，过期槽被清
   const { rel } = makeBatchDoc()
   const expired2 = { ...parent, _engDesignTokens: new Map([[DESIGN_ID, expiredTok]]) }
-  const e3 = catchErr(() => buildEng(expired2, { task: "t", designId: DESIGN_ID, designToken: expiredTok, batchDoc: rel }))
+  const e3 = catchErr(() => buildEng(expired2, { ...args, batchDoc: rel, designToken: expiredTok }))
   assert.match(e3?.message ?? "", /Invalid or missing design token/, "门禁放行后 token 门照常拒过期 token")
   assert.equal(expired2._engDesignTokens.size, 0, "token 门的过期清理确实删槽——定序断言非空转")
 })
@@ -180,7 +181,7 @@ test("T33b 错误/正常：eng-designer 同受 batchDoc 门禁（文案含实际
   assert.equal(missing?.message, baseMsg("eng-designer") + " (given path is not a readable file)")
   // 带可读路径 → 通过 + 任务输入含 Batch record 行 + sync 路径同款（双路覆盖）
   const { rel, abs } = makeBatchDoc("docs/batches/2026-09-10-designer.md")
-  const built = buildDesigner({ task: "写设计", batchDoc: rel }, false)
+  const built = buildDesigner({ task: ENG_TASK_BOOK_MIN, round: "initial", batchDoc: rel }, false)
   assert.ok(built.input.includes(`Batch record (batchDoc): ${abs}`), "child 任务输入含批次档绝对路径")
   assert.ok(!built.child._engDesignReviewed, "designer 不走 token 面（无 token 需求——§1.5 #4）")
   assert.equal(built.child._engTaskAuthorized, undefined, "designer 无任务域授权（写操作仍走人工 ask——§2.15 E）")

@@ -371,6 +371,13 @@ export const ENG_OFF_REMINDER =
 export const AUTO_TURN_DIGEST_DOMAIN =
   "[System reminder: auto-turn — background async subagents finished while there was no user message, and this turn runs automatically to digest their reports (the finished-report reminders above). No one is waiting for this reply, so organize only: 1) summarize each finished report's key points into this conversation for the user to read later; 2) update the task list with the task tool (allowed) to mark finished work done; 3) write decision points with a suggested next step as text — do not execute it. FORBIDDEN this turn (mechanically enforced): modifying files, bash/execute/verify, spawning subagents, asking questions — those need a real user message. End the turn once the summaries are written.]"
 
+/** Up-stream wake-turn domain (AGENT-LOOP-SUBAGENT.md §6.27.12.8): a running subagent sent
+ *  an in-flight message and is waiting for the reply — the digest domain's "No one is waiting
+ *  for this reply" is the opposite of the truth, so the wake turn gets its own text.
+ *  Verbatim from the design doc (single line — no newlines). Content authority = parent side. */
+export const UPSTREAM_TURN_DOMAIN =
+  "[System reminder: auto-turn — a running subagent sent you an in-flight message (shown below). No user message is waiting. Decide it now and reply with subagent action:'send' (id + message) — the child consumes the reply at its next turn boundary and keeps working on the unaffected parts; if the message needs no answer, say so in one line and move on. If finished subagent reports are also present above, summarize them as usual in the same turn. Do not start new work: FORBIDDEN this turn (mechanically enforced): modifying files, bash/execute/verify, spawning subagents, asking questions — those need a real user message. End the turn once the reply is sent.]"
+
 /** Engineering-mode status injection — one reminder on EVERY transition (2026-08-25:
  *  OFF is announced too — the model must know the gates lifted; silence after /eng-off
  *  left it guessing. Covers TUI /eng, resume, and any path bypassing the eng tool.) */

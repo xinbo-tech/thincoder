@@ -109,10 +109,6 @@
 | 落盘阈值权威 | `TOOL_RESULT_OFFLOAD_LIMIT` 等 | 机制权威 = `docs/core/design/TOOL-OUTPUT-LIMITS.md` 与 `thincoder-core/agent/helpers.mjs`——本档只挂指针 |
 | 子 agent 活动显示 | 冻结框 / 面板 / 路由 | `docs/cli/design/TUI.md` §6——本档只划边界（§7） |
 
-## 9. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **122 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
-
 ## 变更记录
 
 - 2026-09-15（**B 式迁移轮 · 第 6 批**）：建档——`thincoder-cli/docs/design/TUI-TOOL-OUTPUT.md` 内容重建入基准层（旧档一字未改、原地作参照历史）。

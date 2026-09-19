@@ -3,26 +3,49 @@
  * session.mjs 曾超 500 行硬限；slot 所有权、认领、清单与核心读写分离，session.mjs
  * re-export 全部导出以保持既有 import 兼容）。
  *
+ * init-block 批 · F-MI7 二次拆分：探测束接线后本档实读 517 行（破 490 判定线并越 500 硬限）
+ * ⇒ 按 `CORE-UNIFICATION.md` §2.8.1 表第 3 行**随批**外提清单 / 认领 / 属主面至
+ * `session-slots-manifest.mjs`（语义原样迁移；本档 re-export 该档导出保既有 import 面——
+ * 消费档 import 路径与名面不动）。本档保留 = 存储原语（cwd 哈希 / 路径 / 原子写 / 进程
+ * sessionId）· 端记录（end marker）· 列表面（listSlots / loadSlotMeta）· 删槽 · 恢复决策面
+ * （usableSlot / loadLegacyFile / resumeSlot）。
+ *
  * 模型：每个项目（cwd hash）拥有无限编号 slot；manifest 记录 active 指针 + 每个
  * slot 的属主进程（slotSessions: slot → "pid-timestamp-random"，CLI ↔ VS Code
- * 共享 manifest 以互斥认领）。属主判定用 PID 存活探测（isProcessAlive）。
+ * 共享 manifest 以互斥认领）。
+ *
+ * 属主判定（init-block 批 · F-MI7 · SESSION.md §6.2）：**入口一次探测束**
+ * （`probeOwnersSync` / `probeOwnersAsync`——≤1 判活 + ≤1 命令行拿全量属主 pid），
+ * 清理 / 占用 / 空闲一律**查表**（`ownerState` 三态：dead / alive / unknown）——
+ * 本档零自有 exec、零逐 pid 探测。unknown（探测失败 / 缺行）⇒ 不认领 / 不判死 / 不删，
+ * 方向不对称见 process-probe.mjs 头注（D-MI10）。
  */
 
 import { createHash } from "node:crypto"
 import { mkdirSync, readFileSync, writeFileSync, renameSync, unlinkSync, existsSync } from "node:fs"
 import { join, dirname, basename } from "node:path"
-import { execSync } from "node:child_process"
 import { configDir } from "./config.mjs"
 import { migrateHashLength } from "./session-migrate.mjs"
-// §10 D-2（2026-09-05）：resumeSlot 决策归本文件（slot/claim 层）；data 层读（loadSlotFile/
-// legacy 过滤）属 session.mjs（500 行内不迁移）——静态环仅此一处：函数声明实例化期已初始化、
-// 只函数体内运行时使用（环安全）；VS Code 端 session-slots ↔ session-io 同构镜像。
+// §6.10 D-2（2026-09-05）：resumeSlot 决策归本文件（slot/claim 层）；data 层读（loadSlotFile/
+// legacy 过滤）属 session.mjs（500 行内不迁移）——静态环（本档 ↔ session.mjs；init-block 批起
+// 另加本档 ↔ session-slots-manifest.mjs，见头注与 L38-47）：函数声明实例化期已初始化、只函数
+// 体内运行时使用（环安全）；VS Code 端 session-slots ↔ session-io 同构镜像。
 import { loadSlotFile, isLegacyTransient } from "./session.mjs"
-// 「真实用户消息」谓词单源（`history-window.mjs`——人读线窗口与槽摘要同判据；原为
-// 本档私有副本——提取期收归单源，防两处漂移）。
-import { isRealUserMsg } from "./history-window.mjs"
-// TUI-OOM-ROOTCAUSE 批（SESSION.md §14.3.8）：删槽联动记录存储（store 零项目内依赖——无环）。
+// TUI-OOM-ROOTCAUSE 批（SESSION.md §6.14 生命周期联动）：删槽联动记录存储（store 零项目内依赖——无环）。
 import { unlinkRecordStore } from "./session-store.mjs"
+// 探测束（init-block 批 · F-MI7）：实现 / 判据单源住 process-probe.mjs——本档零自有 exec、
+// 零逐 pid 探测（判据面与探测面分离）；单 pid 判活 re-export 见下方「判活兼容面」。
+import { probeOwnersAsync, isProcessAlive } from "./process-probe.mjs"
+// 清单 / 认领 / 属主面（init-block 批外提——双向静态环见头注）：本档 import 取用 + re-export
+// 保既有 import 面（消费档路径与名面不动）。
+import {
+  extractSlotMeta, loadManifest, saveManifest, ownerPids, ownerStateOf, cleanDeadOwners,
+  allocateFresh, claimSlot, activeSlot,
+} from "./session-slots-manifest.mjs"
+export {
+  slotDigest, loadManifest, saveManifest, ownerPid, ownerPids,
+  allocateFresh, claimSlot, activeSlot,
+} from "./session-slots-manifest.mjs"
 
 let currentSessionId = null
 
@@ -64,7 +87,7 @@ export function sessionPath(cwd) {
 export function slotPath(cwd, n) { return sessionPath(cwd) + "." + n }
 export function manifestPath(cwd) { return sessionPath(cwd) + ".manifest" }
 
-// ========== end marker（SESSION.md §10 端分离恢复——本端"最后使用槽位"记录）==========
+// ========== end marker（SESSION.md §6.10 端分离恢复——本端"最后使用槽位"记录）==========
 
 /** 端常量：本端记录文件后缀——CLI 写 .cli、VS Code 写 .vscode，互不触碰
  *  （NF1：本端记录是本端单写者文件——不新增跨端共享可变字段）。 */
@@ -119,234 +142,15 @@ export function writeSessionFile(p, data) {
   }
 }
 
-// ========== slot management ==========
+// ========== 清单 / 认领 / 属主面（init-block 批外提——见头注）==========
+// 摘要面（slotDigest）· 清单读写（loadManifest / saveManifest）· 属主面（ownerPid / ownerPids /
+// ownerStateOf / cleanDeadOwners）· 认领面（ensureActive / allocateFresh / claimSlot / activeSlot）
+// 语义原样迁至 `session-slots-manifest.mjs`；本档上方 import 取用、re-export 保既有 import 面。
 
-/** Extract slot metadata from history (shared by slotDigest and loadSlotMeta) */
-function extractSlotMeta(history, activeProvider, updatedAt, title = "") {
-  const userMsgs = history.filter(isRealUserMsg)
-  const first = userMsgs[0]?.content ?? ""
-  return {
-    messageCount: history.length,
-    turnCount: userMsgs.length,
-    firstMessage: first.slice(0, 80),
-    activeProvider: activeProvider ?? "",
-    updatedAt: updatedAt ?? Date.now(),
-    title,
-  }
-}
-
-/** Extract preview summary from session data for manifest storage (with current timestamp)
- *  MODEL-MERGE-SESSION：摘要升级带 activeModel——listSlots 合成显 "p:m"（双端同规则）。 */
-export function slotDigest(data) {
-  const meta = extractSlotMeta(data.history ?? [], data.activeProvider, data.updatedAt, data.title ?? "")
-  if (data.activeModel) meta.activeModel = data.activeModel
-  return { ts: Date.now(), ...meta }
-}
-
-export function loadManifest(cwd) {
-  try {
-    const p = manifestPath(cwd)
-    if (!existsSync(p)) return { slots: {}, sessionId: null }
-    const m = JSON.parse(readFileSync(p, "utf8"))
-    if (!m.slots) m.slots = {} // 2026-09-01 会诊 deepseek 🔵：损坏的 {} manifest 不再让调用方抛 TypeError
-    if (!m.sessionId) m.sessionId = null
-    return m
-  } catch { return { slots: {}, sessionId: null } }
-}
-
-export function saveManifest(cwd, m, deletions = null, opts = {}) {
-  // 2026-08-31 会诊 kimi/deepseek 🟡：写前重读并按"条目级"合并——原实现把"读时快照"
-  // 整对象写回，另一进程在窗口内对 slots/slotSessions/active 的变更被覆盖抹除（被抹
-  // 认领的槽变"文件在、无属主"→ 第三方可认领 → 双属主 → F2 互旋）。无锁文件无法
-  // 完全原子，重读合并把丢失更新窗口缩到最小；删除意图经 deletions 参数显式表达
-  // （deleteSlot：{ slots: [n], slotSessions: [n] }）。
-  // 2026-09-01 会诊 deepseek/kimi/glm 🟡：active 是单值——只有显式翻指针的调用方
-  // （ensureActive 分支、newSession、switchToSlot、deleteSlot 删到 active 时）传
-  // opts.setActive；其余调用方（saveSession/ACP 认领/死项清理）默认保留磁盘 fresh 的
-  // active，否则毫秒窗口内会把并发方刚翻的 active 回滚（F1 防漂移的反向变体）。
-  try {
-    const fresh = JSON.parse(readFileSync(manifestPath(cwd), "utf8"))
-    if (fresh && typeof fresh === "object" && fresh.slots && typeof fresh.slots === "object") {
-      const merged = { ...fresh }
-      if (opts.setActive) merged.active = m.active
-      merged.slots = { ...fresh.slots, ...(m.slots ?? {}) }
-      merged.slotSessions = { ...(fresh.slotSessions ?? {}), ...(m.slotSessions ?? {}) }
-      if (m.sessionId) merged.sessionId = m.sessionId
-      if (deletions) {
-        for (const [section, keys] of Object.entries(deletions)) {
-          for (const k of keys) delete merged[section]?.[k]
-        }
-      }
-      m = merged
-    }
-  } catch {
-    // 首次创建或 manifest 不可读：用传入对象。2026-09-01 advisor 🟡：解析失败时先改名
-    // 保留现场（与 loadSlotFile 对 slot 文件的 .corrupted 原则一致）——否则覆盖后全部
-    // 槽位元数据（digest/title/updatedAt）永久丢失，/session 列表变空。文件不存在时
-    // rename 抛错被吞，无害。
-    try { renameSync(manifestPath(cwd), `${manifestPath(cwd)}.corrupted`) } catch {}
-  }
-  m.sessionId = getSessionId()
-  writeSessionFile(manifestPath(cwd), m)
-}
-
-/** 死主条目清理（2026-08-31 会诊 F4 + 2026-09-01 会诊 deepseek/kimi 🔴 语义原样抽取——
- *  ensureActive/resumeSlot 共用）：删除 owner 进程已死的 slotSessions 条目。死主判定必须跑
- *  isProcessAlive——不能以"文件缺失"短路（活进程在"认领 → 首次保存"窗口文件暂缺，误删会
- *  致双进程同槽）。返回 deletions 计算函数（调用时按 m 当前状态过滤刚重新认领的槽——防删
- *  掉自己的新属主），无清理返回 null。删除须经 saveManifest 的 deletions 显式落盘——条目级
- *  合并会把磁盘死条目从 fresh 复活回写（N1 + 会诊 🔴）。 */
-function cleanDeadOwners(m) {
-  const mySessionId = getSessionId()
-  const deadSlots = []
-  for (const [slot, owner] of Object.entries(m.slotSessions)) {
-    if (owner && owner !== mySessionId) {
-      const pid = parseInt(owner.split("-")[0])
-      if (!pid || !isProcessAlive(pid)) {
-        delete m.slotSessions[slot]
-        deadSlots.push(slot)
-      }
-    }
-  }
-  return deadSlots.length === 0 ? null : () => ({ slotSessions: deadSlots.filter((s) => m.slotSessions[s] !== mySessionId) })
-}
-
-/**
- * Claim a slot for this process and set it as active. Idempotent.
- * Preference order:
- *  1. The current active slot, if it is unowned / ours / its owner is dead — reuse it.
- *  2. Any slot that is unowned or owned by a dead process (reclaim).  → allocateFresh
- *  3. A brand-new slot when all are owned by live processes.          → allocateFresh
- * The owner is recorded in m.slotSessions so other processes (CLI ↔ VS Code) can
- * see which slots are taken and avoid them.
- */
-function ensureActive(cwd, m) {
-  const mySessionId = getSessionId()
-  if (!m.slotSessions) m.slotSessions = {}
-  // 顺手清理死主条目（见 cleanDeadOwners）。ensureActive 因 F1 粘性每次进程只跑几次，
-  // 全量 tasklist 成本可接受；清理结果必须落盘——早退 + 分支 1/2/3 全部传 deletions。
-  const deadParam = cleanDeadOwners(m)
-
-  // Already own the active slot — nothing to do.
-  // 2026-08-31 advisor round2 🔵：清理结果此时落盘（否则死项清理只在内存生效，早退
-  // 路径永不持久化——死条目一直滞留到其他路径保存才消失）。
-  if (m.active && m.slotSessions[m.active] === mySessionId) {
-    if (deadParam) saveManifest(cwd, m, deadParam())
-    return
-  }
-
-  const isFree = (slot) => {
-    const owner = m.slotSessions[slot]
-    if (!owner || owner === mySessionId) return true
-    return !isProcessAlive(parseInt(owner.split("-")[0]))
-  }
-
-  // 1. Prefer the current active slot if we can take it (preserves "resume where you left off").
-  if (m.active && m.slots[m.active] && isFree(m.active)) {
-    m.slotSessions[m.active] = mySessionId
-    saveManifest(cwd, m, deadParam?.() ?? null, { setActive: true })
-    return
-  }
-
-  // 2/3. 分支 2/3 已抽取为 allocateFresh（2026-09-05 §10 D-2——resumeSlot 全新分配复用）。
-  allocateFresh(cwd, m, deadParam)
-}
-
-/**
- * Allocate a slot with ensureActive 分支 2/3 语义（2026-09-05 §10 D-2 抽取——resumeSlot
- * 步骤③"其余一切 → 全新分配"复用；与 newSession 选号语义对齐）：
- *  2. Reclaim a manifest slot whose FILE does not exist (never held a session)；
- *  3. A brand-new slot when none is free / all numbers are taken.
- * 记录所有权 + active 指针（setActive）并落盘。返回分配的槽号。
- */
-export function allocateFresh(cwd, m, deadParam = null) {
-  const mySessionId = getSessionId()
-  if (!m.slotSessions) m.slotSessions = {}
-  const isFree = (slot) => {
-    const owner = m.slotSessions[slot]
-    if (!owner || owner === mySessionId) return true
-    return !isProcessAlive(parseInt(owner.split("-")[0]))
-  }
-
-  // 2. Reclaim a slot whose FILE does not exist (never held a session). 2026-08-31 会诊 F4：
-  //    原实现认领"编号最小的空闲 slot"——死主的旧 slot 文件仍在，新进程会 resume 进
-  //    陌生会话（"会话乱了"实锤）且退出时覆盖它。只有文件缺失的空 slot 才允许回收。
-  const allSlots = Object.keys(m.slots).filter((n) => /^\d+$/.test(n)).map(Number).sort((a, b) => a - b)
-  for (const slot of allSlots) {
-    if (isFree(slot) && !existsSync(slotPath(cwd, slot))) {
-      m.active = slot
-      m.slotSessions[slot] = mySessionId
-      saveManifest(cwd, m, deadParam?.() ?? null, { setActive: true })
-      return slot
-    }
-  }
-
-  // 3. All slots owned by live processes — allocate a new one (no limit).
-  // 2026-08-31 advisor round2 🟡：新号从 max+1 起逐号跳过"已被活进程认领但尚未落盘"
-  // 的号（认领→首次保存窗口：slotSessions 有条目、m.slots 无条目、文件不存在——
-  // 仅凭 m.slots/existsSync 查不到 → 双进程认领同一号 → 同槽双写/互旋）。
-  // 2026-09-01 会诊 kimi 🟡：同时跳过文件仍存在的号（与 newSession 对齐）——manifest
-  // 条目丢失/损坏时 max+1 会撞上孤儿槽文件 → F2 把真会话轮转成不可见的 .bak。
-  // 另：allSlots 已升序，取 max 用 allSlots[allSlots.length-1]（数万槽位时 Math.max
-  // spread 有 RangeError 风险）。
-  const liveClaimed = (n) => {
-    const owner = m.slotSessions?.[n]
-    return !!(owner && owner !== mySessionId && isProcessAlive(parseInt(owner.split("-")[0])))
-  }
-  let newSlot = allSlots.length > 0 ? allSlots[allSlots.length - 1] + 1 : 1
-  while (liveClaimed(newSlot) || existsSync(slotPath(cwd, newSlot))) newSlot++
-  m.active = newSlot
-  m.slotSessions[newSlot] = mySessionId
-  saveManifest(cwd, m, deadParam?.() ?? null, { setActive: true })
-  return newSlot
-}
-
-/** 认领指定槽为本进程所有并置为 active（2026-09-05 §10 D-2 resumeSlot 认领路径——调用方
- *  已按"属主 空/死/本进程"判据校验可用性；幂等）。manifest active 保留为共享指针（D-6：
- *  旧版端/ACP 恢复依据 + 无记录端一次性继承源 + 列表回退高亮——不再作本端恢复第一依据）。
- *  deadParam 在写入所有权之后求值（防 deletions 删掉本调用刚认领的槽——ensureActive
- *  deadParam 同型过滤）。 */
-export function claimSlot(cwd, slot, m = loadManifest(cwd), deadParam = null) {
-  m.slotSessions ??= {}
-  m.slotSessions[slot] = getSessionId()
-  m.active = slot // 认领即翻共享指针（setActive 写 m.active——不更新则落快照旧值）
-  saveManifest(cwd, m, deadParam?.() ?? null, { setActive: true })
-}
-
-/**
- * Check if a process with given PID is still alive.
- * Returns false if process doesn't exist or we can't determine.
- */
-export function isProcessAlive(pid) {
-  if (!pid || isNaN(pid)) return false
-  try {
-    // On Windows: tasklist /FI "PID eq <pid>" /NH
-    // On Unix: kill(pid, 0) or check /proc/<pid>
-    if (process.platform === 'win32') {
-      // 2026-08-31 会诊 F4 + advisor round1 🔵：/FI 已按 PID 过滤；用 CSV 格式解析 PID
-      // 列（第 2 列），避免旧 includes() 误报活、新行解析在罕见镜像名（含"数字+空格"）
-      // 下误报死。
-      const output = execSync(`tasklist /FO CSV /FI "PID eq ${pid}" /NH`, { encoding: 'utf8', stdio: 'pipe' })
-      return output.split(/\r?\n/).some((line) => {
-        const m = line.match(/^"([^"]*)","(\d+)"/)
-        return m && m[2] === String(pid)
-      })
-    } else {
-      // Unix: try to send signal 0 (doesn't kill, just checks)
-      process.kill(pid, 0)
-      return true
-    }
-  } catch {
-    return false
-  }
-}
-
-/** Return the active slot number for this process, claiming one if necessary */
-export function activeSlot(cwd) {
-  const m = loadManifest(cwd)
-  ensureActive(cwd, m)
-  return m.active
-}
+/** 单 pid 判活（F-MI7：实现移居 `process-probe.mjs`——判据单源 + 同步有界 2 s + 三态）：
+ *  此处 re-export 保既有 import 面（`session.mjs` 再 re-export 同保）。
+ *  **三态**：`true` 活 / `false` 死 / `undefined` 未知——未知不作死判据（D-MI10）。 */
+export { isProcessAlive }
 
 /** Lazy-load slot metadata from slot file (for old-format manifest entries that lack metadata) */
 function loadSlotMeta(cwd, slot, v) {
@@ -405,31 +209,32 @@ export function deleteSlot(cwd, slot) {
   delete m.slots[n]
   delete m.slotSessions?.[n] // orphan session-id entries bloat the manifest forever
   try { unlinkSync(slotPath(cwd, n)) } catch { /* missing file is fine */ }
-  unlinkRecordStore(slotPath(cwd, n)) // §14.3.8：删槽连带删除记录存储（sidecar）
+  unlinkRecordStore(slotPath(cwd, n)) // §6.14 生命周期联动：删槽连带删除记录存储（sidecar）
   if (m.active === n) delete m.active
   // setActive: true —— 显式表达"删到 active 时 active 置空"的意图（saveManifest 默认
   // 保留 fresh.active，2026-09-01 会诊三家 🟡）
   saveManifest(cwd, m, { slots: [n], slotSessions: [n] }, { setActive: true })
-  // 2026-09-05 §10 D-4/F4：删到本端记录槽 → 记录显式置空（文件保留 + slot:null——下次全新起步，不复活——T-M4/T-M8）
+  // 2026-09-05 §6.10 D-4/F4：删到本端记录槽 → 记录显式置空（文件保留 + slot:null——下次全新起步，不复活——T-M4/T-M8）
   if (readEndMarker(cwd)?.slot === n) writeEndMarker(cwd, null)
   return true
 }
 
-// renameSlot 已拆至 session-rename.mjs（2026-09-06 §12.2.5 契约改使本文件超 500 行硬限，
-// §12.3 授权拆分）；session.mjs re-export 保持调用点不变。
+// renameSlot 已拆至 session-rename.mjs（2026-09-06 §6.12 标题写契约使本文件超 500 行硬限，
+// 按 §6.12 模块与实现约束拆分）；session.mjs re-export 保持调用点不变。
 
-// ========== resumeSlot（SESSION.md §10 D-2——端分离恢复决策）==========
+// ========== resumeSlot（SESSION.md §6.10 D-2——端分离恢复决策）==========
 
-/** 本端记录槽可用判据（D-2）：slot ∈ m.slots + 槽文件在盘 + 属主 空/死/本进程。 */
-function usableSlot(cwd, m, slot) {
+/** 本端记录槽可用判据（D-2）：slot ∈ m.slots + 槽文件在盘 + 属主 空、死、本进程。
+ *  F-MI7：占用判据查调用面束（零自有探测）；属主 unknown（探测失败 / 缺行）⇒ **不可用**
+ *  （不认领——保守：回落到 allocateFresh 取全新号，绝不与"可能活着"的属主同槽）。 */
+function usableSlot(cwd, m, slot, bundle = null) {
   if (!m.slots[slot] || !existsSync(slotPath(cwd, slot))) return false
   const owner = m.slotSessions?.[slot]
   if (!owner || owner === getSessionId()) return true
-  const pid = parseInt(owner.split("-")[0])
-  return !pid || !isProcessAlive(pid)
+  return ownerStateOf(owner, bundle) === "dead"
 }
 
-/** legacy 单文件兜底（v1/v2 单会话 {hash}.json——迁移前残留；仅 data 层——2026-09-05 §10
+/** legacy 单文件兜底（v1/v2 单会话 {hash}.json——迁移前残留；仅 data 层——2026-09-05 §6.10
  *  D-2：恢复数据兜底不改变 claim 落点，T-M10）。纪律与 loadSlotFile 一致：cwd 不匹配（别人的文件）
  *  直接 null 不改名；坏结构改名 .unreadable 保留（version>2 不动）；解析失败 .corrupted 保留。 */
 function loadLegacyFile(cwd) {
@@ -458,7 +263,8 @@ function loadLegacyFile(cwd) {
 }
 
 /**
- * 恢复决策（SESSION.md §10 D-2）——TUI 启动的本端恢复入口（VS Code 面板同构镜像）。
+ * 恢复决策（SESSION.md §6.10 D-2）——TUI 启动的本端恢复入口（VS Code 面板同构镜像）。
+ * **async**（F-MI7：入口一次异步束——探测不阻塞事件循环；调用面必须 await）。
  * 返回 { slot, data }（data 可为 null——全新起步或读槽失败）。判据：
  *   ① 本端记录可用（slot ≠ null 且 ∈ m.slots 且槽文件在盘 且属主 空/死/本进程）→ claimSlot；
  *   ② 记录缺失（从未记录 = 升级/首用迁移窗口）：②a active 属主 = 本进程（同进程重入——
@@ -468,20 +274,22 @@ function loadLegacyFile(cwd) {
  * 每次落点都写本端记录；claim 后读槽失败（.corrupted/.unreadable——loadSlotFile 既有改名
  * 保全语义）→ 保持已 claim 槽 + data:null——不改 marker——下次保存原地重建（T-M15）。
  */
-export function resumeSlot(cwd) {
+export async function resumeSlot(cwd) {
   const m = loadManifest(cwd)
   m.slotSessions ??= {}
+  // 入口一次**异步束**（F-MI7——整链 async）：清理 / 可用 / 空闲全部查表，零逐 pid 探测。
+  const bundle = await probeOwnersAsync(ownerPids(m))
   // 与 ensureActive 同型的死主清理（认领路径持久化——F5a 纪律：仅传 m 等于没删）
-  const deadParam = cleanDeadOwners(m)
+  const deadParam = cleanDeadOwners(m, bundle)
   const rec = readEndMarker(cwd) // null = 缺失/损坏；{slot:null|N} = 文件在（D-1）
   let slot = null
-  if (rec?.slot != null && usableSlot(cwd, m, rec.slot)) slot = rec.slot // ① 本端记录可用
+  if (rec?.slot != null && usableSlot(cwd, m, rec.slot, bundle)) slot = rec.slot // ① 本端记录可用
   else if (rec === null) {
     if (m.active && m.slotSessions?.[m.active] === getSessionId()) slot = m.active // ②a 同进程重入
-    else if (m.active && usableSlot(cwd, m, m.active)) slot = m.active // ②b 一次性继承
+    else if (m.active && usableSlot(cwd, m, m.active, bundle)) slot = m.active // ②b 一次性继承
   }
   if (slot !== null) claimSlot(cwd, slot, m, deadParam)
-  else slot = allocateFresh(cwd, m, deadParam) // ③ 全新分配（slot:null 绝不继承——T-M4）
+  else slot = allocateFresh(cwd, m, deadParam, bundle) // ③ 全新分配（slot:null 绝不继承——T-M4）
   // data 层：读已认领槽（loadSlotFile 自 session.mjs——环 import 见文件头）；读失败/槽文件不在 → legacy 单文件兜底（仅 data）
   let data = loadSlotFile(cwd, slot)
   if (!data) data = loadLegacyFile(cwd)

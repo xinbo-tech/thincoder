@@ -5,7 +5,7 @@
 > **蒸馏本体不属本档**：替换规则与静默语义 = `docs/core/design/CONTEXT-COMPACTION.md` §6.9（探索结果语义摘要——单一权威源，本档不复制）。
 > 相邻权威 = `docs/core/design/AGENT-LOOP.md`（主循环轮末）· `docs/core/design/SESSION.md`（保存面）。
 > 需求侧 = `docs/core/requirements/SEND-STALL-DISTILL.md`（FR1–FR4 / N1–N5）。
-> 建档：2026-09-15（**B 式迁移轮 · VSC 批 3**——`thincoder-vscode/docs/design/SEND-STALL-DISTILL-TUNING.md` 内容重建入基准层；
+> 建档：2026-09-15（**B 式迁移轮 · VSC 批 3**——`thincoder-vscode/docs/_archive/design/SEND-STALL-DISTILL-TUNING.md` 内容重建入基准层；
 > 旧档原地一字不改、留作参照历史）。CLI 侧同名档（`thincoder-cli/docs/design/SEND-STALL-DISTILL.md`）**已并入（2026-09-15 · CLI 尾部真批）**——
 > CLI 独有面（TUI 保存回调接线 / 退出 flush 有界等待）已入 §2.3 / §2.6 / §3，(d) 类入 §5.1。
 > 本档坐标 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
@@ -29,11 +29,11 @@
 
 仅顶层（`depth === 0`）触发：先发 `onComplete` 释放前端，再把蒸馏 promise 化挂起、**不 await**，立即返回回合内容。
 
-- 发射函数 = `fireEndOfRunDistill`（VSC `thincoder-vscode/src/agent/run-stages.mjs:232`；核侧同语义调用点 = `thincoder-core/agent.mjs:346`）。
+- 发射函数 = `fireEndOfRunDistill`（VSC `thincoder-vscode/src/agent/run-stages.mjs:261`；核侧同语义调用点 = `thincoder-core/agent.mjs:346`）。
 - **depth 守卫**：子轮（`depth > 0`）不得创建蒸馏——否则先创建者晚 resolve 会 clobber 历史（竞态）。
 - 落位时 **原地改保持 history 引用**（同一数组），并失效 token 基线（机器行形状变了）；随后调 `onDistilled`。
-- 蒸馏本体 = `summarizeRunExplorations`（VSC `thincoder-vscode/src/explore-distill.mjs:154`；核 `thincoder-core/explore-distill.mjs:145`）——
-  两档为**同名同源模块**（各端自持、语义同源）；旧 VSC re-export 中转档 `thincoder-vscode/src/compact.mjs:388` **已删**（W6 迁核——现体消费 = `thincoder-vscode/src/agent/run-stages.mjs` 直引 VSC 蒸馏本体；核侧 re-export 见 `thincoder-core/context.mjs:392`）。
+- 蒸馏本体 = `summarizeRunExplorations`（VSC `thincoder-vscode/src/explore-distill.mjs:29`；核 `thincoder-core/explore-distill.mjs:141`）——
+  两档为**同名同源模块**（各端自持、语义同源）；旧 VSC re-export 中转档 `thincoder-vscode/src/compact.mjs:388` **已删**（W6 迁核——现体消费 = `thincoder-vscode/src/agent/run-stages.mjs` 直引 VSC 蒸馏本体；核侧 re-export 见 `thincoder-core/context.mjs:392`）。 （迁移期引文）
 
 ### 2.2 下一轮开头 await（FR2 / N1）
 
@@ -83,11 +83,11 @@ flush 点 = 每轮 `runAgentTurn` 的 finally——`:286-287`，render 已先行
 
 | 面 | 核 / CLI | VSC |
 |---|---|---|
-| 轮末发射 | `thincoder-core/agent.mjs:342-347`（depth 守卫 + `summarizeRunExplorations(...).catch(() => {})` + `_pendingDistill = distill`） | `thincoder-vscode/src/agent/run-stages.mjs:232`（`fireEndOfRunDistill`）· `:243`（`onDistilled` 调用） |
+| 轮末发射 | `thincoder-core/agent.mjs:341-348`（depth 守卫 + `summarizeRunExplorations(...).catch(() => {})` + `_pendingDistill = distill`） | `thincoder-vscode/src/agent/run-stages.mjs:261`（`fireEndOfRunDistill`）· `:267`（`onDistilled` 调用） |
 | 跨轮挂载点 | `thincoder-core/agent.mjs:84`（`_pendingDistill`） | `thincoder-vscode/src/extension/panel-chat.mjs:157`（`_distillState`） |
 | 下一轮 await | `thincoder-core/agent.mjs:99-101` | `thincoder-vscode/src/agent.mjs`（runAgent 内）· `panel-chat.mjs:170-172` |
-| 蒸馏本体 | `thincoder-core/explore-distill.mjs:145` | `thincoder-vscode/src/explore-distill.mjs:154` |
-| re-export | `thincoder-core/context.mjs:392` | 旧档 `thincoder-vscode/src/compact.mjs:388` **已删**（W6 迁核——现体消费 = `thincoder-vscode/src/agent/run-stages.mjs`） |
+| 蒸馏本体 | `thincoder-core/explore-distill.mjs:141` | `thincoder-vscode/src/explore-distill.mjs:29` |
+| re-export | `thincoder-core/context.mjs:392` | 旧档 `thincoder-vscode/src/compact.mjs:388` **已删**（W6 迁核——现体消费 = `thincoder-vscode/src/agent/run-stages.mjs`） （迁移期引文） |
 | 保存回调 | `thincoder-cli/src/tui/tool-events.mjs:395`（`onDistilled` → `saveSessionImpl` 静默保存；callbacks 由 `src/tui/agent-turn.mjs` 传入） | `thincoder-vscode/src/extension/panel-callbacks.mjs:187-189` |
 | 退出 flush | `thincoder-cli/src/tui/agent-turn.mjs:29`（`DISTILL_FLUSH_TIMEOUT_MS = 5000`）· `:286-287`（finally 内有界等待）· `:282`（不摘除 `_pendingDistill`） | —（面板生命周期中止面替代——见 §2.4） |
 | 中止器 | —（会话退出 flush） | `panel-chat.mjs:161-162` · `chat-panel.mjs`（dispose）· `panel-session.mjs`（会话切换） |
@@ -111,7 +111,7 @@ flush 点 = 每轮 `runAgentTurn` 的 finally——`:286-287`，render 已先行
 
 ### 5.1 历史沿革（(d) 类——**不并**）
 
-> 来源档 `thincoder-vscode/docs/design/SEND-STALL-DISTILL-TUNING.md`（VSC 产品档）——**原地保留作参照历史**（保留 ≠ 维护）。下列内容不并入本档：
+> 来源档 `thincoder-vscode/docs/_archive/design/SEND-STALL-DISTILL-TUNING.md`（VSC 产品档）——**原地保留作参照历史**（保留 ≠ 维护）。下列内容不并入本档：
 
 | 旧档位置 | 内容 | 何故不并 |
 |---|---|---|
@@ -138,17 +138,16 @@ flush 点 = 每轮 `runAgentTurn` 的 finally——`:286-287`，render 已先行
 | 旧档「文档地图惯例」注 | 旧树地图惯例 | 树降格后失效——登记表已退休 |
 | CLI 侧同名档未迁面（CLI 台账列为后续批） | CLI 产品档正文 | **已并入（2026-09-15 CLI 尾部真批）**——CLI 独有面入 §2.3 / §2.6 / §3，(d) 类入 §5.1 |
 
-## 6. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **约 155 行**（as-of 2026-09-15 CLI 尾部真批并入后实核）——**低于 300 行软线，无需拆分规划**。
-
 ## 变更记录
 
 - 2026-09-15（**CLI 尾部真批 · 并入既有 · eng-designer**）：`thincoder-cli/docs/design/SEND-STALL-DISTILL.md` 逐节对账并入——
   CLI 独有面入档：TUI 保存回调接线（`tool-events.mjs:395` `onDistilled` → `saveSessionImpl`，§2.3 / §3）· **§2.6 CLI 退出前 flush**
   （有界等待 5s · 不摘除 `_pendingDistill`）；§3 坐标表「保存回调 / 退出 flush」两行按实装收正（原核/CLI 栏仅「—（会话退出 flush）」——不完整）；
   (d) 类（状态行 / 内嵌代码块 / 验收清单 / 逐批流水）入 §5.1。旧档原地一字不改。
-- 2026-09-15（**B 式迁移轮 · VSC 批 3**）：建档——`thincoder-vscode/docs/design/SEND-STALL-DISTILL-TUNING.md` 内容重建入基准层
+- 2026-09-15（**B 式迁移轮 · VSC 批 3**）：建档——`thincoder-vscode/docs/_archive/design/SEND-STALL-DISTILL-TUNING.md` 内容重建入基准层
   （旧档一字未改、原地作参照历史）；坐标改写为现状路径并实核（`thincoder-core/agent.mjs` · `explore-distill.mjs` · `context.mjs`；
-  `thincoder-vscode/src/{agent/run-stages.mjs,explore-distill.mjs,compact.mjs,extension/panel-chat.mjs,extension/panel-callbacks.mjs}`）；
+  `thincoder-vscode/src/agent/run-stages.mjs` · `thincoder-vscode/src/{explore-distill.mjs,compact.mjs,extension/panel-chat.mjs,extension/panel-callbacks.mjs}`）；
   内嵌代码块与验收清单不并（§5）；蒸馏本体指向 `CONTEXT-COMPACTION.md` §6.9（D2 单一权威源）。
+- 2026-09-18（**坐标漂移收正轮 · eng-designer**——承 `docs/batches/2026-09-18-distill-prefix.md` §5 八、登记 · 台账 #76）：坐标按实况收正（机制条文零改）——
+  发射点 VSC `thincoder-vscode/src/agent/run-stages.mjs:261`（原 `:232`）· `onDistilled` 触发 `:267`（原 `:243`）· 核发射面区间 `thincoder-core/agent.mjs:341-348`（原 `:342-347`）；
+  蒸馏本体 VSC `thincoder-vscode/src/explore-distill.mjs:29`（原 `:154`——该档现为 55 行调用期适配器）· 核 `thincoder-core/explore-distill.mjs:141`（原 `:145`）。

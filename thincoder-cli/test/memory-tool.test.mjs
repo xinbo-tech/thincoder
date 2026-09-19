@@ -4,6 +4,10 @@
  * AC3 deleteByUid 尊重 uid origin 段 / AC4 输出与错误串全 layer 无 scope 词 /
  * AC5 工具描述重写（无 scope + delete layer 可选）+ 设计② list 行 [layer] 标签。
  *
+ * TUI 假死批（2026-09-18 · MEMORY.md §6.11 origin 归一）：库内 origin 键 = **归一形**
+ * （盘符大写 + `/`）——本档期望随改（行查询用 `normalizeOrigin(dir)`）；uid 字符串面不变
+ * （旧形态 uid 仍可直接删——`deleteByUid` 归一化解析）。
+ *
  * 快层：in-memory sqlite + 少量 tmp 目录写删——无 git、无网络、无长 IO。
  */
 import test from "node:test"
@@ -13,6 +17,7 @@ import { existsSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { createMemory, memoryTools, putMarkdown, deleteByUid, search } from "@thincoder/core/memory.mjs"
+import { normalizeOrigin } from "@thincoder/core/memory/origin.mjs"
 
 /** Fresh memory db + tmp dirs. t.after removes the tmp base. */
 async function fresh(t) {
@@ -93,10 +98,10 @@ test("AC3 deleteByUid 文件定位用 uid origin（当前 dirs 指向别处也�
   const e = await deleteByUid(mem, `project:${dirA}:${f}`, { dirs: { project: dirB, team: null } })
   assert.equal(e.id, `project:${dirA}:${f}`)
   assert.ok(!existsSync(join(dirA, f)), "file deleted in uid-origin dirA")
-  const row = mem.db.prepare(`SELECT 1 FROM files WHERE layer='project' AND origin=? AND path=?`).get(dirA, f)
+  const row = mem.db.prepare(`SELECT 1 FROM files WHERE layer='project' AND origin=? AND path=?`).get(normalizeOrigin(dirA), f)
   assert.ok(!row, "index row cleared via syncDir(dirA)")
   // dirB untouched
-  const inB = mem.db.prepare(`SELECT COUNT(*) c FROM files WHERE layer='project' AND origin=?`).get(dirB)
+  const inB = mem.db.prepare(`SELECT COUNT(*) c FROM files WHERE layer='project' AND origin=?`).get(normalizeOrigin(dirB))
   assert.equal(inB.c, 0)
 })
 
@@ -108,7 +113,7 @@ test("AC3 origin 目录本地缺失 → ENOENT 容错 + syncDir 清索引", asyn
   await rm(dirC, { recursive: true, force: true }) // dir vanishes locally, row remains in db
   const e = await deleteByUid(mem, `project:${dirC}:${f}`, { dirs: {} }) // no dirs at all — origin resolves itself
   assert.ok(e, "ENOENT-tolerant delete returns the entry")
-  const row = mem.db.prepare(`SELECT 1 FROM files WHERE layer='project' AND origin=? AND path=?`).get(dirC, f)
+  const row = mem.db.prepare(`SELECT 1 FROM files WHERE layer='project' AND origin=? AND path=?`).get(normalizeOrigin(dirC), f)
   assert.ok(!row, "stale (layer, origin) row cleared for a vanished dir")
 })
 
@@ -116,7 +121,7 @@ test("AC3+AC2 工具级：search 带出的非当前 origin id 直接可删（另
   const { dirB, toolA, toolB, mem } = await fresh(t)
   const f = await putMarkdown(mem, { layer: "project", dir: dirB, type: "decision", title: "cross-tool", content: "grape", tags: [], author: "t" })
   const res = await toolA.execute({ action: "search", query: "cross-tool" })
-  assert.ok(res.includes(`[project][decision] cross-tool (id=project:${dirB}:${f})`), res)
+  assert.ok(res.includes(`[project][decision] cross-tool (id=project:${normalizeOrigin(dirB)}:${f})`), res)
   // toolB 的当前 projectDir 也是 dirB，这里故意经 toolA（当前目录 dirA）删 dirB 的 id
   const out = await toolA.execute({ action: "delete", id: `project:${dirB}:${f}` })
   assert.ok(out.startsWith(`Deleted project:${dirB}:${f}`), out)

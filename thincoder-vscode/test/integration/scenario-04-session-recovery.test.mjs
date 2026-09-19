@@ -18,7 +18,9 @@ import assert from "node:assert/strict"
 import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { _setSessionsDirForTest, _resetSessionsDirForTest, slotPath } from "../../src/extension/session-slots.mjs"
+import { slotPath } from "../../src/extension/session-slots.mjs"
+// 沙箱两缝取 session-io 包装版（换目录即清解析缓存——与 session-boot / async-visibility 同源）
+import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../../src/extension/session-io.mjs"
 import { newSlotData } from "../../src/extension/session-slot-write.mjs"
 import { loadSlot, saveSessionToSlot, listSlots, newSlot } from "../../src/extension/session-io.mjs"
 import { historyWindow } from "../../src/extension/history-window.mjs"
@@ -107,7 +109,7 @@ test("④ 边界：跨轮切断历史（无结果 tool_call + 孤儿 tool）→ 
   assert.deepEqual(win.messages.map((m) => m.idx), [0, 1, 2, 3, 4], "全局 idx 不重编号（分页锚点稳定）")
 })
 
-test("④ 错误：损坏档 → 干净回退（判空 + 轮转 + 不崩）；缺档 → 建新会话可写可读", () => {
+test("④ 错误：损坏档 → 干净回退（判空 + 轮转 + 不崩）；缺档 → 建新会话可写可读", async () => {
   const p = slotPath(CWD, 1)
   writeFileSync(p, "{ this is not json", "utf8")
   const broken = loadSlot(CWD, 1)
@@ -116,7 +118,7 @@ test("④ 错误：损坏档 → 干净回退（判空 + 轮转 + 不崩）；�
   assert.equal(existsSync(p), false, "损坏主档已让位（不回写半个现场）")
 
   // 缺档回退：建新会话 → 立即可写可读（干净起点）
-  const slot = newSlot(CWD)
+  const slot = await newSlot(CWD)
   const fresh = loadSlot(CWD, slot)
   assert.ok(fresh, "新会话槽立即可读")
   assert.deepEqual(fresh.history, [], "新会话起点干净")

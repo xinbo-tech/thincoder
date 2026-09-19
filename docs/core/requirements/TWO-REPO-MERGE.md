@@ -11,7 +11,7 @@
 ThinCoder 曾以**两个独立 git 仓**分头维护：CLI 仓与 VSC 扩展仓。
 
 两产品在**概念层**镜像同一套机制（会话、上下文压缩、工具系统、评审收敛、工程模式……），却在**实现层**各自持有一份。
-实测佐证这一「镜像只在概念层」的判断（度量可复现——口径 = 同路径成对 · 去首尾空白 + 丢空行后行集合相似度 · 另报逐字节完全相同对数；复现命令 `node scripts/mirror-divergence.mjs`，工具已入库 = 仓根 `scripts/mirror-divergence.mjs`）：
+ 实测佐证这一「镜像只在概念层」的判断（度量可复现——口径 = 同路径成对 · 去首尾空白 + 丢空行后行集合相似度 · 另报逐字节完全相同对数；复现命令 `node scripts/mirror-divergence.mjs`——**度量工具已于 2026-09-17 退役**（两产品镜像度量随「一核两壳」重构失去对象），历史读数保留于批次档与本节）：
 两产品 `src/**` 同路径成对 107 对——逐字节完全相同 29 对 · 相似度 ≥0.9 者 39 对 · 全体中位 0.6494；真分叉在**实现层**（子目录中位：`agent` 0.0532 · `provider` 0.1124 · `traces` 0.1869 · `agent-tools` 0.2060（n=20）），契约层近同（`tools` 0.9091 · `prompts` 1.0000）。
 
 为了让两份实现不漂移，工程体系被迫长出一整套**跨仓机制**：跨仓引用形态判据、对端仓根发现、缺仓 / 域外口径、自指 fail-closed 防护、
@@ -50,7 +50,7 @@ ThinCoder 曾以**两个独立 git 仓**分头维护：CLI 仓与 VSC 扩展仓�
 - 与 **「各仓自持」**（需求层条款：文档体系各仓自持 / 需求层必须在本仓有档）的关系 = **同一病根的两种解法**：隔离（各记各的）→ 消灭（根本无仓可分）。
   本板块落地后，「各仓自持」条款失去对象，随之退役；二者**非叠加关系**。
 - 与 **「跨仓内容纪律」** 无冲突：内容纪律（正文可指他仓、条目与归属不带跨仓指针）在本板块落地后**自然收窄**为仓内规范，条款本体留存。
-- **条款住址**：两族条款住 CLI 产品树需求档 `thincoder-cli/docs/requirements/ENGINEERING-MODE.md`（CLI 侧**未迁**）与 VSC 侧同名档（未迁）——**先例不构成例外依据**为其中一条。
+- **条款住址**：两族条款住 CLI 产品树需求档 `thincoder-cli/docs/_archive/requirements/ENGINEERING-MODE.md`（CLI 侧**未迁**）与 VSC 侧同名档（未迁）——**先例不构成例外依据**为其中一条。
 - **不属本板块**：phase 2（核心统一）——演进通道 = `docs/core/design/CORE-UNIFICATION.md`（设计）/ `docs/core/requirements/CORE-UNIFICATION.md`（需求）。
 
 ## 5. 不并项与历史沿革
@@ -62,7 +62,7 @@ ThinCoder 曾以**两个独立 git 仓**分头维护：CLI 仓与 VSC 扩展仓�
 | 旧档位置 | 内容 | 何故不并 |
 |---|---|---|
 | 旧档档头 | 「来源：自设计档抽取」/「状态：需求已收口」/「需求来源：用户提案 + 两轮澄清」/ 迁移前设计档与地图址 | 时点材料——需求已归位到本档；配对档现状路径见本档档头 |
-| 旧档各条回指 | `docs/requirements/ENGINEERING-MODE.md` §1.19 等迁移前节号 | 迁移前仓形态——§4 已改现状路径（未迁档按产品树形态书写） |
+| 旧档各条回指 | `thincoder-cli/docs/_archive/requirements/ENGINEERING-MODE.md` §1.19 等迁移前节号 | 迁移前仓形态——§4 已改现状路径（未迁档按产品树形态书写） |
 | 旧档变更记录 | 逐批流水（含数字收正轮的收正说明） | 历史叙述——本档自有变更记录 |
 
 ### 5.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
@@ -73,13 +73,9 @@ ThinCoder 曾以**两个独立 git 仓**分头维护：CLI 仓与 VSC 扩展仓�
 | 批次实施流水与回滚点 | 一次性施工材料 | `docs/batches/`（项目级时序日志） |
 | VSC 侧同名档 | `thincoder-vscode/docs/requirements/TWO-REPO-MERGE.md` | VSC 轮（`docs/core/requirements/` 并入——P1 统一面） |
 
-## 6. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **86 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
-
 ## 变更记录
 
 - 2026-09-15（**B 式迁移轮 · 第 2 批**）：建档——`thincoder-cli/docs/requirements/TWO-REPO-MERGE.md` 内容重建入基准层（旧档一字未改、原地作参照历史）。
-  ① F1–F7 / N1–N6 编号与语义**零改动**（收窄注记原样保留）；② 坐标改现状路径（`docs/core/design/prompts/` · 仓根 `scripts/mirror-divergence.mjs` · 未迁档按 CLI 树形态）；
+  ① F1–F7 / N1–N6 编号与语义**零改动**（收窄注记原样保留）；② 坐标改现状路径（`docs/core/design/prompts/` · 仓根 `scripts/mirror-divergence.mjs` · 未迁档按 CLI 树形态） （迁移期引文——工具已退役）；
   ③ **N1 旁注坐标收正**：CLI 产品目录由 `<ws>/thincoder/thincoder` 收正为 **`<ws>/thincoder/thincoder-cli`**（与设计档目标布局和现状实核一致）；
   ④ §4 条款住址与 phase 2 边界改现状路径；⑤ 新增 §5 不并项与历史沿革、§6 体量。

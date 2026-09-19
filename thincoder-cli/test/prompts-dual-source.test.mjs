@@ -41,12 +41,12 @@ const NEW_PROMPTS = [
 // （其余锚族已随 2026-09-12 散文锚退役批整删）。
 // ─────────────────────────────────────────────────────────────────────────────
 const pdes = readCore("persona-eng-designer.md")
-const pdesZh = read("docs/design/prompts/persona-eng-designer.md")
+const pdesZh = read("docs/_archive/design/prompts/persona-eng-designer.md")
 
 test("AC21 新槽文件双源齐备 + 已入 NEW_PROMPTS（首行头注合格式——漏入则格式/宽行断言不覆盖）", () => {
   assert.ok(NEW_PROMPTS.includes("persona-eng-designer.md"), "已入 NEW_PROMPTS（15 文件全集）")
   assert.ok(existsCore("persona-eng-designer.md"), "英文落地位（核包）")
-  assert.ok(exists("docs/design/prompts/persona-eng-designer.md"), "中文权威位")
+  assert.ok(exists("docs/_archive/design/prompts/persona-eng-designer.md"), "中文权威位")
   assert.match(pdes.split("\n")[0], /^<!-- slot:\[1\] consumers:\[.+\] -->$/, "英文落地头注格式")
   assert.match(pdesZh.split("\n")[0], /^<!-- 槽位:\[1\] 消费方:\[.+\] -->$/, "中文权威头注格式")
 })
@@ -72,16 +72,15 @@ test("T-RO6 边界：时序文本零维护者注（§2.7 #15——旧三值句/�
 // ─────────────────────────────────────────────────────────────────────────────
 // 第 15 批锚（PROMPT-SYSTEM 公共层扩容）：保留 T-CL1（## 块计数）。标题组 / 关键句 /
 // C8 人格段与旧源清零驻留断言已随 2026-09-12 散文锚退役批整删。
+// 2026-09-17 双面流程收正：中英不再同字面（翻译不是 cp）——「双源同一字面串」判据失效；
+// 中文权威在核上级（docs/core/design/prompts/），CLI 仓旧副本已死——本测只验英文运行面块数。
 // ─────────────────────────────────────────────────────────────────────────────
 const commonEn = readCore("common.md")
-const commonZh = read("docs/design/prompts/common.md")
-const COMMON_PAIR = [["thincoder-core（英文落地）", commonEn], ["docs/design/prompts（中文权威）", commonZh]]
-// 计数口径（设计 §1.2）：10 节 = 内容项数；## 块 11（工具观承载 2 块：工具观 + 工具路由表）
 
-test("T-CL1 正常：common 十节标题双源驻留（11 个 ## 块 = 10 节口径——两源同一字面串）", () => {
-  for (const [name, doc] of COMMON_PAIR) {
-    assert.equal(doc.split("\n").filter((l) => l.startsWith("## ")).length, 11, `${name}: ## 块数应为 11（工具观承载 2 块）`)
-  }
+// 计数口径（设计 §1.2）：14 节 = 内容项数；## 块 14（上行通道 + 工具观 + 工具路由表三节 + 文档体系评价 + 台账 + 批次档常识）
+
+test("T-CL1 正常：common 英文运行面十四节（## 块数 14——上行通道 + 工具观 + 工具路由表 + 文档体系评价 + 台账 + 批次档常识）", () => {
+  assert.equal(commonEn.split("\n").filter((l) => l.startsWith("## ")).length, 14, "thincoder-core（英文落地）: ## 块数应为 14")
 })
 
 // ─────────────────────────────────────────────────────────────────────────────

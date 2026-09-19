@@ -9,6 +9,7 @@ import { createModelPicker } from "./model-picker.mjs"
  *  通用绑定（showPicker/closePicker/renderPickerLines）再行装配——index.mjs 消费面不变。
  *  单一 Promise API：showPicker(title, entries, { defaultIndex }) → Promise<entry|null>。
  *  picker 栈：state.pickerStack，state.picker 始终指向栈顶（layout/render/key-handler 都只读 state.picker）。
+ *  删除类二次确认件：confirmDelete（TUI-COMMANDS.md §5.4 单源——形态同 cmd-clear / cmd-new 先例）。
  *  选中即关闭（Enter = resolve + pop）；Esc = pop 当前层并 resolve(null)。菜单循环由调用方 while 重开。 */
 export function createPickers(ctx) {
   const { agent, state, render, ansi, C, pushLine, persistRaw, askQuestion, maskKey } = ctx
@@ -105,13 +106,25 @@ export function createPickers(ctx) {
 
   function renderPickerLines() { rebuildLines() }
 
+  /** 删除类入口二次确认件（单源——TUI-COMMANDS.md §5.4）：形态 = 既有二次确认 picker
+   *  （与 cmd-clear.mjs:6-9 · cmd-new.mjs:30-33 先例逐字同形，禁新造模态）。
+   *  defaultIndex 恒指 Cancel（反误触——直接 Enter 不会删除）；Esc / Cancel ⇒ false
+   *  ⇒ 调用方零动作（取消先于落盘发生）。入口 ctx 缺此绑定 ⇒ 调用方报错（fail-closed）。 */
+  async function confirmDelete(question = "Delete?") {
+    const e = await showPicker(question, [
+      { type: "item", text: "Yes, delete", action: "yes" },
+      { type: "item", text: "Cancel", action: "no" },
+    ], { defaultIndex: 1 })
+    return e?.action === "yes"
+  }
+
   // /model 两级面 + selectModel + 渠道管理 + pickModelForSlot —— 迁 model-picker.mjs
   // （MODEL-MERGE-SESSION——pick 后本文件 ≤450）。createModelPicker 返回同名单函数，
   // 经本层原样转发（index.mjs/wizard/slash-commands 消费面零变化）。
   const modelPicker = createModelPicker({
     agent, state, render, ansi, C, pushLine, persistRaw, askQuestion, maskKey,
-    showPicker, closePicker, renderPickerLines,
+    showPicker, closePicker, renderPickerLines, confirmDelete,
   })
 
-  return { showPicker, closePicker, popPicker, renderPickerLines, ...modelPicker }
+  return { showPicker, closePicker, popPicker, renderPickerLines, confirmDelete, ...modelPicker }
 }

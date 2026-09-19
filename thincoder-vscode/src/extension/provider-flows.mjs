@@ -20,6 +20,7 @@ import { PROVIDER_PRESETS } from "@thincoder/core/config.mjs"
 import { addProviderEntry, removeProviderEntry, setProviderKey, resolveProviders } from "@thincoder/core/config-io.mjs"
 import { probeTargetFromEntry } from "./presets.mjs"
 import { probeChannelModels, channelUnavailableMessage } from "@thincoder/core/provider/list-models.mjs"
+import { overrideAdmissionIfHostBusy } from "./loop-sampler.mjs"
 
 // 纯持久化函数面：核单源 re-export（既有调用方 import 面不变——settings.mjs / 测试）。
 export { addProviderEntry, removeProviderEntry }
@@ -34,7 +35,11 @@ export async function probeProviderAdmission(name) {
     const { providers } = resolveProviders()
     const entry = providers.find((p) => p.name === name)
     if (!entry) return { ok: false, error: `Unknown provider "${name}"` }
-    return await probeChannelModels(name, probeTargetFromEntry(entry))
+    const r = await probeChannelModels(name, probeTargetFromEntry(entry))
+    // F-W19（`SETTINGS.md` §2.12 / `PROVIDER.md` §6.16 M8/M9 补）：核分类只知超时 / 畸形；
+    // 宿主忙 = 端侧证据 ⇒ 覆盖落账分类为 `hostBusy`（`reason` 逐字不动；返回面零扩张）。
+    if (!r.ok) overrideAdmissionIfHostBusy(name, r.error)
+    return r
   } catch (e) {
     return { ok: false, error: channelUnavailableMessage(e) }
   }

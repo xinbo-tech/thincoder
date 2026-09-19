@@ -10,7 +10,7 @@
 ## 1. 总体定位
 
 评审 · 会诊 · 飞刀 = advisor 主面（`advisor.mjs` + `src/advisor/*`）**+** 工具面（`advisor` · `consult` · `advisor-settle` · `review-streak` · `subagent-panel`）**+** 飞刀（升级到更强模型）。
-VSC 侧对应面住 `src/advisor/main.mjs` + `src/advisor/*`（拆 `provider.mjs` · `tools.mjs`）与 `agent-tools/subagent-escalate*`。
+VSC 侧对应面住 `thincoder-core/advisor.mjs` + `src/advisor/*`（拆 `provider.mjs` · `tools.mjs`）与 `agent-tools/subagent-escalate*`。
 本板块对本子系统的要求 = 该面归一为**核内单一实现**（含评审止损护栏）。
 
 > 面清单与逐面裁决（分类 / 端差处置 / 前提校验 / 归属段）→ `docs/core/design/CONSULTATION.md` §1–§2（不复制）。

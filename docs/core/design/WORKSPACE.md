@@ -11,11 +11,11 @@
 
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
-| 技能发现 | `thincoder-cli/src/skills.mjs` | `thincoder-vscode/src/extension/skills.mjs` |
-| 规则发现 | `src/rules.mjs` | `src/extension/rules.mjs` |
-| 同伴实例 / 域 | `src/peer-instances.mjs` · `src/peer-domains.mjs` | `src/extension/peer-instances.mjs` · `peer-domains.mjs` |
+| 技能发现 | `thincoder-core/skills.mjs` | `thincoder-vscode/src/extension/skills.mjs` |
+| 规则发现 | `thincoder-core/rules.mjs` | `thincoder-vscode/src/extension/rules.mjs` |
+| 同伴实例 / 域 | `thincoder-core/peer-instances.mjs` · `thincoder-core/peer-domains.mjs` | `thincoder-vscode/src/extension/peer-instances.mjs` · `peer-domains.mjs` |
 | 台账规则 / 路径约定 | 已迁核——经 `@thincoder/core/{ledger,conventions,escape}.mjs` 引用（S2 U4） | 已迁核——同引核单源（S2 W4 · 自持镜像已删） |
-| 台账展示面 | `src/tui/ledger-surface.mjs` | 端壳缝——核机制 `@thincoder/core/ledger-surface.mjs` + 面板推送供值（S2 W4） |
+| 台账展示面 | `thincoder-cli/src/tui/ledger-surface.mjs` | 端壳缝——核机制 `@thincoder/core/ledger-surface.mjs` + 面板推送供值（S2 W4） |
 
 ## 2. 核模块裁决行（自 `CORE-UNIFICATION.md` §2.5 搬入 · 逐字）
 
@@ -31,11 +31,11 @@
 
 | # | 对位（CLI ↔ VSC） | 分类 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|
-| 170 | `src/skills.mjs` ↔ `src/extension/skills.mjs` | ② | 融合：取一侧（发现规则两端同构：扁平 + `SKILL.md` / 排序 / 项目层优先）+ fs 面（同步 / 异步）按端注入 | 分叉 ＝ 目录 + loader 形态（VSC 头注自述「同构语义…语义同源、实现自持」`:3-5`）⇒ 前提成立 | — | S1（建核补齐） |
-| 171 | `src/rules.mjs` ↔ `src/extension/rules.mjs` | ② | 融合：取一侧 | 分叉 ＝ 目录归属（VSC 住 `extension/`）⇒ 前提成立 | — | S1（建核补齐） |
-| 172 | `src/peer-instances.mjs` ↔ `src/extension/peer-instances.mjs` | ② | 融合：取一侧 + 端判别面按端注入 | 分叉 ＝ 目录 + 端标记判别（VSC 头注自述「VS Code 镜像」`:2`）⇒ 前提成立 | — | S1（建核补齐） |
-| 173 | `src/peer-domains.mjs` ↔ `src/extension/peer-domains.mjs` | ② | 融合：取一侧 | 分叉 ＝ 目录（VSC 头注自述「VS Code 镜像」`:3`）⇒ 前提成立 | — | S1（建核补齐） |
-| 174 | `src/tui/ledger-surface.mjs` ↔ `src/extension/ledger-surface.mjs` | ② | 融合：取一侧 + 渲染面按端注入 | 分叉 ＝ 目录（CLI 住 `tui/` / VSC 住 `extension/`）；台账规则两端逐字同（`ledger.mjs` 同路径 #71）⇒ 前提成立 | — | S1（建核补齐） |
+| 170 | `thincoder-core/skills.mjs` ↔ `thincoder-vscode/src/extension/skills.mjs` | ② | 融合：取一侧（发现规则两端同构：扁平 + `SKILL.md` / 排序 / 项目层优先）+ fs 面（同步 / 异步）按端注入 | 分叉 ＝ 目录 + loader 形态（VSC 头注自述「同构语义…语义同源、实现自持」`:3-5`）⇒ 前提成立 | — | S1（建核补齐） |
+| 171 | `thincoder-core/rules.mjs` ↔ `thincoder-vscode/src/extension/rules.mjs` | ② | 融合：取一侧 | 分叉 ＝ 目录归属（VSC 住 `extension/`）⇒ 前提成立 | — | S1（建核补齐） |
+| 172 | `src/peer-instances.mjs` ↔ `thincoder-vscode/src/extension/peer-instances.mjs` | ② | 融合：取一侧 + 端判别面按端注入 | 分叉 ＝ 目录 + 端标记判别（VSC 头注自述「VS Code 镜像」`:2`）⇒ 前提成立 | — | S1（建核补齐） （迁移期引文） |
+| 173 | `src/peer-domains.mjs` ↔ `thincoder-vscode/src/extension/peer-domains.mjs` | ② | 融合：取一侧 | 分叉 ＝ 目录（VSC 头注自述「VS Code 镜像」`:3`）⇒ 前提成立 | — | S1（建核补齐） （迁移期引文） |
+| 174 | `thincoder-cli/src/tui/ledger-surface.mjs` ↔ `thincoder-vscode/src/extension/ledger-surface.mjs` | ② | 融合：取一侧 + 渲染面按端注入 | 分叉 ＝ 目录（CLI 住 `tui/` / VSC 住 `extension/`）；台账规则两端逐字同（`ledger.mjs` 同路径 #71）⇒ 前提成立 | — | S1（建核补齐） |
 
 ## 3. 须用户裁条目
 
@@ -82,10 +82,6 @@
 | `thincoder-cli/docs/design/LEDGER-SELF-CONTAINED.md` | 台账 / 引用自足面机制 | 非同板块同名档 ⇒ **越段登记**——触发 = 父侧另派 |
 | `thincoder-cli/docs/design/MULTI-INSTANCE-COLLAB.md`（+ 同名需求档） | 同伴实例 / 域面机制 | 同上 |
 | 技能 / 规则发现机制 | 旧档无专档（`ARCHITECTURE.md` 模块图行之外无描述） | 同上 |
-
-## 9. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **95 行**（B 轮并入前 56 行）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 

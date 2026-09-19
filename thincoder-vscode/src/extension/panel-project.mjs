@@ -50,7 +50,9 @@ export async function onProjectChanged(panel) {
     // 2026-09-05 §10 D-2：认领点改 resumeSlot（本端记录/一次性继承/全新分配——与
     // panel-session 的 ensureSlot/openSessionContent（B2——原 status 位置，2026-09-09）
     // 同点）；全新项目 claim 先行，文件首保存落盘
-    panel._slot = resumeSlot(cwd).slot
+    // F-MI7：`resumeSlot` = async（核同名件同形）——本函数（绑定入口之一）awaited 认领
+    // 后再钉槽；决策失败（无返回值）⇒ 保持置空（下次 ensureSlot 后台收敛重认领）。
+    panel._slot = (await resumeSlot(cwd))?.slot ?? null
     pushProject(panel)
     loadSession(panel)   // clearMessages + new project's history + sessions + autoApprove/planMode
     // W8：核记忆面就绪（句柄创建——换项目后索引读数/构建入口同源可用）

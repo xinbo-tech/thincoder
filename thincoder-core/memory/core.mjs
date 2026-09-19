@@ -8,6 +8,7 @@
 import { parseEntry, serializeEntry, entryFilename } from "../markdown.mjs"
 import { embed, cosine, toBlob, fromBlob } from "../embedding.mjs"
 import { scanVectors, createTopK } from "./scan.mjs"
+import { normalizeOrigin } from "./origin.mjs"
 import { readFile, stat, readdir, writeFile, mkdir } from "node:fs/promises"
 import { join } from "node:path"
 import { segmentCJK, VALID_TYPES, SCHEMA_VERSION } from "./schema.mjs"
@@ -57,14 +58,17 @@ export async function search(memory, query, { limit = 5 } = {}) {
     console.error(`[memory] query embedding failed, falling back to FTS-only: ${e.message}`)
     return ftsList.slice(0, limit)
   }
-  const vecFilter = memory.projectOrigin ? `AND (layer = 'team' OR origin = ?)` : ""
-  const vecParams = memory.projectOrigin ? [memory.projectOrigin] : []
+  // §6.11 读缝归一（单点取名——函数体内一律用归一值）
+  const projectOrigin = normalizeOrigin(memory.projectOrigin)
+  const vecFilter = projectOrigin ? `AND (layer = 'team' OR origin = ?)` : ""
+  const vecParams = projectOrigin ? [projectOrigin] : []
   // TUI-OOM-ROOTCAUSE（MEMORY.md §10.3）：分块扫描 + 有界 top-K（原全表 .all() 物化 +
   // 全量排序——峰值 = 块 + K；召回语义不变）。两表各自游标扫描、共享同一 top-K。
+  // TUI 假死批（§6.10）：scanVectors = async（让出）——游标键缺省 rowid（= 本表 PK 别名，零改）。
   const top = createTopK(Math.max(limit * 4, 20))
   const onRow = (r) => top.push({ id: r.uid, score: cosine(qvec, fromBlob(r.embedding)) })
-  scanVectors(memory.db, `SELECT rowid, 'personal:' || id AS uid, embedding FROM entries WHERE embedding IS NOT NULL`, [], { onRow })
-  scanVectors(memory.db, `SELECT rowid, layer || ':' || COALESCE(origin, '') || ':' || path AS uid, embedding FROM files WHERE embedding IS NOT NULL ${vecFilter}`, vecParams, { onRow })
+  await scanVectors(memory.db, `SELECT rowid, 'personal:' || id AS uid, embedding FROM entries WHERE embedding IS NOT NULL`, [], { onRow })
+  await scanVectors(memory.db, `SELECT rowid, layer || ':' || COALESCE(origin, '') || ':' || path AS uid, embedding FROM files WHERE embedding IS NOT NULL ${vecFilter}`, vecParams, { onRow })
   const vecList = top.list()
 
   // ---- RRF merge ----
@@ -92,8 +96,9 @@ export function ftsSearch(memory, ftsQuery, limit) {
     ORDER BY rank LIMIT ?
   `).all(ftsQuery, limit).map((r) => ({ ...r, layer: "personal", id: `personal:${r.id}` }))
 
-  const originFilter = memory.projectOrigin ? `AND (f.layer = 'team' OR f.origin = ?)` : ""
-  const originParams = memory.projectOrigin ? [ftsQuery, memory.projectOrigin, limit] : [ftsQuery, limit]
+  const projectOrigin = normalizeOrigin(memory.projectOrigin) // §6.11 读缝归一
+  const originFilter = projectOrigin ? `AND (f.layer = 'team' OR f.origin = ?)` : ""
+  const originParams = projectOrigin ? [ftsQuery, projectOrigin, limit] : [ftsQuery, limit]
   const files = memory.db.prepare(`
     SELECT f.layer, f.origin, f.path, f.type, f.title, f.content, f.tags, f.author, bm25(files_fts) AS rank
     FROM files_fts JOIN files f ON f.rowid = files_fts.rowid
@@ -119,8 +124,9 @@ export function fetchEntry(memory, uid) {
   const lastColon = uid.lastIndexOf(":")
   const origin = lastColon > layer.length ? uid.slice(layer.length + 1, lastColon) : ""
   const path = lastColon > layer.length ? uid.slice(lastColon + 1) : uid.slice(layer.length + 1)
-  if (layer === "project" && memory.projectOrigin) {
-    const r = memory.db.prepare(`SELECT type, title, content, tags, author FROM files WHERE layer = ? AND origin = ? AND path = ?`).get(layer, origin || memory.projectOrigin, path)
+  const projectOrigin = normalizeOrigin(memory.projectOrigin) // §6.11 读缝归一（uid 解析面零改——`:131` 余量兜底仍在）
+  if (layer === "project" && projectOrigin) {
+    const r = memory.db.prepare(`SELECT type, title, content, tags, author FROM files WHERE layer = ? AND origin = ? AND path = ?`).get(layer, origin || projectOrigin, path)
     if (r) return { ...r, layer, id: uid }
   }
   // team layer or project fallback: query by origin+path; when origin is empty, degrade to path-only (compat with old UID)
@@ -204,6 +210,7 @@ export async function putMarkdown(memory, { layer, dir, type, title, content, ta
  * vanished entries are removed from the index.
  */
 export async function syncDir(memory, { layer, dir }) {
+  const origin = normalizeOrigin(dir) // §6.11 写缝归一（目录 I/O 用原样 dir；与库面比较一律用归一值）
   let names
   try {
     names = (await readdir(dir)).filter((n) => n.endsWith(".md"))
@@ -212,15 +219,25 @@ export async function syncDir(memory, { layer, dir }) {
   }
 
   const indexed = new Map(
-    memory.db.prepare(`SELECT path, mtime_ms FROM files WHERE layer = ? AND origin = ?`).all(layer, dir).map((r) => [r.path, r.mtime_ms]),
+    memory.db.prepare(`SELECT path, mtime_ms FROM files WHERE layer = ? AND origin = ?`).all(layer, origin).map((r) => [r.path, r.mtime_ms]),
   )
 
   let added = 0, updated = 0, skipped = 0
   for (const filename of names) {
-    const mtimeMs = Math.floor((await stat(join(dir, filename))).mtimeMs)
+    let mtimeMs
+    // 档在 readdir 与 stat 之间消失 / 不可读 ⇒ 跳过本行（**不**移出 stale 候选：该文件已无
+    // 盘面依据，交由下方清理移除其索引行——避免 stat 抛出打断整趟 sync，调用面
+    // `deleteByUid` 先 unlink 后 syncDir，抛出即「删除已成功却报失败」）
+    try { mtimeMs = Math.floor((await stat(join(dir, filename))).mtimeMs) } catch { continue }
     const old = indexed.get(filename)
     const isNew = old === undefined
-    if (!isNew && old === mtimeMs) continue
+    if (!isNew && old === mtimeMs) {
+      // 已见且未变：行完好——**必须**移出 stale 候选（既有缺陷修复：原 `continue` 不带
+      // delete ⇒ 未变文件被下方清理误删，索引在两次 sync 间 1→0→1 翻覆；T-O1 暴露）
+      skipped++
+      indexed.delete(filename)
+      continue
+    }
     try {
       await indexMarkdownFile(memory, { layer, dir, filename, mtimeMs })
     } catch (e) {
@@ -236,7 +253,7 @@ export async function syncDir(memory, { layer, dir }) {
 
   let removed = 0
   for (const stale of indexed.keys()) {
-    memory.db.prepare(`DELETE FROM files WHERE layer = ? AND origin = ? AND path = ?`).run(layer, dir, stale)
+    memory.db.prepare(`DELETE FROM files WHERE layer = ? AND origin = ? AND path = ?`).run(layer, origin, stale)
     removed++
   }
   return { added, updated, removed, skipped }
@@ -244,6 +261,7 @@ export async function syncDir(memory, { layer, dir }) {
 
 /** Parse a single .md and upsert into the files table */
 export async function indexMarkdownFile(memory, { layer, dir, filename, mtimeMs }) {
+  const origin = normalizeOrigin(dir) // §6.11 写缝归一（文件 I/O 用原样 dir；origin 列用归一值）
   const abs = join(dir, filename)
   const mtime = mtimeMs ?? Math.floor((await stat(abs)).mtimeMs)
   const { meta, content } = parseEntry(await readFile(abs, "utf8"))
@@ -257,7 +275,7 @@ export async function indexMarkdownFile(memory, { layer, dir, filename, mtimeMs 
       seg_title=excluded.seg_title, seg_content=excluded.seg_content, seg_tags=excluded.seg_tags,
       updated_at=excluded.updated_at
   `).run(
-    layer, dir, filename, meta.type, meta.title, content, tags, meta.author, mtime,
+    layer, origin, filename, meta.type, meta.title, content, tags, meta.author, mtime,
     segmentCJK(meta.title), segmentCJK(content), segmentCJK(tags), Date.now(),
   )
 }

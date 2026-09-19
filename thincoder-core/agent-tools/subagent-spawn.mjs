@@ -24,6 +24,9 @@ import { nextSubagentId } from "./subagent-scheduler.mjs"
 import {
   normalizeFileList, describeBlockers, assertNoDepCycle, depInfo,
 } from "./subagent-scheduler.mjs"
+// M5 F2（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.3）：任务书六强制字段校验本体落
+// spawn-gates.mjs（纯谓词零依赖）——本处只加 import 调用。
+import { validateTaskBookFields } from "./spawn-gates.mjs"
 
 /**
  * §18.7 D-TS5 (A2): mechanically summarize the parent spawn task book for the
@@ -263,6 +266,14 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
     if (!readable) throw refusal(" (given path is not a readable file)")
   }
 
+  // M5 F2（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.2）：任务书六强制字段门——
+  // 工程角色（eng-coder/eng-designer）必带 round（initial|fix）+ 五段任务书字段；
+  // 落点 = batchDoc 门之后、token 门之前（§2.2 数据流契约同序）。判据只到「字段在场」——
+  // 内容够不够由执行者拒收兜底（需求 §1.14 #9 行为面）。explore/plan/coder 豁免。
+  if (role === "eng-coder" || role === "eng-designer") {
+    validateTaskBookFields(args)
+  }
+
   // eng-coder token gate: the design review must have passed and the caller must
   // present the exact token advisor issued — otherwise the child is not authorized to code.
   // 2026-09-01: multi-design slots — the token is located by designId (exact slot,
@@ -450,6 +461,9 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // LOGGING（LOGGING.md）：子代理内部事件（子内 llm:*/tool:*）以 childId 归属——
   // agent._logId 随 runAgent 的 logCtx 透出（主文件单文件全记、按 childId grep）。
   child._logId = relayPrefix.slice(0, -1)
+  // SUBAGENT-UPSTREAM-CHANNEL（AGENT-LOOP-SUBAGENT.md §6.27.4 W1——spawn 主路径，sync + async
+  // 共用）：子 → 父在飞通道装配单点（label = relay 前缀去尾；`sync` 供工具返回注分形）。
+  child._upstream = { parent, label: relayPrefix.slice(0, -1), sync: !wantAsync }
   const childOpts = {
     onPermissionRequest: childPermission,
     ...wrapChildCallbacks(relayPrefix, ctx.callbacks),

@@ -114,11 +114,26 @@ export function channelUnavailableMessage(error) {
 // ─── 渠道准入展示态 + 探针（§2.5 #115 / VSC M9 并入）─────────────────────────
 // 记录 = 「最近一次探测的展示结果」，不是阻断缓存：任何配置动作/面板候选拉取都会重探，
 // 失败也绝不阻止重探（失败不缓存语义）。
-const _admission = new Map() // name → { ok: true } | { ok: false, reason }
+// F-W19（`PROVIDER.md` §6.16 M8/M9 补）：落账形态 = 成功 `{ ok: true, ts }` /
+// 失败 `{ ok: false, reason, failure, ts }`——`failure` ∈ { timeout, malformed, hostBusy }。
+const _admission = new Map() // name → { ok: true, ts } | { ok: false, reason, failure, ts }
 
-/** 记录一次渠道准入探测结果。 */
+/** 探针失败分类（核侧两档——`PROVIDER.md` §6.16 M8/M9 补）：
+ *  `timeout` = 超时族（`AbortSignal.timeout` 的 TimeoutError / 代理读侧 abort `trigger"timeout"` /
+ *  消息含 timeout / AbortError）；其余（HTTP 非 2xx / 载荷畸形 / 连接类）一律 `malformed`。
+ *  `hostBusy` 不由核判（核零宿主事件循环观测）——端侧采样器以证据覆盖（`SETTINGS.md` §2.12）。 */
+export function classifyProbeFailure(error) {
+  if (error?.name === "TimeoutError" || error?.name === "AbortError") return "timeout"
+  if (error?.abortInfo?.trigger === "timeout") return "timeout"
+  return /timeout/i.test(String(error?.message ?? "")) ? "timeout" : "malformed"
+}
+
+/** 记录一次渠道准入探测结果（统一盖落账时间 `ts`——调用方显式给定则尊重：测试缝注入）。 */
 export function recordAdmission(name, result) {
-  if (name) _admission.set(name, result)
+  if (!name) return
+  const rec = { ...(result ?? {}) }
+  if (!Number.isFinite(rec.ts)) rec.ts = Date.now()
+  _admission.set(name, rec)
 }
 
 /** 读取渠道准入展示态（未探过 → null）。 */
@@ -142,7 +157,7 @@ export async function probeChannelModels(name, provider) {
     return { ok: true, models }
   } catch (e) {
     const error = channelUnavailableMessage(e)
-    recordAdmission(name, { ok: false, reason: error })
+    recordAdmission(name, { ok: false, reason: error, failure: classifyProbeFailure(e) })
     return { ok: false, error }
   }
 }

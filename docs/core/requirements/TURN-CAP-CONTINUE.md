@@ -19,7 +19,7 @@ agent 撞上轮数上限时**不该丢掉已完成的工作**——可就地续�
 |---|---|---|
 | **F1** | 统一语义 | 撞墙 = `runAgent` 耗尽 `maxTurns` 抛 `ContinueError`（VSC `thincoder-vscode/src/agent.mjs:36`（类）/ `:371`（抛点））；继续 = `resume:true` 重跑同一执行体 |
 | **F2** | 续跑不重来 | 继续**不重新注入任务文本**、保留 history 与改动——`resume` 把子执行体的活 history 交回（VSC `thincoder-vscode/src/agent-tools/subagent-run.mjs:141`） |
-| **F3** | 全执行体覆盖 | 四类执行体均有续跑分支：主 agent（`thincoder-vscode/src/extension/panel-chat.mjs` 回合循环）· 子 agent（`agent-tools/subagent-run.mjs:85`/`:175`）· 飞刀（`agent-tools/subagent-escalate.mjs:163`/`:197`；async 面 `subagent-escalate-async.mjs:76`——两档已退役·W12 删除集，现体 = 核 `thincoder-core/agent-tools/subagent-actions.mjs`）· 会诊（`agent-tools/consult.mjs:310`） |
+| **F3** | 全执行体覆盖 | 四类执行体均有续跑分支：主 agent（`thincoder-vscode/src/extension/panel-chat.mjs` 回合循环）· 子 agent（`agent-tools/subagent-run.mjs:85`/`:175`）· 飞刀（`agent-tools/subagent-escalate.mjs:163`/`:197`；async 面 `subagent-escalate-async.mjs:76`——两档已退役·W12 删除集，现体 = 核 `thincoder-core/agent-tools/subagent-actions.mjs`）· 会诊（`agent-tools/consult.mjs:310`） （迁移期引文） |
 | **F4** | 拒绝返回部分成果 | 拒绝 / headless / 无法续跑 → 部分成果 + turn-cap 标记（VSC `agent-tools/subagent-run.mjs:195`/`:199`，文本含 "work may be partial"）——报告据此判定「撞墙中断、工作可能不完整」 |
 | **F5** | 用户 Stop 优先 | 中止路径（`AbortError` / `signal.aborted`）始终优先于继续提示——不弹继续卡、不自动续跑 |
 | **F6** | 继续提示串行 | 按会话级队列串行（`continueQueue`——`thincoder-vscode/src/agent-tools/consult.mjs:319`）——并行执行体同时撞墙不弹多个卡；后台 async 子代理**永不弹卡**（engineering && AUTO 自动续跑，否则降级 partial） |
@@ -53,7 +53,7 @@ agent 撞上轮数上限时**不该丢掉已完成的工作**——可就地续�
 | 旧档位置 | 内容 | 何故不并 |
 |---|---|---|
 | 旧档状态行（「现行（含跨段累计编号——已落）」） | 时点状态行 | 批次语境——现行态已入 §2–§3 |
-| 旧档「定位」行内的实现行数注（`src/agent.mjs`（388 行）等） | 时点行数注 | 时点坐标——现行坐标入各 F 判定句 |
+| 旧档「定位」行内的实现行数注（`thincoder-vscode/src/agent.mjs`（388 行）等） | 时点行数注 | 时点坐标——现行坐标入各 F 判定句 |
 | 旧档变更记录（2026-09-12 建档行） | 建档流水 | 本档自有变更记录 |
 
 ### 5.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
@@ -63,10 +63,6 @@ agent 撞上轮数上限时**不该丢掉已完成的工作**——可就地续�
 | 旧档「对位注记（与对端同名需求档语义同源）」 | 跨仓对位句 | 语义同源已由本档正文承载——不另立对位节 |
 | 「需求树逐档成套轮」建档批次注 | 建档批序 | 一次性材料——归批次档 |
 | CLI 侧同名需求档未迁面（**已销项**） | CLI 产品需求正文 | **已对账并入（2026-09-15 批 5）**——并入面 = F7 / N6 / N2 补注 / 分段显示边界；旧档留参照历史 |
-
-## 6. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **约 76 行**（根层新建 + 批 5 并入 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 

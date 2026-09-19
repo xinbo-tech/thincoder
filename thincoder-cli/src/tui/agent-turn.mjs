@@ -68,7 +68,7 @@ export async function runAgentTurn(ctx, text, opts = {}) {
 
 /** runAgentTurn 本体（LOGGING 包装之外——见上方包装器）。 */
 async function runAgentTurnInner(ctx, text, opts) {
-  const { autoTurn = false, skipSession = false } = opts ?? {}
+  const { autoTurn = false, skipSession = false, upstreamTurn = false } = opts ?? {} // upstreamTurn：上行 ask 唤醒轮旗标（§6.27.12.5 D/I——透传核 runAgent，仅供域文本选择）
   const { agent, state, pushLine, pushLabel, render, scheduleRender, ensureAssistantLabel, askPermission, askBatchPermission, askQuestion, handleSlash } = ctx
   // 可注入覆盖（测试用）；默认走真实实现
   const runAgentImpl = ctx.runAgent ?? runAgent
@@ -144,7 +144,7 @@ async function runAgentTurnInner(ctx, text, opts) {
   try {
     for (let resume = false; ; resume = true) {
       try {
-        await runAgentImpl(agent, text, callbacks, { signal: state.controller.signal, resume, autoTurn, suspDriven: true })
+        await runAgentImpl(agent, text, callbacks, { signal: state.controller.signal, resume, autoTurn, upstreamTurn, suspDriven: true })
         flushStream()
         break // Normal completion, exit loop
       } catch (error) {

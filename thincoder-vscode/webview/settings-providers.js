@@ -54,15 +54,18 @@ export function installProviderHandlers() {
   }
 
   window._delKey = function(name, btn) {
-    window._confirmDelete(btn, () => window._vscode.postMessage({ type: "deleteProviderKey", name }))
+    window._confirmSecretDelete(btn, () => window._vscode.postMessage({ type: "deleteProviderKey", name }))
   }
 
   // Provider management (panel-internal, posts payloads to the extension host)
   window._setProviderProxy = function(name, proxy) {
     window._vscode.postMessage({ type: "setProviderProxy", name, proxy })
   }
+  // provider 行 −（删整条）：载体 = `data-name` + 卡级装配位绑定（卡 HTML `:185`；删整条时
+  // 其 apiKey 原文随条目消失 —— 不可复得类，`SETTINGS.md` §2.10 入口册 #4）。消息名 / 载荷
+  // 逐字不变；载荷闭包 = 开框时捕获（同 §2.10 弹框契约）。
   window._removeProvider = function(name, btn) {
-    window._confirmDelete(btn, () => window._vscode.postMessage({ type: "removeProvider", name }))
+    window._confirmSecretDelete(btn, () => window._vscode.postMessage({ type: "removeProvider", name }))
   }
   window._toggleAddForm = function(show) {
     const form = document.getElementById("prov-add-form")
@@ -179,14 +182,14 @@ export function providersCardHtml() {
         <span class="key-status ${configured ? "ok" : ""}">${configured ? escHtml(s0.masked) : t("settings.notConfigured")}</span>
         <span class="prov-actions">
           <button class="key-btn" onclick="window._editKey('${escHtml(name)}')">${configured ? t("settings.setKey") : t("settings.addKey")}</button>
-          <button class="key-btn del-key" onclick="window._removeProvider('${escHtml(name)}', this)" ${active ? "disabled" : ""} title="${t("settings.remove")}">−</button>
+          <button class="key-btn del-key" data-name="${escHtml(name)}" ${active ? "disabled" : ""} title="${t("settings.remove")}">−</button>
         </span>
       </div>
       <div class="prov-sub">
-        <span class="prov-model">${escHtml(s0.model || "(no default model)")}${s0.baseURL ? ` · ${escHtml(s0.baseURL)}` : ""}${s0.available === false ? ` · <span class="prov-unavailable">不可用</span>` : ""}</span>
+        <span class="prov-model">${escHtml(s0.model || "(no default model)")}${s0.baseURL ? ` · ${escHtml(s0.baseURL)}` : ""}${s0.available === false ? ` · <span class="prov-unavailable">${s0.failure === "hostBusy" ? "宿主繁忙" : "不可用"}</span>` : ""}</span>
         <label class="switch" title="${t("settings.proxyRowTitle")}"><input type="checkbox" ${s0.proxy ? "checked" : ""} onchange="window._setProviderProxy('${escHtml(name)}', this.checked)"> ${t("settings.proxyRow")}</label>
       </div>
-      ${s0.available === false && s0.unavailableReason ? `<div class="prov-hint">${escHtml(s0.unavailableReason)}</div>` : ""}
+      ${s0.available === false && s0.unavailableReason && s0.failure !== "hostBusy" ? `<div class="prov-hint">${escHtml(s0.unavailableReason)}</div>` : ""}
     </div>`
   }
   html += `<button id="prov-add-btn" class="key-btn" onclick="window._toggleAddForm(true)">${t("settings.addProvider")}</button>`
@@ -223,12 +226,22 @@ export function providersCardHtml() {
   return html
 }
 
-/** Bind the [+ Add] form controls — they are wired with addEventListener (not inline
- *  onclick), so a re-rendered card must re-bind them or Save/Cancel silently die. */
+/** Bind the card's addEventListener-wired controls — the [+ Add] form buttons (a re-rendered
+ *  card must re-bind them or Save/Cancel silently die) plus the provider-row − delete buttons
+ *  (`data-name` carrier; inline onclick is undrivable under the test fixture — SETTINGS.md
+ *  §2.10 载体绑定段). */
 export function bindAddProviderForm() {
   document.getElementById("pa-save-btn").addEventListener("click", () => { window._paSave(); flashSaved(document.getElementById("pa-save-btn")) })
   document.getElementById("pa-cancel-btn").addEventListener("click", () => window._toggleAddForm(false))
   document.getElementById("defaultmodel-btn")?.addEventListener("click", () => window._defaultModelMenu())
+  // 卡行 −（两建面路径 `settings.js:131` / `renderProvidersCard` 均经此单点重绑）。选择器带
+  // `[data-name]` ⇒ 编辑行取消重建位的 −（无 `data-name`、自持 addEventListener）不入本域。
+  for (const btn of document.querySelectorAll("#prov-list .del-key[data-name]")) {
+    btn.addEventListener("click", () => {
+      const name = btn.dataset.name // 开框时捕获：弹框在位期间的行重绘不改删除目标
+      window._removeProvider(name, btn)
+    })
+  }
   paTypeChanged()
 }
 

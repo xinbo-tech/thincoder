@@ -48,8 +48,8 @@ export { upgradeFailureText, pendingNoticeReady } from "./update-notice.mjs"
  * SESSION.md §8 D-S2 — TUI 启动首帧前的 provider 重选流程：
  * provider 无效（`_providerInvalid` 标记或 provider 为 null）→ 先弹模型选择 picker
  * （复用 openModelPicker，展示当前可用 providers）；用户选定后继续正常启动。
- * 选择取消（Esc）→ 仍进入 TUI，推送提示行（"未配置有效 provider，可用 /model 选择或
- * /provider 配置"）——绝不因无 provider 拒绝进入。返回 true 表示弹过选择流程。
+ * 选择取消（Esc）→ 仍进入 TUI，推送提示行（"未配置有效 provider，可用 /model 配置
+ * 渠道与模型"）——绝不因无 provider 拒绝进入。返回 true 表示弹过选择流程。
  */
 export async function promptProviderIfInvalid(agent, openModelPicker, pushLine) {
   if (!(agent._providerInvalid || !agent.provider)) return false
@@ -60,7 +60,7 @@ export async function promptProviderIfInvalid(agent, openModelPicker, pushLine) 
     const hasProviders = (agent.providers?.length ?? 0) > 0
     pushLine(hasProviders && !agent.config?.defaultModel
       ? "尚未设置默认模型（config.defaultModel——新会话起点）：/config → 默认模型 设置一次；/model 仅改本会话"
-      : "未配置有效 provider，可用 /model 选择或 /provider 配置", C.warn)
+      : "未配置有效 provider，可用 /model 配置渠道与模型", C.warn)
   }
   return true
 }
@@ -406,7 +406,7 @@ export async function startTUI(agent, opts = {}) {
   const { persistRaw, syncProviderField, maskKey } = createConfigHelpers(agent)
 
   // Model picker + generic picker: implemented in pickers.mjs
-  const { closePicker, showPicker, popPicker, renderPickerLines, openModelPicker, selectModel, setProviderKey, pickModelForSlot } = createPickers({
+  const { closePicker, showPicker, popPicker, renderPickerLines, openModelPicker, selectModel, setProviderKey, pickModelForSlot, confirmDelete } = createPickers({
     agent, state, render, ansi, C, pushLine, pushLabel, persistRaw, askQuestion, maskKey,
   })
 
@@ -423,7 +423,7 @@ export async function startTUI(agent, opts = {}) {
   const { handleSlash, completions, handleTab } = createSlashCommands({
     agent, state, distillOpts,
     pushLine, pushLabel, render,
-    showPicker, closePicker, askQuestion, askPermission,
+    showPicker, closePicker, askQuestion, askPermission, confirmDelete,
     persistRaw, syncProviderField, maskKey,
     openModelPicker: () => openModelPicker(),
     selectModel,

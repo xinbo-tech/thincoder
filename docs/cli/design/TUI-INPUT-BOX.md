@@ -240,10 +240,6 @@
 | VSC 端方向键编辑差异 | VSC webview 首行 ↑ 为浏览器默认 no-op（不回落历史） | `docs/vsc/design/WEBVIEW-INPUT.md`——**端差异如实登记**，各端独立实现、互不追赶 |
 | 输入层状态机的宿主实现细节 | `key-handler` / `key-modes` 内部结构 | 实现面——落点 `thincoder-cli/src/tui/key-handler.mjs` · `key-modes.mjs`（本档只留行为契约） |
 
-## 10. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **253 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
-
 ## 变更记录
 
 - 2026-09-15（**B 式迁移轮 · 第 6 批**）：建档——`thincoder-cli/docs/design/TUI-INPUT-BOX.md` 内容重建入基准层（旧档一字未改、原地作参照历史）。

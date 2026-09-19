@@ -436,20 +436,32 @@ export function htmlToText(html) {
     .trim()
 }
 
+/** git 失败消息构造单点（#55 fail-closed——`runGit` / `runGitRaw` 两读取面同款）：形态 =
+ *  `git <args…> failed: <stderr 首行> (cwd: <绝对 cwd>)`；**非仓**失败（退出码 128 ∧ stderr 首行含
+ *  `not a git repository`）尾附 workdir 指引；spawn 失败（无 stderr）取 `e.message` 首行——**禁空尾**。 */
+export function gitFailureMessage(e, cmdArgs, cwd) {
+  const stderr = String(e?.stderr ?? "").trim()
+  const first = stderr.split("\n")[0].trim() || String(e?.message || e?.code || "unknown error").split("\n")[0]
+  const notRepo = e?.status === 128 && first.includes("not a git repository")
+  // cwd 缺省（无任何现调用点——防失败路径自戕）：`execFileSync` 用进程 cwd ⇒ 消息同源取之
+  return `git ${cmdArgs.join(" ")} failed: ${first} (cwd: ${resolve(cwd ?? ".")})${notRepo ? " — pass workdir to run git inside a repository" : ""}`
+}
+
 /** Execute a git command. maxBuffer 10MB prevents large diff/log overflow; on overflow, returns truncated partial output rather than empty.
  *  config: optional array of `-c key=value` overrides (e.g. ["http.proxy=http://10.2.2.112:3128"]) —
  *  inserted verbatim after `git`, so network actions (push/fetch/pull/ls-remote) can route through a proxy. */
 export function runGit(cwd, cmdArgs, config = []) {
   try {
-    return execFileSync("git", [...config, ...cmdArgs], { cwd, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, stdio: ["ignore", "pipe", "ignore"] }).trim().replace(/\r/g, "")
+    return execFileSync("git", [...config, ...cmdArgs], { cwd, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] }).trim().replace(/\r/g, "")
   } catch (e) {
     // maxBuffer overflow: e.stdout contains partial collected output — return it
-    // (callers show "(truncated)"-style tails). ALL OTHER errors (non-git repo,
-    // permission, bad command) return "" — matching gitDiffOne's pattern: a
-    // failed git call must not masquerade as partial success.
+    // (callers show "(truncated)"-style tails). Every OTHER failure (non-git repo,
+    // permission, bad command) THROWS (#55): a swallowed "" used to render as
+    // "(clean — no changes)" / "(no commits)" — indistinguishable from a real
+    // empty result. dispatch renders the throw as `Error: …` with ok:false (model-visible).
     if (e.code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER" && e.stdout) {
       return String(e.stdout).trim().replace(/\r/g, "").split("\n").slice(0, 200).join("\n")
     }
-    return ""
+    throw new Error(gitFailureMessage(e, cmdArgs, cwd))
   }
 }

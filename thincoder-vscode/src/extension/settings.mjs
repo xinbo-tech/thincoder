@@ -7,18 +7,19 @@
 
 import {
   PRESETS, providerNames, isProviderConfigured, storeProviderKey, removeProviderKey,
-  buildProvider, providerLabel, readProviders, sanitizeConsultModels, warnConsultModelsFiltered,
+  providerLabel, readProviders, sanitizeConsultModels, warnConsultModelsFiltered,
 } from "./presets.mjs"
 import { loadRaw, resolveProviders, addProviderEntry, removeProviderEntry } from "@thincoder/core/config-io.mjs"
 import { DEFAULTS, normalizeProxy } from "@thincoder/core/config.mjs"
 import { loadMcpServers, addMcpServer, updateMcpServer, removeMcpServer } from "../config-mcp.mjs"
 import { vscPersistRaw, saveAgentSettingsFromPanel, saveShellSettingsFromPanel } from "./settings-panel-write.mjs"
 import { probeProviderAdmission } from "./provider-flows.mjs"
-import { listModels, admissionOf, channelUnavailableMessage, recordAdmission } from "@thincoder/core/provider/list-models.mjs"
+import { listModels, admissionOf } from "@thincoder/core/provider/list-models.mjs"
 import { specForModel } from "../specs.mjs"
 import { loadModelPrefs, loadSlot } from "./session-io.mjs"
 import { existsSync } from "node:fs"
-import { spawnSync } from "node:child_process"
+import { execFile } from "node:child_process"
+import { _probeWindow, _probeBatch, _retryFailed } from "./provider-probe-window.mjs"
 
 /** Agent settings merged view（W16：自 config-io 迁入——本端面板/运行读面）。默认值 = 核
  *  `DEFAULTS.agent`（单一来源）；compactThreshold 保持本端**显示口径**：null = auto
@@ -50,20 +51,43 @@ export function loadAgentSettings() {
 }
 
 // ─── Shell candidates（W16 自 config-io 迁入——面板消费面）─────────────────────
+// F-W18（`SETTINGS.md` §2.11）：探测面 = **异步非阻塞**——`execFile` + `Promise.all`（并发）；
+// 进程内 memo 保留（成功结果缓存：本进程生命周期内 shell 路径不热变化——同前语义）+ 在飞去重
+// （同一时刻重复请求**共享同一批**探测——不叠发子进程）。同步 `spawnSync` 探测会在打开拍占住
+// 宿主事件循环（UI 假死同源）——本函数**绝不抛出**（探测失败 = 该候选缺席）。
 let _shellCandidatesCache = null
+let _shellCandidatesInFlight = null
 
-/** Detect available shells for this platform. Cached: shell availability does not
- *  change during a session, and spawnSync on every panel open would freeze the UI. */
-export function shellCandidates() {
-  if (_shellCandidatesCache !== null) return _shellCandidatesCache
-  const win = process.platform === "win32"
-  const commandExists = (cmd) => {
+// 测试缝（§2.11 ②「注入式时序断言」——`_setProbeImplForTest` 同族）：伪探测替掉真实 `execFile`
+// 探测（同步阻塞面模拟）；注入即清 memo / 在飞态（免旧批结果串味）；复位 = null。
+let _detectImpl = null
+export function _setShellDetectForTest(fn) {
+  _detectImpl = fn
+  _shellCandidatesCache = null
+  _shellCandidatesInFlight = null
+}
+
+/** 候选命令是否存在（异步探测：Windows `where` / POSIX `sh -c 'command -v'`；失败或超时 ⇒ false）。
+ *  回调式 `execFile`（非阻塞）——`timeout` 到点由 execFile 杀进程后回调错误。 */
+function commandExists(cmd) {
+  return new Promise((resolve) => {
+    if (_detectImpl) { resolve(_detectImpl(cmd)); return } // 注入的伪探测（可返回 Promise——异步面同形）
+    const win = process.platform === "win32"
     try {
       // 'command -v' is a POSIX shell builtin; sh -c runs it (Windows uses `where`)
-      const r = spawnSync(win ? "where" : "sh", win ? [cmd] : ["-c", `command -v ${cmd}`], { encoding: "utf8", timeout: 3000 })
-      return r.status === 0 && r.stdout.trim().length > 0
-    } catch { return false }
-  }
+      execFile(win ? "where" : "sh", win ? [cmd] : ["-c", `command -v ${cmd}`], { timeout: 3000 }, (err, stdout) => {
+        resolve(!err && String(stdout ?? "").trim().length > 0)
+      })
+    } catch { resolve(false) }
+  })
+}
+
+/** Detect available shells for this platform ⇒ `Promise<候选[]>`（memo + 在飞去重）。
+ *  Cached: shell availability does not change during a session — but the first probe must
+ *  not block the host event loop（F-W18）。 */
+export function shellCandidates() {
+  if (_shellCandidatesCache !== null) return Promise.resolve(_shellCandidatesCache)
+  if (_shellCandidatesInFlight) return _shellCandidatesInFlight // 在飞去重：同批共享
   const GIT_BASH_PATHS = [
     "C:\\Program Files\\Git\\bin\\bash.exe",
     "C:\\Program Files (x86)\\Git\\bin\\bash.exe",
@@ -72,7 +96,7 @@ export function shellCandidates() {
   const candidates = []
   // System default always first
   candidates.push({ name: "System default", value: null, detect: () => true })
-  if (win) {
+  if (process.platform === "win32") {
     candidates.push({ name: "PowerShell (pwsh)", value: "pwsh", detect: () => commandExists("pwsh") })
     candidates.push({ name: "Windows PowerShell (powershell)", value: "powershell", detect: () => commandExists("powershell") })
     const gb = GIT_BASH_PATHS.find((p) => existsSync(p))
@@ -83,8 +107,11 @@ export function shellCandidates() {
       candidates.push({ name: sh, value: sh, detect: () => commandExists(sh) })
     }
   }
-  _shellCandidatesCache = candidates.filter((c) => c.detect())
-  return _shellCandidatesCache
+  const p = Promise.all(candidates.map(async (c) => ((await c.detect()) ? c : null)))
+    .then((hits) => { _shellCandidatesCache = hits.filter(Boolean); return _shellCandidatesCache })
+    .finally(() => { if (_shellCandidatesInFlight === p) _shellCandidatesInFlight = null })
+  _shellCandidatesInFlight = p
+  return p
 }
 
 /**
@@ -115,7 +142,10 @@ export function providerStatus() {
       isActive: name === activeProvider,
       proxy: entry.proxy === true, // per-provider proxy flag (row checkbox, preset/custom agnostic)
       ...(admission ? { available: admission.ok === true } : {}),
-      ...(admission && admission.ok === false ? { unavailableReason: admission.reason } : {}),
+      // F-W19（`SETTINGS.md` §2.12 / `PROVIDER.md` §6.16 M8/M9 补）：失败分类随行下发——
+      // `hostBusy` = 宿主忙证据（非渠道故障——展示面分档 `宿主繁忙`，不渲渠道故障 hint）；
+      // `timeout` / `malformed` = 渠道故障（展示面 `不可用` + hint 逐字长句）。
+      ...(admission && admission.ok === false ? { unavailableReason: admission.reason, failure: admission.failure } : {}),
     }
     labels[name] = providerLabel(name)
   }
@@ -292,34 +322,6 @@ export async function saveProviderKey(name, key) {
   await probeProviderAdmission(name)
 }
 
-/** Save a custom provider entry (provider named "custom" in config.json).
- *  MODEL-SELECTION：单值默认模型入 `model`（候选清单字段已退场）。 */
-export async function saveCustomProvider({ key, baseURL, model }) {
-  const url = (baseURL || "").trim().replace(/\/+$/, "")
-  const mdl = (model || "").trim()
-  const k = (key || "").trim() // trimmed FIRST — a whitespace-only key must not land as an empty apiKey
-  vscPersistRaw((raw) => {
-    raw.providers = Array.isArray(raw.providers) ? raw.providers : []
-    let entry = raw.providers.find((p) => p?.name === "custom")
-    if (k) {
-      if (!entry) { entry = { name: "custom" }; raw.providers.push(entry) }
-      entry.apiKey = k
-      if (url) entry.baseURL = url
-      if (mdl) entry.model = mdl
-    } else if ((url || mdl) && entry) {
-      // No key but url/model given → update the existing entry in place (a
-      // future per-field UI must not silently drop baseURL/model updates).
-      if (url) entry.baseURL = url
-      if (mdl) entry.model = mdl
-    } else if (!url && !mdl && entry) {
-      // All fields empty → user cleared everything: drop the entry
-      raw.providers = raw.providers.filter((p) => p?.name !== "custom")
-    }
-  })
-  // M9：加/改 custom 渠道 = 配置写入面——探一次 /models（探不通标不可用，不阻断保存）
-  if (k) await probeProviderAdmission("custom")
-}
-
 export async function deleteProviderKey(name) {
   await removeProviderKey(name)
   // A bare "custom" entry with no baseURL/model is useless — drop it entirely
@@ -361,13 +363,19 @@ export function pushStatus(panel) {
 let _lastModelsPayload = []
 export function lastModelsPayload() { return _lastModelsPayload }
 
+// 渠道准入探针窗口族（F-W19 · §2.12）已外提 `provider-probe-window.mjs`（N-P3 体量拆分）——
+// `fullStatus` 经 `_probeWindow` / `_probeBatch` / `_retryFailed` 驱动之；对外缝由本档 re-export。
+export { endProbeWindow, _resetProbeWindowsForTest, _setProbeRetryDelayForTest } from "./provider-probe-window.mjs"
+
 /**
  * Full status push: sync snapshot + **运行期模型清单拉取**（MODEL-SELECTION M2/R6——候选面唯一
  * 来源 = `GET /models`，无静态兜底）。每个已配置渠道探一次：
  * - 探通 → 候选行 = 拉取结果（直接可选；渠道默认单值仅在槽位/会话回退面使用）；
  * - 探不通 → 该渠道**不可选**（无候选、无 fallback 候选行）+ 失败消息本体随载荷下发
- *   （M8 逐字长句——准入判据）；结果入准入展示态（providerStatus 行 `不可用`）。
+ *   （M8 逐字长句——准入判据）；结果入准入展示态（providerStatus 行 `不可用` / `宿主繁忙`）。
  * 注：本拉取 = 候选面机制本身（R6），非 M9 新增探测点；失败不阻断任何流。
+ * F-W19（§2.12）：失败子集在**同窗口**内有界重探（≤ 2 拍 + 宿主忙让位——`_retryFailed`），
+ * 成功拍走同一 `flush` ⇒ 准入翻转随载荷生效（② / ③）。
  */
 export async function fullStatus(panel, workspaceState, pushSessionsFn, prefsOverride = null) {
   pushStatus(panel)
@@ -375,38 +383,27 @@ export async function fullStatus(panel, workspaceState, pushSessionsFn, prefsOve
   const anyKey = Object.values(s.providers).some((p) => p.configured)
   if (!anyKey) return
 
-  const results = await Promise.allSettled(
-    providerNames().filter((n) => s.providers[n]?.configured).map(async (name) => {
-      const prov = await buildProvider(name)
-      if (!prov) return { name, models: [] }
-      const row = (id) => {
-        const spec = specForModel(id)
-        const r = spec.reasoningEffortEnum || (spec.thinking ? ["enabled"] : [])
-        return { id, label: id, provider: name, group: providerLabel(name), reasoning: r, effortDefault: spec.reasoningEffortDefault || null }
-      }
-      try {
-        const ids = await listModels(prov)
-        recordAdmission(name, { ok: true })
-        return { name, models: ids.map(row) }
-      } catch (e) {
-        const reason = channelUnavailableMessage(e)
-        recordAdmission(name, { ok: false, reason })
-        return { name, models: [], unavailable: { provider: name, reason } }
-      }
-    })
-  )
-  const settled = results.flatMap((r) => r.status === "fulfilled" ? [r.value] : [])
-  const allModels = settled.flatMap((v) => v.models)
-  const unavailable = settled.flatMap((v) => (v.unavailable ? [v.unavailable] : []))
-  _lastModelsPayload = allModels
-  // MODEL-SELECTION：models push 的 prefs = 会话槽复合优先（调用侧 status() 经
-  // prefsOverride 传入——打开/切换后下拉跟随本会话）；无槽复合（新会话）→ 文件夹级
-  // workspaceState prefs 兜底（最近使用——/new 沿用当前语义）
-  const prefs = prefsOverride ?? loadModelPrefs(workspaceState)
-  pushStatus(panel) // 准入展示态已更新（M9）——状态行重推（webview 按变更重渲染）
-  // `unavailable` = 拉取失败渠道的诊断载荷（{ provider, reason }[]）——UI 面失败原因经
-  // providerStatus 行（`不可用` + .prov-hint 渲染失败消息本体）；本字段供测试与排障
-  // （provider-admission.test.mjs T24 断言原因随载荷下发）。
-  panel?.webview.postMessage({ type: "models", models: allModels, prefs, ...(unavailable.length ? { unavailable } : {}) })
-  pushSessionsFn?.()
+  const w = _probeWindow(panel)
+  const names = providerNames().filter((n) => s.providers[n]?.configured)
+  /** 载荷装配 + 投递（首拍与重试成功拍共用——§2.12 ②）。 */
+  const flush = () => {
+    const allModels = names.flatMap((n) => w.models.get(n) ?? [])
+    const unavailable = names.flatMap((n) => (w.diag.has(n) ? [w.diag.get(n)] : []))
+    _lastModelsPayload = allModels
+    // MODEL-SELECTION：models push 的 prefs = 会话槽复合优先（调用侧 status() 经
+    // prefsOverride 传入——打开/切换后下拉跟随本会话）；无槽复合（新会话）→ 文件夹级
+    // workspaceState prefs 兜底（最近使用——/new 沿用当前语义）
+    const prefs = prefsOverride ?? loadModelPrefs(workspaceState)
+    pushStatus(panel) // 准入展示态已更新（M9）——状态行重推（webview 按变更重渲染）
+    // `unavailable` = 拉取失败渠道的诊断载荷（{ provider, reason }[]）——UI 面失败原因经
+    // providerStatus 行（`不可用` / `宿主繁忙` + .prov-hint 渲染失败消息本体）；本字段供测试与排障
+    // （provider-admission.test.mjs T24 断言原因随载荷下发）。
+    panel?.webview.postMessage({ type: "models", models: allModels, prefs, ...(unavailable.length ? { unavailable } : {}) })
+    pushSessionsFn?.()
+  }
+  await _probeBatch(w, names)
+  flush()
+  // 有界重试链 fire-and-forget（打开拍不得被子秒级重试拖住）；链内全兜底，绝不向外抛。
+  _retryFailed(w, flush).catch(() => { /* unreachable: 链内探针 / 等待均已兜底 */ })
 }
+

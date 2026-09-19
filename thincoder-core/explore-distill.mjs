@@ -1,16 +1,18 @@
 /**
  * explore-distill.mjs — End-of-run exploration distillation (AGENT-LOOP §13 +
- * CONTEXT-COMPACTION §5, 2026-08-23). 2026-09-05 module-split: moved verbatim out of
+ * CONTEXT-COMPACTION §6.9 H1, 2026-08-23). 2026-09-05 module-split: moved verbatim out of
  * context.mjs (524 > 500 hard limit). The main agent's machine line is flooded by inline
  * step-by-step exploration (read/grep/...). At run end we distill THIS run's exploration
  * tool-results into one semantic summary note that replaces them in the machine line,
- * while agent._fullHistory (the human line) stays untouched. VS Code compact.mjs
- * distillation mirrors this module (same-name file in thincoder-vscode/src, cross-repo
- * parity anchors point here).
+ * while agent._fullHistory (the human line) stays untouched. Call form = session continuation
+ * (prefix reuse · §6.15): system + `history[0, lastBlockEnd)` verbatim messages + one tail
+ * instruction — built by the single-source constructor compress-form.mjs#buildCompressMessages
+ * (no second builder · D2); the declaration face (systemPrompt / tools) rides `extras` from the
+ * call point, same source as the turn request. VS Code adapter = thincoder-vscode/src/explore-distill.mjs.
  */
 
 import { chat } from "./provider/index.mjs"
-import { safeSliceUTF16 } from "./text-budget.mjs"
+import { buildCompressMessages } from "./compress-form.mjs"
 
 /** Read-only knowledge tools counted as "exploration" (execute writes files → never exploration). */
 export const EXPLORE_TOOLS = new Set([
@@ -69,40 +71,33 @@ function findExplorationBlocks(history, start) {
   return blocks
 }
 
-/** Serialize a batch of exploration messages for the summary LLM (same shape as compaction serialization). */
-function serializeExplorationMessages(messages) {
-  const cap = 8000 // exploration results ARE the signal to distill — generous cap (quality-first, N1)
-  return messages
-    .map((m) => {
-      const toolNote = m.tool_calls ? ` [called tools: ${m.tool_calls.map(toolCallName).join(", ")}]` : ""
-      let text = ""
-      if (typeof m.content === "string") text = m.content
-      else if (Array.isArray(m.content)) text = m.content.filter((p) => p?.type === "text").map((p) => p.text ?? "").join(" ")
-      return `[${m.role}]${toolNote} ${safeSliceUTF16(text, cap)}`
-    })
-    .join("\n")
-}
-
 /**
  * Core (shared) distillation: replace this run's pure-exploration pair blocks with a single
  * "[Exploration summary]" note placed where the first block was. Returns a NEW history array,
  * or null when there is nothing to shrink (<3 exploration results / LLM failure). Pairing-safe:
  * whole assistant→tool blocks are removed, so no orphan tool_calls/tool can survive.
  */
-async function distillExplorations(history, start, provider, signal, agent, depth) {
+async function distillExplorations(history, start, provider, signal, agent, depth, extras) {
   if (!Array.isArray(history) || history.length - start < 2) return null
   const blocks = findExplorationBlocks(history, start)
   const resultCount = blocks.reduce((n, b) => n + b.toolCount, 0)
   if (resultCount < 3) return null
 
-  const serialized = blocks.map((b) => serializeExplorationMessages(b.messages)).join("\n")
+  // 切点 = 本 run 末块的 `end`（与替换面同一 blocks 数组——不新增第二处切割判据）。请求前缀 =
+  // tools 声明 + system + `[0, lastBlockEnd)`——皆回合请求已建缓存面（§6.15）；未命中面 =
+  // 尾部指令一条（+ ≤255 块对齐残余）。
+  const cut = blocks.at(-1).end
 
   let summary
   try {
     // Silent by design (D11): thinking:null and no onToken/onReasoning — this internal
     // distillation must not stream to the frontend. signal propagates user cancellation.
-    const resp = await chat({ ...provider, thinking: null, reasoningEffort: null }, {
-      messages: [{ role: "user", content: EXPLORE_SUMMARY_PROMPT + serialized }],
+    // 会话续写形态（§6.15 / D-CC21）：messages 由单源构造器 buildCompressMessages 产出（不设第二构造
+    // 点）；tools 取与回合请求同一声明面（**不带** tool_choice——实测该参数使服务端丢弃 tools 区）；
+    // 不覆盖 reasoningEffort ⇒ 与回合侧同源（v3 形态）。extras 缺省 ⇒ 退化面 1（无 system / 无 tools）。
+    const resp = await chat({ ...provider, thinking: null }, {
+      messages: buildCompressMessages(history, cut, extras?.systemPrompt, EXPLORE_SUMMARY_PROMPT),
+      tools: extras?.tools,
       signal,
       // §18.6 D-TR4：轨迹元数据增补——kind=distill（探索蒸馏面——agent 元数据透出；
       // depth 经 summarizeRunExplorations 参数透传——agent.mjs 主作用域传入）
@@ -141,9 +136,10 @@ async function distillExplorations(history, start, provider, signal, agent, dept
  * The distillation itself is silent and never streams (D11); `callbacks.onDistilled` fires
  * ONLY after the replacement actually lands (never on no-op/failure) — callers persist the
  * compressed session (SEND-STALL-DISTILL §2.3).
+ * `extras` = 前缀面（{ systemPrompt, tools }——调用点透传、与回合请求同源 · §6.15）；缺省 ⇒ 退化面 1。
  */
-export async function summarizeRunExplorations(agent, callbacks, signal, depth = 0) {
-  const next = await distillExplorations(agent.history, agent._runStartHistoryLen ?? 0, agent.provider, signal, agent, depth)
+export async function summarizeRunExplorations(agent, callbacks, signal, depth = 0, extras) {
+  const next = await distillExplorations(agent.history, agent._runStartHistoryLen ?? 0, agent.provider, signal, agent, depth, extras)
   if (!next) return
   agent.history = next
   // The machine line changed shape — the measured token baseline was for the pre-shrink context.

@@ -34,7 +34,7 @@ import { deathLine } from "../abort-provenance.mjs"
 import {
   mergeChildMutations, runningPoolCount, poolDomainOf, poolLimitsFor, ASYNC_POOL_LIMITS, enqueueAsk,
 } from "./subagent-async.mjs"
-import { refreshQueuedTokens, nextSubagentId } from "./subagent-scheduler.mjs"
+import { refreshQueuedTokens, nextSubagentId, consumeSubagentToken, assertPoolKeyFree } from "./subagent-scheduler.mjs"
 import { mutationSeqOf } from "./advisor-async.mjs"
 // ASYNC-RESULT-CONTAINER.md D3/D6：settle 公共收尾单点 + child signal 构建单点
 import { bindChildController, buildChildSignal, settleAsyncEntry } from "./async-settle.mjs"
@@ -155,6 +155,9 @@ export function launchEscalateAsync(parent, ctx, launch) {
   // SUBAGENT-ID-COUNTER-AGENT（2026-09-09）：取号统一走 nextSubagentId（池活续号
   // 兜底——counter 载体= agent 本体 _subAgentCounter——跨 run/跨压缩存活）。
   const id = nextSubagentId(parent)
+  // ED-5（AGENT-LOOP-SUBAGENT.md §6.21）一次性取号令牌消费（同步配对——本函数内取号 →
+  // 消费无 await 间隙）；断言通过即置 undefined（防同一令牌跨站点复用）。
+  consumeSubagentToken(parent, id, "escalate launch", "escalate")
   const relayPrefix = `escalate#${id}/`
   const entry = {
     id, role: "escalate", relayPrefix,
@@ -199,6 +202,8 @@ export function launchEscalateAsync(parent, ctx, launch) {
     entry.childAgent = child // settle 分类/status touched 摘要绑定（start 时刻）
     child._historyWindow = RECORD_WINDOW_MESSAGES // TUI-OOM-ROOTCAUSE §23.3.1：子代理人读线窗口（四处创建点同置）
     child._logId = relayPrefix.slice(0, -1)
+    // SUBAGENT-UPSTREAM-CHANNEL（§6.27.4 W3——escalate **async**：工具返回注走异步形）。
+    child._upstream = { parent, label: relayPrefix.slice(0, -1), sync: false }
     logEvent("child:spawn", { role: "escalate", id: child._logId, kind: "async", status: "running", ms: 0 })
     const childCallbacks = wrapChildCallbacks(relayPrefix, ctx.callbacks ?? {})
     const relayOnToken = childCallbacks.onToken
@@ -282,6 +287,8 @@ export function launchEscalateAsync(parent, ctx, launch) {
         })
       })
   }
+  // ED-5（§6.21）入池键守卫：同 id 二次入池 = 覆写（静默丢报告 + status/cancel 错址）⇒ 抛错。
+  assertPoolKeyFree(parent._asyncSubagents, id, "escalate")
   parent._asyncSubagents.set(String(id), entry)
   logEvent("child:spawn", { role: "escalate", id: `escalate#${id}`, kind: "async", status: entry.status, ms: 0 })
   if (entry.status === "queued") {

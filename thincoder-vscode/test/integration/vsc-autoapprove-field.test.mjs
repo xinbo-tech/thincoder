@@ -17,7 +17,7 @@
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync,  mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
@@ -42,6 +42,7 @@ let cfgDir
 
 before(() => {
   work = mkdtempSync(join(tmpdir(), "tc-autoapprove-"))
+  mkdirSync(join(work, ".git"), { recursive: true }) // 项目根判据（.git 仓根——2026-09-17）
   cfgDir = mkdtempSync(join(tmpdir(), "tc-autoapprove-cfg-"))
   const cfgPath = join(cfgDir, "config.json")
   writeFileSync(cfgPath, JSON.stringify({ providers: [] }) + "\n", "utf8")

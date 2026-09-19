@@ -1,21 +1,26 @@
 /**
- * ledger.mjs — 台账（需求池 / 技术待办）单源读取面（LEDGER-SURFACE 批——设计档 §2.30.3）。
+ * ledger.mjs — 台账（需求池 / 技术待办）单一权威源（M2 模块——设计档
+ * docs/core/design/modules/ENGINEERING-MODE-V2-MODULE-LEDGER.md §2.2）。
  *
- * 数字单源（F7）：解析（`scanGroups`）/ 计数 / 老化 / 阈值一处实现——机检器
- * （`scripts/check-ledger.mjs`）与显示面（CLI TUI `src/tui/ledger-surface.mjs`）共用本口径；
- * VSC 端为独立实现、语义同源（不跨仓 import）。
- * 口径（需求档 §1.18）：计数 = `##` 组内 `- [ ]` 未决条目；老化 = 技术组无 `触发=` 且行龄
- * > 30 天（行龄未知不计）；阈值 = 池 ≥ 3 或任一板块 ≥ 2；可动作 = 老化 > 0 或阈值达成。
- * 行文本逐字契约 = 设计档 §2.30.3.3（本模块只产出文本，色 / 态归各端显示面）。
+ * v1 md 台账（docs/TODO.md 扫描器）→ SQLite 单表（ledger.db，项目级、不进 git）：六态 CHECK 机械
+ * 锁死、COUNT 单源计数、事务保证收口原子、归档 = 软删除。行龄源 = SQLite 时间戳（无 git blame）。
+ *
+ * 面：① 命令族（查询 = 只读全角色 / 写 = 仅主 agent——接线见 tools/index.mjs 与 agent/family-tools.mjs）
+ * ② 族发现（findProject / discoverFamily——标记 = ledger.db）③ scan 组装（buildScan——行集 + ledgerCount
+ * → scan 对象，形状契约 = pool/tech/aged/thresholdReached/actionable/root/name/ledger）
+ * ④ 通知去重（送达门 + 一次性去重——去重档跨会话、跨端共享）⑤ 格式 helper（行文本逐字契约）。
+ *
+ * W8 契约②：ledger-db.mjs 静态 import node:sqlite ⇒ 消费侧一律**动态 import** 本档（禁止静态 import）。
  */
 import { mkdirSync, opendirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs"
 import { basename, dirname, join, resolve } from "node:path"
-import { execFileSync } from "node:child_process"
 import { configDir } from "./config.mjs"
+import { ledgerDbPath, PENDING_STATUSES } from "./ledger-db.mjs"
+import { ledgerQuery } from "./ledger-cmd.mjs"
 
-/** 老化阈值（天——口径 = 需求档 §1.18；`days` 参数可覆盖）。 */
+/** 老化阈值（天——口径 = 需求档；`days` 参数可覆盖）。 */
 export const AGING_DAYS = 30
-/** 「可开批」阈值：同一板块（池条目指针所指需求档文档名）未决 ≥ 2。 */
+/** 「可开批」阈值：同一板块（需求类条目 board 列）未决 ≥ 2。 */
 export const THRESHOLD_BOARD = 2
 /** 「可开批」阈值：需求池未决 ≥ 3。 */
 export const THRESHOLD_POOL = 3
@@ -24,25 +29,7 @@ export const REFRESH_MS = 120000
 /** 变化行去重档（跨会话、跨端共享——需求档 §1.18 F5；configDir 先例 = crash-reports 同区）。 */
 export const NOTIFY_FILE = join(configDir, "ledger-notify.json")
 /** 空族提示（仅命令面——运行时面静默，N1 / 设计档 §2.30.3.3）。 */
-export const EMPTY_FAMILY_LINE = "台账：未发现台账（docs/TODO.md）。"
-
-const LEDGER_REL = join("docs", "TODO.md")
-const H2_RE = /^##\s+(.*)$/
-const DECL_RE = /（(\d+)\s*条）/
-const OPEN_ENTRY_RE = /^- \[ \]\s+/
-const TRIGGER_RE = /触发\s*=\s*([^·\n]*)/
-const BOARD_REF_RE = /requirements\/([A-Za-z0-9_.-]+\.md)/
-
-/** `##` 组扫描（与机检器 L2/L3 同源——解析唯一实现）：[{name,line,declared,entries:[{line,text}]}]。 */
-export function scanGroups(lines) {
-  const groups = []
-  lines.forEach((l, i) => {
-    const h = H2_RE.exec(l)
-    if (h) groups.push({ name: h[1].trim(), line: i + 1, declared: Number((DECL_RE.exec(h[1]) ?? [])[1] ?? NaN), entries: [] })
-    else if (groups.length && OPEN_ENTRY_RE.test(l)) groups[groups.length - 1].entries.push({ line: i + 1, text: l })
-  })
-  return groups
-}
+export const EMPTY_FAMILY_LINE = "台账：未发现台账。"
 
 /** 条目归一化文本 = 条目键（去 `- [ ] ` 前缀 + 去首尾空白 + 连续空白折叠单空格）。
  *  位置无关（位移 / 他条编辑稳定）；自身文本变更 = 键变（最坏一次重报）。§2.30.3.2。 */
@@ -60,11 +47,12 @@ export function entryTitle(text) {
 
 const isFile = (p) => { try { return statSync(p).isFile() } catch { return false } }
 
-/** 向上（含自身）最近的含台账目录 → {root, ledger} / null（F4——CLI 锚 = cwd）。 */
+/** 向上（含自身）最近的已注册台账项目根 → {root, ledger} / null（F4——CLI 锚 = cwd；
+ *  标记 = 用户数据目录里以该项目路径为键的台账库——项目目录内不落任何标记文件）。 */
 export function findProject(anchor) {
   let dir = resolve(anchor)
   for (;;) {
-    const ledger = join(dir, LEDGER_REL)
+    const ledger = ledgerDbPath(dir)
     if (isFile(ledger)) return { root: dir, ledger }
     const parent = dirname(dir)
     if (parent === dir) return null
@@ -75,7 +63,7 @@ export function findProject(anchor) {
 /** 同级枚举上限（N2 成本有界：父目录超此规模 = 缓存 / 临时等非仓族形态 → 退化空集，只显当前项目）。 */
 export const MAX_SIBLING_SCAN = 100
 
-/** 目录下含台账的直接子目录（目录名升序；不可读 → []；**惰性枚举 + 上限**——大目录零全量扫描）。 */
+/** 目录下已注册台账的直接子目录（目录名升序；不可读 → []；**惰性枚举 + 上限**——大目录零全量扫描）。 */
 function ledgerChildren(dir) {
   const out = []
   let handle
@@ -88,7 +76,7 @@ function ledgerChildren(dir) {
       if (++n > MAX_SIBLING_SCAN) return []
       if (!ent.isDirectory()) continue
       const root = join(dir, ent.name)
-      const ledger = join(root, LEDGER_REL)
+      const ledger = ledgerDbPath(root)
       if (isFile(ledger)) out.push({ root, ledger })
     }
   } catch { /* 读中断 → 已得子集（尽力而为） */ }
@@ -96,7 +84,7 @@ function ledgerChildren(dir) {
   return out.sort((a, b) => (a.root < b.root ? -1 : a.root > b.root ? 1 : 0))
 }
 
-/** 项目族发现：{current, projects}——projects = current + 其同级含台账目录（**发现序：current 在前**，
+/** 项目族发现：{current, projects}——projects = current + 其同级含台账库目录（**发现序：current 在前**，
  *  其余按目录名升序）；current 缺（容器目录，K6）→ 上下文目录向上最近「含台账子目录」者取其子目录。 */
 export function discoverFamily(anchor) {
   const current = findProject(anchor)
@@ -114,48 +102,31 @@ export function discoverFamily(anchor) {
   }
 }
 
-/** 行龄 Map：全档一次 `git blame --porcelain` → Map<行号, 天>；非 git / 不可判定 → null（零假阳降级）。 */
-export function blameAges(abs) {
-  let out
-  try {
-    out = execFileSync("git", ["blame", "--porcelain", "--", abs], {
-      cwd: dirname(abs), encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], maxBuffer: 32 * 1024 * 1024,
-    })
-  } catch { return null }
-  const times = new Map(), ages = new Map()
-  const now = Date.now() / 1000
-  let sha = null, line = 0
-  for (const l of out.split("\n")) {
-    const h = /^([0-9a-f^]{7,40})\s+\d+\s+(\d+)(?:\s+\d+)?$/.exec(l)
-    if (h) { sha = h[1]; line = Number(h[2]); continue }
-    if (l.startsWith("author-time ")) { times.set(sha, Number(l.slice(12))); continue }
-    if (l.startsWith("\t")) {
-      const t = times.get(sha)
-      ages.set(line, t != null ? (now - t) / 86400 : null)
-    }
-  }
-  return ages
-}
-
-/** 单项目汇总 → {name,root,ledger,pool,tech,aged,agedKeys,agedTitles,thresholdReached,boards,actionable}。
- *  `ageOf(abs)` → Map<行号,天>|null（注入面——确定性用例）；**无候选条目不调 ageOf**（N2）。 */
-export function summarizeLedger(project, { days = AGING_DAYS, ageOf = blameAges } = {}) {
-  const groups = scanGroups(readFileSync(project.ledger, "utf8").split("\n"))
-  const poolEntries = groups.filter((g) => g.name.includes("需求池")).flatMap((g) => g.entries)
-  const techEntries = groups.filter((g) => g.name.includes("技术")).flatMap((g) => g.entries)
-  const candidates = techEntries.filter((e) => !TRIGGER_RE.test(e.text))
-  const ages = candidates.length ? ageOf(project.ledger) : null
-  const aged = candidates.filter((e) => { const a = ages?.get(e.line); return a != null && a > days })
+/** scan 组装（SQLite 行集 + 计数单源 → scan 对象）——形状契约（设计档 §2.2）：pool/tech/aged/
+ *  agedKeys/agedTitles/thresholdReached/boards/actionable/root/name/ledger。行龄 = 时间戳
+ *  （updated_at ?? created_at 距今 > days；未知不计——零假阳降级，同 v1 行龄未知口径）。
+ *  `now`/`days` = 注入面（确定性用例——替代 v1 ageOf git 注入面）。 */
+export function buildScan({ cwd, days = AGING_DAYS, now = Date.now() } = {}) {
+  const rows = ledgerQuery({ cwd })
+  const pending = rows.filter((r) => PENDING_STATUSES.includes(r.status))
+  const poolEntries = pending.filter((r) => r.kind === "requirement")
+  const techEntries = pending.filter((r) => r.kind === "tech_todo")
+  const candidates = techEntries.filter((r) => !r.trigger)
+  const aged = candidates.filter((r) => {
+    const t = r.updated_at ?? r.created_at
+    return t != null && (now - Date.parse(t)) / 86400000 > days
+  })
   const boards = new Map()
   for (const e of poolEntries) {
-    const m = BOARD_REF_RE.exec(e.text)
-    if (m) boards.set(m[1], (boards.get(m[1]) ?? 0) + 1)
+    const key = e.board ?? (e.req_doc ? basename(String(e.req_doc).split(/\s+/)[0]) : null)
+    if (key) boards.set(key, (boards.get(key) ?? 0) + 1)
   }
   const thresholdReached = poolEntries.length >= THRESHOLD_POOL || [...boards.values()].some((n) => n >= THRESHOLD_BOARD)
+  const root = resolve(cwd)
   return {
-    name: basename(project.root), root: project.root, ledger: project.ledger,
+    name: basename(root), root, ledger: ledgerDbPath(root),
     pool: poolEntries.length, tech: techEntries.length, aged: aged.length,
-    agedKeys: aged.map((e) => normalizeEntry(e.text)), agedTitles: aged.map((e) => entryTitle(e.text)),
+    agedKeys: aged.map((r) => normalizeEntry(r.title)), agedTitles: aged.map((r) => entryTitle(r.title)),
     thresholdReached, boards, actionable: aged.length > 0 || thresholdReached,
   }
 }
@@ -199,7 +170,7 @@ export function planChangeLines(prev, scan) {
   return { lines, next: { aged: scan.agedKeys, threshold: scan.thresholdReached } }
 }
 
-/** 去重档键 = 台账绝对路径·正斜杠 + **盘符大写**（跨端同规则——CLI 的 `process.cwd()` 盘符大写、
+/** 去重档键 = 台账库绝对路径·正斜杠 + **盘符大写**（跨端同规则——CLI 的 `process.cwd()` 盘符大写、
  *  VSC 的 `uri.fsPath` 小写（`session-slots.mjs` `normalizeCwd` 同一契约——session / checkpoint /
  *  trace 跨端共享即赖此）；CLI 写的键 VSC 须逐字认得）。 */
 export function notifyKey(ledger) {
@@ -225,3 +196,7 @@ export function saveNotifyState(file, state) {
     return true
   } catch { return false }
 }
+
+// ── re-export（拆分件接口——命令面接线 = 动态 import 本档，KD-M2-3） ──
+export { ALLOWED_MIGRATIONS, ledgerDbPath, openLedger, PENDING_STATUSES, _setLedgerDirForTest, _resetLedgerDirForTest } from "./ledger-db.mjs"
+export { ledgerAdd, ledgerAddTool, ledgerClose, ledgerCloseTool, ledgerCount, ledgerCountTool, ledgerQuery, ledgerQueryTool, ledgerUpdate, ledgerUpdateTool } from "./ledger-cmd.mjs"

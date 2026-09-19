@@ -39,12 +39,12 @@ function coreAnchorNames() {
   return [...names].sort()
 }
 
-test("① 表 ⇔ 核锚名集合逐名等值（13 名 · 旧名单锚零命中 · ptr 族恰 5 名）", () => {
+test("① 表 ⇔ 核锚名集合逐名等值（工具面 2 锚——提示词面锚全消 2026-09-17）", () => {
   const core = coreAnchorNames()
   assert.deepEqual(core, Object.keys(CLI_PROMPT_INJECTIONS).sort(), "CLI 表键 ⇔ 核内锚名（逐名等值——新增/缺失即红）")
-  assert.equal(core.length, 13, "锚名去重集合 = 13（§2.13.7⑥）")
+  assert.equal(core.length, 2, "锚名去重集合 = 2（bash-terminal-face / question-ui-face）")
   assert.ok(!core.includes("agent-loop-pointer"), "旧名单锚零命中")
-  assert.equal(core.filter((n) => n.startsWith("agent-loop-ptr-")).length, 5, "agent-loop-ptr-* 恰 5 名")
+  assert.equal(core.filter((n) => n.startsWith("agent-loop-ptr-")).length, 0, "agent-loop-ptr-* 指针族已删（正文自足）")
 })
 
 test("② 配置态：七场景 + consult 装配零锚字面，且「CLI 列」取值逐条在场", () => {
@@ -64,15 +64,15 @@ test("② 配置态：七场景 + consult 装配零锚字面，且「CLI 列」�
       if (value === "") continue
       assert.ok(union.includes(value), `§2.13.2「CLI 列」取值在场：${name}`)
     }
-    // 场景面特有形态（取值落点逐条——含括号 / 后缀边界：前缀重复类缺陷即红）
-    assert.ok(prompts.engineering.includes("docs/README.md"), "engineering: 文档地图 docs/README.md")
-    assert.ok(prompts.engineering.includes("(AGENT-LOOP.md §11.2 — R13)"), "engineering: 异步锚句指针（整条）")
-    assert.ok(prompts.engineering.includes("## 改动面反查（文档影响面）"), "engineering: 改动面反查节")
-    assert.ok(prompts.engineering.includes("review, AGENT-LOOP.md §18)"), "engineering: 交付链指针（整条）")
-    assert.ok(prompts.normal.includes("(AGENT-LOOP.md §18 D-E1a)"), "normal: 顶层异步 spawn 指针（整条）")
-    assert.ok(prompts.normal.includes("(like an async spawn; AGENT-LOOP §25)"), "normal: 飞刀指针（整条）")
+    // 场景面特有形态（消端差后正文自足——旧指针断言改验正文句）
+    assert.ok(prompts["eng-designer"].includes("docs/README.md"), "eng-designer: 文档地图 docs/README.md")
+    assert.ok(prompts.engineering.includes("advisor calls are async by default at the top level"), "engineering: advisor 异步语义正文")
+    assert.ok(!prompts.engineering.includes("## 改动面反查（文档影响面）"), "engineering: 改动面反查节已删")
+    assert.ok(prompts.engineering.includes("in-child advisor code review"), "engineering: 交付链正文")
+    assert.ok(prompts.normal.includes("Top-level subagent spawns default to async"), "normal: 顶层异步 spawn 正文")
+    assert.ok(prompts.normal.includes("Top-level escalate defaults to async"), "normal: 飞刀异步正文")
     assert.ok(prompts.normal.includes("Ctrl+I interrupt does not"), "normal: 会诊终止口径")
-    assert.ok(prompts["eng-coder"].includes("session (AGENT-LOOP.md §18)."), "eng-coder: 交付协议指针（整条）")
+    assert.ok(prompts["eng-coder"].includes("the full loop runs in this same session."), "eng-coder: 交付协议正文")
     assert.ok(!union.includes("AGENT-LOOPAGENT-LOOP"), "整条指针替换（前缀不重复）")
   } finally { resetPromptInjections() }
 })
@@ -92,6 +92,7 @@ test("③ 配置态：工具描述面零锚字面（bash 无终极端行 / quest
 
 test("④ 未配置态：恒等（原文过——现行行为零变）", () => {
   resetPromptInjections()
-  assert.ok(assemblePrompt("engineering").prompt.includes(LITERAL), "未配置 ⇒ 锚字面原样过（零替换）")
+  // 提示词面无锚（2026-09-17 消端差）——未配置 ⇒ 工具面锚字面原样过
+  assert.ok(builtinTools.map(toOpenAISchema).some((s) => String(s.function.description).includes(LITERAL)), "未配置 ⇒ 工具面锚字面原样过（零替换）")
   assert.ok(builtinTools.map(toOpenAISchema).some((s) => String(s.function.description).includes(LITERAL)), "工具描述面同（未配置恒等）")
 })

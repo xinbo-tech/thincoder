@@ -59,7 +59,7 @@ thincoder CLI                          thincoder-vscode
 
 - **品类**：**通用 AI 编码智能体**——能读写代码、与人协作完成软件开发任务。CLI/TUI、VS Code 扩展、ACP 接入是接入面，不是定性。
 - **用户**：**把代码交给 agent 负责、自己保留决策权的开发者与团队**——人定方向、agent 写代码。
-  不假设用户在中国、不假设用户用 Node、不假设用户项目的目录形状（见 `docs/core/requirements/ENGINEERING-MODE.md` §2 FR10）。
+  不假设用户在中国、不假设用户用 Node、不假设用户项目的目录形状（见 `docs/core/requirements/PORTABILITY.md` §2——FR10 正文随 v1 需求档归档待搬迁归位）。
 
 ### 5.2 核心承诺（立身之本）
 
@@ -95,7 +95,7 @@ thincoder CLI                          thincoder-vscode
 | 什么时候用 | 默认；日常绝大多数任务 | 改动有规模、要留痕、值得先想清楚再动手的任务（多文件 / 跳模块 / 需评审） |
 | 什么时候不用 | —— | 小探索、即改即验的小修——**流程开销大过收益**，用普通模式 |
 
-**详细需求**：工程模式 → `docs/core/requirements/ENGINEERING-MODE.md`；普通模式 → `docs/core/requirements/NORMAL-MODE.md` §5–§6。
+**详细需求**：工程模式 → `docs/core/requirements/ENGINEERING-MODE-V2.md`；普通模式 → `docs/core/requirements/NORMAL-MODE.md` §5–§6。
 
 ### 5.6 总体需求与功能范围
 
@@ -160,10 +160,6 @@ v1 不需要团队记忆、先把 agent 主干做薄做扎实；存储 / 记忆�
 | 「待决策」节：安全边界 / Multi-root 策略 / Webview 技术选型 / 国际化 | VSC 端产品决策 | 同上 |
 | 「会话流时序对齐 CLI」节（2026-09-09 需求点——待设计） | webview 面需求（owning board = panel/webview） | 同上（待设计登记） |
 | CLI 侧同名档（`thincoder-cli/docs/requirements/PROJECT.md`） | CLI 产品定性正文（更完整） | **已并入（2026-09-15 CLI 尾部真批——按其档头自注对账合并）**——产品级定性面入 §5；(d) 类入 §6.1；VSC 专有面本就不在该档（CLI 档无 VSC 面） |
-
-## 7. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **约 175 行**（as-of 2026-09-15 CLI 尾部真批并入后实核）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 

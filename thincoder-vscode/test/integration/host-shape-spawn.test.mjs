@@ -30,6 +30,7 @@ import { assembleFamilyTools } from "@thincoder/core/agent/family-tools.mjs"
 import { buildTopLevelAgent, hydrateRun, vscSubagentFace } from "../../src/agent/setup.mjs"
 import { loadConsultPool } from "../../src/extension/presets.mjs"
 import { mockLLM, providerFor } from "./helpers/mock-llm.mjs"
+import { ENG_TASK_BOOK_MIN } from "@thincoder/core/agent-tools/spawn-gates.mjs"
 
 let work
 let cfgDir
@@ -42,6 +43,7 @@ const CHILD_REPORT =
 
 before(async () => {
   work = mkdtempSync(join(tmpdir(), "tc-host-shape-"))
+  mkdirSync(join(work, ".git"), { recursive: true }) // 项目根判据（.git 仓根——2026-09-17）
   cfgDir = mkdtempSync(join(tmpdir(), "tc-host-shape-cfg-"))
   const cfgPath = join(cfgDir, "config.json")
   writeFileSync(cfgPath, JSON.stringify({ providers: [] }) + "\n", "utf8")
@@ -114,13 +116,14 @@ function familyNames(run) {
 }
 
 /** 断言 B fixture (c)——必备 5 角色期望名集（§2.5）：depth-0 例 = 改前基线实读（⓪，落 §5）+ 端差
- *  settings；4 子角色 = 核矩阵语义（§2.3A——家族段名集，不含基础集）。 */
+ *  settings；4 子角色 = 核矩阵语义（§2.3A——家族段名集，不含基础集）+ `notify_parent`
+ *  （SUBAGENT-UPSTREAM-CHANNEL：核 depth>0 段装配——端侧同调核单源，随核矩阵增名同步）。 */
 const FAMILY_FIXTURE = {
-  "depth-0": ["advisor", "eng", "goal", "plan", "read_history", "recent_changes", "settings", "skill", "subagent", "task", "timer", "verify"],
-  "eng-designer": ["batch_segment", "plan", "subagent", "task", "timer"],
-  "eng-coder": ["advisor", "batch_segment", "plan", "subagent", "task", "timer", "verify"],
-  coder: ["advisor", "plan", "task", "timer", "verify"],
-  explore: ["plan", "task", "timer"],
+  "depth-0": ["advisor", "eng", "goal", "ledger_add", "ledger_close", "ledger_update", "plan", "read_history", "recent_changes", "settings", "skill", "subagent", "task", "timer", "verify"],
+  "eng-designer": ["batch_segment", "notify_parent", "plan", "subagent", "task", "timer"],
+  "eng-coder": ["advisor", "batch_segment", "notify_parent", "plan", "subagent", "task", "timer", "verify"],
+  coder: ["advisor", "notify_parent", "plan", "task", "timer", "verify"],
+  explore: ["notify_parent", "plan", "task", "timer"],
 }
 
 /** 生产装配形状逐角色（`hydrateRun` = 生产入口 `setupAgentRun` 同函数；depth/role 同生产调用）。 */
@@ -155,7 +158,7 @@ test("T3 eng-designer（结构——用户实测角色同支）：工程装配 +
   assert.equal(parent.config.agent.engineering, true, "工程模式父（engState 水合落 config）")
   const built = buildProbe(
     parent,
-    { task: "写批次 §2", role: "eng-designer", batchDoc: "docs/batches/2026-09-15-demo.md", async: false },
+    { task: ENG_TASK_BOOK_MIN, round: "initial", role: "eng-designer", batchDoc: "docs/batches/2026-09-15-demo.md", async: false },
     "eng-designer",
   )
   assert.ok(Array.isArray(built.child.tools) && built.child.tools.length > 0, "eng-designer 子代工具表非空")
@@ -177,7 +180,7 @@ test("T5 eng-designer（行为——用户实测角色）：真跑 + 断言 A（
   const parent = await hostParent({ engineering: true })
   const calls0 = llm.calls
   const report = await subagentTool.execute(
-    { task: "写批次 §2", role: "eng-designer", batchDoc: BATCH, async: false },
+    { task: ENG_TASK_BOOK_MIN, round: "initial", role: "eng-designer", batchDoc: BATCH, async: false },
     spawnCtx(parent),
   )
   assert.ok(llm.calls > calls0, "真子运行触达 mock provider（llm.calls ≥ 1）")

@@ -7,9 +7,11 @@
 import { ctx, vscode } from "./state.js"
 import { t } from "./i18n.js"
 import { openModelMenu, closeModelMenu } from "./model-menu.js"
+import { modelSwitchBlocked } from "./loading.js"
 
 ctx.modelBtn.addEventListener("click", (e) => {
     e.stopPropagation()
+    if (modelSwitchBlocked()) return // F-W14：忙态门（零浮层、零写槽；读面仍由按钮显示承载）
     openModelMenu({
       anchorEl: ctx.modelBtn,
       models: ctx._models,
@@ -20,13 +22,17 @@ ctx.modelBtn.addEventListener("click", (e) => {
       },
       footer: [
         { label: t("model.addProvider"), onClick: () => vscode.postMessage({ type: "addProvider" }) },
-        { label: t("model.removeProvider"), onClick: () => vscode.postMessage({ type: "removeProvider" }) },
+        { label: t("model.removeProvider"), onClick: () => window._confirmSecretDelete(null, () => vscode.postMessage({ type: "removeProvider" })) },
+        // ↑ F-W17 确认门（SETTINGS.md §2.10 入口册 #6——删条即失 apiKey 原文）；btn=null：该实参实现内未用（settings.js:47）+ footer onClick 被 model-menu.js:132 调用时不传参 ⇒ 无元素可给。
         { label: t("model.setKey"), onClick: () => vscode.postMessage({ type: "setKey" }) },
       ],
       up: true,
     })
   })
-ctx.reasoningBtn.addEventListener("click", () => toggleDropdown(ctx.reasoningDropdown, () => buildReasoningDropdown()))
+ctx.reasoningBtn.addEventListener("click", () => {
+    if (modelSwitchBlocked()) return // F-W14：同谓词（两写槽入口同读）
+    toggleDropdown(ctx.reasoningDropdown, () => buildReasoningDropdown())
+  })
 
 function buildReasoningDropdown() {
   ctx.reasoningDropdown.innerHTML = ""
@@ -113,8 +119,11 @@ export function handleModelsMessage(m) {
       if (levels.length > 0 && !levels.includes(ctx.selectedReasoning)) ctx.selectedReasoning = levels[0]
       ctx.reasoningBtn.textContent = ctx.selectedReasoning === "none" ? "off" : (reasoningLabel(ctx.selectedReasoning))
       ctx.reasoningBtn.classList.toggle("active", levels.length > 0 && ctx.selectedReasoning !== "off")
-      vscode.postMessage({ type: "selectModel", model: match.id, provider: match.provider })
-      vscode.postMessage({ type: "selectReasoning", reasoning: ctx.selectedReasoning })
+      // F-W14：忙态零回写（显示仍更新——上列已刷）——不携快照覆写槽；idle 零回归（照发）
+      if (!modelSwitchBlocked()) {
+        vscode.postMessage({ type: "selectModel", model: match.id, provider: match.provider })
+        vscode.postMessage({ type: "selectReasoning", reasoning: ctx.selectedReasoning })
+      }
     } else if (prefs.model) {
       // M10 MODEL-SELECTION v2 (2026-09-11 scope add-on, user ruling): a prefs composite
       // NOT in the pulled list must never silently write the session slot. Display AND

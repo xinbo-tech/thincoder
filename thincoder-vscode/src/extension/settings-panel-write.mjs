@@ -10,6 +10,7 @@
 import { persistRaw, conflictError, loadRaw } from "@thincoder/core/config-io.mjs"
 import { probeTargetFromEntry, sanitizeConsultModels } from "./presets.mjs"
 import { probeChannelModels } from "@thincoder/core/provider/list-models.mjs"
+import { overrideAdmissionIfHostBusy } from "./loop-sampler.mjs"
 
 /** VSC 端 `$schema` 指针（§2.5 #80 端差——本端写盘注入；CLI 不注入）。 */
 export const VSC_CONFIG_SCHEMA = "https://thincoder.dev/schemas/config.json"
@@ -46,7 +47,10 @@ function probeDefaultModelChannel(dm) {
     const raw = loadRaw()
     const entry = (Array.isArray(raw.providers) ? raw.providers : []).find((p) => p?.name === name)
     if (!entry) return
-    await probeChannelModels(name, probeTargetFromEntry(entry))
+    const r = await probeChannelModels(name, probeTargetFromEntry(entry))
+    // F-W19（`SETTINGS.md` §2.12）：宿主忙 = 端侧证据 ⇒ 覆盖核落账分类（`reason` 逐字不动）。
+    // 写面同步契约零改——探针仍 fire-and-forget（本链已全兜底）。
+    if (!r.ok) overrideAdmissionIfHostBusy(name, r.error)
   })().catch(() => { /* 探针绝不阻断写面 */ })
 }
 

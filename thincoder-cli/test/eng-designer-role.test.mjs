@@ -35,6 +35,7 @@ import { gateEngCoderSpawn } from "@thincoder/core/agent/spawn-child.mjs"
 import { prepareRun } from "@thincoder/core/agent/setup.mjs"
 import { executeToolCalls } from "@thincoder/core/agent/dispatch.mjs"
 import { assemblePrompt, SCENARIO_SLOT_FILES } from "@thincoder/core/prompt-overlays.mjs"
+import { ENG_TASK_BOOK_MIN } from "@thincoder/core/agent-tools/spawn-gates.mjs"
 
 const __here = dirname(fileURLToPath(import.meta.url))
 const read = (rel) => readFileSync(join(__here, "..", rel), "utf8")
@@ -89,10 +90,10 @@ slow("T30 正常：角色注册五处（schema enum / ROLES 白名单 + 错误�
   assert.ok(subagentTool.parameters.properties.role.enum.includes("eng-designer"), "schema enum 含 eng-designer")
   // ③ 描述角色矩阵 + Mode filtering 句
   assert.match(subagentTool.description, /- eng-designer — engineering-mode design writer \(available only in engineering mode\)/, "描述角色矩阵行缺失")
-  assert.match(subagentTool.description, /Mode filtering: normal mode exposes explore\/plan\/coder; engineering mode exposes explore\/plan\/eng-designer\/eng-coder\./, "Mode filtering 句缺失")
+  assert.match(subagentTool.description, /Mode filtering: normal mode exposes explore\/plan\/coder \(eng-coder and eng-designer are refused\); engineering mode exposes explore\/eng-designer\/eng-coder \(plan and coder are refused/, "Mode filtering 句缺失")
   // ④ setup 工程模式 enum（真实装配——depth 0）
   const { toolByName } = await prepareRun(setupAgent(undefined), "task", {}, { depth: 0 })
-  assert.deepEqual(toolByName.get("subagent").parameters.properties.role.enum, ["explore", "plan", "eng-designer", "eng-coder"], "工程模式 enum 五处之一")
+  assert.deepEqual(toolByName.get("subagent").parameters.properties.role.enum, ["explore", "eng-designer", "eng-coder"], "工程模式 enum 五处之一（F5 集——plan 不入）")
 })
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -120,7 +121,7 @@ test("T32 边界：assemblePrompt('eng-designer') 非空 ≠ CONSULT_BASE + 槽�
   const a = assemblePrompt("eng-designer")
   assert.ok(a.prompt.length > 500, "装配非空")
   assert.deepEqual(a.warnings, [], "全槽在位零警告（漏登记 SLOT_CONTENTS 即警告）")
-  // 扫①：退役提示词文件对照锚 → 收归 test/doc-consistency.test.mjs T75（防回潮族）
+  // 扫①：退役提示词文件对照锚 → 收归防回潮族（该族机检实装已撤除，§4.2.6）
 })
 
 test("T32b 接线：designer 子代理实选场景 = 'eng-designer'（setup 内层选择器——非 engineering/normal）", async () => {
@@ -157,10 +158,10 @@ test("T33 错误/正常：designer 无 batchDoc → throw（含实际角色名�
   const missing = catchErr(() => buildDesigner(engParent(), { task: "写设计", batchDoc: "docs/batches/none.md" }))
   assert.equal(missing?.message, "batchDoc is required for role='eng-designer' — pass the batch record path (docs/batches/<batch>-<topic>.md); spawn refused without it. (given path is not a readable file)", "不可读后缀同款")
   const { rel, abs } = makeBatchDoc()
-  const built = buildDesigner(engParent(), { task: "写设计", batchDoc: rel })
+  const built = buildDesigner(engParent(), { task: ENG_TASK_BOOK_MIN, round: "initial", batchDoc: rel })
   assert.ok(built.input.includes(`Batch record (batchDoc): ${abs}`), "注入行含绝对路径")
   // sync 路径同款（双路覆盖——校验在 buildSpawnChild）
-  const sync = buildDesigner(engParent(), { task: "写设计", batchDoc: rel }, false)
+  const sync = buildDesigner(engParent(), { task: ENG_TASK_BOOK_MIN, round: "initial", batchDoc: rel }, false)
   assert.ok(sync.input.includes(`Batch record (batchDoc): ${abs}`), "sync 路径同样注入")
   // 对照：explore 不带 batchDoc 不受影响（门只管工程角色）
   const explore = buildSpawnChild(engParent(), { agent: engParent(), callbacks: {} }, { task: "audit" }, "explore", true, [], [], null)
@@ -174,7 +175,7 @@ test("T35 边界：designer 受限 schema（explore-only / 无 async·token·bat
   const { toolByName } = await prepareRun(setupAgent("eng-designer"), "task", {}, { depth: 1 })
   const sub = toolByName.get("subagent")
   assert.deepEqual(sub.parameters.properties.role.enum, ["explore"], "designer 通道 explore-only")
-  for (const k of ["async", "id", "n", "designToken", "designId", "batchDoc"]) {
+  for (const k of ["async", "id", "n", "designToken", "designId", "batchDoc", "round"]) {
     assert.ok(!(k in sub.parameters.properties), `受限变体 delete 清单：${k} 不在`)
   }
   assert.match(sub.description, /SURVEY the current state for the design/, "描述文案分流（勘察——非审计）")
@@ -211,11 +212,11 @@ test("T35b 边界：勘察任务输入不含 Audit scope 块（评审 #4——�
 // ═════════════════════════════════════════════════════════════════════════════
 test("T36 边界：designer spawn 不带 designToken → 通过（不需凭证）；eng-coder 同调用被 token 门拒", () => {
   const { rel } = makeBatchDoc()
-  const built = buildDesigner(engParent(), { task: "写设计", batchDoc: rel })
+  const built = buildDesigner(engParent(), { task: ENG_TASK_BOOK_MIN, round: "initial", batchDoc: rel })
   assert.ok(built.child, "无 token 也装配成 child")
   assert.ok(!built.child._engDesignReviewed, "designer 无设计评审解锁标记（token 面不适用）")
   // 对照：eng-coder 同场景（无 token）→ token 门拒
-  const e = catchErr(() => buildSpawnChild(engParent(), { agent: engParent(), callbacks: {} }, { task: "实现", batchDoc: rel }, "eng-coder", true, [], [], null))
+  const e = catchErr(() => buildSpawnChild(engParent(), { agent: engParent(), callbacks: {} }, { task: ENG_TASK_BOOK_MIN, round: "initial", batchDoc: rel }, "eng-coder", true, [], [], null))
   assert.match(e?.message ?? "", /Invalid or missing design token/, "eng-coder 无 token 被拒（对照）")
 })
 
@@ -253,7 +254,7 @@ test("T39 边界：designer 子代理写 docs/ → 走父侧授权 ask（非静�
   assert.equal(r3[0].ok, true, "autoApprove 放行")
   // ④ 契约面：designer 不拿任务域授权（_engTaskAuthorized 仅 eng-coder——设计 §2.15 E）
   const { rel } = makeBatchDoc()
-  const built = buildDesigner(engParent(), { task: "写设计", batchDoc: rel })
+  const built = buildDesigner(engParent(), { task: ENG_TASK_BOOK_MIN, round: "initial", batchDoc: rel })
   assert.equal(built.child._engTaskAuthorized, undefined, "designer 无任务域豁免（保持人在回路）")
 })
 
@@ -261,7 +262,7 @@ test("T39 边界：designer 子代理写 docs/ → 走父侧授权 ask（非静�
 // T40 边界：写权路由单一口径（AC27——六面 + 无残留）
 // ═════════════════════════════════════════════════════════════════════════════
 test("T40 边界：写权路由六面（§2.2 step1/step10 · §2.5 · §2.6 F2 · §2.8 · §2.15 A2）+ 双源 persona-engineering 调用链", () => {
-  const em = read("docs/design/ENGINEERING-MODE.md")
+  const em = read("docs/_archive/design/ENGINEERING-MODE.md")
   // §2.8 切片结构面（六面路由句类正向锚 + README / AGENTS 口径断言已随 2026-09-12 散文锚退役批删除）
   const sec28 = em.slice(em.indexOf("### 2.8 错误与恢复"), em.indexOf("### 2.9"))
   assert.ok(sec28.length > 100, "§2.8 slice 非空")

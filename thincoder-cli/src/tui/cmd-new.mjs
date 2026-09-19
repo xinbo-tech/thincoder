@@ -6,8 +6,9 @@ import { C } from "./ansi.mjs"
 export async function handleNewCommand(ctx) {
   const { agent, state, pushLine, showPicker, render } = ctx
 
-  const doNewSession = () => {
-    const slot = newSession(agent.cwd)
+  // F-MI7：newSession = async（探测束）——doNewSession 随之为 async，调用点 await
+  const doNewSession = async () => {
+    const slot = await newSession(agent.cwd)
     // 2026-08-31 会诊 F3：resetSessionState 清全量会话态（_fullHistory/title/_sessionStart/
     // 多槽设计凭证（_engDesignTokens——单值镜像 _engDesignToken 已退役 D3）/压缩与验证计数
     // 等）——原实现只清 agent.history，新会话首次落盘把旧会话完整人类线 + 旧标题写进新
@@ -30,8 +31,8 @@ export async function handleNewCommand(ctx) {
       { type: "item", text: "Yes, start new session in a new slot", action: "yes" },
       { type: "item", text: "Cancel", action: "no" },
     ], { defaultIndex: 1 })
-    if (e?.action === "yes") doNewSession()
+    if (e?.action === "yes") await doNewSession()
     return
   }
-  doNewSession()
+  await doNewSession()
 }

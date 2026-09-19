@@ -93,7 +93,7 @@ getOpenDoc win32 盘符大小写归一（消除 split-brain）· insert_after �
 | 旧档「现行为 → 改后」对照矩阵（含「CRLF 文件 edit 写回全 LF」等左列） | 修复前的旧行为对照 | 左列 = **已废现状**（旧结构）；现行行为已入 §4 |
 | 旧档状态行 | 时点状态行 | 批次语境——现行态已入 §1–§6 |
 | 旧档「变更记录」节（2026-08-25~09-08 三条） | 需求澄清 / 落地流水 | 历史叙述——本档自有变更记录 |
-| 旧档括注的 `_archive/EDIT-TOOL-EOL-DESIGN.md` / `-REQUIREMENTS.md` | 已归档设计 / 需求档 | 归档档归 CLI 树 `_archive/`（参照历史） |
+| 旧档括注的 `thincoder-cli/docs/design/_archive/EDIT-TOOL-EOL-DESIGN.md` / `-REQUIREMENTS.md` | 已归档设计 / 需求档 | 归档档归 CLI 树 `_archive/`（参照历史） |
 
 ### 8.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
 
@@ -102,10 +102,6 @@ getOpenDoc win32 盘符大小写归一（消除 split-brain）· insert_after �
 | VSC 编辑器路径专属面（`lfOffsetToRaw` 细节） | 端专属机制 | **已并入（2026-09-15 批 8）**——§6 VSC 端差异块（六条编辑器路径差异逐条登记）；VSC 源档留参照历史 |
 | VSC 档 §5 之外的批次材料 / 变更记录 | 一次性材料 + 历史流水 | 批次档承载（D2） |
 | 工具描述文本 | 模型可见文本 | **提示词面 = 产品代码**——落点 `thincoder-core/tool-docs/*.md` |
-
-## 9. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **114 行**（根层 · as-of 2026-09-15 批 8 实测）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 

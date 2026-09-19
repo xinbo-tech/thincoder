@@ -9,10 +9,13 @@
 
 import { compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT } from "../context.mjs"
 import { ensureAutoReminder, injectEngineeringReminder, ContinueError } from "./helpers.mjs"
+import { pushManifestStateReminder } from "./setup-reminders.mjs"
 import { cleanupConsultSessions } from "../agent-tools/consult.mjs"
 import { logEvent } from "../log.mjs"
 // ASYNC-RESULT-CONTAINER.md D1：池 accessor（absorb 双池——advisor 独立池无队列）
 import { getAsyncPool, releaseSettledEntry } from "../agent-tools/async-settle.mjs"
+// 批 4 CLI-ASYNC-DISCARD（AGENT-LOOP-SUBAGENT.md §6.20）：中止分支「只清已死」收尾单点
+import { discardAbortedPool, discardAbortedAdvisors } from "../agent-tools/async-discard.mjs"
 // R10 L3 (MULTI-INSTANCE-COLLAB §2a.5 D-L3a)：回合末域登记 flush（写工具钩子累积 →
 // 整写一次本实例 peers 文件——无写入跳过；失败容忍不抛）
 import { flushPeerDomains } from "../peer-domains.mjs"
@@ -111,6 +114,7 @@ export async function injectTurnReminders(agent, ctx) {
   // vs standard discipline) — see injectEngineeringReminder.
   if (depth === 0) {
     injectEngineeringReminder(agent)
+    pushManifestStateReminder(agent, { depth }) // M1 情境行（MANIFEST.md §2.6——同序组，eng 之后）
   }
 }
 
@@ -146,11 +150,11 @@ export async function finalizeAgentTurn(agent, ctx) {
   // (cleanupConsultSessions — marked stopped → no digest), and the suspension
   // driver aborts them on its own abort unwind.
   // Async subagent turn-end handling (AGENT-LOOP.md §15 D-A3 + §17 D-S1). Lifecycle:
-  // - Ctrl+C (plain abort): children were aborted with the parent signal — clear
-  //   WITHOUT injecting stale errors (user explicitly stopped); consultation
-  //   sessions are cross-turn background work since R17 — the abort branch is the
-  //   ONLY normal-path place that aborts them (cleanupConsultSessions marks
-  //   stopped → their settles never reach the digest stream).
+  // - Ctrl+C (plain abort): children were aborted with the parent signal — discard dead
+  //   entries (tombstone/out-of-pool/notice — AGENT-LOOP-SUBAGENT.md §6.20; no stale
+  //   errors injected — user explicitly stopped); consultation sessions are cross-turn
+  //   background work since R17 — the abort branch is the ONLY normal-path place that
+  //   aborts them (cleanupConsultSessions marks stopped → they never reach the digest).
   // - Ctrl+I (interrupt): keeps the pool AND the consult sessions: the turn
   //   resumes with the interrupt message, children stay tracked (in a suspension
   //   session children hold agent._sessionSignal and a digest's own Ctrl+I must
@@ -165,9 +169,9 @@ export async function finalizeAgentTurn(agent, ctx) {
     if ((subPool?.size ?? 0) > 0 || (advPool?.size ?? 0) > 0) {
       logEvent("ev:stopped", { poolN: (subPool?.size ?? 0) + (advPool?.size ?? 0), where: "turn-end-abort" })
     }
-    subPool?.clear()
-    advPool?.clear()
-    agent._asyncQueue = []
+    // §6.20：只清已死条目（存活/已 settle 留池——收尾见 async-discard.mjs；原无条件清池已弃）。
+    discardAbortedPool(agent)
+    discardAbortedAdvisors(agent)
     // R17: the consult family dies with the user stop (marked stopped — no digest).
     cleanupConsultSessions(agent)
     // ASYNC-RESULT-CONTAINER.md D2：pending 单容器——中止丢弃 consult/escalate 族停靠

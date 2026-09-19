@@ -9,7 +9,7 @@
 
 ## 1. 总体定位
 
-MCP 客户端 = 客户端入口（CLI `mcp.mjs` 真实现 ↔ VSC `mcp.mjs` 转口 + `src/mcp/index.mjs`）**+** 基础件（`helpers.mjs` ↔ `utils.mjs`）**+** 三种传输（stdio / http / ws）。
+MCP 客户端 = 客户端入口（CLI `mcp.mjs` 真实现 ↔ VSC `mcp.mjs` 转口 + `src/mcp/index.mjs`）**+** 基础件（`helpers.mjs` ↔ `utils.mjs`）**+** 三种传输（stdio / http / ws）。 （迁移期引文——档已删）
 共同契约 = 可配项（三种传输）与 `mcp.servers[]` 同源。
 本板块对本子系统的要求 = 该面归一为**核内单一实现**，面板 / 监视面作**端差注入**。
 
@@ -81,7 +81,7 @@ MCP（Model Context Protocol）客户端把外部 MCP server 的工具**动态�
 | 配置重读 | 每轮 `loadRaw` 即磁盘（下轮装配生效） | 对端有磁盘重读菜单面 |
 | 展开机制 / schema / 三 transport / 直调 | 同款（设计侧并入 · 批 7 `docs/core/design/MCP.md` §6.10） | 无实质差（语义同源、各端独立实现） |
 
-探活零副作用 = `src/mcp/index.mjs:129`（一次性探活、不进注册表、探完必关）。
+探活零副作用 = `src/mcp/index.mjs:129`（一次性探活、不进注册表、探完必关）。 （迁移期引文——档已删）
 
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）
 

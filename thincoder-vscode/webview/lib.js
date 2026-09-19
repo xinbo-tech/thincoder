@@ -61,3 +61,39 @@ export function patchLineType(line) {
   if (line.startsWith("-")) return "del"
   return "same"
 }
+
+/**
+ * 工具结果终止状态行（F-W16 判据单源的一部分——与 `isToolFailure` 同住一处，零第二份语法）：
+ * **独立成行**的 `(exit code N≠0)` / `(killed: …)` / `(spawn failed)` ⇒ 返回该标记文本
+ * （`"(exit code 1)"` / `"(killed: timeout 400ms)"` / `"(spawn failed)"`）；成功面 `(exit code 0)` /
+ * 非独立成行 / `(stopped)`（`execute` 工具的用户中止自报形——不在判据集内）⇒ `""`。
+ * 三成员闭集（设计 §4.3）：进程已跑 ⇒ 有退出码；被杀 ⇒ `killed: …`；**进程未启动 ⇒ 无退出码
+ * （不伪造）⇒ `(spawn failed)`**。判据只认状态位、不认产者措辞（`Command failed:` 前缀不入判据）。
+ */
+export function toolFailureStatus(text) {
+  const t = String(text ?? "").trim()
+  if (!t) return ""
+  for (const line of t.split("\n")) {
+    const m = /^\((?:exit code (\d+)|killed: (.+)|spawn failed)\)$/.exec(line.trim())
+    if (!m) continue
+    if (m[1] === undefined && m[2] === undefined) return "(spawn failed)"
+    if (m[1] === undefined) return `(killed: ${m[2]})`
+    if (Number(m[1]) !== 0) return `(exit code ${m[1]})`
+  }
+  return ""
+}
+
+/**
+ * 工具失败判据（F-W16 **单源**——活卡 `ui.js finishToolCard` 与恢复卡
+ * `tool-card-restore.mjs buildFinishedToolCard` 同读）：① 既有 `Error:` / `Error：` 前缀
+ * ∪ ② **独立成行**的终止状态位 `(exit code N≠0)` / `(killed: …)` / `(spawn failed)`——含用户中断值
+ * `killed: user interrupted`（用户中断的命令确未完成 ⇒ 同判失败）。
+ * 边界：仅「独立成行」的状态位触发——正文里提及 `(exit code 1)` / `(spawn failed)` 不误报；
+ * `(stopped)`（`execute` 工具的用户中止自报形）不在判据集内。
+ */
+export function isToolFailure(text) {
+  const t = String(text ?? "").trim()
+  if (!t) return false
+  if (/^Error[:：]/.test(t)) return true
+  return toolFailureStatus(t) !== ""
+}

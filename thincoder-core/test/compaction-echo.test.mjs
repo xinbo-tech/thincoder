@@ -9,7 +9,8 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { compressFallback } from "../context.mjs"
+import { compressFallback, mergeAdjacentAssistantEchoes, isAssistantEchoPair } from "../context.mjs"
+import { applySession } from "../session.mjs"
 
 /** 占位回复字面（D9——与 context.mjs 的 COMPACTION_PLACEHOLDER 同字面） */
 const PLACEHOLDER = "Understood. I'll continue from these notes, re-verifying anything transient."
@@ -128,4 +129,103 @@ test("T3 边界：content 为 null / 缺省 / 多模态数组 ⇒ 占位单独�
     assert.equal(agent.history[1].reasoning_content, "rc", c.label)
     assert.equal(agent._runStartHistoryLen, 1, c.label)
   }
+})
+
+// ─── D-CC19 恢复面回声归并（批 8 ENGINE-DEBT · ED-1——判据 1-5）────────────────
+
+/** 已落盘机读线夹具：user + 占位 assistant（无 reasoning_content）+ 真 assistant（rc + tool_calls）+ tool。 */
+function persistedMachineLine() {
+  return [
+    { role: "user", content: "hello", ts: 1 },
+    { role: "assistant", content: "Understood. I'll continue from these notes.", ts: 2 },
+    {
+      role: "assistant", content: "answer body", reasoning_content: "rc-3", ts: 3,
+      tool_calls: [{ id: "call_m2", type: "function", function: { name: "grep", arguments: "{}" } }],
+    },
+    { role: "tool", tool_call_id: "call_m2", name: "grep", content: "result", ts: 4 },
+  ]
+}
+
+test("M0 零回归：干净输入返回同一数组引用（===）；健康会话恢复逐元素 JSON 相等", () => {
+  const clean = [
+    { role: "user", content: "q", ts: 1 },
+    { role: "assistant", content: "a", reasoning_content: "r", ts: 2 },
+  ]
+  assert.equal(mergeAdjacentAssistantEchoes(clean), clean, "干净输入必须返回同一数组引用")
+  assert.equal(mergeAdjacentAssistantEchoes(null), null, "非数组原样返回")
+  const healthy = [...clean, { role: "user", content: "q2", ts: 3 }]
+  const agent = newAgent([])
+  applySession(agent, { history: healthy, contextHistory: healthy })
+  assert.equal(agent.history.length, healthy.length)
+  for (let i = 0; i < healthy.length; i++) {
+    assert.equal(JSON.stringify(agent.history[i]), JSON.stringify(healthy[i]), `元素 ${i} 逐字相等`)
+  }
+})
+
+test("M1 归并有效：病态对恢复后违例计数 = 0（applySession 调用点）", () => {
+  const machine = persistedMachineLine()
+  assert.equal(echoViolations(machine).length, 1, "夹具自带病态对（正控）")
+  const agent = newAgent([])
+  applySession(agent, { history: [], contextHistory: machine })
+  assert.deepEqual(echoViolations(agent.history), [], "恢复后零违例形态")
+  assert.equal(agent.history.length, machine.length - 1, "前条移除、其余原位")
+  assert.equal(agent.history[1].content, `${machine[1].content}\n\nanswer body`, "文本以空行相接")
+  assert.equal(agent.history[1].reasoning_content, "rc-3")
+  assert.equal(agent.history[1].tool_calls, machine[2].tool_calls, "tool_calls 原样保留（同引用）")
+  assert.equal(agent.history[1].ts, 3, "保留后条原 ts")
+  assert.equal(machine.length, 4, "输入数组零改写（copy-on-write）")
+})
+
+test("M2 信息守恒：归并前后文本拼接逐字相等 + tool_calls 总数相等（不丢内容）", () => {
+  const machine = persistedMachineLine()
+  const textBefore = machine.map((m) => (typeof m.content === "string" ? m.content : "")).join("\n")
+  const callsBefore = machine.reduce((n, m) => n + (m.tool_calls?.length ?? 0), 0)
+  const out = mergeAdjacentAssistantEchoes(machine)
+  const textAfter = out.map((m) => (typeof m.content === "string" ? m.content : "")).join("\n")
+  const callsAfter = out.reduce((n, m) => n + (m.tool_calls?.length ?? 0), 0)
+  assert.equal(callsAfter, callsBefore, "tool_calls 总数守恒（只搬位置）")
+  // 归并只改被并对的接缝：全序文本仅在该接缝由 "\n" 变 "\n\n"——其余逐字守恒
+  const seamBefore = `${machine[1].content}\n${machine[2].content}`
+  const seamAfter = `${machine[1].content}\n\n${machine[2].content}`
+  assert.equal(textAfter, textBefore.replace(seamBefore, seamAfter), "文本逐字守恒（仅接缝空行化）")
+})
+
+test("M3 边界：链式三连一次跑完；前条带 tool_calls 不并（F-3 上抛形态锁定）", () => {
+  // 链式：A(无 rc) + B(无 rc) + C(有 rc) ⇒ 一条合并消息（迭代至不动点）
+  const chain = [
+    { role: "user", content: "q", ts: 1 },
+    { role: "assistant", content: "A", ts: 2 },
+    { role: "assistant", content: "B", ts: 3 },
+    { role: "assistant", content: "C", reasoning_content: "rcC", ts: 4 },
+  ]
+  const merged = mergeAdjacentAssistantEchoes(chain)
+  assert.equal(merged.length, 2)
+  assert.equal(merged[1].content, "A\n\nB\n\nC", "链式归并至不动点")
+  assert.equal(merged[1].reasoning_content, "rcC", "保留链尾字段")
+  assert.equal(merged[1].ts, 4, "保留链尾原 ts")
+  // 前条带 tool_calls ⇒ 谓词为假、不并（配对安全——孤儿 tool_result 面，上抛 F-3）
+  const paired = [
+    { role: "assistant", content: "x", tool_calls: [{ id: "c1", type: "function", function: { name: "read", arguments: "{}" } }], ts: 1 },
+    { role: "assistant", content: "y", reasoning_content: "r", ts: 2 },
+    { role: "tool", tool_call_id: "c1", name: "read", content: "res", ts: 3 },
+  ]
+  assert.equal(isAssistantEchoPair(paired[0], paired[1]), false, "带 tool_calls 的前条不可并")
+  assert.equal(mergeAdjacentAssistantEchoes(paired), paired, "边界形态零改写（同引用锁定）")
+  // content 形态：前条 null 文本（空）⇒ 后条 content 原样；前条串 + 后条数组 ⇒ text part 前置
+  assert.deepEqual(
+    mergeAdjacentAssistantEchoes([
+      { role: "assistant", content: null, ts: 1 },
+      { role: "assistant", content: "body", reasoning_content: "r", ts: 2 },
+    ])[0].content,
+    "body",
+    "空前条文本 → 后条 content 原样",
+  )
+  assert.deepEqual(
+    mergeAdjacentAssistantEchoes([
+      { role: "assistant", content: "pre", ts: 1 },
+      { role: "assistant", content: [{ type: "text", text: "part" }], reasoning_content: "r", ts: 2 },
+    ])[0].content,
+    [{ type: "text", text: "pre" }, { type: "text", text: "part" }],
+    "后条多模态 → text part 前置",
+  )
 })

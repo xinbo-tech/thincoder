@@ -8,7 +8,7 @@
  * are gone from config (session slots keep their own double fields). Legacy fields migrate
  * on load (write-back failure never blocks startup).
  * Config file: ~/.thincoder/config.json
- * API key can fall back to environment variables (when not configured in providers).
+ * API key comes from providers[].apiKey only — environment variables are not a key source.
  */
 
 import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs"

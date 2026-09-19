@@ -152,7 +152,8 @@ const stripComments = (src) =>
 
 test("结构机检①：本批模块代码面零端名（注释剥除后——契约 5 机械面）", () => {
   const BATCH_MODULES = [
-    "history-window.mjs", "session-slot-write.mjs", "session-slots.mjs", "session.mjs", "session-gc.mjs",
+    "history-window.mjs", "session-slot-write.mjs", "session-slots.mjs", "session-slots-manifest.mjs", "session.mjs", "session-gc.mjs",
+    "session-lifecycle.mjs",
     "agent/setup.mjs", "agent.mjs", "agent-tools/advisor.mjs", "agent-tools/advisor-async.mjs",
     "advisor/loop.mjs", "advisor/project-context.mjs",
   ]

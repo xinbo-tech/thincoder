@@ -15,7 +15,7 @@
  *
  * 夹具自持（D18②）：本档自带临时目录隔离 + `settle` + `a2Panel`——零跨档 import。
  * 用例名 / 编号自原档逐字保留；`test(` 计数守恒 17 = 8（面板入口档）+ 9（本档）。
- * 全部用例 <800ms——快层直跑不标 slow（test/slow.mjs 归册阈值纪律）。
+ * 全部用例 <800ms——直跑即可（slow ≡ test，无归册阈值）。
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"

@@ -2,9 +2,10 @@
  * config-pool.test.mjs — 并发池统一可配置（POOL-CONFIG-UNIFIED，2026-09-09——设计评审
  * 采纳版）：F-1 耦合锁（DEFAULTS ↔ 运行时回退常量三键 4/4/4——补 T-24a4 真空——原注释
  * 宣称锁但测试树零引用）/ F-2 advisor 读取器（合法覆盖/非法回退/判定点读生效上限——
- * 文案含生效值）/ F-5 同 scope 守卫（running 同 scope 拒——settled 续跑不回归——
+ * ED-4 后池满 + 异 scope ⇒ 排队——ack 含 queued + position）/ F-5 同 scope 守卫（running
+ * 同 scope 拒——settled 续跑不回归——
  * 异 scope 并行允许——与池容量守卫两关独立）/ F-3 子菜单显示回退（poolCur 三键）。
- * 纯单元：无真实评审启动（拒发路径在 entry.start 前返回——成功路径不驱动 launch——
+ * 纯单元：无真实评审启动（拒发/排队路径在 entry.start 前返回——成功路径不驱动 launch——
  * 续跑/异 scope 经纯谓词 + 实例解析断言）。无网络、无真实 ~/.thincoder 写入。
  *
  * AC-3 TUI 交互走查清单（固定人工清单——评审 #3 批准的替代形态：/config 写盘触及真实
@@ -67,7 +68,7 @@ test("F-2 读取器：合法覆盖生效 / 非法与缺省回退 4（resolveAdvi
   assert.equal(advisorPoolLimitFor(null), 4)
 })
 
-test("F-2 判定点：池容量拒发读生效上限——文案报生效值（缺省 4——5 个并发第 5 拒）", () => {
+test("F-2 判定点：池满 + 异 scope ⇒ 排队（缺省 4——第 5 个排队——ack 含 queued + position）", () => {
   const a = agent({ _asyncAdvisors: new Map(
     [1, 2, 3, 4].map((i) => [`e${i}`, runningEntry(i, "design", `K${i}`)]),
   ) })
@@ -76,13 +77,16 @@ test("F-2 判定点：池容量拒发读生效上限——文案报生效值（�
     reviewType: "design", documents: null, paths: null, object: null,
     designToken: null, designId: null, run: { reviewType: "design", docSetKey: "K5" },
   })
-  assert.ok(r.error, "第 5 并发被拒")
-  assert.ok(r.error.includes("(4 reviews at most"), `文案含生效值 4: ${r.error}`)
-  assert.ok(r.error.includes("agent.poolLimits.advisor"), "文案含可配键引用")
-  assert.ok(r.error.includes("§11.2"), "锚 §11.2（现行节号——旧锚已更新）")
+  assert.equal(r.error, undefined, "异 scope 池满 → 排队非拒（ED-4——原 ②-6a 拒发退役）")
+  assert.equal(r.queued, true, "ack 含 queued")
+  assert.equal(r.position, 1, "ack 含 position")
+  const entry = a._asyncAdvisors.get(r.id)
+  assert.equal(entry.status, "queued", "池条目 status queued")
+  assert.equal(runningAdvisorCount(a), 4, "queued 不占槽——running 计数不变")
+  assert.equal(a._asyncAdvisorQueue.length, 1, "独立评审队列建位")
 })
 
-test("F-2 判定点：配置覆盖后容量拒按生效上限（advisor=1——第 2 个拒——文案报 1）", () => {
+test("F-2 判定点：配置覆盖后按生效上限排队（advisor=1——第 2 个排队——ack 报 position）", () => {
   const a = agent({
     config: { agent: { poolLimits: { advisor: 1 } } },
     _asyncAdvisors: new Map([["e1", runningEntry(1, "design", "K1")]]),
@@ -91,8 +95,9 @@ test("F-2 判定点：配置覆盖后容量拒按生效上限（advisor=1——�
     reviewType: "design", documents: null, paths: null, object: null,
     designToken: null, designId: null, run: { reviewType: "design", docSetKey: "K2" },
   })
-  assert.ok(r.error, "配置 advisor=1 时第 2 个评审被拒")
-  assert.ok(r.error.includes("(1 reviews at most"), `文案报生效值 1（读 config——非死常量）: ${r.error}`)
+  assert.equal(r.error, undefined, "配置 advisor=1 池满 + 异 scope → 排队非拒")
+  assert.equal(r.queued, true, "ack 含 queued")
+  assert.equal(r.position, 1, "ack 报 position（读 config——非死常量）")
 })
 
 test("F-5 同 scope 守卫：running 同 scope 拒——scope 语义文案 + 指引", () => {

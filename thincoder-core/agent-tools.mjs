@@ -18,3 +18,6 @@ export { batchSegmentTool } from "./agent-tools/batch-segment.mjs"
 // CORE-UNIFICATION TOOLS #83（统一登记册——VSC `agent-tools/index.mjs:15` 含 consult 家族；
 // CLI 原把 consult 另挂 `agent/setup.mjs:173` ⇒ 归位：登记册即单一来源，装配方只读本档）。
 export { consultStartTool, consultStopTool } from "./agent-tools/consult.mjs"
+// SUBAGENT-UPSTREAM-CHANNEL（AGENT-LOOP-SUBAGENT.md §6.27.4 装配接线）：子代理上行通道工具
+// （depth>0 段装配——`agent/family-tools.mjs`；depth-0 / consult 不装配）。
+export { parentChannelTool } from "./agent-tools/parent-channel.mjs"

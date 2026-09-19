@@ -129,12 +129,13 @@ export async function reconnectMcp(panel, name) {
     if (!srv) { panel._panel?.webview.postMessage({ type: "providerError", text: `No MCP server named "${name}"` }); return }
     try {
       mcpDisconnectByName(name)
-      const client = await mcpConnect({
+      await mcpConnect({
         name: srv.name,
         command: srv.command, args: srv.args, env: srv.env,
         url: srv.url, wsUrl: srv.wsUrl, headers: srv.headers, token: srv.token,
       })
-      panel._panel?.webview.postMessage({ type: "mcpReconnected", name, tools: client.tools.length })
+      // 无消费者推送（`mcpReconnected`）已删——重连的用户可见效果由本函数尾 pushMcpStatus 全量覆盖
+      // （发面处置 = 删；`WEBVIEW-PROTOCOL.md` §12 表行随退场）
     } catch (e) {
       panel._panel?.webview.postMessage({ type: "providerError", text: `MCP reconnect ${name} failed: ${e.message}` })
     }

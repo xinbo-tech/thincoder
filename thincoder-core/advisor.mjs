@@ -27,8 +27,10 @@
  *   host-verified citations reject references that do not match the current
  *   disk state, and fresh sessions exclude old read data.
  *   Each round replaces the system prompt (ROUND1 → ROUND2 → ROUND3) so the
- *   round-1 full-scope mandate can't bleed into later rounds, plus a mechanical
- *   cap (MAX_ADVISOR_ROUNDS in run.mjs) refuses a 6th review call outright.
+ *   round-1 full-scope mandate can't bleed into later rounds. Rounds have NO
+ *   mechanical cap (2026-09-18 ruling — ADVISOR-CONVERGENCE.md §3.1): the round
+ *   counter only drives prompt decay and display; failure paths end in a
+ *   settlement conclusion block, and repeated failures are reported to the user.
  *   Rounds 2+ also declare all earlier diffs STALE and require read-verified
  *   file:line evidence for any unfixed/new finding — see docs/design/ADVISOR-CONVERGENCE.md.
  *
@@ -76,17 +78,12 @@ const ADVISOR_DESIGN = loadAdvisorPrompt("advisor-design.md")
 // ────────────────────────────────────────
 
 /**
- * Build the system prompt for an advisor review session.
+/** Build the system prompt for an advisor review session.
  * @param {Object} agent — the parent agent
  * @param {Object|null} [prior] — prior review output (full text; decision 2026-08-08)
  * @param {string} [reviewType] — "design" for design review, undefined/"code" for code review
  * @returns {string} the system prompt
  */
-/** Append local time so the reviewer knows "now" (same grounding as the agent loop). */
-function withTime(prompt) {
-  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "local"
-  return prompt + `\n\nCurrent time: ${new Date().toLocaleString("sv-SE")} (${timeZone}).`
-}
 
 // 锚替换缝（CORE-UNIFICATION §2.13.8——U0）：本函数**六个 return 逐条**经 `applyPromptInjections`
 // （未配置 = 恒等，现行行为零变）；读取径（模块级常量缓存）不动。结构机检
@@ -182,7 +179,7 @@ export { escapeLiteralEscapes }
  * session reuse across rounds: round 1 = full scope (ROUND1 prompt), rounds
  * 2+ = convergence (ROUND2/ROUND3 prompt + fix-claims follow-up).
  * @param {Object} agent — the parent agent
- * @param {string} [reviewType] — "design" or "code" (default)
+ * @param {string} [reviewType] — "design" or "code" (已由工具层类型门定轨——此处无缺省；F30)
  * @param {string|null} [designToken] — design-review approval token (design only)
  * @param {string[]|null} [documents] — design review only: explicit list of doc paths to review (passed through to buildAdvisorUserMessage)
  * @param {string[]|null} [paths] — code review only: explicit list of file/dir paths to review
@@ -204,7 +201,7 @@ export function prepareAdvisorMessages(agent, reviewType, designToken = null, do
   // after a failed design review). Fresh session.
   if (reviewType === "design" && (agent._advisorRound || 0) === 0) {
     return [
-      { role: "system", content: withTime(buildAdvisorSystemPrompt(agent, prior, reviewType)) },
+      { role: "system", content: buildAdvisorSystemPrompt(agent, prior, reviewType) },
       { role: "user", content: escapeLiteralEscapes(buildAdvisorUserMessage(agent, prior, reviewType, designToken, documents, paths, object, designId)) },
     ]
   }
@@ -218,21 +215,22 @@ export function prepareAdvisorMessages(agent, reviewType, designToken = null, do
   // No prior review output: reset ONLY when this run made no code changes (user
   // decision 2026-08-05: any loop that modified code must NOT reset — the
   // advisor guard WILL push back, so the convergence round must keep advancing
-  // toward the cap; a run with no mutations has no push-back risk and a reset
-  // is safe). Deterministic runtime state (`_mutatedThisRun`) decides — never
+  // through retries (round = prompt decay + display only; no mechanical cap —
+  // ADVISOR-CONVERGENCE.md §3.1); a run with no mutations has no push-back risk
+  // and a reset is safe). Deterministic runtime state (`_mutatedThisRun`) decides — never
   // model output (phrases/table headers drift; three rounds of false reports
   // proved it). Either way the message is a fresh full review (no prior output
   // exists without a completed review) — only the round counter differs.
   if (!prior || (agent._advisorRound || 0) === 0) {
     if (!(agent._mutatedThisRun ?? false)) {
       // New review cycle (first review, all-clear, or no code changes): reset
-      // the round so the cycle gets its own 5-round budget.
+      // the round so the cycle starts from ROUND1 (round = prompt decay/display).
       agent._advisorRound = 0
     }
-    // Mutations exist → KEEP the round (cap keeps advancing through retries).
+    // Mutations exist → KEEP the round (attempts keep advancing through retries).
     const user = buildAdvisorUserMessage(agent, prior, reviewType, designToken, documents, paths, object, designId)
     return [
-      { role: "system", content: withTime(buildAdvisorSystemPrompt(agent, prior, reviewType)) },
+      { role: "system", content: buildAdvisorSystemPrompt(agent, prior, reviewType) },
       {
         role: "user",
         // NOTE (2026-08-06): the leading prefix is a PLAIN "System reminder:",
@@ -272,12 +270,12 @@ export function prepareAdvisorMessages(agent, reviewType, designToken = null, do
       : ""
     const tokenBlock = designToken ? `\n\n${buildDesignApprovalBlock(designToken, designId)}` : ""
     return [
-      { role: "system", content: withTime(buildAdvisorSystemPrompt(agent, prior, reviewType)) },
+      { role: "system", content: buildAdvisorSystemPrompt(agent, prior, reviewType) },
       { role: "user", content: escapeLiteralEscapes(followUp + scopeBlock + tokenBlock) },
     ]
   }
   return [
-    { role: "system", content: withTime(buildAdvisorSystemPrompt(agent, prior, reviewType)) },
+    { role: "system", content: buildAdvisorSystemPrompt(agent, prior, reviewType) },
     { role: "user", content: escapeLiteralEscapes(followUp) },
   ]
 }

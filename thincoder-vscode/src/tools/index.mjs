@@ -17,7 +17,6 @@ import { readTool, writeTool, editTool, hashlineEditTool, insertAfterTool, readI
 import { globTool, grepTool, lsTool } from "@thincoder/core/tools/search.mjs"
 import { applyPatchTool, deleteTool } from "@thincoder/core/tools/patch.mjs"
 import { lintTool } from "@thincoder/core/tools/linter.mjs"
-import { checklistTool } from "@thincoder/core/tools/checklist.mjs"
 import { lspTool, configureLspHost } from "@thincoder/core/tools/lsp.mjs"
 import { executeTool } from "@thincoder/core/tools/execute.mjs"
 import { questionTool } from "@thincoder/core/tools/question.mjs"
@@ -162,7 +161,7 @@ export { globTool, grepTool }
 export { bashTool }
 export { websearchTool, fetchTool }
 export { insertAfterTool, applyPatchTool, lsTool, deleteTool }
-export { lintTool, checklistTool, lspTool, executeTool, questionTool, readImageTool }
+export { lintTool, lspTool, executeTool, questionTool, readImageTool }
 export { codeSearchTool, docSearchTool }
 export { contextTool, focusTool, fileOpsTool, processTool, getCurrentTimeTool, waitForTool, treeTool }
 export { toOpenAISchema }
@@ -172,7 +171,7 @@ export { resolvePath } from "./shared.mjs"
 /** All built-in tools */
 export const builtinTools = [
   readTool, writeTool, editTool, insertAfterTool, applyPatchTool, hashlineEditTool,
-  lintTool, checklistTool, lsTool, deleteTool,
+  lintTool, lsTool, deleteTool,
   globTool, grepTool, bashTool,
   gitTool,
   websearchTool, fetchTool, questionTool,

@@ -16,8 +16,11 @@ import { homedir } from "node:os"
 // 批后提交（record-results noteMutations）移到执行成功即刻——唯一记账点（取代批后段
 // + agent.mjs 中断分支记账——不双计）——同消息 [写 + async advisor launch] 时 launch 前
 // 完成的写在 launchSeq 之前落地 → settle 不再误判 stale（§29 症状根因）。
-import { noteMutations, inflightDesignReviewConflict } from "../agent-tools/advisor-async.mjs"
+import { noteMutations } from "../agent-tools/advisor-async.mjs"
 import { anyLiveDesignSlot } from "../token-ttl.mjs"
+// M4 写权门禁（模块设计 §2.1#2）：冻结窗口判据组装（被审文件集 = 声明文档集 + 批次档
+// 的合流点）落 write-gate.mjs 单一权威源——本档只 import 消费（KD-M4-4 拆分点）。
+import { freezeWindowConflict } from "./write-gate.mjs"
 
 const ERRORS_DIR = join(homedir(), ".thincoder", "tool-errors")
 
@@ -219,8 +222,9 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
     // E（第 11 批·F17/§14.14 E-3d）：D5 冻结窗口写前拦截——设计评审在途（点火 → 结算）期间，
     // 父侧对被审文件集（声明文档集 + 批次档）的写入会被拒绝：在途写使本轮结算 stale——pass 轮
     // = token 直接丢失（实证：第 10 批 id=20 整轮作废）。工具面 = FILE_MUTATORS（与变更记账
-    // 同集——不记入日志的写面既不判 stale 也不拦）；判据与 reviewIsStale 同源
-    // （inflightDesignReviewConflict——同 docAbs / 同 normAbs；仅扫 running 未取消的设计条目）。
+    // 同集——不记入日志的写面既不判 stale 也不拦）；判据与 reviewIsStale 同源、单一权威源 =
+    // agent/write-gate.mjs 的 freezeWindowConflict（声明文档集腿 = inflightDesignReviewConflict
+    // 同 docAbs / 同 normAbs；批次档腿 = run.batchDoc——M4 合流点，仅扫 running 未取消的设计条目）。
     // 位置：只读 / autoApprove 短路之前——审批不得绕过冻结；拒绝 = 可见 denied + 逃生门
     // （先 cancel → 改 → 重发）。
     if (FILE_MUTATORS.has(toolCall.name)) {
@@ -229,7 +233,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       const absPaths = (touched ?? [])
         .filter((p) => typeof p === "string" && p)
         .map((p) => resolve(agent.cwd, p))
-      const conflict = inflightDesignReviewConflict(agent, absPaths)
+      const conflict = freezeWindowConflict(agent, absPaths)
       if (conflict) {
         prepared.push({
           toolCall, tool, denied: true,

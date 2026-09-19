@@ -98,7 +98,9 @@ export async function prepareRun(agent, input, callbacks, {
         } catch { /* index not ready — suppress error */ }
       }
     }
-    if (agent.memory) {
+    // §6.10 修法 B（TUI 假死批）：回合召回注入 = **depth-0 门**——子代理（depth > 0）不注入
+    // 相关文档 / 相关记忆两块（同函数其余自动注入全为 depth-0 门；需求锚 = F-M7 + 核 §4.11）。
+    if (agent.memory && depth === 0) {
       const docs = await docSearch(agent.memory, input, { limit: DOC_SEARCH_LIMIT })
       if (docs.length > 0) {
         const count = agent.memory.db.prepare(`SELECT COUNT(*) AS n FROM doc_chunks`).get()?.n ?? 0
@@ -124,20 +126,6 @@ export async function prepareRun(agent, input, callbacks, {
         })
       }
     }
-    if (depth === 0) {
-      // Checklist injection: inject pending + in_progress items from .thincoder/checklist.md
-      try {
-        const { pendingItems } = await import("../tools/checklist.mjs")
-        const items = pendingItems(agent.cwd)
-        if (items.length > 0) {
-          agent.history.push({
-            role: "user",
-            content: `[System reminder: task checklist (pending/in-progress):\n${items.map(i => `- [${i.status === "in_progress" ? "~" : " "}] ${i.text}`).join("\n")}]`,
-            transient: true,
-          })
-        }
-      } catch { /* checklist not available — suppress error */ }
-    }
     pushReal(agent, { role: "user", content: input })
   }
   // SESSION.md §11.1: unified per-turn env-state transient reminder (env/mode/
@@ -147,7 +135,7 @@ export async function prepareRun(agent, input, callbacks, {
   // contract). Both depth-0 only (describe the MAIN agent / its workspace peers).
   if (depth === 0) {
     pushEnvStateReminder(agent)
-    pushPeerReminder(agent)
+    await pushPeerReminder(agent)
   }
 
   // Time grounding for EVERY agent depth AND every resume, pushed LAST (after the user

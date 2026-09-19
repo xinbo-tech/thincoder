@@ -1,9 +1,11 @@
 # 测试基建（TESTING）· 设计
 
 > 板块：测试基建——**分层纪律（L0 / L1 / L2）与 slow 门** · **测试库存治理** · **测试生命周期（三层来源）与集成集** · **散文锚退役与禁令**。
+> **v2 就地更新**（2026-09-17 退役批）：M10 模块设计语义融入（门禁简化——见 §10；原旁路档 `_archive/modules/ENGINEERING-MODE-V2-MODULE-TEST-DISCIPLINE.md` 已归档 `_archive/modules/`）。§1 分层纪律 / §3 生命周期 / §4 集成集 runner 为 v1 历史（v2 由 §10 替代）。
 > 需求层指针 = `requirements/TESTING.md`（§1 总体 / §2 F1–F14 / §3 N1–N9 / §5 F15–F22 · N10–N12）。
-> 兄弟档：无——原 `design/E2E-HARNESS.md`（CLI 自动验证面）**已删除**（2026-09-15 · 错轴退役；终端程序自动验证面的设计面 = 待重做另轮）。
-> 权威源（实现）：`thincoder-cli/test/slow.mjs` + `thincoder-cli/test/slow-gate.mjs` + `thincoder-cli/test/run-fast.mjs` + `thincoder-cli/test/run-full.mjs` + `thincoder-cli/test/run-integration.mjs` + `package.json` scripts。
+> 兄弟档：无——原 `design/E2E-HARNESS.md`（CLI 自动验证面）**已删除**（2026-09-15 · 错轴退役；终端程序自动验证面的设计面 = 待重做另轮）。 （迁移期引文）
+> 权威源（实现）：`thincoder-cli/test/slow.mjs` + `thincoder-cli/test/slow-gate.mjs` + `thincoder-cli/test/run-fast.mjs` + `thincoder-cli/test/run-full.mjs` + `thincoder-cli/test/run-integration.mjs` + `package.json` scripts。 （迁移期引文——入口已并入）
+> **多实现面（语义同源 · 各面原文自持 · 不做字节一致 · 面间互不追赶）**：CLI 面（上行所列）· VSC 对端面（其 `test/` 同构 runner 族）· **核树面**（`thincoder-core/test/{slow,slow-gate,run-fast,run-full}.mjs` + `thincoder-core/package.json` scripts——**设计态 / 待落**（本批实施后置为完成态），无集成层）。
 > 关联：本档 §1 是分层纪律的权威叙述；工程模式实现侧分级正文 = `thincoder-core/prompts/persona-eng-coder.md` + `discipline-engineering.md`。
 > 对端对位档 = 对端仓库的同名测试基建档（**语义同源、各端原文自持**）。
 
@@ -53,6 +55,16 @@
 | `npm run test:full` | `thincoder-cli/test/run-full.mjs` | 全量（设 env 后 `node --test`） |
 | `npm run test:integration` | `thincoder-cli/test/run-integration.mjs` | 集成集（发布门第三步骤） |
 | 手工 | `node --test test/xxx.test.mjs` | 单文件调试（不经过快层入口，无拦截） |
+| `npm test`（核） | `thincoder-core/test/run-fast.mjs` | 快层（slow 跳过 + 防漏拦截） |
+| `npm run test:full`（核） | `thincoder-core/test/run-full.mjs` | 全量（设 env 后 `node --test`） |
+| 手工（核） | `node --test test/xxx.test.mjs` | 单文件调试（同 CLI 面） |
+
+**核树面（批 6 设计 · 2026-09-16——设计态 / 待落 · 本批实施后置为完成态）**——分层纪律的第三实现面（承 N1/N3/N4/N5 同一语义）：
+
+- **入口**：核无 `test` scripts 时新增 `test`（快层）/ `test:full`（全量）两条；机制本体逐义镜像 CLI 面（`slow(` 门控 `THINCODER_TEST_FULL` · 慢门 reporter 点名 · `--test-concurrency=6`）。
+- **归册**：对象 = 快层慢门**实跑点名**（不预判）；as-of 点名 **3 例**（`session-slot-write.test.mjs` 死主清理身份复核组；实测 1319.4 / 1545.5 / 1838.6 ms）。点名数与预期不等 ⇒ 如实登记差异，不回填。
+- **无集成层**：集成集机制射程 = CLI / VSC 两面；核树面不设集成入口（不引 `run-integration.mjs`）。
+- **CI 覆盖不降**：`.github/workflows/test.yml:46` 核作业原为裸 `node --test`——归册后该调用会让归册例在 CI 变 skip ⇒ 核作业改跑**全量层**（覆盖与归册前等同）。
 
 ## 2. 测试库存治理（按需加）
 
@@ -88,7 +100,7 @@
 
 ### 3.3 批次档 §6 处置行契约（双半）与同步面
 
-「测试处置」行落在批次档 §6 核销同步清单（槽位枚举权威 = `requirements/ENGINEERING-MODE-MECHANISM.md` §1.12）。行内容两半：
+「测试处置」行落在批次档 §6 核销同步清单（槽位枚举权威 = `design/BATCH-RECORD.md` §6——v1 需求档已归档）。行内容两半：
 
 | 半 | 内容 | 对账面 |
 |---|---|---|
@@ -96,7 +108,7 @@
 | ② 集成影响核 | `新增 <场景>` / `修订 <场景>` / `无` | 主 agent 评估结论（F10——不外包不自动） |
 
 - **执行人** = 主 agent（§6 作者）；① 落手（删档 / 改写）= eng-coder（维护小批 / 随触碰批——删除清单制，逐条列明 + 父侧核销）。
-- **同步面（落笔清单）**：`requirements/ENGINEERING-MODE-MECHANISM.md` §1.12 模板槽位行 + §1.15 D7 行（eng-designer 修订）· 工程纪律档双副本的 D7 枚举（主 agent 内容权 + eng-coder 落笔）· 对端双源同款两文件。
+- **同步面（落笔清单）**：批次档 §6 模板槽位行 + `requirements/ENGINEERING-MODE-V2.md` §13.1 D7 行（eng-designer 修订）· 工程纪律档双副本的 D7 枚举（主 agent 内容权 + eng-coder 落笔）· 对端双源同款两文件。
 - **落笔时机** = **无冻结窗口冲突时**（父侧排程）。
 
 ### 3.4 演进评估与 ③ 收编
@@ -234,6 +246,7 @@
 | A-TS9 | 两仓宽度 / 一致性检查新增违规 0；两仓快层全绿 | 批级 |
 | A-TS10 | 散文锚退役：`用例总数(批后) = 用例总数(批前) − 清单整删条数`；混装档行为断言零改 | F15–F22 · N10–N12 |
 | A-TS11 | 新增断言零散文锚（结构机检 F17 封闭枚举不变） | F19 |
+| A-TS12 | **核树面**：`npm test`(核) exit 0（归册例 `↯ skipped` 可见 · 零超阈拦截）· `npm run test:full`(核) exit 0（归册例执行通过）· CI 核作业跑全量层（覆盖不降） | §3 N1 / N3 / N4 / N5 |
 
 **用例表（正常 / 边界 / 错误——摘）**：
 
@@ -246,10 +259,12 @@
 | TS-5 | 正常 | 散文锚退役对账 | 用例总数下降 == 清单整删条数 |
 | TS-6 | 错误 | 混装档（行为 + 锚断言） | 只删锚断言行；行为断言保留 |
 | TS-7 | 错误 | 新增断言写读档句子断言 | 判红（禁令；结构机检枚举外） |
+| TS-8 | 正常 | 核面快层跑 | 归册例 `↯ skipped`；零超阈拦截；退出码 0 |
+| TS-9 | 边界 | 核面全量跑（本地 `test:full` / CI 核作业同一全量入口） | 归册例执行通过；退出码 0（CI 覆盖不降） |
 
 ## 8. 边界（本档不做）
 
-- 真付费端点进层 · PTY 级全 TUI 驱动（模块级起步）· 对端 commit 镜像缺口修复（技术待办在案）· slow 门 / 分层机制改动（零改）· 集成集一次性写满（最小起步）· 存量 helper 清理（不顺手清）。
+- 真付费端点进层 · PTY 级全 TUI 驱动（模块级起步）· 对端 commit 镜像缺口修复（技术待办在案）· slow 门 / 分层机制**语义**改动（零改——新增实现面见 §1.2「核树面落地」）· 集成集一次性写满（最小起步）· 存量 helper 清理（不顺手清）。
 - 不写实现代码（用例 / runner / 检查器 = eng-coder 写域）；不写提示词实体（内容权归主 agent）。
 
 ## 9. 不并项与历史沿革
@@ -264,14 +279,147 @@
 | 状态行与落笔流水 | 「设计已落 / 实施随批」类状态句 | 运行时状态 |
 | 已退役机制的注记 | 原方法论文档缺失降级（D-M1/D-M2）· 旧工程子档载体 | 已退役——语义保留处已并入正文（告警整段移除；载体改指纪律层双源） |
 
-## 10. 体量与拆分规划（R24a）
+## 10. 测试门禁简化（v2——M10 增量）
 
-**实测行数**：本档 **≈400 行**——超 300 软线。
-**拆分规划（登记——触发 = 再度增厚至 >470）**：候选切面 = ①**分层与寿命**（§1–§3）②**集成集与散文锚**（§4–§6）；切点零交叉（§5 引 §4.3 接口契约，以节名互挂）。**当前不拆**（≤500）。
-**本次迁移的切分理由**：原 995 行超硬限；端到端 harness（原 §12）切出为独立档（`design/E2E-HARNESS.md`——**该档已删除**（2026-09-15））；读者面 = 「测试怎么分层 / 怎么收口」。
+**定位**：v1 测试门禁 = **三层**（`lint` → `test:full`（全量，slow 门控放行）→ `test:integration`（集成集））+ 慢测层归册机制（`slow()` 门控 + `slow-gate.mjs` 防漏拦截）+ 五套 runner 脚本 + 「批次收口的测试退役三选一」流程。v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库存**。
+
+**功能点**：
+
+| # | 功能点 | 方案 |
+|---|---|---|
+| F1 | 统一 `test` 命令 | 一条命令跑全量（单元 + 集成 + slow 全跑），全绿即门禁 |
+| F2 | 砍多套脚本 | `run-fast` / `run-full` / `run-integration` / `slow-gate` / `slow`（门控面）→ 收敛为每包一条 `test`（`node test/run.mjs`——CLI 与核 glob · VSC 显式清单；**清单↔盘上两向自检**见 §10.2） |
+| F3 | 砍慢测层归册 | `slow()` 不再 skip（慢就慢，全量跑）；`slow-gate` 防漏拦截删除；`THINCODER_TEST_FULL` / `THINCODER_SLOW_GATE_MS` env 门全删。**`slow.mjs` 保留为纯别名**（`export { test as slow }`——35 档 + 2 fixture 的 `import { slow }` 零悬空；整档删 = 悬空 import + 35 档机械重写） |
+| F4 | 砍测试退役台账 | 不做「批次收口的测试退役三选一」流程（§3 生命周期 = v1 历史） |
+
+**不砍 `lint`（check-syntax）**：砍单只列测试 runner 脚本；`lint` 是语法门（node --check）非测试门，CI 两作业 + VSC `vscode:prepublish` 仍消费（KD-M10-6）。
+
+**验收（回指 AC-M10）**：
+
+| # | 判据 |
+|---|---|
+| AC-M10-1 | `npm test` 一条命令跑全量（单元 + 集成 + slow 全跑） |
+| AC-M10-2 | 无 `run-fast` / `run-full` / `run-integration` / `slow-gate` 等多套脚本残留（三包 package.json scripts 仅 `test` 一条测试入口 + 文件名不存在） |
+| AC-M10-3 | 无慢测层归册机制（grep `THINCODER_TEST_FULL`/`THINCODER_SLOW_GATE_MS` 代码面零匹配，排除 docs/ 与批次档） |
+| AC-M10-4 | 全量测试全绿（三包 `npm test` → exit 0） |
+
+**边界（本增量不做）**：不做测试内容（各模块自写用例）；不砍 `lint`；不引入新测试框架 / 依赖（零依赖不变）。
+
+### 10.1 VSC 测试登记死项清零 + 清单自检① 对称化（2026-09-18 · 批 M-FAMILY-SWEEP · 条目 ③）
+
+**问题陈述（实测，as-of 2026-09-18）**：
+
+- `thincoder-vscode/test/files.mjs` 清单 **64 条中 4 条为死项**：`test/doc-consistency.test.mjs` · `test/ledger-check.test.mjs` · `test/doc-anchors.test.mjs` · `test/reconcile-lookup.test.mjs`——
+  四档已随 M8 机检重写批（`b9f439c9`「engineering-mode v2 M2-M10 implementation」）删除，清单条目未同步。
+- **两分支实测（死项是否致红——本条目须先答的问题）**：**不致红**。`node --test` 的判据是「实参集合是否**全部**不存在」——
+  **全部缺失** ⇒ 报 `Could not find '<缺失实参拼接串>'` 并 exit 1；**混有在盘实参** ⇒ 缺失项**静默跳过**、exit 0
+  （实测：`node --test <1 在盘> <1 缺失>` ⇒ exit 0；`node --test <4 缺失>` ⇒ exit 1；VSC 全量 `node test/run.mjs` = 593 tests / 592 pass）。
+  ⇒ 死项的实害不是红灯，而是**静默减档**：清单虚报套件组成（64 条实跑 60 条）。
+- **根因（自检只覆盖一半）**：`thincoder-vscode/test/run.mjs` 头注声明「① 清单每项在盘（拼写错误明确失败，不落进 node --test 的"找不到文件"噪音）」——
+  但实现里 ① 只跑 `integrationFiles`；**单元清单直接透传给 `node --test`**（`run.mjs:51`）⇒ 单元面死项无任何拦截，只能靠人眼。
+
+**方案（本条目）**：
+
+| # | 改动 | 落点 |
+|---|---|---|
+| ③-1 | 删 4 条死项 + **一条退役注（占 2 行）**（承 §1 表 C1 先例的「条目随删除勾销」形态：写明删除批与理由，保留可回溯性；注文**自足、不给节号**——落点 `thincoder-vscode/test/files.mjs` 是代码档，在 `doc-check`（域 = docs）覆盖面外） | `thincoder-vscode/test/files.mjs` |
+| ③-2 | 清单自检 ①（在盘）**扩到单元清单**——两清单同检、同 `fail()` 通道、文案带层名（`listed unit file does not exist: …` / `listed integration file does not exist: …` 后者逐字不变） | `thincoder-vscode/test/run.mjs` |
+
+**为何 ③-2 属本条目的收口而非扩域**：F2 声明的设计是「VSC 显式清单 + 清单自检 ①②③」——实现只覆盖 integration 清单 ⇒ **声明与实况不符**（与本批条目 ① 同型缺陷）。
+不补 ③-2，③-1 就只是删 4 行的一次性清账：下一个随批删档的人仍会让清单静默虚报（本批已实证该路径无拦截）。
+
+**受影响文件与判据**：
+
+| 文件 | 现（`wc -l`） | Δ | 判据 |
+|---|---|---|---|
+| `thincoder-vscode/test/files.mjs` | 83 | −4 条目 + 一条退役注（占 2 行）⇒ 净 −2（实施轮实测 **82 行 / 61 条**——2026-09-18；差额 +1 = 并行线已提交档 `test/tool-display-sync.test.mjs` 条目） | A-MS7：清单每条逐条 `existsSync` 全真（61 条全在盘、零死项） |
+| `thincoder-vscode/test/run.mjs` | 52 | +2 → **实测 54**（自检① 多行嵌套：改前 `:28`–`:30` 三行 → 改后五行；另失败前缀改覆盖两清单——§1.6 裁定 1） | A-MS8：注入一条不存在的档 ⇒ `node test/run.mjs` **exit 1** 且文案 `listed unit file does not exist: <注入值>`（先于 `node --test` 启动——fail-closed）；注入后还原，`git status` 该档零差异 |
+
+**不做（明确出界）**：
+
+- **单元面反向自检**（盘上 `*.test.mjs` 未登记 → 拒）。现状盘上已有 1 档未登记的在途档（`thincoder-vscode/test/tool-display-sync.test.mjs`，并行线 untracked）——
+  该方向另立条目（登记主张 + 在途批协同），本批不夹带。**→ 已由 §10.2 承接（2026-09-18 · 批 判据/纪律三连 · 台账 #51）**；本行保留为「当日为何出界」的历史记录。
+- 死项之外的 VSC 测试面（用例内容 / 其他清单 / 其他包——core 与 CLI 无清单文件，走 glob，无此面）。
+
+**§10.1 追加（2026-09-18 · 批 VSC-MIRROR-RETIRE · 条目 ④）——登记注与档头注的裸节号清零（VSC 包面）**：
+
+- **对象与根因**：`§2.20.x` / `§2.22.x` 两族节号**只存于已归档 v1 档**（`docs/core/design/_archive/ENGINEERING-MODE.md` 与两产品树参照历史）——活体面**不可解析**（承 ③-1「注文自足、不给节号」同判据；且这些注文均在**代码档**、处 `doc-check`（域 = `docs`）覆盖面外，无机检可拦）。
+- **修法**：去裸节号，改**自足表述**（面名 + 批号）；能指到**可解析**的现行权威（活档 + 已核节号）者优先——逐行取舍登记入批次档 §5。
+- **范围（本批 · 12 行 / 6 档）**：`thincoder-vscode/test/files.mjs`（`:47` `:48` `:52`）· `thincoder-vscode/test/eng-designer-role.test.mjs`（`:3` `:96`）·
+  `thincoder-vscode/test/batch-segment.test.mjs`（`:2`）· `thincoder-vscode/test/prompts-mirror-anchors.test.mjs`（`:4` `:18` `:44` `:81`）·
+  `thincoder-vscode/src/agent/setup.mjs`（`:309`）· 孤儿夹具档（本包测试夹具目录下的机检基线 JSON，`:2` note 串——**整档删除**；档名见批次档 §2.2 表第 12 行）。
+- **夹具档纳入理由（设计评审轮 1 发现 1）**：该档 = **孤儿夹具**（其消费档已随 M8 机检重写批删除——`files.mjs` 清单条目同批勾销；全包 `.mjs` / `.json` 内容检索零引用），
+  而 ④ 的判据检索域（`thincoder-vscode/src` + `thincoder-vscode/test`）含该档 ⇒ 不纳入则判据**不可达**；纳入后处置 = **整档删除**（孤儿档无消费面——两选一的另一支「改写为自足注文」否决）。
+- **出界**：`§2.20.x` 族在 core / CLI 两包的注文以及「已归档模块档死指针族」同面——归台账 #42（另批统一收正），本批不夹带。
+
+### 10.2 测试收集面**反向**自检（盘上 ⊆ 执行集；2026-09-18 · 批 判据/纪律三连 · 条目 #51）
+
+**问题陈述（实测，as-of 2026-09-18）**：
+
+- 自检只判一个方向：**登记 → 档在盘**（§10.1 ③-2 与 CLI 面）。**反向（盘上 → 已在执行集）无判据** ⇒ 盘上未被收集的 `*.test.mjs` **永不被执行、零信号**（静默漏跑——`node --test` 对「混有在盘实参」的缺失实参静默跳过，依据见 §10.1）。
+- **活样本（已消解）**：`thincoder-vscode/test/tool-display-sync.test.mjs`（#41 实施在写）——落盘未登记期间 `npm test` 零输出、零红灯；该档后已登记（`test/files.mjs`），但**该路径当日确无拦截**。
+- **三包结构不同（本条目须先答的事实）**：VSC = **显式清单制**（`thincoder-vscode/test/files.mjs` 61 条 · `thincoder-vscode/test/integration/files.mjs` 12 条；`thincoder-vscode/test/run.mjs` 自检 ①②③——其中 ② 只走集成目录）；
+  **CLI 无清单文件**（`thincoder-cli/test/run.mjs` 走两层 glob：`test/*.test.mjs` + `test/integration/*.test.mjs`）；**核亦无清单文件**（`thincoder-core/test/run.mjs` 走**单层** glob：`test/*.test.mjs`）。
+  ⇒ CLI / 核面「未登记」形态不存在，**同族缺口 = 未被 glob 命中的档**（CLI = 嵌套——如 `test/x/y.test.mjs`；核 = 嵌套或任何非顶层档）——同为静默漏跑。**核面并入本实施轮 = 批档 §1 批件 2026-09-18 另裁**（同机制、实现可复用）。
+- **三包收集面实测（零缺口，as-of 2026-09-18）**：VSC 单元域盘上 **60** 档 ↔ 清单 60 条 ⟂ 集成域盘上 **12** 档 ↔ 清单 12 条；CLI `test/` 递归 **77** 档（顶层 69 + 集成 8），两层 glob 覆盖 77/77、嵌套他处 **0**；核 `test/` 递归 **42** 档 = 全部顶层，单层 glob 覆盖 **42/42**、嵌套 **0**。
+
+**方案（本条目）**：
+
+| # | 改动 | 落点 |
+|---|---|---|
+| ④-1 | 自检 ② 扩为**两域各查一侧**：VSC 测试树全域（`test/` 递归）按子目录归属分派——非 `integration/` 者判「∈ 单元清单」、`integration/` 者判「∈ 集成清单」（既有集成侧文案逐字不变） | `thincoder-vscode/test/run.mjs` |
+| ④-2 | 新增自检 **②' 无漏收集**：`test/` 递归全部 `*.test.mjs` 须被 runner 的 glob 命中（未被命中 ⇒ 该档永不执行）——CLI = 两层 glob · 核 = 单层 glob | `thincoder-cli/test/run.mjs` · `thincoder-core/test/run.mjs` |
+
+**判据形态（三包同款——语义 / 体式 / 时序同，前缀相同、括注随包）**：
+
+1. **域** = `test/` 树下全部 `*.test.mjs`（**递归**——嵌套档不许绕过）。
+2. **判据** = 域内每一档都在**对应执行集**内；否则 fail。
+3. **时序** = **先于 `node --test` 启动**（fail-closed——失败档不被执行、错误不被套件输出淹没）。
+4. **白名单 = 无按档豁免名单**；豁免判据 = **命名约定**（域只含 `*.test.mjs`——helper / fixture / smoke 档（`smoke-settings.mjs` 等）命名不含该后缀、天然不入域；VSC 清单里的非域条目两向皆不受影响）。将来真出现「须在盘但不可执行」的档 ⇒ **改名**（`*.fixture.mjs`），不得加名单——名单即又一个静默漏跑的藏身处。
+5. **文案（AC 断言对象）**——**三包同前缀** `✖ test manifest check failed: `；`<rel>` = **相对包根**的路径、正斜杠分隔（例 `test/foo.test.mjs`；基准 = `run.mjs` 自身的 `root`，同集成面 ②）。下列三行 = **完整样例（逐字：前缀 + 故障类型 + 括注 + `<rel>`）**：
+
+```text
+✖ test manifest check failed: unregistered unit file (register it in test/files.mjs — an unregistered file is never executed): <rel>
+✖ test manifest check failed: uncollected test file (move it into test/ or test/integration/ — an uncollected file is never executed): <rel>
+✖ test manifest check failed: uncollected test file (move it up into test/ — this runner collects a single level; an uncollected file is never executed): <rel>
+```
+
+（行 1 / 2 / 3 = VSC 单元面 / CLI 收集面 / 核收集面。）
+6. **「零用例行」判据模式**（「自检先于套件」的机判面）：自检失败输出**不得含** `node --test` 的套件标记行（`ℹ tests <n>` / `ℹ pass <n>` / `ℹ fail <n>` 等 `ℹ ` 计数行——实测：套件跑过即打印 `✔ <用例名>` + `ℹ tests 1`）**且不得含** `✔ ` 用例行；`✖ test manifest check failed: ` 行自身 = 自检故障行（非用例行）。判据 = 命中该前缀行 **∧** 零 `ℹ ` 计数行。
+
+**受影响文件与判据**：
+
+| 文件 | 现（`wc -l`） | Δ | 判据 |
+|---|---|---|---|
+| `thincoder-vscode/test/run.mjs` | 54 | +~12（② 分身两域 + 头注一行） | A-RC1：临时落 `test/__reverse-probe.test.mjs`（未登记）⇒ `node test/run.mjs` **exit 1** 且输出命中单元面**完整样例行**（**先于** `node --test`——零 `ℹ ` 计数行）；删档复原 |
+| `thincoder-cli/test/run.mjs` | **10** | +~14（新增 ②' 段 + 头注） | A-RC2：临时落 `test/__reverse-probe/x.test.mjs`（未被 glob 命中）⇒ `node test/run.mjs` **exit 1** 且输出含 `uncollected test file`；删目录复原 |
+| `thincoder-core/test/run.mjs` | **9** | +~14（新增 ②' 段 + 头注） | A-RC5（核面先红）：临时落 `test/__reverse-probe/x.test.mjs`（未被单层 glob 命中）⇒ `node test/run.mjs` **exit 1** 且输出含 `uncollected test file`；删目录复原 |
+| 三包 `test/` 现盘 | — | 0 | A-RC3：零假阳——VSC 60 单元 + 12 集成 / CLI 77 / 核 42 全收集 ⇒ 三包 `npm test` exit 0（回归面） |
+| VSC 集成面自检 ② | 既有 | 0 | A-RC4：既有反向断言（集成域）逐字零回归 |
+
+**不做（明确出界）**：
+
+- **不给 CLI / 核引入清单文件**——三包收集机制差异 = §10 F2 的既有设计（**CLI 与核 glob · VSC 显式清单**）；本条目只补反向断言，不改收集机制（改机制 = 另案）。
+- 不在 M8 机检加测试面判据（测试档不入 `docs/**` 机检域）；不做用例级漏跑判据（用例被 `node:test` 收集失败的面归各档自持）。
 
 ## 变更记录
 
+- 2026-09-18（**批 判据/纪律三连 · 设计评审修正轮 1** · eng-designer——fix 轮；承批档 §3 发现 #3 / #6 / #9）：§10.2 补 **核收集面**（④-2 扩至 `thincoder-core/test/run.mjs` + A-RC5 先红 + 三包实测 42/42——批档 §1 批件另裁）；
+  判据形态补「`<rel>` 基准 = 包根」与「**零用例行**」判据模式（新第 6 条）· 文案改 fenced 块内**完整样例**（前缀入块）· §10 F2 行改指本节；CLI `run.mjs` 行数 11 → **10**（实测收正）。
+
+- 2026-09-18（**批 判据/纪律三连 · 条目 #51** · eng-designer）：新增 §10.2 测试收集面反向自检（两包同款：判据域 / 时序 / 文案 + 白名单 = 命名约定）——判据 A-RC1–A-RC4；§10.1「不做」行改指本节（历史保留）。
+
+- 2026-09-18（**批 VSC-MIRROR-RETIRE · 设计评审修正轮 1 · eng-designer**）：§10.1 裸节号清零范围行收正为 **12 行 / 6 档**——纳入孤儿夹具档（本包测试夹具目录下的机检基线 JSON；处置 = 整档删除；纳入理由 = 判据检索域含该档，不纳入即不可达——评审轮 1 发现 1）。**2026-09-18 父侧随轮改述**：本行与范围行原载该档全路径 token ⇒ 删除后自伤悬空（评审轮 2 新增 🟡）⇒ 改述去路径形态。
+
+- 2026-09-18（**批 VSC-MIRROR-RETIRE · 设计轮 · eng-designer**）：§10.1 追加「登记注与档头注的裸节号清零（VSC 包面）」——修法（自足表述 / 现行权威优先）+ 11 行范围 + 出界（#42）。
+
+- 2026-09-18（**批 M-FAMILY-SWEEP · 设计评审修正轮 1 · eng-designer**）：§10.1 口径三收正——③-1 行数统一为「一条退役注（占 2 行）」（评审轮 1 发现 2）· 退役注文改**自足表述**（去 `§2.22.6` 节号——发现 6）· `run.mjs` Δ 收正 +3 → **+2**（多行嵌套落笔形态——发现 5）。
+- 2026-09-18（**批 M-FAMILY-SWEEP · 设计轮 · eng-designer**）：新增 §10.1——VSC 测试登记死项清零（4 条）+ 清单自检① 对称化（单元清单同检「在盘」）；判据 A-MS7/A-MS8；反向自检明确出界。
+- 2026-09-17（**v2 就地更新 · 退役批** · 主 agent）：M10 模块设计语义融合——新增 §10 测试门禁简化（一条 `test` 全绿 + `slow ≡ test` 纯别名 + `run.mjs` 统一 runner + 砍退役台账；AC-M10 验收）；§1 分层 / §3 生命周期 / §4 runner 标注 v1 历史（v2 由 §10 替代）；原旁路档 `_archive/modules/ENGINEERING-MODE-V2-MODULE-TEST-DISCIPLINE.md` 归档 `_archive/modules/`。
+
 - 2026-09-15（**迁移批 · 第 4 批 · 大档拆分实迁** · eng-designer）：自 `thincoder-cli/docs/design/TESTING.md`（995 行）切出并重建——落点判据 = `design/DOC-SYSTEM.md` §5.1 P1；
-  承载原 §1–§6 + §9–§11.10；原 §12（CLI 自动验证面）切出为 `design/E2E-HARNESS.md`（**该档已删除**——2026-09-15 · 错轴退役）；坐标全量改现状路径；首执行清单与逐条删除清单入「不并项与历史沿革」（一次性执行材料）。
-- 2026-09-15（**TTY-DRIVE 批 · 错轴设计档退役轮 · eng-designer**）：兄弟档 `design/E2E-HARNESS.md` **已删除**（用户 06:02 裁定——错轴档从活档面消失）；首部兄弟档行 + 本文两处切分叙述同批收口。
+  承载原 §1–§6 + §9–§11.10；原 §12（CLI 自动验证面）切出为 `design/E2E-HARNESS.md`（**该档已删除**——2026-09-15 · 错轴退役）；坐标全量改现状路径；首执行清单与逐条删除清单入「不并项与历史沿革」（一次性执行材料）。 （迁移期引文）
+- 2026-09-16（**批 6 RESIDUAL-DEBT** · eng-designer）：§1.2 增**核树面落地**（第三实现面：入口两条 · 归册 3 例 as-of · 无集成层 · CI 覆盖不降）+ 分层入口表增 3 行核面 + 首部权威源行增多实现面枚举 ·
+  §5 增 TS-8 / TS-9（TS-9 含 CI 口径——核作业同一全量入口 · 裁定 5）· §7 增 A-TS12 · §8 边界行收正（机制**语义**零改——新增实现面带语义外沿）· §10 实测行数收正。
+- 2026-09-15（**TTY-DRIVE 批 · 错轴设计档退役轮 · eng-designer**）：兄弟档 `design/E2E-HARNESS.md` **已删除**（用户 06:02 裁定——错轴档从活档面消失）；首部兄弟档行 + 本文两处切分叙述同批收口。 （迁移期引文）
+- 2026-09-16（**批 6 · 评审修正轮（轮 1）** · eng-designer）：§1.2 核树面措辞收正为「**设计态 / 待落**」（首部多实现面行 + §1.2 节头——评审轮 1 #5）。

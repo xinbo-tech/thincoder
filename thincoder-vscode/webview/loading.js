@@ -28,7 +28,35 @@
  */
 import { S, ctx } from "./state.js"
 import { renderStatusBar } from "./status-bar.js"
+import { closeModelMenu } from "./model-menu.js"
 import { t } from "./i18n.js"
+
+/**
+ * 模型 / 推理按钮忙态门判据（F-W14 · D-W16）：非 `idle`（`running` / `susp`）⇒ 挡。
+ * **同经 `S._turnState` 派生的独立谓词**——与 Send / Stop 的 `=== "running"` 非同一条
+ * （本门多含 `susp`：在飞蒸馏落盘窗携旧回合快照——忙态写槽会被旧快照覆写）。
+ * 两处写槽入口同读本谓词（`webview/model-picker.js`：按钮点击 / `models` 推送自动回写）。
+ */
+export function modelSwitchBlocked() {
+  return S._turnState !== "idle"
+}
+
+/**
+ * 忙态门应用（派生单点）：两信息钮**显式禁用**（`disabled` + `aria-disabled`）——不隐藏
+ * （屏上须可读当前会话模型 / 推理级；隐藏即失去信息——与 Send 隐藏的分工见 §4.2）；
+ * 进忙态时关已弹出的两个浮层（不留「点了没用」的假 affordance）。
+ */
+function applyModelSwitchGate() {
+  const blocked = modelSwitchBlocked()
+  for (const btn of [ctx.modelBtn, ctx.reasoningBtn]) {
+    btn.disabled = blocked
+    btn.setAttribute("aria-disabled", String(blocked))
+  }
+  if (blocked) {
+    closeModelMenu()
+    ctx.reasoningDropdown.style.display = "none"
+  }
+}
 
 /**
  * INPUT-LOCK 状态派生单点：busy（S._turnState==="running"——回合/digest/标题窗口）不禁
@@ -39,6 +67,7 @@ import { t } from "./i18n.js"
 export function applyBusyLock() {
   const busy = S._turnState === "running" && !ctx._interruptMode
   ctx.inputEl.readOnly = false // 锁移除——始终可编辑（INPUT-LOCK-BEHAVIOR-REVISED）
+  applyModelSwitchGate() // F-W14：忙态门（与中断模态无关——同点派生，两入口同谓词）
   if (ctx._interruptMode) return
   ctx.inputEl.placeholder = busy ? t("input.busyPlaceholder") : t("input.placeholder")
 }

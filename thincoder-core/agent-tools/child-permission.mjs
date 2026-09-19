@@ -10,7 +10,8 @@
  * 桥到**父面板**的权限卡（owner 归属 + 定向 signal），并在询问前后以
  * onSubagentApproval 通知块头审批态（⏸ + 等待审批: <tool>）。eng-coder child 不配通道
  * （spawn 时授权——C-3/KD-2 保持零弹卡）；explore/plan 只读集不可达；无父通道
- * （headless / AUTO 构建期）→ 返回 null（调用侧省略该键——静默直通，零回归）。
+ * （headless / 无关角色调用侧未挂——AUTO 不再使通道缺席：父门恒在，判定 = 询问时
+ * live 读，父级与子代同判据单源，ED-2 2026-09-16）→ 返回 null（调用侧省略该键——静默直通，零回归）。
  *
  * 顺序定死（C-2）：announce(tool) → await ask → finally announce(null 清态)。owner label
  * 与活动块 label 同源（KD-8——卡与块可目视配对）：escalate/consult 带模型
@@ -26,7 +27,8 @@ export function childOwnerLabel(role, id, model) {
 
 /**
  * 构建 child 权限通道。返回 null（无 `ctx.callbacks.onPermissionRequired`——headless /
- * AUTO 构建期 / 无关角色调用侧未挂）或 `async (toolName, args, diffInfo) => boolean`。
+ * 无关角色调用侧未挂；AUTO 判定走父门询问时 live 读——同判据单源，ED-2 2026-09-16）或
+ * `async (toolName, args, diffInfo) => boolean`。
  * @param {{ ctx: object, id: number, role: string, model?: string|null, signal?: AbortSignal|null }} deps
  */
 export function makeChildPermission({ ctx, id, role, model = null, signal = null }) {

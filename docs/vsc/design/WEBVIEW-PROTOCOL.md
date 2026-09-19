@@ -39,7 +39,7 @@ reasoning, provider, images? } → extension _chat()
 | ext → wv | `providerStatus` / `autoApprove` / `models` / `sessions` | Provider 态 / AUTO 会话级 / 模型表 / 会话列表 |
 | ext → wv | `historyPage` / `loadOlder` | 懒历史：末页先发（`older=false`）+ scroll 补偿 |
 | wv → ext | `question` / `questionResponse` | 内联 question 卡（非原生弹窗）——`questionResponse { answer, promptId }` |
-| ext → wv | `userMessage` / `assistantMessage` | 历史回放（quick-input 命令回显用） |
+| ext → wv | `userMessage` | 历史回放（quick-input 命令回显用） |
 | ext → wv | `clearMessages` | `—` |
 
 ## 3. 扩展机制消息族（本架构权威源）
@@ -49,11 +49,12 @@ reasoning, provider, images? } → extension _chat()
 | `toolPanel` | ext → wv | `{ type, name, kind, text, round, model, sub }`——活动流 chunk（advisor / 子代理 / consult / escalate）；`kind` = start / think / text / tool；`sub` = 嵌套子标（string chunk 分支恒 `undefined`）；**增字段** `tool`（工具名）/ `cmd`（参数摘要 ≤60——无则不携）。**生产者双源** = `onToolPanel` 缝 + 子代内容 chunk 中继（relay 前缀分流——`panel-callbacks.mjs` `relaySubagentContentChunk`）；`cmd` ≤60 截断落层 = **webview 块头渲染**（`activity-view.js` `noteChunk`——超 60 截为 59+…），桥与生产者透传原串 |
 | `subagent` | ext → wv | `{ ...info }` 展开透传——`started`（池条目带 `pool: true`）/ `settled` / `done` / `error` / `cancelled` / `terminated` / `failed` / `answered` 终态 + turn / maxTurns 终值快照；**增 status 值** `"turn"`（`{ id, role, turn, maxTurns }` 逐轮进展帧） |
 | `subagentApproval` | ext → wv | `{ id, role, model?, tool }`——审批态（`tool = null` 清除）→ 块头 `⏸` + 态词 `等待审批: <tool>` |
-| `cancelSubagent` | wv → ext | `{ id, role }`——⏹ 点击路由 → 池条目定向 abort（role 交叉校验防陈旧按钮误停；未知 no-op；advisor role 复用同路由） |
+| `cancelSubagent` | wv → ext | `{ id, role }`——⏹ 点击路由 → 池条目定向 abort（role 交叉校验防陈旧按钮误停；未知 no-op）；**advisor role 复用同路由**——与子代理族**同经** `executeCancelAction`（**不得**走专用直调分支；收尾口径 = `AGENT-LOOP-SUBAGENT.md` 的 §6.11 第 3 条「端侧路径收口」）⇒ 取消事件经中继转 `subagent` 协议消息（queued 命中 = `cancelled(was:"queued")`——等待头移除；running 命中 = `cancelled`——块定格） |
 | `permissionRequest` | ext → wv | `{ tool, args, diff, owner, promptId }`——逐项权限卡；`owner` = 子代理归属标签（`<role>#<id>` / `escalate <model> #<id>`（尖括号为字面 · model = 池条目值——2026-09-16 残环批收正：前引 `<tag>` = 前引擎值；`continue` 询问卡 = `<role>#<id>`〔args.agent 机器键——同批〕）——depth-0 为 `null`）；`promptId` = 响应匹配键 |
 | `permissionResponse` | wv → ext | `{ approved, promptId }`——按 promptId 精确匹配队列条目（无 promptId 回退队头——旧 webview） |
-| `permissionWithdrawn` | ext → wv | `{ promptId }`——host 侧释放（条目取消（⏹/cancel——signal 链）/ 中止 / approve-all 连带）→ 移除对应卡 |
-| `batchPermissionResponse` | wv → ext | approveAll / oneByOne / deny |
+| `permissionWithdrawn` | ext → wv | `{ promptId }`——host 侧释放（条目取消（⏹/cancel——signal 链）/ 中止 / approve-all 连带 / **合并卡 Stop·Ctrl+I 释放** / **孤儿响应**）→ 移除对应卡（逐项 / 合并同选择器——§4.6） |
+| `batchPermissionRequest` | ext → wv | `{ tools, count, promptId }`——合并询问卡（同响应 ≥2 非只读工具——§16 D-B1）；`promptId` = 与逐项卡**同族响应键**（同一单调计数器——§4.6） |
+| `batchPermissionResponse` | wv → ext | `{ choice, promptId? }`——approveAll / oneByOne / deny；`promptId` 精确匹配 `_batchPermissionQueue` 条目（无 promptId 回退队头——旧 webview）；命中零条目 ⇒ host 回 `permissionWithdrawn`（§4.6） |
 | `compress` | ext → wv | start / done / failed / fallback 四态（压缩状态行） |
 | `digest` | ext → wv | `{ status:"start"/"end"/"cap", n, ok?, ms?, mode?, turns? }`——消化轮起跑 / 收尾 / turn-cap 指示（呈现契约见 §5） |
 | `suspension` | ext → wv | 挂起态行 / 冻结通知（`settled → done` 补发 / `active:false + freeze`）——计数载荷与 `turnState` 双通道同源 |
@@ -73,7 +74,7 @@ reasoning, provider, images? } → extension _chat()
 
 历史断链事故：只改发射端与渲染端、漏桥 ⇒ `model` 字段自发布首日被丢弃（2026-08-26 修复 + 锁桥测试）。string / 对象双分支在 payload 构造处统一推导（对象载荷字段透传、string 分支字段 `undefined` 安全降级）。
 
-### 3.2 协议增量登记（六项——只增不改）
+### 3.2 协议增量登记（八项——只增不改）
 
 | # | 消息面 | 增量 | 发射点 | 接收点 |
 |---|---|---|---|---|
@@ -83,16 +84,50 @@ reasoning, provider, images? } → extension _chat()
 | 4 | `subagent`（增 status 值） | `status:"turn"` + `{ id, role, turn, maxTurns }` | `subagent-run.mjs` onAgentTurn | `applySubagentStatus` 进展分支 |
 | 5 | `digest`（增 status 值） | `status:"cap"` + `{ mode, turns }` | `panel-chat.mjs` ContinueError 分支 | `chat.js` case → `.digest-cap` 行 |
 | 6 | `usage`（增字段） | `reasoning_tokens` | `panel-callbacks.mjs` 累计（transports 映射补全） | `status-bar.js` ✦ 段 |
+| 7 | `batchPermissionRequest`（增字段） | `promptId`（与逐项卡同族响应键——§4.6） | `permission-gate.mjs` `batchPermissionGate` | `chat.js` case → `showBatchPermissionRequest`（`data-prompt-id`） |
+| 8 | `panelDiag`（**新消息**——webview → host 诊断上行） | `{ kind:"subTrace", entries:[{ kind, channel, at }] }`——出生 / 终态 / 丢弃三面痕迹（批内合并，最多一消息 / 批） | `thincoder-vscode/webview/activity-diag.js`（上行发点） | `panel-messages.mjs` case → `logEvent("ev:subtrace", …)` |
 
-纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）。发射 / 接收落点：
+纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）——**新增 / 变更一律入本节登记表**（行 1–8 即全部在案增量；表外增量不入）。发射 / 接收落点：
 `thincoder-vscode/src/extension/panel-callbacks.mjs:138-139` · `:159` · `thincoder-vscode/src/extension/panel-index.mjs:44-70` ·
 `thincoder-vscode/src/extension/panel-chat.mjs` · `thincoder-vscode/webview/chat.js:252-253` · `thincoder-vscode/webview/status-bar.js:27-32/46`。
 
-## 4. 消息秩序与忙态收敛
+### 3.3 工具驱动的模式 / 参数变更 → 端显示同步（#45）
+
+**问题（台账 #45）**：agent 经**工具**翻转模式 / 改参数 ⇒ 端显示不变（用户 2026-09-18 01:41 报告 VSC 实测；CLI 未验）。核实结论 as-of 2026-09-18 02:0x（本批实读，逐源逐端判定）：
+
+| 变更源 | 端 | 显示面 | 判定 | 证据 |
+|---|---|---|---|---|
+| `eng` 工具（核） | VSC | `agentSettings` 快照 → ENG 按钮态 | **未接** | `configureEngMirror` 端侧实现只做槽写 + config 镜像 + 结果尾提示串，**零 webview 推送**（`thincoder-vscode/src/agent/setup-tooltable.mjs:84-100`；对照 webview 桥 `thincoder-vscode/src/extension/panel-callbacks.mjs:251`） |
+| `plan` 工具（核） | VSC | `planMode` 消息 | **已接（静态链完整）· 运行时未验** | `thincoder-vscode/src/agent.mjs:423-426`（写入 diff → `callbacks.onPlanMode`）→ `thincoder-vscode/src/extension/panel-callbacks.mjs:251`（`postMessage({type:"planMode"})` + `_setPlanMode` 槽写） |
+| `settings` 工具（核） | VSC | `agentSettings` / `proxySettings` / `websearchSettings` / `shellCandidates` 四快照 | **未接** | 核工具全域零通知缝（`thincoder-core/agent-tools/settings.mjs` 内 `configure` / `notify` / `onChange` / `postMessage` / `panel` 零命中）；`config-watch` 的**自写抑制**（成功写后刷基线 ⇒ 元组未变零推送）把兜底路径一并关掉 |
+| 三工具 | CLI | 状态行 banner（`ENG│` / `PLAN│`） | **已接（结构性——零改需求）** | `thincoder-cli/src/tui/render-frame.mjs:220-224` 每帧由**活对象** recompute（`agent.config.agent.engineering` / `agent.planMode`）；回合中 1s ticker + 行 diff 重绘（`thincoder-cli/src/tui/agent-turn.mjs` 回合驱动器） |
+
+**机制（单一路径 = 一个同步点 + 一个 sink）**：
+
+```text
+变更源（工具）→ 状态载体（agent.config.agent.engineering / 会话槽；config.json）
+      ↓ 工具批后（与 task / plan / goal 同一趟「载体镜像回填」——VSC src/agent.mjs）
+端显示同步点（一处在位，判据两条，每轮复位）
+      ↓ callbacks.onEngMode / onSettingsChanged
+单一 sink = panel._pushSettingsLight()（唯一 webview 写点——四快照重推）
+      ↓
+webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` 态
+```
+
+- **零新增消息类型**（§3.2「只增不改」纪律保持）：两腿都复用既有 `agentSettings` 快照消息——**发射点 / 载荷 / 消费位三面零变**，§12 对表**零改**（机检口径 = 顶级判别式集与发射点集，两者均不动）。
+- **判据两条（同在工具批后单点）**：
+  ① **模式腿** —— `agent.config?.agent?.engineering !== agent._engShown`；`_engShown` 在 `hydrateRun` 按槽应用处**置为当前基线**（`agent._engShown = agent.config?.agent?.engineering === true`）——「**已展示基线**」语义，
+  **非** `undefined` / `null`（后者会让每 run 首个工具批无条件重推一次快照——设计评审轮 1 发现 9 定值）；
+  ② **参数腿** —— `agent._settingsTouched` 标记（端侧 settings 工具包装在 `execute` 返回处置位；同步点读后复位——置位不做「成功」判定，快照重推幂等）。
+- **用户路径不对称**：用户点击（`setEngineeringEnabled` / `setPlanMode`）走既有**直推**（`thincoder-vscode/src/extension/panel-messages.mjs:448-458`）——与本机制的 sink **同源**（`_pushSettingsLight` / `planMode` 消息），不构成第三条路径。
+- **CLI half = 不进推送链**：状态行每帧 recompute 已是「变更 → 显示」的最短路径。本档登记该**结构性**属性：CLI 侧**不得**为模式再引入缓存副本（引入即须自建失效链——本机制的 CLI 面因此天然免维护）。
+- **深度 > 0 不涉及**：子代理循环的 `callbacks` 无该两键 ⇒ `?.` 调用恒为 no-op（零注入、零推送）。
+
+### 4. 消息秩序与忙态收敛
 
 ### 4.1 回合入口秩序
 
-- `userMessage` / `retry` / `sendMessage` 命令直发（quick-input / Ask ThinCoder）共用**单一入口** `routeUserTurn`（`thincoder-vscode/src/extension/panel-messages.mjs:59`）。
+- `userMessage` / `retry` / `sendMessage` 命令直发（quick-input / Ask ThinCoder）共用**单一入口** `routeUserTurn`（`thincoder-vscode/src/extension/panel-messages.mjs:66`）。
 - 回合执行中（`_turnState === "running"`）的消息一律**拒收**（不排队、无回执——排队机制与排队回执消息类型已废；拒收警告明示，不静默丢——`:65`）。
 - `abort` / `interrupt` 等**控制消息永不排队、直通**（延迟红线——杀 Stop 即失败）。
 - `sendMessage` 回显（`userMessage` postMessage）先于路由——running 拒收先于回显（无假气泡、无排队回执）。
@@ -110,13 +145,15 @@ reasoning, provider, images? } → extension _chat()
 
 ### 4.4 忙态收敛（权威锚）
 
-- **host `_turnState` 枚举 `{ idle, running, susp }`**：`running` = 回合（含会话内 digest / 会话用户回合）执行中；`susp` = 挂起会话活跃或释放窗口（池仍 live、会话未建）。`waiting`（权限 / question 队列非空）是 running 的**修饰态非互斥**——只经 `_refreshStatus` 呈现（waiting 优先），**不入枚举**。读者一律走谓词 `panel.turnBusy()`（= state ≠ idle）。
+- **host `_turnState` 枚举 `{ idle, running, susp }`**：`running` = 回合（含会话内 digest / 会话用户回合）执行中；`susp` = 挂起会话活跃或释放窗口（池仍 live、会话未建）。`waiting`（**权限 / 批权限 / question 三队列任一非空**）是 running 的**修饰态非互斥**——只经 `_refreshStatus` 呈现（waiting 优先），**不入枚举**。读者一律走谓词 `panel.turnBusy()`（= state ≠ idle）。
+- **释放 ⇒ 必刷**（2026-09-18 修轮补）：任一队列条目离队后必经 `_refreshStatus` 重算——刷新点单源 = 释放通道 `releasePermission`（§4.6）；批卡停驻期与释放后均不得读作 `idle` / `running`（停驻期误读 `running` · Stop 释放后残留 `waiting`——两形态同一判据缺口）。
 - **单一广播**：每次忙态 set / clear 调 → 发 `{ type:"turnState", state, counts? }`；webview **单一 reducer** `handleTurnStateMessage` 更新 `S._turnState`（`thincoder-vscode/webview/chat.js:168`）。
 - **counts 同源** = host `backgroundStatus`（`thincoder-vscode/src/extension/suspension.mjs:109-122`）形 `{ running, queued, pending, done }`——随 susp 广播 / 重发携带（挂起驱动轮末 + settle 触发点 + `webviewReady` 重推）⇒ webview `S._suspCounts` 恒 = host 实际（不陈旧）。
 - **时序**：状态广播先于同批 `loading:false`（digest / 回合尾）——Stop 派生无闪烁窗口。
 - **`S._suspended` 语义不变**：仍由 `suspension` 消息（active / freeze）驱动（会话级语义——digest 执行中 state 为 running 时不得翻 false）；`S._turnState` 是独立的忙态阶段镜像。
 - **`#status-line` 单 writer = `renderStatusBar`**（`thincoder-vscode/webview/status-bar.js:13`）：thinking 态 = `S._phase === "thinking"` 标记（`loading` 消息经 `setLoading` 置位 / 清除）——`loading` 消息不再 innerHTML 覆写状态行（修「徽标被每 digest 的 thinking 重画清掉」）。
 - **Stop 可见性 = `S._turnState === "running"` 派生**（`thincoder-vscode/webview/loading.js:57`）：running（回合 / 标题窗口 / 会话内 digest 起跑 / Reload 冷启重推）常显；**susp（纯后台池跑——主空闲）不显**（无全停按钮——池空自然消化完）；`loading:true/false` 不再隐 / 显 abort。Stop 作用 = 只停主会话当前 controller（不再全链中止挂起会话）——子代理停止靠区内逐块 ⏹（`cancelSubagent` 定向 abort）。
+- **忙态派生消费者（2026-09-18 批扩面）**：模型 / 推理按钮的忙态门（禁用派生 · 两处入口守卫 · 与 D-P9 的分工）单源 = `WEBVIEW.md` §4.2——本档不复述（D2）。
 
 ### 4.5 会话打开单向 boot（权威锚）
 
@@ -127,6 +164,16 @@ reasoning, provider, images? } → extension _chat()
 - **单向 boot 顺序**：`clearMessages` 先于 `historyPage`（先清后灌——一次内容整体落定，无「波浪式」增量）；`older=false` 末页（懒历史首屏——scroll-back 页仍走 `loadOlder`）。
 - **sessions 恰一次**：快段内无独立 pushSessions——`loadSession` 尾单发（同 tick 合并双发）；异步第三发（慢段 fullStatus 回调）保留**不同 tick**（跨 tick 允许）。
 - **任务可见性族的就绪两拍**排在 `openSessionContent` **之后**（flush → 再断言——见 `WEBVIEW.md` §5.3）。
+
+### 4.6 权限卡族 id 纪律（逐项 / 合并 · 单一释放通道）
+
+- **族键 = `promptId`**：逐项卡（`permissionRequest`）与合并卡（`batchPermissionRequest`）**共用同一单调计数器**（`permission-gate.mjs` 的 `panel._permissionSeq`）——id 跨族唯一（同一移除选择器不误删）。
+- **单一释放通道 = `releasePermission(panel, entry, verdict, queue)`**：出队 + resolve + `permissionWithdrawn` 三步同点；合并卡走 `_batchPermissionQueue`（**队列分立**——判定值域不同：逐项 boolean / 合并字符串；否决并队——`panel-messages.mjs` 的 approve-all 连带循环会以 boolean 释放合并条目）。
+- **三路释放对合并卡同源**：轮级 Stop / Ctrl+I（`panel._abortController` abort）⇒ deny 释放 + 卡移除（一次机制覆盖两入口）；child 定向取消 / approve-all 连带两路仅及逐项族（合并卡恒 depth-0——§18 C-1/Q1）。
+- **响应 = id 精确匹配（非 `shift`）**：`batchPermissionResponse { choice, promptId }` 按 id 查 `_batchPermissionQueue`；无 `promptId`（旧 webview）→ 回退队头（向后兼容）；未知 id ⇒ 零命中（不误 resolve 队头）。
+- **孤儿响应零静默无效**：队列无命中条目 ⇒ host 回 `permissionWithdrawn { promptId }`（可见处置——卡由既有消费者移除）；不 resolve 任何条目、不新造条目（幂等）。
+- **释放即刷新（状态栏）**：`releasePermission` 三步（出队 + resolve + `permissionWithdrawn`）之后**同点**调 `panel._refreshStatus?.()`——轮级 Stop / Ctrl+I 释放合并卡、approve-all 连带、孤儿处置同源同刷（零散点；判据 = §4.4）；no-op 释放（重复释放 / 条目不在队）不改队列 ⇒ 零刷新（幂等）。
+- 卡形态（类名 / 选择器 / 移除外形）= `WEBVIEW.md` §4.1（本档不复述）。
 
 ## 5. digest 轮可见面与 turn-cap
 
@@ -168,7 +215,7 @@ reasoning, provider, images? } → extension _chat()
 | icon | `⏸ / ✓ / ▶`（审批 / 完成 / 运行） | `⏳ / ▶ / ✓ / ⏹ / ⏸`（排队 / 运行 / 完成 / 停 / 审批） | 保持本端语汇（端差登记——语义对位） |
 | 键 | `role#N` | 同（label） | 等价 |
 | 模式词 | ` · sync/async` | ` · 同步/异步`（family 角色；queued 不携） | 等价（queued 信息走状态区） |
-| 模型 | ` · model`（宽截断） | ` · model`（consult / escalate 键内嵌） | 等价 |
+| 模型 | ` · model`（宽截断） | ` · model`（**来源 = 事件载荷字段** `model`；键形 `sub:<role>#<id>` **不含模型段**——`WEBVIEW.md` §5.3 键形收正；consult / escalate 头词现状不携该段——`activity-view.js:56`） | 端差登记（consult / escalate 模型段） |
 | 计时 | ` · Ns`（done 定格） | ` · Ns`（事件驱动 + 2s 定时刷新——`activity.js:379`） | 语义不变 |
 | turn | ` · turn N/M` | ` · turn N/M`（`maxTurns > 0` 且 `turn > 0`；快照 + `status:"turn"` 实时） | 对齐 |
 | 状态区·running | `currentTool` / `thinking...` | `${tool} — ${cmd ≤60}` / 工具文本尾句 / `思考中…` | 对齐（C-11①） |
@@ -177,7 +224,7 @@ reasoning, provider, images? } → extension _chat()
 | 待消化 | `done · awaiting digestion`（状态区） | 块头态词同文案（`activity-view.js:76`） | 对齐 |
 | 冻结头 + tail-3 | `[✓ key · … · done Ns · turn]` + tail-3 | 同形态（`activity-view.js:86-96`） | 等价（归档后形态不变） |
 
-### 6.3 i18n 键表（本轮新增 12 键 · 两 locale 逐字）
+### 6.3 i18n 键表（13 键 · 两 locale 逐字——末行 = 2026-09-19 出生可见性批追加）
 
 | 键 | zh | en |
 |---|---|---|
@@ -193,8 +240,10 @@ reasoning, provider, images? } → extension _chat()
 | `status.quota` | 配额耗尽：${msg} | quota exhausted: ${msg} |
 | `status.indexScan` | 索引：扫描 ${n} 文件… | Indexing: scanning ${n} files… |
 | `status.indexEmbed` | 索引：嵌入 ${done}/${total}… | Indexing: embedding ${done}/${total}… |
+| `sub.newBlocks` | ↓ ${n} 新块 | ↓ ${n} new block(s) |
 
 - **占位符记法**：本端引擎只认 `${k}` 形态（`thincoder-vscode/webview/i18n.js:30`）——照抄 `{n}` 会把字面占位符显示给用户。
+- `sub.newBlocks`（2026-09-19 追加——出生可见性计数钮，机制单源 = `WEBVIEW.md` §5.5）：键名 / 双语逐字 / 占位符形态（`${n}`）三面以本表为单源；`${n}` = 未钉底期间出生块数。
 - `status.turns` 键随旧段退役删除；`digest.start/done/aborted` 与其余既有键不动。
 - 审批态键 = `sub.awaitingApproval`（`等待审批: ${tool}` / `Awaiting approval: ${tool}`）——**已实装**（见 §6.2）；文案单源 = `thincoder-vscode/locales/{zh,en}.json`。
 
@@ -212,7 +261,10 @@ reasoning, provider, images? } → extension _chat()
 | D-P8 | 状态文本载体 = **结构化 `statusText` 消息**（kind 判别 → webview 按 locale 渲染） | 否决 host 直发成品文本（host 不知 locale——复制 i18n = 双源）· 否决不做（判定句要求用例锁新增状态文本） |
 | D-P9 | Send 可见性 = running 期**隐藏** | 否决禁用态（双范式 + 仍占位） |
 | D-P10 | `scrolled N` = 端差保持（悬浮回底钮替代） | 否决补文本段（N 需新造单位 + 与钮重复） |
-| D-P11 | 协议增量 = **只增不改**、六项登记（§3.2） | 否决 host 直发成品文本 · 否决新增 `turnStart` 族 |
+| D-P11 | 协议增量 = **只增不改**、**八项**登记（§3.2） | 否决 host 直发成品文本 · 否决新增 `turnStart` 族 |
+| D-P12 | 合并权限卡**并入 `promptId` 族**（单一释放通道 `releasePermission` + id 精确匹配 + 孤儿回写） | 否决单开释放语义（同语义两通道 · 消费者按类分支）；`shift()` 队列头匹配已驳（D-P4 同据——陈旧卡不误 resolve） |
+| D-P13 | `waiting` 判据含**批权限队列** + **释放即刷**（刷新点 = 释放通道单点 `releasePermission`） | 否决逐路径各补 `_refreshStatus()`（散点——漏一处即残留）· 否决判据只列权限 / question（批卡停驻期读作 idle——状态栏失去「需你输入」语义） |
+| D-P14 | 诊断上行 `panelDiag` = **新消息（行 8 登记）**——出生 / 终态事件面痕迹入主侧日志 | 否决只留 webview 环形日志（DevTools 不可回读——本次事故正因不可回读而盲；理由详见 `WEBVIEW.md` D-W22）· 否决并入既有上行消息字段（无同缝——`webviewReady` 是一次性启动拍） |
 
 ## 8. 不并项与历史沿革
 
@@ -246,27 +298,217 @@ reasoning, provider, images? } → extension _chat()
 | U-P4 | Send 隐藏 / Stop 显 = running 派生 | 已定（§4.4 · D-P9） |
 | U-P5 | 端差不做项：`scrolled N` · ctx 绝对数 · attention chip · 键位提示段 | 已定（§6.1——逐条登记，不静默） |
 | U-P6 | 可调常量（批准环节可翻转）：elapsed 刷新节拍（复用 2s）；状态文本保留时长（无 TTL） | 已定（open 面 = 数值，非语义） |
-
-## 10. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **273 行**（as-of 2026-09-16 实测——协议面收正增行后 + 残环批收正 +1）——低于 300 行软线，**无需拆分**。
-**拆分来源**：源档 §7/§8 与 §14.3 的协议面部分独立成档——理由 = 读者面不同（改 host 发射端 / webview 接收端者）且与结构面（`WEBVIEW.md`）无共享回指；切面取舍总表见 `WEBVIEW.md` §9。
+| U-P7 | 合并卡释放形态 = **卡消失**（同移除选择器；不做「已拒绝态」变体） | 已定（§4.6 · `WEBVIEW.md` §4.1） |
+| U-P8 | VS Code 状态栏 `waiting` 覆盖**批权限卡**：停驻必读 waiting · 释放即刷（不残留） | 已定（§4.4 · §4.6 · D-P13） |
 
 ## 11. 验收与需求回指
 
 | # | 本档覆盖 | 回指 |
 |---|---|---|
-| 1 | 消息族与演进纪律（基础族 / 机制族 / 三落点 / 只增不改） | F-W1 · F-W7 |
+| 1 | 消息族与演进纪律（基础族 / 机制族 / 三落点 / 只增不改 · **登记表**） | F-W1 · F-W7 · **NFR-A2**（诊断上行 `panelDiag`——§3.2 行 8） |
 | 2 | 忙态与消化轮可见指示（`turnState` 收敛 · digest 轮 · cap 行） | F-W7 · N-W1 |
 | 3 | 状态行段位与块头字段对位（含端差登记） | F-W7 · N-W6 |
 | 4 | 会话标题与消息秩序（promptId / seq / 单向 boot） | F-W2 · F-W3 |
 | 5 | 机检面（新增档 ≤500 行 · 无 >300 字符单行 · 文档锚零悬空） | N-M3 · N-M2 |
+| 6 | 收发面全量对表（§12——机检对账 `thincoder-vscode/test/protocol-coverage.test.mjs`） | N-W7 |
+| 7 | 发面全量对表（§13——机检对账 `thincoder-vscode/test/protocol-coverage-reverse.test.mjs`） | F-W12 · N-W7 |
+| 8 | 权限卡族 id 纪律与释放（合并卡同族 · 单释放通道 · 孤儿响应 · **释放即刷新**） | F-W13 |
 
 **用例面**：协议面测试资产在 `thincoder-vscode/test/`（`webview-turnstate` · `status-line` · `digest-visibility` · `chat-panel` · `chat-panel-messages` · `session-boot`）——用例表归测试层，本档不复制（D2）。
 
+## 12. 收发面全量对表（机检对账）
+
+> 判据权威 = `VSC-DEBT.md` §2.3（机检形态）/ §3.2（枚举口径 + 处置判定）；枚举口径（KD-3）= **只取顶级判别式**——host 侧 = `postMessage` 载荷顶级 `type` / `name`；webview 侧 = 顶级 `switch (msg.type)` 的 `case` ∪ 顶级 `name` 比较字面量。
+> 子判别式不单列（`statusText.kind` / `subagent.status` / `compress` 状态族 / `digest` 两型——各为所属消息的载荷变体）；方向 = **host → webview**（webview → host 的发面 = **§13**；两表合称「收发面对表」）。
+> 机检对账 = `thincoder-vscode/test/protocol-coverage.test.mjs`（本表）+ `thincoder-vscode/test/protocol-coverage-reverse.test.mjs`（发面表 = §13）。
+> 坐标 = as-of 2026-09-16 实测（由提取器 `node test/protocol-coverage.test.mjs --emit` 输出；多处标注「（共 N 处）」）；机检 = `thincoder-vscode/test/protocol-coverage.test.mjs`（首列 ↔ 源码提取集双向对账 + ④ 处置闭区间——`npm test` 快层逐跑）。
+> **坐标 as-of = 2026-09-18 文档卫生轮（父侧直接执行）**：② ③ 列**全表重出**（逐行 = `node test/protocol-coverage.test.mjs --emit` 输出——提取器为唯一权威）；下文各轮注记为前轮史（其行号自此只作参照，不再作读值）。
+> 2026-09-18 收正 **2 处漂移坐标**（预存在债——非本批引入）：`indexStatus` 行 `panel-index.mjs:49`→`:53` · `agentSettings` 行 `panel-messages.mjs:408`→`:405/:421`；其余坐标维持该 as-of 口径。
+> 2026-09-18 收正轮（承实现轮）：`agentSettings` 行②列按提取器 `--emit` 实测重出 = `chat-panel.mjs:329/:334` + `panel-messages.mjs:432`（打开拍触发位 `panel-messages.mjs:415`——`_pushSettingsLight()`）；实现轮所记 `panel-messages.mjs:408/:425` = 该轮时点值；本注前句（`:405/:421`）= 设计轮收正时点值。
+> 2026-09-18 实现轮（**VSC 会话界面接线修复批**——F-W13 / F-W14 / F-W15 / F-W16）：`permissionWithdrawn` 行②列补**第二发射点**（孤儿响应回写——§4.6；评审发现 9，同表口径「多发射点全列」）；
+> `batchPermissionRequest` / `permissionRequest` / `historyPage` 行②③列随本批触碰文件**同点实读重出**（提取器当轮输出）。
+> 本批触碰文件（`permission-gate.mjs` / `panel-messages.mjs` / `panel-session.mjs` / `chat-panel.mjs` / `webview/chat.js`）其余行的行号随源位移，未重出——**该口径已由 2026-09-18 文档卫生轮全表 sweep 覆盖**（含四快照行随 `_pushSettingsLight` / `panel-index.mjs` 归位；打开拍触发位 = `panel-messages.mjs:414-415`——`getAgentSettings` case）。
+> 2026-09-19 实现轮（**VSC 子代理 live 块可见性批**——台账 #94 · 机制面 = `WEBVIEW.md` §5.3）：`sub:*` / `subagent` / `subagentApproval` / `toolPanel` 四行 ② 列按 `--emit` 实测重出（发射点随 relay 面文件位移；`toolPanel` 发射由直投改经 `postSubagentEvent`——同口入队）；其余行未重出（行号随本批触碰文件位移——as-of 口径同前轮）。
+
+| ① 判别式 | ② host 发射点 | ③ webview 消费位 | ④ 处置 | ⑤ 备注 |
+|---|---|---|---|---|
+| `aborted` | src/extension/panel-chat.mjs:465/:480 | webview/chat.js:166 | `活` | — |
+| `agentSettings` | src/extension/chat-panel.mjs:329/:334/src/extension/panel-messages.mjs:432（打开拍触发位 `:415`——`_pushSettingsLight()`） | webview/chat.js:212 | `活` | 2026-09-18 收正轮：②列按 `--emit` 实测重出（原记 `:328/:333` · `panel-messages.mjs:408/:425`）；直发点实测 3 处（原「共 4 处」归正——`:415` 为触发位，不重复计数） |
+| `atResults` | src/extension/panel-index.mjs:78/:82 | webview/chat.js:267 | `活` | — |
+| `autoApprove` | src/extension/panel-messages.mjs:305/src/extension/panel-session.mjs:165 | webview/chat.js:211 | `活` | — |
+| `batchPermissionRequest` | src/extension/permission-gate.mjs:101 | webview/chat.js:264 | `活` | 2026-09-18 批：载荷增 `promptId`（§4.6）；坐标随实现轮同点实读重出（`:92`/`:263` = 设计轮时点值） |
+| `clearMessages` | src/extension/panel-session.mjs:168 | webview/chat.js:178 | `活` | — |
+| `complete` | src/extension/panel-callbacks.mjs:306 | webview/chat.js:165 | `活` | — |
+| `compress` | src/extension/panel-callbacks.mjs:268/:269/:276 | webview/chat.js:242 | `活` | — |
+| `digest` | thincoder-vscode/src/extension/panel-callbacks.mjs:206/thincoder-vscode/src/extension/suspension.mjs:292/:304 | webview/chat.js:245 | `活` | `status` 两型 = 一条消息（over-count #3 已证伪） |
+| `error` | src/extension/chat-panel.mjs:405/src/extension/panel-chat.mjs:214/src/extension/panel-chat.mjs:220（共 5 处） | webview/chat.js:167 | `活` | — |
+| `goal` | src/extension/panel-callbacks.mjs:277 | webview/chat.js:286 | `活` | — |
+| `historyPage` | src/extension/panel-session.mjs:215 | webview/chat.js:188 | `活` | — |
+| `i18n` | src/extension/chat-panel.mjs:136/src/extension/panel-messages.mjs:431 | webview/chat.js:131 | `活` | — |
+| `indexStatus` | src/extension/panel-index.mjs:53（打开拍回批——`_pushIndexStatus`；触发位 `panel-messages.mjs:414`） | webview/chat.js:276 | `活` | — |
+| `ledgerNotice` | thincoder-vscode/src/extension/ledger-surface.mjs:73 | webview/chat.js:192 | `活` | — |
+| `loading` | src/extension/chat-panel.mjs:406/src/extension/panel-chat.mjs:275/src/extension/panel-chat.mjs:349 | webview/chat.js:162 | `活` | — |
+| `mcpStatus` | src/extension/panel-mcp.mjs:121 | webview/chat.js:270 | `活` | — |
+| `mcpTestResult` | src/extension/panel-mcp.mjs:157 | webview/chat.js:275 | `活` | — |
+| `mcpTools` | src/extension/panel-messages.mjs:398/:400 | webview/chat.js:274 | `活` | — |
+| `models` | src/extension/panel-session.mjs:185/src/extension/settings.mjs:382 | webview/chat.js:199 | `活` | — |
+| `permissionRequest` | src/extension/permission-gate.mjs:61 | webview/chat.js:250 | `活` | — |
+| `permissionWithdrawn` | src/extension/panel-messages.mjs:320/src/extension/permission-gate.mjs:36（共 2 处） | webview/chat.js:257 | `活` | 2026-09-18 批：第二发射点 = 孤儿响应回写（`batchPermissionResponse` 零命中 ⇒ 可见处置——§4.6） |
+| `planMode` | src/extension/chat-panel.mjs:308/src/extension/panel-callbacks.mjs:251/src/extension/panel-session.mjs:167 | webview/chat.js:281 | `活` | — |
+| `project` | src/extension/panel-project.mjs:24 | webview/chat.js:198 | `活` | — |
+| `providerError` | src/extension/panel-mcp.mjs:129/:140/:151（共 7 处） | webview/chat.js:208 | `活` | — |
+| `providerStatus` | thincoder-vscode/src/extension/settings.mjs:328 | webview/chat.js:200 | `活` | — |
+| `proxySettings` | src/extension/chat-panel.mjs:326/:335（打开拍回批——`_pushSettingsLight`） | webview/chat.js:222 | `活` | — |
+| `proxyTestResult` | src/extension/panel-messages.mjs:483 | webview/chat.js:225 | `活` | — |
+| `question` | src/extension/panel-callbacks.mjs:177 | webview/chat.js:228 | `活` | — |
+| `questionCancelled` | src/extension/panel-callbacks.mjs:184 | webview/chat.js:231 | `活` | — |
+| `reasoning` | src/extension/panel-callbacks.mjs:238 | webview/chat.js:134 | `活` | — |
+| `sessions` | src/extension/panel-session.mjs:300 | webview/chat.js:193 | `活` | — |
+| `shellCandidates` | src/extension/chat-panel.mjs:328/:337（打开拍回批——经 `_pushSettingsLight` 同发）/src/extension/panel-messages.mjs:470（`getShellCandidates` 拉取） | webview/chat.js:219 | `活` | — |
+| `statusText` | src/extension/panel-callbacks.mjs:262/src/extension/panel-index.mjs:27 | webview/chat.js:248 | `活` | `kind` 族 = 载荷变体（不单列——over-count #1 已证伪） |
+| `sub:*` | src/extension/panel-subagent-relay.mjs:131/:178 | webview/chat.js:293 | `活` | 动态段归一（`sub:<role>#<id>` → `sub:*`）；role 段 = **键文法 `[\w-]+`**（含 consult / escalate——键形收正见 `WEBVIEW.md` §5.3）；`webview/activity-view.js:14` 的 `FAMILY_ROLES` 只判 ⏹ 可见性 / sync-async 词，**非**键枚举 |
+| `subagent` | src/extension/panel-subagent-relay.mjs:161/:188/src/extension/suspension.mjs:108 | webview/chat.js:282 | `活` | `status` 族 = 载荷变体（不单列——over-count #2 已证伪） |
+| `subagentApproval` | src/extension/panel-subagent-relay.mjs:161/:188 | webview/chat.js:285 | `活` | — |
+| `suspension` | thincoder-vscode/src/extension/suspension.mjs:388/:396 | webview/chat.js:287 | `活` | — |
+| `taskProgress` | src/extension/panel-callbacks.mjs:249 | webview/chat.js:280 | `活` | — |
+| `testProviderResult` | src/extension/panel-messages.mjs:384 | webview/chat.js:216 | `活` | — |
+| `token` | src/extension/panel-callbacks.mjs:234 | webview/chat.js:133 | `活` | — |
+| `toolCall` | src/extension/panel-callbacks.mjs:289 | webview/chat.js:136 | `活` | — |
+| `toolOutput` | src/extension/panel-callbacks.mjs:300 | webview/chat.js:138 | `活` | — |
+| `toolPanel` | src/extension/panel-subagent-relay.mjs:161/:188 | webview/chat.js:288 | `活` | — |
+| `toolResult` | src/extension/panel-callbacks.mjs:295 | webview/chat.js:137 | `活` | — |
+| `turnBreak` | src/extension/panel-callbacks.mjs:244 | webview/chat.js:135 | `活` | — |
+| `turnFrame` | src/extension/panel-callbacks.mjs:263 | webview/chat.js:249 | `活` | — |
+| `turnState` | src/extension/chat-panel.mjs:199/src/extension/panel-messages.mjs:430 | webview/chat.js:164 | `活` | — |
+| `usage` | src/extension/panel-callbacks.mjs:285 | webview/chat.js:279 | `活` | — |
+| `userMessage` | src/extension/chat-panel.mjs:226 | webview/chat.js:132 | `活` | — |
+| `websearchSettings` | src/extension/chat-panel.mjs:327/:336（打开拍回批——`_pushSettingsLight`） | webview/chat.js:213 | `活` | — |
+
+**方向口径**：上表只收 host → webview（webview → host 的 `postMessage` 不列——发面表 = §13）。**「删」= 消费位在位而发射恒无（死码）**——本批已落地（advisor 回显族 + `assistantMessage` + `toolHistory`；
+被删标识符零悬空，读数入 `docs/batches/2026-09-16-vsc-debt.md` §5）。**「补」行 = 本表现零行**：原 `mcpReconnected` 行随其发射点删除一并退场（2026-09-18 VSC 配置页接线修复批——无消费者推送处置 = 删；
+重连的用户可见效果由同函数 `pushMcpStatus` 覆盖，原悬空指针随之消失）。
+
+**打开拍回批（F-W8）**：`getAgentSettings` 回批按 `indexStatus → providerStatus · proxySettings · websearchSettings · shellCandidates → agentSettings（末位）` 序推——机制与判据单源 = `SETTINGS.md` §2.8（本表只记 ② 列发射点；协议形态零增）。
+
+## 13. 发面全量对表（webview → host · 机检对账）
+
+> 判据权威 = `VSC-DEBT.md` §2.3（机检形态）/ §3.2（枚举口径 + 处置判定）；枚举口径 = **只取顶级判别式**——webview 侧 = `postMessage` 载荷顶级 `type` 字面量；host 侧 = 分发档（`panel-messages*.mjs`）顶级 `case` 标签。
+> 方向 = **webview → host**（§12 = 收面；两表合称「收发面对表」）；子判别式不单列。
+> 坐标 = as-of 2026-09-18 实测（提取器输出）；机检 = `thincoder-vscode/test/protocol-coverage-reverse.test.mjs`（首列 ↔ 提取集双向对账 + ④ 处置闭区间 + 错误路径点名）。
+> **坐标 as-of = 2026-09-18 文档卫生轮（父侧直接执行）**：① ② ③ 列**全表重出**（逐行 = `node test/protocol-coverage-reverse.test.mjs --emit` 输出——提取器为唯一权威）；下文各轮注记为前轮史（其行号自此只作参照，不再作读值）。
+> 2026-09-18 实现轮：行集与 ④ 列随实现同步（删 3 行 + `saveShellSettings` 转 `活`）；本批触碰文件（`webview/settings-env.js` / `webview/settings-tools.js` / `src/extension/panel-messages.mjs`）的行号随之位移——
+> ②/③ 列未同步重出的行仍按设计轮 as-of 口径读（行号仅作 as-of 参照——D4）——**该口径已由 2026-09-18 文档卫生轮全表 sweep 覆盖**（表体坐标 = as-of 本轮）。
+> 2026-09-18 实现轮（**VSC 会话界面接线修复批**）：`batchPermissionResponse` 行②列随 `permission.js` 三发点改**局部箭头形态**实读重出（`reply` 返回字面量——判别式集零变）；
+> `selectModel` / `selectReasoning` 行②列随忙态门（F-W14）同点实读重出；本批触碰的其余行（`panel-messages.mjs` ③列、`ui.js` 消费面等）行号随源位移，未同步重出（同上一句口径）。
+> 形态登记（fail-closed——不静默漏计数）：载荷字面量四形态 = 对象字面量（多数）· 三元双分支（`editMcp` / `saveMcpServer`）· 局部对象绑定（`question.js` 的 `payload`）· 局部箭头函数返回字面量（`permission.js` 的 `reply`）；未登记形态 ⇒ 提取器点名失败。
+> 2026-09-19 实现轮（**VSC 子代理 live 块可见性批**——台账 #94）：新增 `panelDiag` 行（§3.2 行 8 落地——webview → host 诊断上行）；其余行未重出（行号随本批触碰文件位移——as-of 口径同 §12）。
+
+| ① 判别式 | ② webview 发射点 | ③ host 消费位 | ④ 处置 | ⑤ 备注 |
+|---|---|---|---|---|
+| `abort` | webview/chat.js:44/webview/input.js:58 | src/extension/panel-messages.mjs:167 | `活` | — |
+| `addProvider` | webview/model-picker.js:24/webview/onboarding.js:65/webview/settings-providers.js:143（共 4 处） | src/extension/panel-messages.mjs:336 | `活` | — |
+| `atComplete` | webview/autocomplete.js:33 | src/extension/panel-messages.mjs:290 | `活` | — |
+| `batchPermissionResponse` | webview/permission.js:108/:112/:116（`reply` 返回字面量——定义 `:105`） | src/extension/panel-messages.mjs:312 | `活` | 2026-09-18 批：载荷增 `promptId`（三发点同携——§4.6）；形状③/④（局部箭头函数） |
+| `buildIndex` | webview/settings-tools.js:150 | src/extension/panel-messages.mjs:387 | `活` | — |
+| `cancelSubagent` | webview/chat.js:88 | src/extension/panel-messages.mjs:203 | `活` | — |
+| `deleteEmbedKey` | webview/settings-tools.js:28 | src/extension/panel-messages.mjs:378 | `活` | — |
+| `deleteMcpServer` | webview/settings-tools.js:193 | src/extension/panel-messages.mjs:330 | `活` | — |
+| `deleteProviderKey` | webview/settings-providers.js:57 | src/extension/panel-messages.mjs:328 | `活` | — |
+| `deleteSession` | webview/session-bar.js:104 | src/extension/panel-messages.mjs:156 | `活` | — |
+| `deleteWebsearchKey` | webview/settings-tools.js:46 | src/extension/panel-messages.mjs:380 | `活` | — |
+| `editMcp` | webview/settings-tools.js:138 | src/extension/panel-messages.mjs:334 | `活` | 三元双分支（同点 `saveMcpServer`） |
+| `getAgentSettings` | webview/settings.js:103 | src/extension/panel-messages.mjs:413 | `活` | 回批 = §12 打开拍（本档 §12 方向口径） |
+| `getMcpStatus` | webview/settings-tools.js:162 | src/extension/panel-messages.mjs:388 | `活` | — |
+| `getShellCandidates` | webview/settings.js:40 | src/extension/panel-messages.mjs:470 | `活` | — |
+| `interrupt` | webview/input.js:46 | src/extension/panel-messages.mjs:250 | `活` | — |
+| `loadOlder` | webview/history.js:87 | src/extension/panel-messages.mjs:273 | `活` | — |
+| `mcpTools` | webview/settings-tools.js:203 | src/extension/panel-messages.mjs:389 | `活` | — |
+| `newSession` | webview/session-bar.js:10 | src/extension/panel-messages.mjs:154 | `活` | — |
+| `openDiff` | webview/permission.js:58 | src/extension/panel-messages.mjs:272 | `活` | — |
+| `openFile` | webview/chat.js:69 | src/extension/panel-messages.mjs:259 | `活` | — |
+| `panelDiag` | webview/activity-diag.js:81 | src/extension/panel-messages.mjs:270 | `活` | §3.2 行 8——诊断上行（`{ kind:"subTrace", entries }`；批内合并——最多一消息 / 批）；主侧 `logEvent("ev:subtrace", …)` 一行 |
+| `permissionResponse` | webview/permission.js:63/:67/:71（`reply` 返回字面量——定义 `:60`） | src/extension/panel-messages.mjs:291 | `活` | 形态④ 局部箭头函数 |
+| `questionResponse` | webview/question.js:29（`payload` 局部绑定——绑定位 `:27`） | src/extension/panel-messages.mjs:274 | `活` | 形态③ 局部对象绑定 |
+| `reconnectMcp` | webview/settings-tools.js:224 | src/extension/panel-messages.mjs:333 | `活` | — |
+| `removeProvider` | webview/model-picker.js:25/webview/settings-providers.js:65 | src/extension/panel-messages.mjs:362 | `活` | — |
+| `renameSession` | webview/session-bar.js:54 | src/extension/panel-messages.mjs:157 | `活` | — |
+| `retry` | webview/ui.js:417 | src/extension/panel-messages.mjs:159 | `活` | — |
+| `saveAgentSettings` | webview/settings-agent.js:140/webview/settings-providers.js:86 | src/extension/panel-messages.mjs:404 | `活` | — |
+| `saveEmbedKey` | webview/settings-tools.js:18 | src/extension/panel-messages.mjs:377 | `活` | — |
+| `saveMcpServer` | webview/settings-tools.js:138 | src/extension/panel-messages.mjs:329 | `活` | 三元双分支（同点 `editMcp`） |
+| `saveProviderKey` | webview/settings-providers.js:39 | src/extension/panel-messages.mjs:327 | `活` | — |
+| `saveProxySettings` | webview/settings-env.js:113 | src/extension/panel-messages.mjs:476 | `活` | 载荷 = 逐字段（`SETTINGS.md` §2.8） |
+| `saveShellSettings` | webview/settings-env.js:129/webview/settings-env.js:144 | src/extension/panel-messages.mjs:471 | `活` | F-W11 接线落地（`SETTINGS.md` §2.9——本项处置 = 接线（≠ 删））；空值 ⇒ 删键 = 路径册 #2（`System default` 显式项） |
+| `saveWebsearchKey` | webview/settings-tools.js:36 | src/extension/panel-messages.mjs:379 | `活` | — |
+| `selectModel` | webview/model-picker.js:123/:79 | src/extension/panel-messages.mjs:123 | `活` | 2026-09-18 批：②列随忙态门（F-W14）同点实读重出 |
+| `selectReasoning` | webview/model-picker.js:124/:63 | src/extension/panel-messages.mjs:147 | `活` | 2026-09-18 批：②列随忙态门（F-W14）同点实读重出 |
+| `setAdvisorGuard` | webview/mode-buttons.js:28 | src/extension/panel-messages.mjs:451 | `活` | — |
+| `setAutoApprove` | webview/mode-buttons.js:51/:89 | src/extension/panel-messages.mjs:289 | `活` | — |
+| `setEngineeringEnabled` | webview/mode-buttons.js:33 | src/extension/panel-messages.mjs:459 | `活` | — |
+| `setKey` | webview/model-picker.js:26 | src/extension/panel-messages.mjs:376 | `活` | — |
+| `setPlanMode` | webview/mode-buttons.js:38 | src/extension/panel-messages.mjs:466 | `活` | — |
+| `setProject` | webview/session-bar.js:121 | src/extension/panel-messages.mjs:158 | `活` | — |
+| `setProviderProxy` | webview/settings-providers.js:62 | src/extension/panel-messages.mjs:371 | `活` | — |
+| `switchSession` | webview/session-bar.js:48 | src/extension/panel-messages.mjs:155 | `活` | — |
+| `testMcp` | webview/settings-tools.js:219 | src/extension/panel-messages.mjs:335 | `活` | — |
+| `testProvider` | webview/settings-providers.js:124 | src/extension/panel-messages.mjs:381 | `活` | — |
+| `testProxy` | webview/settings-env.js:99 | src/extension/panel-messages.mjs:481 | `活` | — |
+| `userMessage` | webview/send.js:51 | src/extension/panel-messages.mjs:120 | `活` | 双向同判别式（收面回显行 = §12） |
+| `webviewReady` | webview/chat.js:411 | src/extension/panel-messages.mjs:417 | `活` | — |
+
+**方向口径**：本表只收 webview → host。**「删」= host 消费位在位而 webview 发射恒无（死 handler）**——处置逐条入批档（`docs/batches/2026-09-18-vsc-settings-wiring.md` §2）并已随实现落地（三删 + 一接线转活——**本表现零 `删` 行**）；**删除落地 ⇒ 源零位 ⇒ 表行同步退场**（不留悬空行——同 §12 口径）。**「补」= 发射在位而 host 缺消费位**（本表现零行）。
+
 ## 变更记录
+
+- 2026-09-18（**VSC 配置页接线修复批 · 实现轮** · eng-coder——承 `docs/batches/2026-09-18-vsc-settings-wiring.md` §2；§13 表体随实现同步）：
+  §13 删 3 行（`settings` / `saveCustomProvider` / `saveEmbeddingConfig`——死 handler 已删，源零位）+ `saveShellSettings` 转 `活`（F-W11 接线落地，② 列填实现轮实读坐标）；
+  §12 `mcpReconnected` 行退场（无消费者推送已删——原「补」行不留悬空）；
+  §11 行 7 / §12 头注 / §13 头注去「（拟新增）」标记（机检档已建成并登记 `thincoder-vscode/test/files.mjs`）；§13 头注补②/③ 列 as-of 说明。
+  **消息名 / 载荷字段 / 首列判别式集零增**（只减 3 + 转 1——机检 `protocol-coverage-reverse.test.mjs` 双向对账绿）。
 
 - 2026-09-15（**B 式迁移轮 · VSC 第 2 批**）：建档——源档 §4 / §7 / §8 / §14.3 的协议面内容重建入基准层（旧档一字未改）；坐标按 as-of 2026-09-15 实核改写；批次材料（问题陈述 / 选型 / 受影响文件 / 用例表 / 验收标准 / 边界）入 §8.1。
 - 2026-09-15：**按现状收正 1 处**——旧档 §14 C-13 表「审批态 = 无此状态（子代理不经权限门）· 端差登记（不做）」与现行实现冲突（审批态族已实装：`subagentApproval` 消息 + 块头 `⏸`）——本档 §6.2 按现状落笔并与 §3 消息表口径一致；冲突已上报批次（主 agent 裁定）。
 - 2026-09-16（**子代理面板通道恢复批 · 协议面收正**）：§3 `toolPanel` 行补**生产者双源**与 `cmd` ≤60 截断落层（webview 块头渲染——桥/生产者透传原串）；§3.1 三落点发射端例补现体（`relaySubagentContentChunk`）；§3.2 #3 发射点随收——payload 字段零变（只增不改纪律保持）。
 - 2026-09-16（**子代理面板残环修复 · 协议面收正**——承 `docs/batches/2026-09-16-subagent-panel-residual-rings.md` §2）：§3 `permissionRequest` 行 owner 形态收正（`escalate <model> #<id>`——前 `<tag>` 为前引擎形态 + `continue` 键形归属）；§3 `permissionWithdrawn` 行释放来源补条目取消（⏹/cancel signal 链）。
+- 2026-09-16（**VSC 产品树残留债清零批 · 协议面收正**——承 `docs/batches/2026-09-16-vsc-debt.md` §2）：新增 §12 收发面全量对表（机检对账 = `thincoder-vscode/test/protocol-coverage.test.mjs`——首列 ↔ 源码提取集双向对账 + ④ 处置闭区间）；§2 `userMessage` 行去 `assistantMessage`（回显面死码已删——零悬空）；§10 行数收正 + 拆分规划行；§11 回指行 +1（N-W7）。
+- 2026-09-17（**af 批 · 二轮 fix 轮 · eng-designer**——承 `docs/batches/2026-09-17-async-face-fixes.md` §2.13）：§3 `cancelSubagent` 行补**advisor 同路由收口**（F-11——⏹ advisor 目标与子代理族同经 `executeCancelAction`；queued / running 两种命中的中继形态逐字）；**消息名 / 载荷字段零变**（只增不改纪律保持）。
+- 2026-09-18（**模式联动批 · #45 VSC 半** · eng-designer——承 `docs/batches/2026-09-18-mode-propagation.md` §1.1）：新增 **§3.3「工具驱动的模式 / 参数变更 → 端显示同步」**（核实表逐源逐端判定 + 单一路径机制图 + 判据两条 + CLI half 结构性属性）；
+   **消息名 / 载荷字段 / 发射点 / 消费位全部零变**（§3.2 只增不改纪律保持；§12 对表零改——机检 `thincoder-vscode/test/protocol-coverage.test.mjs` 双向对账不动）。
+- 2026-09-18（**模式联动批 · 设计评审轮 1 修正** · eng-designer——fix 轮；承 `docs/batches/2026-09-18-mode-propagation.md` §3 发现 9）：§3.3 判据① 补 **`_engShown` 基线上值**（`← 当前 engineering` 布尔——非 `undefined` / `null`；含「后者 = 每 run 无条件重推」后果句）；同步面另有 §3.3 参数面判定与核实表行 4（发现 8——CLI 参数段活对象直读）。**零新语义**：本档只成文既有设计值（消息面零变，§12 零改）。
+- 2026-09-18（**VSC 配置页接线修复批 · eng-designer**——承 `docs/batches/2026-09-18-vsc-settings-wiring.md` §1）：新增 **§13 发面全量对表（webview → host）**（52 行 as-of 实测 + 四形态登记 + 机检 `protocol-coverage-reverse.test.mjs`（拟新增））；
+  §12 头注补收 / 发两向机检指针与「打开拍回批」发射点（三行 ② 列）· 方向口径段补打开拍序契约；§11 回指 +1 行（F-W12 · N-W7）。
+  **消息名 / 载荷字段零变**（只增不改纪律保持；§12 首列与 host 发射集不动——既有双向对账用例零改）。
+- 2026-09-18（**VSC 配置页接线修复批 · 设计评审轮 1 修正** · eng-designer——fix 轮；承 `docs/batches/2026-09-18-vsc-settings-wiring.md` §3 发现 5 / 6 / 11）：
+  §12 `shellCandidates` 行 ② 列补「（打开拍回批——经 `_pushSettingsLight` 同发）」（四快照行注记对齐）+ 收正 **2 处预存在漂移坐标**
+  （`panel-index.mjs:49`→`:53` · `panel-messages.mjs:408`→`:405/:421`，头注已标）；§13 `saveShellSettings` 行 ⑤ 明写「**本项处置 = 接线（≠ 删）**」（④ 仍记当前类）。**消息名 / 载荷字段 / 首列判别式零变**。
+
+- 2026-09-18（**VSC 会话界面接线修复批 · eng-designer**——承 `docs/batches/2026-09-18-vsc-session-wiring.md` §1）：§3 增 `batchPermissionRequest` 行（原缺登）· `permissionWithdrawn` / `batchPermissionResponse` 行补新释放源与 `promptId` 匹配语义；
+  **§3.2 六项 → 七项**（增 #7 = `batchPermissionRequest` 增字段 `promptId`——D3：计数与列表同改）；新增 **§4.6 权限卡族 id 纪律**（族键 · 单一释放通道 · 三路释放对合并卡同源 · id 精确匹配 · 孤儿响应）；
+  §4.4 增忙态派生消费者指针行（模型/推理忙态门——单源在 `WEBVIEW.md` §4.2）；§7 增 D-P12 + D-P11 计数同步（七项）；§9 增 U-P7；§11 回指 +1 行（F-W13）；
+  §12 `batchPermissionRequest` 行坐标收正 `:95`→`:92`（预存在漂移）+ 载荷注记；§13 `batchPermissionResponse` 行 ⑤ 注记（载荷增字段，三发点同携）。
+  **首列判别式集零变**（只增字段 / 只补登——机检 `protocol-coverage.test.mjs` / `protocol-coverage-reverse.test.mjs` 双向对账集不动）；§12/§13 ②/③ 列行号随实现轮同点实读重出。
+
+- 2026-09-18（**同批修轮 · eng-designer**——父侧裁定带上批档 `2026-09-18-vsc-session-wiring.md` §2.6 #2）：§4.4 `waiting` 判据扩为**三队列**（权限 / 批权限 / question）+ 增「**释放 ⇒ 必刷**」不变量；
+  §4.6 增「释放即刷新」行（刷新点单源 = `releasePermission`——`panel._refreshStatus?.()` 同点）；§7 增 D-P13（**十二 → 十三项**——D3 计数与列表同改）；§9 增 U-P8（**七 → 八项**）；§11 回指行 8 补点。
+  **消息名 / 载荷字段 / 首列判别式集零变**（只改判据与刷新点——§3 / §3.2 / §12 / §13 零改）。
+
+- 2026-09-18（**VSC 会话界面接线修复批 · 实现轮** · eng-coder——承 `docs/batches/2026-09-18-vsc-session-wiring.md` §2；§12/§13 表体随实现同步）：
+  §12 `permissionWithdrawn` 行②列补**第二发射点**（`panel-messages.mjs` 孤儿响应回写——②列改「共 2 处」+ ⑤列点明来源；评审发现 9），`batchPermissionRequest` / `permissionRequest` / `historyPage` 行 ②③ 列同点实读重出；
+  §13 `batchPermissionResponse` 行②列随三发点改**局部箭头形态**重出（形状③/④）+ `selectModel` / `selectReasoning` 行②列随忙态门重出；两表头注各补本批实现轮口径行。
+  **消息名 / 载荷字段 / 首列判别式集零变**（只重出坐标与形态注记——机检 `protocol-coverage.test.mjs` / `protocol-coverage-reverse.test.mjs` 双向对账集不动，`npm test` 643/643 绿）。
+
+- 2026-09-18（**文档卫生轮 · 父侧直接执行**——§12 / §13 全表坐标 sweep）：两表 ② ③ 列逐行按 `node test/protocol-coverage{,-reverse}.test.mjs --emit` 重出（提取器 = 唯一权威）——§12 修正 **38 行** as-of 漂移（另 `digest` 行仅前缀回正——坐标本即准确）/ §13 修正 **33 行**；
+  含四快照行随 `_pushSettingsLight` / `panel-index.mjs` 归位（② 列改指实现落点）· `permissionResponse` / `batchPermissionResponse` / `questionResponse` ② 列改记**三发点**（`reply` / `payload` 定义位入括注）· 形态号② ③ 与头注登记对齐；
+  `settings.mjs` / `suspension.mjs` / `ledger-surface.mjs` 三类重名档持**全限定路径**（短形 `src/extension/…` 触机检悬空——同名多解；本行只作登记，不动解析规则）；两表头注 as-of 统一到本轮（前轮注记只作参照）。**首列判别式集 / ④ 处置列 / 载荷字段零变**（机检双向对账集不动）。
+- 2026-09-18（**面板 live 块出生可靠性面 · eng-designer**——承 `docs/batches/2026-09-18-init-block.md` §1 讨论与需求档 `requirements/WEBVIEW.md` NFR-A2）：
+  §3.2 **七项 → 八项**（增 #8 = `panelDiag` 新消息——webview → host 诊断上行；D3：计数与列表同改）+ 纪律行补「新增量一律入本节登记表」句；
+  §7 增 D-P14 · D-P11 计数同改（七项 → 八项）；§11 行 1 回指补 NFR-A2。**§12 / §13 表体零改**——新消息尚未实现，两表只收实测在位的行；
+  行 8 的 §13 行（含是否加「（拟新增）」标记）随实现轮按惯例落，本档只作 §3.2 登记。
+- 2026-09-19（**VSC 子代理 live 块可见性批 · eng-designer**——承 `docs/batches/2026-09-18-vsc-subagent-live-visibility.md`）：§3.2 行 8 收窄——痕迹面由「出生 / 终态」扩为「出生 / 终态 / 丢弃」三面（`drop-frozen` / `drop-tombstone`——①⑦ 就位）；发点档标「（拟新增）」全路径化。§12 / §13 表体零改（新消息未实现——两表只收实测在位行）。
+- 设计面单源：`docs/vsc/design/WEBVIEW.md` §5.3（出生面存活闸 · 禁静默 · 单投递队列 · 痕七类）、§5.5（出生可见性）、§6（D-W25–D-W31）。
+- 2026-09-19（**同批设计评审修正轮 · eng-designer**——评审 id=130 发现 2 / 6 / 9-11 落地；fix 轮）：§6.2 模型行收正（模型段来源 = **事件载荷字段**——键形 `sub:<role>#<id>` 不含模型段；consult / escalate 头词现状不携——`activity-view.js:56`；结论改端差登记）；
+  §6.3 **12 键 → 13 键**（增 `sub.newBlocks`——出生可见性计数钮；D3：计数与列表同改）；§12 `sub:*` 行 ⑤ 备注收正（role 段 = `[\w-]+`；`FAMILY_ROLES` 非键枚举）；**消息名 / 载荷字段 / 首列判别式集零变**（§3.2 / §12 / §13 表体零改——机检双向对账集不动）。
+- 2026-09-19（**VSC 子代理 live 块可见性批 · 实现轮** · eng-coder——承 `docs/batches/2026-09-18-vsc-subagent-live-visibility.md` §2；§12/§13 表体随实现同步）：
+  §3.2 行 8 去「（拟新增）」标记（上行发点 `webview/activity-diag.js` 已落地）；§13 **新增 `panelDiag` 行**（发点 ② `webview/activity-diag.js:81` · 消费位 ③ `panel-messages.mjs:270` · ④ `活`——机检双向对账绿）；
+  §12 `sub:*` / `subagent` / `subagentApproval` / `toolPanel` 四行 ② 列按 `--emit` 实测重出（发射点随 relay 面文件位移；`toolPanel` 由直投改经 `postSubagentEvent`——同口入队：`WEBVIEW.md` §5.3）；两表头注各补本批 as-of 行。
+  **消息名 / 载荷字段 / 首列判别式集零变**（新增一行 = 实现落地登记，非协议面新语义——§3.2 行 8 早已登记）。

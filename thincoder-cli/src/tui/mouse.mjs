@@ -18,7 +18,7 @@ import { computeLayout, subagentLineIndex } from "./layout.mjs"
 import { buildConvLines, convViewport } from "./render-conversation.mjs"
 import { toggleFoldBlock, scrollFoldBlock, foldScrollOffset } from "./fold-block.mjs"
 import { cancelAsyncSubagent, cancelSyncChild } from "@thincoder/core/agent-tools/subagent-async.mjs"
-import { cancelAsyncAdvisor } from "@thincoder/core/agent-tools/advisor-async.mjs"
+import { cancelAsyncAdvisor, refreshAdvisorQueuedTokens } from "@thincoder/core/agent-tools/advisor-async.mjs" // ED-4：评审队列排队块刷新
 import { maybeRefillAsync, refreshQueuedTokens } from "@thincoder/core/agent-tools/subagent-scheduler.mjs" // F-2：queued 取消后续（补位/位置刷新）——叶子模块
 import { routeSubToken } from "./subagent-blocks.mjs" // F-2：queued 取消块移除（⟦ev⟧cancelled 就地路由——引擎动作路径同通道）
 import { denyModalForOwner } from "./key-modes.mjs"
@@ -199,12 +199,14 @@ export function createMouseDispatch({ agent, state, pushLine, render, popPicker 
     try {
       const id = key.slice(key.lastIndexOf("#") + 1)
       const isAdvisorBlock = key.startsWith("advisor#")
+      // af 批 #1（发射单源化）：`emit` = 本层通道，传进核调用供其单点发射（本层不另发）。
+      const emit = (t) => { if (!routeSubToken(state, t, render)) pushLine(t, C.dim) }
       // §11.2 D-24b (②-6b): ⏹ on an advisor block cancels the background review
       // (directed abort → cancelled settle: no pending entry / no token).
       // SYNC-CANCEL F3: async 池/advisor miss 后查 sync registry（⏹ 门控已放开 sync——
       // cancelSyncChild 与 async cancel 同模块同形态——subagent-async.mjs）。
       let r = isAdvisorBlock
-        ? cancelAsyncAdvisor(agent, id)
+        ? cancelAsyncAdvisor(agent, id, emit)
         : cancelAsyncSubagent(agent, id)
       let syncStopped = false
       if (!isAdvisorBlock && r?.status === "error") {
@@ -230,11 +232,14 @@ export function createMouseDispatch({ agent, state, pushLine, render, popPicker 
         // 无 settle 事件链）——UI 直连路径无回合 ctx 事件流——补 executeCancelAction
         // 同款 TUI 维护：等待块移除（⟦ev⟧cancelled 就地路由——守卫同 routeSubToken
         // cancelled 分支——不冻结）+ 补位 + 剩余排队头位置/依赖标注刷新（⟦ev⟧queued）。
+        // af 批去重（#1 单源化）：共享行加 `!isAdvisorBlock` 守卫——评审族发射已由核单点经
+        // 上方 `emit` 通道完成；子代理族自持发射面零改（该族两路互斥、各发一次）。
         if (r?.was === "queued") {
-          const emit = (t) => { if (!routeSubToken(state, t, render)) pushLine(t, C.dim) }
-          emit(`${key}/⟦ev⟧cancelled\x1e`)
+          if (!isAdvisorBlock) emit(`${key}/⟦ev⟧cancelled\x1e`)
           maybeRefillAsync(agent)
           refreshQueuedTokens(agent, emit)
+          // ED-4（评审池排队语义）：advisor 队列余位位置刷新（subagent 队列同构面）。
+          if (isAdvisorBlock) refreshAdvisorQueuedTokens(agent, emit)
         }
         pushLine(`[subagent ${key} stop requested]`, C.warn)
       }

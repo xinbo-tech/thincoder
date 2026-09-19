@@ -1,6 +1,7 @@
 # 设计评审凭证结算（DESIGN-TOKEN-SETTLEMENT）· 工程模式凭证链板块
 
 > 板块 = **工程模式凭证链（结算面）**——评审通过后 token 的**结算 / 持久化 / 回读 / 消费**。
+> **v2 就地更新**（2026-09-17 退役批）：M6 模块设计语义融入（评审凭证——见 §9；原旁路档 `_archive/modules/ENGINEERING-MODE-V2-MODULE-REVIEW-CREDENTIAL.md` 已归档 `_archive/modules/`）。
 > 相邻权威 = `docs/core/design/ENG-TOKEN-BINDING.md`（token 生命周期语义：TTL / 格式 / 跨模式存活——本档**不重述**，D2）· `docs/core/design/CONSULTATION.md`（评审引擎）· `docs/core/design/SESSION.md`（会话槽文件与序列化）。
 > 需求侧 = `docs/core/requirements/DESIGN-TOKEN-SETTLEMENT.md`（批 5 建档——源 = VSC 树需求档）；CLI 树需求档 `thincoder-cli/docs/requirements/DESIGN-TOKEN-SETTLEMENT.md` **未迁**（后续批）。
 > 建档：2026-09-15（**B 式迁移轮 · 第 3 批**——`thincoder-cli/docs/design/DESIGN-TOKEN-SETTLEMENT.md` 内容重建入基准层；旧档原地一字不改、留作参照历史）。
@@ -90,11 +91,11 @@
 |---|---|
 | settle 当场同步落盘（D1——去 fire-and-forget） | **W12 已迁核**——现体 = 核 `thincoder-core/agent-tools/advisor-settle.mjs`（settle 当场落盘 `:152` · `:163` · 失败回滚 `:171-172`）+ 核 `thincoder-core/token-ttl.mjs:233`（`persistEngTokens`）；原端侧 `src/agent-tools/advisor-async.mjs:364-392` 已删 |
 | token 入槽 + Approved 后缀（echo 即裁决） | **W12 已迁核**——现体 = 核 `thincoder-core/agent-tools/design-token.mjs:22`（`buildApprovedSuffix`）· `:82`（`settleDesignReview`）；原 `advisor-async.mjs:389` / `:392` 已删 |
-| 门禁读权威（miss 回读槽——D4） | **W12/W13 已迁核**——现体 = 核 `thincoder-core/agent-tools/subagent-spawn.mjs:112`（`resolveDesignSlot`——内存 miss 回读槽 reconcile + TTL 过滤保留）；原端侧 `src/agent-tools/subagent-spawn-gate.mjs:70` / `:124` 已删（`authorizeEngCoderDesignToken` 名随核化退场——核 `:158-169` 内联验证；仅过期拒才删槽） |
-| 写侧保留槽 + union 合并（D2 + D6——忙时不清 settle 落盘项） | **W11 转口核**——端壳 `thincoder-vscode/src/extension/session-slot-write.mjs:23`（`engTokensMergeForSave` = 核 `mergeEngTokensForSave` re-export）→ 核 `thincoder-core/session-slot-write.mjs:156`（并集 + 同 key 新铸者胜）；原 `session-slot-write.mjs:166` 自持实现已删 |
+| 门禁读权威（miss 回读槽——D4） | **W12/W13 已迁核**——现体 = 核 `thincoder-core/agent-tools/subagent-spawn.mjs:112`（`resolveDesignSlot`——内存 miss 回读槽 reconcile + TTL 过滤保留）；原端侧 `src/agent-tools/subagent-spawn-gate.mjs:70` / `:124` 已删（`authorizeEngCoderDesignToken` 名随核化退场——核 `:158-169` 内联验证；仅过期拒才删槽） （迁移期引文） |
+| 写侧保留槽 + union 合并（D2 + D6——忙时不清 settle 落盘项） | **W11 转口核**——端壳 `thincoder-vscode/src/extension/session-slot-write.mjs:23`（`engTokensMergeForSave` = 核 `mergeEngTokensForSave` re-export）→ 核 `thincoder-core/session-slot-write.mjs:156`（并集 + 同 key 新铸者胜）；原 `session-slot-write.mjs:166` 自持实现已删 （迁移期引文） |
 | 会话内回合从槽新读（D3——快照已删） | 端壳 hydrate 面：`thincoder-vscode/src/agent/setup.mjs`（`hydrateRun` 每轮 `loadSlot` → `applySlotSessionState`）+ `thincoder-vscode/src/agent/agent-state.mjs:56`（`reconcileEngDesignTokens` 槽权威合入——内存项永不清空）；原 `suspension.mjs` 快照 / `panel-chat.mjs` 回合读行随 W13 重排（旧坐标已退场） |
-| 单值镜像退役（D5） | `_engDesignToken` 单值镜像**零运行时读写**（dispatch 写门资格问「任一活槽存在」——核 `resolveDesignSlot`）；仅 `thincoder-vscode/src/agent/agent-state.mjs:70-71` 一次性迁移读（legacy 残留——`ENG-TOKEN-BINDING.md` §6.3 已列） |
-| 消费落盘对称（consume 后不复活） | **W12/W13 已迁核**——现体 = 核 `thincoder-core/agent-tools/subagent-spawn.mjs:152`（`executeConsumeDesignAction`——删内存槽 + `persistEngTokens` 当场同步落盘 + 失败回滚 `:172-178`）；原 `subagent-spawn-gate.mjs:145` 已删 |
+| 单值镜像退役（D5） | `_engDesignToken` 单值镜像**零运行时读写**（dispatch 写门资格问「任一活槽存在」——核 `resolveDesignSlot`（`thincoder-core/agent-tools/subagent-spawn.mjs:115`））；仅 `thincoder-vscode/src/agent/agent-state.mjs:70-71` 一次性迁移读（legacy 残留——`ENG-TOKEN-BINDING.md` §6.3 已列） |
+| 消费落盘对称（consume 后不复活） | **W12/W13 已迁核**——现体 = 核 `thincoder-core/agent-tools/subagent-spawn.mjs:152`（`executeConsumeDesignAction`——删内存槽 + `persistEngTokens` 当场同步落盘 + 失败回滚 `:172-178`）；原 `subagent-spawn-gate.mjs:145` 已删 （迁移期引文） |
 | 测试面 | `thincoder-vscode/test/eng-settlement.test.mjs`（14 用例——settle 落盘 / union 忙时 / restore / consume 不复活） |
 
 **VSC 侧差异**（有意——§6.2「已知有意差异」的 VSC 载体坐标）：`engTokensMergeForSave` 同 key 冲突以 **expiresAt 大者胜**（新 mint——防 async 重评审同 designId 丢新 token）；CLI 侧 `reconcileEngTokensFromSlot` 同 id 冲突以槽为准（两处源码注释逐字登记）。
@@ -133,11 +134,35 @@
 | VSC 端设计档 | VSC 树对应文档 | **已并入（批 6）**——§6.3 VSC 结算接线（VSC 保持独立实现、语义同源） |
 | VSC 源档 §1 断点剖析（死对象 / 快照 / 清零 file:line 追查） · §2 需求 R1–R4 · §4 受影响文件 · §6 变更记录 | 一次性核实 / 批次材料 / 流水 | **不并**——断点结论已落 §6.3 各落点；R1–R4 为批次需求（机制已落地）；D1–D6 与本档 §2–§5 同源（(d) 类） |
 
-## 9. 体量与拆分规划（R24a）
+## 9. 评审凭证（v2——M6 增量）
 
-**实测行数**：本档 **149 行**（W16 接线面收正后 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
+**定位**：评审通过 ≠ 授权落地——通过只发「凭证」（designId + token），实现方拿凭证解锁写码；链收口后**同 designId 再 spawn = 机械拒**（链终消费）。v1 已完整实现凭证生命周期（签发 → TTL → 消费 → 移除），**v2 继承零改**，唯一变更 = **评审对象来源改读 manifest `docRoot`**（去硬编码 `docs/`）。
+
+**五功能点**：
+
+| # | 功能点 | 方案 |
+|---|---|---|
+| F1 | 评审通过 → 签发 designToken | **继承 v1**（`generateDesignToken` + `settleDesignReview` → designId+token） |
+| F2 | 链终消费制 | **继承 v1**（`consume-design` → `resolveDesignSlot` + `removeDesignTokenSlot`——消费后同 designId 再 spawn = `designId not found` 机械拒；重复消费幂等 no-op） |
+| F3 | 评审对象来源读 `docRoot` | `advisor.mjs` design-review 分支（文档分类）改读 `resolveReviewTargetPaths`（`agent/write-gate.mjs`，M4 产物——**同源单一权威，不重复实现**；不 import `dispatch.mjs`——簇间回边环风险）替代 `loadConventions`/`isDocPath` 分类 |
+| F4 | 凭证值不落文档 | token / designId **值**永不落档（只记 `review passed`）——`sanitizeText`/`CRED_RE` 机械剥除已实证（继承） |
+| F5 | 六 kind 不签发 | 非全绿（含 🔴）→ 不签发 token（fail-closed，继承） |
+
+**验收（回指 AC-M6）**：
+
+| # | 判据 |
+|---|---|
+| AC-M6-1 | 评审通过（全绿）→ 签发 token + 槽登记 |
+| AC-M6-2 | 链终消费后同 designId 再 spawn → 拒 |
+| AC-M6-3 | 评审对象 / 被审文件路径读 `docRoot`（grep 硬编码 `docs/` → 零命中） |
+| AC-M6-4 | token / designId 值不落文档（只记 `review passed`） |
+| AC-M6-5 | 六 kind 非全绿（含 🔴）→ 不签发 token |
+
+**边界（本增量不做）**：不做评审判据本身（advisor 内部——继承）；不做凭证格式改造（`uuid:expiresAt` 继承 v1，不重设 HMAC/签名层——已随 2026-09-06 裁定退役）。
 
 ## 变更记录
+
+- 2026-09-17（**v2 就地更新 · 退役批** · 主 agent）：M6 模块设计语义融合——新增 §9 评审凭证（F1/F2/F4/F5 继承 v1 零改 + F3 评审对象来源改读 `docRoot` 复用 M4 `write-gate.mjs` 同源导出；AC-M6 验收）；原旁路档 `_archive/modules/ENGINEERING-MODE-V2-MODULE-REVIEW-CREDENTIAL.md` 归档 `_archive/modules/`。
 
 - 2026-09-15（**B 式迁移轮 · 第 3 批**）：建档——`thincoder-cli/docs/design/DESIGN-TOKEN-SETTLEMENT.md` 内容重建入基准层（旧档一字未改、原地作参照历史）。
   坐标改写为现状路径并实核（`token-ttl.mjs` · `agent-tools/advisor-settle.mjs` · `agent-tools/subagent-spawn.mjs` · `agent/dispatch.mjs` · `session.mjs` · `session-guard.mjs` · `agent-tools/design-token.mjs`）。

@@ -9,7 +9,7 @@
  * top-level paging anchor: no data-idx (only outer .message carries it).
  */
 
-import { capText } from "./lib.js"
+import { capText, isToolFailure } from "./lib.js"
 import { esc } from "./md.js"
 import { t } from "./i18n.js"
 
@@ -17,15 +17,16 @@ import { t } from "./i18n.js"
  *  - args（评审 #5 槽位定）：header 恒 raw slice 80 + title 全（live :209 对齐——live 显示
  *    raw 截断）；JSON.parse 成功 → pretty JSON 入 body（result 上方独立块）；解析失败
  *    （slim 300 截断串）→ 只留 header raw 原样
- *  - result：capText 落 body（防未 slim 老文件超大输出）；"Error:"/"Error：" 开头 →
- *    红 error + body 展开（finishToolCard 判据复用）；成功 → 绿 done 折叠；
- *    无 result → body 只余 args 块（无两者 → 空）+ done */
+ *  - result：capText 落 body（防未 slim 老文件超大输出）；失败判据（`Error:`/`Error：` 前缀 ∪
+ *    独立成行的退出状态行——`lib.js isToolFailure` 单源）→ 红 error + body 展开
+ *    （finishToolCard 判据复用，两卡面同形）；成功 → 绿 done 折叠；无 result → body 只余
+ *    args 块（无两者 → 空）+ done */
 export function buildFinishedToolCard(tc) {
   if (!tc || typeof tc !== "object") return null
   const name = typeof tc.name === "string" && tc.name ? tc.name : "tool"
   const rawArgs = tc.args == null ? "" : String(tc.args)
   const result = typeof tc.result === "string" ? tc.result : ""
-  const isError = /^Error[:：]/.test(result.trim())
+  const isError = isToolFailure(result) // F-W16：与活卡同判据（lib.js 单源）
 
   const c = document.createElement("div")
   c.className = "tool-call"

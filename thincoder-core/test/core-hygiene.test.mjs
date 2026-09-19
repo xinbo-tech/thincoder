@@ -20,16 +20,32 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
 
 /**
  * 超软线档登记表（`wc -l` 口径）——**逐字随迁**所致（S1 只做提取，**不重写**——
- * F3 / D-C2「零新写」；源档在两产品侧本就 >300）。拆分计划 = 设计档 §2.5 行数列（设计者面）。
+ * F3 / D-C2「零新写」；源档在两产品侧本就 >300）。拆分计划 = 设计档 §2.8.1 表（行数与拆分计划——设计者面）。
+ * `memory/core.mjs` = TUI 假死批（2026-09-18）新增登记：本批改动为点状（await ×2 + 归一
+ * 调用），拆分立场 = **本批不拆**（批次档 `2026-09-18-tui-freeze.md` §2.4「软线 300 状态与
+ * 拆分立场」；结构债总账 = 设计档 `STRUCTURE-DEBT.md` §2 另批落笔）。
+ * `agent-tools/escalate-async.mjs` = 上行通道批（2026-09-18）新增登记：W3 上行接线（1 行 + 注）
+ * 使本档 300 → **302** 越线；本批为**纯接线**（不改变既有拆分结论）
+ * ——拆分计划归父侧另案（设计档 `AGENT-LOOP-SUBAGENT.md` §6.27.6 ▸ 越线登记同源；
+ * 该段未列名本档 ⇒ 读数登记于此）。
+ * init-block 批（2026-09-18）登记面收正：**拆分已落地**——`session.mjs` 500 → **244** 与
+ * `session-slots.mjs` 498 → **298** 双双回落 ≤300 ⇒ **移出登记**（设计档 `CORE-UNIFICATION.md`
+ * §2.8.1 表第 2 行「消解条件 = 本批落地（兑现后本档移出 `SOFT_LINE_REGISTRY`）」）；
+ * 同批新增登记 `process-probe.mjs`（**315**——探测束 API + 三态判据 + 有界同步例外单源）与
+ * `session-lifecycle.mjs`（**305**——会话生命周期七函数外提产物）：两档读数 >300，拆分计划已
+ * 登设计档 §2.8.1 表（第 10 / 11 行——fix 轮 3 补登，漂移已消解）。
+ * 拆分产物 `session-slots-manifest.mjs`（264）≤300 ⇒ 不登记。
  */
 const SOFT_LINE_REGISTRY = new Set([
   "agent/dispatch.mjs", "agent/helpers.mjs", "agent/setup.mjs", "agent.mjs",
-  "agent-tools/advisor-async.mjs", "agent-tools/consult.mjs", "agent-tools/read-history.mjs",
+  "agent-tools/advisor-async.mjs", "agent-tools/consult.mjs", "agent-tools/escalate-async.mjs",
+  "agent-tools/read-history.mjs",
   "agent-tools/subagent-actions.mjs", "agent-tools/subagent-async.mjs",
   "agent-tools/subagent-scheduler.mjs", "agent-tools/subagent-spawn.mjs", "agent-tools/subagent.mjs",
-  "config.mjs", "context.mjs", "git/checkpoint.mjs", "memory/code-sync.mjs", "memory/docs.mjs",
-  "memory/schema.mjs", "provider/core.mjs", "provider/responses.mjs", "session-slots.mjs",
-  "session-store.mjs", "session.mjs", "tools/edit-diff.mjs", "tools/file.mjs", "tools/git.mjs",
+  "config.mjs", "context.mjs", "git/checkpoint.mjs", "manifest.mjs", "memory/code-sync.mjs",
+  "memory/core.mjs", "memory/docs.mjs",
+  "memory/schema.mjs", "process-probe.mjs", "provider/core.mjs", "provider/responses.mjs",
+  "session-lifecycle.mjs", "session-store.mjs", "tools/edit-diff.mjs", "tools/file.mjs", "tools/git.mjs",
   "tools/lsp.mjs", "tools/repomap.mjs", "tools/shared.mjs", "traces/trace-store.mjs",
 ])
 

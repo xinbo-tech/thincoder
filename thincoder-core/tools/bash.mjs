@@ -186,7 +186,15 @@ function runBash(command, cwd, { timeout, signal, onOutput, shell }) {
       // 2ms 内）走 L195 分支带已收集输出收尾（user interrupted——不丢 partial）；
       // 非 abort 的真 spawn 错误（command not found 等）保持原分支
       if (error.name === "AbortError") return
-      finish(truncate(`Command failed: ${error.message}\n[stdout]:\n${outBuf || "(empty)"}`))
+      // spawn 失败形态（2026-09-18 工具失败判据同族残项批）：进程未启动 ⇒ 无退出码（不伪造），
+      // 尾附独占状态位 `(spawn failed)`（判据族第三成员——`webview/lib.js toolFailureStatus`）；
+      // 诊断行 `Command failed: <errno>` 与 `[stdout]:` 段原样保留（诊断面不入判据）。
+      const parts = [
+        `Command failed: ${error.message}`,
+        `[stdout]:\n${outBuf || "(empty)"}`,
+        "(spawn failed)",
+      ]
+      finish(truncate(parts.join("\n\n")))
     })
 
     // Shell exited. Normally 'close' follows within milliseconds — but a BACKGROUND

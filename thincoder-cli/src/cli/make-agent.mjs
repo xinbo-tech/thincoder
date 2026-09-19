@@ -8,6 +8,7 @@ import { discoverRules } from "@thincoder/core/rules.mjs"
 // （静态表 ∪ memory / code_search / doc_search / repo_outline / settings / peer_instances 六面 ∪ 门控 read_image）。
 // 传 `model` 必需：漏传 ⇒ `read_image` 对所有模型静默消失（门判据 = specForModel(model)?.multimodal）。
 import { assembleBuiltinTools } from "@thincoder/core/tools/index.mjs"
+import { resolveEngineeringManifest } from "@thincoder/core/manifest.mjs"
 
 /** 第 27 批 §12.3⑤（R-A1.1）：装配期工具剔除——按 `name` 过滤的纯函数（机验锚）。
  *  恒等语义：空列表 / 零命中 → 原数组原样返回（零意外剔除——T15）。
@@ -20,7 +21,7 @@ export function applyToolExclusions(tools, excludeTools = []) {
 }
 
 /** Assemble an agent with memory, MCP tools, and code/doc indices attached (sync all layers, then return) */
-export async function assembleAgent({ excludeTools = [] } = {}) {
+export async function assembleAgent({ excludeTools = [], slotData } = {}) {
   const config = loadConfig()
   const provider = config.provider
   const providers = config.providersList
@@ -121,6 +122,11 @@ export async function assembleAgent({ excludeTools = [] } = {}) {
   agent.activeProvider = provider.name ?? ""
   agent.activeModel = provider.model ?? null
   agent._mcpWarnings = mcpWarnings
+  // M1 装配钩子（会话起点①——装配期）：判据 = 会话权威值（`slotData` 槽值优先 + config 回退）；
+  // 附着 agent.manifest 供下游 M2–M9 读面（普通会话 = null）。钩子后移的可观察后果（拒 / 建档
+  // 晚于 memory sync / MCP 连接 / 工具装配——功能等价，仍在进入正常循环之前）见
+  // docs/core/design/MANIFEST.md §2.2。
+  attachManifest(agent, { cwd, slotData })
   // SESSION.md §8 D-S1：assembleAgent 后唯一校验点（TUI/chat 两路径同源）——不抛错不退出，
   // 标记由调用侧消费（TUI 弹重选 / headless 报错）。空 provider 由 TUI 路径在 startTUI 前清空。
   validateProvider(agent)
@@ -129,6 +135,43 @@ export async function assembleAgent({ excludeTools = [] } = {}) {
     agent._providerInvalidReason = config.providerInvalidReason
   }
   return agent
+}
+
+/**
+ * M1 装配钩子（docs/core/design/MANIFEST.md §2.2 两端装配钩子——CLI 端）：
+ * 会话起点调用（装配期 ① + `bin` 启动恢复后重估 ②——幂等：重估即重读，无状态位）。
+ *
+ * 模式门（判据单源 = 会话权威值，槽优先 + config 回退——KD-M1-12 / KD-M1-13）：
+ * 「恢复槽带 `engineering` 字段 ? 槽值 : `agent.config.agent.engineering`」（槽字段在场判据
+ * 与 `applySession` 同款——`thincoder-core/session.mjs:314-317`）。普通会话 → **装配钩子
+ * 零 manifest I/O**（不读 / 不拒 / 不建档）+ `agent.manifest = null`（清残留附着——复用
+ * agent 跨模式防陈旧）；工程模式四态：合法档 → 附着；缺档 + 根可解析 → `initManifest`
+ * 建档（拒进正常循环直到生成——E2 前置门槛）；缺档 + 根不可解析 → 抛「工程模式启动拒绝」
+ * **不自动建档**；非法档 → fail-closed 抛出。
+ *
+ * `slotData` = 恢复槽记录，由调用方经**参数注入**（`bin` TUI 分支既有 `resumeSlot` 调用
+ * 前移——KD-M1-15：钩子内不调 `resumeSlot`（该函数非纯读：GC / 认领 / 端标写）；`chat` /
+ * ACP 装配无会话 ⇒ 不传 ⇒ config 回退）。重估点不传（`applySession` 已按槽订正 config）。
+ *
+ * #41（薄包装——KD-M1-20 / AC-19）：工程模式分支的决策树 = 核单源
+ * `resolveEngineeringManifest`（非抛错形态）；本函数只把它翻回「抛错」——四条出口
+ * （附着 / 缺档建档 / 根不可解析抛 / 档非法抛）的**结果与文案逐字不变**（原句由决策树构造）。
+ * @param {object} agent — createAgent 产物（读 agent.config；写 agent.manifest）
+ * @param {{cwd?: string, slotData?: object|null}} [opts]
+ * @returns {object|null} 附着后的 manifest / 普通会话 null
+ */
+export function attachManifest(agent, { cwd = process.cwd(), slotData } = {}) {
+  const slotEng = slotData?.engineering
+  const engineering = slotEng !== undefined ? slotEng === true : agent.config?.agent?.engineering === true
+  if (!engineering) {
+    agent.manifest = null // 清残留附着（KD-M1-12）——普通会话不读 / 不拒 / 不建档
+    return null
+  }
+  // 缺档 + 根可解析 → 就地建档（writer 显式 'main'——写门 fail-closed 缺省拒，KD-M1-3）。
+  const r = resolveEngineeringManifest(cwd, { writer: "main" })
+  if (!r.ok) throw new Error(r.message)
+  agent.manifest = r.manifest
+  return agent.manifest
 }
 
 /**

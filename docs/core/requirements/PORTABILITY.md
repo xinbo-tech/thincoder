@@ -16,7 +16,7 @@
 - 凡需要项目约定处，由**项目自述 / 声明**提供；
 - 缺失时**降级可见**——写进评审消息 / 工具反馈 / 索引提示，不得静默跳过。
 
-范围边界：本档 §2–§3 承载本仓（VSC 面）需求；**需求组 FR10–FR15 的正文**现居 `docs/core/requirements/ENGINEERING-MODE.md` §2
+范围边界：本档 §2–§3 承载本仓（VSC 面）需求；**需求组 FR10–FR15 的正文**随 v1 需求档 `ENGINEERING-MODE.md` 归档入 `_archive/`（搬迁归位属父侧裁决项，见 §5.3）
 （CLI 树旧档的历史归属，已随第 4 批迁入基准层——指针引用，不重述正文）；其**接受方向与 FR14 落实文本** = 本档 §5（CLI 侧同名档并入面）。
 
 ## 2. 功能性需求
@@ -25,10 +25,10 @@
 |---|---|---|
 | **F1** | 分类判据单一权威 | `thincoder-vscode/src/conventions.mjs`（227 行；W4 已迁核——现体 `thincoder-core/conventions.mjs`）为唯一裁判实现（`classifyPath` `:76` / `isCodePath` `:85` / `isDocPath` `:91`）；全仓**零分散副本**（机判 = 组件式 / 锚定式正则副本、`docs/` 前缀判据副本 grep 零命中——判据式见 `PORTABILITY（VSC 侧）`） |
 | **F2** | 项目约定可声明 | 声明文件 = `.thincoder/conventions.json`（`thincoder-vscode/src/conventions.mjs:34`；W4 已迁核——现体 `thincoder-core/conventions.mjs`）；`codePaths` 声明替换默认、`index.*Extensions` 追加入并集；损坏 / 类型错 → 回退默认 + 警告 + 不崩（`thincoder-vscode/src/conventions.mjs:189-220`） |
-| **F3** | 嵌套布局不漏判 | 段匹配非锚定、大小写不敏感、`/` 与 `\` 通吃——`packages/foo/src/x.md` 判 code（分类优先级 = 代码段 > temp > 文档扩展名 > code） |
+| **F3** | 嵌套布局不漏判 | 段匹配非锚定、大小写不敏感、`/` 与 `\` 通吃——`packages/<foo>/src/<x>.md` 判 code（分类优先级 = 代码段 > temp > 文档扩展名 > code） |
 | **F4** | 评审注入降级可见 | 降级句常量四句在位（`thincoder-vscode/src/advisor/project-context.mjs:35` · `:39` · `:40` · `:41`）；缺 AGENTS.md / 地图 / 标准文档 / git 时各注入对应句、从不静默——`injectProjectGuide` `:91` · `injectDocumentMap` `:138` · `injectProjectStandards` `:176` · `thincoder-vscode/src/advisor/messages.mjs:115` |
-| **F5** | 索引面可声明、未列入可见 | 扩展名表 + 声明并集（`thincoder-vscode/src/index-discover.mjs:17` · `:24` · `:125` · `:132`；W8 已退役——核面现体 `thincoder-core/memory/file-walk.mjs`）；构建返回 `unlistedExts`（`thincoder-vscode/src/indexer.mjs:113`；W8 已退役——核面现体 `thincoder-core/memory/code-sync.mjs`）+ 面板提示行（`thincoder-vscode/src/extension/panel-index.mjs:171`） |
-| **F6** | 非 git 项目行为有定义 | 索引：无 git → 全量 walk + per-file mtime 回退（`thincoder-vscode/src/indexer.mjs:185-186` · `:241`；W8 已退役——核面现体 `thincoder-core/memory/code-sync.mjs`）；评审：`NO_GIT_NOTICE` 降级句、评审照常 |
+| **F5** | 索引面可声明、未列入可见 | 扩展名表 + 声明并集（`thincoder-vscode/src/index-discover.mjs:17` · `:24` · `:125` · `:132`；W8 已退役——核面现体 `thincoder-core/memory/file-walk.mjs`）；构建返回 `unlistedExts`（`thincoder-vscode/src/indexer.mjs:113`；W8 已退役——核面现体 `thincoder-core/memory/code-sync.mjs`）+ 面板提示行（`thincoder-vscode/src/extension/panel-index.mjs:171`） （迁移期引文） |
+| **F6** | 非 git 项目行为有定义 | 索引：无 git → 全量 walk + per-file mtime 回退（`thincoder-vscode/src/indexer.mjs:185-186` · `:241`；W8 已退役——核面现体 `thincoder-core/memory/code-sync.mjs`）；评审：`NO_GIT_NOTICE` 降级句、评审照常 （迁移期引文） |
 | **F7** | 门禁面同源 | 工程写门禁按声明分类判定（`thincoder-vscode/src/agent/tool-gates.mjs:89-91`）——不以 `src/` 硬编码 / `docs/` 前缀放行 |
 | **F8** | 提示词面不假定本仓形态 | 提示词内指令性引用零本仓指涉（「本产品自研仓 =」标注形态除外——判据式见 `PORTABILITY（VSC 侧）`） |
 
@@ -43,14 +43,14 @@
 
 ## 4. 范围边界（不做）
 
-- 不重述 FR10–FR15 正文（现居 `docs/core/requirements/ENGINEERING-MODE.md` §2——搬迁归位属父侧裁决项，见 §5.3）。
+- 不重述 FR10–FR15 正文（随 v1 需求档归档 `_archive/`——搬迁归位属父侧裁决项，见 §5.3）。
 - 不做对端 `/eng` TUI 门禁的同位物（本端无该命令；差异已登记在案）。
 - 不做文件系统沙箱 / 目录白名单（安全模型 = 信任模型 + 审批 + 快照，见 TOOLS 板块）。
 - 不建本仓自用 `.thincoder/conventions.json`（默认判据对本仓即正确——开项留父侧酌定）。
 
 ## 5. CLI 侧补充需求面（FR10–FR15 接受方向 + FR14 落实文本 · 2026-09-15 并入）
 
-> 来源 = `thincoder-cli/docs/requirements/PORTABILITY.md`（原地留参照）。FR10–FR15 正文 = `docs/core/requirements/ENGINEERING-MODE.md` §2：
+> 来源 = `thincoder-cli/docs/requirements/PORTABILITY.md`（原地留参照）。FR10–FR15 正文随 v1 需求档归档 `_archive/`（搬迁归位待裁决）：
 > FR10 不得假定项目约定 · FR11 开启前提不得依赖已退役物 · FR12 代码 / 文档判据不得写死目录名 · FR13 纪律层不得强加产品形状 ·
 > FR14 推进档位入需求 · FR15 非 git 项目行为有定义。实施台账 = `docs/TODO.md`「产品可移植性缺陷登记」节（父侧面）。
 
@@ -59,7 +59,7 @@
 | 需求 | 接受方向 |
 |---|---|
 | FR10 | 缺文档地图 / 标准文档时评审消息给**显式降级句**；索引对未列入的扩展名**可声明、可感知** |
-| FR11 | `/eng` 开启**无前提**（不要求任何项目文件）；评审注入不再依赖已退役概念文件 |
+| FR11 | `/eng` 开启**无前提**（不要求任何项目文件）；评审注入不再依赖已退役概念文件。**2026-09-18 收正（#41 拒翻裁定）**：仓根锚（git）为既有 E2 入口前提（非本收正新增）；非锚 cwd 上 `/eng` = **fail-closed 拒翻 + 明示原因**——「无前提」限定为「不要求已退役概念文件 / 产品流程文件」 |
 | FR12 | 代码 / 文档判据 = **单一权威**（一个模块）+ 项目声明可诉 + 判据不漏判（嵌套布局不绕过门禁） |
 | FR13 | 纪律层提示词不再要求建产品形状目录 / 维护产品流程文件 / 跑产品自带脚本；既有锚句保持 |
 | FR14 | 推进档位契约**入需求**（落实文本见 §5.2） |
@@ -108,10 +108,6 @@
 |---|---|---|
 | 旧档 F1 / F8 的设计档 AC 锚（`docs/design/PORTABILITY.md` AC-V01 / AC-V07） | 机判式正文 | VSC 镜像面设计内容**未并**——目标 = `docs/core/design/PORTABILITY.md`（§8B-5，父侧另批）；本档以 `PORTABILITY（VSC 侧）` 参照 |
 | CLI 侧同名需求档（`thincoder-cli/docs/requirements/PORTABILITY.md`） | CLI 产品需求正文（FR10–FR15） | **已并入（2026-09-15 CLI 尾部真批）**——接受方向 + FR14 落实文本入 §5；(d) 类入 §6.1 |
-
-## 7. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **约 120 行**（as-of 2026-09-15 CLI 尾部真批并入后实核）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 

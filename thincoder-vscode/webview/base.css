@@ -108,6 +108,14 @@ body {
 
 #subagent-activity:empty { display: none; }
 
+/* 出生可见性（2026-09-19 批——WEBVIEW.md §5.5 / D-W27）：未钉底期新块出生的未读计数钮
+   （区首 sticky）；N = 0 ⇒ 元素不存在（空区仍 :empty 零高——D-W1）。 */
+.activity-new-btn {
+  position: sticky; top: 0; z-index: 2; display: block; margin: 0 auto 4px; padding: 2px 10px;
+  font-size: 11px; border: 1px solid var(--border); border-radius: 10px; color: var(--fg); cursor: pointer;
+  background: var(--vscode-button-secondaryBackground, rgba(255, 255, 255, 0.08));
+}
+
 /* ─── Scroll-to-bottom button ─────────────────── */
 
 .scroll-bottom-btn {

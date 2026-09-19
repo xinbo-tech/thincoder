@@ -23,6 +23,8 @@ import { detectDanger, normalizeEOL, joinWithEol } from "@thincoder/core/tools/s
 import { computeEditEntry, validateEditEntry, assertEditArgsExclusive, hasLineParams } from "@thincoder/core/tools/edit-diff.mjs"
 // 第 27 批 §12.3①/③：relay 前缀文法单一权威（模块直连——不自持正则副本）。
 import { parseRelayPath } from "@thincoder/core/agent/relay-prefix.mjs"
+// 批 1 CORE-DEFECT-FIXES B3：onWait 相位值域 + 文案单源（本面仅日志——PROVIDER.md §6.20）
+import { waitStatusText } from "@thincoder/core/provider/wait-status.mjs"
 
 /** ACP ToolKind inference (schema v1 enum) — best-effort, clients render by kind. */
 function inferToolKind(name) {
@@ -52,11 +54,18 @@ function permissionToBoolean(response) {
 
 /**
  * Build the runAgent callbacks for an ACP session.
- * @param {{ sessionId: string, notify: (m, p) => void, request: (m, p, o?) => Promise<any>, log?: (s) => void }} deps
+ * @param {{ sessionId: string, notify: (m, p) => void, request: (m, p, o?) => Promise<any>, log?: (s) => void,
+ *           clientCaps?: { fs?: { readTextFile?: boolean, writeTextFile?: boolean } } }} deps
+ *   `clientCaps` = the §3.4 snapshot (taken at `session/new`); capabilities omitted by the
+ *   client are UNSUPPORTED ⇒ the fs reverse-RPC face stays local (§11.4 — never 30s 干等).
  */
-export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }) {
+export function buildAcpCallbacks({ sessionId, notify, request, log = () => {}, clientCaps = {} }) {
   const update = (sessionUpdate, extra = {}) =>
     notify("session/update", { sessionId, update: { sessionUpdate, ...extra } })
+  // §11.4 fs 能力位（默认 false——文档「MUST treat all capabilities omitted … as UNSUPPORTED」）；
+  // 判据同构 = kimi server.ts:626-636。edit 桥需读回 + 写回 ⇒ 两位皆真才路由。
+  const canReadFile = clientCaps?.fs?.readTextFile === true
+  const canWriteFile = clientCaps?.fs?.writeTextFile === true
   let toolSeq = 0
   // D15.8（TOOLS.md §15.1）：tool id FIFO 队列——并行同名工具按 call 序配对（dispatch B1
   // 已测：并行结果回调顺序 = call 顺序——T-TS8/T-TS9）。取代旧 Map 按名覆盖（后写覆盖先写
@@ -99,7 +108,10 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
   // ——与本地通道逐字一致（NF15.6b / AC15.10：not found / occurrences / 空 old / 空 new）。
   const EDIT_ABORT_PREFIX = "edit aborted (atomic — no files written): "
 
+  // 不变量（§11.7-2）：**任何** fs/* 反向 RPC 发出前必过客户端能力位——守卫住在本函数内
+  // （防御面：路由分支先判，守卫兜底，漏判不发静默超时）。
   const readBuffer = async (p) => {
+    if (!canReadFile) throw new Error("client does not advertise fs.readTextFile")
     try {
       const read = await request("fs/read_text_file", { sessionId, path: p }, { timeoutMs: 30000 })
       return read?.text ?? read?.content ?? ""
@@ -108,6 +120,7 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
     }
   }
   const writeBuffer = async (p, content) => {
+    if (!canWriteFile) throw new Error("client does not advertise fs.writeTextFile")
     try {
       await request("fs/write_text_file", { sessionId, path: p, content }, { timeoutMs: 30000 })
     } catch (e) {
@@ -176,12 +189,14 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
       // Strip the subagent `[model]` metadata token ([model]<name>) — it's a
       // TUI/webview display signal, not conversation content, and must not reach ACP clients.
       if (/^\[model\]/.test(payload)) return
-      // D7 (AGENT-LOOP.md §7.2 + §19.5 round2 #6 + D-M7b): strip ⟦ev⟧ event tokens (turn/
-      // approval/done/settled/stopped/async — async = §19.5 D-M7b zero-field spawn marker)
-      // — they carry RS control characters and are a TUI display signal; structured ACP
-      // mapping (tool_call_update) is tracked separately in docs/TODO.md.
+      // D7 + 批 1 B2/D13（ACP-CLIENT.md §7.2）：剥离判据 = **形态**（`⟦ev⟧<小写名>` + RS
+      // 终止符同现），不再枚举事件名——枚举是漏项发生器（`queued` / `cancelled` 发射点在位
+      // 而白名单未跟 ⇒ 随 agent_message_chunk 泄漏给客户端）。终止符约束 load-bearing：
+      // 放宽为无终止符形态会吞真实正文（先例教训见 src/tui/render.mjs:250-252）。
+      // 事件 token 是 TUI 显示信号；结构化 ACP 映射（tool_call_update）另行跟踪
+      // （docs/TODO.md）。
       // 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
-      if (/^⟦ev⟧(?:turn|approval|done|settled|stopped|async)\x1e/.test(payload)) return
+      if (/^⟦ev⟧[a-z]+\x1e/.test(payload)) return
       if (!payload) return // D6：剥后空载荷不发通知（防噪声空 chunk）
       update("agent_message_chunk", { content: { type: "text", text: payload } })
     },
@@ -193,7 +208,10 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
       update("agent_thought_chunk", { content: { type: "text", text: payload } })
     },
     onUsage: (usage) => update("usage_update", { usage }),
-    onWait: ({ phase, seconds }) => log(`[rate-limit] ${phase} waiting ~${seconds}s`),
+    onWait: (ev) => {
+      const s = waitStatusText(ev)
+      if (s) log(`[rate-limit] ${s}`)
+    },
     onCompress: () => log("[context] auto-compacted"),
 
     onToolCall: (name, args, toolId) => {
@@ -265,17 +283,19 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
     },
 
     /**
-     * fs reverse-RPC router (dispatch.mjs toolRouter, M2):
-     * - write            → fs/write_text_file (full content, no read-back)
+     * fs reverse-RPC router (dispatch.mjs toolRouter, M2) — 能力位 + 工具形态双判（§11.4）：
+     * - write            → fs/write_text_file (full content, no read-back) — 需 clientCaps.fs.writeTextFile
      * - edit              → fs/read_text_file → computeEditEntry（本地权威——单/数组形态）→ fs/write_text_file
      *                      （§15.1 D15.7 委派——双通道同语义；数组=原子批量——逐条目串行累积）
+     *                      — 需 readTextFile ∧ writeTextFile（读回是 edit 桥的必要前提）
      * - apply_patch       → local (unified-diff application is not routed in M2)
      * - delete, reads     → local
+     * 未宣告 ⇒ `{ handled: false }` 回落本地（零反向 RPC、零超时等待）。
      */
     toolRouter: async (name, args) => {
       const base = name.includes("/") ? name.split("/").pop() : name
       const path = pathOf(args)
-      if (base === "write" && path) {
+      if (base === "write" && path && canWriteFile) {
         if (typeof args?.content !== "string") {
           return { handled: true, result: `Error: write content must be a string (got ${typeof args?.content})` }
         }
@@ -290,7 +310,7 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
       // 2026-09-08 D1：单形态按行号改（path + line/startLine/endLine + new_string——无
       // old_string）同样走 IDE 缓冲通道（hasLineParams 判定）——否则回落本地写盘会与
       // IDE 缓冲脱敏；editSingle → computeEditEntry 行号语义自动继承。
-      if (base === "edit" && (Array.isArray(args?.edits) || (path && typeof args?.new_string === "string" && (typeof args?.old_string === "string" || hasLineParams(args))))) {
+      if (base === "edit" && canReadFile && canWriteFile && (Array.isArray(args?.edits) || (path && typeof args?.new_string === "string" && (typeof args?.old_string === "string" || hasLineParams(args))))) {
         try {
           const text = Array.isArray(args?.edits) ? await editBatch(args) : await editSingle(path, args)
           return { handled: true, result: text }

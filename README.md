@@ -7,8 +7,8 @@ its own release chain and its own documentation tree; they share no runtime code
 
 | Path | What it is | Release chain |
 |---|---|---|
-| `thincoder-cli/` | ThinCoder CLI (npm package `thincoder`) | npm `publish` — gate = lint → test:full → test:integration |
-| `thincoder-vscode/` | ThinCoder VS Code extension (vsix `thincoder-vscode`) | Marketplace / Open VSX — gate = lint + doc:check → test:full → test:integration |
+| `thincoder-cli/` | ThinCoder CLI (npm package `thincoder`) | npm `publish` — gate = lint → test |
+| `thincoder-vscode/` | ThinCoder VS Code extension (vsix `thincoder-vscode`) | Marketplace / Open VSX — gate = lint → test |
 | `.github/workflows/test.yml` | CI: one job per product (repo-root workflow) | GitHub Actions |
 | `.gitattributes` · `.gitignore` | repository-root settings shared by both products | — |
 
@@ -20,10 +20,9 @@ together with its git history through `git subtree add --prefix=thincoder-vscode
 Every command runs inside the product directory — all paths are product-relative.
 
 ```bash
-cd thincoder-cli && npm install && npm test && npm run lint
-cd thincoder-cli && npm run test:full && npm run test:integration
-cd thincoder-vscode && npm install && npm run lint && npm run doc:check
-cd thincoder-vscode && npm test && npm run test:full && npm run test:integration
+cd thincoder-cli && npm install && npm run lint && npm test
+cd thincoder-vscode && npm install && npm run lint && npm test
+cd thincoder-vscode && npm run doc:check   # repo-root domain doc check — not a gate step; same command as the CI docs job
 ```
 
 Entry points: `thincoder-cli/AGENTS.md` · `thincoder-cli/docs/README.md` (CLI) and `thincoder-vscode/AGENTS.md` ·

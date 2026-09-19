@@ -9,8 +9,13 @@
  * ASYNC_POOL_LIMITS/poolLimitsFor/runningPoolCount 回引自 subagent-async.mjs（主体保有——
  * 仅调用期使用——与主体对此处调度符号的回引构成惰性环——无求值期依赖）。
  */
-import { basename, isAbsolute, relative, resolve } from "node:path"
+import { isAbsolute, relative, resolve } from "node:path"
 import { existsSync, statSync } from "node:fs"
+// zero-block 批 P1（TUI.md §6.8.3.2②）：排队刷新 relay 异常留痕（禁静默——池状态仍不破坏）。
+import { logEvent } from "../log.mjs"
+// M5 F6（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.3）：files 声明面拦截谓词本体落
+// spawn-gates.mjs（纯谓词零依赖——本处只加 import 调用，无环）。
+import { rejectEngineeringFilePaths } from "./spawn-gates.mjs"
 import { poolLimitsFor, runningPoolCount, ASYNC_POOL_LIMITS } from "./subagent-async.mjs"
 // ASYNC-RESULT-CONTAINER.md D1：池 accessor——async-settle.mjs 反向 import 本模块
 // （dependentLabels）构成同款惰性环（函数级绑定——无求值期依赖）。
@@ -35,12 +40,12 @@ import { carrierField, getAsyncPool, tombstoneOf } from "./async-settle.mjs"
  *  调用方（subagent.mjs spawn 入口）catch → 错误即工具结果（模型可见——无静默）。
  *  已知限制（§20.8 未编号段——评审 #4）：不存在的目录声明（无尾斜杠 + 目录未创建）仍通过——不处理。
  *  §28 R26 F-R26b（2026-09-07）：父侧维护文件黑名单——归一化后 basename 全名匹配 +
- *  大小写不敏感（todo.md/changelog.md/checklist.md 精确 + checklist* 前缀家族——路径任意
- *  层含 docs/、根、.thincoder/）——命中 → throw（fail-closed——先于调度器准入——无排队
- *  残留——错误即工具结果）；提示列出全部违规条目——英文模板逐字定稿（AGENT-LOOP.md §28）。 */
+ *  大小写不敏感（todo.md/changelog.md 精确——路径任意层含 docs/、根、.thincoder/）——
+ *  命中 → throw（fail-closed——先于调度器准入——无排队残留——错误即工具结果）；
+ *  提示列出全部违规条目——英文模板逐字定稿（AGENT-LOOP.md §28）。
+ *  M5 F6（2026-09-17）：黑名单随同迁入 spawn-gates.mjs（rejectEngineeringFilePaths——族 = ledger.db / CHANGELOG + scripts/**；老台账 md 族随 M2 退役）——本函数只留调用（错误文案逐字保留）。 */
 export function normalizeFileList(files, cwd) {
   const out = []
-  const violations = [] // §28 R26 F-R26b：父侧维护文件命中（保留声明原样——提示可读）
   for (const f of Array.isArray(files) ? files : []) {
     if (typeof f !== "string" || !f.trim()) continue
     if (f.trimEnd().endsWith("/") || f.trimEnd().endsWith("\\")) { // 2.7 批：尾随空格目录声明（"test/ "）同拒
@@ -50,17 +55,13 @@ export function normalizeFileList(files, cwd) {
     if (existsSync(abs) && statSync(abs).isDirectory()) {
       throw new Error(`files must be file-level paths — directory declarations are not supported: ${f}`)
     }
-    // 黑名单 basename 推导前做分隔符归一（\ → /——反斜杠变体跨平台同拒——
-    // win32 resolve 本就兼容双分隔符——POSIX 需显式归一——advisor 🔵2 处置）
-    const base = basename(resolve(cwd ?? process.cwd(), f.replace(/\\/g, "/"))).toLowerCase()
-    if (base === "todo.md" || base === "changelog.md" || base.startsWith("checklist")) violations.push(f)
     if (!out.includes(abs)) out.push(abs)
   }
-  if (violations.length > 0) {
-    throw new Error(violations
-      .map((f) => `Parent-side maintained file ${f} must not be listed in files — reconciliation is the parent's duty; use the design-doc path if you need to edit a design doc`)
-      .join("\n"))
-  }
+  // M5 F6（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.2）：scripts/** + 过程档拦截——
+  // 谓词本体落 spawn-gates.mjs（rejectEngineeringFilePaths 收集全部违规 + 抛合并错误）；
+  // 循环内目录声明先行（错误序不变——目录错误先于过程档错误）。父侧维护文件
+  // basename 族（ledger.db / CHANGELOG）随同迁入谓词——错误文案逐字保留。
+  if (files !== undefined && files !== null) rejectEngineeringFilePaths(files)
   return out
 }
 
@@ -106,6 +107,7 @@ export function effectiveFiles(e) {
  * - ok      = settle 成功（报告已产出）/ consumed（自动通道注入消费——T-SD14 视为满足）
  * - pending = running/queued 未终态（等启动/等完成）
  * - failed / cancelled = 终态但非成功——依赖者走 dependency cancelled 分支（round2 #3）
+ * - discarded = 中止丢弃（批 4 CLI-ASYNC-DISCARD——报告不可达）⇒ 归 cancelled 口径（F4）
  * - unknown = 从未存在（spawn 时明确错误——非 consumed 的 unknown 拒——T-SD10）
  */
 export function depInfo(parent, id) {
@@ -121,7 +123,11 @@ export function depInfo(parent, id) {
   const pend = (carrierField(parent, "_pendingAsyncResults") ?? []).find((x) => String(x.id) === key)
   if (pend) return pend.error != null ? { state: "failed", role: pend.role } : { state: "ok", role: pend.role }
   const t = tombstoneOf(parent, key)
-  if (t) return { state: t.status === "cancelled" || t.status === "failed" ? t.status : "ok", role: t.role }
+  if (t) {
+    // F4（批 4 CLI-ASYNC-DISCARD）：丢弃墓碑 = 报告不可达 ⇒ 归 cancelled 口径（D-SD5 分支）。
+    const st0 = t.status === "discarded" ? "cancelled" : t.status
+    return { state: st0 === "cancelled" || st0 === "failed" ? st0 : "ok", role: t.role }
+  }
   return { state: "unknown", role: null }
 }
 
@@ -257,6 +263,14 @@ export function detectStall(parent) {
 }
 
 
+/** §6.9 终态守卫谓词单点（c1——2026-09-17 af 批 · 族无关）：**取消 / 已完成条目永不启动**
+ *  （守卫只跳过、不剔除、不重编号——队列内容零副作用）。两消费点 = 本档 `queueRunnable`
+ *  （`maybeRefillAsync` 经它判 · 子代理族）· `refillAdvisorQueue`（评审族）——动机 = 台账
+ *  #31：「取消后仍留队列 → 补位 `start()` 重启 ⇒ 幻影冻结块」的唯一燃料（族无关封死）。 */
+export function entryTerminal(entry) {
+  return entry?.cancelled === true || entry?.done === true
+}
+
 /** §20 D-SD4 补位判据：依赖全满足（AUTO 下 depc 放行）+ 域无冲突（running 任意序 +
  *  queued 先入者——§21.1 D-SL1.1 序判定：同文件串行 = 先入者先启动、后入者等先入者
  *  ——不自锁；先入者启动后以 running 身份继续挡住后入者——self 除外）。
@@ -264,6 +278,9 @@ export function detectStall(parent) {
  *  depc 锁定时（依赖取消/失败且非 AUTO——永不自动启动），后入者滞留等它——cancel
  *  先入者即释放（父显式可清；AUTO 档 depc 视为可启动——不滞留）。 */
 export function queueRunnable(parent, entry) {
+  // §6.9 终态守卫（c1——族无关单点谓词）：终态条目（cancelled / done）不启动——
+  // 与依赖 / 域判据并列的头判（队列内容零副作用——只跳过）。
+  if (entryTerminal(entry)) return false
   for (const depId of entry._dependsOn ?? []) {
     const state = depInfo(parent, String(depId)).state
     if (state === "pending" || state === "unknown") return false
@@ -323,7 +340,9 @@ export function dependentLabels(parent, depId) {
 /** §20 D-SD3b 排队态面板刷新（⟦ev⟧queued 事件族——TUI routeSubToken 消费）：对全部
  *  queued 条目重算等待态并发射变化（去重 sig——kind/position/detail 全变才发）——
  *  调用点 = 一切队列突变与等待态变迁（spawn 入队 / settle 后补位与依赖转移 / cancel
- *  出队 / 自动通道消费）。position = 队列序（D-A1 既有——cancel 前移同源）。 */
+ *  出队 / 自动通道消费）。position = 队列序（D-A1 既有——cancel 前移同源）。
+ *  P1 禁静默（zero-block 批 §6.8.3.2②）：relay 异常不再静默——留痕一条
+ *  `ev:queued-paint-failed`（**池状态不被破坏**语义不变——catch 不重抛）。 */
 export function refreshQueuedTokens(parent, onToken) {
   if (typeof onToken !== "function") return
   const queue = parent._asyncQueue ?? []
@@ -335,7 +354,10 @@ export function refreshQueuedTokens(parent, onToken) {
     e._lastQueuedSig = sig
     try {
       onToken(`${e.relayPrefix}⟦ev⟧queued\x1e${blk.kind}\x1e${i + 1}\x1equeued\x1e${blk.detail}`)
-    } catch { /* relay 失败不影响池状态 */ }
+    } catch {
+      // relay 失败不影响池状态（现状）；P1 禁静默：留痕一条（§6.8.3.2②）。
+      logEvent("ev:queued-paint-failed", { id: `${e.role}#${e.id}` })
+    }
   }
 }
 
@@ -390,5 +412,35 @@ export function nextSubagentId(parent) {
   }
   const next = Math.max(parent?._subAgentCounter ?? 0, poolMax) + 1
   parent._subAgentCounter = next
+  // ED-5（AGENT-LOOP-SUBAGENT.md §6.21）：一次性取号令牌——与 counter 同段原子写
+  // （取号 → 消费同步、无 await 间隙）；消费点断言同号后置 undefined（漏调分配器 ⇒ 抛错，
+  // 非静默覆写）。入池键守卫 = assertPoolKeyFree（下方）。
+  parent._lastSubagentId = next
   return next
+}
+
+/**
+ * ED-5（AGENT-LOOP-SUBAGENT.md §6.21）一次性取号令牌消费——三消费点同族断言：
+ * `parent._lastSubagentId === id`（取号 → 消费同步配对，无 await 间隙；漏调
+ * nextSubagentId ⇒ 令牌缺位/错号 ⇒ 抛错——防直读陈旧 counter 的静默覆写），断言
+ * 通过即置 `undefined`（一次性——同一令牌跨站点复用第二消费必抛）。
+ * 调用点：executeAsyncSpawn（subagent-run.mjs）· launchEscalateAsync（escalate-async.mjs）·
+ * launchAsyncAdvisor（advisor-async.mjs）——site = 站点名（错误文案定位面）。
+ */
+export function consumeSubagentToken(parent, id, site, role) {
+  if (parent?._lastSubagentId !== id) {
+    throw new Error(`subagent id allocator not called (nextSubagentId) before ${site}: ${role}#${id}`)
+  }
+  parent._lastSubagentId = undefined
+}
+
+/**
+ * ED-5（§6.21）入池键守卫——三入池点同族：`set(String(id))` 前断言键不存在；命中 =
+ * 覆写（静默丢报告 + status/cancel 错址）⇒ 抛错。调用点：子代理池（subagent-run.mjs）·
+ * escalate（escalate-async.mjs）· advisor 池（advisor-async.mjs）。
+ */
+export function assertPoolKeyFree(pool, id, role) {
+  if (pool.has(String(id))) {
+    throw new Error(`subagent id collision: ${role}#${id} already in pool`)
+  }
 }

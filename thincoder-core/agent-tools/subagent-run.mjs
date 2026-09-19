@@ -11,7 +11,7 @@ import { logEvent } from "../log.mjs"
 import { deathLine } from "../abort-provenance.mjs"
 import { pushReal } from "../context.mjs"
 import {
-  describeBlockers, refreshQueuedTokens,
+  describeBlockers, refreshQueuedTokens, consumeSubagentToken, assertPoolKeyFree,
 } from "./subagent-scheduler.mjs"
 // ASYNC-RESULT-CONTAINER.md D3/D6：settle 公共收尾单点 + child signal 构建单点
 import { bindChildController, buildChildSignal, settleAsyncEntry } from "./async-settle.mjs"
@@ -51,6 +51,10 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
   parent._asyncSubagents ??= new Map()
   parent._asyncQueue ??= []
   const id = parent._subAgentCounter
+  // ED-5（AGENT-LOOP-SUBAGENT.md §6.21）一次性取号令牌消费：取号（subagent-spawn.mjs async
+  // 分支 nextSubagentId）与本消费点同步配对、无 await 间隙；漏调分配器 = 直读陈旧 counter
+  // ⇒ 抛错（防 map.set 覆写旧条目 = 静默丢报告）。断言通过即置 undefined（一次性）。
+  consumeSubagentToken(parent, id, "async spawn", role)
   const entry = {
     id, role, relayPrefix,
     // §11.1 D-24a/R14：池域字段（域判定单一事实源——poolDomainOf——role 枚举见
@@ -178,6 +182,8 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
         })
       })
   }
+  // ED-5（§6.21）入池键守卫：同 id 二次入池 = 覆写（静默丢报告 + status/cancel 错址）⇒ 抛错。
+  assertPoolKeyFree(parent._asyncSubagents, id, role)
   parent._asyncSubagents.set(String(id), entry)
   // LOGGING（LOGGING.md）：child:spawn（async——注册即事件；status 记 queued/running 分流；
   // 实际启动由补位 start() 触发——运行中由子内 llm/tool 事件可见）

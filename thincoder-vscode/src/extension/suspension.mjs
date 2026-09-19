@@ -254,6 +254,10 @@ export async function suspensionSession(panel, entry) {
   const s0 = Date.now()
   logEvent("susp:enter", poolCounts(history))
   try {
+    // §6.27.12.12 ③：开轮谓词取用一次（模块缓存 ⇒ 每会话一次代价）。动态 import = 零新增静态边
+    // （核链可达 node:sqlite ⇒ W8 契约②；同 `parkAsyncPending` 先例）。等待栓注册点零改（W1 复用）。
+    // 住 try 内（while 之前）：import 失败也走 finally 清场（_suspended / panel._susp 复位 + idle 广播）。
+    const { upstreamWaiting } = await import("@thincoder/core/agent-tools/parent-channel.mjs")
     while (!susp.aborted && !susp.abort.signal.aborted) {
       await sweepSettledToPending(history)
       // 1. 用户输入优先（D-S5）：pendingInput 单槽——INPUT-LOCK-ASYNC（C'——2026-09-09）：
@@ -280,19 +284,25 @@ export async function suspensionSession(panel, entry) {
       // 2. pending 非空 → 合并消化轮（注入由 runAgent 首行统一完成——D-S3 单注入点）。
       // D2 pending 单容器（_pendingAsyncResults +role——四族统一）——非空即触发消化轮
       // （T-R17j——空闲 settle 不悬置到用户下次输入）。
+      // §6.27.12.12 ③（上行通道批）：+ 未 drain 的 ask（`upstreamWaiting`）——谓词**先于**第 3 步
+      // 池空退出判（「池空 + 队列留 ask」仍须开一轮把它 drain 出来）；唤醒（核 ask 入队尾）与本
+      // 谓词两件一组，缺一无效（§6.27.12.3）。note 不计（无时效义务——F13 语义零变）。
       const pendingN = history._pendingAsyncResults?.length ?? 0
-      if (pendingN > 0) {
+      const upstream = upstreamWaiting(history)
+      if (pendingN > 0 || upstream) {
         const before = pendingRowSnapshot(history)
         const d0 = Date.now()
-        logEvent("digest:start", { pendingN })
+        logEvent("digest:start", { pendingN, ...(upstream ? { upstream: true } : {}) })
         // B6（WEBVIEW（VSC 仓）§7.4）：消化轮起跑的可见指示——起跑到首 token 可静默数十秒~分钟，
         // CLI 有 `[auto-turn: digesting …]` 零延迟行，本端此前只有文件日志。post 早于 runTurn
         // （可见时刻不晚于回合开跑）；起止两态 + ok 旗标（异常不留"仍在消化"假象，try/finally
         // 保 end 必发）；直投（同 compress 先例——不经任务可见性 outbox）。
-        panel._panel?.webview.postMessage({ type: "digest", status: "start", n: pendingN })
+        // post 两态均限 `pendingN > 0`（§6.27.12.12 ⑥ 边界）：ask-only 轮不引入 digest 可见面
+        // （`n = 0` 形态不引入；孤立 end 行同禁）——可见性由既有 turnState / loading 面承载。
+        if (pendingN > 0) panel._panel?.webview.postMessage({ type: "digest", status: "start", n: pendingN })
         let ok = true
         try {
-          await entry.runTurn({ autoTurn: true, text: "" })
+          await entry.runTurn({ autoTurn: true, text: "", upstreamTurn: upstream })
         } catch (e) {
           ok = false
           // C-8（AGENT-LOOP（VSC 仓）§12.3）：digest 轮被 Stop（回合级 abort——F-6）不是会话
@@ -301,10 +311,10 @@ export async function suspensionSession(panel, entry) {
           if (e?.name === "AbortError") { logEvent("digest:stopped", { pendingN }); continue }
           throw e
         } finally {
-          panel._panel?.webview.postMessage({ type: "digest", status: "end", ok, ms: Date.now() - d0 })
+          if (pendingN > 0) panel._panel?.webview.postMessage({ type: "digest", status: "end", ok, ms: Date.now() - d0 })
         }
         const left = history._pendingAsyncResults?.length ?? 0 // D2 单容器
-        logEvent("digest:end", { pendingN: left, ms: Date.now() - d0 })
+        logEvent("digest:end", { pendingN: left, ms: Date.now() - d0, ...(upstream ? { upstream: true } : {}) })
         // §17.5.5 实测修订（2026-09-03）：digest 消化完成（pending 条目已注入）→ 对该轮
         // 已消化条目逐条补发 done（webview 折叠回收——不等池空；块回收与池空解耦——
         // CLI freezeReclaimDigestedBlocks parity——池空 freeze 仅兜底未消化残项）

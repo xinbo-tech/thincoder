@@ -7,7 +7,8 @@ import { t } from "./i18n.js"
 import { SS } from "./settings-state.js"
 import { keyRowEdit, flashSaved } from "./settings-widgets.js"
 
-/** Install the window._* handlers the embed/websearch key rows' inline onclick attributes call. */
+/** Install the window._* handlers the embed/websearch key rows' controls call（键行钮经
+ *  `renderKeyRow` 单点绑到这些 handler——行内属性绑定已摘除，见 `SETTINGS.md` §2.10）。 */
 export function installToolsKeyHandlers() {
   // Embedding key row
   window._editEmbedKey = function() {
@@ -16,25 +17,15 @@ export function installToolsKeyHandlers() {
       label: t("settings.embeddingLabel"), placeholder: "sk-...",
       onSave: (v, btn) => { window._vscode.postMessage({ type: "saveEmbedKey", key: v }); flashSaved(btn) },
       onCancel: () => {
-        const row = document.getElementById("row-embed")
-        row.replaceChildren()
-        const lbl = document.createElement("span"); lbl.className = "key-label"; lbl.textContent = t("settings.embeddingLabel")
-        const has = SS.indexStatus?.hasEmbedder
-        const st = document.createElement("span"); st.className = "key-status " + (has ? "ok" : ""); st.textContent = has ? "****" : "—"
-        const editBtn = document.createElement("button"); editBtn.className = "key-btn"; editBtn.textContent = has ? t("settings.changeKey") : t("settings.addKey")
-        editBtn.addEventListener("click", () => window._editEmbedKey())
-        row.append(lbl, st, editBtn)
-        if (has) {
-          const delBtn = document.createElement("button"); delBtn.className = "key-btn del-key"; delBtn.textContent = "✕"
-          delBtn.addEventListener("click", (e) => window._delEmbedKey(e.currentTarget))
-          row.appendChild(delBtn)
-        }
+        // 取消 = 回到键行静止态——与工具卡渲染器**同源**（`embedRowHtml`——单一表达式；
+        // 绑定随同点重贴——`renderKeyRow`；编辑态输入框在位 ⇒ 守卫显式关）
+        renderKeyRow("row-embed", embedRowHtml(), { skipWhileEditing: false })
       },
     })
   }
 
   window._delEmbedKey = function(btn) {
-    window._confirmDelete(btn, () => window._vscode.postMessage({ type: "deleteEmbedKey" }))
+    window._confirmSecretDelete(btn, () => window._vscode.postMessage({ type: "deleteEmbedKey" }))
   }
 
   // Web search key (Tavily)
@@ -44,25 +35,15 @@ export function installToolsKeyHandlers() {
       label: t("settings.websearchLabel"), placeholder: "tvly-...",
       onSave: (v, btn) => { window._vscode.postMessage({ type: "saveWebsearchKey", key: v }); flashSaved(btn) },
       onCancel: () => {
-        const row = document.getElementById("row-websearch")
-        row.replaceChildren()
-        const lbl = document.createElement("span"); lbl.className = "key-label"; lbl.textContent = t("settings.websearchLabel")
-        const has = SS.websearchSettings?.hasKey
-        const st = document.createElement("span"); st.className = "key-status " + (has ? "ok" : ""); st.textContent = has ? "****" : "—"
-        const editBtn = document.createElement("button"); editBtn.className = "key-btn"; editBtn.textContent = has ? t("settings.changeKey") : t("settings.addKey")
-        editBtn.addEventListener("click", () => window._editWebsearchKey())
-        row.append(lbl, st, editBtn)
-        if (has) {
-          const delBtn = document.createElement("button"); delBtn.className = "key-btn del-key"; delBtn.textContent = "✕"
-          delBtn.addEventListener("click", (e) => window._delWebsearchKey(e.currentTarget))
-          row.appendChild(delBtn)
-        }
+        // 取消 = 回到键行静止态——与工具卡渲染器**同源**（`websearchRowHtml`——单一表达式；
+        // 绑定随同点重贴——`renderKeyRow`；编辑态输入框在位 ⇒ 守卫显式关）
+        renderKeyRow("row-websearch", websearchRowHtml(), { skipWhileEditing: false })
       },
     })
   }
 
   window._delWebsearchKey = function(btn) {
-    window._confirmDelete(btn, () => window._vscode.postMessage({ type: "deleteWebsearchKey" }))
+    window._confirmSecretDelete(btn, () => window._vscode.postMessage({ type: "deleteWebsearchKey" }))
   }
 }
 
@@ -98,28 +79,12 @@ export function toolsCardHtml() {
     <button id="mcp-cancel-btn" class="key-btn">${t("settings.cancel")}</button>
   </div>`
   html += `<div class="settings-subtitle">${t("settings.websearchSection")}</div>`
-  const ws = SS.websearchSettings || {}
-  html += `<div class="key-row" id="row-websearch">
-    <span class="key-label">${t("settings.websearchLabel")}</span>
-    <span class="key-status ${ws.hasKey ? "ok" : ""}" id="status-websearch">${ws.hasKey ? "****" : "—"}</span>
-    ${ws.hasKey
-      ? `<button class="key-btn" onclick="window._editWebsearchKey()">${t("settings.changeKey")}</button>
-         <button class="key-btn del-key" onclick="window._delWebsearchKey(this)">✕</button>`
-      : `<button class="key-btn" onclick="window._editWebsearchKey()">${t("settings.addKey")}</button>`}
-  </div>
-  <div style="font-size:11px;opacity:0.55;padding:2px 0">${t("settings.websearchHelp")}</div>`
+  html += websearchRowHtml()
+  html += `<div style="font-size:11px;opacity:0.55;padding:2px 0">${t("settings.websearchHelp")}</div>`
   html += `<div class="settings-subtitle">${t("settings.indexSection")}</div>`
-  const embedConfigured = SS.indexStatus?.hasEmbedder || false
-  html += `<div class="key-row" id="row-embed">
-    <span class="key-label">${t("settings.embeddingLabel")}</span>
-    <span class="key-status ${embedConfigured ? "ok" : ""}" id="status-embed">${embedConfigured ? "****" : "—"}</span>
-    ${embedConfigured
-      ? `<button class="key-btn" onclick="window._editEmbedKey()">${t("settings.changeKey")}</button>
-         <button class="key-btn del-key" onclick="window._delEmbedKey(this)">✕</button>`
-      : `<button class="key-btn" onclick="window._editEmbedKey()">${t("settings.addKey")}</button>`}
-  </div>
-  <div id="index-status" style="font-size:12px;opacity:0.7;padding:4px 0">—</div>
-  <button id="index-build-btn" class="key-btn">${t("settings.indexBuild") || "Build Index"}</button>`
+  html += embedRowHtml()
+  html += `<div id="index-status" style="font-size:12px;opacity:0.7;padding:4px 0">—</div>`
+  html += `<button id="index-build-btn" class="key-btn">${t("settings.indexBuild") || "Build Index"}</button>`
   html += `</div></section>`
   return html
 }
@@ -127,6 +92,10 @@ export function toolsCardHtml() {
 /** Bind the MCP form controls + index build button, render MCP/index status, and
  *  request the MCP status from the extension. */
 export function bindToolsControls() {
+  // 键行单点装配（渲染 + 绑定）——行内属性绑定已摘除 ⇒ 钮必须经此重贴（建面 · 推送回填 · 取消重建三路同点）
+  renderKeyRow("row-websearch", websearchRowHtml())
+  renderKeyRow("row-embed", embedRowHtml())
+
   // Bind MCP type toggle
   document.getElementById("mcp-type").addEventListener("change", (e) => {
     document.getElementById("mcp-stdio-fields").style.display = e.target.value === "stdio" ? "" : "none"
@@ -221,7 +190,10 @@ export function renderMcpList() {
   }).join("")
   list.querySelectorAll(".mcp-del-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      window._confirmDelete(btn, () => window._vscode.postMessage({ type: "deleteMcpServer", name: btn.dataset.name }))
+      // 不可复得类（删整条时 token / headers 一并消失——`SETTINGS.md` §2.10 入口册 #5）：过确认门；
+      // 载荷 = 开框时捕获（弹框在位期间的整表重绘不改删除目标——同 §2.10 弹框契约）
+      const name = btn.dataset.name
+      window._confirmSecretDelete(btn, () => window._vscode.postMessage({ type: "deleteMcpServer", name }))
     })
   })
   list.querySelectorAll(".mcp-tools-btn").forEach((btn) => {
@@ -290,8 +262,64 @@ export function updateMcpTools({ name, tools, error }) {
   }).join("")
 }
 
+/** 键行 HTML：Web search（渲染器与回填**同源**——单一表达式；`updateWebsearchSettings` 整行重绘）。 */
+function websearchRowHtml() {
+  const ws = SS.websearchSettings || {}
+  return `<div class="key-row" id="row-websearch">
+    <span class="key-label">${t("settings.websearchLabel")}</span>
+    <span class="key-status ${ws.hasKey ? "ok" : ""}" id="status-websearch">${ws.hasKey ? "****" : "—"}</span>
+    ${ws.hasKey
+      ? `<button class="key-btn">${t("settings.changeKey")}</button>
+         <button class="key-btn del-key">✕</button>`
+      : `<button class="key-btn">${t("settings.addKey")}</button>`}
+  </div>`
+}
+
+/** 键行 HTML：Semantic Index（同上——`renderIndexStatus` 现同拍重绘 `#row-embed`）。 */
+function embedRowHtml() {
+  const embedConfigured = SS.indexStatus?.hasEmbedder || false
+  return `<div class="key-row" id="row-embed">
+    <span class="key-label">${t("settings.embeddingLabel")}</span>
+    <span class="key-status ${embedConfigured ? "ok" : ""}" id="status-embed">${embedConfigured ? "****" : "—"}</span>
+    ${embedConfigured
+      ? `<button class="key-btn">${t("settings.changeKey")}</button>
+         <button class="key-btn del-key">✕</button>`
+      : `<button class="key-btn">${t("settings.addKey")}</button>`}
+  </div>`
+}
+
+/** 键行两控件动作（按行 id 索引）——渲染 + 绑定的单点 `renderKeyRow` 从此表取动作。 */
+const KEY_ROW_ACTIONS = {
+  "row-websearch": {
+    onEdit: () => window._editWebsearchKey(),
+    onDelete: (btn) => window._delWebsearchKey(btn),
+  },
+  "row-embed": {
+    onEdit: () => window._editEmbedKey(),
+    onDelete: (btn) => window._delEmbedKey(btn),
+  },
+}
+
+/** 键行单点：渲染 + 绑定（`renderKeyRow(id, html)`）——两处密钥行的两个控件（编辑钮
+ *  `[Change]` / 空态 `[Add]` · 删除钮 `✕`）一并在此装配，行内属性绑定已摘除（夹具
+ *  （happy-dom）下行内属性绑定不可驱动 ⇒ 判据动作面不可机判——`SETTINGS.md` §2.10）。
+ *  `skipWhileEditing` = 键行编辑中（输入框在位）则跳过重绘——用户输入优先于推送（U-S10）；
+ *  `onCancel` 重建路径显式置 false（编辑态即因输入框在位——守卫不关则无法回静止态）。 */
+function renderKeyRow(id, html, { skipWhileEditing = true } = {}) {
+  const row = document.getElementById(id)
+  if (!row) return
+  if (skipWhileEditing && row.querySelector("input")) return
+  row.outerHTML = html
+  const fresh = document.getElementById(id)
+  const actions = KEY_ROW_ACTIONS[id]
+  if (!fresh || !actions) return
+  fresh.querySelector(".key-btn:not(.del-key)")?.addEventListener("click", () => actions.onEdit())
+  fresh.querySelector(".del-key")?.addEventListener("click", (e) => actions.onDelete(e.currentTarget))
+}
+
 export function updateWebsearchSettings(settings) {
   SS.websearchSettings = settings || {}
+  renderKeyRow("row-websearch", websearchRowHtml())
 }
 
 export function updateIndexStatus(s) {
@@ -300,6 +328,9 @@ export function updateIndexStatus(s) {
 }
 
 function renderIndexStatus() {
+  // D-W5：`#row-embed` 键行同拍重绘（indexStatus 为异步推送——可能晚于 agentSettings 触发拍；
+  // 不扩则建面后到达时保持 `—` = 假阴性）
+  renderKeyRow("row-embed", embedRowHtml())
   const el = document.getElementById("index-status")
   if (!el) return
   const btn = document.getElementById("index-build-btn")

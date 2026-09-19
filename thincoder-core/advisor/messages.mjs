@@ -61,7 +61,7 @@ export function buildDesignApprovalBlock(designToken, designId) {
  * Build the user message for an advisor review session.
  * @param {Object} agent — the parent agent
  * @param {Object|null} [prior] — prior issue table
- * @param {string} [reviewType] — "design" or "code" (default)
+ * @param {string} [reviewType] — "design" or "code" (已由工具层类型门定轨——此处无缺省；F30)
  * @param {string|null} [designToken] — token injected into the design-review prompt; the advisor echoes it only on approval
  * @param {string[]|null} [documents] — design review only: explicit list of doc paths to review (requirements + design + referenced docs).
  *   When set, the review input is built from this list ONLY — no git-diff change-set collection.

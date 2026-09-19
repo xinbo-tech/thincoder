@@ -15,6 +15,8 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { settingsTool, _buildShapeTable, _nullLeafPaths, _NULL_LEAF_SHAPES, _SIBLING_SHAPES, _checkShapeCompleteness } from "@thincoder/core/agent-tools/settings.mjs"
 import { DEFAULTS, _setConfigPathForTest } from "@thincoder/core/config.mjs"
+// #45 参数腿：端侧包装（`setup.mjs` `vscSettingsFace`）——execute 返回后置位 `_settingsTouched`
+import { vscSettingsFace } from "../src/agent/setup.mjs"
 
 /** 当前沙箱 config 路径（写侧工具实例化用——双缝同指）。 */
 let _cfgPath = null
@@ -194,5 +196,29 @@ test("T-S2.37 同族键（边界）：null 显式清除 / {} 清除态接受 / �
     await trySet("agent.subagentModels", '{"coder":"x:m1"}', ctx)
     const parent = { config: { agent: { subagentModels: diskOf(p).agent.subagentModels, subagentModel: null } } }
     assert.equal(effectiveSubagentModel(parent, "coder", undefined), "x:m1", "落盘值读侧命中（写了即生效）")
+  })
+})
+
+// ─── #45 参数腿（WEBVIEW-PROTOCOL.md §3.3 判据② · AC-E）：端包裹位（工具驱动参数变更联动 UI）───
+
+test("T-S2.38 端包裹（#45）：execute 返回 ⇒ 置位 `_settingsTouched`；抛错 ⇒ 不置位", async () => {
+  await withCfg({}, async () => {
+    const wrapped = vscSettingsFace(tool())
+    const agent = { config: {} }
+    const ctx = { agent }
+    const out = await wrapped.execute({ action: "set", key: "agent.maxTurns", value: "150" }, ctx)
+    assert.match(out, /persisted \+ hot-applied/)
+    assert.equal(agent._settingsTouched, true, "execute 返回后置位（同步点读后复位）")
+    // 读侧 action 同样置位——置位不做「成功」判定（语义 = 该批动过 settings 面；重推幂等）
+    agent._settingsTouched = false
+    const read = await wrapped.execute({ action: "list" }, ctx)
+    assert.ok(read.length > 0)
+    assert.equal(agent._settingsTouched, true, "读侧同置位")
+    // 抛错路径：execute 未返回 ⇒ 不置位
+    agent._settingsTouched = false
+    await assert.rejects(() => wrapped.execute({ action: "bogus" }, ctx))
+    assert.equal(agent._settingsTouched, false, "抛错 ⇒ 不置位")
+    // 无 agent 的 ctx：核侧既有护栏照旧抛（端包裹不吞错、不另爆包装层）
+    await assert.rejects(() => wrapped.execute({ action: "list" }, {}), /no live agent config/)
   })
 })

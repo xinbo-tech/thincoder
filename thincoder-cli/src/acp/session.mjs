@@ -10,14 +10,16 @@
  * - The controller is rebuilt after every turn, so one cancel only affects the
  *   in-flight turn; the next queued prompt starts with a clean signal.
  * - `run` is injectable for tests (defaults to the real runAgent).
+ * - `clientCaps` = the §3.4 client-capability snapshot taken at `session/new` time
+ *   (read-only for the session's whole lifetime) — consumed by the fs gate (§11.4).
  */
 import { runAgent } from "@thincoder/core/agent.mjs"
 import { saveSession } from "@thincoder/core/session.mjs"
 import { buildAcpCallbacks } from "./bridge.mjs"
 
-export function createAcpSession({ id, agent, notify, request = async () => { throw new Error("no request channel") }, log = () => {}, run = runAgent, save = saveSession }) {
+export function createAcpSession({ id, agent, notify, request = async () => { throw new Error("no request channel") }, log = () => {}, run = runAgent, save = saveSession, clientCaps = {} }) {
   let controller = new AbortController()
-  const callbacks = buildAcpCallbacks({ sessionId: id, notify, request, log })
+  const callbacks = buildAcpCallbacks({ sessionId: id, notify, request, log, clientCaps })
   let queue = Promise.resolve()
   let busy = false
 

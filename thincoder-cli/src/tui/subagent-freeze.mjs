@@ -13,7 +13,8 @@
 import { C } from "./ansi.mjs"
 import { closeOpenSubChildren } from "./subagent-children.mjs"
 // TUI-OOM-ROOTCAUSE（TUI.md §15.3.3 落点表末行）：state.lines 总量账——splice 插入路径过账。
-import { accountLine } from "./display-budget.mjs"
+// zero-block 批（§6.8.3.2）：摘除路径负向出账——releaseLine（增删均须过账）。
+import { accountLine, releaseLine } from "./display-budget.mjs"
 
 // ─── §19.6 D-P1 面板视图（subagent panel 检查工具）───
 // CLI-ACTIVITY-DEBLOAT F-3：面板区块列表由消费面**读时现算**（action:"panel" 经
@@ -95,6 +96,15 @@ export function freezeSubTaskLines(state, sub) {
   accountLine(state, line)
 }
 
+/** 键级墓碑（af 批 c2——§6.8.3.3 墓碑写入单点同址）：key 计入 `_frozenSubKeys` ⇒ 后续 token
+ *  经 `ensureSubTaskKey` 墓碑守卫直接丢弃（`⟦ev⟧cancelled` 移除块后的幻影冻结块路径封死）；
+ *  只写键集、不写载体行；存活条目复活 ⇒ 闸门摘墓碑 + 重建块（不永久失明）。 */
+export function tombstoneSubKey(state, key) {
+  if (!state) return
+  state._frozenSubKeys ??= new Set()
+  state._frozenSubKeys.add(String(key))
+}
+
 /** 头裁锚点校正（index.mjs pushLine 调用）：裁 removedCount 补 1 标记行 = 净位移
  *  removedCount−1（code review round1 #3）；在途锚点前移，min 0 兜底。 */
 export function shiftFreezeAnchors(state, removedCount) {
@@ -102,6 +112,62 @@ export function shiftFreezeAnchors(state, removedCount) {
   for (const sub of Object.values(state.subTasks ?? {})) {
     if (sub._freezeAt !== undefined) sub._freezeAt = Math.max(0, sub._freezeAt - shift)
   }
+}
+
+// ─── 墓碑存活闸（zero-block 批——docs/cli/design/TUI.md §6.8.3）─────────────────
+
+/** 存活查询（P0-a/P0-b 共用单点——与墓碑写点 `freezeSubTaskLines` 同址：墓碑条件 /
+ *  墓碑写入 / 载体行增删单一权威）。key 形 = `role#id`（`_frozenSubKeys` / `subTasks`
+ *  同命名空间）；**存活判据（逐字 = §6.8.3.3）**：**条目在池 ∧ `entry.done !== true` ∧
+ *  `entry.cancelled !== true`（running/queued）**（判据先例 = `thincoder-core/agent-tools/async-discard.mjs:55`
+ *  ——零新谓词；仅「键在池内」会把 done-in-pool 误判为存活）。
+ *  映射（写死 = §6.8.3.3）：最后 `#` 切分 → role + id；命中 = `pool.has(String(id))` ∧
+ *  `entry.role === role`；非池键（`compress#N` 等）恒 false（维持既有丢弃语义）。
+ *  降级（§6.8.3.2 末）：`state._agent` 缺省（headless / 子代理内 / 夹具）⇒ 无存活信息
+ *  ⇒ false——与批前**逐字等价**（丢弃），零回归。
+ *  @returns {boolean} 该 key 对应条目是否池内存活 */
+export function livePoolHas(state, key) {
+  const agent = state?._agent
+  if (!agent) return false
+  const k = String(key ?? "")
+  const i = k.lastIndexOf("#")
+  if (i <= 0 || i === k.length - 1) return false // 非池键形态（无 `#` / 空 role / 空 id）
+  const role = k.slice(0, i)
+  const id = k.slice(i + 1)
+  for (const pool of [agent._asyncSubagents, agent._asyncAdvisors]) {
+    if (!(pool instanceof Map)) continue
+    const entry = pool.get(id) // 池键 = String(id)（subagent-run.mjs:187 / advisor-async.mjs:410）
+    if (!entry || entry.role !== role) continue
+    if (entry.done === true || entry.cancelled === true) continue // 已终态（含 done-in-pool）
+    return true
+  }
+  return false
+}
+
+/** 摘旧冻结载体行（P0-a ②——复活时摘该 key 全部 `_frozenSubTask` 载体行）：墓碑源已把
+ *  载体行 splice 进 `state.lines`（`freezeSubTaskLines`）；不摘则一 key 两载体、折叠键
+ *  `sub-${key}` 两处共用（render-segments.mjs / subagent-panel.mjs）⇒ 旧块永久留流。
+ *  ① 逐行 `releaseLine` **负向出账**（增删均须过账——display-budget.mjs）；② 摘除位
+ *  **之后**（严格大于该位）的 `_freezeAt` 在途锚点 −1（`shiftFreezeAnchors` 同款语义
+ *  ——锚点 = 流位置；摘除位之前的锚点不动；**恰等摘除位者亦不动**——逐字照 §6.8.3.2
+ *  「摘除位之后」；若需改判〔该位锚点原指被摘行槽位〕须先改设计）。
+ *  @returns {number} 摘除的载体行数 */
+export function removeFrozenSubTaskLine(state, key) {
+  const lines = state?.lines
+  if (!Array.isArray(lines)) return 0
+  const k = String(key ?? "")
+  let removed = 0
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const l = lines[i]
+    if (l?._frozenSubTask?.key !== k) continue
+    releaseLine(state, l)
+    lines.splice(i, 1)
+    removed++
+    for (const sub of Object.values(state.subTasks ?? {})) {
+      if (sub._freezeAt !== undefined && sub._freezeAt > i) sub._freezeAt = Math.max(0, sub._freezeAt - 1)
+    }
+  }
+  return removed
 }
 
 /** 冻结 + 释放全部已 done 块（工具结果清扫路径）。锚点降序（后 settle 先插——
@@ -138,11 +204,16 @@ export function finishSubTasksByRole(state, roles, lastError = null) {
  *  lastError="interrupted"（Ready 态跳过）。§17.5.5：挂起自然退出时本函数只兜底
  *  **未消化残项**（已消化块由 freezeReclaimDigestedBlocks 逐条先行回收——块回收与
  *  池空解耦）。锚点降序同 freezeDoneSubTasks（挂起期 settle 锚点交错批次各按其
- *  settle 位置落位）。 */
+ *  settle 位置落位）。
+ *  zero-block 批 P0-b（§6.8.3.2）：**墓碑存活闸——池内存活（在池 ∧ `done !== true` ∧
+ *  `cancelled !== true`）条目跳过**（不置 done / 不写墓碑 / 不出 `subTasks`——保留 live
+ *  驻留，待其自身 done/stopped/settled 通道收尾）；**已终态（含 done-in-pool）与池外
+ *  条目照旧冻结**（中断 ghost 语义不变）。存活判据单点 = `livePoolHas`。 */
 export function freezeAllSubTasks(state) {
   const subs = Object.values(state.subTasks ?? {})
     .sort((a, b) => (b._freezeAt ?? -1) - (a._freezeAt ?? -1))
   for (const sub of subs) {
+    if (livePoolHas(state, sub.key)) continue // P0-b 存活跳过（墓碑只断言「此块已终」）
     if (!sub.done) {
       sub.done = true
       sub.doneAt = Date.now()

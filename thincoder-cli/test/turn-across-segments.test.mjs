@@ -6,7 +6,7 @@
  * AC 映射：AC1←T1-T5 · AC2←T6 · AC4←T7 · AC5←T6（AC3 / AC6 原由源码锚用例覆盖——已随
  * 2026-09-12 散文锚退役批退役，行为面由 T1-T7 承载）。
  * 用例面声明（设计 §19.6）：接缝式（无 runAgent 直驱先例）——纯函数缝 + TUI routing 缝；
- * 全量回归缝 = `npm test` / `node test/run-full.mjs`（验收命令）。
+ * 全量回归缝 = `npm test` / `node test/run.mjs`（验收命令）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"

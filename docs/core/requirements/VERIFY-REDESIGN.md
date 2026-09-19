@@ -62,10 +62,6 @@ verify 是**语言无关、框架无关、项目无关**的通用编程 agent �
 |---|---|---|
 | CLI 侧同名需求档（`thincoder-cli/docs/requirements/VERIFY-REDESIGN.md`） | CLI 产品需求正文 | **已并入（2026-09-15 CLI 尾部真批）**——零实质缺口，(d) 类入 §5.1；落点经用户裁定（并入本档，不并入 TOOLS.md） |
 
-## 6. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **约 75 行**（as-of 2026-09-15 CLI 尾部真批并入后实核）——**低于 300 行软线，无需拆分规划**。
-
 ## 变更记录
 
 - 2026-09-15（**CLI 尾部真批 · 并入既有 · eng-designer**）：`thincoder-cli/docs/requirements/VERIFY-REDESIGN.md` 逐节对账——**零实质缺口**

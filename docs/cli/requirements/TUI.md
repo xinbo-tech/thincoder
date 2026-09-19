@@ -4,7 +4,7 @@
 > **配对设计档 = 三档**：`docs/cli/design/TUI.md`（界面核心）· `docs/cli/design/TUI-COMMANDS.md`（命令层与选择面）·
 > `docs/cli/design/TUI-SESSION-VIEW.md`（会话视图 / 回合 / 内存）；另有 `docs/cli/design/TUI-INPUT-BOX.md`（输入框键契约）与
 > `docs/cli/design/TUI-TOOL-OUTPUT.md`（工具行间区块）。**层归属不对称（须知）**：设计侧按读者面拆五档（口径见
-> `docs/cli/design/TUI.md` §9 拆分沿革），需求侧**一份档**承载全部 TUI 需求——**不是漏档**。
+> `docs/cli/design/TUI.md` §8 拆分沿革），需求侧**一份档**承载全部 TUI 需求——**不是漏档**。
 > 建档：2026-09-15（**B 式迁移轮 · 第 6 批**——`thincoder-cli/docs/requirements/TUI.md` 内容重建入基准层；
 > 旧档原地一字不改、留作参照历史）。层归属 = **CLI 面**（P2——终端界面结构性只属 CLI；VSC 对位 = webview 族，非同机制）。
 
@@ -32,6 +32,8 @@ TUI 是 CLI 的主界面：**流式输出必须看着像活的**（新内容自�
 | **F11** | 输入框方向键编辑：↑↓ 竖移 + Inject 框四方向键 | 主输入框 ↑↓：**多行**（可视行口径——折行与 `\n` 同权，与 zsh / readline 惯例 + VSC webview 同款一致）时框内竖直移动（按**显示列**保持 + 目标行短则钳制行尾）；不可竖移时 ↑ 回落输入历史、↓ 无动作；**正在翻历史（`historyIndex ≠ -1`）时恒为历史导航**（不竖移）。Inject 框（Ctrl+I）：`{ chars, cursor }` 模型 + 四方向键可编辑（←→ 逐字符、↑↓ 折行竖移、边界吞——无历史回落）；其余编辑键 = 自由文本最小集。processing 期：竖移放行（纯编辑）、历史导航禁。判定句：多行且光标非首行 → 按 ↑ → 光标至上行同显示列（短行钳制行尾）；单行 → 按 ↑ → 进入历史（`historyIndex` 变、草稿入 `_draft`）；翻历史中且当前为多行条目 → 按 ↑ → `historyIndex` 递减、input 换为前一条（不竖移）；`processing` + 多行 → 按 ↑ → 光标上移且 `historyIndex` 不变；Inject 框折行文本 → 按 ↑ / ↓ → 光标行变化且列保持、边界无副作用。**范围边界**：不改 question 自由文本态 / search / picker / wizard / permission 键语义；Inject 框保持单行不变式；不引入列记忆状态；不做 VSC 端改动（其 webview 已有同款规则，差异仅报告）；竖移不跨出输入框（不滚动会话——F5 保持）。设计 = `docs/cli/design/TUI-INPUT-BOX.md` §3 / §8 |
 | **F12** | /advisor 子菜单可开 + picker entries 契约 | `/advisor` 交互菜单子面（Thinking 等）打开不抛错——子菜单以真实条目列表打开。picker 调用契约：`showPicker(title, entries)` 的 `entries` 必须是数组——非数组（含漏 `await` 的 Promise）→ **显式 TypeError**（Promise 输入附 `await` 提示），不得静默、不得裸抛下游错误。判定句：脚本化 picker 驱真 `handleAdvisorCommand`——主菜单选 Thinking → 第二次 `showPicker` 调用的 entries 为真数组且全程无 `[error]`；真 picker + Promise 输入 → 同步抛 TypeError（子串 `entries must be an array`）。**范围边界**：不改 picker 渲染 / 过滤 / 导航 / 栈语义；不改其它命令菜单；不引入异步 entries 支持（契约 = 调用方 await）。设计 = `docs/cli/design/TUI-COMMANDS.md` §5.2 / §5.3 |
 | **F13** | 用户介入提醒（attention 态） | 出现「需要用户介入」的情况时，界面出现可见的 attention 态提醒（用户原话：「底部任务栏的变色提醒——不用反复切回来」）。**触发集合 = 审批卡挂起（权限确认）/ 提问卡挂起（question）/ 回合结束等待输入（顶层回合链彻底结束、无自动续跑）**。CLI 形态 = 状态栏整行变色（注意力底色 + 提示语前缀——色 / 文案在设计档逐字）；VSC 形态 = 面板 / 状态栏 attention 态（语义同源、各端独立实现——VSC 实现与文档为另链）。消除 = 用户任意输入（键盘 / 鼠标）或提示消解后复位。判定句：① 三触发态任一存在 → 状态栏渲染含注意力色序列与对应提示语（逐字——设计档 §7.2）；② 用户输入（任意键 / 鼠标）后「回合结束」态复位（再渲染为常态）；③ 审批 / 提问两态随提示消解实时消失（派生——零残留）；④ 非触发态（用户自发的 picker / wizard / search、无审批 / 提问卡挂起的 processing、挂起会话、pendingInput）不出现 attention 态——processing 的豁免仅及 awaiting 派生；审批 / 提问卡挂起在回合中同样为 blocked。**范围边界**：仅应用内可见态（不做系统级通知 / 终端标题 / 响铃）；不改状态栏既有信息面（增量）；不闪烁；不做 VSC 端实现（另链）。设计 = `docs/cli/design/TUI.md` §7 |
+| **F14** | 删除类入口显式确认（不可复得判据） | CLI **两条**删除入口——`/model` 渠道删除（`model-picker.mjs` `removeProviderFlow`）与 `/mcp` server 删除（`cmd-mcp.mjs` `removeServer`）——**落盘前**必须过一次显式确认（Yes/Cancel picker · `defaultIndex = 1` · 缺键 **报错不降级直删**）；取消 / Esc ⇒ **零落盘 ∧ 零内存变更 ∧ 零副作用行**。**直参路径同门**（`/mcp remove <name>` 亦须确认——「显式点名 = 已确认」不采）。判定句：真 TUI 路径选中渠道 → 确认面出且磁盘 `config.json` **逐字节不变**；选 Yes ⇒ 恰一次落盘 + 级联三处清（`consultModels` / `subagentModels[role]` / `advisor.provider`）；选 Cancel ⇒ 零 `persistRaw` 调用 ∧ `agent.providers` 长度不变；直参 `/mcp remove <name>` ⇒ 同门；`ctx.confirmDelete` 缺位 ⇒ 入口抛错（`[error]` 行）且零落盘。**范围边界**：不改删除语义本体（级联 / 先盘后存 / 内存镜像收正 / `activeProvider` 不可删）；表单清空保存类不做门（非删除动作）；不取撤销机制；CLI 域**不存在**独立「删 key」入口（2026-09-19 实核）。设计 = `docs/cli/design/TUI-COMMANDS.md` §5.4 |
+
 
 ## 3. 非功能性需求
 
@@ -47,6 +49,7 @@ TUI 是 CLI 的主界面：**流式输出必须看着像活的**（新内容自�
 | **N8** | 方向键编辑约束 | ① 竖移按**显示列**（CJK / emoji 不劈半——非 UTF-16 / codepoint 计数）② 单行 / 空输入 ↑↓ 语义与改动前逐字一致 ③ 状态对象零增（列保持逐键现算）④ 零新依赖。判定句：CJK 用例（第 2 行尾按 ↑ → 光标落首字符之后 = 显示列 2，非第 2 个 codepoint）；空输入 + 空历史按 ↑ → 无副作用；既有锁档全绿 |
 | **N9** | attention 零侵入 + 可机判 | ① 既有状态栏信息面零改（attention 为增量包裹）② **零新定时器**（稳态色——不引入空闲重绘）③ 派生为**纯函数**（可直测）④ 宽度预算保持（整行 ≤ `cols − 1`——既有口径）⑤ 新档测试 glob 自动发现、零长等待 ⑥ 触发 / 消除为状态位驱动——不解析模型输出。判定句：attention 为 null 时状态帧与改动前逐字节等价（机判口径 = 零 `\x1b[43m` 序列 + strip-ANSI 文本无提示语）；非 null 时含注意力色序列 + 提示语（逐字）且 strip-ANSI 后文本以提示语开头；派生纯函数矩阵直测；快层全绿 |
 | **N10** | 会话显示层内存有界（字节维度） | 显示层全部文本载体有界：① 逐行字符上限（超限截断加标记，全文在会话记录）② 各载体字符额度（工具参数 JSON / 工具结果 / 输出环条目 / 子代理块 / 评审块与流式缓冲）——超限裁最旧（与既有行数环同族，省略标记语义不变）③ `state.lines` 总量字符额度（任一路径超限 → 裁头——**只裁至额度内所需的最少行数**，且**不得把可见历史清到保底行数以下**（保底 = 200 行，「一屏」下限的 8 倍余量）；保底触底即接受超额——上界 = 保底 × 单行上限）④ 懒加载翻页不无界累积（额度内）。判定句：模拟超长输入（单行 10MB / 无换行巨 chunk 子块 / 满会话翻页到底）→ 各载体额度 ≤ 设计档常量、`state.lines` 字符总量 ≤ 设计档常量**或**裁剪后可见行数 ≥ 保底 200 行（二者至少一成立）且标记行可见；**字符超额裁剪后可见行数 ≥ 200（不得清到近空）、收据行计数 = 裁后行数（文本与语义不变）**；既有行数口径（5000 行环 / 500 行块环 / 200 行输出环）与折叠语义零改；快层全绿 |
+| **N11** | 显示层字符账账实一致 | `state.lines` 的一切增删均须过账（增 / 删同一口径）——增量账 `accountLine`（行对象存上次计入值 `_budgetChars`、幂等）或直算对账 `accountAll`；**移除路径 = 同额负向出账**（`loadOlder` 占位行 `shift()` 归此列）；不变式 = `accountAll(state)` ≡ `state._linesChars`（唯例外 = `Math.max(0, …)` 钳位，偏差方向仅「账偏高」）。判定句：夹具序列（恢复 → 连续 `loadOlder` n 页含占位行移除）后直算 = 增量账（等式成立，n ≥ 3）；`accountLine` 重复调用账不变（幂等）；既有额度 / 保底口径（N10）零改；快层全绿 |
 
 ## 4. 范围边界（不做）
 
@@ -80,12 +83,9 @@ TUI 是 CLI 的主界面：**流式输出必须看着像活的**（新内容自�
 | 全部机制设计 | 渲染 / 折叠 / 按键 / 选择面 / 命令 / 恢复 / 回合 / 内存额度 | 设计面——本板块五档设计档（§ 档头）；本档只留需求陈述（D2） |
 | VSC 对位面 | webview 渲染 / 消息协议 / 输入面 | `docs/vsc/design/WEBVIEW*.md`（`docs/vsc/requirements/WEBVIEW.md` 已按对位登记）——各端独立实现 |
 
-## 6. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **96 行**（TUI-HISTORY-TRIM 批设计轮修订后 · as-of 2026-09-16 实核）——**低于 300 行软线，无需拆分规划**。
-**层归属不对称**：设计侧五档 / 需求侧一档——**已双向登记**（本档档头 + `docs/cli/design/TUI.md` §9）。
-
 ## 变更记录
+
+- 2026-09-16（**批 8 ENGINE-DEBT · 设计轮 · eng-designer**——承 `docs/batches/2026-09-16-engine-debt.md` §2 ED-3）：新增 **N11 显示层字符账账实一致**（增删同口径 + 不变式 `accountAll ≡ _linesChars` + 夹具序列判定句）；N10 文本零改（额度 / 保底口径不动）；源 = 设计档 `docs/cli/design/TUI-SESSION-VIEW.md` §5.5。
 
 - 2026-09-16（**TUI-HISTORY-TRIM 批 · 设计轮**）：N10 修订——③ 与判定句补「保底」判据（字符超额裁剪不得把可见历史清到保底行数以下；
   只裁至额度内所需最少行数；收据行计数 = 裁后行数）。其余条目零改。
@@ -93,3 +93,6 @@ TUI 是 CLI 的主界面：**流式输出必须看着像活的**（新内容自�
   ① 落点 = `docs/cli/requirements/`（P2）；② F1–F13 / N1–N10 与判定句原样承接（需求语义零改）；
   ③ 各行的**回指指针**改指现行设计档与节（设计侧拆五档——原 `../design/TUI.md` 单指针已失效）；
   ④ 档头登记**层归属不对称**（设计五档 / 需求一档）；⑤ 补 §5 不并项与历史沿革、§6 体量。
+
+- 2026-09-17（**zero-block 批 · 微收口 · 父侧直接执行——可 revert**）：档头悬空节号收正——「`docs/cli/design/TUI.md` §9 拆分沿革」→ **§8**（canonical 界面核心档无 §9）；同源面 = 设计侧微 fix 轮（`TUI-SESSION-VIEW.md` / `TUI-COMMANDS.md`）；来源 = 批档 `docs/batches/2026-09-17-subagent-zero-block.md` §2 出批发现 ⑥/①。
+- 2026-09-19（**CLI 删除确认批 · 父侧直接执行 · 可 revert**）：新增 **F14 删除类入口显式确认（不可复得判据）**——判据句 / 范围边界 / 设计回指全条；源 = 用户 08:21「应该补。」+ 批 `docs/batches/2026-09-19-cli-delete-confirm.md`（设计评 pass id=139 · 实现 id=140）；设计回指 = `docs/cli/design/TUI-COMMANDS.md` §5.4；口径与 VSC 侧 F-W17 同判据、各端独立实现。

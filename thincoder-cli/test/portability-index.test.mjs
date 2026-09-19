@@ -111,8 +111,8 @@ slow("T-16 边界（声明）：index.codeExtensions 声明后 .xyz 入索引；
   assert.equal(mem2.db.prepare("SELECT COUNT(*) n FROM code_chunks WHERE path LIKE '%.xyz'").get().n > 0, true, "声明扩展名的文件已索引")
 })
 
-/** 归册 slow（test/slow.mjs）：/reindex = code+doc 两次全量重建（真实 fs + git 子进程），
- *  并行快层负载下超拦截阈值——快层 skip、test:full 照跑（归册不是删除）。 */
+/** 慢例（test/slow.mjs ≡ test）：/reindex = code+doc 两次全量重建（真实 fs + git 子进程），
+ *  slow ≡ test 后无快层 skip——慢就慢，全量跑。 */
 slow("T-17 正常（文案）：/reindex 在存在 unlisted 时打印声明指路提示行", async () => {
   w("a.xyz")
   const mem = createMemory({ dbPath: ":memory:" })

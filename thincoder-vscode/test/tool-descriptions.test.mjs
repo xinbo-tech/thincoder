@@ -5,7 +5,7 @@
  *
  * 2026-09-12 PROSE-ANCHOR-RETIRE：T-TD-1 / T-TD-4 整删 + T-TD-2 / T-TD-3 段删——读非测试档文本断言
  *（逐字全文 / 路由段子串 / 内联残留扫描 / 排除模式）属散文锚（判据见 CLI 侧设计档 TESTING.md §11）。
- * 口径：T-TD-2 文件面（25 档 `.md` 在位）；T-TD-3 结构面（17 档接线文件的工具级 description 计数 == 25）。
+ * 口径：T-TD-2 文件面（24 档 `.md` 在位）；T-TD-3 结构面（17 档接线文件的工具级 description 计数 == 24）。
  * 接线文件清单 = §12.3 D-TD2 落点（实现自扫更正：`edit` 宿主 = `file-edit.mjs`，非 file.mjs）。
  *
  * W2（2026-09-15 · `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W2）：本端 `src/tools/*.md` 25 档已删 ⇒
@@ -26,40 +26,40 @@ import { VSC_PROMPT_INJECTIONS } from "../src/prompt-injections.mjs"
 const __here = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__here, "..")
 const TOOLS_DIR = join(ROOT, "src", "tools")
-/** 核工具实现面目录（W14 改判的接线落点——25 工具级 DESC 行的新承载面）。 */
+/** 核工具实现面目录（W14 改判的接线落点——24 工具级 DESC 行的新承载面）。 */
 const CORE_TOOLS_DIR = dirname(createRequire(import.meta.url).resolve("@thincoder/core/tools/index.mjs"))
 
-/** D-TD1：25 档迁移面（文件名 = 工具名）——W2 起读核包 `tool-docs/`。 */
+/** D-TD1：24 档迁移面（文件名 = 工具名）——W2 起读核包 `tool-docs/`。 */
 const MIGRATED = [
-  "apply_patch", "bash", "checklist", "delete", "edit", "execute", "fetch", "file_ops",
+  "apply_patch", "bash", "delete", "edit", "execute", "fetch", "file_ops",
   "get_current_time", "git", "glob", "grep", "hashline_edit", "insert_after", "lint", "ls",
   "lsp", "process", "question", "read", "read_image", "tree", "wait_for", "websearch", "write",
 ]
 /** D-TD3：非迁移面（保持内联——本批零改）。 */
 const INLINE_KEPT = ["repo_outline", "code_search", "doc_search", "memory", "context", "focus", "peer_instances"]
-/** D-TD2 接线落点（W14 改判——工具实现面核单源）：25 工具级 DESC 行现住核 `tools/*.mjs`
+/** D-TD2 接线落点（W14 改判——工具实现面核单源）：24 工具级 DESC 行现住核 `tools/*.mjs`
  *  （端侧 17 档接线文件中的 16 档已随 W14 删除——`shell.mjs` 保留但描述亦引核 DESC）。 */
 const CORE_WIRING_FILES = [
-  "bash.mjs", "checklist.mjs", "execute.mjs", "file.mjs", "git.mjs", "linter.mjs", "lsp.mjs",
+  "bash.mjs", "execute.mjs", "file.mjs", "git.mjs", "linter.mjs", "lsp.mjs",
   "ops.mjs", "patch.mjs", "question.mjs", "search.mjs", "tree.mjs", "web.mjs",
 ]
 
-test("T-TD-2 边界：核包 tool-docs/ 25 档在位（本端 src/tools/*.md 已删——描述面 = 核单点）", () => {
+test("T-TD-2 边界：核包 tool-docs/ 24 档在位（本端 src/tools/*.md 已删——描述面 = 核单点）", () => {
   for (const name of MIGRATED) assert.ok(existsSync(join(TOOL_DOCS_DIR, `${name}.md`)), `${name}.md 缺失（核包 tool-docs/）`)
   for (const name of MIGRATED) assert.ok(!existsSync(join(TOOLS_DIR, `${name}.md`)), `${name}.md 本端副本未删净`)
 })
 
-test("T-TD-3（W14 改判）：25 工具级描述 = 核工具模块 DESC 行（端侧镜像已删）", () => {
-  assert.equal(CORE_WIRING_FILES.length, 13, "核接线文件清单 = 13 档（承载 25 工具级 DESC）")
+test("T-TD-3（W14 改判）：24 工具级描述 = 核工具模块 DESC 行（端侧镜像已删）", () => {
+  assert.equal(CORE_WIRING_FILES.length, 12, "核接线文件清单 = 12 档（承载 24 工具级 DESC）")
   let descHits = 0
   for (const f of CORE_WIRING_FILES) {
     const lines = readFileSync(join(CORE_TOOLS_DIR, f), "utf8").split("\n")
     descHits += lines.filter((l) => /^  description: DESC\("/.test(l)).length
   }
-  assert.equal(descHits, 25, `工具级 DESC 命中数 = 25（实 ${descHits}）`)
+  assert.equal(descHits, 24, `工具级 DESC 命中数 = 24（实 ${descHits}）`)
 })
 
-test("T-TD-4' 描述面注入值：配置态 25 工具描述零锚字面 + 本端两锚值在场（§2.13.2「VSC 列」）", () => {
+test("T-TD-4' 描述面注入值：配置态 24 工具描述零锚字面 + 本端两锚值在场（§2.13.2「VSC 列」）", () => {
   try {
     configurePromptInjections(VSC_PROMPT_INJECTIONS)
     const schemas = builtinTools.map(toOpenAISchema)

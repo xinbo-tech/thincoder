@@ -15,6 +15,7 @@ import { parseEntry } from "../markdown.mjs"
 import { readFile, stat, readdir, unlink } from "node:fs/promises"
 import { join, resolve } from "node:path"
 import { fetchEntry, syncDir } from "./core.mjs"
+import { normalizeOrigin } from "./origin.mjs"
 
 /** LIKE pattern from a keyword (wildcards escaped — literal substring match, MEMORY.md §6 keyword filter). */
 function likePattern(keyword) {
@@ -53,10 +54,13 @@ export async function matchMemoryRows(memory, { layer = null, type = null, keywo
     }
   }
   if (wantLayer("project") && projectDir) {
-    for (const r of await diskFileRows(projectDir, type, keyword)) rows.push({ ...r, layer: "project", id: `project:${projectDir}:${r.path}` })
+    // §6.11 删/读缝归一：uid 的 origin 段与索引行的 origin 必须同一形态
+    const org = normalizeOrigin(projectDir)
+    for (const r of await diskFileRows(projectDir, type, keyword)) rows.push({ ...r, layer: "project", id: `project:${org}:${r.path}` })
   }
   if (wantLayer("team") && teamDir) {
-    for (const r of await diskFileRows(teamDir, type, keyword)) rows.push({ ...r, layer: "team", id: `team:${teamDir}:${r.path}` })
+    const org = normalizeOrigin(teamDir)
+    for (const r of await diskFileRows(teamDir, type, keyword)) rows.push({ ...r, layer: "team", id: `team:${org}:${r.path}` })
   }
   rows.sort((a, b) => (b.ts ?? 0) - (a.ts ?? 0))
   return rows
@@ -169,9 +173,11 @@ export async function deleteByUid(memory, uid, { dirs = {} } = {}) {
   // letters); path = segment after the last colon. Empty origin = legacy uid (`project::file.md` /
   // `project:file.md`) → dirs[layer] fallback.
   const lastColon = norm.lastIndexOf(":")
-  const origin = lastColon > layer.length ? norm.slice(layer.length + 1, lastColon) : ""
+  // §6.11 删面归一（uid 解析面）：uid 内 origin 与库内键同一形态——旧形态 uid（`C:\…`）仍可直接删；
+  // `path` = 末冒号后段（原样）；`origin` 空串 = 旧式无 origin uid ⇒ 落到 `dirs[layer]` 基准。
+  const origin = normalizeOrigin(lastColon > layer.length ? norm.slice(layer.length + 1, lastColon) : "")
   const path = lastColon > layer.length ? norm.slice(lastColon + 1) : norm.slice(layer.length + 1)
-  const dir = origin || dirs[layer]
+  const dir = origin || normalizeOrigin(dirs[layer])
   if (!dir) throw new Error(`${layer} layer unavailable: no ${layer} directory configured for an origin-less id`)
   assertPathInside(dir, path)
   // Entry lookup: exact (layer, origin, path) row for origin-ful uids — the delete target is the uid's
@@ -192,7 +198,7 @@ export async function deleteByUid(memory, uid, { dirs = {} } = {}) {
     // index row — only allow it when the origin is a managed memory dir (it already has files rows,
     // or it is the caller's current layer dir). A uid naming an unmanaged directory must not delete
     // a memory-shaped .md there.
-    if (origin && origin !== dirs[layer]) {
+    if (origin && origin !== normalizeOrigin(dirs[layer])) {
       const known = memory.db.prepare(`SELECT 1 FROM files WHERE layer = ? AND origin = ? LIMIT 1`).get(layer, origin)
       if (!known) throw new Error(`memory ${norm} not found in layer ${layer}: origin is not a managed ${layer} memory dir`)
     }

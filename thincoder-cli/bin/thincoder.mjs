@@ -19,7 +19,9 @@ import { runAgent } from "@thincoder/core/agent.mjs"
 import { loadConfig, configPath } from "@thincoder/core/config.mjs"
 import { cleanupTraces } from "@thincoder/core/traces/trace-store.mjs"
 import { createMemory, syncDir } from "@thincoder/core/memory.mjs"
-import { assembleAgent, teamConfig, gitAuthor, validateProvider } from "../src/cli/make-agent.mjs"
+// 批 1 CORE-DEFECT-FIXES B3：onWait 相位值域 + 文案单源（消费面禁各自枚举——PROVIDER.md §6.20）
+import { waitStatusText } from "@thincoder/core/provider/wait-status.mjs"
+import { assembleAgent, attachManifest, teamConfig, gitAuthor, validateProvider } from "../src/cli/make-agent.mjs"
 import { memoryCommand } from "../src/cli/memory-command.mjs"
 import { setupWizard } from "../src/cli/setup-wizard.mjs"
 import { summarize, askPermission } from "../src/cli/permission.mjs"
@@ -100,8 +102,10 @@ const USAGE = `thincoder - thin coding agent
 
 Usage:
   thincoder                 Launch the interactive TUI
+  thincoder tui             Launch the interactive TUI (explicit form of the default)
   thincoder chat [--auto] <prompt>   One-shot agent run (tools enabled), streams reply to stdout; --auto approves all tool calls
   thincoder acp             Agent Client Protocol server (stdio — Zed/JetBrains/Paseo drive sessions)
+  thincoder acp --login     Authenticate this machine for ACP clients (terminal auth flow), then exit
   thincoder memory list [--type=<t>]           List memory entries
   thincoder memory search <query>              Search memory
   thincoder memory put --type=<t> --title=<t> --content=<c> [--tags=<t>]
@@ -122,7 +126,7 @@ Config: ~/.thincoder/config.json — providers[] (one default model per channel)
 
 /** Unified message when no API key is configured */
 function noKeyMessage() {
-  return `No API key configured yet. Run "thincoder" to enter TUI, use /provider add and /provider key; or edit ${configPath} directly`
+  return `No API key configured yet. Run "thincoder" to enter TUI, use /model to add a provider and set its key; or edit ${configPath} directly`
 }
 
 /** Delay exit: process.exit right after fetch triggers libuv assertion on Windows/Node 24; let handles drain first */
@@ -186,8 +190,9 @@ switch (command) {
     try {
       await runAgent(agent, prompt, {
         onToken: (text) => process.stdout.write(text),
-        onWait: ({ phase, seconds }) => {
-          console.error(phase === "gate" ? `[rate-limit] TPM throttle waiting ~${seconds}s` : `[rate-limit] 429 response, retrying in ${seconds}s`)
+        onWait: (ev) => {
+          const s = waitStatusText(ev)
+          if (s) console.error(`[rate-limit] ${s}`)
         },
         onToolCall: (name, toolArgs) => {
           console.error(`\n[tool] ${name} ${summarize(toolArgs)}`)
@@ -299,16 +304,20 @@ switch (command) {
 
   case "tui":
   case undefined: {
-    const agent = await assembleAgent()
+    // 恢复上次的会话（同一项目目录）；provider 按保存的名字切回（用户上次可能换过模型）
+    // 2026-09-05 §10（R4）：恢复决策按本端记录 resumeSlot（D-2 ①②③）——manifest active
+    // 只作"无记录端"的一次性继承源，不再作本端恢复第一依据（D-6）。
+    // 2026-09-18（装配门禁批 #30 · KD-M1-13 / KD-M1-15）：resumeSlot **前移至装配之前**——
+    // 装配期模式门判据 = 会话权威值（槽优先 + config 回退）；恢复记录经 slotData 形参进
+    // 装配钩子（同进程同一调用前移 ⇒ 零新增写动作；钩子内不调 resumeSlot——非纯读）。
+    const { resumeSlot, applySession, sessionDescriptor } = await import("@thincoder/core/session.mjs")
+    // F-MI7：resumeSlot = async（探测束不阻塞事件循环）——此处必须 await
+    const { slot, data } = await resumeSlot(process.cwd())
+    const agent = await assembleAgent({ slotData: data })
     // SESSION.md §8 D-S1：TUI 路径在 startTUI 前清空无效 provider——空 provider 不流入 runAgent
     // （崩溃源：chat() 缺 model → 网关 400 或 fetch("undefined/...") TypeError）
     if (agent._providerInvalid) agent.provider = null
     const config = loadConfig()
-    // 恢复上次的会话（同一项目目录）；provider 按保存的名字切回（用户上次可能换过模型）
-    // 2026-09-05 §10（R4）：恢复决策按本端记录 resumeSlot（D-2 ①②③）——manifest active
-    // 只作"无记录端"的一次性继承源，不再作本端恢复第一依据（D-6）。
-    const { resumeSlot, applySession, sessionDescriptor } = await import("@thincoder/core/session.mjs")
-    const { slot, data } = resumeSlot(process.cwd())
     if (data) {
       // applySession 内部已按槽复合重算 compactThreshold（auto 时）——不再需要 switched 分支
       // TUI-OOM-ROOTCAUSE（SESSION.md §14.3.4）：传 slot → 绑定记录存储（身份核验 + 对账）
@@ -324,6 +333,10 @@ switch (command) {
     // "load → 首回合保存"窗口内并发方翻 active 导致的静默迁移）；/new 经 resetSessionState
     // 清 _slot（newSession 已认领 + 写记录，语义保留）
     agent._slot = slot
+    // M1 重估点（会话起点②——applySession 之后 · KD-M1-13 取值点②）：CLI 的工程模式权威值 =
+    // 会话槽（/eng 只写槽不写 config.json）；此时 agent.config.agent.engineering 已由
+    // applySession 按槽订正 ⇒ 与装配期判据同值 ⇒ 幂等重估（值同 ⇒ 无副作用）。
+    attachManifest(agent)
     // D-S3 优先级补全：applySession 可能已用会话中的有效 provider 修复（config 无效 + 会话有效）——
     // 修复后复验清除标记，仅当两者都无效才弹重选（validateProvider 幂等）
     if (agent._providerInvalid) validateProvider(agent)
@@ -389,7 +402,13 @@ switch (command) {
   }
 
   case "acp": {
-    const { runAcpServer } = await import("../src/acp.mjs")
+    const { runAcpServer, runAcpLogin } = await import("../src/acp.mjs")
+    // §11.2 改法 4：`args` 语义 = 追加到已配置的 agent 调用——`--login` = 终端认证流程，
+    // 不进 stdio 服务模式（不带该旗标时行为零变）；退出码语义 = 0 成功 / 非 0 失败。
+    if (args.includes("--login")) {
+      exitSoon(await runAcpLogin())
+      break
+    }
     await runAcpServer()
     break
   }
@@ -397,7 +416,7 @@ switch (command) {
   case "session": {
     // SESSION.md §12：会话目录 GC 手动面（F2 冷 cwd 报告/删除——VS Code 端无 shell 通道，仅 CLI）
     const { runSessionGc } = await import("@thincoder/core/session-gc.mjs")
-    process.exitCode = runSessionGc(args)
+    process.exitCode = await runSessionGc(args)
     break
   }
 

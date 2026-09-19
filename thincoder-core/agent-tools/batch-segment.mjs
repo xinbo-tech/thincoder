@@ -9,6 +9,11 @@
  *    的同名标题行被丢弃（否则伪造戳会污染 N 计数——§2.20.8 #5）；
  *  - 凭证剥除：含凭证形态的行剥掉该子串，剥后为空则整行丢弃（「零命中」+「其余逐字保留」）；
  *  - 路径门禁：`resolveBatchDocPath`（评审侧「若传则须可读」）；工具内再查一次可读性。
+ *  - v2 增量（ENGINEERING-MODE-V2-MODULE-BATCH-SEGMENT.md §2.1）：§1 状态行解析
+ *    （`readBatchStatusLine`——「已收口」→ 冻结拒写、「进行中」→ 放行、缺失/不可解析 →
+ *    fail-closed 拒）；`resolveBatchDocPath` 加 manifest `docRoot.batches` 双基底
+ *    （值形态 = 串 | 多根数组——逐基底按序复判；manifest 缺失/非法/读错 → v1 单基底
+ *    语义零变）；冻结只覆盖 `batch_segment` 通道（§2.5）。
  *
  * 导出面：`batchSegmentTool` · `resolveBatchDocPath` · `batchDocForReview`（异步评审实例键取绑定）·
  * `configureBatchSegment` / `resetBatchSegment`（#84 记账面注入缝——缺省 no-op，见下）。
@@ -19,6 +24,8 @@
  */
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
+
+import { docRootPaths, readManifest } from "../manifest.mjs"
 
 /** text 单次上限（§2.20.1——超出引导分段追加，不承诺"不新盖戳"）。 */
 export const MAX_TEXT_CHARS = 20000
@@ -31,6 +38,8 @@ const sectionHeaderRe = (seg) => new RegExp(`^## §${seg}(?=\\s|$)`, "m")
 /** 凭证形态（§2.7 冒号态）：`[DESIGN-TOKEN:…]` 与 `designId: …`——本节自有正则。 */
 const CRED_RE = /\[DESIGN-TOKEN:[^\]]*\]|designId\s*:\s*\S+/g
 const CRED_TEST_RE = /\[DESIGN-TOKEN:[^\]]*\]|designId\s*:\s*\S+/
+/** §1 状态行前缀（`**状态行**：` 独立行——表格行 / 块引用行不命中；判定只认关键字）。 */
+const STATUS_LINE_RE = /^\s*\*\*状态行\*\*[：:]\s*(.*)$/
 
 // ─── #84 记账面注入缝（「记账面按端注入」，形态参 §2.13.5 注入缝）───────────────
 /**
@@ -54,17 +63,50 @@ function readableFile(abs) {
 /**
  * 批次档路径门禁（评审侧 §2.20.2 口径 = **「若传则须可读」**）：空/非字符串/不可读 → throw。
  * 非空且可读 → 返回绝对路径（`\` 归一——照 `files`/`batchDoc` spawn 门先例）。
+ * v2：cwd 不可读 → manifest `docRoot.batches` 复判（M3 模块设计 §2.1#4——N3 可迁移；
+ * 值形态 = 串 | 多根数组——逐基底按序复判，首个可读者胜）。
  */
 export function resolveBatchDocPath(cwd, given) {
+  const base = cwd ?? process.cwd()
   const raw = typeof given === "string" ? given.trim() : ""
   if (!raw) {
     throw new Error("batchDoc must be a non-empty path to the batch record (ENGINEERING-MODE.md §2.20.2) — pass the batch record currently in flight, or omit the parameter entirely when no batch record is in flight.")
   }
-  const abs = resolve(cwd ?? process.cwd(), raw.replace(/\\/g, "/"))
-  if (!readableFile(abs)) {
-    throw new Error(`batchDoc is not a readable file: ${raw} — pass the path of the batch record currently in flight (a path that resolves to an existing file), or omit the parameter when no batch record is in flight.`)
+  const abs = resolve(base, raw.replace(/\\/g, "/"))
+  if (readableFile(abs)) return abs
+  // 双基底（M3 模块设计 §2.1#4）：cwd 不可读 → manifest docRoot.batches 复判（逐基底按序，
+  // 首个可读者胜）；manifest 缺失 / 非法 / 读错 → 无第二基底（v1 单基底语义零变），
+  // 全不可读 → throw。
+  let man = { ok: false }
+  try { man = readManifest(base) } catch { /* 权限等读错——按无 manifest 处理（v1 语义） */ }
+  if (man.ok) {
+    for (const root of docRootPaths(man.manifest?.docRoot?.batches, base)) {
+      const alt = resolve(root, raw.replace(/\\/g, "/"))
+      if (readableFile(alt)) return alt
+    }
   }
-  return abs
+  throw new Error(`batchDoc is not a readable file: ${raw} — pass the path of the batch record currently in flight (a path that resolves to an existing file), or omit the parameter when no batch record is in flight.`)
+}
+
+/**
+ * §1 状态行解析（内部——M3 模块设计 §2.1#1）：解析对象 = §1 段内 `**状态行**：` 前缀行
+ * （§1 边界 = `## §1` 标题到下一 `## §` 标题；其他段内「状态行」字样不参与判定）。
+ * 判定只认关键字（emoji / 括号装饰 / 日期后缀容忍）：含「已收口」→ "closed"（冻结优先）、
+ * 含「进行中」→ "open"；无 §1 / 无该行 / 两关键字皆不命中 → "unknown"（fail-closed 视为冻结）。
+ */
+function readBatchStatusLine(src) {
+  const s1 = /^## §1(?=\s|$)/m.exec(src)
+  if (!s1) return "unknown"
+  const nextRe = /^## §\d/gm
+  nextRe.lastIndex = s1.index + s1[0].length
+  const next = nextRe.exec(src)
+  const body = src.slice(s1.index + s1[0].length, next ? next.index : src.length)
+  const m = body.split("\n").map((line) => STATUS_LINE_RE.exec(line)).find(Boolean)
+  if (!m) return "unknown"
+  const value = m[1].trim()
+  if (value.includes("已收口")) return "closed"
+  if (value.includes("进行中")) return "open"
+  return "unknown"
 }
 
 /**
@@ -188,9 +230,14 @@ export function batchSegmentTool(batchDoc = null, { review = false } = {}) {
       if (!batchDoc) {
         throw new Error("batch_segment: no batch record is bound to this caller — there is no path parameter by design (the target arrives via the spawn binding / the review instance key, ENGINEERING-MODE.md §2.20.2). Report the section as not written.")
       }
-      const abs = resolve(agent.cwd ?? process.cwd(), String(batchDoc).replace(/\\/g, "/"))
-      if (!readableFile(abs)) {
-        throw new Error(`batch_segment: the bound batch record is not a readable file: ${abs} — nothing was written (§2.20.1 fail-closed). Check the record still exists, then report the section as not written.`)
+      const abs = resolveBatchDocPath(agent.cwd ?? process.cwd(), batchDoc)
+      const src = readFileSync(abs, "utf8")
+      const status = readBatchStatusLine(src)
+      if (status === "closed") {
+        throw new Error("batch_segment: 已收口档不回改 — the bound batch record's §1 status line contains 「已收口」, so the record is frozen: its body is never written to again (整档冻结；改 = 新批新档, ENGINEERING-MODE-V2-MODULE-BATCH-SEGMENT.md §2.1#2). Nothing was written. Report the section as not written.")
+      }
+      if (status === "unknown") {
+        throw new Error("batch_segment: 状态行不可解析或缺失 — the bound batch record has no §1 `**状态行**：` line whose value contains 已收口 or 进行中 (fail-closed: the write is refused as if frozen). Ask the record's creator to set the §1 status line, then call again. Nothing was written.")
       }
       if (typeof args?.text !== "string") {
         throw new Error("batch_segment: text must be a string (the markdown to append).")
@@ -205,7 +252,6 @@ export function batchSegmentTool(batchDoc = null, { review = false } = {}) {
       if (!body.trim()) {
         throw new Error("batch_segment: nothing to append — the text is empty after credential stripping (credential values never reach the record; ENGINEERING-MODE.md §2.7/§2.20.1).")
       }
-      const src = readFileSync(abs, "utf8")
       const { written, roundN } = insertIntoSection(src, seg, body)
       writeFileSync(abs, written)
       // #84（S1 续轮第二批——VSC 侧并入 ④）：记账面**按端注入**（缺省 no-op = CLI 语义

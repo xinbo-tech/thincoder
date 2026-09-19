@@ -59,7 +59,7 @@ test("T-SG2 错误：sync code run + 时间线 + timeout 尾（尾不在首行�
   const { agent, run } = mkAgent("code")
   await commit(agent, `Round 1 timeline text.\n\n${TAILS.timeout}`)
   assert.equal(agent._calledAdvisorThisRun, false, "截断评审不得计为已覆盖（F16 本体——guard 可重推）")
-  assert.equal(run.round, 1, "attempts 计数照旧（未完成尝试仍耗预算——cap 5 约束）")
+  assert.equal(run.round, 1, "attempts 计数照旧（未完成尝试仍使轮次进位——轮次仅作提示词衰减与显示，无机械上限）")
   assert.equal(agent._advisorRound, 1)
 })
 

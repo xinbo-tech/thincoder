@@ -1,9 +1,8 @@
 /**
  * release-check.mjs — 发版前一键检查（RELEASE.md §1 合并项——2026-09-05）。
- * 顺序：lint（check-syntax）→ 全量测试（test/run-full.mjs——slow 全放行）→ 集成集
- * （test/run-integration.mjs——业务验收场景——TESTING.md §4.3 发布门）。
+ * 顺序：lint（check-syntax）→ 全量测试（test/run.mjs——单元 + 集成 + slow 全跑）。
  * 痛点修复（0.12.59 发版实测——失败详情被管道过滤吞掉，为看错误跑 3 次全量）：
- * 两个测试步骤的输出都巨大（200K+）不全透传——只打印摘要行；失败时**自动提取并打印
+ * 测试步骤输出巨大（200K+）不全透传——只打印摘要行；失败时**自动提取并打印
  * failing tests 详情段**（✖ 行 + 每个失败错误块 ≤20 行）——迭代不再靠手工重定向。
  * exit code = 最后的失败状态（0 = 全绿可发版）。
  */
@@ -14,7 +13,7 @@ function run(script, args = [], opts = {}) {
   return spawnSync(process.execPath, [script, ...args], { encoding: "utf8", ...opts })
 }
 
-/** 失败详情段提取（全量/集成集两步共用——单源）：从 "failing tests:" 到输出尾。
+/** 失败详情段提取（单源）：从 "failing tests:" 到输出尾。
  *  无该标记（文件级装载失败等早退形态——node --test 未跑到汇总段）→ 回退打印输出尾
  *  40 行——详情永不静默丢（评审轮反哺）。 */
 function printFailingDetails(out) {
@@ -74,12 +73,8 @@ if (lint.status !== 0) {
 }
 console.log("✔ lint OK\n")
 
-// ── 2. 全量测试（slow 全放行——THINCODER_TEST_FULL 由 run-full 设置）──
-const fullStatus = runTestStep("test:full", "test/run-full.mjs", "（含 slow——全量输出捕获中——完成后打印摘要 + 失败详情）")
-if (fullStatus !== 0) process.exit(fullStatus)
-
-// ── 3. 集成集（业务验收面——TESTING.md §4.3：上线前检查必跑 ②+③）──
-const integStatus = runTestStep("test:integration", "test/run-integration.mjs", "（业务场景验收集——发布门第二道）")
-if (integStatus !== 0) process.exit(integStatus)
+// ── 2. 全量测试（单元 + 集成 + slow 全跑——M10 单一 `npm test` 门禁）──
+const testStatus = runTestStep("test", "test/run.mjs", "（单元 + 集成 + slow 全量输出捕获中——完成后打印摘要 + 失败详情）")
+if (testStatus !== 0) process.exit(testStatus)
 
 console.log("\n✅ release-check 全绿——可发版（bump → tag → push 双远端 → npm publish——RELEASE.md §2）")

@@ -142,6 +142,14 @@ export function accountLine(state, l) {
   l._budgetChars = next
 }
 
+/** 行移除负向出账（§5.5 记账口径——增删均须过账；不变式 `_linesChars === Σ lineChars`）：
+ *  `state._linesChars -= lineChars(l)`，钳 0。与 `accountLine` 不可互替——后者以行对象
+ *  `_budgetChars` 幂等（行从 `state.lines` 脱落后重调增量恒 0 ⇒ 账不降），移除需本导出。 */
+export function releaseLine(state, l) {
+  if (!l) return
+  state._linesChars = Math.max(0, (state._linesChars ?? 0) - lineChars(l))
+}
+
 /** 直算对账（双算法对照 / 初始化 / 漂移自愈——测试直算同源）。 */
 export function accountAll(state) {
   let total = 0

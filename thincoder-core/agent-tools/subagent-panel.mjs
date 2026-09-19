@@ -85,7 +85,7 @@ export function executePanelAction(args, ctx) {
   // ── freeze 面（优先——D-P2 单动作双参互斥）──
   if (freezeKey) {
     if ((ctx.depth ?? 0) > 0) {
-      return JSON.stringify({ status: "error", error: "panel freeze is only available at depth 0 — a child agent has no panel of its own (AGENT-LOOP.md §19.6 D-P2)" })
+      return JSON.stringify({ status: "error", error: "panel freeze is only available at depth 0 — a child agent has no panel of its own (AGENT-LOOP-SUBAGENT.md §6.7.2)" })
     }
     const gate = panelFreezeGate(ctx, freezeKey)
     if (gate.err) return JSON.stringify({ status: "error", error: gate.err })

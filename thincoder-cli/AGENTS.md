@@ -18,7 +18,8 @@ LLMs via OpenAI-compatible protocol, flagship models from DeepSeek / Kimi / GLM 
 - **Zero npm runtime dependencies**: only `node:` standard library (storage via `node:sqlite`, TUI via bare ANSI). For new features, first ask whether the standard library can do it; if not, raise for discussion.
 - No TypeScript, no build/bundling step.
 - Every change must be verified by running it — no "written but never run" code.
-- **镜像提示词约定（本产品双源——2026-09-13 修订）**：本产品提示词 = **产品内双源**：`docs/design/prompts/*.md`（中文权威模板——内容权威 / 内容维护位）↔ `src/prompts/*.md`（运行期落地物——加载与发布面）。变更流 = 改中文模板 → 内容把关 → 落地回填（手抄 / 译写——无同步脚本）；双源语义同源、原文自持——落地质量由内容把关 + 设计评审守（非机械比对）。
+- **提示词双面（2026-09-17 消端差收正）**：本产品提示词 = `docs/design/prompts/*.md`（**中文审核面**——内容权威）→ 翻译生成 `src/prompts/*.md`（**英文运行面**——国外模型运行用；生成 = 翻译，不是 cp）。提示词面**无端差注入锚**（已全消——正文自足、文档地图统一 `docs/README.md`）；仅工具面 2 锚（bash/question 端差异）保留至工具面 review。
+- **改动面反查（工程工具约定）**：实施轮开工前跑本仓反查脚本 `scripts/doc-impact.mjs`（文档影响面；基准 = 上一批收口点）——其输出的设计/需求档建议一并录入本批「受影响文件」表。
 
 ## Key Conventions
 

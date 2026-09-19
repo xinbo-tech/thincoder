@@ -29,6 +29,8 @@ import {
 // 第 27 批 §12.3②：前缀正则换名 + import 源改文法模块（纯换名——语义零改）。
 import { RELAY_PREFIX_RE } from "@thincoder/core/agent/relay-prefix.mjs"
 import { TURN_CAP_MARK, STOPPED_MARK } from "@thincoder/core/agent/spawn-child.mjs"
+// 批 1 CORE-DEFECT-FIXES B3：onWait 相位值域 + 文案单源（消费面禁各自枚举——PROVIDER.md §6.20）
+import { waitStatusText } from "@thincoder/core/provider/wait-status.mjs"
 // 2026-09-05 module-split：ticks/maps/sweep/slim/settle/探测/find 族迁 tool-display.mjs——
 // buildToolCallbacks 内部引用用本地 import；sweepToolBlocks re-export（agent-turn 消费面）
 import {
@@ -402,11 +404,12 @@ export function buildToolCallbacks(deps) {
       state.tokens.cacheMiss += usage.prompt_cache_miss_tokens ?? 0
       state.tokens.reasoningTokens += usage.completion_tokens_details?.reasoning_tokens ?? 0
     },
-    // Throttle wait (active gate / 429 backoff): show in status bar so user knows it's not frozen
-    onWait: ({ phase, seconds }) => {
-      if (phase === "gate") state.status = `TPM throttle wait ~${seconds}s`
-      else if (phase === "overloaded") state.status = `Server overloaded, retrying in ${seconds}s`
-      else state.status = `Rate-limited 429, retry in ${seconds}s`
+    // Throttle wait (active gate / 429 backoff): show in status bar so user knows it's not frozen.
+    // 相位值域/文案取自核单源（wait-status.mjs）——未知相位与 warn 前置告警不显示（不落兜底误标）。
+    onWait: (ev) => {
+      const s = waitStatusText(ev)
+      if (!s) return
+      state.status = s
       render()
     },
     onTaskUpdate: (items) => {

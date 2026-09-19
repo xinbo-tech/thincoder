@@ -9,7 +9,7 @@
 import test from "node:test"
 import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
-import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs"
+import { mkdirSync,  mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir, homedir } from "node:os"
 import { join } from "node:path"
 import { expandHome } from "@thincoder/core/expand-home.mjs"
@@ -61,6 +61,7 @@ test("T-MA2-4 null / undefined / number / object / array / boolean → 原样透
 
 slow("T-MA2-5 setup 读取段：`shell: '~/x'` → agent.config.shell = join(homedir(), 'x')；null → null；磁盘原文保留", async () => {
   const dir = mkdtempSync(join(tmpdir(), "expand-home-"))
+  mkdirSync(join(dir, ".git"), { recursive: true }) // 项目根判据（.git 仓根——2026-09-17）
   const sessionsDir = mkdtempSync(join(tmpdir(), "expand-home-s-"))
   const cfgPath = join(dir, "config.json")
   _setConfigPathForTest(cfgPath)

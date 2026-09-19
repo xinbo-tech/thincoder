@@ -6,6 +6,8 @@
  * settings-models.js, and shared mutable state in settings-state.js (SS).
  */
 import { SS } from "./settings-state.js"
+import { t } from "./i18n.js"
+import { showConfirmPopover, closeConfirmPopover } from "./settings-widgets.js"
 import { installProviderHandlers, providersCardHtml, bindAddProviderForm, updateProviderStatus, updateTestProviderResult } from "./settings-providers.js"
 import { agentCardHtml, consultAdvisorCardHtml, bindAgentControls, updateAgentSettings } from "./settings-agent.js"
 import { installToolsKeyHandlers, toolsCardHtml, bindToolsControls, renderMcpList, updateMcpTools, updateMcpTestResult, updateWebsearchSettings, updateIndexStatus } from "./settings-tools.js"
@@ -37,8 +39,20 @@ export function initSettings({ onClose, getModels }) {
   // Request detected shells once (extension caches the detection — CLI /shell parity)
   window._vscode.postMessage({ type: "getShellCandidates" })
 
-  // Single-click delete — these actions are reversible (provider/MCP/key can be re-added).
+  // Single-click delete — the re-fillable class only (provider rows — SETTINGS.md §2.10 ruling exception).
   window._confirmDelete = function(btn, action) { action() }
+  // Unrecoverable class (credential originals vanish with the entry — keys / tokens / headers /
+  // MCP server rows; the rows show no original (only the edit form's fields do), so it can only
+  // be reconfigured or re-issued): one explicit confirmation (F-W17 — class criterion = SETTINGS.md §2.10).
+  // btn is kept for call-site symmetry with _confirmDelete; the popover is centered, not anchored.
+  window._confirmSecretDelete = function(btn, action) {
+    showConfirmPopover({
+      text: t("settings.secretDeleteConfirm"),
+      yesLabel: t("session.delete"),
+      noLabel: t("question.cancel"),
+      onConfirm: action,
+    })
+  }
 
   return { openSettings, closeSettings, renderMcpList, updateMcpTools, updateMcpTestResult, updateProviderStatus, updateIndexStatus, updateAgentSettings, notifyAgentSettingsRefreshed, updateWebsearchSettings, updateTestProviderResult, updateShellCandidates, updateProxySettings, updateProxyTestResult, showSettingsError }
 }
@@ -103,6 +117,7 @@ function closeSettings() {
   const panel = document.getElementById("settings-panel")
   panel.style.display = "none"
   panel.setAttribute("aria-hidden", "true")
+  closeConfirmPopover() // 取消路径 #4：关面板同清确认弹框 + 遮罩（零发值）
   // inputEl.focus() — caller should handle this via the returned closeSettings
 }
 

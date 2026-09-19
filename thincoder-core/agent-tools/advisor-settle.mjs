@@ -14,18 +14,21 @@
  *    `reviewIsStale` 同族（同 docAbs / 同 normAbs）、仅扫 running 且未取消的设计条目
  *    （dispatch Phase-1 预闸消费）。
  *
- * 第 33 批（2026-09-11——评审失败护栏 §17.5）：`normAbs` 本体迁 `review-streak.mjs`
- * （原处 re-export 保面）+ design 结算计数接线（分类单源 `designReviewOutcome` →
- * `noteDesignReviewOutcome`，三出口）——记账本体 / 陈旧判定 / 轮次 / token 落盘零改。
+ * 第 33 批（2026-09-11——评审失败护栏 §17.5）：`normAbs` 本体迁 `review-facts.mjs`
+ * （原处 re-export 保面）；**2026-09-18 顾问面治理批**：计数落账（`designReviewOutcome` →
+ * `noteDesignReviewOutcome`）随会话级计数器整体退场——改治**失败结论**：结算出口按
+ * `settlementCriterion`（纯函数单源，`advisor/notice.mjs`）追加结论块（**两轨共用**——
+ * ADVISOR-GUARDS.md §7）。记账本体 / 陈旧判定 / 轮次 / token 落盘零改。
  */
 import { persistEngTokens } from "../token-ttl.mjs"
 import { settleDesignReview, makeDesignTokenRegex, stripApprovedSuffix } from "./design-token.mjs"
 import { looksLikeReviewOutput, advisorIncompleteMarker, ADVISOR_LAUNCH_REFUSAL_PREFIX } from "../advisor/run.mjs"
 import { isCodePath, loadConventions } from "../conventions.mjs"
 import { logEvent } from "../log.mjs"
-// 第 33 批（§17.5）：`normAbs` 迁 `review-streak.mjs`（中立模块——护栏与陈旧判定共用同一归一）
-// + 结算分类 / 计数落账（异步结算计数点）。
-import { normAbs, designReviewOutcome, noteDesignReviewOutcome } from "./review-streak.mjs"
+// 第 33 批（§17.5）：`normAbs` 迁 `review-facts.mjs`（中立模块——陈旧判定与事实面共用同一归一）；
+// 2026-09-18：结算分类 / 结论文案单源迁 `advisor/notice.mjs`（纯函数、零状态、零计数载体）。
+import { normAbs } from "./review-facts.mjs"
+import { settlementCriterion, buildSettlementConclusion, scopeSummary } from "../advisor/notice.mjs"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mutation log (stale-review determination — fix #2: FILE_MUTATORS after the
@@ -48,9 +51,9 @@ export function noteMutations(agent, paths) {
   if (log.length > 200) log.splice(0, log.length - 200)
 }
 
-// 第 33 批（§17.5）：`normAbs` 本体迁 `review-streak.mjs`；原处 re-export 保既有 import 面
+// 第 33 批（§17.5）：`normAbs` 本体迁 `review-facts.mjs`；原处 re-export 保既有 import 面
 // （advisor-async / 测试）零变。
-export { normAbs } from "./review-streak.mjs"
+export { normAbs } from "./review-facts.mjs"
 
 /** Stale = a mutation committed after the launch touched the review's face:
  *  code reviews judge the CODE face; design reviews judge their OWN documents. */
@@ -118,9 +121,9 @@ export function inflightDesignReviewConflict(agent, absPaths) {
  * 第 11 批增补（A/F11）：`incomplete` = 宿主尾族判定（单谓词）——design 结算未完成即不
  * 签发（`settleDesignReview` 的 `opts.incomplete`）；code 完成守卫的失败判定改用同谓词
  * （六形态语义零丢——旧 `^` 锚正则退役）。
- * 第 33 批增补（§17.5 计数点 1）：design 结算按分类单源（`designReviewOutcome`）落账到
- * 会话级护栏 `agent._designReviewStreaks`（三出口：非陈旧 / 陈旧 / 无报告）——cancel 早退
- * 与无实例路径不计（neutral 语义 = 无尝试发生）。
+ * 第 33 批增补（§17.5）：design 结算按分类单源落账到会话级护栏——**2026-09-18 撤**（零载体）。
+ * 现行：结算出口按判据名单源（`settlementCriterion`）追加失败结论块（两轨共用；F28/F29）——
+ * 判据名非空 ⇒ 块在位（块首行 = 对象标识行）；可用判决 / 中断 / 拒发 ⇒ 零噪声（无块）。
  * Cancelled / parent-aborted reviews consume nothing (the user dropped the
  * attempt — the retry must not lose budget).
  * @returns {{cancelled: boolean, stale: boolean, passed: boolean, report: string|null}}
@@ -213,19 +216,25 @@ export function settleAdvisorRun(agent, entry) {
       .trim()
     report = `评审目标已变更——token 未签发 (review target changed after launch — this review judged a stale state; no design token was issued — re-run the review on the current state)\n\n${stripped}`.trim()
   }
-  // 第 33 批（§17.5 计数点 1——异步结算）：design 三出口（非陈旧 / 陈旧 / design 无报告）统一
-  // 按分类单源落账——count/stale/no_credential/no_report 增计数，可用判决复位，取消 / 中断 /
-  // 拒发 neutral（分类表见 §17.3）。cancel 早退 / 无实例在函数头已返回（不计）。
-  if (run.reviewType === "design") {
-    noteDesignReviewOutcome(agent, run.docSetKey, designReviewOutcome({
-      launchRefused, stale, hasResult: result != null, incomplete, persistFailed,
-    }))
-  }
   // Prior of round 2+ = the last REVIEW-LOOKING output (mirror of run.mjs's guard).
   // F2e (§29.1): strip the engine-approved suffix FIRST — the prior must never
   // carry the raw token / designId (exact truncation — zero collateral).
+  // 结论块（下方）刻意晚于 prior 归一：prior 只承载评审正文，不携带机制文案。
   if (report && looksLikeReviewOutput(report)) {
     run.priorOutput = stripApprovedSuffix(report, run.approvedSuffix)
+  }
+  // F28/F29 失败结论（2026-09-18 顾问面治理批——**两轨共用**，ADVISOR-GUARDS.md §7 契约二）：
+  // 判据名非空 ⇒ 结算出口追加结论块（块首行 = 对象标识行 + 既有正文逐字 + 本次尝试单行 +
+  // 选项三值）。**零会话级计数载体 / 零封禁**——下一次发起照常受理（cap / 连败停止预检已撤除）。
+  const criterion = settlementCriterion({ launchRefused, stale, hasResult: result != null, incomplete, persistFailed })
+  if (criterion) {
+    report = buildSettlementConclusion({
+      type: run.reviewType,
+      scope: scopeSummary(entry.documents?.length ? entry.documents : entry.paths),
+      round: run.round,
+      criterion,
+      body: report,
+    })
   }
   return { cancelled: false, stale, passed, report }
 }

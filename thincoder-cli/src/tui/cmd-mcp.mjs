@@ -2,7 +2,7 @@ import { ansi, C } from "./ansi.mjs"
 import { cloneEntry, fieldPicker, maskToken } from "./cmd-mcp-form.mjs"
 
 /** /mcp command handler: view/add/edit/remove/test/reconnect MCP server.
- *  ctx: { agent, pushLine, pushLabel, showPicker, askQuestion, persistRaw, ansi, C }
+ *  ctx: { agent, pushLine, pushLabel, showPicker, askQuestion, persistRaw, ansi, C, confirmDelete }
  *  MCP.md §5（2026-09-02，v2）：列表即菜单（F7/D-2）、edit/add 统一字段 picker 表单
  *  （F3/F3b/D-1——表单机制在 cmd-mcp-form.mjs，本文件只调 fieldPicker）、保存前预览
  *  +探活（F2：探活失败回同一 fieldPicker——AC2）、AI 降 transport picker 末位（F4）、
@@ -50,7 +50,7 @@ async function addAndConnect(ctx, srv) {
 }
 
 export async function handleMcpCommand(ctx, args = []) {
-  const { agent, pushLine, pushLabel, showPicker, askQuestion, persistRaw } = ctx
+  const { agent, pushLine, pushLabel, showPicker, askQuestion, persistRaw, confirmDelete = () => { throw new Error("ctx.confirmDelete missing — deletion refused (fail-closed)") } } = ctx
   // 每轮重读：原本无 mcp 配置时 `?? []` 会拿到游离数组，Add server 后快照过期
   const getServers = () => agent.config?.mcp?.servers ?? []
   // D-3/T24：本菜单会话内最新一次磁盘重读是否失败（畸形 config.json → 内存态兜底）
@@ -85,6 +85,7 @@ export async function handleMcpCommand(ctx, args = []) {
     // D-F5a（#7）先盘后存：磁盘 fresh raw.mcp.servers 上只删目标条目——不整节写回内存
     // agent.config.mcp.servers（内存含 reloadMcpFromDisk 的 keptConnected 尾巴——
     // 整节写回会把对端磁盘上其他 server 的新改动一起抹掉）；冲突放弃不留内存 ghost
+    if (!(await confirmDelete(`Remove MCP server "${name}"?`))) return
     await persistRaw((raw) => {
       raw.mcp ??= { servers: [] }
       if (!Array.isArray(raw.mcp.servers)) return

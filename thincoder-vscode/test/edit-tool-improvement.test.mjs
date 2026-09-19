@@ -18,6 +18,9 @@ import assert from "node:assert/strict"
 // W13（2026-09-15 · 快层 slow 门 D-T6 收口）：AC2/stage2 变体例 = 真 fs fixture × 4 变体——
 // 并行快层负载下实测 >500ms（独立跑 ~360ms）⇒ 按「重 IO 用例归册」入慢层（快层 skip；
 // test:full 照跑——不删用例）。
+// D-1（VSC-DEBT 批 7 · 2026-09-15 · 判据见 docs/vsc/design/VSC-DEBT.md §3.1——读数入批次档 §5）：
+// 本档 fs fixture 族在并行快层下 10–20× 膨胀（同例单跑 4–300ms / 满载 0.8–2.9s）；
+// 连续两跑满载 >800ms 者按「复跑复核仍超 ⇒ 归册」入慢层（首跑点名 + 复跑回落者 = 负载假红，保持裸 test）。
 import { slow } from "./slow.mjs"
 import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -38,7 +41,7 @@ function fixture(name, content) {
 const read = (name) => readFileSync(join(dir, name), "utf8")
 
 // AC1 — 正常按行号改：edit(path, line, new_string) → 该行被替换（不用 old_string）
-test("AC1: edit by line number replaces that line", async () => {
+slow("AC1: edit by line number replaces that line", async () => {
   fixture("a.txt", "one\ntwo\nthree\n")
   const r = await editTool.execute({ path: "a.txt", line: 2, new_string: "TWO" }, ctx)
   assert.match(r, /^Edited a\.txt: replaced 1 occurrence\(s\)/)
@@ -46,7 +49,7 @@ test("AC1: edit by line number replaces that line", async () => {
 })
 
 // AC1 — 正常行范围改：startLine/endLine 闭区间替换
-test("AC1: edit by line range replaces the inclusive range", async () => {
+slow("AC1: edit by line range replaces the inclusive range", async () => {  // 单跑 1197.2ms（2026-09-16 父侧核验实测）
   fixture("a.txt", "one\ntwo\nthree\nfour\nfive\n")
   const r = await editTool.execute({ path: "a.txt", startLine: 2, endLine: 4, new_string: "X\nY" }, ctx)
   assert.match(r, /^Edited a\.txt: replaced 1 occurrence\(s\)/)
@@ -54,7 +57,8 @@ test("AC1: edit by line range replaces the inclusive range", async () => {
 })
 
 // 阶段2 删行形态（EDIT.md §8.1）——省略 new_string = 删单行（有界意图；8.1 空串 vs 省略矩阵）
-test("AC1/stage2: omitted new_string with line deletes the line", async () => {
+// D-1（VSC-DEBT 批 7 · 单跑读数 768.9 ms）
+slow("AC1/stage2: omitted new_string with line deletes the line", async () => {
   fixture("a.txt", "one\ntwo\nthree\n")
   const r = await editTool.execute({ path: "a.txt", line: 2 }, ctx)
   assert.match(r, /^Deleted line 2 of a\.txt/)
@@ -62,7 +66,7 @@ test("AC1/stage2: omitted new_string with line deletes the line", async () => {
 })
 
 // 阶段2 — 省略 new_string + startLine/endLine = 删范围（闭区间）
-test("AC1/stage2: omitted new_string with line range deletes the range", async () => {
+slow("AC1/stage2: omitted new_string with line range deletes the range", async () => {
   fixture("a.txt", "one\ntwo\nthree\nfour\n")
   const r = await editTool.execute({ path: "a.txt", startLine: 2, endLine: 3 }, ctx)
   assert.match(r, /^Deleted lines 2-3 of a\.txt/)
@@ -90,7 +94,7 @@ test("AC1: line + old_string is an explicit mutex error", async () => {
 })
 
 // 修正轮（评审 #2 🟡）：replace_all 守卫真值化——true + line 仍拒；false/缺省 + line 放行（与批量/CLI 对齐）
-test("AC1: replace_all:true with line is rejected, false/omitted is allowed", async () => {
+slow("AC1: replace_all:true with line is rejected, false/omitted is allowed", async () => {
   fixture("a.txt", "one\ntwo\n")
   await assert.rejects(
     () => editTool.execute({ path: "a.txt", line: 1, new_string: "ONE", replace_all: true }, ctx),
@@ -121,7 +125,7 @@ test("AC1/stage2: out-of-range delete is an explicit error", async () => {
 })
 
 // AC2 — 正常模糊匹配：old_string 与文件有细微差异（缩进/引号/行尾空格）→ 匹配成功
-test("AC2: fuzzy match tolerates whitespace/quote differences", async () => {
+slow("AC2: fuzzy match tolerates whitespace/quote differences", async () => {
   fixture("a.js", 'const a = 1\n\tconst x = “hello”   \nconst b = 2\n')
   const r = await editTool.execute({ path: "a.js", old_string: 'const x = "hello"', new_string: 'const x = "world"' }, ctx)
   assert.match(r, /replaced 1 occurrence\(s\).*fuzzy match/)
@@ -185,7 +189,7 @@ test("AC3: zero-overlap patch replaces and deletes old lines", () => {
 })
 
 // AC3 — 替换即删（工具层）：多行 old_string 零重叠替换后旧行从文件消失
-test("AC3: multi-line zero-overlap edit deletes the old lines", async () => {
+slow("AC3: multi-line zero-overlap edit deletes the old lines", async () => {
   fixture("a.txt", "head\nold-one\nold-two\ntail\n")
   const r = await editTool.execute({ path: "a.txt", old_string: "old-one\nold-two", new_string: "new-one" }, ctx)
   assert.match(r, /replaced 1 occurrence\(s\)/)
@@ -193,7 +197,9 @@ test("AC3: multi-line zero-overlap edit deletes the old lines", async () => {
 })
 
 // AC4 — 向后兼容：现有精确匹配保持可用（单行就地替换）
-test("AC4: exact single-line replace keeps working", async () => {
+// D-1（VSC-DEBT 批 7 · 复核路径）：单跑 62.4 ms ≤500（裸 test 期）；满载两连跑 H/I 均 >800 ms
+// （928.3 / 814.1 ms）⇒ 复跑仍超 800 ⇒ 判为 IO 慢例归册（判据见 docs/vsc/design/VSC-DEBT.md §3.1）。
+slow("AC4: exact single-line replace keeps working", async () => {
   fixture("a.txt", "one\ntwo\nthree\n")
   const r = await editTool.execute({ path: "a.txt", old_string: "two", new_string: "TWO" }, ctx)
   assert.match(r, /replaced 1 occurrence\(s\)/)
@@ -201,7 +207,9 @@ test("AC4: exact single-line replace keeps working", async () => {
 })
 
 // AC4 — 向后兼容：带共享上下文行的多行 LCS 替换保持可用
-test("AC4: multi-line edit with shared context keeps LCS semantics", async () => {
+// D-1（VSC-DEBT 批 7 · 复核路径）：单跑 60.0 ms ≤500（裸 test 期）；满载两连跑 H/I 均 >800 ms
+// （912.2 / 1029.2 ms）⇒ 复跑仍超 800 ⇒ 判为 IO 慢例归册（判据见 docs/vsc/design/VSC-DEBT.md §3.1）。
+slow("AC4: multi-line edit with shared context keeps LCS semantics", async () => {
   fixture("a.txt", "start\nmiddle\nend\n")
   const r = await editTool.execute({ path: "a.txt", old_string: "start\nmiddle", new_string: "start\nMIDDLE\nextra" }, ctx)
   assert.match(r, /replaced 1 occurrence\(s\)/)
@@ -209,7 +217,7 @@ test("AC4: multi-line edit with shared context keeps LCS semantics", async () =>
 })
 
 // AC4 — 向后兼容：replace_all 字面替换保持可用
-test("AC4: replace_all literal swap keeps working", async () => {
+slow("AC4: replace_all literal swap keeps working", async () => {
   fixture("a.txt", "foo x\nbar\nfoo y\n")
   const r = await editTool.execute({ path: "a.txt", old_string: "foo", new_string: "baz", replace_all: true }, ctx)
   assert.match(r, /replaced 2 occurrence\(s\)/)
@@ -219,7 +227,7 @@ test("AC4: replace_all literal swap keeps working", async () => {
 // ---- 阶段2 批量行号补（EDIT.md §8.4——批量条目级行号 + 删行形态） --------------
 
 // 批量条目行号替换：edits 条目带 line（内容条目混用）——串行累积、原子、回显按条
-test("stage2 batch: line-numbered entry replaces via edits array", async () => {
+slow("stage2 batch: line-numbered entry replaces via edits array", async () => {
   fixture("a.txt", "one\ntwo\nthree\nfour\n")
   const r = await editTool.execute({ path: "a.txt", edits: [
     { line: 2, new_string: "TWO" },
@@ -231,7 +239,7 @@ test("stage2 batch: line-numbered entry replaces via edits array", async () => {
 })
 
 // 批量条目删行（EDIT.md §8.1 + 8.4）：条目含行号 + 省略 new_string = 删行（与顶层同语义）
-test("stage2 batch: line entry without new_string deletes the line", async () => {
+slow("stage2 batch: line entry without new_string deletes the line", async () => {
   fixture("a.txt", "one\ntwo\nthree\n")
   const r = await editTool.execute({ path: "a.txt", edits: [
     { line: 2 },
@@ -243,7 +251,7 @@ test("stage2 batch: line entry without new_string deletes the line", async () =>
 })
 
 // 批量条目删范围：startLine/endLine + 省略 new_string = 删范围
-test("stage2 batch: range entry without new_string deletes the range", async () => {
+slow("stage2 batch: range entry without new_string deletes the range", async () => {  // 单跑 567.7ms（2026-09-16 父侧核验实测 > 500ms 归册线）
   fixture("a.txt", "one\ntwo\nthree\nfour\nfive\n")
   const r = await editTool.execute({ path: "a.txt", edits: [{ startLine: 2, endLine: 4 }] }, ctx)
   assert.match(r, /Deleted lines 2-4 of a\.txt/)
@@ -271,7 +279,7 @@ test("stage2 batch: out-of-range delete entry errors atomically", async () => {
 })
 
 // 批量混用行号 + 内容条目端到端（串行累积 + 模糊命中条目——8.4 与 CLI 对齐）
-test("stage2 batch: line entries + fuzzy content entry end-to-end", async () => {
+slow("stage2 batch: line entries + fuzzy content entry end-to-end", async () => {
   fixture("a.txt", "one\ntwo\nconst x = “a”\n")
   const r = await editTool.execute({ path: "a.txt", edits: [
     { line: 1, new_string: "ONE" },
@@ -295,7 +303,10 @@ test("stage2 batch: content entry empty new_string stays an error", async () => 
 })
 
 // 顶层 path + 批量：条目缺 path 时默认顶层 path（互斥语义不变——edits 与顶层形态互斥）
-test("AC4: edits array still works with a top-level path default", async () => {
+// D-1（VSC-DEBT 批 7 · 复核路径）：单跑 129.8 ms ≤500（裸 test 期）；满载多跑点名（A 1671.0 / D 1170.3 /
+// G 越线 / I 1590.4 / J 1310.9 ms）；复跑 H 曾回落（负载假红），I 再点名后复跑 J 仍 1310.9 >800
+// ⇒ 判为 IO 慢例归册（判据见 docs/vsc/design/VSC-DEBT.md §3.1）。
+slow("AC4: edits array still works with a top-level path default", async () => {
   fixture("a.txt", "one\ntwo\n")
   const r = await editTool.execute({ path: "a.txt", edits: [
     { old_string: "one", new_string: "ONE" },

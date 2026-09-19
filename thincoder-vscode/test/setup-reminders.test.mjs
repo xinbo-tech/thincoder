@@ -23,7 +23,7 @@
 import { test, beforeEach, afterEach } from "node:test"
 import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdirSync, mkdtempSync, rmSync, existsSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -38,13 +38,23 @@ let cwd
 beforeEach(() => {
   sessionsDir = mkdtempSync(join(tmpdir(), "setup-rem-"))
   cwd = join(sessionsDir, "project")
+  // M1-manifest 钩子前置：hydrateRun 缺档初始化写 cwd 根 PROJECT-MANIFEST.json——
+  // manifest 模块不建目录（设计 §1.4），夹具需先建 cwd 目录。
+  mkdirSync(cwd, { recursive: true })
+  mkdirSync(join(cwd, ".git"), { recursive: true }) // 项目根判据（.git 仓根——2026-09-17）
+  // git 隔离：预填失败冷却（评审 #2 正向锁 seam）——hydrateRun 的 git 注入零 spawn。
+  // 本档用例面 = 恢复事件/注入句，非 git；真 git 行为由下方 slow() 冷却用例锁。
+  _gitFailureCooldownForTests(cwd, Date.now())
   _setSessionsDirForTest(sessionsDir)
   // 模块级重启闸每用例复位——进程内首回合语义逐用例独立（生产从不调用——测试专用 seam）
   _resetRestartDetectionForTests()
 })
-afterEach(() => {
+afterEach(async () => {
   _resetSessionsDirForTest()
-  rmSync(sessionsDir, { recursive: true, force: true })
+  _clearGitFailureCooldownForTests(cwd) // 清理 Map 条目（每用例 cwd 独立）
+  // rmGitCwdDir 保留作 Windows 句柄滞后兑底（manifest 写 + AV 扫描窗口）；
+  // git 已零 spawn（预填冷却）——EPERM 主源已除。
+  await rmGitCwdDir(sessionsDir)
 })
 
 const envOf = (hist) => {
@@ -60,7 +70,7 @@ const restartCount = (hist) => hist.filter((m) =>
 ).length
 
 /** Windows 实测：git 子进程退出后其 cwd 目录句柄释放滞后 close 事件 ~300ms——rmSync 偶发
- *  EPERM（rmSync maxRetries 不覆盖此窗）——短重试兜底（GIT-ASYNC 冷却测试专用）。 */
+ *  EPERM（rmSync maxRetries 不覆盖此窗）——短重试兜底（GIT-ASYNC 冷却测试 + 本档 afterEach 共用）。 */
 async function rmGitCwdDir(dir) {
   for (let attempt = 0; ; attempt++) {
     try {
@@ -174,6 +184,24 @@ test("hydrateRun: env 行 slot 透传 engPersist.slot；无绑定（直连）→
   // 直连/非面板顶层 run（无 engPersist 绑定）→ slot: null（不读 manifest active——N3）
   const r2 = await hydrateRun(buildTopLevelAgent(), { ...optsFor(), opts: { fullHistory: hist } })
   assert.match(envOf(r2.history), /slot: null,/)
+})
+
+// ─── 装配钩子模式门（#30——本批）：normal 零 manifest I/O + 翻转清陈旧 ───
+
+test("hydrateRun: normal 模式（engState 钉 false）零 manifest I/O——不建档 + 清残留附着", async () => {
+  const manifestPath = join(cwd, "PROJECT-MANIFEST.json")
+  // ① normal（模式显式钉死——不得依赖本机 config.json agent.engineering；三级优先见 agent-state.mjs:88-91）
+  const r1 = await hydrateRun(buildTopLevelAgent(), optsFor({ engState: { enabled: false } }))
+  assert.equal(r1.agent.manifest, null, "普通会话不附着（agent.manifest === null）")
+  assert.equal(existsSync(manifestPath), false, "不建档（装配钩子零 manifest I/O）")
+  // ② 工程模式（同 fixture：仓内 + 缺档 → 建档 + 附着——门开面不回归）
+  const r2 = await hydrateRun(buildTopLevelAgent(), optsFor({ engState: { enabled: true } }))
+  assert.ok(r2.agent.manifest, "工程模式：附着（KD-M1-12 四态同今日）")
+  const bytes = readFileSync(manifestPath, "utf8")
+  // ③ 翻转回普通（复用 agent）：清残留附着 + 零写（档未被改）
+  const r3 = await hydrateRun(r2.agent, optsFor({ engState: { enabled: false } }, { restore: false }))
+  assert.equal(r3.agent.manifest, null, "翻转清陈旧（清残留附着——KD-M1-12）")
+  assert.equal(readFileSync(manifestPath, "utf8"), bytes, "普通回合零写（档未被改）")
 })
 
 // ─── 注入句解耦（N6/AC4——模块级闸保留为 process restarted 句专用）───

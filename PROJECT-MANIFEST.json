@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "phase": "initial-dev",
+  "docRoot": {
+    "requirements": [
+      "docs/core/requirements",
+      "docs/cli/requirements",
+      "docs/vsc/requirements"
+    ],
+    "specs": "docs/core/requirements",
+    "design": [
+      "docs/core/design",
+      "docs/cli/design",
+      "docs/vsc/design"
+    ],
+    "modules": "docs/core/design/modules",
+    "batches": "docs/batches"
+  },
+  "promptsLanding": "thincoder-core/prompts",
+  "checkConfig": {
+    "scanDirs": [
+      "docs"
+    ],
+    "lineWidth": 300,
+    "anchors": {
+      "domain": "docs",
+      "exclude": [
+        "_archive",
+        "batches"
+      ]
+    },
+    "exemptions": []
+  }
+}

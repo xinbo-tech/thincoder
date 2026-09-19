@@ -116,3 +116,32 @@ export function applySlotSessionState(agent, { slot, engState, planModeOverride 
   }
   return { engineering, droppedExpired: rt.droppedExpired }
 }
+
+/**
+ * §3.3（#45——`docs/vsc/design/WEBVIEW-PROTOCOL.md`）工具驱动的模式 / 参数变更 → **端显示同步**
+ * cell（纯函数、零 IO——单测锚点）：触发面 = 工具批后（`src/agent.mjs` 载体镜像回填块尾）。
+ * 判据两条（**读后复位**——快照重推幂等）：
+ *  ① **模式腿** —— `agent.config?.agent?.engineering` 与 `agent._engShown`（**已展示基线**
+ *     布尔；`hydrateRun` 按槽应用处置值——非 `undefined` / `null`）不等；触发 ⇒ 基线更新 +
+ *     `callbacks.onEngMode(新值)`。
+ *  ② **参数腿** —— `agent._settingsTouched`（端侧 settings 工具包装 `execute` 返回处置位；
+ *     不做「成功」判定）为 true；触发 ⇒ 位复位 + `callbacks.onSettingsChanged()`。
+ * 深度 > 0 子代理：其 `callbacks` 无该两键 ⇒ `?.` 调用恒 no-op（零注入、零推送）。
+ * @param {object} agent 顶层 agent（读 `config.agent.engineering` / 写两状态位）
+ * @param {object} [callbacks] runAgent 回调面（单 sink = 面板 `_pushSettingsLight()`）
+ * @returns {{eng:boolean, settings:boolean}} 本批实际触发的两路（测试直驱面）
+ */
+export function syncToolDrivenDisplayState(agent, callbacks) {
+  const engNow = agent?.config?.agent?.engineering === true
+  const eng = engNow !== agent._engShown
+  if (eng) {
+    agent._engShown = engNow
+    callbacks?.onEngMode?.(engNow)
+  }
+  const settings = agent?._settingsTouched === true
+  if (settings) {
+    agent._settingsTouched = false
+    callbacks?.onSettingsChanged?.()
+  }
+  return { eng, settings }
+}

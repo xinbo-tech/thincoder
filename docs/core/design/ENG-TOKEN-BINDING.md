@@ -1,7 +1,8 @@
 # designToken 硬化与生命周期（ENG-TOKEN-BINDING）· 工程模式凭证链板块
 
-> 板块 = **工程模式凭证链（token 生命周期）**——token 是什么 · TTL 与格式 · 跨模式存活 · 清理时机。
-> 相邻权威 = `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md`（结算 / 持久化 / 回读 / 消费——本档**不重述**，D2）· `docs/core/design/CONSULTATION.md`（评审引擎）· `docs/core/design/ENGINEERING-MODE.md`（工程模式流程，CLI 树**未迁**）。
+> 板块 = **工程模式凭证链（token 生命周期 + 写权门禁）**——token 是什么 · TTL 与格式 · 跨模式存活 · 清理时机 · **写权机械门（token 门 + D5 冻结窗口 + docRoot 声明面）**。
+> **v2 就地更新**（2026-09-17 退役批）：M4 模块设计语义融入（写权门禁——见 §9；原旁路档 `_archive/modules/ENGINEERING-MODE-V2-MODULE-WRITE-GATE.md` 已归档 `_archive/modules/`——§12 映射核正：WRITE.md 为 write 工具语义档，写权门禁归本档）。
+> 相邻权威 = `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md`（结算 / 持久化 / 回读 / 消费——本档**不重述**，D2）· `docs/core/design/CONSULTATION.md`（评审引擎）· `thincoder-cli/docs/_archive/design/ENGINEERING-MODE.md`（工程模式流程，CLI 树**未迁**）。
 > 需求侧 = `docs/core/requirements/ENG-TOKEN-BINDING.md`（批 5 建档——源 = VSC 树需求档）；CLI 树需求档 `thincoder-cli/docs/requirements/ENG-TOKEN-BINDING.md` **未迁**（后续批）。
 > 建档：2026-09-15（**B 式迁移轮 · 第 3 批**——`thincoder-cli/docs/design/ENG-TOKEN-BINDING.md` 内容重建入基准层；旧档原地一字不改、留作参照历史；**旧档 §4/§5 口径陈旧 ⇒ 按现状收正**——见 §8.1）。
 > 本档坐标 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
@@ -81,7 +82,7 @@ R16 语义（跨模式存活 + 三清时机 + 单一权威）**已全部落地**
 
 ### 6.3 VSC 端接线（B 式并入 · 实核 as-of 2026-09-15）
 
-> 来源 = `thincoder-vscode/docs/design/ENG-TOKEN-BINDING-TUNING.md`（VSC 产品档——旧档一字未改、留参照历史）。**语义两端 lockstep**（流程凭证 / 无签名 / 跨模式存活 / 仅 TTL 过期清 / slot 权威持久源）；VSC 模块落点与持久化面独立
+> 来源 = `thincoder-vscode/docs/_archive/design/ENG-TOKEN-BINDING-TUNING.md`（VSC 产品档——旧档一字未改、留参照历史）。**语义两端 lockstep**（流程凭证 / 无签名 / 跨模式存活 / 仅 TTL 过期清 / slot 权威持久源）；VSC 模块落点与持久化面独立
 > （slot 经 `session-io` / `setSlotEngDesignTokens` 多槽写——非 CLI 单源 persistState 布局）。结算 / 持久化细节归 `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` §6.3（本档不重述，D2）；原 VSC 镜像 `src/agent-tools/{advisor,subagent-spawn-gate,eng}.mjs` 等随 W9/W12/W13 已删（删除记录见批次档 §5）。
 
 | 面 | VSC 落点（实核 · W16 接线面收正） |
@@ -92,11 +93,11 @@ R16 语义（跨模式存活 + 三清时机 + 单一权威）**已全部落地**
 | 过期判定 + validate + 回显匹配 | 核 `thincoder-core/agent-tools/design-token.mjs:53`（`validateDesignToken`——fail-closed）· `:59`（`makeDesignTokenRegex`——转义整 token 回显匹配） |
 | 恢复过滤（逐槽 TTL 校验） | 端壳 hydrate：`thincoder-vscode/src/agent/agent-state.mjs:56-72`（`reconcileEngDesignTokens`——逐槽 TTL 校验、过期丢弃、内存项保留）· `:70-71`（legacy 单值一次性迁移读） |
 | 开工程模式清过期 | **W9 已迁核**——现体 = 核 `thincoder-core/agent-tools/eng.mjs:74`（`purgeExpiredDesignTokens`——仅删过期、有效保留）；原端侧 `eng.mjs:20/:74/:79` 已删 |
-| spawn 门禁族 | **W12/W13 已迁核**——现体 = 核 `thincoder-core/agent-tools/subagent-spawn.mjs:112`（`resolveDesignSlot`——精确槽 / 单槽 / 多槽拒；内存 miss 回读槽）· `:158-169`（仅过期拒才删槽——`removeDesignTokenSlot`）· `:152`（`executeConsumeDesignAction`——链终消费 + 落盘对称）；原端侧 `subagent-spawn-gate.mjs:70/:101/:124/:145` 已删 |
+| spawn 门禁族 | **W12/W13 已迁核**——现体 = 核 `thincoder-core/agent-tools/subagent-spawn.mjs:112`（`resolveDesignSlot`——精确槽 / 单槽 / 多槽拒；内存 miss 回读槽）· `:158-169`（仅过期拒才删槽——`removeDesignTokenSlot`）· `:152`（`executeConsumeDesignAction`——链终消费 + 落盘对称）；原端侧 `subagent-spawn-gate.mjs:70/:101/:124/:145` 已删 （迁移期引文） |
 | 内存运行态 + 回合尾落盘 | 端壳 `thincoder-vscode/src/agent/setup.mjs:304`（`_engDesignTokens` 惰性 Map——每 run 重建 agent 后水合）· `:491`（`setSlotEngDesignTokens` 回合尾 flush） |
 | 多槽持久化原语 | 端壳 `thincoder-vscode/src/extension/session-slot-write.mjs:23`（`setSlotEngDesignTokens` / `mergeEngTokensForSave` 核转口 re-export）→ 核 `thincoder-core/session-slot-write.mjs:156`；原 `session-io.mjs:43` re-export 行随 W11 重排 |
 
-**VSC 侧差异**（有意——源码注释逐字登记）：① slot 持久化 = 会话槽 + config.json mirror（端壳 `src/agent/setup.mjs` `configureEngMirror` onToggle——冲突时槽优先）；② spawn 门禁 `resolveDesignSlot` 读当前 run 内存 Map、**miss 时回读槽文件权威台账**（结算面——`DESIGN-TOKEN-SETTLEMENT.md` §6.3）。
+**VSC 侧差异**（有意——源码注释逐字登记）：① slot 持久化 = 会话槽 + config.json mirror（端壳 `thincoder-vscode/src/agent/setup.mjs` `configureEngMirror` onToggle——冲突时槽优先）；② spawn 门禁 `resolveDesignSlot` 读当前 run 内存 Map、**miss 时回读槽文件权威台账**（结算面——`DESIGN-TOKEN-SETTLEMENT.md` §6.3）。
 
 ## 7. 并入的关键决策记录（含否决备选）
 
@@ -134,14 +135,40 @@ R16 语义（跨模式存活 + 三清时机 + 单一权威）**已全部落地**
 | 需求侧正文 | CLI 树需求档 | 需求档未迁——后续批并入既有档 |
 | VSC 旧档 §1–§3（语义 lockstep 重述） · §4 生命周期表 · §6 AC1–AC11 · 变更记录 | 重复面 / 批次材料 / 流水 | **不并**——语义已由本档 §3–§5 承载（lockstep 表述只在 §6.3 头注保留共存锚）；AC 与变更流水 = 一次性材料（(d) 类） |
 
-## 9. 体量与拆分规划（R24a）
+## 9. 写权门禁（v2——M4 增量）
 
-**实测行数**：本档 **148 行**（W16 接线面收正后 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
+**定位**：把写权矩阵从「靠提示词自觉」落成**机械门禁**——没有 token 写不了产品代码（token 门）、评审在途改不了被审文档（D5 冻结窗口）。v2 增量 = 评审对象 / 被审文件路径来源改读 manifest `docRoot`（去硬编码 `docs/`，可迁移 N2）。
+
+**F1 token 门（继承 v1）**：eng-coder 写产品代码需活 designToken（§4 spawn 门禁同源——无活槽 → 拒，fail-closed）。
+
+**F2 D5 冻结窗口（继承 v1 判据 + 来源改读）**：设计评审在途，被审文件集（设计档 + 批次档）零写入——写入即拒 / 本轮结算为陈旧（不发 token）。「在途」窗口下界 = 报告送达或取消·中止（**不是**子进程退出）；不读 M6 槽文件（槽签发于批准后，无法表达「在途」）。
+
+**F3 评审目标来源（v2 核心增量）**：`resolveReviewTargetPaths(agent)`——读 manifest `docRoot`（缺 `docRoot` 键 → 默认值 fallback，与架构 §2.3 E2 同源），产出评审对象 / 被审文件绝对路径集合。
+**落点 = 新文件 `thincoder-core/agent/write-gate.mjs`**（不是 `dispatch.mjs`——落 dispatch 会让 M6 `advisor.mjs` 反向 import 门禁簇成回边；write-gate 无上游依赖，三向消费不成环）：`dispatch.mjs` / VSC `tool-gates.mjs` / M6 `advisor.mjs` 三向 import 消费（单一权威源，不重复实现）。
+token 门与冻结窗口判据复用 v1 现有导出（`anyLiveDesignSlot` / `inflightDesignReviewConflict` / `validateDesignToken`——不改签名），「改读 docRoot」只落在评审目标来源一处。
+
+**F4 写命令装配承接**：台账写命令落 M2（ledger 命令装配）、manifest 写命令落 M1（manifest 读写装配）——装配点非主 agent → 拒；本档只记录承接关系。
+
+**AC-M4-5（修 ≠ 绕）**：继承 v1 单一权威分类（`loadConventions`/`isCodePath` + 拒绝文案 hint/convNote）——分类与分流不一致时 token 门照拒（fail-closed），模型侧「停下上报」由该文案触发；**不新增独立谓词、零新增编辑点**（继承零改原则）。
+
+**验收（回指 M4 规格 AC）**：
+
+| # | 判据 |
+|---|---|
+| AC-M4-1 | 无活 token 写产品代码 → 拒 |
+| AC-M4-2 | 冻结窗口内写被审文档 → 拒 / 结算为陈旧 |
+| AC-M4-3 | 评审对象 / 被审文件路径读 `docRoot`（grep 硬编码 `docs/` → 零命中——范围 = 评审目标解析函数及其消费点） |
+| AC-M4-4 | 台账 / manifest 写命令非主 agent → 拒（落点 M1/M2） |
+| AC-M4-5 | 修 ≠ 绕：分流（变更面）与门禁不一致 → 停下上报（继承 v1 分类 + 拒绝文案触发） |
+
+**边界（本增量不做）**：不做 token 签发（M6）；不做评审判据（advisor）；不重写 v1 门禁本体（继承 + 声明面微调）；不做语义写权判断（「谁写需求谁写设计」不可机判——落提示词层 + 互锁兜底）。
 
 ## 变更记录
 
+- 2026-09-17（**v2 就地更新 · 退役批** · 主 agent）：M4 模块设计语义融合——新增 §9 写权门禁（token 门继承 + D5 冻结窗口 + `resolveReviewTargetPaths` 读 `docRoot` 落 `write-gate.mjs` + F4 承接 + AC-M4 验收）；§12 映射核正（WRITE.md 为 write 工具语义档，写权门禁归本档）；原旁路档 `_archive/modules/ENGINEERING-MODE-V2-MODULE-WRITE-GATE.md` 归档 `_archive/modules/`。
+
 - 2026-09-15（**B 式迁移轮 · 第 3 批**）：建档——`thincoder-cli/docs/design/ENG-TOKEN-BINDING.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；**旧档 §4 结算语义 / §5 实现落点两处口径按现状收正**（单值镜像已退役 → 见 `DESIGN-TOKEN-SETTLEMENT.md`；签发/校验/结算宿主 = `agent-tools/design-token.mjs`；`src/**` 迁移前坐标 → 现状路径），旧句逐条登记入 §8.1；坐标全量实核；批次材料 / 状态行 / 变更流水不并（§8）。
-- 2026-09-15（**B 式迁移轮 · VSC 第 6 批 · 并入 · eng-designer**）：新增 §6.3 VSC 端接线——自 `thincoder-vscode/docs/design/ENG-TOKEN-BINDING-TUNING.md` 并入（TTL / 解析 / 过期判定 / 门禁族 / 持久化逐项实核；结算面指回 `DESIGN-TOKEN-SETTLEMENT.md` §6.3——D2）；VSC 旧档重复面与批次材料登 §8.2 不并（(d) 类）；需求侧头注随批 5 建档收正。
+- 2026-09-15（**B 式迁移轮 · VSC 第 6 批 · 并入 · eng-designer**）：新增 §6.3 VSC 端接线——自 `thincoder-vscode/docs/_archive/design/ENG-TOKEN-BINDING-TUNING.md` 并入（TTL / 解析 / 过期判定 / 门禁族 / 持久化逐项实核；结算面指回 `DESIGN-TOKEN-SETTLEMENT.md` §6.3——D2）；VSC 旧档重复面与批次材料登 §8.2 不并（(d) 类）；需求侧头注随批 5 建档收正。
 - 2026-09-15（**W16 实施轮 · eng-coder · 接线面收正**）：§6.3 表换「实核 · W16 接线面收正」版——TTL/签发/解析/validate/回显匹配/门禁族全部收为核面坐标
   （`thincoder-core/agent-tools/design-token.mjs` · `thincoder-core/token-ttl.mjs` · `thincoder-core/agent-tools/subagent-spawn.mjs` · `thincoder-core/agent-tools/eng.mjs`）；
   恢复过滤/内存运行态/多槽原语 = 端壳存活档行号重核（`thincoder-vscode/src/agent/agent-state.mjs:56-72` · `thincoder-vscode/src/agent/setup.mjs:304` / `:491` · `thincoder-vscode/src/extension/session-slot-write.mjs:23`）；

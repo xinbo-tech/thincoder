@@ -19,6 +19,7 @@ import { runAgent, createAgent } from "@thincoder/core/agent.mjs"
 import { builtinTools } from "@thincoder/core/tools/index.mjs"
 import { advisorTool } from "@thincoder/core/agent-tools/advisor.mjs"
 import { subagentTool } from "@thincoder/core/agent-tools/subagent.mjs"
+import { ENG_TASK_BOOK_MIN } from "@thincoder/core/agent-tools/spawn-gates.mjs"
 import { executeConsumeDesignAction, resolveDesignSlot } from "@thincoder/core/agent-tools/subagent-spawn.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest, slotPath } from "@thincoder/core/session-slots.mjs"
 
@@ -65,9 +66,9 @@ async function mockEndpoint() {
 /** 工程模式父代理 + 临时工作区（设计档 / 批次档 + 接口文件）。 */
 async function makeEngineeringParent(t) {
   const dir = mkdtempSync(join(tmpdir(), "tc-int-eng-"))
-  mkdirSync(join(dir, "docs"), { recursive: true })
+  mkdirSync(join(dir, "docs", "design"), { recursive: true })
   mkdirSync(join(dir, "lib"), { recursive: true })
-  writeFileSync(join(dir, "docs", "FEATURE.md"), "# Feature design\n\nAdd lib/feature.mjs.\n")
+  writeFileSync(join(dir, "docs", "design", "FEATURE.md"), "# Feature design\n\nAdd lib/feature.mjs.\n")
   writeFileSync(join(dir, "docs", "BATCH.md"), "# Batch record\n\n## 本批任务\n\nImplement lib/feature.mjs.\n")
   const mock = await mockEndpoint()
   t.after(() => { try { mock.server.close() } catch { /* ignore */ } })
@@ -85,7 +86,7 @@ async function makeEngineeringParent(t) {
 /** 设计评审（真工具 → 真评审 → 真 settle）；返回 { report, designId }。默认异步面。 */
 async function runDesignReview(agent, { async = true } = {}) {
   const res = await advisorTool.execute(
-    { type: "design", documents: ["docs/FEATURE.md"], ...(async ? {} : { async: false }) },
+    { type: "design", documents: ["docs/design/FEATURE.md"], ...(async ? {} : { async: false }) },
     { agent, cwd: agent.cwd, depth: 0, callbacks: {} },
   )
   if (!async) return { report: res, designId: [...agent._engDesignTokens.keys()][0] }
@@ -100,7 +101,7 @@ async function runDesignReview(agent, { async = true } = {}) {
 
 const spawnEngCoder = (agent, args) =>
   subagentTool.execute(
-    { action: "spawn", role: "eng-coder", async: false, task: "Implement lib/feature.mjs per the approved design.", ...args },
+    { action: "spawn", role: "eng-coder", async: false, task: ENG_TASK_BOOK_MIN, ...args },
     { agent, cwd: agent.cwd, depth: 0, callbacks: {} },
   )
 
@@ -116,7 +117,7 @@ test("② 正常：评审通过 → token 签发 → 带 token spawn 放行 → 
   assert.equal(onDisk.engDesignTokens[designId], token, "token 已落权威槽台账")
   assert.equal(resolveDesignSlot(agent, designId).token, token, "spawn 门解析出该槽 token")
 
-  const out = await spawnEngCoder(agent, { designToken: token, designId, batchDoc: "docs/BATCH.md" })
+  const out = await spawnEngCoder(agent, { designToken: token, designId, batchDoc: "docs/BATCH.md", round: "initial" })
   assert.match(String(out), /DELIVERY REPORT/, "带 token 的 eng-coder 实跑并回交付报告")
 
   const consumed = executeConsumeDesignAction({ designId }, { agent })
@@ -130,23 +131,23 @@ test("② 边界：链未消费同 designId 复用放行；消费后再 spawn �
   const { agent, dir } = await makeEngineeringParent(t)
   const { designId } = await runDesignReview(agent)
   const token = agent._engDesignTokens.get(designId)
-  const args = { designToken: token, designId, batchDoc: join(dir, "docs", "BATCH.md") }
+  const args = { designToken: token, designId, batchDoc: join(dir, "docs", "BATCH.md"), round: "initial" }
 
   const first = await spawnEngCoder(agent, args)
   assert.match(String(first), /DELIVERY REPORT/, "首次 spawn 放行")
-  const fixRound = await spawnEngCoder(agent, args) // 修正窗口：同 designId + 同 token
+  const fixRound = await spawnEngCoder(agent, { ...args, round: "fix" }) // 修正窗口：同 designId + 同 token
   assert.match(String(fixRound), /DELIVERY REPORT/, "修正窗口内同 designId 复用放行（docs FIRST 语义）")
 
   executeConsumeDesignAction({ designId }, { agent })
   await assert.rejects(() => spawnEngCoder(agent, args), /designId not found/, "链终后再 spawn 机械拒（需新评审新 token）")
-  await assert.rejects(() => spawnEngCoder(agent, { batchDoc: join(dir, "docs", "BATCH.md") }), /Invalid or missing design token/, "链终后无 token 同拒")
+  await assert.rejects(() => spawnEngCoder(agent, { batchDoc: join(dir, "docs", "BATCH.md"), round: "initial" }), /Invalid or missing design token/, "链终后无 token 同拒")
 })
 
 test("② 错误：无 token spawn eng-coder —— 机械拒绝且零 spawn", async (t) => {
   const { agent, dir } = await makeEngineeringParent(t)
   const before = agent._subAgentCounter ?? 0
   await assert.rejects(
-    () => spawnEngCoder(agent, { batchDoc: join(dir, "docs", "BATCH.md") }),
+    () => spawnEngCoder(agent, { batchDoc: join(dir, "docs", "BATCH.md"), round: "initial" }),
     /Invalid or missing design token/,
     "无 token 拒绝（明确文案）",
   )

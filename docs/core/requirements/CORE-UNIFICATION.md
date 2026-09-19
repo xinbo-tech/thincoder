@@ -39,7 +39,7 @@ phase 1 的实测（口径与复现命令 = `thincoder-cli/docs/requirements/TWO
 | 非代码（提示词 / 工具文档 `.md`）40 对 | 中位 **1.0000** · 逐字节同 **28**（**中位掩盖 12 档真分叉——见 §1.2**） |
 | 子目录中位（升序） | `agent` 0.0532 · `provider` 0.1124 · `traces` 0.1869 · **`agent-tools` 0.2060** · 顶层档 0.5247 · `advisor` 0.6465 · `tools` 0.9091 · **`prompts` 1.0000**。⚠ **读数基线注**：本行读数为**脚本输出**（单一基线——设计档 B15 同源）。 |
 | 最接近的代码档（核的先头部队） | `advisor/history.mjs` 1.000 · `prompt-overlays.mjs` 0.985 · `advisor/truncate.mjs` 0.960 · `advisor/convergence.mjs` 0.943 · `log.mjs` 0.929 · `tools/git-checkpoint.mjs` 0.909 |
-| 最分叉的代码档 | `agent-tools.mjs` 0.0000 · `memory.mjs` 0.0093 · `mcp.mjs` 0.0130 · `agent-tools/subagent-run.mjs` 0.0135 · `agent-tools/subagent-async.mjs` 0.0204 · `tools/index.mjs` 0.0215 |
+| 最分叉的代码档 | `agent-tools.mjs` 0.0000 · `memory.mjs` 0.0093 · `mcp.mjs` 0.0130 · `agent-tools/subagent-run.mjs` 0.0135 · `agent-tools/subagent-async.mjs` 0.0204 · `thincoder-core/tools/index.mjs` 0.0215 |
 
 **由此得到本板块的两条判据（也是设计的两条起点）**：
 
@@ -54,7 +54,7 @@ phase 1 的实测（口径与复现命令 = `thincoder-cli/docs/requirements/TWO
 
 **口径（逐字，勿改——口径一变则历史数字不可比）**：成对判据 = 两产品 `thincoder-cli/src/**` 与 `thincoder-vscode/src/**` 下
 **相对路径逐段相等**者成对（含全部档型，**不按扩展名过滤**）；相似度 = 两侧读成行、**去首尾空白 + 丢空行**后取**行集合**的
-**Jaccard**（|交集| / |并集|）；另报 sha256 **逐字节完全相同**对数。复现命令 = `node scripts/mirror-divergence.mjs`
+ **Jaccard**（|交集| / |并集|）；另报 sha256 **逐字节完全相同**对数。复现命令 = `node scripts/mirror-divergence.mjs`（**工具已退役 2026-09-17——历史读数保留**）
 （仓根执行；`--json` 给机器；口径逐字写于该脚本头注 `:5-12`）。
 
 **缺口（S0 必须补）**：现脚本只出「同路径对数 · 逐字节对数 · ≥0.9 对数 · 全体中位 + 逐子目录中位」，
@@ -69,7 +69,7 @@ phase 1 的实测（口径与复现命令 = `thincoder-cli/docs/requirements/TWO
 | 面 | 档数（两端各） | 逐字节同 | 不同 | 不同的档 |
 |---|---|---|---|---|
 | `src/prompts/`（运行期槽位提示词） | 15 | **8** | **7** | `advisor-design.md` · `advisor-round2.md` · `advisor-round3.md` · `discipline-engineering.md` · `discipline-normal.md` · `persona-eng-coder.md` · `persona-engineering.md` |
-| `src/tools/*.md`（运行期**工具描述**——同属提示词面，加载面 = `tools/shared.mjs` 的 `DESC()`） | 25 | **20** | **5** | `bash.md` · `grep.md` · `lint.md` · `question.md` · `websearch.md` |
+| `src/tools/*.md`（运行期**工具描述**——同属提示词面，加载面 = `thincoder-core/tools/shared.mjs` 的 `DESC()`） | 25 | **20** | **5** | `bash.md` · `grep.md` · `lint.md` · `question.md` · `websearch.md` |
 | `docs/design/prompts/`（中文设计档——本行分叉读数为**两端镜像历史读数**；2026-09-14 层级口径：根仓基准层为唯一权威、产品面 = 迁移期参照历史——D-C14） | 15 | **10** | **5** | `advisor-design.md` · `discipline-engineering.md` · `discipline-normal.md` · `persona-eng-coder.md` · `persona-engineering.md` |
 
 **要点**：
@@ -81,7 +81,7 @@ phase 1 的实测（口径与复现命令 = `thincoder-cli/docs/requirements/TWO
    - 仅 CLI 6 档：`bash.mjs` · `checklist-sync.mjs` · `edit-batch.mjs` · `glob-dialect.mjs` · `patch.mjs` · `repomap.mjs`；
    - 仅 VSC 12 档：`checkpoint.mjs` · `code.mjs` · `context.mjs` · `edit-fuzzy-match.mjs` · `edit-line-params.mjs` · `file-edit.mjs` · `focus.mjs` · `hashline-edit.mjs` · `more-file.mjs` · `read_image.mjs` · `shell.mjs` · `wait_for.mjs`。
    **计数口径**：两端合一 = **59** 档（41 同名 + 仅 CLI 6 + 仅 VSC 12）——勿与**仅 CLI 侧计数**混用（20 同 + 21 异 + 6 仅 CLI = 47，漏 VSC 独有 12 档）。
-5. **实测口径**：逐字节 = sha256 文件比对；档名集合 = 目录枚举。**复现命令** = `node -e` 内联脚本（F10：该口径并入 `scripts/mirror-divergence.mjs`）。
+ 5. **实测口径**：逐字节 = sha256 文件比对；档名集合 = 目录枚举。**复现命令** = `node -e` 内联脚本（F10：该口径并入 `scripts/mirror-divergence.mjs`——**工具已退役 2026-09-17**）。
 6. **记忆面（A12 点名面）**：CLI `thincoder-cli/src/memory/**`（8 档）用 **`node:sqlite` 的 `DatabaseSync` + FTS5**（`thincoder-cli/src/memory/schema.mjs:9` / `:68`——零第三方依赖 ✓）；
    VSC `thincoder-vscode/src/memory.mjs` + `memory-tool.mjs` **零 sqlite 用法**（两套逻辑）✗；VSC 包**原声明**（迁移前）`engines.vscode = ^1.85.0`，CLI 声明 `engines.node = >=24`。
    ⇒ 分叉源于**已失效的前提**（「VS Code 内置 Node 不支持 sqlite」）⇒ 用户 2026-09-13 裁定 **A12：记忆面向 CLI 语义归一**（CLI 为准）。
@@ -116,7 +116,7 @@ phase 1 的实测（口径与复现命令 = `thincoder-cli/docs/requirements/TWO
 | **N3** | **核独立可验证** | 核测试可独立执行（`node --test` 于核目录）且 exit 0；**核内 import 面零产品路径**（机检：核内不得出现指向产品侧的相对 import）；**核内提示词读取面只从核包内目录解析**（机检：核内零指向产品侧 `src/prompts/` / `src/tools/` 的路径常量） |
 | **N4** | **两态引用闭合 · 发布链不断** | **CLI**：产物依赖声明可由 registry 解析（核已发布且范围命中——判据 = 发布预检断言：装入版本 = 仓内核版本，且 registry 上该版本存在）；**VSC**：vsix 内嵌核（marketplace 无依赖解析——判据 = 解包断言）；**提示词面随同一条通道到达两端**（核包内 `prompts/` 15 档 + `tool-docs/` 25 档）；两产品互不依赖对端包；发布链对外命令接口不变 |
 | **N5** | **单一权威源 · 由包机制保证** | 核内容只在一处撰写（`thincoder-core/` 包本体——**含提示词面**；仓内零副本；开发期链接是解析指针、非撰写面）；**版本一致性三条断言**（零第三方依赖）：A 产品声明范围与仓内核版本逐字绑定 · B vsix 内嵌核版本 = 仓内核版本 · C 装入版本 = 仓内核版本；**第 4 条 D（提示词面完备性）**：核包内档名集合 = 槽位 15 + 工具描述 25（逐字），随产物到达两端且与仓内核目录**逐字节相同**（判据详式见设计档 §2.7 D-C11；反证：缺核 / 缺档即红） |
-| **N6** | **机检零红** | 本板块两档 + 新增核路径纳入扫描域后，仓根三机检（`scripts/doc-anchors.mjs` / `scripts/check-doc-width.mjs` / `scripts/check-ledger.mjs`）exit 0 |
+| **N6** | **机检零红** | 本板块两档 + 新增核路径纳入扫描域后，仓根机检（`scripts/doc-check-anchors.mjs` / `scripts/doc-check-width.mjs`；`check-ledger.mjs` 随单引擎作废——台账 #75）exit 0 |
 | **N7** | **零第三方运行时依赖** | 核内一律 `node:` 内建；核内零裸包名 import（保 CLI 零依赖承诺与 vsix 体积）。**版本下限不冻结**（承 A12）——归一若要求更高下限（如 VSC 记忆面统一到 `node:sqlite` ⇒ VSC 引擎下限须抬高）⇒ **逐条提交用户裁定**（F12 ② 命中）；**版本映射以查表 / 实测为准（不凭记忆写版本号）**。**（A8 残余 · 定案）**：**采纳 `node:sqlite`（定案）** ✓；VSC 引擎下限 = **`^1.104.0`（已裁 2026-09-15——不另做真机实测；资料推导链 + `activate()` 护栏兜底）**（设计档 §2.11 A8）；下限值属对外契约变更 ⇒ **已过目（2026-09-15 用户裁定）**（**F13** / A11 ②） |
 | **N8** | **结构尺度** | 核模块档 ≤300 行（软线）/ ≤500 行（硬限）；>300 行须在设计档给拆分计划；口径 = `wc -l`（承 phase 1） |
 

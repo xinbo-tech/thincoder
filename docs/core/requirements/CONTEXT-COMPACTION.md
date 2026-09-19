@@ -9,7 +9,7 @@
 
 ## 1. 总体定位
 
-上下文压缩 · 标题 · 文本额度 = 上下文压缩（`src/context.mjs` ↔ VSC `src/compact.mjs`；两旧档**已删**——现体 `thincoder-core/context.mjs`）**+** 会话标题（`src/generate-title.mjs`；已迁核）**+** 文本额度（`src/text-budget.mjs` ↔ VSC `agent/run-helpers.mjs` 的 `safeSliceUTF16` 族）。
+上下文压缩 · 标题 · 文本额度 = 上下文压缩（`src/context.mjs` ↔ VSC `src/compact.mjs`；两旧档**已删**——现体 `thincoder-core/context.mjs`）**+** 会话标题（`src/generate-title.mjs`；已迁核）**+** 文本额度（`src/text-budget.mjs` ↔ VSC `agent/run-helpers.mjs` 的 `safeSliceUTF16` 族）。 （迁移期引文）
 本板块对本子系统的要求 = 该面归一为**核内单一纯函数面**，标题生成的格式分派作**端差注入**。
 
 > 面清单与逐面裁决（分类 / 端差处置 / 前提校验 / 归属段）→ `docs/core/design/CONTEXT-COMPACTION.md` §1–§2（不复制）。
@@ -20,6 +20,12 @@
 
 - **【派生 · 非用户原话】** 上下文压缩 / 会话标题 / 文本额度归一为**核内单一纯函数面**（压缩触发 · 摘要 · 降级截断 · 尾部预算；计长口径 = UTF-16 码元）；会话标题的格式分派（CLI 仅 OpenAI 兼容 / VSC 三格式）按**端差注入**。
   源 = 设计档 `CONTEXT-COMPACTION.md` §2.1 #162–#164。
+
+- **【派生 · 非用户原话】** **恢复面回声安全**：已落盘会话的机读线在**恢复路径读取时**归并回声病态形态（「无 `reasoning_content` 的 assistant 紧邻 assistant」——前条并入后条）；恢复后首个请求不携带该形态；**不推用户**（静默归并）、**不改会话档**（人读线 / 双线约定不变）。
+  判定句：夹具 = 含病态对的落盘机读线 ⇒ 恢复后 `agent.history` 该形态计数 = **0**，文本拼接逐字守恒 + `tool_calls` 总数守恒，干净输入返回**同一数组引用**（零回归）；两端（CLI / VSC）各 ≥1 用例。源 = 设计档 `CONTEXT-COMPACTION.md` §6.10 #8 / D-CC19（批次档 §2 ED-1）。
+
+- **【派生 · 非用户原话】** **压缩调用复用会话前缀**：压缩请求 = 会话前缀（system + 中段真身消息——不截断、不序列化、**随带与回合请求同声明面的 `tools`**（**不随 `tool_choice`**——2026-09-18 实施轮实测：该参数致服务端**丢弃 tools 区**（token 证据：prompt 与无 tools 形态同值）⇒ 按设计预注册判定规则 §6.14 采纳**备选②**；命中面按 `tools` 声明分区——同前缀带 tools **84–98%** vs 去 tools **0%**）；**并随带与回合请求同源的 `reasoningEffort`**（2026-09-18 v3 实测：同值 ⇒ 生产口径首现命中 **92.86% / 93.65%**（两次独立运行）vs 异值 **0%**；不硬编码 · 无配置 ⇒ 缺省）+ 尾部指令一条；不再以「全新 user 消息 + 序列化正文」形态发送（原形态缓存命中 ≈ 0）。
+  判定句：同会话回合调用命中率 ≥90% 时，compress 轨迹 `cached / prompt ≥ 0.9`；**选中面**与修前一致（仍只喂中段），**表示面**改变（真身消息、不截断——保真度预期↑）；切点须为配对安全边界。源 = 设计档 `CONTEXT-COMPACTION.md` §6.14 / D-CC20（批次档 `2026-09-18-compression-continuation.md` §2）。
 
 ### 2.2 适用工作流条目（回指 · 不复制）
 
@@ -56,15 +62,15 @@
 - **F2**：压缩摘要（SUMMARIZE_PROMPT）在压缩时，除「已完成 vs 进行中」外，显式新增保留：已改动文件清单、未决点 / 待办。
 - **F3**：人读线 `_fullHistory`（落盘 `fullHistory`）保持全量不变；机器线 `history`（落盘 `contextHistory`）承载摘要后的信号密集形式。（**记录 / 落盘语义**——完整记录在盘、压缩不触；运行期内存表示为有界窗口，机制见 `docs/core/design/SESSION.md` §6.14。）
 - **N1**：摘要质量优先，token 成本不作决策变量；摘要调用必须 `thinking:null` 且不接 onToken / onReasoning。
-- **N2**：两端（CLI `context.mjs` + VSC 对应 compact 模块）一致落地，两端 prompts byte-identical、有比对测试。
+- **N2**：压缩机制落地单一权威面；**2026-09-18 收正（W6 迁核后）**：压缩面已**单源**（`thincoder-core/context.mjs`；VSC 旧副本 `thincoder-vscode/src/compact.mjs` 已删）——旧「两端 prompts byte-identical + 比对测试」判据随副本退役（比对对象已不存在），一致性由单源承接。 （迁移期引文）
 - **N3**：轮末摘要失败不得阻塞 / 影响 runAgent 返回（静默跳过，原始历史保留）。
 
 ### 4.3 VSC 端条目（并入 · 2026-09-15 批 8 · 自 `thincoder-vscode/docs/requirements/CONTEXT-COMPACTION.md`）
 
 语义同源——VSC 档 F-K1–F-K6 / N-K1–N-K4 与 §4.1 逐条同义（不重并）；**VSC 独有条目** = **F-K7 压缩可见性（本端）**：
-回调链 onCompressStart → onCompress / onCompressFail → webview `compress` 消息四态（start / done / fallback / failed）渲染至 `#compress-status` 状态行（仅生命周期可见——摘要正文不进前端）。坐标（实核）＝ 旧档 `thincoder-vscode/src/compact.mjs:18,28,31,115`（**W6 已删**——现体 `thincoder-core/context.mjs`）
+回调链 onCompressStart → onCompress / onCompressFail → webview `compress` 消息四态（start / done / fallback / failed）渲染至 `#compress-status` 状态行（仅生命周期可见——摘要正文不进前端）。坐标（实核）＝ 旧档 `thincoder-vscode/src/compact.mjs:18,28,31,115`（**W6 已删**——现体 `thincoder-core/context.mjs`） （迁移期引文）
 （THRESHOLD_FRACTION 0.60 / KEEP_HEAD 0 / COMPRESS_FAILURE_LIMIT 3 / SUMMARIZE_PROMPT）+ `src/extension/panel-callbacks.mjs:144-152`（compress 回调接线）。端差 = 呈现面（webview 状态行四态 vs TUI 压缩面板）；
-提示词（`SUMMARIZE_PROMPT`）语义同源、各端原文自持。**测试缺口（发现即报）**：VSC `test/` 对压缩面零专属用例（as-of 2026-09-12 全扫零命中）——补测触发 = 该面下次被触碰。
+提示词（`SUMMARIZE_PROMPT`）**单源 = 核 export**（W6 迁核后旧「各端原文自持」口径退役——`thincoder-core/context.mjs:61`）。**测试缺口（发现即报）**：VSC `test/` 对压缩面零专属用例（as-of 2026-09-12 全扫零命中）——补测触发 = 该面下次被触碰。
 
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）
 
@@ -81,3 +87,9 @@
 - 2026-09-13：建档——自 `docs/core/requirements/CORE-UNIFICATION.md` 拆分（来源：§2 F11 / F6 回指）+ 设计档 `CONTEXT-COMPACTION.md`（§2.1 #162–#164 派生）；**无新增需求**。
 - 2026-09-14（**B 轮并入 · 第 3 批**）：新增 §4 **需求条目**（原 §8.1 压缩体验 F1–F4 + 原 §9.2 探索摘要 F1–F3 / N1–N3——自 `thincoder-cli/docs/requirements/CONTEXT-COMPACTION.md` 逐节比对后并入需求正文；**编号与文本承旧档**）+ §5 **不并项与历史沿革**；**本档新增需求 0**（纯回填）；首部加需求条目面指针一行。
 - 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：新增 §4.3 **VSC 端条目**（F-K7 压缩可见性四态 + 端差登记——自 `thincoder-vscode/docs/requirements/CONTEXT-COMPACTION.md` 并入；语义同源不重并）；§5 登记 VSC 档批次材料；**本档新增需求 0**（纯回填）。
+- 2026-09-16（**批 8 ENGINE-DEBT · 设计轮 · eng-designer**——承 `docs/batches/2026-09-16-engine-debt.md` §2 ED-1）：§2.1 新增 **恢复面回声安全**条目（判定句 = 形态计数 0 / 文本与 tool_calls 守恒 / 干净输入同一引用 / 两端各 ≥1 用例）；source = 设计档 §6.10 #8 / D-CC19。
+- 2026-09-18（**压缩续写批 · 设计轮 + 评审轮 1 收正 · 主 agent**——承 `docs/batches/2026-09-18-compression-continuation.md` §1/§2）：§2.1 新增 **压缩调用复用会话前缀**条目（【派生 · 非用户原话】——判定句 = compress 轨迹 `cached / prompt ≥ 0.9`）；按评审轮 1 收正「选中面 / 表示面」口径；**本档新增需求 0**（派生条目）。
+- 2026-09-18（**压缩续写批 · 修正轮（tool 面）· 父侧直接执行**——承设计档 `CONTEXT-COMPACTION.md` §6.14 修正轮 + 批档 §2.10）：§2.1 条目收正「不带 tools」→「**随带与回合请求同声明面的 `tools` + `tool_choice:"none"`**」（命中面按 `tools` 声明分区——受控实测同前缀带 tools **93.6%** vs 去 tools **0%**）；§4.3 坐标 `:60 → :61`；**判定句不变**。
+- 2026-09-18（**压缩续写批 · 实施轮 v2 实测收正 · 父侧直接执行**——承批档 §5 读数）：§2.1 条目**再收正**——`tool_choice:"none"` **实测否决**（6/6 格首现 0% + token 证据：该参数致服务端丢弃 tools 区）⇒ 落**备选②**（带 `tools`、不抑制；设计 §6.14 预注册判定规则授权）；残留 0% 根因 = `reasoning_effort` 与回合侧异值（单变量实证 G3 0% vs G5 95.81%；待裁）。
+- 2026-09-18（**压缩续写批 · 实施轮 v3 实测收正 · 父侧直接执行**——用户「好」裁定 + 批档 §5 v3 读数）：§2.1 条目补**「随带与回合请求同源的 `reasoningEffort`」**（不硬编码 · 无配置 ⇒ 缺省）——真机生产口径首现命中 **92.86% / 93.65%**（两次独立运行，对照改前 0%）；**判定句不变**；派生差两则（百炼 qwen 族 `enable_thinking` 首判差 / autoThink 窗口）⇒ 台账 #56。
+

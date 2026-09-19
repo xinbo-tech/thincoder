@@ -300,7 +300,7 @@ test("AC-4/AC-5 selectModel：写槽不写 config（字节断言）+ 恢复 = �
     assert.match(h.lines[0].text, /^Model: kimi:kimi-k3 — spec found \(ctx 1M \/ out 128K\)$/)
     assert.equal(h.lines[0].color, "T_TOOL", "正常分支走 C.tool")
     const { loadSession } = await import("@thincoder/core/session.mjs")
-    const restored = loadSession(cwd)
+    const restored = await loadSession(cwd)
     assert.equal(restored.activeProvider, "kimi")
     assert.equal(restored.activeModel, "kimi-k3")
   } finally {

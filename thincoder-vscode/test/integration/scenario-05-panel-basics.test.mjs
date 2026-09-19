@@ -78,7 +78,8 @@ test("⑤ 正常：输入 → Enter 提交 → 文本送达宿主回合；宿主
 
   // 渲染面：宿主回帧 → 对话流更新
   const before2 = messagesEl().children.length
-  hostFrame({ type: "assistantMessage", text: "已改好 **README** 的标题。" })
+  hostFrame({ type: "token", text: "已改好 **README** 的标题。" })
+  hostFrame({ type: "complete" })
   assert.ok(messagesEl().children.length > before2, "渲染面新增一帧")
   const bubble = messagesEl().querySelector(".bubble.content")
   assert.ok(bubble, "助手气泡已渲染")
@@ -141,7 +142,8 @@ test("⑤ 错误：终止（Stop）清理闭合——中止直达控制器 + 未
 test("⑤ 种子 S2（GitHub #7）：网页源码片段原样显示——渲染文本逐字、后段不消失、零真实脚本", () => {
   const source = '检测源码里的 `<script type="application/ld+json">` 是否存在 FAQPage。\n后续段落文本'
   const before = messagesEl().children.length
-  hostFrame({ type: "assistantMessage", text: source })
+  hostFrame({ type: "token", text: source })
+  hostFrame({ type: "complete" })
   const bubbles = messagesEl().querySelectorAll(".bubble.content")
   const bubble = bubbles[bubbles.length - 1]
   assert.equal(messagesEl().children.length, before + 1, "新帧渲染")

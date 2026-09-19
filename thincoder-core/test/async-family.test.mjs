@@ -17,7 +17,8 @@ import {
   getAsyncPool, parkAsyncPending, carrierField, writeTombstone, writeTombstoneTo, tombstoneOf,
   parentAborted, bindChildController, settleAsyncEntry,
 } from "../agent-tools/async-settle.mjs"
-import { depInfo, nextSubagentId } from "../agent-tools/subagent-scheduler.mjs"
+import { depInfo, describeBlockers, nextSubagentId } from "../agent-tools/subagent-scheduler.mjs"
+import { discardAbortedPool } from "../agent-tools/async-discard.mjs"
 
 /** 载体两形：同一字段 × 同一值形（每形各一份全新值——防跨形共享同一数组 / Map）。 */
 function carriers(field, makeValue) {
@@ -65,6 +66,35 @@ test("#94 载体吸收：墓碑两形同写同读 + writeTombstoneTo holder 向"
   assert.deepEqual(tombstoneOf(holder, "x"), { status: "consumed", role: "coder" })
 })
 
+test("#43-② U5/U6/U6b（③ 借用规则扩张）：合成 parent 跨调用存活 · CLI 形同容器 · 首写主容器=父字段+载体别名", () => {
+  // U5（边界）：合成 parent = { history }（无自有 Map）写 → 另一携同 history 的合成 parent 读
+  const H = []
+  const writer = { history: H }
+  writeTombstone(writer, 7, "cancelled", "explore")
+  const reader = { history: H }
+  assert.deepEqual(tombstoneOf(reader, 7), { status: "cancelled", role: "explore" }, "跨调用命中（今日 miss——容器落 per-call 对象）")
+  assert.deepEqual(tombstoneOf(writer, 7), { status: "cancelled", role: "explore" }, "写侧同读")
+  // U6（正常·CLI 形回归）：agent 自有 Map ⇒ 两条读取路径同一容器（A6）
+  const cli = { history: [], _asyncTombstones: new Map() }
+  writeTombstone(cli, 8, "consumed", "coder")
+  assert.equal(cli._asyncTombstones instanceof Map, true)
+  assert.equal(carrierField(cli, "_asyncTombstones"), cli._asyncTombstones, "carrierField ≡ 父字段（同一容器）")
+  assert.deepEqual(tombstoneOf(cli, 8), { status: "consumed", role: "coder" })
+  // U6b（边界·首写腿）：无自有 Map + history 在场 ⇒ 主容器落父字段、载体侧写同一容器（A6b）
+  const first = { history: [] }
+  writeTombstone(first, 9, "discarded", "plan")
+  assert.equal(first._asyncTombstones instanceof Map, true, "主容器建在父字段（今日落点——CLI 零回归）")
+  assert.equal(first.history._asyncTombstones, first._asyncTombstones, "history 侧同一容器（合成 parent 跨调用存活）")
+  assert.deepEqual(tombstoneOf(first, 9), { status: "discarded", role: "plan" })
+  // 既有行为零变：父无 Map 而载体有 ⇒ 借用同一 Map（不另建分叉）
+  const carrier = []
+  carrier._asyncTombstones = new Map()
+  const borrower = { history: carrier }
+  writeTombstone(borrower, 10, "cancelled", "coder")
+  assert.equal(borrower._asyncTombstones, carrier._asyncTombstones, "借用（不另建）")
+  assert.deepEqual(tombstoneOf(carrier, 10), { status: "cancelled", role: "coder" })
+})
+
 test("#94 载体吸收：depInfo 两形同读（池 running→pending · 墓碑→cancelled · pending→ok · unknown）", () => {
   for (const carrier of carriers("_asyncSubagents", () => new Map())) {
     getAsyncPool(carrier, "subagent").set("1", { id: "1", status: "running", role: "coder" })
@@ -104,6 +134,53 @@ test("#98 parentAborted：interrupt 豁免（Ctrl+I 非全停）· 普通 abort 
   assert.equal(parentAborted({}, { controller: { signal: abortedSignal(undefined) } }), true, "条目 controller 中止")
   assert.equal(parentAborted({}, {}), false)
   assert.equal(parentAborted(null, null), false)
+})
+
+test("批 4 U9（F4）：discarded 墓碑归 cancelled 口径（依赖者 depc / AUTO 可启动）；failed/cancelled 不变", () => {
+  // 夹具次序前提（评审轮 1 #1）：先落一条**父形态既有墓碑**（真实先例 = 报告注入写 consumed）
+  // ——复现「载体自有墓碑 Map 已存在」；否则丢弃墓碑「先写」次序下写 / 读同落一容器 ⇒ 用例假绿。
+  for (const carrier of carriers("_asyncTombstones", () => new Map())) {
+    writeTombstone(carrier, 90, "consumed", "coder")
+    // 丢弃写点 = 生产同单点（`async-discard.mjs` 走 `writeTombstone`——载体吸收）
+    writeTombstone(carrier, 91, "discarded", "explore")
+    assert.deepEqual(tombstoneOf(carrier, 91), { status: "discarded", role: "explore" }, "写入 / 读取同容器（未分叉）")
+    assert.deepEqual(depInfo(carrier, 91), { state: "cancelled", role: "explore" }, "丢弃 ⇒ 非 ok（= cancelled）")
+    assert.deepEqual(depInfo(carrier, 90), { state: "ok", role: "coder" }, "consumed 口径不变")
+    writeTombstone(carrier, 92, "failed", "plan")
+    writeTombstone(carrier, 93, "cancelled", "coder")
+    assert.deepEqual(depInfo(carrier, 92), { state: "failed", role: "plan" }, "failed 不变")
+    assert.deepEqual(depInfo(carrier, 93), { state: "cancelled", role: "coder" }, "cancelled 不变")
+    // 依赖者处置（D-SD5）：非 AUTO ⇒ depc（锁住等父）；AUTO ⇒ 可启动
+    const dependent = { id: "100", _dependsOn: [91], _files: [] }
+    carrier.autoApprove = false
+    const blocked = describeBlockers(carrier, dependent)
+    assert.equal(blocked.kind, "depc", "非 AUTO ⇒ 依赖取消口径")
+    assert.match(blocked.detail, /explore#91/)
+    carrier.autoApprove = true
+    assert.equal(describeBlockers(carrier, dependent).kind, "slot", "AUTO ⇒ 可启动")
+  }
+})
+
+test("批 4 U9b（F1↔F4 生产者绑定——评审轮 3 #2）：父形态墓碑已在 + history 在场 ⇒ 丢弃墓碑由生产入口产出且同容器可读", () => {
+  // 夹具 = 「载体自有墓碑 Map 已存在」（先落一条 consumed = 真实先例报告注入）**且** history 在场
+  // ——唯有此夹具能判别写入者：若退回旧形 `writeTombstoneTo(parent.history ?? parent, …)`，
+  // own 形（CLI 载体形）下墓碑落 history、读面 `carrierField` 父对象优先 ⇒ 下方两断红。
+  const own = { history: [], _asyncTombstones: new Map(), _asyncSubagents: new Map() }
+  const hist = { history: [] }
+  hist.history._asyncTombstones = new Map()
+  hist.history._asyncSubagents = new Map()
+  for (const carrier of [own, hist]) {
+    writeTombstone(carrier, 90, "consumed", "coder") // 父形态既有墓碑先落（次序前提）
+    const ctrl = new AbortController()
+    ctrl.abort()
+    const pool = getAsyncPool(carrier, "subagent")
+    pool.set("91", { id: 91, role: "explore", status: "running", controller: ctrl })
+    const res = discardAbortedPool(carrier) // **生产入口**（接线口径不传 ctx）
+    assert.equal(res.discarded.length, 1, "已死条目经生产入口被丢弃")
+    assert.equal(pool.size, 0, "丢弃条目出池")
+    assert.deepEqual(tombstoneOf(carrier, 91), { status: "discarded", role: "explore" }, "写入 / 读取同容器（旧形会分叉）")
+    assert.deepEqual(depInfo(carrier, 91), { state: "cancelled", role: "explore" }, "下游依赖终态面同可见")
+  }
 })
 
 test("#98 bindChildController：interrupt 不逐链中止；普通 abort 逐链传播（reason 保真）", () => {

@@ -9,7 +9,7 @@
 
 ## 1. 总体定位
 
-供应商与模型 = 调用核心（`provider/core.mjs` + `index.mjs` ↔ VSC `provider.mjs`）**+** 传输（`anthropic` / `google` / `responses`）**+** 基础件（`sse` / `retry` / `normalize` / `errors` / `abort-provenance`）**+** 限流（`rate.mjs`）**+** 模型清单（`list-models.mjs`）**+** 模型规格（`model-specs.mjs`）。
+供应商与模型 = 调用核心（`thincoder-core/provider/core.mjs` + `index.mjs` ↔ VSC `provider.mjs`）**+** 传输（`anthropic` / `google` / `responses`）**+** 基础件（`sse` / `retry` / `normalize` / `errors` / `abort-provenance`）**+** 限流（`rate.mjs`）**+** 模型清单（`list-models.mjs`）**+** 模型规格（`model-specs.mjs`）。
 本板块对本子系统的要求 = 该面归一为**核内单一调用核心**，可见面变更**保留兼容并登记**。
 
 > 面清单与逐面裁决（分类 / 端差处置 / 前提校验 / 归属段）→ `docs/core/design/PROVIDER.md` §1–§2（不复制）。
@@ -20,6 +20,11 @@
 
 - **【派生 · 非用户原话】** 供应商与模型面归一为**核内单一调用核心**（`chat` / `createProvider` 语义）+ 传输分派与模型规格按核内结构归位；限流等待改为**可中断**、默认限流口径与 token 估算取并集；`list-models` 失败形态由**静默空清单**改为**明确报错**（登记 + CHANGELOG）。
   源 = 设计档 `PROVIDER.md` §2.1 #114 / #115 · §2.2 #138–#143 · §3.1 A19 / A20 · §4.1 第 8 行。
+- **【F-PV1 · 批 1 · 2026-09-16 · 新条目】** 核事件 `onWait` 的相位值域（五相）与**状态文案映射单源在核**——
+  消费面（CLI TUI 状态行 / headless stderr / ACP 日志）**不得各自枚举相位**；无相位分支可渲染的载荷 ⇒ **不显示**
+  （禁 `undefined` 文案、禁兜底误标——空数值不得被填成兜底文案）。
+  源 = 设计档 `PROVIDER.md` §6.20（本批实测：`warn` 相载荷无 `seconds` ⇒ 旧消费面兜底分支渲染
+  `retry in undefineds` 且被误标 429）。
 
 ### 2.2 适用工作流条目（回指 · 不复制）
 
@@ -142,3 +147,4 @@ N12 零 VSC 触碰（`thincoder-vscode/**` 一字不改——VSC 未迁移，自
 - 2026-09-15（**qwen-plan 渠道名接入批**）：新增 §4.4 需求条目 **R21** / N10–N12（`deepseek-v4.1-flash` 加行——qwen-plan 渠道实测模型名；能力位逐字段对齐 `deepseek-flash` 含 multimodal；零 VSC 触碰；零前缀回归）。
 - 2026-09-15（**评审修正轮** · eng-designer）：§4.4 总体需求段 `lookupSpec` 符号改「前缀查表 miss（`specForModel` 回落）」（与设计层统一用语）；N11 论证口径改前缀不相交（第 12 位 `.` 与 `-` 互不为前缀——长度排序既不充分也无必要）。
 - 2026-09-15（**终收批 · §8B #4 并入** · eng-designer）：新增 §4.5 **VSC 端图片输入与贴图降级条目**（F-IDG-1–3 / N-IDG-1–2——自 VSC 设计档 `IMAGE-DOWNGRADE-VISION.md` 需求节并入 · 编号系本子节自有）；§5 补登记行；**本档新增需求 3 条**（VSC 端面——非核心统一面条目）。
+- 2026-09-16（**批 1 CORE-DEFECT-FIXES** · eng-designer）：§2.1 新增条目——`onWait` 相位值域与状态文案映射单源在核（消费面禁各自枚举 · 禁 `undefined` 文案 · 禁兜底误标）；源 = 设计档 §6.20；条目号 **F-PV1**（批次档 §2 / 设计档 §6.20 同号引用）。

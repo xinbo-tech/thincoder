@@ -1,22 +1,27 @@
 import {
   DESC,
   truncate,
-  runGit
+  runGit,
+  gitFailureMessage
 } from "./shared.mjs";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 import { filterLines, runGitStrict, validateRef, gitConfigArgs, snapshotBefore, executeExtAction } from "./git-ext.mjs";
 import { executeCheckpointAction } from "./git-checkpoint.mjs";
+import { discoverRepos, MANIFEST_REL } from "../manifest.mjs";
 
 
 /** Run git PRESERVING per-line leading whitespace. runGit trims the WHOLE output, which
  *  strips a porcelain line's leading " " (the unstaged marker) and misclassifies an
- *  unstaged-only first line as staged. status uses this so the staged/unstaged column survives. */
+ *  unstaged-only first line as staged. status uses this so the staged/unstaged column survives.
+ *  #55 fail-closed：失败不再吞成 ""（曾把非仓 / 任意失败渲染成 `(clean — no changes)`）——
+ *  溢出保留部分输出；其余 ⇒ throw（消息契约 = `shared.mjs` `gitFailureMessage`）。 */
 function runGitRaw(cwd, cmdArgs, config = []) {
   try {
-    return execFileSync("git", [...config, ...cmdArgs], { cwd, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, stdio: ["ignore", "pipe", "ignore"] }).replace(/\r/g, "").replace(/\n$/, "")
+    return execFileSync("git", [...config, ...cmdArgs], { cwd, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] }).replace(/\r/g, "").replace(/\n$/, "")
   } catch (e) {
-    return String(e.stdout || "").replace(/\r/g, "")
+    if (e.code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER" && e.stdout) return String(e.stdout).replace(/\r/g, "")
+    throw new Error(gitFailureMessage(e, cmdArgs, cwd))
   }
 }
 
@@ -29,6 +34,18 @@ function runGitRaw(cwd, cmdArgs, config = []) {
 function resolveBaseDir(cwd, workdir) {
   if (!workdir || typeof workdir !== "string") return cwd
   return resolve(cwd, workdir)
+}
+
+// ─── 仓发现（§6.13 · #62——单源 = `manifest.mjs` `discoverRepos`，禁第二份实现）───────────────
+/** 动作面例外：`init` / `clone` 以 **cwd 为落点**——不做发现（`init` 在无仓处天然合法；`clone` 的
+ *  落点 = cwd 相对路径——判据同 `init`），否则「在此处建仓 / 克隆」被静默搬进别仓；
+ *  二者仍可经显式 `workdir` 指落点。 */
+const NO_REPO_DISCOVERY = new Set(["init", "clone"])
+
+/** 歧义（多态）消息：候选全列（绝对路径、按名排序）+ 指引显式 `workdir`——不猜（§6.13 解析序行 5）。 */
+function ambiguousRepoMessage(candidates, cwd) {
+  return `Ambiguous git repo at ${cwd}: ${candidates.length} subdirectories carry .git and ${MANIFEST_REL} — ` +
+    `pass workdir to run git in the intended one (no silent pick):\n` + candidates.map((c) => `- ${c}`).join("\n")
 }
 
 // ─── 审批门注入缝（#59——「只读判定 / 审批门按端注入」，形态参 §2.13.5 注入缝）────────
@@ -65,7 +82,7 @@ export const gitTool = {
       // write-op params
       name: { type: "string", description: "(branch/tag) The branch or tag name (create/delete/switch)" },
       remote: { type: "string", description: "(push/fetch/pull) Remote name (e.g. origin). Default: current upstream" },
-      workdir: { type: "string", description: "Run git in this subdirectory (monorepo / multi-repo). Path relative to cwd — no directory restriction. Default: cwd" },
+      workdir: { type: "string", description: "Run git in this subdirectory (monorepo / multi-repo). Path relative to cwd — no directory restriction. Default: the discovered project repo root（缺省 = 发现的项目仓根；显式 workdir 优先）" },
       config: { type: "array", items: { type: "string" }, description: "(network actions: push/fetch/pull/ls-remote) git -c overrides, e.g. [\"http.proxy=http://10.2.2.112:3128\"] for blocked remotes" },
       tags: { type: "boolean", description: "(push) Also push all tags (--tags)" },
       mode: { type: "string", enum: ["soft", "mixed", "hard"], description: "(reset) reset mode — hard snapshots the tree first + needs confirmation（操作前自动快照，checkpointAction=rewind 恢复）" },
@@ -91,11 +108,34 @@ export const gitTool = {
     // workdir: run git in a subdirectory (monorepo / multi-repo). Shadow ctx.cwd so
     // every action + snapshotBefore + checkpoint resolves against the workdir.
     if (args.workdir) ctx = { ...ctx, cwd: resolveBaseDir(ctx.cwd, args.workdir) }
-    // #59：审批门（端注入面）——缺省无门（CLI 语义）；非空字符串返回 ⇒ 拒执行。
+    // 仓发现（§6.13 · #62）：缺省路径（无 workdir）⇒ 单源 = `discoverRepos`——工作区根（非仓）⇒
+    // 唯一带 manifest 子仓：重定向 `ctx.cwd` + 结果首行注记；零 ⇒ 原值落 §6.12 fail-closed（零
+    // 行为变）；多 ⇒ throw（列候选 + 指 workdir，不猜）。判据 = workdir 真值在场（与上行同源——
+    // 空串与缺省同判）；`init` / `clone` 例外不做发现。self / none 态 ctx 对象引用透传（不 clone）。
+    let repoNote = ""
+    if (!args.workdir && !NO_REPO_DISCOVERY.has(args.action)) {
+      const discovered = discoverRepos(ctx.cwd)
+      if (discovered.kind === "ambiguous") throw new Error(ambiguousRepoMessage(discovered.candidates, ctx.cwd))
+      if (discovered.kind === "unique") {
+        ctx = { ...ctx, cwd: discovered.root }
+        repoNote = `(repo: ${discovered.root})`
+      }
+    }
+    // #59：审批门（端注入面）——缺省无门（CLI 语义）；非空字符串返回 ⇒ 拒执行（拒串原样、不加注记）。
     if (injectedApproval) {
       const refusal = await injectedApproval(args, ctx)
       if (typeof refusal === "string" && refusal.length > 0) return refusal
     }
+    const out = await gitActionCore.dispatch(args, ctx)
+    return repoNote ? `${repoNote}\n${out}` : out
+  },
+}
+
+/** git 动作执行体（本批自 `execute()` 抽出——§6.13 落位表行 2：两函数均 <300 行；switch 体原样搬、
+ *  **不用 `this`**（端装配面 `{...coreGitTool}` 展开装饰，`this` 绑定不可依赖））。ctx 已经过 workdir
+ *  归一与仓发现（`execute()` 头部）——本函数只做动作派发，零发现语义。 */
+const gitActionCore = {
+  async dispatch(args, ctx) {
     // git -c overrides (proxy etc.) — only network actions need them; passing to every
     // action would be harmless but noisy. cfgArgs stays [] for local ops.
     const cfgArgs = gitConfigArgs(args.config)

@@ -38,11 +38,10 @@ const SLOT_PROMPTS = [
   "persona-plan.md",
 ]
 
-/** S1 核内工具描述（25）= 全量（S0a 席位 20 + S1 补齐 5）。 */
+/** S1 核内工具描述（24）= 全量。 */
 const TOOL_DOCS = [
   "apply_patch",
   "bash",
-  "checklist",
   "delete",
   "edit",
   "execute",
@@ -71,7 +70,7 @@ test("core prompts/ holds exactly the full slot set (15)", () => {
   assert.deepEqual(readdirSync(PROMPTS_DIR).sort(), [...SLOT_PROMPTS].sort())
 })
 
-test("core tool-docs/ holds exactly the full tool-description set (25)", () => {
+test("core tool-docs/ holds exactly the full tool-description set (24)", () => {
   assert.deepEqual(readdirSync(TOOL_DOCS_DIR).sort(), TOOL_DOCS.map((n) => `${n}.md`).sort())
 })
 
@@ -103,10 +102,11 @@ test("user ruling #44 — advisor-design keeps the general wording 'the document
   assert.ok(!s.includes("the design document that already owns its topic"))
 })
 
-test("user ruling #47 — persona-engineering carries the union title + the cross-end injection slot", () => {
+test("persona-engineering carries the union title; cross-end pointer anchors removed (2026-09-17 消端差)", () => {
   const s = loadSlot("persona-engineering.md")
-  assert.ok(s.includes("## 与 eng-designer / eng-coder 的分工界面（设计写作面归 eng-designer）"))
-  assert.ok(s.includes("in-child advisor code review, {{inject:agent-loop-ptr-engineering-delivery}})"))
+  assert.ok(s.includes("## Interface with eng-designer / eng-coder"), "分工界面节标题（英文运行面）")
+  assert.ok(s.includes("in-child advisor code review"), "审计链正文自足（无跨端指针锚）")
+  assert.ok(!s.includes("{{inject:agent-loop-ptr-engineering-delivery}}"), "agent-loop 指针锚已删")
   // 契约 10：核档不得把某一端的指针形态写死
   assert.ok(!s.includes("本端交付协议节 = §8"))
 })
@@ -125,19 +125,11 @@ function scanAnchorNames() {
   return names
 }
 
-test("§2.13.7⑥ 锚名去重集合 = 13 · 旧名单锚零命中 · agent-loop-ptr-* 恰 5 名 / 5 处", () => {
+test("锚名集合收窄 = 工具面 2 锚（bash-terminal-face / question-ui-face）——提示词面锚全消（2026-09-17 消端差）", () => {
   const names = scanAnchorNames()
-  assert.equal(new Set(names).size, 13, "锚名去重集合 = 13")
+  assert.deepEqual([...new Set(names)].sort(), ["bash-terminal-face", "question-ui-face"], "提示词面锚全消，仅剩工具面 2 锚")
   assert.equal(names.filter((n) => n === "agent-loop-pointer").length, 0, "旧名 agent-loop-pointer 零命中")
-  const ptr = names.filter((n) => n.startsWith("agent-loop-ptr-"))
-  assert.equal(ptr.length, 5, "agent-loop-ptr-* 恰 5 处")
-  assert.deepEqual([...new Set(ptr)].sort(), [
-    "agent-loop-ptr-async-note",
-    "agent-loop-ptr-async-spawn",
-    "agent-loop-ptr-eng-coder-delivery",
-    "agent-loop-ptr-engineering-delivery",
-    "agent-loop-ptr-escalate",
-  ], "agent-loop-ptr-* 恰 5 名")
+  assert.equal(names.filter((n) => n.startsWith("agent-loop-ptr-")).length, 0, "agent-loop-ptr-* 指针族已删（正文自足）")
 })
 
 // ─── U2 核内笔（§2.6.3（六））：advisor 加载面走核内单一解析面（结构机检·fail-closed）──

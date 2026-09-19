@@ -9,7 +9,7 @@
 
 ## 1. 总体定位
 
-工具系统 = 工具实现面（`src/tools/*.mjs` + `src/agent-tools/*.mjs`）**+** 工具描述面（`src/tools/*.md`，文本行本体归提示词面）**+** 注册表（`agent-tools.mjs` / `cli/make-agent.mjs` ↔ VSC `agent-tools/index.mjs`）**+** 单端独有实现。
+工具系统 = 工具实现面（`src/tools/*.mjs` + `src/agent-tools/*.mjs`）**+** 工具描述面（`src/tools/*.md`，文本行本体归提示词面）**+** 注册表（`agent-tools.mjs` / `cli/make-agent.mjs` ↔ VSC `thincoder-vscode/src/agent-tools/index.mjs`）**+** 单端独有实现。
 本档只收**实现面与工具行为契约**（工具描述文本与槽位提示词的行本体住提示词面子系统档）。
 本板块对本子系统的要求 = 对称面归一为**核内单一实现**；工具可见输出 / 回话面的归一变更**保留兼容并逐条登记**。
 
@@ -48,7 +48,7 @@
 工具是模型作用于外部世界的**唯一入口**。工具系统必须做到：注册面单一可枚举、调度确定、安全边界可解释、
 描述文本足以让模型正确路由、**配置申报与消费一一对应（无死键）**。
 
-### 4.2 功能性需求（F1–F7）
+### 4.2 功能性需求（F1–F8）
 
 | # | 需求 | 说明 |
 |---|---|---|
@@ -59,6 +59,7 @@
 | F5 | 交互轻量 | 工具不该与用户对话；需用户输入的场合由专门机制承担 |
 | F6 | `websearch` 后端选择面单一 | 后端由 `websearch.apiKey` 触发（有 key → Tavily；无 key → Bing 兜底）；不设独立后端选择键——`provider` 死键已移除 |
 | F7 | 描述装载面双端同构（VSC） | VSC 端工具描述 = 外部 `.md`（`DESC()` 同语义装载）+ Routing / Notes 段在位 |
+| F8 | `git` 工具的 cwd / workdir 与**跨仓发现** | **缺省 = 发现的项目仓根**（显式 `workdir` 优先——判据 = 与接线 `git.mjs:97` 同源的**真值判定**）；发现规则 = 锚含 `.git` ⇒ 锚 · 否则向下**仅直接子目录一层**找「`.git` ∧ `PROJECT-MANIFEST.json`」者——**恰一 ⇒ 重定向**（输出首行注记 `(repo: <仓根>)`）· **零 ⇒ fail-closed**（`not a git repository`）· **多 ⇒ 报错列候选、不猜**；`init` / `clone` 不做发现。**单源** = 复用 manifest 仓发现逻辑（`thincoder-core/manifest.mjs` `discoverRepos`——禁两份实现）。判据 = 设计档 `TOOLS.md` §6.13 A14–A20；台账 #62 批 = `docs/batches/2026-09-18-repo-discovery.md`（2026-09-19 收口） |
 
 ### 4.3 非功能性需求（N1–N9）
 
@@ -108,7 +109,7 @@
 
 语义同源——VSC 档 F1–F7 / N1–N7 与 §4.1–§4.3 逐条同义（不重并）；VSC 独有事实 = ① **描述外部装载**：`DESC(name)` 运行时装载（`thincoder-vscode/src/tools/shared.mjs:15`）
 ——`src/tools/*.md` 25 档在位、接线命中 25 处（工具选择面与对端同构；CLI 装载面已列 §4.2，两端语义一致）· ② **打包面 N6**：`.vscodeignore` 不排除 `src/**/*.md`——25 档随扩展发布（发布前 `vsce ls` 清单核对）·
-③ 批合并询问 / child 审批（本端面——设计侧 = `docs/core/design/TOOLS.md` §6.11）。坐标（实核）＝ `src/tools/index.mjs:50`（`builtinTools`）· `src/tools/shared.mjs`（414 行）。测试 = `test/tool-descriptions.test.mjs` 全绿。
+③ 批合并询问 / child 审批（本端面——设计侧 = `docs/core/design/TOOLS.md` §6.11）。坐标（实核）＝ `thincoder-vscode/src/tools/index.mjs:50`（`builtinTools`）· `thincoder-vscode/src/tools/shared.mjs`（414 行）。测试 = `test/tool-descriptions.test.mjs` 全绿。
 
 ### 4.7 TTY 驱动能力（TTY-DRIVE——新能力条目 · 2026-09-15）
 
@@ -187,3 +188,4 @@ thincoder 自身的 CLI / TUI **不定义**本能力——它只是其中一个�
 - 2026-09-15（**B 式迁移轮 · VSC 第 6 批 · 并入 · eng-designer**）：新增 §4.5「VSC 端显示层条目」**FR-V1 / FR-V2**（实时面板 / 历史页工具卡同宽——自 `thincoder-vscode/docs/requirements/TOOL-OUTPUT-LIMITS.md` 并入；坐标实核）；§5 补 VSC 行登记；**本档新增需求 0**（纯回填——共享条目不重并）。
 - 2026-09-15（**TTY-DRIVE 批 · 需求层重定 · eng-designer**）：新增 **§4.7 TTY 驱动能力**（U1–U4 + 非功能候选 N1–N5 + 范围边界 + 冲突点核对表 + **待定项 3 条**）——用户 2026-09-15 口径（需求主轴自「为 CLI 建端到端测试套件」改判为「**agent 具备驱动 TTY 程序的能力**」）；**本档新增需求 1 条**（§4.7——非并入）；§4 首注与首部需求条目面指针同批补射程句。
 - 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：新增 §4.6 **VSC 端条目**（描述外部装载 / 打包面 N6 / 批合并与 child 审批面——自 `thincoder-vscode/docs/requirements/TOOLS.md` 并入；语义同源不重并）；§5 补登记行；**本档新增需求 0**（纯回填）。
+- 2026-09-19（**仓库发现批（台账 #62）收口 · 父侧直接执行 · 可 revert**）：新增 **§4.2 F8**「`git` 工具的 cwd / workdir 与跨仓发现」（缺省 = 发现的项目仓根 · 单源复用 `thincoder-core/manifest.mjs` `discoverRepos` · 零态 fail-closed · **多态报错不猜** · `init`/`clone` 例外）；§4.2 标题计数 F1–F7 → **F1–F8**（D3）；源 = `docs/batches/2026-09-18-repo-discovery.md`（设计 id=144 · 评审 pass id=145 · 实现 id=146 · 点修 id=147）；**本档新增需求 1 条**。

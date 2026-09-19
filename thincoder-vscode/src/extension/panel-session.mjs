@@ -7,28 +7,64 @@
  * 槽读写 / 列表 / 标题 / 恢复 / 双线瘦身调用全部经端壳（`session-io.mjs` → 核
  * `@thincoder/core/session.mjs` 族）转口，本档只承载**面板装配面**（槽绑定 / 消息族 /
  * 双线组装 / webview 分页），不持有会话存储算法。存储契约 version 1/2 不变。
+ * 四档结构拆分批（2026-09-18 · VSC-DEBT §12.2.4）：**写面两件**（`saveLines` / `generateTitle`）
+ * 迁出至 `panel-session-write.mjs`——本档按既有导出名转口（消费档 import 面零改）。本档留档 =
+ * 读面 + 会话操作面（14 名）。
  */
-import { loadSlot, saveSessionToSlot, newSlot, deleteSlotAndUpdate, setSlotTitle, loadModelPrefs as loadStoredModelPrefs, historyWindow, listSlots, slimForDisplay, isLegacyTransient, stripTruncatedToolArgs, resumeSlot, readEndMarker, writeEndMarker } from "./session-io.mjs"
+import { loadSlot, cachedSlot, newSlot, deleteSlotAndUpdate, loadModelPrefs as loadStoredModelPrefs, historyWindow, listSlots, stripTruncatedToolArgs, resumeSlot, readEndMarker } from "./session-io.mjs"
 import { ensureMemoryHandle } from "../embed-config.mjs"
-import { engTokensMergeForSave } from "./session-slot-write.mjs"
 import { fullStatus, lastModelsPayload } from "./settings.mjs"
 import { migrateLegacySettings } from "./migrate-settings.mjs"
 import { stripEditorInjection } from "./editor-context.mjs"
-import { generateTitle as generateSessionTitle } from "./generate-title.mjs"
+import { stripAtRefs } from "./file-refs.mjs" // F-W15：@ 引用还原（与产者同档）——恢复面显示消费面（标题源剥离面随写面迁至 panel-session-write.mjs）
+import { mergeAdjacentAssistantEchoes } from "@thincoder/core/context.mjs"
 import { _cwd } from "./panel-messages.mjs"
 // 2026-09-11 第 10 批（§5.1.4 第 4 条——清屏后再断言）：存活投影（读 lines.history 双池）
 import { reassertLiveChildren } from "./suspension.mjs"
+// F-MI7：同伴快照预热（SWR 写面——慢段预热，读面零 exec）
+import { prewarmPeerInstances } from "./peer-instances.mjs"
 import * as vscode from "vscode"
 
-  /**
-   * The slot number this panel is bound to. On first use, resolve it once via the
-   * end-marker resume decision (SESSION.md §10 D-2 — 本端记录/一次性继承/全新分配，
-   * 与 CLI TUI 启动同构), then keep it fixed for the panel's life.
-   */
+// ─── 写面转口（四档拆分批 2026-09-18 · VSC-DEBT §12.2.4）：既有导出名零改 ──────────────
+// `saveLines`（槽写装配面）/ `generateTitle`（标题写面）已迁出至 `panel-session-write.mjs`
+// ——消费档 import 行逐字不变（KD-12）；环 import（本档 ⇄ 新档）判据见新档头注。
+export { saveLines, generateTitle } from "./panel-session-write.mjs"
+
+// ─── 槽绑定（F-MI7 · MULTI-INSTANCE-COLLAB §3.1 · SESSION.md §6.15）─────────────
+
+/** cwd → 在飞认领束（单飞：同 cwd 并发认领不双探；成功/失败即清）。 */
+const bindInflight = new Map()
+
+/** 认领一次（async 真路径）：`resumeSlot` 决策（本端记录 / 一次性继承 / 全新分配——
+ *  SESSION.md §10 D-2）+ 单飞 + 绑定 `panel._slot`。绑定入口三处同源（快段
+ *  `openSessionContent` / `onProjectChanged` / 冷路径 `ensureSlot`）；已绑定 ⇒ 直返
+ *  （slot 粘性——不再重读共享 manifest 的 active 指针）。失败 ⇒ 抛出（`void` 冷路径自吞）。 */
+export async function ensureSlotAsync(panel) {
+    if (panel._slot != null) return panel._slot
+    const cwd = _cwd()
+    let p = bindInflight.get(cwd)
+    if (!p) {
+      p = resumeSlot(cwd)
+      bindInflight.set(cwd, p)
+      p.catch(() => {}).finally(() => { if (bindInflight.get(cwd) === p) bindInflight.delete(cwd) })
+    }
+    const r = await p
+    if (panel._slot == null && r?.slot != null) panel._slot = r.slot
+    return panel._slot
+  }
+
+/**
+ * The slot number this panel is bound to. **零探测冷路径**（SESSION.md §6.15 · F-MI7）：
+ * 已绑定 ⇒ 直返；未绑定 ⇒ 读本进程解析缓存（`session-io.cachedSlot`——纯内存零 IO）；
+ * 仍旧未命中 ⇒ 返 **null** + 后台收敛（同步读面绝不等 exec——N-MI2）。写面遇 null 的
+ * 处置见各调用点（`panel-chat` 回合入口 `?? await ensureSlotAsync` / `saveLines` 短路 /
+ * `panel-messages` 空槽短路 / `setSlot*` 天然返回 false——不写 `.null` 槽）。
+ */
 export function ensureSlot(panel) {
     if (panel._slot == null) {
-      const cwd = _cwd()
-      panel._slot = resumeSlot(cwd).slot
+      const s = cachedSlot(_cwd())
+      if (s != null) panel._slot = s
+      else void ensureSlotAsync(panel).catch((e) => console.error("[chat-panel] background slot bind failed:", e.message))
     }
     return panel._slot
   }
@@ -52,84 +88,11 @@ export function activeLines(panel, slotOverride) {
     // 上下文）；回退播种剥离截断 tool args（CLI F6 镜像）——旧文件恢复后把 `…` 半截
     // arguments 原样发向网关会 400（unexpected end of hex escape）。
     const ch = data?.contextHistory
-    const contextHistory = (Array.isArray(ch) && ch.length > 0) ? ch : history.map(stripTruncatedToolArgs)
+    // D-CC19 恢复面回声归并（CONTEXT-COMPACTION §6.10 #8）：已落盘机读线原样装回会复活
+    // D-CC18 病态形态（无 reasoning_content 的 assistant 紧邻 assistant ⇒ 首请求 400）——
+    // contextHistory 定线后、返回前扫描归并（干净输入返回同一引用——零拷贝零回归）。
+    const contextHistory = (Array.isArray(ch) && ch.length > 0) ? mergeAdjacentAssistantEchoes(ch) : history.map(stripTruncatedToolArgs)
     return { fullHistory: history, contextHistory, sessionStart: data?.sessionStart ?? null }
-  }
-
-  /** Persist both lines to the active slot + update manifest metadata.
- *  `slotOverride`（会话切换竞态修复，2026-08-28）: 保存目标显式绑定 turn 启动时的 slot——
- *  缺省回退 ensureSlot(panel)（当前活跃）。此前每次取当前 slot，运行中切换会话后
- *  onComplete/abort 的保存会把 A 会话整轮内容写进 B 槽（GitHub #2 "输出写错会话文件"）。 */
-export function saveLines(panel, fullHistory, contextHistory, extra = {}, slotOverride) {
-    const cwd = _cwd()
-    const slot = slotOverride ?? ensureSlot(panel)
-    const existing = loadSlot(cwd, slot) ?? {}
-    // Field-roundtrip contract (CLI docs/design/ARCHITECTURE.md): slot files are full-overwrite
-    // writes, so any field we drop here is lost permanently. Spread ...existing so fields the
-    // extension doesn't know about (activeModel, engineering, engDesignToken, ...) round-trip
-    // intact, then override only what the extension actually owns.
-    // Human line drops transient machine-only injections (editor context, time reminder);
-    // the MACHINE line keeps them — reloading the slot must rebuild a byte-identical
-    // machine line or provider prefix caches miss (CLI parity, 2026-08-16 cache-hit fix).
-    const keepReal = (m) => !m.transient && !isLegacyTransient(m)
-    const keepMachine = (m) => !isLegacyTransient(m)
-    // advisor.guard is session-level (2026-08-29): agentState carries the LIVE guard off the
-    // run's agent config, merged over the existing advisor object (provider/model/thinking are
-    // config-scoped but round-trip through the slot untouched; a legacy null upgrades to an
-    // object). When the run didn't speak (abort/finally saves carry no agentState), the field
-    // is preserved verbatim — a session that never expressed a guard preference keeps `null`
-    // and reads keep falling back to config.json.
-    const existingAdvisor = typeof existing.advisor === "object" && existing.advisor !== null ? existing.advisor : {}
-    const advisorOut = extra.advisorGuard !== undefined ? { ...existingAdvisor, guard: extra.advisorGuard } : (existing.advisor ?? null)
-    saveSessionToSlot(cwd, slot, {
-      ...existing,
-      version: 2, cwd, updatedAt: Date.now(),
-      title: existing.title ?? "",
-      activeProvider: extra.activeProvider ?? existing.activeProvider ?? "",
-      // Human line is slimmed for storage (CLI parity — session-io.slimForDisplay):
-      // the never-compacted human line carried the bulk of session-file size
-      // (tool args JSON / full tool results / base64 images); the machine line
-      // below keeps everything byte-identical for the provider.
-      history: fullHistory.filter(keepReal).map(slimForDisplay), contextHistory: contextHistory.filter(keepMachine),
-      // display (the CLI's old WYSIWYG render snapshot) is DEPRECATED — the CLI no
-      // longer reads or writes it (restore always rebuilds from history, lazily).
-      // Clear it defensively so OLD CLI builds still fall back to history instead
-      // of resuming from a stale snapshot missing every VS Code-added message.
-      display: [], tasks: extra.tasks ?? existing.tasks ?? [],
-      planMode: existing.planMode ?? false,
-      // §11.7（2026-09-08）：tasks/goal/pendingReminders 会话级三字段随 agentState 回写槽
-      // （onComplete {...agentState} spread 携入——CLI saveSession session.mjs:131/137 同款）。
-      // 键缺席（undefined——abort/finally 保存只带 activeProvider）→ 保留槽值；键在场（干净
-      // 完成回合）→ 内存即权威（空态 []/null 如实写——含 goal 工具完成/取消的显式清空）。
-      goal: extra.goal !== undefined ? extra.goal : (existing.goal ?? null),
-      autoApprove: existing.autoApprove ?? false,
-      advisor: advisorOut,
-      // Engineering state persisted by runAgent (agentState): design token survives turns;
-      // the engineering flag is slot-authoritative (2026-08-29) — config.json is the mirror.
-      // `!== undefined` (not ??): a legacy slot with NO engineering field must stay field-less
-      // when the run didn't speak (abort/finally saves) — hard-writing `false` here would pin
-      // the session off and kill the config.json fallback (compat contract, see tests).
-      engineering: extra.engineering !== undefined ? extra.engineering : existing.engineering,
-      // DESIGN-TOKEN-SETTLEMENT D2/D5 (2026-09-08): 单值镜像字段 engDesignToken 已退役——
-      // agentState 不再携带（agentState 去镜像），此处不再写该字段（旧槽残留经 ...existing
-      // spread 原样往返保留，仅供 setup 一次性迁移读——AC3 运行时零镜像写）。
-      // 多槽表 engDesignTokens 合并语义 = D2（engTokensMergeForSave 纯函数）：空态 agentState
-      // 保存**不触发清理**。内存空但槽有值（settle 已同步落盘而本回合内存未持有）→ 保留槽值，
-      // 不钉 null（AC2）。槽清理只经三触发（consume-design 显式清 /new 空槽 /TTL 过期清）。
-      engDesignTokens: engTokensMergeForSave("engDesignTokens" in extra ? extra.engDesignTokens : undefined, existing.engDesignTokens),
-      pendingReminders: extra.pendingReminders !== undefined ? extra.pendingReminders : (existing.pendingReminders ?? []), sessionStart: existing.sessionStart ?? new Date().toISOString(),
-      // 2026-09-01 会诊 kimi/qwen 🔴：sessionStart 是 F2 覆盖防护的会话身份——VS Code
-      // 此前从不赋值（恒 null）→ diskStart 恒 null → F2 轮转条件永不触发（纯 VS Code
-      // 会话无覆盖防护）；更糟：CLI 加载 VS Code 槽时 setup 的 `??=` 打上 CLI 自己的
-      // start → 跨端保存必轮转对方现场（F2 自伤，"先占者赢"）。现在 null 时赋一次
-      // （与 CLI agent/setup.mjs `_sessionStart ??=` 同语义——同会话两端打点一致，F2 放行）。
-      // F-2d (MODEL-400-FIX mirror——CLI applySession `||` 语义)：`??` 不兜空串——extra 带
-      // activeModel="" 会把空串钉进槽（双字段恒非空语义下空串 = 无 override）→ 下游克隆缺
-      // model 键 → 无 model 请求 → serde 400。`||` 视空串为缺失——回退 existing（槽 model
-      // 恒有值/恒缺失——与 CLI F-2d 同防御方向；null/undefined 保留槽值语义不变）；legacy
-      // "" 残留槽值在下次保存时归一 null（读侧 slotRef 组装本就 truthy-guard 空串）。
-      activeModel: extra.activeModel || existing.activeModel || null,
-    })
   }
 
 export function loadModelPrefs(panel) {
@@ -148,6 +111,10 @@ export function loadSession(panel) {
     // 引导（槽绑定顺延 resolve→webviewReady——正常 UI 流 view 打开时无活回合；忙态冷启
     // 仅 dev reload/webview 崩溃重载可达——销毁安全面不变）。
     panel._agent = null
+    // 心跳源新鲜度（D-W24——2026-09-19）：会话切换 / 新建点置空 `_liveLines`（newSession /
+    // switchSession / deleteSession / onProjectChanged / openSessionContent 五路汇合于本函数）
+    // ⇒ 心跳 / 再断言回落 `panel._susp?.lines`，不把旧会话池块每 2 s 投进新面板。
+    panel._liveLines = null
     // Session switch (webview newSession/loadSession/deleteSession, project switch, panel open):
     // abort any in-flight async distillation from the previous turn — its history arrays belong
     // to the OLD session (SEND-STALL-DISTILL review #1; onDistilled's slot check is defense in
@@ -196,8 +163,9 @@ export function loadOlder(panel, before) {
 export function sendHistoryPage(panel, messages, hasOlder, older) {
     // Machine-only editor-context injections must never surface in the UI (parity
     // with the per-message strip in the old eager loader).
+    // F-W15（D-W17）：再还原 `@` 引用——恢复面 ≡ 活面（先剔机器注入、再还原 @ 引用——同点同序）。
     const clean = messages.map((m) => {
-      if (m.kind === "user") return { ...m, text: stripEditorInjection(m.text) }
+      if (m.kind === "user") return { ...m, text: stripAtRefs(stripEditorInjection(m.text)) }
       if (m.kind === "tool") return typeof m.text === "string" ? { ...m, text: m.text.slice(0, 64 * 1024) } : m
       // SESSION-RESTORE-PARITY（B）：tool 结果随 assistant 帧 tools[] 嵌套下发——
       // 清洗适配嵌套字段（transport 64K 截断——防未 slim 老文件超大结果进 webview）
@@ -218,7 +186,8 @@ export async function newSession(panel) {
       return
     }
     // Allocate a fresh slot, bind this panel to it, then load its (empty) content.
-    panel._slot = newSlot(_cwd())
+    // F-MI7：`newSlot` = async（核同名件同形）——认领束 awaited 再绑（本函数已 async）。
+    panel._slot = await newSlot(_cwd())
     loadSession(panel)
   }
 
@@ -232,42 +201,13 @@ export async function deleteSession(panel, slot) {
     if (typeof slot !== "number" || slot < 1) return
     const slots = listSlots(_cwd())
     if (slots.length <= 1) return  // Keep at least one session
-    const newActive = deleteSlotAndUpdate(_cwd(), slot)
-    // If we deleted the slot this panel was bound to, rebind to the survivor.
-    // 2026-09-01 CLI 同步：deleteSlotAndUpdate 置空 active（不替面板选"最小剩余号"——
-    // 可能指向另一活进程的槽）；_slot = null → 下次保存经 ensureSlot 重新认领。
-    if (slot === panel._slot) {
-      panel._slot = newActive
-      // 2026-09-05 §10（review 🟡#1）：删本端记录槽后若面板立即重绑幸存槽继续使用——
-      // 重绑 = 一个"落点"：写本端记录 = 幸存槽（与 ACP"删后 newSession 重钉"、switchToSlot
-      // "打开历史会话写 marker"同语义——marker = 端内最后使用槽位 D-1/D-8）；newActive 为
-      // null 时保持置空（F4），下次 ensureSlot 经 resumeSlot 认领新槽并写记录。
-      if (newActive != null) writeEndMarker(_cwd(), newActive)
-    }
+    deleteSlotAndUpdate(_cwd(), slot)
+    // 删本端绑定槽 ⇒ 面板解绑；重解析走 ensureSlot 冷路径（记录/缓存已由
+    // deleteSlotAndUpdate 收敛——记录显式置空 + 解析缓存清空），下一次认领由 resumeSlot 另择**新号**。
+    // 不收养幸存 active（2026-09-01 旧行为）：那可能是**另一活进程的槽**——重绑 = 面板
+    // `_slot` 钉到别人槽上 + 写其本端记录（P3/P4 违约；SESSION.md §6.15）。
+    if (slot === panel._slot) panel._slot = null
     loadSession(panel)
-  }
-
-export async function generateTitle(panel, slotOverride) {
-    try {
-      const cwd = _cwd()
-      // slotOverride（会话切换竞态修复，2026-08-28）：turn 启动时捕获的槽——标题属于产生
-      // 首条消息的那个会话，切走后不得给新会话改名。
-      const slot = slotOverride ?? ensureSlot(panel)
-      const data = loadSlot(cwd, slot)
-      if (!data || data.title) return  // Already titled
-      const firstUser = (data.history ?? []).find((m) => (m.type ?? m.role) === "user")
-      if (!firstUser) return
-      // Provider comes from persisted session data (written by _saveLines on each turn),
-      // not the message (runAgent never stamps provider/model onto history entries).
-      const title = await generateSessionTitle(firstUser.content, data.activeProvider || undefined)
-      if (title) {
-        const r = setSlotTitle(cwd, slot, title)
-        if (r.ok) pushSessions(panel)
-        else console.error(`[chat-panel] setSlotTitle failed (${r.reason})`) // §12 F3：自动标题写失败不再静默
-      }
-    } catch (e) {
-      console.error("[chat-panel] generateTitle failed:", e.message)
-    }
   }
 
 export function pushSessions(panel) {
@@ -290,6 +230,7 @@ export function pushSessions(panel) {
       provider: s.activeProvider ?? null,
       active: s.slot === highlight,
     }))
+    // active = 绑定槽号；零探测冷路径可返 null（F-MI7）= 无高亮行（webview 容 null ✓）
     panel._panel?.webview.postMessage({ type: "sessions", sessions, active: ensureSlot(panel) })
   }
 
@@ -304,11 +245,12 @@ export function pushSessions(panel) {
  * status() 慢段内）保留不同 tick。
  * 槽绑定时机随之上移（resolve → webviewReady）——webviewReady 前无 slot 读者（安全）。
  */
-export function openSessionContent(panel) {
-    const cwd = _cwd()
+export async function openSessionContent(panel) {
     // 2026-09-05 §10 D-2：恢复决策 resumeSlot（本端记录/一次性继承/全新分配——与
-    // ensureSlot/onProjectChanged 同点）；全新目录下 claim 先行——文件在首保存时落盘
-    panel._slot = resumeSlot(cwd).slot
+    // ensureSlot/onProjectChanged 同点）；全新目录下 claim 先行——文件在首保存时落盘。
+    // F-MI7：认领 = async 束（`ensureSlotAsync` 单飞 + 粘性直返）——本函数 = 三个绑定入口
+    // 的快段，awaited（loadSession 内容随认领完成落定——B2 单向 boot 序不变）。
+    await ensureSlotAsync(panel)
     panel._pushProject()
     loadSession(panel)
 }
@@ -345,4 +287,8 @@ export async function status(panel) {
     void panel._maybePromptLegacyIndexRemoval()
     // Auto-check: prompt to build vector index if available but missing
     panel._maybePromptIndex()
+    // F-MI7：同伴快照预热（SWR 写面）——本段 = 面板打开慢段（resolve 期只起本段）；**不绑槽**
+    // （AC-B2c 零回退——只热 `peerInstances` 快照，面板 `_slot` 保持 null ⇒ ⑪b/⑫ 断言不变）；
+    // 首个回合 `pushPeerReminder` 同步读命中快照、零 exec（N-MI3）。探测失败内部吞（降级 []）。
+    prewarmPeerInstances(_cwd())
   }

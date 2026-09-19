@@ -32,8 +32,8 @@
 - 输出 Markdown 表列出全部剩余问题（旧的或新的）：
 | # | Orig# | File | Severity | Status | Notes |
 |---|-------|------|----------|--------|-------|
-| 1 | 3 | src/x.mjs | 🔴 | Unfixed | ... |
-| N | (new) | src/y.mjs | 🔴 | New: 修复后缺 null 检查 | ... |
+| 1 | 3 | src/<x>.mjs | 🔴 | Unfixed | ... |
+| N | (new) | src/<y>.mjs | 🔴 | New: 修复后缺 null 检查 | ... |
 - **收尾裁决行**（规则钉在文末 `## Verdict Line`）：表/发现之后，以恰好一行裁决收尾——`VERDICT: pass` 或 `VERDICT: changes-required`——作为最后一行，之后**什么都不输出**：裁决是收尾决定。
 - 准备好出评审表就停止调工具。
 

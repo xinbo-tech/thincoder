@@ -6,7 +6,6 @@
  */
 import { hasCodeMutations } from "../advisor/repos.mjs"
 import { pushReal } from "../context.mjs"
-import { MAX_ADVISOR_ROUNDS } from "../advisor/run.mjs"
 import { advisorReviewPending, effectiveAdvisorRound } from "../agent-tools/advisor-async.mjs"
 
 const MAX_VERIFY_PUSHBACKS = 2
@@ -126,10 +125,10 @@ export function handleCompletion(agent, response, depth, turn, guardPushbacks, h
     // non-stale it marks _calledAdvisorThisRun, and a STALE settle leaves the
     // mark unset so the guard pushes back here again (fix #2 — no silent skip).
     const pending = advisorReviewPending(agent)
+    // rounds 仅作提醒文案显示（撤 cap——轮次不是终止判据；ADVISOR-CONVERGENCE.md §3.1）。
     const rounds = effectiveAdvisorRound(agent)
     if (!pending && agent._mutatedThisRun && !agent._calledAdvisorThisRun && hasCodeMutations(agent)
-        && advisorPushbacks < MAX_ADVISOR_PUSHBACKS
-        && rounds < MAX_ADVISOR_ROUNDS) {
+        && advisorPushbacks < MAX_ADVISOR_PUSHBACKS) {
       advisorPushbacks++
       pushReal(agent, { role: "assistant", content: response.content })
       agent.history.push({

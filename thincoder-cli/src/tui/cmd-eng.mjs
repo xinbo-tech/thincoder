@@ -1,13 +1,15 @@
 /** /eng command: toggle engineering mode.
- *  No prerequisites (FR11): the mode works on any project — no methodology file,
- *  no docs tree, no git. The retired gate demanded a methodology file and offered
- *  to create it from a template that no longer ships — that option crashed
- *  (PORTABILITY P14). ctx: { agent, pushLine, pushLabel } */
+ *  No retired-concept prerequisites (FR11 收正口径 — `docs/core/requirements/PORTABILITY.md:62`):
+ *  no methodology file, no docs tree. The **repo-root anchor（git）= E2 既有入口前提**：
+ *  非锚 cwd 上 ON = fail-closed 拒翻 + 明示原因、模式保持 OFF（#41 —
+ *  `docs/core/design/MANIFEST.md` §2.8 F2/F3；判定面 = 入口决策树单源）。
+ *  ctx: { agent, pushLine, pushLabel } */
 import { readFileSync, writeFileSync, mkdirSync, renameSync, unlinkSync } from "node:fs"
 import { dirname } from "node:path"
 import { ansi, C } from "./ansi.mjs"
 import { activeSlot, slotPath } from "@thincoder/core/session.mjs"
 import { purgeExpiredDesignTokens } from "@thincoder/core/token-ttl.mjs"
+import { resolveEngineeringManifest } from "@thincoder/core/manifest.mjs"
 
 import { ENG_OFF_REMINDER } from "@thincoder/core/agent.mjs"
 
@@ -29,8 +31,22 @@ export async function handleEngCommand(ctx) {
   const { agent, pushLine, pushLabel } = ctx
   agent.config.agent ??= {}
 
-  // Toggle on/off — no prerequisite check (FR11: engineering mode depends on no
-  // project file at all; a missing docs tree or git repo must not block it).
+  // No retired-concept prerequisite check (FR11 收正口径；退场原因见档头注)。ON 方向的门
+  // = 入口决策树（下方）；OFF 方向恒放行（F2 表 OFF 行——零 manifest I/O）。
+  //
+  // #41 先判后翻（MANIFEST.md §2.8 F2/F3 · KD-M1-21）：**ON 方向**先走入口决策树单源
+  // （resolveEngineeringManifest——KD-M1-20），判据通过才写态；OFF 方向零改（F2 表 OFF 行）。
+  // 拒 ⇒ warn 行 + **零标签**（标签 = 成功回显——拒时零标签防假成功）+ 零副作用
+  // （模式未翻 / token 未清 / `_advisorRuns` 未重置 / 提醒未入列 / 槽未写）。
+  // 准 ⇒ 缺档格就地建档（writer:'main'）+ `agent.manifest` ← 结果（相位行当回合起活）。
+  if (!agent.config.agent.engineering) {
+    const r = resolveEngineeringManifest(agent.cwd ?? process.cwd(), { writer: "main" })
+    if (!r.ok) {
+      pushLine(`Engineering mode not enabled — ${r.message} (mode unchanged)`, C.warn)
+      return
+    }
+    agent.manifest = r.manifest
+  }
   agent.config.agent.engineering = !agent.config.agent.engineering
   // §11.2 D-24b: per-review instances die with the mode (fresh convergence cycles
   // on the next toggle).

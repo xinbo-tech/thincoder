@@ -224,12 +224,12 @@ test("T-RO5/T-RO6 反例+边界：旧三值句/旧相邻形态零残留（本端
 // ① 表 ⇔ 核锚名集合逐名等值（fail-closed）；② 配置态四装配面零 `{{inject:` 字面 + 13 锚 VSC 值在场；
 // ③ 工具描述面特有形态；④ 未配置态恒等；⑤ 入口径（activate() 直调）同断言（A-K5）。
 // ─────────────────────────────────────────────────────────────────────────────
-test("锚面①：VSC 表 ⇔ 核锚名集合逐名等值（13 名 · 旧名单锚零命中 · ptr 族恰 5 名）", () => {
+test("锚面①：VSC 表 ⇔ 核锚名集合逐名等值（工具面 2 锚——提示词面锚全消 2026-09-17）", () => {
   const core = coreAnchorNames()
   assert.deepStrictEqual(core, Object.keys(VSC_PROMPT_INJECTIONS).sort(), "VSC 表键 ⇔ 核内锚名（逐名等值——新增/缺失即红）")
-  assert.equal(core.length, 13, "锚名去重集合 = 13（§2.13.7⑥）")
+  assert.equal(core.length, 2, "锚名去重集合 = 2（bash-terminal-face / question-ui-face）")
   assert.ok(!core.includes("agent-loop-pointer"), "旧名单锚零命中")
-  assert.equal(core.filter((n) => n.startsWith("agent-loop-ptr-")).length, 5, "agent-loop-ptr-* 恰 5 名")
+  assert.equal(core.filter((n) => n.startsWith("agent-loop-ptr-")).length, 0, "agent-loop-ptr-* 指针族已删（正文自足）")
 })
 
 test("锚面①b：顾问提示词面零锚（本端该面直读核档、不过注入原语——新增锚即红）", () => {
@@ -261,26 +261,27 @@ test("锚面②：配置态四装配面零锚字面 + 「VSC 列」取值逐条�
     const eng = prompts[SCENARIOS.indexOf("engineering")]
     const normal = prompts[SCENARIOS.indexOf("normal")]
     const engCoder = prompts[SCENARIOS.indexOf("eng-coder")]
-    assert.ok(eng.includes("docs/design/README.md"), "engineering: 文档地图 docs/design/README.md")
-    assert.ok(eng.includes("(AGENT-LOOP（CLI 仓·设计）§11.2（该节号 = CLI 侧；本端对应节 = §9 会诊/飞刀/advisor 异步化） — R13)"), "engineering: 异步锚句指针（整条 + 端说明括注）")
-    assert.ok(eng.includes("### VSC 端特有段：R14 池规则"), "engineering: R14 端特有段（本端独有之注入段）")
-    assert.ok(!eng.includes("## 改动面反查（文档影响面）"), "engineering: 改动面反查节不在场（VSC = 空串）")
-    assert.ok(eng.includes("review, AGENT-LOOP（CLI 仓·设计）§8（本端交付协议节 = §8）)"), "engineering: 交付链指针（整条）")
-    assert.ok(normal.includes("(AGENT-LOOP（CLI 仓·设计）§7.3（本端交付协议节 = §8） D-E1a)"), "normal: 顶层异步 spawn 指针（整条）")
-    assert.ok(normal.includes("(like an async spawn; AGENT-LOOP（CLI 仓·设计）§14.2（本端异步化节 = §9）)"), "normal: 飞刀指针（整条）")
-    assert.equal((normal.match(/^## 收尾验收$/gm) ?? []).length, 1, "normal: `## 收尾验收` 节标题恰一份（VSC 侧独有）")
-    assert.ok(!normal.includes("Ctrl+I"), "normal: 会诊终止口径不在场（VSC = 空串）")
-    assert.ok(engCoder.includes("session (AGENT-LOOP（CLI 仓·设计）§8（本端交付协议节 = §8）)."), "eng-coder: 交付协议指针（整条）")
-    assert.ok(engCoder.includes("## Guidelines - Work independently."), "eng-coder: Guidelines 块（端特有段）")
-    assert.equal((engCoder.match(/one file at a time/g) ?? []).length, 1, "eng-coder: 核内已承载项不重复注入（缺口 3 去重口径）")
-    assert.equal((engCoder.match(/Out-of-file-list changes/g) ?? []).length, 1, "eng-coder: file 域项不重复注入（同上）")
+    assert.ok(prompts[SCENARIOS.indexOf("eng-designer")].includes("docs/README.md"), "eng-designer: 文档地图统一 docs/README.md")
+    assert.ok(eng.includes("advisor calls are async by default at the top level"), "engineering: advisor 异步语义正文在场")
+    assert.ok(eng.includes("Concurrent pool limits (per role domain)"), "engineering: R14 池规则并入正文")
+    assert.ok(!eng.includes("## 改动面反查（文档影响面）"), "engineering: 改动面反查节不在场（消端差）")
+    assert.ok(eng.includes("in-child advisor code review"), "engineering: 交付链正文自足")
+    assert.ok(normal.includes("Top-level subagent spawns default to async"), "normal: 顶层异步 spawn 语义正文在场")
+    assert.ok(normal.includes("Top-level escalate defaults to async"), "normal: 飞刀异步语义正文在场")
+    assert.equal((normal.match(/^## 收尾验收$/gm) ?? []).length, 0, "normal: `## 收尾验收` 节已消（内容并入正文）")
+    assert.ok(normal.includes("Ctrl+I"), "normal: 会诊终止口径并入正文（两端一致）")
+    assert.ok(engCoder.includes("the full loop runs in this same session."), "eng-coder: 交付协议正文自足")
+    assert.ok(!engCoder.includes("## Guidelines"), "eng-coder: Guidelines 端特有段已消（并入正文）")
+    assert.ok(engCoder.includes("Final review before finishing"), "eng-coder: 收尾自审清单并入正文")
+    assert.equal((engCoder.match(/one file at a time/g) ?? []).length, 1, "eng-coder: 核内已承载项不重复")
+    assert.equal((engCoder.match(/Out-of-file-list changes/g) ?? []).length, 1, "eng-coder: file 域项不重复")
     assert.ok(!union.includes("AGENT-LOOPAGENT-LOOP"), "整条指针替换（前缀不重复）")
   } finally { resetPromptInjections() }
 })
 
 test("锚面③：未配置态恒等（原文过——U0 三态基线「未配置零变」）", () => {
   resetPromptInjections()
-  assert.ok(assemblePrompt("engineering").prompt.includes(LITERAL), "未配置 ⇒ 锚字面原样过（零替换）")
+  // 提示词面无锚（2026-09-17 消端差）——未配置 ⇒ 工具面锚字面原样过
   assert.ok(builtinTools.map(toOpenAISchema).some((s) => String(s.function.description).includes(LITERAL)), "工具描述面同（未配置恒等）")
 })
 
@@ -314,8 +315,8 @@ test("锚面④ A-K5 入口径：activate() 首步配置本端表 ⇒ 四装配�
       if (value === "") continue
       assert.ok(union.includes(value), `入口径：§2.13.2「VSC 列」取值在场：${name}`)
     }
-    assert.equal((prompts[SCENARIOS.indexOf("normal")].match(/^## 收尾验收$/gm) ?? []).length, 1, "入口径：收尾验收节标题恰一份")
-    assert.ok(prompts[SCENARIOS.indexOf("normal")].includes("docs/design/README.md"), "入口径：文档地图路径在场")
+    assert.equal((prompts[SCENARIOS.indexOf("normal")].match(/^## 收尾验收$/gm) ?? []).length, 0, "入口径：收尾验收节已消（内容并入正文）")
+    assert.ok(prompts[SCENARIOS.indexOf("normal")].includes("docs/README.md"), "入口径：文档地图统一 docs/README.md")
   } finally {
     if (hadLang) vscodeEnv.language = origLang
     else delete vscodeEnv.language

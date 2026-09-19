@@ -3,7 +3,7 @@
 > 板块 = **编辑工具**；本档 = **edit 语义的权威源**（逐工具权威档之一 · 主编辑工具）。
 > 地图与契约要点 = `docs/core/design/TOOLS.md` §6.6 · §8.2——本档不复制其内容（D2）。
 > 共享底层（EOL 写回 / 失败候选 / U+FFFD）= `docs/core/design/EDIT-HELPERS.md`（**不在此重复**）。
-> 双端：CLI `thincoder-core/tools/edit-diff.mjs` + `thincoder-core/tools/edit-batch.mjs` + `thincoder-core/tools/file.mjs`（`editTool` 壳 / schema）· VSC `thincoder-vscode/src/tools/file-edit.mjs`（同机制，各自实现）（VSC 自持镜像已删——W14 已迁核，现体同指核三档）。
+> 双端：CLI `thincoder-core/tools/edit-diff.mjs` + `thincoder-core/tools/edit-batch.mjs` + `thincoder-core/tools/file.mjs`（`editTool` 壳 / schema）· VSC `thincoder-vscode/src/tools/file-edit.mjs`（同机制，各自实现）（VSC 自持镜像已删——W14 已迁核，现体同指核三档）。 （迁移期引文）
 > 模型可见描述 = `thincoder-core/tool-docs/edit.md`（提示词面 / 产品代码——与语义须同改，见 §2 末）。
 > 需求侧 = `docs/core/requirements/TOOLS.md`（工具系统板块；CLI 树无逐工具需求档）。
 > 建档：2026-09-15（**B 式迁移轮 · 第 1 批**——`thincoder-cli/docs/design/EDIT.md` 内容重建入基准层；旧档原地一字不改、留作参照历史）。
@@ -71,7 +71,7 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 | 三通道共用 | 本地单形态 / `edits` 批量 / ACP 桥 | 同内核 |
 | 注册面 | `thincoder-core/tools/index.mjs:4` · `:21` | file 组 |
 | 描述面（模型可见） | `thincoder-core/tool-docs/edit.md` | 在位（`DESC()` 加载） |
-| VSC 对位实现 | `thincoder-vscode/src/tools/file-edit.mjs:78`（`edit`）· `edit-diff.mjs` · `edit-batch` 等价档（`edit-line-params.mjs` / `edit-fuzzy-match.mjs`）（W14 已迁核——上述自持档已删，现体 = 核 `thincoder-core/tools/{file.mjs, edit-diff.mjs, edit-batch.mjs}`） | 同机制 · 独立实现 |
+| VSC 对位实现 | `thincoder-vscode/src/tools/file-edit.mjs:78`（`edit`）· `edit-diff.mjs` · `edit-batch` 等价档（`edit-line-params.mjs` / `edit-fuzzy-match.mjs`）（W14 已迁核——上述自持档已删，现体 = 核 `thincoder-core/tools/{file.mjs, edit-diff.mjs, edit-batch.mjs}`） | 同机制 · 独立实现 （迁移期引文） |
 
 **VSC 端差异（并入 · 批 8）**：① 描述机制——VSC 无 `DESC()` md 描述（`file-edit.mjs` editTool 对象内嵌 description——与 CLI `tool-docs/edit.md` 语义一致）；
 ② 编辑器路径——doc 已打开 → WorkspaceEdit range 替换（定位偏移与 `doc.positionAt` 同坐标系——`lfOffsetToRaw` 把 LF 域偏移映射回 CRLF 原文，见 `docs/core/design/EDIT-HELPERS.md` §6）；③ 测试面——VSC 侧 30 用例
@@ -101,7 +101,7 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 |---|---|---|
 | 旧档状态行 | 时点状态行（含 D1–D3 落地日期） | 批次语境——现行态已入 §1–§6 |
 | 旧档「变更记录」节 + §7 之上游离的实施条目 | 阶段 2 落地流水 | 历史叙述——本档自有变更记录 |
-| 旧档括注的 `TOOLS.md` §6.1 节号与 `_archive/EDIT-TOOL-IMPROVEMENT.md` | 旧节号 / 已归档设计档 | 现行地图节号 = `TOOLS.md` §6.6；归档档归 CLI 树 `_archive/`（参照历史） |
+| 旧档括注的 `TOOLS.md` §6.1 节号与 `thincoder-cli/docs/design/_archive/EDIT-TOOL-IMPROVEMENT.md` | 旧节号 / 已归档设计档 | 现行地图节号 = `TOOLS.md` §6.6；归档档归 CLI 树 `_archive/`（参照历史） |
 | 旧档 §3 中的 `8.2` / `§8` 类旧编号 | 旧结构编号 | 现行编号以本档节号为准（迁移轮统一） |
 
 ### 9.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
@@ -111,10 +111,6 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 | 旧档「阶段 2 预告（EDIT-TOOLS-REVIEW.md）」相关注记 | 批次评估/预告 | 一次性批次材料；机制已落（§3–§5）——评估档归 CLI 树 `_archive/` |
 | 描述面正文（Routing / 反模式） | 模型可见文本 | **提示词面 = 产品代码**——落点 `thincoder-core/tool-docs/edit.md` |
 | VSC 档（`thincoder-vscode/docs/design/EDIT.md`）的批次材料（选型 / 用例表 / AC 表 / 变更记录） | 一次性材料 + 历史流水 | VSC 差异面已并 §6（VSC 端差异块）；批次档承载（D2） |
-
-## 10. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **123 行**（根层 · as-of 2026-09-15 批 8 实测）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 

@@ -1,6 +1,6 @@
 /**
  * eng-designer-role.test.mjs — eng-designer 角色 VSC 落地（ENGINEERING-MODE.md §2.15 D /
- * §2.22.4 八处 · FR23 F2；用例 T57/T57b/T57c/T58 + 运行期三关）。
+ * VSC 端镜像批（2026-09-11 · 第 5 批）八处 · FR23 F2；用例 T57/T57b/T57c/T58 + 运行期三关）。
  *
  * 发现 #1 的教训：枚举/装配层落完**不等于角色能 spawn**——运行期有 fail-closed 白名单与三道门。
  * 本档断言下沉到运行期：
@@ -27,6 +27,7 @@ import { buildSpawnChild } from "@thincoder/core/agent-tools/subagent-spawn.mjs"
 import { gateEngCoderSpawn } from "@thincoder/core/agent/spawn-child.mjs"
 import { modeRoleField, setupAgentRun } from "../src/agent/setup.mjs"
 import { SCENARIO_SLOT_FILES, assemblePrompt } from "@thincoder/core/prompt-overlays.mjs"
+import { ENG_TASK_BOOK_MIN } from "@thincoder/core/agent-tools/spawn-gates.mjs"
 import { setupWebview, installChatFixture } from "./helpers/webview-env.mjs"
 
 const REPO = resolve(fileURLToPath(import.meta.url), "..", "..")
@@ -48,7 +49,7 @@ const provider = { name: "probe", model: "gpt-4o", apiKey: "k" }
 const batchFile = () => {
   mkdirSync(join(cwd, "docs", "batches"), { recursive: true })
   const abs = join(cwd, "docs", "batches", "b.md")
-  writeFileSync(abs, "# 批次\n\n## §1 讨论\n\n## §2 批次任务\n\n## §3 设计评审\n\n## §4 用户批准\n\n## §5 实施记录\n\n## §6 验证与收口\n")
+  writeFileSync(abs, "# 批次\n\n## §1 讨论\n\n**状态行**：🔄 进行中（夹具）\n\n## §2 批次任务\n\n## §3 设计评审\n\n## §4 用户批准\n\n## §5 实施记录\n\n## §6 验证与收口\n")
   return abs
 }
 const parentAgent = ({ engineering = true, role = null, depth = 0 } = {}) => ({
@@ -71,7 +72,7 @@ function buildProbe(parent, args, role) {
 test("T57 正常：工程模式 spawn eng-designer 放行（白名单 + 模式门 + 子代门 → 装配）", async () => {
   const abs = batchFile()
   const parent = parentAgent()
-  const built = buildProbe(parent, { task: "写批次 §2", role: "eng-designer", batchDoc: "docs/batches/b.md", async: false }, "eng-designer")
+  const built = buildProbe(parent, { task: ENG_TASK_BOOK_MIN, round: "initial", role: "eng-designer", batchDoc: "docs/batches/b.md", async: false }, "eng-designer")
   assert.equal(built.child._batchDoc, abs, "装配通过 → 绑定落到 child（行前门全过）")
   assert.ok(!parent._engAuditSpawns, "designer 勘察不占审计预算（gate 返回 null——不计审计尝试）")
 })
@@ -86,13 +87,15 @@ test("T57 错误：未知角色文案点名新角色（漏改则报错信息说�
 })
 
 test("T57 边界：角色 enum（工程模式含 designer / 普通模式不含）", () => {
-  const eng = modeRoleField(true).role.enum
-  assert.ok(eng.includes("eng-designer"), "工程模式 enum 含 eng-designer")
+  const eng = [...modeRoleField(true).role.enum].sort()
+  const normal = [...modeRoleField(false).role.enum].sort()
+  assert.deepEqual(eng, ["eng-coder", "eng-designer", "explore"], "工程模式 enum = F5 集（集合相等——集外值即红）")
+  assert.deepEqual(normal, ["coder", "explore", "plan"], "普通模式 enum = 正常模式集（同法锁集）")
   assert.ok(!modeRoleField(false).role.enum.includes("eng-designer"), "普通模式 enum 不含（模式互斥）")
   assert.match(modeRoleField(true).suffix, /eng-designer/, "suffix 指向新角色（模型可见引导）")
 })
 
-test("T57 正常：装配分支——batch_segment 在、advisor 不在、绑定落到工具（§2.22.4 ④/⑨）", async () => {
+test("T57 正常：装配分支——batch_segment 在、advisor 不在、绑定落到工具（VSC 端镜像批（2026-09-11 · 第 5 批）④/⑨）", async () => {
   const abs = batchFile()
   const run = await setupAgentRun({
     provider, cwd, input: "task", depth: 1, role: "eng-designer", getAuto: () => false,
@@ -111,7 +114,7 @@ test("T57 正常：装配分支——batch_segment 在、advisor 不在、绑定
   const props = run.toolByName.get("subagent").parameters.properties
   assert.deepEqual(props.role.enum, ["explore"], "勘察通道 role 仅 explore")
   assert.deepEqual(props.action.enum, ["spawn"], "受限变体 action 仅 spawn（核版形态——机械门在 execute 层）")
-  assert.ok(!("async" in props) && !("batchDoc" in props), "受限变体 delete 清单（含 batchDoc）")
+  assert.ok(!("async" in props) && !("batchDoc" in props) && !("round" in props), "受限变体 delete 清单（含 batchDoc/round——勘察通道 F2 豁免）")
 })
 
 test("T57 零回归：eng-coder 装配面不变（advisor/verify 在，batch_segment 仍挂）", async () => {

@@ -28,7 +28,7 @@ const timeoutMs = (Number.isFinite(cfg) && cfg > 0) ? cfg : REVIEW_TIMEOUT_MS
 
 - **运行期校验**：手写 `config.json` 的非法值（0 / 负数 / 字符串）不得静默禁用或立即触发超时——**非法一律回退默认**。
 - 读取链：`thincoder-core/config.mjs:335` 把 `merged.agent.advisor` promote 为 `merged.advisor`（decoupled copy）⇒ `agent.config.advisor.timeoutMs` 天然可见；`runAdvisorToolLoop` 已接收 `agent` 参数，**无需改签名**。
-- **默认值单一来源**：**不**在 `DEFAULTS.agent.advisor` 写死 `timeoutMs`——默认值只住 `REVIEW_TIMEOUT_MS` 常量，避免两处漂移（`thincoder-core/config.mjs:49` 的 advisor 默认块注释即登记 `timeoutMs` 为可覆盖项）。
+- **默认值单一来源**：**不**在 `DEFAULTS.agent.advisor` 写死 `timeoutMs`——默认值只住 `REVIEW_TIMEOUT_MS` 常量（`thincoder-core/advisor/compaction.mjs:36`），避免两处漂移（`thincoder-core/config.mjs:49` 的 advisor 默认块注释即登记 `timeoutMs` 为可覆盖项）。
 - **TUI 不新增编辑项**：`/config` 不提供 `timeoutMs` 菜单——手写 `config.json` 即可。
 
 ## 3. 主 agent 轮次上限（默认 200）
@@ -82,11 +82,11 @@ const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_T
 
 ### 6.3 VSC 端接线（B 式并入 · 实核 as-of 2026-09-15）
 
-> 来源 = `thincoder-vscode/docs/design/AGENT-PARAMS-TUNING.md`（VSC 产品档——旧档一字未改、留参照历史）。VSC 端四参数与 CLI 语义同源、实现独立（各自文件清单独立）。
+> 来源 = `thincoder-vscode/docs/_archive/design/AGENT-PARAMS-TUNING.md`（VSC 产品档——旧档一字未改、留参照历史）。VSC 端四参数与 CLI 语义同源、实现独立（各自文件清单独立）。
 
 | 面 | VSC 落点（实核） |
 |---|---|
-| 评审超时默认 + re-export | `thincoder-vscode/src/advisor/compaction.mjs:33`（`REVIEW_TIMEOUT_MS` = 600 000）· `thincoder-vscode/src/advisor/run.mjs:19` re-export |
+| 评审超时默认 + re-export | `thincoder-vscode/src/advisor/compaction.mjs:33`（`REVIEW_TIMEOUT_MS` = 600 000）· `thincoder-core/advisor/run.mjs:19` re-export |
 | 评审检查点（配置覆盖 + 非法回退） | `thincoder-vscode/src/advisor/loop.mjs:98`（`Number.isFinite(cfg) && cfg > 0` → 缺省回退常量） |
 | advisor 配置读取链 | `thincoder-vscode/src/agent/setup.mjs:210`（初始 `{ guard: false }`）· `:232`（`raw.agent?.advisor ?? { guard: false }`） |
 | 面板保存透传 timeoutMs（P4——不静默丢） | `thincoder-vscode/src/extension/settings-panel-write.mjs:45`（`saveAgentSettingsFromPanel`）· `:112`–`:116`（合法 payload 胜，否则保留 current——不合并会丢字段；`thincoder-vscode/src/config-io.mjs:26` re-export） |
@@ -131,11 +131,9 @@ const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_T
 | VSC 端「30 硬帽」 | 端特有问题 | **已并入（批 6）**——§4 注 + §6.3 行 5（VSC 侧现状 = 无 `Math.min` 截断） |
 | VSC 旧档 `AGENT-PARAMS-TUNING.md` §3 受影响文件表 · §4 AC1–AC9 · 变更记录流水 | 批次材料（单次改动清单 / 一次性验收 / 历史流水） | **不并**——现行坐标入 §6.3；机制约束已入 §2–§4（(d) 类） |
 
-## 9. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **141 行**（并入批 6 后 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
-
 ## 变更记录
 
-- 2026-09-15（**B 式迁移轮 · 第 3 批**）：建档——`thincoder-cli/docs/design/AGENT-PARAMS.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；坐标改写为现状路径并实核（`advisor/compaction.mjs` · `advisor/loop.mjs` · `config.mjs` · `agent/helpers.mjs` · `agent/setup.mjs` · `tui/cmd-config.mjs`）；新增 §5 参数总表（本档为参数族唯一权威）；批次材料 / 状态行 / 变更流水不并（§8）。
-- 2026-09-15（**B 式迁移轮 · VSC 第 6 批 · 并入 · eng-designer**）：新增 §6.3 VSC 端接线——自 `thincoder-vscode/docs/design/AGENT-PARAMS-TUNING.md` 并入（评审超时 / 面板透传 / explore 30 硬帽移除 / maxTurns 200 逐项实核；VSC 默认落在 `advisor/compaction.mjs` 而非旧档所记 `run.mjs`——按现状收正）；§4 补 VSC 注 + §8.2 VSC 行收口（(d) 类批次材料登记）；需求侧头注随批 4 建档收正。
+- 2026-09-15（**B 式迁移轮 · 第 3 批**）：建档——`thincoder-cli/docs/design/AGENT-PARAMS.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；坐标改写为现状路径并实核（`advisor/compaction.mjs` · `advisor/loop.mjs` · `config.mjs` · `thincoder-core/agent/helpers.mjs` · `thincoder-core/agent/setup.mjs` · `tui/cmd-config.mjs`）；
+  新增 §5 参数总表（本档为参数族唯一权威）；批次材料 / 状态行 / 变更流水不并（§8）。
+- 2026-09-15（**B 式迁移轮 · VSC 第 6 批 · 并入 · eng-designer**）：新增 §6.3 VSC 端接线——自 `thincoder-vscode/docs/_archive/design/AGENT-PARAMS-TUNING.md` 并入（评审超时 / 面板透传 / explore 30 硬帽移除 / maxTurns 200 逐项实核；VSC 默认落在 `advisor/compaction.mjs` 而非旧档所记 `run.mjs`——按现状收正）；
+  §4 补 VSC 注 + §8.2 VSC 行收口（(d) 类批次材料登记）；需求侧头注随批 4 建档收正。

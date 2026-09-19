@@ -14,7 +14,7 @@
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync,  existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { runAgent } from "../../src/agent.mjs"
@@ -26,6 +26,7 @@ let cfgDir
 
 before(() => {
   work = mkdtempSync(join(tmpdir(), "tc-integ-flow-"))
+  mkdirSync(join(work, ".git"), { recursive: true }) // 项目根判据（.git 仓根——2026-09-17）
   cfgDir = mkdtempSync(join(tmpdir(), "tc-integ-flow-cfg-"))
   // 环境隔离：配置指向临时空配置（不读真实用户配置——集成档确定性）
   const cfgPath = join(cfgDir, "config.json")

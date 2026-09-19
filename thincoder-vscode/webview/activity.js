@@ -1,22 +1,23 @@
 /**
  * activity.js — 子代理活动块生命周期编排（2026-09-12 活动区收口——WEBVIEW.md §14 现行机制）。
  * 位置三度更替（活动区 → 流尾 → 活动区 → **消化后归档入流**）——**两态机与块身份语义始终
- * 不变**：生命周期 live → frozen；frozen 上的 `awaitingDigest` 单标志 = settled 块「等待消化」
- * 驻留（**非第二状态机**——C-2）。
+ * 不变**（live → frozen；frozen 上 `awaitingDigest` 单标志 = settled 驻留——**非第二状态机**）。
  *
- * 出生 = 区尾 append（`#subagent-activity`——live 固定可见）。终态两路（C-1）：① `settled` →
- * 折叠 + awaitingDigest 驻留（块头态词 `t("sub.awaitingDigest")`——R3）；② 其余终态（done/
- * error/cancelled/answered/terminated/failed）→ 折叠 + **即时归档**（C-3 ②尾追）；③ 消化回收
- * （`done` 命中 awaitingDigest 块）→ **归档**：本轮 digest 边界（`S._digestBoundary`）有效 →
- * insertBefore 边界之前（CLI 序：块在 digest 文本前）；失效/无边界 → 尾追退化（C-4）。
- * **归档 = 单次 DOM 插入**（块原地进 `#messages`）——无 per-block 锚、无降序排序、无位移校正
- * （§14.4：不是 §12.4 点名的旧 DOM-move 锚链）。幂等守卫 = map 有键且已冻结 → ensureBlock 返
- * null；tombstone（!isConnected）同守卫；**区内保留上限已退役**（C-6——区居民 = live +
- * awaitingDigest）。queued → ⏳ 等待头（C-11②）；started → 翻 running；不做跨 reload 恢复。
+ * 出生 = 区尾 append（`#subagent-activity`）；终态两路（C-1）：① `settled` → 折叠 + 驻留（态词
+ * `t("sub.awaitingDigest")`）；② 其余终态 → 折叠 + **即时归档**（C-3 ②尾追）；③ 消化回收（`done`
+ * 命中 awaitingDigest）→ 归档：digest 边界（`S._digestBoundary`）有效 ⇒ 边界之前（CLI 序），否则
+ * 尾追退化（C-4）。**归档 = 单次 DOM 插入**（无 per-block 锚 / 无降序 / 无位移校正——非 §12.4 旧
+ * DOM-move 锚链）。幂等守卫 = 冻结或 tombstone（!isConnected）⇒ `ensureBlock` 返 null；**区内保留
+ * 上限已退役**（C-6——区居民 = live + awaitingDigest）；queued → ⏳ 等待头；不做跨 reload 恢复。
  *
  * 第 10 批（§5.1）：① 新代接管（旧 awaitingDigest 块即时归档——C-5③；记 `takeover` 痕迹 +
  * 新块 `oldReclaimPending` 吞守卫）；② 终态补块（never-born 桩集精确成员表 = §5.1.4 第 6 条
- * ——补桩 = 折叠 + 立即归档——C-5②）；③ `S._subTraceLog` 出生事件痕迹（本文件单一写点）。
+ * ——补桩 = 折叠 + 立即归档——C-5②）。
+ *
+ * 2026-09-19（子代理 live 块可见性批——WEBVIEW.md §5.3/§5.5）：出生面 = **存活闸**（`queued` /
+ * `started` 命中冻结键 ⇒ 接管建新代；不限角色族 / `pool`——②③ 去门）；非出生面命中冻结 / 墓碑键
+ * ⇒ 丢弃 + 痕（⑦ 禁静默）；终态判据扩 tombstone 形；补桩前置收窄（consult / escalate 纳入）；
+ * 出生可见性 = 钉底跟随 / 未钉底计数钮；痕迹面迁出 `activity-diag.js`。
  *
  * 呈现委 activity-view.js（refreshBlock/refreshLiveHeaders/updateStopButton/noteChunk）；
  * 消费面：panels.js（applySubagentStatus/freezeLiveBlocks/refreshLiveHeaders）、chat.js
@@ -25,10 +26,12 @@
  *
  * 拆分评估（§14.6）：越 300 软线——本批不拆（上限机制退役抵消新增；<500 硬限余量足）。
  */
-import { ctx, S, SUB_TRACE_MAX } from "./state.js"
+import { ctx, S } from "./state.js"
 import { buildAdvisorBlock, maybeScrollActivity } from "./ui.js"
-import { FAMILY_ROLES, refreshBlock } from "./activity-view.js"
+import { refreshBlock } from "./activity-view.js"
 import { t } from "./i18n.js"
+import { traceSub, traceSubOnce, clearSubTraceChannel } from "./activity-diag.js"
+import { noteActivityBirth, clearActivityNew } from "./activity-new.js"
 
 // streaming.js import 面不变（noteChunk 定义在 activity-view.js 叶——hub re-export）
 export { noteChunk } from "./activity-view.js"
@@ -44,7 +47,10 @@ function parseChannel(name) {
   const m = /^sub:(explore|plan|coder|eng-coder|eng-designer|advisor)#(\d+)$/.exec(channel)
   if (m) return { channel, label, role: m[1], id: Number(m[2]), model: null }
   const c = /^sub:(consult|escalate) (.+) #(\d+)$/.exec(channel)
-  if (c) return { channel, label, role: c[1], id: Number(c[3]), model: c[2] }
+  if (c) return { channel, label, role: c[1], id: Number(c[3]), model: c[2] } // CLI 形态残留（不作判据）
+  // 键文法单源（2026-09-19——核 `relay-prefix.mjs` `[\w-]+#\d+`；consult / escalate 端侧键不含模型段）
+  const g = /^sub:([\w-]+)#(\d+)$/.exec(channel)
+  if (g) return { channel, label, role: g[1], id: Number(g[2]), model: null }
   return { channel, label, role: null, id: null, model: null }
 }
 
@@ -62,16 +68,6 @@ function blockNamesFor(role, id, model, sessionId) {
 }
 
 // ─── Block lifecycle ────────────────────────
-
-/** 出生事件痕迹（§5.1.4 第 7 条——本文件单一写点）：环形末 SUB_TRACE_MAX 条——
- *  kind ∈ takeover / late-terminal-stub / drop-unknown-role（范围 = 出生事件面——§5.1.9；
- *  queued 遇已冻结键的陈旧窗口丢弃不在此列）。目录 {kind, channel, at}——channel 供复发
- *  时定位（NFR-A2“不再不可诊断”）。 */
-function traceSub(kind, channel) {
-  const log = (S._subTraceLog ??= [])
-  log.push({ kind, channel, at: Date.now() })
-  if (log.length > SUB_TRACE_MAX) log.splice(0, log.length - SUB_TRACE_MAX)
-}
 
 /** 建块（出生 / 新代接管 / 终态补桩三路径共用——§5.1.4）：append 活动区
  *  （`#subagent-activity`）区尾 + 挂 meta 基座 + toggle 监听。不入 map——入册由调用方定
@@ -106,7 +102,9 @@ function buildBlock(name) {
     block.insertBefore(desc, block.querySelector(".advisor-content"))
   }
   ctx.activityEl.appendChild(block) // 出生位 = 活动区区尾（live 阶段驻区——归档由 C-3 驱动）
-  maybeScrollActivity(ctx) // 出生即区钉底（_pinActivity=false 上读中不强拉——不牵动 #messages）
+  // §5.5 出生可见性（D-W27）：钉底 ⇒ 跟随；未钉底 ⇒ 不改 scrollTop + 区首计数钮（不夺阅读位）
+  if (ctx._pinActivity === false) noteActivityBirth()
+  else maybeScrollActivity(ctx) // 出生即区钉底（_pinActivity=false 上读中不强拉）
   initBlockFollow(block) // 块级跟滚监听（§13——出生/接管/补桩三路径共用本点）
   refreshBlock(block)
   return block
@@ -151,7 +149,24 @@ export function ensureBlock(name) {
   }
   const block = buildBlock(name)
   S._subBlocks.set(name, block)
+  traceSub("birth", name) // 出生面正收据（§5.3 痕族）
   return block
+}
+
+/** 出生闸（§5.3——出生事件 = `queued` / `started`；**不限角色族、不限 `pool`**——②③ 去门）：无
+ *  条目 ⇒ 新建（`birth` 痕）；已冻结 ⇒ 接管建新代（`takeover` 痕——D-W25）；live ⇒ 复用（幂等——
+ *  `reassert-hit` 正收据）；tombstone ⇒ 丢弃 + `drop-tombstone` 痕。role / id 非法 ⇒ null（不可建）。 */
+function enterBlock(m) {
+  if (m?.role == null || m?.id == null) return null
+  const name = `sub:${m.role}#${m.id}`
+  const ch = parseChannel(name)
+  if (ch.role == null || ch.id == null) return null
+  const existing = S._subBlocks.get(name)
+  if (!existing) return ensureBlock(name)
+  if (existing._subMeta?.frozen) return takeoverBlock(name)
+  if (!existing.isConnected) { traceSubOnce("drop-tombstone", name); return null }
+  traceSubOnce("reassert-hit", name)
+  return existing
 }
 
 /** 新代接管（§5.1.4 第 5 条——started + pool:true 命中 map 中同名已冻结条目）：建新块并
@@ -166,6 +181,7 @@ export function takeoverBlock(name) {
   const block = buildBlock(name)
   if (reclaimPending) block._subMeta.oldReclaimPending = true
   S._subBlocks.set(name, block)
+  clearSubTraceChannel(name) // 生命周期边界：新一代的丢弃 / 命中面重新计首条（高频面去重）
   traceSub("takeover", name)
   return block
 }
@@ -220,18 +236,17 @@ function terminalStubKind(m) {
   }
 }
 
-/** 终态补桩前置（§5.1.4 第 6 条）：role ∈ FAMILY_ROLES + id ≠ null + 频道名合法（构造后
- *  回读解析一致。不满足 → no-op，记 `drop-unknown-role`——未知/非 family 角色如
- *  consult·escalate / id 缺失 / 非法频道——D-4 非法与未知丢弃）。 */
+/** 终态补桩前置（§5.3 终态必现——2026-09-19 收窄）：`id` 在 ∧ 角色段合法（`[\w-]+`）∧ 回读
+ *  一致（D-W10——`FAMILY_ROLES` 补桩前置退场：consult / escalate 纳入）；不满足 → no-op + 痕。 */
 function stubAllowed(m) {
-  if (m.role == null || m.id == null || !FAMILY_ROLES.includes(m.role)) return false
+  if (m.role == null || m.id == null) return false
+  if (!/^[\w-]+$/.test(String(m.role))) return false
   const ch = parseChannel(`sub:${m.role}#${m.id}`)
   return ch.role === m.role && ch.id != null
 }
 
-/** 终态补块（never-born 终态防御——§5.1.4 第 6 条）：补出**已折叠**桩块（立即折叠 + 立即
- *  归档——§14 C-5②「终态必现」流内可见 + 记 `late-terminal-stub`）。入册同出生路径——
- *  后续同名/终态消息走既有幂等守卫。 */
+/** 终态补块（never-born / tombstone 终态防御——§5.3「终态必现」）：补**已折叠**桩（立即折叠 +
+ *  立即归档——§14 C-5②）+ 记 `late-terminal-stub`；入册同出生路径（后续消息走幂等守卫）。 */
 function stubTerminalBlock(name, m, kind) {
   const block = buildBlock(name)
   const meta = block._subMeta
@@ -245,20 +260,17 @@ function stubTerminalBlock(name, m, kind) {
 }
 
 /** Status-message effects on blocks（两态机 + awaitingDigest 单标志——事件字段自足）:
- *  - queued → ⏳ 等待头 + `meta.queueInfo`（C-11②）；started → 翻 running（清 queueInfo）
- *  - turn（C-11③）→ live 块头 `turn N/M` 实时；cancelled(was:"queued") → 等待头移除（不冻结）
- *  - settled → 折叠 + awaitingDigest 驻留（C-2）；其余终态 → 折叠 + 即时归档（C-3 ②）
- *  - 消化回收：`done` 命中 awaitingDigest 块 → 归档（C-3 ①——本轮边界之前）
- *  - 旧代回收吞守卫（C-5③）：接管时旧块 awaiting → 新块 `oldReclaimPending`——其后该键首条
- *    `done` 视为旧代回收吞掉（no-op + 清标志）
- *  - 终态补块（§5.1.4 第 6 条成员表）：无 map 条目时按表判定——桩集 + 前置满足 → 折叠 + 立即
- *    归档；表内不补行与前置不满足（未知/非 family role、id 缺失、非法频道——`drop-unknown-role`）
- *    一律 no-op。 */
+ *  - **出生面 = 存活闸**（§5.3——queued / started）：不限角色族 / `pool`；冻结键 ⇒ 接管；墓碑 ⇒ 丢弃 + 痕
+ *  - queued → ⏳ 等待头 + `queueInfo`（C-11②）；started → 翻 running；turn（C-11③）→ 头 turn N/M 实时
+ *  - cancelled(was:"queued") → 等待头移除（不冻结）；settled → 折叠 + awaitingDigest 驻留（C-2）
+ *  - 其余终态 → 折叠 + 即时归档（C-3 ②）；消化回收：`done` 命中 awaitingDigest → 归档（C-3 ①）
+ *  - 旧代回收吞守卫（C-5③）：接管时旧块 awaiting → 新块 `oldReclaimPending`——其后该键首条 `done` 吞
+ *  - 非出生面命中冻结键 ⇒ `drop-frozen` 痕（⑦）；终态补块无可用条目 ⇒ 按表补桩；前置不满足 ⇒
+ *    no-op + `drop-unknown-role`（角色段非法 / id 缺失 / 回读不一致）。 */
 export function applySubagentStatus(m) {
   if (m.status === "queued") {
-    if (m.id == null || m.role == null) return
-    const block = ensureBlock(`sub:${m.role}#${m.id}`)
-    if (!block) return // 终态守卫/tombstone——丢弃
+    const block = enterBlock(m) // 出生闸（§5.3——`queued` 亦出生事件）
+    if (!block) return // 不可建（role/id 非法）/ tombstone——丢弃
     const meta = block._subMeta
     meta.status = "queued"
     meta.queued = true
@@ -271,7 +283,10 @@ export function applySubagentStatus(m) {
     // C-11③ 逐轮进展帧（onAgentTurn → status:"turn"）：区头 turn N/M 实时
     for (const name of blockNamesFor(m.role, m.id, m.model, m.sessionId)) {
       const block = S._subBlocks.get(name)
-      if (!block?._subMeta || block._subMeta.frozen) continue
+      if (!block?._subMeta) continue
+      // ⑦ 非出生面禁静默（§5.3）：冻结 / 墓碑键吞掉的 turn 帧 ⇒ 丢弃 + 痕（状态面逐条）。
+      if (block._subMeta.frozen) { traceSub("drop-frozen", name); continue }
+      if (!block.isConnected) { traceSub("drop-tombstone", name); continue }
       if (m.turn != null) block._subMeta.turn = m.turn
       if (m.maxTurns != null) block._subMeta.maxTurns = m.maxTurns
       refreshBlock(block)
@@ -279,15 +294,8 @@ export function applySubagentStatus(m) {
     return
   }
   if (m.status === "started") {
-    // Pool children of the cancelable family get their block at START (visible
-    // before the first relay chunk; sync spawns create on first chunk).
-    if (FAMILY_ROLES.includes(m.role) && m.pool && m.id != null) {
-      const name = `sub:${m.role}#${m.id}`
-      // 新代接管（§5.1.4 第 5 条）：同名**已冻结**条目把持键 → 建新块改绑（旧 awaiting 块
-      // 归档落流——C-5③）；其余交 ensureBlock（live 复用 / tombstone 丢弃——守卫不变）。
-      if (S._subBlocks.get(name)?._subMeta?.frozen) takeoverBlock(name)
-      else ensureBlock(name)
-    }
+    // 出生面 = 存活闸（§5.3——D-W25/D-W26）：出生事件即建块 / 接管，不限角色族 / `pool`（②③ 去门）。
+    enterBlock(m)
     for (const name of blockNamesFor(m.role, m.id, m.model, m.sessionId)) {
       const block = S._subBlocks.get(name)
       // 冻结块不收 started——不半复活（与终态分支同形）
@@ -342,10 +350,12 @@ export function applySubagentStatus(m) {
   for (const name of blockNamesFor(m.role, m.id, m.model, m.sessionId)) {
     const block = S._subBlocks.get(name)
     if (!block?._subMeta) continue
-    hasEntry = true // 有 map 条目者不受补桩表影响（既有折叠/守卫语义——§5.1.4 第 6 条）
+    if (!block.isConnected) continue // live tombstone ⇒ 条目不可用、走补桩（F-A2 判据扩——§5.3）
+    hasEntry = true // 有可用 map 条目者不受补桩表影响（既有折叠/守卫语义——§5.1.4 第 6 条）
     if (block._subMeta.frozen) {
-      // 消化回收（C-1③/C-3①）：awaitingDigest 块收 done → 归档（轮边界之前）
+      // 消化回收（C-1③/C-3①）：awaitingDigest 收 done → 归档（轮边界前）；其余终态 ⇒ 丢弃 + 痕（⑦）
       if (m.status === "done" && block._subMeta.awaitingDigest) archiveBlock(block, true)
+      else traceSub("drop-frozen", name)
       continue
     }
     const meta = block._subMeta
@@ -360,8 +370,8 @@ export function applySubagentStatus(m) {
       archiveBlock(block) // C-3 ②：即时归档（尾追）
     }
   }
-  // 终态补块（never-born 终态防御——§5.1.4 第 6 条成员表）：无 map 条目 → 按表补桩；前置
-  // 不满足 → no-op + `drop-unknown-role`（answered / queued-cancel 为表内不补行——不补痕）。
+  // 终态补块（never-born / tombstone 终态防御——§5.3「终态必现」）：无可用块条目 → 按表补桩；
+  // 前置不满足 → no-op + `drop-unknown-role`（answered / queued-cancel 为表内不补行——不补痕）。
   if (!hasEntry) {
     const stubKind = terminalStubKind(m)
     if (stubKind === null) return
@@ -410,13 +420,13 @@ export function freezeLiveBlocks() {
 }
 
 /** Full reset — 回合中止（abort 无挂起会话）/会话清（§14 C-7）：**只清区子树**（live +
- *  awaitingDigest）+ 清 map + 区子树内防御孤儿清（边缘路径残留）——**流内归档块（会话历史）
- *  不动**；`clearMessages` = `#messages` 全清（归档块随清）+ 本函数。 */
+ *  awaitingDigest）+ 清 map + 区子树内防御孤儿清——**流内归档块（会话历史）不动**；计数钮同清。 */
 export function resetActivity() {
   for (const block of S._subBlocks.values()) {
     if (block?.parentNode === ctx.activityEl) block.remove()
   }
   S._subBlocks.clear()
+  clearActivityNew() // §5.5：resetActivity 同清（钮按需建 / 删——N=0 ⇒ :empty 零高不回归）
   // 防御清：map 外孤儿块（限区子树——流内归档块＝会话历史不得误删）
   for (const el of [...(ctx.activityEl?.children ?? [])]) {
     if (el.classList.contains("sub-block")) el.remove()

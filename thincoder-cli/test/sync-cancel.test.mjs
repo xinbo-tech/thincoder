@@ -9,6 +9,9 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
+import { mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import {
   classifySyncAbort, armSyncChildAbort, buildSyncStoppedReport,
 } from "@thincoder/core/agent-tools/subagent.mjs"
@@ -16,6 +19,7 @@ import {
   cancelSyncChild, mergeChildMutations,
 } from "@thincoder/core/agent-tools/subagent-async.mjs"
 import { STOPPED_MARK } from "@thincoder/core/agent/spawn-child.mjs"
+import { todayLogPath } from "@thincoder/core/log.mjs"
 
 /** 最小 parent agent（registry/guard 记账面——mergeChildMutations 读写）。 */
 function mkParent(over = {}) {
@@ -160,6 +164,28 @@ test("controller 链组 4：base abort → ctrl 链式（嵌套递归）+ alread
   assert.equal(parent._syncChildAborts.has("coder#1"), false)
   assert.equal(headless._syncChildAborts.has("coder#3"), false)
   assert.equal(headless._syncChildAborts.size, 0)
+})
+
+test("T-AF12 sync ⏹ 日志面（F-12）：提交点直记 ev:cancelled 恰 1 条（id = role#N）；error 两分支零记录", () => {
+  const dir = mkdtempSync(join(tmpdir(), "tc-af-sync-log-"))
+  const prev = process.env.THINCODER_LOG_DIR
+  process.env.THINCODER_LOG_DIR = dir
+  try {
+    const ctrl = new AbortController()
+    const parent = mkParent()
+    parent._syncChildAborts.set("coder#1", { ctrl, stopped: false })
+    assert.equal(cancelSyncChild(parent, "coder#1").status, "cancelled")
+    assert.equal(cancelSyncChild(parent, "coder#1").status, "error", "stopped 后再调 → error（零记录）")
+    assert.equal(cancelSyncChild(parent, "coder#9").status, "error", "registry miss → error（零记录）")
+    const lines = readFileSync(todayLogPath(), "utf8").trim().split("\n").map((l) => JSON.parse(l))
+    const cancelled = lines.filter((l) => l.ev === "ev:cancelled")
+    assert.equal(cancelled.length, 1, "ev:cancelled 恰 1 条（error 两分支零新增）")
+    assert.equal(cancelled[0].id, "coder#1", "id = registry 键 role#N（与异步取消族同事件名 / 同字段形）")
+  } finally {
+    if (prev === undefined) delete process.env.THINCODER_LOG_DIR
+    else process.env.THINCODER_LOG_DIR = prev
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 /**

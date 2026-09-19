@@ -6,7 +6,7 @@
 > `docs/core/design/AGENT-LOOP.md` §6.17（普通模式轻量审计——F-N1 族机制叙述）；
 > 产品定性互指 = `docs/core/requirements/PROJECT.md`（两种工作模式）。
 > 镜像面档 `VSC-PROMPTS` **原地保留不动**（既有裁定——`docs/vsc/design/VSC-MIGRATION.md` §7）。
-> 相邻需求档 = `docs/core/requirements/PROMPT-SYSTEM.md`（提示词并入核）· `docs/core/requirements/ENGINEERING-MODE.md`（另一模式）。
+> 相邻需求档 = `docs/core/requirements/PROMPT-SYSTEM.md`（提示词并入核）· `docs/core/requirements/ENGINEERING-MODE-V2.md`（另一模式）。
 > 建档：2026-09-15（**B 式迁移轮 · VSC 批 4**——`thincoder-vscode/docs/requirements/NORMAL-MODE.md` 内容重建入基准层；
 > 旧档原地一字不改、留作参照历史）。CLI 侧同名需求档（`thincoder-cli/docs/requirements/NORMAL-MODE.md`）**已并入（2026-09-15 · CLI 尾部真批）**——
 > 其内容与装配面不同题（普通模式**产品行为需求**）⇒ 全量并入为 §5–§6；(d) 类入 §7.1。
@@ -53,14 +53,14 @@ Normal 模式 = 默认（非工程模式）会话的提示词基底。装配层�
 ### 5.1 总体需求
 
 把人从「写代码」里解放出来，同时让交付**可信**：改动要验证、结论要有据、取舍要交代。
-与工程模式的差别只有一条——**没有机械门禁**：拦不住的靠纪律与工具（verify / advisor）保证，而不是靠硬拦。
+与工程模式的差别只有一条——**它是强流程（约束靠结构实现），普通模式没有结构约束**：要求同样认真，靠纪律与工具（verify / advisor）保证落地。
 
 ### 5.2 功能性需求
 
 | # | 需求 | 约束 |
 |---|---|---|
 | F1 | **全能力干活** | 直接文件写权限 + 全套工具；「整个项目的代码都是我的」 |
-| F2 | **任务分档** | complex（3+ 步 / 新功能）：读文档→需求→设计→开发→测试，写设计档 + `checklist` + `task`；medium（2-3 步 / 重构）：读文档→计划→改→更新所属文档 + `task`；small（错字 / 一行修）：读文档→改→验证→更新所属文档 + `task`。分不清按 complex |
+| F2 | **任务分档** | complex（3+ 步 / 新功能）：读文档→需求→设计→开发→测试，写设计档 + `task` + 台账条目（跨会话持久）；medium（2-3 步 / 重构）：读文档→计划→改→更新所属文档 + `task`；small（错字 / 一行修）：读文档→改→验证→更新所属文档 + `task`。分不清按 complex |
 | F3 | **复杂任务先计划** | plan mode：只读探索 → 设计 → 呈现计划 → 批准后实施；complex 档时 plan mode 即设计步骤 |
 | F4 | **文档先行** | 改代码前先读所属文档；**文档与代码冲突时以文档为准**；用户指示与文档冲突时先讲清→改文档→再写码；文档归属单一权威源（一处详述，其余引用） |
 | F5 | **完成前验证门** | 每次 write/edit 后 `lint`；宣布完成前按项目 AGENTS.md 的方法跑验证并向 `verify` 声明结果——**verify 机械把关但不代跑**；无法验证就明说，绝不把未验证说成完成 |
@@ -68,7 +68,7 @@ Normal 模式 = 默认（非工程模式）会话的提示词基底。装配层�
 | F7 | **自动代码评审** | 改完代码调 `advisor`（须给 paths 或 documents）；评审后按裁决表回应；🔴 不得埋；≤5 轮收敛；全清后跑 `verify` |
 | F8 | **委派** | 子代理 explore / coder / plan（普通模式装配；工程模式禁用 coder 角色） |
 | F9 | **跨会话记忆** | `memory` 工具（search / put / list / delete / clear）——存 bug、约定、偏好 |
-| F10 | **任务跟踪** | 每档都用 `task`（同时只有一条 in_progress）；complex 档加 `checklist`（持久、每条需求一条） |
+| F10 | **任务跟踪** | 每档都用 `task`（同时只有一条 in_progress）；complex 档另建**台账条目**（跨会话持久、每条需求一条——`/ledger`） |
 
 ### 5.3 非功能性需求
 
@@ -126,7 +126,7 @@ Normal 模式 = 默认（非工程模式）会话的提示词基底。装配层�
 | 旧档位置 | 内容 | 何故不并 |
 |---|---|---|
 | 旧档头注「定位」（装配单源 = `src/prompt-overlays.mjs`（84 行）· 槽位内容 = `src/prompts/` 15 档） | 时点行数与迁移前路径 | 时点坐标——现行坐标入各 F 判定句 |
-| 旧档「设计面：`docs/design/VSC-PROMPTS.md`（双源…）」行 | 镜像面档指针（该面已裁定原地保留不动） | 归属已定（`docs/vsc/design/VSC-MIGRATION.md` §7）——本档不重述 |
+| 旧档「设计面：`thincoder-vscode/docs/_archive/design/VSC-PROMPTS.md`（双源…）」行 | 镜像面档指针（该面已裁定原地保留不动） | 归属已定（`docs/vsc/design/VSC-MIGRATION.md` §7）——本档不重述 |
 | 旧档变更记录（2026-09-12 建档行） | 建档流水 | 本档自有变更记录 |
 
 > **CLI 侧来源档** `thincoder-cli/docs/requirements/NORMAL-MODE.md`（2026-09-15 CLI 尾部真批并入——该档与装配面**不同题**，产品行为面全量入 §5–§6）——原地保留作参照历史。下列内容不并入本档：
@@ -144,10 +144,6 @@ Normal 模式 = 默认（非工程模式）会话的提示词基底。装配层�
 | 旧档 N2「双源对位」的镜像面句 | 中文权威 ↔ 英文落地的双源叙述 | 正本已归 `docs/core/design/prompts/`；口径归 `docs/core/requirements/PROMPT-SYSTEM.md`（本档只留 N-NM2 对位） |
 | 「LEDGER-SELF-CONTAINED 建档批」批序注 | 建档批序 | 一次性材料——归批次档 |
 | CLI 侧同名需求档未迁面 | CLI 产品需求正文 | **已并入（2026-09-15 CLI 尾部真批）**——产品行为面入 §5–§6，(d) 类入 §7.1 |
-
-## 8. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **约 165 行**（as-of 2026-09-15 CLI 尾部真批并入后实核）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 

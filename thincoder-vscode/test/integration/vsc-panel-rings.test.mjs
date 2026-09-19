@@ -16,7 +16,7 @@
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync,  mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
@@ -25,12 +25,18 @@ import { buildPanelCallbacks } from "../../src/extension/panel-callbacks.mjs"
 import { handlePanelMessage } from "../../src/extension/panel-messages.mjs"
 import { executeToolBatches } from "../../src/agent/execute-tools.mjs"
 import { mockLLM, providerFor } from "./helpers/mock-llm.mjs"
+import { CARRIER_FIELDS as PROD_CARRIER_FIELDS } from "../../src/agent.mjs" // af 批 fix 轮 2：对位锁取生产表（T-AF17）
 
 let work
 let cfgDir
 
+/** 本档夹具绑定字段（`hostRunWithCards` 访问器别名——生产形宿主 run 的**子集**；af 批补 `_asyncAdvisorQueue`）。
+ *  须恒为生产 `CARRIER_FIELDS` 的子集且含该键（T-AF17 对位锁——任一侧删/改即红，af 批 F-8 反向面）。 */
+const BOUND_CARRIER_FIELDS = ["_asyncSubagents", "_asyncQueue", "_asyncAdvisorQueue"]
+
 before(() => {
   work = mkdtempSync(join(tmpdir(), "tc-panel-rings-"))
+  mkdirSync(join(work, ".git"), { recursive: true }) // 项目根判据（.git 仓根——2026-09-17）
   cfgDir = mkdtempSync(join(tmpdir(), "tc-panel-rings-cfg-"))
   const cfgPath = join(cfgDir, "config.json")
   writeFileSync(cfgPath, JSON.stringify({ providers: [] }) + "\n", "utf8")
@@ -85,7 +91,8 @@ async function hostRunWithCards({ provider, getAuto, cwd }) {
   run.agent.provider = provider
   run.history._asyncSubagents = new Map()
   run.history._asyncQueue = []
-  for (const f of ["_asyncSubagents", "_asyncQueue"]) {
+  run.history._asyncAdvisorQueue = []
+  for (const f of BOUND_CARRIER_FIELDS) {
     Object.defineProperty(run.agent, f, {
       configurable: true,
       get() { return run.history[f] },
@@ -209,6 +216,7 @@ test("T-R4 释放（全链）：真 async spawn → 子写卡 → cancelSubagent
   ])
   try {
     const box = mkdtempSync(join(work, "tr4-"))
+    mkdirSync(join(box, ".git"), { recursive: true }) // 项目根判据（.git 仓根——2026-09-17）
     const getAuto = () => false
     const { run, panel, callbacks } = await hostRunWithCards({ provider: providerFor(llm), getAuto, cwd: box })
     const spawn = executeToolBatches(run.agent, {
@@ -248,4 +256,13 @@ test("T-R5n 反证（不误释放）：不 abort ⇒ 卡保持；应答后正常
   await handlePanelMessage(panel, { type: "permissionResponse", approved: true, promptId: req.promptId })
   assert.equal(await p, true, "应答 → resolve(true)")
   assert.equal(panel._permissionQueue.length, 0, "正常出队（零回归）")
+})
+
+// ─── af 批 fix 轮 2（2026-09-18）T-AF17：夹具字段 ⊆ 生产表（AC-AF4「两测试夹具同步」对位 · F-8 反向锁）──
+
+test("T-AF17 载体表对位（af 批 F-8 反向锁）：本档夹具绑定字段 ⊆ 生产 `CARRIER_FIELDS`（含该键）", () => {
+  assert.ok(BOUND_CARRIER_FIELDS.includes("_asyncAdvisorQueue"), "本档夹具含该键（AC-AF4「两测试夹具同步」；删款 ⇒ 本档即红）")
+  for (const f of BOUND_CARRIER_FIELDS) {
+    assert.ok(PROD_CARRIER_FIELDS.includes(f), `夹具字段不在生产表：${f}（生产表删款 ⇒ 本档即红）`)
+  }
 })

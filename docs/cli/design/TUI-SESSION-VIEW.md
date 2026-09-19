@@ -155,9 +155,21 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
 - **保底修订**：旧裁剪颗粒（`take = min(1000, lines.length − 1)`）在行数 ≤1001 且字符超额时**一轮裁到 1 行**
   （收据「1 lines remaining」——用户实测 2026-09-16）；最小步进下常规内容稳态窗口 ≈ 额度/行宽 ≈ 1000 行，
   胖行场景下限 = `LINES_TRIM_FLOOR`（200 行——≥8 屏@24 行制）。
-- **恢复 / 翻页记账**：恢复 / 翻页 / 切槽 / 清空路径全部经既有对账（直算重对账或逐行入账 + 重跑对账 / 同步归零）——
-  「恢复路径绕过记账」不成立；「裁了又回来」的循环 = 每次恢复 / 翻页 materialize 后立即对账裁剪，旧颗粒下每次裁到近空。
-- **限定（父侧 2026-09-16 实施回读）**：`loadOlder` 占位行移除（`thincoder-cli/src/tui/startup.mjs:170`）未走入账 ⇒ 直算账对 Σ占位行有高估（数十码元 / 页）——**存量漂移**、本批零改（记账面零改动边界）；修复另立技术待办（触发=条件）。
+- **恢复 / 翻页记账**：恢复 / 切槽 / 清空路径全部经既有对账（直算重对账或逐行入账 + 重跑对账 / 同步归零）——
+  「恢复路径绕过记账」不成立；**例外 = 翻页路径的占位行移除**（见下条限定——本批修复面）；「裁了又回来」的循环 = 每次恢复 / 翻页 materialize 后立即对账裁剪，旧颗粒下每次裁到近空。
+- **记账口径（2026-09-16 批 8 修订）**：`state.lines` 的一切增删都必须过账——
+  增 = 逐行 `accountLine`（`thincoder-cli/src/tui/display-budget.mjs:137`）/ 批算 `accountAll`（同档 `:146`）；
+  **删 = 同额负向出账**（新增导出 `releaseLine(state, l)` = `state._linesChars -= lineChars(l)`，钳 0）——`:170` `loadOlder` 移除占位行即归此列。
+  不变式 = `state._linesChars === Σ lineChars(l)`（`:147` 恢复路径的直算对账即该式）。
+  **复用不可（实读）**：既有 `accountLine` 以行对象 `_budgetChars` 为基、幂等（`display-budget.mjs:137-143`）——行已从 `state.lines` 脱落后再调用，增量值恒 0 ⇒ 不产生负向出账，故本批需新增导出。
+- **限定（2026-09-16 批 8 修订——原「存量漂移、本批零改」**撤**）**：`loadOlder` 占位行移除（`thincoder-cli/src/tui/startup.mjs:170`）此前**未出账** ⇒ 直算账对 Σ 有高估（数十码元 / 页）；`thincoder-cli/src/tui/display-budget.mjs:175` 的 `!Number.isFinite(_linesChars)` 守卫对该路径不触发（账仍有限）⇒ 不重算、漂移逐页累积。**本批修复**（选定选型 ① = `shift()` 处补同额出账；对比表紧随本节）。
+
+**选型对比（2026-09-16 批 8）**：占位行移除的记账处置两候选——
+
+| # | 候选方案 | 判据逐项评估 | 取舍（选定代价 / 权衡） | 结论 |
+|---|---|---|---|---|
+| 1 | `shift()` 处补同额出账 | 不变式 `_linesChars = Σ lineChars` 恒成立；与 `:147` 直算对账同口径；一行改动 | 需核对该行字符数（既有 `lineChars` 可复用） | **选定** |
+| 2 | 占位行不单独入账 | 无需新增调用 | 占位行确在 `state.lines` 渲染面 ⇒ 该行**不计入**账即反向失真（账 < 实际），不变式破坏 | **否决** |
 - **两层 scrollback**：TUI 全程 alt screen（`\x1b[?1049h`——`thincoder-cli/src/tui/tui-lifecycle.mjs` 启动序列）——终端自身
   scrollback 不承载会话（退出即弃）；滚轮 / 键面滚动全走内层 `state.lines` ⇒ **单层可见历史**。视口 = 内层自底偏移
   （增长补偿 + clamp，`thincoder-cli/src/tui/render-loop.mjs`）——不改、不加外层锚定 / 提示。
@@ -182,25 +194,25 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
 
 | 旧档面 | 内容 | 何故不并（去向 / 触发） |
 |---|---|---|
-| 需求层条目 | F6（修订）/ N10 等 | 需求面——`docs/cli/requirements/TUI.md`（本档只留设计层） |
+| 需求层条目 | F6（修订）/ N10–N11 等 | 需求面——`docs/cli/requirements/TUI.md`（本档只留设计层） |
 | 分页源下沉的机制契约 | 记录存储 / 序号锚定 / 描述符口径 | `docs/core/design/SESSION.md`（本节只落 TUI 面落点） |
 | 挂起会话状态机 / settle 时序 / 池管理 | 编排语义 | `docs/core/design/AGENT-LOOP.md` §9（本档只留 TUI 侧驱动行为） |
 | 回合内工具事件与显示 | 工具载体 / 新区块 / 参数可见性 | `docs/cli/design/TUI-TOOL-OUTPUT.md`（本档只留回调装配点） |
 | attention 置位谓词 | `userNeededAtTurnEnd` 的语义与清位 | `docs/cli/design/TUI.md` §7.2（本档只标调用点） |
 | 显示层额度的常量数值来源 | 常量本体 | `thincoder-cli/src/tui/display-budget.mjs`（单源——本档引用不复制数值之外的口径） |
 
-## 7. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **206 行**（TUI-HISTORY-TRIM 批设计轮修订后 · as-of 2026-09-16 实核）——**低于 300 行软线，无需拆分规划**。
-**拆分沿革**：本档自源档 `thincoder-cli/docs/design/TUI.md`（1529 行，超 500 硬门）按读者面拆出（见 `docs/cli/design/TUI.md` §9）。
-
 ## 变更记录
+
+- 2026-09-17（**zero-block 批 · 微 fix 轮 · eng-designer**）：变更记录 2026-09-15 条①内**悬空节号收正**——原引节号在 canonical 界面核心档无此节，收正为「§8 不并项与历史沿革」（拆分沿革登记现住 §8）；批档 `docs/batches/2026-09-17-subagent-zero-block.md` §2 出批发现 ⑥ 收口。
+
+- 2026-09-16（**批 8 ENGINE-DEBT · 设计轮 · eng-designer**——承 `docs/batches/2026-09-16-engine-debt.md` §2 ED-3）：§5.5 修订——「`loadOlder` 占位行移除未入账」由**存量漂移（本批零改）**改判为**本批修复**；新增**记账口径**条（增删均须过账——不变式 `_linesChars === Σ lineChars`）+ **选型对比**表（补出账 vs 占位行不入账）；
+  需求侧同批新增 `docs/cli/requirements/TUI.md` **N11**（显示层字符账账实一致；**N10 文本零改**）。
 
 - 2026-09-16（**TUI-HISTORY-TRIM 批 · 设计轮**）：§5 裁剪策略修订——新增 `LINES_TRIM_FLOOR`（保底 200 行）+ **最小步进裁剪**
   （超限只裁至额度内所需最少行数；保底触底即停——接受超额）；新增 §5.5（保底与视口语义：恢复 / 翻页记账在册、单层可见历史）。
   动机 = 旧颗粒在行数 ≤1001 且超额时一轮裁到 1 行（用户实测收据「1 lines remaining」）。
 - 2026-09-15（**B 式迁移轮 · 第 6 批**）：建档——`thincoder-cli/docs/design/TUI.md` 的 §7（会话恢复与懒加载）/ §8（回合驱动与挂起会话）/
   §15（长会话内存有界）三面内容重建入本档（旧档一字未改、原地作参照历史）。
-  ① 落点 = `docs/cli/design/TUI-SESSION-VIEW.md`（P2 板块内的**读者面拆分档**——由 `docs/cli/design/TUI.md` §9 拆分沿革登记）；
+  ① 落点 = `docs/cli/design/TUI-SESSION-VIEW.md`（P2 板块内的**读者面拆分档**——由 `docs/cli/design/TUI.md` §8 拆分沿革登记）；
   ② §15 的两块（分页源下沉 / 显示层额度）按归属分置：A 块只留 TUI 落点、机制挂 `docs/core/design/SESSION.md`；B 块全量承载（§5）；
   ③ 模块地图按**现文件结构**重建（行数列不并）；④ 坐标全量改**现状路径**并实核；⑤ 批次材料（选型 / 用例 / AC / 受影响文件 / 决策编号）入 §6.1。

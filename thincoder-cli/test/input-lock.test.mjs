@@ -10,6 +10,9 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { createKeyHandler } from "../src/tui/key-handler.mjs"
 import { suspensionSession } from "../src/tui/suspension-drive.mjs"
 import { renderStatus } from "../src/tui/render-frame.mjs"
@@ -183,6 +186,167 @@ test("单槽交接：driver 消费 pendingInput 单条即开回合（原文直�
   assert.deepEqual(r2.state.queue, [{ text: "keep-me" }], "中止残余单消息转正队列（下个普通回合续发——零丢失）")
   assert.equal(r2.lines.length, 1, "提示行明示去向")
   assert.match(r2.lines[0], /will run as a normal turn/, "abort 提示文案（不静默丢）")
+})
+
+// ─── F-UC7 上行通道默认流可用性（§6.27.12——2026-09-19 批）：CLI 驱动开轮 ──────
+// 未 drain 的 ask（子代理在飞提问）= 第二开轮源：谓词先于池空退出判 ⇒ ask 入队即开
+// auto 轮 drain 注入（唤醒 + 谓词两件一组）；旗标 `upstreamTurn` 经 agent-turn 跳贯通到
+// 核 `runAgent`（域文本选择面——本轮由 CLI 面机检）。
+
+/** 上行唤醒轮夹具：`driveRig` + 记录 `(text, opts)` 第 4 参的桩。
+ *  桩内模拟核消费（`thincoder-core/agent.mjs:226-228`——回合头 drain「消费即清」；
+ *  桩不模拟则谓词恒真、驱动连开轮——真实现里队列由核 drain 关闭）。 */
+function upstreamRig(agentOver = {}) {
+  const rig = driveRig()
+  Object.assign(rig.agent, agentOver)
+  const calls = []
+  rig.ctx.runAgent = async (_a, text, _cb, opts) => {
+    calls.push({ text: String(text), opts: { ...(opts ?? {}) } })
+    rig.agent._childUpstream = [] // 核回合头 drain（:228——消费即清）
+    rig.agent._pendingAsyncResults = [] // 核 run 首行注入（:111-122——消费即清）
+  }
+  return { ...rig, calls }
+}
+
+/** 会话退出（防悬挂）：置中止标志 + 唤醒等待栓 → await 会话。 */
+async function exitSession(rig) {
+  rig.state._suspAborted = true
+  rig.state._suspWake?.()
+  await rig.session
+}
+
+/** 跑一拍后交给断言块——无论断言成败都收口会话（不泄漏驱动 1s tick interval）。 */
+async function withSession(rig, fn) {
+  rig.session = suspensionSession(rig.ctx)
+  try {
+    await new Promise((r) => setTimeout(r, 10))
+    await fn()
+  } finally {
+    await exitSession(rig)
+  }
+}
+
+/** 自然退出用例：等会话**自行退出**再断言（不依赖墙钟——会话 finally 内含冷动态 import，
+ *  固定睡眠窗口不可靠；2s 上界仅防悬挂（收口即清——不滞留定时器），不开轮则断言自然红）。 */
+async function withClosedSession(rig, fn) {
+  rig.session = suspensionSession(rig.ctx)
+  let cap = null
+  try {
+    await Promise.race([rig.session, new Promise((r) => { cap = setTimeout(r, 2000) })])
+    await fn()
+  } finally {
+    clearTimeout(cap)
+    await exitSession(rig)
+  }
+}
+
+test("T-CL-U1 正常·CLI 驱动开轮 + 旗标贯通：未 drain 的 ask ⇒ auto 轮恰 1 次 + 桩第 4 参 `upstreamTurn === true`（CLI 跳未丢弃）+ 第三档提示行；池空 + ask 留队仍开轮（§6.27.12.5 D）", async () => {
+  const ask = { seq: 1, from: "explore#1", kind: "ask", message: "先定 X 还是 Y？", ts: Date.now() }
+  // ① 池内 1 running + ask 留队
+  const rig = upstreamRig({ _childUpstream: [{ ...ask }] })
+  await withSession(rig, () => {
+    assert.equal(rig.calls.length, 1, "未 drain 的 ask ⇒ 恰开一轮（谓词先于池空退出判）")
+    assert.equal(rig.calls[0].text, "", "auto 轮文本为空（系统驱动——无用户输入）")
+    assert.equal(rig.calls[0].opts.autoTurn, true, "auto 轮分类不变")
+    assert.equal(rig.calls[0].opts.upstreamTurn, true, "旗标贯通到核 runAgent（CLI 跳未丢弃——可机检）")
+    assert.match(rig.lines[0] ?? "", /auto-turn: answering a subagent's in-flight message/, "manual 档第三档提示行")
+  })
+
+  // ② 池空 + ask 留队（子代理已 settle 且报告已消化）：仍开一轮把它 drain 出来 ⇒ 自然退出
+  const bare = upstreamRig({ _childUpstream: [{ ...ask }] })
+  bare.agent._asyncSubagents.clear()
+  await withClosedSession(bare, () => {
+    assert.equal(bare.calls.length, 1, "池空 + ask 留队仍开一轮（谓词先于池空退出判——硬约束）")
+    assert.equal(bare.calls[0].opts.upstreamTurn, true, "同判：旗标贯通")
+    assert.equal(bare.state.suspended, false, "会话自然退出复位 suspended")
+  })
+})
+
+test("T-CL-U2 边界·提示行三分 + 不误开轮：仅 note ⇒ 0 轮 0 提示行；manual 档 ask ⇒ 第三档字面；既有两档字面零改（manual digest / AUTO）（§6.27.12.9）", async () => {
+  // ① 仅 note：无时效义务 ⇒ 不开轮（note 不唤醒——边界 7）
+  const note = upstreamRig({ _childUpstream: [{ seq: 1, from: "explore#1", kind: "note", message: "FYI：前提失效" }] })
+  await withSession(note, () => {
+    assert.equal(note.calls.length, 0, "note ⇒ 零轮（谓词只认 ask）")
+    assert.equal(note.lines.length, 0, "零轮 ⇒ 零提示行")
+  })
+
+  // ② manual 档 ask ⇒ 第三档提示行（设计 D 段逐字）
+  const askRig = upstreamRig({ _childUpstream: [{ seq: 1, from: "explore#1", kind: "ask", message: "q" }] })
+  await withSession(askRig, () => {
+    assert.match(askRig.lines[0] ?? "", /^\[auto-turn: answering a subagent's in-flight message…\]$/, "第三档提示行字面")
+  })
+
+  // ③ 既有 manual 档字面零改（pending 非空 · 无 ask）
+  const digestRig = upstreamRig({ _pendingAsyncResults: [{ role: "subagent", id: 2 }] })
+  await withSession(digestRig, () => {
+    assert.match(digestRig.lines[0] ?? "", /^\[auto-turn: digesting finished subagent reports…\]$/, "既有 manual 档字面零改")
+  })
+
+  // ④ 既有 AUTO 档字面零改（autoApprove）
+  const autoRig = upstreamRig({ autoApprove: true, _pendingAsyncResults: [{ role: "subagent", id: 3 }] })
+  await withSession(autoRig, () => {
+    assert.match(autoRig.lines[0] ?? "", /^\[auto-turn: continuing background work…\]$/, "既有 AUTO 档字面零改")
+  })
+})
+
+// ─── 中止丢弃（批 4 CLI-ASYNC-DISCARD——§6.20 接线点②）────────────────
+
+/** 已中止 controller（死条目夹具——`parentAborted` controller 支实判面）。 */
+function aborted() {
+  const c = new AbortController()
+  c.abort()
+  return c
+}
+
+/** 隔离日志目录内 `ev:discarded` 事件行（写门 override——NODE_TEST_CONTEXT 默认不写盘）。 */
+function discardedEvents(dir) {
+  const out = []
+  for (const n of readdirSync(dir)) {
+    for (const line of readFileSync(join(dir, n), "utf8").split("\n")) {
+      if (!line.trim()) continue
+      try { const e = JSON.parse(line); if (e.ev === "ev:discarded") out.push(e) } catch { /* 半行（并发写）忽略 */ }
+    }
+  }
+  return out
+}
+
+test("中止丢弃（接线点②）：只清已死条目——出池 + discarded 墓碑 + 两族各一条提醒/事件；存活条目留池", async (t) => {
+  const { agent, state, ctx } = driveRig()
+  const dead = { id: 7, role: "explore", status: "running", controller: aborted() }
+  const queued = { id: 9, role: "explore", status: "queued", position: 1, controller: aborted() }
+  const live = { id: 8, role: "eng-coder", status: "running", controller: new AbortController() }
+  agent._asyncSubagents.clear()
+  for (const e of [dead, queued, live]) agent._asyncSubagents.set(String(e.id), e)
+  agent._asyncQueue = [queued]
+  agent._asyncAdvisors.set("5", { id: 5, role: "advisor", status: "running", reviewType: "design", controller: aborted() })
+  const logDir = mkdtempSync(join(tmpdir(), "tc-susp-discard-"))
+  t.after(() => { try { rmSync(logDir, { recursive: true, force: true }) } catch { /* ignore */ } })
+  process.env.THINCODER_LOG_DIR = logDir
+  agent._sessionAbort.abort() // 会话 Stop（首行 while 条件即假——直接走 finally 中止路径）
+  try {
+    await suspensionSession(ctx)
+  } finally {
+    delete process.env.THINCODER_LOG_DIR
+  }
+
+  // 只清已死：死条目（running + queued）出池、存活留池
+  assert.deepEqual([...agent._asyncSubagents.values()], [live], "已死条目出池、存活条目留池")
+  assert.equal(agent._asyncQueue.length, 0, "队列剔除（唯一排队条目已死）")
+  assert.equal(agent._asyncAdvisors.size, 0, "评审池死条目出池")
+  // 丢弃终态墓碑（读面 = agent 对象自身 Map——写入面同容器）
+  assert.equal(agent._asyncTombstones.get("7").status, "discarded")
+  assert.equal(agent._asyncTombstones.get("9").status, "discarded", "排队死条目同判")
+  assert.equal(agent._asyncTombstones.get("5").status, "discarded", "评审族同判")
+  assert.equal(agent._asyncTombstones.has("8"), false, "存活条目不写墓碑")
+  // 提醒：两族各一条 user 注入（整批一次）
+  const notices = agent.history.filter((m) => m.role === "user" && String(m.content).includes("discarded by the user's Stop"))
+  assert.equal(notices.length, 2, `两族各一条提醒：\n${agent.history.map((m) => String(m.content).slice(0, 70)).join("\n")}`)
+  assert.match(notices[0].content, /explore#9 \(was queued — never started\)/, "名单带 id + 未启动词（队列剔除同时入名单）")
+  assert.match(notices[0].content, /explore#7 \(was running\)/, "running 词在位")
+  assert.match(notices[1].content, /advisor#5 \(design\) \(was running\)/, "评审族带 reviewType")
+  // 事件：两族各一条（n = 该族丢弃数）+ 中止清池事件
+  assert.deepEqual(discardedEvents(logDir).map((e) => e.n), [2, 1], "两族各一条 ev:discarded")
+  assert.equal(state.suspended, false, "会话退出复位 suspended")
 })
 
 // ─── busy 提示文案：状态栏（F-3——取代 (queue) 提示）──────────────

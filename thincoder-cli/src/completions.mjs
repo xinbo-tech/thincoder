@@ -21,7 +21,7 @@ export function printCompletion(shell) {
     distill) COMPREPLY=( \\$(compgen -W "--yes --layer=" -- "\\$cur") ) ;;
     completion) COMPREPLY=( \\$(compgen -W "bash zsh fish" -- "\\$cur") ) ;;
     *)
-      COMPREPLY=( \\$(compgen -W "chat acp memory sync reindex distill upgrade completion session -v --version -h --help" -- "\\$cur") ) ;;
+      COMPREPLY=( \\$(compgen -W "tui chat acp memory sync reindex distill upgrade completion session -v --version -h --help" -- "\\$cur") ) ;;
   esac
 }
 complete -F _thincoder thincoder
@@ -39,6 +39,7 @@ _thincoder() {
   case "\\$state" in
     cmd)
       _values 'command' \\
+        'tui[Launch the interactive TUI]' \\
         'chat[One-shot agent run with tools]' \\
         'acp[Agent Client Protocol server for IDEs]' \\
         'memory[Manage long-term memory]' \\
@@ -69,6 +70,7 @@ _thincoder
 complete -c thincoder -f
 
 # Subcommands
+complete -c thincoder -a tui      -d 'Launch the interactive TUI'
 complete -c thincoder -a chat     -d 'One-shot agent run with tools'
 complete -c thincoder -a memory   -d 'Manage long-term memory'
 complete -c thincoder -a sync     -d 'Sync team memory repo'

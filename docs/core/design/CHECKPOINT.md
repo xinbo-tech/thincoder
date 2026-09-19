@@ -30,7 +30,7 @@
 **四要素明细（原 §2.5（二）明细块 · 逐字）**
 
 - **#48 `tools/git-checkpoint.mjs`**（同路径 · j 0.9091 · sha `7b56f04cc565` / `5d9a226a1321` · 143 / 150 行）
-  - 左端读数（CLI）：`escapeXml` 经 `thincoder-cli/src/tools/git-checkpoint.mjs:7` 由 `thincoder-cli/src/agent/helpers.mjs:89-91` 导入（共享实现）；checkpoint 子系统依赖 `../git/checkpoint.mjs`（`:8-16`）。
+  - 左端读数（CLI）：`escapeXml` 经 `thincoder-cli/src/tools/git-checkpoint.mjs:7` 由 `thincoder-core/agent/helpers.mjs:89-91` 导入（共享实现）；checkpoint 子系统依赖 `../git/checkpoint.mjs`（`:8-16`）。
   - 右端读数（VSC）：`escapeXml` 本地定义（`thincoder-vscode/src/tools/git-checkpoint.mjs:21-23`；注释自述「镜像 CLI 版本」）；依赖 `./checkpoint.mjs`（`:8-16`）；头注含「CLI 镜像：」行（`:5`）。
   - 建议归一形态：融合——`escapeXml` 下沉核内单一实现（消除本地副本）；依赖 / 路径按核内闭包归一。
   - 影响面：无行为差——两 `escapeXml` 实现逐字相同（同款 5 链替换、同序）；差异属组织面（共享函数本地副本化 + 子系统模块位置）⇒ 不命中三口径（须用户裁 = —）。
@@ -160,7 +160,8 @@ checkout 文件 / restore / stash pop / branch|tag delete / clean / rebase，操
 `Restored "<path>" (tracked|untracked) from checkpoint <id>.\n(The pre-restore state was snapshotted first —
 you can restore again to go back.)`；oversized / 未含文件 → 具体 Error。`cat checkpointId path=…`：只读查看
 快照内文件内容（legacy 走临时恢复 + 还原工作树）。`restoreFile(cwd,path,id)` = rewind path 模式薄封装。
-- **只读分类（审批过滤）**：git 只读 action 免审批（diff/status/log/show/ls-remote/blame）+ checkpoint 的 **list/cat**（list 的 F6 懒清理副作用已判可接受——清的是 commit 后失去意义的过期快照）；rewind/create/versions 走副作用门。F2 提示文本（`checkpointAction=list` 非空输出尾部固定一行）— 与 §6.7 D-CP7 同文本。**W14**：分类面现住端装配面装饰（`isReadonlyAction`——端 `tools/index.mjs`）。
+- **只读分类（审批过滤）**：git 只读 action 免审批（diff/status/log/show/ls-remote/blame）+ checkpoint 的 **list/cat**（list 的 F6 懒清理副作用已判可接受——清的是 commit 后失去意义的过期快照）；rewind/create/versions 走副作用门。F2 提示文本（`checkpointAction=list` 非空输出尾部固定一行）— 与 §6.7 D-CP7 同文本。
+  **W14**：分类面现住端装配面装饰（`isReadonlyAction`——端 `thincoder-vscode/src/tools/index.mjs`）。
 
 ## 7. 并入的关键决策记录（含否决备选）
 
@@ -201,10 +202,6 @@ you can restore again to go back.)`；oversized / 未含文件 → 具体 Error�
 ### 8.3 需求侧（已并入本层需求档）
 
 旧档需求面（旧同名需求档 §1 四层闭环 / 缺口实证 / 范围 / NF1–NF7）=== 本板块需求层，已并入本层需求档 `docs/core/requirements/CHECKPOINT.md`（**与本档同名成对**）——本档不重复。
-
-## 9. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **216 行**（B 轮并入前 69 行——S2 W5 复跑收正，原记 185 为 B 轮/批 7 前读数）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 

@@ -5,7 +5,7 @@
  */
 
 import { md, mdInline, esc } from "./md.js"
-import { fmtTime, capText } from "./lib.js"
+import { fmtTime, capText, isToolFailure, toolFailureStatus } from "./lib.js"
 import { t } from "./i18n.js"
 import { buildFinishedToolCard } from "./tool-card-restore.mjs"
 
@@ -178,23 +178,6 @@ export function buildAssistantRestore(ctx, msg) {
   return el
 }
 
-/** Historical assistant message (single-message replay — quick-input echo). The
- *  "❯ ThinCoder:" label is painted ONLY when `turnStart` (one label per turn);
- *  mid-turn segments render the content alone. `idx` stored as data-idx. */
-export function buildAssistantHistory(ctx, text, timestamp, idx, turnStart = true) {
-  const el = document.createElement("div")
-  el.className = "message assistant"
-  if (idx !== undefined) el.dataset.idx = String(idx)
-  const label = turnStart ? `<div class="msg-label">❯ ${t("msg.assistant")}:</div>` : ""
-  el.innerHTML = `${label}<div class="bubble content">${md(text)}</div>`
-  return el
-}
-
-export function addAssistantHistory(ctx, text, timestamp, idx) {
-  ctx.messagesEl.appendChild(buildAssistantHistory(ctx, text, timestamp, idx))
-  scrollDown(ctx)
-}
-
 export function newBlock(ctx) {
   ctx.currentTools = []
   ctx.currentBubble = null
@@ -287,16 +270,20 @@ function linkifyPaths(bodyEl, links) {
 }
 
 /** Last line of a tool result (CLI-style completion summary, ≤80 chars).
- *  Wrapper lines ([stdout]:/[stderr]:/(exit code N)/(stopped)/[background]…)
- *  are skipped — for bash the literal last line is "(exit code 0)", which as a
- *  collapsed-card summary looks like "no output came back". */
+ *  Wrapper lines ([stdout]:/[stderr]:/(exit code N)/(stopped)/[background]…) are skipped — bash's
+ *  literal "(exit code 0)" would otherwise read as "no output came back".
+ *  F-W16：失败面摘要含退出状态（无输出 ⇒ 只余状态行——不再读作 `(empty)`）；成功面零改。 */
 function resultSummary(text) {
   const WRAPPER = /^(?:\[(?:stdout|stderr|background)\]|\((?:exit code|killed|stopped|background))/
   const trimmed = (text || "").trim()
   if (!trimmed) return ""
   const lines = trimmed.split("\n").map((l) => l.trim()).filter((l) => l && !WRAPPER.test(l))
   const last = lines.pop() ?? trimmed.split("\n").filter(Boolean).pop() ?? ""
-  return last.length > 80 ? last.slice(0, 79) + "…" : last
+  const brief = last.length > 80 ? last.slice(0, 79) + "…" : last
+  const status = toolFailureStatus(text)
+  if (!status) return brief
+  const content = last && last !== "(empty)" && last !== status ? last : "" // 无输出占位 / 状态行本体不作内容
+  return content ? `${content} ${status}` : status
 }
 
 /** Update a tool card to its done state: elapsed ms, result summary, collapse/expand, error tint. */
@@ -305,7 +292,7 @@ function finishToolCard(ref, text, links) {
   ref.b.textContent = capText(text || "")
   linkifyPaths(ref.b, links)
   const ms = Date.now() - (ref.startTime || Date.now())
-  const isError = /^Error[:：]/.test((text || "").trim())
+  const isError = isToolFailure(text) // F-W16：判据单源（lib.js——与恢复卡同读）
   const statusEl = ref.h.querySelector(".tool-call-status")
   if (statusEl) {
     if (isError) {
@@ -404,11 +391,6 @@ export function buildToolHistory(ctx, name, text, idx) {
   return c
 }
 
-export function addToolHistory(ctx, name, text, idx) {
-  ctx.messagesEl.appendChild(buildToolHistory(ctx, name, text, idx))
-  scrollDown(ctx)
-}
-
 /**
  * Build one history element from a historyPage message ({ kind, text, name,
  * timestamp, idx, turnStart?, reasoning?, tools? }) — the lazy-loading counterpart
@@ -483,8 +465,8 @@ export function initScrollFollow(ctx) {
   ctx._pinActivity = true
   const watch = (el, key) => {
     const onScroll = () => { ctx[key] = el.scrollHeight - el.scrollTop - el.clientHeight < 24 }
-    el?.addEventListener("wheel", onScroll, { passive: true })
-    el?.addEventListener("touchmove", onScroll, { passive: true })
+    // §5.5（2026-09-19 批）：`scroll` 为唯一「滚动已生效」后触发者（键盘 / 拖条 / 程序写入全覆盖）
+    for (const ev of ["wheel", "touchmove", "scroll"]) el?.addEventListener(ev, onScroll, { passive: true })
   }
   watch(ctx.messagesEl, "_pinBottom")
   watch(ctx.activityEl, "_pinActivity")

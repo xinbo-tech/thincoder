@@ -10,6 +10,7 @@ import { closeAllMcp } from "./src/extension/panel-mcp.mjs"
 import { initLocale } from "./src/i18n.mjs"
 import { registerDiffPreviewProvider } from "./src/extension/diff-preview.mjs"
 import { startConfigWatch } from "./src/extension/config-watch.mjs"
+import { startSampler, stopSampler } from "./src/extension/loop-sampler.mjs"
 import { VSC_PROMPT_INJECTIONS } from "./src/prompt-injections.mjs"
 
 /** @type {ChatPanel} */
@@ -87,6 +88,9 @@ export async function activate(context) {
   // W8 pre-pen engine-floor guard (A8 ruling 2026-09-15) — first step; never throws.
   await applyEngineFloorGuard()
   initLocale(vscode.env.language)
+  // F-W19（`SETTINGS.md` §2.12）：宿主事件循环采样器随激活起（幂等）——渠道准入探针的
+  // 「宿主忙」证据面与延迟重试闸均读它；`hostBusy()` 纯内存零 I/O（采样器自身不作阻塞源）。
+  startSampler()
   _panel = new ChatPanel(context)
 
   // Status bar item
@@ -158,6 +162,7 @@ function logFireAndForget(err) {
 }
 
 export function deactivate() {
+  stopSampler() // F-W19（`SETTINGS.md` §2.12）：采样器随停用（幂等）——不留未清单定时器
   closeAllMcp()
   _panel?.dispose()
 }

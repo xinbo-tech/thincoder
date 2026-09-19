@@ -12,7 +12,7 @@
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
 | 客户端入口 | 核 `thincoder-core/mcp.mjs`（唯一实现——CLI 侧 S2 U7 已迁核，自持镜像已删） | 同核（VSC 侧 S2 W7 已迁核——自持镜像已删；端壳增量 = `thincoder-vscode/src/extension/panel-mcp.mjs`） |
-| 基础件 | 核 `mcp/helpers.mjs`（自持镜像已删——S2 U7 / S2 W7） | 同核 |
+| 基础件 | 核 `thincoder-core/mcp/helpers.mjs`（自持镜像已删——S2 U7 / S2 W7） | 同核 |
 | 传输 | 核 `mcp/transport-stdio.mjs` · `transport-http.mjs` · `transport-ws.mjs`（自持镜像已删——S2 U7 / S2 W7） | 同核 |
 
 **共同契约**：可配项（三种传输）与 `mcp.servers[]` 同源。
@@ -29,11 +29,11 @@
 
 | # | 对位（CLI ↔ VSC） | 分类 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|
-| 144 | `src/mcp/helpers.mjs` ↔ `src/mcp/utils.mjs`（两侧自持镜像已删——S2 U7 / W7） | ② | 融合：取一侧（常量 + RPC id 生成） | 分叉 ＝ 档名（helpers / utils）；常量逐条同值（`INIT_TIMEOUT_MS` / `CALL_TIMEOUT_MS` / `ENDPOINT_WAIT_MS`）⇒ 前提成立 | — | S1（建核补齐） |
-| 145 | `src/mcp/transport-stdio.mjs` ↔ `src/mcp/stdio.mjs`（两侧自持镜像已删——S2 U7 / W7） | ② | 融合：取一侧 + 核内 `mcp/` 切分归位 | 分叉 ＝ 档名与目录；同源自述 ⇒ 前提成立 | — | S1（建核补齐） |
-| 146 | `src/mcp/transport-http.mjs` ↔ `src/mcp/http.mjs`（两侧自持镜像已删——S2 U7 / W7） | ② | 融合：同 #145 | 同 #145（VSC `http.mjs:252` 自述「与 CLI 语义同构」）⇒ 前提成立 | — | S1（建核补齐） |
-| 147 | `src/mcp/transport-ws.mjs` ↔ `src/mcp/ws.mjs`（两侧自持镜像已删——S2 U7 / W7） | ② | 融合：同 #145 | 同 #145 ⇒ 前提成立 | — | S1（建核补齐） |
-| 148 | `src/mcp.mjs` ↔ `src/mcp/index.mjs` | ② | 融合：核内单一切分 + 端侧配置面板 / 监视面按端注入 | 分叉 ＝ 组织（VSC 2 行转口 + `mcp/index.mjs`）；可配项（三种传输）与 `mcp.servers[]` 同源；**承 §2.5 #81** | —（承 #81） | S1（建核补齐） |
+| 144 | `src/mcp/helpers.mjs` ↔ `src/mcp/utils.mjs`（两侧自持镜像已删——S2 U7 / W7） | ② | 融合：取一侧（常量 + RPC id 生成） | 分叉 ＝ 档名（helpers / utils）；常量逐条同值（`INIT_TIMEOUT_MS` / `CALL_TIMEOUT_MS` / `ENDPOINT_WAIT_MS`）⇒ 前提成立 | — | S1（建核补齐） （迁移期引文） |
+| 145 | `src/mcp/transport-stdio.mjs` ↔ `src/mcp/stdio.mjs`（两侧自持镜像已删——S2 U7 / W7） | ② | 融合：取一侧 + 核内 `mcp/` 切分归位 | 分叉 ＝ 档名与目录；同源自述 ⇒ 前提成立 | — | S1（建核补齐） （迁移期引文） |
+| 146 | `src/mcp/transport-http.mjs` ↔ `src/mcp/http.mjs`（两侧自持镜像已删——S2 U7 / W7） | ② | 融合：同 #145 | 同 #145（VSC `http.mjs:252` 自述「与 CLI 语义同构」）⇒ 前提成立 | — | S1（建核补齐） （迁移期引文） |
+| 147 | `src/mcp/transport-ws.mjs` ↔ `src/mcp/ws.mjs`（两侧自持镜像已删——S2 U7 / W7） | ② | 融合：同 #145 | 同 #145 ⇒ 前提成立 | — | S1（建核补齐） （迁移期引文） |
+| 148 | `src/mcp.mjs` ↔ `src/mcp/index.mjs` | ② | 融合：核内单一切分 + 端侧配置面板 / 监视面按端注入 | 分叉 ＝ 组织（VSC 2 行转口 + `mcp/index.mjs`）；可配项（三种传输）与 `mcp.servers[]` 同源；**承 §2.5 #81** | —（承 #81） | S1（建核补齐） （迁移期引文——档已删） |
 
 ## 3. 须用户裁条目
 
@@ -205,20 +205,9 @@ MCP 工具、下轮重试）。**子代理不含 MCP**：装配仅 depth-0 展�
 
 §1 总体需求 / F1–F5 / N1–N4 / 范围边界（旧档自身即需求层）已并入本层需求档 `docs/core/requirements/MCP.md`（**与本档同名成对**）——本档不重复。
 
-## 9. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **194 行**（B 轮并入前 52 行）——**低于 300 行软线，无需拆分规划**。
-
-| # | 拆分面 | 去向 | 状态 |
-|---|---|---|---|
-| 1 | §6.8 `/mcp` 配置交互（菜单 / picker / 探活确认环） | 「MCP 交互面」子档（TUI 壳体面） | **建议**（待父侧裁定——迁移批落地） |
-| 2 | §6.6 传输层与活性 | 与 §6.3 / §6.7 合族为「MCP 传输与探活」子档 | **需用户裁定**——与「一板块一档」的板块镜像惯例冲突 |
-
-**落地时点** = 迁移批（本批不拆）；拆分动作不得改语义（只修引用）。
-
 ## 变更记录
 
 - 2026-09-13：建档——自 `docs/core/design/CORE-UNIFICATION.md` 拆出（§2.5 #81 / #144–#148）；**语义零改**，行号沿用原编号。
-- 2026-09-14（**B 轮并入 · 第 2 批**）：新增 §6 **机制面**（定位与术语 / 工具展开 / execute 契约 / 连接装配与热插拔 / 配置机制 / 传输与活性 / 探活 / `/mcp` 交互 / 失效语义）· §7 **关键决策记录（D-MC1–15）** · §8 **不并项与历史沿革** · §9 体量与拆分规划；来源 = `thincoder-cli/docs/design/MCP.md`（**旧档一字未改**——原地作参照历史）；需求侧已并入本层 `docs/core/requirements/MCP.md`；首部加机制面指针一行。
+- 2026-09-14（**B 轮并入 · 第 2 批**）：新增 §6 **机制面**（定位与术语 / 工具展开 / execute 契约 / 连接装配与热插拔 / 配置机制 / 传输与活性 / 探活 / `/mcp` 交互 / 失效语义）· §7 **关键决策记录（D-MC1–15）** · §8 **不并项与历史沿革** · 来源 = `thincoder-cli/docs/design/MCP.md`（**旧档一字未改**——原地作参照历史）；需求侧已并入本层 `docs/core/requirements/MCP.md`；首部加机制面指针一行。
 - 2026-09-15（**VSC 轮并入 · 批 7**）：§6.10 新增 **VS Code Settings 面板 MCP 页**（无 `/mcp` 命令面端差 / config-mcp 读写 / depth-0 装配 / 命连接 / 探活镜像 / 生命周期 / agent 代配差异）· §7 补 **D-MC16** · §8.2 补 1 行不并项登记；来源 = `thincoder-vscode/docs/design/MCP.md`（**旧档一字未改**）；坐标按现状实核（`panel-mcp.mjs:8,28` · `config-mcp.mjs:12,19,37,63`）。
 - 2026-09-15（**S2 W7 落地**）：VSC 自持镜像已迁核删除（`thincoder-vscode/src/mcp.mjs` + `src/mcp/**` 6 档——删除记录 = 批次档 `2026-09-15-vsc-core-wiring.md` §5）；§1 归属表两列收正（两侧同核单源）· §2.2 #144–#147 行加现状注 · §6.2 网关废弃行 / §6.10（坐标 + name 键 session 面 + 端壳增量 + 面板展开器载荷契约）/ §7 D-MC2 / §8.2 同批收正（只收正形态，机制条文零改）。

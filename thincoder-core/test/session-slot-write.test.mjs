@@ -4,15 +4,18 @@
  * 手法：真实临时会话目录（`_setSessionsDirForTest` 隔离缝）+ 真实槽文件——断言落在
  * **磁盘可观察结果**上（开关值 / 未涉字段保留 / manifest 摘要 / 轮转产物）。
  * 覆盖：开关写四种 + 全新槽（认领先行）默认记录 + 非属主槽拒写 + 轮转四判据
- *（异会话 / version>2 / 异 cwd / 同会话并发追加）+ 损坏现场保全。
+ *（异会话 / version>2 / 异 cwd / 同会话并发追加）+ 损坏现场保全 + 死主清理身份复核
+ *（批 1 CORE-DEFECT-FIXES · V2：pid 复用 ⇒ 删 / 身份符 · 探测失败 · 缺行 ⇒ 保守保留）。
  */
 import { test, before, after, beforeEach } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
-import { _resetSessionsDirForTest, _setSessionsDirForTest, getSessionId, loadManifest, manifestPath, slotPath } from "../session-slots.mjs"
+import { _resetSessionsDirForTest, _setSessionsDirForTest, activeSlot, getSessionId, loadManifest, manifestPath, slotPath } from "../session-slots.mjs"
+import { _resetProcessProbeTestImpl, _setProcessProbeTestImpl } from "../process-probe.mjs"
 import {
   _resetSlotMtimeCacheForTest, mergeEngTokensForSave, newSlotData, saveSlotData,
   setSlotAdvisorGuard, setSlotAutoApprove, setSlotEngineering, setSlotPlanMode,
@@ -133,4 +136,83 @@ test("损坏现场：解析失败 ⇒ 改名 .corrupted 保全，目标档照写
   assert.equal(rotated, null, "损坏面不产 .bak（走 .corrupted）")
   assert.ok(readdirSync(dir).some((n) => n.endsWith(".json.4.corrupted")), "损坏现场保全")
   assert.equal(JSON.parse(readFileSync(p, "utf8")).sessionStart, "mine")
+})
+
+const FOREIGN = process.platform === "win32" ? "C:\\Windows\\System32\\SearchHost.exe" : "/usr/lib/search-host"
+const CLI_PROC = process.platform === "win32" ? "node C:\\app\\thincoder.cjs" : "node /app/thincoder.cjs"
+
+/** 死主清理装配：槽 7 = 陈旧属主（**本进程 pid 活**——进程实例真活，非注入；会话 id 不同
+ *  ⇒ 非 self）+ 槽文件在盘 ⇒ 回收路径不会占用该槽，清理结果可直接读盘断言。 */
+function putStaleOwner(sessionId) {
+  const m = loadManifest(CWD)
+  m.slots = { ...(m.slots ?? {}), 7: { updatedAt: 1 } }
+  m.slotSessions = { ...(m.slotSessions ?? {}), 7: sessionId }
+  writeFileSync(manifestPath(CWD), JSON.stringify(m))
+  writeFileSync(slotPath(CWD, 7), JSON.stringify({ version: 2, history: [] }))
+}
+
+/** 驱一次死主清理（公开入口 activeSlot → ensureActive → cleanDeadOwners，结果落盘）。
+ *  init-block 批（F-MI7）：缝面随探测束扩容——`aliveFn` 缺省 = 注入 pid 全活（与真实 tasklist
+ *  同形：本进程 pid 存在）；`cmdlineFn` = 命令行批量结果。两缝均批语义（F-MI7 禁逐 pid）。 */
+function driveCleanup(cmdlineFn, aliveFn = (pids) => new Set(pids)) {
+  _setProcessProbeTestImpl({ aliveFn, cmdlineFn })
+  try { activeSlot(CWD) } finally { _resetProcessProbeTestImpl() }
+}
+
+/** 缝面计数（F-MI7 束上界 / 粘性早退零探测断言用）：返回计数对象 + 驱动函数。 */
+function countingProbe(cmdlineFn = () => new Map()) {
+  const calls = { alive: 0, cmdline: 0 }
+  _setProcessProbeTestImpl({
+    aliveFn: (pids) => { calls.alive++; return new Set(pids) },
+    cmdlineFn: (pids) => { calls.cmdline++; return cmdlineFn(pids) },
+  })
+  return calls
+}
+
+slow("死主清理身份复核：pid 活 + 命令行非本产品（pid 复用）⇒ 陈旧属主条目被删", () => {
+  putStaleOwner(`${process.pid}-0-stale`)
+  driveCleanup(() => new Map([[process.pid, FOREIGN]]))
+  assert.equal(loadManifest(CWD).slotSessions?.[7], undefined, "身份不符的陈旧属主未清理")
+})
+
+slow("死主清理身份复核：命令行命中本产品 ⇒ 保留（不误删活实例槽）", () => {
+  const stale = `${process.pid}-0-live`
+  putStaleOwner(stale)
+  driveCleanup(() => new Map([[process.pid, CLI_PROC]]))
+  assert.equal(loadManifest(CWD).slotSessions?.[7], stale, "活实例属主被误删")
+})
+
+slow("死主清理身份复核：探测失败 / 缺行 ⇒ 不删（保守——D-MI10）", () => {
+  const stale = `${process.pid}-0-unknown`
+  for (const probe of [() => null, () => new Map()]) {
+    putStaleOwner(stale)
+    driveCleanup(probe)
+    assert.equal(loadManifest(CWD).slotSessions?.[7], stale, "探测不确定 ⇒ 保守保留")
+  }
+})
+
+slow("束上界（F-MI7）：冷路径一次 = ≤1 判活 + ≤1 命令行——不得逐 pid exec", () => {
+  // 三个属主（本进程 pid + 两个不可达 pid）：判活 / 命令行仍各只 1 次 exec
+  const m = loadManifest(CWD)
+  m.slots = { ...(m.slots ?? {}), 7: { updatedAt: 1 }, 8: { updatedAt: 1 } }
+  m.slotSessions = { ...(m.slotSessions ?? {}), 7: `${process.pid}-0-stale`, 8: "999999-0-dead" }
+  delete m.active // 确保走冷路径（粘性早退不探测）
+  writeFileSync(manifestPath(CWD), JSON.stringify(m))
+  const calls = countingProbe(() => new Map())
+  try { activeSlot(CWD) } finally { _resetProcessProbeTestImpl() }
+  assert.equal(calls.alive, 1, `判活 exec = ${calls.alive} 次（应 1）`)
+  assert.equal(calls.cmdline, 1, `命令行 exec = ${calls.cmdline} 次（应 1）`)
+})
+
+slow("粘性早退（F-MI7）：已拥有 active ⇒ 零探测（0 判活 + 0 命令行）", () => {
+  const m = loadManifest(CWD)
+  m.slots = { ...(m.slots ?? {}), 5: { updatedAt: 1 } }
+  m.slotSessions = { ...(m.slotSessions ?? {}), 5: getSessionId() }
+  m.active = 5
+  writeFileSync(manifestPath(CWD), JSON.stringify(m))
+  const calls = countingProbe()
+  let got = null
+  try { got = activeSlot(CWD) } finally { _resetProcessProbeTestImpl() }
+  assert.equal(got, 5, "已拥有 active 未被复用")
+  assert.deepEqual(calls, { alive: 0, cmdline: 0 }, "粘性早退面发生探测（应为零）")
 })

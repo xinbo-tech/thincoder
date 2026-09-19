@@ -219,6 +219,17 @@
   background: var(--hover-bg);
 }
 
+/* F-W14（忙态门）：模型 / 推理信息钮禁用可见态（不隐藏——读数仍可读） */
+.ctrl-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.ctrl-btn:disabled:hover {
+  border-color: var(--border);
+  background: transparent;
+}
+
 .ctrl-btn.active {
   opacity: 1;
   border-color: var(--accent);

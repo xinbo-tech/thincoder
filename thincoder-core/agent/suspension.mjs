@@ -2,9 +2,10 @@
  * agent/suspension.mjs — §17 挂起 / 唤醒驱动（核内形态——AGENT-LOOP.md §2.3 #184 定案）。
  *
  * 语义（两端同源，逐字承两端现行挂起驱动——CLI 侧 tui 面 / VSC 侧 extension 面，同语义移植）：
- * 回合尾后台池仍 live → 挂起会话——池项 settle → 入 pending；pending 非空 → 合并消化轮
- * （auto-turn）；挂起空闲用户输入优先于消化轮。池空 + pending 空 + 无待处理输入 → 自然退出
- * （idle）。退出清场：abort = 清池不注入（陈旧结果不注入）；idle = 残余直注入（结果零丢失）。
+ * 回合尾后台池仍 live → 挂起会话——池项 settle → 入 pending；pending 非空 **或存在未 drain 的
+ * 上行 ask**（`upstreamWaiting`——F-UC7 / §6.27.12.4 ①）→ 合并消化轮 / 唤醒轮（auto-turn；旗标
+ * `upstreamTurn` 仅供域文本选择）；挂起空闲用户输入优先于消化轮。池空 + pending 空 + 无待处理
+ * 输入 → 自然退出（idle）。退出清场：abort = 清池不注入（陈旧结果不注入）；idle = 残余直注入（结果零丢失）。
  *
  * 载体注入（端差面 = 池 / pending / 标志挂谁）：`ctx.carrier` = 字段集按核内异步面
  * 现行口径的对象（`_asyncSubagents` · `_asyncAdvisors` · `_consultSessions` ·
@@ -16,7 +17,8 @@
  *
  * ctx 接口（注入面）：
  *   - carrier           池 / pending / 标志载体（见上）
- *   - runTurn(text, opts)  回合执行器（digest = `("", { autoTurn: true })`）
+ *   - runTurn(text, opts)  回合执行器（digest = `("", { autoTurn: true })`；上行唤醒轮 =
+ *                          `("", { autoTurn: true, upstreamTurn: true })`——旗标仅供域文本选择）
  *   - abortSignal       会话中止信号（兜底监听 + abort 清场判据）
  *   - hooks.onCounts(counts)      计数变化通知（{ running, queued, pending, done }）
  *   - hooks.onDigest(phase, counts) 消化轮边界（start / end）
@@ -27,6 +29,7 @@
  */
 
 import { parkAsyncPending } from "../agent-tools/async-settle.mjs"
+import { upstreamWaiting } from "../agent-tools/parent-channel.mjs"
 
 /** 运行中 consult children（非 stopped 会话的在飞子调用数——挂起活度/计数同源）。 */
 function consultRunningChildren(carrier) {
@@ -142,7 +145,8 @@ function waitForSettleOrWake(carrier, abortSignal, latch) {
  *
  * 状态机行表（承 AGENT-LOOP.md §9/§7 行表）：
  * 1. 用户输入优先（D-S5）：pendingInput 非空 → 以该消息开普通回合（`_suspended=false`）；
- * 2. pending 非空 → 合并消化轮（auto-turn；注入由宿主 runTurn 首行完成——单注入点）；
+ * 2. pending 非空 或 存在未 drain 的 ask（`upstreamWaiting`）→ 合并消化轮 / 唤醒轮（auto-turn；
+ *    注入由宿主 runTurn 首行完成——单注入点）；
  * 3. 池空（无 running / queued / 未注入）→ 自然退出；
  * 4. 等下一 settle / 宿主唤醒（handle.wake）。
  * 每轮消化 / 用户回合后：hooks.reclaim(consumed) 逐条回收（不等池空）。
@@ -183,12 +187,14 @@ export function startSuspension(ctx) {
           hooks.onCounts?.(backgroundCounts(carrier))
           continue
         }
-        // 2. pending 非空 → 合并消化轮（单注入点由 runTurn 首行完成）。
-        if ((carrier._pendingAsyncResults?.length ?? 0) > 0) {
+        // 2. pending 非空 或 未 drain 的 ask → 合并消化轮 / 上行唤醒轮（单注入点由 runTurn
+        //    首行完成：pending 经 run 起始注入器，ask 经回合头 `drainChildUpstream`）。
+        const upstream = upstreamWaiting(carrier) // §6.27.12.4 ①：第二开轮源（谓词必须先于第 3 步退出判）
+        if ((carrier._pendingAsyncResults?.length ?? 0) > 0 || upstream) {
           const afterRun = consumedByRun()
           hooks.onDigest?.("start", backgroundCounts(carrier))
           try {
-            await runTurn("", { autoTurn: true })
+            await runTurn("", { autoTurn: true, upstreamTurn: upstream })
           } catch (e) {
             // 消化轮自身的回合级中止不是会话停止——记边界后重入循环（池空 / pending 空自然退出）。
             if (e?.name === "AbortError" && !abortSignal?.aborted) {

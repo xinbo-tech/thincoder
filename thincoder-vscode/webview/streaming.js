@@ -1,6 +1,6 @@
 /**
  * streaming.js — token/reasoning stream rendering (rAF-throttled), turn finish,
- * code-block copy buttons, and the in-conversation advisor review block.
+ * code-block copy buttons, and subagent activity-stream chunks.
  * (2026-09-11 活动区回归 → 2026-09-12 §14 收口：live/awaitingDigest 驻留 `#subagent-activity`；
  * 终态折叠与归档落流在 activity.js——ensureBlock 可返 null（subagentChunk 空安全守卫）；rAF 尾
  * 区 pin = maybeScrollActivity + 块级跟滚 maybeScrollBlock。)
@@ -10,7 +10,7 @@ import { md } from "./md.js"
 import { t } from "./i18n.js"
 import {
   newBlock, maybeScrollDown, maybeScrollActivity, escHtml,
-  buildAdvisorBlock, appendAdvisorChunk,
+  appendAdvisorChunk,
 } from "./ui.js"
 import { setLoading } from "./loading.js"
 import { renderStatusBar } from "./status-bar.js"
@@ -18,17 +18,17 @@ import { renderStatusBar } from "./status-bar.js"
 // (#subagent-activity — activity.js) — lifecycle (create/flip/fold/⏹) lives there;
 // panels.js never imports streaming.js and activity.js imports neither (no cycles).
 import { ensureBlock, noteChunk, resetActivity, maybeScrollBlock } from "./activity.js"
+import { traceSubOnce } from "./activity-diag.js"
 
 // Stream render scheduler: reasoning/token chunks arrive at thousands/sec; rendering
 // markdown + innerHTML on EVERY chunk is O(n²) and floods the main thread — the backlog
 // keeps the Stop button unresponsive long after the backend aborted (2026-08-16
 // "Stop won't stop while thinking" bug). rAF throttles to one render per frame.
-// Advisor/subagent content appends incrementally (appendAdvisorChunk), but their
-// per-chunk scrollTop=scrollHeight forces a sync layout — that's folded in here too.
+// Subagent content appends incrementally (appendAdvisorChunk) with block-level
+// follow-scroll (maybeScrollBlock) — folded into the same frame here.
 let _renderScheduled = false
 let _reasoningDirty = false
 let _tokenDirty = false
-let _advisorScrollDirty = false
 let _subScrollDirty = null // 子代理块跟滚脏集（Set 惰性建——§13 C-LU2；rAF 尾应用后置空）
 let _lastStreamRender = 0
 const STREAM_RENDER_MIN_MS = 50 // 长回复降频：全量 md() 重渲染限到 ≥50ms 一次
@@ -41,7 +41,7 @@ function scheduleStreamRender() {
     const now = Date.now()
     if (now - _lastStreamRender < STREAM_RENDER_MIN_MS) {
       // 距上次渲染 <50ms：跳过一次，仍有脏内容则继续排队（flushStreamRender 兜底尾帧）
-      if (_tokenDirty || _reasoningDirty || _advisorScrollDirty || _subScrollDirty) scheduleStreamRender()
+      if (_tokenDirty || _reasoningDirty || _subScrollDirty) scheduleStreamRender()
       return
     }
     _lastStreamRender = now
@@ -53,13 +53,6 @@ function scheduleStreamRender() {
     if (ctx.currentBubble && _tokenDirty) {
       try { ctx.currentBubble.innerHTML = md(ctx.currentRaw) } catch { ctx.currentBubble.textContent = ctx.currentRaw }
       _tokenDirty = false
-    }
-    if (_advisorScrollDirty) {
-      // 流内 advisor 块内容自滚钉底（裸钉底——无让位语义——本批范围外——§13.8 边界）；
-      // 子代理块跟滚由 `_subScrollDirty` / maybeScrollBlock 承担（WEBVIEW.md §13）
-      const c = S._advisorBlock?.querySelector(".advisor-content")
-      if (c) c.scrollTop = c.scrollHeight
-      _advisorScrollDirty = false
     }
     if (_subScrollDirty) {
       // 子代理块块级跟滚（§13 C-LU2——逐块应用后置空；让位旗标 = 内容区 _pinFollow）
@@ -187,7 +180,6 @@ export function finish(aborted) {
   // resetActivity 只清区子树（C-7——流内归档块留存）；digest/会话内回合中止（_suspended
   // true）不动块（池仍 live——children 持会话 signal）。
   if (aborted && !S._suspended) resetActivity() // abort 无会话：池随回合死——区子树复位（C-7：流内归档块留存）
-  if (!S._suspended) S._advisorBlock = null // in-flow sync-advisor block pointer — the element itself stays in the conversation
   setLoading(ctx, false)
   renderStatusBar()
 }
@@ -212,29 +204,6 @@ export function attachCopyButtons(container) {
   }
 }
 
-/**
- * Advisor output renders as an in-conversation details block (reasoning-style):
- * full content streams into a scrolling region — NEVER truncated — and the
- * summary carries the round number. A "start" chunk opens (and closes the
- * previous round's block); think/tool/text chunks append inside it.
- */
-export function advisorChunk(m) {
-  if (m.kind === "start") {
-    if (S._advisorBlock) S._advisorBlock.open = false // previous round collapses (stays readable)
-    // Show the advisor's effective model in the block title (it may differ from the main agent's).
-    const details = buildAdvisorBlock(t("advisor.round", { round: m.round ?? "?" }) + (m.model ? " · " + m.model : ""))
-    if (ctx.currentBlock) ctx.currentBlock.appendChild(details)
-    else ctx.messagesEl.appendChild(details)
-    S._advisorBlock = details
-    return
-  }
-  if (!S._advisorBlock) return
-  appendAdvisorChunk(S._advisorBlock, m.kind ?? "text", m.text)
-  _advisorScrollDirty = true
-  scheduleStreamRender()
-}
-
-
 /** Subagent/consultant/escalate activity stream — 2026-09-11 活动区回归: 块出生即
  *  活动区 `#subagent-activity` 区尾（activity.js ensureBlock——channel "sub:explore#1"/
  *  "sub:consult glm:glm-5.2 #4"…——label 去 sub: 前缀）；终态原地折叠（live→frozen
@@ -245,9 +214,14 @@ export function advisorChunk(m) {
 export function subagentChunk(m) {
   const name = String(m.name ?? "")
   const block = ensureBlock(name)
-  // 空安全 + 冻结守卫（评审 round2 #5）：ensureBlock 对已终态频道返 null——迟到 chunk
-  // 丢弃（CLI tombstone 丢弃链对齐——§7.2 D4 完成态冻结——不复活不重建）
-  if (!block || block._subMeta?.frozen) return
+  if (!block || block._subMeta?.frozen) {
+    // ⑦ 非出生面禁静默（2026-09-19——§5.3）：冻结 / 墓碑键吞掉的 chunk 同样逐条入痕
+    // （内容面高频 ⇒ 每频道每生命周期首条——`activity-diag.js` 去重）。
+    const entry = S._subBlocks.get(name)
+    if (entry?._subMeta?.frozen) traceSubOnce("drop-frozen", name)
+    else if (entry && !entry.isConnected) traceSubOnce("drop-tombstone", name)
+    return
+  }
   appendAdvisorChunk(block, m.kind ?? "tool", m.text, m.sub)
   noteChunk(block, m.kind ?? "tool", m.text, m) // m 携结构化 tool/cmd（§14 C-11①——结果 chunk 不改写状态区）
   _subScrollDirty ??= new Set() // 块级跟滚脏集（§13 C-LU2——rAF 尾逐块应用）

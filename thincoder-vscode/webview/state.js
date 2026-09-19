@@ -76,16 +76,11 @@ export const S = {
   _lastCtxPct: null,
   _planActive: false,
   _goalInfo: null,
-  // Current live-turn advisor block (in-conversation details element) — advisor
-  // output streams here like reasoning instead of the side tool panel.
-  _advisorBlock: null,
   // Subagent/consultant activity-stream blocks (ACTIVITY-REWRITE-SIMPLE——簿记 map 删
   // ——单 map 单守卫——键 = 频道名——终态冻结后条目保留作幂等守卫直至 resetActivity)。
   _subBlocks: new Map(),
-  // 出生事件诊断痕迹（2026-09-11 第 10 批——WEBVIEW.md §5.1.4 第 7 条——activity.js 单一
-  // 写点——环形末 SUB_TRACE_MAX 条）：takeover / late-terminal-stub / drop-unknown-role
-  // 三类（范围 = 出生事件面——§5.1.9 声明）——复发时凭痕迹定位（NFR-A2）。
-  _subTraceLog: [],
+  // 诊断痕迹（出生 / 终态 / 丢弃三面——§5.3）自 2026-09-19 批起住 `activity-diag.js`
+  // （环载体 + 七 kind + `panelDiag` 上行）——载体不再在 S 上，本档零痕迹职责。
   // Lazy history loading: ctx._hasOlder = more pages exist before the first rendered
   // message; _loadingOlder guards against scroll-triggered double requests.
   _loadingOlder: false,
@@ -120,7 +115,4 @@ export const S = {
   // （#status-line 唯一 writer）据此绘制 thinking 段——不再 innerHTML 覆写状态行（修 H-E）。
   _phase: null, // null | "thinking"
 }
-
-/** 出生事件痕迹环上界（第 10 批 §5.1.4 第 7 条——环形末 50 条）。 */
-export const SUB_TRACE_MAX = 50
 

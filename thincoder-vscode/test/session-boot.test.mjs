@@ -3,6 +3,9 @@
  * docs/design/SESSION-FLOW-B.md B2 节（F-B2a~c——快慢段拆/openSessionContent/会话打开
  * 原子化——AC-B2a~c + N2 红线）。
  * 组 ⑪⑫（评审 #2：chat-panel.test.mjs 485 行近 500 硬限不再追加——新文件登记 files.mjs）。
+ * 组 ⑬（SESSION-RESTORE-PARITY H/AC）· 组 ⑭（F-MI7 槽绑定束：零探测冷路径 / 解析缓存
+ * 写穿 / 空槽写面短路——批档 2026-09-18-init-block §5 续轮）· 组 ⑮⑯（他端活槽不收养——
+ * SESSION.md §6.15 P3/P4：switchSession / deleteSession 的 marker + 解析缓存收敛）。
  * 手法：真实 ChatPanel 原型 + 真实模块链路（panel-session openSessionContent/loadSession/
  * pushSessions/status——不桩模块函数）+ tmp 会话/config 沙箱（session-io/config-io 测试缝
  * ——同 chat-panel.test.mjs）。桩只切 host API 面（vscode mock 缺失件局部补）；posted
@@ -12,26 +15,27 @@
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync } from "node:fs"
+import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import * as vscode from "vscode"
 import { handlePanelMessage, _cwd } from "../src/extension/panel-messages.mjs"
 import { ChatPanel } from "../src/extension/chat-panel.mjs"
-import { openSessionContent, loadOlder, status as bootstrapStatus } from "../src/extension/panel-session.mjs"
-import { newSlot, loadSlot, saveSessionToSlot, _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-io.mjs"
+import { openSessionContent, loadOlder, ensureSlot, ensureSlotAsync, saveLines, deleteSession, status as bootstrapStatus } from "../src/extension/panel-session.mjs"
+import { newSlot, loadSlot, saveSessionToSlot, cachedSlot, loadManifest, saveManifest, readEndMarker, slotOccupancy, _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-io.mjs"
+import { _setProcessProbeTestImpl, _resetProcessProbeTestImpl } from "@thincoder/core/process-probe.mjs"
 import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
 
 // ─── 环境隔离（真实槽/配置读写全部指向临时目录——同 chat-panel.test.mjs）───
 
 let _tmp
 
-before(() => {
+before(async () => {
   _tmp = mkdtempSync(join(tmpdir(), "tc-boot-"))
   _setConfigPathForTest(join(_tmp, "config.json")) // 文件可缺席（loadRaw 缺省 {}）——migrate 会写
   _setSessionsDirForTest(join(_tmp, "sessions"))
   vscode.env.language = "en" // vscode mock 无 env.language——webviewReady 的 i18n 推送需要
-  newSlot(_cwd()) // fixture 槽 1（文件在盘 + manifest 条目）——resumeSlot 各次认领确定性
+  await newSlot(_cwd()) // fixture 槽 1（文件在盘 + manifest 条目）——resumeSlot 各次认领确定性
 })
 
 after(() => {
@@ -179,7 +183,7 @@ test("⑪b resolve 零内容（AC-B2b）：resolve 只触慢段——内容只�
 test("⑫ 快慢段分离（AC-B2c）：快段 openSessionContent 调用链 pushProject→loadSession（记参断言）——慢段 status 不含 loadSession/不绑槽", async () => {
   // 快段（webviewReady case 的调用对象——直接入口）
   const f = bootPanel()
-  openSessionContent(f)
+  await openSessionContent(f)
   let types = typesOf(f)
   const iProj = types.indexOf("project")
   const iClear = types.indexOf("clearMessages")
@@ -242,7 +246,7 @@ function assertPageShape(page, firstIdx, count, hasOlder, older, idxList) {
   assert.deepEqual(page.messages.map((m) => m.idx), want, "idx = 全局原始下标（永不复编号）")
 }
 
-test("⑬ 真实形状非空 history：首窗 200 + hasOlder（AC-H）——模型/序/turnStart/配对/剔除 + loadOlder 越页配对（⑪⑫ 零破坏——追加末位）", () => {
+test("⑬ 真实形状非空 history：首窗 200 + hasOlder（AC-H）——模型/序/turnStart/配对/剔除 + loadOlder 越页配对（⑪⑫ 零破坏——追加末位）", async () => {
   // fixture A：406 条——前段 [0,6) 含 reminder/纯工具回合帧（reasoning + 配对）/夹帧，尾 400 条交替
   const fixtureA = [
     { role: "user", content: "hello zero", ts: 10 },
@@ -255,7 +259,7 @@ test("⑬ 真实形状非空 history：首窗 200 + hasOlder（AC-H）——模�
   ]
   writeFixture(fixtureA)
   const p = bootPanel()
-  openSessionContent(p)
+  await openSessionContent(p)
   let pages = historyPages(p)
   assertPageShape(pages[0], 206, 200, true, false) // 首页 = 200（评审 #3——>200 fixture 首页 200 断言）
   assert.deepEqual(pages[0].messages.map((m) => m.kind).slice(0, 4), ["user", "assistant", "user", "assistant"], "尾段模型/序（user/assistant 交替）")
@@ -293,7 +297,7 @@ test("⑬ 真实形状非空 history：首窗 200 + hasOlder（AC-H）——模�
     ...fillAlt(207, 407),
   ]
   writeFixture(fixtureB)
-  openSessionContent(p)
+  await openSessionContent(p)
   pages = historyPages(p)
   assertPageShape(pages[3], 208, 200, true, false) // 尾窗干净 200（跨页结果在上一窗区域）
   assert.equal(pages[3].messages[0].idx, 208)
@@ -315,4 +319,122 @@ test("⑬ 真实形状非空 history：首窗 200 + hasOlder（AC-H）——模�
   assert.ok(f2, "F@204 在 [8,208) 页内")
   assert.deepEqual(f2.tools.map((t) => t.result), ["res9", "res10"], "真实 loadOlder 锚路径配对不变")
   assert.ok(pages[5].messages.every((m) => m.kind !== "tool"), "结果随帧——无独立 tool 消息（防双显）")
+})
+
+// ─── ⑭ F-MI7 槽绑定束（零探测冷路径 / 解析缓存写穿 / 空槽写面短路）────────────
+
+test("⑭ 零探测冷路径（F-MI7）：未解析 ⇒ ensureSlot 同步返 null（不等 exec）+ 后台收敛绑槽；解析缓存写穿 ⇒ 零探测直返；saveLines 遇 null 短路（零 .null 槽文件）", async () => {
+  // 冷起点：换沙箱目录 = 解析缓存整体失效（session-io 沙箱缝）——无 manifest ⇒ 全新认领
+  const dir2 = join(_tmp, "sessions2")
+  _setSessionsDirForTest(dir2)
+  const cwd = _cwd()
+  assert.equal(cachedSlot(cwd), null, "沙箱缝清缓存（冷起点）")
+
+  const p1 = bootPanel({ _slot: null })
+  assert.equal(ensureSlot(p1), null, "① 冷路径同步返 null——零探测（绝不同步等 exec）")
+  assert.equal(p1._slot, null, "① 同步面不绑槽（收敛在后台）")
+
+  // ② 空槽写面短路（坑位 §5 第 1 条）：不抛、不落 `.null` 槽文件（`saveSlotData(cwd, null, …)` 会写坏文件）
+  saveLines(p1, [], [], {}, undefined)
+  const coldFiles = existsSync(dir2) ? readdirSync(dir2) : [] // 短路连沙箱目录都不建 ⇒ 缺目录亦满足「零写」
+  assert.ok(!coldFiles.some((f) => f.includes(".null")), "② saveLines 冷短路——零 .null 槽文件（目录缺 ⇒ 更零写）")
+
+  // ③ 后台收敛：resumeSlot 认领 ⇒ 面板绑槽 + 解析缓存写穿（供下一次零探测直返）
+  for (let i = 0; i < 50 && p1._slot == null; i++) await settle()
+  const bound = p1._slot
+  assert.ok(typeof bound === "number" && bound >= 1, "③ 后台收敛绑槽（resumeSlot 认领）")
+  assert.equal(cachedSlot(cwd), bound, "③ 认领写穿解析缓存")
+
+  // ④ 缓存直返（零探测——同步路径 + awaited 路径同槽）
+  const p2 = bootPanel({ _slot: null })
+  assert.equal(ensureSlot(p2), bound, "④ 冷路径命中缓存同步直返")
+  assert.equal(await ensureSlotAsync(p2), bound, "④ awaited 认领路径同槽（已绑定直返）")
+
+  _setSessionsDirForTest(join(_tmp, "sessions")) // 还原沙箱（缝亦清缓存）
+})
+
+// ─── ⑮⑯ 他端活槽不收养（SESSION.md §6.15 P3/P4——批档 2026-09-18-init-block fix 轮 4）──────
+
+/** 伪造他端活属主（pid 42424 + 产品命令行 ⇒ ownerState = "alive"——判据单源）：
+ *  注入缝 = 核 process-probe（批量语义；`_resetProcessProbeTestImpl()` 清除）。
+ *  读面 slotOccupancy（同步束）与恢复面 resumeSlot（异步束）同缝查表。 */
+const OTHER_PID = 42424
+const stubLiveOther = () => _setProcessProbeTestImpl({
+  aliveFn: (pids) => new Set([...pids].filter((p) => p === OTHER_PID)),
+  cmdlineFn: (pids) => new Map([...pids].map((p) => [p, "node bin/thincoder.cjs"])),
+})
+
+/** 他端槽 fixture：文件 + 条目 + 属主 = 伪造活进程（本进程 ≠ 该 sessionId）。 */
+function foreignSlot(cwd, slot) {
+  saveSessionToSlot(cwd, slot, {
+    version: 2, cwd, title: "", updatedAt: Date.now(),
+    history: [{ role: "user", content: "other-end", ts: 1 }],
+    contextHistory: [], sessionStart: null,
+  })
+  const m = loadManifest(cwd)
+  m.slotSessions = { ...(m.slotSessions ?? {}), [slot]: `${OTHER_PID}-other-end` }
+  saveManifest(cwd, m)
+}
+
+test("⑮ 切到被占目标槽（SESSION.md §6.15 P3/P4）：switchSession 不写本端记录（marker 保持原槽）+ 不污染解析缓存 + 面板回自身槽（不钉占槽）；共享 active 指针仍翻（D-6 保留）", async () => {
+  _setSessionsDirForTest(join(_tmp, "sessions3"))
+  const cwd = _cwd()
+  try {
+    assert.equal(await newSlot(cwd), 1, "fixture：本端槽 1（newSlot 写穿 marker + 缓存）")
+    assert.equal(cachedSlot(cwd), 1, "fixture：解析缓存 = 1")
+    foreignSlot(cwd, 2)
+    stubLiveOther()
+    assert.equal(slotOccupancy(cwd, 2).occupied, true, "fixture：槽 2 判占用（他端活属主）")
+
+    const p = bootPanel({ _slot: 1 })
+    const warned = []
+    const realWarn = vscode.window.showWarningMessage
+    vscode.window.showWarningMessage = async (m) => { warned.push(m) }
+    try {
+      await handlePanelMessage(p, { type: "switchSession", slot: 2 })
+    } finally {
+      vscode.window.showWarningMessage = realWarn
+    }
+
+    assert.equal(loadManifest(cwd).active, 2, "共享 active 指针仍翻（D-6：CLI 互操作保留——非本端记录面）")
+    assert.equal(readEndMarker(cwd).slot, 1, "P4：本端记录保持原槽 1（被占 ⇒ 不写他端槽 marker）")
+    assert.equal(cachedSlot(cwd), 1, "P3：解析缓存保持原槽 1（被占 ⇒ 不收养占槽）")
+    assert.equal(p._slot, 1, "P3：面板不钉占槽——loadSession 经缓存绑回自身槽 1")
+    assert.equal(warned.length, 1, "占用提示恰一次")
+    assert.match(warned[0], /is being used by another live process/, "占用文案（不收养）")
+    assert.equal(loadManifest(cwd).slotSessions[2], `${OTHER_PID}-other-end`, "不认领占槽（slotSessions[2] 仍是伪造属主——精确比对，非子串启发式）")
+  } finally {
+    _resetProcessProbeTestImpl()
+    _setSessionsDirForTest(join(_tmp, "sessions")) // 还原沙箱（缝亦清缓存）
+  }
+})
+
+test("⑯ 删本端绑定槽（SESSION.md §6.15 P3/P4）：面板不收养幸存 active（他端活槽）+ 不写其本端记录 + 解析缓存不残留——重解析 = 全新分配（不粘占槽 / 不复活被删槽）", async () => {
+  _setSessionsDirForTest(join(_tmp, "sessions4"))
+  const cwd = _cwd()
+  try {
+    assert.equal(await newSlot(cwd), 1, "fixture：本端槽 1")
+    foreignSlot(cwd, 2)
+    // 他端（CLI）把共享指针切到槽 2：删本端槽时 m.active 指向他端活槽（幸存指针的由来）
+    saveManifest(cwd, { ...loadManifest(cwd), active: 2 }, null, { setActive: true })
+    stubLiveOther()
+
+    const p = bootPanel({ _slot: 1 })
+    await deleteSession(p, 1)
+
+    assert.equal(p._slot, null, "P3：面板不收养幸存 active（不钉他端占槽 2）")
+    assert.equal(readEndMarker(cwd).slot, null, "P4：删本端槽 ⇒ 本端记录显式置空（不写他端占槽）")
+    assert.equal(cachedSlot(cwd), null, "P3：解析缓存随删槽收敛（不残留他端占槽）")
+
+    // 重解析收敛：resumeSlot 见显式 slot:null ⇒ allocateFresh（新号——不粘 2、不复活 1）
+    for (let i = 0; i < 50 && p._slot == null; i++) await settle()
+    assert.equal(await ensureSlotAsync(p), 3, "重解析 = max+1 全新分配（槽 2 他端占 / 槽 1 刚删）")
+    assert.equal(readEndMarker(cwd).slot, 3, "重解析写本端记录 = 新槽 3（不写他端占槽）")
+    assert.equal(loadManifest(cwd).active, 3, "共享 active 随认领翻新槽")
+    assert.ok(loadSlot(cwd, 2), "他端槽 2 未被触碰（文件仍在盘）")
+    assert.ok(!loadSlot(cwd, 1), "被删槽 1 未复活（文件不在盘）")
+  } finally {
+    _resetProcessProbeTestImpl()
+    _setSessionsDirForTest(join(_tmp, "sessions")) // 还原沙箱（缝亦清缓存）
+  }
 })

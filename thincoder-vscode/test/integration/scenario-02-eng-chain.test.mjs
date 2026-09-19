@@ -23,6 +23,7 @@ import { advisorTool } from "@thincoder/core/agent-tools/advisor.mjs" // W12：�
 // 夹具改驱真链路：mock provider（本地 SSE 零外网））。
 import { subagentTool } from "@thincoder/core/agent-tools/subagent.mjs"
 import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
+import { ENG_TASK_BOOK_MIN } from "@thincoder/core/agent-tools/spawn-gates.mjs"
 import { buildTopLevelAgent, hydrateRun } from "../../src/agent/setup.mjs" // W18：生产宿主形状父对象（拆手工 tools:[] 补丁）
 import { mockLLM, providerFor } from "./helpers/mock-llm.mjs"
 
@@ -31,6 +32,7 @@ let cfgDir
 
 before(() => {
   work = mkdtempSync(join(tmpdir(), "tc-integ-eng-"))
+  mkdirSync(join(work, ".git"), { recursive: true }) // 项目根判据（.git 仓根——2026-09-17）
   cfgDir = mkdtempSync(join(tmpdir(), "tc-integ-eng-cfg-"))
   const cfgPath = join(cfgDir, "config.json")
   writeFileSync(cfgPath, JSON.stringify({ providers: [] }) + "\n", "utf8")
@@ -124,9 +126,9 @@ test("② 正常：设计评审结算 → token 签发 → spawn 放行（两路
     // spawn 放行两路：阻塞路 + 异步路（同一真实门 + 真子运行——mock provider）
     const h = spawnHarness()
     const calls0 = llm.calls
-    await subagentTool.execute({ task: "实现功能", role: "eng-coder", designToken: token, designId, batchDoc: BATCH, async: false }, h.ctx(agent))
+    await subagentTool.execute({ task: ENG_TASK_BOOK_MIN, round: "initial", role: "eng-coder", designToken: token, designId, batchDoc: BATCH, async: false }, h.ctx(agent))
     assert.ok(llm.calls > calls0, "阻塞路带 token 放行（真子运行触达 mock provider）")
-    const ack = JSON.parse(await subagentTool.execute({ task: "异步实现", role: "eng-coder", designToken: token, designId, batchDoc: BATCH, async: true }, h.ctx(agent)))
+    const ack = JSON.parse(await subagentTool.execute({ task: ENG_TASK_BOOK_MIN, round: "initial", role: "eng-coder", designToken: token, designId, batchDoc: BATCH, async: true }, h.ctx(agent)))
     assert.equal(ack.status, "running", "异步路带 token 放行")
     await until(() => agent._asyncSubagents.get(String(ack.id))?.done === true, 5000)
     assert.equal(agent._asyncSubagents.get(String(ack.id))?.done, true, "异步路真子运行跑完（同一门）")
@@ -154,15 +156,15 @@ test("② 边界：链未收口——同 designId 修正复用放行；消费后
     const h = spawnHarness()
 
     const calls0 = llm.calls
-    await subagentTool.execute({ task: "首轮实现", role: "eng-coder", designToken: token, designId, batchDoc: BATCH, async: false }, h.ctx(agent))
+    await subagentTool.execute({ task: ENG_TASK_BOOK_MIN, round: "initial", role: "eng-coder", designToken: token, designId, batchDoc: BATCH, async: false }, h.ctx(agent))
     // 修正轮：同一 designId + 同 token 复用（docs FIRST 窗口内放行）
-    await subagentTool.execute({ task: "修正轮", role: "eng-coder", designToken: token, designId, batchDoc: BATCH, async: false }, h.ctx(agent))
+    await subagentTool.execute({ task: ENG_TASK_BOOK_MIN, round: "fix", role: "eng-coder", designToken: token, designId, batchDoc: BATCH, async: false }, h.ctx(agent))
     assert.ok(llm.calls - calls0 >= 2, "修正窗口内同 designId 复用放行（不需新评审——两轮真跑）")
 
     await subagentTool.execute({ action: "consume-design", designId }, h.ctx(agent))
     const calls1 = llm.calls
     await assert.rejects(
-      () => subagentTool.execute({ task: "链终后再来", role: "eng-coder", designToken: token, designId, batchDoc: BATCH, async: false }, h.ctx(agent)),
+      () => subagentTool.execute({ task: ENG_TASK_BOOK_MIN, round: "initial", role: "eng-coder", designToken: token, designId, batchDoc: BATCH, async: false }, h.ctx(agent)),
       /designId not found|Invalid or missing design token/,
       "消费后同 designId 再 spawn → 机械拒（需新评审新 token）",
     )
@@ -179,12 +181,12 @@ test("② 错误：无 token spawn eng-coder → 机械拒绝 + 零 spawn（不�
     const h = spawnHarness()
     const calls0 = llm.calls
     await assert.rejects(
-      () => subagentTool.execute({ task: "偷偷实现", role: "eng-coder", batchDoc: BATCH, async: false }, h.ctx(agent)),
+      () => subagentTool.execute({ task: ENG_TASK_BOOK_MIN, round: "initial", role: "eng-coder", batchDoc: BATCH, async: false }, h.ctx(agent)),
       /Invalid or missing design token/,
       "无 token 阻塞路机械拒",
     )
     await assert.rejects(
-      () => subagentTool.execute({ task: "偷偷异步实现", role: "eng-coder", batchDoc: BATCH, async: true }, h.ctx(agent)),
+      () => subagentTool.execute({ task: ENG_TASK_BOOK_MIN, round: "initial", role: "eng-coder", batchDoc: BATCH, async: true }, h.ctx(agent)),
       /Invalid or missing design token/,
       "无 token 异步路机械拒（两路同门）",
     )

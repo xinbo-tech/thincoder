@@ -3,32 +3,71 @@
  * Every `case` dispatches to a ChatPanel method or a settings/provider helper.
  */
 import * as vscode from "vscode"
-import { t, loadLocaleStrings } from "../i18n.mjs"
-import { saveModelPrefs, switchToSlot, setSlotTitle, setSlotAdvisorGuard, setSlotEngineering, slotOccupancy, loadSlot } from "./session-io.mjs"
-import { handleAddProvider, handleRemoveProvider, handleSetProviderProxy, agentSettings, saveAgentSettingsFromPanel, saveProxySettingsFromPanel, testProxyConnection, shellCandidates, saveShellSettingsFromPanel, saveWebsearchKeyFromPanel, deleteWebsearchKeyFromPanel, testProviderConnection } from "./settings.mjs"
-import { loadRaw } from "@thincoder/core/config-io.mjs"
-import { loadMcpServers } from "../config-mcp.mjs"
+import { loadLocaleStrings } from "../i18n.mjs"
+import { saveModelPrefs, loadSlot } from "./session-io.mjs"
+import { agentSettings } from "./settings.mjs"
 import { openSessionContent } from "./panel-session.mjs"
 // B2（SESSION-FLOW-B——2026-09-09）：panel-messages ↔ panel-session 环 import（panel-session
 // 头部 import 本文件 _cwd）——openSessionContent 只在 webviewReady case 函数体内使用（延迟
 // 解引用）——环安全（两模块均无顶层跨环读取）。
-import { addProviderFlow, removeProviderFlow, setKeyFlow, probeProviderAdmission } from "./provider-flows.mjs"
-import { openDiffPreview } from "./diff-preview.mjs"
-import { traceStop } from "./stop-trace.mjs"
+// D-3（VSC-DEBT 批 7）：会话族六 case（newSession/switchSession/deleteSession/renameSession/
+// setProject/loadOlder）handler 迁出至 panel-messages-session.mjs——分发表仍按同名 case 标签
+// 分发（缝保持：本档既有导出与调用点零改）。环 import 同 B2 形态（该档回 import 本档 `_cwd`
+// ——仅在该档 handler 体内解引用——两模块均无顶层跨环读取——环安全）。
+import { handleNewSession, handleSwitchSession, handleDeleteSession, handleRenameSession, handleSetProject, handleLoadOlder } from "./panel-messages-session.mjs"
+// 四档拆分批（2026-09-18 · VSC-DEBT §12.2.2）：回合交互族 10 case / 设置族 28 case 的 handler 迁出
+// ——本档分发表按**同名 case 标签**转发行分发（case 标签集合零变化；两新档名带 `panel-messages`
+// 前缀以落在 reverse 机检的 `HOST_DISPATCH` 扫描域内）。
+import { handleAbort, handleCancelSubagent, handleInterrupt, handleOpenFile, handleOpenDiff, handleQuestionResponse, handleSetAutoApprove, handleAtComplete, handlePermissionResponse, handleBatchPermissionResponse } from "./panel-messages-turn.mjs"
+import { handleSaveProviderKey, handleDeleteProviderKey, handleSaveMcpServer, handleDeleteMcpServer, handleReconnectMcp, handleEditMcp, handleTestMcp, handleAddProvider, handleRemoveProvider, handleSetProviderProxy, handleSetKey, handleSaveEmbedKey, handleDeleteEmbedKey, handleSaveWebsearchKey, handleDeleteWebsearchKey, handleTestProvider, handleBuildIndex, handleGetMcpStatus, handleMcpTools, handleSaveAgentSettings, handleGetAgentSettings, handleSetAdvisorGuard, handleSetEngineeringEnabled, handleSetPlanMode, handleGetShellCandidates, handleSaveShellSettings, handleSaveProxySettings, handleTestProxy } from "./panel-messages-settings.mjs"
 import { savePastedImages, runVisionReader } from "./image-handler.mjs"
+import { logEvent } from "@thincoder/core/log.mjs"
 import { specForModel } from "../specs.mjs"
 import { backgroundStatus, reassertLiveChildren } from "./suspension.mjs"
-// 2026-09-11 第 10 批（§5.1.4 第 1/2 条）：任务可见性族投递通道（队列 flush 拍）
-// W15：+ 事件中继面（⏹ queued 取消路径的核 ⟦ev⟧ 事件 → webview 协议消息）。
-import { flushSubagentOutbox, relaySubagentEventToken } from "./panel-callbacks.mjs"
-// §18 C-5/C-6（2026-09-12）：permissionResponse 按 promptId 路由 + approve-all 连带释放（同一 release helper）
-import { releasePermission } from "./permission-gate.mjs"
+// 2026-09-11 第 10 批（§5.1.4 第 1/2 条）：任务可见性族投递通道（队列 flush 拍——webviewReady case）
+// （W15 事件中继面 + §18 C-5/C-6 permissionResponse 释放面随回合交互族迁出——见 panel-messages-turn.mjs）
+import { flushSubagentOutbox } from "./panel-callbacks.mjs"
 // LEDGER-SURFACE（§2.30.3.5）：台账启动行投递（webviewReady 时机）
 import { pushLedgerStartup } from "./ledger-surface.mjs"
 
 /** Current workspace folder (or process cwd) — shared with chat-panel. */
 let _cwdOverride = null
 export const _cwd = () => _cwdOverride ?? (vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath || process.cwd())
+
+// ─── 出生自愈心跳（D-W20/D-W21——§5.3）──────────────────────────────
+// 拍体 = `reassertLiveChildren` 本体（单一存活投影）；起 = `webviewReady` case；止 = panel dispose。
+// 两前置：未就绪不拍（不向队列堆重复出生事件）；空拍零留痕（n 变化即记 + 每 30 拍兜底）。
+export const LIVE_HEARTBEAT_MS = 2000
+const _heartbeats = new WeakMap() // panel → interval 句柄
+const _hbState = new WeakMap() // panel → { beats, last }
+
+/** 单拍（返回本拍重发条数——测试直驱面）。 */
+export function liveHeartbeatBeat(panel) {
+  if (panel._wvReady !== true) return 0 // 未就绪：就绪拍已覆盖该窗口——不堆事件
+  const n = reassertLiveChildren(panel)
+  const s = _hbState.get(panel) ?? { beats: 0, last: -1 }
+  _hbState.set(panel, s)
+  s.beats += 1
+  if ((n > 0 && n !== s.last) || s.beats % 30 === 0) logEvent("ev:subreassert", { n, beats: s.beats })
+  s.last = n
+  return n
+}
+
+/** 起拍（幂等：同面板单拍）/ 停拍（panel dispose）。 */
+export function startLiveHeartbeat(panel) {
+  if (_heartbeats.has(panel)) return _heartbeats.get(panel)
+  const timer = setInterval(() => liveHeartbeatBeat(panel), LIVE_HEARTBEAT_MS)
+  timer.unref?.() // 不阻进程退出
+  _heartbeats.set(panel, timer)
+  return timer
+}
+
+export function stopLiveHeartbeat(panel) {
+  const timer = _heartbeats.get(panel)
+  if (!timer) return
+  clearInterval(timer)
+  _heartbeats.delete(panel)
+}
 
 /**
  * Switch the "current project" (agent cwd) in a multi-root workspace.
@@ -128,6 +167,9 @@ export async function handlePanelMessage(panel, msg) {
       if (msg.provider && msg.model) {
         try {
           const slot = panel._ensureSlot()
+          // F-MI7 空槽短路（§6.15 零探测冷路径）：未解析窗口 ⇒ 跳过槽写——prefs 已写 ✓，
+          // 会话槽的 activeProvider/activeModel 播种随下次 ensureSlot 收敛后经 saveLines 落盘。
+          if (slot == null) break
           const cwd = _cwd()
           const data = loadSlot(cwd, slot) ?? { history: [], contextHistory: [] }
           // 全量保存通道（saveLines——existing 往返字段保全）——只翻 activeProvider/activeModel
@@ -145,67 +187,12 @@ export async function handlePanelMessage(panel, msg) {
       saveModelPrefs(panel._context.workspaceState, prefs)
       break
     }
-    case "newSession":
-      // §17: session switch during a suspension session would orphan the background pool
-      // (its lines/pool belong to the current session). Stop the session first.
-      if (panel._susp?.active) { vscode.window.showWarningMessage("ThinCoder: background subagents are still running — stop them before starting a new session."); break }
-      panel._newSession(); break
-    case "switchSession": {
-      // 会话切换竞态守卫（GitHub #2/#5，2026-08-28）：运行中禁止切换——此前只改 _slot 指针
-      // 不 abort，旧 turn 的 stream/complete/标题会灌进新会话视图（"思考串台"）、内容落错槽
-      // （"写错会话文件"）。与 applyProjectSwitch（panel-project.mjs）的运行中拒绝同模式。
-      // C2（F-C2a）：守卫改谓词 turnBusy()——running 或 susp（含 digest 间等待）一律拒绝
-      // （旧 _turnActive || _susp?.active 双读合一）。
-      if (panel.turnBusy()) {
-        vscode.window.showWarningMessage("ThinCoder: a task is running — stop it before switching sessions.")
-        break
-      }
-      // 交付评审 🔵#5：manifest 漂移（槽不存在）时 switchToSlot 返回 null 且不切指针——
-      // 此时不得把面板绑到幻影槽（否则渲染出空会话）。
-      const target = switchToSlot(_cwd(), msg.slot)  // persists the shared active pointer for CLI interop
-      if (target == null) break
-      // 2026-09-01 advisor round2 🟡：目标槽被另一活进程（CLI/另一实例）占用时不得钉槽——
-      // 面板 _slot 粘性会绕过 activeSlot 的认领决策，双方写同一槽静默互覆盖。占用 →
-      // 不钉（_slot 保持 null）+ 提示。注意：loadSession 会在 load 时立即经 ensureSlot
-      // 认领新槽（不是"下次保存才 fork"）——文案与实际行为对齐。
-      const occ = slotOccupancy(_cwd(), msg.slot)
-      if (occ.occupied) {
-        vscode.window.showWarningMessage(`ThinCoder: session ${msg.slot} is being used by another live process — a new empty session has been created for you here.`)
-        panel._slot = null
-      } else {
-        panel._slot = msg.slot          // bind this panel to the chosen slot
-      }
-      await panel._loadSession()
-      break
-    }
-    case "deleteSession": {
-      if (panel._susp?.active) { vscode.window.showWarningMessage("ThinCoder: background subagents are still running — stop them before deleting a session."); break }
-      await panel._deleteSession(msg.slot); break
-    }
-    case "renameSession": {
-      // Manual rename: prefill the current title; empty input = cancel (keep old title).
-      const title = await vscode.window.showInputBox({
-        prompt: t("session.renamePrompt"),
-        value: msg.currentTitle || "",
-        placeHolder: t("session.renamePlaceholder"),
-        validateInput: (v) => (v.length > 60 ? t("session.renameTooLong") : null),
-      })
-      if (!title || !title.trim()) break
-      const r = setSlotTitle(_cwd(), msg.slot, title.trim())
-      if (!r.ok) vscode.window.showWarningMessage(`ThinCoder: session rename failed (${r.reason})`) // §12 F3：标题写失败可见
-      panel._pushSessions()
-      break
-    }
-    case "setProject": {
-      // §17: project switch mid-suspension would yank cwd out from under the session —
-      // the suspension lines/slot belongs to the old project's session store.
-      if (panel._susp?.active) { vscode.window.showWarningMessage("ThinCoder: background subagents are still running — stop them before switching projects."); break }
-      // Current-project switcher (multi-root): with fsPath → switch directly;
-      // without → show the native folder picker.
-      if (msg.fsPath) await panel._applyProjectSwitch(msg.fsPath)
-      else await panel._pickProject()
-      break
-    }
+    // 会话族（D-3 迁出——handler 住 panel-messages-session.mjs；case 标签与分发零改——缝保持）
+    case "newSession": await handleNewSession(panel); break
+    case "switchSession": await handleSwitchSession(panel, msg); break
+    case "deleteSession": await handleDeleteSession(panel, msg); break
+    case "renameSession": await handleRenameSession(panel, msg); break
+    case "setProject": await handleSetProject(panel, msg); break
     case "retry": {
       // C1（F-C1e——H-F）+ INPUT-LOCK（C'）：retry 与 userMessage 同入口（routeUserTurn）——
       // 回合中（running）retry 不再直开并发回合（拒收提示——禁排队）；idle/susp 直发。
@@ -214,248 +201,40 @@ export async function handlePanelMessage(panel, msg) {
       if (lastUser) routeUserTurn(panel, { text: lastUser.content, modelOverride: undefined, reasoning: undefined, providerName: lastUser.provider })
       break
     }
-    case "abort":
-      panel._stopClickTs = Date.now()
-      traceStop("click received — abort() called", panel._stopClickTs)
-      // C1（SESSION-FLOW-C F-C1b——abort 启动闩——修 H-C）：Startup 窗口（回合起点后、本回合
-      // controller 建立前的 await 段——prevDistill/provider 解析可达秒级）无活 controller 可
-      // 交付——abort 只能命中上回合僵尸 controller（交付无效）。此时记闩——newTurnController
-      // 消费（新建 controller 立即 abort + 复位闩）。有活 controller（运行中）→ 交付即生效——
-      // 不置闩（置了会被中断续跑重建消费——误杀 Ctrl+I/Continue 续跑）。
-      // F-6（SESSION-ACTIVITY-REVISED——2026-09-09 用户裁定——评审 #1——废除 D-S9 susp
-      // 全停）：Stop 只在主会话 running（回合/digest）显示与生效——只停当前主会话 controller
-      // （_abortController = newTurnController 每回合新建——digest 轮 controller 或用户回合
-      // controller——池 children 持会话 signal 不受影响——susp 等待期本无 digest 可停）。
-      // 挂起等待期（susp——纯后台池跑）陈旧/竞态 Stop 点击 no-op——不再 _susp.aborted /
-      // _susp.abortControllers 全链 abort / _susp.abort / _suspWake 唤醒（全停路径删除——
-      // 无全停按钮——池空自然消化完——CLI 对拍）；子代理停止靠活动区每块 ⏹
-      // （cancelSubagent 定向 abort——running+pool 块挂停 ⏹——queued/waiting 等待头挂取消 ⏹
-      // （F-2——QUEUED-VISIBILITY——2026-09-09——覆盖 F-6 旧“queued/waiting 不挂”定论）。
-      if (panel._turnState === "running") {
-        // A12（群 A 批）：降级窗（视觉读图 await 段）优先——窗 controller 活且未 aborted →
-        // 定向 abort + break（交付有效）。否则旧两路皆静默无效：命中上回合僵尸 controller /
-        // 入口清闩丢失。
-        if (panel._visionAbort && !panel._visionAbort.signal.aborted) {
-          panel._visionAbort.abort()
-          break
-        }
-        if (!panel._abortController || panel._abortController.signal.aborted) panel._abortRequested = true
-        panel._abortController?.abort()
-      }
-      break
-    // §19.5 D-M7 UI 停止（VS Code ⏹——不经模型回合——直连 extension 层定向 abort）：
-    // webview 子块标题行 ⏹ 点击 → cancelSubagent 消息 → 定位 live lines 的池条目 →
-    // 条目级 abort（cancelSubagent——与工具 action:'cancel' 同实现路径——D-M6）。
-    // live lines 锚点 = panel._liveLines（runPanelChat 每回合登记——挂起期与
-    // susp.lines 同一数组）。未知 id（陈旧按钮/池已清）→ no-op（无虚构状态）。
-    // §9 D-24b（R13）：role="advisor" 伪角色条目在独立评审池（_asyncAdvisors）——
-    // ⏹ 路由到 cancelAdvisorReview（②-6b——controller abort——取消不入 pending/不签发 token）。
-    case "cancelSubagent": {
-      const lines = panel._liveLines ?? panel._susp?.lines
-      // W13 键形单源（评审 🔴 收口）：核池键恒 `String(id)`（核 spawn/launch 写侧 `set(String(id))`
-      // ——`advisor-async.mjs:326` / `subagent-run.mjs`；旧端侧 `Number(msg.id)` 归一在生产恒 miss
-      // ⇒ ⏹ 路由失效面）。读键 = String 归一，与核 `getAsyncPool`/`cancelAsyncSubagent` 同形。
-      const id = String(msg.id)
-      const entry = lines?.history?._asyncSubagents?.get(id) ?? lines?.history?._asyncAdvisors?.get(id)
-      // advisor round 2 #6：role 交叉校验——陈旧按钮命中同 id 异 role 的极端情况防御
-      // （webview ⏹ 携带 block 的 role——消息契约不设死参数）
-      if (!lines || !entry || entry.role !== msg.role) {
-        console.warn(`[chat-panel] cancelSubagent: no live pool entry for id ${msg.id} role ${msg.role}`)
-        break
-      }
-      if (entry.role === "advisor") {
-        // W12（2026-09-15）：原端侧 `cancelAdvisorReview`（advisor-async.mjs）退役——改指核
-        // `cancelAsyncAdvisor`（`@thincoder/core/agent-tools/advisor-async.mjs`——同一池
-        // `_asyncAdvisors` 的核条目；cancelled settle 不入 pending、不签发 token）。
-        const { cancelAsyncAdvisor } = await import("@thincoder/core/agent-tools/advisor-async.mjs")
-        cancelAsyncAdvisor({ _asyncAdvisors: lines.history._asyncAdvisors, history: lines.history }, id)
-        break
-      }
-      // W13（2026-09-15）：原端侧 `cancelSubagent`（subagent.mjs/subagent-actions.mjs）随镜像
-      // 删旧退役——改指核 cancel 动作执行器 `executeCancelAction`（`@thincoder/core/agent-tools/subagent-async.mjs`
-      // ——与工具 action:'cancel' 同实现路径：running 定向 abort（settle
-      // cancelled 分支收尾）/ queued 出队 + 位置前移 + 补位；含 advisor 池 fallback）。动态
-      // import：核链可达 node:sqlite（W8 契约②）。合成 parent 携双池 + history + 队列
-      //（`_asyncQueue` 核侧载体——面板 agent 槽；缺则核内按空队处理）。
-      // W15（R5——等待头回收 + W12/W13 遗留「合成 parent 三缺」收口）：
-      //   ① config / autoApprove 由面板活 agent / 会话标志供给（核 `poolLimitsFor` 按生效值
-      //      判定补位；AUTO 档依赖者自动启动判定按真值——不再回退默认 4/4 + 不启动）；
-      //   ② callbacks 携事件中继——核 queued 取消路径的 `⟦ev⟧cancelled`（等待头移除）与
-      //      `refreshQueuedTokens`（剩余排队位置前移）经 `relaySubagentEventToken` 转 webview
-      //      协议消息（原 `callbacks: {}` = 两者 no-op——webview 等待头悬留）。
-      const { executeCancelAction } = await import("@thincoder/core/agent-tools/subagent-async.mjs")
-      executeCancelAction({ id }, {
-        agent: {
-          _asyncSubagents: lines.history._asyncSubagents,
-          _asyncAdvisors: lines.history._asyncAdvisors,
-          history: lines.history,
-          _asyncQueue: lines.history._asyncQueue ?? panel._agent?._asyncQueue,
-          config: panel._agent?.config,
-          autoApprove: panel._autoApprove === true,
-        },
-        depth: 0,
-        callbacks: { onToken: (tok) => { relaySubagentEventToken(panel, tok) } },
-      })
-      break
-    }
-    // Ctrl+I inject (CLI parity): abort with an interrupt reason — the agent loop
-    // commits partial output, injects the message, and resumes from the same context.
-    case "interrupt":
-      panel._stopClickTs = Date.now(); traceStop("interrupt received", panel._stopClickTs)
-      // C1（F-C1b）：同 abort——启动窗口 interrupt 无活 controller → 记闩（回合起点消费；
-      // 窗口内 interrupt 无法注入续跑——降级为停止）。运行中 → 交付（interrupt 续跑重建消费
-      // 点恒 no-op——不置闩）。
-      if (!panel._abortController || panel._abortController.signal.aborted) panel._abortRequested = true
-      panel._abortController?.abort({ interrupt: true, message: msg.message })
-      break
-    // Clickable file paths in tool cards — open in the editor, at the line if given.
-    case "openFile": {
-      try {
-        const doc = await vscode.workspace.openTextDocument(msg.path)
-        const ed = await vscode.window.showTextDocument(doc, { preview: true })
-        if (msg.line) {
-          const pos = new vscode.Position(msg.line - 1, 0)
-          ed.selection = new vscode.Selection(pos, pos)
-          ed.revealRange(new vscode.Range(pos, pos), 2 /* InCenter */)
-        }
-      } catch (e) { console.error("[openFile] failed:", e.message) }
-      break
-    }
-    // Permission prompt: open a large diff in the editor's native diff viewer.
-    case "openDiff": await openDiffPreview(msg.diff); break
-    case "loadOlder": panel._loadOlder(msg.before); break
-    case "questionResponse": {
-      // C1（SESSION-FLOW-C F-C1d——修 H-D）：按 promptId 精确匹配队列条目——不再无条件 shift
-      // （旧卡片/乱序响应会错 resolve 队头——新 question 被旧卡答案吞）。无 promptId（旧
-      // webview）→ 回退队头（历史语义）；找不到 → no-op（陈旧卡——不虚构 resolve——不 resolve
-      // 错队头）。
-      const entry = msg.promptId != null
-        ? panel._questionQueue.find((e) => e.id === msg.promptId) ?? null
-        : (panel._questionQueue[0] ?? null)
-      if (entry == null) break
-      const i = panel._questionQueue.indexOf(entry)
-      if (i >= 0) panel._questionQueue.splice(i, 1)
-      entry.resolve(msg.answer ?? null)  // null → tool returns "(user cancelled)"
-      panel._refreshStatus()
-      break
-    }
-    case "setAutoApprove": await panel._setAutoApprove(!!msg.value); break
-    case "atComplete": await panel._atComplete(msg.query, msg.cwd, msg.seq); break
-    case "permissionResponse": {
-      // §18 C-5（child permission gate）：promptId 精确匹配（question F-C1d 同构）；无 id（旧 webview）
-      // → 回退队头；未知 → no-op（陈旧卡不误 resolve）。
-      const entry = msg.promptId != null
-        ? panel._permissionQueue.find((e) => e.id === msg.promptId) ?? null
-        : (panel._permissionQueue[0] ?? null)
-      if (entry == null) break
-      const pi = panel._permissionQueue.indexOf(entry)
-      if (pi >= 0) panel._permissionQueue.splice(pi, 1)
-      if (msg.approved === "approveAll") {
-        entry.resolve(true)
-        // §18 C-6 ③：approve-all 连带——其余 pending 逐个 release（permissionWithdrawn）；AUTO 置位（零改）
-        for (const e of [...panel._permissionQueue]) releasePermission(panel, e, true)
-        await panel._setAutoApprove(true)
-        panel._panel?.webview.postMessage({ type: "autoApprove", value: true })
-      } else {
-        entry.resolve(!!msg.approved)
-      }
-      panel._refreshStatus()
-      break
-    }
-    case "batchPermissionResponse": {
-      // §16 D-B1: merged ask — approveAll / oneByOne / deny (deny → whole batch refused,
-      // no second ask; oneByOne → execute-tools falls back to per-item asks).
-      const entry = panel._batchPermissionQueue?.shift()
-      entry?.resolve(msg.choice === "approveAll" ? "approveAll" : msg.choice === "oneByOne" ? "oneByOne" : "deny")
-      panel._refreshStatus()
-      break
-    }
-    case "settings": await panel._pushSettings(); break
-    case "saveProviderKey": await panel._saveProviderKey(msg.name, msg.key); break
-    case "saveCustomProvider": await panel._saveCustomProvider(msg.config); break
-    case "deleteProviderKey": await panel._deleteProviderKey(msg.name); break
-    case "saveMcpServer": await panel._saveMcpServer(msg.name, msg.config); panel._pushMcpStatus(); break
-    case "deleteMcpServer": await panel._deleteMcpServer(msg.name); panel._pushMcpStatus(); break
-    // MCP.md §4 F5/D-4：reconnectMcp（既有死按钮修复——webview 已在发此消息，路由拆分时
-    // 丢失）+ edit/test（CLI /mcp edit/test parity，交互随面板惯例）。
-    case "reconnectMcp": await panel._reconnectMcp(msg.name); break
-    case "editMcp": panel._editMcp(msg.name, msg.config ?? {}); break
-    case "testMcp": await panel._testMcp(msg.name); break
-    case "addProvider":
-      // Payload form (settings panel [+ Add] form): persist directly.
-      // No payload (model dropdown shortcut): interactive QuickPick flow.
-      if (msg.preset || msg.custom) {
-        const err = handleAddProvider({ preset: msg.preset, custom: msg.custom, key: msg.key })
-        if (err) {
-          panel._panel?.webview.postMessage({ type: "providerError", text: err })
-          panel._pushSettings()
-          break
-        }
-        panel._pushSettings()
-        // M9 渠道准入（配置写入面）：加渠道后探一次 GET /models——探通则候选可用；探不通
-        // 界面明示失败消息（消息本体逐字长句）+ 行内标「不可用」（**不阻断保存**——条目已
-        // 落盘；探针失败不缓存，下次配置动作重探）。
-        const name = msg.custom?.name || msg.preset
-        if (name) {
-          const probe = await probeProviderAdmission(name)
-          if (!probe.ok) {
-            panel._panel?.webview.postMessage({ type: "providerError", text: probe.error })
-            panel._pushStatus() // 准入展示态刚更新——状态行重推（行内标 `不可用`）
-          }
-        }
-      } else {
-        await addProviderFlow(() => panel._pushSettings())
-      }
-      break
-    case "removeProvider":
-      if (msg.name) {
-        const err = handleRemoveProvider(msg.name)
-        if (err) panel._panel?.webview.postMessage({ type: "providerError", text: err })
-        panel._pushSettings()
-      } else {
-        await removeProviderFlow(() => panel._pushSettings())
-      }
-      break
-    case "setProviderProxy": {
-      handleSetProviderProxy(msg.name, msg.proxy === true)
-      panel._pushSettingsLight()
-      break
-    }
-    case "setKey": await setKeyFlow(() => panel._pushSettings()); break
-    case "saveEmbeddingConfig": await panel._saveEmbeddingConfig(msg.config); break
-    case "saveEmbedKey": await panel._saveEmbeddingConfig({ apiKey: msg.key }); break
-    case "deleteEmbedKey": await panel._saveEmbeddingConfig({ apiKey: "" }); break
-    case "saveWebsearchKey": saveWebsearchKeyFromPanel(msg.key); panel._pushSettingsLight(); break
-    case "deleteWebsearchKey": deleteWebsearchKeyFromPanel(); panel._pushSettingsLight(); break
-    case "testProvider": {
-      // M1 三 format 分派：format 随表单透传（anthropic/google 与 openai 端点/头不同）
-      const r = await testProviderConnection({ baseURL: msg.baseURL, apiKey: msg.apiKey, format: msg.format })
-      panel._panel?.webview.postMessage({ type: "testProviderResult", ...r })
-      break
-    }
-    case "buildIndex": await panel._buildIndex(); break
-    case "getMcpStatus": panel._pushMcpStatus(); break
-    case "mcpTools": {
-      // Probe/expand: connect (idempotent — reuses the live connection) and return the
-      // tool list for the settings panel's per-server expander.
-      try {
-        const { mcpConnect } = await import("./panel-mcp.mjs")
-        const servers = loadMcpServers()
-        const cfg = servers.find((x) => x.name === msg.name)
-        if (!cfg) throw new Error(`no MCP server named "${msg.name}"`)
-        const r = await mcpConnect(cfg)
-        panel._panel?.webview.postMessage({ type: "mcpTools", name: msg.name, tools: r.tools })
-      } catch (e) {
-        panel._panel?.webview.postMessage({ type: "mcpTools", name: msg.name, error: e?.message ?? String(e) })
-      }
-      break
-    }
-    case "saveAgentSettings": {
-      saveAgentSettingsFromPanel(msg.settings ?? {})
-      panel._pushSettingsLight()
-      break
-    }
-    case "getAgentSettings": panel._panel?.webview.postMessage({ type: "agentSettings", settings: agentSettings(panel._agentSettingsSession?.() ?? null) }); break
+    // 回合交互族（本批迁出——handler 住 panel-messages-turn.mjs；case 标签与分发零改——缝保持）
+    case "abort": handleAbort(panel); break
+    case "cancelSubagent": await handleCancelSubagent(panel, msg); break
+    case "interrupt": handleInterrupt(panel, msg); break
+    case "openFile": await handleOpenFile(panel, msg); break
+    case "openDiff": await handleOpenDiff(panel, msg); break
+    case "loadOlder": await handleLoadOlder(panel, msg); break
+    case "questionResponse": handleQuestionResponse(panel, msg); break
+    case "setAutoApprove": await handleSetAutoApprove(panel, msg); break
+    case "atComplete": await handleAtComplete(panel, msg); break
+    case "permissionResponse": await handlePermissionResponse(panel, msg); break
+    case "batchPermissionResponse": handleBatchPermissionResponse(panel, msg); break
+    // 设置族（本批迁出——handler 住 panel-messages-settings.mjs；case 标签与分发零改——缝保持）
+    case "saveProviderKey": await handleSaveProviderKey(panel, msg); break
+    case "deleteProviderKey": await handleDeleteProviderKey(panel, msg); break
+    case "saveMcpServer": await handleSaveMcpServer(panel, msg); break
+    case "deleteMcpServer": await handleDeleteMcpServer(panel, msg); break
+    case "reconnectMcp": await handleReconnectMcp(panel, msg); break
+    case "editMcp": handleEditMcp(panel, msg); break
+    case "testMcp": await handleTestMcp(panel, msg); break
+    case "addProvider": await handleAddProvider(panel, msg); break
+    case "removeProvider": await handleRemoveProvider(panel, msg); break
+    case "setProviderProxy": handleSetProviderProxy(panel, msg); break
+    case "setKey": await handleSetKey(panel); break
+    case "saveEmbedKey": await handleSaveEmbedKey(panel, msg); break
+    case "deleteEmbedKey": await handleDeleteEmbedKey(panel); break
+    case "saveWebsearchKey": handleSaveWebsearchKey(panel, msg); break
+    case "deleteWebsearchKey": handleDeleteWebsearchKey(panel); break
+    case "testProvider": await handleTestProvider(panel, msg); break
+    case "buildIndex": await handleBuildIndex(panel); break
+    case "getMcpStatus": handleGetMcpStatus(panel); break
+    case "mcpTools": await handleMcpTools(panel, msg); break
+    case "saveAgentSettings": handleSaveAgentSettings(panel, msg); break
+    case "getAgentSettings": await handleGetAgentSettings(panel); break
     case "webviewReady": {
       // The webview finished loading — now it's safe to push initial state.
       // resolveWebviewView pushed i18n right after setting webview.html, which
@@ -479,7 +258,8 @@ export async function handlePanelMessage(panel, msg) {
       // webview 未加载，此刻发内容即丢（Reload 后对话区空缺陷的静态根因）。sessions 同
       // tick 恰一次（N2——loadSession 尾单发——F-B2c——异步第三发在 status() 慢段 fullStatus
       // cb——不同 tick 保留）。槽绑定随之顺延至此——webviewReady 前无 slot 读者（安全）。
-      openSessionContent(panel)
+      // F-MI7：快段 = async（认领束 awaited——本 case 已 async ✓）
+      await openSessionContent(panel)
       // 2026-09-11 第 10 批（§5.1.4 第 2 条——两拍，排在 openSessionContent 之后）：
       // ① flush 暗窗口队列（保持入队序）→ ② 再断言存活（存活投影——只发 running/queued）。
       // 后置理由：openSessionContent 内部含 clearMessages（抹块 + resetActivity 清簿记）——
@@ -487,43 +267,28 @@ export async function handlePanelMessage(panel, msg) {
       // 投影本不含已终态者，故不重复。
       flushSubagentOutbox(panel)
       reassertLiveChildren(panel)
+      startLiveHeartbeat(panel) // 出生自愈心跳起拍（D-W20——止于 panel dispose）
       pushLedgerStartup(panel) // LEDGER-SURFACE：启动行（会话内容落定后——不被 clearMessages 抹掉；不可动作零 post）
       break
     }
-    case "setAdvisorGuard": {
-      // Slot first (session-level authority, 2026-08-29), then the config.json mirror
-      // (CLI compat). A slot write failure must not block the config write.
-      try { setSlotAdvisorGuard(_cwd(), panel._ensureSlot(), !!msg.value) } catch {}
-      saveAgentSettingsFromPanel({ advisor: { guard: !!msg.value } })
-      panel._pushSettingsLight()
+    case "panelDiag": {
+      // §3.2 行 8（webview → host 诊断上行）：痕迹批 → 主侧日志一行（`ev:subtrace`——NFR-A2：与
+      // `ev:subdeliver` 合读「host 投了没 × webview 收了做什么」）。
+      const entries = Array.isArray(msg.entries) ? msg.entries : []
+      logEvent("ev:subtrace", {
+        kind: msg.kind ?? null,
+        n: entries.length,
+        kinds: [...new Set(entries.map((e) => e?.kind).filter(Boolean))].join(","),
+        ch: entries.map((e) => e?.channel).filter(Boolean).slice(-3).join(","),
+      })
       break
     }
-    case "setEngineeringEnabled": {
-      // Same dual-write contract as setAdvisorGuard above: slot authority + config mirror.
-      try { setSlotEngineering(_cwd(), panel._ensureSlot(), !!msg.value) } catch {}
-      saveAgentSettingsFromPanel({ engineering: !!msg.value })
-      panel._pushSettingsLight()
-      break
-    }
-    case "setPlanMode": {
-      await panel._setPlanMode(!!msg.value)
-      break
-    }
-    case "getShellCandidates": panel._panel?.webview.postMessage({ type: "shellCandidates", candidates: shellCandidates(), current: loadRaw().shell ?? null }); break
-    case "saveShellSettings": {
-      saveShellSettingsFromPanel(msg.value)
-      panel._pushSettingsLight()
-      break
-    }
-    case "saveProxySettings": {
-      saveProxySettingsFromPanel(msg.settings ?? {})
-      panel._pushSettingsLight()
-      break
-    }
-    case "testProxy": {
-      const result = await testProxyConnection(msg.uri)
-      panel._panel?.webview.postMessage({ type: "proxyTestResult", result })
-      break
-    }
+    case "setAdvisorGuard": handleSetAdvisorGuard(panel, msg); break
+    case "setEngineeringEnabled": handleSetEngineeringEnabled(panel, msg); break
+    case "setPlanMode": await handleSetPlanMode(panel, msg); break
+    case "getShellCandidates": await handleGetShellCandidates(panel); break
+    case "saveShellSettings": handleSaveShellSettings(panel, msg); break
+    case "saveProxySettings": handleSaveProxySettings(panel, msg); break
+    case "testProxy": await handleTestProxy(panel, msg); break
   }
 }

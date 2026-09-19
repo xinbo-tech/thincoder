@@ -17,16 +17,19 @@
  * 同源的原语一律**转口核单源**：
  *   - `@thincoder/core/agent/helpers.mjs`：`AUTO_REMINDER` · `ENG_{ON,OFF}_REMINDER` ·
  *     `injectEngineeringReminder` · `composeGitContext` · `collectGitContext` +
- *     失败冷却测试缝（原端侧同构副本随本单元退场——核注释同款「VSC 镜像」）。
+ *     失败冷却测试缝（原端侧同构副本随本单元退场——核注释同款「VSC 镜像」）·
+ *     回合域文本基座两名 `AUTO_TURN_DIGEST_DOMAIN` + `UPSTREAM_TURN_DOMAIN`（§6.27.12.5 J——
+ *     端侧零自持基座副本，消费点 = `./turn-domains.mjs` 组合单点）。
  *   - `@thincoder/core/agent/setup-reminders.mjs`：#113 并集面 `pushInjections` /
- *     `appendImagePointer`（核供注入纪律单点——内容由端采集/传入，核内零端名）。
+ *     `appendImagePointer`（核供注入纪律单点——内容由端采集/传入，核内零端名）；
+ *     #28 情境行 `manifestStateLine` / `pushManifestStateReminder`（同档同源转口）。
  * 逐字/语义零差（核面 = 端侧原文上收）。
  */
 
 import { peerInstances } from "../extension/peer-instances.mjs"
 import { escapeXml } from "./run-helpers.mjs"
 
-// ── 核单源转口（W15）──────────────────────────────────────────────────────────
+// ── 核单源转口（W15）──────────────────────────────────────
 export {
   AUTO_REMINDER,
   ENG_ON_REMINDER,
@@ -36,8 +39,10 @@ export {
   collectGitContext,
   _gitFailureCooldownForTests,
   _clearGitFailureCooldownForTests,
+  AUTO_TURN_DIGEST_DOMAIN,
+  UPSTREAM_TURN_DOMAIN,
 } from "@thincoder/core/agent/helpers.mjs"
-export { pushInjections, appendImagePointer } from "@thincoder/core/agent/setup-reminders.mjs"
+export { pushInjections, appendImagePointer, manifestStateLine, pushManifestStateReminder } from "@thincoder/core/agent/setup-reminders.mjs"
 import { collectGitContext } from "@thincoder/core/agent/helpers.mjs" // pushGitContext 体内用
 
 // ─── SESSION.md §11.1：统一 env-state transient reminder（2026-09-06 需求池
@@ -66,10 +71,14 @@ export function pushEnvStateReminder(history, { engineering, provider, slot, res
   history.push({ role: "user", content: envStateLine({ mode, model, slot, resumed }), transient: true })
 }
 
-// R10 L1（MULTI-INSTANCE-COLLAB.md D-L1a——VS Code 镜像）：同伴实例感知注入。
-// peerInstances 惰性 mtime 缓存保证"无同伴零开销"（回合一次 stat）；peerInstances 的
-// 判活/端探测在 manifest 未变时不重跑。探测失败/无 manifest 按无同伴降级（不注入）。
-// 文案按设计 §2a.4 逐字： "本目录另有 N 个活跃 thincoder（{end} pid={pid}…）——文件操作注意避让"
+// R10 L1（MULTI-INSTANCE-COLLAB.md §3.1——VS Code 镜像）：同伴实例感知注入。
+// peerInstances = 端侧 **SWR 快照读**（新鲜度判据单源 = TTL `PEER_PROBE_TTL_MS`——端面
+// 不复刻核的 mtime 判据，§3.1）：新鲜 ⇒ 直返 / 过期 ⇒ 返旧 + 后台刷新 / 无快照 ⇒
+// 空集 + 后台刷新 ⇒ 每回合调用面（本函数）**零同步 exec**。探测失败 / 无 manifest
+// 按无同伴降级（不注入）——注入绝不打断回合。
+// 文案（**逐字契约 · 双端一致** = 设计 `MULTI-INSTANCE-COLLAB.md` §3.2「注入文案」条）：
+// "本目录另有 N 个活跃 thincoder（{end} pid={pid}；无 end 则 pid={pid}；同伴间以「、」
+// 连接）——文件操作注意避让"——与核 `agent/setup-reminders.mjs:162` 的 `who` 构造逐字同形。
 
 /** 注入当前 cwd 的同伴实例提醒（env-state 之后、time reminder 之前调用——setup.mjs
  *  装配；有同伴才注入；transient）。返回是否注入（测试断言用）。 */
@@ -77,10 +86,10 @@ export function pushPeerReminder(history, cwd) {
   try {
     const peers = peerInstances(cwd).filter((p) => !p.self)
     if (peers.length === 0) return false
-    const list = peers.map((p) => `(${p.end ?? "unknown"} pid=${p.pid})`).join(", ")
+    const who = peers.map((p) => (p.end ? `${p.end} pid=${p.pid}` : `pid=${p.pid}`)).join("、")
     history.push({
       role: "user",
-      content: `[System reminder: 本目录另有 ${peers.length} 个活跃 thincoder（${list}）——文件操作注意避让]`,
+      content: `[System reminder: 本目录另有 ${peers.length} 个活跃 thincoder（${who}）——文件操作注意避让]`,
       transient: true,
     })
     return true

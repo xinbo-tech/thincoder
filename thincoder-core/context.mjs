@@ -12,6 +12,7 @@
 import { chat } from "./provider/index.mjs"
 import { estimateText } from "./provider/rate.mjs"
 import { providerSpec } from "./config.mjs"
+import { buildCompressMessages } from "./compress-form.mjs"
 
 const IMAGE_TOKEN_ESTIMATE = 2000 // rough estimate for image content tokens (CLI legacy 256 underestimated real image costs, delaying compaction)
 
@@ -57,7 +58,7 @@ function tailBudgetTokens(provider) {
   return Math.max(0, Math.floor(providerSpec(provider).context * TAIL_BUDGET_FRACTION) - SUMMARY_TOKEN_ESTIMATE)
 }
 
-export const SUMMARIZE_PROMPT = `You are a conversation compressor. Summarize the following agent work log into a compact summary for use as context in the ongoing conversation.
+export const SUMMARIZE_PROMPT = `The conversation above is our work log so far — summarize it into a compact summary for use as context in the ongoing conversation.
 Requirements:
 - Write in first person, present tense — these are "my" handover notes, continuing my own train of thought
 - Most important: preserve design decisions and their reasons — architecture choices, API contracts, naming conventions, trade-off rationale. These are the anchors the subsequent code must not deviate from
@@ -68,8 +69,6 @@ Requirements:
 - Drop: pleasantries, repetition, fine-grained tool output details
 - Honestly mark uncertain items: anything not actually verified must say "unverified"; do not present guesses as facts
 - Use bullet-point output. Stay under ~1K tokens (≈1000 Chinese chars / 4000 ASCII chars) — a hard target. An oversized summary wastes window and dilutes the tail; the old unbounded-length guidance is deprecated. When over budget, trim in this order: completed recaps to one line; FILES CHANGED why-notes to bare paths; in-progress prose tightened. NEVER cut design anchors or UNRESOLVED ISSUES/TODOs — recovery depends on them.
-
-Work log:
 `
 
 /** Context prefix after compaction, informing the agent what happened */
@@ -194,14 +193,81 @@ export function pushReal(agent, msg) {
 }
 
 /**
+ * Content-shape-safe prefixing (D-CC18, generalized for D-CC19 merge reuse):
+ * string → text + blank line + original; multimodal array → text part prepended;
+ * empty string / null / undefined / other → text alone.
+ */
+function prefixContent(content, text) {
+  if (typeof content === "string" && content.length > 0) return `${text}\n\n${content}`
+  if (Array.isArray(content)) return [{ type: "text", text }, ...content]
+  return text
+}
+
+/**
  * D-CC18 echo safety: prefix the placeholder onto an existing assistant message's content.
- * string → placeholder + blank line + original; multimodal array → placeholder text part prepended;
- * empty string / null / undefined / other → placeholder alone.
+ * Thin wrapper over prefixContent (behavioral semantics unchanged).
  */
 function withPlaceholderPrefix(content) {
-  if (typeof content === "string" && content.length > 0) return `${COMPACTION_PLACEHOLDER}\n\n${content}`
-  if (Array.isArray(content)) return [{ type: "text", text: COMPACTION_PLACEHOLDER }, ...content]
-  return COMPACTION_PLACEHOLDER
+  return prefixContent(content, COMPACTION_PLACEHOLDER)
+}
+
+/**
+ * D-CC19 restore-path echo merge (2026-09-16 ENGINE-DEBT 批 ED-1): persisted `contextHistory`
+ * is loaded back VERBATIM on session restore, so the D-CC18 pathological shape (an assistant
+ * WITHOUT reasoning_content directly followed by another assistant — DeepSeek-family thinking
+ * mode rejects the first request with 400) can revive from disk. Pure in-core function: scans
+ * only at restore time, never prompts the user, never rewrites the session file. Merge direction
+ * matches D-CC18 (the reasoning-less message is absorbed INTO its follower — the follower's
+ * tool_calls / reasoning_content / other fields are kept verbatim; texts joined with a blank
+ * line). Iterates to a fixed point (chains collapse in full). Copy-on-write: messages may be
+ * shared with other lines, so the merged message is always a NEW object; clean input returns
+ * the SAME array reference (zero copy).
+ */
+
+/** Pair predicate: prev = assistant with no/empty reasoning_content and no tool_calls,
+ * directly followed by another assistant. (Prev WITH tool_calls is never merged — pairing
+ * safety, F-3.) */
+export function isAssistantEchoPair(prev, next) {
+  return prev?.role === "assistant"
+    && next?.role === "assistant"
+    && !prev.reasoning_content
+    && !(Array.isArray(prev.tool_calls) && prev.tool_calls.length > 0)
+}
+
+/** Text of a message content in any supported shape (string / parts array / null-ish). */
+function contentTextOf(content) {
+  if (typeof content === "string") return content
+  if (Array.isArray(content)) {
+    return content.filter((p) => p?.type === "text").map((p) => p.text ?? "").join("\n\n")
+  }
+  return ""
+}
+
+/** Absorb prev's text into next's content (blank-line join; empty prev text → next unchanged). */
+function absorbEchoContent(prevContent, nextContent) {
+  const text = contentTextOf(prevContent)
+  if (text.length === 0) return nextContent
+  return prefixContent(nextContent, text)
+}
+
+export function mergeAdjacentAssistantEchoes(history) {
+  if (!Array.isArray(history)) return history
+  let src = history
+  for (;;) {
+    let changed = false
+    const next = []
+    for (let i = 0; i < src.length; i++) {
+      if (i + 1 < src.length && isAssistantEchoPair(src[i], src[i + 1])) {
+        next.push({ ...src[i + 1], content: absorbEchoContent(src[i].content, src[i + 1].content) })
+        i += 1
+        changed = true
+      } else {
+        next.push(src[i])
+      }
+    }
+    if (!changed) return src === history ? history : src
+    src = next
+  }
 }
 
 /** Replace middle with a note, then re-inject task/plan state (shared by LLM summary and truncation fallback) */
@@ -318,21 +384,13 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
   }
 
   const middle = history.slice(split.headEnd, split.tailStart)
-  const serialized = middle
-    .map((m) => {
-      const toolNote = m.tool_calls ? ` [called tools: ${m.tool_calls.map((t) => t.function?.name).join(", ")}]` : ""
-      // user messages get a wider cap (8000): cutting off a long user-pasted requirement loses original intent; tool/assistant capped at 2000 is enough
-      const cap = m.role === "user" ? 8000 : 2000
-      // Multimodal messages (array content): extract the TEXT parts — the image itself can't be
-      // summarized, but any accompanying text (e.g. "看这张图" + image) must not be silently lost
-      let text = ""
-      if (typeof m.content === "string") text = m.content
-      else if (Array.isArray(m.content)) text = m.content.filter((p) => p?.type === "text").map((p) => p.text ?? "").join(" ")
-      return `[${m.role}]${toolNote} ${text.slice(0, cap)}`
-    })
-    .join("\n")
 
-  // The summary is a plain-text task, no reasoning needed — passing thinking to the compaction provider wastes tokens.
+  // Compression request form v2/v3 (§6.14 / D-CC20): continuation — same system + same tools declaration (the turn's own
+  // array) + the middle's verbatim messages + one tail instruction. 首现即复用回合所建前缀 ⟺ 带 tools 声明（无 tool_choice）
+  // 且 `reasoning_effort` 与回合侧同值——v2 探针复测：8 格 84–98%（读数详表见批次档 §5）；不带 tools / 带 tool_choice:"none" / effort 异值 ⇒ 首现 0%（自建项复跑例外）；无 extras.tools ⇒ 不发 tools。
+  // ⚠️ **不带 `tool_choice`**（设计 §6.14 备选② · 预注册判定规则「S3 <0.9 且 S4 ≥0.9 ⇒ 采纳 v2 减 tool_choice」启用——实测该参数使服务端丢弃 tools 区 ⇒ 首现命中 0%）。
+  // ⚠️ v3（父侧 2026-09-18 裁定）：**随带与回合请求同源的 `reasoning_effort`**——下行不再覆盖 `agent.provider.reasoningEffort`（回合调用 `chat(agent.provider, …)` 同字段；
+  // 不硬编码、未配置 ⇒ 缺省同修前。实证：deepseek 同值 95.69% / 异值首现 0%；族差/窗差：百炼 qwen 另有 `enable_thinking` 派生差、autoThink 的 turn 0 有改写窗口——登记见批次档 §5 上抛）。
   // Silent by design (D11): no onToken/onReasoning — the compaction process must not stream to the frontend.
   // signal propagates user cancellation (Ctrl+C) to the in-flight summary call.
   // Compression visibility (CONTEXT-COMPACTION.md §7 D-C1/D-C2): the frontend learns the compression
@@ -340,8 +398,9 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
   // the lifecycle is surfaced, never the summary body. N = the number of history messages being summarized.
   callbacks?.onCompressStart?.({ messages: middle.length })
   const startedAt = performance.now()
-  const summary = await chat({ ...agent.provider, thinking: null, reasoningEffort: null }, {
-    messages: [{ role: "user", content: SUMMARIZE_PROMPT + serialized }],
+  const summary = await chat({ ...agent.provider, thinking: null }, {
+    messages: buildCompressMessages(history, split.tailStart, extras?.systemPrompt, SUMMARIZE_PROMPT),
+    tools: extras?.tools,
     signal,
     // §18.6 D-TR4：轨迹元数据增补——kind=compress（上下文构建面——agent 元数据透出；
     // depth 经 extras.traceDepth——agent.mjs 主作用域传入——compress 调用点补齐）
@@ -352,6 +411,10 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
       traces: agent.config?.traces?.enabled !== false,
     },
   })
+
+  // Blank-summary guard (§6.14 退化面 3): a blank summary would land in applyCompression as
+  // "middle dropped + empty note" and still count as success — throw into the failure chain instead.
+  if (!summary.content?.trim()) throw new Error("compaction summary is empty")
 
   applyCompression(agent, split.headEnd, split.tailStart, COMPACTION_PREFIX + summary.content)
 

@@ -9,7 +9,7 @@
 
 ## 1. 总体定位
 
-工作区约定 = 技能发现（`skills.mjs`）**+** 规则发现（`rules.mjs`）**+** 同伴实例 / 域（`peer-instances.mjs` · `peer-domains.mjs`）**+** 台账规则与路径约定（`ledger.mjs` · `conventions.mjs` · `escape.mjs`）**+** 台账展示面（`tui/ledger-surface.mjs` ↔ VSC `extension/ledger-surface.mjs`）。
+工作区约定 = 技能发现（`skills.mjs`）**+** 规则发现（`rules.mjs`）**+** 同伴实例 / 域（`peer-instances.mjs` · `peer-domains.mjs`）**+** 台账规则与路径约定（`ledger.mjs` · `conventions.mjs` · `escape.mjs`）**+** 台账展示面（`thincoder-cli/src/tui/ledger-surface.mjs` ↔ VSC `thincoder-vscode/src/extension/ledger-surface.mjs`）。
 VSC 侧同名面住 `src/extension/**`。
 本板块对本子系统的要求 = 该面归一为**核内单一实现**，fs 面与渲染面作**端差注入**。
 

@@ -57,7 +57,7 @@ function withInjections(table, fn) {
 
 // ─── 行为面（四装配面 × 假全表）─────────────────────────────────────────────────
 
-test("面 1/2（槽位 + consult 基底）：假全表 ⇒ 全场景装配零 `{{inject:` 字面 + 表值在场", () => {
+test("面 1/2（槽位 + consult 基底）：假全表 ⇒ 全场景装配零 `{{inject:` 字面 + 工具面表值在场", () => {
   const names = coreAnchorNames()
   assert.ok(names.size > 0, "核档锚名集合不得为空（否则本用例空转）")
   withInjections(fakeTable(names), () => {
@@ -65,20 +65,21 @@ test("面 1/2（槽位 + consult 基底）：假全表 ⇒ 全场景装配零 `{
     for (const [scenario, prompt] of outputs) {
       assert.ok(!prompt.includes("{{inject:"), `场景 ${scenario} 装配输出残留锚字面`)
     }
-    // 非空转：engineering 场景含真实锚（discipline-engineering / persona-engineering 两档）⇒ 表值须在场
-    const eng = outputs.get("engineering")
-    assert.ok([...names].some((n) => eng.includes(`<${n}>`)), "engineering 场景无表值在场 ⇒ 面 1 钩子未生效")
+    // 非空转：工具面锚（bash / question）⇒ 表值须在工具描述面在场
+    assert.ok(names.has("bash-terminal-face") && names.has("question-ui-face"), "核内仅剩工具面 2 锚")
+    const toolDescs = builtinTools.map((t) => String(toOpenAISchema(t).function.description))
+    assert.ok([...names].some((n) => toolDescs.some((d) => d.includes(`<${n}>`))), "工具面表值在场 ⇒ 钩子未失效")
     assert.ok(outputs.get("consult").length > 0, "面 2（consult 基底）经同函数出径")
   })
 })
 
-test("面 1：缺键 ⇒ 装配抛错（fail-loud 经装配面——钩子确在槽位路径上）", () => {
+test("面 1：缺键 ⇒ 工具面抛错（fail-loud——钩子确在工具描述路径上）", () => {
   const names = [...coreAnchorNames()]
-  const present = names.filter((n) => assemblePrompt("engineering").prompt.includes(`{{inject:${n}}}`))
-  assert.ok(present.length > 0, "engineering 场景必须含真实锚（否则本用例空转）")
+  const present = names.filter((n) => builtinTools.some((t) => t.description.includes(`{{inject:${n}}}`)))
+  assert.ok(present.length > 0, "工具面必须含真实锚（否则本用例空转）")
   const missing = present[0]
   withInjections(fakeTable(names.filter((n) => n !== missing)), () => {
-    assert.throws(() => assemblePrompt("engineering"), new RegExp(missing), "缺键 ⇒ 抛错且消息含锚名")
+    assert.throws(() => builtinTools.map(toOpenAISchema), new RegExp(missing), "缺键 ⇒ 抛错且消息含锚名")
     assert.deepEqual(assemblePrompt("consult").warnings, [], "无锚场景不受缺键影响")
   })
 })

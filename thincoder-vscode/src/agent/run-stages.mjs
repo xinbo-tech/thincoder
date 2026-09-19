@@ -19,7 +19,6 @@ import { resolveCompactThreshold } from "@thincoder/core/config.mjs"
 import { summarizeRunExplorations } from "../explore-distill.mjs"
 import { pushReal, reinjectAfterCompaction, MAX_VERIFY_PUSHBACKS, MAX_VERIFY_RETRIES, hasCodeMutations } from "./run-helpers.mjs"
 import { MAX_ADVISOR_PUSHBACKS } from "./run-helpers.mjs"
-import { MAX_ADVISOR_ROUNDS } from "@thincoder/core/advisor/run.mjs"
 
 /**
  * W12（2026-09-15）：未决评审判定——原端侧 `../agent-tools/advisor-async.mjs` 的
@@ -75,7 +74,7 @@ export function injectResponseReminders(agent, response) {
  * 收尾前 guard 推回组（2026-09-05 实践轮——自 runAgent 无工具分支提取，verbatim + 签名
  * 化）：pending 任务检查（≤1 次/任务表态）→ verify guard（OPT-IN——首次缺验推回 + 失败
  * 重试 ≤MAX_VERIFY_RETRIES + 耗尽诚实声明）→ advisor guard（OPT-IN——非工程模式 + 有
- * 变更 + 未评审 → 推回，受 MAX_ADVISOR_PUSHBACKS/ROUNDS 双帽）。计数经 pb 对象回流
+ * 变更 + 未评审 → 推回，受 MAX_ADVISOR_PUSHBACKS 限——**轮次不是停推条件**，撤 cap）。计数经 pb 对象回流
  * （guardPushbacks/advisorPushbacks 是 runAgent 回合级局部——不落 agent 字段防 resume
  * 延续语义变化）。@returns {boolean} push=true 时已注入提醒——调用方 continue 本回合。
  */
@@ -141,9 +140,8 @@ export async function maybeGuardPushbacks(agent, st) {
   // (advisor.guard === true, default OFF — 2026-08-21 semantic
   // refactor), NEVER in engineering mode (engineering has its own
   // mandatory gates). The advisor tool itself is always available.
-  // Cap sync (CLI b74e413): beyond MAX_ADVISOR_ROUNDS the advisor tool
-  // refuses reviews (run.mjs convergence cap) — pushing back further
-  // would loop forever (fix → pushback → cap-refused call → fix …).
+  // 撤 cap（2026-09-18——ADVISOR-CONVERGENCE.md §3.1）：advisor 发起无机械轮次上限，guard
+  // 不以轮次停推（推回限 MAX_ADVISOR_PUSHBACKS；失败路径的出口 = 失败结论块）。
   // §9 D-24b（R13——④）：async 评审未决（在池 running/queued）不算未评审——不推回
   // （等 settle——settle 后无有效评审/陈旧才推回——陈旧 settle 不置 _calledAdvisorThisRun
   // ——天然落到下一条推回）。
@@ -152,8 +150,7 @@ export async function maybeGuardPushbacks(agent, st) {
   if (advisorReview && !agent.config?.agent?.engineering
       && agent._mutatedThisRun && !agent._calledAdvisorThisRun && hasCodeMutations(agent)
       && !advisorReviewInFlight(agent)
-      && pb.advisorPushbacks < MAX_ADVISOR_PUSHBACKS
-      && (agent._advisorRound || 0) < MAX_ADVISOR_ROUNDS) {
+      && pb.advisorPushbacks < MAX_ADVISOR_PUSHBACKS) {
     pb.advisorPushbacks++
     pushReal(history, fullHistory, { role: "assistant", content: response.content })
     history.push({
@@ -255,11 +252,12 @@ export async function checkAndCompact(agent, ctx) {
  * 完成；用户 Stop 同样不影响；panel dispose/会话切换才 abort）。收缩落位 = 适配器原位
  * 回收（共享数组引用不失效）+ 核内基线失效；本函数只剩 onDistilled 触发（落地才算——
  * 调用方应持久化——评审 #5）。失败静默（N3）——原历史保留，永不阻塞返回。
+ * @param {object} [extras] 会话续写前缀面（`{ systemPrompt, tools }`——发射点透传、与回合请求同源 · 核 §6.15）
  * @returns {Promise} 蒸馏 promise（调用方挂 distillState）。
  */
-export function fireEndOfRunDistill(agent, history, provider, signal, callbacks) {
+export function fireEndOfRunDistill(agent, history, provider, signal, callbacks, extras) {
   // TRACE-STORE-VSC（D-TR4）：agent 尾参线程化——蒸馏轨迹带 cwd/session/kind 元数据
-  return summarizeRunExplorations(history, agent._runStartHistoryLen ?? 0, provider, signal, agent)
+  return summarizeRunExplorations(history, agent._runStartHistoryLen ?? 0, provider, signal, agent, extras)
     .then((shrunk) => {
       // W15：收缩已由适配器原位回收（核 write-replace → 共享数组），`_lastPromptTokens` /
       // `_usageAtLen` 基线失效由核内完成——此处只剩落地持久化信号。

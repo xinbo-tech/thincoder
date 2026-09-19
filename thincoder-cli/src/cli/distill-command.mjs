@@ -7,7 +7,7 @@ import { askPermission } from "./permission.mjs"
 
 /** Unified message when no API key is configured */
 function noKeyMessage() {
-  return `还没有配置 API key。运行 thincoder 进入 TUI，用 /provider add 和 /provider key 配置；或直接编辑 ${configPath}`
+  return `还没有配置 API key。运行 thincoder 进入 TUI，用 /model 添加渠道并设置 key；或直接编辑 ${configPath}`
 }
 
 /** thincoder distill <transcript-file> [--yes] [--layer=...]

@@ -53,10 +53,12 @@ src/tools/{index,shell,code,context,focus,shared}.mjs  端壳工具面（index =
 src/extension/        ChatPanel 分解模块（chat-panel.mjs 类本体 + panel-chat/panel-messages/panel-session/panel-project/panel-mcp/panel-index/panel-toolpanel/panel-callbacks 等载荷分模块 + session-io/session-slots/settings/presets）
 webview/chat.js
 webview/state.js     UI 状态单一持有（S + DOM ctx + vscode——全模块共享同一运行时对象——WEBVIEW.md）
-webview/streaming.js  token/reasoning 流式渲染（rAF 节流）+ 回合收尾 + advisor review 块 + 活动块路由（块出生即 #messages 流尾——activity.js——subagentChunk 空安全守卫）
+webview/streaming.js  token/reasoning 流式渲染（rAF 节流）+ 回合收尾 + 活动块路由（块出生即 #messages 流尾——activity.js——subagentChunk 空安全守卫）
 webview/panels.js    侧面板：task progress / goal + 挂起态 + 桥路由（行面板已撤——簿记 map 已删——handleSubagentMessage 纯转发——活动块生命周期在 activity.js）
 webview/activity.js   编排层（ACTIVITY-REWRITE-SIMPLE 重写——B1 流尾形态）：ensureBlock（append #messages 流尾——终态幂等守卫返 null）+ applySubagentStatus 三态机（queued ⏳ 头含取消 ⏹/started 翻 running/其余 status 一律终态折叠——lookup-only 绝不建块——settled 视同 done）+ freeze 原地折叠 + resetActivity + freezeLiveBlocks——导出消费面 panels/chat/streaming（noteChunk 经此 re-export）
 webview/activity-view.js   呈现叶（refreshBlock/updateStopButton/noteChunk——块头/状态词/⏹——区显隐/pin/ticker/awaiting 词删）——leaf（i18n only——不依赖核心）
+webview/activity-new.js    未钉底期新块出生未读计数钮（建/更/删 + 点击回底 + resetActivity 同清——WEBVIEW.md §5.5 D-W27）
+webview/activity-diag.js   诊断痕迹面（七 kind + 环载体 SUB_TRACE_MAX=50 + `panelDiag` 批内合并上行——WEBVIEW.md §5.3 D-W22；2026-09-19 批自 activity.js/state.js 迁出）
 webview/ui.js        DOM helpers: welcome banner, message bubbles, tool call rendering
 webview/md.js        Lightweight Markdown → HTML renderer
 webview/base.css     Base styles, variables, layout
@@ -94,7 +96,7 @@ webview/index.html   Webview shell (referenced by ChatPanel._html())
 | webview → extension | `questionResponse` | `{ answer, promptId }` — null = cancelled → tool returns "(user cancelled)"; host resolves the queue entry BY promptId (never an unconditional head shift — C1, see WEBVIEW.md §8) |
 | extension → webview | `questionCancelled` | `{ promptId }` — an unanswered question card was released by abort/Stop; the webview removes the matching card (C1, see WEBVIEW.md §8) |
 | extension → webview | `turnState` | `{ state, counts? }` — single busy-state broadcast: `state` ∈ `idle`/`running`/`susp`; `counts` = `{ running, queued, pending, done }` background-pool numbers riding the susp publishes (C2 — authoritative prose in WEBVIEW.md §8, mirrored here without duplication) |
-| extension → webview | `userMessage` / `assistantMessage` | `{ text }` (history replay — retained for the quick-input `sendMessage` command echo) |
+| extension → webview | `userMessage` | `{ text }` (history replay; also the quick-input `sendMessage` command echo) |
 | extension → webview | `clearMessages` | — |
 
 ## Agent Lifecycle
@@ -114,9 +116,10 @@ webview/index.html   Webview shell (referenced by ChatPanel._html())
 ## Testing
 
 - **Smoke test**: `node test/smoke-provider.mjs <provider> <api-key>` — directly tests an API provider (single turn, no tools).
-- **Unit tests** (`npm test`, fast layer): explicit file list in `test/files.mjs`（清单单一来源——逐档登记 + 行内注释记覆盖面；快层基线 ≈ **553 例**——2026-09-15 实跑 553/518 pass/0 fail/35 skip）covering the agent loop, dual-line history, tool routing, config, advisor convergence protocol (fresh sessions, citations verification, escapeLiteralEscapes), provider panels, the permission gate, live autoApprove semantics (mid-turn flip stops repeated prompts), lazy history pagination (global idx anchors, scroll-back chaining), the inline question tool (panel callback preferred over native popups, subagent questions routed to the same panel callback), the webview diff renderer (every permission-prompt diff preview), context-utilization math (divides by the REAL spec context — the old `contextWindow` field read fell back to 128K and showed 137% on 1M models), provider parity constants (FETCH_TIMEOUT_MS = 10 min), SSRF guards (proxy URL validation, redirect allowlist), websearch (Bing fallback, Tavily structured API), abort end-to-end (bash process-tree kill, AbortError propagation out of tool batches, SSE stream interruption), the in-conversation search bar (Ctrl+F highlight/jump/clear, plus input-history ↑/↓ boundary behavior), and the paste-image pipeline (webview alias regression, dataURL→tmp-file save, `[Attached images:]` pointer injection, non-multimodal guard, panel-messages wiring).
-- **Full suite**: `npm run test:full` — the same list with slow-registered tests released (`slow()` gate).
-- **Integration tests**: `npm run test:integration` — the ②③ integration set (`test/integration/` + explicit manifest `test/integration/files.mjs`, runner `test/run-integration.mjs`): business-voice scenarios asserting observable results; no `slow()` inside; the release gate's fourth ring. Design authority: `docs/design/TESTING.md`.
-- **Release gate**: `vscode:prepublish` = `npm run lint && npm run doc:check && npm run test:full && npm run test:integration` (runs automatically on `vsce package` / bare `vsce publish`).
+- **Unit tests** (`npm test`): explicit file list in `test/files.mjs`（清单单一来源——逐档登记 + 行内注释记覆盖面；基线（as-of 2026-09-15）≈ **553 例**——实跑 553/518 pass/0 fail/35 skip）covering the agent loop, dual-line history, tool routing, config, advisor convergence protocol (fresh sessions, citations verification, escapeLiteralEscapes), provider panels, the permission gate, live autoApprove semantics (mid-turn flip stops repeated prompts), lazy history pagination (global idx anchors, scroll-back chaining), the inline question tool (panel callback preferred over native popups, subagent questions routed to the same panel callback), the webview diff renderer (every permission-prompt diff preview), context-utilization math (divides by the REAL spec context — the old `contextWindow` field read fell back to 128K and showed 137% on 1M models), provider parity constants (FETCH_TIMEOUT_MS = 10 min), SSRF guards (proxy URL validation, redirect allowlist), websearch (Bing fallback, Tavily structured API), abort end-to-end (bash process-tree kill, AbortError propagation out of tool batches, SSE stream interruption), the in-conversation search bar (Ctrl+F highlight/jump/clear, plus input-history ↑/↓ boundary behavior), and the paste-image pipeline (webview alias regression, dataURL→tmp-file save, `[Attached images:]` pointer injection, non-multimodal guard, panel-messages wiring).
+- **Full suite**: `npm test` — the single entry: unit + integration + slow all run in one go (no separate fast/full/integration scripts).
+- **Integration set**: business-voice scenarios asserting observable results — they run inside `npm test` (`test/integration/` + its manifest `test/integration/files.mjs`, driven by the unified runner `test/run.mjs`).
+- **Release gate**: `vscode:prepublish` = `npm run lint && npm test` (runs automatically on `vsce package` / bare `vsce publish`).
+- **Doc check (not a gate step)**: `npm run doc:check` — repo-root domain; same command as the CI docs job.
 - **Packaging assertion**: `postpackage` = `node scripts/check-vsix.mjs` (runs automatically after `npm run package`) — unpacks the produced vsix and asserts the embedded core + version literal equality + prompt-face completeness (`prompts/` 15 + `tool-docs/` 25 — names + sha256); fail-closed (a core-less vsix exits 1, though vsce itself exits 0).
 - After modifying agent loop or tools: test with a simple file operation (read + write) and a multi-turn conversation.

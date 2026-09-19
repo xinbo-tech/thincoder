@@ -104,6 +104,12 @@ function statusFields(entry, cwd) {
 }
 
 export function executeStatusAction(args, ctx) {
+  // #46（批 TOOLFACE-FIXES ①——设计 AGENT-LOOP-SUBAGENT.md §6.25 ①）：七动作族 depth 门收口——
+  // status 与 observe/send/escalate/cancel/panel freeze 同为 depth-0 专有（子代无自有异步池）；
+  // 缺门时子代静默空 overview（把「不可用」读成「无在飞」）。族锚取现行可解析节号（§6.7.2）。
+  if ((ctx.depth ?? 0) > 0) {
+    return JSON.stringify({ status: "error", error: "status is only available at depth 0 — a child agent has no async pool of its own (AGENT-LOOP-SUBAGENT.md §6.7.2)" })
+  }
   const agent = ctx.agent
   const map = getAsyncPool(agent, "subagent") ?? new Map()
   const advisors = getAsyncPool(agent, "advisor") ?? new Map()
@@ -233,7 +239,7 @@ function clampRecent(n) {
  */
 export function executeObserveAction(args, ctx) {
   if ((ctx.depth ?? 0) > 0) {
-    return JSON.stringify({ status: "error", error: "observe is only available at depth 0 — a child agent has no async pool of its own (AGENT-LOOP.md §7.2)" })
+    return JSON.stringify({ status: "error", error: "observe is only available at depth 0 — a child agent has no async pool of its own (AGENT-LOOP-SUBAGENT.md §6.7.2)" })
   }
   const agent = ctx.agent
   const id = args?.id
@@ -285,7 +291,7 @@ export function executeObserveAction(args, ctx) {
  */
 export function executeSendAction(args, ctx) {
   if ((ctx.depth ?? 0) > 0) {
-    return JSON.stringify({ status: "error", error: "send is only available at depth 0 — a child agent has no async pool of its own (AGENT-LOOP.md §7.2)" })
+    return JSON.stringify({ status: "error", error: "send is only available at depth 0 — a child agent has no async pool of its own (AGENT-LOOP-SUBAGENT.md §6.7.2)" })
   }
   const agent = ctx.agent
   const id = args?.id
@@ -300,7 +306,7 @@ export function executeSendAction(args, ctx) {
   const entry = getAsyncPool(agent, "subagent")?.get(key)
   if (!entry) {
     if (getAsyncPool(agent, "advisor")?.has(key)) {
-      return JSON.stringify({ status: "error", error: `id ${key} is an async ADVISOR review — send is for async subagents; you cannot inject direction into a running review (AGENT-LOOP.md §7.2) — track it with action:'status' (role:"advisor") or wait for its report to arrive automatically` })
+      return JSON.stringify({ status: "error", error: `id ${key} is an async ADVISOR review — send is for async subagents; you cannot inject direction into a running review (AGENT-LOOP-SUBAGENT.md §6.7.2) — track it with action:'status' (role:"advisor") or wait for its report to arrive automatically` })
     }
     return JSON.stringify({ status: "error", error: `unknown async subagent id: ${key}` })
   }
@@ -410,6 +416,8 @@ export async function executeEscalateAction(args, ctx) {
     })
     child._historyWindow = RECORD_WINDOW_MESSAGES // TUI-OOM-ROOTCAUSE §23.3.1：子代理人读线窗口（四处创建点同置）
     child._logId = escId // LOGGING：子内事件归属（escalate#N）
+    // SUBAGENT-UPSTREAM-CHANNEL（§6.27.4 W2——escalate **sync**：单向；工具返回注走同步形）。
+    child._upstream = { parent, label: escId, sync: true }
     escT0 = Date.now()
     logEvent("child:spawn", { role: "escalate", id: escId, kind: "escalate" })
     const runner = ctx.runAgent ?? runAgent

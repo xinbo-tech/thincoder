@@ -19,7 +19,7 @@
 |---|---|
 | `thincoder-cli/src/tui/slash-commands.mjs` | `SLASH_COMMANDS` 表 + `SLASH_ALIASES` + `HANDLERS` 分派（handler 异常统一拦截成 `[error]` 行——不击穿 TUI 主循环）+ `completions` / Tab 循环 |
 | `thincoder-cli/src/tui/cmd-*.mjs`（单命令档族） | 每个命令实现独立成档：`cmd-auto` / `cmd-clear` / `cmd-config` / `cmd-copy` / `cmd-eng` / `cmd-exit` / `cmd-extract`+`distill-cmd` / `cmd-fold` / `cmd-goal` / `cmd-help` / `cmd-init` / `cmd-mcp` / `cmd-mcp-form` / `cmd-model` / `cmd-new` / `cmd-plan` / `cmd-reindex` / `cmd-restore` / `cmd-session` / `cmd-shell` / `cmd-skills` / `cmd-submodel` / `cmd-think` / `cmd-undo` / `cmd-upgrade` / `cmd-advisor` |
-| `thincoder-cli/src/tui/model-picker.mjs` | 模型两级选择器（provider → model，可 fetch `/models`、失败回退预设）+ `/provider` Add / Remove / key 流程 + `pickModelForSlot`（子模型槽位） |
+| `thincoder-cli/src/tui/model-picker.mjs` | 模型两级选择器（provider → model，可 fetch `/models`、失败回退预设）+ `/model` Add / Remove / key 流程 + `pickModelForSlot`（子模型槽位） |
 | `thincoder-cli/src/tui/model-catalog.mjs` | 模型清单目录面（供选择器构造条目） |
 | `thincoder-cli/src/tui/ledger-surface.mjs` | 台账可见面渲染（配置菜单的台账摘要行） |
 
@@ -27,7 +27,7 @@
 
 | 文件 | 职责 |
 |---|---|
-| `thincoder-cli/src/tui/pickers.mjs` | 通用列表选择器（标题 / 条目 / filter / 位置指示 / 栈式嵌套）+ **`showPicker` 入口契约守卫**（§5.2） |
+| `thincoder-cli/src/tui/pickers.mjs` | 通用列表选择器（标题 / 条目 / filter / 位置指示 / 栈式嵌套）+ **`showPicker` 入口契约守卫**（§5.2）+ **删除类二次确认件 `confirmDelete`**（§5.4） |
 | `thincoder-cli/src/tui/wizard.mjs` | 首启配置向导：provider 菜单（existing / preset / custom）→ 文本步 → 落盘 → 模型选择；Esc 全步可跳（无半配置落盘） |
 | `thincoder-cli/src/tui/interaction.mjs` | 权限确认 / 批量确认 / 自由提问（question 工具桥）+ 权限内容预览 |
 | `thincoder-cli/src/tui/config-helpers.mjs` | 配置落盘收口（`persistRaw` / `syncProviderField` / `maskKey`） |
@@ -101,8 +101,8 @@
 
 ### 5.3 关键命令要点
 
-- **`/submodel`**：子 agent 模型设置入口——与 `/model`（主会话模型）对称。4 种子 agent 类型（explore / plan / coder / eng-coder）
-  各有独立配置项。无参时 picker 菜单列出全局 + 4 类型共 5 个槽位（各显示当前生效值与继承来源）→ 二级选择（provider → model）。
+- **`/submodel`**：子 agent 模型设置入口——与 `/model`（主会话模型）对称。5 种子 agent 类型（explore / plan / coder / eng-coder / eng-designer）
+  各有独立配置项。无参时 picker 菜单列出全局 + 5 类型共 6 个槽位（各显示当前生效值与继承来源）→ 二级选择（provider → model）。
   参数直设路径保留（`/submodel <type> <value>` / `<value>` / `<type>` / `reset [type]`）。
   持久化到 `config.agent.subagentModel`（全局）与 `config.agent.subagentModels[role]`（类型级），立即生效。
   **优先级链：subagent 工具 `model` 参数 > 类型级 `subagentModels[role]` > 全局 `subagentModel` > 继承父 provider**（单一解析源）。
@@ -119,6 +119,47 @@
   `✓ Save & test` 探活确认环、失败回同一表单）——**字段表单机制权威 = `docs/core/design/MCP.md` §5 / §8**，本档不重述。
 - **`/advisor`**：评审模型 / 思考配置 + guard 开关（交互菜单循环）；Thinking 子菜单以**真实条目列表**打开。
 - **其余命令**：见 §5.1 登记面与会话层文档；菜单循环类命令的 picker / 问答细节见各 `cmd-*.mjs` 文件头注释。
+
+### 5.4 删除类入口显式确认门
+
+**判据句**：删除类入口，若其副作用**销毁不可复得的原文或整条配置**（渠道 `apiKey` / MCP `token`）⇒ 用户选中目标后、
+**落盘与生效之前**必须有一次**显式确认**——确认 ⇒ 原语义执行；**取消 ⇒ 零落盘 ∧ 零内存变更**。
+判据源 = 用户 2026-09-19 08:21 逐字「应该补。」；与 VSC 端 `docs/vsc/requirements/WEBVIEW.md` **F-W17** 同判据、
+**两端各自实现**（VSC 侧弹框面属另链，本档不涉及）。
+
+**确认件（单源）** = `thincoder-cli/src/tui/pickers.mjs` 的 `confirmDelete`（picker 层通用绑定，与 `showPicker` / `closePicker`
+同路装配进命令 ctx）。形态 = **既有二次确认 picker**：`showPicker(<问句>?, [Yes 动作行, "Cancel"], { defaultIndex: 1 })`；
+`defaultIndex` 恒指向 **Cancel**（防误触 Enter 即删）；Esc / 选 Cancel ⇒ 返回未确认 ⇒ 调用方零动作。
+装配缺键（ctx 无 `confirmDelete`）⇒ 入口**报错**（fail-closed）——**不得**降级为直删（缺门即报错，不静默放行）。
+
+- **禁新造模态**：不引入新键位 / 新面板 / 新渲染面——形态与先例同源（`thincoder-cli/src/tui/cmd-clear.mjs:6-9` ·
+  `thincoder-cli/src/tui/cmd-new.mjs:30-33`）；本件把该形态收口为单点（D2 单一权威源）。
+  picker 栈式嵌套语义不变（确认面 = 独立一层：Enter 确认 / Esc 取消）。
+- **取消语义（两入口同）**：两入口均为**先盘后存**（`persistRaw` 落盘 → 内存镜像 / 工具表收尾）⇒ 取消发生在落盘之前，
+  即**零落盘 ⇒ 零内存变更**（无 ghost、无半删）。
+- **默认落点（反误触）**：`defaultIndex: 1` = Cancel ⇒ 直接按 Enter 不会删除；确认须显式移到 Yes 行。
+
+**入口册（实核 · 域 = `thincoder-cli/src/tui/**`）**：
+
+| 入口 | 门位（载体） | 状态 |
+|---|---|---|
+| 渠道删除（`/model` → Remove provider…） | `thincoder-cli/src/tui/model-picker.mjs:374` `removeProviderFlow`（`persistRaw` 之前） | ✅ 本批过门（单一调用点 `:73`） |
+| MCP server 删除（`/mcp` 菜单 → Remove） | `thincoder-cli/src/tui/cmd-mcp.mjs:84` `removeServer`（`persistRaw` 之前） | ✅ 本批过门（调用点 `:389`） |
+| MCP server 删除（`/mcp remove <name>` 直参） | 同上——`removeServer` 是两条路径的单一收口 | ✅ 本批过门（调用点 `:331`） |
+| 会话冷 GC（`thincoder session gc --confirm`） | 非 TUI 面（`thincoder-cli/bin/thincoder.mjs` → 核 `thincoder-core/session-gc.mjs`） | 已覆盖（`--confirm` 显式旗标——端面不同，不入 TUI 域） |
+
+- **独立「删 key」入口 = 不存在**（实核）：`setKeyFlow`（`thincoder-cli/src/tui/model-picker.mjs:398`）是**设** key；
+  `/config` 的 embedding key 同为设 key（`thincoder-cli/src/tui/cmd-config.mjs:38-41`——空输入直接返回、不写盘）。
+  key 原文消失的路径**只有**上表两条已入册入口（渠道删除 / MCP server 删除）——无第三入口待门。
+
+**判据域边界（不属本门 · 防误并）**：
+
+- **表单清空保存类**（MCP `token` / `headers` / `env` 字段清空后 `✓ Save & test` 保存）不设本门——它是**编辑面**
+  （预览 + 探活两步，非「选中即生效」的删除入口），语义归核 `docs/core/design/MCP.md` §5 / §8；
+- `/clear` 与 `/new` 的确认件（同形先例）**不是删除类**——不并入本门、本批零改；
+- **可复得类**不做门（context 清空 / 子模型槽位 reset 等：值可重填）——判据是**不可复得**，不是「凡是删」。
+
+**机检面**：本门的结构对账 = 域内删除类入口逐名过门（fail-closed：未登记入口 ⇒ 红 + 点名）——用例表见批次档。
 
 ## 6. 不并项与历史沿革
 
@@ -148,15 +189,16 @@
 | 配置落盘机制 | 原子写 / mtime 门控 / 并发冲突 | `docs/core/design/CONFIG.md`（本档只留入口与纪律） |
 | VSC 侧对位面 | webview 无 picker / wizard 面 | 登记「无镜像面」；VSC 轮 |
 
-## 7. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **163 行**（根层新建 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
-**拆分沿革**：本档自源档 `thincoder-cli/docs/design/TUI.md`（1529 行，超 500 硬门）按读者面拆出（见 `docs/cli/design/TUI.md` §9）。
-
 ## 变更记录
+
+- 2026-09-19（**CLI 端删除二次确认批（台账 #96）· 设计轮 · eng-designer**）：新增 **§5.4 删除类入口显式确认门**——判据句（不可复得 ⇒ 一次显式确认）·
+  确认件单源 `confirmDelete`（形态 = 既有二次确认 picker，先例 `cmd-clear.mjs:6-9` / `cmd-new.mjs:30-33`）· 入口册 4 行（渠道删除 / MCP 删除 ×2 路 / 冷 GC 已覆盖）·
+  独立「删 key」入口实核 = 不存在 · 判据域边界三条 · 机检面。§1 模块地图 `pickers.mjs` 行同批登记确认件。其余各节零改。
+
+- 2026-09-17（**zero-block 批 · 微 fix 轮 · eng-designer**）：变更记录 2026-09-15 条①内**悬空节号收正**——原引节号在 canonical 界面核心档无此节，收正为「§8 不并项与历史沿革」（拆分沿革登记现住 §8）；批档 `docs/batches/2026-09-17-subagent-zero-block.md` §2 出批发现 ⑥ 收口。
 
 - 2026-09-15（**B 式迁移轮 · 第 6 批**）：建档——`thincoder-cli/docs/design/TUI.md` 的 §9（交互层与命令层）/ §12（选择面收口）/
   §13（输入面小修 B1）三面内容重建入本档（旧档一字未改、原地作参照历史）。
-  ① 落点 = `docs/cli/design/TUI-COMMANDS.md`（P2 板块内的**读者面拆分档**——由 `docs/cli/design/TUI.md` §9 拆分沿革登记）；
+  ① 落点 = `docs/cli/design/TUI-COMMANDS.md`（P2 板块内的**读者面拆分档**——由 `docs/cli/design/TUI.md` §8 拆分沿革登记）；
   ② 模块地图按**现文件结构**重建（cmd-* 族逐档入表——旧档为「其余单命令小件」汇总行）；行数列不并；
   ③ §12 / §13 的机制结论并入 §3 / §4 / §5.2，批次材料入 §6.1；④ 坐标全量改**现状路径**并实核；⑤ 命令清点不复制（挂 `docs/cli/requirements/FEATURES.md` §2.9 指针——D2）。

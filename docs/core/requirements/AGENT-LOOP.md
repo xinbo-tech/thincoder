@@ -40,7 +40,7 @@ VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` 
 
 > **来源** = `thincoder-cli/docs/requirements/AGENT-LOOP.md`（356 行 · CLI 产品需求档）——根层裁定后该档 = **迁移期参照历史**（只读 · 不维护）。
 > **并入** = 该档中「根层所缺」的**需求条目正文**（判定句 / 范围边界 / 度量方式）——条目**编号与文本承旧档**（编号 = 既有引用锚，重编号会再制造引用漂移）。
-> **批 5 补记（2026-09-15）**：另并入两份独立专题档——§4.7（`requirements/SUBAGENT-OBSERVE-SEND.md`）· §4.8（`requirements/ASYNC-RESULT-CONTAINER.md`）；本档旧档的 VSC 面需求节（§3 / §5 / §8 / §13）维持「不并」（见 §5）。
+> **批 5 补记（2026-09-15）**：另并入两份独立专题档——§4.7（`thincoder-cli/docs/_archive/requirements/SUBAGENT-OBSERVE-SEND.md`）· §4.8（`thincoder-cli/docs/_archive/requirements/ASYNC-RESULT-CONTAINER.md`）；本档旧档的 VSC 面需求节（§3 / §5 / §8 / §13）维持「不并」（见 §5）。
 
 ### 4.1 question 工具抑制（旧档 §1）
 
@@ -68,10 +68,12 @@ VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` 
 | F-B2 | 等待口径真实 | `wait_for "advisor settled"` 判据 = **评审池真实状态**（无 running / queued 评审）；条件字面与既有条件集不变（不再 0ms 误报） | 不新增条件字面；不改等待边界（超时 / 间隔不变） |
 | F-B3 | 定向取消 | `subagent cancel <advisor id>` 可定向中止运行中评审（与面板 ⏹ 同源：abort 条目 controller → cancelled settle 不入 pending、不签发 token）、幂等、未知 / 已完成 id 显式报错 | 不做全停；不改 ⏹ 既有路由；不改评审取消的 token 语义 |
 | F-B4 | 动作面指引一致 | `observe` / `send` 遇 advisor id 时给**明确指引**（「这是后台评审——用 status 查 / 等其自动送达」），不得回含糊的 unknown id | 不为 advisor 开 observe / send（评审无逐回合观察面） |
+| F-B5 | 池满排队 | 池满（**达 advisor 生效上限**——默认 4 running）+ **异 scope** 发起 ⇒ ack 返回 `queued` + `position`（非 error）、槽释放按队首自动起跑；**同 scope** 发起 ⇒ 仍拒（文案原样）；等待口径「无 running / queued」含排队条目；排队条目 cancel ⇒ 出队 + 余项 `position` 重编号无空洞；池未满路径逐字同（零回归） | 不改池容量默认值与 `agent.poolLimits` 语义；不改「同 scope 不并发」守卫语义；不新造第二套队列（复用子代理域既有排队语义） |
+| F-B6 | 取号断言（防静默覆写） | 每个 spawn 站点**必先调分配器**由运行期断言强制：未调分配器即消费 ⇒ **显式报错**（非静默覆写）；同 id 二次入池 ⇒ **显式报错**；既有链路（分配点前缀号 ≡ ack id）零回归 | 不改 id 语义与分配算法（取号公式 / 载体字段 / 池键形态零改）；不做跨进程槽持久化；不去令牌化（改动面仅核侧） |
 
 **非功能**：NFR-B1 双端同源（两端工具面行为一致——同输入同判定；文案各自原文自持，不一致处显式登记）· NFR-B2 零回归（子代理池既有语义零变化、`wait_for` 其余条件零变化）。
 
-**明确不做**：不改评审收敛机制本体（轮次 / cap / 铁律）· 不改评审池容量 / 守卫语义 · 不做「评审排队」。
+**明确不做**：不改评审收敛机制本体（轮次 / cap / 铁律）· 不改评审池容量默认值（`agent.poolLimits` 独立键语义不变）· 不改「同 scope 不并发」守卫语义；「评审排队」= **F-B5**（2026-09-16 批 8 起纳入——原「不做」**撤**）· 不改子代理取号公式与 id 语义（取号断言 = **F-B6**，2026-09-16 批 8 起纳入——仅核侧加固，VSC 零写入）。
 
 ### 4.4 子代理 abort 来源标注（可诊断性——旧档 §6）
 
@@ -122,7 +124,7 @@ VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` 
 
 **明确不做**：不做子代理内存的全局池级上限；不做 entry / report 的落盘化；不做轨迹内容质量改写（仅截断 / 降级 + 标记）；不改 VSC 端。
 
-### 4.7 子代理观测 / 注入（旧档 `requirements/SUBAGENT-OBSERVE-SEND.md` · 22 行）
+### 4.7 子代理观测 / 注入（旧档 `thincoder-cli/docs/_archive/requirements/SUBAGENT-OBSERVE-SEND.md` · 22 行）
 
 **总体需求**：给父 agent 对运行中异步子代理的**运行时观测与轻量引导**能力——治「父看不到中间瞎猜 + 无法中途引导」，不改变子代理隔离模型（中间内容仍不进父上下文，按需拉取）。
 
@@ -137,13 +139,13 @@ VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` 
 
 **设计侧 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.7.2**（observe / send 契约行）——本档不复制。
 
-### 4.8 async 结果容器统一（旧档 `requirements/ASYNC-RESULT-CONTAINER.md` · 27 行）
+### 4.8 async 结果容器统一（旧档 `thincoder-cli/docs/_archive/requirements/ASYNC-RESULT-CONTAINER.md` · 27 行）
 
 **总体需求**：统一 async 子代理结果结算的**容器与记账逻辑**——消 4 处 settle 重复 / 3 族 pending 分叉 / 3 表示 done-in-pool / 信号兜底抄，统一为**池 accessor + pending 单容器 + role + settle 共享 helper + buildChildSignal**，每次加角色不再复制整段。
 
 | # | 需求 | 说明 |
 |---|---|---|
-| F1 | 池 accessor 吸收双池 | 消费端统一经 `getAsyncPool(role)` 访问——底层保留双池（advisor 无队列独立调度），accessor 吸收差异 |
+| F1 | 池 accessor 吸收双池 | 消费端统一经 `getAsyncPool(role)` 访问——底层保留双池（advisor 独立调度——**2026-09-16 批 8 ED-4 后含排队面**，见 §4.3 F-B5），accessor 吸收差异 |
 | F2 | pending 单容器 + role | 3 族 pending 统一为单容器 `_pendingAsyncResults`，条目带 role 字段；consult 裸对象升格完整 entry；done-in-pool 统一表示（留池 done:true + `_inPending` 标记防重复移交） |
 | F3 | settle 共享 helper | `thincoder-core/agent-tools/async-settle.mjs`——`settleAsyncEntry(parent, entry, {pool, onAccounting})`；族特有段作 hook 注入 |
 | F4 | 守卫统一 | settle 守卫统一为 `!parentAborted`（严格版——覆盖 ctx.signal ∨ 条目 controller aborted） |
@@ -162,9 +164,70 @@ VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` 
 
 **ASYNC-RESULT-CONTAINER（VSC 仓版）**：语义同源（F1–F6 / N1–N4 已并 §4.8）；VSC 端条目 = ① F-A6 挂起期注入与消化面（settle → 单容器 → digest 轮驱动；中止 → 容器清不注入陈旧结果）·
 ② 端差——统一前 pending **5 族**（对端 3 族，含 advisor 独立族）· 池载体 = 共享 history 数组双查询（`history?._X ?? agent._X`——accessor 吸收，语义同源）。坐标（实核）＝
-`thincoder-vscode/src/agent-tools/async-settle.mjs`（`settleAsyncEntry`——四族调用点 = advisor-async / consult / subagent-async / subagent-escalate-async）· `src/extension/suspension.mjs:32-55`（挂起期单容器）· `src/agent.mjs:66-74`。
+`thincoder-vscode/src/agent-tools/async-settle.mjs`（`settleAsyncEntry`——四族调用点 = advisor-async / consult / subagent-async / subagent-escalate-async）· `thincoder-vscode/src/extension/suspension.mjs:32-55`（挂起期单容器）· `thincoder-vscode/src/agent.mjs:66-74`。
 
 端差差异若有 → 逐条补登记（不静默）；本档不代述对端正文（D2）。旧档 = 各自 VSC 仓需求档（一字未改 · 参照历史）。
+
+### 4.10 CLI 侧中止丢弃提醒与终态（CLI-ASYNC-DISCARD——新增 · 2026-09-15 批 4）
+
+**总体需求**：作为 **使用 CLI 的开发者 / 模型**，我想要 **中止（Stop / 会话中止）导致后台子代理 / 评审条目被丢弃时留下终态
+并得到一次可见提醒**，以便 **知道「报告不会到达」而不必猜，并据此决定是否重派**。
+症状（台账 `docs/TODO.md` 技术待办）：CLI 中止分支仍**静默清池**（`thincoder-core/agent/run-stages.mjs:168-170` ·
+`thincoder-cli/src/tui/suspension-drive.mjs:260-262`），且**丢弃墓碑状态与丢弃提醒文案**在 `thincoder-core/**` + `thincoder-cli/**` 全仓零命中（该词在核内另有 4 处出现，均为其他语义——见设计档 §6.20.1 清单）。
+对侧（VSC）同场景已有「墓碑 + 整批提醒 + 事件」三件套（`thincoder-vscode/src/agent-tools/async-discard.mjs`）
+⇒ 本条 = **CLI 侧对称，不新语义**。
+
+| # | 需求（能力逐条可交付） | 范围边界（明确不做什么） |
+|---|---|---|
+| F1 | 中止时**只清「已死」条目**——判定 = `done !== true ∧ cancelled !== true ∧ parentAborted(...)`，复用核守卫单点（零新谓词） | 不改 cancel / failed 语义；不新增判定谓词 |
+| F2 | 每个被丢弃条目留 **`discarded` 终态墓碑**（跨 run 终态账本）+ 出池 + 汇总；整批**一次**提醒注入（含丢弃数 + 名单）+ **一条** `ev:discarded` | 零丢弃 ⇒ 零提醒、零事件（零噪音）；不改提醒以外的 settle 语义 |
+| F3 | 中止清池在**两个生产接线点**（回合尾中止 · 挂起会话中止）都生效——任一 Stop 路径均不静默 | 收尾站（`finishSuspension`）**不接线**（无父 agent 注入目标——判据登记设计档 §6.20.1）；**不改 VSC 侧** |
+| F4 | 依赖目标被判丢弃时**不再判「报告已到达」**（`depInfo` 归 `cancelled` 口径——非 AUTO 依赖者锁住等父处置，AUTO 可启动） | 不新增枚举值；不改 `describeBlockers` / `detectStall` 与依赖者文案 |
+
+**非功能**：N1 **对称语义**（提醒文案 / 动作序 / 事件名与对侧同源；必须不同处须显式登记端差，不静默偏离）· N2 **可机检**（断言面 = 墓碑状态 / 池内容 / 提醒注入 / `ev:discarded` 计数 / 依赖终态）· N3 **尺度与可回退**（源档守 500 硬限，越 300 软线如实登记 + 拆分计划；纯增量接线 ⇒ 整批可回退）。
+
+**设计侧 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.20**（条目标号 F1–F4 / N1–N3 与批次档 `docs/batches/2026-09-15-cli-async-discard.md` §2 **三方一致**）——本档不复制。
+
+### 4.11 回合记忆召回注入（depth-0——新增 · 2026-09-18 · TUI 假死批）
+
+**总体需求**：作为**使用 CLI 的开发者**，我想要 **主 agent 回合（depth-0 · 非 resume）注入一条记忆召回块**，而**子代理 spawn 的子代回合不注入**（子代按需自取），以便**召回对主对话可用、且不为每次 spawn 付一次全表扫描**。
+
+来源与依据：VSC 端条目 `docs/core/requirements/MEMORY.md:146` F-M7（depth-0 · 非 resume · 非 auto-turn）+ 迁移期参照档 `thincoder-cli/docs/requirements/AGENT-LOOP.md:283-284`（F-Q2 / F-Q3）；核心层此前**无对应条目** ⇒ 本条 = **核心层补位**。现状代码 `thincoder-core/agent/setup.mjs:101-126` 无 depth 门（同函数其余自动注入面皆有门）⇒ 与本条相抵，修复随 TUI 假死批。
+
+| # | 需求（能力逐条可交付） | 范围边界（明确不做什么） |
+|---|---|---|
+| F1 | 召回注入限 **depth-0**（子代理 spawn 的子代回合不注入） | 不加配置开关；不改注入内容 / 检索路径 / limit |
+| F2 | 既有「非 resume」条件保持（注入块位于 `if (!resume)` 内——现状即如此） | 不新增门类 |
+| F3 | 子代仍可按需检索（readonly `code_search` / `doc_search` 在子代工具表内；`memory` 工具因工具级 readonly 不在只读子代表内 = 既有登记） | 不改工具表过滤 |
+
+**非功能**：N1 **可机判**（两路径回合装配的注入有无 = 断言面）· N2 **零新增失败面**（注入失败静默跳过 = 现状）· N3 **auto-turn 面已满足**（实测 `thincoder-core/agent.mjs:129` `resume: resume || autoTurn` ⇒ auto-turn 回合走 resume 路径、不进召回块——2026-09-18 收正；本条不改 auto-turn 语义）。
+
+**设计侧 = `docs/core/design/MEMORY.md` §6.10 修法 B**（批次档 `2026-09-18-tui-freeze.md` §2 三方一致）——本档不复制。
+
+### 4.12 子代理上行通道（子 → 父 在飞提问 / 上报）（新增 · 2026-09-18 · 批 SUBAGENT-UPSTREAM-CHANNEL）
+
+**总体需求**：作为**子代理（depth>0）**，我想要**在运行中向父（spawn 方）发一条决策级消息、且不中断自身回合**，以便命中「前提失效 / 方向冲突 / 授权边界」时**不必走到终态停报、代价整轮作废**；
+作为**父（主 agent）**，我想要**在自己下个回合边界收到该消息、并能直接用 `subagent action:'send'` 答复**，以便**在飞纠偏，不必重派子代理重新勘察**。
+
+| # | 需求（能力逐条可交付） | 范围边界（明确不做什么） |
+|---|---|---|
+| F-UC1 | 子侧发声面：`notify_parent({kind, message})`——depth>0 专有（五角色装配）；调用**立即返回**（零等待态） | 不给 consult / depth-0 装配；不提供拉取 / 轮询动作 |
+| F-UC2 | 父侧接收面：队列 `_childUpstream` → **下一回合边界**合并注入一条 user 消息（来源 + 答复指引）；回复**复用 `send`** | 不新造下行管子；不改 `send` / `observe` / `status` 语义 |
+| F-UC3 | 无答复兜底：到终态未获答复 ⇒ 受影响部分不做 + 报告如实写；队列消息**仍注入**（附「已结束」注脚） | 不做自动重试 / 超时重发 |
+| F-UC4 | 射程纪律（提示词面）：两问自检（行动相关性 + 材料可读性）+ 可问 / 禁问清单 + 保守兜底 | 机制面不新增语义判定；不弱化既有「停下上报」纪律 |
+| F-UC5 | 机械闸：kind 枚举 · **同一子代理在父队列中未取走（未 drain）的 ask ≤1** · message ≤1500 字符 · 父队列 ≤20 | 不做配额持久化 / 跨会话计数 |
+| F-UC6 | 失败面：父不在（留队列待苏醒）· 会话终止（随会话丢弃 + 日志）· 子先结束（消息不丢）· 并发合并 · 同步子代理顺延 · 无上游明确报错 | 不做跨进程传递 / 持久化信箱 |
+| F-UC7 | **默认流可用性**（2026-09-19 · 用户实证）：单子代理 · 父侧挂起（无并发回合）时，ask 须**能触发父侧一次处理**（唤醒面）使答复可在子代理结束前到达；**结构不可行 / 代价不可接受 ⇒ 降级为 note-only 通道**，且工具描述 / 提示词面的承诺与事实**同轮改准**（不许留「答复会到达」的假承诺） | 不改非阻塞地基（子代理机制上永不等）· 不新增计数 / 上限 · 不动 consult / depth-0 面 · 降级分支 = 需求改判（F-UC1 / F-UC2 / F-UC6 同步收紧，须父侧裁定） |
+
+**非功能**：N1 非阻塞**结构保证**（无等待 / 拉取 API——子代理在机制上无法等待）· N2 零回归（既有语义与文案零变化）· N3 可机判（在场性 / 合并注入 / 三闸 / 零回归 = 断言面）·
+N4 范围 = **核侧 + CLI + VSC 两端对位**（**2026-09-19 23:23 用户裁定「vsc 肯定要扩啊，否则不完整啊」**；提示词面本批零改）。
+
+> **窗口口径（父侧 2026-09-18 15:2x 收正 · 承修正轮 id=66 上抛 1）**：F-UC5 闸一窗口 = 「**父队列中未取走（未 drain）**」——机制面不追踪「是否已答复」（唯一可观测注入 = 父 `send`；答复与任意注入不可区分）⇒ 本档措辞与设计档 §6.27.2 ③ 同源（设计侧 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.27.2 ③ / §6.27.8）。
+
+> **F-UC7 由头（2026-09-19 · 用户实证 · 父侧直接执行 · 可 revert）**：默认异步流实测——`thincoder-core/agent-tools/parent-channel.mjs:83-84` 自陈「**零等待、零唤醒**」⇒ 子代理 ask 只在父侧「下一次回合」被读到，而该回合的唤醒源通常正是**子代理自身的 settle** ⇒ 答复恒迟到，「在飞纠偏」（本 § 总体需求 `:210`）在默认流不成立；工具返回注 `:45-49` 自带的退路（「运行先结束 ⇒ 未获答复部分按未做上报」）即默认流实走的那条。批 = `docs/batches/2026-09-19-upstream-channel-availability.md`（台账 #104）。
+
+**设计侧 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.27**——本档不复制（D2）。
+
 
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）
 
@@ -180,7 +243,18 @@ VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` 
 
 ## 变更记录
 
+- 2026-09-18（**批 SUBAGENT-UPSTREAM-CHANNEL · 父侧直接执行 · 可 revert**——承用户 2026-09-18 14:49 提议「子侧有没有必要向父侧发消息或者问问题」；14:51「立批吧」）：新增 **§4.12 子代理上行通道**（F-UC1–F-UC6 / N1–N4）——设计侧 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.27。
+  - 2026-09-18 16:1x 父侧直接执行：**§4.12 位置收正**——原误置于「§5 不并项与历史沿革」之后，移回 §4 序列（§4.11 之后）；承设计评审 id=69 发现 6。
+
 - 2026-09-13：建档——自 `docs/core/requirements/CORE-UNIFICATION.md` 拆分（来源：§2 F11 / F6 / F12 / F13 回指）+ 设计档 `AGENT-LOOP.md`（§2.1–§2.2 · §3.1 A7 / A15 / A22 / A23 · §3.2 D2 派生）；**无新增需求**。
 - 2026-09-14（**B 轮并入 · 试点批**）：新增 §4 **需求条目**（question 工具抑制 / 顶层一律异步 / 后台评审池可观测可控 / abort 来源标注 / Stop 钩子 / 长会话内存上界——自 `thincoder-cli/docs/requirements/AGENT-LOOP.md` 逐节比对后并入需求正文；**编号与文本承旧档**）；新增 §5 **不并项与历史沿革**（VSC 面需求节 4 处 + 时点材料 + 变更记录）；**本档新增需求 0**（纯回填）。本档 41 → **140 行**。
-- 2026-09-15（**迁移批 · 第 5 批 · 并入 · eng-designer**）：新增 §4.7 **子代理观测 / 注入**（旧专题档 `requirements/SUBAGENT-OBSERVE-SEND.md`）+ §4.8 **async 结果容器统一**（旧专题档 `requirements/ASYNC-RESULT-CONTAINER.md`）——编号与文本承旧档；设计侧指针按批 5 拆分面改指（`AGENT-LOOP-SUBAGENT.md` §6.7.2 / §6.7.3）；**本档新增需求 0**（纯回填）。
+- 2026-09-15（**迁移批 · 第 5 批 · 并入 · eng-designer**）：新增 §4.7 **子代理观测 / 注入**（旧专题档 `thincoder-cli/docs/_archive/requirements/SUBAGENT-OBSERVE-SEND.md`）+ §4.8 **async 结果容器统一**（旧专题档 `thincoder-cli/docs/_archive/requirements/ASYNC-RESULT-CONTAINER.md`）
+  ——编号与文本承旧档；设计侧指针按批 5 拆分面改指（`AGENT-LOOP-SUBAGENT.md` §6.7.2 / §6.7.3）；**本档新增需求 0**（纯回填）。
 - 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：新增 §4.9 **VSC 端对位与端差**（SUBAGENT-OBSERVE-SEND F-O3/F-O4 · ASYNC-RESULT-CONTAINER F-A6 + 端差——自两 VSC 仓需求档并入；坐标实核）；§5 登记 VSC 两档批次材料；**本档新增需求 0**（纯回填）。
+- 2026-09-15（**批 4 CLI-ASYNC-DISCARD · eng-designer**）：新增 §4.10 **CLI 侧中止丢弃提醒与终态**（F1–F4 / N1–N3）——台账技术待办一条（CLI 侧无「子 agent 被丢弃」提醒与丢弃终态，与 VSC 不对称）；**本档新增需求 1**（自 B 轮以来首次非纯回填增条）。本档 186 → **207 行**（实测）。
+- 2026-09-16（**批 8 ENGINE-DEBT · 设计轮 · eng-designer**——承 `docs/batches/2026-09-16-engine-debt.md` §2 ED-4）：§4.3 新增 **F-B5 池满排队**（异 scope 入队 / 同 scope 仍拒；判定句含 position / 自动起跑 / 取消重编号 / 零回归）+ 撤「不做评审排队」句（范围边界同句重写）；源 = 设计档 `AGENT-LOOP-SUBAGENT.md` §6.10。本档 207 → **209 行**（`wc -l` 实测）。
+- 2026-09-16（**批 8 ENGINE-DEBT · 设计轮 · eng-designer**——承 `docs/batches/2026-09-16-engine-debt.md` §2 ED-5）：§4.3 新增 **F-B6 取号断言（防静默覆写）**（漏调分配器即消费 ⇒ 显式报错 / 同 id 二次入池 ⇒ 显式报错 / 既有分配点前缀号 ≡ ack id 链路零回归）；
+  范围 = 仅核侧（不改 id 语义与分配算法）；源 = 设计档 `AGENT-LOOP-SUBAGENT.md` §6.21。本档 209 → **211 行**（`wc -l` 实测——F-B6 行 +1 · 变更记录 +1）。
+- 2026-09-16（**批 8 ENGINE-DEBT · 补充收正 · eng-designer**）：§4.3 F1 说明括注「advisor 无队列独立调度」→「advisor 独立调度——批 8 ED-4 后含排队面」（与 F-B5 · 设计档 `AGENT-LOOP-SUBAGENT.md` §6.10 对齐——残留旧语义清理，该行改写净零）；本档行数 **+1**（变更记录行）——复测 **213 行**。
+- 2026-09-18（**TUI 假死批 · 父侧直接执行**）：新增 §4.11 **回合记忆召回注入（depth-0）**（F1–F3 / N1–N3——**核心层补位**；依据 = VSC 端条目 `docs/core/requirements/MEMORY.md:146` F-M7 + 迁移期参照档 F-Q2/F-Q3）；源 = 批次档 `docs/batches/2026-09-18-tui-freeze.md` §2 与设计档 `MEMORY.md` §6.10 修法 B。
+

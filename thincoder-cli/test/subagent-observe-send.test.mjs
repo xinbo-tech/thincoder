@@ -303,3 +303,28 @@ test("T-B8（AC-B4）：observe/send 遇 advisor id → 明确指引（含 actio
   }
   assert.equal(agent._asyncAdvisors.get("9")._injected?.length ?? 0, 0, "send 不为评审开新能力（零注入）")
 })
+
+// ═══ #46（TOOLFACE-FIXES ①）：status depth 门 ═══════════════════════════════
+
+test("U1/U2（#46）：子代（depth>0）显式拒（同款门 + 同文案族 + 同返回形）；depth 0 / 缺省逐字零回归", () => {
+  const agent = advisorAgent(new Map([["9", advisorEntry(9)]]), { _asyncSubagents: new Map([["3", runningEntry(3)]]) })
+  // U2（回归）：depth 0 与缺省同判——overview 形态逐字零变（A2）
+  const d0 = JSON.parse(executeStatusAction({}, { depth: 0, agent, callbacks: {} }))
+  const dNone = JSON.parse(executeStatusAction({}, { agent, callbacks: {} }))
+  assert.deepEqual(dNone, d0, "depth 缺省 ≡ 0（逐字同）")
+  assert.equal(d0.overview.running.length, 2, "双池并表形态不变")
+  // U1（#46）：子代拒——错误串逐字相等（A1）
+  const child = JSON.parse(executeStatusAction({}, { depth: 1, agent, callbacks: {} }))
+  assert.deepEqual(child, {
+    status: "error",
+    error: "status is only available at depth 0 — a child agent has no async pool of its own (AGENT-LOOP-SUBAGENT.md §6.7.2)",
+  }, "同文案族（族锚 = 现行可解析节号）")
+  // A1b：返回形 ≡ 兄弟动作既存拒（observe / send 的 JSON {status,error} 对象形——非 escalate 字符串形）
+  const obsReject = JSON.parse(executeObserveAction({ id: 3 }, { depth: 1, agent, callbacks: {} }))
+  const sndReject = JSON.parse(executeSendAction({ id: 3, message: "m" }, { depth: 1, agent, callbacks: {} }))
+  assert.equal(child.status, obsReject.status, "拒返回形同款（observe）")
+  assert.equal(child.status, sndReject.status, "拒返回形同款（send）")
+  assert.equal(typeof child.error, "string")
+  // 门在函数首行（早于 id 分支）：单查路径同拒
+  assert.deepEqual(JSON.parse(executeStatusAction({ id: "3" }, { depth: 1, agent, callbacks: {} })), child)
+})

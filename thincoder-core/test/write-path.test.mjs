@@ -5,10 +5,10 @@
  * openDoc / isDirty = 11（写点 src 面 9 + file_ops dest 面 2）· applyEdit = 6 · 落盘 = 交给
  * 注入面的字节；夹具二 = `resetWritePath()` ⇒ 回默认 fs 径，**产物与夹具一逐字节同**。
  * 结构面：8 个写点所在档零直调 `writeFile`；`tools/**` 写 API 只许出现在单一写路径点
- * `tools/write-path.mjs`（白名单 1 档 + `checklist-sync.mjs` 一档已登记豁免——口径与理由见
- * 测试内注释 / 交付报告；任务书「白名单 1 档」的字面形在本仓不可满足）。
+ * `tools/write-path.mjs`（白名单 1 档）。
  */
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -87,7 +87,7 @@ async function withTempDir(fn) {
   try { return await fn(dir) } finally { rmSync(dir, { recursive: true, force: true }) }
 }
 
-test("§2.13.5 验收①·夹具一（注入面）：openDoc / isDirty 计数 = 11（8 写点 src 面 + file_ops dest 面）· 内容写点 applyEdit 计数 = 6", async () => {
+slow("§2.13.5 验收①·夹具一（注入面）：openDoc / isDirty 计数 = 11（8 写点 src 面 + file_ops dest 面）· 内容写点 applyEdit 计数 = 6", async () => {
   await withTempDir(async (dir) => {
     const { impl, calls } = fakeInjection()
     configureWritePath(impl)
@@ -115,7 +115,7 @@ test("§2.13.5 验收①·夹具一（注入面）：openDoc / isDirty 计数 = 
   })
 })
 
-test("§2.13.5 验收①·夹具二（不注入）：回默认 fs 径，产物与夹具一逐字节同", async () => {
+slow("§2.13.5 验收①·夹具二（不注入）：回默认 fs 径，产物与夹具一逐字节同", async () => {
   let injected
   await withTempDir(async (dir) => {
     const { impl } = fakeInjection()
@@ -167,8 +167,7 @@ test("§2.13.5 门禁（dest 面补丁）：move/rename/copy 覆盖「打开且�
     configureWritePath({ openDoc: () => null, isDirty: () => { throw new Error("isDirty must not run") }, applyEdit: async () => {} })
     try {
       await fileOpsTool.execute({ action: "move", source: "src.txt", dest: "dst2.txt" }, CTX(dir))
-      assert.equal(existsSync(src), false, "放行 ⇒ 正常移动")
-      assert.equal(readFileSync(join(dir, "dst2.txt"), "utf8"), "S\n")
+      assert.equal(existsSync(src), false, "放行 ⇒ 正常移动"); assert.equal(readFileSync(join(dir, "dst2.txt"), "utf8"), "S\n")
       // copy 放行对照：新源档 ⇒ 复制成功、源档保留（copy 不移动）。
       writeFileSync(join(dir, "cp.txt"), "C\n", "utf8")
       await fileOpsTool.execute({ action: "copy", source: "cp.txt", dest: "cp2.txt" }, CTX(dir))
@@ -213,7 +212,7 @@ test("§2.13.5 契约：applyEdit 返回 null（未处理）⇒ 回退默认 fs 
   })
 })
 
-test("§2.13.5 契约与门禁：openDoc 未命中 / 撤销注入 ⇒ 回默认径；applyEdit 无 isDirty ⇒ 配置错；脏缓冲拒删", async () => {
+slow("§2.13.5 契约与门禁：openDoc 未命中 / 撤销注入 ⇒ 回默认径；applyEdit 无 isDirty ⇒ 配置错；脏缓冲拒删", async () => {
   await withTempDir(async (dir) => {
     // ① openDoc 未命中（未打开）⇒ 未处理 ⇒ 默认 fs 径
     let applyCalls = 0
@@ -260,17 +259,9 @@ test("§2.13.5 契约与门禁：openDoc 未命中 / 撤销注入 ⇒ 回默认�
   })
 })
 
-test("§2.13.5 验收②·结构机检：8 个写点所在档零直调 writeFile；tools/** 白名单外只许 1 档已登记豁免", () => {
-  // 白名单 1 档（§2.13.5）。**已登记豁免 1 档**：`checklist-sync.mjs` 是 checklist 状态档
-  // （.thincoder/checklist.md）的**同步**写机（writeFileSync + mtime 门控 + ID 合并），既非
-  // §2.13.5 的 8 个模型面文件编辑写点、也无异步缝可接（改它要把 flushWrite 整链改异步 =
-  // 越设计清单）。故登记豁免而非静默放过：命中集合必须**逐档等于**本表（新增命中 / 豁免
-  // 消失 ⇒ 红），由设计面裁定是否收编（已在交付报告「未决 / 越段发现」登记）。
+test("§2.13.5 验收②·结构机检：8 个写点所在档零直调 writeFile；tools/** 白名单外零直调", () => {
+  // 白名单 1 档（§2.13.5）——tools/ 内写 API 命中集合必须为空（新增命中 ⇒ 红），由设计面裁定是否收编。
   const WHITELIST = new Set(["tools/write-path.mjs"])
-  const EXEMPT = new Map([
-    ["tools/checklist-sync.mjs",
-      "checklist 状态档同步机（.thincoder/checklist.md 的 mtime 门控 + ID 合并）——非模型面文件编辑写点，§2.13.5 的 8 点清单未含"],
-  ])
   const strip = (src) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1")
   // 检测面 = 核内可能落盘的写 API（不只 writeFile——别名导入 / appendFile 等同样不许绕过缝）
   const WRITE_CALL = /\b(?:writeFile|writeFileSync|appendFile|appendFileSync|createWriteStream|writeSync)\s*\(/
@@ -288,8 +279,8 @@ test("§2.13.5 验收②·结构机检：8 个写点所在档零直调 writeFile
   }
   walk(join(ROOT, "tools"))
   assert.deepEqual(
-    hits.sort(), [...EXEMPT.keys()].sort(),
-    `tools/ 内写 API 调用点只许在 ${[...WHITELIST].join(", ")}（+ 豁免 ${[...EXEMPT.keys()].join(", ")}）；命中：${hits.join(", ")}`,
+    hits, [],
+    `tools/ 内写 API 调用点只许在 ${[...WHITELIST].join(", ")}；命中：${hits.join(", ")}`,
   )
   // 8 个写点所在档 = 白名单外零命中（**不带豁免**——§2.13.5 验收② 的本体）
   const WRITE_POINT_FILES = ["tools/file.mjs", "tools/edit-diff.mjs", "tools/edit-batch.mjs", "tools/patch.mjs", "tools/ops.mjs"]

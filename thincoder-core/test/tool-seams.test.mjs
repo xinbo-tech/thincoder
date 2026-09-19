@@ -14,7 +14,9 @@
  * 对位档 = tool-seams-agent.test.mjs（agent 面：#88 / #91 / #96）。
  */
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
+import { execFileSync } from "node:child_process"
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join, relative } from "node:path"
@@ -66,7 +68,7 @@ test("#56 tree cwd 归一缝：缺省 = resolveInCwd（现行为）；注入 ⇒
 
 // ─── #57 execute：树杀实现 ──────────────────────────────────────────────────────
 
-test("#57 树杀缝：超时 ⇒ 注入树杀被调（缺省 = 核内 killProcessTree，现行为）", async () => {
+slow("#57 树杀缝：超时 ⇒ 注入树杀被调（缺省 = 核内 killProcessTree，现行为）", async () => {
   await withTempDir(async (dir) => {
     const ctx = { cwd: dir }
     const killed = []
@@ -84,8 +86,9 @@ test("#57 树杀缝：超时 ⇒ 注入树杀被调（缺省 = 核内 killProces
 
 // ─── #59 git：审批门 ───────────────────────────────────────────────────────────
 
-test("#59 git 审批门缝：gate 返回非空串 ⇒ 拒执行（原样返回）；缺省 ⇒ 全动作照常", async () => {
+slow("#59 git 审批门缝：gate 返回非空串 ⇒ 拒执行（原样返回）；缺省 ⇒ 全动作照常", async () => {
   await withTempDir(async (dir) => {
+    execFileSync("git", ["init", "-q", "-b", "main"], { cwd: dir }) // #55 F-2 用例改判：真洁净仓（原非仓 temp 目录把「假洁净」写成期望值）
     const ctx = { cwd: dir }
     const calls = []
     try {
@@ -104,9 +107,39 @@ test("#59 git 审批门缝：gate 返回非空串 ⇒ 拒执行（原样返回�
   })
 })
 
+// ─── #55 git 读面 fail-closed（③′ · 台账 #55——设计 = TOOLS.md §6.12）────────────
+
+test("#55 A7–A12：非仓 cwd 读动作抛错（not a git repository + cwd + workdir 指引）；unborn 仓 status 洁净 / log·diff·show·blame 抛错 / list 族不变；仓内改动同 porcelain", async () => {
+  await withTempDir(async (dir) => {
+    for (const args of [{ action: "status" }, { action: "log" }]) {
+      await assert.rejects(() => gitTool.execute(args, { cwd: dir }), (e) => {
+        assert.match(e.message, /not a git repository/); assert.ok(e.message.includes(dir), "消息含 cwd")
+        assert.match(e.message, /pass workdir to run git inside a repository/, "A12：非仓谓词附指引")
+        assert.equal(/clean — no changes|\(no commits\)/.test(e.message), false, "失败不渲染洁净 / 占位（A7/A10）")
+        return true
+      })
+    }
+  })
+  await withTempDir(async (dir) => {
+    execFileSync("git", ["init", "-q", "-b", "main"], { cwd: dir })
+    assert.equal(await gitTool.execute({ action: "status" }, { cwd: dir }), "(clean — no changes)", "A9：真洁净仓零假阳")
+    for (const [args, re] of [[{ action: "log" }, /does not have any commits yet/], [{ action: "diff" }, /bad revision 'HEAD'/], [{ action: "show" }, /ambiguous argument 'HEAD'/], [{ action: "blame", path: "f.txt" }, /no such ref: HEAD/]]) {
+      await assert.rejects(() => gitTool.execute(args, { cwd: dir }), (e) => {
+        assert.match(e.message, re, `${args.action}（unborn）⇒ 抛错（占位退场）`); assert.equal(e.message.includes("pass workdir"), false, "A12 反证：unborn 不附指引")
+        return true
+      })
+    }
+    for (const [args, out] of [[{ action: "tag", tagAction: "list" }, "(no tags)"], [{ action: "stash", stashAction: "list" }, "(no stashes)"], [{ action: "remote", remoteAction: "list" }, "(no remotes)"], [{ action: "branch", branchAction: "list" }, "(no branches)"]]) assert.equal(await gitTool.execute(args, { cwd: dir }), out, `list 族不变（${args.action}）`)
+    assert.match(await gitTool.execute({ action: "worktree", worktreeAction: "list" }, { cwd: dir }), /\[main\]$/, "worktree list 正常输出")
+    writeFileSync(join(dir, "f.txt"), "x\n")
+    assert.equal(execFileSync("git", ["status", "--porcelain"], { cwd: dir, encoding: "utf8" }).replace(/\r/g, "").trim(), "?? f.txt", "同刻 bash 基线")
+    assert.match(await gitTool.execute({ action: "status" }, { cwd: dir }), /Untracked \(1\):\nf\.txt/, "A8：与 porcelain 同一条目")
+  })
+})
+
 // ─── #61 / #63 / #96 执行器缝（exec-run 单点）────────────────────────────────────
 
-test("#61 执行器缝（linter）：检查器命令全经注入执行器；缺省 ⇒ 现行为", async () => {
+slow("#61 执行器缝（linter）：检查器命令全经注入执行器；缺省 ⇒ 现行为", async () => {
   await withTempDir(async (dir) => {
     writeFileSync(join(dir, "ok.mjs"), "export const a = 1\n")
     writeFileSync(join(dir, "x.py"), "print(1)\n")
@@ -160,7 +193,7 @@ test("#66 lsp 宿主缝：handle 非 null ⇒ 以其为结果；null / 缺省 �
 
 // ─── #69 edit：回执形态 ────────────────────────────────────────────────────────
 
-test("#69 回执形态缝：注入 ⇒ 单形态与数组形态均以其为准；缺省 ⇒ CLI 回执", async () => {
+slow("#69 回执形态缝：注入 ⇒ 单形态与数组形态均以其为准；缺省 ⇒ CLI 回执", async () => {
   await withTempDir(async (dir) => {
     const ctx = { cwd: dir }
     writeFileSync(join(dir, "e.txt"), "k1\nk2\n")

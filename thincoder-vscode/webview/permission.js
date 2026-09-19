@@ -86,6 +86,9 @@ export function showPermissionRequest(m) {
 export function showBatchPermissionRequest(m) {
   const el = document.createElement("div")
   el.className = "permission-prompt"
+  // F-W13（D-W15）：合并卡同携族键 promptId（与逐项卡同族——同一移除选择器
+  // `.permission-prompt[data-prompt-id]`；host 释放 permissionWithdrawn 按 id 精确移除）
+  if (m.promptId != null) el.dataset.promptId = String(m.promptId)
   el.setAttribute("role", "alert")
   const names = (m.tools ?? []).map((t) => escHtml(t?.name ?? "?")).join(", ")
   let html =
@@ -98,17 +101,19 @@ export function showBatchPermissionRequest(m) {
   html += '<button class="deny">' + t("perm.deny") + "</button>"
   html += "</div>"
   el.innerHTML = html
+  // F-W13：三按钮载荷同携 promptId（逐项卡 `reply` 同形——旧 host 无 id 则只发 choice）
+  const reply = (choice) => ({ type: "batchPermissionResponse", choice, ...(m.promptId != null ? { promptId: m.promptId } : {}) })
   el.querySelector(".approve-all").addEventListener("click", () => {
     el.remove()
-    vscode.postMessage({ type: "batchPermissionResponse", choice: "approveAll" })
+    vscode.postMessage(reply("approveAll"))
   })
   el.querySelector(".one-by-one").addEventListener("click", () => {
     el.remove()
-    vscode.postMessage({ type: "batchPermissionResponse", choice: "oneByOne" })
+    vscode.postMessage(reply("oneByOne"))
   })
   el.querySelector(".deny").addEventListener("click", () => {
     el.remove()
-    vscode.postMessage({ type: "batchPermissionResponse", choice: "deny" })
+    vscode.postMessage(reply("deny"))
   })
   document.getElementById("messages").appendChild(el)
   el.scrollIntoView({ behavior: "smooth" })

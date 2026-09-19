@@ -19,7 +19,7 @@ agent 需要在不打断会话的前提下查看 / 修改运行配置（模型�
 | # | 需求 | 判定句（可机器验证） |
 |---|---|---|
 | **F-ST1** | 只读动作面 | 列表 / 取值类动作为只读——主 agent 面可调（与记忆工具同分类），不需写权限（注册面 `thincoder-vscode/src/agent/setup.mjs`） |
-| **F-ST2** | 写动作 = 写共享配置 | 设值类动作写共享配置（`thincoder-vscode/src/config-io.mjs`）+ 热应用到 live 配置（`thincoder-vscode/src/agent-tools/settings.mjs`）；**热应用语义**：回合边界读取的键（maxTurns / autoThink 等）下回合生效、会话内持续读取的键即时、重启不丢（写盘） |
+| **F-ST2** | 写动作 = 写共享配置 | 设值类动作写共享配置（`thincoder-vscode/src/config-io.mjs`）+ 热应用到 live 配置（`thincoder-core/agent-tools/settings.mjs`）；**热应用语义**：回合边界读取的键（maxTurns / autoThink 等）下回合生效、会话内持续读取的键即时、重启不丢（写盘） |
 | **F-ST7** | 值解析两端统一（**用户裁定 ① 去引号**——2026-09-11） | `JSON.parse` 成功且为顶层标量 / 对象 / 数组 → 解析结果；**解析成功但结果为字符串 → 解析值（去引号）**；parse 失败 → 字符串字面——两端同一语义；不可消费形态两端同拒、磁盘零变化 |
 | **F-ST3** | 已知键校验 | 非空叶子由默认值表（agent / traces 默认集）**派生**——按规范全路径寻址，不手写镜像键表 |
 | **F-ST4** | 形状护栏 | 不可消费形态明确拒绝（不落盘、不热应用）；空叶子与跨面 / 同族键走显式形状表；**无静默判据**（F-S1.8）：对每个受约束键断言「接受集 == 应用侧可消费集 ∧ 拒绝集 == 应用侧不可消费集」（表驱动集合相等，判据取自应用侧读取器本体——`thincoder-core/config.mjs:277` · `thincoder-cli/src/cli/make-agent.mjs:150` · `thincoder-core/agent-tools/subagent-spawn.mjs:92` · `thincoder-core/tools/bash.mjs:131` · `thincoder-core/model-ref.mjs:25-36` 形态面），被拒值的写入尝试不改变磁盘与内存 |
@@ -40,8 +40,8 @@ agent 需要在不打断会话的前提下查看 / 修改运行配置（模型�
 ## 4. 范围边界（不做）
 
 - 不做凭据管理通道（密钥仍由用户 / 配置面维护——工具只在读面遮蔽）。
-- ~~不做配置项自由添加（已知键之外一律拒绝）~~——**收正（2026-09-15 CLI 尾部真批）**：该句与双端实装相反——未知键 = **原样写入**
-  （全量域：已知节内任意嵌套允许；证据 = `thincoder-core/agent-tools/settings.mjs:128` · `thincoder-vscode/src/agent-tools/settings.mjs:135`
+- **未知键 = 原样写入**
+  （全量域：已知节内任意嵌套允许；证据 = `thincoder-core/agent-tools/settings.mjs:128` · `thincoder-core/agent-tools/settings.mjs:135`
   与双端工具描述「Unknown keys under a known section are stored as given」）。
 - **持久性边界**（文档级）：可写键限 **loadConfig 保留域**（顶层已知节内）——节外任意键写盘后下次启动被合并逻辑丢弃。
 - 不引入第二份配置存储（写面 = 共享配置文件单一权威）。
@@ -58,7 +58,7 @@ agent 需要在不打断会话的前提下查看 / 修改运行配置（模型�
 
 | 旧档位置 | 内容 | 何故不并 |
 |---|---|---|
-| 旧档头注「定位」（实现 `src/agent-tools/settings.mjs`（261 行）· 注册面 · 写盘面 · 部分承载 = `docs/design/TOOLS.md` §5） | 时点行数注与迁移前路径 | 时点坐标——现行坐标入各 F 判定句 |
+| 旧档头注「定位」（实现 `src/agent-tools/settings.mjs`（261 行）· 注册面 · 写盘面 · 部分承载 = `docs/design/TOOLS.md` §5） | 时点行数注与迁移前路径 | 时点坐标——现行坐标入各 F 判定句 （迁移期引文——档已迁核） |
 | 旧档「跨端：与 CLI 仓同名需求档语义同源（同源形状表）」注 | 跨仓对位句 | 语义同源已由正文承载——不另立对位节 |
 | 旧档变更记录（2026-09-12 建档行） | 建档流水 | 本档自有变更记录 |
 
@@ -78,10 +78,6 @@ agent 需要在不打断会话的前提下查看 / 修改运行配置（模型�
 | 旧档「部分承载 = `docs/design/TOOLS.md` §5」指针 | 跨档承载句 | 归 `docs/core/design/TOOLS.md`（本档只留设计侧指针） |
 | 「机制在位无档补建」建档批注 | 建档批序 | 一次性材料——归批次档 |
 | CLI 侧同名需求档未迁面 | CLI 产品需求正文 | **已并入（2026-09-15 CLI 尾部真批）**——缺口入 §2–§4，(d) 类入 §5.1；**§4 错误边界行已按双端实装收正**（详见变更记录） |
-
-## 6. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **约 90 行**（as-of 2026-09-15 CLI 尾部真批并入后实核）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 

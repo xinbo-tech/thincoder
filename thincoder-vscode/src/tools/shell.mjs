@@ -249,7 +249,27 @@ export const bashTool = {
           return
         }
         if (error && error.killed) {
-          finish(`(killed — timeout ${timeout || BASH_TIMEOUT_MS}ms)`)
+          // 超时形态收正（2026-09-18 工具失败判据同族残项批）：判据族认 `killed: ` 冒号形
+          // （既有成员——本档背景/exit 面 `killed: <signal>` 已是冒号形）；旧破折号形
+          // `(killed — timeout …)` 判据不认 ⇒ 卡读绿 + 折叠，本批收正。
+          // （终端可见路同族形 `:85` 无测试 harness ⇒ 本批登记不修——批档 §2.8 #8 ①。）
+          finish(`(killed: timeout ${timeout || BASH_TIMEOUT_MS}ms)`)
+          return
+        }
+        // 退出码槽只接受数字（设计 §4.3「状态位族三成员」）：非数字 `error.code` 不许塞进退出码槽。
+        if (error && typeof error.code !== "number") {
+          // spawn 失败（errno 字符串 code ∧ 进程未启动 = `child.pid === undefined`）⇒ 无退出码，
+          // 尾附状态位 `(spawn failed)` + 诊断行 `Command failed: <errno>`（诊断面不入判据——
+          // 模型 / 用户仍得 errno）；否则（pid 已定义）= 输出超容
+          // （ERR_CHILD_PROCESS_STDIO_MAXBUFFER）⇒ `(killed: output limit exceeded)`。
+          const spawnFailed = child.pid === undefined
+          const out = [
+            spawnFailed ? `Command failed: ${error.message}` : "",
+            stdout ? `[stdout]:\n${stdout}` : "",
+            stderr ? `[stderr]:\n${stderr}` : "",
+            spawnFailed ? "(spawn failed)" : "(killed: output limit exceeded)",
+          ].filter(Boolean).join("\n")
+          finish(out)
           return
         }
         const out = [

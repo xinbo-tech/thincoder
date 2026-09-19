@@ -6,8 +6,8 @@
  * 写入又与用户随后的保存互相竞写（split-brain 数据丢失）。核内原先写盘直调
  * `node:fs/promises`、散在 5 个档的 8 个写点上 ⇒ **没有可注入的一跳** ⇒ 端侧接核后会
  * 丢掉编辑器径。本模块就是那一跳：核内**工具面的 8 个编辑写点**全改调 `writeThroughPath`
- * （模型面直写 `agent-tools/batch-segment.mjs` = 设计登记的 S2 前置门 · `tools/checklist-sync.mjs`
- * = 已登记豁免——两者不在本缝覆盖面；口径与 `CORE-UNIFICATION.md` §2.13.5 落地收正同源）。
+ * （模型面直写 `agent-tools/batch-segment.mjs` = 设计登记的 S2 前置门——不在本缝覆盖面；
+ * 口径与 `CORE-UNIFICATION.md` §2.13.5 落地收正同源）。
  *
  * 默认径 = CLI 语义（**零行为变**）：`writeFile` + 记账。端侧
  * `configureWritePath({ openDoc, applyEdit, isDirty })` 覆盖 ⇒ 编辑器径；**缺省不覆盖**。

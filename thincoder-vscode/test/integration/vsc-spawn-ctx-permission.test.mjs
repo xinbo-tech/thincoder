@@ -15,7 +15,7 @@
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync,  existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
@@ -34,6 +34,7 @@ let cfgDir
 
 before(() => {
   work = mkdtempSync(join(tmpdir(), "tc-spawn-ctx-"))
+  mkdirSync(join(work, ".git"), { recursive: true }) // 项目根判据（.git 仓根——2026-09-17）
   cfgDir = mkdtempSync(join(tmpdir(), "tc-spawn-ctx-cfg-"))
   const cfgPath = join(cfgDir, "config.json")
   writeFileSync(cfgPath, JSON.stringify({ providers: [] }) + "\n", "utf8")
@@ -202,6 +203,7 @@ test("T7 全链（正常 · 手动）：驱真 spawn（coder）→ 出卡（owne
   ])
   try {
     const box = mkdtempSync(join(work, "t7-"))
+    mkdirSync(join(box, ".git"), { recursive: true }) // 项目根判据（.git 仓根——2026-09-17）
     const getAuto = () => false
     const { run, panel, callbacks } = await hostRunWithCards({ provider: providerFor(llm), getAuto, cwd: box })
     const calls0 = llm.calls
@@ -223,6 +225,7 @@ test("T7b 全链（正常 · AUTO）：AUTO 档零卡直通 → 文件落地 + �
   ])
   try {
     const box = mkdtempSync(join(work, "t7b-"))
+    mkdirSync(join(box, ".git"), { recursive: true }) // 项目根判据（.git 仓根——2026-09-17）
     const getAuto = () => true
     const { run, panel, callbacks } = await hostRunWithCards({ provider: providerFor(llm), getAuto, cwd: box })
     await driveCards(panel, driveParentSpawn({ run, callbacks, cwd: box, getAuto }), () => true)
@@ -240,6 +243,7 @@ test("T8 全链（错误 · deny）：卡出 → deny → 子下一请求体含�
   ])
   try {
     const box = mkdtempSync(join(work, "t8-"))
+    mkdirSync(join(box, ".git"), { recursive: true }) // 项目根判据（.git 仓根——2026-09-17）
     const getAuto = () => false
     const { run, panel, callbacks } = await hostRunWithCards({ provider: providerFor(llm), getAuto, cwd: box })
     const calls0 = llm.calls
@@ -259,6 +263,7 @@ test("T9 结构（透传 pin）：toolCtx.onPermissionRequest === callbacks.onPe
   const llm = await mockLLM([{ content: "noop" }])
   try {
     const box = mkdtempSync(join(work, "t9-"))
+    mkdirSync(join(box, ".git"), { recursive: true }) // 项目根判据（.git 仓根——2026-09-17）
     const getAuto = () => false
     const { run, callbacks } = await hostRunWithCards({ provider: providerFor(llm), getAuto, cwd: box })
     let captured = null

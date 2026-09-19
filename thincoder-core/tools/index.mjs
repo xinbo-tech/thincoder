@@ -8,7 +8,6 @@ import { globTool, grepTool, lsTool } from "./search.mjs";
 import { websearchTool, fetchTool } from "./web.mjs";
 import { gitTool } from "./git.mjs";
 import { questionTool } from "./question.mjs";
-import { checklistTool } from "./checklist.mjs";
 import { lintTool } from "./linter.mjs";
 import { lspTool } from "./lsp.mjs";
 import { executeTool } from "./execute.mjs";
@@ -22,7 +21,7 @@ export const builtinTools = [
   bashTool, globTool, grepTool,
   websearchTool, lsTool, fetchTool, deleteTool,
   gitTool, questionTool,
-  checklistTool, lintTool, lspTool, executeTool,
+  lintTool, lspTool, executeTool,
   fileOpsTool, processTool, getCurrentTimeTool, waitForTool,
   treeTool,
 ];
@@ -32,7 +31,7 @@ export {
   readImageTool, bashTool, globTool, grepTool,
   websearchTool, lsTool, fetchTool, deleteTool,
   gitTool, questionTool,
-  checklistTool, lintTool, lspTool, executeTool,
+  lintTool, lspTool, executeTool,
   fileOpsTool, processTool, getCurrentTimeTool, waitForTool,
   treeTool,
 };
@@ -59,6 +58,7 @@ export async function assembleBuiltinTools({ memory, cwd, projectDir = null, aut
   const { repoOutlineTool } = await import("./repomap.mjs");
   const { settingsTool } = await import("../agent-tools/settings.mjs");
   const { peerInstancesTool } = await import("../peer-instances.mjs");
+  const { ledgerQueryTool, ledgerCountTool } = await import("../ledger.mjs"); // 动态 import（ledger 链静态达 node:sqlite——W8 契约②）
   const imageOk = Boolean(specForModel(model)?.multimodal);
   return [
     ...builtinTools,
@@ -69,5 +69,8 @@ export async function assembleBuiltinTools({ memory, cwd, projectDir = null, aut
     repoOutlineTool(memory.db, cwd),
     settingsTool(),
     peerInstancesTool,
+    // 台账查询命令族（M2 设计 §2.2 命令面接线——查询命令全角色面；写命令住 family-tools depthOnly 分支）
+    ledgerQueryTool,
+    ledgerCountTool,
   ];
 }

@@ -20,6 +20,7 @@ import {
 import { runWithContinue, TURN_CAP_MARK } from "../agent/spawn-child.mjs"
 import { pushReal } from "../context.mjs"
 import { offloadToolResult } from "../agent/helpers.mjs"
+import { logEvent } from "../log.mjs"
 import { digestBudgetOver, persistOverflowReport } from "./digest-budget.mjs"
 // 群 B 批 B5（§22 D-DG4）：预算单源迁出（digest-budget.mjs）——原处 re-export 保测试
 // 导入面零改（DIGEST_INJECT_BUDGET / _setDigestOffloadDirForTest）。
@@ -30,9 +31,9 @@ import {
 // §11.2 (R13): advisor-pool cancel fallback + mutation logging for merged
 // code（lazy function-level cycle——advisor-async → async-settle → scheduler →
 // 本模块——全函数级绑定无求值期依赖，环安全）。
-import { cancelAsyncAdvisor, noteMutations } from "./advisor-async.mjs"
+import { cancelAsyncAdvisor, noteMutations, refreshAdvisorQueuedTokens } from "./advisor-async.mjs"
 // #94（VSC 侧并入——异步机械族）：池读取载体吸收 + 墓碑写入单点（原 inline 写收口）。
-import { getAsyncPool, writeTombstone } from "./async-settle.mjs"
+import { getAsyncPool, tombstoneOf, writeTombstone } from "./async-settle.mjs"
 
 // agent-tools 共享：并行子代理的审批/继续弹窗经 owner 上命名 promise 链串行——
 // 永不叠弹窗（返回链供调用方 .then 续接）。
@@ -196,6 +197,9 @@ export function cancelAsyncSubagent(agent, id) {
     // §20 D-SD5 终态墓碑：queued 取消（无 settle 事件——出队即终态）——依赖者经
     // 墓碑查得 cancelled 分支（round1 #4——cancel 返回时即重估标注）。
     writeTombstone(agent, key, "cancelled", entry.role)
+    // af 批 F-6（§6.11 日志面）：queued 取消不经 settle ⇒ 出队点直记一条 ev:cancelled
+    // （与 running 面经 settle 记的事件名 / 字段同形；写点互斥 ⇒ 同次取消恰一条）。
+    logEvent("ev:cancelled", { id: `${entry.role}#${key}` })
     entry._settle?.()
     return { id: key, status: "cancelled", was: "queued" }
   }
@@ -227,6 +231,9 @@ export function cancelSyncChild(agent, key) {
   }
   entry.stopped = true
   entry.ctrl.abort({ abortTrigger: "cancel", abortDetail: "sync-child-cancel" })
+  // af 批 F-12（§6.7.2「日志面」）：定向中止**提交点**直记一条——与异步取消族同事件名 /
+  // 同字段形（`id` = registry 键 `role#N`）；error 两分支零记录（无取消发生）。
+  logEvent("ev:cancelled", { id: k })
   return { id: k, status: "cancelled" }
 }
 
@@ -237,11 +244,11 @@ export function cancelSyncChild(agent, key) {
  *  （AUTO 档依赖者自动启动/槽位竞态释放）。被取消条目自身发 ⟦ev⟧cancelled 移除等待块。 */
 export function executeCancelAction(args, ctx) {
   if ((ctx.depth ?? 0) > 0) {
-    return JSON.stringify({ status: "error", error: "cancel is only available at depth 0 — a child agent has no async pool of its own (AGENT-LOOP.md §19.5 D-M6)" })
+    return JSON.stringify({ status: "error", error: "cancel is only available at depth 0 — a child agent has no async pool of its own (AGENT-LOOP-SUBAGENT.md §6.7.2)" })
   }
   const id = args?.id
   if (id === undefined || id === null || String(id) === "") {
-    return JSON.stringify({ status: "error", error: "cancel requires the id of the async subagent to stop — omitting it would mean a blanket cancel (Ctrl+C stops everything; AGENT-LOOP.md §19.5 D-M6)" })
+    return JSON.stringify({ status: "error", error: "cancel requires the id of the async subagent to stop — omitting it would mean a blanket cancel (Ctrl+C stops everything; AGENT-LOOP-SUBAGENT.md §6.7.2)" })
   }
   const key = String(id)
   const agent = ctx.agent
@@ -249,8 +256,20 @@ export function executeCancelAction(args, ctx) {
   // §11.2 (②-6b): an id that names no async SUBAGENT falls through to the
   // async ADVISOR pool (the background reviews share the cancel surface — ⏹ on
   // an advisor block / action:'cancel' with an advisor id abort that review).
-  if (!entry && getAsyncPool(agent, "advisor")?.has(key)) {
-    return JSON.stringify(cancelAsyncAdvisor(agent, key))
+  // af 批 fix 轮（T-AF2 终态确认面 · §6.11 第 3 条「幂等」）：已出队取消的 advisor id
+  //（cancelled 墓碑在册、池内已无）同落本分支——`cancelAsyncAdvisor` 返回同一确认
+  //（零副作用）；role 守卫 ⇒ 子代理族墓碑不在此列（子代理重复取消文案零改）。
+  const advisorTomb = tombstoneOf(agent, key)
+  const advisorCancelled = advisorTomb?.status === "cancelled" && advisorTomb.role === "advisor"
+  if (!entry && (getAsyncPool(agent, "advisor")?.has(key) || advisorCancelled)) {
+    // §6.11 第 3 条「工具路径收口」（F-3②）：本路径**不得早退**跳过 TUI 维护——queued 命中时把本层
+    // 通道传进核 queued 分支（`⟦ev⟧cancelled` 由核单点发射，**本路径不另发**）+ `refreshAdvisorQueuedTokens`
+    // 余位重编号刷新；不补位（槽从未被占）、不发 `⟦ev⟧stopped`。
+    const advisorResult = cancelAsyncAdvisor(agent, key, ctx.callbacks?.onToken)
+    if (advisorResult.status === "cancelled" && advisorResult.was === "queued") {
+      refreshAdvisorQueuedTokens(agent, ctx.callbacks?.onToken)
+    }
+    return JSON.stringify(advisorResult)
   }
   const wasQueued = entry?.status === "queued"
   // 依赖者快照（出队前——用于 AUTO 分支判定"是否有依赖者被本次取消波及"；note 组装在

@@ -35,6 +35,8 @@ import { pushReal } from "../context.mjs"
 import { escapeXml } from "../agent/helpers.mjs"
 import { TURN_CAP_MARK } from "../agent/spawn-child.mjs"
 import { dependentLabels, maybeRefillAsync, refreshQueuedTokens } from "./subagent-scheduler.mjs"
+// ED-4（2026-09-16）：advisor 排队补位——同 scheduler ↔ 本模块惰性环（函数声明提升——无求值期依赖）
+import { refillAdvisorQueue } from "./advisor-async.mjs"
 
 // ─── #94 载体吸收（VSC 侧并入——AGENT-LOOP.md §2.3 载体五字段）───────────────
 
@@ -64,10 +66,19 @@ export function writeTombstoneTo(holder, id, status, role) {
   holder._asyncTombstones.set(String(id), { status, role })
 }
 
-/** parent 形态墓碑写入（载体吸收：父对象无 Map 而 history 有 ⇒ 借用同一 Map——不另建分叉）。 */
+/** parent 形态墓碑写入（载体吸收：父对象无 Map 而 history 有 ⇒ 借用同一 Map——不另建分叉）。
+ *  #43-② 借用规则扩张（设计 §6.25 ③）：父无自有 Map 且载体无 ⇒ **主容器落父字段**（今日落点——
+ *  CLI 零回归；`history` 数组会被整体替换、非稳定载体）+ **载体侧写同一容器**——合成 parent 形
+ *  （VSC ⏹ 取消路径）跨调用存活。 */
 export function writeTombstone(parent, id, status, role) {
-  const existing = carrierField(parent, "_asyncTombstones")
-  if (!(parent?._asyncTombstones instanceof Map) && existing instanceof Map) parent._asyncTombstones = existing
+  if (!(parent?._asyncTombstones instanceof Map)) {
+    const existing = carrierField(parent, "_asyncTombstones")
+    if (existing instanceof Map) parent._asyncTombstones = existing          // 借用（既有）
+    else if (parent?.history && typeof parent.history === "object") {
+      parent._asyncTombstones = new Map()                                    // 主容器（父字段——今日落点）
+      parent.history._asyncTombstones = parent._asyncTombstones              // 载体别名（合成 parent 跨调用存活）
+    }
+  }
   writeTombstoneTo(parent, id, status, role)
 }
 
@@ -170,8 +181,8 @@ export function releaseSettledEntry(entry) {
  *      单容器 + 出池 + ⟦ev⟧settled；回合内 ⟦ev⟧done 留池 done:true）；
  *   ④ 公共尾部：settleSeq 递增 + `_settle` 唤醒 waiter + 腾槽补位（subagent/escalate 族
  *      恒补——settle/cancel 释放槽 → maybeRefillAsync + refreshQueuedTokens——AGENT-LOOP.md
- *      §10 "settle/cancel 释放槽后…启动到槽满"；advisor（独立评审池——无队列）/consult
- *      （会话池）豁免）。
+ *      §10 "settle/cancel 释放槽后…启动到槽满"；advisor 经 refillAdvisorQueue 补位
+ *      （ED-4——评审池有排队语义后不再豁免）；consult（会话池）豁免）。
  * opts（设计签名 `{pool, onAccounting}` + 实现参数 ctx）：
  * - pool：条目所在池 Map（出池 delete 目标；consult 传 null——会话池无条目）。
  * - ctx：回合上下文（守卫读 ctx.signal；⟦ev⟧ 事件经 ctx.callbacks.onToken；腾槽补位
@@ -267,13 +278,22 @@ export function settleAsyncEntry(parent, entry, opts = {}) {
   // ④ 公共尾部：settleSeq 递增 + _settle 唤醒（never rejects）+ 唤醒挂起驱动 waiter
   entry._settleSeq = (parent._asyncSettleSeq = (parent._asyncSettleSeq ?? 0) + 1)
   entry._settle?.()
-  for (const w of parent._asyncWaiters?.splice(0) ?? []) { try { w() } catch { /* noop */ } }
+  wakeAsyncWaiters(parent) // §6.27.12.4 ①：挂起驱动唤醒单点（settle 尾 / 上行 ask 入队尾两处调用）
   // §20 D-SD4 释放点：settle/cancel 释放槽 + 依赖终态转移 → 补位（依赖满足者/域冲突
   // 解除者自动启动——槽 ≤4）→ 排队态面板刷新（等待块头标注随终态更新——dependency
   // cancelled / 位置前移）。subagent/escalate 族恒补（旧行为零回归——cancelled 分支
-  // 同样补位）；advisor（独立评审池——无队列）/consult（会话池）豁免。
-  if (role !== "advisor" && role !== "consult") {
+  // 同样补位）；advisor（ED-4——独立评审池的排队语义）经 refillAdvisorQueue 补位；
+  // consult（会话池）豁免。
+  if (role === "advisor") {
+    refillAdvisorQueue(parent, ctx?.callbacks?.onToken)
+  } else if (role !== "consult") {
     maybeRefillAsync(parent)
     refreshQueuedTokens(parent, ctx?.callbacks?.onToken)
   }
+}
+/** 唤醒挂起驱动单点（§6.27.12.4 ①——settle 尾 / 上行 ask 入队尾两处调用）：循环体逐字自 settle 公共尾
+ *  抽入（唯一差分 = 读径经 `carrierField` 吸收——父字段在场路径零差分 = 严格超集）；缺省 / 空 ⇒ no-op。 */
+export function wakeAsyncWaiters(parent) {
+  const list = carrierField(parent, "_asyncWaiters")
+  for (const w of list?.splice(0) ?? []) { try { w() } catch { /* noop */ } }
 }

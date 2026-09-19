@@ -24,7 +24,10 @@ export async function assembleFamilyTools({
   decorate = null,       // object   端差面：{ subagent?, consultStart?, consultStop?, settings? }
 } = {}) {
   // CORE-UNIFICATION TOOLS #83：consult 家族随统一登记册自 `../agent-tools.mjs` 取用（单一来源）
-  const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool, readHistoryTool, batchSegmentTool, consultStartTool, consultStopTool } = await import("../agent-tools.mjs")
+  const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool, readHistoryTool, batchSegmentTool, consultStartTool, consultStopTool, parentChannelTool } = await import("../agent-tools.mjs")
+  // 写命令（主 agent 专用）——动态 import 且**仅 depth===0 载入**（ledger 链静态达 node:sqlite——
+  // W8 契约②；子代理路径不注册 = 零载入——depth>0 解构得空、不引用即无副作用）
+  const { ledgerAddTool, ledgerUpdateTool, ledgerCloseTool } = depth === 0 ? await import("../ledger.mjs") : {}
 
   // withPool: decorate the consult_start description with the CURRENT candidate pool
   // so the model knows which models it can pick (CLI parity with the plugin). The
@@ -40,7 +43,7 @@ export async function assembleFamilyTools({
   // Role enum is mutually exclusive: normal mode has "coder", engineering mode has "eng-coder"/"eng-designer"
   const subagentRoles = (depth === 0 && engineering)
     ? {
-        enum: ["explore", "plan", "eng-designer", "eng-coder"],
+        enum: ["explore", "eng-designer", "eng-coder"],
         description: "The sub-agent role — see the tool description for the role capability matrix. Exact spelling required.",
         suffix: " In engineering mode, use role='eng-coder' for implementation (coder is disabled) and role='eng-designer' for writing the requirements/design documents.",
       }
@@ -96,6 +99,10 @@ export async function assembleFamilyTools({
         delete props.designToken
         delete props.designId
         delete props.batchDoc
+        // M5 F2（ENGINEERING-MODE-V2-MODULE-DELEGATION §1.2）：round 同理删除——勘察/审计
+        // 通道 role=explore 唯一，F2 门豁免 → 该字段对子通道无意义（schema 噪音会诱模型
+        // 传无关参数——同 batchDoc 删除理由）。
+        delete props.round
         const designer = engChildRole === "eng-designer"
         props.role = {
           type: "string",
@@ -132,6 +139,9 @@ export async function assembleFamilyTools({
   const depthOnly = depth === 0
     ? [decorate?.subagent ?? filteredSubagent, skillTool, goalTool, engTool, verifyTool, recentChangesTool, readHistoryTool, advisorTool,
       ...consultTools,
+      // 台账写命令（M2——仅主 agent；查询面 ledger_count 住基础集 tools/index.mjs）。
+      // fail-closed：子代理不挂载 = 写面机械不可达。
+      ledgerAddTool, ledgerUpdateTool, ledgerCloseTool,
       // 端差（decorate.settings——VSC depth-0 主 agent 面；缺省不追加）：核默认形态里
       // settings 住**基础集**（`tools/index.mjs` `assembleBuiltinTools`），端侧自持清单
       // 无该面 ⇒ 端以 decorate 补位（收敛通道 = 将来去 decorate 项即归核位）。
@@ -148,11 +158,16 @@ export async function assembleFamilyTools({
     // (it does not fire reviews) and no verify (its deliverable is documents, not code).
     // §2.20.3（第 4 批）：两分支各追加 batch_segment——目标档 = spawn 时绑定的
     // `batchDoc`（§2.20.2）；主 agent 不挂载（§1/§4/§6 走普通文档写）。
-    : engChildRole === "eng-coder" ? [advisorTool, verifyTool, batchSegmentTool(batchDoc), ...(engChildSubagent ? [engChildSubagent] : [])]
-    : engChildRole === "eng-designer" ? [batchSegmentTool(batchDoc), ...(engChildSubagent ? [engChildSubagent] : [])]
-    : role === "coder" ? [verifyTool, advisorTool]
+    // SUBAGENT-UPSTREAM-CHANNEL（AGENT-LOOP-SUBAGENT.md §6.27.4 装配接线）：子代理上行通道
+    // （`notify_parent`）随 depth>0 段**前置**——4 处携带 = eng-coder / eng-designer / coder / 兜底段
+    // （未列名 depth>0 role 落同一兜底段 ⇒ 亦装配；语义 =「depth>0 且非 consult 皆装配」）；
+    // 计数口径：`consult` 分支不入 ⇒ 「5 个插入点」读法已作废（实读 `thincoder-core/agent/family-tools.mjs:165-169`）。
+    // consult 段不入（其角色语义 = 父发起的一次性会诊，父在其 settle 前不期望中途对话）。
+    : engChildRole === "eng-coder" ? [parentChannelTool, advisorTool, verifyTool, batchSegmentTool(batchDoc), ...(engChildSubagent ? [engChildSubagent] : [])]
+    : engChildRole === "eng-designer" ? [parentChannelTool, batchSegmentTool(batchDoc), ...(engChildSubagent ? [engChildSubagent] : [])]
+    : role === "coder" ? [parentChannelTool, verifyTool, advisorTool]
     : role === "consult" ? [recentChangesTool]
-    : []
+    : [parentChannelTool]
 
   // task/plan/timer 固定段（所有面都有）：装配序 = agent.tools → 固定段 → 家族段 → extraTools
   return [taskTool, planTool, timerTool, ...depthOnly]

@@ -5,6 +5,7 @@ import { readFile, stat } from "node:fs/promises"
 import { join, relative } from "node:path"
 import { embed, cosine, toBlob, fromBlob } from "../embedding.mjs"
 import { scanVectors, createTopK } from "./scan.mjs"
+import { normalizeOrigin } from "./origin.mjs"
 import { CODE_EXTS, DOC_EXTS, MAX_CODE_FILE_BYTES, MAX_DOC_FILE_BYTES } from "./schema.mjs"
 import { buildFtsQuery, ensureEmbeddings, EMBED_TEXT_MAX_LEN } from "./core.mjs"
 import { detectLanguage, _upsertCodeFile, _upsertDocFile, yieldTick } from "./code-index.mjs"
@@ -37,6 +38,7 @@ export function indexExtensions(dir) {
  * Returns { updated, removed, skipped } or null (git unavailable).
  */
 export async function gitSync(memory, dir, { onProgress } = {}) {
+  const origin = normalizeOrigin(dir) // §6.11 写缝归一（git / 文件 I/O 用原样 dir；库面 origin 一律归一值）
   const { execFile: _execFile } = await import("node:child_process")
   const { code: codeExts, doc: docExts } = indexExtensions(dir)
   const gitRun = (args) => new Promise((resolve, reject) => {
@@ -88,18 +90,18 @@ export async function gitSync(memory, dir, { onProgress } = {}) {
         const lang = detectLanguage(abs)
         let mtimeMs = 0
         try { mtimeMs = Math.floor((await stat(abs)).mtimeMs) } catch { /* new file */ }
-        _upsertCodeFile(memory, dir, rel, lines, lang, mtimeMs)
+        _upsertCodeFile(memory, origin, rel, lines, lang, mtimeMs)
       } else {
         let mtimeMs = 0
         try { mtimeMs = Math.floor((await stat(abs)).mtimeMs) } catch { /* new file */ }
-        _upsertDocFile(memory, dir, rel, lines, mtimeMs)
+        _upsertDocFile(memory, origin, rel, lines, mtimeMs)
       }
       updated++
     } catch (e) {
       const isDeleted = e.code === "ENOENT"
       if (isDeleted) {
-        if (codeExts.has(ext)) memory.db.prepare(`DELETE FROM code_chunks WHERE origin = ? AND path = ?`).run(dir, rel)
-        else memory.db.prepare(`DELETE FROM doc_chunks WHERE origin = ? AND path = ?`).run(dir, rel)
+        if (codeExts.has(ext)) memory.db.prepare(`DELETE FROM code_chunks WHERE origin = ? AND path = ?`).run(origin, rel)
+        else memory.db.prepare(`DELETE FROM doc_chunks WHERE origin = ? AND path = ?`).run(origin, rel)
         removed++
       } else {
         failed++
@@ -188,6 +190,7 @@ export async function listProjectFiles(dir, exts, { maxFiles } = {}) {
  * Incremental by mtime — only rebuilds chunks for files that have changed.
  */
 export async function codeSync(memory, dir, { onProgress } = {}) {
+  const origin = normalizeOrigin(dir) // §6.11 写缝归一（遍历/git I/O 用原样 dir；库面 origin 一律归一值）
   const { code: exts } = indexExtensions(dir)
   const { entries, unlisted } = await listProjectFiles(dir, exts)
   const files = [] // { abs, rel, mtimeMs }
@@ -200,7 +203,7 @@ export async function codeSync(memory, dir, { onProgress } = {}) {
   }
 
   const indexed = new Map(
-    memory.db.prepare(`SELECT path, mtime_ms FROM code_chunks WHERE origin = ?`).all(dir).map((r) => [r.path, r.mtime_ms])
+    memory.db.prepare(`SELECT path, mtime_ms FROM code_chunks WHERE origin = ?`).all(origin).map((r) => [r.path, r.mtime_ms])
   )
   const seen = new Set()
 
@@ -221,7 +224,7 @@ export async function codeSync(memory, dir, { onProgress } = {}) {
       const text = await readFile(abs, "utf8")
       const lines = text.split("\n")
       const lang = detectLanguage(abs)
-      _upsertCodeFile(memory, dir, rel, lines, lang, mtimeMs)
+      _upsertCodeFile(memory, origin, rel, lines, lang, mtimeMs)
       updated++
     } catch (e) {
       failed++
@@ -236,7 +239,7 @@ export async function codeSync(memory, dir, { onProgress } = {}) {
 
   for (const stale of indexed.keys()) {
     if (!seen.has(stale)) {
-      memory.db.prepare(`DELETE FROM code_chunks WHERE origin = ? AND path = ?`).run(dir, stale)
+      memory.db.prepare(`DELETE FROM code_chunks WHERE origin = ? AND path = ?`).run(origin, stale)
       removed++
     }
   }
@@ -271,9 +274,11 @@ export async function codeSearch(memory, query, { limit = 5 } = {}) {
   const ftsQuery = buildFtsQuery(query)
   if (!ftsQuery && !memory.embedder) return []
 
-  const ftsOriginFilter = memory.codeOrigin ? `AND c.origin = ?` : ""
-  const vecOriginFilter = memory.codeOrigin ? `AND origin = ?` : ""
-  const originParams = memory.codeOrigin ? [memory.codeOrigin] : []
+  // §6.11 读缝归一（单点取名——函数体内一律用归一值）
+  const codeOrigin = normalizeOrigin(memory.codeOrigin)
+  const ftsOriginFilter = codeOrigin ? `AND c.origin = ?` : ""
+  const vecOriginFilter = codeOrigin ? `AND origin = ?` : ""
+  const originParams = codeOrigin ? [codeOrigin] : []
 
   const ftsList = ftsQuery ? memory.db.prepare(`
     SELECT c.rowid, c.path, c.language, c.symbol_name, c.content, c.line_start, c.line_end, bm25(code_chunks_fts) AS rank
@@ -294,8 +299,13 @@ export async function codeSearch(memory, query, { limit = 5 } = {}) {
     return ftsList.slice(0, limit)
   }
   // TUI-OOM-ROOTCAUSE（MEMORY.md §10.3）：分块扫描 + 有界 top-K（原全表 .all()——峰值 = 块 + K）
+  // TUI 假死批（§6.10 修法 A1/A2）：游标 = PK 去等值过滤前缀列（有 origin 过滤 ⇒ 2 元组；
+  // 无过滤 ⇒ 全 PK）；scanVectors = async（让出）。SELECT 须携键列（游标值源）。
+  const cursorKey = codeOrigin ? ["path", "line_start"] : ["origin", "path", "line_start"]
+  const keyCols = cursorKey.join(", ")
   const top = createTopK(Math.max(limit * 4, 20))
-  scanVectors(memory.db, `SELECT rowid, embedding FROM code_chunks WHERE embedding IS NOT NULL ${vecOriginFilter}`, originParams, {
+  await scanVectors(memory.db, `SELECT rowid, ${keyCols}, embedding FROM code_chunks WHERE embedding IS NOT NULL ${vecOriginFilter}`, originParams, {
+    cursorKey,
     onRow: (r) => top.push({ id: r.rowid, rowid: r.rowid, score: cosine(qvec, fromBlob(r.embedding)) }),
   })
   const vecList = top.list().map((c) => ({ rowid: c.id, score: c.score }))
@@ -379,6 +389,7 @@ export function codeSearchTool(memory) {
  * Single-file incremental reindex: called after write/edit/delete, only rebuilds this one path.
  */
 export async function reindexFile(memory, cwd, absPath) {
+  const origin = normalizeOrigin(cwd) // §6.11 写缝归一（文件 I/O 用原样 cwd；库面 origin 一律归一值）
   const ext = extensionOf(absPath)
   const rel = relative(cwd, absPath).replaceAll("\\", "/")
   if (rel === ".." || rel.startsWith("../")) return
@@ -394,8 +405,8 @@ export async function reindexFile(memory, cwd, absPath) {
 
   let text
   try { text = await readFile(absPath, "utf8") } catch {
-    if (codeExts.has(ext)) memory.db.prepare(`DELETE FROM code_chunks WHERE origin = ? AND path = ?`).run(cwd, rel)
-    else if (docExts.has(ext)) memory.db.prepare(`DELETE FROM doc_chunks WHERE origin = ? AND path = ?`).run(cwd, rel)
+    if (codeExts.has(ext)) memory.db.prepare(`DELETE FROM code_chunks WHERE origin = ? AND path = ?`).run(origin, rel)
+    else if (docExts.has(ext)) memory.db.prepare(`DELETE FROM doc_chunks WHERE origin = ? AND path = ?`).run(origin, rel)
     return
   }
   const lines = text.split("\n")
@@ -404,11 +415,11 @@ export async function reindexFile(memory, cwd, absPath) {
     const lang = detectLanguage(absPath)
     let mtimeMs = 0
     try { mtimeMs = Math.floor((await stat(absPath)).mtimeMs) } catch { /* new file */ }
-    _upsertCodeFile(memory, cwd, rel, lines, lang, mtimeMs)
+    _upsertCodeFile(memory, origin, rel, lines, lang, mtimeMs)
   } else if (docExts.has(ext)) {
     let mtimeMs = 0
     try { mtimeMs = Math.floor((await stat(absPath)).mtimeMs) } catch { /* new file */ }
-    _upsertDocFile(memory, cwd, rel, lines, mtimeMs)
+    _upsertDocFile(memory, origin, rel, lines, mtimeMs)
   }
   if (memory.embedder) {
     try { await ensureEmbeddings(memory) } catch { /* embedding failure is non-blocking */ }

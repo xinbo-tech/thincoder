@@ -10,9 +10,13 @@
  * expiry cleans tokens, at three points: restore filtering (session.mjs applySession) /
  * eng enter expired cleanup (below + cmd-eng ON) / spawn-gate expired rejection
  * (subagent-spawn.mjs). See docs/design/ENG-TOKEN-BINDING-TUNING.md §5/§5.1 (F-R16).
+ * #41（2026-09-18）：enter 分支改「先判后翻」——判据 = 入口决策树单源
+ * `resolveEngineeringManifest`（docs/core/design/MANIFEST.md §2.8 F2 / KD-M1-20/21）；
+ * 拒翻 ⇒ 返回原因串 + **零副作用**（模式保持 OFF）。OFF 方向与幂等 enter 零改。
  */
 import { ENG_ON_REMINDER, ENG_OFF_REMINDER } from "../agent.mjs"
 import { purgeExpiredDesignTokens } from "../token-ttl.mjs"
+import { resolveEngineeringManifest } from "../manifest.mjs"
 
 // ─── 持久化镜像 / 面板提示注入缝（#91——「写盘镜像 / 面板提示按端注入」，形态参 §2.13.5 注入缝）──
 /**
@@ -68,6 +72,16 @@ export const engTool = {
       if (ctx.agent.config.agent.engineering) {
         return "Engineering mode already active. Existing design tokens stay valid."
       }
+      // #41 先判后翻（MANIFEST.md §2.8 F2 / KD-M1-21）：判据 = 入口决策树**单源**
+      // （resolveEngineeringManifest——KD-M1-20），判据通过才写态。拒翻 ⇒ 返回原因串 +
+      // **零副作用**（不清 token / 不重置 _advisorRuns / 不入列 ENG_ON_REMINDER /
+      // 不动 _lastEngState / 不触镜像缝）；准 ⇒ 缺档格就地建档（writer:'main'）+
+      // agent.manifest ← 结果（翻转面唯一赋值点——相位行当回合起活，§2.8 F2 放行行）。
+      const r = resolveEngineeringManifest(ctx.agent.cwd ?? ctx.cwd ?? process.cwd(), { writer: "main" })
+      if (!r.ok) {
+        return `Error: cannot enter engineering mode — ${r.message} (mode unchanged)`
+      }
+      ctx.agent.manifest = r.manifest
       ctx.agent.config.agent.engineering = true
       // R16 (F-R16b ②): off→on 不重评——只清过期 token（用户裁定"打开工程模式时
       // 应该清理"），有效 token 原样保留——遍历 Map 删过期，返回文案含清理个数。

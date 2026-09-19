@@ -190,7 +190,7 @@ slow("T-TB9 翻页不无界：模拟 50 页载入 → 总量对账仍 ≤ 预算
   let guard = 0
   while (state._hasOlder && guard++ < 20) loadOlder()
   assert.equal(state._historyLoaded, msgs.length, "翻至最早（全量可见）")
-  assert.equal(accountAll(state), state._linesChars, "翻页后账目一致") // 存量注（本批实检+上抛）：loadOlder 占位行 shift 未入账（startup.mjs:170）——直算对照在此路径可差 Σ占位行；断言保持原式（批次档 §5）
+  assert.equal(accountAll(state), state._linesChars, "翻页后账目一致（占位行移除已出账——ED-3 releaseLine）")
   assert.ok(state.lines.length > 0)
   // 锚定滚动补偿不破（值域合理）
   assert.equal(Number.isFinite(state.scroll), true)
@@ -277,6 +277,40 @@ slow("U9 翻页保底：restore + 翻页到底（400 条超额窗口）→ 账�
   assert.equal(state._historyLoaded, msgs.length, "翻至最早（全量已翻）")
   assert.ok(accountCheck(state), "翻页后账目一致")
   assert.ok(state.lines.length >= Math.min(LINES_TRIM_FLOOR, msgs.length), `可见行数 ${state.lines.length} ≥ min(200, 全量)`)
+})
+
+test("U11 占位行移除出账（ED-3）：含/不含占位行 + 两次 loadOlder 重放——Σ lineChars = 账（不变式）", async () => {
+  const { restoreLines, createLoadOlder } = await import("../src/tui/startup.mjs")
+  const { pushReal } = await import("@thincoder/core/context.mjs")
+  const { releaseLine } = await import("../src/tui/display-budget.mjs")
+  // 判据 2（反证——不含占位行）：同式成立（不引入反向偏差）
+  const s1 = mkBudget(["a".repeat(10), "b".repeat(20)])
+  assert.ok(accountCheck(s1), "判据 2：不含占位行时直算 = 账")
+  // 220 条小消息（总量 ≈12K——预算内 ⇒ 恢复后占位行幸存于 lines[0]，翻页时经 shift 移除）
+  const agent = createAgent({ provider: { name: "mock", model: "m", baseURL: "http://127.0.0.1:1/v1", apiKey: "k" }, tools: [], config: { agent: {} }, cwd: process.cwd(), memory: null })
+  const msgs = Array.from({ length: 220 }, (_, i) => ({ role: i % 2 ? "assistant" : "user", content: `${i}:` + "e".repeat(60) }))
+  for (const m of msgs) pushReal(agent, m)
+  const state = mkState()
+  restoreLines(state, { history: msgs.slice(-200), total: msgs.length, base: 200 })
+  // 判据 1（含占位行）：占位行在场 + Σ lineChars = 账
+  assert.equal(state.lines[0].text.startsWith("… "), true, "判据 1 前置：头部占位在场")
+  assert.ok(accountCheck(state), "判据 1：含占位行时直算 = 账")
+  // 判据 3（重放无漂移）：两次 loadOlder 后等式仍成立（占位行 shift 出账）
+  const loadOlder = createLoadOlder({ agent, state, render: () => {} })
+  loadOlder()
+  assert.ok(accountCheck(state), "判据 3：第 1 次翻页（占位行移除出账）后直算 = 账")
+  assert.equal(state._historyLoaded, msgs.length, "首翻后全量已载")
+  assert.equal(state._hasOlder, false, "已无更早（占位行移除且不再补）")
+  loadOlder()
+  assert.ok(accountCheck(state), "判据 3：第 2 次调用（零动作）后直算 = 账")
+  // releaseLine 直驱：同额负向出账 + 钳 0（不转负）
+  const s2 = mkBudget(["abc", "defgh"])
+  const before = s2._linesChars
+  releaseLine(s2, s2.lines[1])
+  assert.equal(s2._linesChars, before - 5, "releaseLine 同额负向出账（lineChars 单口径）")
+  releaseLine(s2, s2.lines[0])
+  releaseLine(s2, s2.lines[0])
+  assert.equal(s2._linesChars, 0, "钳 0（不转负）")
 })
 
 test("AC-TB2 常量单源：各载体额度从 display-budget 导入断言（值锁）", () => {

@@ -11,11 +11,13 @@ import { readFileSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 import { setSlotAutoApprove, setSlotPlanMode } from "./session-io.mjs"
-import { providerStatus, saveProviderKey, saveCustomProvider, deleteProviderKey, pushStatus, fullStatus, agentSettings, proxySettings, shellCandidates, websearchSettings, saveMcpServer, deleteMcpServer } from "./settings.mjs"
+import { providerStatus, saveProviderKey, deleteProviderKey, pushStatus, fullStatus, endProbeWindow, agentSettings, proxySettings, shellCandidates, websearchSettings, saveMcpServer, deleteMcpServer } from "./settings.mjs"
 import { loadLocaleStrings } from "../i18n.mjs"
-import { handlePanelMessage, routeUserTurn, _cwd, setProjectFolder, clearProjectOverride } from "./panel-messages.mjs"
+import { handlePanelMessage, routeUserTurn, _cwd, setProjectFolder, clearProjectOverride, stopLiveHeartbeat } from "./panel-messages.mjs"
+import { subagentChannelSummary } from "./panel-subagent-relay.mjs"
 import { runPanelChat } from "./panel-chat.mjs"
 import { loadRaw } from "@thincoder/core/config-io.mjs"
+import { logEvent } from "@thincoder/core/log.mjs"
 import { initStopTrace } from "./stop-trace.mjs"
 import { ensureSlot, activeData, activeHistory, activeLines, saveLines, loadModelPrefs, loadSession, loadOlder, newSession, deleteSession, pushSessions, generateTitle, status as bootstrapStatus } from "./panel-session.mjs"
 import { projectInfo, pushProject, applyProjectSwitch, onProjectChanged, pickProject } from "./panel-project.mjs"
@@ -119,12 +121,19 @@ export class ChatPanel {
     }
 
     webviewView.onDidDispose(() => {
+      // F-W19（`SETTINGS.md` §2.12 ③）: view 销毁 = 探针窗口终止（撤未发重试；在途结果不再回投）。
+      // 必须在 `this._panel = null` 之前捕获 view 对象——窗口键 = 面板对象。
+      endProbeWindow(webviewView)
       this._panel = null
       // 2026-09-11 第 10 批（§5.1.4 第 1 条——跨 view 不串味）：view 销毁 → 投递闸门
       // 关闩 + 清空队列（旧 view 的待投事件不得灌进下一个 view——新 view 经 webviewReady
       // 握手重新开闩）。
       this._wvReady = false
+      // ⑥（2026-09-19）：清队留痕（`discard-dispose`——禁静默；重建面交心跳 / 就绪再断言——D-W29）
+      const discarded = Array.isArray(this._wvOutbox) ? this._wvOutbox : []
+      if (discarded.length > 0) logEvent("ev:subdeliver", { action: "discard-dispose", ch: subagentChannelSummary(discarded), n: discarded.length, wvReady: false })
       this._wvOutbox = []
+      stopLiveHeartbeat(this) // 出生自愈心跳停拍（D-W20——起于 webviewReady）
       // §11 销毁点：view 销毁 → 会话级 agent 随之销毁（面板重开经 ensurePanelAgent 重建）
       this._agent = null
       this._abortController?.abort()
@@ -200,9 +209,10 @@ export class ChatPanel {
     }
   }
 
-  /** Waiting prompts beat running; without pending prompts, fall back to turn state. */
+  /** Waiting prompts beat running; without pending prompts, fall back to turn state.
+   *  F-W13（§4.4）：waiting 判据 = 权限 / 批权限 / question 三队列；释放 ⇒ 必刷（单源 = `releasePermission`）。 */
   _refreshStatus() {
-    if (this._permissionQueue.length > 0 || this._questionQueue.length > 0) { this._setStatus("waiting"); return }
+    if (this._permissionQueue.length > 0 || this._questionQueue.length > 0 || this._batchPermissionQueue?.length > 0) { this._setStatus("waiting"); return }
     this._setStatus(this.turnBusy() ? "running" : "idle")
   }
 
@@ -246,6 +256,7 @@ export class ChatPanel {
     this._statusBar?.dispose()
     this._statusBar = null
     disposeLedgerSurface() // LEDGER-SURFACE：台账 item / 周期随面板释放（重载后 init 可重建）
+    endProbeWindow(this._panel) // F-W19（§2.12 ③）：面板 dispose = 探针窗口终止（重试链止）
     this._panel?.dispose()
   }
 
@@ -284,7 +295,6 @@ export class ChatPanel {
 
   _providerStatus() { return providerStatus() }
   async _saveProviderKey(name, key) { await saveProviderKey(name, key); this._pushStatus() }
-  async _saveCustomProvider(config) { await saveCustomProvider(config); this._pushStatus() }
   async _deleteProviderKey(name) { await deleteProviderKey(name); this._pushStatus() }
   _saveMcpServer(name, config) { return saveMcpServer(name, config) }
   _deleteMcpServer(name) { return deleteMcpServer(name) }
@@ -314,24 +324,31 @@ export class ChatPanel {
 
   /** Settings snapshot push WITHOUT the provider-model network probe (fullStatus).
    *  Used for save acknowledgements — the panel already shows what the user typed;
-   *  a full re-probe would rebuild the settings panel and drop in-progress edits. */
-  _pushSettingsLight() {
+   *  a full re-probe would rebuild the settings panel and drop in-progress edits.
+   *  **序 = 契约**（`SETTINGS.md` §2.8）：`agentSettings` 居末位——它是打开等待器的唯一
+   *  触发拍（`webview/settings.js` 的 `requestAgentSettingsThen`），末位才能保证建面时
+   *  其余快照已在位。 */
+  async _pushSettingsLight() {
     // Snapshot-only (no network probe) — but the snapshot must be COMPLETE: providerStatus
     // (per-provider proxy checkboxes revert without it) and shellCandidates WITH current
     // (the webview nulls the shell value when current is missing).
+    // F-W18（`SETTINGS.md` §2.11）：shell 候选面探测 = 异步（`await`，不阻塞宿主事件循环）——
+    // **相对序零改**：agentSettings 仍居末位（打开等待器唯一触发拍——W8-1 序契约）。
     pushStatus(this._panel)
-    this._panel?.webview.postMessage({ type: "agentSettings", settings: agentSettings(this._agentSettingsSession()) })
     this._panel?.webview.postMessage({ type: "proxySettings", settings: proxySettings() })
     this._panel?.webview.postMessage({ type: "websearchSettings", settings: websearchSettings() })
-    this._panel?.webview.postMessage({ type: "shellCandidates", candidates: shellCandidates(), current: loadRaw().shell ?? null })
+    this._panel?.webview.postMessage({ type: "shellCandidates", candidates: await shellCandidates(), current: loadRaw().shell ?? null })
+    this._panel?.webview.postMessage({ type: "agentSettings", settings: agentSettings(this._agentSettingsSession()) })
   }
 
-  _pushSettings() {
+  async _pushSettings() {
     fullStatus(this._panel)
+    // F-W18（§2.11）：候选面就绪后再发快照族（异步探测——不阻塞事件循环；相对序零改）。
+    const candidates = await shellCandidates()
     this._panel?.webview.postMessage({ type: "agentSettings", settings: agentSettings(this._agentSettingsSession()) })
     this._panel?.webview.postMessage({ type: "proxySettings", settings: proxySettings() })
     this._panel?.webview.postMessage({ type: "websearchSettings", settings: websearchSettings() })
-    this._panel?.webview.postMessage({ type: "shellCandidates", candidates: shellCandidates(), current: loadRaw().shell ?? null })
+    this._panel?.webview.postMessage({ type: "shellCandidates", candidates, current: loadRaw().shell ?? null })
     this._pushMcpStatus()
     this._pushIndexStatus()
   }
@@ -348,7 +365,9 @@ export class ChatPanel {
 
   // ─── Index (implementations in panel-index.mjs) ───
 
-  _pushIndexStatus() { return pushIndexStatus(this) }
+  /** F-W18（§2.11）：打开拍回批序首拍——async 化供调用侧 `await`（indexStatus 先落，
+   *  其后 `_pushSettingsLight` 的候选 / 快照族才发——W8-1 序契约）。 */
+  async _pushIndexStatus() { return pushIndexStatus(this) }
   async _atComplete(query, cwd, seq) { return atComplete(this, query, cwd, seq) }
   async _saveEmbeddingConfig(config) { return saveEmbeddingConfig(this, config) }
   async _maybePromptIndex() { return maybePromptIndex(this) }

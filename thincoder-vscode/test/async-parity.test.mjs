@@ -28,7 +28,7 @@ import files from "./files.mjs"
 import { subagentTool as coreSubagentTool } from "@thincoder/core/agent-tools/subagent.mjs"
 import { executeStatusAction } from "@thincoder/core/agent-tools/subagent-actions.mjs"
 import { depInfo } from "@thincoder/core/agent-tools/subagent-scheduler.mjs"
-import { tombstoneOf } from "@thincoder/core/agent-tools/async-settle.mjs"
+import { tombstoneOf, writeTombstone } from "@thincoder/core/agent-tools/async-settle.mjs"
 import { discardAbortedPool, discardAbortedAdvisors } from "../src/agent-tools/async-discard.mjs"
 import { vscSubagentFace } from "../src/agent/setup.mjs"
 import { finalizeAgentTurn } from "../src/agent/run-stages.mjs"
@@ -333,11 +333,10 @@ test("T-D8 正常/边界：status 单查四终态回显（discarded/cancelled/co
 
 // ═══ T-D9（AC-G7/F-G7）：dependsOn 停靠 ════════════════════════════════════
 
-test("T-D9 边界：墓碑 → depInfo；cancelled 依赖 → depc 停靠；discarded 差异登记（核判 ok——§5 未决）", async () => {
-  // ⚠ W13 差异登记（核↔端语义面，已登记待裁）：核 `depInfo` 把未列墓碑状态（含端侧 Stop 丢弃写入的
-  // 'discarded'）判为 ok（= 依赖已满足），端侧设计 §12 C-6 原为「discarded → cancelled（depc 停靠）」——
-  // `depInfo` 消费面在核 scheduler 内（describeBlockers/queueRunnable），端装配层无法补齐 ⇒ 本档按核
-  // 语义锁定现状 + 差异入 §5 未决（待裁：核内一笔 vs 端侧承认）。
+test("T-D9 边界：墓碑 → depInfo；cancelled 依赖 → depc 停靠；discarded 归 cancelled（核端同判——W13 收口）", async () => {
+  // W13 收口（F4 批 4）：核 `depInfo` 把 'discarded' 墓碑归 cancelled 口径（`subagent-scheduler.mjs:127-128`
+  // `discarded → cancelled`），与端侧设计 §12 C-6「discarded → cancelled（depc 停靠）」同判——
+  // 原「核判 ok vs 端侧 cancelled」差异随核内一笔收口（§5 未决项撤）。
   const { agent } = mkParent({ tombstones: [["7", { status: "cancelled", role: "plan" }]] })
   assert.deepEqual(depInfo(agent, 7), { state: "cancelled", role: "plan" }, "cancelled 墓碑 → cancelled（C-6 主路径）")
   agent._asyncSubagents.set("8", { id: 8, role: "explore", status: "queued", done: false, cancelled: false, _dependsOn: ["7"] })
@@ -346,10 +345,10 @@ test("T-D9 边界：墓碑 → depInfo；cancelled 依赖 → depc 停靠；disc
   assert.equal(out.status, "queued", "依赖者留在 queued（等父决定——不静默放行）")
   assert.equal(out.waiting, "dependency-cancelled")
   assert.match(out.reason, /dependency cancelled: plan#7/, "原因指向已取消的依赖")
-  // 核语义现状（差异面——见上注）：discarded 墓碑在核 depInfo 判 ok（非 depc）
+  // 核端同判（收口面——见上注）：discarded 墓碑在核 depInfo 归 cancelled（F4 批 4）
   const { agent: agent2 } = mkParent({ tombstones: [["7", { status: "discarded", role: "plan" }]] })
-  assert.deepEqual(depInfo(agent2, 7), { state: "ok", role: "plan" }, "核现状：discarded → ok（未列状态不虚构语义——差异已登记）")
-  assert.deepEqual(depInfo(agent2, "7"), { state: "ok", role: "plan" }, "字符串 id 同判")
+  assert.deepEqual(depInfo(agent2, 7), { state: "cancelled", role: "plan" }, "核现状：discarded → cancelled（与端侧 C-6 同判——F4 批 4）")
+  assert.deepEqual(depInfo(agent2, "7"), { state: "cancelled", role: "plan" }, "字符串 id 同判")
 })
 
 // ═══ T-D10（现状锁——AC-N1/N2 覆盖）：症状 1 不重开 ═════════════════════════
@@ -452,4 +451,35 @@ test("T-D13 正常：丢弃后的 advisor id 经 subagent status 回显 discarde
 
 test("AC-N2：本档已登记 test/files.mjs（不登记不跑）", () => {
   assert.ok(files.includes("test/async-parity.test.mjs"), "本档已登记 test/files.mjs")
+})
+
+// ═══ #43-② V2（绑定腿）+ #46 U2（对侧回归）═════════════════════════════════
+
+test("V2/U2（#43-② 绑定腿 + #46 对侧）：合成 parent 写 ⇒ 绑定形 agent 读命中；status depth 0 零回归 / depth>0 显式拒", () => {
+  // V2（绑定腿）：合成 parent = { history: H }（无自有 Map）写墓碑 ⇒ 经绑定形 agent 读。
+  // 绑定形 = 生产同形（`src/agent.mjs:147-153` Object.defineProperty get/set——闭包绑 `:140`
+  // 分支的 history 形参）；合成 parent 与绑定 agent 携**同一数组**（`extension/panel-messages.mjs:234-242`
+  // 携 `lines.history`）。真实装配不可直驱 ⇒ 该坐标即判据（A5b）。
+  const H = []
+  const synthetic = { history: H } // ⏹ 取消路径的合成 parent（无自有 _asyncTombstones）
+  writeTombstone(synthetic, 5, "cancelled", "eng-coder")
+  const bound = { history: H }
+  Object.defineProperty(bound, "_asyncTombstones", {
+    configurable: true,
+    get() { return H._asyncTombstones },
+    set(v) { H._asyncTombstones = v },
+  })
+  assert.deepEqual(tombstoneOf(bound, 5), { status: "cancelled", role: "eng-coder" }, "访问器腿命中（今日 miss——容器落 per-call 对象）")
+  assert.equal(bound._asyncTombstones, synthetic._asyncTombstones, "两腿同一容器（跨调用存活）")
+
+  // U2（对侧回归）：depth 0 / 缺省 ⇒ 现行为逐字零变；depth>0 ⇒ 同款门（门在核单点——端侧零改）
+  const { agent } = mkParent({ entries: [mkEntry({ id: 7, role: "explore" })] })
+  const d0 = JSON.parse(executeStatusAction({}, { agent, cwd: process.cwd(), depth: 0 }))
+  const dNone = JSON.parse(executeStatusAction({}, { agent, cwd: process.cwd() }))
+  assert.deepEqual(dNone, d0, "depth 缺省 ≡ 0（逐字同）")
+  assert.equal(d0.overview.running.length, 1)
+  assert.deepEqual(JSON.parse(executeStatusAction({}, { agent, cwd: process.cwd(), depth: 1 })), {
+    status: "error",
+    error: "status is only available at depth 0 — a child agent has no async pool of its own (AGENT-LOOP-SUBAGENT.md §6.7.2)",
+  }, "子代拒（同款门 + 同文案族 + 同返回形）")
 })

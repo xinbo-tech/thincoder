@@ -17,6 +17,7 @@ import { existsSync, rmSync } from "node:fs"
 import { join, relative } from "node:path"
 import { getEmbedder as getSharedEmbedder, getMemoryHandle, loadMemoryFace, memoryFor, setVSCodeEmbedder, resetEmbedder } from "../embed-config.mjs"
 import { loadEmbeddingConfig, saveEmbeddingConfig as saveEmbeddingConfigToFile } from "../embed-config.mjs"
+import { normalizeOrigin } from "@thincoder/core/memory/origin.mjs"
 import { _cwd } from "./panel-messages.mjs"
 
 /** §14 C-12#1/C-15：索引进度 → statusText（webview 状态行段——scan/index/done 三相位；
@@ -27,10 +28,13 @@ function postIndexProgress(panel, p) {
 }
 
 /** 核库读数（本项目 origin）——files = code+doc 的 `COUNT(DISTINCT path)`，chunks = 行数。
- *  CLI `backgroundIndex` 同形（`tui/startup.mjs:263-289`）；本端按 origin 限定项目。 */
+ *  CLI `backgroundIndex` 同形（`tui/startup.mjs:263-289`）；本端按 origin 限定项目。
+ *  origin 键 = **归一形**（TUI 假死批 2026-09-18 · 核 `MEMORY.md` §6.11：核内写入面已归一，
+ *  本读数点按 `normalizeOrigin` 取同形键——否则 Windows 反斜杠 cwd 读不到本项目行）。 */
 function readIndexCounts(memory, cwd) {
-  const code = memory.db.prepare(`SELECT COUNT(DISTINCT path) AS files, COUNT(*) AS chunks FROM code_chunks WHERE origin = ?`).get(cwd) ?? {}
-  const doc = memory.db.prepare(`SELECT COUNT(DISTINCT path) AS files, COUNT(*) AS chunks FROM doc_chunks WHERE origin = ?`).get(cwd) ?? {}
+  const origin = normalizeOrigin(cwd)
+  const code = memory.db.prepare(`SELECT COUNT(DISTINCT path) AS files, COUNT(*) AS chunks FROM code_chunks WHERE origin = ?`).get(origin) ?? {}
+  const doc = memory.db.prepare(`SELECT COUNT(DISTINCT path) AS files, COUNT(*) AS chunks FROM doc_chunks WHERE origin = ?`).get(origin) ?? {}
   return { files: (code.files ?? 0) + (doc.files ?? 0), chunks: (code.chunks ?? 0) + (doc.chunks ?? 0) }
 }
 

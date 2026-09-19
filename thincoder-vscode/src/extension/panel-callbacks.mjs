@@ -4,15 +4,16 @@
  * （25 个 onX 的 webview 桥协议——白名单字段/超时截断/压缩生命周期/子代理载荷），
  * 从 405 行回合驱动器提出后，impl 主干 = 阶段调用序列。闭包变量参数化：桥接目标
  * panel + 阶段产物（cwd/p/lines/槽位/autoTurn）作 deps——verbatim 移动，语义零变。
+ * 四档结构拆分批（2026-09-18 · VSC-DEBT §12.2.3）：relay 中继面 + 任务可见性族投递队列迁出至
+ * `panel-subagent-relay.mjs`——本档按既有导出名转口（消费档 import 面零改）；`onSubagent` /
+ * `onSubagentApproval` 两装配点改委托该档转口（R-4）。
  */
 
 import { ctxPercentForModel } from "../specs.mjs"
 import { extractFileLinks } from "./file-links.mjs"
 import { permissionGate, batchPermissionGate } from "./permission-gate.mjs"
 import { notifyCompletionIfUnfocused } from "./notify.mjs"
-import { toolPanelPayload } from "./panel-toolpanel.mjs"
 import { backgroundStatus } from "./suspension.mjs"
-import { logEvent } from "@thincoder/core/log.mjs"
 // W15（R5 · 事件中继面）：核 relay 前缀解析（`role#id/` 文法单一权威——零依赖）。
 import { parseRelayPath } from "@thincoder/core/agent/relay-prefix.mjs"
 // F1（2026-09-16 缺陷修复——承 `docs/batches/2026-09-16-vsc-autoapprove-misalign.md` §2 F1）：child
@@ -20,143 +21,14 @@ import { parseRelayPath } from "@thincoder/core/agent/relay-prefix.mjs"
 // 块同源 KD-8）——叶子档（零依赖、静态链不达 node:sqlite）⇒ 静态引入安全。
 import { makeChildPermission } from "@thincoder/core/agent-tools/child-permission.mjs"
 
-// ─── W15（2026-09-15 · R5「⏹ queued 等待头回收」+ W13 观察项收口）事件中继面 ───────────
-// 核异步族（spawn/settle/cancel）经 `ctx.callbacks.onToken` 发 **relay 前缀 ⟦ev⟧ 事件 token**
-// （TUI routeSubToken 消费面；`subagent-run.mjs:143` `⟦ev⟧async` · `subagent-scheduler.mjs:337`
-// `⟦ev⟧queued` · `subagent-async.mjs:262` `⟦ev⟧cancelled` · `async-settle.mjs:228/262/264`
-// `⟦ev⟧stopped/⟦ev⟧settled/⟦ev⟧done` · 核 `agent.mjs:207` 子代 `⟦ev⟧turn`）。VSC 消费面 =
-// `{type:"subagent", …}` 状态消息（webview `activity.js` `applySubagentStatus`）——原 W12/W13
-// 镜像删旧后该转换面缺失（事件以裸文本泄漏 / ⏹ queued 取消无等待头回收事件）。
-//
-// `relaySubagentEventToken` = 转换单点：识别（relay 前缀 + ⟦ev⟧/[model] 形态）即**消费**
-// （返回 true——不再以裸 token 文本泄漏）；未识别 → false（调用方原样转发）。两类调用面：
-//   ① 面板 `onToken` 包装（buildPanelCallbacks）——运行期事件流；
-//   ② ⏹/取消路径的合成 callbacks（panel-messages `cancelSubagent`——核 `executeCancelAction`
-//      的 `⟦ev⟧cancelled` + `refreshQueuedTokens` 中继）。
-// `⟦ev⟧async` → 记 pending（started 载荷 pool:true 判定）；尾随 `[model]` → `started` 载荷
-// （model 入块头）。pending 表挂 panel 弱映射（多面板互不串味）。
-const _relayAsyncPending = new WeakMap() // panel → Set<`role#id`>
-
-/** 事件 token → webview 活动区状态消息（映射表：queued / cancelled / stopped / settled /
- *  done / turn / async+[model]）。识别返回 true；未知形态（非本面事件）返回 false。 */
-export function relaySubagentEventToken(panel, tok) {
-  const text = String(tok ?? "")
-  if (!text.includes("⟦ev⟧") && !text.includes("[model]")) return false
-  const path = parseRelayPath(text)
-  if (!path) return false
-  const hash = path.head.indexOf("#")
-  const role = path.head.slice(0, hash)
-  const id = Number(path.head.slice(hash + 1))
-  const rest = path.rest
-  const emit = (payload) => { postSubagentEvent(panel, { type: "subagent", role, id, ...payload }); return true }
-  if (rest.startsWith("⟦ev⟧async")) {
-    let set = _relayAsyncPending.get(panel)
-    if (!set) { set = new Set(); _relayAsyncPending.set(panel, set) }
-    set.add(path.head)
-    return true // [model] 随行补发 started
-  }
-  if (rest.startsWith("[model]")) {
-    const pool = _relayAsyncPending.get(panel)?.delete(path.head) === true
-    return emit({ status: "started", pool, model: rest.slice("[model]".length) || null, startedAt: Date.now() })
-  }
-  if (rest.startsWith("⟦ev⟧queued")) {
-    // 载荷：⟦ev⟧queued \x1e kind \x1e position \x1e queued \x1e detail（subagent-scheduler 发射面）
-    const parts = rest.split("\x1e")
-    const kind = parts[1]
-    const detail = parts.slice(4).join("\x1e")
-    return emit({
-      status: "queued",
-      position: Number(parts[2]) || null,
-      waiting: kind === "slot" ? null : (kind === "depc" ? "dependency-cancelled" : "waiting-deps"),
-      reason: kind === "slot" ? null : (detail || null),
-    })
-  }
-  if (rest.startsWith("⟦ev⟧cancelled")) {
-    // 核仅在 queued 取消路径发（subagent-async executeCancelAction——出队即终态）
-    return emit({ status: "cancelled", was: "queued" })
-  }
-  if (rest.startsWith("⟦ev⟧stopped")) return emit({ status: "cancelled" }) // 运行中取消 → 冻结 stopped
-  if (rest.startsWith("⟦ev⟧settled")) return emit({ status: "settled" })
-  if (rest.startsWith("⟦ev⟧done")) return emit({ status: "done" })
-  if (rest.startsWith("⟦ev⟧turn")) {
-    const parts = rest.split("\x1e")
-    return emit({ status: "turn", turn: Number(parts[1]) || 0, maxTurns: Number(parts[2]) || 0 })
-  }
-  if (rest.startsWith("⟦ev⟧")) return true // 其余核事件（approval 等——VSC 另有通道）：消费不泄漏
-  return false
-}
-
-// ─── W15 内容中继面（2026-09-16 子代理面板通道恢复批——子代理内容回流 `sub:` 块）────────
-// 核迁移版子代回调（`wrapChildCallbacks`——`thincoder-core/agent/spawn-child.mjs:131-148`）带
-// relay 前缀（`role#id/`）到达端壳；事件面（`relaySubagentEventToken`）只吃 `⟦ev⟧`/`[model]`，
-// 其余前缀 chunk（text / think / tool 调用行 / tool 输出行）原走主流 ⇒ 面板通道缺生产者
-//（迁前端侧自持面丢失——子代理内容被塞进主会话流）。本面 = **内容分流单点**：前缀 chunk →
-// `toolPanel` `sub:<role>#<id>` 载荷（webview `activity.js` 子代理块接收面；文法与 CLI
-// `routeSub*` 同源——`thincoder-core/agent/relay-prefix.mjs`）。次序：事件面先吃、内容面后判
-//（`onToken` 内——事件面 return 之后、主流 postMessage 之前）；前缀由核逐 chunk 重加 ⇒
-// 端侧逐 chunk 独立解析（无跨 chunk 重组、无半前缀）。
-
-/** `toolPanel` 载荷发射单点：`buildPanelCallbacks` 的 `onToolPanel` 处理器与
- *  `relaySubagentContentChunk` 共用——全档唯一 `toolPanelPayload` 构造点（§3.1 三落点②）。 */
-export function emitToolPanel(panel, name, chunk) {
-  panel._panel?.webview.postMessage(toolPanelPayload(name, chunk))
-}
-
-/** 子代内容 chunk 分流：relay 前缀（含嵌套链——D-M8 子标）→ 面板载荷。无前缀 → false
- *  （调用方原样转发）。face ∈ text / think / toolCall / toolOutput（四路调用面）：
- *  toolCall = CLI 同构（工具名 + args JSON ≤120；结构化 tool/cmd 随行）；toolOutput = 输出行。 */
-export function relaySubagentContentChunk(panel, face, a, b) {
-  const path = parseRelayPath(String(a ?? ""))
-  if (!path) return false
-  const sub = path.inner.length > 0 ? path.inner.join("/") : undefined // D-M8 嵌套子标
-  let chunk
-  if (face === "toolCall") {
-    const argsJson = JSON.stringify(b) || ""
-    chunk = { kind: "tool", text: `${path.rest} ${argsJson.slice(0, 120)}`, tool: path.rest,
-      cmd: typeof b?.command === "string" ? b.command : undefined, sub }
-  } else if (face === "toolOutput") {
-    chunk = { kind: "tool", text: typeof b === "string" ? b : String(b?.text ?? ""), sub }
-  } else {
-    chunk = { kind: face === "think" ? "think" : "text", text: path.rest, sub }
-  }
-  emitToolPanel(panel, "sub:" + path.head, chunk)
-  return true
-}
-
-// ─── 任务可见性族投递队列（2026-09-11 第 10 批——WEBVIEW.md §5.1.4 第 1 条）———
-/** 队列上界（§5.1.4 第 1 条——溢出丢最旧 + 留痕）。 */
-export const WV_OUTBOX_MAX = 200
-
-/** 任务可见性族消息投递（subagent 族**唯一**入口——§5.1.4 第 1 条）：webview 就绪
- *  （panel._wvReady === true）→ 直投；否则入队（暗窗口零丢失——webviewReady 握手
- *  flush 补发）。上界 WV_OUTBOX_MAX——溢出丢最旧 + `ev:subdeliver` 留痕（入队/丢计数——
- *  NFR-A2）。返回是否直投。族边界（§5.1.4 第 1 条末段）：suspension.mjs
- *  reclaimDigestedBlocks 的 done 补发为**直投、不入队**（已消化块收尾，非出生事件）。 */
-export function postSubagentEvent(panel, payload) {
-  if (panel._wvReady === true) {
-    panel._panel?.webview.postMessage(payload)
-    return true
-  }
-  const q = (panel._wvOutbox ??= [])
-  q.push(payload)
-  let dropped = 0
-  while (q.length > WV_OUTBOX_MAX) { q.shift(); dropped++ }
-  if (dropped > 0) panel._wvOutboxDropped = (panel._wvOutboxDropped ?? 0) + dropped
-  logEvent("ev:subdeliver", { action: "enqueue", status: payload?.status ?? null, queued: q.length, dropped: panel._wvOutboxDropped ?? 0 })
-  return false
-}
-
-/** 就绪补发（§5.1.4 第 2 条——webviewReady case 两拍之一）：按入队序 flush + `ev:subdeliver`
- *  出队计数。清队后丢弃计数归零（下一窗口重新计）。返回补发条数。 */
-export function flushSubagentOutbox(panel) {
-  const q = panel._wvOutbox
-  if (!Array.isArray(q) || q.length === 0) return 0
-  const n = q.length
-  for (const payload of q.splice(0)) panel._panel?.webview.postMessage(payload)
-  logEvent("ev:subdeliver", { action: "flush", n, dropped: panel._wvOutboxDropped ?? 0 })
-  panel._wvOutboxDropped = 0
-  return n
-}
+// ─── 投递面转口（四档拆分批 2026-09-18 · VSC-DEBT §12.2.3）：既有导出名零改 ──────────────
+// relay 中继面 + 任务可见性族投递队列迁出至 `panel-subagent-relay.mjs`（逐字搬迁 + 1-hop
+// 解析面结构约定 R-1–R-6）；此处只 import 回调装配面消费件（`buildPanelCallbacks`）。
+import { relaySubagentEventToken, relaySubagentContentChunk, emitToolPanel, postSubagentStatus, postSubagentApproval } from "./panel-subagent-relay.mjs"
+// 消费档 import 行逐字不变（KD-12）：`relaySubagentEventToken`（panel-messages.mjs:28 · 测试 2 档）·
+// `postSubagentEvent` / `flushSubagentOutbox` / `WV_OUTBOX_MAX`（suspension.mjs:27 · 测试 3 档）·
+// `emitToolPanel` / `relaySubagentContentChunk`（外部零消费）。
+export { relaySubagentEventToken, relaySubagentContentChunk, emitToolPanel, postSubagentEvent, flushSubagentOutbox, WV_OUTBOX_MAX } from "./panel-subagent-relay.mjs"
 
 /**
  * Ask a question in the panel (persistent in-chat card, never auto-dismisses) — shared
@@ -206,6 +78,15 @@ export function postDigestCap(panel, mode, turns) {
   panel._panel?.webview.postMessage({ type: "digest", status: "cap", mode, turns })
 }
 
+/** ⑥（2026-09-19）sync 子代理完成锚：`<role>#<id>` 键 → `done` 载荷（键文法单源 = `parseRelayPath`）。 */
+function settleSyncSubagent(panel, key) {
+  const path = parseRelayPath(`${String(key)}/`)
+  const hash = path && path.inner.length === 0 ? path.head.indexOf("#") : -1
+  const id = hash > 0 ? Number(path.head.slice(hash + 1)) : NaN
+  if (!Number.isFinite(id)) return
+  postSubagentStatus(panel, { status: "done", role: path.head.slice(0, hash), id })
+}
+
 /**
  * runAgent 回调装配（2026-09-05 module-split：verbatim 自 runPanelChatImpl——语义零变）。
  * 内部闭包：totalUsage（跨 onUsage 调用累计）+ lastAgentState（onComplete 写 →
@@ -249,10 +130,15 @@ export function buildPanelCallbacks(panel, deps) {
       panel._panel?.webview.postMessage({ type: "taskProgress", done, inProgress, pending, total: tasks.length, items: tasks })
     },
     onPlanMode: (active) => { panel._panel?.webview.postMessage({ type: "planMode", active }); panel._setPlanMode(active).catch(() => {}) },
-    onSubagent: (info) => postSubagentEvent(panel, { type: "subagent", ...info }),
+    // #45（WEBVIEW-PROTOCOL.md §3.3）：工具驱动的模式 / 参数变更 → 端显示同步——两回调同指
+    // 单一 sink `_pushSettingsLight()`（四快照重推；**零新增消息类型**）。发射源 = `agent.mjs`
+    // 工具批后的同步 cell（mode 腿 = `eng` 工具翻转；参数腿 = 端侧 settings 包装置位）。
+    onEngMode: () => { panel._pushSettingsLight() },
+    onSettingsChanged: () => { panel._pushSettingsLight() },
+    onSubagent: (info) => postSubagentStatus(panel, info),
     // §18 C-8（child permission gate——2026-09-12）：审批态块头通知（child 权限通道
     // announce——tool 非空 = 等待审批 / null = 清态）——任务可见性族（outbox/flush 同通道）。
-    onSubagentApproval: (info) => postSubagentEvent(panel, { type: "subagentApproval", ...info }),
+    onSubagentApproval: (info) => postSubagentApproval(panel, info),
     // §14 C-12#1：onWait 相位 → statusText；§14 C-12#2：顶层逐轮帧 → turnFrame
     onWait: (info) => { const payload = statusTextPayload(info); if (payload) panel._panel?.webview.postMessage(payload) },
     onAgentTurn: (turn, maxTurns) => panel._panel?.webview.postMessage({ type: "turnFrame", turn, maxTurns }),
@@ -283,7 +169,13 @@ export function buildPanelCallbacks(panel, deps) {
       if (relaySubagentContentChunk(panel, "toolCall", n, a)) return
       panel._panel?.webview.postMessage({ type: "toolCall", name: n, args: JSON.stringify(a, null, 2), id })
     },
-    onToolResult: (n, r, id) => {
+    onToolResult: (n, r, id, subKey) => {
+      // ⑥（2026-09-19）第 4 参 `_subagentKey` = sync 子代理完成锚（核 `dispatch.mjs:441` 传入；
+      // 仅 sync 成功 / 折叠路径设置）⇒ 该参在即补 `done`（块冻结 + 归档落流——CLI `finishSubTaskKey`
+      // 对位）；无该参（async ack / 普通工具）零动作。与内容面分流互不排斥（两事同点）。
+      if (subKey) settleSyncSubagent(panel, subKey)
+      // 第五路调用面：工具结果行按 relay 前缀分流（face = `toolResult`——命中则不入主流）。
+      if (relaySubagentContentChunk(panel, "toolResult", n, r)) return
       const text = (r || "").slice(0, 64 * 1024)
       // Verified workspace-real paths ride along so the webview can linkify them.
       const links = extractFileLinks(cwd, text)

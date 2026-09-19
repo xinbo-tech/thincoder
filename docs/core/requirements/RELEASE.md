@@ -43,7 +43,7 @@ F2 / F3 是此事故的直接修复产物。
 
 | # | 需求 | 说明 |
 |---|---|---|
-| **V-F1** | 发布 = 唯一门禁（VSC） | `vscode:prepublish` = `npm run lint && npm run doc:check && npm run test:full && npm run test:integration`（`thincoder-vscode/package.json`）——`vsce package` / 无参 `vsce publish` 自动执行；无独立预跑步 |
+| **V-F1** | 发布 = 唯一门禁（VSC） | `vscode:prepublish` = `npm run lint && npm test`（`thincoder-vscode/package.json`）——`vsce package` / 无参 `vsce publish` 自动执行；无独立预跑步。**2026-09-18 收正（VSC 收尾批 · 父侧直接执行）**：原「四环」（lint → doc:check → test:full → test:integration）实况已收敛；**`doc:check` 移出发布门**（发布门不挂仓级文档债），仓级文档机检改走**仓根域** `node scripts/doc-check.mjs`（域语义 / 取向裁定见 `docs/core/design/DOC-DISCIPLINE.md` §7） |
 | **V-F2** | 双源发布一条命令 | `npm run publish:all`（`scripts/publish-all.mjs`）——一次打包、双源发同一 .vsix、全量只测一次；`--skip-marketplace` / `--skip-openvsx` 显式单源 |
 | **V-F3** | 号在发布时定（VSC） | 开发期变更记录挂 `[Unreleased]`；发布 = 唯一定号动作；CalVer `0.<月>.<月内序号>` 月内计数重置 |
 | **V-F4** | 发布完成判定（VSC） | 发布命令正确返回（exit 0）= 完成——不轮询、不检查上线版本（审核队列 = 平台侧事务）；边界 = 发布前 PAT 校验照做（显式 `--pat` / `VSCE_PAT` + `OVSX_PAT`） |
@@ -68,11 +68,7 @@ F2 / F3 是此事故的直接修复产物。
 | 旧档面 | 内容 | 何故不并（去向 / 触发） |
 |---|---|---|
 | 发布操作步骤 / 踩坑记录 / 回滚 | 命令、代理、双远端、vsce-ovsx 教训 | 设计面——`docs/cli/design/RELEASE.md`（CLI 侧）· `thincoder-vscode/docs/design/RELEASE.md`（VSC 侧未迁） |
-| VSC 源档 §2（F1–F5 判定句的证据列）· §3（N1–N4 度量方式——`package.json` 行号 / `CHANGELOG.md:8` / `docs/design/RELEASE.md` 节号） | VSC 实现坐标 | 时点坐标——随版本演进失真；机制面已并入 §5（只留需求陈述） |
-
-## 7. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **105 行**（根层新建 68 行 + VSC 轮并入 §5 ≈ +37）——**低于 300 行软线，无需拆分规划**。
+| VSC 源档 §2（F1–F5 判定句的证据列）· §3（N1–N4 度量方式——`package.json` 行号 / `thincoder-vscode/CHANGELOG.md:8` / `docs/design/RELEASE.md` 节号） | VSC 实现坐标 | 时点坐标——随版本演进失真；机制面已并入 §5（只留需求陈述） |
 
 ## 变更记录
 

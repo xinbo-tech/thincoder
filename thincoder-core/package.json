@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "ThinCoder shared core — shared mechanism modules + shared prompt content (CLI ↔ VS Code extension).",
   "type": "module",
+  "scripts": {
+    "test": "node test/run.mjs"
+  },
   "license": "MIT",
   "engines": {
     "node": ">=22.13.0"

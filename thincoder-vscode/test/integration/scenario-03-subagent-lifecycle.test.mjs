@@ -27,6 +27,7 @@ import { injectAsyncResult } from "@thincoder/core/agent-tools/subagent.mjs"
 import { finalizeAgentTurn } from "../../src/agent/run-stages.mjs"
 import { suspensionSession } from "../../src/extension/suspension.mjs"
 import { mockLLM, providerFor } from "./helpers/mock-llm.mjs"
+import { CARRIER_FIELDS as PROD_CARRIER_FIELDS } from "../../src/agent.mjs" // af 批 fix 轮 2：对位锁取生产表（T-AF16）
 
 const CWD = mkdtempSync(join(tmpdir(), "tc-integ-subagent-"))
 process.on("exit", () => { try { rmSync(CWD, { recursive: true, force: true }) } catch { /* ignore */ } })
@@ -42,8 +43,9 @@ async function until(pred, ms = 8000) {
 }
 
 /** 父侧夹具（真形状：history 数组为跨 run 载体 + agent 字段**访问器绑定**到 history
- *  ——与 `src/agent.mjs` run 期绑定不变式同形（W13）；键形单源 = String(id)）。 */
-const CARRIER_FIELDS = ["_asyncSubagents", "_asyncAdvisors", "_asyncTombstones", "_pendingAsyncResults", "_consultSessions", "_engDesignTokens", "_suspended", "_asyncQueue"]
+ *  ——与 `src/agent.mjs` run 期绑定不变式同形（W13）；键形单源 = String(id)）。
+ *  字段副本 == 生产 `CARRIER_FIELDS`（T-AF16 对位锁——任一侧删/增款即红）。 */
+const CARRIER_FIELDS = ["_asyncSubagents", "_asyncAdvisors", "_asyncTombstones", "_pendingAsyncResults", "_consultSessions", "_engDesignTokens", "_suspended", "_asyncQueue", "_asyncAdvisorQueue", "_asyncWaiters", "_advisorRuns", "_mutLog", "_childUpstream", "_childUpstreamSeq"]
 function mkParent(llm) {
   const history = []
   history._asyncSubagents = new Map()
@@ -238,4 +240,27 @@ test("③ 种子 S1-b（GitHub #6）：错误轮不误杀——digest 轮被停�
   } finally {
     await llm.close()
   }
+})
+
+// ─── af 批（2026-09-17）T-AF14：载体字段 `_asyncAdvisorQueue` 绑定不变式（AC-AF4 宿主）──
+
+test("③ T-AF14 载体绑定（AC-AF4）：`_asyncAdvisorQueue` 写侧落 `history` 容器——二次访问同一容器（跨 run 存活语义）", () => {
+  // 无 LLM 面（只验绑定不变式——假 llm 句柄仅供 providerFor 取值，不发起请求）
+  const { agent, history } = mkParent({ baseURL: "http://127.0.0.1:1" })
+  assert.equal(history._asyncAdvisorQueue, undefined, "夹具不预置该字段（写侧落地须被真实验证）")
+  agent._asyncAdvisorQueue ??= [] // 核写侧形态（advisor-async.mjs:414 池满入队）
+  assert.ok(Array.isArray(history._asyncAdvisorQueue), "落 `history`（访问器绑定——非 per-run agent 自有属性）")
+  assert.equal(history._asyncAdvisorQueue, agent._asyncAdvisorQueue, "agent 字段与 history 同容器")
+  const first = agent._asyncAdvisorQueue
+  agent._asyncAdvisorQueue ??= [] // 二次读写的幂等面（核每发入队都走 `??=`）
+  assert.equal(agent._asyncAdvisorQueue, first, "二次访问同一容器（跨 run 同一容器语义——不重建）")
+})
+
+// ─── af 批 fix 轮 2（2026-09-18）T-AF16：AC-AF4 首句对位宿主（F-8 反向面锁）──
+
+/** AC-AF4 首句「`CARRIER_FIELDS` 含该键」的对位宿主 = 本用例：生产表 `src/agent.mjs` 删款／夹具副本
+ *  删款 ⇒ 本档即红（原缺口：T-AF14 只经夹具副本绑定——生产表删款时三端仍全绿 = 静默回归）。 */
+test("③ T-AF16 载体表对位（AC-AF4 首句 · F-8 反向锁）：生产 `CARRIER_FIELDS` 含 `_asyncAdvisorQueue` 且本档夹具副本 == 生产表", () => {
+  assert.ok(PROD_CARRIER_FIELDS.includes("_asyncAdvisorQueue"), "生产表含该键（AC-AF4 首句；缺它 ⇒ ⏹ 出队 no-op ⇒ #21 静默回归）")
+  assert.deepEqual([...CARRIER_FIELDS].sort(), [...PROD_CARRIER_FIELDS].sort(), "夹具副本 == 生产表（双向逐款一致——任一侧删/增款即红；两测试夹具同步语义）")
 })

@@ -1,0 +1,59 @@
+# Function Spec · M2 台账（SQLite）
+
+> 模块划分权威源 = `docs/core/design/ENGINEERING-MODE-V2.md` §2.2（M2）
+
+## ① 模块目标
+
+把 v1 的 md 台账（计数漂移、无事务、无枚举约束）换成 **SQLite 单表**——待办总账的单一权威源：六态 CHECK 机械锁死、COUNT 单源计数、收口事务保证原子。
+
+## ② 功能点
+
+1. **items 表 schema**（单表 + status 枚举，归档 = 状态子集）：
+
+   | 字段 | 说明 |
+   |---|---|
+   | `id` | INTEGER PRIMARY KEY |
+   | `kind` | TEXT NOT NULL CHECK(kind IN ('requirement','tech_todo')) |
+   | `status` | TEXT NOT NULL CHECK(status IN ('待讨论','待设计','在途','待核销','已核销','已废弃')) |
+   | `title` | NOT NULL——需求句 / 待办句（一行一条，不展开细节） |
+   | `board` | 归属板块 |
+   | `req_doc` | 需求档指针（需求类：`<档> §X`） |
+   | `task_book` | 任务书指针（在途 / 待核销必填：批次档 §2） |
+   | `evidence` | `file:line` + 症状（技术类最小证据行） |
+   | `trigger` | CHECK(trigger IN ('归批','条件','认账不排期') OR NULL) |
+   | 时间戳 | `created_at` · `updated_at` · `closed_at` |
+
+2. **六态状态机**：待讨论 → 待设计 → 在途 → 待核销 → 已核销（勾销入归档）；任意态 → 已废弃（撤回 / 批次废弃）。
+3. **查询命令**（只读，全角色可见）——替代 v1 `/ledger` 读面。
+4. **写命令**（仅主 agent 装配）。
+5. **归档 = 软删除语义**：已核销 / 已废弃 = 状态值，不物理删行。
+6. **计数单源**：`SELECT COUNT(*) WHERE status IN (未决四态)`。
+7. **落点**：项目级 `ledger.db`（不进 git）。
+
+## ③ 边界（不做什么）
+
+- 不做 manifest（M1，只互指咬合）；不做批次档（M3）；不做 checklist（M7 废除，语义由本模块六态承接）。
+- 不做项目归档档搬迁（`docs/TODO-archive.md` 是项目文档约定，不在本模块）。
+- 不承载细节展开（台账条目一行一条——细节进需求档 / 批次档）。
+
+## ④ 验收（逐条可机判）
+
+| # | 判据 | 方式 |
+|---|---|---|
+| AC-M2-1 | 表含六态 status CHECK + kind CHECK + trigger CHECK | 读 schema / 尝试非法值 |
+| AC-M2-2 | 非法 `status` 写入 → 拒（CHECK 生效） | INSERT 非法值 → 期望拒 |
+| AC-M2-3 | 计数 = `COUNT` 单源（无 md 计数面） | grep 计数实现 |
+| AC-M2-4 | 写命令非主 agent 装配 → 拒 | 非主 agent 写 → 期望拒 |
+| AC-M2-5 | `status IN (在途,待核销)` 且 `task_book` 为空 → 拒（咬合） | INSERT 缺 task_book → 期望拒 |
+| AC-M2-6 | `node:sqlite` 在 Node 24 可用（无需 `--experimental-sqlite`） | 实跑 import + 建表 |
+
+> AC-M2-6 = KD7 实核（M2 实现前必验；失败则重开存储选型）。
+
+## ⑤ 依赖
+
+- **上游**：无（原 M1 `activeBatch` 指针咬合——2026-09-17 用户裁定撤除；咬合保留面 = 条目 `task_book` ⇄ 批次档状态行，档面直读）。
+- **下游**：M4（写门装配）· M8（台账一致性由本模块 schema 承接——`check-ledger` 作废）。
+
+## 需求依据
+
+v2 §5.2（台账）· §5.4（条目字段）· 架构设计 §2.3 E1（表结构 + 两账咬合）· KD1 / KD7。

@@ -14,7 +14,8 @@ import { _setConfigPathForTest, resolveProviders } from "@thincoder/core/config-
 import { providerFromConfig } from "../src/extension/presets.mjs"
 import { listModels, channelUnavailableMessage, probeChannelModels, admissionOf, _resetAdmissionForTest } from "@thincoder/core/provider/list-models.mjs"
 import { probeProviderAdmission } from "../src/extension/provider-flows.mjs"
-import { providerStatus, fullStatus, saveProviderKey } from "../src/extension/settings.mjs"
+import { providerStatus, fullStatus, saveProviderKey, endProbeWindow, _resetProbeWindowsForTest, _setProbeRetryDelayForTest } from "../src/extension/settings.mjs"
+import { startSampler, stopSampler, hostBusy, _setLoopSamplerForTest } from "../src/extension/loop-sampler.mjs"
 import { saveAgentSettingsFromPanel } from "../src/extension/settings-panel-write.mjs"
 
 const UNAVAILABLE_TEXT = "该渠道不提供模型列表（GET /models {S}）——无法选择模型，请改用其他渠道"
@@ -56,7 +57,24 @@ after(() => {
   try { rmSync(dir, { recursive: true, force: true }) } catch { /* ignore */ }
 })
 
-afterEach(() => { _resetAdmissionForTest() })
+afterEach(() => {
+  _resetAdmissionForTest()
+  // F-W19：探针窗 / 重试链 / 忙态采样器跨用例隔离——挂起重试链必须在 fetch 替身撤下前终止
+  // （否则 fire-and-forget 链会带着真网去打真接口）。
+  _resetProbeWindowsForTest()
+  _setProbeRetryDelayForTest(null)
+  stopSampler()
+  _setLoopSamplerForTest(null)
+})
+
+// 伪时钟（F-W19 忙态用例——判定面零真实等待）+ 轮询等待（重试链 fire-and-forget 收敛）
+const clock = { t: 1_000_000_000 }
+const setClock = () => _setLoopSamplerForTest({ nowFn: () => clock.t })
+async function until(fn, ms = 1500) {
+  const t0 = Date.now()
+  while (Date.now() - t0 < ms) { if (fn()) return true; await new Promise((r) => setTimeout(r, 20)) }
+  return fn()
+}
 
 // ─── fetch 替身（proxyFetch 无代理 → globalThis.fetch——单测唯一网络面）────────────
 
@@ -84,6 +102,26 @@ async function withFetch(handler, fn) {
 }
 
 const settle = () => new Promise((r) => setTimeout(r, 25))
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+/** 捕获式桩面板（models / providerStatus 载荷断言面）。 */
+function stubPanel() {
+  const posted = []
+  return { panel: { webview: { postMessage: (m) => { posted.push(m); return Promise.resolve(true) } } }, posted }
+}
+const wsStub = () => ({ get: () => undefined, update: async () => {} })
+const kimiCalls = (calls) => calls.filter((u) => u.includes("moonshot")).length
+const dsCalls = (calls) => calls.filter((u) => u.includes("deepseek")).length
+const modelsPayloads = (posted) => posted.filter((m) => m.type === "models")
+/** 按真 payload 渲染面板卡（词档双向机检用——非手写 SS 载荷）。 */
+function renderWith(statusPayload, name = "kimi") {
+  const { providersCardHtml, SS } = webviewMods
+  SS.providerStatus = {
+    labels: { [name]: "Kimi (Moonshot)" },
+    presets: [],
+    providers: { [name]: statusPayload.providers[name] },
+  }
+  return providersCardHtml()
+}
 
 // ─── T1–T4 + T26/T27：三 format 分派 / 解析 / 翻页（AC-1）──────────────────────
 
@@ -259,6 +297,149 @@ test("T25 运行期零探测：非配置流（解析/快照/构建 provider）�
     providerFromConfig("kimi")
     providerStatus()
     assert.deepEqual(calls, [], "零启动期网络依赖——探测只发生在配置写入面")
+  })
+})
+
+// ─── F-W19（`SETTINGS.md` §2.12）：失败分类落账 + 宿主忙分档 + 有界重试（≤ 2）──────────
+
+test("T-W19a 失败分类落账（malformed/timeout/hostBusy + ts）+ 双向词档（词 ⇔ 落账单源）", async () => {
+  // ① malformed：HTTP 非 2xx（非超时族）
+  await withFetch(() => jsonResponse({ error: "down" }, 500), async () => {
+    await probeProviderAdmission("kimi")
+  })
+  let rec = admissionOf("kimi")
+  assert.equal(rec.ok, false)
+  assert.equal(rec.failure, "malformed", "HTTP 500 ⇒ 核分类 malformed")
+  assert.ok(Number.isFinite(rec.ts), "落账统一盖 ts")
+  assert.equal(providerStatus().providers.kimi.failure, "malformed", "失败分类随行下发")
+  assert.equal(providerStatus().providers.kimi.unavailableReason, unavailableText(500), "失败消息本体逐字零改")
+  let html = renderWith(providerStatus())
+  assert.ok(html.includes("不可用"), "渠道故障 ⇒ 词 `不可用`")
+  assert.ok(!html.includes("宿主繁忙"), "渠道故障不得显 `宿主繁忙`（分档互斥）")
+  assert.ok(html.includes(unavailableText(500)), "渠道故障 ⇒ hint 逐字长句在场")
+
+  // ② timeout：超时族错误 ⇒ 同档词 + hint（分类不同、词档同档）
+  await withFetch(() => { throw Object.assign(new Error("fetch failed"), { name: "TimeoutError" }) }, async () => {
+    await probeProviderAdmission("kimi")
+  })
+  rec = admissionOf("kimi")
+  assert.equal(rec.failure, "timeout", "TimeoutError ⇒ 核分类 timeout")
+  html = renderWith(providerStatus())
+  assert.ok(html.includes("不可用") && !html.includes("宿主繁忙"), "timeout ⇒ 词 `不可用`（非宿主忙档）")
+  assert.ok(html.includes(unavailableText("fetch failed")), "hint 逐字（状态 = 网络错误摘要）")
+
+  // ③ hostBusy：端侧忙证据覆盖核落账（reason 逐字不动·非渠道故障）
+  setClock()
+  startSampler()
+  clock.t += 5000
+  assert.equal(await until(() => hostBusy()), true, "进入忙态（伪时钟）")
+  await withFetch(() => jsonResponse({ error: "down" }, 500), async () => {
+    await probeProviderAdmission("kimi")
+  })
+  rec = admissionOf("kimi")
+  assert.equal(rec.failure, "hostBusy", "忙证据覆盖核分类（非渠道故障）")
+  assert.equal(rec.reason, unavailableText(500), "reason 逐字不动")
+  assert.ok(Number.isFinite(rec.ts), "覆盖落账同样盖 ts")
+  html = renderWith(providerStatus())
+  assert.ok(html.includes("宿主繁忙"), "宿主忙 ⇒ 词 `宿主繁忙`")
+  assert.ok(!html.includes("不可用"), "宿主忙档不显 `不可用`")
+  assert.ok(!html.includes(unavailableText(500)), "宿主忙 ⇒ 抑制渠道故障 hint")
+  // 零 i18n 键：词硬编码于 `settings-providers.js`（`:186` 同址），不得进 i18n 双源
+  const providersSrc = readFileSync(new URL("../webview/settings-providers.js", import.meta.url), "utf8")
+  assert.ok(providersSrc.includes("宿主繁忙"), "词硬编码于 webview/settings-providers.js")
+  for (const f of ["../webview/i18n.js", "../webview/i18n-dom.js"]) {
+    assert.ok(!readFileSync(new URL(f, import.meta.url), "utf8").includes("宿主繁忙"), `零 i18n 键：${f} 不得含本词`)
+  }
+})
+
+test("T-W19b 有界重试成功拍三清除：落账复位 + 载荷 available:false→true + 展示回绿", async () => {
+  _setProbeRetryDelayForTest(20)
+  let n = 0
+  const { panel, posted } = stubPanel()
+  let sessions = 0
+  await withFetch((url) => (url.includes("moonshot")
+    ? (n++ < 2 ? jsonResponse({ error: "down" }, 500) : jsonResponse({ data: [{ id: "kimi-k3" }] }))
+    : jsonResponse({ data: [{ id: "deepseek-v4-pro" }] })), async (calls) => {
+    await fullStatus(panel, wsStub(), () => { sessions += 1 })
+    const first = modelsPayloads(posted).at(-1)
+    assert.equal(first.unavailable?.[0]?.provider, "kimi", "首拍失败 ⇒ 失败渠道随载荷明示原因")
+    assert.equal(admissionOf("kimi").ok, false, "首拍落账 = 失败")
+    assert.equal(await until(() => admissionOf("kimi")?.ok === true), true, "重试链收敛（成功拍）")
+    assert.equal(kimiCalls(calls), 3, "首拍 1 + 重试 ≤ 2（成功即止）")
+    assert.equal(dsCalls(calls), 1, "重试只打失败子集（健康渠道零重探）")
+    assert.ok(sessions >= 2, "成功拍走同一 flush（会话推链重入——准入翻转随载荷生效）")
+  })
+  // ① 落账清除：`recordAdmission(name, { ok: true, ts })`——失败分类键退场
+  const rec = admissionOf("kimi")
+  assert.equal(rec.ok, true)
+  assert.equal("failure" in rec, false, "成功落账不带 failure")
+  assert.ok(Number.isFinite(rec.ts), "成功落账盖 ts")
+  // ② 载荷翻转 + ③ 展示回绿
+  const row = providerStatus().providers.kimi
+  assert.equal(row.available, true, "载荷 available: false → true")
+  assert.equal("failure" in row, false)
+  const last = modelsPayloads(posted).at(-1)
+  assert.ok(last.models.some((m) => m.provider === "kimi" && m.id === "kimi-k3"), "重试成功 ⇒ 候选面收敛")
+  assert.equal(last.unavailable, undefined, "成功拍载荷无失败项")
+  const html = renderWith(providerStatus())
+  assert.ok(!html.includes("不可用") && !html.includes("宿主繁忙"), "展示回绿（无失败词）")
+  assert.ok(!html.includes(unavailableText(500)), "hint 退场")
+})
+
+test("T-W19c 重试耗尽：恒失败 ⇒ 重试恰 2 次（共 3 次探测）后停（不无限重试）", async () => {
+  _setProbeRetryDelayForTest(20)
+  const { panel } = stubPanel()
+  await withFetch((url) => (url.includes("moonshot")
+    ? jsonResponse({ error: "down" }, 500)
+    : jsonResponse({ data: [{ id: "deepseek-v4-pro" }] })), async (calls) => {
+    await fullStatus(panel, wsStub(), () => {})
+    assert.equal(await until(() => kimiCalls(calls) >= 3), true, "重试链推进到上限")
+    await sleep(200)
+    assert.equal(kimiCalls(calls), 3, "首拍 1 + 重试 2 = 3（≤ 2 上限——无第 4 次）")
+    assert.equal(dsCalls(calls), 1, "失败子集外零重探")
+    assert.equal(admissionOf("kimi").failure, "malformed", "窗口内不再重试 ⇒ 保持失败分类")
+    assert.equal(admissionOf("deepseek").ok, true, "健康渠道不受重试链影响")
+  })
+})
+
+test("T-W19d 宿主忙闸：忙证据下失败渠道不重试（零加压）+ 落账分类 = hostBusy", async () => {
+  _setProbeRetryDelayForTest(20)
+  setClock()
+  startSampler()
+  clock.t += 5000
+  assert.equal(await until(() => hostBusy()), true, "进入忙态")
+  const { panel } = stubPanel()
+  await withFetch(() => jsonResponse({ error: "down" }, 500), async (calls) => {
+    await fullStatus(panel, wsStub(), () => {})
+    await sleep(200) // 两轮让位窗口（deferred 上限）远小于本等待
+    assert.equal(kimiCalls(calls), 1, "忙 ⇒ 让位不探（不在忙循环上加压——零重试）")
+    assert.equal(admissionOf("kimi").failure, "hostBusy", "探针失败分类 = hostBusy（宿主忙证据）")
+  })
+})
+
+test("T-W19e 在飞去重：同窗并发打开拍共享同批探测（不叠发）", async () => {
+  const { panel } = stubPanel()
+  await withFetch(() => new Promise((r) => setTimeout(() => r(jsonResponse({ data: [{ id: "kimi-k3" }] })), 60)), async (calls) => {
+    const pA = fullStatus(panel, wsStub(), () => {})
+    const pB = fullStatus(panel, wsStub(), () => {})
+    await Promise.all([pA, pB])
+    assert.equal(calls.length, 2, "同窗并发 ⇒ 两渠道各一批（4 次 = 叠发）")
+    assert.equal(kimiCalls(calls), 1, "同批不叠发探针")
+  })
+})
+
+test("T-W19f 窗口终止（§2.12 ③）：面板关闭 ⇒ 重试链止（撤未发重试 + 在途结果不再回投）", async () => {
+  _setProbeRetryDelayForTest(20)
+  const { panel, posted } = stubPanel()
+  await withFetch((url) => (url.includes("moonshot")
+    ? jsonResponse({ error: "down" }, 500)
+    : jsonResponse({ data: [{ id: "deepseek-v4-pro" }] })), async (calls) => {
+    await fullStatus(panel, wsStub(), () => {})
+    assert.equal(kimiCalls(calls), 1, "首拍探测已发（失败 ⇒ 重试链待发）")
+    endProbeWindow(panel) // 面板关闭 / 重开 = 新窗口（③）
+    await sleep(250) // 远长于重试延迟（20ms）——窗口终止后链不得再探
+    assert.equal(kimiCalls(calls), 1, "窗口终止 ⇒ 撤未发重试（不再发探针）")
+    assert.equal(modelsPayloads(posted).length, 1, "在途 / 后续结果不再回投（零新 models 载荷）")
   })
 })
 

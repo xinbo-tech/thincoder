@@ -4,7 +4,7 @@
  * §17.3/§17.4/§17.5）。
  *
  * 块序（§17.4 目标序——编排一处可见）：#1 git → #2 OS/cwd/Session start/快照 →
- * #3 restarted → #4 依赖大纲 → #5 文档召回 → #6 记忆召回 → #7 checklist。
+ * #3 restarted → #4 依赖大纲 → #5 文档召回 → #6 记忆召回。
  * 纪律：全部「只追加（单调）、只 transient、失败静默」——新块只 push 到 history 尾，
  * 禁中段插入、禁改写已入线消息；全部 depth-0 且非 resume/autoTurn 门（召回面仅 depth 0
  * ——差异登记 §17.10：CLI 召回门 = agent.memory 载荷，本端索引/记忆为 cwd 级句柄态）。
@@ -18,7 +18,6 @@ import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { homedir } from "node:os"
 import { loadMemoryFace, memoryFor } from "../embed-config.mjs"
-import { pendingItems } from "@thincoder/core/tools/checklist.mjs" // W14：checklist 面核单源（本端镜像已删）
 import { buildSummary } from "../repomap.mjs"
 import { detectRestoredSession, pushGitContext } from "./setup-reminders.mjs"
 import { escapeXml, safeSliceUTF16 } from "./run-helpers.mjs"
@@ -174,20 +173,9 @@ export async function pushMemoryRecall(history, cwd, input) {
   return true
 }
 
-/** checklist 推送（cli setup.mjs:126-139 行形态）：pending/in_progress 项（只取 text）。 */
-export function pushChecklist(history, cwd) {
-  const items = _deps.pendingItems(cwd)
-  if (!items?.length) return false
-  history.push({
-    role: "user",
-    content: `[System reminder: task checklist (pending/in-progress):\n${items.map((i) => `- [${i.status === "in_progress" ? "~" : " "}] ${i.text}`).join("\n")}]`,
-    transient: true,
-  })
-  return true
-}
 
 /**
- * 编排入口（D-CI1）：块 #1–#7 按 §17.4 目标序注入；门 = `depth === 0 && !resume &&
+ * 编排入口（D-CI1）：块 #1–#6 按 §17.4 目标序注入；门 = `depth === 0 && !resume &&
  * !autoTurn`（§17.3）。每块失败静默（该块跳过、其余块与用户输入零影响——失败不重试）。
  */
 export async function injectRunContext(agent, { history, cwd, input, depth, resume, autoTurn, platform }) {
@@ -202,7 +190,6 @@ export async function injectRunContext(agent, { history, cwd, input, depth, resu
   try { await pushOutline(history, cwd) } catch { /* outline not ready — suppress error */ }
   try { await pushDocRecall(history, cwd, input) } catch { /* recall failure — suppress error */ }
   try { await pushMemoryRecall(history, cwd, input) } catch { /* recall failure — suppress error */ }
-  try { pushChecklist(history, cwd) } catch { /* checklist not available — suppress error */ }
 }
 
 // ── 测试缝（T-CI-5/T-CI-10 seam 计数——spy 形态：对块函数 I/O 依赖做计数包装；
@@ -214,7 +201,6 @@ const DEFAULT_DEPS = {
   getMemory: (cwd) => memoryFor(cwd),
   docSearch: async (memory, query, opts) => (await loadMemoryFace()).docSearch(memory, query, opts),
   memorySearch: async (memory, query, opts) => (await loadMemoryFace()).search(memory, query, opts),
-  pendingItems,
   detectRestoredSession,
 }
 let _deps = DEFAULT_DEPS

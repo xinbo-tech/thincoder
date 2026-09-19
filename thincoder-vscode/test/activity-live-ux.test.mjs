@@ -45,7 +45,6 @@ function fresh({ S, ctx }) {
   S._subBlocks.clear()
   ctx._pinBottom = undefined
   ctx._pinActivity = undefined
-  S._advisorBlock = null
 }
 
 /** 等帧：跟滚应用在 streaming rAF 尾（happy-dom rAF = setImmediate）——轮询到谓词成立

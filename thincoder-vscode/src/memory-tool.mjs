@@ -34,7 +34,7 @@ const MEMORY_TOOL_DESCRIPTION =
   "- delete — SINGLE: {id, layer} deletes one entry by the id shown in search/list output — layer is OPTIONAL: pass it to verify the entry really lives in that layer (a mismatch is refused — protection against deleting the wrong entry); omit it to route by where the id actually lives. BATCH (no id): {layer + type and/or keyword} deletes every matching entry in that layer — a call without confirm:true is refused and returns the count plus a preview (re-send with confirm:true to execute); a layer-wide wipe without filters is refused on every layer\n" +
   "- clear — {layer: \"personal\", confirm: true} wipes ALL personal memory entries. clear is personal-only: a missing layer or a project layer is refused (use delete batch filters on shared layers)\n" +
   "layer = the memory tier an entry lives in: personal (private) or project (shared via this repo's .thincoder/memory/). The [layer] tag on search/list result rows and delete's layer parameter are the same concept — pass a result row's [layer] into delete, or omit layer and delete auto-routes by the id's actual location.\n" +
-  "Save bugs, conventions, and preferences here — they persist across sessions. For project-level task tracking use checklist; for reusable project instructions use skill."
+  "Save bugs, conventions, and preferences here — they persist across sessions. For project-level task tracking use `/ledger`; for reusable project instructions use skill."
 
 /** team layer refusal — this end has no team layer (MEMORY.md §6.6「layer 值域按端」). */
 const teamRefusal = (action) => `Error: memory ${action}: VS Code memory has no team layer — team memory is managed by the CLI`

@@ -2,6 +2,14 @@
 
 All notable changes to ThinCoder VS Code are documented here.
 
+## [Unreleased]
+
+### Changed
+
+- **发布门链收正**：`vscode:prepublish` = `npm run lint && npm test`——`doc:check` 移出发布门（发布门不挂仓级文档债）；`npm run doc:check` 改走仓根域（`node ../scripts/doc-check.mjs --root ..`；非发布门，与 CI docs 作业同命令）。
+- **工程模式角色 enum 收正（第三面）**：工具表装配面 `src/agent/setup-tooltable.mjs` 工程分支 enum = `explore / eng-designer / eng-coder`（`plan` 不入）；测档判据由 `includes` 改**集合相等**（`test/eng-designer-role.test.mjs`）。
+
+
 ## [0.9.2] — 2026-09-13
 
 > 0.9.1 → 0.9.2（发布时定号）

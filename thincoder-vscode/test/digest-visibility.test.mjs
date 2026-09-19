@@ -140,7 +140,7 @@ test("T-D5 每轮独立元素（§14 C-9——漂移回归/AC-CL2）：两轮两
   send({ type: "clearMessages" })
   send({ type: "digest", status: "start", n: 2 })
   const round1Status = statusEls().at(-1)
-  send({ type: "assistantMessage", text: "round1 digest output", timestamp: 1, idx: 1 })
+  send({ type: "token", text: "round1 digest output" })
   const round1Output = document.getElementById("messages").lastElementChild
   send({ type: "digest", status: "end", ok: true, ms: 900 })
   assert.equal(round1Status.textContent, "Digested 2 background report(s) (0.9s)", "第 1 轮收尾留痕")

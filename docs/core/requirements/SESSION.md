@@ -97,7 +97,7 @@ N-S3 CLI 写出的槽文件 `history` 数组与旧实现同构（version 2 + his
 
 语义同源——VSC 档 F-N1–F-N8 / N-N1–N-N5 与 §4.1–§4.4 逐条同义（不重并）；**VSC 端差（登记）**：① marker `END = "vscode"`——只写 `.manifest.vscode`、永不碰 `.cli`（认领面隔离）·
 ② 历史分页步长 **200**（`HISTORY_PAGE_SIZE`——`thincoder-vscode/src/extension/history-window.mjs:18-22`，对端 20）· ③ 恢复呈现 = assistant 帧容器 + 嵌套工具卡（配对语义同源）·
-④ 冷 cwd 手动 GC 无 shell 通道（只接线自动残留 GC）· ⑤ 记录存储形态 = 本端零该机制（如实登记）· ⑥ `turnBusy()` 拒新会话 / 删除 / 切换 / 换项目（回合互斥）。坐标（实核）＝ `src/extension/session-slots.mjs`（400 行）· `session-io.mjs`（437 行）· `panel-session.mjs`（339 行）· `session-gc.mjs`。
+④ 冷 cwd 手动 GC 无 shell 通道（只接线自动残留 GC）· ⑤ 记录存储形态 = 本端零该机制（如实登记）· ⑥ `turnBusy()` 拒新会话 / 删除 / 切换 / 换项目（回合互斥）。坐标（实核）＝ `thincoder-vscode/src/extension/session-slots.mjs`（400 行）· `session-io.mjs`（437 行）· `panel-session.mjs`（339 行）· `session-gc.mjs`。
 用例面 = `test/session-boot.test.mjs`（319 行 / 4 例）· `test/history-window.test.mjs`（192 行 / 8 例）· `test/history-restore.test.mjs`（237 行 / 9 例）· 集成 `test/integration/scenario-04-session-recovery.test.mjs`（140 行 / 5 例）。
 
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）

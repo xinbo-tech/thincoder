@@ -3,7 +3,7 @@
 > 板块 = **编辑工具**；本档 = **apply_patch 语义的权威源**（逐工具权威档之一）。
 > 地图与契约要点 = `docs/core/design/TOOLS.md` §6.6 · §8.2——本档不复制其内容（D2）。
 > 共享底层 = `docs/core/design/EDIT-HELPERS.md`（EOL 写回 / 新建随目录多数派——本档只指不述）。
-> 双端：CLI `thincoder-core/tools/patch.mjs`（`applyPatchTool`）· VSC `thincoder-vscode/src/tools/more-file.mjs`（同机制，各自实现）（VSC 自持镜像已删——W14 已迁核，现体同指 `thincoder-core/tools/patch.mjs`）。
+> 双端：CLI `thincoder-core/tools/patch.mjs`（`applyPatchTool`）· VSC `thincoder-vscode/src/tools/more-file.mjs`（同机制，各自实现）（VSC 自持镜像已删——W14 已迁核，现体同指 `thincoder-core/tools/patch.mjs`）。 （迁移期引文）
 > 模型可见描述 = `thincoder-core/tool-docs/apply_patch.md`（提示词面 / 产品代码）。
 > 需求侧 = `docs/core/requirements/TOOLS.md`（工具系统板块；CLI 树无逐工具需求档）。
 > 建档：2026-09-15（**B 式迁移轮 · 第 1 批**——`thincoder-cli/docs/design/APPLY-PATCH.md` 内容重建入基准层；旧档原地一字不改、留作参照历史）。
@@ -54,9 +54,9 @@ hunk 按**上下文 / 删除行定位，非行号**——但上下文必须与�
 | 返回文案 | `thincoder-core/tools/patch.mjs:243`（`Applied patch to N file(s)`） | 在位 |
 | 注册面 | `thincoder-core/tools/index.mjs:5`（import）· `:21`（注册表） | patch 组（apply_patch / delete） |
 | 描述面（模型可见） | `thincoder-core/tool-docs/apply_patch.md` | 在位（`DESC()` 加载） |
-| VSC 对位实现 | `thincoder-vscode/src/tools/more-file.mjs:239`（`apply_patch`）（W14 已迁核——自持镜像已删，现体 = 核 `thincoder-core/tools/patch.mjs`） | 同名机制 · 独立实现 |
+| VSC 对位实现 | `thincoder-vscode/src/tools/more-file.mjs:239`（`apply_patch`）（W14 已迁核——自持镜像已删，现体 = 核 `thincoder-core/tools/patch.mjs`） | 同名机制 · 独立实现 （迁移期引文） |
 
-**VSC 端差异（并入 · 批 8）**：VSC 端 `more-file.mjs:239`（`apply_patch`）——同机制独立实现；EOL 写回 / 新建随目录多数派（F1 / F2）同口径（`docs/core/design/EDIT-HELPERS.md` §4）；**无编辑器路径分支**（apply_patch = 整文件域、不进编辑器 range——见 §1）；宽容格式三处（§2）双端同。（W14 已迁核——VSC 自持镜像已删，现体 = 核 `thincoder-core/tools/patch.mjs`）
+**VSC 端差异（并入 · 批 8）**：VSC 端 `more-file.mjs:239`（`apply_patch`）——同机制独立实现；EOL 写回 / 新建随目录多数派（F1 / F2）同口径（`docs/core/design/EDIT-HELPERS.md` §4）；**无编辑器路径分支**（apply_patch = 整文件域、不进编辑器 range——见 §1）；宽容格式三处（§2）双端同。（W14 已迁核——VSC 自持镜像已删，现体 = 核 `thincoder-core/tools/patch.mjs`） （迁移期引文）
 
 ## 7. 并入的关键决策记录（含否决备选）
 
@@ -86,10 +86,6 @@ hunk 按**上下文 / 删除行定位，非行号**——但上下文必须与�
 | 描述面正文（参数描述全文） | 模型可见文本 | **提示词面 = 产品代码**——落点 `thincoder-core/tool-docs/apply_patch.md` |
 | delete 工具语义 | 删除面契约 | 非编辑工具——归 `docs/core/design/TOOLS.md` §6.7 逐工具契约 |
 | VSC 档（`thincoder-vscode/docs/design/APPLY-PATCH.md`）的批次材料 / 变更记录 | 一次性材料 + 历史流水 | VSC 差异面已并 §6.1（VSC 端差异块）；批次档承载 |
-
-## 9. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **98 行**（根层 · as-of 2026-09-15 批 8 实测）——**低于 300 行软线，无需拆分规划**。
 
 ## 变更记录
 

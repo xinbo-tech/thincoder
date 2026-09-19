@@ -10,10 +10,11 @@ import { FILE_MUTATORS } from "./run-helpers.mjs"
 import { isCodePath, loadConventions } from "@thincoder/core/conventions.mjs"
 import { validateDesignToken } from "@thincoder/core/agent-tools/design-token.mjs"
 import { readSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
-// §9 D-24b：冻结窗口冲突判定——W12（2026-09-15）：原端侧 `advisor-async.mjs` 副本退役，
-// 改指核 `advisor-settle.mjs`（同读池条目 `docAbs`/`launchSeq`/`_mutLog`——核 launchAsyncAdvisor
-// 建条目的形态；端侧旧副本读 `entry.documents`/`_fileMutEvents` 与核条目已不同形）。
-import { inflightDesignReviewConflict } from "@thincoder/core/agent-tools/advisor-settle.mjs"
+// §9 D-24b：冻结窗口判据组装——W12（2026-09-15）原端侧 `advisor-async.mjs` 副本退役后
+// 改指核 `advisor-settle.mjs`（同读池条目 `docAbs`/`launchSeq`/`_mutLog`）；M4（2026-09-17）
+// 上移单点：消费核 `agent/write-gate.mjs` 的 `freezeWindowConflict`（被审文件集 = 声明
+// 文档集 + 批次档的合流点）——与 CLI dispatch.mjs 同源镜像，端侧不再直连 settle 谓词。
+import { freezeWindowConflict } from "@thincoder/core/agent/write-gate.mjs"
 
 /** L3 触达路径（绝对）：FILE_MUTATORS 走 tool.touchedPaths（既有收口）；file_ops 按动作
  *  取源/目标（move/rename 动两端；copy 只写目标——源仅读取不算写域）。 */
@@ -110,7 +111,7 @@ export function preGateBlocked(agent, { tool, toolName, args, depth }) {
   if (FILE_MUTATORS.has(toolName) || toolName === "file_ops") {
     let absPaths = []
     try { absPaths = l3TouchedPaths(toolName, tool, args ?? {}, agent.cwd) } catch { absPaths = [] }
-    const conflict = inflightDesignReviewConflict(agent, absPaths)
+    const conflict = freezeWindowConflict(agent, absPaths)
     if (conflict) {
       return { blocked: true, content: `Error: write refused — design review #${conflict.id} is in flight over ${relative(agent.cwd, conflict.path)} (D5 freeze window). A write now would settle it stale — no token for a pass (the round is lost). Wait for the report, or cancel the review first (subagent action:'cancel' id:'${conflict.id}') and re-launch after the change.` }
     }

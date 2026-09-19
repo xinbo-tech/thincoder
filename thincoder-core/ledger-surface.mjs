@@ -12,17 +12,17 @@
  * 常驻标记，渲染端消费；**不受启动行门约束**——F2 按标记态照显）。
  * 只读台账；唯一写面 = 去重档（`~/.thincoder/ledger-notify.json`）。
  */
-import { blameAges, detailScans, discoverFamily, formatDetailLine, formatMarker, loadNotifyState, NOTIFY_FILE, notifyKey, planChangeLines, REFRESH_MS, saveNotifyState, summarizeLedger } from "./ledger.mjs"
+import { buildScan, detailScans, discoverFamily, formatDetailLine, formatMarker, loadNotifyState, NOTIFY_FILE, notifyKey, planChangeLines, REFRESH_MS, saveNotifyState } from "./ledger.mjs"
 
 /** 单次扫描（直驱面——timer 包装见 `startLedgerSurface`）。
  *  `startup=true` = 会话首扫（补启动行；变化行在前、明细行在后）。
  *  `colors` = 端注入的渲染色表（`{ warn, dim }`）；未注入 ⇒ `{}`（`undefined` 色值 = 纯文本）。 */
-export function runLedgerScan({ state, agent = null, anchor = null, notifyFile = NOTIFY_FILE, pushLine = () => {}, render = () => {}, startup = false, ageOf = blameAges, colors = {} } = {}) {
+export function runLedgerScan({ state, agent = null, anchor = null, notifyFile = NOTIFY_FILE, pushLine = () => {}, render = () => {}, startup = false, colors = {} } = {}) {
   const base = anchor ?? agent?.cwd ?? process.cwd()
   const family = discoverFamily(base)
   const scans = []
   for (const p of family.projects) {
-    try { scans.push(summarizeLedger(p, { ageOf })) } catch { /* 台账不可读 → 该项目跳过（余者照常——N1/T110①） */ }
+    try { scans.push(buildScan({ cwd: p.root })) } catch { /* 台账不可读 → 该项目跳过（余者照常——N1/T110①） */ }
   }
   const current = family.current ? scans.find((s) => s.root === family.current.root) ?? null : null
   const notify = loadNotifyState(notifyFile)
@@ -57,7 +57,7 @@ export function startLedgerSurface(ctx = {}) {
   let timer = null
   const tick = (startup) => {
     if (disposed) return
-    if (!startup && ctx.state?.processing) return // git 子进程不打断回合帧
+    if (!startup && ctx.state?.processing) return // 扫描不打断回合帧
     try { runLedgerScan({ ...ctx, startup }) } catch { /* 可见面尽力——不崩（N1） */ }
   }
   setImmediate(() => {

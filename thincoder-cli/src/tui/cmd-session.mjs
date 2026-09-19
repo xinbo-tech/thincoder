@@ -1,4 +1,5 @@
-import { listSlots, switchToSlot, applySession, renameSlot, activeSlot, slotOccupancy, readEndMarker, sessionDescriptor } from "@thincoder/core/session.mjs"
+import { listSlots, switchToSlot, applySession, renameSlot, activeSlot, slotOccupancy, readEndMarker, sessionDescriptor, loadSlotFile } from "@thincoder/core/session.mjs"
+import { resolveEngineeringManifest } from "@thincoder/core/manifest.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { restoreLines } from "./startup.mjs"
 import { stringWidth, sliceByWidth } from "./render.mjs"
@@ -81,6 +82,26 @@ export async function handleSessionCommand(ctx) {
   // 2026-08-31 会诊 deepseek 🔴：目标槽被另一活进程占用时 switchToSlot 不认领（避免
   // 劫持对方 active），本次会话仍读到数据，但下次保存会 fork 到新槽——提前提示。
   const occ = slotOccupancy(agent.cwd, e.slot)
+  // #41 先判后切（MANIFEST.md §2.8 F3 · 父侧裁定 3）：目标槽**合值**（§2.2 会话权威值
+  // 「槽带 `engineering` 字段 ? 槽值 : `config.agent.engineering`」）=== true 时，判据前置于
+  // `switchToSlot`——判据落其后会留下「指针已切、会话未换」的半态（下次 `saveSession` 把旧
+  // 会话写回目标槽 = 跨槽覆盖）。预读 = `loadSlotFile`（**纯读**——无认领副作用）。
+  // 触发条件 = 合值（遗留槽（无 `engineering` 字段）自工程会话切入时合值 = true ⇒ 预判据
+  // 照触发——F3 触发条件口径）；槽不可读（preview null）不判：该次切换本就以「Slot not
+  // found」收场（switchToSlot 返回 null），无半态面。拒 ⇒ 切槽整体不发生（switchToSlot /
+  // applySession 均不调——零副作用）+ 原因行；准 ⇒ 既有切换 + applySession 之后一行附着。
+  const preview = loadSlotFile(agent.cwd, e.slot)
+  const slotEng = preview?.engineering
+  const targetEng = preview != null && (slotEng !== undefined ? slotEng === true : agent.config?.agent?.engineering === true)
+  let manifestAfterSwitch = null
+  if (targetEng) {
+    const r = resolveEngineeringManifest(agent.cwd, { writer: "main" })
+    if (!r.ok) {
+      pushLine(`Cannot switch to slot ${e.slot} — ${r.message} (slot unchanged)`, C.warn)
+      return
+    }
+    manifestAfterSwitch = r.manifest
+  }
   const data = switchToSlot(agent.cwd, e.slot)
   if (!data) {
     pushLine(`Slot ${e.slot} not found`, C.dim)
@@ -90,6 +111,8 @@ export async function handleSessionCommand(ctx) {
     pushLine(`⚠ Slot ${e.slot} is being used by another live process (${occ.owner}) — continuing here will create a new copy on the next save`, C.warn)
   }
   applySession(agent, data, occ.occupied ? {} : { slot: e.slot })
+  // #41 准翻列：附着动作 = 翻转面自己赋值（`agent.manifest` ← 判据结果——相位行当回合起活）。
+  if (manifestAfterSwitch) agent.manifest = manifestAfterSwitch
   // Rebuild from history (lazy) — the display snapshot is deprecated.
   // §14.3.6：描述符 { history（尾窗+±1）, total, base }——标签口径 = total（非窗口长度）；
   // 未绑定（占用分支——模式 F）回退全量数组。

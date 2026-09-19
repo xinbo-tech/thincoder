@@ -9,9 +9,11 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { resolve } from "node:path"
-import { normalizeFileList, effectiveFiles, describeBlockers, queueRunnable, detectStall, maybeRefillAsync, nextSubagentId } from "@thincoder/core/agent-tools/subagent-scheduler.mjs"
+import { normalizeFileList, effectiveFiles, describeBlockers, queueRunnable, detectStall, maybeRefillAsync, nextSubagentId, consumeSubagentToken } from "@thincoder/core/agent-tools/subagent-scheduler.mjs"
 import { buildSpawnChild } from "@thincoder/core/agent-tools/subagent-spawn.mjs"
 import { executeAsyncSpawn } from "@thincoder/core/agent-tools/subagent-run.mjs"
+import { launchEscalateAsync } from "@thincoder/core/agent-tools/escalate-async.mjs"
+import { launchAsyncAdvisor } from "@thincoder/core/agent-tools/advisor-async.mjs"
 
 test("2.7 尾随空格目录声明（\"test/ \"）被识别为目录声明 throw", () => {
   assert.throws(() => normalizeFileList(["test/ "], "C:/w"), /directory declarations are not supported/)
@@ -179,4 +181,85 @@ test("ID-COUNTER 链路：压缩替换 history 数组后 spawn id 仍递增（ag
   assert.equal(built.relayPrefix, "explore#6/", "压缩后 relay 前缀续 6（本体计数器不随 history 丢）")
   assert.equal(ack.id, "6", "压缩后链路取号 6")
   assert.equal(p._subAgentCounter, 6)
+})
+
+// ─── ED-5（AGENT-LOOP-SUBAGENT.md §6.21）——一次性取号令牌 + 入池键守卫 ───
+// 设计用例表：T5-1/T5-2/T5-3 由既有链路形态两用例覆盖（同档「链路形态」节——counter
+// 丢失面续号 / 池满入队 / 压缩续号），T5-8 = 该节「同号」断言零回归。本节落 T5-4
+// （令牌单次性）· T5-5（漏调反证）· T5-6（覆写反证）· T5-7（兄弟族两反证 + 正链路）。
+
+/** advisor 池满夹具（4 设计评审 running + 异 scope——排队路径；池限 4）。 */
+const advisorPoolFull = () => ({
+  cwd: "C:/w",
+  history: [],
+  config: { agent: { poolLimits: { advisor: 4 } } },
+  _asyncAdvisors: new Map(
+    [1, 2, 3, 4].map((i) => [String(i), {
+      id: i, role: "advisor", reviewType: "design",
+      run: { reviewType: "design", docSetKey: `K${i}`, round: 0 },
+      reviewId: `r${i}`, designId: null, designToken: null,
+      documents: null, paths: null, object: null,
+      relayPrefix: `advisor#${i}/`, status: "running", position: undefined,
+      report: null, error: null, done: false, cancelled: false,
+      promise: null, _settle: null, startedAt: Date.now(),
+      controller: { signal: { aborted: false } },
+    }]),
+  ),
+})
+
+test("ED-5 T5-4 令牌单次性：消费即作废——同 id 二次消费（无重新取号）抛 allocator-not-called", () => {
+  const p = spawnAgent()
+  const { built } = chainSpawn(p) // id 5 入池（queued）——取号令牌消费
+  assert.equal(p._lastSubagentId, undefined, "消费即置 undefined（一次性）")
+  assert.throws(
+    () => executeAsyncSpawn(p, {}, "explore", {}, built.child, "t", built.childOpts, built.childRunOpts, built.relayPrefix, built.childProvider, [], []),
+    /subagent id allocator not called \(nextSubagentId\) before async spawn: explore#5/,
+  )
+})
+
+test("ED-5 T5-5 漏调分配器反证：直读陈旧 counter（令牌缺位）→ 抛 allocator-not-called（非静默覆写）", () => {
+  const p = spawnAgent()
+  p._subAgentCounter = 3 // 陈旧 counter——无任何取号（令牌缺位）
+  assert.throws(
+    () => executeAsyncSpawn(p, {}, "explore", {}, null, "t", {}, {}, "explore#3/", null, [], []),
+    /subagent id allocator not called \(nextSubagentId\) before async spawn: explore#3/,
+  )
+  assert.equal(p._asyncSubagents.size, 4, "抛错于入池前——池未被污染")
+})
+
+test("ED-5 T5-6 覆写反证：同 id 二次入池（令牌重配对过断言）→ 键守卫抛 collision", () => {
+  const p = spawnAgent()
+  const { built } = chainSpawn(p) // id 5 已入池（queued）
+  p._lastSubagentId = 5 // 模拟第二次取号同号——令牌断言过、键守卫兜底
+  assert.throws(
+    () => executeAsyncSpawn(p, {}, "explore", {}, built.child, "t", built.childOpts, built.childRunOpts, built.relayPrefix, built.childProvider, [], []),
+    /subagent id collision: explore#5 already in pool/,
+  )
+})
+
+test("ED-5 T5-7a 兄弟族反证（escalate）：漏调形态 → consumeSubagentToken 抛（站点名 + role#id）", () => {
+  const p = { _subAgentCounter: 7, _asyncSubagents: new Map() } // 令牌缺位
+  assert.throws(
+    () => consumeSubagentToken(p, 7, "escalate launch", "escalate"),
+    /before escalate launch: escalate#7/,
+  )
+})
+
+test("ED-5 T5-7b 兄弟族反证（advisor）：漏调形态 → consumeSubagentToken 抛（站点名 + role#id）", () => {
+  const p = { _subAgentCounter: 7, _asyncAdvisors: new Map() }
+  assert.throws(
+    () => consumeSubagentToken(p, 7, "advisor launch", "advisor"),
+    /before advisor launch: advisor#7/,
+  )
+})
+
+test("ED-5 T5-7c 兄弟族正链路：escalate / advisor 排队启动正常路径令牌配对消费（消费即作废）", () => {
+  const pe = spawnAgent() // other 域 4 running——escalate 排队（不启动——零异步残留）
+  const ackE = JSON.parse(launchEscalateAsync(pe, {}, { task: "t", provider: { name: "p", model: "m" }, tag: null, effortNote: null }))
+  assert.equal(ackE.status, "queued", "escalate 池满排队")
+  assert.equal(pe._lastSubagentId, undefined, "escalate 站点令牌消费即作废")
+  const pa = advisorPoolFull() // 4 设计评审 running + 异 scope——advisor 排队
+  const r = launchAsyncAdvisor(pa, {}, { reviewType: "design", documents: null, paths: null, object: null, designToken: null, designId: null, run: { reviewType: "design", docSetKey: "K9" } })
+  assert.equal(r.queued, true, "advisor 池满排队")
+  assert.equal(pa._lastSubagentId, undefined, "advisor 站点令牌消费即作废")
 })

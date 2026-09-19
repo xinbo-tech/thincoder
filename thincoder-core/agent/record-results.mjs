@@ -16,7 +16,7 @@
  *    invalidate verify only (user decision 2026-08-08: reviews trigger on
  *    code mutations, not environment changes).
  *  - advisor calls always advance _advisorRound (convergence budget counts
- *    attempts, not successes). §15 F16 (2026-09-11 第 13 批): the SYNC
+ *    attempts, not successes — 轮次仅作提示词衰减与显示，**无机械上限**). §15 F16 (2026-09-11 第 13 批): the SYNC
  *    called-mark is gated by the single incomplete-tail predicate
  *    (advisorIncompleteMarker) — a truncated-then-settled CODE review must not
  *    count as covered (the guard re-pushes); design reviews keep the mark
@@ -105,9 +105,9 @@ export async function recordToolResults(agent, toolByName, results) {
         // accounting. Only the SYNC path (depth>0 / explicit async:false) accounts
         // here — per-review instance round++ (marker-keyed by tool call id) + the
         // legacy mirror._advisorRound_ counter stays for display/back-compat.
-        // REFUSED launches (pool full / per-review cap) count as neither a call
-        // nor a completion: no called-mark (the guard must keep pushing until a
-        // review really runs), no round advance.
+        // REFUSED launches (type gate / scope guard / same-scope in flight / launch
+        // refusal) count as neither a call nor a completion: no called-mark (the guard
+        // must keep pushing until a review really runs), no round advance.
         const refused = agent._advisorRefusals?.has(toolCall.id)
         const asyncAck = agent._advisorAsyncAcks?.has(toolCall.id)
         if (refused) {

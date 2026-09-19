@@ -101,9 +101,10 @@ export async function executeToolBatches(agent, { response, history, fullHistory
         return { tool_call_id: tc.id, toolName, content: pre.content, meta: null }
       }
 
-      // Permission gate: any non-readonly tool without a live auto-approve. getAuto() is the
-      // LIVE flag (CLI parity) — approve-all / the AUTO button can flip it mid-turn, so
-      // re-read it per tool call instead of using the startup snapshot.
+      // Permission gate: non-readonly tools ask only when the LIVE AUTO read is off.
+      // getAuto() is the live flag (CLI parity) — approve-all / the AUTO button can flip it
+      // mid-turn, so re-read it per tool call; the gate itself is always present and reads
+      // the same live value at ask time (permission-gate.mjs——同判据单源，ED-2 2026-09-16)。
       // §18 C-1（child permission gate——2026-09-12）：`depth === 0` 已从条件移除——深度不再是
       // 权限门。手动档下带权限通道的 child（coder/eng-designer——child-permission.mjs 经父面板
       // 弹卡，第 4 参携 owner/signal）**抵达**本阶段；eng-coder child 仍不达（spawn 时授权 = C-3

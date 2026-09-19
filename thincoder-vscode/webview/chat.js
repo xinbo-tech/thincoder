@@ -5,8 +5,8 @@
  */
 import { ctx, vscode, S } from "./state.js"
 import {
-  showWelcome, updateWelcomeStatus, showBanner, addUser, addAssistantHistory,
-  addTool, addToolHistory, finishTool, showError, maybeScrollDown, escHtml,
+  showWelcome, updateWelcomeStatus, showBanner, addUser,
+  addTool, finishTool, showError, maybeScrollDown, escHtml,
 } from "./ui.js"
 import { setLoading } from "./loading.js"
 import { MAX_TOOL_OUTPUT } from "./lib.js"
@@ -16,7 +16,7 @@ import { initSettings } from "./settings.js"
 import { closeModelMenu } from "./model-menu.js"
 import { applyI18nToDOM } from "./i18n-dom.js"
 import { send } from "./send.js"
-import { onToken, onReasoning, onTurnBreak, finish, attachCopyButtons, advisorChunk, subagentChunk } from "./streaming.js"
+import { onToken, onReasoning, onTurnBreak, finish, attachCopyButtons, subagentChunk } from "./streaming.js"
 import { resetActivity, applySubagentApproval } from "./activity.js"
 import { renderStatusBar, handleUsageMessage } from "./status-bar.js"
 import { handleTaskProgress, handleSubagentMessage, handleGoalMessage, handleSuspensionMessage, handleTurnStateMessage } from "./panels.js"
@@ -130,9 +130,6 @@ window.addEventListener("message", (e) => {
   switch (m.type) {
     case "i18n":           setStrings(m.strings); applyI18nToDOM(); break
     case "userMessage":      addUser(ctx, m.text, m.timestamp, m.idx); break
-    case "assistantMessage": addAssistantHistory(ctx, m.text, m.timestamp, m.idx);
-      attachCopyButtons(ctx.messagesEl.lastElementChild);
-      break
     case "token":            clearStatusText(); onToken(m.text); break
     case "reasoning":        clearStatusText(); onReasoning(m.text); break
     case "turnBreak":        onTurnBreak(); break
@@ -158,7 +155,6 @@ window.addEventListener("message", (e) => {
       maybeScrollDown(ctx)
       break
     }
-    case "toolHistory":      addToolHistory(ctx, m.name, m.text, m.idx); break
     // C2 (SESSION-FLOW-C F-C2c——修 H-E): loading case 不再 innerHTML 覆写 #status-line——
     // setLoading 置 S._phase（thinking 标记）→ renderStatusBar（唯一 writer）同线绘制徽标/
     // 计数/thinking；Stop 可见性 = S._turnState==="running" 派生（F-6——susp 纯池跑不显——
@@ -182,7 +178,7 @@ window.addEventListener("message", (e) => {
     case "clearMessages":
       ctx.messagesEl.replaceChildren()
       ctx.currentBubble = null; ctx.currentBlock = null; ctx.currentTools = []; ctx.currentRaw = ""; ctx.currentReasoning = null; ctx.currentReasoningRaw = ""
-      S._advisorBlock = null; S._digestBoundary = null; S._statusText = null; S._turnFrame = null; resetActivity()
+      S._digestBoundary = null; S._statusText = null; S._turnFrame = null; resetActivity()
       ctx._hasOlder = false
       ctx._nextIdx = 0
       S._loadingOlder = false
@@ -254,9 +250,10 @@ window.addEventListener("message", (e) => {
     case "permissionRequest":
       showPermissionRequest(m)
       break
-    // §18 C-6（child permission gate）：host 释放（opts.signal / Stop / approve-all 连带）
-    // → 移除对应卡。promptId 精确匹配；无 promptId（旧 host）→ 移除全部带 id 的卡
-    // （中止即整轮作废——无悬挂卡）。批量卡（无 data-prompt-id）不受影响。
+    // §18 C-6（child permission gate）· F-W13（批卡并入同族）：host 释放（opts.signal /
+    // Stop / approve-all 连带 / 孤儿响应回写）→ 移除对应卡。promptId 精确匹配；无 promptId
+    // （旧 host）→ 移除全部带 id 的卡（中止即整轮作废——无悬挂卡）。
+    // 合并卡自 2026-09-18 批起同携 data-prompt-id ⇒ 与逐项卡零分支共用本选择器。
     case "permissionWithdrawn": {
       const cards = [...document.querySelectorAll(".permission-prompt[data-prompt-id]")]
       for (const c of cards) {
@@ -289,10 +286,11 @@ window.addEventListener("message", (e) => {
     case "goal":             handleGoalMessage(m); break
     case "suspension":       S._digestBoundary = null; handleSuspensionMessage(m); break
     case "toolPanel":
-      // Advisor streams into an in-conversation details block (like reasoning),
-      // round-tagged and never truncated — NOT a side panel.
-      if (m.name === "advisor") advisorChunk(m)
-      else if (m.name?.startsWith("sub:")) subagentChunk(m)
+      // Subagent/consultant content streams into an activity-region block
+      // (§13/§14 — activity.js ensureBlock). Advisor has no webview consumer
+      // (VSC-DEBT D-2: no host emitter — the advisor family merged into the
+      // subagent container; src/agent.mjs:79).
+      if (m.name?.startsWith("sub:")) subagentChunk(m)
       break
   }
 })

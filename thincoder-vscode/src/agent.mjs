@@ -10,36 +10,33 @@ import {
   configuredMaxTurns, hasCodeMutations,
   pushReal, agentState, turnFrame,
 } from "./agent/run-helpers.mjs"
-import { MAX_ADVISOR_ROUNDS } from "@thincoder/core/advisor/run.mjs" // W12：advisor 镜像删旧——核单源
 import { executeToolBatches } from "./agent/execute-tools.mjs"
 import { hydrateRun, setupAgentRun } from "./agent/setup.mjs"
-import { AUTO_REMINDER, ENG_OFF_REMINDER, ENG_ON_REMINDER, injectEngineeringReminder } from "./agent/setup-reminders.mjs"
+// #45（WEBVIEW-PROTOCOL.md §3.3）：工具驱动的模式 / 参数变更 → 端显示同步 cell（纯函数）
+import { syncToolDrivenDisplayState } from "./agent/agent-state.mjs"
+import { AUTO_REMINDER, ENG_OFF_REMINDER, ENG_ON_REMINDER, injectEngineeringReminder, pushManifestStateReminder } from "./agent/setup-reminders.mjs"
+// 端侧回合域文本组合单点（核基座 + 端 overlay——§6.27.12.5 L；原自持基座常量块外提 = 拆分计划落地）。
+import { composeTurnDomain } from "./agent/turn-domains.mjs"
 // 主循环阶段函数（压缩检查/蒸馏发射/回合收尾/响应提醒）2026-09-05 实践轮迁 agent/run-stages.mjs
 import { checkAndCompact, fireEndOfRunDistill, finalizeAgentTurn, injectResponseReminders, maybeGuardPushbacks } from "./agent/run-stages.mjs"
 // D-CI4（VSC-CONTEXT-PARITY §17.3）：plan-mode 节律常量/计数（W9 起 = 核单源 agent-tools/plan.mjs）
 import { planReminderForTurn } from "@thincoder/core/agent-tools/plan.mjs"
 
-/** Manual-tier auto-turn digest domain (AGENT-LOOP.md §17 D-S6): organize-only.
- *  Injected per manual auto-turn run — writes/execute/spawns/questions are also
- *  mechanically denied (deny-stub permission/question handlers + the spawn gate in
- *  subagent.mjs); this reminder steers the model before it hits those denials.
- *  §9 D-24b（R13——2026-09-06）：async advisor review 报告同此消化通道——呈递发现与
- *  修复建议（不擅自动手——修正轮由用户裁决后发起）。 */
-const AUTO_TURN_DIGEST_DOMAIN =
-  "[System reminder: auto-turn — background async subagents / consultations / escalate reports / advisor reviews finished while there was no user message, and this turn runs automatically to digest their reports (the finished-report reminders above). No one is waiting for this reply, so organize only: 1) summarize each finished report's key points into this conversation for the user to read later (async advisor review reports: present the findings and suggested fixes verbatim — do not apply them; consultation reports: present each reply verbatim with your per-reply adoption judgment as text — do not apply anything; escalate reports: summarize the merged post-op work — further changes need a user message); 2) update the task list with the task tool (allowed) to mark finished work done; 3) write decision points with a suggested next step as text — do not execute it. FORBIDDEN this turn (mechanically enforced): modifying files, bash/execute/verify, spawning subagents, asking questions — those need a real user message. End the turn once the summaries are written.]"
-
 /** Guard bookkeeping keys an auto-turn's end state inherits into the next USER run
  *  (§17 D-S6 — auto-turn changes never escape the verify/advisor guards silently). */
 export const INHERITED_GUARD_KEYS = ["_mutatedThisRun", "_verifiedThisRun", "_verifyPassed", "_calledAdvisorThisRun", "_touchedFiles", "_verifyRetries", "_advisorRound"]
 
-/** W13 载体字段集（跨 run 存活——住共享 depth-0 history；`docs/core/design/AGENT-LOOP.md §2.3` :93 十字段全集）。
+/** W13 载体字段集（跨 run 存活——住共享 depth-0 history；`docs/core/design/AGENT-LOOP.md §2.3` :93 **13 字段全集**〔设计 13 款 + 端自持 `_engDesignTokens` = 本表 14 绑定〕）。
  *  `_mutLog` = 核 `advisor-settle.noteMutations` 写点（VSC 旧对位名 `_fileMutEvents`——核名单源）；
- *  `_asyncWaiters` = 核 settle 尾部唤醒数组（`async-settle.mjs:270` `splice(0)` 全唤醒）；
- *  `_advisorRuns` = 核评审实例登记册（`advisor-async.mjs:69-82`）。 */
-const CARRIER_FIELDS = [
+ *  `_asyncWaiters` = 核唤醒单点 `wakeAsyncWaiters`（`async-settle.mjs:296-299`；settle 公共尾 `:281` + 上行 ask 入队尾两处调用）；
+ *  `_advisorRuns` = 核评审实例登记册（`advisor-async.mjs:69-82`）；
+ *  `_asyncAdvisorQueue` = 核评审排队容器（ED-4——af 批补入；缺它 ⇒ ⏹ 出队 no-op ⇒ 已取消评审被补位重启）；
+ *  `_childUpstream` / `_childUpstreamSeq` = 子→父在飞消息队列 + 单调计数（§6.27 上行通道——2026-09-19 批补两款：
+ *  端壳 drain 消费点与开轮谓词 `upstreamWaiting` 读它）。**导出**（2026-09-18 af 批 fix 轮 2）：测试对位锁以本表为权威（T-AF16 夹具副本 == 本表 · T-AF17 夹具子集 ⊆ 本表——任一侧删/增款即红，F-8 反向面）。 */
+export const CARRIER_FIELDS = [
   "_asyncSubagents", "_asyncAdvisors", "_asyncTombstones", "_pendingAsyncResults",
-  "_consultSessions", "_engDesignTokens", "_suspended", "_asyncQueue",
-  "_asyncWaiters", "_advisorRuns", "_mutLog",
+  "_consultSessions", "_engDesignTokens", "_suspended", "_asyncQueue", "_asyncAdvisorQueue",
+  "_asyncWaiters", "_advisorRuns", "_mutLog", "_childUpstream", "_childUpstreamSeq",
 ]
 
 /** Typed error for turn-limit exhaustion — consumers can detect and offer "Continue?" prompt */
@@ -58,6 +55,9 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
   const role = opts.role ?? null
   const overrideTurns = opts.maxTurns
   const autoTurn = opts.autoTurn === true // §17 D-S6: system-driven digest turn (no user input)
+  // §6.27.12.12 ③/④: up-stream wake turn (a running subagent's in-flight ask opened it) — the flag
+  // only SELECTS the domain text (§6.27.12.5 L); it enters no gate (autoTurn keeps the auto-turn class).
+  const upstreamTurn = opts.upstreamTurn === true
 
   // Live autoApprove read (CLI parity): the panel passes a getter — approve-all / the
   // AUTO toolbar button flip the flag MID-TURN; the gate + AUTO reminder re-read it.
@@ -119,15 +119,17 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
   if (!opts.resume && opts.inheritedGuard) {
     for (const k of INHERITED_GUARD_KEYS) if (k in opts.inheritedGuard) agent[k] = opts.inheritedGuard[k]
   }
-  // §17 D-S6 manual tier: digest action-domain reminder (system-driven turn — organize only).
-  if (autoTurn && !getAuto()) {
-    history.push({ role: "user", content: AUTO_TURN_DIGEST_DOMAIN, transient: true })
+  // §17 D-S6 manual tier + §6.27.12.12 ④: system-driven turn domain reminder — the base switches by
+  // turn type (digest / up-stream wake), the end-side overlay is always present (§6.27.12.5 L).
+  if ((autoTurn || upstreamTurn) && !getAuto()) {
+    history.push({ role: "user", content: composeTurnDomain(upstreamTurn), transient: true })
   }
 
   // §15 D-A3（VS Code 对齐）：async 注册表挂 agent 上；depth-0 的容器沿共享 history
   // 数组跨 runAgent 调用存活。
-  // W13（2026-09-15）载体绑定不变式收口（`docs/core/design/AGENT-LOOP.md §2.3` :93/:107——**十字段**
-  // 全集 + `_asyncQueue`）：核写侧**以父对象字段为入口**（`async-settle.mjs`「写侧不变——绑定
+  // W13（2026-09-15）载体绑定不变式收口（`docs/core/design/AGENT-LOOP.md §2.3` :93/:107——**13 字段**
+  // 全集〔af 批 2026-09-17 补 `_asyncAdvisorQueue`；上行通道批 2026-09-19 补 `_childUpstream` / `_childUpstreamSeq`；
+  // 设计 13 款 + 端自持 `_engDesignTokens` = 本表 14 绑定〕）：核写侧**以父对象字段为入口**（`async-settle.mjs`「写侧不变——绑定
   // 不变式下与 history 同一容器」；`carrierField` 只是读侧吸收）——只绑两池时，核 settle 的
   // `parkAsyncPending(parent=agent)` / 墓碑 / 队列 / 唤醒数组会落在 **per-run agent** 上（挂起期 settle
   // 报告丢投、digest 永不见 pending、`_asyncWaiters` 唤醒双径不同容器——种子 S1 病征类）。
@@ -156,6 +158,9 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
   // End-of-run exploration distillation boundary (CONTEXT-COMPACTION §5): setupAgentRun has already
   // pushed the user input + injections, so everything appended from here is "this run's" work.
   agent._runStartHistoryLen = history.length
+
+  // §6.27 子 → 父在飞消息（§6.27.12.12 ①）：消费点取用一次；动态 import = 零新增静态边（W8 契约②）。
+  const { drainChildUpstream } = await import("@thincoder/core/agent-tools/parent-channel.mjs")
 
   // ─── Main loop ─────────────────────────────
   const maxTurns = overrideTurns || configuredMaxTurns()
@@ -195,6 +200,11 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
       }
     }
 
+    // §6.27 子 → 父在飞消息的回合边界消费点（§6.27.12.12 ①）：端壳循环头单点，紧随上方
+    // `opts.turnInput?.()` 消费段——与核 `thincoder-core/agent.mjs:223-225` 同址反向（核单源复用；
+    // 空队列 no-op —— 零历史变更）。禁另造第二实现（D2 单一权威源）。
+    drainChildUpstream(agent)
+
     // Context compaction check — only at safe points: history ends with a complete
     // exchange (user input or tool result), never mid-assistant (CLI parity D1).
     // 2026-09-05 实践轮：压缩判定/重建/降级计数提为 checkAndCompact 模块函数
@@ -231,6 +241,9 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
     // Engineering-mode transition reminder (CLI parity): covers TUI/panel toggles and
     // session resume — paths that bypass the eng tool's own _pendingReminders push.
     injectEngineeringReminder(agent)
+    // M1 情境行（#28——`docs/core/design/MANIFEST.md` §2.6）：manifest phase 进模型
+    // 上下文——CLI `run-stages.mjs` injectTurnReminders 同序（eng 之后）；depth>0 在函数内门拒。
+    pushManifestStateReminder(agent, { depth })
 
     // Flush pending reminders queued by meta-tools (eng enter/exit, etc.)
     if (agent._pendingReminders.length > 0) {
@@ -363,7 +376,8 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
         callbacks.onComplete?.(response.content, agentState(agent))   // UI 立即释放
         // 2026-09-05 实践轮：蒸馏发射（深度守卫/distillSignal 分离/落位回写）提为
         // fireEndOfRunDistill 模块函数——此处只剩 UI 释放 + 发射调用。
-        const distill = fireEndOfRunDistill(agent, history, provider, opts.distillSignal ?? signal, callbacks)
+        const distill = fireEndOfRunDistill(agent, history, provider, opts.distillSignal ?? signal, callbacks,
+          { systemPrompt, tools: toolSchemas }) // §6.15 会话续写前缀面（与回合请求同源）
         if (opts.distillState) opts.distillState.pending = distill
       }
       return response.content
@@ -428,6 +442,11 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
         ? { status: g.status === "active" ? "active" : g.status === "complete" ? "done" : g.status, objective: g.objective, criteria: g.criteria }
         : { status: "cancelled" })
     }
+    // #45（WEBVIEW-PROTOCOL.md §3.3）：工具驱动的模式 / 参数变更 → 端显示同步（**单点**、判据两条、
+    // 读后复位）——模式腿（`eng` 工具翻转 ⇒ onEngMode）+ 参数腿（settings 工具包装置位 ⇒
+    // onSettingsChanged）；两回调同指面板 `_pushSettingsLight()`（四快照重推——零新增消息类型）。
+    // 深度 > 0 子代理的 callbacks 无该两键 ⇒ `?.` 恒 no-op。
+    syncToolDrivenDisplayState(agent, callbacks)
 
     // Ctrl+I interrupt during tool execution (CLI agent.mjs parity): skip committing
     // partial tool results — they'd mislead the model. Inject the interrupt and retry.

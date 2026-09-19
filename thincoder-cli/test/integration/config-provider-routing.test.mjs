@@ -23,6 +23,7 @@ const BIN = join(__here, "..", "..", "bin", "thincoder.cjs")
 function mkEnv(t, configText) {
   const home = mkdtempSync(join(tmpdir(), "tc-int-cfg-home-"))
   const cwd = mkdtempSync(join(tmpdir(), "tc-int-cfg-cwd-"))
+  mkdirSync(join(cwd, ".git"), { recursive: true }) // 项目根判据（.git 仓根——2026-09-17）
   t.after(() => {
     try { rmSync(home, { recursive: true, force: true }) } catch { /* ignore */ }
     try { rmSync(cwd, { recursive: true, force: true }) } catch { /* ignore */ }

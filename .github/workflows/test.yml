@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 24 }
-      - run: node --test
+      - run: npm test
   docs:
     name: repo-wide doc machine checks
     runs-on: ubuntu-latest
@@ -51,7 +51,5 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 24 }
-      # 全域态（无域参 = 全域——设计档 TWO-REPO-MERGE.md §2.5）：doc-anchors（V5 两引擎）/ 宽度+一致性 V1–V3 / 台账 L1–L4
-      - run: node scripts/doc-anchors.mjs
-      - run: node scripts/check-doc-width.mjs
-      - run: node scripts/check-ledger.mjs
+      # 单引擎（声明面驱动——设计档 DOC-DISCIPLINE.md §7；2026-09-18 判据面批收正：旧三档 doc-anchors / check-doc-width / check-ledger 已随 v2 收敛撤除）
+      - run: node scripts/doc-check.mjs

@@ -72,10 +72,6 @@
 | 旧档关联指针 `docs/design/README.md`（文档地图） | 旧树地图档 | 旧树地图随树降格退休——基准层地图面不归本档 |
 | CLI 侧同名需求档（`thincoder-cli/docs/requirements/ENG-TOKEN-BINDING.md`） | CLI 产品需求正文 | **已并入（2026-09-15 CLI 尾部真批）**——编号承旧档零改号；(d) 类入 §5.1 |
 
-## 6. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **约 84 行**（as-of 2026-09-15 CLI 尾部真批并入后实核）——**低于 300 行软线，无需拆分规划**。
-
 ## 变更记录
 
 - 2026-09-15（**CLI 尾部真批 · 并入既有 · eng-designer**）：`thincoder-cli/docs/requirements/ENG-TOKEN-BINDING.md` 逐节对账并入——

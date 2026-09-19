@@ -13,25 +13,39 @@
  * 自持该四个落点（认领 / 选号 / 落盘序列 = 核同源步骤 + 核原语复用）。
  * 另两件端侧自有：`loadModelPrefs`/`saveModelPrefs`（workspaceState，非会话文件）·
  * `stripTruncatedToolArgs`（核内私有件、未导出——`applySession` 机读线播种同规则）。
+ *
+ * F-MI7（2026-09-18 · MULTI-INSTANCE-COLLAB §3.1——端侧探测收口）：
+ *   ① 端壳落点**零自有探测**——`newSlot` 入口一次 `probeOwnersAsync(ownerPids(m))` 拿判据束，
+ *      死主清理 / 空闲选号 / 活认领跳过全部查表（三态 D-MI10/D-MI11：unknown ⇒ 保留 + 跳过，
+ *      绝不判死、绝不抢"可能活着"属主的号）；
+ *   ② `resumeSlot` 包装器 → **async**（核同名件同形）；本档新增 `cachedSlot(cwd)`，见下。
  */
 import { existsSync, unlinkSync } from "node:fs"
 // 本档体内使用（其余名面 = 纯转口，见下 `export … from`）。
 import { loadSlotFile } from "@thincoder/core/session.mjs"
 import { newSlotData } from "@thincoder/core/session-slot-write.mjs"
 import { unlinkRecordStore } from "@thincoder/core/session-store.mjs"
+// F-MI7 判据面（单源 = 核）：探测束 + 属主三态 / pid 清单。
+import { probeOwnersAsync } from "@thincoder/core/process-probe.mjs"
+import { ownerPids, ownerStateOf } from "@thincoder/core/session-slots-manifest.mjs"
 import {
   getSessionId, slotPath, loadManifest, saveManifest, writeSessionFile,
-  isProcessAlive, slotDigest, slotOccupancy, readEndMarker, writeEndMarker,
+  slotDigest, slotOccupancy, readEndMarker, writeEndMarker,
 } from "./session-slots.mjs"
 import { scheduleSessionGC } from "./session-gc.mjs"
 import { resumeSlot as slotsResumeSlot } from "./session-slots.mjs"
+import {
+  _setSessionsDirForTest as slotsSetSessionsDirForTest,
+  _resetSessionsDirForTest as slotsResetSessionsDirForTest,
+} from "./session-slots.mjs"
 
 // ─── 单源转口（既有 import 路径与名面不变）────────────────────────────────
 
-// slot / manifest / 路径 / 属主 / 沙箱缝（源 = 核 `session-slots.mjs`，经端壳 session-slots）
+// slot / manifest / 路径 / 属主 / 沙箱缝（源 = 核 `session-slots.mjs`，经端壳 session-slots；
+// 沙箱两缝在本档**包装**后再导出——见下「沙箱缝 + 解析缓存」）
 export {
   getSessionId, normalizeCwd, slotPath, manifestPath, loadManifest, saveManifest,
-  activeSlot, slotOccupancy, sessionsDir, _setSessionsDirForTest, _resetSessionsDirForTest,
+  activeSlot, slotOccupancy, sessionsDir,
   END, endMarkerPath, readEndMarker, writeEndMarker, claimSlot, allocateFresh,
 } from "./session-slots.mjs"
 
@@ -41,7 +55,6 @@ export { loadSlotFile as loadSlot, listSlots, renameSlot as setSlotTitle, slimFo
 export { saveSlotData as saveSessionToSlot } from "@thincoder/core/session-slot-write.mjs"
 
 // 人读线惰性窗口面（`history-window.mjs`——W6 起即核面转口）
-import { historyWindow, HISTORY_PAGE_SIZE, isRealUserMsg } from "./history-window.mjs"
 export { historyWindow, HISTORY_PAGE_SIZE, isRealUserMsg } from "./history-window.mjs"
 
 // 槽开关写面（源 = 核 `session-slot-write.mjs`，经端壳 session-slot-write）
@@ -50,11 +63,33 @@ export {
   setSlotEngDesignTokens,
 } from "./session-slot-write.mjs"
 
+// ─── 沙箱缝 + 解析缓存（F-MI7）──────────────────────────────────────────
+
+/** cwd → 本进程**已解析绑定**的槽号（`resumeSlot` / `newSlot` / `switchToSlot` /
+ *  `deleteSlotAndUpdate` 四个落点写穿）。用途 = `panel-session.ensureSlot` 的**零探测冷路径**
+ *  直读源：命中即返（零 exec、零 manifest 读），未命中则后台收敛（N-MI2）。
+ *  条目 = 纯值快照（陈旧只影响新鲜度——真值仍以 manifest / 本端记录为准）；环境变更
+ *  （沙箱缝）即整体失效。 */
+const slotCache = new Map()
+
+/** 沙箱缝包装：目录切换 ⇒ 解析缓存失效（缓存不得跨沙箱 / 跨目录根存活）。 */
+export function _setSessionsDirForTest(...args) { slotCache.clear(); return slotsSetSessionsDirForTest(...args) }
+export function _resetSessionsDirForTest(...args) { slotCache.clear(); return slotsResetSessionsDirForTest(...args) }
+
+/** 冷路径读源：本 cwd 已解析的槽号（无 ⇒ null）。纯内存读——**零探测零 IO**。 */
+export function cachedSlot(cwd) {
+  const s = slotCache.get(cwd)
+  return s == null ? null : s
+}
+
 /** 恢复决策包装（SESSION.md §12 启动钩子，2026-09-06）：面板恢复入口触发一次残留 GC——
- *  scheduleSessionGC 内部 setImmediate 空闲执行 + 每进程每前缀去重，不阻塞激活路径（N4）。 */
-export function resumeSlot(cwd) {
+ *  scheduleSessionGC 内部 setImmediate 空闲执行 + 每进程每前缀去重，不阻塞激活路径（N4）。
+ *  F-MI7：转 async（核同名件同形）+ 解析结果写穿缓存（冷路径直读源）。 */
+export async function resumeSlot(cwd) {
   scheduleSessionGC(cwd)
-  return slotsResumeSlot(cwd)
+  const r = await slotsResumeSlot(cwd)
+  if (r?.slot != null) slotCache.set(cwd, r.slot)
+  return r
 }
 
 /** slimForDisplay 截断的 arguments 以 U+2026（…）结尾——不是合法 JSON 的完整值。
@@ -80,24 +115,26 @@ export function stripTruncatedToolArgs(m) {
  *  记所有权 + 翻 active + 写本端记录（D-4：newSlot 成功后）。
  *  2026-09-01 CLI 同步：开头清理死主条目（死主且文件缺失的槽号回收复用，与核 ensureActive
  *  分支 2 语义对齐）；立即记录所有权（F3——否则并发方会把新 active 槽当空闲认领）；deletions
- *  经显式落盘（条目级合并会把磁盘死条目从 fresh 复活回写）。 */
-export function newSlot(cwd) {
+ *  经显式落盘（条目级合并会把磁盘死条目从 fresh 复活回写）。
+ *  F-MI7：**async** + 入口一次判据束（零逐 pid exec——旧实现 `isProcessAlive` 逐 pid 一次），
+ *  三态判定（D-MI10/D-MI11）：死主判定 = `ownerStateOf === "dead"`（unknown ⇒ **保留**——
+ *  旧实现把 undefined（探测失败）当死 ⇒ 误删"可能活着"属主条目，本批收正）；活认领跳过 =
+ *  `!== "dead"`（unknown 一并跳过——保守）。 */
+export async function newSlot(cwd) {
   const m = loadManifest(cwd)
   const mySessionId = getSessionId()
+  const bundle = await probeOwnersAsync(ownerPids(m)) // F-MI7：入口一次异步束（空清单 ⇒ 零 exec）
   const deadSlots = []
   for (const [s, owner] of Object.entries(m.slotSessions ?? {})) {
-    if (owner && owner !== mySessionId) {
-      const pid = parseInt(owner.split("-")[0])
-      if (!pid || !isProcessAlive(pid)) {
-        delete m.slotSessions[s]
-        if (!existsSync(slotPath(cwd, Number(s)))) delete m.slots[s]
-        deadSlots.push(s)
-      }
+    if (owner && owner !== mySessionId && ownerStateOf(owner, bundle) === "dead") {
+      delete m.slotSessions[s]
+      if (!existsSync(slotPath(cwd, Number(s)))) delete m.slots[s]
+      deadSlots.push(s)
     }
   }
   const liveClaimed = (n) => {
     const owner = m.slotSessions?.[n]
-    return !!(owner && owner !== mySessionId && isProcessAlive(parseInt(owner.split("-")[0])))
+    return !!(owner && owner !== mySessionId && ownerStateOf(owner, bundle) !== "dead")
   }
   let slot = 1
   while (m.slots[slot] || existsSync(slotPath(cwd, slot)) || liveClaimed(slot)) slot++
@@ -115,26 +152,37 @@ export function newSlot(cwd) {
     : null
   saveManifest(cwd, m, deletions, { setActive: true })
   writeEndMarker(cwd, slot) // D-4：newSlot 成功后
+  slotCache.set(cwd, slot)
   return slot
 }
 
 /** Switch active slot. Returns the loaded session data (null if slot doesn't exist). Same as CLI switchToSlot.
  *  D-4：成功后写本端记录（「打开历史会话」落点）。
  *  先 loadSlot 成功才翻 active 指针（文件缺失/损坏时返回 null 且不产生幻影 active，与核
- *  「切换不得有认领副作用」对齐）；目标槽被另一活进程占用则不认领（防双属主——占用方
- *  `_slot` 粘性不受影响）——占用判定单源 = 核 `slotOccupancy`。 */
+ *  「切换不得有认领副作用」对齐）；目标槽被另一活进程占用则不认领（防双属主）——
+ *  占用判定单源 = 核 `slotOccupancy`（F-MI7 有界同步例外：槽内单次有界探测、不在
+ *  每回合面上——§3.1 判据条③）。
+ *  F-MI7 收敛（SESSION.md §6.15 P3/P4）：占用时本端记录面（`{manifest}.vscode` marker +
+ *  解析缓存）**保持原值不动**——被占槽是占用方的事，本端不得把它记成「最后使用槽」
+ *  （否则面板 `_slot` 经缓存钉到别人的槽上 = 双写同槽）；共享 active 指针仍翻（D-6——
+ *  CLI 互操作面，非本端记录面）。 */
 export function switchToSlot(cwd, slot) {
   const m = loadManifest(cwd)
   if (!m.slots[slot]) return null
   const data = loadSlotFile(cwd, slot)
   if (!data) return null
   m.active = slot
-  if (!slotOccupancy(cwd, slot).occupied) {
+  const occ = slotOccupancy(cwd, slot)
+  if (!occ.occupied) {
     m.slotSessions ??= {}
     m.slotSessions[slot] = getSessionId()
   }
   saveManifest(cwd, m, null, { setActive: true })
-  writeEndMarker(cwd, slot) // D-4：switchToSlot 成功后
+  // 本端记录面（marker + 解析缓存）只在未占时写穿（P3/P4）——被占 ⇒ 保持原值不动。
+  if (!occ.occupied) {
+    writeEndMarker(cwd, slot) // D-4：switchToSlot 成功后
+    slotCache.set(cwd, slot) // 绑定事实写穿（与面板 _slot 同落点）
+  }
   return data
 }
 
@@ -153,6 +201,10 @@ export function deleteSlotAndUpdate(cwd, slot) {
   if (m.active === slot) delete m.active
   saveManifest(cwd, m, { slots: [slot], slotSessions: [slot] }, { setActive: true })
   if (readEndMarker(cwd)?.slot === slot) writeEndMarker(cwd, null)
+  // 解析缓存随删槽收敛：删的是已解析槽 ⇒ 清空（下次 ensureSlot 经 resumeSlot 重新认领，
+  // F4「null 时保持置空」）。**不得改随幸存 active**——那可能是他端活槽（收养 ⇒ 面板
+  // `_slot` 钉到别人槽上 + 本端记录写别人槽 = P3/P4 违约；幸存槽由认领束另择新号）。
+  if (slotCache.get(cwd) === slot) slotCache.delete(cwd)
   return m.active ?? null
 }
 

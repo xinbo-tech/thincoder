@@ -65,8 +65,8 @@
 | 帧纯函数 / 消费 helper | `thincoder-vscode/src/agent/run-helpers.mjs:29`（`turnFrame`）· `:37`（`applyTurnFrame`） | 在位 |
 | 子代理续跑循环 | `thincoder-vscode/src/agent-tools/subagent-run.mjs:85`（`for (let resume = false; ; resume = true)`）· `:132`（`applyTurnFrame`）· `:141`（`resume` → `history` + `_turnSeqBase`）· `:175`（`ContinueError` 分支） | 在位 |
 | 撞墙终态文案 | `thincoder-vscode/src/agent-tools/subagent-run.mjs:195`（`onSubagent` error）· `:199`（返回文本） | 在位 |
-| 飞刀同步续跑 | `thincoder-vscode/src/agent-tools/subagent-escalate.mjs:153`（`runOpts(resume)`）· `:158`/`:161` · `:163`（`for (let resumes = 0; ; resumes++)`）· `:177`（`runOpts(resumes > 0)`）· `:197`（`ContinueError` 分支）——**该端档已退役**（W12 删除集；现体 = 核 `thincoder-core/agent-tools/subagent-actions.mjs`） | 在位 |
-| 飞刀 async 面 | `thincoder-vscode/src/agent-tools/subagent-escalate-async.mjs:76`（注释：续跑支当前休眠——`ContinueError` 全走 error-class return）——**该端档已退役**（W12 删除集） | 在位（同构契约驻留） |
+| 飞刀同步续跑 | `thincoder-vscode/src/agent-tools/subagent-escalate.mjs:153`（`runOpts(resume)`）· `:158`/`:161` · `:163`（`for (let resumes = 0; ; resumes++)`）· `:177`（`runOpts(resumes > 0)`）· `:197`（`ContinueError` 分支）——**该端档已退役**（W12 删除集；现体 = 核 `thincoder-core/agent-tools/subagent-actions.mjs`） | 在位 （迁移期引文） |
+| 飞刀 async 面 | `thincoder-vscode/src/agent-tools/subagent-escalate-async.mjs:76`（注释：续跑支当前休眠——`ContinueError` 全走 error-class return）——**该端档已退役**（W12 删除集） | 在位（同构契约驻留） （迁移期引文） |
 | 会诊续跑 | `thincoder-vscode/src/agent-tools/consult.mjs:300`（`consultTurns ?? 40`）· `:310`（`ContinueError`）· `:319-325`（队列 + watchdog 重挂） | 在位 |
 | 主 agent 回合循环 | `thincoder-vscode/src/extension/panel-chat.mjs`（回合循环） | 在位 |
 
@@ -138,10 +138,6 @@
 | `AGENT-PARAMS` explore 30 硬帽沿革 | 邻板块参数沿革 | 归 `docs/core/design/AGENT-PARAMS.md` |
 | CLI 侧同名档未迁面（CLI 台账列为后续批） | CLI 产品档正文 | **已并入（2026-09-15 CLI 尾部真批）**——CLI 独有面入 §1–§5，(d) 类入 §6.1 |
 
-## 7. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **155 行**（as-of 2026-09-15 CLI 尾部真批并入后实核）——**低于 300 行软线，无需拆分规划**。
-
 ## 变更记录
 
 - 2026-09-15（**CLI 尾部真批 · 并入既有 · eng-designer**）：`thincoder-cli/docs/design/TURN-CAP-CONTINUE.md` 逐节对账并入——
@@ -149,6 +145,6 @@
   主 agent 续跑 / 编号镜像层 ×2 / CLI 消费链）· 决策补 D-TC8–D-TC11（§5）；(d) 类（§19 批次材料 / 状态行 / 跨仓登记行指针 / 逐批流水）入 §6.1。
   旧档原地一字不改。
 - 2026-09-15（**B 式迁移轮 · VSC 批 3**）：建档——`thincoder-vscode/docs/design/TURN-CAP-CONTINUE.md` 内容重建入基准层
-  （旧档一字未改、原地作参照历史）；坐标改写为现状路径并实核（`thincoder-core/agent.mjs` · `agent/helpers.mjs` · `agent-tools/{subagent-run,consult}.mjs`；
+  （旧档一字未改、原地作参照历史）；坐标改写为现状路径并实核（`thincoder-core/agent.mjs` · `thincoder-core/agent/helpers.mjs` · `agent-tools/{subagent-run,consult}.mjs`；
   `thincoder-vscode/src/{agent.mjs,agent/run-helpers.mjs,agent-tools/*,extension/panel-chat.mjs}`）；源档漂移按现状收正（§3.2 注）；
   批次材料 / 状态行 / 逐批流水不并（§6）。

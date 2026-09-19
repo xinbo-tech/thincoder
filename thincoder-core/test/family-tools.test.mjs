@@ -25,27 +25,27 @@ const ROLE_FIXTURES = [
   {
     label: "depth-0 默认（无 decorate ⇒ 核默认形态）",
     args: { depth: 0 },
-    expect: ["task", "plan", "timer", "subagent", "skill", "goal", "eng", "verify", "recent_changes", "read_history", "advisor"],
+    expect: ["task", "plan", "timer", "subagent", "skill", "goal", "eng", "verify", "recent_changes", "read_history", "advisor", "ledger_add", "ledger_close", "ledger_update"],
   },
   {
     label: "eng-designer（depth>0）",
     args: { depth: 1, role: "eng-designer", batchDoc: BATCH },
-    expect: ["task", "plan", "timer", "batch_segment", "subagent"],
+    expect: ["task", "plan", "timer", "batch_segment", "subagent", "notify_parent"],
   },
   {
     label: "eng-coder（depth>0）",
     args: { depth: 1, role: "eng-coder", batchDoc: BATCH },
-    expect: ["task", "plan", "timer", "advisor", "verify", "batch_segment", "subagent"],
+    expect: ["task", "plan", "timer", "advisor", "verify", "batch_segment", "subagent", "notify_parent"],
   },
   {
     label: "coder（depth>0）",
     args: { depth: 1, role: "coder" },
-    expect: ["task", "plan", "timer", "verify", "advisor"],
+    expect: ["task", "plan", "timer", "verify", "advisor", "notify_parent"],
   },
   {
     label: "explore（depth>0——只读子代）",
     args: { depth: 1, role: "explore" },
-    expect: ["task", "plan", "timer"],
+    expect: ["task", "plan", "timer", "notify_parent"],
   },
   {
     label: "consult（depth>0——会诊子代）",
@@ -70,6 +70,19 @@ test("固定段序：task → plan → timer 恒为前 3 项；家族段随后�
   }
 })
 
+test("A1 上行通道（SUBAGENT-UPSTREAM-CHANNEL §6.27.10）：notify_parent 仅 depth>0 且非 consult 装配", async () => {
+  const fallback = sorted(await assembleFamilyTools({ depth: 1, role: "sub" }))
+  assert.deepEqual(fallback, ["task", "plan", "timer", "notify_parent"].sort(), "未列名 depth>0 role（兜底段）亦装配")
+  const plan = sorted(await assembleFamilyTools({ depth: 1, role: "plan" }))
+  assert.ok(plan.includes("notify_parent"), "plan（兜底段）含")
+  const bare = sorted(await assembleFamilyTools({ depth: 0 }))
+  assert.ok(!bare.includes("notify_parent"), "depth-0 主 agent 面不含（与用户的通道 = 普通回复 / question）")
+  const eng = sorted(await assembleFamilyTools({ depth: 0, engineering: true }))
+  assert.ok(!eng.includes("notify_parent"), "depth-0 工程模式面不含")
+  const consult = sorted(await assembleFamilyTools({ depth: 1, role: "consult" }))
+  assert.ok(!consult.includes("notify_parent"), "consult 段不装配（父发起的一次性会诊——角色语义边界）")
+})
+
 test("consult 池门：空池不注册；有池注册两件 + consult_start 描述携当前候选", async () => {
   const empty = names(await assembleFamilyTools({ depth: 1, role: "consult", consultModels: [] }))
   assert.ok(!empty.includes("consult_start") && !empty.includes("consult_stop"), "空池 ⇒ consult 家族零注册")
@@ -90,7 +103,7 @@ test("decorate 缺省面 = 核默认形态：subagent role enum 随模式互斥�
 
   const eng = await assembleFamilyTools({ depth: 0, engineering: true })
   const engSub = eng.find((t) => t.name === "subagent")
-  assert.deepEqual(engSub.parameters.properties.role.enum, ["explore", "plan", "eng-designer", "eng-coder"], "工程模式 role enum")
+  assert.deepEqual(engSub.parameters.properties.role.enum, ["explore", "eng-designer", "eng-coder"], "工程模式 role enum（F5 集——plan 不入）")
 
   const scheme = normal.find((t) => t.name === "subagent").parameters.properties.role
   assert.equal(scheme.type, "string", "role 参数形状不变（schema 面）")

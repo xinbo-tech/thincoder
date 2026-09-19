@@ -75,9 +75,17 @@
 - **`child:spawn` / `child:done` / `child:error`** —— 子代理 spawn / settle（`thincoder-core/agent-tools/*`）；字段 role / id / ms / kind（ok/partial）。
 - **`susp:enter` / `susp:exit` / `digest:start` / `digest:end`** —— 挂起态迁移；字段 pendingN / poolN / ms / reason。
 - **`ev:settled` / `ev:stopped` / `ev:cancelled`** —— settle 回调分流 + **中止清池 `ev:stopped`**（正常回合内 settle 由 child:done 覆盖不另发）；字段 id / kind / poolN / where。
+  **`ev:cancelled` 三个写点（2026-09-17 af 批逐轮收正——二轮 fix 加 ③）**：① `settleAsyncEntry` cancelled 分支（running 取消——经 settle 三连）；
+  ② **queued 取消出队点直记**（`advisor-async.mjs` / `subagent-async.mjs` 的 queued 分支——出队即终态、不经 settle ⇒ 不走 ①）；
+  ③ **sync 定向取消提交点直记**（`subagent-async.mjs` `cancelSyncChild`——sync 块 ⏹ 唯一入口；机制条 = `AGENT-LOOP-SUBAGENT.md` 的 §6.7.2「日志面」）。
+  三写点字段同形：`id` = `<role>#<id>`（评审族 = `advisor#<id>`）；**同一次取消恰一条**（写点互斥：queued 走 ②、running 走 ①、sync 走 ③——三种 child 形态各恰一条）。
+- **`ev:subagent-block-revived`** —— 墓碑存活闸**复活分支**留痕（`thincoder-cli/src/tui/subagent-blocks.mjs` `ensureSubTaskKey`——墓碑命中但条目**池内存活（在池 ∧ 非 done / 非 cancelled）** ⇒ 摘墓碑 + 重建块；**每次复活记一条（无去重状态）**）。
+- **`ev:queued-paint-failed`** —— 排队块刷新 relay 异常留痕（`thincoder-core/agent-tools/subagent-scheduler.mjs` `refreshQueuedTokens` catch——池状态不被破坏）。
 - **`err:internal`** —— 未分类异常（回合包装器 catch——带消息 200 截断 + 栈位置）；字段 msg / where。
 
-**写入点落位**（在既有节点 emit，不新造总线）：回合包装器与 digest / suspension 面（`thincoder-cli/src/tui/agent-turn.mjs`）· `llm:*` 统一落 `chat()`（单点全覆盖——未来新增调用点自动覆盖）· `tool:*` 在 dispatch `runOne` · `child:*` / `ev:*` 在子代理族 spawn / settle 分流点 · 中止清池（runAgent finally + suspension abort）→ `ev:stopped`。
+**写入点落位**（在既有节点 emit，不新造总线）：回合包装器与 digest / suspension 面（`thincoder-cli/src/tui/agent-turn.mjs`）· `llm:*` 统一落 `chat()`（单点全覆盖——未来新增调用点自动覆盖）·
+`tool:*` 在 dispatch `runOne` · `child:*` / `ev:*` 在子代理族 spawn / settle 分流点（另两新条目见 §6.2——`ev:subagent-block-revived` 落显示层复活分支 ·
+`ev:queued-paint-failed` 落排队刷新 catch） · 中止清池（runAgent finally + suspension abort）→ `ev:stopped`。
 
 **存储**：目录 `~/.thincoder/logs/`（与 sessions/ 同域）；`THINCODER_LOG_DIR` 显式 override；文件名 `agent-YYYY-MM-DD.log`（按日——两端同写同文件追加）；**轮转** = 每进程每日首次写事件时清超龄 `agent-*.log`（机会式）；**写入** = `appendFileSync` 小写（每事件一次——事件频率低——开销可忽略——失败静默降级，进程内首次失败置死——不逐事件空转）。
 
@@ -137,13 +145,14 @@
 
 旧档需求面（F-L1–F-L7 / NF-L1–NF-L4）=== 本板块需求层，已并入本层需求档 `docs/core/requirements/LOGGING.md`（**与本档同名成对**）——本档不重复。
 
-## 9. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **150 行**（B 轮并入前 46 行）——**低于 300 行软线，无需拆分规划**。
-
 ## 变更记录
 
 - 2026-09-13：建档——自 `docs/core/design/CORE-UNIFICATION.md` 拆出（§2.5 #42 + 四要素明细）；**语义零改**，行号沿用原编号。
 - 2026-09-14（**B 轮并入 · 第 2 批**）：新增 §6 **机制面**（选型与理由 / 架构——事件格式·事件面·写入点·存储 / 关键决策 / 测试隔离与开发提示）· §7 **关键决策记录（D-LG1–9）** · §8 **不并项与历史沿革** · §9 体量（低于软线，无需拆分）；来源 = `thincoder-cli/docs/design/LOGGING.md`（**旧档一字未改**——原地作参照历史）；需求侧已并入本层 `docs/core/requirements/LOGGING.md`；首部加机制面指针一行。
 - 2026-09-15（**S2 W1 接线 · VSC 端** · eng-coder 实施轮）：§1 表两格（CLI / VSC）收正为「经 `@thincoder/core/log.mjs` 引用」——VSC 自持镜像随 W1 删档（坐标 + 状态面收正）；同格 CLI 端为 U1 已删档的滞后坐标，随本笔一并收正（实核：`thincoder-cli/src/log.mjs` 不存在）。机制条文（§6–§9）零改；§9 体量读数随行数·144 → **145** 收正。
 - 2026-09-15（**修正轮-6 · W1 上抛 1 落点 · eng-designer**）：§6.1 尾部 + §7 D-LG9 行后各加**现状注**（「同构模块 / 镜像实现」= 迁移前形态表述——双端自持镜像已删〔CLI U1 / VSC W1〕、现态 = 双端同引核单源；机制语义不变——07:08 边界：机制条文零改、形态收正）；§9 体量读数随行数 → **150** 收正。
+- 2026-09-17（**zero-block 批 · 微 fix 轮 · eng-designer**）：§6.2 事件面补登两事件——`ev:subagent-block-revived`（墓碑存活闸复活分支留痕）/ `ev:queued-paint-failed`（排队块刷新 relay 异常留痕）；设计源 = `docs/cli/design/TUI.md` §6.8.3.2 P1；批档 `docs/batches/2026-09-17-subagent-zero-block.md` §2 出批发现 ⑤ 收口；族描述与机制条文零改。
+- 2026-09-17（**zero-block 批 · 父侧直接执行——可 revert**）：§6.2「写入点落位」枚举面补两新事件落点一句（微 fix 轮登记的伴随收正；行宽纪律——同轮折行）；机制语义零改。
+- 2026-09-17（**zero-block 批 · 父侧直接执行——可 revert**）：§6.2 `ev:subagent-block-revived` 条描述与设计收正同步（存活判据收窄 + 「每次复活记一条（无去重状态）」——设计源 `docs/cli/design/TUI.md` §6.8.3.2 P0-a/P1 评审 fix 轮，2026-09-17）。
+- 2026-09-17（**af 批 · fix 轮 · eng-designer**——承 `docs/batches/2026-09-17-async-face-fixes.md` §2.12）：§6.2 `ev:cancelled` 条补**两个写点**口径（① settle cancelled 分支〔running 取消〕/ ② queued 取消出队点直记——不经 settle）；机制语义零改。
+- 2026-09-17（**af 批 · 二轮 fix 轮 · eng-designer**——承 `docs/batches/2026-09-17-async-face-fixes.md` §2.13）：§6.2 `ev:cancelled` 条写点由两个 → **三个**（加 ③ sync 定向取消提交点 `cancelSyncChild`——F-12）；事件名 / 字段形与既有取消族一致；机制语义零改。

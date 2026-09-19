@@ -212,13 +212,13 @@ test("T-RS8b 长内容检索（delta 登记）：>500 字符尾段不命中；�
   })
 })
 
-test("T-RS9 删除联动：deleteSlot 清 sidecar；session gc --confirm 清冷前缀后不存在", () => {
+test("T-RS9 删除联动：deleteSlot 清 sidecar；session gc --confirm 清冷前缀后不存在", async () => {
   const sessionsDir = mkdtempSync(join(tmpdir(), "tc-store-sess-"))
   const cwd = mkdtempSync(join(tmpdir(), "tc-store-proj-"))
   _setSessionsDirForTest(sessionsDir)
   try {
     // ① deleteSlot 联动
-    const slot = newSession(cwd)
+    const slot = await newSession(cwd)
     const sf = slotPath(cwd, slot)
     const a1 = { cwd, _fullHistory: [], history: [], _sessionStart: "S1" }
     const s1 = bindRecordStore(a1, { slotFile: sf, identity: "S1", baseHistory: [] })
@@ -227,17 +227,17 @@ test("T-RS9 删除联动：deleteSlot 清 sidecar；session gc --confirm 清冷�
     assert.equal(deleteSlot(cwd, slot), true)
     assert.equal(existsSync(recordDirOf(sf)), false, "删槽连带删除记录存储")
 
-    // ② 冷前缀清理（now 注入使 manifest 判冷；aliveFn=false 无活主）
-    const slot2 = newSession(cwd)
+    // ② 冷前缀清理（now 注入使 manifest 判冷；注入全死束 = 无活主）
+    const slot2 = await newSession(cwd)
     const sf2 = slotPath(cwd, slot2)
     const a2 = { cwd, _fullHistory: [], history: [], _sessionStart: "S2" }
     bindRecordStore(a2, { slotFile: sf2, identity: "S2", baseHistory: [] })
     pushReal(a2, msg(1))
     assert.equal(existsSync(recordDirOf(sf2)), true)
     const out = []
-    const code = runSessionGc(["gc", "--confirm", "--all"], {
+    const code = await runSessionGc(["gc", "--confirm", "--all"], {
       dir: sessionsDir, cwd, now: Date.now() + COLD_CWD_RETENTION_MS + 86_400_000,
-      out: (s) => out.push(s), err: (s) => out.push(s), aliveFn: () => false,
+      out: (s) => out.push(s), err: (s) => out.push(s), probeFn: () => ({ aliveSet: new Set(), cmds: null }),
     })
     assert.equal(code, 0)
     assert.equal(existsSync(recordDirOf(sf2)), false, "冷前缀清理连带删除记录存储")

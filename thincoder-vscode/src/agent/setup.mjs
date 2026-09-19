@@ -2,6 +2,9 @@
  * agent/setup.mjs — pre-loop setup for runAgent: tool table, config, system prompt,
  * dual-line history, and startup context injection.
  * Extracted from agent.mjs (file-size split).
+ * 2026-09-16（批 7 VSC-DEBT §3.3 档一）：工具表装配装饰面迁出 `setup-tooltable.mjs`（batch_segment
+ * 记账缝 / W14 三缝接线 / 池装配装饰与子代理面）；本档 re-export 既有导出名（KD-6 缝）；
+ * 动态载核登记册面（KD-5）仍在本档。
  * AGENT-LOOP.md §11（2026-09-08——agent 生命周期对齐 CLI）：setupAgentRun 拆出
  * buildTopLevelAgent（agent 对象工厂——首轮/destroy 重建-only）+ hydrateRun（每轮
  * reconcile——顶层单例复用路径）。纯函数层 resetRunState / reconcileEngDesignTokens /
@@ -17,247 +20,52 @@ import { builtinTools, toOpenAISchema, readImageTool } from "../tools.mjs"
 // （`test/engine-floor-guard.test.mjs:129`：端壳静态链不得到达 node:sqlite，低宿主加载期硬失败）。
 // 核侧同款先例 = 核 `agent-tools.mjs` 头注「Loaded from agent.mjs via dynamic import」；
 // 动态 import 不入静态闭包（扫描语义同 W8 契约）。
-import { configureBatchSegment } from "@thincoder/core/agent-tools/batch-segment.mjs" // 叶子（node:fs/node:path）——静态面安全
-// W13 ④ C-5 终态回显读面（核墓碑单点）——**动态** import：核 `async-settle.mjs` 静态链可达
-// `node:sqlite`（scheduler→subagent-async→核 agent 栈——W8 契约②机判），静态引入会破端壳静态闭包；
-// 读点见 `vscStatusTerminalEcho`。
 import { settingsTool as coreSettingsTool } from "@thincoder/core/agent-tools/settings.mjs"
 import { resetRunState, reconcileEngDesignTokens, applySlotSessionState } from "./agent-state.mjs"
+import { vscSubagentFace, modeRoleField, withPool, wireAgentToolSeams } from "./setup-tooltable.mjs" // 缝（KD-6）：迁出面同档再导出
 import { loadSlot } from "../extension/session-io.mjs"
 import { specForModel } from "../specs.mjs"
 import { escapeXml, pushReal } from "./run-helpers.mjs"
 import { expandHome } from "@thincoder/core/expand-home.mjs"
 import { applyPromptInjections } from "@thincoder/core/prompt-files.mjs"
 import { assemblePrompt } from "@thincoder/core/prompt-overlays.mjs"
-import { loadSkills, formatSkillListing, readSkill } from "../extension/skills.mjs"
-import { vscPersistRaw } from "../extension/settings-panel-write.mjs"
-import { CONFIG_CONFLICT_HINT, conflictError, loadRaw, resolveProviders } from "@thincoder/core/config-io.mjs"
+import { resolveEngineeringManifest } from "@thincoder/core/manifest.mjs"
+import { loadSkills, formatSkillListing } from "../extension/skills.mjs"
+import { loadRaw, resolveProviders } from "@thincoder/core/config-io.mjs"
 import { DEFAULTS, normalizeProxy } from "@thincoder/core/config.mjs"
 import { loadConsultPool } from "../extension/presets.mjs"
-import { setSlotEngineering, setSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
-import { configureVerifyDiagnostics } from "@thincoder/core/agent-tools/verify.mjs" // 叶子面（闭包 4 档零 node:sqlite）——静态面安全
-import * as vscode from "vscode"
-import { resolve } from "node:path"
+import { setSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
 import { injectRunContext, loadProjectInstructions } from "./context-injections.mjs"
 import { pushTimeReminder, pushInjections, appendImagePointer, pushEnvStateReminder, pushPeerReminder } from "./setup-reminders.mjs"
+export { vscSubagentFace, modeRoleField } // 既有导出名零改（批 7 VSC-DEBT §3.3 缝）
 
 // W16（2026-09-15）：settings 工具 = 核工厂单源（`@thincoder/core/agent-tools/settings.mjs`
 // `settingsTool(opts)`——本端实例化一次；写盘 = 核 `writeConfigAtomic`（DEFAULTS 全量类型表
 // = A5 已裁「以 CLI 为准」——错类型拒写不再是端侧窄表）。
-const settingsTool = coreSettingsTool()
+// #45 参数腿（WEBVIEW-PROTOCOL.md §3.3 判据②）：端侧**包装实例**——`execute` **返回后**置位
+// `ctx.agent._settingsTouched`（不做「成功」判定；同步点读后复位、快照重推幂等）。
+// 核零改（核内通知缝 = 本批边界外——批档 §2.5）。**导出**（测试直驱面 = settings-tool 用例）。
+export function vscSettingsFace(tool) {
+  return {
+    ...tool,
+    async execute(args, ctx) {
+      const out = await tool.execute(args, ctx)
+      if (ctx?.agent) ctx.agent._settingsTouched = true
+      return out
+    },
+  }
+}
+const settingsTool = vscSettingsFace(coreSettingsTool())
 
 // PROMPT-SYSTEM 施工② G1（2026-09-10）：旧三件（system.md/discipline.md/main.md）退役——
 // 六件槽位常量装载收口 prompt-overlays.mjs（mod 为槽位内容新家）；本文件不再各自读取。
 // W2（2026-09-15）：槽位装配面 = **核内单点**（`@thincoder/core/prompt-overlays.mjs`）——本端
 // 镜像已删（本地路径运算随之为零）。
 
-// ─── W9（2026-09-15）：batch_segment 记账面注入（核缝 #84 —— `configureBatchSegment`）──────────
-// VSC 特有增量随删旧迁入端壳（四步协议 ②）：核 `agent-tools/batch-segment.mjs` 的写入回调默认
-// no-op；本端在装配层注册 = 写入成功即记绑定档绝对路径入 `agent._touchedFiles`（与删除前
-// `src/agent-tools/batch-segment.mjs:184` 逐字同语义——Array.isArray 守卫 + includes 去重）——
-// 冻结窗口 / 子代理合入记账（execute-tools 的 recordFileMutation 同一载体）行为不变。
-configureBatchSegment({
-  onWrite: (agent, abs) => {
-    if (Array.isArray(agent._touchedFiles) && !agent._touchedFiles.includes(abs)) agent._touchedFiles.push(abs)
-  },
-})
-// ─── W14（2026-09-15）：agent-tools 三缝端侧接线（#88 skill loader / #91 eng mirror / #96 verify 诊断段）──
-// 端侧供值随删旧迁入装配层（同 W9 先例）：① `configureSkillLoader` —— 本端 loader 形态 = 同步
-// 实现（`src/extension/skills.mjs`，D-CI3 与核 skills.mjs 同构语义）；② `configureEngMirror` ——
-// 工程模式翻转后的双持久化镜像（槽权威 + config.json CLI 兼容镜像——迁自删除档
-// `src/agent-tools/eng.mjs:92-105`，逐字同语义）；③ `configureVerifyDiagnostics` —— 编辑器诊断
-// 段（advisory——迁自删除档 `src/agent-tools/verify.mjs:250-275`，逐字同语义）。
-// skill / eng 两缝**动态**载入（核 `agent-tools/skill.mjs` / `eng.mjs` 静态链经核 agent 栈可达
-// `node:sqlite`——W8 契约②机判；verify 闭包 4 档零 sqlite ⇒ 静态面安全）。
-
-/** VSC 编辑器诊断段（#96 信息段——advisory，不进门禁；`codeFiles` = 本轮代码变更集，绝对路径）。
- *  逐档取 VS Code 语言服务诊断（Error/Warning 两类），每档前 15 条；零诊断且存在代码档 ⇒ 明示
- *  "none"。返回行数组（核缝契约 `section(ctx, codeFiles) → string[] | null`）。 */
-function vscodeDiagnosticsSection(ctx, codeFiles) {
-  const key = (p) => (process.platform === "win32" ? p.toLowerCase() : p)
-  const diagByFile = new Map()
-  for (const [uri, diags] of vscode.languages.getDiagnostics()) {
-    if (diags.length > 0) diagByFile.set(key(uri.fsPath.replace(/\\/g, "/")), diags)
-  }
-  const lines = []
-  let advisoryDiag = 0
-  for (const f of codeFiles) {
-    const abs = resolve(ctx.cwd, f)
-    const diags = diagByFile.get(key(abs.replace(/\\/g, "/")))
-    if (!diags?.length) continue
-    const errors = diags.filter((d) => d.severity === vscode.DiagnosticSeverity.Error)
-    const warnings = diags.filter((d) => d.severity === vscode.DiagnosticSeverity.Warning)
-    if (!errors.length && !warnings.length) continue
-    advisoryDiag += errors.length + warnings.length
-    lines.push(`\nEditor diagnostics (advisory — informational only, not a gate):`)
-    lines.push(`── ${f} (${errors.length} errors, ${warnings.length} warnings) ──`)
-    for (const d of [...errors, ...warnings].slice(0, 15)) {
-      const sev = d.severity === vscode.DiagnosticSeverity.Error ? "E" : "W"
-      const line = d.range.start.line + 1
-      const col = d.range.start.character + 1
-      lines.push(`  ${sev} ${line}:${col}  ${d.message}${d.source ? ` [${d.source}]` : ""}`)
-    }
-  }
-  if (advisoryDiag === 0 && codeFiles.some((f) => /\.(m?js|cjs|ts|tsx|mts|cts|rs|go|py)$/i.test(f))) {
-    lines.push("\nEditor diagnostics: none for the changed code files.")
-  }
-  return lines.length ? lines : null
-}
-configureVerifyDiagnostics({ section: vscodeDiagnosticsSection })
-
-/** skill / eng 两缝动态接线（模块缓存 ⇒ 每 run 零成本；幂等——只接一次）。 */
-let agentToolSeamsWired = false
-async function wireAgentToolSeams() {
-  if (agentToolSeamsWired) return
-  const { configureSkillLoader } = await import("@thincoder/core/agent-tools/skill.mjs")
-  configureSkillLoader({ loadSkills, readSkill })
-  const { configureEngMirror } = await import("@thincoder/core/agent-tools/eng.mjs")
-  configureEngMirror({
-    onToggle: (enabled, ctx) => {
-      const agent = ctx?.agent
-      try {
-        const p = agent?._engPersist
-        if (p) setSlotEngineering(p.cwd, p.slot, enabled)
-      } catch { /* slot unwritable — config mirror still written */ }
-      try {
-        const r = vscPersistRaw((raw) => {
-          raw.agent = raw.agent && typeof raw.agent === "object" ? raw.agent : {}
-          raw.agent.engineering = enabled
-        })
-        // F5b：config 并发被改 → 放弃镜像写（槽权威仍持态）；提示串由核缝追加到结果尾
-        return conflictError(r) ? `${CONFIG_CONFLICT_HINT} — config.json mirror not written (slot state still holds for this session).` : null
-      } catch { return null /* config unreadable — in-memory state still holds for this run */ }
-    },
-  })
-  // 旗标在两处 configure* 之后置位（评审修正）：载入中途 reject 时下一轮仍会补接，
-  // 不留下「旗标已置、两缝未接」的静默降级态。
-  agentToolSeamsWired = true
-}
 
 
 /** AUTO mode reminder lives in setup-reminders.mjs (single source of truth —
  *  D-CI6: the agent loop head pushes it; agent.mjs imports it from there for the dedupe check). */
-
-/**
- * Decorate a consult-related tool's description with the CURRENT configured candidate
- * pool (provider:model list). Without this the model cannot know which models a consult
- * start / subagent action:'escalate' call can pick from — it would hallucinate
- * provider:model names or never pass `model`. The tool table is assembled per-run from
- * loadRaw(), so the list stays fresh. Description-only: the tool object is cloned
- * shallowly, execute untouched. §19 (2026-09-03): applied to the depth-0 subagentTool
- * too — its escalate action picks from the same pool (the standalone escalate tool was
- * merged in as action:"escalate").
- */
-function withPool(tool) {
-  // F-4 (IKCDMR)：运行时读面清洗（loadConsultPool——未知渠道条目过滤 + 一次性警告——
-  // CLI loadConfig 同规则）——池描述只列合法候选（防模型照描述点名悬挂条目）。
-  const models = loadConsultPool()
-  const list = models.map((m) => `${m.provider}:${m.model}${m.effort ? ` (${m.effort})` : ""}`).join(", ")
-  if (!list) return tool
-  return {
-    ...tool,
-    description: tool.description + `\nCurrently configured consultants (pool for consult_start / subagent action:'escalate'): ${list}`,
-  }
-}
-
-/**
- * W13（2026-09-15 · S2 · `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W13）：VSC subagent
- * 工具面装饰（原 `src/agent-tools/subagent.mjs` 的端侧面随镜像删旧迁入本档——同一份装配面，
- * 不另立档；承 W14 `gitTool` 装饰先例）：
- *   ① `modeRoleField`（模式互斥 role enum + suffix）——原档 verbatim 迁入（核 `agent/setup.mjs`
- *      同族逻辑在核内装配面，未导出 ⇒ 端侧装配面自持该面至 W15 收敛）。
- *   ② #99（CORE-UNIFICATION §2.13.4 / AGENT-LOOP.md §19.6 AC-P4）：核登记册的工具面含 `panel`
- *      动作（CLI TUI 面板镜像），VSC 载荷面不存在 ⇒ **装配层剔除**（端侧过滤、零核改动）——
- *      action enum 去项 + 描述去 panel 段 + view/freeze 两参数（仅 panel 消费）移除。
- *   ③ 动作级分类（`isReadonlyAction` status/observe · `isControlAction` cancel/send）——端审批面
- *      （execute-tools 权限门/批分组 + tool-gates planMode 门）按谓词读；核 subagent 工具无该钩子
- *      （核内零端名/零端概念）⇒ 装饰面承载（逐字同删除档谓词）。
- *   ④ C-5 终态回显（AGENT-LOOP（VSC 仓）§12.3）：核 `status` 不读墓碑（未命中即 unknown），
- *      端契约要求 discarded/cancelled/consumed/failed 四态回显 ⇒ 装配面接管 `execute`（仅在核
- *      输出为 unknown-错误时查核墓碑单点 `tombstoneOf` 补回显——其余输出原样透传）。
- */
-export function vscSubagentFace(tool) {
-  const { view, freeze, ...props } = tool.parameters.properties
-  const actionProp = props.action
-  return {
-    ...tool,
-    description: tool.description.split("\n").filter((l) => !l.startsWith("- action:'panel'")).join("\n"),
-    parameters: {
-      ...tool.parameters,
-      properties: {
-        ...props,
-        action: {
-          ...actionProp,
-          enum: (actionProp.enum ?? []).filter((a) => a !== "panel"),
-          description: actionProp.description.replace(/panel \(view the live subagent panel \/ freeze a digested-stuck block — §19\.6\), /, ""),
-        },
-      },
-    },
-    async execute(args, ctx) {
-      return vscStatusTerminalEcho(args, ctx, await tool.execute(args, ctx))
-    },
-    isReadonlyAction(args) {
-      const action = args?.action
-      return action === "status" || action === "observe"
-    },
-    isControlAction(args) {
-      const action = args?.action
-      return action === "cancel" || action === "send"
-    },
-  }
-}
-
-/** C-5 终态回显表（墓碑 status → 返回 status + note；未列值不入表——不虚构语义）。
- *  文案 = 删除前端侧同表逐字（§12.3 C-5 四态：discarded/cancelled/consumed→done/failed）。 */
-const VSC_TERMINAL_ECHO = {
-  discarded: { status: "discarded", note: "discarded by the user's Stop — its report will NOT arrive (partial changes stay unmerged/unaudited; re-spawn if the work is still needed)" },
-  cancelled: { status: "cancelled", note: "cancelled — its report will NOT arrive (its work was stopped; partial changes stay unmerged/unaudited)" },
-  consumed: { status: "done", note: "delivered — the report was injected into the session" },
-  failed: { status: "failed", note: "settled with an error — the error report was injected; nothing is pending" },
-}
-
-/** C-5 终态回显（两池未命中 → 查墓碑；无记录/未列墓碑值照旧 unknown）。核 `status` 单查
- *  未命中返回 unknown-错误串——本函数仅接管该形态（`status` + 带 id + 输出含 unknown）。 */
-async function vscStatusTerminalEcho(args, ctx, out) {
-  if (args?.action !== "status") return out
-  const id = args?.id
-  if (id === undefined || id === null || String(id) === "") return out
-  if (typeof out !== "string" || !out.includes("unknown async subagent id")) return out
-  const { tombstoneOf } = await import("@thincoder/core/agent-tools/async-settle.mjs") // 动态（W8 契约②）
-  const t = tombstoneOf(ctx?.agent, id)
-  const echo = t ? VSC_TERMINAL_ECHO[t.status] : null
-  if (!echo) return out
-  return JSON.stringify({ id, role: t.role, status: echo.status, note: echo.note })
-}
-
-/**
- * Mode-dependent subagent role schema field (原 `src/agent-tools/subagent.mjs` verbatim 迁入
- * ——W13；CLI setup.mjs parity）。The role enum is mutually exclusive per mode: normal mode
- * advertises "coder", engineering mode advertises "eng-coder". The schema filter is the FIRST
- * line of defense — the model never sees the disabled role as legal; the runtime throws in
- * execute() stay as the hard gate. Returns { role, suffix }: `role` replaces
- * parameters.properties.role wholesale; `suffix` appends to the tool-level description
- * ("" in normal mode).
- */
-export function modeRoleField(engineering) {
-  return engineering
-    ? {
-        role: {
-          type: "string",
-          enum: ["explore", "plan", "eng-coder", "eng-designer"],
-          description: "The sub-agent role — see the tool description for the role capability matrix. Exact spelling required.",
-        },
-        suffix: "In engineering mode, use role='eng-coder' for implementation (coder is disabled) and role='eng-designer' for design writing.",
-      }
-    : {
-        role: {
-          type: "string",
-          enum: ["explore", "plan", "coder"],
-          description: "The sub-agent role — see the tool description for the role capability matrix. Exact spelling required.",
-        },
-        suffix: "",
-      }
-}
 
 /**
  * §11.2 agent 对象工厂——首轮-only（hydrateRun 每轮 reconcile）。归类：A = 回合级预算/守卫
@@ -449,6 +257,10 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     engState,
     planModeOverride: opts.planMode,
   }, { cfg: cfgBag, restore })
+  // #45（WEBVIEW-PROTOCOL.md §3.3 判据①——设计评审轮 1 发现 9 定值）：`_engShown` = **已展示基线**
+  // （当前 engineering 布尔——槽应用之后取值）；非 `undefined` / `null`（后者会让每 run 首个工具批
+  // 无条件重推一次快照）。工具驱动翻转的比对起点（写入面 = agent-state 同步 cell）。
+  agent._engShown = agent.config?.agent?.engineering === true
   // D2 触发③：restore/水合发现槽内过期项 → 回写权威台账清 expired（幂等；map 可能已含内存项）
   if (droppedExpired && bind?.cwd && bind?.slot) {
     try {
@@ -494,7 +306,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // ——不相交式 = 追加家族 ∥ 绑定值；VSC-TOOL-TABLE-DUP §2.1A），不拷贝。
   agent.tools = baseSet
   agent._engTaskInput = opts.engTaskInput ?? null
-  // §2.22.3（第 5 批）：spawn 侧批次档绑定上车（batch_segment 的唯一路径来源；无 path 参数——
+  // VSC 端镜像批（2026-09-11 · 第 5 批）：spawn 侧批次档绑定上车（batch_segment 的唯一路径来源，现行权威 = BATCH-RECORD.md §4.2；无 path 参数——
   // 目标档由 spawn 绑定 / 评审实例键提供）。顶层/非工程角色恒 null（不挂载工具）。
   agent._batchDoc = batchDoc
   agent._engDesignReviewed = engDesignReviewed === true // eng-coder children arrive pre-authorized
@@ -573,6 +385,21 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // keep those aliases live so the ported modules work unchanged.
   agent.cwd = cwd
   agent.history = history
+  // M1-manifest（docs/core/design/MANIFEST.md §2.2 两端装配钩子——VSC 端）：
+  // 模式门（KD-M1-12——判据 = `agent.config.agent.engineering`，已由 `applySlotSessionState`
+  // 按槽订正：槽优先 + config 回退）：普通会话 → 钩子整体不执行——**零 manifest I/O**
+  // （不读 / 不拒 / 不建档）+ `agent.manifest = null`（清残留附着——复用 agent 跨模式防陈旧）。
+  // #41 薄包装（KD-M1-20 / AC-19）：工程模式分支的决策树 = 核单源 `resolveEngineeringManifest`
+  // （非抛错形态）——本块只把它翻回「抛错」，四条出口（附着 / 缺档建档 / 根不可解析抛 / 档非法抛）
+  // 的**结果与文案逐字不变**（原句由决策树构造）。depth > 0（子代理水合同经此钩）⇒ `init:false`
+  // （仅不初始化——写门缺省拒已机械兜底；缺档格零动作）。
+  if (agent.config?.agent?.engineering !== true) {
+    agent.manifest = null
+  } else {
+    const r = resolveEngineeringManifest(cwd, { writer: "main", init: depth === 0 })
+    if (r.ok) agent.manifest = r.manifest
+    else if (r.code !== "missing") throw new Error(r.message) // 仅 depth > 0 可达 missing
+  }
   // TRACE-STORE-VSC（D-TR4 镜像——CLI agent/setup.mjs `_sessionStart ??=` 同语义）：顶层
   // 会话身份 = 槽 sessionStart（跨端同身份——F2 打点同源）优先，无槽/未保存则首建打点；
   // 复用 agent 不重打（??=——同会话跨回合恒等）；子代理（depth>0）不设——轨迹 session
@@ -601,8 +428,8 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   if (opts.stateSink) opts.stateSink.history = history
 
   // ─── Context injection（D-CI1/D-CI2——§17.3 契约 / §17.4 序表）────
-  // 块 #1–#7（git → OS/cwd/Session start/快照 → restarted → 依赖大纲 → 文档召回 →
-  // 记忆召回 → checklist）由 context-injections 单一编排注入（只追加、只 transient、
+  // 块 #1–#6（git → OS/cwd/Session start/快照 → restarted → 依赖大纲 → 文档召回 →
+  // 记忆召回）由 context-injections 单一编排注入（只追加、只 transient、
   // 失败静默；门 = depth 0 且非 resume/autoTurn）。原 git 行与 restarted 段随编排退役。
   await injectRunContext(agent, { history, cwd, input, depth, resume, autoTurn, platform })
 

@@ -82,10 +82,6 @@ write = **整文件替换 / 新建**——覆盖已有文件（read 后确认整
 | read 工具语义 | 读面契约 | 非编辑工具——归 `docs/core/design/TOOLS.md` §6.7 逐工具契约 |
 | VSC 档（`thincoder-vscode/docs/design/WRITE.md`）的批次材料 / 变更记录 | 一次性材料 + 历史流水 | VSC 差异面已并 §6.1（VSC 端差异块）；批次档承载 |
 
-## 9. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **93 行**（根层 · as-of 2026-09-15 批 8 实测）——**低于 300 行软线，无需拆分规划**。
-
 ## 变更记录
 
 - 2026-09-15（**B 式迁移轮 · 第 1 批**）：建档——`thincoder-cli/docs/design/WRITE.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；坐标一律改写为现状路径（`thincoder-core/tools/**` · `thincoder-vscode/src/tools/**`）；批次材料 / 状态行 / 变更流水不并（§8）。

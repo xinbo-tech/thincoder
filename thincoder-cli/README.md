@@ -20,7 +20,7 @@ Design philosophy (the entire meaning of the name): if the Node standard library
 - **Memory system**: three layers (personal/project/team), FTS5 + vector RRF hybrid retrieval, git-friendly markdown format
 - **Two-phase tool scheduling**: permission prompts serialized, read-only tools parallelized, side-effect tools serialized
 - **Session persistence** ⭐0.5.0: unlimited archive slots, `/session` to switch anytime, tool results visible after restore. Process-level isolation — multiple instances in the same directory each get their own session slot
-- **Concurrent subagents**: three roles — `explore`/`plan`/`coder` — dispatched in parallel, streaming output visible, reports land in the conversation; per-subagent model override (`subagent` tool `model` arg or `agent.subagentModel` config — e.g. discuss with `glm-5.2`, let `deepseek-v4-flash` implement)
+- **Concurrent subagents**: five roles — `explore`/`plan`/`coder`/`eng-coder`/`eng-designer` — dispatched in parallel, streaming output visible, reports land in the conversation; per-subagent model override (`subagent` tool `model` arg or `agent.subagentModel` config — e.g. discuss with `glm-5.2`, let `deepseek-v4-flash` implement)
 - **Multi-model consultation 会诊 + 飞刀 (escalate)** ⭐0.12.30: `consult_start`/`consult_stop` run several configured models in parallel as independent read-only consultants (each with its own TUI activity card, `main_history` access to the failure trail); when every model settles, the full verdict digest is delivered automatically (R17 — consult_check retired). `escalate` flies in a stronger model for a single expert implementation run with full write access (default-async since R17 — the post-op report arrives automatically with its mutations merged). Candidate pool = `agent.consultModels` ([{ provider, model, effort? }], up to 5); budgets via `agent.consultTurns` / `agent.consultTimeoutMs`
 - **Plan Mode**: read-only exploration + design, implement after user approval
 - **AUTO mode**: `/auto` full authorization, no confirmations on long tasks
@@ -49,7 +49,8 @@ Three layers, all "query if present, skip if absent", unified hybrid retrieval:
   - IDE-native diffs — `write`/`edit` route through the editor buffer
   - Persisted sessions: list / load (history replay) / resume / delete
   - Per-session config: model / thinking / mode
-  - Setup: [docs/guides/ides.md](docs/guides/ides.md)
+  - Setup: [ACP 接入设计](../docs/cli/design/ACP-CLIENT.md)
+  - Login: `thincoder acp --login` — one interactive terminal login; ACP clients and orchestrators then drive sessions headlessly
 
 
 ## Requirements
@@ -68,7 +69,7 @@ npm install -g thincoder
 thincoder
 ```
 
-First launch walks you through a setup wizard: arrow keys to pick a provider (built-in presets or a custom endpoint) → enter API key → optionally enter an embedding key (SiliconFlow, enables vector memory search, skippable) → arrow keys to pick a model — no hand-editing config files. Adjust anytime with `/provider`, `/model`, `/config embedkey`. `chat`/`distill` also offer in-place interactive setup when no key is configured in a terminal (in pipes/CI they exit with an error and instructions).
+First launch walks you through a setup wizard: arrow keys to pick a provider (built-in presets or a custom endpoint) → enter API key → optionally enter an embedding key (SiliconFlow, enables vector memory search, skippable) → arrow keys to pick a model — no hand-editing config files. Adjust anytime with `/model` (add/remove providers, set keys, custom endpoints) or `/config embedkey`. `chat`/`distill` also offer in-place interactive setup when no key is configured in a terminal (in pipes/CI they exit with an error and instructions).
 
 You can also hand-write `~/.thincoder/config.json` (see "Configuration" below), then:
 
@@ -94,7 +95,7 @@ thincoder upgrade
 
 Running from source: replace `thincoder` above with `node bin/thincoder.mjs`.
 
-Slash commands in the TUI: `/help`, `/model` (two-level picker: first select provider, then model; `/model <provider>:<name>` switches directly), `/submodel` (subagent models per type — picker over global + explore/plan/coder/eng-coder slots, or `/submodel <type> <provider:model>` directly), `/shell` (platform-aware picker of available shells — e.g. `/shell` → pick Git Bash/pwsh, or `/shell "C:\Program Files\Git\bin\bash.exe"`, `/shell reset`; fixes win11 cmd encoding/command issues), `/provider` (add/remove providers, set keys, custom endpoints), `/think` (thinking mode toggle and reasoning effort), `/config` (view config, `/config embedkey` for the embedding key, `/config set` for parameters), `/session` (list/switch archived sessions), `/reindex` (rebuild the index), `/extract` (extract knowledge from the current session), `/restore` (restore checkpoint), `/clear`, `/exit`. High-frequency commands support abbreviations: `/h` `/x` `/m` `/p` `/t` `/c` `/n`. Typing `/` shows live matching hints in the status bar. Model picker supports search/filter — type to narrow down results.
+Slash commands in the TUI: `/help`, `/model` (two-level picker: first select provider, then model; also add/remove providers, set keys, custom endpoints; `/model <provider>:<name>` switches directly), `/submodel` (subagent models per type — picker over global + explore/plan/coder/eng-coder/eng-designer slots, or `/submodel <type> <provider:model>` directly), `/shell` (platform-aware picker of available shells — e.g. `/shell` → pick Git Bash/pwsh, or `/shell "C:\Program Files\Git\bin\bash.exe"`, `/shell reset`; fixes win11 cmd encoding/command issues), `/think` (thinking mode toggle and reasoning effort), `/config` (view config; no-argument form opens the interactive menu — e.g. default model, embedding key, proxy; `/config embedkey` sets the embedding key directly), `/session` (list/switch archived sessions), `/reindex` (rebuild the index), `/extract` (extract knowledge from the current session), `/restore` (restore checkpoint), `/clear`, `/exit`. High-frequency commands support abbreviations: `/h` `/x` `/m` `/p` `/t` `/c` `/n`. Typing `/` shows live matching hints in the status bar. Model picker supports search/filter — type to narrow down results.
 
 Configuration comes exclusively from `~/.thincoder/config.json` — no environment-variable configuration is supported.
 
@@ -102,16 +103,16 @@ Configuration comes exclusively from `~/.thincoder/config.json` — no environme
 
 ## Configuration
 
-`~/.thincoder/config.json`:
+`~/.thincoder/config.json` — strictly parsed (`JSON.parse`); the `//` annotations below are illustrative only and are not valid in the actual file:
 
-```jsonc
+```json
 {
   "providers": [
     // multiple allowed; switch with /model <name>
     {
       "name": "deepseek",
       "baseURL": "https://api.deepseek.com/v1", // any OpenAI-compatible endpoint
-      "apiKey": "sk-...", // or leave empty to use env vars
+      "apiKey": "sk-...", // or leave empty — the TUI prompts for a key when this provider is selected
       "model": "deepseek-chat",
       // optional: proactive throttling budget (match your account's rate-limit tier;
       // without it the gate is off, 429 backoff still applies).
@@ -120,7 +121,7 @@ Configuration comes exclusively from `~/.thincoder/config.json` — no environme
       // "rpm": 50,     // requests/minute
     },
   ],
-  "activeProvider": "deepseek", // currently active provider name
+  "defaultModel": "deepseek:deepseek-chat", // new-session starting model — "provider:model" (set via /config → 默认模型; /model switches the current session)
   "shell": null, // bash tool shell (win11: e.g. "C:\\Program Files\\Git\\bin\\bash.exe" or "pwsh"); null = system default — cmd on Windows (UTF-8 forced per command), /bin/sh elsewhere. TUI: /shell; a leading ~ in the path expands to the home directory
   "embedding": {
     // optional: without it, retrieval is pure FTS
@@ -131,7 +132,7 @@ Configuration comes exclusively from `~/.thincoder/config.json` — no environme
   "agent": {
     "maxTurns": 100, // tool-loop cap
     "subagentModel": null, // default subagent provider/model override: "provider:model" | provider name | model name; null = inherit parent provider. Per-call: subagent tool `model` arg
-    "subagentModels": {}, // per-type override: { "explore": "...", "plan": "...", "coder": "...", "eng-coder": "..." }; priority: tool model arg > this > subagentModel > parent provider
+    "subagentModels": {}, // per-type override: { "explore": "...", "plan": "...", "coder": "...", "eng-coder": "...", "eng-designer": "..." }; priority: tool model arg > this > subagentModel > parent provider
     "compactThreshold": 100000, // context compaction threshold (approx. tokens)
   },
   "memory": {
@@ -197,7 +198,7 @@ src/
   tui.mjs           re-export shim → src/tui/index.mjs
   tui-render.mjs    re-export shim → src/tui/render.mjs
   prompts/          prompt texts — slot-based (PROMPT-SYSTEM): persona-engineering / persona-normal /
-                    persona-{eng-coder,explore,coder,plan} + common + discipline-engineering / discipline-normal
+                    persona-{eng-coder,explore,coder,plan,eng-designer} + common + discipline-engineering / discipline-normal
                     + special modules (consult-base / advisor-design / advisor-round{1,2,3});
                     assembly = assemblePrompt (prompt-overlays.mjs): persona → common → discipline → [4] AGENTS+skills
 test/               node:test offline unit tests (npm test)
@@ -303,7 +304,7 @@ Code conventions: pure `.mjs`, no semicolons, no npm dependencies allowed (inclu
 
 ### 0.9.0 (2026-07)
 - **Checkpoint v2** — snapshot-before-destructive with full workspace copies, per-file restore (`cat` preview), auto-recover on failed apply, and escape-hatch hints when git checks fail
-- **Lifecycle Hooks** — `PreToolUse` / `PostToolUse` / `PostToolUseFailure` / `Notification` events. User-defined shell commands in config, with per-tool regex matching, timeout control, and `block`/`allow`/`notify` actions. Implemented in `src/hooks.mjs`, integrated into tool dispatch.
+- **Lifecycle Hooks** — `PreToolUse` / `PostToolUse` / `PostToolUseFailure` / `Stop` events. User-defined shell commands in config, with per-tool regex matching, timeout control, and `block`/`allow`/`notify` actions. Implemented in `thincoder-core/hooks.mjs`, integrated into tool dispatch.
 - **Built-in Skills (5)** — `pdf-create`, `xlsx-create`, `frontend-design`, `code-review`, `api-design` ship with the installation. Each is a standalone markdown instruction file using zero-dependency approaches (Chrome headless for PDF, PowerShell for Excel, etc.).
 - **Conversation message folding** — Long tool result blocks (>8 consecutive dim lines) auto-collapse to first 2 lines + "… N more lines — Enter to expand". `/fold on|off` toggles globally.
 - **Tree-shaped tasks** — `checklist` tool now supports hierarchical task IDs (`T1`, `T1.1`, `T1.2.1`) with auto-assigned numbering. `add` accepts `parent` parameter for subtree positioning. Indentation-based persistence in `checklist.md`.

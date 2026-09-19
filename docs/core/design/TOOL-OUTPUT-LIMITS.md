@@ -101,7 +101,7 @@ Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do 
 
 ### 6.3 VSC 端实现坐标（B 式并入 · 实核 as-of 2026-09-15）
 
-> 来源 = `thincoder-vscode/docs/design/TOOL-OUTPUT-LIMITS-TUNING.md`（VSC 产品档——旧档一字未改、留参照历史）。与 CLI / 核面**同阈值同构成、各自独立实现**（锁步镜像——单边改动会造成行为漂移，须两端同步）。
+> 来源 = `thincoder-vscode/docs/_archive/design/TOOL-OUTPUT-LIMITS-TUNING.md`（VSC 产品档——旧档一字未改、留参照历史）。与 CLI / 核面**同阈值同构成、各自独立实现**（锁步镜像——单边改动会造成行为漂移，须两端同步）。
 
 | 面 | VSC 落点（实核） |
 |---|---|
@@ -110,11 +110,11 @@ Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do 
 | preview 构造 | `thincoder-vscode/src/agent/run-helpers.mjs:132`（`buildHeadTailPreview`——head + 省略注 + tail 预算） |
 | 落盘 + 写时自清理 | `thincoder-vscode/src/agent/run-helpers.mjs:167`（`offloadToolResult`）· `:86`（`TMP_RETENTION_MS` = 3 天）· `:181`（mtime 清理判定） |
 | 主链路调用点 | `thincoder-vscode/src/agent/execute-tools.mjs:256`（非 read_image 结果统一过落盘守卫） |
-| advisor 上限 + 双端截断 | `thincoder-vscode/src/advisor/compaction.mjs:34`（`MAX_RESULT_CHARS` = 64 × 1024）· `thincoder-vscode/src/advisor/truncate.mjs`（`truncateAdvisorResult`——头行 ~60% + 中段注 + 尾行余预算）· 调用 `thincoder-vscode/src/advisor/loop.mjs:266`（`thincoder-vscode/src/advisor/run.mjs:19` re-export） |
+| advisor 上限 + 双端截断 | `thincoder-vscode/src/advisor/compaction.mjs:34`（`MAX_RESULT_CHARS` = 64 × 1024）· `thincoder-vscode/src/advisor/truncate.mjs`（`truncateAdvisorResult`——头行 ~60% + 中段注 + 尾行余预算）· 调用 `thincoder-vscode/src/advisor/loop.mjs:266`（`thincoder-core/advisor/run.mjs:19` re-export） |
 | 实时显示同宽 | `thincoder-vscode/src/extension/panel-callbacks.mjs:165`（`onToolResult` `slice(0, 64 * 1024)`） |
 | 历史页工具卡同宽 | `thincoder-vscode/src/extension/panel-session.mjs:195`（tool 卡）· `:199`（tool 结果数组同限） |
 | webview DOM 上限 | `thincoder-vscode/webview/lib.js:27`（`MAX_TOOL_OUTPUT` = 64 × 1024）· `:30`（`capText`） |
-| read 双端返回 | （W14 已迁核——VSC 自持 `thincoder-vscode/src/tools/file.mjs` 与 `tools/shared.mjs` 已删，现体 = 核 `thincoder-core/tools/file.mjs`：`READ_TAIL_LINES` / 双端返回形态；`MAX_READ_LINES` = 核 `thincoder-core/tools/shared.mjs`） |
+| read 双端返回 | （W14 已迁核——VSC 自持 `thincoder-vscode/src/tools/file.mjs` 与 `tools/shared.mjs` 已删，现体 = 核 `thincoder-core/tools/file.mjs`：`READ_TAIL_LINES` / 双端返回形态；`MAX_READ_LINES` = 核 `thincoder-core/tools/shared.mjs`） （迁移期引文） |
 | 失败回退 | `thincoder-vscode/src/agent/run-helpers.mjs:196`（双端切片 + 无路径 + 原文总长——`offload to disk failed`） |
 
 **VSC 侧差异注**：提示语 / 路径格式与 CLI 契约**同形**（`[Large output saved. Read the full result with the read tool: …]`——模型契约稳定需双端一致）；`tail` **绝不硬编码**（实际 = 预算余量）两端同律。
@@ -154,11 +154,7 @@ Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do 
 | VSC 旧档 §3 实现落点与兼容性清单 · §4 AC1–AC11 · 变更记录流水 | 单次改动清单 / 一次性验收 / 批次流水 | **不并**——现行坐标入 §6.3；约束已入 §2–§5 + VSC 需求侧（(d) 类） |
 | 需求侧正文 | CLI 树需求档 | 需求档未迁——后续批并入 `docs/core/requirements/TOOLS.md` |
 
-## 9. 体量与拆分规划（R24a）
-
-**实测行数**：本档 **165 行**（并入批 6 后 · as-of 2026-09-15 实核）——**低于 300 行软线，无需拆分规划**。
-
 ## 变更记录
 
 - 2026-09-15（**B 式迁移轮 · 第 3 批**）：建档——`thincoder-cli/docs/design/TOOL-OUTPUT-LIMITS.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；坐标改写为现状路径并实核（`thincoder-core/agent/helpers.mjs` · `advisor/compaction.mjs` · `advisor/truncate.mjs` · `tools/file.mjs` · `text-budget.mjs`）；批次材料 / 状态行 / 变更流水不并（§8）。
-- 2026-09-15（**B 式迁移轮 · VSC 第 6 批 · 并入 · eng-designer**）：新增 §6.3 VSC 端实现坐标——自 `thincoder-vscode/docs/design/TOOL-OUTPUT-LIMITS-TUNING.md` 并入（常量 / 落盘 / advisor 截断 / 显示 / 历史页 / read 双端 / 失败回退逐项实核）；§6.2 双端测试面补 VSC 对位；§8.2 补 VSC 批次材料不并（(d) 类）；需求侧头注随批 5 并入收正。
+- 2026-09-15（**B 式迁移轮 · VSC 第 6 批 · 并入 · eng-designer**）：新增 §6.3 VSC 端实现坐标——自 `thincoder-vscode/docs/_archive/design/TOOL-OUTPUT-LIMITS-TUNING.md` 并入（常量 / 落盘 / advisor 截断 / 显示 / 历史页 / read 双端 / 失败回退逐项实核）；§6.2 双端测试面补 VSC 对位；§8.2 补 VSC 批次材料不并（(d) 类）；需求侧头注随批 5 并入收正。

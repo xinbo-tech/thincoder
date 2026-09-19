@@ -1,6 +1,6 @@
 /**
  * batch-segment.test.mjs — 批次档段写入工具（ENGINEERING-MODE.md §2.20 · FR22 F1-F7 / N1-N5）。
- * 用例表 T43–T53 1:1 落地（含 T43b/T49b/T52b；T46 的 V3 三态在 test/doc-consistency.test.mjs）：
+ * 用例表 T43–T53 1:1 落地（含 T43b/T49b/T52b；T46 的 V3 三态 = 一致性族 V1–V3——该族机检实装已撤除，§4.2.6）：
  *   T43 正常 append（既有行字节不变）· T43b 段标题缺失拒 · T44 越段/未知段拒 ·
  *   T45 凭证剥除零命中 · T47 路径门 + 只读面零变更（含挂载面 T47b）·
  *   T48 来源戳不可伪造（含骨架行不计/连写 N=1,2）· T49b 提示词双源（含限定子串）·
@@ -23,6 +23,7 @@ import { _advisorToolsFor } from "@thincoder/core/advisor/run.mjs"
 import { buildAdvisorSystemPrompt } from "@thincoder/core/advisor.mjs"
 import { advisorTool } from "@thincoder/core/agent-tools/advisor.mjs"
 import { prepareRun } from "@thincoder/core/agent/setup.mjs"
+import { ENG_TASK_BOOK_MIN } from "@thincoder/core/agent-tools/spawn-gates.mjs"
 
 let tmp
 beforeEach(() => { tmp = mkdtempSync(join(tmpdir(), "batch-segment-")) })
@@ -38,7 +39,7 @@ afterEach(async () => { await rmTmp(tmp) })
 /** 六段骨架夹具（§1.12 模板形态；`_（…）_` = 占位行）。 */
 const skeleton = (over = {}) => [
   "# 批次记录（测试夹具）", "",
-  "## §1 讨论（主 agent）", "", "讨论内容", "",
+  "## §1 讨论（主 agent）", "", over.s1Status ?? "**状态行**：🔄 进行中（测试夹具）", "", "讨论内容", "",
   "## §2 批次任务（eng-designer 自写）", "", over.s2 ?? "_（待实施）_", "",
   "## §3 设计评审（评审子代理自写）", "", "### 轮次与发现（发现摘要 / 🔴 处置——**凭证值不落档**）", "", over.s3 ?? "_（待实施）_", "",
   "## §4 用户批准（主 agent 记）", "", "_（待批准）_", "",
@@ -94,7 +95,7 @@ test("T43 正常：designer 写 §2——段尾追加 + 既有行字节不变（
 
 // ── T43b 段标题缺失 ─────────────────────────────────────────────────────────
 test("T43b 错误：目标段标题缺失 → throw（纠正动作 = 创建方先补骨架）", async () => {
-  const abs = makeDoc("# 批次\n\n## §1 讨论（主 agent）\n\n内容\n\n## §3 设计评审\n\n_（待实施）_\n")
+  const abs = makeDoc("# 批次\n\n## §1 讨论（主 agent）\n\n**状态行**：🔄 进行中（T43b 夹具）\n\n内容\n\n## §3 设计评审\n\n_（待实施）_\n")
   const before = read(abs)
   const e = await catchErr(() => designer(abs).execute({ segment: "§2", text: "x" }, ctxFor("eng-designer")))
   assert.ok(e instanceof Error, "无 §2 标题 → 必须 throw")
@@ -175,9 +176,9 @@ slow("T47b 边界：挂载面 + spawn 绑定（eng-designer/eng-coder 有；主 
     cwd: tmp, provider: { name: "p", model: "m" }, config: { agent: { engineering: true } }, tools: [],
     _engDesignTokens: new Map([["did", token]]),
   }
-  const built = buildSpawnChild(parent, { agent: parent, callbacks: {} }, { task: "t", batchDoc: "docs/batches/b.md" }, "eng-designer", false, [], [], null)
+  const built = buildSpawnChild(parent, { agent: parent, callbacks: {} }, { task: ENG_TASK_BOOK_MIN, round: "initial", batchDoc: "docs/batches/b.md" }, "eng-designer", false, [], [], null)
   assert.equal(built.child._batchDoc, abs, "eng-designer：child._batchDoc = 批次档绝对路径")
-  const coderBuilt = buildSpawnChild(parent, { agent: parent, callbacks: {} }, { task: "t", batchDoc: "docs/batches/b.md", designId: "did", designToken: token }, "eng-coder", false, [], [], null)
+  const coderBuilt = buildSpawnChild(parent, { agent: parent, callbacks: {} }, { task: ENG_TASK_BOOK_MIN, round: "initial", batchDoc: "docs/batches/b.md", designId: "did", designToken: token }, "eng-coder", false, [], [], null)
   assert.equal(coderBuilt.child._batchDoc, abs, "eng-coder：child._batchDoc = 批次档绝对路径")
   const mk = (role) => ({
     config: { agent: { engineering: true } }, history: [], tools: [], cwd: tmp,

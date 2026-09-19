@@ -8,6 +8,7 @@
  * 内核不依赖任何产品树：本档在 `thincoder-core/` 内 `node --test` 独立跑绿即为证。
  */
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { readdirSync, statSync } from "node:fs"
 import { dirname, join, relative } from "node:path"
@@ -24,7 +25,7 @@ function walk(dir, out = []) {
   return out
 }
 
-test("every core module imports cleanly (no product tree, no missing prompt/tool-doc file)", async () => {
+slow("every core module imports cleanly (no product tree, no missing prompt/tool-doc file)", async () => {
   const files = walk(ROOT).sort()
   assert.ok(files.length > 100, `expected the extracted core surface, found ${files.length} modules`)
   const failures = []

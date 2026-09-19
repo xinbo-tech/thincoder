@@ -11,6 +11,7 @@ import assert from "node:assert/strict"
 import { setupWebview, installChatFixture } from "./helpers/webview-env.mjs"
 
 let cleanupEnv
+let _diag // 痕迹面（2026-09-19 批起由 activity-diag.js 持环载体）
 
 before(() => {
   const env = setupWebview()
@@ -28,6 +29,7 @@ async function loadWebview() {
   const activity = await import("../webview/activity.js")
   const streaming = await import("../webview/streaming.js")
   const i18n = await import("../webview/i18n.js")
+  _diag = await import("../webview/activity-diag.js")
   return { S: state.S, ctx: state.ctx, t: i18n.t, subagentChunk: streaming.subagentChunk, ...activity }
 }
 
@@ -35,7 +37,7 @@ function fresh({ S, ctx }) {
   ctx.messagesEl.replaceChildren()
   ctx.activityEl.replaceChildren()
   S._subBlocks.clear()
-  S._subTraceLog = []
+  _diag.resetSubTrace() // 痕迹面（环载体 = activity-diag.js）
   S._digestBoundary = null
   S._subDescShown = true // A13 说明行一次性标志（该面另有专档）
 }
@@ -184,7 +186,7 @@ test("T-CL10 新代接管 + 旧代回收吞（AC-CL1）：旧 awaiting 块即时
   assert.equal(next._subMeta.oldReclaimPending, true, "新块布防（旧代回收在途——C-5③）")
   assert.equal(old.parentNode, ctx.messagesEl, "旧 awaiting 块即时归档（C-5③）")
   assert.equal(old._subMeta.awaitingDigest, false, "旧块 awaitingDigest 清（头词回终态）")
-  assert.ok(S._subTraceLog.some((e) => e.kind === "takeover"), "takeover 痕迹在位")
+  assert.ok(_diag.subTraceEntries().some((e) => e.kind === "takeover"), "takeover 痕迹在位")
   // 旧代回收 done 到达 → 吞：新块仍 live、不折叠、不归档
   applySubagentStatus(subMsg("done", "eng-coder", 4))
   assert.equal(next._subMeta.frozen, false, "吞守卫：新块不折叠（不失明/不提前终止）")
@@ -207,7 +209,7 @@ test("T-CL11 补桩直归档（AC-CL1）：never-born done → 桩出生即折�
   assert.equal(stub._subMeta.frozen, true, "桩 = 已折叠")
   assert.equal(stub.parentNode, ctx.messagesEl, "立即归档（流内可见——「终态必现」）")
   assert.equal(regionBlocks(ctx).length, 0, "不驻区")
-  assert.ok(S._subTraceLog.some((e) => e.kind === "late-terminal-stub"), "late-terminal-stub 留痕")
+  assert.ok(_diag.subTraceEntries().some((e) => e.kind === "late-terminal-stub"), "late-terminal-stub 留痕")
   // 表内不补行（answered / queued-cancel）保持 no-op（成员表语义不动）
   applySubagentStatus(subMsg("answered", "explore", 41))
   applySubagentStatus(subMsg("cancelled", "explore", 42, { was: "queued" }))
