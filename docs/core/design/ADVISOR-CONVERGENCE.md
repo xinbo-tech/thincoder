@@ -310,7 +310,7 @@ advisor design review 标准维度补一条：
 | A-AC10 | 需求契合度维度在位（声称 vs 实现 / 期望 vs 形态）；证据约束（无证据至多 🔵） | 需求契合 |
 | A-AC11 | 行数标注核查维度在位；函数档为第一判据 | 行数核查 |
 
-**工具轮 assistant 消息构造（回声恒带——`CONTEXT-COMPACTION.md` §7 D-CC22）**：`thincoder-core/advisor/loop.mjs:205-215` 推入 `messages` 的 assistant 消息由核单点 `assistantToolCallMessage(response, providerSpec(provider))`（`thincoder-core/model-specs.mjs`）构造——`reasoningEcho:"required"` 族（继承主 provider 或显式 `advisor.provider`，均按 `providerSpec` 判定）**恒带** `reasoning_content`（本轮无推理 ⇒ 空串）；`optional` / 未声明族恒不带。回归锚 = 核 `test/model-specs.test.mjs`（规则面）+ 核 `test/core-hygiene.test.mjs`（构造单点结构检查：两推入档零 `reasoning_content:` 字面）。
+**工具轮 assistant 消息构造（回声恒带——`CONTEXT-COMPACTION.md` §7 D-CC22）**：`thincoder-core/advisor/loop.mjs:205-215` 推入 `messages` 的 assistant 消息由核单点 `assistantToolCallMessage(response, providerSpec(provider))`（`thincoder-core/model-specs.mjs`）构造——`reasoningEcho:"required"` 族（继承主 provider 或显式 `advisor.provider`，均按 `providerSpec` 判定）**恒带** `reasoning_content`（本轮无推理 ⇒ 空串）；`optional` / 未声明族恒不带。回归锚 = 核 `test/model-specs.test.mjs`（规则面）+ 核 `test/core-hygiene.test.mjs`（结构面 · 单点双面形态）+ 核 `test/reasoning-echo-live.test.mjs`（缝式行为面 · 拟新增）——判据形态单源 = 批次档 `docs/batches/2026-09-20-reasoning-echo-gap.md` §2.4 A-C6 / A-C12。
 
 ## 13. 不并项与历史沿革
 
@@ -326,6 +326,8 @@ advisor design review 标准维度补一条：
 ## 变更记录
 
 - 2026-09-20（**thinking 回传缺口批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-20-reasoning-echo-gap.md` §1 · 台账 #109）：§12 新增「工具轮 assistant 消息构造（回声恒带）」契约行——本档持有 `thincoder-core/advisor/loop.mjs`（实现载体表 `:12`，非 `AGENT-LOOP-SUBAGENT.md`）⇒ advisor 镜像推入面（`:205-215`）的规范条文落此；判据与机制单源 = `CONTEXT-COMPACTION.md` §6.10 #9 / §7 D-CC22。机制条文其余零改。
+
+- 2026-09-20（**thinking 回传缺口批 · 设计评审轮 1 收正 · eng-designer**——承批次档 `docs/batches/2026-09-20-reasoning-echo-gap.md` §3 轮次 1：🟡#1 派生一致性收正）：§12 契约行回归锚改双面结构形态 + 缝式行为档（拟新增）——判据形态单源 = 该批 §2.4 A-C6 / A-C12。机制条文其余零改。
 
 - 2026-09-18（**顾问面治理批 · 实现后收正**——实现轮 id=91 终态 clean；落地批 = `docs/batches/2026-09-18-advisor-face.md`）：
   `notice.mjs` 的拟新增标记四处撤除（实现已落——首部实现载体表 / §3.2 / §3.4 / 变更记录条）；§3.1 纪律面扫尾与 §3.3 父侧纪律落位改「已落笔」（父侧 2026-09-18 落）；§3.7 处置列同步（P1–P4 已落 · P5/P6 未落）；§3.5 增到期核对行；§3.7 ④ 改「已收正」。

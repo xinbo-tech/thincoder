@@ -204,6 +204,60 @@ export function assistantToolCallMessage(response, spec) {
 - `docs/core/design/AGENT-LOOP.md:545`（前轮变更记录行）原带裸文件名死锚 ⇒ 本轮同批收正为核路径形态；`node scripts/doc-check.mjs --root .` 实测：悬空 **7 → 6**（净减 1）· 行宽 **24 = 24**（净增 0）。
 - `docs/core/design/AGENT-LOOP.md` 544 → **547 行**（>500 硬限，沿革在册）；本批不为该档另立结构债条目。
 
+### 2.10 设计评审轮 1 收正（F1–F8 逐条处置）· 2026-09-20
+
+**轮次**：设计轮 fix —— 评审轮 1 = **pass**（🔴0 · 🟡4 · 🔵4；发现表逐字 = §3「轮次 1」）；父侧逐条裁定「全部接受并要求落地」⇒ 本节 = 处置面。**追加制**（承 §2.9 同制）：前述各行 = 史实保留；凡与本节冲突 ⇒ **以本节为准**。
+
+**覆盖索引（被本节收正的前述行）**：§2.3 `:97` / `:98`（Δ）· `:103`（设计档行数）· §2.4 A-C2 `:110` / A-C6 `:114` / A-C7 `:115` · §2.5（残险面）· §2.6 行 2 `:130` · §2.9 ② 对 `docs/core/design/ADVISOR-CONVERGENCE.md` 的「零改」句（本节 ⑨ = 一处派生一致性收正）。
+
+**① F1（advisor 站点无行为 / 调用在场判据）→ 采「两者」**
+
+- **A-C6 改双面形态**（对称 §2.9 A-C9）：`thincoder-core/agent.mjs` / `thincoder-core/advisor/loop.mjs` **各档**：源文本零 `reasoning_content:` 字面 **∧** `assistantToolCallMessage(` 调用恰 1 处；并补 `thincoder-core/config.mjs:91-92` 名表含该名（import ∧ re-export 两面）。命令不变（归 A-C5 档内 `thincoder-core/test/core-hygiene.test.mjs`）。
+- **新增 A-C12（缝式离线行为断言 · 零网络）**：缝 = `_runAdvisorToolLoop`（`thincoder-core/advisor/loop.mjs:298`；调用形态承 `thincoder-cli/test/advisor-context-budget.test.mjs:21-26` 的 `seams.chat` 覆写——循环对入参 `messages` **原位推入**，断言直读该数组）：required 族（`{model:"deepseek-flash"}`）首轮返回 `tool_calls` 且无 `reasoning` ⇒ 推入的 assistant 消息 `'reasoning_content' in m === true && m.reasoning_content === ""`；带 `reasoning:"think-1"` ⇒ `=== "think-1"`；`optional` 族（`glm-5.3`）⇒ 键不存在。落位 = **新核档** `thincoder-core/test/reasoning-echo-live.test.mjs`（拟新增；核门单层 glob 收集 ⇒ 归 A-C5 档内）。
+- **选型理由（选「两者」）**：A-C6 单面只证「字面不在」——删掉整段不接线亦可满足（评审原话）；行为面的「空串在场」无静态替代 ⇒ 两面互补，增量仅一条用例（缝既有 + 零网络 + 零新夹具面）。
+
+**② F2（Δ 算术 −2 ∥ 实为 −10）→ 三站点同变换同 Δ（对照）**
+
+| 站点 | 现量 | Δ | 落值 | 形态 |
+|---|---|---|---|---|
+| 核主循环 `thincoder-core/agent.mjs`（§2.3 `:97` 原记 −2） | 440 | **−10** | **430** | `:366-376` 11 行条件式 → 1 行调用 |
+| advisor 循环 `thincoder-core/advisor/loop.mjs`（§2.3 `:98` 原记 −2） | 299 | **−10** | **289** | `:205-215` 同上 |
+| VSC 端壳 `thincoder-vscode/src/agent.mjs`（§2.9 ② 原记） | 494 | **−10** | **484** | `:387-397` 同上 |
+
+档位结论两向不变：430 ≤ 500 ✓ · 289 ≤ 300 ✓（回落软线内 ⇒ `SOFT_LINE_REGISTRY` 零改）。
+
+**③ F3（W8 闭包读数三处重复 → 单源）**：闭包读数单处 = 本节 §2.9 ①（批档面）；两设计档只留**结论 + 指针**（编辑面 = ⑨）。依据 = 本项目「重复读数已致分叉」先例（`docs/core/design/CONTEXT-COMPACTION.md` §6.15 系同法处置——评审 #3 引）。
+
+**④ F4（kimi / mimo 空串接受面未证）→ 探针扩面 + 残险登记**
+
+- **A-C7 扩面**（父侧授权该探针面 ≤6 请求）：`deepseek-flash` 三连（原）+ **kimi 一族一行**（`kimi-k3` · `thincoder-core/model-specs.mjs:44`）× 三形态 + **mimo 一族一行**（`mimo-v2.5` · `:76`）× 三形态 = 扩编 **6 请求**（空串 / 缺字段 / 真值各 1），期望 200/200/200（形态口径逐字同原 A-C7）；缺凭证 ⇒ 该族判「不可证」并落入下条残险登记，不阻塞其余两族。
+- **§2.5 边界补登（本节即登记面）**：① kimi / mimo 的 `reasoning_content:""` 接受面在扩面探针跑完前 = **未证**（原「风险消解」句仅 `deepseek-flash` 一族成立）；② **任一探针出现 400（"must be passed back"）⇒ 停下上报**、不得带病上线（三族同规；实施轮开工前一次跑）。
+
+**⑤ F5（§6.18 新行脱表）→ 已修**：删 `docs/core/design/AGENT-LOOP.md` 原 `:413` 空行 ⇒ 该行（现 `:413`）并入表体（W15 行 `:412` 紧邻）；结句前空行保留（现 `:414`）。
+
+**⑥ F6（`completion.mjs` 坐标清单缺 `:101` / `:133`）**：§2.6 行 2 坐标收正为**七处** —— `thincoder-core/agent/completion.mjs:59/77/90/101/105/133/143`（本席实读 `pushReal(agent, { role: "assistant", content: response.content })` 七站点；皆无 `tool_calls` ⇒ 判据面不变）。
+
+**⑦ F7（§2.3 设计档行数陈旧）**：按 §2.9 ⑥ 读数收正 + 本节落笔后实读（口径 = 文件按 `\n` 切分元素数，同 §2.9）：`docs/core/design/CONTEXT-COMPACTION.md` 517 → **518**（+1 变更记录行）· `AGENT-LOOP.md` **547**（−1 空行 +1 变更记录行 = 净 0；超 500 硬限沿革在册）· `ADVISOR-CONVERGENCE.md` 349 → **351**（+2：分隔空行 + 变更记录行）。
+
+**⑧ F8（A-C2 测试落位）→ 保留 CLI 集成层 + 落位理由**（选型 = 理由支，不移核）：
+
+核测试层无 mock provider 面——核主循环经**模块级** `chat()`（`thincoder-core/agent.mjs:5` ← `thincoder-core/provider/index.mjs:5`）直发、无 chat 注入缝，且 `thincoder-core/test/` 为**单层**目录、零 helpers / 零 server 夹具 ⇒ 核内建 live-loop 用例须**新增核内 mock 面**（新面、新夹具）；CLI 集成层既有 `thincoder-cli/test/helpers/mock-llm.mjs` + tmp 工作区夹具（先例 = `thincoder-cli/test/integration/normal-mode-toolflow.test.mjs:15-17/46` 驱核 `runAgent`）⇒ 落位 = **零新增夹具面**。核侧判据面（A-C1 规则 / A-C6 结构 / **A-C12 缝式行为**）**全在核门内**（A-C5 覆盖）；A-C2 / A-C3 = 「真循环 × HTTP mock」集成档，与 A-C8 端侧**同层同位**（各面自持断言）。
+
+**⑨ 设计档收正落笔（本席）**：`docs/core/design/CONTEXT-COMPACTION.md:164` + 变更记录 `:516` · `AGENT-LOOP.md:241` / 空行删除（现 `:413` 为并入行）+ 变更记录 `:546` · `ADVISOR-CONVERGENCE.md:313` + 变更记录 `:330`（F1 派生一致性收正）。**产品码 / 需求档 / 提示词 / 他批写域零触。**
+
+**⑩ 冒烟读数（本节落笔时 · cwd = 仓根）**：`node scripts/doc-check.mjs --root .` —— 悬空 **6 = 6**（净增 0）· 行宽 **25 = 25**（净增 0）· 拟新增 6 = 6 · 迁移期引文 222 = 222；门态 FAIL（悬空 6 / 行宽 25）= **存量**（本轮前即 6 / 25，本轮零新增）。三处被编辑行本就在行宽清单内（`CONTEXT-COMPACTION.md:164` 882 → 899 · `AGENT-LOOP.md:241` 658 → 675 · `ADVISOR-CONVERGENCE.md:313` 496 → 602 字符）——清单**条数不变**、同三条读数增（存量非阻断，如实登记）。
+
+**⑪ 与父侧裁定不一致处**：**无**（八条逐条照落）。附一条形式说明：批档面为**追加制** ⇒ F2 / F6 / F7 的「改记 / 收正」以本节为载体、以「以本节为准」生效；如需**就地改写** §2.3 / §2.6 原行，属父侧另裁面（本节不含）。
+
+**⑫ 受影响文件面增补（承本节 ①②；其余行以 §2.3 + §2.9 ② + 本节 ② 为准——D2/D3 不重复列表）**
+
+| 文件 | 现量（行） | Δ | 越线核查 |
+|---|---|---|---|
+| `thincoder-core/test/reasoning-echo-live.test.mjs`（拟新增 · A-C12 宿主） | 新建 | ~50 | ≤300 ✓（`core-hygiene` 对 `test/**` 同样生效——无 `test/` 登记条目，超线即红） |
+| `thincoder-core/test/core-hygiene.test.mjs` | 124 | +~16（双面形态：零字面 **∧** 调用恰 1 处 + `config.mjs:91-92` 名表双面） | ~140 ≤300 ✓ |
+
+设计档落笔后读数（§2.10 ⑦ 同口径）：`CONTEXT-COMPACTION.md` **518** · `AGENT-LOOP.md` **547** · `ADVISOR-CONVERGENCE.md` **351**。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
@@ -227,6 +281,16 @@ VERDICT: pass
 （已核事实抽样：`model-specs.mjs` 182 行 · required 行 33/35/38/40/42/44/46/48/75/76 · DEFAULT_SPEC `:99` 无 `reasoningEcho` · glm-5.3 `:52` optional；`agent.mjs` 440 行 / `:366-376` 条件式同形；`advisor/loop.mjs` 299 行 / `:205-215` + `:298` 缝；`config.mjs` 420 行 / `:91-92` 名表；VSC `agent.mjs` 494 行 / `:6` + `:387-397`；VSC `specs.mjs` 61 行 / `:11` + `:13` + `:46-50`；`context.mjs` 496 行 / `:30` / `:230-235`；`core-hygiene.test.mjs` 124 行；`model-specs.test.mjs` 60 行；VSC `test/integration/files.mjs` 22 行；两 mock 助手的 requests 形状差异（CLI = 裸 body · VSC = `{body}`）与 A-C2 / A-C8 断言路径相符；三站点扫面（核 tool_calls 推入仅 `agent.mjs:369` + `loop.mjs:208`；端 src 仅 `agent.mjs:394-395` + `panel-session.mjs:92` 注释）成立。残险登记 = kimi / mimo 接受面（见 #4）。）
 
 ## §4 用户批准（主 agent）
+
+**2026-09-20 01:32 父侧代签**——依据用户 01:04 授权「**你自动跑到排空吧**」（同 2026-09-18 先例：设计评审点火权 + §4 批准权委托父侧，自缚三条件）。
+
+**三条件核验**：① 评审 **pass（0 🔴）**（id=182 · 🔴0 / 🟡4 / 🔵4 · §3「轮次 1」在册）；② **修正轮（id=183）F1–F8 全部落地**（F1 双面判据 + A-C12 缝式断言 · F2 Δ 收正 −10 · F3 读数单源指针 · F4 探针扩三族 · F5 脱表行归并 · F6 坐标补全七处 · F7 行数收正 · F8 落位理由）——三条形式面披露 **父侧裁定**：批档追加制（以 §2.10 为准）**接受** · F1 派生收正（`ADVISOR-CONVERGENCE.md:313`）**接受** · 行宽清单条数不变（25）**接受**；③ **token 已签发**（值不落档——运行时凭证）。
+
+**批准范围**：① **设计定稿**（批档 §1–§2 含 §2.9 扩展块 + §2.10 修正轮块 · 设计三档 · **需求档 §4.13**〔父侧已落〕）；② **实现派法**：**单轮 · 两包**（核包 = `model-specs.mjs` / `config.mjs` / `agent.mjs` / `advisor/loop.mjs` + 两核测档；端包 = `thincoder-vscode/src/agent.mjs` / `specs.mjs` + 两 VSC 测档 + 两处新建 `reasoning-echo-live.test.mjs`）——同 designId + token 一次 spawn（端侧经 `@thincoder/core` JUNCTION 直取新导出 ✓）。
+
+**特别授权**：**A-C7 前置真机探针**（三族各一模型 × 三形态 · **总请求 ≤9** · 400 ⇒ 停下上报）——探针上限由父侧在此明示（承 178 轮越面教训）。
+
+**收口预告**：实现轮落定 → 父侧核 A-C1..A-C12 → 收口（§6）+ 核销 #109 + **提交 + push**。
 
 ## §5 实施记录（eng-coder）
 
