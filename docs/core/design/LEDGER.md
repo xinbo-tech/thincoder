@@ -3,7 +3,7 @@
 > 板块：工程模式 / 台账——**待办总账单一权威源（SQLite）** + **台账提醒与可见面（FR24 载体面）**。
 > **v2 就地更新**（2026-09-17 退役批）：存储 **md 台账 → SQLite 单表**（M2 模块设计语义并入本档；原旁路档 `_archive/modules/ENGINEERING-MODE-V2-MODULE-LEDGER.md` 已归档 `_archive/modules/`——§6.3 就地更新纪律）。
 > 需求层指针 = `requirements/ENGINEERING-MODE-V2.md` §3（M2 台账 SQLite）· §9（继承机制：台账提醒与可见面 = 原 MECHANISM §1.18）。
-> 兄弟档：`design/LEDGER-SELF-CONTAINED.md`（L4「本仓可解析」判据）· `design/DOC-DISCIPLINE.md`（机检引擎）· `design/BATCH-RECORD.md`（批次档 §6 模板槽位）。
+> 兄弟档：`design/LEDGER-SELF-CONTAINED.md`（L4「本仓可解析」判据）· `design/DOC-DISCIPLINE.md`（机检引擎）· `design/BATCH-RECORD.md`（核销同步清单槽位枚举 = `design/DOC-DISCIPLINE.md` D7 行）。
 > 落点：用户数据目录键控库 `~/.thincoder/ledger/<sha1(项目根)>[:16].db`（SQLite，工作树外——天然不进 git；2026-09-17 用户裁定：不在项目目录）· `thincoder-core/ledger.mjs`（查询/写命令单源）· `ledger-surface.mjs` ×3（显示面，数据源迁移）。
 
 ## 1. 机制目标与范围

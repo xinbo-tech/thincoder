@@ -41,7 +41,8 @@ const PLACEHOLDERS = new Set(["placeholder", "yourfile", "your-file", "example",
 const EXTS = "mjs|cjs|js|json|md|css|html|svg|yml|yaml|sh|ps1";
 // 右界守卫转义须单层（源串 "(?![\\w])" ⇒ 正则源 (?!\w)）；双转义 ⇒ 「字面反斜杠 / 字面 w」二字符类、守卫失效
 // ⇒ `…/package.json` 被交替序 `js` 先命中截为 `…/package.js`（§4.2.1 实现口径——2026-09-18 判据面批）。
-const PATH_RE = new RegExp("(?<![A-Za-z0-9_.\\-\\\\/])((?:[A-Za-z0-9_.\\-]+\\/)*[A-Za-z0-9_.\\-]+\\.(?:" + EXTS + "))(?::(\\d+(?:-\\d+)?)(?:\\/:\\d+(?:-\\d+)?)*)?(?![\\w])", "g");
+// 左界守卫补 `@`（2026-09-20 小债批 §2.1 条 2——`@scope/pkg/x.mjs` 包规格形不应抽为仓内路径 token；父侧直接执行 · 可 revert）
+const PATH_RE = new RegExp("(?<![A-Za-z0-9_.\\-\\\\/@])((?:[A-Za-z0-9_.\\-]+\\/)*[A-Za-z0-9_.\\-]+\\.(?:" + EXTS + "))(?::(\\d+(?:-\\d+)?)(?:\\/:\\d+(?:-\\d+)?)*)?(?![\\w])", "g");
 const CASE_RE = /(?<![A-Za-z0-9-])((?:T-[A-Z]{1,5}\d{1,3}(?:-\d{1,3})?|T-\d{1,3}|T[A-Z]?\d{1,3})[a-z]?(?:\.\d+)?)(?![A-Za-z0-9-])/g;
 const SPAN_RE = /`([^`\n]+)`/g;
 const IDENT_RE = /[A-Za-z_$][A-Za-z0-9_$]*/g;

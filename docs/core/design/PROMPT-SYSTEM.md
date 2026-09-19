@@ -263,7 +263,7 @@
 | 2 | `advisor-round1` | ✓ | 4/4（同） | 对齐 | 双语正当差 |
 | 3 | `advisor-round2` | ✓ | 5/5（同） | 对齐 | 双语正当差 + 示例行写法差（CN 用全路径形式、EN 用短文件名形式——皆为提示词内示例文本，非本档引用） |
 | 4 | `advisor-round3` | ✓ | 5/5（同） | 对齐 | 同上 |
-| 5 | `common` | ✓ | 10/13 | **差** | **EN 领先**：EN 将工具观三条升为 3 个 `###` 子节 + 工具路由表（表 vs CN 散文；7 项仅 EN：`process` / `get_current_time` / `wait_for` / `verify` / `fetch` / `websearch` / MCP 搜索） |
+| 5 | `common` | ✓ | 14/17（2026-09-20 重算〔台账 #112〕；口径 = 标题节点〔层级 2+，含行内〕） | **差** | **EN 领先**：EN 将工具观三条升为 3 个 `###` 子节 + 工具路由表（表 vs CN 散文；7 项仅 EN：`process` / `get_current_time` / `wait_for` / `verify` / `fetch` / `websearch` / MCP 搜索） |
 | 6 | `consult-base` | ✓ | 4/4（同） | 对齐 | 双语正当差 |
 | 7 | `discipline-engineering` | ✓ | 14/14（同） | 对齐 | 双语正当差（段 22/22 全配对；token 差仅 `文档:节` ↔ `doc:section`） |
 | 8 | `discipline-normal` | ✓ | 22/22（同） | 对齐 | 双语正当差（编号签名集合零差） |
