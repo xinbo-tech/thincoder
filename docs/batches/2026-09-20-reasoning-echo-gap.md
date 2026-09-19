@@ -389,4 +389,124 @@ VERDICT: pass
 
 **⑥ 内审 / 代码评审轮次**：**0 轮**（终态 = `stalled`：零代码产出 ⇒ 无 divergence 可审、无代码可评；进入评审 = 报告无意义消耗）。**fix round**：0（未返工）。**工作树**：`git status` 实读 = clean（除 gitignore 的探针脚本与轨迹证据外零落笔）。
 
+### 实施轮 §5（eng-coder · 2026-09-20 01:4x）—— 终态：**clean**
+
+**轮次**：initial（承接 184 轮已核实坐标——上轮止于 A-C7 停止线、零产品码落笔）。
+**本轮零真机请求**（父侧裁定：修复形〔空串〕双族活体形状 200 已在册 ⇒ 接受面成立；400 落在旧形 = 本批病灶本身）。
+任务书 = 批档 §2 全段（以 §2.10 为准面）。
+
+#### ① 改动清单（file → 落点 → Δ）
+
+| 文件 | 落点 | Δ（本席真实读） |
+|---|---|---|
+| `thincoder-core/model-specs.mjs` | 新增导出 `assistantToolCallMessage(response, spec)`（§2.2 契约逐字） | 182 → **210**（+28） |
+| `thincoder-core/config.mjs` | `:91` import / `:92` re-export 名表加项 | 420 ±0 |
+| `thincoder-core/agent.mjs` | `:8` 导入面加名；`:366-376` 11 行条件式 → `:366` 单行调用 | 440 → **430**（−10） |
+| `thincoder-core/advisor/loop.mjs` | `:11` 导入面加名；`:205-215` 11 行条件式 → `:205` 单行调用 | 299 → **289**（−10） |
+| `thincoder-vscode/src/agent.mjs` | `:6` 导入面加名；`:387-397` 11 行条件式 → `:387` 单行调用 | 494 → **484**（−10） |
+| `thincoder-vscode/src/specs.mjs` | `:11` 核 import 名表 + `:13` re-export 名表加项（端构造单点入口·转口形态） | 61 ±0 |
+| `thincoder-core/test/model-specs.test.mjs` | 追加 T-6/T-7（A-C1 规则面四情形 + `tool_calls` 形状守恒） | 60 → 91 |
+| `thincoder-core/test/core-hygiene.test.mjs` | 追加 D-CC22 双面结构检查（两档零字面 ∧ 调用恰 1 + config 名表双面） | 124 → 143 |
+| `thincoder-core/test/reasoning-echo-live.test.mjs` | **新建**（A-C12 缝式离线行为断言 · `_runAdvisorToolLoop` 的 `seams.chat`） | 57 |
+| `thincoder-cli/test/integration/reasoning-echo-live.test.mjs` | **新建**（A-C2/A-C3 真循环 × HTTP mock 线上体断言） | 73 |
+| `thincoder-vscode/test/integration/reasoning-echo-live.test.mjs` | **新建**（A-C8/A-C9 端壳真循环 + 端结构面） | 103 |
+| `thincoder-vscode/test/integration/files.mjs` | `:22` 新档登记（D3 清单与实档同动） | 22 → 23 |
+
+产品码零越设计面：`provider/*` · `context.mjs` · `session-lifecycle.mjs` · 非工具路径推入 · 提示词 · 需求档/设计档/批档 全零触。
+
+#### ② 决策透明表（本席自决项）
+
+| # | 判断点 | 处置 | 理由 |
+|---|---|---|---|
+| 1 | 三站点是否加指针注释 | **不加**（各站点仅 1 行调用；`advisor/loop.mjs:199-204` 既有注释原文保留） | 设计 §2.3/§2.9 ② 受影响文件表逐档记 Δ −10 ⇒ 加注会破 Δ 逐档对齐（F2 教训）；机制解释单源在 `model-specs.mjs` 单点头注 |
+| 2 | VSC 区段标记行 `// ─── Tool calls ───…` | **原位恢复** | 替入经 fuzzy 匹配误吞一个 `─`（区段标记非设计内变更）⇒ 归零非设计面 churn |
+| 3 | advisor 🔵「结构断言对注释敏感」 | **受领 · 本批不改** | 设计 A-C6/A-C9 明写「**源文本**零字面」形态 ⇒ 按设计逐字落；改注释剥离属另批可选收正 |
+| 4 | advisor 🔵「`toolCalls` 无兜底」 | **受领 · 本批不改** | 设计 §2.2 代码块逐字无兜底；三站点均在工具轮分支内（`agent.mjs:345` / `loop.mjs:194` / VSC `agent.mjs:334` 已判空）⇒ 无现网缺陷 |
+| 5 | 测试时序 | **先红后绿**（先写五个测试面 → 取红读数 → 落实现 → 转绿） | 任务书验收「先红后绿：新用例先红（读数）→ 落实现转绿」 |
+
+#### ③ 先红后绿读数（逐字）
+
+| 用例 | 红（落实现前） | 绿（落实现后） |
+|---|---|---|
+| A-C1（T-6/T-7） | `model-specs.test.mjs` 整档 ✖（模块实例化失败栈帧 `#asyncInstantiate`/`ModuleJob.run`——新增导出当时未落地） | ✔ T-6 / T-7 通过 |
+| A-C6（核双面结构） | ✖：`agent.mjs` 命中 `reasoning_content:` 字面（actual 1 / expected 0） | ✔ 通过 |
+| A-C12（advisor 缝式） | ✖：`'reasoning_content' in pushed`（actual false / expected true） | ✔ 三条通过 |
+| A-C2（CLI 宿主面） | ✖：第 3 请求体该消息 `'reasoning_content' in second`（actual false / expected true） | ✔ 通过 |
+| A-C8（VSC 宿主面） | ✖：同上（端壳线上体 actual false / expected true） | ✔ 通过 |
+| A-C9（端结构面） | ✖：`src/agent.mjs` `reasoning_content:` 字面（actual 1 / expected 0） | ✔ 通过 |
+| A-C3 / A-C8 边界（optional 族） | 绿（反向断言——实现前即无键，形态本就正确） | ✔ 通过 |
+
+#### ④ A-C1..A-C12 逐条读数（命令 + 断言面）
+
+| # | 命令 | 读数 |
+|---|---|---|
+| A-C1 | `cd thincoder-core && node --test test/model-specs.test.mjs` | ✔ T-6（缺值/空串 ⇒ 键在场 `""`；有值逐字 `"rc"`；`tool_calls` 形状 deepEqual）· T-7（glm-5.3 与未知模型 × rc/`""`/undefined ⇒ 键恒不存在） |
+| A-C2 | `cd thincoder-cli && node --test test/integration/reasoning-echo-live.test.mjs` | ✔ 第 3 次请求体该 assistant 消息 `in === true ∧ === ""`；第 2 次请求体首工具轮 `=== "think-1"` |
+| A-C3 | 同 A-C2 档 | ✔ 全量请求体任一 assistant 消息键恒不存在（脚本真发 reasoning 帧下） |
+| A-C4 | `cd thincoder-core && node --test test/compaction-echo.test.mjs` | ✔ T0-T3 / M0-M3 全 9 条绿（D-CC18/19 代码零改） |
+| A-C5 | `cd thincoder-core && node test/run.mjs` | ✔ **401/401 pass · fail 0**（exit 0；含行数硬限 + 新增结构检查 + 新核档在门内） |
+| A-C6 | 归 A-C5 档内（`test/core-hygiene.test.mjs`） | ✔ 双面通过（两档零 `reasoning_content:` 字面 ∧ 调用恰 1 处；config 名表 import ∧ re-export 双面含名） |
+| A-C7 | —— | **前置已闭合**（184 轮 6 请求在册 · 父侧裁定授权继续）⇒ 本轮零真机请求、未重跑 ✓ |
+| A-C8 | `cd thincoder-vscode && node --test test/integration/reasoning-echo-live.test.mjs` | ✔ 第 3 请求体 `in === true ∧ === ""`；第 2 请求体 `=== "think-1"`；边界例 glm-5.3 全量零键 |
+| A-C9 | 同 A-C8 档 | ✔ 端壳零字面 ∧ 调用恰 1 处 ∧ `specs.mjs` import/re-export 双面含名 |
+| A-C10 | `cd thincoder-vscode && node test/run.mjs` | ✔ **734/734 pass · fail 0**（exit 0；含 `test/run.mjs:28-56` 启动自检：清单在盘 / 无漏登记 / 零混入） |
+| A-C11 | `cd thincoder-vscode && node --test test/engine-floor-guard.test.mjs` | ✔ 6 条绿（含 W8 契约②：端壳静态闭包零 `node:sqlite`）；本次加名零新增闭包条目 |
+| A-C12 | `cd thincoder-core && node --test test/reasoning-echo-live.test.mjs` | ✔ 三条：required 缺值 ⇒ 键在场 `""`；有值 ⇒ `"think-1"`；glm-5.3 ⇒ 键不存在 |
+
+三包汇总：核 **401/401** · CLI **718/718** · VSC **734/734**（exit 全 0；既有红零命中）。
+
+#### ⑤ 内审 / 代码评审轮次与终态
+
+- **内审（explore 只读发散审计）1 轮**：终态 **DEVIATIONS(2)** —— PARTIAL 0 · SILENT-SIMPLIFICATION 0 · OUT-OF-LIST 0 · A-C1..A-C12 断言面零弱化零缺失；两条皆 **DOC-DRIFT 低危**：① `model-specs.mjs` Δ 标注（在册 +12 / 实 +28）；② 三设计档调用点坐标仍为改前块区间（区间首行仍命中调用）。
+- **advisor 代码评审 1 轮**：**VERDICT: pass**（🔴0 · 🟡1 · 🔵3 · **零 must-fix**）。
+  - 🟡 = 工作区 >300 软线建议项（`config.mjs` 420 · `agent.mjs` 430 · VSC `agent.mjs` 484——皆存量在册且本批 Δ ≤ 0）；
+  - 🔵 = ① Δ 标注漂移（同上）· ② 结构断言对注释敏感（设计写「源文本」形态 ⇒ 按设计保留）· ③ 单点构造无 `toolCalls ?? []` 兜底（设计 §2.2 逐字无兜底，三站点已判空）。
+- **fix round：0**（审计/评审零 must-fix ⇒ 无返工；实现面首轮即绿）。
+
+#### ⑥ 上抛项（父侧 / 设计者笔域）
+
+1. 批档 §2.3 `model-specs.mjs` 行：在册「182 → 194（+12）」，现盘 **210**（+28）——请收口时收正（同批其余各档 Δ 逐档相符）。
+2. 三设计档（`CONTEXT-COMPACTION.md:164` · `AGENT-LOOP.md:241`/`:413` · `ADVISOR-CONVERGENCE.md:313`）内三站点块坐标（`agent.mjs:366-376` / `advisor/loop.mjs:205-215` / VSC `agent.mjs:387-397`）为**替入前**区间；现盘各为单行（366 / 205 / 387）——机制条文仍真，仅指针范围偏宽。
+3. 需求档 `docs/core/requirements/AGENT-LOOP.md:241` F-RC4 仍标「（实现轮）」而探针门已闭（§2.11 ②）；批档 §2.11 ⑥① 的「`:245` 未带形状限定」已过期（`:245` 现含形状限定与残险句）——需求档笔在父侧。
+4. 形式面：`node scripts/doc-check.mjs --root .` 读数 = 悬空 **6** · 拟新增 **6** · 迁移期引文 **222**（= 设计轮在册基线）；行宽 **26**（在册 25）。本席写域零文档改动；以「>300 字符行数」为口径逐档比对 HEAD 与工作树 = 零按档差异 ⇒ 行宽差额非本席所出（供父侧核对）。
+
 ## §6 验证与收口（父代理）
+
+### 6.1 父侧实核（spot-check · 非复述自报）
+
+- **构造单点**：`thincoder-core/model-specs.mjs:197` `export function assistantToolCallMessage(response, spec)` ✓。
+- **三站点各单行调用**（全仓 grep 实读）：`agent.mjs:366` `pushReal(agent, assistantToolCallMessage(response, specForModel(agent.provider.model)))` · `advisor/loop.mjs:205` `messages.push(assistantToolCallMessage(response, providerSpec(provider)))` · VSC `agent.mjs:387` `pushReal(history, fullHistory, assistantToolCallMessage(response, specForModel(provider.model)))` ✓。
+- **导入面双面**：核 `config.mjs:91/92`（import + re-export）· 端 `specs.mjs:11/13` ✓。
+- **结构断言**：核 `core-hygiene.test.mjs:138`「构造调用恰 1 处」+ 端集成测 `:99` 同形 ✓；名表双面断言 ✓。
+- 三包 **401 / 718 / 734**（exit 0）· 先红后绿（六处红读数在册）✓。
+
+### 6.2 上抛处理
+
+| 源 | 条 | 裁定 |
+|---|---|---|
+| 186 | ① §2.3 `model-specs.mjs` Δ 在册 +12 ∥ 实测 **+28**（210 ≤ 300 ✓） | **收正**——以 §6.3 实测表为准（覆盖 §2.3 预测值） |
+| 186 | ② 三设计档块区间指针偏宽（`:366-376` 等） | **Accept（零动作）**——区间**包含**目标行（`:366 ∈ :366-376`）⇒ 指针可解析；机制条文全真；变更记录行 = as-of 属正常 |
+| 186 | ③ 需求档 F-RC4「（实现轮）」已过期 · 批档 §2.11⑥① 过期 | **Fixed**（父侧笔）：F-RC4 改「已闭合」+ 读数（`requirements/AGENT-LOOP.md:241`）；批档 §2.11⑥① = 追加制下史实 ✓ |
+| 186 | ④ `doc-check` 行宽 26 ∥ 在册 25 | **归因：父侧笔**（§4.13 两行超宽）⇒ **已折**（`:245`/`:246` · `:268`/`:269`）⇒ 净增归零 ✓ |
+| 184 | A-C7 停止线命中 | **已裁：授权继续**（修复形接受面成立 · §4 特别授权）；证据面收正 = 185 ✓ |
+| 185 | C1/C2/C3 + 两条形式披露 | **接受**（就地补句 · §2.4/§2.10 同缺陷同处置）✓ |
+
+### 6.3 读数收正表（实测 · **覆盖 §2.3 预测值**）
+
+| 档 | 预测（§2.3/§2.10） | 实测 |
+|---|---|---|
+| `thincoder-core/model-specs.mjs` | 182 → 194（+12） | 182 → **210**（+28 ≤ 300 ✓） |
+| `thincoder-core/config.mjs` | ±0 | 420（±0 ✓） |
+| `thincoder-core/agent.mjs` | −10 | 440 → **430** ✓ |
+| `thincoder-core/advisor/loop.mjs` | −10 | 299 → **289**（回落软线内）✓ |
+| `thincoder-vscode/src/agent.mjs` | −10 | 494 → **484** ✓ |
+| `thincoder-vscode/src/specs.mjs` | ±0 | 61（±0 ✓） |
+| 测试档（三新 + 两改 + 入册） | — | core `model-specs.test.mjs` **91** · core `core-hygiene.test.mjs` **143** · core `reasoning-echo-live.test.mjs` **57**（新）· cli `…/reasoning-echo-live.test.mjs` **73**（新）· vscode `…/reasoning-echo-live.test.mjs` **103**（新）· vscode `…/files.mjs` **23** ✓ |
+
+### 6.4 状态行
+
+**✅ 已收口 2026-09-20 01:5x**——实现轮 186 clean（内审 DEVIATIONS(2) 皆 DOC-DRIFT 低危 + advisor pass 零 must-fix + **fix 轮 0**）+ 父侧实核通过 + 需求档 §4.13 已落（含形状限定与残险）。
+
+**收口对账（D7）**：① 角色表 = §2 / §3 / §4 / §5 / §6 ✓；② 状态行 = 本行 ✓；③ 计数 = 台账 **#109 → 已核销** ✓；④ 指针链 = 需求 §4.13 → 设计 `CONTEXT-COMPACTION.md` §6.10 #9 / D-CC22 → 实现三站点 ✓；⑤ 变更记录 = 需求档 `:268` · 设计三档 ✓；⑥ 待办勾销 = 上抛 6 条逐条裁定（含父侧自收两处超宽行）✓；⑦ 台账可见面 = `/ledger` 随核销刷新 ✓。
+
+**冻结**：本档自本行起冻结；提交哈希以 errata 记。

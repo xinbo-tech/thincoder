@@ -8,7 +8,7 @@
  * 并按 0.75 一次性预算提示 + 结构化超时尾收尾；守卫与限额函数在 compaction.mjs。
  */
 import { chat } from "../provider/core.mjs"
-import { providerSpec } from "../config.mjs"
+import { providerSpec, assistantToolCallMessage } from "../config.mjs"
 import { toOpenAISchema } from "../tools/index.mjs"
 import { truncateAdvisorResult } from "./truncate.mjs"
 import { batchSegmentTool } from "../agent-tools/batch-segment.mjs"
@@ -202,17 +202,7 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
     // tool-call assistant history lacks it — the observed "reasoning stops
     // after the first tool call, returns only at the final answer" symptom.
     // Mirrors the main agent's push (agent.mjs).
-    messages.push({
-      role: "assistant",
-      content: response.content || null,
-      tool_calls: response.toolCalls.map((tc) => ({
-        id: tc.id, type: "function",
-        function: { name: tc.name, arguments: tc.arguments },
-      })),
-      ...(response.reasoning && providerSpec(provider).reasoningEcho === "required"
-        ? { reasoning_content: response.reasoning }
-        : {}),
-    })
+    messages.push(assistantToolCallMessage(response, providerSpec(provider)))
 
     // B1 (AGENT-LOOP.md §18.7 D-TS7): the SAME LLM reply's multiple read-only
     // tool calls run in PARALLEL (Promise.all) — results are backfilled in

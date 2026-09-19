@@ -179,3 +179,32 @@ export function providerSpec(provider) {
   if (Number.isInteger(k) && k > 0) return { ...spec, context: k * 1024 }
   return spec
 }
+
+/**
+ * assistantToolCallMessage(response, spec) — the tool-round assistant message pushed onto the
+ * machine line (D-CC22, #109 — live-push face of the echo-safety family; single construction
+ * point, CONTEXT-COMPACTION.md §6.10 #9).
+ *
+ * `reasoningEcho:"required"` families (deepseek / kimi / mimo) MUST carry the reasoning echo on
+ * every tool-call assistant message: the field is NEVER omitted — an absent/non-string
+ * `response.reasoning` is echoed as `""` (live-shape probe 2026-09-20: missing field → 400
+ * "must be passed back"; empty string → 200 with reasoning still returned). `optional` /
+ * undeclared families (incl. DEFAULT_SPEC) never get the field (behavior byte-identical).
+ *
+ * Callers: thincoder-core/agent.mjs (main loop) · thincoder-core/advisor/loop.mjs (review
+ * mirror) · thincoder-vscode/src/agent.mjs (shell loop) — each passes its own spec face.
+ */
+export function assistantToolCallMessage(response, spec) {
+  const msg = {
+    role: "assistant",
+    content: response.content || null,
+    tool_calls: response.toolCalls.map((tc) => ({
+      id: tc.id, type: "function",
+      function: { name: tc.name, arguments: tc.arguments },
+    })),
+  }
+  if (spec?.reasoningEcho === "required") {
+    msg.reasoning_content = typeof response.reasoning === "string" ? response.reasoning : ""
+  }
+  return msg
+}

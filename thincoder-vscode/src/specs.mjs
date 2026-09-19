@@ -8,9 +8,9 @@
  *    旧 `src/config.mjs` 规格表随 W16 删旧，该字段的数据面迁入本档覆盖表）；
  *  - `ctxPercentForModel`（面板上下文占比派生——面板消费面，随 config 面收拢入驻）。
  */
-import { specForModel as coreSpecForModel, providerSpec } from "@thincoder/core/model-specs.mjs"
+import { specForModel as coreSpecForModel, providerSpec, assistantToolCallMessage } from "@thincoder/core/model-specs.mjs"
 
-export { providerSpec }
+export { providerSpec, assistantToolCallMessage }
 
 /** 端差字段表（`reasoningEffortDefault`）：前缀匹配、最长优先；未命中且 ID 含 `vendor/` 命名空间
  *  时按裸模型段重试（与核 `lookupSpec` 命名空间剥离同法——聚合网关惯例 `vendor/model`）；仍未命中 → undefined

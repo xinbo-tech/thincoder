@@ -3,7 +3,7 @@
  * plan mode, goal tracking, verify guard; setup lives in agent/setup.mjs).
  */
 import { chat } from "@thincoder/core/provider/core.mjs"
-import { specForModel } from "./specs.mjs"
+import { specForModel, assistantToolCallMessage } from "./specs.mjs"
 import { traceStop } from "./extension/stop-trace.mjs"
 import {
   MAX_ADVISOR_PUSHBACKS, MAX_VERIFY_PUSHBACKS, MAX_VERIFY_RETRIES, MAX_EMPTY_RETRIES,
@@ -384,17 +384,7 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
     }
 
     // ─── Tool calls ─────────────────────────
-    pushReal(history, fullHistory, {
-      role: "assistant",
-      content: response.content || null,
-      tool_calls: response.toolCalls.map((tc) => ({
-        id: tc.id, type: "function",
-        function: { name: tc.name, arguments: tc.arguments },
-      })),
-      ...(response.reasoning && specForModel(provider.model).reasoningEcho === "required"
-        ? { reasoning_content: response.reasoning }
-        : {}),
-    })
+    pushReal(history, fullHistory, assistantToolCallMessage(response, specForModel(provider.model)))
 
     // Machine-line warning (ARCHITECTURE.md §285-287): tell the model some of its tool
     // calls were dropped (non-standard provider format) so it does not assume they ran.

@@ -88,8 +88,8 @@ export const DEFAULTS = {
 // Model capability table + spec lookup live in model-specs.mjs (2026-08-31
 // extract — config.mjs had grown past the 300-line advisory). Re-exported here
 // so the 23 existing importers keep their import paths.
-import { specForModel, providerSpec, specMatch } from "./model-specs.mjs"
-export { specForModel, providerSpec, specMatch }
+import { specForModel, providerSpec, specMatch, assistantToolCallMessage } from "./model-specs.mjs"
+export { specForModel, providerSpec, specMatch, assistantToolCallMessage }
 
 
 // Window utilization threshold: compacts at 60% context, reserving 40% headroom

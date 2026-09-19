@@ -6,7 +6,7 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { specForModel, specMatch } from "../model-specs.mjs"
+import { specForModel, specMatch, assistantToolCallMessage } from "../model-specs.mjs"
 
 // qwen-plan 渠道名（token-plan GET /models 2026-09-15 实测）——字段逐字对齐 deepseek-flash 行
 const CHANNEL = "deepseek-v4.1-flash"
@@ -57,4 +57,35 @@ test("T-5 unknown model still falls back to DEFAULT_SPEC with matched:false", ()
   assert.equal(r.spec.context, 128_000, "128K fallback unchanged")
   assert.equal(r.spec.maxOutput, 32_000)
   assert.equal(specForModel(model), r.spec, "specForModel shares the same fallback spec")
+})
+
+// ─── D-CC22（#109）：活体推入面回声恒带 —— 构造单点规则面（批档 §2.4 A-C1）────────
+
+const TC = [{ id: "call_1", name: "read", arguments: '{"path":"a.txt"}' }]
+const extractToolCall = (msg) => msg.tool_calls[0]
+
+test("T-6/A-C1 required 族：工具轮消息恒带 reasoning_content —— 缺值 ⇒ 空串在场", () => {
+  const spec = specForModel(FLASH)
+  assert.equal(spec.reasoningEcho, "required", "判据前提：deepseek 族回声策略 = required")
+  const empty = assistantToolCallMessage({ content: null, toolCalls: TC, reasoning: "" }, spec)
+  assert.equal("reasoning_content" in empty, true, "空 reasoning ⇒ 键在场（字段不省略）")
+  assert.equal(empty.reasoning_content, "")
+  const missing = assistantToolCallMessage({ content: null, toolCalls: TC }, spec)
+  assert.equal("reasoning_content" in missing, true, "缺 reasoning ⇒ 同样在场")
+  assert.equal(missing.reasoning_content, "")
+  const valued = assistantToolCallMessage({ content: "text", toolCalls: TC, reasoning: "rc" }, spec)
+  assert.equal(valued.reasoning_content, "rc", "有值 ⇒ 逐字回传（零回归）")
+  assert.equal(valued.role, "assistant")
+  assert.equal(valued.content, "text")
+  assert.deepEqual(extractToolCall(valued), { id: "call_1", type: "function", function: { name: "read", arguments: '{"path":"a.txt"}' } }, "tool_calls 形状逐字不变")
+})
+
+test("T-7/A-C1 optional / 未声明族：键恒不存在（有值 / 无值两情形）", () => {
+  for (const model of ["glm-5.3", "no-such-model-xyz"]) {
+    const spec = silent(() => specForModel(model))
+    for (const reasoning of ["rc", "", undefined]) {
+      const msg = assistantToolCallMessage({ content: null, toolCalls: TC, reasoning }, spec)
+      assert.equal("reasoning_content" in msg, false, `${model} / reasoning=${String(reasoning)} ⇒ 键不存在`)
+    }
+  }
 })

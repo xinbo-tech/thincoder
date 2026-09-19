@@ -5,7 +5,7 @@
 import { chat } from "./provider/index.mjs"
 import { abortError, annotateAbort } from "./abort-provenance.mjs"
 import { pushReal, summarizeRunExplorations } from "./context.mjs"
-import { specForModel } from "./config.mjs"
+import { specForModel, assistantToolCallMessage } from "./config.mjs"
 import { resolve } from "node:path"
 import { executeToolCalls } from "./agent/dispatch.mjs"
 import { recordToolResults } from "./agent/record-results.mjs"
@@ -363,17 +363,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     // abort after chat completes, before committing history: don't commit a half-finished turn
     if (signal?.aborted) throw abortError(signal, "agent", "post-chat")
 
-    pushReal(agent, {
-      role: "assistant",
-      content: response.content || null,
-      tool_calls: response.toolCalls.map((tc) => ({
-        id: tc.id, type: "function",
-        function: { name: tc.name, arguments: tc.arguments },
-      })),
-      ...(response.reasoning && specForModel(agent.provider.model).reasoningEcho === "required"
-        ? { reasoning_content: response.reasoning }
-        : {}),
-    })
+    pushReal(agent, assistantToolCallMessage(response, specForModel(agent.provider.model)))
 
     const results = await executeToolCalls(agent, toolByName, response.toolCalls, callbacks, depth, signal)
 

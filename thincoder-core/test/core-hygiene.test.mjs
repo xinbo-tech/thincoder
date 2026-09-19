@@ -121,3 +121,23 @@ test("core .mjs files: ≤500 hard cap, and every >300 file is registered (T-C14
     `>300 without a registered split plan (design §2.5 行数列): ${unregistered.join(", ")}`,
   )
 })
+
+/**
+ * D-CC22（#109）构造单点结构面（批档 §2.10 ① A-C6 双面形态，对称 VSC 侧 A-C9）：
+ * 回声字段的构造**只存一处**（`model-specs.mjs` 的 `assistantToolCallMessage`）——两个核
+ * 推入点（主循环 `agent.mjs` / advisor 镜像 `advisor/loop.mjs`）各档源文本**零
+ * `reasoning_content:` 字面** ∧ 构造调用**恰 1 处**（只查字面在场，删掉整段不接线亦可满足
+ * ⇒ 两面并列）；`config.mjs` 名表两面（导入 ∧ re-export）须含该名（两推入点均经 config
+ * 门面取 spec —— 单一导入面）。
+ */
+test("single construction point for the reasoning echo field — D-CC22", () => {
+  const read = (rel) => readFileSync(join(ROOT, rel), "utf8")
+  for (const rel of ["agent.mjs", "advisor/loop.mjs"]) {
+    const src = read(rel)
+    assert.equal((src.match(/reasoning_content:/g) ?? []).length, 0, `${rel}: 零 reasoning_content: 字面（字段构造只存单点）`)
+    assert.equal((src.match(/assistantToolCallMessage\(/g) ?? []).length, 1, `${rel}: 构造调用恰 1 处`)
+  }
+  const cfg = read("config.mjs")
+  assert.match(cfg, /import\s*{[^}]*\bassistantToolCallMessage\b[^}]*}\s*from\s*"\.\/model-specs\.mjs"/, "config.mjs 导入面含该名")
+  assert.match(cfg, /export\s*{[^}]*\bassistantToolCallMessage\b[^}]*}/, "config.mjs re-export 面含该名")
+})

@@ -19,4 +19,5 @@ export default [
   "test/integration/vsc-spawn-ctx-permission.test.mjs",
   "test/integration/vsc-panel-rings.test.mjs",
   "test/integration/vsc-autoapprove-midturn.test.mjs",
+  "test/integration/reasoning-echo-live.test.mjs", // #109 D-CC22 活体推入面回声恒带（required 族恒带 / optional 族零回声）+ 端壳单点结构面（A-C8 / A-C9）
 ]
