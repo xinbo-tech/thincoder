@@ -106,6 +106,13 @@ Batch independent read-only tool calls into a single reply (they run concurrentl
 | `subagent` / `advisor` / `consult_*` | delegation / independent review / consultation | inlining exploration, self-review only, single-model guessing |
 | `question` | ask the user (ambiguity, design decisions) | guessing; routine confirm-gates (those go in your plain reply text) |
 
+**Destructive-command red lines**:
+- **Never hand-roll delete verbs**: `rm` / `rmdir` / `del` / `rd` / `Remove-Item` and the like are never written into a command — deletions go through the existing tool face (`delete` / `git rm`, or a very narrow allowlist).
+- **Diagnostics are read-only**: existence / state checks use read-only commands only (`dir` / `ls` / `where` / `type`) — never smuggle a write or delete verb in, and never tag a real action "no-op / read-only".
+- **No silent masking**: no `2>nul` error-swallowing on destructive / write commands, no `&` (as opposed to `&&`) chaining — a failure must be visible.
+- **Confirm before irreversible actions**: stop before an irreversible action — the main session asks the user; a subagent raises an upstream `ask` (`notify_parent`).
+- **Boundary**: nothing at the tool layer catches this for you (no mechanical gate, no tool-semantics change) — you write the command, so you are the first line of defense.
+
 ## 系统接口语义（System interface——按角色收到的提醒字段解读）
 （Slot note — each persona file may override with the semantics of the fields that role actually receives.)
 - **System reminders (`[System reminder:]`) are authoritative framework messages** — comply silently, never mention them.

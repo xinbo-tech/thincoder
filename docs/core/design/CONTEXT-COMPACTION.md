@@ -161,6 +161,8 @@
    边界：前条带 `tool_calls` 的变体（孤儿 `tool_result` 面）**不并**——配对安全优先（登记上抛，批次档 §2 F-3）；干净输入返回**同一数组引用**（零拷贝 / 零回归）。
    判据锚：`applySession` 线 `thincoder-core/test/compaction-echo.test.mjs`（形态计数 0 + 文本 / `tool_calls` 守恒）；VSC 面 `thincoder-vscode/test/**` 同形名用例（各面自持）。
 
+9. **活体推入面回声恒带（D-CC22）**：`reasoningEcho:"required"` 族（`thincoder-core/model-specs.mjs:33/35/38/40/42` deepseek · `:44/46/48` kimi · `:75/76` mimo）的**工具轮** assistant 消息经核单点构造 `assistantToolCallMessage(response, spec)`（`thincoder-core/model-specs.mjs`）推入 ⇒ **恒带** `reasoning_content`；本轮无推理 ⇒ **空串**（不省略字段——「必须回传」按字段在场判定）。真机三连（2026-09-20 · `deepseek-flash` · 带 `tools` · 同形历史）：空串 **200**（服务端仍回 `reasoning` 63 字符）/ 缺字段 **200**（`reasoning` 帧 **0**）/ 真值 **200**（104 字符）⇒ 空串合法；缺字段轮不再回推理，与 `advisor/loop.mjs:199-204` 自述同向（n=1 采样——症状面证据）。调用点（**三站点共享同一构造单点**，非各自内联）：主循环 `thincoder-core/agent.mjs:366-376` · advisor 循环 `thincoder-core/advisor/loop.mjs:205-215` · VSC 端壳自有循环 `thincoder-vscode/src/agent.mjs:387-397`（端取值 = `thincoder-vscode/src/specs.mjs` 的 `specForModel`，构造单点经该档转口复用；端壳静态闭包含 `thincoder-core/model-specs.mjs` 且零 `node:sqlite` ⇒ 静态引合法——W8 契约②）。glm 族 / 未声明（`optional`）⇒ 恒不带（行为零改）。
+
 ### 6.11 已知 parity 说明
 
 - **CLI `splitHistory` 无「reverse 保护」**（VSC 旧镜像 `thincoder-vscode/src/compact.mjs` **已删**——W6 迁核后本差异退场；旧 VSC 侧判据 `callsGapAfter` / `reverseProtectTail` 随删档退场）：CLI 不需要——`repairHistory` 在 run 起点已保证 tool_calls→tool 顺序、run 中 append 保序，倒序无法产生； （迁移期引文）
@@ -447,6 +449,8 @@ provider = { ...agent.provider, thinking: null }   // **不覆盖** reasoningEff
 | D-CC20 | 压缩调用改**会话续写形态**（前缀复用）：`system`（同回合）+ 中段真身消息 + 尾部指令一条 + **与回合同声明的 `tools`**（**不随 `tool_choice`**——v2 实施 2026-09-18：全形态经 S3 实测否决，该参数致服务端**丢弃 tools 区** ⇒ 落备选⑤；v1「不带 tools」被实施轮受控实测推翻） | 修前形态与回合请求共享前缀 0（轨迹 108590 / 256）；同请求体重发命中 98.0% ⇒ 机制可用、**形态**未复用；**命中面按 `tools` 声明分区**（实施轮受控实测：带 tools 93.6% · 不带 0%）⇒ 声明面须与回合同源。**否决**：① 全量 history + 指令（尾部进摘要输入域 ⇒ 摘要与保留尾部重复，且尾部落入未命中面）② **不带 tools**（= v1 决定——实施轮实测命中 0%；探针 R2 / R4 小样本结论作废）③ 按 `cacheMode` 双形态分派（双语义；`cacheMode` = 静态能力标注且核内零消费，与「调用期前缀可否复用」不同层——判据错位；原「标注语义 = 需显式 cache_control ≠ 无缓存」引证作废——评审 #5）④ 保留序列化正文 + 前缀拼接（中段重复发送，重复段不在命中面）⑤ 带 tools 但不抑制 tool_call（**已采纳**——2026-09-18 实测触发条件成立：`tool_choice` 自身破坏命中；泄漏由 content-only + 空白守卫兜底） |
 | D-CC21 | 蒸馏调用改**会话续写形态**（前缀复用）：`system`（同回合）+ 中段真身消息（`[0, lastBlockEnd)`）+ 尾部指令（`EXPLORE_SUMMARY_PROMPT`）+ **与回合同声明面的 `tools`**（不随 `tool_choice`）+ **`reasoningEffort` 同源**——与 D-CC20 逐件同构（§6.15） | 修前形态与回合请求共享前缀 0（轨迹 18/18 = 0%，prompt 1.5–11.7K 全价）；命中机制（`tools` 声明分区 / effort 同值）已由 §6.14 受控实测确立（84–98% · 92.86/93.65%）⇒ 本面 = 同式复制、不重造。**否决**：① 保留序列化正文 + 前缀拼接（重复段全价且不在命中面）② 全量 history + 指令（末块之后尾部入摘要输入域，且全价新面）③ 指令前置于正文（插入点之后的真身消息全落入未命中面 ⇒ 命中 ≈ 0）④ 维持修前单条 `user` 形态（0%）⑤ 改提示词文本以适配尾部位置（内容权 = 主 agent——登记上抛，本批不做） |
 
+| D-CC22 | 活体推入面回声恒带：`required` 族的**工具轮** assistant 消息恒带 `reasoning_content`（本轮无推理 ⇒ **空串**）——核单点构造 `assistantToolCallMessage(response, spec)`（`thincoder-core/model-specs.mjs`），**主循环 / advisor 循环 / VSC 端壳自有循环（`thincoder-vscode/src/agent.mjs:387-397`）三站点共用** | 与 D-CC18 / D-CC19 **同判据**（required 族机读线不得缺该字段）的**第三面**：前两者治压缩注入 / 恢复读取，本面治**活体推入**（前两者不覆盖）。真机实证（2026-09-20 · deepseek-flash · 带 `tools` · 同形历史三连）：带空串 **200**（服务端仍回 `reasoning`）· 缺字段 **200** 但 `reasoning` 帧 = **0** · 带真值 **200** ⇒ 空串合法，且缺字段轮服务端不再回推理（与 `advisor/loop.mjs:199-204` 自述同向，n=1）。**否决**：① 维持条件式省略（族内形态不齐 + 症状持续）② 伪造 / 借用别轮推理文本（污染 + 与「回声 = 服务端原文」语义冲突——承 D-CC18 否决③）③ 改 provider 序列化面统一补字段（跨族越权：glm / optional 族行为将改）④ 落点选 `context.mjs`（该档 496 行 + Δ 越 **500 硬限**——`core-hygiene` 硬红）⑤ 各推入点内联同式（多构造点——违 D2 单源） |
+
 ## 8. 不并项与历史沿革
 
 ### 8.1 历史沿革（(d) 类——**不并**）
@@ -506,4 +510,7 @@ REVERSE 保护坐标 / 摘要段形状 / 边界重置 2 / webview 四态 / 失�
 - 2026-09-18（**蒸馏前缀批 · 评审轮 1 收正 · eng-designer**——承批次档 `2026-09-18-distill-prefix.md` §3 轮次 1：🟡3 · 🔵4）：§6.15 **受影响文件表改指针**（单一权威位 = 批次档 §2.3——两处逐行重复且读数分叉，评审 #1）+ `compress-form.mjs` 读数统一 **21 行**（§6.14 落地形态 + 行数沿革行，同批收正）；
   质量风险表「请求体量」行 + 退化面 1 补 **miss 面成本量级**（前缀量级全价 × ≈18 次/半日——评审 #2）· 退化面 1 增 **服务端接受度登记**（与 §6.14 取证项同源：该格仅直调 / 测试可达 ⇒ 免真机取证——评审 #3）· 判定句补 **判定格口径**（中大型前缀会话 / 折算口径——评审 #5）· 适配器措辞改 **端形向后兼容（增形参 `extras`）**（评审 #7·落地见批次档 §2.3 #5）。
 - 2026-09-18（**漂移收正轮 · eng-designer**——承 `docs/batches/2026-09-18-distill-prefix.md` §5 八、登记 · 台账 #76）：§6.9 H1 签名行标 **核形** + 端形第 6 位注明（`agent` 居第 5——防实施误插）· `EXPLORE_SUMMARY_PROMPT` 坐标 `thincoder-core/explore-distill.mjs:21` → **`:23`**（+2 = 本批头注改动位移）。机制条文零改。
+- 2026-09-20（**thinking 回传缺口批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-20-reasoning-echo-gap.md` §1 · 台账 #109）：§6.10 新增 **#9 活体推入面回声恒带** · §7 新增 **D-CC22**（required 族工具轮 assistant 消息恒带 `reasoning_content`，缺值 ⇒ 空串；核单点构造 `assistantToolCallMessage`）；
+  依据 = 真机三连实证（空串 200 / 缺字段 200 且 `reasoning` 帧 0 / 真值 200）+ 轨迹面复算（`~/.thincoder/traces/2026-09-20/` 当日 690 次调用：缺字段形态 263 次**全成功**——批次档 §1.2 的「一律 400」不成立于普通请求，见该批 §2.7）；落点 = `thincoder-core/model-specs.mjs` + `config.mjs` re-export + 两推入点（任务书见批次档 §2）。
+- 2026-09-20（**thinking 回传缺口批 · fix 轮（第三站点补面）· eng-designer**——承 `docs/batches/2026-09-20-reasoning-echo-gap.md` §2.9）：§6.10 #9 调用点枚举 **2 → 3**（补 VSC 端壳自有循环 `thincoder-vscode/src/agent.mjs:387-397`——端取值 × 同一构造单点；W8 契约② 静态引合法）· §7 D-CC22「共用」口径同步为三站点、否决项「双构造点」收正为「多构造点」。机制条文其余零改。
 
