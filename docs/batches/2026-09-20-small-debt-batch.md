@@ -117,7 +117,9 @@
 | 15 | 行宽折行 16 档 + `docs/vsc/design/SETTINGS.md` 改指 | 见 2.1 条 2 | 纯折行 | 纯 .md | 文档 | 父侧直改 |
 | 16 | `docs/core/requirements/ENGINEERING-MODE-V2.md`（§8.2 · `:429` 派单强制字段行） | — | — | 纯 .md | 需求 | 父侧直改（需求档机械——归桶 2 · 承评审 #6） |
 
-> **读数存查（父侧 2026-09-20 02:2x 实核 · 供 §5 记账）**：BATCH-RECORD **304** · DOC-DISCIPLINE **1258** · MEMORY **560** · PROMPT-SYSTEM **336** · LEDGER **199** / TESTING **426** · discipline-engineering **155 / 169** · persona-engineering **159**。`.md` 行两列按 `DOC-DISCIPLINE.md` §3.7 口径不列（行保留、格填 `—` · 承评审 #9）；行 14（产品文本）保留 Δ = **实施范围**描述、非行数记账。〔父侧直接执行 · 可 revert〕
+> **读数存查（父侧 2026-09-20 02:2x 实核 · 供 §5 记账 · 02:5x 收正）**：BATCH-RECORD **304** · DOC-DISCIPLINE **1258** · MEMORY **560** · PROMPT-SYSTEM **336** · LEDGER **199** / TESTING **426** · discipline-engineering **120 / 123**（D6 实测 · **原 §2.2 预测 155/169 作废** · 承桶 1-B 上抛 2）· persona-engineering **159 / 161**（D6）。`.md` 行两列按 `DOC-DISCIPLINE.md` §3.7 口径不列（行保留、格填 `—` · 承评审 #9）；行 14（产品文本）保留 Δ = **实施范围**描述、非行数记账。〔父侧直接执行 · 可 revert〕
+
+> **同轮父侧小改（承桶 1-B 上抛 1 · 父侧直接执行 · 可 revert）**：`thincoder-core/prompts/persona-engineering.md:108` 首标签「`Goal & rationale`」→「**`Goal & why`**」——理由 = 派单门禁 `thincoder-core/agent-tools/spawn-gates.mjs:19` 的 markers 仅收 `/目标与理由/` · `/goal\s*&\s*why/i` · `/goal\s+and\s+why/i` ⇒ 原 EN 字面照写会被机械拒 spawn（CN 面已相容：`docs/core/design/prompts/persona-engineering.md:106` = `目标与理由` ✓）。**方向裁定** = 提示词面就门禁（**非**扩门禁 marker）：门禁严格性 = 既有设计，提示词字面应与之相容。
 
 （`thincoder-core/manifest.mjs` 339 = **零改**——U-2 裁定保留；`thincoder-core/prompts/persona-engineering.md` = 标签化同轮。）
 
@@ -340,5 +342,156 @@ VERDICT: pass
 **收口预告**：三分桶落定 → 逐条核 A1–A19 → 收口（§6）+ 核销 10 条 + **提交 + push**。
 
 ## §5 实施记录（eng-coder）
+
+### 5.0 状态行
+**桶 1-B 完成（条 1② · 条 5② 双面落地）· 终态 = `clean`** · 编制 = eng-coder · 2026-09-20 02:5x · 任务书 = 本档 §2 条 1②（`:55` + 逐字稿 2.3-①/②）+ 条 5②（`:94` + 逐字稿 2.3-④）。
+
+### 5.1 改动清单（file → 落点 → Δ）
+
+| # | 档 | 落点 | Δ | 逐字源 |
+|---|---|---|---|---|
+| 1 | `docs/core/design/prompts/discipline-engineering.md` | `:115`（「### 写文档要人类可读」节尾 `:114` 后） | +1 行（新 bullet，135 字符） | §2.3-① |
+| 2 | `thincoder-core/prompts/discipline-engineering.md` | `:118`（「### Docs must be human-readable」节尾 `:117` 后） | +1 行（新 bullet，256 字符） | §2.3-② |
+| 3 | `docs/core/design/prompts/persona-engineering.md` | `:106-111`（六条就地加标签） | 6 行 → 6 行（行数零净增：159 → 159） | §2.1 条 5 标签表（CN） |
+| 4 | `thincoder-core/prompts/persona-engineering.md` | `:108-113`（六条就地加标签） | 6 行 → 6 行（行数零净增：161 → 161） | §2.3-④（EN 逐字） |
+
+- **零标题变更**：四处 diff 无任何标题行增删（`git diff -- docs/core/design/prompts` / `-- thincoder-core/prompts` 实读）⇒ 标题树计数零连带（条 1② 承 `:55`「零计数连带」）。
+- **零越线行**：两新行 135 / 256 字符 < 300（`doc-check` 行宽口径 = UTF-16 长度——`scripts/doc-check-width.mjs:62` 实读）。
+- **双面同轮同改** ✓；仓内同名副本仅存于两条 `_archive` 冻结树（各 188 行）——零遗漏的第三现役面。
+
+### 5.2 决策透明表
+
+| # | 决策 | 依据 / 证据 | 影响 |
+|---|---|---|---|
+| 1 | 新 bullet **紧邻节尾、不插空行** | 与本档同族样式一致（`persona-engineering.md:22`→`:23` 等同款：段落行后直接接 bullet）；设计表述 = 「节尾 `:114` 后」 | Δ 最小（+1 行）；markdown 列表仍可中断段落渲染 |
+| 2 | CN 六标签**按 §2.1 条 5 标签表**落，含第 1 字段名对齐 `目标与为什么` → `目标与理由` | 任务书明列 CN 标签；`git diff` 改前逐字 = `  目标与为什么` | CN 字段名自此与门禁 `/目标与理由/` 兼容（改前不兼容）——属改进 |
+| 3 | EN 第 1 字段名照 §2.3-④ 逐字落 `**Goal & rationale**`（**不**改回改前的 `goal & why`） | 任务书「逐字，勿改字面」；`git diff` 改前 = `  goal & why` | **发现跨档冲突**：该 EN 形不被强制执行门禁接受（见 5.4-1）⇒ 按纪律**不自行改字面**，照设计落地 + 上抛 |
+| 4 | 六行**注释文本零改**（`（初始 / 修复……）` / `(paths you already explored — no re-exploration)` 等逐字保留），仅加标签 + 首字母大写 | `git diff` 逐行比对：除标签与 `**` 外与改前逐字相同 | 「只加标签」语义成立；无夹带新语义 |
+| 5 | 未触任何禁止面（`DOC-DISCIPLINE.md` · `BATCH-RECORD.md` · 需求档 · `scripts/**` · 机制/工具行为 · 他批写域 · 新增节） | `git diff` 面 = 四档；零标题增删 | 桶 3 / 父侧写域零冲突 |
+
+### 5.3 验收读数（逐条实跑 · 全 ASCII 判据）
+
+| 条 | 判据 | 读数 |
+|---|---|---|
+| 条 1② | 两档新 bullet **逐行等值** §2.3-① / ②（`node` 字符串等值比对，非子串） | `OK`（两行皆等值；A5 的 `includes('findstr') ∧ includes('UTF-8')` 双面亦 `OK`） |
+| 条 5② | 12 条标签断言（CN 6 + EN 6 逐条 `includes`） | `12/12 OK` |
+| 条 5② | CN/EN 六行块**逐行等值** 目标文本 | `12/12 OK`（CN `:106-111` · EN `:108-113`） |
+| 条 5② | 零节变更（标题集合前后一致） | `OK`（diff 面零标题行；CN persona 15 个 `##` / EN 16 个 `##` 改前后同） |
+| 条 1② · 条 5② | `node scripts/doc-check.mjs --root .` 净增 0 | 改前 = 候选 17329 · 悬空 6 · 注记豁免 43 · 拟新增 6 · 迁移期引文 222 · 行宽 25（16 档）；**改后同值**（含 `prompts/persona-engineering.md:141〔507〕` / `:143〔416〕` 原样——属条 2 折行面） ⇒ **净增 0** |
+| 相关测试面（提示词档为三包装配输入） | 三包 `node test/run.mjs` | core **401/401 pass** · cli **718/718 pass** · vscode **734/734 pass**（三处 `fail 0`，链式 exit 0） |
+| 回读核验（D6） | 四档落盘后逐行回读 + 行数复核 | `OK`（CN discipline 120 行 / EN 123 行 / persona 159 / 161——persona 净增 0） |
+| 中文串判据纪律（台账 #102 本体） | 本条全部判据用 `node` 等值/`includes`，**零** `findstr /c:"<中文>"` | `OK`（自证：本条即该坑来源） |
+
+### 5.4 上抛项（父侧裁定 · 均不阻断本桶收敛）
+
+1. **🟡 EN 字段名 ↔ 强制执行门禁不兼容（设计面偏差 · 非实现偏差）**：新 EN 标签 `thincoder-core/prompts/persona-engineering.md:108` = `  **Goal & rationale**`；而门禁 `thincoder-core/agent-tools/spawn-gates.mjs:19` = `{ label: "目标与理由 (goal & why)", markers: [/目标与理由/, /goal\s*&\s*why/i, /goal\s+and\s+why/i] }`，错误文案 `:64` 同 gloss `目标与理由 (goal & why)` —— **改前的 `goal & why` 命中、改后的 `Goal & rationale` 三条 marker 全不命中**（本席实读该档核验）。后果：英文面派单照提示词字面写任务书 ⇒ `validateTaskBookFields` 机械拒 spawn（消息自解释、可恢复）。**本席按任务书「逐字」纪律照 §2.3-④ 落地，未改字面**（改字面 = 偏离已批准设计）。候选处置：① 门禁 marker 补 `/goal\s*&\s*rationale/i` + 同步 `:64` 文案（`scripts/**` 之外 = 产品码面，需另走实现轮）；② EN 标签退回 `goal & why`（需设计席改 §2.3-④）。**建议**：§2.1 条 5 的「实核」（`:91`）未把执行门禁（`spawn-gates.mjs:19`）列为字段名第三权威面——补上后此冲突可提前识别。
+2. **🔵 §2.2 读数存查 `discipline-engineering **155 / 169**` 与活档不符**（`:120`）：活档实测 = **120 / 123** 内容行（末内容行分别 = `:120`「（并行委派的 token 隔离……）」/ `:123`「(Parallel-delegation token isolation……)」），且批档自身坐标（条 1② 落点 `:114` / `:118` 区）只在 120/123 行档上成立；两 `_archive` 冻结副本实为 188 / 188，亦非 155/169 ⇒ 该对读数**来源无对应活档**（偏差 +35 / +46）。落 §5 记账已按实测值记（本表）。建议父侧重取该两档行数并标注取数来源。
+3. **🔵 第 1 字段名改名未在批档留痕**（可追溯性）：条 5② 描述为「六条列表改带标签」（纯加标签），落地同时含第 1 字段名对齐（CN `目标与为什么`→`目标与理由`；EN `goal & why`→`Goal & rationale`；`git diff` 改前逐字为证）。**本席已在本 §5 记录该改名**（见 5.2-2 / 5.2-3），无需另改他档。
+4. **🔵 逐字稿 ④ 形态与落地形态不一致**（批档层）：§2.3-④（`:138`）为单行「 / 」连写形，而条 5②（`:94`）要求「带标签逐字**六行**」⇒ 落地取六行（遵条 5②）；「落笔即照抄」在本子项上无法按字面全等通过（形式差，非内容差）。建议在 `:138` 加同类注记（同 2.3-③ 款）或改排六行。
+5. **🔵 A10 判据鉴别力不足**（批档层 · 父侧写域）：`:222` 的 CN 两子句改前**已真**——`轮次` 见 `docs/core/design/prompts/persona-engineering.md:48/:54/:56/:68/:86`（既有行），`验收标准` = 改前该列表的裸行本身（`git diff` 删行逐字）⇒ CN 半边对「本次是否有改动」零鉴别力；EN 两串则有鉴别力（改前为 `goal & why` / `delivery-report format.`）。另四条全为子串在场判据 ⇒ 不能区分「六行」与压成一行。本桶另有逐行等值断言兜底（5.3），不阻断；若要机检钉住形态，可加逐行锚定判据（如 `/^\s+\*\*目标与理由\*\*/m`）。
+6. **范围外注记（仅报不动）**：① `docs/core/design/prompts/discipline-normal.md:149-155` = 普通模式派单清单仍五条无标签（`目标与为什么` 原文、无「轮次」）——同机制另一面未随 #95 对齐，且不在本桶对象；② `docs/core/design/DOC-DISCIPLINE.md` §3.11（`~:623-631`）与双面 bullet 近乎同文重述（D2 面观察 · 桶 3 域）；③ `.thincoder/tmp/enge-160/*.before.md` 快照为 2026-09-19 15:32，晚于/早于活档 mtime 不一，若作「改前基线」须慎（本席的改前断言已改用 `git diff` 删行逐字为准）。
+
+### 5.5 审计与评审轮次（终态）
+
+| 轮次 | 形式 | 结果 | 终态 |
+|---|---|---|---|
+| 1 | 内审（`subagent` explore 只读偏差审计：设计稿 ↔ 实况四类偏差） | 四类（未完全实现 / 静默简化 / 逐字失真 / 清单外改动）**零发现**；其两项「未核实」（doc-check 净增、git 面三项）已由本席实跑闭合（见 5.3） | 收敛 |
+| 2 | 内部 advisor 代码评审（`advisor type='code'` · 对象 = 四档） | **VERDICT = pass** · 0 🔴 / 1 🟡 / 4 🔵（🟡 = 5.4-1 跨档滞后 → 上抛；🔵 = 记录层 / 批档层） | **clean** |
+| — | fix round | **0 轮**——对象内无待修缺陷（评审未产生对象内必改项；🔵-3 由本 §5 记录闭合；🟡 属设计↔门禁对齐，非实现可自决） | — |
+
+**对评审发现的处置（逐条）**：🟡-1 = 接受（上抛 · 5.4-1，本席不改字面）；🔵-2 = 部分接受（漂移确认，但「VSC 归档 = 155 行」这一来源推测**不成立**——实测两归档均 188 行）；🔵-3 = 接受并就地闭合（本节 5.2-2 / 5.2-3）；🔵-4 = 接受（批档层 · 上抛 5.4-4）；🔵-5 = **部分接受**（CN 半边零鉴别力成立，但其「`验收标准` 改前零出现」判读有误——改前为裸行在场；EN 半边鉴别力成立）。
+
+### 5.1 交付摘要（条 4 · #113 + 条 7 · #110）
+
+- **条 4（#113）**：两产品 `AGENTS.md` 各增批档 `:84` 逐字句（`the remote is the only disaster backup` 族）。
+  - `thincoder-cli/AGENTS.md:30`（Commit messages 条后）
+  - `thincoder-vscode/AGENTS.md:33`（Discussion → docs 条后）
+- **条 7（#110）**：
+  - `thincoder-cli/AGENTS.md:47`–`:63` = 模块图块整块重写（端壳面清单 + 「机制本体 = `@thincoder/core`」句）；权威指针由死链 `docs/design/ARCHITECTURE.md` 改指仓根 `../docs/core/design/ARCHITECTURE.md` §3。
+  - `thincoder-cli/AGENTS.md:21` = 提示词双面路径改指 `docs/core/design/prompts/*.md`（中文正本）+ `thincoder-core/prompts/*.md`（英文落地）。
+  - `thincoder-vscode/AGENTS.md:41` = src/agent 行补 `setup-tooltable.mjs` · `turn-domains.mjs`（补后与盘上 `src/agent/*.mjs` 10 档逐名吻合）。
+- **Δ**：CLI 70 → 64 行（−6 = 块 46–69〔24 行〕→ 47–63〔17 行〕−7，+1 提交条）；VSC 126 → 127 行（+1）。
+
+### 5.2 决策透明表
+
+| # | 决策 | 依据 |
+|---|---|---|
+| 1 | 块内文档指针用**仓根相对**形态（`docs/cli/design/TUI.md`） | 与同档既有形态一致（`:14`/`:21`/`:22` 的 `docs/README.md`、`scripts/doc-impact.mjs` 皆仓根相对）；新指针目标全部实存 |
+| 2 | 块内逐项描述取自**盘上实读**（文件头注 + `ls`），不抄旧清单 | 批档设计要点「以盘上实存为准」；v1 块 22 项中 14 项已死 |
+| 3 | 未改 `:12`（`src/prompts/` 死路径残留）· `:35`（v1 测试门描述）· `:38`（CHECKPOINT 死指针） | 批档 `:168` 边界「只改模块图块 + 权威指针 + `:21` 双面路径；其余登记不动作」⇒ 超出授权面，报告不动作（见 5.3 / 上抛项） |
+| 4 | 未新建仓根 `AGENTS.md` · 未触仓外工作区档 · 未触提示词档本体 · 未动 `package.json`/发布面 | 批档 `:86` / `:168` 禁止范围 |
+
+### 5.3 内审 + 代码评审轮次与终态
+
+- **内审（explore 只读偏差审计）**：1 轮 —— 四类偏差（部分实现 / 静默简化 / 文档漂移 / 越界）**均未发现**；逐项实核 = 逐字句落点、CLI 块 22 项盘上实存、`src/tui/` 62 档（≥「60+ 档」）、权威指针 §3 解析、VSC `src/agent` 名集 10/10。
+- **advisor 代码评审（`type=code`）**：1 轮 —— **VERDICT: pass**；无 🔴；4×🟡（CLI `:35` v1 测试门描述 · CLI `:12` 提示词面自相抵 + 死链 · CHECKPOINT 死指针〔VSC `:35` + CLI `:38`〕· VSC 块无概览/漏列）+ 3×🔵（`tool-docs` 24/25 读数 · core 族枚举漏 `tool-docs` · 新块指针形态两制）——全部**非 must-fix**，且均落在批档登记不动作面或本轮授权面之外。
+- **fix round**：**0 轮**（无 must-fix；上列发现一律「报告不动作」，未动授权面之外的任何一条文本）。
+- **终态**：`clean`（收敛）。
+
+### 5.4 验收读数（本实施轮实跑）
+
+- 条 4：两档 `includes('the remote is the only disaster backup')` = **OK / OK**。
+- 条 7：VSC `includes('turn-domains.mjs') ∧ includes('setup-tooltable.mjs')` = **OK**；CLI `!includes('src/agent-tools/')`（0 命中）∧ `!includes('docs/design/ARCHITECTURE.md')`（0 命中）∧ `includes('src/acp')` ∧ `includes('src/tui')` ∧ `includes('thincoder-core/prompts/')` = **OK**。
+- 落盘回读（D6）：两档全文回读核验；CLI 块内 22 项 / VSC 10 名逐项 `ls`·`glob` 比对（无幽灵项、无缺项）。
+- `cd thincoder-cli && node test/run.mjs` = **718/718 pass · 0 fail**（纯 .md 改动；CLI 档 `:35` 明记纯文档更新不要求跑测试——本读数作冗余证据）。
+
+### 5.6 读数追记（本席 §5 落笔后复跑 · 供父侧核 A1 时对账）
+
+本席四档改毕即刻复跑读数 = **与基线同值**（候选 17329 · 悬空 6 · 注记豁免 43 · 拟新增 6 · 迁移期引文 222 · 行宽 25）——该读数 **as-of 2026-09-20 02:4x**。§5 落笔后再跑 `node scripts/doc-check.mjs --root .` = **候选 17438 · 悬空 6 · 注记豁免 43 · 拟新增 6 · 迁移期引文 219 · 行宽 25**。
+
+- **接受判据（新悬空 / 新行宽零）在两跑中均成立**：悬空恒 6（= 基线存量，5 处 `@thincoder/core/…` 族 + `SETTINGS.md:388`，属条 2 面）· 行宽恒 25（= 基线存量 16 档，属条 2 折行面）。
+- **候选 +109 / 迁移期引文 −3 的变动源不在本席写面**：本席两跑之间未再动任何 `docs/**` 被扫档（`git status` 实读：本席写面 = 四档 + 本档 §5，其余为同伴在途轮次——`thincoder-cli/AGENTS.md` · 两条 test/run.mjs · `memory-scan-bounds.test.mjs` · `thincoder-vscode/AGENTS.md` 及未跟踪新档 `docs/core/design/MODEL-SPECS.md`）；`docs/batches/**` 在两跑中均属 `checkConfig.anchors.exclude`，故本档 §5 追加**不进**锚/行宽读数。变动具体归因（新档入域 / 同伴轮次改写）**未核实**——登记待父侧 §6 对账时以「A1 只看悬空 + 行宽」口径收口。
+
+**轮次** = initial · **桶 1-C** = 测试基建两项（#72 条 9 · #94 条 8）· 2026-09-20 · 本段经 `batch_segment` 落盘（无路径参数）
+
+### 5.1 交付摘要（改动清单）
+
+| # | 文件 | 落点 | Δ（`git diff --numstat`）| 净行数 |
+|---|---|---|---|---|
+| 1 | `thincoder-core/test/run.mjs` | `:8`–`:9` 档头 ②'' · `:12` import 补 `statSync` · `:28`–`:31` walk 拒绝分支 | 7 / 2 | 38 → 43 |
+| 2 | `thincoder-cli/test/run.mjs` | `:9`–`:10` · `:13` · `:29`–`:32`（消息「two-level glob」） | 7 / 2 | 40 → 45 |
+| 3 | `thincoder-vscode/test/run.mjs` | `:13`–`:14` 档头 ④ · `:17` · `:44`–`:47`（消息「manifest check」） | 7 / 2 | 59 → 64 |
+| 4 | `thincoder-cli/test/memory-scan-bounds.test.mjs` | `:298`–`:299` 常量 `T_Y4_CTRL_MIN_GAP_MS = 100` · `:364` 打印线「≥100 ms」· `:366` 断言改用常量 | 4 / 2 | 369 → 371 |
+
+**零改动面（边界遵守）**：收集谓词 glob 形态 · 夹具 `T_Y4_ROWS = 30_000` · `SCAN_*` 生产常量 · `:365`（缺省 ≤250）与 `:367`（对照 ≥2×缺省）两断言 · ×5 打印读数 · 未新增测试档 · 未跟遍历软链目录。
+
+### 5.2 决策透明表
+
+| # | 决策点 | 裁定 | 理由 |
+|---|---|---|---|
+| 1 | 三 runner 拒绝消息 | 保留「消息随包」：core「single-level glob」· CLI「two-level glob」· VSC「the manifest check walks this same tree」 | 设计 §2 条 9 明写「三档同款 · 消息随包」；VSC 为清单制（无 glob），逐字照抄会写出假话 |
+| 2 | 打印线判据文案 | 文案写「≥100 ms」字面，同行**评估项**改用常量 `T_Y4_CTRL_MIN_GAP_MS` | 文案按 §2.1 条 8 逐字；评估项若仍留 300 则打印自报与断言判据相抵 |
+| 3 | 档头注释各 +2 行 | 保留（不比照 §2.2 Δ +4 砍注释） | 档头本就逐条枚举自检面，新拒收面须在同处可见；两评审均判合规；代价 = §2.2 行 1/2/3 的 Δ 需收正（见 5.5-2） |
+| 4 | 悬空软链目录（链接目标缺失） | **不加固**，照设计逐字稿 | 设计是权威规格；发现即上抛登记（见 5.5-4），不静默偏离 |
+| 5 | 探针副本范围 | 三 runner 各拷一份（超 A4 的 core 单份），加一处 file symlink 样例 | 三档均改 ⇒ 逐档取 fail-closed 证据 + 软链文件非回归证据；成本 = 多两个副本（仍在 %TEMP%） |
+
+### 5.3 验收读数（逐条）
+
+| AC | 命令 | 读数 |
+|---|---|---|
+| 条 9① 三包全绿 | `node test\run.mjs`（三包 · 串行 · 落盘再读汇总） | core **401/401** · CLI **718/718** · VSC **734/734** · fail 0 · exit 0（日志 `%TEMP%\pkg-{core,cli,vsc}.log`） |
+| 条 9② junction 探针 | `%TEMP%\tc-runner-probe`：`pkg\test\link` = junction → `..\target`（内含 `probe.test.mjs`），三 runner 副本落盘后跑 | **改前** = 三 runner 全 exit 0（tests 0，静默漏收集）；**改后** = 三 runner 全 exit 1 + stderr 含 `symlinked directory under test/`（消息随包） |
+| 条 9② 探针前提实证 | `execute`（node · 只读） | `link` → `isDirectory=false` · `isSymbolicLink=true` · `statSync().isDirectory=true`（设计实证复核成立） |
+| 条 9 软链**文件**非回归 | `%TEMP%\tc-runner-probe\pkg2`（file symlink · 无 junction） | runner exit 0 ∧ 该软链档被收集执行（tests 1） |
+| 条 8 | `cd thincoder-cli && node --test test\memory-scan-bounds.test.mjs` | **11/11 pass · exit 0**；打印行含「≥100 ms」（实测 缺省 97ms / 对照 453ms / 比值 4.67×，×5 仍为打印读数） |
+| 条 8「先红」 | 同命令（改前 ×3） | 375 / 957 / 863 ms——三次均偶然 ≥300 绿；设计轮记录红 277 · 台账读数 267/272/265 ⇒ 旧绝对项读数**跨阈值**（flake 本体），非确定性不可复现 |
+| 条 8 零改复核 | `git diff -- thincoder-cli/test/memory-scan-bounds.test.mjs` | 仅 2 处替换 + 2 行新增；`:365`/`:367` 两断言**零出现在 diff** |
+| 落盘后回读（D6） | `read` 四档 + `git diff`（三 runner 逐档） | 逐行实读通过；三 runner diff **仅含预期 hunk**（无题外改动） |
+
+### 5.4 内审 + 代码评审轮次与终态
+
+- **内审**（explore 只读发散审计）：**1 轮** → 代码四项（条 9 分支/位置/import/不跟遍历 · 条 8 常量/断言/零改面/文档一致性）全通过；唯一发现 = §2.2 Δ 记账差 1（LOW · 非代码缺陷）。
+- **代码评审**（advisor · code）：**1 轮** → **VERDICT pass**（🔴 0 · 🟡 1〔非 must-fix · 已裁定债〕· 🔵 5）。
+- **fix round = 0**（无 must-fix 项；🟡 = 不拆裁定在册，🔵 = 可选加固 / 记账项）。
+- **终态 = `clean`**。
+- **口径勘误（透明披露）**：评审表行 3 把「Δ 差 1」归到 §2.2 行 4（测试档）；经 `git show HEAD:` 与 `git diff --numstat` 实测，行 4 两口径吻合（369→371 · 读档口径 370→372 = 「Δ ±2」自洽），真实差 1 落在行 1/2/3 的 Δ 列——已按实测定稿（见 5.5-2），未采信评审该行结论。
+
+### 5.5 上抛与待办
+
+1. **探针清理（停在原地报告 · 未自构造删除命令 · 承硬约束）**：`%TEMP%\tc-runner-probe\`（junction `pkg\test\link` + 三 runner 副本 + `pkg2` file symlink + `target` 夹具）留存原处；另 `D:\teamcode\%P%\`（`%P%` 未展开产生的字面目录含其 junction）= 实施中命令行形态所致残留。二者 junction 目标均在各自探针树**内**，任何清理路径无域外风险；请父侧按工具面清理。
+2. **设计表 Δ 记账差 1（非代码缺陷 · 请父侧转 §6 或设计小轮收正）**：§2.2 行 1/2/3 记「现量 39/41/60 · Δ +4」（口径 = 读档 lines total），实际净增 **+5**（档头注释 2 行 + walk 3 行；numstat 7+/2−）⇒ 该口径交付态 = **44/46/65**。行 4 实测吻合（370 · ±2 ⇒ 372 = 交付态同口径）。
+3. **既有裁定项零动作**：档长 371 行 >300 软线（不拆 + 触发 + 抽取候选线裁定在册 = `docs/core/design/DOC-DISCIPLINE.md` §3.10）；`:365` 缺省 ≤250 绝对墙钟（设计已按条 8 `:178` 登记机器敏感项 · 承评审 #13）。
+4. **可选加固（裁决权在父侧）**：悬空软链目录（链接目标缺失 ⇒ `statSync` 返 `undefined`）不触发拒收，落回名判静默通过——实装与设计逐字稿严格一致，属拒收策略边界余量（无漏收集风险：目标缺失时其内无可漏收档）；若求「把沉默洞变响铃」完全同构，可另批登记加固。
+5. **他桶依赖**：条 8 设计面判据句已在 `docs/core/design/MEMORY.md:407` 落位，与本轮代码三层（常量 250 / 常量 100 / ×2 相对）逐项对应，无待办。
 
 ## §6 验证与收口（父代理）

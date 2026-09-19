@@ -18,7 +18,7 @@ LLMs via OpenAI-compatible protocol, flagship models from DeepSeek / Kimi / GLM 
 - **Zero npm runtime dependencies**: only `node:` standard library (storage via `node:sqlite`, TUI via bare ANSI). For new features, first ask whether the standard library can do it; if not, raise for discussion.
 - No TypeScript, no build/bundling step.
 - Every change must be verified by running it — no "written but never run" code.
-- **提示词双面（2026-09-17 消端差收正）**：本产品提示词 = `docs/design/prompts/*.md`（**中文审核面**——内容权威）→ 翻译生成 `src/prompts/*.md`（**英文运行面**——国外模型运行用；生成 = 翻译，不是 cp）。提示词面**无端差注入锚**（已全消——正文自足、文档地图统一 `docs/README.md`）；仅工具面 2 锚（bash/question 端差异）保留至工具面 review。
+- **提示词双面（2026-09-17 消端差收正）**：本产品提示词 = `docs/core/design/prompts/*.md`（仓根中文正本——**中文审核面**——内容权威）→ 翻译生成 `thincoder-core/prompts/*.md`（**英文运行面**——国外模型运行用；生成 = 翻译，不是 cp）。提示词面**无端差注入锚**（已全消——正文自足、文档地图统一 `docs/README.md`）；仅工具面 2 锚（bash/question 端差异）保留至工具面 review。
 - **改动面反查（工程工具约定）**：实施轮开工前跑本仓反查脚本 `scripts/doc-impact.mjs`（文档影响面；基准 = 上一批收口点）——其输出的设计/需求档建议一并录入本批「受影响文件」表。
 
 ## Key Conventions
@@ -27,6 +27,7 @@ LLMs via OpenAI-compatible protocol, flagship models from DeepSeek / Kimi / GLM 
 - **Prefix caching**: the system prompt must be byte-stable across runs — per-turn varying content goes in user messages, not the system prompt.
 - **Thinking echo**: `reasoning_content` in assistant tool_calls messages depends on the model's `reasoningEcho` spec field.
 - **Commit messages**: `type: summary` (feat / fix / release / docs), single English line.
+- **Commit & push promptly**: commit at each batch closeout (path-scoped); push immediately after committing — the remote is the only disaster backup; push before any destructive git operation.
 - **Release flow**（权威 `docs/design/RELEASE.md`——发布 = 唯一门禁）：bump（待发号 = registry 最高 + 1——发布时才 bump 不预占）→ 手动改 `package.json` version + `CHANGELOG.md` → `git add/commit` → `git tag vX.Y.Z` → push origin **+ github 双远端**（分支 + tag 都推——github 被墙走代理，RELEASE.md §5.2）→ **`npm publish` 放最后**（`prepublishOnly` 自动跑 lint + test:full + test:integration 单轮 = 唯一门禁——不再手动分轮）。Manual smoke pass before release. **Versioning (CalVer, 2026-08-27)** — see `docs/design/RELEASE.md` §4.6: `年份.月份.月内计数`, month counter resets each month; CLI stays on `0.12.x` through 2026 then switches to `1.1.0` on 2027-01; never bump below the published version (npm/vsce reject downgrades).
 - **Discussion → docs**: design decisions, architecture choices, and naming conventions discussed in chat don't exist until they're in a doc file. After any design discussion, write the conclusions to the relevant document immediately — not "later". Chat context compresses; docs persist.
 - **Doc references use symbols, not line numbers**: design docs anchor code references to symbol/export names (e.g. `routeSubToken` in `subagent-blocks.mjs`), never line numbers — line numbers rot on every edit, symbols are grep-able. Historical change-log entries keep their as-of snapshot.
@@ -43,27 +44,20 @@ LLMs via OpenAI-compatible protocol, flagship models from DeepSeek / Kimi / GLM 
 - **存储**：`~/.thincoder/checkpoints/{cwdHash12}/`（cwdHash12 = `sha1(normalizeCwd(cwd)).slice(0,12)`，Windows 盘符大写归一化）——与 VS Code 端**同存储同格式**，快照跨端互通；每 cwd 上限 100 个（最旧淘汰）。
 - **纪律**：**git 操作一律走 git 工具**（含 clean/rebase 等破坏性操作）——违反即视为纪律违规；bash guard 仅为纪律漏网兜底（纵深防御）。
 
-**模块图 = 概览——权威见 [`ARCHITECTURE.md`](docs/design/ARCHITECTURE.md) §3（模块地图当前态）——此处只列主要项**：
+**模块图 = 概览——权威见 [`ARCHITECTURE.md`](../docs/core/design/ARCHITECTURE.md) §3（模块地图当前态）——此处只列主要项**：
 ```
-bin/thincoder.cjs    CLI entry
-src/agent.mjs        main loop + reminder injection + verifyGuard (opt-in) + incremental indexing
-src/agent/           loop helpers (9 files: dispatch/setup/helpers/post-turn/completion/record-results/run-stages/setup-reminders/spawn-child)
-src/agent-tools/     self-discipline tools (23 files: task/plan/goal/verify/subagent/advisor/consult/timer/eng/design-token/skill/read_history/recent-changes/settings/…)
-src/advisor.mjs + src/advisor/   advisor 评审入口（advisor/ 下 run/messages/history/repos/citations/convergence——ADVISOR-CONVERGENCE.md）
-src/acp.mjs + src/acp/   ACP 协议桥（bridge/session/transport——ACP-CLIENT.md——`thincoder acp` 入口）
+（机制本体 = `@thincoder/core`（agent / agent-tools / advisor / provider / tools / prompts / memory / mcp / git / traces / session / config 族）——本端只列端壳面；已删的自持镜像不再列行）
+bin/thincoder.cjs    CLI entry（CJS shim——npm 12 可能拒 ESM bin，转 `bin/thincoder.mjs`）
+bin/thincoder.mjs    命令分发入口（tui / chat / memory / upgrade / session gc / acp / completion）
+src/tui/             bare-ANSI 终端界面 + 命令族（60+ 档：index/agent-turn/render*/key-handler/cmd-*/subagent-*/…——`docs/cli/design/TUI.md`）
+src/tui.mjs          TUI re-export hub（子模块在 `src/tui/` 下）
 src/cli/             CLI 顶层命令实现（setup-wizard/memory-command/distill-command/make-agent/permission——bin/thincoder.mjs 分发 import）
-src/git/             git 子系统（checkpoint.mjs 快照存储 + gitmem.mjs team 层 git 同步）
-src/traces/          trace-store.mjs 完整轨迹存档（AGENT-LOOP.md §18.6——~/.thincoder/traces/）
-src/prompts/         system prompts (槽位化：persona-engineering / persona-normal / persona-{eng-coder,eng-designer,explore,coder,plan} + common + discipline-engineering / discipline-normal + 特殊模块 consult-base / advisor-design / advisor-round{1,2,3}——装配链 [1]人格 → [2]公共 → [3]纪律 → [4]项目 AGENTS+skills；旧 system/engineering/engineering-sub/main/discipline/methodology-template 已退役——PROMPT-SYSTEM.md)
-src/provider/        LLM calls (native fetch + SSE)
-src/tools/           built-in tools (file/git/bash/search/web/checklist)
-src/tui/             bare-ANSI terminal UI
-src/memory/          three-layer FTS5 + vector memory
-src/context.mjs      context compaction
-src/config.mjs       config + provider presets
-src/session-slots.mjs  slot/manifest 管理 + end marker 端分离恢复（SESSION.md §10——END="cli"，resumeSlot/claimSlot/allocateFresh）
-src/session.mjs        session 持久化（双线读写/saveSession/applySession/loadSession=resumeSlot 数据包装）
-src/mcp/             MCP client (stdio/http/ws transports)
-src/log.mjs          diagnostic event log (LOGGING.md — logEvent/rotation/blacklist; shared ~/.thincoder/logs/)
+src/acp.mjs + src/acp/   ACP 协议桥（bridge/client-caps/ext/handlers-session/handlers-slots/login/session/transport——`thincoder acp` 入口——`docs/cli/design/ACP-CLIENT.md`）
+src/completions.mjs  `thincoder completion <shell>` 补全脚本发射（bash/zsh/fish）
+src/crash-reports.mjs  崩溃捕获与取证（fatal 报告 / 记录 / stderr 捕获 / 近堆快照——`docs/cli/design/CRASH-REPORTS.md`）
+src/distill.mjs      会话知识候选抽取（双轨制自动轨——人确认后落盘）
+src/heap-watch.mjs   堆遥测 / 看门狗（`docs/cli/design/CRASH-REPORTS.md` §8）
+src/prompt-injections.mjs  工具面 2 锚 CLI 取值表（bash-terminal-face / question-ui-face）
+src/upgrade.mjs      版本检查与升级工具（CLI upgrade 命令 + TUI 启动检查共用）
 test/                test suite
 ```

@@ -295,6 +295,8 @@ const T_Y4_ORIGIN = "D:/ty4/proj"
 const T_Y4_ROUNDS = 5
 /** 缺省面 = 响应性契约读数（§6.10 墙钟与响应性：每让出窗 ≲ 0.1 s 量级）。 */
 const T_Y4_DEFAULT_MAX_GAP_MS = 250
+/** 对照面 = 量级下限（§6.10「≲ 0.1 s 量级」；原 300 ms = 机器敏感绝对值——台账 #94）。 */
+const T_Y4_CTRL_MIN_GAP_MS = 100
 
 /** 建夹具（磁盘真库——§6.10 病灶的真形态：blob 从页面读出）：N 行 × DIM 维（toBlob 直造）。 */
 function ty4Fixture(t) {
@@ -359,9 +361,9 @@ test("T-Y4 集成（真时探针）：缺省面 ⟂ 对照（yieldMs: Infinity�
     const ctrlMed = median(ctrlGaps)
     console.log(`[T-Y4] 夹具 ${T_Y4_ROWS} 行 × ${T_Y4_DIM} 维 · ${T_Y4_ROUNDS} 轮中位数：` +
       `缺省 maxGap=${defMed}ms（逐轮 ${defGaps.join(",")}）· 对照 maxGap=${ctrlMed}ms（逐轮 ${ctrlGaps.join(",")}）` +
-      ` · 比值 ${(ctrlMed / defMed).toFixed(2)}×（设计判据 ≥5× ∧ ≥300 ms：${ctrlMed >= 5 * defMed && ctrlMed >= 300 ? "达标" : "未达标——读数入报告（§2.5 上界 3 万行逃生口）"}）`)
+      ` · 比值 ${(ctrlMed / defMed).toFixed(2)}×（设计判据 ≥5× ∧ ≥100 ms：${ctrlMed >= 5 * defMed && ctrlMed >= T_Y4_CTRL_MIN_GAP_MS ? "达标" : "未达标——读数入报告（§2.5 上界 3 万行逃生口）"}）`)
     assert.ok(defMed <= T_Y4_DEFAULT_MAX_GAP_MS, `缺省面 maxGap 中位数 ${defMed}ms ≤ ${T_Y4_DEFAULT_MAX_GAP_MS}ms（响应性契约）`)
-    assert.ok(ctrlMed >= 300, `对照面 maxGap 中位数 ${ctrlMed}ms ≥ 300 ms（关让出 ⇒ 整趟阻塞）`)
+    assert.ok(ctrlMed >= T_Y4_CTRL_MIN_GAP_MS, `对照面 maxGap 中位数 ${ctrlMed}ms ≥ ${T_Y4_CTRL_MIN_GAP_MS} ms（量级下限；原 300 为机器敏感绝对值——台账 #94）`)
     assert.ok(ctrlMed >= defMed * 2, `让出显著压低单次阻塞：${ctrlMed}ms ≥ 2×${defMed}ms`)
   } finally {
     globalThis.fetch = realFetch

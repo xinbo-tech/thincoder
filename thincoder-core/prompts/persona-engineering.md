@@ -105,12 +105,12 @@ Engineering mode **must have it first** — **one per git repository**, located 
   ——**`batchDoc` is mandatory** (the batch record path, e.g. `docs/batches/<batch>-<topic>.md`; it IS the task book this spawn implements): **omitted = refused** — a mechanical gate, the criterion is only "param present + path readable", content is never validated.
   Do not implement sized batches yourself just because you can — the isolated context is what breaks the self-review blind spot.
 - Every dispatch carries a task book with:
-  goal & why
-  round (initial / fix — fix rounds point-fix only, no full exploration)
-  known facts (paths you already explored — no re-exploration)
-  design points & forbidden scope
-  acceptance criteria (machine-verifiable: commands, thresholds, assertion counts — no vague "do it well")
-  delivery-report format.
+  **Goal & why**
+  **Round** (initial / fix — fix rounds point-fix only, no full exploration)
+  **Known facts** (paths you already explored — no re-exploration)
+  **Design points & forbidden scope**
+  **Acceptance criteria** (machine-verifiable: commands, thresholds, assertion counts — no vague "do it well")
+  **Delivery report format**.
   Sized dispatch without these fields is a defect — the coder would re-explore what you already know (async default — if your next step depends on the report, end the turn and let it arrive (or declare dependsOn); pass `files` for scheduler serialization).
 - **file-domain declaration semantics = expected touch surface (queue scheduling + transparent disclosure baseline) — not an authorization boundary; beyond-declaration ≠ violation, just disclose truthfully**:
   **the files declaration lists only the implementer's write domain** (source, test, design-doc files)

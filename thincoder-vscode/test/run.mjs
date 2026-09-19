@@ -10,9 +10,11 @@
  *   ② 无漏登记（两域各查一侧：test/ 树递归分派——非 integration/ 判「∈ 单元清单」、
  *      integration/ 判「∈ 集成清单」；盘上未登记的 *.test.mjs 永不执行 ⇒ 反查即失败）；
  *   ③ 零混入：集成档不得出现在单元清单 test/files.mjs。
+ *   ④ 软链目录拒绝：junction 的 Dirent 报 isSymbolicLink ∧ !isDirectory（上面的 walk 穿不过
+ *      ⇒ 其中 *.test.mjs 永不执行却零告警）——检出即 fail（不跟遍历 · 避环）；软链文件不受影响。
  */
 import { spawnSync } from "node:child_process"
-import { existsSync, readdirSync } from "node:fs"
+import { existsSync, readdirSync, statSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import integrationFiles from "./integration/files.mjs"
@@ -39,7 +41,10 @@ const walk = (rel) => {
   for (const e of readdirSync(join(root, rel), { withFileTypes: true })) {
     const p = `${rel}/${e.name}`
     if (e.isDirectory()) walk(p)
-    else if (e.name.endsWith(".test.mjs")) onDisk.push(p)
+    // 软链目录（junction）：不拒绝就在这里静默漏收集——拒绝制把沉默洞变响铃
+    else if (e.isSymbolicLink() && statSync(join(root, p), { throwIfNoEntry: false })?.isDirectory()) {
+      fail(`symlinked directory under test/ — collection cannot verify through it (the manifest check walks this same tree and never descends into it); unlink it or move its tests up: ${p}`)
+    } else if (e.name.endsWith(".test.mjs")) onDisk.push(p)
   }
 }
 walk("test")

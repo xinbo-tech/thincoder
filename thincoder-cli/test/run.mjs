@@ -6,9 +6,11 @@
  *
  * 启动前自检（fail-closed——收集面反向判据，先于 node --test 启动）：②' 无漏收集——`test/`
  * 树递归全部 *.test.mjs 须被上面两层 glob 命中（未被命中的档永不执行 ⇒ 反查即失败）。
+ * ②'' 软链目录拒绝：junction 的 Dirent 报 isSymbolicLink ∧ !isDirectory（递归与两层 glob 都穿不过
+ * ⇒ 其中 *.test.mjs 永不执行却零告警）——检出即 fail（不跟遍历 · 避环）；软链文件不受影响。
  */
 import { spawnSync } from "node:child_process"
-import { readdirSync } from "node:fs"
+import { readdirSync, statSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -24,7 +26,10 @@ const walk = (rel) => {
   for (const e of readdirSync(join(root, rel), { withFileTypes: true })) {
     const p = `${rel}/${e.name}`
     if (e.isDirectory()) walk(p)
-    else if (e.name.endsWith(".test.mjs")) onDisk.push(p)
+    // 软链目录（junction）：不拒绝就在这里静默漏收集——拒绝制把沉默洞变响铃
+    else if (e.isSymbolicLink() && statSync(join(root, p), { throwIfNoEntry: false })?.isDirectory()) {
+      fail(`symlinked directory under test/ — collection cannot verify through it (the two-level glob never descends into it); unlink it or move its tests up: ${p}`)
+    } else if (e.name.endsWith(".test.mjs")) onDisk.push(p)
   }
 }
 walk("test")
