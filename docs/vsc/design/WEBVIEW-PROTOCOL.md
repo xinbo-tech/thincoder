@@ -224,7 +224,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | 待消化 | `done · awaiting digestion`（状态区） | 块头态词同文案（`activity-view.js:76`） | 对齐 |
 | 冻结头 + tail-3 | `[✓ key · … · done Ns · turn]` + tail-3 | 同形态（`activity-view.js:86-96`） | 等价（归档后形态不变） |
 
-### 6.3 i18n 键表（13 键 · 两 locale 逐字——末行 = 2026-09-19 出生可见性批追加）
+### 6.3 i18n 键表（14 键 · 两 locale 逐字——`sub.newBlocks` = 2026-09-19 出生可见性批追加 · `sub.waiting` = 2026-09-20 一致性同步批追加）
 
 | 键 | zh | en |
 |---|---|---|
@@ -233,6 +233,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | `digest.capStop` | 自动回合在 ${turns} 轮处停止——部分消化；已完成的报告保留在历史中 | [auto-turn stopped at ${turns} turns — partial digest; finished reports stay in history] |
 | `sub.awaitingDigest` | 已完成 · 等待消化 | done · awaiting digestion |
 | `sub.queueSlot` | 排队中 · 位置 ${n}（槽满等位） | queued · position ${n} (slot full) |
+| `sub.waiting` | 等待中 | waiting |
 | `status.turn` | 轮次 ${n}/${m} | turn ${n}/${m} |
 | `status.rateWait` | TPM 限流等待 ~${s}s | TPM throttle wait ~${s}s |
 | `status.rateLimited` | 限流 429，${s}s 后重试 | Rate-limited 429, retry in ${s}s |
@@ -244,6 +245,9 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 
 - **占位符记法**：本端引擎只认 `${k}` 形态（`thincoder-vscode/webview/i18n.js:30`）——照抄 `{n}` 会把字面占位符显示给用户。
 - `sub.newBlocks`（2026-09-19 追加——出生可见性计数钮，机制单源 = `WEBVIEW.md` §5.5）：键名 / 双语逐字 / 占位符形态（`${n}`）三面以本表为单源；`${n}` = 未钉底期间出生块数。
+- `sub.waiting`（2026-09-20 追加——#118 queued 状态词对位，机制单源 = `WEBVIEW.md` §5.2）：zh `等待中` / en `waiting`——与既有键 `sub.queued`（zh `排队中` / en `queued`）成对，两键**无占位符**。
+  **消费点 = 状态词**（块头方括号内——`activity-view.js:38`）：选用判据 = 载荷 `kind`——`kind === "slot"` → `sub.queued`；否则（**含 `kind` 缺省**）→ `sub.waiting`（CLI `thincoder-cli/src/tui/subagent-panel.mjs:73` 同判据）。
+- **状态区（方括号后）键面**（`activity-view.js:77-80`；标尺 = CLI `thincoder-cli/src/tui/subagent-panel.mjs:100-102`）：slot（`kind === "slot"`）→ `sub.queueSlot`；wait / depc → 载荷 `reason` 原文（零改写，无键）；**降级**（`kind` 缺省）→ 有 `reason` 走原文、无 `reason` 中性回落 `sub.queued`（= CLI `queued.detail || "queued"` 同形）。（#118 落）
 - `status.turns` 键随旧段退役删除；`digest.start/done/aborted` 与其余既有键不动。
 - 审批态键 = `sub.awaitingApproval`（`等待审批: ${tool}` / `Awaiting approval: ${tool}`）——**已实装**（见 §6.2）；文案单源 = `thincoder-vscode/locales/{zh,en}.json`。
 
@@ -459,6 +463,10 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 **方向口径**：本表只收 webview → host。**「删」= host 消费位在位而 webview 发射恒无（死 handler）**——处置逐条入批档（`docs/batches/2026-09-18-vsc-settings-wiring.md` §2）并已随实现落地（三删 + 一接线转活——**本表现零 `删` 行**）；**删除落地 ⇒ 源零位 ⇒ 表行同步退场**（不留悬空行——同 §12 口径）。**「补」= 发射在位而 host 缺消费位**（本表现零行）。
 
 ## 变更记录
+
+- 2026-09-20（**一致性同步批 · 设计评审修正轮 1 · eng-designer**——评审 id=13 发现 #4）：§6.3 **追加键 `sub.waiting`**（zh `等待中` / en `waiting`——#118 queued 状态词对位；D3：表头计数 13 → 14 与行同改）+ 该键登记注（成对键 / 选用判据 = 载荷 `kind` / 无占位符）。
+  落笔因由 = `WEBVIEW.md` §5.2 的 queued 状态词契约（` · queued|waiting`）需有键表落点——**键表 / 双语逐字单源 = 本表**，文案实体仍落 `thincoder-vscode/locales/{zh,en}.json`（本批 R6 落地）。
+  **消息名 / 载荷字段 / 首列判别式集零变**（§12 / §13 表体零改——机检双向对账集不动）。
 
 - 2026-09-18（**VSC 配置页接线修复批 · 实现轮** · eng-coder——承 `docs/batches/2026-09-18-vsc-settings-wiring.md` §2；§13 表体随实现同步）：
   §13 删 3 行（`settings` / `saveCustomProvider` / `saveEmbeddingConfig`——死 handler 已删，源零位）+ `saveShellSettings` 转 `活`（F-W11 接线落地，② 列填实现轮实读坐标）；

@@ -261,7 +261,7 @@ function stubTerminalBlock(name, m, kind) {
 
 /** Status-message effects on blocks（两态机 + awaitingDigest 单标志——事件字段自足）:
  *  - **出生面 = 存活闸**（§5.3——queued / started）：不限角色族 / `pool`；冻结键 ⇒ 接管；墓碑 ⇒ 丢弃 + 痕
- *  - queued → ⏳ 等待头 + `queueInfo`（C-11②）；started → 翻 running；turn（C-11③）→ 头 turn N/M 实时
+ *  - queued → ⏳ 等待头 + `queueInfo`（C-11②/#118 四项）；started → 翻 running；turn（C-11③）→ 头 turn N/M 实时
  *  - cancelled(was:"queued") → 等待头移除（不冻结）；settled → 折叠 + awaitingDigest 驻留（C-2）
  *  - 其余终态 → 折叠 + 即时归档（C-3 ②）；消化回收：`done` 命中 awaitingDigest → 归档（C-3 ①）
  *  - 旧代回收吞守卫（C-5③）：接管时旧块 awaiting → 新块 `oldReclaimPending`——其后该键首条 `done` 吞
@@ -274,8 +274,10 @@ export function applySubagentStatus(m) {
     const meta = block._subMeta
     meta.status = "queued"
     meta.queued = true
-    // C-11②：排队信息入 meta（slot → position；wait/depc → reason 原文）——状态区渲染
-    meta.queueInfo = { position: m.position ?? null, waiting: m.waiting ?? null, reason: m.reason ?? null }
+    // C-11②/#118：排队信息入**块级活态载体**（`_subMeta.queueInfo`——两条刷新路径共读，
+    // 无回落通道；WEBVIEW.md §5.2）——`kind` 判词（slot ⇒ 槽满词 / 否则 reason 原文）/ `reason`
+    // 文本 / `position` / `waiting` 对位字段。
+    meta.queueInfo = { kind: m.kind ?? null, position: m.position ?? null, waiting: m.waiting ?? null, reason: m.reason ?? null }
     refreshBlock(block)
     return
   }

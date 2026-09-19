@@ -12,7 +12,7 @@ Design docs in `docs/design/` (migration-period reference — retained, not main
 - ESM (`.mjs`) throughout — `package.json` declares `"type": "module"`.
 - LLM calls go through native `fetch` with SSE streaming, same as thincoder core.
 - Tool implementations are adapted for VS Code context (workspace root = cwd; no directory restriction on tools since 2026-09-02 — paths resolve relative to cwd, approval gate is the guard).
-- **提示词面（核内唯一副本——2026-09-15 修订）**：运行期提示词/工具描述 = 核内落地（`thincoder-core/prompts/` 15 档槽位 + `thincoder-core/tool-docs/` 25 档工具描述）——本端 `src/prompts/` 与 `src/tools/*.md` 已删（F9 零残留）；中文设计档（人读正本）= 仓根 `docs/core/design/prompts/*.md`。装配 = 核单点（`@thincoder/core/prompt-overlays.mjs`）+ 本端 `src/prompt-injections.mjs`（13 锚 VSC 取值表）注入端取值。
+- **提示词面（核内唯一副本——2026-09-15 修订）**：运行期提示词/工具描述 = 核内落地（`thincoder-core/prompts/` 15 档槽位 + `thincoder-core/tool-docs/` 24 档工具描述）——本端自持提示词 / 工具描述镜像已删（F9 零残留）；中文设计档（人读正本）= 仓根 `docs/core/design/prompts/*.md`。装配 = 核单点（`@thincoder/core/prompt-overlays.mjs`）+ 本端 `src/prompt-injections.mjs`（13 锚 VSC 取值表）注入端取值。
 
 
 ## Key Conventions
@@ -32,10 +32,12 @@ Design docs in `docs/design/` (migration-period reference — retained, not main
 - **Discussion → docs**: design decisions, architecture choices, and naming conventions discussed in chat don't exist until they're in a doc file. After any design discussion, write the conclusions to the relevant document immediately — not "later". Chat context compresses; docs persist.
 - **Commit & push promptly**: commit at each batch closeout (path-scoped); push immediately after committing — the remote is the only disaster backup; push before any destructive git operation.
 - **Dogfooding feedback (must report)**: using thincoder to build *other* projects (e.g. thinworker) is itself a deep test of thincoder. When you find a thincoder bug, an unusable/awkward tool, or a workflow defect during such work, **report it proactively** — never silently work around it or fix-and-forget. Report routing: **functional bug / tool doesn't fit** → open a Gitee issue (thincoder or thincoder-vscode repo, label `bug`/`feature`; write mode via `thincoder-issues/check-gitee-issues.mjs`, needs `GITEE_TOKEN` env var); **doc flaw / minor polish** → thincoder `docs/TODO.md`. Fixing the bug then follows thincoder's own engineering flow (design doc → review → eng-coder → release).
-- **Checkpoint 事故恢复（快照机制）**：与 CLI 完全一致——权威文档 `thincoder-cli/docs/design/CHECKPOINT.md`（本端引用不复制）。要点：① 快照时机 = git 工具破坏性操作前自动快照（checkout 还原文件 / restore / reset --hard / stash pop / branch|tag delete / clean / rebase）+ bash guard（`gitGuardSnapshot` 宽匹配，先快照后放行）+ 手动 `checkpointAction=create`；② 恢复 = `checkpointAction=list` → `cat` → `rewind checkpointId=<id> path=<文件>`；③ 快照是"操作前状态"而非"良好状态"备份（编码损坏内容 cat 作重建参照）；④ commit 成功后该项目 checkpoint 清空（commit = 新安全基线）；⑤ 存储 = `~/.thincoder/checkpoints/{cwdHash12}/`（cwdHash12 = `sha1(normalizeCwd(cwd)).slice(0,12)`，盘符大写归一化——与 CLI 同目录同格式，快照跨端互通；实现 = 核 `@thincoder/core/git/checkpoint.mjs`——本端自持镜像已删，W5）；⑥ **存量 stash 快照不迁移**（不再支持工具 rewind，用户可手动 `git stash drop`）。**git 操作一律走 git 工具**（含 clean/rebase 等破坏性操作）——违反即视为纪律违规；bash guard 仅为纪律漏网兜底。
+- **Checkpoint 事故恢复（快照机制）**：与 CLI 完全一致——权威文档 `../docs/core/design/CHECKPOINT.md`（本端引用不复制）。要点：① 快照时机 = git 工具破坏性操作前自动快照（checkout 还原文件 / restore / reset --hard / stash pop / branch|tag delete / clean / rebase）+ bash guard（`gitGuardSnapshot` 宽匹配，先快照后放行）+ 手动 `checkpointAction=create`；② 恢复 = `checkpointAction=list` → `cat` → `rewind checkpointId=<id> path=<文件>`；③ 快照是"操作前状态"而非"良好状态"备份（编码损坏内容 cat 作重建参照）；④ commit 成功后该项目 checkpoint 清空（commit = 新安全基线）；⑤ 存储 = `~/.thincoder/checkpoints/{cwdHash12}/`（cwdHash12 = `sha1(normalizeCwd(cwd)).slice(0,12)`，盘符大写归一化——与 CLI 同目录同格式，快照跨端互通；实现 = 核 `@thincoder/core/git/checkpoint.mjs`——本端自持镜像已删，W5）；⑥ **存量 stash 快照不迁移**（不再支持工具 rewind，用户可手动 `git stash drop`）。**git 操作一律走 git 工具**（含 clean/rebase 等破坏性操作）——违反即视为纪律违规；bash guard 仅为纪律漏网兜底。
+
+**模块图 = 概览——权威见 [`ARCHITECTURE.md`](../docs/core/design/ARCHITECTURE.md) §3（模块地图当前态 · VSC 壳层装配地图 = §3.1）——此处只列主要项（**非穷尽**）**：
 
 ```
-（机制本体 = `@thincoder/core`（prompts / provider / mcp / memory / checkpoint / tools / traces / advisor / agent-tools 族）——本端只列端壳 / 装配面；已删的自持镜像不再列行）
+（机制本体 = `@thincoder/core`（prompts / provider / mcp / memory / checkpoint / tools / tool-docs / traces / advisor / agent-tools 族）——本端只列端壳 / 装配面；已删的自持镜像不再列行）
 extension.mjs        Extension entry — 注册 ChatPanel（类已迁 src/extension/chat-panel.mjs）为 WebviewViewProvider + commands/status bar（session CRUD/设置/标题生成/CSP 注入随类迁移）
 src/agent.mjs         Agent main loop — parallel tool batching, multimodal image injection, context compaction, subagent spawning, reasoningEcho
 src/agent/           端壳装配面（W15 重定保留）—— setup.mjs（装配/注入/工具表）· setup-tooltable.mjs（工具表装配装饰面——W9 记账缝 / W14 三缝 / 池装配与子代理面）· turn-domains.mjs（端侧回合域文本组合单点——核基座转口 + 端 overlay，digest 轮与 ask 唤醒轮共用）· run-stages.mjs（回合级阶段）· setup-reminders.mjs（端特有提醒 + 核转口）· agent-state.mjs · context-injections.mjs · execute-tools.mjs · tool-gates.mjs · run-helpers.mjs
@@ -54,12 +56,12 @@ src/tools/{index,shell,code,context,focus,shared}.mjs  端壳工具面（index =
 src/extension/        ChatPanel 分解模块（chat-panel.mjs 类本体 + panel-chat/panel-messages/panel-session/panel-project/panel-mcp/panel-index/panel-toolpanel/panel-callbacks 等载荷分模块 + session-io/session-slots/settings/presets）
 webview/chat.js
 webview/state.js     UI 状态单一持有（S + DOM ctx + vscode——全模块共享同一运行时对象——WEBVIEW.md）
-webview/streaming.js  token/reasoning 流式渲染（rAF 节流）+ 回合收尾 + 活动块路由（块出生即 #messages 流尾——activity.js——subagentChunk 空安全守卫）
+webview/streaming.js  token/reasoning 流式渲染（rAF 节流）+ 回合收尾 + 活动块路由（块出生即活动区 `#subagent-activity` 区尾——activity.js——subagentChunk 空安全守卫）
 webview/panels.js    侧面板：task progress / goal + 挂起态 + 桥路由（行面板已撤——簿记 map 已删——handleSubagentMessage 纯转发——活动块生命周期在 activity.js）
-webview/activity.js   编排层（ACTIVITY-REWRITE-SIMPLE 重写——B1 流尾形态）：ensureBlock（append #messages 流尾——终态幂等守卫返 null）+ applySubagentStatus 三态机（queued ⏳ 头含取消 ⏹/started 翻 running/其余 status 一律终态折叠——lookup-only 绝不建块——settled 视同 done）+ freeze 原地折叠 + resetActivity + freezeLiveBlocks——导出消费面 panels/chat/streaming（noteChunk 经此 re-export）
-webview/activity-view.js   呈现叶（refreshBlock/updateStopButton/noteChunk——块头/状态词/⏹——区显隐/pin/ticker/awaiting 词删）——leaf（i18n only——不依赖核心）
-webview/activity-new.js    未钉底期新块出生未读计数钮（建/更/删 + 点击回底 + resetActivity 同清——WEBVIEW.md §5.5 D-W27）
-webview/activity-diag.js   诊断痕迹面（七 kind + 环载体 SUB_TRACE_MAX=50 + `panelDiag` 批内合并上行——WEBVIEW.md §5.3 D-W22；2026-09-19 批自 activity.js/state.js 迁出）
+webview/activity.js   编排层（ACTIVITY-REWRITE-SIMPLE 重写——B1 流尾形态已由活动区回归取代）：ensureBlock（出生 append 活动区 `#subagent-activity` 区尾——终态幂等守卫返 null）+ applySubagentStatus 三态机（queued ⏳ 头含取消 ⏹/started 翻 running/其余 status 一律终态折叠——非出生消息 lookup-only 绝不建块（终态补桩例外——§5.3「终态必现」）——settled ⇒ awaitingDigest 驻留（回收 done 才归档））+ freeze 原地折叠 + resetActivity + freezeLiveBlocks——导出消费面 panels/chat/streaming（noteChunk 经此 re-export）——`../docs/vsc/design/WEBVIEW.md` §5.1
+webview/activity-view.js   呈现叶（refreshBlock/updateStopButton/noteChunk——块头/状态词/⏹——区显隐/pin/ticker/awaiting 词删）——leaf（i18n only——不依赖核心）——`../docs/vsc/design/WEBVIEW.md` §5.2
+webview/activity-new.js    未钉底期新块出生未读计数钮（建/更/删 + 点击回底 + resetActivity 同清——`../docs/vsc/design/WEBVIEW.md` §5.5 D-W27）
+webview/activity-diag.js   诊断痕迹面（七 kind + 环载体 SUB_TRACE_MAX=50 + `panelDiag` 批内合并上行——`../docs/vsc/design/WEBVIEW.md` §5.3 D-W22；2026-09-19 批自 activity.js/state.js 迁出）
 webview/ui.js        DOM helpers: welcome banner, message bubbles, tool call rendering
 webview/md.js        Lightweight Markdown → HTML renderer
 webview/base.css     Base styles, variables, layout
@@ -122,5 +124,5 @@ webview/index.html   Webview shell (referenced by ChatPanel._html())
 - **Integration set**: business-voice scenarios asserting observable results — they run inside `npm test` (`test/integration/` + its manifest `test/integration/files.mjs`, driven by the unified runner `test/run.mjs`).
 - **Release gate**: `vscode:prepublish` = `npm run lint && npm test` (runs automatically on `vsce package` / bare `vsce publish`).
 - **Doc check (not a gate step)**: `npm run doc:check` — repo-root domain; same command as the CI docs job.
-- **Packaging assertion**: `postpackage` = `node scripts/check-vsix.mjs` (runs automatically after `npm run package`) — unpacks the produced vsix and asserts the embedded core + version literal equality + prompt-face completeness (`prompts/` 15 + `tool-docs/` 25 — names + sha256); fail-closed (a core-less vsix exits 1, though vsce itself exits 0).
+- **Packaging assertion**: `postpackage` = `node scripts/check-vsix.mjs` (runs automatically after `npm run package`) — unpacks the produced vsix and asserts the embedded core + version literal equality + prompt-face completeness (`prompts/` 15 + `tool-docs/` 24 — names + sha256); fail-closed (a core-less vsix exits 1, though vsce itself exits 0).
 - After modifying agent loop or tools: test with a simple file operation (read + write) and a multi-turn conversation.

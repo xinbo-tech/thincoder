@@ -248,17 +248,37 @@ test("T-CL13 digest 中断残块（AC-CL1/AC-CL3）：end ok:false 无 reclaim �
 })
 
 // ─── AC-CL4：块头字段（R4）───────────────
-test("T-CL17 queued 状态区（AC-CL4）：slot → 位置词；wait/depc → 原因原文；started 后清", async () => {
-  const { S, ctx, applySubagentStatus } = await loadWebview()
+test("T-CL17 queued 三档 + 降级（AC-CL4 · #118 A118-1）：kind 判词（slot/wait/depc）+ 两刷新路径逐字不变；started 后清", async () => {
+  const { S, ctx, t, applySubagentStatus, refreshLiveHeaders } = await loadWebview()
+  const { refreshBlock } = await import("../webview/activity-view.js")
   fresh({ S, ctx })
-  applySubagentStatus(subMsg("queued", "eng-coder", 9, { position: 2 }))
-  const slot = S._subBlocks.get("sub:eng-coder#9")
-  assert.ok(hdrOf(slot).includes("queued · position 2 (slot full)"), `slot 位置词（实到 ${JSON.stringify(hdrOf(slot))}）`)
-  applySubagentStatus(subMsg("queued", "eng-coder", 10, { position: 3, waiting: "waiting-deps", reason: "waiting for: explore#1（域冲突 a.mjs）" }))
-  const wait = S._subBlocks.get("sub:eng-coder#10")
-  assert.ok(hdrOf(wait).includes("waiting for: explore#1"), "wait/depc → 原因原文（host detail 逐字）")
-  assert.ok(!hdrOf(wait).includes("position 3"), "wait 形态不显槽满词")
+  // #118 A118-1：两条刷新路径（2 s 同点 ∥ 覆盖式重建）同读一个载体（`block._subMeta.queueInfo`）
+  // ——同一断言体复跑：刷新前后逐字不变（无回落通道）。
+  const stable = (block) => {
+    const before = hdrOf(block)
+    refreshLiveHeaders() // ① panels `_panelTimer`（2 s）同点路径
+    assert.equal(hdrOf(block), before, `2 s 路径刷新后逐字不变（${JSON.stringify(before)}）`)
+    refreshBlock(block) // ② 覆盖式重建路径（消息 / 状态分支 / toggle 同读点）
+    assert.equal(hdrOf(block), before, `重建路径刷新后逐字不变（${JSON.stringify(before)}）`)
+    return before
+  }
+  // 三档判词 = 载荷 `kind`（标尺 = CLI `subagent-panel.mjs:73` 状态词 / `:100-102` 状态区）+ 降级行
+  // （kind 缺省 ∧ 无 reason ⇒ 中性回落 `sub.queued`——= CLI `queued.detail || "queued"` 同形）。
+  const rows = [
+    { id: 9, extra: { kind: "slot", position: 2 }, word: t("sub.queued"), area: t("sub.queueSlot", { n: 2 }) },
+    { id: 10, extra: { kind: "wait", position: 3, waiting: "waiting-deps", reason: "waiting for: explore#1（域冲突 a.mjs）" }, word: t("sub.waiting"), area: "waiting for: explore#1（域冲突 a.mjs）" },
+    { id: 11, extra: { kind: "depc", position: 1, waiting: "dependency-cancelled", reason: "dependency cancelled: plan#7" }, word: t("sub.waiting"), area: "dependency cancelled: plan#7" },
+    { id: 12, extra: { position: 4 }, word: t("sub.waiting"), area: t("sub.queued") },
+  ]
+  for (const row of rows) {
+    applySubagentStatus(subMsg("queued", "eng-coder", row.id, row.extra))
+    const hdr = stable(S._subBlocks.get(`sub:eng-coder#${row.id}`))
+    assert.ok(hdr.includes(`⏳ eng-coder#${row.id} · ${row.word}`), `[${row.id}] 状态词 = ${row.word}（实到 ${JSON.stringify(hdr)}）`)
+    assert.ok(hdr.includes(row.area), `[${row.id}] 状态区 = ${row.area}（实到 ${JSON.stringify(hdr)}）`)
+    if (row.extra.kind !== "slot") assert.ok(!hdr.includes("(slot full)"), `[${row.id}] 非 slot 档不显槽满词`)
+  }
   applySubagentStatus(subMsg("started", "eng-coder", 9, { pool: true }))
+  const slot = S._subBlocks.get("sub:eng-coder#9")
   assert.ok(!hdrOf(slot).includes("position"), "started 后清 queueInfo")
   assert.ok(hdrOf(slot).includes("▶") && !hdrOf(slot).includes("⏳"), "翻 running 头")
 })

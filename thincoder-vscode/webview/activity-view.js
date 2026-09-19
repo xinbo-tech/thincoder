@@ -21,12 +21,15 @@ const W = {
   done: () => t("sub.done") || "done",
   stopped: () => t("sub.stopped") || "stopped",
   error: () => t("sub.error") || "error",
+  queued: () => t("sub.queued") || "queued",
+  waiting: () => t("sub.waiting") || "waiting",
   thinking: () => t("status.thinking") + "…",
 }
 
 /** Identity/status header line:
  *  live   → "[▶ eng-coder#3 · async · glm-5.3 · 12s · turn 3/100]" + 状态词
- *  queued → "[⏳ eng-coder#4]" + 状态区排队信息（C-11②：位置/原因）
+ *  queued → "[⏳ eng-coder#4 · queued|waiting]"（#118 R4：`kind` 判词——CLI `:73` 对位）
+ *           + 状态区排队信息（C-11②：位置/原因）
  *  frozen → "[✓ eng-coder#3 · async · glm-5.3 · done 15s · turn 4/100]"
  *  awaiting（settled 待消化）→ "[✓ eng-coder#3 · async · glm-5.3 · 15s] done · awaiting digestion"
  *           （C-2：括号去 verb + awaiting 态词）
@@ -35,7 +38,11 @@ const W = {
  *  Parts are conditional on what the events actually carried（turn 只在真实计数值时）。 */
 function headerText(meta, now) {
   const frozen = meta.frozen
-  if (!frozen && meta.status === "queued") return `[⏳ ${meta.label}]`
+  // #118 R4：排队头状态词（判据 = 载荷 `kind`——CLI `subagent-panel.mjs:73` 同形）：`kind === "slot"`
+  // ⇒ queued；其余（含 `kind` 缺省 = 降级态）+ 与 R5 降级形同一判据 ⇒ waiting。
+  if (!frozen && meta.status === "queued") {
+    return `[⏳ ${meta.label} · ${meta.queueInfo?.kind === "slot" ? W.queued() : W.waiting()}]`
+  }
   const sec = Math.max(0, Math.floor(((frozen ? (meta.doneAt ?? now) : now) - (meta.startedAt ?? now)) / 1000))
   let icon = "▶"
   let verb = null
@@ -69,15 +76,18 @@ function headerText(meta, now) {
  *  - awaitingDigest 驻留（C-2）→ `t("sub.awaitingDigest")`（en 逐字 `done · awaiting digestion`）
  *  - approval（C-8）→ `t("sub.awaitingApproval", { tool })`（child ask 在途——最高优先级；
  *    清态（tool:null）即回落）
- *  - queued（C-11②）→ slot：`t("sub.queueSlot", {n: position})`；wait/depc：host detail 原文
+ *  - queued（C-11②/#118 R5）→ **`kind` 优先**（CLI `thincoder-cli/src/tui/subagent-panel.mjs:100-102`
+ *    同形）：`kind === "slot"` ⇒ `t("sub.queueSlot", {n: position})`；其余（含 `kind` 缺省）⇒
+ *    `reason` 原文零改写；无 `reason` ⇒ 中性回落 `t("sub.queued")`（= CLI `queued.detail || "queued"`）
  *  - live running → 结构化工具行（C-11①：`tool — cmd ≤60`）/ 工具文本尾句 / thinking… */
 function stateWord(meta) {
   if (meta.approval) return t("sub.awaitingApproval", { tool: meta.approval }) || `Awaiting approval: ${meta.approval}`
   if (meta.awaitingDigest) return t("sub.awaitingDigest") || "done · awaiting digestion"
   if (meta.status === "queued" && !meta.frozen) {
     const q = meta.queueInfo
-    if (q?.reason) return String(q.reason) // wait/depc：detail 原文（CLI 同形）
-    return t("sub.queueSlot", { n: q?.position ?? "?" }) || `queued · position ${q?.position ?? "?"} (slot full)`
+    if (q?.kind === "slot") return t("sub.queueSlot", { n: q.position ?? "?" }) || `queued · position ${q?.position ?? "?"} (slot full)`
+    if (q?.reason) return String(q.reason) // wait/depc：detail 原文（CLI 同形——零改写）
+    return t("sub.queued") || "queued" // 降级 / 空 detail：中性回落（= CLI `queued.detail || "queued"`）
   }
   return meta.stateWord || W.thinking()
 }

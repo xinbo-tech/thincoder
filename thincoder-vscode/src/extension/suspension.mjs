@@ -24,7 +24,7 @@ import { logEvent } from "@thincoder/core/log.mjs"
 // 任务可见性族投递通道（第 10 批 §5.1.4 第 3 条）：环 import（panel-callbacks ↔ 本模块——
 // B2 panel-messages↔panel-session 同款）——postSubagentEvent 为函数声明（hoist）——只在
 // 调用期读——环安全（两模块无顶层跨环读取）。
-import { postSubagentEvent } from "./panel-callbacks.mjs"
+import { postSubagentEvent, queuedInfoOf } from "./panel-callbacks.mjs"
 
 // INPUT-LOCK-ASYNC（C'——2026-09-09，设计 thincoder-cli/docs/design/INPUT-LOCK-ASYNC.md——双端）：
 // R15 排队用户指令合并整批废弃（攒批取数/合并文案/上限常量全删）——busy（_turnState
@@ -133,7 +133,8 @@ export function backgroundStatus(history) {
 /** 存活投影 / 状态再断言（第 10 批 §5.1.4 第 3/4 条——WEBVIEW.md）——触发点 = webviewReady
  *  握手（就绪两拍之一）与 loadSession 清屏（historyPage）之后：读 panel._liveLines ??
  *  panel._susp?.lines 的 _asyncSubagents / _asyncAdvisors（与 panel-messages ⏹ 路由**同一
- *  来源**）——**只发 live**（running → started + pool:true；queued → queued）；两侧 role/id
+ *  来源**）——**只发 live**（running → started + pool:true；queued → queued——#118 R2：queued
+ *  行四项与 live 中继面同形，取自 relay 面缓存；缓存缺省 ⇒ 降级仅 `position`）；两侧 role/id
  *  必带（webview 建块/接管守卫依赖——§5.1.4 第 3 条）。settled/已消化不在投影内（呈现面 =
  *  终态消息 / digest）；投影不含已终态者，故与 flush 不重复。投递经 postSubagentEvent
  *  （就绪直投 / 未就绪入队——同一族通道）。返回重发条数。 */
@@ -150,7 +151,19 @@ export function reassertLiveChildren(panel) {
         postSubagentEvent(panel, { type: "subagent", status: "started", role: e.role, id: e.id, pool: true, model: e.model ?? null, startedAt: e.startedAt })
         n++
       } else if (e.status === "queued") {
-        postSubagentEvent(panel, { type: "subagent", status: "queued", id: e.id, role: e.role, position: e.position ?? null })
+        // #118 R2（2026-09-20 一致性同步批）：载荷与 live 中继面**同形**——四项（`position` /
+        // `waiting` / `reason` / `kind`）取自 relay 面每面板缓存（`queuedInfoOf`；`kind` / detail
+        // 只存在于一次性 token——池条目仅携 `position`）。缓存缺省（该键未消费过 queued token）
+        // ⇒ 仅 `position` = **降级态**：webview 侧走 `kind !== "slot"` 支 ⇒ 状态词 `sub.waiting`
+        // ∧ 状态区中性回落 `sub.queued`（WEBVIEW.md §5.2 降级形——非「槽满等位」）。
+        const info = queuedInfoOf(panel, `${e.role}#${e.id}`)
+        postSubagentEvent(panel, {
+          type: "subagent", status: "queued", id: e.id, role: e.role,
+          // 四项 = 单一来源：缓存在场 ⇒ 全取自缓存（与 relay 面逐字同形，含 `position` 为 null 的
+          // 退化情形——显示面 `n: "?"` 与 CLI `queued.position ?? "?"` 同形）；缓存缺省 ⇒ 池条目位置。
+          position: info ? (info.position ?? null) : (e.position ?? null),
+          ...(info ? { waiting: info.waiting, reason: info.reason, kind: info.kind } : {}),
+        })
         n++
       }
     }

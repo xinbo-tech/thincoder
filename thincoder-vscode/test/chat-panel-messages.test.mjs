@@ -409,8 +409,9 @@ test("⑬ W15 事件中继：queued/cancelled/stopped/turn/done/settled/async+[m
   assert.equal(consume("eng-coder#5/hello chunk"), false)
 
   const [q1, q2, started, turn, cancelled, stopped, settled, done] = posted
-  assert.deepEqual(q1, { type: "subagent", role: "eng-coder", id: 4, status: "queued", position: 3, waiting: null, reason: null })
-  assert.deepEqual(q2, { type: "subagent", role: "explore", id: 2, status: "queued", position: 1, waiting: "dependency-cancelled", reason: "dependency cancelled" })
+  // 载荷四项（#118）：`kind` 随行 = 显示面判词单源（slot ⇒ 槽满词 / 其余 ⇒ reason 原文）。
+  assert.deepEqual(q1, { type: "subagent", role: "eng-coder", id: 4, status: "queued", position: 3, waiting: null, reason: null, kind: "slot" })
+  assert.deepEqual(q2, { type: "subagent", role: "explore", id: 2, status: "queued", position: 1, waiting: "dependency-cancelled", reason: "dependency cancelled", kind: "depc" })
   assert.equal(started.status, "started")
   assert.equal(started.pool, true, "async 标记 → pool:true（webview ⏹/接管判据）")
   assert.equal(started.model, "glm-5.3")

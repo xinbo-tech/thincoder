@@ -159,6 +159,7 @@
   "sub.awaitingDigest": "done · awaiting digestion",
   "sub.awaitingApproval": "Awaiting approval: ${tool}",
   "sub.queueSlot": "queued · position ${n} (slot full)",
+  "sub.waiting": "waiting",
   "sub.newBlocks": "↓ ${n} new block(s)",
   "settings.submodelSection": "Subagent models",
   "settings.submodelGlobal": "Global default",

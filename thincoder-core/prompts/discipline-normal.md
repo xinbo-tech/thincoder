@@ -148,11 +148,12 @@ The report must contain: what changed / why, the paths of files touched, how you
 - Sized implementation batches (multi-file / cross-module / with a confirmed design) are implemented by a coder subagent BY DEFAULT — async spawn with the design as the task book; small / exploratory / interactive changes stay inline.
   Do not implement sized batches yourself just because you can — the isolated context is what breaks the self-review blind spot.
 - Every delegation carries a task book with:
-  goal & why
-  known facts (paths the parent already explored — no re-exploration)
-  design points & forbidden scope
-  acceptance criteria (machine-verifiable: commands, thresholds, assertion counts — no vague "do it well")
-  delivery-report format.
+  **goal & why**
+  **round (initial | fix — fix rounds are point-fixes only, no full survey)**
+  **known facts** (paths the parent already explored — no re-exploration)
+  **design points & forbidden scope**
+  **acceptance criteria** (machine-verifiable: commands, thresholds, assertion counts — no vague "do it well")
+  **delivery-report format**.
   Sized delegation without these fields is a defect — the coder would re-explore what the parent already knows (async default — if your next step depends on the report, end the turn and let it arrive (or declare dependsOn); pass `files` for scheduler serialization).
 - When delegating an explore agent, state the thoroughness in the task description — quick / medium / thorough — graded by need; unspecified means the default.
 - Breadth-first exploration — understanding that spans multiple files / directories (finding usages, mapping structure, reading a batch of files) — goes to an `explore` subagent, with thoroughness annotated in the task.

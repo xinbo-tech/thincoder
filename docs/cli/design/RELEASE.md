@@ -2,7 +2,7 @@
 
 > 板块 = **发布流程**——`thincoder` CLI 发布到 npm 的完整流程（设计与测试细节）。
 > **配对需求档 = `docs/core/requirements/RELEASE.md`（统一面）**——本板块两档**跨部分成对**：设计档判 CLI 面（npm 发布链结构性只属 CLI 产品，P2；冲突序 P5「P2 优先于 P1」），需求档判统一面（发布流程是跨产品的板块主题）。**不是漏档**，是层归属不对称（对照读本板块时须知）。
-> 对位档 = `thincoder-vscode/docs/design/RELEASE.md`（VSC 侧**未迁**——vsix / Marketplace / Open VSX 链；其踩坑与门禁归该档）。
+> 对位档 = `thincoder-vscode/docs/_archive/design/RELEASE.md`（**已归档**——VSC 产品树设计档降格后整体入 `_archive/design/`，参照历史、保留 ≠ 维护；vsix / Marketplace / Open VSX 链的踩坑与门禁归该档。as-of 2026-09-20 实核）。
 > 建档：2026-09-15（**B 式迁移轮 · 第 2 批**——`thincoder-cli/docs/design/RELEASE.md` 内容重建入基准层；旧档原地一字不改、留作参照历史）。
 > 本档坐标与行数 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
 
@@ -12,15 +12,14 @@
 - **发布 = 唯一门禁**：`npm publish` 触发 `prepublishOnly`，一次即跑完整校验链，不过即中止。**不再有**独立的发布前手动 check 步。
 - 门禁不过 ⇒ 发布中止——这是**有意设计**，不得绕过。
 
-## 2. 发布链（三步一链 · 实核）
+## 2. 发布链（两步一链 · 实核）
 
 | 步 | 命令 / 落点 | 说明 |
 |---|---|---|
 | 1 · lint | `thincoder-cli/scripts/check-syntax.mjs` | 语法检查（`node --check` 系） |
-| 2 · 全量测试 | `thincoder-cli/test/run-full.mjs` | 全量集（slow 全放行） （迁移期引文——入口已并入） |
-| 3 · 集成集 | `thincoder-cli/test/run-integration.mjs` | 业务验收场景（`docs/core/design/TESTING.md` 发布门节） （迁移期引文——入口已并入） |
+| 2 · 全量测试 | `thincoder-cli/test/run.mjs` | 全量（单元 + 集成 + slow 全跑——单入口；`docs/core/design/TESTING.md` §10） |
 
-**接线**：`thincoder-cli/package.json:38`（`prepublishOnly` → `npm run release:check`）→ `thincoder-cli/package.json:40`（`release:check` → `node scripts/release-check.mjs`）→ 顺序编排见 `thincoder-cli/scripts/release-check.mjs:68`（lint）· `:78`（全量）· `:82`（集成集）。
+**接线**：`thincoder-cli/package.json`（`prepublishOnly` → `npm run release:check`）→（`release:check` → `node scripts/release-check.mjs`）→ 顺序编排见 `thincoder-cli/scripts/release-check.mjs:66-74`（lint）· `:76-78`（全量测试）。
 
 **输出形态**：脚本捕获完整输出，只打印摘要行（`ℹ tests / pass / fail / skipped / duration`）；失败时**自动提取失败详情段**（`✖` 行 + 每失败块 ≤24 行、最多 12 块；输出无汇总段时回退打印输出尾 40 行）。失败详情永不静默丢。
 
@@ -74,7 +73,7 @@ git push origin vX.Y.Z
 git -c http.proxy=http://10.2.2.112:3128 push github main
 git -c http.proxy=http://10.2.2.112:3128 push github vX.Y.Z
 
-npm publish    # prepublishOnly 自动跑 lint → test:full → test:integration
+npm publish    # prepublishOnly 自动跑 lint → npm test（全量——单入口）
 ```
 
 ## 5. 验证
@@ -98,7 +97,7 @@ Windows PowerShell 5.1 的 `Set-Content -Encoding UTF8` 会写 **BOM**，污染 
 
 ### 6.3 VS Code 端发布教训（对位档，CLI 不适用）
 
-vsce / ovsx 的坑（`vsce publish patch` 自动再 bump、Open VSX 异步激活、ovsx 无 TTY 静默 exit 0 等）归 `thincoder-vscode/docs/design/RELEASE.md`（VSC 侧**未迁**）。CLI 侧只需记住：**npm 无审核队列、无 silent-exit-0**——勿把 vsce / ovsx 的失败模式推广到 npm。
+vsce / ovsx 的坑（`vsce publish patch` 自动再 bump、Open VSX 异步激活、ovsx 无 TTY 静默 exit 0 等）归 `thincoder-vscode/docs/_archive/design/RELEASE.md`（**已归档**——参照历史、保留 ≠ 维护；as-of 2026-09-20 实核）。CLI 侧只需记住：**npm 无审核队列、无 silent-exit-0**——勿把 vsce / ovsx 的失败模式推广到 npm。
 
 ## 7. 回滚 / 问题
 
@@ -123,10 +122,14 @@ vsce / ovsx 的坑（`vsce publish patch` 自动再 bump、Open VSX 异步激活
 
 | 旧档面 | 内容 | 何故不并（去向 / 触发） |
 |---|---|---|
-| VS Code 端发布教训全文（旧档 §5.3） | vsce / ovsx 逐条教训 | 对位档 = `thincoder-vscode/docs/design/RELEASE.md`（VSC 侧未迁）——本档只留一句边界（§6.3） |
+| VS Code 端发布教训全文（旧档 §5.3） | vsce / ovsx 逐条教训 | 对位档 = `thincoder-vscode/docs/_archive/design/RELEASE.md`（**已归档**——参照历史、保留 ≠ 维护）——本档只留一句边界（§6.3） |
 | 门禁脚本内部实现细节 | 输出摘要 / 失败块提取算法 | 实现面——落点 `thincoder-cli/scripts/release-check.mjs`（本档只留行为契约） |
 
 ## 变更记录
+
+- 2026-09-20（**一致性同步批 · 设计评审修正轮 1 · eng-designer**——评审 id=13 发现 #7 / #12）：
+  ① 补本轮变更条（D7）——§2 两行死入口名（`run-full.mjs` / `run-integration.mjs` → 单入口 `thincoder-cli/test/run.mjs`）与标题「三步一链」→「两步一链」收正 = 本批条目 #116 落地（同族发现 F-4 · 就地修）。变更记录 = **时点记录面**：2026-09-15 建档条的「三环」叙辞为该轮谱系，正文已按 v2 单入口收正（§2 · §4）。
+  ② 三处「VSC 侧未迁」指针收正（§2 对位档 · §6.3 · §8.2）：原址 `thincoder-vscode/docs/design/RELEASE.md` 已不在盘（该产品树设计档整体入 `_archive/design/`）⇒ 改指归档址 + 标 as-of 2026-09-20——与本批 `docs/core/design/ARCHITECTURE.md` 同判据。
 
 - 2026-09-15（**B 式迁移轮 · 第 2 批**）：建档——`thincoder-cli/docs/design/RELEASE.md` 内容重建入基准层（旧档一字未改、原地作参照历史）。
   ① 落点 = `docs/cli/design/`（P2：npm 发布链结构性只属 CLI；P5 冲突序）；**档头注明配对需求档位置**（需求档判统一面——层归属不对称已明写）；

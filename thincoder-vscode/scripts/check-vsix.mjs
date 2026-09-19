@@ -26,7 +26,7 @@ const arg = process.argv.slice(2).find((a) => !a.startsWith("--"))
 const vsix = resolve(arg ?? join(ROOT, `${PKG.name}-${PKG.version}.vsix`))
 if (!existsSync(vsix)) { console.error(`✘ vsix 不存在：${vsix}（先 \`npm run package\`）`); process.exit(1) }
 const IN_VSIX = "extension/node_modules/@thincoder/core/"
-const EXPECT = { prompts: 15, "tool-docs": 25 } // 档数口径（T-C7 / `CORE-UNIFICATION.md` §2.8 :1057——枚举 15 + 25）
+const EXPECT = { prompts: 15, "tool-docs": 24 } // 档数口径（T-C7 / `CORE-UNIFICATION.md` §2.8——枚举 15 + 24；tool-docs 由 25 收正为 24 = 实盘计数——一致性同步批 §4 批 2 · 父侧直接执行 · 可 revert）
 const sha = (buf) => createHash("sha256").update(buf).digest("hex")
 
 const failures = []

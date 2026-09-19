@@ -28,7 +28,7 @@ grid-template-rows: auto minmax(0, 1fr) auto auto auto;
 - 行模板 ↔ 垂直序：header(session-bar) / `#messages`(1fr) / `#subagent-activity`(auto) / `#panels`(auto) / `#toolbar`(auto)——后三层均 auto，隐藏项不占高 ⇒ 消息区高 = 容器 − 活动区 − 面板 − 输入（grid `1fr` 自动吸收）。
 - 消息区钉底/滚动语义**限定在 `#messages` 内**：`overflow-y: auto` + `overscroll-behavior: contain`（`thincoder-vscode/webview/base.css:93-97`）。
 - **活动区**：位于 `#messages` 与 `#panels` 之间（`thincoder-vscode/webview/index.html:25`——`role="region"`）；**空区隐藏零高**（`base.css:109` `#subagent-activity:empty { display: none; }`——零显隐 JS）；内容自适应 + `max-height: 32vh` 封顶 + 区内自滚（`base.css:102-107`）。
-- **活动区独立 pin**（`thincoder-vscode/webview/ui.js:460-463` `maybeScrollActivity`）——与消息区**互不拉扯**（两层状态独立——§5.5）。
+- **活动区独立 pin**（`thincoder-vscode/webview/ui.js:442-445` `maybeScrollActivity`）——与消息区**互不拉扯**（两层状态独立——§5.5）。
 - shell 结构（`thincoder-vscode/webview/index.html:14-63`）：`#chat-container` 内含 `#session-bar` / `#messages` / `#subagent-activity` /
   `#panels`（goal、task 两个行面板）/ `#toolbar` / `#settings-panel`（dialog）/ `#welcome-panel`（首次运行 onboarding）。
 - `#toolbar` 内 = `#status-line` + `#input-row`（attach / send / abort）+ `#paste-bar` + `#controls-row`。
@@ -40,7 +40,7 @@ grid-template-rows: auto minmax(0, 1fr) auto auto auto;
 
 | 模块 | 职责 |
 |---|---|
-| `chat.js` | 编排层：状态/事件/消息路由/模型选择/历史/设置；`window.message` 派发中枢；启动握手 `webviewReady`（`chat.js:413`） |
+| `chat.js` | 编排层：状态/事件/消息路由/模型选择/历史/设置；`window.message` 派发中枢；启动握手 `webviewReady`（`chat.js:411`） |
 | `streaming.js` | token/reasoning 流式渲染（rAF 节流 + ≥50ms 重排门——`streaming.js:34` · `:42-45`）+ 回合收尾 + 子代理块路由（`subagentChunk` `:213`）+ code-block 复制按钮 |
 | `ui.js` | DOM 构造（欢迎页/气泡/工具卡/advisor 块/loading 态）+ 滚动族（`scrollDown` / `maybeScrollDown` / `maybeScrollActivity` / `initScrollFollow` / `trimOldMessages`）——leaf：不 import `state.js` |
 | `md.js` | markdown 渲染（`md()` `:67` · 内联引擎 `inline()` `:34`——契约见 `WEBVIEW-INPUT.md`） |
@@ -177,7 +177,11 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
 块头为一行方括号 + 状态词（`activity-view.js:36` `headerText` / `:74` `stateWord`）：
 
 - **live**：`[▶ key · sync/async · model · Ns · turn N/M]` + 状态词（结构化工具行 `${tool} — ${cmd ≤60}` / 工具文本尾句 / 思考中）。
-- **queued**：`[⏳ key]` + 排队信息（slot → `排队中 · 位置 N（槽满等位）`；依赖/冲突等位 → host detail 原文）。
+- **queued**：`[⏳ key · queued|waiting]` + 排队信息——**与 CLI 逐档一致**（标尺 = `thincoder-cli/src/tui/subagent-panel.mjs:73` 状态词 / `:100-102` 状态区）。
+  slot（`kind: "slot"`）→ `排队中 · 位置 N（槽满等位）`；wait / depc（`kind` ≠ slot）→ **host detail 原文**（`waiting for: …` / `dependency cancelled: …`——零改写）。
+  载荷 = `status:"queued"` + `position` / `waiting` / `reason` / `kind`；**降级形态**（缓存缺省 ⇒ 仅 `position`、`kind` 缺省）⇒ 走 **`kind` ≠ `slot`** 支：有 `reason` ⇒ 原文、无 `reason` ⇒ 中性回落 `sub.queued`（= CLI `queued.detail || "queued"` 同形）∧ 状态词 `waiting`。（#118 落）
+- **载体与读点（#118——刷新两路径）**：四字段的**块级活态载体** = 块自身 `block._subMeta.queueInfo`（建块默认 `null`——`thincoder-vscode/webview/activity.js:88`；写点 = queued 消费点 `:278`；清点 = `started` 分支 `:307`）；**单一读点** = `stateWord` / `headerText`（`thincoder-vscode/webview/activity-view.js:38` · `:78-80`），经 `refreshBlock` 被两条路径消费：
+  ① **2 s 同点刷 live 块头**（`thincoder-vscode/webview/panels.js:69-70` `_panelTimer` → `refreshLiveHeaders`——不设运行态门）；② **覆盖式重建头词与状态区**（每条已建块消息 / 状态分支 + `toggle`）。⇒ 重绘后形态由该载体重建，**无第二消息面回落通道**（缺陷复辟路径不成立）。
 - **frozen**：`[✓ key · … · done Ns · turn N/M]`（stop → `⏹` + `stopped Ns`；error → 错误注记随头）。
 - **awaitingDigest**：括号去 verb（`[✓ key · … · Ns]`）+ 态词 `done · awaiting digestion`。
 - **审批态**（live）：`⏸` 覆盖 `▶` + 态词 `等待审批: <tool>`（子代理 child ask 在途——`activity-view.js:45` · `:75`；清态（`tool: null`）即回落；终态不覆盖图标）。
@@ -223,7 +227,8 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 - **就绪握手（两拍）**：webview 起手投 `webviewReady`（`thincoder-vscode/webview/chat.js:411`）→ host case（`panel-messages.mjs:199-231`）置 `_wvReady = true`（`:211`），
   **排在** `openSessionContent`（`:222`——内部含 `clearMessages` + `resetActivity`）**之后**执行 ① flush 队列（`:228` `flushSubagentOutbox`——保持入队序，**含内容面**）→ ② `reassertLiveChildren`（`:229`）。
   后置理由：先投的出生事件必被清屏抹掉。
-- **存活投影**：`thincoder-vscode/src/extension/suspension.mjs:131-148` 读 `panel._liveLines ?? panel._susp?.lines` 的 `_asyncSubagents` / `_asyncAdvisors`（与 ⏹ 路由同源），**只发 live**——`running` → `started` + `pool: true`，`queued` → `queued`（两侧 role/id 必带）。
+- **存活投影**：`thincoder-vscode/src/extension/suspension.mjs:131-148` 读 `panel._liveLines ?? panel._susp?.lines` 的 `_asyncSubagents` / `_asyncAdvisors`（与 ⏹ 路由同源），
+  **只发 live**——`running` → `started` + `pool: true`，`queued` → `queued`（两侧 role/id 必带；**载荷与 relay 面同形**：`position` / `waiting` / `reason` / `kind` 一并投影——重绘后与 live 面逐档一致；缓存单源 = queued 事件消费点）。（#118 落）
 
 **内容面投递（W15 内容面——2026-09-16 补；投递面本批并入队列）**：子代内容 chunk（text / think / 工具调用行 / 工具输出行 / **工具结果行**）经 relay 前缀文法
 （`role#id/`——嵌套链子标随行）在端壳分流 → `toolPanel` `sub:<role>#<id>` 载荷（`panel-subagent-relay.mjs` `relaySubagentContentChunk`）；
@@ -253,7 +258,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 
 **webview 侧痕迹与上行（NFR-A2 webview 侧）**：
 
-- 痕迹面迁出至新档 `thincoder-vscode/webview/activity-diag.js`（拟新增——`activity.js` 现 425 行（read 口径）、越 300 建议线；痕迹整体迁出，`activity.js` 只留调用点）；环形 `SUB_TRACE_MAX = 50` 与 `_subTraceLog` 载体同迁（`state.js:83-85` · `:122` 两处退场）。
+- 痕迹面迁出至新档 `thincoder-vscode/webview/activity-diag.js`（拟新增——`activity.js` 现 **434 行**（行计数口径 = `wc -l` / 含末行；as-of 2026-09-20）、越 300 建议线；痕迹整体迁出，`activity.js` 只留调用点）；环形 `SUB_TRACE_MAX = 50` 与 `_subTraceLog` 载体同迁（`state.js:83-85` · `:122` 两处退场）。
 - kind 族（**七类**）：既有三类 `takeover` / `late-terminal-stub` / `drop-unknown-role` + `birth`（新块出生——正收据）/ `drop-frozen`（冻结键吞掉的非出生消息——① 静默面）/ `drop-tombstone` / `reassert-hit`（心跳命中已 live 块——正收据，每频道每生命周期一条）。
   **退场一类**：`skip-key-unrebuildable`（旧射程登记用）——consult / escalate 射程收正后该分支不存在（见「终态必现」）。
 - **留痕节律**：出生 / 状态面**逐条**；内容 chunk 面**每频道每生命周期首条**（高频面按频道去重——上界与 `content-first` 同族）。
@@ -332,7 +337,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 
 两层独立、互不写对方状态：
 
-- **外层 = 区 pin**（`ui.js:460-463`）：块出生（`activity.js:109`）与流式帧（`streaming.js:70`）调用；近底 24px 判据、上滚解 pin、回底重 pin（`ui.js:481-491`）。块出生**不再牵动** `#messages` 滚动。
+- **外层 = 区 pin**（`ui.js:442-445`）：块出生（`activity.js:107`）与流式帧（`streaming.js:63`）调用；近底 24px 判据、上滚解 pin、回底重 pin（`ui.js:466-470` `watch` 闭包）。块出生**不再牵动** `#messages` 滚动。
 - **内层 = 块内容区跟滚**（`activity.js:120-136`）：`initBlockFollow` 给 `.advisor-content` 挂 `wheel` / `touchmove`（passive）监听写 `内容区._pinFollow`；`maybeScrollBlock` 在 rAF 尾逐块应用——`open=false` 或 `!isConnected` → no-op，默认钉底写超值（不读 `scrollHeight`）。
 - **帧驱动**（`thincoder-vscode/webview/streaming.js:32` · `:44` · `:64-67`）：`subagentChunk` 追加后把块记入脏集 `_subScrollDirty`，`scheduleStreamRender` 的 rAF 体内逐块 `maybeScrollBlock` 后置空；**节流重排条件含脏集**（跳过的帧不得丢跟随）。
 - **高度**：`.advisor-block.sub-block .advisor-content` = **60px**（`thincoder-vscode/webview/chat.css:468`）；基础 `.advisor-content` = 100px（`chat.css:318`）。
@@ -361,7 +366,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 | D-W10 | 终态补块前置 = **合法 id + 合法角色段（`[\w-]+`）+ 回读解析一致**（2026-09-19 收窄：`FAMILY_ROLES` 白名单退场——consult / escalate 纳入；仍否决无条件建块） | 否决无条件建块（未知 role 的块无法解读）· 否决 answered / queued-cancel 补桩（既有裁决） |
 | D-W11 | 频道名 `sub:<role>#<id>` 与 chunk 路由契约**不变** | 否决加代际后缀（连带改频道命名/子标挂载/CLI 面板路由） |
 | D-W12 | 队列上界 200 + 溢出丢最旧 + `ev:subdeliver` 留痕 | 否决无界队列（暗窗口内存无界） |
-| D-W13 | 块级跟滚载体落 `activity.js`（旗标 + wheel/touch 让位 + rAF 帧应用） | 否决内联裸钉底（无让位）· 否决几何派生（新造模式）· 否决 `ui.js` 滚动族泛化（状态模型不符 + `ui.js` 474 行（2026-09-19 实读）越 300 建议线） |
+| D-W13 | 块级跟滚载体落 `activity.js`（旗标 + wheel/touch 让位 + rAF 帧应用） | 否决内联裸钉底（无让位）· 否决几何派生（新造模式）· 否决 `ui.js` 滚动族泛化（状态模型不符 + `ui.js` 473 行（口径 = `wc -l` / 含末行 · as-of 2026-09-20 实读）越 300 建议线） |
 | D-W14 | 高度 60px 作用于 `.sub-block` 全部（live + 冻结同卡面） | 否决仅 `.sub-live`（冻结展开态须同卡面）；advisor 流内块维持 100px |
 | D-W15 | 合并权限卡**携 `promptId` 并入逐项卡族**（单一释放通道 + 同一移除选择器） | 否决单开释放语义（同语义两通道 + 消费者按类分支——`permissionWithdrawn` 已按 id 精确匹配，见 `WEBVIEW-PROTOCOL.md` §4.6 · D-P12） |
 | D-W16 | 忙态门 = **禁用**（非隐藏 / 非不做）；判据 = `_turnState !== "idle"` | 否决隐藏（信息钮隐藏即失去「当前模型」读数）· 否决仅 `running`（留 `susp` 在飞蒸馏落盘窗——`panel-callbacks.mjs:319` 携旧回合快照）+ 与 D-P9 的分工见 §4.2 |
@@ -370,7 +375,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 | D-W19 | spawn 失败（进程未启动） = **产者补状态位** `(spawn failed)`（状态位族第三成员；端侧判据族随扩一名）——**产者两处、同名同形**：核 `thincoder-core/tools/bash.mjs:183-190`（CLI 面）· **宿主 `thincoder-vscode/src/tools/shell.mjs:242-260`（本端卡面真产者）**；同批收正宿主两态（超时 ⇒ `(killed: timeout <N>ms)` · 输出超容 ⇒ `(killed: output limit exceeded)`）+ **退出码槽只接受数字**规则。本端 `bash` ≠ 核 `bash`（`thincoder-vscode/src/tools/index.mjs:29` · `:172-175`）⇒ 只改核面则本端卡面零变化（评审 id=118 #1 实核） | 否决判据面认产者措辞（`Command failed:` 前缀——跨端措辞耦合 ⇒ 产者改字即静默复辟；且不产状态文本 ⇒ 摘要仍读 `(empty)`，第三信号须二次手术；CLI 端零收益）· 否决 `Error:` 前缀（核侧控制信号——`dispatch.mjs:369` · `:420` · `:426` · `:438` 同读，语义升格面）· 否决伪造 `(exit code N)`（进程未启动，禁造假状态）· 否决「本端改判为核/CLI 面收口」（本端卡面即本缺陷的用户可见承诺面） |
 | D-W20 | 出生自愈 = **既有存活投影的 2 s 心跳**（拍体即 `reassertLiveChildren` 本体；起于就绪握手、止于 dispose） | 否决新造存活投影（双源）· 否决投递层重试（投递层看不见 webview 守卫吞掉 / 键已冻结）· 否决只在握手 / 切屏再断言（投递丢失窗口不覆盖——本次事故留 20 min 空窗） |
 | D-W21 | 心跳**允许**对已冻结键建新代（接管；host 是「该键仍 live」的权利人） | 否决心跳禁接管（新代出生消息丢失时永久不可见——违 F-A3）· 否决心跳携带实例序号（改频道命名法——D-W11 / F-A3 边界禁止） |
-| D-W22 | 痕迹面**迁出** `thincoder-vscode/webview/activity-diag.js`（拟新增） + 上行 `panelDiag` 入主侧日志 | 否决痕迹留 `activity.js`（425 行 + 新增 ⇒ 近 500 硬限）· 否决只留 webview 环形日志（DevTools 不可回读——本次事故正因不可回读而盲） |
+| D-W22 | 痕迹面**迁出** `thincoder-vscode/webview/activity-diag.js`（拟新增） + 上行 `panelDiag` 入主侧日志 | 否决痕迹留 `activity.js`（**434 行**——行计数口径 / as-of 2026-09-20 + 新增 ⇒ 近 500 硬限）· 否决只留 webview 环形日志（DevTools 不可回读——本次事故正因不可回读而盲） |
 | D-W23 | 终态「块缺失」判据**扩 tombstone 一形**；**射程含 consult / escalate**（2026-09-19 收正——端侧键 = `sub:<role>#<id>`，可单源重建；旧「键不可重建」判定按 CLI 形态，不成立于端侧——§5.3 键形收正） | 否决端侧按 `sub:consult <model> #<id>` 重建（端侧无此键形）· 否决改频道命名法（D-W11 · 跨端契约） |
 | D-W24 | 心跳源新鲜度 = **会话切换 / 新建会话点清 `panel._liveLines`**（回落 `_susp?.lines`）；落点 = `thincoder-vscode/src/extension/panel-session.mjs:74` `loadSession` 入口段（`:85` 旁——五路会话操作汇合单点） | 否决心跳自带会话比对（同一判据两处实现）· 否决不禁（心跳把源陈旧从偶发放大为每 2 s 一次——NFR-A1 反例） |
 | D-W25 | **出生面 = 存活闸 + 非出生面 = 禁静默**（①）：出生事件（`queued` / `started`）命中冻结键 ⇒ 接管建新代；非出生消息（chunk / turn / 终态）命中 ⇒ 维持丢弃 + `drop-frozen` / `drop-tombstone` 痕 | 否决仅留痕不建块（用户症状本体仍在——块永不出现；且 CLI 先例取生存活闸）· 否决全路径接管（chunk 复活已折叠块 ⇒ 违 NFR-A1）· 否决按「谁先到」时序定存亡（不可机判）。**选型理由**：CLI 存活判据读池实体（`livePoolHas`），端侧无池 ⇒ 存活凭据 = 出生事件本身 + host 心跳（D-W21），故判据分界 = 消息形态（见 §5.3） |
@@ -404,7 +409,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 | # | 事项 | 现状 | 收口点 |
 |---|---|---|---|
 | 1 | 需求侧 `requirements/WEBVIEW.md` 内对本板块设计节的引用 | 已随本批翻转为同层/层前缀引用（`design/WEBVIEW*.md`） | 本批已收口 |
-| 2 | `thincoder-vscode/docs/design/WEBVIEW.md`（旧档） | **原地一字未改**——参照历史（保留 ≠ 维护） | 产品树降格后随批处置 |
+| 2 | `thincoder-vscode/docs/_archive/design/WEBVIEW.md`（归档址） | **原地一字未改**——参照历史（保留 ≠ 维护） | 产品树降格后随批处置 |
 | 3 | `AGENT-LOOP（VSC 侧）` §10/§12/§14/§16（webview 族需求侧权威） | 未迁入基准层（统一面）——引用保持迁移期口径 | 统一面批次（`docs/core/requirements/AGENT-LOOP.md` 并入后翻转） |
 
 ## 8. UI / 交互决策落档
@@ -461,6 +466,19 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 （缺口登记 = `requirements/WEBVIEW.md` N-W5，消解路径 + 到期条件在案）。
 
 ## 变更记录
+
+- 2026-09-20（**显示面消差批 · 设计评审修正轮 1 · eng-designer**——评审 id=20 发现 #10（行数与坐标收口 · 含 as-of））：
+  ① §2 布局 + §5.5 坐标收正（as-of 2026-09-20 实读）：`ui.js:460-463` → **`ui.js:442-445`**（`maybeScrollActivity` 实位——两处：§2 布局行 · §5.5 外层行）；
+  §5.5 同句 `activity.js:109` → `:107` · `streaming.js:70` → `:63` · `ui.js:481-491` → **`ui.js:466-470`**（`watch` 闭包）。
+  ② §3 文件表 `webviewReady` 坐标 `chat.js:413` → **`chat.js:411`**（实位 = `vscode.postMessage({ type: "webviewReady" })`）；D-W13 行数读数 474 → **473**（口径 = `wc -l` / 含末行）。
+  ③ 行数实读（同轮同口径 · as-of 2026-09-20）：`ui.js` 473 · `chat.js` 411 · `activity.js` 434 · `activity-view.js` 182 · `streaming.js` 230（webview 面）· `suspension.mjs` 407 · `panel-callbacks.mjs` 272（宿主面）· `agent-turn.mjs` 343 · `suspension-drive.mjs` 316（CLI 面）。
+  ④ 本批 11 子项条款（VSC 面）待落行 = **批 4**（`M1` `M2` `M3` `M4` `X2` `X3` `X5` `X6` `X7` `X10` `X11`）；须收正的既成条款行三处 = §5.2 ⏹ 行（`:188`）· §5.3 ⏹ 判据句（`:214`）· §5.2 frozen 行（`:185`）——收正方向与需求面连带（F-A4）= 批档 `2026-09-20-display-parity-batch.md` §2.10.2。
+
+- 2026-09-20（**一致性同步批 · 设计评审修正轮 1 · eng-designer**——评审 id=13 发现 #9 / #10）：
+  ① §5.2 补 **载体与读点**行（#118）：四字段的块级活态载体 = `block._subMeta.queueInfo`（`activity.js:88` / `:278` / `:307`），单一读点 = `headerText` / `stateWord`（`activity-view.js:38` / `:78-80`）——2 s 同点刷与覆盖式重建两路径同走该载体（无回落通道）——发现 #9；
+  ② `activity.js` 行数两说收正到同一口径与 as-of：§5.3 痕迹面行 + D-W22 由 425 行改为 **434 行**（行计数口径 = `wc -l` / 含末行；as-of 2026-09-20）——发现 #10。
+
+- 2026-09-20（**一致性同步批 · 条目 #118 · eng-designer**）：§5.2 queued 形态收正为**与 CLI 逐档一致**（状态词 ` · queued|waiting` + slot / wait / depc 三档状态区；载荷 `position` / `waiting` / `reason` / `kind`）；§5.3 存活投影载荷与 relay 面同形（重绘不丢原因）。
 
 - 2026-09-15（**B 式迁移轮 · VSC 第 2 批**）：建档——`thincoder-vscode/docs/design/WEBVIEW.md` 内容按面重建入基准层三档（旧档一字未改、原地作参照历史；切面取舍见 §9）；坐标改写为仓根相对现状路径（全部按 as-of 2026-09-15 实核）；批次材料（问题陈述 / 方案选型 / 受影响文件 / 用例表 / 验收标准 / 边界 / 变更流水）入 §7.1。
 - 2026-09-15：**源档与现状冲突 1 处按现状落笔**——旧档 §14 C-13 表「审批态 = 无此状态（子代理不经权限门）」与现行实现冲突：审批态块头（`⏸` + `等待审批: <tool>`）已实装（`activity-view.js:45` · `:75` · `activity.js:390`）——本档按现状落笔，冲突已上报批次（主 agent 裁定）。

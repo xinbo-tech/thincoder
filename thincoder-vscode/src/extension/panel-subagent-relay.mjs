@@ -19,9 +19,10 @@
  * 缺①或②任一 ⇒ `protocol-coverage.test.mjs` fail-closed 红（`:178` / `:180`）；漏
  * `subagentApproval` 一半 ⇒ T-6 `wrongDisp` 红（表记 `活` ∕ 实得 `删`）。
  *
- * 缝保持（KD-12）：`panel-callbacks.mjs` 按**既有导出名** re-export 本档六件 ⇒ 消费档 import
- * 面零改（`relaySubagentEventToken` 消费面：`panel-messages.mjs:28` 一行随本批 case 迁移收窄为
- * `flushSubagentOutbox`——真消费点 = `panel-messages-turn.mjs:25`；`suspension.mjs:27` · 测试 2 档）。
+ * 缝保持（KD-12）：`panel-callbacks.mjs` 按**既有导出名** re-export 本档导出件（六件 + #118 新增
+ * `queuedInfoOf`）⇒ 消费档 import 面零改（`relaySubagentEventToken` 消费面：`panel-messages.mjs:28`
+ * 一行随本批 case 迁移收窄为 `flushSubagentOutbox`——真消费点 = `panel-messages-turn.mjs:25`；
+ * `suspension.mjs:27` · 测试 2 档）。
  * 依赖单向：本档零 import 主档（`panel-callbacks → panel-subagent-relay`——无环）。
  */
 import { toolPanelPayload } from "./panel-toolpanel.mjs"
@@ -45,6 +46,27 @@ import { parseRelayPath } from "@thincoder/core/agent/relay-prefix.mjs"
 // `⟦ev⟧async` → 记 pending（started 载荷 pool:true 判定）；尾随 `[model]` → `started` 载荷
 // （model 入块头）。pending 表挂 panel 弱映射（多面板互不串味）。
 const _relayAsyncPending = new WeakMap() // panel → Set<`role#id`>
+// #118（2026-09-20 一致性同步批 · R1）：queued 载荷四项（`kind` / `position` / `waiting` / `reason`）
+// 的**每面板缓存**（载体同款：`WeakMap<panel, Map<`role#id`, info>>`）。理由：`kind` / `detail` 只
+// 存在于一次性 token（池条目仅携 `position`），而 webview 重载后的存活投影（`suspension.mjs`
+// `reassertLiveChildren`）必须与 live 中继面**同形**——否则重绘后排队头回落「槽满等位」。
+// 键 = relay 前缀 head；清点 = started / cancelled / 终态分支（排队信息作废）；缓存缺省 = 降级态。
+const _relayQueuedInfo = new WeakMap() // panel → Map<`role#id`, {kind, position, waiting, reason}>
+
+/** queued 缓存写点（#118 R1——queued 消费点同点入缓存）。 */
+function rememberQueued(panel, key, info) {
+  let m = _relayQueuedInfo.get(panel)
+  if (!m) { m = new Map(); _relayQueuedInfo.set(panel, m) }
+  m.set(key, info)
+}
+
+/** queued 缓存删点（#118 R1——`started` / `cancelled` / 终态分支删该键：排队信息作废）。 */
+function forgetQueued(panel, key) { _relayQueuedInfo.get(panel)?.delete(key) }
+
+/** queued 缓存读点（#118 R1/R2——重生投影载荷**同形单源**：`suspension.mjs`
+ *  `reassertLiveChildren` 的 queued 行四项取自本缓存）。未消费过该键的 queued token ⇒ null
+ *  （降级态：重发仅 `position`——WEBVIEW.md §5.2 降级形）。 */
+export function queuedInfoOf(panel, key) { return _relayQueuedInfo.get(panel)?.get(key) ?? null }
 
 /** 事件 token → webview 活动区状态消息（映射表：queued / cancelled / stopped / settled /
  *  done / turn / async+[model]）。识别返回 true；未知形态（非本面事件）返回 false。 */
@@ -66,27 +88,34 @@ export function relaySubagentEventToken(panel, tok) {
   }
   if (rest.startsWith("[model]")) {
     const pool = _relayAsyncPending.get(panel)?.delete(path.head) === true
+    forgetQueued(panel, path.head) // #118 R1：已启动 ⇒ 排队信息作废
     return emit({ status: "started", pool, model: rest.slice("[model]".length) || null, startedAt: Date.now() })
   }
   if (rest.startsWith("⟦ev⟧queued")) {
     // 载荷：⟦ev⟧queued \x1e kind \x1e position \x1e queued \x1e detail（subagent-scheduler 发射面）
+    // #118 R1：`kind` 随载荷下行（此前解析即丢——显示面无法区分 slot / wait / depc）；同点四项入
+    // 每面板缓存（重生投影 `reassertLiveChildren` 读——live 面与重绘面同形）。
     const parts = rest.split("\x1e")
     const kind = parts[1]
     const detail = parts.slice(4).join("\x1e")
-    return emit({
-      status: "queued",
+    const info = {
+      kind: kind ?? null,
       position: Number(parts[2]) || null,
       waiting: kind === "slot" ? null : (kind === "depc" ? "dependency-cancelled" : "waiting-deps"),
       reason: kind === "slot" ? null : (detail || null),
-    })
+    }
+    rememberQueued(panel, path.head, info)
+    return emit({ status: "queued", ...info })
   }
   if (rest.startsWith("⟦ev⟧cancelled")) {
     // 核仅在 queued 取消路径发（subagent-async executeCancelAction——出队即终态）
+    forgetQueued(panel, path.head) // #118 R1：出队即终态（cancelled(was:"queued")——头移除）
     return emit({ status: "cancelled", was: "queued" })
   }
-  if (rest.startsWith("⟦ev⟧stopped")) return emit({ status: "cancelled" }) // 运行中取消 → 冻结 stopped
-  if (rest.startsWith("⟦ev⟧settled")) return emit({ status: "settled" })
-  if (rest.startsWith("⟦ev⟧done")) return emit({ status: "done" })
+  // #118 R1：终态分支同删缓存键（该键后世代的 queued 事件会重写缓存，陈旧项不得滞留）。
+  if (rest.startsWith("⟦ev⟧stopped")) { forgetQueued(panel, path.head); return emit({ status: "cancelled" }) } // 运行中取消 → 冻结 stopped
+  if (rest.startsWith("⟦ev⟧settled")) { forgetQueued(panel, path.head); return emit({ status: "settled" }) }
+  if (rest.startsWith("⟦ev⟧done")) { forgetQueued(panel, path.head); return emit({ status: "done" }) }
   if (rest.startsWith("⟦ev⟧turn")) {
     const parts = rest.split("\x1e")
     return emit({ status: "turn", turn: Number(parts[1]) || 0, maxTurns: Number(parts[2]) || 0 })

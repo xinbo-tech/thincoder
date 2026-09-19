@@ -159,6 +159,7 @@
   "sub.awaitingDigest": "已完成 · 等待消化",
   "sub.awaitingApproval": "等待审批: ${tool}",
   "sub.queueSlot": "排队中 · 位置 ${n}（槽满等位）",
+  "sub.waiting": "等待中",
   "sub.newBlocks": "↓ ${n} 新块",
   "settings.submodelSection": "子代理模型",
   "settings.submodelGlobal": "全局默认",

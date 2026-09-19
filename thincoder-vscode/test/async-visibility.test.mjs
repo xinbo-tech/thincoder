@@ -180,6 +180,54 @@ test("T-V6b 存活投影载荷：双池 running/queued 全带 role/id——runni
   assert.equal(empty.posted.length, 0)
 })
 
+// A118-2（#118 排队头显示链消差——批档 `2026-09-20-consistency-sync-batch.md` §2.1）：重绘载荷
+// 四项全等（`position` / `waiting` / `reason` / `kind`）——同一 ⟦ev⟧queued token 经 relay 消费入
+// **每面板缓存** ⇒ `reassertLiveChildren` 重发与 relay 面**同形**；无缓存 ⇒ 降级（仅 `position`）；
+// 重发载荷喂真 webview ⇒ 块头形态 = A118-1 三档 + 降级行（#9：live 面与重绘面同读点）。
+test("A118-2 重绘载荷：relay 后重发四项全等（slot/wait/depc）+ 无缓存降级（仅 position）+ 重发头形态三档", async () => {
+  const { relaySubagentEventToken } = await import("../src/extension/panel-callbacks.mjs")
+  const RS = "\x1e"
+  const history = {
+    _asyncSubagents: new Map([
+      ["2", { id: 2, role: "eng-coder", status: "queued", position: 3 }],
+      ["3", { id: 3, role: "explore", status: "queued", position: 1 }],
+      ["4", { id: 4, role: "coder", status: "queued", position: 2 }],
+      ["5", { id: 5, role: "plan", status: "queued", position: 4 }], // 无缓存（降级行）
+    ]),
+    _asyncAdvisors: new Map(),
+  }
+  const p = stubPanel({ _liveLines: { history, fullHistory: [], cwd: "/proj" }, _wvReady: true })
+  assert.equal(relaySubagentEventToken(p, `eng-coder#2/⟦ev⟧queued${RS}slot${RS}3${RS}queued${RS}`), true)
+  assert.equal(relaySubagentEventToken(p, `explore#3/⟦ev⟧queued${RS}wait${RS}1${RS}queued${RS}waiting for: coder#7（域冲突 src/a.mjs）`), true)
+  assert.equal(relaySubagentEventToken(p, `coder#4/⟦ev⟧queued${RS}depc${RS}2${RS}queued${RS}dependency cancelled: plan#9`), true)
+  const live = subagentMsgs(p) // live 中继面载荷（relay 单点）
+  assert.equal(live.length, 3, "三条 queued 中继落 webview")
+  const n = reassertLiveChildren(p)
+  assert.equal(n, 4, "重发 = 池内四条 queued（含无缓存者——降级行在册）")
+  const re = subagentMsgs(p).slice(live.length)
+  const byId = (list, id) => list.find((m) => m.id === id)
+  const FOUR = ["position", "waiting", "reason", "kind"]
+  for (const id of [2, 3, 4]) {
+    const a = byId(live, id), b = byId(re, id)
+    for (const f of FOUR) assert.deepEqual(b[f], a[f], `#${id} 重发 ${f} 与 relay 面全等（relay 实到 ${JSON.stringify(a[f])}）`)
+    assert.deepEqual(Object.keys(b).sort(), Object.keys(a).sort(), `#${id} 重发字段集与 relay 面同形`)
+  }
+  const deg = byId(re, 5)
+  assert.equal(deg.position, 4, "降级行仍携池条目 position")
+  assert.deepEqual(Object.keys(deg).sort(), ["id", "position", "role", "status", "type"],
+    "降级行（无缓存）仅 position——无 waiting/reason/kind")
+  // 重发载荷喂真 webview：头形态 = A118-1 三档 + 降级行（逐字）
+  const { S, ctx, applySubagentStatus } = await loadWebview()
+  const { t } = await import("../webview/i18n.js")
+  fresh({ S, ctx })
+  for (const m of re) applySubagentStatus(m)
+  const hdr = (id) => S._subBlocks.get(`sub:${byId(re, id).role}#${id}`).querySelector(".sub-hdr").textContent
+  assert.equal(hdr(2), `[⏳ eng-coder#2 · ${t("sub.queued")}] ${t("sub.queueSlot", { n: 3 })}`, "slot 重发后头形态")
+  assert.equal(hdr(3), `[⏳ explore#3 · ${t("sub.waiting")}] waiting for: coder#7（域冲突 src/a.mjs）`, "wait 重发后头形态（detail 原文零改写）")
+  assert.equal(hdr(4), `[⏳ coder#4 · ${t("sub.waiting")}] dependency cancelled: plan#9`, "depc 重发后头形态")
+  assert.equal(hdr(5), `[⏳ plan#5 · ${t("sub.waiting")}] ${t("sub.queued")}`, "降级行：状态词 waiting ∧ 状态区 sub.queued")
+})
+
 test("T-V7 溢出与清队：超上界丢最旧 + ev:subdeliver 记丢弃计数；view dispose 关闸清队", async () => {
   const p = stubPanel()
   for (let i = 0; i < WV_OUTBOX_MAX + 5; i++) {

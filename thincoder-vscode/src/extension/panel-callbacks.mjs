@@ -27,8 +27,9 @@ import { makeChildPermission } from "@thincoder/core/agent-tools/child-permissio
 import { relaySubagentEventToken, relaySubagentContentChunk, emitToolPanel, postSubagentStatus, postSubagentApproval } from "./panel-subagent-relay.mjs"
 // 消费档 import 行逐字不变（KD-12）：`relaySubagentEventToken`（panel-messages.mjs:28 · 测试 2 档）·
 // `postSubagentEvent` / `flushSubagentOutbox` / `WV_OUTBOX_MAX`（suspension.mjs:27 · 测试 3 档）·
-// `emitToolPanel` / `relaySubagentContentChunk`（外部零消费）。
-export { relaySubagentEventToken, relaySubagentContentChunk, emitToolPanel, postSubagentEvent, flushSubagentOutbox, WV_OUTBOX_MAX } from "./panel-subagent-relay.mjs"
+// `emitToolPanel` / `relaySubagentContentChunk`（外部零消费）· `queuedInfoOf`（#118 R2——
+// suspension.mjs 重生投影读同一转口面）。
+export { relaySubagentEventToken, relaySubagentContentChunk, emitToolPanel, postSubagentEvent, flushSubagentOutbox, WV_OUTBOX_MAX, queuedInfoOf } from "./panel-subagent-relay.mjs"
 
 /**
  * Ask a question in the panel (persistent in-chat card, never auto-dismisses) — shared
