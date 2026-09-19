@@ -161,7 +161,10 @@
    边界：前条带 `tool_calls` 的变体（孤儿 `tool_result` 面）**不并**——配对安全优先（登记上抛，批次档 §2 F-3）；干净输入返回**同一数组引用**（零拷贝 / 零回归）。
    判据锚：`applySession` 线 `thincoder-core/test/compaction-echo.test.mjs`（形态计数 0 + 文本 / `tool_calls` 守恒）；VSC 面 `thincoder-vscode/test/**` 同形名用例（各面自持）。
 
-9. **活体推入面回声恒带（D-CC22）**：`reasoningEcho:"required"` 族（`thincoder-core/model-specs.mjs:33/35/38/40/42` deepseek · `:44/46/48` kimi · `:75/76` mimo）的**工具轮** assistant 消息经核单点构造 `assistantToolCallMessage(response, spec)`（`thincoder-core/model-specs.mjs`）推入 ⇒ **恒带** `reasoning_content`；本轮无推理 ⇒ **空串**（不省略字段——「必须回传」按字段在场判定）。真机三连（2026-09-20 · `deepseek-flash` · 带 `tools` · 同形历史）：空串 **200**（服务端仍回 `reasoning` 63 字符）/ 缺字段 **200**（`reasoning` 帧 **0**）/ 真值 **200**（104 字符）⇒ 空串合法；缺字段轮不再回推理，与 `advisor/loop.mjs:199-204` 自述同向（n=1 采样——症状面证据）。调用点（**三站点共享同一构造单点**，非各自内联）：主循环 `thincoder-core/agent.mjs:366-376` · advisor 循环 `thincoder-core/advisor/loop.mjs:205-215` · VSC 端壳自有循环 `thincoder-vscode/src/agent.mjs:387-397`（端取值 = `thincoder-vscode/src/specs.mjs` 的 `specForModel`，构造单点经该档转口复用；静态引合法（W8 契约②）= 结论——**闭包读数单源 = 批次档 `docs/batches/2026-09-20-reasoning-echo-gap.md` §2.9 ①**）。glm 族 / 未声明（`optional`）⇒ 恒不带（行为零改）。
+9. **活体推入面回声恒带（D-CC22）**：`reasoningEcho:"required"` 族（`thincoder-core/model-specs.mjs:33/35/38/40/42` deepseek · `:44/46/48` kimi · `:75/76` mimo）的**工具轮** assistant 消息经核单点构造 `assistantToolCallMessage(response, spec)`（`thincoder-core/model-specs.mjs`）推入 ⇒ **恒带**
+ `reasoning_content`；本轮无推理 ⇒ **空串**（不省略字段——「必须回传」按字段在场判定）。真机三连（2026-09-20 · `deepseek-flash` · 带 `tools` · 同形历史）：空串 **200**（服务端仍回 `reasoning` 63 字符）/ 缺字段 **200**（`reasoning` 帧 **0**）/ 真值 **200**（104 字符）⇒
+ 空串合法；缺字段轮不再回推理，与 `advisor/loop.mjs:199-204` 自述同向（n=1 采样——症状面证据）。调用点（**三站点共享同一构造单点**，非各自内联）：主循环 `thincoder-core/agent.mjs:366-376` · advisor 循环 `thincoder-core/advisor/loop.mjs:205-215` · VSC 端壳自有循环
+ `thincoder-vscode/src/agent.mjs:387-397`（端取值 = `thincoder-vscode/src/specs.mjs` 的 `specForModel`，构造单点经该档转口复用；静态引合法（W8 契约②）= 结论——**闭包读数单源 = 批次档 `docs/batches/2026-09-20-reasoning-echo-gap.md` §2.9 ①**）。glm 族 / 未声明（`optional`）⇒ 恒不带（行为零改）。
    **形状限定（2026-09-20 · 实现轮 184 探针 · 批次档 §2.11 ①）**：「缺字段 **200** · `reasoning` 帧 0」**仅设计轮形状（请求尾 = user）**成立；**活体形状（尾 = tool · 三站点产出形状）**实测 = 空串 **200** / 缺字段 **400**（逐字 `must be passed back`）· 真值 **200** · kimi 三形态全 **200** ⇒ 空串接受面双族已证（mimo 不可证——无凭证）。
 
 ### 6.11 已知 parity 说明
@@ -303,7 +306,8 @@ tools    = extras.tools（与回合请求同一声明面；**不随 tool_choice*
                                                             // （v1 曾定「不带」——实施轮实测推翻；v2 全形态（含 tool_choice:"none"）经 S3 实测否决 ⇒ 备选②，见上方分区）
 ```
 
-- **状态**：消息序 v1 **已落**（`thincoder-core/compress-form.mjs` + `context.mjs` 接线）；`tools` 行 = **v2 已实施**（2026-09-18 · `context.mjs` 落盘 494 → v3 后 **495**）——**落备选②**（带 tools、**不随 `tool_choice`**：该参数实测致服务端丢弃 tools 区 ⇒ 按预注册判定规则采纳备选②）；`reasoningEffort` 行 = **v3 已实施**（2026-09-18——**同源随带**：移除 `reasoningEffort: null` 覆盖 ⇒ 与回合同一字段；不硬编码 · 无配置 ⇒ 缺省）——**真机生产口径首现命中 92.86% / 93.65%**（两次独立运行，对照改前 0%）；派生差两则（百炼 qwen 族 / autoThink 窗口）⇒ 台账 **#56** 登记。
+- **状态**：消息序 v1 **已落**（`thincoder-core/compress-form.mjs` + `context.mjs` 接线）；`tools` 行 = **v2 已实施**（2026-09-18 · `context.mjs` 落盘 494 → v3 后 **495**）——**落备选②**（带 tools、**不随 `tool_choice`**：该参数实测致服务端丢弃 tools 区
+ ⇒ 按预注册判定规则采纳备选②）；`reasoningEffort` 行 = **v3 已实施**（2026-09-18——**同源随带**：移除 `reasoningEffort: null` 覆盖 ⇒ 与回合同一字段；不硬编码 · 无配置 ⇒ 缺省）——**真机生产口径首现命中 92.86% / 93.65%**（两次独立运行，对照改前 0%）；派生差两则（百炼 qwen 族 / autoThink 窗口）⇒ 台账 **#56** 登记。
 - **前缀构成**（= 可复用面）= `tools` 声明 + `system` + 中段（v2；v1 = `system` + 中段——实测该面未被命中）；**新增未命中面** = 尾部指令一条（+ ≤255 的块对齐残余）。中段 = `splitHistory` 的 `[headEnd, tailStart)`（KEEP_HEAD = 0 ⇒ head 空；§6.4② / ④）。
 - **摘要输入域（选中面）不变 / 表示面改变**（评审 #3 收正）：修前同样只喂中段（尾部不进摘要输入）⇒ **选中范围不变**；中段的**表示面**改变（序列化文本 → 真身消息 · 不截断）——信息量差异见下方质量风险表（旧「模型所见内容面无变化」句作废）。
 - **前缀对齐前提**：切点须是配对安全边界（`repairedTailStart` 保证中段自足）——否则发送期配对归一（`thincoder-core/provider/normalize.mjs`）会在压缩请求合成 `[Tool result missing: …]` 占位而回合请求不会，前缀自此分叉。

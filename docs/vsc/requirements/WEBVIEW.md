@@ -175,4 +175,5 @@ webview 只做 UI 渲染与用户交互；agent 循环与工具执行在 extensi
 - 2026-09-18 23:4x（**父侧直接执行 · 可 revert**——用户 23:33「live 区毛病一起修了」）：§2 新增**并入条目 F-A1–F-A5 / NFR-A1–A3**（异步任务可见性——自迁移期参照档 §3 收敛入基准层，编号承旧档；复发实据在册）；批 = `docs/batches/2026-09-18-init-block.md`。
 - 2026-09-19 08:1x（**父侧直接执行 · 可 revert —— 用户 08:11 裁定 A**）：**provider 行 ✕ 亦入确认门**（逐字「**A，也入。**」）——删行连带删其 `apiKey` 原文（`config-io.mjs:201-208` 写 / `:262-277` 整条 filter）⇒ 不可复得 ⇒ 与 MCP 行同判据；
   **F-W17 判据句与产出格收正**（原「非密钥类保持单击即删」/「非密钥类行为零回归」**两处作废**）；「单击即删」类自此**为空域**。新批 = `docs/batches/2026-09-19-vsc-provider-delete-confirm.md`。
-- 2026-09-19 20:5x（**父侧直接执行 · 可 revert**）：**实测入口册补第六行**（模型菜单 footer「Remove provider」——载体 `webview/model-picker.js:25` 直发 `removeProvider`（无 name ⇒ 宿 QuickPick 选）· 渲染位 `model-menu.js:128-134`；同消息第二载体、与 settings 面同判据入确认门）；**计数口径定案 = 册序**（本入口 = 入口册 #6/6，「不计死 handler」的口径作废）。批 = `docs/batches/2026-09-19-vsc-model-menu-delete-confirm.md`（设计评 pass id=142）。
+- 2026-09-19 20:5x（**父侧直接执行 · 可 revert**）：**实测入口册补第六行**（模型菜单 footer「Remove provider」——载体 `webview/model-picker.js:25` 直发 `removeProvider`（无 name ⇒ 宿 QuickPick 选）·
+ 渲染位 `model-menu.js:128-134`；同消息第二载体、与 settings 面同判据入确认门）；**计数口径定案 = 册序**（本入口 = 入口册 #6/6，「不计死 handler」的口径作废）。批 = `docs/batches/2026-09-19-vsc-model-menu-delete-confirm.md`（设计评 pass id=142）。

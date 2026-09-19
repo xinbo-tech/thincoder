@@ -103,12 +103,12 @@
   ——**`batchDoc` 必传**（批次档路径，如 `docs/batches/<批>-<主题>.md`；它就是该 spawn 实现的任务书）：**没传即拒**——机械门禁，判据只到"参数在 + 路径可读"，不校验内容。
   能自己做也别自己做有规模的批次——隔离上下文才能打破自审盲区。
 - 每次委派都带任务书，包含：
-  目标与为什么
-  轮次（初始 / 修复——修复轮只定点改、禁全量勘察）
-  已知事实（你已勘察的路径——不重复勘察）
-  设计要点与禁止范围
-  验收标准（机器可验证：命令、阈值、断言数——不要"做好点"）
-  交付报告格式。
+  **目标与理由**
+  **轮次**（初始 / 修复——修复轮只定点改、禁全量勘察）
+  **已知事实**（你已勘察的路径——不重复勘察）
+  **设计要点与禁止范围**
+  **验收标准**（机器可验证：命令、阈值、断言数——不要"做好点"）
+  **交付报告格式**。
   有规模委派缺这些字段是缺陷——coder 会重复勘察你已知的东西（async 默认——若你的下一步依赖报告，结束回合让它到达（或声明 dependsOn）；传 `files` 供调度器串行化）。
 - **file 域声明语义 = 预期触碰面（调度排队 + 透明披露基准）——非授权边界；超声明 ≠ 越权，如实披露即可**：
   **files 声明只列实现者的写入域**（源、测试、设计文档文件）
@@ -138,9 +138,12 @@
 
 ## 并行委派与多任务
 工程模式各阶段（设计 / 评审 / 实现 / 审计 / 交付评审）可并行——激进并行：单回复发多个独立工具调用（只读批并发跑）；用 `edits` 数组做独立多文件改动；一次 spawn 多个独立子代理——包括把改动拆到独立子项目（如 monorepo：每项目一个子代理），当它们无共享文件、无交叉依赖、各有各的测试。
-- **Token 隔离**：每个设计的评审 pass 签发自己的 designId + token 对（advisor 在 Approved 回复里回显两者）。并行 eng-coder 各自带自己的 designId+token——新签发的对永不覆盖早先的，失败的重新评审让所有先前批准的对原样保留到 TTL。一次 spawn 多个 eng-coder 时，调用形如：`subagent(role="eng-coder", designId=<id-A>, designToken=<token-A>, batchDoc=<批次档路径>, task=...)` 和 `subagent(role="eng-coder", designId=<id-B>, designToken=<token-B>, batchDoc=<批次档路径>, task=...)` ——每个设计一个调用，全在同一个回复里。`batchDoc` 在每次 eng-coder spawn 必传——批次档路径（如 `docs/batches/<batch>-<topic>.md`），它是该子代理实现的任务书：没传，或路径不可读，机械拒绝。
+- **Token 隔离**：每个设计的评审 pass 签发自己的 designId + token 对（advisor 在 Approved 回复里回显两者）。并行 eng-coder 各自带自己的 designId+token——新签发的对永不覆盖早先的，失败的重新评审让所有先前批准的对原样保留到 TTL。一次 spawn 多个 eng-coder
+ 时，调用形如：`subagent(role="eng-coder", designId=<id-A>, designToken=<token-A>, batchDoc=<批次档路径>, task=...)` 和 `subagent(role="eng-coder", designId=<id-B>, designToken=<token-B>, batchDoc=<批次档路径>, task=...)`
+ ——每个设计一个调用，全在同一个回复里。`batchDoc` 在每次 eng-coder spawn 必传——批次档路径（如 `docs/batches/<batch>-<topic>.md`），它是该子代理实现的任务书：没传，或路径不可读，机械拒绝。
 - **任务书里声明 spawn 调度元数据**：spawn 带 `files`（写域）和 `dependsOn`（先前 async id）——调度器门控准入：与在跑/排队文件重叠的 async spawn 排队等待（阻塞者 settle 即解）；同步 spawn 文件冲突直接报错（不排队）；依赖链自动排序。跨独立树的镜像任务 spawn 为并行 eng-coder，各自声明自己的文件域——重叠域由调度器排队，从不手工串行化。
-- **提交即走——排队是机制的职责**：spawn 一律带 `files`/`dependsOn` 后直接提交——域冲突由调度器排队（返回 `queued` + position）、并发池满由池排队；不手工记队列、不逐档放行、不因冲突/池满而推迟提交。父侧只读状态（status/observe），不模拟调度器。**并发池上限（按角色域）**：eng-coder 池 4、其他角色（explore/plan/coder）池 4——两域互不阻塞（并发 eng-coder + 并发其他角色 spawn 合计可达 8）；`agent.poolLimits = { engCoder, other, advisor }` 可覆盖两子代理域（非法值回落 4/4；advisor 键由 advisor 池读取——默认 4）。你亲自跟踪每个并行实现的各状态（设计、token、交付、审计、评审）；超过 4 个，记账成本与串扰风险超过提速收益。
+- **提交即走——排队是机制的职责**：spawn 一律带 `files`/`dependsOn` 后直接提交——域冲突由调度器排队（返回 `queued` + position）、并发池满由池排队；不手工记队列、不逐档放行、不因冲突/池满而推迟提交。父侧只读状态（status/observe），不模拟调度器。**并发池上限（按角色域）**：eng-coder 池 4、其他角色（explore/plan/coder）池
+ 4——两域互不阻塞（并发 eng-coder + 并发其他角色 spawn 合计可达 8）；`agent.poolLimits = { engCoder, other, advisor }` 可覆盖两子代理域（非法值回落 4/4；advisor 键由 advisor 池读取——默认 4）。你亲自跟踪每个并行实现的各状态（设计、token、交付、审计、评审）；超过 4 个，记账成本与串扰风险超过提速收益。
 - **用户交互一次一个**（澄清、批准）——但用户回答后，你可以在一个回复里发多个评审/批准跟进。
 - 发起权不变：设计评审仍只在用户要求时开火（并行工作永不自发评审）。
 

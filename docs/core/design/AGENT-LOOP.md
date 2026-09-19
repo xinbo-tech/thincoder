@@ -238,7 +238,10 @@ runAgent(agent, input, callbacks, { depth, signal, maxTurns, resume, autoTurn, s
 
 ### 6.4 工具调度与权限（`dispatch` 两段式）
 
-**工具轮 assistant 消息构造（回声恒带——`CONTEXT-COMPACTION.md` §7 D-CC22）**：模型回复带 `tool_calls` 时，入史消息由核单点 `assistantToolCallMessage(response, spec)`（`thincoder-core/model-specs.mjs`）构造后 `pushReal`（`thincoder-core/agent.mjs:366-376`）——`reasoningEcho:"required"` 族（deepseek / kimi / mimo）**恒带** `reasoning_content`，本轮无推理取**空串**（真机实证 · **活体形状（请求尾 = tool）**：空串 / 真值被接受 · 缺字段 **400**（`must be passed back`）；「缺字段 **200** · 服务端不再回推理」= **设计轮形状（尾 = user）**读数——形状限定见批次档 `docs/batches/2026-09-20-reasoning-echo-gap.md` §2.11 ①）。`optional`（glm 族）/ 未声明族恒不带（行为不变）。显示面零改（`history-window.mjs` `reasoningOf` 对空串返回 null——不出幽灵帧）。**第三站点（2026-09-20 补）**：VSC 端壳自有 depth-0 循环同经本单点（`thincoder-vscode/src/agent.mjs:387-397`——端 `thincoder-vscode/src/specs.mjs` 取值 × 单点构造；静态引合法（W8 契约②）= 结论——**闭包读数单源 = 批次档 `docs/batches/2026-09-20-reasoning-echo-gap.md` §2.9 ①**）；端侧接线事实见 §6.18 表。
+**工具轮 assistant 消息构造（回声恒带——`CONTEXT-COMPACTION.md` §7 D-CC22）**：模型回复带 `tool_calls` 时，入史消息由核单点 `assistantToolCallMessage(response, spec)`（`thincoder-core/model-specs.mjs`）构造后 `pushReal`（`thincoder-core/agent.mjs:366-376`）——`reasoningEcho:"required"`
+ 族（deepseek / kimi / mimo）**恒带** `reasoning_content`，本轮无推理取**空串**（真机实证 · **活体形状（请求尾 = tool）**：空串 / 真值被接受 · 缺字段 **400**（`must be passed back`）；「缺字段 **200** · 服务端不再回推理」= **设计轮形状（尾 =
+ user）**读数——形状限定见批次档 `docs/batches/2026-09-20-reasoning-echo-gap.md` §2.11 ①）。`optional`（glm 族）/ 未声明族恒不带（行为不变）。显示面零改（`history-window.mjs` `reasoningOf` 对空串返回 null——不出幽灵帧）。**第三站点（2026-09-20 补）**：VSC 端壳自有 depth-0
+ 循环同经本单点（`thincoder-vscode/src/agent.mjs:387-397`——端 `thincoder-vscode/src/specs.mjs` 取值 × 单点构造；静态引合法（W8 契约②）= 结论——**闭包读数单源 = 批次档 `docs/batches/2026-09-20-reasoning-echo-gap.md` §2.9 ①**）；端侧接线事实见 §6.18 表。
 
 **Phase 1 预审**（全部 toolCalls 先过一遍，任一被拒不影响其他）：
 
@@ -541,7 +544,9 @@ VSC 侧**接线**面（端装配 / 面板 / webview 呈现）——机制本体�
 - 2026-09-19（**批 2026-09-19-upstream-channel-availability · 设计轮 · eng-designer**——承需求 §4.12 F-UC7 / 台账 #104）：§2.3「载体字段集与回写义务」**11 款 → 13 款**（补 `_childUpstream` 子→父在飞队列 · `_childUpstreamSeq` 单调计数——§6.27 上行通道面；前批只在本表以「同列」引用、表未同步，本批对齐）；
   同题联改六处：seam 表 `carrier` 行字段清单扩至 13 · 全集结论句改「13 款即全集」· 唤醒栓「兑现」点由 `async-settle.mjs:270`（时点坐标已陈旧）改指**核单点 `wakeAsyncWaiters(parent)`**（settle 公共尾 `:281` + 上行 ask 入队尾两处调用）· 「借用 / 新建」单点表补 `upstreamHolder` · VSC 绑定不变式「全部 11 字段」→「全部 13 字段」（并注明端壳表未含两款 · 另案）· 验收点 2 夹具 11 款 → 13 款。
   机制本体落 `AGENT-LOOP-SUBAGENT.md` §6.27.12（唤醒面）；本档只做字段集一致性对齐，零机制裁决。
-- 2026-09-20（**thinking 回传缺口批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-20-reasoning-echo-gap.md` §1 · 台账 #109）：§6.4 新增「工具轮 assistant 消息构造（回声恒带）」契约行（核单点 `assistantToolCallMessage`——required 族恒带 `reasoning_content`，缺值 ⇒ 空串）；判据与机制单源 = `CONTEXT-COMPACTION.md` §6.10 #9 / §7 D-CC22（本档不复制否决表）；落点 = `thincoder-core/model-specs.mjs` + `config.mjs` re-export + `thincoder-core/agent.mjs:366-376`（advisor 镜像面归 `ADVISOR-CONVERGENCE.md` 变更记录）。本档 as-of **541 行**（**超 500 硬限**——沿革自 D-CC18 批登记的 506 → 537 序列；结构债归总账）；本设计轮落笔后 **544 行**。
+- 2026-09-20（**thinking 回传缺口批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-20-reasoning-echo-gap.md` §1 · 台账 #109）：§6.4 新增「工具轮 assistant 消息构造（回声恒带）」契约行（核单点 `assistantToolCallMessage`——required 族恒带
+ `reasoning_content`，缺值 ⇒ 空串）；判据与机制单源 = `CONTEXT-COMPACTION.md` §6.10 #9 / §7 D-CC22（本档不复制否决表）；落点 = `thincoder-core/model-specs.mjs` +
+ `config.mjs` re-export + `thincoder-core/agent.mjs:366-376`（advisor 镜像面归 `ADVISOR-CONVERGENCE.md` 变更记录）。本档 as-of **541 行**（**超 500 硬限**——沿革自 D-CC18 批登记的 506 → 537 序列；结构债归总账）；本设计轮落笔后 **544 行**。
 - 2026-09-20（**thinking 回传缺口批 · fix 轮（第三站点）· eng-designer**——承 `docs/batches/2026-09-20-reasoning-echo-gap.md` §2.9）：§6.4 契约行补第三站点（VSC 端壳自有循环 `thincoder-vscode/src/agent.mjs:387-397`）；§6.18 表新增「端壳自有循环工具轮推入面」行（七面 → 八面）；上条裸文件名死锚已收正为核路径形态。本档 as-of **547 行**（**超 500 硬限**沿革在册）。
 - 2026-09-20（**thinking 回传缺口批 · 设计评审轮 1 收正 · eng-designer**——承批次档 `docs/batches/2026-09-20-reasoning-echo-gap.md` §3 轮次 1：🟡#3 · 🔵#5）：§6.4 与 §6.18 两行的 W8 闭包读数改**指针形态**（单源 = 该批 §2.9 ①）；§6.18 新增行并入表体（删空行）。机制条文其余零改。
 - 2026-09-20（**thinking 回传缺口批 · 实现轮探针证据收正 · eng-designer**——承批次档 §2.11 ①）：§6.4 契约行的真机实证句补**形状限定**（活体形状（尾 = tool）：缺字段 = **400**；「缺字段 200 · 服务端不再回推理」仅设计轮形状（尾 = user）成立）。机制条文零改。

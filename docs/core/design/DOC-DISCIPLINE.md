@@ -501,7 +501,8 @@ node -e "const fs=require('fs');let n=0;fs.readdirSync('.',{recursive:true}).for
 | 3 | `docs/core/design/PROMPT-SYSTEM.md` | `:21` `:23` `:157` `:182` | 核内落点 / 运行面 / 双面 / 落点四行 |
 | 4 | `docs/core/design/TOOLS.md` | `:272`（现 `:271`——该档 `:229` 整条删后行号 −1） | 描述装载面行「25 档随包发布」 |
 
-**执行（2026-09-19 · 父侧直接执行 · 可 revert）**：A 类 **7 处全部收正**（25 → 24）——`ARCHITECTURE.md:58` · `DOC-SYSTEM.md:142` · `PROMPT-SYSTEM.md:21`/`:23`/`:157`/`:182` · `TOOLS.md`（原 `:272`）；附带 `docs/core/requirements/PROMPT-SYSTEM.md:12`（现态陈述行——同口径）。B 类 3 处（`PROMPT-SYSTEM.md:17` · `TOOLS.md:16` · `DOC-SYSTEM.md:181`）零触碰。**机判（子集判）现态 = 命中集 ⊆ 豁免集** ✓（A-DD19 ④ / DD-44 满足）。
+**执行（2026-09-19 · 父侧直接执行 · 可 revert）**：A 类 **7 处全部收正**（25 → 24）——`ARCHITECTURE.md:58` · `DOC-SYSTEM.md:142` · `PROMPT-SYSTEM.md:21`/`:23`/`:157`/`:182` · `TOOLS.md`（原
+ `:272`）；附带 `docs/core/requirements/PROMPT-SYSTEM.md:12`（现态陈述行——同口径）。B 类 3 处（`PROMPT-SYSTEM.md:17` · `TOOLS.md:16` · `DOC-SYSTEM.md:181`）零触碰。**机判（子集判）现态 = 命中集 ⊆ 豁免集** ✓（A-DD19 ④ / DD-44 满足）。
 
 **B 类（零触碰 · 在册残差）**：`docs/core/design/PROMPT-SYSTEM.md:17` · `docs/core/design/TOOLS.md:16`（产品侧副本行——带「已随 U2 / W2 删，实核空」史实谓词）· `docs/core/design/CORE-UNIFICATION.md` 全族（迁移工作流档 as-of 读数 + F / T / D 表）。
 
