@@ -27,6 +27,7 @@ import {
   MIN_REPORT_CHARS, REPORT_CONTINUATION,
   AUTO_TURN_DIGEST_DOMAIN,
   UPSTREAM_TURN_DOMAIN, // §6.27.12.8：上行唤醒轮域文本（手动档——ask 轮不沿用 digest 域文本）
+  restoreGuard, // §17 D-S6 读侧单点（P2 机制层端差批 §2.18——键清单归核）
 } from "./agent/helpers.mjs"
 // ENG 提醒族 + auto-turn domain 2026-09-05 迁 agent/helpers.mjs（agent.mjs 530 > 500 硬限）
 // PROMPT-SYSTEM 施工② G1（2026-09-10）：六件槽位常量装载收口 prompt-overlays.mjs
@@ -145,7 +146,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     // reset) so auto-turn changes never escape the guard silently.
     const g = agent._inheritedGuard
     if (g) {
-      for (const k of ["_mutatedThisRun", "_verifiedThisRun", "_verifyPassed", "_calledAdvisorThisRun", "_touchedFiles", "_verifyRetries", "_advisorRound"]) agent[k] = g[k]
+      restoreGuard(agent, g)
       agent._inheritedGuard = null
     } else {
       agent._mutatedThisRun = false

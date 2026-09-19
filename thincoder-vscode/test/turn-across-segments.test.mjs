@@ -152,3 +152,14 @@ test("T11 种子锚（错误）：escalate-async 续跑支种子传参驻留（�
   // + 真 runChild opts 断言）——重复项删。
   // 2026-09-12 PROSE-ANCHOR-RETIRE：种子锚（读 src 子串）删——散文锚（判据见 CLI 侧设计档 TESTING.md §11）。
 })
+
+// ─── T12：ContinueError 单类（P2 机制层端差批 §2.23——结构性锁）──────────────
+
+test("T12 ContinueError 单类（结构）：端转口 === 核权威类（字段 `turn`——旧端字段 `turns` 退场）", async () => {
+  const core = await import("@thincoder/core/agent/helpers.mjs")
+  assert.equal(ContinueError, core.ContinueError, "端壳转口 = 核类（同一对象——跨域 instanceof 不失配）")
+  const e = new ContinueError(5)
+  assert.equal(e.turn, 5, "字段 = turn（核 `helpers.mjs:209` 同形）")
+  assert.equal(e.name, "ContinueError")
+  assert.equal(new core.ContinueError(3) instanceof ContinueError, true, "核侧抛错可被端壳识别（反之亦然）")
+})

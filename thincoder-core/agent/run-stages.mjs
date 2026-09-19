@@ -8,7 +8,7 @@
  */
 
 import { compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT } from "../context.mjs"
-import { ensureAutoReminder, injectEngineeringReminder, ContinueError } from "./helpers.mjs"
+import { ensureAutoReminder, injectEngineeringReminder, ContinueError, snapshotGuard } from "./helpers.mjs"
 import { pushManifestStateReminder } from "./setup-reminders.mjs"
 import { cleanupConsultSessions } from "../agent-tools/consult.mjs"
 import { logEvent } from "../log.mjs"
@@ -199,12 +199,8 @@ export async function finalizeAgentTurn(agent, ctx) {
   // !resume reset above). Normal ends only — abort discards; ContinueError lets the
   // auto-resumed run snapshot at its own end.
   if (autoTurn && !(signal?.aborted && !signal?.reason?.interrupt) && !(thrownError instanceof ContinueError)) {
-    agent._inheritedGuard = {
-      _mutatedThisRun: agent._mutatedThisRun, _verifiedThisRun: agent._verifiedThisRun,
-      _verifyPassed: agent._verifyPassed, _calledAdvisorThisRun: agent._calledAdvisorThisRun,
-      _touchedFiles: agent._touchedFiles, _verifyRetries: agent._verifyRetries,
-      _advisorRound: agent._advisorRound,
-    }
+    // 键清单/快照形态单源 = helpers.mjs（P2 机制层端差批 §2.18——端侧经同一 helper 取同清单）
+    agent._inheritedGuard = snapshotGuard(agent)
   }
 }
 

@@ -9,7 +9,12 @@
  * `onSubagentApproval` 两装配点改委托该档转口（R-4）。
  */
 
-import { ctxPercentForModel } from "../specs.mjs"
+import { ctxPercentForHistory } from "../specs.mjs"
+// X6（显示面消差批 §2.2）：sync 完成注记锚（turn-cap / stopped-by-user）——核零依赖叶
+// （`child-marks.mjs`；静态引入安全：该叶零 import ⇒ 端壳静态闭包不达 node:sqlite——W8 契约②）。
+import { TURN_CAP_MARK, STOPPED_MARK } from "@thincoder/core/agent/child-marks.mjs"
+// X2（显示面消差批 §2.1）：advisor 生效模型解析——核单源（CLI `tool-events.mjs:131` 同函数；try/catch 降 null；静态链不达 node:sqlite）。
+import { resolveAdvisorProvider } from "@thincoder/core/advisor/run.mjs"
 import { extractFileLinks } from "./file-links.mjs"
 import { permissionGate, batchPermissionGate } from "./permission-gate.mjs"
 import { notifyCompletionIfUnfocused } from "./notify.mjs"
@@ -79,13 +84,33 @@ export function postDigestCap(panel, mode, turns) {
   panel._panel?.webview.postMessage({ type: "digest", status: "cap", mode, turns })
 }
 
-/** ⑥（2026-09-19）sync 子代理完成锚：`<role>#<id>` 键 → `done` 载荷（键文法单源 = `parseRelayPath`）。 */
-function settleSyncSubagent(panel, key) {
+/** ⑥（2026-09-19）sync 子代理完成锚：`<role>#<id>` 键 → `done` 载荷（键文法单源 = `parseRelayPath`）。
+ *  X6（显示面消差批 §2.2）：`note` = 块头注记（turn-cap / 停面——判据见 `syncNoteOf`；无注记 null）。 */
+function settleSyncSubagent(panel, key, note) {
   const path = parseRelayPath(`${String(key)}/`)
   const hash = path && path.inner.length === 0 ? path.head.indexOf("#") : -1
   const id = hash > 0 ? Number(path.head.slice(hash + 1)) : NaN
   if (!Number.isFinite(id)) return
-  postSubagentStatus(panel, { status: "done", role: path.head.slice(0, hash), id })
+  postSubagentStatus(panel, { status: "done", role: path.head.slice(0, hash), id, note: note ?? null })
+}
+
+/** X6（显示面消差批 §2.2 · 判据与 CLI `tool-events.mjs:217` 同源同序）：sync 完成注记——
+ *  turn-cap 锚 ⇒ `turn cap reached — work may be partial`；停面锚 ⇒ `stopped by user — work may be partial`；
+ *  否则 null（零注记——**不伪造**）。锚常量 = 核单源（`child-marks.mjs`），禁字面复制。 */
+function syncNoteOf(result) {
+  const s = String(result ?? "")
+  if (s.includes(TURN_CAP_MARK)) return "turn cap reached — work may be partial"
+  if (s.includes(STOPPED_MARK)) return "stopped by user — work may be partial"
+  return null
+}
+
+/** X2（显示面消差批 §2.1）：advisor 卡头 / 状态行补充字段——字面与判据同源 CLI `tool-events.mjs:131` /
+ *  `:145` `:152`（`round = _advisorRound + 1`）；非 advisor 不调用 ⇒ 零字段。 */
+function advisorMeta(panel) {
+  const agent = panel?._agent
+  let model = null
+  try { model = resolveAdvisorProvider(agent).model ?? null } catch { model = null }
+  return { round: (agent?._advisorRound ?? 0) + 1, model }
 }
 
 /**
@@ -163,29 +188,40 @@ export function buildPanelCallbacks(panel, deps) {
       totalUsage.prompt_cache_hit_tokens += u.prompt_cache_hit_tokens ?? 0
       totalUsage.prompt_cache_miss_tokens += u.prompt_cache_miss_tokens ?? 0
       totalUsage.reasoning_tokens += u.reasoning_tokens ?? 0 // C-12#6：✦ 段（transports 映射补全）
-      const ctxPct = ctxPercentForModel(u.prompt_tokens, p)
+      // M2（§2.1）：分子 = 核 `estimateTokens(history)`（与 CLI 状态行同源同式——`render-frame.mjs:388-389`）。
+      const ctxPct = ctxPercentForHistory(history, p)
       panel._panel?.webview.postMessage({ type: "usage", usage: { ...totalUsage }, ctxPct })
     },
     onToolCall: (n, a, id) => {
       if (relaySubagentContentChunk(panel, "toolCall", n, a)) return
-      panel._panel?.webview.postMessage({ type: "toolCall", name: n, args: JSON.stringify(a, null, 2), id })
+      // X2：advisor 携 `round` + `model`（其余工具零字段——webview 无 round ⇒ 逐字节同修前）。
+      const meta = n === "advisor" ? advisorMeta(panel) : null
+      panel._panel?.webview.postMessage({ type: "toolCall", name: n, args: JSON.stringify(a, null, 2), id, ...(meta ?? {}) })
     },
     onToolResult: (n, r, id, subKey) => {
       // ⑥（2026-09-19）第 4 参 `_subagentKey` = sync 子代理完成锚（核 `dispatch.mjs:441` 传入；
       // 仅 sync 成功 / 折叠路径设置）⇒ 该参在即补 `done`（块冻结 + 归档落流——CLI `finishSubTaskKey`
       // 对位）；无该参（async ack / 普通工具）零动作。与内容面分流互不排斥（两事同点）。
-      if (subKey) settleSyncSubagent(panel, subKey)
+      if (subKey) settleSyncSubagent(panel, subKey, syncNoteOf(r))
       // 第五路调用面：工具结果行按 relay 前缀分流（face = `toolResult`——命中则不入主流）。
       if (relaySubagentContentChunk(panel, "toolResult", n, r)) return
-      const text = (r || "").slice(0, 64 * 1024)
+      // X5（§2.2）：切片点携**事实旗标**（静默发生在本行）；`String(r ?? "")` 取代 `(r || "")`：falsy
+      // 非串结果（`0` / `false`）文本由空变 `"0"`（记录形——§2.10.8 #13）。
+      const full = String(r ?? "")
+      const text = full.slice(0, 64 * 1024)
+      const truncated = full.length > text.length
       // Verified workspace-real paths ride along so the webview can linkify them.
       const links = extractFileLinks(cwd, text)
-      panel._panel?.webview.postMessage({ type: "toolResult", name: n, text, id, links })
+      panel._panel?.webview.postMessage({ type: "toolResult", name: n, text, id, links, truncated })
     },
     // Live output streaming (bash etc.) — chunks append to the running tool card.
     onToolOutput: (n, chunk, id) => {
       if (relaySubagentContentChunk(panel, "toolOutput", n, chunk)) return
-      panel._panel?.webview.postMessage({ type: "toolOutput", name: n, text: chunk, id })
+      // M3（§2.2）：`[object Object]` —— 核 sync 评审 chunk = `{ kind, text }` 对象（`advisor/loop.mjs:82`
+      // emit），无 relay 前缀 ⇒ 直通至此 ⇒ 对象入载荷。端边界归一（CLI 逐字先例 `tool-events.mjs:322-324`）：
+      // 非串取 `.text`；`kind` 随行保留为可选字段（webview 现只消费 `text`——不新增消费面）。
+      const text = typeof chunk === "string" ? chunk : String(chunk?.text ?? "")
+      panel._panel?.webview.postMessage({ type: "toolOutput", name: n, text, kind: chunk?.kind ?? null, id })
     },
     onToolPanel: (name, chunk) => emitToolPanel(panel, name, chunk),
     onComplete: (content, agentState) => {

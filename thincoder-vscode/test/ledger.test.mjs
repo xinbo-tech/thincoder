@@ -18,10 +18,15 @@ import files from "./files.mjs"
 import { slow } from "./slow.mjs"
 import {
   buildScan, entryTitle, formatAgingLine, formatDetailLine, formatMarker, formatThresholdLine,
-  ledgerAdd, ledgerDbPath, loadNotifyState, normalizeEntry, notifyKey, openLedger, planChangeLines,
+  ledgerAdd, ledgerCountTool, ledgerDbPath, ledgerQueryTool, loadNotifyState, normalizeEntry, notifyKey, openLedger, planChangeLines,
   _resetLedgerDirForTest, _setLedgerDirForTest,
 } from "@thincoder/core/ledger.mjs"
 import { _setLedgerSurfaceForTest, dispose as disposeLedgerSurface, initLedgerSurface, pushLedgerStartup, refreshLedger } from "../src/extension/ledger-surface.mjs"
+// P2 机制层端差批 §2.19（T-LQ1–T-LQ4）：装配面直驱（hydrateRun = 生产入口同函数）
+import { buildTopLevelAgent, hydrateRun } from "../src/agent/setup.mjs"
+import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
+import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-slots.mjs"
+import { _gitFailureCooldownForTests, _clearGitFailureCooldownForTests } from "../src/agent/setup-reminders.mjs"
 
 let tmp
 beforeEach(() => {
@@ -245,4 +250,75 @@ test("T102 边界：老化界值（29 / 31 天 + 触发表态）", () => {
   db.prepare("UPDATE items SET created_at = NULL, updated_at = NULL WHERE title = ?").run(techEntry("乙"))
   db.close()
   assert.equal(buildScan({ cwd: proj }).aged, 0, "行龄未知 → 不计且不抛")
+})
+
+// ── P2 机制层端差批 §2.19：台账查询两工具装配面（T-LQ1–T-LQ4）────────────────
+// 面 = 生产装配入口 `hydrateRun`（setupAgentRun 同函数）；夹具 = 临时 config / 会话目录 + 隔离 cwd
+// （git 零 spawn）+ 台账 tmp 夹具（本档既有 `mkLedgerAt`）。
+
+/** 装配面夹具：隔离 cwd + 临时 config 路径（providers 空池）+ git 失败冷却（零 spawn）。 */
+function hydrateFixture() {
+  const proj = join(tmp, "lq-proj")
+  mkdirSync(proj, { recursive: true })
+  writeFileSync(join(tmp, "lq-config.json"), JSON.stringify({ providers: [], defaultModel: null }))
+  _setConfigPathForTest(join(tmp, "lq-config.json"))
+  _setSessionsDirForTest(join(tmp, "lq-sessions"))
+  _gitFailureCooldownForTests(proj, Date.now())
+  return proj
+}
+
+function hydrateTeardown(proj) {
+  _setConfigPathForTest(null)
+  _resetSessionsDirForTest()
+  _clearGitFailureCooldownForTests(proj)
+}
+
+/** 装配直驱（depth-0 主会话形态 = 面板调用同参；`agent.config` 由此整建）。 */
+const hydrate = (proj, over = {}) => hydrateRun(buildTopLevelAgent(), {
+  provider: { model: "deepseek-v4-pro" }, cwd: proj, input: "hi",
+  opts: { engState: { enabled: false } }, depth: 0, role: null, getAuto: () => false, ...over,
+})
+const namesOf = (r) => r.toolSchemas.map((s) => s.function.name)
+
+test("T-LQ1 正常（装配面）：台账查询两工具入基础集——各恰 1（零重名）+ 同一核工具对象", async () => {
+  const proj = hydrateFixture()
+  try {
+    const r = await hydrate(proj)
+    const names = namesOf(r)
+    assert.equal(names.filter((n) => n === "ledger_query").length, 1, "ledger_query 恰一次（零重名——provider 400 类根因）")
+    assert.equal(names.filter((n) => n === "ledger_count").length, 1, "ledger_count 恰一次")
+    assert.ok(r.agent.tools.some((t) => t.name === "ledger_query"), "入绑定值 baseSet（子代装配同口径）")
+    assert.equal(r.toolByName.get("ledger_query"), ledgerQueryTool, "端侧零第二实现（同一核工具对象）")
+    assert.equal(r.toolByName.get("ledger_count"), ledgerCountTool)
+  } finally { hydrateTeardown(proj) }
+})
+
+test("T-LQ2 边界（只读角色）：depth>0 explore ⇒ 两查询工具仍在（readonly 放行）", async () => {
+  const proj = hydrateFixture()
+  try {
+    const r = await hydrate(proj, { depth: 1, role: "explore", opts: {} })
+    const names = namesOf(r)
+    assert.ok(names.includes("ledger_query") && names.includes("ledger_count"), "只读角色两工具在装")
+  } finally { hydrateTeardown(proj) }
+})
+
+test("T-LQ3 正常（执行形状）：ledger_query 行集 JSON · ledger_count = {count:N}", async () => {
+  const proj = hydrateFixture()
+  try {
+    mkLedgerAt(proj, [{ row: poolRow("甲") }, { row: techRow("乙") }])
+    const rows = JSON.parse(await ledgerQueryTool.execute({}, { agent: { cwd: proj } }))
+    assert.equal(rows.length, 2, "行集 = 未决两态各 1")
+    assert.ok(rows.some((x) => String(x.title ?? "").includes("甲")), "行集内容 = 台账条目")
+    assert.deepEqual(JSON.parse(await ledgerCountTool.execute({}, { agent: { cwd: proj } })), { count: 2 }, "计数 = 未决四态 COUNT(*)")
+  } finally { hydrateTeardown(proj) }
+})
+
+test("T-LQ4 边界（写面零回归）：写命令仍只在 depth-0 装配（子代 fail-closed）", async () => {
+  const proj = hydrateFixture()
+  try {
+    const top = namesOf(await hydrate(proj))
+    const child = namesOf(await hydrate(proj, { depth: 1, role: "coder", opts: {} }))
+    assert.ok(top.includes("ledger_add"), "depth-0 主 agent 写面在装")
+    assert.ok(!child.includes("ledger_add"), "子代写面不可达（核面行为不变）")
+  } finally { hydrateTeardown(proj) }
 })

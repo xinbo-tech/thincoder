@@ -107,11 +107,11 @@ export async function runTurnLoop(panel, deps) {
           // §17 D-S9 ContinueError row (digest): NO panel — AUTO auto-resumes (§2 unified rule);
           // manual stops silently (partial digest stays in history — no lost reports).
           if (panel._autoApprove) {
-            postDigestCap(panel, "auto", e.turns) // §14 C-10：cap 行（auto——继续推进）
+            postDigestCap(panel, "auto", e.turn) // §14 C-10：cap 行（auto——继续推进）
             newTurnController(panel)
             continue
           }
-          postDigestCap(panel, "stop", e.turns) // §14 C-10：cap 行（stop——部分消化）
+          postDigestCap(panel, "stop", e.turn) // §14 C-10：cap 行（stop——部分消化）
           tLog.result = "stopped"
           break
         }
@@ -121,7 +121,7 @@ export async function runTurnLoop(panel, deps) {
         // is already pushed; resume=true skips re-pushing it). Unlimited continues —
         // the user can Stop at any prompt.
         const willContinue = await askInPanel(
-          `Agent reached ${e.turns} turns (limit). Continue from here?`,
+          `Agent reached ${e.turn} turns (limit). Continue from here?`,
           ["Continue", "Stop"],
         )
         if (willContinue === "Continue") {

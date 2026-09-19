@@ -14,7 +14,12 @@
  * `releasePermission`（出队 + resolve + `permissionWithdrawn`）——挂三路：
  * ① opts.signal（child 定向取消/⏹）② panel._abortController（轮级 Stop）
  * ③ approve-all 连带（panel-messages.mjs 消费同一 helper）。
+ *
+ * P2 批 §2.20（#165 落点）：**闸语义 / 请示流程改经核单源**——`askPermission`
+ * （`@thincoder/core/permission.mjs:60-64`）的 `io.ask` 缝；本端只供**展示面**
+ * （面板卡片 / 队列 / 释放三路）——卡片形态与载荷零改。
  */
+import { askPermission } from "@thincoder/core/permission.mjs"
 
 /**
  * Unified release（§18 C-6）: dequeue + resolve + post `permissionWithdrawn`
@@ -47,33 +52,36 @@ export function releasePermission(panel, entry, verdict, queue) {
  * @param {{ _autoApprove: boolean, _permissionQueue: {resolve: Function}[], _panel?: { webview: { postMessage: Function } } }} panel
  */
 export function permissionGate(panel) {
-  return (toolName, args, diffInfo, opts) => new Promise((resolve) => {
-    // Re-check on every invocation: approve-all / AUTO may have flipped the
-    // flag after this gate was built. Honoring it immediately stops repeated
-    // permission prompts for the rest of the running turn.
-    if (panel._autoApprove) { resolve(true); return }
-    // C-4：promptId = 单调计数（question 的 _questionSeq 同构）——webview 响应按 id 精确路由
-    panel._permissionSeq = (panel._permissionSeq ?? 0) + 1
-    const id = panel._permissionSeq
-    const entry = { id, resolve, toolName, owner: opts?.owner ?? null }
-    panel._permissionQueue.push(entry)
-    panel._setStatus?.("waiting")
-    panel._panel?.webview.postMessage({ type: "permissionRequest", tool: toolName, args: JSON.stringify(args, null, 2), diff: diffInfo, owner: opts?.owner?.label ?? null, promptId: id })
-    const release = (verdict) => releasePermission(panel, entry, verdict)
-    // Stop must release a permission-parked turn — otherwise the loop hangs on
-    // this promise until the user answers the (now irrelevant) prompt.
-    // C-6 ②：轮级 Stop（panel._abortController abort——F-6：不停后台池）→ deny 释放。
-    const onAbort = () => release(false)
-    const turnSig = panel._abortController?.signal
-    if (turnSig?.aborted) onAbort()
-    else turnSig?.addEventListener("abort", onAbort, { once: true })
-    // C-6 ①：child 定向取消（opts.signal = 条目级 controller——⏹/cancel/会话中止逐链）
-    // → deny 释放 + 卡移除（Q3：一机制覆盖三路——模型 cancel 与会话中止同路径）。
-    const sig = opts?.signal
-    if (sig) {
-      if (sig.aborted) onAbort()
-      else sig.addEventListener("abort", onAbort, { once: true })
-    }
+  // 闸语义 / 请示流程 = 核单源（P2 批 §2.20——`askPermission` 的 `io.ask` 缝）；本端只供展示面。
+  return (toolName, args, diffInfo, opts) => askPermission(toolName, args, {
+    ask: () => new Promise((resolve) => {
+      // Re-check on every invocation: approve-all / AUTO may have flipped the
+      // flag after this gate was built. Honoring it immediately stops repeated
+      // permission prompts for the rest of the running turn.
+      if (panel._autoApprove) { resolve(true); return }
+      // C-4：promptId = 单调计数（question 的 `_questionSeq` 同构）——webview 响应按 id 精确路由
+      panel._permissionSeq = (panel._permissionSeq ?? 0) + 1
+      const id = panel._permissionSeq
+      const entry = { id, resolve, toolName, owner: opts?.owner ?? null }
+      panel._permissionQueue.push(entry)
+      panel._setStatus?.("waiting")
+      panel._panel?.webview.postMessage({ type: "permissionRequest", tool: toolName, args: JSON.stringify(args, null, 2), diff: diffInfo, owner: opts?.owner?.label ?? null, promptId: id })
+      const release = (verdict) => releasePermission(panel, entry, verdict)
+      // Stop must release a permission-parked turn — otherwise the loop hangs on
+      // this promise until the user answers the (now irrelevant) prompt.
+      // C-6 ②：轮级 Stop（panel._abortController abort——F-6：不停后台池）→ deny 释放。
+      const onAbort = () => release(false)
+      const turnSig = panel._abortController?.signal
+      if (turnSig?.aborted) onAbort()
+      else turnSig?.addEventListener("abort", onAbort, { once: true })
+      // C-6 ①：child 定向取消（opts.signal = 条目级 controller——⏹/cancel/会话中止逐链）
+      // → deny 释放 + 卡移除（Q3：一机制覆盖三路——模型 cancel 与会话中止同路径）。
+      const sig = opts?.signal
+      if (sig) {
+        if (sig.aborted) onAbort()
+        else sig.addEventListener("abort", onAbort, { once: true })
+      }
+    }),
   })
 }
 

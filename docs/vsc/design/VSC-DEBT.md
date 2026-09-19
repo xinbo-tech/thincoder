@@ -268,7 +268,17 @@
 **上行通道批（2026-09-19-upstream-channel-availability）读数收正（2026-09-20 · 实现轮实核；口径 `find /c /v ""` ≡ `wc -l`）**：
 `thincoder-vscode/src/extension/suspension.mjs` **397 → 406**（>300 咨询线、≤500 硬限；本批净增 = 开轮谓词 + 旗标 + 日志载荷）；
 `thincoder-vscode/src/agent.mjs` **485 → 492**（**逼近 500 硬限（余 8 行）**——N-P3 口径；本批净增 = 端壳 drain 消费点 + 载体表 12 → 14 款 + 旗标 + 域文本组合调用；
-**拆分计划已落地** = 域文本常量族外提 `thincoder-vscode/src/agent/turn-domains.mjs`（本批新增档，该档净移出 8 行）；**触发 = 该档下次触碰**）。
+**拆分计划已落地** = 域文本常量族外提 `thincoder-vscode/src/agent/turn-domains.mjs`（本批新增档，该档净移出 8 行））。
+
+**机制层端差批（2026-09-20-mechanism-parity-batch）读数收正（实现轮实核 · 2026-09-20；口径 `find /c /v ""` ≡ `wc -l`）**：
+`thincoder-vscode/src/agent.mjs` **483 → 478**（本批净 −5：端壳 `ContinueError` 单类转口〔本地类删除〕+ guard 键清单常量删除 + 快照/回填改核单点）——**触发条件更新**：现盘 478（< 490 触发线；距 500 余 22 行）⇒ 触发条件 = **净增越 490**（本批触碰为净负、未触发）；拆分计划在册（`turn-domains.mjs` 已落地）；
+`thincoder-vscode/src/agent/run-stages.mjs` **377 → 402**（+25：Stop 钩子 + advisor-run 收口 + guard 回填；>300 咨询线、≤500 硬限）；
+`thincoder-vscode/src/agent/execute-tools.mjs` **393 → 407**（+14：派发面 hooks 三调用点；同上）；
+`thincoder-vscode/src/agent/setup.mjs` **481 → 489**（+8：台账查询两工具装配 + `hooks` config 读取；**贴线**——`find` 口径 489 < 490 未触线；`read` 口径 490 = 恰在触发线 ⇒ **下次触碰即触线**〔拆分计划在册〕）；
+`thincoder-vscode/src/extension/permission-gate.mjs` **109 → 117**（+8：门体改经核 `askPermission` 的 `io.ask` 缝；<300 咨询线）；
+`thincoder-vscode/test/files.mjs` **116**（本批 +4——三条机制层用例档登记 `:112-115`；登记面）。
+本批新增用例档（均 <300 咨询线）：`test/lifecycle-hooks.test.mjs` **264** · `test/dispatch-hooks.test.mjs` **217** · `test/permission-gate-seam.test.mjs` **102**。
+**测试档越线登记（续）**：`thincoder-vscode/test/ledger.test.mjs` **324**（`wc -l`；>300 咨询线——本批 T-LQ 组追加后；≤500 硬限，无拆分义务）。
 
 **批后新档（2026-09-19 · init-block 批）**：`provider-probe-window.mjs` **122**——`settings.mjs` 探针窗口族外提产物（N-P3 体量拆分 · 缝 = re-export；≤300 咨询线，无拆分义务）。
 
@@ -574,3 +584,6 @@
   **§12.4#5 ∕ A14** 判据改写为「**按档归属零新增**」+ 登记构成 **13 = 基线 11 + 他席在途 2 行**（`docs/vsc/design/WEBVIEW.md:105` / `:118` · 该档 mtime 22:45 已收正 ⇒ 本刻复跑 11）+ 行宽豁免表格行口径提示；新增 §12.14。**零新语义**：不改实现面 ∕ 需求档 ∕ 已收口批档 ∕ 🔵 五条（父侧裁「登记不改」）。
 - 2026-09-19（**init-block 批 · fix 轮 5** · eng-designer——承批次档 §6 第 9 项）：§12.1 三越档读数复测（`chat-panel.mjs` **441** · `suspension.mjs` **397** · `settings.mjs` **409**——2026-09-19 `wc -l`）+ **批后新档登记**（`provider-probe-window.mjs` **122**）；KD-16 / §12.10#2 的三档读数复述改 §12.1 指针（D2 单源）。**零新语义**。
 - 2026-09-19（**init-block 批 · fix 轮** · eng-designer——承批次档 §6）：§12.1 补**测试档越线登记**（`test/session-boot.test.mjs` **440** · `wc -l` 口径——>300 咨询线、≤500 硬限；逐项登记非全量普查）。**零新语义**。
+- 2026-09-20（**P2 机制层端差批 · 车道 3 设计档落笔轮 · eng-designer**——承 `docs/batches/2026-09-20-mechanism-parity-batch.md` §2.1 / §2.15 车道 3 行）：§12.1 增本批读数收正块
+  （`agent.mjs` 483 → 478 · `run-stages.mjs` 377 → 402 · `execute-tools.mjs` 393 → 407 · `setup.mjs` 481 → 489 · `permission-gate.mjs` 109 → 117 · `files.mjs` 116）+ **`agent.mjs` 拆分触发条件更新**（触发 = 净增越 490）
+  + 测试档越线续登记（`ledger.test.mjs` **324**）。**零新语义**。

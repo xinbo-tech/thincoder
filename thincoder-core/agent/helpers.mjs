@@ -210,6 +210,27 @@ export class ContinueError extends Error {
   }
 }
 
+/** §17 D-S6 auto-turn guard 标记集（核内单源）：快照/回填两 helper 共用本清单——
+ *  端侧宿主载体（`panel._guardCarry`）与核载体（`agent._inheritedGuard`）同清单。 */
+export const INHERITED_GUARD_KEYS = [
+  "_mutatedThisRun", "_verifiedThisRun", "_verifyPassed", "_calledAdvisorThisRun",
+  "_touchedFiles", "_verifyRetries", "_advisorRound",
+]
+
+/** 写侧单点：快照 7 键 → 纯对象（载体形态由调用方决定——核 = agent 字段 / 端 = 宿主容器）。 */
+export function snapshotGuard(agent) {
+  const snap = {}
+  for (const k of INHERITED_GUARD_KEYS) snap[k] = agent[k]
+  return snap
+}
+
+/** 读侧单点：回填快照中**存在**的键（`in` 守卫——等价核现行读侧；端侧快照恒含全键 ⇒
+ *  等价现行无条件拷贝）。载体留端（target 由调用方给）。 */
+export function restoreGuard(target, snap) {
+  if (!snap) return
+  for (const k of INHERITED_GUARD_KEYS) if (k in snap) target[k] = snap[k]
+}
+
 /** 跨段累计编号帧（TURN-CAP-CONTINUE.md §19.3——第 19 批 TURN-ACROSS-SEGMENTS）：
  *  唯一计算点（纯函数）——把链内累计序数换算成面向消费面的编号载荷。
  *  - seq      = 该轮链内累计序数（1 起——`agent._turnSeq` 每轮 +1，续跑不重置）

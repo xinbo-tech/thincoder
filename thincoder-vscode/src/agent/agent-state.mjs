@@ -96,6 +96,8 @@ export function applySlotSessionState(agent, { slot, engState, planModeOverride 
   agent.config = {
     advisor: { ...(cfg.advisor ?? {}), guard },
     agent: { ...(cfg.agentFields ?? {}), engineering },
+    // P2 批 §2.16：hooks 段随 config 整建（`runHooks` 读 `agent.config.hooks[event]`——缺段 = 钩子恒空转）
+    hooks: cfg.hooks ?? null,
     proxy: cfg.proxy, shell: cfg.shell, providersList: cfg.providersList, websearch: cfg.websearch,
     // traces（TRACE-STORE-VSC D-TR6——镜像 CLI loadConfig().traces 合并）：cfg.traces 由
     // hydrate cfgBag 携带（raw.traces 合并核 DEFAULTS.traces——默认 off——2026-09-05 发布

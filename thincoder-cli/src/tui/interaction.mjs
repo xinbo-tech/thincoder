@@ -1,5 +1,6 @@
 import { ansi, C } from "./ansi.mjs"
 import { detectDanger } from "@thincoder/core/tools/shared.mjs"
+import { askPermission as coreAskPermission } from "@thincoder/core/permission.mjs"
 
 /** Interaction primitives: permission approval + question input.
  *  Extracted from index.mjs, receives closure dependencies via createInteraction(ctx).
@@ -62,12 +63,15 @@ export function createInteraction(ctx) {
       pushLine(`  [auto] ${name}${argSummary ? ` ${argSummary}` : ""}`, C.warn)
       return Promise.resolve(true)
     }
-    // store preview content in permissionPreview, rendered above input box next to "Allow?" prompt
-    state.permissionPreview = formatPermission(name, args)
-    return new Promise((resolve) => {
-      state.permission = { name, args, resolve }
-      state.status = `Waiting: ${name}`
-      render()
+    // 闸语义 / 请示流程 = 核单源（P2 批 §2.20）；本端只供展示面——卡片预览经 `io.ask` 缝
+    // 注入（permissionPreview 渲染在输入框上方，与 "Allow?" 提示同帧）。
+    return coreAskPermission(name, args, {
+      ask: ({ name: n, toolArgs }) => new Promise((resolve) => {
+        state.permissionPreview = formatPermission(n, toolArgs)
+        state.permission = { name: n, args: toolArgs, resolve }
+        state.status = `Waiting: ${n}`
+        render()
+      }),
     })
   }
 

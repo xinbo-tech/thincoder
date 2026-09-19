@@ -99,4 +99,19 @@ export default [
   "test/loop-sampler.test.mjs", // init-block 批（2026-09-18）F-W19：扩展宿主事件循环采样器——常量 100/1000/1000 + 窗口起止 + 阈值边界（999/1000）+ 起停幂等 + 未启动 fail-open + 注入缝复位 + 端侧装配（probeFailureOf/overrideAdmissionIfHostBusy）+ 零 exec·I/O 扫描 + activate/deactivate 挂点——LS-1…LS-8（SETTINGS.md §2.12）
   "test/upstream-parity.test.mjs", // 批 2026-09-19-upstream-channel-availability（2026-09-20）：上行通道 VSC 对位面（F-UC7）——T-VS-U1–U7（开轮三元组 / 注入非空 / 唤醒端到端 / note 不唤醒 / 结构机检 / 回复可达 / 组合同规；§6.27.12.12）
   "test/zero-sync-exec.test.mjs", // init-block 批（2026-09-18）F-MI7 判据① 端侧半：端侧探测面两档（session-slots.mjs / peer-instances.mjs）零 child_process 直调扫描 + 域外正证 + 探测面消费者闭包 fail-closed——MULTI-INSTANCE-COLLAB.md §3.1 条①（核半 = core test/process-probe.test.mjs；N3 门禁 ⇒ 域不交）
+  // 端差·显示面消差批（2026-09-20 · `docs/batches/2026-09-20-display-parity-batch.md` · 批 1 = VSC 工具卡/摘要/状态行）
+  "test/webview-tool-interrupted.test.mjs", // M1 回合尾清扫未结算工具卡（CLI `sweepToolBlocks` 对位）：`finish(true)`/`finish(false)` 双路径 + 已结算卡零改写 + 跨块同清扫 + 刷新两路径不复活（先红 = 永停 running）
+  "test/context-percent-parity.test.mjs", // M2 `context%` 单口径：`ctxPercentForHistory` ∥ CLI `render-frame.mjs:388-389` 公式逐字复算对拍（含对端源锚）+ `onUsage` 调用点载荷 + 渲染两路径同值（先红 = prompt_tokens 口径）
+  "test/tool-output-payload.test.mjs", // M3 `[object Object]` 现场探针 A（三段链：`parseRelayPath` 不命中 ∧ relay 未认领 ∧ 直通载荷归一为串——CLI `tool-events.mjs:322-324` 先例）+ async 路对照（先红 = 对象入载荷）
+  "test/advisor-card-header.test.mjs", // X2 评审轮次/模型可见：载荷 `round`/`model`（核 resolver 同源）+ 卡头 `(round N · model)` + 状态行 CLI `:145` 字面 + 降级形 / 非 advisor 零字段（先红 = 两处皆无）
+  "test/tool-summary-parity.test.mjs", // X3+X7 摘要族：advisor/read/write/grep/glob/bash/默认分支 ∥ CLI `formatToolSummary` 纯函数对拍等值 + 活卡/恢复卡两路径同源 + 端差②与射程边界（verify）显式断言（先红 = 全走通用末行摘要）
+  "test/tool-result-truncation.test.mjs", // X5 >64KB 截断提示：宿主事实旗标（65K/恰 64K/falsy `0`）+ 活卡旗标驱动双标记 + 恢复卡同字面（先红 = 两形皆零标记）
+  // 端差·显示面消差批（2026-09-20 · `docs/batches/2026-09-20-display-parity-batch.md` · 批 2 = VSC 活动块/协议面）
+  "test/subagent-note-parity.test.mjs", // X6+X11 块头注记：宿主 subKey 判据（核 child-marks 锚）⇒ done 载荷 `note` + relay `⟦ev⟧stopped` 原因位透传 + 承面 `— <note>`（done/stopped/interrupted——`meta.note` 单载体）+ X11 宿主真值源（先红 = 零注记面）
+  "test/sync-block-stop.test.mjs", // X10 sync 块 ⏹：核 registry 只读 ⇒ 载荷 `syncLive` + 门控支 + 点击载荷（与 async 同形）+ 宿主取消路由（`cancelSyncChild` 单源）+ 零回归——**display-logic-only**（夹具预置 registry；产者侧序缺陷 ⇒ 运行期不可达——父侧裁定降级登记，批档 §2.8 #7）
+  // 端差·机制层端差批（2026-09-20 · `docs/batches/2026-09-20-mechanism-parity-batch.md` · 车道 2 = VSC）
+  "test/lifecycle-hooks.test.mjs", // §2.16 端侧 Stop 钩子 + advisor-run 收口（T-LH1–T-LH9；先红 = 端侧零 `runHooks` + 零收口）
+  "test/dispatch-hooks.test.mjs", // §2.17 派发面 hooks 四调用点（T-DH1–T-DH7；先红 = 零调用点/零阻断文案）
+  "test/permission-gate-seam.test.mjs", // §2.20 VSC 半——门改经核 `io.ask` 缝（T-PT6–T-PT8；先红 = 核 `permission.mjs` 零 importer）
+  "test/subagent-queued-payload.test.mjs", // §2.22 同族事件载荷机检锚（T-QP1–6）：载荷逐 kind 对表 + 缓存单源 + 五路作废点（含 `⟦ev⟧stopped`——§2.29 #7c）+ 重生投影同形（先红后绿 = 收口轮变异探针——停用 stopped 路 `forgetQueued` ⇒ T-QP5 恰该路红）
 ]

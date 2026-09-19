@@ -3,6 +3,8 @@
  * plan mode, goal tracking, verify guard; setup lives in agent/setup.mjs).
  */
 import { chat } from "@thincoder/core/provider/core.mjs"
+// P2 批 §2.23 / §2.18：核单类转口（ContinueError 权威类——字段 `turn`）+ guard 回填单点
+import { ContinueError, restoreGuard } from "@thincoder/core/agent/helpers.mjs"
 import { specForModel, assistantToolCallMessage } from "./specs.mjs"
 import { traceStop } from "./extension/stop-trace.mjs"
 import {
@@ -22,10 +24,6 @@ import { checkAndCompact, fireEndOfRunDistill, finalizeAgentTurn, injectResponse
 // D-CI4（VSC-CONTEXT-PARITY §17.3）：plan-mode 节律常量/计数（W9 起 = 核单源 agent-tools/plan.mjs）
 import { planReminderForTurn } from "@thincoder/core/agent-tools/plan.mjs"
 
-/** Guard bookkeeping keys an auto-turn's end state inherits into the next USER run
- *  (§17 D-S6 — auto-turn changes never escape the verify/advisor guards silently). */
-export const INHERITED_GUARD_KEYS = ["_mutatedThisRun", "_verifiedThisRun", "_verifyPassed", "_calledAdvisorThisRun", "_touchedFiles", "_verifyRetries", "_advisorRound"]
-
 /** W13 载体字段集（跨 run 存活——住共享 depth-0 history；`docs/core/design/AGENT-LOOP.md §2.3` :93 **13 字段全集**〔设计 13 款 + 端自持 `_engDesignTokens` = 本表 14 绑定〕）。
  *  `_mutLog` = 核 `advisor-settle.noteMutations` 写点（VSC 旧对位名 `_fileMutEvents`——核名单源）；
  *  `_asyncWaiters` = 核唤醒单点 `wakeAsyncWaiters`（`async-settle.mjs:296-299`；settle 公共尾 `:281` + 上行 ask 入队尾两处调用）；
@@ -39,10 +37,10 @@ export const CARRIER_FIELDS = [
   "_asyncWaiters", "_advisorRuns", "_mutLog", "_childUpstream", "_childUpstreamSeq",
 ]
 
-/** Typed error for turn-limit exhaustion — consumers can detect and offer "Continue?" prompt */
-export class ContinueError extends Error {
-  constructor(turns) { super(`Agent reached max turns (${turns}).`); this.turns = turns }
-}
+/** Typed error for turn-limit exhaustion — consumers can detect and offer "Continue?" prompt.
+ *  P2 批 §2.23：单类 = 核 `agent/helpers.mjs:205-211`（字段 `turn`）——本档只转口（保既有 import
+ *  面：run-stages.mjs / panel-turn-loop.mjs / 用例档）；用户可见文案均由消费点自建。 */
+export { ContinueError }
 
 export { builtinTools } from "./tools.mjs"
 // ENG 提醒族 2026-09-05 迁入 agent/setup-reminders.mjs（agent.mjs 519 > 500 硬限）——
@@ -116,9 +114,7 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
   agent._inAutoTurn = autoTurn
   agent._sessionSignal = opts.sessionSignal ?? null
   // §17 D-S6: an auto-turn's guard marks are inherited by the next USER run (not reset).
-  if (!opts.resume && opts.inheritedGuard) {
-    for (const k of INHERITED_GUARD_KEYS) if (k in opts.inheritedGuard) agent[k] = opts.inheritedGuard[k]
-  }
+  if (!opts.resume && opts.inheritedGuard) restoreGuard(agent, opts.inheritedGuard)
   // §17 D-S6 manual tier + §6.27.12.12 ④: system-driven turn domain reminder — the base switches by
   // turn type (digest / up-stream wake), the end-side overlay is always present (§6.27.12.5 L).
   if ((autoTurn || upstreamTurn) && !getAuto()) {

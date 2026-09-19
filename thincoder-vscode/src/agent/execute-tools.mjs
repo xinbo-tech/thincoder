@@ -11,6 +11,8 @@ import {
   offloadToolResult, pushReal, runWithLimit,
 } from "./run-helpers.mjs"
 import { logEvent, errText, headText } from "@thincoder/core/log.mjs"
+// P2 机制层端差批 §2.17：派发面 hooks 四调用点（静态合法——`hooks.mjs` 闭包仅 `node:child_process`）
+import { runHooks } from "@thincoder/core/hooks.mjs"
 import { manifestPath } from "../extension/session-slots.mjs"
 import { peerDomains, registerDomains } from "../extension/peer-domains.mjs"
 // §9 D-24b：文件变更事件记账（async 评审陈旧判定数据源）——W12（2026-09-15）：原端侧
@@ -168,6 +170,13 @@ export async function executeToolBatches(agent, { response, history, fullHistory
         }
       }
 
+      // PreToolUse hooks（核 `dispatch.mjs:258/314` 两端点在此合流 · P2 批 §2.17）：用户脚本
+      // 可拦截工具执行；阻断 ⇒ 工具不执行 + 模型可见结果**逐字**同核（`dispatch.mjs:337-338`）。
+      // 未知工具（下方 `!tool` 路径）与前置门禁早退保持零钩子（核同——那两路在 Phase 1 更前）。
+      if (tool && !(await runHooks("PreToolUse", { agent, toolName, toolArgs: args }))) {
+        return { tool_call_id: tc.id, toolName, content: "Error: blocked by PreToolUse hook", meta: null }
+      }
+
       callbacks.onToolCall?.(toolName, args, tc.id) // subagents forward to the activity stream (depth guard removed)
 
       // R10 L3（MULTI-INSTANCE-COLLAB.md D-L3b）：结构化写工具执行前查冲突（软提示数据源——
@@ -254,6 +263,9 @@ export async function executeToolBatches(agent, { response, history, fullHistory
               if (Array.isArray(agent._touchedFiles) && !agent._touchedFiles.includes(abs)) agent._touchedFiles.push(abs)
             }
           }
+          // PostToolUse hooks（核 `dispatch.mjs:443` 同语义——fire-and-forget；载荷 result =
+          // 原始结果（非 offload 后文本）。位序：核在本轮 onToolResult 之后、端在之前（同成功路径内））
+          runHooks("PostToolUse", { agent, toolName, toolArgs: args, result: raw }).catch(() => {})
 
           // Multimodal tools
           if (tool.multimodal) {
@@ -272,6 +284,8 @@ export async function executeToolBatches(agent, { response, history, fullHistory
           if (e?.name === "AbortError" || signal?.aborted) throw e
           toolErrored = true
           logEvent("tool:error", { tool: toolName, ms: Date.now() - toolT0, err: errText(e, 200) })
+          // 失败事件钩子（核 `dispatch.mjs:456-457` 同序——中止先于事件、中止不落钩子）
+          runHooks("PostToolUseFailure", { agent, toolName, toolArgs: args, error: e }).catch(() => {})
           // A tool may reject with a non-Error value (string/null) — .message would be
           // undefined and the model would see "Error: undefined", losing the cause.
           result = `Error: ${e instanceof Error ? e.message : String(e)}`

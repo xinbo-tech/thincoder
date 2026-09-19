@@ -35,7 +35,11 @@ function advisorReviewInFlight(parent) {
   return false
 }
 import { logEvent } from "@thincoder/core/log.mjs"
-import { ContinueError, INHERITED_GUARD_KEYS } from "../agent.mjs"
+import { runHooks } from "@thincoder/core/hooks.mjs" // P2 机制层端差批 §2.16：Stop 钩子（静态合法——闭包仅 node:child_process）
+// P2 批 §2.18 端半：guard 快照/回填单点（7 键清单归核——端侧常量退场）；本档经 setup-reminders
+// 已在端壳静态闭包内。
+import { restoreGuard, snapshotGuard } from "@thincoder/core/agent/helpers.mjs"
+import { ContinueError } from "../agent.mjs"
 import { flushDomains } from "../extension/peer-domains.mjs"
 // 2026-09-05 实践轮：maybeGuardPushbacks——收尾前 guard 推回组（自 runAgent 无工具分支）
 
@@ -276,6 +280,19 @@ export function fireEndOfRunDistill(agent, history, provider, signal, callbacks,
  */
 export async function finalizeAgentTurn(agent, ctx) {
   const { signal, history, fullHistory, cwd, depth, thrownError, autoTurn, guardCarry, suspDriven } = ctx
+  // Stop 钩子（核 `thincoder-core/agent/run-stages.mjs:135-144` 同语义 · P2 批 §2.16）：主会话 run
+  // 终止 → fire-and-forget（非阻塞 / 失败静默）；排除用户中止与 AbortError 展开。轮号载荷 =
+  // 端壳 `_turnSeq`（链内累计轮号——与核 `_currentTurn` 同口径；载荷表 `AGENT-LOOP.md` §6.13）。
+  if (depth === 0 && !signal?.aborted && thrownError?.name !== "AbortError") {
+    runHooks("Stop", {
+      agent,
+      error: thrownError && !(thrownError instanceof ContinueError) ? thrownError : undefined,
+      extra: {
+        turn: agent._turnSeq ?? 0,
+        reason: thrownError instanceof ContinueError ? "maxTurns" : thrownError ? "error" : "done",
+      },
+    }).catch(() => {})
+  }
   // §25 R17（2026-09-06——会诊/飞刀完全异步化）：consult 会话不再 turn-bound——普通收尾
   // 不清不 abort（会话沿 history._consultSessions 跨 run 存活——挂起会话驱动消化——
   // 与 async 池同语义）；**全停（plain abort）**才清理：abort 会话子代理 + 清会话 Map +
@@ -330,6 +347,8 @@ export async function finalizeAgentTurn(agent, ctx) {
   }
   // §9 D-24b（R13——2026-09-06）：async advisor 池同款回合尾处理（独立池——
   // 停/ContinueError 不注入陈旧结果；settled 留池由挂起会话 sweep → digest 消化）。
+  // 本回合是否注入过 settled 评审报告（核 `collectSettledAsync` 返回位对位——下方收口豁免判据）
+  let injectedAdvisor = false
   const advMap = agent._asyncAdvisors
   if (advMap && advMap.size > 0) {
     if (signal?.aborted && !signal?.reason?.interrupt) {
@@ -349,10 +368,18 @@ export async function finalizeAgentTurn(agent, ctx) {
         for (const e of [...advMap.values()]) {
           if (!e.done) continue
           await injectAsyncResult(agent, e)
+          injectedAdvisor = true // 池成员恒为评审条目（`advisor-async.mjs:381` role:"advisor"）
           advMap.delete(String(e.id))
         }
       }
     }
+  }
+  // advisor-run 收口（核 `run-stages.mjs:192-195` 同语义 · P2 批 §2.16）：正常结束且本回合未注入
+  // settled 评审报告 ⇒ 关闭 OPEN code 评审实例（自动回合豁免——其消化先于修复轮）。动态 import：
+  // 核 advisor-async 链静态达 `node:sqlite`（W8 契约②）。
+  if (!autoTurn && !injectedAdvisor && !(signal?.aborted && !signal?.reason?.interrupt) && !(thrownError instanceof ContinueError)) {
+    const { closeOpenCodeAdvisorRuns } = await import("@thincoder/core/agent-tools/advisor-async.mjs")
+    closeOpenCodeAdvisorRuns(agent)
   }
   // The pool rides the shared depth-0 history array across runAgent calls (the agent
   // object itself is per-run) — attach while entries remain, drop when drained.
@@ -364,9 +391,7 @@ export async function finalizeAgentTurn(agent, ctx) {
   // (user cancelled the work); ContinueError lets the auto-resumed run snapshot at
   // its own end (CLI parity).
   if (autoTurn && !(signal?.aborted && !signal?.reason?.interrupt) && !(thrownError instanceof ContinueError)) {
-    if (guardCarry) {
-      for (const k of INHERITED_GUARD_KEYS) guardCarry[k] = agent[k]
-    }
+    if (guardCarry) restoreGuard(guardCarry, snapshotGuard(agent))
   }
   // R10 L3（MULTI-INSTANCE-COLLAB.md D-L3a——VS Code 回合收尾）：回合级登记 flush——
   // 顶层回合末整写一次本实例 peers 文件（无写入回合跳过——hot 窗口自然老化；子代理写入

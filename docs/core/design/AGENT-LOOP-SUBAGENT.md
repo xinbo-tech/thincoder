@@ -1064,7 +1064,7 @@ if (agent._spawnSystemBlock) systemPrompt += `\n\n${agent._spawnSystemBlock}`
   （`docs/core/design/AGENT-LOOP.md` §2.3——与 `_asyncQueue` / `_asyncAdvisorQueue` 同列；VSC 形挂 depth-0 `history`）：
   读 / 写同经单点 `upstreamHolder(parent)` = ① 父字段在场 ⇒ 父对象（CLI 形主容器）② 缺 ⇒ `carrierField` 回退 `history`（命中即用）③ 两者皆无 ⇒ **建在父字段 + 载体别名**
   （`parent.history._childUpstream = parent._childUpstream`——同 `writeTombstone` 借用规则扩张句的既有形态，`thincoder-core/agent-tools/async-settle.mjs:73-83`）。
-  ▸ **VSC 形后果 = 已知面（F8）**：载体吸收只解决容器跨 run 存活；**端壳自接消费点 = 已并入（2026-09-19 批 · 设计面）**（循环头调核单源——`thincoder-vscode/src/agent.mjs:179` 邻位，§6.27.12.12；**实现待实现轮落地**）⇒ VSC 形与核形同判。
+  ▸ **VSC 形后果 = 已知面（F8）**：载体吸收只解决容器跨 run 存活；**端壳自接消费点 = 已并入（2026-09-19 批 · 设计面）**（循环头调核单源——`thincoder-vscode/src/agent.mjs:179` 邻位，§6.27.12.12）⇒ VSC 形与核形同判。
   **载体分离**：不进 `_asyncSubagents`（那是「父→子」的池条目）、不进 `_pendingAsyncResults`（那是终态报告容器）。
 - **与既有 `send` 相容**：**回复路径复用 `send`**（零新下行管子）——本通道只增「子→父」一个方向。
 - **与池 / 异步模型相容**：池 / 队列 / 补位 / settle / digest **零触碰**；`_childUpstream` 生命周期与子代理生命周期**解耦**（子代理 settle / cancel 不迁移它）。
@@ -1289,7 +1289,7 @@ ask · eng-coder#57: <message>
 - **D-UC4（射程 = 两问自检 + 正负清单 + 保守兜底）**：射程是**提示词面**纪律（§6.27.8）；机制面只强制可机判的三条闸（kind / 未 drain ask ≤1（窗口 = 未 drain，见 §6.27.2 ③）/ 长度与队列上限）。
 - **D-UC5（注入形态 = `pushReal` 非 `transient`）**：判据 = 事件性（一次性、有内容、落盘有价值）vs 状态性（每轮重复的机器行）；先例 = `injectAsyncResult`（`subagent-async.mjs:383`）。
 - **D-UC6（范围 = 核侧 + 提示词面——§6.27 批口径）**：VSC 端对位面**该批不做**（登记：VSC 子代理经核 `runChildPipeline` → 核 `runAgent`；装配面在其 `setup` 面）；**范围现值 = 核 + CLI + VSC 两端对位**（2026-09-19 批并入——需求 §4.12 N4 / §6.27.12.12）。
-  **已知面 = F8**（端壳自持 depth-0 循环 ⇒ 核侧 drain 不经端壳）：**另案三项**（端壳 drain 接线 / 端壳载体表补字段（+ 夹具）/ 端壳取消 · 观察面对位）——现态 = **前两项设计已并入本批（2026-09-19 · 设计面；实现待实现轮落地）**（§6.27.12.12）+ **第三项未并入**（另案）。**核侧读 / 写按 `carrierField` 吸收**（§6.27.2 ①）——端壳面只补消费点与端壳登记，**不回改核码**。
+  **已知面 = F8**（端壳自持 depth-0 循环 ⇒ 核侧 drain 不经端壳）：**另案三项**（端壳 drain 接线 / 端壳载体表补字段（+ 夹具）/ 端壳取消 · 观察面对位）——现态 = **前两项设计已并入本批（2026-09-19 · 设计面；实现已落地）**（§6.27.12.12）+ **第三项未并入**（另案）。**核侧读 / 写按 `carrierField` 吸收**（§6.27.2 ①）——端壳面只补消费点与端壳登记，**不回改核码**。
 
 ### 6.27.8 提示词面逐字建议（**父侧已落笔（2026-09-18）**——内容权在父侧；本档只出文本。落笔状态与实测读数 = §6.27.6 行 11–14 及其下表注）
 
@@ -1401,7 +1401,7 @@ Queue a message on the parent's side; your turn is not interrupted and nothing i
 3. 不改 `send` / `observe` / `status` / `cancel` / `panel` 动作语义与文案；不改 depth 门既有条文（§6.7.2 / §6.25）。
 4. 不改池 / 队列 / 补位 / settle / digest 语义；`_childUpstream` 不参与 `dependsOn` 墓碑与 `status` 视图。
 5. 不新增 TUI 面板块 / 不改块状态机；不改 `transient` 语义。
-6. **VSC 端对位已并入（2026-09-19 批 · 设计面）**（端壳消费点 = 循环头调核单源 `drainChildUpstream` + 载体表 12 → 14 款 + 端侧唤醒 / 谓词 / 旗标 + 夹具同步；**实现待实现轮落地**——§6.27.12.12）；**残余边界 = 端壳取消 / 观察面对位**（F8 未并入项——另案）。
+6. **VSC 端对位已并入（2026-09-19 批 · 设计面）**（端壳消费点 = 循环头调核单源 `drainChildUpstream` + 载体表 12 → 14 款 + 端侧唤醒 / 谓词 / 旗标 + 夹具同步；端侧细则见 §6.27.12.12）；**残余边界 = 端壳取消 / 观察面对位**（F8 未并入项——另案）。
 7. 不改需求档正文（父侧笔）；不改提示词正文（父侧落笔——本档只出逐字建议）。
 8. 不做「父→子」新动作 / 新管子（回复路径恒 = `send`）。
 
@@ -1443,7 +1443,8 @@ Queue a message on the parent's side; your turn is not interrupted and nothing i
 **挂起驱动坐标（核 + 两端）**：核 `thincoder-core/agent/suspension.mjs`（**234 行** · `startSuspension` `:150` · 等待单点 `waitForSettleOrWake` `:116-138`）·
 CLI `thincoder-cli/src/tui/suspension-drive.mjs`（**301 行** · `suspensionSession` `:191` · 等待单点 `:109-132`）·
 VSC `thincoder-vscode/src/extension/suspension.mjs`（**397 行** · `suspensionSession` `:227` · 等待单点 `:163-195`）。
-**核驱动现状 = 无生产消费方**：`startSuspension` 全仓命中仅核档 + `thincoder-core/test/suspension.test.mjs`（CLI / VSC 各自持自有循环）⇒ 本批改动面 = **核 + CLI + VSC 三面**（VSC = 对位设计已并入本批（2026-09-19 · 设计面）：§6.27.12.4 范围面 / §6.27.12.12）。
+**核驱动现状 = 无生产消费方**：`startSuspension` 全仓命中仅核档 + `thincoder-core/test/suspension.test.mjs`（CLI / VSC 各自持自有循环）⇒ **核档 = 参考实现**（唯一消费者 = 核测）；挂起面**权威 = 两端驱动**（CLI `thincoder-cli/src/tui/suspension-drive.mjs` ∥ VSC `thincoder-vscode/src/extension/suspension.mjs`——已分叉，**判保留**：结构不对称）；
+核档读者不得据其改端行为（2026-09-20 · 机制层端差批 §2.21 裁定）。
 
 #### 6.27.12.3 关键发现——唤醒 ≠ 开轮（第二要件）
 
@@ -1776,7 +1777,7 @@ spawning subagents, asking questions — those need a real user message. End the
 5. 不改提示词面（`prompts/**`）与 `notify_parent` 工具描述 / 返回注（主分支下承诺变真，无需改准）——**内容权 = 父侧**。
 6. **降级分支（不落 · 备份路径）**：若父侧裁为 note-only 降级，则改准面 = 工具描述 `parent-channel.mjs:144-156`（`:148` 承诺句）· `ASYNC_NOTE` `:45-49` · 提示词面 `thincoder-core/prompts/common.md` + 模板 `docs/core/design/prompts/common.md`（父侧笔）· 需求 F-UC1 / F-UC2 / F-UC6 收紧（父侧笔）；机制零改。
 7. **note 面（登记）**：`note` 入队**不唤醒**（§6.27.12.4 ①）⇒ 挂起期 note 仍等下一拐点——若父侧要求 note 一并唤醒，改动 = `upstreamWaiting` 谓词一行（`q.some(...)` → `q.length > 0`）+ 用例 T19 / T24 反转；**代价 = 每条 note 一次父侧轮**（轮风暴面，故默认不开）。
-8. **VSC 面已并入本批（设计面；实现待实现轮落地）**：本批 VSC 写域 = 文件表行 **12–21**（源 7 档 + 新测 1 档 + 登记 1 档 + 集成夹具 1 档）；**不动** webview 面（`digest` 消息族 / `suspension` 消息族 / 文案）与提示词面——细则 = §6.27.12.12。
+8. **VSC 面已并入本批（设计面；实现已落地）**：本批 VSC 写域 = 文件表行 **12–21**（源 7 档 + 新测 1 档 + 登记 1 档 + 集成夹具 1 档）；**不动** webview 面（`digest` 消息族 / `suspension` 消息族 / 文案）与提示词面——细则 = §6.27.12.12。
 9. 不改需求档正文（父侧笔）；不做「父→子」新动作 / 新管子（回复路径恒 = `send`）。
 
 
@@ -1849,17 +1850,20 @@ escalate reports: summarize the merged post-op work — further changes need a u
 
 - 本批 VSC 写域 = 文件表行 **12–21**；核面零改；**CLI 面 1 档**（`thincoder-cli/src/tui/agent-turn.mjs`——旗标贯通两行，**修正轮 1 补——发现 1**；行 22）+ CLI 日志载荷回填（§6.27.12.5 K，承父侧同轮裁定 ④）。
 - **实证面 = CLI**（§6.27.12.1）；VSC 面 = **对位设计已并入本批（2026-09-19 · 设计面）**（结构 + 夹具可机判）。本机默认流非 VSC ⇒ VSC 侧行为验收 = 收口轮**重载扩展后实跑**（「重载后自验」口径；`docs/core/requirements/ENGINEERING-MODE-V2.md` §13.2）。
-- **台账 #87 关系**：其 **①②**（端壳循环插 drain / 端壳载体表补两字段 + 夹具）= **本批设计并入（2026-09-19 · 设计面；实现待实现轮落地）**；其 **③**（端壳取消 / 观察面对位）= 承前批另案、**不在本批**。台账本体 = 父侧笔（本席不改）。
+- **台账 #87 关系**：其 **①②**（端壳循环插 drain / 端壳载体表补两字段 + 夹具）= **本批设计并入（2026-09-19 · 设计面；实现已落地）**；其 **③**（端壳取消 / 观察面对位）= 承前批另案、**不在本批**。台账本体 = 父侧笔（本席不改）。
 
 **⑥ 边界（VSC 面）**
 
-- **不动 webview 面**：`digest` 消息族（`thincoder-vscode/webview/chat.js:356-403`）· `suspension` 消息族 · i18n 文案——ask-only 轮**不 post** `digest` 起跑消息（post 仍限 `pendingN > 0`；`n = 0` 形态不引入）。
-  **后果登记**：ask-only 轮的可见性 = 既有 `turnState` / loading 面承载（无「消化中」行）——如需专属行 ⇒ 另案（须先定 i18n 键与行形态）。
+- **webview digest 可见面**：`digest` 消息族的可见面契约 —— ask-only 轮**亦 post** 起跑消息（载荷 `tier: "ask"`，`n` 可 0）：webview 建标签行 ∧ **不建**计数元素（`digest.turnLabelAsk` / `digest.turnLabelAuto` 两键入核 i18n 容器）；`suspension` 消息族与既有 i18n 键值零改。
+  契约单源 = `docs/vsc/design/WEBVIEW.md` §5.1（机制：档位判据与元素约束）与 `docs/vsc/design/WEBVIEW-PROTOCOL.md` §5（元素级：标签行 / 计数行 / `start`·`end` 语义）——本节不重述。
 - **不动提示词面 / 工具描述 / 返回注**（同 §6.27.12.11-5）。
 - **不做** VSC 侧 `escalate` / `consult` 面的上行对位（本批只及子代理 spoke 面——与 §6.27.2 射程一致）。
 - **端 overlay 字面 = 逐字搬迁既有端述句**（零新撰 / 零改写——落点 = §6.27.12.5 L；四族枚举短语的处置见 ④ Δ 登记）。
 
 ## 变更记录
+
+- 2026-09-20（**显示面消差批 · 批 4 条款落笔 · eng-designer**——承 `docs/batches/2026-09-20-display-parity-batch.md` §2.10.9 附（第三档落点））：
+  §6.27.12.12 ⑥ 边界首条改写为 **webview digest 可见面现态**（ask-only 轮同 post `tier: "ask"` 起跑消息——建标签行、不建计数元素；`digest.turnLabelAsk` / `digest.turnLabelAuto` 两键入核 i18n 容器）；元素级契约挂 `docs/vsc/design/WEBVIEW.md` §5.1 / `docs/vsc/design/WEBVIEW-PROTOCOL.md` §5（D2）。
 
 - 2026-09-19（**批 2026-09-19-upstream-channel-availability · 设计评审修正轮 1 · eng-designer**——承 `docs/batches/2026-09-19-upstream-channel-availability.md` §3 轮次 1（9 条：🔴 2 · 🟡 5 · 🔵 2；域外注 2）· 父侧逐条裁定）：**逐条落位（发现 1–8；🔵9 = 父侧裁 Not an issue ⇒ 零动作）**——
   ① **CLI 贯通跳补入**（发现 1）：文件表 **21 → 23 行**（行 22 = `thincoder-cli/src/tui/agent-turn.mjs` · 行 23 = 核新测档）+ §6.27.12.5 **I / E** 与 §6.27.12.4 ④ 范围面链路收正 + T-CL-U1 扩「桩第 4 参 `upstreamTurn === true`」（可机检）；
@@ -1961,3 +1965,4 @@ escalate reports: summarize the merged post-op work — further changes need a u
 - 2026-09-18（**坐标漂移收正轮 · eng-designer**——承 `docs/batches/2026-09-18-distill-prefix.md` §5 八、登记 · 台账 #76）：载体面「`history` 非稳定载体」句坐标收正——
   `thincoder-core/explore-distill.mjs:148` → **`:144`**（蒸馏前缀批 −4 位移；同句 `thincoder-core/context.mjs:309` / `:317` / `:332` / `:483` 与 `thincoder-core/session.mjs:301` / `:438` 逐处实核未漂移）。语义零改。
 - 2026-09-18（**失效表达清理批 · 本批直接执行 · 可 revert**——承用户 2026-09-18 裁定「修订式表达很害人，失效的表达一定要删掉」）：删除现役规范面内的失效表达（不留划改残留）——§6.22 定位句括注 · 功能点 F3 / F4 两行 · 落点句「F3 拆除后回落」半句 · 验收表 AC-M5-4 行。历史沿革 = 本档既有历史段 + 批档 `docs/batches/2026-09-18-stale-expression-purge.md`。
+- 2026-09-20（**P2 机制层端差批 · 车道 3 设计档落笔轮 · eng-designer**——承 `docs/batches/2026-09-20-mechanism-parity-batch.md` §2.21）：§6.27.12.2「挂起驱动坐标」段尾句按现态收正——核驱动 = **参考实现**（唯一消费者 = 核测）；挂起面权威 = 两端驱动（已分叉，**判保留**）；核档读者不得据其改端行为（2026-09-20 §2.21 裁定）。机制条文零改。

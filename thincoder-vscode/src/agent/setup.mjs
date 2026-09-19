@@ -139,6 +139,9 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
       settings: settingsTool,
     },
   })
+  // M2 台账查询两工具（核 `tools/index.mjs:61` 同法——全角色面）：动态 import——ledger 链静态
+  // 达 `node:sqlite`（W8 契约②）；写命令族已随核 `assembleFamilyTools` 在端可达（上方装配块）。
+  const { ledgerQueryTool, ledgerCountTool } = await import("@thincoder/core/ledger.mjs")
 
   // MCP tools: idempotent connect + expand into NATIVE tools (CLI parity, MCP.md D1/D2).
   // Top level only; failures never block — D-CI7（F-Q11）：警告可见面 = console
@@ -159,8 +162,10 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // `question` is excluded from ALL subagents (depth > 0) — it's an interactive main-agent
   // tool; a background subagent (parallel consultants especially) must never prompt the user.
   const isReadOnlyRole = depth > 0 && (role === "explore" || role === "plan" || role === "consult")
-  const baseTools = (isReadOnlyRole ? builtinTools.filter((t) => t.readonly) : builtinTools)
-    .filter((t) => depth === 0 || t.name !== "question")
+  const baseTools = [
+    ...(isReadOnlyRole ? builtinTools.filter((t) => t.readonly) : builtinTools),
+    ledgerQueryTool, ledgerCountTool, // M2 查询两工具（只读——只读角色同放行；恒入基础集）
+  ].filter((t) => depth === 0 || t.name !== "question")
   // L1 契约（VSC-TOOL-TABLE-DUP §2.1A）：`agent.tools` 绑定值 = **基础集**（下方 `baseSet`）
   // ——不含端侧 meta 工具族 `agentTools`（核 `assembleFamilyTools` 追加族与端侧 meta 族实测
   // 重叠 11 名 ⇒ 入绑定值必致子代装配重名）；全表 `tools` 原样保留（端侧 schema `:503` /
@@ -203,6 +208,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   let cfgWaitForTimeoutMs = undefined // wait_for default override (TOOLS.md §16 — CLI parity); undefined → tool default 30s
   let cfgProviders = []
   let cfgWebsearch = { apiKey: "" } // structured search; empty key → Bing fallback
+  let cfgHooks = null // P2 批 §2.16：hooks 段随 config 读入（`runHooks` 消费面）
   // TRACE-STORE-VSC（D-TR6 镜像——核 config.mjs DEFAULTS.traces 合并同语义）：traces 段
   // 默认 OFF（2026-09-05 发布隐私裁定）——agent.config.traces 由此整建——每轮拾取外部变更
   let cfgTraces = { ...DEFAULTS.traces }
@@ -228,6 +234,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     cfgWaitForTimeoutMs = raw.agent?.waitForTimeoutMs ?? undefined // wait_for timeout override — tool applies its own default/cap when absent
     cfgProviders = resolveProviders().providers // for subagent model overrides
     cfgWebsearch = raw.websearch ?? { apiKey: "" }
+    cfgHooks = raw.hooks ?? null
     cfgTraces = { ...DEFAULTS.traces, ...(raw.traces ?? {}) }
     cfgAutoThink = raw.agent?.autoThink ?? cfgAutoThink // #175a：显式键优先（缺省 = 核 DEFAULTS）
   } catch { /* config unreadable — defaults */ }
@@ -250,6 +257,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
       waitForTimeoutMs: cfgWaitForTimeoutMs, poolLimits: cfgPoolLimits, autoThink: cfgAutoThink,
     },
     proxy: cfgProxy, shell: cfgShell, providersList: cfgProviders, websearch: cfgWebsearch,
+    hooks: cfgHooks,
     traces: cfgTraces,
   }
   const { engineering, droppedExpired } = applySlotSessionState(agent, {
