@@ -250,3 +250,24 @@ test("T-15/A-13 qwen 域无族前缀条目（负探针）：未知 qwen 名 / �
     assert.equal(silent(() => specForModel(name).reasoningEffortDefault), undefined, `${name} 不命中任何端差行（防族遮蔽）`)
   }
 })
+
+
+// ─── 批 2026-09-20-qwen36-family-rows（设计 `docs/core/design/MODEL-SPECS.md` §11 · 用例 Q-7）───
+// qwen3.6 系五名端差默认档登记（`../src/specs.mjs` EFFORT_DEFAULT_PREFIXES +5——AC-4）。
+
+test("[qwen36] Q-7 端差默认档：五名 ⇒ high 且 ∈ 枚举（不落首项 none）；快照名前缀命中母名条目同得 high", async () => {
+  const { specForModel } = await import("../src/specs.mjs")
+  const FIVE = ["qwen3.6-flash", "qwen3.6-plus", "qwen3.6-max-preview", "qwen3.6-27b", "qwen3.6-35b-a3b"]
+  for (const model of FIVE) {
+    const spec = specForModel(model)
+    assert.equal(spec.reasoningEffortDefault, "high", `${model} 端差默认档 = high（命中登记条目，非首项兜底）`)
+    assert.ok(spec.reasoningEffortEnum.includes(spec.reasoningEffortDefault), `${model} 默认档须是枚举成员（下拉预选可选，非空悬）`)
+    assert.equal(spec.reasoningEffortEnum[0], "none", `${model} 枚举首项 = none——未登记即回落首项 = 默认关（qwen 批 §2.8 首项陷阱负证）`)
+  }
+  // 快照名不登 ⇒ 前缀扫描命中母名条目（与核查表继承意图一致——父侧裁定 批档 §1.2）
+  for (const snap of ["qwen3.6-flash-2026-04-16", "qwen3.6-plus-2026-04-02"]) {
+    const spec = specForModel(snap)
+    assert.equal(spec.reasoningEffortDefault, "high", `${snap} 前缀命中母名条目 ⇒ 同得 high（有意继承非遮蔽）`)
+    assert.equal(spec.maxOutput, 65_536, `${snap} 核表同经母名行继承（校验级上限）`)
+  }
+})

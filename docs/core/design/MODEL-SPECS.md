@@ -821,8 +821,154 @@ UI 显示 OFF、服务端照想 = 与 PROVIDER.md §6.12 初始缺陷同类。�
 | CLI `/think effort` 档位行 | flashx 列 `effort: low/high/max`（枚举驱动零改码）；off 标记经 D-14 guard 对 `thinkApi:"type"` 行不发字段（现状族形——与 `glm-5.3` 同，off 不可达 = 服务端 400，非本批对象） |
 | VSC 思考下拉 | 零改：flashx 落既有 `glm-5` 族前缀条目，默认档 `max`（新枚举内合法）；档位行自动 = 枚举三档 |
 
+## 11. qwen3.6 系五名独立规格行（2026-09-20 快车道批 · 五行新增）
+
+> 需求面 = `docs/batches/2026-09-20-qwen36-family-rows.md` §1（台账新需求条目随该档 §6 核销）；批次条目 = 同档 §2.1。
+> §1–§10 机制不变；本节为五行新增批交付面（形状循 §10 先例）。
+
+### 11.1 方案与理由
+
+- **五名同形独立行，不修既有行**：批档 §1.2 活体取证五名每名 10 针全绿、字段面完全同形
+  （枚举六档止于 xhigh / maxOutput 65_536 / 视觉受理 / 默认思考开）⇒ 一套字段口径 × 五名，
+  每名独立一行（同值集 ≠ 同行——§9 `[onboard]` A-3 形状先例）。既有 qwen3.7/3.8 行零触碰（AC-3）。
+- **独立行必要性**：qwen 泛前缀托底行已随 qwen 批删除（§2.4）⇒ 未登名落 DEFAULT_SPEC
+  （128K / 32K / 无视觉 / 无枚举），maxOutput 与枚举双失真坐实（65_536 ≠ 131_072；
+  `max` 非法档位无从拦截）。
+- **落位**：qwen 段末尾——`thincoder-core/model-specs.mjs:96`（「No generic qwen fallback
+  row」注释块末行）与 `:97`（MiniMax 段注释）之间插入五行；行序 = flash / plus / max-preview /
+  27b / 35b-a3b（表插入序；`SORTED_SPECS` 派生序由机制自排，§11.8）。
+  （**锚核 2026-09-20 修正轮 · 实读**：`:73-79` = 3.7/3.8-flash 共享行注块 · `:83-92` =
+  omni/27b 行注块 · `:94-96` = fallback 注释块 · `:97` = MiniMax 段注释 ⇒ `:96`/`:97` 为真锚，
+  批档 §2.2 原记 `:93`/`:94` 系预读坐标漂移，已同步同锚。）
+- **零机制改动**：查表 / 排序 / off 路径 / VSC 端差机制全不动——五名 off **可达**
+  （`none` / `minimal` 实测 rc=0 可关，D-14 guard `includes("none")` = true ⇒ off 载荷
+  正常下发），无 §10 flashx 那样的 no-op 失配面。
+
+### 11.2 表变更清单（五行新增，零删除、零改既有行）
+
+| 位置 | 新行 | 取值 |
+|---|---|---|
+| `thincoder-core/model-specs.mjs:96` 与 `:97` 之间 | `["qwen3.6-flash" / "qwen3.6-plus" / "qwen3.6-max-preview" / "qwen3.6-27b" / "qwen3.6-35b-a3b", { … }]` 共 5 行 | §11.3 口径表 |
+
+行注形态：**家族共享证据块**（首行 `qwen3.6-flash` 上方——五名同形 ⇒ 取证叙述落一处全量）+
+plus / max-preview / 27b / 35b-a3b 各一行单行注（证据词在场，细则 = 实施轮自由度）；
+`qwen3.6-35b-a3b` 单行注另含「MoE」后缀说明（开放项 批档 §1.5-② 裁定 = 行注承载）；
+max-preview 单行注另如实记录视觉证据波动（纯红图答「黑色」= 抽样波动、通道 ✓——批档 §1.2）。
+
+### 11.3 字段口径表（逐字段 + 证据等级；批档 §1.2 取证表同源）
+
+| 字段 | 值 | 证据等级 |
+|---|---|---|
+| context | 1_000_000 | 官方口径（未探边；行注标明文档口径非 API 实测） |
+| maxOutput | 65_536 | **校验级**（400「Range of max_tokens should be [1, 65536]」；65536 → 200） |
+| thinking | true | 实测（裸请求 rc=143–239 默认开；`none` / `minimal` rc=0 可关） |
+| multimodal | true | 实测（64×64 纯红 PNG 五名受理） |
+| reasoningEffortEnum | ["none","minimal","low","medium","high","xhigh"] | **校验级**（400 原文点名六档；`max` → 400——3.6 系无 max，≠ 3.8 系七档） |
+| partialMode / cacheMode / thinkApi / tempRange | true / "none" / "effort" / [0,2] | 族沿用（qwen3.7/3.8 行先例——非独立实测） |
+| reasoningEcho | 不声明 | 跨轮回声未验（R-4 口径——optional 现状零变化） |
+| reasoningEffortDefault（VSC 端差） | "high" | 族沿用（qwen3.7-flash 先例；官方默认未探——复访条件：官方默认口径确认后升级证据等级） |
+
+「族沿用」字段的 Q-2 期望值**推导规则**：五名同形实证 ⇒ 期望对象 = 运行时推导
+`{ ...specForModel("qwen3.7-flash"), maxOutput: 65_536 }`——全字段 deepEqual 语义下未声明键
+（reasoningEcho）自然不进期望；**禁字面清单**（T-13 信息性字段闸 =
+`thincoder-core/test/model-specs.test.mjs:260` 全仓测试面计数冻结，新档含该字面即时红）。
+3.7-flash 行若未来漂移，Q-2 期望自动跟随（推导式红利，循 §10.3 推导规则先例）。
+
+VSC 端差字段不在核表：核规格行无 `reasoningEffortDefault`（端侧扩展面——
+`thincoder-vscode/src/specs.mjs:22` 端差表持有）。
+
+### 11.4 消费面契约（本批动谁、谁零改）
+
+- **动**：`thincoder-vscode/src/specs.mjs` `EFFORT_DEFAULT_PREFIXES` +5 条目（qwen 段
+  `thincoder-vscode/src/specs.mjs:35` 后插入；运行时最长优先扫描 ⇒ 条目序无关；
+  快照名 `qwen3.6-flash-2026-04-16` 前缀命中 `qwen3.6-flash` 条目同得 "high"——与核查表
+  继承意图一致，父侧裁定 批档 §1.2「快照不登」的配套行为面）。
+- **零改但行为受益（链路现成）**：`thincoder-vscode/webview/settings-state.js:48`
+  （`defaultEffortFor` 读 `effortDefault`，端差未命中才回落枚举首项）·
+  `thincoder-vscode/src/extension/provider-probe-window.mjs:67`（模型行 `effortDefault`
+  直读 spec）——本批登记后两处消费面自动生效，零码改。
+- **零改**：CLI 产品码（on 默认档 = 枚举首个非 `"none"` 档 =
+  `thincoder-cli/src/tui/cmd-think.mjs:131` qwen 批修法产物，机制现成）· 核查表 / 排序 /
+  off 路径机制 · `thincoder-core/test/run.mjs`（单层 glob 自动收集新测试档——
+  `thincoder-core/test/run.mjs:42`，启动器零清单改动）。
+
+### 11.5 影响文件清单（预读 · split 口径 · as-of 2026-09-20 设计轮）
+
+| 文件 | 现行数 | 预期 | 变更 |
+|---|---|---|---|
+| `thincoder-core/model-specs.mjs` | 261 | ~273 | +5 表行 + 行注块（§11.2 落位）；300 软限内 |
+| `thincoder-core/test/model-specs-qwen36.test.mjs` | **批内新建** | ~150 | `[qwen36]` 段 Q-1..Q-6 · Q-8——**500 硬限拆分载体**（`thincoder-core/test/core-hygiene.test.mjs:123` 硬红判据，登记表只适用 300–500 段 ⇒ 主档 append-only 不可行）；新文件 ≤300 软限、零登记 |
+| `thincoder-core/test/model-specs.test.mjs` | 468 | 468 | **零触碰**（三段/四段已收口面不动、老段不迁移——拆分 = 新文件承载） |
+| `thincoder-vscode/src/specs.mjs` | 84 | ~89 | `EFFORT_DEFAULT_PREFIXES` +5 条目 |
+| `thincoder-vscode/test/image-downgrade.test.mjs` | 253 | ~271 | +`[qwen36]` 段 Q-7（append-only，不扩改既有 T-10/T-15）；≤300 ✓ |
+| `docs/core/design/MODEL-SPECS.md` | 950 | ~1070 | §11（本节，设计轮自笔）+ 变更记录一条 |
+
+### 11.6 验收标准回指（逐条指回批档 §1.3）
+
+| AC | 判据（§1.3 原文） | 承载 |
+|---|---|---|
+| AC-1 | 五名各命中独立行（非前缀兜底）：`maxOutput:65_536` · 枚举六档 · `thinking:true` · `multimodal:true` | Q-1 / Q-2 / Q-3 · Q-8（max 拒收负证） |
+| AC-2 | 未实测字段行注含「族沿用」/「官方口径」字样 | Q-6 |
+| AC-3 | 既有 qwen3.7/3.8 族回归零变化；五新行排序面不遮蔽既有名 | Q-4 / Q-5 + §11.8 读码核 |
+| AC-4 | VSC 端差表处置裁定（= 登记 "high"，批档 §1.5-①）+ 三端测试全绿 + doc-check 零新增 | Q-7 + 收口实跑（批档 §6） |
+
+### 11.7 用例表（`[qwen36]` 段 · Q-1..Q-8 · 循 `[flashx]` 段先例）
+
+Q-1..Q-6 · Q-8 落新建核测试档（`thincoder-core/test/model-specs-qwen36.test.mjs`——批内新建，
+不带行号坐标防悬空锚）；Q-7 落 VSC 既有档新段。四类齐全：正常 = Q-1 / Q-2 / Q-7；
+边界 = Q-3（max 缺失 + 快照继承）/ Q-5；回归护栏 = Q-4 / Q-6；错误 = Q-8。
+
+| 用例 | 断言 |
+|---|---|
+| Q-1 | 五名 `specMatch` 均 `matched:true`（精确命中非兜底）且 `maxOutput === 65_536`（≠131_072 即证非蹭 3.7/3.8 行）；五行对象两两 `notEqual`（行独立——A-3 形状） |
+| Q-2 | 五名全字段 deepEqual = 运行时推导 `{ ...specForModel("qwen3.7-flash"), maxOutput: 65_536 }`（五名同形 ⇒ 单推导式通吃；3.7-flash 行漂移自动跟随；T-13 字面闸安全） |
+| Q-3 | 枚举形状锚：五名 deepEqual `["none","minimal","low","medium","high","xhigh"]`（服务端原文序 · 首项 `"none"`——D-5 禁重排）；`includes("max") === false`；与 `qwen3.8-max` 行枚举 `notDeepEqual`（同带 max 字样的跨版本行不同值集，防抄错源） |
+| Q-4 | 既有 qwen 族 6 行（3.7-max / 3.7-flash / 3.8-flash / 3.8-max / 3.8-omni-flash / 3.8-27b）逐字段零变化 + 五新名 × 既有行名非前缀循环（A-11 形状）；期望对象/字段清单**不含 `cacheMode` 键**（D-10 信息性字段、零行为面——硬约束① T-13 字面闸安全），其余字段逐字面 |
+| Q-5 | `TABLE_ROW_NAMES` 含五名（防空扫——`>= 40` 正控先例） |
+| Q-6 | `rowNote` 五名各含「校验级」「官方口径」「族沿用」；`qwen3.6-35b-a3b` 行注另含「MoE」 |
+| Q-7（VSC `thincoder-vscode/test/image-downgrade.test.mjs` 新 `[qwen36]` 段） | 五名 `reasoningEffortDefault === "high"` 且 ∈ 枚举（**不落首项 "none"**——qwen 批 §2.8 首项陷阱负证）；快照名前缀命中母名条目亦得 "high" |
+| Q-8 | 错误面：`qwen3.6-flash` + `reasoningEffort:"max"` ⇒ 本地抛错含 `not supported by model` 且合法档位清单 = 六档（`thincoder-core/provider/core.mjs:198-203` 门——T-8 / B-2 先例形态；枚举入册后 `max` 由「透传吃服务端 400」变「本地抛错」） |
+
+新档实施约束（设计钉死）：① 全文禁含 `cacheMode` 字面（T-13 全仓测试面计数闸——
+`thincoder-core/test/model-specs.test.mjs:259-260` 基线逐档冻结）；② helpers
+（`SPEC_SOURCE` / `TABLE_ROW_NAMES` / `rowNote` / `assertFields` / `EFFORT_6`）就地重定义、
+零 import 主测试档（主档无导出面，动了即破零触碰）。
+
+### 11.8 排序面读码核（批档 §1.2「设计轮核现排序实现语义」销项）
+
+- `SORTED_SPECS` = 对表按 `b[0].length - a[0].length` 降序预排
+  （`thincoder-core/model-specs.mjs:161`——五行实长严格降序无并列，比较器稳定性语义不介入）。
+- 五名长度 19 / 15 / 13 / 12 / 11，两两互非前缀；既有表**无任何 `qwen3.6` 前缀条目**
+  （泛 `qwen` 行已随 qwen 批删除）⇒ 五新名唯一命中面 = 自身精确行，零遮蔽
+  （Q-1 命中 + Q-4 非前缀循环钉住）。
+- `qwen3.6-max-preview`(19) 与 `qwen3.8-max` 版本号不同位互非前缀，不蹭 max 行；
+  日期戳快照长名未登 ⇒ 前缀命中 13 字符 flash 行 = **有意继承非遮蔽**
+  （父侧裁定 批档 §1.2「快照不登」）。结论：排序面零机制风险。
+
+### 11.9 UI/交互决策（全落地，无 open）
+
+| 面 | 决策 |
+|---|---|
+| CLI `/models` | 五名显示 `1M`（context 官方口径；证据等级由行注承载，显示面不区分） |
+| CLI `/think effort` 档位行 | 五名列 `effort: none/minimal/low/medium/high/xhigh`（六值枚举驱动零改码）；off 可达 = 实测（`none` / `minimal` rc=0）——与 §10 flashx 不同，无 no-op 失配面 |
+| CLI `/think on` 默认档 | = 枚举首个非 `"none"` 档 = **minimal**（`thincoder-cli/src/tui/cmd-think.mjs:131` 机制现成）——与 VSC 默认 `high` 分叉 = 已知后果，不并入本轮（qwen 批 §3 发现 #10 同款裁定注，防后续当缺陷返工） |
+| VSC 思考下拉 | 五名默认档 = **high**（§11.4 端差登记）；档位行自动 = 枚举六档（零改码）；快照名同得 high（前缀扫描） |
+| 面板 `max_output` / `context` 显示 | `65_536` / `1M` 双栏（证据等级由行注承载，显示面不区分） |
+
 ## 变更记录
 
+- 2026-09-20（**qwen3.6 五名行批 · 设计评审轮 1 修正** · eng-designer——fix 轮；承
+  `docs/batches/2026-09-20-qwen36-family-rows.md` §3 轮次 1，#1…#10 十针全落）：
+  ① §11.1 补插入锚实读核注（`:96`/`:97` 真锚）；② §11.8 五名长度 19/15/13/12/11、
+  删同长并列稳定句；③ §11.4/§11.9 `cmd-think.mjs` 坐标 `:118`→`:131`；④ Q-4 补期望
+  形态句（不含 `cacheMode` 键）；⑤ §11.5 行数对齐批档（~273 / ~1070）；⑥ 用例分类
+  四类齐 + 补 Q-8 错误面用例（Q-1..Q-8 · 新档 7 例 + VSC 1 例，计数与清单同变）；
+  ⑦ helpers 清单补 `EFFORT_6`；⑨ §11.2 max-preview 视觉波动如实记录句。
+  ⑧⑩ 两针落批档 §2.3 / §2.2 面。零新语义——§1–§10 未动。
+- 2026-09-20（**qwen3.6 系五名独立行批 · 设计轮（initial）** · eng-designer——承
+  `docs/batches/2026-09-20-qwen36-family-rows.md` §1 + §2）：新增 §11（五行新增交付面：
+  方案 / 表变更 / 字段口径 / 消费面 / 影响文件 / AC 回指 / 用例 Q-1..Q-7 / 排序核 / UI 决策）
+  + 变更记录本条。§1–§10 机制与既有面零触碰。
 - 2026-09-20（**glm-5.3-flashx 独立行批 · 设计评审轮 1 修正** · eng-designer——fix 轮；承
   `docs/batches/2026-09-20-glm53-flashx-row.md` §3 轮次 1 · 针一 #1 / 针二 #3 / 针三 #4）：
   ① §10.3 补「族沿用」字段 F-2 期望值**推导规则**（实施轮实读 `glm-5.3-flash` 行现行键集/值

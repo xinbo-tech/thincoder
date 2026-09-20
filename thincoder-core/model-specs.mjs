@@ -94,6 +94,23 @@ const MODEL_SPECS = [
   // No generic "qwen" fallback row: unlisted qwen names deliberately resolve to DEFAULT_SPEC
   // (128K / 32K, no vision) — per-name disposition in docs/core/design/MODEL-SPECS.md §2.4.
   // Do not re-add a blanket prefix row (silent inheritance is how missing rows stayed invisible).
+
+  // qwen3.6 系五行（批 2026-09-20-qwen36-family-rows · 五名同形，取证叙述落此一处全量）：
+  // effort 枚举六档 = **校验级**（`max` → 400 原文点名 none/minimal/low/medium/high/xhigh——无 max，
+  // ≠ 3.8 系七档）；maxOutput 65_536 = **校验级**（400「Range of max_tokens should be [1, 65536]」；
+  // 65536 → 200）。thinking / multimodal = **实测**（裸请求 rc=143–239 默认开、none/minimal rc=0 可关；
+  // 64×64 纯红 PNG 五名受理）。context = **官方口径**（未探边，文档口径非 API 实测）；partialMode /
+  // cacheMode / thinkApi / tempRange = **族沿用**（qwen3.7/3.8 行先例）；reasoningEcho 不声明
+  // （跨轮回声未验——R-4）。日期戳快照名不登——前缀命中母名行（有意继承）。
+  ["qwen3.6-flash",     { context: 1_000_000, maxOutput: 65_536, thinking: true, partialMode: true, multimodal: true, cacheMode: "none", thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh"], tempRange: [0, 2] }],
+  // qwen3.6-plus：同形行（共享证据块见 flash 行上）——校验级 maxOutput / 六档枚举、官方口径 context、族沿用机制位。
+  ["qwen3.6-plus",      { context: 1_000_000, maxOutput: 65_536, thinking: true, partialMode: true, multimodal: true, cacheMode: "none", thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh"], tempRange: [0, 2] }],
+  // qwen3.6-max-preview：同形行——校验级 maxOutput / 六档枚举、官方口径 context、族沿用机制位；视觉通道实测 ✓ 但纯红图答「黑色」（抽样波动，如实记）。
+  ["qwen3.6-max-preview", { context: 1_000_000, maxOutput: 65_536, thinking: true, partialMode: true, multimodal: true, cacheMode: "none", thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh"], tempRange: [0, 2] }],
+  // qwen3.6-27b：同形行——校验级 maxOutput / 六档枚举、官方口径 context（未探边）、族沿用机制位。
+  ["qwen3.6-27b",        { context: 1_000_000, maxOutput: 65_536, thinking: true, partialMode: true, multimodal: true, cacheMode: "none", thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh"], tempRange: [0, 2] }],
+  // qwen3.6-35b-a3b：MoE 后缀（a3b = 激活参数量级）——校验级 maxOutput / 六档枚举、官方口径 context、族沿用机制位。
+  ["qwen3.6-35b-a3b",    { context: 1_000_000, maxOutput: 65_536, thinking: true, partialMode: true, multimodal: true, cacheMode: "none", thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh"], tempRange: [0, 2] }],
   // MiniMax series
   ["MiniMax-M3",        { context: 1_000_000, maxOutput: 128_000, thinking: true,  multimodal: true, cacheMode: "auto", thinkApi: "type", thinkEnabledValue: "adaptive", tempRange: [0, 2], noUsageStream: true }],
   // MiMo series (Xiaomi — OpenAI-compatible https://api.xiaomimimo.com/v1;

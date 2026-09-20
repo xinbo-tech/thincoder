@@ -33,6 +33,11 @@ const EFFORT_DEFAULT_PREFIXES = [
   ["qwen3.8-flash", "high"],
   ["qwen3.8-omni-flash", "high"],
   ["qwen3.8-27b", "high"],
+  ["qwen3.6-flash", "high"],
+  ["qwen3.6-plus", "high"],
+  ["qwen3.6-max-preview", "high"],
+  ["qwen3.6-27b", "high"],
+  ["qwen3.6-35b-a3b", "high"],
 ]
 
 function effortDefaultFor(model) {
