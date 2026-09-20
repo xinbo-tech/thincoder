@@ -9,8 +9,7 @@
 
 | 类 | 位置 | 形态 |
 |---|---|---|
-| 发布流程 · 需求（统一面） | `docs/RELEASE.md` | 2026-09-20 用户裁定迁根（原 `core/requirements/`）——**总发布计划**（三发布单元：核 / CLI / VSC · 顺序 = 核 → CLI → VSC） |
-| 发布流程 · CLI 链设计 | `docs/RELEASE-CLI.md` | 同批同迁（原 `cli/design/`）——CLI 链细目 ✗ 总计划在 `docs/RELEASE.md` |
+| 发布流程 · 需求（统一面） | `docs/RELEASE.md` | 2026-09-20 用户裁定迁根（原 `core/requirements/`）+ **三端合一**（23:23「把各端的 release.md 整合成一个」⇒ CLI 链设计档并回 ✗ 单档承载）——**总发布计划**（三发布单元：核 / CLI / VSC · 顺序 = 核 → CLI → VSC） |
 | 台账（项目级唯一真相） | SQLite——用户数据目录键控库 `~/.thincoder/ledger/<sha1(项目根)>.db`（2026-09-17 落点裁定：不在项目目录） | ✅ 唯一台账面 = SQLite（`/ledger` 查询）；`TODO.md` · `TODO-archive.md` = 退役历史（md 形态，无机械校验） |
 | 板块档（需求 / 设计） | `core/requirements/` · `core/design/` | ✅ 核心统一已迁入（2026-09-13）；后续新板块档直接落此。**子系统档（设计 / 需求各 15 档）见 §4** |
 | 批次档 | `batches/` | ✅ 核心统一已迁入（2026-09-13） |
@@ -90,7 +89,8 @@
 
 ## 变更记录
 
-- 2026-09-20：**发布计划档迁根登记**（用户裁定「release.md 不应该放在那个目录里，应该直接放在 docs 目录下」）——`docs/core/requirements/RELEASE.md` → `docs/RELEASE.md`（总发布计划）+ `docs/cli/design/RELEASE.md` → `docs/RELEASE-CLI.md`（CLI 链细目）；§1 内容表补两行。
+- 2026-09-20：**发布计划档迁根登记**（用户裁定「release.md 不应该放在那个目录里，应该直接放在 docs 目录下」）——原 `docs/core/requirements/RELEASE.md` 迁根为总发布计划 ✗ CLI 链设计档同批同迁（后随三端合一并回 ✗ 详见发布计划档变更记录）；§1 内容表补一行。
+- 2026-09-20：**三端合一登记**（用户 23:23「把各端的 release.md 整合成一个」）——CLI 链设计细目并回总发布计划 ✗ 单档承载 ✗ 地图改单行。
 
 - 2026-09-18：**v1 文档退役批（台账 #22）· 轮 A 落笔**——首部层级定位 + §2 补**退役状态**注（VSC 树已归档 `_archive/`；CLI 树轮 B 待执行）；本档其余不变。
 
