@@ -720,7 +720,120 @@ UI 显示 OFF、服务端照想 = 与 PROVIDER.md §6.12 初始缺陷同类。�
 | VSC 思考下拉 | 零改码：枚举源 = spec ⇒ `hy3-preview` / `hy4-preview` 档位空 = **认账**（代价句 = §9.3 D-11；两端差异 = §9.9 清单 6）；五新名**默认档** = 枚举首项（hy3 / seed 两族 `"none"` · 两 preview `null`）= 端差表未登记所致，**已认账**（后果与上抛 = §9.9 清单 7）|
 | 面板 `max_output` / `context` 显示 | 双栏形状同 §8（证据等级由行注承载，显示面不区分等级）|
 
+## 10. glm-5.3-flashx 独立规格行（2026-09-20 快车道批 · 单行新增）
+
+> 需求面 = `docs/batches/2026-09-20-glm53-flashx-row.md` §1（台账 #20）；批次条目 = 同档 §2.1。
+> §1–§9 机制不变；本节为单行新增批交付面（形状循 §9 先例）。
+
+### 10.1 方案与理由
+
+- **独立行新增，不修 `glm-5.3-flash` 行**（开放项 批档 §1.5-② 裁定）：flashx 是独立模型档，
+  131_072 为校验级实测（批档 §1.2 400 原文），flash 的 128_000 是其自身口径——AC-3 钉
+  「既有 glm 族回归零变化」。先例 = `deepseek-v4.1-flash`（2026-09-15 DEEPSEEK-QWENPLAN 批）
+  · `hy3` 族三行（§9）。
+- **落位**：GLM 段 `glm-5.3-flash`（`thincoder-core/model-specs.mjs:53`）与 `glm-5.2`（`:54`）
+  之间。`SORTED_SPECS` 按名长降序预排（`thincoder-core/model-specs.mjs:153`——**as-of 读数**：
+  同档 §2.1（`:57`）与变更记录「修复轮 #11」条均记 `:130`，坐标以实施轮实读复验为准；**收口核销值 = `:161`**（实施轮 #4 实读，父侧复验））⇒
+  flashx(14) > flash(13) > 5.3(7) 自洽，长前缀优先天然成立（用例 F-1 钉住）。
+- **「始终思考」= 仅行注，不加机制位**（开放项 批档 §1.5-① 裁定）：枚举
+  `["low","high","max"]` 无 `none` ⇒「off 不可达」已由枚举本身表达
+  （`thincoder-core/provider/core.mjs:213-219` D-14 五 guard 第 4 面 `includes("none")`
+  = false ⇒ off 载荷惰性不发字段）；机制无此字段、无消费者 ⇒ 加字段 = 死字段（同 §2.7
+  D-10 判）。先例 = `glm-5.3` 行注（`thincoder-core/model-specs.mjs:50-51`）。
+- **零机制改动**：查表 / 排序 / off 路径机制全部不动（零改面 = §10.4）。
+
+### 10.2 表变更清单（一行新增，零删除、零改既有行）
+
+| 位置 | 新行 | 取值 |
+|---|---|---|
+| `thincoder-core/model-specs.mjs:53` 与 `:54` 之间 | `["glm-5.3-flashx", { … }]` | §10.3 口径表 |
+
+### 10.3 字段口径表（逐字段 + 证据等级；批档 §1.2 取证表同源）
+
+| 字段 | 值 | 证据等级 |
+|---|---|---|
+| context | 1_000_000 | 族沿用（网络口径——未探边） |
+| maxOutput | 131_072 | **校验级**（400「max_tokens…限制数值范围[1,131072]」） |
+| thinking | true | 实测（disabled → 400；裸请求 rc=61 默认开） |
+| multimodal | true | 实测（8×8 纯红 PNG → 答「红色」） |
+| reasoningEffortEnum | ["low","high","max"] | **校验级**（400 原文点名：low/high/max 受理，其余拒绝） |
+| cacheMode / thinkApi / reasoningEcho / tempRange / noUsageStream | "auto" / "type" / "optional" / [0,1] / true | 族沿用（前缀命中路径日常在用） |
+
+「族沿用」字段的 F-2 期望值**推导规则**：以实施轮实读 `glm-5.3-flash` 行
+（`thincoder-core/model-specs.mjs:53`）的现行键集/值逐字为准，未声明键不进期望对象；
+上表字面清单仅作 as-of 参考（某键若为「不声明 = optional」形态，deepEqual 照此规则自然成立，
+不逼实施侧补造声明）。
+
+行注（AC-2 承载面）证据等级词 = **实测 / 校验级 / 族沿用**——用例 F-5 断言（断言面不变）；
+行注「始终思考」句内补记：**off 动作在 UI 侧为 no-op**（`thinkApi:"type"` + 枚举无 `none`
+⇒ D-14 guard 短路不发字段，服务端无关闭路径）——静默失配自行注可发现，认账面 = §10.9。
+
+### 10.4 消费面契约（本批动谁、谁零改）
+
+- **动**：`thincoder-core/model-specs.mjs`（+1 行 + 行注）·
+  `thincoder-core/test/model-specs.test.mjs`（F-1..F-5）· 本设计档（本节 + 变更记录）。
+- **零改**：CLI（`cmd-think.mjs` 档位行枚举驱动，flashx 自动显示三档）· VSC（
+  `specs.mjs` 端差表零改——`EFFORT_DEFAULT_PREFIXES` 既有 `glm-5` 族前缀条目即命中 flashx，
+  其默认档 `max` 在新枚举内合法）· `thincoder-core/provider/core.mjs`（`resolveEnableThinking`
+  qwen 白名单对 glm 恒 undefined——`thincoder-core/config.mjs:133-140` 零影响）·
+  `PROVIDER.md`（渠道机制无变）。
+
+### 10.5 影响文件清单（预读 · split 口径 · as-of 2026-09-20 设计轮）
+
+| 文件 | 现行数 | 预期 | 拆分计划 |
+|---|---|---|---|
+| `thincoder-core/model-specs.mjs` | 253 → **261**（收口实读） | ~259（<300 软限） | 无需 |
+| `thincoder-core/test/model-specs.test.mjs` | 415 → **468**（收口实读） | ~460（<500 硬限） | 无需（不拆档豁免已登记：`thincoder-core/test/core-hygiene.test.mjs:55`；拆分计划落点 = `CORE-UNIFICATION.md` §2.8.1） |
+| `docs/core/design/MODEL-SPECS.md` | 837 | ~940 | 本节 + 变更记录一条 |
+
+### 10.6 验收标准回指（逐条指回批档 §1.3）
+
+| AC | 判据 | 用例 |
+|---|---|---|
+| AC-1 | `specForModel('glm-5.3-flashx')` 命中独立行：`multimodal:true` · `maxOutput:131_072` · 枚举 `["low","high","max"]` · `thinking:true` | F-1 / F-2 |
+| AC-2 | 未实测字段行注含「族沿用」字样 | F-5 |
+| AC-3 | 既有 glm 族回归零变化；排序面 flashx 先于 flash 不破坏 | F-3 / F-1 |
+| AC-4 | 三端测试全绿 + doc-check 零新增 | 批档 §6 收口实跑 |
+
+### 10.7 用例表（`[flashx]` 段 · F-1..F-5 · 循 `[onboard]` 段先例）
+
+| 用例 | 类 | 输入 / 动作 | 期望 |
+|---|---|---|---|
+| F-1 | 正常 | `specMatch("glm-5.3-flashx")` | `matched:true` 且 `spec.maxOutput === 131_072`（≠ 128_000 即证非蹭 flash 行，排序面同证） |
+| F-2 | 正常 | `specForModel("glm-5.3-flashx")` | §10.3 全字段 deepEqual |
+| F-3 | 回归 | `glm-5.3` / `glm-5.3-flash` 查表 | 两行逐字段零变化（FAMILY_BASELINE 形状先例） |
+| F-4 | 结构 | `TABLE_ROW_NAMES` | 含 `glm-5.3-flashx`（防空扫） |
+| F-5 | 锚 | `rowNote("glm-5.3-flashx")` | 含「族沿用」+「校验级」 |
+
+### 10.8 边界（本节不做）
+
+- 不探 context 上限（沿用族口径 + 行注）；不动 `glm-5.3-flash` 行 128_000（残留上抛 =
+  批档 §2.6——语义面，后续批以同法取证后修正）；不动 VSC / `PROVIDER.md` / CLI 产品码。
+- 不新增「始终思考」机制字段（§10.1 裁定）；不改排序 / 查表 / off 路径机制。
+- 不测 flashx 在 tokenhub / dashscope 的转售差异（批档 §1.4）。
+- 本节不落实现——改码 = eng-coder，需本批 designToken。
+
+### 10.9 UI/交互决策（全落地，无 open）
+
+| 面 | 决策 |
+|---|---|
+| CLI `/models` | flashx 显示 `1M`（context 族口径；证据等级由行注承载，显示面不区分） |
+| CLI `/think effort` 档位行 | flashx 列 `effort: low/high/max`（枚举驱动零改码）；off 标记经 D-14 guard 对 `thinkApi:"type"` 行不发字段（现状族形——与 `glm-5.3` 同，off 不可达 = 服务端 400，非本批对象） |
+| VSC 思考下拉 | 零改：flashx 落既有 `glm-5` 族前缀条目，默认档 `max`（新枚举内合法）；档位行自动 = 枚举三档 |
+
 ## 变更记录
+
+- 2026-09-20（**glm-5.3-flashx 独立行批 · 设计评审轮 1 修正** · eng-designer——fix 轮；承
+  `docs/batches/2026-09-20-glm53-flashx-row.md` §3 轮次 1 · 针一 #1 / 针二 #3 / 针三 #4）：
+  ① §10.3 补「族沿用」字段 F-2 期望值**推导规则**（实施轮实读 `glm-5.3-flash` 行现行键集/值
+  逐字为准，未声明键不进期望对象；§10.3 字面清单降为 as-of 参考）；② §10.1 `SORTED_SPECS`
+  `:153` 标 as-of 读数（同档 §2.1 与「修复轮 #11」条均记 `:130`，坐标以实施轮实读复验为准）；
+  ③ §10.3 行注规格补「off 动作在 UI 侧为 no-op（服务端无关闭路径）」（F-5 断言面不变）。
+  零新语义——§1–§9 未动。
+- 2026-09-20（**glm-5.3-flashx 独立行批 · 设计轮（initial）** · eng-designer——承
+  `docs/batches/2026-09-20-glm53-flashx-row.md` §1 + §2）：新增 §10（单行新增交付面：
+  +1 表行 + 行注证据块 + 用例 F-1..F-5）；开放项两项裁定（行注表达 / 独立行）= §10.1；
+  零改面 = §10.4；残留上抛（flash 行 128_000 与 §1.2 对照实测矛盾）= 批档 §2.6。
 
 - 2026-09-20（**渠道接入批 · 设计侧收口轮（fix 轮）** · eng-designer——承 `docs/batches/2026-09-20-channel-onboarding.md` §5.4 漂移表 DR-3 / DR-4 / DR-5 + §1.10-④ 预裁）：
   ① **读数刷新（收口复读 · 实施后终态）**：§9.7 表改收口值——`model-specs.mjs` **253** · `config-presets.mjs` **50** · `thincoder-core/provider/core.mjs` **492** · 两测试档 **415** / **307** · 新档 `config-presets.test.mjs` **52**（`split` 口径；口径注更「收口复读」as-of，各预读 as-of 不追改）。

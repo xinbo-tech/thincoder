@@ -51,6 +51,14 @@ const MODEL_SPECS = [
   //          7-level glm-5.2 enum (verified vs docs.bigmodel.cn GLM-5.3 page, 2026-08)
   ["glm-5.3",           { context: 1_000_000, maxOutput: 128_000, thinking: true,  cacheMode: "auto", thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 1], noUsageStream: true }],
   ["glm-5.3-flash",     { context: 1_000_000, maxOutput: 128_000, thinking: true, multimodal: true, cacheMode: "auto", thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 1], noUsageStream: true }],
+  // glm-5.3-flashx（GLM-5.3-FlashX，2026-09 上线）——独立行（不再蹭 flash 前缀行）：maxOutput 131_072 =
+  // **校验级**（400「max_tokens…限制数值范围[1,131072]」）；effort 枚举 ["low","high","max"] = **校验级**
+  // （400 原文点名：low/high/max 受理，其余拒绝）。multimodal = **实测**（8×8 纯红 PNG → 答「红色」）。
+  // thinking = **实测**且**始终思考**（`thinking:{type:"disabled"}` → 400；裸请求默认开）——off 动作在
+  // UI 侧为 no-op（服务端无关闭路径）。其余 = **族沿用** flash 行（context 网络口径未探边；
+  // cacheMode / thinkApi / reasoningEcho / tempRange / noUsageStream = 前缀命中路径日常在用）。
+  // flash 行 128_000 系其自身口径，不得对齐本行（AC-3 零回归）。
+  ["glm-5.3-flashx",    { context: 1_000_000, maxOutput: 131_072, thinking: true, multimodal: true, cacheMode: "auto", thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 1], noUsageStream: true }],
   ["glm-5.2",           { context: 1_000_000, maxOutput: 128_000, thinking: true,  cacheMode: "auto", thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["max", "xhigh", "high", "medium", "low", "minimal", "none"], tempRange: [0, 1], noUsageStream: true }],
   ["glm-5",             { context: 1_000_000, maxOutput: 128_000, thinking: true,  cacheMode: "auto", thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["max", "xhigh", "high", "medium", "low", "minimal", "none"], tempRange: [0, 1], noUsageStream: true }],
   ["glm-4",             { context: 128_000,   maxOutput: 32_000,  thinking: true,  cacheMode: "auto", thinkApi: "type", reasoningEcho: "optional", tempRange: [0, 1], noUsageStream: true }],

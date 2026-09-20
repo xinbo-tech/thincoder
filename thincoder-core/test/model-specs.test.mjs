@@ -1,15 +1,18 @@
 /**
- * model-specs.test.mjs — MODEL_SPECS 查表层核内行为面。两段：
+ * model-specs.test.mjs — MODEL_SPECS 查表层核内行为面。四段：
  *  ① 上段（DEEPSEEK-QWENPLAN 批：qwen-plan 渠道名 `deepseek-v4.1-flash` 接入——R21 / N10 / N11 ·
  *     批次档 §2 AC A-1..A-4 / 用例 T-1..T-5）；
  *  ② 中段（2026-09-20-qwen-flash-specs 批：qwen3.7/3.8-flash 独立行 + omni/27b 新档 + `qwen`
  *     托底行删除——设计 `docs/core/design/MODEL-SPECS.md` §2.1–§2.4 · 用例 T-1…T-13；该段用例
  *     标题带 `[qwen]` 打标，与上段同号用例消歧）；
- *  ③ 末段（2026-09-20-channel-onboarding 批：TokenHub `hy3` 族三行 + 方舟 `doubao-seed-2-0-*`
+ *  ③ 后段（2026-09-20-channel-onboarding 批：TokenHub `hy3` 族三行 + 方舟 `doubao-seed-2-0-*`
  *     两行入登记面——设计 `docs/core/design/MODEL-SPECS.md` §9 · 用例 A-1…A-12；该段标题带
- *     `[onboard]` 打标。D-14 载荷面用例在 `provider-merge.test.mjs` B-1…B-6）。
+ *     `[onboard]` 打标。D-14 载荷面用例在 `provider-merge.test.mjs` B-1…B-6）；
+ *  ④ 末段（2026-09-20-glm53-flashx-row 批：`glm-5.3-flashx` 独立规格行入登记面——设计
+ *     `docs/core/design/MODEL-SPECS.md` §10 · 用例 F-1..F-5；该段标题带 `[flashx]` 打标）。
  *
- * 断言面 = 行为面：specForModel / specMatch 返回形状 + 显式字段值——无逐字子串散文锚（唯一例外 = 末段 A-4 的行注证据等级词，见末段段注）。
+ * 断言面 = 行为面：specForModel / specMatch 返回形状 + 显式字段值——无逐字子串散文锚
+ * （唯一例外 = ③ A-4 与 ④ F-5 的行注证据等级词，行注即交付物本体，见各段段注）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
@@ -411,4 +414,54 @@ test("[onboard] A-12 两族枚举各自七值且行独立（受理级 ≠ 校验
     hy3Spec.reasoningEffortEnum = saved
   }
   assert.deepEqual(specForModel(HY3).reasoningEffortEnum, EFFORT_7_CH, "还原（防泄漏至后续用例）")
+})
+
+// ─── 批 2026-09-20-glm53-flashx-row（设计 `docs/core/design/MODEL-SPECS.md` §10 · 用例 F-1..F-5）───
+// `glm-5.3-flashx` 独立规格行入登记面（不再蹭 `glm-5.3-flash` 前缀行）。断言面 = 行为面
+// （查表返回形状 + 显式字段值）；文本锚仅 F-5 行注证据等级词（AC-2——行注即交付物本体，
+// 循上段 A-4 先例）。「族沿用」字段的期望值 = 实读 flash 行现行键集/值逐字（§10.3 推导规则）。
+const FLASHX = "glm-5.3-flashx"
+const GLM_FLASH = "glm-5.3-flash"
+
+test("[flashx] F-1 独立行命中：specMatch matched 且 maxOutput 131_072（≠ flash 行 128_000，排序面同证）", () => {
+  const r = specMatch(FLASHX)
+  assert.equal(r.matched, true, "命中独立行（非前缀兜底蹭 flash 行）")
+  assert.equal(r.spec.maxOutput, 131_072, "maxOutput = 校验级实测 131_072（≠ 128_000）")
+  assert.equal(r.spec.context, 1_000_000, "context = 族口径 1M（非 128K 兜底）")
+  assert.notEqual(specForModel(FLASHX), specForModel(GLM_FLASH), "与 flash 行非同一对象（独立行）")
+})
+
+test("[flashx] F-2 全字段 deepEqual：实测/校验级字段显式 + 族沿用字段 = flash 行运行时实读（§10.3 推导规则）", () => {
+  const spec = specForModel(FLASHX)
+  // 实测 / 校验级字段（批档 §1.2 / §10.3 口径表）：
+  assert.equal(spec.thinking, true, "thinking = 实测（disabled → 400；裸请求默认开）")
+  assert.equal(spec.multimodal, true, "multimodal = 实测（8×8 纯红 PNG → 答「红色」）")
+  assert.equal(spec.maxOutput, 131_072, "maxOutput = 校验级（400「max_tokens…[1,131072]」）")
+  assert.deepEqual(spec.reasoningEffortEnum, ["low", "high", "max"], "枚举 = 校验级（400 原文点名 low/high/max）")
+  // 族沿用字段 = flash 行**运行时实读**逐字（§10.3:762-765 推导规则——不照抄设计档字面清单，
+  // 未声明键不进期望对象），仅 maxOutput 换校验级值 ⇒ 全字段 deepEqual（键集差 / 值差任一即红）：
+  assert.deepEqual(spec, { ...specForModel(GLM_FLASH), maxOutput: 131_072 }, "全字段 deepEqual（实测/校验级 + 族沿用逐字）")
+})
+
+test("[flashx] F-3 glm 族回归零变化：glm-5.3 / glm-5.3-flash 逐字段不变（AC-3 · FAMILY_BASELINE 形状先例）", () => {
+  // FAMILY_BASELINE 形状（§10.7 F-3 判据自引）：行为面字段逐项断言，D-10 信息性字段不入列；
+  // flashx 对 flash 的信息性字段一致性由 F-2 运行时推导承载。
+  assertFields("glm-5.3", FAMILY_BASELINE.find(([n]) => n === "glm-5.3")[1])
+  assertFields(GLM_FLASH, {
+    context: 1_000_000, maxOutput: 128_000, thinking: true, multimodal: true, thinkApi: "type",
+    reasoningEcho: "optional", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 1], noUsageStream: true,
+  })
+})
+
+test("[flashx] F-4 表行在场：TABLE_ROW_NAMES 含 glm-5.3-flashx（防空扫）", () => {
+  assert.ok(TABLE_ROW_NAMES.includes(FLASHX), "表行名提取须含新行（正则空扫防护同 [qwen] T-7）")
+})
+
+test("[flashx] F-5 行注证据词：实测 / 校验级 / 族沿用逐字在场 + 始终思考 no-op 句（AC-2 承载面）", () => {
+  const note = rowNote(FLASHX)
+  for (const w of ["实测", "校验级", "族沿用"]) {
+    assert.ok(note.includes(w), `行注含「${w}」（AC-2 证据等级词）`)
+  }
+  assert.ok(note.includes("始终思考"), "行注含「始终思考」（§10.3 行注规格）")
+  assert.ok(note.includes("no-op") && note.includes("服务端无关闭路径"), "行注含 off = UI 侧 no-op / 服务端无关闭路径句（§10.3 行注规格）")
 })
