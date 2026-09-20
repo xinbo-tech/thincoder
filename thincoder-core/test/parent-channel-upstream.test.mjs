@@ -3,6 +3,8 @@
  * `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.27.12.9 T18–T22；批 2026-09-19-upstream-channel-availability）。
  * 正常 = T18（ask 入队即唤醒）；边界 = T19（note 不唤醒——F13 面）/ T20（无等待栓——F11 / F12）；
  * 谓词真值 = T21；结构单点 = T22（机检）。
+ * F-UC8（2026-09-21 信号提示行批 · §6.27.12.13 ② / ⑦）：**提示行携参**用例 T-SL1–T-SL4——
+ * `upstreamAskLabelVars`（队首 ask 选择 / 单行归一 + 截断 / 载体吸收 / 无 ask 缺省）。
  *
  * 本档 = 设计评审修正轮 1 拆分产物（T18–T22 原计划并入 `parent-channel.test.mjs` ⇒ 291 + 45 越
  * 核档 300 软线；`thincoder-core/test/run.mjs:37` 单层 `test/*.test.mjs` glob 自动收集）。
@@ -13,7 +15,7 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 
-import { pushChildUpstream, upstreamWaiting } from "../agent-tools/parent-channel.mjs"
+import { pushChildUpstream, upstreamAskLabelVars, upstreamWaiting } from "../agent-tools/parent-channel.mjs"
 
 /** 父（接收方）agent 最小形态：载体字段在场（CLI 形）。 */
 const parentAgent = (over = {}) => ({
@@ -76,6 +78,55 @@ test("T21 谓词真值：upstreamWaiting 四形 + 载体吸收 + 缺容器 fail-
   assert.equal(upstreamWaiting({}), false, "两形皆缺 ⇒ false（fail-closed——缺容器不抛）")
   assert.equal(upstreamWaiting(null), false, "null 载荷 ⇒ false")
   assert.equal(upstreamWaiting({ _childUpstream: "x" }), false, "非数组 ⇒ false（Array.isArray 守卫）")
+})
+
+test("T-SL1 正常：携参取队首 ask（`from` 原文 + `msg` 问题摘要）——前位 note 跳过", () => {
+  const carrier = {
+    _childUpstream: [
+      { seq: 1, from: "explore#3", kind: "note", message: "fyi" },
+      { seq: 2, from: "coder#7", kind: "ask", message: "选 A 还是 B？" },
+    ],
+  }
+  assert.deepEqual(upstreamAskLabelVars(carrier), { from: "coder#7", msg: "选 A 还是 B？" }, "队首 ask 的 `from` / `msg`")
+})
+
+test("T-SL2 边界：无 ask / 非数组 / 字段缺省 ⇒ null（不抛）；载体别名路 ⇒ 同一容器；`from` 缺 ⇒ `?`", () => {
+  assert.equal(upstreamAskLabelVars({ _childUpstream: [] }), null, "空队列 ⇒ null")
+  assert.equal(upstreamAskLabelVars({ _childUpstream: [{ kind: "note", message: "x" }] }), null, "仅 note ⇒ null")
+  assert.equal(upstreamAskLabelVars({}), null, "字段缺省 ⇒ null（fail-closed——缺容器不抛）")
+  assert.equal(upstreamAskLabelVars(null), null, "null 载荷 ⇒ null")
+  assert.equal(upstreamAskLabelVars({ _childUpstream: "x" }), null, "非数组 ⇒ null（Array.isArray 守卫）")
+  // 载体别名路（合成 parent / VSC 形）：父字段缺 + `history._childUpstream` 在场 ⇒ `carrierField` 吸收
+  const carried = { history: { _childUpstream: [{ kind: "ask", from: "explore#9", message: "q" }] } }
+  assert.deepEqual(upstreamAskLabelVars(carried), { from: "explore#9", msg: "q" }, "载体命中（同一容器）")
+  assert.deepEqual(
+    upstreamAskLabelVars({ _childUpstream: [{ kind: "ask", message: "q" }] }),
+    { from: "?", msg: "q" },
+    "`from` 缺 ⇒ `?`（防御缺省）",
+  )
+})
+
+test("T-SL3 边界：`msg` 单行归一（折行 / 连续空白 ⇒ 单空格）+ 截断 120 字符（尾 `…`）", () => {
+  const long = "A".repeat(200)
+  const one = upstreamAskLabelVars({ _childUpstream: [{ kind: "ask", from: "coder#1", message: `l1\n\nl2\t l3   ${long}` }] })
+  assert.equal(one.msg.length, 120, "截断上限 = 120 字符")
+  assert.ok(one.msg.endsWith("…"), "尾 `…`（截断标记）")
+  assert.ok(!/[\n\t]/.test(one.msg) && !/\s\s/.test(one.msg), "折行 / 连续空白归一为单空格（单行）")
+  assert.ok(one.msg.startsWith("l1 l2 l3 A"), "归一后内容不失真（首段）")
+  const short = upstreamAskLabelVars({ _childUpstream: [{ kind: "ask", from: "coder#1", message: "  a\n b  " }] })
+  assert.equal(short.msg, "a b", "未超长 ⇒ 仅归一（零截断）")
+  const empty = upstreamAskLabelVars({ _childUpstream: [{ kind: "ask", from: "coder#1", message: "   " }] })
+  assert.equal(empty.msg, "…", "归一后空串 ⇒ `…`（工具闸拒空 message ⇒ 不可达）")
+})
+
+test("T-SL4 边界：多 ask 取插入序首个（不并列 / 不 `+N`）", () => {
+  const carrier = {
+    _childUpstream: [
+      { kind: "ask", from: "coder#2", message: "second-queued" },
+      { kind: "ask", from: "explore#5", message: "later" },
+    ],
+  }
+  assert.equal(upstreamAskLabelVars(carrier).from, "coder#2", "取插入序首个 ask（与 drain 列示序同源）")
 })
 
 test("T22 结构单点（机检）：唤醒定义恰 1 + splice(0) 收口 + 两调用点 + 消费单点不破", () => {

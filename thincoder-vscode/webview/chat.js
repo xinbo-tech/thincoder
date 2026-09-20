@@ -389,21 +389,24 @@ function showDigestStatus(m) {
   if (m.status === "start") {
     const label = document.createElement("div")
     label.className = "digest-turn"
-    // M4（显示面消差批 §2.1）：起跑标签三档（`tier` 缺省 ⇒ 既有键——后向兼容）；字面单源 = 核
-    // i18n 容器（本地档不重复定义）。ask 轮 = CLI 第三档（本轮主事 = 答复在飞提问）。
-    label.textContent = t(m.tier === "ask" ? "digest.turnLabelAsk" : m.tier === "auto" ? "digest.turnLabelAuto" : "digest.turnLabel")
+    // M4（显示面消差批 §2.1）+ F-UC8（2026-09-21 信号提示行批 · §6.27.12.13 ①–②）：起跑标签 **两档**
+    // （`tier === "ask"` 携参 `{ from, msg }` / 其余含缺省档 ⇒ 既有键——后向兼容）；字面单源 = 核
+    // i18n 容器（本地档不重复定义）。AUTO 档同判（`auto` 泛句退场——无生产者）。
+    label.textContent = t(m.tier === "ask" ? "digest.turnLabelAsk" : "digest.turnLabel",
+      m.tier === "ask" ? { from: m.from ?? "?", msg: m.msg ?? "…" } : {})
     messagesEl.appendChild(label)
     _digestRoundEl = null
-    if (m.tier !== "ask") {
+    // 计数元素规则 = `n > 0`（D-SL2——两档同规；`n = 0` 的 ask-only 轮零元素：幻影行禁出）
+    if ((m.n ?? 0) > 0) {
       const el = document.createElement("div")
       el.className = "digest-status"
-      el.dataset.n = String(m.n ?? "?")
+      el.dataset.n = String(m.n)
       el.textContent = t("digest.start", { n: el.dataset.n })
       messagesEl.appendChild(el)
       _digestRoundEl = el
     }
-    // ask 轮（起跑即发·`n` 可 0）：只打标签行——不建计数元素（CLI ask 轮对位）；本轮
-    // `_digestRoundEl` 置空 ⇒ end 零动作（禁兜底建元素——不得造 `dataset.n = "?"` 幻影行）。
+    // 零计数元素轮（`n = 0`——起跑即发）：只打标签行；本轮 `_digestRoundEl` 置空 ⇒ end 零动作
+    // （禁兜底建元素——不得造 `dataset.n = "?"` 幻影行）。
     S._digestBoundary = label // C-4：本轮边界 = 本轮首元素（标签行）
     ctx.assistantLabeled = false // C-9③：本轮 assistant 输出带一次回合标签
     maybeScrollDown(ctx)
@@ -420,7 +423,7 @@ function showDigestStatus(m) {
     return
   }
   // end：本轮元素原地更新（start 连发亦各成独立元素——end 更新其前最近未结本轮元素）；
-  // 本轮无计数元素（ask 轮——`_digestRoundEl` 置空）⇒ **零动作**（M4：禁兜底建元素——
+  // 本轮无计数元素（`n = 0` 轮——`_digestRoundEl` 置空）⇒ **零动作**（M4：禁兜底建元素——
   // 旧兜底行会造 `dataset.n = "?"` 幻影计数行）。
   const el = _digestRoundEl?.isConnected ? _digestRoundEl : null
   if (!el) return

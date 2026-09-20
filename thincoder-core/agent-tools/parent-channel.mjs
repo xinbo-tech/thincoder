@@ -30,6 +30,9 @@
  * ≤ `UPSTREAM_MSG_MAX` 且父队列 ≤ `UPSTREAM_QUEUE_MAX`（超限 = 工具**明确报错**，不静默丢）。
  * 射程纪律（两问自检 + 正负清单）在提示词面（§6.27.8），机制面不新增语义判定。
  *
+ * 显示面单点（F-UC8 · AGENT-LOOP-SUBAGENT.md §6.27.12.13 ②）：`upstreamAskLabelVars(carrier)`——CLI / VSC
+ * 两端共用的提示行携参（队首 ask 的 `from` + 单行归一截断的 `message`）；两端各持一份 = 漂移源（D2）。
+ *
  * 模块图：静态 import 核单点 `async-settle.mjs`（`carrierField` / `getAsyncPool` /
  * `tombstoneOf` / `wakeAsyncWaiters`——同层既有导出，同 `async-discard.mjs:35` 先例；唤醒走
  * 既有静态边，零新增）+ `../context.mjs`（`pushReal`）
@@ -95,6 +98,20 @@ function upstreamHolder(parent) {
 export function upstreamWaiting(carrier) {
   const q = carrierField(carrier, "_childUpstream")
   return Array.isArray(q) && q.some((e) => e.kind === "ask")
+}
+
+/** ask 提示行显示串上限（字符——模块内常量，不导出）。 */
+const ASK_LABEL_MSG_MAX = 120
+
+/** ask 提示行携参（显示面单点——CLI / VSC 两端同源）：队首未 drain ask ⇒ `{ from, msg }`；无 ⇒ null。
+ *  选择 = 插入序首个 `kind === "ask"`（与 drain 列示序同源）；`msg` = 单行归一 + 截断 `ASK_LABEL_MSG_MAX`；
+ *  载体经 `carrierField` 吸收（同 `upstreamWaiting`）。 */
+export function upstreamAskLabelVars(carrier) {
+  const q = carrierField(carrier, "_childUpstream")
+  const e = Array.isArray(q) ? q.find((x) => x.kind === "ask") : null
+  if (!e) return null
+  const one = String(e.message ?? "").replace(/\s+/g, " ").trim()
+  return { from: String(e.from ?? "?"), msg: one.length > ASK_LABEL_MSG_MAX ? one.slice(0, ASK_LABEL_MSG_MAX - 1) + "…" : (one || "…") }
 }
 
 /**

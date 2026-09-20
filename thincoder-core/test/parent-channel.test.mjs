@@ -265,11 +265,14 @@ test("T17 边界（同用例两半）：sync 形返回注不给「答复到达�
   assert.match(asyncOut.note, /a reply arrives as an ordinary instruction at your next turn boundary/)
 })
 
-test("A4 导出面：tool + push / drain + 谓词 + 三常量（通道无拉取 / 等待导出）", async () => {
+test("A4 导出面：tool + push / drain + 谓词 + 显示面携参 + 三常量（通道无拉取 / 等待导出）", async () => {
   const mod = await import("../agent-tools/parent-channel.mjs")
   assert.deepEqual(
     Object.keys(mod).sort(),
-    ["UPSTREAM_ASK_MAX_INFLIGHT", "UPSTREAM_MSG_MAX", "UPSTREAM_QUEUE_MAX", "drainChildUpstream", "parentChannelTool", "pushChildUpstream", "upstreamWaiting"].sort(),
+    [
+      "UPSTREAM_ASK_MAX_INFLIGHT", "UPSTREAM_MSG_MAX", "UPSTREAM_QUEUE_MAX", "drainChildUpstream",
+      "parentChannelTool", "pushChildUpstream", "upstreamAskLabelVars", "upstreamWaiting",
+    ].sort(),
     "导出面钉死（零 fetch / poll / wait 动作）",
   )
   assert.equal(UPSTREAM_MSG_MAX, 1500)

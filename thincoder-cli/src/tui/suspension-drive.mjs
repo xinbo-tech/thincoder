@@ -11,7 +11,9 @@
  * done 冻结自然退出。状态机行表见 AGENT-LOOP.md §9.2。
  * F-UC7（2026-09-19 批，AGENT-LOOP-SUBAGENT.md §6.27.12）：第二开轮源 = 未 drain 的上行
  * ask（`upstreamWaiting` 谓词——ask 入队即唤醒本驱动）；唤醒轮同走 auto-turn（旗标
- * `upstreamTurn` 供核域文本选择，提示行走第三档）。
+ * `upstreamTurn` 供核域文本选择）。
+ * F-UC8（2026-09-21 批，§6.27.12.13）：可见提示面**按因两档**（ask 携「谁 + 啥」——
+ * 核单点 `upstreamAskLabelVars` / digest）+ 起跑数行与轮尾收尾行同守 `pend0 > 0`。
  */
 
 // 函数级静态环（2026-09-05）：drive 的 digestTurn/用户回合经 runAgentTurn 递归进入
@@ -24,7 +26,8 @@ import { C } from "./ansi.mjs"
 // ASYNC-RESULT-CONTAINER.md D1/D2：池 accessor（双池 absorb）+ pending 单容器停靠
 import { getAsyncPool, parkAsyncPending, releaseSettledEntry } from "@thincoder/core/agent-tools/async-settle.mjs"
 // F-UC7（AGENT-LOOP-SUBAGENT.md §6.27.12——2026-09-19 批）：上行 ask 开轮谓词单点（核导出）
-import { upstreamWaiting } from "@thincoder/core/agent-tools/parent-channel.mjs"
+// F-UC8（§6.27.12.13 ②——2026-09-21 批）：ask 提示行携参单点（同档导出——显示面单源）
+import { upstreamAskLabelVars, upstreamWaiting } from "@thincoder/core/agent-tools/parent-channel.mjs"
 // X9（2026-09-20 端差·显示面消差批）：消化收尾文案单源 = 核 i18n 容器（禁第三份字面）
 import { t } from "@thincoder/core/i18n.mjs"
 // 批 4 CLI-ASYNC-DISCARD（AGENT-LOOP-SUBAGENT.md §6.20）：中止分支「只清已死」收尾单点
@@ -162,33 +165,40 @@ function backgroundStatusText(agent) {
  *  契约——denied 不弹面板、不悬挂）；AUTO 档沿用普通回调（autoApprove 短路自动
  *  执行）。_suspended 保持 true：消化中 settle 延迟冻结 + 移交 pending。R17：pending
  *  计数/消化触发 = 任一 pending 族（T-R17j——consult/escalate 空闲 settle 也触发消化轮）。
- *  F-UC7（§6.27.12.5 D）：`upstream` = 未 drain 的 ask 在场（唤醒轮）——提示行走第三
- *  档、旗标随 auto 轮贯通到核 `runAgent`（域文本选择面）、`digest:*` 载荷条件携带
- *  `upstream: true`（宿主日志区分唤醒轮与 digest 轮——两端同规）。 */
+ *  F-UC7（§6.27.12.5 D）：`upstream` = 未 drain 的 ask 在场（唤醒轮）——旗标随 auto 轮
+ *  贯通到核 `runAgent`（域文本选择面）、`digest:*` 载荷条件携带 `upstream: true`（宿主
+ *  日志区分唤醒轮与 digest 轮——两端同规）。
+ *  F-UC8（§6.27.12.13 ①–③）：可见提示面**按因两档 × 全档**——标签行 ask 携「谁 + 啥」
+ *  （核容器键，CLI 零自持字面）/ digest（manual 与 AUTO 同判——泛句退场）；起跑数行
+ *  与轮尾收尾行同守 `pend0 > 0`（ask-only 轮两行皆不出）。 */
 async function digestTurn(ctx, upstream = false) {
   const { agent, pushLine } = ctx
   const manual = !agent.autoApprove
-  // 提示行三分（§6.27.12.5 D）：manual 档 ask 轮 = 第三档（「消化已完成的报告」字面在
-  // ask 轮相抵——本轮主事 = 答复子代理在飞提问）；既有两档字面零改。
-  const label = manual
-    ? (upstream ? "[auto-turn: answering a subagent's in-flight message…]" : "[auto-turn: digesting finished subagent reports…]")
-    : "[auto-turn: continuing background work…]"
-  pushLine(label, C.dim)
+  // 起跑数前置（§6.27.12.13 ③）：起跑行与轮尾收尾行同源（皆 = 起跑口径）
+  const pend0 = pendingFamilyCount(agent)
+  // 标签两档（§6.27.12.13 ①）：ask 因恒优先——携参单源 = 核 `upstreamAskLabelVars`
+  // （队首 ask 的 `from` + 单行归一截断 `msg`）；digest 因沿用既有字面；AUTO 档同判
+  // （泛句无生产者——开轮因穷尽；模式可见性另有 `AUTO│` 横幅载体）。
+  const ask = upstream ? upstreamAskLabelVars(agent) : null
+  pushLine(ask ? t("digest.turnLabelAsk", ask) : t("digest.turnLabel"), C.dim)
+  // 起跑数行（对位 VSC `.digest-status` 元素）：`n > 0` 规则——ask-only 轮（`n = 0`）零行
+  if (pend0 > 0) pushLine(t("digest.start", { n: pend0 }), C.dim)
   const digestCtx = manual
     ? { ...ctx, askPermission: null, askBatchPermission: null, askQuestion: null }
     : ctx
   // LOGGING：digest:* 事件（D-S9 消化轮边界——LOGGING.md F-L4 挂起态覆盖）
   const d0 = Date.now()
-  const pend0 = pendingFamilyCount(agent)
   logEvent("digest:start", { pendingN: pend0, ...(upstream ? { upstream: true } : {}) })
   const outcome = await runAgentTurn(digestCtx, "", { autoTurn: true, upstreamTurn: upstream, skipSession: true })
   logEvent("digest:end", { pendingN: pendingFamilyCount(agent), ms: Date.now() - d0, ...(upstream ? { upstream: true } : {}) })
   // X9（2026-09-20 端差·显示面消差批）：轮尾**可见**收尾行（修前只有 `digest:end` 日志事件——
-  // 用户不可见；对位 VSC `webview/chat.js:394-401`）。计数口径 = **起跑数** `pend0`
-  // （与 VSC `suspension.mjs:302/:314` 同源）；文案单源 = 核 i18n `digest.done` /
+  // 用户不可见；对位 VSC `webview/chat.js` `showDigestStatus` end 段）。计数口径 = **起跑数**
+  // `pend0`（与 VSC `suspension.mjs` 起跑 post 同源）；文案单源 = 核 i18n `digest.done` /
   // `digest.aborted`；终态 ≠ ok（中止/失败）⇒ aborted 形态（VSC ok 旗标同口径）。
+  // F-UC8 守卫（§6.27.12.13 ③）：`pend0 = 0`（ask-only 轮）⇒ **零收尾行**——与起跑行
+  // 同规则（两行成对）；done / aborted 两形态同判（VSC 零动作守卫先于 ok 判）。
   const seconds = ((Date.now() - d0) / 1000).toFixed(1)
-  pushLine(t(outcome === "ok" ? "digest.done" : "digest.aborted", { n: pend0, seconds }), C.dim)
+  if (pend0 > 0) pushLine(t(outcome === "ok" ? "digest.done" : "digest.aborted", { n: pend0, seconds }), C.dim)
 }
 
 /**

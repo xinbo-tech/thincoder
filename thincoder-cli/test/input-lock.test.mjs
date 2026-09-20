@@ -16,6 +16,8 @@ import { join } from "node:path"
 import { createKeyHandler } from "../src/tui/key-handler.mjs"
 import { suspensionSession } from "../src/tui/suspension-drive.mjs"
 import { renderStatus } from "../src/tui/render-frame.mjs"
+// F-UC8（2026-09-21 信号提示行批 §6.27.12.13 ①–②）：提示行断言以**核容器值**为据（零自持字面）
+import { t } from "@thincoder/core/i18n.mjs"
 
 /** 最小按键态。 */
 function baseState(over = {}) {
@@ -240,7 +242,7 @@ async function withClosedSession(rig, fn) {
   }
 }
 
-test("T-CL-U1 正常·CLI 驱动开轮 + 旗标贯通：未 drain 的 ask ⇒ auto 轮恰 1 次 + 桩第 4 参 `upstreamTurn === true`（CLI 跳未丢弃）+ 第三档提示行；池空 + ask 留队仍开轮（§6.27.12.5 D）", async () => {
+test("T-CL-U1 正常·CLI 驱动开轮 + 旗标贯通：未 drain 的 ask ⇒ auto 轮恰 1 次 + 桩第 4 参 `upstreamTurn === true`（CLI 跳未丢弃）+ ask 档携参提示行；池空 + ask 留队仍开轮（§6.27.12.5 D / §6.27.12.13 ②）", async () => {
   const ask = { seq: 1, from: "explore#1", kind: "ask", message: "先定 X 还是 Y？", ts: Date.now() }
   // ① 池内 1 running + ask 留队
   const rig = upstreamRig({ _childUpstream: [{ ...ask }] })
@@ -249,7 +251,10 @@ test("T-CL-U1 正常·CLI 驱动开轮 + 旗标贯通：未 drain 的 ask ⇒ au
     assert.equal(rig.calls[0].text, "", "auto 轮文本为空（系统驱动——无用户输入）")
     assert.equal(rig.calls[0].opts.autoTurn, true, "auto 轮分类不变")
     assert.equal(rig.calls[0].opts.upstreamTurn, true, "旗标贯通到核 runAgent（CLI 跳未丢弃——可机检）")
-    assert.match(rig.lines[0] ?? "", /auto-turn: answering a subagent's in-flight message/, "manual 档第三档提示行")
+    assert.equal(
+      rig.lines[0], t("digest.turnLabelAsk", { from: "explore#1", msg: "先定 X 还是 Y？" }, "en"),
+      "ask 档提示行携「谁 + 啥」（核容器字面——零自持）",
+    )
   })
 
   // ② 池空 + ask 留队（子代理已 settle 且报告已消化）：仍开一轮把它 drain 出来 ⇒ 自然退出
@@ -262,7 +267,7 @@ test("T-CL-U1 正常·CLI 驱动开轮 + 旗标贯通：未 drain 的 ask ⇒ au
   })
 })
 
-test("T-CL-U2 边界·提示行三分 + 不误开轮：仅 note ⇒ 0 轮 0 提示行；manual 档 ask ⇒ 第三档字面；既有两档字面零改（manual digest / AUTO）（§6.27.12.9）", async () => {
+test("T-CL-U2 边界·按因分流 + 不误开轮：仅 note ⇒ 0 轮 0 提示行；ask 档携参字面；digest 档字面零改（manual / AUTO **同判**——泛句退场）（§6.27.12.9 / §6.27.12.13 ①）", async () => {
   // ① 仅 note：无时效义务 ⇒ 不开轮（note 不唤醒——边界 7）
   const note = upstreamRig({ _childUpstream: [{ seq: 1, from: "explore#1", kind: "note", message: "FYI：前提失效" }] })
   await withSession(note, () => {
@@ -270,22 +275,34 @@ test("T-CL-U2 边界·提示行三分 + 不误开轮：仅 note ⇒ 0 轮 0 提�
     assert.equal(note.lines.length, 0, "零轮 ⇒ 零提示行")
   })
 
-  // ② manual 档 ask ⇒ 第三档提示行（设计 D 段逐字）
+  // ② manual 档 ask ⇒ 携参标签行（核单点 `upstreamAskLabelVars`）
   const askRig = upstreamRig({ _childUpstream: [{ seq: 1, from: "explore#1", kind: "ask", message: "q" }] })
   await withSession(askRig, () => {
-    assert.match(askRig.lines[0] ?? "", /^\[auto-turn: answering a subagent's in-flight message…\]$/, "第三档提示行字面")
+    assert.equal(
+      askRig.lines[0], t("digest.turnLabelAsk", { from: "explore#1", msg: "q" }, "en"),
+      "ask 档携参字面（manual）",
+    )
   })
 
-  // ③ 既有 manual 档字面零改（pending 非空 · 无 ask）
+  // ③ digest 档字面零改（manual 档 · pending 非空 · 无 ask）
   const digestRig = upstreamRig({ _pendingAsyncResults: [{ role: "subagent", id: 2 }] })
   await withSession(digestRig, () => {
-    assert.match(digestRig.lines[0] ?? "", /^\[auto-turn: digesting finished subagent reports…\]$/, "既有 manual 档字面零改")
+    assert.equal(digestRig.lines[0], t("digest.turnLabel", {}, "en"), "digest 档字面零改（manual）")
   })
 
-  // ④ 既有 AUTO 档字面零改（autoApprove）
+  // ④ AUTO × digest：**同判**（§6.27.12.13 ①——泛句退场，AUTO 得 digest 档字面）
   const autoRig = upstreamRig({ autoApprove: true, _pendingAsyncResults: [{ role: "subagent", id: 3 }] })
   await withSession(autoRig, () => {
-    assert.match(autoRig.lines[0] ?? "", /^\[auto-turn: continuing background work…\]$/, "既有 AUTO 档字面零改")
+    assert.equal(autoRig.lines[0], t("digest.turnLabel", {}, "en"), "AUTO × digest 与 manual 逐字同")
+  })
+
+  // ⑤ AUTO × ask：同判（与 ② 逐字同——泛句无生产者）
+  const autoAskRig = upstreamRig({ autoApprove: true, _childUpstream: [{ seq: 1, from: "explore#1", kind: "ask", message: "q" }] })
+  await withSession(autoAskRig, () => {
+    assert.equal(
+      autoAskRig.lines[0], t("digest.turnLabelAsk", { from: "explore#1", msg: "q" }, "en"),
+      "AUTO × ask 与 manual 逐字同（泛句退场）",
+    )
   })
 })
 

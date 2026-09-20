@@ -189,9 +189,10 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
 
 - **归档落点二值**（`activity.js:196-206`）：① 消化回收且本轮边界 `S._digestBoundary` 有效（`isConnected`）→ 边界之前；② 其余（普通终态 / 补桩 / 会话退出 flush / 边界失效 / 无边界）→ `#messages` 尾追。同批多块 = 消息到达序；幂等 = 已归档（`parentNode === messagesEl`）即 no-op。
 - **消化回收（host 侧）**：`thincoder-vscode/src/extension/suspension.mjs:95-101`（`reclaimDigestedBlocks`）对该轮已消化条目逐条补发 `{type:"subagent", status:"done"}`——**直投不入队**（非出生事件，属收尾通知）。
-- **消化轮起跑档位（M4——显示面消差批）**：宿主起跑载荷携 `tier` ∈ `ask` / `digest` / `auto`（判据与 CLI 三档**同源**——`autoApprove` 档 + 未 drain ask 在场旗标取核既有载体，**禁新造第二判据**；宿主无该旗标 ⇒ 降级为两档 + 登记）；webview 按 `tier` 取键：`digest.turnLabel`（缺省档）/ `digest.turnLabelAsk` / `digest.turnLabelAuto`（两新键入**核 i18n 容器**——VSC 本地档不重复定义）。
-  **ask-only 轮**（`n` 可 0）：建标签行 ∧ **不建**计数元素（`_digestRoundEl` 置空）∧ end 侧在「本轮无计数元素」时**零动作**（禁兜底建元素——`dataset.n = "?"` 幻影行禁出）。起跑判据 = **本轮起跑即发**（`n` 可 0）。
-  **零影响证据**：回收按轮差集补发 ⇒ `n = 0` 轮零 `done` 投递；`S._digestBoundary` 写点唯一（start 分支，每轮重写）⇒ 无跨轮残留。**元素级契约（标签行 / 计数行 / `start`·`end` 语义）单源 = `WEBVIEW-PROTOCOL.md` §5**（本档只记档位与元素约束）。
+- **消化轮起跑档位（F-UC8——批 SUBAGENT-SIGNAL-LINES）**：宿主起跑载荷携 `tier` ∈ `ask` / `digest`（**按因两档**——ask 因优先；旗标取核既有载体，**禁新造第二判据**；判据与 CLI **同源同式**）；webview 按 `tier` 取键：`digest.turnLabel`（digest 档 / 缺省档）/ `digest.turnLabelAsk`（ask 档——**携参**）。
+- **ask 档携参**（载荷 `from` / `msg`——仅 ask 档条件携带）：`from` = 提问者 `role#id`；`msg` = 问题摘要（显示串——单行 + 截断 ≤120 字符，核单点 `upstreamAskLabelVars`）。
+- **计数元素随 `n > 0`**（两档同规）：`n > 0` ⇒ 建本轮计数元素（`dataset.n` = 起跑数）；`n = 0`（ask-only 轮）⇒ 不建（`_digestRoundEl` 置空）∧ end 侧**零动作**（禁兜底建元素——`dataset.n = "?"` 幻影行禁出）。起跑判据 = **本轮起跑即发**（`n` 可 0）。
+   **零影响证据**：回收按轮差集补发 ⇒ `n = 0` 轮零 `done` 投递；`S._digestBoundary` 写点唯一（start 分支，每轮重写）⇒ 无跨轮残留。**元素级契约（标签行 / 计数行 / `start`·`end` 语义）单源 = `WEBVIEW-PROTOCOL.md` §5**（本档只记档位与元素约束）。
 - **终态补桩状态表**（`activity.js:211-230` 判定 + `:365-373` 调用；前置 = `id != null` ∧ 角色段合法（`[\w-]+`）∧ 回读解析一致——`FAMILY_ROLES` 前置退场（2026-09-19 收正，射程含 consult / escalate——见下「终态必现」）；不满足 → no-op + 记 `drop-unknown-role`）：
 
 | status | 上下文 | 无块时 | 折叠 kind |
@@ -451,7 +452,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 | D-W32 | 工具卡「已结算」= 卡对象 `done` 旗标（**唯一写点** = `finishToolCard` 首行；建卡 `addTool` 置 `done:false`）+ 回合尾**无条件**清扫未结算卡（`webview/streaming.js` `sweepUnsettledToolCards`——`finish()` 内 complete / aborted 两路径同规）（M1） | 否决「收尾前恒有 `toolResult`」时序假设（中止路径不成立——CLI `sweepToolBlocks` 为对位标尺）· 否决 TTL / 自动消失（迟到结果无消费者）· 否决 webview 侧按长度 / 超时改判 |
 | D-W33 | `context X%` **单口径**：分子 = 核 `estimateTokens(history)` ∥ 分母 = `providerSpec(provider).context`（与 CLI 状态行同源同式——派生单点 = `thincoder-vscode/src/specs.mjs` `ctxPercentForHistory`）（M2） | 否决保留 provider 报告值分子（同标签双口径 = 本缺陷本体）· 否决两端各自实现（漂移源）· 否决新增绝对 token 段（端差登记面另计） |
 | D-W34 | 对象 chunk（核 sync 评审 `{kind, text}`）在**端边界归一**为串（`thincoder-vscode/src/extension/panel-callbacks.mjs` `onToolOutput`——**CLI 逐字先例** `thincoder-cli/src/tui/tool-events.mjs:322-324`）（M3） | 否决核侧字符串化（毁 `kind` 三态语义）· 否决 webview 侧再归一（载荷已定型）· 否决 relay 面改动（对象已在 relay 内归一） |
-| D-W35 | digest 起跑携 `tier` ∈ `ask` / `digest` / `auto`（判据与 CLI 三档**同源**——ask 在场旗标取核既有载体，禁第二判据）；ask-only 轮建标签行、**不建**计数元素（end 侧零兜底——禁幻影计数行）（M4） | 否决 VSC 自造第二判据 · 否决 ask 轮零元素（可见性缺口）· 否决 end 侧兜底建元素 |
+| D-W35 | digest 起跑携 `tier` ∈ `ask` / `digest`（**按因两档**——判据与 CLI 同源：ask 因优先；ask 档同携 `from` / `msg` 问题摘要）；计数元素随 **`n > 0`**（两档同规；`n = 0` ⇒ 零元素、end 侧零兜底——禁幻影计数行）（M4 · F-UC8） | 否决 VSC 自造第二判据 · 否决按档判计数元素（两因同轮吞计数）· 否决 end 侧兜底建元素 |
 | D-W36 | advisor 卡头 / 状态行轮次标签 = **端侧单源** `advisorRoundTag`（字面 = CLI `roundTag` 逐字 `(round N · model)`；无 `model` ⇒ `(round N)`；非 advisor 零字段）（X2） | 否决 webview 侧写工具名字面比较（`protocol-coverage` 提取器按 `.name === "x"` 形态误判消息判别式）· 否决宿主侧拼整串（双源） |
 | D-W37 | 工具摘要族 = **端侧单源叶** `thincoder-vscode/webview/tool-summary.js`（`formatToolSummary` 分派；字面逐字承 CLI；活卡 / 恢复卡共用）（X3 · X7） | 否决留 `ui.js`（触 500 硬限——先例 `tool-card-restore.mjs`）· 否决迁核单源（跨批结构面——重复形态登记）· 否决只补 advisor 分支（其余族仍异形） |
 | D-W38 | 工具结果截断提示 = **宿主切片点事实旗标** `truncated` 驱动（正文尾行 + 摘要标注）（X5） | 否决 webview 侧长度比较驱动（`capText` 的 `<= max` 边界洞复辟——恰 64K 无提示）· 否决不提示（静默截断 = 用户不可知）· 否决改 64K 额度 |
@@ -506,7 +507,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 | U-W16 | 工具摘要 = CLI 标尺结构化分派（`N lines` / `N matches` / `N files` / `wrote N bytes` / `bash: <末行>`；成功面不拼 `(exit code 0)`） | 已定（§4.3 · D-W37） |
 | U-W17 | 冻结块头注记 = `— <note>`（turn-cap / 停因 / `interrupted`）；error 面注记保留 | 已定（§5.2 · D-W39） |
 | U-W18 | sync 运行块 ⏹ 可见（宿主确证可中止时；registry 不可读 ⇒ 降级为登记） | 已定（§5.2 · D-W40） |
-| U-W19 | digest ask-only 轮 = 标签行在 ∧ 无计数行（计数行只随 `digest` / `auto` 档） | 已定（§5.1 · D-W35） |
+| U-W19 | digest 计数行随 `n > 0`（两档同规）；ask-only 轮（`n = 0`）= 标签行在 ∧ 无计数行；ask 档标签携 `from` / `msg` | 已定（§5.1 · D-W35；F-UC8 批） |
 
 ## 9. 三档切面取舍（拆档决策 · 含否决备选）
 
@@ -540,7 +541,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 | 12 | 出生可见性（区 pin 旗标（`scroll` 事件）· 未钉底计数钮 · `:empty` 不回归） | N-W3 · **（出生面 / 视口面新增条目号待父侧落——建议文本：「活动区未钉底时新块出生 ⇒ 区首出现未读计数钮（`↓ ${n} 新块`）且不夺阅读位；点击 ⇒ 回底并清账」；实据 = 批档 §1.2 ④ · 判据 = T-A21–T-A23）** |
 | 13 | 工具卡呈现增强（结算 / 清扫（M1）· 对象 chunk 归一（M3）· 轮次标签（X2）· 摘要单源（X3 · X7）· 截断提示（X5）） | F-W4 · F-W16 · 台账 #124 |
 | 14 | 状态行 context 段单口径（M2） | 台账 #124（段位对位表 = `WEBVIEW-PROTOCOL.md` §6.1——本档不重述，D2） |
-| 15 | 块头注记与 ⏹ 门控扩支 · digest 三档（X6 · X10 · X11 · M4） | F-A4 · F-W7 · 台账 #125 |
+| 15 | 块头注记与 ⏹ 门控扩支 · digest 两档（X6 · X10 · X11 · M4） | F-A4 · F-W7 · 台账 #125 |
 | 16 | 内容行合并粒度（CLI `pushBlock` 对齐 · 协议字段 `face` · RAW 拼接 + `pre-wrap` · 工具结果行面删净） | F-W1 · N-W5 · 台账 #148 |
 
 **用例面**：本板块的测试资产在 `thincoder-vscode/test/`（`activity-flow` · `activity-closure` · `activity-live-ux` ·
@@ -549,6 +550,11 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 （缺口登记 = `requirements/WEBVIEW.md` N-W5，消解路径 + 到期条件在案）。
 
 ## 变更记录
+
+- 2026-09-21（**批 SUBAGENT-SIGNAL-LINES · 设计轮 · eng-designer**——承 `docs/batches/2026-09-21-subagent-signal-lines.md` §1 · 需求 `docs/core/requirements/AGENT-LOOP.md` §4.12 F-UC8；设计权威 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.27.12.13）：
+  ① §5.1 **消化轮起跑档位**改写为按因两档（`tier` ∈ `ask` / `digest`——`auto` 泛句退场）+ 新增**ask 档携参**行（`from` / `msg`）+ 计数元素规则改 **`n > 0`**（两档同规；`n = 0` 零元素与 end 零动作不变）；
+  ② §6 **D-W35** 同步（两档 + 携参 + 计数元素 `n > 0`）；§8 **U-W19** 同步（计数行随 `n > 0`）。
+  **本档只记档位与元素约束**——元素级 / 载荷级单源 = `WEBVIEW-PROTOCOL.md` §3 / §5（D2）。
 
 - 2026-09-20（**显示面消差批 · 批 4 收口轮 · eng-designer**——承 `docs/batches/2026-09-20-display-parity-batch.md` §2.11 未落面 / §5 批 1–2 实施记录 · 批 2 上抛设计档漂移面）：
   ① §3 文件表坐标收正（as-of 2026-09-20 收口轮实读）：`chat.js` 启动握手 `:423` → **`:426`**；`activity-view.js` 行四坐标重出（`refreshBlock` `:117` · `updateStopButton` `:150` · `noteChunk` `:179` · `tailLines` `:102`）；

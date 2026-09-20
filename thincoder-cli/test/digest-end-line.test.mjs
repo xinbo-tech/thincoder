@@ -1,9 +1,12 @@
 /**
  * digest-end-line.test.mjs — X9（2026-09-20 端差·显示面消差批 批 3）用例：CLI 消化轮可见
- * 收尾行（`已消化 N 份后台报告（Xs）` 的英文字面 / 中断形态）——对位 VSC `webview/chat.js:356-402`
- * 的 digest end 面。口径：① 计数 = **起跑数**（`pend0`——与 VSC `suspension.mjs:302/:314` 同源）；
- * ② 文案单源 = 核 i18n `digest.done` / `digest.aborted`（本档断言以核容器值正则化为据，
- * 不复制字面常量）；③ 中断/失败 ⇒ aborted 形态。
+ * 收尾行（`已消化 N 份后台报告（Xs）` 的英文字面 / 中断形态）——对位 VSC `webview/chat.js`
+ * `showDigestStatus` 的 digest end 面。口径：① 计数 = **起跑数**（`pend0`——与 VSC
+ * `suspension.mjs` 起跑 post 同源）；② 文案单源 = 核 i18n `digest.done` / `digest.aborted`
+ * （本档断言以核容器值正则化为据，不复制字面常量）；③ 中断/失败 ⇒ aborted 形态。
+ * F-UC8（2026-09-21 信号提示行批 · §6.27.12.13 ①–③ / ⑦）：起跑标签**按因两档**（T-SL-C1
+ * 四格矩阵——AUTO 与 manual 同判）+ **起跑数行**（T-SL-C2）+ ask-only 轮零收尾行
+ * （T-SL-C3——起跑行与收尾行同守 `pend0 > 0`）。
  * 手法：`suspensionSession` 驱动会话 + `ctx.runAgent` 注入（无网络/无 TTY）。
  */
 import { test } from "node:test"
@@ -82,16 +85,60 @@ test("X9 收尾行（中断）：首轮被停 ⇒ aborted 字面（核 digest.ab
   assert.ok(iAborted >= 0 && iDone > iAborted, "中断轮行在续跑轮 done 行之前（轮序——两形不串）")
 })
 
-test("X9 起跑标签三档字面零回归：manual / manual+ask（第三档）/ auto", async () => {
-  const manual = rig({ entries: 1 })
-  await suspensionSession(manual.ctx)
-  assert.ok(manual.lines[0].includes("digesting finished subagent reports"), `manual 档标签（实读：${manual.lines[0]}）`)
+test("T-SL-C1 正常·CLI 四格矩阵（manual / AUTO × ask / digest——§6.27.12.13 ①）：字面 = 核容器值（ask 档携「谁 + 啥」）；AUTO 两格与 manual 逐字同", async () => {
+  const ASK_LABEL = t("digest.turnLabelAsk", { from: "coder#1", msg: "in-flight ask" }, "en")
+  const DIGEST_LABEL = t("digest.turnLabel", {}, "en")
+  // ① manual × digest（既有字面零改）
+  const m1 = rig({ entries: 1 })
+  await suspensionSession(m1.ctx)
+  assert.equal(m1.lines[0], DIGEST_LABEL, `manual × digest（实读：${m1.lines[0]}）`)
+  // ② manual × ask（携参——核单点 `upstreamAskLabelVars`）
+  const m2 = rig({ entries: 1, upstream: true })
+  await suspensionSession(m2.ctx)
+  assert.equal(m2.lines[0], ASK_LABEL, `manual × ask 携「谁 + 啥」（实读：${m2.lines[0]}）`)
+  // ③ AUTO × digest（与 ① 逐字同——泛句退场：无生产者）
+  const a1 = rig({ entries: 1, auto: true })
+  await suspensionSession(a1.ctx)
+  assert.equal(a1.lines[0], DIGEST_LABEL, `AUTO × digest 与 manual 逐字同（实读：${a1.lines[0]}）`)
+  assert.ok(!a1.lines.some((l) => l.includes("continuing background work")), "AUTO 泛句零生产者（键已退场）")
+  // ④ AUTO × ask（与 ② 逐字同）
+  const a2 = rig({ entries: 1, auto: true, upstream: true })
+  await suspensionSession(a2.ctx)
+  assert.equal(a2.lines[0], ASK_LABEL, `AUTO × ask 与 manual 逐字同（实读：${a2.lines[0]}）`)
+})
 
-  const ask = rig({ entries: 1, upstream: true })
-  await suspensionSession(ask.ctx)
-  assert.ok(ask.lines[0].includes("answering a subagent's in-flight message"), `manual+ask 档标签（实读：${ask.lines[0]}）`)
+test("T-SL-C2 正常·CLI 起跑数行（对位 VSC `.digest-status`——§6.27.12.13 ③）：digest 轮标签后起跑行携起跑数；ask-only 轮（`pend0 = 0`）零起跑行（`n > 0` 规则）", async () => {
+  const START2 = lineRe("digest.start", { n: "2" })
+  const a = rig({ entries: 2 })
+  await suspensionSession(a.ctx)
+  assert.equal(a.lines[0], t("digest.turnLabel", {}, "en"), `标签行在前（实读：${a.lines[0]}）`)
+  assert.ok(START2.test(a.lines[1] ?? ""), `起跑行紧随标签（起跑数 n = 2——实读：${a.lines[1]}）`)
+  assert.equal(a.lines.filter((l) => START2.test(l)).length, 1, "首轮一条起跑行（次轮起跑数 1——逐轮各一条）")
+  // ask-only 轮：无 pending ⇒ `pend0 = 0` ⇒ 零起跑行（与收尾行同守卫——幻影行禁出）
+  const b = rig({ entries: 0, upstream: true })
+  await suspensionSession(b.ctx)
+  assert.equal(b.rounds(), 1, "ask-only 轮恰开一轮（drain 后自然退出）")
+  assert.equal(b.lines.length, 1, `零起跑行（实读：${JSON.stringify(b.lines)}）`)
+})
 
-  const auto = rig({ entries: 1, auto: true })
-  await suspensionSession(auto.ctx)
-  assert.ok(auto.lines[0].includes("continuing background work"), `auto 档标签（实读：${auto.lines[0]}）`)
+test("T-SL-C3 正常 + 边界·CLI ask-only 轮零收尾行（`pend0 > 0` 守卫——§6.27.12.13 ③）：done / aborted 两形态同判；对照态（`pend0 > 0`）收尾行在场（零回归）", async () => {
+  // ① ask-only 轮（`upstream` + 零 pending ⇒ `pend0 = 0`）：零 done 收尾行
+  const askOnly = rig({ entries: 0, upstream: true })
+  await suspensionSession(askOnly.ctx)
+  assert.equal(
+    askOnly.lines.filter((l) => DONE1.test(l) || DONE2.test(l)).length, 0,
+    `零 done 收尾行（实读：${JSON.stringify(askOnly.lines)}）`,
+  )
+  assert.ok(askOnly.lines[0]?.includes("answering coder#1"), "标签行仍在场（可见面零回归）")
+  // ② 同形 + 首轮停（aborted 形态）：仍零收尾行（两形态同判——守卫先于 ok 判）
+  const abortedAsk = rig({ entries: 0, upstream: true, abortFirst: true })
+  await suspensionSession(abortedAsk.ctx)
+  assert.equal(
+    abortedAsk.lines.filter((l) => ABORTED.test(l)).length, 0,
+    `ask-only 中断轮零 aborted 收尾行（实读：${JSON.stringify(abortedAsk.lines)}）`,
+  )
+  // ③ 对照：`pend0 > 0` ⇒ 收尾行在场（既有形态零回归——与首条 X9 用例同源）
+  const ctl = rig({ entries: 2 })
+  await suspensionSession(ctl.ctx)
+  assert.equal(ctl.lines.filter((l) => DONE1.test(l) || DONE2.test(l)).length, 2, "对照态两轮各一条收尾行")
 })

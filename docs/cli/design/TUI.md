@@ -508,9 +508,11 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 
 ### 6.9 消化轮（digest auto-turn）可见面（X9）
 
-- **起跑标签三档**：manual + upstream ask / manual / auto 三档 dim 行（既有字面不动；三档字面 = 核 i18n 容器 `digest.turnLabel` 族——VSC 端按此补齐，见 `docs/vsc/design/WEBVIEW.md` §5.1）。
-- **收尾行（X9——显示面消差批）**：轮尾 `pushLine` 一行 dim——完成 ⇒ `digest.done`（`已消化 N 份后台报告（Xs）`）/ 中止与失败 ⇒ `digest.aborted`（`消化中断（Xs）`）；**文案单源 = 核 i18n 容器**（`t()` 取值——CLI 侧首个核 i18n 消费点）；**计数口径 = 起跑数**（与 VSC 端同源——消费数另计会引入双口径）；秒位 = `toFixed(1)`（与 VSC 同式）。
-- **边界**：`digest:start` / `digest:end` 日志事件零改（LOGGING 面）；消化轮机制 / 计数语义零改（编排面 = `docs/core/design/AGENT-LOOP.md` §9）。
+- **起跑标签两档**：dim 行按因取键（**ask 因恒优先**）——ask ⇒ `digest.turnLabelAsk`（携 `from` / `msg`——核单点 `upstreamAskLabelVars`）/ digest ⇒ `digest.turnLabel`；**manual / AUTO 两档同判**（`auto` 泛句退场）；字面单源 = 核 i18n 容器（CLI 零自持字面；VSC 端对位见 `docs/vsc/design/WEBVIEW.md` §5.1）。
+- **起跑数行**：标签行之后、`runAgentTurn` 之前 `pushLine(t("digest.start", { n: pend0 }), C.dim)`——规则 = **`pend0 > 0`**（`pend0 = pendingFamilyCount(agent)` 取数前置，与收尾行同源；ask-only 轮零此行）。
+- **收尾行（X9——显示面消差批）**：轮尾 `pushLine` 一行 dim——完成 ⇒ `digest.done`（`已消化 N 份后台报告（Xs）`）/ 中止与失败 ⇒ `digest.aborted`（`消化中断（Xs）`）；
+  **`pend0 > 0` 守卫**（ask-only 轮零收尾行——done / aborted 两形态同判）；**文案单源 = 核 i18n 容器**（`t()` 取值——CLI 侧首个核 i18n 消费点）；**计数口径 = 起跑数**（与 VSC 端同源——消费数另计会引入双口径）；秒位 = `toFixed(1)`（与 VSC 同式）。
+- **边界**：`digest:start` / `digest:end` 日志事件零改（LOGGING 面）；消化轮机制 / 计数语义零改（编排面 = `docs/core/design/AGENT-LOOP.md` §9；可见面口径单源 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.27.12.13 ①–③——本节 = CLI 侧落地形态）。
 
 ## 7. 状态栏与用户介入提醒（attention 态）
 
@@ -595,6 +597,9 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 | VSC webview 对位 | webview 渲染 / 消息协议 / 子标 | `docs/vsc/design/WEBVIEW*.md`——**非同机制**（端差异登记，不追赶） |
 
 ## 变更记录
+
+- 2026-09-21（**SIGNAL-LINES 批 · 设计微修二轮 · eng-designer**——承 `docs/batches/2026-09-21-subagent-signal-lines.md` §2.6 遗留 2 · 父侧 2026-09-21 02:1x 裁定纳入本批）：
+  §6.9 就地同步为 F-UC8 现态——起跑标签**两档**（ask 携参 / digest——manual / AUTO 同判 · `auto` 泛句退场）· **起跑数行**（`pend0 > 0` ⇒ `digest.start`）· 收尾行 **`pend0 > 0` 守卫**（done / aborted 两形态同判）；可见面口径单源回指 `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.27.12.13 ①–③。
 
 - 2026-09-20（**VSC 行为/能力两则批 · #132 · eng-designer**）：§2 键面枚举补 `retry`；§4.3 未决面（框面 `y`/`n`/`a`）按用户裁定收正为**仅 `y`/`n`**（判据单源 `isYesNoModal`）+ 原文余行 log-only 条（`err:provider`）。设计源 = `docs/batches/2026-09-20-vsc-rules-retry-batch.md` §2。
 

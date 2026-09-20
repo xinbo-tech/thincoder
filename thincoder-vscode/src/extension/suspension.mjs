@@ -269,10 +269,11 @@ export async function suspensionSession(panel, entry) {
   const s0 = Date.now()
   logEvent("susp:enter", poolCounts(history))
   try {
-    // §6.27.12.12 ③：开轮谓词取用一次（模块缓存 ⇒ 每会话一次代价）。动态 import = 零新增静态边
-    // （核链可达 node:sqlite ⇒ W8 契约②；同 `parkAsyncPending` 先例）。等待栓注册点零改（W1 复用）。
-    // 住 try 内（while 之前）：import 失败也走 finally 清场（_suspended / panel._susp 复位 + idle 广播）。
-    const { upstreamWaiting } = await import("@thincoder/core/agent-tools/parent-channel.mjs")
+    // §6.27.12.12 ③ + §6.27.12.13 ②：开轮谓词 + ask 提示行携参取用一次（模块缓存 ⇒ 每会话一次代价）。
+    // 动态 import = 零新增静态边（核链可达 node:sqlite ⇒ W8 契约②；同 `parkAsyncPending` 先例）。
+    // 等待栓注册点零改（W1 复用）。住 try 内（while 之前）：import 失败也走 finally 清场
+    // （_suspended / panel._susp 复位 + idle 广播）。
+    const { upstreamWaiting, upstreamAskLabelVars } = await import("@thincoder/core/agent-tools/parent-channel.mjs")
     while (!susp.aborted && !susp.abort.signal.aborted) {
       await sweepSettledToPending(history)
       // 1. 用户输入优先（D-S5）：pendingInput 单槽——INPUT-LOCK-ASYNC（C'——2026-09-09）：
@@ -313,12 +314,14 @@ export async function suspensionSession(panel, entry) {
         // （可见时刻不晚于回合开跑）；起止两态 + ok 旗标（异常不留"仍在消化"假象，try/finally
         // 保 end 必发）；直投（同 compress 先例——不经任务可见性 outbox）。
         // M4（显示面消差批 §2.1 · 2026-09-20）：**起跑即发**（`n` 可 0）——ask-only 轮亦有可见面
-        // （`AGENT-LOOP-SUBAGENT.md` §6.27.12.12 ⑥ 边界行随本批收正）；webview 按 `tier` 分档
-        // （ask 轮只打标签行、不建计数元素，end 零动作）。`tier` 判据与 CLI 三档同源
-        // （`suspension-drive.mjs:174-176`）：AUTO 档（`panel._autoApprove`——端侧既有 AUTO 载体）/
-        // 手动+未 drain ask（`upstream`——核既有谓词）/ 手动。
-        const tier = panel._autoApprove === true ? "auto" : (upstream ? "ask" : "digest")
-        panel._panel?.webview.postMessage({ type: "digest", status: "start", n: pendingN, tier })
+        // （`AGENT-LOOP-SUBAGENT.md` §6.27.12.12 ⑥ 边界行随本批收正）。
+        // F-UC8（§6.27.12.13 ①–② · 2026-09-21 信号提示行批）：`tier` **按因两档**（ask 因恒优先）
+        // ——与 CLI 同源同式（`suspension-drive.mjs` `digestTurn`）：`ask` = 未 drain ask（核既有
+        // 谓词）/ `digest` = 其余（AUTO 档同判——`auto` 泛句退场）；ask 档**携参** `from` / `msg`
+        // （核单点 `upstreamAskLabelVars`——显示串跨端同源）；计数元素规则同转向 `n > 0`（webview 侧）。
+        const tier = upstream ? "ask" : "digest"
+        const ask = upstream ? upstreamAskLabelVars(history) : null
+        panel._panel?.webview.postMessage({ type: "digest", status: "start", n: pendingN, tier, ...(ask ?? {}) })
         let ok = true
         try {
           await entry.runTurn({ autoTurn: true, text: "", upstreamTurn: upstream })

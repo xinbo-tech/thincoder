@@ -1562,16 +1562,18 @@ export function upstreamWaiting(carrier) {
           try { await runTurn("", { autoTurn: true, upstreamTurn: upstream }) }
 ```
 
-**D. `thincoder-cli/src/tui/suspension-drive.mjs`（301 行 → ~313 行）**——`digestTurn`（`:159-174`）加第三档提示行 + 旗标；`:231` 判据同式：
+**D. `thincoder-cli/src/tui/suspension-drive.mjs`（现量 323 行）**——提示行权威节 = **F-UC8 按因两档 × 全档（manual / AUTO 同判）**；矩阵 / 携参 / 起跑行口径单源 = §6.27.12.13 ①–③；开轮判据（`:252-254`）零改：
 
 ```js
-// 改前（:231）
-      if (pendingFamiliesNonEmpty(agent)) { await digestTurn(ctx) … }
-// 改后
+// 开轮判据（:252-254——F-UC7 落，零改）
       const upstream = upstreamWaiting(agent)
       if (pendingFamiliesNonEmpty(agent) || upstream) { await digestTurn(ctx, upstream) … }
-// digestTurn：manual 档提示行三分（既有两档 + `[auto-turn: answering a subagent's in-flight message…]`）；
-//             runAgentTurn(ctx, "", { autoTurn: true, upstreamTurn: upstream, skipSession: true })
+// digestTurn（:168-192——F-UC8 改点）：起跑数前置 + 按因两档标签（核容器字面——CLI 零自持）+ 起跑行
+      const pend0 = pendingFamilyCount(agent)                           // 取数前置（起跑行与 X9 收尾行同源）
+      const ask = upstream ? upstreamAskLabelVars(agent) : null         // 核单点（§6.27.12.13 ②）
+      pushLine(ask ? t("digest.turnLabelAsk", ask) : t("digest.turnLabel"), C.dim)
+      if (pend0 > 0) pushLine(t("digest.start", { n: pend0 }), C.dim)   // 起跑行（对位 VSC——§6.27.12.13 ③）
+// 其后零改：digest:* 日志 / `runAgentTurn(ctx, "", { autoTurn: true, upstreamTurn: upstream, skipSession: true })`；X9 收尾行加 `pend0 > 0` 守卫（ask-only 轮零收尾行——§6.27.12.13 ③）
 ```
 
 （`upstreamTurn` 与 `autoTurn` 同径贯通到核 `runAgent`——**修正轮 1 补跳后的实际链路（发现 1）**：CLI 驱动 `runAgentTurn(ctx, "", { autoTurn, upstreamTurn, skipSession })`
@@ -1740,8 +1742,8 @@ spawning subagents, asking questions — those need a real user message. End the
 | T22 | 结构单点（机检） | 源文本 | `async-settle.mjs` 内 `wakeAsyncWaiters` 定义 1 处 + `splice(0)` 全档仅在该函数内；三驱动第 2 步含 `upstreamWaiting(`；`agent.mjs` 的 `drainChildUpstream(agent)` 仍恰 1 处（既有断言 `parent-channel.test.mjs:130-133` 不破） | 条目 1 / 2 / 零回归 |
 | T23 | 正常·核驱动开轮（假 carrier） | `startSuspension`：池内 1 running + `_childUpstream` 含 ask；假 `runTurn` 记录 `(text, opts)` 并清池 | `runTurn("", { autoTurn: true, upstreamTurn: true })` 恰 1 次；`res.upstreamTurn === true` | 条目 2 |
 | T24 | 边界·核驱动 note 不开轮 | 同上但 `[{kind:"note"}]` | 零 `runTurn` 调用；池空即退出（`reason: "idle"`） | 条目 2 / 边界 7 |
-| T-CL-U1 | 正常·CLI 驱动开轮 + **旗标贯通（修正轮 1 补——发现 1）**（`driveRig`） | `agent._childUpstream = [{kind:"ask",…}]` + 池内 1 running；桩 `ctx.runAgent`（记录第 4 参 opts） | 桩被调 1 次（`text === ""`——auto 轮）；**桩第 4 参 `opts.upstreamTurn === true`**（旗标未被 CLI 跳丢弃——可机检）；提示行含 `in-flight message` | 条目 4 |
-| T-CL-U2 | 边界·CLI 驱动提示行三分 + 不误开轮 | ① 仅 note ⇒ 桩 0 次 ② manual 档 ask ⇒ 第三档提示行字面 | 字面断言（`/auto-turn: answering a subagent's in-flight message/`） | 条目 4 / 条目 3 |
+| T-CL-U1 | 正常·CLI 驱动开轮 + **旗标贯通（修正轮 1 补——发现 1）**（`driveRig`） | `agent._childUpstream = [{kind:"ask",…}]` + 池内 1 running；桩 `ctx.runAgent`（记录第 4 参 opts） | 桩被调 1 次（`text === ""`——auto 轮）；**桩第 4 参 `opts.upstreamTurn === true`**（旗标未被 CLI 跳丢弃——可机检）；提示行为 ask 档携参形态（字面随 F-UC8 批收正——§6.27.12.13 ⑦） | 条目 4 |
+| T-CL-U2 | 边界·CLI 驱动提示行矩阵 + 不误开轮 | ① 仅 note ⇒ 桩 0 次 ② manual 档 ask ③ manual 档 digest ④ AUTO 档两因 | 字面断言（四格矩阵——F-UC8 批四处字面收正，见 §6.27.12.13 ⑦ T-SL-C1） | 条目 4 / 条目 3 |
 | T-VS-U1 | 正常·端壳驱动开轮（`thincoder-vscode/test/upstream-parity.test.mjs`） | 桩面板 + `history` 内 `_childUpstream = [{ kind:"ask", … }]` + 池内 1 running；桩 `runTurn` 记录 `(opts)` | 恰 1 次调用且 `opts = { autoTurn: true, text: "", upstreamTurn: true }` | 条目 9 |
 | T-VS-U2 | 正常·注入内容非空（补 F8 病征） | 同 T-VS-U1；桩 `runTurn` 内调核 `drainChildUpstream(history)` | `history` 尾条 user 消息含 `ask · <role>#<id>: <message>`（**非空**）；队列消费即清（`_childUpstream.length === 0`） | 条目 7 |
 | T-VS-U3 | 正常·ask 唤醒驱动开轮（端到端·含载体别名路） | 不 await 地起 `suspensionSession`（会话进第 4 步等待）→ 一拍后 `pushChildUpstream({ parent: { history }, kind: "ask" })`（合成 parent 形——写侧别名） | 等待栓被兑现 ⇒ 驱动重入 ⇒ 第 2 步真 ⇒ 桩 `runTurn` 恰 1 次；日志含 `upstream: true`；会话自然退出 | 条目 9 |
@@ -1840,7 +1842,7 @@ escalate reports: summarize the merged post-op work — further changes need a u
 | 7 | 机械拒绝面 | 同（`autoTurn` ⇒ permission deny-stub + spawn 门） | 同 | **0** |
 | 8 | 收尾形态 | `]` 收尾 · 端 overlay 在括号内 | 同 | **0** |
 | 9 | 宿主日志载荷 | `digest:start` / `digest:end` | 同 + `upstream: true` | 非文本面（有意区分项——两端同规：CLI 同式 = §6.27.12.5 K） |
-| 10 | webview 起跑行 | `n > 0` 时 post `digest` 消息 | 不 post | 非文本面（可见性面——登记见 ⑥） |
+| 10 | webview 起跑行 | 起跑即 post `digest` 消息（`n` 可 0） | 同（两轮同规） | 非文本面（可见性面——登记见 ⑥） |
 
 ⇒ **域文本构成差异项 = 0**（第 1 行 = 按轮型的基座选择；第 9 / 10 行 = 非文本面且各有既定登记）。
 
@@ -1856,13 +1858,190 @@ escalate reports: summarize the merged post-op work — further changes need a u
 
 **⑥ 边界（VSC 面）**
 
-- **webview digest 可见面**：`digest` 消息族的可见面契约 —— ask-only 轮**亦 post** 起跑消息（载荷 `tier: "ask"`，`n` 可 0）：webview 建标签行 ∧ **不建**计数元素（`digest.turnLabelAsk` / `digest.turnLabelAuto` 两键入核 i18n 容器）；`suspension` 消息族与既有 i18n 键值零改。
+- **webview digest 可见面**：`digest` 消息族的可见面契约 —— 起跑即 post（`n` 可 0，**两轮同规**）；载荷 `tier` ∈ `ask` / `digest`（**按因两档**）+ ask 档携 `from` / `msg`（问题摘要——`msg` 单行 + 截断 ≤120 字符，核单点 `upstreamAskLabelVars`）；**计数元素随 `n > 0`**（两档同规——`n = 0` 零元素 ∧ end 零动作）；标签键 = `digest.turnLabelAsk`（携参）/ `digest.turnLabel`（缺省档）。
   契约单源 = `docs/vsc/design/WEBVIEW.md` §5.1（机制：档位判据与元素约束）与 `docs/vsc/design/WEBVIEW-PROTOCOL.md` §5（元素级：标签行 / 计数行 / `start`·`end` 语义）——本节不重述。
 - **不动提示词面 / 工具描述 / 返回注**（同 §6.27.12.11-5）。
 - **不做** VSC 侧 `escalate` / `consult` 面的上行对位（本批只及子代理 spoke 面——与 §6.27.2 射程一致）。
 - **端 overlay 字面 = 逐字搬迁既有端述句**（零新撰 / 零改写——落点 = §6.27.12.5 L；四族枚举短语的处置见 ④ Δ 登记）。
 
+#### 6.27.12.13 信号提示行（F-UC8 · 全档 × 双端）（2026-09-21 · 批 `2026-09-21-subagent-signal-lines` · 台账 #166）
+
+**回指**：需求 `docs/core/requirements/AGENT-LOOP.md` §4.12 **F-UC8**（全档按因分流 + ask 携「谁 + 啥」+ CLI digest 起跑对位 VSC；**N4 范围 = 核侧 + CLI + VSC 两端**）。
+**射程**：只动**可见提示面**——唤醒 / 开轮 / 域文本 / `UPSTREAM_*` / 队列结构 / 提示词面**零改**；X9 收尾行**加 `pend0 > 0` 守卫一处**（ask-only 轮零收尾行——父侧 2026-09-21 02:0x 裁定；逐条见 ⑨）。
+
+**① 档位矩阵（判据 = `upstream` 旗标（`upstreamWaiting`）——ask 因恒优先于 digest 因）**
+
+| 模式 | 本因 | 标签行（键） | 计数行 | 备注 |
+|---|---|---|---|---|
+| manual | ask（未 drain ask 在场） | `digest.turnLabelAsk`（携参——②） | `pend0 > 0` ⇒ `digest.start` | 两因同轮 ⇒ 标签取 ask、计数照出 |
+| manual | digest | `digest.turnLabel` | `pend0 > 0` ⇒ `digest.start` | 既有字面零改 |
+| AUTO | ask | 同 manual · ask | 同 | AUTO 泛句退场（④ D-SL1） |
+| AUTO | digest | 同 manual · digest | 同 | 同上 |
+
+- **档值 = `tier` ∈ `ask` / `digest` 两档**（`auto` 档退役——D-SL1）；webview 侧 `tier` 缺省 ⇒ `digest.turnLabel`（后向兼容面保留）。
+- **计数行 / 计数元素规则 = `n > 0`**（不按档判——两端同规；`n = 0` 的 ask-only 轮零计数元素：幻影行禁出不变）。
+
+**② ask 携参形态（单源 = 核 `upstreamAskLabelVars(carrier)`）**
+
+- **选择 = 队首**：`_childUpstream` 插入序首个 `kind === "ask"`——与 drain 合并注入的列示序同源；多 ask 时标签示其一，**全文由该轮注入承载**（不并列 / 不 `+N`——D-SL5）。
+- **`msg` = 显示串**：折行 / 连续空白归一为单空格 + **截断 120 字符**（超长补 `…`）；口径 = **字符**（跨端单源；宽字符在窄终端折行——列宽口径见 ⑨-5）。
+- **`from` = 原文**（`role#id`——`role` = `[\w-]+` 机器键，零改写）。
+- **防御缺省**：归一后空串（工具闸拒空 message ⇒ 不可达）⇒ `msg = "…"`；`from` 缺 ⇒ `"?"`。
+
+**③ CLI digest 起跑行（对位 VSC——消费既有 `digest.start`）**
+
+- 位置 = 标签行之后、`runAgentTurn` 之前（VSC `thincoder-vscode/src/extension/suspension.mjs:321` post 早于 `:324` runTurn——同序）。
+- 计数 = **起跑数** `pend0 = pendingFamilyCount(agent)`（`thincoder-cli/src/tui/suspension-drive.mjs:182` 取数点前移）——与 X9 收尾行（`:191`）同源。
+- 形态 = `pushLine(t("digest.start", { n: pend0 }), C.dim)`（dim 与标签行同色；VSC 对位元素 = `.digest-status`）。
+- **X9 收尾行 = `pend0 > 0` 守卫**（**父侧 2026-09-21 02:0x 裁定纳入本批**）：`pend0 = 0`（ask-only 轮）⇒ **零收尾行**——与起跑行同规则（两行成对，`n > 0`）；**`digest.done` / `digest.aborted` 两形态同判**（VSC 侧零动作守卫先于 `ok` 判——`thincoder-vscode/webview/chat.js:425-426`，两端行为对齐）；其外形制零改（字面 = 核容器 `t()` / 计数口径 = 起跑数 `pend0` / 轮序）。
+
+**④ 关键决策（含否决备选）**
+
+| # | 决策 | 理由 | 否决备选 |
+|---|---|---|---|
+| D-SL1 | `digest.turnLabelAuto` **退场**（键删除 + `tier` 的 `auto` 值退役） | 开轮因穷尽（`pendingFamiliesNonEmpty` ∥ `upstream`——CLI `:253` / VSC `:307`）⇒ 泛句无生产者；模式可见性另有载体（CLI `AUTO│` 横幅 `thincoder-cli/src/tui/render-frame.mjs:221` / VSC `autoApprove` 广播 `thincoder-vscode/src/extension/panel-session.mjs:127`） | 降兜底（保留 `auto` 档作未知来源回退）——无未知来源、徒留死分支 |
+| D-SL2 | 计数行规则 = `n > 0`（替「非 ask 档」） | 两因同轮时 digest 计数不丢（VSC 亦得 `digest.done` 收尾更新）；两端规则同式 | 按档判（ask 档吞计数——两因同轮信息缺失） |
+| D-SL3 | 携参单源 = **核 `parent-channel.mjs` 新导出**（选择 + 显示串同点） | 选择须走 `carrierField` 吸收（父字段 / 载体别名两形态）；截断 / 归一字面跨端一致（D2） | 两端各自读原始字段（载体形态漏读 ⇒ 标签与 tier 判据分叉）· VSC 自持副本（第二单源） |
+| D-SL4 | 标签字面 = **核容器键**（CLI 亦改读容器——零自持字面） | D2 单源（CLI 现持硬编码字面 = 第二份）；CLI 既有 `t()` 先例（`suspension-drive.mjs:29` / `:191`） | CLI 保留硬编码（两端逐字漂移面） |
+| D-SL5 | 多 ask 取队首（不并列 / 不 `+N`） | 注入消息列全量（`drainChildUpstream` 合并列示）；提示行 = 单行信号 | 并列（行宽爆）· `+N`（新变量 + 双语键面） |
+
+**⑤ 接口契约（改点逐档；行数 = as-of 2026-09-21 01:5x 实测）**
+
+**a. `thincoder-core/agent-tools/parent-channel.mjs`（231 行 → ~250 行）**——新导出（拟新增；导出面 +1 名——`thincoder-core/test/parent-channel.test.mjs:272` 名单同批更新）：
+
+```js
+/** ask 提示行显示串上限（字符——模块内常量，不导出）。 */
+const ASK_LABEL_MSG_MAX = 120
+
+/** ask 提示行携参（显示面单点——CLI / VSC 两端同源）：队首未 drain ask ⇒ `{ from, msg }`；无 ⇒ null。
+ *  选择 = 插入序首个 `kind === "ask"`（与 drain 列示序同源）；`msg` = 单行归一 + 截断 `ASK_LABEL_MSG_MAX`；
+ *  载体经 `carrierField` 吸收（同 `upstreamWaiting`）。 */
+export function upstreamAskLabelVars(carrier) {
+  const q = carrierField(carrier, "_childUpstream")
+  const e = Array.isArray(q) ? q.find((x) => x.kind === "ask") : null
+  if (!e) return null
+  const one = String(e.message ?? "").replace(/\s+/g, " ").trim()
+  return { from: String(e.from ?? "?"), msg: one.length > ASK_LABEL_MSG_MAX ? one.slice(0, ASK_LABEL_MSG_MAX - 1) + "…" : (one || "…") }
+}
+```
+
+**b. `thincoder-core/i18n.mjs`（106 行 → ~105 行）**——键面三笔：
+  - **改值** `digest.turnLabelAsk` → 携参形态（en `[auto-turn: answering ${from}: ${msg}]` / zh `自动回合：答复 ${from}：${msg}`）；
+  - **删除** `digest.turnLabelAuto`（AUTO 泛句退场——D-SL1）；
+  - **零新增键**（`digest.turnLabel` / `digest.start` 复用——CLI 新增消费点）。
+  golden 面（`thincoder-core/test/i18n.test.mjs:32-46`）锁 `digest.done` / `digest.start`——两键本批零改。
+
+**c. `thincoder-cli/src/tui/suspension-drive.mjs`（323 行 → ~333 行）**——= §6.27.12.5 D 现态块；import 面 `:27` +1 名（`upstreamAskLabelVars`——零新静态边）；**X9 收尾行（`:191`）加 `pend0 > 0` 守卫**（ask-only 轮零收尾行——done / aborted 两形态同判，口径与理由见 ③ / ⑩）。
+
+**d. `thincoder-vscode/src/extension/suspension.mjs`（430 行 → ~432 行）**——`:320-321` 判据 + 载荷（`:275` 动态 import 解构 +1 名）：
+
+```js
+// 改前（:320-321）
+        const tier = panel._autoApprove === true ? "auto" : (upstream ? "ask" : "digest")
+        panel._panel?.webview.postMessage({ type: "digest", status: "start", n: pendingN, tier })
+// 改后
+        const tier = upstream ? "ask" : "digest"
+        const ask = upstream ? upstreamAskLabelVars(history) : null
+        panel._panel?.webview.postMessage({ type: "digest", status: "start", n: pendingN, tier, ...(ask ?? {}) })
+```
+
+**e. `thincoder-vscode/webview/chat.js`（445 行 → ~448 行）**——`:389-404` 分档取键 + 计数元素规则：
+
+```js
+    label.textContent = t(m.tier === "ask" ? "digest.turnLabelAsk" : "digest.turnLabel",
+      m.tier === "ask" ? { from: m.from ?? "?", msg: m.msg ?? "…" } : {})
+    …
+    if ((m.n ?? 0) > 0) { /* 本轮独立计数元素——两档同规（D-SL2）；n = 0 ⇒ 零元素 + end 零动作（零改） */ }
+```
+
+**f. 档面同步**：`docs/vsc/design/WEBVIEW-PROTOCOL.md` §3（载荷行）· §3.2 行 11 收正 + **新增行 14**（`from` / `msg`——ask 携参）· §5（元素级契约）· §13 `digest` 行（坐标随实现位移 ⇒ 按档内既有程序重出）· §6.3 键表；`docs/vsc/design/WEBVIEW.md` §5.1 · §6 D-W35 · §8 U-W19。
+
+**⑥ 受影响文件表（行数口径 = `find /c /v ""`；现量 = as-of 2026-09-21 01:5x 实测）**
+
+| # | 文件 | 现量 | Δ（估） | 变更类型 | 说明 |
+|---|---|---|---|---|---|
+| 1 | `thincoder-core/agent-tools/parent-channel.mjs` | 231 | +19 | 新导出 | `upstreamAskLabelVars`（显示面单点）+ `ASK_LABEL_MSG_MAX`（内部常量） |
+| 2 | `thincoder-core/i18n.mjs` | 106 | −1 | 键面 | `digest.turnLabelAsk` 改值携参；`digest.turnLabelAuto` 删 |
+| 3 | `thincoder-cli/src/tui/suspension-drive.mjs` | 323 | +10 | 提示行 | 起跑数前置 + 两档标签 + 起跑行 + X9 收尾行 guard（`pend0 > 0`——`:168-192`）；import +1 名 |
+| 4 | `thincoder-cli/test/digest-end-line.test.mjs` | 97 | +40 | 用例 | 起跑行三态（digest / ask `n=0` / ask `n>0`）+ 矩阵字面 + T-SL-C3（ask-only 零收尾行 · 两态对照） |
+| 5 | `thincoder-cli/test/input-lock.test.mjs` | 368 | ±6 | 用例（改行） | `:252` / `:265-290` 四格矩阵收正（AUTO 两格字面改判） |
+| 6 | `thincoder-core/test/parent-channel.test.mjs` | 291 | ±2 | 用例（改行） | A4 导出面名单 +1 名（`:272`） |
+| 7 | `thincoder-core/test/parent-channel-upstream.test.mjs` | 95 | +30 | 用例 | T-SL1–T-SL4（携参选择 / 归一截断 / 载体吸收 / 多 ask 队首） |
+| 8 | `thincoder-vscode/src/extension/suspension.mjs` | 430 | +2 | tier + 载荷 | `:320-321` 两档 + 携参；`:275` 解构 +1 名 |
+| 9 | `thincoder-vscode/webview/chat.js` | 445 | +4 | webview | 标签携参 + 计数元素 `n > 0`（`:389-404`）；`auto` 分支退场 |
+| 10 | `thincoder-vscode/test/digest-visibility.test.mjs` | 250 | ±22 | 用例 | T-SL-V1 / T-SL-V2（T-D9 / T-D10 就地收正） |
+| 11 | `docs/core/design/AGENT-LOOP-SUBAGENT.md` | 1975 | +95 | 设计档 | §6.27.12.5 D 改写 + §6.27.12.13 新增 + §6.27.12.12 ④/⑥ 收正 + 变更记录 |
+| 12 | `docs/vsc/design/WEBVIEW-PROTOCOL.md` | 539 | +12 | 设计档 | §3 / §3.2（行 11 + 新增行 14）/ §5 / §6.3 / §13 / 变更记录 |
+| 13 | `docs/vsc/design/WEBVIEW.md` | 615 | +8 | 设计档 | §5.1 / §6 D-W35 / §8 U-W19 / 变更记录 |
+| 14 | `docs/cli/design/TUI.md` | 630 → **635**（本设计微修二轮实读） | 0（实现轮零改） | 设计档 | §6.9 就地同步（起跑标签两档 · 起跑数行 · 收尾行 `pend0 > 0` 守卫）+ 变更记录一行——本微修二轮已落 |
+
+**越线核查（评审 #44 发现 3 处置——逐档档位口径；对照先例 = §6.27.12.7 ①–③）**：行 3 / 5 / 8 / 9 四档越 300 软线（均 ≤500 硬限；CLI 侧 = advisory 线、无同族机检门——§6.27.12.7 ②）：
+
+- **行 3 `thincoder-cli/src/tui/suspension-drive.mjs`（323 → ~333）**：**既有在册**——§6.20.4 拆分计划（`finally` 收尾块 → `suspension-teardown.mjs` 候选）；本批 +10 = 就地改行（零新增段）⇒ **结构未变 · 本批不拆**。
+- **行 5 `thincoder-cli/test/input-lock.test.mjs`（368）**：**既有在册**——§6.27.12.7 ② 越线核查 + 触发式拆分计划；本批 ±6 = 就地改行（四格矩阵收正）⇒ **结构未变 · 本批不拆**。
+- **行 8 `thincoder-vscode/src/extension/suspension.mjs`（430 → ~432）**：读数登记面 = `docs/vsc/design/VSC-DEBT.md` §12.1（登记归父侧派单——§6.27.12.7 尾注先例）；本批 +2 = 就地改行 ⇒ **结构未变 · 本批不拆**。
+- **行 9 `thincoder-vscode/webview/chat.js`（445 → ~448）**：≤500 硬限、>300 咨询线；`VSC-DEBT.md` §12.1 本刻未列该档（该节逐项登记、非全量普查）⇒ 补登归父侧派单；本批 +4 = 就地改行 ⇒ **结构未变 · 本批不拆**。
+
+**读数口径（评审 #44 发现 4 处置；先例 = §6.27.12.7 尾注④）**：行 11–14（设计档四档）= **as-of 读数 · 不追值**——「现量」= 落笔前读数、「Δ」= 落笔估值；
+实测终态另见批档 §2.3 / §2.7（本档 2127 · `docs/vsc/design/WEBVIEW-PROTOCOL.md` 545 · `docs/vsc/design/WEBVIEW.md` 621 · `docs/cli/design/TUI.md` 635）⇒ **统一归实现轮复核**。
+
+**⑦ 用例表（正常 / 边界 / 错误）**
+
+| # | 用例 | 输入 | 期望输出 | 回指 |
+|---|---|---|---|---|
+| T-SL1 | 正常·携参取队首 ask（`thincoder-core/test/parent-channel-upstream.test.mjs`） | `_childUpstream = [{kind:"note",…},{kind:"ask", from:"coder#7", message:"选 A 还是 B？"}]` | `upstreamAskLabelVars(载体)` = `{ from:"coder#7", msg:"选 A 还是 B？" }` | F-UC8 条 2 |
+| T-SL2 | 边界·无 ask / 非数组 / 载体别名路 | ① `[]` ② `[{kind:"note"}]` ③ 字段缺省 ④ 父字段缺 + `history._childUpstream` 在场 | ①②③ ⇒ `null`（不抛）；④ ⇒ 命中同一容器（carrier 吸收） | 条 2 / 零回归 |
+| T-SL3 | 边界·单行归一 + 截断 | `message` = 折行 + 连续空白 + 200 字符 | 单空格单行；长度 ≤ 120；尾 `…` | 条 2 |
+| T-SL4 | 边界·多 ask 队首 | 两条 ask（不同 `from`） | 取插入序首个（`from` = 首条） | 条 2 |
+| T-SL-C1 | 正常·CLI 四格矩阵（`thincoder-cli/test/digest-end-line.test.mjs`） | 四 rig：manual / AUTO × ask / digest | 标签 = 对应核容器值（ask 档携 `from` + `msg`）；**AUTO 两格与 manual 逐字同** | 条 1 / 2 |
+| T-SL-C2 | 正常·CLI 起跑行 | `_pendingAsyncResults` 2 条；① 无 ask ② ask + `pend0 = 0` | ① 标签（digest）→ 起跑行 `digest.start n=2`；② 零起跑行（`n > 0` 规则） | 条 3 |
+| T-SL-C3 | 正常 + 边界·CLI ask-only 轮零收尾行（`thincoder-cli/test/digest-end-line.test.mjs`） | ① ask-only 轮（`upstream` + 零 pending ⇒ `pend0 = 0`）② 同形 + 首轮停（aborted 形态）③ 对照：`entries = 2`（`pend0 > 0`） | ①② **零收尾行**（`digest.done` / `digest.aborted` 皆不出——`pend0 > 0` 守卫）；③ 收尾行在场（零回归） | 条 3 / 零回归 |
+| T-SL-V1 | 正常·VSC tier 两档 + 携参（`thincoder-vscode/test/digest-visibility.test.mjs`） | ① pending ② ask + `from` / `msg` ③ AUTO + pending | ①/③ `tier:"digest"`（AUTO 同判）② `tier:"ask"` + 两字段——逐字段 deepEqual | 条 1 / 4 |
+| T-SL-V2 | 正常 + 边界·webview 标签与计数元素 | ① `tier:"ask", n:0` ② `tier:"ask", n:2` ③ `tier` 缺省 | ① 携参标签行 + 零计数元素 + end 零动作 ② 计数元素在场 + end 原地更新 ③ `digest.turnLabel` 零回归 | 条 4 |
+
+**⑧ 验收标准（逐条回指——可机检 · Windows / cmd.exe；cwd = `D:\teamcode\thincoder`）**
+
+| # | 判据 | 回指 |
+|---|---|---|
+| U-SL1 | `cd thincoder-core && npm test` 全绿（含 T-SL1–T-SL4 + A4 导出面 +1 名） | 条 1 / 2 |
+| U-SL2 | `cd thincoder-cli && npm test` 全绿（含 T-SL-C1 / C2 / C3 + `input-lock` 四格收正） | 条 1 / 2 / 3 |
+| U-SL3 | `cd thincoder-vscode && npm test` 全绿（含 T-SL-V1 / V2 + 协议档坐标面重出） | 条 4 |
+| U-SL4 | 结构机检（ASCII 令牌，单行 `node -e`；四查 + 两否定）：核容器含 `"digest.turnLabelAsk"` ∧ `${from}` ∧ **不含** `digest.turnLabelAuto`；`suspension-drive.mjs` 含 `t("digest.turnLabel` ∧ `digest.start` ∧ **不含** `[auto-turn:`；`suspension.mjs` 含 `upstreamAskLabelVars(`；`chat.js` 不含 `digest.turnLabelAuto` | 条 1 / 4 |
+| U-SL5 | 文档一致：`node scripts/doc-check.mjs --root .` **本批触碰档零新增**条目（悬空 0 ∧ 行宽读数不因本批上升）；引擎退出码 = 0 需存量超宽行（需求档 `docs/core/requirements/AGENT-LOOP.md:236` / `:278`——父侧写域；`docs/core/requirements/SESSION.md:45`——他流写域）各自折行后成立；§6.27.12.13 ↔ 批档 §2 ↔ 需求 §4.12 F-UC8 三方同源 | 批档自身约束 |
+
+**⑨ 边界（本批不做）**
+
+1. 唤醒 / 开轮 / 域文本机制零改（`upstreamWaiting` 谓词 · `_asyncWaiters` · `upstreamTurn` 旗标 · 域文本常量）。
+2. X9 收尾行 **guard 一处**（`pend0 > 0`——ask-only 轮零收尾行，done / aborted 两形态同判）；其余轮尾机制零改（字面 / 计数口径 / 轮序 / `digest:*` 日志面）。
+3. `UPSTREAM_*` 三常量语义与数值 · 队列结构 · drain 注入文案与注脚零改。
+4. 提示词面 / `notify_parent` 工具描述与返回注零改（内容权 = 父侧）。
+5. 不做列宽口径截断（核无宽度叶——`sliceByWidth` 住 `thincoder-cli/src/tui/render.mjs:46`；引核 = 新结构面）。CLI 手边同档宽度叶不用于显示点截断之由 = **跨端单源（D2）**——截断口径须与 VSC 同源（VSC 侧无终端宽度概念）⇒ 只取字符口径（②）；代价 = CLI 窄终端下含宽字符的标签可折行——**已知形态**，不为此再分叉口径。
+6. 不新增 i18n 键（改值 1 + 删 1 + 复用 2）；`thincoder-vscode/locales/{en,zh}.json` 零改（核投影面）。
+7. 不做 AUTO 档模式字面（模式可见性 = CLI `AUTO│` 横幅 / VSC `autoApprove` 广播）。
+
+**⑩ 登记**
+
+- **ask-only 轮的 CLI 收尾行**：**已裁纳入本批**（父侧 2026-09-21 02:0x）——落点 = ③ 尾条（guard 口径与理由）+ ⑤c + ⑨-2 + 用例 T-SL-C3（⑦）。依据 = 与起跑行同规则（`n > 0`）才有一致形态；`pend0 = 0` 轮出收尾行 = 幻影行（同 ① 计数行的幻影行禁出原则）；两端形态对齐（VSC ask 轮无计数元素 ⇒ end 零动作——`thincoder-vscode/webview/chat.js:425-426`，该守卫先于 `ok` 判 ⇒ done / aborted 两形态皆零）。
+- **`digest.turnLabel` 措辞**：pending 单容器含 consult / escalate / advisor 族，标签字面只说 "subagent reports"（既有多族措辞面）；本批只钉两因分流，措辞面不动。
+
 ## 变更记录
+
+- 2026-09-21（**批 SUBAGENT-SIGNAL-LINES · 设计微修三轮 · eng-designer**——承 `docs/batches/2026-09-21-subagent-signal-lines.md` §3 轮次 1 评审 #44（pass · 3🟡 / 5🔵）设计档面四项 × 父侧逐条裁定）：§6.27.12.13 ——
+  ① ⑥ 表后补**越线核查**（行 3 / 5 / 8 / 9 四档逐档档位口径）· ② 行 11–14 补**读数口径**注（as-of 读数 · 不追值）· ③ ⑤a 代码块改用 `ASK_LABEL_MSG_MAX` · ④ ⑨-5 补理由句（跨端单源 D2 · 宽字符折行为已知形态）。机制面零改。
+
+- 2026-09-21（**批 SUBAGENT-SIGNAL-LINES · 设计微修二轮 · eng-designer**——承 `docs/batches/2026-09-21-subagent-signal-lines.md` §2.6 遗留 2（CLI 设计档 §6.9 口径差）· **父侧 2026-09-21 02:1x 裁定纳入本批**）：
+  CLI 设计档同步——`docs/cli/design/TUI.md` **§6.9** 就地收正为 F-UC8 现态口径（起跑标签**两档**〔ask 携参 / digest——manual / AUTO 同判 · `auto` 泛句退场〕
+  · **起跑数行** `pend0 > 0` ⇒ `digest.start` · 收尾行 **`pend0 > 0` 守卫**——done / aborted 两形态同判）+ 该档变更记录一行；
+  §6.27.12.13 ⑥ 文件表 **14 行**（新增行 14 = `docs/cli/design/TUI.md`——实现轮零改）。机制面零改。
+
+- 2026-09-21（**批 SUBAGENT-SIGNAL-LINES · 设计微修正轮 · eng-designer**——承 `docs/batches/2026-09-21-subagent-signal-lines.md` §1 · **父侧 2026-09-21 02:0x 裁定**（⑩-1 上抛项：ask-only 轮 CLI 收尾行**纳入本批**））：§6.27.12.13 ——
+  X9 收尾行**加 `pend0 > 0` 守卫**（ask-only 轮零收尾行；**done / aborted 两形态同判**——VSC `webview/chat.js:425-426` 零动作守卫先于 `ok` 判）；③ 尾条改写 + 射程句 / §6.27.12.5 D 尾注同扫收正 + ⑨-2 边界改写（「轮尾行零改」→「收尾行 guard 一处，其余零改」）+
+  ⑩-1 改「已裁纳入」含落点 + ⑤c 守卫口径 + ⑦ 用例 **T-SL-C3**（ask-only 零收尾行 · 两态对照）+ ⑧ U-SL2 回指含 C3 + ⑥ 文件表 Δ 收正两行（`suspension-drive.mjs` +9 → +10 · `digest-end-line.test.mjs` +20 → +40）。机制面零改（可见提示面一处守卫）。
+
+- 2026-09-21（**批 SUBAGENT-SIGNAL-LINES · 设计轮 · eng-designer**——承 `docs/batches/2026-09-21-subagent-signal-lines.md` §1（用户 01:55 报告 + 01:58 口径「全档 × 双端」）· 需求 §4.12 **F-UC8** · 台账 #166）：
+  **新增 §6.27.12.13 信号提示行**（档位矩阵 / ask 携参 / CLI 起跑行 / 决策 D-SL1–D-SL5 / 接口契约 a–f / 受影响文件 13 档 / 用例 T-SL1–T-SL4 + T-SL-C1·C2 + T-SL-V1·V2 / 验收 U-SL1–U-SL5 / 边界 7 条 / 登记 2 条）；
+  §6.27.12.5 **D** 改写为 F-UC8 现态契约（按因两档 × 全档 + 起跑行——`auto` 泛句退场）；§6.27.12.12 ⑥ 首条（webview digest 可见面）与 ④ 对照表第 10 行收正（tier 两档 · 携参 · 计数元素随 `n > 0`）。
+  对位档同步：`docs/vsc/design/WEBVIEW-PROTOCOL.md` §3 / §3.2（行 11 收正 + 新增行 14）/ §5 / §13 / §6.3 · `docs/vsc/design/WEBVIEW.md` §5.1 / §6 D-W35 / §8 U-W19。**机制面零改**（只动可见提示面）。
 
 - 2026-09-20（**显示面消差批 · 批 4 收口轮 · eng-designer**——承 `docs/batches/2026-09-20-display-parity-batch.md` §2.11 未落面 / §5.13 / §5.18 批 2 实施记录）：
   §6.7.2 —— ① 「VSC 同步 spawn 块无 ⏹」句收正为 **X10 现态**（`syncLive` 门控 + 宿主 sync 分支经核 `cancelSyncChild` 单源；产者侧序缺陷 ⇒ 降级登记）；
