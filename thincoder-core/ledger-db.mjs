@@ -57,13 +57,30 @@ CREATE TABLE IF NOT EXISTS items (
   task_book  TEXT,
   evidence   TEXT,
   trigger    TEXT CHECK(trigger IN ('归批','条件','认账不排期') OR trigger IS NULL),
+  executor   TEXT,
   created_at TEXT,
   updated_at TEXT,
   closed_at  TEXT,
   CHECK (status NOT IN ('在途','待核销') OR (task_book IS NOT NULL AND task_book <> ''))
 )`
 
-/** 开库（cwd = 项目根——仅作关联键）→ DatabaseSync 句柄 + 幂等建表。
+/** 老库幂等迁移：items 表缺 executor 列（旧 DDL 建的库）→ ALTER 补列。
+ *  判据 = PRAGMA table_info 实查（不猜版本号）；ALTER duplicate column 竞争 → 复核列在吞 / 不在抛真错。
+ *  列存在性谓词抽成单元（param exists），便于并发竞争拍直测。K-LX5：老库零删改、零重建。 */
+export function ensureExecutorColumn(db, { exists } = {}) {
+  const columnExists = exists
+    ?? (() => db.prepare("SELECT 1 FROM pragma_table_info('items') WHERE name = 'executor'").get() !== undefined)
+  if (columnExists()) return false
+  try {
+    db.exec("ALTER TABLE items ADD COLUMN executor TEXT")
+    return true
+  } catch (e) {
+    if (columnExists()) return false // 并发竞争——另一连接已加列：吞
+    throw new Error(`台账库 executor 列迁移失败：${e.message}`)
+  }
+}
+
+/** 开库（cwd = 项目根——仅作关联键）→ DatabaseSync 句柄 + 幂等建表 + 老库幂等迁移（executor 列）。
  *  读面（create=false）：库文件不存在 → 返回 null（空账——读面不建库、无副作用）。
  *  写面（create=true）：库文件不存在自动建（台账目录随之创建）；项目根目录不存在 → 抛友好错误。 */
 export function openLedger(cwd, { create = false } = {}) {
@@ -75,7 +92,10 @@ export function openLedger(cwd, { create = false } = {}) {
   if (!existsSync(file) && !create) return null
   try { mkdirSync(ledgerDir, { recursive: true }) } catch { /* 已存在 / 并发建目录竞争——忽略 */ }
   const db = new DatabaseSync(file)
-  try { db.exec(DDL) } catch (e) {
+  try {
+    db.exec(DDL)
+    ensureExecutorColumn(db)
+  } catch (e) {
     db.close()
     throw new Error(`台账库打开失败：${file}（${e.message}）`)
   }

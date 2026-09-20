@@ -12,12 +12,13 @@
  * 常驻标记，渲染端消费；**不受启动行门约束**——F2 按标记态照显）。
  * 只读台账；唯一写面 = 去重档（`~/.thincoder/ledger-notify.json`）。
  */
-import { buildScan, detailScans, discoverFamily, formatDetailLine, formatMarker, loadNotifyState, NOTIFY_FILE, notifyKey, planChangeLines, REFRESH_MS, saveNotifyState } from "./ledger.mjs"
+import { buildScan, detailScans, discoverFamily, formatDetailLine, formatMarker, loadNotifyState, NOTIFY_FILE, notifyKey, planChangeLines, REFRESH_MS, resolveExecutorStates, saveNotifyState } from "./ledger.mjs"
 
-/** 单次扫描（直驱面——timer 包装见 `startLedgerSurface`）。
+/** 单次扫描（直驱面——timer 包装见 `startLedgerSurface`）。**async**（F-LX1：await 判活解析——
+ *  LEDGER.md §7.3.1 ④ 读面不阻塞事件循环）。
  *  `startup=true` = 会话首扫（补启动行；变化行在前、明细行在后）。
  *  `colors` = 端注入的渲染色表（`{ warn, dim }`）；未注入 ⇒ `{}`（`undefined` 色值 = 纯文本）。 */
-export function runLedgerScan({ state, agent = null, anchor = null, notifyFile = NOTIFY_FILE, pushLine = () => {}, render = () => {}, startup = false, colors = {} } = {}) {
+export async function runLedgerScan({ state, agent = null, anchor = null, notifyFile = NOTIFY_FILE, pushLine = () => {}, render = () => {}, startup = false, colors = {} } = {}) {
   const base = anchor ?? agent?.cwd ?? process.cwd()
   const family = discoverFamily(base)
   const scans = []
@@ -25,6 +26,7 @@ export function runLedgerScan({ state, agent = null, anchor = null, notifyFile =
     try { scans.push(buildScan({ cwd: p.root })) } catch { /* 台账不可读 → 该项目跳过（余者照常——N1/T110①） */ }
   }
   const current = family.current ? scans.find((s) => s.root === family.current.root) ?? null : null
+  await resolveExecutorStates(scans) // 判活批量解析（一次探束 + TTL 缓存；无在途零 exec）
   const notify = loadNotifyState(notifyFile)
   const plans = scans.map((s) => ({ s, plan: planChangeLines(notify.ledgers[notifyKey(s.ledger)], s) }))
   const changeLines = plans.flatMap(({ plan }) => plan.lines)
@@ -46,19 +48,24 @@ export function runLedgerScan({ state, agent = null, anchor = null, notifyFile =
     for (const { s, plan } of plans) ledgers[notifyKey(s.ledger)] = { ...plan.next, updatedAt: Date.now() }
     saveNotifyState(notifyFile, { version: 1, ledgers })
   }
-  state.ledger = { marker: current ? formatMarker(current) : null, warn: Boolean(current && current.aged > 0), scannedAt: Date.now() }
+  // warn 判位钉在判活解析之后（裁定 #7）：属主已死也是可动作态
+  state.ledger = { marker: current ? formatMarker(current) : null, warn: Boolean(current && (current.aged > 0 || current.deadExecutors > 0)), scannedAt: Date.now() }
   render()
 }
 
 /** 挂载：首扫（`setImmediate`——不抢首帧）+ 周期（`REFRESH_MS`；`state.processing` 期间跳过本轮）。
- *  端注入的渲染面（`ctx.colors`）与推送面（`ctx.pushLine` / `ctx.render`）照传。 */
+ *  端注入的渲染面（`ctx.colors`）与推送面（`ctx.pushLine` / `ctx.render`）照传。
+ *  `tick` 异步化（F-LX1——runLedgerScan async）：await 且 catch 不崩（N1）。重叠防衛：
+ *  判活探测秒级可达，上一轮未落定时跳过本轮（防探束堆积）。 */
 export function startLedgerSurface(ctx = {}) {
   let disposed = false
   let timer = null
-  const tick = (startup) => {
-    if (disposed) return
+  let inflight = false
+  const tick = async (startup) => {
+    if (disposed || inflight) return
     if (!startup && ctx.state?.processing) return // 扫描不打断回合帧
-    try { runLedgerScan({ ...ctx, startup }) } catch { /* 可见面尽力——不崩（N1） */ }
+    inflight = true
+    try { await runLedgerScan({ ...ctx, startup }) } catch { /* 可见面尽力——不崩（N1） */ } finally { inflight = false }
   }
   setImmediate(() => {
     if (disposed) return

@@ -37,7 +37,7 @@ export function ledgerCount({ cwd } = {}) {
 /** 路径 = 存在的**档**？（目录 / 缺失 → false——写门存在性判据用）。 */
 const isFile = (p) => { try { return statSync(p).isFile() } catch { return false } }
 
-/** 写门·指针存在性（设计档 §6.1 · 台账 #38 · AC-M2-8）：写命令落盘前判**结果行**——`status ∈
+/** 写门·指针存在性（设计档 §6.1 · 台账 #38 · AC-M2-9）：写命令落盘前判**结果行**——`status ∈
  *  {在途, 待核销}` 且 `task_book` 非空 ⇒ 文件部分（首个 `§` 前子串，trim）须经基准 `resolve(base, …)`
  *  指向存在的档；缺文件部分（`§2` / 全空白）⇒ 拒；不在册 / 非文件 ⇒ 拒（throw，行不变）。
  *  判位与迁移表判同层（落盘前）；文案前缀 = 调用函数名（与同函数既有两条文案同款）。
@@ -67,8 +67,22 @@ export function ledgerAdd({ cwd, row }) {
   } finally { db.close() }
 }
 
-/** 更新（写命令，仅主 agent）：UPDATE——状态迁移前判允许迁移表（不在表内 → 拒，行不变）。 */
-export function ledgerUpdate({ cwd, id, patch }) {
+/** executor 目标值计算（设计档 docs/core/design/LEDGER.md §3.1——判位在 ledgerUpdate 体内：迁移表判 → 本语义 → 写门 → UPDATE）。
+ *  优先级 = patch 显式 > 自动语义（进在途 = executorSessionId / 出在途 = NULL）> 行现值兜底 > NULL。 */
+function resolveExecutorTarget(row, to, patch, executorSessionId) {
+  if (row.status === "待设计" && to === "在途") {
+    return patch.executor ?? executorSessionId ?? row.executor ?? null
+  }
+  if (row.status === "在途" && (to === "待核销" || to === "已废弃")) {
+    return null // 出边自动语义压 patch——显式传 executor 也不复活
+  }
+  return patch.executor ?? row.executor ?? null
+}
+
+/** 更新（写命令，仅主 agent）：UPDATE——状态迁移前判允许迁移表（不在表内 → 拒，行不变）。
+ *  executor 目标值随同一 UPDATE 落列（LEDGER.md §3.1）；executorSessionId = 调用会话（函数参数注入——K-LX1
+ *  纯函数可测；工具层动态 import getSessionId() 供值，零新静态边）。 */
+export function ledgerUpdate({ cwd, id, patch, executorSessionId }) {
   const db = openLedger(cwd, { create: true })
   try {
     const row = db.prepare("SELECT * FROM items WHERE id = ?").get(id)
@@ -79,9 +93,10 @@ export function ledgerUpdate({ cwd, id, patch }) {
     }
     const nextTaskBook = patch.task_book ?? row.task_book
     assertTaskBookGate(cwd, "ledgerUpdate", to, nextTaskBook) // 判序：迁移表判 → 本门 → UPDATE
+    const nextExecutor = resolveExecutorTarget(row, to, patch, executorSessionId)
     const now = nowIso()
-    db.prepare(`UPDATE items SET status = ?, title = ?, board = ?, req_doc = ?, task_book = ?, evidence = ?, trigger = ?, updated_at = ? WHERE id = ?`)
-      .run(to, patch.title ?? row.title, patch.board ?? row.board, patch.req_doc ?? row.req_doc, nextTaskBook, patch.evidence ?? row.evidence, patch.trigger ?? row.trigger, now, id)
+    db.prepare(`UPDATE items SET status = ?, title = ?, board = ?, req_doc = ?, task_book = ?, evidence = ?, trigger = ?, executor = ?, updated_at = ? WHERE id = ?`)
+      .run(to, patch.title ?? row.title, patch.board ?? row.board, patch.req_doc ?? row.req_doc, nextTaskBook, patch.evidence ?? row.evidence, patch.trigger ?? row.trigger, nextExecutor, now, id)
     return { id }
   } finally { db.close() }
 }
@@ -97,7 +112,8 @@ export function ledgerClose({ cwd, id, status }) {
       if (!row) throw new Error(`ledgerClose：行 ${id} 不存在`)
       if (status === "已核销" && row.status !== "待核销") throw new Error(`ledgerClose：勾销仅限待核销（现态 ${row.status}）`)
       const now = nowIso()
-      db.prepare("UPDATE items SET status = ?, closed_at = ?, updated_at = ? WHERE id = ?").run(status, now, now, id)
+      // 撤回（任意态 → 已废弃——含在途直撤）同步 executor = NULL（LEDGER.md §3.1 ④）；勾销路径 executor 已在离场迁移清空，零触碰
+      db.prepare("UPDATE items SET status = ?, closed_at = ?, updated_at = ?, executor = ? WHERE id = ?").run(status, now, now, status === "已废弃" ? null : row.executor, id)
       db.exec("COMMIT")
       return { id, status }
     } catch (e) { db.exec("ROLLBACK"); throw e }
@@ -181,12 +197,19 @@ export const ledgerUpdateTool = {
       task_book: { type: "string", description: "任务书指针（缺省 = 不变）" },
       evidence: { type: "string", description: "证据（缺省 = 不变）" },
       trigger: { type: "string", enum: ["归批", "条件", "认账不排期"], description: "触发（缺省 = 不变）" },
+      executor: { type: "string", description: "执行者 sessionId（可选——接手改写归属用；缺省 = 按状态迁移语义：进在途自动写本会话 / 出在途自动清空 / 其余不变）" },
     },
   },
   readonly: false,
   async execute(args, ctx) {
     const { cwd, id, ...patch } = args
-    return JSON.stringify(ledgerUpdate({ cwd: cwd ?? cwdOf(ctx), id, patch }))
+    let executorSessionId
+    if (patch.executor === undefined) {
+      // 动态 import——零新静态边（K-LX1）；工具层供值，核心函数保持参数注入纯函数
+      const { getSessionId } = await import("./session-slots.mjs")
+      executorSessionId = getSessionId()
+    }
+    return JSON.stringify(ledgerUpdate({ cwd: cwd ?? cwdOf(ctx), id, patch, executorSessionId }))
   },
 }
 

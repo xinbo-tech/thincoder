@@ -9,6 +9,8 @@
  * ② 族发现（findProject / discoverFamily——标记 = ledger.db）③ scan 组装（buildScan——行集 + ledgerCount
  * → scan 对象，形状契约 = pool/tech/aged/thresholdReached/actionable/root/name/ledger）
  * ④ 通知去重（送达门 + 一次性去重——去重档跨会话、跨端共享）⑤ 格式 helper（行文本逐字契约）。
+ * 判活展示 = 拆分件 `ledger-executors.mjs`（在途 executor 解析 + 三态尾段——本档 re-export，
+ * 消费面仍只认本档）。
  *
  * W8 契约②：ledger-db.mjs 静态 import node:sqlite ⇒ 消费侧一律**动态 import** 本档（禁止静态 import）。
  */
@@ -17,6 +19,7 @@ import { basename, dirname, join, resolve } from "node:path"
 import { configDir } from "./config.mjs"
 import { ledgerDbPath, PENDING_STATUSES } from "./ledger-db.mjs"
 import { ledgerQuery } from "./ledger-cmd.mjs"
+import { executorTail } from "./ledger-executors.mjs"
 
 /** 老化阈值（天——口径 = 需求档；`days` 参数可覆盖）。 */
 export const AGING_DAYS = 30
@@ -105,7 +108,9 @@ export function discoverFamily(anchor) {
 /** scan 组装（SQLite 行集 + 计数单源 → scan 对象）——形状契约（设计档 §2.2）：pool/tech/aged/
  *  agedKeys/agedTitles/thresholdReached/boards/actionable/root/name/ledger。行龄 = 时间戳
  *  （updated_at ?? created_at 距今 > days；未知不计——零假阳降级，同 v1 行龄未知口径）。
- *  `now`/`days` = 注入面（确定性用例——替代 v1 ageOf git 注入面）。 */
+ *  `now`/`days` = 注入面（确定性用例——替代 v1 ageOf git 注入面）。
+ *  `inflightExecutors`（F-LX1 · sync 零变——K-LX2）：在途且 executor 非空行集原样携带
+ *  {executor, updated_at, created_at}——判活解析由 `resolveExecutorStates` async 单源负责，本函数零探测。 */
 export function buildScan({ cwd, days = AGING_DAYS, now = Date.now() } = {}) {
   const rows = ledgerQuery({ cwd })
   const pending = rows.filter((r) => PENDING_STATUSES.includes(r.status))
@@ -123,11 +128,15 @@ export function buildScan({ cwd, days = AGING_DAYS, now = Date.now() } = {}) {
   }
   const thresholdReached = poolEntries.length >= THRESHOLD_POOL || [...boards.values()].some((n) => n >= THRESHOLD_BOARD)
   const root = resolve(cwd)
+  const inflightExecutors = pending
+    .filter((r) => r.status === "在途" && r.executor)
+    .map((r) => ({ executor: r.executor, updated_at: r.updated_at ?? null, created_at: r.created_at ?? null }))
   return {
     name: basename(root), root, ledger: ledgerDbPath(root),
     pool: poolEntries.length, tech: techEntries.length, aged: aged.length,
     agedKeys: aged.map((r) => normalizeEntry(r.title)), agedTitles: aged.map((r) => entryTitle(r.title)),
     thresholdReached, boards, actionable: aged.length > 0 || thresholdReached,
+    inflightExecutors,
   }
 }
 
@@ -136,9 +145,10 @@ export function formatMarker(scan) {
   return scan ? `台账 ${scan.pool}·${scan.tech}` : null
 }
 
-/** L2 明细行（逐字——`（老化 <n>）` 恒显；阈值达成加 ` — 可开批`）。 */
+/** L2 明细行（逐字——`（老化 <n>）` 恒显；阈值达成加 ` — 可开批`；判活尾段 = executorTail 三态——
+ *  在途 executor 缺席时尾段空串，既有逐字断言零破）。 */
 export function formatDetailLine(scan) {
-  return `台账 ${scan.name}：需求池 ${scan.pool} · 技术待办 ${scan.tech}（老化 ${scan.aged}）${scan.thresholdReached ? " — 可开批" : ""}`
+  return `台账 ${scan.name}：需求池 ${scan.pool} · 技术待办 ${scan.tech}（老化 ${scan.aged}）${scan.thresholdReached ? " — 可开批" : ""}${executorTail(scan)}`
 }
 
 /** L3 变化行·老化（titles = 新增老化条目标题；> 3 条时第三项后接 `；…`）。 */
@@ -198,5 +208,6 @@ export function saveNotifyState(file, state) {
 }
 
 // ── re-export（拆分件接口——命令面接线 = 动态 import 本档，KD-M2-3） ──
-export { ALLOWED_MIGRATIONS, ledgerDbPath, openLedger, PENDING_STATUSES, _setLedgerDirForTest, _resetLedgerDirForTest } from "./ledger-db.mjs"
+export { ALLOWED_MIGRATIONS, ledgerDbPath, openLedger, PENDING_STATUSES, _setLedgerDirForTest, _resetLedgerDirForTest, ensureExecutorColumn } from "./ledger-db.mjs"
 export { ledgerAdd, ledgerAddTool, ledgerClose, ledgerCloseTool, ledgerCount, ledgerCountTool, ledgerQuery, ledgerQueryTool, ledgerUpdate, ledgerUpdateTool } from "./ledger-cmd.mjs"
+export { resolveExecutorStates, executorTail, _setExecutorProbeTtlForTest } from "./ledger-executors.mjs"

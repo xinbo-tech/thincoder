@@ -46,24 +46,28 @@ export function _setLedgerSurfaceForTest(opts = {}) {
   return { notifyFile: _notifyFile, cwd: _anchor }
 }
 
-/** 族扫描（项目解析 + 汇总——不可读项目跳过，余者照常；N1/T110①）。 */
+/** 族扫描（项目解析 + 汇总——不可读项目跳过，余者照常；N1/T110①）。
+ *  **async**（F-LX1）：await 判活解析（resolveExecutorStates——一次探束 + TTL 缓存；
+ *  无在途零 exec），tooltip 行集与核机制面同拍同文（K-LX3 同源 `formatDetailLine`）。 */
 async function scanFamily(ledger) {
   const family = ledger.discoverFamily(_anchor ?? _cwd())
   const scans = []
   for (const p of family.projects) {
     try { scans.push(ledger.buildScan({ cwd: p.root })) } catch { /* 不可读 → 跳过 */ }
   }
+  await ledger.resolveExecutorStates(scans)
   const current = family.current ? scans.find((s) => s.root === family.current.root) ?? null : null
   return { scans, current }
 }
 
-/** item 更新（缝值 `render` 的端侧实现）：无台账 → hide（K6/U4）；aged>0 → 警示底色。 */
+/** item 更新（缝值 `render` 的端侧实现）：无台账 → hide（K6/U4）；aged>0 或属主已死 → 警示底色
+ *  （F-LX1——与核机制 warn 同判位：`aged > 0 || deadExecutors > 0`，§7.3.1）。 */
 function updateItem(ledger, scans, current) {
   if (!_item) return
   if (!current) { _item.hide(); return }
   _item.text = ledger.formatMarker(current)
   _item.tooltip = new vscode.MarkdownString(ledger.detailScans(scans, current).map((s) => ledger.formatDetailLine(s)).join("\n"))
-  _item.backgroundColor = current.aged > 0 ? new vscode.ThemeColor("statusBarItem.warningBackground") : undefined
+  _item.backgroundColor = current.aged > 0 || current.deadExecutors > 0 ? new vscode.ThemeColor("statusBarItem.warningBackground") : undefined
   _item.show()
 }
 
@@ -81,7 +85,7 @@ const SEAM_COLORS = { warn: true, dim: false }
 async function runScan(panel, { startup = false } = {}) {
   const { ledger, surface } = await loadCore()
   const { scans, current } = await scanFamily(ledger) // 端侧明细面（tooltip 行集——与核机制扫描同拍同锚）
-  surface.runLedgerScan({
+  await surface.runLedgerScan({
     state: _state,
     anchor: _anchor ?? _cwd(),
     notifyFile: _notifyFile ?? undefined,

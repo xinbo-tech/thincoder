@@ -17,9 +17,11 @@ import { dirname, join, parse } from "node:path"
 import { slow } from "./slow.mjs"
 import {
   buildScan, discoverFamily, entryTitle, findProject, formatAgingLine, formatDetailLine, formatMarker,
-  formatThresholdLine, ledgerAdd, ledgerClose, ledgerCount, ledgerDbPath, loadNotifyState, normalizeEntry, notifyKey,
-  openLedger, saveNotifyState, _resetLedgerDirForTest, _setLedgerDirForTest,
+  formatThresholdLine, ledgerAdd, ledgerClose, ledgerCount, ledgerDbPath, ledgerQuery, ledgerUpdate, loadNotifyState,
+  normalizeEntry, notifyKey, openLedger, saveNotifyState, _resetLedgerDirForTest, _setExecutorProbeTtlForTest,
+  _setLedgerDirForTest,
 } from "@thincoder/core/ledger.mjs"
+import { _resetProcessProbeTestImpl, _setProcessProbeTestImpl } from "@thincoder/core/process-probe.mjs"
 import { runLedgerScan } from "../src/tui/ledger-surface.mjs"
 import { renderStatus } from "../src/tui/render-frame.mjs"
 import { C } from "../src/tui/ansi.mjs"
@@ -30,7 +32,12 @@ beforeEach(() => {
   tmp = mkdtempSync(join(tmpdir(), "ledger-surface-"))
   _setLedgerDirForTest(join(tmp, "ledgerdir"))
 })
-afterEach(() => { _resetLedgerDirForTest(); rmSync(tmp, { recursive: true, force: true }) })
+afterEach(() => {
+  _resetLedgerDirForTest()
+  _resetProcessProbeTestImpl()
+  _setExecutorProbeTtlForTest(null) // 判活 TTL 缝恢复（裁定 #8——测试间不串）
+  rmSync(tmp, { recursive: true, force: true })
+})
 
 const mk = (rel, content) => { const abs = join(tmp, rel); mkdirSync(dirname(abs), { recursive: true }); writeFileSync(abs, content); return abs }
 const poolEntry = (name, board = "FOO.md") => `- [ ] **${name}** → 需求 \`docs/requirements/${board}\` §1.13 · 任务书 \`docs/batches/B.md\` §2 · status=待讨论`
@@ -213,6 +220,33 @@ test("T103 边界：跨端去重档键——绝对路径·正斜杠 + 盘符大�
   }
   assert.ok(!notifyKey(join(tmp, "ledger.db")).includes("\\"), "无反斜杠（跨端共享档——全平台）")
 })
+// ── T19 双端（AC-M2-8 · LEDGER-EXECUTOR 批）：CLI L2 尾段 + warn 判位（端面 await 判活径） ──
+test("T19 端面（CLI）：属主已死 → L2 明细行带「（属主已死 1，可接手）」+ state.ledger.warn = true", async () => {
+  _setExecutorProbeTtlForTest(0) // 恒重探（用例内确定性）
+  const base = join(tmp, "fam-ex")
+  // 明细行门 = 任一项目 actionable ⇒ 夹具带一条老化行（独立——迁在途会刷 updated_at 重置自身行龄）
+  const proj = mkLedgerAt(join(base, "proj"), [{ row: techRow("丁"), ageDays: 40 }, { row: techRow("丙") }])
+  mkdirSync(join(proj, "docs", "batches"), { recursive: true })
+  writeFileSync(join(proj, "docs", "batches", "here.md"), "# 在档\n")
+  const row = ledgerQuery({ cwd: proj }).find((r) => r.title === techEntry("丙"))
+  ledgerUpdate({ cwd: proj, id: row.id, patch: { status: "待设计" } })
+  ledgerUpdate({ cwd: proj, id: row.id, patch: { status: "在途", task_book: "docs/batches/here.md" }, executorSessionId: "5001-dead" })
+  const pre = buildScan({ cwd: proj })
+  assert.equal(pre.inflightExecutors.length, 1, "前提：在途 executor 带值")
+  assert.equal(pre.actionable, true, "前提：老化行（丁）使项目可动作——明细行门开")
+  _setProcessProbeTestImpl({ aliveFn: (pids) => new Set(pids.filter((p) => p !== 5001)), cmdlineFn: () => new Map() })
+  const state = { processing: false }
+  const lines = []
+  await runLedgerScan({
+    state, anchor: proj, notifyFile: join(base, "notify.json"),
+    pushLine: (t) => lines.push(t), startup: true,
+  })
+  const detail = lines.find((l) => l.startsWith("台账 proj："))
+  assert.ok(detail, `明细行在流（${JSON.stringify(lines)}）`)
+  assert.ok(detail.includes("（属主已死 1，可接手）"), `L2 尾段逐字（${detail}）`)
+  assert.equal(state.ledger.warn, true, "warn 判位：deadExecutors>0（裁定 #7——await 判活后重算）")
+})
+
 
 // ── T106 状态行接线（AC87/F2） ──────────────────────────────────────────────
 test("T106 正常：空标记零注入（字节等价）；非空在位（scrollHint 后、键位组前）；warn 色段", () => {

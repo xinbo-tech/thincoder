@@ -18,9 +18,11 @@ import files from "./files.mjs"
 import { slow } from "./slow.mjs"
 import {
   buildScan, entryTitle, formatAgingLine, formatDetailLine, formatMarker, formatThresholdLine,
-  ledgerAdd, ledgerCountTool, ledgerDbPath, ledgerQueryTool, loadNotifyState, normalizeEntry, notifyKey, openLedger, planChangeLines,
-  _resetLedgerDirForTest, _setLedgerDirForTest,
+  ledgerAdd, ledgerCountTool, ledgerDbPath, ledgerQuery, ledgerQueryTool, ledgerUpdate, loadNotifyState,
+  normalizeEntry, notifyKey, openLedger, planChangeLines,
+  _resetLedgerDirForTest, _setExecutorProbeTtlForTest, _setLedgerDirForTest,
 } from "@thincoder/core/ledger.mjs"
+import { _resetProcessProbeTestImpl, _setProcessProbeTestImpl } from "@thincoder/core/process-probe.mjs"
 import { _setLedgerSurfaceForTest, dispose as disposeLedgerSurface, initLedgerSurface, pushLedgerStartup, refreshLedger } from "../src/extension/ledger-surface.mjs"
 // P2 机制层端差批 §2.19（T-LQ1–T-LQ4）：装配面直驱（hydrateRun = 生产入口同函数）
 import { buildTopLevelAgent, hydrateRun } from "../src/agent/setup.mjs"
@@ -35,6 +37,8 @@ beforeEach(() => {
 })
 afterEach(() => {
   _resetLedgerDirForTest()
+  _resetProcessProbeTestImpl()
+  _setExecutorProbeTtlForTest(null) // 判活 TTL 缝恢复（裁定 #8——测试间不串）
   disposeLedgerSurface()
   _setLedgerSurfaceForTest({ notifyFile: undefined, cwd: undefined })
   vscode.window.statusBarItems.length = 0
@@ -146,6 +150,30 @@ slow("T107 正常：item text = L1 / tooltip = 明细行集 / aged>0 → warning
   _setLedgerSurfaceForTest({ cwd: ghost })
   await refreshLedger(panel, { emit: false })
   assert.equal(item.visible, false, "无台账 → hide（K6/U4）")
+})
+
+// ── T19 双端（AC-M2-8 · LEDGER-EXECUTOR 批）：VSC tooltip 尾段 + deadExecutors 警示底色 ──
+slow("T19 端面（VSC）：属主已死 → tooltip 明细行带「（属主已死 1，可接手）」+ warningBackground（deadExecutors>0）", async () => {
+  _setExecutorProbeTtlForTest(0) // 恒重探（用例内确定性）
+  const alpha = mkLedgerAt(join(tmp, "ws", "alpha"), [
+    { row: techRow("丁"), ageDays: 40 }, // 老化行 → actionable（独立于在途行——迁在途刷 updated_at 重置自身行龄）
+    { row: techRow("丙") }, // 迁在途的执行者行
+  ])
+  mkdirSync(join(alpha, "docs", "batches"), { recursive: true })
+  writeFileSync(join(alpha, "docs", "batches", "here.md"), "# 在档\n")
+  const row = ledgerQuery({ cwd: alpha }).find((r) => r.title === techEntry("丙"))
+  ledgerUpdate({ cwd: alpha, id: row.id, patch: { status: "待设计" } })
+  ledgerUpdate({ cwd: alpha, id: row.id, patch: { status: "在途", task_book: "docs/batches/here.md" }, executorSessionId: "5001-dead" })
+  const pre = buildScan({ cwd: alpha })
+  assert.equal(pre.inflightExecutors.length, 1, "前提：在途 executor 带值")
+  assert.equal(pre.actionable, true, "前提：老化行使项目可动作")
+  _setProcessProbeTestImpl({ aliveFn: (pids) => new Set(pids.filter((p) => p !== 5001)), cmdlineFn: () => new Map() })
+  _setLedgerSurfaceForTest({ cwd: alpha, notifyFile: join(tmp, "n.json") })
+  await initLedgerSurface(fakePanel())
+  const item = vscode.window.statusBarItems[0]
+  assert.equal(item.text, "台账 0·2", "L1 计数（在途行仍入技术计数——未决态）")
+  assert.ok(item.tooltip.value.includes("（属主已死 1，可接手）"), `tooltip 尾段逐字（${item.tooltip.value}）`)
+  assert.equal(item.backgroundColor?.id, "statusBarItem.warningBackground", "deadExecutors>0 → 警示底色（F-LX1 判位）")
 })
 
 // ── 启动行 post 门 + 送达门（AC82/F5） ──────────────────────────────────────
