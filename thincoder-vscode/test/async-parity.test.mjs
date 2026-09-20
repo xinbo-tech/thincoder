@@ -480,6 +480,6 @@ test("V2/U2（#43-② 绑定腿 + #46 对侧）：合成 parent 写 ⇒ 绑定�
   assert.equal(d0.overview.running.length, 1)
   assert.deepEqual(JSON.parse(executeStatusAction({}, { agent, cwd: process.cwd(), depth: 1 })), {
     status: "error",
-    error: "status is only available at depth 0 — a child agent has no async pool of its own (AGENT-LOOP-SUBAGENT.md §6.7.2)",
+    error: "status is only available at depth 0 — a child agent has no async pool of its own",
   }, "子代拒（同款门 + 同文案族 + 同返回形）")
 })

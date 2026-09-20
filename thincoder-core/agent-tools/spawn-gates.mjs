@@ -64,7 +64,7 @@ export function validateTaskBookFields(args) {
     `The six-field task book — 目标与理由 (goal & why), round (initial|fix), 已知事实 (known facts), ` +
     `设计要点与禁止范围 (design points & forbidden scope), 验收标准 (acceptance criteria), ` +
     `交付报告格式 (delivery-report format) — is the spawn contract; a missing field is a dispatch ` +
-    `defect and the spawn is refused (ENGINEERING-MODE-V2-MODULE-DELEGATION §1.2 F2).`)
+    `defect and the spawn is refused.`)
 }
 
 /**

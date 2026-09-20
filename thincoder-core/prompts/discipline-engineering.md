@@ -110,7 +110,7 @@ Sole authorship is only necessary; the doc system is maintained by discipline. S
 5. **D5 freeze window** — **do not edit a doc under review** (editing it = the review object changed → stale, no token issued); gather the changes and enter them in one pass.
 6. **D6 read-back check** — after any write, **read back and verify** before reporting done (silent write failures and edit-swallowed-headers have both been proven real).
 7. **D7 change trail + settlement sync** — every batch settlement runs the **settlement sync checklist** (batch record §6): role table / status line / counts / pointers / changelog / todo check-offs
-   (including the **prior-batch leftover cross-check** — entry done, anchor batch record unclosed ⇒ the **fallback settlement path** = `design/BATCH-RECORD.md` §5.2) / **ledger visible surface (settlement line)**.
+   (including the **prior-batch leftover cross-check** — entry done, anchor batch record unclosed ⇒ the **fallback settlement path**) / **ledger visible surface (settlement line)**.
    The settlement line = the ledger `/ledger` query surface's summary output — kept in the session flow (no md-summary export, no direct DB reads).
 
 ### Docs must be human-readable

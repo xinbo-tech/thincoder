@@ -317,8 +317,8 @@ test("U1/U2（#46）：子代（depth>0）显式拒（同款门 + 同文案族 +
   const child = JSON.parse(executeStatusAction({}, { depth: 1, agent, callbacks: {} }))
   assert.deepEqual(child, {
     status: "error",
-    error: "status is only available at depth 0 — a child agent has no async pool of its own (AGENT-LOOP-SUBAGENT.md §6.7.2)",
-  }, "同文案族（族锚 = 现行可解析节号）")
+    error: "status is only available at depth 0 — a child agent has no async pool of its own",
+  }, "同文案族（子代拒——串为自足句，不带外部引证）")
   // A1b：返回形 ≡ 兄弟动作既存拒（observe / send 的 JSON {status,error} 对象形——非 escalate 字符串形）
   const obsReject = JSON.parse(executeObserveAction({ id: 3 }, { depth: 1, agent, callbacks: {} }))
   const sndReject = JSON.parse(executeSendAction({ id: 3, message: "m" }, { depth: 1, agent, callbacks: {} }))

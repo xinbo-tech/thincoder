@@ -57,7 +57,7 @@ function panelFreezeGate(ctx, key) {
   // ASYNC-RESULT-CONTAINER.md D2：pending 单容器（四族统一——原 escalate/consult
   // 独立族退役）。
   if (blockKeyIn(ctx.agent._pendingAsyncResults, key)) {
-    return { err: `block ${key} is still genuinely awaiting digestion — its report is still pending and has NOT reached the model yet; freezing now would break the digestion order (wait for the digest run, which reclaims it automatically — §17.5.5)` }
+    return { err: `block ${key} is still genuinely awaiting digestion — its report is still pending and has NOT reached the model yet; freezing now would break the digestion order (wait for the digest run, which reclaims it automatically)` }
   }
   return { ok: true }
 }
@@ -85,7 +85,7 @@ export function executePanelAction(args, ctx) {
   // ── freeze 面（优先——D-P2 单动作双参互斥）──
   if (freezeKey) {
     if ((ctx.depth ?? 0) > 0) {
-      return JSON.stringify({ status: "error", error: "panel freeze is only available at depth 0 — a child agent has no panel of its own (AGENT-LOOP-SUBAGENT.md §6.7.2)" })
+      return JSON.stringify({ status: "error", error: "panel freeze is only available at depth 0 — a child agent has no panel of its own" })
     }
     const gate = panelFreezeGate(ctx, freezeKey)
     if (gate.err) return JSON.stringify({ status: "error", error: gate.err })
@@ -99,7 +99,7 @@ export function executePanelAction(args, ctx) {
     return JSON.stringify({
       key: freezeKey,
       status: "frozen",
-      note: "done freeze event issued — the TUI reclaimed the block into the conversation (spliced at its settle anchor when one is recorded, else appended at the current stream end — §17.5.5 same-rule position)",
+      note: "done freeze event issued — the TUI reclaimed the block into the conversation (spliced at its settle anchor when one is recorded, else appended at the current stream end — same-rule position)",
     })
   }
   // ── view 面（缺省——readonly）──
@@ -131,10 +131,10 @@ export function executePanelAction(args, ctx) {
     // 独立族退役）——族注记按 role 保留。
     for (const e of agent._pendingAsyncResults ?? []) {
       const note = e.role === "consult"
-        ? "consultation digest pending — injected at the next run start (§25 D-R17a)"
+        ? "consultation digest pending — injected at the next run start"
         : e.role === "escalate"
-          ? "report pending — injected at the next run start (§25 D-R17b)"
-          : "report pending — injected at the next run start (§17)"
+          ? "report pending — injected at the next run start"
+          : "report pending — injected at the next run start"
       blocks.push({ key: `${e.role}#${e.id}`, role: e.role, status: "awaitingDigest", note })
     }
     return JSON.stringify({

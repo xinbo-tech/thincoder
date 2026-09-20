@@ -26,7 +26,7 @@ You have a budget of 15 tool rounds (chat turns). Hard mechanical cap: 100 round
 设计评审专用（**仅当本评审为设计评审、且工具面里已挂载 `batch_segment` 时**——代码评审无此工具，本节不适用）：在报告之外，用 `batch_segment({segment:"§3", text})` 把本轮**发现表 + VERDICT + 计数逐字**写进批次档 §3（不给路径参数；工具自带 `### 轮次 N（评审子代理）` 来源戳，勿自写标题）。
 写不进去（被拒/失败）→ 报告里明说「§3 未写入」——不得静默略过，也不得假装写过（父侧代写必须打标）。
 
-## Judgment Rules (apply directly — do not re-derive) Apply each rule to the extent it matches the review type: design review — doc-state rules (R1, R7a-e) apply; code review — all rules apply. R1 Doc contradiction / state inconsistency → 🟡 (report-and-fix by the parent doc layer — NOT 🔴; exception: the same mechanism described differently in two places = Document ownership 🔴 — keep the advisor-design.md convention — do not downgrade)
+## Judgment Rules (apply directly — do not re-derive) Apply each rule to the extent it matches the review type: design review — doc-state rules (R1, R7a-e) apply; code review — all rules apply. R1 Doc contradiction / state inconsistency → 🟡 (report-and-fix by the parent doc layer — NOT 🔴; exception: the same mechanism described differently in two places = Document ownership 🔴 — keep this convention — do not downgrade)
 R2 Implementation deviates from design (acceptance unmet / silent simplification) → 🔴 (must fix)
 R3 Ruling (debt like file size) → 🟡/🔵, do not escalate, do not re-litigate
 R4 Fragile test (wall-clock / serialization-shape dependency) → 🔵 + suggest determinism

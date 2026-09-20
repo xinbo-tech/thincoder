@@ -77,7 +77,7 @@ function _checkShapeCompleteness(defaults, warn = console.warn) {
   const missing = _nullLeafPaths(defaults).filter((p) => !declared.has(p))
   if (missing.length && !_shapeWarned) {
     _shapeWarned = true
-    warn(`[settings] null-default keys missing from _NULL_LEAF_SHAPES: ${missing.join(", ")} — declare their real consumption shape (SETTINGS-TOOL.md §8.3; N-S1.5 completeness lock)`)
+    warn(`[settings] null-default keys missing from _NULL_LEAF_SHAPES: ${missing.join(", ")} — declare their real consumption shape`)
   }
   return missing
 }

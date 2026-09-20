@@ -16,7 +16,7 @@
 |---|---|---|
 | 1 | **撞墙** | `runAgent` 耗尽 `maxTurns` 抛 `ContinueError`（VSC `thincoder-vscode/src/agent.mjs:36`（类）/ `:371`（抛点）；核 `thincoder-core/agent.mjs:24`（导入）） |
 | 2 | **继续** | `resume:true` 重跑**同一执行体**：不重新注入任务文本、保留 history 与改动记录、每次全新轮数预算（VSC `thincoder-vscode/src/agent.mjs:96` 起 `resume` 参数；核 `thincoder-core/agent.mjs:96`） |
-| 3 | **拒绝 / headless** | 无 `onQuestion` 或无权限 handler → 返回部分成果 + turn-cap 标记——`TURN_CAP_MARK = "stopped: turn cap reached"`（常量单源 = `thincoder-core/agent/spawn-child.mjs:32`；尾部附 "work may be partial"）——报告据此判定「撞墙中断、工作可能不完整」 |
+| 3 | **拒绝 / headless** | 无 `onQuestion` 或无权限 handler → 返回部分成果 + turn-cap 标记——`TURN_CAP_MARK = "stopped: turn cap reached"`（常量单源 = `thincoder-core/agent/child-marks.mjs`——2026-09-20 下沉零依赖叶，`agent/spawn-child.mjs:33` 原样再导出；尾部附 "work may be partial"）——报告据此判定「撞墙中断、工作可能不完整」 |
 | 4 | **用户 Stop 优先** | 中止路径（`AbortError` / `signal.aborted`）恒优先于继续提示——不弹卡、不自动续跑 |
 | 5 | **继续提示串行** | 按会话级队列串行（`continueQueue`）——并行执行体同时撞墙不弹多个卡 |
 | 6 | **次数不限** | 无次数帽（`MAX_RESUMES` 形态已从代码面移除——VSC 侧 `src/` 零命中实核）；防卡死靠用户 Stop |
@@ -49,7 +49,7 @@
 | 编号帧纯函数 | `thincoder-core/agent/helpers.mjs:221`（`export function turnFrame(seq, turn, maxTurns)`） | 在位 |
 | 续跑支（子代理） | `thincoder-core/agent-tools/subagent-run.mjs`（`resume` 分支） | 在位（子代理轮帽语义面） |
 | 续跑支（会诊） | `thincoder-core/agent-tools/consult.mjs:304`（注释：每次 continue = 新回合预算 + 重挂 watchdog）· `:319`（`continueQueue`）· `:322`/`:324` | 在位 |
-| **续跑骨架（三执行体共用）** | `thincoder-core/agent/spawn-child.mjs:218`（`runWithContinue(runner, child, input, callbacks, runOpts, { askContinue, onDeclined })`——`ContinueError → 询问 → resume:true 重跑`循环骨架，差异点经参数注入）· `:32`（`TURN_CAP_MARK`） | 在位 |
+| **续跑骨架（三执行体共用）** | `thincoder-core/agent/spawn-child.mjs:213`（`runWithContinue(runner, child, input, callbacks, runOpts, { askContinue, onDeclined })`——`ContinueError → 询问 → resume:true 重跑`循环骨架，差异点经参数注入）· `:33`（再导出 `TURN_CAP_MARK`——唯一定义 = `thincoder-core/agent/child-marks.mjs`） | 在位 |
 | 主 agent 续跑（CLI） | `thincoder-cli/src/tui/agent-turn.mjs:182`（`ContinueError` 分支）· `:201`（`name: "continue"` 权限卡）· `:108`（续跑重建 controller 登记 abort 集合） | 在位 |
 | 编号镜像层（子代理） | `thincoder-core/agent-tools/subagent-run.mjs:105-112`（`⟦ev⟧turn` 原样正则解析 → `entry.turn` / `maxTurns` → status / observe 面） | 在位 |
 | 编号镜像层（飞刀） | `thincoder-core/agent-tools/escalate-async.mjs:207-209`（同形解析 → `entry.turn`） | 在位 |
@@ -139,6 +139,8 @@
 | CLI 侧同名档未迁面（CLI 台账列为后续批） | CLI 产品档正文 | **已并入（2026-09-15 CLI 尾部真批）**——CLI 独有面入 §1–§5，(d) 类入 §6.1 |
 
 ## 变更记录
+
+- 2026-09-20（**显示面消差批 · 批 4 收口轮 · eng-designer**——承 `docs/batches/2026-09-20-display-parity-batch.md` §5.13 批 2 实施记录）：§1 #3 + §3.1 的 `TURN_CAP_MARK` **常量单源指针收正**——定义已下沉零依赖叶 `thincoder-core/agent/child-marks.mjs`（先例 `agent/relay-prefix.mjs`），`agent/spawn-child.mjs:33` 原样再导出（既有 import 面零改）。
 
 - 2026-09-15（**CLI 尾部真批 · 并入既有 · eng-designer**）：`thincoder-cli/docs/design/TURN-CAP-CONTINUE.md` 逐节对账并入——
   CLI 独有面入档：`TURN_CAP_MARK` 常量单源（§1 #3）· CLI 继续通道对位段（§2）· §3.1 新增 6 行坐标（`runWithContinue` 骨架 /

@@ -386,9 +386,9 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // 位置纪律：必须在 history 初始化之后（advisor round1 🔴——此前引用未初始化的
   // history 绑定会 TDZ ReferenceError，守卫/警告在触发时自爆）。
   if (role === "consult" && !base) {
-    const msg = "[Consult module unavailable: prompts/consult-base.md missing — the consultation module refuses to degrade (蓝图 §3.4 特殊模块不自降级). Check the installation's prompts directory.]"
+    const msg = "[Consult module unavailable: prompts/consult-base.md missing — the consultation module refuses to degrade (特殊模块不自降级). Check the installation's prompts directory.]"
     history.push({ role: "user", content: msg })
-    throw new Error(`consult-base.md missing — consultation module unavailable (no degraded fallback per PROMPT-SYSTEM §3.4)`)
+    throw new Error(`consult-base.md missing — consultation module unavailable (no degraded fallback)`)
   }
   // D2 警告通道 = history 注入（CLI 同款深度门——depth 0 才注入）。
   if (depth === 0 && slotWarnings.length > 0) {

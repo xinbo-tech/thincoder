@@ -108,7 +108,7 @@ export function executeStatusAction(args, ctx) {
   // status 与 observe/send/escalate/cancel/panel freeze 同为 depth-0 专有（子代无自有异步池）；
   // 缺门时子代静默空 overview（把「不可用」读成「无在飞」）。族锚取现行可解析节号（§6.7.2）。
   if ((ctx.depth ?? 0) > 0) {
-    return JSON.stringify({ status: "error", error: "status is only available at depth 0 — a child agent has no async pool of its own (AGENT-LOOP-SUBAGENT.md §6.7.2)" })
+    return JSON.stringify({ status: "error", error: "status is only available at depth 0 — a child agent has no async pool of its own" })
   }
   const agent = ctx.agent
   const map = getAsyncPool(agent, "subagent") ?? new Map()
@@ -239,12 +239,12 @@ function clampRecent(n) {
  */
 export function executeObserveAction(args, ctx) {
   if ((ctx.depth ?? 0) > 0) {
-    return JSON.stringify({ status: "error", error: "observe is only available at depth 0 — a child agent has no async pool of its own (AGENT-LOOP-SUBAGENT.md §6.7.2)" })
+    return JSON.stringify({ status: "error", error: "observe is only available at depth 0 — a child agent has no async pool of its own" })
   }
   const agent = ctx.agent
   const id = args?.id
   if (id === undefined || id === null || String(id) === "") {
-    return JSON.stringify({ status: "error", error: "observe requires the id of the async subagent to inspect (from the async spawn return) — pass the id; omitting it observes nothing (SUBAGENT-OBSERVE-SEND)" })
+    return JSON.stringify({ status: "error", error: "observe requires the id of the async subagent to inspect (from the async spawn return) — pass the id; omitting it observes nothing" })
   }
   const key = String(id)
   const entry = getAsyncPool(agent, "subagent")?.get(key)
@@ -291,12 +291,12 @@ export function executeObserveAction(args, ctx) {
  */
 export function executeSendAction(args, ctx) {
   if ((ctx.depth ?? 0) > 0) {
-    return JSON.stringify({ status: "error", error: "send is only available at depth 0 — a child agent has no async pool of its own (AGENT-LOOP-SUBAGENT.md §6.7.2)" })
+    return JSON.stringify({ status: "error", error: "send is only available at depth 0 — a child agent has no async pool of its own" })
   }
   const agent = ctx.agent
   const id = args?.id
   if (id === undefined || id === null || String(id) === "") {
-    return JSON.stringify({ status: "error", error: "send requires the id of the running async subagent to direct (from the async spawn return) — omitting it means an unspecified target (SUBAGENT-OBSERVE-SEND)" })
+    return JSON.stringify({ status: "error", error: "send requires the id of the running async subagent to direct (from the async spawn return) — omitting it means an unspecified target" })
   }
   const message = args?.message
   if (typeof message !== "string" || !message.trim()) {
@@ -306,7 +306,7 @@ export function executeSendAction(args, ctx) {
   const entry = getAsyncPool(agent, "subagent")?.get(key)
   if (!entry) {
     if (getAsyncPool(agent, "advisor")?.has(key)) {
-      return JSON.stringify({ status: "error", error: `id ${key} is an async ADVISOR review — send is for async subagents; you cannot inject direction into a running review (AGENT-LOOP-SUBAGENT.md §6.7.2) — track it with action:'status' (role:"advisor") or wait for its report to arrive automatically` })
+      return JSON.stringify({ status: "error", error: `id ${key} is an async ADVISOR review — send is for async subagents; you cannot inject direction into a running review — track it with action:'status' (role:"advisor") or wait for its report to arrive automatically` })
     }
     return JSON.stringify({ status: "error", error: `unknown async subagent id: ${key}` })
   }

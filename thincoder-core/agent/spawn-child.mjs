@@ -51,16 +51,16 @@ export function gateEngCoderSpawn(parent, depth, role, async) {
   const parentRole = parent?._role
   if ((depth ?? 0) <= 0 || (parentRole !== "eng-coder" && parentRole !== "eng-designer")) return null
   if (role !== "explore") {
-    throw new Error(`${parentRole} subagents may only spawn role='explore' — internal spawns exist solely for read-only work (the eng-coder divergence audit / the designer's own survey) (AGENT-LOOP.md §18 D-E3, ENGINEERING-MODE.md §2.15 D)`)
+    throw new Error(`${parentRole} subagents may only spawn role='explore' — internal spawns exist solely for read-only work (the eng-coder divergence audit / the designer's own survey)`)
   }
   if (async === true) {
-    throw new Error(`${parentRole} internal spawns are sync-only — the child's report must return before the next protocol step; async spawn is only available at the top level (AGENT-LOOP.md §18 D-E3)`)
+    throw new Error(`${parentRole} internal spawns are sync-only — the child's report must return before the next protocol step; async spawn is only available at the top level`)
   }
   // designer 勘察路径：校验通过即返回 null（非审计——不计数、不触发审计任务书注入）
   if (parentRole === "eng-designer") return null
   const attempt = (parent._engAuditSpawns ?? 0) + 1
   if (attempt > ENG_AUDIT_SPAWN_LIMIT) {
-    throw new Error("correction-round limit exceeded — deliver a stalled report (AGENT-LOOP.md §18: max 5 fix rounds; the 7th audit spawn is refused mechanically)")
+    throw new Error("correction-round limit exceeded — deliver a stalled report (max 5 fix rounds; the 7th audit spawn is refused mechanically)")
   }
   parent._engAuditSpawns = attempt
   return attempt

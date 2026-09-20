@@ -223,13 +223,13 @@ export function prepareScheduling(parent, filesRaw, dependsRaw, wantAsync) {
   if (files.length > 0 || dependsOn.length > 0) {
     for (const d of dependsOn) {
       if (depInfo(parent, d).state === "unknown") {
-        throw new Error(`subagent dependsOn: unknown async subagent id: ${d} — dependsOn references ids from prior async spawn returns; an id already consumed (auto-delivered to the model) counts as satisfied, anything else is a mistake (AGENT-LOOP.md §20 D-SD5)`)
+        throw new Error(`subagent dependsOn: unknown async subagent id: ${d} — dependsOn references ids from prior async spawn returns; an id already consumed (auto-delivered to the model) counts as satisfied, anything else is a mistake`)
       }
     }
     assertNoDepCycle(parent, dependsOn)
     const block = describeBlockers(parent, { _files: files, _dependsOn: dependsOn })
     if (!wantAsync && block.kind !== "slot") {
-      throw new Error(`sync spawn (async:false) cannot queue behind a scheduling conflict: ${block.detail} — pass async:true to queue the task (the scheduler starts it when the blockers clear), or wait for them to finish first (AGENT-LOOP.md §20 round2 #7)`)
+      throw new Error(`sync spawn (async:false) cannot queue behind a scheduling conflict: ${block.detail} — pass async:true to queue the task (the scheduler starts it when the blockers clear), or wait for them to finish first`)
     }
   }
   return { files, dependsOn, errorJson: null }
@@ -405,24 +405,24 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
       // §18.7 D-TS4 A1：审计指令模板（四类偏差 + 范围限制 + 校验清单格式）——审计语义
       // 不再靠模型自悟；范围限制是 §18.5 D-AG3 声明（下方 Zero-git scope authority）
       // 的同源一句指注，不重复声明。
-      `[Audit instructions — mechanical template (AGENT-LOOP.md §18.7 D-TS4 A1):]\n` +
+      `[Audit instructions — mechanical template:]\n` +
       `You are auditing an eng-coder delivery against its approved design — audit for EXACTLY these four deviation categories:\n` +
       `- PARTIAL: an acceptance criterion implemented partially or not at all;\n` +
       `- SILENT-SIMPLIFICATION: a "simpler approximation" of a specified behavior substituted for the spec;\n` +
       `- DOC-DRIFT: code changed without the owning design-doc section (module map / affected-files table) updated in the same delivery;\n` +
       `- OUT-OF-LIST: changes outside the approved file list.\n` +
-      `Audit scope = _touchedFiles above UNION the files confirmed by the parent task book (single source — the Zero-git scope authority note below, AGENT-LOOP.md §18.5 D-AG3; NOT a second copy): ` +
+      `Audit scope = _touchedFiles above UNION the files confirmed by the parent task book (single source — the Zero-git scope authority note below; NOT a second copy): ` +
       `workspace changes not listed there are unrelated to this delivery and are NOT grounds for an out-of-list finding.\n` +
       `Scope discipline (F-TS6 A1): read ONLY the audited files and the design-doc sections relevant to this delivery — do NOT re-read whole documents.\n` +
       `Every deviation item MUST be fieldized: file:line + design reference (doc path + section/AC id) + severity + evidence (quoted code or doc text).\n` +
       // §18.7 D-TS5 A2：任务书从全量 verbatim 改机械摘要块（三要素逐字——排除冗长上下文）。
-      `[Parent spawn task book — mechanical summary (AGENT-LOOP.md §18.7 D-TS5 A2): design docs + affected-file list + acceptance criteria verbatim; verbose context/background dropped — the design docs are still available for reading outside this input:]\n` +
+      `[Parent spawn task book — mechanical summary: design docs + affected-file list + acceptance criteria verbatim; verbose context/background dropped — the design docs are still available for reading outside this input:]\n` +
       `${summarizeEngTaskBook(ctx.agent._engTaskInput)}\n` +
       `Files actually touched by the eng-coder (mechanical union — audit these against the file list):\n${touched}\n` +
       // §18.5 D-AG3（2026-09-04）：审计零 git 范围权威声明——本审计任务零 git（不注入
       // git 上下文——§18.5 全角色零 git）；_touchedFiles 为审计范围；工作区未列于
       // _touchedFiles 的改动与本任务无关，不作超清单依据（VS Code auditTaskBook 同款措辞）。
-      "Zero-git scope authority (AGENT-LOOP.md §18.5 D-AG3): this audit task receives NO git context — nothing is injected. " +
+      "Zero-git scope authority: this audit task receives NO git context — nothing is injected. " +
       "The evidence base is the design documents, the current disk state (read/glob/grep), and the _touchedFiles list above. " +
       "Workspace changes NOT listed in _touchedFiles are unrelated to this delivery — they are NOT grounds for an out-of-file-list finding." +
       // §18.13 D-A1.2：审计预算句——A1 指令模板 + A2 摘要块之后、A3 报告模板之前（定序——评审 #7）。
@@ -430,7 +430,7 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
       // 前导 \n 与 A3 同款块分隔约定（上一句 Zero-git 句末无换行——不触碰既有句）。
       `\n[Audit budget — mechanical]: read ONLY the touched files listed above and the design-doc sections the parent task book names (affected-files table, acceptance criteria, status line). Do NOT read whole documents. Budget = 10 tool rounds max — if you cannot conclude within it, report PROBLEM (inconclusive) rather than continuing to explore.\n` +
       // §18.7 D-TS6 A3：审计输出报告格式模板（三态——字段化行——不让模型自由发挥）。
-      `\n[Audit report format — mechanical template (AGENT-LOOP.md §18.7 D-TS6 A3):]\n` +
+      `\n[Audit report format — mechanical template:]\n` +
       `Report EXACTLY one of three states:\n` +
       `- CLEAN — no deviation across the four categories: reply the line "Four deviation categories: none found." (四类偏差均未发现);\n` +
       `- DEVIATIONS — one row per deviation, every row fieldized: | category | file:line | design reference | severity | evidence |;\n` +

@@ -70,7 +70,7 @@ export function resolveBatchDocPath(cwd, given) {
   const base = cwd ?? process.cwd()
   const raw = typeof given === "string" ? given.trim() : ""
   if (!raw) {
-    throw new Error("batchDoc must be a non-empty path to the batch record (ENGINEERING-MODE.md §2.20.2) — pass the batch record currently in flight, or omit the parameter entirely when no batch record is in flight.")
+    throw new Error("batchDoc must be a non-empty path to the batch record — pass the batch record currently in flight, or omit the parameter entirely when no batch record is in flight.")
   }
   const abs = resolve(base, raw.replace(/\\/g, "/"))
   if (readableFile(abs)) return abs
@@ -165,7 +165,7 @@ function roundCount(src, headerMatch, endIdx) {
 function insertIntoSection(src, seg, text) {
   const hdr = sectionHeaderRe(seg).exec(src)
   if (!hdr) {
-    throw new Error(`batch_segment: the bound batch record has no "## §${seg}" section header — the six-section skeleton is written by the record's creator before any segment write (§1.12). Fix: ask the parent/creator to add the "## §${seg} …" heading (with the template's sub-headings) first, then call batch_segment again. Nothing was written.`)
+    throw new Error(`batch_segment: the bound batch record has no "## §${seg}" section header — the six-section skeleton is written by the record's creator before any segment write. Fix: ask the parent/creator to add the "## §${seg} …" heading (with the template's sub-headings) first, then call batch_segment again. Nothing was written.`)
   }
   const nextRe = /^## §\d/gm
   nextRe.lastIndex = hdr.index + hdr[0].length
@@ -193,11 +193,11 @@ export function batchSegmentTool(batchDoc = null, { review = false } = {}) {
   return {
     name: "batch_segment",
     description:
-      "Append your own section of the batch record (ENGINEERING-MODE.md §2.20 — 一段一作者). " +
+      "Append your own section of the batch record (一段一作者). " +
       "There is NO path parameter: the target record is bound to you (at spawn for eng-designer/eng-coder, per review instance for a design review) and your identity fixes the section you may write " +
       "(eng-designer → §2, design review → §3, eng-coder → §5) — a write outside your own section is refused. " +
       "Append-only: the text lands at the end of your section; existing lines are never rewritten or deleted. " +
-      "Credential values are stripped mechanically before writing (never write a token or designId value — §2.7). " +
+      "Credential values are stripped mechanically before writing (never write a token or designId value). " +
       "A design review's append is stamped by the tool with a `### 轮次 N（评审子代理）` heading — N is tool-counted; do not write your own heading (it would be dropped). " +
       "Failures are hard and visible (no silent fallback): if the write is refused or fails, say so in your report — “§× 未写入”.",
     parameters: {
@@ -205,7 +205,7 @@ export function batchSegmentTool(batchDoc = null, { review = false } = {}) {
       properties: {
         segment: {
           type: "string",
-          description: `The batch-record section you are writing${own ? ` — yours is ${own}` : ""}. Declares the section number only; your identity decides what is actually writable (§2.20.1).`,
+          description: `The batch-record section you are writing${own ? ` — yours is ${own}` : ""}. Declares the section number only; your identity decides what is actually writable.`,
         },
         text: {
           type: "string",
@@ -218,23 +218,23 @@ export function batchSegmentTool(batchDoc = null, { review = false } = {}) {
       const agent = ctx?.agent ?? {}
       const seg = allowedSegment(agent, review)
       if (seg === null) {
-        throw new Error("batch_segment: no segment is writable by this caller — the channel exists for eng-designer (§2), eng-coder (§5) and design reviews bound to a batch record (§3); the parent agent writes §1/§4/§6 through ordinary document writes (ENGINEERING-MODE.md §2.20.1/§2.20.3).")
+        throw new Error("batch_segment: no segment is writable by this caller — the channel exists for eng-designer (§2), eng-coder (§5) and design reviews bound to a batch record (§3); the parent agent writes §1/§4/§6 through ordinary document writes.")
       }
       const n = segmentNumber(args?.segment)
       if (n === null) {
         throw new Error(`batch_segment: unknown segment ${JSON.stringify(args?.segment ?? null)} — pass the section number you write (e.g. "§${seg}").`)
       }
       if (n !== seg) {
-        throw new Error(`batch_segment: §${n} is not yours to write — this caller writes §${seg} only (一段一作者: eng-designer → §2, design review → §3, eng-coder → §5; ENGINEERING-MODE.md §2.20.1).`)
+        throw new Error(`batch_segment: §${n} is not yours to write — this caller writes §${seg} only (一段一作者: eng-designer → §2, design review → §3, eng-coder → §5).`)
       }
       if (!batchDoc) {
-        throw new Error("batch_segment: no batch record is bound to this caller — there is no path parameter by design (the target arrives via the spawn binding / the review instance key, ENGINEERING-MODE.md §2.20.2). Report the section as not written.")
+        throw new Error("batch_segment: no batch record is bound to this caller — there is no path parameter by design (the target arrives via the spawn binding / the review instance key). Report the section as not written.")
       }
       const abs = resolveBatchDocPath(agent.cwd ?? process.cwd(), batchDoc)
       const src = readFileSync(abs, "utf8")
       const status = readBatchStatusLine(src)
       if (status === "closed") {
-        throw new Error("batch_segment: 已收口档不回改 — the bound batch record's §1 status line contains 「已收口」, so the record is frozen: its body is never written to again (整档冻结；改 = 新批新档, ENGINEERING-MODE-V2-MODULE-BATCH-SEGMENT.md §2.1#2). Nothing was written. Report the section as not written.")
+        throw new Error("batch_segment: 已收口档不回改 — the bound batch record's §1 status line contains 「已收口」, so the record is frozen: its body is never written to again (整档冻结；改 = 新批新档). Nothing was written. Report the section as not written.")
       }
       if (status === "unknown") {
         throw new Error("batch_segment: 状态行不可解析或缺失 — the bound batch record has no §1 `**状态行**：` line whose value contains 已收口 or 进行中 (fail-closed: the write is refused as if frozen). Ask the record's creator to set the §1 status line, then call again. Nothing was written.")
@@ -243,14 +243,14 @@ export function batchSegmentTool(batchDoc = null, { review = false } = {}) {
         throw new Error("batch_segment: text must be a string (the markdown to append).")
       }
       if (args.text.length > MAX_TEXT_CHARS) {
-        throw new Error(`batch_segment: text is ${args.text.length} characters — the limit is ${MAX_TEXT_CHARS} per call. Split it into multiple calls: each call becomes its own section and the round number N continues (分段追加——每次调用各成节、N 顺延; ENGINEERING-MODE.md §2.20.1).`)
+        throw new Error(`batch_segment: text is ${args.text.length} characters — the limit is ${MAX_TEXT_CHARS} per call. Split it into multiple calls: each call becomes its own section and the round number N continues (分段追加——每次调用各成节、N 顺延).`)
       }
       if (/^## §\d/m.test(args.text)) {
-        throw new Error("batch_segment: the text contains a section header line matching `^## §N` — that would break section location and the append-only guarantee. Rewrite it (escape the heading, or drop the leading `## §N`), then call again (§2.20.1 骨架保护). Nothing was written.")
+        throw new Error("batch_segment: the text contains a section header line matching `^## §N` — that would break section location and the append-only guarantee. Rewrite it (escape the heading, or drop the leading `## §N`), then call again (骨架保护). Nothing was written.")
       }
       const body = sanitizeText(args.text, seg === 3).replace(/^\n+/, "").replace(/\s+$/, "")
       if (!body.trim()) {
-        throw new Error("batch_segment: nothing to append — the text is empty after credential stripping (credential values never reach the record; ENGINEERING-MODE.md §2.7/§2.20.1).")
+        throw new Error("batch_segment: nothing to append — the text is empty after credential stripping (credential values never reach the record).")
       }
       const { written, roundN } = insertIntoSection(src, seg, body)
       writeFileSync(abs, written)

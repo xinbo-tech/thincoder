@@ -191,7 +191,7 @@ export function buildBody(provider, messages, tools, opts = {}) {
   // 2026-08-31 真机冒烟：百炼/GLM 开链 = 云端留存 7 天——首次知情警告（不刷屏）
   if (wantStateful && hostStateful && isStoreRequiredHost(provider.baseURL) && !provider._responsesStoreWarned) {
     provider._responsesStoreWarned = true
-    warnings.push({ name: "responses-store-retention", message: "链生效需要 store:true——对话将在云端留存 7 天（PROVIDER.md §13.3 D10；provider.stateful=false 可退出）" })
+    warnings.push({ name: "responses-store-retention", message: "链生效需要 store:true——对话将在云端留存 7 天（provider.stateful=false 可退出）" })
   }
 
   const body = {

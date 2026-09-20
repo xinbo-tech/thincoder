@@ -192,7 +192,7 @@ export function describeBlockers(parent, entry) {
  * 但状态既可能成环即机械可检——不依赖可达性论证。maybeRefillAsync 空转处不调用：refill
  * 嵌在 settle/cancel 链上无模型可见输出通道（抛错即破坏池操作）——status 视图（actions
  * 模块）即 F-SL2 的报错/标记落点（§19.8：check 守卫随 check 删除）。 */
-export const STALL_NOTE = "cancel one task in the loop (action:'cancel') to break the cycle, then re-spawn it (AGENT-LOOP.md §21.1 P-SL2)"
+export const STALL_NOTE = "cancel one task in the loop (action:'cancel') to break the cycle, then re-spawn it"
 
 export function detectStall(parent) {
   const map = getAsyncPool(parent, "subagent")
@@ -318,7 +318,7 @@ export function assertNoDepCycle(parent, dependsOn) {
   const onPath = new Set()
   const visit = (id) => {
     if (onPath.has(id)) {
-      throw new Error(`subagent dependsOn cycle detected: ${[...onPath, id].join(" → ")} — entries in a dependency loop can never start; cancel the dependents and restructure the chain (AGENT-LOOP.md §20 D-SD5)`)
+      throw new Error(`subagent dependsOn cycle detected: ${[...onPath, id].join(" → ")} — entries in a dependency loop can never start; cancel the dependents and restructure the chain`)
     }
     onPath.add(id)
     for (const dep of edges.get(id) ?? []) visit(dep)

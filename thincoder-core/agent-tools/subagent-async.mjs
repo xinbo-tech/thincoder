@@ -113,7 +113,7 @@ export function poolLimitsFor(agent) {
 function warnPoolFallback(what, sig) {
   if (warnedPoolConfigs.has(sig)) return
   warnedPoolConfigs.add(sig)
-  console.warn(`[config] agent.poolLimits: ${what} — must be a positive integer ≥1 — falling back to default ${JSON.stringify(ASYNC_POOL_LIMITS)} (AGENT-LOOP.md §11.1)`)
+  console.warn(`[config] agent.poolLimits: ${what} — must be a positive integer ≥1 — falling back to default ${JSON.stringify(ASYNC_POOL_LIMITS)}`)
 }
 
 /** Running count within ONE pool domain (口径同 §15 D-A1/T6: queued 与已完成不计入；
@@ -244,11 +244,11 @@ export function cancelSyncChild(agent, key) {
  *  （AUTO 档依赖者自动启动/槽位竞态释放）。被取消条目自身发 ⟦ev⟧cancelled 移除等待块。 */
 export function executeCancelAction(args, ctx) {
   if ((ctx.depth ?? 0) > 0) {
-    return JSON.stringify({ status: "error", error: "cancel is only available at depth 0 — a child agent has no async pool of its own (AGENT-LOOP-SUBAGENT.md §6.7.2)" })
+    return JSON.stringify({ status: "error", error: "cancel is only available at depth 0 — a child agent has no async pool of its own" })
   }
   const id = args?.id
   if (id === undefined || id === null || String(id) === "") {
-    return JSON.stringify({ status: "error", error: "cancel requires the id of the async subagent to stop — omitting it would mean a blanket cancel (Ctrl+C stops everything; AGENT-LOOP-SUBAGENT.md §6.7.2)" })
+    return JSON.stringify({ status: "error", error: "cancel requires the id of the async subagent to stop — omitting it would mean a blanket cancel (Ctrl+C stops everything)" })
   }
   const key = String(id)
   const agent = ctx.agent
@@ -287,7 +287,7 @@ export function executeCancelAction(args, ctx) {
       const dependents = dependentLabels(agent, key)
       if (dependents.length > 0) {
         result.dependents = dependents
-        result.note = `queued dependents ${dependents.join(", ")} marked "dependency cancelled" — they stay queued until you cancel them (this action again with their id) or an AUTO session starts them (AGENT-LOOP.md §20 D-SD5)`
+        result.note = `queued dependents ${dependents.join(", ")} marked "dependency cancelled" — they stay queued until you cancel them (this action again with their id) or an AUTO session starts them`
       } else if (agent.autoApprove) {
         result.note = `dependents of the cancelled task auto-started (AUTO session — round2 #3: an AUTO session starts dependency-cancelled dependents on slot availability)`
       }

@@ -122,7 +122,7 @@ export function classifyEscalateSettle(parent, entry) {
     if (merged) {
       decision = `\nPartial changes merged into the parent's bookkeeping (no parent-side overlap since launch).`
     } else if (overlap.length > 0) {
-      decision = `\nPartial changes NOT merged — the parent changed overlapping files while this escalate ran: ${overlap.join(", ")}. Escalate-side changes: ${childTouchedDisplay(child, parent?.cwd)}. Review the conflict and decide what to keep (report-level — not a gate; AGENT-LOOP.md §25 D-R17b).`
+      decision = `\nPartial changes NOT merged — the parent changed overlapping files while this escalate ran: ${overlap.join(", ")}. Escalate-side changes: ${childTouchedDisplay(child, parent?.cwd)}. Review the conflict and decide what to keep (report-level — not a gate).`
     }
     // (nothing to merge + no overlap → the plain error report stands alone)
     entry.error = `${raw}${decision}`
@@ -132,7 +132,7 @@ export function classifyEscalateSettle(parent, entry) {
   // done — merge-all + overlap warning into the report (report-level — not a gate)
   const merged = mergeChildMutations(parent, child)
   const overlapNote = overlap.length > 0
-    ? `\n⚠ Overlapping writes: the parent changed ${overlap.join(", ")} while this escalate ran — mutations merged all the same; review those files before building on the report (report-level warning — not a gate; AGENT-LOOP.md §25 D-R17b round2 #4).`
+    ? `\n⚠ Overlapping writes: the parent changed ${overlap.join(", ")} while this escalate ran — mutations merged all the same; review those files before building on the report (report-level warning — not a gate).`
     : ""
   entry.report = `${raw}${overlapNote}`
   return { cancelled: false, merged, overlap }

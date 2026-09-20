@@ -366,7 +366,7 @@ export function launchAsyncAdvisor(parent, ctx, launch) {
       : "a code review is still running (code reviews are a single thread — launch the next one after it settles)"
     // F31：既有稳定前缀逐字（行首）+ 标识块尾随（单源 notice.mjs）；round = 本次发起将使用的轮次号。
     const idFields = { type: reviewType, scope: scopeSummary(documents?.length ? documents : paths), round: `${(run?.round ?? 0) + 1}/uncapped`, criterion: "scope-in-flight" }
-    return { error: withIdentityLine(`Advisor: 此 scope 已有评审在跑——settle 后逐个发起 — ${scopeNote}; round/prior continuation would be ambiguous while it is in flight — wait for it to settle, then launch the next review (AGENT-LOOP.md §11.2).`, idFields) }
+    return { error: withIdentityLine(`Advisor: 此 scope 已有评审在跑——settle 后逐个发起 — ${scopeNote}; round/prior continuation would be ambiguous while it is in flight — wait for it to settle, then launch the next review.`, idFields) }
   }
   // ED-4（AGENT-LOOP-SUBAGENT.md §6.10）：池满 + 异 scope ⇒ 排队（非拒）——ack 含 queued +
   // position；running 计数只算 running 条目（排队不占槽）。原 ②-6a 拒发退役。

@@ -197,9 +197,9 @@ export async function prepareRun(agent, input, callbacks, {
   // ——空基底绝不可静默上岗）。consult 场景在外部消费点收口：入历史后抛错（Agent 循环
   // → 历史已含错误句可见——不静默、不降级）。四槽场景维持跳过+警告降级链（AC-2 三款）。
   if (agent._role === "consult" && !base) {
-    const msg = "[Consult module unavailable: prompts/consult-base.md missing — the consultation module refuses to degrade (蓝图 §3.4 特殊模块不自降级). Check the installation's prompts directory.]"
+    const msg = "[Consult module unavailable: prompts/consult-base.md missing — the consultation module refuses to degrade (特殊模块不自降级). Check the installation's prompts directory.]"
     agent.history.push({ role: "user", content: msg })
-    throw new Error(`consult-base.md missing — consultation module unavailable (no degraded fallback per PROMPT-SYSTEM §3.4)`)
+    throw new Error(`consult-base.md missing — consultation module unavailable (no degraded fallback)`)
   }
   if (depth === 0 && slotWarnings.length > 0) {
     agent.history.push({

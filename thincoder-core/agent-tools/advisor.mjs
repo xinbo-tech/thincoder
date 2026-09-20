@@ -45,9 +45,9 @@ export const advisorTool = {
     "After the review, you MUST produce a response table (see discipline rules for format). " +
     "If advisor says all clear, call verify. " +
     "Optionally pass object={type,target,status,reason,exclude} to anchor the review target " +
-    "(AGENT-LOOP.md §18.8 — the review-object declaration is mechanically injected into the review message); " +
+    " (the review-object declaration is mechanically injected into the review message); " +
     "absent → legacy behavior (no injection). " +
-    "ASYNC (AGENT-LOOP.md §11.2): at depth 0 the review runs in the BACKGROUND by default " +
+    "ASYNC: at depth 0 the review runs in the BACKGROUND by default " +
     "(async:true or omitted) — the call returns an ack immediately, the turn ends, and the report " +
     "arrives automatically in a digest turn when the review finishes; background reviews share one pool — " +
     "at most agent.poolLimits.advisor concurrent reviews (default 4 — configurable via /config 并发池 or " +
@@ -72,7 +72,7 @@ export const advisorTool = {
           reason: { type: "string", description: "Why this review runs: user-initiated / delivery verification" },
           exclude: { type: "string", description: "Explicit exclusion list — approved/implemented items NOT in this review" },
         },
-        description: "Review-object declaration (§18.8): mechanically injected at the start of the review user message so the advisor does not re-derive the review target. Absent → no injection (legacy behavior).",
+        description: "Review-object declaration: mechanically injected at the start of the review user message so the advisor does not re-derive the review target. Absent → no injection (legacy behavior).",
       },
       paths: {
         type: "array",
@@ -86,7 +86,7 @@ export const advisorTool = {
       },
       batchDoc: {
         type: "string",
-        description: "Design review only: path to the batch record currently in flight. Validated WHENEVER passed (any review type) — a value that is not a readable file is refused with an error rather than ignored; for design reviews the reviewer then ALSO gets the batch_segment write channel to record its findings table + VERDICT + counts into §3 (ENGINEERING-MODE.md §2.20). Omit when no batch record is in flight — the review then runs unchanged with no write channel (zero regression).",
+        description: "Design review only: path to the batch record currently in flight. Validated WHENEVER passed (any review type) — a value that is not a readable file is refused with an error rather than ignored; for design reviews the reviewer then ALSO gets the batch_segment write channel to record its findings table + VERDICT + counts into §3. Omit when no batch record is in flight — the review then runs unchanged with no write channel (zero regression).",
       },
     },
     required: ["type"],
@@ -164,7 +164,7 @@ export const advisorTool = {
       // 拒发登记（与 cap/池满拒同款）：评审未跑——不置 called/不耗轮次（record-results
       // 的 REFUSED 契约——advisor 评审发现 #1：拒发不得静默满足 guard）。
       if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
-      return "Advisor: async reviews are only available at depth 0 — the top-level session owns the background pool (AGENT-LOOP-SUBAGENT.md §6.10); inside a child (eng-coder self-review) reviews run synchronously. Call advisor again without async:true (or with async:false)."
+      return "Advisor: async reviews are only available at depth 0 — the top-level session owns the background pool; inside a child (eng-coder self-review) reviews run synchronously. Call advisor again without async:true (or with async:false)."
     }
     const isAsync = asyncRequested || (depth === 0 && args.async !== false)
 

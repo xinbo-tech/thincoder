@@ -130,7 +130,7 @@ The single-point pipeline's fixed cost is ~40 minutes — borne alone by one req
 **Lifecycle (event → action — act on the hit, don't wait for the user to push)**:
 1. **Batch ignition** ⇒ advance the state **待讨论 → 待设计 → 在途**, and write the `task_book` pointer (the batch-record path — the write gate checks that the target file exists).
 2. **Implementation verification passed** ⇒ **在途 → 待核销 → 已核销** (two-step migration; `ledger_close` accepts only the current state 待核销); write the **settlement basis** back into `evidence` (landing coordinates / commit id / batch-record section).
-3. **Batch closeout** ⇒ **settlement cross-check** (the D7 row rises from "read-out" to "action"): verify entries settled, pointers resolve; **prior-batch leftovers** (entry done, anchor batch record unclosed) ⇒ the **fallback settlement path** (`design/BATCH-RECORD.md` §5.2).
+3. **Batch closeout** ⇒ **settlement cross-check** (the D7 row rises from "read-out" to "action"): verify entries settled, pointers resolve; **prior-batch leftovers** (entry done, anchor batch record unclosed) ⇒ the **fallback settlement path**.
 4. **New debt found** (review finding / stop-and-report output / doc drift) ⇒ **book it the same day** — a tech todo must carry `trigger` (**bare enum**: `归批` / `条件` / `认账不排期` — the batch name / condition sentence goes into `evidence`, **never into `trigger`**); never leave it in report prose.
 5. **Escalated item** (from a subagent / review / stop-and-report) ⇒ **rule on the spot** — correctable items **get fixed in the same round**; the rest **get booked the same day** (`trigger` + an **expiry condition** → `evidence`); **never leave it in report prose or a "pending-ruling" list only**.
 

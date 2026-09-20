@@ -275,7 +275,7 @@ class RecordStore {
       return true
     } catch (e) {
       this.degraded = true
-      console.error(`[session] record store append failed (${e.message}) — writing stopped (SESSION.md §14.4 D-R4)`)
+      console.error(`[session] record store append failed (${e.message}) — writing stopped`)
       return false
     }
   }
@@ -352,7 +352,7 @@ class RecordStore {
   /** 降级置位（追赶失败——投影照 store 前缀 + meta.degraded 标记 + stderr 一行诊断）。 */
   markDegraded() {
     this.degraded = true
-    console.error("[session] record store degraded — projection written from the stored prefix; unflushed messages beyond the window are unrecoverable (SESSION.md §14.4 D-R4)")
+    console.error("[session] record store degraded — projection written from the stored prefix; unflushed messages beyond the window are unrecoverable")
     this.syncMeta()
   }
 }
