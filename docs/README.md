@@ -9,6 +9,8 @@
 
 | 类 | 位置 | 形态 |
 |---|---|---|
+| 发布流程 · 需求（统一面） | `docs/RELEASE.md` | 2026-09-20 用户裁定迁根（原 `core/requirements/`）——**总发布计划**（三发布单元：核 / CLI / VSC · 顺序 = 核 → CLI → VSC） |
+| 发布流程 · CLI 链设计 | `docs/RELEASE-CLI.md` | 同批同迁（原 `cli/design/`）——CLI 链细目 ✗ 总计划在 `docs/RELEASE.md` |
 | 台账（项目级唯一真相） | SQLite——用户数据目录键控库 `~/.thincoder/ledger/<sha1(项目根)>.db`（2026-09-17 落点裁定：不在项目目录） | ✅ 唯一台账面 = SQLite（`/ledger` 查询）；`TODO.md` · `TODO-archive.md` = 退役历史（md 形态，无机械校验） |
 | 板块档（需求 / 设计） | `core/requirements/` · `core/design/` | ✅ 核心统一已迁入（2026-09-13）；后续新板块档直接落此。**子系统档（设计 / 需求各 15 档）见 §4** |
 | 批次档 | `batches/` | ✅ 核心统一已迁入（2026-09-13） |
@@ -87,6 +89,8 @@
 - **三部分不各设地图**——本 README = 三部分（`core/` · `cli/` · `vsc/`）的唯一地图（目标结构 `core/design/DOC-SYSTEM.md` §4）；`cli/` · `vsc/` 两产品面档所对应的产品树旧档（`thincoder-cli/docs/**` · `thincoder-vscode/docs/**`）= 迁移期参照历史（§2 政策——保留 ≠ 维护）。
 
 ## 变更记录
+
+- 2026-09-20：**发布计划档迁根登记**（用户裁定「release.md 不应该放在那个目录里，应该直接放在 docs 目录下」）——`docs/core/requirements/RELEASE.md` → `docs/RELEASE.md`（总发布计划）+ `docs/cli/design/RELEASE.md` → `docs/RELEASE-CLI.md`（CLI 链细目）；§1 内容表补两行。
 
 - 2026-09-18：**v1 文档退役批（台账 #22）· 轮 A 落笔**——首部层级定位 + §2 补**退役状态**注（VSC 树已归档 `_archive/`；CLI 树轮 B 待执行）；本档其余不变。
 
