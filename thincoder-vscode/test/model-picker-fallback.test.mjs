@@ -8,7 +8,14 @@
  *
  * 手法（happy-dom——helpers/webview-env.mjs 先例）：setupWebview（happy-dom 注册 + en locale +
  * acquireVsCodeApi 桥桩——capturedPosts）+ installChatFixture 后动态 import 真模块，
- * 直驱 handleModelsMessage（webview/model-picker.js:101 导出）——不引导 chat.js 全量模块图。
+ * 直驱 handleModelsMessage（webview/model-picker.js:110 导出）——不引导 chat.js 全量模块图。
+ *
+ * 2026-09-20 追加 ③（父侧裁定修复轮 #11 · 顾问面 🟡①——批次档 §5 同轮记录）：reasoning 归一
+ * 优先**端侧默认档** `effortDefault`（spec `reasoningEffortDefault`——产线载荷同形：
+ * `src/extension/provider-probe-window.mjs:67`），未声明才回落 `levels[0]`；两处归一
+ * （`selectModel` / `handleModelsMessage`）各一条断言——后者直驱、前者走**真点击流**
+ * （`#model-btn` → provider 行 → 飞窗模型行）——因为 ② 兜底面用 LIST（无 effortDefault）
+ * 锁的是回落口径，本组锁的才是默认档优先。
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
@@ -144,13 +151,70 @@ test("② 命中正控——仍 post selectModel（同值回写——发射链�
   assert.equal(ctx.modelBtn.textContent, "kimi-k3")
 })
 
-test("② 命中分支维持现状——reasoning 归一（levels[0]）改写 + selectReasoning post 照旧", async () => {
+test("② 命中分支（同值回写面）——reasoning 归一：清单未声明 effortDefault ⇒ 回落 levels[0]", async () => {
   const { ctx, handleModelsMessage } = await loadPicker()
   resetPicker(ctx)
   const prefs = { model: "kimi-k3", provider: "kimi", reasoning: "ultra" } // "ultra" ∉ levels
 
   handleModelsMessage({ type: "models", models: LIST, prefs })
 
-  assert.equal(ctx.selectedReasoning, "low", "归一为 levels[0]（命中分支既有语义）")
+  assert.equal(ctx.selectedReasoning, "low", "未声明端侧默认档 ⇒ 回落 levels[0]（兜底口径不变）")
   assert.ok(slotPosts().some((m) => m.type === "selectReasoning" && m.reasoning === "low"), "归一结果照旧 post")
+})
+
+// ─── ③ 归一优先端侧默认档 effortDefault（修复轮 #11 · 🟡①）────────────────────
+
+/** 产线候选行（`provider-probe-window.mjs:67` 同形）：四新 flash 档枚举首项 = "none"
+ *  ⇒ 旧归一（取 `levels[0]`）选中即落 `reasoning="none"` = 思考关（登记默认 = "high"）。 */
+const EFFORT_LIST = [
+  { id: "qwen3.7-flash", provider: "qwen", group: "Qwen", reasoning: ["none", "minimal", "low", "medium", "high", "xhigh"], effortDefault: "high" },
+]
+
+test("③ 归一默认档（直驱）：prefs.reasoning 不在新档枚举 ⇒ 落 effortDefault（非枚举首项 none）", async () => {
+  const { ctx, handleModelsMessage } = await loadPicker()
+  resetPicker(ctx)
+  const prefs = { model: "qwen3.7-flash", provider: "qwen", reasoning: "max" } // 旧模型残留档（"max" ∉ 新档枚举）
+
+  handleModelsMessage({ type: "models", models: EFFORT_LIST, prefs })
+
+  assert.equal(ctx.selectedReasoning, "high", "归一 = 该档端侧默认档 effortDefault（取 levels[0] 即落 none = 思考关）")
+  assert.ok(slotPosts().some((m) => m.type === "selectReasoning" && m.reasoning === "high"), "归一结果随 selectReasoning post 上榜")
+  assert.ok(!slotPosts().some((m) => m.type === "selectReasoning" && m.reasoning === "none"), "不得落 none")
+})
+
+/** 点击流候选（真菜单两段：provider 行 + 飞窗模型行——`model-menu.js:169-271`）。 */
+const CLICK_LIST = [
+  { id: "kimi-k3", provider: "kimi", group: "Kimi", label: "kimi-k3", reasoning: ["low", "high"] },
+  { id: "qwen3.7-flash", provider: "qwen", group: "Qwen", label: "qwen3.7-flash",
+    reasoning: ["none", "minimal", "low", "medium", "high", "xhigh"], effortDefault: "high" },
+]
+
+test("③ 归一默认档（真点击流）：#model-btn → provider 行 → 飞窗模型行 ⇒ 思考档按钮落 effortDefault（非 off）", async () => {
+  const { ctx } = await loadPicker()
+  resetPicker(ctx)
+  ctx._models = CLICK_LIST
+  ctx.selectedModel = "kimi-k3"; ctx.selectedProvider = "kimi"; ctx.modelBtn.textContent = "kimi-k3"
+  ctx.selectedReasoning = "max" // 旧模型残留档（"max" ∉ qwen 档枚举 ⇒ 归一必触发）
+
+  ctx.modelBtn.click() // 真绑定（model-picker.js:12 监听）——非直接调 openModelMenu
+  const provRows = [...document.querySelectorAll(".mm-panel > .mm-row")]
+  const provRow = provRows.find((el) => el.textContent.includes("Qwen"))
+  assert.ok(provRow, `菜单 provider 行在位（实读 ${JSON.stringify(provRows.map((r) => r.textContent))}）`)
+  provRow.click() // 开飞窗（model-menu.js:269）
+
+  const modelRows = [...document.querySelectorAll(".mm-flyout .mm-row")]
+  const row = modelRows.find((el) => el.textContent.includes("qwen3.7-flash"))
+  assert.ok(row, `飞窗候选行在位（实读 ${JSON.stringify(modelRows.map((r) => r.textContent))}）`)
+  row.click() // pickModel ⇒ onPick ⇒ selectModel（:77）
+
+  assert.equal(ctx.selectedModel, "qwen3.7-flash", "选中已切换（点击流真到达 selectModel）")
+  assert.equal(ctx.selectedReasoning, "high", "归一 = effortDefault（非枚举首项 none）")
+  assert.ok(slotPosts().some((m) => m.type === "selectModel" && m.model === "qwen3.7-flash"), "槽写 post 在位")
+  // 显示面（:87 同式）——旧归一（取 levels[0]="none"）时此处为 "off" = 「选中即关思考」的可见症状
+  assert.equal(ctx.reasoningBtn.textContent, "High", "思考档按钮显示 = High（非 off）")
+  // 写面契约（既有，非本轮改动）：点击路归一 = 状态/显示面——不补发 selectReasoning
+  // （`selectModel` 仍为唯一槽写 :80）；失配的 prefs.reasoning 由下一次 models 消息归一（:123）
+  // 后照发（:129）自愈。
+
+  document.querySelectorAll(".mm-overlay").forEach((el) => el.remove()) // 菜单闭合清理（happy-dom 残留归零）
 })

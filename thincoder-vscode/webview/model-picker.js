@@ -79,7 +79,10 @@ function selectModel(m) {
   ctx.modelBtn.textContent = m.id; closeModelMenu()
   vscode.postMessage({ type: "selectModel", model: m.id, provider: m.provider || "" })
   const levels = m.reasoning || []
-  if (levels.length > 0 && !levels.includes(ctx.selectedReasoning)) ctx.selectedReasoning = levels[0]
+  // 归一优先**端侧默认档**（spec `reasoningEffortDefault`——表 = `src/specs.mjs:22-36`；同式
+  // `settings-state.js:48`）：未声明该档时才回落枚举首项——effort 型新档（qwen3.7/3.8-flash 族）
+  // 枚举首项 = `"none"`，取首项即等于把思考关掉（静默 off）。
+  if (levels.length > 0 && !levels.includes(ctx.selectedReasoning)) ctx.selectedReasoning = m.effortDefault || levels[0]
   const visible = levels.length > 0 ? ctx.selectedReasoning : "off"
   ctx.reasoningBtn.textContent = visible === "none" ? "off" : (reasoningLabel(visible))
   ctx.reasoningBtn.classList.toggle("active", levels.length > 0 && visible !== "off")
@@ -116,7 +119,8 @@ export function handleModelsMessage(m) {
       ctx.modelBtn.textContent = match.id
       ctx.selectedReasoning = prefs.reasoning || "off"
       const levels = match.reasoning || []
-      if (levels.length > 0 && !levels.includes(ctx.selectedReasoning)) ctx.selectedReasoning = levels[0]
+      // 归一（单一出处 = `selectModel` 内注释）：`effortDefault` 优先，未声明回落 `levels[0]`。
+      if (levels.length > 0 && !levels.includes(ctx.selectedReasoning)) ctx.selectedReasoning = match.effortDefault || levels[0]
       ctx.reasoningBtn.textContent = ctx.selectedReasoning === "none" ? "off" : (reasoningLabel(ctx.selectedReasoning))
       ctx.reasoningBtn.classList.toggle("active", levels.length > 0 && ctx.selectedReasoning !== "off")
       // F-W14：忙态零回写（显示仍更新——上列已刷）——不携快照覆写槽；idle 零回归（照发）

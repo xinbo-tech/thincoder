@@ -33,7 +33,8 @@ export async function handleThinkCommand(ctx, args = []) {
     if (autoThinkEnabled) { pushLine("Auto-think is ON — manual settings are overridden each turn; turn Auto off first via /think", C.error); return }
     await applyThink({ action: "effort", level }, agent, syncProviderField, spec, isEffortOnly, isCustomThink, thinkOnValue)
     pushLabel("❯ Think", ansi.bold + C.tool)
-    pushLine(`Thinking effort: ${level}`, C.tool)
+    // none = 关思考档（applyThink 内归一到 off 路径）⇒ 回执同 off 文案，不比照档位报“…none”
+    pushLine(level === "none" ? "Thinking: OFF" : `Thinking effort: ${level}`, C.tool)
     return
   }
   if (sub) { pushLine("Usage: /think [on|off|effort <level>]", C.error); return }
@@ -78,18 +79,29 @@ export async function handleThinkCommand(ctx, args = []) {
       pushLine(`Auto-think: ${newAuto ? "ON" : "OFF"}`, C.tool)
       return // exit loop — no useful actions remain when auto mode just changed (T8b 锁定——toggle 即退是已批准语义——2026-09-05 曾误改 OFF 回菜单——测试抓回归——已撤销)
     } else if (e.action === "effort") {
-      pushLine(`Reasoning effort: ${e.level}`, C.tool)
+      pushLine(e.level === "none" ? "Thinking: OFF" : `Reasoning effort: ${e.level}`, C.tool)
     } else {
+      // 与菜单头（:47-48）同式：`thinking:null`（NF1 显式 off）必须落 OFF——本式缺 `!== null` 守卫时
+      // effort 型 off 后回执误报 ON（同一状态、两处公式——单一口径 = 面板式）。
       const nowEnabled = cur.thinking?.type === thinkOnValue
-        || (cur.thinking?.type === undefined && !isCustomThink)
+        || (cur.thinking !== null && cur.thinking?.type === undefined && !isCustomThink)
       pushLine(`Thinking: ${nowEnabled ? "ON" : "OFF"}`, C.tool)
     }
   }
 }
 
-/** Shared apply logic — extracted from handleThinkCommand for reuse in both fast path and loop */
-async function applyThink(e, agent, syncProviderField, spec, isEffortOnly, isCustomThink, thinkOnValue) {
+/** Shared apply logic — extracted from handleThinkCommand for reuse in both fast path and loop.
+ *  Named export (2026-09-20): the on-default-effort rule (§2.8) is unit-tested by driving this
+ *  directly with a synthetic spec — behavior otherwise unchanged.
+ *  Effort 档位 `"none"` = 关思考 ⇒ 入口归一到 off 路径（与菜单 off 项同形——见内注释）。 */
+export async function applyThink(e, agent, syncProviderField, spec, isEffortOnly, isCustomThink, thinkOnValue) {
   const cur = agent.provider
+  // `effort` 档位取 `"none"` = **关思考**（非“强度零”）：与本面 off 动作同语义 ⇒ 归一到 off 路径
+  // （各族取其原生 off 形：effort 型 = `thinking:null`＋删 effort；type 型 = `{type:"disabled"}`）。
+  // 不归一的两处违约：① 菜单头同拍显示「Thinking: ON | Effort: none」自相矛盾（off 标记缺失）；
+  // ② 残留 `reasoningEffort:"none"` 会被载荷层当强度档送（`provider/core.mjs:197-204`），与百炼
+  // qwen 侧 off 判据（`config.mjs:133-139` 的 `thinking === null ⇒ false`）错位 ⇒ 服务端仍思考。
+  if (e.action === "effort" && e.level === "none") e = { action: "off" }
   if (e.action === "auto") {
     const cfg = agent.config.agent ??= {}
     cfg.autoThink = !cfg.autoThink
@@ -113,9 +125,10 @@ async function applyThink(e, agent, syncProviderField, spec, isEffortOnly, isCus
       // Explicit off persists thinking:null (NF1 convention — distinguishable from autoThink's
       // delete/undefined); "on" deletes the marker so enable_thinking maps from effort again.
       if (!enable) { cur.thinking = null; delete cur.reasoningEffort }
-      // "on" 默认 effort 取 spec 枚举首值（交付评审 #2）：硬编码 "high" 对 qwen3.8-max
-      // （enum xhigh/medium/low）无效，会被 core.mjs 枚举校验 throw（400 前置）
-      else { delete cur.thinking; if (!cur.reasoningEffort) cur.reasoningEffort = spec.reasoningEffortEnum?.[0] ?? "high" }
+      // "on" 默认 effort 取 spec 枚举的**首个非 "none"** 档（批次档 §1.8-② / 设计 §2.8 D-9）：硬编码 "high"
+      // 对 qwen3.8-max（enum xhigh/medium/low）无效，会被 core.mjs 枚举校验 throw（400 前置）；而直接取枚举
+      // 首项在新档（首项 "none"）等于把思考关掉 ⇒ 跳过 "none"；枚举全 "none" 时与无枚举同型 ⇒ 回退 "high"
+      else { delete cur.thinking; if (!cur.reasoningEffort) cur.reasoningEffort = spec.reasoningEffortEnum?.find((v) => v !== "none") ?? "high" }
       await syncProviderField(agent.activeProvider, "thinking", cur.thinking)
       if (!enable) await syncProviderField(agent.activeProvider, "reasoningEffort", undefined)
       else await syncProviderField(agent.activeProvider, "reasoningEffort", cur.reasoningEffort)

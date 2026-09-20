@@ -213,3 +213,40 @@ test("T-MA12-3 边界（缝兼容）：runVisionReader ① 预 aborted signal �
   assert.ok(Date.now() - t0 < 5000, "快速失败——不复用 60s 超时窗")
   assert.equal(await runVisionReader({ paths: ["x.png"], providerName: "ds", cwd: _tmp }), null, "不传 signal → 现状（无视觉渠道 null）")
 })
+
+// ─── 批 2026-09-20-qwen-flash-specs（设计 `docs/core/design/MODEL-SPECS.md` §6 T-10 / T-15 · A-13）───
+// 端差默认档表 = `../src/specs.mjs` 的 EFFORT_DEFAULT_PREFIXES（核表无 `reasoningEffortDefault`）。
+
+/** 未知模型查表会 warnUnknownModel 告警一次——负探针静音（try/finally 保证还原）。 */
+function silent(fn) {
+  const orig = console.warn
+  console.warn = () => {}
+  try { return fn() } finally { console.warn = orig }
+}
+
+test("T-10/A-13 端差默认档覆盖 qwen 全档：四新档 ⇒ high、两 max 档 ⇒ xhigh（且默认档是枚举成员）", async () => {
+  const { specForModel } = await import("../src/specs.mjs")
+  const EXPECT = {
+    "qwen3.7-flash": "high",
+    "qwen3.8-flash": "high",
+    "qwen3.8-omni-flash": "high",
+    "qwen3.8-27b": "high",
+    "qwen3.7-max": "xhigh",
+    "qwen3.8-max": "xhigh",
+  }
+  for (const [model, def] of Object.entries(EXPECT)) {
+    const spec = specForModel(model)
+    assert.equal(spec.reasoningEffortDefault, def, `${model} 端差默认档 = ${def}（命中原端自行，非端差缺省）`)
+    assert.ok(spec.reasoningEffortEnum.includes(def), `${model} 默认档须是枚举成员（下拉预选可选，非空悬）`)
+  }
+})
+
+test("T-15/A-13 qwen 域无族前缀条目（负探针）：未知 qwen 名 / 退役名均不借前缀遮蔽", async () => {
+  const { specForModel } = await import("../src/specs.mjs")
+  // 设计 §6 T-15 结构断言原文 = 「`EFFORT_DEFAULT_PREFIXES` 任一键均没有同为键前缀的兄弟」——该表内即
+  // 不成立：`deepseek-v4-flash`(specs.mjs:24) ⊂ `deepseek-v4-flash-vision-exp`(:23) ⇒ 改按 qwen 域实施：
+  // 族前缀条目（如 `qwen` / `qwen3.7` / `qwen3.8`）一被加回即红；口径漂移已上报（批档 §5 / 交付报告）。
+  for (const name of ["qwen-nope", "qwen3.7-nope", "qwen3.8-nope", "qwen3.7-plus"]) {
+    assert.equal(silent(() => specForModel(name).reasoningEffortDefault), undefined, `${name} 不命中任何端差行（防族遮蔽）`)
+  }
+})

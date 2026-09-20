@@ -1,0 +1,153 @@
+/**
+ * cmd-think.test.mjs — `/think on` 的默认 effort 档（MODEL-SPECS 批 · 批次档
+ * 2026-09-20-qwen-flash-specs §1.8-② / 设计 §2.8 + D-9 ——用例 T-14 / AC A-16）。
+ *
+ * 断言对象 = src/tui/cmd-think.mjs 的 `applyThink`（本批改具名导出，供注入合成 spec 直驱）：
+ * on ⇒ effort 取枚举的**首个非 "none"** 档；枚举全 `"none"` / 无枚举 ⇒ 回退 `"high"`
+ * （与无枚举同型）。三态均**不得**写入 `"none"`，且 `thinking` 显式 off 标记必须被清除。
+ * 构造手法 = ctx 直驱（同 `cmd-eng.test.mjs`）：agent 为普通对象 + `syncProviderField` 记账 mock。
+ *
+ * 2026-09-20 追加（父侧裁定修复轮 #11 · 顾问面 🟡②——批次档 §5 同轮记录）：`effort none` 档 =
+ * **关思考**（非「强度零」）⇒ `applyThink` 入口归一到 off 路径（effort 型 = `thinking:null`＋删
+ * effort；type 型 = `{type:"disabled"}`，取其原生 off 形）；载荷面 = 百炼 qwen 出
+ * `enable_thinking:false`（`config.mjs:133-139`）且不发 `reasoning_effort`（`provider/core.mjs:197` 门）。
+ */
+import { test } from "node:test"
+import assert from "node:assert/strict"
+
+import { applyThink } from "../src/tui/cmd-think.mjs"
+import { specForModel, resolveEnableThinking } from "@thincoder/core/config.mjs"
+
+/** 本批四新档（核表独立行——枚举首项即 `"none"` = 旧实现会把思考关掉的那一类）。 */
+const NEW_ROWS = ["qwen3.7-flash", "qwen3.8-flash", "qwen3.8-omni-flash", "qwen3.8-27b"]
+
+/** agent 夹具：provider 带显式 off 标记（thinking:null）+ 无 effort ⇒ 走 on 默认档分支。 */
+function fixture(model) {
+  const calls = []
+  const agent = {
+    provider: { model, thinking: null },
+    activeProvider: "p1",
+    config: {},
+  }
+  const syncProviderField = async (name, field, value) => { calls.push([name, field, value]) }
+  return { agent, calls, syncProviderField }
+}
+
+/** 从 spec 推出 handleThinkCommand 会传给 applyThink 的三个分叉位（保持与调用面同式）。 */
+function face(spec) {
+  const thinkOnValue = spec.thinkEnabledValue ?? "enabled"
+  return {
+    isEffortOnly: spec.thinkApi === "effort",
+    isCustomThink: thinkOnValue !== "enabled",
+    thinkOnValue,
+  }
+}
+
+test("T-14 正常：四新档 `/think on` ⇒ 枚举首个非 none 档（minimal）、off 标记清除", async () => {
+  for (const model of NEW_ROWS) {
+    const spec = specForModel(model)
+    assert.equal(spec.thinkApi, "effort", `${model}：前提——effort 型（on 走 reasoning_effort 分支）`)
+    assert.equal(spec.reasoningEffortEnum[0], "none", `${model}：前提——枚举首项 = none（取首项即等于关思考）`)
+    assert.equal(spec.reasoningEffortEnum.includes("minimal"), true, `${model}：前提——存在非 none 档`)
+
+    const { agent, calls, syncProviderField } = fixture(model)
+    const f = face(spec)
+    await applyThink({ action: "on" }, agent, syncProviderField, spec, f.isEffortOnly, f.isCustomThink, f.thinkOnValue)
+
+    assert.equal(agent.provider.reasoningEffort, "minimal", `${model}：on ⇒ 首个非 "none" 档`)
+    assert.notEqual(agent.provider.reasoningEffort, "none", `${model}：不得写入 "none"`)
+    assert.equal("thinking" in agent.provider, false, `${model}：显式 off 标记已清除（delete）`)
+    assert.deepEqual(calls, [
+      ["p1", "thinking", undefined],
+      ["p1", "reasoningEffort", "minimal"],
+    ], `${model}：落盘字段与 provider 同步同值`)
+  }
+})
+
+test("T-14 边界：枚举全 none ⇒ 回退 high（与无枚举同型——不抛错、不留空、不写 none）", async () => {
+  const spec = { thinkApi: "effort", reasoningEffortEnum: ["none"] }
+  const { agent, calls, syncProviderField } = fixture("qwen3.8-degenerate")
+  const f = face(spec)
+  await applyThink({ action: "on" }, agent, syncProviderField, spec, f.isEffortOnly, f.isCustomThink, f.thinkOnValue)
+
+  assert.equal(agent.provider.reasoningEffort, "high")
+  assert.notEqual(agent.provider.reasoningEffort, "none")
+  assert.equal("thinking" in agent.provider, false, "显式 off 标记已清除")
+  assert.deepEqual(calls, [["p1", "thinking", undefined], ["p1", "reasoningEffort", "high"]])
+})
+
+test("T-14 边界：无枚举 ⇒ 既有 high 回退零变化", async () => {
+  const spec = { thinkApi: "effort" }
+  const { agent, calls, syncProviderField } = fixture("qwen-nofallback")
+  const f = face(spec)
+  await applyThink({ action: "on" }, agent, syncProviderField, spec, f.isEffortOnly, f.isCustomThink, f.thinkOnValue)
+
+  assert.equal(agent.provider.reasoningEffort, "high")
+  assert.notEqual(agent.provider.reasoningEffort, "none")
+  assert.equal("thinking" in agent.provider, false, "显式 off 标记已清除")
+  assert.deepEqual(calls, [["p1", "thinking", undefined], ["p1", "reasoningEffort", "high"]])
+})
+
+// ─── 追加（修复轮 #11 · 🟡②）：`effort none` = 关思考 ⇒ 归一到 off 路径 ──────────────
+
+/** 百炼 host（`resolveEnableThinking` 白名单门——`config.mjs:116-119`）；model 为裸 ID（无 `/`
+ *  前缀 ⇒ `provider/core.mjs:196` 的 isRouter 门不参与，载荷断言面成立）。 */
+const BAILIAN = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+
+/** 「思考已开」起点（effort 档在位、无 off 标记）——`effort none` 的可达前置态。 */
+function onFixture(model) {
+  const calls = []
+  const agent = { provider: { model, baseURL: BAILIAN, reasoningEffort: "high" }, activeProvider: "p1", config: {} }
+  const syncProviderField = async (name, field, value) => { calls.push([name, field, value]) }
+  return { agent, calls, syncProviderField }
+}
+
+test("修复轮 #11 正常：四新档 `effort none` ⇒ 关思考（off 标记在位 + 零 effort 残留 + 载荷 enable_thinking:false）", async () => {
+  for (const model of NEW_ROWS) {
+    const spec = specForModel(model)
+    assert.equal(spec.thinkApi, "effort", `${model}：前提——effort 型（档位面可达 none）`)
+    assert.equal(spec.reasoningEffortEnum.includes("none"), true, `${model}：前提——枚举含 none`)
+
+    const { agent, calls, syncProviderField } = onFixture(model)
+    const f = face(spec)
+    await applyThink({ action: "effort", level: "none" }, agent, syncProviderField, spec, f.isEffortOnly, f.isCustomThink, f.thinkOnValue)
+
+    assert.equal(agent.provider.thinking, null, `${model}：none ⇒ 显式 off 标记在位（NF1——与 /think off 同态）`)
+    assert.equal("reasoningEffort" in agent.provider, false, `${model}：effort 字段删除（不留 "none"）`)
+    assert.equal(agent.provider.reasoningEffort, undefined, `${model}：值面也非 "none"`)
+    assert.deepEqual(calls, [["p1", "thinking", null], ["p1", "reasoningEffort", undefined]], `${model}：落盘字段与 provider 同步同值`)
+    // 载荷面（🟡② 判据）：显式 off ⇒ enable_thinking:false；零 effort ⇒ reasoning_effort 不发
+    assert.equal(resolveEnableThinking(agent.provider, spec), false, `${model}：载荷 enable_thinking:false（provider/core.mjs:209-210）`)
+    assert.equal(Boolean(agent.provider.reasoningEffort), false, `${model}：载荷 reasoning_effort 不发（provider/core.mjs:197 门）`)
+  }
+})
+
+test("修复轮 #11 正常（type 型）：`effort none` ⇒ `{type:\"disabled\"}`（原生 off 形）", async () => {
+  const spec = specForModel("glm-5.2")
+  assert.equal(spec.thinkApi, "type", "前提——glm-5.2 = type 型（off 形与 effort 族不同）")
+  assert.equal(spec.reasoningEffortEnum.includes("none"), true, "前提——枚举含 none")
+
+  const { agent, calls, syncProviderField } = onFixture("glm-5.2")
+  const f = face(spec)
+  assert.equal(f.isEffortOnly, false, "前提——非 effort 型")
+  assert.equal(f.isCustomThink, false, "前提——thinkOnValue = enabled（非 MiniMax 的 adaptive）")
+  await applyThink({ action: "effort", level: "none" }, agent, syncProviderField, spec, f.isEffortOnly, f.isCustomThink, f.thinkOnValue)
+
+  assert.deepEqual(agent.provider.thinking, { type: "disabled" }, "type 型 off 形 = {type:'disabled'}（既有 off 路径同形——非 null）")
+  assert.equal("reasoningEffort" in agent.provider, false, "effort 字段删除")
+  assert.deepEqual(calls, [["p1", "thinking", { type: "disabled" }], ["p1", "reasoningEffort", undefined]])
+  assert.equal(resolveEnableThinking(agent.provider, spec), undefined, "非 qwen ⇒ 白名单不命中（enable_thinking 不发——零变更）")
+})
+
+test("修复轮 #11 边界：非 none 档零回归（off 标记清除 + effort 落值——入口归一不误伤）", async () => {
+  const spec = specForModel("qwen3.8-flash")
+  const { agent, calls, syncProviderField } = onFixture("qwen3.8-flash")
+  agent.provider.thinking = null // 上一动作 = off ⇒ effort 档须清 off 标记（评审 #1 既有语义）
+  const f = face(spec)
+  await applyThink({ action: "effort", level: "high" }, agent, syncProviderField, spec, f.isEffortOnly, f.isCustomThink, f.thinkOnValue)
+
+  assert.equal(agent.provider.reasoningEffort, "high", "档位照落")
+  assert.equal("thinking" in agent.provider, false, "显式 off 标记被清除")
+  assert.deepEqual(calls, [["p1", "thinking", undefined], ["p1", "reasoningEffort", "high"]])
+  assert.equal(resolveEnableThinking(agent.provider, spec), true, "载荷 enable_thinking:true（随 reasoning_effort 同行）")
+})
