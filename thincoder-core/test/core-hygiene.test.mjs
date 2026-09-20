@@ -42,19 +42,28 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
  * `docs/batches/2026-09-20-channel-onboarding.md` §1.10-④ 预裁「**登记不拆档**（单档内聚）」；
  * 设计档 `CORE-UNIFICATION.md` §2.8.1 表行（拆分计划落点）= 已落（子表行 12 / 13，收口轮）。
  * 读数口径 = 末行终止后的行数（两档与 `wc -l` 同值：414 / 306；split 口径 415 / 307）。
+ * STARTUP-LATENCY 批（2026-09-21）登记面收正：`traces/trace-store.mjs` 清理面外提
+ * `traces/trace-cleanup.mjs` 后 303 → **299** ≤300 ⇒ **移出登记**（设计档 `docs/core/design/TRACES.md`
+ * §6.4 模块落点——存续条件 = 本批落地）。
+ * 批次档生命周期工具批（2026-09-21）登记**三档**：`agent-tools/batch.mjs`（**397**——KD-4 proactive
+ * 处置已落：骨架/词表解析单源外提 `batch-skeleton.mjs`（94）+ 生命周期动作外提
+ * `batch-lifecycle.mjs`（245），三档各 ≤300；主档 = 398 行设计预裁面——旧 `batch-segment.mjs`
+ * 266 → 18 行过渡 shim）与 `test/batch.test.mjs`（**380**——新测试档，C1–C10+BR-18–26 用例表；预裁
+ * 「**保留单档**」（既有/新用例 fixtures 共享，拆档 = 复制脚手架——批档 :89/:165-#8）；硬顶 500 内）。
+ * 读数口径 = 末行终止后的行数（node 实测——`wc -l` 本机 cmd 乱码已弃用）。
  */
 const SOFT_LINE_REGISTRY = new Set([
   "agent/dispatch.mjs", "agent/helpers.mjs", "agent/setup.mjs", "agent.mjs",
-  "agent-tools/advisor-async.mjs", "agent-tools/consult.mjs", "agent-tools/escalate-async.mjs",
+  "agent-tools/advisor-async.mjs", "agent-tools/batch.mjs", "agent-tools/consult.mjs", "agent-tools/escalate-async.mjs",
   "agent-tools/read-history.mjs",
   "agent-tools/subagent-actions.mjs", "agent-tools/subagent-async.mjs",
   "agent-tools/subagent-scheduler.mjs", "agent-tools/subagent-spawn.mjs", "agent-tools/subagent.mjs",
   "config.mjs", "context.mjs", "git/checkpoint.mjs", "manifest.mjs", "memory/code-sync.mjs",
   "memory/core.mjs", "memory/docs.mjs",
   "memory/schema.mjs", "process-probe.mjs", "provider/core.mjs", "provider/responses.mjs",
-  "session-lifecycle.mjs", "session-store.mjs", "test/model-specs.test.mjs", "test/provider-merge.test.mjs",
+  "session-lifecycle.mjs", "session-store.mjs", "test/batch.test.mjs", "test/model-specs.test.mjs", "test/provider-merge.test.mjs",
   "tools/edit-diff.mjs", "tools/file.mjs", "tools/git.mjs",
-  "tools/lsp.mjs", "tools/repomap.mjs", "tools/shared.mjs", "traces/trace-store.mjs",
+  "tools/lsp.mjs", "tools/repomap.mjs", "tools/shared.mjs",
 ])
 
 function walk(dir) {

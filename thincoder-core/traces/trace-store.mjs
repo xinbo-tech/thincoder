@@ -20,8 +20,9 @@
  *   **单遍序列化**：脱敏内联进输出缓冲（不构造复制图 + 二次全量字符串）——字段名/次序
  *   与 `JSON.stringify` 形态同构（T-TR1 等价断言）。
  * - 容量 / 清理（§2.5 #116 / A21 已裁 · 按建议——取 VSC 侧）：**完整落盘**（不截断、
- *   不丢行、不丢记录）；**清理 = 每写一次 prune**（写盘成功后顺带 `cleanupTraces`——
- *   与写盘同在 fire-and-forget 异步体内）。目录按日组织（YYYY-MM-DD），可按日/会话过滤。
+ *   不丢行、不丢记录）；**清理 = 每写一次 prune**（写盘成功后顺带 `maybePruneTraces`——
+ *   与写盘同在 fire-and-forget 异步体内）。2026-09-21（TRACES.md §6.4）：判据改**目录级三段梯**
+ *   + 每写 prune **节流**；清理实现外提 `trace-cleanup.mjs`（本档包装保既有 import 面）。
  * - seq = 当日目录内最大已有 seq + 1（D-TR3——跨会话/进程重启不覆写既有旧轨迹——
  *   18.6.1 评审 #3）；**进程内 seqCache（§23.3.2——消除逐调用同步扫目录）**：首次
  *   readdirSync 后进程内递增预留，目录被清理（retention）后取下界重扫一次（防御）。
@@ -35,7 +36,8 @@
  *   记录不输出 round 字段（全设计无 round 定义——删——不发明无来源字段）。
  */
 import { readdirSync, existsSync } from "node:fs"
-import { appendFile, mkdir, readdir, stat, unlink, rmdir } from "node:fs/promises"
+import { appendFile, mkdir } from "node:fs/promises"
+import { cleanupTraces as cleanupTracesImpl } from "./trace-cleanup.mjs"
 import { join } from "node:path"
 import { createHash } from "node:crypto"
 import { configDir, loadConfig } from "../config.mjs"
@@ -87,17 +89,33 @@ export function tracesDirFor(dateStr) {
   return join(tracesRoot(), dateStr)
 }
 
-// ─── 容量 / 清理策略（§2.5 #116 / A21 已裁 · 按建议——取 VSC 侧）───────────────
+// ─── 容量 / 清理策略（§2.5 #116 / A21 已裁 · 按建议——取 VSC 侧）（§6.4 判据面）─────────
 // 完整落盘：不截断、不丢行（无单消息/单记录额度，无在途丢弃）；清理 = 每写一次 prune
-// （写盘成功后顺带 cleanupTraces——与写盘同在 fire-and-forget 异步体内，永不阻塞 chat）。
+// （写盘成功后顺带清理——与写盘同在 fire-and-forget 异步体内，永不阻塞 chat）。
 
-// 进程内 seq 缓存（§23.3.2：dir → 已见/已预留 max——首次 readdirSync 后递增预留；
-// 目录被清理（retention）后取下界重扫一次（防御））。
+// 进程内 seq 缓存（§23.3.2：dir → 已预留 max；首次读盘后递增预留，目录被清理后取下界重扫一次）。
 const _seqCache = new Map()
+// 每写 prune 节流（D-TR12 · §6.4）：窗 = 10 分钟 + 在飞合并（同窗 3 连写 ⇒ 扫描 ≤1 次）。
+export const PRUNE_THROTTLE_MS = 10 * 60_000
+let _pruneAt = 0, _pruneInFlight = null
 
-/** 测试缝：清进程内状态（seqCache）。 */
+/** 测试缝：清进程内状态（seqCache + 节流窗/在飞——**跨用例残留**，用例须显式复位）。 */
 export function _resetTraceStateForTest() {
   _seqCache.clear()
+  _pruneAt = 0
+  _pruneInFlight = null
+}
+
+/** 每写 prune（`recordChatTrace` 写盘成功后调用）：窗内 / 在飞 ⇒ 不发起新扫描。
+ *  返回 = 新扫描 promise（首次发起）/ `false`（窗内 / 在飞——不重复扫）；`now` = 测试注入缝。 */
+export function maybePruneTraces({ dir = tracesRoot(), retentionHours = 24, now = Date.now() } = {}) {
+  if (_pruneInFlight) return false // 在飞合并：同窗并发不重复发起扫描
+  if (now - _pruneAt < PRUNE_THROTTLE_MS) return false
+  _pruneAt = now
+  _pruneInFlight = cleanupTracesImpl({ dir, retentionHours })
+    .catch(() => 0) // 清理失败静默——不影响写盘（fire-and-forget 同纪律）
+    .finally(() => { _pruneInFlight = null })
+  return _pruneInFlight
 }
 
 function scanMaxSeq(dir) {
@@ -266,38 +284,16 @@ export function recordChatTrace(provider, opts = {}, result = null, error = null
       await _traceHooks.append(join(dir, `${sessionKey}-${seq}.jsonl`), record + "\n")
       let retentionHours = 24
       try { retentionHours = loadConfig()?.traces?.retentionHours ?? 24 } catch { /* 默认 24h */ }
-      await cleanupTraces({ dir: tracesRoot(), retentionHours })
+      await maybePruneTraces({ dir: tracesRoot(), retentionHours }) // D-TR12：每写节流（窗内 ⇒ false 即返）
     } catch {
       // F-TR3：落盘/prune 失败静默降级——不抛错、不阻塞 chat() 返回
     }
   })()
 }
 
-/**
- * D-TR10（用户裁定——发布隐私 + 磁盘卫生）：清理——删除 traces 根下
- * mtime 超过保留期的轨迹文件（保留期 = config.traces.retentionHours，默认 24h）；
- * 删空的日期目录（YYYY-MM-DD）。目录里非 .jsonl 文件不碰。
- * §2.5 #116 / A21（已裁 · 按建议）：调用点 = 每写一次 prune（`recordChatTrace` 写盘成功
- * 后顺带调用——fire-and-forget 异步体内）；CLI 启动点的启动清理保留（本端不动）。
- * 返回删除文件数。
- */
-export async function cleanupTraces({ dir = tracesRoot(), retentionHours = 24 } = {}) {
-  const cutoff = Date.now() - retentionHours * 3_600_000
-  let days
-  try { days = await readdir(dir) } catch { return 0 } // 目录不存在/不可读 → 无事可做
-  let removed = 0
-  for (const day of days) {
-    const dayDir = join(dir, day)
-    try { if (!(await stat(dayDir)).isDirectory()) continue } catch { continue }
-    let names
-    try { names = await readdir(dayDir) } catch { continue }
-    for (const n of names) {
-      if (!n.endsWith(".jsonl")) continue
-      try {
-        if ((await stat(join(dayDir, n))).mtimeMs < cutoff) { await unlink(join(dayDir, n)); removed++ }
-      } catch { /* 单个文件失败不影响其余 */ }
-    }
-    try { if ((await readdir(dayDir)).length === 0) await rmdir(dayDir) } catch {}
-  }
-  return removed
+/** D-TR10 清理面（D-TR11 目录级三段梯）——实现外提 `traces/trace-cleanup.mjs`；此处包装保
+ *  既有 import 面与缺省 `dir`（`tracesRoot()` 单源——测试经 `THINCODER_TRACES_DIR` 隔离）。
+ *  调用点 = 每写 prune（经 `maybePruneTraces`）+ 启动清理（壳侧）；返回删除文件数。 */
+export function cleanupTraces({ dir = tracesRoot(), retentionHours = 24 } = {}) {
+  return cleanupTracesImpl({ dir, retentionHours })
 }

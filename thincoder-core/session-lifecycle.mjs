@@ -33,8 +33,8 @@ import { clearPlanMode } from "./agent-tools/plan.mjs"
 import { bindRecordStore, unbindRecordStore, RECORD_WINDOW_MESSAGES } from "./session-store.mjs"
 
 /** 恢复决策包装（SESSION.md §6.12 启动钩子，2026-09-06）：本端恢复入口触发一次残留 GC——
- *  scheduleSessionGC 内部 setImmediate 空闲执行 + 每进程每前缀去重，不阻塞启动路径（N4）。
- *  **async**（F-MI7——整链异步：探测不阻塞事件循环；调用面必须 await）。 */
+ *  scheduleSessionGC 内部**启动窗外延迟拍**（`GC_PASS_DELAY_MS` = 3s）+ 每进程每前缀去重，
+ *  **异步非阻塞**启动路径（N4；§6.17 D-SE39）；**async**（F-MI7——调用面必须 await）。 */
 export async function resumeSlot(cwd) {
   scheduleSessionGC(cwd)
   return slotsResumeSlot(cwd)

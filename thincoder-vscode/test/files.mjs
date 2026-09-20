@@ -118,5 +118,8 @@ export default [
   "test/subagent-queued-payload.test.mjs", // §2.22 同族事件载荷机检锚（T-QP1–6）：载荷逐 kind 对表 + 缓存单源 + 五路作废点（含 `⟦ev⟧stopped`——§2.29 #7c）+ 重生投影同形（先红后绿 = 收口轮变异探针——停用 stopped 路 `forgetQueued` ⇒ T-QP5 恰该路红）
   "test/nested-token-relay.test.mjs", // 嵌套 token 显示面批（2026-09-20 · 台账 #137 · `docs/batches/2026-09-20-nested-token-batch.md` §2）：内层链事件不路由（`panel-subagent-relay.mjs` 嵌套守卫——判据收窄 `nested ∧ rest 起于 ⟦ev⟧／[model]` + `ev:substrip` 留痕）——T-N2–T-N7（T-N6 = 宽判据反例锁；真链 = 真装配 `buildSpawnChild` + 真宣告 `armSyncChildAbort` + 真 webview 闭路）
   "test/render-granularity.test.mjs", // 渲染粒度对齐批（2026-09-20 · 台账 #148 · `docs/batches/2026-09-20-render-granularity-batch.md` §2）：内容行合并粒度（CLI `pushBlock` 对齐——WEBVIEW.md §5.6）——T-G1–T-G7 段数断言（tool 面按「工具名 + sub 同」并入末行 · RAW 零分隔符 / 调用行恒新行 / 降级恒新行 / kind 缺省归 text）
+  // STARTUP-LATENCY 批（2026-09-21 · `docs/batches/2026-09-21-startup-latency.md` §2 · 台账 #173）：F-SL3 目录级清理判据（TRACES.md §6.4）+ F-SL2 端侧命令面（SESSION.md §6.17 D-SE38）
+  "test/trace-cleanup.test.mjs", // T-SL3.1/3.2/3.4：目录级三段梯（整删零逐 .jsonl stat——计数注入 / 当天跳过 / 含 .txt 逐文件）+ 每写节流（同窗 3 连写 ⇒ 扫描 ≤1 + 在飞合并）+ 缩比存量整删幂等（T-SL3.3 语义保真 = 既有 trace-store.test.mjs D-TR10 用例零改动保绿）
+  "test/session-gc-command.test.mjs", // T-VSC-SG1/SG2：`thincoder.sessionGc` 处理体（空候选/确认/驳回零删除 + 模态门 + 删除期变活拒绝行 + 汇总跳过计数）+ 命令注册/直调点机检（不消费 runSessionGc）
 
 ]

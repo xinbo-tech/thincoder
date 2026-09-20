@@ -1099,7 +1099,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | 15 | `agent/child-marks.mjs` | **24** | 显示面消差批 X6 下沉产物（`TURN_CAP_MARK` / `STOPPED_MARK` 唯一定义——先例 `agent/relay-prefix.mjs`；`agent/spawn-child.mjs:33` 原样再导出保 import 面；`wc -l` 实读 2026-09-20） | —（软线内——≤300 免登记） |
 
 **覆盖口径**：本表 = S1 落地新增 / 拆分产物档（**15 档** = §2.8 表「核包（S1 新建）」行的逐档展开 + **S1 续轮两档**——#184 / #185 + **S1 续轮第四批两档**——#123 / #126 + **init-block 批一档**——`session-slots-manifest.mjs`（拆分产物；同批 `session-lifecycle.mjs` **>300** ⇒ 归下子表行 11）＋ **显示面消差批一档**——`agent/child-marks.mjs`（X6 常量下沉产物））。
-`SOFT_LINE_REGISTRY`（`thincoder-core/test/core-hygiene.test.mjs`）在册 **35 档**：拆分计划已登 **14 档**（`config.mjs` + 收正轮 3 补 4 档 + 收尾轮补 4 档 + **U0 修轮补 1 档** + **init-block 批补 2 档** + **渠道接入批补 2 档**〔test 面首次入册——子表行 12 / 13〕——后 **13** 档见下子表）；**其余 21 档待补**（记档——补登范围与时点另定；其中 **≥437 八档**已列次优先）。
+`SOFT_LINE_REGISTRY`（`thincoder-core/test/core-hygiene.test.mjs`）在册 **34 档**：拆分计划已登 **14 档**（`config.mjs` + 收正轮 3 补 4 档 + 收尾轮补 4 档 + **U0 修轮补 1 档** + **init-block 批补 2 档** + **渠道接入批补 2 档**〔test 面首次入册——子表行 12 / 13〕——后 **13** 档见下子表）；**其余 20 档待补**（记档——补登范围与时点另定；其中 **≥437 八档**已列次优先）。
 其中距 500 硬限最近五档（**500 / 498 / 495 / 489 / 483**——`session.mjs` · `session-slots.mjs` · `provider/responses.mjs` · `agent/dispatch.mjs` · `agent-tools/subagent-actions.mjs`；计划均已补，见下子表）：前两档读数 2026-09-18——已随 init-block 批拆分兑现（`wc -l` 实读 **244** / **298**；行 2 / 行 3）；余三档读数 2026-09-14（行 1 / 行 4 / 行 5）。
 次优先面 = 其余 **≥437** 八档（见下；`thincoder-core/tools/shared.mjs` 已补登计划、移出该列表）。
 
@@ -1936,5 +1936,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 - 2026-09-20（**库存清账批 · 设计评审修正轮（id=43）· eng-designer**——承 `docs/batches/2026-09-20-residual-sweep-batch.md` §3 发现 5）：
   §2.6.2（七）复跑命令行 · §4.5 K1 行**三死脚本名改指**（`doc-anchors.mjs` → `scripts/doc-check.mjs`；`check-doc-width.mjs` → `scripts/doc-check-width.mjs`）；
   `check-ledger.mjs` **无承接 ⇒ 改述**——台账一致性归核内 SQLite `thincoder-core/ledger.mjs`，不换名；映射单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.8。**零新语义**。
+
+- 2026-09-21（**STARTUP-LATENCY 批 · 收口前残留收正** · eng-designer——承 `docs/batches/2026-09-21-startup-latency.md` §5 实施读数 + 父侧裁定）：§2.8.1 计数收正（**在册 35→34 · 待补 21→20**——`traces/trace-store.mjs` 外提后 **303→299** ⇒ 移出 `SOFT_LINE_REGISTRY`；登记面 = `thincoder-core/test/core-hygiene.test.mjs:45-47`）；**零新语义**。
 
 

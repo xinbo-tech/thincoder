@@ -83,8 +83,8 @@ export function cachedSlot(cwd) {
 }
 
 /** 恢复决策包装（SESSION.md §6.12 启动钩子，2026-09-06）：面板恢复入口触发一次残留 GC——
- *  scheduleSessionGC 内部 setImmediate 空闲执行 + 每进程每前缀去重，不阻塞激活路径（N4）。
- *  F-MI7：转 async（核同名件同形）+ 解析结果写穿缓存（冷路径直读源）。 */
+ *  scheduleSessionGC 内部**启动窗外延迟拍**（核 `GC_PASS_DELAY_MS` = 3s）+ 每进程每前缀去重，
+ *  **异步非阻塞**激活路径（N4；核 §6.17 D-SE39）；F-MI7：转 async + 解析结果写穿缓存。 */
 export async function resumeSlot(cwd) {
   scheduleSessionGC(cwd)
   const r = await slotsResumeSlot(cwd)

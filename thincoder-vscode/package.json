@@ -72,6 +72,10 @@
       {
         "command": "thincoder.askSelection",
         "title": "Ask ThinCoder"
+      },
+      {
+        "command": "thincoder.sessionGc",
+        "title": "ThinCoder: Recycle Cold Session Data"
       }
     ],
     "menus": {

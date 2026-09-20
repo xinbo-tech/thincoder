@@ -17,7 +17,8 @@ import { readFileSync } from "node:fs"
 import { isAbsolute, join } from "node:path"
 import { runAgent } from "@thincoder/core/agent.mjs"
 import { loadConfig, configPath } from "@thincoder/core/config.mjs"
-import { cleanupTraces } from "@thincoder/core/traces/trace-store.mjs"
+import { tracesRoot } from "@thincoder/core/traces/trace-store.mjs"
+import { scheduleTraceCleanup } from "@thincoder/core/traces/trace-cleanup.mjs"
 import { createMemory, syncDir } from "@thincoder/core/memory.mjs"
 // 批 1 CORE-DEFECT-FIXES B3：onWait 相位值域 + 文案单源（消费面禁各自枚举——PROVIDER.md §6.20）
 import { waitStatusText } from "@thincoder/core/provider/wait-status.mjs"
@@ -32,9 +33,8 @@ import { spawnTuiWrapped } from "../src/tui/wrapped-spawn.mjs"
 import { configurePromptInjections } from "@thincoder/core/prompt-files.mjs"
 import { CLI_PROMPT_INJECTIONS } from "../src/prompt-injections.mjs"
 
-// U2（CORE-UNIFICATION §2.6.3 专项补⑦ / §2.13.8（六））：CLI 端锚取值表——**进程入口、
-// 任何装配之前**注册一次（调用期应用 ⇒ 无导入序要求）。漏配 = 锚字面静默进模型
-// ⇒ 入口面用例（test/integration/cli-prompt-entry.test.mjs）显式覆盖本调用路径。
+// U2（CORE-UNIFICATION §2.6.3 专项补⑦ / §2.13.8（六））：CLI 端锚取值表——**进程入口、任何装配之前**注册一次（调用期应用 ⇒ 无导入序要求）。
+// 漏配 = 锚字面静默进模型 ⇒ 入口面用例（test/integration/cli-prompt-entry.test.mjs）显式覆盖本调用路径。
 configurePromptInjections(CLI_PROMPT_INJECTIONS)
 
 const [command, ...args] = process.argv.slice(2)
@@ -116,7 +116,8 @@ Usage:
                             Extract knowledge candidates from a session
                             transcript file; confirm each before saving
   thincoder session gc --dry-run | --confirm <hash|--all>
-                            Session dir GC: report/delete cold project data (cold = manifest idle >90d, no live slots)
+                            Session dir GC: report/recycle cold & stale project data into a 7-day recycle bin
+                            (cold = manifest idle >90d; stale = no live owner + unreachable/empty cwd + 7-day window)
   thincoder upgrade         Update to the latest version from npm
   thincoder completion <sh>  Generate shell completion script (bash / zsh / fish)
   thincoder -v, --version   Print version
@@ -134,12 +135,18 @@ function exitSoon(code) {
   setTimeout(() => process.exit(code), 100)
 }
 
-// D-TR9（2026-09-05）：启动轨迹清理——删除超过 traces.retentionHours（默认 24h）的
-// 轨迹文件（fire-and-forget——不阻塞启动——失败静默——与轨迹写盘同纪律）。
-try {
-  const startupCfg = loadConfig()
-  cleanupTraces({ retentionHours: startupCfg.traces?.retentionHours ?? 24 }).catch(() => {})
-} catch { /* 配置缺失/损坏 → 跳过清理（零风险） */ }
+// D-TR9（2026-09-05）：启动轨迹清理——删除超过 traces.retentionHours（默认 24h）的轨迹文件
+// （fire-and-forget——不阻塞启动——失败静默——与轨迹写盘同纪律）。
+// D-TR13（2026-09-21 · STARTUP-LATENCY 批 · TRACES.md §6.4）：触发面 = **会话型命令白名单**
+// （`tui` 含无参默认路径 `command === undefined` / `chat` / `acp`）；白名单外命令（`--version` /
+// `--help` / `completion` / `memory` / `sync` / `reindex` / `distill` / `upgrade` / `session`）
+// 零启动清理。**启动清理 = 启动窗外延迟拍**——核侧 `scheduleTraceCleanup`（`TRACE_CLEANUP_DELAY_MS` = 3s，自调度点起；失败静默 / 不 unref 保后台排空）。
+if (command === undefined || command === "tui" || command === "chat" || command === "acp") {
+  try {
+    const startupCfg = loadConfig()
+    scheduleTraceCleanup({ dir: tracesRoot(), retentionHours: startupCfg.traces?.retentionHours ?? 24 })
+  } catch { /* 配置缺失/损坏 → 跳过清理（零风险） */ }
+}
 
 switch (command) {
   case "chat": {
@@ -414,7 +421,8 @@ switch (command) {
   }
 
   case "session": {
-    // SESSION.md §6.12：会话目录 GC 手动面（F2 冷 cwd 报告/删除——VS Code 端无 shell 通道，仅 CLI）
+    // SESSION.md §6.12 / §6.17：会话目录 GC 显式面（冷 cwd 90 天面 + 三合取存量组全量面）——
+    // 双端同面（2026-09-21 端差注销：VS Code 端命令 `thincoder.sessionGc` 走同一核数据面）。
     const { runSessionGc } = await import("@thincoder/core/session-gc.mjs")
     process.exitCode = await runSessionGc(args)
     break

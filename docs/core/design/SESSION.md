@@ -32,7 +32,7 @@
 |---|---|---|---|---|---|---|
 | 123 | `thincoder-core/session.mjs` ↔ `src/extension/session-io.mjs` | ② | 融合：数据层取一侧 + VSC 的 `history-window` 拆面按核内结构归位 | 分叉 ＝ 目录归属（VSC 住 `extension/`）；存储契约两端自述同格式（同一 `~/.thincoder/sessions/<hash>.json.{N,manifest}`——VSC 头注 `:2-8`）⇒ 前提成立 | — | S1（建核补齐） |
 | 124 | `src/session-slots.mjs` ↔ `thincoder-vscode/src/extension/session-slots.mjs` | ② | 融合：取一侧（slot / manifest / 认领 / 属主判定） | 分叉 ＝ 目录归属；头注互指「同构镜像」（CLI `src/session-slots.mjs:19` / VSC `:21`）⇒ 前提成立 | — | S1（建核补齐） （迁移期引文） |
-| 125 | `thincoder-core/session-gc.mjs` ↔ `thincoder-vscode/src/extension/session-gc.mjs` | ② | 融合：取一侧；**冷 cwd 手动执行面**（`session gc` 子命令）仅 CLI ⇒ 端差段 | 分叉 ＝ 目录归属 + VSC 无 shell 通道（VSC 头注 `:3-5` 自述）；保留期 / 阈值两端同值 ⇒ 前提成立 | — | S1（建核补齐） |
+| 125 | `thincoder-core/session-gc.mjs` ↔ `thincoder-vscode/src/extension/session-gc.mjs` | ② | 融合：取一侧；冷 cwd 手动面 = **双端同面**（2026-09-21 端差注销——VSC 补命令入口走数据面 API；判据 / 执行面单源见 §6.17） | 分叉 ＝ 目录归属（端壳档纯转口重导出核五名）；保留期 / 阈值两端同值 ⇒ 前提成立 | — | S1（建核补齐） |
 | 126 | `src/session-store.mjs` ↔ `thincoder-vscode/src/extension/session-slot-write.mjs` | ② | 融合：核内单一记录存储 + 槽写入面归位 | 分叉 ＝ 切分与目录归属（VSC 记录存储内联于槽写面）；槽写语义两端同 ⇒ 前提成立 | — | S1（建核补齐） |
 | 127 | `src/session-segments.mjs` · `session-guard.mjs` · `session-rename.mjs` · `session-migrate.mjs` ↔ 核内（VSC 侧内联于 `session-io` / `session-slots`） | ② | 融合：按核内结构归位（段 / 归属守卫 / 改名 / 旧短哈希迁移四面各保留） | 分叉 ＝ 拆档粒度（VSC 未拆）；能力面逐条对位（VSC `session-io.mjs:92-113` 迁移遍 / `:399` 改名枚举同构）⇒ 前提成立 | — | S1（建核补齐） |
 
@@ -56,6 +56,7 @@
 
 指针（不复制）→ `CORE-UNIFICATION.md` §2.8 下列行：**产品运行期（S2 改）** · **产品测试（S1 / S2 改）**。
 **本批（SESSION-CLAIM · 2026-09-21）落点表** = `docs/batches/2026-09-21-session-claim-release.md` §2（唯一承载面——一次性批次材料）；本档 §6.16 承载判据句 / 边界情形 / 验收回指。
+**本批（STARTUP-LATENCY · 2026-09-21）落点表** = `docs/batches/2026-09-21-startup-latency.md` §2（唯一承载面——一次性批次材料）；本档 §6.17 承载判据句 / 边界情形 / 端差注销 / 验收回指。
 
 ## 6. 机制面（自 CLI 产品档并入 · 2026-09-14 · B 轮）
 
@@ -94,7 +95,8 @@
   **探测形态（2026-09-18 · F-MI7）**：判活 = **入口一次探测束**（`probeOwnersAsync` / `probeOwnersSync`）+ `ownerState` 查表——本模块 `cleanDeadOwners` / `usableSlot` / `allocateFresh` / `ensureActive` **零自有 exec**；认领链 `resumeSlot` 为 **async**；探测失败 / 缺行 ⇒ **未知 ⇒ 保守保留**（D-MI10 同向）。
 - **`isProcessAlive(pid)`**：Windows `tasklist /FO CSV`（PID 列精确比对） / Unix `kill(pid, 0)`；**实现住 `process-probe.mjs`**（本模块 re-export 保 import 面零变）；同步有界 2 s，**返回 `true | false | undefined` 三态**（`undefined` = 未知——超时 / 探测失败；未知不作「死」判据，与 D-MI10 同向）。
   **认领 / 占用 / 清理 / 新会话死主四路不经它**：改经批量束 + `ownerState` 三态判据；**「假 ⇒ 判死」形态的调用点一律改经 `ownerState`**（未知 ⇒ 保守保留）——不得布尔化消费三态结果。
-  **消费面全枚举（本批改经束）**：核内 `session.mjs`（`:385` / `:400` / `:497`——含 `slotOccupancy`）· `session-slots.mjs`（`:213` / `:248` / `:275` / `:301` / `:436`）· `session-gc.mjs`（`:25` / `:70` / `:116` / `:151` / `:179`——**未知 ⇒ 不判冷 / 保留**）⇒ 全部改经束 + `ownerState`（零判定消费残留）；
+  **消费面全枚举（本批改经束）**：核内 `session.mjs`（`:385` / `:400` / `:497`——含 `slotOccupancy`）· `session-slots.mjs`（`:213` / `:248` / `:275` / `:301` / `:436`）
+  · `session-gc.mjs`（`liveSlots` / `deleteColdCwd`）+ `session-stale.mjs`（`listStaleCwds`——存量面同判）（**符号锚 · as-of 2026-09-21**；未知 ⇒ 不判冷 / 保留）⇒ 全部改经束 + `ownerState`（零判定消费残留）；
   端侧 `thincoder-vscode/src/extension/session-io.mjs:91` / `:100`（+ 镜像档）= 随 F-MI6 引核收正（判定收归核束；端侧薄壳只留 END / 命名空间面）。
 - **slot 粘性**：`saveSession` 首次认领后缓存 `agent._slot`，**永不重跑** ensureActive（原实现每次保存重推——manifest active 被并发方翻动时会话静默迁移 → 双副本 / 覆盖他人）；`applySession` 清空缓存；ACP 加载路径显式钉回目标槽。
 - **ACP 同进程多会话**：`session/new` 立即钉独立槽；load/resume 钉槽前查 `sameProcessPinned`（同槽占用 → 显式 fork 新槽）；**绝不 `_slot = null` 等下次保存**（会落回同进程 active 槽即他人槽）；`session/delete` 删非 active 槽时立即重钉。
@@ -206,11 +208,12 @@ TUI 路径在 `startTUI` 前置 `agent.provider = null`。
 ### 6.12 会话目录残留 GC 与标题写契约
 
 - **残留分类与保留期**：`.corrupted` / `.unreadable` / `.manifest.corrupted` / `.bak-*` = 30 天；孤儿 `.tmp`（无对应主文件）= 7 天。
-- **自动残留 GC**：触发 = 进程启动完成后的空闲期（`setImmediate`——不阻塞启动）+ 可选手动命令；范围 = sessionsDir 下**当前 cwd 的 hash 前缀**文件（不跨 cwd 扫描）；**排除** = 活跃槽对应文件的任何现场后缀、manifest 主文件、end marker 主文件（保守）；保留期边界语义 = `mtime < now − retention` 即删（older-than，恰好等于保留期者保留）。
-- **冷 cwd 清理**（手动命令——CLI 统一提供；VSC 无 shell 通道，只实现自动残留 GC）：判定 = 该 cwd hash 下**无任何活跃数据文件**（主文件不存在或全部属死主）**且** manifest mtime 距今 > **90 天**；`session gc --dry-run` 枚举 sessionsDir 全目录（跨 cwd）报告不删；`session gc --confirm <hash>`（或 `--all`）
-显式删除该 cwd hash 前缀**全部文件**（manifest + end marker + 死主槽数据文件 + 裸 v1 `{hash}.json` + 残留）——含数据文件是为避免制造**孤儿数据**；删除前警告 + **重校验冷态**（TOCTOU 防护，期间变活跃则拒绝）。
+- **自动残留 GC**：触发 = 进程启动**窗外**的一次性延迟拍（核侧 `setTimeout`——**全链异步、零同步扫描**，2026-09-21 §6.17 / D-SE39）+ 可选手动命令；范围 = sessionsDir 下**当前 cwd 的 hash 前缀**文件（不跨 cwd 扫描）；**排除** = 活跃槽对应文件的任何现场后缀、manifest 主文件、end marker 主文件（保守）；保留期边界语义 = `mtime < now − retention` 即删（older-than，恰好等于保留期者保留）。
+- **冷 cwd / 存量组清理**（**执行面双档**——90 天冷 cwd 面（cwd 存活组唯一出口）= **显式命令面**；三合取存量组 = **自动面（有界）+ 显式面（全量）**——**双端同面**，2026-09-21 端差注销见 §6.17）：
+  判定 = 该 cwd hash 下**无任何活跃数据文件**（主文件不存在或全部属死主）**且** manifest mtime 距今 > **90 天**；**2026-09-21 判据扩**（cwd 不可达 / 零内容组 + 7 天安全窗——唯一公式与边界见 §6.17）；`session gc --dry-run` 枚举 sessionsDir 全目录（跨 cwd）报告不删；`session gc --confirm <hash>`（或 `--all`）
+显式清理该 cwd hash 前缀**全部文件**（manifest + end marker + 死主槽数据文件 + 裸 v1 `{hash}.json` + 残留）——含数据文件是为避免制造**孤儿数据**；删除前警告 + **重校验**（TOCTOU 防护，期间变活跃则拒绝）；**2026-09-21 起经回收目录（可回退）**——§6.17。
 - **标题写契约**：`renameSlot` / `setSlotTitle` 返回 `{ ok: true }` | `{ ok: false, reason: "file-missing" | "parse-failure" | "mtime-conflict" | "invalid-slot" }`——reason 与内部判定一一对应、**不含用户文本**（渲染由调用方决定）；双端同契约，调用方同步适配。
-- **模块与实现约束**：GC 逻辑入**独立模块** `thincoder-core/session-gc.mjs`（不塞 `session-slots.mjs`——500 行硬限）；`renameSlot` 自 session-slots 拆入 `thincoder-core/session-rename.mjs`；残留 GC 与冷 cwd 共用文件集合判断。
+- **模块与实现约束**：GC 逻辑入**独立模块** `thincoder-core/session-gc.mjs`（不塞 `session-slots.mjs`——500 行硬限）；`renameSlot` 自 session-slots 拆入 `thincoder-core/session-rename.mjs`；残留 GC 与冷 cwd 共用文件集合判断；**存量清立面（2026-09-21）** = 分组 / 判据 / 回收入 `thincoder-core/session-stale.mjs`（§6.17）。
 
 ### 6.13 跨会话历史检索与检索族消歧
 
@@ -342,7 +345,7 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 
 - 释放谓词（**唯一公式**）：释放 A ⟺ `slotSessions[A]` 为本进程 ∧ `A ∉ 保留集`；**保留集 = 本次落点槽 ∪ 本进程其余活绑定槽**（同 cwd manifest 内）。各落点 = 公式代入（单绑定端 ⇒ {落点槽}；目标被占 ⇒ 空）。
 - 释放时机 = **绑定迁移落点**（不是定时 / 后台清扫）：CLI `/new`（`thincoder-cli/src/tui/cmd-new.mjs:11` 调用面）· CLI `/session N`（`thincoder-cli/src/tui/cmd-session.mjs:105` 调用面）·
-  启动恢复（`thincoder-cli/bin/thincoder.mjs:335` 钉槽落点，经 `resumeSlot` → `claimSlot`）· VSC 端壳 `newSlot` / `switchToSlot` / `resumeSlot` 包装（`thincoder-vscode/src/extension/session-io.mjs`）。
+  启动恢复（`thincoder-cli/bin/thincoder.mjs:342` 钉槽落点，经 `resumeSlot` → `claimSlot`）· VSC 端壳 `newSlot` / `switchToSlot` / `resumeSlot` 包装（`thincoder-vscode/src/extension/session-io.mjs`）。
 - **落盘判据（D-SE4 同型）**：① 释放集按**写盘同一次 fresh 快照**计算 / 校验（不得以陈旧内存 manifest 直接构 `deletions`）；② 条目删除 = **值条件删除**（仅当该槽 fresh 属主仍为本进程 sessionId——防窗口内他人新认领被误删）；③ 写盘同时从**内存认领表** `m.slotSessions` 移除该条目（防后续保存经条目级合并复活回写）。
 - 落盘载体 = 各落点**既有那一次** `saveManifest` 的 `deletions.slotSessions`（零新增写盘次数）。
 - **活绑定集口径（per end）**：CLI TUI = 本进程唯一 agent 的 `agent._slot`；ACP = 各在存会话 `agent._slot`（多会话多认领属其设计——**本批不入释放面**，F-CR3 零回归）；VSC 见下条。
@@ -376,7 +379,73 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 **不做（边界）**：跨 cwd 释放（绑定迁项目时旧 cwd 认领保留至进程退出——另案登记）· ACP 会话关闭面释放（多会话进程属其设计面——另存待办）· 提示文案（#161①——用户 2026-09-21 01:46 裁「不改」）· 槽文件格式 / `version` / 端标记语义 / 共享 active 语义（D-SE1 / D-SE9 不动）· 不新增机械门。
 
 
-## 7. 关键决策记录（D-SE1–D-SE33）
+### 6.17 启动等待：会话 GC 热路径 + sessions 存量治理（2026-09-21 · STARTUP-LATENCY 批）
+
+> 需求 = `docs/core/requirements/SESSION.md` §2.4（F-SL1 / F-SL2；2026-09-21 03:36 用户裁定「端差应消除、两端共用同一套机制」）；批档 = `docs/batches/2026-09-21-startup-latency.md`。
+> 本节承载本批判据句 / 边界情形 / 端差注销 / 验收回指；落点表与用例表 = 批档 §2（一次性材料——本节不复制）。
+
+**问题形态（实测钉定 · 2026-09-21）**：`resumeSlot`（`thincoder-core/session-lifecycle.mjs:38`）→ `scheduleSessionGC(cwd)`（同档 `:39`）→ `gcResidue` 的同步 `readdirSync`（`thincoder-core/session-gc.mjs:86`）——存量 20,227 项时单次 ≈10s，落在启动 await 链内 ⇒ 启动 9.6–16s 的 ~95%（空 HOME 对照 495ms）。
+双端同源：CLI = `thincoder-cli/bin/thincoder.mjs:322`；VSC 端壳 = `thincoder-vscode/src/extension/session-io.mjs:89`（经纯转口 `thincoder-vscode/src/extension/session-gc.mjs:15`）⇒ F-SL1 修核面即双端同判，读数面同判据。
+
+**F-SL1 判据句（热路径零同步阻塞）**
+
+- **D-SE34（全链异步化；触发形态 = 启动窗外延迟拍，见 D-SE39）**：清立面两档（`thincoder-core/session-gc.mjs` 与 `thincoder-core/session-stale.mjs`）内**零同步扫描**——`readdirSync` / `statSync` / `readFileSync` / `unlinkSync` / `rmSync` 禁用（目录与逐文件面一律 `node:fs/promises`）。
+  同步 fs 仅保留 `existsSync` 单条目探测；**既有单条目同步面保留**（`loadManifest` 单文件读 + `migrateHashLength` ≤15 次 `existsSync`——不随存量线性劣化，归「bounded 单文件」面）。
+  判据句 = 启动路径同步 fs 阻塞样本 ≤50ms——**机检路由三档**：① 结构扫描（两档零同步动词）② 行为代理（事件循环未被同步扫描吞噬）③ **收口真机读数**（CPU profile 同步自时 / ≤50ms 样本——归收口面）；用例详情 = 批档 §2 用例表。
+- **编排**：`scheduleSessionGC(cwd)` 保持「每进程每前缀一次 + 不阻塞调用面」；pass = ① 一次**异步目录快照**（readdir 恰一次）② 残留面（当前前缀——`gcResidue` 既有判据）③ 存量面（有界 `STALE_SWEEP_LIMIT` 组/次）。
+  触发时点 = **启动窗外延迟拍**（核侧 `setTimeout`——`GC_PASS_DELAY_MS` = 3s，自调度点起；核无需感知「启动完成」——无帧概念保持）；**不做帧耦合**（核无帧概念、VSC 无帧事件——异步化已满足判据；否决理由见 §7 D-SE34 / D-SE39）。
+  **触发与启动解耦判据句（D-SE39）**：启动链（`resumeSlot` → 装配 → TTY 门）不因 pass 竞争超 2s——读数 = 无参启动至拒印时刻（非 TTY 环境代理「TTY 门」）≤2s × 复测 ≥2 次；结构性保证 = pass 起点 ≥ 调度点 + 3s（落于启动窗之外）。**测试缝** = `_setSessionGcDelayForTest(ms)`（`_setSessionsDirForTest` 同款——用例可置 0 立即点火；默认值 = 3s 可断言）。
+
+**F-SL2 判据句（可清组——唯一公式）**
+
+- **组** = sessions 根下同一 40 位 cwd 哈希前缀的全文件集合（前缀族 = `thincoder-core/session-slots.mjs:81` `sessionPath` 所得 `{hash}.json` + 各后缀）。
+- **可清组 ⟺ 三合取（D-SE35）**：
+  ① **无活属主**——manifest `slotSessions` 全量经**入口一次探测束** + `ownerState` 三态：**活 / 未知（探测失败 / 缺行）⇒ 保留**；无 manifest ⇒ 无认领面 ⇒ 该条自动满足。
+  ② **内容面不可达或无内容**（二择一）：**T1** = 组内可读数据文件的 `cwd` 字段**全部不存在于磁盘**（至少读到一份；一份都读不到 ⇒ T1 不成立 ⇒ 保留）；**T2** = 组内无任何数据文件（无 `.json.N`、无裸 `{hash}.json`——只剩清单 / 端标记 / 残留）。
+  ③ **安全窗**——组内**最新 mtime** < now − 7 天（`STALE_SAFETY_WINDOW_MS`；与孤儿 `.tmp` 保留期同值同族——异常现场窗口）。
+- **理由链**：cwd 不可达 ⇒ 内容在恢复 / 检索发现 / 列表呈现三条产品路径均不可达；T2 ⇒ 内容面为零；安全窗兜住「临时不可达」（网络盘 / 外接盘）与竞态；属主三态守住活数据。**90 天冷判据保留**（`COLD_CWD_RETENTION_MS` 不变——cwd 存活组唯一出口）。
+- **端无关**（F-SL2 口径扩）：判据与执行面不引用端——双端共享 sessions 根，任一端可清另一端弃用 cwd。
+- **实测分布（as-of 2026-09-21 · 设计轮实读）**：9,358 组 ⇒ 一次性清理预期 **≈7,384 组**（T1 = 5,869 · T2 = 1,515）；余 = 0–7 天窗口 1,970 组 + cwd 存活 4 组；抽样 262/262 组 cwd 均不存在且全为临时目录（`%TEMP%` 下测试遗留）。
+
+**执行面（D-SE37）**
+
+- **自动面（判据集合 = 三合取组）**：绑 `scheduleSessionGC` 的启动窗外延迟拍（`GC_PASS_DELAY_MS` = 3s；每进程一次）——**仅三合取组（D-SE35）**；**90 天冷 cwd 判据面（cwd 存活组唯一出口）不入自动面**，保持显式命令面——cwd 存活 = 内容可达，自动回收在回收期后不可逆（与核档头注「手动——v1 不自动删 manifest」同向，`thincoder-core/session-gc.mjs:10-11`）。全链异步、失败静默 + 回收清运（超期回收批）。
+- **有界语义（D-SE37 / D-SE40）**：`STALE_SWEEP_LIMIT`（500）= **每 pass 总评估组数上限**（**不是删除数**；**含 ① 面 manifest 读**）；评估闸 = **过 ③ 进 ① 即耗 1**——该组的 ① manifest 读与（若过 ① 的）② 内容读均在此预算内；达上限即停（余量下一 pass 继续）；③ 短路组零预算（纯内存比较、零 IO——不占）。
+- **求值序 / 短路口径**：③ 组最新 mtime `< now − 7 天` → ① 无活属主（入口一次探测束 + `ownerState` 三态）→ ② 内容不可达 / 零内容；任一步不通过 ⇒ **保留并短路**（不进下一档）。**预算口径**：③ 短路组零预算（未读盘）；① / ② 短路组已耗 1（① manifest 读已发生——不退）。
+- **选取顺序 = 组最新 mtime 升序**（最旧优先；自最旧未处理组起评估，至过 ③ 组数达 `STALE_SWEEP_LIMIT` 或全集用尽）。
+  **前向推进论证（D-SE40）**：升序 + 过 ③ 即耗 ⇒ 每 pass 评估面 = 升序**最旧前缀**（≤500 组）——可清组回收后自目录消失（前缀面收缩、恒向未及面收敛）；活跃写入使组最新 mtime 上移（排序后移 / 偶发落出 ③ 窗）；③ 窗内组零预算（不阻塞）。
+  **恒保留组**（① 活 / 未知、② T1 成立 / 不可读）占前缀预算 ⇒ 自动面可在该相位滞留（边界行在册；兜底 = 显式全量面 limit = Infinity）。**否决**「上限仅落 ② 面」（① 面 manifest 读无界 ⇒ 单 pass 无界——见 D-SE40）·「③ 短路组计预算」·「本 pass 跳过集」（新机制面——登记边界 + 兜底即可）。
+- **单 pass 成本读数（登记 · 2026-09-21）**：目录快照 1 次 readdir（存量 9,358 组 / 20,227 项量级）+ 逐条目 stat 异步（≈20k 次——非阻塞）+ **① 面 manifest 读 ≤500 次**（预算内——进入 ① 面者各一次）+ 批量探测束 ≤1 + **② 内容读 ≤500 组**（组均 ≈2.2 文件 ⇒ ≤≈1.1k 次读）——**每 pass 总评估 ≈500 组（含 ① manifest 读）**；设计目标 = 零同步阻塞 + 单 pass 有界，真机耗时随收口登记。
+- **显式命令面**：`session gc --dry-run`（当前 cwd 残留 + 全部可清组候选——带 reason 与文件数）/ `--confirm <hash>`（单组）/ `--confirm --all`（全量）——**零新增旗标**（判据扩展使候选面自然扩大）；删除前重校验（TOCTOU）。
+- **落地顺序**：逐组「重校验 → 逐文件 rename 进回收批（残留 / 端标记 → manifest → 数据文件）」；单文件失败 / 回收根不可写 = 跳过并计数（部分移动态安全——不可达性保证任意中途状态无害；不 unlink 兜底 ⇒ 零误删）。
+- **两级窗口 + 回收目录（D-SE36）**：判据窗 7 天 + 回收保留 7 天 ⇒ **不可逆删除最早 = 最后写入 + 14 天**；回收根 = **由当次 sessions 根 `dir` 派生（同级）**——`sessions-trash/<批次时间戳>/`（sessions 根外——不参与扫描 / 不入发现面；`dir` 注入缝因此覆盖回收批，启动钩子路 `dir` 自 `sessionPath` 派生）；清运面带**注入 now 的缝**；恢复 = 移回原目录（命令输出提示）。
+
+**VSC 命令入口 + 端差注销（D-SE38 · 用户 2026-09-21 03:36 裁定）**
+
+- 命令 = `thincoder.sessionGc`（`thincoder-vscode/package.json` contributes.commands 注册 · 处理体挂 `thincoder-vscode/extension.mjs:128` 起同址簇）；流程 = `listColdCwds`（核数据面）→ 计数报告 → 模态警告确认 → 逐组 `deleteColdCwd`（内部重校验）→ 汇总；**不消费 `runSessionGc`**（console 形态属 CLI 壳——核内零消费方结构机检保持）。
+- **目录来源（D-SE38）**：处理体**显式传端侧派生的 sessions 根**（`thincoder-vscode/src/extension/session-slots.mjs:52` `sessionsDir()`——核 `sessionPath` 反推）——不依赖核函缺省 `dir`（缺省 = 核内 configDir 版）；备选「统一走核根访问器」否决（核未提供根访问器——新增核面属新机制，本轮不引入）；用例沙箱缝 = 处理体接受注入 `dir` + 装置显式传 temp 目录。
+- 端侧命令档 = `thincoder-vscode/src/extension/session-gc-command.mjs`；原「冷 cwd 手动执行面仅 CLI」端差**注销**——注销落地清单 = §6.12 冷 cwd 条 + 本节 + `thincoder-vscode/src/extension/session-gc.mjs` 档头注 + **需求侧 `docs/core/requirements/SESSION.md` §4.5 ④ 行**（「冷 cwd 手动 GC 无 shell 通道」——**父侧直改**，需求档笔域不在本代理；本轮只登记落点）。
+
+**边界情形（判据取值 = 公式代入）**
+
+| 情形 | 判据 |
+|---|---|
+| 属主活（他进程 / 本进程） | 保留（不候选）——F-SL2「不动活数据」 |
+| 属主探测未知（超时 / 失败 / 缺行） | 保留（未知不作死判据——D-MI10 同向） |
+| cwd 存在（哪怕久无写入） | T1 不成立 ⇒ 仅走 90 天冷判据 |
+| 数据文件不可读 / 无 `cwd` 字段 | T1 不成立 ⇒ 保留（fail-safe） |
+| 组内残留含非数据文件 | 随组处理（判据在组粒度；后缀保留期仅用于当前前缀的 `gcResidue`） |
+| 并发双进程同扫 | 删除幂等（rename 失败跳过 / 重校验拒绝）——无需锁 |
+| 删除中途失败（含单文件 rename 报错 / 回收根不可写） | 跳过并计数；部分移动态安全（组不可达）；**原文件零删除**（不 unlink 兜底）；下次 pass 重扫再判（幂等） |
+| 回收批超期 | 后续 pass 清运（7 天窗口）；清运失败（占用 / 权限）⇒ 静默跳过、不误删在期批、后续 pass 重试 |
+| 恒保留组（① 活 / 未知、② T1 成立 / 不可读）达 ≥500 组 | 该类组**计入 500 预算**（评估闸 = 过 ③ 进 ①）且恒保留 ⇒ **自动面滞留**（升序窗口被占用、更新的可清组暂不进入）；**兜底 = 显式命令面**（`session gc --confirm --all`——全量面 limit=Infinity） |
+
+**验收回指（需求 §2.4 四条 + `docs/cli/requirements/TUI.md` §3 N12）**：① 同步阻塞 ≤50ms = **机检路由三档**（结构扫描 + 行为代理 ≤1s + 收口真机读数——≤50ms 归收口面）；② 启动到 TTY 门 ≤2s / `--version` ≤0.5s = 真机读数（验收面）；③ 三端测试全绿；④ 存量回落且零误删 = 判据矩阵 + 一次性清理用例（dry-run 全列 / confirm 全移 / 幂等 / 可回退）。端差注销 + VSC 命令入口可机检（命令注册 + 直调点）——用例清单见批档 §2。
+
+**不做（边界）**：不改槽文件 / manifest / 端标记形态 · 不改 90 天冷判据与残留后缀保留期 · 不引入常驻进程 / 周期后台定时器（清理 = 启动窗外一次性延迟拍 + 显式命令）· 不动二次成本四项（单进程化 / 懒加载 / execSync 去重 / MCP 连接）· 不读 / 不改用户 config.json · 轨迹面策略裁决不动（见 `docs/core/design/TRACES.md` §6.4）。
+
+
+## 7. 关键决策记录（D-SE1–D-SE40）
 
 | # | 决策 | 理由 / 否决备选 |
 |---|---|---|
@@ -413,6 +482,13 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 | D-SE31 | 跨端 `m.active` 翻动 = **他端合法事件、本进程零效果**（绑定 / 缓存 / 记录不因外部翻指针迁移；释放时**不收养幸存 active**——§6.15 裁定条 P1–P5） | 收养绕开 `usableSlot` / `slotOccupancy` 守卫（可能接手另一活进程的槽 ⇒ 双端双写互覆盖）；且与 D-SE2 粘性同病灶——本端绑定只在四个本端落点维护 |
 | D-SE32 | 认领**随绑定走**（F-CR1）：绑定迁移落点释放本进程残留认领（保留集 = 落点槽 ∪ 其他活绑定；被占目标 ⇒ 保留集空）；释放集并入落点既有 `deletions` 写；`active` / `m.slots` / 槽文件零动 | 认领只增不减 ⇒ 进程活着期间访问过的槽在他端一律打不开且随会话累积；释放不损互覆保护（他端认领 ⇒ 本端再切入判占 + 保存 fork）。否决：保存面全局清扫（ACP 多会话误伤）· `activeSlot` 内释放（裸调用面会放掉真绑定） |
 | D-SE33 | 拒绝路径**判据前置**（F-CR2）：面板受占切换不进入 `switchToSlot`（共享指针 / 记录 / 缓存 / 认领四不动）；端壳函数内被占分支 = 零写 | 先写后判 ⇒ 被拒切换仍翻共享指针（实测 active 41→40）；回滚形态否决（回滚窗口内他端可读脏指针 + 二次写）。核侧受占 = 切换成立（保留 D-6 / D-4 落点语义——fork 面依赖指针翻至目标槽） |
+| D-SE34 | GC 热路径**全链异步化**（零同步扫描；触发形态 = 启动窗外延迟拍，见 D-SE39——不做帧耦合） | 判据 = 同步 fs 阻塞 ≤50ms，「重活异步化」支即满足；核无帧概念 / VSC 无帧事件 ⇒ 帧耦合推迟支否决；分片外壳不换收益 |
+| D-SE35 | 可清组判据 = **三合取**（无活属主 / cwd 不可达或零内容 / 7 天安全窗）；90 天冷判据保留 | 实测 9,358 组：mtime 判据覆盖 0 组（30 天窗仅 1 组）⇒ 必须以语义判据为主；cwd 不可达 = 内容三路径不可达；T2 收零内容组（实测 3,172 组）。否决「仅 cwd 不可达」（零内容组永留）·「仅 mtime」（覆盖零） |
+| D-SE36 | **两级窗口 + 回收目录**（判据 7 天 + 回收 7 天 ⇒ 不可逆 ≥14 天；同卷 rename 进 sessions 根同级的 `sessions-trash/`——由 `dir` 派生） | 一次性批量删除须可回退（父侧指令）；同卷 rename = 廉价原子；回收根随 `dir` 派生 ⇒ 注入缝覆盖回收批。否决直接 unlink（不可回退）·「复制备份再删」（双份磁盘 + 备份判据另立） |
+| D-SE37 | 执行面**双层**（自动面 = **仅三合取组**、有界 ≤500 组/次总评估（含 ① manifest 读——D-SE40）；显式面 = 全量（含 90 天冷 cwd 面）；`session gc` 三形态零新增旗标） | 自动面防回潮（新遗留随 7 天窗自然到期）、显式面做存量；**cwd 存活组（内容可达）不入自动面**——自动回收将致不可逆（对齐「v1 不自动删 manifest」纪律）；否决纯自动（每次启动做重活）· 纯手动（不跑就永不清理） |
+| D-SE38 | **端差注销**：冷 cwd 手动面双端同面（VSC 命令走数据面 API；不消费 `runSessionGc`） | 用户 2026-09-21 03:36 裁定「端差应消除、两端共用同一套机制」；核机制已在（五导出 + 端壳转口）⇒ 只补端侧入口；走数据面保核内零消费方结构机检 |
+| D-SE39 | GC 触发 = **启动窗外延迟拍**（核侧 `setTimeout`——`GC_PASS_DELAY_MS` = 3s，自调度点起；每进程每前缀一次；不 unref——保后台排空现状） | 真机复测：`setImmediate` 拍与启动链同循环 ⇒ pass 在跑时 `resumeSlot` 126ms → 1.9 / 1.9 / 3.8s、无参启动拒印 2.96 / 4.16s（验收 ≤2s ✗）；3s ⇒ pass 起点 ≥ 调度点 + 3s = 结构落于启动窗外（2s 档裕度 ≈0）；否决「调用面首帧后点火」（VSC / ACP 无统一帧事件、多调用面分散） |
+| D-SE40 | 自动面预算 = **每 pass 总评估组数 ≤ `STALE_SWEEP_LIMIT`**（过 ③ 进 ① 即耗——含 ① manifest 读；余量下一 pass 继续） | 真机复测：① 面原对全部过 ③ 组逐组读（≈6,887 组 ⇒ ≈6.9k 次/pass）⇒ 单 pass 拖至 ≈40s 量级（对照 `session gc --dry-run` 全面 41.6s / 6,887 候选）；否决「上限仅落 ② 面」（① 面无界）·「跳过集」（登记边界 + 显式面兜底） |
 
 ## 8. 不并项与历史沿革
 
@@ -482,3 +558,13 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 - 2026-09-21（**SESSION-CLAIM 批 · 设计评审轮 1 修正** · eng-designer——承 `docs/batches/2026-09-21-session-claim-release.md` §3 发现 #2–#7）：
   §6.2 认领释放条改**单一保留集公式**（落点槽 ∪ 其余活绑定槽；被占 ⇒ 空）+ 各落点取值 = 公式代入；§6.16 新增 **ACP 调用面实读表**（`newSession` 四点不传 `releaseStale`；`switchToSlot` / `claimSlot` 零调用点）；
   §6.16 补**落盘判据三条**（fresh 同次快照 / 值条件删除 / 内存认领表移除）· 活绑定集口径改「假定 + 复核条件」（VSC 单实例）· 落点表与测试面表移出（清单唯一承载面 = 批档 §2）——§5 指针同改 · 补回 **§7 节标题** · 验收回指「三不动」收正「四不动」。**零新语义**（均为评审发现直接导出项）。
+- 2026-09-21（**STARTUP-LATENCY 批 · eng-designer**——承 `docs/batches/2026-09-21-startup-latency.md` §1）：新增 **§6.17**（F-SL1 全链异步化判据 / F-SL2 可清组三合取判据 + 两级窗口与回收目录 + 双层执行面 + VSC 命令入口 / 边界情形表 / 验收回指）
+  ——同时 §6.12 冷 cwd 条与残留 GC 触发句收正（**端差注销** + 异步化指针）；§2.2 #125 行端差处置列同收正；§7 补 **D-SE34–D-SE38**；§5 补本批落点指针；来源 = 需求档 §2.4（F-SL1 / F-SL2，台账 #173）。
+- 2026-09-21（**STARTUP-LATENCY 批 · 设计评审轮 1 修正** · eng-designer——承 `docs/batches/2026-09-21-startup-latency.md` §3 发现 1–13）：
+  §6.17 执行面钉**自动面判据集合 = 三合取组**（90 天冷 cwd 面保持显式面）+ **有界语义 = 每 pass 内容判据评估 ≤500 组**（非删除数）+ 选取顺序（组最新 mtime 升序——前向推进论证）+ 求值序 / 短路（③→①→②）+ 单 pass 成本读数；
+  D-SE36 回收根改**由 `dir` 派生**（+ 清运 `now` 缝）· D-SE38 补端侧 sessions 根显式传 + 用例沙箱缝 + 需求侧注销落点 · §6.12 冷 cwd 条执行面标签收正（双档）· §6.17 验收机检路由改三档 + 边界情形表补错误路径行 · §7 D-SE36 / D-SE37 同步；**零新语义**（均为评审发现直接导出项）。
+- 2026-09-21（**STARTUP-LATENCY 批 · 设计评审轮 2 修正** · eng-designer——承 `docs/batches/2026-09-21-startup-latency.md` §3 轮次 2 残留 14 / 15）：
+  §6.17 边界情形表补 **② 面保留组计入 500 预算 ⇒ 自动面滞留（兜底 = 显式命令面）** 行 · 单 pass 成本读数补 **① 面 manifest 读**（≈7.4k 次/pass，异步）；**零新语义**（均为评审残留直接导出项）。
+- 2026-09-21（**STARTUP-LATENCY 批 · 收口前残留收正** · eng-designer——承 `docs/batches/2026-09-21-startup-latency.md` §5 实施读数 + 父侧裁定）：两处引 `thincoder-cli/bin/thincoder.mjs` 坐标按实施后实读收正（§6.16 钉槽落点 `:342` · §6.17 双端同源 CLI 锚 `:322`）；**零新语义**。
+- 2026-09-21（**STARTUP-LATENCY 批 · 收口前机制微修** · eng-designer——承 `docs/batches/2026-09-21-startup-latency.md` §2 修正轮 3 = 父侧 04:5x 真机复测）：
+  §6.12 / §6.17 GC 触发改**启动窗外延迟拍**（`GC_PASS_DELAY_MS` = 3s；启动解耦判据句在档）+ 自动面预算改**过 ③ 进 ① 即耗**（含 ① manifest 读，总评估 ≤500/pass；有界语义 / 前向推进论证 / 成本读数 / 边界行同步）；§7 补 **D-SE39 / D-SE40**；来源 = 验收② 实测 2.9–4.2s（对照 ≤2s ✗）根因两处。

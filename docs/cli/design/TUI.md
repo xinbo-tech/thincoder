@@ -21,7 +21,7 @@
 | 文件 | 职责 |
 |---|---|
 | `thincoder-cli/src/tui/index.mjs` | `startTUI` 入口：raw mode、keyStream + readline、分块解码、粘贴协议、Shift+Enter 翻译、resize、state 对象、`pushLine` / `pushLabel`、提交门禁、行缓冲裁剪；装配归位（`createMouseDispatch` / `createLoadOlder` / update-notice re-export）；`state._agent` ↔ `agent._tuiState` 双向挂载 |
-| `thincoder-cli/src/tui/tui-lifecycle.mjs` | TUI 生命周期终端序列：`writeStartupSequence`（alt buffer + 光标 + 鼠标 / 粘贴 / 键盘增强 + **DECRST 7 禁环绕**）、`writeCleanupSequence`、`RECOVERY_SEQUENCE`（异常退出恢复序列单源——见 `docs/cli/design/CRASH-REPORTS.md` §5）、`createExitCleanup`、`setTuiActive` |
+| `thincoder-cli/src/tui/tui-lifecycle.mjs` | TUI 生命周期终端序列：`writeStartupSequence`（alt buffer + 光标 + 鼠标 / 粘贴 / 键盘增强 + **DECRST 7 禁环绕**）、`writeLoadingLine`（启动加载行——首帧渲染自然覆盖）、`writeCleanupSequence`、`RECOVERY_SEQUENCE`（异常退出恢复序列单源——见 `docs/cli/design/CRASH-REPORTS.md` §5）、`createExitCleanup`、`setTuiActive` |
 | `thincoder-cli/src/tui/update-notice.mjs` | 后台升级提示（`upgradeFailureText` / `pendingNoticeReady` 纯函数 + `createUpdateNotice` 装配） |
 | `thincoder-cli/src/tui/key-handler.mjs` | 按键分发：模态入口（permission / question / search / picker / wizard / interruptPrompt）+ 输入编辑；**busy 门禁**；挂起空闲 Enter → pendingInput；Ctrl+C 分支；`convMaxScroll` 导出 |
 | `thincoder-cli/src/tui/key-handler-search.mjs` | 搜索模式按键子处理（Ctrl+F 分支） |
@@ -52,6 +52,15 @@
 | `thincoder-cli/src/tui/ansi.mjs` | ANSI 色板 / 控制序列；键盘增强协议启停；`wrapOff` / `wrapOn`；attention 色对常量 |
 | `thincoder-cli/src/tui/config-helpers.mjs` | `persistRaw`（写配置收口——mtime 门控 + 并发冲突 throw）/ `syncProviderField` / `maskKey` |
 | `thincoder-cli/src/tui/display-budget.mjs` | 显示层字符额度常量与对账（单源）——机制面见 `docs/cli/design/TUI-SESSION-VIEW.md` §5 |
+
+### 启动序（首帧前——2026-09-21 登记）
+
+> 读数锚 = 需求档 `docs/cli/requirements/TUI.md` §3 **N12**（启动等待不随存量劣化）；机制单源 = `docs/core/design/SESSION.md` §6.17（会话 GC）· `docs/core/design/TRACES.md` §6.4（轨迹清理）。
+
+- **序**：wrapped 父 spawn 子（`thincoder-cli/src/tui/wrapped-spawn.mjs:27`——父段先写 loading 行）→ 子进程 import → `resumeSlot`（`thincoder-cli/bin/thincoder.mjs:322`）→ 装配（同档 `:323`）
+  → `writeStartupSequence`（alt buffer 接管；`thincoder-cli/src/tui/index.mjs:162`）+ `writeLoadingLine`（同档 `:168`）→ 首帧 render（全屏重绘自然覆盖 loading 行）。
+- **纪律**：启动关键路径零同步 fs 阻塞（判据 ≤50ms）——会话 GC 与轨迹清理均为**异步非阻塞**面，且不在纯信息命令启动时执行（触发闸见 `docs/core/design/SESSION.md` §6.17 / `docs/core/design/TRACES.md` §6.4）。
+- **读数（2026-09-21 基线）**：启动到 TTY 门 9.6–16s（sessions 20,227 项 + 轨迹 15,610 个）⇒ 目标 ≤2s；空 HOME 对照 0.495s。
 
 **不在本档的三面**（各挂指针，D2）：命令层与选择面 → `docs/cli/design/TUI-COMMANDS.md` §1；
 会话恢复 / 回合驱动 / 显示层内存 → `docs/cli/design/TUI-SESSION-VIEW.md` §1；输入框键契约 → `docs/cli/design/TUI-INPUT-BOX.md`。
@@ -597,6 +606,14 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 | VSC webview 对位 | webview 渲染 / 消息协议 / 子标 | `docs/vsc/design/WEBVIEW*.md`——**非同机制**（端差异登记，不追赶） |
 
 ## 变更记录
+
+- 2026-09-21（**STARTUP-LATENCY 批 · 收口前机制微修** · eng-designer——承 `docs/batches/2026-09-21-startup-latency.md` §2 修正轮 3）：启动序纪律行术语收正（「异步 + 空闲拍」→「异步非阻塞」——GC 触发已改启动窗外延迟拍，机制单源 = `docs/core/design/SESSION.md` §6.17）；**零新语义**。
+
+- 2026-09-21（**STARTUP-LATENCY 批 · 收口前残留收正** · eng-designer——承 `docs/batches/2026-09-21-startup-latency.md` §5 实施读数 + 父侧裁定）：§1「启动序」坐标按实施后实读收正（`resumeSlot` / 装配 = `thincoder-cli/bin/thincoder.mjs` `:322` / `:323`）；**零新语义**。
+
+- 2026-09-21（**STARTUP-LATENCY 批 · 设计评审轮 1 修正** · eng-designer——承 `docs/batches/2026-09-21-startup-latency.md` §3 发现 10）：§1「启动序（首帧前）」**序行收正**——import → `resumeSlot` → 装配 → `writeStartupSequence` + `writeLoadingLine` → 首帧（`resumeSlot` 已前移至装配之前）；**零新语义**（评审发现直接导出项）。
+
+- 2026-09-21（**STARTUP-LATENCY 批 · eng-designer**——承 `docs/batches/2026-09-21-startup-latency.md` §1）：§1 新增 **「启动序（首帧前）」**（序 / 零同步阻塞纪律 / 读数基线——读数锚 = 需求档 §3 N12；机制单源 = `docs/core/design/SESSION.md` §6.17 · `docs/core/design/TRACES.md` §6.4）；`tui-lifecycle.mjs` 地图行补 `writeLoadingLine`。
 
 - 2026-09-21（**SIGNAL-LINES 批 · 设计微修二轮 · eng-designer**——承 `docs/batches/2026-09-21-subagent-signal-lines.md` §2.6 遗留 2 · 父侧 2026-09-21 02:1x 裁定纳入本批）：
   §6.9 就地同步为 F-UC8 现态——起跑标签**两档**（ask 携参 / digest——manual / AUTO 同判 · `auto` 泛句退场）· **起跑数行**（`pend0 > 0` ⇒ `digest.start`）· 收尾行 **`pend0 > 0` 守卫**（done / aborted 两形态同判）；可见面口径单源回指 `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.27.12.13 ①–③。

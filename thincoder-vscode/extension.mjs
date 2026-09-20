@@ -11,6 +11,7 @@ import { initLocale } from "./src/i18n.mjs"
 import { registerDiffPreviewProvider } from "./src/extension/diff-preview.mjs"
 import { startConfigWatch } from "./src/extension/config-watch.mjs"
 import { startSampler, stopSampler } from "./src/extension/loop-sampler.mjs"
+import { runSessionGcCommand } from "./src/extension/session-gc-command.mjs"
 import { VSC_PROMPT_INJECTIONS } from "./src/prompt-injections.mjs"
 
 /** @type {ChatPanel} */
@@ -150,6 +151,11 @@ export async function activate(context) {
     // Internal-only: invoked from the settings webview (build index button); intentionally
     // not in contributes.commands — not a user-facing command-palette entry.
     vscode.commands.registerCommand("thincoder.buildIndex", () => _panel._buildIndex().catch(logFireAndForget)),
+    // SESSION.md §6.17 D-SE38（2026-09-21）：冷 cwd / 存量组 GC 手动面（端差注销——原「仅 CLI」）。
+    // 处理体 = 端侧命令档（核数据面 API；**不消费 `runSessionGc`**——console 形态属 CLI 壳）。
+    vscode.commands.registerCommand("thincoder.sessionGc", () => {
+      runSessionGcCommand({ api: vscode }).catch(logFireAndForget)
+    }),
   )
 }
 

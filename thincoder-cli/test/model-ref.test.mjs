@@ -6,13 +6,29 @@
  * - /model selectModel（model-picker.mjs）：写槽不写 config（**config 内容字节断言**——写前快照
  *   对比——非 mtime）；候选外可切换（不再 throw）；切换回显两分支（正常色 / DEFAULT 警示色 + /config 提示）
  */
-import { test } from "node:test"
+import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync, unlinkSync, existsSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { parseModelRef, resolveRuntimeProvider, specMatch, _setConfigPathForTest, _resetConfigPathForTest } from "@thincoder/core/config.mjs"
 import { sessionPath as sessionFilePath } from "@thincoder/core/session.mjs"
+import { _setSessionsDirForTest, _resetSessionsDirForTest } from "@thincoder/core/session-slots.mjs"
+
+// sessions 沙箱缝（STARTUP-LATENCY 批 2026-09-21 修）：本档夹具路径经 `sessionFilePath`
+//（= 核 `sessionPath`）落在 sessions 根，且 `loadSession` → `resumeSlot` 会调度会话 GC——
+// 未隔离时两者都落到**真实** `~/.thincoder/sessions`（实测事故形态：F-SL2 自动面空闲拍把真实
+// 陈旧组移入回收批 + 夹具文件残留）。全档隔离后 fixture 读写与 GC 全落 temp。
+// 断言逐条不变——仅落点隔离。
+let _sdir
+beforeEach(() => {
+  _sdir = mkdtempSync(join(tmpdir(), "thincoder-model-sess-"))
+  _setSessionsDirForTest(_sdir)
+})
+afterEach(() => {
+  _resetSessionsDirForTest()
+  try { rmSync(_sdir, { recursive: true, force: true }) } catch { /* ignore */ }
+})
 
 const PROVIDERS = [
   { name: "deepseek", baseURL: "https://api.deepseek.com", model: "deepseek-v4-pro", apiKey: "sk-ds" },

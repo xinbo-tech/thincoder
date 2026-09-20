@@ -69,9 +69,38 @@
 
 ### 6.3 边界（轨迹面——本机制不做）
 
-- 不改轨迹字段集 / 落盘目录 / 保留期（`cleanupTraces` 不变）；不改开关默认（默认 OFF 保持）；
+- 不改轨迹字段集 / 落盘目录 / 保留期取值面（清理执行面单源 = §6.4——2026-09-21 目录级判据 + 每写节流）；不改开关默认（默认 OFF 保持）；
 - 不做轨迹重放 / 重试补偿（尽力面——丢弃可观测）/ 压缩 / 加密；
 - 不做轨迹内容质量改写（仅截断 / 降级 + 标记）。
+
+### 6.4 清理面性能边界：目录级判据 + 每写节流 + 触发面收窄（2026-09-21 · STARTUP-LATENCY 批）
+
+> 需求 = `docs/core/requirements/TRACES.md` §2.3（F-SL3）；批档 = `docs/batches/2026-09-21-startup-latency.md`。策略面不动（§6.1「完整落盘 + 每写 prune」裁决不变）——本节只收**清理执行面**（判据粒度 / 节流 / 触发面）。
+
+**问题形态（实测 · 2026-09-21）**：`cleanupTraces`（`thincoder-core/traces/trace-store.mjs:284`）逐日目录 × 逐文件串行 `stat`——存量 15,610 个 `.jsonl`（4 个日目录）⇒ ① 启动后台扫描风暴；② `--version` 印出后进程挂 12.5s（事件循环排空）；③ `recordChatTrace`（同档 `:199`）每写一条又全扫一遍（调用点同档 `:269`）。
+
+- **D-TR11 目录级判据（三段梯）**：设 `D` = 日目录（`YYYY-MM-DD`——本地时区，与 `localDateStr` 同口径）、`retention` = `traces.retentionHours`；`dayStart` / `dayEnd` = 当日 00:00:00.000 / 23:59:59.999（本地）：
+  ① `dayEnd(D) + retention ≤ now` **且目录内全部条目为 `.jsonl`** ⇒ **整目录删**（递归 `rm`，零逐文件 stat）；
+  ② `dayStart(D) + retention > now` ⇒ **整目录跳过**（正常写入下目录内无可过期文件）；
+  ③ 其余（含含非 `.jsonl` 条目的目录）⇒ **逐文件 `stat` 判定 + unlink**（现行语义；非 `.jsonl` 一律不碰）。空日目录在任何分支后按现法移除。
+- **语义 delta 登记（D-TR11）**：纯 `.jsonl` 日目录整删时不逐文件核 mtime（人为回拨 mtime 的文件随目录清理；正常写入 mtime ∈ 目录日 ⇒ 无差异）；②支跳过时人为前拨（超期）文件暂留（宽容向）——保留期主粒度改为**目录日**（与 §6.1 的 24h 保留期并读）。
+- **整删支计数口径（D-TR11）**：整删支的 `removed` 计数 = 该批内 `.jsonl` 条目数（与 ③ 支逐文件计入同口径；非 `.jsonl` 不计数）——既有断言面保持（`thincoder-vscode/test/trace-store.test.mjs:248-249` `removed === 2`：含非 `.jsonl` 的目录落 ③、纯 `.jsonl` 过期目录落 ①，两路合计数不变）。
+- **非日期名 / 非法日目录归类（D-TR11）**：目录名不以 `YYYY-MM-DD` 解析（日期解析 NaN），**或为非法日（解析归一后 ≠ 原日**——如 `2026-02-31`）⇒ ①② 两条件恒假 ⇒ **回落 ③ 逐文件支**（现行语义；非 `.jsonl` 一律不碰）。
+- **D-TR12 每写 prune 节流**：`maybePruneTraces`（`recordChatTrace` 写盘成功后调用）——模块级窗口 `PRUNE_THROTTLE_MS`（10 分钟）+ 在飞合并；`cleanupTraces` 本体保持无状态（启动面 / 手动面直调）。判据 = 同窗 3 连写 ⇒ 扫描 ≤1 次。
+  **测试缝（D-TR12）**：节流为模块级状态（**跨用例残留**）——缝 = 既有先例 `_resetTraceStateForTest`（`thincoder-core/traces/trace-store.mjs:103`）扩展为**一并复位节流窗**（或给节流面注入 now 缝），用例须显式复位。
+- **D-TR13 启动清理触发面收窄（白名单）+ 启动窗外延迟拍**：启动清理仅在**会话型命令白名单**执行——`tui`（**含无参默认路径 `command === undefined`**，`thincoder-cli/bin/thincoder.mjs:312-313` `case "tui": case undefined:`）/ `chat` / `acp`；
+  白名单外命令一律零启动清理（一次性 / 信息命令 `--version` / `-v` / `--help` / `completion`，及 `memory` / `sync` / `reindex` / `distill` / `upgrade` / `session`）；闸位 = 命令解析之后（同档 `:40`）；启动清理白名单判定 = 同档 `:144`；
+  判据 = `--version` 总时长 ≤0.5s（对照 12.9s）+ **无参启动仍执行启动清理**（两用例见批档 §2 用例表）；策略裁决不变——清理照常执行，只是不在白名单外命令启动时执行。
+  **启动清理 = 启动窗外延迟拍（2026-09-21 · 收口前机制微修 2）**：复测 8 轮（无参启动至拒印 1.3–2.9s、≤2s 仅 4/8）⇒ 残余竞争者 = 本清理的 fs 爆发仍落在启动窗内、与启动链争同一事件循环。
+  闸内（同档 `:144-149`）不直呼 `cleanupTraces`，改经**核侧调度器** `scheduleTraceCleanup({ dir, retentionHours })`（`thincoder-core/traces/trace-cleanup.mjs` 导出）——`setTimeout` 延迟点火（`TRACE_CLEANUP_DELAY_MS` = **3s**，自调度点起；与 D-SE39 的 `GC_PASS_DELAY_MS` 同值同形态——启动窗 ≤2s 之外留 ≈1s 裕度；**不 unref**——保后台排空现状，与 D-SE39 同向）。
+  `dir` 由调度点捕获（调用面取 `tracesRoot()`）；失败静默保持（`.catch(() => {})` 移入调度器——fire-and-forget 语义不变）；白名单 / 闸位 / 每进程一次语义均保持（启动面恰一处调用——调度器无去重闸）；进程早退（显式 `process.exit`）未及拍 ⇒ 本次不执行（幂等——下次会话型命令照常清理）。
+  **注（一次性命令排空 · 与 D-SE39 同向）**：不 unref ⇒ 一次性命令（`chat`）的进程自然排空被延迟拍推后 ≤3s（设计内后果——不损正确性，仅进程退出稍候）。
+  **判据句（启动解耦）**：启动链（`resumeSlot` → 装配 → TTY 门）**不因 traces 清理竞争超 2s**——读数 = 无参启动至拒印时刻（非 TTY 环境代理「TTY 门」）≤2s × **复测 ≥2 次**（同 D-SE39 口径）；结构性保证 = 清理起点 ≥ 调度点 + `TRACE_CLEANUP_DELAY_MS`（3s——落于启动窗之外）。
+  **测试缝** = `_setTraceCleanupDelayForTest(ms)`（`_setSessionGcDelayForTest` 同款；用例置 0–短值立即点火；默认值 = 3s 可断言）。
+  **形态取舍**：核侧 `setTimeout` 取支——与 D-SE39 同款单源（机制 / 常量 / 测试缝住核；核用例可注入 0–短值；闸位包裹在 CLI 子进程面**缝不可注入**且常量外落端层）。否决「调用面首帧后点火」——同 D-SE39（VSC / ACP 无统一帧事件）。
+- **双端同函数**：目录级判据与节流住核同一实现——CLI（启动扫 + 每写 prune）与 VSC（仅每写 prune；宿主长驻无启动事件）同源生效；不动开关默认与保留期取值面。
+- **存量一次性清理**：目录级判据下任一后续清理拍即整删全部过期日目录（幂等、可复跑）；判据 = 清理后 `.jsonl` 总量回落。
+- **模块落点**：清理面外提 `thincoder-core/traces/trace-cleanup.mjs`——`trace-store.mjs` 回落 ≤300（消解既有超软线在册）；`cleanupTraces` 经 `trace-store.mjs` re-export 保既有 import 面（两端测试）；启动面调度器 `scheduleTraceCleanup` 住该档、由 CLI 直引（不动 store 行数——见 D-TR13）。
 
 ## 7. 并入的关键决策记录（含否决备选）
 
@@ -82,6 +111,9 @@
 | D-TR3 | 在途上界 = 待写计数上限 8 + 丢弃计数（尽力面）；序号进程内缓存 | 峰值 ≤ 8 × 记录上限；丢弃可观测；消除逐调用目录扫。**否决**串行队列（无丢——写盘慢时队列无限增长）· 保持无限待写（本批要治的面） |
 | D-TR4 | 不新增配置项（额度 = 编译期常量） | 轨迹为诊断面——默认 OFF 时零成本 |
 | D-TR6 / D-TR10 | 默认 OFF + 启动清理（2026-09-05 发布隐私裁定） | 轨迹含完整对话内容——发布隐私优先；本机调试可显式开；启动清理防无限积累 |
+| D-TR11 | 清理判据改**目录级三段梯**（整删 / 跳过 / 逐文件） | 存量 15,610 文件下逐文件 stat = 启动风暴本体；目录日 = 天然保留期主粒度。否决「并发 stat 池」（量级不减）·「只节流不换判据」（存量清理仍逐文件） |
+| D-TR12 | 每写 prune **节流（10 分钟窗 + 在飞合并）** | 判据 = 同窗 3 连写 ⇒ 扫描 ≤1；fire-and-forget 语义不变（写盘零阻塞）。否决「只留启动扫」（VSC 无启动事件）·「每写全扫」（本批要治的面） |
+| D-TR13 | 启动清理 = **会话型命令白名单**（`tui`（含无参默认路径 `command === undefined`）/ `chat` / `acp`；白名单外零启动清理）**+ 启动窗外延迟拍**（核侧 `scheduleTraceCleanup`——`TRACE_CLEANUP_DELAY_MS` = 3s、不 unref；测试缝可注入） | `--version` 类一次性命令零后台工作 ⇒ 判据 ≤0.5s 可闭合；清理策略不损（会话型命令为常规路径）。复测 8 轮（#9 后）≤2s 仅 4/8 ⇒ 清理 fs 爆发仍与启动链争同一事件循环；3s ⇒ 清理起点 ≥ 调度点 + 3s = 结构落于启动窗外（与 D-SE39 同款同值）。否决闸位包裹（缝不可注入 + 常量外落端层）·「首帧后点火」（同 D-SE39） |
 
 （容量 / 清理策略决策面仍见 §3.1 A21 与 §4.1 第 10 行——本表补写入形态面。）
 
@@ -111,3 +143,10 @@
 - 2026-09-14（**B 轮并入 · 第 3 批补源**）：§6 机制面 = 自 `thincoder-cli/docs/design/AGENT-LOOP.md` §13 / §23.3.2 轨迹面节并入（同名旧档仍缺——扩参照面来源；**旧档一字未改**）· §7 决策（D-TR1–4 · D-TR6 / D-TR10）· §8.2「越段登记」两行收口为「已并入」；首部指针一行收正。
 - 2026-09-15（**S2 W3 接线 · VSC 端** · eng-coder 实施轮）：§1 表两格（CLI / VSC）收正为「经 `@thincoder/core/traces/trace-store.mjs` 引用」——VSC 自持镜像随 W3 删档（坐标 + 状态面收正）；同格 CLI 端为 U3 已删档的滞后坐标，随本笔一并收正（实核：`thincoder-cli/src/traces/trace-store.mjs` 不存在）。机制条文（§6–§8）零改。
 - 2026-09-20（**卫生族批 · 台账 #138 · eng-designer**）：首部机制面节区改 `§6–§8` + 历史节号指称清理（行数规则废除批残留）；设计源 = `docs/batches/2026-09-20-hygiene-sweep-batch.md` §2。
+- 2026-09-21（**STARTUP-LATENCY 批 · eng-designer**——承 `docs/batches/2026-09-21-startup-latency.md` §1）：新增 **§6.4 清理面性能边界**（目录级三段梯判据 / 每写节流 / 启动触发面收窄 / 存量清理）· §7 补 **D-TR11–D-TR13** · §6.3 边界行同收正；来源 = 需求档 §2.3（F-SL3，台账 #173）。
+- 2026-09-21（**STARTUP-LATENCY 批 · 设计评审轮 1 修正** · eng-designer——承 `docs/batches/2026-09-21-startup-latency.md` §3 发现 4 / 12 / 13）：
+  §6.4 **D-TR13 改白名单形态**（含无参默认路径 `command === undefined`；白名单外命令逐名写明；闸位 = 命令解析后）· **D-TR11 补整删支 `removed` 计数口径**（按批内 `.jsonl` 计数——既有断言面保持）**+ 非日期名目录归类**（回落 ③ 逐文件支）· **D-TR12 补测试缝**（节流窗复位 / now 注入缝 + 跨用例残留提示）；**零新语义**（均为评审发现直接导出项）。
+- 2026-09-21（**STARTUP-LATENCY 批 · 设计评审轮 2 修正** · eng-designer——承 `docs/batches/2026-09-21-startup-latency.md` §3 轮次 2 残留 15）：§7 **D-TR13 行同步白名单形态**（含无参默认路径 `command === undefined`；与 §6.4 机制行一致）；**零新语义**。
+- 2026-09-21（**STARTUP-LATENCY 批 · 收口前残留收正** · eng-designer——承 `docs/batches/2026-09-21-startup-latency.md` §5 实施读数 + 父侧裁定）：§6.4 坐标实读收正（触发闸 `thincoder-cli/bin/thincoder.mjs:312-313` / `:144` · 测试缝 `thincoder-core/traces/trace-store.mjs:103`）+ **非法日目录归类成文**（同「非日期名」⇒ 回落 ③ 支）；**零新语义**。
+- 2026-09-21（**STARTUP-LATENCY 批 · 收口前机制微修 2** · eng-designer——承 `docs/batches/2026-09-21-startup-latency.md` §2 修正轮 4 + 父侧 #9 后 8 轮复测）：
+  §6.4 **D-TR13 增「启动清理 = 启动窗外延迟拍」**（核侧 `scheduleTraceCleanup`——`TRACE_CLEANUP_DELAY_MS` = 3s、不 unref、失败静默、测试缝）+ **启动解耦判据句在档**；§7 D-TR13 行同步；机制面收正——父侧复测残余竞争者处置（设计先落 · 非新范围）。

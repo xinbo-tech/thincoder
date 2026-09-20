@@ -48,6 +48,18 @@ VSC 侧对应面住 `thincoder-vscode/src/extension/session-io.mjs` · `session-
 
 **依赖**：核槽面（`session-lifecycle.mjs` `switchToSlot`/`newSession`/`slotOccupancy`）· VSC 端壳（`session-io.mjs` `switchToSlot`/`newSlot` · `panel-messages-session.mjs`）· 设计档 `docs/core/design/SESSION.md` · ACP 例外核；批档 = `docs/batches/2026-09-21-session-claim-release.md`。
 
+### 2.4 启动等待：会话 GC 热路径 + sessions 存量（2026-09-21 用户报「启动的时间好长」· 台账 #173）
+
+**模块目标**：CLI / VSC 启动时，会话面的磁盘工作**不得同步阻塞主线程**，且耗时不随 sessions 存量线性劣化——现状实测（2026-09-21）：`~/.thincoder/sessions/` = **20,227 项**（9,358 个 cwd 前缀遗留）⇒ 启动钩子 `gcResidue` 同步 `readdir` **单次 ≈10s**（启动 9.6–16s 的 ~95%；空 HOME 对照 495ms）。
+
+- **F-SL1（热路径零同步阻塞）**：`resumeSlot` → `scheduleSessionGC` → `gcResidue` 链在启动关键路径上**不得有 ≥50ms 同步 fs 阻塞**（重活异步化，或将全量扫描推迟至首帧后）。判定句：多量 sessions 目录下启动路径同步 fs 阻塞样本 ≤50ms（机检 = CPU profile 同步 `readdir` 自时 / 埋点）。
+- **F-SL2（存量治理）**：陈旧 cwd 组（cwd 目录已不存在 / 属主死 / 无活数据文件）可由**自动或显式命令面**清理——现冷判据（manifest mtime > 90 天）覆盖不到近期海量遗留；判据 / 保留期 / 执行面由设计钉，零误删活数据。
+  **（2026-09-21 03:36 用户裁定（逐字）：「设计如此是设计不对，这也是端差，应该消除，这部分代码能进核吗？这样两端可以共用同一套机制。」）⇒ 显式命令面**双端都要有**——VSC 补端侧入口（命令 + 报告 / 确认），机制 = 核单源共用（核已备 `listColdCwds` / `deleteColdCwd`；VSC 转口已在）；「仅 CLI」端差**注销**。
+  判定句：清理面存在且逐项判据可核；清理后目录量级回落（存量 9,358 前缀组可处理）。
+- **边界**：不动活数据（活主 / 近期写 / 绑定面）· 不引入常驻进程 · 不改槽文件与端标记形态 · VSC 端壳 resume 路径（同源调用）同判零端差。
+- **验收**：① 启动路径同步阻塞 ≤50ms（对照 ≈10s）；② CLI 启动到 TTY 门 ≤ **2s**（对照 9.6–16s；空 HOME 0.495s + 真装配 ~1.0s 为参考下界）；③ 三端测试全绿；④ 存量清理面执行后 sessions 项数回落且零活数据误删。
+- **依赖**：`session-lifecycle.mjs`（resumeSlot）· `session-gc.mjs`（gcResidue / listColdCwds）· CLI `bin/thincoder.mjs` 启动序 · VSC 端壳（`session-io.mjs` resumeSlot 包装）· 设计档 `docs/core/design/SESSION.md` §6.12（含 ④ 端差段注销）。
+
 ## 3. 非功能性需求
 
 本子系统无独立非功能条目。适用工作流条目（回指）= **N1**（未涉面不得无故回归）· **N2**（建核段两产品零改动 · 可回退）· **N3**（核独立可验证）· **N5**（单一权威源）· **N8**（结构尺度）。
@@ -113,7 +125,8 @@ N-S3 CLI 写出的槽文件 `history` 数组与旧实现同构（version 2 + his
 
 语义同源——VSC 档 F-N1–F-N8 / N-N1–N-N5 与 §4.1–§4.4 逐条同义（不重并）；**VSC 端差（登记）**：① marker `END = "vscode"`——只写 `.manifest.vscode`、永不碰 `.cli`（认领面隔离）·
 ② 历史分页步长 **200**（`HISTORY_PAGE_SIZE`——`thincoder-vscode/src/extension/history-window.mjs:18-22`，对端 20）· ③ 恢复呈现 = assistant 帧容器 + 嵌套工具卡（配对语义同源）·
-④ 冷 cwd 手动 GC 无 shell 通道（只接线自动残留 GC）· ⑤ 记录存储形态 = 本端零该机制（如实登记）· ⑥ `turnBusy()` 拒新会话 / 删除 / 切换 / 换项目（回合互斥）。坐标（实核）＝ `thincoder-vscode/src/extension/session-slots.mjs`（400 行）· `session-io.mjs`（437 行）· `panel-session.mjs`（339 行）· `session-gc.mjs`。
+④ 冷 cwd 手动 GC 无 shell 通道（只接线自动残留 GC）——**注销（2026-09-21）**：VSC 已补命令入口 `thincoder.sessionGc`（数据面 API——双端同面；见 `docs/core/design/SESSION.md` §6.17 D-SE38）
+· ⑤ 记录存储形态 = 本端零该机制（如实登记）· ⑥ `turnBusy()` 拒新会话 / 删除 / 切换 / 换项目（回合互斥）。坐标（实核）＝ `thincoder-vscode/src/extension/session-slots.mjs`（400 行）· `session-io.mjs`（437 行）· `panel-session.mjs`（339 行）· `session-gc.mjs`。
 用例面 = `test/session-boot.test.mjs`（319 行 / 4 例）· `test/history-window.test.mjs`（192 行 / 8 例）· `test/history-restore.test.mjs`（237 行 / 9 例）· 集成 `test/integration/scenario-04-session-recovery.test.mjs`（140 行 / 5 例）。
 
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）
