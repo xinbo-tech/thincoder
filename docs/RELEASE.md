@@ -89,6 +89,7 @@
 
 1. **定号**（§4.2）：查当月最高已发号 + 当前月 → 期望号；`package.json` ≠ 期望号 → 先纠正再走流程。
 2. **CHANGELOG**：**三端各自**（核 `thincoder-core/CHANGELOG.md` ✗ CLI ✗ VSC——**核不豁免**：首发漏建 ✗ 2026-09-21 补建 ✗ 0.9.1 段已补 ✗ 后续发布随阶段 0 一起更新）——开发批记录挂 `[Unreleased]` 段，发布时段头改新号（Keep a Changelog 格式，中文，Added / Changed / Fixed / Removed 分节；VSC 侧 = 市场页 Changelog 标签内容来源）；**无档先建**（首发端 = 建 + 写首发段）。
+   **附带**：CLI README 的 Changelog 摘要节（面向 npm 用户的英文精要 ✗ 非 CHANGELOG 全量镜像）同步补新版本段——首发漏更过一次（0.12.12→0.12.63 空窗 ✗ 2026-09-21 补 0.12.63/0.12.62 两段 ✗ 此后每发布必更 ✓）。
 3. **version bump**：`package.json` 改到期望号（**JSON.parse → 改字段 → JSON.stringify**——禁 PowerShell `Set-Content -Encoding UTF8`：会写 BOM `EF BB BF`，JSON 解析失败、发布门崩）。
 4. **依赖核对**：两产品 `@thincoder/core` 声明与本次核版本对齐（§4.4——本次首发后收正 `^0.9.1`）。
 
