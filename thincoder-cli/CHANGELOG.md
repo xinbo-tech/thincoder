@@ -1,3 +1,12 @@
+## [0.12.63] — 2026-09-21
+
+> 0.12.62 → 0.12.63（连续号——发布时定号；本版随核首发联动）
+
+### Fixed
+
+- **发布依赖收正**：`@thincoder/core` `^0.1.0` → `^0.9.1`（核首发 `@thincoder/core@0.9.1` 同日落地——声明面与 registry 实发对齐；0.12.62 及以前发布形态为合并前自带拷贝、无核依赖）。
+- **smoke 探针 import 修复**：`isBailianHost` 实居 `config.mjs`——原从 `provider/normalize.mjs` 静默容错导入（`catch(() => ({}))`）恒 undefined ⇒ smoke 恒 skip（假绿）✗ 修正后真跑三连测（OFF 无思考 / XHIGH / DEFAULT 有思考——dashscope 百炼 qwen 实测过 ✓）。
+
 ## [0.12.62] — 2026-09-13
 
 > 0.12.61 → 0.12.62（§4.3 连续号——发布时定号）
