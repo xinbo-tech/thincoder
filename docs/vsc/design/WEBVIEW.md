@@ -403,6 +403,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 **为什么必须改**：relay chunk = **任意字节边界碎片**（CLI 同注释实证：逐 chunk 补 `\n` 会把词拦腰断行——`subagent-blocks.mjs:351-355`）；旧形（`webview/ui.js:51-68`）每 chunk 新建 `div.advisor-tool-line` ⇒ 逐 chunk 断行（台账 #148 症状「一 chunk 一行」）。
 
 **面随载荷（协议字段 `face`）**：CLI 以「哪个路由函数被调用」表达面；本端四面压成单 `toolPanel` 载荷 ⇒ 面必须随载荷，否则调用行与输出行不可分（输出并入调用行 ⇒ 工具名粘连）。取值与登记 = `WEBVIEW-PROTOCOL.md` §3（`toolPanel` 行）· §3.2 行 3。
+**端差登记（2026-09-20 · 台账 #150-B）**：CLI 首条 ``toolOutput`` **并入调用块**（`fresh = sub.currentTool !== toolName` ⇒ 调用后同名输出不新开块——`thincoder-cli/src/tui/subagent-blocks.mjs:369`；调用行自带 `\n`——`:346`）⇒ 块面 1 段；本端面门（`face` ⇒ 调用行 / 输出行各成行）⇒ **2 段**。**视觉等价**（CLI 调用行内换行、输出紧随下一行）⇒ **维持 R3 面门**。
 
 **RAW 与换行**：并入 = 逐字文本节点拼接（零分隔符，同 CLI `subagent-children.mjs:143`）+ `.advisor-tool-line` 加 `white-space: pre-wrap`（`webview/chat.css:336`）⇒ 输出自带换行结构无损还原、chunk 边界不可见。
 
@@ -611,3 +612,4 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 - 2026-09-20（**渲染粒度对齐批 · eng-designer**——承 `docs/batches/2026-09-20-render-granularity-batch.md` §1 / §2）：新增 **§5.6 内容行合并粒度**（CLI `pushBlock` 对齐——tool 面按「工具名 + `sub` 同」并入末行、RAW 零分隔符 + `pre-wrap`；text / think 面两端同构零改；降级 = 无 `face` 恒新行）；
   §5.3 内容面**面集收正为四面**（`toolResult` 面删净——无产者，证据链同节）· §10 回指 +1 行（行 16）。**协议消息名零变**（字段增 `face`——`WEBVIEW-PROTOCOL.md` §3 / §3.2 行 3）。
 - 2026-09-20（卫生族三批 · 台账 #145 · eng-designer）：D8 划改/修订式残句清理（2 处去划改形保裁定 + 2 处去修订框架/删残句）；**零新语义**。
+- 2026-09-20（**扩面族批 · 台账 #150-B · eng-designer**）：§5.6 补端差登记句（CLI 首条 ``toolOutput`` 并入调用块 ∥ 本端面门 2 段——视觉等价 ⇒ 维持 R3 面门）。**零新语义**。

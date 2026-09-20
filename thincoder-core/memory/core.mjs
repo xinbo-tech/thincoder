@@ -62,7 +62,7 @@ export async function search(memory, query, { limit = 5 } = {}) {
   const projectOrigin = normalizeOrigin(memory.projectOrigin)
   const vecFilter = projectOrigin ? `AND (layer = 'team' OR origin = ?)` : ""
   const vecParams = projectOrigin ? [projectOrigin] : []
-  // TUI-OOM-ROOTCAUSE（MEMORY.md §10.3）：分块扫描 + 有界 top-K（原全表 .all() 物化 +
+  // TUI-OOM-ROOTCAUSE（MEMORY.md §6.8）：分块扫描 + 有界 top-K（原全表 .all() 物化 +
   // 全量排序——峰值 = 块 + K；召回语义不变）。两表各自游标扫描、共享同一 top-K。
   // TUI 假死批（§6.10）：scanVectors = async（让出）——游标键缺省 rowid（= 本表 PK 别名，零改）。
   const top = createTopK(Math.max(limit * 4, 20))

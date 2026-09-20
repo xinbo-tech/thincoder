@@ -88,7 +88,7 @@ const provider = { model: "deepseek-v4-pro" }
 
 /** hydrateRun 调用参数装配（镜像 agent-lifecycle-singleton.test.mjs 的 optsFor 形态）。
  *  缺省 restore:true——工厂路径（setupAgentRun/首轮/destroy 重建）；复用续跑显式
- *  restore:false（顶层 opts 缺省同义——见 agent.mjs §11 hydrate 分支）。 */
+ *  restore:false（顶层 opts 缺省同义——见 agent.mjs hydrate 分支）。 */
 const optsFor = (optsOver = {}, topOver = {}) => ({
   provider,
   cwd,
@@ -296,7 +296,7 @@ slow("collectGitContext: Map 预填——健康 git 仓也跳过；>30s 旧条�
   }
 })
 
-// ─── VSC-CONTEXT-PARITY D-CI5/D-CI6（§17.7「AUTO 位置 / 无 permission / 去重」）───
+// ─── VSC-CONTEXT-PARITY D-CI5/D-CI6（「AUTO 位置 / 无 permission / 去重」）───
 
 test("hydrateRun: permission 句退役（D-CI6）+ AUTO 不由 hydrate 推送（唯一 = 循环头）", async () => {
   // permission 句 = 删除（裁定 1：权威源 CLI——CLI 无此句；注释「parity」失真随删）

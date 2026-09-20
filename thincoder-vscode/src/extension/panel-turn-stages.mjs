@@ -101,7 +101,7 @@ export async function resolveTurnStage({ panel, turnSlot, providerName, modelOve
 export async function finalizeTurn(panel, { history, fullHistory, slotStamp, turnSlot, isFirstMessage, susp, skipSession }) {
   traceStop("finally: turn complete — UI released", panel._stopClickTs)
   panel._stopClickTs = null
-  // §17 D-S2 释放窗口守卫（2026-09-02 偏差修复 #2——A2 + INPUT-LOCK-ASYNC 修订）：挂起
+  // 释放窗口守卫（2026-09-02 偏差修复 #2——A2 + INPUT-LOCK-ASYNC 修订）：挂起
   // 决策先于任何释放点登记——归位与回合尾会话接管之间的异步段内消息不得开并发新回合
   // （从磁盘重载 lines 孤儿化池 + abort 池 controller——AC-S2）。窗口 = _turnState==="susp"
   // 且 _susp 空——A2 标题移入下方归位前（running——routeUserTurn 拒收——禁排队）——标题
@@ -143,7 +143,7 @@ export async function finalizeTurn(panel, { history, fullHistory, slotStamp, tur
  *  契约 B-1：入参面含 `distillSlot`（finally 段清单无此项——本段读）；B-2：`runTurn` 闭包原
  *  直调 `runPanelChat` ⇒ 改注入项 `deps.runChat`（本档零 import 主档）。 */
 export async function enterSuspensionTurn(panel, { turnSlot, distillSlot, history, fullHistory, skipSession, susp, runChat }) {
-  // §17 D-S2 释放窗口接管（偏差修复 #2——A2 修订 + INPUT-LOCK-ASYNC 2026-09-09）：标题
+  // 释放窗口接管（偏差修复 #2——A2 修订 + INPUT-LOCK-ASYNC 2026-09-09）：标题
   // 已移 finally 归位前（running——routeUserTurn 拒收）——入队容器已随排队机制废弃——释放
   // 窗口 = 会话建立的同一同步续段（susp 广播与 suspensionSession 间零 await——无事件窗
   // 口）；本块只做会话入口判定：池 live + controller 未中止 → 进挂起会话（用户输入优先于

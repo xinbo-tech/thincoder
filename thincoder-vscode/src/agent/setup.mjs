@@ -8,7 +8,7 @@
  * agent 生命周期对齐 CLI（2026-09-08）：setupAgentRun 拆出
  * buildTopLevelAgent（agent 对象工厂——首轮/destroy 重建-only）+ hydrateRun（每轮
  * reconcile——顶层单例复用路径）。纯函数层 resetRunState / reconcileEngDesignTokens /
- * applySlotSessionState 已拆 agent-state.mjs（§11.2 A 复位清单与 §11.2.1 槽↔hydrate
+ * applySlotSessionState 已拆 agent-state.mjs（复位清单与槽↔hydrate
  * 映射——500 行硬限——test/agent-lifecycle-singleton.test.mjs 单测锚点）。
  */
 import * as os from "node:os"
@@ -69,11 +69,11 @@ const settingsTool = vscSettingsFace(coreSettingsTool())
  *  D-CI6: the agent loop head pushes it; agent.mjs imports it from there for the dedupe check). */
 
 /**
- * §11.2 agent 对象工厂——首轮-only（hydrateRun 每轮 reconcile）。归类：A = 回合级预算/守卫
+ * agent 对象工厂——首轮-only（hydrateRun 每轮 reconcile）。归类：A = 回合级预算/守卫
  * （resetRunState 每 runAgent 清零——AC6）；C = 会话级保留（_tasks/_goal/_engDesignTokens
  * 不复位，hydrate 槽 reconcile）；_pendingReminders = A 复位 + restore 槽回填（A/C 双列注）；
  * B = run 绑定（每轮重指 _role/_provider/_planMode/cwd/history/_fullHistory/config 等）。
- * 池载体（_asyncSubagents/…）不在此——挂共享 history 数组（§11.2 D）。
+ * 池载体（_asyncSubagents/…）不在此——挂共享 history 数组。
  */
 export function buildTopLevelAgent() {
   return {
@@ -102,7 +102,7 @@ export function buildTopLevelAgent() {
 }
 
 /**
- * hydrateRun —— 顶层 agent 每轮 reconcile（§11.1②）：复位（A）→ config/tools/MCP 重建
+ * hydrateRun —— 顶层 agent 每轮 reconcile：复位（A）→ config/tools/MCP 重建
  * （AC7）→ 槽水合（11.2.1）→ systemPrompt → history 重指 → 上下文注入。复用（opts.agent
  * ——面板回合/续跑）与新建（factory + restore:true）同路径；子代理 depth>0 经 setupAgentRun
  * （opts.agent 仅 depth-0 honored——AC5）。
@@ -111,7 +111,7 @@ export function buildTopLevelAgent() {
 export async function hydrateRun(agent, { provider, cwd, input, opts, depth, role, getAuto, restore = false }) {
   const { mcpServers, skills, engState, engDesignReviewed, resume = false, autoTurn = false, batchDoc = null } = opts
 
-  // §11.2 A —— per-run 复位先于一切 reconcile（含 inheritedGuard 的 agent.mjs 侧应用）
+  // per-run 复位先于一切 reconcile（含 inheritedGuard 的 agent.mjs 侧应用）
   resetRunState(agent)
 
   // W14（2026-09-15）：agent-tools 三缝（skill loader / eng mirror / verify 诊断段）接线——
@@ -242,7 +242,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     cfgStreamRules = mergeFileRules(raw.agent?.streamRules ?? [], cwd) // #130 A-1：与 CLI make-agent.mjs:44-48 同语义
   } catch { /* config unreadable — defaults */ }
 
-  // §11.2.1 槽 reconcile：顶层会话绑定（opts.engPersist = {cwd, slot}）每轮读权威槽（settle
+  // 槽 reconcile：顶层会话绑定（opts.engPersist = {cwd, slot}）每轮读权威槽（settle
   // 落盘在 run 外——hydrate 是唯一 reconcile 点——digest/续跑可见刚落盘的 token）；子代理无
   // 槽绑定 → 回退 opts.engState（父模式镜像）→ cfg。restore（agent 刚由 factory 新建——
   // 首轮/destroy 重建）→ tasks/goal/pendingReminders 从槽回填（11.2.1 映射表）。

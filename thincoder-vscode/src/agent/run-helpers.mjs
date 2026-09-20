@@ -21,7 +21,7 @@ export function configuredMaxTurns() {
 }
 
 /**
- * 跨段累计编号帧（TURN-CAP-CONTINUE §19.3——第 19 批）：seq = 链内累计序数（agent._turnSeq），
+ * 跨段累计编号帧（TURN-CAP-CONTINUE.md §4——第 19 批）：seq = 链内累计序数（agent._turnSeq），
  * turn = 段内轮次（0 起），maxTurns = 本段预算。差额项 seq − turn − 1 = 本段开始前的链内累计
  * → maxTurns = 段前累计 + 段预算（跨段预算同步累计）。段内帽判定不读本函数（帽 = turn < maxTurns）。
  */
@@ -30,7 +30,7 @@ export function turnFrame(seq, turn, maxTurns) {
 }
 
 /**
- * 消费点统一入口（§19.3——runChild / escalate-async 两续跑循环）：把帧写进池条目。
+ * 消费点统一入口（TURN-CAP-CONTINUE.md §4——runChild / escalate-async 两续跑循环）：把帧写进池条目。
  * entry 空（sync 路径）→ no-op 不抛；maxTurns ≤ 0（帧缺第二参的兼容形态）→ 不覆盖既有值。
  */
 export function applyTurnFrame(entry, turn, maxTurns) {
@@ -74,9 +74,9 @@ export function hasCodeMutations(agent) {
   return files.some((p) => isCodePath(p, conv))
 }
 export const MAX_TOOL_RESULT = 64 * 1024 // chars — large results saved to disk instead of truncated (aligns with CLI)
-export const TOOL_RESULT_PREVIEW_HEAD = 16 * 1024 // §5 D-4.1 head slice preserved (preview 保头保尾)
-export const TOOL_RESULT_PREVIEW_TAIL = 48 * 1024 // §5 D-4.1 nominal tail — actual budget = MAX_TOOL_RESULT − head − noteLen (tail 优先)
-// §5 省略注格式（设计逐字定稿——CLI 同文案）；noteLen 含 omitted 位数（1~8 位十进制，初值 6）——预算按初始最大位数
+export const TOOL_RESULT_PREVIEW_HEAD = 16 * 1024 // TOOL-OUTPUT-LIMITS.md §2 head slice preserved (preview 保头保尾)
+export const TOOL_RESULT_PREVIEW_TAIL = 48 * 1024 // TOOL-OUTPUT-LIMITS.md §2 nominal tail — actual budget = MAX_TOOL_RESULT − head − noteLen (tail 优先)
+// TOOL-OUTPUT-LIMITS.md §2 省略注格式（设计逐字定稿——CLI 同文案）；noteLen 含 omitted 位数（1~8 位十进制，初值 6）——预算按初始最大位数
 // 预留后按真实位数释放给 tail（round1 评审 #2：head + note + tail ≤ 65536——tail 优先）。
 const PREVIEW_NOTE_PREFIX = "\n\n… [middle omitted: "
 const PREVIEW_NOTE_SUFFIX = " chars] …\n\n"
@@ -101,7 +101,7 @@ export function safeSliceUTF16(text, max) {
 }
 
 /**
- * UTF-16-safe TAIL slice (§5 D-4.1 — safeSliceUTF16 的对称面): from the end, keep the last
+ * UTF-16-safe TAIL slice (TOOL-OUTPUT-LIMITS.md §2 — safeSliceUTF16 的对称面): from the end, keep the last
  * `max` code units. Two cut points must both land safely:
  *  - START: a lone LOW surrogate (U+DC00-DFFF) means the pair was cut — advance one code
  *    unit (drop the whole pair from the tail's viewpoint);
@@ -123,7 +123,7 @@ export function safeSliceUTF16Tail(text, max) {
 }
 
 /**
- * §5 D-4.1 双端预览（保头保尾）：head(16K) + 省略注 + tail——总长 ≤ MAX_TOOL_RESULT（AC3/AC4 保持）。
+ * TOOL-OUTPUT-LIMITS.md §2 双端预览（保头保尾）：head(16K) + 省略注 + tail——总长 ≤ MAX_TOOL_RESULT（AC3/AC4 保持）。
  * 预算（round1 评审 #2 定死）：tail 优先——tail 预算 = MAX_TOOL_RESULT − head − noteLen；noteLen 含
  * omitted 位数（先按 PREVIEW_NOTE_MAX_DIGITS 预留，再按真实位数把差额释放给 tail——位数只减不增，
  * 迭代收敛）。两端均经 UTF-16 安全切片（评审 #5：防代理对切开）。
@@ -222,10 +222,10 @@ export function pushReal(history, fullHistory, msg) {
  *  slot（镜像字段运行时零写）；只带多槽表 engDesignTokens（内存 Map 真持有态）。空态保存是否
  *  清权威槽由 saveLines 的 D2 合并语义决定（内存空但槽有值 → 保留槽值，不钉 null）——此处只
  *  如实反映内存。
- *  §11.7 交付缺口补强 (2026-09-08): tasks/goal/pendingReminders 会话级字段（C 类——
+ *  交付缺口补强 (2026-09-08): tasks/goal/pendingReminders 会话级字段（C 类——
  *  buildTopLevelAgent 内存真持有态）随回合完成回写槽（agent.mjs onComplete → saveLines
  *  spread 携入）——CLI saveSession 同款三字段（session.mjs:131/137），destroy/重载后重建
- *  hydrate restore 从槽回填（§11.2.1 映射表——F4 闭环）。字段名以内存源 _tasks/_goal/
+ *  hydrate restore 从槽回填（槽↔hydrate 映射表——F4 闭环）。字段名以内存源 _tasks/_goal/
  *  _pendingReminders 为准（槽键 tasks/goal/pendingReminders 不变——applySlotSessionState
  *  读侧同键）。空态 []/null 如实反映内存——干净完成回合内存即权威；abort/finally 保存不带
  *  agentState（键缺席 undefined）→ saveLines 保留槽值。快照拷贝（非引用）：onComplete 与
@@ -240,7 +240,7 @@ export function agentState(agent) {
     engDesignTokens: agent._engDesignTokens instanceof Map && agent._engDesignTokens.size > 0
       ? Object.fromEntries(agent._engDesignTokens)
       : null,
-    // §11.7: 会话级三字段回写槽（slot keys: tasks/goal/pendingReminders）。JSON-safe
+    // 会话级三字段回写槽（slot keys: tasks/goal/pendingReminders）。JSON-safe
     // snapshot copies of the agent's memory — live arrays/objects are never handed out.
     tasks: Array.isArray(agent._tasks) ? [...agent._tasks] : [],
     goal: agent._goal ? { ...agent._goal } : null,
@@ -257,7 +257,7 @@ export function agentState(agent) {
 export function reinjectAfterCompaction(history, agent, getAuto) {
   // Re-inject AUTO mode reminder — getAuto() is the live flag (CLI parity), so a
   // mid-turn approve-all that survives compression re-injects the reminder. D-CI6
-  // (VSC-CONTEXT-PARITY §17.3): the permission sentence retired — the CLI has no
+  // (VSC-CONTEXT-PARITY): the permission sentence retired — the CLI has no
   // permission reminder, AUTO is the only mode line (agent.mjs loop head re-pushes it).
   if (getAuto()) {
     history.push({
