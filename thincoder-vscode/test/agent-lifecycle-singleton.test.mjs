@@ -18,12 +18,13 @@
 import { test, beforeEach, afterEach } from "node:test"
 import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { randomUUID } from "node:crypto"
-import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-slots.mjs"
+import { _setSessionsDirForTest, _resetSessionsDirForTest, slotPath } from "../src/extension/session-slots.mjs"
 import { _gitFailureCooldownForTests, _clearGitFailureCooldownForTests } from "../src/agent/setup-reminders.mjs"
+import { planTool } from "@thincoder/core/agent-tools/plan.mjs"
 import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
 import { _setProjectRootForTest } from "@thincoder/core/manifest.mjs"
 import {
@@ -210,7 +211,7 @@ test("applySlotSessionState §11.2.1: slot authority for modes/tokens; restore b
   assert.equal(a.config.agent.engineering, true)
   assert.equal(a.config.advisor.guard, true)
   assert.equal(a.config.advisor.provider, "cfg-provider") // 非 guard advisor 字段 config-scoped（SESSION §6——只有 guard 槽权威）
-  assert.equal(a._planMode, true)
+  assert.equal(a._planMode, false) // FR31 ③ / T13：槽 {engineering:true, planMode:true} ⇒ 生效值 false（槽值回写归 hydrateRun）
   assert.equal(a._tasks[0].title, "restored-task")
   assert.equal(a._goal.objective, "restored-goal")
   assert.deepEqual(a._pendingReminders, ["[System reminder: restored]"])
@@ -218,6 +219,14 @@ test("applySlotSessionState §11.2.1: slot authority for modes/tokens; restore b
   assert.equal(a._engDesignTokens.size, 1)
   assert.equal(out.engineering, true)
   assert.equal(out.droppedExpired, false)
+})
+
+test("T13 收正（FR31 ③）：hydrateRun 遇槽 {engineering:true, planMode:true} ⇒ 生效值 + 槽位 + 未注入 plan 提示语三收正", async () => {
+  const dir = join(sessionsDir, "project-plan"); mkdirSync(join(dir, ".git"), { recursive: true }); _gitFailureCooldownForTests(dir, Date.now()); const sf = slotPath(dir, 1)
+  const q = []; planTool.execute({ action: "exit" }, { agent: { _pendingReminders: q } }) // 真产出未注入 EXIT 句
+  writeFileSync(sf, JSON.stringify({ version: 2, cwd: dir, history: [], contextHistory: [], tasks: [], planMode: true, autoApprove: false, engineering: true, goal: null, advisor: null, pendingReminders: [...q, "[System reminder: unrelated]"], sessionStart: "S-plan" }), "utf8")
+  const run = await hydrateRun(buildTopLevelAgent(), { provider: { model: "deepseek-v4-pro" }, cwd: dir, input: "hi", depth: 0, role: null, getAuto: () => false, restore: true, opts: { engPersist: { cwd: dir, slot: 1 } } })
+  assert.deepEqual([run.agent._planMode, JSON.parse(readFileSync(sf, "utf8")).planMode, run.agent._pendingReminders], [false, false, ["[System reminder: unrelated]"]], "工程模式 ⇒ 内存位/槽位/未注入 plan 提示语全零")
 })
 
 test("applySlotSessionState: reuse path — slot modes refresh per run, memory session fields stay authoritative", () => {

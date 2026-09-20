@@ -18,7 +18,8 @@ import {
 } from "@thincoder/core/session-store.mjs"
 import { pushReal } from "@thincoder/core/context.mjs"
 import { readHistoryTool } from "@thincoder/core/agent-tools/read-history.mjs"
-import { deleteSlot, newSession, slotPath, applySession } from "@thincoder/core/session.mjs"
+import { deleteSlot, newSession, slotPath, applySession, saveSession } from "@thincoder/core/session.mjs"
+import { planTool } from "@thincoder/core/agent-tools/plan.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "@thincoder/core/session-slots.mjs"
 import { runSessionGc, COLD_CWD_RETENTION_MS } from "@thincoder/core/session-gc.mjs"
 
@@ -380,6 +381,29 @@ test("T-RS11 未绑定模式 F：pushReal 全量数组（无驱逐、无 sidecar
   })
 })
 
+test("T13 恢复清零（FR31 ③ / AC14）：槽 {engineering:true, planMode:true} ⇒ applySession 后内存位 false + 排队 plan 提示语摘除；下次保存槽收正", () => {
+  withDir((dir) => {
+    const agent = mkAgent(dir, { config: { agent: {} }, planMode: false, _pendingReminders: [], _engDesignTokens: new Map() })
+    // 真产出排队提示语（产出面 = plan 工具本体——未注入的 EXIT 句正是跨模式落地风险项）
+    planTool.execute({ action: "exit" }, { agent })
+    const data = {
+      version: 2, cwd: dir, title: "", activeProvider: "mock", activeModel: null, updatedAt: 1,
+      history: [], contextHistory: [], tasks: [], planMode: true, autoApprove: false,
+      engineering: true, goal: null, advisor: null,
+      pendingReminders: [...agent._pendingReminders, "[System reminder: unrelated]"], sessionStart: "S1",
+    }
+    applySession(agent, data)
+    assert.equal(agent.config.agent.engineering, true, "工程位随槽恢复（既有语义）")
+    assert.equal(agent.planMode, false, "内存位清零（FR31 ③——半状态不随恢复复活）")
+    assert.deepEqual(agent._pendingReminders, ["[System reminder: unrelated]"], "未注入 plan 提示语摘除、非 plan 项保留")
+    // 槽收正 = 下一次保存（内存即权威——`session.mjs:128` planMode 字段既有路径）
+    saveSession(agent)
+    const disk = JSON.parse(readFileSync(slotPath(dir, agent._slot), "utf8"))
+    assert.equal(disk.engineering, true)
+    assert.equal(disk.planMode, false, "槽 planMode 随保存收正（不再重推 plan-active）")
+  })
+})
+
 test("unlinkRecordStore：目录不存在/失败均静默（尽力面）", () => {
   withDir((dir) => {
     const sf = join(dir, "none.json.1")
@@ -387,3 +411,6 @@ test("unlinkRecordStore：目录不存在/失败均静默（尽力面）", () =>
     assert.equal(existsSync(recordDirOf(sf)), false)
   })
 })
+
+
+// ─── MODE-SEAM 旧面：applySession 无 slot → 解绑（模式 F）───────────────────────────

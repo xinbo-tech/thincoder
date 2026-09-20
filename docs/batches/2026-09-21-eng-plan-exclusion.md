@@ -75,7 +75,7 @@
 | depth>0 子代理（eng-coder / eng-designer / explore · 工程模式） | **排除** | 子代理的「计划」= 任务书；话术冲突同在主代理；角色面已排除（role enum `family-tools.mjs:44-48` + spawn 门 `agent-tools/subagent.mjs:253-255`）而工具面留口 = 半排除；判据句最短（不带深度分支） |
 | 普通模式（全深度 · 两端） | 不排除 | FR31 边界：普通模式零改 |
 
-**受影响文件表**（file 级 + 每行改动面；行数 = 2026-09-21 实测；与设计档 §2.3 E7 表同源）：
+**受影响文件表**（file 级 + 每行改动面；行数 = 2026-09-21 实测——口径 = 内容行数、不含文末空行；与设计档 §2.3 E7 表同源）：
 
 | file | 行数 | 改动面 |
 |---|---|---|
@@ -91,10 +91,10 @@
 | `thincoder-vscode/src/extension/chat-panel.mjs` | 441 | `_setPlanMode` 拒绝（真值 = `agentSettings(_agentSettingsSession()).engineering`；不写槽 + 回弹） |
 | `thincoder-vscode/src/extension/panel-messages-settings.mjs` | 202 | eng 开关 ON ⇒ 调 `panel._setPlanMode(false)` |
 | `thincoder-vscode/webview/mode-buttons.js` | 119 | plan 按钮 disabled + title（`toolbar.planDisabled`）+ 点击守卫 |
-| `thincoder-vscode/src/extension/panel-session.mjs` | 296 | `:129` 装载推送改读生效值（工程 ⇒ `active:false`） |
-| `thincoder-vscode/src/extension/panel-messages.mjs` | 295 | `:133` 取槽同源 engineering 传入 `runVisionReader` |
-| `thincoder-vscode/src/extension/image-handler.mjs` | 88 | `:84` 旁路 runAgent 携 `engState`（工程真值同源） |
-| `thincoder-vscode/locales/en.json` · `zh.json` | 264 · 264 | 新增 `toolbar.planDisabled` 一键（两 locale 同步） |
+| `thincoder-vscode/src/extension/panel-session.mjs` | 295 | `:129` 装载推送改读生效值（工程 ⇒ `active:false`） |
+| `thincoder-vscode/src/extension/panel-messages.mjs` | 294 | `:133` 取槽同源 engineering 传入 `runVisionReader` |
+| `thincoder-vscode/src/extension/image-handler.mjs` | 87 | `:84` 旁路 runAgent 携 `engState`（工程真值同源） |
+| `thincoder-vscode/locales/en.json` · `zh.json` | 263 · 263 | 新增 `toolbar.planDisabled` 一键（两 locale 同步） |
 | `thincoder-core/test/family-tools.test.mjs` | 131 | 工程模式固定段断言（含子代理面） |
 | `thincoder-cli/test/cmd-plan.test.mjs` | 新建 | `/plan` 工程拒绝 + 普通回归 |
 | `thincoder-cli/test/cmd-eng.test.mjs` | 124 | 清零断言（内存位 + 槽位） |
@@ -102,8 +102,8 @@
 | `thincoder-cli/test/session-store.test.mjs` | 389 | 恢复清零断言（恢复后槽 `planMode` 收正） |
 | `thincoder-vscode/test/agent-lifecycle-singleton.test.mjs` | 491 | 槽恢复清零断言（`_planMode` + 槽位） |
 | `thincoder-vscode/test/chat-panel-messages.test.mjs` | 462 | `_setPlanMode` 拒绝断言（不写槽 + 回弹） |
-| `thincoder-vscode/test/status-line.test.mjs` | happy-dom 真 chat.js 驱动同族 | plan 按钮 disabled + title 断言 |
-| `thincoder-vscode/test/integration/host-shape-spawn.test.mjs` | 208 | T5 fixture 两条工程行（`:121-127` eng-designer / eng-coder）删 `plan`（矩阵镜像收正——`:193-199` 以 engineering=true 驱动）；其余断言零改 |
+| `thincoder-vscode/test/status-line.test.mjs` | 157 | plan 按钮 disabled + title 断言（happy-dom 真 chat.js 驱动全量 id fixture） |
+| `thincoder-vscode/test/integration/host-shape-spawn.test.mjs` | 208 | T5 fixture 两条工程行（`:121-127` eng-designer / eng-coder）删 `plan` + 增 explore 工程行（旁路面形状——`:193-199` 以 engineering=true 驱动；= T10 旁路面判据落点）；其余既有用例零改 |
 
 （测试面行 = 落点建议：判据以用例号 T10–T14 为准，实施段可就近并入更贴切的既有档。）
 
@@ -147,6 +147,18 @@
 正确读法（本节收正；实施与评审以此为准）：先例 = `thincoder-core/agent/family-tools.mjs:44-49`（角色 enum 互斥）· `:66-67`（escalate 池装饰门——工程模式 escalate 拒在 execute 层 `thincoder-core/agent-tools/subagent-actions.mjs:349`）；
 consult 家族注册门 = `consultModels.length`（`:135-137`），与 `engineering` 无关。
 
+**修正记录（评审轮 2 · 2026-09-21 · eng-designer）**——§3 发现表 #11–#13 逐号落点（设计档 + 本段面）：
+
+| # | 级 | 落点 |
+|---|---|---|
+| 11 | 🔵 | `test/status-line.test.mjs` 行「行数」列由描述改**实测行数 157**（口径 = 内容行数、不含文末空行——以表内既有行实读核对：`family-tools.mjs` 174 / `plan.mjs` 86 / 本档 host-shape 208）；两表同步（设计 `:417` · 本段 `:105`）；原描述语移入「改动面」列保留 |
+| 12 | 🔵 | 五处新增行行数按同口径收正：`panel-session.mjs` 296→**295** · `panel-messages.mjs` 295→**294** · `image-handler.mjs` 88→**87** · `locales/en.json` · `zh.json` 264·264→**263·263**（两表同步：设计 `:405-408` · 本段 `:94-97`） |
+| 13 | 🔵 | VSC 旁路面判据（设计 `:513` T10）落点钉定 = 扩 `thincoder-vscode/test/integration/host-shape-spawn.test.mjs` T5 用例集（增 explore + engineering=true 一例——`:193-199` 驱动块同款形状、`engState.enabled` 驱动 ⇒ 名集不含 `plan`）；两表该行改动面同步（设计 `:416` · 本段 `:106`）=「T5 fixture 两条工程行删 `plan` + 增 explore 工程行（旁路面形状）」，「其余断言零改」→「其余既有用例零改」；设计 T14 括注同步（`:517`）——#13 派生的同源枚举同步（非新语义） |
+
+（落点选择依据（实读）：视觉渠道档 `test/image-downgrade.test.mjs` 直调 `runVisionReader`（`:101`/`:103`/`:212` 调用形态），入参面无 `engState` ⇒ 换落点须为其补新参（超出本批改动面）；host-shape T5 的 `:193-199` 驱动块已以 `engState.enabled` 走生产 hydrate 入口 ⇒ 维持父侧钉定落点。）
+
+（父侧小项收正（2026-09-21 · 可 revert）：两表表头补口径声明（内容行数、不含文末空行——防 #11/#12 一类口径漂移复发）。）
+
 ## §3 设计评审（评审子代理）
 
 （待评审——用户点火。）
@@ -172,14 +184,111 @@ consult 家族注册门 = `consultModels.length`（`:135-137`），与 `engineer
 
 VERDICT: changes-required
 
+### 轮次 2（评审子代理）
+
+**评审对象**：#155 工程模式 plan 面排除（FR31）——轮次 2（验证轮 1 发现 #1–#10 处置落地 + 例行评审）。**方法**：三档全文实读 + 被引坐标/行数逐条实核（as-of 本轮磁盘状态）。**覆盖**：需求档 §13.9 ↔ 设计档 §2.3 E7 / §2.4 / §2.6 KD8–KD11 / §3.1 AC12–AC15 / §3.2 T10–T14 ↔ 批档 §1/§2。
+
+| # | Orig# | File | Severity | Status | Notes |
+|---|-------|------|----------|--------|-------|
+| 1 | 1 | `docs/core/design/ENGINEERING-MODE-V2.md:416` · `docs/batches/2026-09-21-eng-plan-exclusion.md:106` | 🔴 | Fixed | 两表补齐 `thincoder-vscode/test/integration/host-shape-spawn.test.mjs`（208 行）+ 改动面 = T5 fixture `:121-127` 的 eng-designer / eng-coder 两行删 `plan`（`:193-199` 以 engineering=true 驱动——本轮实读与实测口径相符）；T14（设计 `:517`）与批档判据 ④（`:117`）口径同步改「除本批所列矩阵镜像收正外」。 |
+| 2 | 2 | `ENGINEERING-MODE-V2.md:351-357` · `:424` | 🟡 | Fixed | 新增「命令面逐面钉定」表：VSC 真值 = `agentSettings(_agentSettingsSession()).engineering`（实核 `settings.mjs:196` = `engineering: slotData?.engineering ?? s.engineering`（槽优先）✓ · `chat-panel.mjs:359-364` ✓）；提示载体 = plan 按钮 disabled + title（新键 `toolbar.planDisabled`，两 locale；`mode-buttons.js:16-23` 现无 disabled/title —— 改动面成立）；边界行收窄为「仅一条 i18n 键」。 |
+| 3 | 3 | `ENGINEERING-MODE-V2.md:396/:400/:401/:405/:498/:516` | 🟡 | Fixed | T13/AC14 纳入槽位（「内存 + 槽位」）；恢复面槽值收正 = VSC 水合槽回写（先例 `:277-279` = 水合发现槽内过期项回写，实核 ✓）+ agent-state 生效值 + `panel-session.mjs:129` 装载推送改读生效值；CLI 侧明文「下次保存随内存值收正」。 |
+| 4 | 4 | `ENGINEERING-MODE-V2.md:356` · `:399` · `docs/batches/…:88` | 🟡 | Fixed | ACP 拒绝出口钉定 = 两 handler 前置判 + 携共用文案的 `INVALID_PARAMS`；`applyConfigOption` 布尔契约零改（`false` 仍 = `unknown configId`——工程拒绝不经该路径，误导文案不可达）。 |
+| 5 | 5 | `docs/core/requirements/ENGINEERING-MODE-V2.md:697` · `docs/batches/…:25` | 🟡 | Fixed | 先例句已改实读形态（`:44-49` 角色 enum 互斥 · `:66-67` escalate 池装饰门 + execute 层拒）；批档 §1:25 亦已收正；§2:147-148 附「正确读法」。残留（不另计）：§2:145 仍写「未改，请父侧自改」——§1:25 实已收正，属过程记录滞后一行。 |
+| 6 | 6 | `requirements:696` · `ENGINEERING-MODE-V2.md:423` | 🟡 | Fixed | 两侧均改「三条 reminder 文本本体不改」+ 三常量逐名（`plan.mjs:11` · `:17` · `:21`），与批档 §1:49 口径一致。 |
+| 7 | 7 | `ENGINEERING-MODE-V2.md:372-377` · `:496` · `:513` · 两表新增 2 文件行 | 🟡 | Fixed | depth>0 改「两条活体面」逐条钉定：① 核 spawn 强制位（`subagent-spawn.mjs:341-344`）；② VSC 旁路面（`image-handler.mjs:84` 携 `engState`；`panel-messages.mjs:133` 传槽同源 engineering）。实核：VSC `runAgent(provider, cwd, input, callbacks, signal, autoApprove, opts)`（`agent.mjs:53`）第 7 参 = opts → `hydrateRun` ✓ ⇒ 无需额外改 `agent.mjs`（不在表内成立）；AC12/T10 判据随补。 |
+| 8 | 8 | `ENGINEERING-MODE-V2.md:385-386` · `:443` | 🔵 | Fixed | 改「core 侧五处（示例）」+ §2.4 行补 VSC 载体面 / 槽写面清单，标注「全部零改」。 |
+| 9 | 9 | `ENGINEERING-MODE-V2.md:542-549` | 🔵 | Fixed | 变更记录时序收正（2026-09-21 两条移至 09-18 行之后）。 |
+| 10 | 10 | `ENGINEERING-MODE-V2.md:419` | 🔵 | Fixed | 「净增 ±0 行」→「净增 **+1 行**」✓；次级项（F12 口径句 = `requirements:631` 仍为「超限档本批拆」原句）转新行 14。 |
+| 11 | (new) | `ENGINEERING-MODE-V2.md:417` · `docs/batches/…:105` | 🔵 | New | `test/status-line.test.mjs` 行「行数」列填的是描述（「全量 id fixture 同族（happy-dom 真 chat.js 驱动）」/「happy-dom 真 chat.js 驱动同族」）而非行数 ⇒ 受影响文件表缺该档当前行数标注。 |
+| 12 | (new) | `ENGINEERING-MODE-V2.md:405/:406/:407/:408` · `docs/batches/…:94-97` | 🔵 | New | 新增行行数口径与表内既有行不一致（含文末空行，+1）：实读 `panel-session.mjs:295` = `  }`（`:296` 空）↔ 表 296；`panel-messages.mjs:294` = `}`（`:295` 空）↔ 表 295；`image-handler.mjs:87` = `}`（`:88` 空）↔ 表 88；`locales/en.json:263` = `}` 与 `zh.json:263` = `}`（各 `:264` 空）↔ 表 264 · 264。 |
+| 13 | (new) | `ENGINEERING-MODE-V2.md:513` · `:389` | 🔵 | New | T10 新增的「VSC 旁路面」判据在两表测试行中无对应落点（现有行 = host-shape T5「其余断言零改」+ panel-messages 的 `_setPlanMode` 断言；最贴近的视觉渠道测试档 `thincoder-vscode/test/image-downgrade.test.mjs`（仓内实存）未列入）⇒ 判据落点靠「就近并入更贴切的既有档」自由度兜底。 |
+| 14 | (new) | `docs/core/requirements/ENGINEERING-MODE-V2.md:631` | 🔵 | New | F12「超限档本批拆」口径句未加软/硬线适用注（≠ 本批边界结论本身；批档 `:143` 已裁「需求档面，父侧处置」）。 |
+
+**计数**：本轮 = 🔴 0 · 🟡 0 · 🔵 4（新）；轮 1 发现 #1–#10 = 全部 Fixed（#5 残留 1 行过程记录滞后 · #10 次级项转行 14）。行数抽查 = 其余行与内容行数一致；新增 5 处口径 +1（行 12）。**覆盖**：FR31 三条裁决 + 四条验收齐（判据 = T10–T14 / AC12–AC15）；边界（普通模式零改 / reminder 文本 / 不新增机械门 / 提示词零改 / VSC setup 拆分不执行）齐。
+
+VERDICT: pass
+
 ## §4 用户批准（主 agent）
 
-（待 §3 后。）
+**父侧代签（用户 2026-09-21 01:21「自动跑」授权 · 代签三条件齐备）**：
+
+- 依据 ① **评审 pass**：§3 轮次 2 = 🔴 0 · 🟡 0 · 🔵 4（`:196`），无阻塞项；
+- 依据 ② **修正轮已落地并逐条核验**：轮 1 十项（§2 修正记录 `:127-148`）+ 轮 2 四项（#11/#12/#13 = §2 修正记录（评审轮 2）`:150-158`；#14 = F12 口径句，需求档 `docs/core/requirements/ENGINEERING-MODE-V2.md:631` 父侧收正）；父侧独立复核（2026-09-21 01:5x）= 改档实读 ✓ · doc-check 复跑 exit 0 ✓ · 两表表头口径声明补行（父侧小项收正 ✓ 可 revert）；
+- 依据 ③ **token 已签发**（评审通过即发——不落值）。
+
+**批准 = 本批设计（E7 五面 + 命令面逐面钉定 + 两条活体面 + 受影响文件表 25 行 + T10–T14 / AC12–AC15）为正式设计，准予实施** ✓。
 
 ## §5 实施记录（eng-coder）
 
 （待批准后。）
 
+**状态行**：✅ 实施完成（三端全绿 + 内部偏差审计 + advisor 代码评审 pass）· 待父侧 §6 收口
+
+**交付摘要**：FR31 五面落地——① 装配面（核单源按 `engineering` 裁剪 + VSC 补传模式位 / 装配块下移）② 命令面（CLI `/plan` · ACP 两 handler 前置判 · VSC 宿主拒绝 + 按钮 disabled/title/点击守卫 + 两 locale 新键）③ 残留清零（单点 `clearPlanMode` + 三翻转 + 两恢复 + 槽位收正）④ 提示词面零改 ⑤ 测试面 T10–T14 / AC12–AC15。
+
+**判据号 → 落点**（实施 file:line ↔ 判据 file:line）：
+
+| 判据 | 实施落点 | 判据落点（测试） |
+|---|---|---|
+| FR31 ① / AC12 / T10 | 核裁剪 `thincoder-core/agent/family-tools.mjs:178-180` · VSC 补传+下移 `thincoder-vscode/src/agent/setup.mjs:216-241`（`:229 engineering`）· 旁路面 `thincoder-vscode/src/extension/panel-messages.mjs:137` → `thincoder-vscode/src/extension/image-handler.mjs:87` | `thincoder-core/test/family-tools.test.mjs:73-95` · `thincoder-vscode/test/integration/host-shape-spawn.test.mjs:124-131` + `:197-203` |
+| FR31 ② / AC13 / T11 | CLI `thincoder-cli/src/tui/cmd-plan.mjs:12-15` · ACP `thincoder-cli/src/acp/handlers-session.mjs:221-223`（set_config_option）+ `:246-248`（set_mode）· VSC 宿主 `thincoder-vscode/src/extension/chat-panel.mjs:319-333` · 界面 `thincoder-vscode/webview/mode-buttons.js:27-31`+`:44-50` · i18n `thincoder-vscode/locales/en.json:24` · `thincoder-vscode/locales/zh.json:24` | `thincoder-cli/test/cmd-plan.test.mjs:26-40` · `thincoder-cli/test/acp-contract.test.mjs:194-215` · `thincoder-vscode/test/chat-panel-messages.test.mjs:470-500` · `thincoder-vscode/test/status-line.test.mjs:163-198` |
+| FR31 ③ / AC14 / T12 | 单点 `thincoder-core/agent-tools/plan.mjs:35`（共用文案常量）+ `:38-61`（`clearPlanMode`）· 三翻转 `thincoder-core/agent-tools/eng.mjs:87-89` · `thincoder-cli/src/tui/cmd-eng.mjs:52-54` · `thincoder-vscode/src/extension/panel-messages-settings.mjs:171-181` · 槽位 `thincoder-cli/src/tui/cmd-eng.mjs:100` | `thincoder-cli/test/cmd-eng.test.mjs:131-167` · `thincoder-core/test/tool-seams-agent.test.mjs:121-145` · `thincoder-vscode/test/chat-panel-messages.test.mjs:470-500` |
+| FR31 ③ / AC14 / T13（恢复面） | CLI `thincoder-core/session-lifecycle.mjs:116-119`（内存；槽随下次保存收正 `thincoder-core/session.mjs:128`）· VSC `thincoder-vscode/src/agent/agent-state.mjs:110-127` · 槽回写 `thincoder-vscode/src/agent/setup.mjs:211-214` · 装载推送 `thincoder-vscode/src/extension/panel-session.mjs:128-132` | `thincoder-cli/test/session-store.test.mjs:384-405` · `thincoder-vscode/test/agent-lifecycle-singleton.test.mjs:213` + `:224-230` |
+| FR31 ④ / AC15 / T14 | 普通支路逐字（`thincoder-core/agent/family-tools.mjs:180` · `thincoder-cli/src/tui/cmd-plan.mjs:16-18` · ACP 未改 · 两恢复面以 `engineering === true` 为门） | `thincoder-cli/test/cmd-plan.test.mjs:42-53` · `thincoder-cli/test/acp-contract.test.mjs:217-238` · 三端既有用例零改全绿（矩阵镜像收正 = `host-shape-spawn.test.mjs:126-131` 两工程行删 plan + 增 `explore-eng` 行） |
+
+**三端验证读数**（cwd = 各项目根 · 命令 `node test/run.mjs`）：
+
+- 核 `thincoder-core`：`tests 449 / pass 449 / fail 0`
+- CLI `thincoder-cli`：`tests 760 / pass 760 / fail 0`
+- VSC `thincoder-vscode`：`tests 865 / pass 865 / fail 0`
+
+**实施期端到端复核读数**（一次性脚手架，跑完即删；未入库）：CLI 路径真装配（核 `prepareRun`，depth 0）＝ 工程 `task,timer,subagent,…`（无 plan）· 普通 `task,plan,timer,…`（含 plan）；eng-designer 子代真链（`gateEngCoderSpawn` + `buildSpawnChild` + `prepareRun`）＝ 强制位 `engineering:true` ⇒ `task,timer,notify_parent,batch_segment,subagent`（无 plan）——**未决项 1 复核 ✓**。
+
+**决策透明表**（实施期自决 4 条）：
+
+| # | 决策 | 理由 | 依据 |
+|---|---|---|---|
+| D1 | VSC `_setPlanMode` 仅锁**开方向**（`value === true` 拒绝）；`false` 走既有槽写契约 | 设计同段落并存「工程模式一律拒绝」与「`handleSetEngineeringEnabled` ON ⇒ 调 `panel._setPlanMode(false)`」；若 false 亦拒写 ⇒ T12「槽 planMode=false（VSC）」无落点。关方向 = 归零语义（工程态下只会清残留，不产生半状态） | 设计档 §2.3 E7 命令面钉定表 VSC 行 + 文件表 `panel-messages-settings.mjs` 行 |
+| D2 | VSC 恢复面除 `_planMode` 外，一并摘除**槽回填的未注入 plan 提示语**（`agent-state.mjs:127` 复用单点） | E7 ③ 结构行与 KD10 明写「两个恢复点复用 `clearPlanMode`（含未注入提示语过滤）」；只收 `_planMode` 会留下 `PLAN_EXIT_REMINDER` 跨模式落地口（VSC 逐回合注入 `_pendingReminders`） | 设计档 §2.3 E7 ③ 行 · §2.6 KD10 |
+| D3 | T12 核 `eng` 工具翻转点落 `thincoder-core/test/tool-seams-agent.test.mjs`（表外档） | 两表测试行无该落点；批档 `:108` 明授权「测试面行 = 落点建议：判据以用例号 T10–T14 为准，实施段可就近并入更贴切的既有档」（该档已是 eng 工具 #91 用例之家） | 批档 §2 测试面注 + 判据 ③ |
+| D4 | 行数压缩以守 ≤500 硬限（`setup.mjs` 499 · 两测试档 500）：注释合并、断言行合并，无逻辑变化 | 触碰后三档越限 ⇒ 违反项目硬限；拆分方案仅 `setup.mjs` 一条已登记（本批不执行），两测试档无拆分授权 | 项目约定「≤ 500 lines hard limit」+ 设计档 §2.3 E7 拆分方案节 |
+
+**面外披露**（表外 + 需父侧/设计段收正）：
+
+1. **表外档 1 个**：`thincoder-core/test/tool-seams-agent.test.mjs`（D3——批档 `:108` 口径内）；
+2. **设计档行数自证句漂移**：`setup.mjs` 实为 495 → **499**（净增 **+4**，设计档 §2.3 E7 拆分方案节自证「本批净增 **+1 行**」）——设计档非本角色写域，请父侧/设计段按实收正（不涉机制）；
+3. **两表「行数」列整体为设计时实测**（实施后实际值，供下次触碰或 §6 收正）：family-tools 181 · plan.mjs 120 · eng.mjs 106 · session-lifecycle 310 · cmd-plan 19 · cmd-eng 104 · handlers-session 257 · vsc setup 499 · agent-state 158 · chat-panel 455 · panel-messages-settings 208 · mode-buttons 130 · panel-session 298 · panel-messages 300（读侧计数）· image-handler 90 · locales 263 · 263 · family-tools.test 156 · cmd-plan.test 53 · cmd-eng.test 167 · acp-contract 411 · session-store 417 · agent-lifecycle 500 · chat-panel-messages 500 · status-line 198 · host-shape 214（口径 = 内容行数，不含文末空行）；
+4. **相邻观察项（本批不做）**：① VSC 翻转点在**在飞回合内**只收正槽位（活体 `agent.config.agent.engineering` / `planMode` 由下一次 hydrate 收正）——该回合剩余轮次内 `planMode` 可仍为 true 且当轮表内仍有 plan（= 设计边界：VSC 真值 = 槽权威 + 不新增机械门）；② VSC 旁路面 `engState` 活体传递链无直接用例（T10 判据按父侧钉定落装配入参面 `host-shape T5`）；③ 两测试档压线 500（零余量，下次触碰前需拆分或外提用例）。
+
+**审计与代码评审轮次与终态**：
+
+- **内部偏差审计（explore 子代 · 只读）轮次 1**：1 🔴（= §5 未写入——协议时序：§5 于实施完成后写）+ 🔵 4（表外档未登记 / 临时脚手架残留 / T10 第四格输入面 `{depth:1, role:"plan"}` 未断言 / 两表行数漂移）；处置：① 补断言 `thincoder-core/test/family-tools.test.mjs:92-94` ② 删 `.thincoder/tmp` 脚手架 3 档 ③ 本段（§5） ④ 行数漂移入本段面外披露第 2/3 条。
+- **advisor 代码评审（type=code）轮次 1**：**VERDICT: pass**（0 🔴；🟡 2 = 文件行数软线（7 档 >300，其中两测试档压线 500）+ §5 协调项（本段即其落点）；🔵 4 = 表外档记录面 / 行数漂移 / VSC 翻转点回合内残窗登记 / 旁路面用例缺口）——🟡🔵 均为**登记项，无 must-fix**。
+- **终态：clean**（fix round 1 内收敛，无未完项）。
+
+**未做清单（本批边界内明确不做）**：需求档/设计档/§1–§4/§6 未触碰（他段写域）· 表外档 0（除 D3 授权档）· VSC `setup.mjs` 拆分未执行（改动后 499 行，未越 500 硬限 ⇒ 触发条件未成立）· 提示词档零改 · 无新增机械门 · 三条 reminder 文本本体逐字未改（`thincoder-core/agent-tools/plan.mjs:11` · `:17` · `:21`）。
+
+（占位收正注：本段首行「状态行」承接上方占位行「（待批准后。）」——占位语以本段为准，同 §2 先例。）
+
 ## §6 验证与收口（父代理）
 
-（待实施后。）
+**状态行**：✅ 已收口 2026-09-21
+
+**父侧验证（承 §5 交付）**：
+
+- **三端独立复跑**（父侧实跑 · cwd = 各项目根 · `node test/run.mjs`）：核 **449/449** exit 0 · CLI **exit 0** · VSC **exit 0** ✓（与 §5 自报一致）。
+- **承重面抽验**（实读）：核裁剪 `thincoder-core/agent/family-tools.mjs:173-181` = `engineering ? [taskTool, timerTool, …] : [taskTool, planTool, timerTool, …]`（注释含 FR31 / KD8 / KD11 与判据单点句）✓；`setup.mjs` 499 · 两测试档 500 = 未越硬限 ✓（§5 面外披露 2/3 采信）。
+- **未决项 1 复核**（实施期 E2E）：CLI depth-0 工程装配无 `plan` / 普通含 `plan`；eng-designer 子代真链 = `engineering:true` ⇒ 无 `plan` ✓。
+- **内部审计 + 代码评审**：审计轮 1（1🔴 协议时序 + 4🔵）处置完毕；advisor `type=code` 轮 1 = **pass**（0🔴 / 2🟡 / 4🔵——均登记级）⇒ 终态 clean ✓。
+
+**D7 结算清单**：
+
+- **角色表**：设计 = eng-designer #28（设计轮）/ #33 · #35（修正轮）· 评审 = #34（轮 2 pass）· 实施 = eng-coder #37（内审 + 代码评审 pass）· 收口 = 父侧。
+- **状态行**：§2 / §5 完成态 → **已收口**（本段）· 整档冻结（不再回改）。
+- **计数**：三端测试 = §5 读数（与本段独立复跑一致）；受影响文件 = 表内 26 档 + 表外授权 1 档（`tool-seams-agent.test.mjs`——批档：108 口径内 ✓）。
+- **指针**：需求档 §13.9 FR31 ↔ 设计档 §2.3 E7 ↔ 本批档 ↔ §5 落点表——四方同源 ✓。
+- **变更记录**：设计档 / 需求档条目已在档（本批）；批档本档自洽。
+- **待办勾销**：**#155 → 已核销**；新增记账两条 = 两测试档压线 500（零余量）+ VSC 翻转在飞回合残窗（另册）。
+- **台账可见面**：`#155` 结算依据 = 本段 + §5。
+- **Errata（父侧小项收正 · 可 revert）**：设计档 `:419` 拆分方案节「本批净增 +1 行」→ 实读 **+4 行（499）**（实施轮实测；触发条件仍未达 ✓）；设计档变更记录「±0 → +1」为轮 2 时点记录（历史面留档不动）。

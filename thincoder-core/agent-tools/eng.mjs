@@ -15,6 +15,7 @@
  * 拒翻 ⇒ 返回原因串 + **零副作用**（模式保持 OFF）。OFF 方向与幂等 enter 零改。
  */
 import { ENG_ON_REMINDER, ENG_OFF_REMINDER } from "../agent.mjs"
+import { clearPlanMode } from "./plan.mjs"
 import { purgeExpiredDesignTokens } from "../token-ttl.mjs"
 import { resolveEngineeringManifest } from "../manifest.mjs"
 
@@ -83,6 +84,9 @@ export const engTool = {
       }
       ctx.agent.manifest = r.manifest
       ctx.agent.config.agent.engineering = true
+      // FR31 ③ / KD10（翻转点①）：工程模式 ⇒ planMode 恒 false——中途开模式时清残留
+      //（planMode 位 + reminder 计数 + 未注入的 plan 提示语），半状态（工程纪律 × plan 只读）不产生。
+      clearPlanMode(ctx.agent)
       // R16 (F-R16b ②): off→on 不重评——只清过期 token（用户裁定"打开工程模式时
       // 应该清理"），有效 token 原样保留——遍历 Map 删过期，返回文案含清理个数。
       const cleared = purgeExpiredDesignTokens(ctx.agent)

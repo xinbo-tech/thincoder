@@ -20,6 +20,7 @@ import { fileURLToPath } from "node:url"
 
 import { buildAcpHandlers } from "../src/acp.mjs"
 import { buildAcpCallbacks } from "../src/acp/bridge.mjs"
+import { PLAN_ENGINEERING_REFUSED } from "@thincoder/core/agent-tools/plan.mjs"
 import { _setConfigPathForTest, _resetConfigPathForTest } from "@thincoder/core/config.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest, loadManifest, saveManifest, slotPath, writeSessionFile } from "@thincoder/core/session-slots.mjs"
 import { mockLLM } from "./helpers/mock-llm.mjs"
@@ -187,6 +188,53 @@ describe("§11.3 会话方法响应形状（AC10 / AC11）", () => {
     } finally {
       rmSync(cwd, { recursive: true, force: true })
     }
+  })
+})
+
+// ─── ENG-PLAN-EXCLUSION 批（FR31 ② / AC13 = T11）：工程模式 plan 面拒绝 ─────────────
+
+describe("§2.3 E7 命令面（ENG-PLAN-EXCLUSION · AC13）：工程模式 plan 设置拒绝且提示可见（T11）", () => {
+  /** 工程会话：`agent.config.agent.engineering` = 工况真值（核单源同键——E7「命令面逐面钉定」表）。 */
+  const engHarness = (engineering) => {
+    const agent = {
+      _slot: null, _sessionStart: null, history: [], tasks: [], planMode: false,
+      config: { agent: { engineering } }, run: async () => {}, cancel: () => {},
+    }
+    return { agent, ...handlerHarness({ createSession: async ({ id }) => ({ id, agent, run: async () => {}, cancel: () => {} }) }) }
+  }
+
+  test("T11 拒绝：工程模式 ⇒ set_mode / set_config_option 携共用文案 INVALID_PARAMS（非 unknown configId）；状态不变、零通知；mode:'normal' 照常", async () => {
+    const { agent, handlers, notifications } = engHarness(true)
+    const created = await handlers["session/new"]({ cwd: process.cwd(), mcpServers: [] })
+    const sid = created.sessionId
+
+    const r1 = await handlers["session/set_mode"]({ sessionId: sid, mode: "plan" })
+    assert.equal(r1.error.code, -32602, "INVALID_PARAMS")
+    assert.equal(r1.error.message, PLAN_ENGINEERING_REFUSED, "文案 = 共用常量逐字（TUI / ACP 同源）")
+    assert.equal(agent.planMode, false, "状态不变（零翻转）")
+
+    const r2 = await handlers["session/set_config_option"]({ sessionId: sid, configId: "mode", value: "plan" })
+    assert.equal(r2.error.code, -32602, "INVALID_PARAMS")
+    assert.equal(r2.error.message, PLAN_ENGINEERING_REFUSED, "前置判出口——不再是误导性的 unknown configId（评审轮 1 #4）")
+    assert.equal(agent.planMode, false, "状态不变")
+    assert.equal(notifications.length, 0, "拒绝零通知（不产生半状态广播）")
+
+    const r3 = await handlers["session/set_mode"]({ sessionId: sid, mode: "normal" })
+    assert.ok(!r3.error, "mode:'normal' 照常接受（唯一合法态——幂等）")
+  })
+
+  test("T14 普通模式回归：engineering=false ⇒ ACP plan 设置全带宽（两条入口均放行）", async () => {
+    const { agent, handlers, notifications } = engHarness(false)
+    const created = await handlers["session/new"]({ cwd: process.cwd(), mcpServers: [] })
+    const sid = created.sessionId
+    const r1 = await handlers["session/set_mode"]({ sessionId: sid, mode: "plan" })
+    assert.ok(!r1.error, "普通模式 set_mode plan 放行")
+    assert.equal(agent.planMode, true)
+    assert.ok(notifications.some((n) => n.params?.update?.sessionUpdate === "current_mode_update"), "既有通知保留")
+    agent.planMode = false
+    const r2 = await handlers["session/set_config_option"]({ sessionId: sid, configId: "mode", value: "plan" })
+    assert.ok(!r2.error, "普通模式 set_config_option mode=plan 放行")
+    assert.equal(agent.planMode, true)
   })
 })
 

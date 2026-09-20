@@ -27,6 +27,40 @@ const SPARSE_INTERVAL = 2
 const FULL_INTERVAL = 5
 
 /**
+ * ENG-PLAN-EXCLUSION（FR31 ② · 设计 `docs/core/design/ENGINEERING-MODE-V2.md` §2.3 E7）：
+ * 工程模式下 plan 面的**拒绝文案**——TUI `/plan`（`thincoder-cli/src/tui/cmd-plan.mjs`）与
+ * ACP `session/set_mode` / `session/set_config_option`（`thincoder-cli/src/acp/handlers-session.mjs`）
+ * 两面**共用一条**（D2 单源；VSC 面板面提示 = webview i18n 键 `toolbar.planDisabled`）。
+ */
+export const PLAN_ENGINEERING_REFUSED =
+  "plan mode is disabled in engineering mode — engineering mode already runs design-before-code (design → review → approval → implementation)."
+
+/** ENG-PLAN-EXCLUSION（FR31 ③ · KD10）：未注入 plan 提示语判据 = 三条 reminder 常量逐字组成员。 */
+const isPlanReminder = (r) => r === PLAN_FULL_REMINDER || r === PLAN_SPARSE_REMINDER || r === PLAN_EXIT_REMINDER
+
+/**
+ * ENG-PLAN-EXCLUSION（FR31 ③ / KD10——单点复用）：工程模式 ⇒ `planMode` 恒 false。
+ * 清 `planMode` + 两 reminder 计数 + **未注入的 plan 提示语**（`_pendingReminders` 中的三条
+ * plan 提醒——否则排队的 `PLAN_EXIT_REMINDER`「Start implementing your plan …」会在模式翻转后
+ * 落地，与工程链条打架）。五个挂点复用本函数：三翻转（核 `eng` 工具 / CLI `/eng` / VSC 面板开关）
+ * + 两恢复（CLI `applySession` / VSC `applySlotSessionState`）。
+ * @param {object} agent — 会话 agent（就地改写）
+ * @returns {boolean} 是否清掉了实况（planMode 曾为 true / 有排队 plan 提示语）——调用方按需提示
+ */
+export function clearPlanMode(agent) {
+  if (!agent) return false
+  const queued = Array.isArray(agent._pendingReminders) ? agent._pendingReminders.filter(isPlanReminder).length : 0
+  const had = agent.planMode === true || queued > 0
+  agent.planMode = false
+  agent._planTurnsSinceReminder = 0
+  agent._planTurnsSinceSparse = 0
+  if (Array.isArray(agent._pendingReminders)) {
+    agent._pendingReminders = agent._pendingReminders.filter((r) => !isPlanReminder(r))
+  }
+  return had
+}
+
+/**
  * Decide which plan-mode reminder (if any) to inject this turn.
  * @param {object} agent — the agent object (mutated: tracks reminder state)
  * @param {boolean} userMessageSince — whether a user message arrived since the last reminder

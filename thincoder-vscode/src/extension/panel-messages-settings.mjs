@@ -169,9 +169,15 @@ export function handleSetAdvisorGuard(panel, msg) {
 
 /** 迁出自 `panel-messages.mjs` 的 case "setEngineeringEnabled"。 */
 export function handleSetEngineeringEnabled(panel, msg) {
+  const on = !!msg.value
+  // ENG-PLAN-EXCLUSION（FR31 ③ / T12——翻转点③·VSC）：ON 先清 plan 残留（槽 planMode=false
+  // + 回推面板）——清在工程位写槽之**前**（此刻 panel 读到的仍是旧模式位——走 `_setPlanMode`
+  // 既有槽写契约；工程位写后 plan 面才是拒绝态）。否则槽 `{engineering:true, planMode:true}`
+  // 半状态每次装载复活（FR31 ③ 要消灭的形态）。
+  if (on) void panel._setPlanMode(false)
   // Same dual-write contract as setAdvisorGuard above: slot authority + config mirror.
-  try { setSlotEngineering(_cwd(), panel._ensureSlot(), !!msg.value) } catch {}
-  saveAgentSettingsFromPanel({ engineering: !!msg.value })
+  try { setSlotEngineering(_cwd(), panel._ensureSlot(), on) } catch {}
+  saveAgentSettingsFromPanel({ engineering: on })
   panel._pushSettingsLight()
 }
 

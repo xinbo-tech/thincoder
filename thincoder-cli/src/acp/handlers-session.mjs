@@ -11,7 +11,12 @@
  */
 import { resolve } from "node:path"
 import { normalizeCwd, bindRecordStore, newSession, slotPath } from "@thincoder/core/session.mjs"
+import { PLAN_ENGINEERING_REFUSED } from "@thincoder/core/agent-tools/plan.mjs"
 import { ACP_ERRORS } from "./transport.mjs"
+
+/** ENG-PLAN-EXCLUSION（FR31 ② · E7「命令面逐面钉定」）：工程真值 = 核单源同键
+ *  `agent.config.agent.engineering`。 */
+const isEngineering = (agent) => agent?.config?.agent?.engineering === true
 
 /** Session-level config options exposed to clients — schema `SessionConfigOption.required = ["id","name"]`
  *  (响应侧用 `id`；请求侧 `SetSessionConfigOptionRequest` 用 `configId`——不对称属契约本身 · §11.3 G2-8). */
@@ -209,6 +214,13 @@ export function createSessionHandlers(ctx) {
       if (!configId || value === undefined) {
         return { error: { ...ACP_ERRORS.INVALID_PARAMS, message: "set_config_option requires configId and value" } }
       }
+      // ENG-PLAN-EXCLUSION（FR31 ② / 评审轮 1 发现 #4 出口钉定）：工程模式 ⇒ plan 面**前置判**
+      // ⇒ 携共用文案的 INVALID_PARAMS。`applyConfigOption` 布尔契约零改（`false` 仍 = unknown
+      // configId——工程拒绝不经该路径，下方 `:unknown configId` 误导文案对 mode=plan 不再可达）；
+      // `mode:"normal"` 照常接受（唯一合法态，幂等）。
+      if (configId === "mode" && value === "plan" && isEngineering(found.session.agent)) {
+        return { error: { ...ACP_ERRORS.INVALID_PARAMS, message: PLAN_ENGINEERING_REFUSED } }
+      }
       const applied = applyConfigOption(found.session.agent, configId, value)
       if (!applied) {
         return { error: { ...ACP_ERRORS.INVALID_PARAMS, message: `unknown configId: ${configId}` } }
@@ -228,6 +240,11 @@ export function createSessionHandlers(ctx) {
       if (found.error) return found
       if (params.mode !== "plan" && params.mode !== "normal") {
         return { error: { ...ACP_ERRORS.INVALID_PARAMS, message: "mode must be plan or normal" } }
+      }
+      // ENG-PLAN-EXCLUSION（FR31 ② / 同 #4）：工程模式 + `mode:"plan"` ⇒ 前置判 ⇒ 携共用文案
+      // 的 INVALID_PARAMS（状态零变、零通知）；`normal` 照常（幂等）。
+      if (params.mode === "plan" && isEngineering(found.session.agent)) {
+        return { error: { ...ACP_ERRORS.INVALID_PARAMS, message: PLAN_ENGINEERING_REFUSED } }
       }
       found.session.agent.planMode = params.mode === "plan"
       notifyRef.current("session/update", {

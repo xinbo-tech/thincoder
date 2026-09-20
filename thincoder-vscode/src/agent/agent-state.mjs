@@ -9,6 +9,7 @@
 // 过期判定改指核 `@thincoder/core/token-ttl.mjs`（`tokenExpired`——单一权威；畸形 token 不判过期
 // = 核语义：门禁格式拒、不主动删）。`extractTokenUUID` 核无同名导出 ⇒ 本地一行式（uuid 段）。
 import { tokenExpired } from "@thincoder/core/token-ttl.mjs"
+import { clearPlanMode } from "@thincoder/core/agent-tools/plan.mjs"
 // W16：traces 默认值 = 核 DEFAULTS.traces（单一来源——原 config-io TRACES_DEFAULTS 随删旧退场）。
 import { DEFAULTS } from "@thincoder/core/config.mjs"
 
@@ -78,7 +79,8 @@ export function reconcileEngDesignTokens(existing, slotTokens, legacyToken) {
  * engineering/advisor.guard → agent.config（槽字段钉；缺席 → engState（子代理镜像）→ cfg）；
  * traces → agent.config.traces（cfg.traces 或核 DEFAULTS.traces 合并——TRACE-STORE-VSC
  * D-TR6——恒有定义——chat 调用点开关读 agent.config.traces.enabled）；
- * planMode → agent._planMode（B 类每轮重指；opts.planMode 覆盖优先）；
+ * planMode → agent._planMode（B 类每轮重指；engineering 真值优先 ⇒ 恒 false——FR31 ③；
+ * 非工程态 opts.planMode 覆盖优先）；
  * engDesignTokens → reconcile（C 类永不清空）。restore=true（factory 新建——首轮/destroy
  * 重建同路径）→ 会话级槽字段回填 tasks/goal/pendingReminders（11.2.1/AC3）。
  * @param cfg config.json 解析产物（agent.config 由此整建——AC7 每轮拾取外部变更）。
@@ -107,7 +109,10 @@ export function applySlotSessionState(agent, { slot, engState, planModeOverride 
     // 对 traces.enabled 同键生效。
     traces: cfg.traces ? { ...cfg.traces } : { ...DEFAULTS.traces },
   }
-  agent._planMode = planModeOverride !== undefined ? planModeOverride === true : (slot?.planMode === true)
+  // ENG-PLAN-EXCLUSION（FR31 ③ / KD10——恢复点②·VSC）：工程模式 ⇒ `_planMode` 恒 false
+  // （生效值收正——优先于槽 `planMode` 与 `planModeOverride`）；纯函数面零 IO——槽值回写
+  // 归 hydrateRun 水合面（先例 = droppedExpired）。
+  agent._planMode = engineering ? false : (planModeOverride !== undefined ? planModeOverride === true : (slot?.planMode === true))
   // engDesignTokens：内存保留 + 槽权威合入（slot 优先；无槽绑定（子代理/直连）回退 opts.engState 载体）
   const rt = reconcileEngDesignTokens(agent._engDesignTokens, slot?.engDesignTokens ?? engState?.engDesignTokens, slot?.engDesignToken ?? engState?.engDesignToken)
   agent._engDesignTokens = rt.map
@@ -116,6 +121,10 @@ export function applySlotSessionState(agent, { slot, engState, planModeOverride 
     agent._goal = slot?.goal ?? null
     agent._pendingReminders = Array.isArray(slot?.pendingReminders) ? [...slot.pendingReminders] : []
   }
+  // ENG-PLAN-EXCLUSION（FR31 ③ / KD10——恢复点②·VSC）：工程模式 ⇒ 单点 `clearPlanMode` 复用
+  // （除生效值外，摘除**槽恢复回填的未注入 plan 提示语**——`PLAN_EXIT_REMINDER` 否则会跨模式落地；
+  // 纯函数面零 IO——槽值回写归 hydrateRun 水合面，先例 = droppedExpired）。
+  if (engineering) clearPlanMode(agent)
   return { engineering, droppedExpired: rt.droppedExpired }
 }
 

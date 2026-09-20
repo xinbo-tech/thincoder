@@ -126,7 +126,10 @@ export function loadSession(panel) {
     panel._autoApprove = activeData(panel)?.autoApprove ?? false
     panel._panel?.webview.postMessage({ type: "autoApprove", value: panel._autoApprove })
     // Plan mode is also session-level — sync the toolbar button + status badge on load/switch.
-    panel._panel?.webview.postMessage({ type: "planMode", active: activeData(panel)?.planMode ?? false })
+    // ENG-PLAN-EXCLUSION（FR31 ③ / T13）：装载推送读**生效值**——工程真值（槽权威面，同
+    // `_setPlanMode` 的 `_engineeringOn()`）下计划位恒 false：槽内残留 planMode:true 不再
+    // 推回面板（半状态复活面收口）。
+    panel._panel?.webview.postMessage({ type: "planMode", active: panel._engineeringOn?.() !== true && (activeData(panel)?.planMode ?? false) })
     panel._panel?.webview.postMessage({ type: "clearMessages" })
     // Lazy history: only the LAST page is sent on load; older pages arrive via
     // loadOlder (webview scroll-back). idx values are global history indexes.

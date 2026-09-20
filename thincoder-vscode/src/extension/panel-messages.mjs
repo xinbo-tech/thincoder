@@ -130,7 +130,12 @@ export async function routeUserTurn(panel, { text, modelOverride, reasoning, pro
     visionAbort = new AbortController()
     panel._visionAbort = visionAbort
     let out = null
-    try { out = await (visionReader ?? runVisionReader)({ paths: saved, providerName, cwd: _cwd(), signal: visionAbort.signal }) } catch { out = null }
+    // ENG-PLAN-EXCLUSION（FR31 · 端差面②/KD9）：工程真值随旁路面传下（槽权威同源——与 depth-0
+    // 装配面同一真值源 `agentSettings`）⇒ 视觉渠道子代理装配与主面同口径（工程模式 plan 不入表）；
+    // 真值不可读 ⇒ enabled:false（回落现行为——不制造假拒绝）。
+    let engState
+    try { engState = { enabled: agentSettings(panel._agentSettingsSession()).engineering === true } } catch { engState = { enabled: false } }
+    try { out = await (visionReader ?? runVisionReader)({ paths: saved, providerName, cwd: _cwd(), signal: visionAbort.signal, engState }) } catch { out = null }
     finally { if (panel._visionAbort === visionAbort) panel._visionAbort = null }
     if (out?.ok && typeof out.description === "string" && out.description.trim()) {
       const marker = `[图片 ${saved.join("、")} 描述: ${out.description.trim()}]`

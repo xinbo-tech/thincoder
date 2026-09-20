@@ -6,7 +6,8 @@
  * （消灭「同一角色矩阵两份实现」= 本批缺陷的类根因）；端差（VSC 装饰链 / settings 追加 /
  * consult 池来源）经 `decorate` 注入——**不传 = 核默认形态**（CLI = 迁出前逐字）。
  *
- * 返回 = 家族段数组（`[task, plan, timer, ...depth 家族 / 角色段]`）——**不含** `agent.tools`
+ * 返回 = 家族段数组（**非**工程模式：`[task, plan, timer, ...depth 家族 / 角色段]`；工程模式：
+ * 固定段 = `[task, timer]`——plan 不入表，FR31 ① / KD8）——**不含** `agent.tools`
  * 展开与 `extraTools`（调用点各自展开：核 `agent/setup.mjs` 两段式）。
  *
  * 登记册**动态**载入：`agent-tools.mjs` 静态图经 consult/subagent 族可达核 agent 栈
@@ -169,6 +170,12 @@ export async function assembleFamilyTools({
     : role === "consult" ? [recentChangesTool]
     : [parentChannelTool]
 
-  // task/plan/timer 固定段（所有面都有）：装配序 = agent.tools → 固定段 → 家族段 → extraTools
-  return [taskTool, planTool, timerTool, ...depthOnly]
+  // 固定段（装配序 = agent.tools → 固定段 → 家族段 → extraTools）：task/timer 全模式全深度；
+  // plan 随模式位——ENG-PLAN-EXCLUSION（FR31 ① · KD8 卸载而非「注册 + 报错」· KD11 全深度两端）：
+  // plan **不入表**（模型不可见——看不见的选项不会被选）；普通模式固定段逐字不变（FR31 边界）。
+  // 判据 = 单一模式位 `engineering`（不带深度分支——子代理面随同排除，role enum
+  // `:44-49` + spawn 门已同向）。
+  return engineering
+    ? [taskTool, timerTool, ...depthOnly]
+    : [taskTool, planTool, timerTool, ...depthOnly]
 }

@@ -29,6 +29,7 @@ import { loadSlotFile } from "./session.mjs"
 import { mergeAdjacentAssistantEchoes } from "./context.mjs"
 import { scheduleSessionGC } from "./session-gc.mjs"
 import { restoreEngTokens } from "./token-ttl.mjs"
+import { clearPlanMode } from "./agent-tools/plan.mjs"
 import { bindRecordStore, unbindRecordStore, RECORD_WINDOW_MESSAGES } from "./session-store.mjs"
 
 /** 恢复决策包装（SESSION.md §6.12 启动钩子，2026-09-06）：本端恢复入口触发一次残留 GC——
@@ -112,6 +113,10 @@ export function applySession(agent, data, opts = {}) {
     agent.config.agent ??= {}
     agent.config.agent.engineering = data.engineering === true
   }
+  // ENG-PLAN-EXCLUSION（FR31 ③ / KD10——恢复点①·CLI `applySession`）：工程模式 ⇒ planMode 恒
+  // false（内存位 + 未注入的 plan 提示语）——防「工程纪律 × plan 只读」半状态随槽恢复复活。
+  // **槽不就地回写**：内存值在下一次 `saveSession` 随 `planMode` 字段自然收正（`session.mjs:128`）。
+  if (agent.config?.agent?.engineering === true) clearPlanMode(agent)
   if (data.advisor) {
     agent.config.advisor = { ...data.advisor }
   }

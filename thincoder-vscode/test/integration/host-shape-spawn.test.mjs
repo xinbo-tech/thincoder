@@ -117,13 +117,17 @@ function familyNames(run) {
 
 /** 断言 B fixture (c)——必备 5 角色期望名集（§2.5）：depth-0 例 = 改前基线实读（⓪，落 §5）+ 端差
  *  settings；4 子角色 = 核矩阵语义（§2.3A——家族段名集，不含基础集）+ `notify_parent`
- *  （SUBAGENT-UPSTREAM-CHANNEL：核 depth>0 段装配——端侧同调核单源，随核矩阵增名同步）。 */
+ *  （SUBAGENT-UPSTREAM-CHANNEL：核 depth>0 段装配——端侧同调核单源，随核矩阵增名同步）。
+ * ENG-PLAN-EXCLUSION（FR31 ① / AC12 = T10）：工程模式两行删 `plan`（固定段裁剪——
+ * `assembleFamilyTools` 按 `engineering` 取 `[task, timer]`）+ 新增 `explore-eng`（工程模式
+ * explore：VSC 旁路面形状——视觉渠道子代理携 `engState.enabled:true`）。 */
 const FAMILY_FIXTURE = {
   "depth-0": ["advisor", "eng", "goal", "ledger_add", "ledger_close", "ledger_update", "plan", "read_history", "recent_changes", "settings", "skill", "subagent", "task", "timer", "verify"],
-  "eng-designer": ["batch_segment", "notify_parent", "plan", "subagent", "task", "timer"],
-  "eng-coder": ["advisor", "batch_segment", "notify_parent", "plan", "subagent", "task", "timer", "verify"],
+  "eng-designer": ["batch_segment", "notify_parent", "subagent", "task", "timer"],
+  "eng-coder": ["advisor", "batch_segment", "notify_parent", "subagent", "task", "timer", "verify"],
   coder: ["advisor", "notify_parent", "plan", "task", "timer", "verify"],
   explore: ["notify_parent", "plan", "task", "timer"],
+  "explore-eng": ["notify_parent", "task", "timer"],
 }
 
 /** 生产装配形状逐角色（`hydrateRun` = 生产入口 `setupAgentRun` 同函数；depth/role 同生产调用）。 */
@@ -193,6 +197,8 @@ test("T5 eng-designer（行为——用户实测角色）：真跑 + 断言 A（
   const childCases = [
     ["eng-designer", "eng-designer", true], ["eng-coder", "eng-coder", true],
     ["coder", "coder", false], ["explore", "explore", false],
+    // T10 旁路面（FR31 ①）：工程模式 explore——同 `engState.enabled:true` 驱动（视觉渠道子代理形状）
+    ["explore-eng", "explore", true],
   ]
   for (const [label, role, engineering] of childCases) {
     const run = await hostShape({ depth: 1, role, engineering })

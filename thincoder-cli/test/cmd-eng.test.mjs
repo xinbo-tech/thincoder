@@ -11,12 +11,15 @@
  */
 import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
 import { handleEngCommand } from "../src/tui/cmd-eng.mjs"
 import { ENG_OFF_REMINDER } from "@thincoder/core/agent.mjs"
+import { planTool } from "@thincoder/core/agent-tools/plan.mjs"
+import { newSession, loadSlotFile } from "@thincoder/core/session.mjs"
+import { slotPath, writeSessionFile } from "@thincoder/core/session-slots.mjs"
 import { MANIFEST_REL } from "@thincoder/core/manifest.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "@thincoder/core/session-slots.mjs"
 
@@ -121,4 +124,44 @@ test("T-22 边界：OFF 方向恒放行（非锚 cwd 亦不拦——F2 表 OFF �
     assert.ok(lines.some((l) => l.includes("❯ Eng")), "OFF 走既有成功回显（标签）")
     assert.ok(lines.some((l) => l.includes("Engineering mode: OFF")))
   } finally { rmSync(plain, { recursive: true, force: true }) }
+})
+
+// ─── ENG-PLAN-EXCLUSION 批（FR31 ③ / AC14 = T12）：翻转点② `/eng` 清零（内存位 + 槽位）────
+
+test("T12 翻转清零（FR31 ③ / AC14）：planMode=true + 排队 plan 提示语 ⇒ /eng ON 清零（内存位 + 槽位）；OFF 方向零改", async () => {
+  // 槽目标：真实分配一个槽并预写 planMode:true（ON 路径槽写面的落点）
+  const slot = await newSession(tmp)
+  const p = slotPath(tmp, slot)
+  const seeded = { ...loadSlotFile(tmp, slot), planMode: true, engineering: false }
+  writeSessionFile(p, seeded)
+
+  const lines = []
+  const agent = engAgent({
+    _pendingReminders: [],
+  })
+  // 真产出排队提示语（未经文字硬编码——产出面 = plan 工具本体）：EXIT 句（危险项）+ FULL 句
+  await planTool.execute({ action: "exit" }, { agent })
+  await planTool.execute({ action: "enter" }, { agent })
+  agent._planTurnsSinceReminder = 3
+  agent._planTurnsSinceSparse = 2
+  agent._pendingReminders.push("[System reminder: unrelated]")
+  assert.equal(agent.planMode, true, "前置：中途已入 plan 模式（残留半状态）")
+
+  await handleEngCommand(ctxFor(agent, lines))
+
+  assert.equal(agent.config.agent.engineering, true, "ON 翻转照常")
+  assert.equal(agent.planMode, false, "内存位清零（FR31 ③）")
+  assert.equal(agent._planTurnsSinceReminder, 0, "reminder 计数清零（防旧节奏残留）")
+  assert.equal(agent._planTurnsSinceSparse, 0)
+  assert.deepEqual(agent._pendingReminders, ["[System reminder: unrelated]"], "未注入的 plan 提示语被摘除、非 plan 项保留")
+  assert.ok(lines.some((l) => l.includes("plan mode reset")), "清零提示行在场")
+  const disk = JSON.parse(readFileSync(p, "utf8"))
+  assert.equal(disk.engineering, true, "槽 engineering 落盘（既有契约）")
+  assert.equal(disk.planMode, false, "槽 planMode 收正（T12 槽位判据）")
+
+  // OFF 方向零改（FR31 边界：普通模式零改——离开工程模式不回头动 plan）
+  const agent2 = engAgent({ config: { agent: { engineering: true } }, planMode: true, _pendingReminders: [] })
+  await handleEngCommand(ctxFor(agent2, []))
+  assert.equal(agent2.config.agent.engineering, false)
+  assert.equal(agent2.planMode, true, "OFF 不碰 planMode（普通面全带宽）")
 })

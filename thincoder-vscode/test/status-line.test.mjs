@@ -18,6 +18,7 @@ import { statusTextPayload } from "../src/extension/panel-callbacks.mjs"
 import { toolPanelPayload } from "../src/extension/panel-toolpanel.mjs"
 
 let cleanupEnv
+let capturedPosts
 
 const INDEX_IDS = ("chat-container session-bar project-btn session-selector session-title session-arrow " +
   "session-dropdown new-session-btn messages subagent-activity panels goal-panel task-panel toolbar status-line " +
@@ -30,6 +31,7 @@ const INDEX_IDS = ("chat-container session-bar project-btn session-selector sess
 before(() => {
   const env = setupWebview()
   cleanupEnv = env.cleanup
+  capturedPosts = env.capturedPosts
   document.body.innerHTML = INDEX_IDS.map((id) => `<div id="${id}"></div>`).join("")
 })
 
@@ -154,4 +156,43 @@ test("T-CL24 端差登记（AC-CL6）：scrolled 不做（悬浮回底钮在位�
   assert.ok(line().includes("context 55%"), "ctx 段保持 pct 形态（绝对数端差不做）")
   assert.ok(!/\bscrolled\b/.test(line()), "状态行无 scrolled 段（M5 端差保持）")
   assert.ok(files.includes("test/status-line.test.mjs"), "本档已登记 test/files.mjs")
+})
+
+// ─── ③ ENG-PLAN-EXCLUSION 批（FR31 ② / AC13 = T11）：plan 按钮 disabled + title 载体 ──
+
+test("T11 界面（FR31 ② / AC13）：工程模式 ⇒ plan 按钮 disabled + title（toolbar.planDisabled 两 locale）+ 点击守卫零 setPlanMode；回弹面 plan 不亮", async () => {
+  const { S, setStrings } = await loadChat()
+  const zh = JSON.parse(readFileSync(new URL("../locales/zh.json", import.meta.url), "utf8"))
+  const en = JSON.parse(readFileSync(new URL("../locales/en.json", import.meta.url), "utf8"))
+  const btn = document.getElementById("plan-btn")
+  resetLine(S)
+
+  // ① 非工程态（回归）：可用 + 点击照发 setPlanMode
+  send({ type: "agentSettings", settings: { engineering: false } })
+  assert.equal(btn.disabled, false, "非工程态按钮可用（回归）")
+  const base = capturedPosts.length
+  btn.click()
+  assert.ok(capturedPosts.slice(base).some((m) => m.type === "setPlanMode"), "非工程态点击照发 setPlanMode（回归）")
+  send({ type: "planMode", active: false }) // 归位
+
+  // ② 工程态：disabled + title（两 locale 同步——语言切换后重推仍命中）
+  send({ type: "agentSettings", settings: { engineering: true } })
+  assert.equal(btn.disabled, true, "工程模式 plan 按钮 disabled")
+  assert.equal(btn.title, en["toolbar.planDisabled"], "title = toolbar.planDisabled（en）")
+  setStrings(zh)
+  send({ type: "agentSettings", settings: { engineering: true } })
+  assert.equal(btn.title, zh["toolbar.planDisabled"], "title 两 locale 同步（zh）")
+
+  // ③ 点击守卫：工程态点击零 setPlanMode（disabled 的兜底——不依赖宿主回弹）
+  const after = capturedPosts.length
+  btn.click()
+  assert.equal(capturedPosts.slice(after).filter((m) => m.type === "setPlanMode").length, 0, "工程态点击零 setPlanMode")
+
+  // ④ 回弹面：过期 active:true 到达 ⇒ 不亮 active 类（半状态不呈现）；退出工程态后标题回落
+  send({ type: "planMode", active: true })
+  assert.equal(btn.classList.contains("active"), false, "工程态 plan 不亮（applyModeButtons 判据）")
+  send({ type: "agentSettings", settings: { engineering: false } })
+  assert.equal(btn.disabled, false, "退出工程态恢复可用")
+  assert.ok(btn.title !== zh["toolbar.planDisabled"], "title 回落到缺省（非工程态）")
+  setStrings(en)
 })

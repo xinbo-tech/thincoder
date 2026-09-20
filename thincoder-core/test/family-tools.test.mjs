@@ -70,6 +70,30 @@ test("固定段序：task → plan → timer 恒为前 3 项；家族段随后�
   }
 })
 
+test("T10 固定段模式裁剪（FR31 ① / AC12）：工程模式固定段 = [task, timer]（plan 不入表——深度无分支）；普通面含 plan（回归）", async () => {
+  // 工程面 depth-0：plan 缺失 + 固定段序契约（task 先于 timer——装配契约序保持）
+  const eng0 = names(await assembleFamilyTools({ depth: 0, engineering: true }))
+  assert.ok(!eng0.includes("plan"), "depth-0 工程面不含 plan（模型不可见——KD8 卸载而非注册+报错）")
+  assert.deepEqual(eng0.slice(0, 2), ["task", "timer"], "工程固定段 = [task, timer]（序契约）")
+  assert.ok(eng0.includes("subagent") && eng0.includes("eng"), "家族段不受裁剪影响（只裁固定段的 plan）")
+  // 全深度（KD11）：工程角色子代理面同裁——`subagent-spawn.mjs:341-344` 工程角色强制位
+  // `engineering: true` ⇒ 子代装配即以本参数调用本函数（未决项 1 复核面）
+  for (const role of ["eng-coder", "eng-designer", "explore"]) {
+    const got = names(await assembleFamilyTools({ depth: 1, role, engineering: true, batchDoc: BATCH }))
+    assert.ok(!got.includes("plan"), `工程子代理面不含 plan（role=${role}——全深度）`)
+    assert.deepEqual(got.slice(0, 2), ["task", "timer"], `工程子代理固定段序（role=${role}）`)
+  }
+  // 普通面回归（FR31 边界：普通模式零改）——固定段逐字不变
+  const normal0 = names(await assembleFamilyTools({ depth: 0 }))
+  assert.ok(normal0.includes("plan"), "普通 depth-0 面含 plan")
+  assert.deepEqual(normal0.slice(0, 3), FIXED, "普通固定段逐字不变（task → plan → timer）")
+  const normalChild = names(await assembleFamilyTools({ depth: 1, role: "explore" }))
+  assert.ok(normalChild.includes("plan"), "普通 depth>0 面含 plan（深度不参与判据）")
+  // T10 输入面第四格：`{depth:1, role:"plan"}`（普通模式 plan 角色）——名集仍含 plan（非工程 ⇒ 不裁）
+  const planChild = names(await assembleFamilyTools({ depth: 1, role: "plan" }))
+  assert.ok(planChild.includes("plan"), "普通 plan 子代理面含 plan（T10 列明输入面）")
+})
+
 test("A1 上行通道（SUBAGENT-UPSTREAM-CHANNEL §6.27.10）：notify_parent 仅 depth>0 且非 consult 装配", async () => {
   const fallback = sorted(await assembleFamilyTools({ depth: 1, role: "sub" }))
   assert.deepEqual(fallback, ["task", "plan", "timer", "notify_parent"].sort(), "未列名 depth>0 role（兜底段）亦装配")

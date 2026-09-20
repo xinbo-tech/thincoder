@@ -21,6 +21,7 @@
   "toolbar.autoApprove": "自动批准工具",
   "toolbar.advisor": "Advisor 评审——改动代码后要求评审",
   "toolbar.engineering": "工程模式（先设计后编码）",
+  "toolbar.planDisabled": "工程模式下禁用——工程模式本身即先设计后编码",
   "toolbar.settings": "设置",
   "welcome.textConfigured": "就此工作区提问——agent 可以读取文件、运行命令、修改代码。",
   "welcome.heading": "欢迎使用 ThinCoder",

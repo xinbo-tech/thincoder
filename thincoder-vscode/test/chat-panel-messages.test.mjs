@@ -13,14 +13,19 @@
  * 夹具自持（D18②）：本档自带 `stubPanel`——零跨档 import、零余档真实回合夹具依赖
  * （余档 `chat-panel.test.mjs` = 真实模块直驱面：`runPanelChat` 回合执行 / `atComplete`
  * 索引补全 / `resolveTurnModelAndStamp` 模型决策）。
- * 用例名 / 编号自原档逐字保留；`test(` 计数守恒 **19 = 10（本档）+ 9（余档）**
- *（2026-09-17 af 批 +T-AF11（F-11 VSC ⏹ advisor 目标并入共用路径）——原句「17 = 8（本档）+ 9（余档）」
- *  为拆分时点值，其后 W15 事件中继例（⑬）已使本档实档 +1；本行按实档收正）。
+ * 用例名 / 编号自原档逐字保留；`test(` 计数守恒 **20 = 11（本档）+ 9（余档）**
+ *（2026-09-17 af 批 +T-AF11——原句「17 = 8 + 9」为拆分时点值，其后 W15 事件中继例（⑬）已使本档实档 +1；
+ *  2026-09-21 ENG-PLAN-EXCLUSION 批（FR31/T11+T12）再加入 plan 面例（⑮）——本行按实档收正）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import * as vscode from "vscode"
-import { handlePanelMessage } from "../src/extension/panel-messages.mjs"
+import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
+import { _setSessionsDirForTest, _resetSessionsDirForTest, slotPath, writeSessionFile } from "../src/extension/session-slots.mjs"
+import { handlePanelMessage, _cwd } from "../src/extension/panel-messages.mjs"
 import { newTurnController } from "../src/extension/panel-chat.mjs"
 import { makeAskInPanel } from "../src/extension/panel-callbacks.mjs"
 import { ChatPanel } from "../src/extension/chat-panel.mjs"
@@ -460,3 +465,37 @@ test("⑭ T-AF11 cancelSubagent 路由（advisor 目标·queued）：并入共�
   assert.equal(p.posted.filter((m) => m.type === "token").length, 0, "事件 token 零裸文本泄漏（识别即消费）")
   assert.equal(history.filter((m) => m.role === "user").length, 1, "机读线提醒恰 1 条（评审已取消——token 未签发）")
 })
+
+// ─── ⑮ ENG-PLAN-EXCLUSION 批（FR31 ②③ / AC13+AC14 = T11+T12）：VSC 命令面拒绝 + 翻转清零 ──
+
+test("⑮ T11/T12 命令面（FR31 ②③ / AC13+AC14）：工程模式 ⇒ setPlanMode(true) 拒绝（不写槽 + 回弹）；eng 开关 ON ⇒ 槽 planMode 清零；非工程态回归", async () => {
+  const sessionsDir = mkdtempSync(join(tmpdir(), "tc-plan-eng-sess-")); const cfgDir = mkdtempSync(join(tmpdir(), "tc-plan-eng-cfg-"))
+  _setSessionsDirForTest(sessionsDir); _setConfigPathForTest(join(cfgDir, "config.json")); writeFileSync(join(cfgDir, "config.json"), JSON.stringify({ agent: {} }), "utf8")
+  try {
+    const cwd = _cwd(); const slot = 1; const sf = slotPath(cwd, slot); const disk = () => JSON.parse(readFileSync(sf, "utf8"))
+    // 真原型方法（真值读面 = 槽权威 `agentSettings`）+ 真槽落盘
+    const panel = stubPanel({ _slot: slot, _ensureSlot: () => slot, _agentSettingsSession: () => ({ cwd, slot }), _pushSettingsLight: () => {} })
+    panel._setPlanMode = ChatPanel.prototype._setPlanMode; panel._engineeringOn = ChatPanel.prototype._engineeringOn
+    const seed = (over) => writeSessionFile(sf, { version: 2, cwd, history: [], contextHistory: [], tasks: [], planMode: false, autoApprove: false, engineering: false, goal: null, advisor: null, pendingReminders: [], ...over })
+    // ① T11：工程模式 + 槽内 plan 残留 ⇒ 开方向拒绝（不写槽 + 回弹 active:false）
+    seed({ engineering: true, planMode: true })
+    await handlePanelMessage(panel, { type: "setPlanMode", value: true })
+    assert.equal(disk().planMode, true, "不写槽（播种值原样——拒绝零副作用）")
+    assert.deepEqual(panel.posted, [{ type: "planMode", active: false }], "回弹 active:false（与按钮 disabled+title 同拍）")
+    // ② T12：工程开关 ON ⇒ 先清 plan 槽位（此时读旧模式位 ⇒ 走合法槽写路径）+ 面板收 false
+    seed({ planMode: true }); panel.posted.length = 0
+    await handlePanelMessage(panel, { type: "setEngineeringEnabled", value: true })
+    assert.equal(disk().engineering, true, "工程位落槽（既有契约）")
+    assert.equal(disk().planMode, false, "槽 planMode 清零（T12 槽位判据）")
+    assert.ok(panel.posted.some((m) => m.type === "planMode" && m.active === false), "面板收到 active:false（不再重推 plan-active）")
+    // ③ T14 回归：非工程态照常（槽写 + 回推）
+    seed({}); panel.posted.length = 0
+    await handlePanelMessage(panel, { type: "setPlanMode", value: true })
+    assert.equal(disk().planMode, true, "普通模式槽写照常（回归）")
+    assert.deepEqual(panel.posted, [{ type: "planMode", active: true }], "普通模式回推 active:true（回归）")
+  } finally {
+    _setConfigPathForTest(null); _resetSessionsDirForTest()
+    rmSync(sessionsDir, { recursive: true, force: true }); rmSync(cfgDir, { recursive: true, force: true })
+  }
+})
+

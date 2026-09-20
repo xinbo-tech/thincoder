@@ -13,13 +13,22 @@ const engBtn = document.getElementById("eng-btn")
 const planBtn = document.getElementById("plan-btn")
 const autoBtn = document.getElementById("auto-btn")
 
+/** plan 按钮缺省 title（静态 HTML——i18n-dom 不管 plan 面）：非工程态回填用。 */
+const planDefaultTitle = planBtn.title
+
 export function applyModeButtons() {
   advisorBtn.classList.toggle("active", S._advisorOn)
   advisorBtn.classList.toggle("warning", S._advisorOn)
   engBtn.classList.toggle("active", S._engOn)
   engBtn.classList.toggle("warning", S._engOn)
-  planBtn.classList.toggle("active", S._planActive)
-  planBtn.classList.toggle("warning", S._planActive)
+  // ENG-PLAN-EXCLUSION（FR31 ② / AC13——宿主 `_setPlanMode` 拒绝的回弹口径）：工程模式 ⇒
+  // plan 面排除——按钮 disabled + title（新键 `toolbar.planDisabled`，两 locale 同步）+ 不亮
+  // active 类（半状态不呈现）。非工程态逐字回落既有形态。
+  const planActive = S._planActive === true && S._engOn !== true
+  planBtn.classList.toggle("active", planActive)
+  planBtn.classList.toggle("warning", planActive)
+  planBtn.disabled = S._engOn === true
+  planBtn.title = S._engOn === true ? t("toolbar.planDisabled") : planDefaultTitle
 }
 
 advisorBtn.addEventListener("click", () => {
@@ -33,6 +42,8 @@ engBtn.addEventListener("click", () => {
   vscode.postMessage({ type: "setEngineeringEnabled", value: S._engOn })
 })
 planBtn.addEventListener("click", () => {
+  // ENG-PLAN-EXCLUSION（FR31 ②）：工程模式点击守卫（disabled 的兜底——不依赖宿主回弹）。
+  if (S._engOn === true) return
   S._planActive = !S._planActive
   applyModeButtons()
   vscode.postMessage({ type: "setPlanMode", value: S._planActive })

@@ -12,6 +12,7 @@ import { purgeExpiredDesignTokens } from "@thincoder/core/token-ttl.mjs"
 import { resolveEngineeringManifest } from "@thincoder/core/manifest.mjs"
 
 import { ENG_OFF_REMINDER } from "@thincoder/core/agent.mjs"
+import { clearPlanMode } from "@thincoder/core/agent-tools/plan.mjs"
 
 /** Atomic slot write (same shape as session.mjs writeSessionFile — kept local to avoid a
  *  private-import; cmd-advisor's guard toggle shares this helper). */
@@ -48,6 +49,9 @@ export async function handleEngCommand(ctx) {
     agent.manifest = r.manifest
   }
   agent.config.agent.engineering = !agent.config.agent.engineering
+  // FR31 ③ / KD10（翻转点②·CLI `/eng`）：ON ⇒ 清 plan 残留（内存位 + 未注入的 plan 提示语）；
+  // OFF 方向不动（普通模式零改——FR31 边界）。提示行仅在真清到东西时出（不喧宾）。
+  const planReset = agent.config.agent.engineering ? clearPlanMode(agent) : false
   // §11.2 D-24b: per-review instances die with the mode (fresh convergence cycles
   // on the next toggle).
   agent._advisorRuns = new Map()
@@ -68,6 +72,9 @@ export async function handleEngCommand(ctx) {
   pushLine(`Engineering mode: ${agent.config.agent.engineering ? "ON" : "OFF"} (session)`, C.tool)
   if (agent.config.agent.engineering) {
     pushLine(`  → design-before-code enforced (design review + user approval before code)`, C.dim)
+    if (planReset) {
+      pushLine(`  → plan mode reset (engineering mode excludes plan mode)`, C.dim)
+    }
     if (clearedExpired > 0) {
       pushLine(`  → cleared ${clearedExpired} expired design token${clearedExpired === 1 ? "" : "s"}; valid tokens from prior reviews stay usable`, C.dim)
     }
@@ -80,6 +87,8 @@ export async function handleEngCommand(ctx) {
  * VS Code, per-session; config.json is just the initial default, no mirror write).
  * The in-memory agent.config.agent.engineering (already flipped) stays the live authority for
  * this process; saveSession also round-trips it on every turn-end write.
+ * 槽写也担 FR31 ③ 的槽位收正（T12）：ON 时 `data.planMode = false`——否则下次装载/恢复
+ * 把 plan-active 推回 UI（半状态复活面；验收判据 = 「内存 + 槽位」双清零）。OFF 方向零改。
  */
 async function persistEngineering(agent) {
   const slot = activeSlot(agent.cwd)
@@ -88,6 +97,7 @@ async function persistEngineering(agent) {
     const data = JSON.parse(readFileSync(p, "utf8"))
     if (data && typeof data === "object" && Array.isArray(data.history)) {
       data.engineering = agent.config.agent.engineering
+      if (agent.config.agent.engineering) data.planMode = false
       writeSessionFile(p, data)
     }
   } catch { /* slot missing/unreadable — in-memory flag already flipped; saveSession persists at turn end */ }

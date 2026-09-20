@@ -63,7 +63,7 @@ export function savePastedImages(dataUrls, cwd) {
 // 返回 null = 不降级（无视觉渠道 / 渠道无 key / spawn 失败 / 超时 / 空返回）——调用方回落
 // 现路径（图片保留下发——主回合 setup appendImagePointer 报现错——可读不静默丢）。
 export const VISION_READ_TIMEOUT_MS = 60_000
-export async function runVisionReader({ paths, providerName, cwd, signal }) {
+export async function runVisionReader({ paths, providerName, cwd, signal, engState }) {
   // A12（群 A 批）：宿主取消缝——窗内 Stop（⏹）经外部 signal 传入；已停 → 快速失败
   // （不复用 60s 超时路径）；否则桥接内部 controller（下面 ac）。缺省（不传）= 现状。
   if (signal?.aborted) return null
@@ -81,7 +81,10 @@ export async function runVisionReader({ paths, providerName, cwd, signal }) {
   if (signal) signal.addEventListener("abort", () => ac.abort(), { once: true })
   try {
     const task = paths.map((f) => `用 read_image 读 ${f} 返回图像内容描述`).join("\n")
-    const desc = await runAgent({ ...p, model: vc.model }, cwd, task, {}, ac.signal, true, { depth: 1, role: "explore", maxTurns: 10 })
+    // ENG-PLAN-EXCLUSION（FR31 · 端差面②/KD9）：携 `engState`（工程真值同源——调用点已由
+    // `agentSettings` 槽权威面取位）⇒ 该旁路 depth-1 子代理装配与主面同口径（工程模式 plan
+    // 不入表）；缺省（不传）= 现状（向后兼容——既有直调面零改）。
+    const desc = await runAgent({ ...p, model: vc.model }, cwd, task, {}, ac.signal, true, { depth: 1, role: "explore", maxTurns: 10, ...(engState ? { engState } : {}) })
     return typeof desc === "string" && desc.trim() ? { ok: true, description: desc.trim() } : null
   } catch { return null } finally { clearTimeout(timer) }
 }

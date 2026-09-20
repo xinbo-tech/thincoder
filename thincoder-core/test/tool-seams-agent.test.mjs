@@ -17,6 +17,7 @@ import { join } from "node:path"
 import { skillTool, configureSkillLoader, resetSkillLoader } from "../agent-tools/skill.mjs"
 import { loadSkills, loadSkillsSync, readSkill, readSkillSync } from "../skills.mjs"
 import { engTool, configureEngMirror, resetEngMirror } from "../agent-tools/eng.mjs"
+import { planTool } from "../agent-tools/plan.mjs"
 import { DEFAULT_MANIFEST, MANIFEST_REL, resolveEngineeringManifest } from "../manifest.mjs"
 import { verifyTool, configureVerifyDiagnostics, resetVerifyDiagnostics } from "../agent-tools/verify.mjs"
 import { configureExecRun, resetExecRun } from "../tools/exec-run.mjs"
@@ -112,6 +113,34 @@ test("#91 eng 镜像缝：注入 onToggle ⇒ 通知串追加（enter / exit）�
       )
       assert.deepEqual(seen.map((s) => s[0]), [false, true], "状态翻转后调用（观察新态）")
     } finally { resetEngMirror() }
+  })
+})
+
+// ─── ENG-PLAN-EXCLUSION 批（FR31 ③ / AC14 = T12）：核 `eng` 工具 enter 清 plan 残留 ────
+
+test("T12 翻转点①（核 eng 工具）：enter ⇒ planMode + 未注入 plan 提示语清零；exit 方向零改", async () => {
+  await withTempDir(async (dir) => {
+    mkRepo(dir)
+    writeFileSync(manifestPathOf(dir), LEGAL_JSON)
+    const agent = { cwd: dir, config: { agent: {} }, _pendingReminders: [], planMode: false }
+    const ctx = { agent }
+    // 真产出排队提示语（产出面 = plan 工具本体）后模拟「中途已入 plan 模式」
+    await planTool.execute({ action: "exit" }, ctx)
+    await planTool.execute({ action: "enter" }, ctx)
+    agent._planTurnsSinceReminder = 3
+    agent._planTurnsSinceSparse = 1
+    agent._pendingReminders.push("[System reminder: unrelated]")
+    assert.equal(agent.planMode, true, "前置：已入 plan 模式（残留半状态）")
+    assert.ok((await engTool.execute({ action: "enter" }, ctx)).startsWith("Engineering mode activated. "), "enter 照常准翻")
+    assert.equal(agent.planMode, false, "进工程模式 ⇒ planMode 清零（FR31 ③）")
+    assert.equal(agent._planTurnsSinceReminder, 0, "reminder 计数清零")
+    assert.equal(agent._planTurnsSinceSparse, 0)
+    assert.deepEqual(agent._pendingReminders.filter((r) => /plan mode/.test(r)), [], "未注入 plan 提示语摘除")
+    assert.ok(agent._pendingReminders.some((r) => r.includes("unrelated")), "非 plan 项保留")
+    // OFF 方向零改（FR31 边界：普通模式零改——离开工程模式不回头动 plan）
+    agent.planMode = true
+    await engTool.execute({ action: "exit" }, ctx)
+    assert.equal(agent.planMode, true, "OFF 不碰 planMode")
   })
 })
 

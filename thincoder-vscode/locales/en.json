@@ -21,6 +21,7 @@
   "toolbar.autoApprove": "Auto-approve tools",
   "toolbar.advisor": "Advisor review — require a review after code changes",
   "toolbar.engineering": "Engineering mode (design-before-code)",
+  "toolbar.planDisabled": "Disabled in engineering mode — engineering already runs design-before-code",
   "toolbar.settings": "Settings",
   "welcome.textConfigured": "Ask about this workspace — the agent can read files, run commands, and edit code.",
   "welcome.heading": "Welcome to ThinCoder",
