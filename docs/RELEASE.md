@@ -109,7 +109,7 @@ npm publish
 | **C-F2** | 发布顺序 = 核 → CLI → VSC | 产品发布恒以核已发布为前提（硬约束）；VSC vsix **内嵌**核（marketplace 无依赖解析）；CLI 依赖由 registry 解析 |
 | **C-F3** | 产品侧发布顺序守卫 | CLI `release-check` / VSC `publish-all.mjs` 段 0 = 核版本存在性预检（缺 = 中止）；断言 A/B/C/D 按各端落点（N5） |
 | **C-F4** | 核首发前置清单（运营面） | ① `@thincoder` npm scope 归属确认（`npm whoami` + org 核对）② 首发**显式 `--access public`**（scoped 包默认 private）③ 核包 `prepublishOnly` 门禁**暂缺**（现 scripts 仅 `test`——首发前评估是否补 `test` 门；补 = 与 CLI/VSC 门禁对称原则一致） |
-| **C-F5** | 核版本号规则（参照 CLI/VSC 既有规则——用户裁定） | **连续不跳号**（N1/N2 同源）；**起点 = 0.1.0**（仓内现值——registry 无号 ⇒ 首个推导号即 `0.1.0` ⇒ 无 bump）；后续递增 = semver 惯例（破坏/功能/修复）· **不采用** CLI 年段形态、**不采用** VSC CalVer——核版本独立（D-C10） |
+| **C-F5** | 核版本号规则（**参照 CLI/VSC 现有规则**——用户两度裁定 23:14 / 23:27） | **与 CLI 同制**：连续不跳号（N1/N2 同源——待发号 = registry 最高 + 1，首发 = 0.1.0 仓内现值 ✓ registry 无号 ⇒ 无 bump）· **发布时才定号**（F2 同源——开发期不预占）· 递增形态 = **流水号 +1**（承 CLI `0.12.62 → 0.12.63` 同制 ✗ 核号段独立 ⇒ 同制递增 = `0.1.N` 流水 ✗）；VSC CalVer 不采（月段制 = 产品发布节奏 ✗ 核号段独立 ✓）。**即：核下一号 = 现号 + 1（流水 +1 ✗ 不按 semver 语义跳段）**——与 CLI 现行实践一致（CLI 0.12.54→0.12.58→…→0.12.62 均为 +1 连发 ✓） |
 
 操作：`cd thincoder-core && npm publish --access public`（首发显式；门禁若补 = `prepublishOnly` 挂 `npm test`）。发版 commit + tag（`v<号>`）随发布提交推 origin。
 **核端非功能**：C-N1 连续不跳空（同 N1/N2）· C-N2 门禁不可绕过（若补 prepublishOnly）· C-N3 凭据不入库（同 V-F5）· C-N4 发布完成判定 = exit 0（npm 面同 F4）。
@@ -126,6 +126,6 @@ npm publish
 - 2026-09-15（**B 式迁移轮 · 第 2 批**）：建档——`thincoder-cli/docs/requirements/RELEASE.md` 内容重建入基准层（落点原 = `docs/core/requirements/`）；门禁链补**集成集**环（旧档 F1 未同步）· F4 去实现名（行为陈述）。
 - 2026-09-15（**VSC 轮并入 · 批 7**）：新增 **VSC 端通道面**（双市场 V-F1–V-F5 / V-N1–V-N3）——旧 `thincoder-vscode/docs/requirements/RELEASE.md` 原地作参照历史。
 - 2026-09-20（**核发布面并入 · 主 agent**——用户 23:06「两端发版」触发实勘 + 23:08 问「核心需要发版吗？」+ 23:14「整合发布计划 + 核心发布纳入 + 核版本号规则参照 CLI/VSC」）：档头产品面补**核**（三发布单元）· §1 发布顺序恒等式（核 → CLI → VSC）· **F5 核发布面** · **N5 版本一致性三断言 + 断言 D** · **§7 核发布面**（结论：核必须发——registry E404 实测；C-F1–C-F5 + C-N1–C-N4）；
-  核版本号规则 = 连续不跳号 + 起点 0.1.0 + semver 递增 + 独立版本。批 = 用户直接指令（发版准备面 · 无批档）。
+  核版本号规则 = **与 CLI/VSC 同制**（连续不跳号 + 发布时定号 + 流水 +1 递增 ✗ 号段独立）。批 = 用户直接指令（发版准备面 · 无批档）。
 - 2026-09-20（**落点迁根 · 主 agent**——用户 23:18「release.md 不应该放在那个目录里，应该直接放在 docs 目录下」）：本档迁 `docs/` 根（流程面·根层 ✗ 用户裁定改原 P1 判 ✗ DOC-SYSTEM §5.1 P3 精神同向）。
 - 2026-09-20（**三端合一 · 主 agent**——用户 23:23「明确的要求把各端的 release.md 整合成一个」）：**CLI 链设计档（原 `docs/cli/design/RELEASE.md` 同日迁根件）并回本档 §5**（门禁链 / 操作步骤 / 踩坑）✗ **单档承载 ✗ 无第二发布档** ✗；档头改「统一发布计划」✗ 撤「总计划 + 链细目两档」形 ✗ 实现面外指撤 ✗；§8 不并项相应收窄 ✗（踩坑与操作已内并 ✗ 仅机制推导仍外链 `CORE-UNIFICATION.md` ✓）。
