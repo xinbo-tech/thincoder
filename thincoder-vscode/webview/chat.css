@@ -489,3 +489,26 @@
   color: var(--vscode-editorWarning-foreground, var(--yellow));
   opacity: 1;
 }
+
+/* ─── Loading screen (2026-09-21) ─────────────── */
+/* 静态首屏：webview 打开即见（HTML 默认渲染）；chat.js 握手落定后 dismissLoadingScreen 移除。
+   覆盖整个视口 ✗ 遮住骨架 ✗ 淡出 150ms。 */
+#loading-screen {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--vscode-editor-background, #1e1e1e);
+  transition: opacity 150ms ease-out;
+}
+#loading-screen.dismiss { opacity: 0; pointer-events: none; }
+.loading-inner { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.loading-logo {
+  font-size: 1.5em; font-weight: 600; letter-spacing: 0.04em;
+  color: var(--vscode-foreground, #cccccc);
+}
+.loading-spinner {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid var(--vscode-widget-border, #444);
+  border-top-color: var(--accent, #4fc1ff);
+  animation: tc-spin 0.9s linear infinite;
+}
+@keyframes tc-spin { to { transform: rotate(360deg); } }

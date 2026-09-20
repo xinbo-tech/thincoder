@@ -11,7 +11,17 @@
   <link rel="stylesheet" href="__CSS_SETTINGS_URI__">
 </head>
 <body>
-  <div id="chat-container" role="main">
+    <!-- 启动加载画面（2026-09-21 用户）：webview 静态骨架（session-bar + 空 messages + 全套控制钮）
+         在宿主握手（webviewReady → 初始消息序）到达前裸露 ✗ 用户首屏 = 半成品骨架 + 未配 key 时
+         welcome 表单即弹 ✗ 观感差。loading-screen 为静态 HTML 默认可见 ✗ chat.js 握手落定后
+         移除（dismissLoadingScreen）✗ 此后 welcome-panel 逻辑不变 ✓ -->
+    <div id="loading-screen" aria-label="Loading">
+      <div class="loading-inner">
+        <div class="loading-logo">ThinCoder</div>
+        <div class="loading-spinner"></div>
+      </div>
+    </div>
+    <div id="chat-container" role="main">
     <div id="session-bar" role="navigation" aria-label="Session navigation">
       <button id="project-btn" class="project-btn" title="Current project" aria-label="Current project" style="display:none">📁</button>
       <div id="session-selector" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox" aria-label="Select session">

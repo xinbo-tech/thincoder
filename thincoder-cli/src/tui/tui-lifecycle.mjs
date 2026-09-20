@@ -15,6 +15,15 @@ export function writeStartupSequence(write = (s) => process.stdout.write(s)) {
   write(ansi.altBuffer + ansi.hideCursor + ansi.mouseOn + ansi.bracketedPasteOn + ansi.keyboardPush + ansi.modifyOtherKeysOn + ansi.wrapOff)
 }
 
+// 启动加载画面（2026-09-21 用户）：双进程冷启动（wrapped spawn + 全链 import）期间 alt buffer
+// 全黑 → 用户以为死了。序列后立即写一行 loading（首帧 render 自然覆盖 ✗ 无需清除逻辑 ✗）。
+// 版本号由调用方传入（bin 入口已读 package.json——零重复 IO）；wrapped 父进程同款（spawn 前写——
+// 父子两段冷启动都非黑）。纯文本行 ✗ 无 ANSI 位置控制 ✗ 首帧覆盖依赖 render-loop 全屏重绘 ✓
+export function writeLoadingLine(write = (s) => process.stdout.write(s), version = "") {
+  const v = version ? ` v${version}` : ""
+  try { write(`\n\n  ◌ thincoder loading...${v}\n`) } catch { /* 尽力面——TTY 不可写不阻断启动 */ }
+}
+
 /** TUI 清理序列 = 异常退出恢复序列（单一来源——§9.2 表 2 候选 1）：清屏 + 关闭鼠标/
  *  粘贴/键盘增强 + 退出 alt buffer + 显示光标 + 恢复环绕。
  *  TUI-OOM-ROOTCAUSE（CRASH-REPORTS.md §9.3）：提取为导出常量 `RECOVERY_SEQUENCE`——

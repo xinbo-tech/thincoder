@@ -38,6 +38,26 @@ import { applyHistoryPage } from "./history.js"
 
 // ─── Init ──────────────────────────────────────
 
+// 启动加载画面（2026-09-21 用户）：index.html 静态 #loading-screen 首屏即见（骨架裸露 + welcome
+// 表单早弹的替代）。移除时机 = 握手落定：providerStatus（provider 态已知 ✗ banner/welcome 语义就绪）
+// 是宿主初始消息序的最后一环（webviewReady → turnState → i18n → agentSettings → _pushStatus →
+// openSessionContent）——收到即可安全展示真 UI。兜底 = 3s 超时强移（宿主未响应也不永锁）。
+function dismissLoadingScreen() {
+  const el = document.getElementById("loading-screen")
+  if (!el) return
+  el.classList.add("dismiss")
+  setTimeout(() => el.remove(), 200) // 淡出后移除（CSS transition 150ms + 余量）
+}
+let _loadingDismissed = false
+function dismissLoadingScreenOnce() {
+  if (_loadingDismissed) return
+  _loadingDismissed = true
+  dismissLoadingScreen()
+}
+const _loadingTimeout = setTimeout(dismissLoadingScreenOnce, 3000) // 兑底：握手异常不永锁首屏
+
+dismissLoadingScreen._onProviderStatus = () => { clearTimeout(_loadingTimeout); dismissLoadingScreenOnce() }
+
 showWelcome(ctx)
 
 ctx.sendBtn.addEventListener("click", send)
@@ -214,6 +234,7 @@ window.addEventListener("message", (e) => {
       updateProviderStatus(S._lastProviderStatus)
       ctx._keyOk = m.keyOk === true
       showBanner(ctx, ctx._keyOk ? t("banner.configured") : t("banner.notConfigured"), ctx._keyOk)
+      dismissLoadingScreenOnce() // 启动加载画面移除（握手最后一环到达——2026-09-21）
       maybeShowWelcome(S._lastProviderStatus, m.keyOk)
       updateWelcomeStatus(ctx) // keyOk 到达可能晚于 showWelcome（初始渲染）——刷新欢迎条文案态
       break

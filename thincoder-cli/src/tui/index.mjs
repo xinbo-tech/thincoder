@@ -19,6 +19,7 @@
  */
 
 import { emitKeypressEvents } from "node:readline"
+import { readFileSync } from "node:fs"
 import { PassThrough } from "node:stream"
 import { saveSession } from "@thincoder/core/session.mjs"
 import { closeAllMcp } from "@thincoder/core/mcp.mjs"
@@ -27,7 +28,7 @@ import { createRenderLoop } from "./render-loop.mjs"
 import { makeDimsState } from "./dims.mjs"
 import { SLASH_COMMANDS, createSlashCommands } from "./slash-commands.mjs"
 import { createWizard } from "./wizard.mjs"
-import { writeStartupSequence, setTuiActive, createExitCleanup } from "./tui-lifecycle.mjs"
+import { writeStartupSequence, writeLoadingLine, setTuiActive, createExitCleanup } from "./tui-lifecycle.mjs"
 import { createPickers } from "./pickers.mjs"
 import { runDistill as runDistillImpl } from "./distill-cmd.mjs"
 import { createInteraction } from "./interaction.mjs"
@@ -159,6 +160,13 @@ export async function startTUI(agent, opts = {}) {
   // modifyOtherKeys lvl 2 (\x1b[>4;2m): Shift+Enter → \x1b[27;2;13~ (mintty / Git Bash)
   // translateShiftEnter (stdin layer) maps both to \x1b\r → meta+return → multiline branch.
   writeStartupSequence()
+  // 启动加载画面（2026-09-21 用户）：冷启动剩余期（memory 同步 / 索引扫描）非黑。
+  // 静态读（render-frame 先例——module-load 一次 ✗ 首帧 render 覆盖本行 ✗ 无需清除逻辑）。
+  {
+    let v = ""
+    try { v = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version } catch { /* 尽力面 */ }
+    writeLoadingLine(undefined, v)
+  }
   setTuiActive(true) // R25（F-R25a）：终端接管完成——置 TUI 活动态（崩溃钩子恢复判定源）
 
   const utf8Decoder = new TextDecoder("utf-8", { fatal: false })
