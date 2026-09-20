@@ -122,9 +122,9 @@ function familyNames(run) {
  * `assembleFamilyTools` 按 `engineering` 取 `[task, timer]`）+ 新增 `explore-eng`（工程模式
  * explore：VSC 旁路面形状——视觉渠道子代理携 `engState.enabled:true`）。 */
 const FAMILY_FIXTURE = {
-  "depth-0": ["advisor", "eng", "goal", "ledger_add", "ledger_close", "ledger_update", "plan", "read_history", "recent_changes", "settings", "skill", "subagent", "task", "timer", "verify"],
-  "eng-designer": ["batch_segment", "notify_parent", "subagent", "task", "timer"],
-  "eng-coder": ["advisor", "batch_segment", "notify_parent", "subagent", "task", "timer", "verify"],
+  "depth-0": ["advisor", "batch", "eng", "goal", "ledger_add", "ledger_close", "ledger_update", "plan", "read_history", "recent_changes", "settings", "skill", "subagent", "task", "timer", "verify"],
+  "eng-designer": ["batch", "notify_parent", "subagent", "task", "timer"],
+  "eng-coder": ["advisor", "batch", "notify_parent", "subagent", "task", "timer", "verify"],
   coder: ["advisor", "notify_parent", "plan", "task", "timer", "verify"],
   explore: ["notify_parent", "plan", "task", "timer"],
   "explore-eng": ["notify_parent", "task", "timer"],

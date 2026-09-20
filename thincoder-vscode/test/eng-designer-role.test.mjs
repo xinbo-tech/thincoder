@@ -5,7 +5,7 @@
  * 发现 #1 的教训：枚举/装配层落完**不等于角色能 spawn**——运行期有 fail-closed 白名单与三道门。
  * 本档断言下沉到运行期：
  *   ① 白名单放行 + 未知角色文案点名新角色；② 模式门第三门（非工程模式拒 designer）；
- *   ③ 子代 spawn 门（designer 勘察 = explore-only）；④ 装配分支（batch_segment 在、advisor 不在、
+ *   ③ 子代 spawn 门（designer 勘察 = explore-only）；④ 装配分支（batch 在、advisor 不在、
  *   `agent._batchDoc` 落到工具）；⑤ 角色 enum 含 designer；⑥ 场景表两行 + 人格槽位；
  *   ⑦ webview 四处枚举；⑨ 勘察通道行为（explore 允 / 其它拒、勘察任务不含 Audit scope 块）。
  * 测试缝 `ctx.runAgent` 驱动真实 execute 的放行面（零网络）。
@@ -95,18 +95,18 @@ test("T57 边界：角色 enum（工程模式含 designer / 普通模式不含�
   assert.match(modeRoleField(true).suffix, /eng-designer/, "suffix 指向新角色（模型可见引导）")
 })
 
-test("T57 正常：装配分支——batch_segment 在、advisor 不在、绑定落到工具（VSC 端镜像批（2026-09-11 · 第 5 批）④/⑨）", async () => {
+test("T57 正常：装配分支——batch 在、advisor 不在、绑定落到工具（VSC 端镜像批（2026-09-11 · 第 5 批）④/⑨）", async () => {
   const abs = batchFile()
   const run = await setupAgentRun({
     provider, cwd, input: "task", depth: 1, role: "eng-designer", getAuto: () => false,
     opts: { engineering: true, engState: { enabled: true }, batchDoc: abs },
   })
   assert.equal(run.agent._batchDoc, abs, "spawn 绑定 → agent._batchDoc")
-  assert.ok(run.toolByName.has("batch_segment"), "designer 挂 batch_segment（§2 写通道）")
+  assert.ok(run.toolByName.has("batch"), "designer 挂 batch（§2 写通道）")
   assert.ok(!run.toolByName.has("advisor"), "designer 不挂 advisor（设计师不发起评审）")
   assert.ok(run.toolByName.has("subagent"), "勘察通道工具在（explore-only 受限变体）")
   // 挂载的工具真能写进绑定的档（绑定不是摆设）
-  await run.toolByName.get("batch_segment").execute({ segment: "§2", text: "### 本批任务" }, { agent: run.agent, cwd })
+  await run.toolByName.get("batch").execute({ action: "append", segment: "§2", text: "### 本批任务" }, { agent: run.agent, cwd })
   assert.ok(readFileSync(abs, "utf8").includes("### 本批任务"), "designer 工具写 §2 落到绑定档")
   // 受限变体的 schema 面：explore-only + 无 async/batchDoc（delete 清单）；action 显式
   // spawn-only（核版形态——VSC 旧 engChildSubagentTool 的 delete-action 微差随死支删除消解，
@@ -117,13 +117,13 @@ test("T57 正常：装配分支——batch_segment 在、advisor 不在、绑定
   assert.ok(!("async" in props) && !("batchDoc" in props) && !("round" in props), "受限变体 delete 清单（含 batchDoc/round——勘察通道 F2 豁免）")
 })
 
-test("T57 零回归：eng-coder 装配面不变（advisor/verify 在，batch_segment 仍挂）", async () => {
+test("T57 零回归：eng-coder 装配面不变（advisor/verify 在，batch 仍挂）", async () => {
   const abs = batchFile()
   const run = await setupAgentRun({
     provider, cwd, input: "task", depth: 1, role: "eng-coder", getAuto: () => false,
     opts: { engineering: true, engState: { enabled: true }, batchDoc: abs },
   })
-  for (const t of ["advisor", "verify", "batch_segment", "subagent"]) assert.ok(run.toolByName.has(t), `eng-coder 工具：${t}`)
+  for (const t of ["advisor", "verify", "batch", "subagent"]) assert.ok(run.toolByName.has(t), `eng-coder 工具：${t}`)
   assert.equal(run.agent._batchDoc, abs, "eng-coder 绑定同形")
 })
 

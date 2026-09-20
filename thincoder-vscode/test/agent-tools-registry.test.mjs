@@ -26,14 +26,14 @@ const VSC_ROOT = join(HERE, "..")
 const REGISTRY_NAMES = [
   "planTool", "subagentTool", "taskTool", "skillTool", "goalTool", "verifyTool",
   "recentChangesTool", "timerTool", "advisorTool", "engTool", "readHistoryTool",
-  "batchSegmentTool", "consultStartTool", "consultStopTool", "parentChannelTool",
+  "batchTool", "consultStartTool", "consultStopTool", "parentChannelTool",
 ]
 
 test("W9 ① 核登记册：15 名逐字（名集钉死——工具对象/工厂齐备）", async () => {
   const reg = await import("@thincoder/core/agent-tools.mjs")
   assert.deepEqual(Object.keys(reg).sort(), [...REGISTRY_NAMES].sort(), "核登记册名集 = 15 名（引核册）")
   for (const name of REGISTRY_NAMES) {
-    // batchSegmentTool = 工厂（绑定档 → 工具对象）；余 14 名为单例工具对象
+    // batchTool = 工厂（绑定档 → 工具对象）；余 14 名为单例工具对象
     assert.ok(["object", "function"].includes(typeof reg[name]), `${name} 必须是工具对象或工厂`)
     assert.equal(typeof reg[name].name, "string", `${name}.name 必须为字符串`)
   }

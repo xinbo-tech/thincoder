@@ -1,7 +1,7 @@
 /**
  * agent/setup-tooltable.mjs — 工具表装配装饰面（2026-09-16 · 批 7 `docs/vsc/design/VSC-DEBT.md`
  * §3.3 档一：setup.mjs 654 > 500 硬限 ⇒ 结构拆分）。纯结构搬移（零语义改动）——段序与原文
- * 一致：① W9 batch_segment 记账缝注入 · ② W14 三缝接线（skill loader / eng mirror / verify
+ * 一致：① W9 batch 记账缝注入 · ② W14 三缝接线（skill loader / eng mirror / verify
  * 诊断段）· ③ 池装配装饰与子代理面（`withPool` / `vscSubagentFace` / 终态回显族 /
  * `modeRoleField`）。缝 = re-export（KD-6）：`setup.mjs` 再导出既有导出名
  * （`vscSubagentFace` / `modeRoleField`）⇒ 消费档零改。
@@ -19,7 +19,7 @@ import { vscPersistRaw } from "../extension/settings-panel-write.mjs"
 import { setSlotEngineering } from "../extension/session-slot-write.mjs"
 import { loadConsultPool } from "../extension/presets.mjs"
 
-// ─── W9（2026-09-15）：batch_segment 记账面注入（核缝 #84 —— `configureBatchSegment`）──────────
+// ─── W9（2026-09-15）：batch 记账面注入（核缝 #84 —— `configureBatchSegment`）──────────
 // VSC 特有增量随删旧迁入端壳（四步协议 ②）：核 `agent-tools/batch-segment.mjs` 的写入回调默认
 // no-op；本端在装配层注册 = 写入成功即记绑定档绝对路径入 `agent._touchedFiles`（与删除前
 // `src/agent-tools/batch-segment.mjs:184` 逐字同语义——Array.isArray 守卫 + includes 去重）——

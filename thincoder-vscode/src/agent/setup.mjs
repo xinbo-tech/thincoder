@@ -2,7 +2,7 @@
  * agent/setup.mjs — pre-loop setup for runAgent: tool table, config, system prompt,
  * dual-line history, and startup context injection.
  * Extracted from agent.mjs (file-size split).
- * 2026-09-16（批 7 VSC-DEBT §3.3 档一）：工具表装配装饰面迁出 `setup-tooltable.mjs`（batch_segment
+ * 2026-09-16（批 7 VSC-DEBT §3.3 档一）：工具表装配装饰面迁出 `setup-tooltable.mjs`（batch
  * 记账缝 / W14 三缝接线 / 池装配装饰与子代理面）；本档 re-export 既有导出名（KD-6 缝）；
  * 动态载核登记册面（KD-5）仍在本档。
  * agent 生命周期对齐 CLI（2026-09-08）：setupAgentRun 拆出
@@ -322,7 +322,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // ——不相交式 = 追加家族 ∥ 绑定值；VSC-TOOL-TABLE-DUP §2.1A），不拷贝。
   agent.tools = baseSet
   agent._engTaskInput = opts.engTaskInput ?? null
-  // VSC 端镜像批（2026-09-11 · 第 5 批）：spawn 侧批次档绑定上车（batch_segment 的唯一路径来源，现行权威 = BATCH-RECORD.md §4.2；无 path 参数——
+  // VSC 端镜像批（2026-09-11 · 第 5 批）：spawn 侧批次档绑定上车（batch 工具的唯一路径来源，现行权威 = BATCH-RECORD.md §4.2；无 path 参数——
   // 目标档由 spawn 绑定 / 评审实例键提供）。顶层/非工程角色恒 null（不挂载工具）。
   agent._batchDoc = batchDoc
   agent._engDesignReviewed = engDesignReviewed === true // eng-coder children arrive pre-authorized

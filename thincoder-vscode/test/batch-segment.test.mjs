@@ -5,7 +5,7 @@
  *      （既有行字节不变）/ 来源戳仅 §3（N = §3 内该形态行 + 1，骨架行不计，调用方自带标题被丢）/
  *      凭证剥除自有正则（落档零命中）/ fail-closed 六条；
  *   ② **只读面**（T60）：代码评审工具集逐字节不变（`_resolvedAdvisorToolsFor`）；仅
- *      reviewType==='design' 且 batchDoc 已绑定才追加 batch_segment；
+ *      reviewType==='design' 且 batchDoc 已绑定才追加 batch（主名写通道）；
  *   ③ **实例键通道**（T66）：batchDoc 沿 `rv`（评审实例）传递——两设计评审并发各落自档，
  *      不串档、不用单值会话态（测试缝 `ctx.runAdvisorReview` 驱动 launch 真实路径）。
  * 纯单元：零网络、零真实评审。
@@ -180,12 +180,12 @@ test("T60 错误/边界：只读面——代码评审工具集逐字节不变；
   const agent = { cwd: tmp }
   const code = advisorToolsFor(agent, "code")
   const noArgs = advisorToolsFor(agent)
-  assert.ok(!code.byName.has("batch_segment"), "代码评审工具集不含本工具（零 git + 只读不变量）")
+  assert.ok(!code.byName.has("batch"), "代码评审工具集不含本工具（零 git + 只读不变量）")
   assert.deepEqual([...code.byName.keys()], [...noArgs.byName.keys()], "与无参调用（默认 code）逐字相同——零变更")
   assert.deepEqual([...code.byName.keys()], ["read", "glob", "grep", "ls", "lsp", "code_search"], "只读工具集恒定")
-  assert.ok(advisorToolsFor(agent, "design", abs).byName.has("batch_segment"), "设计评审 + 已绑定 → 挂载")
-  assert.ok(!advisorToolsFor(agent, "design", null).byName.has("batch_segment"), "设计评审未绑定 → 不挂载（fail-closed）")
-  assert.ok(!advisorToolsFor(agent, "code", abs).byName.has("batch_segment"), "代码评审即便传 batchDoc 也不含（reviewType 门）")
+  assert.ok(advisorToolsFor(agent, "design", abs).byName.has("batch"), "设计评审 + 已绑定 → 挂载")
+  assert.ok(!advisorToolsFor(agent, "design", null).byName.has("batch"), "设计评审未绑定 → 不挂载（fail-closed）")
+  assert.ok(!advisorToolsFor(agent, "code", abs).byName.has("batch"), "代码评审即便传 batchDoc 也不含（reviewType 门）")
 })
 
 // ── T66（W12 退役登记）──────────

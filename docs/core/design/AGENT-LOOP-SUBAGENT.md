@@ -2024,7 +2024,81 @@ export function upstreamAskLabelVars(carrier) {
 - **ask-only 轮的 CLI 收尾行**：**已裁纳入本批**（父侧 2026-09-21 02:0x）——落点 = ③ 尾条（guard 口径与理由）+ ⑤c + ⑨-2 + 用例 T-SL-C3（⑦）。依据 = 与起跑行同规则（`n > 0`）才有一致形态；`pend0 = 0` 轮出收尾行 = 幻影行（同 ① 计数行的幻影行禁出原则）；两端形态对齐（VSC ask 轮无计数元素 ⇒ end 零动作——`thincoder-vscode/webview/chat.js:425-426`，该守卫先于 `ok` 判 ⇒ done / aborted 两形态皆零）。
 - **`digest.turnLabel` 措辞**：pending 单容器含 consult / escalate / advisor 族，标签字面只说 "subagent reports"（既有多族措辞面）；本批只钉两因分流，措辞面不动。
 
+## 6.28 VSC 端 batch 改名镜面修复（2026-09-21 · 批 VSC-BATCH-RENAME-FIX · 核 `0b45957c` 遗留 5 红）
+
+**问题陈述（as-of 2026-09-21 实测）**：核批 `0b45957c`（batch 生命周期工具单名化——主名 `batch` 单工具四 action，
+`thincoder-core/agent-tools/batch.mjs:270`；过渡别名 `batchSegmentTool` 降 shim 导出面，`:366`）落地后，VSC 全量
+876 测试中 **5 红**——红源全部为 **VSC 测试断言面钉改前形状**（生产码零红）。核挂载面（VSC 装配同源，四处全主名）：
+depth-0 段 `agent/family-tools.mjs:141`（`batchTool(null)`）· eng-coder `:170` / eng-designer `:171`
+（`batchTool(batchDoc)`）· 设计评审 `advisor/loop.mjs:45`（`batchTool(batchDoc, { review: true })`）。
+
+**改前 → 改后（逐处；坐标 as-of 2026-09-21 实读）**：
+
+| # | 红例 | 档:行 | 改前 → 改后 | 性质 |
+|---|---|---|---|---|
+| 1 | W9① | `agent-tools-registry.test.mjs:29` | REGISTRY_NAMES 含 `"batchSegmentTool"` → `"batchTool"`（仍 15 名——别名不入登记册，`thincoder-core/agent-tools.mjs:17/:21`） | 红 |
+| 1b | W9① 注 | `:36` | 行内注释「batchSegmentTool = 工厂」随主名 | 注释面 |
+| 2 | T57 正常 | `eng-designer-role.test.mjs:105` | `has("batch_segment")` → `has("batch")` | 红 |
+| 2b | T57 正常 | `:109` | `get("batch_segment").execute({segment,text})` → `get("batch").execute({action:"append",…})`（`batch.mjs:321` `required:["action"]`） | 红 |
+| 3 | T57 零回归 | `eng-designer-role.test.mjs:126` | 名单字面 `"batch_segment"` → `"batch"` | 红 |
+| 4 | T60 | `batch-segment.test.mjs:183/:186/:187/:188` | 四处 `byName` 断言名 → `"batch"` | 红 2（:186/:187）+ 误绿 2（:183/:188 旧名下恒真） |
+| 5 | T5 | `integration/host-shape-spawn.test.mjs:125` | depth-0 期望 15 名 → 加 `"batch"`（15→16——`:141` 实挂） | 红 |
+| 5b | T5 | `:126/:127` | eng 两行 `"batch_segment"` → `"batch"` | 红 |
+| 6 | 注释面 | `setup-tooltable.mjs:4/:22` · `setup.mjs:5/:325` | 四处「batch_segment 记账缝 / 唯一路径来源」指称 → 主名 `batch`（`configureBatchSegment` 契约名不动） | 静默残留 |
+| 7 | 注释面 | `batch-segment.test.mjs:8` · `eng-designer-role.test.mjs:8` | 两档头注 `batch_segment` 指称 → 随主名 | 静默残留 |
+
+**坐标收拢注**（§3 复评 🟡#1 · 实施轮代落）：表未单列的 `:98/:120/:178` 三处 = 所在用例块的 **test() 标题行**（`:98` = 表行 2 用例标题 · `:120` = 表行 3 用例标题 · `:178` = 表行 4 用例标题）——非独立改动点，snake_case 字面随块内断言行同批收正；块内断言行（`:105/:109/:126/:183–:188`）即表中改后形态，U2/U3/U4 覆盖。
+
+**保缝面（三处——非改名面，禁触）**：① `configureBatchSegment`（#84 记账缝契约名——`setup-tooltable.mjs:14/:27`
+消费、`batch-segment.test.mjs:19/:204` 镜像注册）；② shim 直调用例（T59/T66/T-FZ3 的 `batchSegmentTool` 直调——
+别名等价载体，等价性由核 BATCH-RECORD §4.14 撤除判据守护）；③ 核错误串前缀断言
+`batch-segment.test.mjs:126`（`/^batch_segment: the text contains a section header line/`——核 `batch.mjs:251`
+对子代理身份的错误串**逐字保持** `batch_segment:` 前缀 = 核锚；该断言锁核契约，非残留）。
+
+**关键决策**：
+
+- **D-1** 登记册**换名不加名**（仍 15 名——实读 `thincoder-core/agent-tools.mjs:17/:21`：`batchSegmentTool` 过渡别名不入登记册，仅 shim 导出面）。
+- **D-2** T60 **四处全改**（非仅 2 红）——`:183/:188` 在旧名下恒真（主名世界里代码评审既不含旧名也不含新名），
+  断言力已失；随主名改后 `!has("batch")` 恢复强断言。
+- **D-3** `:109` 改走主名 execute 形——`required:["action"]`（`batch.mjs:321`）+ action 分发（`:342`）实读：
+  缺 action = unknown action throw；shim 形 `{segment,text}` 对主名不可达。
+- **D-4** 注释面 = **6 处** = src 4（`setup-tooltable.mjs:4/:22` · `setup.mjs:5/:325`）+ 测试档头注 2（`batch-segment.test.mjs:8` · `eng-designer-role.test.mjs:8`）。
+- **D-5** 落点 = 本档 §6.28（VSC 装配镜像面 owner 档——§6.24 先例）；不另建 `docs/vsc/design/WEBVIEW-TOOLTABLE.md`
+  （不存在，glob 实勘——另建即单一权威源破面）。
+
+**用例表（改后形态——既有用例就地收正，零新增用例）**：
+
+| # | 用例 | 输入 | 期望 | 回指 |
+|---|---|---|---|---|
+| U1 | W9① 名集 | import 核登记册 | `Object.keys` 排序 = 15 名（含 `batchTool`、不含 `batchSegmentTool`） | 红 1 |
+| U2 | T57 正常 | depth-1 eng-designer 装配 + 绑定档 | `has("batch")`；`get("batch").execute({action:"append",…})` 写 §2 落绑定档 | 红 2 |
+| U3 | T57 零回归 | depth-1 eng-coder 装配 | advisor / verify / batch / subagent 全在 | 红 3 |
+| U4 | T60 只读面 | `advisorToolsFor` code/design × 绑定/未绑定 | code 集 6 名恒定且无 `batch`；design+绑定含 `batch`；design 未绑定 / code+绑定不含 | 红 4 |
+| U5 | T5 矩阵 | `hostShape` 六角色 | depth-0 = 16 名（含 `batch`）；eng 两行含 `batch`；coder / explore / explore-eng 不变 | 红 5 |
+
+**验收标准（可机检 · cmd.exe · cwd = `thincoder-vscode/`）**：
+
+| # | 判据 | 回指 |
+|---|---|---|
+| A-1 | `npm test` = **876/876 零红**（改前 871/876） | 全体 |
+| A-2 | `node --test test/agent-tools-registry.test.mjs test/eng-designer-role.test.mjs test/batch-segment.test.mjs test/integration/host-shape-spawn.test.mjs` 全绿 | 红 1–5 |
+| A-3 | 残留清零：VSC `src` + `test` + `webview` 域 snake_case `batch_segment` 字面命中 = **0**（webview 域 2026-09-21 实勘已零命中）；豁免集见下 | 注释面 6 处 + 红 2/3/5b |
+
+A-3 豁免集（不计入命中面）：① `configureBatchSegment` / `batchSegmentTool` camelCase 缝名与 shim 导出面；
+② `batch-segment.mjs` 连字符路径；③ `batch-segment.test.mjs:126` 核错误串前缀断言（保缝面 ③）。
+
+A-3 机检（单行 · cmd.exe · cwd = `thincoder-vscode/`；§3 复评 🔵#3 · 实施轮代落）：
+`node -e "const fs=require('fs'),path=require('path');let n=0;const w=d=>{for(const x of fs.readdirSync(d)){const q=path.join(d,x);if(fs.statSync(q).isDirectory())w(q);else if(/\\.(mjs|js)$/.test(x))fs.readFileSync(q,'utf8').split(/\\r?\\n/).forEach(l=>{if(l.includes('batch_segment'))n++})}};['src','test','webview'].forEach(w);console.log(n)"`
+→ 期望输出 = `1`（唯一命中 = 豁免集③ `batch-segment.test.mjs:126` 核错误串前缀断言；命中面 = 0——camelCase 缝名与连字符路径形态不含 snake_case 字面，天然不入命中）。
+
+**边界（本批不做）**：不改核侧（`0b45957c` 已收口）；不动 #84 缝契约名；不删 shim 档与别名（核 §4.14 撤除判据
+归核批）；错误串 `batch_segment:` 前缀零改（核 §4.1 锚）；T5 已定性机械面（fixture 钉改前形状），零行为裁决；
+`setup.mjs` 现量 500 = 硬限在位，本批 ±0——该档后续净增的拆分另案（归父侧派单登记）。
+
 ## 变更记录
+
+- 2026-09-21（**批 VSC-BATCH-RENAME-FIX · 设计轮 · eng-designer**——承 `docs/batches/2026-09-21-vsc-batch-rename-fix.md` §1 · 核 `0b45957c` 遗留 VSC 5 红）：新增 **§6.28**——5 红逐处坐标表（改前→改后）+ 保缝面三处（#84 缝契约名 / shim 直调用例 / 核错误串前缀断言）+
+  决策 D-1–D-5（登记册 15 名换名 / T60 误绿面 / 主名 execute 形 / 注释面 6 处 / 落点本档）+ 用例 U1–U5 + 验收 A-1–A-3 + 边界。零生产码改动（断言面 + 注释面单侧收正）。
 
 - 2026-09-21（**批 SUBAGENT-SIGNAL-LINES · 设计微修三轮 · eng-designer**——承 `docs/batches/2026-09-21-subagent-signal-lines.md` §3 轮次 1 评审 #44（pass · 3🟡 / 5🔵）设计档面四项 × 父侧逐条裁定）：§6.27.12.13 ——
   ① ⑥ 表后补**越线核查**（行 3 / 5 / 8 / 9 四档逐档档位口径）· ② 行 11–14 补**读数口径**注（as-of 读数 · 不追值）· ③ ⑤a 代码块改用 `ASK_LABEL_MSG_MAX` · ④ ⑨-5 补理由句（跨端单源 D2 · 宽字符折行为已知形态）。机制面零改。
