@@ -3,7 +3,7 @@
 > 部分 = **vsc**（`docs/vsc/`）。板块 = **VSC 产品树残留债清零**（批 7）。
 > 任务书 = `docs/batches/2026-09-16-vsc-debt.md` §1（主 agent · 需求已确认）；批次任务面 = 同档 §2。
 > 需求侧回指 = `docs/vsc/requirements/PROJECT.md` §6（N-P1 / N-P2 / N-P3——本部分编号域；与 CLI 树 `PROMPT-SYSTEM.md` 的 `N-P1`–`N-P3` 同号不同域，全引处须带档限定）· `docs/vsc/requirements/WEBVIEW.md` §3（N-W7）。
-> 权威源（**本档不重述**——D2）：webview 消息族与协议表 = `docs/vsc/design/WEBVIEW-PROTOCOL.md`；慢测层机制 = `thincoder-vscode/test/{slow,slow-gate,run-fast,run-full}.mjs` 头注；文档体系判据 = `docs/core/design/DOC-SYSTEM.md`。
+> 权威源（**本档不重述**——D2）：webview 消息族与协议表 = `docs/vsc/design/WEBVIEW-PROTOCOL.md`；测试入口 = `thincoder-vscode/test/run.mjs`（单入口——`slow` = 纯别名；测试门权威 = `docs/core/design/TESTING.md` §10）；文档体系判据 = `docs/core/design/DOC-SYSTEM.md`。
 > 建档：2026-09-16（批 7 设计轮）。坐标 = as-of 2026-09-16 实测（行数口径 = `wc -l`）。
 > 论域 = VSC 产品树（`thincoder-vscode/**`）+ 基准层文档（`docs/vsc/**`）。
 
@@ -11,7 +11,7 @@
 
 | # | 条目（承 §1 条目 1/2/3） | 判定句（验收语义） | 需求条目（回指） |
 |---|---|---|---|
-| **D-1** | 快层 12 例慢例归册 | 逐例**单跑**读数在案；单跑 **>500 ms** 者一律 `slow(` 归册；归册后快层 `npm test` 绿、慢层拦截零命中 | `PROJECT.md` §6 N-P1 / N-P2 |
+| **D-1** | 12 例慢例 `slow(` 归册 | 逐例**单跑**读数在案；单跑 **>500 ms** 者一律 `slow(` 归册；归册后 `npm test` 绿（单入口——`slow` 纯别名，无拦截线） | `PROJECT.md` §6 N-P1 / N-P2 |
 | **D-2** | 收发面全量对表 + 死码清理 | 表逐行在位（顶级判别式 · host 发射点 · 消费位 · 处置）；复跑**零未处置**；删项后全树**零悬空引用** | `WEBVIEW.md` §3 N-W7 |
 | **D-3** | 两档越 500 硬限 ⇒ 拆分 | 拆后各档（含新档）`wc -l` **≤500**；**缝保持**（既有导出名 / 调用点零改 · 既有用例零回归） | `PROJECT.md` §6 N-P3 |
 
@@ -24,7 +24,7 @@
 | 1 | 以**满载读数**为判据（§1 父侧初测 800.1–2267.1 ms） | 与拦截线同源；但同一用例跨跑漂移大——实测同例 `:274` 905→416 ms、`:124` 960→1240 ms | 判据不可复现 ⇒ 复跑读数红/绿漂移，无法作为验收证据 | **否决**：不可复现的判据 = 不可验收 |
 | 2 | 以**单跑读数**为判据（§1 口径句；先例 = 批 2 片 1「T-CG18 单跑 450 ms ⇒ 不归册」） | 可复现（例独占进程）；与 `thincoder-vscode/test/slow.mjs:4`「单测 >500ms」同线 | 需逐例 12 次单跑（成本 ≈12 次进程启动）——本批一次性成本可接受 | **选定** |
 
-**两线分立**（承 `thincoder-vscode/test/slow.mjs:4,16` · `thincoder-vscode/test/slow-gate.mjs:8-9`）：**归册线 = 500 ms（单跑）** · **拦截线 = 800 ms（快层实测，env `THINCODER_SLOW_GATE_MS` 可覆盖）**。800 ms 是**负载缓冲**（满并发下 `--test-concurrency=6` 的抖动余量），**不是**归册线——二者职责不同，不得混用。 （迁移期引文——入口已并入）
+**两线分立**（承 `thincoder-vscode/test/slow.mjs:4,16`）：**归册线 = 500 ms（单跑）** · **拦截线 = 800 ms（满载实测）**。800 ms 是**负载缓冲**（满并发下的抖动余量），**不是**归册线——二者职责不同，不得混用。 （迁移期引文——v1 慢测层两线机制；v2 已收敛为单入口）
 
 ### 2.2 D-2 对表的落点
 
@@ -54,7 +54,7 @@
 
 ## 3. 设计层
 
-### 3.1 D-1 快层慢例归册
+### 3.1 D-1 慢例 `slow(` 归册
 
 **范围**：`thincoder-vscode/test/edit-tool-improvement.test.mjs` 的 12 例（§1 名单：`:41`/`:49`/`:57`/`:65`/`:124`/`:188`/`:196`/`:204`/`:222`/`:234`/`:274`/`:298`，均为裸 `test(`；档行数 326）。**候选集** = 满载拦截点名集 **∪** §1 名单——**并集**内逐例施加同一单跑协议（名单外被点名者同法读数与处置，不豁免——评审轮 1 裁定）。
 
@@ -62,7 +62,7 @@
 **转义与守卫**：例名含正则元字符（实测 `:274` 例含 `+`）——`--test-name-pattern` 按 regex 语义须转义（如 `\+`）；且**每例读数前确认恰 1 例被选中**（TAP `tests 1`；零命中 ⇒ 读数作废、改正 pattern 重跑）。
 **判据**：单跑 **>500 ms** ⇒ 该例 `test(` → `slow(`（`thincoder-vscode/test/slow.mjs:24-27`——非 FULL 层自动 skip）；单跑 ≤500 ms ⇒ 保持裸 `test(`。
 **不归册例的复核路径**：若某例单跑 ≤500 ms 而满载超 800 ms ⇒ 拦截红，处置 = 复跑复核：仍超 800 ms ⇒ 判为 IO 慢例归册；复跑回落 ⇒ 记录负载假红（读数入 §5），不动该例。
-**归册后**：快层 `npm test`（= `node test/run-fast.mjs`）绿；`test:full`（`THINCODER_TEST_FULL=1`）仍跑（`slow.mjs:22`）。
+**归册后**：`npm test`（= `node test/run.mjs`，单入口）绿——`slow` 纯别名、全量同跑。
 
 ### 3.2 D-2 收发面对表 + 死码清理
 
@@ -189,13 +189,13 @@
 |---|---|---|---|
 | A1 | 12 例逐例单跑读数在案（ms，含复跑读数） | 报告表逐例一行（§3.1 测量协议） | `PROJECT.md` §6 N-P2 |
 | A2 | 单跑 >500 ms 者已 `slow(` 归册 | `grep -n "slow(" thincoder-vscode/test/edit-tool-improvement.test.mjs` | `PROJECT.md` §6 N-P1 |
-| A3 | 归册后快层绿、慢层拦截零命中 | `cd thincoder-vscode && npm test` ⇒ exit 0 | `PROJECT.md` §6 N-P1 |
+| A3 | 归册后 `npm test` 绿（单入口——无拦截线） | `cd thincoder-vscode && npm test` ⇒ exit 0 | `PROJECT.md` §6 N-P1 |
 | A4 | 对表逐行在位（五列无空） | `docs/vsc/design/WEBVIEW-PROTOCOL.md` §12 | N-W7 |
 | A5 | 复跑零未处置 | `cd thincoder-vscode && node --test test/protocol-coverage.test.mjs` ⇒ pass | `WEBVIEW.md` §3 N-W7 |
 | A6 | 删项后零悬空引用 | `grep -rn -e "_advisorBlock" -e "_advisorScrollDirty" -e "advisorChunk" thincoder-vscode/src thincoder-vscode/webview thincoder-vscode/test thincoder-vscode/AGENTS.md`（大小写敏感——`appendAdvisorChunk`/`buildAdvisorBlock` 保留不误伤）⇒ 0 命中 | `WEBVIEW.md` §3 N-W7 |
 | A7 | 拆后各档 ≤500 | `wc -l` 逐档读数（`setup.mjs` / `panel-messages.mjs` / 两新档） | `PROJECT.md` §6 N-P3 |
-| A8 | 缝保持（既有用例零回归） | `npm test` · `npm run test:integration` 全绿；`agent-tools-registry.test.mjs` 绿 | `PROJECT.md` §6 N-P3 |
-| A9 | 门禁全绿 + 文档锚零悬空 | `npm run lint` → `npm run test:full` → `npm run test:integration`；`npm run doc:check` | 全部 |
+| A8 | 缝保持（既有用例零回归） | `npm test` 全绿；`agent-tools-registry.test.mjs` 绿 | `PROJECT.md` §6 N-P3 |
+| A9 | 门禁全绿 + 文档锚零悬空 | `npm run lint` → `npm test`；`npm run doc:check` | 全部 |
 
 > **A6 射程口径**：grep 面 = 产品树活代码面（`src` / `webview` / `test`）+ 端壳登记档 `AGENTS.md`；`thincoder-vscode/docs/**`（冻结参照历史——含 `design/WEBVIEW.md` `:1265-1266`/`:1377`/`:1385`/`:1784` · `requirements/AGENT-LOOP.md` `:229`/`:257`/`:264` 等）与本批批次档**命中不判悬空**（B 式迁移前旧档 + 批材料，原地一字不改）。
 
@@ -204,9 +204,8 @@
 | # | 类型 | 输入 | 期望输出 | 映射 |
 |---|---|---|---|---|
 | T-1 | 正常 | 逐例单跑 12 例 | 12 行读数在案，超阈者 `slow(` | D-1 |
-| T-2 | 边界 | 单跑 495 ms 例（≤500） | 保持裸 `test(`，快层 pass | D-1 |
-| T-3 | 边界 | 单跑 505 ms 例（>500） | `slow(` 归册；快层 skip、`test:full` 仍跑 | D-1 |
-| T-4 | 错误 | 未归册慢例（快层实测 >800 ms） | `slow-gate` 红 + 点名该例（既有自验 `test/slow-gate.test.mjs:35`） | D-1 |
+| T-2 | 边界 | 单跑 495 ms 例（≤500） | 保持裸 `test(`，`npm test` pass | D-1 |
+| T-3 | 边界 | 单跑 505 ms 例（>500） | `slow(` 归册（纯别名——不 skip，单入口仍跑） | D-1 |
 | T-5 | 正常 | 提取器跑全量 | 提取集 ↔ §12 表首列集双向零差 ⇒ pass | D-2 |
 | T-6 | 边界 | 某 type 仅 host 发射、webview 零消费 | 表内登记为 `补` 行（非 `未处置`）⇒ pass | D-2 |
 | T-7 | 错误 | 源码新增 type 未登记 | 测试红并点名该 type | D-2 |
@@ -587,3 +586,5 @@
 - 2026-09-20（**P2 机制层端差批 · 车道 3 设计档落笔轮 · eng-designer**——承 `docs/batches/2026-09-20-mechanism-parity-batch.md` §2.1 / §2.15 车道 3 行）：§12.1 增本批读数收正块
   （`agent.mjs` 483 → 478 · `run-stages.mjs` 377 → 402 · `execute-tools.mjs` 393 → 407 · `setup.mjs` 481 → 489 · `permission-gate.mjs` 109 → 117 · `files.mjs` 116）+ **`agent.mjs` 拆分触发条件更新**（触发 = 净增越 490）
   + 测试档越线续登记（`ledger.test.mjs` **324**）。**零新语义**。
+- 2026-09-20（**库存清账批 · v1 测试门词面收正 · eng-designer**——承 `docs/batches/2026-09-20-residual-sweep-batch.md` §2 · 台账 #128）：§1 D-1 行 · §2.1 两线分立段 · §3.1 标题与归册后句 · §6 A3 / A8 / A9 · §7 T-2 / T-3 收正为 v2 单入口词面（`slow` 纯别名）；
+  T-4（`slow-gate` 拦截面）随机制撤除**整行删**；权威源行收正（`thincoder-vscode/test/run.mjs` 单入口 + `TESTING.md` §10）。**零新语义**。

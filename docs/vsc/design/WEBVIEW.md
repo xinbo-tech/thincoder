@@ -204,7 +204,7 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
 | 前置不满足 | 角色段非法（非 `[\w-]+`）/ id 缺失 / 回读解析不一致 | 不补（no-op） | — |
 
 - **旧代回收吞守卫**（`activity.js:331-340`）：接管归档时旧块若在 awaitingDigest（回收在途）→ 新块记 `oldReclaimPending`，其后该键**首条 `done` 视为旧代回收 → 吞**（no-op + 清标志）。残余登记：旧代回收永不至（abort 等）× 新代 `done` 后至 → 可能误吞一次（降级 = 新块滞留区，会话退出 flush 兜底归档——不丢内容）。
-- **诊断痕迹**：痕迹面 = **`thincoder-vscode/webview/activity-diag.js`（拟新增——本批落：单一写点 + 环形载体 `SUB_TRACE_MAX = 50`）**；kind 族（七类）与留痕节律见 §5.3；范围 = **出生 / 终态 / 丢弃三面**（内容 chunk 高频面按频道去重）；上行 = 协议行 `panelDiag`。
+- **诊断痕迹**：痕迹面 = **`thincoder-vscode/webview/activity-diag.js`（已落：单一写点 + 环形载体 `SUB_TRACE_MAX = 50`）**；kind 族（七类）与留痕节律见 §5.3；范围 = **出生 / 终态 / 丢弃三面**（内容 chunk 高频面按频道去重）；上行 = 协议行 `panelDiag`。
 
 ### 5.2 块头与状态词（形态与字段）
 
@@ -296,7 +296,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 
 **webview 侧痕迹与上行（NFR-A2 webview 侧）**：
 
-- 痕迹面迁出至新档 `thincoder-vscode/webview/activity-diag.js`（拟新增——`activity.js` 现 **450 行**（行计数口径 = `wc -l` / 含末行；as-of 2026-09-20 收口轮实读）、越 300 建议线；痕迹整体迁出，`activity.js` 只留调用点）；环形 `SUB_TRACE_MAX = 50` 与 `_subTraceLog` 载体同迁（`state.js:83-85` · `:122` 两处退场）。
+- 痕迹面迁出至新档 `thincoder-vscode/webview/activity-diag.js`（已落——`activity.js` 现 **450 行**（行计数口径 = `wc -l` / 含末行；as-of 2026-09-20 收口轮实读）、越 300 建议线；痕迹整体迁出，`activity.js` 只留调用点）；环形 `SUB_TRACE_MAX = 50` 与 `_subTraceLog` 载体同迁（`state.js:83-85` · `:122` 两处退场）。
 - kind 族（**七类**）：既有三类 `takeover` / `late-terminal-stub` / `drop-unknown-role` + `birth`（新块出生——正收据）/ `drop-frozen`（冻结键吞掉的非出生消息——① 静默面）/ `drop-tombstone` / `reassert-hit`（心跳命中已 live 块——正收据，每频道每生命周期一条）。
   **退场一类**：`skip-key-unrebuildable`（旧射程登记用）——consult / escalate 射程收正后该分支不存在（见「终态必现」）。
 - **留痕节律**：出生 / 状态面**逐条**；内容 chunk 面**每频道每生命周期首条**（高频面按频道去重——上界与 `content-first` 同族）。
@@ -383,7 +383,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
   - **区 pin 旗标维护**：`ctx._pinActivity` 由 `scroll` / `wheel` / `touchmove` 三事件同读几何（近底 24px——`ui.js:463-473` `watch` 闭包）。`scroll` 为**唯一「滚动已生效」后**触发者（键盘 / 拖条 / 程序写入全覆盖）——现状只有 wheel / touchmove，且读的是**滚动前**几何 ⇒ 旗标可留陈旧位。
   - **出生判据（二向）**：`buildBlock`（`activity.js:108-111`）出生时——钉底（`_pinActivity !== false`）⇒ 照旧 `maybeScrollActivity(ctx)`（跟随）；**未钉底** ⇒ **不改 `scrollTop`**（不夺用户阅读位——D-W2 语义保持），
     改在**区首**生成 / 更新未读计数钮 `.activity-new-btn`（`position: sticky; top: 0`；文案 = locale 键 `sub.newBlocks`（zh `↓ ${n} 新块` / en `↓ ${n} new block(s)`——逐字登记 = `WEBVIEW-PROTOCOL.md` §6.3）；`N` = 未钉底期间出生块数）。
-    **落档 = 新档 `thincoder-vscode/webview/activity-new.js`（拟新增）**——建 / 更 / 删钮 + 点击回底 + `resetActivity` 同清；`activity.js` 只在出生判据点调用。
+    **落档 = 新档 `thincoder-vscode/webview/activity-new.js`（已落）**——建 / 更 / 删钮 + 点击回底 + `resetActivity` 同清；`activity.js` 只在出生判据点调用。
   - **回底清账**：钮点击 ⇒ `scrollTop = MAX` + `_pinActivity = true` + 移除钮 + `N` 归零；任一「近底」判定成立（`scroll` 事件）同清；`resetActivity` 同清。
   - **`:empty` 不回归**：钮按需建 / 删（`N = 0` 时元素不存在）——空区仍 `:empty` 零高（D-W1）。
   - **判据**：T-A21 / T-A22 / T-A23（未钉底出生 ⇒ 钮 `N = 1` 且 `scrollTop` 零改；点击 ⇒ 回底 + 钮消失；`scroll` 事件两向旗标正确）。
@@ -413,7 +413,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 | D-W19 | spawn 失败（进程未启动） = **产者补状态位** `(spawn failed)`（状态位族第三成员；端侧判据族随扩一名）——**产者两处、同名同形**：核 `thincoder-core/tools/bash.mjs:183-190`（CLI 面）· **宿主 `thincoder-vscode/src/tools/shell.mjs:242-260`（本端卡面真产者）**；同批收正宿主两态（超时 ⇒ `(killed: timeout <N>ms)` · 输出超容 ⇒ `(killed: output limit exceeded)`）+ **退出码槽只接受数字**规则。本端 `bash` ≠ 核 `bash`（`thincoder-vscode/src/tools/index.mjs:29` · `:172-175`）⇒ 只改核面则本端卡面零变化（评审 id=118 #1 实核） | 否决判据面认产者措辞（`Command failed:` 前缀——跨端措辞耦合 ⇒ 产者改字即静默复辟；且不产状态文本 ⇒ 摘要仍读 `(empty)`，第三信号须二次手术；CLI 端零收益）· 否决 `Error:` 前缀（核侧控制信号——`dispatch.mjs:369` · `:420` · `:426` · `:438` 同读，语义升格面）· 否决伪造 `(exit code N)`（进程未启动，禁造假状态）· 否决「本端改判为核/CLI 面收口」（本端卡面即本缺陷的用户可见承诺面） |
 | D-W20 | 出生自愈 = **既有存活投影的 2 s 心跳**（拍体即 `reassertLiveChildren` 本体；起于就绪握手、止于 dispose） | 否决新造存活投影（双源）· 否决投递层重试（投递层看不见 webview 守卫吞掉 / 键已冻结）· 否决只在握手 / 切屏再断言（投递丢失窗口不覆盖——本次事故留 20 min 空窗） |
 | D-W21 | 心跳**允许**对已冻结键建新代（接管；host 是「该键仍 live」的权利人） | 否决心跳禁接管（新代出生消息丢失时永久不可见——违 F-A3）· 否决心跳携带实例序号（改频道命名法——D-W11 / F-A3 边界禁止） |
-| D-W22 | 痕迹面**迁出** `thincoder-vscode/webview/activity-diag.js`（拟新增） + 上行 `panelDiag` 入主侧日志 | 否决痕迹留 `activity.js`（**450 行**——行计数口径 = `wc -l` / 含末行；as-of 2026-09-20 收口轮实读 + 新增 ⇒ 近 500 硬限）· 否决只留 webview 环形日志（DevTools 不可回读——本次事故正因不可回读而盲） |
+| D-W22 | 痕迹面**迁出** `thincoder-vscode/webview/activity-diag.js`（已落） + 上行 `panelDiag` 入主侧日志 | 否决痕迹留 `activity.js`（**450 行**——行计数口径 = `wc -l` / 含末行；as-of 2026-09-20 收口轮实读 + 新增 ⇒ 近 500 硬限）· 否决只留 webview 环形日志（DevTools 不可回读——本次事故正因不可回读而盲） |
 | D-W23 | 终态「块缺失」判据**扩 tombstone 一形**；**射程含 consult / escalate**（2026-09-19 收正——端侧键 = `sub:<role>#<id>`，可单源重建；旧「键不可重建」判定按 CLI 形态，不成立于端侧——§5.3 键形收正） | 否决端侧按 `sub:consult <model> #<id>` 重建（端侧无此键形）· 否决改频道命名法（D-W11 · 跨端契约） |
 | D-W24 | 心跳源新鲜度 = **会话切换 / 新建会话点清 `panel._liveLines`**（回落 `_susp?.lines`）；落点 = `thincoder-vscode/src/extension/panel-session.mjs:74` `loadSession` 入口段（`:85` 旁——五路会话操作汇合单点） | 否决心跳自带会话比对（同一判据两处实现）· 否决不禁（心跳把源陈旧从偶发放大为每 2 s 一次——NFR-A1 反例） |
 | D-W25 | **出生面 = 存活闸 + 非出生面 = 禁静默**（①）：出生事件（`queued` / `started`）命中冻结键 ⇒ 接管建新代；非出生消息（chunk / turn / 终态）命中 ⇒ 维持丢弃 + `drop-frozen` / `drop-tombstone` 痕 | 否决仅留痕不建块（用户症状本体仍在——块永不出现；且 CLI 先例取生存活闸）· 否决全路径接管（chunk 复活已折叠块 ⇒ 违 NFR-A1）· 否决按「谁先到」时序定存亡（不可机判）。**选型理由**：CLI 存活判据读池实体（`livePoolHas`），端侧无池 ⇒ 存活凭据 = 出生事件本身 + host 心跳（D-W21），故判据分界 = 消息形态（见 §5.3） |
@@ -582,3 +582,4 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
   §5.3「工具结果行」与「第 4 参对位」两说合一（`onToolResult` = 分流补 + 第 4 参消费两件——2026-09-19 实核）；内容面正收据落事件名 `ev:subcontent`（载荷 `{ ch, face }`——不并入 `ev:subdeliver`，五处置计数零改）；
   §5.5 计数钮**落档登记**（新档 `thincoder-vscode/webview/activity-new.js`（拟新增））+ 文案落 locale 键 `sub.newBlocks`；D-W24 补落点坐标（`panel-session.mjs:74`）；D-W13 行数读数收正（`ui.js` 474——2026-09-19 实读）；
   §10 行 12 悬空指针改内嵌建议文本（新增条目号仍待父侧落）；T-A12 退场标记化 · T-A27 触发面收窄（`drop-unknown-role`）。
+- 2026-09-20（**库存清账批 · 台账 #129 G-2 · eng-designer**——承 `docs/batches/2026-09-20-residual-sweep-batch.md` §2）：§5.3 / §5.5 / D-W22 四处「（拟新增）」标记撤除（`webview/activity-diag.js` / `webview/activity-new.js` 已落地——与姊妹档 `WEBVIEW-PROTOCOL.md` 同形）。**零新语义**。

@@ -616,9 +616,9 @@ VSC（`thincoder-vscode/`）：
 
 **该产品全链命令（cwd = 该产品目录）**：
 
-- **CLI**：`npm test`（快层 `test/run-fast.mjs`）· `npm run lint`（`scripts/check-syntax.mjs`）· `npm run test:full` · `npm run test:integration`；发布前另跑 `npm run release:check`。
-- **VSC**：`npm test` · `npm run lint` · `npm run test:full` · `npm run test:integration` · **`npm run doc:check`**（= `node ../scripts/doc-anchors.mjs --root .. --domain thincoder-vscode --strict`——**VSC 侧文档锚为阻断态** ⇒ §（六）五行必须同批改）。
-- **仓根三机检**：`node scripts/doc-anchors.mjs` · `node scripts/check-doc-width.mjs` · `node scripts/check-ledger.mjs`。
+- **CLI**：`npm test`（单入口 `test/run.mjs`）· `npm run lint`（`scripts/check-syntax.mjs`）；发布前另跑 `npm run release:check`。
+- **VSC**：`npm test` · `npm run lint` · **`npm run doc:check`**（= `node scripts/doc-check.mjs --root ..`（端目录执行）——**VSC 侧文档锚为阻断态** ⇒ §（六）五行必须同批改）。
+- **仓根机检**：`node scripts/doc-check.mjs --root .`（单入口——锚 / 行宽同驱；核分居 `scripts/doc-check-anchors.mjs` · `scripts/doc-check-width.mjs` · `scripts/doc-check-targets.mjs`）；**台账一致性面**无独立机检脚本（归核内 SQLite 台账面——`thincoder-core/ledger.mjs` · `docs/core/design/LEDGER.md`）。
 - **核回归（T-C4 / F4 / N3）**：`node --test`（cwd = `thincoder-core/`）——基线 = **160 tests / pass 160 / fail 0 / exit 0**（本轮实跑原样读数）。
 - **链接机检 L1**（§2.6.1）：产品目录 `npm ls @thincoder/core --json` exit 0 + 版本探针输出 `0.1.0`。
 
@@ -910,7 +910,7 @@ VSC（`thincoder-vscode/`）：
 
 1. **接线**：改 import / 加载面指向 `@thincoder/core/<子路径>`（**一律带子路径**）；**测试面同批改指**。
 2. **删旧**：删本单元「删除集」；**删前三条全过**——① 改指已落盘；② 该产品全链 exit 0；③ **零引用机判**通过（判读口径 = **反向判**两模式，§2.6.2（五）法 1）。
-3. **复跑**：CLI 四命令（`npm test` · `npm run lint` · `npm run test:full` · `npm run test:integration`，cwd = `thincoder-cli/`）· 核回归 `node --test`（cwd = `thincoder-core/`，基线 160/160）· 仓根三机检。
+3. **复跑**：CLI 两命令（`npm test` · `npm run lint`，cwd = `thincoder-cli/`）· 核回归 `node --test`（cwd = `thincoder-core/`，基线 160/160）· 仓根三机检。
 4. **提交**：**单笔**（删档 + 改指 + 文档锚同批）；回退点 = `git revert <sha>`。
 
 | # | 共同验收判据 | 通过条件 |
@@ -1723,10 +1723,10 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 
 | # | 判据 | 通过条件 | 反证面 |
 |---|---|---|---|
-| **K1** | 三机检（cwd = 仓根） | `node scripts/doc-anchors.mjs` · `check-doc-width.mjs` · `check-ledger.mjs` **全 exit 0** | 残留旧 token / 断了的 import ⇒ 至少一项转红 |
+| **K1** | 仓根机检（cwd = 仓根） | `node scripts/doc-check.mjs --root .` **exit 0**（锚 / 行宽同驱——核分居 `scripts/doc-check-anchors.mjs` / `scripts/doc-check-width.mjs` / `scripts/doc-check-targets.mjs`）；台账一致性无独立脚本（归核内 SQLite 台账面） | 残留旧 token / 断了的 import ⇒ 转红 |
 | **K2** | 扫替复查 | 三类替换各自的 check 模式**报 0 处**（类 C 逐点 = 5 处，含第 5 项花括号简写的改后逐字读校）；§4.3.2 保护项计数**扫替前后逐项相等**（as-of 参考 = 点状态目录 565 / 作用域前缀 50 / 盘符路径 2+2 / registry URL 1 / 文件名里的 `core` 241——**以同脚本前后两次读数为准，不硬编码**）；§4.3.3 站点排除 4 处**逐字未变**（核验 = 改动集 diff 不触及这 4 处；第 1 处按内容定位——「自工作区根计 = 」行；第 4 处 = 批次档 §3 评审块——按内容匹配） | 漏扫 = 报非 0；误伤 = 保护项计数前后不等；排除项被扫动 = 所在行出现在改动集 diff 中 |
 | **K3** | **diff 可逆性**（防夹带——对照面 = **脚本产出子集**） | 以改前提交（HEAD）为输入跑扫替脚本 dry-run ⇒ 输出**逐字节等于**本次改动集中的**脚本产出部分**（类 A + 类 B 的 token 替换）；改动集其余部分 = **恰好两类人工改动、逐处可枚举**——① 类 C 5 处手改（§4.3.1）② 折行行集 3 行（§4.2 步骤 4——含台账 1 行）——出现枚举外的人工改动即判红 | 夹带人工改动 ⇒ 两者不等 |
-| **K4** | 两产品全链 | CLI：`npm run lint` → `test:full` → `test:integration`；VSC：`npm run lint` + `doc:check` → `test:full` → `test:integration`——**全 exit 0** | 域参数 / 夹具 / 长路径引用漏改 ⇒ 用例红 |
+| **K4** | 两产品全链 | CLI：`npm run lint` → `npm test`；VSC：`npm run lint` + `doc:check` → `npm test`——**全 exit 0** | 域参数 / 夹具 / 长路径引用漏改 ⇒ 用例红 |
 | **K5** | 核内测试 | `node --test`（cwd = 核目录）**49 / 49 · exit 0**（改前基线同值） | 核内注释指针或 import 面被改坏 |
 | **K6** | 度量复现 | `node scripts/mirror-divergence.mjs` 读数与改前**逐位一致**（路径字段除外）：同路径对 107 · 逐字节同 29 · ≥0.9 39 · 中位 0.6494 · 单端 148 / 91 · 席位 51 / 71 | 默认目录 / 面定义漏改 ⇒ 读数变化或报错 |
 | **K7** | 工作树 | `git status` 仅含预期的重命名 + 文本改动，**无未跟踪残留** | 扫替脚本 / 临时档被误提交 |
@@ -1925,5 +1925,9 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
   §2.13.3 `io.ask` 行端侧列改三端填法（TUI 卡片预览 / VSC 面板卡经 `io.ask`；CLI 不传）· §2.13.3 载体行注现态（核内落点已落 · 端侧判保留——核档 = 参考实现）且双夹具验收句改「核内自证」·
   §2.13.4 #165 / #184 行注接线与判保留 · #174 行补台账查询工具接线事实 · §2.8.1 表 `permission.mjs` / `suspension.mjs` 两行注消费者接线与判保留 ·
   （三）逐档清单 `thincoder-core/agent/helpers.mjs` 读数收正（384 → 411，2026-09-20 实读）。机制条文零改。
+- 2026-09-20（**库存清账批 · v1 测试门词面收正 · eng-designer**——承 `docs/batches/2026-09-20-residual-sweep-batch.md` §2 · 台账 #128）：§2.6.2（七）复跑命令两行 · §2.6.2（四）复跑步 · §4.5 K4 行收正为 v2 单入口词面（`lint` → `npm test`；`doc:check` 现行锚 = `scripts/doc-check.mjs`）；死命令零残留。**零新语义**。
+- 2026-09-20（**库存清账批 · 设计评审修正轮（id=43）· eng-designer**——承 `docs/batches/2026-09-20-residual-sweep-batch.md` §3 发现 5）：
+  §2.6.2（七）复跑命令行 · §4.5 K1 行**三死脚本名改指**（`doc-anchors.mjs` → `scripts/doc-check.mjs`；`check-doc-width.mjs` → `scripts/doc-check-width.mjs`）；
+  `check-ledger.mjs` **无承接 ⇒ 改述**——台账一致性归核内 SQLite `thincoder-core/ledger.mjs`，不换名；映射单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.8。**零新语义**。
 
 

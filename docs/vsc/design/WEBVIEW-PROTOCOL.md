@@ -222,6 +222,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | icon | `⏸ / ⏹ / ✓ / ▶`（审批 / 停 / 完成 / 运行——冻结头三态互斥见 `TUI.md` §6.8 / M5） | `⏳ / ▶ / ✓ / ⏹ / ⏸`（排队 / 运行 / 完成 / 停 / 审批） | 端差登记（语义对位——本端 ⏳ 排队图标为 CLI 所无） |
 | 键 | `role#N` | 同（label） | 等价 |
 | 模式词 | ` · sync/async` | ` · 同步/异步`（family 角色；queued 不携） | 等价（queued 信息走状态区） |
+| 状态词·queued | ` · queued` / ` · waiting`（`thincoder-cli/src/tui/subagent-panel.mjs:73` 判定 · `:75` 落地） | ` · ${t("sub.queued")}` / ` · ${t("sub.waiting")}`（en = `queued` / `waiting` 逐字；zh = `排队中` / `等待中`）——选用判据 = 载荷 `kind`：`slot` ⇒ queued、其余（含缺省）⇒ waiting（`WEBVIEW.md` §5.2） | 对齐（C-11② · #118 落） |
 | 模型 | ` · model`（宽截断） | ` · model`（**来源 = 事件载荷字段** `model`；键形 `sub:<role>#<id>` **不含模型段**——`WEBVIEW.md` §5.3 键形收正；consult / escalate 头词现状不携该段——`activity-view.js:69`） | 端差登记（consult / escalate 模型段） |
 | 计时 | ` · Ns`（done 定格） | ` · Ns`（事件驱动 + 2 s 同点刷——`panels.js:69-72` → `activity.js:403` `refreshLiveHeaders`） | 语义不变 |
 | turn | ` · turn N/M` | ` · turn N/M`（`maxTurns > 0` 且 `turn > 0`；快照 + `status:"turn"` 实时） | 对齐 |
@@ -234,6 +235,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 ### 6.3 i18n 键表（18 键 · zh/en 逐字）
 
 > 键面 = **webview 可渲染键**（消费位见各注）；文案实体 = **核容器** `thincoder-core/i18n.mjs`（投影面）+ **本地档** `thincoder-vscode/locales/{zh,en}.json`（端特有键）——本地档同值副本的冻结面见 `thincoder-vscode/src/i18n.mjs:18-20`（本表只作对照，不复制为第二单源）。
+> **收录口径（2026-09-20 补 · 库存清账批）**：本表 = **对位冻结面**（收录与 CLI 逐字对位 / 端差登记所需的键）——**非 locales 全量**；全量实体 = `thincoder-vscode/locales/{en,zh}.json` + 核容器 `thincoder-core/i18n.mjs`；**新增对位键须同轮登记本表**（登记义务 = 承 **D3** 计数·枚举纪律，本表为其落点——非本表新立；防「新键落表滞后」型缺口）。
 
 | 键 | zh | en |
 |---|---|---|
@@ -340,7 +342,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 > 判据权威 = `VSC-DEBT.md` §2.3（机检形态）/ §3.2（枚举口径 + 处置判定）；枚举口径（KD-3）= **只取顶级判别式**——host 侧 = `postMessage` 载荷顶级 `type` / `name`；webview 侧 = 顶级 `switch (msg.type)` 的 `case` ∪ 顶级 `name` 比较字面量。
 > 子判别式不单列（`statusText.kind` / `subagent.status` / `compress` 状态族 / `digest` 两型——各为所属消息的载荷变体）；方向 = **host → webview**（webview → host 的发面 = **§13**；两表合称「收发面对表」）。
 > **坐标 as-of = 2026-09-20 显示面消差批收口轮**：② ③ 列**全表重出**（逐行 = `node test/protocol-coverage.test.mjs --emit` 输出——提取器为唯一权威；多处标注「（共 N 处）」= 提取器 cap 3；覆盖本批六处载荷扩字段（X2 · X5 · M4 · X6 · X10 · X11）与触碰档行号位移）。本表坐标 = **唯一读值**；历轮坐标收正的时点值住各批档（记录面），本档不复载。
-> 机检对账 = `thincoder-vscode/test/protocol-coverage.test.mjs`（本表）+ `thincoder-vscode/test/protocol-coverage-reverse.test.mjs`（发面表 = §13）——首列 ↔ 源码提取集双向对账 + ④ 处置闭区间（`npm test` 快层逐跑）。
+> 机检对账 = `thincoder-vscode/test/protocol-coverage.test.mjs`（本表）+ `thincoder-vscode/test/protocol-coverage-reverse.test.mjs`（发面表 = §13）——首列 ↔ 源码提取集双向对账 + ④ 处置闭区间（`npm test` 逐跑）。
 
 | ① 判别式 | ② host 发射点 | ③ webview 消费位 | ④ 处置 | ⑤ 备注 |
 |---|---|---|---|---|
@@ -532,3 +534,5 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
   §3.2 行 8 去「（拟新增）」标记（上行发点 `webview/activity-diag.js` 已落地）；§13 **新增 `panelDiag` 行**（发点 ② `webview/activity-diag.js:81` · 消费位 ③ `panel-messages.mjs:270` · ④ `活`——机检双向对账绿）；
   §12 `sub:*` / `subagent` / `subagentApproval` / `toolPanel` 四行 ② 列按 `--emit` 实测重出（发射点随 relay 面文件位移；`toolPanel` 由直投改经 `postSubagentEvent`——同口入队：`WEBVIEW.md` §5.3）；两表头注各补本批 as-of 行。
   **消息名 / 载荷字段 / 首列判别式集零变**（新增一行 = 实现落地登记，非协议面新语义——§3.2 行 8 早已登记）。
+- 2026-09-20（**库存清账批 · 台账 #129 G-3 / G-4 + #128 · eng-designer**——承 `docs/batches/2026-09-20-residual-sweep-batch.md` §2）：§6.2 补 **queued 状态词行**（与 `WEBVIEW.md` §5.2 契约对位）；§6.3 头注补**收录口径**（非 locales 全量 + 新增对位键同轮登记）；§12 头注 v1 词面收正（`npm test` 逐跑）。**零新语义**。
+- 2026-09-20（**库存清账批 · 设计评审修正轮（id=43）· eng-designer**——承 `docs/batches/2026-09-20-residual-sweep-batch.md` §3 发现 10）：§6.3 头注末句改述——「新增对位键须同轮登记本表」明标**登记义务 = 承 D3 计数·枚举纪律（本表为其落点）**（非本表新立义务——与上行「零新语义」同口径）。

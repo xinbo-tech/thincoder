@@ -291,7 +291,7 @@ advisor design review 标准维度补一条：
 
 ## 12. 验证
 
-评审收敛行为（轮次提示词替换、prior 原文注入、确定性轮次判定、**第 6 次及以后照常受理探针（撤 cap）**、guard 推回判定、fresh session、host-verified citations、对象声明块注入）的回归测试按测试基建分层执行（`design/TESTING.md`：快层 / 全量链终父侧——含慢测层）。
+评审收敛行为（轮次提示词替换、prior 原文注入、确定性轮次判定、**第 6 次及以后照常受理探针（撤 cap）**、guard 推回判定、fresh session、host-verified citations、对象声明块注入）的回归测试按测试基建执行（`docs/core/design/TESTING.md` §10：单入口 `npm test`——`slow` 纯别名、原慢测用例随入口全跑）。
 提示词锚（“Do NOT look for new issues”、证据规则句等）由各端 prompts 内容断言防回退。
 
 **验收标准（逐条回指需求）**：
@@ -351,3 +351,4 @@ advisor design review 标准维度补一条：
 
 - 2026-09-15（**迁移批 · 第 4 批 · 大档拆分实迁** · eng-designer）：自 `thincoder-cli/docs/design/ADVISOR-CONVERGENCE.md`（1570 行）切出并重建——落点判据 = `design/DOC-SYSTEM.md` §5.1 P1；
   承载原 §1–§12（收敛协议本体）+ §13 契约一/二（响应表四值 + 修正轮⇄批准时序）；§14–§18 的守卫契约切出为 `design/ADVISOR-GUARDS.md`；坐标全量改现状路径。
+- 2026-09-20（**库存清账批 · v1 测试门词面收正 · eng-designer**——承 `docs/batches/2026-09-20-residual-sweep-batch.md` §2 · 台账 #128）：§12 验证段测试基建描述收正（单入口 `npm test`——`slow` 纯别名；权威 = `docs/core/design/TESTING.md` §10）。**零新语义**。

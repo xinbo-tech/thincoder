@@ -39,7 +39,7 @@ F2 / F3 是此事故的直接修复产物。
 ## 5. VSC 端通道面（VSC 轮并入 · 2026-09-15）
 
 > **来源** = `thincoder-vscode/docs/requirements/RELEASE.md`（42 行 · VSC 产品档——迁移期参照历史）。本节 = 该档中「根层所缺」的 **VSC 端发布通道面**（双市场 = Marketplace + Open VSX——结构性端差，与 CLI npm 面同语义、异通道）。
-> **对位注**：§2 F1 / §3 N1 / N3 的语义（唯一门禁 / 编号连续 / 门禁不可绕过）双端同源——VSC 侧同一机制在本节登记**通道差异**；设计侧操作步骤 = `thincoder-vscode/docs/design/RELEASE.md`（VSC 侧未迁）——本档只留需求陈述（D2）。
+> **对位注**：§2 F1 / §3 N1 / N3 的语义（唯一门禁 / 编号连续 / 门禁不可绕过）双端同源——VSC 侧同一机制在本节登记**通道差异**；设计侧操作步骤 = `thincoder-vscode/docs/_archive/design/RELEASE.md`（归档址——VSC 侧未迁入主档）——本档只留需求陈述（D2）。
 
 | # | 需求 | 说明 |
 |---|---|---|

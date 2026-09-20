@@ -499,7 +499,7 @@ I1 → `thincoder-cli/test/integration/subagent-lifecycle.test.mjs:182`（扩）
 | A3 | 接线点①② 生效（中止路径产出 A1 / A2 结果）；`thincoder-core/agent/suspension.mjs` 零改动 | F3 |
 | A4 | `depInfo` 对 `discarded` 墓碑不再返 `ok`；非 AUTO 依赖者 depc、AUTO 可启动 | F4 |
 | A5 | 文案 / 动作序 / 事件名与对侧同源；判据口径 = controller 支（与对侧同判——D-AD6）；端差清单已登记（D-AD8a·b·c）· 重复实现登记（D-AD7） | N1 |
-| A6 | 用例表逐条有对应断言；核用例入口 = `thincoder-core` 下 `node --test`（CI 同式 `.github/workflows/test.yml:36-46`——CLI 三命令不覆盖核用例）；`lint` / `test:full` / `test:integration` 全绿 | N2 |
+| A6 | 用例表逐条有对应断言；核用例入口 = `thincoder-core` 下 `node --test`（CI 同式 `.github/workflows/test.yml:36-46`——CLI 三命令不覆盖核用例）；`lint` / 各包 `npm test`（单入口）全绿 | N2 |
 | A7 | 触碰源档 ≤500 硬限；越软线档在档内登记（含拆分计划） | N3 |
 
 ### 6.20.8 边界（本批不做）
@@ -1972,3 +1972,4 @@ escalate reports: summarize the merged post-op work — further changes need a u
   `thincoder-core/explore-distill.mjs:148` → **`:144`**（蒸馏前缀批 −4 位移；同句 `thincoder-core/context.mjs:309` / `:317` / `:332` / `:483` 与 `thincoder-core/session.mjs:301` / `:438` 逐处实核未漂移）。语义零改。
 - 2026-09-18（**失效表达清理批 · 本批直接执行 · 可 revert**——承用户 2026-09-18 裁定「修订式表达很害人，失效的表达一定要删掉」）：删除现役规范面内的失效表达（不留划改残留）——§6.22 定位句括注 · 功能点 F3 / F4 两行 · 落点句「F3 拆除后回落」半句 · 验收表 AC-M5-4 行。历史沿革 = 本档既有历史段 + 批档 `docs/batches/2026-09-18-stale-expression-purge.md`。
 - 2026-09-20（**P2 机制层端差批 · 车道 3 设计档落笔轮 · eng-designer**——承 `docs/batches/2026-09-20-mechanism-parity-batch.md` §2.21）：§6.27.12.2「挂起驱动坐标」段尾句按现态收正——核驱动 = **参考实现**（唯一消费者 = 核测）；挂起面权威 = 两端驱动（已分叉，**判保留**）；核档读者不得据其改端行为（2026-09-20 §2.21 裁定）。机制条文零改。
+- 2026-09-20（**库存清账批 · v1 测试门词面收正 · eng-designer**——承 `docs/batches/2026-09-20-residual-sweep-batch.md` §2 · 台账 #128）：§6.20.7 A6 行判据收正（v1 三层命令 → `lint` / 各包 `npm test` 单入口）。**零新语义**。
