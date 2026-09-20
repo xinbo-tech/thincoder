@@ -284,6 +284,6 @@
 
 ### 6.4 收口
 
-- 提交 = **本 §6 同轮落地（hash 见 git log）**；提交面 = 本批受影响表全集 + 需求面三档 + 批档；**CLI 实例在飞面（SESSION/TRACES/TUI/startup-latency 等）零触碰**——path-limited。
+- 提交 = **`0b45957c`**（35 档；+1582/−346）——本批受影响表全集 + 需求面三档 + 批档 §6；**CLI 实例在飞面（SESSION/TRACES/TUI/startup-latency 等）零触碰**——path-limited（`docroot.test.mjs` 本批零改未入）。
 - 状态行冻结：§1 →「✅ 已收口 2026-09-21」（close 通道语义首次实战——由父侧普通文档写落，因本批工具本身在混版窗口内）。
 - 遗留债：VSC 5 红（归 VSC 轮）· #27（别名撤除 + 递归判定）——均已入账，无悬空。
