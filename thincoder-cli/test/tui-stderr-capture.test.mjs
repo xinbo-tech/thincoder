@@ -111,35 +111,35 @@ const MAIN_BUFFER = "\x1b[?1049l"
 test("T-RT1 异常退出补发：child exit(1) → writeImpl 收到含 mouseOff + mainBuffer 的序列；且先于 exitImpl", () => {
   const s = runMock(tmpRoot())
   s.child.emit("exit", 1, null)
-  assert.equal(s.writes.length, 1, "恰一次序列写")
-  assert.ok(s.writes[0].includes(MOUSE_OFF), "含鼠标关闭（DECRST 1000/1006）")
-  assert.ok(s.writes[0].includes(MAIN_BUFFER), "含主屏恢复（1049l）")
-  assert.ok(s.writes[0].startsWith("\x1b[2J"), "清屏起始（与 writeCleanupSequence 同序）")
+  assert.equal(s.writes.length, 2, "恰一次序列写（writes[0] = F-A 启动加载行——经同一缝）")
+  assert.ok(s.writes[1].includes(MOUSE_OFF), "含鼠标关闭（DECRST 1000/1006）")
+  assert.ok(s.writes[1].includes(MAIN_BUFFER), "含主屏恢复（1049l）")
+  assert.ok(s.writes[1].startsWith("\x1b[2J"), "清屏起始（与 writeCleanupSequence 同序）")
   assert.deepEqual(s.exits, [], "exit 事件本身不退出（30s 兜底/close 才退）——序列先于同码退")
   s.child.emit("close")
   assert.deepEqual(s.exits, [1], "同码退（既有语义保持）")
 })
 
-test("T-RT2 正常退出零干预：child exit(0) → writeImpl 零调用", () => {
+test("T-RT2 正常退出零干预：child exit(0) → 零序列写（writeImpl 仅 F-A 启动加载行）", () => {
   const s = runMock(tmpRoot())
   s.child.emit("exit", 0, null)
   s.child.emit("close")
   assert.deepEqual(s.exits, [0])
-  assert.equal(s.writes.length, 0, "正常退出零序列动作")
+  assert.equal(s.writes.length, 1, "正常退出零序列动作（唯一写 = F-A 启动加载行）")
 })
 
 test("T-RT3 恰一次：exit 与 30s 兜底双路触发 → 序列仍恰一次", () => {
   const s = runMock(tmpRoot())
   s.child.emit("exit", null, "SIGKILL")
   s.child.emit("close")
-  assert.equal(s.writes.length, 1, "双路（exit/close）不重复写")
+  assert.equal(s.writes.length, 2, "双路（exit/close）不重复写（writes[0] = F-A 启动加载行）")
   assert.deepEqual(s.exits, [1])
 })
 
-test("T-RT4 spawn error 零动作：mock spawnImpl 触发 error（不发 exit/close）→ writeImpl 零调用；exitImpl(1) 照常", () => {
+test("T-RT4 spawn error 零动作：mock spawnImpl 触发 error（不发 exit/close）→ 零序列写（writeImpl 仅 F-A 启动加载行）；exitImpl(1) 照常", () => {
   const s = runMock(tmpRoot())
   s.child.emit("error", { message: "ENOENT recovery-test" })
-  assert.equal(s.writes.length, 0, "负断言：spawn error 零序列（子未启动——F5③）")
+  assert.equal(s.writes.length, 1, "负断言：spawn error 零序列（唯一写 = 先启的 F-A 启动加载行；子未启动——F5③）")
   assert.deepEqual(s.exits, [1], "exitImpl(1) 照常（不挂死——既有语义）")
 })
 

@@ -6,16 +6,7 @@ import { appendFileSync, mkdirSync, writeFileSync, readFileSync } from "node:fs"
 import { spawn } from "node:child_process"
 import { fileURLToPath } from "node:url"
 import { crashReportsDir } from "../crash-reports.mjs"
-import { RECOVERY_SEQUENCE } from "./tui-lifecycle.mjs"
-
-// 启动加载行（2026-09-21 用户）：wrapped 父进程 spawn 前写一行 loading——用户回车后立刻可见
-//（父 stdout = inherit ✓）✗ 父子两段冷启动都非黑。与 tui-lifecycle.writeLoadingLine 同形
-//（父不 import tui 模块图 ✗ 最轻副本 ✗ 改动面两处同步——同注释已互指）。
-function writeParentLoadingLine() {
-  let v = ""
-  try { v = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version } catch { /* 尽力面 */ }
-  try { process.stdout.write(`\n  ◌ thincoder loading...${v ? ` v${v}` : ""}\n`) } catch { /* 尽力面 */ }
-}
+import { RECOVERY_SEQUENCE, writeLoadingLine } from "./tui-lifecycle.mjs"
 
 // F-3 信号语义（raw mode 既有 key-handler 双按语义——Ctrl+C = stdin 字节不产生信号 → 子正常退 → 父收
 // exit 同码退）：父忽略 SIGINT/SIGTERM——tee 不被打断。2026-09-09 实测：Windows process.kill(SIGINT)
@@ -30,7 +21,10 @@ export function spawnTuiWrapped({ dir = crashReportsDir(), script = fileURLToPat
     logPath = `${dir}/tui-stderr-${Date.now()}-${process.pid}.log`
     writeFileSync(logPath, `# tui-stderr ${new Date().toISOString()} pid=${process.pid} argv=${JSON.stringify(process.argv)}\n`, { flag: "a", mode: 0o600 })
   } catch { return false }
-  writeParentLoadingLine() // ①⸸ 启动加载行（spawn 前——回车后立刻可见 ✗ 冷启动期非黑）
+  // ①⸸ 启动加载行（spawn 前——回车后立刻可见 ✗ 冷启动期非黑）：复用 tui-lifecycle.writeLoadingLine（修正轮 F-A ✗ 父段副本删）
+  let v = ""
+  try { v = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version } catch { /* 尽力面——读失败 → 无版本尾 */ }
+  writeLoadingLine(writeImpl, v)
   process.on("SIGINT", ignoreSignal); process.on("SIGTERM", ignoreSignal) // 父忽略信号（F-3）——tee 不被打断
   process.stderr.on("error", ignoreSignal) // 父 stderr 异步 EPIPE（终端/管道已关）→ 不炸父——tee 继续
   const note = (s) => { try { appendFileSync(logPath, s) } catch { /* 落盘尽力面——不阻断 tee */ } }
