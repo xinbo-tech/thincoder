@@ -6,8 +6,8 @@
  * 「成功但无核 / 缺提示词档」的静默产物 exit 0，R6/R8①/R12 实证 ⇒ 必须断言化）。
  *   断言 B（含核 + 版本逐字相等）：vsix 内 `extension/node_modules/@thincoder/core/package.json`
  *     存在，且其 `version` 逐字等于仓内 `thincoder-core/package.json` 的 `version`。
- *   断言 D（提示词面完备性）：vsix 内同目录 `prompts/` 15 档 + `tool-docs/` 25 档——
- *     ① 档数硬等设计口径（15 / 25）；② 档名集合逐字等于仓内 `thincoder-core/` 同名目录；③ 各档内容 sha256 等于仓内同档。
+ *   断言 D（提示词面完备性）：vsix 内同目录 `prompts/` 15 档 + `tool-docs/` 24 档——
+ *     ① 档数硬等设计口径（15 / 24）；② 档名集合逐字等于仓内 `thincoder-core/` 同名目录；③ 各档内容 sha256 等于仓内同档。
  *
  * Usage: node scripts/check-vsix.mjs [<vsix>]   # 缺省 = <root>/<name>-<version>.vsix
  * Exit: 0 = 断言全过 · 1 = 任一断言失败（逐条打印）

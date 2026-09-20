@@ -160,11 +160,11 @@ VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` 
 
 **SUBAGENT-OBSERVE-SEND（VSC 仓版）**：语义同源（F1 / F2 / N1–N4 已并 §4.7）；VSC 端条目 = ① F-O3 目标边界**逐类显式错误**（send 对 queued / settled / sync / unknown）·
 ② F-O4 动作级分类（observe = readonly——planMode 放行、免审批；send = control——豁免审批、不入批审批分组）· ③ depth>0 不可用（子代理无异步池）。坐标（实核）＝
-`thincoder-vscode/src/agent-tools/subagent-actions.mjs:276`（`SUBAGENT_OBSERVE_RECENT = 5` 摘要条数 · 行截断 160/条）· send 入队 `:349-396` · `subagent-spec.mjs`（工具描述逐字）· `tool-gates.mjs`（分类钩子）：59-67。
+`thincoder-vscode/src/agent-tools/subagent-actions.mjs:276`（`SUBAGENT_OBSERVE_RECENT = 5` 摘要条数 · 行截断 160/条）· send 入队 `:349-396` · `subagent-spec.mjs`（工具描述逐字）· `tool-gates.mjs`（分类钩子）：59-67。（**迁核注 2026-09-20**：本节 VSC 直引档 `subagent-actions.mjs` / `subagent-spec.mjs` 已退役——**W12 迁核删除集**，该端目录现仅 `async-discard.mjs` / `index.mjs` 两档；现体 = 核 `thincoder-core/agent-tools/` 同族、语义同源。）
 
 **ASYNC-RESULT-CONTAINER（VSC 仓版）**：语义同源（F1–F6 / N1–N4 已并 §4.8）；VSC 端条目 = ① F-A6 挂起期注入与消化面（settle → 单容器 → digest 轮驱动；中止 → 容器清不注入陈旧结果）·
 ② 端差——统一前 pending **5 族**（对端 3 族，含 advisor 独立族）· 池载体 = 共享 history 数组双查询（`history?._X ?? agent._X`——accessor 吸收，语义同源）。坐标（实核）＝
-`thincoder-vscode/src/agent-tools/async-settle.mjs`（`settleAsyncEntry`——四族调用点 = advisor-async / consult / subagent-async / subagent-escalate-async）· `thincoder-vscode/src/extension/suspension.mjs:32-55`（挂起期单容器）· `thincoder-vscode/src/agent.mjs:66-74`。
+`thincoder-vscode/src/agent-tools/async-settle.mjs`（`settleAsyncEntry`——四族调用点 = advisor-async / consult / subagent-async / subagent-escalate-async）· `thincoder-vscode/src/extension/suspension.mjs:32-55`（挂起期单容器）· `thincoder-vscode/src/agent.mjs:66-74`。（**迁核注 2026-09-20**：`async-settle.mjs` 已退役——**W12 迁核删除集**；现体 = 核面同族。后两项坐标按现状仍在位。）
 
 端差差异若有 → 逐条补登记（不静默）；本档不代述对端正文（D2）。旧档 = 各自 VSC 仓需求档（一字未改 · 参照历史）。
 

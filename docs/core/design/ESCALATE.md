@@ -100,7 +100,7 @@ subagent(action:"escalate")
 | 动作执行器 | `thincoder-core/agent-tools/subagent-actions.mjs:23`（`launchEscalateAsync`）· `:6`（`executeEscalateAction` §19） | `thincoder-vscode/src/agent-tools/subagent-escalate.mjs:73`（`escalateAction`）——**该端档已退役**（W12 删除集；现体 = 核 `thincoder-core/agent-tools/subagent-actions.mjs`） （迁移期引文） |
 | async runner | `thincoder-core/agent-tools/escalate-async.mjs:2-8`（缺省 async / other 池 / 共享 4 槽）· `:142-149`（入池） | `thincoder-vscode/src/agent-tools/subagent-escalate-async.mjs:59`（`settle: settleEscalateEntry`）· `:39`（三分类）——**该端档已退役**（W12 删除集） （迁移期引文） |
 | 池域 | `thincoder-core/agent-tools/subagent-async.mjs:55`（`ASYNC_POOL_LIMITS = { engCoder: 4, other: 4 }`）· `:62-65`（`poolDomainOf`——escalate 以 role coder 落 other 池） | 同源（池域机制见 `AGENT-LOOP.md`） |
-| 结算 helper | `thincoder-core/agent-tools/async-settle.mjs`（`settleAsyncEntry` / `buildChildSignal`） | `thincoder-vscode/src/agent-tools/async-settle.mjs`（同款） |
+| 结算 helper | `thincoder-core/agent-tools/async-settle.mjs`（`settleAsyncEntry` / `buildChildSignal`） | `thincoder-vscode/src/agent-tools/async-settle.mjs`（同款）——**该端档已退役**（W12 删除集；现体 = 核同档） （迁移期引文） |
 | 深度护栏 | `thincoder-core/agent-tools/subagent-actions.mjs:341`（`(ctx.depth ?? 0) > 0` → 明确错误） | `thincoder-vscode/src/agent-tools/subagent-escalate.mjs:79`（`depth > 0` → 明确错误）——**该端档已退役**（W12 删除集） （迁移期引文） |
 | 工程模式禁用 | fail-closed（实现走 eng-coder spawn） | 同位 |
 | 撞墙继续（同步路径） | `thincoder-core/agent-tools/subagent-actions.mjs:423`（`runWithContinue` + `onPermissionRequest("continue")` y/n 面板——主会话同款） | `thincoder-vscode/src/agent-tools/subagent-escalate.mjs:163`（`for (let resumes = 0; ; resumes++)`）· `:197`（`ContinueError`）——见 `docs/core/design/TURN-CAP-CONTINUE.md` §2（**该端档已退役**——W12 删除集） （迁移期引文） |

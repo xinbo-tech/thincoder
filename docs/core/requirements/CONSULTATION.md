@@ -66,7 +66,7 @@ VSC 侧对应面住 `thincoder-core/advisor.mjs` + `src/advisor/*`（拆 `provid
 - **F-S7 面板可见性**：每 consultant 一条活动块（`sub:consult` 事件）+ 回复预览（≤8KB）随 answered 事件带出；冻结入流同 subagent / escalate / advisor——呈现接线 = `docs/vsc/design/WEBVIEW.md` §14（设计侧并入 · 批 7 §6.5）。
 - **N-S1 预算**：`consultTurns` 默认 40 + 墙钟看门狗 `consultTimeoutMs` 600000ms（10min）——坐标（实核）＝ `thincoder-vscode/src/config-io.mjs:321-322`；判定权仍归主 agent（会诊 = 建议非门禁）。
 
-端差 = 呈现面（面板活动块 + 回复预览 vs TUI）+ 配置入口（Settings 面板 vs `/config`）。坐标（实核）＝ `thincoder-vscode/src/agent-tools/consult.mjs` · `config-consult.mjs`。
+端差 = 呈现面（面板活动块 + 回复预览 vs TUI）+ 配置入口（Settings 面板 vs `/config`）。坐标（实核）＝ `thincoder-vscode/src/agent-tools/consult.mjs` · `config-consult.mjs`。（**迁核注 2026-09-20**：该两档已退役——**W12 迁核删除集**；现体 = 核面同族（W12 迁核后归核）。）
 **测试缺口（发现即报）**：VSC `test/` 对 `_consultSessions` / `runConsultChild` 直引零命中——既有间接回归 = `test/config-softfail.test.mjs` · `activity-flow.test.mjs` · `agent-lifecycle-singleton.test.mjs`。
 
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）

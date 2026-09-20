@@ -13,9 +13,10 @@
 |---|---|---|
 | 技能发现 | `thincoder-core/skills.mjs` | `thincoder-vscode/src/extension/skills.mjs` |
 | 规则发现 | `thincoder-core/rules.mjs` | `thincoder-vscode/src/extension/rules.mjs` |
-| 同伴实例 / 域 | `thincoder-core/peer-instances.mjs` · `thincoder-core/peer-domains.mjs` | `thincoder-vscode/src/extension/peer-instances.mjs` · `peer-domains.mjs` |
+| 同伴实例 / 域 | `thincoder-core/peer-instances.mjs` · `thincoder-core/peer-domains.mjs` | `thincoder-vscode/src/extension/peer-instances.mjs` · `thincoder-vscode/src/extension/peer-domains.mjs` |
 | 台账规则 / 路径约定 | 已迁核——经 `@thincoder/core/{ledger,conventions,escape}.mjs` 引用（S2 U4） | 已迁核——同引核单源（S2 W4 · 自持镜像已删） |
 | 台账展示面 | `thincoder-cli/src/tui/ledger-surface.mjs` | 端壳缝——核机制 `@thincoder/core/ledger-surface.mjs` + 面板推送供值（S2 W4） |
+| 端特有运维 / 交互面（粗粒度覆盖 · 2026-09-20 登记） | `thincoder-cli/src/{crash-reports,upgrade,completions,heap-watch,distill}.mjs` · `thincoder-cli/src/tui/{update-notice,mouse,fold-block}.mjs` | 无对位（VSC 走 webview / 宿主能力）——`tui/mouse.mjs` 承载评审 ⏹ 点击取消，VSC 对位 = webview 点击 |
 
 ## 2. 核模块裁决行（自 `CORE-UNIFICATION.md` §2.5 搬入 · 逐字）
 
