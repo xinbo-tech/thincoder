@@ -416,7 +416,8 @@ engineering 真值 ──► 固定段裁剪（plan 不入表）─────�
 | VSC `test/integration/host-shape-spawn.test.mjs` | 208 | T5 fixture 两条工程行（`:121-127` FAMILY_FIXTURE 的 eng-designer / eng-coder）删 `plan` + 增 explore 工程行（旁路面形状——`:193-199` 以 engineering=true 驱动；= T10 旁路面判据落点）；其余既有用例零改 |
 | VSC `test/status-line.test.mjs` | 157 | plan 按钮 disabled + title 断言（happy-dom 真 chat.js 驱动全量 id fixture；`agentSettings` engineering=true 注入面） |
 
-**VSC `thincoder-vscode/src/agent/setup.mjs` 拆分方案（登记 · 本批不执行）**：该档 495 行 > 300 软线 ⇒ 拆分方案 = 装配段（家族段调用 + `tools`/`toolByName`/`toolSchemas` 构建）迁入既有邻档 `thincoder-vscode/src/agent/setup-tooltable.mjs`（该档已是工具表装饰面之家，缝现成）；触发条件 = 本批改动后越 500 硬限，或下一次触碰该档的批。本批净增 **+4 行**（实施后实读 **499**——2026-09-21 实施轮实测；触发条件仍未达），不触发。
+**VSC `thincoder-vscode/src/agent/setup.mjs` 拆分方案（登记 · 本批不执行）**：该档 495 行 > 300 软线 ⇒ 拆分方案 = 装配段（家族段调用 + `tools`/`toolByName`/`toolSchemas` 构建）迁入既有邻档 `thincoder-vscode/src/agent/setup-tooltable.mjs`（该档已是工具表装饰面之家，缝现成）；
+触发条件 = 本批改动后越 500 硬限，或下一次触碰该档的批。本批净增 **+4 行**（实施后实读 **499**——2026-09-21 实施轮实测；触发条件仍未达），不触发。
 
 **提示词面（评估结论 = 零改，理由三条）**：① 工程两档（`persona-engineering.md` / `discipline-engineering.md`）与中文模板零处指示 plan 模式（实读 grep 命中仅「并发池上限：其他角色（explore/plan/coder）池」= 角色域枚举，非 plan 模式指令）；② 工具不注册已由结构兜底——再加「不要用 plan 模式」句 = 为不可见选项写限制（承 2026-09-18 反模式之裁）；③ `ENG_ON_REMINDER`（`agent/helpers.mjs:376-381`）无 plan 字样，无悬挂指令。
 
@@ -550,3 +551,4 @@ engineering 真值 ──► 固定段裁剪（plan 不入表）─────�
 - 2026-09-21（**ENG-PLAN-EXCLUSION 批 · 设计评审轮 2 修正** · eng-designer——fix 轮；承批档 §3 发现 #11–#13）：
   ① 🔵#11/#12——受影响文件表行数按「内容行数（不含文末空行）」口径实读收正：`test/status-line.test.mjs` 填 **157**；`panel-session.mjs` 296→**295** · `panel-messages.mjs` 295→**294** · `image-handler.mjs` 88→**87** · `locales/en.json` / `zh.json` 264·264→**263·263**（两表同步）；
   ② 🔵#13——VSC 旁路面判据（T10）落点钉定 = `host-shape-spawn.test.mjs` T5 增 explore + engineering=true 一例（`engState.enabled` 驱动 ⇒ 名集不含 `plan`）；受影响文件表该行改动面同步 + T14 括注同步。
+- 2026-09-21（**SIGNAL-LINES 批 · 设计微修三轮 · eng-designer · 清单外机械项**——父侧可 revert）：`:419` 行超 300 字符（306）⇒ 折为两行，逐字不变（零语义）。
