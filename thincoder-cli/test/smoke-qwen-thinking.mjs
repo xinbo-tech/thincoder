@@ -37,7 +37,7 @@ if (!prov.apiKey) {
 // 成立（T4/T5 判例：非白名单域/非 qwen3 型号 → 不映射 thinking，服务端默认思考，OFF 必失败）。
 // 本机现实：qwenplan 常挂 deepseek 等模型——此时 smoke 无目标模型，skip（exit 0），
 // 打印原因并指引——不是失败（环境不满足，非测试失败）。发版判断人工确认。
-const { isBailianHost } = await import("@thincoder/core/provider/normalize.mjs").catch(() => ({}))
+const { isBailianHost } = await import("@thincoder/core/config.mjs")
 const baiHost = isBailianHost ? isBailianHost(prov.baseURL ?? "") : false
 const qwenModel = /^qwen/i.test(prov.model ?? "") // T5 判例：qwen3-coder 等非思考型号排除——目标是 enable_thinking 白名单 qwen 思考型号
 if (!baiHost || !qwenModel) {
