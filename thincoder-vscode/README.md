@@ -4,7 +4,7 @@
 
 ThinCoder VS Code gives you the complete ThinCoder agent — multi-turn tool-calling, subagents, plan mode, task tracking — in a side panel. It reads your project, writes code, runs commands, searches the web, and explains its work as it goes.
 
-Like the CLI, it's pure `.mjs`, zero npm dependencies, and connects directly to top-tier models via OpenAI-compatible APIs.
+Like the CLI, it's pure `.mjs`, zero third-party runtime dependencies, and connects directly to top-tier models via OpenAI-compatible APIs.
 
 ## Features
 

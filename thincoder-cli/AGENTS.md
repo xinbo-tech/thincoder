@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Zero-dependency AI coding CLI: pure Node.js >= 24 standard library, no build step, ESM (`.mjs`).
+AI coding CLI with zero third-party dependencies: Node.js >= 24 standard library plus the in-repo core `@thincoder/core`, no build step, ESM (`.mjs`).
 LLMs via OpenAI-compatible protocol, flagship models from DeepSeek / Kimi / GLM / Qwen / MiniMax.
 
 ## Requirements & Design Docs (the doc map)
@@ -15,7 +15,7 @@ LLMs via OpenAI-compatible protocol, flagship models from DeepSeek / Kimi / GLM 
 
 ## Hard Constraints
 
-- **Zero npm runtime dependencies**: only `node:` standard library (storage via `node:sqlite`, TUI via bare ANSI). For new features, first ask whether the standard library can do it; if not, raise for discussion.
+- **Zero third-party npm runtime dependencies**: only `node:` standard library (storage via `node:sqlite`, TUI via bare ANSI) and the in-repo core `@thincoder/core` — the one declared dependency. For new features, first ask whether the standard library can do it; if not, raise for discussion.
 - No TypeScript, no build/bundling step.
 - Every change must be verified by running it — no "written but never run" code.
 - **提示词双面（2026-09-17 消端差收正）**：本产品提示词 = `docs/core/design/prompts/*.md`（仓根中文正本——**中文审核面**——内容权威）→ 翻译生成 `thincoder-core/prompts/*.md`（**英文运行面**——国外模型运行用；生成 = 翻译，不是 cp）。提示词面**无端差注入锚**（已全消——正文自足、文档地图统一 `docs/README.md`）；仅工具面 2 锚（bash/question 端差异）保留至工具面 review。

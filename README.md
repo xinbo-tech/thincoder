@@ -1,7 +1,7 @@
 # ThinCoder — merged repository
 
 Single git repository hosting both ThinCoder products. Each product keeps its own package root,
-its own release chain and its own documentation tree; they share no runtime code path.
+its own release chain and its own documentation tree; their only shared runtime code is the first-party `@thincoder/core`.
 
 ## Layout
 

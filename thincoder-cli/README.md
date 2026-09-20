@@ -2,13 +2,13 @@
 
 **Sharp Code, Zero Bloat.**
 
-**A "thin" AI coding agent: pure `.mjs`, no build step, zero npm dependencies, native Node.js.**
+**A "thin" AI coding agent: pure `.mjs`, no build step, zero third-party dependencies, native Node.js.**
 
 The "Thin" in ThinCoder doesn't mean "feature-poor" — it means **sharp thinking, straight to the point** — like a blade.
 While every AI agent races to be "all-powerful", ThinCoder plays the opposite card: **restraint, precision, no filler**.
 Its persona is a geek engineer of few words who cuts to the bone: give it a complex requirement, get back a clean implementation.
 
-Design philosophy (the entire meaning of the name): if the Node standard library can do it, no dependency is allowed. The project's `node_modules` is empty.
+Design philosophy (the entire meaning of the name): if the Node standard library can do it, no third-party dependency is allowed. The project's `node_modules` contains no third-party packages — only the first-party `@thincoder/core` shared core (a local link in development, resolved from the npm registry for releases).
 
 ## Features
 
@@ -222,7 +222,7 @@ node scripts/verify-compress.mjs  # real-API verification of context compaction 
 node scripts/verify-team.mjs      # team memory A->git->B full-chain verification (local git, offline)
 ```
 
-Code conventions: pure `.mjs`, no semicolons, no npm dependencies allowed (including devDependencies).
+Code conventions: pure `.mjs`, no semicolons, no third-party npm dependencies allowed (including devDependencies) — the first-party `@thincoder/core` shared core is the only npm dependency.
 
 ## Roadmap
 
