@@ -5,7 +5,7 @@
 
 ## §1 讨论（主 agent）
 
-**状态行**：🔄 进行中（设计轮待发）
+**状态行**：已收口 2026-09-20（§6）
 
 ### 1.1 条目清单（4 条台账 · 全为文档面）
 
@@ -125,8 +125,8 @@
 | `docs/vsc/design/VSC-DEBT.md` | 设计档 | eng-designer | **已落** | 10 行改 + 1 行删 + 1 条 |
 | `docs/vsc/design/WEBVIEW.md` | 设计档 | eng-designer | **已落** | 4 行 + 1 条 |
 | `docs/vsc/design/WEBVIEW-PROTOCOL.md` | 设计档 | eng-designer | **已落**（修正轮再改 1 行——#10） | 4 行 + 新行 2 + 2 条 |
-| `thincoder-cli/AGENTS.md` · `thincoder-vscode/AGENTS.md` | 产品文本 | **eng-coder 轮（待派）** | 未落 | 六则（2.3） |
-| `docs/core/requirements/**` 13 档（37 处） | 需求档 | **主 agent** | 未落 | 登记清单（2.1-d） |
+| `thincoder-cli/AGENTS.md` · `thincoder-vscode/AGENTS.md` | 产品文本 | **eng-coder 轮（已落 · 批 2）** | **已落** | 六则（2.3）· 读数 = §5 ②/③/④ |
+| `docs/core/requirements/**` 13 档（37 处） | 需求档 | **主 agent** | **部分已落**（收正 24 + 判保留 5；余项在册） | 登记清单（2.1-d）· 批 3 进度 = §6 角色表 / 遗留① |
 
 **分批（文件面并行度）**：**批 1** = 设计档面 8 档（**本轮已落**——单轮串行防互扰）；**批 2** = 产品文本面 2 档（eng-coder · 单轮可并行、同轮交付）；**批 3** = 需求面（父侧笔 · 可并入任意后续轮）。三批**文件面互斥**（无交叉档）⇒ 可并行推进；**同档禁并行双改**。
 
@@ -164,7 +164,7 @@ cd D:\teamcode\thincoder && node -e "const fs=require('fs');const t=fs.readFileS
 
 **读数（本刻实跑）**：`OK subset judge [31,40,44,697,710,1041,1902]` · exit 0。
 
-**E1–E6 · #131 六则**（**未落 · 读数待实现轮**；逐条单行命令 · **正判 + 反判成对**——承评审 #9 防半改；E2 含 C2 括注面、E4 原已成对）
+**E1–E6 · #131 六则**（**已落**（批 2）；读数 = §5 ②/③/④；逐条单行命令 · **正判 + 反判成对**——承评审 #9 防半改；E2 含 C2 括注面、E4 原已成对）
 
 - E1：`node -e "const t=require('fs').readFileSync('thincoder-cli/AGENTS.md','utf8');const pos=t.includes('CRASH-REPORTS.md` \u00a74');const neg=!t.includes('\u00a78');console.log(pos&&neg?'OK C1':'FAIL C1 pos='+pos+' neg='+neg);process.exit(pos&&neg?0:1)"`
 - E2：`node -e "const t=require('fs').readFileSync('thincoder-cli/AGENTS.md','utf8');const pos=t.includes('docs/core/requirements/')&&t.includes('docs/core/design/')&&t.includes('\u9700\u6c42\u6863 = **\u4e3b agent \u4ea7\u7269**');const neg=!t.includes('docs/requirements/')&&!t.includes('\u5747 **eng-designer \u4ea7\u7269**');console.log(pos&&neg?'OK C2':'FAIL C2 pos='+pos+' neg='+neg);process.exit(pos&&neg?0:1)"`

@@ -275,7 +275,7 @@
 `thincoder-vscode/src/agent/execute-tools.mjs` **393 → 407**（+14：派发面 hooks 三调用点；同上）；
 `thincoder-vscode/src/agent/setup.mjs` **481 → 489**（+8：台账查询两工具装配 + `hooks` config 读取；**贴线**——`find` 口径 489 < 490 未触线；`read` 口径 490 = 恰在触发线 ⇒ **下次触碰即触线**〔拆分计划在册〕）；
 `thincoder-vscode/src/extension/permission-gate.mjs` **109 → 117**（+8：门体改经核 `askPermission` 的 `io.ask` 缝；<300 咨询线）；
-`thincoder-vscode/test/files.mjs` **116**（本批 +4——三条机制层用例档登记 `:112-115`；登记面）。
+`thincoder-vscode/test/files.mjs` **116 → 117**（本批 +5——批注行 `:112` + 三档 `:113-115` + T-QP `:116`；登记面）。
 本批新增用例档（均 <300 咨询线）：`test/lifecycle-hooks.test.mjs` **264** · `test/dispatch-hooks.test.mjs` **217** · `test/permission-gate-seam.test.mjs` **102**。
 **测试档越线登记（续）**：`thincoder-vscode/test/ledger.test.mjs` **324**（`wc -l`；>300 咨询线——本批 T-LQ 组追加后；≤500 硬限，无拆分义务）。
 
