@@ -89,6 +89,15 @@ export function relaySubagentEventToken(panel, tok) {
   const role = path.head.slice(0, hash)
   const id = Number(path.head.slice(hash + 1))
   const rest = path.rest
+  // 判据射程（评审 #1 收窄）= 嵌套 ∧ `rest` 起于 `⟦ev⟧`／`[model]`：含字面形态的内层 text
+  // chunk 不在射程（仍走内容面——T-N6 锁）。剥除不路由——**同旨** CLI `routeSubToken`（防外层块
+  // 头污染；覆盖面差异 = CLI 另有子块载体落点，本端端差登记见批档 §2.8 #2）；NFR-A2 留痕 =
+  // `ev:substrip` 独立事件名（不并入 `ev:subdeliver` 五处置计数——沿 `ev:subcontent` 先例）。
+  const nested = path.inner.length > 0
+  if (nested && (rest.startsWith("⟦ev⟧") || rest.startsWith("[model]"))) {
+    logEvent("ev:substrip", { ch: `sub:${path.inner.at(-1)}`, outer: path.head, kind: rest.startsWith("[model]") ? "model" : rest.slice(4).split("\x1e")[0] })
+    return true // 剥除不路由——同旨 CLI routeSubToken（防外层块头污染）；NFR-A2 留痕
+  }
   const emit = (payload) => { postSubagentEvent(panel, { type: "subagent", role, id, ...payload }); return true }
   if (rest.startsWith("⟦ev⟧async")) {
     let set = _relayAsyncPending.get(panel)
