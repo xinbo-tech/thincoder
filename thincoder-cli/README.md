@@ -230,6 +230,13 @@ Code conventions: pure `.mjs`, no semicolons, no npm dependencies allowed (inclu
 
 ## Changelog
 
+### 0.12.63 (2026-09)
+- **Core dependency live** — now depends on `@thincoder/core@^0.9.1` (the shared-mechanism core's first npm release); installed packages resolve the core from the registry instead of shipping duplicated copies.
+- **Fix: smoke probe always skipped** — `isBailianHost` was imported from the wrong module behind a silent catch, so the pre-release real-endpoint smoke test never actually ran. Fixed; smoke now performs the real three-call thinking-mapping check.
+
+### 0.12.62 (2026-09)
+- Last release in the pre-core shape (self-contained copies); 0.12.63 onward resolves the core from `@thincoder/core`.
+
 ### 0.12.11 (2026-08)
 - **Subagent model per type** — `subagent` tool `model` arg, `config.agent.subagentModels` (per explore/plan/coder/eng-coder) and `config.agent.subagentModel` (global fallback); priority: tool arg > type > global > parent provider. `/submodel` TUI command: picker over 5 slots (global + 4 roles) with provider→model selection, or direct args (`/submodel coder deepseek:deepseek-v4-flash`).
 - **Configurable bash shell** — `config.shell` or `/shell` TUI command: platform-aware picker (Windows: pwsh/Git Bash/WSL bash; POSIX: bash/zsh/fish — availability-detected, custom path supported). Windows default cmd now forces UTF-8 per command (`chcp 65001`) — fixes garbled Chinese output on win11.
