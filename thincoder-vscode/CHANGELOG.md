@@ -1,3 +1,11 @@
+## [0.9.3] — 2026-09-21
+
+> 0.9.2 → 0.9.3（CalVer 月内序号——发布时定号；本版随核首发联动）
+
+### Changed
+
+- **核依赖收正**：`@thincoder/core` `^0.1.0` → `^0.9.1`（核首发 `@thincoder/core@0.9.1` 同日落地——vsix 内嵌核版本与仓内声明对齐）。
+
 # Changelog
 
 All notable changes to ThinCoder VS Code are documented here.
