@@ -5,9 +5,10 @@
  */
 
 import { md, mdInline, esc } from "./md.js"
-import { fmtTime, capText, isToolFailure, toolFailureStatus } from "./lib.js"
+import { fmtTime, capText, isToolFailure } from "./lib.js"
 import { t } from "./i18n.js"
 import { buildFinishedToolCard } from "./tool-card-restore.mjs"
+import { formatToolSummary } from "./tool-summary.js" // X3/X7：摘要族迁出（500 行限——见该叶头注）
 
 // ─── Advisor review block (in-conversation, reasoning-style) ──
 
@@ -196,7 +197,16 @@ export function newBlock(ctx) {
   trimOldMessages(ctx)
 }
 
-export function addTool(ctx, name, args, id) {
+/** X2（显示面消差批 §2.1）：advisor 卡头轮次标签（字面 = CLI `tool-events.mjs:152` `roundTag` 逐字）
+ *  `(round N · model)`；无 model ⇒ 降级形 `(round N)`（不显 `null`）；无 round ⇒ `""`（零改面——
+ *  非 advisor / 无轮次载荷逐字节同修前）。状态行同用（`chat.js`：`advisor review${tag}`）。 */
+export function advisorRoundTag(round, model) {
+  if (round == null) return ""
+  return `(round ${round}${model ? " · " + model : ""})`
+}
+
+/** `roundTag`（X2，可选）= advisor 轮次标签——非空才加一格 span（其余调用零改）。 */
+export function addTool(ctx, name, args, id, roundTag) {
   if (!ctx.currentBlock) newBlock(ctx)
 
   const c = document.createElement("div")
@@ -211,6 +221,7 @@ export function addTool(ctx, name, args, id) {
   h.innerHTML =
     `<span class="tool-call-icon"></span>` +
     `<span class="tool-call-name">${esc(name)}</span>` +
+    (roundTag ? `<span class="tool-call-round">${esc(roundTag)}</span>` : "") +
     `<span class="tool-call-args" title="${esc(args)}">${esc(args.slice(0, 80))}</span>` +
     `<span class="tool-call-status">${t("tool.running")}</span>`
 
@@ -230,7 +241,8 @@ export function addTool(ctx, name, args, id) {
   c.appendChild(b)
   c.dataset.toolId = id || name  // fallback: findable via DOM query even if _toolRefs cleared
   ctx.currentBlock.appendChild(c)
-  const ref = { h, b, name, id: id || name, startTime: Date.now() }
+  // `done` = 「已结算」唯一写点（`finishToolCard` 置真；回合尾清扫 `streaming.js` 只碰 `!done` 卡）
+  const ref = { h, b, name, id: id || name, startTime: Date.now(), done: false }
   ctx.currentTools.push(ref)
   ctx._toolRefs[id || name] = ref  // flat lookup — primary path
   scrollDown(ctx)
@@ -269,27 +281,16 @@ function linkifyPaths(bodyEl, links) {
   }
 }
 
-/** Last line of a tool result (CLI-style completion summary, ≤80 chars).
- *  Wrapper lines ([stdout]:/[stderr]:/(exit code N)/(stopped)/[background]…) are skipped — bash's
- *  literal "(exit code 0)" would otherwise read as "no output came back".
- *  F-W16：失败面摘要含退出状态（无输出 ⇒ 只余状态行——不再读作 `(empty)`）；成功面零改。 */
-function resultSummary(text) {
-  const WRAPPER = /^(?:\[(?:stdout|stderr|background)\]|\((?:exit code|killed|stopped|background))/
-  const trimmed = (text || "").trim()
-  if (!trimmed) return ""
-  const lines = trimmed.split("\n").map((l) => l.trim()).filter((l) => l && !WRAPPER.test(l))
-  const last = lines.pop() ?? trimmed.split("\n").filter(Boolean).pop() ?? ""
-  const brief = last.length > 80 ? last.slice(0, 79) + "…" : last
-  const status = toolFailureStatus(text)
-  if (!status) return brief
-  const content = last && last !== "(empty)" && last !== status ? last : "" // 无输出占位 / 状态行本体不作内容
-  return content ? `${content} ${status}` : status
-}
+// 摘要族（`resultSummary`）已整段迁出 `tool-summary.js`（X3/X7——500 行限；判据/字面单源见该叶）。
 
 /** Update a tool card to its done state: elapsed ms, result summary, collapse/expand, error tint. */
-function finishToolCard(ref, text, links) {
+function finishToolCard(ref, name, text, links, truncated) {
+  ref.done = true // M1：已结算唯一写点（回合尾清扫只碰 `!done` 卡）
   // 截断超长输出入 DOM（防无界增长），完整结果不保留——摘要已在 header 显示
   ref.b.textContent = capText(text || "")
+  // X5（显示面消差批 §2.2）：宿主切片点携事实旗标 ⇒ 正文明示截断（**旗标驱动**——不由长度比较
+  // 驱动：恰 64K 与超出同判，`lib.js capText` 的 `<= max` 边界洞不复辟）。
+  if (truncated) ref.b.textContent += "\n" + t("tool.truncated")
   linkifyPaths(ref.b, links)
   const ms = Date.now() - (ref.startTime || Date.now())
   const isError = isToolFailure(text) // F-W16：判据单源（lib.js——与恢复卡同读）
@@ -303,16 +304,16 @@ function finishToolCard(ref, text, links) {
       statusEl.style.color = "#4ec9b0"
     }
   }
-  // CLI parity: completion summary (last line) visible in the header
-  const summary = resultSummary(text)
+  // CLI parity: completion summary visible in the header（X3/X7：分派字面见 tool-summary.js）
+  const summary = formatToolSummary(name, text)
   let summaryEl = ref.h.querySelector(".tool-call-summary")
-  if (summary) {
+  if (summary || truncated) {
     if (!summaryEl) {
       summaryEl = document.createElement("span")
       summaryEl.className = "tool-call-summary"
       ref.h.appendChild(summaryEl)
     }
-    summaryEl.textContent = "→ " + summary
+    summaryEl.textContent = "→ " + [summary, truncated ? t("tool.truncated") : ""].filter(Boolean).join(" ")
     summaryEl.style.display = ""
   } else if (summaryEl) {
     summaryEl.style.display = "none"
@@ -331,12 +332,12 @@ function finishToolCard(ref, text, links) {
   }
 }
 
-export function finishTool(ctx, name, id, text, links) {
+export function finishTool(ctx, name, id, text, links, truncated) {
   // Primary: O(1) flat lookup by tool_call_id
   const key = id || name
   const ref = ctx._toolRefs[key]
   if (ref) {
-    finishToolCard(ref, text, links)
+    finishToolCard(ref, name, text, links, truncated)
     ctx.hadToolResult = true
     scrollDown(ctx) // the auto-expanded output must scroll into view, not sit below the fold
     return
@@ -346,7 +347,7 @@ export function finishTool(ctx, name, id, text, links) {
   if (el) {
     const card = el.closest(".tool-call")
     const body = card?.querySelector(".tool-call-body")
-    finishToolCard({ h: card, b: body, startTime: card?.dataset.startTime ? Number(card.dataset.startTime) : Date.now() }, text)
+    finishToolCard({ h: card, b: body, startTime: card?.dataset.startTime ? Number(card.dataset.startTime) : Date.now() }, name, text, undefined, truncated)
     ctx.hadToolResult = true
     scrollDown(ctx)
   }
@@ -368,11 +369,12 @@ export function buildToolHistory(ctx, name, text, idx) {
   h.setAttribute("role", "button")
   h.setAttribute("aria-expanded", "false")
   if (idx !== undefined) c.dataset.idx = String(idx) // lazy-load paging (minLoadedIdx)
+  const summary = formatToolSummary(name, text) // 恢复面同判据（X3/X7 单源——活卡/恢复卡同字面）
   h.innerHTML =
     `<span class="tool-call-icon"></span>` +
     `<span class="tool-call-name">${esc(name)}</span>` +
     `<span class="tool-call-status" style="color:#4ec9b0">${t("tool.done")}</span>` +
-    (resultSummary(text) ? `<span class="tool-call-summary">→ ${esc(resultSummary(text))}</span>` : "")
+    (summary ? `<span class="tool-call-summary">→ ${esc(summary)}</span>` : "")
 
   const b = document.createElement("div")
   b.className = "tool-call-body"

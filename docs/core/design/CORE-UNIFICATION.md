@@ -1096,8 +1096,9 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | 12 | `history-window.mjs` | **179** | SESSION #123（人读线惰性窗口面归核——`historyWindow` / `HISTORY_PAGE_SIZE` / `isRealUserMsg` + 工具配对；**纯函数零宿主依赖**——S1 续轮第四批（E 类轮）落地） | —（软线内） |
 | 13 | `session-slot-write.mjs` | **168** | SESSION #126（槽写入面归核——`newSlotData` / 四开关写 / `saveSlotData` 落盘单点 / `rotateIfForeign` 轮转判定 / `mergeEngTokensForSave` 保存面合并规则——S1 续轮第四批（E 类轮）落地） | —（软线内） |
 | 14 | `session-slots-manifest.mjs` | **264** | init-block 批拆分产物（`session-slots.mjs` 清单 / 认领 / 属主面外提——承下子表行 3 拆分计划；`wc -l` 实读 2026-09-19） | —（软线内——≤300 免登记） |
+| 15 | `agent/child-marks.mjs` | **24** | 显示面消差批 X6 下沉产物（`TURN_CAP_MARK` / `STOPPED_MARK` 唯一定义——先例 `agent/relay-prefix.mjs`；`agent/spawn-child.mjs:33` 原样再导出保 import 面；`wc -l` 实读 2026-09-20） | —（软线内——≤300 免登记） |
 
-**覆盖口径**：本表 = S1 落地新增 / 拆分产物档（**14 档** = §2.8 表「核包（S1 新建）」行的逐档展开 + **S1 续轮两档**——#184 / #185 + **S1 续轮第四批两档**——#123 / #126 + **init-block 批一档**——`session-slots-manifest.mjs`（拆分产物；同批 `session-lifecycle.mjs` **>300** ⇒ 归下子表行 11））。
+**覆盖口径**：本表 = S1 落地新增 / 拆分产物档（**15 档** = §2.8 表「核包（S1 新建）」行的逐档展开 + **S1 续轮两档**——#184 / #185 + **S1 续轮第四批两档**——#123 / #126 + **init-block 批一档**——`session-slots-manifest.mjs`（拆分产物；同批 `session-lifecycle.mjs` **>300** ⇒ 归下子表行 11）＋ **显示面消差批一档**——`agent/child-marks.mjs`（X6 常量下沉产物））。
 `SOFT_LINE_REGISTRY`（`thincoder-core/test/core-hygiene.test.mjs`）在册 **33 档**：拆分计划已登 **12 档**（`config.mjs` + 收正轮 3 补 4 档 + 收尾轮补 4 档 + **U0 修轮补 1 档** + **init-block 批补 2 档**——后 11 档见下子表）；**其余 21 档待补**（记档——补登范围与时点另定；其中 **≥437 八档**已列次优先）。
 其中距 500 硬限最近五档（**500 / 498 / 495 / 489 / 483**——`session.mjs` · `session-slots.mjs` · `provider/responses.mjs` · `agent/dispatch.mjs` · `agent-tools/subagent-actions.mjs`；计划均已补，见下子表）：前两档读数 2026-09-18——已随 init-block 批拆分兑现（`wc -l` 实读 **244** / **298**；行 2 / 行 3）；余三档读数 2026-09-14（行 1 / 行 4 / 行 5）。
 次优先面 = 其余 **≥437** 八档（见下；`thincoder-core/tools/shared.mjs` 已补登计划、移出该列表）。
@@ -1780,6 +1781,8 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 ---
 
 ## 变更记录
+
+- 2026-09-20（**显示面消差批 · 批 4 收口轮 · eng-designer**——承 `docs/batches/2026-09-20-display-parity-batch.md` §2.11 未落面 / §5.13 批 2 实施记录）：§2.8.1 主表补 **行 15** = `agent/child-marks.mjs`（**24** 行——X6 标记常量下沉零依赖叶，先例 `agent/relay-prefix.mjs`；`wc -l` 实读 2026-09-20）+ 覆盖口径计数同改（**14 → 15 档**；D3：计数与列表同改）。
 
 - 2026-09-13：建档——phase 2「核心统一」设计 + 测试（方案选型对比 / S0 方法与判定口径 / 裁决表骨架 / S0–S3 分段执行 / 关键决策 / 受影响文件清单 / 冲突点核对 / 验收回指 / 待定裁定 A1–A3）。
 - 2026-09-13：核形态两次改述——「仓根权威源 + 包根内同源副本 + 逐字节校验」→「单仓 npm workspace 真包」→**非 workspace 真包 + 双态引用**（dev `npm link` / prod 已发布包 · vsix 反排除行内嵌）；D-C3 / D-C9 / D-C10 / D-C11 / D-C12 与 §2.2 / §2.2.1 / §2.3.2 / §2.6 S2 进入条件同步；§2.1 增 B12 / B13 并更正 B2 / B3 / B7 / B8；§2.8 撤垫片面、增真依赖面与发布编排面。

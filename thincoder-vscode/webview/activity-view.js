@@ -33,8 +33,11 @@ const W = {
  *  frozen → "[✓ eng-coder#3 · async · glm-5.3 · done 15s · turn 4/100]"
  *  awaiting（settled 待消化）→ "[✓ eng-coder#3 · async · glm-5.3 · 15s] done · awaiting digestion"
  *           （C-2：括号去 verb + awaiting 态词）
- *  stopped→ "[⏹ eng-coder#3 · async · glm-5.3 · stopped 12s]"
+ *  stopped→ "[⏹ eng-coder#3 · async · glm-5.3 · stopped 12s]"（该面**零注记**——#134 ② 收口：
+ *           原因词与 verb 重复 ⇒ relay 不传；CLI 标尺同面零注记）
  *  live 审批 → "[⏸ coder#2 · async · …] 等待审批: write"（§18 C-8——icon 覆盖 ▶）
+ *  冻结注记 → 尾接 ` — <note>`（X6/X11：done 停因（turn-cap / stopped-by-user）与 X11 `interrupted`
+ *           读 `meta.note`；error 则读 `meta.error`）
  *  Parts are conditional on what the events actually carried（turn 只在真实计数值时）。 */
 function headerText(meta, now) {
   const frozen = meta.frozen
@@ -54,6 +57,9 @@ function headerText(meta, now) {
     if (meta.status === "cancelled") { icon = "⏹"; verb = W.stopped() }
     else if (meta.status === "error") { icon = "⏹"; verb = W.error(); note = meta.error ? String(meta.error) : null }
     else { icon = "✓"; verb = W.done() }
+    // X6/X11（显示面消差批 §2.2 · 收口轮 #134 ②）：注记承面由「仅 error」扩到 done（+ X11 interrupted）
+    // ——载体 = `meta.note`（turn-cap / stopped-by-user / interrupted 共用单一字段）；error 面维持 `meta.error`（零回归）。
+    if (meta.status !== "error" && meta.note) note = String(meta.note)
   }
   let head = `[${icon} ${meta.label}`
   // Mode word: family roles only (consult/escalate keys already carry their model).
@@ -136,16 +142,18 @@ export function refreshBlock(block) {
   updateStopButton(block)
 }
 
-/** ⏹ overlay：live + cancelable family 角色时可见——running+pool（stop）或 queued 等待
- *  头（cancel queue——F-2 QUEUED-VISIBILITY）。标签区分两动作；title 每次刷新（幂等——
- *  queued→running 翻转重挂 title，locale 重设在内）。冻结块随 freeze 移除按钮（无 ⏹）。 */
+/** ⏹ overlay：live + cancelable family 角色时可见——running+pool（stop）、queued 等待
+ *  头（cancel queue——F-2 QUEUED-VISIBILITY）或 **running+syncLive**（X10：宿主确证可中止的
+ *  sync 子代理——核 registry 只读判定）时可见。标签区分两动作（sync =停标签同 async）；
+ *  title 每次刷新（幂等——queued→running 翻转重挂 title，locale 重设在内）。冻结块随 freeze
+ *  移除按钮（无 ⏹）。 */
 function updateStopButton(block) {
   const meta = block._subMeta
   let btn = block.querySelector(".sub-stop-btn")
   const cancelingQueued = meta && !meta.frozen && meta.status === "queued"
   const want = meta
     && !meta.frozen
-    && ((meta.status === "running" && meta.pool === true) || cancelingQueued)
+    && ((meta.status === "running" && (meta.pool === true || meta.syncLive === true)) || cancelingQueued)
     && FAMILY_ROLES.includes(meta.role)
     && block.isConnected
   if (want) {

@@ -107,7 +107,7 @@ export default [
   "test/tool-summary-parity.test.mjs", // X3+X7 摘要族：advisor/read/write/grep/glob/bash/默认分支 ∥ CLI `formatToolSummary` 纯函数对拍等值 + 活卡/恢复卡两路径同源 + 端差②与射程边界（verify）显式断言（先红 = 全走通用末行摘要）
   "test/tool-result-truncation.test.mjs", // X5 >64KB 截断提示：宿主事实旗标（65K/恰 64K/falsy `0`）+ 活卡旗标驱动双标记 + 恢复卡同字面（先红 = 两形皆零标记）
   // 端差·显示面消差批（2026-09-20 · `docs/batches/2026-09-20-display-parity-batch.md` · 批 2 = VSC 活动块/协议面）
-  "test/subagent-note-parity.test.mjs", // X6+X11 块头注记：宿主 subKey 判据（核 child-marks 锚）⇒ done 载荷 `note` + relay `⟦ev⟧stopped` 原因位透传 + 承面 `— <note>`（done/stopped/interrupted——`meta.note` 单载体）+ X11 宿主真值源（先红 = 零注记面）
+  "test/subagent-note-parity.test.mjs", // X6+X11 块头注记：宿主 subKey 判据（核 child-marks 锚）⇒ done 载荷 `note` + relay `⟦ev⟧stopped` **零注记**（CLI 标尺——verb 已 stopped，无重复词）+ 承面 `— <note>`（done/interrupted——`meta.note` 单载体）+ X11 宿主真值源（先红 = 零注记面）
   "test/sync-block-stop.test.mjs", // X10 sync 块 ⏹：核 registry 只读 ⇒ 载荷 `syncLive` + 门控支 + 点击载荷（与 async 同形）+ 宿主取消路由（`cancelSyncChild` 单源）+ 零回归——**display-logic-only**（夹具预置 registry；产者侧序缺陷 ⇒ 运行期不可达——父侧裁定降级登记，批档 §2.8 #7）
   // 端差·机制层端差批（2026-09-20 · `docs/batches/2026-09-20-mechanism-parity-batch.md` · 车道 2 = VSC）
   "test/lifecycle-hooks.test.mjs", // §2.16 端侧 Stop 钩子 + advisor-run 收口（T-LH1–T-LH9；先红 = 端侧零 `runHooks` + 零收口）

@@ -6,9 +6,13 @@
  * 非缺位」）：
  *  - `reasoningEffortDefault`（推理强度下拉默认档——CLI 规格行无此字段，端侧扩展；
  *    旧 `src/config.mjs` 规格表随 W16 删旧，该字段的数据面迁入本档覆盖表）；
- *  - `ctxPercentForModel`（面板上下文占比派生——面板消费面，随 config 面收拢入驻）。
+ *  - `ctxPercentForModel`（面板上下文占比派生——面板消费面，随 config 面收拢入驻）；
+ *  - `ctxPercentForHistory`（M2 · 显示面消差批：同标签双口径消差——分子改核 `estimateTokens(history)`，
+ *    与 CLI 状态行同源；`ctxPercentForModel` 保留给 provider 报告值消费面）。
  */
 import { specForModel as coreSpecForModel, providerSpec, assistantToolCallMessage } from "@thincoder/core/model-specs.mjs"
+// M2（显示面消差批）：分子 = 核 `estimateTokens`——与 CLI 状态行**同源同式**（零依赖纯函数，静态引入安全）
+import { estimateTokens } from "@thincoder/core/context.mjs"
 
 export { providerSpec, assistantToolCallMessage }
 
@@ -23,7 +27,12 @@ const EFFORT_DEFAULT_PREFIXES = [
   ["kimi", "max"],
   ["k3", "max"],
   ["glm-5", "max"],
+  ["qwen3.7-max", "xhigh"],
   ["qwen3.8-max", "xhigh"],
+  ["qwen3.7-flash", "high"],
+  ["qwen3.8-flash", "high"],
+  ["qwen3.8-omni-flash", "high"],
+  ["qwen3.8-27b", "high"],
 ]
 
 function effortDefaultFor(model) {
@@ -57,4 +66,18 @@ export function specForModel(model) {
 export function ctxPercentForModel(promptTokens, provider) {
   if (!promptTokens) return null
   return Math.round((promptTokens / providerSpec(provider).context) * 100)
+}
+
+/**
+ * Context utilization percentage — CLI-parity ruler (显示面消差批 M2): numerator = core
+ * `estimateTokens(history)`, the SAME estimate the CLI status line renders (`thincoder-cli/src/tui/
+ * render-frame.mjs:388-389` over the `render-loop.mjs:89-91` ctxCache —— 分子分母两端同源),
+ * denominator = the provider-aware window (`providerSpec(provider).context`). The provider-reported
+ * `prompt_tokens` numerator (ctxPercentForModel above) double-reported: one session showed two
+ * percentages under the same `context X%` label (端差 M2). Null when the estimate is 0.
+ */
+export function ctxPercentForHistory(history, provider) {
+  const tokens = estimateTokens(history ?? [])
+  if (!tokens) return null
+  return Math.round((tokens / providerSpec(provider).context) * 100)
 }

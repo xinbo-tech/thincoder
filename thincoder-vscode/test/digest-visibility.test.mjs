@@ -12,6 +12,9 @@ import { setupWebview, installFullIndexFixture } from "./helpers/webview-env.mjs
 import files from "./files.mjs"
 import { suspensionSession } from "../src/extension/suspension.mjs"
 import { postDigestCap } from "../src/extension/panel-callbacks.mjs"
+// M4（显示面消差批 §2.1）：生产字典 = 核投影 + 本地叠加（新键只在核容器 ⇒ 本档注入生产字典驱动真渲染）
+import { loadLocaleStrings } from "../src/i18n.mjs"
+import { setStrings } from "../webview/i18n.js"
 
 let cleanupEnv
 
@@ -50,7 +53,7 @@ test("T-D1 起跑时序（F-C1/AC-D1）：start 早于 runTurn（n = pending 数
   entry.runTurn = async (arg) => { seenAtRun = digestMsgs(panel); autoTurnArg = arg; history._pendingAsyncResults = [] }
   await suspensionSession(panel, entry)
   assert.equal(seenAtRun?.length, 1, "runTurn 被调之前 start 已投（用户看到的\"在动\"不晚于回合开跑）")
-  assert.deepEqual(seenAtRun[0], { type: "digest", status: "start", n: 2 }, "起跑载荷 {status:start, n}")
+  assert.deepEqual(seenAtRun[0], { type: "digest", status: "start", n: 2, tier: "digest" }, "起跑载荷 {status:start, n, tier}（M4 档位）")
   assert.equal(autoTurnArg?.autoTurn, true, "消化轮语义不变（autoTurn）")
   assert.equal(digestMsgs(panel)[0].type, "digest", "投递面 = panel._panel.webview 直投（同 compress 先例）")
 })
@@ -188,4 +191,60 @@ test("T-D7 cap 行 + 边界清空（§14 C-10/C-4/AC-CL2）：auto dim / stop wa
 
 test("T-D8 接线机检（AC-CL2）：本档在册 + `.digest-turn`/`.digest-cap` 样式族在位", () => {
   assert.ok(files.includes("test/digest-visibility.test.mjs"), "本档已登记 test/files.mjs")
+})
+
+// ─── M4（显示面消差批 §2.1 M4 + §2.10.6 #7）：档位分档 + ask-only 可见面 ─────────
+
+test("T-D9 三档 tier（M4 宿主面）：载荷档位与 CLI 三档同源（digest / ask / auto）——起跑即发（n 可 0）", async () => {
+  // digest 档：手动档（AUTO 未开）+ 无未 drain ask
+  const a = fixture()
+  a.history._pendingAsyncResults = [{ id: 1, role: "explore" }]
+  a.entry.runTurn = async () => { a.history._pendingAsyncResults = [] }
+  await suspensionSession(a.panel, a.entry)
+  assert.deepEqual(digestMsgs(a.panel)[0], { type: "digest", status: "start", n: 1, tier: "digest" }, "digest 档字面")
+  // ask 档：手动档 + 未 drain 的 ask 在场（核既有载体 `_childUpstream`——`upstreamWaiting` 同源判据）
+  const b = fixture()
+  b.history._childUpstream = [{ seq: 1, from: "coder#1", kind: "ask", message: "q", ts: 1 }]
+  let seenAtRun = null
+  b.entry.runTurn = async () => { seenAtRun = digestMsgs(b.panel); b.history._childUpstream = [] }
+  await suspensionSession(b.panel, b.entry)
+  assert.deepEqual(seenAtRun?.[0], { type: "digest", status: "start", n: 0, tier: "ask" }, "ask-only 轮起跑即发（n = 0 形态引入——M4 放宽）")
+  assert.equal(digestMsgs(b.panel).filter((m) => m.status === "end").length, 1, "end 同发（webview 无本轮计数元素时零动作）")
+  // auto 档：AUTO 档（autoApprove）
+  const c = fixture()
+  c.panel._autoApprove = true
+  c.history._pendingAsyncResults = [{ id: 2, role: "plan" }]
+  c.entry.runTurn = async () => { c.history._pendingAsyncResults = [] }
+  await suspensionSession(c.panel, c.entry)
+  assert.deepEqual(digestMsgs(c.panel)[0], { type: "digest", status: "start", n: 1, tier: "auto" }, "auto 档字面")
+})
+
+test("T-D10 ask 轮可见面（M4 webview）：三档标签字面（= CLI 三档）+ ask 轮零计数元素 + end 零动作（无 `n:\"?\"` 幻影）", async () => {
+  const { S } = await loadChat()
+  setStrings(loadLocaleStrings("en")) // 生产字典（核投影 + 本地叠加）——M4 两新键只在核容器
+  send({ type: "clearMessages" })
+  // ① ask 档：标签行在 ∧ 零计数元素 ∧ 边界置位
+  send({ type: "digest", status: "start", n: 0, tier: "ask" })
+  const askLabel = turnEls().at(-1)
+  assert.equal(askLabel.textContent, "[auto-turn: answering a subagent's in-flight message…]", "ask 档字面（CLI suspension-drive.mjs:175 逐字）")
+  assert.equal(statusEls().length, 0, "ask 轮不建 `.digest-status` 计数行（CLI ask 轮只打标签行）")
+  assert.equal(S._digestBoundary, askLabel, "边界仍置 = 本轮首元素（C-4 归档落点）")
+  // ② end：本轮无计数元素 ⇒ 零动作（禁兜底建元素——§2.10.6 #7）
+  send({ type: "digest", status: "end", ok: true, ms: 120 })
+  assert.equal(statusEls().length, 0, "end 零新增元素（无 `n:\"?\"` 幻影计数行）")
+  assert.equal(document.querySelectorAll(".digest-turn").length, 1, "标签行不被 end 改写")
+  // ③ digest 档零回归（计数行 + 原地更新）
+  send({ type: "digest", status: "start", n: 2, tier: "digest" })
+  assert.equal(turnEls().at(-1).textContent, "[auto-turn: digesting finished subagent reports…]", "digest 档字面零回归")
+  const roundEl = statusEls().at(-1)
+  assert.equal(roundEl.dataset.n, "2", "计数行建（n = 起跑数）")
+  send({ type: "digest", status: "end", ok: true, ms: 500 })
+  assert.equal(statusEls().length, 1, "end 原地更新（不新增）")
+  assert.equal(roundEl.textContent, "Digested 2 background report(s) (0.5s)", "digest 档收尾零回归")
+  // ④ auto 档字面
+  send({ type: "digest", status: "start", n: 1, tier: "auto" })
+  assert.equal(turnEls().at(-1).textContent, "[auto-turn: continuing background work…]", "auto 档字面（CLI suspension-drive.mjs:176 逐字）")
+  // ⑤ tier 缺省 ⇒ 既有键（后向兼容——旧宿主 / 其它发射面）
+  send({ type: "digest", status: "start", n: 1 })
+  assert.equal(turnEls().at(-1).textContent, "[auto-turn: digesting finished subagent reports…]", "tier 缺省 ⇒ digest.turnLabel（零回归）")
 })

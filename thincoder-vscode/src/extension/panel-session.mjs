@@ -168,9 +168,10 @@ export function sendHistoryPage(panel, messages, hasOlder, older) {
       if (m.kind === "user") return { ...m, text: stripAtRefs(stripEditorInjection(m.text)) }
       if (m.kind === "tool") return typeof m.text === "string" ? { ...m, text: m.text.slice(0, 64 * 1024) } : m
       // SESSION-RESTORE-PARITY（B）：tool 结果随 assistant 帧 tools[] 嵌套下发——
-      // 清洗适配嵌套字段（transport 64K 截断——防未 slim 老文件超大结果进 webview）
+      // 清洗适配嵌套字段（transport 64K 截断——防未 slim 老文件超大结果进 webview）；
+      // X5（显示面消差批）：切片点**同置事实旗标**（恢复卡据此出截断提示——旗标驱动与活卡同形）。
       if (m.kind === "assistant" && Array.isArray(m.tools) && m.tools.some((t) => typeof t.result === "string" && t.result.length > 64 * 1024)) {
-        return { ...m, tools: m.tools.map((t) => typeof t.result === "string" && t.result.length > 64 * 1024 ? { ...t, result: t.result.slice(0, 64 * 1024) } : t) }
+        return { ...m, tools: m.tools.map((t) => typeof t.result === "string" && t.result.length > 64 * 1024 ? { ...t, result: t.result.slice(0, 64 * 1024), resultTruncated: true } : t) }
       }
       return m
     })

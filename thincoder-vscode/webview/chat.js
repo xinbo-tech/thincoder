@@ -6,7 +6,7 @@
 import { ctx, vscode, S } from "./state.js"
 import {
   showWelcome, updateWelcomeStatus, showBanner, addUser,
-  addTool, finishTool, showError, maybeScrollDown, escHtml,
+  addTool, finishTool, showError, maybeScrollDown, escHtml, advisorRoundTag,
 } from "./ui.js"
 import { setLoading } from "./loading.js"
 import { MAX_TOOL_OUTPUT } from "./lib.js"
@@ -133,8 +133,20 @@ window.addEventListener("message", (e) => {
     case "token":            clearStatusText(); onToken(m.text); break
     case "reasoning":        clearStatusText(); onReasoning(m.text); break
     case "turnBreak":        onTurnBreak(); break
-    case "toolCall":         clearStatusText(); S._currentTool = m.name; addTool(ctx, m.name, m.args, m.id); renderStatusBar(); break
-    case "toolResult":       clearStatusText(); finishTool(ctx, m.name, m.id, m.text, m.links); S._currentTool = null; renderStatusBar(); break
+    // X2（显示面消差批 §2.1）：advisor 卡头携轮次标签 + 状态行字面 = CLI `tool-events.mjs:145`
+    // 逐字（`advisor review (round N · model)`）；无 round 字段（非 advisor / 旧载荷）⇒ 逐字节同修前。
+    // 注：`round` 仅 advisor 载荷携（宿主 `advisorMeta`）⇒ 以标签非空分派，**不写工具名字面比较**
+    // （该形会被 `protocol-coverage` 提取器当消息判别式——§12 表机检）。
+    case "toolCall": {
+      clearStatusText()
+      const roundTag = advisorRoundTag(m.round, m.model)
+      S._currentTool = roundTag ? `advisor review ${roundTag}` : m.name
+      addTool(ctx, m.name, m.args, m.id, roundTag)
+      renderStatusBar()
+      break
+    }
+    // X5（显示面消差批 §2.2）：`truncated` 事实旗标透传（正文/摘要标记见 ui.js finishToolCard）
+    case "toolResult":       clearStatusText(); finishTool(ctx, m.name, m.id, m.text, m.links, m.truncated); S._currentTool = null; renderStatusBar(); break
     case "toolOutput": {
       // Live output streaming (bash etc.): chunks append to the running card's
       // body. Open while streaming so long commands are watchable; finishTool
@@ -358,14 +370,21 @@ function showDigestStatus(m) {
   if (m.status === "start") {
     const label = document.createElement("div")
     label.className = "digest-turn"
-    label.textContent = t("digest.turnLabel")
+    // M4（显示面消差批 §2.1）：起跑标签三档（`tier` 缺省 ⇒ 既有键——后向兼容）；字面单源 = 核
+    // i18n 容器（本地档不重复定义）。ask 轮 = CLI 第三档（本轮主事 = 答复在飞提问）。
+    label.textContent = t(m.tier === "ask" ? "digest.turnLabelAsk" : m.tier === "auto" ? "digest.turnLabelAuto" : "digest.turnLabel")
     messagesEl.appendChild(label)
-    const el = document.createElement("div")
-    el.className = "digest-status"
-    el.dataset.n = String(m.n ?? "?")
-    el.textContent = t("digest.start", { n: el.dataset.n })
-    messagesEl.appendChild(el)
-    _digestRoundEl = el
+    _digestRoundEl = null
+    if (m.tier !== "ask") {
+      const el = document.createElement("div")
+      el.className = "digest-status"
+      el.dataset.n = String(m.n ?? "?")
+      el.textContent = t("digest.start", { n: el.dataset.n })
+      messagesEl.appendChild(el)
+      _digestRoundEl = el
+    }
+    // ask 轮（起跑即发·`n` 可 0）：只打标签行——不建计数元素（CLI ask 轮对位）；本轮
+    // `_digestRoundEl` 置空 ⇒ end 零动作（禁兜底建元素——不得造 `dataset.n = "?"` 幻影行）。
     S._digestBoundary = label // C-4：本轮边界 = 本轮首元素（标签行）
     ctx.assistantLabeled = false // C-9③：本轮 assistant 输出带一次回合标签
     maybeScrollDown(ctx)
@@ -381,15 +400,11 @@ function showDigestStatus(m) {
     maybeScrollDown(ctx)
     return
   }
-  // end：本轮元素原地更新（start 连发亦各成独立元素——end 更新其前最近未结本轮元素）
-  let el = _digestRoundEl?.isConnected ? _digestRoundEl : null
-  if (!el) {
-    el = document.createElement("div")
-    el.className = "digest-status"
-    el.dataset.n = "?"
-    messagesEl.appendChild(el)
-    _digestRoundEl = el
-  }
+  // end：本轮元素原地更新（start 连发亦各成独立元素——end 更新其前最近未结本轮元素）；
+  // 本轮无计数元素（ask 轮——`_digestRoundEl` 置空）⇒ **零动作**（M4：禁兜底建元素——
+  // 旧兜底行会造 `dataset.n = "?"` 幻影计数行）。
+  const el = _digestRoundEl?.isConnected ? _digestRoundEl : null
+  if (!el) return
   el.classList.remove("digest-done", "digest-failed")
   const seconds = ((m.ms ?? 0) / 1000).toFixed(1)
   if (m.ok !== false) {

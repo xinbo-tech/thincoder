@@ -86,7 +86,9 @@ function frozenSubTaskLines(state, sub, cols, maxRows) {
   const modelPart = sub.model ? ` · ${sub.model}` : ""
   const turnPart = sub.maxTurns > 0 ? ` · turn ${sub.turn}/${sub.maxTurns}` : ""
   const errPart = sub.lastError ? ` — ${sub.lastError}` : ""
-  const icon = sub.approval ? "⏸" : "✓"
+  // 图标三态互斥（2026-09-20 端差·显示面消差批 M5）：修前 stopped 冻结头 `✓` 与 verb 相抵
+  // ⇒ 补齐 VSC `webview/activity-view.js:46-49` 已成的 cancelled → `⏹` 形态（VSC 标尺，CLI 缺面）。
+  const icon = sub.approval ? "⏸" : sub.stopped ? "⏹" : "✓"
   const verb = sub.stopped ? "stopped" : "done" // §19.5: cancel 冻结标题 "stopped"
   const header = `[${icon} ${sub.key}${modePart}${modelPart} · ${verb} ${elapsed}s${turnPart}${errPart}]`
   const out = []

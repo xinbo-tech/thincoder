@@ -13,7 +13,7 @@
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
 | 主循环 | `thincoder-core/agent.mjs` | 同名（同路径对） |
-| 装配 / 提醒 / 收尾 | `thincoder-core/agent/setup.mjs` · `setup-reminders.mjs` · `run-stages.mjs` · `post-turn.mjs` · `dispatch.mjs` · `completion.mjs` · `record-results.mjs` · `relay-prefix.mjs` · `thincoder-core/agent/helpers.mjs` · `spawn-child.mjs` | `src/agent/*`（拆档：`execute-tools` · `tool-gates` · `run-helpers` · `context-injections` · `agent-state`） |
+| 装配 / 提醒 / 收尾 | `thincoder-core/agent/setup.mjs` · `setup-reminders.mjs` · `run-stages.mjs` · `post-turn.mjs` · `dispatch.mjs` · `completion.mjs` · `record-results.mjs` · `relay-prefix.mjs` · `thincoder-core/agent/helpers.mjs` · `spawn-child.mjs` · `child-marks.mjs` | `src/agent/*`（拆档：`execute-tools` · `tool-gates` · `run-helpers` · `context-injections` · `agent-state`） |
 | 子代理 / 异步 | `src/agent-tools/{subagent-scheduler,subagent,subagent-actions,subagent-async,subagent-run,async-settle,subagent-spawn,escalate-async}.mjs` | 同名 / 拆分档 |
 | 挂起与唤醒 | `src/tui/suspension-drive.mjs` | `thincoder-vscode/src/extension/suspension.mjs` |
 | 权限 | `thincoder-cli/src/cli/permission.mjs` | `src/extension/permission-gate.mjs` · `agent-tools/child-permission.mjs` |
@@ -183,6 +183,7 @@
 | `thincoder-core/agent/helpers.mjs` | 常量（turn 上限、结果落盘阈值）、`escapeXml`、`repairHistory`、`AUTO_REMINDER` 单源、git 上下文、目录树 |
 | `thincoder-core/agent/record-results.mjs` | 工具结果提交 + 变更记账：tool 消息落盘、`FILE_MUTATORS` 失效链、`_touchedFiles` + `noteMutations` |
 | `thincoder-core/agent/spawn-child.mjs` | 子代理统一管线：`makeRelay` / `wrapChildCallbacks` / `runWithContinue` / `ensureChildApiKey` / `clampEffort` / `⟦ev⟧` strip / 嵌套 done·stopped 补发射 |
+| `thincoder-core/agent/child-marks.mjs` | 子代理报告文本锚点（`TURN_CAP_MARK` / `STOPPED_MARK`）**唯一定义**（零依赖叶——先例 `relay-prefix.mjs`；端壳静态导入面，W8 契约②）；`spawn-child.mjs:33` 原样再导出 ⇒ 既有 import 面零改 |
 | `thincoder-core/agent/run-stages.mjs` | 回合阶段骨架 / abort 分支 / pending 单容器过滤 / `finalizeAgentTurn`（收尾单点） |
 | `thincoder-core/agent/suspension.mjs` | 挂起 / 唤醒状态机（核内形态与载体契约见 §2.3） |
 | `thincoder-core/auto-think.mjs` | 任务难度分类 → 自动设置 reasoning effort（opt-in） |
@@ -491,6 +492,8 @@ VSC 侧**接线**面（端装配 / 面板 / webview 呈现）——机制本体�
 | VSC 档 §2 / §12 / §17（runAgent 主循环 · async 保真 · 上下文注入对齐） | VSC 侧实现细节叙述 | 与 §2.3 / `AGENT-LOOP-SUBAGENT.md` §6.7–§6.12 已并面同族（端差登记 = §6.18 表）——不重并（D2） |
 
 ## 变更记录
+
+- 2026-09-20（**显示面消差批 · 批 4 收口轮 · eng-designer**——承 `docs/batches/2026-09-20-display-parity-batch.md` §2.11 未落面 / §5.13 批 2 实施记录）：§1 归属行 + §6.1 模块地图补 **`thincoder-core/agent/child-marks.mjs`**（X6 标记常量唯一定义——零依赖叶，先例 `relay-prefix.mjs`；`spawn-child.mjs:33` 原样再导出 ⇒ 既有 import 面零改；实读 **24 行**）。
 
 - 2026-09-19（**批 2026-09-19-upstream-channel-availability · 设计评审修正轮 1 · eng-designer**——承批档 §3 轮次 1 · 父侧逐条裁定）：**同族收正两处（发现 5 / 6）**——
   ① §6.18 上行通道行的验收机判指针 `T-VS-U1–U6` → **`T-VS-U1–U7`**（与 `AGENT-LOOP-SUBAGENT.md` §6.27.12.9 / §6.27.12.10 U9 同源）；

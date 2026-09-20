@@ -143,10 +143,40 @@ export function onTurnBreak() {
   ctx.hadToolResult = false
 }
 
+/** M1 回合尾清扫（显示面消差批 §2.1——VSC 无清扫 ⇒ 中止后工具卡永停「执行中…」）：
+ *  未结算（`ref.done !== true`）的工具卡 ⇒ 状态词 `tool.interrupted` + 摘要 `→ (interrupted)`
+ *  （CLI 标尺 = `thincoder-cli/src/tui/tool-display.mjs:60-72` `sweepToolBlocks`：`b.done = true`
+ *  （清扫即结算——同形保留）+ `b.summary = "(interrupted)"` + 独立 interrupted 旗标；**不套错误色**
+ *  （非 error 面）、正文（流内输出）原样保留）。已结算卡零改写（`finishToolCard` 首行置 `done`）。 */
+function sweepUnsettledToolCards(ctx) {
+  for (const ref of Object.values(ctx._toolRefs ?? {})) {
+    if (!ref || ref.done) continue
+    ref.done = true // CLI `sweepToolBlocks` 同形（`b.done = true`）——清扫即结算，重复命中幂等
+    const statusEl = ref.h?.querySelector(".tool-call-status")
+    if (statusEl) {
+      statusEl.textContent = t("tool.interrupted")
+      statusEl.style.color = ""
+    }
+    let summaryEl = ref.h?.querySelector(".tool-call-summary")
+    if (ref.h && !summaryEl) {
+      summaryEl = document.createElement("span")
+      summaryEl.className = "tool-call-summary"
+      ref.h.appendChild(summaryEl)
+    }
+    if (summaryEl) {
+      summaryEl.textContent = "→ (interrupted)"
+      summaryEl.style.display = ""
+    }
+  }
+}
+
 export function finish(aborted) {
   // Paint any pending throttled chunks before the bubble pointers reset — otherwise
   // the tail of the reply/reasoning never renders.
   flushStreamRender()
+  // M1：回合尾清扫**无条件**执行（complete / aborted 两路径同规 = CLI 回合 `finally` 恒清扫
+  // ——`agent-turn.mjs:265`）；必须先于下方 `ctx._toolRefs = {}` 复位。
+  sweepUnsettledToolCards(ctx)
   // A turn end without an answer leaves a stale inline question card — drop it
   // (aborted/error paths; a completed turn answers via questionResponse which
   // removes its own card).

@@ -71,7 +71,7 @@
 4. `runAgent` 循环：正常完成 → `flushStream`；`AbortError` → **interrupt 区分**——`reason.interrupt && message`（Ctrl+I）= 重建 controller 续跑；
    `reason.interrupt` 无 message（Ctrl+C 首按）= break 不续跑 + 回滚无 message 注入产生的尾部垃圾 + `[stopped]` 行；
    `ContinueError` → 询问 "Continue after N turns?"（**autoTurn 消化轮例外：无面板——AUTO 档自动 resume、手动档静默拒绝**，
-   部分消化留在历史不丢）；其他错误 → `[error] …` 一行。
+   部分消化留在历史不丢）；其他错误 → `[error] <首行（URL 脱敏）>` + `→ Provider` / `→ Model` 诊断两行 + Retry 询问（同意 ⇒ `resume` 重入；形态与边界 = `docs/cli/design/TUI.md` §4.3——本档不复述）。
 5. **finally 收尾**：停 ticker、清 processing、**挂起决策**——回合正常结束且后台池仍 live → 子 agent 区块**不冻结**
    （各 settle 事件自行处理），本次回合 controller 记为会话中止句柄 + abort 集合快照（= 链条内全部 controller）；
    池空 / 中断 / 错误 → `freezeAllSubTasks`（中断态块标 interrupted）；挂起会话内回合由会话层逐条回收；
@@ -202,6 +202,8 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
 | 显示层额度的常量数值来源 | 常量本体 | `thincoder-cli/src/tui/display-budget.mjs`（单源——本档引用不复制数值之外的口径） |
 
 ## 变更记录
+
+- 2026-09-20（**显示面消差批 · 批 4 随轮收正 · eng-designer**——承 `docs/batches/2026-09-20-display-parity-batch.md` §2.3 X8）：§4 第 4 条「其他错误 → `[error] …` 一行」按实现面收正为三件形（脱敏首行 + 诊断两行 + Retry 询问），面细节挂 `docs/cli/design/TUI.md` §4.3（D2 不重述）。
 
 - 2026-09-17（**zero-block 批 · 微 fix 轮 · eng-designer**）：变更记录 2026-09-15 条①内**悬空节号收正**——原引节号在 canonical 界面核心档无此节，收正为「§8 不并项与历史沿革」（拆分沿革登记现住 §8）；批档 `docs/batches/2026-09-17-subagent-zero-block.md` §2 出批发现 ⑥ 收口。
 

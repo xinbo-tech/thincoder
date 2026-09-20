@@ -28,6 +28,10 @@ import { suspensionSession, poolLive } from "./suspension-drive.mjs"
  *  never let shutdown hang on the background summary call. */
 const DISTILL_FLUSH_TIMEOUT_MS = 5000
 
+/** Provider 失败面 URL 脱敏（X8——判据与 VSC `panel-turn-loop.mjs:153` 同式；两端各自持有
+ *  字面 = 双写登记——单源化须动 VSC/核写域，出本批射程，见批档 §2.3）。 */
+const PROVIDER_URL_RE = /https?:\/\/[^\s,)"]+/g
+
 /**
  * 第 33 批（TUI §14.3(d)——纯函数，供测试直驱）：回合链尾「需要用户」谓词——agent 已停
  * 且无自动续跑 ⇒ 置 attention 位。排除项语义（F13）：`skipSession`（digest / 会话内回合
@@ -45,6 +49,8 @@ export function userNeededAtTurnEnd(state, agent, skipSession) {
  * user/auto；result ok/stopped/error）。内层经 _logOutcome 载具回传终止原因（中止/
  * turn-cap 拒绝/错误 vs 正常完成）——嵌套回合（队列递归/挂起会话内 digest 轮）各自
  * 新开载具（每次包装调用独立），互不串扰。err:internal = 逃出内层的未分类异常。
+ * @returns {Promise<"ok"|"stopped"|"error">} 本回合终态（同一载具外化——X9 消化轮
+ *  收尾可见行的 ok/aborted 判据；VSC digest end ok 旗标同口径）。
  */
 export async function runAgentTurn(ctx, text, opts = {}) {
   const kind = opts?.autoTurn ? "auto" : "user"
@@ -55,8 +61,8 @@ export async function runAgentTurn(ctx, text, opts = {}) {
   const t0 = Date.now()
   logEvent("turn:start", { kind })
   try {
-    const result = await runAgentTurnInner(ctx, text, runOpts)
-    return result
+    await runAgentTurnInner(ctx, text, runOpts)
+    return carrier.result ?? "ok"
   } catch (e) {
     carrier.result = "error"
     logEvent("err:internal", { msg: errText(e, 200), where: "runAgentTurn" })
@@ -216,7 +222,25 @@ async function runAgentTurnInner(ctx, text, opts) {
           state.controller = makeController()
           continue
         }
-        pushLine(`[error] ${error.message}`, C.error)
+        // X8（2026-09-20 端差·显示面消差批）：provider 失败面 = 友好首行（判据同 VSC
+        // panel-turn-loop.mjs:152-153：原文首行 + URL 脱敏）+ 诊断两行（Provider/Model）+ Retry
+        // 询问（复用 permission 机制——同意 ⇒ 重建 controller + resume 重入，与 ContinueError
+        // 同法；拒绝 ⇒ 现状 break，[error] 行保留）。
+        const rawMsg = error?.message || String(error)
+        const errLine = rawMsg.split("\n")[0].replace(PROVIDER_URL_RE, "[endpoint]")
+        pushLine(`[error] ${errLine}`, C.error)
+        pushLine(`→ Provider: ${agent.provider?.baseURL}`, C.dim)
+        pushLine(`→ Model: ${agent.provider?.model}`, C.dim)
+        const willRetry = await new Promise((resolve) => {
+          state.permission = { name: "retry", args: { message: errLine }, resolve }
+          state.status = "Retry after provider error?"
+          render()
+        })
+        state.permission = null
+        if (willRetry) {
+          state.controller = makeController()
+          continue
+        }
         if (opts?._logOutcome) opts._logOutcome.result = "error"
         break
       }

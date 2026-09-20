@@ -148,6 +148,15 @@ permission（y/n/a/esc；batch a/o/n；continue y/n）
   ——回合层回滚无 message 注入产生的尾部垃圾（`agent` 侧零改动；partial 输出**不**回滚——interrupt 家族「提交部分输出」语义）。
 - 注入框的键集 / 光标 / 提示 = `docs/cli/design/TUI-INPUT-BOX.md` §8。
 
+### 4.3 provider 失败面（诊断上下文 + Retry · X8）
+
+- **形态（显示面消差批 · X8）**：provider 失败面（`thincoder-cli/src/tui/agent-turn.mjs` 回合循环 catch 非中止分支）三件——
+  ① **友好首行** `[error] <原文首行>`，URL 脱敏（`[endpoint]`）；② **诊断两行** `→ Provider: <baseURL>` / `→ Model: <model>`；③ **Retry 询问**（复用 `state.permission` 机制——`name: "retry"`）：同意 ⇒ 重建 controller + `resume` 重入（与 `ContinueError` 面同法）；拒绝 ⇒ 断回合（`[error]` 行保留）。
+- **脱敏判据**：`PROVIDER_URL_RE = /https?:\/\/[^\s,)"]+/g` → `[endpoint]`——与 VSC 端（`thincoder-vscode/src/extension/panel-turn-loop.mjs`）**同式双写**（单源化 = 跨批结构面，登记）。
+- **重入语义（现场判定成立）**：provider 抛错不写 history（核 `thincoder-core/agent.mjs` 仅 `AbortError` 分支注历史）+ `flushStream` 清 `state.streaming` / `state.reasoning` ⇒ resume 重跑不携半截 assistant 行、不重复推部分输出。
+- **边界**：abort 分支 / `ContinueError` 面零改；不新增 TUI 组件（复用权限面板）；不改 provider 层重试策略；不动 CLI 硬编码 zh/EN 混排面。
+- **未决面（`open` · 父侧裁定中）**：重试询问沿用通用权限框（键面 `y` / `n` / `a`）——`a` = approve all（会话级 `autoApprove` 置位）为该框**既有语义**；是否收窄为 `y/n`（与 `continue` 框同形）待裁。
+
 ## 5. 渲染管线（帧装配 / 布局 / 对话行构建）
 
 **帧装配（`render-frame.mjs`）**
@@ -304,8 +313,8 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
    **与墓碑存活闸（§6.8.3.2 P0-a）的交互**：写入时该条目已终态（`cancelled` + `done` + 出池）⇒ 存活判据 false ⇒ 维持丢弃（不再建块）；
    若同 key 条目仍存活（未来重启路径清终态位）⇒ 闸门摘墓碑 + 重建块（`ev:subagent-block-revived` 留痕）——**不构成永久失明**。
    同一幻影的**另一面已同批封死（c1）**：补位不启动终态条目（`AGENT-LOOP-SUBAGENT.md` §6.9）——「取消后仍被 settle」的燃料族无关消失。
-- **冻结头**：`[✓ explore#1 · sync · model · done 45s]`——✓ / stopped 动词按状态（cancel 冻结 → stopped；
-  interrupt 清场 → interrupted 标）；挂起期**已结算待消化中间态**驻留面板显示 `done · awaiting digestion`。
+- **冻结头**：`[✓ explore#1 · sync · model · done 45s]`——**图标三态互斥（M5）**：`⏸`（审批态）→ `⏹`（`stopped`）→ `✓`（其余），与动词同源（`thincoder-cli/src/tui/render-segments.mjs` `frozenSubTaskLines` 图标行；跨端标尺 = VSC `webview/activity-view.js` 的 cancelled → `⏹`；运行中面板头无 `stopped` 分支 ⇒ 不并）；
+  动词按状态（cancel 冻结 → `stopped`；interrupt 清场 → `interrupted` 标）；挂起期**已结算待消化中间态**驻留面板显示 `done · awaiting digestion`。
 - **advisor 块**：运行中 = 对话流内可折叠框（key = `advisor-blocks`，单实例；头 `[advisor · review] N lines` + tail 3；
   展开 = `renderBlockTimeline` 有序块时间线——think ↔ tool 交替按发射序）；完成 → 冻结 `_frozenAdvisor` 载体；
   async advisor ⏹ = 取消后台评审；压缩以同款面板块渲染（`docs/core/design/CONTEXT-COMPACTION.md` §8 权威）。
@@ -495,6 +504,12 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 - **不引入**块落盘恢复；不改提示词 / 需求档 / `_archive/**`。
 - **VSC 对位不在本批**（VSC `panel-callbacks.mjs` / `suspension.mjs` 为独立实现）——登记为观察项（批次档 §2.7 同源）。
 
+### 6.9 消化轮（digest auto-turn）可见面（X9）
+
+- **起跑标签三档**：manual + upstream ask / manual / auto 三档 dim 行（既有字面不动；三档字面 = 核 i18n 容器 `digest.turnLabel` 族——VSC 端按此补齐，见 `docs/vsc/design/WEBVIEW.md` §5.1）。
+- **收尾行（X9——显示面消差批）**：轮尾 `pushLine` 一行 dim——完成 ⇒ `digest.done`（`已消化 N 份后台报告（Xs）`）/ 中止与失败 ⇒ `digest.aborted`（`消化中断（Xs）`）；**文案单源 = 核 i18n 容器**（`t()` 取值——CLI 侧首个核 i18n 消费点）；**计数口径 = 起跑数**（与 VSC 端同源——消费数另计会引入双口径）；秒位 = `toFixed(1)`（与 VSC 同式）。
+- **边界**：`digest:start` / `digest:end` 日志事件零改（LOGGING 面）；消化轮机制 / 计数语义零改（编排面 = `docs/core/design/AGENT-LOOP.md` §9）。
+
 ## 7. 状态栏与用户介入提醒（attention 态）
 
 > 动机：Agent 跑长任务或弹审批 / 提问时，用户切去别处 → 需要反复切回来查看。本机制让「需要用户介入」在状态栏**可见**。
@@ -578,6 +593,8 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 | VSC webview 对位 | webview 渲染 / 消息协议 / 子标 | `docs/vsc/design/WEBVIEW*.md`——**非同机制**（端差异登记，不追赶） |
 
 ## 变更记录
+
+- 2026-09-20（**显示面消差批 · 批 4 条款落笔 · eng-designer**——承 `docs/batches/2026-09-20-display-parity-batch.md` §2.3 / §2.10.5）：§6.8 冻结头条补**图标三态互斥**（`⏸` / `⏹` / `✓`——M5）；新增 **§4.3**（provider 失败面：友好首行 + 脱敏 + 诊断两行 + Retry 询问——X8）与 **§6.9**（消化轮可见面：起跑三档 + 收尾行——X9）。
 
 - 2026-09-18（**失效表达清理批 · 本批直接执行 · 可 revert**——承用户 2026-09-18 裁定「修订式表达很害人，失效的表达一定要删掉」）：§6.8.3.8 边界「不改」行删 `⟦ev⟧cancelled` 坐标的「原记 `:167-179` 系…非机制变更」句。历史沿革 = 本档既有历史段 + 批档 `docs/batches/2026-09-18-stale-expression-purge.md`。
 

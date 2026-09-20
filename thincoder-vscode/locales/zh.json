@@ -40,6 +40,8 @@
   "tool.running": "执行中…",
   "tool.done": "完成",
   "tool.initial": "执行中…",
+  "tool.interrupted": "已中断",
+  "tool.truncated": "…（已截断于 64K——完整文本在历史中）",
   "status.thinking": "思考中",
   "status.plan": "规划",
   "status.stopped": "[已停止]",

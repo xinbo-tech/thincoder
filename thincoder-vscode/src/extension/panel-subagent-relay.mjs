@@ -68,6 +68,16 @@ function forgetQueued(panel, key) { _relayQueuedInfo.get(panel)?.delete(key) }
  *  （降级态：重发仅 `position`——WEBVIEW.md §5.2 降级形）。 */
 export function queuedInfoOf(panel, key) { return _relayQueuedInfo.get(panel)?.get(key) ?? null }
 
+/** X10（显示面消差批 §2.10.5 #4）：sync 块 ⏹ 门控**事实**——核 sync registry
+ *  `agent._syncChildAborts`（核写点 `subagent.mjs` `armSyncChildAbort`；键 = relay 前缀去尾 `role#id`）
+ *  **只读**消费（禁第二套 registry——§2.7 边界）。谓词与 ⏹ 路由（`panel-messages-turn.mjs`
+ *  cancelSubagent 面）及 CLI 门控逐字同源（`thincoder-cli/src/tui/subagent-panel.mjs:123`：
+ *  `state._agent?._syncChildAborts?.has(sub.key) === true`）。registry 不可达（无面板 agent /
+ *  headless / 面板 agent 未绑定窗口）⇒ false——**不伪造可中止**（可见但不可中止违 D-M7）。 */
+function syncLiveOf(panel, key) {
+  return panel?._agent?._syncChildAborts?.has(key) === true
+}
+
 /** 事件 token → webview 活动区状态消息（映射表：queued / cancelled / stopped / settled /
  *  done / turn / async+[model]）。识别返回 true；未知形态（非本面事件）返回 false。 */
 export function relaySubagentEventToken(panel, tok) {
@@ -89,7 +99,8 @@ export function relaySubagentEventToken(panel, tok) {
   if (rest.startsWith("[model]")) {
     const pool = _relayAsyncPending.get(panel)?.delete(path.head) === true
     forgetQueued(panel, path.head) // #118 R1：已启动 ⇒ 排队信息作废
-    return emit({ status: "started", pool, model: rest.slice("[model]".length) || null, startedAt: Date.now() })
+    // X10：sync 出生面事实（pool=false 且 registry 命中 ⇒ `syncLive:true`）——async 块恒 false。
+    return emit({ status: "started", pool, model: rest.slice("[model]".length) || null, startedAt: Date.now(), syncLive: !pool && syncLiveOf(panel, path.head) })
   }
   if (rest.startsWith("⟦ev⟧queued")) {
     // 载荷：⟦ev⟧queued \x1e kind \x1e position \x1e queued \x1e detail（subagent-scheduler 发射面）
@@ -113,7 +124,9 @@ export function relaySubagentEventToken(panel, tok) {
     return emit({ status: "cancelled", was: "queued" })
   }
   // #118 R1：终态分支同删缓存键（该键后世代的 queued 事件会重写缓存，陈旧项不得滞留）。
-  if (rest.startsWith("⟦ev⟧stopped")) { forgetQueued(panel, path.head); return emit({ status: "cancelled" }) } // 运行中取消 → 冻结 stopped
+  // X6 收口（#134 ②）：`⟦ev⟧stopped` 第 4 位 = **恒定字面**原因词 `stopped`（核发射 `⟦ev⟧stopped\x1e0\x1e0\x1estopped\x1e`——`agent-tools/async-settle.mjs:239` / `agent-tools/subagent.mjs:364` 同形，无第二取值）
+  // ⇒ 与冻结头 verb `stopped` 重复 ⇒ **零注记**（不传 `note`；CLI 标尺 = `subagent-blocks.mjs:263-273` 该分支不置 `lastError`）；注记面（done 停因 / interrupted）零影响。
+  if (rest.startsWith("⟦ev⟧stopped")) { forgetQueued(panel, path.head); return emit({ status: "cancelled" }) }
   if (rest.startsWith("⟦ev⟧settled")) { forgetQueued(panel, path.head); return emit({ status: "settled" }) }
   if (rest.startsWith("⟦ev⟧done")) { forgetQueued(panel, path.head); return emit({ status: "done" }) }
   if (rest.startsWith("⟦ev⟧turn")) {

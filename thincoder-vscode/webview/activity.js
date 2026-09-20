@@ -86,6 +86,10 @@ function buildBlock(name) {
     turn: null, maxTurns: 0, status: "running", stateWord: null,
     doneAt: null, frozen: false, error: null, queued: false,
     queueInfo: null, awaitingDigest: false,
+    // X6/X11（显示面消差批 §2.2 · 收口轮 #134 ②）：块头注记（`— <note>`——turn-cap /
+    // stopped-by-user / interrupted 共用**单一载体**，禁第二注记字段）；X10：sync 可中止事实
+    // （⏹ 门控支基底——与 async `pool` 并列；缺省 false = 无门控支——零回归）。
+    note: null, syncLive: false,
     // §18 C-8（child permission gate）：child ask 审批态（tool 名 ≤40 or null——
     // onSubagentApproval 驱动；块头 ⏸ + 态词；freeze 清态）
     approval: null,
@@ -188,14 +192,16 @@ export function takeoverBlock(name) {
 
 /** 终态原地折叠（freeze——2026-09-11 活动区回归：区内原地；本批起折叠后去向由调用方定：
  *  settled → awaitingDigest 驻留；其余终态 → 即时归档（C-1/C-3））: 终态翻 + class
- *  sub-live→sub-frozen + 折叠 open=false + ⏹ 移除 + 头词刷新——无 DOM move/无锚插。 */
-function freezeBlock(block, kind) {
+ *  sub-live→sub-frozen + 折叠 open=false + ⏹ 移除 + 头词刷新——无 DOM move/无锚插。
+ *  `opts.note`（X11——会话中止 `interrupted`）⇒ 写块级活态载体 `meta.note`（与 X6 同载体）。 */
+function freezeBlock(block, kind, opts = {}) {
   const meta = block._subMeta
   if (!meta || meta.frozen) return
   meta.status = kind === "stopped" ? "cancelled" : kind === "error" ? "error" : "done"
   meta.frozen = true
   meta.doneAt = meta.doneAt ?? Date.now()
   meta.approval = null // §18 C-8：终态清审批态（头词不悬空）
+  if (opts.note != null) meta.note = String(opts.note)
   block.classList.remove("sub-live")
   block.classList.add("sub-frozen")
   block.open = false
@@ -246,11 +252,13 @@ function stubAllowed(m) {
 }
 
 /** 终态补块（never-born / tombstone 终态防御——§5.3「终态必现」）：补**已折叠**桩（立即折叠 +
- *  立即归档——§14 C-5②）+ 记 `late-terminal-stub`；入册同出生路径（后续消息走幂等守卫）。 */
+ *  立即归档——§14 C-5②）+ 记 `late-terminal-stub`；入册同出生路径（后续消息走幂等守卫）。
+ *  注记随桩（X6/X11：与 error / turn 同规——载荷携 `note` 即写 `meta.note`，头词不丢）。 */
 function stubTerminalBlock(name, m, kind) {
   const block = buildBlock(name)
   const meta = block._subMeta
   if (kind === "error" && m.error) meta.error = m.error
+  if (m.note != null) meta.note = String(m.note)
   if (m.maxTurns != null) meta.maxTurns = m.maxTurns
   if (m.turn != null) meta.turn = m.turn
   S._subBlocks.set(name, block)
@@ -309,6 +317,8 @@ export function applySubagentStatus(m) {
       meta.queueInfo = null // C-11②：started 后清排队信息
       // pool 标记语义: async 池条目 started 携 pool:true；同步 spawn 不带 → false。
       meta.pool = m.pool === true
+      // X10（§2.10.5 #4）：sync 可中止事实（宿主只读核 registry 判定——载荷缺省/false ⇒ 零门控支）。
+      meta.syncLive = m.syncLive === true
       if (m.startedAt) meta.startedAt = m.startedAt
       if (m.model) meta.model = m.model
       if (m.maxTurns != null) meta.maxTurns = m.maxTurns
@@ -362,6 +372,8 @@ export function applySubagentStatus(m) {
     }
     const meta = block._subMeta
     if (kind === "error" && m.error) meta.error = m.error
+    // X6（§2.2）：注记入块级活态载体（与 X11 共用——两条刷新路径共读，无回落通道）。
+    if (m.note != null) meta.note = String(m.note)
     if (m.maxTurns != null) meta.maxTurns = m.maxTurns
     if (m.turn != null) meta.turn = m.turn
     freezeBlock(block, kind)
@@ -412,11 +424,13 @@ export function applySubagentApproval(m) {
 /** 会话退出 freeze 兜底（suspension active:false + freeze:true——§14 C-8——panels 直接
  *  消费）：区**全体**归档——live → 折叠；awaitingDigest → 归档；已在流者不动（尾追）。
  *  host 既定注释语义「补发 done 冻结：随会话退出折叠进流」的兑现；CLI freezeAllSubTasks
- *  中断语义：不留悬空块（abort 同路径）。 */
-export function freezeLiveBlocks() {
+ *  中断语义：不留悬空块（abort 同路径）。
+ *  X11（§2.2）：`interrupted`（会话中止真值源）⇒ 未冻结块折叠时补 `— interrupted` 注记
+ *  （`meta.note`——与 X6 同载体）；已冻结（含 awaitingDigest）块不回头改写。 */
+export function freezeLiveBlocks(interrupted = false) {
   for (const block of [...S._subBlocks.values()]) {
     if (!block?._subMeta) continue
-    if (!block._subMeta.frozen) freezeBlock(block, "done")
+    if (!block._subMeta.frozen) freezeBlock(block, "done", interrupted ? { note: "interrupted" } : undefined)
     if (block.parentNode === ctx.activityEl) archiveBlock(block)
   }
 }

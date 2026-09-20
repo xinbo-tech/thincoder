@@ -73,7 +73,23 @@ export async function handleCancelSubagent(panel, msg) {
   const entry = lines?.history?._asyncSubagents?.get(id) ?? lines?.history?._asyncAdvisors?.get(id)
   // advisor round 2 #6：role 交叉校验——陈旧按钮命中同 id 异 role 的极端情况防御
   // （webview ⏹ 携带 block 的 role——消息契约不设死参数）
-  if (!lines || !entry || entry.role !== msg.role) {
+  if (entry && entry.role !== msg.role) {
+    console.warn(`[chat-panel] cancelSubagent: no live pool entry for id ${msg.id} role ${msg.role}`)
+    return
+  }
+  // X10（显示面消差批 §2.2）：sync 子代理定向中止——池外目标，核 sync registry
+  // `panel._agent._syncChildAborts`（写点 `subagent.mjs` `armSyncChildAbort`；键 = `role#id`）
+  // **只读**消费 + 核单源执行器 `cancelSyncChild`（stopped 旗标 + 条目 ctrl.abort ⇒ childRun
+  // opts.signal 覆写链——AbortError 解绕 ⇒ catch 折叠 stopped partial 报告 + 核发 ⟦ev⟧stopped
+  // ⇒ 块冻结 stopped）。谓词与门控载荷产者（`panel-subagent-relay.mjs` `syncLiveOf`）同源。
+  const syncKey = `${msg.role}#${id}`
+  if (panel._agent?._syncChildAborts?.has(syncKey)) {
+    const { cancelSyncChild } = await import("@thincoder/core/agent-tools/subagent-async.mjs")
+    const r = cancelSyncChild(panel._agent, syncKey)
+    if (r.status === "error") console.warn(`[chat-panel] cancelSubagent: ${r.error}`)
+    return
+  }
+  if (!entry) {
     console.warn(`[chat-panel] cancelSubagent: no live pool entry for id ${msg.id} role ${msg.role}`)
     return
   }

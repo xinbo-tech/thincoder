@@ -418,6 +418,9 @@ test("⑬ W15 事件中继：queued/cancelled/stopped/turn/done/settled/async+[m
   assert.ok(typeof started.startedAt === "number", "startedAt 随行（elapsed 不丢）")
   assert.deepEqual(turn, { type: "subagent", role: "eng-coder", id: 5, status: "turn", turn: 7, maxTurns: 100 })
   assert.deepEqual(cancelled, { type: "subagent", role: "eng-coder", id: 5, status: "cancelled", was: "queued" })
+  // X6 收口（2026-09-20 · 父侧裁定 #134 ②）：`⟦ev⟧stopped` 第 4 位（原因词位——核发射恒字面
+  // "stopped"）与冻结头 verb 重复 ⇒ **零注记**（CLI 标尺：`subagent-blocks.mjs:263-273` 同分支不置
+  // `lastError`）；有值 / 空位两形归一为同一载荷。
   assert.deepEqual(stopped, { type: "subagent", role: "eng-coder", id: 5, status: "cancelled" })
   assert.deepEqual(settled, { type: "subagent", role: "eng-coder", id: 5, status: "settled" })
   assert.deepEqual(done, { type: "subagent", role: "eng-coder", id: 5, status: "done" })

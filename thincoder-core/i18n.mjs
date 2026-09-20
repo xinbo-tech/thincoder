@@ -35,6 +35,10 @@ export const CORE_MESSAGES = Object.freeze({
   "digest.done": { en: "Digested ${n} background report(s) (${seconds}s)", zh: "已消化 ${n} 份后台报告（${seconds}s）" },
   "digest.aborted": { en: "Digestion interrupted (${seconds}s)", zh: "消化中断（${seconds}s）" },
   "digest.turnLabel": { en: "[auto-turn: digesting finished subagent reports…]", zh: "自动回合：消化已完成的子代理报告…" },
+  // M4（2026-09-20 端差·显示面消差批）：起跑标签三档（en = CLI `suspension-drive.mjs:175-176`
+  // 逐字；zh = 与上方既有档同式译法）——VSC 本地档不重复定义（单一权威容器）。
+  "digest.turnLabelAsk": { en: "[auto-turn: answering a subagent's in-flight message…]", zh: "自动回合：答复子代理的在飞提问…" },
+  "digest.turnLabelAuto": { en: "[auto-turn: continuing background work…]", zh: "自动回合：继续后台推进…" },
   "digest.capAuto": { en: "[auto-turn: continuing past turn cap…]", zh: "自动回合：越过轮次上限，继续推进…" },
   "digest.capStop": { en: "[auto-turn stopped at ${turns} turns — partial digest; finished reports stay in history]", zh: "自动回合在 ${turns} 轮处停止——部分消化；已完成的报告保留在历史中" },
   // ── 限流 / 供应商状态行 ──

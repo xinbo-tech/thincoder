@@ -148,7 +148,9 @@ export function reassertLiveChildren(panel) {
     if (!(map instanceof Map)) continue
     for (const e of map.values()) {
       if (e.status === "running") {
-        postSubagentEvent(panel, { type: "subagent", status: "started", role: e.role, id: e.id, pool: true, model: e.model ?? null, startedAt: e.startedAt })
+        // X10（显示面消差批 §2.2 · 同形面）：`syncLive` 随载荷——投影只枚举池条目（async）
+        // ⇒ 恒 false（sync 子代理不在池内，无第二来源）；字段形态与 relay 出生面同形（D2 单表）。
+        postSubagentEvent(panel, { type: "subagent", status: "started", role: e.role, id: e.id, pool: true, model: e.model ?? null, startedAt: e.startedAt, syncLive: false })
         n++
       } else if (e.status === "queued") {
         // #118 R2（2026-09-20 一致性同步批）：载荷与 live 中继面**同形**——四项（`position` /
@@ -307,12 +309,16 @@ export async function suspensionSession(panel, entry) {
         const d0 = Date.now()
         logEvent("digest:start", { pendingN, ...(upstream ? { upstream: true } : {}) })
         // B6（WEBVIEW（VSC 仓）§7.4）：消化轮起跑的可见指示——起跑到首 token 可静默数十秒~分钟，
-        // CLI 有 `[auto-turn: digesting …]` 零延迟行，本端此前只有文件日志。post 早于 runTurn
+        // CLI 有 `[auto-turn: …]` 零延迟行，本端此前只有文件日志。post 早于 runTurn
         // （可见时刻不晚于回合开跑）；起止两态 + ok 旗标（异常不留"仍在消化"假象，try/finally
         // 保 end 必发）；直投（同 compress 先例——不经任务可见性 outbox）。
-        // post 两态均限 `pendingN > 0`（§6.27.12.12 ⑥ 边界）：ask-only 轮不引入 digest 可见面
-        // （`n = 0` 形态不引入；孤立 end 行同禁）——可见性由既有 turnState / loading 面承载。
-        if (pendingN > 0) panel._panel?.webview.postMessage({ type: "digest", status: "start", n: pendingN })
+        // M4（显示面消差批 §2.1 · 2026-09-20）：**起跑即发**（`n` 可 0）——ask-only 轮亦有可见面
+        // （`AGENT-LOOP-SUBAGENT.md` §6.27.12.12 ⑥ 边界行随本批收正）；webview 按 `tier` 分档
+        // （ask 轮只打标签行、不建计数元素，end 零动作）。`tier` 判据与 CLI 三档同源
+        // （`suspension-drive.mjs:174-176`）：AUTO 档（`panel._autoApprove`——端侧既有 AUTO 载体）/
+        // 手动+未 drain ask（`upstream`——核既有谓词）/ 手动。
+        const tier = panel._autoApprove === true ? "auto" : (upstream ? "ask" : "digest")
+        panel._panel?.webview.postMessage({ type: "digest", status: "start", n: pendingN, tier })
         let ok = true
         try {
           await entry.runTurn({ autoTurn: true, text: "", upstreamTurn: upstream })
@@ -324,7 +330,7 @@ export async function suspensionSession(panel, entry) {
           if (e?.name === "AbortError") { logEvent("digest:stopped", { pendingN }); continue }
           throw e
         } finally {
-          if (pendingN > 0) panel._panel?.webview.postMessage({ type: "digest", status: "end", ok, ms: Date.now() - d0 })
+          panel._panel?.webview.postMessage({ type: "digest", status: "end", ok, ms: Date.now() - d0 })
         }
         const left = history._pendingAsyncResults?.length ?? 0 // D2 单容器
         logEvent("digest:end", { pendingN: left, ms: Date.now() - d0, ...(upstream ? { upstream: true } : {}) })
@@ -385,7 +391,8 @@ export async function suspensionSession(panel, entry) {
     panel._suspWake = null
     // 补发 done 冻结：区全体随会话退出归档落流（WEBVIEW.md §14 C-8——live 折叠、
     // awaitingDigest 归档；abort 同路径——CLI freezeAllSubTasks 中断语义：不留悬空块）。
-    postSuspensionEnd(panel, { freeze: true })
+    // X11：中止事实随载荷（`aborted` = 本 finally 判定——自然退出 false）。
+    postSuspensionEnd(panel, { freeze: true, interrupted: aborted })
     panel._refreshStatus?.()
       // 排队输入兜底（2026-09-02 code review round2 #2-VS Code 偏差修复 + INPUT-LOCK 单槽化
       // 2026-09-09）：会话退出时 pendingInput 单槽残余不得静默丢弃——输入框已清空 + 用户气
@@ -413,8 +420,11 @@ function postSuspension(panel, susp) {
 }
 
 /** 挂起退出通知：freeze = 补发 done 冻结（驻留面板的 awaiting-digest 块折叠进流）。
- *  C2：先广播 idle（忙态收敛——Stop 派生/路由守卫以 idle 收尾）再发 suspension 终态。 */
-function postSuspensionEnd(panel, { freeze }) {
+ *  C2：先广播 idle（忙态收敛——Stop 派生/路由守卫以 idle 收尾）再发 suspension 终态。
+ *  X11（显示面消差批 §2.2）：`interrupted` = 会话中止事实（真值源 = 本驱动 finally 的
+ *  `aborted` 判定——与 CLI `subagent-freeze.mjs:220`「未 done ∧ 非 Ready ⇒ interrupted」
+ *  同取向）⇒ webview 对**未冻结**块补 `— interrupted` 注记；自然退出 false（不伪造）。 */
+function postSuspensionEnd(panel, { freeze, interrupted = false }) {
   panel._publishTurnState?.("idle")
-  panel._panel?.webview.postMessage({ type: "suspension", active: false, freeze })
+  panel._panel?.webview.postMessage({ type: "suspension", active: false, freeze, interrupted: interrupted === true })
 }

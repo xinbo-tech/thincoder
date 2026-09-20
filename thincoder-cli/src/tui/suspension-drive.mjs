@@ -25,6 +25,8 @@ import { C } from "./ansi.mjs"
 import { getAsyncPool, parkAsyncPending, releaseSettledEntry } from "@thincoder/core/agent-tools/async-settle.mjs"
 // F-UC7（AGENT-LOOP-SUBAGENT.md §6.27.12——2026-09-19 批）：上行 ask 开轮谓词单点（核导出）
 import { upstreamWaiting } from "@thincoder/core/agent-tools/parent-channel.mjs"
+// X9（2026-09-20 端差·显示面消差批）：消化收尾文案单源 = 核 i18n 容器（禁第三份字面）
+import { t } from "@thincoder/core/i18n.mjs"
 // 批 4 CLI-ASYNC-DISCARD（AGENT-LOOP-SUBAGENT.md §6.20）：中止分支「只清已死」收尾单点
 import { discardAbortedPool, discardAbortedAdvisors } from "@thincoder/core/agent-tools/async-discard.mjs"
 
@@ -180,8 +182,14 @@ async function digestTurn(ctx, upstream = false) {
   const d0 = Date.now()
   const pend0 = pendingFamilyCount(agent)
   logEvent("digest:start", { pendingN: pend0, ...(upstream ? { upstream: true } : {}) })
-  await runAgentTurn(digestCtx, "", { autoTurn: true, upstreamTurn: upstream, skipSession: true })
+  const outcome = await runAgentTurn(digestCtx, "", { autoTurn: true, upstreamTurn: upstream, skipSession: true })
   logEvent("digest:end", { pendingN: pendingFamilyCount(agent), ms: Date.now() - d0, ...(upstream ? { upstream: true } : {}) })
+  // X9（2026-09-20 端差·显示面消差批）：轮尾**可见**收尾行（修前只有 `digest:end` 日志事件——
+  // 用户不可见；对位 VSC `webview/chat.js:394-401`）。计数口径 = **起跑数** `pend0`
+  // （与 VSC `suspension.mjs:302/:314` 同源）；文案单源 = 核 i18n `digest.done` /
+  // `digest.aborted`；终态 ≠ ok（中止/失败）⇒ aborted 形态（VSC ok 旗标同口径）。
+  const seconds = ((Date.now() - d0) / 1000).toFixed(1)
+  pushLine(t(outcome === "ok" ? "digest.done" : "digest.aborted", { n: pend0, seconds }), C.dim)
 }
 
 /**

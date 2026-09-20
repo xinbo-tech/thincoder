@@ -45,7 +45,7 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 ├── thincoder-core/                 ← 核包（@thincoder/core——共享机制实现 + 共享提示词与工具描述）
 │   ├── agent.mjs                   主循环（createAgent / runAgent）——见 AGENT-LOOP
 │   ├── agent/                      主循环分段（dispatch / setup / run-stages / completion / record-results /
-│   │                               suspension / spawn-child / helpers / post-turn / relay-prefix / setup-reminders）
+│   │                               suspension / spawn-child / child-marks / helpers / post-turn / relay-prefix / setup-reminders）
 │   ├── agent-tools/                元工具实现（task / plan / goal / verify / timer / skill / eng / settings /
 │   │                               recent-changes / read-history / batch-segment / consult / escalate /
 │   │                               advisor 族 / subagent 族 / async-settle）
@@ -183,6 +183,8 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 | VSC 源档 §1 设计原则（与 core §2 重叠者） · §2 整体架构图 · 文首未决 / 待办状态行 · 变更记录 | 重叠面 / 时点面 / 流水 | **不并**——VSC 专属取向已并入 §4.1；待办状态行与变更流水 = 时点材料（(d) 类） |
 
 ## 变更记录
+
+- 2026-09-20（**显示面消差批 · 批 4 收口轮 · eng-designer**——承 `docs/batches/2026-09-20-display-parity-batch.md` §2.11 未落面 / §5.13 批 2 实施记录）：§3 模块地图 `thincoder-core/agent/` 行补 **`child-marks.mjs`**（X6 标记常量下沉零依赖叶——先例 `relay-prefix.mjs`；`spawn-child.mjs:33` 再导出保 import 面；实读 **24 行**）。
 
 - 2026-09-20（**一致性同步批 · 设计评审修正轮 1 · eng-designer**——评审 id=13 发现 #1）：§3.1 测试面行 + §4.1「验证层」行**收正为单入口形态**（VSC = `node thincoder-vscode/test/run.mjs` + 显式清单 `thincoder-vscode/test/files.mjs`；`test:full` / `slow-gate 分层` 词面删除）。
   同形判据 = 单一权威 `docs/core/design/TESTING.md` §10（每包一条 `test`）+ §1.2 入口表；两行坐标 as-of 2026-09-20。

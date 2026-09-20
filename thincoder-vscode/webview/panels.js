@@ -104,7 +104,9 @@ export function handleSuspensionMessage(m) {
     S._suspCounts = { running: m.running ?? 0, queued: m.queued ?? 0, pending: m.pending ?? 0, done: m.done ?? 0 }
   } else {
     S._suspCounts = null
-    if (m.freeze) freezeLiveBlocks()
+    // X11（显示面消差批 §2.2）：`interrupted` = 会话中止事实（宿主 finally 判定）⇒ 未冻结块
+    // 补 `— interrupted` 注记；缺省/false ⇒ 自然退出零注记（不伪造）。
+    if (m.freeze) freezeLiveBlocks(m.interrupted === true)
   }
   renderStatusBar()
   // Re-derive send/abort button visibility from the current loading state —

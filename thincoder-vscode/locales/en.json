@@ -40,6 +40,8 @@
   "tool.running": "running…",
   "tool.done": "done",
   "tool.initial": "Running…",
+  "tool.interrupted": "interrupted",
+  "tool.truncated": "… (truncated at 64K — full text in history)",
   "status.thinking": "Thinking",
   "status.plan": "PLAN",
   "status.stopped": "[stopped]",

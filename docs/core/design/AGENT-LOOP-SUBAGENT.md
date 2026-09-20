@@ -59,12 +59,14 @@
 **sync 定向中止（SYNC-CANCEL）**：
 
 - **面**：CLI TUI **顶层 sync 块**运行中 ⏹ 可点——定向中止（只停子代理，父回合继续拿 stopped 报告）；嵌套层无独立 ⏹ 面；
-  VSC webview 同步 spawn 块无 ⏹（无池条目 ⇒ cancel 路由定位不到）；`action:"cancel"` 只对 async 池 / advisor 池，sync 由 ⏹ → `cancelSyncChild` 直连。
+  VSC webview 同步 spawn 块 ⏹ = 按 `syncLive` 门控（宿主只读采样核 `_syncChildAborts` registry——X10 甲案；
+  **判据 / 门控 / 路由三条已落，产者侧序缺陷致运行期未达 ⇒ 降级登记**——见 `WEBVIEW.md` §5.2 与批档 `docs/batches/2026-09-20-display-parity-batch.md` §5.18-1）——
+  点击 ⇒ 宿主 sync 分支（`thincoder-vscode/src/extension/panel-messages-turn.mjs` `handleCancelSubagent`）经核 `cancelSyncChild` 单源直连（与 CLI 同法）；`action:"cancel"` 只对 async 池 / advisor 池。
 - **信号链**：`armSyncChildAbort` 建**自属** `AbortController` 并链到基信号 `buildChildSignal`（`_sessionSignal ?? ctx.signal`）；
   注册 `parent._syncChildAborts`（Map，key = relayPrefix 去尾 `role#N`）——try / finally **三路径注销**。
 - **catch 三分支**（纯函数 `classifySyncAbort(ctxSignal, baseSignal, ctrlSignal, err)`）：① base / ctx aborted → 整回合停，rethrow；
   ② `AbortError` ∧ ctrl aborted ∧ 非整回合停 → **折叠**（`mergeChildMutations` + stopped partial 报告 + `⟦ev⟧stopped` 直发 + 正常 return）；③ 其他错误原样。
-  `STOPPED_MARK`（`spawn-child.mjs`，与 `TURN_CAP_MARK` 同族）= 折叠报告公共锚。
+  `STOPPED_MARK`（定义 = `thincoder-core/agent/child-marks.mjs`——`spawn-child.mjs` 再导出；与 `TURN_CAP_MARK` 同族）= 折叠报告公共锚。
 - **TUI 面板门控**：按 `_syncChildAborts` 存在性 + queued 臂判 ⏹ 可见；⏹ 顺带 deny 该 child 的 pending 权限 / continue 模态。
 - **日志面**（2026-09-17 af 批二轮 fix · F-12）：⏹ 定向中止在 `cancelSyncChild` **提交点**（`entry.stopped = true` + `ctrl.abort({ abortTrigger:"cancel", abortDetail:"sync-child-cancel" })` 之后、`return { status:"cancelled" }` 之前）**直记一条**
   `logEvent("ev:cancelled", { id: k })`（`k` = registry 键 `role#N`——与异步取消族**同事件名 / 同字段形**；口径 = `docs/core/design/LOGGING.md` §6.2）；error 两分支（`stopped` 后再调 / registry miss）**零记录**（无取消发生）。
@@ -1861,6 +1863,10 @@ escalate reports: summarize the merged post-op work — further changes need a u
 - **端 overlay 字面 = 逐字搬迁既有端述句**（零新撰 / 零改写——落点 = §6.27.12.5 L；四族枚举短语的处置见 ④ Δ 登记）。
 
 ## 变更记录
+
+- 2026-09-20（**显示面消差批 · 批 4 收口轮 · eng-designer**——承 `docs/batches/2026-09-20-display-parity-batch.md` §2.11 未落面 / §5.13 / §5.18 批 2 实施记录）：
+  §6.7.2 —— ① 「VSC 同步 spawn 块无 ⏹」句收正为 **X10 现态**（`syncLive` 门控 + 宿主 sync 分支经核 `cancelSyncChild` 单源；产者侧序缺陷 ⇒ 降级登记）；
+  ② `STOPPED_MARK` 定义指针收正为下沉零依赖叶 `thincoder-core/agent/child-marks.mjs`（`spawn-child.mjs` 再导出）。
 
 - 2026-09-20（**显示面消差批 · 批 4 条款落笔 · eng-designer**——承 `docs/batches/2026-09-20-display-parity-batch.md` §2.10.9 附（第三档落点））：
   §6.27.12.12 ⑥ 边界首条改写为 **webview digest 可见面现态**（ask-only 轮同 post `tier: "ask"` 起跑消息——建标签行、不建计数元素；`digest.turnLabelAsk` / `digest.turnLabelAuto` 两键入核 i18n 容器）；元素级契约挂 `docs/vsc/design/WEBVIEW.md` §5.1 / `docs/vsc/design/WEBVIEW-PROTOCOL.md` §5（D2）。

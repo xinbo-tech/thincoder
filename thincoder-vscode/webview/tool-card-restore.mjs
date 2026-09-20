@@ -55,7 +55,12 @@ export function buildFinishedToolCard(tc) {
   } catch { pretty = null }
   const parts = []
   if (pretty !== null) parts.push(pretty)
-  if (result) parts.push(capText(result))
+  // X5（显示面消差批 §2.2·刷新路径）：截断提示 = **旗标驱动优先**（宿主传输切片点 `panel-session.mjs`
+  // sendHistoryPage 对 >64K 嵌套结果立 `resultTruncated`——与活卡同形）；无旗标（旧载荷 / 夹具直
+  // 喂）回落长度维 `capText`（`<= max` 边界洞在生产不可达——切片点恒立旗）。同标记字面 = `tool.truncated`。
+  if (result) parts.push(tc.resultTruncated === true
+    ? result + "\n" + t("tool.truncated")
+    : capText(result, undefined, "\n" + t("tool.truncated")))
   b.textContent = parts.join("\n")
 
   h.addEventListener("click", () => {

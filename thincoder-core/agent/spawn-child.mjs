@@ -26,16 +26,11 @@ export { RELAY_PREFIX_RE, parseRelayPath, relayPrefixOf } from "./relay-prefix.m
 export const EVENT_SENTINEL = "⟦ev⟧"
 const RS = "\x1e"
 
-/** turn-cap 降级文案的公共锚点：subagent/escalate 的 onDeclined 文案必含此子串，
- *  消费端（TUI tool-events onToolResult）用 includes() 检测"工作可能不完整"语义。
- *  单源化（2026-08-30 评审）：文案演进只改这里，消除文案与检测正则的漂移面。 */
-export const TURN_CAP_MARK = "stopped: turn cap reached"
-
-/** SYNC-CANCEL（L52）：sync spawn ⏹ 定向中止折叠报告的公共锚点——sync 折叠文案必含
- *  此子串（buildSyncStoppedReport）；消费端（TUI tool-events onToolResult）用
- *  includes() 检测"用户定向中止——工作可能不完整"语义（块冻结标 stopped 而非 done——
- *  R6）。与 TURN_CAP_MARK 同族单源纪律。 */
-export const STOPPED_MARK = "stopped by user"
+// 报告文本锚点（turn-cap / stopped-by-user）2026-09-20 下沉零依赖叶 `child-marks.mjs`（端壳
+// 需**静态**导入锚点做块头注记判定，而本档静态链经核 agent 栈可达 `node:sqlite` ⇒ 端壳静态
+// 闭包禁达，W8 契约②；先例 = `relay-prefix.mjs` 同因下沉）。本行再导出 ⇒ 既有 import 面
+// （核 agent-tools 族 / CLI `tool-events.mjs:31`）零改。
+export { TURN_CAP_MARK, STOPPED_MARK } from "./child-marks.mjs"
 
 /**
  * §18 D-E3 工程子代理内部 spawn 机械门（AGENT-LOOP.md §18 D-E2 round5 #2 后备 +

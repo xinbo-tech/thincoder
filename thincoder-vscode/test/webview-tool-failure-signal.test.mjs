@@ -11,6 +11,10 @@
  *
  * 手法（happy-dom——`history-restore.test.mjs` 模式）：installChatFixture + 真 ui.js 活卡
  * 路径（`addTool` → `finishTool`）+ 真 `tool-card-restore.mjs` 恢复卡。判定对象 = 卡面三信号。
+ *
+ * 2026-09-20 显示面消差批（X7 · 批档 `2026-09-20-display-parity-batch.md` §2.2）：bash 摘要改取
+ * CLI 前缀形（`bash: <末行>`——`tool-summary.js` 字面逐字承 CLI）⇒ 本档 **12 处**摘要字面随改
+ * （**判据与语义零改**：末行输出 + 状态位、`(empty)` 不入内容、成功面不拼 `(exit code 0)` 不变）。
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
@@ -84,19 +88,19 @@ test("W16-1 非零退出（空输出，正常）：错误 + 红 + 保持 open + 
   const wv = await loadUi()
   const c = liveCard(wv, "[stdout]:\n(empty)\n\n(exit code 1)")
   assertFailed(c, wv.t, "W16-1")
-  assert.equal(c.summary, "→ (exit code 1)", "摘要含退出状态（无输出面）")
+  assert.equal(c.summary, "→ bash: (exit code 1)", "摘要含退出状态（无输出面）")
 
   // 裸状态行形态（无 `[stdout]:` 包裹——`execute` 无输出 + 非零退出的结果恰为单行）：状态词勿重复
   const bare = liveCard(wv, "(exit code 1)")
   assertFailed(bare, wv.t, "W16-1 裸状态行")
-  assert.equal(bare.summary, "→ (exit code 1)", "裸状态行 ⇒ 只出状态（不重复拼）")
+  assert.equal(bare.summary, "→ bash: (exit code 1)", "裸状态行 ⇒ 只出状态（不重复拼）")
 })
 
 test("W16-2 非零退出（有输出，正常）：摘要 = 末行输出 + 退出状态", async () => {
   const wv = await loadUi()
   const c = liveCard(wv, "[stdout]:\nboom\n\n(exit code 2)")
   assertFailed(c, wv.t, "W16-2")
-  assert.equal(c.summary, "→ boom (exit code 2)", "末行输出 + 退出状态")
+  assert.equal(c.summary, "→ bash: boom (exit code 2)", "末行输出 + 退出状态")
 })
 
 // ─── W16-3 被杀（含用户中断）────────────────────────────────────────────────
@@ -106,7 +110,7 @@ test("W16-3 被杀（错误）：killed 两值同判失败（含用户中断—�
   for (const status of ["(killed: timeout)", "(killed: user interrupted)"]) {
     const c = liveCard(wv, `[stdout]:\n(empty)\n\n${status}`)
     assertFailed(c, wv.t, `W16-3 ${status}`)
-    assert.equal(c.summary, `→ ${status}`, `摘要含 killed（${status}）`)
+    assert.equal(c.summary, `→ bash: ${status}`, `摘要含 killed（${status}）`)
   }
 })
 
@@ -116,14 +120,14 @@ test("W16-4 成功面零回归（正常·回归锚）：退出 0 ⇒ 绿 + 折�
   const wv = await loadUi()
   const c = liveCard(wv, "[stdout]:\nok\n\n(exit code 0)")
   assertSucceeded(c, wv.t, "W16-4")
-  assert.equal(c.summary, "→ ok", "成功面摘要 = 末行输出（不拼 (exit code 0)）")
+  assert.equal(c.summary, "→ bash: ok", "成功面摘要 = 末行输出（不拼 (exit code 0)）")
 })
 
 test("W16-5 反例面（边界·锁定判据精度）：正文提及 (exit code 1) 非独占行 ⇒ 不判失败", async () => {
   const wv = await loadUi()
   const c = liveCard(wv, "see (exit code 1) in log")
   assertSucceeded(c, wv.t, "W16-5")
-  assert.equal(c.summary, "→ see (exit code 1) in log", "摘要照旧（零误报面）")
+  assert.equal(c.summary, "→ bash: see (exit code 1) in log", "摘要照旧（零误报面）")
 })
 
 // ─── W16-6 恢复卡同判据（正常）─────────────────────────────────────────────
@@ -159,7 +163,7 @@ test("W16-7 活卡 spawn 失败（正常·先红——真产者）：宿主真�
   const wv = await loadUi()
   const c = liveCard(wv, await hostSpawnFailure())
   assertFailed(c, wv.t, "W16-7")
-  assert.equal(c.summary, "→ (spawn failed)", "摘要 = 状态位本体（spawn 形态天然无输出体）")
+  assert.equal(c.summary, "→ bash: (spawn failed)", "摘要 = 状态位本体（spawn 形态天然无输出体）")
 })
 
 test("W16-8 恢复卡同判据（正常·先红——真产者）：同真产形 ⇒ tool.error + 红 + 展开", async () => {
@@ -179,15 +183,15 @@ test("W16-9 反例面（边界·恒绿）：正文提及 (spawn failed) 非独�
   const wv = await loadUi()
   const c = liveCard(wv, "see (spawn failed) in log")
   assertSucceeded(c, wv.t, "W16-9")
-  assert.equal(c.summary, "→ see (spawn failed) in log", "摘要照旧（零误报面）")
+  assert.equal(c.summary, "→ bash: see (spawn failed) in log", "摘要照旧（零误报面）")
 })
 
 test("W16-10 锁否决面（边界·恒绿·三形）：无状态位措辞形 / 非数字退出码槽 / 破折号超时形 ⇒ 均不判失败", async () => {
   const wv = await loadUi()
   for (const [result, summary, label] of [
-    ["Command failed: spawn C:\\Windows\\system32\\cmd.exe ENOENT\n[stdout]:\n(empty)", "→ (empty)", "（乙）所认措辞面（无状态位）"],
-    ["(exit code ENOENT)", "→ (exit code ENOENT)", "收正前宿主 spawn 历史形"],
-    ["(killed — timeout 400ms)", "→ (killed — timeout 400ms)", "收正前宿主超时历史形"],
+    ["Command failed: spawn C:\\Windows\\system32\\cmd.exe ENOENT\n[stdout]:\n(empty)", "→ bash: (empty)", "（乙）所认措辞面（无状态位）"],
+    ["(exit code ENOENT)", "→ bash: (exit code ENOENT)", "收正前宿主 spawn 历史形"],
+    ["(killed — timeout 400ms)", "→ bash: (killed — timeout 400ms)", "收正前宿主超时历史形"],
   ]) {
     const c = liveCard(wv, result)
     assertSucceeded(c, wv.t, `W16-10 ${label}`)
@@ -203,5 +207,5 @@ test("W16-11 活卡超时（正常·先红——真产者）：宿主超时真�
   const result = await bashTool.execute({ command: 'node -e "setTimeout(()=>{},5000)"', timeout: 400 }, { cwd: tmpdir() })
   const c = liveCard(wv, result)
   assertFailed(c, wv.t, "W16-11")
-  assert.equal(c.summary, "→ (killed: timeout 400ms)", "摘要含超时状态位（冒号形）")
+  assert.equal(c.summary, "→ bash: (killed: timeout 400ms)", "摘要含超时状态位（冒号形）")
 })
