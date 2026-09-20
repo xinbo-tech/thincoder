@@ -2,6 +2,7 @@
 
 > 板块 = **发布流程**——`thincoder` CLI 发布到 npm 的完整流程（设计与测试细节）。
 > **配对需求档 = `docs/core/requirements/RELEASE.md`（统一面）**——本板块两档**跨部分成对**：设计档判 CLI 面（npm 发布链结构性只属 CLI 产品，P2；冲突序 P5「P2 优先于 P1」），需求档判统一面（发布流程是跨产品的板块主题）。**不是漏档**，是层归属不对称（对照读本板块时须知）。
+> **三发布单元与顺序**：核（`@thincoder/core`）→ CLI → VSC（核先发硬约束——`CORE-UNIFICATION.md` §2.6；核发布面需求 = 需求档 §2 F5 / §6；核发布机制 = `CORE-UNIFICATION.md` §2.6.1——本档不重述）。
 > 对位档 = `thincoder-vscode/docs/_archive/design/RELEASE.md`（**已归档**——VSC 产品树设计档降格后整体入 `_archive/design/`，参照历史、保留 ≠ 维护；vsix / Marketplace / Open VSX 链的踩坑与门禁归该档。as-of 2026-09-20 实核）。
 > 建档：2026-09-15（**B 式迁移轮 · 第 2 批**——`thincoder-cli/docs/design/RELEASE.md` 内容重建入基准层；旧档原地一字不改、留作参照历史）。
 > 本档坐标与行数 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
@@ -127,6 +128,7 @@ vsce / ovsx 的坑（`vsce publish patch` 自动再 bump、Open VSX 异步激活
 
 ## 变更记录
 
+- 2026-09-20（**核发布面并入 · 主 agent**——用户 23:14「整合 CLI/VSC 发布计划文件 + 把核心发布加进去」）：档头补**三发布单元与顺序**（核 → CLI → VSC · 核先发硬约束 `CORE-UNIFICATION.md` §2.6）；核发布面需求 = 需求档 §2 F5 / §6，机制 = §2.6.1——本档不重述（D2）。CLI 链零改（本档口径不变）。
 - 2026-09-20（**一致性同步批 · 设计评审修正轮 1 · eng-designer**——评审 id=13 发现 #7 / #12）：
   ① 补本轮变更条（D7）——§2 两行死入口名（`run-full.mjs` / `run-integration.mjs` → 单入口 `thincoder-cli/test/run.mjs`）与标题「三步一链」→「两步一链」收正 = 本批条目 #116 落地（同族发现 F-4 · 就地修）。变更记录 = **时点记录面**：2026-09-15 建档条的「三环」叙辞为该轮谱系，正文已按 v2 单入口收正（§2 · §4）。
   ② 三处「VSC 侧未迁」指针收正（§2 对位档 · §6.3 · §8.2）：原址 `thincoder-vscode/docs/design/RELEASE.md` 已不在盘（该产品树设计档整体入 `_archive/design/`）⇒ 改指归档址 + 标 as-of 2026-09-20——与本批 `docs/core/design/ARCHITECTURE.md` 同判据。
