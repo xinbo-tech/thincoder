@@ -358,9 +358,9 @@ A13 调用方普查 · 套件级：三包全量 `npm test` 失败集合 ⊆ 批�
 本批改法（逐处）：① 该用例 ctx.cwd 改挂 `git init` 洁净仓（`execFileSync("git", ["init","-q"], { cwd: dir })`）⇒ 两处断言原样成立（= A9 真洁净路径）；
 ② 非仓路径另立断言（同档）⇒ `status` **抛错** + 消息含 `not a git repository`（A7，测试面用 `assert.rejects`）。两例分离后「洁净」与「非仓」不再共用同一期望值。
 
-**对账口径（#55 已落地 · 2026-09-19 实核）**：收口判定一律以 `git status --porcelain`（bash，仓内）为准；工具侧自 **#62 批起**已自带仓发现（**缺省 = 发现的项目仓根**，显式 `workdir` 优先）——原「修复落地前…可临时以 `workdir` 绕行」句**已退役**（#55 落地 + #62 发现面落地）。
+**对账口径（#55 已落地 · 2026-09-19 实核）**：收口判定一律以 `git status --porcelain`（bash，仓内）为准；工具侧自 **#62 批起**已自带仓发现（**缺省 = 发现的项目仓根**，显式 `workdir` 优先）。
 
-**边界（本节不做）**：~~不做跨仓自动发现~~ **已由 §6.13 落定**（2026-09-18 #62 批——工作区根 ⇒ 唯一带 manifest 子仓自动下钻；本节的 fail-closed 保留为**零发现态**兜底，语义零改）；不改工具描述（`thincoder-core/tool-docs/git.md` = 提示词面，内容权归主 agent）；不改 `runGitStrict` 族（写面已是严格形）；H3 夹具留实施轮；不改 `advisor/repos.mjs` 的独立 git 读取面（自带 `stdio` 三通，非本缺陷族）。
+**边界（本节不做）**：跨仓自动发现不在本节（归 §6.13——工作区根 ⇒ 唯一带 manifest 子仓自动下钻）；本节的 fail-closed 保留为**零发现态**兜底，语义零改；不改工具描述（`thincoder-core/tool-docs/git.md` = 提示词面，内容权归主 agent）；不改 `runGitStrict` 族（写面已是严格形）；H3 夹具留实施轮；不改 `advisor/repos.mjs` 的独立 git 读取面（自带 `stdio` 三通，非本缺陷族）。
 
 ### 6.13 git 工具仓发现（2026-09-18 · 批 REPO-DISCOVERY · 台账 #62——§6.12 之上的发现层）
 
@@ -536,3 +536,4 @@ A17 workdir 优先 + 无注记；A18 两类 cwd 零行为变（既有用例全�
 - 2026-09-20（**P2 机制层端差批 · 车道 3 设计档落笔轮 · eng-designer**——承 `docs/batches/2026-09-20-mechanism-parity-batch.md` §2.17 / §2.19「设计档落点」）：§6.11 增「工具面接线」条——派发面 hooks 三调用点
   （`thincoder-vscode/src/agent/execute-tools.mjs:176/268/288`）+ 台账查询两工具入基础集（`thincoder-vscode/src/agent/setup.mjs:142-144` / `:165-168`）。机制条文（§6.1–§6.10）零改。
 - 2026-09-20（**卫生族批 · 台账 #138 · eng-designer**）：首部机制面节区改 `§6–§8` + 历史节号指称清理（行数规则废除批残留）；设计源 = `docs/batches/2026-09-20-hygiene-sweep-batch.md` §2。
+- 2026-09-20（**卫生族二批 · 台账 #142 · eng-designer**）：§6.12 两处修订式残句清理（边界行去划改形保断言 + 对账口径行退役句删）；**零新语义**。

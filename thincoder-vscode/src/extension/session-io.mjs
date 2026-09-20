@@ -82,7 +82,7 @@ export function cachedSlot(cwd) {
   return s == null ? null : s
 }
 
-/** 恢复决策包装（SESSION.md §12 启动钩子，2026-09-06）：面板恢复入口触发一次残留 GC——
+/** 恢复决策包装（SESSION.md §6.12 启动钩子，2026-09-06）：面板恢复入口触发一次残留 GC——
  *  scheduleSessionGC 内部 setImmediate 空闲执行 + 每进程每前缀去重，不阻塞激活路径（N4）。
  *  F-MI7：转 async（核同名件同形）+ 解析结果写穿缓存（冷路径直读源）。 */
 export async function resumeSlot(cwd) {

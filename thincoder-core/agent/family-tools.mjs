@@ -146,7 +146,7 @@ export async function assembleFamilyTools({
       // settings 住**基础集**（`tools/index.mjs` `assembleBuiltinTools`），端侧自持清单
       // 无该面 ⇒ 端以 decorate 补位（收敛通道 = 将来去 decorate 项即归核位）。
       ...(decorate?.settings ? [decorate.settings] : [])]
-    // SESSION.md §9 D-S2: read_history is depth-0 ONLY — a subagent querying "the session"
+    // SESSION.md §6.9: read_history is depth-0 ONLY — a subagent querying "the session"
     // would mix its throwaway context with the parent's record (semantic confusion).
     // It is readonly:true, so planMode pass and no permission ask come automatically (T-S9).
     // Write-permission coder sub-agents (subagent role="coder" + escalate action):

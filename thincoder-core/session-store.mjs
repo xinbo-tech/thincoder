@@ -1,6 +1,6 @@
 /**
  * session-store.mjs — 人读线记录存储：磁盘为准 + 内存窗口（TUI-OOM-ROOTCAUSE 批）。
- * 机制契约全文 = docs/design/SESSION.md §14.3（D2 单一权威源）；本文件 = 实现。
+ * 机制契约全文 = docs/core/design/SESSION.md §6.14（D2 单一权威源）；本文件 = 实现。
  * 形态：`{slot 文件路径}.d/` + `meta.json` + `seg-000001.jsonl`（行 = slimForDisplay 后的
  * 消息 JSON——与槽 JSON `history` 元素逐字节同形；投影零转换，§14.3.1）。
  * 依赖：零项目内依赖（仅 `node:`）——路径由 `slotFile` 传入；session.mjs / session-slots.mjs /

@@ -145,7 +145,7 @@ export function createSessionHandlers(ctx) {
         // mySessionId 同进程恒真）→ 第二个会话拿到与第一个相同的槽号 → 双写同槽
         // F2 互旋。getSessionId() 是进程级，_slot 是 agent 级——粒度错配必须在此切断。
         session.agent._slot = await newSession(getCwd())
-        // TUI-OOM-ROOTCAUSE（SESSION.md §14.3.4）：新建槽绑定记录存储（baseHistory 空——
+        // TUI-OOM-ROOTCAUSE（SESSION.md §6.14）：新建槽绑定记录存储（baseHistory 空——
         // identity 待固化）——与 /new 同语义
         bindRecordStore(session.agent, { slotFile: slotPath(getCwd(), session.agent._slot), identity: session.agent._sessionStart ?? null, baseHistory: [] })
         sessions.set(id, session)

@@ -215,7 +215,7 @@ export const advisorTool = {
         ? "；D5 冻结窗口：被审文档（含批次档）在报告送达前零写入——在途写入会被拒绝，写入将使本轮结算为陈旧 (pass 不发 token)"
         : ""
       if (ack.queued) {
-        // ED-4（2026-09-16 · AGENT-LOOP.md §6.10）：排队 ack——模型可见状态如实 queued +
+        // ED-4（2026-09-16 · AGENT-LOOP-SUBAGENT.md §6.10）：排队 ack——模型可见状态如实 queued +
         // position（评审槽空自动启动——不误导模型等待即刻 digest）。
         return JSON.stringify({
           id: ack.id, kind: "advisor", status: "queued", position: ack.position,

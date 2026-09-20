@@ -155,7 +155,7 @@ test("④ 错误：损坏会话档 → 真子进程恢复 —— 干净回退 + 
   assert.ok(readdirSync(sessionsDir).length > 0, "回退后的会话照常落盘")
 })
 
-// ── T-RS10（TUI-OOM-ROOTCAUSE 组 1——SESSION.md §14.6）：恢复→翻页→检索→保存 往返 ──
+// ── T-RS10（TUI-OOM-ROOTCAUSE 组 1）：恢复→翻页→检索→保存 往返 ──
 test("④ 正常（T-RS10）：磁盘为准 + 内存窗口——尾窗/total、翻页页沿、窗口外检索、保存不缩", async (t) => {
   const cwd = mkdtempSync(join(tmpdir(), "tc-int-sess-win-"))
   t.after(() => { try { rmSync(cwd, { recursive: true, force: true }) } catch { /* ignore */ } })

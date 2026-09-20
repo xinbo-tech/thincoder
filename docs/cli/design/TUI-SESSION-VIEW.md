@@ -42,7 +42,7 @@
   滚轮 / PgUp 双入口同一判别式（`convMaxScroll` 单源导出复用）；加载后 scroll 补偿保持锚定；
   头部分页标记行 `… N more earlier messages …` 维护。
 - **分页数据源下沉**：数据源 = 会话记录存储（磁盘为准）——绝对序号锚定；内存层不再驻留全量。
-  机制契约 = `docs/core/design/SESSION.md`（§14.3.6 段）；**本节只落 TUI 面落点**（交互语义不变，逐条见 §5）。
+  机制契约 = `docs/core/design/SESSION.md`（§6.14 段）；**本节只落 TUI 面落点**（交互语义不变，逐条见 §5）。
 
 **性能根治——三层缓存**
 
@@ -202,6 +202,8 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
 | 显示层额度的常量数值来源 | 常量本体 | `thincoder-cli/src/tui/display-budget.mjs`（单源——本档引用不复制数值之外的口径） |
 
 ## 变更记录
+
+- 2026-09-20（**卫生族二批 · 台账 #141 · eng-designer**——承 `docs/batches/2026-09-20-hygiene-sweep-2-batch.md` §2.1）：§3 分页数据源下沉条机制契约指称收正——`docs/core/design/SESSION.md` 节号改指现核档 `§6.14`；零新语义。
 
 - 2026-09-20（**显示面消差批 · 批 4 随轮收正 · eng-designer**——承 `docs/batches/2026-09-20-display-parity-batch.md` §2.3 X8）：§4 第 4 条「其他错误 → `[error] …` 一行」按实现面收正为三件形（脱敏首行 + 诊断两行 + Retry 询问），面细节挂 `docs/cli/design/TUI.md` §4.3（D2 不重述）。
 

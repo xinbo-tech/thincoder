@@ -104,7 +104,7 @@ export async function generateTitle(userContent, provider) {
 export async function ensureSessionTitle(agent) {
   if (agent.title) return agent.title
   try {
-    // TUI-OOM-ROOTCAUSE 批（SESSION.md §14.3.3）：绑定态首条 user 消息在记录存储（段 1）——
+    // TUI-OOM-ROOTCAUSE 批（SESSION.md §6.14）：绑定态首条 user 消息在记录存储（段 1）——
     // 内存窗口可能已滑过它（store.firstUserMessage 首扫一次并缓存）；未绑定回退内存查找。
     let firstUser = agent._recordStore?.firstUserMessage?.() ?? null
     if (!firstUser) {

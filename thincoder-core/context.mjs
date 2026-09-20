@@ -169,12 +169,12 @@ function tightenTailByBudget(history, start, floorStart, budgetTokens) {
  * Machine-only messages ([System reminder:...], compaction notes, task/plan/checkpoint re-injections)
  * are pushed directly to agent.history WITHOUT going through here, so they never enter _fullHistory.
  * The two lines are written independently at the source — no after-the-fact delta sync.
- * Message timestamps (SESSION.md §9 D-S1): stamped HERE once at push time (epoch ms) — a single
+ * Message timestamps (SESSION.md §6.9): stamped HERE once at push time (epoch ms) — a single
  * point covers every real message. Pre-existing ts (e.g. from another end writing the shared slot)
  * is preserved; restored old messages keep no ts rather than getting a misleading backdate (D-S3).
  * ts is a LOCAL-ONLY field — the send layer strips it before any provider request (T-S3).
  *
- * TUI-OOM-ROOTCAUSE 批（SESSION.md §14.3.5）——人读线内存有界 + 磁盘为准：
+ * TUI-OOM-ROOTCAUSE 批（SESSION.md §6.14）——人读线内存有界 + 磁盘为准：
  *   ① `agent._recordStore?.append(msg)`：记录同步追加（磁盘为准——append-only sidecar）；
  *   ② 窗口驱逐：绑定态（agent._historyWindow = 200）下 _fullHistory 只保最近窗口条——
  *      更早内容仅存磁盘（翻页/检索/保存从盘按需读）。未绑定（模式 F）不驱逐（零回归）。
@@ -279,7 +279,7 @@ function applyCompression(agent, headEnd, tailStart, note) {
   // possibly-completed earlier requests.
   const head = agent.history.slice(0, headEnd)
   const tail = agent.history.slice(tailStart)
-  // SESSION.md §9 D-S1: compaction-injected messages carry a ts — Date.now() at the compaction
+  // SESSION.md §6.9: compaction-injected messages carry a ts — Date.now() at the compaction
   // moment (the note below; and the separate "Understood" placeholder in the non-merge branch).
   // They are machine-only (never in _fullHistory), but the machine-line timeline stays consistent
   // for any audit use. D-CC18 exception: in the merge branch the placeholder rides inside a REAL

@@ -1,7 +1,7 @@
 /**
  * session-segments.mjs — 记录存储的段文件原语 + 人读线条目形态（TUI-OOM-ROOTCAUSE 批）。
  *
- * 机制契约全文 = docs/design/SESSION.md §14.3（D2 单一权威源）；本文件 = 「段 IO + 条目
+ * 机制契约全文 = docs/core/design/SESSION.md §6.14（D2 单一权威源）；本文件 = 「段 IO + 条目
  * 形态」叶子层（`session-store.mjs` 拆分产物——503+ 行越 500 硬限，§14.5 表列模块按职责
  * 拆分；store 继续 re-export 全部公开名，调用面零改）。零项目内依赖（仅 `node:`）。
  */

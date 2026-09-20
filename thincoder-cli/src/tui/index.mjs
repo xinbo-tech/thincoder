@@ -45,7 +45,7 @@ import { startLedgerSurface } from "./ledger-surface.mjs"
 export { upgradeFailureText, pendingNoticeReady } from "./update-notice.mjs"
 
 /**
- * SESSION.md §8 D-S2 — TUI 启动首帧前的 provider 重选流程：
+ * SESSION.md §6.8 D-S2 — TUI 启动首帧前的 provider 重选流程：
  * provider 无效（`_providerInvalid` 标记或 provider 为 null）→ 先弹模型选择 picker
  * （复用 openModelPicker，展示当前可用 providers）；用户选定后继续正常启动。
  * 选择取消（Esc）→ 仍进入 TUI，推送提示行（"未配置有效 provider，可用 /model 配置
@@ -458,7 +458,7 @@ export async function startTUI(agent, opts = {}) {
 
   // ---------------------------------------------------------- Startup screen + background indexing
 
-  // SESSION.md §8 D-S2：startTUI 首帧前 —— provider 无效（_providerInvalid / provider 为 null）
+  // SESSION.md §6.8 D-S2：startTUI 首帧前 —— provider 无效（_providerInvalid / provider 为 null）
   // → 先弹模型选择 picker（keyStream 已挂 keypress，Esc/Enter 可用）；Esc → 提示行，仍进 TUI
   await promptProviderIfInvalid(agent, () => openModelPicker(), pushLine)
 

@@ -7,7 +7,7 @@
  *   thincoder memory <sub>    Memory management: list / search / put / remove
  *   thincoder upgrade         Update to the latest version from npm
  *   thincoder completion <sh> Shell completion: bash / zsh / fish
- *   thincoder session gc    Session dir GC: --dry-run report / --confirm delete cold projects (SESSION.md §12)
+ *   thincoder session gc    Session dir GC: --dry-run report / --confirm delete cold projects (SESSION.md §6.12)
  *   thincoder acp             Agent Client Protocol server (stdio, for Zed/JetBrains/Paseo)
  *   thincoder -v              Print version
  *   thincoder --help          Print help
@@ -156,7 +156,7 @@ switch (command) {
     if (crashNotice) console.error(crashNotice)
 
     const agent = await assembleAgent()
-    // SESSION.md §8 D-S4（F4）+ MODEL-MERGE-SESSION：headless 无 TUI —— 可读错误 + 退出码 1，
+    // SESSION.md §6.8 D-S4（F4）+ MODEL-MERGE-SESSION：headless 无 TUI —— 可读错误 + 退出码 1，
     // 不弹 UI、不崩溃；文案改引 defaultModel（F-6 引导 A headless 面——/config → 默认模型）
     if (agent._providerInvalid) {
       const dm = agent.config?.defaultModel
@@ -314,16 +314,16 @@ switch (command) {
     // F-MI7：resumeSlot = async（探测束不阻塞事件循环）——此处必须 await
     const { slot, data } = await resumeSlot(process.cwd())
     const agent = await assembleAgent({ slotData: data })
-    // SESSION.md §8 D-S1：TUI 路径在 startTUI 前清空无效 provider——空 provider 不流入 runAgent
+    // SESSION.md §6.8 D-S1：TUI 路径在 startTUI 前清空无效 provider——空 provider 不流入 runAgent
     // （崩溃源：chat() 缺 model → 网关 400 或 fetch("undefined/...") TypeError）
     if (agent._providerInvalid) agent.provider = null
     const config = loadConfig()
     if (data) {
       // applySession 内部已按槽复合重算 compactThreshold（auto 时）——不再需要 switched 分支
-      // TUI-OOM-ROOTCAUSE（SESSION.md §14.3.4）：传 slot → 绑定记录存储（身份核验 + 对账）
+      // TUI-OOM-ROOTCAUSE（SESSION.md §6.14）：传 slot → 绑定记录存储（身份核验 + 对账）
       // ——人读线 = 尾窗（磁盘为准）；未传 = 模式 F（全量数组）
       applySession(agent, data, { slot })
-      // SESSION.md §11.2（2026-09-08——N6 评审 🔴 修复）：process restarted 句 = 进程级
+      // SESSION.md §6.11（2026-09-08——N6 评审 🔴 修复）：process restarted 句 = 进程级
       // 信号——仅本启动 resume 路径设一次（真进程重启恢复盘上会话）；/session 切换与 ACP
       // 加载走同一 applySession 收敛但不设（不误报进程重启）。prepareRun 发句即清——进程
       // 内一次。resumed:yes 独立由 applySession 的恢复事件武装（data.history 非空）。
@@ -414,7 +414,7 @@ switch (command) {
   }
 
   case "session": {
-    // SESSION.md §12：会话目录 GC 手动面（F2 冷 cwd 报告/删除——VS Code 端无 shell 通道，仅 CLI）
+    // SESSION.md §6.12：会话目录 GC 手动面（F2 冷 cwd 报告/删除——VS Code 端无 shell 通道，仅 CLI）
     const { runSessionGc } = await import("@thincoder/core/session-gc.mjs")
     process.exitCode = await runSessionGc(args)
     break

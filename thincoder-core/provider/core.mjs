@@ -121,7 +121,7 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
   // window/clamping logic below reads the overridden value where it matters.
   const spec = providerSpec(provider)
   messages = stripImagesForTextModel(messages, spec)
-  // SESSION.md §9 T-S3: local-only message fields (ts/transient) never reach the wire.
+  // SESSION.md §6.9 T-S3: local-only message fields (ts/transient) never reach the wire.
   // Stripped BEFORE format dispatch — anthropic/responses transports pass whole message
   // objects through verbatim (only the OpenAI path ran escapeMessages). Copy-on-write:
   // history keeps the fields, the request never sees them.

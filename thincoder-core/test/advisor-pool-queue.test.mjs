@@ -1,5 +1,5 @@
 /**
- * advisor-pool-queue.test.mjs — ED-4（AGENT-LOOP.md §6.10 · 批 8 ENGINE-DEBT 条目 4）：
+ * advisor-pool-queue.test.mjs — ED-4（AGENT-LOOP-SUBAGENT.md §6.10 · 批 8 ENGINE-DEBT 条目 4）：
  * advisor 评审池满改排队——异 scope 恒可排队 / 同 scope 保拒 / 槽释放自动起跑 /
  * 排队条目取消（cancel + 中止清池两面）/ 零回归。
  *

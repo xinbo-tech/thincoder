@@ -131,7 +131,7 @@ export function escapeMessageContent(message) {
   return changed ? next : message
 }
 
-/** IKBGX4 + SESSION.md §9 D-S1：剥离仅本地使用的整消息标记字段（transient/ts）——发送给 provider 前移除。
+/** IKBGX4 + SESSION.md §6.9：剥离仅本地使用的整消息标记字段（transient/ts）——发送给 provider 前移除。
  * 严格 OpenAI 兼容服务端（opencode/LiteLLM 等）会拒绝消息级未知 key
  * （"Extra inputs are not permitted, field: 'messages[i].transient'"）；ts 同理
  * （消息时间戳是本地取证字段，不进任何 provider 请求——T-S3）。copy-on-write：

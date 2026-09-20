@@ -111,7 +111,7 @@ export async function finalizeTurn(panel, { history, fullHistory, slotStamp, tur
   // live → susp（释放窗口——同上）；无池无会话 → idle。计数随广播：会话内回合尾带
   // backgroundStatus（F-C2e——轮尾计数刷新到 host 实际；释放窗口期 webview 未入会话
   // 不显示计数段——计数由会话入口 postSuspension 随带）。
-  // Persist BEFORE the title（A2 方案 Y——权威正文 SESSION.md §7）：标题从槽读首条
+  // Persist BEFORE the title（A2 方案 Y——权威正文 SESSION.md §6.7）：标题从槽读首条
   // user 消息——ContinueError→Stop 路径（runTurnLoop break 跳过 catch 落盘）的唯一
   // 落盘就是本 save——先落盘后标题该路径才出得了标题。CLI agent-turn.mjs finally
   // parity——"Save session after every turn (survives crashes)"。
@@ -120,7 +120,7 @@ export async function finalizeTurn(panel, { history, fullHistory, slotStamp, tur
   } catch (saveErr) {
     console.error("[chat-panel] save in finally failed:", saveErr.message)
   }
-  // A2（SESSION-FLOW-A F-A2——权威正文 SESSION.md §7）：标题上移至此（归位前——
+  // A2（SESSION-FLOW-A F-A2——权威正文 SESSION.md §6.7）：标题上移至此（归位前——
   // _turnState 仍 running——窗口 = busy：Stop 显 + 路由守卫拒收）；错误不外抛——
   // 归位恒执行（评审 #2）。
   try {

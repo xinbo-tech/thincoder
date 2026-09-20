@@ -1,5 +1,5 @@
 /**
- * session-gc.mjs — 会话目录残留 GC + 冷 cwd 报告/删除（SESSION.md §12，2026-09-06）。
+ * session-gc.mjs — 会话目录残留 GC + 冷 cwd 报告/删除（SESSION.md §6.12，2026-09-06）。
  *
  * F1 残留 GC（自动）：进程启动时对当前 cwd hash 前缀做一次轻量清理——.corrupted /
  * .unreadable / .manifest.corrupted / .bak-* 保留 30 天，孤儿 .tmp 保留 7 天

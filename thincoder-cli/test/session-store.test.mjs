@@ -1,5 +1,5 @@
 /**
- * session-store.test.mjs — TUI-OOM-ROOTCAUSE 批 组 1（A1/C1——SESSION.md §14）用例表 1:1。
+ * session-store.test.mjs — TUI-OOM-ROOTCAUSE 批 组 1（A1/C1——SESSION.md §6.14）用例表 1:1。
  *
  * 覆盖 T-RS1–T-RS9 / T-RS12–T-RS14 + AC-RS9（恢复只读末段）；T-RS10/T-RS11 在
  * integration/session-resume.test.mjs 与既有族（模式 F 零回归）。

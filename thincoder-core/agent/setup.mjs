@@ -78,7 +78,7 @@ export async function prepareRun(agent, input, callbacks, {
         }
   
       }
-      // SESSION.md §11.2（2026-09-08——N6 评审 🔴 修复：注入句解耦——双信号独立消费）：
+      // SESSION.md §6.11（2026-09-08——N6 评审 🔴 修复：注入句解耦——双信号独立消费）：
       // process restarted 句 = 进程级信号 _processRestartPending——仅 TUI 启动 resume 路径
       // （bin/thincoder.mjs resumeSlot→applySession）设一次；/session 切换与 ACP 加载不设。
       // 发句即清——进程内只发一次。resumed:yes 走 _envResumed（applySession 载入历史非空
@@ -128,7 +128,7 @@ export async function prepareRun(agent, input, callbacks, {
     }
     pushReal(agent, { role: "user", content: input })
   }
-  // SESSION.md §11.1: unified per-turn env-state transient reminder (env/mode/
+  // SESSION.md §6.11: unified per-turn env-state transient reminder (env/mode/
   // model/resumed — R5/R8/R9/R11 one-shot coverage; changes surface next turn).
   // R10 L1 (MULTI-INSTANCE-COLLAB §2a.4 D-L1a): peer-instance reminder right after
   // env-state, BEFORE the time reminder — the time reminder stays LAST (prefix-cache

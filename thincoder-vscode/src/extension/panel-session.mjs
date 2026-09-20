@@ -36,7 +36,7 @@ export { saveLines, generateTitle } from "./panel-session-write.mjs"
 const bindInflight = new Map()
 
 /** 认领一次（async 真路径）：`resumeSlot` 决策（本端记录 / 一次性继承 / 全新分配——
- *  SESSION.md §10 D-2）+ 单飞 + 绑定 `panel._slot`。绑定入口三处同源（快段
+ *  SESSION.md §6.10 D-2）+ 单飞 + 绑定 `panel._slot`。绑定入口三处同源（快段
  *  `openSessionContent` / `onProjectChanged` / 冷路径 `ensureSlot`）；已绑定 ⇒ 直返
  *  （slot 粘性——不再重读共享 manifest 的 active 指针）。失败 ⇒ 抛出（`void` 冷路径自吞）。 */
 export async function ensureSlotAsync(panel) {

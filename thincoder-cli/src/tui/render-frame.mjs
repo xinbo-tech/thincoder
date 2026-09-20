@@ -40,7 +40,7 @@ const SLASH_HINTS = {
 
 /** Header panel (always 1 line). */
 export function renderHeader(agent, cols) {
-  // 2026-09-02 Q1（SESSION.md §8）：provider 可为 null（无效 provider 被清空后用户 Esc 取消重选）
+  // 2026-09-02 Q1（SESSION.md §6.8）：provider 可为 null（无效 provider 被清空后用户 Esc 取消重选）
   // —— 可选链守卫，头部显示 "no provider" 占位
   const model = agent.provider?.model ?? "no provider"
   // providerSpec（PROVIDER.md §15）：模型信息显示跟随 provider 级 context 覆盖（D-C5）；
@@ -388,7 +388,7 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
   const elapsed = state.processing ? ` ${Math.floor((Date.now() - state.processingStarted) / 1000)}s` : ""
   const toolHint = state.currentTool ? ` ${state.currentTool}…` : ""
   const statusText = state.processing ? `${state.status}${toolHint}${elapsed}` : state.status
-  // 2026-09-02 Q1（SESSION.md §8）：provider 可为 null —— providerSpec(null) 保守 128K 不抛错
+  // 2026-09-02 Q1（SESSION.md §6.8）：provider 可为 null —— providerSpec(null) 保守 128K 不抛错
   // 2026-09-02 §15：context 窗口跟随 providers[].context 覆盖（T-C6——百分比基于覆盖后的窗口）
   const modelContext = providerSpec(agent.provider).context
   const ctxPct = Math.round((state.ctxCache.tokens / modelContext) * 100)

@@ -1,12 +1,12 @@
 /**
- * agent-tools/read-history.mjs — read_history tool (SESSION.md §9 + §13 R19 cross-session).
+ * agent-tools/read-history.mjs — read_history tool (SESSION.md §6.9 + §6.13 R19 cross-session).
  *
  * Query message history — THIS session by default, any session on disk with `path`
- * (SESSION.md §13 R19): an explicit session file path deep-queries that file's
+ * (SESSION.md §6.13 R19): an explicit session file path deep-queries that file's
  * history line; "cwd:<dir>" discovers the sessions stored for that directory.
  *
  * Default (no path) — THIS session's full human-readable record (record store when bound
- * — disk-backed, SESSION.md §14.3.7; agent._fullHistory memory fallback otherwise:
+ * — disk-backed, SESSION.md §6.14; agent._fullHistory memory fallback otherwise:
  * NEVER compacted, audit-complete). Use to recall what was said or done earlier:
  * design decisions, tool-call timing, past rulings.
  *
@@ -22,7 +22,7 @@
  * session file. assistant tool_calls are summarized to a name list (arguments
  * never expanded).
  *
- * Cross-session (SESSION.md §13 D-R19a): path = a session file path (absolute, or
+ * Cross-session (SESSION.md §6.13 D-R19a): path = a session file path (absolute, or
  * relative to the project cwd) → read that file's history line and apply the SAME
  * filter surface; path = "cwd:<dir>" → list every slot stored for that directory
  * (slot number + full file path + title/message count/updatedAt — no dead-slot
@@ -32,8 +32,8 @@
  *
  * readonly: true — planMode pass / no permission ask. Registered depth-0 only:
  * subagents get their own throwaway history, so querying "the session" from a
- * child would be semantically confusing (SESSION.md §9.5 refinement 1 + §13 T-R19.4).
- * §13 R19 extension mirrored per SESSION.md §13 — double-end isomorphic, no
+ * child would be semantically confusing (SESSION.md §6.9 refinement 1 + §6.13 T-R19.4).
+ * §13 R19 extension mirrored per SESSION.md §6.13 — double-end isomorphic, no
  * cross-end byte test (thincoder-vscode/src/agent-tools/read-history.mjs).
  */
 
@@ -46,17 +46,17 @@ const MAX_LIMIT = 200
 const CONTENT_CAP = 500
 const VALID_ROLES = new Set(["user", "assistant", "tool"])
 
-/** 单槽检索行扫护栏（SESSION.md §13 D-R19a——评审 #3 定稿：超限不再读全文，返回定稿错误文案）。 */
+/** 单槽检索行扫护栏（SESSION.md §6.13 D-R19a——评审 #3 定稿：超限不再读全文，返回定稿错误文案）。 */
 export const READ_HISTORY_SCAN_MAX = 200_000
 
 /** L24 消息数预算（评审 #2 钉死——双保险第二道）：行扫按物理 \n 行计——JSON 单行槽
  *  行扫不设防——parse 后 history 数组长度超限即拒（同款定稿文案——双端同常量同文案）。 */
 export const READ_HISTORY_MAX_MESSAGES = 50_000
 
-/** 超限错误文案（SESSION.md §13——逐字定稿——T-R19.7 断言）。 */
+/** 超限错误文案（SESSION.md §6.13——逐字定稿——T-R19.7 断言）。 */
 const TOO_LARGE_ERROR = JSON.stringify({ error: "session too large — refine keyword or since/until" })
 
-/** 检索/记忆族消歧总纲（SESSION.md §13 D-R19b——逐字定稿——read_history 描述尾段——T-R19.5 锚）。 */
+/** 检索/记忆族消歧总纲（SESSION.md §6.13 D-R19b——逐字定稿——read_history 描述尾段——T-R19.5 锚）。 */
 const SEARCH_FAMILY_GUIDE =
   "检索/记忆族选哪个：查**本会话**说过/裁定过 → read_history（默认）；查**别的会话/项目**旧对话 → read_history 带 path/cwd 参数；查**本 run 改过哪些文件** → recent_changes；查**跨会话已存知识/约定**（memory）→ memory search；查**项目设计文档** → doc_search；查**代码实现** → code_search；查 git 历史快照 → checkpoint cat/versions。read_history 只查会话消息——文件级改动用 recent_changes——知识与约定用 memory——互相不替代。"
 
@@ -113,7 +113,7 @@ function toEntry(m) {
 }
 
 /** AND-filter one history message (role/keyword/tool/since-until) — shared by the in-memory
- *  default and the cross-session file query (SESSION.md §13 D-R19a: 同 filter 面应用). */
+ *  default and the cross-session file query (SESSION.md §6.13 D-R19a: 同 filter 面应用). */
 function matches(m, { role, kwRe, tool, since, until }) {
   if (!m || typeof m !== "object") return false
   if (role !== undefined && m.role !== role) return false
@@ -142,7 +142,7 @@ function formatMatches(matched, direction, limit) {
 }
 
 /** Line-scan guard: stream-count physical newlines, bailing the moment the cap is crossed —
- *  an oversized file is refused BEFORE it is read whole ("不再读全文"——SESSION.md §13 D-R19a). */
+ *  an oversized file is refused BEFORE it is read whole ("不再读全文"——SESSION.md §6.13 D-R19a). */
 function exceedsScanMax(file) {
   const CHUNK = 64 * 1024
   let fd = null
@@ -275,7 +275,7 @@ export const readHistoryTool = {
     const keyword = typeof a.keyword === "string" && a.keyword.length > 0 ? a.keyword : null
     // Case-insensitive substring WITHOUT copying the full message text: the human line is
     // never compacted (绑定态存储行 = slimForDisplay 产物——匹配基准 delta 见 SESSION.md
-    // §14.3.7 / T-RS8b) — single tool results can be hundreds of KB to MBs. Lowercase the
+    // §6.14 / T-RS8b) — single tool results can be hundreds of KB to MBs. Lowercase the
     // needle once and run a regex-i test over the haystack (escaping regex metachars so the
     // keyword stays a literal substring).
     const kwRe = keyword ? new RegExp(keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") : null

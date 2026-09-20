@@ -118,7 +118,7 @@ export function historyToLines(history, startIdx, endIdx) {
  * INITIAL_HISTORY_MESSAGES, set the _history* counters the loadOlder closure
  * reads, and prepend the "… N more earlier messages" placeholder. Shared by
  * startup restore and /session switching (the display snapshot is deprecated).
- * TUI-OOM-ROOTCAUSE（SESSION.md §14.3.6）：desc = `{ history, total, base? }`——
+ * TUI-OOM-ROOTCAUSE（SESSION.md §6.14）：desc = `{ history, total, base? }`——
  * history = 尾窗（≤200，含 ±1 页沿头一条——跨页回标判定用；不渲染）、total = 绝对总条数
  * （「N messages」标签口径）、base = history[0] 的绝对序号（缺省由 total − len 推导）。
  */
@@ -206,7 +206,7 @@ export function showStartup(ctx) {
   const { agent, state, opts, pushLine, pushLabel, render, startWizard } = ctx
 
   // Startup screen
-  // 2026-09-02 Q1（SESSION.md §8 D-S2）：provider 可为 null（无效 provider 被清空后用户 Esc 取消重选）
+  // 2026-09-02 Q1（SESSION.md §6.8 D-S2）：provider 可为 null（无效 provider 被清空后用户 Esc 取消重选）
   // —— 可选链守卫；`!apiKey` 触发既有 wizard（其 provider 菜单列出已存在 providers，可选中恢复，F3）
   if (!agent.provider?.apiKey) {
     pushLabel(`Welcome to ThinCoder!`, ansi.bold + C.tool)

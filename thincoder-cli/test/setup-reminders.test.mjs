@@ -1,5 +1,5 @@
 /**
- * setup-reminders.test.mjs — SESSION.md §11.2（2026-09-08——F1 env-state slot 字段 +
+ * setup-reminders.test.mjs — SESSION.md §6.11（2026-09-08——F1 env-state slot 字段 +
  * F2 resumed 按会话跟踪 + F3 CLI 伪触发修复 + N6 注入句解耦）CLI 端单测（双端镜像：
  * VSC 仓同文件名的同套用例——模板同构、载体异名）。
  *

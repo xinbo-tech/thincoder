@@ -1,6 +1,6 @@
 /**
  * agent/setup-reminders.mjs — per-turn transient reminders
- * (SESSION.md §11.1 — 2026-09-06 需求池 R5/R8/R9/R11 合并设计; R10 L1 peer 注入同文件).
+ * (SESSION.md §6.11 — 2026-09-06 需求池 R5/R8/R9/R11 合并设计; R10 L1 peer 注入同文件).
  *
  * One unified transient user reminder per turn covers the whole self-awareness
  * family: env identity (R8 — §10 D-1 END 常量先例：静态常量，不做 cmdline 判别),

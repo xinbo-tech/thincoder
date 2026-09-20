@@ -127,7 +127,7 @@ export async function assembleAgent({ excludeTools = [], slotData } = {}) {
   // 晚于 memory sync / MCP 连接 / 工具装配——功能等价，仍在进入正常循环之前）见
   // docs/core/design/MANIFEST.md §2.2。
   attachManifest(agent, { cwd, slotData })
-  // SESSION.md §8 D-S1：assembleAgent 后唯一校验点（TUI/chat 两路径同源）——不抛错不退出，
+  // SESSION.md §6.8 D-S1：assembleAgent 后唯一校验点（TUI/chat 两路径同源）——不抛错不退出，
   // 标记由调用侧消费（TUI 弹重选 / headless 报错）。空 provider 由 TUI 路径在 startTUI 前清空。
   validateProvider(agent)
   // defaultModel 无效/未设的具体原因覆盖通用判据文案（providers 存在时更有指导性）
@@ -175,7 +175,7 @@ export function attachManifest(agent, { cwd = process.cwd(), slotData } = {}) {
 }
 
 /**
- * SESSION.md §8 D-S1 — provider 有效性校验（assembleAgent 后唯一校验点，TUI/chat 两路径同源）。
+ * SESSION.md §6.8 D-S1 — provider 有效性校验（assembleAgent 后唯一校验点，TUI/chat 两路径同源）。
  * 判据（评审 #1/#2）：仅 model/baseURL 缺失判 invalid——**不得用 MODEL_SPECS 成员资格判无效**
  * （未知模型 = 受支持场景：自定义端点模型不在 spec 表是常态，误判会让自定义模型用户每次恢复都弹重选）。
  * apiKey 缺失不判（既有 wizard /model 流程处理）。幂等：有效时清标记，无效时置标记 + 原因。

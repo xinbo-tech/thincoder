@@ -88,7 +88,7 @@ export function createSlotsHandlers(ctx) {
         // （进程级属主无法区分 agent，双方 sessionStart 相同 → F2 永不触发 → 静默互覆盖）。
         const sameProcessPinned = [...sessions.values()].some((s) => s.agent?._slot === slot)
         const pinned = !occ.occupied && !sameProcessPinned
-        // TUI-OOM-ROOTCAUSE（SESSION.md §14.3.4）：钉槽（非占用）才绑定记录存储——
+        // TUI-OOM-ROOTCAUSE（SESSION.md §6.14）：钉槽（非占用）才绑定记录存储——
         // 占用/fork 分支模式 F（首保存 fork 新槽后补绑）
         applySession(session.agent, data, pinned ? { slot } : {})
         reattach(session.agent)
@@ -144,7 +144,7 @@ export function createSlotsHandlers(ctx) {
         // 2026-09-01 会诊 kimi/glm 🔴：同 session/load——同进程其他 session 已钉同槽视为占用 → fork
         const sameProcessPinned = [...sessions.values()].some((s) => s.agent?._slot === slot)
         const pinned = !occ.occupied && !sameProcessPinned
-        // TUI-OOM-ROOTCAUSE（SESSION.md §14.3.4）：同 load——钉槽才绑定（占用/fork 模式 F）
+        // TUI-OOM-ROOTCAUSE（SESSION.md §6.14）：同 load——钉槽才绑定（占用/fork 模式 F）
         applySession(session.agent, data, pinned ? { slot } : {})
         reattach(session.agent)
         if (pinned) {

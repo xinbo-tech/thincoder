@@ -1,5 +1,5 @@
 /**
- * read-history-guard.test.mjs — read_history 跨会话深查双保险护栏测试（SESSION.md §13
+ * read-history-guard.test.mjs — read_history 跨会话深查双保险护栏测试（SESSION.md §6.13
  * D-R19a + L24——STRUCTURE-DEBT-BATCH-7——双端同构）：
  * ① 行扫第一道保留（READ_HISTORY_SCAN_MAX = 200,000 行——流式计数——超限 parse 前拒绝）；
  * ② 消息数第二道（parse 后 history.length > READ_HISTORY_MAX_MESSAGES = 50,000 即拒——
@@ -14,7 +14,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { readHistoryTool } from "@thincoder/core/agent-tools/read-history.mjs"
 
-/** 超限错误文案（SESSION.md §13——逐字定稿——断言与实现同文案）。 */
+/** 超限错误文案（SESSION.md §6.13——逐字定稿——断言与实现同文案）。 */
 const TOO_LARGE = JSON.stringify({ error: "session too large — refine keyword or since/until" })
 const MAX_MSGS = 50_000
 const MAX_LINES = 200_000

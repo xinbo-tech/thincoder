@@ -421,11 +421,11 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   if (depth === 0 && agent._sessionStart == null) {
     agent._sessionStart = sessionData?.sessionStart ?? new Date().toISOString()
   }
-  // read_history (SESSION.md §9 D-S2): the tool reads the HUMAN line via agent._fullHistory —
+  // read_history (SESSION.md §6.9): the tool reads the HUMAN line via agent._fullHistory —
   // attach at depth 0 only (subagent throwaway lines are never reachable, the tool is not
   // registered for them anyway).
   if (depth === 0) agent._fullHistory = fullHistory
-  // SESSION.md §11.2（2026-09-08——F2 评审 #7 修复版）：resumed 按会话跟踪——agent 级
+  // SESSION.md §6.11（2026-09-08——F2 评审 #7 修复版）：resumed 按会话跟踪——agent 级
   // _resumedPending 只在 agent 新建（restore:true factory 路径——首轮/destroy 换槽重建
   // 同路径）且 fullHistory 载入非空时武装——每次槽恢复进新 agent 天然得一次 resumed:yes；
   // 同绑定复用（restore=false）不武装（下方注入点消费即清——复用路径恒 no）。
@@ -433,7 +433,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // process restarted 句（N6——评审 🔴 修复）：随 D-CI1 #3 迁入 context-injections
   // （injectRunContext——模块级 restartDetectionDone 一次性闸保留：extension host 重启后
   // 模块级重置、进程内切槽不重置＝真重启语义；判据 = 载入历史非空，且在用户输入落线前
-  // 求值——CLI prepareRun 同序）。跨端异名互指（结构债批 5 N7）：thincoder SESSION.md §11.2
+  // 求值——CLI prepareRun 同序）。跨端异名互指（结构债批 5 N7）：thincoder SESSION.md §6.11
   // ——CLI 同机制载体 = agent._envResumed + agent._processRestartPending。
 
   // Live history reference for the parent: same array the loop appends to — a caller
@@ -461,7 +461,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     pushReal(history, fullHistory, userMsg)
   }
 
-  // SESSION.md §11.1/§11.2：统一 env-state reminder（每回合、depth-0）——注入句解耦
+  // SESSION.md §6.11：统一 env-state reminder（每回合、depth-0）——注入句解耦
   // （N6——评审 🔴 修复、双信号独立消费）：resumed:yes = agent 级 _resumedPending（上方
   // restore 路径武装——读即清，每次会话恢复一次；切槽恢复只发 resumed:yes、不误报进程
   // 重启）。process restarted 句由 context-injections #3（injectRunContext）在输入落线前按进场历史求值。

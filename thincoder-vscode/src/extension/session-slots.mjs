@@ -100,7 +100,7 @@ function usableSlot(cwd, m, slot, bundle = null) {
 }
 
 /**
- * 恢复决策（SESSION.md §10 D-2）——面板 resolve 的本端恢复入口（核 `resumeSlot` 同算法、
+ * 恢复决策（SESSION.md §6.10 D-2）——面板 resolve 的本端恢复入口（核 `resumeSlot` 同算法、
  * 读**本端**记录）：返回 { slot, data }（data 可为 null——全新起步或读槽失败）。判据：
  *   ① 本端记录可用（slot ≠ null 且 ∈ m.slots 且槽文件在盘 且属主 空/死/本进程）→ claimSlot；
  *   ② 记录缺失（文件不存在 = 从未记录——升级/首用迁移窗口）：

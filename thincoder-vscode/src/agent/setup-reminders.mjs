@@ -45,7 +45,7 @@ export {
 export { pushInjections, appendImagePointer, manifestStateLine, pushManifestStateReminder } from "@thincoder/core/agent/setup-reminders.mjs"
 import { collectGitContext } from "@thincoder/core/agent/helpers.mjs" // pushGitContext 体内用
 
-// ─── SESSION.md §11.1：统一 env-state transient reminder（2026-09-06 需求池
+// ─── SESSION.md §6.11：统一 env-state transient reminder（2026-09-06 需求池
 //     R5/R8/R9/R11 合并——核 setup-reminders.mjs 同构面；R4 端差：env 行端生成）─────────
 // 每回合一行覆盖家族四项：env 身份（R8——§10 D-1 END 静态常量，不做 cmdline 判别）、
 // 工程模式（R9）、活跃模型（R11）、重启感知（R5 resumed）。变更不专门注入——每回合
@@ -98,7 +98,7 @@ export function pushPeerReminder(history, cwd) {
   }
 }
 
-// R5 重启检测：process restarted 句的进程级一次性闸（SESSION.md §11.2 评审 #7——N6 双信号
+// R5 重启检测：process restarted 句的进程级一次性闸（SESSION.md §6.11 评审 #7——N6 双信号
 // 分离：本闸保留为"真进程重启"句专用——extension host 重启后模块级重置；进程内切槽/换槽
 // 不重置 → 切槽不误报进程重启）。resumed:yes 已改 agent 级 _resumedPending（setup.mjs
 // hydrateRun——restore:true 工厂路径 + fullHistory 非空时武装——每次会话恢复一次）。

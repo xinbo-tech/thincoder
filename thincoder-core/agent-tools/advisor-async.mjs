@@ -20,7 +20,7 @@
  *  3. the async pool (agent._asyncAdvisors — ADVISOR_POOL_LIMIT = 4 default,
  *     agent.poolLimits.advisor configurable — POOL-CONFIG-UNIFIED; same-scope
  *     running launches are refused at once — never queued (F-5); over-limit +
- *     DIFFERENT scope launches QUEUE (ED-4 2026-09-16 — AGENT-LOOP.md §6.10:
+ *     DIFFERENT scope launches QUEUE (ED-4 2026-09-16 — AGENT-LOOP-SUBAGENT.md §6.10:
  *     agent._asyncAdvisorQueue, ack {queued, position}, slot release auto-start,
  *     queued cancel dequeue+renumber — the former over-limit refusal ②-6a is
  *     retired); cancel (ruling ②-6b — directed abort → cancelled settle: no
@@ -280,7 +280,7 @@ function relayAdvisorOutput(callbacks, prefix, chunk) {
   }
 }
 
-// ─── ED-4（2026-09-16 · AGENT-LOOP.md §6.10）：评审池排队（槽释放自动起跑）────────
+// ─── ED-4（2026-09-16 · AGENT-LOOP-SUBAGENT.md §6.10）：评审池排队（槽释放自动起跑）────────
 
 /** 排队出队单点（ED-4）：`_asyncAdvisorQueue` 剔除目标条目 + 余项 position 按 `1..n`
  *  重编号；读面经**载体吸收**（`carrierField`——#21⑤b）：部分 parent（只携池 + `history`）
@@ -368,7 +368,7 @@ export function launchAsyncAdvisor(parent, ctx, launch) {
     const idFields = { type: reviewType, scope: scopeSummary(documents?.length ? documents : paths), round: `${(run?.round ?? 0) + 1}/uncapped`, criterion: "scope-in-flight" }
     return { error: withIdentityLine(`Advisor: 此 scope 已有评审在跑——settle 后逐个发起 — ${scopeNote}; round/prior continuation would be ambiguous while it is in flight — wait for it to settle, then launch the next review (AGENT-LOOP.md §11.2).`, idFields) }
   }
-  // ED-4（AGENT-LOOP.md §6.10）：池满 + 异 scope ⇒ 排队（非拒）——ack 含 queued +
+  // ED-4（AGENT-LOOP-SUBAGENT.md §6.10）：池满 + 异 scope ⇒ 排队（非拒）——ack 含 queued +
   // position；running 计数只算 running 条目（排队不占槽）。原 ②-6a 拒发退役。
   const queued = runningAdvisorCount(parent) >= limit
   parent._asyncAdvisors ??= new Map()

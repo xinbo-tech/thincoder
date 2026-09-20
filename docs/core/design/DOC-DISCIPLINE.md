@@ -495,6 +495,7 @@ node -e "const fs=require('fs');let n=0;fs.readdirSync('.',{recursive:true}).for
 
 - **消解路径** = 该族（含模型可见位点）与代码注释 / 头注面**同轮 sweep**（下一轮扩面轮；锚实核逐处人判——现态指针 vs 改动沿革记录）。**到期条件** = `docs/core/design/` 下一次板块级 sweep，或该族任一纳入机检扫描域时（现况 = 机检域 = `docs/**`，代码面不扫）。
 - **§11 子族登记（2026-09-20）**：全形 · 注释面**已处置**（批档 `docs/batches/2026-09-20-hygiene-sweep-batch.md` §2）；余面（`§7.2` / `§15` / `§17`–`§29` 等 + 文案 / 裸形面）仍在册，随扩面轮。
+- **登记（2026-09-20 · 卫生族二批 · 台账 #143）**：**§6.10 陈名形子族（5 处 · 注释面）已处置**（批档 docs/batches/2026-09-20-hygiene-sweep-2-batch.md §2）；该子族出 #139 族界（§6.10 陈名形 vs §11 紧邻形），坐标 as-of 2026-09-18 = advisor-async.mjs :23 / :281 / :367 · advisor.mjs :215 · advisor-pool-queue.test.mjs :2；余面仍在册，随扩面轮。零新语义。
 
 #### J-2（#68）测试头注 4 处 + §4.2.8 登记行 1 处——**逐处判类**
 
@@ -1306,3 +1307,4 @@ node -e "const s=require('fs').readFileSync('docs/core/design/DOC-MIGRATION.md',
 - 2026-09-20（**库存清账批 · 设计评审修正轮（id=43）· eng-designer**——承 `docs/batches/2026-09-20-residual-sweep-batch.md` §3 发现 1 / 2）：**D1 行收正**——需求档 = 主 agent · 设计档 = eng-designer（用户 2026-09-20 12:25 收正授权；与纪律层提示词 `docs/core/design/prompts/discipline-engineering.md` 文档更新纪律 D1 行同态——消 D1 行 ∥ 同档 `:12` / `:33` 的互斥态）；
   §5 A-DD8 判据 1 内「沿革」行**删**（D8——失效表达离现役规范面）；历史记入本条：A-DD8 判据 1 原以旧慢层用例档（`doc-consistency.test.mjs`）为等价腿、判据仅在慢层生效，该档已随 M8 机检重写批删除；现行承接档 = `thincoder-cli/test/doc-check.test.mjs` 随 `npm test` 常驻。**零新语义**。
 - 2026-09-20（**卫生族批 · 登记轮 · eng-designer**——承 `docs/batches/2026-09-20-hygiene-sweep-batch.md` §2）：§3.9 J-1 残差块 +1 行登记——**§11 子族（全形 · 注释面）已处置**；余面（`§7.2` / `§15` / `§17`–`§29` 等 + 文案 / 裸形面）仍在册，随扩面轮。**零新语义**。
+- 2026-09-20（**卫生族二批 · 登记轮 · eng-designer**——承 `docs/batches/2026-09-20-hygiene-sweep-2-batch.md` §2）：§3.9 J-1 残差块 +1 行登记——**§6.10 陈名形子族（5 处 · 注释面）已处置**；余面仍在册，随扩面轮。**零新语义**。
