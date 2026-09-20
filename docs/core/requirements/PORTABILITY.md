@@ -39,7 +39,7 @@
 | **N1** | 零假阳 | 默认判据（`src` 为代码面）对既有项目行为与修复前一致——专项用例零误报 + 全量回归全绿 |
 | **N2** | 降级不崩溃 | 声明损坏 / 不可读 → 默认 + `console.warn` + `logEvent`（不抛）；注入缺失 → 降级句（不抛） |
 | **N3** | 全接线 | 消费点逐处换源（评审 / 门禁 / 索引 / 提示词四族）——「修一处漏三处」在用例面反证 |
-| **N4** | 测试面 | 专项用例三档在位且快层全绿：`thincoder-vscode/test/portability-vsc-classification.test.mjs` · `portability-vsc-advisor-context.test.mjs` · `portability-vsc-index.test.mjs` |
+| **N4** | 测试面 | 专项用例三档在位且 `npm test` 全绿：`thincoder-vscode/test/portability-vsc-classification.test.mjs` · `portability-vsc-advisor-context.test.mjs` · `portability-vsc-index.test.mjs` |
 
 ## 4. 范围边界（不做）
 

@@ -30,7 +30,7 @@
 | **N-E1** | 改动并入父级守卫 | 子代理 mutations 合并 + 重置父级 verify / advisor 收敛预算——飞刀不绕过父级门 |
 | **N-E2** | 活动流上屏 | relay `sub:escalate <label> #N` → 面板（冻结入流同 subagent / consult）——VSC `agent-tools/subagent-escalate.mjs:154` 起（该端档已退役——W12 删除集） （迁移期引文） |
 | **N-E3** | 双端语义一致 | 分工 / 缺省 async / 约束面双端同源；**各端独立实现**（同结果、异载体） |
-| **N-E4** | 可机判 | VSC 侧用例 = `thincoder-vscode/test/child-permission.test.mjs`（sync + async 接线 / 取消与 Stop 两路释放 / 角色域）等族；快层全绿、档名在册 |
+| **N-E4** | 可机判 | VSC 侧用例 = `thincoder-vscode/test/child-permission.test.mjs`（sync + async 接线 / 取消与 Stop 两路释放 / 角色域）等族；`npm test` 全绿、档名在册 |
 
 ## 4. 范围边界（不做）
 

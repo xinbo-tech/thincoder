@@ -32,7 +32,7 @@ settle 即落盘权威台账；凭证值只进槽文件（会话态），永不�
 | **N-D1** | 凭证不落文档 | token / designId 值只进槽文件（会话态）——设计 / 需求 / 批次档零值 | 设计侧验收巡检；文档面 grep 零凭证值 |
 | **N-D2** | 跨进程存活 | 槽文件 = 权威台账（持久）；进程重启 resume 后可结算 | 用例 = `thincoder-vscode/test/eng-settlement.test.mjs`（重启面 / 挂起会话 digest） |
 | **N-D3** | 双端同源 | 与对端同机制语义（settle 即落盘 / 废镜像 / 凭证纪律）；各端独立实现 | 本档 §4 端差登记（已登记差异 = 载体一项） |
-| **N-D4** | 可机判 | 用例在册且快层全绿 | `thincoder-vscode/test/eng-settlement.test.mjs`（D1 / D4 / D2 / D6 组） |
+| **N-D4** | 可机判 | 用例在册且 `npm test` 全绿 | `thincoder-vscode/test/eng-settlement.test.mjs`（D1 / D4 / D2 / D6 组） |
 
 ## 4. 端差登记（多实现面——语义同源、各端原文自持）
 

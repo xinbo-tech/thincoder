@@ -43,7 +43,7 @@ F2 / F3 是此事故的直接修复产物。
 
 | # | 需求 | 说明 |
 |---|---|---|
-| **V-F1** | 发布 = 唯一门禁（VSC） | `vscode:prepublish` = `npm run lint && npm test`（`thincoder-vscode/package.json`）——`vsce package` / 无参 `vsce publish` 自动执行；无独立预跑步。**2026-09-18 收正（VSC 收尾批 · 父侧直接执行）**：原「四环」（lint → doc:check → test:full → test:integration）实况已收敛；**`doc:check` 移出发布门**（发布门不挂仓级文档债），仓级文档机检改走**仓根域** `node scripts/doc-check.mjs`（域语义 / 取向裁定见 `docs/core/design/DOC-DISCIPLINE.md` §7） |
+| **V-F1** | 发布 = 唯一门禁（VSC） | `vscode:prepublish` = `npm run lint && npm test`（`thincoder-vscode/package.json`）——`vsce package` / 无参 `vsce publish` 自动执行；无独立预跑步。仓级文档机检改走**仓根域** `node scripts/doc-check.mjs`（域语义 / 取向裁定见 `docs/core/design/DOC-DISCIPLINE.md` §7） |
 | **V-F2** | 双源发布一条命令 | `npm run publish:all`（`scripts/publish-all.mjs`）——一次打包、双源发同一 .vsix、全量只测一次；`--skip-marketplace` / `--skip-openvsx` 显式单源 |
 | **V-F3** | 号在发布时定（VSC） | 开发期变更记录挂 `[Unreleased]`；发布 = 唯一定号动作；CalVer `0.<月>.<月内序号>` 月内计数重置 |
 | **V-F4** | 发布完成判定（VSC） | 发布命令正确返回（exit 0）= 完成——不轮询、不检查上线版本（审核队列 = 平台侧事务）；边界 = 发布前 PAT 校验照做（显式 `--pat` / `VSCE_PAT` + `OVSX_PAT`） |
