@@ -130,7 +130,16 @@ npm publish                    # prepublishOnly 自动跑 release:check（lint �
 
 ### 5.5 阶段 3 · 发 VSC（`thincoder-vscode`）
 
-**第 1 步 · 凭据预验**（防无 TTY 静默假成功——npm 的 exit-0 判定**不可**推广到 vsce/ovsx）：
+**第 1 步 · 物化核依赖（link → 真实安装态）**：开发机 `node_modules/@thincoder/core` 是 `npm link` 符号链接——**vsce 不打包 symlink**（2026-09-21 实证：vsix 静默无核，段 1.5 断言 B 拦下）⇒ 发布前先物化（发布路径依赖按 `CORE-UNIFICATION.md` §2.6.1 由 registry 解析）：
+
+```bash
+cd thincoder-vscode
+npm install --install-links             # link → registry 真实拷贝
+```
+
+发完可恢复开发链接（`npm link @thincoder/core`——dev / prod 双态见 §2.6.1）。
+
+**第 2 步 · 凭据预验**（防无 TTY 静默假成功——npm 的 exit-0 判定**不可**推广到 vsce/ovsx）：
 
 ```bash
 npx @vscode/vsce ls-publishers         # marketplace 凭据
@@ -139,7 +148,7 @@ npx ovsx verify-pat xinbo-tech         # open-vsx 凭据
 
 PAT 走 `VSCE_PAT` / `OVSX_PAT` 环境变量或显式传参，**零入库**（N6）。
 
-**第 2 步 · 发布**：
+**第 3 步 · 发布**：
 
 ```bash
 cd thincoder-vscode
