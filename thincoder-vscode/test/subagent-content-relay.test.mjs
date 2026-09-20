@@ -13,7 +13,7 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { buildPanelCallbacks, relaySubagentEventToken } from "../src/extension/panel-callbacks.mjs"
+import { buildPanelCallbacks, relaySubagentEventToken, relaySubagentContentChunk } from "../src/extension/panel-callbacks.mjs"
 
 /** 桩面板：`_wvReady: true`（事件面直投门——postSubagentEvent）+ postMessage 捕记数组。 */
 function stubPanel() {
@@ -50,6 +50,9 @@ test("T1 四路分流：onToken/onReasoning/onToolCall/onToolOutput 前缀 chunk
   assert.equal(call.text, 'read {"path":"x.mjs"}', "调用行 = 工具名 + args JSON（≤120）")
   assert.equal(out.kind, "tool")
   assert.equal(out.text, "out", "输出行 = chunk 文本")
+  // R1（渲染粒度对齐批 · 2026-09-20）：面随载荷（四面）+ 输出面携工具名（合并判据源 = relay 前缀 rest）
+  assert.deepEqual(panels.map((m) => m.face), ["text", "think", "toolCall", "toolOutput"], "面随载荷（四面）")
+  assert.equal(out.tool, "read", "输出面工具名与调用面同源")
 })
 
 // ─── T2 反向（硬项）：前缀 chunk 主流零命中 ────────────────────
@@ -141,4 +144,14 @@ test("T7 误伤形态锁定（已知接受——与 CLI 同文法同暴露）：
   assert.equal(m.name, "sub:issue#123", "已知暴露（判据句 = 与 CLI 同规；收严文法 = 显式改动）")
   assert.equal(m.kind, "text")
   assert.equal(m.text, "details")
+})
+
+// ─── T-G8 面集 = 四面结构锁（R6——第五路 `toolResult` 死支路删净）────
+
+test("T-G8 face-set lock: four faces claim; toolResult returns false (zero payload)", () => {
+  const { panel, posted } = stubPanel()
+  const claimed = ["text", "think", "toolCall", "toolOutput"].map((f) => relaySubagentContentChunk(panel, f, "eng-coder#2/read", "out"))
+  assert.deepEqual(claimed, [true, true, true, true], "四面认领")
+  assert.equal(relaySubagentContentChunk(panel, "toolResult", "eng-coder#2/read", "out"), false, "非四面 face ⇒ false（不入 subcontent / 不发载荷——修前 = 认领）")
+  assert.equal(panelMessages(posted).length, 4, "恰 4 条载荷（toolResult 零载荷）")
 })

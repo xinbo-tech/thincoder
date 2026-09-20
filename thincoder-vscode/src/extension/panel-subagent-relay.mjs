@@ -164,21 +164,25 @@ export function emitToolPanel(panel, name, chunk) {
 }
 
 /** 子代内容 chunk 分流：relay 前缀（含嵌套链——D-M8 子标）→ 面板载荷。无前缀 → false（调用方
- *  原样转发）。face ∈ text / think / toolCall / toolOutput / toolResult（五路调用面；后两路 = 输出 /
- *  结果行——2026-09-19 批补第五路：首参工具名带 `role#id/` 形）。 */
+ *  原样转发）。**面集 = 四面**（`text` / `think` / `toolCall` / `toolOutput`）——非四面 face
+ *  （含第五路 `toolResult` 死路）⇒ 早退 false（不入内容面正收据 · 不发载荷；2026-09-20 渲染粒度
+ *  对齐批删净——无产者证据链 `WEBVIEW.md` §5.3）。**面随载荷**：CLI 以「哪个路由函数被调用」表达
+ *  面，本端四面压成单 `toolPanel` 载荷 ⇒ 面必须随载荷（否则调用行与输出行不可分）；工具面 chunk
+ *  携 `tool`（relay 前缀 rest 逐字——与 CLI `fresh` 判据同源）。 */
 export function relaySubagentContentChunk(panel, face, a, b) {
+  if (face !== "text" && face !== "think" && face !== "toolCall" && face !== "toolOutput") return false
   const path = parseRelayPath(String(a ?? ""))
   if (!path) return false
   const sub = path.inner.length > 0 ? path.inner.join("/") : undefined // D-M8 嵌套子标
   let chunk
   if (face === "toolCall") {
     const argsJson = JSON.stringify(b) || ""
-    chunk = { kind: "tool", text: `${path.rest} ${argsJson.slice(0, 120)}`, tool: path.rest,
+    chunk = { kind: "tool", text: `${path.rest} ${argsJson.slice(0, 120)}`, tool: path.rest, face,
       cmd: typeof b?.command === "string" ? b.command : undefined, sub }
-  } else if (face === "toolOutput" || face === "toolResult") {
-    chunk = { kind: "tool", text: typeof b === "string" ? b : String(b?.text ?? ""), sub }
+  } else if (face === "toolOutput") {
+    chunk = { kind: "tool", text: typeof b === "string" ? b : String(b?.text ?? ""), tool: path.rest, face, sub }
   } else {
-    chunk = { kind: face === "think" ? "think" : "text", text: path.rest, sub }
+    chunk = { kind: face === "think" ? "think" : "text", text: path.rest, face, sub }
   }
   const ch = "sub:" + path.head
   noteContentFirst(panel, ch, face)

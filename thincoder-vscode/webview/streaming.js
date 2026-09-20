@@ -252,8 +252,10 @@ export function subagentChunk(m) {
     else if (entry && !entry.isConnected) traceSubOnce("drop-tombstone", name)
     return
   }
-  appendAdvisorChunk(block, m.kind ?? "tool", m.text, m.sub)
-  noteChunk(block, m.kind ?? "tool", m.text, m) // m 携结构化 tool/cmd（§14 C-11①——结果 chunk 不改写状态区）
+  const kind = m.kind ?? "text" // R4（渲染粒度对齐批 · §2.2 埋雷归一）：单点默认——与桥
+  // `panel-toolpanel.mjs:15` 及 CLI `tool-events.mjs:324` 同值（旧 `?? "tool"` 会把绕过桥的裸载荷静默渲成工具行）
+  appendAdvisorChunk(block, kind, m.text, m.sub, m) // m 随行（§5.6 合并判据读 face/tool）
+  noteChunk(block, kind, m.text, m) // m 携结构化 tool/cmd（§14 C-11①——结果 chunk 不改写状态区）
   _subScrollDirty ??= new Set() // 块级跟滚脏集（§13 C-LU2——rAF 尾逐块应用）
   _subScrollDirty.add(block)
   scheduleStreamRender() // 块级跟滚随 rAF 帧应用（§13——节流帧不丢：重排条件含脏集）

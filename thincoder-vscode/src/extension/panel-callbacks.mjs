@@ -203,8 +203,6 @@ export function buildPanelCallbacks(panel, deps) {
       // 仅 sync 成功 / 折叠路径设置）⇒ 该参在即补 `done`（块冻结 + 归档落流——CLI `finishSubTaskKey`
       // 对位）；无该参（async ack / 普通工具）零动作。与内容面分流互不排斥（两事同点）。
       if (subKey) settleSyncSubagent(panel, subKey, syncNoteOf(r))
-      // 第五路调用面：工具结果行按 relay 前缀分流（face = `toolResult`——命中则不入主流）。
-      if (relaySubagentContentChunk(panel, "toolResult", n, r)) return
       // X5（§2.2）：切片点携**事实旗标**（静默发生在本行）；`String(r ?? "")` 取代 `(r || "")`：falsy
       // 非串结果（`0` / `false`）文本由空变 `"0"`（记录形——§2.10.8 #13）。
       const full = String(r ?? "")

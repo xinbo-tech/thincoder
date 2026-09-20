@@ -38,8 +38,13 @@ export function buildAdvisorBlock(roundLabel) {
  * a dim row-start tag. The tag repeats only when the attribution CHANGES or a
  * run starts — rows of the same sub follow unprefixed (CLI sub-label parity);
  * the block's current sub rides a DOM expando (block._subCur).
+ * §5.6 (渲染粒度对齐批): `meta` (optional structured chunk — absent = old behavior) carries
+ * `face` / `tool` for the tool-face merge judgment: an output row (face "toolOutput") merges
+ * into the last row iff that row is a tool row with the same face / tool / sub ⇒ RAW text-node
+ * append (zero separator — CLI pushBlock parity); call rows (face "toolCall") and chunks without
+ * face/tool always start a fresh row (fail-safe — never guessed).
  */
-export function appendAdvisorChunk(block, kind, text, sub) {
+export function appendAdvisorChunk(block, kind, text, sub, meta) {
   // §27.1 F3（缺陷①）: 冻结块不接受追加（advisor 块无 _subMeta——不受影响）
   if (block._subMeta?.frozen) return
   const content = block.querySelector(".advisor-content")
@@ -49,9 +54,19 @@ export function appendAdvisorChunk(block, kind, text, sub) {
   const subLabel = typeof sub === "string" && sub ? sub : null
   const changedSub = subLabel !== null && (block._subCur ?? null) !== subLabel
   if (kind === "tool") {
+    const face = typeof meta?.face === "string" ? meta.face : null, tool = typeof meta?.tool === "string" && meta.tool ? meta.tool : null
+    const last = content.lastElementChild
+    // §5.6 合并路径（CLI pushBlock 判据）：末子行 ∧ 面 = toolOutput ∧ tool 同 ∧ sub 同 ⇒ RAW 拼接
+    // （零分隔符）；不满足（调用行 / 旧形无 face·tool / 不同 sub）⇒ 恒新行。
+    if (face === "toolOutput" && tool && last?.classList.contains("advisor-tool-line")
+      && last.dataset.face === "toolOutput" && last.dataset.tool === tool && (last.dataset.sub ?? "") === (subLabel ?? "")) {
+      last.appendChild(document.createTextNode(str)); return
+    }
     const line = document.createElement("div")
     line.className = "advisor-tool-line"
+    if (face) line.dataset.face = face; if (tool) line.dataset.tool = tool
     if (subLabel) {
+      line.dataset.sub = subLabel
       if (changedSub) {
         const tag = document.createElement("span")
         tag.className = "advisor-sub"

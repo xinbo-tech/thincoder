@@ -268,11 +268,13 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 - **存活投影**：`thincoder-vscode/src/extension/suspension.mjs:131-148` 读 `panel._liveLines ?? panel._susp?.lines` 的 `_asyncSubagents` / `_asyncAdvisors`（与 ⏹ 路由同源），
   **只发 live**——`running` → `started` + `pool: true`，`queued` → `queued`（两侧 role/id 必带；**载荷与 relay 面同形**：`position` / `waiting` / `reason` / `kind` 一并投影——重绘后与 live 面逐档一致；缓存单源 = queued 事件消费点）。（#118 落）
 
-**内容面投递（W15 内容面——2026-09-16 补；投递面本批并入队列）**：子代内容 chunk（text / think / 工具调用行 / 工具输出行 / **工具结果行**）经 relay 前缀文法
+**内容面投递（W15 内容面——2026-09-16 补；投递面本批并入队列）**：子代内容 chunk（text / think / 工具调用行 / 工具输出行）经 relay 前缀文法
 （`role#id/`——嵌套链子标随行）在端壳分流 → `toolPanel` `sub:<role>#<id>` 载荷（`panel-subagent-relay.mjs` `relaySubagentContentChunk`）；
 投递 = `emitToolPanel` 单点 → `postSubagentEvent`（**就绪门 + 队列 + 溢出留痕**——与事件面同语义）。次序 = 事件面先吃、内容面后判；前缀由核逐 chunk 重加 ⇒
 端侧逐 chunk 独立解析（无跨 chunk 重组、无半前缀）。
-**工具结果行（本批补——⑥）**：`onToolResult` 结果文本按 relay 前缀分流（face = `toolResult`——第五路调用面；前缀形态 = 核 `dispatch.mjs:441` 首参工具名带 `role#id/` 形）。
+**工具结果行面 = 无产者（2026-09-20 删净——行为零变更）**：证据链 —— 核 `wrapChildCallbacks`（`thincoder-core/agent/spawn-child.mjs:146-163`）只包四面
+（`onToken` / `onReasoning` / `onToolCall` / `onToolOutput`，**无 `onToolResult`**），子装配（`agent-tools/subagent-spawn.mjs:472-475` · `consult.mjs:299` · `escalate-async.mjs:208` · `subagent-actions.mjs:399` 同族）亦不携该回调
+⇒ 子内 `callbacks.onToolResult?.()`（`dispatch.mjs:374` / `:441`）恒 `undefined` ⇒ 带 relay 前缀的结果行不存在（端侧分流恒 false）。将来核侧若真加 relay ⇒ 随该能力面重建支路 + 本句（不预置死支路）。
 **第 4 参对位（⑥）**：`onToolResult` 第 4 参 = `toolCtx._subagentKey`（核 `dispatch.mjs:441` 传入；**仅 sync 成功 / 折叠路径**设置——`subagent.mjs:380-384`）= sync 子代理的**完成锚**（CLI 对位 = `finishSubTaskKey`）⇒ 端侧消费：该参存在即以该键补 `done`（**sync 子代理块终态落定**——现态永不折叠）；无该参（async ack 形 / 普通工具路径）零动作。
 
 **出生自愈心跳（host · 2 s 拍——F-A1 · F-A4 · F-A5）**：
@@ -291,7 +293,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 
 - `postSubagentEvent` **五处置全记** `ev:subdeliver`：`direct`（就绪直投）/ `enqueue` / `flush` / `drop-overflow`（溢出丢最旧）/ `discard-dispose`（view dispose 清队——⑥ 本批补）——载荷含 `ch`（频道名）· `status` · `wvReady`。
   现状只记入队 / 出队两处置 ⇒ 直投（生产常态）、溢出丢弃与清队丢弃三面无痕（本次实据：15:00–15:30Z 窗口零条 ⇒ 无法区分「直投成功」与「从未投递」）。
-- 内容面（`relaySubagentContentChunk` → `emitToolPanel`）：每频道**首条**记 `logEvent("ev:subcontent", …)`——载荷 `{ ch, face }`（`face` ∈ `text` / `think` / `toolCall` / `toolOutput` / `toolResult`——该频道首条实收面）、形态 = `content-first` 正收据；「内容丢失」面本批起由 `drop-overflow` 承载（内容已入队，不再直投丢弃——上界 = 每频道 1 行 + 溢出行）。
+- 内容面（`relaySubagentContentChunk` → `emitToolPanel`）：每频道**首条**记 `logEvent("ev:subcontent", …)`——载荷 `{ ch, face }`（`face` ∈ `text` / `think` / `toolCall` / `toolOutput`——四面；该频道首条实收面）、形态 = `content-first` 正收据；「内容丢失」面本批起由 `drop-overflow` 承载（内容已入队，不再直投丢弃——上界 = 每频道 1 行 + 溢出行）。
 - 心跳：`reassert` 摘要行——`n` 变化即记 + 每 30 次拍兜底（心跳存活本身可断言）。
 
 **webview 侧痕迹与上行（NFR-A2 webview 侧）**：
@@ -319,7 +321,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 - **补桩限 family** ⇒ 前置判据收正见上「终态必现」（consult / escalate 纳入）。
 - **`makeRelay` 无池兜底**（`thincoder-core/agent/spawn-child.mjs:77-82`——sync 取号 = `_subAgentCounter + 1`，与 async 取号 `nextSubagentId`（`subagent-scheduler.mjs:404-420`：`max(counter, poolMax) + 1`）共用同一计数器）⇒ **登记 + 出批上抛**（**端侧零修**）：
   同键成立需「计数器被重置 ∧ 池存活」这一组合，而池与 agent 生命周期同灭（VSC 侧 `_agent = null` 提池同段）⇒ 常态不可达；核面修法（改走 `nextSubagentId`）跨端影响 CLI 块命名 ⇒ 不在本批写域。既有显式取舍保留：同键两实例 = 消息交错可见（`activity.js:161`）。
-- **`onToolResult` 两件**（`panel-callbacks.mjs:163-168`）：① 审计 ⑥「relay 分流缺失」成立——本批补第五路调用面 `toolResult`（2026-09-19 实核：该回调现零 relay 分支、`relaySubagentContentChunk` 现役 face 仅四路——见上「工具结果行」）；② 第 4 参 `_subagentKey` 同点未消费 ⇒ sync 子代理块**永不折叠**，修法 = 消费该参补 `done`（见上「第 4 参对位」）。
+- **`onToolResult` 两件**（`panel-callbacks.mjs:163-168`）：① relay 分流面 = **无产者**（证据链见上「工具结果行面 = 无产者」）；② 第 4 参 `_subagentKey` 同点未消费 ⇒ sync 子代理块**永不折叠**，修法 = 消费该参补 `done`（见上「第 4 参对位」）。
 
 **同族配套（非上述三面）**：
 
@@ -387,6 +389,29 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
   - **回底清账**：钮点击 ⇒ `scrollTop = MAX` + `_pinActivity = true` + 移除钮 + `N` 归零；任一「近底」判定成立（`scroll` 事件）同清；`resetActivity` 同清。
   - **`:empty` 不回归**：钮按需建 / 删（`N = 0` 时元素不存在）——空区仍 `:empty` 零高（D-W1）。
   - **判据**：T-A21 / T-A22 / T-A23（未钉底出生 ⇒ 钮 `N = 1` 且 `scrollTop` 零改；点击 ⇒ 回底 + 钮消失；`scroll` 事件两向旗标正确）。
+
+### 5.6 内容行合并粒度（CLI `pushBlock` 对齐）
+
+**口径** = 以 CLI 为标尺（`docs/cli/design/TUI.md` §6.8.2；两端语义冲突以 CLI 为准）。三面实读（2026-09-20 设计轮 · file:line 实核）：
+
+| 面 | CLI 合并判据（标尺） | 本端（本批落） |
+|---|---|---|
+| text / think | `pushBlock`：`!fresh && last.kind === kind` ⇒ 并入末块（`thincoder-cli/src/tui/subagent-children.mjs:139-145`） | 同判据（`.advisor-text` 行 kind + `sub` 同即并入——`webview/ui.js:71-77`，**零改**） |
+| kind 翻转 | `last.kind === kind` 不成立 ⇒ 新块（`subagent-children.mjs:140`） | 新行（同判据——**两端同构，非端差**） |
+| 工具输出 | `fresh = currentTool !== toolName`（工具名取自 relay 前缀 `path.rest`）⇒ 工具名不变即并入末块、**RAW 拼接零分隔符**（`thincoder-cli/src/tui/subagent-blocks.mjs:364-370`） | **新**：末子行 = 工具行 ∧ `dataset.face === "toolOutput"` ∧ `dataset.tool` 同 ∧ `dataset.sub` 同 ⇒ 并入（文本节点拼接，零分隔符） |
+| 工具调用行 | 恒新块（`fresh: true`；行尾带 `\n`——`subagent-blocks.mjs:346`） | 恒新行（`face === "toolCall"`） |
+
+**为什么必须改**：relay chunk = **任意字节边界碎片**（CLI 同注释实证：逐 chunk 补 `\n` 会把词拦腰断行——`subagent-blocks.mjs:351-355`）；旧形（`webview/ui.js:51-68`）每 chunk 新建 `div.advisor-tool-line` ⇒ 逐 chunk 断行（台账 #148 症状「一 chunk 一行」）。
+
+**面随载荷（协议字段 `face`）**：CLI 以「哪个路由函数被调用」表达面；本端四面压成单 `toolPanel` 载荷 ⇒ 面必须随载荷，否则调用行与输出行不可分（输出并入调用行 ⇒ 工具名粘连）。取值与登记 = `WEBVIEW-PROTOCOL.md` §3（`toolPanel` 行）· §3.2 行 3。
+
+**RAW 与换行**：并入 = 逐字文本节点拼接（零分隔符，同 CLI `subagent-children.mjs:143`）+ `.advisor-tool-line` 加 `white-space: pre-wrap`（`webview/chat.css:336`）⇒ 输出自带换行结构无损还原、chunk 边界不可见。
+
+**降级（fail-safe）**：无 `tool` / 无 `face` 的 chunk（旧生产者 / `onToolPanel` 缝）⇒ **恒新行 = 旧行为零变**（不猜）。
+
+**不做**：不跨 kind 合并 · 不并「不同 `sub`」的行（行首子标归属可辨；CLI 内层无归属标 = `docs/cli/design/TUI.md:360-361` 已登记端差，本批维持） · 不改状态区判据（输出 chunk 仍走「工具文本尾句」——`WEBVIEW-PROTOCOL.md` §6.2 状态区·running 对齐面零回归）。
+
+**判据**：T-G1–T-G8（`thincoder-vscode/test/render-granularity.test.mjs`）——同工具连续输出三片段 ⇒ 段数 2（先红 = 3）；工具改 ⇒ 新段；调用行恒新段；kind / `sub` 交替恒分段；旧生产者降级；kind 缺省 ⇒ 文本行。
 
 ## 6. 关键决策记录（含否决备选）
 
@@ -516,6 +541,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 | 13 | 工具卡呈现增强（结算 / 清扫（M1）· 对象 chunk 归一（M3）· 轮次标签（X2）· 摘要单源（X3 · X7）· 截断提示（X5）） | F-W4 · F-W16 · 台账 #124 |
 | 14 | 状态行 context 段单口径（M2） | 台账 #124（段位对位表 = `WEBVIEW-PROTOCOL.md` §6.1——本档不重述，D2） |
 | 15 | 块头注记与 ⏹ 门控扩支 · digest 三档（X6 · X10 · X11 · M4） | F-A4 · F-W7 · 台账 #125 |
+| 16 | 内容行合并粒度（CLI `pushBlock` 对齐 · 协议字段 `face` · RAW 拼接 + `pre-wrap` · 工具结果行面删净） | F-W1 · N-W5 · 台账 #148 |
 
 **用例面**：本板块的测试资产在 `thincoder-vscode/test/`（`activity-flow` · `activity-closure` · `activity-live-ux` ·
 `async-visibility` · `history-window` · `history-restore` · `session-boot`）——用例表归测试层，本档不复制（D2）。
@@ -583,3 +609,5 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
   §5.5 计数钮**落档登记**（新档 `thincoder-vscode/webview/activity-new.js`（拟新增））+ 文案落 locale 键 `sub.newBlocks`；D-W24 补落点坐标（`panel-session.mjs:74`）；D-W13 行数读数收正（`ui.js` 474——2026-09-19 实读）；
   §10 行 12 悬空指针改内嵌建议文本（新增条目号仍待父侧落）；T-A12 退场标记化 · T-A27 触发面收窄（`drop-unknown-role`）。
 - 2026-09-20（**库存清账批 · 台账 #129 G-2 · eng-designer**——承 `docs/batches/2026-09-20-residual-sweep-batch.md` §2）：§5.3 / §5.5 / D-W22 四处「（拟新增）」标记撤除（`webview/activity-diag.js` / `webview/activity-new.js` 已落地——与姊妹档 `WEBVIEW-PROTOCOL.md` 同形）。**零新语义**。
+- 2026-09-20（**渲染粒度对齐批 · eng-designer**——承 `docs/batches/2026-09-20-render-granularity-batch.md` §1 / §2）：新增 **§5.6 内容行合并粒度**（CLI `pushBlock` 对齐——tool 面按「工具名 + `sub` 同」并入末行、RAW 零分隔符 + `pre-wrap`；text / think 面两端同构零改；降级 = 无 `face` 恒新行）；
+  §5.3 内容面**面集收正为四面**（`toolResult` 面删净——无产者，证据链同节）· §10 回指 +1 行（行 16）。**协议消息名零变**（字段增 `face`——`WEBVIEW-PROTOCOL.md` §3 / §3.2 行 3）。

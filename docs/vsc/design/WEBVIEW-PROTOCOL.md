@@ -46,7 +46,7 @@ reasoning, provider, images? } → extension _chat()
 
 | 消息 | 方向 | 载荷 / 语义 |
 |---|---|---|
-| `toolPanel` | ext → wv | `{ type, name, kind, text, round, model, sub }`——活动流 chunk（advisor / 子代理 / consult / escalate）；`kind` = start / think / text / tool；`sub` = 嵌套子标（string chunk 分支恒 `undefined`）；**增字段** `tool`（工具名）/ `cmd`（参数摘要 ≤60——无则不携）。**生产者双源** = `onToolPanel` 缝 + 子代内容 chunk 中继（relay 前缀分流——`panel-callbacks.mjs` `relaySubagentContentChunk`）；`cmd` ≤60 截断落层 = **webview 块头渲染**（`activity-view.js` `noteChunk`——超 60 截为 59+…），桥与生产者透传原串 |
+| `toolPanel` | ext → wv | `{ type, name, kind, text, round, model, sub }`——活动流 chunk（advisor / 子代理 / consult / escalate）；`kind` = start / think / text / tool；`sub` = 嵌套子标（string chunk 分支恒 `undefined`）；**增字段** `tool`（工具名——工具调用面与工具输出面同携）/ `cmd`（参数摘要 ≤60——无则不携）/ `face`（内容 chunk 来源面 ∈ `text` / `think` / `toolCall` / `toolOutput`——`WEBVIEW.md` §5.6 合并判据源）。**生产者双源** = `onToolPanel` 缝 + 子代内容 chunk 中继（relay 前缀分流——`panel-callbacks.mjs` `relaySubagentContentChunk`）；`cmd` ≤60 截断落层 = **webview 块头渲染**（`activity-view.js` `noteChunk`——超 60 截为 59+…），桥与生产者透传原串 |
 | `subagent` | ext → wv | `{ ...info }` 展开透传——`started`（池条目带 `pool: true`）/ `settled` / `done` / `error` / `cancelled` / `terminated` / `failed` / `answered` 终态 + turn / maxTurns 终值快照；**增 status 值** `"turn"`（`{ id, role, turn, maxTurns }` 逐轮进展帧）；**增字段** `note`（块头停因注记——X6）/ `syncLive`（sync 可中止事实——X10） |
 | `subagentApproval` | ext → wv | `{ id, role, model?, tool }`——审批态（`tool = null` 清除）→ 块头 `⏸` + 态词 `等待审批: <tool>` |
 | `cancelSubagent` | wv → ext | `{ id, role }`——⏹ 点击路由 → 池条目定向 abort（role 交叉校验防陈旧按钮误停；未知 no-op）；**advisor role 复用同路由**——与子代理族**同经** `executeCancelAction`（**不得**走专用直调分支；收尾口径 = `AGENT-LOOP-SUBAGENT.md` 的 §6.11 第 3 条「端侧路径收口」）⇒ 取消事件经中继转 `subagent` 协议消息（queued 命中 = `cancelled(was:"queued")`——等待头移除；running 命中 = `cancelled`——块定格） |
@@ -80,7 +80,7 @@ reasoning, provider, images? } → extension _chat()
 |---|---|---|---|---|
 | 1 | `statusText`（新消息） | 五 kind 载荷（见 §3 表） | `panel-callbacks.mjs` onWait 映射；`panel-index.mjs` 索引进度 | `chat.js` case → `S._statusText` → 状态行段 |
 | 2 | `turnFrame`（新消息） | `{ turn, maxTurns }` | `panel-callbacks.mjs` onAgentTurn（顶层） | 同上 → 状态行 `turn N/M` 段 |
-| 3 | `toolPanel`（增字段） | `tool` / `cmd` | `relaySubagentContentChunk`（子代内容中继——2026-09-16 补）+ payload 白名单 | `activity-view.js` 块头 |
+| 3 | `toolPanel`（增字段） | `tool` / `cmd` / **`face`**（2026-09-20 补——内容 chunk 来源面，工具输出面合并判据源：`WEBVIEW.md` §5.6） | `relaySubagentContentChunk`（子代内容中继——2026-09-16 补）+ payload 白名单 | `activity-view.js` 块头 · `ui.js` 内容行合并 |
 | 4 | `subagent`（增 status 值） | `status:"turn"` + `{ id, role, turn, maxTurns }` | `subagent-run.mjs` onAgentTurn | `applySubagentStatus` 进展分支 |
 | 5 | `digest`（增 status 值） | `status:"cap"` + `{ mode, turns }` | `panel-turn-loop.mjs` ContinueError 分支（`postDigestCap`） | `chat.js` case → `.digest-cap` 行 |
 | 6 | `usage`（增字段） | `reasoning_tokens` | `panel-callbacks.mjs` 累计（transports 映射补全） | `status-bar.js` ✦ 段 |
@@ -536,3 +536,4 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
   **消息名 / 载荷字段 / 首列判别式集零变**（新增一行 = 实现落地登记，非协议面新语义——§3.2 行 8 早已登记）。
 - 2026-09-20（**库存清账批 · 台账 #129 G-3 / G-4 + #128 · eng-designer**——承 `docs/batches/2026-09-20-residual-sweep-batch.md` §2）：§6.2 补 **queued 状态词行**（与 `WEBVIEW.md` §5.2 契约对位）；§6.3 头注补**收录口径**（非 locales 全量 + 新增对位键同轮登记）；§12 头注 v1 词面收正（`npm test` 逐跑）。**零新语义**。
 - 2026-09-20（**库存清账批 · 设计评审修正轮（id=43）· eng-designer**——承 `docs/batches/2026-09-20-residual-sweep-batch.md` §3 发现 10）：§6.3 头注末句改述——「新增对位键须同轮登记本表」明标**登记义务 = 承 D3 计数·枚举纪律（本表为其落点）**（非本表新立义务——与上行「零新语义」同口径）。
+- 2026-09-20（**渲染粒度对齐批 · eng-designer**——承 `docs/batches/2026-09-20-render-granularity-batch.md` §2）：§3 `toolPanel` 行与 §3.2 行 3 补**增字段** `face`（内容 chunk 来源面——`WEBVIEW.md` §5.6 合并判据源；`tool` 字段同携于工具输出面）。**消息名 / 发射点 / 消费位零变 · 十三项计数零变**（行 3 原地扩字段）。

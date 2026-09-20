@@ -180,7 +180,9 @@ export function noteChunk(block, kind, text, m) {
   if (!block?._subMeta || block._subMeta.frozen) return
   const meta = block._subMeta
   if (kind === "tool") {
-    if (typeof m?.tool === "string" && m.tool) {
+    // R5（§5.6 面门）：输出 chunk（face = toolOutput）不走结构化分支 ⇒ 状态词仍取「工具文本尾句」
+    // （否则 R1 补 `tool` 后状态区退成裸工具名——`WEBVIEW-PROTOCOL.md` §6.2 状态区·running 对齐面回归）。
+    if (typeof m?.tool === "string" && m.tool && m.face !== "toolOutput") {
       // 结构化工具字段（C-11①）：`${tool} — ${cmd ≤60}`（无 cmd 仅 tool）
       const cmd = typeof m.cmd === "string" ? m.cmd.replace(/\s+/g, " ").trim() : ""
       meta.stateWord = cmd ? `${m.tool} — ${cmd.length > 60 ? cmd.slice(0, 59) + "…" : cmd}` : m.tool
