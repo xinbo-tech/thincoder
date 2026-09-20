@@ -14,7 +14,8 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSy
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
-import { _resetSessionsDirForTest, _setSessionsDirForTest, activeSlot, getSessionId, loadManifest, manifestPath, slotPath } from "../session-slots.mjs"
+import { _resetSessionsDirForTest, _setSessionsDirForTest, activeSlot, claimSlot, getSessionId, loadManifest, manifestPath, readEndMarker, slotPath } from "../session-slots.mjs"
+import { newSession, switchToSlot } from "../session.mjs"
 import { _resetProcessProbeTestImpl, _setProcessProbeTestImpl } from "../process-probe.mjs"
 import {
   _resetSlotMtimeCacheForTest, mergeEngTokensForSave, newSlotData, saveSlotData,
@@ -215,4 +216,69 @@ slow("粘性早退（F-MI7）：已拥有 active ⇒ 零探测（0 判活 + 0 �
   try { got = activeSlot(CWD) } finally { _resetProcessProbeTestImpl() }
   assert.equal(got, 5, "已拥有 active 未被复用")
   assert.deepEqual(calls, { alive: 0, cmdline: 0 }, "粘性早退面发生探测（应为零）")
+})
+
+// ─── F-CR1 认领释放（SESSION-CLAIM 批 · SESSION.md §6.2 / §6.16——释放集判据单源）──────────
+
+/** 释放面夹具：槽文件 + manifest 条目（`switchToSlot` 需 m.slots 条目 + 可读槽文件）；
+ *  清单先归零（隔离他测遗留的属主条目——防冷路径真探测）。 */
+function seedReleaseState(...slots) {
+  writeFileSync(manifestPath(CWD), JSON.stringify({ version: 2, slots: {}, slotSessions: {}, sessionId: null }))
+  const m = loadManifest(CWD)
+  for (const s of slots) { putSlot(() => {}, s); m.slots[s] = { updatedAt: 1 } }
+  writeFileSync(manifestPath(CWD), JSON.stringify(m))
+}
+
+test("F-CR1 切槽释放（验收①）：绑定 41 → 切 40 ⇒ 41 释放 ∧ 40 = 本进程；再切回 41 ⇒ 重新认领", () => {
+  seedReleaseState(40, 41)
+  claimSlot(CWD, 41) // 启动 / 恢复认领 = 当前绑定
+  const other = `${process.pid}-0-other-end`
+  const m0 = loadManifest(CWD)
+  m0.slotSessions = { ...(m0.slotSessions ?? {}), 99: other } // 他端认领（零动面）
+  writeFileSync(manifestPath(CWD), JSON.stringify(m0))
+
+  assert.ok(switchToSlot(CWD, 40), "切换成功（读得到目标槽数据）")
+  const m1 = loadManifest(CWD)
+  assert.equal(m1.slotSessions[41], undefined, "旧绑定 41 已释放（认领随绑定走）")
+  assert.equal(m1.slotSessions[40], getSessionId(), "新绑定 40 = 本进程")
+  assert.equal(m1.slotSessions[99], other, "他端认领零动")
+  assert.equal(m1.active, 40, "共享指针按 D-6 翻至目标")
+  assert.equal(m1.slots[41].updatedAt, 1, "m.slots 条目零动（释放只碰认领集）")
+  assert.ok(existsSync(slotPath(CWD, 41)), "槽文件零动")
+  assert.equal(readEndMarker(CWD)?.slot, 40, "端标记按 D-4 写目标槽")
+
+  assert.ok(switchToSlot(CWD, 41), "再切回成功（旧槽已空闲）")
+  const m2 = loadManifest(CWD)
+  assert.equal(m2.slotSessions[41], getSessionId(), "验收①后半：旧槽重新认领")
+  assert.equal(m2.slotSessions[40], undefined, "40 释放")
+})
+
+test("F-CR1 落盘判据：值条件删除（fresh 属主 ≠ 本进程 ⇒ 不删）+ 内存条目移除（不复活回写）", () => {
+  seedReleaseState(40, 41)
+  const other = `${process.pid}-0-other-end`
+  const stale = loadManifest(CWD) // 本进程内存面：认为 41 是自己的（陈旧）
+  stale.slotSessions = { ...(stale.slotSessions ?? {}), 41: getSessionId() }
+  const disk = loadManifest(CWD) // 盘面：窗口内 41 已被他端重新认领
+  disk.slotSessions = { ...(disk.slotSessions ?? {}), 41: other }
+  writeFileSync(manifestPath(CWD), JSON.stringify(disk))
+
+  claimSlot(CWD, 40, stale) // 落点认领（释放集按写盘同一次 fresh 快照取值）
+
+  const m = loadManifest(CWD)
+  assert.equal(m.slotSessions[41], other, "fresh 属主非本进程 ⇒ 值条件不删（他人新认领保住）")
+  assert.equal(m.slotSessions[40], getSessionId(), "落点槽照常认领")
+})
+
+test("F-CR1 释放面 opt-in：newSession 默认零释放（ACP 四点面）；传 releaseStale 才释放", async () => {
+  seedReleaseState(40, 41)
+  claimSlot(CWD, 41) // 本进程残留认领（模拟既有多认领）
+  const s1 = await newSession(CWD) // 默认：不释放
+  assert.notEqual(s1, 41, "新槽另取号")
+  assert.equal(loadManifest(CWD).slotSessions[41], getSessionId(), "默认不释放（ACP 调用面纪律）")
+
+  const s2 = await newSession(CWD, { releaseStale: true }) // opt-in：释放（保留集 = {新槽}）
+  const m = loadManifest(CWD)
+  assert.equal(m.slotSessions[41], undefined, "opt-in ⇒ 残留认领释放")
+  assert.equal(m.slotSessions[s1], undefined, "前一落点认领亦释放（保留集 = {新槽}）")
+  assert.equal(m.slotSessions[s2], getSessionId(), "新槽认领 = 本进程（保留集）")
 })

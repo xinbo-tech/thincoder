@@ -171,8 +171,11 @@ export function applySession(agent, data, opts = {}) {
  * write an empty session, and mark it as the active slot.
  * No limit on the number of sessions.
  * **async**（F-MI7：入口一次异步束——探测不阻塞事件循环；调用面必须 await）。
+ * `opts.releaseStale`（F-CR1 · SESSION.md §6.5 / §6.16）：**调用面 opt-in**——CLI `/new` 传
+ * （`cmd-new.mjs`），释放本进程残留认领（保留集 = {新槽}）；ACP 四点不传（多会话多认领属其
+ * 设计——F-CR3 零回归）。
  */
-export async function newSession(cwd) {
+export async function newSession(cwd, opts = {}) {
   const m = loadManifest(cwd)
 
   // 2026-09-01 advisor 🔵：先清理死主条目（与 ensureActive 分支2 语义一致）——否则
@@ -228,7 +231,9 @@ export async function newSession(cwd) {
         slots: deadSlots.filter((s) => !m.slots[s]),
       }
     : null
-  saveManifest(cwd, m, deletions, { setActive: true })
+  // F-CR1 认领释放（SESSION.md §6.5 / §6.16 公式代入）：保留集 = {新槽}——与既有死主
+  // deletions 合流（同一一次 saveManifest；落盘判据见核 `saveManifest`）。
+  saveManifest(cwd, m, deletions, opts.releaseStale ? { setActive: true, release: [slot] } : { setActive: true })
   // 2026-09-05 §6.10 D-4：/new 落点写本端记录（显式切换跟随——T-M8）
   writeEndMarker(cwd, slot)
   return slot
@@ -285,7 +290,10 @@ export function switchToSlot(cwd, slot) {
     m.slotSessions ??= {}
     m.slotSessions[slot] = getSessionId()
   }
-  saveManifest(cwd, m, null, { setActive: true })
+  // F-CR1 认领释放（SESSION.md §6.5 / §6.16 公式代入）：保留集 = 未占 ⇒ {目标}；**被占 ⇒ 空**
+  // （不认领目标 + 旧认领一并释放——下次保存经 `allocateFresh` fork，既有语义）。核受占 =
+  // 切换成立（D-SE33：指针 / 记录按 D-6 / D-4 落点——fork 面依赖指针翻至目标槽）。
+  saveManifest(cwd, m, null, { setActive: true, release: occ.occupied ? [] : [slot] })
   // 2026-09-05 §6.10 D-4：/session N 跟随"最后查看的槽"（成功切换才写）
   writeEndMarker(cwd, slot)
   return data

@@ -20,7 +20,7 @@ import { handleSessionCommand } from "../src/tui/cmd-session.mjs"
 import { buildAcpHandlers } from "../src/acp.mjs"
 import { DEFAULT_MANIFEST, MANIFEST_REL } from "@thincoder/core/manifest.mjs"
 import { loadManifest } from "@thincoder/core/session.mjs"
-import { _setSessionsDirForTest, _resetSessionsDirForTest, saveManifest, slotPath, writeSessionFile } from "@thincoder/core/session-slots.mjs"
+import { _setSessionsDirForTest, _resetSessionsDirForTest, claimSlot, getSessionId, saveManifest, slotPath, writeSessionFile } from "@thincoder/core/session-slots.mjs"
 
 const LEGAL_JSON = JSON.stringify(DEFAULT_MANIFEST, null, 2) + "\n"
 let sessionsDir
@@ -181,4 +181,27 @@ test("session/load 边界：目标槽普通会话 ⇒ 不判（零 manifest I/O�
   const r = await handlers["session/load"]({ sessionId: 2 })
   assert.ok(!r?.error, `装载成功（普通槽不受判据影响）：${r?.error?.message ?? ""}`)
   assert.equal(created.length, 1)
+})
+
+// ─── F-CR1 认领释放（SESSION-CLAIM 批 · SESSION.md §6.2 / §6.16——/session 调用面）────────────
+
+test("F-CR1 切槽释放（/session 调用面 · 验收①）：旧绑定释放 + 目标认领；再切回 ⇒ 重新认领", async (t) => {
+  const cwd = mkPlainDir(t)
+  seedSlot(cwd, 40)
+  seedSlot(cwd, 41)
+  claimSlot(cwd, 41) // 启动恢复 = 当前绑定槽 41（本进程）
+  const agent = tuiAgent(cwd, { _slot: 41 })
+  const lines = []
+
+  await handleSessionCommand(sessionCtx(agent, lines, 40))
+  assert.ok(lines.some((l) => l.includes("Switched to slot 40")), "切槽回显在场")
+  const m1 = loadManifest(cwd)
+  assert.equal(m1.slotSessions[41], undefined, "旧绑定 41 释放（认领随绑定走）")
+  assert.equal(m1.slotSessions[40], getSessionId(), "目标 40 认领 = 本进程")
+  assert.equal(m1.active, 40, "共享指针翻至目标（D-6）")
+
+  await handleSessionCommand(sessionCtx(agent, lines, 41))
+  const m2 = loadManifest(cwd)
+  assert.equal(m2.slotSessions[41], getSessionId(), "验收①后半：旧槽重新认领")
+  assert.equal(m2.slotSessions[40], undefined, "40 释放")
 })

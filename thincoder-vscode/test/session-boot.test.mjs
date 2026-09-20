@@ -5,7 +5,8 @@
  * 组 ⑪⑫（评审 #2：chat-panel.test.mjs 485 行近 500 硬限不再追加——新文件登记 files.mjs）。
  * 组 ⑬（SESSION-RESTORE-PARITY H/AC）· 组 ⑭（F-MI7 槽绑定束：零探测冷路径 / 解析缓存
  * 写穿 / 空槽写面短路——批档 2026-09-18-init-block §5 续轮）· 组 ⑮⑯（他端活槽不收养——
- * SESSION.md §6.15 P3/P4：switchSession / deleteSession 的 marker + 解析缓存收敛）。
+ * SESSION.md §6.15 P3/P4：switchSession / deleteSession 的 marker + 解析缓存收敛；组 ⑮ 兼
+ * F-CR2 四不动——SESSION-CLAIM 批：受占拒绝路径共享指针 / 认领集零动）。
  * 手法：真实 ChatPanel 原型 + 真实模块链路（panel-session openSessionContent/loadSession/
  * pushSessions/status——不桩模块函数）+ tmp 会话/config 沙箱（session-io/config-io 测试缝
  * ——同 chat-panel.test.mjs）。桩只切 host API 面（vscode mock 缺失件局部补）；posted
@@ -376,7 +377,7 @@ function foreignSlot(cwd, slot) {
   saveManifest(cwd, m)
 }
 
-test("⑮ 切到被占目标槽（SESSION.md §6.15 P3/P4）：switchSession 不写本端记录（marker 保持原槽）+ 不污染解析缓存 + 面板回自身槽（不钉占槽）；共享 active 指针仍翻（D-6 保留）", async () => {
+test("⑮ 切到被占目标槽（SESSION.md §6.15 P3/P4 · F-CR2 四不动）：switchSession 不写本端记录（marker 保持原槽）+ 不污染解析缓存 + 面板回自身槽（不钉占槽）；共享 active 指针 / 认领集零动（判据前置）", async () => {
   _setSessionsDirForTest(join(_tmp, "sessions3"))
   const cwd = _cwd()
   try {
@@ -385,6 +386,7 @@ test("⑮ 切到被占目标槽（SESSION.md §6.15 P3/P4）：switchSession 不
     foreignSlot(cwd, 2)
     stubLiveOther()
     assert.equal(slotOccupancy(cwd, 2).occupied, true, "fixture：槽 2 判占用（他端活属主）")
+    const before = loadManifest(cwd) // F-CR2 四不动基准（拒绝前态）
 
     const p = bootPanel({ _slot: 1 })
     const warned = []
@@ -396,7 +398,11 @@ test("⑮ 切到被占目标槽（SESSION.md §6.15 P3/P4）：switchSession 不
       vscode.window.showWarningMessage = realWarn
     }
 
-    assert.equal(loadManifest(cwd).active, 2, "共享 active 指针仍翻（D-6：CLI 互操作保留——非本端记录面）")
+    // F-CR2（SESSION-CLAIM 批 · §6.15 / §6.16）：受占 ⇒ 判据前置、不进入 switchToSlot——
+    // 共享指针与认领集与前态逐字段相等。
+    const after = loadManifest(cwd)
+    assert.equal(after.active, before.active, "F-CR2 四不动：共享 active 指针零动（判据前置——不进入 switchToSlot）")
+    assert.deepEqual(after.slotSessions, before.slotSessions, "F-CR2 四不动：认领集零动（不认领占槽）")
     assert.equal(readEndMarker(cwd).slot, 1, "P4：本端记录保持原槽 1（被占 ⇒ 不写他端槽 marker）")
     assert.equal(cachedSlot(cwd), 1, "P3：解析缓存保持原槽 1（被占 ⇒ 不收养占槽）")
     assert.equal(p._slot, 1, "P3：面板不钉占槽——loadSession 经缓存绑回自身槽 1")

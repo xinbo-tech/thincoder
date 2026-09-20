@@ -16,10 +16,11 @@ import { dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { createAgent } from "@thincoder/core/agent.mjs"
 import { pushReal } from "@thincoder/core/context.mjs"
-import { saveSession, resumeSlot, applySession, newSession, sessionDescriptor } from "@thincoder/core/session.mjs"
+import { saveSession, resumeSlot, applySession, newSession, switchToSlot, sessionDescriptor } from "@thincoder/core/session.mjs"
 import { repairHistory } from "@thincoder/core/agent/helpers.mjs"
 import { restoreLines, createLoadOlder } from "../../src/tui/startup.mjs"
-import { _setSessionsDirForTest, _resetSessionsDirForTest, slotPath } from "@thincoder/core/session-slots.mjs"
+import { _setSessionsDirForTest, _resetSessionsDirForTest, getSessionId, loadManifest, saveManifest, slotPath } from "@thincoder/core/session-slots.mjs"
+import { _setProcessProbeTestImpl, _resetProcessProbeTestImpl } from "@thincoder/core/process-probe.mjs"
 
 const __here = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__here, "..", "..")
@@ -256,4 +257,43 @@ test("④ 正常（T-RS10）：磁盘为准 + 内存窗口——尾窗/total、�
   const disk2 = JSON.parse(readFileSync(slotPath(cwd, first._slot), "utf8"))
   assert.equal(disk2.history.length, TOTAL + 1, "保存后 JSON history 仍为全量")
   assert.equal(first._recordStore.total(), TOTAL + 1)
+})
+
+// ── F-CR1（验收③ · SESSION.md §2.3）：他端认领后本端再切入 ⇒ 判占 + fork ──
+const OTHER_PID = 42424 // 伪造他端活属主（产品命令行 ⇒ ownerState = "alive"；注入缝 = 核 process-probe）
+const stubLiveOther = () => _setProcessProbeTestImpl({
+  aliveFn: (pids) => new Set([...pids].filter((p) => p === OTHER_PID)),
+  cmdlineFn: (pids) => new Map([...pids].map((p) => [p, "node bin/thincoder.cjs"])),
+})
+
+test("④ 认领（验收③）：甲离开 X ⇒ 认领释放 → 乙认领 X → 甲再切入 ⇒ 不认领 X（占用判）+ 下次保存 fork", async (t) => {
+  const cwd = mkdtempSync(join(tmpdir(), "tc-int-sess-claim-"))
+  t.after(() => { try { rmSync(cwd, { recursive: true, force: true }) } catch { /* ignore */ } })
+  const agent = mkAgent(cwd)
+  relay(agent, { role: "user", content: "at X" })
+  saveSession(agent)
+  const X = agent._slot
+  const Y = await newSession(cwd, { releaseStale: true }) // /new 落点：离开 X ⇒ 认领释放
+  assert.notEqual(Y, X, "新会话落新槽")
+  assert.equal(loadManifest(cwd).slotSessions[X], undefined, "甲离开 X ⇒ 认领释放（乙可认领）")
+  const m = loadManifest(cwd)
+  saveManifest(cwd, { ...m, slotSessions: { ...(m.slotSessions ?? {}), [X]: `${OTHER_PID}-other-end` } }) // 乙认领 X
+  stubLiveOther()
+  try {
+    // 甲再切入 X：他端活属主 ⇒ 占用判 ⇒ 不认领；核受占 = 切换成立（指针翻目标——fork 依赖）
+    const data = switchToSlot(cwd, X)
+    assert.ok(data, "切入成功（读得到目标槽数据）")
+    const m1 = loadManifest(cwd)
+    assert.equal(m1.slotSessions[X], `${OTHER_PID}-other-end`, "不认领被占槽（占用判单源 slotOccupancy）")
+    assert.equal(m1.active, X, "共享指针翻至目标（D-SE33）")
+    assert.equal(m1.slotSessions[Y], undefined, "被占落点保留集 = 空 ⇒ Y 认领一并释放")
+    applySession(agent, data) // 下次保存：未绑定 + 目标被占 ⇒ activeSlot → allocateFresh fork
+    relay(agent, { role: "user", content: "forked" })
+    saveSession(agent)
+    assert.notEqual(agent._slot, X, "下次保存 fork 新槽（不写他端槽）")
+    assert.equal(loadManifest(cwd).slotSessions[X], `${OTHER_PID}-other-end`, "他端认领零动")
+    assert.equal(loadManifest(cwd).slotSessions[agent._slot], getSessionId(), "fork 槽认领 = 本进程")
+  } finally {
+    _resetProcessProbeTestImpl()
+  }
 })

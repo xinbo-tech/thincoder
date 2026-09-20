@@ -4,7 +4,8 @@
  * `CORE-UNIFICATION.md` §2.8.1 表第 3 行随批执行外提；各函数语义**原样**迁移）：
  * 摘要面（`extractSlotMeta` / `slotDigest`）· 清单读写（`loadManifest` / `saveManifest`）·
  * 属主面（`ownerPid` / `ownerPids` / `ownerStateOf` / `ownerArgs` / `cleanDeadOwners`）·
- * 认领面（`ensureActive` / `allocateFresh` / `claimSlot` / `activeSlot`）。
+ * 认领面（`ensureActive` / `allocateFresh` / `claimSlot` / `activeSlot` / **认领释放集
+ * `staleClaims`**——F-CR1 · SESSION-CLAIM 批：判据单源，`saveManifest` 落盘 + 各落点共用）。
  *
  * 静态环（与既有的 session.mjs ↔ session-slots.mjs 同形）：本档引 `session-slots.mjs` 的
  * 存储原语（`getSessionId` / `manifestPath` / `slotPath` / `writeSessionFile`），
@@ -69,6 +70,10 @@ export function saveManifest(cwd, m, deletions = null, opts = {}) {
   // （ensureActive 分支、newSession、switchToSlot、deleteSlot 删到 active 时）传
   // opts.setActive；其余调用方（saveSession/ACP 认领/死项清理）默认保留磁盘 fresh 的
   // active，否则毫秒窗口内会把并发方刚翻的 active 回滚（F1 防漂移的反向变体）。
+  // F-CR1 认领释放（判据单源 · SESSION.md §6.2 / §6.16 落盘判据三条）：`opts.release` = 保留集
+  // （落点槽 ∪ 本进程其余活绑定槽；被占落点 ⇒ 空集）。③ 内存认领表先移除残留条目（否则下方
+  // 条目级合并会把它从内存复活回写）——先于 try（fresh 不可读时亦须生效）。
+  if (opts.release) dropStaleClaims(m, opts.release)
   try {
     const fresh = JSON.parse(readFileSync(manifestPath(cwd), "utf8"))
     if (fresh && typeof fresh === "object" && fresh.slots && typeof fresh.slots === "object") {
@@ -77,6 +82,14 @@ export function saveManifest(cwd, m, deletions = null, opts = {}) {
       merged.slots = { ...fresh.slots, ...(m.slots ?? {}) }
       merged.slotSessions = { ...(fresh.slotSessions ?? {}), ...(m.slotSessions ?? {}) }
       if (m.sessionId) merged.sessionId = m.sessionId
+      // ① 释放集按**本次 fresh 快照**取值（不得以陈旧内存 manifest 构 deletions）；② **值条件删除**
+      // （仅当 fresh 属主仍为本进程——窗口内他人的新认领不在集内、不被误删）⇒ 并入本次 deletions。
+      if (opts.release) {
+        const released = staleClaims(fresh, opts.release)
+        if (released.length > 0) {
+          deletions = { ...(deletions ?? {}), slotSessions: [...(deletions?.slotSessions ?? []), ...released] }
+        }
+      }
       if (deletions) {
         for (const [section, keys] of Object.entries(deletions)) {
           for (const k of keys) delete merged[section]?.[k]
@@ -93,6 +106,23 @@ export function saveManifest(cwd, m, deletions = null, opts = {}) {
   }
   m.sessionId = getSessionId()
   writeSessionFile(manifestPath(cwd), m)
+}
+
+/** 本进程**残留认领集**（F-CR1 释放谓词 —— **判据单源** · SESSION.md §6.2 / §6.16）：
+ *  「释放 A ⟺ `slotSessions[A]` 为本进程 ∧ `A ∉ 保留集`」。`keep` = 保留集 = 落点槽 ∪ 本进程
+ *  其余活绑定槽（单绑定落点 ⇒ `{落点槽}`；被占落点 ⇒ 空集）。返回槽号（**字符串键**形态）。 */
+export function staleClaims(src, keep = []) {
+  const keepSet = new Set((keep ?? []).filter((s) => s != null).map(Number))
+  const mySessionId = getSessionId()
+  return Object.entries(src?.slotSessions ?? {})
+    .filter(([slot, owner]) => owner === mySessionId && !keepSet.has(Number(slot)))
+    .map(([slot]) => slot)
+}
+
+/** 从**内存**认领表移除本进程残留条目（判据③——与写盘同一时机；见 `saveManifest`）。 */
+function dropStaleClaims(m, keep) {
+  if (!m?.slotSessions) return
+  for (const slot of staleClaims(m, keep)) delete m.slotSessions[slot]
 }
 
 /** 属主串 → pid（`"pid-ts-rand"`——`owner.split("-")[0]` 格式判据单源：session-slots ↔
@@ -248,12 +278,15 @@ export function allocateFresh(cwd, m, deadParam = null, bundle = null) {
  *  已按"属主 空/死/本进程"判据校验可用性；幂等）。manifest active 保留为共享指针（D-6：
  *  旧版端/ACP 恢复依据 + 无记录端一次性继承源 + 列表回退高亮——不再作本端恢复第一依据）。
  *  deadParam 在写入所有权之后求值（防 deletions 删掉本调用刚认领的槽——ensureActive
- *  deadParam 同型过滤）。 */
+ *  deadParam 同型过滤）。
+ *  F-CR1（2026-09-21 · SESSION-CLAIM 批）：认领落点释放本进程残留认领（保留集 = {认领槽}——
+ *  §6.2 公式代入）；本函数 = 启动恢复 / 本端恢复落点（核 `resumeSlot` 与 VSC 端壳
+ *  `resumeSlot` 共用），落盘判据（fresh 快照 / 值条件删除 / 内存移除）见 `saveManifest`。 */
 export function claimSlot(cwd, slot, m = loadManifest(cwd), deadParam = null) {
   m.slotSessions ??= {}
   m.slotSessions[slot] = getSessionId()
   m.active = slot // 认领即翻共享指针（setActive 写 m.active——不更新则落快照旧值）
-  saveManifest(cwd, m, deadParam?.() ?? null, { setActive: true })
+  saveManifest(cwd, m, deadParam?.() ?? null, { setActive: true, release: [slot] })
 }
 
 /** Return the active slot number for this process, claiming one if necessary */

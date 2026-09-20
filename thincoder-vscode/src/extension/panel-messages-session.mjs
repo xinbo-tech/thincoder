@@ -37,22 +37,23 @@ export async function handleSwitchSession(panel, msg) {
     vscode.window.showWarningMessage("ThinCoder: a task is running — stop it before switching sessions.")
     return
   }
-  // 交付评审 🔵#5：manifest 漂移（槽不存在）时 switchToSlot 返回 null 且不切指针——
-  // 此时不得把面板绑到幻影槽（否则渲染出空会话）。
-  const target = switchToSlot(_cwd(), msg.slot)  // persists the shared active pointer for CLI interop
-  if (target == null) return
-  // 2026-09-01 advisor round2 🟡：目标槽被另一活进程（CLI/另一实例）占用时不得钉槽——
-  // 面板 _slot 粘性会绕过 activeSlot 的认领决策，双方写同一槽静默互覆盖。占用 →
-  // 不钉（_slot = null）+ 提示；**不认领、不写解析缓存 / 本端记录**（session-io.mjs:182-185
-  // 仅未占才写穿——P3/P4）。随后 _loadSession() 经 ensureSlot 读解析缓存绑回**本端原槽**
-  // （SESSION.md §6.15 P3）——非"新建空会话"：面板留在自身会话，文案同此语义。
+  // F-CR2 判据前置（2026-09-21 · SESSION.md §6.15 / §6.16）：先 `slotOccupancy`（纯读判据）判占用——
+  // 受占 ⇒ **拒绝路径不进入 `switchToSlot`**：共享 active 指针 / 端标记 / 认领集 / 解析缓存
+  // **四不动**；不钉槽（`_slot = null`）+ 提示 → `_loadSession()` 经缓存重绑**本端原槽**。
+  // 旧序 = 先调 `switchToSlot` 再判占 ⇒ 被拒切换仍把共享指针翻到目标槽（缺陷乙）。占用判定
+  // 单源 = 核 `slotOccupancy`（未知 ⇒ 保守按占用——D-MI10）。
   const occ = slotOccupancy(_cwd(), msg.slot)
   if (occ.occupied) {
     vscode.window.showWarningMessage(`ThinCoder: session ${msg.slot} is being used by another live process — staying on this panel's current session.`)
     panel._slot = null
-  } else {
-    panel._slot = msg.slot          // bind this panel to the chosen slot
+    await panel._loadSession()
+    return
   }
+  // 交付评审 🔵#5：manifest 漂移（槽不存在）时 switchToSlot 返回 null 且不切指针——
+  // 此时不得把面板绑到幻影槽（否则渲染出空会话）。
+  const target = switchToSlot(_cwd(), msg.slot)  // persists the shared active pointer for CLI interop
+  if (target == null) return
+  panel._slot = msg.slot          // bind this panel to the chosen slot
   await panel._loadSession()
 }
 

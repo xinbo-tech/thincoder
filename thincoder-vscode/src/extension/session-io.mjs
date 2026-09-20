@@ -119,7 +119,9 @@ export function stripTruncatedToolArgs(m) {
  *  F-MI7：**async** + 入口一次判据束（零逐 pid exec——旧实现 `isProcessAlive` 逐 pid 一次），
  *  三态判定（D-MI10/D-MI11）：死主判定 = `ownerStateOf === "dead"`（unknown ⇒ **保留**——
  *  旧实现把 undefined（探测失败）当死 ⇒ 误删"可能活着"属主条目，本批收正）；活认领跳过 =
- *  `!== "dead"`（unknown 一并跳过——保守）。 */
+ *  `!== "dead"`（unknown 一并跳过——保守）。
+ *  F-CR1（2026-09-21 · SESSION-CLAIM 批）：落点释放本进程残留认领（保留集 = {新槽}——
+ *  §6.2 公式代入；端壳单绑定 = 假定 + 复核条件，见 §6.16）；释放集并入本次 deletions。 */
 export async function newSlot(cwd) {
   const m = loadManifest(cwd)
   const mySessionId = getSessionId()
@@ -150,7 +152,9 @@ export async function newSlot(cwd) {
         slots: deadSlots.filter((s) => !m.slots[s]),
       }
     : null
-  saveManifest(cwd, m, deletions, { setActive: true })
+  // F-CR1 认领释放（2026-09-21 · SESSION.md §6.15 / §6.16 公式代入）：保留集 = {新槽}——释放集
+  // 并入本次 deletions（落盘判据 = 核 `saveManifest`：fresh 快照 / 值条件删除 / 内存移除）。
+  saveManifest(cwd, m, deletions, { setActive: true, release: [slot] })
   writeEndMarker(cwd, slot) // D-4：newSlot 成功后
   slotCache.set(cwd, slot)
   return slot
@@ -159,30 +163,30 @@ export async function newSlot(cwd) {
 /** Switch active slot. Returns the loaded session data (null if slot doesn't exist). Same as CLI switchToSlot.
  *  D-4：成功后写本端记录（「打开历史会话」落点）。
  *  先 loadSlot 成功才翻 active 指针（文件缺失/损坏时返回 null 且不产生幻影 active，与核
- *  「切换不得有认领副作用」对齐）；目标槽被另一活进程占用则不认领（防双属主）——
- *  占用判定单源 = 核 `slotOccupancy`（F-MI7 有界同步例外：槽内单次有界探测、不在
- *  每回合面上——§3.1 判据条③）。
+ *  「切换不得有认领副作用」对齐）；目标槽被另一活进程占用 ⇒ **F-CR2 判据前置**：受占分支
+ *  **零写**（不认领 / 不翻共享指针 / 不写本端记录 / 不写解析缓存——判定前置于 `m.active`
+ *  赋值；旧序 = 先无条件赋值 ⇒ 被拒切换仍翻共享指针）。占用判定单源 = 核 `slotOccupancy`
+ *  （F-MI7 有界同步例外：槽内单次有界探测、不在每回合面上——§3.1 判据条③）。面板路径另在
+ *  调用面前置同判据（`panel-messages-session.handleSwitchSession`——不进入本函数）。
  *  F-MI7 收敛（SESSION.md §6.15 P3/P4）：占用时本端记录面（`{manifest}.vscode` marker +
  *  解析缓存）**保持原值不动**——被占槽是占用方的事，本端不得把它记成「最后使用槽」
- *  （否则面板 `_slot` 经缓存钉到别人的槽上 = 双写同槽）；共享 active 指针仍翻（D-6——
- *  CLI 互操作面，非本端记录面）。 */
+ *  （否则面板 `_slot` 经缓存钉到别人的槽上 = 双写同槽）。
+ *  F-CR1（2026-09-21）：未占分支释放本进程残留认领（保留集 = {落点槽}；被占分支零写、不释放）。 */
 export function switchToSlot(cwd, slot) {
   const m = loadManifest(cwd)
   if (!m.slots[slot]) return null
   const data = loadSlotFile(cwd, slot)
   if (!data) return null
-  m.active = slot
+  // F-CR2 判据前置（SESSION.md §6.15 / §6.16——本节单源）：占用判定前置于 `m.active` 赋值。
   const occ = slotOccupancy(cwd, slot)
-  if (!occ.occupied) {
-    m.slotSessions ??= {}
-    m.slotSessions[slot] = getSessionId()
-  }
-  saveManifest(cwd, m, null, { setActive: true })
-  // 本端记录面（marker + 解析缓存）只在未占时写穿（P3/P4）——被占 ⇒ 保持原值不动。
-  if (!occ.occupied) {
-    writeEndMarker(cwd, slot) // D-4：switchToSlot 成功后
-    slotCache.set(cwd, slot) // 绑定事实写穿（与面板 _slot 同落点）
-  }
+  if (occ.occupied) return data // 受占 ⇒ 零写（只回读面数据；调用面已在前置判据拒掉）
+  m.active = slot
+  m.slotSessions ??= {}
+  m.slotSessions[slot] = getSessionId()
+  // F-CR1 释放（公式代入：保留集 = {落点槽}——单绑定端；被占分支不落盘、不释放）
+  saveManifest(cwd, m, null, { setActive: true, release: [slot] })
+  writeEndMarker(cwd, slot) // D-4：switchToSlot 成功后
+  slotCache.set(cwd, slot) // 绑定事实写穿（与面板 _slot 同落点）
   return data
 }
 
