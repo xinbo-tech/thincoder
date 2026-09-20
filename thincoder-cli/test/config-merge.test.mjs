@@ -2,7 +2,7 @@
  * config-merge.test.mjs — MODEL-SELECTION v2 迁移（§16.2 M7）+ schema 校验（CLI 面——AC-2/AC-3）。
  * loadConfig 经 _setConfigPathForTest 指向 tmp config——无真实 ~/.thincoder 干扰。
  * 覆盖：形态 A（p.model + active*）/ 形态 B（models[] + defaultModel）→ 单值 `providers[].model`
- * （磁盘无 `models` 键）；垃圾清理；幂等；写回失败不阻断；预设 20 条单值；defaultModel 校验
+ * （磁盘无 `models` 键）；垃圾清理；幂等；写回失败不阻断；预设 21 条单值（+`tokenhub`——MODEL-SPECS §9.6）；defaultModel 校验
  * （provider ∈ providers——模型不再有成员校验，M4）。
  *
  * 并档注（2026-09-11 TEST-LIFECYCLE 扫①——设计档 TESTING.md §7.2 #1）：原 config.test.mjs 全量并入
@@ -23,9 +23,9 @@ function tmpCfg(content) {
   return { dir, p }
 }
 
-test("AC-3 预设 20 条：各携单值 `model`，无 `models` 键（R3 播种）", () => {
+test("AC-3 预设 21 条：各携单值 `model`，无 `models` 键（R3 播种）", () => {
   const names = Object.keys(PROVIDER_PRESETS)
-  assert.equal(names.length, 20, "内置预设 20 条")
+  assert.equal(names.length, 21, "内置预设 21 条")
   for (const [name, p] of Object.entries(PROVIDER_PRESETS)) {
     assert.equal(typeof p.model, "string", `${name}.model 为字符串`)
     assert.ok(p.model.length > 0, `${name}.model 非空`)

@@ -2,7 +2,9 @@
  * provider-merge.test.mjs — PROVIDER 子系统并入面用例（§2.5 #114 / #115 / #163）。
  *
  * 覆盖：rate.mjs 的 abortableSleep（VSC 可中断等待）+ token 估算取并集 +
- * list-models 的排序 / 明确报错 / 渠道准入探针 + generate-title 三格式分派。
+ * list-models 的排序 / 明确报错 / 渠道准入探针 + generate-title 三格式分派；
+ * 末段：effort 族载荷面——qwen flash（T-8/T-9）+ TokenHub/方舟 off 补发（B-1…B-6，
+ * 设计 `docs/core/design/MODEL-SPECS.md` §9.6–§9.9）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
@@ -13,6 +15,9 @@ import {
   listModels, probeChannelModels, admissionOf, _setProbeImplForTest, _resetAdmissionForTest,
 } from "../provider/list-models.mjs"
 import { generateTitle } from "../generate-title.mjs"
+import { chat } from "../provider/core.mjs"
+import { resolveEnableThinking } from "../config.mjs"
+import { specForModel } from "../model-specs.mjs"
 
 // ─── #114 rate.mjs ──────────────────────────────────────────────────────────
 
@@ -158,4 +163,144 @@ test("generateTitle：按 provider.format 三格式分派（openai / anthropic /
   } finally {
     globalThis.fetch = savedFetch
   }
+})
+
+// ─── 批 2026-09-20-qwen-flash-specs（设计 `docs/core/design/MODEL-SPECS.md` §6 T-8 / T-9）───
+
+const BAILIAN = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+
+/** fetch 桩：捕获出站请求体 + 回最小 SSE 流（形态同 compress-form.test.mjs 的 stubFetch）。 */
+function stubSSE(content = "ok") {
+  const calls = []
+  const saved = globalThis.fetch
+  globalThis.fetch = async (_url, opts) => {
+    calls.push(JSON.parse(opts.body))
+    const sse = `data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\ndata: [DONE]\n\n`
+    return { ok: true, status: 200, headers: { get: () => "text/event-stream" }, body: [new TextEncoder().encode(sse)] }
+  }
+  return { calls, restore: () => { globalThis.fetch = saved } }
+}
+
+test("T-8/A-3 effort 越界门：qwen3.7-flash + reasoningEffort max ⇒ 组体前抛错（枚举无 max）", async () => {
+  const stub = stubSSE()
+  try {
+    const provider = { name: "qwen", model: "qwen3.7-flash", baseURL: BAILIAN, apiKey: "k", reasoningEffort: "max" }
+    await assert.rejects(
+      chat(provider, { messages: [{ role: "user", content: "hi" }] }),
+      /reasoning_effort "max" not supported by model "qwen3\.7-flash"/,
+      "枚举外取值 ⇒ 本地抛错（早于 rateGate / 网络）",
+    )
+    assert.equal(stub.calls.length, 0, "门在 fetch 之前：零出站请求")
+    await assert.rejects(chat(provider, { messages: [{ role: "user", content: "hi" }] }), (e) => {
+      assert.match(e.message, /valid values: none, minimal, low, medium, high, xhigh$/, "报错列出服务端原文序枚举（可自查）")
+      return true
+    }, "越界错误面稳定（重复调用同形）")
+
+    // 正控（区分力）：同档 + 枚举内取值 ⇒ 过门，出站体带 reasoning_effort
+    const result = await chat({ ...provider, reasoningEffort: "xhigh" }, { messages: [{ role: "user", content: "hi" }] })
+    assert.equal(result.content, "ok", "枚举内取值 ⇒ 走完整路径（桩 SSE 回包）")
+    assert.equal(stub.calls.length, 1, "恰一次出站")
+    assert.equal(stub.calls[0].reasoning_effort, "xhigh", "均按 provider 对象取值组装")
+    assert.equal(stub.calls[0].model, "qwen3.7-flash")
+  } finally { stub.restore() }
+})
+
+test("T-9/A-7 enable_thinking 四态零回归：两新档 × 百炼 host＋非百炼负控", () => {
+  const pairs = ["qwen3.8-flash", "qwen3.8-omni-flash"]
+  for (const model of pairs) {
+    const spec = specForModel(model)
+    const p = (extra) => ({ name: "qwen", model, baseURL: BAILIAN, apiKey: "k", ...extra })
+    assert.equal(resolveEnableThinking(p({ thinking: null }), spec), false, `${model} 显式 off ⇒ false（NF1 约定）`)
+    assert.equal(resolveEnableThinking(p({ reasoningEffort: "high" }), spec), true, `${model} effort 档 ⇒ true（随 reasoning_effort 同行）`)
+    assert.equal(resolveEnableThinking(p({}), spec), undefined, `${model} 均无 ⇒ undefined（字段不发，服务端默认不变）`)
+    // 第四态（裁定② · A-18 同携态）：修复后 `/think effort none` 落 off 标记——档位「保留/清除」两写法均可（设计 §2.8-2）
+    // ⇒ 同携态须 false（`thinking === null` 先判、truthy 档位次判，§2.6-2）；判序颠倒即回归 true。
+    assert.equal(resolveEnableThinking(p({ thinking: null, reasoningEffort: "none" }), spec), false, `${model} 同携态（off 标记 + "none" 档）⇒ false；判序颠倒即回归 true（§2.6-2）`)
+    assert.equal(
+      resolveEnableThinking({ ...p({ reasoningEffort: "high" }), baseURL: "https://api.other-host.test/v1" }, spec),
+      undefined,
+      `${model} 非百炼 host 负控 ⇒ 白名单不命中`,
+    )
+    assert.equal(spec.reasoningEffortEnum.includes("none"), true, `${model} 枚举含 none（显式 off 面已在枚举内）`)
+  }
+})
+
+// ─── 批 2026-09-20-channel-onboarding（设计 `docs/core/design/MODEL-SPECS.md` §9.6–§9.9 · 用例 B-1..B-6）───
+// D-14（AC-9）：effort 族非百炼渠道的 off 标记（`thinking:null`）在载荷组装层补发 `reasoning_effort:"none"`。
+const TOKENHUB = "https://tokenhub.tencentmaas.com/v1"
+const SEED_CODE = "doubao-seed-2-0-code-preview-260215"
+
+/** 捕获出站体（桩 SSE 回包）：provider 名随意——本批载荷面不看渠道名，只看 model/host/字段。 */
+async function sentBody(model, extra = {}, baseURL = TOKENHUB) {
+  const stub = stubSSE()
+  try {
+    const res = await chat({ name: "ch", model, baseURL, apiKey: "k", ...extra }, { messages: [{ role: "user", content: "hi" }] })
+    assert.equal(res.content, "ok", `${model} 走完整路径（桩 SSE 回包）`)
+    assert.equal(stub.calls.length, 1, `${model} 恰一次出站`)
+    return stub.calls[0]
+  } finally { stub.restore() }
+}
+
+test("B-1 hy3 + reasoningEffort:\"none\" ⇒ 出站体携该字段（枚举内取值照发）", async () => {
+  const body = await sentBody("hy3", { reasoningEffort: "none" })
+  assert.equal(body.reasoning_effort, "none")
+  assert.equal("thinking" in body, false, "provider 未设 thinking ⇒ 不发（现状零变）")
+})
+
+test("B-2 hy3 + 域外档 \"zzz\" ⇒ 本地抛错并列合法档位（越界门零改）", async () => {
+  const stub = stubSSE()
+  try {
+    await assert.rejects(
+      chat({ name: "ch", model: "hy3", baseURL: TOKENHUB, apiKey: "k", reasoningEffort: "zzz" }, { messages: [{ role: "user", content: "hi" }] }),
+      (e) => {
+        assert.match(e.message, /not supported by model "hy3"/, "错误面点名模型")
+        assert.match(e.message, /valid values: none, minimal, low, medium, high, xhigh, max/, "并列合法档位（服务端原文序）")
+        return true
+      },
+    )
+    assert.equal(stub.calls.length, 0, "门在 fetch 之前：零出站")
+  } finally { stub.restore() }
+})
+
+test("B-3 无枚举行（hy4-preview）+ 任意档 ⇒ 原样透传（无校验 = 零变化）", async () => {
+  const body = await sentBody("hy4-preview", { reasoningEffort: "xhigh" })
+  assert.equal(body.reasoning_effort, "xhigh", "无枚举 ⇒ 不校验不失真")
+})
+
+test("B-4 seed-code + \"max\" ⇒ 七档内取值过门并携出", async () => {
+  const body = await sentBody(SEED_CODE, { reasoningEffort: "max" })
+  assert.equal(body.reasoning_effort, "max")
+})
+
+test("B-5 D-14 off 补发：thinking:null 且无显式档 ⇒ 携 none；五 guard 零变面同断", async () => {
+  const off = await sentBody("hy3", { thinking: null })
+  assert.equal(off.reasoning_effort, "none", "off 标记 ⇒ 补发 none")
+  assert.equal("thinking" in off, false, "thinking:null 仍不发（falsy 跳过 = 现状）")
+
+  const noEnum = await sentBody("hy4-preview", { thinking: null })
+  assert.equal("reasoning_effort" in noEnum, false, "guard①：无枚举行 ⇒ 零变化")
+
+  const explicit = await sentBody("hy3", { thinking: null, reasoningEffort: "low" })
+  assert.equal(explicit.reasoning_effort, "low", "guard②：显式档优先，不叠 none")
+
+  const flash = await sentBody("qwen3.7-flash", { thinking: null }, BAILIAN)
+  assert.equal(flash.enable_thinking, false, "guard③：百炼 host ⇒ enable_thinking:false 照发")
+  assert.equal(flash.reasoning_effort, "none", "guard③：同义多携（非回归，§1.8-① 实测支持）")
+
+  const kimi = await sentBody("kimi-k3", { thinking: null })
+  assert.equal("reasoning_effort" in kimi, false, "guard④：枚举无 none 者不发")
+
+  const router = await sentBody("x/hy3", { thinking: null })
+  assert.equal("reasoning_effort" in router, false, "guard⑤：含 / 路由名不发（复用 !isRouter 门）")
+})
+
+test("B-6 后台路径形态（`{...provider, thinking:null}`）同样携 none = 认账交付", async () => {
+  const uiProvider = { name: "ch", model: "hy3", baseURL: TOKENHUB, apiKey: "k" }
+  const background = { ...uiProvider, thinking: null } // context.mjs:401 / explore-distill.mjs:98 同形
+  const stub = stubSSE()
+  try {
+    await chat(background, { messages: [{ role: "user", content: "hi" }] })
+    assert.equal(stub.calls[0].reasoning_effort, "none", "后台调用不再想（§9.6 副作用面，防误当缺陷改掉）")
+    assert.equal("enable_thinking" in stub.calls[0], false, "非百炼 host ⇒ 零变面")
+  } finally { stub.restore() }
 })

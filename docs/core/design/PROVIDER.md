@@ -86,7 +86,9 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`）
 ### 6.2 chat() 主流程
 
 按序：① **净化（分派前）**——`providerSpec(provider)` 取带 provider 级 context 覆盖的 spec；`stripImagesForTextModel` 防图片毒化；`stripLocalMessageFields` 剥离仅本地消息字段（ts / transient）；② **format 分派**——`anthropic` / `google` / `responses` 各走原生 transport，缺省 OpenAI 兼容（body 组装内联）；③ **OpenAI body 组装**——
-`model` / `messages` / `stream: true`；`stream_options`（非 `noUsageStream` 模型）；`max_tokens` 按 `provider.maxTokens`；`temperature` 按 `spec.tempRange` 钳位；`thinking` 按 `spec.thinkApi` 注入；`reasoning_effort` 校验进 enum 后注入（router 模型 ID 含 `/` 时不发）；`enable_thinking`（Qwen）；
+`model` / `messages` / `stream: true`；`stream_options`（非 `noUsageStream` 模型）；`max_tokens` 按 `provider.maxTokens`；
+`temperature` 按 `spec.tempRange` 钳位；`thinking` 按 `spec.thinkApi` 注入；`reasoning_effort` 校验进 enum 后注入（router 模型 ID 含 `/` 时不发）；
++ **off 补发支**（`thinking:null` ∧ effort 族 ∧ 枚举行含 `"none"` ∧ 无显式档 ⇒ 发 `"none"`，同受 `!isRouter` 门——机制单源 = §6.12 · 渠道接入批 D-14）；`enable_thinking`（Qwen）；
 `tools` / `tool_choice` / `parallel_tool_calls`；④ **token 估算与闸门**（`rateGate`）；⑤ **请求**（`requestWithRetry` → `readSSE` → 用实测 usage 修正记账）；⑥ **结果短路**——`ruleTriggered` / `interrupted` / `partial` **立即返回**；⑦ **overload 重试**（`insufficient_system_resource` → 最多 1 次）；⑧ **截断续写**；
 ⑨ 返回结果（续写失败注入 `_warnings`，不整轮飞出）。
 
@@ -150,7 +152,12 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`）
 - 新模型只加一行 spec，transport / 续写 / thinking 全自动适配；未知模型保守 `DEFAULT_SPEC`（128K 上下文 / 32K 输出）+ warn once。
 - **厂商前缀剥离**：完整名未命中且含 `/` 时剥掉首个 `/` 前 namespace 再匹配一次（`ZHIPU/GLM-5.3 → glm-5.3`）；显式 alias 行保留；只影响 spec 查询，不改 `provider.model`。
 - **规格来源可判定**：`specMatch(model) → { spec, matched }`（与 `specForModel` 共享同一查表实现——单次查表）；`matched: false` = `DEFAULT_SPEC` 兜底。
-- **退役 / 路由名保留为独立行**：服务端仍收旧名时删行 → 旧配置降 `DEFAULT_SPEC`（压缩阈值 / 窗口显示错）；参数与能力位**是否随新模型按「当下合同」判**（当下即由新模型服务 → 随行；限期路由 → 不预支能力位）。
+- **退役 / 路由名是否保留成行按服务端状态判**：服务端**仍受理**旧名时删行 → 旧配置降 `DEFAULT_SPEC`（压缩阈值 / 窗口显示错）——故默认**保留为独立行**；
+  仅当服务端**已 404**（名真退役）或用户明令退役时删行，且**须逐名认账退化后果**（不得静默）。参数与能力位**是否随新模型按「当下合同」判**
+  （当下即由新模型服务 → 随行；限期路由 → 不预支能力位）。逐名表 = `doc:MODEL-SPECS.md:§2.4`。
+- **qwen 族无泛前缀托底行**（2026-09-20 裁定 · 待落）：`qwen` 行本批删除后，任何 `qwen*` 未命中名退 `DEFAULT_SPEC` + 一次性告警；不建「保守族底行」
+  （理由与逐名后果 = `docs/core/design/MODEL-SPECS.md` §2.4，本档不重述）。**约束：以后不得以蹭泛前缀的方式给新 qwen 档配能力**——
+  音/视频能力在 schema 上**未表达且未接入**（`multimodal` 仅承载「可收图像 part」），新档声明只写实测到的字段。
 - **re-export 契约**：`config.mjs` re-export `specForModel` / `providerSpec` / `specMatch`；`providerSpec` = spec + provider 级 context 覆盖。
 
 ### 6.10 畸形 tool_calls 防御解析
@@ -160,7 +167,12 @@ name 空槽丢弃并计数、缺 id 合成 `call_N`。告警（`droppedToolCalls
 
 ### 6.11 模型支持与预设（PROVIDER_PRESETS）
 
-- **预设** `PROVIDER_PRESETS`（住 `thincoder-core/config-presets.mjs`，20 家）：按需从预设创建 provider，各预设声明 `baseURL` / **`model`（单值默认模型）** / thinking / reasoningEffort / maxTokens / desc。**预设不再携带候选清单**（原 `models` 种子已废）。
+- **预设** `PROVIDER_PRESETS`（住 `thincoder-core/config-presets.mjs`，21 家）：按需从预设创建 provider，各预设声明 `baseURL` / **`model`（单值默认模型）** / thinking / reasoningEffort / maxTokens / desc。**预设不再携带候选清单**（原 `models` 种子已废）。
+- **渠道接入批新增**（2026-09-20 · `tokenhub` 入表 + `volcengine` 默认模型改值）：`tokenhub` = 腾讯 TokenHub 聚合网关
+  （baseURL `https://tokenhub.tencentmaas.com/v1`，默认模型 `hy3`，**不带** thinking / reasoningEffort / maxTokens 字段 =
+  该载荷面未实测，不设即不发）；`volcengine` = 火山方舟，默认模型 = `doubao-seed-2-0-code-preview-260215`（实测在册；
+  改值动因与旧值 = 批次档 `2026-09-20-channel-onboarding.md` §1.2–§1.3）。既有 `hunyuan` 预设 = 另一主机，本轮未实测 ⇒ **不动**。
+  行集与逐字段取值 = `doc:MODEL-SPECS.md:§9`；护栏用例 = 预置↔规格漂移白名单（只减不增）。
 - 能力差异全走规格表；`kimi/kimi-k3`（router 前缀）与 `k3` 保留显式 alias 行；未知模型保守 `DEFAULT_SPEC`。
 - **DeepSeek V4.1-Flash 行集**：新行 `deepseek-flash`（1M 上下文 / 384K 输出 / thinking 默认开 / 前缀补全 Beta / 磁盘缓存默认开 / `multimodal: true`）；
 qwen-plan 渠道同名模型以 `deepseek-v4.1-flash` 提供（`token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1`——2026-09-15 实测 GET /models 含该名 · chat 200）——独立行、字段逐字对齐 `deepseek-flash`（`.1` ≠ `-` ⇒ 纯前缀查表不命中既有行）；
@@ -170,7 +182,23 @@ qwen-plan 渠道同名模型以 `deepseek-v4.1-flash` 提供（`token-plan.cn-be
 ### 6.12 Qwen 思考关闭（`enable_thinking`）
 
 qwen 系列（百炼**混合思考**模式，默认开启）需能**真正关闭**思考（缺陷：reasoning off 时原请求体不含任何思考控制字段 → 服务端按默认开启 → off 静默失效）。纯函数 `resolveEnableThinking(provider, spec)`（`config.mjs`，两端同构造）：白名单双条件 = 模型名 `qwen` 开头（排除 `qwen3-coder` 前缀）**且** provider 指向百炼 host（`isBailianHost`）；
-`provider.thinking === null` 是两端统一的**显式 off 唯一标记**。**不受 router 门控**（白名单键控模型前缀 + host，非模型 ID 斜杠）。**选档位 / 开 auto = 隐含 thinking on**：清 `thinking: null` off 标记；on 分支默认 effort 取 `spec.reasoningEffortEnum[0]`（**非硬编码 `"high"`**）。
+`provider.thinking === null` 是两端统一的**显式 off 唯一标记**。**不受 router 门控**（白名单键控模型前缀 + host，非模型 ID 斜杠）。**选档位 / 开 auto = 隐含 thinking on**：清 `thinking: null` off 标记；
+on 分支默认 effort 契约 = 取 `spec.reasoningEffortEnum` 的**首个非 `"none"` 档**——枚举首项为 `none` 的族（qwen 全族）不得拿首项当 on 默认，否则 = 「开了个关着的思考」；
+`none` 不在枚举时两者等价 ⇒ 对其余族零回归。**现状（待落）**：`thincoder-cli/src/tui/cmd-think.mjs:118` 仍取枚举首项，修法 = `docs/batches/2026-09-20-qwen-flash-specs.md` 本批交付项（设计 `doc:MODEL-SPECS.md:§2.8`，A-16 / T-14）。
+
+**两机制并存（2026-09-20 登记，不混同）**：关思考有两条独立路径——本节的名字 + 主机白名单（管**请求体字段**）
+与 spec 的 `reasoningEffortEnum` 含 `"none"`（管**端侧下拉能选哪些档 + 发送前校验**）。
+本批**不新增** `thinkToggleApi` 类 spec 字段：同一语义两处真源违 D2，枚举含 `"none"` 已是「可关」的唯一枚举表达
+（裁定与链路逐条 = `doc:MODEL-SPECS.md:§2.6`）。
+
+**effort 族渠道的 off 补发（渠道接入批 D-14 · AC-9——本节 = 谓词单源）**：host 白名单只覆盖百炼（`resolveEnableThinking`）；
+**effort 族**（`spec.thinkApi === "effort"`——spec 行自携该位，如 hy3 / doubao-seed / qwen-max）的 `thinking: null` 不能靠
+`enable_thinking` 生效，需在载荷组装层补发 `reasoning_effort: "none"`（实测唯一有效 off 路径：tok=0、`reasoning_content` 消失）。
+**谓词（单源，其余面引用本节）**：`provider.thinking === null` ∧ `spec.thinkApi === "effort"` ∧ `spec.reasoningEffortEnum?.includes("none")` ∧
+`provider.reasoningEffort == null` ∧ `!provider.model.includes("/")`（末款复用 §6.2 router 门）。
+**零变面五 guard**：无枚举名 / 显式档在场（档位优先）/ 枚举不含 `none` / 百炼 qwen（`enable_thinking:false` 照发 + 同义多携该字段）/ 
+路由形态名（含 `/`）；后台调用路径（`context.mjs` / `explore-distill.mjs` 的 `{...provider, thinking:null}`）同命 = 有意认账
+（不再空想，与 qwen 侧同方向）。判据 = `doc:MODEL-SPECS.md:§9.6`（D-14）+ 用例 B-5；落点 = `thincoder-core/provider/core.mjs` 载荷组装段（+~5 行）。
 
 ### 6.13 Responses API transport
 
@@ -253,9 +281,11 @@ Ctrl+I（interrupt）面与视觉模型 / 无图路径零动；`maxTurns` 不改
 VS Code settings 的 `thincoder.providers` + SecretStorage 一次性迁入 config.json（`thincoder-vscode/src/config-migrate.mjs` `migrateCore`——不覆盖已有 apiKey、preset 名自动重建）后清 legacy 存储；嵌入 key 一并迁移 ⑤ `resolveDefaultModel`（`thincoder-vscode/src/config-io.mjs:213`）回退链 =
 ① defaultModel 复合属本渠道 ② 渠道单值 `entry.model` ③ `null`——**不再静默回退 `models[0]`**（§6.16 M7 同源 · VSC 独立实现）；v2 迁移 `delete p.models` / `p.model` 单值恢复。
 
-**Preset 预设表端差**（`thincoder-vscode/src/config-presets.mjs:10`）：`PROVIDER_PRESETS` 镜像 CLI **保持同步**——**20 preset**（deepseek / kimi / kimi-code / glm / glm-code / qwen / qwenplan / mimo / mimoplan / minimax
-/ openai / claude / gemini / grok / mistral / volcengine / hunyuan / siliconflow / openrouter / groq）；
-claude / gemini 携 `format: "anthropic" / "google"`；minimax 携 `chatPath: "/text/chatcompletion_v2"`；`presetToEntry`（`:35`）剥离 `desc` 余下发成 provider 条目
+**Preset 预设表（核单源 · 2026-09-20 实读取一侧）**：`PROVIDER_PRESETS` 表 = **核单源**（`thincoder-core/config-presets.mjs`），
+VSC 侧取一侧复用（`thincoder-vscode/src/extension/presets.mjs:9` 注 + `:21` re-export；端壳无镜像文件）——**21 preset**（deepseek / kimi / kimi-code /
+glm / glm-code / qwen / qwenplan / mimo / mimoplan / minimax / openai / claude / gemini / grok / mistral / volcengine / hunyuan / siliconflow /
+openrouter / groq / **tokenhub**）；
+claude / gemini 携 `format: "anthropic" / "google"`；minimax 携 `chatPath: "/text/chatcompletion_v2"`；`presetToEntry`（核单源 = `thincoder-core/config-presets.mjs:41`）剥离 `desc` 余下发成 provider 条目
 （单值默认模型——§6.11 同源）；2026-09-11 `deepseek` 预设默认模型 → `deepseek-flash`（§6.11 同源）。
 
 **模型选择 UI（面板接线）**：主下拉列 provider 行（名 + 当前模型 + `›`）+ hover flyout 子菜单（webview 无键盘导航）；选中 = 写当前会话槽；设置面板「默认模型」项 = provider →
@@ -400,3 +430,15 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` → 
   §6.19 探针行收**纯指针**（双向指，不重述）。**零新语义**（切分 = 评审发现的直接导出项）。
 - 2026-09-18（**init-block 批 · 设计评审轮 2 修正** · eng-designer——fix 轮 2；承 `docs/batches/2026-09-18-init-block.md` §3 轮次 2 发现 2）：
   §8 **D-PR29** 零改面限定为 `channelUnavailableMessage` 本体（「UI 契约零变」不再作全局结论）+ 补端侧展示面指针（状态词级分档 → `docs/vsc/design/SETTINGS.md` §2.12）；§6.16 M8/M9 补行零改。**零新语义**（= 评审发现的直接导出项）。
+- 2026-09-20（**qwen flash 规格批 · eng-designer**，承 `docs/batches/2026-09-20-qwen-flash-specs.md`）：§6.9 两改——「退役 / 路由名」判据收口为**按服务端状态判**
+  （原「保留为独立行」与本批 §1.6 删行裁定的张力显式化）+ 新登「qwen 族无泛前缀托底行」与音/视频未接入事实；§6.12 两处——`/think on` 默认档**契约**收口为首个非 `"none"` 档
+  （原枚举首项对 qwen 族等于 off；**实现待落**，本批交付项）+ 登记「`enable_thinking` 与 spec 枚举两机制并存、不新增 `thinkToggleApi`」。规格数值不入本档（真源 = MODEL-SPECS.md）。
+- 2026-09-20（**渠道接入批 · eng-designer**，承 `docs/batches/2026-09-20-channel-onboarding.md`）：§6.11 预设计数 20 → **21**
+  （D3 计数与清单同变）+ 新登 `tokenhub` 预置（腾讯 TokenHub 聚合网关 · 默认模型 `hy3` · 思考/`maxTokens` 字段**不设 = 不发**）
+  与 `volcengine` 默认模型改值（方舟豆包 Seed 编程专档，实测在册）。既有 `hunyuan`（另一主机）未实测 ⇒ 不动。
+- 2026-09-20（**渠道接入批 · 设计评审轮 1 修正** · eng-designer——fix 轮；承 `docs/batches/2026-09-20-channel-onboarding.md` §3 轮次 1）：
+  §6.19 预设段来源命题**收正**（实读盘上无 `thincoder-vscode/src/config-presets.mjs`）——改指核单源 `thincoder-core/config-presets.mjs`
+  + VSC 取一侧（`thincoder-vscode/src/extension/presets.mjs:9`/`:21`），计数 20 → **21**（+ `tokenhub`）；§6.12 新登 **effort 族 off 补发**
+  （D-14 / AC-9）谓词单源 + 零变面五 guard；§6.2 载荷组装枚举补该支指针。规格数值不入本档（真源 = MODEL-SPECS.md）。
+  **零新语义**（D-14 系批档 §1.7-① 已批项；余 = 评审发现的直接导出项）。
+  行集与逐字段取值真源 = `doc:MODEL-SPECS.md:§9`，本档只承载渠道/预设面（D2 不重述数值）。

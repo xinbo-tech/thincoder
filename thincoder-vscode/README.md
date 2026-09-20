@@ -19,7 +19,7 @@ Like the CLI, it's pure `.mjs`, zero npm dependencies, and connects directly to 
 - **Multi-session** — save and switch between conversation sessions with session bar; LLM auto-generates titles
 - **Image input** — paste or drag images into chat, or use `read_image` tool; supported on vision models (Kimi K3, Qwen3.7, MiniMax M3)
 - **Reasoning display** — collapsible "Thinking..." block shows the model's reasoning process in real-time
-- **20 provider presets** — DeepSeek, Kimi, Kimi For Coding, GLM, GLM Coding Plan, Qwen, Qwen Token Plan, MiMo, MiMo Token Plan, MiniMax, OpenAI, Claude, Gemini, Grok, Mistral, Volcengine, Hunyuan, SiliconFlow, OpenRouter, Groq + custom OpenAI-compatible endpoint
+- **21 provider presets** — DeepSeek, Kimi, Kimi For Coding, GLM, GLM Coding Plan, Qwen, Qwen Token Plan, MiMo, MiMo Token Plan, MiniMax, OpenAI, Claude, Gemini, Grok, Mistral, Volcengine, Hunyuan, Tencent TokenHub, SiliconFlow, OpenRouter, Groq + custom OpenAI-compatible endpoint
 - **Vector search** — semantic code search with BAAI/bge-m3 embeddings via SiliconFlow (configurable in Settings)
 - **Model selection** — choose from all available models per provider, with reasoning effort control
 - **Permission control** — session-level AUTO mode (off by default): every file-modifying tool prompts for approval until you click the AUTO toolbar button or "Approve All"; the flip takes effect immediately, even mid-turn
@@ -89,8 +89,9 @@ No key (or a bad key) → the tool silently falls back to Bing, so agents never 
 | Gemini (Google) | `gemini-2.5-flash` | `https://generativelanguage.googleapis.com/v1beta` |
 | Grok (xAI) | `grok-4.5` | `https://api.x.ai/v1` |
 | Mistral | `mistral-large` | `https://api.mistral.ai/v1` |
-| Volcengine Ark (豆包) | `doubao-pro-32k` | `https://ark.cn-beijing.volces.com/api/v3` |
+| Volcengine Ark (豆包) | `doubao-seed-2-0-code-preview-260215` | `https://ark.cn-beijing.volces.com/api/v3` |
 | Hunyuan (腾讯混元) | `hunyuan-pro` | `https://api.hunyuan.cloud.tencent.com/v1` |
+| Tencent TokenHub (腾讯混元网关) | `hy3` | `https://tokenhub.tencentmaas.com/v1` |
 | SiliconFlow (硅基流动) | `deepseek-ai/DeepSeek-V3` | `https://api.siliconflow.cn/v1` |
 | OpenRouter | `anthropic/claude-sonnet-4` | `https://openrouter.ai/api/v1` |
 | Groq | `llama-3.3-70b-versatile` | `https://api.groq.com/openai/v1` |

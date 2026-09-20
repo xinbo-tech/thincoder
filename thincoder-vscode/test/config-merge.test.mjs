@@ -1,7 +1,7 @@
 /**
  * config-merge.test.mjs — MODEL-SELECTION 迁移 v2（M7）+ 单值/defaultModel 解析（VSC 面——
  * AC-2/AC-3/AC-6）。loadRaw/saveRaw/persistRaw 经 _setConfigPathForTest 指向 tmp config。
- * 覆盖：老形态 A/B → 单值（幂等 + 失败不阻断 + 凭据不丢；磁盘无 models 键）；预设 20 条单值；
+ * 覆盖：老形态 A/B → 单值（幂等 + 失败不阻断 + 凭据不丢；磁盘无 models 键）；预设 21 条单值（+`tokenhub`——MODEL-SPECS §9.6）；
  * resolveDefaultModel 新回退链（复合属本渠道 → 渠道默认单值 → null——不再静默回退 models[0]）；
  * resolveProviders activeProvider = defaultModel 渠道（回退首渠道）；providerFromConfig 运行时解析。
  */
@@ -127,9 +127,9 @@ test("AC-2 写回失败不阻断（内存迁移态继续——下次重试——
 
 // ─── 预设单值（T13——AC-3）───
 
-test("AC-3 预设 20 条：各携单值 `model`（无 models 键）", () => {
+test("AC-3 预设 21 条：各携单值 `model`（无 models 键）", () => {
   const entries = Object.entries(PROVIDER_PRESETS)
-  assert.equal(entries.length, 20, "预设数 = 20")
+  assert.equal(entries.length, 21, "预设数 = 21")
   for (const [name, p] of entries) {
     assert.equal(typeof p.model, "string", `${name} 单值 model`)
     assert.ok(p.model.length > 0, `${name} 非空`)

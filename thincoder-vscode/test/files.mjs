@@ -18,7 +18,7 @@ export default [
   "test/edit-tool-improvement.test.mjs",
   "test/memory-tool.test.mjs",
   "test/eng-settlement.test.mjs",
-  "test/config-merge.test.mjs", // MODEL-SELECTION（2026-09-10）：迁移 v2 双端同规则 VSC 面（形态 A/B→单值、幂等/失败不阻断/凭据不丢、磁盘无 models 键）+ 预设 20 条单值 + resolveDefaultModel 新回退链（复合→渠道默认单值→null）
+  "test/config-merge.test.mjs", // MODEL-SELECTION（2026-09-10）：迁移 v2 双端同规则 VSC 面（形态 A/B→单值、幂等/失败不阻断/凭据不丢、磁盘无 models 键）+ 预设 21 条单值 + resolveDefaultModel 新回退链（复合→渠道默认单值→null）
   "test/provider-admission.test.mjs", // MODEL-SELECTION（2026-09-10）：VSC 渠道准入——三 format 拉取/翻页（T1–T4/T26/T27）+ M9 配置阶段两态（T23/T24——含 fullStatus 拉取失败=不可选）+ 运行期零探测（T25）+ 面板行 `不可用` 标注（happy-dom）；W10（2026-09-15）改判：list-models/proxy 实现面迁核（`@thincoder/core/provider/list-models.mjs`）——面板行为断言原文保留；init-block 批（2026-09-18）F-W19：T-W19a 失败分类三档落账（malformed/timeout/hostBusy + 统一 ts）+ 双向词档（词 ⇔ 落账单源）· T-W19b 重试成功拍三清除（落账/available 载荷/展示回绿）· T-W19c 重试 ≤2 耗尽 · T-W19d 宿主忙闸零重试 · T-W19e 在飞去重（SETTINGS.md §2.12）
   "test/model-picker-fallback.test.mjs", // MODEL-SELECTION v2 范围追加（2026-09-11）：M10/T29——面板候选未命中不写会话槽（零 selectModel/selectReasoning post + 显示与状态回落会话槽复合 prefs 复合）+ 命中分支同值回写正控（happy-dom 直驱 handleModelsMessage）
   "test/config-io-panel.test.mjs", // MODEL-MERGE-SESSION（2026-09-09）：defaultModel 面板键白名单 + selectModel 消息 = 写会话槽（内容字节断言——config 零写——槽播种 + digest p:m）
@@ -108,7 +108,7 @@ export default [
   "test/tool-result-truncation.test.mjs", // X5 >64KB 截断提示：宿主事实旗标（65K/恰 64K/falsy `0`）+ 活卡旗标驱动双标记 + 恢复卡同字面（先红 = 两形皆零标记）
   // 端差·显示面消差批（2026-09-20 · `docs/batches/2026-09-20-display-parity-batch.md` · 批 2 = VSC 活动块/协议面）
   "test/subagent-note-parity.test.mjs", // X6+X11 块头注记：宿主 subKey 判据（核 child-marks 锚）⇒ done 载荷 `note` + relay `⟦ev⟧stopped` **零注记**（CLI 标尺——verb 已 stopped，无重复词）+ 承面 `— <note>`（done/interrupted——`meta.note` 单载体）+ X11 宿主真值源（先红 = 零注记面）
-  "test/sync-block-stop.test.mjs", // X10 sync 块 ⏹：核 registry 只读 ⇒ 载荷 `syncLive` + 门控支 + 点击载荷（与 async 同形）+ 宿主取消路由（`cancelSyncChild` 单源）+ 零回归——**display-logic-only**（夹具预置 registry；产者侧序缺陷 ⇒ 运行期不可达——父侧裁定降级登记，批档 §2.8 #7）
+  "test/sync-block-stop.test.mjs", // X10 sync 块 ⏹：核 registry 只读 ⇒ 载荷 `syncLive` + 门控支 + 点击载荷（与 async 同形）+ 宿主取消路由（`cancelSyncChild` 单源）+ 零回归；#133 序修后出生面升级**真序夹具**（T-S1a 装配面零发射 ∧ T-S1b 宣告时刻 registry 已在位 = 真序两面夹 · T-S1d 链路形状 · T-S1e/T-B1/T-B2 接线机检——sync 可达性批 §2.5）
   // 端差·机制层端差批（2026-09-20 · `docs/batches/2026-09-20-mechanism-parity-batch.md` · 车道 2 = VSC）
   "test/lifecycle-hooks.test.mjs", // §2.16 端侧 Stop 钩子 + advisor-run 收口（T-LH1–T-LH9；先红 = 端侧零 `runHooks` + 零收口）
   "test/dispatch-hooks.test.mjs", // §2.17 派发面 hooks 四调用点（T-DH1–T-DH7；先红 = 零调用点/零阻断文案）

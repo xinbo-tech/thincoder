@@ -35,6 +35,13 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
  * `session-lifecycle.mjs`（**305**——会话生命周期七函数外提产物）：两档读数 >300，拆分计划已
  * 登设计档 §2.8.1 表（第 10 / 11 行——fix 轮 3 补登，漂移已消解）。
  * 拆分产物 `session-slots-manifest.mjs`（264）≤300 ⇒ 不登记。
+ * 渠道接入批（2026-09-20）新增登记**两条测试档**：`test/model-specs.test.mjs`（**414** 行——A-1..A-12：
+ * 五新行逐字段 / 证据等级行注 / 转售面零回归 / 兼容层护栏 / 两族枚举行独立）与
+ * `test/provider-merge.test.mjs`（**306** 行——B-1..B-6：D-14 off 补发 + 五 guard 零变面）：
+ * 两档实施后越线（设计预估 ~305 / ~272，实读超出）⇒ 处置 = 批次档
+ * `docs/batches/2026-09-20-channel-onboarding.md` §1.10-④ 预裁「**登记不拆档**（单档内聚）」；
+ * 设计档 `CORE-UNIFICATION.md` §2.8.1 表行（拆分计划落点）= 已落（子表行 12 / 13，收口轮）。
+ * 读数口径 = 末行终止后的行数（两档与 `wc -l` 同值：414 / 306；split 口径 415 / 307）。
  */
 const SOFT_LINE_REGISTRY = new Set([
   "agent/dispatch.mjs", "agent/helpers.mjs", "agent/setup.mjs", "agent.mjs",
@@ -45,7 +52,8 @@ const SOFT_LINE_REGISTRY = new Set([
   "config.mjs", "context.mjs", "git/checkpoint.mjs", "manifest.mjs", "memory/code-sync.mjs",
   "memory/core.mjs", "memory/docs.mjs",
   "memory/schema.mjs", "process-probe.mjs", "provider/core.mjs", "provider/responses.mjs",
-  "session-lifecycle.mjs", "session-store.mjs", "tools/edit-diff.mjs", "tools/file.mjs", "tools/git.mjs",
+  "session-lifecycle.mjs", "session-store.mjs", "test/model-specs.test.mjs", "test/provider-merge.test.mjs",
+  "tools/edit-diff.mjs", "tools/file.mjs", "tools/git.mjs",
   "tools/lsp.mjs", "tools/repomap.mjs", "tools/shared.mjs", "traces/trace-store.mjs",
 ])
 

@@ -1099,11 +1099,11 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | 15 | `agent/child-marks.mjs` | **24** | 显示面消差批 X6 下沉产物（`TURN_CAP_MARK` / `STOPPED_MARK` 唯一定义——先例 `agent/relay-prefix.mjs`；`agent/spawn-child.mjs:33` 原样再导出保 import 面；`wc -l` 实读 2026-09-20） | —（软线内——≤300 免登记） |
 
 **覆盖口径**：本表 = S1 落地新增 / 拆分产物档（**15 档** = §2.8 表「核包（S1 新建）」行的逐档展开 + **S1 续轮两档**——#184 / #185 + **S1 续轮第四批两档**——#123 / #126 + **init-block 批一档**——`session-slots-manifest.mjs`（拆分产物；同批 `session-lifecycle.mjs` **>300** ⇒ 归下子表行 11）＋ **显示面消差批一档**——`agent/child-marks.mjs`（X6 常量下沉产物））。
-`SOFT_LINE_REGISTRY`（`thincoder-core/test/core-hygiene.test.mjs`）在册 **33 档**：拆分计划已登 **12 档**（`config.mjs` + 收正轮 3 补 4 档 + 收尾轮补 4 档 + **U0 修轮补 1 档** + **init-block 批补 2 档**——后 11 档见下子表）；**其余 21 档待补**（记档——补登范围与时点另定；其中 **≥437 八档**已列次优先）。
+`SOFT_LINE_REGISTRY`（`thincoder-core/test/core-hygiene.test.mjs`）在册 **35 档**：拆分计划已登 **14 档**（`config.mjs` + 收正轮 3 补 4 档 + 收尾轮补 4 档 + **U0 修轮补 1 档** + **init-block 批补 2 档** + **渠道接入批补 2 档**〔test 面首次入册——子表行 12 / 13〕——后 **13** 档见下子表）；**其余 21 档待补**（记档——补登范围与时点另定；其中 **≥437 八档**已列次优先）。
 其中距 500 硬限最近五档（**500 / 498 / 495 / 489 / 483**——`session.mjs` · `session-slots.mjs` · `provider/responses.mjs` · `agent/dispatch.mjs` · `agent-tools/subagent-actions.mjs`；计划均已补，见下子表）：前两档读数 2026-09-18——已随 init-block 批拆分兑现（`wc -l` 实读 **244** / **298**；行 2 / 行 3）；余三档读数 2026-09-14（行 1 / 行 4 / 行 5）。
 次优先面 = 其余 **≥437** 八档（见下；`thincoder-core/tools/shared.mjs` 已补登计划、移出该列表）。
 
-**在册超软线档拆分计划（S1 逐字随迁面——收正轮 3 补 4 档；收尾轮补 ≥450 面 4 档；U0 修轮补 1 档；init-block 批补 2 档；读数 = `wc -l`——本批触及行实读 2026-09-19 · 其余实核 2026-09-14）**
+**在册超软线档拆分计划（S1 逐字随迁面——收正轮 3 补 4 档；收尾轮补 ≥450 面 4 档；U0 修轮补 1 档；init-block 批补 2 档；渠道接入批补 2 档〔test 面〕；读数 = `wc -l`——本批触及行实读 2026-09-19 · 其余实核 2026-09-14 · test 面两档实读 2026-09-20）**
 
 | # | 档（`thincoder-core/` 内） | 当前行数 | 拆分计划 |
 |---|---|---|---|
@@ -1118,6 +1118,8 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | 9 | `thincoder-core/tools/shared.mjs` | **452** | **>300——须带（U0 前置笔即该档的实质改动 ⇒ 随 U0 补登——见 §2.8 U0 行）**：抽取**命令安全面**（`shellSegments` · `blankQuoted` · `isDestructiveCommand` · `detectDanger`——`:299-389` 约 91 行）与 **HTML / 文本面**（`decodeNumericEntity` · `stripTags` · `htmlToText`——`:390-437` 约 48 行）外提姊妹档（`shared-command.mjs` / `shared-html.mjs` 式）；re-export 保既有 import 面；余量预计 ≈**313**（仍 >300 ⇒ 二切 = `toOpenAISchema` / `sanitizeOutput` / `truncate` / `makeDecoder` 输出面约 50 行外提 ⇒ ≈263）· 新档预计 ≈**139**。消解条件 = U0 落笔同轮或其后的下一次实质动档（不得再增量） |
 | 10 | `thincoder-core/process-probe.mjs` | **315** | **>300——须带（本批新建即超软线——F-MI6 / F-MI7 产物）**：抽取**探测执行面**（执行底座与解析器：超时常量 `:26-27` · `uniqPids` / `parseTasklistPids` / `parsePsPids` / `parseCimCmdlines` / `parsePsArgs` · `execFileP` · `batchAlive` / `batchAliveAsync` · `probeCmdlines` / `probeCmdlinesAsync`——`:59-213` 约 155 行）外提姊妹档（`process-probe-exec.mjs` 式）；判据 / 分类面（`isProductProc` / `classifyEnd` / `ownerState` / `probeOwnersSync` / `probeOwnersAsync` / `isProcessAlive` / `filterDeadOwners`）与注入缝（`_setProcessProbeTestImpl`）留本档；余量预计 ≈**160** · 新档预计 ≈**160**。消解条件 = 该档下次实质改动时 |
 | 11 | `session-lifecycle.mjs` | **305** | **>300——须带（本批拆分产物即超软线——承行 2 拆分兑现）**：抽取**新建 / 切换 / 占用面**（`newSession` `:170-235` · `switchToSlot` `:272-293` · `slotOccupancy` `:294-305`——约 100 行）外提姊妹档（`session-slot-ops.mjs` 式）；恢复 / 应用 / 复位面（`resumeSlot` / `stripTruncatedToolArgs` / `applySession` / `resetSessionState`）留本档；余量预计 ≈**205** · 新档预计 ≈**100**。消解条件 = 该档下次实质改动时 |
+| 12 | `test/model-specs.test.mjs` | **414**（`wc -l` 实读 2026-09-20） | **>300——须带（渠道接入批补登——登记不拆档，批次档 §1.10-④ 预裁；test 面首次入册）**：用例族 = A-1..A-12（五名逐字段 · 证据等级行注 · 转售命中面 · 既有族零回归）整体承载 = 单档内聚；登记已落（`thincoder-core/test/core-hygiene.test.mjs:55`）；**消解条件 = 越 500 硬限前或该档下次实质改动时重裁**；细节面 = `docs/core/design/MODEL-SPECS.md` §9.7 |
+| 13 | `test/provider-merge.test.mjs` | **306**（`wc -l` 实读 2026-09-20） | **>300——须带（渠道接入批补登——登记不拆档，同 12）**：载荷族 = B-1..B-6 + T-8 / T-9（D-14 off 补发 + 五 guard 零变面）整体承载 = 单档内聚；登记已落（同 `:55`）；**消解条件 = 越 500 硬限前或该档下次实质改动时重裁**；细节面 = `docs/core/design/MODEL-SPECS.md` §9.7 |
 
 **次优先（≥437——登记、暂不逐档建计划；读数 = `wc -l` · 实核 2026-09-14）**：`thincoder-core/provider/core.mjs` **476** · `agent-tools/consult.mjs` **469** ·
 `tools/file.mjs` **464** · `agent-tools/subagent-spawn.mjs` **459** · `memory/schema.mjs` **452** ·
@@ -1781,6 +1783,11 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 ---
 
 ## 变更记录
+
+- 2026-09-20（**渠道接入批 · 设计侧收口轮（fix 轮）** · eng-designer——承 `docs/batches/2026-09-20-channel-onboarding.md` §5.4 漂移表 DR-1 · §1.10-④ 预裁）：
+  §2.8.1 补 **子表行 12 / 13**（`test/model-specs.test.mjs` **414** · `test/provider-merge.test.mjs` **306**——test 面首次入册；`wc -l` 实读 2026-09-20）
+  + 计数句同改（**在册 33 → 35 · 已登 12 → 14 · 后 11 → 13 档**）+ 子表头补「渠道接入批补 2 档〔test 面〕」；
+  两行拆分计划 = **登记不拆档（单档内聚）** + 消解窗口（越 500 硬限前或该档下次实质改动时重裁），细节面 = `MODEL-SPECS.md` §9.7。**零新语义**（= §1.10-④ 预裁的直接落位）。
 
 - 2026-09-20（**显示面消差批 · 批 4 收口轮 · eng-designer**——承 `docs/batches/2026-09-20-display-parity-batch.md` §2.11 未落面 / §5.13 批 2 实施记录）：§2.8.1 主表补 **行 15** = `agent/child-marks.mjs`（**24** 行——X6 标记常量下沉零依赖叶，先例 `agent/relay-prefix.mjs`；`wc -l` 实读 2026-09-20）+ 覆盖口径计数同改（**14 → 15 档**；D3：计数与列表同改）。
 

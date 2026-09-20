@@ -1,11 +1,11 @@
 /**
  * config-presets.mjs — provider preset table + entry builder（核内单一预设面）。
  *
- * 来源（§2.5 #129「融合：取一侧（逐条同值）」）：
- *  - `PROVIDER_PRESETS` = CLI `thincoder-cli/src/config.mjs` 的表（VSC
- *    `config-presets.mjs` 头注自述「mirrors CLI PROVIDER_PRESETS…双端逐条同值」⇒ 逐条同值，
- *    取 CLI 侧为单一权威）。
- *  - `presetToEntry` = VSC `config-presets.mjs` 的薄构造器（VSC 侧独有导出；CLI 侧对应实现在
+ * 来源（#129 融合：自 CLI / VSC 两张逐条同值的预设表取一侧）：
+ *  - `PROVIDER_PRESETS` = 取 CLI 侧为单一权威（VSC 侧现经由
+ *    `@thincoder/core/config.mjs` 取用，无独立镜像档；本档 = 两表
+ *    融合后的唯一定义处）。
+ *  - `presetToEntry` = 取 VSC 侧独有导出（CLI 侧对应实现在
  *    `cli/setup-wizard.mjs`，同字节语义）。
  *
  * 预先声明（MODEL-SELECTION v2，2026-09-10）：每个预设恰好携带一个默认模型（`model` ——
@@ -29,8 +29,11 @@ export const PROVIDER_PRESETS = {
   gemini:   { baseURL: "https://generativelanguage.googleapis.com/v1beta", model: "gemini-2.5-flash", format: "google", maxTokens: 8192, desc: "Gemini (Google)" },
   grok:     { baseURL: "https://api.x.ai/v1", model: "grok-4.5", maxTokens: 65536, desc: "Grok (xAI)" },
   mistral:  { baseURL: "https://api.mistral.ai/v1", model: "mistral-large", maxTokens: 32768, desc: "Mistral" },
-  volcengine: { baseURL: "https://ark.cn-beijing.volces.com/api/v3", model: "doubao-pro-32k", maxTokens: 32768, desc: "Volcengine Ark (豆包)" },
+  volcengine: { baseURL: "https://ark.cn-beijing.volces.com/api/v3", model: "doubao-seed-2-0-code-preview-260215", maxTokens: 131072, desc: "Volcengine Ark (豆包)" },
   hunyuan:  { baseURL: "https://api.hunyuan.cloud.tencent.com/v1", model: "hunyuan-pro", maxTokens: 32768, desc: "Hunyuan (腾讯混元)" },
+  // TokenHub = Tencent MaaS 聚合网关（另一主机；`hy3` 在本规格表有行）。`thinking` / `reasoningEffort` /
+  // `maxTokens` 一律**不设 = 不发**（两新渠道的 thinking 载荷与 max_tokens 行为未测 —— MODEL-SPECS §9.6 D-13）。
+  tokenhub: { baseURL: "https://tokenhub.tencentmaas.com/v1", model: "hy3", desc: "Tencent TokenHub (腾讯混元网关)" },
   siliconflow: { baseURL: "https://api.siliconflow.cn/v1", model: "deepseek-ai/DeepSeek-V3", maxTokens: 32768, desc: "SiliconFlow (硅基流动)" },
   openrouter: { baseURL: "https://openrouter.ai/api/v1", model: "anthropic/claude-sonnet-4", maxTokens: 32768, desc: "OpenRouter" },
   groq:     { baseURL: "https://api.groq.com/openai/v1", model: "llama-3.3-70b-versatile", maxTokens: 32768, desc: "Groq" },

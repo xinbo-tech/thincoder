@@ -27,7 +27,7 @@ ThinCoder 产品族 = **两个独立产品**（终端 CLI + VS Code 扩展）—
 |---|---|---|
 | **C1** | 配置共享 | 两端读写 `~/.thincoder/config.json`（`providers[]` + `activeProvider`）；`apiKey` 缺省回退环境变量；旧 VS Code settings 一次性迁移后停用 |
 | **C2** | 会话共享 | `~/.thincoder/sessions/`（完整 sha1(cwd) + 槽位）——两端互读，可无缝接续同一会话 |
-| **C3** | Provider 预设权威 | preset 表以 CLI `thincoder-cli/src/config.mjs` 的 `PROVIDER_PRESETS` 为唯一权威（当前全集 20 个，含 `kimi-code` / `glm-code` / `mimo` / `mimoplan` / `claude`（format: anthropic）/ `gemini`（format: google））——各端不再各自硬编码（避免漂移） |
+| **C3** | Provider 预设权威 | preset 表以核 `thincoder-core/config-presets.mjs` 的 `PROVIDER_PRESETS` 为唯一权威（当前全集 **21** 个，含 `kimi-code` / `glm-code` / `mimo` / `mimoplan` / `claude`（format: anthropic）/ `gemini`（format: google））——各端不再各自硬编码（避免漂移）。〔2026-09-20 渠道接入批同步：旧述权威路径 `thincoder-cli/src/config.mjs` 已不存在（#129 融合后表体住核）；计数 20→21 与 `thincoder-core/config-presets.mjs` 同变〕 |
 | **C4** | custom 三协议 | 手动输入 name / baseURL / model，并选 API format：`openai`（默认）/ `anthropic` / `google`，写入 `provider.format`；三协议均有 transport |
 | **C5** | 模型选择两级结构 | provider → 模型 两级 + add / remove / key 管理项（对齐 CLI `openModelPicker → openModelListForProvider`）；各端按各自界面形态实现（VSC 端形态见 `docs/vsc/requirements/PROJECT.md`） |
 | **C6** | 添加 / 删除 provider 流程 | 对齐 CLI `addProviderFlow` / `removeProviderFlow` / `setKeyFlow`：添加 = 选 preset（过滤已添加）→ 自动填 baseURL / model → 输入 API key（custom 走 C4 手动流程）；删除 = 列出非 active 的 provider；key 管理 = 单独入口 |

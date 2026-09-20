@@ -3,8 +3,8 @@
  *
  * Split from config.mjs (which had grown to 358 lines, past the 300 advisory
  * line — TODO #1). config.mjs re-exports specForModel so the 23 existing
- * importers stay untouched. PROVIDER_PRESETS stays in config.mjs (only 23
- * lines; extracting it would churn wizard/pickers/setup-wizard for no gain).
+ * importers stay untouched. (PROVIDER_PRESETS has since moved out, to
+ * config-presets.mjs — the core's single preset face, re-exported by config.mjs.)
  */
 
 /**
@@ -60,13 +60,32 @@ const MODEL_SPECS = [
   ["gpt-4.1",           { context: 1_000_000, maxOutput: 128_000, thinking: false, cacheMode: "prompt" }],
   ["gpt-4o",            { context: 128_000,   maxOutput: 16_000,  thinking: false, multimodal: true, cacheMode: "prompt" }],
   // Qwen series
-  ["qwen3.8-max-preview", { context: 1_000_000, maxOutput: 131_072, thinking: true, partialMode: true, multimodal: true, cacheMode: "none", thinkApi: "effort", reasoningEffortEnum: ["xhigh", "medium", "low"], tempRange: [0, 2] }],
   // qwen3.7-max rejects image parts outright (DashScope 400 "Unexpected item type in content") — text-only
   ["qwen3.7-max",       { context: 1_000_000, maxOutput: 131_072, thinking: true, partialMode: true, cacheMode: "none", thinkApi: "effort", reasoningEffortEnum: ["xhigh", "high"], tempRange: [0, 2] }],
+  // qwen3.7-flash / qwen3.8-flash (2026-09-20): thinking + effort enum + maxOutput + image intake
+  // are server-MEASURED (batch 2026-09-20-qwen-flash-specs §1.2 — bare request carries reasoning_tokens
+  // 166/27; 400 literal lists the enum; max_tokens range [1, 131072]). 3.7-flash enum has NO "max"
+  // (6 levels), 3.8-flash adds it (7); enum order = the server's literal order, first member "none"
+  // (D-5) — never re-sort by strength. context = doc/web statement (1M class, not API-measured);
+  // partialMode / cacheMode / thinkApi / tempRange = same-family carry-over (not independently
+  // measured on these rows); reasoningEcho stays undeclared (cross-turn echo unverified — R-4).
+  ["qwen3.7-flash",     { context: 1_000_000, maxOutput: 131_072, thinking: true, partialMode: true, multimodal: true, cacheMode: "none", thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh"], tempRange: [0, 2] }],
+  ["qwen3.8-flash",     { context: 1_000_000, maxOutput: 131_072, thinking: true, partialMode: true, multimodal: true, cacheMode: "none", thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"], tempRange: [0, 2] }],
   ["qwen3.8-max",       { context: 1_000_000, maxOutput: 131_072, thinking: true, partialMode: true, multimodal: true, cacheMode: "none", thinkApi: "effort", reasoningEffortEnum: ["xhigh", "medium", "low"], tempRange: [0, 2] }],
-  ["qwen-max",          { context: 1_000_000, maxOutput: 131_072, thinking: false, partialMode: true, multimodal: true, cacheMode: "none", thinkApi: "effort", tempRange: [0, 2] }],
-  ["qwen-plus",         { context: 1_000_000, maxOutput: 131_072,  thinking: false, partialMode: true, multimodal: true, cacheMode: "none", thinkApi: "effort", tempRange: [0, 2] }],
-  ["qwen",              { context: 1_000_000, maxOutput: 131_072, thinking: false, partialMode: true, multimodal: true, cacheMode: "none", thinkApi: "effort", tempRange: [0, 2] }],
+  // qwen3.8-omni-flash / qwen3.8-27b — parent 80-token probe (batch §1.8-①): reasoning_content
+  // present, reasoning_tokens 49, `effort:"none"` removes it ⇒ thinking MEASURED; enum / maxOutput
+  // / image intake measured the same way. omni-flash: context = doc/web statement (1M class, not
+  // API-measured); partialMode / cacheMode / thinkApi / tempRange = same-family carry-over;
+  // reasoningEcho undeclared (cross-turn echo unverified — R-4). The server also takes audio, this
+  // repo's call path sends images only ⇒ multimodal below = image intake (no `modalities` field, §2.7).
+  ["qwen3.8-omni-flash",{ context: 1_000_000, maxOutput: 131_072, thinking: true, partialMode: true, multimodal: true, cacheMode: "none", thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"], tempRange: [0, 2] }],
+  // 27b: context 262_144 = doc/web statement, the native value (1M is YaRN extrapolation, local
+  // deploy only); partialMode / cacheMode / thinkApi / tempRange same-family carry-over; reasoningEcho
+  // undeclared (cross-turn echo unverified — R-4).
+  ["qwen3.8-27b",       { context: 262_144,   maxOutput: 131_072, thinking: true, partialMode: true, multimodal: true, cacheMode: "none", thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"], tempRange: [0, 2] }],
+  // No generic "qwen" fallback row: unlisted qwen names deliberately resolve to DEFAULT_SPEC
+  // (128K / 32K, no vision) — per-name disposition in docs/core/design/MODEL-SPECS.md §2.4.
+  // Do not re-add a blanket prefix row (silent inheritance is how missing rows stayed invisible).
   // MiniMax series
   ["MiniMax-M3",        { context: 1_000_000, maxOutput: 128_000, thinking: true,  multimodal: true, cacheMode: "auto", thinkApi: "type", thinkEnabledValue: "adaptive", tempRange: [0, 2], noUsageStream: true }],
   // MiMo series (Xiaomi — OpenAI-compatible https://api.xiaomimimo.com/v1;
@@ -95,6 +114,29 @@ const MODEL_SPECS = [
   ["gemini-3-pro",      { context: 1_000_000, maxOutput: 64_000,  thinking: false, multimodal: true, cacheMode: "none", format: "google", noUsageStream: true }],
   ["gemini-2.5-pro",    { context: 2_000_000, maxOutput: 64_000,  thinking: false, multimodal: true, cacheMode: "none", format: "google", noUsageStream: true }],
   ["gemini-2.5-flash",  { context: 1_000_000, maxOutput: 64_000,  thinking: false, multimodal: true, cacheMode: "none", format: "google", noUsageStream: true }],
+  // Tencent Hunyuan (TokenHub — 聚合网关 `https://tokenhub.tencentmaas.com/v1`；批 2026-09-20-channel-onboarding)
+  // hy3：thinking / thinkApi / effort 枚举 = **本渠道实测**——裸请求 reasoning_content 在场（tok=16），
+  // `reasoning_effort:"none"` 即消失（实测唯一有效 off 路径）。枚举 = 七值**受理级探针**（七值全 200 受理；
+  // 乱值 400 泛化拒收、服务端不列枚举——等级低于 seed 的「服务端真校验」，两族同值集但等级不混）；
+  // 序 = 服务端原文序、首项 "none"，**禁按强度重排**（D-5）。multimodal：**不声明**——真值 32×32 纯红图
+  // 答 "Unknown"（对照组明说不识图）⇒ 实测无视觉。尺寸位两级逐条标（AC-2）：maxOutput 128_000 =
+  // **参考实配**（网关对 max_tokens 不硬拒 ⇒ 上限未证）；context 256_000 = **网络口径**（他仓/文档 256K，未本渠道实测）。
+  ["hy3",               { context: 256_000, maxOutput: 128_000, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"] }],
+  // hy3-preview（在场实测：/models + 401 前验活；能力位**未探针**）——**尺寸行**：仅登记尺寸位，取值 =
+  // hy3 **同族沿用**（maxOutput 参考实配 / context 网络口径）。D-11：能力位不跨名沿用 ⇒ thinking / 枚举 / 视觉全不声明。
+  ["hy3-preview",       { context: 256_000, maxOutput: 128_000 }],
+  // hy4-preview（在场实测：/models + 401；能力位**未探针**）——尺寸行：取值 = hy3 族**同族沿用**
+  // （maxOutput 参考实配级取值 / context 网络口径；批次档 §1.2 未给该名尺寸行 ⇒ 上报清单 2，行注即标级）。
+  ["hy4-preview",       { context: 256_000, maxOutput: 128_000 }],
+  // Doubao Seed (Volcano Ark — `https://ark.cn-beijing.volces.com/api/v3`；批 2026-09-20-channel-onboarding)
+  // 两档全针实测：裸请求 reasoning_content 在场（code tok=219 / lite tok=161）、`effort:"none"` 即消失 ⇒
+  // thinking / thinkApi = 实测；枚举 = **服务端真校验级**（乱值 400 明列 invalid + 七档全 200）⇒ 七值即服务端值域；
+  // maxOutput 131_072 = **实测**（262 144 → 400 "above maximum"）；context 256_000 = **官方口径**（官方 256K）
+  // + **实测**下界 210K 输入受理（探至账号 429 停手）；multimodal = 实测（纯红图答 "Red"）。
+  ["doubao-seed-2-0-code-preview-260215", { context: 256_000, maxOutput: 131_072, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"], multimodal: true }],
+  // seed-lite = 同族全针（批次档 §1.2 lite 行：思考 tok=161 / 视觉 "Red" / 上限 131 072 / echo 真名）——
+  // context 同按 **官方口径** + **实测**下界标注；行独立（同值集 ≠ 同行：改一行不动另一行）。
+  ["doubao-seed-2-0-lite-260428", { context: 256_000, maxOutput: 131_072, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"], multimodal: true }],
 ]
 const DEFAULT_SPEC = { context: 128_000, maxOutput: 32_000, cacheMode: "none" }
 
