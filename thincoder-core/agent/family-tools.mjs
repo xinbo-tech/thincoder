@@ -21,11 +21,11 @@ export async function assembleFamilyTools({
   role = null,           // string   子代理角色（eng-coder / eng-designer / coder / consult / explore / …）
   engineering = false,   // boolean  depth-0 role enum 注入用（工程模式）
   consultModels = [],    // array    consult 池（[] ⇒ consult 工具不注册）
-  batchDoc = null,       // string   batchSegment 绑定路径（eng 角色）
+  batchDoc = null,       // string   批次档绑定路径（eng 角色 → batchTool 绑定）
   decorate = null,       // object   端差面：{ subagent?, consultStart?, consultStop?, settings? }
 } = {}) {
   // CORE-UNIFICATION TOOLS #83：consult 家族随统一登记册自 `../agent-tools.mjs` 取用（单一来源）
-  const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool, readHistoryTool, batchSegmentTool, consultStartTool, consultStopTool, parentChannelTool } = await import("../agent-tools.mjs")
+  const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool, readHistoryTool, batchTool, consultStartTool, consultStopTool, parentChannelTool } = await import("../agent-tools.mjs")
   // 写命令（主 agent 专用）——动态 import 且**仅 depth===0 载入**（ledger 链静态达 node:sqlite——
   // W8 契约②；子代理路径不注册 = 零载入——depth>0 解构得空、不引用即无副作用）
   const { ledgerAddTool, ledgerUpdateTool, ledgerCloseTool } = depth === 0 ? await import("../ledger.mjs") : {}
@@ -138,7 +138,7 @@ export async function assembleFamilyTools({
     : []
 
   const depthOnly = depth === 0
-    ? [decorate?.subagent ?? filteredSubagent, skillTool, goalTool, engTool, verifyTool, recentChangesTool, readHistoryTool, advisorTool,
+    ? [decorate?.subagent ?? filteredSubagent, skillTool, goalTool, engTool, verifyTool, recentChangesTool, readHistoryTool, advisorTool, batchTool(null),
       ...consultTools,
       // 台账写命令（M2——仅主 agent；查询面 ledger_count 住基础集 tools/index.mjs）。
       // fail-closed：子代理不挂载 = 写面机械不可达。
@@ -157,15 +157,18 @@ export async function assembleFamilyTools({
     // eng-coder: advisor + verify + the §18 audit-only subagent channel (D-E3).
     // eng-designer (§2.15 D): the survey-only subagent channel alone — no advisor
     // (it does not fire reviews) and no verify (its deliverable is documents, not code).
-    // §2.20.3（第 4 批）：两分支各追加 batch_segment——目标档 = spawn 时绑定的
-    // `batchDoc`（§2.20.2）；主 agent 不挂载（§1/§4/§6 走普通文档写）。
+    // BATCH-RECORD §4.3 挂载表（批次档生命周期工具化批）：eng 两分支各挂主名 `batch`
+    // （绑定段 append/status；目标 = spawn 绑定 `child._batchDoc`）——§2.20.3 的 batch_segment
+    // 挂载形态已随单名化收口退役（过渡别名 §4.14 不入生产挂载面）；depth-0 主 agent 同表挂载
+    // `batch`（D-BR18 扩权——create/close + append §1/§4/§6 + status §1（轮 2 裁定②：§4/§6
+    // 状态面走普通文档写），目标走可选 path / 在飞扫描）。
     // SUBAGENT-UPSTREAM-CHANNEL（AGENT-LOOP-SUBAGENT.md §6.27.4 装配接线）：子代理上行通道
     // （`notify_parent`）随 depth>0 段**前置**——4 处携带 = eng-coder / eng-designer / coder / 兜底段
     // （未列名 depth>0 role 落同一兜底段 ⇒ 亦装配；语义 =「depth>0 且非 consult 皆装配」）；
     // 计数口径：`consult` 分支不入 ⇒ 「5 个插入点」读法已作废（实读 `thincoder-core/agent/family-tools.mjs:165-169`）。
     // consult 段不入（其角色语义 = 父发起的一次性会诊，父在其 settle 前不期望中途对话）。
-    : engChildRole === "eng-coder" ? [parentChannelTool, advisorTool, verifyTool, batchSegmentTool(batchDoc), ...(engChildSubagent ? [engChildSubagent] : [])]
-    : engChildRole === "eng-designer" ? [parentChannelTool, batchSegmentTool(batchDoc), ...(engChildSubagent ? [engChildSubagent] : [])]
+    : engChildRole === "eng-coder" ? [parentChannelTool, advisorTool, verifyTool, batchTool(batchDoc), ...(engChildSubagent ? [engChildSubagent] : [])]
+    : engChildRole === "eng-designer" ? [parentChannelTool, batchTool(batchDoc), ...(engChildSubagent ? [engChildSubagent] : [])]
     : role === "coder" ? [parentChannelTool, verifyTool, advisorTool]
     : role === "consult" ? [recentChangesTool]
     : [parentChannelTool]

@@ -25,17 +25,17 @@ const ROLE_FIXTURES = [
   {
     label: "depth-0 默认（无 decorate ⇒ 核默认形态）",
     args: { depth: 0 },
-    expect: ["task", "plan", "timer", "subagent", "skill", "goal", "eng", "verify", "recent_changes", "read_history", "advisor", "ledger_add", "ledger_close", "ledger_update"],
+    expect: ["task", "plan", "timer", "subagent", "skill", "goal", "eng", "verify", "recent_changes", "read_history", "advisor", "batch", "ledger_add", "ledger_close", "ledger_update"],
   },
   {
     label: "eng-designer（depth>0）",
     args: { depth: 1, role: "eng-designer", batchDoc: BATCH },
-    expect: ["task", "plan", "timer", "batch_segment", "subagent", "notify_parent"],
+    expect: ["task", "plan", "timer", "batch", "subagent", "notify_parent"],
   },
   {
     label: "eng-coder（depth>0）",
     args: { depth: 1, role: "eng-coder", batchDoc: BATCH },
-    expect: ["task", "plan", "timer", "advisor", "verify", "batch_segment", "subagent", "notify_parent"],
+    expect: ["task", "plan", "timer", "advisor", "verify", "batch", "subagent", "notify_parent"],
   },
   {
     label: "coder（depth>0）",

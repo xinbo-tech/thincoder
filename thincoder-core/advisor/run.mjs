@@ -10,7 +10,7 @@ import { buildObjectDeclarationBlock, buildDesignApprovalBlock } from "./message
 import { appendCitationReport } from "./citations.mjs"
 import { runAdvisorToolLoop } from "./loop.mjs"
 import { advisorIncompleteMarker, estimateTokens } from "./compaction.mjs"
-import { batchDocForReview } from "../agent-tools/batch-segment.mjs"
+import { batchDocForReview } from "../agent-tools/batch.mjs"
 
 // 拆分后 import 面（既有导出名逐一保面——re-export；谓词为本批新增）。
 export { ADVISOR_THINKING_PLACEHOLDER, MAX_RESULT_CHARS, renderTimeline as _renderTimeline } from "./compaction.mjs"

@@ -12,14 +12,14 @@
 
    | 段 | 作者 | 写入手段 |
    |---|---|---|
-   | §1 目标 + 前情 + 条目 | 主 agent | 普通文档写 |
-   | §2 任务书 | eng-designer | `batch_segment`（段 = §2，无路径参数） |
-   | §3 发现表 | 评审子代理（advisor） | `batch_segment`（段 = §3，工具已挂载时） |
-   | §4 核验与裁决 | 主 agent | 普通文档写 |
-   | §5 实施记录 | eng-coder | `batch_segment`（段 = §5） |
-   | §6 收口 + 状态行 | 父代理 | 普通文档写 |
+   | §1 目标 + 前情 + 条目 | 主 agent | 普通文档写（或 `batch` append depth-0 可选 path） |
+   | §2 任务书 | eng-designer | `batch` append（段 = §2，无路径参数） |
+   | §3 发现表 | 评审子代理（advisor） | `batch` append（段 = §3，工具已挂载时） |
+   | §4 核验与裁决 | 主 agent | 普通文档写（或 `batch` append depth-0 可选 path） |
+   | §5 实施记录 | eng-coder | `batch` append（段 = §5） |
+   | §6 收口 + 状态行 | 父代理 | 普通文档写（或 `batch` close 冻结） |
 
-2. **`batch_segment` 工具**：段白名单——调用者身份定段号（designer → §2 · 设计评审 → §3 · coder → §5），**越段即拒**。
+2. **`batch` 工具**（action: create/append/status/close——生命周期契约 = `docs/core/design/BATCH-RECORD.md` §4）：append 段白名单——调用者身份定段号（designer → §2 · 设计评审 → §3 · coder → §5 · 主 agent → §1/§4/§6），**越段即拒**；create（骨架预齐）/ close（冻结）仅 depth-0。
 3. **append-only**：段不重叠、不回改。
 4. **前情指针形态**：`前情 = docs/batches/<旧档> §N（已收口 <日期>）`。
 
@@ -33,7 +33,7 @@
 
 | # | 判据 | 方式 |
 |---|---|---|
-| AC-M3-1 | `batch_segment` 越段 → 拒（角色段白名单） | 以 designer 写 §5 → 期望拒 |
+| AC-M3-1 | `batch` append 越段 → 拒（角色段白名单） | 以 designer 写 §5 → 期望拒 |
 | AC-M3-2 | 六段齐 + 状态行存在 | 读档结构 |
 | AC-M3-4 | 已收口档被回改 → 拒 / 机检红 | 写冻结档 → 期望拒 |
 

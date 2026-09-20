@@ -10,7 +10,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
-import { batchSegmentTool, resolveBatchDocPath } from "../agent-tools/batch-segment.mjs"
+import { batchSegmentTool, resolveBatchDocPath } from "../agent-tools/batch.mjs"
 import { _resetProjectRootForTest, _setProjectRootForTest } from "../manifest.mjs"
 
 /** 六段骨架 + §1 状态行（进行中）。 */

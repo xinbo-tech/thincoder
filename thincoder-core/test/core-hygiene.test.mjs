@@ -47,7 +47,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
  * §6.4 模块落点——存续条件 = 本批落地）。
  * 批次档生命周期工具批（2026-09-21）登记**三档**：`agent-tools/batch.mjs`（**397**——KD-4 proactive
  * 处置已落：骨架/词表解析单源外提 `batch-skeleton.mjs`（94）+ 生命周期动作外提
- * `batch-lifecycle.mjs`（245），三档各 ≤300；主档 = 398 行设计预裁面——旧 `batch-segment.mjs`
+ * `batch-lifecycle.mjs`（245），三档各 ≤300；主档实测 397 行——旧 `batch-segment.mjs`
  * 266 → 18 行过渡 shim）与 `test/batch.test.mjs`（**380**——新测试档，C1–C10+BR-18–26 用例表；预裁
  * 「**保留单档**」（既有/新用例 fixtures 共享，拆档 = 复制脚手架——批档 :89/:165-#8）；硬顶 500 内）。
  * 读数口径 = 末行终止后的行数（node 实测——`wc -l` 本机 cmd 乱码已弃用）。

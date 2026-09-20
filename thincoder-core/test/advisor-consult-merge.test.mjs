@@ -67,8 +67,8 @@ test("#109 code_search 恒在：工具清单与索引绑定解耦（未绑定 �
   assert.equal(await withoutIndex.byName.get("code_search").execute({ query: "x" }), "(code index not available in this session)")
   assert.deepEqual([...withoutIndex.byName.get("code_search").parameters.required], ["query"], "工具面同形（参数/描述不因降级而变）")
   // 批次档绑定只在 design + batchDoc 同时到位时追加（既有语义零变）
-  assert.equal(_advisorToolsFor({}, "design", null).byName.has("batch_segment"), false)
-  assert.equal(_advisorToolsFor({}, "code", "docs/batch.md").byName.has("batch_segment"), false)
+  assert.equal(_advisorToolsFor({}, "design", null).byName.has("batch"), false)
+  assert.equal(_advisorToolsFor({}, "code", "docs/batch.md").byName.has("batch"), false)
 })
 
 // ─── #95 depth 显式校验（拒发行）────────────────────────────────

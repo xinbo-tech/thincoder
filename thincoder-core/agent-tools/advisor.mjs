@@ -8,7 +8,7 @@
  * blocking review); depth>0 (eng-coder self-review) stays synchronous always.
  */
 import { runAdvisorReview, advisorIncompleteMarker, ADVISOR_LAUNCH_REFUSAL_PREFIX } from "../advisor/run.mjs"
-import { resolveBatchDocPath } from "./batch-segment.mjs"
+import { resolveBatchDocPath } from "./batch.mjs"
 // M6（模块设计 §2.1 F3）：评审对象来源读 manifest docRoot（声明面）——复用 M4 的
 // write-gate.mjs 单一权威源（KD-M6-1），替代 v1 的 loadConventions/isDocPath 分类；
 // normAbs 同源 re-export（指针非副本）。不 import dispatch.mjs（簇间回边，环风险）。
@@ -86,7 +86,7 @@ export const advisorTool = {
       },
       batchDoc: {
         type: "string",
-        description: "Design review only: path to the batch record currently in flight. Validated WHENEVER passed (any review type) — a value that is not a readable file is refused with an error rather than ignored; for design reviews the reviewer then ALSO gets the batch_segment write channel to record its findings table + VERDICT + counts into §3. Omit when no batch record is in flight — the review then runs unchanged with no write channel (zero regression).",
+        description: "Design review only: path to the batch record currently in flight. Validated WHENEVER passed (any review type) — a value that is not a readable file is refused with an error rather than ignored; for design reviews the reviewer then ALSO gets the `batch` write channel (transition alias `batch_segment`) to record its findings table + VERDICT + counts into §3. Omit when no batch record is in flight — the review then runs unchanged with no write channel (zero regression).",
       },
     },
     required: ["type"],

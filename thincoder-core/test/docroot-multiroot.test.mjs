@@ -16,7 +16,7 @@ import {
   docRootPaths, isValidDocRootValue, readManifest, validateManifest, writeManifest,
 } from "../manifest.mjs"
 import { resolveReviewTargetPaths } from "../agent/write-gate.mjs"
-import { resolveBatchDocPath } from "../agent-tools/batch-segment.mjs"
+import { resolveBatchDocPath } from "../agent-tools/batch.mjs"
 
 /** 本仓根（thincoder-core/test/ → 上两级）——AC-13 端到端用。 */
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..")
