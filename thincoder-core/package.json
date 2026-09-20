@@ -1,10 +1,11 @@
 {
   "name": "@thincoder/core",
-  "version": "0.1.0",
+  "version": "0.9.1",
   "description": "ThinCoder shared core — shared mechanism modules + shared prompt content (CLI ↔ VS Code extension).",
   "type": "module",
   "scripts": {
-    "test": "node test/run.mjs"
+    "test": "node test/run.mjs",
+    "prepublishOnly": "npm test"
   },
   "license": "MIT",
   "engines": {
