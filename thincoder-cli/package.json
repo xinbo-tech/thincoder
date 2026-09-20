@@ -20,7 +20,7 @@
     "node": ">=24"
   },
   "dependencies": {
-    "@thincoder/core": "^0.1.0"
+    "@thincoder/core": "^0.9.1"
   },
   "files": [
     "bin/",

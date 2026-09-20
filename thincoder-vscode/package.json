@@ -30,7 +30,7 @@
     "vscode": "^1.104.0"
   },
   "dependencies": {
-    "@thincoder/core": "^0.1.0"
+    "@thincoder/core": "^0.9.1"
   },
   "type": "module",
   "main": "./extension.mjs",
