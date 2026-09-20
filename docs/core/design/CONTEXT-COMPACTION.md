@@ -5,7 +5,7 @@
 > 需求层 = `docs/core/requirements/CORE-UNIFICATION.md`（F1–F13 / N1–N8）。
 > 建档：2026-09-13（**文档拆分轮**——自 `CORE-UNIFICATION.md` §2.5 **逐节搬入，只搬不改语义**；行号沿用原裁定表编号）。
 > **列定义**（裁决行各列含义）→ `CORE-UNIFICATION.md` §2.5；**须裁条目的分组口径与四要素提交形式** → 该档 §2.5.1。
-> **机制面**（§6–§9 · 2026-09-14「B 轮并入」）：机制 / 契约的实质描述 · 关键决策 · 不并项与历史沿革（自 CLI 产品档并入）——**本档 = 该板块的完整设计面**（裁决行 + 机制 + 决策 + 沿革）。
+> **机制面**（§6–§8 · 2026-09-14「B 轮并入」）：机制 / 契约的实质描述 · 关键决策 · 不并项与历史沿革（自 CLI 产品档并入）——**本档 = 该板块的完整设计面**（裁决行 + 机制 + 决策 + 沿革）。
 
 ## 1. 归属与范围（自本档行内容的路径归纳）
 
@@ -484,7 +484,7 @@ provider = { ...agent.provider, thinking: null }   // **不覆盖** reasoningEff
 ## 变更记录
 
 - 2026-09-13：建档——自 `docs/core/design/CORE-UNIFICATION.md` 拆出（§2.5 #162–#164）；**语义零改**，行号沿用原编号。
-- 2026-09-14（**B 轮并入 · 第 3 批**）：新增 §6 **机制面**（术语与双线 / 触发 / token 判定 / 切割四约束 / 降级链 / 回注与双线 / 文案与静默 / 压缩面板 / 摘要 ≤1K 与探索摘要 / 行为契约 / parity / 实现位置）· §7 **关键决策（D-CC1–16）** · §8 **不并项与历史沿革** · §9 体量（低于软线，无需拆分）；
+- 2026-09-14（**B 轮并入 · 第 3 批**）：新增 §6 **机制面**（术语与双线 / 触发 / token 判定 / 切割四约束 / 降级链 / 回注与双线 / 文案与静默 / 压缩面板 / 摘要 ≤1K 与探索摘要 / 行为契约 / parity / 实现位置）· §7 **关键决策（D-CC1–16）** · §8 **不并项与历史沿革**；
   来源 = `thincoder-cli/docs/design/CONTEXT-COMPACTION.md`（**旧档一字未改**——原地作参照历史）；需求侧已并入本层 `docs/core/requirements/CONTEXT-COMPACTION.md`；首部加机制面指针一行。
 - 2026-09-15（**VSC 轮并入 · 批 7**）：§6.13 新增 **VS Code 端接线面**（判定点封装 / 基线记录 / 预算端差 /
 REVERSE 保护坐标 / 摘要段形状 / 边界重置 2 / webview 四态 / 失败可见化 / 非压缩职责边界）· §7 补 **D-CC17** ·
@@ -493,7 +493,7 @@ REVERSE 保护坐标 / 摘要段形状 / 边界重置 2 / webview 四态 / 失�
 - 2026-09-15（**W6 迁核收正 · VSC 壳代码接线批**）：§6.13 按 W6 现状收正（判定点封装改指核 `compressIfNeeded` / `compressFallback` ·
   阈值档位经核 `resolveCompactThreshold` · 端差适配（`provider` / `tasks` / `planMode` 调用期同指 + 共享数组回收）· 预算端差退场 ·
   REVERSE 保护退场（回植候选记核内笔）· webview 四态现状登记 · 摘要段形状取核）· §6.12 实现位置 VSC 列改指核面 ·
-  §6.11 REVERSE 差异注收正 · §6.4④ 预算常量端差注收正 · §1 归属表补迁核注（旧档 `thincoder-vscode/src/compact.mjs` **已删**、现体 `thincoder-core/context.mjs`）；§9 体量重锚。 （迁移期引文）
+  §6.11 REVERSE 差异注收正 · §6.4④ 预算常量端差注收正 · §1 归属表补迁核注（旧档 `thincoder-vscode/src/compact.mjs` **已删**、现体 `thincoder-core/context.mjs`）。 （迁移期引文）
 - 2026-09-16（**子代理压缩后推理链回传断裂修复 · eng-designer**——承 `docs/batches/2026-09-16-subagent-reasoning-echo.md`）：新增 **D-CC18**（压缩注入回声安全——tail 首条为 assistant 时占位并入该条）· §6.10 #2 形状句修正 + 新增 **#7 回声安全契约** · §6.7 D9 注 · §6.12 符号列补 `applyCompression` · §6.13 边界重置注收正；
   来源 = 轨迹档离线解剖（`reasoningEcho:"required"` 压缩后首发 400——同链 5 子代理全灭实证）；修复落点 = `thincoder-core/context.mjs` `applyCompression`（反向用例 = 核单测，§2 任务书）。
 - 2026-09-16（**实施轮收正 · eng-coder**——评审发现 🟡#3 / 父侧裁决「同轮收正失效文本」）：§6.4② 形状句补并入分支注 · §6.13 摘要段形状注删「带压缩时刻 ts」（并入分支保留尾首原 ts——D-S1 例外）；实现面 = `thincoder-core/context.mjs` `applyCompression` 并入分支 + 核单测 `thincoder-core/test/compaction-echo.test.mjs`。
@@ -520,4 +520,5 @@ REVERSE 保护坐标 / 摘要段形状 / 边界重置 2 / webview 四态 / 失�
 - 2026-09-20（**thinking 回传缺口批 · fix 轮（第三站点补面）· eng-designer**——承 `docs/batches/2026-09-20-reasoning-echo-gap.md` §2.9）：§6.10 #9 调用点枚举 **2 → 3**（补 VSC 端壳自有循环 `thincoder-vscode/src/agent.mjs:387-397`——端取值 × 同一构造单点；W8 契约② 静态引合法）· §7 D-CC22「共用」口径同步为三站点、否决项「双构造点」收正为「多构造点」。机制条文其余零改。
 - 2026-09-20（**thinking 回传缺口批 · 设计评审轮 1 收正 · eng-designer**——承批次档 `docs/batches/2026-09-20-reasoning-echo-gap.md` §3 轮次 1：🟡#3）：§6.10 #9 的 W8 闭包读数改**指针形态**（单源 = 该批 §2.9 ①——同批三处重复读数收口）。机制条文其余零改。
 - 2026-09-20（**thinking 回传缺口批 · 实现轮探针证据收正 · eng-designer**——承批次档 §2.11 ①）：§6.10 #9 与 §7 D-CC22 补**形状限定**（「缺字段 200」仅设计轮形状（尾 = user）成立；活体形状（尾 = tool）实测缺字段 **400**（`must be passed back`）· 空串 / 真值 200；kimi 三形态全 200；mimo 不可证）。机制条文与决策零改。
+- 2026-09-20（**卫生族批 · 台账 #138 · eng-designer**）：首部机制面节区改 `§6–§8` + 历史节号指称清理（行数规则废除批残留）；设计源 = `docs/batches/2026-09-20-hygiene-sweep-batch.md` §2。
 

@@ -5,7 +5,7 @@
 > 需求层 = `docs/core/requirements/CORE-UNIFICATION.md`（F1–F13 / N1–N8）。
 > 建档：2026-09-13（**文档拆分轮**——自 `CORE-UNIFICATION.md` §2.5 / §2.5.1 / §2.12.2 **逐节搬入，只搬不改语义**；行号沿用原裁定表编号）。
 > **列定义**（裁决行各列含义）→ `CORE-UNIFICATION.md` §2.5；**须裁条目的分组口径与四要素提交形式** → 该档 §2.5.1。
-> **机制面**（§6–§9 · 2026-09-14「B 轮并入」）：机制 / 契约的实质描述 · 关键决策 · 不并项与历史沿革（自 CLI 产品档并入）——**本档 = 该板块的完整设计面**（裁决行 + 机制 + 决策 + 沿革）。
+> **机制面**（§6–§8 · 2026-09-14「B 轮并入」）：机制 / 契约的实质描述 · 关键决策 · 不并项与历史沿革（自 CLI 产品档并入）——**本档 = 该板块的完整设计面**（裁决行 + 机制 + 决策 + 沿革）。
 
 ## 1. 归属与范围（自本档行内容的路径归纳）
 
@@ -417,11 +417,11 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` → 
 - 2026-09-14（markdown 面小收正轮）：§1 归属表与 §2.4 #138 行的 `index.mjs` 补路径前缀（`thincoder-core/provider/index.mjs`——与 `thincoder-vscode/src/tools/index.mjs` / `thincoder-cli/src/tui/index.mjs` 同名不同物；**消除歧义不改判据**）。
 - 2026-09-14（**B 轮并入 · 第 2 批**）：新增 §6 **机制面**（模块地图 / chat 主流程 / 重试超时错误分类 / SSE / 续写 / 闸门 / 净化 / 原生 transport / 规格表 / 畸形 tool_calls / 预设 / enable_thinking / Responses / 续写 400 根治 / providerSpec / 模型清单 provider 化 / 请求头装配）· §7 **关键决策记录（D-PR1–24）** · §8 **不并项与历史沿革** ·
 来源 = `thincoder-cli/docs/design/PROVIDER.md`（**旧档一字未改**——原地作参照历史）；产品需求条目 R1–R20 / N1–N9 归本层需求档 `docs/core/requirements/PROVIDER.md`；首部加机制面指针一行。
-- 2026-09-15（**qwen-plan 渠道名接入批** · eng-designer）：§6.11 行集补 `deepseek-v4.1-flash`（qwen-plan 渠道名 · 字段逐字对齐 `deepseek-flash`）· §7 补 **D-PR25** · §9 实测行数更新；本批源码 / 测试面见批次档 `batches/2026-09-15-DEEPSEEK-QWENPLAN.md`。
+- 2026-09-15（**qwen-plan 渠道名接入批** · eng-designer）：§6.11 行集补 `deepseek-v4.1-flash`（qwen-plan 渠道名 · 字段逐字对齐 `deepseek-flash`）· §7 补 **D-PR25**；本批源码 / 测试面见批次档 `batches/2026-09-15-DEEPSEEK-QWENPLAN.md`。
 - 2026-09-15（**评审修正轮** · eng-designer）：§7 D-PR25 论证口径改「前缀不相交（第 12 位 `.` 与 `-` 互不为前缀）」——长度排序既不充分也无必要（字典序下退役行反在前），排序交由既有 SORTED_SPECS 长度降序（与本批无关）。
-- 2026-09-15（**§8B #4 / #7 终收批** · eng-designer）：新增 §6.18 **图片输入与贴图降级链**（#4 IMAGE-DOWNGRADE-VISION + #7 PROVIDER §8 合成）+ §6.19 **VS Code 端接线**（配置存储端差 / 预设镜像 / 面板接线 / transport 端差 / 能力适配坐标 / 标题生成——#7 其余面）；§7 补 D-PR26 / D-PR27；§8.2 登记两行；§9 体量更新
-（360 行——高于软线、低于硬限）；来源 = `thincoder-vscode/docs/design/{PROVIDER,IMAGE-DOWNGRADE-VISION}.md`（一字未改——参照历史）。
-- 2026-09-15（**S2 W10 · VSC provider 接线批** · eng-coder）：§1 归属表 VSC 列改述（「经 `@thincoder/core/...` 引用」——自持镜像已删）；§6.19 transport 端差 / M9 探针 / 能力适配坐标收正（迁核退役登记；机制条文零改）；§9 体量更新。
+- 2026-09-15（**§8B #4 / #7 终收批** · eng-designer）：新增 §6.18 **图片输入与贴图降级链**（#4 IMAGE-DOWNGRADE-VISION + #7 PROVIDER §8 合成）+ §6.19 **VS Code 端接线**（配置存储端差 / 预设镜像 / 面板接线 / transport 端差 / 能力适配坐标 / 标题生成——#7 其余面）；§7 补 D-PR26 / D-PR27；§8.2 登记两行；
+来源 = `thincoder-vscode/docs/design/{PROVIDER,IMAGE-DOWNGRADE-VISION}.md`（一字未改——参照历史）。
+- 2026-09-15（**S2 W10 · VSC provider 接线批** · eng-coder）：§1 归属表 VSC 列改述（「经 `@thincoder/core/...` 引用」——自持镜像已删）；§6.19 transport 端差 / M9 探针 / 能力适配坐标收正（迁核退役登记；机制条文零改）。
   VSC 侧删除集、改指面与测试面（含 `provider-timeout-semantics` 改判）见批次档 `batches/2026-09-15-vsc-core-wiring.md` §5。
 - 2026-09-16（**批 1 CORE-DEFECT-FIXES · eng-designer**）：§6.6 补**五相值域**行 · §6.20 新增 **onWait 状态文案映射单源**块（映射表 / API / 复现判据 ①–⑤）+ **D-PR28**；体量读数 363 → 402。
 - 2026-09-18（**init-block 批 · eng-designer**——承 `docs/batches/2026-09-18-init-block.md` §1）：§6.16 补 **M8/M9 补**行（探针落账分类 + `hostBusy` 闸 + 窗口内 ≤2 次有界重试 · 文案零改）· §6.19 补探针落账指针 · §7 补 **D-PR29 / D-PR30**。
@@ -442,3 +442,4 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` → 
   （D-14 / AC-9）谓词单源 + 零变面五 guard；§6.2 载荷组装枚举补该支指针。规格数值不入本档（真源 = MODEL-SPECS.md）。
   **零新语义**（D-14 系批档 §1.7-① 已批项；余 = 评审发现的直接导出项）。
   行集与逐字段取值真源 = `doc:MODEL-SPECS.md:§9`，本档只承载渠道/预设面（D2 不重述数值）。
+- 2026-09-20（**卫生族批 · 台账 #138 · eng-designer**）：首部机制面节区改 `§6–§8` + 历史节号指称清理（行数规则废除批残留）；设计源 = `docs/batches/2026-09-20-hygiene-sweep-batch.md` §2。

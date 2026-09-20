@@ -43,7 +43,7 @@ export function enqueueAsk(owner, key, ask) {
   return chain
 }
 
-// Async pool limits per role domain (AGENT-LOOP.md §11.1 — R14, 2026-09-06):
+// Async pool limits per role domain (AGENT-LOOP-SUBAGENT.md §6.10 — R14, 2026-09-06):
 // the old single cap (ASYNC_SUBAGENT_LIMIT = 4, §15 D-A4) evolved into two
 // independent pools — eng-coder 4 / other roles 4 (user ruling "eng-coder 四路，
 // 其他 4 路") — a full engCoder pool never blocks an explore spawn and vice versa

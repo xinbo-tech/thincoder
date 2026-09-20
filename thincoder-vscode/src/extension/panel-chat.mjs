@@ -39,7 +39,7 @@ import { resolveTurnStage, finalizeTurn, enterSuspensionTurn } from "./panel-tur
 // 缝保持（KD-12 · 承 KD-13）：`newTurnController` 迁出 + 本档 re-export——消费档 import 行零改。
 export { newTurnController } from "./panel-turn-loop.mjs"
 
-/** §11 绑定判定（AGENT-LOOP.md §11——纯函数，单测锚点）：agent 仅在其 _engPersist 绑定的
+/** 绑定判定（纯函数，单测锚点）：agent 仅在其 _engPersist 绑定的
  *  cwd×slot 与当前面板会话一致时可复用（同 cwd 同 slot 第二轮 → 复用不销毁——AC1；换 slot/
  *  换项目 → 不匹配 → 销毁重建——AC4/F4——不跨会话串态）。 */
 export function agentSlotMatches(agent, cwd, slot) {
@@ -119,7 +119,7 @@ async function runPanelChatImpl(panel, opts = {}) {
   // chat-panel F-C1a 兜底复位忙态（:398-413——不变量：回合 promise 永不悬挂）。
   let turnSlot = susp?.turnSlot ?? ensureSlot(panel)
   if (turnSlot == null) turnSlot = await ensureSlotAsync(panel)
-  // §11（AGENT-LOOP.md §11——2026-09-08）：会话级顶层 agent 单例——ensureSlot 后绑定判定：
+  // 会话级顶层 agent 单例（2026-09-08）：ensureSlot 后绑定判定：
   // 存在且 _engPersist cwd×slot 匹配 → 复用（同 panel 连续多回合同一对象——AC1）；否则销毁，
   // 本回合 runAgent 经 opts.agent 缺省路径 factory 新建（首轮/换槽/destroy 重建同路径）。
   ensurePanelAgent(panel, turnSlot)
@@ -198,7 +198,7 @@ async function runPanelChatImpl(panel, opts = {}) {
   const isFirstMessageNow = !suspLines && fullHistory.filter((m) => (m.type ?? m.role) === "user").length === 0
   isFirstMessage = isFirstMessageNow
 
-  // §11（AGENT-LOOP.md §11.1③/F2——2026-09-08）：runOpts 不再搬运 engState/planMode 状态载荷
+  // F2（2026-09-08）：runOpts 不再搬运 engState/planMode 状态载荷
   // ——hydrate（setup.mjs applySlotSessionState）每轮直接从权威槽 reconcile（engineering/
   // advisor.guard/planMode/engDesignTokens——settle 落盘在 run 外，槽读保留）。
   // Persist model selection

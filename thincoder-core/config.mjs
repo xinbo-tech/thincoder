@@ -49,7 +49,7 @@ export const DEFAULTS = {
     advisor: { guard: false },  // code review is always available; guard: true pushes completion back until reviewed (opt-in). Also accepts provider/model/thinking/reasoningEffort/timeoutMs overrides. Deprecated: enabled (2026-08-21)
     autoThink: false,     // auto-classify task difficulty and set reasoning effort per-turn
     engineering: false,   // strict methodology enforcement — design-before-code (design review + user approval before code)
-    // Async pool limits (AGENT-LOOP.md §11.1 D-24a/R14 + §11.2 R13 — POOL-CONFIG-
+    // Async pool limits (AGENT-LOOP-SUBAGENT.md §6.10 D-24a/R14 + R13 — POOL-CONFIG-
     // UNIFIED 2026-09-09): { engCoder, other, advisor } — eng-coder pool / other-role
     // pool / advisor-review pool, defaults 4/4/4 (user ruling "eng-coder 四路，其他
     // 4 路" + advisor 评审池并入同一可配体系——三池统一默认 4)。engCoder/other

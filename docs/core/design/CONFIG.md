@@ -5,7 +5,7 @@
 > 需求层 = `docs/core/requirements/CORE-UNIFICATION.md`（F1–F13 / N1–N8）。
 > 建档：2026-09-13（**文档拆分轮**——自 `CORE-UNIFICATION.md` §2.5 / §2.5.1 / §2.12.1 / §2.12.2 **逐节搬入，只搬不改语义**；行号沿用原裁定表编号）。
 > **列定义**（裁决行各列含义）→ `CORE-UNIFICATION.md` §2.5；**须裁条目的分组口径与四要素提交形式** → 该档 §2.5.1。
-> **机制面**（§6–§9 · 2026-09-14「B 轮并入」）：本板块**同名旧档缺 ⇒ 无新内容并入**（不虚构）——详见 §6 / §8。
+> **机制面**（§6–§8 · 2026-09-14「B 轮并入」）：本板块**同名旧档缺 ⇒ 无新内容并入**（不虚构）——详见 §6 / §8。
 > **并入面补记**（2026-09-15 批 5）：配置面机制文本散布旧档——按父侧点名并入 `POOL-CONFIG-UNIFIED`（§6.1）。
 
 ## 1. 归属与范围（自本档行内容的路径归纳）
@@ -142,8 +142,9 @@
 
 - 2026-09-13：建档——自 `docs/core/design/CORE-UNIFICATION.md` 拆出（§2.5 #74 / #77 / #79 / #80 / #87 / #128–#132 / #177 · §2.5.1 A4 / A5 · §2.12.1「配置格式」类 · §2.12.2 第 1–4 行）；**语义零改**，行号沿用原编号。
 - 2026-09-14（S1 收口轮）：§5 补**核内落点行数**指针（`config.mjs` · `config-io.mjs` · `config-presets.mjs`——§2.8 新增小节）。
-- 2026-09-14（**B 轮并入 · 第 3 批**）：§6 **机制面 = 同名旧档缺**（`thincoder-cli/docs/{design,requirements}/CONFIG.md` 均不存在——两产品树实核）⇒ 无并入内容（不虚构）；§7 无新增决策；§8 登记配置面机制文本散布于旧档（越段发现 + MEMORY §6.7 指回）；§9 体量（低于软线，无需拆分）；首部加机制面指针一行。
-- 2026-09-15（**迁移批 · 第 5 批 · 并入 · eng-designer**）：新增 §6.1 **并发池配置面**（自 `thincoder-cli/docs/_archive/design/POOL-CONFIG-UNIFIED.md` 并入——配置键表 / 双读取器 / 默认四源 / 界面入口 / 兼容面；机制本体指 `AGENT-LOOP-SUBAGENT.md` §6.10）；§7 补 D-CF1–D-CF4；§8.2 两行指态收正（PROXY 已落 / POOL 已并入）；§9 行数重核。
-- 2026-09-15（**W16 实施轮 · eng-coder**）：§1 归属表改「现体」双列（加载器 / 迁移 / 预设 / settings 工具 / 供应持久化面 = 核单源；VSC 端侧镜像 6 档已删——端壳保留写盘通道 / 监视 / 迁移 glue / provider 访问层）+ W16 现况注；§2.2 #130 行注 W16 端侧 consult 读面现体；§6.1 界面入口行号重核（`settings-panel-write.mjs:94` · `thincoder-vscode/src/extension/settings.mjs:176`）；§9 行数重核。
-- 2026-09-16（**ENGINE-DEBT 批 8 · ED-4 决策面收正 · eng-designer**——承 `docs/batches/2026-09-16-engine-debt.md` §1 裁定 ④）：§7 **D-CF2 理由句 / D-CF3 否决句**按「评审池满 → 异 scope 入队」收正（决策本体不变——独立读取器 / 同 scope 守卫；机制落 `AGENT-LOOP-SUBAGENT.md` §6.10/§6.11）；§9 行数读数随收。
-- 2026-09-16（**批 8 ENGINE-DEBT · 补充收正 · eng-designer**）：§6.1 范围边界句「『评审不排队』语义不变」→「**表述已废**」（承 ED-4——与 §7 D-CF3 · `AGENT-LOOP-SUBAGENT.md` §6.10 对齐；残留旧语义清理）；§9 行数读数随收（152 → **153**）。
+- 2026-09-14（**B 轮并入 · 第 3 批**）：§6 **机制面 = 同名旧档缺**（`thincoder-cli/docs/{design,requirements}/CONFIG.md` 均不存在——两产品树实核）⇒ 无并入内容（不虚构）；§7 无新增决策；§8 登记配置面机制文本散布于旧档（越段发现 + MEMORY §6.7 指回）；首部加机制面指针一行。
+- 2026-09-15（**迁移批 · 第 5 批 · 并入 · eng-designer**）：新增 §6.1 **并发池配置面**（自 `thincoder-cli/docs/_archive/design/POOL-CONFIG-UNIFIED.md` 并入——配置键表 / 双读取器 / 默认四源 / 界面入口 / 兼容面；机制本体指 `AGENT-LOOP-SUBAGENT.md` §6.10）；§7 补 D-CF1–D-CF4；§8.2 两行指态收正（PROXY 已落 / POOL 已并入）。
+- 2026-09-15（**W16 实施轮 · eng-coder**）：§1 归属表改「现体」双列（加载器 / 迁移 / 预设 / settings 工具 / 供应持久化面 = 核单源；VSC 端侧镜像 6 档已删——端壳保留写盘通道 / 监视 / 迁移 glue / provider 访问层）+ W16 现况注；§2.2 #130 行注 W16 端侧 consult 读面现体；§6.1 界面入口行号重核（`settings-panel-write.mjs:94` · `thincoder-vscode/src/extension/settings.mjs:176`）。
+- 2026-09-16（**ENGINE-DEBT 批 8 · ED-4 决策面收正 · eng-designer**——承 `docs/batches/2026-09-16-engine-debt.md` §1 裁定 ④）：§7 **D-CF2 理由句 / D-CF3 否决句**按「评审池满 → 异 scope 入队」收正（决策本体不变——独立读取器 / 同 scope 守卫；机制落 `AGENT-LOOP-SUBAGENT.md` §6.10/§6.11）。
+- 2026-09-16（**批 8 ENGINE-DEBT · 补充收正 · eng-designer**）：§6.1 范围边界句「『评审不排队』语义不变」→「**表述已废**」（承 ED-4——与 §7 D-CF3 · `AGENT-LOOP-SUBAGENT.md` §6.10 对齐；残留旧语义清理）。
+- 2026-09-20（**卫生族批 · 台账 #138 · eng-designer**）：首部机制面节区改 `§6–§8` + 历史节号指称清理（行数规则废除批残留）；设计源 = `docs/batches/2026-09-20-hygiene-sweep-batch.md` §2。

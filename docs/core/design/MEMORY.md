@@ -5,7 +5,7 @@
 > 需求层 = `docs/core/requirements/CORE-UNIFICATION.md`（F1–F13 / N1–N8）。
 > 建档：2026-09-13（**文档拆分轮**——自 `CORE-UNIFICATION.md` §2.5 / §2.5.1 / §2.12.2 / §2.12.3 **逐节搬入，只搬不改语义**；行号沿用原裁定表编号）。
 > **列定义**（裁决行各列含义）→ `CORE-UNIFICATION.md` §2.5；**须裁条目的分组口径与四要素提交形式** → 该档 §2.5.1。
-> **机制面**（§6–§9 · 2026-09-14「B 轮并入」）：机制 / 契约的实质描述 · 关键决策 · 不并项与历史沿革（自 CLI 产品档并入）——**本档 = 该板块的完整设计面**（裁决行 + 机制 + 决策 + 沿革）。
+> **机制面**（§6–§8 · 2026-09-14「B 轮并入」）：机制 / 契约的实质描述 · 关键决策 · 不并项与历史沿革（自 CLI 产品档并入）——**本档 = 该板块的完整设计面**（裁决行 + 机制 + 决策 + 沿革）。
 
 ## 1. 归属与范围（自本档行内容的路径归纳）
 
@@ -539,15 +539,15 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 - 2026-09-14（**B 轮并入 · 试点批**）：新增 §6 **机制面**（总览与目标 / 存储与分层 / 检索 / 代码与文档索引 / 主循环集成与门禁 / 工具契约五动作 / 家目录展开 / 向量加载上界）·
   §7 **关键决策记录（D-MEM1–13）** · §8 **不并项与历史沿革**（含已知限制并入）
   来源 = `thincoder-cli/docs/design/MEMORY.md`（**旧档一字未改**——原地作参照历史）；首部加机制面指针一行。本档 80 → **334 行**。
-- 2026-09-15（**VSC 轮并入 · 批 7**）：§6.9 新增 **VS Code 端实现面**（现状登记——文件制存储 / 向量优先检索 / 索引有效性 B1–B4 / 工具契约端差）· §7 补 **D-MEM14–15** · §8.2 补 3 行不并项登记（含文件制存储 (d) 类——已裁归一）· §9 拆分表 +1 行（归一退场）；来源 = `thincoder-vscode/docs/design/MEMORY.md`（**旧档一字未改**）；坐标按现状实核（`indexer.mjs:156,170` · `memory.mjs` 等）。 （迁移期引文）
+- 2026-09-15（**VSC 轮并入 · 批 7**）：§6.9 新增 **VS Code 端实现面**（现状登记——文件制存储 / 向量优先检索 / 索引有效性 B1–B4 / 工具契约端差）· §7 补 **D-MEM14–15** · §8.2 补 3 行不并项登记（含文件制存储 (d) 类——已裁归一）；来源 = `thincoder-vscode/docs/design/MEMORY.md`（**旧档一字未改**）；坐标按现状实核（`indexer.mjs:156,170` · `memory.mjs` 等）。 （迁移期引文）
 - 2026-09-15（**引擎下限裁定收口 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮）：§3.1 A3 行与 §4.1 第 1 行同轮收正——用户 2026-09-15 裁定：值 = **`^1.104.0`** · **不另做真机实测**（资料推导链 + `activate()` 护栏兜底）；原「待真机实测 + 过目 / 经真机实测确认后定值」口径作废。
 - 2026-09-15（**索引存储面裁定收口 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮-2）：用户 2026-09-15 裁定：索引面归一 = 并核 sqlite；**数据面零迁移 / 零兼容**（不写导入器——重新索引 = 正当路径）。收正面 = §6.9（现状登记 → 裁定收口注——文件制存储/检索 + B1–B4 随驱动删旧退场）· §4 第 11 行（兼容形态 + 裁定状态）· §3.1 A2（迁移边界注）· §7 D-MEM14（承接形态收口）。
 - 2026-09-15（**W8 归一落地 · eng-coder**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W8）：§6.9 现状登记收正为**W8 后实现面**
-  （核 sqlite 句柄 / 护栏接线 / 检索面 / 重建面 / 工具契约端差 + 文件制面退场登记）；§9 行数实测 334 → **374**、拆分表第 3 行措辞随落地收正。
+  （核 sqlite 句柄 / 护栏接线 / 检索面 / 重建面 / 工具契约端差 + 文件制面退场登记）。
   VSC 侧删除集（`src/memory.mjs` · `embedding.mjs` · `index-bin.mjs` · `index-discover.mjs` · `indexer.mjs`）与核面接线均已落地 （迁移期引文——档已迁核）
   （机判 = `thincoder-vscode/test/memory-index-face.test.mjs` · `engine-floor-guard.test.mjs`）。
 - 2026-09-18（**TUI 假死修复批 · eng-designer**——承 `docs/batches/2026-09-18-tui-freeze.md` 的 §1）：新增 §6.10（扫描让出 + 子代检索门）· §6.11（索引 origin 归一 + 数据面迁移判据）· §6.12（WAL 卫生）；§7 补 D-MEM17–D-MEM21；§8.3 补已知限制三行（别名路径 / 嵌套 origin 重叠 / 扫描事件循环上界）。
-- 2026-09-15（**embedding UTF-16 截断缺陷批 · eng-designer**——承 `docs/batches/2026-09-15-embedding-utf16-truncation.md` 的 §2）：§6.3 补「嵌入输入文本（三路）」段（三处截断统一走 `text-budget.mjs` 的 `safeSliceUTF16`）；§7 补 D-MEM16；§9 行数复测收正（`wc -l` 口径——与核内机检同源；旧读数 374 系显示行号口径）。
+- 2026-09-15（**embedding UTF-16 截断缺陷批 · eng-designer**——承 `docs/batches/2026-09-15-embedding-utf16-truncation.md` 的 §2）：§6.3 补「嵌入输入文本（三路）」段（三处截断统一走 `text-budget.mjs` 的 `safeSliceUTF16`）；§7 补 D-MEM16。
 - 2026-09-18（**TUI 假死批 · 修正轮-2（设计评审轮 1 的 12 条）· eng-designer**——承 `docs/batches/2026-09-18-tui-freeze.md` §3 轮次 1）：
   §6.10 修法 A1 补两道终止判据（游标不前进 / 尾块）；修法 B ① 需求锚标全（VSC 端 F-M7 + 迁移期 F-Q2/F-Q3 + 核心层 `AGENT-LOOP.md` §4.11 同批补）+ 补 auto-turn 面现状；
   §6.11 应用点补**删面 `thincoder-core/memory/delete.mjs`** 五落点 + 新增「模型可见 id 形态」段；§6.12 边界写实（最坏等待上界 = `busy_timeout`；busy-handler 语义 `unverified`）；
@@ -559,3 +559,4 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 - 2026-09-18（**TUI 假死批 · 实施后收正轮（fix）· eng-designer**——承 `docs/batches/2026-09-18-tui-freeze.md` §5 与父侧派单）：
   §6.11「端文件零改」收窄为「端**装配**文件零改 + **核库读数点例外**」（`thincoder-vscode/src/extension/panel-index.mjs:20` / `:35-37`——实施轮既有改动回填）；§7 D-MEM19 同句收窄 + 指针。语义零改。
 - 2026-09-18（**坐标漂移收正轮 · eng-designer**——承 `docs/batches/2026-09-18-distill-prefix.md` §5 八、登记 · 台账 #76）：§7 D-MEM16 补注记——先例坐标 `thincoder-core/explore-distill.mjs:13` 随蒸馏前缀批序列化面退役（`safeSliceUTF16` import 已删）；**声明本体不变**（函数仍有 memory 族消费方——现体先例 = `thincoder-core/memory/core.mjs:15` 等三档）。
+- 2026-09-20（**卫生族批 · 台账 #138 · eng-designer**）：首部机制面节区改 `§6–§8` + 历史节号指称清理（行数规则废除批残留）；设计源 = `docs/batches/2026-09-20-hygiene-sweep-batch.md` §2。

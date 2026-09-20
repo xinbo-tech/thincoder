@@ -96,7 +96,7 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
     }
   }
 
-  // AGENT-LOOP.md §11（2026-09-08——agent 生命周期对齐 CLI）：顶层 agent 会话级单例复用。
+  // agent 生命周期对齐 CLI（2026-09-08）：顶层 agent 会话级单例复用。
   // opts.agent（仅 depth-0 honored）存在 → hydrateRun 复用同一对象（面板多回合/续跑共享——
   // AC1/F1——resume 迭代传同一 opts.agent）；缺省（首轮/destroy 重建/子代理/直连）→
   // setupAgentRun = factory 新建 + hydrate（restore:true——§11.2.1 槽字段回填）。复用与新建

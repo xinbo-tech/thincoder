@@ -5,7 +5,7 @@
  * 2026-09-16（批 7 VSC-DEBT §3.3 档一）：工具表装配装饰面迁出 `setup-tooltable.mjs`（batch_segment
  * 记账缝 / W14 三缝接线 / 池装配装饰与子代理面）；本档 re-export 既有导出名（KD-6 缝）；
  * 动态载核登记册面（KD-5）仍在本档。
- * AGENT-LOOP.md §11（2026-09-08——agent 生命周期对齐 CLI）：setupAgentRun 拆出
+ * agent 生命周期对齐 CLI（2026-09-08）：setupAgentRun 拆出
  * buildTopLevelAgent（agent 对象工厂——首轮/destroy 重建-only）+ hydrateRun（每轮
  * reconcile——顶层单例复用路径）。纯函数层 resetRunState / reconcileEngDesignTokens /
  * applySlotSessionState 已拆 agent-state.mjs（§11.2 A 复位清单与 §11.2.1 槽↔hydrate

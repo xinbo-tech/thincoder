@@ -262,7 +262,7 @@
 ⇒ 本档实为**四档中唯一贴线者**（499；下一次触碰即越 500）——实施次序中列为最后一步 + 首要回归对象（12.5）。
 
 **本批范围外的越档面（登记 · 不处理）**：`chat-panel.mjs` **441** · `settings.mjs` **409**（均 >300 咨询线、≤500 硬限；读数 = 2026-09-19 复测——init-block 批后 `wc -l`）；`suspension.mjs` 读数见下行「上行通道批读数收正」块（本批已触碰——读数归该块单源）。
-上述越档面（`chat-panel.mjs` / `suspension.mjs` / `settings.mjs` 三档）不在批次档 §1.2 范围内 ⇒ 本批不动，留后续批（触发 = 条件：其一净增越 490 或下次触碰）。
+上述越档面（`chat-panel.mjs` / `suspension.mjs` / `settings.mjs` 三档）不在批次档 §1.2 范围内 ⇒ 本批不动，留后续批（触发 = 下次触碰；触线判据 = 块内**逐档触线（单源）**行）。
 
 **上行通道批（2026-09-19-upstream-channel-availability）读数收正（2026-09-20 · 实现轮实核；口径 `find /c /v ""` ≡ `wc -l`）**：
 `thincoder-vscode/src/extension/suspension.mjs` **397 → 406**（>300 咨询线、≤500 硬限；本批净增 = 开轮谓词 + 旗标 + 日志载荷）；
@@ -270,12 +270,14 @@
 **拆分计划已落地** = 域文本常量族外提 `thincoder-vscode/src/agent/turn-domains.mjs`（本批新增档，该档净移出 8 行））。
 
 **机制层端差批（2026-09-20-mechanism-parity-batch）读数收正（实现轮实核 · 2026-09-20；口径 `find /c /v ""` ≡ `wc -l`）**：
-`thincoder-vscode/src/agent.mjs` **483 → 478**（本批净 −5：端壳 `ContinueError` 单类转口〔本地类删除〕+ guard 键清单常量删除 + 快照/回填改核单点）——**触发条件更新**：现盘 478（< 490 触发线；距 500 余 22 行）⇒ 触发条件 = **净增越 490**（本批触碰为净负、未触发）；拆分计划在册（`turn-domains.mjs` 已落地）；
-`thincoder-vscode/src/agent/run-stages.mjs` **377 → 402**（+25：Stop 钩子 + advisor-run 收口 + guard 回填；>300 咨询线、≤500 硬限）；
-`thincoder-vscode/src/agent/execute-tools.mjs` **393 → 407**（+14：派发面 hooks 三调用点；同上）；
-`thincoder-vscode/src/agent/setup.mjs` **481 → 489**（+8：台账查询两工具装配 + `hooks` config 读取；**贴线**——`find` 口径 489 < 490 未触线；`read` 口径 490 = 恰在触发线 ⇒ **下次触碰即触线**〔拆分计划在册〕）；
+`thincoder-vscode/src/agent.mjs` **现盘 494**（触发线 **>495**——**未触** · 距 500 硬限 **6** 行；拆分候选在册 = 响应后处理段 → `agent/response-stages.mjs`（拟新增））；
+`thincoder-vscode/src/agent/run-stages.mjs` **现盘 403**（>300 咨询线、≤500 硬限）；
+`thincoder-vscode/src/agent/execute-tools.mjs` **现盘 418**（同上）；
+`thincoder-vscode/src/agent/setup.mjs` **现盘 495**（触发线 **>497**——**未触** · 距 500 硬限 **5** 行；拆分候选在册 = 配置读段 → `agent/setup-config.mjs`（拟新增））；
 `thincoder-vscode/src/extension/permission-gate.mjs` **109 → 117**（+8：门体改经核 `askPermission` 的 `io.ask` 缝；<300 咨询线）；
-`thincoder-vscode/test/files.mjs` **116 → 117**（本批 +5——批注行 `:112` + 三档 `:113-115` + T-QP `:116`；登记面）。
+`thincoder-vscode/test/files.mjs` **现势回填 120**（+3 = `vsc-stream-rules.test.mjs` / `scoped-rules.test.mjs` / `nested-token-relay.test.mjs` 登记）。
+**触发线未触（as-of 2026-09-20 复测）**：`agent.mjs` 494（线 >495）· `setup.mjs` 495（线 >497）；距 500 硬限 **6 / 5** 行。
+**逐档触线（单源）**：`agent.mjs` **>495** · `setup.mjs` **>497** · `run-stages.mjs` / `execute-tools.mjs` **>450**（源 = `docs/batches/2026-09-20-vsc-rules-retry-batch.md` §2.4 / §5.8）；未列档触发 = 触碰时复核（拆分候选按 §12.2 各档）——§12.1 各行「触发」口径以此为准（`:265` 同指）。
 本批新增用例档（均 <300 咨询线）：`test/lifecycle-hooks.test.mjs` **264** · `test/dispatch-hooks.test.mjs` **217** · `test/permission-gate-seam.test.mjs` **102**。
 **测试档越线登记（续）**：`thincoder-vscode/test/ledger.test.mjs` **324**（`wc -l`；>300 咨询线——本批 T-LQ 组追加后；≤500 硬限，无拆分义务）。
 
@@ -588,3 +590,6 @@
   + 测试档越线续登记（`ledger.test.mjs` **324**）。**零新语义**。
 - 2026-09-20（**库存清账批 · v1 测试门词面收正 · eng-designer**——承 `docs/batches/2026-09-20-residual-sweep-batch.md` §2 · 台账 #128）：§1 D-1 行 · §2.1 两线分立段 · §3.1 标题与归册后句 · §6 A3 / A8 / A9 · §7 T-2 / T-3 收正为 v2 单入口词面（`slow` 纯别名）；
   T-4（`slow-gate` 拦截面）随机制撤除**整行删**；权威源行收正（`thincoder-vscode/test/run.mjs` 单入口 + `TESTING.md` §10）。**零新语义**。
+- 2026-09-20（**卫生族批 · 台账 #140 · eng-designer**——承 `docs/batches/2026-09-20-hygiene-sweep-batch.md` §2）：§12.1 机制层端差批读数块按现盘刷新
+  （`agent.mjs` **494** · `run-stages.mjs` **403** · `execute-tools.mjs` **418** · `setup.mjs` **495** · `files.mjs` **120**）+ **触发线未触**注
+  + **逐档触线（单源）**句（源 = vsc-rules-retry 批 §2.4 / §5.8）+ 越档面触发句改指块内单源行。**零新语义**。

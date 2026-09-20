@@ -5,7 +5,7 @@
 > 需求层 = `docs/core/requirements/CORE-UNIFICATION.md`（F1–F13 / N1–N8）。
 > 建档：2026-09-13（**文档拆分轮**——自 `CORE-UNIFICATION.md` §2.5 **逐节搬入，只搬不改语义**；行号沿用原裁定表编号）。
 > **列定义**（裁决行各列含义）→ `CORE-UNIFICATION.md` §2.5；**须裁条目的分组口径与四要素提交形式** → 该档 §2.5.1。
-> **机制面**（§6–§9 · 2026-09-14「B 轮并入」）：机制 / 契约的实质描述 · 关键决策 · 不并项与历史沿革（自 CLI 产品档并入）——**本档 = 该板块的完整设计面**（裁决行 + 机制 + 决策 + 沿革）。
+> **机制面**（§6–§8 · 2026-09-14「B 轮并入」）：机制 / 契约的实质描述 · 关键决策 · 不并项与历史沿革（自 CLI 产品档并入）——**本档 = 该板块的完整设计面**（裁决行 + 机制 + 决策 + 沿革）。
 
 ## 1. 归属与范围（自本档行内容的路径归纳）
 
@@ -206,11 +206,12 @@ you can restore again to go back.)`；oversized / 未含文件 → 具体 Error�
 ## 变更记录
 
 - 2026-09-13：建档——自 `docs/core/design/CORE-UNIFICATION.md` 拆出（§2.5 #48 / #49 / #167 + 四要素明细 + 映射行）；**语义零改**，行号沿用原编号。
-- 2026-09-14（**B 轮并入 · 第 3 批**）：新增 §6 **机制面**（快照形态 / 触发三路 / 存储与 id / 语义边界 / commit 清理 / git 能力与纪律 / 恢复入口 / 两端统一后形态）· §7 **关键决策（D-CP1–9）** · §8 **不并项与历史沿革** · §9 体量（低于软线，无需拆分）；来源 = `thincoder-cli/docs/design/CHECKPOINT.md`（**旧档一字未改**——原地作参照历史）；
+- 2026-09-14（**B 轮并入 · 第 3 批**）：新增 §6 **机制面**（快照形态 / 触发三路 / 存储与 id / 语义边界 / commit 清理 / git 能力与纪律 / 恢复入口 / 两端统一后形态）· §7 **关键决策（D-CP1–9）** · §8 **不并项与历史沿革**；来源 = `thincoder-cli/docs/design/CHECKPOINT.md`（**旧档一字未改**——原地作参照历史）；
   需求侧已并入本层 `docs/core/requirements/CHECKPOINT.md`；首部加机制面指针一行。
 - 2026-09-15（**VSC 轮并入 · 批 7**）：§6.9 新增 **VS Code 端接线面**（触发点 / 恢复输出契约 / 只读分类）· §7 补 **D-CP10** · §8.2 补 1 行不并项登记；来源 = `thincoder-vscode/docs/design/CHECKPOINT.md`（**旧档一字未改**）；坐标按现状实核（`thincoder-vscode/src/tools/git-ext.mjs:55` · `thincoder-vscode/src/tools/shell.mjs:139,148` ·
 `thincoder-vscode/src/tools/git-checkpoint.mjs:31,46`）。
 - 2026-09-15（**S2 W5 接线 · VSC 端** · eng-coder 实施轮）：§1 表两格（CLI / VSC）收正为「经 `@thincoder/core/...` 引用」——VSC 自持镜像（`src/tools/checkpoint.mjs` · `git-checkpoint.mjs` · `git-ext.mjs`）随 W5 删档；
-  §6.9 补接线状态行 + 实现坐标收正为核（`@thincoder/core/tools/git-ext.mjs:54` · `tools/git-checkpoint.mjs:24/:39`）；§9 体量读数复跑收正；机制条文（§6.1–§6.8 · §7 · §8）零改。
+  §6.9 补接线状态行 + 实现坐标收正为核（`@thincoder/core/tools/git-ext.mjs:54` · `tools/git-checkpoint.mjs:24/:39`）；机制条文（§6.1–§6.8 · §7 · §8）零改。
 - 2026-09-15（**S2 W14 收口 · eng-coder**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W14）：§6.9 补 W14 收口行（VSC 自持 `src/tools/git.mjs` 已删——checkpoint 路由 / commit 清理现体 = 核 `thincoder-core/tools/git.mjs` + `git/checkpoint.mjs`；
   只读分类保留为端装配面装饰 `isReadonlyAction`——`thincoder-vscode/src/tools/index.mjs`；`src/tools/shell.mjs` bash guard 保留）；机制条文（§6.1–§6.8 · §7 · §8）零改。
+- 2026-09-20（**卫生族批 · 台账 #138 · eng-designer**）：首部机制面节区改 `§6–§8` + 历史节号指称清理（行数规则废除批残留）；设计源 = `docs/batches/2026-09-20-hygiene-sweep-batch.md` §2。

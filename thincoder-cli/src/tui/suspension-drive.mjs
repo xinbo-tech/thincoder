@@ -33,7 +33,6 @@ import { discardAbortedPool, discardAbortedAdvisors } from "@thincoder/core/agen
 // INPUT-LOCK-ASYNC（C'——2026-09-09，本档 INPUT-LOCK-ASYNC.md）：R15 排队
 // 用户指令合并（§11.3 D-24c——攒批计划/合并文案/上限常量）整批废弃
 // ——busy 提交吞 + pendingInput 单槽化（至多一条待交接——单消息逐发不攒批）。
-// 废弃记录见 AGENT-LOOP.md §11.3。
 
 /** 后台池计数（LOGGING susp/digest 事件字段——pendingN/poolN）。
  *  poolN = _asyncSubagents + _asyncAdvisors（§11.2 D-24b advisor 池同面板计数——queued

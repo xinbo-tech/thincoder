@@ -5,7 +5,7 @@
 > 需求层 = `docs/core/requirements/CORE-UNIFICATION.md`（F1–F13 / N1–N8）。
 > 建档：2026-09-13（**文档拆分轮**——自 `CORE-UNIFICATION.md` §2.5 / §2.5.1 **逐节搬入，只搬不改语义**；行号沿用原裁定表编号）。
 > **列定义**（裁决行各列含义）→ `CORE-UNIFICATION.md` §2.5；**须裁条目的分组口径与四要素提交形式** → 该档 §2.5.1。
-> **机制面**（§6–§9 · 2026-09-14「B 轮并入」）：机制 / 契约的实质描述 · 关键决策 · 不并项与历史沿革（自 CLI 产品档并入）——**本档 = 该板块的完整设计面**（裁决行 + 机制 + 决策 + 沿革）。
+> **机制面**（§6–§8 · 2026-09-14「B 轮并入」）：机制 / 契约的实质描述 · 关键决策 · 不并项与历史沿革（自 CLI 产品档并入）——**本档 = 该板块的完整设计面**（裁决行 + 机制 + 决策 + 沿革）。
 
 ## 1. 归属与范围（自本档行内容的路径归纳）
 
@@ -246,10 +246,11 @@ consult_stop
 - 2026-09-14（S1 收口轮）：§5 补**核内落点行数**指针（`agent-tools/panel-blocks.mjs`——#159 · #180 收正）。
 - 2026-09-14（markdown 面小收正轮）：§1 / §2.4 裸名点名补路径前缀（`advisor/provider.mjs` · `advisor/tools.mjs` · `thincoder-core/agent-tools/subagent-panel.mjs`——与 `src/provider.mjs` / `src/tools.mjs` / `thincoder-cli/src/tui/subagent-panel.mjs` 同名不同物；**消除歧义不改判据**）〔W10/W12 后该轮点名端点已退役——本条为历史记录〕 （迁移期引文）
 - 2026-09-14（**设计面收正轮 3 · eng-designer**）：§2.3 表后补 **#106 S2 接线前口径确认项**（归一取 CLI 的核内实核坐标 + 对端严格形态 + 潜伏差异的行为差登记——只记，S2 动作）。
-- 2026-09-14（**B 轮并入 · 第 3 批**）：新增 §6 **机制面**（架构与数据流 / R17 digest 消费模型 / 工具契约 / 实现接线）· §7 **关键决策（D-CO1–6）** · §8 **不并项与历史沿革**（含飞刀 / advisor / 旧 AGENT-LOOP §14 越段登记）· §9 体量（低于软线，无需拆分）；
+- 2026-09-14（**B 轮并入 · 第 3 批**）：新增 §6 **机制面**（架构与数据流 / R17 digest 消费模型 / 工具契约 / 实现接线）· §7 **关键决策（D-CO1–6）** · §8 **不并项与历史沿革**（含飞刀 / advisor / 旧 AGENT-LOOP §14 越段登记）；
   来源 = `thincoder-cli/docs/design/CONSULTATION.md`（**旧档一字未改**——原地作参照历史）；需求侧已并入本层 `docs/core/requirements/CONSULTATION.md`；首部加机制面指针一行。
 - 2026-09-15（**VSC 轮并入 · 批 7**）：§6.5 新增 **VS Code 端级实现接线表**（子 agent 构建 / runner / 只读
   工具集与 main_history / 系统 prompt / 注册 / 容器 / digest / 驱动中止 / 动作域 / 面板可见性）· §7 补 **D-CO7** ·
   §8.2 补 1 行不并项登记；来源 = `thincoder-vscode/docs/design/CONSULTATION.md`（**旧档一字未改**）；坐标按现状
   实核（`thincoder-vscode/src/agent-tools/consult.mjs:29,223`）。
-- 2026-09-15（**W12 收正 · VSC 壳接线批**）：§6.5 加 W12 状态行；坐标收正：`runConsultChild` = 核 `thincoder-core/agent-tools/consult.mjs:215`、`makeMainHistoryTool` = 同档 `:82`（端档删旧退役）；§9 实测行数同步。机制条文零改。
+- 2026-09-15（**W12 收正 · VSC 壳接线批**）：§6.5 加 W12 状态行；坐标收正：`runConsultChild` = 核 `thincoder-core/agent-tools/consult.mjs:215`、`makeMainHistoryTool` = 同档 `:82`（端档删旧退役）。机制条文零改。
+- 2026-09-20（**卫生族批 · 台账 #138 · eng-designer**）：首部机制面节区改 `§6–§8` + 历史节号指称清理（行数规则废除批残留）；设计源 = `docs/batches/2026-09-20-hygiene-sweep-batch.md` §2。

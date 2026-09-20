@@ -100,7 +100,7 @@ export function loadModelPrefs(panel) {
   }
 
 export function loadSession(panel) {
-    // §11 销毁点（AGENT-LOOP.md §11——2026-09-08）：会话切换/新建/删除/项目切换/面板打开的
+    // 销毁点（2026-09-08）：会话切换/新建/删除/项目切换/面板打开的
     // 会话级 agent 销毁置 null（AC4——内存态不跨 session 复用；槽文件仍权威——下回合经
     // ensurePanelAgent → runAgent factory 重建 + §11.2.1 槽字段回填）。六销毁点在此汇合
     // （newSession/deleteSession/switchSession/onProjectChanged/openSessionContent 全走

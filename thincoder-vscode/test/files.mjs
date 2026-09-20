@@ -27,7 +27,7 @@ export default [
   "test/smoke-settings.mjs",
   "test/verify-redesign.test.mjs",
   "test/prompts-async-guidance.test.mjs", // AGENT-LOOP §7.7.1（2026-09-08）：escalate/advisor/spawn 顶层一律异步——async:false 同步引导内容断言（CLI 对拍同款）
-  "test/agent-lifecycle-singleton.test.mjs", // AGENT-LOOP §11（2026-09-08）：agent 生命周期单例——resetRunState/reconcile/applySlot 映射/绑定判定
+  "test/agent-lifecycle-singleton.test.mjs", // agent 生命周期单例（2026-09-08）：resetRunState/reconcile/applySlot 映射/绑定判定
   "test/setup-reminders.test.mjs", // SESSION §11.2（2026-09-08）：env-state slot 字段 + resumed 按会话跟踪 + 注入句解耦
   "test/session-boot.test.mjs", // SESSION-FLOW-B B2（2026-09-09）：会话打开原子化——webviewReady 单向 boot（四件握手+快段全量/sessions 恰一次红线）+ resolve 零内容 + 快慢段分离（openSessionContent/status）——F-B2a~c + N2（组 ⑪⑫——评审 #2：chat-panel.test.mjs 近 500 不再追加）+ ⑬（SESSION-RESTORE-PARITY——真实形状 >200 消息 fixture 首窗 200/hasOlder + loadOlder 越页配对）
   "test/history-window.test.mjs", // SESSION-RESTORE-PARITY ①（2026-09-09）：historyWindow 直驱——turnStart 可见前驱矩阵/C reminder 剔除/B 配对（乱序全配+args 透传+无结果 null）/E reasoning ?? 兼容/F ts 三形态+idx+hasOlder/窗口跨页配对+孤儿 skip/HISTORY_PAGE_SIZE===200

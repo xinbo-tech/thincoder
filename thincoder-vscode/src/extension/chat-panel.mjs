@@ -64,7 +64,7 @@ export class ChatPanel {
     // then used for ALL reads and writes — we never re-read the shared manifest's active
     // pointer mid-conversation (it can be changed by a concurrently running CLI).
     this._slot = null
-    // AGENT-LOOP.md §11（2026-09-08——agent 生命周期对齐 CLI）：顶层 agent 会话级单例——
+    // agent 生命周期对齐 CLI（2026-09-08）：顶层 agent 会话级单例——
     // 首轮 runAgent 经 ensurePanelAgent 建、后续回合复用同一对象（AC1/F1）；会话切换/换项目/
     // dispose 销毁置 null（AC4——六销毁点）——内存态随对象回收，槽文件仍权威。
     this._agent = null
@@ -82,7 +82,7 @@ export class ChatPanel {
         if (!folder || folder.uri.fsPath === _cwd() || this.turnBusy()) return
         const r = setProjectFolder(folder.uri.fsPath)
         if (r.ok) {
-          // §11 销毁点（AGENT-LOOP §11——切换边界守卫在上方 turnBusy() 检查——销毁安全）
+          // 销毁点（切换边界守卫在上方 turnBusy() 检查——销毁安全）
           this._agent = null
           this._onProjectChanged().catch((e) => console.error("[chat-panel] project switch failed:", e.message))
         }
@@ -98,7 +98,7 @@ export class ChatPanel {
       const cwd = _cwd()
       if (!cwd || folders.some((f) => f.uri.fsPath === cwd)) return
       clearProjectOverride()
-      // §11 销毁点（AGENT-LOOP §11——工作区兜底即换 cwd——agent 不跨项目复用）
+      // 销毁点（工作区兜底即换 cwd——agent 不跨项目复用）
       this._agent = null
       this._onProjectChanged().catch((e) => console.error("[chat-panel] project fallback failed:", e.message))
     }))

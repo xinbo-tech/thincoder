@@ -37,7 +37,7 @@ export async function applyProjectSwitch(panel, fsPath) {
       vscode.window.showErrorMessage(`ThinCoder: ${r.error}`)
       return
     }
-    // §11 销毁点（AGENT-LOOP §11——2026-09-08）：换项目 → 会话级 agent 销毁（AC4——agent
+    // 销毁点（2026-09-08）：换项目 → 会话级 agent 销毁（AC4——agent
     // 不跨 cwd 复用；onProjectChanged → loadSession 同款置 null——此处显式接线双保险）
     panel._agent = null
     await onProjectChanged(panel)

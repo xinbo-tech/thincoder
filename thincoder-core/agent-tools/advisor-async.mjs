@@ -1,5 +1,5 @@
 /**
- * advisor-async.mjs — async advisor reviews (AGENT-LOOP.md §11.2 — R13, 2026-09-06).
+ * advisor-async.mjs — async advisor reviews (AGENT-LOOP-SUBAGENT.md §6.10 — R13, 2026-09-06).
  *
  * The advisor tool runs reviews in a background pool at depth 0 (default async —
  * ruling ②-3 A): the launch returns an ack, the turn ends naturally, the session

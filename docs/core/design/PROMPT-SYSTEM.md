@@ -7,7 +7,7 @@
 > 需求层 = `docs/core/requirements/CORE-UNIFICATION.md`（F1–F13 / N1–N8）。
 > 建档：2026-09-13（**文档拆分轮**——自 `CORE-UNIFICATION.md` §2.5 / §2.5.1 / §2.12.2 **逐节搬入，只搬不改语义**；行号沿用原裁定表编号）。
 > **列定义**（裁决行各列含义）→ `CORE-UNIFICATION.md` §2.5；**须裁条目的分组口径与四要素提交形式** → 该档 §2.5.1。
-> **机制面**（§6–§9 · 2026-09-15「批 5 并入」）：双源落地流程 · 装配实现事实 · 端特有段纪律 · byte-identical 取消 · 现状坐标——来源 = `thincoder-cli/docs/design/PROMPT-SYSTEM.md`（707 行 · 旧档一字未改，留参照历史）。
+> **机制面**（§6–§8 · 2026-09-15「批 5 并入」）：双源落地流程 · 装配实现事实 · 端特有段纪律 · byte-identical 取消 · 现状坐标——来源 = `thincoder-cli/docs/design/PROMPT-SYSTEM.md`（707 行 · 旧档一字未改，留参照历史）。
 
 ## 1. 归属与范围（自本档行内容的路径归纳）
 
@@ -329,8 +329,9 @@
 - 2026-09-13：建档——自 `docs/core/design/CORE-UNIFICATION.md` 拆出（§2.5 #2–#9 / #30–#39 / #43–#47 / #50 / #51 / #117–#122 + 四要素明细 · §2.5.1 A16–A18 / C1 / C2 · §2.12.2 第 9 行）；**语义零改**，行号沿用原编号。
 - 2026-09-13（概念纠正轮）：**中文提示词档 = 设计文档**（批次档 §1 裁定）——§1 表与 §2.2 组名改「中文设计档（供人读・非运行期）」；**#30–#39 / #50 / #51 / #120–#122 的「归属段」列由建核段改为「文档面」**（改前 = `S0a（首批建核）` ×12 / `S1（随同源档裁决）` ×3）；§1 补「核内只有运行期面 · 中文设计档永进核」。
 - 2026-09-15（**迁移批 · 第 5 批 · 并入 · eng-designer**）：新增 §6 **机制面**（双源落地流程 / 装配实现事实 / 端特有段纪律 / **byte-identical 取消**——自 `thincoder-cli/docs/design/AGENT-LOOP.md` 旧 §12.4 并入 / 现状坐标）· §7 **并入的关键决策记录**（D-PS1–D-PS4）·
-  §8 **不并项与历史沿革**（旧档一次性材料逐项登记）· §9 体量（低于软线）；来源 = `thincoder-cli/docs/design/PROMPT-SYSTEM.md`（旧档一字未改，留参照历史）。本档 150 → **221 行**。
+  §8 **不并项与历史沿革**（旧档一次性材料逐项登记）；来源 = `thincoder-cli/docs/design/PROMPT-SYSTEM.md`（旧档一字未改，留参照历史）。本档 150 → **221 行**。
 - 2026-09-15（**提示词加载面收正 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮 finding 13）：§1 表「槽位加载面」行与 §5 指针注同轮收正——`src/prompt-overlays.mjs` 两产品侧 = **S2 删**（CLI 已随 U15 落地〔实核档不存在〕；VSC 随 W2）；权威 §2.8 `:1037` / `:1038` 两行同批由「S2 改 · ±6」收正为「S2 删」。
 - 2026-09-15（**提示词加载面同族 5 行收正 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮-4 发现 #3）：权威 §2.8 `:1039`–`:1043` 逐行择一收正——CLI `advisor.mjs` / `tools/shared.mjs` / `agent/setup.mjs` 与 VSC `advisor/main.mjs` = **「S2 删」**（CLI 实核档不存在 · VSC 随 W12/W15 删除集）； （迁移期引文——档已删）
   VSC `thincoder-vscode/src/tools/shared.mjs` = **「S2 改——拆壳薄壳保留」**（与 W14 口径一致）；本档 §5 指针注同轮同步。
 - 2026-09-15（**S2 W2 落地 · eng-coder**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W2）：VSC 侧接线落地读数收正——§1 表三行状态行（槽位提示词 / 工具描述 / 槽位加载面：VSC 副本已随 W2 删〔实核空〕，运行期面 = 核包）；§6.5 补端侧装配面坐标（VSC = `extension.mjs` `activate()` 首步 + `thincoder-vscode/src/prompt-injections.mjs` 取值表；工具描述装载根同指核 `loadToolDoc`）。
+- 2026-09-20（**卫生族批 · 台账 #138 · eng-designer**）：首部机制面节区改 `§6–§8` + 历史节号指称清理（行数规则废除批残留）；设计源 = `docs/batches/2026-09-20-hygiene-sweep-batch.md` §2。
