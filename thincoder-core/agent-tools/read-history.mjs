@@ -33,7 +33,7 @@
  * readonly: true — planMode pass / no permission ask. Registered depth-0 only:
  * subagents get their own throwaway history, so querying "the session" from a
  * child would be semantically confusing (SESSION.md §6.9 refinement 1 + §6.13 T-R19.4).
- * §13 R19 extension mirrored per SESSION.md §6.13 — double-end isomorphic, no
+ * §6.13 R19 extension mirrored per SESSION.md §6.13 — double-end isomorphic, no
  * cross-end byte test (thincoder-vscode/src/agent-tools/read-history.mjs).
  */
 
@@ -168,7 +168,7 @@ function exceedsScanMax(file) {
   }
 }
 
-/** Cross-session deep query: one session file, same filter surface (§13 D-R19a). */
+/** Cross-session deep query: one session file, same filter surface (§6.13 D-R19a). */
 function querySessionFile(pathArg, { role, kwRe, tool, since, until, direction, limit }, baseCwd) {
   const file = isAbsolute(pathArg) ? pathArg : resolve(baseCwd ?? process.cwd(), pathArg)
   if (!existsSync(file)) return `Error: session file not found: ${file}`
@@ -197,7 +197,7 @@ function querySessionFile(pathArg, { role, kwRe, tool, since, until, direction, 
 }
 
 /** Discovery surface (path = "cwd:<dir>"): list every slot stored for that directory, one line
- *  per slot — slot number + FULL session file path + title/message count/updatedAt（§13 D-R19a
+ *  per slot — slot number + FULL session file path + title/message count/updatedAt（§6.13 D-R19a
  *  ——评审 #2：摘要必须含寻址字段——模型第二步深查 = 复制行内文件路径重调 path=）。 */
 function discoverCwd(raw, baseCwd) {
   const dir = resolve(baseCwd ?? process.cwd(), raw)
@@ -290,7 +290,7 @@ export const readHistoryTool = {
     }
 
     // 本会话（无 path）：绑定记录存储 → 方向流式迭代（磁盘为准——全量可见、内存窗口外
-    // 可命中；§14.3.7）；未绑定（测试 / 模式 F）→ 内存 _fullHistory 既有过滤路径（回退保留）。
+    // 可命中；§6.14）；未绑定（测试 / 模式 F）→ 内存 _fullHistory 既有过滤路径（回退保留）。
     // 方向语义不变：newest 自尾向前取满 limit → 反转回时间序（输出恒时间序）。
     const store = ctx.agent?._recordStore
     if (store?.iterate) {

@@ -64,7 +64,7 @@ export function createProvider(config) {
 // 2026-09-01 根因修复：600s 绝对墙钟曾腰斩长上下文子代理（eng-coder TTFB>10min 即死）——TTFB 阶段改用
 // fetchTimeoutMs（默认 600s，agent.fetchTimeoutMs 可配），body 阶段 idle 超时（FETCH_BODY_IDLE_MS，无新数据才断）。
 const FETCH_BODY_IDLE_MS = 120_000
-/** §14.2 设计值：prefix 续写只保留最近 8 条非工具文本（截断点语境足够，N 以测试锁定） */
+/** §6.14 设计值：prefix 续写只保留最近 8 条非工具文本（截断点语境足够，N 以测试锁定） */
 const PREFIX_CONTINUATION_KEEP = 8
 
 /** 2026-09-01：响应头阶段超时（默认 600s，agent.fetchTimeoutMs 可配）——anthropic/responses transport 共用 */
@@ -117,7 +117,7 @@ export async function chat(provider, opts = {}) {
 async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWait, signal, streamRules, firedPatterns, toolChoice, parallelToolCalls, logCtx }) {
   // Sanitize BEFORE format dispatch — image poisoning bricks anthropic/google sessions
   // the same way it bricks OpenAI-format ones (all raster-only).
-  // providerSpec: spec with the provider-level context override (PROVIDER.md §15) — the
+  // providerSpec: spec with the provider-level context override (PROVIDER.md §6.15) — the
   // window/clamping logic below reads the overridden value where it matters.
   const spec = providerSpec(provider)
   messages = stripImagesForTextModel(messages, spec)
@@ -150,7 +150,7 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
     return result
   }
   if (provider.format === "responses") {
-    // 2026-08-31：Responses API transport（PROVIDER.md §13）——双轨链在 transport 内部
+    // 2026-08-31：Responses API transport（PROVIDER.md §6.13）——双轨链在 transport 内部
     // 自行管理（provider._responsesChain），agent 层零改动。
     // round3 #3：配对归一化必须在此分派前（压缩/中断遗留的孤儿 tool 消息发向严格服务端会 400）
     messages = normalizeToolPairing(messages)
@@ -218,7 +218,7 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
   ) {
     body.reasoning_effort = "none"
   }
-  // enable_thinking — Bailian hybrid-thinking switch (PROVIDER.md §12): qwen3.x defaults to
+  // enable_thinking — Bailian hybrid-thinking switch (PROVIDER.md §6.12): qwen3.x defaults to
   // thinking ON, so an explicit off must send enable_thinking:false or the server keeps thinking.
   // NOT gated by isRouter: the whitelist keys on model prefix + Bailian host, not the model-ID slash.
   const enableThinking = resolveEnableThinking(provider, spec)
@@ -283,7 +283,7 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
         logCtx: { ...logCtx, isContinuation: true },
       })
     } catch (error) {
-      // §14.3 失败可见性：续写失败注入 _warnings（agent 机读线可见）不整轮飞出；AbortError 用户中断透传
+      // §6.14 失败可见性：续写失败注入 _warnings（agent 机读线可见）不整轮飞出；AbortError 用户中断透传
       if (error?.name === "AbortError") throw error
       result._warnings ??= []
       result._warnings.push({ name: "continuation-failed", message: `output continuation failed: ${error.message}` })
@@ -307,7 +307,7 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
   return result
 }
 
-/** 续写消息构造（§14.3）：prefix 精简历史（§14.2——deepseek /beta 网关对含工具链历史必 400，真机矩阵）；partial 保持现状 */
+/** 续写消息构造（§6.14）：prefix 精简历史（deepseek /beta 网关对含工具链历史必 400，真机矩阵）；partial 保持现状 */
 export function buildContinuationMessages(messages, result, spec) {
   const tail = (extra) => ({ role: "assistant", content: result.content, ...extra, ...(result.reasoning ? { reasoning_content: result.reasoning } : {}) })
   if (!spec.prefixMode) return [...messages, tail({ partial: true })]
@@ -357,7 +357,7 @@ function mergeRetryToolCalls(result, toolCalls) {
   }
 }
 
-// listModels 已迁 provider/list-models.mjs（PROVIDER.md §16 M1——按 format 分派）：2026-09-10
+// listModels 已迁 provider/list-models.mjs（PROVIDER.md §6.16 M1——按 format 分派）：2026-09-10
 // 模型选择面重构——原 OpenAI-only 实现在此，迁出并扩 anthropic / google 两分支；
 // provider/index.mjs re-export 改指新文件——调用点零改。
 

@@ -39,21 +39,21 @@ const KEEP_HEAD = 0 // No dedicated head: earliest messages may be a COMPLETED e
 // sessions — keeping them verbatim anchored attention on stale work. Everything before the tail is
 // summarized (the summary itself distinguishes completed vs in-progress work; see SUMMARIZE_PROMPT).
 // Tail count formula (D4): window-adaptive (~30 msgs per 100K — old fixed 10 too thin on 1M), capped
-// at 40% of history; §9 D-T1/D-T2 make the count only a CANDIDATE — a token budget (TAIL_BUDGET_FRACTION
-// × window − SUMMARY_TOKEN_ESTIMATE ≈1K, §8) tightens it over pair-safe boundaries when compaction runs,
+// at 40% of history; §6.4④ D-T1/D-T2 make the count only a CANDIDATE — a token budget (TAIL_BUDGET_FRACTION
+// × window − SUMMARY_TOKEN_ESTIMATE ≈1K, §6.9) tightens it over pair-safe boundaries when compaction runs,
 // never below TAIL_FLOOR_MESSAGES; ordinary sessions never reach it (D-T4: trigger 0.6 untouched).
 const TAIL_BUDGET_FRACTION = 0.15
-const SUMMARY_TOKEN_ESTIMATE = 1000 // §8: summary output target ~1K tokens — reserved from the 15%
-const TAIL_FLOOR_MESSAGES = 10 // §9 D-T2: the tail keeps ≥10 verbatim messages — floor beats budget
+const SUMMARY_TOKEN_ESTIMATE = 1000 // §6.9: summary output target ~1K tokens — reserved from the 15%
+const TAIL_FLOOR_MESSAGES = 10 // §6.4④ D-T2: the tail keeps ≥10 verbatim messages — floor beats budget
 function keepTailSize(provider, historyLen) {
   // provider is guaranteed at every call site (runAgent always builds one); providerSpec
   // degrades to DEFAULT_SPEC (128K) only if provider is somehow absent — acceptable
   // because the 40% history cap still bounds the tail. providers[].context override
-  // (K units) is honored here (PROVIDER.md §15 T-C2: tail formula follows the window).
+  // (K units) is honored here (PROVIDER.md §6.15 T-C2: tail formula follows the window).
   const ctxWindow = providerSpec(provider).context
   return Math.min(Math.max(10, Math.floor((ctxWindow / 100_000) * 30)), Math.floor(historyLen * 0.4))
 }
-// §9 D-T1 tail token budget: window×15% − summary ~1K — the compressed history segment (summary + placeholder + tail) lands ≈ 15% (B 口径 §9.5).
+// §6.4④ D-T1 tail token budget: window×15% − summary ~1K — the compressed history segment (summary + placeholder + tail) lands ≈ 15% (B 口径 §6.4④).
 function tailBudgetTokens(provider) {
   return Math.max(0, Math.floor(providerSpec(provider).context * TAIL_BUDGET_FRACTION) - SUMMARY_TOKEN_ESTIMATE)
 }
@@ -96,7 +96,7 @@ const FALLBACK_NOTE =
  * Split history into head / middle (to be summarized) / tail; return null if no middle to compress.
  * head is normally empty (KEEP_HEAD = 0 — earliest messages go into the summary); the tool_calls-extension logic below is defensive for future KEEP_HEAD > 0.
  * The tail boundary must include any assistant whose tool results are in the tail — if the assistant is in the middle, the summary swallows it, leaving orphan tool results → protocol 400.
- * `budgetTokens` (optional, §9 D-T1): when the candidate's estimate exceeds it, the boundary moves
+ * `budgetTokens` (optional, §6.4④ D-T1): when the candidate's estimate exceeds it, the boundary moves
  * forward until the tail fits — never below the D-T2 floor (10 msgs, or the candidate itself when
  * the 40% cap made it < 10 — short history).
  */
@@ -111,7 +111,7 @@ function splitHistory(history, keepTail, budgetTokens = null) {
   const candidate = repairedTailStart(history, headEnd, history.length - keepTail)
   if (candidate <= headEnd) return null
   let tailStart = candidate
-  // §9 D-T1: tighten only above the floor — a candidate ≤ 10 IS the floor (short history under the 40% cap must not tighten further, review #5); the floor is D5-repaired too.
+  // §6.4④ D-T1: tighten only above the floor — a candidate ≤ 10 IS the floor (short history under the 40% cap must not tighten further, review #5); the floor is D5-repaired too.
   if (budgetTokens > 0 && keepTail > TAIL_FLOOR_MESSAGES) {
     const floor = repairedTailStart(history, headEnd, history.length - TAIL_FLOOR_MESSAGES)
     if (floor > candidate) tailStart = tightenTailByBudget(history, candidate, floor, budgetTokens)
@@ -144,10 +144,10 @@ function repairedTailStart(history, headEnd, tailStart) {
 }
 
 /**
- * §9 D-T1 budget tightening (pair-safe, review #2): walk the boundary FORWARD (fewer tail messages —
+ * §6.4④ D-T1 budget tightening (pair-safe, review #2): walk the boundary FORWARD (fewer tail messages —
  * the rest joins the summary) while the tail's estimated tokens exceed the budget. Only pair-safe
  * positions may stop the walk: a boundary ON a tool message would orphan its owner assistant into the
- * middle (D5); pairing is contiguous in the machine line (§6 note) — every non-tool boundary is safe.
+ * middle (D5); pairing is contiguous in the machine line (§6.4③) — every non-tool boundary is safe.
  * No fit before the floor → keep the floor, accept the overrun.
  */
 function tightenTailByBudget(history, start, floorStart, budgetTokens) {
@@ -358,7 +358,7 @@ function applyCompression(agent, headEnd, tailStart, note) {
  * @param {object} callbacks - { onToken, onReasoning, onCompress, onCompressStart } — summary
  *   generation is SILENT (never forwards onToken/onReasoning: the compaction process is an
  *   internal mechanism, not a model reply); onCompressStart fires right before the summary call
- *   (§7 D-C1, compression lifecycle visibility — panel start state)
+ *   (§6.8 D-C1, compression lifecycle visibility — panel start state)
  * @param {object} extras - { systemPrompt?, tools? } — estimated overhead for the pure-estimation
  *   path (no measured baseline); the measured path already includes system+tools in prompt_tokens.
  */
@@ -393,7 +393,7 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
   // 不硬编码、未配置 ⇒ 缺省同修前。实证：deepseek 同值 95.69% / 异值首现 0%；族差/窗差：百炼 qwen 另有 `enable_thinking` 派生差、autoThink 的 turn 0 有改写窗口——登记见批次档 §5 上抛）。
   // Silent by design (D11): no onToken/onReasoning — the compaction process must not stream to the frontend.
   // signal propagates user cancellation (Ctrl+C) to the in-flight summary call.
-  // Compression visibility (CONTEXT-COMPACTION.md §7 D-C1/D-C2): the frontend learns the compression
+  // Compression visibility (CONTEXT-COMPACTION.md §6.8 D-C1/D-C2): the frontend learns the compression
   // STARTED right before the summary LLM call ("Compressing context… / summarizing N messages" panel) — only
   // the lifecycle is surfaced, never the summary body. N = the number of history messages being summarized.
   callbacks?.onCompressStart?.({ messages: middle.length })

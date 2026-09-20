@@ -214,14 +214,14 @@
 | 15 | `thincoder-vscode/docs/_archive/design/TOOL-OUTPUT-LIMITS-TUNING.md`（139）——VSC 坐标 + 双端测试面 | `docs/core/design/TOOL-OUTPUT-LIMITS.md` | §2 常量表 / §6.2 双端与测试面 | 该档 `:99` 登记「VSC 树档未迁」⇒ **已并入（批 6）**——§6.3 坐标表 |
 | 16 | `thincoder-vscode/docs/_archive/design/ENG-TOKEN-BINDING-TUNING.md`（115）——VSC slot 多槽写 / 持久化面 | `docs/core/design/ENG-TOKEN-BINDING.md` | §6.1 实现坐标 | 该档 §6.2 为 CLI 侧落地状态；VSC 载体未并 ⇒ **已并入（批 6）**——§6.3 接线表 |
 | 17 | `design/DESIGN-TOKEN-SETTLEMENT.md`（109）——VSC 根因（每 run 重建 agent / 死对象）+ D1–D6 | `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` | §6.1 实现坐标 | 该档 §6.2「双端与依赖方向」；VSC 根因面未并 ⇒ **已并入（批 6）**——§6.3 结算接线表 |
-| 18 | `requirements/AGENT-LOOP.md`（355）——**VSC 面需求节** | ⚠ ~~归属疑变~~ → **D3 裁定（2026-09-15）：维持现状** | —— | 该 core 档 §5（`:129`-`:132`）显式登记「VSC 面需求节 ⇒ 归属 `docs/vsc/requirements/`」——与 §4.2 原判「落 core」冲突 ⇒ **本行销项不并**（结构变更非本批题·留在 core 档内） |
+| 18 | `requirements/AGENT-LOOP.md`（355）——**VSC 面需求节** | **D3 裁定（2026-09-15）：维持现状** | —— | 该 core 档 §5（`:129`-`:132`）显式登记「VSC 面需求节 ⇒ 归属 `docs/vsc/requirements/`」——与 §4.2 原判「落 core」冲突 ⇒ **本行销项不并**（结构变更非本批题·留在 core 档内） |
 | 19 | `requirements/MEMORY.md`（50）——VSC 端需求条目 | `docs/core/requirements/MEMORY.md` | §4 需求条目之后（新增「VSC 端」节） | CLI 台账同判「尚有未并 · 整档条目面」⇒ **已并入（批 6）**——§4.7 VSC 端需求条目 |
 | 20 | `thincoder-vscode/docs/_archive/requirements/SUBAGENT-OBSERVE-SEND.md`（41） | `docs/core/requirements/AGENT-LOOP.md` | §4 需求条目之后 | 该 core 档为根层面级对位；条目未并入 ⇒ **已并入（批 8）**——§4.9 VSC 端对位与端差 |
 | 21 | `thincoder-vscode/docs/_archive/requirements/ASYNC-RESULT-CONTAINER.md`（45） | `docs/core/requirements/AGENT-LOOP.md` | 同上 | 机制本体已入设计侧 §6.7.3 ⇒ **已并入（批 8）**——§4.9 VSC 端对位与端差 |
 | 22 | `requirements/TOOL-OUTPUT-LIMITS.md`（47）——64K 阈值与保头保尾条目 | `docs/core/requirements/TOOLS.md` | §4 需求条目之后 | CLI 台账同判「根层部分 · 未并入」⇒ **已并入（批 6）**——§4.5「VSC 端显示层条目」FR-V1/FR-V2（共享条目不重并） |
 | 23 | `requirements/CHECKPOINT`（49）· `CONSULTATION`（46）· `CONTEXT-COMPACTION`（46）· `MCP`（46）· `SESSION`（52）· `TOOLS`（47）· `LOGGING`（37）——VSC 端条目面 | 对应 `docs/core/requirements/<板块>.md` | §4 需求条目之后（各档新增「VSC 端」节） | 各 core 档 §4 为 CLI 需求档并入面；VSC 条目未并 ⇒ **已并入（批 8）**——各档 §4「VSC 端条目」节 + 批 8 收口 |
 | 24 | `requirements/PHILOSOPHY.md`（136）· `requirements/RELEASE.md`（42）——VSC 端差异（RELEASE = 双市场通道；PHILOSOPHY = 合并前措辞对账） | `docs/core/requirements/{PHILOSOPHY,RELEASE}.md` | §5 / §4 之后 | 两 core 档为 CLI 需求档并入面 ⇒ **已并入（批 7）**——RELEASE：§5 VSC 端通道面（V-F1–V-F5 / V-N1–V-N3——双市场 = Marketplace + Open VSX）· PHILOSOPHY：**销项零并入**（VSC 版 = 本档旧措辞子集——§7.2 已核登记） |
-| 25 | `requirements/FEATURES.md`（21） | ⚠ ~~归属疑变~~ → **D2 裁定（2026-09-15）：VSC 专有面** | —— | 内容 = 本产品 v1 功能范围；CLI 同判落 `docs/cli/requirements/` ⇒ **本行销项不并**——另落 `docs/vsc/requirements/FEATURES.md`（非 core 并入项 · 落笔待父侧另派） |
+| 25 | `requirements/FEATURES.md`（21） | **D2 裁定（2026-09-15）：VSC 专有面** | —— | 内容 = 本产品 v1 功能范围；CLI 同判落 `docs/cli/requirements/` ⇒ **本行销项不并**——另落 `docs/vsc/requirements/FEATURES.md`（非 core 并入项 · 落笔待父侧另派） |
 | 26 | `requirements/ADVISOR-CONVERGENCE.md`（57）——VSC 端对位面（F-A1–F-A12 / N-A1–N-A6 + 端差登记四条） | `docs/core/requirements/ADVISOR-CONVERGENCE.md` | 新增「VSC 端对位面」节（该档 §7 登记面之后） | 该档 `:8` 明载「VSC 端对位面不并入（旧档 §8 / §9 / §13——VSC 面，触发 = VSC 轮）」；§7 逐节登记在案 ⇒ **已并入（批 7）**——§8 VSC 端对位面（F-A1–F-A12 / N-A1–N-A6 + §8.3 对位与端差登记四条）· 档头声明 + §7.2 三行销项 |
 
 **串行纪律**：本节目标在 `docs/core/**` ⇒ 与 CLI 批**同文件竞争**——两批**不得并行**（父侧排队）。

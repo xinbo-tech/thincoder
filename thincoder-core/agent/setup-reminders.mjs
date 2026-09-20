@@ -3,14 +3,14 @@
  * (SESSION.md §6.11 — 2026-09-06 需求池 R5/R8/R9/R11 合并设计; R10 L1 peer 注入同文件).
  *
  * One unified transient user reminder per turn covers the whole self-awareness
- * family: env identity (R8 — §10 D-1 END 常量先例：静态常量，不做 cmdline 判别),
+ * family: env identity (R8 — §6.10 D-1 END 常量先例：静态常量，不做 cmdline 判别),
  * engineering mode (R9), active model (R11), session slot (F1), restart awareness
- * (R5 resumed). §11.2（2026-09-08）：resumed 按会话跟踪——恢复事件由 session.mjs
+ * (R5 resumed). §6.11（2026-09-08）：resumed 按会话跟踪——恢复事件由 session.mjs
  * applySession 武装（agent._envResumed——载入历史非空 = 恢复）；进程重启句独立走
  * agent._processRestartPending（bin 启动 resume 路径设）——双信号互不绑门（N6）。
  * Change awareness needs no dedicated injection — every turn carries the
  * CURRENT state, so a mode/model flip shows up in the next turn's line.
- * git is NOT a field here (§11.1: CLI 不重复注入 clean|dirty 摘要) — the rich
+ * git is NOT a field here (§6.11: CLI 不重复注入 clean|dirty 摘要) — the rich
  * git-context injection (branch/commits/uncommitted — helpers.mjs
  * collectGitContext, wired in setup.mjs) carries it.
  * Peer awareness (R10 L1) rides the same per-turn transient channel:
@@ -31,7 +31,7 @@ import { specForModel } from "../config.mjs"
 import { manifestFilePath, readManifest } from "../manifest.mjs"
 
 /** env-state line builder — pure, unit-testable.
- *  §11.2（F1）：slot 字段入行——位置在 model 后 resumed 前（N3：无绑定 → 显式 null——
+ *  §6.11（F1）：slot 字段入行——位置在 model 后 resumed 前（N3：无绑定 → 显式 null——
  *  不读 manifest active 共享指针——粘性 _slot 才是"本 agent 之槽"）。 */
 export function envStateLine({ mode, model, slot, resumed }) {
   return `[System reminder: env: ${END}, mode: ${mode}, model: ${model}, slot: ${slot}, resumed: ${resumed ? "yes" : "no"}.]`
@@ -42,8 +42,8 @@ export function envStateLine({ mode, model, slot, resumed }) {
  * the line describes the MAIN agent's host/mode/model/slot identity). resumed=yes
  * exactly once per session restore: applySession (session.mjs) arms
  * agent._envResumed when restored history is non-empty; consumed here so every
- * later turn reads resumed=no（§11.2 F2——每次恢复一次；/new 与空历史槽切换不武装——
- * F3 伪触发消除）。slot = 粘性 agent._slot（§11.2 N2/N3——无绑定显式 null）。
+ * later turn reads resumed=no（§6.11 F2——每次恢复一次；/new 与空历史槽切换不武装——
+ * F3 伪触发消除）。slot = 粘性 agent._slot（§6.11 N2/N3——无绑定显式 null）。
  * Degrades safely: activeModel null → provider.model → "unknown" (T-E12);
  * a missing config/history never throws (T-E13).
  */

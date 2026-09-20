@@ -61,7 +61,7 @@ export async function generateTitle(userContent, provider) {
         // Disable thinking so reasoning_content doesn't consume the whole output budget and
         // leave content empty (IK9UZ8). Providers that don't accept the field ignore it
         // (OpenAI-compatible convention). A 40-char title wants ~60–80 tokens, so 100 is
-        // ~2.5x headroom (design decision — docs/design/SESSION.md §IK9UZ8-D).
+        // ~2.5x headroom (design decision — docs/core/design/SESSION.md §6.7).
         thinking: { type: "disabled" },
         max_tokens: MAX_TITLE_TOKENS,
         stream: false,
@@ -71,7 +71,7 @@ export async function generateTitle(userContent, provider) {
       body = JSON.stringify(bodyObj)
       extract = (data) => data.choices?.[0]?.message?.content
     }
-    // 定制头展开（PROVIDER.md §21）——定制头在前、内置头在后：内置头胜出；三格式各自内置头。
+    // 定制头展开（PROVIDER.md §6.17）——定制头在前、内置头在后：内置头胜出；三格式各自内置头。
     const headers = { ...(provider.headers ?? {}), "Content-Type": "application/json" }
     if (provider.format === "anthropic") {
       headers["x-api-key"] = provider.apiKey

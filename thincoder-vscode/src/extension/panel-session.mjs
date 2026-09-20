@@ -214,7 +214,7 @@ export async function deleteSession(panel, slot) {
 export function pushSessions(panel) {
     const cwd = _cwd()
     const listed = listSlots(cwd)
-    // 2026-09-05 §10 D-5：会话列表本端高亮按端记录（● = 记录槽 ∈ 列表 ? 记录槽 :
+    // 2026-09-05 §6.10 D-5：会话列表本端高亮按端记录（● = 记录槽 ∈ 列表 ? 记录槽 :
     // manifest active 回退——含"记录槽已被对端删除"的守卫）；listSlots 的 manifest
     // active 语义不变（跨端回退高亮 + 旧版/ACP）
     const rec = readEndMarker(cwd)
@@ -247,7 +247,7 @@ export function pushSessions(panel) {
  * 槽绑定时机随之上移（resolve → webviewReady）——webviewReady 前无 slot 读者（安全）。
  */
 export async function openSessionContent(panel) {
-    // 2026-09-05 §10 D-2：恢复决策 resumeSlot（本端记录/一次性继承/全新分配——与
+    // 2026-09-05 §6.10 D-2：恢复决策 resumeSlot（本端记录/一次性继承/全新分配——与
     // ensureSlot/onProjectChanged 同点）；全新目录下 claim 先行——文件在首保存时落盘。
     // F-MI7：认领 = async 束（`ensureSlotAsync` 单飞 + 粘性直返）——本函数 = 三个绑定入口
     // 的快段，awaited（loadSession 内容随认领完成落定——B2 单向 boot 序不变）。

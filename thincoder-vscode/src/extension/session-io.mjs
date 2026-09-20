@@ -190,11 +190,11 @@ export function switchToSlot(cwd, slot) {
  *  deletions 显式删除（防 saveManifest 合并复活）+ 删到 active 时置空指针（不替面板选「最小
  *  剩余号」——可能指向另一活进程的槽）；删到本端记录槽 → 记录显式置空（文件保留 + slot:null
  *  ——下次启动全新起步：不继承他人遗留、不复活被删会话——T-M4/T-M8）。
- *  核同源步：核 `deleteSlot` 的 `unlinkRecordStore`（§14.3.8——记录存储 sidecar `{槽文件}.d/`
+ *  核同源步：核 `deleteSlot` 的 `unlinkRecordStore`（§6.14——记录存储 sidecar `{槽文件}.d/`
  *  随槽删除；CLI 绑定态会产生该目录，VSC 自身不建——共享会话目录的卫生语义单源）。 */
 export function deleteSlotAndUpdate(cwd, slot) {
   try { unlinkSync(slotPath(cwd, slot)) } catch { /* 缺文件即幂等 */ }
-  unlinkRecordStore(slotPath(cwd, slot)) // §14.3.8 删槽联动（核 `deleteSlot` 同源步）
+  unlinkRecordStore(slotPath(cwd, slot)) // §6.14 删槽联动（核 `deleteSlot` 同源步）
   const m = loadManifest(cwd)
   delete m.slots[slot]
   if (m.slotSessions) delete m.slotSessions[slot]

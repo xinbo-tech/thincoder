@@ -2,13 +2,13 @@
  * session-segments.mjs — 记录存储的段文件原语 + 人读线条目形态（TUI-OOM-ROOTCAUSE 批）。
  *
  * 机制契约全文 = docs/core/design/SESSION.md §6.14（D2 单一权威源）；本文件 = 「段 IO + 条目
- * 形态」叶子层（`session-store.mjs` 拆分产物——503+ 行越 500 硬限，§14.5 表列模块按职责
+ * 形态」叶子层（`session-store.mjs` 拆分产物——503+ 行越 500 硬限，§6.14 表列模块按职责
  * 拆分；store 继续 re-export 全部公开名，调用面零改）。零项目内依赖（仅 `node:`）。
  */
 
 import { readdirSync, readFileSync } from "node:fs"
 
-/** 常量单源（§14.3.2）：每段消息数 / sidecar 目录后缀。 */
+/** 常量单源（§6.14）：每段消息数 / sidecar 目录后缀。 */
 export const RECORD_SEG_MESSAGES = 100
 export const RECORD_DIR_SUFFIX = ".d"
 
@@ -29,7 +29,7 @@ export function isLegacyTransient(m) {
   )
 }
 
-/** Slim the HUMAN line for storage（自 session.mjs 迁出——§14.5）：机器线（contextHistory）
+/** Slim the HUMAN line for storage（自 session.mjs 迁出——§6.14）：机器线（contextHistory）
  *  逐字节保持。Copy-on-write ONLY（两线经 pushReal 共享对象引用）：tool args → 300 字符头
  *  截断 / tool content → 500 / 多模态 user → 保留 text、丢 image_url。 */
 export function slimForDisplay(m) {

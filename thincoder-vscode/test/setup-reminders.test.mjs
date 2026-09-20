@@ -4,7 +4,7 @@
  * 用例——模板同构、载体异名：VSC = agent 级 _resumedPending + 模块级 restartDetectionDone
  * 闸保留——评审 #7 对齐）。
  *
- * 覆盖（§11.2 测试段）：
+ * 覆盖（§6.11 测试段）：
  *  - envStateLine 模板：slot 字段存在/位置（model 后 resumed 前）/null 降级/resumed yes-no；
  *  - hydrateRun 恢复事件（_resumedPending agent 级载体——评审 #7 点名）：restore:true
  *    factory 路径（setupAgentRun 同款）+ fullHistory 载入非空 → 首 run resumed:yes 一次、
@@ -101,7 +101,7 @@ const optsFor = (optsOver = {}, topOver = {}) => ({
   ...topOver,
 })
 
-// ─── envStateLine 模板（§11.2 测试段——slot 字段存在/位置/null 降级/resumed yes-no）───
+// ─── envStateLine 模板（§6.11 测试段——slot 字段存在/位置/null 降级/resumed yes-no）───
 
 test("envStateLine: slot 字段存在且位置在 model 后 resumed 前（双端同构模板——END=vscode）", () => {
   assert.equal(

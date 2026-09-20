@@ -2,7 +2,7 @@
  * session-store.mjs — 人读线记录存储：磁盘为准 + 内存窗口（TUI-OOM-ROOTCAUSE 批）。
  * 机制契约全文 = docs/core/design/SESSION.md §6.14（D2 单一权威源）；本文件 = 实现。
  * 形态：`{slot 文件路径}.d/` + `meta.json` + `seg-000001.jsonl`（行 = slimForDisplay 后的
- * 消息 JSON——与槽 JSON `history` 元素逐字节同形；投影零转换，§14.3.1）。
+ * 消息 JSON——与槽 JSON `history` 元素逐字节同形；投影零转换，§6.14）。
  * 依赖：零项目内依赖（仅 `node:`）——路径由 `slotFile` 传入；session.mjs / session-slots.mjs /
  * session-guard.mjs 单向引本模块。窗口驱逐在 pushReal（context.mjs）、追加单点同 pushReal。
  * 段 IO 原语与条目形态（`slimForDisplay` 等）拆住 `session-segments.mjs`（越 500 硬限的
@@ -19,12 +19,12 @@ import {
   isLegacyTransient, slimForDisplay, shouldAppend, isRealUserMsg, _storeStats,
 } from "./session-segments.mjs"
 
-// 公开名 re-export（调用面零改——§14.3.3 接口面）
+// 公开名 re-export（调用面零改——§6.14 接口面）
 export {
   RECORD_SEG_MESSAGES, RECORD_DIR_SUFFIX, recordDirOf, isLegacyTransient, slimForDisplay, _storeStats,
 } from "./session-segments.mjs"
 
-/** 内存窗口（条数——与首屏 INITIAL_HISTORY_MESSAGES 同值——单一概念，§14.3.2）。 */
+/** 内存窗口（条数——与首屏 INITIAL_HISTORY_MESSAGES 同值——单一概念，§6.14）。 */
 export const RECORD_WINDOW_MESSAGES = 200
 
 const META_NAME = "meta.json"
@@ -35,7 +35,7 @@ class RecordStore {
     this.dir = recordDirOf(slotFile)
     this.agent = null
     this.identity = null      // meta.identity（会话身份锚 = sessionStart）
-    this.degraded = false     // 追加失败即停（§14.4 D-R4①）
+    this.degraded = false     // 追加失败即停（§6.14 D-R4①）
     this.memTotal = 0         // pushReal 计数（含未落盘条——缺口 = memTotal − total，D-R4②）
     this._segCount = this._lastSegN = this._lastSegLines = 0 // 末段段号（= 段文件数）+ 行数
     this._metaReady = false
@@ -46,7 +46,7 @@ class RecordStore {
     this._firstUser = undefined // undefined = 未扫；null = 无（首扫一次并缓存）
   }
 
-  /** 绑定对账（§14.3.4）：**先验身份、后比计数**。返回 this。 */
+  /** 绑定对账（§6.14）：**先验身份、后比计数**。返回 this。 */
   bind(agent, identity, baseHistory) {
     this.agent = agent
     const base = (Array.isArray(baseHistory) ? baseHistory : []).filter(shouldAppend)
@@ -60,7 +60,7 @@ class RecordStore {
       const same = !!(this.identity && site && this.identity === site)
       if (!bothEmpty && !same) {
         // 陈旧/孤儿 sidecar——不得采纳（槽号回收/轮转/改名/对端占用同槽的跨会话污染面）：
-        // 改名 `.stale-<epochms>` 保留现场，按现场重建（§14.3.8 ②③）——身份回到现场身份
+        // 改名 `.stale-<epochms>` 保留现场，按现场重建（§6.14 ②③）——身份回到现场身份
         // （否则空 base 路径不重物化时，新建 sidecar 会把旧会话身份写进 meta——内审 #1）。
         this._quarantine()
         this.identity = site
@@ -158,7 +158,7 @@ class RecordStore {
     for (const m of msgs) this._countLine(m)
   }
 
-  /** 以 JSON 为准重建整个 sidecar（rm 目录 → 重新物化——§14.3.4 规则 2）。 */
+  /** 以 JSON 为准重建整个 sidecar（rm 目录 → 重新物化——§6.14 规则 2）。 */
   _materialize(base) {
     try { rmSync(this.dir, { recursive: true, force: true }) } catch { /* 尽力面 */ }
     this._resetState()
@@ -223,7 +223,7 @@ class RecordStore {
     return this._range(Math.max(0, total - n), total)
   }
 
-  /** 区间取页 + ±1 页沿（§14.3.6——页沿上下文供渲染层跨页回合标签/工具结果配对）。 */
+  /** 区间取页 + ±1 页沿（§6.14——页沿上下文供渲染层跨页回合标签/工具结果配对）。 */
   page(start, end, { margin = 1 } = {}) {
     const total = this.total()
     const lo = Math.max(0, start - margin)
@@ -265,7 +265,7 @@ class RecordStore {
     return { total: this.total(), userReal: this._counts.turnCount, firstMessage: this._counts.firstMessage }
   }
 
-  /** 追加一条真实消息（§14.3.5 单点 = pushReal；同步；独立 try/catch——失败置 degraded + 停写）。 */
+  /** 追加一条真实消息（§6.14 单点 = pushReal；同步；独立 try/catch——失败置 degraded + 停写）。 */
   append(msg) {
     if (!shouldAppend(msg)) return false
     this.memTotal++
@@ -357,7 +357,7 @@ class RecordStore {
   }
 }
 
-/** 绑定记录存储到 agent（`agent._recordStore`）+ 身份核验/对账 + 窗口置位（§14.3.4）。 */
+/** 绑定记录存储到 agent（`agent._recordStore`）+ 身份核验/对账 + 窗口置位（§6.14）。 */
 export function bindRecordStore(agent, { slotFile, identity = null, baseHistory = [] } = {}) {
   const store = new RecordStore(slotFile)
   store.bind(agent, identity, baseHistory)
@@ -378,7 +378,7 @@ export function unlinkRecordStore(slotFile) {
 }
 
 /**
- * 槽 JSON 投影（流式拼接——§14.3.3 表 3 候选 1）：`history` = 各段原文拼接（峰值 O(单段)）；
+ * 槽 JSON 投影（流式拼接——§6.14 表 3 候选 1）：`history` = 各段原文拼接（峰值 O(单段)）；
  * 原子写（.tmp + rename——与 writeSessionFile 同族）。降级态先追赶（D-R4②）。
  */
 export function saveProjectedSlot(agent, p, fields, contextHistory) {
@@ -412,7 +412,7 @@ export function saveProjectedSlot(agent, p, fields, contextHistory) {
       let lines
       try { lines = readSegmentLines(join(store.dir, segName(s))) } catch { lines = [] }
       for (const line of lines) {
-        // 半行容忍（§14.3.2——读路径逐行容错）：崩溃在 append 中途留下的末尾半行/损坏行
+        // 半行容忍（§6.14——读路径逐行容错）：崩溃在 append 中途留下的末尾半行/损坏行
         // 不得拼进投影——否则槽 JSON 变成非法 JSON（下次 loadSlotFile 整体读不出）。
         if (line === "" || tryParse(line) === undefined) continue
         if (wrote) w(",")

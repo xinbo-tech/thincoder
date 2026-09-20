@@ -3,7 +3,7 @@ import { ansi, C } from "./ansi.mjs"
 import { describeToolArgs, toolArgsLines } from "./tool-args.mjs"
 import { slimToolResultForDisplay } from "./tool-events.mjs"
 import { countConvLines } from "./render-conversation.mjs"
-// TUI-OOM-ROOTCAUSE（TUI.md §15.3.3）：恢复/翻页行过额度 + state.lines 总量对账。
+// TUI-OOM-ROOTCAUSE（TUI-SESSION-VIEW.md §5.3/§5.4）：恢复/翻页行过额度 + state.lines 总量对账。
 import { capLine, accountLine, accountAll, releaseLine, syncLineBudget } from "./display-budget.mjs"
 import { shiftFreezeAnchors } from "./subagent-blocks.mjs"
 
@@ -132,7 +132,7 @@ export function restoreLines(state, desc) {
   const start = total - loaded
   state._lineIdCounter = state._lineIdCounter ?? 0
   const fresh = historyToLines(window, Math.max(0, start - base), window.length)
-  for (const l of fresh) l.text = capLine(l.text) // 行额度（§15.3.3 恢复行过 capText）
+  for (const l of fresh) l.text = capLine(l.text) // 行额度（§5.3 恢复行过 capText）
   // Stable per-line ids (P1, 2026-08-30): fold keys for tool blocks derive from
   // _lineId so loadOlder's head-unshift cannot re-bind an expanded block to a
   // different tool (positional tool-{i} keys drift under unshift).
@@ -144,7 +144,7 @@ export function restoreLines(state, desc) {
   if (state._hasOlder) {
     state.lines.unshift({ text: `… ${start} more earlier messages (PgUp at top to load)`, color: C.dim })
   }
-  accountAll(state) // 行集重建 → 总量直算重对账（§15.3.4）
+  accountAll(state) // 行集重建 → 总量直算重对账（§5.4）
   syncLineBudget(state, { onTrim: (st, n) => shiftFreezeAnchors(st, n) })
 }
 /** 懒加载更早历史（2026-08-31 用户约定："滚动到头自动加载"——滚轮/PgUp 到顶皆触发；
@@ -156,7 +156,7 @@ export function createLoadOlder({ agent, state, render }) {
   return () => {
     if (!state._hasOlder) return
     // 翻页锚 = 恢复时点 total（state._historyTotal）——活消息增长不再使页码漂移
-    // （§14.1 事实 4 / §14.3.6 顺带修复）。
+    // （§6.14 事实 4 顺带修复）。
     const total = state._historyTotal ?? 0
     const loaded = state._historyLoaded
     const start = Math.max(0, total - loaded - HISTORY_PAGE_MESSAGES)
@@ -169,7 +169,7 @@ export function createLoadOlder({ agent, state, render }) {
 
     if (state.lines[0]?.text?.startsWith("… ")) releaseLine(state, state.lines.shift()) // 移除必出账（§5.5 记账口径——releaseLine 同额负向）
     state._lineIdCounter = state._lineIdCounter ?? 0
-    // 页源（§14.3.6）：绑定态 → store.page 绝对区间 + ±1 页沿（页前一消息供跨页回合
+    // 页源（§6.14）：绑定态 → store.page 绝对区间 + ±1 页沿（页前一消息供跨页回合
     // 标签判定、页后一消息供 tool_result 配对）；未绑定（模式 F）→ 内存全量数组回退。
     const store = agent._recordStore
     let older
@@ -179,7 +179,7 @@ export function createLoadOlder({ agent, state, render }) {
     } else {
       older = historyToLines(agent._fullHistory ?? [], start, end)
     }
-    for (const l of older) l.text = capLine(l.text) // 行额度（§15.3.3 翻页行过 capText）
+    for (const l of older) l.text = capLine(l.text) // 行额度（§5.3 翻页行过 capText）
     for (const l of older) l._lineId = ++state._lineIdCounter
     state.lines.unshift(...older)
     for (const l of older) accountLine(state, l)
@@ -190,7 +190,7 @@ export function createLoadOlder({ agent, state, render }) {
       state.lines.unshift(ph)
       accountLine(state, ph)
     }
-    // 页内不裁头（保锚定）——§15.3.3：总量的裁头由 syncLineBudget 兜（此处只对账字符预算）
+    // 页内不裁头（保锚定）——§5.3：总量的裁头由 syncLineBudget 兜（此处只对账字符预算）
     syncLineBudget(state, { onTrim: (st, n) => shiftFreezeAnchors(st, n) })
 
     const after = countConvLines(state, cols, (state.dims?.get() ?? {}).rows ?? (process.stdout.rows || 24))
@@ -225,7 +225,7 @@ export function showStartup(ctx) {
   // deprecated; it drifted out of sync with history on VS Code writes).
   if (opts.restored?.history?.length) {
     restoreLines(state, opts.restored)
-    // 「N messages」标签口径 = total（§14.3.6——非窗口长度）
+    // 「N messages」标签口径 = total（§6.14——非窗口长度）
     const total = Number.isFinite(opts.restored.total) ? opts.restored.total : opts.restored.history.length
     pushLabel(`── Restored previous session (${total} messages); /new for a fresh session ──`, C.warn)
   }

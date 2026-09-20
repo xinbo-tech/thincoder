@@ -47,22 +47,22 @@ import { collectGitContext } from "@thincoder/core/agent/helpers.mjs" // pushGit
 
 // ─── SESSION.md §6.11：统一 env-state transient reminder（2026-09-06 需求池
 //     R5/R8/R9/R11 合并——核 setup-reminders.mjs 同构面；R4 端差：env 行端生成）─────────
-// 每回合一行覆盖家族四项：env 身份（R8——§10 D-1 END 静态常量，不做 cmdline 判别）、
+// 每回合一行覆盖家族四项：env 身份（R8——§6.10 D-1 END 静态常量，不做 cmdline 判别）、
 // 工程模式（R9）、活跃模型（R11）、重启感知（R5 resumed）。变更不专门注入——每回合
-// 注入当前状态，下回合自然反映。git 不入 env-state 行（§11.1：不重复 clean|dirty
+// 注入当前状态，下回合自然反映。git 不入 env-state 行（§6.11：不重复 clean|dirty
 // 摘要）——由下方 pushGitContext 的富注入（branch/commits/uncommitted）承载。
 
 /** env-state line builder — pure, unit-testable (VSC 端身份面, END="vscode"——W15 R4：
  *  核 `END` 参数化 = 核内笔登记；端侧自持端身份行)。
- *  §11.2（F1）：slot 字段入行——位置在 model 后 resumed 前（N3：无绑定 → 显式 null）。 */
+ *  §6.11（F1）：slot 字段入行——位置在 model 后 resumed 前（N3：无绑定 → 显式 null）。 */
 export function envStateLine({ mode, model, slot, resumed }) {
   return `[System reminder: env: vscode, mode: ${mode}, model: ${model}, slot: ${slot}, resumed: ${resumed ? "yes" : "no"}.]`
 }
 
 /** Per-turn env-state push (depth-0 runs — the line describes the MAIN agent's
  *  host/mode/model/slot identity). slot = 粘性当前会话槽（opts.engPersist.slot——
- *  §11.2 N2/N3——无绑定显式 null，不读 manifest active 共享指针）。resumed 由调用方
- *  传入 agent 级 _resumedPending 消费结果（§11.2 评审 #7——按会话跟踪；模块级
+ *  §6.11 N2/N3——无绑定显式 null，不读 manifest active 共享指针）。resumed 由调用方
+ *  传入 agent 级 _resumedPending 消费结果（§6.11 评审 #7——按会话跟踪；模块级
  *  restartDetectionDone 闸保留为 process restarted 句专用——见 setup.mjs）。
  *  Degrades safely: provider.model missing → "unknown". */
 export function pushEnvStateReminder(history, { engineering, provider, slot, resumed }) {

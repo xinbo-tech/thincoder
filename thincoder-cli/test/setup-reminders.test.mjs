@@ -3,7 +3,7 @@
  * F2 resumed 按会话跟踪 + F3 CLI 伪触发修复 + N6 注入句解耦）CLI 端单测（双端镜像：
  * VSC 仓同文件名的同套用例——模板同构、载体异名）。
  *
- * 覆盖（§11.2 测试段）：
+ * 覆盖（§6.11 测试段）：
  *  - envStateLine 模板：slot 字段存在/位置（model 后 resumed 前）/null 降级/resumed yes-no；
  *  - pushEnvStateReminder：agent._envResumed 消费即清（每次恢复一次）+ slot 透传（粘性
  *    agent._slot——无绑定显式 null——N3）+ model 降级族（activeModel → provider → unknown）；
@@ -70,7 +70,7 @@ function mockAgent(over = {}) {
   return { config: {}, history: [], ...over }
 }
 
-/** prepareRun 级 agent（§11.2 注入句消费路径的完整 run 形态）。 */
+/** prepareRun 级 agent（§6.11 注入句消费路径的完整 run 形态）。 */
 function runAgentMock(cwd, over = {}) {
   return {
     config: { agent: {} },
@@ -103,7 +103,7 @@ beforeEach(() => { tmp = mkdtempSync(join(tmpdir(), "setup-rem-")) })
 // rmSync 偶发 EPERM——走短重试（既有用例零语义改）
 afterEach(async () => { await rmGitCwdDir(tmp) })
 
-// ─── envStateLine 模板（§11.2 测试段——slot 字段存在/位置/null 降级/resumed yes-no）───
+// ─── envStateLine 模板（§6.11 测试段——slot 字段存在/位置/null 降级/resumed yes-no）───
 
 test("envStateLine: slot 字段存在且位置在 model 后 resumed 前（双端同构模板——END=cli）", () => {
   assert.equal(
@@ -160,7 +160,7 @@ test("pushEnvStateReminder: slot 降级族——_slot 无绑定显式 null + mod
   assert.match(envOf(a2), /model: pm/)
 })
 
-// ─── applySession 恢复事件（F2/F3——§11.2 测试段）───
+// ─── applySession 恢复事件（F2/F3——§6.11 测试段）───
 
 test("applySession: 载入历史非空 → 武装 _envResumed——下回合 resumed:yes 一次、再切槽再武装再 yes", () => {
   const agent = mockAgent()

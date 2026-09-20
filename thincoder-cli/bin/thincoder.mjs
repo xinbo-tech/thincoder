@@ -305,7 +305,7 @@ switch (command) {
   case "tui":
   case undefined: {
     // 恢复上次的会话（同一项目目录）；provider 按保存的名字切回（用户上次可能换过模型）
-    // 2026-09-05 §10（R4）：恢复决策按本端记录 resumeSlot（D-2 ①②③）——manifest active
+    // 2026-09-05 §6.10（R4）：恢复决策按本端记录 resumeSlot（D-2 ①②③）——manifest active
     // 只作"无记录端"的一次性继承源，不再作本端恢复第一依据（D-6）。
     // 2026-09-18（装配门禁批 #30 · KD-M1-13 / KD-M1-15）：resumeSlot **前移至装配之前**——
     // 装配期模式门判据 = 会话权威值（槽优先 + config 回退）；恢复记录经 slotData 形参进

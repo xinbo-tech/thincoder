@@ -11,10 +11,10 @@
  *   判定：manifest mtime 距今 > 90 天 且 无任何活跃数据文件（.json.N 不存在或全部属死主）；
  *   报告：thincoder session gc --dry-run（跨 cwd 枚举，不删除）；
  *   删除：thincoder session gc --confirm <hash|--all>（整前缀清空——manifest+marker+
- *         .json.N 死主数据+裸 v1 {hash}.json（§12.7 D-V1）+残留；删除前重校验冷态——
+ *         .json.N 死主数据+裸 v1 {hash}.json（§6.12 D-V1）+残留；删除前重校验冷态——
  *         TOCTOU 防护 T12）。
  *
- * 拆分理由（§12.3 review #1）：session-slots.mjs 已在 500 行硬限零余量，GC 是独立决策
+ * 拆分理由（§6.12 review #1）：session-slots.mjs 已在 500 行硬限零余量，GC 是独立决策
  * （"何时清何种残留"），独立成模块；原语（sessionPath / ownerPid）自 session-slots
  * import，启动钩子（session.mjs resumeSlot 包装）只一行调用。
  *
@@ -29,16 +29,16 @@ import { configDir } from "./config.mjs"
 import { sessionPath, ownerPid } from "./session-slots.mjs"
 import { probeOwnersAsync, ownerState } from "./process-probe.mjs"
 
-/** 保留期（§12.2.2）：损坏现场（.corrupted/.unreadable/.manifest.corrupted）与并发轮转
+/** 保留期（§6.12）：损坏现场（.corrupted/.unreadable/.manifest.corrupted）与并发轮转
  *  备份（.bak-*）30 天；孤儿 .tmp 7 天（崩溃现场恢复窗口）。 */
 export const RESIDUE_RETENTION_MS = 30 * 24 * 3600 * 1000
 export const ORPHAN_TMP_RETENTION_MS = 7 * 24 * 3600 * 1000
-/** 冷 cwd 阈值（§12.2.4）：manifest mtime 距今 > 90 天（保守——正常开发会频繁触碰）。 */
+/** 冷 cwd 阈值（§6.12）：manifest mtime 距今 > 90 天（保守——正常开发会频繁触碰）。 */
 export const COLD_CWD_RETENTION_MS = 90 * 24 * 3600 * 1000
 
 function sessionsDir() { return join(configDir, "sessions") }
 
-/** 残留分类（§12.2.2 后缀表）：name 须以 `${prefix}.` 开头（prefix = `${hash}.json`）。
+/** 残留分类（§6.12 后缀表）：name 须以 `${prefix}.` 开头（prefix = `${hash}.json`）。
  *  返回 { retention, slot, tmp } 或 null（主文件/end marker/他前缀——不动）。
  *  slot = 关联槽号（`.N.` 段），无则 null（如 .manifest.corrupted）。 */
 function classifyResidue(name, prefix) {
@@ -51,7 +51,7 @@ function classifyResidue(name, prefix) {
   return null
 }
 
-/** 活跃槽集合（§12.4 T3/T12 操作定义）：.json.N 主文件存在 且 manifest slotSessions[N]
+/** 活跃槽集合（§6.12 T3/T12 操作定义）：.json.N 主文件存在 且 manifest slotSessions[N]
  *  属主进程存活。manifest 缺失/损坏 → 空集（无活跃槽——不阻碍残留清理）。
  *  探测 = **入口一次异步束**（零逐 pid exec）；三态消费：活 ⇒ 活跃；死 ⇒ 非活跃；
  *  **未知（探测失败 / 缺行）⇒ 计为活跃**（现场保留——D-MI10 同向）。 */
@@ -75,7 +75,7 @@ async function liveSlots(dir, prefix, probeFn) {
 }
 
 /**
- * 残留 GC（§12.2.3——单 cwd 前缀，不跨 cwd 扫描）：返回 { candidates, deleted }
+ * 残留 GC（§6.12——单 cwd 前缀，不跨 cwd 扫描）：返回 { candidates, deleted }
  * （dryRun 时 candidates 照列、deleted 为空——只列不删，N2 可预览）。
  * 扫描先按后缀预过滤（N4——只 stat 残留候选），再对候选做活跃槽/孤儿/保留期判定；
  * 无残留候选 ⇒ **零探测早退**（不发起探测束）。probeFn = 测试注入缝（缺省核异步束）。
@@ -97,7 +97,7 @@ export async function gcResidue({ dir = sessionsDir(), prefix, now = Date.now(),
     if (c.tmp && existsSync(p.slice(0, -".tmp".length))) continue // 非孤儿 .tmp（主文件在——写中/回退候选）
     let st
     try { st = statSync(p) } catch { continue }
-    if (st.mtimeMs >= now - c.retention) continue // 边界：older-than 才删，等于保留期保留（§12.4）
+    if (st.mtimeMs >= now - c.retention) continue // 边界：older-than 才删，等于保留期保留（§6.12）
     result.candidates.push(c.name)
     if (!dryRun) {
       try { unlinkSync(p); result.deleted.push(c.name) } catch { /* 占用/竞态——跳过 */ }
@@ -108,7 +108,7 @@ export async function gcResidue({ dir = sessionsDir(), prefix, now = Date.now(),
 
 const scheduledPrefixes = new Set()
 
-/** 启动钩子（§12 review #8——N4）：GC 延后到进程启动完成后空闲执行（setImmediate），
+/** 启动钩子（§6.12 review #8——N4）：GC 延后到进程启动完成后空闲执行（setImmediate），
  *  不阻塞启动路径；每进程每前缀一次（Set 去重——resumeSlot 可多次进入）。 */
 export function scheduleSessionGC(cwd) {
   let base
@@ -121,10 +121,10 @@ export function scheduleSessionGC(cwd) {
 }
 
 /**
- * 冷 cwd 枚举（§12.2.4 步骤 1/2——跨 cwd 报告面，仅手动命令调用）：候选 =
+ * 冷 cwd 枚举（§6.12 步骤 1/2——跨 cwd 报告面，仅手动命令调用）：候选 =
  * manifest mtime 距今 > 90 天 且 无活跃数据文件（.json.N 主文件不存在或全部属死主进程）。
  * 返回 [{ hash, prefix, manifestMtime, dataFiles, files }]（files = 整前缀全部文件——
- * 含裸 v1 `{hash}.json`，§12.7 D-V1——dataFiles 仅 .json.N，v1 不参与冷态判定）。
+ * 含裸 v1 `{hash}.json`，§6.12 D-V1——dataFiles 仅 .json.N，v1 不参与冷态判定）。
  * 探测 = **全部候选前缀一次异步束**（两遍：先筛候选并收 pid，再一次判活 + 三态）；
  * **未知 ⇒ 非冷（保留）**——探测失败不得判冷（D-MI10 同向）。
  */
@@ -161,15 +161,15 @@ export async function listColdCwds({ dir = sessionsDir(), now = Date.now(), prob
       prefix: c.prefix,
       manifestMtime: c.manifestMtime,
       dataFiles: c.dataFilesLen,
-      files: entries.filter((e) => e.startsWith(c.prefix + ".") || e === c.prefix), // 整前缀清空含裸 v1 {hash}.json（§12.7 D-V1）
+      files: entries.filter((e) => e.startsWith(c.prefix + ".") || e === c.prefix), // 整前缀清空含裸 v1 {hash}.json（§6.12 D-V1）
     })
   }
   return cold
 }
 
 /**
- * 删除指定冷 cwd 的整个前缀（§12.2.4 步骤 3——manifest+end marker+.json.N 死主数据+
- * 裸 v1 {hash}.json（§12.7 D-V1）+残留；只删 manifest 留数据文件会制造孤儿数据，整前缀清空才真正释放）。
+ * 删除指定冷 cwd 的整个前缀（§6.12 步骤 3——manifest+end marker+.json.N 死主数据+
+ * 裸 v1 {hash}.json（§6.12 D-V1）+残留；只删 manifest 留数据文件会制造孤儿数据，整前缀清空才真正释放）。
  * 删除前重跑冷 cwd 判定（TOCTOU 防护，T12——期间变活跃则拒绝）。
  */
 export async function deleteColdCwd(hash, { dir = sessionsDir(), now = Date.now(), probeFn = probeOwnersAsync } = {}) {
@@ -179,7 +179,7 @@ export async function deleteColdCwd(hash, { dir = sessionsDir(), now = Date.now(
   for (const name of target.files) {
     const p = join(dir, name)
     try {
-      // §14.3.8（TUI-OOM-ROOTCAUSE）：目录项（记录存储 sidecar `{prefix}.N.d`）递归删——
+      // §6.14（TUI-OOM-ROOTCAUSE）：目录项（记录存储 sidecar `{prefix}.N.d`）递归删——
       // 现 unlinkSync 对目录静默跳过（旧实现漏删 sidecar）；数据文件维持 unlink。
       if (statSync(p).isDirectory()) rmSync(p, { recursive: true, force: true })
       else unlinkSync(p)
@@ -190,10 +190,10 @@ export async function deleteColdCwd(hash, { dir = sessionsDir(), now = Date.now(
 }
 
 /**
- * ④ 端差段 · 手动执行面（§12.2.4）——仅命令行壳提供（另一形态无 shell 子命令通道）；
+ * ④ 端差段 · 手动执行面（§6.12）——仅命令行壳提供（另一形态无 shell 子命令通道）；
  * 本段**核内零消费方**（结构机检③）：核内保存实现（取一侧），命令接线属壳侧（S2）。
  *
- * `thincoder session gc` 子命令分发（§12.2.3/12.2.4 手动面——F2 执行入口仅命令行壳，
+ * `thincoder session gc` 子命令分发（§6.12 手动面——F2 执行入口仅命令行壳，
  * 另一形态无 shell 子命令通道，review #7）：
  *   --dry-run          报告当前 cwd 残留候选 + 跨 cwd 冷候选（只列不删，N2 预览）
  *   --confirm <hash>   删除指定冷 cwd 整前缀（警告 + 文件清单 + TOCTOU 重校验）
@@ -213,7 +213,7 @@ export async function runSessionGc(args, { dir = sessionsDir(), prefix = null, c
 
   if (dryRun) {
     out("Session GC dry-run — no files will be deleted.")
-    // 当前 cwd 残留（§12.2.3 删除面——自动 GC 的预览）
+    // 当前 cwd 残留（§6.12 删除面——自动 GC 的预览）
     let p = prefix
     if (!p) { try { p = basename(sessionPath(cwd)) } catch { p = null } }
     const residue = p ? await gcResidue({ dir, prefix: p, now, dryRun: true, probeFn }) : { candidates: [] }
