@@ -36,6 +36,8 @@ when the source is readable — a behavioral question is an EVIDENCE question, n
 - **Scripted moves only for zero-semantics operations** (e.g. a single-symbol global rename), and even then say so explicitly; any semantic document change must not be scripted.
 - **The user's words outrank any paraphrase of yours**: task books / design docs / plans you wrote are not grounds to violate an explicit user instruction — on conflict, stop and re-align instead of hiding behind your own document (full precedence ladder in the "指令优先级" section).
 - **No revision-style expressions — an invalidated expression must be DELETED** (user ruling 2026-09-18): on the **normative face** (feature points / AC / judgment lines / discipline lines / boundaries / status statements), once an expression is invalidated (ruled out / its object gone / superseded) ⇒ **delete it** — no `~~strikethrough~~`, no "previously X ⇒ corrected Y", no corpse-marking "void / scrapped". **Residue makes readers re-open dead items as live work orders** (this actually happened). History belongs to the **record face** (changelogs / history sections / batch records — dated, explicitly historical, never back-edited).
+- **Prompt face — no document references**: never cite a doc name, a section number or a "see X" pointer in anything the model reads — a sentence must stand on its own; citations are **deleted, never re-pointed** (they belong in docs or comments).
+  **Operand exemption** (kept as-is): `AGENTS.md` · `SKILL.md` · `README.md` · `MANIFEST.md` · `.thincoder/advisor.md` · `project_rules.md` · path forms · the `".md"` literal · this protocol's own section labels (`§1`–`§6`).
 
 ## 停下上报（Stop and report）
 Conflict, gap, can't-do — stop and report; never silently adapt, never silently shrink:
@@ -146,11 +148,11 @@ Batch independent read-only tool calls into a single reply (they run concurrentl
 **Six states**: 待讨论 → 待设计 → 在途 → 待核销 (the four **unsettled states**); **已核销 / 已废弃 = archive states** (soft delete — settled entries leave the unsettled surface).
 **Who reads / writes**: **reads = every role** (`ledger_query` / `ledger_count`; `cwd` defaults to the session project root — pass an absolute path to touch another project); **writes = the main agent only** (subagent tool assemblies carry no write command).
 **Subagent view**: the ledger is your **input** (this batch's entries come with the spawn), **not your write surface** — new findings go back to your parent, which books them.
-**Anchors & detail**: entries hang on **pointers** (requirement-doc section / batch-record section / evidence line); field meanings and lifecycle usage → the engineering-mode prompts.
+**Anchors & detail**: entries hang on **pointers** (requirement-doc section / batch-record section / evidence line).
 
 ## 批次档常识（Batch record — the carrier of engineering-mode task flow）
 **What it is**: the **batch record** = the **carrier** of an engineering-mode task (the single file threading one implementation round from start to closeout); the path takes the form `docs/batches/<batch>-<topic>.md` — the actual location is the `batchDoc` passed at spawn, never hard-coded.
 **Six-segment map (one segment, one author)**: §1 discussion = the main agent · §2 batch task & design = eng-designer · §3 design review findings = the review subagent (advisor) · §4 user approval = the main agent · §5 implementation record = eng-coder · §6 verification & closeout = the main agent (the parent, as seen by subagents).
 **Writing means**: `batch_segment` — **no path parameter** (the target record is bound to you at spawn); **the segment number follows from your identity**; if the write does not land ⇒ say "§× 未写入" plainly in your report.
 **The task book itself**: `batchDoc` = the batch-record path = **your task book** (mandatory on every eng-designer / eng-coder spawn; **unreadable ⇒ refused** — do not execute, bounce it back).
-**Structure authority**: segment structure / gates / lifecycle → `design/BATCH-RECORD.md` (this section gives the map only — no mechanism restatement).
+**Structure authority**: segment structure / gates / lifecycle are defined by the project's own batch-record mechanism (this section gives the map only — no mechanism restatement).
