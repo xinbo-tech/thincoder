@@ -58,24 +58,28 @@ async function runOneHook(event, hook, ctx) {
   return new Promise((resolve) => {
     const timeout = hook.timeout ?? 10_000
     let settled = false
+    let guard = null
     const done = (code) => {
       if (settled) return
       settled = true
+      if (guard) clearTimeout(guard) // #135-④：守卫句柄收尾清理（unref 后的显式释放）
       resolve(code === 0)
     }
 
     let proc
     try {
+      // 不传 spawn 的 `timeout` 选项（#135-④）：其内部定时器在 spawn 失败（ENOENT）路径
+      // 不被清理、也不 unref ⇒ 单独维持事件循环整整 `timeout` ms（实测：命令不存在时
+      // 10023ms 退出，去掉该选项后 6ms）——超时杀子进程改由下方自有 guard 承担（同时点、
+      // 同默认信号 SIGTERM，语义等价）。
       if (hook.args?.length) {
         proc = spawn(hook.command, hook.args, {
           stdio: ["pipe", "ignore", "ignore"],
-          timeout,
           windowsHide: true,
         })
       } else {
         proc = spawn(hook.command, [], {
           stdio: ["pipe", "ignore", "ignore"],
-          timeout,
           windowsHide: true,
         })
       }
@@ -91,7 +95,14 @@ async function runOneHook(event, hook, ctx) {
     // Send payload via stdin
     try { proc.stdin?.end(payload) } catch { /* */ }
 
-    // Timeout guard
-    setTimeout(() => done(0), timeout + 1000)
+    // Timeout guard（#135-④：`timeout` ms 到点杀掉子进程 + 放行——原由 spawn 的 `timeout`
+    // 选项承担，见上）。句柄捕获 + `unref()`：进程存活期间守卫照常触发（真 CLI 运行事件循环
+    // 另有 handle），但不再单独维持事件循环存活 ⇒ 子进程钩子用例的测试进程零尾挂；
+    // 任一出口经 `done` 收尾 clearTimeout（house 先例 = mcp/transport-stdio.mjs:20）。
+    guard = setTimeout(() => {
+      try { proc.kill() } catch { /* already gone */ }
+      done(0)
+    }, timeout)
+    guard.unref?.()
   })
 }

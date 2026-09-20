@@ -278,7 +278,7 @@ test("T-CI-7 正常：finishReason=length + `_warnings` 非空——两条提醒
     _warnings: [{ name: "w1", message: "m1" }, { pattern: "p2", message: "m2" }, { name: "w1", message: "m1-dup" }],
   })
   assert.deepEqual(agent.history.map((m) => [m.role, m.content]), [
-    ["user", "[System reminder — warnings from your last response:\n- w1: m1-dup\n- p2: m2]"],
+    ["user", "[System reminder — stream rule warnings from your last response:\n- w1: m1-dup\n- p2: m2]"],
     ["user", "[System reminder: the previous turn ended abnormally — output token limit reached after exhausting continuations. The assistant response that follows may be incomplete.]"],
   ], "warnings 去重（同名留末条）+ finish reason 兜底句逐字")
 

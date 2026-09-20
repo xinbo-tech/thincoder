@@ -10,6 +10,11 @@ import { askPermission as coreAskPermission } from "@thincoder/core/permission.m
  *  answer mode (the user supplements/corrects the AI's preset choices). */
 export const QUESTION_CUSTOM = "\u0001custom-answer"
 
+/** y/n-only modal family（判据单源——key-modes / render-frame 同引）：`continue`（回合帽）
+ *  与 `retry`（provider 失败面）同形 ⇒ 仅 `y` / `n`。`a` 不属该族键面（会翻会话级 AUTO）。 */
+const YES_NO_MODALS = new Set(["continue", "retry"])
+export function isYesNoModal(name) { return YES_NO_MODALS.has(name) }
+
 export function createInteraction(ctx) {
   const { agent, state, pushLine, pushLabel, render, summarize } = ctx
 

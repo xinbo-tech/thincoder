@@ -1,6 +1,8 @@
 /**
  * sync-block-stop.test.mjs — X10（端差·显示面消差批 · 批次档
- * `docs/batches/2026-09-20-display-parity-batch.md` §2.2 X10 + §2.10.5 #4）机器验收。
+ * `docs/batches/2026-09-20-display-parity-batch.md` §2.2 X10 + §2.10.5 #4）机器验收；
+ * 出生面随 #133 序修（sync 可达性批 `docs/batches/2026-09-20-sync-reachability-batch.md`
+ * §2.2/§2.3/§2.5）就地升级为**真序夹具**。
  *
  * 面：① 载荷产者（`panel-subagent-relay.mjs` `[model]` 支）：核 sync registry（`_syncChildAborts`
  * ——只读消费，禁第二套）命中 ⇒ `syncLive:true`；不可达（无 `_agent` / 无键）⇒ false（不伪造）；
@@ -11,21 +13,23 @@
  * 手法：host 真 relay / 真路由 + 真 webview 模块（activity-live-visibility 同骨架；点击面走真
  * chat.js 模块图——activity-flow T-R13 同法）。
  *
- * ⚠ 现场判定读数（2026-09-20 实核 · 父侧裁定 = 设计预案「降级登记」——批档 §2.8 #7 / §2.10.9 #16②）：
- * 本档 T-S1/T-S2/T-S4 用**夹具预置** registry 键驱动门控与路由 ⇒ **display-logic-only**（验证的是“事实
- * 到位后的机制”，不构成生产可达性证据）。真实出生序列里，sync 出生 token `[model]` 由 `buildSpawnChild`
- * （`agent-tools/subagent-spawn.mjs:459` → `spawn-child.mjs:75`）发射，**早于** registry 写点
- * `armSyncChildAbort`（`agent-tools/subagent.mjs:329`，晚于 `:276` 且中间无 await）⇒ 载荷产者
- * （`panel-subagent-relay.mjs` `syncLiveOf`）在该时刻必空 ⇒ 生产 ⏹ 不可达（首回合更有 `panel._agent`
- * 未绑定盲窗——`panel-turn-loop.mjs:163` 才回写）。判据 / 门控 / 路由三条**本身正确**（产者侧序修好后
- * ⏹ 自然成活）；产者侧序缺陷 = 出批上抛（父侧已入账）。裁定落地后本档须补一条**按真发射顺序**的断言。
+ * 真序面（#133——T-S1a/T-S1b/T-S1d/T-S1e/T-B1/T-B2）：sync 出生 token `[model]` 不再由装配面
+ * 发射，改由 SYNC-CANCEL 单点 `armSyncChildAbort(parent, key, baseSignal, announce)` 在 registry
+ * 写入**之后**当场宣告（先登记、后宣告 ⇒ VSC 载荷产者 `syncLiveOf` 在该时刻必命中）⇒ ⏹ 运行期可达。
+ * 两面夹 = 真序证据：T-S1a（装配面零发射）+ T-S1b（宣告时刻 registry 已在位）；T-S1d = 生产两条
+ * 调用的**链路形状**冻结（不冒充真序证据）；T-S1e / T-B2 = 生产接线结构机检；判据 / 门控 / 路由
+ * 三条（T-S1c 与 T-S2–T-S6）夹具升级零改判据。
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
 import * as vscode from "vscode"
 import files from "./files.mjs"
 import { relaySubagentEventToken } from "../src/extension/panel-callbacks.mjs"
 import { handlePanelMessage } from "../src/extension/panel-messages.mjs"
+import { buildSpawnChild } from "@thincoder/core/agent-tools/subagent-spawn.mjs"
+import { emitRelayModel } from "@thincoder/core/agent/spawn-child.mjs"
+import { armSyncChildAbort } from "@thincoder/core/agent-tools/subagent.mjs"
 import { setupWebview, installChatFixture } from "./helpers/webview-env.mjs"
 
 const RS = "\x1e"
@@ -74,9 +78,64 @@ async function wv() {
 const subMsg = (status, role, id, extra = {}) => ({ type: "subagent", status, role, id, ...extra })
 const stopBtn = (block) => block.querySelector(".sub-stop-btn")
 
-// ─── ① 载荷产者（宿主）──────────────────────────
+// ─── ①′ #133 真序夹具（装配面 / 出生序单点 / 链路形状 / 接线）──────────────
 
-test("T-S1 载荷产者（relay [model] 支）：registry 命中 ⇒ syncLive:true；不可达 ⇒ false（不伪造）", () => {
+/** 真装配夹具：`buildSpawnChild` sync 分支（explore——readonly 工具集；provider apiKey 齐、
+ *  无 model 覆盖 ⇒ childProvider.model = parent.provider.model）。tokens = 装配面发射 spy。 */
+function syncAssembly() {
+  const tokens = []
+  const parent = {
+    cwd: "/proj", _role: "coder", _touchedFiles: [],
+    tools: [], provider: { name: "p", baseURL: "https://x", model: "m", apiKey: "k" },
+    config: { agent: {} },
+  }
+  const ctx = { agent: parent, depth: 0, callbacks: { onToken: (t) => tokens.push(String(t)) }, cwd: "/proj" }
+  return { parent, ctx, tokens }
+}
+
+/** 载荷形状（`startedAt` 为时钟字段 ⇒ 只断言其类型，其余逐字）。 */
+const shapeOf = (p) => ({ ...p, startedAt: typeof p?.startedAt })
+
+const startedShape = (role, id, model) => ({
+  type: "subagent", role, id, status: "started", pool: false, model, startedAt: "number", syncLive: true,
+})
+
+const readCore = (rel) => readFileSync(new URL(`../../thincoder-core/${rel}`, import.meta.url), "utf8")
+/** 归一（结构机检用）：先剥整行 `//` 注释再坍缩空白——注释插拔不改变调用形判据。 */
+const flat = (src) => src.replace(/^\s*\/\/.*$/gm, "").replace(/\s+/g, " ")
+
+test("T-S1a 装配面零发射：sync 分支只取号（`[model]` 不发——出生宣告归 arm 单点）", () => {
+  const { parent, ctx, tokens } = syncAssembly()
+  const built = buildSpawnChild(parent, ctx, { task: "survey the repo" }, "explore", false, [], [], null)
+  assert.deepEqual(tokens, [], "装配面零发射（先红：装配面发 1 条 [model]）")
+  assert.match(built.relayPrefix, /^explore#\d+\/$/, "取号仍在装配面（relayPrefix 形如 explore#N/）")
+  assert.equal(parent._subAgentCounter, 1, "取号恰 +1（取号段仍在装配面——发射段外移）")
+})
+
+test("T-S1b 出生序单点：registry 写入之后宣告 ⇒ 载荷 syncLive:true（真 relay 闭路）", () => {
+  const { parent, ctx } = syncAssembly()
+  const built = buildSpawnChild(parent, ctx, { task: "survey the repo" }, "explore", false, [], [], null)
+  const key = built.relayPrefix.slice(0, -1)
+  const panel = stubPanel({ _agent: parent })
+  let registryAtAnnounce = null
+  const { ctrl, disarm } = armSyncChildAbort(parent, key, null, () => {
+    registryAtAnnounce = parent._syncChildAborts?.has(key) === true
+    emitRelayModel((t) => relaySubagentEventToken(panel, t), built.relayPrefix, "m")
+  })
+  assert.equal(registryAtAnnounce, true, "宣告时刻 registry 已在位（序即契约——先红：第 4 参被忽略 ⇒ null）")
+  const load = panel.posted.at(-1)
+  assert.ok(load, "宣告产出载荷（先红：零载荷）")
+  assert.deepEqual(shapeOf(load), startedShape("explore", Number(key.split("#")[1]), "m"),
+    "载荷 = {status:'started', pool:false, model, syncLive:true}（不可中止事实随载荷）")
+  assert.equal(parent._syncChildAborts.has(key), true, "宣告在 arm 内 ⇒ registry 键在位")
+  assert.ok(ctrl instanceof AbortController, "自属 controller 照旧")
+  disarm()
+  assert.equal(parent._syncChildAborts.has(key), false, "disarm 注销（跨回合零残留）")
+})
+
+// ─── ① 载荷产者（宿主 · 判据——T-S1c）───────────────
+
+test("T-S1c 判据零回归（原 T-S1）载荷产者（relay [model] 支）：registry 命中 ⇒ syncLive:true；不可达 ⇒ false（不伪造）", () => {
   const ac = new AbortController()
   const agent = { _syncChildAborts: new Map([["coder#2", { ctrl: ac, stopped: false }]]) }
   const p = stubPanel({ _agent: agent })
@@ -98,6 +157,47 @@ test("T-S1 载荷产者（relay [model] 支）：registry 命中 ⇒ syncLive:tr
   relaySubagentEventToken(a, "coder#2/[model]m")
   assert.equal(a.posted.at(-1).pool, true, "async 支 pool:true 零回归")
   assert.equal(a.posted.at(-1).syncLive, false, "async 块不因 registry 同名键误标 syncLive")
+})
+
+test("T-S1d 链路形状冻结：生产两条调用复刻首回合序列 ⇒ 载荷与 T-S1b 同形（不冒充真序证据）", () => {
+  const { parent, ctx } = syncAssembly()
+  const built = buildSpawnChild(parent, ctx, { task: "survey the repo" }, "explore", false, [], [], null)
+  const panel = stubPanel({ _agent: parent })
+  const syncKey = built.relayPrefix.slice(0, -1)
+  // 生产形（`agent-tools/subagent.mjs` 阻塞路径）：第 4 参 = announce 闭包，模型取自 built.childProvider
+  const { disarm } = armSyncChildAbort(parent, syncKey, null, () =>
+    emitRelayModel((t) => relaySubagentEventToken(panel, t), built.relayPrefix, built.childProvider?.model ?? ""))
+  const load = panel.posted.at(-1)
+  assert.ok(load, "链路形状：生产两条调用产出载荷（先红：零载荷）")
+  assert.deepEqual(shapeOf(load), startedShape("explore", Number(syncKey.split("#")[1]), "m"), "与 T-S1b 同形（model = childProvider.model）")
+  disarm()
+})
+
+test("T-S1e 生产调用点接线（结构机检）：subagent.mjs 阻塞路径第 4 参 = announce 闭包", () => {
+  const src = flat(readCore("agent-tools/subagent.mjs"))
+  assert.ok(src.includes("armSyncChildAbort(parent, syncKey, baseSignal, () => emitRelayModel(ctx.callbacks?.onToken,"),
+    "阻塞路径调用形在位（第 4 参 = announce 闭包——评审 #1 选项②）")
+  assert.match(src, /registry\.set\(key, \{ ctrl, stopped: false \}\) try \{ announce\?\.\(\) \}/,
+    "序即契约：arm 内登记先于宣告（宣告包异常自清，不改登记→宣告次序）")
+})
+
+test("T-B1 面板绑定 holder 契约：bindPanelAgent(panel, holder) 双向活绑定", async () => {
+  const mod = await import("../src/extension/panel-turn-loop.mjs")
+  assert.equal(typeof mod.bindPanelAgent, "function", "bindPanelAgent 导出件在位（先红：helper 不存在）")
+  const panel = { _agent: null }
+  const holder = { agent: null }
+  mod.bindPanelAgent(panel, holder)
+  const a = { tag: "a" }
+  holder.agent = a
+  assert.equal(panel._agent, a, "宿主写回 holder.agent ⇒ 面板字段当场同步（首回合盲窗收口）")
+  const b = { tag: "b" }
+  panel._agent = b
+  assert.equal(holder.agent, b, "面板槽直写 ⇒ holder.agent 实读（同一槽单源）")
+})
+
+test("T-B2 接线机检：panel-turn-loop.mjs 中 bindPanelAgent(panel, ro) 在位", () => {
+  const src = flat(readFileSync(new URL("../src/extension/panel-turn-loop.mjs", import.meta.url), "utf8"))
+  assert.ok(src.includes("bindPanelAgent(panel, ro)"), "runTurnLoop 构造 ro 后一行接入（先红：零接入）")
 })
 
 // ─── ② webview 门控（syncLive 支）─────────────────

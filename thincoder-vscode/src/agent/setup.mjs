@@ -37,6 +37,7 @@ import { loadConsultPool } from "../extension/presets.mjs"
 import { setSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
 import { injectRunContext, loadProjectInstructions } from "./context-injections.mjs"
 import { pushTimeReminder, pushInjections, appendImagePointer, pushEnvStateReminder, pushPeerReminder } from "./setup-reminders.mjs"
+import { mergeFileRules, scopedRulesBlock } from "./rules-face.mjs" // #130 规则面判据单源（批档 §2.1）
 export { vscSubagentFace, modeRoleField } // 既有导出名零改（批 7 VSC-DEBT §3.3 缝）
 
 // W16（2026-09-15）：settings 工具 = 核工厂单源（`@thincoder/core/agent-tools/settings.mjs`
@@ -215,6 +216,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // #175（W15 · a 半）：autoThink 键随 config 归一（默认 false——核 DEFAULTS.agent.autoThink；
   // 消费点 = agent.mjs 循环首轮核分类器调用）——W16 前为死键（全仓零消费）。
   let cfgAutoThink = DEFAULTS.agent?.autoThink === true
+  let cfgStreamRules = [] // #130 A-1/A-2：stream 规则（`.thincoder/rules` 文件规则并入 config 规则）
   try {
     const raw = loadRaw()
     advisorCfg = raw.agent?.advisor ?? { guard: false }
@@ -237,6 +239,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     cfgHooks = raw.hooks ?? null
     cfgTraces = { ...DEFAULTS.traces, ...(raw.traces ?? {}) }
     cfgAutoThink = raw.agent?.autoThink ?? cfgAutoThink // #175a：显式键优先（缺省 = 核 DEFAULTS）
+    cfgStreamRules = mergeFileRules(raw.agent?.streamRules ?? [], cwd) // #130 A-1：与 CLI make-agent.mjs:44-48 同语义
   } catch { /* config unreadable — defaults */ }
 
   // §11.2.1 槽 reconcile：顶层会话绑定（opts.engPersist = {cwd, slot}）每轮读权威槽（settle
@@ -255,6 +258,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
       maxTurns: cfgMaxTurns, verifyGuard: cfgVerifyGuard, compactThreshold: cfgCompactThreshold,
       consultModels: cfgConsultModels, consultTurns: cfgConsultTurns, consultTimeoutMs: cfgConsultTimeoutMs,
       waitForTimeoutMs: cfgWaitForTimeoutMs, poolLimits: cfgPoolLimits, autoThink: cfgAutoThink,
+      streamRules: cfgStreamRules, // #130 A-2：经 agentFields → agent.config.agent.streamRules（消费 = 核 chat）
     },
     proxy: cfgProxy, shell: cfgShell, providersList: cfgProviders, websearch: cfgWebsearch,
     hooks: cfgHooks,
@@ -356,6 +360,8 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   if (projectRules) {
     systemPrompt += `\n\nProject instructions (follow these as project conventions):\n<untrusted_project_instructions>\n${escapeXml(projectRules)}\n</untrusted_project_instructions>`
   }
+  // #130 B-3/B-4：`.cursor/rules` 常驻集 [4] 层尾块 + 作用域集缓存载体（本 run 唯一一次目录读）
+  systemPrompt += scopedRulesBlock(agent, cwd)
   if (depth === 0) {
     const skillsList = Array.isArray(skills) ? skills : loadSkills(cwd)
     const listing = formatSkillListing(skillsList)

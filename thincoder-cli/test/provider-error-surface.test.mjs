@@ -9,8 +9,12 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { runAgentTurn } from "../src/tui/agent-turn.mjs"
 import { handlePermissionMode } from "../src/tui/key-modes.mjs"
+import { renderRows, renderStatus } from "../src/tui/render-frame.mjs"
 
 const PROVIDER = { name: "glm", baseURL: "https://api.example.com/v1", model: "glm-5.3" }
 /** 供应商错误原文（首行含 baseURL——脱敏面判据；次行 = 不应进首行的后续行）。 */
@@ -117,4 +121,167 @@ test("X8 边界：非 Error 抛出（字符串）也出首行（VSC `e.message |
   answer(r, "n")
   await p
   assert.ok(r.lines.some((l) => l === "[error] boom-from-provider"), `字符串抛出仍出首行（实读：${JSON.stringify(r.lines)}）`)
+})
+
+// ─── #132 ① Retry 仅 y/n（框面 + 键面）────────────────────────────────────
+
+/** permission 模态直驱（真 key-modes 处理器）——返回 resolve 记录 + 按键面。 */
+function permProbe(name, permOver = {}) {
+  const r = rig()
+  const calls = []
+  r.agent._pendingReminders = []
+  r.state.permission = { name, args: {}, resolve: (v) => calls.push(v), ...permOver }
+  const press = (key) => handlePermissionMode(key === "escape" ? "" : key, { name: key }, {
+    state: r.state, agent: r.agent, pushLine: (t) => r.lines.push(String(t)), render() {},
+  })
+  return { r, calls, press }
+}
+
+const RETRY = { name: "retry", args: {}, batch: null }
+
+test("T-R1 retry 键面：`a` 被吞（零 AUTO 副作用 / 不消模态 / 不 resolve）；`y` ⇒ true；`n` / Esc ⇒ false", () => {
+  const a = permProbe("retry", RETRY)
+  a.press("a")
+  assert.equal(a.calls.length, 0, "`a` 不 resolve（键被吞——等有效键）")
+  assert.equal(a.r.agent.autoApprove, false, "`a` 不翻会话级 AUTO")
+  assert.deepEqual(a.r.agent._pendingReminders, [], "`a` 不推 AUTO 提醒")
+  assert.ok(a.r.state.permission, "模态仍在（悬挂态——非静默放行）")
+  assert.ok(!a.r.lines.some((l) => l.includes("[auto]")), "无 [auto] 轨迹行")
+
+  const y = permProbe("retry", RETRY)
+  y.press("y")
+  assert.deepEqual(y.calls, [true], "`y` ⇒ resolve(true)")
+  assert.equal(y.r.state.permission, null, "应答即消模态")
+  assert.ok(y.r.lines.some((l) => l.includes("[approved] retry")), "轨迹行保留（与 continue 面不同——retry 无自有输出行）")
+
+  const n = permProbe("retry", RETRY)
+  n.press("n")
+  assert.deepEqual(n.calls, [false], "`n` ⇒ resolve(false)")
+
+  const esc = permProbe("retry", RETRY)
+  esc.press("escape")
+  assert.deepEqual(esc.calls, [false], "Esc ⇒ resolve(false)")
+})
+
+test("T-R2 retry 端到端：`a` 被吞 ⇒ 不重入（悬挂）；随后 `n` ⇒ 单调用 + [error] 保留 + 收尾", async () => {
+  const r = rig()
+  const p = runAgentTurn(r.ctx, "hello")
+  await until(() => r.state.permission, 3000, () => JSON.stringify(r.lines))
+  answer(r, "a")
+  await new Promise((res) => setTimeout(res, 20))
+  assert.equal(r.calls.length, 1, "`a` 被吞 ⇒ 不重入")
+  assert.ok(r.state.permission, "模态悬挂（有效键前不 resolve——rig 收尾走 `n`）")
+  answer(r, "n")
+  await p
+  assert.equal(r.calls.length, 1, "`n` ⇒ 不重入（断回合）")
+  assert.ok(r.lines.some((l) => l.startsWith("[error] ")), "[error] 行保留")
+  assert.equal(r.state.processing, false, "回合收尾（不悬挂）")
+})
+
+/** 帧面最小状态（renderRows / renderStatus 直驱——attention-state.test.mjs 同款）。 */
+function frameState(over = {}) {
+  return {
+    input: [], cursor: 0, scroll: 0, tasks: [], queue: [], history: [], historyIndex: -1, _draft: null,
+    processing: false, processingStarted: Date.now(), status: "Ready", currentTool: null,
+    tokens: { prompt: 0, completion: 0, cacheHit: 0, cacheMiss: 0, reasoningTokens: 0 },
+    ctxCache: { tokens: 0 }, permission: null, question: null, picker: null, wizard: null, search: null,
+    interruptPrompt: null, suspended: false, _suspPending: false, attentionAwaiting: false,
+    subTasks: {}, lines: [], permissionPreview: [], streaming: "", reasoning: "",
+    ...over,
+  }
+}
+const frameAgent = () => ({ provider: null, cwd: "x", autoApprove: false, planMode: false, config: null, _currentTurn: 0, _maxTurns: 0 })
+const rowsOf = (perm) => renderRows(frameState({ permission: perm }), frameAgent(), { cols: 80, rows: 24, slashCommands: [] }).rows.join("\n")
+
+test("T-R3 框面字面：retry ⇒ 标题 ` Retry? (y/n) ` + 提示行 ` y: retry │ n: stop`；continue / 通用框 / batch 框零改", () => {
+  const retry = rowsOf({ name: "retry" })
+  assert.ok(retry.includes(" Retry? (y/n) "), "retry 标题逐字")
+  assert.ok(retry.includes(" y: retry │ n: stop"), "retry 提示行逐字")
+  assert.ok(!retry.includes("a: approve all"), "retry 框不广告 `a` 键")
+
+  const cont = rowsOf({ name: "continue" })
+  assert.ok(cont.includes(" Continue? (y/n) ") && cont.includes(" y: continue │ n: stop"), "continue 两字面零改")
+
+  const generic = rowsOf({ name: "bash" })
+  assert.ok(generic.includes(" Allow bash? (y/n/a) "), "通用框标题零改")
+  assert.ok(renderStatus(frameState({ permission: { name: "bash" } }), frameAgent(), 80, []).includes(" y: approve │ n: deny │ a: approve all (AUTO)"), "通用框提示行零改")
+
+  const batch = rowsOf({ name: "3 tools need permission: read, write", batch: { tools: [], count: 3 } })
+  assert.ok(batch.includes("(a/o/n)"), "batch 框标题零改")
+  assert.ok(renderStatus(frameState({ permission: { name: "x", batch: { tools: [], count: 3 } } }), frameAgent(), 80, []).includes(" a: approve all │ o: one by one │ n: deny"), "batch 框提示行零改")
+})
+
+test("T-R4 ① 回归：通用 permission 框 `a` ⇒ autoApprove=true + 推 AUTO 提醒；batch 框 `a/o/n` 零改", () => {
+  const g = permProbe("bash")
+  g.press("a")
+  assert.deepEqual(g.calls, [true], "通用框 `a` ⇒ resolve(true)")
+  assert.equal(g.r.agent.autoApprove, true, "`a` 仍翻 AUTO（既有语义零回归）")
+  assert.equal(g.r.agent._pendingReminders.length, 1, "AUTO 提醒仍推")
+
+  const b = permProbe("3 tools need permission: read, write", { batch: { tools: [], count: 3 } })
+  b.press("a")
+  assert.deepEqual(b.calls, ["approveAll"], "batch `a` ⇒ approveAll（批语义零改）")
+  const bo = permProbe("3 tools need permission: read, write", { batch: { tools: [], count: 3 } })
+  bo.press("o")
+  assert.deepEqual(bo.calls, ["oneByOne"], "batch `o` ⇒ oneByOne")
+  const bn = permProbe("3 tools need permission: read, write", { batch: { tools: [], count: 3 } })
+  bn.press("n")
+  assert.deepEqual(bn.calls, ["deny"], "batch `n` ⇒ deny")
+  assert.equal(b.r.agent.autoApprove, false, "batch `a` 不翻会话级 AUTO（既有语义）")
+})
+
+// ─── #132 ② provider 原文余行 = log-only（表面零膨胀）──────────────────────
+
+/** 真跑一轮失败面 + 读盘：返回 { lines, entry, line }（entry = 落盘的 err:provider 事件）。 */
+async function runLogged(raw, t) {
+  const logDir = mkdtempSync(join(tmpdir(), "tc-errprovider-"))
+  t.after(() => { try { rmSync(logDir, { recursive: true, force: true }) } catch { /* ignore */ } })
+  const r = rig()
+  r.ctx.runAgent = async () => { throw new Error(raw) }
+  process.env.THINCODER_LOG_DIR = logDir
+  try {
+    const p = runAgentTurn(r.ctx, "hello")
+    await until(() => r.state.permission, 3000, () => JSON.stringify(r.lines))
+    answer(r, "n")
+    await p
+  } finally {
+    delete process.env.THINCODER_LOG_DIR
+  }
+  const file = join(logDir, readdirSync(logDir)[0])
+  const line = readFileSync(file, "utf8").split("\n").find((l) => l.includes('"ev":"err:provider"'))
+  return { lines: r.lines, line, entry: line ? JSON.parse(line) : null }
+}
+
+test("T-L1 `err:provider` 脱敏覆盖面：两行原文（两行各含 URL）⇒ `err`/`head` 同过管道 ∧ 整行不含原 URL", async (t) => {
+  const raw = "Provider request failed: 502 from https://api.example.com/v1/chat/completions\nupstream MARKER detail from https://other.example.com/x"
+  const { line, entry } = await runLogged(raw, t)
+  assert.ok(line, "err:provider 事件已落盘（现盘先红：无该事件）")
+  assert.ok(entry.err.includes("[endpoint]"), "`err` = 脱敏首行")
+  assert.ok(entry.head.includes("MARKER"), "`head` = 余行合单行")
+  assert.ok(entry.head.includes("[endpoint]"), "`head` 同过脱敏管道（第二行 URL ⇒ [endpoint]）")
+  assert.ok(!line.includes("api.example.com") && !line.includes("other.example.com"), "整行不含任一原 URL（两行覆盖）")
+  assert.ok(line.length < 512, `单行 <512（实读 ${line.length}）`)
+})
+
+test("T-L2 边界：单行原文 ⇒ `head` 字段缺省（null／undefined——勿传空串）∧ 行全长 <512", async (t) => {
+  const raw = "Provider request failed: 502 from https://api.example.com/v1"
+  const { line, entry } = await runLogged(raw, t)
+  assert.ok(line, "err:provider 事件已落盘")
+  assert.ok(!("head" in entry), "单行原文 ⇒ head 字段不在（空串守卫：传 \"\" 会落字段）")
+  assert.ok(entry.err.includes("[endpoint]"), "首行仍脱敏")
+  assert.ok(line.length < 512, `行全长 <512（实读 ${line.length}）`)
+})
+
+test("T-L3 表面零膨胀：多行原文 ⇒ `[error]` 1 + 诊断 2 = 3 行（逐行断言）", async (t) => {
+  const raw = "Provider request failed: 502 from https://api.example.com/v1\nupstream detail line"
+  const { lines } = await runLogged(raw, t)
+  const at = lines.findIndex((l) => l.startsWith("[error] "))
+  assert.ok(at >= 0, "[error] 行在位")
+  const tail = lines.slice(at)
+  assert.deepEqual(tail.slice(0, 3), [
+    "[error] Provider request failed: 502 from [endpoint]",
+    `→ Provider: ${PROVIDER.baseURL}`,
+    `→ Model: ${PROVIDER.model}`,
+  ], `失败面恰三行（逐行断言——余行不入 UI；实读 ${JSON.stringify(tail)})`)
+  assert.ok(tail.length === 3 || tail[3].includes("[denied] retry"), "第 4 行仅为 retry 轨迹行（授权面既定）——日志行不增 UI 行")
 })

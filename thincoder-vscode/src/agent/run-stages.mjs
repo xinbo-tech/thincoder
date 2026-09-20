@@ -45,9 +45,10 @@ import { flushDomains } from "../extension/peer-domains.mjs"
 
 /**
  * 响应后置提醒注入（D-CI9——cli run-stages.mjs:27-51 同语义）：`response._warnings` 非空
- * → 去重注入（模型下轮可见；本端文本 = 无 stream rules 措辞——PROVIDER 传输面既定）+ 异常
- * finish reason 警告（reasonMap 三档 + 兜底逐字——响应可能不完整/截断）。调用点 =
- * agent.mjs chat 返回后（cli agent.mjs:293 同位——interrupt/builtin 处理之后、toolCalls 分支之前）。
+ * → 去重注入（模型下轮可见；文案 = CLI 逐字 `stream rule warnings from your last response`
+ * ——A-4 收正）+ 异常 finish reason 警告（reasonMap 三档 + 兜底逐字——响应可能不完整/截断）。
+ * 调用点 = agent.mjs chat 返回后（cli agent.mjs:293 同位——interrupt/builtin 处理之后、
+ * toolCalls 分支之前）。
  */
 export function injectResponseReminders(agent, response) {
   // Warnings channel (provider/stream): de-duplicated so the model sees each warning once.
@@ -55,7 +56,7 @@ export function injectResponseReminders(agent, response) {
     const deDuplicated = [...new Map(response._warnings.map(w => [w.name || w.pattern, w])).values()]
     agent.history.push({
       role: "user",
-      content: `[System reminder — warnings from your last response:\n${deDuplicated.map(w => `- ${w.name || w.pattern}: ${w.message}`).join("\n")}]`,
+      content: `[System reminder — stream rule warnings from your last response:\n${deDuplicated.map(w => `- ${w.name || w.pattern}: ${w.message}`).join("\n")}]`,
     })
   }
 

@@ -19,7 +19,7 @@
  * → ./subagent-run.mjs——execute 只保留动作分流 + 装配调用 + 阻塞路径。
  */
 
-import { gateEngCoderSpawn, TURN_CAP_MARK, STOPPED_MARK, emitNestedChildEvent } from "../agent/spawn-child.mjs"
+import { gateEngCoderSpawn, TURN_CAP_MARK, STOPPED_MARK, emitNestedChildEvent, emitRelayModel } from "../agent/spawn-child.mjs"
 import { logEvent, errText } from "../log.mjs"
 import { abortError, deathLine } from "../abort-provenance.mjs"
 import {
@@ -63,8 +63,12 @@ export function classifySyncAbort(ctxSignal, baseSignal, ctrlSignal, err) {
  * TUI ⏹ 门控 live 判据 + cancelSyncChild 定向中止目标——与 async 条目 controller 存池
  * 分层一致）。返回 { ctrl, disarm }——disarm 注销 registry（调用方 try/finally 三路径
  * 共用——R7 防跨回合残留）。
+ * **序即契约（#133）**：第 4 参 `announce`（可选）在 registry 写入**之后**当场调用——sync
+ * 出生声明（`[model]`）与登记同函数、序不被调用方拆散；先宣告后登记会使载荷产者（VSC
+ * `panel-subagent-relay.mjs` `syncLiveOf` 采样该 registry）必空 ⇒ sync 块 ⏹ 运行期不可达。
+ * 同序先例 = async 支（池登记 `subagent-run.mjs` 先于 `[model]` 发射）。
  */
-export function armSyncChildAbort(parent, key, baseSignal) {
+export function armSyncChildAbort(parent, key, baseSignal, announce = null) {
   const ctrl = new AbortController()
   if (baseSignal) {
     // §20.3 站点 #10（第 24 批）：hop 逐跳保 reason（下游可判定「谁杀的」）
@@ -72,7 +76,11 @@ export function armSyncChildAbort(parent, key, baseSignal) {
     else baseSignal.addEventListener("abort", () => ctrl.abort(baseSignal.reason), { once: true })
   }
   const registry = (parent._syncChildAborts ??= new Map())
+  // #133：序即契约——登记完成之后才宣告出生（见 doc；不得上移）。宣告抛错（announce 链
+  // 经显示面 onToken）时自清该键再上抛：登记/注销配对不因异常破坏（改序前的发射在装配面、
+  // 无 registry 可残留；改序后本函数自持该不变式——否则条目永久残留）。
   registry.set(key, { ctrl, stopped: false })
+  try { announce?.() } catch (e) { registry.delete(key); throw e }
   const disarm = () => { registry.delete(key) }
   return { ctrl, disarm }
 }
@@ -326,7 +334,9 @@ export const subagentTool = {
     // baseSignal 一次性快照（spawn 时刻）——catch 分类复用同一信号对象（会话收尾把
     // _sessionSignal 置 null 的窗口内重读会漂移——快照防误判）
     const baseSignal = buildChildSignal(parent, ctx)
-    const { ctrl, disarm } = armSyncChildAbort(parent, syncKey, baseSignal)
+    // #133 sync 出生序：`[model]` 出生声明由 arm 单点在 registry 写入**之后**宣告（不早于登记；
+    // 生产形 = 第 4 参 announce 闭包，模型取自 built.childProvider——T-S1e 结构机检锚）。
+    const { ctrl, disarm } = armSyncChildAbort(parent, syncKey, baseSignal, () => emitRelayModel(ctx.callbacks?.onToken, relayPrefix, built.childProvider?.model ?? ""))
     let pipelineReport
     try {
       pipelineReport = await runChildPipeline(child, input, childOpts, { ...childRunOpts, signal: ctrl.signal }, {

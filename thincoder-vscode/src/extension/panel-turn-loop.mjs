@@ -45,6 +45,21 @@ export function newTurnController(panel) {
   return c
 }
 
+/** #133 次因（首回合盲窗）修：面板 `_agent` 槽与宿主持有件（`runTurnLoop` 的 `ro`）**同槽
+ * 活绑定**——get 实读 / set 直写面板字段。宿主在回合内写回新建/hydrate 的顶层单例
+ * （`agent.mjs` `opts.agent = agent`）当场落到面板字段（原仅回合末同步，见本档 `runTurnLoop`
+ * 尾）⇒ 首回合 run 期（与换槽 / destroy 后首回合）载荷产者（`panel-callbacks.mjs` relay 的
+ * `syncLive` 采样）与取消路由（`panel-messages-turn.mjs`）同步可达。面板侧置 null 由直写面板
+ * 字段发生（不经本函数）——槽即单源。 */
+export function bindPanelAgent(panel, holder) {
+  Object.defineProperty(holder, "agent", {
+    configurable: true,
+    enumerable: true,
+    get: () => panel._agent,
+    set: (a) => { panel._agent = a },
+  })
+}
+
 /**
  * §17 D-S6 guard-carry 主循环（2026-09-05 实践轮——自 runPanelChatImpl 按骨干—细节
  * 两层提取，verbatim + 签名化，语义零变）：runOpts 构造（guard 继承/会话句柄/持久化
@@ -64,6 +79,7 @@ export async function runTurnLoop(panel, deps) {
   if (inherited) { carryTaken = true; panel._guardCarry = null }
   const ro = {
     agent: panel._agent, // §11 单例：存在且绑定匹配（ensurePanelAgent）→ runAgent hydrate 复用
+    // ↑ 该初值仅保键序/可读：下方 bindPanelAgent 立即把本槽改为 ⇄ panel._agent 访问器（#133）
     mcpServers: getMcpServers(), images, skills: loadSkills(cwd), history, fullHistory, // skills 载荷 = [4] 层 systemPrompt 尾块消费面（D-CI2/D-CI3——死参数消除）
     injections: [collectEditorInjection(cwd)].filter(Boolean), resume: false,
     distillState: panel._distillState, distillSignal: panel._distillController?.signal,
@@ -81,6 +97,9 @@ export async function runTurnLoop(panel, deps) {
     inheritedGuard: inherited,
     guardCarry: autoTurn ? (panel._guardCarry ??= {}) : undefined,
   }
+  // #133 次因：`ro.agent` ⇄ `panel._agent` 同槽活绑定——宿主 `opts.agent = agent` 写回当场
+  // 落到面板字段（首回合 run 期载荷产者 / 取消路由即可达；下方回合末写回幂等保留）。
+  bindPanelAgent(panel, ro)
   // Turn-cap continue loop (CLI agent-turn.mjs parity): each ContinueError offers
   // "Continue" — unlimited, resume:true keeps history, fresh budget per run. The loop
   // also folds in the Ctrl+I interrupt resume (same rebuild-controller semantics).
@@ -158,7 +177,8 @@ export async function runTurnLoop(panel, deps) {
       break
     }
   }
-  // §11 write-back：runAgent 已把（新建的）顶层单例写回 ro.agent——同步到 panel._agent，
-  // 下回合经 ensurePanelAgent 复用同一对象（AC1——_engDesignTokens/_tasks 等回合间携带）。
+  // §11 write-back：runAgent 已把（新建的）顶层单例写回 ro.agent——同槽活绑定下本行即实读
+  // 面板字段（#133：ro.agent ⇄ panel._agent 恒同槽；此行为幂等保留），下回合经 ensurePanelAgent
+  // 复用同一对象（AC1——_engDesignTokens/_tasks 等回合间携带）。
   if (ro.agent) panel._agent = ro.agent
 }

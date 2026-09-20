@@ -2,7 +2,9 @@
  * spawn-child.mjs — 生成侧统一子代理管线（AGENT-LOOP.md §7.2 D3）。
  *
  * 收编 subagent/escalate/consult 三份机械同构的重复实现：
- *   - makeRelay:           _subAgentCounter + relayPrefix 生成 + `[model]` 元数据 token 发送
+ *   - allocRelay / emitRelayModel: relay 取号段 ∥ 出生声明（`[model]`）发射段——两段分离
+ *                          （#133 序修：装配面只取号，宣告归 SYNC-CANCEL 单点 arm）；
+ *                          makeRelay = 两段组合（escalate / consult 调用点零改）
  *   - wrapChildCallbacks:  onToken/onReasoning/onToolCall/onToolOutput 前缀包装
  *                          （onToolOutput 复用 dispatch.mjs 的 onOutput 管线，D1；
  *                          LLM 文本 token strip ⟦ev⟧ 哨兵——防伪造，D7）
@@ -65,14 +67,32 @@ export function gateEngCoderSpawn(parent, depth, role, async) {
 }
 
 /**
- * 构造 relay 前缀 + 发送 `[model]` 元数据 token（显示层据此更新区块头部，
- * 不进内容流）。counter 挂在 parent agent 上，多轮/并行子代理互不冲突。
+ * relay **取号段**（无 io）：counter 挂在 parent agent 上，多轮/并行子代理互不冲突。
+ * 与发射段分离（#133）：sync 装配面只取号——出生声明（`[model]`）由 SYNC-CANCEL 单点
+ * `armSyncChildAbort` 在 registry 写入之后当场宣告（序即契约——先登记、后宣告）。
+ * @returns {string} relayPrefix，形如 "coder#3/"
+ */
+export function allocRelay(parent, label) {
+  parent._subAgentCounter = (parent._subAgentCounter ?? 0) + 1
+  return relayPrefixOf(label, parent._subAgentCounter)
+}
+
+/**
+ * relay **出生声明段**：`[model]` 元数据 token 发射（显示层据此更新区块头部，不进内容流）。
+ * `[model]` 文法单源本函数——异步支同形字面在 `subagent-run.mjs`（观察项，未并）。
+ */
+export function emitRelayModel(emit, relayPrefix, model) {
+  emit?.(relayPrefix + "[model]" + (model ?? ""))
+}
+
+/**
+ * 取号 + 发射**组合**（语序与拆分前逐字等价）：escalate / consult 两调用点零改
+ * （`subagent-actions.mjs` / `consult.mjs`）；subagent sync 分支改用 `allocRelay` 单独取号。
  * @returns {string} relayPrefix，形如 "coder#3/"
  */
 export function makeRelay(parent, label, emit, model) {
-  parent._subAgentCounter = (parent._subAgentCounter ?? 0) + 1
-  const relayPrefix = relayPrefixOf(label, parent._subAgentCounter)
-  emit?.(relayPrefix + "[model]" + (model ?? ""))
+  const relayPrefix = allocRelay(parent, label)
+  emitRelayModel(emit, relayPrefix, model)
   return relayPrefix
 }
 

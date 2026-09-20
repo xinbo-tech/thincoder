@@ -22,6 +22,8 @@ import { peerDomains, registerDomains } from "../extension/peer-domains.mjs"
 import { noteMutations } from "@thincoder/core/agent-tools/advisor-settle.mjs"
 // §18 C-11（2026-09-12——500 硬限归位）：前置门禁族 + 批权限扫描自本档 verbatim 迁至 tool-gates
 import { l3TouchedPaths, preGateBlocked, isSubagentConsumeDesignAction, collectBatchPermission } from "./tool-gates.mjs"
+// #130 B-4：`.cursor/rules` 作用域集 JIT 注入（派发前——判据单源 `rules-face.mjs`）
+import { injectScopedRules } from "./rules-face.mjs"
 
 // R10 L3（MULTI-INSTANCE-COLLAB.md D-L3a/b——VS Code 接线面）：结构化写工具集 =
 // FILE_MUTATORS ∪ file_ops（bash 大通道不可拦——诚实边界：L3 覆盖结构化写工具足迹）。
@@ -84,6 +86,15 @@ export async function executeToolBatches(agent, { response, history, fullHistory
     }
   }
   if (pendingReadonly.length > 0) batches.push(pendingReadonly)
+
+  // #130 B-4（`.cursor/rules` 作用域集）：派发前注入——本批触达路径命中未注入规则 ⇒ 规则
+  // 先入上下文（模型下一轮可见）。只读 `agent._rules` 缓存（每 run 读盘一次——装配期）；
+  // 去重 = 会话级（`agent._rulesInjected`）。
+  const ruleCalls = []
+  for (const tc of response.toolCalls) {
+    try { ruleCalls.push({ tool: toolByName.get(tc.name), args: JSON.parse(tc.arguments || "{}") }) } catch { /* 逐项解析错误归 runOne */ }
+  }
+  injectScopedRules(agent, history, ruleCalls)
 
   // Execute batches in order (parallel within batch, serial between batches)
   for (const batch of batches) {

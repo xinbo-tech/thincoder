@@ -228,6 +228,13 @@ async function runAgentTurnInner(ctx, text, opts) {
         // 同法；拒绝 ⇒ 现状 break，[error] 行保留）。
         const rawMsg = error?.message || String(error)
         const errLine = rawMsg.split("\n")[0].replace(PROVIDER_URL_RE, "[endpoint]")
+        // X8 跟进②（用户 2026-09-20 裁定）：原文余行 = **log-only**（表面零膨胀——不增 UI 行）。
+        // `head` 与 `err` **同过脱敏管道**（PROVIDER_URL_RE ⇒ `[endpoint]`——LOGGING.md §6.3
+        // D-LG4「URL 不入事件」）**先脱敏后截断**（防截断留 URL 残段），自限 ≤200（`err` 200 +
+        // `head` 200 + 固定字段 < 512——log.mjs NF-L2）；无余行 ⇒ 传 `null`（勿传空串）。
+        const restRaw = rawMsg.split("\n").slice(1).map((l) => l.trim()).filter(Boolean).join(" / ")
+        const restSan = restRaw.replace(PROVIDER_URL_RE, "[endpoint]")
+        logEvent("err:provider", { err: errLine, head: restSan ? (restSan.length > 200 ? restSan.slice(0, 199) + "…" : restSan) : null })
         pushLine(`[error] ${errLine}`, C.error)
         pushLine(`→ Provider: ${agent.provider?.baseURL}`, C.dim)
         pushLine(`→ Model: ${agent.provider?.model}`, C.dim)

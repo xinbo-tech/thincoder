@@ -14,6 +14,8 @@ import {
 } from "./agent/run-helpers.mjs"
 import { executeToolBatches } from "./agent/execute-tools.mjs"
 import { hydrateRun, setupAgentRun } from "./agent/setup.mjs"
+// #130 A-3：stream 规则 abort 消费（部分输出入线 + 规则提醒 + `continue` 重入）
+import { applyRuleTriggered } from "./agent/rules-face.mjs"
 // #45（WEBVIEW-PROTOCOL.md §3.3）：工具驱动的模式 / 参数变更 → 端显示同步 cell（纯函数）
 import { syncToolDrivenDisplayState } from "./agent/agent-state.mjs"
 import { AUTO_REMINDER, ENG_OFF_REMINDER, ENG_ON_REMINDER, injectEngineeringReminder, pushManifestStateReminder } from "./agent/setup-reminders.mjs"
@@ -173,6 +175,9 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
   let guardPushbacks = 0
   let advisorPushbacks = 0
   let thrownError = null
+  // #130 A-3：“once” stream rules fire at most once per runAgent call；the set survives across
+  // chat() calls (rule abort-retry, tool loop) within the turn（核 `agent.mjs:183` 同款）。
+  const streamRuleFired = new Set()
 
   try {
   for (let turn = 0; turn < maxTurns; turn++) {
@@ -271,6 +276,10 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
       onReasoning: callbacks.onReasoning,
       onWait: callbacks.onWait,
       signal,
+      // #130 A-3：stream 规则（两端同义）——规则体 + run 级 firedPatterns 去重集
+      // （核 provider `chat()` 单一消费点；CLI `agent.mjs:259-260` 同款）。
+      streamRules: agent.config?.agent?.streamRules ?? [],
+      firedPatterns: streamRuleFired,
       // LOGGING（LOGGING.md——CLI parity）：llm:* 语义上下文（stage=turn 主循环回合——
       // digest autoTurn=true；role/depth = 子代理上下文归属——§11 后顶层 agent 为面板会话级
       // 单例（复用 hydrate），per-run 对象仅子代理/destroy 重建路径）
@@ -321,6 +330,12 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
         agent._usageAtLen = history.length
       }
     }
+
+    // Stream rule triggered (action: "abort"): halt, inject the rule message, retry from the
+    // same context (CLI `agent.mjs:305-315` parity — response 后处理段、injectResponseReminders 之前)。
+    // 注：核中 ruleTriggered 先于 interrupted，本端反之——两标志互斥（核 provider/sse.mjs：
+    // abort 规则命中即 return，interrupted 仅在 catch 置位）⇒ 次序无观测差。
+    if (applyRuleTriggered(agent, history, fullHistory, response)) continue
 
     // Warnings from this response + abnormal finish-reason reminder (D-CI9——cli
     // agent.mjs:293 同位：interrupt/builtin 处理之后、toolCalls 分支之前)。

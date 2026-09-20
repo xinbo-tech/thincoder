@@ -13,6 +13,7 @@ import { providerSpec } from "@thincoder/core/config.mjs"
 import { computeLayout, subagentVisibleLines } from "./layout.mjs"
 import { basename } from "node:path"
 import { readFileSync } from "node:fs"
+import { isYesNoModal } from "./interaction.mjs" // X8 跟进①：y/n-only 族判据单源
 
 export { convCacheKey, renderConversation, countConvLines } from "./render-conversation.mjs"
 
@@ -323,7 +324,9 @@ function inputBoxStyle(state) {
     borderColor = C.tool; title = " Question "
   } else if (state.permission) {
     borderColor = C.warn
-    title = state.permission.name === "continue" ? " Continue? (y/n) "
+    // X8 跟进①：y/n-only 族（continue / retry）按名分流——`a` 不属该族键面
+    title = isYesNoModal(state.permission.name)
+      ? (state.permission.name === "continue" ? " Continue? (y/n) " : " Retry? (y/n) ")
       : state.permission.batch ? ` Allow ${state.permission.name}? (a/o/n) `
       : ` Allow ${state.permission.name}? (y/n/a) `
   } else if (state.picker) {
@@ -349,7 +352,9 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
       : " Type answer then Enter │ Esc: cancel"
   }
   if (state.permission) {
-    if (state.permission.name === "continue") return " y: continue │ n: stop"
+    if (isYesNoModal(state.permission.name)) {
+      return state.permission.name === "continue" ? " y: continue │ n: stop" : " y: retry │ n: stop"
+    }
     if (state.permission.batch) return " a: approve all │ o: one by one │ n: deny"
     return " y: approve │ n: deny │ a: approve all (AUTO)"
   }

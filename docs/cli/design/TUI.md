@@ -103,7 +103,7 @@
 **状态优先级**（从高到低，每个状态独占处理并 `return`）：
 
 ```text
-permission（y/n/a/esc；batch a/o/n；continue y/n）
+permission（y/n/a/esc；batch a/o/n；continue / retry y/n）
 → question（选项 ↑↓ / enter / esc，自由文本——key-modes）
 → search 模式（Ctrl+F 进入：Ctrl+N/P/G/R 导航、esc 退出、字符输入过滤）
 → interruptPrompt（Ctrl+I 后输入注入消息——创建 / 模态分支先于 picker）
@@ -155,7 +155,9 @@ permission（y/n/a/esc；batch a/o/n；continue y/n）
 - **脱敏判据**：`PROVIDER_URL_RE = /https?:\/\/[^\s,)"]+/g` → `[endpoint]`——与 VSC 端（`thincoder-vscode/src/extension/panel-turn-loop.mjs`）**同式双写**（单源化 = 跨批结构面，登记）。
 - **重入语义（现场判定成立）**：provider 抛错不写 history（核 `thincoder-core/agent.mjs` 仅 `AbortError` 分支注历史）+ `flushStream` 清 `state.streaming` / `state.reasoning` ⇒ resume 重跑不携半截 assistant 行、不重复推部分输出。
 - **边界**：abort 分支 / `ContinueError` 面零改；不新增 TUI 组件（复用权限面板）；不改 provider 层重试策略；不动 CLI 硬编码 zh/EN 混排面。
-- **未决面（`open` · 父侧裁定中）**：重试询问沿用通用权限框（键面 `y` / `n` / `a`）——`a` = approve all（会话级 `autoApprove` 置位）为该框**既有语义**；是否收窄为 `y/n`（与 `continue` 框同形）待裁。
+- **框面（X8 跟进 ① · 用户 2026-09-20 裁定）**：重试询问与 `continue` 同形——**仅 `y` / `n`**（`a` 不属本框键面 ⇒ 零会话级 `autoApprove` 副作用）；框面 = 标题 ` Retry? (y/n) ` · 提示行 ` y: retry │ n: stop`。
+  y/n 判据单源 = `isYesNoModal(name)`（`thincoder-cli/src/tui/interaction.mjs`——`key-modes.mjs` / `render-frame.mjs` 同引）；`[approved]` / `[denied]` 轨迹行仍只归 `continue` 豁免——`retry` 保留轨迹行。
+- **原文余行 = log-only（X8 跟进 ②）**：失败原文除首行外的余行**不增 UI 行**（表面零膨胀）——入事件日志 `err:provider`（`err` = 脱敏首行 · `head` = 余行合单行；事件面见 `docs/core/design/LOGGING.md` §6.2）。
 
 ## 5. 渲染管线（帧装配 / 布局 / 对话行构建）
 
@@ -593,6 +595,8 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 | VSC webview 对位 | webview 渲染 / 消息协议 / 子标 | `docs/vsc/design/WEBVIEW*.md`——**非同机制**（端差异登记，不追赶） |
 
 ## 变更记录
+
+- 2026-09-20（**VSC 行为/能力两则批 · #132 · eng-designer**）：§2 键面枚举补 `retry`；§4.3 未决面（框面 `y`/`n`/`a`）按用户裁定收正为**仅 `y`/`n`**（判据单源 `isYesNoModal`）+ 原文余行 log-only 条（`err:provider`）。设计源 = `docs/batches/2026-09-20-vsc-rules-retry-batch.md` §2。
 
 - 2026-09-20（**显示面消差批 · 批 4 条款落笔 · eng-designer**——承 `docs/batches/2026-09-20-display-parity-batch.md` §2.3 / §2.10.5）：§6.8 冻结头条补**图标三态互斥**（`⏸` / `⏹` / `✓`——M5）；新增 **§4.3**（provider 失败面：友好首行 + 脱敏 + 诊断两行 + Retry 询问——X8）与 **§6.9**（消化轮可见面：起跑三档 + 收尾行——X9）。
 

@@ -1,47 +1,55 @@
 /**
- * rules.mjs — load project rules from .thincoder/rules/ and .cursor/rules/
+ * rules.mjs — load scoped project rules from `.cursor/rules/` (VSC-only face).
  *
- * Format: Markdown files with optional YAML frontmatter.
+ * Face definition (authoritative) = `docs/core/design/WORKSPACE.md` §2.3: `.cursor/rules/*`
+ * is the VSC end's SCOPE face; `.thincoder/rules/*` is the STREAM face (both ends — read by
+ * the core `thincoder-core/rules.mjs` + consumed via `chat()`). This loader reads the scope
+ * face only — never `.thincoder/rules/` (one thread, one semantic).
+ *
+ * Format: Markdown files (`.md` / `.mdc`) with optional YAML frontmatter.
  *
  *   ---
- *   globs: "src/components/**"*.tsx"
+ *   globs: "src/components/**"
+ *   alwaysApply: true
  *   ---
  *   Always use React.memo() for top-level component exports.
  *
- * Rules without `globs` are global — injected every conversation.
- * Rules with `globs` are file-scoped — only apply when working on matching paths.
- * Cursor's .cursor/rules/ directory is supported for compatibility.
+ * Three-way classification (ordered, mutually exclusive — single consumer
+ * `src/agent/rules-face.mjs`):
+ *   ① `alwaysApply: true` ⇒ always-rules (every run — injected into the system prompt tail block)
+ *   ② `globs` present ⇒ scoped rules (JIT reminder before a matching-path tool dispatch)
+ *   ③ neither `globs` nor `description` ⇒ always-rules
+ *   ④ `description` only (Cursor's agent-requested semantic) ⇒ never injected here (registered)
  */
 
 import { readdirSync, readFileSync, existsSync } from "node:fs"
 import { join } from "node:path"
 
 /**
- * Load all rules from both .thincoder/rules/ and .cursor/rules/.
- * Returns [{ name, content, globs, description, source }, ...]
+ * Load all scoped rules from `.cursor/rules/`.
+ * Returns [{ name, content, globs, alwaysApply, description, source }, ...]
  */
 export function loadRules(cwd) {
+  const dir = join(cwd, ".cursor/rules")
+  if (!existsSync(dir)) return []
   const results = []
-  for (const sub of [".thincoder/rules", ".cursor/rules"]) {
-    const dir = join(cwd, sub)
-    if (!existsSync(dir)) continue
-    let entries
-    try { entries = readdirSync(dir, { withFileTypes: true }) } catch { continue }
-    for (const e of entries) {
-      if (!e.isFile() || e.name.startsWith(".") || (!e.name.endsWith(".md") && !e.name.endsWith(".mdc"))) continue
-      try {
-        const raw = readFileSync(join(dir, e.name), "utf8").trim()
-        if (raw.length === 0) continue
-        const { content, meta } = parseFrontmatter(raw)
-        results.push({
-          name: e.name.replace(/\.(md|mdc)$/, ""),
-          content,
-          globs: meta.globs ? String(meta.globs).split(/[;\n]/).map(s => s.trim()).filter(Boolean) : null,
-          description: meta.description ? String(meta.description) : null,
-          source: sub,
-        })
-      } catch { /* skip unreadable */ }
-    }
+  let entries
+  try { entries = readdirSync(dir, { withFileTypes: true }) } catch { return results }
+  for (const e of entries) {
+    if (!e.isFile() || e.name.startsWith(".") || (!e.name.endsWith(".md") && !e.name.endsWith(".mdc"))) continue
+    try {
+      const raw = readFileSync(join(dir, e.name), "utf8").trim()
+      if (raw.length === 0) continue
+      const { content, meta } = parseFrontmatter(raw)
+      results.push({
+        name: e.name.replace(/\.(md|mdc)$/, ""),
+        content,
+        globs: meta.globs ? String(meta.globs).split(/[;\n]/).map(s => s.trim()).filter(Boolean) : null,
+        alwaysApply: meta.alwaysApply === "true",
+        description: meta.description ? String(meta.description) : null,
+        source: ".cursor/rules",
+      })
+    } catch { /* skip unreadable */ }
   }
   return results
 }

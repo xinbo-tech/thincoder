@@ -14,7 +14,7 @@ import {
   createAgent,
   readonlyToolNames, escapeXml,
 } from "../agent.mjs"
-import { makeRelay, wrapChildCallbacks, relayPrefixOf } from "../agent/spawn-child.mjs"
+import { allocRelay, wrapChildCallbacks, relayPrefixOf } from "../agent/spawn-child.mjs"
 // TUI-OOM-ROOTCAUSE（AGENT-LOOP.md §23.3.1）：子代理人读线窗口常量单源（store 零依赖）。
 import { RECORD_WINDOW_MESSAGES } from "../session-store.mjs"
 import { validateDesignToken } from "./advisor.mjs"
@@ -237,8 +237,9 @@ export function prepareScheduling(parent, filesRaw, dependsRaw, wantAsync) {
 
 /**
  * §20 准入通过后的 child 装配（2026-09-05 module-split——自 execute 参数化提取，
- * 原 318-488 段 verbatim——语义零变）。副作用保留：relay 计数器/子代理 _logId/
- * makeRelay 注册/_engTaskInput 携带全部在此发生。返回阻塞/异步两路径共用的
+ * 原 318-488 段 verbatim——语义零变）。副作用保留：relay 取号（sync 支 allocRelay——
+ * `[model]` 出生声明归 SYNC-CANCEL 单点，#133）/ 子代理 _logId / _engTaskInput 携带
+ * 全部在此发生。返回阻塞/异步两路径共用的
  * { child, input, childOpts, childRunOpts, relayPrefix, childProvider }。
  */
 export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, dependsOn, engAuditAttempt) {
@@ -452,11 +453,15 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   if (wantAsync) {
     // SUBAGENT-ID-COUNTER-AGENT（2026-09-09）：async id 取号统一走 nextSubagentId
     // （池活续号兜底——counter 载体= agent 本体 _subAgentCounter——跨 run/跨压缩
-    // 存活——per-run reset 清单不含它）。sync 分支 makeRelay 不进池——照旧。
+    // 存活——per-run reset 清单不含它）。sync 分支只取号（allocRelay）不进池——照旧。
     const id = nextSubagentId(parent)
     relayPrefix = relayPrefixOf(role, id)
   } else {
-    relayPrefix = makeRelay(parent, role ?? "sub", ctx.callbacks?.onToken, childProvider.model ?? "")
+    // #133（sync 出生序）：装配面**只取号**（allocRelay）——`[model]` 出生声明不由此处发射，
+    // 改由 SYNC-CANCEL 单点 `armSyncChildAbort(parent, key, baseSignal, announce)` 在 registry
+    // 写入**之后**当场宣告（`agent-tools/subagent.mjs` 阻塞路径）。先宣告后登记 ⇒ VSC 载荷
+    // 产者（panel-subagent-relay `syncLiveOf`）采样必空 ⇒ sync 块 ⏹ 运行期不可达（本缺陷根因）。
+    relayPrefix = allocRelay(parent, role ?? "sub")
   }
   // LOGGING（LOGGING.md）：子代理内部事件（子内 llm:*/tool:*）以 childId 归属——
   // agent._logId 随 runAgent 的 logCtx 透出（主文件单文件全记、按 childId grep）。

@@ -7,7 +7,7 @@
  */
 import { C } from "./ansi.mjs"
 import { readClipboardText, insertPastedText } from "./clipboard.mjs"
-import { QUESTION_CUSTOM } from "./interaction.mjs"
+import { QUESTION_CUSTOM, isYesNoModal } from "./interaction.mjs"
 import { inputContentWidth } from "./layout.mjs"
 import { moveCursorVertical } from "./render.mjs"
 
@@ -35,14 +35,19 @@ export function denyModalForOwner(state, key, { pushLine, render } = {}) {
 }
 
 /** permission 确认模态：y/n/a（a = approve + AUTO ON）；batch（§16 D-B1）：a/o/n（Esc = deny）。
+ *  `continue` / `retry` = y/n-only 族（判据单源 `isYesNoModal`——X8 跟进①：`retry` 框不
+ *  广告 `a`，零会话级 AUTO 副作用）。
  *  consume：valid 键或 Esc 走 resolve 分支；其余键静默吞掉（模态独占）。 */
 export function handlePermissionMode(str, key, ctx) {
   const { state, agent, pushLine, render } = ctx
   if (!state.permission) return false
   const answer = (str || "").toLowerCase()
+  // `yOnly` = 本框键面仅 y/n（continue / retry）；`isContinue` 仅保轨迹行豁免（continue 有
+  // 自有输出行——retry **保留** `[approved]` / `[denied]` 轨迹行）。
   const isContinue = state.permission.name === "continue"
+  const yOnly = isYesNoModal(state.permission.name)
   const isBatch = Boolean(state.permission.batch)
-  const validKeys = isContinue ? ["y", "n"] : isBatch ? ["a", "o", "n"] : ["y", "n", "a"]
+  const validKeys = yOnly ? ["y", "n"] : isBatch ? ["a", "o", "n"] : ["y", "n", "a"]
   if (validKeys.includes(answer) || key.name === "escape") {
     const { resolve, name } = state.permission
     state.permission = null
@@ -58,13 +63,13 @@ export function handlePermissionMode(str, key, ctx) {
       render()
       return true
     }
-    if (answer === "a" && !isContinue) {
+    if (answer === "a" && !yOnly) {
       agent.autoApprove = true
       agent._pendingReminders = agent._pendingReminders ?? []
       agent._pendingReminders.push("[System reminder: AUTO mode is now ON. All tool calls are automatically approved. Use /auto to disable.]")
       pushLine(`  [auto] AUTO ON: tool calls no longer prompt for approval (/auto to disable)`, C.warn)
     }
-    const approved = answer === "y" || (answer === "a" && !isContinue)
+    const approved = answer === "y" || (answer === "a" && !yOnly)
     // leave trail: record approval/denial in conversation (continue prompt has its own output, don't duplicate)
     if (!isContinue) {
       pushLine(`  [${approved ? "approved" : "denied"}] ${name}`, approved ? C.dim : C.error)
