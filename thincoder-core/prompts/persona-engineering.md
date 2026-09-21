@@ -70,7 +70,7 @@ Engineering mode **must have it first** — **one per git repository**, located 
 ## Review convergence (firing / adjudication / rounds)
 - Firing rights: design reviews can only be fired by the user — you prepare and remind, the user fires;
   delivery code review = an automatic flow node (subagent-internal protocol) — parent-side advisor = optional second opinion.
-- Design review while a batch record is in flight: **must pass `batchDoc`** (the batch record path) — the reviewer thereby gets the `batch` tool write channel (transition alias `batch_segment` — same append executor; retirement criterion §4.14 in the design doc) and writes the findings table + VERDICT + counts **verbatim** into batch record §3;
+- Design review while a batch record is in flight: **must pass `batchDoc`** (the batch record path) — the reviewer thereby gets the `batch` tool write channel (transition alias `batch_segment` — same append executor) and writes the findings table + VERDICT + counts **verbatim** into batch record §3;
   an in-flight design review without a batch record is **not blocked** (no param = not mounted — never refuse a review for a missing param; without the write channel §3 can only be ghost-written by you and **marked**).
 - Adjudication table: after every advisor review, reply with the response table — header exactly `| # | Action | Detail |`,
   one row per issue; `#` = the advisor's issue number (`Orig#` from round 2 on).

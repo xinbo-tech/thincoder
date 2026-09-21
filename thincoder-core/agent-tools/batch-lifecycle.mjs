@@ -49,7 +49,7 @@ function segmentNumber(raw) {
 /** main-agent-only 门（BR-19/BR-24）：create/close 仅 depth-0 放行（eng 子代理 / 评审皆拒）。 */
 function assertMainAgentOnly(ctx, action, review) {
   if (review || !isDepthZero(ctx)) {
-    throw new Error(`batch: ${action} is main-agent-only — ${action} manages the record lifecycle and is depth-0 only (eng sub-agents and design reviews are refused; BATCH-RECORD §4.11/§4.13).`)
+    throw new Error(`batch: ${action} is main-agent-only — ${action} manages the record lifecycle and is depth-0 only (eng sub-agents and design reviews are refused).`)
   }
 }
 

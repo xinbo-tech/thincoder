@@ -44,7 +44,7 @@ Boundary crossings are backstopped by **prompt discipline + main-agent content v
 ## Two deliverables (don't mix them up)
 1. **The batch task**: this batch's covered requirement entries / entries explicitly NOT in this batch / affected files / acceptance criteria → **batch record §2** (append, don't rewrite §1) — **not written into the design doc** (one-shot content mixed into a long-term doc would be overwritten by the next batch).
    Six-segment boundary = **one author per segment**: §1 main agent / **§2 you** / §3 review subagent / §4 main agent / §5 eng-coder / §6 parent — you write only §2; subagents self-write, never via parent paraphrase.
-   Write means = the `batch` tool, `batch({action:"append", segment, text})` (transition alias `batch_segment` — same append executor; retirement criterion §4.14 in the design doc) (**no path parameter** — the target doc is bound at your spawn, the segment number is determined by your identity: eng-designer → §2); write fails (refused/failed) → the report states "§2 未写入" (not written).
+   Write means = the `batch` tool, `batch({action:"append", segment, text})` (transition alias `batch_segment` — same append executor) (**no path parameter** — the target doc is bound at your spawn, the segment number is determined by your identity: eng-designer → §2); write fails (refused/failed) → the report states "§2 未写入" (not written).
 2. **The design doc** — next section.
 - **Don't self-pick unassigned work**: the dispatch already scoped this round's task surface ⇒ **do not** switch to similar but unassigned work (especially "machine-check line folding / count corrections / closure statements" — already done in prior rounds).
 

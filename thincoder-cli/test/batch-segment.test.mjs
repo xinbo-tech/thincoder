@@ -1,5 +1,5 @@
 /**
- * batch-segment.test.mjs — 批次档段写入工具（ENGINEERING-MODE.md §2.20 · FR22 F1-F7 / N1-N5）。
+ * batch-segment.test.mjs — 批次档段写入工具（docs/core/design/BATCH-RECORD.md 挂载表 §4.3 · FR22 F1-F7 / N1-N5）。
  * 用例表 T43–T53 1:1 落地（含 T43b/T49b/T52b；T46 的 V3 三态 = 一致性族 V1–V3——该族机检实装已撤除，§4.2.6）：
  *   T43 正常 append（既有行字节不变）· T43b 段标题缺失拒 · T44 越段/未知段拒 ·
  *   T45 凭证剥除零命中 · T47 路径门 + 只读面零变更（含挂载面 T47b）·
@@ -161,14 +161,14 @@ test("T47 错误/边界：路径门（若传则须可读）+ 代码评审工具�
   assert.ok(!advisorTool.parameters.required?.includes("batchDoc"), "不强制必传（N5 零回归）")
   // 工具集：仅「设计评审 + 已绑定」才挂写通道；未绑定/代码评审 → 零变更
   const code = _advisorToolsFor(agent, "code")
-  assert.ok(!code.byName.has("batch_segment"), "代码评审工具集不含本工具")
+  assert.ok(!code.byName.has("batch"), "代码评审工具集不含本工具")
   assert.deepEqual([...code.byName.keys()], [..._advisorToolsFor(agent).byName.keys()], "与无参调用（旧签名默认）逐字相同——代码评审零变更")
   assert.deepEqual([...code.byName.keys()], ["read", "glob", "grep", "ls", "lsp", "code_search"], "只读工具集（检索面恒在——六工具；未绑定索引时执行面端中立降级）恒定")
-  assert.ok(!_advisorToolsFor(agent, "design", null).byName.has("batch_segment"), "设计评审未绑定 → 不挂载（fail-closed）")
-  assert.ok(_advisorToolsFor(agent, "design", abs).byName.has("batch_segment"), "设计评审 + 已绑定 → 挂载")
+  assert.ok(!_advisorToolsFor(agent, "design", null).byName.has("batch"), "设计评审未绑定 → 不挂载（fail-closed）")
+  assert.ok(_advisorToolsFor(agent, "design", abs).byName.has("batch"), "设计评审 + 已绑定 → 挂载")
 })
 
-slow("T47b 边界：挂载面 + spawn 绑定（eng-designer/eng-coder 有；主 agent 无——不变量 3）", async () => {
+slow("T47b 边界：挂载面 + spawn 绑定（eng-designer/eng-coder 有；主 agent depth-0 亦有——D-BR18 · 不变量 3 零回归）", async () => {
   const abs = makeDoc()
   // §2.20.2 spawn 绑定：buildSpawnChild 把批次档绝对路径记在 child 上
   const token = `${randomUUID()}:${Date.now() + 3600e3}`
@@ -185,14 +185,14 @@ slow("T47b 边界：挂载面 + spawn 绑定（eng-designer/eng-coder 有；主 
     _pendingReminders: [], autoApprove: true, memory: undefined, _role: role, _batchDoc: abs,
   })
   const coder = await prepareRun(mk("eng-coder"), "task", {}, { depth: 1 })
-  const coderTool = coder.toolByName.get("batch_segment")
-  assert.ok(coderTool, "eng-coder 挂 batch_segment（§2.20.3）")
-  await coderTool.execute({ segment: "§5", text: "coder 写入" }, { agent: mk("eng-coder") })
+  const coderTool = coder.toolByName.get("batch")
+  assert.ok(coderTool, "eng-coder 挂 batch（挂载表 §4.3）")
+  await coderTool.execute({ action: "append", segment: "§5", text: "coder 写入" }, { agent: mk("eng-coder") })
   assert.ok(read(abs).includes("coder 写入"), "eng-coder 工具写 §5")
   const designerRun = await prepareRun(mk("eng-designer"), "task", {}, { depth: 1 })
-  assert.ok(designerRun.toolByName.get("batch_segment"), "eng-designer 挂 batch_segment（§2.20.3）")
+  assert.ok(designerRun.toolByName.get("batch"), "eng-designer 挂 batch（挂载表 §4.3）")
   const main = await prepareRun(mk(undefined), "task", {}, { depth: 0 })
-  assert.ok(!main.toolByName.has("batch_segment"), "主 agent 不挂载（§1/§4/§6 走普通文档写）")
+  assert.ok(main.toolByName.has("batch"), "主 agent depth-0 挂载 batch（create/close + append §1/§4/§6——D-BR18）")
 })
 
 // ── T48 来源戳不可伪造 ──────────────────────────────────────────────────────
@@ -212,7 +212,7 @@ test("T48 边界：来源戳不可伪造（工具生成 / 自带标题被忽略 
 
 // ── T49b 提示词面（双源） ────────────────────────────────────────────────────
 const WRITE_RE = /把本轮\*\*发现表 \+ VERDICT \+ 计数逐字\*\*写进批次档 §3/
-const QUAL_RE = /仅当本评审为设计评审、且工具面里已挂载 `batch_segment` 时/
+const QUAL_RE = /仅当本评审为设计评审、且工具面里已挂载 `batch`（[^）]*）时/
 
 test("T49b 错误：代码评审不带写指令（round 1 无此句；round 2+ 该句必带限定）", () => {
   const codeR1 = buildAdvisorSystemPrompt({}, null, "code")
@@ -256,10 +256,10 @@ test("T51 边界：两设计评审并发——各自落自档（实例键绑定�
   assert.equal(batchDocForReview(agent, docsA, { batchDoc: null }), null, "同步未绑定 → null（不看池）")
   assert.equal(batchDocForReview(agent, docsA, { batchDoc: docB }), docB, "同步绑定以 callbacks 为准")
   // run.mjs 的挂载路径：各自的工具集取各自的绑定 → 各写各档
-  await _advisorToolsFor(agent, "design", batchDocForReview(agent, docsA)).byName.get("batch_segment")
-    .execute({ segment: "§3", text: "A 轮发现" }, ctxFor())
-  await _advisorToolsFor(agent, "design", batchDocForReview(agent, docsB)).byName.get("batch_segment")
-    .execute({ segment: "§3", text: "B 轮发现" }, ctxFor())
+  await _advisorToolsFor(agent, "design", batchDocForReview(agent, docsA)).byName.get("batch")
+    .execute({ action: "append", segment: "§3", text: "A 轮发现" }, ctxFor())
+  await _advisorToolsFor(agent, "design", batchDocForReview(agent, docsB)).byName.get("batch")
+    .execute({ action: "append", segment: "§3", text: "B 轮发现" }, ctxFor())
   assert.ok(read(docA).includes("A 轮发现") && !read(docA).includes("B 轮发现"), "A 档只含 A 的发现")
   assert.ok(read(docB).includes("B 轮发现") && !read(docB).includes("A 轮发现"), "B 档只含 B 的发现（不串档）")
 })
