@@ -60,6 +60,29 @@ VSC 侧对应面住 `thincoder-vscode/src/extension/session-io.mjs` · `session-
 - **验收**：① 启动路径同步阻塞 ≤50ms（对照 ≈10s）；② CLI 启动到 TTY 门 ≤ **2s**（对照 9.6–16s；空 HOME 0.495s + 真装配 ~1.0s 为参考下界）；③ 三端测试全绿；④ 存量清理面执行后 sessions 项数回落且零活数据误删。
 - **依赖**：`session-lifecycle.mjs`（resumeSlot）· `session-gc.mjs`（gcResidue / listColdCwds）· CLI `bin/thincoder.mjs` 启动序 · VSC 端壳（`session-io.mjs` resumeSlot 包装）· 设计档 `docs/core/design/SESSION.md` §6.12（含 ④ 端差段注销）。
 
+### 2.5 优雅退出认领释放（2026-09-21 用户事故报告新增 · 台账 #211）
+
+**模块目标**：正常退出（CLI `Ctrl+C`×2 / `/exit`；VSC deactivate）时，进程对自己的槽认领**随退随释**——下次启动恢复不依赖「旧进程已被 OS 探测明确判死」，直接经「无属主即可用」路径回到退出前会话。
+
+**事故锚（动机）**：2026-09-21 21:56 用户实测——CLI 会话（槽 41，5554 条消息）Ctrl+C×2 正常退出（`key-handler.mjs:152` `process.exit(0)`，退出前零释放动作），1.7s 后重启：属主记录仍指旧 pid，恢复判定链落入探测保守支（`process-probe.mjs` D-MI10 unknown ⇒ 不认领）⇒ 新开空槽 44，旧会话未自动恢复（数据完好，`/session` 可手动接回）。
+
+- **F-XR1（退出释放）**：优雅退出路径在进程结束前**释放本进程全部槽认领**——判据复用 F-CR1 同族释放谓词（`staleClaims`，保留集空 = 全释放）；释放失败不阻断退出（尽力面——退出动作恒达）。
+- **F-XR2（路标保留）**：端标记（D-4）**保持指向退出前槽，不置空**——释放后的恢复判定链 = 读端标记 → 槽无属主 → 直接认领恢复（`usableSlot` 无属主分支直达，零探测）。
+- **F-XR3（崩溃面零变）**：非优雅退出（kill / 终端窗口直接关闭 / V8 fatal）**不经过本路径**——属主记录原样保留，恢复仍走既有探测三态判据（D-MI10 unknown ⇒ 不认领），语义零变。
+- **F-XR4（双端同源）**：释放机制 = **核内单一实现**（薄函数，两端接线各几行）；CLI 接线点 = `key-handler.mjs` 空闲退出分支 + `/exit` 命令路径（两入口同一退出语义，`cmd-exit.mjs` 经 `ctx.exit` 同收口）；VSC 接线点 = extension `deactivate`（改 async——可 await 写盘完成再退）。
+
+**边界（不做什么）**：不改探测三态判据（D-MI10——它防双进程同槽互踩，方向正确）· 不改端分离（NF1——CLI `.cli` / VSC `.vscode` 各写各的端标记）· 不改槽文件格式 / `version` · **不做「按时间窗猜死活」启发式**（在猜测上叠猜测）· ACP `session/close` 多会话语义不动（#168① 另案）· Ctrl+C 单按（中止回合）与两按（全停后台）**不属退出、不释放**。
+
+**验收（可机判）**：
+① T1 造认领 → 跑退出释放 → manifest 无本进程 `slotSessions` 条目 ∧ 端标记仍指原槽 ∧ 槽文件完好；
+② T2 释放后 `resumeSlot` 返回 `{slot: 原槽, data}`，且属主缺失分支直达（**探测零 exec**——`probeOwnersAsync` 入参清单为空早退）；
+③ T3 崩溃路径回归——认领在 + 探测 unknown ⇒ 仍全新分配槽（现状不变）；
+④ T4 CLI 退出分支 e2e——注入 `exitDelay`（测试缝，`key-handler.mjs` 既有）+ 捕获 `exitTimer`：断言「先释放后定时器注册、桩收 exit(0)、失败容忍（释放抛错仍注册退出）」；
+⑤ T5 VSC `deactivate` 后 manifest 无本进程条目（端壳机判）；
+⑥ 既有 session 系 / key-handler 系测试全绿。
+
+**依赖**：核槽面（`thincoder-core/session-slots-manifest.mjs` `saveManifest`/`staleClaims`）· CLI `thincoder-cli/src/tui/key-handler.mjs` 退出分支 · VSC `thincoder-vscode/src/extension.mjs` deactivate · 设计档 `docs/core/design/SESSION.md`（§6.10 D-2/D-4）· 批档 = `docs/batches/2026-09-21-exit-claim-release.md`。
+
 ## 3. 非功能性需求
 
 本子系统无独立非功能条目。适用工作流条目（回指）= **N1**（未涉面不得无故回归）· **N2**（建核段两产品零改动 · 可回退）· **N3**（核独立可验证）· **N5**（单一权威源）· **N8**（结构尺度）。
@@ -127,7 +150,7 @@ N-S3 CLI 写出的槽文件 `history` 数组与旧实现同构（version 2 + his
 ② 历史分页步长 **200**（`HISTORY_PAGE_SIZE`——`thincoder-vscode/src/extension/history-window.mjs:18-22`，对端 20）· ③ 恢复呈现 = assistant 帧容器 + 嵌套工具卡（配对语义同源）·
 ④ 冷 cwd 手动 GC 无 shell 通道（只接线自动残留 GC）——**注销（2026-09-21）**：VSC 已补命令入口 `thincoder.sessionGc`（数据面 API——双端同面；见 `docs/core/design/SESSION.md` §6.17 D-SE38）
 · ⑤ 记录存储形态 = 本端零该机制（如实登记）· ⑥ `turnBusy()` 拒新会话 / 删除 / 切换 / 换项目（回合互斥）。坐标（实核）＝ `thincoder-vscode/src/extension/session-slots.mjs`（400 行）· `session-io.mjs`（437 行）· `panel-session.mjs`（339 行）· `session-gc.mjs`。
-用例面 = `test/session-boot.test.mjs`（319 行 / 4 例）· `test/history-window.test.mjs`（192 行 / 8 例）· `test/history-restore.test.mjs`（237 行 / 9 例）· 集成 `test/integration/scenario-04-session-recovery.test.mjs`（140 行 / 5 例）。
+用例面 = `test/session-boot.test.mjs`（447 行 / 4 例，2026-09-21 实测）· `test/history-window.test.mjs`（192 行 / 8 例）· `test/history-restore.test.mjs`（237 行 / 9 例）· 集成 `test/integration/scenario-04-session-recovery.test.mjs`（140 行 / 5 例）。
 
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）
 
@@ -145,3 +168,4 @@ N-S3 CLI 写出的槽文件 `history` 数组与旧实现同构（version 2 + his
 - 2026-09-14（**B 轮并入 · 第 2 批**）：新增 §4 **需求条目**（会话恢复与端分离 / 运行环境自我感知 / 跨会话检索与消歧 / 长会话记录内存有界——自 `thincoder-cli/docs/requirements/SESSION.md` 逐节比对后并入需求正文；**编号与文本承旧档**）+ §5 **不并项与历史沿革**；**本档新增需求 0**（纯回填）；首部加需求条目面指针一行。
 - 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：新增 §4.5 **VSC 端条目**（六条端差登记 + 坐标 + 用例面——自 `thincoder-vscode/docs/requirements/SESSION.md` 并入；语义同源不重并）；§5 登记 VSC 档批次材料；**本档新增需求 0**（纯回填）。
 - 2026-09-21（**用户报告轮 · 新增需求**）：新增 **§2.3 会话认领释放与拒绝零副作用**（F-CR1–F-CR3——用户 01:46 报告「CLI 同时持有两个会话」+ 01:49 委托「排批这两个问题都处理吧」；台账 #165/#161②；批档 `docs/batches/2026-09-21-session-claim-release.md`）。**本档首次新增需求**（此前各轮均为回填/派生）。
+- 2026-09-21（**用户事故报告轮 · 新增需求**）：新增 **§2.5 优雅退出认领释放**（F-XR1–F-XR4——用户 21:56 实测 Ctrl+C×2 正常退出后重启未恢复旧会话（槽 41→空槽 44）；台账 #211；批档 `docs/batches/2026-09-21-exit-claim-release.md`；修法方向用户 22:26 批准）。
