@@ -7,6 +7,7 @@
  * #41 段（T37–T40）锁工程模式翻转准入（docs/core/design/MANIFEST.md §2.8 / AC-20）；
  * 2026-09-21（#188 · 父侧授权表外收正）：T39 / T40 夹具由「根不可解析」（梯⑤——现建档 + 放行）
  * 改**歧义**（容器 + ≥2 带档子仓）；拒翻文案锚改 `/项目不可解析/`；T38 补梯④ / 梯⑤ 两格。
+ * 2026-09-21（plan-approval-texts 批 · #154 修法①）：plan 工具批准语义文本收正（① ② ⑤ ⑥）——新增 PT-7 / PT-8。
  */
 import { test } from "node:test"
 import { slow } from "./slow.mjs"
@@ -144,6 +145,22 @@ test("T12 翻转点①（核 eng 工具）：enter ⇒ planMode + 未注入 plan
     await engTool.execute({ action: "exit" }, ctx)
     assert.equal(agent.planMode, true, "OFF 不碰 planMode")
   })
+})
+
+// ─── plan-approval-texts 批（#154 修法①）：plan 工具批准语义文本收正——描述面 / 源文注释面 ───
+
+test("PT-7 正常：plan 工具描述面 = 新句在场 ∧ 旧句零残留（模型面文本）", () => {
+  assert.ok(planTool.description.includes("Exit plan mode to present the plan for the user's approval; implement only after they approve."), "描述含新句")
+  assert.ok(!planTool.description.includes("When the user approves, exit plan mode and implement"), "描述不含旧句")
+})
+
+test("PT-8 正常：plan.mjs 源文面 = 档头句 / 注释引文收正 ∧ 旧句零残留（防回流）", () => {
+  const src = readFileSync(new URL("../agent-tools/plan.mjs", import.meta.url), "utf8")
+  const lines = src.split("\n")
+  assert.ok(!src.includes("After the user approves the plan, exit plan mode and start implementing"), "档头旧句零残留")
+  assert.ok(!src.includes("Start implementing your plan"), "注释引文 / 旧②面零残留")
+  assert.ok(lines.some((l) => l.startsWith(" * ") && l.includes("Exit plan mode to present the plan for the user's approval; implement only after they approve.")), "档头注行含 ⑤ 新句")
+  assert.ok(lines.some((l) => l.startsWith(" * ") && l.includes("Present your plan")), "注释块含新②引文片段（防删而不换）")
 })
 
 // ─── #96 verify：执行方式（exec 缝）+ 信息段（诊断段缝）──────────────────────────

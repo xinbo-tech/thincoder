@@ -338,7 +338,7 @@ M10 测试（独立简化，无依赖）
 
 #### E7 工程模式 plan 面排除（FR31 · v2 §13.9 · 2026-09-21）
 
-**问题**：工程模式主 agent 的职能本身即「设计先行」（设计 → 评审 → 批准 → 实施），与 plan 模式语义重叠；其退出话术（`PLAN_EXIT_REMINDER`，`thincoder-core/agent-tools/plan.mjs:21-23`：「Start implementing your plan … No need for … further confirmation」）
+**问题**：工程模式主 agent 的职能本身即「设计先行」（设计 → 评审 → 批准 → 实施），与 plan 模式语义重叠；其退出话术（`PLAN_EXIT_REMINDER`，`thincoder-core/agent-tools/plan.mjs:21-23`：「Start implementing your plan … No need for … further confirmation」〔该文本已于 2026-09-21 收正为「呈计划 ⇒ 待批准 ⇒ 实施」✗ 见批档 `2026-09-21-plan-approval-texts.md` ✓〕）
 与工程链条直接冲突 ⇒ 模型在工程模式下频繁入 plan 模式（用户实测 glm-5.3-flash）= 系统性误导源。
 
 **三结构面（= FR31 三条裁决，各带判据）**：
@@ -424,7 +424,7 @@ engineering 真值 ──► 固定段裁剪（plan 不入表）─────�
 
 **提示词面（评估结论 = 零改，理由三条）**：① 工程两档（`persona-engineering.md` / `discipline-engineering.md`）与中文模板零处指示 plan 模式（实读 grep 命中仅「并发池上限：其他角色（explore/plan/coder）池」= 角色域枚举，非 plan 模式指令）；② 工具不注册已由结构兜底——再加「不要用 plan 模式」句 = 为不可见选项写限制（承 2026-09-18 反模式之裁）；③ `ENG_ON_REMINDER`（`agent/helpers.mjs:376-381`）无 plan 字样，无悬挂指令。
 
-**边界（不做什么）**：普通模式零改（工具 / 命令 / ACP / 恢复四路径全带宽）· **三条 reminder 文本本体不改**（`PLAN_FULL_REMINDER` / `PLAN_SPARSE_REMINDER` / `PLAN_EXIT_REMINDER`——`thincoder-core/agent-tools/plan.mjs:11` · `:17` · `:21`，普通模式仍用）；
+**边界（不做什么）**：普通模式零改（工具 / 命令 / ACP / 恢复四路径全带宽）· **三条 reminder 文本本体不改**（`PLAN_FULL_REMINDER` / `PLAN_SPARSE_REMINDER` / `PLAN_EXIT_REMINDER`〔`PLAN_EXIT_REMINDER` 文本已于 2026-09-21 收正 ✗ 本句对其作废 ✓ 另两条不动 ✓〕——`thincoder-core/agent-tools/plan.mjs:11` · `:17` · `:21`，普通模式仍用）；
 不新增机械门（拒绝点 = 既有命令面与既有翻转点）· 不改 `_setPlanMode` 的既有槽写契约（合法态仍 = 槽写 + 回推面板；工程态拒绝 = 不写槽 + 回弹）· VSC 新增 i18n 键仅 `toolbar.planDisabled` 一条（plan 按钮禁用态 title，两 locale 同步）。
 
 ### 2.4 模块间接口 / 依赖

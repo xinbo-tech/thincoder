@@ -263,9 +263,12 @@ test("T-CI-6 正常：plan enter/exit + 节律语义（稀疏 2 / 满 5 / 新消
   assert.match(planReminderForTurn(agent, false), /^\[System reminder: plan mode is ON\./, "turn 5：满 5 → 全量句")
   assert.match(planReminderForTurn(agent, true), /^\[System reminder: plan mode is ON\./, "新用户消息 → 全量句")
 
-  await planTool.execute({ action: "exit" }, { agent, callbacks: {} })
+  const exitMsg = await planTool.execute({ action: "exit" }, { agent, callbacks: {} })
   assert.equal(agent.planMode, false, "exit 清位（核载体名）")
-  assert.equal(agent._pendingReminders.at(-1), "[System reminder: plan mode is now OFF. Start implementing your plan — edit files, run commands. No need for a task list (plan already covered that) or further confirmation.]", "exit pending 句逐字")
+  assert.equal(exitMsg, "Plan mode exited. Present your plan to the user and wait for their explicit approval before writing any code.", "exit 回执句逐字")
+  assert.equal(agent._pendingReminders.at(-1), "[System reminder: plan mode is now OFF. Present your plan to the user and wait for their explicit approval before implementing — no need for a task list (the plan already covered that).]", "exit pending 句逐字")
+  assert.ok(!exitMsg.includes("edit files and run commands") && !exitMsg.includes("further confirmation"), "exit 回执旧放行串零残留（负向）")
+  assert.ok(!agent._pendingReminders.at(-1).includes("edit files and run commands") && !agent._pendingReminders.at(-1).includes("further confirmation"), "exit pending 旧放行串零残留（负向）")
   assert.equal(planReminderForTurn(agent, false), null, "退出后节律归零")
 })
 

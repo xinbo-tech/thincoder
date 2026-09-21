@@ -1,7 +1,7 @@
 /**
  * plan tool: enter/exit plan mode.
  * In plan mode only read-only tools are allowed — explore code, design solutions, no code writing.
- * After the user approves the plan, exit plan mode and start implementing.
+ * Exit plan mode to present the plan for the user's approval; implement only after they approve.
  *
  * Reminder cadence (kimi-code style): while plan mode is active the agent loop
  * re-injects reminders — sparse every 2 turns, full every 5 turns or when the
@@ -19,8 +19,8 @@ const PLAN_SPARSE_REMINDER =
   "Design the solution, then call plan with action='exit' for user approval.]"
 
 const PLAN_EXIT_REMINDER =
-  "[System reminder: plan mode is now OFF. Start implementing your plan — edit files, run commands. " +
-  "No need for a task list (plan already covered that) or further confirmation.]"
+  "[System reminder: plan mode is now OFF. Present your plan to the user " +
+  "and wait for their explicit approval before implementing — no need for a task list (the plan already covered that).]"
 
 /** Turns between reminder re-injections while plan mode is active */
 const SPARSE_INTERVAL = 2
@@ -41,7 +41,7 @@ const isPlanReminder = (r) => r === PLAN_FULL_REMINDER || r === PLAN_SPARSE_REMI
 /**
  * ENG-PLAN-EXCLUSION（FR31 ③ / KD10——单点复用）：工程模式 ⇒ `planMode` 恒 false。
  * 清 `planMode` + 两 reminder 计数 + **未注入的 plan 提示语**（`_pendingReminders` 中的三条
- * plan 提醒——否则排队的 `PLAN_EXIT_REMINDER`「Start implementing your plan …」会在模式翻转后
+ * plan 提醒——否则排队的 `PLAN_EXIT_REMINDER`「Present your plan … wait for their explicit approval …」会在模式翻转后
  * 落地，与工程链条打架）。五个挂点复用本函数：三翻转（核 `eng` 工具 / CLI `/eng` / VSC 面板开关）
  * + 两恢复（CLI `applySession` / VSC `applySlotSessionState`）。
  * @param {object} agent — 会话 agent（就地改写）
@@ -89,7 +89,7 @@ export function planReminderForTurn(agent, userMessageSince) {
 export const planTool = {
   name: "plan",
   description:
-    "Enter or exit plan mode. In plan mode you are restricted to READ-ONLY tools: read files, search code, run read-only shell commands. Use plan mode before complex multi-step tasks — explore the codebase, design the architecture, present a plan to the user. When the user approves, exit plan mode and implement. For simple single-file edits, skip plan mode and just make the change.",
+    "Enter or exit plan mode. In plan mode you are restricted to READ-ONLY tools: read files, search code, run read-only shell commands. Use plan mode before complex multi-step tasks — explore the codebase, design the architecture, present a plan to the user. Exit plan mode to present the plan for the user's approval; implement only after they approve. For simple single-file edits, skip plan mode and just make the change.",
   parameters: {
     type: "object",
     properties: {
@@ -106,7 +106,7 @@ export const planTool = {
       ctx.agent._planTurnsSinceReminder = 0
       ctx.agent._pendingReminders = ctx.agent._pendingReminders ?? []
       ctx.agent._pendingReminders.push(PLAN_EXIT_REMINDER)
-      return "Plan mode exited. You may now edit files and run commands."
+      return "Plan mode exited. Present your plan to the user and wait for their explicit approval before writing any code."
     }
     if (args.action !== "enter") {
       return `Error: unknown action "${args.action}". Use "enter" or "exit".`
