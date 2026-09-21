@@ -83,7 +83,8 @@ _cwd() = _cwdOverride ?? workspaceFolders[0] ?? process.cwd()
 | ⑦ | 会话族 handler（`src/extension/panel-messages-session.mjs:22/30/61/67/82`） | newSession / switchSession / deleteSession / renameSession / setProject（槽写 / manifest active 写） | 提示 + return |
 | ⑧ | 索引面：`buildIndex`（`src/extension/panel-index.mjs:141`）+ `maybePromptIndex`（`:121`；调用点 `panel-session.mjs:293` 跳发） | 免把用户引向「以安装目录为项目」的建档流 | 提示 + return / 邀请零发 |
 
-**派生面（无需守卫 · 如实登记）**：守卫态下 `panel._slot` 恒 null（⑤⑥ 阻断认领，解析缓存无条目）⇒ 槽写面 `setSlot*` 天然返 false（`panel-session.mjs:57-61` 记载）；`pushSessions`（`panel-session.mjs:217`）加同判据守卫——不把安装目录家族的会话列表推给面板（否则会话行可点 ⇒ 绕过 ⑦）。**实施轮加法 D2（可 revert）**：冷路径 `ensureSlot` 亦加同判据（`panel-session.mjs:68-72`）——使「守卫态 `_slot` 恒 null」不变量无条件成立。
+**派生面（无需守卫 · 如实登记）**：守卫态下 `panel._slot` 恒 null（⑤⑥ 阻断认领，解析缓存无条目）⇒ 槽写面 `setSlot*` 天然返 false（`panel-session.mjs:57-61` 记载）；`pushSessions`（`panel-session.mjs:217`）加同判据守卫——不把安装目录家族的会话列表推给面板（否则会话行可点 ⇒ 绕过 ⑦）。
+**实施轮加法 D2（可 revert）**：冷路径 `ensureSlot` 亦加同判据（`panel-session.mjs:68-72`）——使「守卫态 `_slot` 恒 null」不变量无条件成立。
 **`atComplete`（@ 补全）链（评审轮 1 发现 8 判定）**：**不入守卫面**——**只读、零落盘**：扫描 = `vscode.workspace.findFiles`（工作区级 API——`panel-index.mjs:65-69`，非 `_cwd()` 的 fs 遍历），`_cwd()` 在该链仅作 `path.relative` 显示基（`:63` / `:74`），整链零写调用（`:56-84` 逐行实读）⇒ 不加守卫；§2「不再被守卫面消费」即此口径。
 
 **提示面（逐字）**：
