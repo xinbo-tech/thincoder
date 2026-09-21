@@ -35,8 +35,8 @@ const MIGRATED = [
   "get_current_time", "git", "glob", "grep", "hashline_edit", "insert_after", "lint", "ls",
   "lsp", "process", "question", "read", "read_image", "tree", "wait_for", "websearch", "write",
 ]
-/** D-TD3：非迁移面（保持内联——本批零改）。 */
-const INLINE_KEPT = ["repo_outline", "code_search", "doc_search", "memory", "context", "focus", "peer_instances"]
+/** D-TD3：非迁移面（保持内联——本批零改）。D-CC26（2026-09-21）：宿主 IDE 快照工具自 `context` 改名 `ide`（让名给核 `context` 工具）——死常量随改名。 */
+const INLINE_KEPT = ["repo_outline", "code_search", "doc_search", "memory", "ide", "focus", "peer_instances"]
 /** D-TD2 接线落点（W14 改判——工具实现面核单源）：24 工具级 DESC 行现住核 `tools/*.mjs`
  *  （端侧 17 档接线文件中的 16 档已随 W14 删除——`shell.mjs` 保留但描述亦引核 DESC）。 */
 const CORE_WIRING_FILES = [

@@ -131,6 +131,28 @@
 
 **未决 / 上抛**：§2.5 项 5（VSC 自持工具表计数口径）仍待父侧裁；无新增未决项。
 
+### 2.9 修正轮 2（实施后微修轮 · 承 §5 上抛 · eng-designer · 2026-09-21）
+
+**状态行（本轮）**：🔄 实施轮完成 + 实施后微修轮完成（2026-09-21）——设计档与实施态逐条对齐，待父侧 §6 收口。
+
+| # | 上抛项（§5.4） | 判定 | 落点（设计档 `docs/core/design/CONTEXT-COMPACTION.md` · as-of 本轮末） |
+|---|---|---|---|
+| 1 | 🟡 强制路第三去向（§5.4-2） | **(a) 现状语义自洽、非缺口**：`force` ∧ `!split` ∧ `shrinkOversized` 命中 ⇒ 有损收缩已处理、按「一次成功压缩」记账（不落 no-op 注记 / 不跑阈值面）；等价性 = 该形下阈值面唯一杠杆是同一 `shrinkOversized`（`split` 输入不变 ⇒ 重复调用恒 false）⇒ 跳过不改变可观察结果；与「阈值面语义零改」硬边界一致 | §6.16.2 表格行（`:488`）+ 新增「强制面第三去向」条目（`:493-496`） |
+| 2 | 🔵 `historyPercent` 空历史分歧（§5.4-3） | **保留分歧 + 写明理由（不收正）**：`historyPercent([]) = 0` = 纯公式；两端 `ctxPct > 0` / `null` = 端侧显示门；收正须动端码或破坏 stats 行定值 ⇒ 零收益 | §6.16.4 新增「空历史口径（保留分歧）」条目（`:544-545`） |
+| 3 | 🔵 回查锚 `cwd` 缺省分支（§5.4-3） | **写明该态取形（降级形）**：判据改合取（`_slot != null` ∧ `cwd` 在场）；`cwd` 缺省 ⇒ 未绑定分支、字面 `cwd:undefined`、工具内不抛；两端生产链不可达（建链面恒带 `cwd`） | §6.16.7 判据两行（`:584` / `:585`）+ 新增「`cwd` 缺省态」条目（`:590-591`）；§6.16.11 退化面 ③（`:655`） |
+| 4 | 同轮收正（引文标记形 + 行宽） | §6.16.6 内三处引文标记形未命中机检闭枚举（「（迁移期引文」字面缺失 ⇒ 悬空误报；其中 `:559` 原无标记）+ 两条 >300 字符行宽 | `:565` / `:567-568` / `:768`（标记形——语义零改）· `:565-568`（拆行） |
+
+**判定理由（逐条实证坐标）**：
+- ① 第三去向：`thincoder-core/context.mjs:285-289`（`!split` ⇒ `shrinkOversized`）· `:393`（8000 字符上限）· `:403-432`（命中返 true + 基线失效）；两端消费同构 = 核 `thincoder-core/agent/run-stages.mjs:64-109` / VSC `thincoder-vscode/src/agent/run-stages.mjs:205-229`。
+- ② 空历史：核 `thincoder-core/token-window.mjs:160-162` vs VSC `thincoder-vscode/src/specs.mjs:84-88` + CLI `thincoder-cli/src/tui/render-frame.mjs:396-397`（显示门端侧）。
+- ③ `cwd` 缺省：`thincoder-core/agent-tools/context.mjs:107`（fail-soft 守卫）· `thincoder-cli/src/cli/make-agent.mjs:112-118` / `thincoder-vscode/src/agent/setup.mjs:322-324`（建链面恒带 `cwd`）。
+
+**机检读数（本轮实跑 · `node scripts/doc-check.mjs`）**：悬空 **3** / 行宽 **3** = 父侧基线（触碰档零新增 ✓）；余 3 / 3 在 `AGENT-LOOP-SUBAGENT.md` 与 `BATCH-RECORD.md`——非本批档，未动。
+
+**未测面（登记 · 非阻塞）**：第三去向现无专属用例（C5① 覆盖摘要路、C7 覆盖无收缩命中的 no-op 路）；机判护栏（短历史 + 单条 `"x".repeat(9000)`）如需，另轮 coder 补。`shrinkOversized` 不设 `_lastCompressInfo`（面板面取既有值）——与本批零改的阈值面同形，登记不改。
+
+**零代码改动** ✓（验收 ③）。
+
 ## §3 设计评审（评审子代理）
 
 （待点火。）
@@ -170,6 +192,77 @@
 
 （待批准后。）
 
+**状态行**：✅ 实施轮完成（2026-09-21）——§2.2 全 20 行代码面落位（21–23 行 = 设计/文档面，本轮零改）+ AC1–AC9 全绿 + 用例 S1–R4 逐条落 + 双端全量套件绿（核 515 · CLI 778 · VSC 905，fail 0）+ doc-check 行宽面零新增（触碰档零新增；悬空面见「偏差」）。
+
+### 5.1 交付摘要（逐面）
+
+| 面 | 落点（file:line · as-of 本轮末） |
+|---|---|
+| 单源新档 | `thincoder-core/token-window.mjs`（188 行 = 自 `context.mjs` 逐字迁出三族 110 行 + 新增族 `contextUsage` / `historyPercent` / `collectStaleToolOutputs` + `PRUNE_MIN_TOKENS`；依赖面 = `provider/rate.mjs` + `config.mjs`，零 import 环） |
+| 压缩模块 | `thincoder-core/context.mjs`（440 行；`force` 分支 `:281` · 焦点块 `:56-60` · anchor 取值 `:66-72` · prune 应用面 `:348-372` · `estimateTokens` 再导出 `:435`） |
+| 工具档 | `thincoder-core/agent-tools/context.mjs`（174 行 = 工具形态逐字 + 三操作 + 轻推助手 + 注记文案单源 + 可回查锚两分支） |
+| 装配 | `agent-tools.mjs:19`（登记册 +1）· `agent/family-tools.mjs:28`/:141（depth-0 段 +1，子代理面零含） |
+| 消费点 | 核 `agent/run-stages.mjs:63-108`（取用即清槽 + `force`/`focus` + no-op/失败注记 + 阈值面承接）· VSC `src/agent/run-stages.mjs:197-211`/`:237-246`（同构） |
+| 接线 | 核 `agent.mjs:163`（`_pendingCompact` 回合起点清零）· `:199`（`_ctxBasis` 暂存）· VSC `agent-state.mjs:34` · VSC `run-stages.mjs:200` |
+| 轻推 | `agent-tools/task.mjs:84` · `goal.mjs:34/50/108/121`（四分支 + depth-0 门） |
+| VSC 让名 | `src/tools/context.mjs` → `src/tools/ide.mjs`（git rename · 旧路径删除态 · `name: "ide"` `:27` · 行为面零改：`readonly` / 描述语义 / `what` 参数 / 五段采集逐字）+ `src/tools/index.mjs:33/166/181` + `AGENTS.md:54-55` |
+| 测试 | `test/context-tool.test.mjs`（300 行 · S1–S4 / P1–P5 / C1–C13 / N1–N4 / R1·R3·R4）+ `test/tool-registry.test.mjs:38`（`HOST_ONLY = ["ide","focus"]`）+ VSC `host-shape-spawn.test.mjs:196-202`（R2：名唯一 + 含 `context` + 宿主已名 `ide`）+ `tool-descriptions.test.mjs:39`（`INLINE_KEPT` 改名）+ `test/family-tools.test.mjs:29`（家族段 +1 名） |
+
+**AC1–AC9 对位（命令 + 读数原文）**：AC1/AC2/AC3/AC4/AC5/AC6/AC7/AC8 = `node --test test/context-tool.test.mjs`（9/9 pass）逐条对应用例（S1–S4 / C1+C2+C5+C6 / C3 / P1–P5 / C13 / N1–N4 / R1+R3+`host-shape-spawn` / C11+C12）✓；AC9 = `node --test test/compress-form.test.mjs test/compaction-echo.test.mjs`（19/19）+ VSC `node --test test/context-percent-parity.test.mjs`（6/6）+ 名集/tool-docs 断言（R4，`context-tool.test.mjs:295-299`）✓。
+
+### 5.2 决策透明表（实施侧自决项 · 逐条给理由）
+
+| # | 决策 | 理由 / 与设计的关系 |
+|---|---|---|
+| 1 | 轻推去重 = **原位 `splice`**（非 `filter` 换数组） | 设计写「同前缀旧行先滤（`filter` 手法）」；可观察面（恒恰一行）逐条满足，但 `agent.history = <新数组>` 会让 VSC 端局部引用失效（D-CC24 同一顾虑）⇒ 取等价且保引用的形。 |
+| 2 | 注记前缀 = `[System reminder: context compact`（机器行族） | 设计只给注记**正文**片段，未定前缀。取 `[System reminder:` 族 ⇒ 既有 `isRealUserMsg` / plan 节律等机器行谓词自动同判（先例 = 压缩注记 `[Context was automatically compacted…`；`[System note:` 会被当「真实用户消息」）。代码评审 🔵 建议项，已落。 |
+| 3 | 饱和值 `toGo = max(0, threshold − total)` | 设计模板占位 `{toGo}` 未定越阈行为；取 0（「无余量」）免负数字面。 |
+| 4 | 「无可压」判据落地为 `!compacted && pending` | `compressIfNeeded` 的 `!split` 分支先走 `shrinkOversized`（短历史 + 超大单条消息时返回 true）⇒ 该形下不落 no-op 注记、不跑阈值面（与「同点至多一次成功压缩」自洽）。设计 §6.16.2 只写了两种去向 ⇒ **已登记上抛**（见 5.4）。 |
+| 5 | 核 `run-stages.mjs` 的失败注记取 `errText()` / VSC 同 | 错误文本单源（`log.mjs`）——零自造格式。 |
+| 6 | 测试夹具口径：`pairedHistory()` = 60 条（默认窗口 131072 ⇒ keepTail 24 / tailStart 36） | 让「12 条 ≥200 tok 的 tool 结果全在保护尾外」与「tail 首条 = assistant（D-CC18 并入分支）」两形可确定复现（不依赖真机）。 |
+
+### 5.3 审计与代码评审（轮次 + 终态）
+
+| 轮 | 面 | 发现 | 处置 |
+|---|---|---|---|
+| 审计（内部 explore · 只读偏差审计） | 交付物 vs 设计 §6.16 / 批档 §2 | 🟡2 · 🔵2（无 🔴、无机制缺失、无未申报表外改动） | 🟡 = ①设计档 `:558`/`:757` 旧路径悬空（父侧收口笔域，见 5.4）②行数实测 Δ（见 5.5，登记报告）；🔵 = ③用例 C2/C8/C13 三子句无断言（`onCompressStart`/`onCompress` 触发面 / `history` 未变 / 会话档零改）④VSC 登记册测试头注计数量名（15→16）⇒ 两条 🔵 **已修**（fix round 1）。 |
+| 代码评审（advisor · code review） | 上述 12 档 + 三份文档 | 🟡2（非 must-fix）· 🔵4（0 🔴）⇒ **VERDICT: pass** | 🟡 = ①强制压缩的「无可压」第三去向（= 决策 #4，设计侧裁定）②`context.mjs` 440 > 300 软线（在册债 · 本批已拆 · ≤500 ✓）：两条均**非 must-fix**，不改语义；🔵 = 注记前缀族（**已修**，= 决策 #2）/ `historyPercent` 空历史返 0 vs 端侧返 null（**已登记**，见 5.4）/ 可回查锚 `cwd` 缺省形（**已登记**）/ 行数实测 Δ 未记录（本表 5.5）。⇒ 终态 = **clean**（无未处置 must-fix；两条设计侧项 + 两条文档侧项留父侧收口）。 |
+
+**fix round（本会话内）**：① 测试档超 300 软线两次收敛（460 → 370 → 309 → **300**）；② 审计 🔵 两条落修（C2/C8/C13 三子句断言 + VSC 头注计数）；③ 评审 🔵 一条落修（注记前缀归机器行族）；④ `retrievabilityAnchor` 增 `cwd` 前置（工具内不抛——`_slot` 在场但缺 `cwd` 时退未绑定分支）。每轮后 `npm test`（核）复跑全绿。
+
+### 5.4 未决 / 偏差 / 上抛（逐条）
+
+1. **🟡 设计档旧路径悬空（父侧收口）**：`docs/core/design/CONTEXT-COMPACTION.md:558`（活体面「现档 = `thincoder-vscode/src/tools/context.mjs`」）与 `:757`（变更记录面同路径）在改名后指不到文件 ⇒ `node scripts/doc-check.mjs` 悬空由基线 **3 → 5**（行宽仍 3，零新增）。本轮禁改设计档 ⇒ 收口请按「档改名读法」回指 `thincoder-vscode/src/tools/ide.mjs`（`:559` 的「拟新增」标记同批翻为实测）。
+2. **🟡 强制执行路第三去向（设计侧裁定）**：`force` + `!split` + `shrinkOversized` 命中 ⇒ 不落 no-op 注记、不跑阈值面（决策 #4）。请在设计 §6.16.2 补一句或明确「视为成功压缩」；如需机判，加一条用例（短历史 + `"x".repeat(9000)` 单条 + `compact`）。
+3. **🔵 已登记未改（父侧裁定即可）**：`historyPercent` 空历史返 `0`（端侧 VSC `ctxPercentForHistory` 返 `null` / CLI `ctxPct > 0` 门）⇒ 「与状态行同式」有一处分歧，代码注释已自述、设计档未记；可回查锚 `_slot` 在场而 `cwd` 缺省时落未绑定分支（字面 `cwd:undefined`）⇒ 建议补中性句或进退化面。
+4. **表外改动 3 处（必披露）**：`thincoder-core/test/family-tools.test.mjs:29`（家族段 fixture +`context`）· `thincoder-vscode/test/agent-tools-registry.test.mjs:26-35`（登记册名集 15 → **16** + 头注/测试名同步；表外 = 受影响表未列）· `thincoder-vscode/node_modules/@thincoder/core` **环境动作**：原为发布物化副本（`npm install --install-links` 残留 ⇒ VSC 套件跑的是旧核、`context` 不可见），已按 `docs/RELEASE.md:140`「发完可恢复开发链接」恢复为 **junction → `thincoder-core/`**（= `CORE-UNIFICATION.md` §2.6.1 开发期单源态；`git status` 零污染；发布前需再物化）。
+5. **取证类未跑**（非 CI 门禁）：真机摘要聚焦词差额（判定句①）· 前缀复用命中率面（本批零改，沿用 §6.14 判定）。
+
+### 5.5 行数实测对照（单一权威位 = 批档 §2.2；口径 = `readFileSync(...).split("\n").length − 1`）
+
+**实测 / 设计预算**：`context.mjs` **440** / ≈428 · `token-window.mjs` **188** / ≈175 · `agent-tools/context.mjs` **174** / ≈150 · `test/context-tool.test.mjs` **300** / ≈270（≤300 软线内）· `agent-tools.mjs` **30** / 28 · `agent/family-tools.mjs` **184** / 186（增量以行内方式落 ⇒ 实测 +0）· 核 `agent/run-stages.mjs` **266** / 256 · 核 `agent.mjs` **435** / 432 · `task.mjs` **91** / 88 · `goal.mjs` **126** / 123 · `tools/index.mjs` **78** / 77 · VSC `ide.mjs` **144** / 141 · VSC `tools/index.mjs` **186** / 186–190 ✓ · VSC `agent/run-stages.mjs` **420** / 414（`VSC-DEBT` 触线 >450 未达 ✓）· VSC `agent-state.mjs` **159** / 159 ✓ · `host-shape-spawn.test.mjs` **220** / 214–218 · `tool-descriptions.test.mjs` **73** ✓ · VSC `AGENTS.md` **128** ✓ · VSC `README.md` **204** ✓。
+**尺寸线**：`context.mjs` ≤500 硬限 ✓（440）· 三个新档 ≤300 软线 ✓ · 无档越硬限。**偏差归因** = 注释/说明行密度（设计预算未计入逐条注：`force` 语义 · 焦点块省略范围 · 可回查锚两分支 · 失败链复用），功能面零增减 ⇒ 按 AC③「Δ 实测对照」列报，未自行改口径。
+
+### 5.6 全量套件（本轮实跑 · 冻结态）
+
+核 `cd thincoder-core && npm test` → **tests 515 · pass 515 · fail 0**；CLI `cd thincoder-cli && npm test` → **tests 778 · pass 778 · fail 0**；VSC `cd thincoder-vscode && npm test` → **tests 905 · pass 905 · fail 0**；核具名复跑 `compress-form + compaction-echo` = 19/19；VSC `context-percent-parity` = 6/6；`node scripts/doc-check.mjs` = 悬空 5 / 行宽 3（见 5.4-1）。
+
 ## §6 验证与收口（主代理）
 
-（待实施后。）
+**状态行**：✅ 已收口 2026-09-21（实施验证通过 · 评审 pass · 落点逐条复核 ✓ ✗ 台账 #18 已核销；记录冻结）
+
+**交付核验（父侧独立复核 ✗ 非采信自报）**：
+- 落点：体量逐档对齐（`token-window.mjs` **188** ✗ `agent-tools/context.mjs` **174** ✗ `context.mjs` **440** ✗ VSC `ide.mjs` **144** ✗ 旧路径 `tools/context.mjs` 已删 ✓）✗ `HOST_ONLY = ["ide","focus"]` ✓ ✗ 家族段 `family-tools.mjs:141` 装配 ✓ ✗ `PRUNE_MIN_TOKENS` 住 `token-window.mjs` ✓ ✗ 回查锚 `_slot` 分支在 ✓ ✗ VSC `index.mjs` 已改指 ✓ ✗ `node_modules/@thincoder/core` junction 生效（新档可见 ✓）✗ 批档 §5 已写入 ✓
+- 套件读数（子代理报 ✗ 父侧抽跑）：「核 **515/515** ✗ CLI **778/778** ✗ VSC **905/905** ✗ context-tool **9/9**（父侧复跑 ✓）✗ compress-form+compaction-echo **19/19** ✗ percent-parity **6/6**」全绿 ✓
+- Δ 对照：逐档在表内/近限（注释密度偏差已披露 ✗ 功能面零增减 ✓）✗ 尺寸线全绿（≤500 / ≤300 无越 ✓）
+
+**上抛处置（3 条 → 全闭）**：
+1. 🟡 设计档旧路径悬空 → **已闭**（父侧 + 设计微修轮 #64：`:558/:559/:757` 真话化 ✗ 引文标记按闸闭枚举重收正 ✗ 现机检 = 基线 **悬空 3 / 行宽 3** ✓ 父侧复跑 ✓）
+2. 🟡 强制路第三去向 → **已闭**（#64 判定 (a) 非缺口（等价性论证在档 `:488`/`:493-496` ✓）；机判护栏 = 台账 **#209**（归批 ✓））
+3. 🔵 空历史 `0`/`null` 分歧 ✗ 回查锚 `cwd` 缺省态 → **已闭**（#64 取形在档 `:544-545` / `:584-591` / `:655` ✓）
+
+**收口面**：「拟新增」→「已落」翻转 = 设计档 **7** 处 + `TOOLS.md` **2** 处 + `CORE-UNIFICATION.md` **1** 处（父侧机械收正 ✗ 可 revert ✓）✗ 三链同源（F-CC1–F-CC5 ↔ §6.16 ↔ §5 ✓）
+
+**核销**：台账 **#18** = 已核销 ✓（六态走满：待设计 → 在途 → 待核销 → 已核销 ✓）
+
+**提交**：本收口轮已提交并推送 `origin/main`（哈希以 errata 行补记 ✓）。

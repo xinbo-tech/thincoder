@@ -45,8 +45,10 @@ export {
 // faces (memory / code+doc search / repo outline / settings / peer instances)
 // whose factories need the shell's memory handle at run time.
 //
-// Host-only tools (VS Code `context` / `focus` — TOOLS #179 ④, IDE capabilities)
+// Host-only tools (VS Code `ide` / `focus` — TOOLS #179 ④, IDE capabilities)
 // are NOT part of the core registry: the VS Code shell adds them itself.
+// D-CC26（context-tool 批 2026-09-21）：宿主 IDE 快照工具自 `context` **改名 `ide`**（`tools/ide.mjs`）
+// ——让出 `context` 名给核新工具（`agent-tools/context.mjs`；同名撞车 ⇒ provider 逐字 400）。
 //
 // `read_image` registration follows VS Code (#70): it is registered only when the
 // model accepts image input (`specForModel(model).multimodal`) — the conservative

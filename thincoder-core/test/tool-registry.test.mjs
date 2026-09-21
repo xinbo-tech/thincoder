@@ -33,7 +33,9 @@ const SHARED_FACE = [
 // memory handle at run time — they cannot be static entries).
 const INSTANCE_BOUND = ["memory", "code_search", "doc_search", "repo_outline", "settings", "peer_instances", "ledger_query", "ledger_count"]
 // Host-capability tools — ④ (TOOLS #179): the VS Code shell owns them.
-const HOST_ONLY = ["context", "focus"]
+// D-CC26（context-tool 批 2026-09-21）：宿主工具 `context`（IDE 快照）**改名 `ide`**——让出 `context`
+// 名给核新工具（同名撞车 ⇒ provider 逐字 400；行为面零改，档名 `thincoder-vscode/src/tools/ide.mjs`）。
+const HOST_ONLY = ["ide", "focus"]
 const TEXT_ONLY_MODEL = "qwen3.7-max" // spec row carries no `multimodal` (image parts rejected)
 const VISION_MODEL = "qwen3.8-max"    // spec row carries `multimodal: true`
 

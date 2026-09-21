@@ -25,7 +25,7 @@ export async function assembleFamilyTools({
   decorate = null,       // object   端差面：{ subagent?, consultStart?, consultStop?, settings? }
 } = {}) {
   // CORE-UNIFICATION TOOLS #83：consult 家族随统一登记册自 `../agent-tools.mjs` 取用（单一来源）
-  const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool, readHistoryTool, batchTool, consultStartTool, consultStopTool, parentChannelTool } = await import("../agent-tools.mjs")
+  const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool, readHistoryTool, contextTool, batchTool, consultStartTool, consultStopTool, parentChannelTool } = await import("../agent-tools.mjs")
   // 写命令（主 agent 专用）——动态 import 且**仅 depth===0 载入**（ledger 链静态达 node:sqlite——
   // W8 契约②；子代理路径不注册 = 零载入——depth>0 解构得空、不引用即无副作用）
   const { ledgerAddTool, ledgerUpdateTool, ledgerCloseTool } = depth === 0 ? await import("../ledger.mjs") : {}
@@ -138,7 +138,7 @@ export async function assembleFamilyTools({
     : []
 
   const depthOnly = depth === 0
-    ? [decorate?.subagent ?? filteredSubagent, skillTool, goalTool, engTool, verifyTool, recentChangesTool, readHistoryTool, advisorTool, batchTool(null),
+    ? [decorate?.subagent ?? filteredSubagent, skillTool, goalTool, engTool, verifyTool, recentChangesTool, readHistoryTool, contextTool, advisorTool, batchTool(null),
       ...consultTools,
       // 台账写命令（M2——仅主 agent；查询面 ledger_count 住基础集 tools/index.mjs）。
       // fail-closed：子代理不挂载 = 写面机械不可达。

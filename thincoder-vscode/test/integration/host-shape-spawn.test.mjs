@@ -120,9 +120,11 @@ function familyNames(run) {
  *  （SUBAGENT-UPSTREAM-CHANNEL：核 depth>0 段装配——端侧同调核单源，随核矩阵增名同步）。
  * ENG-PLAN-EXCLUSION（FR31 ① / AC12 = T10）：工程模式两行删 `plan`（固定段裁剪——
  * `assembleFamilyTools` 按 `engineering` 取 `[task, timer]`）+ 新增 `explore-eng`（工程模式
- * explore：VSC 旁路面形状——视觉渠道子代理携 `engState.enabled:true`）。 */
+ * explore：VSC 旁路面形状——视觉渠道子代理携 `engState.enabled:true`）。
+ * context-tool 批（2026-09-21 · D-CC23 / D-CC28）：depth-0 家族段 + `context`（核单源装配）；
+ * 子代理面**不给**（裁决 D——结构不可达）⇒ 5 子角色行零改。 */
 const FAMILY_FIXTURE = {
-  "depth-0": ["advisor", "batch", "eng", "goal", "ledger_add", "ledger_close", "ledger_update", "plan", "read_history", "recent_changes", "settings", "skill", "subagent", "task", "timer", "verify"],
+  "depth-0": ["advisor", "batch", "context", "eng", "goal", "ledger_add", "ledger_close", "ledger_update", "plan", "read_history", "recent_changes", "settings", "skill", "subagent", "task", "timer", "verify"],
   "eng-designer": ["batch", "notify_parent", "subagent", "task", "timer"],
   "eng-coder": ["advisor", "batch", "notify_parent", "subagent", "task", "timer", "verify"],
   coder: ["advisor", "notify_parent", "plan", "task", "timer", "verify"],
@@ -193,6 +195,10 @@ test("T5 eng-designer（行为——用户实测角色）：真跑 + 断言 A（
 
   // ── 断言 B：(a) VSC 生产装配家族名集 ≡ (c) 5 角色 fixture ──
   const depth0 = await hostShape({ depth: 0, role: null })
+  // R2（context-tool 批 2026-09-21 §2.3 AC7）：双端 +1 —— 生产表含 `context`（唯一来源 = 核家族段）∧ 表内名唯一 ∧ 宿主工具已名 `ide`
+  const names0 = [...depth0.toolByName.keys()]
+  assert.deepEqual(names0, [...new Set(names0)], "生产表名唯一（重名 ⇒ provider 逐字 400 Tool names must be unique.）")
+  assert.ok(depth0.toolByName.has("context") && depth0.toolByName.get("ide") != null, "表含 `context`（家族段）∧ 宿主工具名 = `ide`")
   assert.deepEqual(familyNames(depth0), [...FAMILY_FIXTURE["depth-0"]].sort(), "(a)≡(c) depth-0 默认（携改前基线锚）")
   const childCases = [
     ["eng-designer", "eng-designer", true], ["eng-coder", "eng-coder", true],

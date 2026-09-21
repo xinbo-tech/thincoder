@@ -31,6 +31,7 @@ export function resetRunState(agent) {
   agent._lastPromptTokens = null
   agent._usageAtLen = null
   agent._compressFailures = 0
+  agent._pendingCompact = null // F-CC2（§6.16.2）：模型主动压缩的排队槽回合级（同 _compressFailures 同点——上回合未被安全点消费的请求不得跨回合生效）
   agent._emptyRetries = 0
   agent._taskPushbacks = 0 // 预算类同款（清单外补充——task 完成门每任务表态 ≤1 的回合级计数）
   agent._advisorRound = 0

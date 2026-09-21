@@ -1,3 +1,6 @@
+// F-CC4（CONTEXT-COMPACTION.md §6.16.5）：goal 任一状态变更 ⇒ 方向转换轻推（本档只调用；文案/去重单源 = agent-tools/context.mjs）
+import { pushContextNudge } from "./context.mjs"
+
 /**
  * goal tool: lifecycle management for long-running autonomous goals (completion contract).
  * Three states: active / complete / blocked. Completion must pass a verify evidence threshold;
@@ -28,6 +31,7 @@ export const goalTool = {
     const agent = ctx.agent
     if (args.action === "cancel") {
       agent.goal = null
+      if (ctx.depth === 0) pushContextNudge(agent) // F-CC4（depth-0 门）
       return "Goal cancelled. If the goal was blocked or impossible, explain why in your next message — the user can clarify, adjust scope, or confirm cancellation."
     }
     if (args.action === "set") {
@@ -43,6 +47,7 @@ export const goalTool = {
         turnsUsed: 0,
         _blockTally: null, // { reason, count } — consecutive count of the same blocking condition (for blocked audit)
       }
+      if (ctx.depth === 0) pushContextNudge(agent) // F-CC4（depth-0 门）
       return `Goal set: ${agent.goal.objective}\nDone when: ${agent.goal.criteria}\nThe system will inject goal status every turn. Completion and blocked claims are audited — see the reminders.`
     }
     if (!agent.goal || agent.goal.status !== "active") {
@@ -100,6 +105,7 @@ Has this goal been achieved? Answer ONLY "YES" or "NO" followed by a one-sentenc
       }
 
       agent.goal.status = "complete"
+      if (ctx.depth === 0) pushContextNudge(agent) // F-CC4（depth-0 门）
       return `Goal verified complete ✓: ${agent.goal.objective}\nIn your next message, summarize the evidence (what check ran, what it showed) — the user should be able to audit this claim.`
     }
     if (args.action === "blocked") {
@@ -112,6 +118,7 @@ Has this goal been achieved? Answer ONLY "YES" or "NO" followed by a one-sentenc
         return `Blocked not accepted yet (${count}/3 for this condition). Try a genuinely different approach first; report blocked only if the same condition stops you ${3 - count} more time(s).`
       }
       agent.goal.status = "blocked"
+      if (ctx.depth === 0) pushContextNudge(agent) // F-CC4（depth-0 门）
       return `Goal marked blocked after 3 attempts: ${args.reason}\nExplain the blocker to the user in your next message — what you tried, and what you need (clarification, permission, a decision).`
     }
     return `Error: unknown action '${args.action}'.`

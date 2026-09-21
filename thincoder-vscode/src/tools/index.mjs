@@ -3,7 +3,7 @@
  *
  * W14（2026-09-15 · S2 · `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W14）：端侧
  * 自持工具实现面退场——12 同路径镜像档 + 7 M 档删除，工具实现经 `@thincoder/core/tools/*`
- * 单源引用（核内零改动）；本档保留 = VSC 登记表（宿主工具 `context/focus/shell/code` +
+ * 单源引用（核内零改动）；本档保留 = VSC 登记表（宿主工具 `ide/focus/shell/code` +
  * 自持 `builtinTools` 清单）+ **两处端壳增量**（同一份登记面，不另立档）：
  *   ① `gitTool` 动作级只读分类装饰（`isReadonlyAction`——端审批面 execute-tools 权限门 /
  *      planMode 门消费；核 git 工具无此概念）；
@@ -30,7 +30,7 @@ import { bashTool } from "./shell.mjs"
 import { codeSearchTool, docSearchTool } from "./code.mjs"
 import { repoOutlineTool } from "../repomap.mjs"
 import { memoryTool } from "../memory-tool.mjs"
-import { contextTool } from "./context.mjs"
+import { ideTool } from "./ide.mjs"
 import { focusTool } from "./focus.mjs"
 import { peerInstancesTool } from "../extension/peer-instances.mjs" // R10 L2（MULTI-INSTANCE-COLLAB D-L2b）只读工具
 
@@ -163,7 +163,7 @@ export { websearchTool, fetchTool }
 export { insertAfterTool, applyPatchTool, lsTool, deleteTool }
 export { lintTool, lspTool, executeTool, questionTool, readImageTool }
 export { codeSearchTool, docSearchTool }
-export { contextTool, focusTool, fileOpsTool, processTool, getCurrentTimeTool, waitForTool, treeTool }
+export { ideTool, focusTool, fileOpsTool, processTool, getCurrentTimeTool, waitForTool, treeTool }
 export { toOpenAISchema }
 export { BASH_TIMEOUT_MS } from "@thincoder/core/tools/shared.mjs"
 export { resolvePath } from "./shared.mjs"
@@ -178,7 +178,7 @@ export const builtinTools = [
   repoOutlineTool, codeSearchTool, docSearchTool,
   lspTool, executeTool,
   memoryTool,
-  contextTool, focusTool,
+  ideTool, focusTool, // D-CC26：宿主 IDE 快照工具自 `context` 改名 `ide`（让名给核 `context` 工具——行为面零改）
   fileOpsTool, processTool, getCurrentTimeTool,
   waitForTool,
   treeTool,

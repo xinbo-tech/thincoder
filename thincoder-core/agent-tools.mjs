@@ -14,6 +14,9 @@ export { timerTool } from "./agent-tools/timer.mjs"
 export { advisorTool } from "./agent-tools/advisor.mjs"
 export { engTool } from "./agent-tools/eng.mjs"
 export { readHistoryTool } from "./agent-tools/read-history.mjs"
+// 模型主动整理上下文（CONTEXT-COMPACTION.md §6.16 · F-CC5）：单工具三操作 stats / prune / compact
+// ——depth-0 段挂载（子代理面裁见 §6.16.6 `family-tools.mjs` `depthOnly`）。
+export { contextTool } from "./agent-tools/context.mjs"
 export { batchTool } from "./agent-tools/batch.mjs"
 // 批次档生命周期工具（BATCH-RECORD §4.3 挂载表——主名 `batch` 单工具四 action：depth-0 主 agent
 // create/close + append §1/§4/§6 + status §1（轮 2 裁定②：§4/§6 状态面走普通文档写）（D-BR18）；

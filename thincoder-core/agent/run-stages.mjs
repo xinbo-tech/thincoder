@@ -11,7 +11,7 @@ import { compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT } from "../c
 import { ensureAutoReminder, injectEngineeringReminder, ContinueError, snapshotGuard } from "./helpers.mjs"
 import { pushManifestStateReminder } from "./setup-reminders.mjs"
 import { cleanupConsultSessions } from "../agent-tools/consult.mjs"
-import { logEvent } from "../log.mjs"
+import { logEvent, errText } from "../log.mjs"
 // ASYNC-RESULT-CONTAINER.md D1：池 accessor（absorb 双池——advisor 独立池无队列）
 import { getAsyncPool, releaseSettledEntry } from "../agent-tools/async-settle.mjs"
 // 批 4 CLI-ASYNC-DISCARD（AGENT-LOOP-SUBAGENT.md §6.20）：中止分支「只清已死」收尾单点
@@ -59,11 +59,28 @@ export function injectResponseReminders(agent, response) {
  * 计数复位（recentCallSigs——runAgent 回合级局部——经 ctx 传对象引用）/压缩完成事件
  * /AUTO 提醒重注入。失败：AbortError 透传；计数 + Q3 onCompressFail；
  * COMPRESS_FAILURE_LIMIT 连续失败降级 compressFallback（确定性截断——不发 LLM）。
+ * 模型主动压缩（`context` 工具）由本点消费（§6.16.2——取用即清槽；no-op 与失败各落一行注记）。
  */
 export async function runCompactionCheck(agent, ctx) {
   const { threshold, callbacks, compactionOverhead, signal, recentCallSigs } = ctx
+  // F-CC2（CONTEXT-COMPACTION.md §6.16.2）：模型主动压缩（`context` 工具）在**本安全点**消费——
+  // 取用即清槽（失败不重放；重发由模型再调）；`force` 只跳过阈值早退（模型判定优先于阈值），
+  // 其余全同（同 splitHistory / 同尾部预算 / 同摘要链 / 同回注 / 同基线失效）。
+  const pending = agent._pendingCompact
+  agent._pendingCompact = null
   try {
-    if (await compressIfNeeded(agent, threshold, callbacks, compactionOverhead, signal)) {
+    let compacted = await compressIfNeeded(
+      agent, threshold, callbacks,
+      pending ? { ...compactionOverhead, force: true, focus: pending.focus } : compactionOverhead,
+      signal,
+    )
+    if (!compacted && pending) {
+      // 强制面无可压（短历史无中段）⇒ 记 no-op 注记后**照常**跑阈值面（阈值面不因模型请求让位）
+      const { compactNoopNote } = await import("../agent-tools/context.mjs")
+      agent.history.push({ role: "user", content: compactNoopNote(), transient: true })
+      compacted = await compressIfNeeded(agent, threshold, callbacks, compactionOverhead, signal)
+    }
+    if (compacted) {
       agent._compressFailures = 0
       agent._planReminderAtLen = 0 // After compression history shrinks, reset cadence so reminders resume
       recentCallSigs.length = 0 // After compression history is rebuilt, reset stall detection counter
@@ -79,6 +96,11 @@ export async function runCompactionCheck(agent, ctx) {
     // Q3 (CONTEXT-COMPACTION §7 D-C1): a failed compression is surfaced to the panel;
     // COMPRESS_FAILURE_LIMIT consecutive failures still degrade to compressFallback.
     callbacks?.onCompressFail?.(compressError)
+    if (pending) {
+      // 失败注记（§6.16.2 回执面②）：模型面告知缺口——既有失败链 / 面板面零改，仅补一行机器注记
+      const { compactFailureNote } = await import("../agent-tools/context.mjs")
+      agent.history.push({ role: "user", content: compactFailureNote(errText(compressError), agent._compressFailures), transient: true })
+    }
     if (agent._compressFailures >= COMPRESS_FAILURE_LIMIT) {
       agent._compressFailures = 0
       if (compressFallback(agent)) callbacks.onCompress?.(agent._lastCompressInfo ?? {})

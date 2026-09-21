@@ -51,8 +51,8 @@ src/memory-tool.mjs   memory 工具端壳面（核 memory 单源消费）
 src/prompt-injections.mjs  13 名锚 VSC 取值表（W2——数据面；核槽位装配注入值）
 src/repomap.mjs       Repository dependency graph parsing（workspace.fs 数据源）
 src/specs.mjs         Model capability specs（核 `model-specs.mjs` 表 + 端侧 `reasoningEffortDefault` 增补面）
-src/tools.mjs         Re-export shim → src/tools/index.mjs（端壳工具面 = {code,context,focus,index,shared,shell}；内置工具实现本体在核）
-src/tools/{index,shell,code,context,focus,shared}.mjs  端壳工具面（index = 核工具装配 · shell/code/context/focus = 宿主工具 · shared = 拆壳薄壳 + 四缝供值）
+src/tools.mjs         Re-export shim → src/tools/index.mjs（端壳工具面 = {code,focus,ide,index,shared,shell}；内置工具实现本体在核）
+src/tools/{index,shell,code,ide,focus,shared}.mjs  端壳工具面（index = 核工具装配 · shell/code/ide/focus = 宿主工具 · shared = 拆壳薄壳 + 四缝供值；D-CC26：宿主 IDE 快照工具自 `context` 改名 `ide`——让名给核 `context` 工具）
 src/extension/        ChatPanel 分解模块（chat-panel.mjs 类本体 + panel-chat/panel-messages/panel-session/panel-project/panel-mcp/panel-index/panel-toolpanel/panel-callbacks 等载荷分模块 + session-io/session-slots/settings/presets）
 webview/chat.js
 webview/state.js     UI 状态单一持有（S + DOM ctx + vscode——全模块共享同一运行时对象——WEBVIEW.md）

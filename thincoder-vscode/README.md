@@ -172,7 +172,7 @@ thincoder-vscode/
 │   ├── prompt-injections.mjs  # Prompt-anchor values for this end — tool face (bash / question)
 │   ├── repomap.mjs            # Repository dependency outline (workspace.fs data source)
 │   ├── specs.mjs              # Model capability specs (core table + end-side additions)
-│   ├── tools/                 # Host tools — code, context, focus, shell + core tool wiring
+│   ├── tools/                 # Host tools — code, focus, ide, shell + core tool wiring
 │   └── tools.mjs              # Re-export shim → src/tools/index.mjs
 ├── webview/
 │   ├── chat.js           # Frontend orchestration

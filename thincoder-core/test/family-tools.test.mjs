@@ -25,7 +25,8 @@ const ROLE_FIXTURES = [
   {
     label: "depth-0 默认（无 decorate ⇒ 核默认形态）",
     args: { depth: 0 },
-    expect: ["task", "plan", "timer", "subagent", "skill", "goal", "eng", "verify", "recent_changes", "read_history", "advisor", "batch", "ledger_add", "ledger_close", "ledger_update"],
+    // context-tool 批（2026-09-21 · D-CC23/D-CC28）：depth-0 家族段 + `context`（子代理面不给）
+    expect: ["task", "plan", "timer", "subagent", "skill", "goal", "eng", "verify", "recent_changes", "read_history", "context", "advisor", "batch", "ledger_add", "ledger_close", "ledger_update"],
   },
   {
     label: "eng-designer（depth>0）",

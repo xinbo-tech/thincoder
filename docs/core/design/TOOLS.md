@@ -104,7 +104,7 @@
 | CLI `thincoder-core/tools/repomap.mjs` | ↔ VSC `repomap.mjs`（同一 repo 大纲；VSC 头注自述「Ported from thincoder CLI `thincoder-core/tools/repomap.mjs`」）⇒ 融合 |
 | VSC `tools/checkpoint.mjs` | ↔ CLI `git/checkpoint.mjs`（行 #167）——**该端档已退役**（W14 删除集；现体 = 核 `thincoder-core/git/checkpoint.mjs`） （迁移期引文） |
 | VSC `tools/code.mjs` | ↔ CLI `memory/docs.mjs` 的 `codeSearchTool` / `docSearchTool` ⇒ 随 #82 |
-| VSC `thincoder-vscode/src/tools/ide.mjs`（拟新增——2026-09-21 自 `context.mjs` 改名 · 旧路径删除态；让出 `context` 名与核新工具） | **④ 端特有段**（IDE 上下文 = 宿主能力；CLI 无 IDE） |
+| VSC `thincoder-vscode/src/tools/ide.mjs`（**已落**——2026-09-21 自 `context.mjs` 改名 · 旧路径删除态；让出 `context` 名与核新工具） | **④ 端特有段**（IDE 上下文 = 宿主能力；CLI 无 IDE） |
 | VSC `tools/edit-fuzzy-match.mjs` · `edit-line-params.mjs` · `file-edit.mjs` · `more-file.mjs` · `hashline-edit.mjs` | 核内 edit / read / insert 实现切分 ⇒ 随 #68 / #69（W14 已迁核——上述 VSC 自持档已删，现体 = 核 `thincoder-core/tools/{file.mjs, edit-diff.mjs, edit-batch.mjs, patch.mjs, search.mjs}`） （迁移期引文） |
 | VSC `tools/focus.mjs` | **④ 端特有段**（驱动编辑器光标 = 宿主能力） |
 | VSC `tools/read_image.mjs`（W14 已迁核——自持镜像已删，现体 = 核 `thincoder-core/tools/file.mjs`） | 核内 `read_image` 实现（CLI 住 `tools/file.mjs`；同路径 `read_image.md` = #26） （迁移期引文） |
@@ -323,7 +323,7 @@ VS Code 端在 extension host 内运行的**端独有增强**（CLI 无对应面
 | 2 | `git.mjs:114`（status——经 `runGitRaw`；本批修复目标点） | 工具层读动作（第 8 处） | 同上（假洁净就此消失） |
 | 3 | `git-ext.mjs:97`（remote list）· `:136`（worktree list）· `:162`（blame） | 工具层读动作（3 处） | 同上 |
 | 4 | `git-checkpoint.mjs:28`（`lazyClearIfCommitted`） | **已 try/catch** | **零变**（`:24-36` 全程 try/catch + 非数字提前返回） |
-| 5 | `thincoder-vscode/src/tools/ide.mjs`（拟新增——2026-09-21 自 `context.mjs` 改名）:131（`changesSection`） | **已 try/catch** | **零变**（`:128-134` 已按 throw 契约写 catch ⇒ 返回 null） |
+| 5 | `thincoder-vscode/src/tools/ide.mjs`（**已落**——2026-09-21 自 `context.mjs` 改名）:131（`changesSection`） | **已 try/catch** | **零变**（`:128-134` 已按 throw 契约写 catch ⇒ 返回 null） |
 
 **计数自洽**：读动作调用点合计 = **11 处**（#1 的 7 + #2 的 status + #3 的 3）——其中「十处读动作调用点」（修法表 #5 口径）= **不含 status 本点**的 10 处。「已 try/catch」= 2 处（#4 / #5）。
 **无未捕获且非工具层的调用方**（VSC 唯一调用方自持 catch；CLI 侧无第二个消费面）⇒ throw 的爆炸半径 = 工具层读动作，落点正合本批目标。
@@ -708,6 +708,9 @@ timed out after <n>s (killed) — no interactive input is possible here (editor 
 **边界（本增量不做）**：不做 task 工具本体改动（保留）；不做台账（M2 承接）；不做「归册三选一」替代流程（M10 一并砍）。
 
 ## 变更记录
+
+- 2026-09-21（**plan-approval-texts 批 · 设计轮** · eng-designer——承 `docs/batches/2026-09-21-plan-approval-texts.md` §1 · 台账 #154 修法①）：
+  plan 工具退出文本收正为**批准语义**（退出回执 + `PLAN_EXIT_REMINDER` 两处——`thincoder-core/agent-tools/plan.mjs:21` · `:109`；退出不再自我放行）；逐字文本 / 用例 / 判据 = 批档 §2（D2——本档不重述）。
 
 - 2026-09-21（**git-noninteractive 批 · 设计评审修正轮 1 · eng-designer**——承 `docs/batches/2026-09-21-git-noninteractive.md` §3 轮次 1：🔴 2 · 🟡 4 · 🔵 5 · 发现 11 = 复核回执零动作）：
   §6.14 逐条收正——①受影响面补 **VSC** `thincoder-vscode/src/tools/ide.mjs`（`changesSection` 转 async + 1 处 `await`）+ 新用例档 `test/tools-ide-changes.test.mjs`（拟新增）+ `test/files.mjs` 登记，A27 回归面扩**两包全量**；②**A28① 改白名单谓词**（四档 `execFileSync` 命中 = `gitDiffOne` 恰一处）；③A24 补**测试态缝**（`_setGitTimeoutForTest`）与层位（适配器层）；

@@ -1340,7 +1340,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 | #174 台账渲染面 | **有**（`ctx.colors` 等） | 端侧接线（渲染面）；**台账查询工具面同批接线**（`ledger_query` / `ledger_count`——VSC `thincoder-vscode/src/agent/setup.mjs:142-144` 经动态 import 追加入基础集；2026-09-20 · 机制层端差批 §2.19） |
 | #185 文案字典投影 | **有**（`projectDictionary`） | 端侧接线 |
 
-**④ 端特有面（不进核——无注入位，登记以免误当缺位）**：VSC `thincoder-vscode/src/tools/ide.mjs`（拟新增——2026-09-21 自 `context.mjs` 改名） · VSC `tools/focus.mjs`（`TOOLS.md` §2.3 映射表）· `src/extension/config-watch.mjs` / `migrate-settings.mjs`（`CONFIG.md` #132）· CLI `memory` 子命令面（`MEMORY.md` #135）。
+**④ 端特有面（不进核——无注入位，登记以免误当缺位）**：VSC `thincoder-vscode/src/tools/ide.mjs`（**已落**——2026-09-21 自 `context.mjs` 改名） · VSC `tools/focus.mjs`（`TOOLS.md` §2.3 映射表）· `src/extension/config-watch.mjs` / `migrate-settings.mjs`（`CONFIG.md` #132）· CLI `memory` 子命令面（`MEMORY.md` #135）。
 
 #### 2.13.5 编辑工具径专项（VSC「编辑器打开的文件」）
 

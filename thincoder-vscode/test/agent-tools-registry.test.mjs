@@ -1,10 +1,11 @@
 /**
- * agent-tools-registry.test.mjs — W9（2026-09-15）：自持工具登记面退役后的**登记册 15 名装配断言**
+ * agent-tools-registry.test.mjs — W9（2026-09-15）：自持工具登记面退役后的**登记册 16 名装配断言**
  * （「引核册」——以核登记册 `@thincoder/core/agent-tools.mjs` 为唯一来源；CORE-UNIFICATION §2.13.4 #83）。
  *
  * 判据（W9 专项验收第 2 项）：
- *  ① 核登记册 = 15 名（名集逐字钉死——新增/删除名在此显性失败，不得静默漂移；
- *     +1 = SUBAGENT-UPSTREAM-CHANNEL 上行通道工具 `parentChannelTool`）；
+ *  ① 核登记册名集（名集逐字钉死——新增/删除名在此显性失败，不得静默漂移；
+ *     +1 = SUBAGENT-UPSTREAM-CHANNEL 上行通道工具 `parentChannelTool`；
+ *     +1 = context-tool 批 2026-09-21 模型主动整理上下文工具 `contextTool`）；
  *  ② 端侧转口面 `src/agent-tools/index.mjs` 与核登记册**同集**（`export * from` 形态——
  *     VSC 侧不再自持工具集清单）；
  *  ③ 装配消费者 `src/agent/setup.mjs`（结构机检——核 #83 同款形态）**动态**取自核登记册——
@@ -22,18 +23,18 @@ import { fileURLToPath } from "node:url"
 const HERE = dirname(fileURLToPath(import.meta.url))
 const VSC_ROOT = join(HERE, "..")
 
-/** 登记册 15 名（核 `agent-tools.mjs`——W9 as-of + 上行通道批 +1，与核侧 23 行档同源）。 */
+/** 登记册 16 名（核 `agent-tools.mjs`——W9 as-of + 上行通道批 +1 + context-tool 批 +1，与核侧档同源）。 */
 const REGISTRY_NAMES = [
   "planTool", "subagentTool", "taskTool", "skillTool", "goalTool", "verifyTool",
-  "recentChangesTool", "timerTool", "advisorTool", "engTool", "readHistoryTool",
+  "recentChangesTool", "timerTool", "advisorTool", "engTool", "readHistoryTool", "contextTool",
   "batchTool", "consultStartTool", "consultStopTool", "parentChannelTool",
 ]
 
-test("W9 ① 核登记册：15 名逐字（名集钉死——工具对象/工厂齐备）", async () => {
+test("W9 ① 核登记册：16 名逐字（名集钉死——工具对象/工厂齐备）", async () => {
   const reg = await import("@thincoder/core/agent-tools.mjs")
-  assert.deepEqual(Object.keys(reg).sort(), [...REGISTRY_NAMES].sort(), "核登记册名集 = 15 名（引核册）")
+  assert.deepEqual(Object.keys(reg).sort(), [...REGISTRY_NAMES].sort(), "核登记册名集 = 16 名（引核册）")
   for (const name of REGISTRY_NAMES) {
-    // batchTool = 工厂（绑定档 → 工具对象）；余 14 名为单例工具对象
+    // batchTool = 工厂（绑定档 → 工具对象）；余 15 名为单例工具对象
     assert.ok(["object", "function"].includes(typeof reg[name]), `${name} 必须是工具对象或工厂`)
     assert.equal(typeof reg[name].name, "string", `${name}.name 必须为字符串`)
   }

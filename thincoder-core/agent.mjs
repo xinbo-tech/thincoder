@@ -159,6 +159,8 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
       agent._advisorSession = null // advisor session is per-run: discard when the task ends, next task starts fresh
       agent._emptyRetries = 0 // empty-response retry budget is per-run: a fresh user turn restarts from zero
       agent._compressFailures = 0 // compaction summary-failure counter is per-run: a fresh user turn restarts from zero
+      // F-CC2（§6.16.2）：模型主动压缩的排队槽也是回合级——上一回合末尾未被安全点消费的请求不得跨回合生效
+      agent._pendingCompact = null
     }
   }
   // §17 D-S6 manual tier: digest action-domain reminder (system-driven turn — organize only).
@@ -192,6 +194,9 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     // context.mjs compressIfNeeded 经 extras 透出到 logCtx）
     traceDepth: depth,
   }
+  // F-CC1（§6.16.4 阈值单源接线）：本回合压缩判定所用的阈值 + 固定开销面暂存——
+  // `context` 工具的 stats 报**同一口径**（不自行重算第二口径；VSC checkAndCompact 同款暂存）。
+  agent._ctxBasis = { threshold, overhead: compactionOverhead }
 
   // SUBAGENT-UPSTREAM-CHANNEL（AGENT-LOOP-SUBAGENT.md §6.27.4 消费点）：子 → 父在飞消息的
   // 回合边界注入单点取用一次（模块缓存 ⇒ 每 run 一次代价）；动态 import = 零新增静态边

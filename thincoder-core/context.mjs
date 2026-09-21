@@ -7,56 +7,13 @@
  * typically a COMPLETED earlier task; preserving them verbatim anchored the model's attention on stale
  * work after compaction. The earliest messages now go into the summary (which distinguishes completed
  * vs in-progress work), so the post-compaction context anchors on the current task (recent tail) only.
+ *
+ * 2026-09-21（context-tool 批 · CONTEXT-COMPACTION.md §6.16.8）：计量 / 尾族 / 切分三族**逐字迁出** `token-window.mjs`（495 → ≈428——硬限 500 内）；`estimateTokens` 经本档**再导出**保既有 import 面；新增面 = 模型主动压缩接线（`force` / `focus` + 焦点块 + anchor）与 prune 应用面。
  */
 
 import { chat } from "./provider/index.mjs"
-import { estimateText } from "./provider/rate.mjs"
-import { providerSpec } from "./config.mjs"
 import { buildCompressMessages } from "./compress-form.mjs"
-
-const IMAGE_TOKEN_ESTIMATE = 2000 // rough estimate for image content tokens (CLI legacy 256 underestimated real image costs, delaying compaction)
-
-/** Rough token count for a list of messages (body + reasoning + tool_calls params) */
-export function estimateTokens(messages) {
-  let tokens = 0
-  for (const m of messages) {
-    if (typeof m.content === "string") tokens += estimateText(m.content)
-    else if (Array.isArray(m.content)) {
-      for (const part of m.content) {
-        if (part.type === "text") tokens += estimateText(part.text)
-        else if (part.type === "image_url") tokens += IMAGE_TOKEN_ESTIMATE
-      }
-    }
-    if (typeof m.reasoning_content === "string") tokens += estimateText(m.reasoning_content)
-    for (const tc of m.tool_calls ?? []) {
-      tokens += estimateText(tc.function?.name ?? "") + estimateText(tc.function?.arguments ?? "")
-    }
-  }
-  return tokens
-}
-
-const KEEP_HEAD = 0 // No dedicated head: earliest messages may be a COMPLETED earlier task in multi-task
-// sessions — keeping them verbatim anchored attention on stale work. Everything before the tail is
-// summarized (the summary itself distinguishes completed vs in-progress work; see SUMMARIZE_PROMPT).
-// Tail count formula (D4): window-adaptive (~30 msgs per 100K — old fixed 10 too thin on 1M), capped
-// at 40% of history; §6.4④ D-T1/D-T2 make the count only a CANDIDATE — a token budget (TAIL_BUDGET_FRACTION
-// × window − SUMMARY_TOKEN_ESTIMATE ≈1K, §6.9) tightens it over pair-safe boundaries when compaction runs,
-// never below TAIL_FLOOR_MESSAGES; ordinary sessions never reach it (D-T4: trigger 0.6 untouched).
-const TAIL_BUDGET_FRACTION = 0.15
-const SUMMARY_TOKEN_ESTIMATE = 1000 // §6.9: summary output target ~1K tokens — reserved from the 15%
-const TAIL_FLOOR_MESSAGES = 10 // §6.4④ D-T2: the tail keeps ≥10 verbatim messages — floor beats budget
-function keepTailSize(provider, historyLen) {
-  // provider is guaranteed at every call site (runAgent always builds one); providerSpec
-  // degrades to DEFAULT_SPEC (128K) only if provider is somehow absent — acceptable
-  // because the 40% history cap still bounds the tail. providers[].context override
-  // (K units) is honored here (PROVIDER.md §6.15 T-C2: tail formula follows the window).
-  const ctxWindow = providerSpec(provider).context
-  return Math.min(Math.max(10, Math.floor((ctxWindow / 100_000) * 30)), Math.floor(historyLen * 0.4))
-}
-// §6.4④ D-T1 tail token budget: window×15% − summary ~1K — the compressed history segment (summary + placeholder + tail) lands ≈ 15% (B 口径 §6.4④).
-function tailBudgetTokens(provider) {
-  return Math.max(0, Math.floor(providerSpec(provider).context * TAIL_BUDGET_FRACTION) - SUMMARY_TOKEN_ESTIMATE)
-}
+import { contextUsage, estimateTokens, collectStaleToolOutputs, keepTailSize, splitHistory, tailBudgetTokens } from "./token-window.mjs"
 
 export const SUMMARIZE_PROMPT = `The conversation above is our work log so far — summarize it into a compact summary for use as context in the ongoing conversation.
 Requirements:
@@ -93,72 +50,25 @@ const FALLBACK_NOTE =
   "Re-verify any state you need with tools before relying on it.]\n\n"
 
 /**
- * Split history into head / middle (to be summarized) / tail; return null if no middle to compress.
- * head is normally empty (KEEP_HEAD = 0 — earliest messages go into the summary); the tool_calls-extension logic below is defensive for future KEEP_HEAD > 0.
- * The tail boundary must include any assistant whose tool results are in the tail — if the assistant is in the middle, the summary swallows it, leaving orphan tool results → protocol 400.
- * `budgetTokens` (optional, §6.4④ D-T1): when the candidate's estimate exceeds it, the boundary moves
- * forward until the tail fits — never below the D-T2 floor (10 msgs, or the candidate itself when
- * the 40% cap made it < 10 — short history).
+ * focus 指令块（F-CC2 · §6.16.2）：模型主动压缩时追加在摘要指令**尾段**——摘要按它加权取舍。`anchor` = task/goal 状态行；
+ * `anchor == null`（无 task 且无 goal）⇒ **anchor 段省略**，focus 正文恒保留（不产空标题）。
  */
-function splitHistory(history, keepTail, budgetTokens = null) {
-  if (history.length <= KEEP_HEAD + keepTail + 1) return null
-  let headEnd = KEEP_HEAD
-  // head must not end with dangling tool_calls: when assistant declares tool_calls, all its tool results must stay in head.
-  // Parallel calls: one assistant followed by multiple tool messages — accepting only one still causes 400, must collect all
-  if (history[headEnd - 1]?.role === "assistant" && history[headEnd - 1].tool_calls?.length) {
-    while (headEnd < history.length && history[headEnd].role === "tool") headEnd++
-  }
-  const candidate = repairedTailStart(history, headEnd, history.length - keepTail)
-  if (candidate <= headEnd) return null
-  let tailStart = candidate
-  // §6.4④ D-T1: tighten only above the floor — a candidate ≤ 10 IS the floor (short history under the 40% cap must not tighten further, review #5); the floor is D5-repaired too.
-  if (budgetTokens > 0 && keepTail > TAIL_FLOOR_MESSAGES) {
-    const floor = repairedTailStart(history, headEnd, history.length - TAIL_FLOOR_MESSAGES)
-    if (floor > candidate) tailStart = tightenTailByBudget(history, candidate, floor, budgetTokens)
-  }
-  return { headEnd, tailStart }
-}
+const focusBlock = (focus, anchor) =>
+  `\n\nThis compaction happens at my own request and is weighted toward the work coming next:\n${focus}\n\n` +
+  `Keep what that work needs at full fidelity — files, decisions, constraints, open threads; compress ` +
+  `everything else harder.` +
+  (anchor ? ` Current task/goal state (attached automatically):\n${anchor}` : "")
 
 /**
- * D5 tail-side pairing repair for a raw cut at history.length − tailCount: pull into the tail any
- * assistant whose tool results are in the tail (the summary swallowing the owner leaves orphan tool
- * results → protocol 400), then skip orphan tool messages at the new boundary. Single-assistant
- * assumption (nearest owner only — a tail spans at most one assistant→tools cycle); bounds-guarded.
+ * anchor 取值（§6.16.2「自动附任务 / 目标（F-CC2 明文）」）：取值源 = **工具面单源**——`task` / `goal` 工具写入的
+ * `agent.tasks` / `agent.goal`，不新增第二份状态；行格式沿用既有任务重注入形态（`- [status] title` + goal 一行）。两者皆空 ⇒ null（anchor 段整体省略）。
  */
-function repairedTailStart(history, headEnd, tailStart) {
-  const tailToolIds = new Set()
-  for (let i = tailStart; i < history.length; i++) {
-    if (history[i].role === "tool") tailToolIds.add(history[i].tool_call_id)
-  }
-  for (let i = tailStart - 1; i > headEnd; i--) {
-    const m = history[i]
-    if (m.role === "assistant" && m.tool_calls?.some((tc) => tailToolIds.has(tc.id))) {
-      tailStart = i
-      break
-    }
-  }
-  while (tailStart < history.length && tailStart > headEnd && history[tailStart].role === "tool") {
-    tailStart++
-  }
-  return tailStart
-}
-
-/**
- * §6.4④ D-T1 budget tightening (pair-safe, review #2): walk the boundary FORWARD (fewer tail messages —
- * the rest joins the summary) while the tail's estimated tokens exceed the budget. Only pair-safe
- * positions may stop the walk: a boundary ON a tool message would orphan its owner assistant into the
- * middle (D5); pairing is contiguous in the machine line (§6.4③) — every non-tool boundary is safe.
- * No fit before the floor → keep the floor, accept the overrun.
- */
-function tightenTailByBudget(history, start, floorStart, budgetTokens) {
-  const suffixTokens = new Array(history.length + 1)
-  suffixTokens[history.length] = 0
-  for (let i = history.length - 1; i >= 0; i--) suffixTokens[i] = suffixTokens[i + 1] + estimateTokens([history[i]])
-  if (suffixTokens[start] <= budgetTokens) return start // already fits — ordinary sessions stay untouched (D-T2)
-  for (let p = start + 1; p <= floorStart; p++) { // first fit keeps the most recent verbatim context
-    if (history[p].role !== "tool" && suffixTokens[p] <= budgetTokens) return p
-  }
-  return floorStart
+function anchorText(agent) {
+  const lines = []
+  const g = agent?.goal
+  if (g?.objective) lines.push(`- goal [${g.status}] ${g.objective}${g.criteria ? ` — done when: ${g.criteria}` : ""}`)
+  for (const t of agent?.tasks ?? []) lines.push(`- [${t.status}] ${t.title}`)
+  return lines.length > 0 ? lines.join("\n") : null
 }
 
 /**
@@ -359,21 +269,16 @@ function applyCompression(agent, headEnd, tailStart, note) {
  *   generation is SILENT (never forwards onToken/onReasoning: the compaction process is an
  *   internal mechanism, not a model reply); onCompressStart fires right before the summary call
  *   (§6.8 D-C1, compression lifecycle visibility — panel start state)
- * @param {object} extras - { systemPrompt?, tools? } — estimated overhead for the pure-estimation
- *   path (no measured baseline); the measured path already includes system+tools in prompt_tokens.
+ * @param {object} extras - { systemPrompt?, tools?, force?, focus? } — 固定开销面（system + tools 估计）+
+ *   模型主动压缩面（§6.16.2）：`force` **只跳过** `tokens <= threshold` 早退，其余全同；`focus` 追加在摘要指令尾段。
  */
 export async function compressIfNeeded(agent, threshold, callbacks, extras = {}, signal) {
   const history = agent.history
-  // Prefer the real baseline: the last response's prompt_tokens is the measured value for the full context (system+tools+history).
-  // Subsequent appended messages use estimation as increment; when no measured value exists (first turn / after restore / right after compaction), fall back to pure estimation
-  const overhead =
-    (extras.systemPrompt ? estimateText(extras.systemPrompt) : 0) +
-    (extras.tools ? estimateText(JSON.stringify(extras.tools)) : 0)
-  const tokens =
-    agent._lastPromptTokens != null
-      ? agent._lastPromptTokens + estimateTokens(history.slice(agent._usageAtLen ?? history.length))
-      : estimateTokens(history) + overhead
-  if (tokens <= threshold) return false
+  // 单源（§6.16.4）：total / overhead 与 stats 面同一函数（既有内联式改调 contextUsage，判定语义零改）
+  const usage = contextUsage(agent, extras)
+  const tokens = usage.total
+  const overhead = usage.overhead
+  if (!extras.force && tokens <= threshold) return false
 
   const keepTail = keepTailSize(agent.provider, history.length)
   const split = splitHistory(history, keepTail, tailBudgetTokens(agent.provider))
@@ -398,8 +303,15 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
   // the lifecycle is surfaced, never the summary body. N = the number of history messages being summarized.
   callbacks?.onCompressStart?.({ messages: middle.length })
   const startedAt = performance.now()
+  // F-CC2 焦点块（§6.16.2）：仅模型主动面携带——追加在**指令末条尾段**（`SUMMARIZE_PROMPT` 文本零改，
+  // 只追加焦点块；无 focus ⇒ 请求体逐字节同修前——compress-form.test.mjs 零回归）。
+  const messages = buildCompressMessages(history, split.tailStart, extras?.systemPrompt, SUMMARIZE_PROMPT)
+  if (extras.focus) {
+    const last = messages.at(-1)
+    messages[messages.length - 1] = { ...last, content: last.content + focusBlock(String(extras.focus), anchorText(agent)) }
+  }
   const summary = await chat({ ...agent.provider, thinking: null }, {
-    messages: buildCompressMessages(history, split.tailStart, extras?.systemPrompt, SUMMARIZE_PROMPT),
+    messages,
     tools: extras?.tools,
     signal,
     // §18.6 D-TR4：轨迹元数据增补——kind=compress（上下文构建面——agent 元数据透出；
@@ -428,6 +340,37 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
     elapsedMs: performance.now() - startedAt,
   }
   return true
+}
+
+/** prune stub 逐字（§6.16.3）：只给「已清理 + 原长度 + 重跑路径」——prune 是**删**不是摘要，不声称可复原。 */
+const pruneStub = (chars) => `[pruned: stale tool output dropped (${chars} chars) — re-run the tool if you need it again.]`
+
+/**
+ * 陈旧工具输出清理（F-CC3 · §6.16.3）：合格集 = `token-window.mjs` 单源（保护尾外 ∧ `role:"tool"` ∧ ≥ 门槛）；
+ * 命中项**原位换「内容」**（`history[i] = { ...m, content: stub }`——数组引用 / 长度 / 索引 / `tool_call_id` 全不变
+ * ⇒ 配对**结构上不可能被拆**）。记录面零改（copy-on-write：消息对象与人读线共享）；基线失效同 `shrinkOversized` 先例。
+ * @returns {{pruned:number, freed:number, candidates:number, tailKept:number, belowMin:number}}
+ */
+export function pruneStaleToolOutputs(agent) {
+  const history = agent.history
+  const stale = collectStaleToolOutputs(history, agent.provider)
+  const counts = {
+    pruned: stale.indexes.length,
+    freed: stale.tokens,
+    candidates: stale.candidates,
+    tailKept: stale.tailKept,
+    belowMin: stale.belowMin,
+  }
+  if (counts.pruned === 0) return counts
+  for (const i of stale.indexes) {
+    const m = history[i]
+    // 多模态 tool 结果（content 数组）整体替换为 stub ⇒ 图像 part 丢弃（不可再取——prune 是删；回执只给重跑路径）
+    const chars = typeof m.content === "string" ? m.content.length : JSON.stringify(m.content ?? "").length
+    history[i] = { ...m, content: pruneStub(chars) }
+  }
+  agent._lastPromptTokens = null
+  agent._usageAtLen = null
+  return counts
 }
 
 /**
@@ -488,6 +431,8 @@ function shrinkOversized(agent, limit = OVERSIZE_CONTENT_LIMIT) {
   return shrunk
 }
 
+// ─── 迁出面（import 面保持：TUI / verify-compress / VSC 对拍经本档取——先例 = 下方 explore-distill 再导出）──
+export { estimateTokens }
 // ─── End-of-run exploration distillation（2026-09-05 module-split：524 > 500 硬限——verbatim
 // 迁至 explore-distill.mjs，语义零变——VS Code compact.mjs 同款联动；cross-repo parity 锚改指
 // explore-distill.mjs——消费方 import 面不变（re-export））───────────────────────

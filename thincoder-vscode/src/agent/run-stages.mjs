@@ -34,7 +34,7 @@ function advisorReviewInFlight(parent) {
   }
   return false
 }
-import { logEvent } from "@thincoder/core/log.mjs"
+import { logEvent, errText } from "@thincoder/core/log.mjs"
 import { runHooks } from "@thincoder/core/hooks.mjs" // P2 机制层端差批 §2.16：Stop 钩子（静态合法——闭包仅 node:child_process）
 // P2 批 §2.18 端半：guard 快照/回填单点（7 键清单归核——端侧常量退场）；本档经 setup-reminders
 // 已在端壳静态闭包内。
@@ -194,9 +194,21 @@ export async function checkAndCompact(agent, ctx) {
     agent.tasks = agent._tasks ?? []
     agent.planMode = agent._planMode === true
     agent.history = history
-    const compacted = await compressIfNeeded(agent, threshold, callbacks, {
-      systemPrompt, tools: toolSchemas, traceDepth: agent?._depth ?? null,
-    }, signal)
+    const overhead = { systemPrompt, tools: toolSchemas, traceDepth: agent?._depth ?? null }
+    // F-CC1（§6.16.4 阈值单源接线）：本回合判定所用阈值 + 固定开销面暂存——`context` 工具的
+    // stats 报同一口径（不自行重算第二口径；核 `agent.mjs` 同点同款）。
+    agent._ctxBasis = { threshold, overhead }
+    // F-CC2（§6.16.2）：模型主动压缩（`context` 工具）在本安全点消费——取用即清槽（失败不重放）；
+    // `force` 只跳过阈值早退；强制面无可压 ⇒ no-op 注记后**照常**跑阈值面（阈值面不让位）。
+    const pending = agent._pendingCompact
+    agent._pendingCompact = null
+    let compacted = await compressIfNeeded(agent, threshold, callbacks,
+      pending ? { ...overhead, force: true, focus: pending.focus } : overhead, signal)
+    if (!compacted && pending) {
+      const { compactNoopNote } = await import("@thincoder/core/agent-tools/context.mjs")
+      history.push({ role: "user", content: compactNoopNote(), transient: true })
+      compacted = await compressIfNeeded(agent, threshold, callbacks, overhead, signal)
+    }
     if (compacted) {
       // 核 applyCompression（重建）以新数组替换 agent.history——回收共享数组；shrinkOversized
       // 同款（长度不变、仅截 body——边界 / 基线失效由核自理，与旧语义逐点同）。
@@ -227,6 +239,11 @@ export async function checkAndCompact(agent, ctx) {
     // Summary LLM failed — count consecutive failures; after the limit degrade to
     // deterministic truncation (no network) so the task can continue (CLI parity D6).
     agent._compressFailures = (agent._compressFailures ?? 0) + 1
+    if (pending) {
+      // 失败注记（§6.16.2 回执面②）：模型面告知缺口——既有失败链 / 面板面零改（计数 = 自增后）
+      const { compactFailureNote } = await import("@thincoder/core/agent-tools/context.mjs")
+      history.push({ role: "user", content: compactFailureNote(errText(e), agent._compressFailures), transient: true })
+    }
     if (agent._compressFailures >= COMPRESS_FAILURE_LIMIT) {
       agent._compressFailures = 0
       agent.history = history

@@ -1,3 +1,6 @@
+// F-CC4（CONTEXT-COMPACTION.md §6.16.5）：task 列表变更 ⇒ 方向转换轻推（本档只调用；文案/去重单源 = agent-tools/context.mjs）
+import { pushContextNudge } from "./context.mjs"
+
 /** Common synonyms LLMs tend to use — normalize to canonical values */
 const STATUS_ALIASES = {
   completed: "done",
@@ -78,6 +81,7 @@ export const taskTool = {
     ctx.agent.tasks = items
     ctx.agent._taskPushbacks = 0 // task list changed — the completion gate earns a fresh reminder
     ctx.agent._onTaskUpdate?.(items)
+    if (ctx.depth === 0) pushContextNudge(ctx.agent) // F-CC4 轻推（§6.16.5——depth-0 门：子代理拿不到 context 工具）
     const done = items.filter((i) => i.status === "done").length
     const open = items.length - done
     const warningText = warnings.length > 0 ? ` ⚠️ ${warnings.join("; ")}` : ""
