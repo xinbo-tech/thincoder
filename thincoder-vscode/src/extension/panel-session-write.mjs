@@ -15,16 +15,19 @@
  * `at-refs-restore.test.mjs:19`）。
  *
  * 环 import（同 `panel-messages ↔ panel-session` 先例）：本档反向 import 主档的 `ensureSlot`
- * / `pushSessions`——两件均**只在本档函数体内**解引用（延迟解引用）⇒ 两模块顶层零跨环读取
+ * / `ensureSlotAsync`——两件均**只在本档函数体内**解引用（延迟解引用）⇒ 两模块顶层零跨环读取
  * ——环安全。
  */
-import { loadSlot, saveSessionToSlot, setSlotTitle, slimForDisplay, isLegacyTransient } from "./session-io.mjs"
+import { loadSlot, saveSessionToSlot, slimForDisplay, isLegacyTransient } from "./session-io.mjs"
 import { engTokensMergeForSave } from "./session-slot-write.mjs"
 // F-W15：@ 引用还原（与产者同档）——标题源文本剥离消费面（恢复面显示剥离留主档）。
 import { stripAtRefs } from "./file-refs.mjs"
 import { generateTitle as generateSessionTitle } from "./generate-title.mjs"
+// D7（2026-09-21）：标题源谓词单源——核 `isRealUserMsg`（角色 user ∧ content 为串 ∧ 非
+// `[System reminder:` 前缀）——端壳不再自持 `m.type ?? m.role` 变体。
+import { isRealUserMsg } from "@thincoder/core/history-window.mjs"
 import { _cwd } from "./panel-messages.mjs"
-import { ensureSlot, ensureSlotAsync, pushSessions } from "./panel-session.mjs"
+import { ensureSlot, ensureSlotAsync } from "./panel-session.mjs"
 
 // 迁出自 `panel-session.mjs`（同批逐字搬迁——仅随迁件来源变更）。
 /** Persist both lines to the active slot + update manifest metadata.
@@ -62,7 +65,10 @@ export function saveLines(panel, fullHistory, contextHistory, extra = {}, slotOv
   saveSessionToSlot(cwd, slot, {
     ...existing,
     version: 2, cwd, updatedAt: Date.now(),
-    title: existing.title ?? "",
+    // D7（2026-09-21 块标题行对齐批——标题链单源）：标题值随本整档 save **单写**（回合尾
+    // `finalizeTurn` 把新标题并入 extra——`extra.title` 支；无第二写）；键缺席 ⇒ 槽既有值
+    // 保留（abort/finally 等不携标题的保存不得抹掉已生成标题）。
+    title: extra.title ?? existing.title ?? "",
     activeProvider: extra.activeProvider ?? existing.activeProvider ?? "",
     // Human line is slimmed for storage (CLI parity — session-io.slimForDisplay):
     // the never-compacted human line carried the bulk of session-file size
@@ -111,7 +117,12 @@ export function saveLines(panel, fullHistory, contextHistory, extra = {}, slotOv
 }
 
 // 迁出自 `panel-session.mjs`（同批逐字搬迁）。
-export async function generateTitle(panel, slotOverride) {
+/** D7（2026-09-21 块标题行对齐批——标题链单源 · `docs/core/design/SESSION.md` §6.7）：本函数
+ *  **只生成不落盘**（返 title / null——写形 = 随回合尾整档 save 单写，见 `saveLines`）。
+ *  源 = 调用方传入的内存人读线消息数组（不再读槽 history）；谓词单源 = 核 `isRealUserMsg`。
+ *  触发 = **无标题即尝试**（槽 `title` 在场 ⇒ 短路零触网——与 CLI `ensureSessionTitle` 同判据）；
+ *  失败静默（返 null ⇒ 调用方不写 title、save 照常）。 */
+export async function generateTitle(panel, slotOverride, messages) {
   try {
     const cwd = _cwd()
     // slotOverride（会话切换竞态修复，2026-08-28）：turn 启动时捕获的槽——标题属于产生
@@ -119,19 +130,15 @@ export async function generateTitle(panel, slotOverride) {
     // F-MI7：冷路径 null ⇒ awaited 认领束兜底（本函数 async——标题属产生首条消息的会话）。
     const slot = slotOverride ?? ensureSlot(panel) ?? await ensureSlotAsync(panel)
     const data = loadSlot(cwd, slot)
-    if (!data || data.title) return  // Already titled
-    const firstUser = (data.history ?? []).find((m) => (m.type ?? m.role) === "user")
-    if (!firstUser) return
+    if (!data || data.title) return null  // Already titled
+    const firstUser = (messages ?? []).find(isRealUserMsg)
+    if (!firstUser) return null
     // Provider comes from persisted session data (written by _saveLines on each turn),
     // not the message (runAgent never stamps provider/model onto history entries).
     // F-W15：标题源文本同接同档剥离（零第二实现）——标题不得由 `[File: …]` 文件正文生成。
-    const title = await generateSessionTitle(stripAtRefs(firstUser.content), data.activeProvider || undefined)
-    if (title) {
-      const r = setSlotTitle(cwd, slot, title)
-      if (r.ok) pushSessions(panel)
-      else console.error(`[chat-panel] setSlotTitle failed (${r.reason})`) // §12 F3：自动标题写失败不再静默
-    }
+    return await generateSessionTitle(stripAtRefs(firstUser.content), data.activeProvider || undefined) || null
   } catch (e) {
     console.error("[chat-panel] generateTitle failed:", e.message)
+    return null
   }
 }

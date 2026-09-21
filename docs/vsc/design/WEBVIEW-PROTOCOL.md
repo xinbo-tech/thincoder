@@ -227,11 +227,11 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | 模型 | ` · model`（宽截断） | ` · model`（**来源 = 事件载荷字段** `model`；键形 `sub:<role>#<id>` **不含模型段**——`WEBVIEW.md` §5.3 键形收正；consult / escalate 头词现状不携该段——`activity-view.js:69`） | 端差登记（consult / escalate 模型段） |
 | 计时 | ` · Ns`（done 定格） | ` · Ns`（事件驱动 + 2 s 同点刷——`panels.js:69-72` → `activity.js:403` `refreshLiveHeaders`） | 语义不变 |
 | turn | ` · turn N/M` | ` · turn N/M`（`maxTurns > 0` 且 `turn > 0`；快照 + `status:"turn"` 实时） | 对齐 |
-| 状态区·running | `currentTool` / `thinking...` | `${tool} — ${cmd ≤60}` / 工具文本尾句 / `思考中…` | 对齐（C-11①） |
+| 状态区·running | `currentTool` + `command≤60`（`thincoder-cli/src/tui/subagent-panel.mjs:105-110`） | `${tool} — ${cmd ≤60}`（嵌套 = `label/tool`——`thincoder-cli/src/tui/subagent-blocks.mjs:337` 同构）/ `思考中…` | 对齐（C-11①；**输出面零写入**——判据单源 = `WEBVIEW.md` §5.2） |
 | 状态区·queued | `queued · position N（槽满等位）` / 依赖 detail 原文 | `排队中 · 位置 N（槽满等位）` / 原因原文 | 对齐（C-11②） |
 | 审批态 | `等待审批: X` | `⏸` + `等待审批: <tool>`（`activity-view.js:55` · `:90`） | **已实装**——两端同形 |
 | 待消化 | `done · awaiting digestion`（状态区） | 块头态词同文案（`activity-view.js:91`） | 对齐 |
-| 冻结头 + tail-3 | `[✓ key · … · done Ns · turn]` + tail-3 + 注记 ` — <note>`（停因 / interrupted——`render-segments.mjs:88-93`） | 同形态 + 注记 ` — <note>`（载体 `meta.note`——契约 = `WEBVIEW.md` §5.2；tail-3 = `activity-view.js:102`） | 等价（归档后形态不变） |
+| 冻结头 + tail-3 | `[✓ key · … · done Ns · turn]` + tail-3（`│ ` 前缀独立行——`render-segments.mjs:103-109`）+ 注记 ` — <note>`（停因 / interrupted——`:88-93`） | `[✓ key · … · done Ns · turn]` + tail-3（`│ ` 前缀——`activity-view.js` `refreshBlock`；容器 = `<details>/<summary>` 原生）+ 注记 ` — <note>`（载体 `meta.note`——契约 = `WEBVIEW.md` §5.2；`tailLines` = `activity-view.js:102`） | 对齐（D4 消：tail-3 行文归一 = `│ ` 前缀独立行） |
 
 ### 6.3 i18n 键表（17 键 · zh/en 逐字）
 
@@ -468,6 +468,12 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 **方向口径**：本表只收 webview → host。**「删」= host 消费位在位而 webview 发射恒无（死 handler）**——处置逐条入批档（`docs/batches/2026-09-18-vsc-settings-wiring.md` §2）并已随实现落地（三删 + 一接线转活——**本表现零 `删` 行**）；**删除落地 ⇒ 源零位 ⇒ 表行同步退场**（不留悬空行——同 §12 口径）。**「补」= 发射在位而 host 缺消费位**（本表现零行）。
 
 ## 变更记录
+
+- 2026-09-21（**块标题行对齐批 · eng-designer**——承 `docs/batches/2026-09-21-vsc-block-title-align.md` §1）：§6.2「状态区·running」行本端现状改**闭枚举**（结构化工具行（嵌套 = `label/tool`）/ `思考中…`）+ CLI 形态列补 `command≤60` 来源坐标；**输出面不入状态区**（判据单源 = `WEBVIEW.md` §5.2）。**消息名 / 载荷字段 / 首列判别式集零变**。
+
+- 2026-09-21（**块标题行对齐批 · D4 裁定轮 · eng-designer**——承 `docs/batches/2026-09-21-vsc-block-title-align.md` §2.11）：§6.2「冻结头 + tail-3」行收正——本端 tail-3 行文改 **`│ ` 前缀独立行**（`refreshBlock`——与 CLI `render-segments.mjs:103-109` 同形）；
+  结论列旧「等价」按端差默认 = 消口径改**「对齐（D4 消）」** + 折叠容器 = `<details>/<summary>` 原生（壳能力面）。**消息名 / 载荷字段 / 首列判别式集零变**。
+
 
 - 2026-09-21（**批 SUBAGENT-SIGNAL-LINES · 设计轮 · eng-designer**——承 `docs/batches/2026-09-21-subagent-signal-lines.md` §1 · 需求 `docs/core/requirements/AGENT-LOOP.md` §4.12 F-UC8；设计权威 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.27.12.13）：
   ① §3 `digest` 行 + §3.2 **行 11 收正（tier 两档）** + **新增行 14**（`from` / `msg`——ask 携参；登记 **十三项 → 十四项**，D3 计数与列表同改）；

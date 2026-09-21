@@ -404,5 +404,9 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
   const ledgerHint = lg?.marker
     ? ` │ ${lg.warn ? `${ansi.reset}${C.warn}${lg.marker}${ansi.reset}${ansi.dim}` : lg.marker}`
     : ""
-  return ` ${statusText}${taskHint}${turnHint}${tokenHint}${ctxHint}${scrollHint}${ledgerHint} │ ${enterHint} │ /: commands │ wheel/PgUp/PgDn: scroll │ Ctrl+I: inject │ Ctrl+C: exit (×2)`
+  // D8（2026-09-21 块标题行对齐批——会话标题常显 · `docs/cli/design/TUI.md` §7.4）：状态段簇尾
+  // （ledgerHint 后、键位组前）；取值 = `agent.title` 活读（每帧 recompute）· 空值零注入。
+  const titleRaw = typeof agent.title === "string" ? agent.title.trim() : ""
+  const titleHint = titleRaw ? ` │ ${stringWidth(titleRaw) > 40 ? sliceByWidth(titleRaw, 39) + "…" : titleRaw}` : ""
+  return ` ${statusText}${taskHint}${turnHint}${tokenHint}${ctxHint}${scrollHint}${ledgerHint}${titleHint} │ ${enterHint} │ /: commands │ wheel/PgUp/PgDn: scroll │ Ctrl+I: inject │ Ctrl+C: exit (×2)`
 }

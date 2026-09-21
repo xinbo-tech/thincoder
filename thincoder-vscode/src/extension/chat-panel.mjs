@@ -273,7 +273,7 @@ export class ChatPanel {
   async _newSession() { return newSession(this) }
   async _deleteSession(slot) { return deleteSession(this, slot) }
   _pushSessions() { return pushSessions(this) }
-  async _generateTitle(slotOverride) { return generateTitle(this, slotOverride) }
+  async _generateTitle(slotOverride, messages) { return generateTitle(this, slotOverride, messages) }
   async _status() { return bootstrapStatus(this) }
 
   // ─── Project (implementations in panel-project.mjs) ───

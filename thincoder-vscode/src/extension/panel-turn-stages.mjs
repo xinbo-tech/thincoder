@@ -96,9 +96,12 @@ export async function resolveTurnStage({ panel, turnSlot, providerName, modelOve
   return { done: false, providerName, p, slotStamp, slotData }
 }
 
-/** 迁出自 `panel-chat.mjs`（本批逐字搬迁——`b.mjs` 收尾段）：回合收尾——落盘 + 标题 +
- *  忙态归位 + `loading:false`。参数化捕获变量（原 finally 体同函数作用域引用）。 */
-export async function finalizeTurn(panel, { history, fullHistory, slotStamp, turnSlot, isFirstMessage, susp, skipSession }) {
+/** 迁出自 `panel-chat.mjs`（本批逐字搬迁——`b.mjs` 收尾段）：回合收尾——标题 + 落盘 +
+ *  忙态归位 + `loading:false`。参数化捕获变量（原 finally 体同函数作用域引用）。
+ *  D7（2026-09-21 块标题行对齐批——标题链单源 · `docs/core/design/SESSION.md` §6.7）：序翻为
+ *  「先标题后 save」（CLI `agent-turn.mjs:307-322` 同序）——标题值并入 extra 后随**整档
+ *  save 单写**（无第二写）；写后刷会话列表。A2 腿不变：标题仍在忙态归位前（running 窗口）。 */
+export async function finalizeTurn(panel, { history, fullHistory, slotStamp, turnSlot, susp, skipSession }) {
   traceStop("finally: turn complete — UI released", panel._stopClickTs)
   panel._stopClickTs = null
   // 释放窗口守卫（2026-09-02 偏差修复 #2——A2 + INPUT-LOCK-ASYNC 修订）：挂起
@@ -111,22 +114,30 @@ export async function finalizeTurn(panel, { history, fullHistory, slotStamp, tur
   // live → susp（释放窗口——同上）；无池无会话 → idle。计数随广播：会话内回合尾带
   // backgroundStatus（F-C2e——轮尾计数刷新到 host 实际；释放窗口期 webview 未入会话
   // 不显示计数段——计数由会话入口 postSuspension 随带）。
-  // Persist BEFORE the title（A2 方案 Y——权威正文 SESSION.md §6.7）：标题从槽读首条
-  // user 消息——ContinueError→Stop 路径（runTurnLoop break 跳过 catch 落盘）的唯一
-  // 落盘就是本 save——先落盘后标题该路径才出得了标题。CLI agent-turn.mjs finally
-  // parity——"Save session after every turn (survives crashes)"。
+  // D7（§6.7 五环单源）：① 标题先于落盘（源 = 内存人读线 fullHistory——谓词单源 = 核
+  // `isRealUserMsg`；触发 = **无标题即尝试**——槽 `title` 在场 ⇒ 端壳短路零触网）；生成失败
+  // 静默（返 null ⇒ 不写 title、save 照常）。A2 腿不变：标题上移至此（归位前——_turnState
+  // 仍 running——窗口 = busy：Stop 显 + 路由守卫拒收）；错误不外抛——归位恒执行（评审 #2）。
+  // 风险披露：标题 LLM（核超时 10s）前置于整档 save ⇒ 首次标题拍内容落盘最多延后 10s——
+  // 与 CLI 同形（该风险 CLI 既有，非本批新引入）。
+  let title = null
   try {
-    if (fullHistory?.length) panel._saveLines(fullHistory, history, slotStamp, turnSlot)
+    title = await panel._generateTitle(turnSlot, fullHistory)
+  } catch (e) {
+    console.error("[chat-panel] title generation threw:", e?.message ?? e)
+  }
+  // 落盘（ContinueError→Stop 路径——runTurnLoop break 跳过 catch 落盘——的唯一落盘点）；
+  // CLI agent-turn.mjs finally parity「Save session after every turn (survives crashes)」；
+  // 标题值随本整档 save 单写落盘（`extra.title` 支——无第二写）。
+  try {
+    if (fullHistory?.length) panel._saveLines(fullHistory, history, title ? { ...slotStamp, title } : slotStamp, turnSlot)
   } catch (saveErr) {
     console.error("[chat-panel] save in finally failed:", saveErr.message)
   }
-  // A2（SESSION-FLOW-A F-A2——权威正文 SESSION.md §6.7）：标题上移至此（归位前——
-  // _turnState 仍 running——窗口 = busy：Stop 显 + 路由守卫拒收）；错误不外抛——
-  // 归位恒执行（评审 #2）。
-  try {
-    if (isFirstMessage) await panel._generateTitle(turnSlot)
-  } catch (e) {
-    console.error("[chat-panel] title generation threw:", e?.message ?? e)
+  // 写后刷会话列表（标题已随 save 落盘——原 setSlotTitle 后刷新点随写形收归此处）；推送面异常
+  // 非致命（标题链纪律：标题面故障不得跳过下方忙态归位——旧形该调用在端壳 try 内被吞）。
+  if (title) {
+    try { panel._pushSessions() } catch (e) { console.error("[chat-panel] pushSessions after title failed:", e.message) }
   }
   if (!skipSession && !susp && !panel._susp && panel._panel && poolLive(history)) {
     panel._publishTurnState("susp")

@@ -8,6 +8,7 @@
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
 import { setupWebview, installChatFixture } from "./helpers/webview-env.mjs"
 
 let cleanupEnv
@@ -315,3 +316,109 @@ test("T-CL19 turn/计时刷新（AC-CL4）：turn 帧实时；elapsed 经 refres
   refreshLiveHeaders()
   assert.equal(hdrOf(block), archived, "归档块头零变化")
 })
+
+// ─── 块标题行对齐批（2026-09-21 · 批档 §2.8 用例 1–5/10 + §2.13 用例 14–15）─────────
+// 权威 = 批档 §2.1（状态区取值源闭枚举）+ §2.2（嵌套名）+ §2.11（D4 行文）。先红读数见 §5。
+
+/** 状态区段（头行方括号之后——`headerText` 尾 + `stateWord` 拼接面）。 */
+const stateZoneOf = (block) => { const h = hdrOf(block); return h.slice(h.indexOf("]") + 1) }
+
+test("T-CL20 输出面零写入（§2.8-1 · 用户 07:14 泄漏本体）：advisor 流式 toolOutput 多行 ⇒ 状态区恒 `advisor`（文本零入）", async () => {
+  const { S, ctx, subagentChunk } = await loadWebview()
+  fresh({ S, ctx })
+  const ch = "sub:eng-coder#7"
+  subagentChunk({ name: ch, kind: "tool", text: 'advisor {"role":"advisor"}', tool: "advisor", face: "toolCall" })
+  const block = S._subBlocks.get(ch)
+  assert.equal(stateZoneOf(block).trim(), "advisor", `调用行后状态区 = advisor（实到 ${JSON.stringify(hdrOf(block))}）`)
+  for (const text of ["审核第一行\n第二行流式\n末行流式文本", "更多流式文本\n又一行", "第三块\n最末行尾句"]) {
+    subagentChunk({ name: ch, kind: "tool", text, tool: "advisor", face: "toolOutput" })
+  }
+  const hdr = hdrOf(block)
+  assert.equal(stateZoneOf(block).trim(), "advisor", `流式后仍 = advisor（实到 ${JSON.stringify(hdr)}）`)
+  assert.equal((hdr.match(/advisor/g) ?? []).length, 1, "头内 advisor 恰一次（流式文本零入）")
+  assert.ok(!/流式|尾句|审核/.test(hdr), "流式文本零入头（输出只进块体行）")
+})
+
+test("T-CL21 嵌套工具名（§2.8-2 · B/D2）：sub 前缀合成 `explore#7/read — src/x.mjs`（CLI `:337` 同构）", async () => {
+  const { S, ctx, subagentChunk } = await loadWebview()
+  fresh({ S, ctx })
+  subagentChunk({ name: "sub:eng-coder#7", kind: "tool", text: "read {}", tool: "read", cmd: "src/x.mjs", sub: "explore#7" })
+  assert.equal(stateZoneOf(S._subBlocks.get("sub:eng-coder#7")).trim(), "explore#7/read — src/x.mjs", "状态区 = 全路径（label/tool + cmd）")
+})
+
+test("T-CL22 旧形态零写入（§2.8-3）：无 face / 无 tool 的文本 chunk ⇒ 状态区零变（不猜）", async () => {
+  const { S, ctx, subagentChunk } = await loadWebview()
+  fresh({ S, ctx })
+  const ch = "sub:eng-coder#7"
+  subagentChunk({ name: ch, kind: "tool", text: "read {}", tool: "read", cmd: "src/x.mjs" })
+  const block = S._subBlocks.get(ch)
+  const before = stateZoneOf(block)
+  subagentChunk({ name: ch, kind: "tool", text: "legacy tail line" })
+  subagentChunk({ name: ch, kind: "tool", text: "legacy tail line two" })
+  assert.equal(stateZoneOf(block), before, "状态区逐字不变")
+  assert.equal(block._subMeta.stateWord, "read — src/x.mjs", "stateWord 零改写")
+  assert.ok(!hdrOf(block).includes("legacy"), "旧形态文本零入头")
+})
+
+test("T-CL23 输出面携 cmd 亦零写（§2.8-4）：face=toolOutput ⇒ 状态区零变（cmd 不入头）", async () => {
+  const { S, ctx, subagentChunk } = await loadWebview()
+  fresh({ S, ctx })
+  const ch = "sub:eng-coder#7"
+  subagentChunk({ name: ch, kind: "tool", text: "read {}", tool: "read", cmd: "src/x.mjs" })
+  const block = S._subBlocks.get(ch)
+  const before = stateZoneOf(block)
+  subagentChunk({ name: ch, kind: "tool", text: "rm -rf x", tool: "bash", cmd: "rm -rf x", face: "toolOutput" })
+  assert.equal(stateZoneOf(block), before, "状态区零变")
+  assert.ok(!hdrOf(block).includes("rm -rf"), "输出面 cmd 不入头")
+})
+
+test("T-CL24 结构锁（§2.8-5 · 防复辟）：noteChunk 状态区写点恰 2（结构化 / think）∧ 无末行取值形态", () => {
+  const src = readFileSync(new URL("../webview/activity-view.js", import.meta.url), "utf8")
+  const start = src.indexOf("export function noteChunk(")
+  assert.ok(start >= 0, "noteChunk 在位")
+  const end = src.indexOf("\n}\n", start)
+  const body = src.slice(start, end === -1 ? undefined : end)
+  assert.equal((body.match(/meta\.stateWord\s*=/g) ?? []).length, 2, "写点恰 2（结构化分支 / think 分支）")
+  assert.ok(!body.includes('split("\\n")'), "无「取文本末行」形态")
+  assert.ok(!/尾句/.test(src), "旧规则字样零残留（全档）")
+})
+
+test("T-CL25 tail-3 行文（§2.11 D4 消）：折叠态尾行逐行 `│ ` 前缀 ∧ 行序 = 原序末 3 行", async () => {
+  const { S, ctx, subagentChunk } = await loadWebview()
+  fresh({ S, ctx })
+  const { refreshBlock } = await import("../webview/activity-view.js")
+  const ch = "sub:explore#9"
+  for (const tool of ["alpha", "beta", "gamma", "delta"]) subagentChunk({ name: ch, kind: "tool", text: tool, tool })
+  const block = S._subBlocks.get(ch)
+  block.open = false
+  refreshBlock(block)
+  const tail = block.querySelector(".sub-tail")
+  assert.ok(tail, "折叠态尾行在位")
+  assert.deepEqual(tail.textContent.replace(/^\n/, "").split("\n"), ["│ beta", "│ gamma", "│ delta"], `行文/行序（实到 ${JSON.stringify(tail.textContent)}）`)
+})
+
+test("T-CL26 用户 07:14 场景一体化复现（§2.13-14）：explore#7 工具 → advisor 流式 ⇒ 状态区渐次，恒无流式文本", async () => {
+  const { S, ctx, subagentChunk } = await loadWebview()
+  fresh({ S, ctx })
+  const ch = "sub:eng-coder#7"
+  subagentChunk({ name: ch, kind: "tool", text: "read {}", tool: "read", cmd: "src/x.mjs", sub: "explore#7", face: "toolCall" })
+  const block = S._subBlocks.get(ch)
+  assert.equal(stateZoneOf(block).trim(), "explore#7/read — src/x.mjs", "① 子代工具行")
+  subagentChunk({ name: ch, kind: "tool", text: "→ 42 lines\n(输出多行文本)", tool: "read", sub: "explore#7", face: "toolOutput" })
+  assert.equal(stateZoneOf(block).trim(), "explore#7/read — src/x.mjs", "② 子代输出零写")
+  subagentChunk({ name: ch, kind: "tool", text: 'advisor {"role":"advisor"}', tool: "advisor", face: "toolCall" })
+  assert.equal(stateZoneOf(block).trim(), "advisor", "③ advisor 调用行 → 状态区 = advisor")
+  for (const text of ["advisor 流式第一段\n末行甲", "advisor 流式第二段\n末行乙", "advisor 流式第三段\n末行丙"]) {
+    subagentChunk({ name: ch, kind: "tool", text, tool: "advisor", face: "toolOutput" })
+  }
+  assert.equal(stateZoneOf(block).trim(), "advisor", "④ 流式后恒无流式文本")
+  assert.ok(!/流式|末行/.test(hdrOf(block)), "头内零流式文本")
+})
+
+test("T-CL27 深嵌套 ≥2 层（§2.13-15 · #5 实核）：sub=explore#1/x#2 ⇒ `explore#1/x#2/read — src/x.mjs`", async () => {
+  const { S, ctx, subagentChunk } = await loadWebview()
+  fresh({ S, ctx })
+  subagentChunk({ name: "sub:eng-coder#7", kind: "tool", text: "read {}", tool: "read", cmd: "src/x.mjs", sub: "explore#1/x#2" })
+  assert.equal(stateZoneOf(S._subBlocks.get("sub:eng-coder#7")).trim(), "explore#1/x#2/read — src/x.mjs", "两端同构形（inner.join('/') + '/' + rest）")
+})
+

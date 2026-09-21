@@ -85,7 +85,8 @@ function headerText(meta, now) {
  *  - queued（C-11②/#118 R5）→ **`kind` 优先**（CLI `thincoder-cli/src/tui/subagent-panel.mjs:100-102`
  *    同形）：`kind === "slot"` ⇒ `t("sub.queueSlot", {n: position})`；其余（含 `kind` 缺省）⇒
  *    `reason` 原文零改写；无 `reason` ⇒ 中性回落 `t("sub.queued")`（= CLI `queued.detail || "queued"`）
- *  - live running → 结构化工具行（C-11①：`tool — cmd ≤60`）/ 工具文本尾句 / thinking… */
+ *  - live running → 结构化工具行（C-11①：`${name} — ${cmd ≤60}` / 工具名）/ `思考中…`
+ *    （取值源闭枚举 + 输出面零写入——`WEBVIEW.md` §5.2） */
 function stateWord(meta) {
   if (meta.approval) return t("sub.awaitingApproval", { tool: meta.approval }) || `Awaiting approval: ${meta.approval}`
   if (meta.awaitingDigest) return t("sub.awaitingDigest") || "done · awaiting digestion"
@@ -124,18 +125,19 @@ export function refreshBlock(block) {
   hdr.className = "sub-hdr"
   if (meta.frozen && (meta.status === "cancelled" || meta.status === "error")) hdr.classList.add("sub-stopped")
   // Frozen: bracket only (verb inside: done/stopped/error Ns). Live running:
-  // bracket + state word (tool tail / thinking…). Queued: ⏳ bracket only.
+  // bracket + state word (structured tool row / thinking…). Queued: ⏳ bracket only.
   hdr.textContent = headerText(meta, Date.now())
     + (!meta.frozen || meta.awaitingDigest ? " " + stateWord(meta) : "")
   summary.appendChild(hdr)
   // Folded context: tail-3 dim lines under the header（live 折叠态或冻结态——终态折叠后
-  // 块 = header + tail-3——内容保留可展开——无报告 preview 元素）。
+  // 块 = header + tail-3——内容保留可展开——无报告 preview 元素）；行文 = `│ ` 前缀独立行
+  // （CLI `render-segments.mjs:103-109` 同形——D4 消：tail-3 行文归一）。
   if (meta.frozen || !block.open) {
     const lines = tailLines(block, TAIL_LINES)
     if (lines.length) {
       const tail = document.createElement("span")
       tail.className = "sub-tail"
-      tail.textContent = "\n" + lines.join("\n")
+      tail.textContent = "\n" + lines.map((l) => "│ " + l).join("\n")
       summary.appendChild(tail)
     }
   }
@@ -174,25 +176,21 @@ function updateStopButton(block) {
   }
 }
 
-/** Chunk-level state-word tracking (think → thinking…; tool → `${tool} — ${cmd ≤60}`
- *  or legacy line tail; result chunk 不改写状态区 — CLI currentTool parity §14 C-11①). */
+/** Chunk-level state-word tracking（状态区取值源 = 闭枚举——`WEBVIEW.md` §5.2）：写点恰两处
+ *  ——结构化工具行（`${name} — ${cmd ≤60}` / 工具名；嵌套 name = `sub/tool`，CLI
+ *  `subagent-blocks.mjs:337` 同构）与 think（`思考中…`）。
+ *  **输出面永不入状态区**：`face === "toolOutput"` 的 chunk 与无结构化 `tool` 字段的旧形态
+ *  一律不改写状态区（输出 / 结果只进块体行——CLI `currentTool` 语义 §14 C-11①）。 */
 export function noteChunk(block, kind, text, m) {
   if (!block?._subMeta || block._subMeta.frozen) return
   const meta = block._subMeta
   if (kind === "tool") {
-    // R5（§5.6 面门）：输出 chunk（face = toolOutput）不走结构化分支 ⇒ 状态词仍取「工具文本尾句」
-    // （否则 R1 补 `tool` 后状态区退成裸工具名——`WEBVIEW-PROTOCOL.md` §6.2 状态区·running 对齐面回归）。
+    // 结构化工具字段（C-11①）：`${name} — ${cmd ≤60}`（无 cmd 仅 name）；label 段 = relay
+    // 折出的全路径（`panel-subagent-relay.mjs:176` `path.inner.join("/")`）。
     if (typeof m?.tool === "string" && m.tool && m.face !== "toolOutput") {
-      // 结构化工具字段（C-11①）：`${tool} — ${cmd ≤60}`（无 cmd 仅 tool）
+      const name = (typeof m.sub === "string" && m.sub) ? `${m.sub}/${m.tool}` : m.tool
       const cmd = typeof m.cmd === "string" ? m.cmd.replace(/\s+/g, " ").trim() : ""
-      meta.stateWord = cmd ? `${m.tool} — ${cmd.length > 60 ? cmd.slice(0, 59) + "…" : cmd}` : m.tool
-    } else if (/^→ /.test(String(text ?? ""))) {
-      return // 结果 chunk 不改写状态区（CLI currentTool 语义——C-11①）
-    } else {
-      const lines = String(text ?? "").split("\n").map((l) => l.trim()).filter(Boolean)
-      const tail = lines[lines.length - 1] ?? ""
-      const flat = tail.replace(/\s+/g, " ").trim()
-      meta.stateWord = flat ? (flat.length > 64 ? flat.slice(0, 63) + "…" : flat) : meta.stateWord
+      meta.stateWord = cmd ? `${name} — ${cmd.length > 60 ? cmd.slice(0, 59) + "…" : cmd}` : name
     }
     refreshBlock(block)
   } else if (kind === "think") {

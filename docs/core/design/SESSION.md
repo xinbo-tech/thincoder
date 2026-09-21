@@ -152,7 +152,19 @@
 
 ### 6.7 会话标题生成
 
-标题请求**显式禁用思考**（OpenAI 兼容 body 加 `thinking:{type:"disabled"}`；anthropic / google 分支不传即不思考）且 **`max_tokens` 30→100**，双端同修（`thincoder-core/generate-title.mjs` 单一 fetch 直拼 body + VSC `requestTitle` 独立 fetch 三分支）——读取逻辑、标题规范（≤40 字符、无引号）、超时 10s 与失败静默降级均不变。
+**链单源（双端同一套机制 · 2026-09-21 块标题行对齐批）**：源 / 生成 / 触发 / 写 / 读·展示**五环**两端同源（谓词 ∈ 源、时点 ∈ 写），各端只留端壳（触发调用 + chrome）。
+
+- **源 = 首条真实 user 消息**，谓词单源 = `isRealUserMsg`（`thincoder-core/history-window.mjs:17-19`：角色为 `user` ∧ content 为串 ∧ 非 `[System reminder:` 前缀）。
+  CLI 取记录存储 `firstUserMessage()`（绑定态；未绑定回退内存人读线——`thincoder-core/generate-title.mjs:104-123`）；VSC 取内存人读线（`fullHistory` 经 `keepReal` 过滤——端壳 `thincoder-vscode/src/extension/panel-session-write.mjs`）。
+- **生成** = 核 `generateTitle(userContent, provider)`（`thincoder-core/generate-title.mjs:23`）：三格式分派 · **显式禁用思考**（OpenAI 兼容 body 加 `thinking:{type:"disabled"}`；anthropic / google 分支不传即不思考）· `max_tokens` 100 · 标题规范 ≤40 字符无引号 · 超时 10s · 失败静默返 null。
+  两端同调该函数（VSC 端壳 `thincoder-vscode/src/extension/generate-title.mjs` 只做 key / provider 解析——无第二请求实现）。
+- **触发** = 会话**尚无标题**即尝试（一次成功即停；失败静默、下回合再试——两端同判据：CLI `ensureSessionTitle` 的 `title` 在场短路；VSC 端壳读槽 `title` 空判）。
+- **写形 = 单写**：标题值随**回合尾整档 save** 落盘——CLI `agent.title` → `saveSession(agent)`（`thincoder-core/session.mjs:121`）；VSC `saveLines` 的 `extra.title`（`title: extra.title ?? existing.title ?? ""`）。两端均不为标题另开第二写。
+- **时点** = 回合尾、整档 save **之前**生成（两端同序）；标题期 = busy 窗口（VSC 面另见 §6.15）。
+- **读 / 展示**：**列表面**（CLI `/session` / VSC `pushSessions`）两端同读 `listSlots` 的标题（回退链 `title → firstMessage → "(empty)"`——VSC `pushSessions` 同链）；
+  **常显 = 两端 chrome 常驻**（VSC 面板顶栏 / CLI 状态行段——CLI 段取值 = `agent.title` 活读 · **空值零注入**（非回退链）；落点设计 = `docs/cli/design/TUI.md` §7.4；D8 消 · 2026-09-21）；
+  空窗差（生成前 / 失败期：VSC 顶栏显回退链值 ∥ CLI 段零注入）= **已登记端差**（A9——结构性不对称 + 证据 + 显式裁定）；`/session` 列表按需面不变。
+- **边界**：标题规范 / 超时 / 失败语义 / 手动重命名链（`renameSlot`）零改；机器注入消息（`[System reminder:` 前缀）永不入标题源。
 
 ### 6.8 会话恢复时 provider/model 无效 → 模型重选
 
@@ -318,11 +330,12 @@ finally 保存无 agentState → 缺席保留槽值不误清）。
 `loadSlotForWrite` 对「无文件但本进程刚 claim 的槽」返回 `newSlotData` 默认记录——否则
 `setSlot*` 落在「claim 先行、首保存落盘」的新槽时 `if (!data) return false` 静默丢标志（AUTO-bug 修复）；
 version>2 / 异 cwd / 损坏 / 未知槽返回 null（新版 CLI 文件不属本端覆盖——v3 interop 前保守姿态）。
-- **标题触发时机（A2——SESSION-FLOW-A 方案 Y）**：标题 await 在回合尾 finally **忙态归位之前**（stream
-完成即触发——`panel-chat.mjs` 归位分支前）；期间 `_turnState` 仍 running——标题窗口 = busy——webview Stop 显
-（running 派生）+ 路由守卫 running→拒收（修无池首回合并发——归位 idle 后标题旧序会让窗口内新消息直开并发回合与
-标题 LLM 调用赛跑）。错误路径（评审 #2）：`generateTitle` 内部全 try/catch 吞错 + 调用点兜底 try/catch——
-**归位恒执行**（标题抛错不卡永久 busy）。标题期消息拒收（routeUserTurn running 分支——无排队无回执——拒收警告明示）。
+- **标题触发时机与写形（2026-09-21 块标题行对齐批——链单源 = §6.7）**：标题 await 在回合尾 finally **忙态归位之前**（stream
+完成即触发——`panel-turn-stages.mjs` `finalizeTurn`）；期间 `_turnState` 仍 running——标题窗口 = busy——webview Stop 显
+（running 派生）+ 路由守卫 running→拒收（归位 idle 后标题会让窗口内新消息直开并发回合与标题 LLM 调用赛跑）。**写形 = 单写**：
+标题值喂入同一拍的整档 `saveLines`（`extra.title`）——不另开 `setSlotTitle` 直写；写后刷会话列表（`pushSessions`）。
+错误路径（评审 #2）：`generateTitle` 内部全 try/catch 吞错 + 调用点兜底 try/catch——**归位恒执行**（标题抛错不卡永久 busy）。
+标题期消息拒收（routeUserTurn running 分支——无排队无回执——拒收警告明示）。
 - **懒加载历史分页（VSC 端**，端壳 `thincoder-vscode/src/extension/history-window.mjs` = 纯转口（`:12`）⇒ 核 `thincoder-core/history-window.mjs`）**：
 `HISTORY_PAGE_SIZE = 200`（核 `:24`——对齐 CLI 首屏）；`historyWindow(history, before)`（核 `:107`）——`before == null`
 取**末页**（首屏只发末页），否则取 `before` 前结束的一页 `[s, e)` 半开区间（loadOlder 页不重渲染边界消息）
@@ -478,7 +491,7 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 | D-SE27 | VSC 运行中禁止切换 + **turnSlot 纵深防御**（保存 / 标题落回合捕获槽） | 运行中切槽 = 旧 turn 流串台 + 内容落错槽；turnSlot 使并发切换零窗口 |
 | D-SE28 | VSC `setSlot*` 写面 = **Parnas 拆分** + `loadSlotForWrite` 对新槽补默认记录 | 一次性写面档（session-slot-write.mjs）避免槽写逻辑混入既有档；新槽无记录 → 静默丢标志（AUTO-bug） |
 | D-SE29 | VSC 懒历史分页 = **帧容器 + 嵌套 tools[] + 全局 idx**（HISTORY_PAGE_SIZE 200） | 跨页消息永不重编号；工具卡随帧渲染防跨页双显；匹配 CLI 首屏 200 |
-| D-SE30 | VSC 标题触发 = **回合尾 finally 忙态归位之前**（A2 方案 Y）+ 归位恒执行 | 标题期 = busy 窗口（webview Stop 显 + 路由守卫拒收）；标题抛错不卡永久 busy |
+| D-SE30 | VSC 标题触发 = **回合尾、忙态归位之前**；写形 = 标题值随整档 `saveLines` 落盘（单写；链单源 = §6.7） | 标题期 = busy 窗口（webview Stop 显 + 路由守卫拒收）；标题抛错不卡永久 busy；单写免「整档 save + 独立 `renameSlot`」两次落盘 |
 | D-SE31 | 跨端 `m.active` 翻动 = **他端合法事件、本进程零效果**（绑定 / 缓存 / 记录不因外部翻指针迁移；释放时**不收养幸存 active**——§6.15 裁定条 P1–P5） | 收养绕开 `usableSlot` / `slotOccupancy` 守卫（可能接手另一活进程的槽 ⇒ 双端双写互覆盖）；且与 D-SE2 粘性同病灶——本端绑定只在四个本端落点维护 |
 | D-SE32 | 认领**随绑定走**（F-CR1）：绑定迁移落点释放本进程残留认领（保留集 = 落点槽 ∪ 其他活绑定；被占目标 ⇒ 保留集空）；释放集并入落点既有 `deletions` 写；`active` / `m.slots` / 槽文件零动 | 认领只增不减 ⇒ 进程活着期间访问过的槽在他端一律打不开且随会话累积；释放不损互覆保护（他端认领 ⇒ 本端再切入判占 + 保存 fork）。否决：保存面全局清扫（ACP 多会话误伤）· `activeSlot` 内释放（裸调用面会放掉真绑定） |
 | D-SE33 | 拒绝路径**判据前置**（F-CR2）：面板受占切换不进入 `switchToSlot`（共享指针 / 记录 / 缓存 / 认领四不动）；端壳函数内被占分支 = 零写 | 先写后判 ⇒ 被拒切换仍翻共享指针（实测 active 41→40）；回滚形态否决（回滚窗口内他端可读脏指针 + 二次写）。核侧受占 = 切换成立（保留 D-6 / D-4 落点语义——fork 面依赖指针翻至目标槽） |
@@ -568,3 +581,8 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 - 2026-09-21（**STARTUP-LATENCY 批 · 收口前残留收正** · eng-designer——承 `docs/batches/2026-09-21-startup-latency.md` §5 实施读数 + 父侧裁定）：两处引 `thincoder-cli/bin/thincoder.mjs` 坐标按实施后实读收正（§6.16 钉槽落点 `:342` · §6.17 双端同源 CLI 锚 `:322`）；**零新语义**。
 - 2026-09-21（**STARTUP-LATENCY 批 · 收口前机制微修** · eng-designer——承 `docs/batches/2026-09-21-startup-latency.md` §2 修正轮 3 = 父侧 04:5x 真机复测）：
   §6.12 / §6.17 GC 触发改**启动窗外延迟拍**（`GC_PASS_DELAY_MS` = 3s；启动解耦判据句在档）+ 自动面预算改**过 ③ 进 ① 即耗**（含 ① manifest 读，总评估 ≤500/pass；有界语义 / 前向推进论证 / 成本读数 / 边界行同步）；§7 补 **D-SE39 / D-SE40**；来源 = 验收② 实测 2.9–4.2s（对照 ≤2s ✗）根因两处。
+- 2026-09-21（**块标题行对齐批 · eng-designer**——承 `docs/batches/2026-09-21-vsc-block-title-align.md` §1 · 用户 07:26 范围更正）：§6.7 改为**双端同一套机制**四环单源（源谓词 = `isRealUserMsg` / 生成 = 核 `generateTitle` / 触发 = 无标题即尝试 / 写形 = 随回合尾整档 save 单写）+ VSC `requestTitle` 独立实现旧句去净；
+  §6.15 标题触发条改「时点 + 单写形」；D-SE30 同步。**零新协议语义**（改的是同一链的调用形与落点）。
+- 2026-09-21（**块标题行对齐批 · D8 裁定轮 · eng-designer**——承 `docs/batches/2026-09-21-vsc-block-title-align.md` §2.12 · 父侧代裁）：§6.7「读 / 展示」行收正——**常显位 = 两端 chrome**（VSC 顶栏 / CLI 状态行段；落点设计 = `docs/cli/design/TUI.md` §7.4）——D8 由「上抛」改判**消（b 形 · 两端常显）**；`/session` 按需列表面零变。
+
+- 2026-09-21（**块标题行对齐批 · 设计评审轮 1 修正** · eng-designer——承 `docs/batches/2026-09-21-vsc-block-title-align.md` §2.13 · 发现 1 / 4）：§6.7 两处收正——①「读 / 展示」行限定形（**列表面**同回退链；CLI 段 = `agent.title` 活读 · 空值零注入；空窗差 = 已登记端差〔A9〕）；② 环枚举重基 = **源 / 生成 / 触发 / 写 / 读·展示五环**（谓词 ∈ 源、时点 ∈ 写）。**零新语义**。

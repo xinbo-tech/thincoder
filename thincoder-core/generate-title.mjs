@@ -9,6 +9,9 @@
  */
 
 import { proxyFetch } from "./proxy.mjs"
+// D7（2026-09-21 块标题行对齐批——标题链单源）：首条真实 user 消息谓词收核单源
+// （`isRealUserMsg`——纯函数零依赖，无环）。
+import { isRealUserMsg } from "./history-window.mjs"
 
 // Test seam (_-prefix, mirrors run.mjs seams): lets the proxy-branch regression
 // test swap the proxy fetch. The branch it exercises used to carry a dynamic
@@ -105,13 +108,10 @@ export async function ensureSessionTitle(agent) {
   if (agent.title) return agent.title
   try {
     // TUI-OOM-ROOTCAUSE 批（SESSION.md §6.14）：绑定态首条 user 消息在记录存储（段 1）——
-    // 内存窗口可能已滑过它（store.firstUserMessage 首扫一次并缓存）；未绑定回退内存查找。
+    // 内存窗口可能已滑过它（store.firstUserMessage 首扫一次并缓存）；未绑定回退内存查找
+    // （谓词单源 = `isRealUserMsg`——与 VSC 端壳同判据）。
     let firstUser = agent._recordStore?.firstUserMessage?.() ?? null
-    if (!firstUser) {
-      firstUser = (agent._fullHistory ?? agent.history).find(
-        (m) => m.role === "user" && typeof m.content === "string" && !m.content.startsWith("[System reminder:"),
-      )
-    }
+    if (!firstUser) firstUser = (agent._fullHistory ?? agent.history).find(isRealUserMsg)
     if (firstUser) {
       const title = await generateTitle(firstUser.content, agent.provider)
       if (title) agent.title = title

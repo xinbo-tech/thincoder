@@ -16,8 +16,8 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { createServer } from "node:http"
 import { injectAtRefs } from "../src/extension/file-refs.mjs"
-import { sendHistoryPage, generateTitle } from "../src/extension/panel-session.mjs"
-import { saveSessionToSlot, _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-io.mjs"
+import { sendHistoryPage, generateTitle, saveLines } from "../src/extension/panel-session.mjs"
+import { loadSlot, saveSessionToSlot, _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-io.mjs"
 import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
 
 let _tmp, WS, CFG, A, B
@@ -128,14 +128,15 @@ test("W15-5 标题源文本同源剥离（正常）：真 injectAtRefs 产物经
     assert.ok(text.length >= 10, `前置：剥离后 ≥10 字符（实 ${text.length}）`)
     assert.ok(injected.slice(0, 200).includes(SENTINEL), "前置：哨兵入前 200 字符窗")
 
-    // 夹具前提 ②：槽数据 activeProvider = 假 provider + history[0] = 真注入产物
+    // 夹具前提 ②（D7 后）：槽只供 provider 解析（activeProvider）+ 无标题短路位；标题**源** =
+    // 内存人读线入参（真注入产物——不再读槽 history）
     const cwd = process.cwd()
     const slot = 1
     saveSessionToSlot(cwd, slot, {
       version: 2, cwd, title: "", activeProvider: "fakep", activeModel: "m1",
-      history: [{ type: "user", content: injected }], contextHistory: [],
+      history: [], contextHistory: [],
     })
-    await generateTitle({ _slot: slot }, slot)
+    await generateTitle({ _slot: slot }, slot, [{ role: "user", content: injected }])
 
     // 夹具前提 ⑤：三条并列（零请求假绿防呆）
     assert.ok(srv.requests.length >= 1, "请求 ≥1 次")
@@ -146,3 +147,67 @@ test("W15-5 标题源文本同源剥离（正常）：真 injectAtRefs 产物经
     await srv.close()
   }
 })
+
+// ─── 块标题行对齐批（2026-09-21 · 批档 §2.8 用例 7–9 + §2.13）：标题链 D7 单源（源 / 触发 / 写形）──
+
+/** D7 用例夹具：假 provider 配置 + 槽（槽只供 provider 解析与无标题短路位——源由用例入参给）。 */
+function d7Slot(srv, { title = "", slot = 3 } = {}) {
+  writeFileSync(CFG, JSON.stringify({
+    providers: [{ name: "fakep", apiKey: "k", baseURL: srv.url, model: "m1" }],
+    defaultModel: "fakep:m1",
+  }))
+  const cwd = process.cwd()
+  saveSessionToSlot(cwd, slot, { version: 2, cwd, title, activeProvider: "fakep", activeModel: "m1", history: [], contextHistory: [] })
+  return { cwd, slot }
+}
+
+test("§2.8-7 C 谓词（首条 = reminder ⇒ 下一条真实 user）：载荷含真实文本 ∧ 不含 reminder 文本", async () => {
+  const srv = await titleServer()
+  try {
+    const { slot } = d7Slot(srv)
+    await generateTitle({ _slot: slot }, slot, [
+      { role: "user", content: "[System reminder: env: vscode, mode: eng, model: m1, slot: 1, resumed: no.]" },
+      { role: "user", content: "真实提问文本：请概括本会话" },
+    ])
+    assert.ok(srv.requests.length >= 1, "请求 ≥1 次")
+    const payload = JSON.stringify(srv.requests)
+    assert.ok(payload.includes("真实提问文本"), "标题源 = 下一条真实 user 消息")
+    assert.ok(!payload.includes("[System reminder:"), "reminder 文本零入标题源（谓词单源 isRealUserMsg）")
+  } finally {
+    await srv.close()
+  }
+})
+
+test("§2.8-8 string 守卫（非串 content ⇒ 跳过）：取下一真实消息（多模态条目不消费）", async () => {
+  const srv = await titleServer()
+  try {
+    const { slot } = d7Slot(srv)
+    await generateTitle({ _slot: slot }, slot, [
+      { role: "user", content: [{ type: "text", text: "多模态首条文本" }] },
+      { role: "user", content: "真实提问文本：请概括本会话" },
+    ])
+    assert.ok(srv.requests.length >= 1, "请求 ≥1 次")
+    const payload = JSON.stringify(srv.requests)
+    assert.ok(payload.includes("真实提问文本"), "跳过非串条目取下一真实消息")
+    assert.ok(!payload.includes("多模态首条文本"), "非串条目不消费（守卫）")
+  } finally {
+    await srv.close()
+  }
+})
+
+test("§2.8-9 短路 + 单写形：槽 title 在场 ⇒ 零触网；saveLines(extra.title) 落槽；extra 无 title ⇒ 既有 title 保留", async () => {
+  const srv = await titleServer()
+  try {
+    const { cwd, slot } = d7Slot(srv, { title: "已有标题" })
+    await generateTitle({ _slot: slot }, slot, [{ role: "user", content: "真实提问文本：请概括本会话" }])
+    assert.equal(srv.requests.length, 0, "槽 title 在场 ⇒ 短路零触网（无标题即尝试同判据）")
+    const history = [{ type: "user", content: "真实提问文本：请概括本会话" }]
+    saveLines({}, history, [], { title: "标题X" }, slot)
+    assert.equal(loadSlot(cwd, slot).title, "标题X", "标题值随整档 save 单写（extra.title）")
+    saveLines({}, history, [], {}, slot)
+    assert.equal(loadSlot(cwd, slot).title, "标题X", "extra 无 title ⇒ 槽既有 title 保留")
+  } finally {
+    await srv.close()
+  }
+})
+

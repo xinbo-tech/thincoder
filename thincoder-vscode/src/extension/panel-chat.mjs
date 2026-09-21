@@ -14,8 +14,10 @@
  * C2（SESSION-FLOW-C F-C2a——2026-09-09）：_suspPending/_turnActive 布尔退役——忙态单一
  * _turnState 枚举（idle/running/susp）——释放窗口 = state==="susp" 且 panel._susp 空；
  * 队列尾排空等读者改状态机表达（真值表与旧布尔逐位一致）。
- * A2（SESSION-FLOW-A F-A2——2026-09-09 用户裁方案 Y）：标题（首回合 isFirstMessage）上移
- * finally 忙态归位前（running 窗口——修 R3 并发/消化劫持——错误不外抛归位恒执行）。
+ * A2（SESSION-FLOW-A F-A2——2026-09-09 用户裁方案 Y）：标题上移 finally 忙态归位前（running
+ * 窗口——修 R3 并发/消化劫持——错误不外抛归位恒执行）；D7（2026-09-21 块标题行对齐批）后
+ * 触发判据 = **无标题即尝试**（槽 `title` 空判——`isFirstMessage` 退役；标题链单源 =
+ * `docs/core/design/SESSION.md` §6.7）。
  * 四档结构拆分批（2026-09-18 · VSC-DEBT §12.2.1）：回合执行循环 + controller 工厂迁出至
  * `panel-turn-loop.mjs`；回合阶段三段（provider/模型解析 · 收尾落盘 · 挂起接管）迁出至
  * `panel-turn-stages.mjs`——本档留入口守卫段（`ensurePanelAgent` / `ensureMemoryHandle` 同址——
@@ -127,7 +129,6 @@ async function runPanelChatImpl(panel, opts = {}) {
   await ensureMemoryHandle()
   const distillSlot = turnSlot
   const suspLines = susp?.lines ?? null // suspension turns keep the LIVE lines (pool/pending ride them)
-  let isFirstMessage // assigned inside the try (needs the loaded lines); read after finally
   let fullHistory = [] // hoisted: the finally-block save must see them even on early-return paths
   let history = []
   // 四档拆分批：`slotStamp` 同 hoist（原 `const slotStamp` 在 try 内——收尾段参数化后，早退
@@ -195,8 +196,8 @@ async function runPanelChatImpl(panel, opts = {}) {
   panel._liveLines = { history, fullHistory, cwd }
   // Slot snapshot comment: turnSlot/distillSlot are captured at function entry (above, before
   // any await) — see the 交付评审 🔴#1 note at the top of this function.
-  const isFirstMessageNow = !suspLines && fullHistory.filter((m) => (m.type ?? m.role) === "user").length === 0
-  isFirstMessage = isFirstMessageNow
+  // D7（2026-09-21）：`isFirstMessage` 判据退役——标题触发改「无标题即尝试」（槽 title 空判），
+  // 源改内存人读线（标题链单源——`finalizeTurn` 内完成）。
 
   // F2（2026-09-08）：runOpts 不再搬运 engState/planMode 状态载荷
   // ——hydrate（setup.mjs applySlotSessionState）每轮直接从权威槽 reconcile（engineering/
@@ -243,7 +244,7 @@ async function runPanelChatImpl(panel, opts = {}) {
   await runTurnLoop(panel, { text, cwd, p, callbacks, images, history, fullHistory, autoTurn, upstreamTurn, susp, turnSlot, tLog, askInPanel, slotStamp })
   } finally {
     // 收尾段（迁出至 panel-turn-stages.mjs——捕获变量参数化；纪律 = §12.2.1 第 4 步附加纪律）。
-    await finalizeTurn(panel, { history, fullHistory, slotStamp, turnSlot, isFirstMessage, susp, skipSession })
+    await finalizeTurn(panel, { history, fullHistory, slotStamp, turnSlot, susp, skipSession })
   }
 
   // 段 B（迁出至 panel-turn-stages.mjs——契约 B-1/B-2：`runTurn` 闭包原直调 `runPanelChat`
