@@ -428,3 +428,5 @@ VERDICT: pass
 **发布关联**：本批 = 核 `0.9.2` 的 npm 页面首秀件（README / LICENSE）✗ 随 `0.9.2` 发布（发布动作 = 用户门 ✗ 挂起中 ✓）。
 
 **冻结核**：本 §6 落 ⇒ 整档冻结（不再回改 ✗ 例外 = 提交哈希回填 errata 一笔 ✓）。
+
+**提交 errata（本 §6 声明的例外笔）**：本批提交 = `1935f13b`（`feat: core README + LICENSE + npm metadata (release face)` ✗ 4 路径：批档 + `thincoder-core/{README.md, LICENSE, package.json}` ✗ 已 push origin main ✓）。
