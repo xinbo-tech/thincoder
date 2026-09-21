@@ -204,7 +204,7 @@ v2 把纪律从「文字」变成「机器」——**能靠结构拦的，就不
 
 | 层 | 文档（中 / 英） | 粒度 | 谁写 | 默认目录 | 项目类型 |
 |---|---|---|---|---|---|
-| 状态 | **项目状态档**（PROJECT-MANIFEST） | **每个 git 仓一份** | 主 agent | 仓根 `PROJECT-MANIFEST.json`（判据 = .git 纯向下：锚自身仓→自身；否则向下唯一带 manifest 子仓；2026-09-17 用户裁定） | 两类都需 |
+| 状态 | **项目状态档**（PROJECT-MANIFEST） | **每个 git 仓一份** | 主 agent | 仓根 `PROJECT-MANIFEST.json`（判据 = .git 纯向下：锚自身仓→自身；否则向下唯一带 manifest 子仓——2026-09-17 用户裁定；**按用点解析 ✗ 会话不绑定项目——2026-09-21 用户裁定，见 `SPEC-MANIFEST` §⑥**） | 两类都需 |
 | 需求 | **项目需求**（Project Requirements） | 项目一份 | 主 agent | `docs/requirements/` | 两类都需 |
 | 需求 | **功能规格**（Function Spec） | 一模块一份 | 主 agent | `docs/requirements/specs/` | 两类都需 |
 | 设计 | **架构设计**（Architecture Design） | 项目一份 | eng-designer | `docs/design/` | 两类都需 |

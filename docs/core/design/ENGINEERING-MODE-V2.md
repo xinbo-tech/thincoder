@@ -62,7 +62,7 @@
 
 | # | 模块 | 现有模块（file/dir → 变更） | 职责（一句话） | v2 依据 |
 |---|---|---|---|---|
-| M1 | 项目状态档 manifest | `thincoder-core/manifest.mjs`（**新增**，v1 无对应物）——机制代码在核，操作对象 = 被开发项目**项目根（= git 仓根——判据 = .git 纯向下；2026-09-17 用户裁定）**的 `PROJECT-MANIFEST.json`（数据档，N3 迁移点）；`thincoder-core/agent/setup-reminders.mjs` + `thincoder-core/agent/run-stages.mjs`（**修改**——情境行注入，E5.1） | JSON schema + 读/写/校验（version/phase/docRoot/promptsLanding/checkConfig 五键）+ 情境值 → 模型注入行 | §5.1 · §6 · §9 |
+| M1 | 项目状态档 manifest | `thincoder-core/manifest.mjs`（**新增**，v1 无对应物）——机制代码在核，操作对象 = 被开发项目**项目根（= 带 manifest 的目录——**git 非前提**；归属 = 最近祖先优先 / 发现梯 = 纯向下一层；2026-09-21 用户裁定——明细 = `docs/core/design/MANIFEST.md` §2.2 / §2.9）**的 `PROJECT-MANIFEST.json`（数据档，N3 迁移点）；`thincoder-core/agent/setup-reminders.mjs` + `thincoder-core/agent/run-stages.mjs`（**修改**——情境行注入，E5.1） | JSON schema + 读/写/校验（version/phase/docRoot/promptsLanding/checkConfig 五键）+ 情境值 → 模型注入行 | §5.1 · §6 · §9 |
 | M2 | 台账（SQLite） | `thincoder-core/ledger.mjs`（228 行·**修改**）+ `ledger-surface.mjs`（77 行·**修改**）+ CLI/VSC 端 `ledger-surface.mjs`（70/119 行·**修改**，完整清单见接线表） | md 读面 → `node:sqlite` 读面 + 写命令 + 六态 CHECK schema | §5.2 |
 | M3 | 批次档生命周期工具 | `thincoder-core/agent-tools/batch-segment.mjs` → **改名 `batch.mjs`**（265 行·**修改**——action 分发扩 create/status/close，超硬顶则拆 `batch-skeleton.mjs` 模板档） | 批次档生命周期（create/append/status/close）+ 段白名单 + 状态行冻结拒写 | §5.3 · `design/BATCH-RECORD.md` §4.11–§4.14 |
 | M4 | 写权门禁（token 门 + 冻结窗口） | `thincoder-core/agent/dispatch.mjs`（490 行·**修改**，**拆分候选**——近 500 硬上限，拆出 `write-gate.mjs`）+ 新档 `write-gate.mjs`（`resolveReviewTargetPaths` + 冻结窗口判据组装）+ VSC `tool-gates.mjs`（165 行·**修改**，完整清单见接线表） | token 门 + D5 冻结窗口——评审对象/被审文件读 manifest `docRoot`（去硬编码 docs/） | §7 · §8.5 |
@@ -212,8 +212,9 @@ M10 测试（独立简化，无依赖）
 
 - **模块划分权威源 = 架构设计（本档 §2.2）**——Function Spec 按它拆、模块设计按它写。
 - **目录约定（默认值）**：`requirements/`（项目需求 + `specs/` 功能规格）· `design/`（架构 + `modules/` 模块设计）· `batches/`（批次档）· `PROJECT-MANIFEST.json`（项目根）。
-- **声明面覆盖机制**：默认值被 manifest 声明面（`docRoot` / `promptsLanding`）覆盖——产品启动时读 manifest，各机制（机检扫描 / 文档地图 / 批次档落点 / 提示词落地）从 `docRoot` / `promptsLanding` 取路径，不硬编码。**缺某键（含 `docRoot` 各键 / `promptsLanding`）→ 用默认值（便利 fallback）；缺 manifest（整档）→ 拒绝进入正常循环、先初始化**（需求 §5.1 前置门槛——缺 manifest 时机制拒绝进入正常循环，必须先初始化生成再进正常循环）。
-  **口径限定（2026-09-18——台账 #30）**：以上读面与前置门槛均为**工程模式会话**口径（判据取**会话权威值**：槽优先 + config 回退）；普通会话**装配钩子**零 manifest I/O（不读 / 不拒 / 不建档；下游仍读盘消费面不在此限）；模式门判据与取值点、钩子执行点、拒自动建档分支（根不可解析 → 拒，不建档）见 `MANIFEST.md` §2.2（D2——本档不重述）。
+- **声明面覆盖机制**：默认值被 manifest 声明面（`docRoot` / `promptsLanding`）覆盖——产品启动时读 manifest，各机制（机检扫描 / 文档地图 / 批次档落点 / 提示词落地）从 `docRoot` / `promptsLanding` 取路径，不硬编码。
+  **缺某键（含 `docRoot` 各键 / `promptsLanding`）→ 用默认值（便利 fallback）；缺 manifest（整档）→ 会话照常起 + 按用点报明 / 走建档流**（2026-09-21 用户裁定——启动零拒绝；**项目落地 = 建 manifest**，轻动作，落点默认 = 会话锚）。
+  **口径限定（2026-09-18——台账 #30）**：以上读面与前置门槛均为**工程模式会话**口径（判据取**会话权威值**：槽优先 + config 回退）；普通会话**装配钩子**零 manifest I/O（不读 / 不拒 / 不建档；下游仍读盘消费面不在此限）；模式门判据与取值点、钩子执行点、装配钩子非 fatal、建档三格（梯②④⑤ ⇒ 就地建档）、按用点解析两段（归属 ∨ 发现）见 `docs/core/design/MANIFEST.md` §2.2 / §2.9（D2——本档不重述）。
 - **值形态（2026-09-17 用户裁定）**：`docRoot` 各键 = 非空字符串 \| 非空字符串数组（多根声明——数组为完整声明、不追加默认；非法形态拒）；解析基数 = 项目根。值域与消费面见 `MANIFEST.md` §2.7（单一权威源）。
 
 #### E3 角色架构（v2 §7）
@@ -446,7 +447,7 @@ engineering 真值 ──► 固定段裁剪（plan 不入表）─────�
 ### 2.5 整体数据流
 
 ```text
-进入（读 manifest phase，无则初始化；情境值随后由 E5.1 情境行进模型上下文）
+进入（按用点解析 manifest：归属 ∨ 发现；缺档 ⇒ 落点 = 会话锚建档；情境值随后由 E5.1 情境行进模型上下文）
   └─► 需求进台账（items.status=待讨论，主 agent）
         └─► 攒批（阈值触发）→ 开批（批次档 §1）
               └─► eng-designer 设计（§2 任务书 + 架构/模块设计档）
@@ -518,6 +519,10 @@ engineering 真值 ──► 固定段裁剪（plan 不入表）─────�
 | T14 | 错误：普通模式零回归 | 普通模式装配 / `/plan` 切换 / ACP `mode:"plan"` / 槽 `planMode:true` 恢复 | 四条路径全带宽不变（**除本批所列矩阵镜像收正**——`host-shape-spawn.test.mjs` T5：两条工程行删 `plan` + 增 explore 工程行——外，既有测试零改全绿） |
 
 ## 4. 变更记录
+
+- 2026-09-21（**manifest 解析模型收正批 · 设计轮** · eng-designer——承 `docs/batches/2026-09-21-manifest-resolution.md` §1 · 用户 2026-09-21 11:00–11:29 裁定）：
+  E2 声明面句收正（缺 manifest（整档）→ 会话照常起 + 按用点报明 / 走建档流；项目落地 = 建 manifest 轻动作）；
+  E2 口径限定行挂新指针（装配钩子非 fatal · 建档三格 · 按用点解析两段 = 归属 ∨ 发现）；M1 模块行项目根口径改「带 manifest 的目录（git 非前提）+ 归属 = 最近祖先优先」；§2.5 数据流首行同步。机制权威 = `docs/core/design/MANIFEST.md` §2.2 / §2.9（D2——本档不重述）。
 
 - 2026-09-21（**批次档生命周期工具化批 · 设计轮** · eng-designer——承 `docs/batches/2026-09-21-batch-lifecycle-tool.md`）：M3 行收正（改名 `batch.mjs` + action 扩面 + 行数 as-of 265）；§2.3 六段表 §2/§3/§5 写入手段改指 `batch` append；§3 机械面表 M3 行同步；机制权威 = `design/BATCH-RECORD.md` §4（该批扩 §4.11–§4.14）。
 
