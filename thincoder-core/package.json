@@ -2,12 +2,29 @@
   "name": "@thincoder/core",
   "version": "0.9.1",
   "description": "ThinCoder shared core — shared mechanism modules + shared prompt content (CLI ↔ VS Code extension).",
+  "keywords": [
+    "ai",
+    "agent",
+    "core",
+    "shared",
+    "llm",
+    "mcp"
+  ],
   "type": "module",
   "scripts": {
     "test": "node test/run.mjs",
     "prepublishOnly": "npm test"
   },
   "license": "MIT",
+  "author": "liwei <liwei@51marine.com> (上海新舶)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xinbo-tech/thincoder.git"
+  },
+  "homepage": "https://github.com/xinbo-tech/thincoder",
+  "bugs": {
+    "url": "https://github.com/xinbo-tech/thincoder/issues"
+  },
   "engines": {
     "node": ">=22.13.0"
   },
