@@ -395,3 +395,5 @@ node -e "const fs=require('fs');const t=fs.readFileSync('thincoder-cli/README.md
 **发布关联**：三档随发布列车（核 `0.9.2` ✗ CLI `0.12.64` ✗ VSC `0.9.4`）✗ **发布动作 = 用户门 ✗ 挂起中** ✓。
 
 **冻结核**：本 §6 落 ⇒ 整档冻结（不再回改 ✗ 例外 = 提交哈希回填 errata 一笔 ✓）。
+
+**提交 errata（本 §6 声明的例外笔）**：本批提交 = `95e07181`（`docs: readme text corrections — core static-tool wording, vsc/cli structure trees to current form` ✗ 4 路径：三 README + 本档 ✗ 已 push origin main ✓）。
