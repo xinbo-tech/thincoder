@@ -364,11 +364,11 @@ A8 / A9（对称面均入核）与 F3（零「新写」——不得造第三份�
 | VSC `extension/**`（38 档） | 38 | 对位 **18** 档（#123–#126 / #131 / #163 / #165 / #170–#174 / #175 / #177 / #184）+ ④ **20** 档（#132 两档 + #183 十八档） | — |
 | VSC `mcp/**` | 5 | 对位（#144–#148） | — |
 | VSC `provider/**` + `provider/transports/**` | 5 | 对位（#138–#141） | — |
-| VSC `tools/**` 单端 | 12 | 对位 10 档（#167 / #179 + 映射表）+ ④ 2 档（`context` / `focus`） | — |
+| VSC `tools/**` 单端 | 12 | 对位 10 档（#167 / #179 + 映射表）+ ④ 2 档（`ide` / `focus`——`context` 于 2026-09-21 改名让位与核新工具 `context`） | — |
 
 > **结论**：单端 **148 + 94 = 242 档**逐面闭合——每档或落对位行 / 归核（`markdown.mjs`——见上表）、或落 ④ 结构性不对称桶（附结构性证据）；无「两者皆缺」的未闭合面。
 > **④ 桶合计 = 101 档**：**CLI 79**（`tui/**` + `tui.mjs` 68 · `acp.mjs` + `acp/**` 4 · `cli/**` 2 · 顶层杂项 5）· **VSC 22**（`extension/**` 20 · `tools/**` 2）。
-> 顶层杂项 5 = `completions` · `crash-reports` · `heap-watch` · `upgrade` · `distill`（顶层 `thincoder-core/markdown.mjs` 归核——见上注）；VSC `tools` 的 2 = `context.mjs` · `focus.mjs`。
+> 顶层杂项 5 = `completions` · `crash-reports` · `heap-watch` · `upgrade` · `distill`（顶层 `thincoder-core/markdown.mjs` 归核——见上注）；VSC `tools` 的 2 = `ide.mjs` · `focus.mjs`。
 > **边界纪律**：本桶只收「仅单侧存在 / 依赖壳能力」者（A9 第 1 条），**不得**以「差异 / 相似度低」入桶；其余 **141 档**全部闭合（对位行 **140** + 归核 **1**——`markdown.mjs`，见上表）。
 > **工具实现面单端档逐档映射表**（#178 / #179 的行内容）→ 已随拆档移入 **`docs/core/design/TOOLS.md` §2.3**（行本体）；本节不复制。
 #### 2.5.1 须用户裁条目清单（A11——四要素提交形式）
@@ -1340,7 +1340,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 | #174 台账渲染面 | **有**（`ctx.colors` 等） | 端侧接线（渲染面）；**台账查询工具面同批接线**（`ledger_query` / `ledger_count`——VSC `thincoder-vscode/src/agent/setup.mjs:142-144` 经动态 import 追加入基础集；2026-09-20 · 机制层端差批 §2.19） |
 | #185 文案字典投影 | **有**（`projectDictionary`） | 端侧接线 |
 
-**④ 端特有面（不进核——无注入位，登记以免误当缺位）**：VSC `thincoder-vscode/src/tools/context.mjs` · VSC `tools/focus.mjs`（`TOOLS.md` §2.3 映射表）· `src/extension/config-watch.mjs` / `migrate-settings.mjs`（`CONFIG.md` #132）· CLI `memory` 子命令面（`MEMORY.md` #135）。
+**④ 端特有面（不进核——无注入位，登记以免误当缺位）**：VSC `thincoder-vscode/src/tools/ide.mjs`（拟新增——2026-09-21 自 `context.mjs` 改名） · VSC `tools/focus.mjs`（`TOOLS.md` §2.3 映射表）· `src/extension/config-watch.mjs` / `migrate-settings.mjs`（`CONFIG.md` #132）· CLI `memory` 子命令面（`MEMORY.md` #135）。
 
 #### 2.13.5 编辑工具径专项（VSC「编辑器打开的文件」）
 
@@ -1944,5 +1944,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 
 - 2026-09-21（**端差纪律收正批（end-diff-doctrine）· 设计评审修正轮（轮 1）** · eng-designer——承 `docs/batches/2026-09-21-end-diff-doctrine.md` §3 发现 #2）：§2.5「渲染面总则（markdown 面）」补**端差默认 = 消**半句 + **登记面 = 记录已裁的保留项（✗ 非未决差项兜底）**；
   **零新语义（评审发现逐号落位）**。
+
+- 2026-09-21（**context-tool 批 · 设计轮（含设计评审轮 1 收正）· eng-designer**——承 `docs/batches/2026-09-21-context-tool.md` §1 / §3 轮次 1 · 台账 #18）：§2.5 ④ 桶行 **`ide`** 归位（`context` 于 2026-09-21 改名让位与核新工具——`:367`）· ④ 桶合计句「VSC `tools` 的 2」改名同步（`ide.mjs` · `focus.mjs`——`:371`）· §2.13.4 ④ 端特有面行路径同步（`:1343`）。**零新语义**。
 
 

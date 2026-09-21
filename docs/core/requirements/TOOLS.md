@@ -48,7 +48,7 @@
 工具是模型作用于外部世界的**唯一入口**。工具系统必须做到：注册面单一可枚举、调度确定、安全边界可解释、
 描述文本足以让模型正确路由、**配置申报与消费一一对应（无死键）**。
 
-### 4.2 功能性需求（F1–F8）
+### 4.2 功能性需求（F1–F9）
 
 | # | 需求 | 说明 |
 |---|---|---|
@@ -60,7 +60,7 @@
 | F6 | `websearch` 后端选择面单一 | 后端由 `websearch.apiKey` 触发（有 key → Tavily；无 key → Bing 兜底）；不设独立后端选择键——`provider` 死键已移除 |
 | F7 | 描述装载面双端同构（VSC） | VSC 端工具描述 = 外部 `.md`（`DESC()` 同语义装载）+ Routing / Notes 段在位 |
 | F8 | `git` 工具的 cwd / workdir 与**跨仓发现** | **缺省 = 发现的项目仓根**（显式 `workdir` 优先——判据 = 与接线 `git.mjs:97` 同源的**真值判定**）；发现规则 = 锚含 `.git` ⇒ 锚 · 否则向下**仅直接子目录一层**找「`.git` ∧ `PROJECT-MANIFEST.json`」者——**恰一 ⇒ 重定向**（输出首行注记 `(repo: <仓根>)`）· **零 ⇒ fail-closed**（`not a git repository`）· **多 ⇒ 报错列候选、不猜**；`init` / `clone` 不做发现。**单源** = 复用 manifest 仓发现逻辑（`thincoder-core/manifest.mjs` `discoverRepos`——禁两份实现）。判据 = 设计档 `TOOLS.md` §6.13 A14–A20；台账 #62 批 = `docs/batches/2026-09-18-repo-discovery.md`（2026-09-19 收口） |
-
+| F9 | `git` 工具的**非交互与超时** | **任何调用不得因交互等待卡死会话**——编辑器族（提交信息 / `rebase --continue` 等）/ 凭据族（终端提示 / askpass GUI）/ pager 族一律压制（加固键集 = 常量，**不进 schema**、不新增用户选项）；需人输入而不可得时须**明确失败**，不得静默等待。**超时兜底**：超时 = fail-closed（可读失败句 + 恢复指引 ✗ 不静默挂起）✗ 被杀不引入工作树回滚（回滚仅经 checkpoint / git 自持命令）；超时数值口径 = 设计档。**单源** = 核 `runGit` 族 spawn 单点加固（禁逐调用点各写一套）。判据 = 设计档 `TOOLS.md` §6.14 A23–A29；台账 #207 批 = `docs/batches/2026-09-21-git-noninteractive.md` |
 ### 4.3 非功能性需求（N1–N9）
 
 | # | 维度 | 标准 |
@@ -190,3 +190,4 @@ thincoder 自身的 CLI / TUI **不定义**本能力——它只是其中一个�
 - 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：新增 §4.6 **VSC 端条目**（描述外部装载 / 打包面 N6 / 批合并与 child 审批面——自 `thincoder-vscode/docs/requirements/TOOLS.md` 并入；语义同源不重并）；§5 补登记行；**本档新增需求 0**（纯回填）。
 - 2026-09-19（**仓库发现批（台账 #62）收口 · 父侧直接执行 · 可 revert**）：新增 **§4.2 F8**「`git` 工具的 cwd / workdir 与跨仓发现」（缺省 = 发现的项目仓根 · 单源复用 `thincoder-core/manifest.mjs` `discoverRepos` · 零态 fail-closed
  · **多态报错不猜** · `init`/`clone` 例外）；§4.2 标题计数 F1–F7 → **F1–F8**（D3）；源 = `docs/batches/2026-09-18-repo-discovery.md`（设计 id=144 · 评审 pass id=145 · 实现 id=146 · 点修 id=147）；**本档新增需求 1 条**。
+- 2026-09-21（**git-noninteractive 批（台账 #207）需求面补登 · 父侧直接执行 · 可 revert**）：新增 **§4.2 F9**「`git` 工具的非交互与超时」（用户 20:26 实报「会话多次在 git rebase 时卡死」✗ 定因 = 同步 spawn + 零交互加固）；§4.2 标题计数 F1–F8 → **F1–F9**（D3）；源 = `docs/batches/2026-09-21-git-noninteractive.md`（设计 id=57 · 评审 59 changes-required → 修正 60 → **61 pass** · 实现 62）；**本档新增需求 1 条**。
