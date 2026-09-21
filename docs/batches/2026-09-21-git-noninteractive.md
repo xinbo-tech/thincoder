@@ -260,4 +260,4 @@ VERDICT: pass
 
 **核销**：台账 **#207** = 已核销 ✓（六态走满 ✓）
 
-**提交**：本收口轮（含 `TOOLS.md` ✗ `requirements/TOOLS.md`（F9）✗ VSC `files.mjs` ✗ plan 批 errata 行 ✓）。
+**提交**：`966f66f1`（15 档 +658/−101 ✗ 含 `TOOLS.md` ✗ `requirements/TOOLS.md`（F9）✗ VSC `files.mjs` ✗ plan 批 errata 行 ✓ 已推 origin ✓）。

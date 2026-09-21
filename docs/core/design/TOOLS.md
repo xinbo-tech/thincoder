@@ -716,7 +716,8 @@ timed out after <n>s (killed) — no interactive input is possible here (editor 
 plan 工具退出文本收正为**批准语义**（**五处**：`thincoder-core/agent-tools/plan.mjs:4` · `:21-23` · `:44` · `:92` · `:109`；退出不再自我放行 ✗ 呈计划 ⇒ 待批准 ⇒ 实施）；逐字文本 / 用例 / 判据 = 批档 §2（D2——本档不重述）。
 
 - 2026-09-21（**git-noninteractive 批 · 设计评审修正轮 1 · eng-designer**——承 `docs/batches/2026-09-21-git-noninteractive.md` §3 轮次 1：🔴 2 · 🟡 4 · 🔵 5 · 发现 11 = 复核回执零动作）：
-  §6.14 逐条收正——①受影响面补 **VSC** `thincoder-vscode/src/tools/ide.mjs`（`changesSection` 转 async + 1 处 `await`）+ 新用例档 `test/tools-ide-changes.test.mjs`（已落）+ `test/files.mjs` 登记，A27 回归面扩**两包全量**；②**A28① 改白名单谓词**（四档 `execFileSync` 命中 = `gitDiffOne` 恰一处）；③A24 补**测试态缝**（`_setGitTimeoutForTest`）与层位（适配器层）；
+  §6.14 逐条收正——①受影响面补 **VSC** `thincoder-vscode/src/tools/ide.mjs`（`changesSection` 转 async + 1 处 `await`）+ 新用例档 `test/tools-ide-changes.test.mjs`（已落）+ `thincoder-vscode/test/files.mjs` 登记，
+  A27 回归面扩**两包全量**；②**A28① 改白名单谓词**（四档 `execFileSync` 命中 = `gitDiffOne` 恰一处）；③A24 补**测试态缝**（`_setGitTimeoutForTest`）与层位（适配器层）；
   ④新增**「被杀后仓态与恢复锚」按写动作类表** + 超时文案收正（树杀尽力而为 + git 自持态恢复锚）；⑤300s 依据改指需求档 **§4.7 TTY-DRIVE N3**（候选参照值）；⑥§6.12 / §6.13 边界行补 §6.14 指针；⑦await 计数收正（34 → **30** · 核三档合计 **46**）；
   ⑧未实测段标 unverified（`VISUAL` / `EDITOR` 两段 · #8 归因）；⑨A25 钉 `LC_ALL=C` + 墙钟经验界注；⑩win32 `SIGTERM` = 硬终止（实测 184ms）。**零新语义**（评审发现逐号落位）。
 
