@@ -3,6 +3,28 @@
 All notable changes to the core package are documented here.
 Format: Keep a Changelog · 中文 · 号在发布时定（CalVer——见 `docs/RELEASE.md` §4）。
 
+## [0.9.2] — 2026-09-21
+
+> 0.9.1 → 0.9.2（月内序号——发布时定号）
+
+### Added
+
+- **PROJECT-MANIFEST 模型（按用点解析）**：项目发现五级梯（会话锚 → 带档祖先 → 一层子档 → 工作区……）+ owning-ancestor 归属 + 建档流；整档缺失不再静默（启动降级 + 明示提示）。
+- **批档生命周期工具** `batch`（create / append / status / close——原 `batch_segment` 更名，别名保留）。
+- **台账执行人列**（F-LX1）：executor 归属 + 判存活显示。
+- **信号行两档标签**（digest / ask）+ ask 参数 + 起始行（F-UC8）。
+- **会话认领释放**（F-CR1/CR2）：释放 + 拒绝零写入。
+
+### Changed
+
+- **非阻塞启动**：异步会话 GC · 陈旧清扫 · traces 清理（启动不再被大扫除卡住）。
+- **工程模式排除 `plan` 角色**（FR31——装配 / 命令 / 残留三面一致）。
+- **包面**：README 补建（static 工具口径收正）+ LICENSE + npm 元数据；`files` 白名单不变。
+
+### Fixed
+
+- 批别名残留（测试断言 / 提示词文档引用 / 错误串）· VSC 子代理块标题行与 CLI 对齐（标题段补全）。
+
 ## [0.9.1] — 2026-09-21
 
 > 核首发（2026-09 当月推导——registry 无号 ⇒ `0.<当月>.1`；首发即本段 ✗ 无更早历史——核内容此前散在两产品仓 ✗ 无独立版本号可考 ✗）。
