@@ -4,8 +4,9 @@
  * 行为面：`pushInjections`（机器行专用注入——单条/数组/非法条目静默跳过/同文去重/
  * transient 标记）· `appendImagePointer`（粘贴图指引——depth>0 no-op / 空图 no-op /
  * 非多模态模型可见报错 / 多模态模型追加指引）· `envStateLine` 形态（回归锚）·
- * `manifestStateLine` / `pushManifestStateReminder`（#28 情境行——AC-N1–AC-N6 · T8–T14；
- * #34 值变检测（mtime 门控重读）——AC-N7–AC-N7d · T32–T36）。
+ * `manifestStateLine` / pushManifestStateReminder`（#28 情境行——AC-N1–AC-N6 · T8–T14；
+ * #34 值变检测（mtime 门控重读）——AC-N7–AC-N7d · T32–T36）· 2026-09-21（#188）：
+ * `manifestReportLine` 四态逐字 + 状态选行（AC-25——T46 / T47）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
@@ -13,7 +14,8 @@ import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
-import { envStateLine, pushInjections, appendImagePointer, manifestStateLine, pushManifestStateReminder } from "../agent/setup-reminders.mjs"
+import { envStateLine, pushInjections, appendImagePointer, manifestStateLine, manifestReportLine, pushManifestStateReminder } from "../agent/setup-reminders.mjs"
+import { DEFAULT_MANIFEST } from "../manifest.mjs"
 
 test("envStateLine：形态锚（mode / model / slot / resumed 四字段）", () => {
   const line = envStateLine({ mode: "eng", model: "kimi-k3", slot: 3, resumed: true })
@@ -117,17 +119,19 @@ test("AC-N4/T11 压缩自愈：行被移除（模拟压缩吞咽）后下一回�
   assert.equal(agent.history.length, 1, "行回来（零触碰 context.mjs 压缩面）")
 })
 
-test("AC-N5/T12/T13 门控：depth≠0 / 非工程模式 / manifest 缺失 → false 且零注入", () => {
+test("AC-N5/T12/T13 门控：depth≠0 / 非工程模式 / 无锚 → false 且零注入", () => {
   const deep = engAgent()
   const normal = engAgent()
   normal.config.agent.engineering = false
-  const noManifest = { ...engAgent(), manifest: null }
+  // 门控第三腿（本批收正——KD-M1-27）：判据 = **无锚**（`agent.cwd` 缺失——零 I/O / 零报明）；
+  // 「`agent.manifest` 缺失」自本批起不再是门（有锚时状态判定轴会解析出值/报明行——§2.6 ③'）。
+  const noAnchor = { ...engAgent(), cwd: undefined, manifest: null }
   const noConfig = { manifest: { phase: "initial-dev" }, history: [] }
   assert.equal(pushManifestStateReminder(deep, { depth: 1 }), false, "depth:1 拒（仅 depth-0）")
   assert.equal(pushManifestStateReminder(normal, { depth: 0 }), false, "非工程模式拒")
-  assert.equal(pushManifestStateReminder(noManifest, { depth: 0 }), false, "manifest 缺失拒")
+  assert.equal(pushManifestStateReminder(noAnchor, { depth: 0 }), false, "无锚拒（零 I/O / 零报明——无既往好值 ⇒ 零注入）")
   assert.equal(pushManifestStateReminder(noConfig, { depth: 0 }), false, "无 config → 拒（可选链降级不抛）")
-  for (const a of [deep, normal, noManifest, noConfig]) assert.equal(a.history.length, 0, "零注入")
+  for (const a of [deep, normal, noAnchor, noConfig]) assert.equal(a.history.length, 0, "零注入")
 })
 
 test("AC-N6 面纪律：注入行 transient:true / role:user；_fullHistory 零新增", () => {
@@ -239,4 +243,126 @@ test("AC-N7c/T36 读回非法 ⇒ 保守（缓存不推进）；修好 ⇒ 自�
     assert.equal(pushManifestStateReminder(agent, { depth: 0 }), true, "自愈：缓存未推进 ⇒ 同 mtime 仍重读采纳")
     assert.deepEqual(stateLines(agent).map((m) => m.content), [lineOf("production", "strict")], "行更新")
   } finally { rmSync(root, { recursive: true, force: true }) }
+})
+
+// ═══ #188 状态选行（`docs/core/design/MANIFEST.md` §2.6 条 1b / KD-M1-26——AC-25）：T46 / T47 ═══
+
+/** 四态夹具（真判据——tmp 自建 `.git` / 数据档）：梯⑤ 空目录 / 两带档子仓（带档级歧义）/
+ *  两裸仓（裸仓级歧义）/ 裸仓缺档 / 档非法。返回 = 各态锚目录。 */
+function reportFixture() {
+  const base = mkdtempSync(join(tmpdir(), "manifest-report-"))
+  const dir = (rel) => { const d = join(base, rel); mkdirSync(d, { recursive: true }); return d }
+  const doc = (rel) => { const d = dir(rel); writeFileSync(join(d, DATA_FILE), JSON.stringify(DEFAULT_MANIFEST), "utf8"); return d }
+  const bare = (rel) => { const d = dir(rel); mkdirSync(join(d, ".git")); return d }
+  doc("two/alpha")
+  doc("two/zed")
+  bare("bare-two/x")
+  bare("bare-two/y")
+  bare("bare-one")
+  const bad = bare("bad")
+  writeFileSync(join(bad, DATA_FILE), "{ not json", "utf8")
+  return {
+    base,
+    noProject: dir("empty"),
+    ambiguousManifest: join(base, "two"),
+    ambiguousGit: join(base, "bare-two"),
+    missing: join(base, "bare-one"),
+    invalid: bad,
+    ok: doc("good"),
+  }
+}
+
+/** 报明行期望（逐字构造——判据 = §2.6 条 1b 逐字）。 */
+const reportLine = (body) => `[System reminder: project state: ${body}]`
+
+test("T46 报明行四态逐字（纯函数）：no-project / ambiguous 两变体 / missing / invalid；ok 态无报明行", () => {
+  const f = reportFixture()
+  try {
+    assert.equal(
+      manifestReportLine({ state: "no-project", cwd: f.noProject }),
+      reportLine(`none — no project at ${f.noProject} (no manifest on the ancestor chain, none below). Parameters fall back to defaults. Create PROJECT-MANIFEST.json here to land a project (git optional).`),
+      "no-project 行逐字",
+    )
+    assert.equal(
+      manifestReportLine({ state: "ambiguous", cwd: f.ambiguousManifest, candidates: [join(f.ambiguousManifest, "alpha"), join(f.ambiguousManifest, "zed")], matched: "manifest" }),
+      reportLine(`ambiguous — 2 candidate marker directories under ${f.ambiguousManifest}: ${join(f.ambiguousManifest, "alpha")}、${join(f.ambiguousManifest, "zed")} — target the intended one explicitly (the mechanism never picks).`),
+      "ambiguous 带档级变体逐字（marker directories）",
+    )
+    assert.equal(
+      manifestReportLine({ state: "ambiguous", cwd: f.ambiguousGit, candidates: [join(f.ambiguousGit, "x"), join(f.ambiguousGit, "y")], matched: "git" }),
+      reportLine(`ambiguous — 2 candidate repositories under ${f.ambiguousGit} (none carries PROJECT-MANIFEST.json): ${join(f.ambiguousGit, "x")}、${join(f.ambiguousGit, "y")} — target the intended one explicitly (the mechanism never picks).`),
+      "ambiguous 裸仓级变体逐字（repositories … none carries）",
+    )
+    assert.equal(
+      manifestReportLine({ state: "missing", root: f.missing }),
+      reportLine(`missing — the resolved project root ${f.missing} has no PROJECT-MANIFEST.json; project parameters fall back to defaults until the file is generated.`),
+      "missing 行逐字",
+    )
+    assert.equal(
+      manifestReportLine({ state: "invalid", path: join(f.invalid, DATA_FILE), errors: ["e1", "e2"] }),
+      reportLine(`invalid — ${join(f.invalid, DATA_FILE)} is not a usable declaration: e1；e2; project parameters fall back to defaults until fixed.`),
+      "invalid 行逐字（errors 逐条「；」连接）",
+    )
+    assert.equal(manifestReportLine({ state: "ok", cwd: f.noProject }), null, "ok 态无报明行（相位行归 manifestStateLine）")
+  } finally { rmSync(f.base, { recursive: true, force: true }) }
+})
+
+test("T46b 推注入状态选行：各态 cwd 夹具 ⇒ 报明行落线；ok 态 ⇒ 相位行（行族前缀共用单活体）", () => {
+  const f = reportFixture()
+  const at = (cwd, manifest = null) => ({ cwd, config: { agent: { engineering: true } }, manifest, history: [], _fullHistory: [] })
+  try {
+    for (const [name, cwd, body] of [
+      ["no-project", f.noProject, `none — no project at ${f.noProject} (no manifest on the ancestor chain, none below). Parameters fall back to defaults. Create PROJECT-MANIFEST.json here to land a project (git optional).`],
+      ["ambiguous·带档", f.ambiguousManifest, `ambiguous — 2 candidate marker directories under ${f.ambiguousManifest}: ${join(f.ambiguousManifest, "alpha")}、${join(f.ambiguousManifest, "zed")} — target the intended one explicitly (the mechanism never picks).`],
+      ["ambiguous·裸仓", f.ambiguousGit, `ambiguous — 2 candidate repositories under ${f.ambiguousGit} (none carries PROJECT-MANIFEST.json): ${join(f.ambiguousGit, "x")}、${join(f.ambiguousGit, "y")} — target the intended one explicitly (the mechanism never picks).`],
+      ["missing", f.missing, `missing — the resolved project root ${f.missing} has no PROJECT-MANIFEST.json; project parameters fall back to defaults until the file is generated.`],
+      ["invalid（首观）", f.invalid, null],
+    ]) {
+      const a = at(cwd)
+      assert.equal(pushManifestStateReminder(a, { depth: 0 }), true, `${name}：落报明行`)
+      const line = a.history[0].content
+      assert.ok(line.startsWith("[System reminder: project state: "), `${name}：同族前缀（单活体机制共用）`)
+      if (body) assert.equal(line, reportLine(body), `${name}：行文逐字`)
+      else assert.match(line, /^\[System reminder: project state: invalid — /)
+      assert.equal(a.history[0].transient, true, `${name}：transient 机器行`)
+    }
+    // ok 态 ⇒ 相位行（AC-N1 断言零改——报明行不干扰）
+    const ok = at(f.ok)
+    assert.equal(pushManifestStateReminder(ok, { depth: 0 }), true)
+    assert.deepEqual(ok.history.map((m) => m.content), [lineOf("initial-dev", "light")], "ok ⇒ 相位行")
+    // 相位行 → 报明行换位：行族单活体（旧行被摘、报明行入列）
+    const flip = at(f.ok)
+    assert.equal(pushManifestStateReminder(flip, { depth: 0 }), true, "ok 态 ⇒ 相位行")
+    assert.deepEqual(flip.history.map((m) => m.content), [lineOf("initial-dev", "light")])
+    rmSync(join(f.ok, DATA_FILE))
+    rmSync(join(f.ok, ".git"), { recursive: true, force: true })
+    assert.equal(pushManifestStateReminder(flip, { depth: 0 }), true, "档删 + 无项目 ⇒ 报明行接管")
+    assert.equal(flip.history.length, 1, "行族单活体（相位行被摘）")
+    assert.match(flip.history[0].content, /^\[System reminder: project state: none — /)
+  } finally { rmSync(f.base, { recursive: true, force: true }) }
+})
+
+test("T47 首观失败可见 / 有既往好值保守（KD-M1-26）", () => {
+  const f = reportFixture()
+  const at = (cwd, manifest = null) => ({ cwd, config: { agent: { engineering: true } }, manifest, history: [], _fullHistory: [] })
+  try {
+    // ① 无既往好值（agent.manifest 未附着）+ 档非法 ⇒ 推 ⇒ 报明行（至少可见一次）
+    const cold = at(f.invalid)
+    assert.equal(pushManifestStateReminder(cold, { depth: 0 }), true, "①首观即失败 ⇒ 落报明行")
+    assert.match(cold.history[0].content, /^\[System reminder: project state: invalid — /)
+    assert.ok(cold.history[0].content.includes(join(f.invalid, DATA_FILE)), "行内档路径在册")
+    // ② 有既往好值：先推过相位行 ⇒ 档删 / 档非法 ⇒ 行不变（T35 / T36 零改）
+    const warmDir = join(f.base, "warm")
+    mkdirSync(join(warmDir, ".git"), { recursive: true }) // 梯②（可解析 ⇒ 档删后状态 = missing —— 保守格）
+    writeFileSync(join(warmDir, DATA_FILE), JSON.stringify({ ...DEFAULT_MANIFEST, phase: "production" }), "utf8")
+    const warm = at(warmDir)
+    assert.equal(pushManifestStateReminder(warm, { depth: 0 }), true)
+    assert.deepEqual(stateLines(warm).map((m) => m.content), [lineOf("production", "strict")], "②前置：相位行在")
+    rmSync(join(warmDir, DATA_FILE))
+    assert.equal(pushManifestStateReminder(warm, { depth: 0 }), false, "②档删 ⇒ 保守（不抛、不更新）")
+    assert.deepEqual(stateLines(warm).map((m) => m.content), [lineOf("production", "strict")], "行不变（沿用已知好值）")
+    writeFileSync(join(warmDir, DATA_FILE), "{ not json", "utf8")
+    assert.equal(pushManifestStateReminder(warm, { depth: 0 }), false, "②读回非法 ⇒ 保守（行不变）")
+    assert.deepEqual(stateLines(warm).map((m) => m.content), [lineOf("production", "strict")])
+  } finally { rmSync(f.base, { recursive: true, force: true }) }
 })

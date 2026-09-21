@@ -51,6 +51,15 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
  * 266 → 18 行过渡 shim）与 `test/batch.test.mjs`（**380**——新测试档，C1–C10+BR-18–26 用例表；预裁
  * 「**保留单档**」（既有/新用例 fixtures 共享，拆档 = 复制脚手架——批档 :89/:165-#8）；硬顶 500 内）。
  * 读数口径 = 末行终止后的行数（node 实测——`wc -l` 本机 cmd 乱码已弃用）。
+ * 按用点解析批（2026-09-21 · `docs/batches/2026-09-21-manifest-resolution.md`）登记**三条测试档**
+ * （本批用例面扩列后越线）：`test/manifest.test.mjs`（**479**——T43–T45 / T48 / T54 / T55：
+ * 发现梯两表六格 / 归属形 / 单源结构 / `init:false` 歧义）· `test/setup-reminders.test.mjs`（**368**
+ * ——T46 / T47：报明行四态逐字 + 状态选行）· `test/tool-seams-agent.test.mjs`（**305**——T38 补
+ * 梯④/⑤ + T39/T40 拒翻夹具改歧义，父侧授权表外收正）。前两档拆分计划已登设计档
+ * `docs/core/design/MANIFEST.md` §2.3 >300 注块（行 19 = 发现面用例组拆出 `manifest-discovery.test.mjs`；
+ * 行 21 = 值变检测组 / 报明行组拆出邻档；触发条件 = 越 500 硬限，或下一次触碰该档的批）；
+ * `test/tool-seams-agent.test.mjs` 设计档无对应行（父侧授权表外收正所致）——拆分方案 = 拒翻用例组
+ * 随下次触碰该档的批拆出邻档（**待设计侧收正**，见批档 §5 报告）。
  */
 const SOFT_LINE_REGISTRY = new Set([
   "agent/dispatch.mjs", "agent/helpers.mjs", "agent/setup.mjs", "agent.mjs",
@@ -61,7 +70,8 @@ const SOFT_LINE_REGISTRY = new Set([
   "config.mjs", "context.mjs", "git/checkpoint.mjs", "manifest.mjs", "memory/code-sync.mjs",
   "memory/core.mjs", "memory/docs.mjs",
   "memory/schema.mjs", "process-probe.mjs", "provider/core.mjs", "provider/responses.mjs",
-  "session-lifecycle.mjs", "session-store.mjs", "test/batch.test.mjs", "test/model-specs.test.mjs", "test/provider-merge.test.mjs",
+  "session-lifecycle.mjs", "session-store.mjs", "test/batch.test.mjs", "test/manifest.test.mjs", "test/model-specs.test.mjs",
+  "test/provider-merge.test.mjs", "test/setup-reminders.test.mjs", "test/tool-seams-agent.test.mjs",
   "tools/edit-diff.mjs", "tools/file.mjs", "tools/git.mjs",
   "tools/lsp.mjs", "tools/repomap.mjs", "tools/shared.mjs",
 ])

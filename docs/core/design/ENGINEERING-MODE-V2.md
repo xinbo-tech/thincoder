@@ -417,8 +417,10 @@ engineering 真值 ──► 固定段裁剪（plan 不入表）─────�
 | VSC `test/integration/host-shape-spawn.test.mjs` | 208 | T5 fixture 两条工程行（`:121-127` FAMILY_FIXTURE 的 eng-designer / eng-coder）删 `plan` + 增 explore 工程行（旁路面形状——`:193-199` 以 engineering=true 驱动；= T10 旁路面判据落点）；其余既有用例零改 |
 | VSC `test/status-line.test.mjs` | 157 | plan 按钮 disabled + title 断言（happy-dom 真 chat.js 驱动全量 id fixture；`agentSettings` engineering=true 注入面） |
 
-**VSC `thincoder-vscode/src/agent/setup.mjs` 拆分方案（登记 · 本批不执行）**：该档 495 行 > 300 软线 ⇒ 拆分方案 = 装配段（家族段调用 + `tools`/`toolByName`/`toolSchemas` 构建）迁入既有邻档 `thincoder-vscode/src/agent/setup-tooltable.mjs`（该档已是工具表装饰面之家，缝现成）；
-触发条件 = 本批改动后越 500 硬限，或下一次触碰该档的批。本批净增 **+4 行**（实施后实读 **499**——2026-09-21 实施轮实测；触发条件仍未达），不触发。
+**VSC `thincoder-vscode/src/agent/setup.mjs` 拆分（2026-09-21 manifest 解析模型收正批执行）**：该档 500 行 > 300 软线 ∧ 本批触碰 ∧ 增量后越 500 硬限 ⇒ 触发条件达成，**本批执行拆分**。
+拆分对象 = 装配段（家族段装配 / MCP 连接 / 基础集 · 全表 · `toolByName` · `toolSchemas` 构建；`thincoder-vscode/src/agent/setup.mjs:222-304` as-of 2026-09-21 读盘）⇒ 迁入既有邻档 `thincoder-vscode/src/agent/setup-tooltable.mjs`
+（纯结构搬移零语义；缝 = 导出函数 `buildToolTable`；落位与行数增量见 `docs/core/design/MANIFEST.md` §2.3 行 16 · 行 29）。
+触发条件（拆分后沿用）= 越 500 硬限，或下一次触碰该档的批。拆后估算：`setup.mjs` ≈432 · `setup-tooltable.mjs` ≈325（实施轮回填实读）。
 
 **提示词面（评估结论 = 零改，理由三条）**：① 工程两档（`persona-engineering.md` / `discipline-engineering.md`）与中文模板零处指示 plan 模式（实读 grep 命中仅「并发池上限：其他角色（explore/plan/coder）池」= 角色域枚举，非 plan 模式指令）；② 工具不注册已由结构兜底——再加「不要用 plan 模式」句 = 为不可见选项写限制（承 2026-09-18 反模式之裁）；③ `ENG_ON_REMINDER`（`agent/helpers.mjs:376-381`）无 plan 字样，无悬挂指令。
 

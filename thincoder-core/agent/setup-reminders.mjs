@@ -19,16 +19,20 @@
  * pushManifestStateReminder carries the project phase as a self-healing single live line.
  * #34 adds the per-turn value refresh (mtime-gated re-read — §2.6 ③b / KD-M1-17..M1-19):
  * the line always carries the CURRENT on-disk phase, not the assembly-time snapshot.
+ * 2026-09-21（#188）：**状态选行**（③' `projectView(agent.cwd)` —— KD-M1-26）——`ok` ⇒ 相位行
+ * （逐字零改）；`no-project` / `ambiguous` ⇒ 报明行；`missing` / `invalid` ⇒ 有既往好值保守沿用、
+ * 无 ⇒ 报明行；无锚 ⇒ **零 I/O / 零报明**（KD-M1-27）。报明行构造 = `manifestReportLine` 四态。
  *
  * #113（S1 续轮第二批——VSC 侧并入 ④ 段）：`pushInjections`（机器行专用注入——编辑器上下文
  * 等端侧采集内容；同文去重）与 `appendImagePointer`（粘贴图指引——非多模态模型可见报错）
  * 两档并入——内容由端采集 / 传入（核内零端名），核供注入纪律单点。
  */
 import { statSync } from "node:fs"
+import { resolve } from "node:path"
 import { END } from "../session-slots.mjs"
 import { peerInstances } from "../peer-instances.mjs"
 import { specForModel } from "../config.mjs"
-import { manifestFilePath, readManifest } from "../manifest.mjs"
+import { manifestFilePath, readManifest, projectView } from "../manifest.mjs"
 
 /** env-state line builder — pure, unit-testable.
  *  §6.11（F1）：slot 字段入行——位置在 model 后 resumed 前（N3：无绑定 → 显式 null——
@@ -72,6 +76,39 @@ export function manifestStateLine({ phase }) {
 }
 
 /**
+ * 报明行构造 — pure, unit-testable（**本批新增**——`docs/core/design/MANIFEST.md` §2.6 条 1b /
+ * KD-M1-26）：`projectView` 四非 ok 态各自的行文，**逐字**（同族前缀 `MANIFEST_LINE_PREFIX`——
+ * 报明行与相位行共用单活体机制）。歧义行按 `matched` **两变体**（`manifest` = 带档级「marker
+ * directories」/ `git` = 裸仓档「repositories … (none carries …)」——同口径 = `TOOLS.md` §6.13 A22）；
+ * `candidates` 按名排序（判据同 `discoverProjects`）、`<abs…>` 以「、」连接；`errors` 逐条以「；」连接。
+ * `ok` / 未知态 ⇒ `null`（无报明行——相位行归 `manifestStateLine`）。
+ * @param {{state?:string, cwd?:string, root?:string|null, path?:string|null, candidates?:string[], errors?:string[], matched?:string|null}} p 行素材（= `projectView` 返回面 + 锚）
+ * @returns {string|null} 行文 / null（非报明态）
+ */
+export function manifestReportLine({ state, cwd, root, path, candidates, errors, matched } = {}) {
+  if (state === "no-project") {
+    return `${MANIFEST_LINE_PREFIX}none — no project at ${cwd} (no manifest on the ancestor chain, none below). ` +
+      `Parameters fall back to defaults. Create PROJECT-MANIFEST.json here to land a project (git optional).]`
+  }
+  if (state === "ambiguous") {
+    const list = candidates ?? []
+    const head = matched === "git"
+      ? `ambiguous — ${list.length} candidate repositories under ${cwd} (none carries PROJECT-MANIFEST.json):`
+      : `ambiguous — ${list.length} candidate marker directories under ${cwd}:`
+    return `${MANIFEST_LINE_PREFIX}${head} ${list.join("、")} — target the intended one explicitly (the mechanism never picks).]`
+  }
+  if (state === "missing") {
+    return `${MANIFEST_LINE_PREFIX}missing — the resolved project root ${root} has no PROJECT-MANIFEST.json; ` +
+      `project parameters fall back to defaults until the file is generated.]`
+  }
+  if (state === "invalid") {
+    return `${MANIFEST_LINE_PREFIX}invalid — ${path} is not a usable declaration: ${(errors ?? []).join("；")}; ` +
+      `project parameters fall back to defaults until fixed.]`
+  }
+  return null // ok / 未知态——无报明行（相位行归 manifestStateLine）
+}
+
+/**
  * ③b 取值前置步（#34——`docs/core/design/MANIFEST.md` §2.6 条 3 · KD-M1-17–M1-19）：数据档
  * mtime 门控重读——盘上 mtime ≠ `agent._manifestMtime`（含缓存未设 = 首次观测）⇒ `readManifest`
  * 重读并采纳（`agent.manifest` ← 新值 + 缓存 ← 观测值）；mtime 未变 ⇒ 零重读。
@@ -79,7 +116,7 @@ export function manifestStateLine({ phase }) {
  * 沿用上次已知好值，缓存不推进（⇒ 下回合重试，自愈）。路径 = `manifestFilePath(agent.cwd)`
  * （项目根解析与读点同源——KD-M1-18，非「锚目录 + 档名」）；缓存载体 = `agent._manifestMtime`
  * （per-agent——KD-M1-19，同族先例 `agent._slotMtime`）。本步失败只降级注入面（运行期），
- * 与 E2 启动门槛（会话起点）两分——见 §2.5「运行期失败退化 vs 启动门槛」。
+ * 与**会话起点动作**两分——见 §2.5「运行期失败退化 vs 会话起点动作」（本批收正条名）。
  * @param {object} agent 主 agent（`agent.cwd` / `agent.manifest`）
  */
 function refreshManifest(agent) {
@@ -104,26 +141,45 @@ function refreshManifest(agent) {
 
 /**
  * 情境行注入（#28——`docs/core/design/MANIFEST.md` §2.6 模块契约）：manifest 的
- * `phase` 逐回合进模型上下文（判据序 ①–⑥ + 取值前置步 ③b = §2.6 表；#34 起值变由盘面驱动）。**自愈单活体**——
- * 同文活体在 → 幂等（零历史变更）；值变 → 就地摘旧行 + 落新行（保 `history` 数组引用）；
- * 压缩 / 会话重建吞行 → 下一回合重推（不落 system 槽——架构 E5.1 #5，`context.mjs`
- * 压缩面零触碰）。`transient:true` ⇒ 不进人读线（`_fullHistory`）。
- * @param {object} agent 主 agent（`agent.manifest` / `agent.history` / `agent.cwd`——③b 取值）
+ * `phase` 逐回合进模型上下文（判据序 ①–⑥ + 取值前置步 ③b = §2.6 表；#34 起值变由盘面驱动；
+ * 本批 + ③' 状态选行 / 报明行入口）。**自愈单活体**——同文活体在 → 幂等（零历史变更）；值变 →
+ * 就地摘旧行 + 落新行（保 `history` 数组引用）；压缩 / 会话重建吞行 → 下一回合重推（不落 system
+ * 槽——架构 E5.1 #5，`context.mjs` 压缩面零触碰）。`transient:true` ⇒ 不进人读线（`_fullHistory`）。
+ * @param {object} agent 主 agent（`agent.manifest` / `agent.history` / `agent.cwd`——③'/③b）
  * @param {{depth?: number}} [opts] 注入深度（仅 depth-0）
  * @returns {boolean} 是否落新行（测试断言用）
  */
 export function pushManifestStateReminder(agent, { depth = 0 } = {}) {
   if (depth !== 0) return false // ① 仅 depth-0（子代理读任务书——架构 §2.4 M5 零 manifest 读面）
   if (agent.config?.agent?.engineering !== true) return false // ② 模式门：仅工程模式
-  if (!agent.manifest) return false // ③ 无 manifest（normal 路径 / 装配缺失）→ 零注入
-  refreshManifest(agent) // ③b 取值前置步（#34）：mtime 门控重读——行构造须取刷新后的值
+  let line
+  if (!agent.cwd) {
+    // ③ 无锚门（KD-M1-27——**零 I/O / 零报明**）：状态无从解析 ⇒ 沿用内存值（有 ⇒ 相位行；
+    // 无既往好值 ⇒ 零注入）。既有无 cwd 夹具用例零改（§2.6 条 3 边界同源）。
+    if (!agent.manifest) return false
+    line = manifestStateLine({ phase: agent.manifest.phase })
+  } else {
+    // ③' 状态选行（KD-M1-26——**每回合实读**，成本两轴见 §2.6 条 3）：projectView 五态 ⇒ 选行。
+    const view = projectView(agent.cwd)
+    refreshManifest(agent) // ③b 取值前置步（#34）：mtime 门控重读——相位行须取刷新后的值
+    if (view.state === "ok") {
+      const phase = (agent.manifest ?? view.manifest)?.phase
+      line = phase === undefined ? null : manifestStateLine({ phase })
+    } else if (view.state === "no-project" || view.state === "ambiguous") {
+      line = manifestReportLine({ ...view, cwd: resolve(agent.cwd) }) // 本批新报明格（无项目 / 歧义）
+    } else if (agent.manifest) {
+      line = manifestStateLine({ phase: agent.manifest.phase }) // missing / invalid：有既往好值 ⇒ 保守沿用
+    } else {
+      line = manifestReportLine({ ...view, cwd: resolve(agent.cwd) }) // 首观即失败 ⇒ 至少可见一次（KD-M1-26）
+    }
+  }
+  if (!line) return false
   const history = agent.history
-  const line = manifestStateLine({ phase: agent.manifest.phase })
   // ④ 同文 user 行已在（活体）→ 幂等——零历史变更（同文口径 = pushInjections 的 history.some）
   if (history.some((m) => m.content === line)) return false
   // ⑤ 值已变 → 就地 splice 摘旧行（`role === "user"` 全匹配），保 history 数组引用。会话重建后
   //    `_manifestLine` 不随历史回来 → 先按行族前缀从 history 认领现存活体（否则旧行残留 +
-  //    新行入列 = 双活体，违 §2.6 定案「单活体」）。
+  //    新行入列 = 双活体，违 §2.6 定案「单活体」）。相位行 ↔ 报明行**同族前缀**⇒ 互相换位同机制。
   let old = agent._manifestLine
   if (!old) {
     for (const m of history) {

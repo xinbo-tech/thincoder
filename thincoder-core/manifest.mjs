@@ -12,10 +12,16 @@
  *  - isValidDocRootValue(value) / docRootPaths(value, cwd)（F7 判据单源 KD-M1-8）：值形态谓词
  *    + 值 → 绝对路径数组（展开 / trim + `\` 归一 / 基数 = 项目根 / 去重保序）。
  *  - requireManifest(cwd) → 装配钩子入口 = readManifest(cwd)。
- *  - discoverRepos(cwd) → { kind: self|unique|none|ambiguous, root, candidates }：仓发现**单源**
- *    （KD-M1-22——manifest 面与 `git` 工具共用；`candidates` 按名排序）；`resolveProjectRoot` = 其薄包装。
+ *  - discoverProjects(cwd) → { kind, root, candidates, matched }：**项目梯**（五级 / git 非前提——KD-M1-23）；
+ *    `discoverRepos(cwd)` 同形态 = **仓梯**（`.git` 视图——`git` 工具经它接线，KD-M1-22）。
+ *    两梯共一模块私有 walk 内核 `scanChildren`（单源）；`candidates` 按名排序、`matched` 记档位。
+ *  - owningProject(target) → 归属形单点（沿祖先链取**最近带档目录**——KD-M1-30）。
+ *  - projectView(target) → { state, root, path, manifest?, candidates?, errors?, matched }：**按用点解析**
+ *    的读侧单点（归属 ∨ 发现兜底 / 五态 / 非抛错 / **零写**——KD-M1-24）。
+ *  - resolveProjectRoot(cwd) = owningProject(cwd) ?? discoverProjects(cwd).root（KD-M1-30）。
  *  - resolveEngineeringManifest(cwd, { writer, init }) → 入口决策树（**非抛错**——KD-M1-20）：
- *    两端入口钩子（抛错薄包装）与翻转面（拒翻）共用同一张树（判据单源；§2.8 F1）。
+ *    两端入口钩子与翻转面（拒翻）共用同一张树（判据单源；§2.8 F1）——失败码五枚
+ *    `missing` / `invalid` / `no-project` / `ambiguous` / `init-failed`（KD-M1-28）。
  *  - manifestFilePath(cwd) → 数据档绝对路径（档路径单源 KD-M1-18——读 / 写 / mtime 门控三处同源）。
  *  - initManifest(cwd, { writer = 'subagent' } = {}) → 经写门写 DEFAULT_MANIFEST，缺省拒。
  *  - writeManifest(cwd, manifest, { writer = 'subagent' } = {}) → 落盘前先校验（ok:false 拒
@@ -25,54 +31,151 @@
  * N3 可迁移：本模块不硬编码任何本仓路径（docRoot / checkConfig 由被开发项目声明）。
  */
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
-import { join, resolve } from "node:path"
+import { dirname, join, resolve } from "node:path"
 
-/** 数据档文件名（每个 git 仓一份——项目根 = 仓根；2026-09-17 用户裁定）。 */
+/** 数据档文件名（**每个项目一份**——项目根 = 带档目录；**git 非前提**。2026-09-17 / 2026-09-21 用户裁定）。 */
 export const MANIFEST_REL = "PROJECT-MANIFEST.json"
-
 /** 测试注入：强制项目根（测试 tmp 非 git 仓——同 ledger `_setLedgerDirForTest` 先例）。 */
 let _projectRootOverride = null
 export function _setProjectRootForTest(dir) { _projectRootOverride = dir }
 export function _resetProjectRootForTest() { _projectRootOverride = null }
 
 /**
- * 仓发现（**单源**——KD-M1-22 / 设计 `docs/core/design/MANIFEST.md` §2.2 · `docs/core/design/TOOLS.md` §6.13；
- * 2026-09-17 用户裁定 + #62 批）：判据 = git 目录（`.git`）+ 数据档存在性——
- * ① `_projectRootOverride` 在场 ⇒ `self` + 覆盖值（测试注入面，短路先于真判据）；
- * ② 锚（cwd 的 `resolve`）自身含 `.git` ⇒ `self`（锚即仓根）；
- * ③ 否则**向下看锚的直接子目录一层**（不递归、不向上）：含 `.git` **∧** 含 `MANIFEST_REL`（只判存在性、
- *    不解析档内容）——恰一 ⇒ `unique`；零 ⇒ `none`；≥2 ⇒ `ambiguous`（全列候选，不猜）。
- * `candidates` 一律**按名排序**（歧义消息确定可判）——`self` / `none` ⇒ `[]`。
- * 纯 fs（不读档内容 / 不查模式 / 不依赖 agent）· **不抛**（锚不可读 ⇒ `none`）· 不缓存。
- * @param {string} [cwd] 会话锚（缺省 → 进程 cwd）
- * @returns {{kind:'self'|'unique'|'none'|'ambiguous', root:string|null, candidates:string[]}}
+ * 一层扫描内核（**模块私有**——两条梯表共用；KD-M1-23 / 设计 §2.2「单源结构」）：枚举锚的
+ * **直接子目录**一层（不递归）+ 按名排序 + 谓词过滤 ⇒ 命中表（绝对路径）。
+ * 全档唯一 `readdirSync` 落点（结构机判 T54）；锚不可读 ⇒ `[]`（不抛——调用方按「零命中」处置）。
+ * @param {string} anchor 锚绝对路径
+ * @param {(dir:string)=>boolean} isHit 子目录谓词
+ * @returns {string[]} 命中子目录绝对路径（按名排序）
  */
-export function discoverRepos(cwd) {
-  if (_projectRootOverride) return { kind: "self", root: resolve(_projectRootOverride), candidates: [] }
-  const anchor = resolve(cwd ?? ".")
-  if (existsSync(join(anchor, ".git"))) return { kind: "self", root: anchor, candidates: [] }
-  let found = []
+function scanChildren(anchor, isHit) {
   try {
-    found = readdirSync(anchor, { withFileTypes: true })
+    return readdirSync(anchor, { withFileTypes: true })
       .filter((e) => e.isDirectory())
       .map((e) => e.name)
       .sort()
       .map((e) => join(anchor, e))
-      .filter((d) => existsSync(join(d, ".git")) && existsSync(join(d, MANIFEST_REL)))
-  } catch { /* 不可读 → 空（none） */ }
-  if (found.length === 1) return { kind: "unique", root: found[0], candidates: [...found] }
-  if (found.length === 0) return { kind: "none", root: null, candidates: [] }
-  return { kind: "ambiguous", root: null, candidates: found }
+      .filter(isHit)
+  } catch { return [] }
 }
 
 /**
- * 项目根解析（2026-09-17 用户裁定，**最终定案：纯向下，绝不向上**）——`discoverRepos(cwd).root` 的
- * **薄包装**（零语义——KD-M1-22：`self` / `unique` ⇒ 路径，`none` / `ambiguous` ⇒ `null`，与批前逐字同）。
- * 判据本体 = 上（单源）；调用方（`manifestFilePath` / `docRootBase` / `ledger-db.mjs`）零改。
+ * **项目发现**（项目梯五级——KD-M1-23 / 设计 `docs/core/design/MANIFEST.md` §2.2；**git 非前提**，
+ * 2026-09-21 用户裁定）：① 锚自身带 `MANIFEST_REL` ⇒ 锚；② 锚含 `.git` ⇒ 锚（缺档 = 建档机会）；
+ * ③ 直接子目录中**带档**者优先（非空即只看此级：恰一 ⇒ `unique` / ≥2 ⇒ `ambiguous`）；
+ * ④ 零带档才看含 `.git` 的**裸仓**（同判）；⑤ 均无 ⇒ `none`（⇒ 建档流，落点 = 会话锚）。
+ * `candidates` 一律**按名排序**（`self` / `none` ⇒ `[]`）；`matched` ∈ `manifest` / `git` / `null`
+ * 记命中（或歧义）出自哪一级。**纯 fs**（只判存在性——不解析档内容）· **不抛** · **不向上** · **不递归**。
+ * **覆盖位**（`_setProjectRootForTest` 在场）⇒ **头部短路**（测试注入面——先于真判据，同 `discoverRepos`）。
+ * @param {string} [cwd] 会话锚（缺省 → 进程 cwd）
+ * @returns {{kind:'self'|'unique'|'none'|'ambiguous', root:string|null, candidates:string[], matched:'manifest'|'git'|null}}
+ */
+export function discoverProjects(cwd) {
+  if (_projectRootOverride) return { kind: "self", root: resolve(_projectRootOverride), candidates: [], matched: null }
+  const anchor = resolve(cwd ?? ".")
+  if (existsSync(join(anchor, MANIFEST_REL))) return { kind: "self", root: anchor, candidates: [], matched: "manifest" }
+  if (existsSync(join(anchor, ".git"))) return { kind: "self", root: anchor, candidates: [], matched: "git" }
+  const withManifest = scanChildren(anchor, (d) => existsSync(join(d, MANIFEST_REL)))
+  if (withManifest.length > 1) return { kind: "ambiguous", root: null, candidates: withManifest, matched: "manifest" }
+  if (withManifest.length === 1) return { kind: "unique", root: withManifest[0], candidates: [...withManifest], matched: "manifest" }
+  const bareRepos = scanChildren(anchor, (d) => existsSync(join(d, ".git")))
+  if (bareRepos.length > 1) return { kind: "ambiguous", root: null, candidates: bareRepos, matched: "git" }
+  if (bareRepos.length === 1) return { kind: "unique", root: bareRepos[0], candidates: [...bareRepos], matched: "git" }
+  return { kind: "none", root: null, candidates: [], matched: null }
+}
+
+/**
+ * **仓发现**（仓梯——KD-M1-23 / `docs/core/design/TOOLS.md` §6.13；**单源** KD-M1-22——`git` 工具
+ * 经此符号接线，禁第二份实现）：① 锚含 `.git` ⇒ 锚；② 直接子目录中 `.git` **∧** 带档者恰一 ⇒ 命中
+ * （≥2 ⇒ 歧义）；③ **零个此类时才看**含 `.git` 的裸仓（恰一 ⇒ 命中 / ≥2 ⇒ 歧义）；④ 均无 ⇒ `none`。
+ * 与 `discoverProjects` = **同一 walk 内核**（`scanChildren`）的两种梯表——差异只在谓词与级序。
+ * `candidates` 按名排序；`matched` 记档位；纯 fs / 不抛 / 不递归 / 不向上；覆盖位 ⇒ 头部短路。
+ * @param {string} [cwd] 会话锚（缺省 → 进程 cwd）
+ * @returns {{kind:'self'|'unique'|'none'|'ambiguous', root:string|null, candidates:string[], matched:'manifest'|'git'|null}}
+ */
+export function discoverRepos(cwd) {
+  if (_projectRootOverride) return { kind: "self", root: resolve(_projectRootOverride), candidates: [], matched: null }
+  const anchor = resolve(cwd ?? ".")
+  if (existsSync(join(anchor, ".git"))) return { kind: "self", root: anchor, candidates: [], matched: "git" }
+  const scoped = scanChildren(anchor, (d) => existsSync(join(d, ".git")) && existsSync(join(d, MANIFEST_REL)))
+  if (scoped.length > 1) return { kind: "ambiguous", root: null, candidates: scoped, matched: "manifest" }
+  if (scoped.length === 1) return { kind: "unique", root: scoped[0], candidates: [...scoped], matched: "manifest" }
+  const bare = scanChildren(anchor, (d) => existsSync(join(d, ".git")))
+  if (bare.length > 1) return { kind: "ambiguous", root: null, candidates: bare, matched: "git" }
+  if (bare.length === 1) return { kind: "unique", root: bare[0], candidates: [...bare], matched: "git" }
+  return { kind: "none", root: null, candidates: [], matched: null }
+}
+
+/**
+ * **归属形单点**（KD-M1-30 / 设计 §2.9 A——2026-09-21 用户裁定「最近者优先」）：自 `target`
+ * （目录含自身；文件路径自其父目录起）沿**祖先链**逐级上溯至盘根，取**最近**带 `MANIFEST_REL`
+ * 的目录；无 ⇒ `null`（⇒ 调用方走发现兜底）。**嵌套合法**：子内归子、根其余归根。
+ * **纯 fs**（只判存在性——不解析档内容 / 不问模式）· **不跨兄弟** · **无全局优先级**。
+ * **覆盖位**（`_setProjectRootForTest` 在场）⇒ **头部短路**：直接返回覆盖值（不查档存在性——
+ * 保「覆盖即覆盖值」语义，回归守卫 = `test/manifest.test.mjs` T42 覆盖断言）。
+ * @param {string} [target] 目标路径（目录 / 文件）
+ * @returns {string|null} 最近带档祖先目录绝对路径 / null
+ */
+export function owningProject(target) {
+  if (_projectRootOverride) return resolve(_projectRootOverride)
+  let dir = resolve(target ?? ".")
+  for (;;) {
+    if (existsSync(join(dir, MANIFEST_REL))) return dir
+    const parent = dirname(dir)
+    if (parent === dir) return null // 盘根 → 祖先链无档
+    dir = parent
+  }
+}
+
+/**
+ * 项目根解析（**归属 ∨ 发现**——KD-M1-30 / M1-24）：`owningProject(cwd) ?? discoverProjects(cwd).root`。
+ * 带档路径与批前**逐字同**；变更面两条（设计 §2.2）：① 项目树内路径（祖先带档）⇒ **该项目根**
+ * （批前回落 `resolve(cwd)`——错层建档面，本批修）；② 裸仓恰一 ⇒ 该仓根（零档降级 = 建档机会）。
+ * `none` / `ambiguous` ⇒ `null`。调用方（`manifestFilePath` / `docRootBase` / `ledger-db.mjs` /
+ * `ledger-cmd.mjs`）**零改**（行为随语义变更——设计 §2.5 键面条 / 错层条）。
  * @returns {string|null} 项目根绝对路径 / null
  */
 export function resolveProjectRoot(cwd) {
-  return discoverRepos(cwd).root
+  return owningProject(cwd) ?? discoverProjects(cwd).root
+}
+
+/**
+ * **按用点解析**的读侧单点（KD-M1-24 / M1-30——**非抛错 / 零写 / 无缓存**）：两段合成——
+ * · **归属（第一段——§⑥ 归属形）**：`owningProject(target)` 沿祖先链取最近带档目录
+ *   （子优于根 / 不跨兄弟 / 无全局优先级）⇒ 读该档 ⇒ `ok` / `invalid`。
+ * · **发现兜底（第二段——§⑥ 发现规则，纯向下）**：祖先链无档 ⇒ `discoverProjects(target)` ⇒ 命中
+ *   （`self` / `unique`）⇒ 读其档（带档 ⇒ `ok` / `invalid`；缺档 ⇒ `missing`）；`ambiguous` ⇒
+ *   `ambiguous`（+ `candidates`）；`none` ⇒ `no-project`。
+ * 写侧（建档）**不在**此函数（归入口决策树——KD-M1-25 / M1-29）⇒ 注入器 / 只读消费面不会变写点。
+ * `matched` 契约：归属段命中 ⇒ `'manifest'`；发现段 ⇒ `discoverProjects.matched` 逐字；
+ * `no-project`（/ 覆盖位短路）⇒ `null`——报明行歧义变体按它分野（§2.6 条 1b）。
+ * 读错（非 ENOENT——权限 / 目录等）收为 `invalid`（非抛错契约；`readManifest` 语义零改）。
+ * @param {string} [target] 目标路径（目录 / 文件——动作作用于哪个项目的路径）
+ * @returns {{state:'ok'|'missing'|'no-project'|'ambiguous'|'invalid', root:string|null, path:string|null,
+ *   manifest?:object, candidates?:string[], errors?:string[], matched:'manifest'|'git'|null}}
+ */
+export function projectView(target) {
+  const anchor = resolve(target ?? ".")
+  const owning = owningProject(anchor)
+  if (owning) return viewAtRoot(owning, "manifest")
+  const d = discoverProjects(anchor)
+  if (d.kind === "ambiguous") return { state: "ambiguous", root: null, path: null, candidates: d.candidates, matched: d.matched }
+  if (d.kind === "none") return { state: "no-project", root: null, path: null, matched: null }
+  return viewAtRoot(d.root, d.matched)
+}
+
+/** `projectView` 公共尾段：给定项目根 ⇒ 读 + 校验 ⇒ `ok` / `missing` / `invalid`（非抛错）。 */
+function viewAtRoot(root, matched) {
+  const path = join(root, MANIFEST_REL)
+  let m
+  try {
+    m = readManifest(root)
+  } catch (e) {
+    return { state: "invalid", root, path, errors: [e?.message ?? String(e)], matched } // 读错（权限 / 目录等）⇒ 非抛错收口
+  }
+  if (m.ok) return { state: "ok", root, path, manifest: m.manifest, matched }
+  if (m.reason === "missing") return { state: "missing", root, path, matched }
+  return { state: "invalid", root, path, errors: m.errors, matched }
 }
 
 /**
@@ -114,8 +217,8 @@ export function docRootPaths(value, cwd) {
   return [...new Set(list)]
 }
 
-/** 落盘根：git 根优先（仓内任意子目录调用都落仓根——防错层）；无 .git（临时项目 / 测试）→ 退回 cwd
- *  （旧行为，不更坏）。防「写进 monorepo 容器根」的主闸 = 提示词（主 agent 会话锚必须进仓内）。 */
+/** 落盘根：**项目根**优先（项目树内任意子目录调用都落项目根——防错层，KD-M1-30 归属形）；
+ *  无项目（梯⑤ 存档 / 临时目录 / 测试注入）→ 退回 cwd（既有行为，不更坏）。 */
 function writeRoot(cwd) {
   return resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")
 }
@@ -255,7 +358,8 @@ export function readManifest(cwd) {
 
 /**
  * 装配钩子入口（模块设计 §2.2）——同 readManifest(cwd)。ok:true 返回补默认值后的 manifest；
- * reason:'missing' 由调用方走初始化分支（壳面拒进正常循环直至初始化完成）。
+ * reason:'missing' 由调用方走**建档流**（**工程模式会话**口径——梯②④⑤ 就地建档，**不拒会话**；
+ * KD-M1-29）；普通会话 = 装配钩子零 manifest I/O（KD-M1-12）。
  */
 export function requireManifest(cwd) {
   return readManifest(cwd)
@@ -264,49 +368,57 @@ export function requireManifest(cwd) {
 /**
  * 入口决策树（**非抛错**形态——KD-M1-20；docs/core/design/MANIFEST.md §2.8 F1）：三面共用——
  * ① CLI 装配 / 重估薄包装 ② VSC `hydrateRun` 钩子块 ③ 翻转面（`eng` 工具 / `/eng` /
- * `/session` / ACP——「先判后翻」，拒翻分支零副作用）。判据树只此一处（判据单源——KD-M1-8 同族）。
+ * `/session` / ACP——「先判后翻」，拒翻分支零副作用）。判据树只此一处（判据单源——KD-M1-8
+ * 同族）；读侧解析与状态归位 = `projectView`（KD-M1-24——非抛错 / 零写）。
  *
- * 分支（四出口）：
- *   档合法          → { ok:true, manifest, created:false }（manifest = 补默认值后的档内容）
- *   缺档 + init     → 根可解析 ? `initManifest(cwd, { writer })`（抛错 → `init-failed`）
- *                             : { ok:false, code:'root-unresolvable', message }
- *   缺档 + !init    → { ok:false, code:'missing' }（不拒——调用方自决；VSC depth>0 分支用）
- *   档非法          → { ok:false, code:'invalid', message, errors }
+ * 分支（两分支六出口——§2.8 F1 树）：
+ *   档合法         → { ok:true, manifest, created:false }（manifest = 补默认值后的档内容）
+ *   缺档 + init    → 梯②④⑤（锚 = 裸仓 / 裸仓命中 / 无项目）⇒ `initManifest(cwd, { writer })`
+ *                    （抛错 → `init-failed`）；歧义（≥2 候选）⇒ `{ ok:false, code:'ambiguous',
+ *                    message, candidates }`（**不建 / 不猜**）
+ *   缺档 + !init   → 梯⑤（无项目）⇒ `{ ok:false, code:'no-project' }`（KD-M1-28；`init:false` 面）；
+ *                    梯②④（裸仓可解析、档缺）⇒ `{ ok:false, code:'missing' }`；歧义 ⇒ 同上
+ *   档非法         → { ok:false, code:'invalid', message, errors }
  *
  * `writer` 由调用点**显式**传（生产调用点全传 `'main'`）：缺省 `'subagent'` 是写门 fail-closed
- * 缺省（KD-M1-3），误用缺省 ⇒「缺档 + 根可解析」退化为 `init-failed`（拒翻——与 §2.8 F2 /
+ * 缺省（KD-M1-3），误用缺省 ⇒「缺档 + 梯②④⑤」退化为 `init-failed`（拒翻——与 §2.8 F2 /
  * AC-20② 语义相反；T38 反证格）。
- * 边界：`readManifest` 的非 ENOENT 读错（权限 / 目录等）按既有契约**上抛**（不伪装成缺失——
- * readManifest 语义零改）；本树只承诺上列四出口。
+ * 失败码两态文案不同（KD-M1-28）：无项目 ⇒ 可在锚处落地 / 歧义 ⇒ 列候选不猜；文案族 =
+ * 「项目不可解析」（稳定锚句 `/项目不可解析/`——拒翻面与报明面共用）。
+ * 边界：`readManifest` 的非 ENOENT 读错（权限 / 目录等）由 `projectView` 收为 `invalid`（非抛错
+ * 契约——`readManifest` 返回语义零改）；本树只承诺上列六出口。
  * @param {string} [cwd] 会话锚（缺省 → 进程 cwd）
  * @returns {{ok:true, manifest:object, created:boolean}
- *   | {ok:false, code:'missing'|'invalid'|'root-unresolvable'|'init-failed', message?:string, errors?:string[]}}
+ *   | {ok:false, code:'missing'|'invalid'|'no-project'|'ambiguous'|'init-failed',
+ *      message?:string, errors?:string[], candidates?:string[]}}
  */
 export function resolveEngineeringManifest(cwd, { writer = "subagent", init = true } = {}) {
-  const m = readManifest(cwd)
-  if (m.ok) return { ok: true, manifest: m.manifest, created: false }
-  if (m.reason === "invalid") {
+  const view = projectView(cwd)
+  if (view.state === "ok") return { ok: true, manifest: view.manifest, created: false }
+  if (view.state === "invalid") {
     return {
-      ok: false, code: "invalid", errors: m.errors,
-      message: `${MANIFEST_REL} 非法（fail-closed 拒进正常循环）：${m.errors.join("；")}`,
+      ok: false, code: "invalid", errors: view.errors,
+      message: `项目不可解析：${MANIFEST_REL} 非法（fail-closed）：${(view.errors ?? []).join("；")}`,
     }
   }
-  if (!init) return { ok: false, code: "missing" }
-  // 项目根 = git 仓根（2026-09-17 用户裁定：判据 = .git，向下找；每个仓一份 manifest）：
-  // cwd 非仓且子仓中无带 manifest 的仓（零个 = 无项目，多个 = 歧义）→ 不自动建档。
-  if (!resolveProjectRoot(cwd)) {
-    return {
-      ok: false, code: "root-unresolvable",
-      message:
-        `工程模式启动拒绝：会话锚 ${cwd} 不是 git 仓，且其子仓中带 ${MANIFEST_REL} 的不是恰好一个` +
-        `（零个 = 无项目；多个 = 歧义）——每个仓库一份 manifest，请锚在仓内或为子仓建档`,
-    }
+  if (view.state === "ambiguous") {
+    return { ok: false, code: "ambiguous", candidates: view.candidates, message: ambiguousProjectMessage(cwd, view.candidates) }
   }
+  // 缺档（梯②④⑤）：init ⇒ 就地建档（内容 = DEFAULT_MANIFEST，经写门 writer:'main'）；!init ⇒ 归码。
+  if (!init) return { ok: false, code: view.state === "no-project" ? "no-project" : "missing" }
   try {
     return { ok: true, manifest: initManifest(cwd, { writer }), created: true }
   } catch (e) {
     return { ok: false, code: "init-failed", message: e?.message ?? String(e) }
   }
+}
+
+/** 歧义消息（文案族「项目不可解析」——KD-M1-28）：候选**全列**（绝对路径、按名排序）+ 指引
+ *  显式指定目标——**不猜**（与报明行同族；拒翻面经 F3 明示面逐字转发）。 */
+function ambiguousProjectMessage(cwd, candidates) {
+  const list = (candidates ?? []).map((c) => `- ${c}`).join("\n")
+  return `项目不可解析：会话锚 ${cwd} 下候选项目不是恰好一个（下列 ${(candidates ?? []).length} 个）——` +
+    `每个项目一份 ${MANIFEST_REL}；请显式指定目标项目（机制不猜）：\n${list}`
 }
 
 /**

@@ -4,7 +4,10 @@
  * Extracted from agent.mjs (file-size split).
  * 2026-09-16（批 7 VSC-DEBT §3.3 档一）：工具表装配装饰面迁出 `setup-tooltable.mjs`（batch
  * 记账缝 / W14 三缝接线 / 池装配装饰与子代理面）；本档 re-export 既有导出名（KD-6 缝）；
- * 动态载核登记册面（KD-5）仍在本档。
+ * 动态载核登记册面（KD-5）随 2026-09-21 的装配段拆分迁往 `setup-tooltable.mjs`。
+ * 2026-09-21（`docs/core/design/MANIFEST.md` §2.3 行 16/29）：本档 500 行越硬限 ⇒ **装配段**
+ * （家族段装配 / MCP 连接 / 基础集 · 全表 · `toolByName` · `toolSchemas`）纯结构搬移入
+ * `setup-tooltable.mjs` 的 `buildToolTable`（W8 契约②：段内动态 import 原样动态）。
  * agent 生命周期对齐 CLI（2026-09-08）：setupAgentRun 拆出
  * buildTopLevelAgent（agent 对象工厂——首轮/destroy 重建-only）+ hydrateRun（每轮
  * reconcile——顶层单例复用路径）。纯函数层 resetRunState / reconcileEngDesignTokens /
@@ -12,9 +15,10 @@
  * 映射——500 行硬限——test/agent-lifecycle-singleton.test.mjs 单测锚点）。
  */
 import * as os from "node:os"
-import { builtinTools, toOpenAISchema, readImageTool } from "../tools.mjs"
+import { builtinTools } from "../tools.mjs"
 // W9（2026-09-15）：工具集 re-export 面退役——14 名装配面**动态载入核登记册**
-// `@thincoder/core/agent-tools.mjs`（登记册单一来源 #83；载入点 = hydrateRun——见下）。
+// `@thincoder/core/agent-tools.mjs`（登记册单一来源 #83；载入点 = `buildToolTable`——
+// 2026-09-21 随装配段迁出本档，见 `setup-tooltable.mjs`）。
 // 形式 = 动态 import()（**非**静态）：核登记册静态图经 consult/subagent 族可达核 agent 栈
 // （`core/agent/setup.mjs:9` → `memory.mjs` → `node:sqlite`）——静态引入会破坏 W8 契约②
 // （`test/engine-floor-guard.test.mjs:129`：端壳静态链不得到达 node:sqlite，低宿主加载期硬失败）。
@@ -22,14 +26,12 @@ import { builtinTools, toOpenAISchema, readImageTool } from "../tools.mjs"
 // 动态 import 不入静态闭包（扫描语义同 W8 契约）。
 import { settingsTool as coreSettingsTool } from "@thincoder/core/agent-tools/settings.mjs"
 import { resetRunState, reconcileEngDesignTokens, applySlotSessionState } from "./agent-state.mjs"
-import { vscSubagentFace, modeRoleField, withPool, wireAgentToolSeams } from "./setup-tooltable.mjs" // 缝（KD-6）：迁出面同档再导出
+import { vscSubagentFace, modeRoleField, wireAgentToolSeams, buildToolTable } from "./setup-tooltable.mjs" // 缝（KD-6）：迁出面同档再导出
 import { loadSlot } from "../extension/session-io.mjs"
-import { specForModel } from "../specs.mjs"
 import { escapeXml, pushReal } from "./run-helpers.mjs"
 import { expandHome } from "@thincoder/core/expand-home.mjs"
-import { applyPromptInjections } from "@thincoder/core/prompt-files.mjs"
 import { assemblePrompt } from "@thincoder/core/prompt-overlays.mjs"
-import { resolveEngineeringManifest } from "@thincoder/core/manifest.mjs"
+import { resolveEngineeringManifest, projectView } from "@thincoder/core/manifest.mjs"
 import { loadSkills, formatSkillListing } from "../extension/skills.mjs"
 import { loadRaw, resolveProviders } from "@thincoder/core/config-io.mjs"
 import { DEFAULTS, normalizeProxy } from "@thincoder/core/config.mjs"
@@ -213,94 +215,12 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     try { setSlotPlanMode(bind.cwd, bind.slot, false) } catch { /* 槽写失败非致命——生效值已是 false */ }
   }
 
-  // ── 工具表装配（W9/W13 → VSC-TOOL-TABLE-DUP §2.3C：装配改调**核家族单源**）：登记册解构面收窄至
-  // 装饰所需实例（3 名）；角色分支链（原 `:351-385` depth/role 矩阵）整体退场；两档均**动态**载入
-  // （静态引入会经 consult/subagent 族触达 node:sqlite，破 W8 契约②；模块缓存 ⇒ 每轮零成本）。
-  // ENG-PLAN-EXCLUSION（2026-09-21 · FR31 ①/KD9）：本块**下移至模式判定后**——入参 `engineering`
-  // = 工程模式真值（`applySlotSessionState` 派生：槽优先 → engState → cfg），固定段裁剪（工程模式
-  // plan 不入表）与核/CLI 同口径；端壳不二次过滤。
-  const { subagentTool, consultStartTool, consultStopTool } = await import("@thincoder/core/agent-tools.mjs") // ← 解构面收窄（装饰所需实例）
-  const { assembleFamilyTools } = await import("@thincoder/core/agent/family-tools.mjs") // ← 动态（W8 契约②）
-  const pool = loadConsultPool()
-  // 端差：`engineering` 补传（核内消费点除 filteredSubagent 外新增**固定段裁剪**——固定段不被
-  // `decorate.subagent` 覆盖）；端侧角色 enum 仍由 schema 面 `modeRoleField` 承载。
-  const agentTools = await assembleFamilyTools({
-    depth, role,
-    engineering,
-    consultModels: pool,
-    batchDoc,
-    decorate: {
-      subagent: pool.length ? withPool(vscSubagentFace(subagentTool)) : vscSubagentFace(subagentTool),
-      consultStart: pool.length ? withPool(consultStartTool) : consultStartTool,
-      consultStop: consultStopTool,
-      settings: settingsTool,
-    },
-  })
-  // M2 台账查询两工具（核 `tools/index.mjs:61` 同法——全角色面）：动态 import——ledger 链静态
-  // 达 `node:sqlite`（W8 契约②）；写命令族已随核 `assembleFamilyTools` 在端可达（上方装配块）。
-  const { ledgerQueryTool, ledgerCountTool } = await import("@thincoder/core/ledger.mjs")
-
-  // MCP tools: idempotent connect + expand into NATIVE tools (CLI parity, MCP.md D1/D2).
-  // Top level only; failures never block — D-CI7（F-Q11）：警告可见面 = console
-  // （端壳 MCP 面 `panel-mcp.mjs` / cli make-agent.mjs 同前缀）；不是 history 注入（CLI 无此
-  // 行为）——mcpWarnings 字段保留为采集面。
-  let mcpTools = []
-  const mcpWarnings = []
-  if (depth === 0 && Array.isArray(mcpServers) && mcpServers.length > 0) {
-    try {
-      const { connectMcpServersExpanded } = await import("../extension/panel-mcp.mjs")
-      const r = await connectMcpServersExpanded(mcpServers)
-      mcpTools = r.tools
-      mcpWarnings.push(...r.warnings)
-    } catch { /* expansion failure is non-fatal — the model just lacks MCP tools this turn */ }
-  }
-
-  // Subagent role-based tool filtering: explore/plan/consult get read-only tools only.
-  // `question` is excluded from ALL subagents (depth > 0) — it's an interactive main-agent
-  // tool; a background subagent (parallel consultants especially) must never prompt the user.
-  const isReadOnlyRole = depth > 0 && (role === "explore" || role === "plan" || role === "consult")
-  const baseTools = [
-    ...(isReadOnlyRole ? builtinTools.filter((t) => t.readonly) : builtinTools),
-    ledgerQueryTool, ledgerCountTool, // M2 查询两工具（只读——只读角色同放行；恒入基础集）
-  ].filter((t) => depth === 0 || t.name !== "question")
-  // L1 契约（VSC-TOOL-TABLE-DUP §2.1A）：`agent.tools` 绑定值 = **基础集**（下方 `baseSet`）
-  // ——不含端侧 meta 工具族 `agentTools`（核 `assembleFamilyTools` 追加族与端侧 meta 族实测
-  // 重叠 11 名 ⇒ 入绑定值必致子代装配重名）；全表 `tools` 原样保留（端侧 schema / 执行面
-  // `toolByName`）。多模态项抽 `mm` 局部（§2.1A 认可消重形态——行为等价）。
-  const mm = specForModel(provider.model).multimodal ? [readImageTool] : []
-  const baseSet = [
-    ...baseTools,
-    ...mm,
-    ...mcpTools,
-    // caller-injected tools (e.g. consult's main_history)——注入方承担「与核追加家族不重名」义务（§2.3F）
-    ...(opts.extraTools ?? []),
-  ]
-  const tools = [
-    ...baseTools,
-    ...mm,
-    ...agentTools,
-    ...mcpTools,
-    ...(opts.extraTools ?? []), // caller-injected tools (e.g. consult's main_history)
-  ]
-  const toolByName = new Map(tools.map((t) => [t.name, t]))
-
-  // Tool schemas are built AFTER `engineering` is known: the subagent role enum is
-  // mode-dependent (CLI setup.mjs parity) — normal mode must not advertise 'eng-coder'
-  // as a legal role. Schema filtering is the first line of defense; the runtime
-  // mutual-exclusion throws in subagentTool.execute stay as the hard gate.
-  const toolSchemas = tools.map((t) => {
-    if (depth === 0 && t.name === "subagent") {
-      const { role: roleField, suffix } = modeRoleField(engineering)
-      const schema = toOpenAISchema(t)
-      // 重组后的描述仍经锚替换原语（§2.13.8 面 3 单出口——本行不得以裸描述覆写注入结果）
-      schema.function.description = applyPromptInjections(t.description + (suffix ? "\n" + suffix : ""))
-      schema.function.parameters = {
-        ...t.parameters,
-        properties: { ...t.parameters.properties, role: roleField },
-      }
-      return schema
-    }
-    return toOpenAISchema(t)
+  // ── 工具表装配（2026-09-21 拆出——`docs/core/design/MANIFEST.md` §2.3 行 16/29：装配段
+  // **纯结构搬移零语义**迁入 `setup-tooltable.mjs` 的 `buildToolTable`；段序 / 段内四条动态
+  // import 逐字保留——W8 契约②）。`baseSet` 即 `agent.tools` 绑定值；`toolByName` / `toolSchemas`
+  // 随 hydrateRun 返回面出。
+  const { baseSet, tools, toolByName, toolSchemas } = await buildToolTable({
+    depth, role, engineering, provider, mcpServers, builtinTools, opts, batchDoc, settingsTool,
   })
 
   // B 类 run 绑定（每轮重指——复用 agent 不残留上轮引用）+ opts 派生字段
@@ -407,16 +327,18 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // 模式门（KD-M1-12——判据 = `agent.config.agent.engineering`，已由 `applySlotSessionState`
   // 按槽订正：槽优先 + config 回退）：普通会话 → 钩子整体不执行——**零 manifest I/O**
   // （不读 / 不拒 / 不建档）+ `agent.manifest = null`（清残留附着——复用 agent 跨模式防陈旧）。
-  // #41 薄包装（KD-M1-20 / AC-19）：工程模式分支的决策树 = 核单源 `resolveEngineeringManifest`
-  // （非抛错形态）——本块只把它翻回「抛错」，四条出口（附着 / 缺档建档 / 根不可解析抛 / 档非法抛）
-  // 的**结果与文案逐字不变**（原句由决策树构造）。depth > 0（子代理水合同经此钩）⇒ `init:false`
-  // （仅不初始化——写门缺省拒已机械兜底；缺档格零动作）。
+  // 工程模式分支的决策树 = 核单源 `resolveEngineeringManifest`（KD-M1-20）；**非 fatal**
+  // （KD-M1-25 / M1-29——启动零拒绝）：档合法 / 梯②④⑤ 缺档（`depth === 0` ⇒ 就地建档，
+  // `writer:'main'`）⇒ 附着；歧义 / 档非法 / 建档失败 ⇒ **不抛**（会话照常起）——
+  // `agent.manifest = null` + 记 `agent._projectView`（形状 = `projectView` 返回面 + `created`
+  // 建档标记）。`depth > 0`（子代理水合同经此钩）⇒ `init:false`（仅不初始化——写门缺省拒已
+  // 机械兜底）。两端同形（本批）。
   if (agent.config?.agent?.engineering !== true) {
     agent.manifest = null
   } else {
     const r = resolveEngineeringManifest(cwd, { writer: "main", init: depth === 0 })
-    if (r.ok) agent.manifest = r.manifest
-    else if (r.code !== "missing") throw new Error(r.message) // 仅 depth > 0 可达 missing
+    agent._projectView = { ...projectView(cwd), created: r.ok && r.created === true }
+    agent.manifest = r.ok ? r.manifest : null
   }
   // TRACE-STORE-VSC（D-TR4 镜像——CLI agent/setup.mjs `_sessionStart ??=` 同语义）：顶层
   // 会话身份 = 槽 sessionStart（跨端同身份——F2 打点同源）优先，无槽/未保存则首建打点；

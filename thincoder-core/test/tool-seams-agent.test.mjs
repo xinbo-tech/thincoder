@@ -4,7 +4,9 @@
  *
  * 双夹具口径同 tool-seams.test.mjs（工具面档）：夹具一 = 注入接管；夹具二 = 缺省现行为。
  * 另：#88 附「同步 loader 面（按核内结构归一）」与异步面的**等值断言**；
- * #41 段（T37–T40）锁工程模式翻转准入（docs/core/design/MANIFEST.md §2.8 / AC-20）。
+ * #41 段（T37–T40）锁工程模式翻转准入（docs/core/design/MANIFEST.md §2.8 / AC-20）；
+ * 2026-09-21（#188 · 父侧授权表外收正）：T39 / T40 夹具由「根不可解析」（梯⑤——现建档 + 放行）
+ * 改**歧义**（容器 + ≥2 带档子仓）；拒翻文案锚改 `/项目不可解析/`；T38 补梯④ / 梯⑤ 两格。
  */
 import { test } from "node:test"
 import { slow } from "./slow.mjs"
@@ -213,13 +215,29 @@ test("T37 正常：翻转准入（合法档）→ 放行 + 附着 + 既有成功
   })
 })
 
-test("T38 正常：缺档 + 根可解析 → 建档放行；反证格：缺省 writer ⇒ init-failed 拒翻", async () => {
+test("T38 正常：缺档 + 梯②④⑤ → 建档放行；反证格：缺省 writer ⇒ init-failed 拒翻", async () => {
   await withTempDir(async (dir) => {
-    mkRepo(dir)
+    mkRepo(dir) // 梯②：锚 = 裸仓（缺档）
     const ctx = engCtx(dir)
     const msg = await engTool.execute({ action: "enter" }, ctx)
     assert.equal(ctx.agent.config.agent.engineering, true, "放行")
     assert.equal(readFileSync(manifestPathOf(dir), "utf8"), LEGAL_JSON, "就地建档 = DEFAULT_MANIFEST（writer:'main'）")
+    assert.ok(ctx.agent.manifest, "附着")
+    assert.match(msg, /^Engineering mode activated\./)
+  })
+  await withTempDir(async (dir) => { // 梯④：容器 + 恰一裸仓 ⇒ 档落裸仓
+    mkRepo(join(dir, "bare"))
+    const ctx = engCtx(dir)
+    await engTool.execute({ action: "enter" }, ctx)
+    assert.equal(readFileSync(manifestPathOf(join(dir, "bare")), "utf8"), LEGAL_JSON, "梯④ 档落裸仓根")
+    assert.equal(existsSync(manifestPathOf(dir)), false, "容器处零建档")
+    assert.ok(ctx.agent.manifest, "附着")
+  })
+  await withTempDir(async (dir) => { // 梯⑤：空目录 ⇒ 档落会话锚（本批可拒面收窄）
+    const ctx = engCtx(dir)
+    const msg = await engTool.execute({ action: "enter" }, ctx)
+    assert.equal(ctx.agent.config.agent.engineering, true, "梯⑤ 不再拒翻")
+    assert.equal(readFileSync(manifestPathOf(dir), "utf8"), LEGAL_JSON, "档落会话锚")
     assert.ok(ctx.agent.manifest, "附着")
     assert.match(msg, /^Engineering mode activated\./)
   })
@@ -232,17 +250,23 @@ test("T38 正常：缺档 + 根可解析 → 建档放行；反证格：缺省 w
   })
 })
 
-test("T39 错误：拒翻两格（根不可解析 / 档非法）——模式仍 OFF · manifest 仍 null · 原因句在场", async () => {
-  // ① 根不可解析（非仓 cwd：无 .git ∧ 向下零个带 manifest 子仓）
+test("T39 错误：拒翻两格（歧义 / 档非法）——模式仍 OFF · manifest 仍 null · 原因句在场", async () => {
+  // ① 歧义（容器 + ≥2 带档子仓——#188 可拒面收窄后的拒翻格）
   await withTempDir(async (dir) => {
+    for (const n of ["alpha", "zed"]) {
+      const d = join(dir, n)
+      mkdirSync(join(d, ".git"), { recursive: true })
+      writeFileSync(manifestPathOf(d), LEGAL_JSON)
+    }
     const ctx = engCtx(dir)
     const msg = await engTool.execute({ action: "enter" }, ctx)
     assert.equal(ctx.agent.config.agent.engineering, false, "模式保持 OFF")
     assert.equal(ctx.agent.manifest ?? null, null, "agent.manifest 仍 null")
     assert.equal(ctx.agent._pendingReminders.length, 0, "_pendingReminders 零新增")
     assert.match(msg, /^Error: cannot enter engineering mode — /, "明示面（F3 工具行）")
-    assert.match(msg, /工程模式启动拒绝/, "原因句 = 入口门槛原句")
+    assert.match(msg, /项目不可解析/, "原因句 = 决策树文案族（KD-M1-28）")
     assert.match(msg, /\(mode unchanged\)$/)
+    assert.equal(existsSync(manifestPathOf(dir)), false, "锚处零建档（不建 / 不猜）")
   })
   // ② 档非法（JSON 非法）
   await withTempDir(async (dir) => {
@@ -253,6 +277,7 @@ test("T39 错误：拒翻两格（根不可解析 / 档非法）——模式仍 
     assert.equal(ctx.agent.config.agent.engineering, false, "模式保持 OFF")
     assert.equal(ctx.agent.manifest ?? null, null, "agent.manifest 仍 null")
     assert.match(msg, /^Error: cannot enter engineering mode — /)
+    assert.match(msg, /项目不可解析/, "原因句 = 文案族")
     assert.match(msg, /fail-closed/)
     assert.match(msg, /\(mode unchanged\)$/)
   })
@@ -260,6 +285,11 @@ test("T39 错误：拒翻两格（根不可解析 / 档非法）——模式仍 
 
 test("T40 边界：先判后翻零副作用（拒翻后内态逐项不变——实现前必红）", async () => {
   await withTempDir(async (dir) => {
+    for (const n of ["alpha", "zed"]) {
+      const d = join(dir, n)
+      mkdirSync(join(d, ".git"), { recursive: true })
+      writeFileSync(manifestPathOf(d), LEGAL_JSON)
+    }
     const ctx = engCtx(dir, { _advisorRuns: new Map([["x", { round: 3 }]]), _lastEngState: false })
     const probes = []
     try {

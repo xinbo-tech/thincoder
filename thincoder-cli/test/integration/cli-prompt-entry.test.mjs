@@ -11,11 +11,12 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { spawn } from "node:child_process"
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync, existsSync } from "node:fs"
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, existsSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { mockLLM } from "../helpers/mock-llm.mjs"
+import { DEFAULT_MANIFEST } from "@thincoder/core/manifest.mjs"
 
 const __here = dirname(fileURLToPath(import.meta.url))
 const BIN = join(__here, "..", "..", "bin", "thincoder.cjs")
@@ -102,14 +103,43 @@ test("入口面（engineering 态）：engineering 场景 ⇒ 零锚字面 + eng
 
 // ── #30 回归（AC-14 / T31）：normal + 非仓 cwd 启动——装配门禁不拦普通会话 ──────────────
 
-test("入口面（normal + 非仓 cwd）：启动零门禁——退出码 0、无『工程模式启动拒绝』、不建档", async (t) => {
+test("入口面（normal + 非仓 cwd）：启动零门禁——退出码 0、无『项目不可解析』、不建档", async (t) => {
   const mock = await mockLLM([{ content: "hello from mock" }])
   t.after(() => { try { mock.server.close() } catch { /* ignore */ } })
   const { home, cwd } = mkEnv(t, providerConfig(mock.port), { repo: false })
 
   const r = await runCli(["chat", "hello"], { home, cwd })
   assert.equal(r.code, 0, `chat 正常退出（stderr: ${r.stderr}）`)
-  assert.ok(!r.stderr.includes("工程模式启动拒绝"), "stderr 无「工程模式启动拒绝」（普通会话零 manifest I/O）")
+  assert.ok(!r.stderr.includes("项目不可解析"), "stderr 无拒绝句（普通会话零 manifest I/O——文案族锚 KD-M1-28）")
+  assert.ok(!r.stderr.includes("工程模式启动拒绝"), "旧文案零残留（防断言空转——T31 收正）")
   assert.ok(mock.requests.length >= 1, "请求抵达 mock 端点（进入了正常循环）")
   assert.equal(existsSync(join(cwd, "PROJECT-MANIFEST.json")), false, "普通会话不自动建档")
+})
+
+// ── #188 回归（AC-22 / T51——先红）：工程模式 + 非仓 cwd 启动——零拒绝 + 就地建档 ─────────
+
+test("入口面（engineering + 非仓 cwd · 梯⑤ 无项目）：退出码 0、零拒绝句、锚处建档", async (t) => {
+  const mock = await mockLLM([{ content: "hello from mock" }])
+  t.after(() => { try { mock.server.close() } catch { /* ignore */ } })
+  const { home, cwd } = mkEnv(t, providerConfig(mock.port, { agent: { engineering: true } }), { repo: false })
+
+  const r = await runCli(["chat", "hello"], { home, cwd })
+  assert.equal(r.code, 0, `chat 正常退出（stderr: ${r.stderr}）`)
+  assert.ok(!r.stderr.includes("项目不可解析"), "stderr 零拒绝句（启动零拒绝——KD-M1-25）")
+  assert.ok(mock.requests.length >= 1, "请求抵达 mock 端点（进入了正常循环）")
+  assert.equal(readFileSync(join(cwd, "PROJECT-MANIFEST.json"), "utf8"), JSON.stringify(DEFAULT_MANIFEST, null, 2) + "\n", "梯⑤ 档落会话锚（轻动作建档——内容 = DEFAULT_MANIFEST）")
+})
+
+test("入口面（engineering + 非仓 cwd · 梯④ 容器 + 恰一裸仓）：退出码 0、档落裸仓（先红）", async (t) => {
+  const mock = await mockLLM([{ content: "hello from mock" }])
+  t.after(() => { try { mock.server.close() } catch { /* ignore */ } })
+  const { home, cwd } = mkEnv(t, providerConfig(mock.port, { agent: { engineering: true } }), { repo: false })
+  const bare = join(cwd, "bare-proj")
+  mkdirSync(join(bare, ".git"), { recursive: true })
+
+  const r = await runCli(["chat", "hello"], { home, cwd })
+  assert.equal(r.code, 0, `chat 正常退出（stderr: ${r.stderr}）——先红：批前抛错退出`)
+  assert.ok(!r.stderr.includes("项目不可解析"), "stderr 零拒绝句")
+  assert.equal(readFileSync(join(bare, "PROJECT-MANIFEST.json"), "utf8"), JSON.stringify(DEFAULT_MANIFEST, null, 2) + "\n", "梯④ 档落裸仓根")
+  assert.equal(existsSync(join(cwd, "PROJECT-MANIFEST.json")), false, "容器处零建档")
 })

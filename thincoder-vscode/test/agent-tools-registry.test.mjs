@@ -45,10 +45,14 @@ test("W9 ② 端侧转口面：src/agent-tools/index.mjs 与核登记册同集",
   assert.deepEqual(Object.keys(face).sort(), Object.keys(reg).sort(), "转口面 = 核登记册（同集——非自持清单）")
 })
 
-test("W9 ③ 装配消费者（结构机检）：setup.mjs 自核登记册动态取装饰实例三名 + 家族段经核单源", () => {
+test("W9 ③ 装配消费者（结构机检）：装配面自核登记册动态取装饰实例三名 + 家族段经核单源", () => {
+  // 2026-09-21（`docs/core/design/MANIFEST.md` §2.3 行 16 / 29 拆入面）：装配段由 `setup.mjs`
+  // 纯结构搬移迁入 `setup-tooltable.mjs` ⇒ 扫描靶随新落点走（**断言意图零改**：动态 import 存在 ∧
+  // 三名装饰实例 ∧ 家族段核单源——仅换靶，不弱化）。
+  const face = readFileSync(join(VSC_ROOT, "src", "agent", "setup-tooltable.mjs"), "utf8")
   const setup = readFileSync(join(VSC_ROOT, "src", "agent", "setup.mjs"), "utf8")
-  const m = setup.match(/const\s*\{([^}]*)\}\s*=\s*await import\("@thincoder\/core\/agent-tools\.mjs"\)/)
-  assert.ok(m, "setup.mjs 必须以 await import() 动态载入核登记册（静态链破 W8 契约②）")
+  const m = face.match(/const\s*\{([^}]*)\}\s*=\s*await import\("@thincoder\/core\/agent-tools\.mjs"\)/)
+  assert.ok(m, "装配面必须以 await import() 动态载入核登记册（静态链破 W8 契约②）")
   const imported = m[1]
     .split(",")
     .map((s) => s.replace(/\/\/.*$/s, "").trim()) // 行内注释剥离（§25 R17 句）
@@ -60,10 +64,12 @@ test("W9 ③ 装配消费者（结构机检）：setup.mjs 自核登记册动态
   for (const n of imported) assert.ok(REGISTRY_NAMES.includes(n), `${n} 必须来自核登记册名集`)
   // 家族段（本批）：装配改调核单源函数——同样动态（W8 契约②）
   assert.match(
-    setup,
+    face,
     /await import\("@thincoder\/core\/agent\/family-tools\.mjs"\)/,
     "家族矩阵经核单源档取用（动态——静态链破 W8 契约②）",
   )
-  // 负控：端侧不得再自持逐档 re-export 面（W9 删旧面）
-  assert.ok(!/from\s+"\.\.\/agent-tools\.mjs"/.test(setup), "setup.mjs 不得再指向已退役的端侧 barrel")
+  // 负控：端侧不得再自持逐档 re-export 面（W9 删旧面）——两档同扫（装配面拆分后仍全范围）
+  for (const [name, src] of [["setup.mjs", setup], ["setup-tooltable.mjs", face]]) {
+    assert.ok(!/from\s+"\.\.\/agent-tools\.mjs"/.test(src), `${name} 不得再指向已退役的端侧 barrel`)
+  }
 })

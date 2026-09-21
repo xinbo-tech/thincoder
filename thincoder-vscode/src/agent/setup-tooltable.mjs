@@ -8,16 +8,22 @@
  * W8 契约②（`test/engine-floor-guard.test.mjs:129`——端壳静态闭包零 `node:sqlite`）：本档静态边
  * = setup.mjs 既有静态边之子集；核 `agent-tools/skill.mjs` / `eng.mjs` / `async-settle.mjs`
  * 三类面仍走**动态** import()（见 `wireAgentToolSeams` / `vscStatusTerminalEcho`）。
+ * 2026-09-21（`docs/core/design/MANIFEST.md` §2.3 行 16 / 29 拆入面）：`setup.mjs` 装配段
+ * （家族段装配 / MCP 连接 / 基础集 · 全表 · `toolByName` · `toolSchemas`）纯结构搬移迁入——
+ * 新导出 `buildToolTable`（段内四条动态 import 原样动态——W8 契约②）。
  */
 import * as vscode from "vscode"
 import { resolve } from "node:path"
 import { configureBatchSegment } from "@thincoder/core/agent-tools/batch-segment.mjs" // 叶子（node:fs/node:path）——静态面安全
 import { configureVerifyDiagnostics } from "@thincoder/core/agent-tools/verify.mjs" // 叶子面（闭包 4 档零 node:sqlite）——静态面安全
 import { CONFIG_CONFLICT_HINT, conflictError } from "@thincoder/core/config-io.mjs"
+import { applyPromptInjections } from "@thincoder/core/prompt-files.mjs"
 import { loadSkills, readSkill } from "../extension/skills.mjs"
 import { vscPersistRaw } from "../extension/settings-panel-write.mjs"
 import { setSlotEngineering } from "../extension/session-slot-write.mjs"
 import { loadConsultPool } from "../extension/presets.mjs"
+import { builtinTools, toOpenAISchema, readImageTool } from "../tools.mjs"
+import { specForModel } from "../specs.mjs"
 
 // ─── W9（2026-09-15）：batch 记账面注入（核缝 #84 —— `configureBatchSegment`）──────────
 // VSC 特有增量随删旧迁入端壳（四步协议 ②）：核 `agent-tools/batch-segment.mjs` 的写入回调默认
@@ -226,4 +232,111 @@ export function modeRoleField(engineering) {
         },
         suffix: "",
       }
+}
+
+/**
+ * 工具表装配（2026-09-21 拆入面——`docs/core/design/MANIFEST.md` §2.3 行 16 / 29：`setup.mjs`
+ * 越 500 硬限 ⇒ 装配段**纯结构搬移零语义**迁入本档）。段序与原文一致：
+ * ① 家族段装配（核单源 `assembleFamilyTools`）· ② MCP 连接展开 · ③ 基础集 · 全表 ·
+ * `toolByName` · `toolSchemas` 构建。入参 = 段内消费的既有局部；返回 = 后续段解构收下的四名
+ * （`baseSet` 即 `agent.tools` 绑定值；`toolByName` / `toolSchemas` 随 hydrateRun 返回面出）。
+ * W8 契约②保持：段内四条动态 import（核 `agent-tools.mjs` / 核 `agent/family-tools.mjs` /
+ * 核 `ledger.mjs` / 端 `panel-mcp.mjs`）**原样动态**——静态引入会经核 agent 栈触达 `node:sqlite`。
+ * @param {{depth:number, role:string|null, engineering:boolean, provider:object,
+ *   mcpServers:object[]|undefined, builtinTools:object[], opts:object, batchDoc:string|null,
+ *   settingsTool:object}} p 段内消费的既有局部
+ * @returns {{baseSet:object[], tools:object[], toolByName:Map<string,object>, toolSchemas:object[]}}
+ */
+export async function buildToolTable({ depth, role, engineering, provider, mcpServers, builtinTools, opts, batchDoc, settingsTool }) {
+  // ── 工具表装配（W9/W13 → VSC-TOOL-TABLE-DUP §2.3C：装配改调**核家族单源**）：登记册解构面收窄至
+  // 装饰所需实例（3 名）；角色分支链（原 `:351-385` depth/role 矩阵）整体退场；两档均**动态**载入
+  // （静态引入会经 consult/subagent 族触达 node:sqlite，破 W8 契约②；模块缓存 ⇒ 每轮零成本）。
+  // ENG-PLAN-EXCLUSION（2026-09-21 · FR31 ①/KD9）：本块**下移至模式判定后**——入参 `engineering`
+  // = 工程模式真值（`applySlotSessionState` 派生：槽优先 → engState → cfg），固定段裁剪（工程模式
+  // plan 不入表）与核/CLI 同口径；端壳不二次过滤。
+  const { subagentTool, consultStartTool, consultStopTool } = await import("@thincoder/core/agent-tools.mjs") // ← 解构面收窄（装饰所需实例）
+  const { assembleFamilyTools } = await import("@thincoder/core/agent/family-tools.mjs") // ← 动态（W8 契约②）
+  const pool = loadConsultPool()
+  // 端差：`engineering` 补传（核内消费点除 filteredSubagent 外新增**固定段裁剪**——固定段不被
+  // `decorate.subagent` 覆盖）；端侧角色 enum 仍由 schema 面 `modeRoleField` 承载。
+  const agentTools = await assembleFamilyTools({
+    depth, role,
+    engineering,
+    consultModels: pool,
+    batchDoc,
+    decorate: {
+      subagent: pool.length ? withPool(vscSubagentFace(subagentTool)) : vscSubagentFace(subagentTool),
+      consultStart: pool.length ? withPool(consultStartTool) : consultStartTool,
+      consultStop: consultStopTool,
+      settings: settingsTool,
+    },
+  })
+  // M2 台账查询两工具（核 `tools/index.mjs:61` 同法——全角色面）：动态 import——ledger 链静态
+  // 达 `node:sqlite`（W8 契约②）；写命令族已随核 `assembleFamilyTools` 在端可达（上方装配块）。
+  const { ledgerQueryTool, ledgerCountTool } = await import("@thincoder/core/ledger.mjs")
+
+  // MCP tools: idempotent connect + expand into NATIVE tools (CLI parity, MCP.md D1/D2).
+  // Top level only; failures never block — D-CI7（F-Q11）：警告可见面 = console
+  // （端壳 MCP 面 `panel-mcp.mjs` / cli make-agent.mjs 同前缀）；不是 history 注入（CLI 无此
+  // 行为）——mcpWarnings 字段保留为采集面。
+  let mcpTools = []
+  const mcpWarnings = []
+  if (depth === 0 && Array.isArray(mcpServers) && mcpServers.length > 0) {
+    try {
+      const { connectMcpServersExpanded } = await import("../extension/panel-mcp.mjs")
+      const r = await connectMcpServersExpanded(mcpServers)
+      mcpTools = r.tools
+      mcpWarnings.push(...r.warnings)
+    } catch { /* expansion failure is non-fatal — the model just lacks MCP tools this turn */ }
+  }
+
+  // Subagent role-based tool filtering: explore/plan/consult get read-only tools only.
+  // `question` is excluded from ALL subagents (depth > 0) — it's an interactive main-agent
+  // tool; a background subagent (parallel consultants especially) must never prompt the user.
+  const isReadOnlyRole = depth > 0 && (role === "explore" || role === "plan" || role === "consult")
+  const baseTools = [
+    ...(isReadOnlyRole ? builtinTools.filter((t) => t.readonly) : builtinTools),
+    ledgerQueryTool, ledgerCountTool, // M2 查询两工具（只读——只读角色同放行；恒入基础集）
+  ].filter((t) => depth === 0 || t.name !== "question")
+  // L1 契约（VSC-TOOL-TABLE-DUP §2.1A）：`agent.tools` 绑定值 = **基础集**（下方 `baseSet`）
+  // ——不含端侧 meta 工具族 `agentTools`（核 `assembleFamilyTools` 追加族与端侧 meta 族实测
+  // 重叠 11 名 ⇒ 入绑定值必致子代装配重名）；全表 `tools` 原样保留（端侧 schema / 执行面
+  // `toolByName`）。多模态项抽 `mm` 局部（§2.1A 认可消重形态——行为等价）。
+  const mm = specForModel(provider.model).multimodal ? [readImageTool] : []
+  const baseSet = [
+    ...baseTools,
+    ...mm,
+    ...mcpTools,
+    // caller-injected tools (e.g. consult's main_history)——注入方承担「与核追加家族不重名」义务（§2.3F）
+    ...(opts.extraTools ?? []),
+  ]
+  const tools = [
+    ...baseTools,
+    ...mm,
+    ...agentTools,
+    ...mcpTools,
+    ...(opts.extraTools ?? []), // caller-injected tools (e.g. consult's main_history)
+  ]
+  const toolByName = new Map(tools.map((t) => [t.name, t]))
+
+  // Tool schemas are built AFTER `engineering` is known: the subagent role enum is
+  // mode-dependent (CLI setup.mjs parity) — normal mode must not advertise 'eng-coder'
+  // as a legal role. Schema filtering is the first line of defense; the runtime
+  // mutual-exclusion throws in subagentTool.execute stay as the hard gate.
+  const toolSchemas = tools.map((t) => {
+    if (depth === 0 && t.name === "subagent") {
+      const { role: roleField, suffix } = modeRoleField(engineering)
+      const schema = toOpenAISchema(t)
+      // 重组后的描述仍经锚替换原语（§2.13.8 面 3 单出口——本行不得以裸描述覆写注入结果）
+      schema.function.description = applyPromptInjections(t.description + (suffix ? "\n" + suffix : ""))
+      schema.function.parameters = {
+        ...t.parameters,
+        properties: { ...t.parameters.properties, role: roleField },
+      }
+      return schema
+    }
+    return toOpenAISchema(t)
+  })
+
+  return { baseSet, tools, toolByName, toolSchemas }
 }

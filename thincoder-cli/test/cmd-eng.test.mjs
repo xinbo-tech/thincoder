@@ -4,10 +4,11 @@
  * docs/core/design/MANIFEST.md §2.8 F2/F3 · AC-20 · 批档 §2.3 AC-C）。
  *
  * 断言对象 = src/tui/cmd-eng.mjs（/eng 无**已退役概念前提**切换——FR11 收正口径 = 不要
- * 求方法论文档 / 文档树；仓根锚（git）= E2 既有入口前提）。构造手法：ctx 直驱
+ * 求方法论文档 / 文档树；项目根锚（带档目录——git 非前提）= E2 既有入口前提）。构造手法：ctx 直驱
  * （slash-commands 的调用形态）+ sessions 目录隔离缝；showPicker 传"会炸的探针"——
  * 旧门禁若复活（要求 METHODOLOGY.md）即红。
- * 夹具（#41）：`tmp` = 仓根（`.git`——ON 判据锚）；非锚格 = 临时纯目录。
+ * 夹具（#41 / #188）：`tmp` = 带档目录（锚）；拒翻格 = 容器 + ≥2 带档子仓（歧义）；
+ * 梯⑤（空目录）本批起走**建档 + 放行**（T53——可拒面收窄）。
  */
 import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
@@ -20,7 +21,7 @@ import { ENG_OFF_REMINDER } from "@thincoder/core/agent.mjs"
 import { planTool } from "@thincoder/core/agent-tools/plan.mjs"
 import { newSession, loadSlotFile } from "@thincoder/core/session.mjs"
 import { slotPath, writeSessionFile } from "@thincoder/core/session-slots.mjs"
-import { MANIFEST_REL } from "@thincoder/core/manifest.mjs"
+import { MANIFEST_REL, DEFAULT_MANIFEST } from "@thincoder/core/manifest.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "@thincoder/core/session-slots.mjs"
 
 let tmp, sessionsDir
@@ -82,16 +83,30 @@ test("T-19 边界：OFF 切换 → 提醒推入 + 令牌语义保持（快照断
 
 // ─── #41：先判后翻（ON）/ 拒翻零标签 / OFF 恒放行（AC-C · AC-20）───────────────────
 
-/** 非锚 cwd（无 .git ∧ 向下零个带 manifest 子仓 ⇒ 根不可解析）。 */
+/** 非锚 cwd（无 .git ∧ 向下零个带 manifest 子仓 ⇒ 梯⑤ 无项目——**本批起走建档流**（T53））。 */
 function mkPlainDir() {
   return mkdtempSync(join(tmpdir(), "portability-eng-plain-"))
 }
 
-test("T-20 错误：非锚 cwd 上 ON ⇒ 拒翻——warn 行 + 零标签 + 零副作用", async () => {
-  const plain = mkPlainDir()
+/** 合法档逐字（= `initManifest` 落盘形态）。 */
+const LEGAL_JSON = JSON.stringify(DEFAULT_MANIFEST, null, 2) + "\n"
+
+/** 拒翻夹具（本批收正——`mkPlainDir`（梯⑤）现走建档放行）：容器 + ≥2 带档子仓 ⇒ 歧义（F2 表拒面）。 */
+function mkAmbiguousDir() {
+  const dir = mkdtempSync(join(tmpdir(), "portability-eng-amb-"))
+  for (const n of ["alpha", "zed"]) {
+    const d = join(dir, n)
+    mkdirSync(join(d, ".git"), { recursive: true })
+    writeFileSync(join(d, MANIFEST_REL), LEGAL_JSON)
+  }
+  return dir
+}
+
+test("T-20 错误：歧义（≥2 候选）上 ON ⇒ 拒翻——warn 行 + 零标签 + 零副作用", async () => {
+  const amb = mkAmbiguousDir()
   try {
     const lines = []
-    const agent = engAgent({ cwd: plain, _advisorRuns: new Map([["x", {}]]), _lastEngState: false })
+    const agent = engAgent({ cwd: amb, _advisorRuns: new Map([["x", {}]]), _lastEngState: false })
     await handleEngCommand(ctxFor(agent, lines))
     assert.notEqual(agent.config.agent.engineering, true, "模式未翻（fail-closed 拒翻）")
     assert.equal(agent.manifest ?? null, null, "不附着")
@@ -99,8 +114,22 @@ test("T-20 错误：非锚 cwd 上 ON ⇒ 拒翻——warn 行 + 零标签 + 零
     assert.equal(agent._pendingReminders.length, 0, "提醒未入列")
     assert.ok(!lines.some((l) => l.includes("❯ Eng")), "拒时零标签（标签 = 成功回显——防假成功）")
     assert.ok(lines.some((l) => l.includes("Engineering mode not enabled")), "warn 行在场")
-    assert.ok(lines.some((l) => l.includes("工程模式启动拒绝") && l.includes("(mode unchanged)")), "原因句 = 入口门槛原句")
-    assert.equal(existsSync(join(plain, MANIFEST_REL)), false, "不自动建档")
+    assert.ok(lines.some((l) => l.includes("项目不可解析") && l.includes("(mode unchanged)")), "原因句 = 决策树文案族（KD-M1-28）")
+    assert.equal(existsSync(join(amb, MANIFEST_REL)), false, "锚处零建档（不建 / 不猜）")
+  } finally { rmSync(amb, { recursive: true, force: true }) }
+})
+
+test("T53 正常：梯⑤（无项目）上 ON ⇒ 放行 + 就地建档 + 附着（AC-20②——本批可拒面收窄）", async () => {
+  const plain = mkPlainDir()
+  try {
+    const lines = []
+    const agent = engAgent({ cwd: plain })
+    await handleEngCommand(ctxFor(agent, lines))
+    assert.equal(agent.config.agent.engineering, true, "梯⑤ 不再拒翻（建档即项目落地——git 非前提）")
+    assert.ok(agent.manifest, "附着（agent.manifest ← 判据结果）")
+    assert.equal(readFileSync(join(plain, MANIFEST_REL), "utf8"), LEGAL_JSON, "档在锚处生成（= DEFAULT_MANIFEST）")
+    assert.ok(lines.some((l) => l.includes("❯ Eng")), "标签面正常（准翻回显）")
+    assert.ok(lines.some((l) => l.includes("Engineering mode: ON")), "ON 提示行在场")
   } finally { rmSync(plain, { recursive: true, force: true }) }
 })
 

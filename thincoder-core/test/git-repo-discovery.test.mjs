@@ -1,6 +1,8 @@
 /**
  * git-repo-discovery.test.mjs — #62 仓发现：`git` 工具复用 manifest 发现单源（判据 A14–A20）。
  * 权威设计 = docs/core/design/TOOLS.md §6.13 · docs/core/design/MANIFEST.md §2.2 / KD-M1-22。
+ * 2026-09-21（#188 · 仓梯新级）：A21 / A22 = **裸仓级**（零个「.git ∧ 档」子仓时才看 `.git` 裸仓）
+ * ——两格均**先红**（批前 `none` ⇒ §6.12 fail-closed）；A14–A20 带档级行为逐字不变。
  * 路径纪律（§6.13 用例表）：A14–A19 一律经 `gitTool.execute(args, ctx)` 真调用面（禁绕过工具直调
  * `discoverRepos`）；夹具 = 真 `git init` 仓 + 真 `PROJECT-MANIFEST.json` 档（禁 mock / 手写）；
  * A20 = `tools/git.mjs` 源码结构断言（无夹具）。
@@ -155,6 +157,38 @@ test("A19 创建类动作例外：init / clone 以 cwd 为落点（不做发现�
     assert.equal(out2.startsWith("(repo: "), false, "clone 例外 ⇒ 不重定向 / 无注记")
     assert.equal(existsSync(join(c2, "src-repo", ".git")), true, "clone 落点 = cwd 相对（容器）")
     assert.equal(existsSync(join(proj2, "src-repo")), false, "未克隆进发现的子仓")
+  })
+})
+
+// ── A21 / A22（#188 裸仓级——先红面：批前均落 §6.12 fail-closed）────────────────────────────
+
+test("A21 裸仓级命中：容器 + 恰一裸子仓 ⇒ 重定向 + 注记首行（批前 = none ⇒ fail-closed）", async () => {
+  await withTmp(async (container) => {
+    const repo = join(container, "bare-proj")
+    makeRepo(repo, { manifest: false })
+    writeFileSync(join(repo, "untracked.txt"), "u\n")
+    const out = await gitTool.execute({ action: "status" }, { cwd: container })
+    const [note, ...rest] = out.split("\n")
+    assert.equal(note, `(repo: ${repo})`, "裸仓级命中同享重定向注记（首行 + 仓根绝对路径）")
+    assert.match(rest.join("\n"), /Untracked \(1\):\nuntracked\.txt$/, "porcelain 条目级一致")
+    assert.equal(existsSync(join(container, ".git")), false, "零副作用（不落仓于容器）")
+    assert.equal(existsSync(join(repo, MANIFEST_REL)), false, "发现面不建档（纯 fs 只判存在性）")
+  })
+})
+
+test("A22 裸仓级歧义：容器 + 两裸子仓 ⇒ throw（消息 = 裸仓档变体——不书带档句）", async () => {
+  await withTmp(async (container) => {
+    const [a, b] = ["alpha-repo", "beta-repo"].map((n) => join(container, n))
+    for (const d of [a, b]) makeRepo(d, { manifest: false })
+    await assert.rejects(() => gitTool.execute({ action: "status" }, { cwd: container }), (e) => {
+      assert.ok(e.message.includes(a), "候选①绝对路径在册")
+      assert.ok(e.message.includes(b), "候选②绝对路径在册")
+      assert.match(e.message, /workdir/, "指引用显式 workdir")
+      assert.equal(e.message.includes("clean"), false, "不含 clean（不与假洁净同形）")
+      assert.equal(/carry \.git and PROJECT-MANIFEST\.json/.test(e.message), false, "裸仓档变体：不书带档句")
+      assert.match(e.message, /none carries PROJECT-MANIFEST\.json/, "裸仓档变体明示「无一带档」（§6.13 A22）")
+      return true
+    })
   })
 })
 

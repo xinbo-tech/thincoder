@@ -42,10 +42,14 @@ function resolveBaseDir(cwd, workdir) {
  *  二者仍可经显式 `workdir` 指落点。 */
 const NO_REPO_DISCOVERY = new Set(["init", "clone"])
 
-/** 歧义（多态）消息：候选全列（绝对路径、按名排序）+ 指引显式 `workdir`——不猜（§6.13 解析序行 5）。 */
-function ambiguousRepoMessage(candidates, cwd) {
-  return `Ambiguous git repo at ${cwd}: ${candidates.length} subdirectories carry .git and ${MANIFEST_REL} — ` +
-    `pass workdir to run git in the intended one (no silent pick):\n` + candidates.map((c) => `- ${c}`).join("\n")
+/** 歧义（多态）消息：候选全列（绝对路径、按名排序）+ 指引显式 `workdir`——不猜（§6.13 解析序行 5）；
+ *  **两档变体**（#188——按 `matched`）：带档级 ⇒ 「.git ∧ PROJECT-MANIFEST.json」；裸仓级 ⇒ 「.git」
+ *  且注明 none carries …（不书带档句——§6.13 A22）。 */
+function ambiguousRepoMessage(candidates, cwd, matched) {
+  const head = matched === "git"
+    ? `Ambiguous git repo at ${cwd}: ${candidates.length} subdirectories carry .git (none carries ${MANIFEST_REL})`
+    : `Ambiguous git repo at ${cwd}: ${candidates.length} subdirectories carry .git and ${MANIFEST_REL}`
+  return `${head} — pass workdir to run git in the intended one (no silent pick):\n` + candidates.map((c) => `- ${c}`).join("\n")
 }
 
 // ─── 审批门注入缝（#59——「只读判定 / 审批门按端注入」，形态参 §2.13.5 注入缝）────────
@@ -108,14 +112,15 @@ export const gitTool = {
     // workdir: run git in a subdirectory (monorepo / multi-repo). Shadow ctx.cwd so
     // every action + snapshotBefore + checkpoint resolves against the workdir.
     if (args.workdir) ctx = { ...ctx, cwd: resolveBaseDir(ctx.cwd, args.workdir) }
-    // 仓发现（§6.13 · #62）：缺省路径（无 workdir）⇒ 单源 = `discoverRepos`——工作区根（非仓）⇒
-    // 唯一带 manifest 子仓：重定向 `ctx.cwd` + 结果首行注记；零 ⇒ 原值落 §6.12 fail-closed（零
-    // 行为变）；多 ⇒ throw（列候选 + 指 workdir，不猜）。判据 = workdir 真值在场（与上行同源——
-    // 空串与缺省同判）；`init` / `clone` 例外不做发现。self / none 态 ctx 对象引用透传（不 clone）。
+    // 仓发现（§6.13 · #62）：缺省路径（无 workdir）⇒ 单源 = `discoverRepos`（仓梯——#188 含裸仓级）
+    // ——工作区根（非仓）⇒ 唯一带档子仓 / 零档时唯一裸仓：重定向 `ctx.cwd` + 结果首行注记；零 ⇒ 原值
+    // 落 §6.12 fail-closed（零行为变）；多 ⇒ throw（列该级候选 + 指 workdir，不猜——消息按 `matched`
+    // 两档变体）。判据 = workdir 真值在场（与上行同源——空串与缺省同判）；`init` / `clone` 例外
+    // 不做发现。self / none 态 ctx 对象引用透传（不 clone）。
     let repoNote = ""
     if (!args.workdir && !NO_REPO_DISCOVERY.has(args.action)) {
       const discovered = discoverRepos(ctx.cwd)
-      if (discovered.kind === "ambiguous") throw new Error(ambiguousRepoMessage(discovered.candidates, ctx.cwd))
+      if (discovered.kind === "ambiguous") throw new Error(ambiguousRepoMessage(discovered.candidates, ctx.cwd, discovered.matched))
       if (discovered.kind === "unique") {
         ctx = { ...ctx, cwd: discovered.root }
         repoNote = `(repo: ${discovered.root})`

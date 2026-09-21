@@ -23,14 +23,16 @@
 import { test, beforeEach, afterEach } from "node:test"
 import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
-import { mkdirSync, mkdtempSync, rmSync, existsSync, readFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
-import { envStateLine, pushEnvStateReminder, pushInjections, AUTO_REMINDER, _resetRestartDetectionForTests, composeGitContext, collectGitContext, _gitFailureCooldownForTests, _clearGitFailureCooldownForTests } from "../src/agent/setup-reminders.mjs"
+import { envStateLine, pushEnvStateReminder, pushInjections, pushManifestStateReminder, AUTO_REMINDER, _resetRestartDetectionForTests, composeGitContext, collectGitContext, _gitFailureCooldownForTests, _clearGitFailureCooldownForTests } from "../src/agent/setup-reminders.mjs"
 import * as setupReminders from "../src/agent/setup-reminders.mjs"
 import { buildTopLevelAgent, hydrateRun } from "../src/agent/setup.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-slots.mjs"
+import { DEFAULT_MANIFEST, MANIFEST_REL } from "@thincoder/core/manifest.mjs"
+import { manifestReportLine as coreManifestReportLine } from "@thincoder/core/agent/setup-reminders.mjs"
 
 let sessionsDir
 let cwd
@@ -202,6 +204,43 @@ test("hydrateRun: normal 模式（engState 钉 false）零 manifest I/O——不
   const r3 = await hydrateRun(r2.agent, optsFor({ engState: { enabled: false } }, { restore: false }))
   assert.equal(r3.agent.manifest, null, "翻转清陈旧（清残留附着——KD-M1-12）")
   assert.equal(readFileSync(manifestPath, "utf8"), bytes, "普通回合零写（档未被改）")
+})
+
+// ─── #188 端差消（T52 / T55——`docs/core/design/MANIFEST.md` §2.2 / §3.2）───
+
+test("T52 端差消：梯⑤ 钩子块（depth 0）⇒ 不抛 + 建档 + 附着 + `_projectView`；报明行文本同源（核单点）", async () => {
+  const engCwd = join(sessionsDir, "eng-plain") // 梯⑤：空目录（无 .git ∧ 无档）
+  mkdirSync(engCwd, { recursive: true })
+  _gitFailureCooldownForTests(engCwd, Date.now()) // git 隔离（预填失败冷却——本档零 spawn）
+  try {
+    const r = await hydrateRun(buildTopLevelAgent(), { ...optsFor({ engState: { enabled: true } }), cwd: engCwd })
+    assert.ok(r.agent.manifest, "梯⑤ ⇒ 轻动作建档 + 附着（启动零拒绝——KD-M1-25）")
+    assert.equal(r.agent._projectView.state, "ok", "解析结果归位（= projectView 返回面 + created）")
+    assert.equal(r.agent._projectView.created, true, "建档标记")
+    assert.equal(r.agent._projectView.root, engCwd, "根 = 会话锚")
+    assert.equal(readFileSync(join(engCwd, MANIFEST_REL), "utf8"), JSON.stringify(DEFAULT_MANIFEST, null, 2) + "\n", "档内容 = DEFAULT_MANIFEST（两端同形）")
+    // depth > 0（init:false 面）× 歧义：非 fatal（不抛）——与 CLI / 核同码（T55 同格）
+    const amb = join(sessionsDir, "eng-amb")
+    for (const n of ["alpha", "zed"]) { const d = join(amb, n); mkdirSync(join(d, ".git"), { recursive: true }); writeFileSync(join(d, MANIFEST_REL), JSON.stringify(DEFAULT_MANIFEST), "utf8") }
+    _gitFailureCooldownForTests(amb, Date.now())
+    const child = await hydrateRun(buildTopLevelAgent(), { ...optsFor({ engState: { enabled: true } }), cwd: amb, depth: 1, role: "explore", opts: {} })
+    assert.equal(child.agent.manifest ?? null, null, "歧义 + init:false ⇒ 不附着（非 fatal）")
+    assert.equal(child.agent._projectView.state, "ambiguous", "报明状态归位")
+    assert.deepEqual(child.agent._projectView.candidates, [join(amb, "alpha"), join(amb, "zed")], "候选全列（按名排序）")
+    assert.equal(existsSync(join(amb, MANIFEST_REL)), false, "锚处零建档（不建 / 不猜）")
+    // 报明行文本同源（核单点——端侧转口产出的行 = 核函数逐字；端不复制行文——AC-28）
+    const a = { cwd: amb, config: { agent: { engineering: true } }, manifest: null, history: [] }
+    assert.equal(pushManifestStateReminder(a, { depth: 0 }), true, "端侧转口推报明行")
+    assert.equal(
+      a.history[0].content,
+      coreManifestReportLine({ state: "ambiguous", cwd: amb, candidates: [join(amb, "alpha"), join(amb, "zed")], matched: "manifest" }),
+      "行文 = 核 manifestReportLine 逐字",
+    )
+    assert.equal(setupReminders.manifestReportLine, undefined, "端侧不复制行文（无端特异副本——端差消）")
+  } finally {
+    _clearGitFailureCooldownForTests(engCwd)
+    _clearGitFailureCooldownForTests(join(sessionsDir, "eng-amb"))
+  }
 })
 
 // ─── 注入句解耦（N6/AC4——模块级闸保留为 process restarted 句专用）───
