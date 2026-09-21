@@ -1,3 +1,28 @@
+# Changelog
+
+All notable changes to ThinCoder VS Code are documented here.
+
+## [0.9.4] — 2026-09-21
+
+> 0.9.3 → 0.9.4（CalVer 月内序号——发布时定号）
+
+### Added
+
+- **无工作区守卫**：未打开任何文件夹时**拒启 agent（零写入）+ 明确提示**（host 通知 + 「Open Folder」一键动作；webview 出口守卫 + 输入框占位符第三态），不再把工作静默锚到 `process.cwd()`（VS Code 安装目录）；稍后打开文件夹免重载恢复。
+- **PROJECT-MANIFEST 模型（按用点解析）**：owning-ancestor 归属 + 五级梯发现；整档缺失非致命（降级 + 建档流提示）。
+- **加载遮罩**：webview 握手前显示覆盖层（含修复轮收正）。
+- **台账执行人列**（F-LX1）· **信号行两档标签**（digest/ask）· **会话认领释放**（F-CR1/CR2）· **会话 GC 命令**（`gc`）。
+
+### Changed
+
+- **发布门链收正**：`vscode:prepublish` = `npm run lint && npm test`——`doc:check` 移出发布门（发布门不挂仓级文档债）；`npm run doc:check` 改走仓根域（非发布门，与 CI docs 作业同命令）。
+- **工程模式角色 enum 收正（第三面）**：工具表装配面工程分支 enum = `explore / eng-designer / eng-coder`（`plan` 不入）；测档判据改集合相等；**排除 `plan`**（FR31——装配/命令/残留三面 + VSC parity）。
+- **启动非阻塞**：异步会话 GC + 陈旧清扫 + traces 清理。
+
+### Fixed
+
+- 子代理块标题行与 CLI 对齐 · 批量改名镜像修正（测试面）· README 依赖声明口径收正（零三方运行时依赖）。
+
 ## [0.9.3] — 2026-09-21
 
 > 0.9.2 → 0.9.3（CalVer 月内序号——发布时定号；本版随核首发联动）
@@ -5,17 +30,6 @@
 ### Changed
 
 - **核依赖收正**：`@thincoder/core` `^0.1.0` → `^0.9.1`（核首发 `@thincoder/core@0.9.1` 同日落地——vsix 内嵌核版本与仓内声明对齐）。
-
-# Changelog
-
-All notable changes to ThinCoder VS Code are documented here.
-
-## [Unreleased]
-
-### Changed
-
-- **发布门链收正**：`vscode:prepublish` = `npm run lint && npm test`——`doc:check` 移出发布门（发布门不挂仓级文档债）；`npm run doc:check` 改走仓根域（`node ../scripts/doc-check.mjs --root ..`；非发布门，与 CI docs 作业同命令）。
-- **工程模式角色 enum 收正（第三面）**：工具表装配面 `src/agent/setup-tooltable.mjs` 工程分支 enum = `explore / eng-designer / eng-coder`（`plan` 不入）；测档判据由 `includes` 改**集合相等**（`test/eng-designer-role.test.mjs`）。
 
 
 ## [0.9.2] — 2026-09-13
