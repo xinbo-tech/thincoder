@@ -12,6 +12,9 @@
  *
  * 段标题定位（sectionHeaderRe）同住本档：append 段尾定位与 status/close 段内状态行定位
  * 消费**同一个段头正则**——`## §N` 形态单源（`## §20` 不误命中 §2）。
+ *
+ * F11-C（本批）：**骨架死占位枚举**（TEMPLATE_PLACEHOLDERS）与残留扫描纯函数
+ * （findPlaceholderResidue）同住本档——与骨架模板共址即判据不会与模板脱节。
  */
 /**
  * 段标题定位（`## §N` 独立标题——`## §20` 不误命中 §2）。
@@ -24,7 +27,9 @@ export const sectionHeaderRe = (seg) => new RegExp(`^## §${seg}(?=\\s|$)`, "m")
  *  - §4/§6 无项——主 agent 的 status 写域**仅 §1**（§4/§6 状态面走普通文档写，与 D-BR18 分工一致）。
  * 词面纪律（最小词面）：一条状态行值只带**一个**关键字——校验面（batch 工具 status）拒绝
  * 内嵌另一冻结词的值（含「进行中…已收口」双词 ⇒ 已收口优先误冻结——2026-09-20 词面纪律）。
- * emoji / 括注 / 日期后缀容忍（判定 = 子串包含，同 gate）。
+ * emoji / 括注 / 日期后缀容忍（**读侧** gate 判定 = 子串包含，同 gate——写入面 value 谓词
+ * 自本批起收紧为「剥装饰白名单后余核 = 关键词」，见 batch-lifecycle.mjs）；
+ * 全词表并集 = 各段项去重集合（note 字段零命中的判据面——括注永不误触 gate）。
  */
 export const STATUS_WORDS = Object.freeze({
   1: Object.freeze({ open: "进行中", closed: "已收口" }),
@@ -41,6 +46,61 @@ export const SEGMENT_BY_ROLE = { "eng-designer": 2, "eng-coder": 5 }
 
 /** §1 状态行前缀形态（`**状态行**：` 独立行——表格行 / 块引用行不命中；判定只认关键字）。 */
 export const STATUS_LINE_RE = /^\s*\*\*状态行\*\*[：:]\s*(.*)$/
+
+/**
+ * 骨架死占位**枚举单源**（F11-C 判据面——create 骨架产出过的全部死占位字面）：
+ *  - `#<编号>` / `<板块>` = 现行骨架仍在产出的两处（台账行——填充人 = 主 agent，时点 =
+ *    建档后、本档首个 append/status 之前）；
+ *  - `<BATCH-ID>` / `<讨论来源>` = 改形**删除**的两处旧占位（create 不再产出；旧档残留同判）。
+ * 判据 = 枚举而非泛形正则：`<[^>]{1,40}>` 一类泛形会误杀正文合法尖括号（`Error: <message>` /
+ * 泛型 `Array<T>` / 讨论字面本身）与 `<§N 模板占位：…>` 合法暂存行（append 不删行——段内留存
+ * 是常态）——设计档 `TOOLS.md` 6.15 裁定点④。
+ */
+export const TEMPLATE_PLACEHOLDERS = ["<BATCH-ID>", "<讨论来源>", "#<编号>", "<板块>"]
+
+/**
+ * 死占位残留扫描（F11-C——append/status 落笔前的机检；**纯函数 · 零 fs**）。
+ * 判定域 = **档头**（档首行起至首个 `## §N` 段头前）+ **本次目标段**段内——他段模板占位不归
+ * 本段作者管（一段一作者：§2 作者扫 §5 的占位 = 越权）。
+ * @param {string} src — 档全文
+ * @param {number|string} seg — 本次目标段号（`2` / `"2"`——同 sectionHeaderRe 消费形）
+ * @returns {Array<{line: number, text: string, where: "header"|"section"}>} 残留列表（空 = 无残留）；
+ *   `line` = 所在判定域内 1-based 行号（档头域自档首行起 · 段域自 `## §N` 标题行起——便于定位），
+ *   `text` = 命中行 trim 原文，`where` = 命中域（档头 / 目标段——错误句标注位置用）
+ */
+export function findPlaceholderResidue(src, seg) {
+  const out = []
+  const scan = (text, where) => {
+    text.split("\n").forEach((line, i) => {
+      if (TEMPLATE_PLACEHOLDERS.some((ph) => line.includes(ph))) out.push({ line: i + 1, text: line.trim(), where })
+    })
+  }
+  const firstSection = /^## §\d/m.exec(src)
+  scan(src.slice(0, firstSection ? firstSection.index : 0), "header")
+  const hdr = sectionHeaderRe(seg).exec(src)
+  if (hdr) {
+    const nextRe = /^## §\d/gm
+    nextRe.lastIndex = hdr.index + hdr[0].length
+    const next = nextRe.exec(src)
+    scan(src.slice(hdr.index, next ? next.index : src.length), "section")
+  }
+  return out
+}
+
+/**
+ * 占位残留拒绝句（F11-C——append / status 两个挂点共用单源文案；逐行列残留：位置标注 + 行号 + 原文）。
+ * 错误句前缀 = `batch:`（本批新增错误面——与 append 迁移面的 `batch_segment:` 旧面不混）。
+ * @param {Array<{line:number,text:string,where:string}>} residues — findPlaceholderResidue 的返回值（非空）
+ * @returns {string} 完整拒绝句（调用方 throw new Error(...)）
+ */
+export function placeholderResidueError(residues) {
+  const where = (r) => (r.where === "header" ? "档头" : "目标段")
+  const list = residues.map((r) => `  ${where(r)} line ${r.line}: ${r.text}`).join("\n")
+  return "batch: 骨架死占位残留 — the batch record still carries skeleton placeholders (档头 or your target section). " +
+    "Fill them before writing: create ⇒ the main agent fills the header's 台账编号 / 板块 placeholders ⇒ the record's first append/status opens. " +
+    `Nothing was written. Residue:\n${list}`
+}
+
 
 /**
  * §1 状态行解析（冻结门与 lifecycle 共用的**单源解析器**——原 batch-segment.mjs 逐字迁移，
@@ -68,16 +128,18 @@ export function readBatchStatusLine(src) {
 /**
  * create 骨架模板（BATCH-RECORD.md §4.10 行为规格的**代码单源**——红线：模板只覆盖骨架与
  * 占位，不模板化内容）：`## §1–§6` 段头（含职责署名）+ 档头 boilerplate（六段一段一作者句 +
- * 编制行 + 前情指针行）+ §1 段内**占位状态行**（含 gate 合法关键字「进行中」——建档即过
+ * 编制行 + 台账/前情指针行）+ §1 段内**占位状态行**（含 gate 合法关键字「进行中」——建档即过
  * gate；整行不含「已收口」——gate 已收口优先，占位行不得携带冻结词）+ 各段模板子标题占位。
- * 已知实参替换：date / topic / prev（§4.11 参数面）；`<BATCH-ID>` / `<讨论来源>` / `#<编号>` /
- * `<板块>` 无参数 —— 保持占位字面（台账登记 / 来源 = 主 agent 既有义务，create 不代建）。
+ * 已知实参替换：date / topic / **source** / prev（§4.11 参数面 + F11-B——source 必填、prev 传
+ * 入值过幂等剥前缀，归一化在 lifecycle 面）；档头 `#<编号>` / `<板块>` 仍保持占位字面（台账
+ * 登记 = 主 agent 既有义务，create 不代建——填充时点 = 建档后、本档首个 append/status 之前）。
+ * 本批改形删除（F11-B）：旧 `# …（<BATCH-ID>）` 后缀与 `来源 = <讨论来源>` 占位实参化。
  */
-export function batchSkeleton({ date, topic, prev }) {
+export function batchSkeleton({ date, topic, source, prev }) {
   return [
-    `# ${date} · ${topic}（<BATCH-ID>）`,
+    `# ${date} · ${topic}`,
     "> 六段 append-only，一段一作者：§1 讨论（主 agent）· §2 批次任务与设计（eng-designer）· §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder）· §6 验证与收口（父代理）。",
-    `> 编制：主 agent · ${date} · 来源 = <讨论来源>。`,
+    `> 编制：主 agent · ${date} · 来源 = ${source}。`,
     `> 台账 = #<编号>（<板块> · 归批）。前情 = ${prev}。`,
     "## §1 讨论（主 agent）",
     `**状态行**：🔄 ${STATUS_WORDS[1].open}（…）`,

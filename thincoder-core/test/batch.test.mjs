@@ -6,13 +6,18 @@
  * 覆盖：create 正/负例（BR-18–20/25 + 基底单源）· depth-0 身份门（BR-19/24）· status 段属主
  * 流转 + 词表 + 声明段拒（BR-21/22/C4/C5）· close/冻结（BR-23/C6/C7）· depth-0 path 面
  * （D-BR21：可选 path / 在飞批缺省 / 0·复数拒 / 子代理评审拒）· 别名等价（AC-2/AC-9/BR-26/C8）
- * · #84 缝（AC-11——主名三通道记账）· append 不补骨架（C10）。
+ * · #84 缝（AC-11——主名三通道记账）· append 不补骨架（C10）·
+ * **F11 词面协议（tool-discipline 批）**：A 组 = value 谓词收紧（余核 = 关键词） + note 括注
+ * （A1/A2/A3/A4，含事故①「讨论已收口」防复发先红）；B 组 = create source 必填/落盘 · prev
+ * 幂等剥前缀 · `<BATCH-ID>` 删除（B1–B4）；C 组 = 死占位机检（**已拆出** `batch-placeholder-gate.test.mjs`
+ * ——本档 F11 落地后实测 506 行 > 500 硬限，按设计预裁拆分位拆出）；兼容组 = 手写档夹具零改（C6/C7/T10/C4 三格）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 
 import {
   batchTool, batchSegmentTool, configureBatchSegment, resetBatchSegment,
@@ -65,6 +70,11 @@ function writeManifest(dir, batches) {
   }))
 }
 
+/** 拒句捕获（F11 组：message 全文断言——词表回显 / 逐行残留）。 */
+const errOf = (p) => p.then(() => null, (e) => e)
+/** 档头填充（F11-C 次序句：create ⇒ 主 agent 填档头 ⇒ 首个 append/status 开放；“普通文档写”）。 */
+const fillHeader = (abs) => writeFileSync(abs, readFileSync(abs, "utf8").replace("#<编号>", "#214").replace("<板块>", "TOOLS"), "utf8")
+
 // ═══ create（BR-18–20/25 · C1/C2/C3/C9）════════════════════════════════════════
 
 test("C1/BR-18 create 正例：主代理建档——六段骨架 + §1 状态行占位（进行中）+ 前情指针 + 编制行；建档即过 gate", async () => {
@@ -73,7 +83,7 @@ test("C1/BR-18 create 正例：主代理建档——六段骨架 + §1 状态行
     try {
       const tool = batchTool(null)
       const out = await tool.execute(
-        { action: "create", path: "2026-09-21-x.md", topic: "x", prev: "旧档（已收口 2026-09-20）", date: "2026-09-21" },
+        { action: "create", path: "2026-09-21-x.md", topic: "x", source: "夹具来源", prev: "旧档（已收口 2026-09-20）", date: "2026-09-21" },
         { agent: { cwd: dir }, depth: 0 },
       )
       assert.match(out, /created/, "成功回执")
@@ -88,9 +98,11 @@ test("C1/BR-18 create 正例：主代理建档——六段骨架 + §1 状态行
       assert.ok(after.includes("六段 append-only，一段一作者"), "档头 boilerplate（六段一段一作者句）")
       assert.ok(after.includes("编制：主 agent · 2026-09-21"), "编制行")
       assert.ok(after.includes("前情 = 旧档（已收口 2026-09-20）"), "前情指针")
-      assert.ok(after.includes("x（<BATCH-ID>）"), "档头主题（无参占位保持字面）")
+      assert.ok(after.includes("来源 = 夹具来源"), "编制行实参化（F11-B2）")
+      assert.ok(after.startsWith("# 2026-09-21 · x\n"), "档头 = 日期 · 主题（F11-B4：无 `<BATCH-ID>` 段）")
+      fillHeader(abs) // F11-C 次序句：create ⇒ 主 agent 填档头 ⇒ 首个 append 开放（夹具 Δ）
       await tool.execute({ action: "append", segment: "§4", text: "post-create write" }, { agent: { cwd: dir }, depth: 0 })
-      assert.ok(readFileSync(abs, "utf8").includes("post-create write"), "建档即过 gate（占位状态行 ⇒ 在飞批可写）")
+      assert.ok(readFileSync(abs, "utf8").includes("post-create write"), "建档即过 gate（占位状态行 ⇒ 在飞批可写）+ 档头填后过占位机检")
     } finally { _resetProjectRootForTest() }
   })
 })
@@ -130,7 +142,7 @@ test("C9/BR-25 create 目录不存在：mkdir -p 后骨架一次落位（BR-25�
     _setProjectRootForTest(dir)
     try {
       writeManifest(dir, "declared-batches")
-      await batchTool(null).execute({ action: "create", path: "nested/2026-09-21-n.md", topic: "n" }, { agent: { cwd: dir }, depth: 0 })
+      await batchTool(null).execute({ action: "create", path: "nested/2026-09-21-n.md", topic: "n", source: "test" }, { agent: { cwd: dir }, depth: 0 })
       assert.ok(readFileSync(join(dir, "declared-batches", "nested", "2026-09-21-n.md"), "utf8").includes("## §1 讨论（主 agent）"), "骨架落位")
     } finally { _resetProjectRootForTest() }
   })
@@ -141,7 +153,7 @@ test("create 相对 path 基底 = manifest docRoot.batches（轮 2 裁定——�
     _setProjectRootForTest(dir)
     try {
       writeManifest(dir, "declared-batches")
-      await batchTool(null).execute({ action: "create", path: "2026-09-21-d.md", topic: "d" }, { agent: { cwd: dir }, depth: 0 })
+      await batchTool(null).execute({ action: "create", path: "2026-09-21-d.md", topic: "d", source: "test" }, { agent: { cwd: dir }, depth: 0 })
       assert.ok(existsSync(join(dir, "declared-batches", "2026-09-21-d.md")), "落声明基底")
       assert.ok(!existsSync(join(dir, "2026-09-21-d.md")), "不落 cwd")
       assert.ok(!existsSync(join(dir, "docs", "batches")), "不落默认基底")
@@ -347,7 +359,8 @@ test("AC-11 #84 缝：注入回调按写入各一次（create/append/status 三�
       })
       try {
         const ctx = { agent, depth: 0 }
-        await tool.execute({ action: "create", path: "2026-09-21-x.md", topic: "x" }, ctx)
+        await tool.execute({ action: "create", path: "2026-09-21-x.md", topic: "x", source: "test" }, ctx)
+        fillHeader(join(dir, "docs", "batches", "2026-09-21-x.md")) // F11-C 夹具 Δ（create 后、首写前）
         await tool.execute({ action: "append", segment: "§4", text: "seam write", path: "docs/batches/2026-09-21-x.md" }, ctx)
         await tool.execute({ action: "status", value: "🔄 进行中", path: "docs/batches/2026-09-21-x.md" }, ctx)
         assert.equal(calls.length, 3, "三次写入 ⇒ 回调恰三次（含 create/status 新通道）")
@@ -377,4 +390,84 @@ test("resolveBatchDocPath（主档单源）：cwd 命中 → abs；不可读 →
     assert.equal(resolveBatchDocPath(dir, "rec.md"), join(dir, "rec.md"))
     assert.throws(() => resolveBatchDocPath(dir, "nope.md"), /batchDoc is not a readable file/)
   })
+})
+
+// ═══ F11 词面协议结构化（A：value 谓词 + note · B：create 补齐/归一化 · C：死占位机检）════
+
+test("F11-A1/A4 写入面机械拦：散文内嵌值拒 + 词表回显（先红）；note 含冻结词 / 占位 / 多行 ⇒ 拒；零写入", async () => {
+  await withTempDir(async (dir) => {
+    const abs = join(dir, "rec.md")
+    const designer = { agent: { cwd: dir, _role: "eng-designer" }, depth: 1 }
+    writeFileSync(abs, record(), "utf8")
+    // 事故①复现形：现行子串谓词恰命中「已收口」∈ §1 词表 ⇒ 接受；新谓词剥装饰后余核 `讨论已收口` ≠ 关键词 ⇒ 拒
+    const e1 = await errOf(batchTool(null).execute({ action: "status", value: "讨论已收口 2026-09-21", path: "rec.md" }, depth0(dir)))
+    assert.match(String(e1?.message), /is not in the legal keyword set/, "F11-A1 余核 ≠ 关键词（散文内嵌）⇒ 拒")
+    assert.match(String(e1?.message), /进行中 \/ 已收口/, "错误句回显 §1 词表（与 0 命中 / 词表外同串）")
+    for (const [note, re, label] of [
+      ["已收口", /must not contain any STATUS_WORDS keyword/, "F11-A4 note 含冻结词（括注永不误触 gate）"],
+      ["<板块> 待填", /must not carry skeleton placeholders/, "F11-A4 note 含骨架占位"],
+      ["两行\n注释", /single line/, "F11-A4 note 多行"],
+    ]) {
+      assert.match(String((await errOf(batchTool("rec.md").execute({ action: "status", value: "进行中", note }, designer)))?.message), re, label)
+    }
+    assert.ok(readFileSync(abs, "utf8").includes("**状态行**：🔄 进行中（模块设计·门禁与流程族）"), "零写入（§1 冻结真值零污染）")
+  })
+})
+
+test("F11-A2/A3 note 落盘形态：带 note ⇒ `关键词（括注）`；无 note ⇒ 纯值（旧形态零变）", async () => {
+  await withTempDir(async (dir) => {
+    const abs = join(dir, "rec.md")
+    const designer = { agent: { cwd: dir, _role: "eng-designer" }, depth: 1 }
+    writeFileSync(abs, record(), "utf8")
+    await batchTool("rec.md").execute({ action: "status", value: "进行中", note: "F10/F11 进设计轮" }, designer)
+    assert.ok(readFileSync(abs, "utf8").includes("**状态行**：进行中（F10/F11 进设计轮）"), "F11-A2 括注落状态行（仅状态行行内）")
+    await batchTool("rec.md").execute({ action: "status", value: "设计完成" }, designer)
+    assert.ok(readFileSync(abs, "utf8").includes("**状态行**：设计完成"), "F11-A3 无 note ⇒ 纯值")
+    assert.ok(!readFileSync(abs, "utf8").includes("设计完成（"), "无括注")
+  })
+})
+
+test("F11-B1 缺 source ⇒ 拒（topic 同款 fail-closed——死锁防线）；多行 source 拒；零落盘", async () => {
+  await withTempDir(async (dir) => {
+    _setProjectRootForTest(dir)
+    try {
+      const ctx = { agent: { cwd: dir }, depth: 0 }
+      await assert.rejects(batchTool(null).execute({ action: "create", path: "2026-09-21-s.md", topic: "s" }, ctx), /create requires source/, "缺 source 拒")
+      await assert.rejects(batchTool(null).execute({ action: "create", path: "2026-09-21-s.md", topic: "s", source: "a\nb" }, ctx), /source must be a single line/, "多行 source 拒")
+      assert.ok(!existsSync(join(dir, "docs", "batches", "2026-09-21-s.md")), "零落盘")
+    } finally { _resetProjectRootForTest() }
+  })
+})
+
+test("F11-B2/B4 create 产物：编制行实参化 · 档头无 `<BATCH-ID>` · 台账两占位留待主 agent", async () => {
+  await withTempDir(async (dir) => {
+    _setProjectRootForTest(dir)
+    try {
+      await batchTool(null).execute({ action: "create", path: "2026-09-21-s.md", topic: "s", source: "用户 22:47 双提问", date: "2026-09-21" }, { agent: { cwd: dir }, depth: 0 })
+      const after = readFileSync(join(dir, "docs", "batches", "2026-09-21-s.md"), "utf8")
+      assert.ok(after.includes("编制：主 agent · 2026-09-21 · 来源 = 用户 22:47 双提问。"), "F11-B2 编制行 = 来源实参")
+      assert.ok(!after.includes("<讨论来源>"), "旧占位零产出")
+      assert.ok(after.startsWith("# 2026-09-21 · s\n"), "F11-B4 档头 = `# <date> · <topic>`（无 ID 段）")
+      assert.ok(after.includes("> 台账 = #<编号>（<板块> · 归批）。"), "台账行两占位保留（填充 = 主 agent · 首写前）")
+    } finally { _resetProjectRootForTest() }
+  })
+})
+
+test("F11-B3 prev 幂等剥：`前情 = 前情 = X` / `前情 = X` / `X` ⇒ 落盘行均 `前情 = X`（单前缀）", async () => {
+  await withTempDir(async (dir) => {
+    _setProjectRootForTest(dir)
+    try {
+      for (const [i, prev] of ["前情 = 前情 = X", "前情 = X", "X"].entries()) {
+        const name = `2026-09-21-p${i}.md`
+        await batchTool(null).execute({ action: "create", path: name, topic: `p${i}`, source: "test", prev }, { agent: { cwd: dir }, depth: 0 })
+        const after = readFileSync(join(dir, "docs", "batches", name), "utf8")
+        assert.ok(after.includes("前情 = X。") && !after.includes("前情 = 前情"), `prev=${JSON.stringify(prev)} ⇒ 单前缀落盘`)
+      }
+    } finally { _resetProjectRootForTest() }
+  })
+})
+
+test("F11-C 组拆档落地：占位机检用例（C1–C4）住邻档 `test/batch-placeholder-gate.test.mjs`（本档 + F11 后越 500 硬限 ⇒ 按设计预裁拆分位拆出）", () => {
+  const sibling = join(dirname(fileURLToPath(import.meta.url)), "batch-placeholder-gate.test.mjs")
+  assert.ok(existsSync(sibling), "邻档在位（C 组已拆出——本档零引用其私有夹具）")
 })

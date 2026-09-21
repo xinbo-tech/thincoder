@@ -89,7 +89,7 @@ export async function maybeGuardPushbacks(agent, st) {
   // state (CLI parity): an unbounded loop stranded the model when a pending item
   // could not be resolved. Updating the list via the task tool resets the budget.
   const pending = agent._tasks?.filter((t) => t.status === "pending")
-  if (pending?.length && (agent._taskPushbacks ?? 0) < 1) {
+  if (pending?.length && !agent.config?.agent?.engineering && (agent._taskPushbacks ?? 0) < 1) {
     agent._taskPushbacks = (agent._taskPushbacks ?? 0) + 1
     pushReal(history, fullHistory, { role: "assistant", content: response.content })
     history.push({

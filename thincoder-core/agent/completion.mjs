@@ -53,7 +53,9 @@ export function handleCompletion(agent, response, depth, turn, guardPushbacks, h
   // pending item can't be resolved). After the single reminder the model is free
   // to finish — updating the task list (task tool) resets the budget, so a fresh
   // list state earns one fresh reminder.
-  if (depth === 0 && agent.tasks.some((t) => t.status === "pending") && (agent._taskPushbacks ?? 0) < 1) {
+  // F10（催更门连带）：工程模式下 task 工具机械停用（装配摘除 + execute 拒）⇒ 不再发指向被拒
+  // 工具的提醒（死胡同提醒防线）；列表本体与 `_taskPushbacks` 预算语义零改。
+  if (depth === 0 && !agent.config?.agent?.engineering && agent.tasks.some((t) => t.status === "pending") && (agent._taskPushbacks ?? 0) < 1) {
     agent._taskPushbacks = (agent._taskPushbacks ?? 0) + 1
     const pending = agent.tasks.filter((t) => t.status === "pending").map((t) => t.title).join(", ")
     pushReal(agent, { role: "assistant", content: response.content })

@@ -99,6 +99,9 @@ discipline-normal.md 内容大纲（每节管什么）：
 
 **附属纪律（已落提示词正本——本档不复制，D2）**：spawn 排队纪律、需求池攒批工作流（六条）——机制权威 = `docs/core/design/LEDGER.md`（v2 台账）。
 
+> 2026-09-21 修正（**tool-discipline 批 · 主 agent 落笔**——承 `docs/batches/2026-09-21-tool-discipline.md` · 台账 #214 · 机制 = `docs/core/requirements/TOOLS.md` F10）：**`task` 工具工程模式机械停用**（装配摘除 + 调用拒）后，提示词面三处撞点仍「指挥已停用工具」= 自相矛盾态 ⇒ 收正：① `discipline-engineering.md` 铁律 3「工作靠任务清单跟踪」→ 工程模式分支（追踪面 = 批次档 §2 + 台账）；② 同档需求完成判据句「任务清单是需求验收的标志」→ 批次档 §2 条目表 + 台账行；③ `persona-engineering.md` 欠账句「立即写进任务清单」→ 批次档 §6 未决（或台账行）。散文纪律句本体不删（机判 + 文案改指双轨）。
+> **逐字文本** = 设计档 `docs/core/design/TOOLS.md` §6.15.2「提示词面条目建议文本」（正本中文 + 核内英文）；**落点** = 双副本四档（`docs/core/design/prompts/{discipline-engineering,persona-engineering}.md` 正本 → `thincoder-core/prompts/…` 运行期）——双源同文，**变更记录只落本档**。
+
 ### 2.5 命名法（层前缀-变体.md）
 
 - **双面流程**：权威源 = 中文模板（`docs/core/design/prompts/`，用户审核面）；运行期提示词（`thincoder-core/prompts/*.md`）= 英文运行面（国外模型用）。变更流：改中文正本 → 翻译写入英文运行面（生成 = 翻译，不是 cp；无机检门）。
@@ -199,3 +202,4 @@ discipline-normal.md 内容大纲（每节管什么）：
 - 2026-09-20（**用户定向 · 主 agent 落笔**——用户 20:34「这个说明应该进提示词系统的需求和设计文档，免得以后 agent 又把二者串了」+ 20:33 原话）：§4 编写纪律 **新增第 16 条「提示词与文档分属两界」**——**运行时读不到文档 ⇒ 提示词内一切文档引用（档名/节号/指路句/面级指路句）= 运行时死文本**；
   合法所指白名单五类（工具与参数 · 会话内对象 · 用户项目内文件 · 体系自身段号 · 操作数）；写前自查一句。计数 15 → 16（D3）。**双面分工**：需求面 = 本条（判据与白名单）；设计面 = `PROMPT-SYSTEM.md` §6.6（机判三式 + 域 + 边界——清零批已落 ✓ 承接本条 ✓ designer 微轮回指）。批 = 清零批（台账 #147）。
   **受众口径** = 主链各角色（两模式 + 五个子代理角色 explore / plan / coder / eng-coder / eng-designer），advisor / consult 属特殊模块不入主链（同轮评审 F1 收正）。双源同文（模板 + 运行期）——**变更记录只落本档**。批 = `docs/batches/2026-09-20-batch-record-commons.md`（台账 #106）。（折两行 = 父侧直接执行 · 行宽收正 · 零语义 · 可 revert）
+- 2026-09-21（**tool-discipline 批 · 主 agent 落笔**——承 `docs/batches/2026-09-21-tool-discipline.md` · 台账 #214）：`task` 工程模式机械停用（`docs/core/requirements/TOOLS.md` F10）连带**三处提示词撞点收正**——`discipline-engineering.md` 铁律 3 / 需求完成判据句 + `persona-engineering.md` 欠账句（工程模式追踪面 = 批次档 §2/§6 + 台账）；逐字文本 = 设计档 `docs/core/design/TOOLS.md` §6.15.2；双源同文（正本 → 运行期）；**无计数连带**（节数 / 文件清单零变）。

@@ -57,6 +57,13 @@ export const taskTool = {
   },
   readonly: true,
   async execute(args, ctx) {
+    // F10（工程模式机械停用——双层门的 **execute 层兜底**；先例 = escalate `subagent-actions.mjs:349`）：
+    // 前置位 = 本行以下全部副作用之前（alias 归一 / `_taskPushbacks` 归零 / `_onTaskUpdate` / 轻推）
+    // ⇒ 零副作用（列表不变）；装配层已摘（`agent/family-tools.mjs` 工程分支不入表，KD8）。
+    // 普通模式（engineering 非真）逐字走原路径。
+    if (ctx?.agent?.config?.agent?.engineering) {
+      return "Error: engineering mode is ON — task is unavailable (the batch record + the ledger are the tracking authority in engineering mode). Update progress in the batch record (§5/§6) or the ledger (`/ledger`); task lists go stale in this mode's parallel structure."
+    }
     // Keep only non-done items + the 3 most recently completed (for context reference), max 20 to prevent accumulation
     const warnings = []
     const raw = (args.items ?? []).map((it) => {

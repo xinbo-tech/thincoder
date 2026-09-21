@@ -120,7 +120,7 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
   // §17 D-S6 manual tier + §6.27.12.12 ④: system-driven turn domain reminder — the base switches by
   // turn type (digest / up-stream wake), the end-side overlay is always present (§6.27.12.5 L).
   if ((autoTurn || upstreamTurn) && !getAuto()) {
-    history.push({ role: "user", content: composeTurnDomain(upstreamTurn), transient: true })
+    history.push({ role: "user", content: composeTurnDomain(upstreamTurn, agent.config?.agent?.engineering === true), transient: true })
   }
 
   // §15 D-A3（VS Code 对齐）：async 注册表挂 agent 上；depth-0 的容器沿共享 history

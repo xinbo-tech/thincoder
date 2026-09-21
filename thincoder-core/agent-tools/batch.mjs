@@ -31,7 +31,7 @@ import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 
 import { docRootBase, docRootPaths, readManifest } from "../manifest.mjs"
-import { SEGMENT_BY_ROLE, readBatchStatusLine, sectionHeaderRe } from "./batch-skeleton.mjs"
+import { SEGMENT_BY_ROLE, readBatchStatusLine, sectionHeaderRe, findPlaceholderResidue, placeholderResidueError } from "./batch-skeleton.mjs"
 import { closeBatchRecord, createBatchRecord, findInFlightBatch, statusBatchRecord } from "./batch-lifecycle.mjs"
 
 export { SEGMENT_BY_ROLE }
@@ -193,7 +193,7 @@ function insertIntoSection(src, seg, text) {
  *    eng-coder → §5（迁移错误面，"batch_segment:" 前缀**逐字保持**）；
  *  - 目标定位（D-BR21）：depth-0 path 可选（缺省 = findInFlightBatch 唯一在飞批）；子代理/评审
  *    传 path ⇒ 拒，目标 = spawn/实例绑定；
- *  - 其余（gate / text 校验 / 剥凭证 / 骨架保护 / 插入 / 记账 / 回执）逐字保持原语义。
+ *  - 其余（gate / text 校验 / 剥凭证 / 骨架保护 / **死占位机检（F11-C）** / 插入 / 记账 / 回执）逐字保持原语义。
  */
 function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   const agent = ctx?.agent ?? {}
@@ -254,6 +254,10 @@ function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   if (!body.trim()) {
     throw new Error("batch_segment: nothing to append — the text is empty after credential stripping (credential values never reach the record).")
   }
+  // F11-C（挂点：gate / text 校验后 · insertIntoSection 前）：档头 + 目标段死占位残留 ⇒ 拒
+  // （他段占位不拦——一段一作者；骨架枚举单源 = skeleton 档 TEMPLATE_PLACEHOLDERS）。
+  const residues = findPlaceholderResidue(src, n)
+  if (residues.length) throw new Error(placeholderResidueError(residues))
   const { written, roundN } = insertIntoSection(src, n, body)
   writeFileSync(abs, written)
   // #84：记账面按端注入（缺省 no-op = CLI 语义零行为变——端装配经 configureBatchSegment 覆盖）。
@@ -272,11 +276,12 @@ export function batchTool(batchDoc = null, { review = false } = {}) {
     name: "batch",
     description:
       "Batch-record lifecycle tool (一段一作者 — six append-only sections, one author each). " +
-      "actions: create (depth-0 only — write a new six-section skeleton record; pass path + topic) · " +
+      "actions: create (depth-0 only — write a new six-section skeleton record; pass path + topic + source) · " +
       "append (add text to the END of YOUR section — existing lines are never rewritten or deleted) · " +
-      "status (update YOUR section's `**状态行**：` line — the value must carry exactly ONE legal keyword of your section's STATUS_WORDS entry) · " +
+      "status (update YOUR section's `**状态行**：` line — the value must carry exactly ONE legal keyword of your section's STATUS_WORDS entry, decorated only by surrounding symbols / a trailing ISO date / whitespace; prose goes to the separate `note` field, which lands as a parenthetical) · " +
       "close (depth-0 only — freeze the record: §1 → 「已收口 <date>」, every further write is refused). " +
       "Identity fixes what you may write (段白名单): main agent (depth 0) — append §1/§4/§6, status §1 only, create/close; eng-designer — §2; eng-coder — §5; design review (review binding) — §3. A write outside your own section is refused. " +
+      "Skeleton placeholders (dead literals — `#<编号>` / `<板块>` and the older `<BATCH-ID>` / `<讨论来源>`) in the record header or in your target section block append/status: fill them first (the main agent fills the header right after create); `<§N 模板占位：…>` template lines are legal and never blocked. " +
       "Target record: sub-agents and design reviews have NO path parameter in practice — the record arrives via the spawn binding / the review instance key (passing path is refused); depth-0 MAY pass path (若传则须可读), omitting it picks the unique in-flight record (0 or ≥2 in flight ⇒ refuse — pass path). " +
       "A design review's append is stamped by the tool with a `### 轮次 N（评审子代理）` heading — N is tool-counted; do not write your own heading (it would be dropped). " +
       "Credential values are stripped mechanically before writing (never write a token or designId value). " +
@@ -303,11 +308,19 @@ export function batchTool(batchDoc = null, { review = false } = {}) {
         },
         value: {
           type: "string",
-          description: "status only — the new status-line value (single line; must contain exactly one legal keyword of your section's STATUS_WORDS entry: §1 进行中/已收口 · §2 设计完成 · §3 评审完成 · §5 实施完成).",
+          description: "status only — the new status-line value (single line; exactly one legal keyword of your section's STATUS_WORDS entry: §1 进行中/已收口 · §2 设计完成 · §3 评审完成 · §5 实施完成 — plus decoration only: surrounding symbols / a trailing ISO date / whitespace; prose goes to `note`).",
+        },
+        note: {
+          type: "string",
+          description: "status only — prose that lands as a parenthetical on the status line (`**状态行**：进行中（note）`). Single line; must carry no STATUS_WORDS keyword (those go in `value`) and no skeleton placeholders. Omit for a plain value.",
         },
         topic: {
           type: "string",
           description: "create only — the batch subject word shared by the record header (keep the file name aligned with it).",
+        },
+        source: {
+          type: "string",
+          description: "create only — REQUIRED: the record's origin line (来源 = …; single line). It fills the header's 编制 line; without it the skeleton's placeholder would block the record's first append/status (topic-style fail-closed). Nothing is written when it is missing.",
         },
         date: {
           type: "string",
@@ -315,7 +328,7 @@ export function batchTool(batchDoc = null, { review = false } = {}) {
         },
         prev: {
           type: "string",
-          description: "create only — the predecessor pointer line (前情); defaults to 无（独立批）.",
+          description: "create only — the predecessor pointer line (前情); a leading `前情 = ` prefix is stripped automatically (idempotent — repeated prefixes included); defaults to 无（独立批）.",
         },
       },
       required: ["action"],

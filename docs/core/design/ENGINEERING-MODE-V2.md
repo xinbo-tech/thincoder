@@ -345,7 +345,7 @@ M10 测试（独立简化，无依赖）
 
 | # | 面 | 结构 | 判据（可机判） |
 |---|---|---|---|
-| ① | 装配面 | `assembleFamilyTools` 固定段按模式裁剪（`thincoder-core/agent/family-tools.mjs:173`）：工程模式固定段 = `[task, timer]`，plan 不入表——**模型不可见** | 工程模式装配名集不含 `plan`；普通模式含（回归） |
+| ① | 装配面 | `assembleFamilyTools` 固定段按模式裁剪（`thincoder-core/agent/family-tools.mjs:184-186`）：工程模式固定段 = `[timer]`——task / plan 皆不入表（KD8 / F10 同处置）——**模型不可见** | 工程模式装配名集不含 `plan` ∧ 不含 `task`；普通模式两者皆含（回归） |
 | ② | 命令面 | `/plan`（`thincoder-cli/src/tui/cmd-plan.mjs`）· ACP 两入口（`handlers-session.mjs` `applyConfigOption` `mode` 分支 · `session/set_mode`）· VSC 面板开关（`chat-panel.mjs` `_setPlanMode`）工程模式一律拒绝 + 提示可见 | 拒绝后 `planMode` 不变 + 提示可见（非静默失败） |
 | ③ | 残留清零 | 单点 `clearPlanMode(agent)`（`agent-tools/plan.mjs`）：清 `planMode` + 两 reminder 计数 + **未注入的 plan 提示语**；三个翻转点 + 两个恢复点复用；恢复面**槽值一并收正** | 工程模式真值 ⇒ `planMode` 恒 false（内存 + 槽位） |
 
@@ -380,7 +380,7 @@ M10 测试（独立简化，无依赖）
 **判据链（不变量式，消费面零改）**：
 
 ```text
-engineering 真值 ──► 固定段裁剪（plan 不入表）──────────► 模型不可见（①）
+engineering 真值 ──► 固定段裁剪（plan / task 不入表）──────► 模型不可见（①）
                 ├──► 命令面拒绝（/plan · ACP · VSC 面板）─► 半状态不产生（②）
                 └──► clearPlanMode（三翻转 + 两恢复）────► planMode 恒 false（③）
                          └─► 消费面零改（core 侧五处为示例：dispatch.mjs:167 · run-stages.mjs:98 · context.mjs:344
@@ -514,13 +514,17 @@ engineering 真值 ──► 固定段裁剪（plan 不入表）─────�
 | T7 | 错误：token 过期 | spawn 带过期 token | 门禁拒 + 清理槽 |
 | T8 | 正常：情境行进模型上下文 | 工程模式 + depth-0 + manifest 有 `phase` | 逐回合恰一行情境行（`…phase: <值> (discipline: <light\|strict>).`）；值不变不重复、值变换新 |
 | T9 | 边界：压缩吞掉情境行 | 压缩后 history 无该行 | 下一回合自动重推（活体守卫自愈） |
-| T10 | 正常：固定段模式裁剪 | `assembleFamilyTools({depth:0, engineering:true})` / `{depth:1, role:"eng-coder", engineering:true}` / `{depth:0}` / `{depth:1, role:"plan"}` + VSC 旁路面（视觉渠道子代理携 `engState.enabled:true`） | 工程面名集不含 `plan`（含该子代理）；后两者含（普通面回归）；固定段序契约（task 先于 timer）保持 |
+| T10 | 正常：固定段模式裁剪 | `assembleFamilyTools({depth:0, engineering:true})` / `{depth:1, role:"eng-coder", engineering:true}` / `{depth:0}` / `{depth:1, role:"plan"}` + VSC 旁路面（视觉渠道子代理携 `engState.enabled:true`） | 工程面名集不含 `plan` ∧ 不含 `task`（含该子代理）；后两者含（普通面回归）；普通面固定段序契约（task → plan → timer）保持 |
 | T11 | 边界：命令面拒绝 | 工程模式下 `/plan` · ACP `set_mode{mode:"plan"}` · `set_config_option{configId:"mode", value:"plan"}` · VSC `setPlanMode{value:true}` | 四处均拒 + 提示可见；`planMode` 保持 false；ACP 拒绝携共用文案（非 `unknown configId`）；VSC 按钮 disabled + title + 回弹；ACP `mode:"normal"` 照常接受 |
 | T12 | 边界：翻转清零 | `planMode=true` 后开工程模式（核 `eng` 工具 / `/eng` / VSC 面板开关） | `planMode=false` + 槽 `planMode=false`（CLI `/eng` · VSC）+ 未注入的 plan 提示语被摘除 |
 | T13 | 边界：恢复清零 | 槽 `{engineering:true, planMode:true}` → CLI `applySession` / VSC `applySlotSessionState` | 恢复后 `planMode`（VSC `_planMode`）= false，**槽 `planMode` 一并收正**（装载推送不再重推 plan-active） |
 | T14 | 错误：普通模式零回归 | 普通模式装配 / `/plan` 切换 / ACP `mode:"plan"` / 槽 `planMode:true` 恢复 | 四条路径全带宽不变（**除本批所列矩阵镜像收正**——`host-shape-spawn.test.mjs` T5：两条工程行删 `plan` + 增 explore 工程行——外，既有测试零改全绿） |
 
 ## 4. 变更记录
+
+- 2026-09-22（**tool-discipline 批 · 第三面闭口轮 · eng-designer**——承 `docs/batches/2026-09-21-tool-discipline.md` §5 线外发现 + F10 实施终态）：
+  E7 装配面同源断言三处收正（`:348` 行 ① 工程模式固定段 = `[timer]`〔task / plan 皆不入表〕+ 判据补 `task` · `:383` 判据链图 · `:517` T10 判据）；
+  `:372` / `:394` / `:410` 逐条实读 = 现态成立，零改。第三面机制（auto-turn digest 域模式变体）= `docs/core/design/TOOLS.md` §6.15.3（本档不重述）。
 
 - 2026-09-21（**manifest 解析模型收正批 · 设计轮** · eng-designer——承 `docs/batches/2026-09-21-manifest-resolution.md` §1 · 用户 2026-09-21 11:00–11:29 裁定）：
   E2 声明面句收正（缺 manifest（整档）→ 会话照常起 + 按用点报明 / 走建档流；项目落地 = 建 manifest 轻动作）；

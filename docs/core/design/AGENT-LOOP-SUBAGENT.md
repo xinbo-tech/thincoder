@@ -144,10 +144,11 @@
 
 **digest 动作域（两档）**：
 
-- **手动档**（无 AUTO——只做「信息整理」）：**允许**总结报告要点注入会话流、更新任务清单、标记需决策点 + 写下建议（只写不执行）；**禁止**写文件 / 改代码、执行类工具（bash / execute / verify）、spawn 一切子代理（async + 同步——**机械拒绝**，subagent 入口检查 `_inAutoTurn && !autoApprove`）。
+- **手动档**（无 AUTO——只做「信息整理」）：**允许**总结报告要点注入会话流、标记需决策点 + 写下建议（只写不执行）；**任务清单更新随模式**——普通模式允许（`task` 在场），工程模式不允许（F10：装配摘除 + 执行拒）；
+  该轮域文本随模式取变体，工程模式的追踪权威面 = 批次档 + 台账（机制与文本单源 = `docs/core/design/TOOLS.md` §6.15.3）；**禁止**写文件 / 改代码、执行类工具（bash / execute / verify）、spawn 一切子代理（async + 同步——**机械拒绝**，subagent 入口检查 `_inAutoTurn && !autoApprove`）。
 - **AUTO 档**（`autoApprove` 开——与用户回合一致的全语义推进型）：读 / 写 / spawn / verify / 执行全开放；禁 spawn 的机械限制撤销（推进链终止 = 池空自然停 + 用户输入随时打断）；guard 与普通回合同款。
 - **两档通用**：auto-turn 的 mutation 标记不随下轮 per-run 重置而丢（auto-turn 结束时 guard 字段合并保留 `_inheritedGuard`）→ 下一用户回合覆盖 auto-turn 期间改动（防静默漏验）。
-- **权限**：手动档 auto-turn 不传 `onPermissionRequest` handler（无 handler 即 denied——不弹审批面板）；AUTO 档沿用 `autoApprove`；自省工具（如 `task`）按只读 / 豁免分类放行。
+- **权限**：手动档 auto-turn 不传 `onPermissionRequest` handler（无 handler 即 denied——不弹审批面板）；AUTO 档沿用 `autoApprove`；自省工具按只读 / 豁免分类放行（普通模式示例 = `task`；工程模式下 `task` 不在表且执行层机械拒——F10，机制见 `docs/core/design/TOOLS.md` §6.15.3）。
 - **轮次上限**：auto-turn **不另设轮次预算**——统一用系统 `maxTurns`；成本护栏 = 手动档动作域 + 合并消化 + AUTO 责任转移。
 
 **冻结门控 + 消化完成逐条回收**：
@@ -2096,6 +2097,10 @@ A-3 机检（单行 · cmd.exe · cwd = `thincoder-vscode/`；§3 复评 🔵#3 
 `setup.mjs` 现量 500 = 硬限在位，本批 ±0——该档后续净增的拆分另案（归父侧派单登记）。
 
 ## 变更记录
+
+- 2026-09-22（**tool-discipline 批 · 第三面闭口轮 · eng-designer**——承 `docs/batches/2026-09-21-tool-discipline.md` §5 线外发现 · 父侧裁定并入本批）：
+  §6.8「digest 动作域（两档）」收正两处——手动档条目任务清单更新改**模式条件句**（普通模式允许 / 工程模式不允许——F10：装配摘除 + 执行拒；域文本随模式取变体，追踪权威面 = 批次档 + 台账）· 权限条目自省工具示例补模式限定；
+  两处指针 → `docs/core/design/TOOLS.md` §6.15.3（机制与文本单源，本档不重述）。其余条目零改。
 
 - 2026-09-21（**批 VSC-BATCH-RENAME-FIX · 设计轮 · eng-designer**——承 `docs/batches/2026-09-21-vsc-batch-rename-fix.md` §1 · 核 `0b45957c` 遗留 VSC 5 红）：新增 **§6.28**——5 红逐处坐标表（改前→改后）+ 保缝面三处（#84 缝契约名 / shim 直调用例 / 核错误串前缀断言）+
   决策 D-1–D-5（登记册 15 名换名 / T60 误绿面 / 主名 execute 形 / 注释面 6 处 / 落点本档）+ 用例 U1–U5 + 验收 A-1–A-3 + 边界。零生产码改动（断言面 + 注释面单侧收正）。

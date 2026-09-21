@@ -26,6 +26,7 @@ import {
   DEFAULT_MAX_TURNS, DEFAULT_SUBAGENT_TURNS,
   MIN_REPORT_CHARS, REPORT_CONTINUATION,
   AUTO_TURN_DIGEST_DOMAIN,
+  AUTO_TURN_DIGEST_DOMAIN_ENG, // §6.15.3（F10 第三面）：工程模式 digest 基座变体（task 指针改批次档 + 台账）
   UPSTREAM_TURN_DOMAIN, // §6.27.12.8：上行唤醒轮域文本（手动档——ask 轮不沿用 digest 域文本）
   restoreGuard, // §17 D-S6 读侧单点（P2 机制层端差批 §2.18——键清单归核）
 } from "./agent/helpers.mjs"
@@ -167,7 +168,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
   // §6.27.12.4 ②: an up-stream wake turn answers a RUNNING subagent waiting for the reply — it
   // must not reuse the digest text ("no one is waiting" is the opposite of the truth).
   if ((autoTurn || upstreamTurn) && !agent.autoApprove) {
-    agent.history.push({ role: "user", content: upstreamTurn ? UPSTREAM_TURN_DOMAIN : AUTO_TURN_DIGEST_DOMAIN, transient: true })
+    agent.history.push({ role: "user", content: upstreamTurn ? UPSTREAM_TURN_DOMAIN : (agent.config?.agent?.engineering === true ? AUTO_TURN_DIGEST_DOMAIN_ENG : AUTO_TURN_DIGEST_DOMAIN), transient: true })
   }
   // eng-coder authorization (_engDesignReviewed) is eng-coder-only: set by subagent-spawn.mjs
   // (spawn gate) / design-token.mjs (design review pass) BEFORE the child runAgent — the

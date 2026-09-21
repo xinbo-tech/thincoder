@@ -4,7 +4,8 @@
  * create（建档，§4.11）/ status（段属主状态行流转，§4.12）/ close（收口冻结，§4.13）+
  * depth-0 在飞批定位（findInFlightBatch——D-BR21）。判定字面全部单源自 batch-skeleton.mjs
  * （SEGMENT_BY_ROLE / STATUS_WORDS / STATUS_LINE_RE / readBatchStatusLine / sectionHeaderRe /
- * batchSkeleton）；路径解析单源（resolveBatchDocPath / batchDocBases）与 #84 记账缝住 batch.mjs
+ * batchSkeleton / TEMPLATE_PLACEHOLDERS / findPlaceholderResidue / placeholderResidueError）；
+ * 路径解析单源（resolveBatchDocPath / batchDocBases）与 #84 记账缝住 batch.mjs
  * 主档——**依赖单向（KD-4）：skeleton ← lifecycle ← 主档**，主档把解析后的 cwd/bases/目标闭包
  * 传进来，本档不回 import 主档（防环）。
  *
@@ -19,6 +20,7 @@ import { dirname, isAbsolute, resolve, sep } from "node:path"
 
 import {
   SEGMENT_BY_ROLE, STATUS_WORDS, STATUS_LINE_RE, readBatchStatusLine, sectionHeaderRe, batchSkeleton,
+  TEMPLATE_PLACEHOLDERS, findPlaceholderResidue, placeholderResidueError,
 } from "./batch-skeleton.mjs"
 
 /** 可读文件判据（存在且为文件——目录/缺失同判不可读；与主档同名 helper 同型——KD-4 单向
@@ -100,6 +102,8 @@ function assertInsideBases(abs, bases, raw) {
  * create——建档（§4.11，仅 depth-0）。六段骨架一次预齐（骨架模板单源 = batchSkeleton），
  * 建档即过 gate（§1 占位状态行含「进行中」）；fail-closed：非 .md / 越基底 / 目标已存在 ⇒ throw
  * （不覆盖既有批档，BR-20）；目录缺失 ⇒ mkdir -p 后落位（BR-25）。不代建台账条目。
+ * F11-B：`source` **必填**（topic 同款空拒——骨架编制行实参化；不传 = 死占位残留必被 F11-C 拒
+ * ⇒ create 即拒，不留死锁）；`prev` 传入值**幂等剥**「前情 = 」前缀（值规范化；默认值零变）。
  * @returns {string} 成功消息（含落盘绝对路径）
  */
 export function createBatchRecord({ args, ctx, review, cwd, bases, onWritten }) {
@@ -124,10 +128,20 @@ export function createBatchRecord({ args, ctx, review, cwd, bases, onWritten }) 
   if (!topic) {
     throw new Error("batch: create requires topic — the batch subject word shared by the record header (档名与档头共用——keep the file name aligned with it). Nothing was written.")
   }
+  const source = typeof args?.source === "string" ? args.source.trim() : ""
+  if (!source) {
+    throw new Error("batch: create requires source — the record's origin line (来源 = …). Pass where this batch came from (the request / discussion that started it); it lands in the header's 编制 line. Nothing was written.")
+  }
+  if (/\r?\n/.test(source)) {
+    throw new Error("batch: create source must be a single line — a multi-line source would break the header's 编制 line. Nothing was written.")
+  }
   const date = typeof args?.date === "string" && args.date.trim() ? args.date.trim() : todayLocal()
-  const prev = typeof args?.prev === "string" && args.prev.trim() ? args.prev.trim() : "无（独立批）"
+  // F11-B：prev 幂等 strip——调用方自带「前情 = 」前缀（单或重复）一并剥净（`+` 量词；归一化目的
+  // = 值规范化，无前缀值原样通过）。默认值形态「无（独立批）」零变。
+  const prevRaw = typeof args?.prev === "string" ? args.prev.trim() : ""
+  const prev = prevRaw ? (prevRaw.replace(/^(?:前情\s*[=：:]\s*)+/g, "").trim() || "无（独立批）") : "无（独立批）"
   mkdirSync(dirname(abs), { recursive: true })
-  writeFileSync(abs, batchSkeleton({ date, topic, prev }))
+  writeFileSync(abs, batchSkeleton({ date, topic, source, prev }))
   onWritten?.(ctx?.agent ?? {}, abs)
   return `batch: created ${abs} — six-section skeleton written (§1 status line carries the gate-legal 「进行中」 placeholder; register the ledger entry yourself — create does not).`
 }
@@ -168,30 +182,65 @@ function assertGateOpen(src) {
   }
 }
 
-/** status 值域校验（fix 轮 #1 + 词面纪律）：值在**全词表 union**（各段项去重并集——含他段
- *  生命周期词与 §1 gate 词对）中必须恰命中一个关键字，且该关键字属于本段词表项——0 个 ⇒ 词表外
- *  拒；≥2 个 ⇒ 混词拒；唯一命中不属本段 ⇒ 词表外拒（该段值域不含）。「进行中…已收口」双词无论
- *  写哪段皆拒（最小词面：已收口优先误冻结防线——2026-09-20 词面纪律）。 */
+/** 全词表去重并集（各段项——value 命中判据与 note 零命判据共用同一口径）。 */
+function statusVocabulary() {
+  return [...new Set(Object.values(STATUS_WORDS).flatMap((w) => Object.values(w)))]
+}
+
+/** 状态行值装饰白名单（F11-A 谓词收紧）：首尾非字母数字符号（emoji / 标点 / 空白）+ 尾部
+ *  ISO 日期（YYYY-MM-DD）+ 首尾空白。剥白名单后**余核必须逐字等于**该关键词——余核 ≠ 关键词
+ *  （散文内嵌）⇒ 拒（散文说明走独立 `note` 字段落括注）。
+ *  读侧（gate）零变：`readBatchStatusLine` / `assertGateOpen` 仍子串包含——冻结门语义不动；
+ *  收紧只在写入面 value。 */
+const LEAD_DECOR_RE = /^[^\p{L}\p{N}]+/u
+const TAIL_DECOR_RE = /[^\p{L}\p{N}]+$/u
+const ISO_TAIL_RE = /\d{4}-\d{2}-\d{2}\s*$/
+function stripDecorations(value) {
+  return value.replace(LEAD_DECOR_RE, "").replace(ISO_TAIL_RE, "").replace(TAIL_DECOR_RE, "")
+}
+
+/** status 值域校验（fix 轮 #1 + 词面纪律 + 本批 F11-A 谓词收紧）：值在**全词表 union**中必须恰
+ *  命中一个关键字（判读序不动：≥2 命中 ⇒ 混词拒在前；0 命中 / 唯一命中不属本段 ⇒ 词表外拒），
+ *  且剥装饰白名单后**余核逐字 = 该关键词**（余核 ≠ 关键词 = 散文内嵌 ⇒ 词表外拒同串）。
+ *  「进行中…已收口」双词无论写哪段皆拒（最小词面：已收口优先误冻结防线——2026-09-20 词面纪律）。 */
 function assertStatusValue(seg, value) {
   const words = Object.values(STATUS_WORDS[seg] ?? {})
   if (!words.length) {
     throw new Error(`batch: §${seg} has no status word list — status is undefined for this section (STATUS_WORDS 分段词表无该项). Nothing was written.`)
   }
-  const vocabulary = [...new Set(Object.values(STATUS_WORDS).flatMap((w) => Object.values(w)))]
-  const hits = vocabulary.filter((w) => value.includes(w))
-  if (hits.length === 0 || (hits.length === 1 && !words.includes(hits[0]))) {
-    throw new Error(`batch: status value ${JSON.stringify(value)} is not in the legal keyword set for §${seg} (${words.join(" / ")}) — STATUS_WORDS 分段词表是唯一值域（D-BR19）. Nothing was written.`)
-  }
+  const hits = statusVocabulary().filter((w) => value.includes(w))
   if (hits.length > 1) {
     throw new Error(`batch: status value contains multiple keywords (${hits.join(" + ")}) — one status line carries exactly ONE keyword (词面纪律: mixed values mis-freeze via 已收口-priority). Nothing was written.`)
+  }
+  if (hits.length === 0 || !words.includes(hits[0]) || stripDecorations(value) !== hits[0]) {
+    throw new Error(`batch: status value ${JSON.stringify(value)} is not in the legal keyword set for §${seg} (${words.join(" / ")}) — STATUS_WORDS 分段词表是唯一值域（D-BR19；合法值 = 恰一关键词 + 装饰白名单〔首尾符号 / 尾部 ISO 日期 / 空白〕，散文说明走 note 字段落括注）. Nothing was written.`)
+  }
+}
+
+/** status `note` 字段校验（F11-A——落盘形态 = 状态行行内括注）：单行 + **全词表零命中**
+ *  （括注永不误触冻结门——§1 判定是子串包含；已收口优先误冻结防线的第二道）+ 死占位判据零命中
+ *  （括注不得成为骨架占位的新驻留面）。 */
+function assertStatusNote(note) {
+  if (/\r?\n/.test(note)) {
+    throw new Error("batch: status note must be a single line — a multi-line note would break the one-line status-line form. Nothing was written.")
+  }
+  const hits = statusVocabulary().filter((w) => note.includes(w))
+  if (hits.length) {
+    throw new Error(`batch: status note must not contain any STATUS_WORDS keyword (${hits.join(" + ")}) — a parenthetical carrying a keyword would be read as gate truth (§1 substring predicate). Put the keyword in value, the prose in note. Nothing was written.`)
+  }
+  const residues = TEMPLATE_PLACEHOLDERS.filter((ph) => note.includes(ph))
+  if (residues.length) {
+    throw new Error(`batch: status note must not carry skeleton placeholders (${residues.join(" · ")}) — fill them in the record header instead of parking them in the status line. Nothing was written.`)
   }
 }
 
 /**
  * status——状态行流转（§4.12，段属主）。写域 = 调用者自己段内 `**状态行**：` 行（eng-designer →
  * §2 · 评审 → §3 · eng-coder → §5 · 主 agent → §1——轮 2 #3 裁定②）；值域 = STATUS_WORDS 该段项
- * 恰一词；冻结真值不变（gate 只读 §1）。path 参数 = 仅 depth-0（D-BR21）——子代理/评审传 path
- * ⇒ 拒（目标 = spawn/实例注入，语法上写不到别处）。
+ * 恰一词（**余核 = 关键词**——F11-A 谓词收紧），散文说明走独立 `note` 字段（落状态行括注）；
+ * 冻结真值不变（gate 只读 §1）。path 参数 = 仅 depth-0（D-BR21）——子代理/评审传 path
+ * ⇒ 拒（目标 = spawn/实例注入，语法上写不到别处）。F11-C 挂点 = 写盘前（assertStatusValue 后）：
+ * 档头 / 目标段含骨架死占位 ⇒ 拒（close 不拦——收口是主 agent 终态动作）。
  * @returns {string} 成功消息
  */
 export function statusBatchRecord({ args, ctx, review, pickTarget, onWritten }) {
@@ -216,14 +265,21 @@ export function statusBatchRecord({ args, ctx, review, pickTarget, onWritten }) 
   if (/\r?\n/.test(value)) {
     throw new Error("batch: status value must be a single line — a multi-line value would break the one-line status-line form. Nothing was written.")
   }
+  // note（可选）：散文说明的承载面——落状态行行内括注（value 内散文不再容忍）。缺省 / 空串 = 无括注。
+  const note = typeof args?.note === "string" ? args.note.trim() : ""
   assertStatusValue(seg, value)
+  if (note) assertStatusNote(note)
+  const lineValue = note ? `${value}（${note}）` : value
   const abs = pickTarget(args?.path)
   const src = readFileSync(abs, "utf8")
   assertGateOpen(src)
-  const written = updateSectionStatusLine(src, seg, value)
+  // F11-C（写盘前）：档头 + 本段死占位残留 ⇒ 拒（他段占位不归本段作者管）
+  const residues = findPlaceholderResidue(src, seg)
+  if (residues.length) throw new Error(placeholderResidueError(residues))
+  const written = updateSectionStatusLine(src, seg, lineValue)
   writeFileSync(abs, written)
   onWritten?.(ctx?.agent ?? {}, abs)
-  return `batch: §${seg} status line updated to ${JSON.stringify(value)} — the freeze gate (§1) is a read-only domain for non-§1 writes (frozen truth stays = the §1 line).`
+  return `batch: §${seg} status line updated to ${JSON.stringify(lineValue)} — the freeze gate (§1) is a read-only domain for non-§1 writes (frozen truth stays = the §1 line).`
 }
 
 /**

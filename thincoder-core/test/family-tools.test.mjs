@@ -12,6 +12,8 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { assembleFamilyTools } from "../agent/family-tools.mjs"
+import { taskTool } from "../agent-tools/task.mjs"
+import { handleCompletion } from "../agent/completion.mjs"
 
 /** 名集读数（保持返回序——固定段 + 家族段序也是契约面）。 */
 const names = (tools) => tools.map((t) => t.name)
@@ -71,28 +73,83 @@ test("固定段序：task → plan → timer 恒为前 3 项；家族段随后�
   }
 })
 
-test("T10 固定段模式裁剪（FR31 ① / AC12）：工程模式固定段 = [task, timer]（plan 不入表——深度无分支）；普通面含 plan（回归）", async () => {
-  // 工程面 depth-0：plan 缺失 + 固定段序契约（task 先于 timer——装配契约序保持）
+test("T10 固定段模式裁剪（FR31 ① / AC12 + F10）：工程模式固定段 = [timer]（plan / task 不入表——深度无分支）；普通面含 plan + task（回归）", async () => {
+  // 工程面 depth-0：plan / task 缺失 + 固定段序契约（timer 居首——装配契约序保持）
   const eng0 = names(await assembleFamilyTools({ depth: 0, engineering: true }))
   assert.ok(!eng0.includes("plan"), "depth-0 工程面不含 plan（模型不可见——KD8 卸载而非注册+报错）")
-  assert.deepEqual(eng0.slice(0, 2), ["task", "timer"], "工程固定段 = [task, timer]（序契约）")
-  assert.ok(eng0.includes("subagent") && eng0.includes("eng"), "家族段不受裁剪影响（只裁固定段的 plan）")
+  assert.ok(!eng0.includes("task"), "depth-0 工程面不含 task（F10——机械停用，同 KD8 卸载）")
+  assert.deepEqual(eng0.slice(0, 1), ["timer"], "工程固定段 = [timer]（序契约）")
+  assert.ok(eng0.includes("subagent") && eng0.includes("eng"), "家族段不受裁剪影响（只裁固定段的 plan / task）")
   // 全深度（KD11）：工程角色子代理面同裁——`subagent-spawn.mjs:341-344` 工程角色强制位
   // `engineering: true` ⇒ 子代装配即以本参数调用本函数（未决项 1 复核面）
   for (const role of ["eng-coder", "eng-designer", "explore"]) {
     const got = names(await assembleFamilyTools({ depth: 1, role, engineering: true, batchDoc: BATCH }))
     assert.ok(!got.includes("plan"), `工程子代理面不含 plan（role=${role}——全深度）`)
-    assert.deepEqual(got.slice(0, 2), ["task", "timer"], `工程子代理固定段序（role=${role}）`)
+    assert.ok(!got.includes("task"), `工程子代理面不含 task（role=${role}——全深度 · F10）`)
+    assert.deepEqual(got.slice(0, 1), ["timer"], `工程子代理固定段序（role=${role}）`)
   }
-  // 普通面回归（FR31 边界：普通模式零改）——固定段逐字不变
+  // 普通面回归（FR31 边界 / F10 边界：普通模式零改）——固定段逐字不变
   const normal0 = names(await assembleFamilyTools({ depth: 0 }))
-  assert.ok(normal0.includes("plan"), "普通 depth-0 面含 plan")
+  assert.ok(normal0.includes("plan") && normal0.includes("task"), "普通 depth-0 面含 plan + task")
   assert.deepEqual(normal0.slice(0, 3), FIXED, "普通固定段逐字不变（task → plan → timer）")
   const normalChild = names(await assembleFamilyTools({ depth: 1, role: "explore" }))
-  assert.ok(normalChild.includes("plan"), "普通 depth>0 面含 plan（深度不参与判据）")
+  assert.ok(normalChild.includes("plan") && normalChild.includes("task"), "普通 depth>0 面含 plan + task（深度不参与判据）")
   // T10 输入面第四格：`{depth:1, role:"plan"}`（普通模式 plan 角色）——名集仍含 plan（非工程 ⇒ 不裁）
   const planChild = names(await assembleFamilyTools({ depth: 1, role: "plan" }))
   assert.ok(planChild.includes("plan"), "普通 plan 子代理面含 plan（T10 列明输入面）")
+})
+
+// ═══ F10 task 工程模式机械停用（双层门——装配面在 T10，本块 = execute 门 / 催更门）═══════
+
+test("F10-3/F10-4 装配两态：工程 depth-0 与 eng 子代理面零 `task`；非工程两态逐字含（既有名集回归）", async () => {
+  const eng0 = names(await assembleFamilyTools({ depth: 0, engineering: true }))
+  assert.ok(!eng0.includes("task"), "depth-0 工程面零 task")
+  for (const role of ["eng-designer", "eng-coder"]) {
+    const got = names(await assembleFamilyTools({ depth: 1, role, engineering: true, batchDoc: BATCH }))
+    assert.ok(!got.includes("task"), `eng 子代理面零 task（role=${role}）`)
+  }
+  const plane0 = names(await assembleFamilyTools({ depth: 0, engineering: false }))
+  assert.ok(plane0.includes("task"), "depth-0 非工程面含 task（普通段逐字零变）")
+  const planeChild = names(await assembleFamilyTools({ depth: 1, role: "eng-coder", batchDoc: BATCH }))
+  assert.ok(planeChild.includes("task"), "非工程 eng-coder 面含 task（既有名集零变）")
+})
+
+test("F10-1 工程模式拒（零副作用）：task.execute 返回拒句含 engineering + 批次档/台账指引；列表与预算零变", async () => {
+  const agent = { config: { agent: { engineering: true } }, tasks: [{ title: "旧条目", status: "pending" }] }
+  const snapshot = JSON.parse(JSON.stringify(agent.tasks))
+  const out = String(await taskTool.execute({ items: [{ title: "新条目", status: "in_progress" }] }, { agent, depth: 0 }))
+  assert.match(out, /engineering mode is ON/, "拒句含 engineering（先例形态 = escalate）")
+  assert.match(out, /batch record/, "拒句指引追踪权威面（批次档）")
+  assert.match(out, /ledger/, "拒句指引追踪权威面（台账）")
+  assert.deepEqual(agent.tasks, snapshot, "零副作用：列表不变（拒门先于 alias 归一 / 归零 / 回调）")
+  assert.equal(agent._taskPushbacks, undefined, "零副作用：预算字段未被归零")
+})
+
+test("F10-2 普通模式零变：task.execute 照常成功（Task list updated）；无 engineering 位同判", async () => {
+  for (const cfg of [{ agent: {} }, { agent: { engineering: false } }, undefined]) {
+    const agent = { config: cfg, tasks: [], history: [], _fullHistory: [] }
+    const out = String(await taskTool.execute({ items: [{ title: "普通任务", status: "pending" }] }, { agent, depth: 0 }))
+    assert.match(out, /Task list updated/, `普通模式成功回执（既有语义——cfg=${JSON.stringify(cfg)}）`)
+    assert.equal(agent.tasks.length, 1, "普通模式列表照常落位")
+    assert.equal(agent._taskPushbacks, 0, "普通模式预算归零照常（F10 零变面）")
+  }
+})
+
+test("F10-5 催更门排除：工程模式不发 pending-task 催更（零提醒注入）；普通模式对照仍发", () => {
+  const mk = (engineering) => ({
+    config: { agent: engineering ? { engineering: true } : {} },
+    tasks: [{ title: "pending-1", status: "pending" }], history: [], _fullHistory: [],
+  })
+  const eng = mk(true)
+  const r1 = handleCompletion(eng, { content: "done for now" }, 0, 1, 0, false, 0, {})
+  assert.equal(r1.action, "done", "工程模式不推回（被拒工具的指针不发——死胡同提醒防线）")
+  assert.deepEqual(eng.history.filter((m) => m.role === "user"), [], "零提醒注入（user 行不发——assistant 行照常落地）")
+  // 对照（反证非空转）：同桩普通模式 ⇒ 催更照发
+  const normal = mk(false)
+  const r2 = handleCompletion(normal, { content: "done for now" }, 0, 1, 0, false, 0, {})
+  assert.equal(r2.action, "continue", "普通模式依旧推回（门本体零改）")
+  assert.equal(normal._taskPushbacks, 1, "预算照常消耗")
+  assert.ok(normal.history.some((m) => m.role === "user" && /pending tasks/.test(String(m.content))), "普通模式提醒句在位")
 })
 
 test("A1 上行通道（SUBAGENT-UPSTREAM-CHANNEL §6.27.10）：notify_parent 仅 depth>0 且非 consult 装配", async () => {

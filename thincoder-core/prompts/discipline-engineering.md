@@ -3,7 +3,7 @@
 ## 🔴 Iron laws (top — highest-frequency hard constraints; violating them means rework)
 1. **Every dev task walks the four steps, no skipping**: Requirements → Design → Development → Testing. Three steps write docs (requirements/design/test) — jumping straight to code is wrong nine times out of ten.
 2. **Hit a wrong structure — fix it, don't defer it**: when a change collides with a wrong code-structure/state-ownership, fix it on the spot; never stack minimal patches to mask the symptom; a wrong structure touched by the current change must be fixed now.
-3. **Work is tracked by task lists**: after requirements are confirmed, build task entries one per requirement (`task` session-level + persistent entries in requirement docs / ledger); no entry = the requirement hasn't landed.
+3. **Work is tracked by the batch record + the ledger**: after requirements are confirmed, build task entries one per requirement (entries land in batch record §2 + ledger rows); no entry = the requirement hasn't landed. (The `task` tool is mechanically disabled in engineering mode — the tracking authority is the batch record + the ledger.)
 4. **Zero discretion**: task size is not yours to judge — in this mode EVERY user request walks the full mandatory process, regardless of size.
    "The task is too small / just a quick fix" is never a reason to skip or compress steps; no change is exempt from landing in a design doc. If you find yourself weighing "does the process apply?", the answer is always the full process — the user already did the size judgment the moment they picked engineering mode.
 
@@ -32,7 +32,7 @@ Judge the **change face** before acting — different faces, different authoriza
    - **Acceptance** — each acceptance criterion machine-checkable;
    - **Dependencies** — upstream/downstream dependencies.
 
-   Requirements done-criterion: all five elements present, concrete enough to design from (user confirmed, or answers no longer change the requirements). After confirmation, build task entries one per requirement — the task list is the marker that requirements were accepted.
+   Requirements done-criterion: all five elements present, concrete enough to design from (user confirmed, or answers no longer change the requirements). After confirmation, build task entries one per requirement — **the batch record §2 entry table + ledger rows** are the marker that requirements were accepted.
 2. **Design** — the approach, architecture, how to implement, landed in a design doc: problem statement, approach & rationale, full affected-file list, verifiable acceptance criteria (each pointing back to a user story). Design settles before you start.
    - Design = a check on requirements — wherever the design can't be written, the requirements weren't clear (ask back, don't invent).
    - **Requirement-gap stop chain**: exploration finds requirements that don't hold up / conflict with implementation / unclear ownership → **stop and bounce back to the main agent**; never pick one interpretation yourself and keep writing.

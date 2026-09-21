@@ -22,7 +22,7 @@ import { fileURLToPath } from "node:url"
 import files from "./files.mjs"
 import { pushChildUpstream, drainChildUpstream } from "@thincoder/core/agent-tools/parent-channel.mjs"
 import { executeSendAction } from "@thincoder/core/agent-tools/subagent-actions.mjs"
-import { AUTO_TURN_DIGEST_DOMAIN, UPSTREAM_TURN_DOMAIN } from "@thincoder/core/agent/helpers.mjs"
+import { AUTO_TURN_DIGEST_DOMAIN, AUTO_TURN_DIGEST_DOMAIN_ENG, UPSTREAM_TURN_DOMAIN } from "@thincoder/core/agent/helpers.mjs"
 import { suspensionSession } from "../src/extension/suspension.mjs"
 import { CARRIER_FIELDS as PROD_CARRIER_FIELDS } from "../src/agent.mjs"
 import { composeTurnDomain, VSC_TURN_OVERLAY } from "../src/agent/turn-domains.mjs"
@@ -207,6 +207,8 @@ test("T-VS-U5 结构机检：生产载体表两款 / 消费点 / 谓词 / 组合
   const agentSrc = read("src/agent.mjs")
   assert.equal(count(agentSrc, "drainChildUpstream(agent)"), 1, "端壳消费点恰 1 处（循环头单点）")
   assert.equal(count(agentSrc, "composeTurnDomain("), 1, "域文本组合调用恰 1 处（调用方无从绕过端 overlay）")
+  assert.equal(count(agentSrc, "composeTurnDomain(upstreamTurn, agent.config?.agent?.engineering === true)"), 1,
+    "DOM-V3：组合调用传模式（第二实参 = 模式旗标，与核侧同键）")
   assert.ok(/await import\("@thincoder\/core\/agent-tools\/parent-channel\.mjs"\)/.test(agentSrc),
     "核单源经动态 import 载入（W8 契约②）")
   assert.ok(!/^\s*import\b[^\n]*agent-tools\/parent-channel\.mjs/m.test(agentSrc),
@@ -217,6 +219,8 @@ test("T-VS-U5 结构机检：生产载体表两款 / 消费点 / 谓词 / 组合
   assert.equal(count(tdSrc, "composeTurnDomain("), 1, "端侧组合单点定义恰 1 处")
   assert.ok(tdSrc.includes("VSC_TURN_OVERLAY"), "端 overlay 常量在场")
   assert.ok(!tdSrc.includes("[System reminder: auto-turn"), "核基座文本字面零在场（核单源守护——U12 同款否定检查）")
+  assert.ok(read("src/agent/setup-reminders.mjs").includes("AUTO_TURN_DIGEST_DOMAIN_ENG"),
+    "DOM-V3：W15 转口表 +1 名（端侧零自持基座副本——模式变体同经核单源）")
   // 旗标三跳（§6.27.12.5 I——每档一处透传；缺任一跳 = 旗标丢失 = CLI 发现 1 同型缺陷）
   const stagesSrc = read("src/extension/panel-turn-stages.mjs")
   assert.ok(stagesSrc.includes("upstreamTurn: tUp === true"), "跳 1：runTurn 闭包转发（panel-turn-stages）")
@@ -241,21 +245,31 @@ test("T-VS-U6 正常：回复可达——`send` 对 running 条目交付（端�
   assert.equal(out.queued, 1, "队列深度回显")
 })
 
-// ═══ T-VS-U7（§6.27.12.12 ④）：组合同规（差异项 = 0）════════════════════════
+// ═══ T-VS-U7（§6.27.12.12 ④ · DOM-V1/V2）：组合同规（差异项 = 0 + 模式变体）════
 
 test("T-VS-U7 正常：两轮域文本构成差异项 = 0（按轮型换基座 · 端 overlay 恒在场）", () => {
   const digest = composeTurnDomain(false)
   const ask = composeTurnDomain(true)
+  // DOM-V2：默认参数零回归 + 唤醒轮不受模式影响（变体只挂 digest 基座）
+  assert.equal(composeTurnDomain(false), composeTurnDomain(false, false),
+    "第二实参缺省 ⇒ 与显式 false 逐字同（默认参数零回归——DOM-V1 输入格显式两参形）")
+  const askEng = composeTurnDomain(true, true)
+  assert.equal(askEng, ask, "唤醒轮两模式逐字同（`UPSTREAM_TURN_DOMAIN` 无 task 指针——模式不改唤醒轮）")
+  // DOM-V1：digest 轮两模式（工程模式换变体基座）
+  const digestEng = composeTurnDomain(false, true)
+  assert.ok(digestEng.startsWith(AUTO_TURN_DIGEST_DOMAIN_ENG.slice(0, -1)), "DOM-V1 工程轮起头 = 变体基座逐字")
+  assert.notEqual(digestEng, digest, "两模式 digest 轮不同串（换基座真发生）")
   // ① 各以对应核基座逐字起头（组合形态 = 收尾括号内插入 ⇒ 起头 = 基座去尾 `]` 逐字）
   assert.ok(digest.startsWith(AUTO_TURN_DIGEST_DOMAIN.slice(0, -1)), "digest 轮起头 = AUTO_TURN_DIGEST_DOMAIN 逐字")
   assert.ok(ask.startsWith(UPSTREAM_TURN_DOMAIN.slice(0, -1)), "ask 轮起头 = UPSTREAM_TURN_DOMAIN 逐字")
-  // ② + ③ 端 overlay 全串逐字在场；收尾 `]` 且端 overlay 在收尾括号内
-  for (const c of [digest, ask]) {
-    assert.ok(c.includes(VSC_TURN_OVERLAY), "端 overlay 逐字在场（两轮同规）")
+  // ② + ③ 端 overlay 全串逐字在场；收尾 `]` 且端 overlay 在收尾括号内（四格 = 两轮 × 两模式）
+  for (const c of [digest, ask, digestEng, askEng]) {
+    assert.ok(c.includes(VSC_TURN_OVERLAY), "端 overlay 逐字在场（四格同规）")
     assert.ok(c.endsWith(VSC_TURN_OVERLAY + "]"), "收尾 = 端 overlay + `]`（括号形态不破）")
   }
-  // ④ 两返回值的 overlay 段逐字相同（构成差异项 = 0）
+  // ④ overlay 段逐字相同（构成差异项 = 0——轮型与模式皆非构成差异）
   const tail = (c) => c.slice(c.indexOf(VSC_TURN_OVERLAY))
   assert.equal(tail(digest), tail(ask), "overlay 段逐字相同（两轮构成差异项 = 0）")
+  assert.equal(tail(digestEng), tail(digest), "overlay 段逐字相同（两模式构成差异项 = 0）")
   assert.equal(tail(digest), `${VSC_TURN_OVERLAY}]`)
 })

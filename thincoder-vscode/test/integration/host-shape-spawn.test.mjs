@@ -119,17 +119,19 @@ function familyNames(run) {
  *  settings；4 子角色 = 核矩阵语义（§2.3A——家族段名集，不含基础集）+ `notify_parent`
  *  （SUBAGENT-UPSTREAM-CHANNEL：核 depth>0 段装配——端侧同调核单源，随核矩阵增名同步）。
  * ENG-PLAN-EXCLUSION（FR31 ① / AC12 = T10）：工程模式两行删 `plan`（固定段裁剪——
- * `assembleFamilyTools` 按 `engineering` 取 `[task, timer]`）+ 新增 `explore-eng`（工程模式
+ * `assembleFamilyTools` 按 `engineering` 取 `[timer]`）+ 新增 `explore-eng`（工程模式
  * explore：VSC 旁路面形状——视觉渠道子代理携 `engState.enabled:true`）。
+ * TOOL-DISCIPLINE 批（2026-09-21 · F10）：工程模式三行同删 `task`（task 工程模式机械停用——
+ * 装配摘除 + execute 拒；普通模式两行（`coder` / `explore`）逐字零变）。
  * context-tool 批（2026-09-21 · D-CC23 / D-CC28）：depth-0 家族段 + `context`（核单源装配）；
  * 子代理面**不给**（裁决 D——结构不可达）⇒ 5 子角色行零改。 */
 const FAMILY_FIXTURE = {
   "depth-0": ["advisor", "batch", "context", "eng", "goal", "ledger_add", "ledger_close", "ledger_update", "plan", "read_history", "recent_changes", "settings", "skill", "subagent", "task", "timer", "verify"],
-  "eng-designer": ["batch", "notify_parent", "subagent", "task", "timer"],
-  "eng-coder": ["advisor", "batch", "notify_parent", "subagent", "task", "timer", "verify"],
+  "eng-designer": ["batch", "notify_parent", "subagent", "timer"],
+  "eng-coder": ["advisor", "batch", "notify_parent", "subagent", "timer", "verify"],
   coder: ["advisor", "notify_parent", "plan", "task", "timer", "verify"],
   explore: ["notify_parent", "plan", "task", "timer"],
-  "explore-eng": ["notify_parent", "task", "timer"],
+  "explore-eng": ["notify_parent", "timer"],
 }
 
 /** 生产装配形状逐角色（`hydrateRun` = 生产入口 `setupAgentRun` 同函数；depth/role 同生产调用）。 */
