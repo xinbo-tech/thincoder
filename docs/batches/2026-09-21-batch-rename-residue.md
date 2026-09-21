@@ -285,3 +285,5 @@ node -e "const fs=require('fs'),p=require('path'),re=/§\s*\d+\.\d/g;let n=0,k=0
 **发布门**：本批 = CLI `0.12.64` 发布门**前置**（12:05 钉 → 12:27 解）✓ 5 红全消 ✗ 解钉读数 = AC-a（772/772）✓。
 
 **冻结核**：本 §6 落 ⇒ 整档冻结（不再回改 ✗ 例外 = 提交哈希回填 errata 一笔 ✓）。
+
+**提交 errata（本 §6 声明的例外笔）**：本批提交 = `08324095`（`fix: sync batch alias residue — test assertions, prompt doc-refs, error string; CLI 772/772` ✗ 17 档：16 改动档 + 本档 ✗ 已 push origin main ✓）。
