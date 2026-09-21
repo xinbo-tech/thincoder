@@ -490,3 +490,5 @@ VERDICT: pass
 **发布关联**：本批 = 核 `0.9.2` + CLI `0.12.64` + VSC `0.9.4` 的**核心内容件**（三端全绿 ⇒ 发布门齐备）✗ 发布动作 = 用户门（挂起中 ✓）。
 
 **冻结核**：本 §6 落 ⇒ 整档冻结（不再回改 ✗ 例外 = 提交哈希回填 errata 一笔 ✓）。
+
+**提交 errata（本 §6 声明的例外笔）**：本批提交 = `ceb03b45`（`feat: per-use manifest resolution — owning-ancestor discovery, non-fatal startup, VSC tool-table split` ✗ 21 路径：18 实施档 + `MANIFEST.md` + `ENGINEERING-MODE-V2.md` + 本档 ✗ 已 push origin main ✓）。
