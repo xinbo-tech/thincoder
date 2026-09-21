@@ -337,7 +337,7 @@ A8 / A9（对称面均入核）与 F3（零「新写」——不得造第三份�
 > 理由一行 = 该面**纯函数、零宿主依赖**（核内 `thincoder-core/history-window.mjs` 全档零 import；对端 `thincoder-vscode/src/extension/history-window.mjs:5` 头注自述 `Pure functions — no vscode/fs imports`）⇒ 非结构性不对称（A9）——不属 ④。
 > 已按 #123「VSC 的 `history-window` 拆面按核内结构归位」落核（S1 已落——**179 行**；`session.mjs` re-export 保调用方单一路径——见 §2.8.1 **#12 行**）；**④ 清单与计数收正**：`history-window` 移出（**十九档 → 十八档**）——
 > 覆盖对账同轮同步（`extension/**` 对位 **17 → 18** · ④ **21 → 20** · ④ 桶合计 **102 → 101** · 其余 **136 → 137**）；`extension/**` 其余（面板 / webview / 宿主面）维持 ④。
-> **渲染面总则（markdown 面）**：**markdown 渲染面 = 两端各自实现、互不合并、互不追赶**（TUI 终端行内渲染 / VSC 宿主侧渲染）——逻辑面（顶层 `markdown.mjs`）才是共享面（归核）。
+> **渲染面总则（markdown 面）**：**markdown 渲染面 = 两端各自实现、互不合并、互不追赶**（TUI 终端行内渲染 / VSC 宿主侧渲染）——**端差默认 = 消**；**本项 = A9 合法保留（✗ 非默认保留）**：结构性不对称 + 证据 = **渲染宿主不同**（行内终端渲染 ∥ 宿主侧渲染）；显式裁定 = 2026-09-14 markdown 面「逻辑 / 渲染分家」裁定；**登记面 = 记录已裁的保留项**（✗ 非未决差项兜底）；逻辑面（顶层 `markdown.mjs`）才是共享面（归核）。
 > **「同名≠同物」判据纪律**：裁决行点名档时**必须带路径前缀**（`thincoder-cli/src/tui/markdown.mjs` ✓ / `markdown.mjs` ✗ 属歧义）——两端 / 多目录同名者一律前缀。
 
 **覆盖对账（单端 148 + 94 逐面闭合——§2.6 判据 3 覆盖程序）**
@@ -1938,5 +1938,11 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
   `check-ledger.mjs` **无承接 ⇒ 改述**——台账一致性归核内 SQLite `thincoder-core/ledger.mjs`，不换名；映射单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.8。**零新语义**。
 
 - 2026-09-21（**STARTUP-LATENCY 批 · 收口前残留收正** · eng-designer——承 `docs/batches/2026-09-21-startup-latency.md` §5 实施读数 + 父侧裁定）：§2.8.1 计数收正（**在册 35→34 · 待补 21→20**——`traces/trace-store.mjs` 外提后 **303→299** ⇒ 移出 `SOFT_LINE_REGISTRY`；登记面 = `thincoder-core/test/core-hygiene.test.mjs:45-47`）；**零新语义**。
+
+- 2026-09-21（**端差纪律收正批（end-diff-doctrine）· 设计轮** · eng-designer——承 `docs/batches/2026-09-21-end-diff-doctrine.md` §1 裁定 + 需求层例外句（F7-3 / N4））：§2.5 端特有桶注「渲染面总则（markdown 面）」收正为 **A9 合法保留形**（结构性不对称 + 证据 = 渲染宿主不同；✗ 非默认保留）；
+  **语义源 = 需求层已定稿例外句——设计层落点、零新增口径**。
+
+- 2026-09-21（**端差纪律收正批（end-diff-doctrine）· 设计评审修正轮（轮 1）** · eng-designer——承 `docs/batches/2026-09-21-end-diff-doctrine.md` §3 发现 #2）：§2.5「渲染面总则（markdown 面）」补**端差默认 = 消**半句 + **登记面 = 记录已裁的保留项（✗ 非未决差项兜底）**；
+  **零新语义（评审发现逐号落位）**。
 
 

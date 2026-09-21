@@ -31,7 +31,7 @@
 | **N-AP1** | 默认值单一来源 | 评审默认只住常量（`thincoder-core/advisor/compaction.mjs:36`）——不在配置默认块双写（`thincoder-core/config.mjs:49` 登记 `timeoutMs` 为可覆盖项） |
 | **N-AP2** | 兼容 | 现有配置语义不变：加 `timeoutMs` 不改 `guard` / `provider` / `model` / `effort` 行为；单工具超时与会诊轮次 / 超时不动 |
 | **N-AP3** | 可测试 | `thincoder-core/test/config.test.mjs:37` 断言默认合并后 `maxTurns === 200`；评审超时三态（配置覆盖 / 缺省回退 / 非法回退）由用例断言 |
-| **N-AP4** | 双端同源 | CLI 与 VS Code 同一配置项、同一默认值（共享 `~/.thincoder/config.json`）——各实现面独立实现（多实现面纪律） |
+| **N-AP4** | 双端同源 | CLI 与 VS Code 同一配置项、同一默认值（共享 `~/.thincoder/config.json`）——各实现面独立实现（多实现面纪律——只述实现形态 ✗ 不构成差异保留依据；端差默认 = 消，保留仅限结构性不对称 + 证据 + 显式裁定） |
 
 ## 4. 范围边界（不做）
 

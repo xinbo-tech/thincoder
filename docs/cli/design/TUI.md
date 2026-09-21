@@ -367,7 +367,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
   （`pushBlock` 仅按 kind 合并）；当前不可达——`depth > 0` spawn 恒同步（下游对 `depth > 0` 拒 async），
   未来放开并行嵌套时须复核。
 - **端差异**：VSC 侧嵌套活动保留「子标」形态（行首 dim 子标）——本批后**两端不再同构**（CLI 内层行无归属标）；
-  差异如实登记，各端独立实现、互不追赶。
+  **端差异如实登记**（登记 ≠ 默认保留；**登记面 = 记录已裁的保留项**，✗ 非未决差项兜底）；**端差默认 = 消**（机制面差异 ⇒ 归核单源 / 两端口径统一）——保留仅限结构性不对称 + 证据 + 显式裁定（A9）；各端独立实现只述实现形态，✗ 不构成差异保留依据；**本项状态：待裁**（A9 三件未齐——消解路径 = 两端口径统一（嵌套归属标语义对齐）∥ 补显式裁定；到期 = 台账 #185「已登记端差逐项 A9 复核」落定）。
 
 #### 6.8.3 异步子代理「零块」修复（subagent-zero-block——2026-09-17）
 
@@ -574,6 +574,17 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 - **边界（负向锁）**：**不得**为模式再引入缓存副本（引入即须自建失效链——本面因此天然免维护）；本面**不入推送链**（VSC 端另有多文件推送链——单一权威源 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §3.3，本档不重述——D2）。
 - **可机判**：`renderStatus(state, agent, cols, slashCommands)` 为纯函数（既有导出）——改 `agent.config.agent.engineering` / `agent.planMode` 后重调 ⇒ banner 段随变（同调用内零状态）。
 
+### 7.4 会话标题段（常显 · D8 · 2026-09-21 块标题行对齐批）
+
+- **落点**：`buildStatusLine`（`thincoder-cli/src/tui/render-frame.mjs`）**状态段簇尾**——`ledgerHint` 之后、键位组（` │ ${enterHint}`）之前；与「L1 台账常驻标记」同区（先例 = LEDGER-SURFACE，`:401-406`）。
+- **取值 = 活对象单读**：`agent.title`（写点四处：载入 `applySession` / 新建 `resetSessionState` / 回合尾 `ensureSessionTitle` / `/rename`）。每帧 recompute——零缓存副本、零推送链（§7.3 同纪律）。
+- **形态**：` │ <title>`；段宽 = `sliceByWidth` 截断至 **40 显示列**（超宽补 `…`）；**空值零注入**（`title` 空 ⇒ 零字节——半态逐字节等价，负向锁同 §7.2）。
+- **宽度预算**：标题段入既有 `statusMax` 链（整行 ≤ `cols − 1` 口径不变）；宽度紧张时键位组先让位（标题在键位组之前 ⇒ 标题存活优先）。
+- **可见态**：idle / processing 常态在行；模态提示态（question / permission / picker / wizard / slash 提示）状态行整行让位（既有形态，零改）。
+- **VSC 对位**：顶栏常显（`#session-title`）保持、端侧零改；**列表面**（`/session` / VSC `pushSessions`）两端同字段（`title`）同回退链（`listSlots` 派生——VSC `panel-session.mjs:227-231`）；
+  本段取值 = `agent.title` 活读 · **空值零注入**（非回退链）；空窗差（生成前 / 失败期：VSC 顶栏显回退链值 ∥ 本段零注入）= 已登记端差（A9 保留：结构性不对称 + 证据 + 显式裁定；登记 = 批档 §1）。
+- **可机判**：`renderStatus` 纯函数直驱——`agent.title` 置值 / 清空两次调用，strip-ANSI 文本读「含 ` │ <title>` / 零注入」两段（用例 = `test/session-title-surface.test.mjs`）。
+
 ## 8. 不并项与历史沿革
 
 ### 8.1 历史沿革（(d) 类——**不并**）
@@ -596,16 +607,25 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 
 | 旧档面 | 内容 | 何故不并（去向 / 触发） |
 |---|---|---|
-| 需求层条目 | F1–F13 / N1–N11 | 需求面——`docs/cli/requirements/TUI.md`（本档只留设计层） |
+| 需求层条目 | F1–F15 / N1–N12 | 需求面——`docs/cli/requirements/TUI.md`（本档只留设计层） |
 | 输入框键契约 | 状态模型不变量 / 按键表 / ↑↓ 三规则 / Inject 框 / question 自由文本态 | `docs/cli/design/TUI-INPUT-BOX.md`（本档只挂指针） |
 | 普通工具行间区块 | 区块格式 / chunk 契约 / 参数可见性 / 收尾守卫 | `docs/cli/design/TUI-TOOL-OUTPUT.md`（本档只挂指针） |
 | 命令层与选择面 | slash 命令族 / picker / wizard / 交互桥 | `docs/cli/design/TUI-COMMANDS.md` |
 | 会话恢复 / 懒加载 / 回合驱动 / 显示层额度 | 恢复管道 / 三层缓存 / runAgentTurn / 字符额度 | `docs/cli/design/TUI-SESSION-VIEW.md` |
 | 挂起会话状态机 / 子代理编排语义 | settle 时序 / 池管理 / 调度排队 | `docs/core/design/AGENT-LOOP.md`（本档只留显示层契约） |
 | 压缩面板 / MCP 表单 / 会话存档 | 跨板块机制 | `docs/core/design/CONTEXT-COMPACTION.md` §8 · `docs/core/design/MCP.md` §5/§8 · `docs/core/design/SESSION.md` |
-| VSC webview 对位 | webview 渲染 / 消息协议 / 子标 | `docs/vsc/design/WEBVIEW*.md`——**非同机制**（端差异登记，不追赶） |
+| VSC webview 对位 | webview 渲染 / 消息协议 / 子标 | `docs/vsc/design/WEBVIEW*.md`——**非同机制**（端差异如实登记——登记 ≠ 默认保留；**登记面 = 记录已裁的保留项**，✗ 非未决差项兜底；端差默认 = 消，保留须结构性不对称 + 证据 + 显式裁定（A9）；各端独立实现只述实现形态，✗ 不构成差异保留依据；**本项状态：待裁**（A9 三件未齐——消解路径 = 两端口径统一（webview 渲染 / 消息协议语义对齐）∥ 补显式裁定；到期 = 台账 #185「已登记端差逐项 A9 复核」落定）） |
 
 ## 变更记录
+
+- 2026-09-21（**端差纪律收正批（end-diff-doctrine）· 冻结待落项补落轮** · eng-designer——承 `docs/batches/2026-09-21-end-diff-doctrine.md` §2「冻结待落项」（评审发现 #2 / #4））：§6.8.2 端差异句 + §8.2「VSC webview 对位」行各补**登记面语义**（登记面 = 记录已裁的保留项，✗ 非未决兜底）+ **状态词**（待裁——A9 三件未齐；消解路径 / 到期见行内）；**零新语义**（评审发现逐号落位）。
+
+- 2026-09-21（**块标题行对齐批 · D8 裁定轮 · eng-designer**——承 `docs/batches/2026-09-21-vsc-block-title-align.md` §2.12 · 父侧代裁）：新增 **§7.4 会话标题段（常显 · D8）**——落点 = `renderStatus` 状态段簇尾（`ledgerHint` 后、键位组前）；取值 = `agent.title` 活对象单读（每帧 recompute · 空值零注入 · 40 显示列截断）；VSC 端零改（顶栏常显保持）。
+
+- 2026-09-21（**块标题行对齐批 · 设计评审轮 1 修正** · eng-designer——承 `docs/batches/2026-09-21-vsc-block-title-align.md` §2.13 · 发现 1 / 7）：§7.4 VSC 对位行收正为限定形——**列表面**（`/session` / `pushSessions`）同回退链；本段取值 = `agent.title` 活读 · **空值零注入**；空窗差 = 已登记端差（A9）；§8.2 需求层条目计数收正（F1–F13 / N1–N11 → F1–F15 / N1–N12）。**零新语义**。
+
+- 2026-09-21（**端差纪律收正批（end-diff-doctrine）· 设计轮** · eng-designer——承 `docs/batches/2026-09-21-end-diff-doctrine.md` §1 裁定 + 需求层例外句（F7-3 / N4））：§6.8.2 端差异句 + §8.2「VSC webview 对位」行收正——去「互不追赶」作保留依据的读法（补端差默认 = 消 / 保留三件齐备（结构性不对称 + 证据 + 显式裁定 · A9）/ 实现形态限定）；
+  **语义源 = 需求层已定稿例外句——设计层落点、零新增口径**。
 
 - 2026-09-21（**STARTUP-LATENCY 批 · 收口前机制微修** · eng-designer——承 `docs/batches/2026-09-21-startup-latency.md` §2 修正轮 3）：启动序纪律行术语收正（「异步 + 空闲拍」→「异步非阻塞」——GC 触发已改启动窗外延迟拍，机制单源 = `docs/core/design/SESSION.md` §6.17）；**零新语义**。
 

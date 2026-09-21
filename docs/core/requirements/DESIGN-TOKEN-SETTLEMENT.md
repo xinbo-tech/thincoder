@@ -34,7 +34,7 @@ settle 即落盘权威台账；凭证值只进槽文件（会话态），永不�
 | **N-D3** | 双端同源 | 与对端同机制语义（settle 即落盘 / 废镜像 / 凭证纪律）；各端独立实现 | 本档 §4 端差登记（已登记差异 = 载体一项） |
 | **N-D4** | 可机判 | 用例在册且 `npm test` 全绿 | `thincoder-vscode/test/eng-settlement.test.mjs`（D1 / D4 / D2 / D6 组） |
 
-## 4. 端差登记（多实现面——语义同源、各端原文自持）
+## 4. 端差登记（多实现面——语义同源、各端原文自持；登记面 = 已裁的保留项；端差默认 = 消；保留仅限结构性不对称 + 证据 + 显式裁定）
 
 - 语义对位（对端 = `thincoder-cli/docs/requirements/DESIGN-TOKEN-SETTLEMENT.md` §2，**已并入本档**——2026-09-15 CLI 尾部真批）：结算可靠（不再 `designId not found`）· 废单值镜像 · 凭证不落文档——逐条同源。
 - 端差（本端实况）：**结算载体** = 会话槽 `engDesignTokens` 多槽表（`thincoder-vscode/src/extension/session-slot-write.mjs:100-166`——对端 = persistState 单源面）；本端断点修复面（快照 / 写侧清零 / 落盘时序）= 本端实现史实，语义结果两端一致（settle 即落盘）。
