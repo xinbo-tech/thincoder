@@ -339,6 +339,8 @@ async function runAgentTurnInner(ctx, text, opts) {
   // 承诺）——逐条直发；斜杠命令直接执行（保序）；回合后的续发由递归层同循环续取。
   while (state.queue.length > 0 && !state.processing) {
     const head = state.queue.shift()
+    // F16（TUI.md §7.5）：消费回执——queued dim 行（消费事实的可见锚；对位 [continuing…]）
+    pushLine("[sending queued message]", C.tool)
     // 残项斜杠命令直接执行——保序、绝不合并
     if (head.text.startsWith("/")) {
       await handleSlash(head.text)

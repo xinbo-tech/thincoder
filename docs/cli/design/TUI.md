@@ -23,7 +23,7 @@
 | `thincoder-cli/src/tui/index.mjs` | `startTUI` 入口：raw mode、keyStream + readline、分块解码、粘贴协议、Shift+Enter 翻译、resize、state 对象、`pushLine` / `pushLabel`、提交门禁、行缓冲裁剪；装配归位（`createMouseDispatch` / `createLoadOlder` / update-notice re-export）；`state._agent` ↔ `agent._tuiState` 双向挂载 |
 | `thincoder-cli/src/tui/tui-lifecycle.mjs` | TUI 生命周期终端序列：`writeStartupSequence`（alt buffer + 光标 + 鼠标 / 粘贴 / 键盘增强 + **DECRST 7 禁环绕**）、`writeLoadingLine`（启动加载行——首帧渲染自然覆盖）、`writeCleanupSequence`、`RECOVERY_SEQUENCE`（异常退出恢复序列单源——见 `docs/cli/design/CRASH-REPORTS.md` §5）、`createExitCleanup`、`setTuiActive` |
 | `thincoder-cli/src/tui/update-notice.mjs` | 后台升级提示（`upgradeFailureText` / `pendingNoticeReady` 纯函数 + `createUpdateNotice` 装配） |
-| `thincoder-cli/src/tui/key-handler.mjs` | 按键分发：模态入口（permission / question / search / picker / wizard / interruptPrompt）+ 输入编辑；**busy 门禁**；挂起空闲 Enter → pendingInput；Ctrl+C 分支；`convMaxScroll` 导出 |
+| `thincoder-cli/src/tui/key-handler.mjs` | 按键分发：模态入口（permission / question / search / picker / wizard / interruptPrompt）+ 输入编辑；**busy 门禁**（busy 单槽注入——`docs/cli/design/TUI-INPUT-BOX.md` §4.1）；挂起空闲 Enter → pendingInput；Ctrl+C 分支；`convMaxScroll` 导出 |
 | `thincoder-cli/src/tui/key-handler-search.mjs` | 搜索模式按键子处理（Ctrl+F 分支） |
 | `thincoder-cli/src/tui/key-modes.mjs` | 按键模态层：permission / question / interruptPrompt 独占模态 handler（激活即消费全部按键） |
 | `thincoder-cli/src/tui/render-frame.mjs` | 帧布局装配：header / conversation / subagent 面板 / todo / input / status 各面板；状态栏（含 attention 态——§7）；question 自由文本态光标例外 |
@@ -123,8 +123,9 @@ permission（y/n/a/esc；batch a/o/n；continue / retry y/n）
 - **模态分支**（`key-modes.mjs`）：permission / question / interruptPrompt 激活时**消费全部按键**（含未匹配键——不落入下层编辑路径）；
   搜索模态另居 `key-handler-search.mjs`。
 - **busy 门禁**（`processing` 含 digest 单一判据）：**输入不禁**——打字照常进输入框回显（吞提交不吞字符）；
-  **Enter 提交吞 + busy 提示**；**斜杠命令同禁发**（白名单机制已删——`/exit` 也发不出，退出靠 Ctrl+C 终端层武装通道）；
-  空 Enter 静默（text 非空才吞）。
+  **Enter 提交 = busy 单槽注入**（非挂起非模态期——放行判据与二次提交语义 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1，
+  本档不重述——D2）；**斜杠命令同禁发**（白名单机制已删——`/exit` 也发不出，退出靠 Ctrl+C 终端层武装通道）；
+  空 Enter 静默（text 非空才吞）；反馈面 = §7.5。
 - **挂起空闲**（`docs/core/design/AGENT-LOOP.md` §9——busy 之外）：Enter（非 slash）→ `pendingInput` **单槽**
   （至多一条待交接——槽满吞 + 提示）+ 唤醒（`_suspWake`，不打断后台）；释放窗口期间同语义。
 - **输入编辑键表与 ↑↓ 三规则** = `docs/cli/design/TUI-INPUT-BOX.md` §2 / §3（本档不重述——D2）。
@@ -535,7 +536,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 | 提问卡挂起（`state.question`） | **计**（blocked） | 同上 |
 | 回合结束等待输入（顶层回合链尾） | **计**（awaiting） | agent 已停、无自动续跑——「不用反复切回来」的主用例 |
 | picker / wizard / search / interruptPrompt | 不计 | 用户自己发起——在场已由发起动作证明 |
-| pendingInput（挂起期输入单槽） | 不计 | 是**用户自己的**待交接输入，非 agent 需要用户 |
+| pendingInput 单槽（挂起 / busy 期） | 不计 | 是**用户自己的**待交接输入，非 agent 需要用户 |
 | 挂起会话（池 live） | 不计 | 自动续跑中——不需要用户动作 |
 | design token 门 / 工具拒绝 | 不计 | 无独立 UI 态；其「需要用户」部分由上述三类承接 |
 
@@ -585,6 +586,29 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
   本段取值 = `agent.title` 活读 · **空值零注入**（非回退链）；空窗差（生成前 / 失败期：VSC 顶栏显回退链值 ∥ 本段零注入）= 已登记端差（A9 保留：结构性不对称 + 证据 + 显式裁定；登记 = 批档 §1）。
 - **可机判**：`renderStatus` 纯函数直驱——`agent.title` 置值 / 清空两次调用，strip-ANSI 文本读「含 ` │ <title>` / 零注入」两段（用例 = `test/session-title-surface.test.mjs`）。
 
+### 7.5 queued 反馈面（F16 · busy-injection 批 2026-09-21）
+
+> 机制面（放行判据 / 二次提交 / 送达链路）= `docs/cli/design/TUI-INPUT-BOX.md` §4.1——本节只落**反馈形态**。
+> F13 豁免对齐（需求判定句④）：pendingInput 不出 attention——本节反馈零注意力色对（非 43 底 + 30 字）、非 chip、
+> 不进 `attentionKind` 触发集合（§7.1 表）——queued 反馈是**信息面**，非「需要用户介入」面（用户自己排的队，无需在场）。
+
+**反馈形态（两段式）**：
+
+| 段 | 载体 | 形态（逐字） | 清除时机 |
+|---|---|---|---|
+| 提交时 | 状态栏 | busy 提示段收正：`processing && pendingInput.length > 0` ⇒ 显示 ` │ 已排队 1 条消息`（C.dim 现有段样式）；否则现状 busy / idle 文案（零改） | 单槽被消费（driver shift / 队列 while shift）⇒ 段消失（派生自 `pendingInput.length`——零簿记零定时器） |
+| 消费时 | 对话流 | dim 行 `[sending queued message]`（`C.tool`——对位既有 `[continuing…]`）在消费点推送 | 不清除——即送达回执本身 |
+
+**否决 dim 对话行**（提交时落 `[queued: <text 预览>]` 进 `state.lines`）：对话区是用户正在读的内容面——
+回合流式输出每帧刷新，queued 行瞬间被顶走不可见；状态栏段常驻可见且随消费自动消失，**生命周期语义 = 单槽现状派生**（零簿记）。
+F13 判定句「pendingInput 不出 attention」约束的是**注意力色对**，dim 信息段不违反。
+
+**可机判**：`renderStatus` 纯函数直驱——构造 `processing: true, pendingInput: ["x"]` → strip-ANSI 含 `已排队 1 条消息` 且零 `\x1b[43m`；
+`pendingInput: []` → 不含。用例宿主 = `thincoder-cli/test/busy-injection.test.mjs`（T-F16-6）。
+
+**VSC 对位**：普通回合 busy 面（`running && !_suspended`）对称修同面送达（queuedUserMessage 链——机制单源 = `WEBVIEW-INPUT.md` §1 C-B2-6）；
+webview 反馈 = 本地气泡（提交入槽即现 / 送达即 user 回声面——形态各端自落，语义同源）。
+
 ## 8. 不并项与历史沿革
 
 ### 8.1 历史沿革（(d) 类——**不并**）
@@ -618,7 +642,18 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 
 ## 变更记录
 
+- 2026-09-21（**busy-injection 批 · 设计评审轮 2 修正** · eng-designer——承 `docs/batches/2026-09-21-busy-injection.md` §3 轮次 2 发现 4 / 5）：
+  §7.5 VSC 对位行改**纯实现形态描述**（去「非同构…各端独立实现」保留口吻——本地气泡两时点（提交入槽即现 / 送达即 user 回声面）+ 形态各端自落 / 语义同源）；
+  §7.1 表 `pendingInput` 行标签覆盖两填充面（挂起 / busy 期——「不计」裁决与理由句零改）。
+
 - 2026-09-21（**端差纪律收正批（end-diff-doctrine）· 冻结待落项补落轮** · eng-designer——承 `docs/batches/2026-09-21-end-diff-doctrine.md` §2「冻结待落项」（评审发现 #2 / #4））：§6.8.2 端差异句 + §8.2「VSC webview 对位」行各补**登记面语义**（登记面 = 记录已裁的保留项，✗ 非未决兜底）+ **状态词**（待裁——A9 三件未齐；消解路径 / 到期见行内）；**零新语义**（评审发现逐号落位）。
+
+- 2026-09-21（**busy-injection 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-21-busy-injection.md` §1）：新增 **§7.5 queued 反馈面**（F16）——
+  提交时 = 状态栏 ` │ 已排队 1 条消息` dim 段（`pendingInput.length` 现状派生——消费即消失，零簿记零定时器）；
+  消费时 = 对话流 `[sending queued message]` dim 行；F13 豁免对齐声明（零注意力色对、非 chip）；否决提交时对话 dim 行（流式刷新顶走）。
+  机制面回指 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1。Ctrl+I（§4.2）零改。
+
+- 2026-09-21（**busy-injection 批 · 设计评审轮 1 修正** · eng-designer——承 `docs/batches/2026-09-21-busy-injection.md` §3 发现 1 · 语义源 = 父侧裁定（C-B2-6 ∪ CLI 条件 3））：§7.5 VSC 对位行收正——「挂起会话非 digest 期同面送达」反写口径 → 普通回合 busy 面（`running && !_suspended`）对称修同面送达，机制单源回指 `WEBVIEW-INPUT.md` §1 C-B2-6。反馈形态两段式零变。
 
 - 2026-09-21（**块标题行对齐批 · D8 裁定轮 · eng-designer**——承 `docs/batches/2026-09-21-vsc-block-title-align.md` §2.12 · 父侧代裁）：新增 **§7.4 会话标题段（常显 · D8）**——落点 = `renderStatus` 状态段簇尾（`ledgerHint` 后、键位组前）；取值 = `agent.title` 活对象单读（每帧 recompute · 空值零注入 · 40 显示列截断）；VSC 端零改（顶栏常显保持）。
 

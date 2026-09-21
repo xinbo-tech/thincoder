@@ -251,7 +251,9 @@ export async function suspensionSession(panel, entry) {
     // pendingInput = 挂起空闲期消息单槽（INPUT-LOCK-ASYNC——busy（running 含 digest/标题
     // 窗口）输入禁用——routeUserTurn 拒收——digest 运行期不再有入队——挂起纯等待期消息
     // 经 panel._chat 直推本数组——driver 消费清槽（用户输入优先于 digest，D-S5）。
-    pendingInput: [],
+    // F16（busy-injection 2026-09-21）：入口装载缝——entry.pendingInput（普通回合 busy 期
+    // 排队残项，由 `enterSuspensionTurn` 预填）优先；缺省空数组（原行为零变）。
+    pendingInput: Array.isArray(entry.pendingInput) ? entry.pendingInput : [],
     // abortControllers = 进入回合（含 Ctrl+I / ContinueError 续跑重建）的全部 controller 快照
     // ——面板销毁统一中止（dispose 路径——2026-09-02 偏差修复 #3：会话句柄只取最后一个
     // controller 会让持旧 controller signal 的池 children 逃逸中止）。快照后清空：会话内回合

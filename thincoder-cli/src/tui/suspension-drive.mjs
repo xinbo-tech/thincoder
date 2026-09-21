@@ -245,6 +245,7 @@ export async function suspensionSession(ctx) {
       //    单消息交接——无合并无 /cmd 分流——key-handler 只收非斜杠文本——单消息逐发）。
       if ((state.pendingInput?.length ?? 0) > 0) {
         const head = String(state.pendingInput.shift())
+        pushLine("[sending queued message]", C.tool) // F16 消费回执（TUI.md §7.5——driver 消费点）
         agent._suspended = false // 用户回合 = 普通回合语义（① 直注入 + settle 即冻结）
         await runAgentTurn(ctx, head, { skipSession: true })
         agent._suspended = true

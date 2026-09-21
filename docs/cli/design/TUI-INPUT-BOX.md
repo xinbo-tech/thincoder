@@ -39,7 +39,7 @@
 | Backspace / Delete | 删光标前 / 处字符 |
 | ← → Home End | 光标移动 |
 | Ctrl+U | 清空输入框 |
-| Enter（`return` / `\r`） | 提交 |
+| Enter（`return` / `\r`） | 提交（busy 期 = §4.1 单槽注入） |
 | **Shift+Enter** | **插入换行（多行输入）**——需终端键盘增强协议（§5）；不支持时退化为提交 |
 | Alt+Enter（`meta+return`） | 插入换行（后备多行键，所有终端可用） |
 | Tab | 斜杠命令补全循环 |
@@ -66,7 +66,7 @@
 - 空输入进入导航不存草稿；`submit()` 清 `_draft`。
 - 竖移不改草稿（仅发生在 `historyIndex === -1`——草稿面零涉，不变量 2 / 3 零改）。
 - **处理中**（`processing`，含 digest）：**竖移放行**（纯编辑——与字符 / 退格 / ←→ 同权）、**历史导航禁**
-  （第 1 / 3 条的历史分支吞——不进入、不切换；Tab / 提交吞等其余 busy 门禁不变）。
+  （第 1 / 3 条的历史分支吞——不进入、不切换；Tab 吞等其余 busy 门禁不变；提交面 busy 期分流 = §4.1）。
 
 ## 4. 挂起态输入契约（AGENT-LOOP §9）
 
@@ -75,10 +75,11 @@
 
 - **不变量**：`state.input` **永不被后台事件读写**——settle / 消化轮 / 注入全部经独立通道（token / `state.pendingInput`），
   后台代码零接触输入框；框内文本在后台事件前后逐字不变。
-- **Enter（非 slash 文本，含 digest 运行中）**：不入 `state.queue`、不打断当前消化轮——消息入 **`state.pendingInput` 队列**
+- **Enter（非 slash 文本）**：不入 `state.queue`、不打断后台——消息入 **`state.pendingInput` 队列**
   （key-handler 分流 + 清框，与 submit 同款清理；history 照常收录），经 `state._suspWake?.()` 唤醒挂起会话循环；
-  纯挂起期立即调度新回合，digest 运行中排队续发（队列非空期间不触发新 auto-turn）。
-- **斜杠命令**：挂起分流不拦截——走 submit 正常路径（纯挂起期直接执行；digest 中 allowlist 直行 / 其余入 `state.queue`，会话循环排空）。
+  driver 消费清槽即以该消息开新回合（输入优先——不触发新 digest；见 §4.1 送达链路）。
+  **busy 期（`state.processing` 含 digest）提交先经 busy 门禁吞——本分支不触达**（触达窗 = 挂起空闲 / 释放窗口；§4.1 条件 3）。
+- **斜杠命令**：挂起分流不拦截——走 submit 正常路径（纯挂起期直接执行）；busy 期（`state.processing` 含 digest）经 busy 门禁同吞——不直行 / 不排队 / 不入槽，文本保留在输入框（斜杠 busy 禁发不变——§4.1 条件 4）。
 - **Ctrl+C**（挂起 / 消化中 = 武装窗口两级中止）：
   - **未武装首次按下**：digest / 会话内回合处理中仅中止当前回合（`state.controller.abort()`，会话与后台子代理不受影响，回挂起等待）；
     纯挂起等待期仅提示武装（含运行中数量，不清池）。
@@ -89,6 +90,61 @@
   - **Ctrl+I**：仅 digest 处理中有效（`processing && controller`）——立即打断（interruptPrompt，插话语义保留）；
     纯挂起等待期 Ctrl+I 无动作（Enter 即插话通道）。
 - 消化轮输出照常流式显示；状态行显示「后台 N 子代理运行中 · M 待消化」（processing 期由工具事件接管）。
+
+### 4.1 busy 期输入注入（F16 · busy-injection 批 2026-09-21）
+
+> 需求锚 = `docs/cli/requirements/TUI.md` **F16**（台账 #213）；语义对位 = 子代理 `send`（回合边界注入，非打断）。
+> 动机 = busy 期 Enter 提交被吞（INPUT-LOCK 2026-09-09 有意收窄的有意识部分重开——形态单槽非攒批）；
+> Ctrl+I 中断注入**保留并存**（打断 vs 排队两语义——用户 2026-09-21 22:38 裁定，本批零触碰 Ctrl+I）。
+> 送达链路 = 既有回合尾 drain（`thincoder-cli/src/tui/agent-turn.mjs:333-350` 队列续发 + `thincoder-cli/src/tui/suspension-drive.mjs:246-257`
+> driver 消费——取数谓词零改；消费回执两处新增 dim 行（见消费回执段））；反馈面（dim 行 / 状态栏段）= `docs/cli/design/TUI.md` §7.5。
+
+**放行判据（busy Enter → 单槽注入，全部满足）**：
+
+| # | 条件 | 理由 |
+|---|---|---|
+| 1 | `state.processing === true`（含 digest——单一判据既有） | 本批开的面——非 busy 期走既有 submit / 挂起分流，零改 |
+| 2 | `state.permission == null && state.question == null` | 审批 / 提问卡挂起期**仍吞**——模态卡是回合阻塞面（等用户裁决），Enter 的用户意图 = 回应卡；排队文本会串进裁决流。F16「回合运行中」的排除项 |
+| 3 | `state.suspended === false && state._suspPending === false` | 挂起两态零改：释放窗口既有单槽路径（§4 Enter 分流）保持；挂起会话内 digest 期（`suspended && processing`）仍吞——其消费点（`digestTurn`）正忙，且 VSC 端 digest 同判（端差最小化） |
+| 4 | 非 slash（`text.startsWith("/")` 为假） | 斜杠 busy 禁发不变（INPUT-LOCK 斜杠面） |
+| 5 | `text` 非空 | 空 Enter 静默（既有） |
+| 6 | `state.pendingInput.length === 0` | 单槽不变量（至多一条待交接——R15 撤销攒批不翻） |
+
+**执行序（`key-handler.mjs` busy 门禁改写——替换「提交吞 + busy 提示」分支）**：
+斜杠 → 吞 + busy 提示（文本保留，既有）；空 → 静默（既有）；条件 2/3 不满足 → 吞 + busy 提示（文本保留，既有）；
+**单槽满（条件 6）→ 吞 + 槽满提示 + 文本保留**（先例 = 挂起态槽满分支 `key-handler.mjs:417-422` 逐字同构）；
+**其余（1∧2∧3∧4∧5∧6）→ 入槽**：清框 + `history.push` + `historyIndex = -1` + `_draft = null` + `pendingInput.push(text)`
+（与挂起态入槽分支同款清理——`state.input` 永不被后台事件读写的不变量（§4）保持：入槽是**前台**按键路径写自己的槽）。
+
+**二次提交（单槽满）= 拒绝 + 提示 + 文本保留**：单槽至多一条 = 需求判定句钉死；覆盖 = 在 busy 不可见窗口静默丢用户文本
+（违背「不静默丢」纪律——先例 `suspension-drive.mjs:306` 中止残余转正注释）；拒绝 + 提示与既有槽满语义同构零新机制。
+
+**submit 双保险同步**（`index.mjs` submit busy 拒分支）：防御语义保持「busy 期拒绝 + 不清框」——直呼路径不因本批开裂；
+本批正常流量的 Enter 在 key-handler 已分流，submit busy 分支仍只服务直呼防御（注释随判据收正同步更新）。
+
+**消费回执（送达链路侧——两处各一行 dim 行）**：`[sending queued message]` 在**消费时**推送——
+① 回合尾兜底转正点（`agent-turn.mjs` 队列 while shift 后）；② 挂起 driver 消费点（`suspension-drive.mjs` pendingInput shift 后）。
+形态对位既有 `[continuing…]`（`agent-turn.mjs:220`，`C.tool`）——消费事实的可见锚，回执在则顺序自然
+（queued dim 行 → 回合尾 → `❯ You:` 标签 + 消息行）。**否决气泡行编辑**（改写 queued 行为送达态）：
+生命周期簿记两处编辑点 + 行 diff 键漂移风险，消费回执行零簿记同效。
+
+**送达链路（零改声明）**：回合自然结束 → ① 顶层兜底转正（`agent-turn.mjs:333-335`：`!poolLive` 时 pendingInput → `state.queue`
+→ 队列 while 续发新回合）；② 池 live → 挂起会话 driver 输入优先消费（`suspension-drive.mjs:246-249`）。
+两条既有链路的取数谓词零改——本批只是让单槽**可达**（busy 期可填）。
+
+**VSC 对位（对称修——本批射程内）**：VSC busy 同吞（`webview/send.js:26-31` toast 拒发 + `src/extension/panel-messages.mjs:111-113`
+routeUserTurn 拒收——实勘 2026-09-21）⇒ 落需求 F16 对称修句（busy 同吞实勘 ⇒ 普通回合 busy 面同面送达），判别式与 C-B2-6 逐字对齐：
+**queue = `S._turnState === "running" && !S._suspended`**（普通回合 busy）→ webview 本地气泡 + `queuedUserMessage` 消息 → host 单槽 `panel._busyQueued`
+→ 送达 = ① 回合尾挂起会话入口装载 `susp.pendingInput`（driver 消费）② 无会话 idle 归位分支直接续发回合；
+**reject = 挂起会话内 busy（`running && _suspended`）仍拒发 + toast**（与 CLI 条件 3 对称——挂起期全吞不分 digest / 用户回合，webview 以 `S._suspended` 区分）；
+**二次提交（未消费排队 ≥1）** = webview 守卫**不出泡 / 不清框 / 提示**（对位本条槽满面；判据源 = host 推送 `busyQueued { pending }`——外部入口同面入槽，webview 不自持真值）；
+**携贴图送达**同过 F-1 降级判定（与 idle 面同一判决函数——非直呼 `runChat` 旁路）；
+**纯挂起等待既有单槽（`susp.pendingInput`）零改**。
+契约落 `docs/vsc/design/WEBVIEW-INPUT.md` §1（C-B2-6）；守卫 / 降级细则 = 同处 ①⑥。
+
+**边界**：不引入攒批（单槽语义不变）；不触碰 Ctrl+I 代码与文档条目（`key-handler.mjs:176-183` / `key-modes.mjs handleInterruptMode` /
+本档 §2 表 Ctrl+I 行 / §8——两语义并存）；`_pasting` 锁零触；空闲 / 挂起 / 释放窗口 Enter 语义零改；
+F13 attention 判据不破（queued 反馈零注意力色对——`docs/cli/design/TUI.md` §7.5）。
 
 ## 5. 多行输入（能力 + 键实现）
 
@@ -127,7 +183,7 @@
 
 | 模块 | 职责 |
 |---|---|
-| `thincoder-cli/src/tui/key-handler.mjs` | 按键总分发：permission / question / search / picker / wizard / interruptPrompt / 输入编辑 + 挂起态输入；↑↓ 分流（竖移 / 历史——§3）；Inject 框创建（§8） |
+| `thincoder-cli/src/tui/key-handler.mjs` | 按键总分发：permission / question / search / picker / wizard / interruptPrompt / 输入编辑 + 挂起态输入；↑↓ 分流（竖移 / 历史——§3）；Inject 框创建（§8）；busy 期单槽注入（§4.1——`pendingInput` 单槽可达化） |
 | `thincoder-cli/src/tui/key-modes.mjs` | 模态层：permission / question / interruptPrompt 独占模态——激活即消费全部按键；question 自由文本态编辑键（§7）；Inject 框编辑键（§8） |
 | `thincoder-cli/src/tui/render.mjs` | `layoutInput`（折行 / 光标行列 + `lineStarts`）/ `charWidth` 纯函数；`moveCursorVertical`（竖移定位——§3 规则 2） |
 | `thincoder-cli/src/tui/layout.mjs` | `computeLayout` 面板布局（输入框 boxLines / cap / offset / 光标行列；question 自由文本态 `layoutAnswer` = `layoutInput` 复用）；`inputContentWidth`（输入框内容宽度单源——布局与竖移共用） |
@@ -137,6 +193,7 @@
 | `thincoder-cli/src/tui/ansi.mjs` | `keyboardPush` / `keyboardPop` 序列常量 |
 | `thincoder-cli/src/tui/index.mjs` | state 初始化（含 `_draft` / `interruptPrompt` 空态）；stdin 层 `translateShiftEnter` 接线；启动 `keyboardPush` / 退出 `keyboardPop` |
 | `thincoder-cli/test/input-lock.test.mjs` · `thincoder-cli/test/arrow-editing.test.mjs` | 按键分发锁（含 busy 门禁）+ 方向键编辑用例 |
+| `thincoder-cli/test/busy-injection.test.mjs`（拟新增） | F16 用例（T-F16-1…7——放行 / 槽满 / 送达 / 排除项——§4.1 判据逐条） |
 
 ## 7. question 自由文本输入态：光标与编辑键
 
@@ -252,3 +309,20 @@
 
 - 2026-09-21（**端差纪律收正批（end-diff-doctrine）· 设计评审修正轮（轮 1）** · eng-designer——承 `docs/batches/2026-09-21-end-diff-doctrine.md` §3 发现 #2 / #4）：§9.2「VSC 端方向键编辑差异」行补**登记面语义**（登记面 = 记录已裁的保留项，✗ 非未决兜底）+ **状态词**（待裁——A9 三件未齐；消解路径 / 到期见行内）；
   **零新语义（评审发现逐号落位）**。
+
+- 2026-09-21（**busy-injection 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-21-busy-injection.md` §1）：新增 **§4.1 busy 期输入注入**（F16）——
+  busy（processing 含 digest）非挂起非模态期 Enter 提交入 `pendingInput` 单槽（放行判据六条 · 二次提交 = 拒绝 + 提示 · 消费回执行）；
+  送达链路零改声明（回合尾 drain + driver 消费两条既有链路取数谓词零改）；VSC 对称修面（queuedUserMessage）回指 `WEBVIEW-INPUT.md` §1 C-B2-6。Ctrl+I 两语义并存零触碰。
+
+- 2026-09-21（**busy-injection 批 · 设计评审轮 1 修正** · eng-designer——承 `docs/batches/2026-09-21-busy-injection.md` §3 发现 1/2/3/5/8
+  · 语义源 = 父侧裁定（C-B2-6 ∪ CLI 条件 3））：§4.1 VSC 对位段收正——queue = 普通回合 busy（`running && !_suspended`）/
+  reject = 挂起会话内 busy 仍拒发 + toast / 纯挂起等待零改（判别式与 C-B2-6 三面同构），槽名收正 `panel._busyQueued`，
+  去 F16 伪引改述实句；射程句收窄（取数谓词零改 + 消费回执两处新增 dim 行）；§2 Enter 行补 §4.1 指针。判据表 / 执行序 / 边界段零变。
+
+- 2026-09-21（**busy-injection 批 · 设计评审轮 2 修正** · eng-designer——承 `docs/batches/2026-09-21-busy-injection.md` §3 轮次 2 发现 1 / 2
+  · 语义源 = 已落地实现 + 测试锁（旧 D-S5 入队已废））：§4 Enter 条目收正至真实触达窗——删「含 digest 运行中」限定与「digest 运行中排队续发」句，
+  补 busy（含 digest）期先经门禁吞、本分支不触达（触达窗 = 挂起空闲 / 释放窗口）；§3「处理中」行去无限定「提交吞…不变」（提交面分流指针 = §4.1）。
+  判据表 / 执行序 / VSC 段零变。
+
+- 2026-09-22（**busy-injection 批 · 实施悬空裁定轮（fix round）· eng-designer**——承批档 §5 决策透明表 #5 / #6 + 父侧裁定）：§4.1 VSC 对位段补两行——**二次提交守卫**（未消费排队 ≥1 ⇒ 不出泡 / 不清框 / 提示；判据源 = host 推送 `busyQueued`）与**携贴图送达降级对位**（同 idle 面判决函数）；细则回指 C-B2-6 ①⑥。
+  判据表 / 执行序 / 消费回执 / 送达零改声明零变。

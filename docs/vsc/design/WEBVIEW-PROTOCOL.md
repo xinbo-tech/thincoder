@@ -60,6 +60,7 @@ reasoning, provider, images? } → extension _chat()
 | `suspension` | ext → wv | 挂起态行 / 冻结通知（`settled → done` 补发 / `active:false + freeze`）——计数载荷与 `turnState` 双通道同源；**增字段** `interrupted`（会话中止事实——X11） |
 | `turnState` | ext → wv | `{ state, counts? }`——忙态单一广播（§4.4 权威锚） |
 | `workspaceGuard` | ext → wv | `{ active }`——无工作区守卫态（拒启 + 提示；判据 / 守卫面 / 提示面 = `docs/vsc/design/PROJECT-SWITCHER.md` §4.1）。发射 = `src/extension/workspace-guard.mjs` `pushWorkspaceGuard`（推送点 = `panel-session.mjs` 的 `openSessionContent` 两分支 / `chat-panel.mjs` 工作区变化处理）；消费 = `webview/chat.js` `case`（§3.2 行 15）。机检②/③ 列坐标 = §12 行 |
+| `busyQueued` | ext → wv | `{ pending }`——busy 排队单槽未消费态（webview 二次提交守卫 = 不出泡 / 不清框 / toast；判据 / 清除时机 / 提示形 = `WEBVIEW-INPUT.md` §1 C-B2-6 ①）。发射 = `src/extension/panel-messages.mjs` `pushBusyQueued`（入槽 / 消费两分支 / 忙分支判决 / `webviewReady` 握手重推）；消费 = `webview/chat.js` `case`（§3.2 行 17）。机检②/③ 列坐标 = §12 行 |
 | `statusText` | ext → wv | `{ kind:"rateWait"/"rateLimited"/"overloaded"/"quota"/"index", seconds?/message?/phase?/done?/total? }`——限流 / 索引状态段 |
 | `turnFrame` | ext → wv | `{ turn, maxTurns }`——顶层逐轮进展段 |
 | `questionCancelled` | ext → wv | `{ promptId }`——abort 释放未答 question 卡（§4.2） |
@@ -75,7 +76,7 @@ reasoning, provider, images? } → extension _chat()
 
 历史断链事故：只改发射端与渲染端、漏桥 ⇒ `model` 字段自发布首日被丢弃（2026-08-26 修复 + 锁桥测试）。string / 对象双分支在 payload 构造处统一推导（对象载荷字段透传、string 分支字段 `undefined` 安全降级）。
 
-### 3.2 协议增量登记（十五项——只增不改）
+### 3.2 协议增量登记（十七项——只增不改）
 
 | # | 消息面 | 增量 | 发射点 | 接收点 |
 |---|---|---|---|---|
@@ -94,8 +95,10 @@ reasoning, provider, images? } → extension _chat()
 | 13 | `suspension`（增字段） | `interrupted`（会话中止事实——自然退出 false） | `suspension.mjs` `postSuspensionEnd` | `panels.js` → `activity.js` `freezeLiveBlocks`（`— interrupted` 注记） |
 | 14 | `digest`（增字段） | `from` / `msg`（ask 档携参——提问者 + 问题摘要；`msg` = 单行 + 截断 ≤120 字符，核单点 `upstreamAskLabelVars`） | `suspension.mjs` 起跑点（ask 档条件携带） | `chat.js` `showDigestStatus`（`digest.turnLabelAsk` 携参取键——§5） |
 | 15 | `workspaceGuard`（**新消息**——host → webview） | `{ active:boolean }`——无工作区守卫态（面板拒发 + 占位符第三态；判据 / 守卫面 = `PROJECT-SWITCHER.md` §4.1） | `src/extension/workspace-guard.mjs` `pushWorkspaceGuard`（推送点 = `panel-session.mjs` `openSessionContent` 两分支 / `chat-panel.mjs` 工作区变化处理；机检发点坐标 = `src/extension/workspace-guard.mjs:38`） | `webview/chat.js:197` `case "workspaceGuard"` |
+| 16 | `queuedUserMessage`（**新消息**——webview → host 输入上行） | `{ text, model, reasoning, provider, images }`——busy 期排队注入（普通回合 busy 面；host 单槽 `_busyQueued`；细则 = `WEBVIEW-INPUT.md` §1 C-B2-6） | `webview/send.js:44`（出口分流——本地气泡先行） | `panel-messages.mjs:174` `case` → `routeUserTurn` 入槽 |
+| 17 | `busyQueued`（**新消息**——host → webview 状态镜像） | `{ pending:boolean }`——busy 排队单槽未消费态（webview 二次提交守卫 = 不出泡 / 不清框 / toast；判据 / 清除时机 / 提示形 = `WEBVIEW-INPUT.md` §1 C-B2-6 ①） | `src/extension/panel-messages.mjs` `pushBusyQueued`（入槽 / 消费两分支 / 忙分支判决 / `webviewReady` 握手重推） | `webview/chat.js` `case "busyQueued"` → `S._busyQueuedPending` |
 
-纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）——**新增 / 变更一律入本节登记表**（行 1–15 即全部在案增量；表外增量不入）。发射 / 接收落点：
+纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）——**新增 / 变更一律入本节登记表**（行 1–17 即全部在案增量；表外增量不入）。发射 / 接收落点：
 `thincoder-vscode/src/extension/panel-callbacks.mjs:169`（statusText）· `:170`（turnFrame）· `thincoder-vscode/src/extension/panel-index.mjs:27` ·
 `thincoder-vscode/webview/chat.js:260` · `thincoder-vscode/webview/status-bar.js:27-30/46`。
 
@@ -135,10 +138,10 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 
 ### 4.1 回合入口秩序
 
-- `userMessage` / `retry` / `sendMessage` 命令直发（quick-input / Ask ThinCoder）共用**单一入口** `routeUserTurn`（`thincoder-vscode/src/extension/panel-messages.mjs:66`）。
-- 回合执行中（`_turnState === "running"`）的消息一律**拒收**（不排队、无回执——排队机制与排队回执消息类型已废；拒收警告明示，不静默丢——`:65`）。
+- `userMessage` / `retry` / `sendMessage` 命令直发（quick-input / Ask ThinCoder）共用**单一入口** `routeUserTurn`（`thincoder-vscode/src/extension/panel-messages.mjs:102`）。
+- 回合执行中（`_turnState === "running"`）的消息按**面**分流（C-B2-6）：**普通回合 busy 面**（无挂起会话）→ 入 host 单槽 `panel._busyQueued`（webview 侧 = 本地气泡 + `queuedUserMessage` 上行；单槽满 ⇒ 提交不出泡 / 不清框 / toast——二次提交守卫）；**挂起会话内 busy**（`running && _suspended`）→ 拒收（警告明示，不静默丢）。契约单源 = `WEBVIEW-INPUT.md` §1 C-B2-6。
 - `abort` / `interrupt` 等**控制消息永不排队、直通**（延迟红线——杀 Stop 即失败）。
-- `sendMessage` 回显（`userMessage` postMessage）先于路由——running 拒收先于回显（无假气泡、无排队回执）。
+- `sendMessage` 回显（`userMessage` postMessage）先于路由——挂起会话内 busy 的拒收先于回显（无假气泡）；普通回合 busy 面回显即排队气泡面（C-B2-6 ③ 外部入口同判据同槽）。
 
 ### 4.2 question 卡 id 匹配
 
@@ -235,7 +238,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | 待消化 | `done · awaiting digestion`（状态区） | 块头态词同文案（`activity-view.js:91`） | 对齐 |
 | 冻结头 + tail-3 | `[✓ key · … · done Ns · turn]` + tail-3（`│ ` 前缀独立行——`render-segments.mjs:103-109`）+ 注记 ` — <note>`（停因 / interrupted——`:88-93`） | `[✓ key · … · done Ns · turn]` + tail-3（`│ ` 前缀——`activity-view.js` `refreshBlock`；容器 = `<details>/<summary>` 原生）+ 注记 ` — <note>`（载体 `meta.note`——契约 = `WEBVIEW.md` §5.2；`tailLines` = `activity-view.js:102`） | 对齐（D4 消：tail-3 行文归一 = `│ ` 前缀独立行） |
 
-### 6.3 i18n 键表（19 键 · zh/en 逐字）
+### 6.3 i18n 键表（20 键 · zh/en 逐字）
 
 > 键面 = **webview 可渲染键**（消费位见各注）；文案实体 = **核容器** `thincoder-core/i18n.mjs`（投影面）+ **本地档** `thincoder-vscode/locales/{zh,en}.json`（端特有键）——本地档同值副本的冻结面见 `thincoder-vscode/src/i18n.mjs:18-20`（本表只作对照，不复制为第二单源）。
 > **收录口径（2026-09-20 补 · 库存清账批）**：本表 = **对位冻结面**（收录与 CLI 逐字对位 / 端差登记所需的键）——**非 locales 全量**；全量实体 = `thincoder-vscode/locales/{en,zh}.json` + 核容器 `thincoder-core/i18n.mjs`；**新增对位键须同轮登记本表**（登记义务 = 承 **D3** 计数·枚举纪律，本表为其落点——非本表新立；防「新键落表滞后」型缺口）。
@@ -261,6 +264,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | `tool.truncated` | …（已截断于 64K——完整文本在历史中） | … (truncated at 64K — full text in history) |
 | `workspace.required` | 请先打开文件夹——ThinCoder 需要一个工作区才能开工。 | Open a folder first — ThinCoder needs a workspace to work in. |
 | `workspace.requiredPlaceholder` | 请先打开文件夹… | Open a folder to start… |
+| `input.slotFull` | 主会话处理中——已有一条消息待发送，请等其处理完成后再发送 | Task running — one message is already queued; wait for it to be sent before submitting again. |
 
 - **占位符记法**：本端引擎只认 `${k}` 形态（`thincoder-vscode/webview/i18n.js:30`）——照抄 `{n}` 会把字面占位符显示给用户。
 - `sub.newBlocks`（2026-09-19 追加——出生可见性计数钮，机制单源 = `WEBVIEW.md` §5.5）：键名 / 双语逐字 / 占位符形态（`${n}`）三面以本表为单源；`${n}` = 未钉底期间出生块数。
@@ -271,6 +275,8 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 - `tool.interrupted` / `tool.truncated`（同批批 1 落）= **端特有键**（住 `thincoder-vscode/locales/{zh,en}.json`——不进核容器）；消费面 = `WEBVIEW.md` §4.5（M1 清扫状态词 / X5 截断标记）。
 - `workspace.required` / `workspace.requiredPlaceholder`（2026-09-21 无工作区守卫批）= **端特有键**（住 `thincoder-vscode/locales/{zh,en}.json`——不进核容器；无工作区守卫为端面机制，CLI 无对位面）。
   消费面 = `webview/send.js` 出口守卫（拒发 toast）/ `webview/loading.js` `applyBusyLock` 第三态占位符（守卫 > busy > 常态）；机制单源 = `PROJECT-SWITCHER.md` §4.1；登记依据 = 加键批同轮登记（D3）。
+- `input.slotFull`（2026-09-22 busy-injection 批 · 实施悬空裁定轮）= **端特有键**（住 `thincoder-vscode/locales/{zh,en}.json`——不进核容器；CLI 同判据提示为端内字面 `thincoder-cli/src/tui/key-handler.mjs:307`——本键 = 端面成文）。
+  消费面 = `webview/send.js` 二次提交守卫 toast（判据 = `WEBVIEW-INPUT.md` §1 C-B2-6 ①）；登记依据 = 加键批同轮登记（D3）。
 - `status.indexProgress`（W8 索引面归一新键——住本地档）+ 其 sibling `status.indexScan`：消费 = `thincoder-vscode/webview/status-bar.js:97-99`（`statusText` `kind:"index"` 两相位）。
 - 审批态键 = `sub.awaitingApproval`（`等待审批: ${tool}` / `Awaiting approval: ${tool}`）——**已实装**（见 §6.2）；消费 = `activity-view.js:90`。
 
@@ -288,7 +294,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | D-P8 | 状态文本载体 = **结构化 `statusText` 消息**（kind 判别 → webview 按 locale 渲染） | 否决 host 直发成品文本（host 不知 locale——复制 i18n = 双源）· 否决不做（判定句要求用例锁新增状态文本） |
 | D-P9 | Send 可见性 = running 期**隐藏** | 否决禁用态（双范式 + 仍占位） |
 | D-P10 | `scrolled N` = 端差保持（悬浮回底钮替代） | 否决补文本段（N 需新造单位 + 与钮重复） |
-| D-P11 | 协议增量 = **只增不改**、**十五项**登记（§3.2） | 否决 host 直发成品文本 · 否决新增 `turnStart` 族 |
+| D-P11 | 协议增量 = **只增不改**、**十七项**登记（§3.2） | 否决 host 直发成品文本 · 否决新增 `turnStart` 族 |
 | D-P12 | 合并权限卡**并入 `promptId` 族**（单一释放通道 `releasePermission` + id 精确匹配 + 孤儿回写） | 否决单开释放语义（同语义两通道 · 消费者按类分支）；`shift()` 队列头匹配已驳（D-P4 同据——陈旧卡不误 resolve） |
 | D-P13 | `waiting` 判据含**批权限队列** + **释放即刷**（刷新点 = 释放通道单点 `releasePermission`） | 否决逐路径各补 `_refreshStatus()`（散点——漏一处即残留）· 否决判据只列权限 / question（批卡停驻期读作 idle——状态栏失去「需你输入」语义） |
 | D-P14 | 诊断上行 `panelDiag` = **新消息（行 8 登记）**——出生 / 终态事件面痕迹入主侧日志 | 否决只留 webview 环形日志（DevTools 不可回读——本次事故正因不可回读而盲；理由详见 `WEBVIEW.md` D-W22）· 否决并入既有上行消息字段（无同缝——`webviewReady` 是一次性启动拍） |
@@ -356,6 +362,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | `agentSettings` | src/extension/chat-panel.mjs:341/:348/src/extension/panel-messages.mjs:253 | webview/chat.js:224 | `活` | 打开拍回批末位（F-W8——机制与判据单源 = `SETTINGS.md` §2.8） |
 | `atResults` | src/extension/panel-index.mjs:78/:82 | webview/chat.js:279 | `活` | — |
 | `autoApprove` | src/extension/panel-messages-turn.mjs:194/src/extension/panel-session.mjs:127 | webview/chat.js:223 | `活` | — |
+| `busyQueued` | src/extension/panel-messages.mjs:101 | webview/chat.js:200 | `活` | busy 排队单槽未消费态（host → webview 状态镜像——二次提交守卫；登记 = §3.2 行 17。② ③ 列 as-of 2026-09-22 实施轮 `--emit`） |
 | `batchPermissionRequest` | src/extension/permission-gate.mjs:109 | webview/chat.js:276 | `活` | 载荷增 `promptId`（§4.6） |
 | `clearMessages` | src/extension/panel-session.mjs:130 | webview/chat.js:190 | `活` | — |
 | `complete` | src/extension/panel-callbacks.mjs:230 | webview/chat.js:177 | `活` | — |
@@ -445,6 +452,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | `panelDiag` | webview/activity-diag.js:81 | src/extension/panel-messages.mjs:274 | `活` | §3.2 行 8——诊断上行（`{ kind:"subTrace", entries }`；批内合并——最多一消息 / 批）；主侧 `logEvent("ev:subtrace", …)` 一行 |
 | `permissionResponse` | webview/permission.js:63/:67/:71（`reply` 返回字面量——定义 `:60`） | src/extension/panel-messages.mjs:214 | `活` | 形状 = 局部箭头函数 |
 | `questionResponse` | webview/question.js:29（`payload` 局部绑定——绑定位 `:27`） | src/extension/panel-messages.mjs:211 | `活` | 形状 = 局部对象绑定 |
+| `queuedUserMessage` | webview/send.js:44 | src/extension/panel-messages.mjs:174 | `活` | busy 期排队注入上行（普通回合 busy 面——webview 本地气泡先行 + host 单槽 `_busyQueued`；登记 = §3.2 行 16。本行 as-of 2026-09-21 实现轮） |
 | `reconnectMcp` | webview/settings-tools.js:227 | src/extension/panel-messages.mjs:221 | `活` | — |
 | `removeProvider` | webview/model-picker.js:25/webview/settings-providers.js:68 | src/extension/panel-messages.mjs:225 | `活` | — |
 | `renameSession` | webview/session-bar.js:54 | src/extension/panel-messages.mjs:194 | `活` | — |
@@ -475,6 +483,14 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 **方向口径**：本表只收 webview → host。**「删」= host 消费位在位而 webview 发射恒无（死 handler）**——处置逐条入批档（`docs/batches/2026-09-18-vsc-settings-wiring.md` §2）并已随实现落地（三删 + 一接线转活——**本表现零 `删` 行**）；**删除落地 ⇒ 源零位 ⇒ 表行同步退场**（不留悬空行——同 §12 口径）。**「补」= 发射在位而 host 缺消费位**（本表现零行）。
 
 ## 变更记录
+
+- 2026-09-22（**busy-injection 批 · 实施悬空裁定轮（fix round）· eng-designer**——承 `docs/batches/2026-09-21-busy-injection.md` §5 决策透明表 #5 / #6 + 父侧裁定）：
+  §3 增 `busyQueued` 行 + §3.2 **十六 → 十七项**（增行 17 = `busyQueued` 新消息——host → webview 状态镜像；D3：计数与列表同改 · §7 D-P11 同改）+ §12 新增 `busyQueued` 行（② ③ 列 = 计划落点，实施轮 `--emit` 重出）+ §6.3 键表 **19 → 20 键**（增 `input.slotFull`——端特有键 + 登记注）。
+  **§4.1 就地收正**（存量失效表达——与 C-B2-6 相抵的两行）：回合执行中消息由「一律拒收」改为**按面分流**（普通回合 busy 面入槽 / 挂起会内 busy 拒收）+ 回显条同改；死坐标 `panel-messages.mjs:66` → `:102`。
+  **§13 零改**（新信号方向 = host → webview ⇒ 收面 §12；发面表零行）；**既有消息名 / 载荷字段 / 首列判别式集零变**（既有行零改）。
+
+- 2026-09-22（**busy-injection 批 · 协议登记补落轮 · eng-designer**——承 `docs/batches/2026-09-21-busy-injection.md` §2：§3.2 **十五 → 十六项**（增行 16 = `queuedUserMessage` 新消息——webview → host 输入上行；D3：计数与列表同改 · §7 D-P11 同改）+ §13 **新增 `queuedUserMessage` 行**
+  （② `webview/send.js:44` · ③ `src/extension/panel-messages.mjs:174` · ④ `活`——`--emit` 实测，W12-1 双向对账绿）。**消息名 / 载荷字段 / 首列判别式集零变**（新增一行 = 实现落地登记，非协议面新语义）。
 
 - 2026-09-21（**块标题行对齐批 · eng-designer**——承 `docs/batches/2026-09-21-vsc-block-title-align.md` §1）：§6.2「状态区·running」行本端现状改**闭枚举**（结构化工具行（嵌套 = `label/tool`）/ `思考中…`）+ CLI 形态列补 `command≤60` 来源坐标；**输出面不入状态区**（判据单源 = `WEBVIEW.md` §5.2）。**消息名 / 载荷字段 / 首列判别式集零变**。
 

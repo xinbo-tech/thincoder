@@ -353,7 +353,7 @@ test("T-D9 边界：墓碑 → depInfo；cancelled 依赖 → depc 停靠；disc
 
 // ═══ T-D10（现状锁——AC-N1/N2 覆盖）：症状 1 不重开 ═════════════════════════
 
-test("T-D10 现状锁：susp 等待态 userMessage 不动池（Map 引用与条目数不变）；busy 态拒收（不新开并发回合）", async () => {
+test("T-D10 现状锁：susp 等待态 userMessage 不动池（Map 引用与条目数不变）；普通回合 busy 入单槽 / 挂起会内 busy 拒收（不新开并发回合）", async () => {
   const pool = new Map([["11", mkEntry({ id: 11, role: "explore" })]])
   const history = []
   history._asyncSubagents = pool
@@ -375,10 +375,19 @@ test("T-D10 现状锁：susp 等待态 userMessage 不动池（Map 引用与条�
   const realWarn = vscode.window.showWarningMessage
   vscode.window.showWarningMessage = async (m) => { warned.push(m) }
   try {
-    const busy = { _turnState: "running", _susp: null, _chatCalls: [], _chat(t) { busy._chatCalls.push(t) } }
+    // 普通回合 busy（无会话）→ 单槽入队（C-B2-6）：不开并发回合、零警告
+    const busy = { _turnState: "running", _susp: null, _busyQueued: [], _chatCalls: [], _chat(t) { busy._chatCalls.push(t) } }
     await handlePanelMessage(busy, { type: "userMessage", text: "during" })
-    assert.equal(warned.length, 1, "busy 拒收一次警告（不静默丢）")
-    assert.deepEqual(busy._chatCalls, [], "拒收不直呼 _chat（无并发回合）")
+    assert.deepEqual(busy._busyQueued.map((q) => q.text), ["during"], "普通回合 busy ⇒ 入单槽（F16——不开并发回合）")
+    assert.deepEqual(busy._chatCalls, [], "入队不直呼 _chat（无并发回合）")
+    assert.equal(warned.length, 0, "入队零警告")
+    assert.equal(pool.size, 1, "入队路径不动池")
+    // 挂起会话内 busy（_susp 在场）→ 拒收 + 警告（C-B2-4 收窄后仅存面）：同不开并发
+    const inSusp = { _turnState: "running", _susp: { active: true }, _busyQueued: [], _chatCalls: [], _chat(t) { inSusp._chatCalls.push(t) } }
+    await handlePanelMessage(inSusp, { type: "userMessage", text: "during-session" })
+    assert.equal(warned.length, 1, "挂起会内 busy 拒收一次警告（不静默丢）")
+    assert.deepEqual(inSusp._chatCalls, [], "拒收不直呼 _chat（无并发回合）")
+    assert.equal(inSusp._busyQueued.length, 0, "拒收零入槽")
     assert.equal(pool.size, 1, "拒收路径不动池")
   } finally {
     vscode.window.showWarningMessage = realWarn

@@ -286,18 +286,34 @@ export function createKeyHandler(ctx) {
     }
 
     if (state.processing) {
-      // busy 门禁（INPUT-LOCK C'——2026-09-09 + INPUT-LOCK-BEHAVIOR-REVISED——2026-09-09）：
-      // processing（含 digest——单一判据）输入不禁——吞提交不吞字符（打字照常回显）；Enter
-      // 提交吞 + busy 提示——斜杠同禁发（白名单已删——/exit 也发不出——退出靠 Ctrl+C 终端
-      // 层通道——门禁前不误伤）；空 Enter 静默（text 非空才吞）；多行换行
-      // （meta/enter——编辑）照常放行。**第 31 批**：↑↓ 不再在此全屏蔽——分流下沉到下方
-      // 三规则块（竖移放行 / 历史导航禁；TUI-INPUT-BOX.md §3）；Tab 仍吞（死条件在案——原样保留）。
+      // busy 门禁（INPUT-LOCK C'——2026-09-09 + F16 busy 单槽注入——2026-09-21）：processing
+      // （含 digest——单一判据）输入不禁——打字照常回显；Enter 提交 = 单槽注入（放行判据六条
+      // = TUI-INPUT-BOX.md §4.1：非挂起 · 非模态 · 非斜杠 · 非空 · 槽空 ⇒ 清框入 pendingInput，
+      // 回合尾 drain / 挂起 driver 送达）；斜杠同禁发（白名单已删——退出靠 Ctrl+C 终端层）；
+      // 模态 / 挂起两态 / 槽满 → 吞 + 提示（文本保留）；空 Enter 静默；多行换行（meta/enter——
+      // 编辑）照常放行。**第 31 批**：↑↓ 分流下沉到下方三规则块；Tab 仍吞（死条件在案——原样保留）。
       if (key.name === "tab") return
-      const isSend = (key.name === "return" && !key.meta) || (str === "\r" && !key.meta)
-      if (isSend && state.input.join("").trim()) {
-        pushLine(`[主会话处理中 —— 消息未发送（回合结束后请重按 Enter）]`, C.warn)
-        render()
-        return
+      if ((key.name === "return" && !key.meta) || (str === "\r" && !key.meta)) {
+        const text = state.input.join("").trim()
+        if (!text) return // 条件 5：空 Enter 静默（既有）
+        state.pendingInput ??= []
+        // 条件 2/3/4 不满足（模态 / 挂起两态 / 斜杠——模态分派在前，此处按判据表如实守卫）→ 吞 + busy 提示
+        if (text.startsWith("/") || state.permission || state.question || state.suspended || state._suspPending) {
+          pushLine(`[主会话处理中 —— 消息未发送（回合结束后请重按 Enter）]`, C.warn)
+          render(); return
+        }
+        // 条件 6：单槽满 = 拒绝 + 提示 + 文本保留（二次提交裁定——与挂起态槽满分支逐字同构）
+        if (state.pendingInput.length > 0) {
+          pushLine(`[主会话处理中 —— 已有一条消息待发送，请等其处理完成后再发送]`, C.warn)
+          render(); return
+        }
+        // 入槽（判据全满足）：清框 + history 收录 + 草稿复位 + 单槽填充（§4.1 执行序）
+        state.input = []; state.cursor = 0
+        state.history.push(text)
+        state.historyIndex = -1
+        state._draft = null
+        state.pendingInput.push(text)
+        render(); return
       }
     }
 
@@ -416,9 +432,9 @@ export function createKeyHandler(ctx) {
         const text = state.input.join("").trim()
         // §17 D-S5/F3/F7 + 偏差 #1 + INPUT-LOCK 单槽化（F-6——2026-09-09）：挂起态
         // （suspended 或释放窗口 _suspPending）Enter = 新回合输入（非打断）——填
-        // pendingInput 单槽（至多一条待交接——busy 提交吞在 L265 门禁先拦，digest 期
-        // 不会到这——仅挂起空闲/释放窗口触达）由挂起会话调度；输入框零干扰（F3）。
-        // 槽满（竞态防御——不覆盖不丢失）→ 吞 + 提示，文本保留在输入框。
+        // pendingInput 单槽（至多一条待交接——挂起会话内 busy（含 digest）提交在 busy
+        // 门禁先拦（F16 §4.1 条件 3）——仅挂起空闲/释放窗口触达）由挂起会话调度；
+        // 输入框零干扰（F3）。槽满（竞态防御——不覆盖不丢失）→ 吞 + 提示，文本保留在输入框。
         if ((state.suspended || state._suspPending) && text && !text.startsWith("/")) {
           state.pendingInput ??= []
           if (state.pendingInput.length > 0) {

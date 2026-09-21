@@ -395,9 +395,12 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
   const ctxTokensHint = state.ctxCache.tokens > 0 ? ` ${fmtK(state.ctxCache.tokens)}` : ""
   const ctxHint = ctxPct > 0
     ? ctxPct >= 80 ? ` │ ${ansi.reset}${C.warn}context ${ctxPct}%${ctxTokensHint}${ansi.reset}${ansi.dim}` : ` │ context ${ctxPct}%${ctxTokensHint}` : ""
-  // INPUT-LOCK-ASYNC（C'——F-3）：busy（processing 含 digest）状态栏提示——取代旧
-  // 排队提示（F-7 已删）——“主会话处理中——Enter 提交禁用”
-  const enterHint = state.processing ? `主会话处理中 — Enter 提交禁用（字符可输入，回合结束请重按 Enter）` : "Enter: send"
+  // INPUT-LOCK-ASYNC（C'——F-3）：busy（processing 含 digest）状态栏提示——取代旧排队提示
+  // （F-7 已删）；F16（TUI.md §7.5）：单槽已填 ⇒ 段收正为 queued 反馈（dim 现有段样式 ·
+  // 零注意力色对——F13 豁免；消费即消失——派生自 pendingInput.length，零簿记零定时器）。
+  const enterHint = state.processing
+    ? ((state.pendingInput?.length ?? 0) > 0 ? "已排队 1 条消息" : `主会话处理中 — Enter 提交禁用（字符可输入，回合结束请重按 Enter）`)
+    : "Enter: send"
   // LEDGER-SURFACE（§2.30.3.3/§2.30.3.4）：L1 常驻标记——状态段簇尾（scrollHint 后、键位组前）；
   // 空标记零注入（半态逐字节等价——同 :233-238 纪律）；warn = 当前项目老化 > 0（警示色段包裹）
   const lg = state.ledger

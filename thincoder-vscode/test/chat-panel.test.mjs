@@ -167,7 +167,7 @@ function a2Panel({ titleRejects = false } = {}) {
   return { p, titleGate }
 }
 
-test("⑨ A2 标题窗口 = busy（F-A2 测试锁 + INPUT-LOCK C'）：首回合标题 await 期间 _turnState 仍 running——userMessage 拒收（不并发不排队——禁排队）；标题完成后才归位", async () => {
+test("⑨ A2 标题窗口 = busy（F-A2 测试锁 + C-B2-6）：首回合标题 await 期间 _turnState 仍 running——userMessage 入 `_busyQueued` 单槽（不并发——F16 排队注入）；标题完成后才归位", async () => {
   const { p, titleGate } = a2Panel()
   const turn = runPanelChat(p, { text: "first" })
   turn.catch(() => {}) // 防 settle 窗口 unhandled rejection（assert.rejects 稍后接管）
@@ -175,7 +175,8 @@ test("⑨ A2 标题窗口 = busy（F-A2 测试锁 + INPUT-LOCK C'）：首回合
   assert.equal(titleGate.length, 1, "回合尾标题已触发（isFirstMessage——finally 内归位前）")
   assert.equal(p._turnState, "running", "标题 await 期间忙态未归位——仍 running（标题窗口 = busy——修前此点已 idle → 消息直开并发回合）")
 
-  // 标题窗口内 userMessage → running 拒收——不并发直发不排队（R3 无池首回合并发锁 + C'）
+  // 标题窗口内 userMessage → 普通回合 busy 面入 `_busyQueued` 单槽（C-B2-6——不并发直发；
+  // 归位后由 enterSuspensionTurn 装载：池空 → idle 归位分支续发）
   const realWarn = vscode.window.showWarningMessage
   const warned = []
   vscode.window.showWarningMessage = async (m) => { warned.push(m) }
@@ -185,7 +186,8 @@ test("⑨ A2 标题窗口 = busy（F-A2 测试锁 + INPUT-LOCK C'）：首回合
     vscode.window.showWarningMessage = realWarn
   }
   assert.equal(p._chatCalls.length, 0, "标题期间消息不直发 _chat（不并发新回合）")
-  assert.equal(warned.length, 1, "拒收警告一次（禁排队——无入队容器无回执）")
+  assert.deepEqual((p._busyQueued ?? []).map((q) => q.text), ["during-title"], "普通回合 busy ⇒ 入单槽（F16 排队注入——不再拒收）")
+  assert.equal(warned.length, 0, "入槽零警告（受理即反馈）")
 
   // 释放标题 → 归位执行（turnState idle 先于 loading:false——F-C2b 时序——A3 无闪烁前提）
   titleGate[0]()

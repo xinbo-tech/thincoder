@@ -20,9 +20,10 @@ import { handleNewSession, handleSwitchSession, handleDeleteSession, handleRenam
 // 前缀以落在 reverse 机检的 `HOST_DISPATCH` 扫描域内）。
 import { handleAbort, handleCancelSubagent, handleInterrupt, handleOpenFile, handleOpenDiff, handleQuestionResponse, handleSetAutoApprove, handleAtComplete, handlePermissionResponse, handleBatchPermissionResponse } from "./panel-messages-turn.mjs"
 import { handleSaveProviderKey, handleDeleteProviderKey, handleSaveMcpServer, handleDeleteMcpServer, handleReconnectMcp, handleEditMcp, handleTestMcp, handleAddProvider, handleRemoveProvider, handleSetProviderProxy, handleSetKey, handleSaveEmbedKey, handleDeleteEmbedKey, handleSaveWebsearchKey, handleDeleteWebsearchKey, handleTestProvider, handleBuildIndex, handleGetMcpStatus, handleMcpTools, handleSaveAgentSettings, handleGetAgentSettings, handleSetAdvisorGuard, handleSetEngineeringEnabled, handleSetPlanMode, handleGetShellCandidates, handleSaveShellSettings, handleSaveProxySettings, handleTestProxy } from "./panel-messages-settings.mjs"
-import { savePastedImages, runVisionReader } from "./image-handler.mjs"
+// C-B2-6 细则⑥（busy-injection 批 fix 轮 2026-09-22）：F-1 降级判决函数已迁 `image-handler.mjs`
+// ——本档只留触发（`downgradeNonVisionImages` + `visionReader` per-call 缝）。
+import { savePastedImages, downgradeNonVisionImages } from "./image-handler.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"
-import { specForModel } from "../specs.mjs"
 import { backgroundStatus, reassertLiveChildren } from "./suspension.mjs"
 // 无工作区守卫（2026-09-21 批 · `PROJECT-SWITCHER.md` §4.1）：② 回合入口守卫（leaf——无环）
 import { blockOnNoWorkspace } from "./workspace-guard.mjs"
@@ -91,6 +92,16 @@ export function clearProjectOverride() {
 }
 
 /**
+ * C-B2-6 细则①（busy-injection 批 fix 轮 2026-09-22）：busy 排队单槽未消费态镜像推送——
+ * webview 二次提交守卫判据源（`busyQueued { pending }`；判据 = host 单槽实际占用，权威面）。
+ * 推送点 = 入槽 / 忙分支判决 / 消费两分支（`panel-turn-stages.mjs` 装载①②）/ `webviewReady`
+ * 握手重推（Reload 冷启重同步）。`{ pending }` 值恒 = 单槽实况（非事件——重推幂等）。
+ */
+export function pushBusyQueued(panel) {
+  panel._panel?.webview.postMessage({ type: "busyQueued", pending: (panel._busyQueued?.length ?? 0) > 0 })
+}
+
+/**
  * C1（SESSION-FLOW-C F-C1e——retry 并入 userMessage 同入口——修 H-F 守卫双份）：userMessage
  * 与 retry 共用同一路由——busy 拒收（INPUT-LOCK-ASYNC C'）与挂起分流（_chat 内 susp 守卫）
  * 全走一套判断——retry 不再绕过路由直呼 _chat（并发新回合竞态——AC-S2 同款）。
@@ -103,13 +114,24 @@ export async function routeUserTurn(panel, { text, modelOverride, reasoning, pro
   // ② 无工作区守卫（**先于** busy 与 `savePastedImages`——图片不落 `<cwd>/.thincoder/tmp/`）：
   // webview 发消息 / retry 共用本入口 ⇒ 无文件夹窗口里一律拒（提示明示——不静默丢）。
   if (blockOnNoWorkspace(panel)) return
-  // INPUT-LOCK-ASYNC（C'——2026-09-09——F-1/F-3）：busy（_turnState==="running"——回合含
-  // digest/标题窗口——单一判据）输入禁用——消息一律拒收不排队（排队机制与排队回执 UI
-  // 消息类型全删）——webview 输入框已由 loading.js 锁（正常发送到不了这里——本守卫
-  // 兜外部入口：Ask ThinCoder 命令/retry/竞态窗口）——提示明示（不静默丢）。susp 等待态
-  // （纯后台池跑——主空闲）→ _chat 上游分流（pendingInput 单槽——D-S5 唤醒）；idle 直发。
+  // INPUT-LOCK-ASYNC（C'——2026-09-09——F-1/F-3）→ C-B2-6 busy 排队注入（busy-injection
+  // 2026-09-21）：busy（`_turnState === "running"`——回合含 digest/标题窗口——单一判据）分流两态——
+  //   ① 挂起会话内 busy（`panel._susp` 在场——digest / 会话内用户回合）：拒收不排队
+  //      （C-B2-4 收窄后仅存面）——提示明示（不静默丢）；
+  //   ② 普通回合 busy 面（无会话）：入 `_busyQueued` 单槽（C-B2-6；槽满 = 拒收 + 提示，
+  //      槽内既有不被覆盖）——回合尾由 `enterSuspensionTurn` 装载两分支送达。
+  // susp 等待态（纯后台池跑——主空闲）→ _chat 上游分流（pendingInput 单槽——D-S5 唤醒）；idle 直发。
   if (panel._turnState === "running") {
-    vscode.window.showWarningMessage("ThinCoder: a task is running — wait for it to finish before sending.")
+    if (panel._susp || (panel._busyQueued?.length ?? 0) > 0) {
+      pushBusyQueued(panel) // C-B2-6 细则①：判决后推实际占用（拒收 ⇒ 槽内实况——webview 镜像权威收敛）
+      vscode.window.showWarningMessage("ThinCoder: a task is running — wait for it to finish before sending.")
+      return
+    }
+    const busySaved = Array.isArray(images) && images.length > 0 ? savePastedImages(images, _cwd()) : undefined
+    // 入槽项携来源标记（`fromBusyQueue`——装载① `runTurn` 闭包据此只对排队支降级，纯挂起既有
+    // 路径零改）与 `visionReader` per-call 缝（C-B2-6 细则⑥：送达侧判决与 idle 面同判定同注入形态）。
+    ;(panel._busyQueued ??= []).push({ text, modelOverride, reasoning, providerName, images: busySaved, fromBusyQueue: true, visionReader })
+    pushBusyQueued(panel) // 入槽 ⇒ pending:true（受理即反馈——webview 二次提交守卫判据源）
     return
   }
   // Plan B (GitHub thincoder#3): the webview sends pasted images as base64
@@ -118,36 +140,28 @@ export async function routeUserTurn(panel, { text, modelOverride, reasoning, pro
   // compat), but from here on it carries paths — setupAgentRun appends the
   // "[Attached images: ...]" pointer and the model views them via read_image.
   // F-1（IMAGE-DOWNGRADE-VISION——2026-09-09——评审 #1 定稿 appendImagePointer 零动）：本入口 =
-  // depth-0 主回合面——非视觉主模型贴图（specForModel(modelOverride).multimodal 假——webview
-  // echo）→ 先置 running（C' 忙锁——await 窗口拒并发回合）→ 视觉渠道一次性子代理读图
-  // （visionReader ?? runVisionReader——评审 #6 seam：参数注入 mock、缺省回落生产）——成功：描述
-  // 注入 text（[图片 <路径> 描述: <描述>]）+ images 清空（throw 路径不再到达）；无渠道/spawn
-  // 失败/超时/空返/异常 → 原样下发（主回合 setup 现报错文案——可读不静默丢）。susp 等待态
-  // 不降级（排队回合走现路径——depth>0 子代理无此入口——边界明示）。
+  // depth-0 主回合面——非视觉主模型贴图（webview echo）→ 视觉渠道一次性子代理读图（成功：描述
+  // 注入 text（[图片 <路径> 描述: <描述>]）+ images 清空；无渠道/spawn 失败/超时/空返/异常 → 原样
+  // 下发（主回合 setup 现报错文案——可读不静默丢）。susp 等待态不降级（排队回合走现路径——
+  // depth>0 子代理无此入口——边界明示）。
+  // C-B2-6 细则⑥（2026-09-22 fix 轮）：判决 / 读图 / 忙锁（await 窗前先置 running）已抽入
+  // `image-handler.mjs` 的 `downgradeNonVisionImages`（三调用点共用同一判定——本调用点保留
+  // `_turnState !== "susp"` 门）。
   let saved = Array.isArray(images) && images.length > 0
     ? savePastedImages(images, _cwd())
     : undefined
-  // A12（群 A 批）：降级窗（下段 await）的外部取消载体——窗生命周期临时字段
-  // （panel._visionAbort——唯一新字段；零新布尔状态）；finally 幂等清理。
   let visionAbort = null
-  if (saved?.length && modelOverride && panel._turnState !== "susp" && !specForModel(modelOverride).multimodal) {
-    panel._publishTurnState?.("running")
-    visionAbort = new AbortController()
-    panel._visionAbort = visionAbort
-    let out = null
-    // ENG-PLAN-EXCLUSION（FR31 · 端差面②/KD9）：工程真值随旁路面传下（槽权威同源——与 depth-0
-    // 装配面同一真值源 `agentSettings`）⇒ 视觉渠道子代理装配与主面同口径（工程模式 plan 不入表）；
-    // 真值不可读 ⇒ enabled:false（回落现行为——不制造假拒绝）。
-    let engState
-    try { engState = { enabled: agentSettings(panel._agentSettingsSession()).engineering === true } } catch { engState = { enabled: false } }
-    try { out = await (visionReader ?? runVisionReader)({ paths: saved, providerName, cwd: _cwd(), signal: visionAbort.signal, engState }) } catch { out = null }
-    finally { if (panel._visionAbort === visionAbort) panel._visionAbort = null }
-    if (out?.ok && typeof out.description === "string" && out.description.trim()) {
-      const marker = `[图片 ${saved.join("、")} 描述: ${out.description.trim()}]`
-      text = text?.trim() ? `${text}\n\n${marker}` : marker
-      saved = undefined
-    }
+  if (saved?.length && modelOverride && panel._turnState !== "susp") {
+    const d = await downgradeNonVisionImages(panel, { text, images: saved, providerName, modelOverride, cwd: _cwd(), visionReader })
+    text = d.text
+    saved = d.images
+    visionAbort = d.visionAbort
   }
+  // C-B2-6 细则①（fix 轮收敛补全——判据源不变式「host 推送权威收敛」不留死角）：归位受理
+  // 路径同推槽内实况（幂等——正常槽空 ⇒ `pending:false`；有残项 ⇒ `true`）。补因：webview
+  // 镜像在提交受理时本地先行置位，若该消息落归位路径（镜像仍 running 而 host 已归位）则
+  // 入库路零推送 ⇒ 镜像黏滞 true——后续 busy 期提交被守卫误拒至 Reload（窄竞态）。
+  pushBusyQueued(panel)
   panel._chat(text, modelOverride, reasoning, providerName, saved)
   // C-MA12-4（停止语义 = 启动即中止）：窗内被 Stop → 用户消息照常入 history（at-most-half-
   // a-turn）但回合建立即 abort——置位序必须在 _chat 调用**之后**（其入口清陈旧闩，置前
@@ -162,6 +176,11 @@ export async function routeUserTurn(panel, { text, modelOverride, reasoning, pro
 export async function handlePanelMessage(panel, msg) {
   switch (msg.type) {
     case "userMessage":
+      routeUserTurn(panel, { text: msg.text || "", modelOverride: msg.model, reasoning: msg.reasoning, providerName: msg.provider, images: msg.images })
+      break
+    case "queuedUserMessage":
+      // C-B2-6（busy-injection 2026-09-21）：普通回合 busy 面排队上行——同入口同判据同槽
+      // （webview 本地气泡已先行上屏；此处只做 host 侧单槽装载——送达由回合尾装载两分支）。
       routeUserTurn(panel, { text: msg.text || "", modelOverride: msg.model, reasoning: msg.reasoning, providerName: msg.provider, images: msg.images })
       break
     case "selectModel": {
@@ -262,6 +281,7 @@ export async function handlePanelMessage(panel, msg) {
       panel._panel?.webview.postMessage({ type: "i18n", strings: loadLocaleStrings(vscode.env.language) })
       panel._panel?.webview.postMessage({ type: "agentSettings", settings: agentSettings(panel._agentSettingsSession?.() ?? null) })
       panel._pushStatus()
+      pushBusyQueued(panel) // C-B2-6 细则①：Reload 冷启握手重同步（单槽未消费态镜像——对位 workspaceGuard 先例；排四件握手之后——交握序列零改）
       // B2（SESSION-FLOW-B F-B2a/F-B2b——2026-09-09）：握手后接快段 openSessionContent——
       // 会话打开**单向 boot**：内容（pushProject → loadSession 内部序 autoApprove → planMode
       // → clearMessages → historyPage → sessions）只在 webviewReady 后落定——resolve 期

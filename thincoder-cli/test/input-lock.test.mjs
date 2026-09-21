@@ -1,9 +1,10 @@
 /**
  * input-lock.test.mjs — INPUT-LOCK-ASYNC（C'——INPUT-LOCK-ASYNC.md——2026-09-09）
  * + INPUT-LOCK-BEHAVIOR-REVISED（INPUT-LOCK-BEHAVIOR-REVISED.md——2026-09-09 修订——
- * 白名单删——忙时斜杠同禁发）：用例表测试锁：busy（processing 含 digest）提交禁发（吞提交
- * 不吞字符——打字回显）/ 忙时斜杠同吞（/exit 也发不出）/ 空 Enter 静默 / 挂起空闲输入开放
- * （单槽）/ 释放窗口单槽交接 / abort 零丢失 / 状态栏 busy 文案。
+ * 白名单删——忙时斜杠同禁发）：用例表测试锁：busy 普通回合 Enter = 单槽注入（F16 翻转——
+ * AC-1；`docs/cli/design/TUI-INPUT-BOX.md` §4.1）/ 挂起两态 · 斜杠 · 槽满 · 空 照旧吞 /
+ * 挂起空闲输入开放（单槽）/ 释放窗口单槽交接 / abort 零丢失 / 状态栏 busy 文案。
+ * F16 busy-injection（2026-09-21）：T-F16-7 = 本档 AC-1 断言翻转 + 既有语义零回归面。
  * 手法：createKeyHandler 桩 ctx 直驱按键（无真实 TTY）；suspensionSession 桩 agent/state
  * 直驱驱动循环（ctx.runAgent 注入——runAgentTurn 测试缝——真实单消息交接路径）。快层直跑
  * （<800ms——无定时器悬挂：驱动会话必然终止）。
@@ -53,28 +54,30 @@ function keyCtx(state, over = {}) {
 
 const pressEnter = (kh) => kh("\r", { name: "return" })
 
-// ─── AC-1/AC-4：busy 提交吞 + 忙时斜杠同禁（普通回合 + digest 两态）──────
+// ─── T-F16-7（AC-1 翻转）：busy 普通回合入槽 + 排除面同吞（挂起两态/斜杠/空）─────
 
-test("busy（processing）提交禁发：Enter 提交吞 + busy 提示 + 字符保留（AC-1/AC-4——F-3 修订）；digest（processing+suspended）同判据不落 pendingInput；忙时斜杠（/exit）同吞禁发（白名单已删）；空 Enter 静默无提示", () => {
-  // 普通回合 busy：打字照进输入框（回显），Enter 吞——文本保留 + busy 提示 + 不 submit
+test("T-F16-7 busy 普通回合 Enter = 单槽注入（AC-1 翻转——F16 busy-injection 2026-09-21）：pendingInput 填入 + 清框 + history 收录 + 零 submit；digest（processing+suspended）同判据不入槽；忙时斜杠（/exit）同吞禁发；空 Enter 静默；多行编辑照常", () => {
+  // 普通回合 busy：打字照进输入框（回显），Enter = 单槽注入（清框 + history 收录 + 不 submit）
   const s1 = baseState({ processing: true, input: [..."hello"], cursor: 5 })
   const c1 = keyCtx(s1)
   const kh1 = createKeyHandler(c1)
   kh1("h", { name: "h" }) // 字符回显（busy 期可打字）
   assert.deepEqual(s1.input, [..."helloh"], "字符照进输入框回显（吞提交不吞字符）")
   pressEnter(kh1)
-  assert.equal(c1.calls.submit, 0, "Enter 提交被吞（不 submit）")
-  assert.equal(c1.calls.lines.length, 1, "busy 提示一次")
-  assert.match(c1.calls.lines[0], /主会话处理中/, "busy 提示文案含主会话处理中")
-  assert.deepEqual(s1.input, [..."helloh"], "吞提交不清框（文本保留——回合结束重按 Enter）")
+  assert.equal(c1.calls.submit, 0, "Enter 不经 submit（回合在跑——单槽路径）")
+  assert.equal(c1.calls.lines.length, 0, "入槽零提示行（反馈 = 状态栏 queued 段——TUI.md §7.5）")
+  assert.deepEqual(s1.pendingInput, ["helloh"], "入 pendingInput 单槽（F16 放行判据六条）")
+  assert.deepEqual(s1.input, [], "入槽清框（用户视为已发送）")
+  assert.deepEqual(s1.history, ["helloh"], "history 照常收录")
 
-  // digest 两态（suspended && processing）：同一 processing 判据——吞——不落 pendingInput
+  // digest 两态（suspended && processing）：条件 3——同一 processing 判据——吞——不落 pendingInput
   const s2 = baseState({ processing: true, suspended: true, input: [..."during-digest"] })
   const c2 = keyCtx(s2)
   pressEnter(createKeyHandler(c2))
-  assert.equal(c2.calls.submit, 0, "digest 期 Enter 提交吞（F-1 单一判据）")
-  assert.equal(s2.pendingInput.length, 0, "digest 期不排队（旧 D-S5 入队已废——禁排队）")
+  assert.equal(c2.calls.submit, 0, "digest 期 Enter 提交吞（挂起两态零改——F16 条件 3）")
+  assert.equal(s2.pendingInput.length, 0, "digest 期不入槽（挂起会话内 busy 全吞）")
   assert.match(c2.calls.lines[0], /主会话处理中/, "digest 期 busy 提示同文案")
+  assert.deepEqual(s2.input, [..."during-digest"], "被吞文本保留在输入框（吞不丢）")
 
   // 忙时斜杠同禁发（INPUT-LOCK-BEHAVIOR-REVISED——白名单直执行已删——/exit 也吞——退出靠 Ctrl+C）
   const s3 = baseState({ processing: true, input: [..."/exit"] })

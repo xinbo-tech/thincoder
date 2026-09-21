@@ -195,6 +195,9 @@ window.addEventListener("message", (e) => {
     // 无工作区守卫（2026-09-21 批 · `PROJECT-SWITCHER.md` §4.1）：host 守卫态镜像 ⇒
     // 占位符第三态（拒发出口守卫单源 = send.js）
     case "workspaceGuard":   S._workspaceRequired = m.active === true; applyBusyLock(); break
+    // C-B2-6 细则①（busy-injection 批 fix 轮 2026-09-22）：host 单槽未消费态镜像（webview
+    // 二次提交守卫判据源 = `send.js` 出口守卫；提交受理时本地先行置位、本推送权威收敛）
+    case "busyQueued":       S._busyQueuedPending = m.pending === true; break
     case "complete":         clearStatusText(); finish(); break
     case "aborted":          clearStatusText(); finish(true); break
     case "error":

@@ -35,6 +35,12 @@ before(() => {
   cleanupEnv = env.cleanup
   capturedPosts = env.capturedPosts
   installChatFixture()
+  // F16（busy-injection 2026-09-21）：send() 排队路径清理面（生产 index.html 常驻）——
+  // 共享 fixture 零改，本档自备补充（先例 `webview-input-enter.test.mjs`）。
+  document.body.insertAdjacentHTML("beforeend", `
+    <div id="paste-bar" style="display:none"></div>
+    <div id="paste-badge"></div>
+  `)
 })
 
 after(() => {
@@ -62,6 +68,7 @@ const sendShown = () => document.getElementById("send-btn").style.display === "f
 function resetBusy({ S, ctx }) {
   S._turnState = "idle"
   S._suspended = false
+  S._busyQueuedPending = false // C-B2-6 细则①（fix 轮）：二次提交守卫镜像初启态
   S._suspCounts = null
   S._phase = null
   ctx.isRunning = false
@@ -234,7 +241,7 @@ test("④ _suspCounts 在 re-post 间不陈旧（AC-C2e）：digest 间重发/se
 
 // ─── ⑤ INPUT-LOCK busy 输入面（修订——INPUT-LOCK-BEHAVIOR-REVISED：不禁录入只禁 send）───
 
-test("⑤ busy 不禁录入 + send 禁（INPUT-LOCK-BEHAVIOR-REVISED——AC-1/AC-2）：running → readOnly false（打字回显）+ busy 占位符 + send 拒发（Enter/发送按钮——文本保留不吞）；loading 交替不翻；susp/idle 默认占位符；Ctrl+I 中断模态占位符归属（ctx._interruptMode——注入通道不误伤）", async () => {
+test("⑤ busy 不禁录入 + send 分流（INPUT-LOCK-BEHAVIOR-REVISED + C-B2-6）：running → readOnly false（打字回显）+ busy 占位符 + send 排队注入（queuedUserMessage——入槽清框）；loading 交替不翻；susp/idle 默认占位符；Ctrl+I 中断模态占位符归属（ctx._interruptMode——注入通道不误伤）", async () => {
   const { S, ctx, t, send, setLoading, applyBusyLock, handleTurnStateMessage } = await loadWebview()
   resetBusy({ S, ctx })
   const input = ctx.inputEl
@@ -245,13 +252,17 @@ test("⑤ busy 不禁录入 + send 禁（INPUT-LOCK-BEHAVIOR-REVISED——AC-1/A
   setLoading(ctx, true)
   assert.equal(input.readOnly, false, "running → 输入不禁（readOnly false——AC-1 可录入）")
   assert.equal(input.placeholder, t("input.busyPlaceholder"), "running → busy 占位符文案")
-  // 打字回显 + send 拒发（Enter 路径 = send() 出口守卫——文本保留不吞不拒收）
+  // 打字回显 + send 分流（Enter 路径 = send() 出口守卫——C-B2-6 普通回合 busy 面）
   input.value = "busy 期录入的文字"
   const before = userPosts().length
+  const mark = capturedPosts.length
   send()
-  assert.equal(input.value, "busy 期录入的文字", "send 拒发后文本保留输入框（AC-2——不吞）")
-  assert.equal(userPosts().length, before, "busy send 拒发——无 userMessage 发出（AC-2）")
-  assert.equal(input.placeholder, t("input.busyPlaceholder"), "拒发提示 = busy 占位符（send.js 出口守卫）")
+  const posts = capturedPosts.slice(mark)
+  assert.equal(posts.filter((m) => m.type === "queuedUserMessage").length, 1, "普通回合 busy ⇒ queuedUserMessage 一条（C-B2-6 排队注入）")
+  assert.equal(posts[0].text, "busy 期录入的文字", "文本随消息上行（host 单槽装载）")
+  assert.equal(input.value, "", "入槽清框（消息已受理——用户视为已发送）")
+  assert.equal(userPosts().length, before, "零 userMessage 发出（不经正常发送面）")
+  assert.equal(input.placeholder, t("input.busyPlaceholder"), "占位符 = busy 串（running 派生——零伤）")
   // loading 交替不翻（running 派生——防 digest 间闪烁）
   setLoading(ctx, false)
   assert.equal(input.readOnly, false, "running + loading:false → 仍不禁（running 派生）")
@@ -294,7 +305,7 @@ test("⑤ busy 不禁录入 + send 禁（INPUT-LOCK-BEHAVIOR-REVISED——AC-1/A
 })
 
 // ⑥ Send 可见性（§14 C-14——T-CL20/AC-CL5）：running ⇄ flex 同 Stop 派生点
-test("⑥ Send running 期隐藏（AC-CL5）：running → display none；susp/idle → flex；loading 交替不翻；send.js 门禁零改", async () => {
+test("⑥ Send running 期隐藏（AC-CL5）：running → display none；susp/idle → flex；loading 交替不翻；send.js 出口分流（C-B2-6 普通回合 busy ⇒ queuedUserMessage）", async () => {
   const { S, ctx, setLoading, handleTurnStateMessage, send } = await loadWebview()
   resetBusy({ S, ctx })
   const before = capturedPosts.filter((m) => m.type === "userMessage").length
@@ -318,8 +329,10 @@ test("⑥ Send running 期隐藏（AC-CL5）：running → display none；susp/i
   assert.equal(sendShown(), true, "idle → Send 可见")
   ctx.inputEl.value = "x"
   handleTurnStateMessage({ type: "turnState", state: "running" })
+  const qmark = capturedPosts.length
   send()
-  assert.equal(capturedPosts.filter((m) => m.type === "userMessage").length, before, "busy 期仍拒发（门禁未动）")
+  assert.equal(capturedPosts.filter((m) => m.type === "userMessage").length, before, "busy 期不经正常发送面（零 userMessage——C-B2-6 排队注入）")
+  assert.equal(capturedPosts.slice(qmark).filter((m) => m.type === "queuedUserMessage").length, 1, "普通回合 busy ⇒ queuedUserMessage 一条")
   ctx.inputEl.value = ""
   handleTurnStateMessage({ type: "turnState", state: "idle" })
 })

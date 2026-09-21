@@ -23,10 +23,40 @@ export function send() {
     showToast(t("workspace.required"))
     return
   }
+  // C-B2-6（busy-injection 批 2026-09-21 · `WEBVIEW-INPUT.md` §1）：busy 拒发**收窄为普通
+  // 回合 busy 面**——`running && !_suspended` ⇒ 排队注入：本地气泡先行（送达时即该消息 user
+  // 回声面）+ `queuedUserMessage` 上行（host 单槽 `_busyQueued`）；不 setLoading 不清面板
+  // （回合仍跑在既有流上）；回合态簿记（`_turnStart` / `_llmCalls`）归下一回合起点——零触碰。
+  if (S._turnState === "running" && !S._suspended) {
+    // C-B2-6 细则① 二次提交守卫（fix 轮 2026-09-22 · `WEBVIEW-INPUT.md` §1 C-B2-6 ①）：
+    // 单槽已有一条未消费排队（host 权威镜像 `busyQueued`）⇒ 提交不出泡 / 不清框 + toast
+    // （对位 CLI 槽满面 = 文本保留形，`thincoder-cli/src/tui/key-handler.mjs:306-309`）。
+    if (S._busyQueuedPending) {
+      showToast(t("input.slotFull"))
+      return
+    }
+    S._busyQueuedPending = true // 本地先行置位（受理即置——防同 tick 二连 Enter 竞态；host 推送权威收敛）
+    const h = ctx._inputHistory
+    if (h[h.length - 1] !== text) h.push(text) // dedupe consecutive repeats
+    ctx._historyIdx = -1
+    ctx._inputDraft = ""
+    const w = ctx.messagesEl.querySelector(".welcome")
+    if (w) w.remove()
+    ctx.inputEl.value = ""
+    ctx.inputEl.style.height = "auto"
+    const images = [...ctx._pastedImages]
+    ctx._pastedImages.length = 0
+    document.getElementById("paste-bar").style.display = "none"
+    document.getElementById("paste-badge").innerHTML = ""
+    addUser(ctx, text, Date.now())
+    vscode.postMessage({ type: "queuedUserMessage", text, model: ctx.selectedModel, reasoning: ctx.selectedReasoning, provider: ctx.selectedProvider, images })
+    return
+  }
+  // C-B2-4（收窄后仅存面 = 挂起会话内 busy：`running && _suspended`——digest / 会话内用户
+  // 回合）：拒发可见提示——复用既有 toast 机制（文案 = 既有 busy 串，零新增 locale 键）；
+  // 占位符设置保留（既有测试锁零伤）。
   if (S._turnState === "running") {
     ctx.inputEl.placeholder = t("input.busyPlaceholder")
-    // C-B2-4（§9.2——AC-B2-3）：拒发可见提示——复用既有 toast 机制（文案 = 既有 busy 串，
-    // 零新增 locale 键）；占位符设置保留（既有测试锁零伤）。
     showToast(t("input.busyPlaceholder"))
     return
   }

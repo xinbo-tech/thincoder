@@ -1,7 +1,8 @@
 /**
  * image-handler.mjs — pasted-image handling: save dataURLs to temp files +
- * IMAGE-DOWNGRADE-VISION F-1 降级读图跑者（routeUserTurn 贴图降级链的 runner——评审 #6
- * seam：visionReader 参数注入 mock、本实现为 ?? 默认——panel-messages 预算内只留触发）。
+ * IMAGE-DOWNGRADE-VISION F-1 降级读图跑者（`runVisionReader`——评审 #6 seam：visionReader 参数注入
+ * mock、本实现为 ?? 默认）+ F-1 **降级判决函数**（`downgradeNonVisionImages`——C-B2-6 细则⑥
+ * 三调用点共用；2026-09-22 fix 轮自 `panel-messages.mjs` 抽出）。
  *
  * Plan B (GitHub thincoder#3, 2026-08-29): the webview sends dataURLs with
  * `userMessage`; the EXTENSION saves each to <cwd>/.thincoder/tmp/paste-*.<ext>
@@ -22,6 +23,10 @@ import { resolveProviders } from "@thincoder/core/config-io.mjs"
 import { providerFromConfig } from "./presets.mjs"
 import { findVisionChannel } from "./vision-channel.mjs"
 import { runAgent } from "../agent.mjs"
+// C-B2-6 细则⑥（busy-injection 批 fix 轮 2026-09-22）：降级判决函数自 `panel-messages.mjs` 抽出
+// ——工程真值源与主面同口径（`agentSettings`）；模型能力判据 `specForModel`。
+import { agentSettings } from "./settings.mjs"
+import { specForModel } from "../specs.mjs"
 
 /** dataURL → { ext, buffer } | null. Raster mime types only; oversized (>15 MB, aligned with
  *  read_image's MAX_IMAGE_BYTES) returns null so a giant paste is skipped at save time
@@ -87,4 +92,38 @@ export async function runVisionReader({ paths, providerName, cwd, signal, engSta
     const desc = await runAgent({ ...p, model: vc.model }, cwd, task, {}, ac.signal, true, { depth: 1, role: "explore", maxTurns: 10, ...(engState ? { engState } : {}) })
     return typeof desc === "string" && desc.trim() ? { ok: true, description: desc.trim() } : null
   } catch { return null } finally { clearTimeout(timer) }
+}
+
+// ─── F-1 降级判决（C-B2-6 细则⑥——2026-09-22 fix 轮：自 `panel-messages.mjs` 抽出·三调用点共用）───
+/**
+ * 非视觉主模型贴图裁决（idle 面 / 装载② `deliverBusyQueued` / 装载① `runTurn` 闭包三调用点——
+ * `WEBVIEW-INPUT.md` §1 C-B2-6 ⑥）：`images` 路径非空 ∧ `modelOverride` 在场 ∧
+ * `specForModel(modelOverride).multimodal` 假 ⇒ 视觉渠道一次性子代理读图（`visionReader` 注入缝
+ * 随迁——缺省回落生产 `runVisionReader`）；成功 ⇒ 描述注入 text + images 清空（throw 路径不再
+ * 到达）；无渠道 / spawn 失败 / 超时 / 空返 / 异常 ⇒ 原样兜底（不静默丢）。
+ * 忙锁（C' 不变量）：降级 await 窗内置 running（拒并发回合）——静挂面（`_turnState === "susp"`，
+ * 装载① 窗内）零置（无 Stop 面——受读图 60s 超时约束）。
+ * 返回 `{ text, images, visionAbort }`：`visionAbort` = 本窗控制器（A12——窗内 Stop 定向中止）；
+ * 调用方按 `visionAbort?.signal.aborted` 决定 `panel._abortRequested` 置位（序 = 调 runChat 之后）。
+ */
+export async function downgradeNonVisionImages(panel, { text, images, providerName, modelOverride, cwd, visionReader = null }) {
+  if (!images?.length || !modelOverride || specForModel(modelOverride).multimodal) return { text, images, visionAbort: null }
+  if (panel._turnState !== "susp") panel._publishTurnState?.("running")
+  // A12（群 A 批）：降级窗（下段 await）的外部取消载体——窗生命周期临时字段
+  // （panel._visionAbort——唯一新字段；零新布尔状态）；finally 幂等清理。
+  const visionAbort = new AbortController()
+  panel._visionAbort = visionAbort
+  let out = null
+  // ENG-PLAN-EXCLUSION（FR31 · 端差面②/KD9）：工程真值随旁路面传下（槽权威同源——与 depth-0
+  // 装配面同一真值源 `agentSettings`）⇒ 视觉渠道子代理装配与主面同口径（工程模式 plan 不入表）；
+  // 真值不可读 ⇒ enabled:false（回落现行为——不制造假拒绝）。
+  let engState
+  try { engState = { enabled: agentSettings(panel._agentSettingsSession()).engineering === true } } catch { engState = { enabled: false } }
+  try { out = await (visionReader ?? runVisionReader)({ paths: images, providerName, cwd, signal: visionAbort.signal, engState }) } catch { out = null }
+  finally { if (panel._visionAbort === visionAbort) panel._visionAbort = null }
+  if (out?.ok && typeof out.description === "string" && out.description.trim()) {
+    const marker = `[图片 ${images.join("、")} 描述: ${out.description.trim()}]`
+    return { text: text?.trim() ? `${text}\n\n${marker}` : marker, images: undefined, visionAbort }
+  }
+  return { text, images, visionAbort }
 }

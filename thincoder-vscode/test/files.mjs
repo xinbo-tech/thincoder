@@ -15,6 +15,7 @@ export default [
   "test/chat-panel.test.mjs", // 真实模块直驱面（2026-09-09；2026-09-12 拆分）：turn 句柄保底（④ F-C1a/H-B）/ atComplete seq（⑥ F-C1c/H-A）/ A2 标题回合内（⑨⑩ F-A2）/ 模型·stamp 决策（⑪ MODEL-MERGE-SESSION）——真 runPanelChat + 真 atComplete + resolveTurnModelAndStamp（面板入口组已迁 chat-panel-messages.test.mjs；切点判据 = LEDGER-SELF-CONTAINED.md D18 四条）
   "test/chat-panel-messages.test.mjs", // 面板入口（消息/控制/状态）面（2026-09-12 拆分自 chat-panel.test.mjs——500 行硬限无豁免）：桩面板驱动（stubPanel 夹具自持——零跨档 import）——拒收（①）/ 控制直通（②）/ 启动闩（③）/ 响应器匹配（⑤）/ 忙态状态机（⑦）/ sendMessage（⑧）/ _chat 单槽（⑪）/ F-2 取消路由（⑫）
   "test/webview-turnstate.test.mjs", // SESSION-FLOW-C C2 webview reducer 组（2026-09-09）：_turnState 枚举转换/renderStatusBar 单 writer/Stop susp 常显/_suspCounts 不陈旧——F-C2a~e（happy-dom——helpers/webview-env.mjs）
+  "test/busy-injection-vsc.test.mjs", // F16 busy 排队注入（2026-09-21 busy-injection 批 · WEBVIEW-INPUT.md §1 C-B2-6）：webview 出口分流（本地气泡 + queuedUserMessage，不 setLoading 不清面板）/ host 单槽入槽·槽满拒·挂起会内拒 / enterSuspensionTurn 装载两分支——T-V16-1…4 + 3b（happy-dom + vscode-mock）
   "test/edit-tool-improvement.test.mjs",
   "test/memory-tool.test.mjs",
   "test/eng-settlement.test.mjs",

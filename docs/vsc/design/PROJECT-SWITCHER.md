@@ -92,7 +92,7 @@ _cwd() = _cwdOverride ?? workspaceFolders[0] ?? process.cwd()
 - **host 通知**（英文硬编码——随本端通知面现状，如 `chat-panel.mjs:228` busy 串）：文本 = `ThinCoder: no folder is open — the agent has no workspace to work in. Open a folder to start.`；按钮 = `Open Folder` ⇒ `vscode.commands.executeCommand("vscode.openFolder")`（VS Code 内置命令；**无参 ⇒ 原生文件夹选择框**）。
   **「选择框 / 同窗口重载」= 未验**（实机行为待用户侧观察）——可核代替面 = **调用形断言**（调用发生 ∧ 命令名逐字 ∧ 无参）。
 - **webview 面**（i18n 键，`locales/{en,zh}.json` 各 +2）：拒发 toast = `t("workspace.required")`（en 逐字 = `Open a folder first — ThinCoder needs a workspace to work in.`）。
-  输入框占位符 = `t("workspace.requiredPlaceholder")`（en 逐字 = `Open a folder to start…`）——`webview/loading.js:67-73` `applyBusyLock` 派生第三态（**守卫 > busy > 常态**）。**两键登记** = `WEBVIEW-PROTOCOL.md` §6.3 键表（19 键——端特有键）；文案实体 = `locales/{zh,en}.json`。
+  输入框占位符 = `t("workspace.requiredPlaceholder")`（en 逐字 = `Open a folder to start…`）——`webview/loading.js:67-73` `applyBusyLock` 派生第三态（**守卫 > busy > 常态**）。**两键登记** = `WEBVIEW-PROTOCOL.md` §6.3 键表（端特有键——不携总数，防脱同步）；文案实体 = `locales/{zh,en}.json`。
 - **出口守卫**：`webview/send.js` 判 `S._workspaceRequired` ⇒ toast + 拒发，**先于** `addUser` / `setLoading`（`:36-41`）——无假气泡、无悬挂 loading。
 - **新消息**：`{ type:"workspaceGuard", active:boolean }`（host → webview）——推送点 = ⑤ 两分支 + 工作区变化处理；协议登记 = `WEBVIEW-PROTOCOL.md` §3 / §3.2 行 15。
 - **频度（不吵 / 不吞）**：主动提示（①）= 每空窗**恰一次**（`panel._wsGuardNotified`，释放即复位）；被动提示 = **每次被挡的用户动作各一次**。

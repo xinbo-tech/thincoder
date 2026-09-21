@@ -62,6 +62,10 @@ export class ChatPanel {
     // susp.pendingInput 单槽（_chat 内分流）。
     // _turnControllers = 回合内 controller 重建登记（偏差修复 #3——会话 Stop 统一 abort）。
     this._turnControllers = []
+    // F16（2026-09-21 busy-injection 批 · `docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6）：
+    // 普通回合 busy 期排队输入单槽——webview `queuedUserMessage` / 外部入口经 routeUserTurn
+    // 分流入槽（`_chat` 不并发开回合）；回合尾由 `enterSuspensionTurn` 装载两分支送达。
+    this._busyQueued = []
     // The slot number this panel is bound to. Set once when a session is opened/created,
     // then used for ALL reads and writes — we never re-read the shared manifest's active
     // pointer mid-conversation (it can be changed by a concurrently running CLI).
@@ -252,10 +256,13 @@ export class ChatPanel {
     }
     // ③ 无工作区守卫（先于回显 ⇒ 无假气泡；先于回显也先于 routeUserTurn）
     if (blockOnNoWorkspace(this)) return
-    // INPUT-LOCK-ASYNC（C'——F-1/F-3）：busy（_turnState==="running"——回合/digest/标题
-    // 窗口——单一判据）输入禁用——外部入口（Ask ThinCoder 命令）先于回显拒绝——不排队
-    // 不回显（拒收 = 无假气泡——webview 输入框已由 loading.js 锁——正常发送到不了这里）。
-    if (this._turnState === "running") {
+    // INPUT-LOCK-ASYNC（C'——F-1/F-3）→ C-B2-6 busy 排队注入（busy-injection 2026-09-21）：
+    // busy（`_turnState === "running"`——回合/digest/标题窗口——单一判据）分流两态——
+    // 挂起会话内 busy（`_susp` 在场）：先于回显拒绝（拒收 = 无假气泡——webview 输入框已由
+    // loading.js 锁——正常发送到不了这里）；普通回合 busy 面：回显（排队气泡面）+ 下方
+    // `routeUserTurn` 同判据入 `_busyQueued` 单槽（C-B2-6 细则③——外部入口与 webview 上行
+    // 同面分流：同判据同槽）。
+    if (this._turnState === "running" && this._susp) {
       vscode.window.showWarningMessage("ThinCoder: a task is running — wait for it to finish before sending.")
       return
     }

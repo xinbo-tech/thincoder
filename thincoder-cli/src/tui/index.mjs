@@ -366,8 +366,8 @@ export async function startTUI(agent, opts = {}) {
   async function submit() {
     const text = state.input.join("").trim()
     if (!text) return
-    // INPUT-LOCK 防御（C'——2026-09-09）+ INPUT-LOCK-BEHAVIOR-REVISED（2026-09-09——白名单
-    // 已删——busy 全拒）：提交吞的门禁在 key-handler（busy Enter 已吞 + 提示，文本保留）——
+    // INPUT-LOCK 防御（C'——2026-09-09 + F16 busy 单槽——2026-09-21）：门禁在 key-handler
+    // （busy Enter 非挂起非模态 = 单槽注入 / 斜杠·模态·挂起·槽满 = 吞 + 提示，文本保留）——
     // submit 只在非 busy 期达此；防御直呼/上游改动：busy 期拒绝（不清输入框不吞内容）。
     if (state.processing) {
       pushLine(`[主会话处理中 —— 消息未发送（回合结束后请重按 Enter）]`, C.warn)
