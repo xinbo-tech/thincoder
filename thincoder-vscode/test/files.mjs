@@ -124,5 +124,6 @@ export default [
   // 无工作区守卫批（2026-09-21 · `docs/batches/2026-09-21-vsc-no-folder-guard.md` §2.6 · 台账 #199）：用例 1–17
   "test/workspace-guard.test.mjs", // 无文件夹窗口 ⇒ 拒启 agent（零写入三档）+ 双面逐字提示（host 通知+按钮 / webview toast+占位符第三态）+ 恢复面（空↔非空免重载）；守卫八处 + 派生面 / 结构+行为双锁 / 5 结构锁——机制单源 = PROJECT-SWITCHER.md §4.1
   "test/tools-ide-changes.test.mjs", // git 工具非交互加固批（2026-09-21 · `docs/batches/2026-09-21-git-noninteractive.md` §2 · 台账 #207）A27 的 VSC 半（TOOLS.md §6.14）：核 `runGit` 转异步薄壳 ⇒ `changesSection` 同批转 async + 1 处 await——三格 = 未提交变更出段 / 洁净不出段 / 非仓零抛错（真 git 子进程；中间态红 = 输出变 `(error: porcelain.split …)`）
+  "test/session-exit-release.test.mjs", // 退出认领释放批（2026-09-21 · `docs/batches/2026-09-21-exit-claim-release.md` §2 · 台账 #211）T5（SESSION.md §6.18）：`releaseClaimsOnExit` 沙箱三格（转核 / 无 workspace 跳过 / 核 false 透传——他端零动）+ deactivate 结构机检（async 形 / 释放前置 / workspace 判据参数形 / 包装 vscode-free）
 
 ]

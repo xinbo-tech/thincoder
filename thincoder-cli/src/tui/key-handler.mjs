@@ -5,6 +5,9 @@ import { moveCursorVertical } from "./render.mjs"
 import { handleSearchKey } from "./key-handler-search.mjs"
 import { countConvLines } from "./render-conversation.mjs"
 import { handlePermissionMode, handleQuestionMode, handleInterruptMode } from "./key-modes.mjs"
+// F-XR1 退出释放（EXIT-CLAIM-RELEASE · SESSION.md §6.18 D-SE41）：核薄函数——退出恒达
+// （永不抛出，失败返回 false）；零触碰 marker 面（F-XR2 路标保留）。
+import { releaseClaimsAll } from "@thincoder/core/session-slots-manifest.mjs"
 
 /** 第 33 批（TUI §14.3(e)——attention 清位）：输入即在场——仅当原值为真时置假 + `render()`
  *  （已假则零副作用、零重绘）。键盘入口与本文件（`onKeypress`）与鼠标输入路径（index.mjs
@@ -148,6 +151,9 @@ export function createKeyHandler(ctx) {
       }
       if (ctx.exitArmTimer) clearTimeout(ctx.exitArmTimer)
       cleanup()
+      // F-XR1 退出释放（EXIT-CLAIM-RELEASE · SESSION.md §6.18）：先于定时器注册同步完成
+      // （D-SE42——100ms 窗零竞态）；退出前保存已完成 ⇒ 释放 = 收口前最后一步。
+      releaseClaimsAll(process.cwd())
       // 延迟退出可注入（测试传大值并清理定时器，避免定时器在 mock 恢复后调到真 process.exit）
       ctx.exitTimer = setTimeout(() => process.exit(0), ctx.exitDelay ?? 100)
       ctx.exitTimer.unref?.()

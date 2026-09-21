@@ -289,6 +289,25 @@ export function claimSlot(cwd, slot, m = loadManifest(cwd), deadParam = null) {
   saveManifest(cwd, m, deadParam?.() ?? null, { setActive: true, release: [slot] })
 }
 
+/** 退出全释放（EXIT-CLAIM-RELEASE 批 · F-XR1 · SESSION.md §6.18 D-SE41）：优雅退出前释放
+ *  本进程**全部**槽认领（保留集空——`staleClaims` 释放谓词单源）；落盘判据 = `saveManifest`
+ *  `opts.release` 三条自动继承（fresh 同次快照取释放集 / 值条件删除——他人窗口内新认领不误删 /
+ *  内存认领表同步移除）。**零触碰 marker 面**（F-XR2 路标保留——下次启动经 `usableSlot`
+ *  无属主短路零探测直达恢复）；崩溃路径不经此（信号无 JS 钩子——F-XR3）。
+ *  早退面：磁盘无 manifest ⇒ `existsSync` 单条目早退**零写**（不造盘面）；本进程无认领 ⇒
+ *  零写返回 false。失败容忍（F-XR1「退出恒达」）：整体 try/catch **永不抛出**，返回 boolean
+ *  （true = 有释放且落盘成功；false = 早退 / 失败——断言面）；写失败盘面 = 认领残留 →
+ *  恢复走既有探测面（现状形态，数据零险）。 */
+export function releaseClaimsAll(cwd) {
+  try {
+    if (!existsSync(manifestPath(cwd))) return false // 无 manifest ⇒ 零写（不造盘面）
+    const m = loadManifest(cwd)
+    if (staleClaims(m, []).length === 0) return false // 无本进程认领 ⇒ 零写（免白刷共享 sessionId）
+    saveManifest(cwd, m, null, { release: [] }) // 保留集空 = 全释放；不 setActive（active 共享指针不动）
+    return true
+  } catch { return false } // F-XR1：退出恒达（写失败 = 认领残留 → 恢复走探测面）
+}
+
 /** Return the active slot number for this process, claiming one if necessary */
 export function activeSlot(cwd) {
   const m = loadManifest(cwd)

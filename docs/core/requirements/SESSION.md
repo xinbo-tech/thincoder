@@ -77,7 +77,7 @@ VSC 侧对应面住 `thincoder-vscode/src/extension/session-io.mjs` · `session-
 ① T1 造认领 → 跑退出释放 → manifest 无本进程 `slotSessions` 条目 ∧ 端标记仍指原槽 ∧ 槽文件完好；
 ② T2 释放后 `resumeSlot` 返回 `{slot: 原槽, data}`，且属主缺失分支直达（**探测零 exec**——`probeOwnersAsync` 入参清单为空早退）；
 ③ T3 崩溃路径回归——认领在 + 探测 unknown ⇒ 仍全新分配槽（现状不变）；
-④ T4 CLI 退出分支 e2e——注入 `exitDelay`（测试缝，`key-handler.mjs` 既有）+ 捕获 `exitTimer`：断言「先释放后定时器注册、桩收 exit(0)、失败容忍（释放抛错仍注册退出）」；
+ ④ T4 CLI 退出分支 e2e——注入 `exitDelay`（测试缝，`key-handler.mjs` 既有）+ 捕获 `exitTimer`：断言「先释放后定时器注册、桩收 exit(0)、失败容忍（核面释放失败返回 false 不抛 ⇒ 退出零阻——**容忍面在核 D-SE41，接线层零防护**；如测试驱动接线层抛错形态须以模块 mock 显式命名缝）」；
 ⑤ T5 VSC `deactivate` 后 manifest 无本进程条目（端壳机判）；
 ⑥ 既有 session 系 / key-handler 系测试全绿。
 

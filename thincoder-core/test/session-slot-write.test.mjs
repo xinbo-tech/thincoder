@@ -14,8 +14,9 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSy
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
-import { _resetSessionsDirForTest, _setSessionsDirForTest, activeSlot, claimSlot, getSessionId, loadManifest, manifestPath, readEndMarker, slotPath } from "../session-slots.mjs"
-import { newSession, switchToSlot } from "../session.mjs"
+import { _resetSessionsDirForTest, _setSessionsDirForTest, activeSlot, claimSlot, getSessionId, loadManifest, manifestPath, readEndMarker, slotPath, writeEndMarker } from "../session-slots.mjs"
+import { releaseClaimsAll } from "../session-slots-manifest.mjs"
+import { newSession, resumeSlot, switchToSlot } from "../session.mjs"
 import { _resetProcessProbeTestImpl, _setProcessProbeTestImpl } from "../process-probe.mjs"
 import {
   _resetSlotMtimeCacheForTest, mergeEngTokensForSave, newSlotData, saveSlotData,
@@ -281,4 +282,77 @@ test("F-CR1 释放面 opt-in：newSession 默认零释放（ACP 四点面）；�
   assert.equal(m.slotSessions[41], undefined, "opt-in ⇒ 残留认领释放")
   assert.equal(m.slotSessions[s1], undefined, "前一落点认领亦释放（保留集 = {新槽}）")
   assert.equal(m.slotSessions[s2], getSessionId(), "新槽认领 = 本进程（保留集）")
+})
+
+// ─── F-XR1 退出全释放（EXIT-CLAIM-RELEASE 批 · SESSION.md §6.18——T1/T2/T3）──────────
+
+/** 退出释放夹具：seedReleaseState 同型 + 本进程认领 slot + 本端 marker 指向该槽（D-1 形态
+ *  ——marker 走真 `writeEndMarker`，与运行时同落点）。 */
+function seedExitRelease(slot) {
+  seedReleaseState(slot)
+  claimSlot(CWD, slot)
+  writeEndMarker(CWD, slot)
+}
+
+test("F-XR1 T1 退出全释放：manifest 无本进程条目 ∧ marker 仍指原槽（路标保留）∧ 槽文件完好 ∧ 返回 true", () => {
+  seedExitRelease(41)
+  const my = getSessionId()
+  const m0 = loadManifest(CWD)
+  m0.slotSessions = { ...(m0.slotSessions ?? {}), 99: `${process.pid}-0-other-end` } // 他端认领（零动面）
+  writeFileSync(manifestPath(CWD), JSON.stringify(m0))
+
+  assert.equal(releaseClaimsAll(CWD), true, "有释放且落盘成功")
+
+  const m = loadManifest(CWD)
+  for (const [slot, owner] of Object.entries(m.slotSessions ?? {})) {
+    assert.notEqual(owner, my, `slot ${slot} 属主非本进程（全释放——保留集空）`)
+  }
+  assert.equal(m.slotSessions[99], `${process.pid}-0-other-end`, "他端认领零动（值条件天然）")
+  assert.equal(m.slots[41].updatedAt, 1, "m.slots 摘要条目零动（释放只碰认领集）")
+  assert.equal(readEndMarker(CWD)?.slot, 41, "marker 仍指原槽——路标保留（F-XR2 零触碰 marker 面）")
+  assert.ok(existsSync(slotPath(CWD, 41)), "槽文件完好")
+  assert.equal(readFileSync(slotPath(CWD, 41), "utf8").includes('"sessionStart":"s-1"'), true, "槽内容完好")
+})
+
+test("F-XR1 早退面两态：磁盘无 manifest ⇒ 零写不造盘面；无本进程认领 ⇒ 零写（他端条目零动）", () => {
+  // ① 无 manifest（全新 cwd 从未有过会话）——释放不落盘面文件（rmSync 清同目录前组遗留）
+  rmSync(manifestPath(CWD), { force: true })
+  assert.equal(releaseClaimsAll(CWD), false)
+  assert.equal(existsSync(manifestPath(CWD)), false, "无 manifest ⇒ 零写（不造盘面）")
+
+  // ② 有 manifest 但本进程无认领（仅他端属主）
+  writeFileSync(manifestPath(CWD), JSON.stringify({ version: 2, slots: {}, slotSessions: { 9: "999999-0-ghost" }, sessionId: null }))
+  assert.equal(releaseClaimsAll(CWD), false, "无本进程认领 ⇒ false")
+  assert.equal(loadManifest(CWD).slotSessions[9], "999999-0-ghost", "他端条目零动")
+})
+
+test("F-XR1 T2 释放后恢复直达：resumeSlot 返回原槽非空数据 ∧ 探测束零 exec（ownerPids 空 ⇒ 早退）", async () => {
+  seedExitRelease(41)
+  assert.equal(releaseClaimsAll(CWD), true)
+
+  const calls = countingProbe()
+  let r = null
+  try { r = await resumeSlot(CWD) } finally { _resetProcessProbeTestImpl() }
+  assert.equal(r.slot, 41, "释放后恢复直达原槽（D-2 ① 支——usableSlot 无属主短路）")
+  assert.ok(r.data, "data 非空")
+  assert.equal(r.data.sessionStart, "s-1", "恢复的是退出前的会话数据")
+  assert.deepEqual(calls, { alive: 0, cmdline: 0 }, "单进程盘面 ownerPids 空 ⇒ 探测零 exec")
+  assert.equal(readEndMarker(CWD)?.slot, 41, "marker 保持 41（resumeSlot D-4 同值重写）")
+})
+
+test("F-XR1 T3 崩溃路径负向回归（现状锁）：他进程未释放认领 + 探测 unknown ⇒ 全新分配（不直达原槽）", async () => {
+  seedExitRelease(41)
+  // 崩溃面 = 旧进程认领保留（owner = 旧会话 id ≠ 本进程 id——沙箱用幽灵属主模拟旧进程）；
+  // 探测面 = aliveSet 缺失 ⇒ 属主 unknown ⇒ 槽不可用（保守——D-MI10）。
+  const ghost = `${process.pid + 55555}-0-ghost`
+  const m0 = loadManifest(CWD)
+  m0.slotSessions[41] = ghost
+  writeFileSync(manifestPath(CWD), JSON.stringify(m0))
+
+  _setProcessProbeTestImpl({ aliveFn: () => null }) // 束形态：aliveSet null = 未探测 ⇒ unknown
+  let r = null
+  try { r = await resumeSlot(CWD) } finally { _resetProcessProbeTestImpl() }
+  assert.notEqual(r.slot, 41, "unknown ⇒ 原槽不可用（D-MI10 保守——现状锁）")
+  assert.ok(r.slot >= 42, "全新分配取号 > 41")
+  assert.equal(loadManifest(CWD).slotSessions[41], ghost, "崩溃面认领条目保留（零释放——F-XR3 语义）")
 })

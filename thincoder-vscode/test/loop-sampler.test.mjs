@@ -122,7 +122,9 @@ test("LS-7 端侧装配：probeFailureOf（忙证据覆盖核分类）/ override
 test("LS-8 扩展挂点：activate 启采样 / deactivate 停采样（结构性）", () => {
   const src = readFileSync(here("../extension.mjs"), "utf8")
   const act = src.indexOf("export async function activate")
-  const deact = src.indexOf("export function deactivate")
+  // EXIT-CLAIM-RELEASE 批（2026-09-21）：deactivate 改 async（宿主 await 窗口内前置释放
+  // 认领——SESSION.md §6.18）⇒ 声明字面同步 async 形（锁意图 = 两入口在场且有序，不变）。
+  const deact = src.indexOf("export async function deactivate")
   assert.ok(act >= 0 && deact > act, "扩展入口形状（activate / deactivate 声明在场且有序）")
   assert.match(src.slice(act, deact), /startSampler\(\)/, "activate 内挂 startSampler()")
   assert.match(src.slice(deact), /stopSampler\(\)/, "deactivate 内挂 stopSampler()")

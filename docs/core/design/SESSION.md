@@ -475,22 +475,22 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 **判据句（F-XR1 / F-XR2）**
 
 - 释放时机 = **优雅退出路径**（进程结束前、数据保存完成之后）；不在运行期任何常规落点（与 §6.16 绑定迁移释放互补——非定时清扫，保留集口径不同面：迁移释放 = 落点 ∪ 活绑定，退出释放 = 空 = 全量）。
-- **F-XR2 端标记不置空（对照 `deleteSlot` 置空路径区分）**：释放原语零触碰 marker 面（不调 `writeEndMarker`、不写 null）。区分：`deleteSlot` 删到本端记录槽 → `writeEndMarker(cwd, null)`（核 `thincoder-core/session-slots.mjs` + 端壳 `thincoder-vscode/src/extension/session-io.mjs:207`）= **显式置空**——删槽 = 会话不再要（下次全新起步）；退出释放 = 会话还要回（**路标保留**——下次直达恢复）。
+- **F-XR2 端标记不置空（对照 `deleteSlot` 置空路径区分）**：释放原语零触碰 marker 面（不调 `writeEndMarker`、不写 null）。区分：`deleteSlot` 删到本端记录槽 → `writeEndMarker(cwd, null)`（核 `thincoder-core/session-slots.mjs` + 端壳 `thincoder-vscode/src/extension/session-io.mjs:210`）= **显式置空**——删槽 = 会话不再要（下次全新起步）；退出释放 = 会话还要回（**路标保留**——下次直达恢复）。
 - 恢复直达支实证：释放后盘面 = marker 指原槽 ∧ `slotSessions[原槽]` 无属主 ⇒ `usableSlot` true（`thincoder-core/session-slots.mjs:230-235` 无属主分支先于属主判定短路——**该槽可用性判定零探测**）→ D-2 ① 支 `claimSlot` + `loadSlotFile` 直接恢复。
 - 入口探测束（`resumeSlot:281`）是否零 exec 取决于 manifest 内**他进程**属主有无：单进程常态（事故锚形态）= 清单空 ⇒ `probeOwnersAsync` 入参清单空早退零 exec（`thincoder-core/process-probe.mjs:266-268`）；T2 用例沙箱 = 单进程盘面 ⇒ 机判成立。
 
 **CLI 接线序（F-XR4 · 同步插行两点）**
 
-- 两点同源（同一退出语义双入口，均收口 `cleanup() → setTimeout(exit, 100)` 链）：① Ctrl+C×2 空闲双确认分支——`thincoder-cli/src/tui/key-handler.mjs:149-152`：`cleanup()` 之后、`exitTimer` 注册之前插 `releaseClaimsAll(process.cwd())`（+ import）；② `/exit` 命令——`cmd-exit.mjs:6` 经 `ctx.exit`（`thincoder-cli/src/tui/index.mjs:441`）同型插行。
+- 两点同源（同一退出语义双入口，均收口 `cleanup() → setTimeout(exit, 100)` 链）：① Ctrl+C×2 空闲双确认分支——`thincoder-cli/src/tui/key-handler.mjs:152-158`：`cleanup()` 之后、`exitTimer` 注册之前插 `releaseClaimsAll(process.cwd())`（+ import）；② `/exit` 命令——`cmd-exit.mjs:6` 经 `ctx.exit`（`thincoder-cli/src/tui/index.mjs:444-450`）同型插行。
 - **退出序钉定**：回合尾既有保存（数据面）→ `cleanup()`（终端恢复）→ **释放** → `exitTimer`（100ms）→ `exit(0)`。
 - **100ms 窗口钉定**：释放 = 同步单文件写（loadManifest + saveManifest 同步 fs——会话面既有形态），先于 `setTimeout` 注册**同步完成** ⇒ 窗口内零竞态；`ctx.exitDelay ?? 100` 原值保留（既有测试缝 + crash-report 写窗对齐不动）。
 - cwd 域 = `process.cwd()`——与启动恢复（`thincoder-cli/bin/thincoder.mjs:322`）同域同参（CLI 生命周期锚定启动 cwd）。**不引入 async**（否决 async 化退出链——同步写零改造零新竞态面，见 D-SE42）。
 
 **VSC 接线（F-XR4 · async deactivate 前置释放）**
 
-- `deactivate`（`thincoder-vscode/extension.mjs:170-174`）改 **async**：`await releaseClaimsOnExit(cwd)` 前置于既有三步（stopSampler / closeAllMcp / dispose）。VS Code 宿主 await async `deactivate`（合法——宿主等待窗口）；释放 = 窗口内最有价值步**抢先执行**，宿主超时强杀时残留 = 现状形态（认领保留——恢复走探测面），数据零险。
+- `deactivate`（`thincoder-vscode/extension.mjs:176-190`）改 **async**：`releaseClaimsOnExit(_cwd(), hasWorkspace)` 前置于既有三步（stopSampler / closeAllMcp / dispose）。VS Code 宿主 await async `deactivate`（合法——宿主等待窗口）；释放 = 窗口内最有价值步**抢先执行**，宿主超时强杀时残留 = 现状形态（认领保留——恢复走探测面），数据零险。
 - cwd = 面板域 `_cwd()`（`thincoder-vscode/src/extension/panel-messages.mjs:37`——workspaceFolders[0]，与认领落点同域）；`workspaceFolders` 空 ⇒ **跳过释放**（`_cwd()` 回退宿主任意 process.cwd()——不给宿主 cwd 造盘面 / 误放他项目认领）。
-- 薄包装 `releaseClaimsOnExit(cwd)` 住 `thincoder-vscode/src/extension/session-io.mjs`（node 可测缝——`extension.mjs` 依赖 vscode 模块不可直测）：无 workspace ⇒ false；否则转核 `releaseClaimsAll`（容忍逻辑全在核——端侧零重复）。
+- 薄包装 `releaseClaimsOnExit(dir, hasWorkspace)` 住 `thincoder-vscode/src/extension/session-io.mjs`（node 可测缝——`extension.mjs` 依赖 vscode 模块不可直测）：无 workspace ⇒ false；否则转核 `releaseClaimsAll`（容忍逻辑全在核——端侧零重复）。
 
 **端壳裁定（F-XR4 双端同源）**：释放机制核内单点；端壳对位 = **纯转口两行**（`session-slots.mjs` / `session-io.mjs` 各一——W11 转口纪律形态）。端壳镜像的既有理由 = marker 端差与 resumeSlot 算法（§6.10 D-1/D-2）——本面两者不涉（谓词 = `getSessionId` 字符串比较，零探测零束零端差）⇒ 无镜像必要。NF1 红线：零新增跨端共享可变字段。
 
@@ -514,7 +514,7 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 - T1 = 造认领 → `releaseClaimsAll` → 盘面三断言（manifest 无本进程 `slotSessions` 条目 ∧ marker 仍指原槽 ∧ 槽文件完好）——核 `thincoder-core/test/session-slot-write.test.mjs` 新组。
 - T2 = T1 后 `resumeSlot` 返回 `{slot: 原槽, data 非空}` + 探测束零 exec（沙箱单进程盘面 ownerPids 空 ⇒ 早退——替身注入断言）。
 - T3 = 崩溃路径负向回归（认领在 + 探测 unknown ⇒ 全新分配——现状锁）。
-- T4 = CLI 退出分支 e2e（`exitDelay` 注入 + `ctx.exitTimer` 捕获——先释放后定时器注册 / 桩收 `exit(0)` / 释放抛错仍注册退出 = 失败容忍）——`thincoder-cli/test/tui-exit-cleanup.test.mjs` 新组。
+- T4 = CLI 退出分支 e2e（`exitDelay` 注入 + `ctx.exitTimer` 捕获——先释放后定时器注册 / 桩收 `exit(0)` / 失败容忍 = 核 D-SE41 面：`releaseClaimsAll` 失败返回 false 不抛 ⇒ 退出零阻、定时器恒注册；接线层零防护，如驱动接线层抛错形态须模块 mock 显式命名缝）——`thincoder-cli/test/tui-exit-cleanup.test.mjs` 新组。
 - T5 = VSC 端壳机判（`releaseClaimsOnExit` 沙箱 + deactivate 结构机检）——`thincoder-vscode/test/session-exit-release.test.mjs` 新档。
 - T6 = 三端测试全绿。
 
@@ -650,4 +650,5 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 - 2026-09-21（**块标题行对齐批 · D8 裁定轮 · eng-designer**——承 `docs/batches/2026-09-21-vsc-block-title-align.md` §2.12 · 父侧代裁）：§6.7「读 / 展示」行收正——**常显位 = 两端 chrome**（VSC 顶栏 / CLI 状态行段；落点设计 = `docs/cli/design/TUI.md` §7.4）——D8 由「上抛」改判**消（b 形 · 两端常显）**；`/session` 按需列表面零变。
 
 - 2026-09-21（**块标题行对齐批 · 设计评审轮 1 修正** · eng-designer——承 `docs/batches/2026-09-21-vsc-block-title-align.md` §2.13 · 发现 1 / 4）：§6.7 两处收正——①「读 / 展示」行限定形（**列表面**同回退链；CLI 段 = `agent.title` 活读 · 空值零注入；空窗差 = 已登记端差〔A9〕）；② 环枚举重基 = **源 / 生成 / 触发 / 写 / 读·展示五环**（谓词 ∈ 源、时点 ∈ 写）。**零新语义**。
-- 2026-09-21（**EXIT-CLAIM-RELEASE 批 · eng-designer**——承 `docs/batches/2026-09-21-exit-claim-release.md` §1）：新增 **§6.18**（判据句 / 核薄函数 / CLI·VSC 接线序 / 端壳裁定 / 边界情形 / 验收回指 T1–T6）；§7 补 **D-SE41 / D-SE42**；§5 补落点指针；来源 = 需求档 §2.5（台账 #211；用户 22:28 批准）。批档 §2 写入被冻结机制拒——待父侧处置。
+- 2026-09-21（**EXIT-CLAIM-RELEASE 批 · eng-designer**——承 `docs/batches/2026-09-21-exit-claim-release.md` §1）：新增 **§6.18**（判据句 / 核薄函数 / CLI·VSC 接线序 / 端壳裁定 / 边界情形 / 验收回指 T1–T6）；§7 补 **D-SE41 / D-SE42**；§5 补落点指针；来源 = 需求档 §2.5（台账 #211；用户 22:28 批准）。批档 §2 已落地（纠偏复开后父侧直写）。
+- 2026-09-21（**EXIT-CLAIM-RELEASE 批 · 收口前坐标收正** · 父侧直接执行 · 机械形修 · 零语义 · 可 revert）：§6.18 四处引 `file:line` 按实施后实读收正（:484 `key-handler.mjs:152-158` · `index.mjs:444-450`；:491 `extension.mjs:176-190`；:478 `session-io.mjs:210`）——漂移源 = 本批落地所致；核验 = 父侧 2026-09-21 23:5x 键档+源码双读。

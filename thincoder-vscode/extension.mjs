@@ -12,6 +12,9 @@ import { registerDiffPreviewProvider } from "./src/extension/diff-preview.mjs"
 import { startConfigWatch } from "./src/extension/config-watch.mjs"
 import { startSampler, stopSampler } from "./src/extension/loop-sampler.mjs"
 import { runSessionGcCommand } from "./src/extension/session-gc-command.mjs"
+// F-XR1 退出释放（EXIT-CLAIM-RELEASE · SESSION.md §6.18 F-XR4）：端壳纯转口——workspace
+// 判据在本侧解析（import vscode 侧——评审 #3 参数形钉死），包装保持 vscode-free。
+import { releaseClaimsOnExit } from "./src/extension/session-io.mjs"
 import { VSC_PROMPT_INJECTIONS } from "./src/prompt-injections.mjs"
 
 /** @type {ChatPanel} */
@@ -167,8 +170,21 @@ function logFireAndForget(err) {
   console.error("[thincoder] async command failed:", err)
 }
 
-export function deactivate() {
+/** Deactivate: release session-slot claims first (EXIT-CLAIM-RELEASE · F-XR1), then the
+ *  pre-existing teardown. Host awaits async deactivate (await window); the release is the
+ *  highest-value step inside it and must not be skipped by teardown failures. */
+export async function deactivate() {
+  // F-XR1（SESSION.md §6.18）：前置释放——cwd = 面板域（`_cwd()` 同域，认领落点一致）；
+  // workspaceFolders 空 ⇒ 端壳跳过（不给宿主 cwd 造盘面）；核永不抛 ⇒ 既有三步恒达；
+  // 宿主超时强杀残留 = 现状形态（认领保留走探测面，数据零险）。
+  try { releaseClaimsOnExit(_cwd(), (vscode.workspace.workspaceFolders?.length ?? 0) > 0) } catch { /* 容忍面在核（D-SE41）——此层为 dispose 恒达兜底 */ }
   stopSampler() // F-W19（`SETTINGS.md` §2.12）：采样器随停用（幂等）——不留未清单定时器
   closeAllMcp()
   _panel?.dispose()
+}
+
+/** 面板域 cwd（EXIT-CLAIM-RELEASE：与 `panel-messages._cwd` 同域——认领落点一致）。
+ *  本侧局部镜像 = 环避让（chat-panel → panel-messages 静态环不因本档新增 import 扩环）。 */
+function _cwd() {
+  return vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath || process.cwd()
 }

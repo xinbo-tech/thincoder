@@ -25,6 +25,9 @@ import { existsSync, unlinkSync } from "node:fs"
 import { loadSlotFile } from "@thincoder/core/session.mjs"
 import { newSlotData } from "@thincoder/core/session-slot-write.mjs"
 import { unlinkRecordStore } from "@thincoder/core/session-store.mjs"
+// F-XR1 退出释放（EXIT-CLAIM-RELEASE · SESSION.md §6.18）：核薄函数（端壳纯转口——
+// 容忍逻辑全在核；workspace 判据 = 入参形，见 releaseClaimsOnExit）。
+import { releaseClaimsAll } from "@thincoder/core/session-slots-manifest.mjs"
 // F-MI7 判据面（单源 = 核）：探测束 + 属主三态 / pid 清单。
 import { probeOwnersAsync } from "@thincoder/core/process-probe.mjs"
 import { ownerPids, ownerStateOf } from "@thincoder/core/session-slots-manifest.mjs"
@@ -210,6 +213,16 @@ export function deleteSlotAndUpdate(cwd, slot) {
   // `_slot` 钉到别人槽上 + 本端记录写别人槽 = P3/P4 违约；幸存槽由认领束另择新号）。
   if (slotCache.get(cwd) === slot) slotCache.delete(cwd)
   return m.active ?? null
+}
+
+/** 退出释放端壳（EXIT-CLAIM-RELEASE 批 · SESSION.md §6.18 F-XR4——端壳 = 纯转口两行）：
+ *  转**核** `releaseClaimsAll`（容忍逻辑全在核——永不抛出 / 返回 boolean）。workspace 判据
+ *  = **入参形**（评审 #3 钉死）：旗标 false ⇒ 跳过释放返回 false（extension 侧 `_cwd()` 会
+ *  回退宿主任意 process.cwd()——不给宿主 cwd 造盘面 / 误放他项目认领）；extension.mjs
+ *  （import vscode 侧）解析工作区面后显式传入旗标——本档保持 vscode-free（node 可测缝）。 */
+export function releaseClaimsOnExit(dir, hasWorkspace) {
+  if (!hasWorkspace) return false
+  return releaseClaimsAll(dir)
 }
 
 // ─── Model prefs (workspaceState, unrelated to session files) ──

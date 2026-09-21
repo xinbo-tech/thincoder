@@ -36,6 +36,9 @@ import { pasteClipboardImage as pasteClipboardImageImpl, insertPastedText, trans
 import { parseMouseClicks, handleWheel, createMouseDispatch, mouseOob } from "./mouse.mjs"
 import { runAgentTurn } from "./agent-turn.mjs"
 import { createKeyHandler, convMaxScroll, clearAttention } from "./key-handler.mjs"
+// F-XR1 退出释放（EXIT-CLAIM-RELEASE · SESSION.md §6.18）：核薄函数——/exit 与 Ctrl+C×2
+// 同一退出语义双入口；退出恒达（永不抛出）；零触碰 marker 面（F-XR2 路标保留）。
+import { releaseClaimsAll } from "@thincoder/core/session-slots-manifest.mjs"
 import { showStartup, backgroundIndex, createLoadOlder } from "./startup.mjs"
 import { shiftFreezeAnchors } from "./subagent-blocks.mjs"
 import { capLine, accountLine, accountAll, syncLineBudget } from "./display-budget.mjs"
@@ -438,7 +441,13 @@ export async function startTUI(agent, opts = {}) {
     setProviderKey,
     pickModelForSlot,
     runDistill,
-    exit: () => { cleanup(); setTimeout(() => process.exit(0), 100) },
+    exit: () => {
+      cleanup()
+      // F-XR1 退出释放（EXIT-CLAIM-RELEASE · SESSION.md §6.18）：同 key-handler 退出分支——
+      // 先释放（同步完成）后定时器注册（D-SE42——100ms 窗零竞态）。
+      releaseClaimsAll(process.cwd())
+      setTimeout(() => process.exit(0), 100)
+    },
   })
   // handleSlash is referenced by turnCtx (circular dep: submit → turn → handleSlash), backfilled here
   turnCtx.handleSlash = handleSlash

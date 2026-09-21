@@ -60,6 +60,12 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
  * 行 21 = 值变检测组 / 报明行组拆出邻档；触发条件 = 越 500 硬限，或下一次触碰该档的批）；
  * `test/tool-seams-agent.test.mjs` 设计档无对应行（父侧授权表外收正所致）——拆分方案 = 拒翻用例组
  * 随下次触碰该档的批拆出邻档（**待设计侧收正**，见批档 §5 报告）。
+ * EXIT-CLAIM-RELEASE 批（2026-09-21 · `docs/batches/2026-09-21-exit-claim-release.md` §2 现值列 +
+ * §5 尺度结论）登记**两档**（评审 #2 预判命中——同批越线）：`session-slots-manifest.mjs`
+ * （**316**——`releaseClaimsAll` +~19：释放函数与谓词 / 落盘同档单源 D-SE41，单凝面不拆；
+ * 拆分触发 = 越 500 硬限或下次触碰该档的批随批拆出认领面）· `test/session-slot-write.test.mjs`
+ * （**358**——T1/T2/T3 释放用例新组：夹具 `seedReleaseState` / `countingProbe` 与既有组共享，
+ * 拆档 = 复制脚手架；触发条件同前——随批拆出退出释放组）。
  */
 const SOFT_LINE_REGISTRY = new Set([
   "agent/dispatch.mjs", "agent/helpers.mjs", "agent/setup.mjs", "agent.mjs",
@@ -70,8 +76,8 @@ const SOFT_LINE_REGISTRY = new Set([
   "config.mjs", "context.mjs", "git/checkpoint.mjs", "manifest.mjs", "memory/code-sync.mjs",
   "memory/core.mjs", "memory/docs.mjs",
   "memory/schema.mjs", "process-probe.mjs", "provider/core.mjs", "provider/responses.mjs",
-  "session-lifecycle.mjs", "session-store.mjs", "test/batch.test.mjs", "test/manifest.test.mjs", "test/model-specs.test.mjs",
-  "test/provider-merge.test.mjs", "test/setup-reminders.test.mjs", "test/tool-seams-agent.test.mjs",
+  "session-lifecycle.mjs", "session-slots-manifest.mjs", "session-store.mjs", "test/batch.test.mjs", "test/manifest.test.mjs", "test/model-specs.test.mjs",
+  "test/provider-merge.test.mjs", "test/session-slot-write.test.mjs", "test/setup-reminders.test.mjs", "test/tool-seams-agent.test.mjs",
   "tools/edit-diff.mjs", "tools/file.mjs", "tools/git.mjs",
   "tools/lsp.mjs", "tools/repomap.mjs", "tools/shared.mjs",
 ])
