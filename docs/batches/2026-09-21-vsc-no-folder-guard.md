@@ -417,3 +417,5 @@ VERDICT: pass
 **发布关联**：随 VSC 列车（`0.9.4` / `0.9.5`）✗ **发布动作 = 用户门 ✗ 挂起中** ✓。
 
 **冻结核**：本 §6 落 ⇒ 整档冻结（不再回改 ✗ 例外 = 提交哈希回填 errata 一笔 ✓）。
+
+**提交 errata（本 §6 声明的例外笔）**：本批提交 = `1769287c`（`feat: vsc workspace guard — refuse agent start without a workspace folder (zero-write + explicit prompt)` ✗ 24 档 ✗ 已 push origin main ✓）。
