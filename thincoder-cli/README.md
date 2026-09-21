@@ -166,43 +166,25 @@ Configuration comes exclusively from `~/.thincoder/config.json` — no environme
 ## Architecture
 
 ```
-bin/thincoder.mjs   command entry (tui / chat / memory / sync / distill)
+bin/thincoder.mjs   command entry (tui / chat / memory / sync / distill / reindex / completion / upgrade / acp / session gc)
+bin/thincoder.cjs   CommonJS shim → bin/thincoder.mjs
 src/
-  provider/         LLM calls — core.mjs (fetch, SSE streaming, reasoning_content, usage, retries),
-                    rate.mjs (TPM/RPM proactive rate gate), index.mjs (entry)
-  embedding.mjs     vector embeddings (OpenAI-compatible /v1/embeddings)
-  tools/            16 builtin tools + MCP wrapping + readonly scheduling flags
-                    index.mjs (registry), file/git/patch/system/web.mjs (groups), shared.mjs (schema utils),
-                    repomap.mjs (repo dependency outline: import/export regex parsing, on-demand via tool)
-  tools.mjs         re-export shim → src/tools/index.mjs
-  mcp/              MCP client — helpers.mjs, transport-stdio/http/ws.mjs (JSON-RPC, zero-dependency)
-  mcp.mjs           MCP client entry (connectMcpServer), delegates to src/mcp/
-  agent.mjs         main loop + two-phase tool execution + reminder injection + completion guard + fix-verify loop
-                    + incremental indexing (auto reindexFile after write/edit/delete)
-  agent/            agent loop helpers — dispatch.mjs (two-phase execution), setup.mjs (system prompt assembly), helpers.mjs
-  agent-tools/      self-discipline tools (task/plan/goal/verify/subagent/skill/recent_changes)
-  context.mjs       rough token estimation + history compaction + task re-injection
-  memory/           three-layer memory — schema.mjs (DDL/constants), core.mjs (CRUD + retrieval),
-                    code-index.mjs + code-sync.mjs (code_chunks), docs.mjs (doc_chunks)
-  memory.mjs        re-export shim → src/memory/*
-  session.mjs       session persistence (unlimited archive slots, isolated by project cwd, process-level isolation via sessionId + slotSessions)
-  skills.mjs        skill discovery/loading (.thincoder/skills/*.md)
-  markdown.mjs      entry format (frontmatter parse/serialize)
-  git/              checkpoint.mjs (git patch snapshots / rewind), gitmem.mjs (Team layer git sync)
-  distill.mjs       session knowledge extraction (candidates + human confirmation)
-  config.mjs        config loading
-  tui/              bare-ANSI terminal UI — index.mjs (startTUI), render.mjs (drawing primitives),
-                    render-frame.mjs (frame layout), render-conversation.mjs (conversation panel),
-                    markdown.mjs (lightweight inline markdown → ANSI), mouse.mjs (SGR clicks),
-                    clipboard.mjs (paste/copy), ansi.mjs
-  tui.mjs           re-export shim → src/tui/index.mjs
-  tui-render.mjs    re-export shim → src/tui/render.mjs
-  prompts/          prompt texts — slot-based (PROMPT-SYSTEM): persona-engineering / persona-normal /
-                    persona-{eng-coder,explore,coder,plan,eng-designer} + common + discipline-engineering / discipline-normal
-                    + special modules (consult-base / advisor-design / advisor-round{1,2,3});
-                    assembly = assemblePrompt (prompt-overlays.mjs): persona → common → discipline → [4] AGENTS+skills
+  acp/                   Agent Client Protocol bridge — bridge, client caps, session/slot handlers, login, transport
+  acp.mjs                thincoder acp entry → src/acp/
+  cli/                   top-level command implementations — setup-wizard, memory-command, distill-command,
+                         make-agent (assembly), permission
+  completions.mjs        shell completion scripts (thincoder completion <shell>)
+  crash-reports.mjs      crash capture and forensics — fatal records, stderr capture, heap snapshots
+  distill.mjs            session knowledge extraction (candidates + human confirmation)
+  heap-watch.mjs         heap telemetry / watchdog
+  prompt-injections.mjs  prompt-anchor values for this end — tool face (bash / question)
+  tui/                   bare-ANSI terminal UI — index.mjs (startTUI), frame/conversation rendering,
+                         key handling, mouse/clipboard, the cmd-* command family, subagent panels
+  tui.mjs                re-export shim → src/tui/index.mjs
+  upgrade.mjs            version check and self-upgrade
 test/               node:test offline unit tests (npm test)
-scripts/            real-environment verification scripts (compaction, team sync)
+scripts/            repo-side scripts — release check, doc-impact, syntax/endpoint probes,
+                    real-environment verification (compaction, team sync)
 ```
 
 Key design decisions:

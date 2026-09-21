@@ -62,7 +62,7 @@ same files are loaded in every delivery state (local link, npm install, packaged
 
 - `prompts/` — the slot-based prompt texts: personas, the common layer, the discipline layers, and the advisor
   and consultation modules.
-- `tool-docs/` — one file per built-in tool; these texts are what the model reads as tool descriptions.
+- `tool-docs/` — one file per static built-in tool; these texts are what the model reads as tool descriptions.
 
 A prompt rule or a tool-description body is edited in exactly one place, and both products pick it up with the
 next release. The exception is two tool-face anchors — the bash terminal face in `tool-docs/bash.md` and the

@@ -160,22 +160,20 @@ thincoder-vscode/
 ├── AGENTS.md             # Developer guide
 ├── README.md             # This file
 ├── src/
-│   ├── agent-tools/       # Meta-tools — task, subagent, plan, goal, verify, skill
-│   ├── agent-tools.mjs    # Re-export shim
-│   ├── tools/             # File/system/git/web/bash tools (20+)
-│   ├── tools.mjs          # Re-export shim
-│   ├── provider/          # Provider rate gate
-│   ├── provider.mjs       # LLM provider with retry + re-exports rate
-│   ├── mcp/               # MCP transport (stdio, http)
-│   ├── mcp.mjs            # Re-export shim
-│   ├── extension/         # Extracted modules — presets, session-io, settings
-│   ├── config.mjs         # Model capability specs (self-contained)
-│   ├── memory.mjs         # Long-term memory (FTS5)
-│   ├── repomap.mjs        # Repository dependency graph
-│   ├── specs.mjs          # Re-export from config.mjs
-│   └── prompts/           # System prompts — slot-based (PROMPT-SYSTEM): persona-{engineering,normal,
-│   │                       eng-coder,explore,coder,plan} + common + discipline-{engineering,normal}
-│   │                       + special (consult-base / advisor-{design,round1-3}); assembly = assemblePrompt
+│   ├── agent/                 # Shell assembly — setup, tool table, run stages, reminders, gates
+│   ├── agent.mjs              # Agent loop — tool batching, image injection, compaction, subagents
+│   ├── agent-tools/           # Meta-tool wiring — registry re-export + stop/discard face
+│   ├── config-mcp.mjs         # MCP config shell — panel edits persist to config
+│   ├── embed-config.mjs       # Embedding / vector config shell
+│   ├── explore-distill.mjs    # Explore-summary adapter (core summarizer wrapper)
+│   ├── extension/             # Chat panel modules — panel-*, session slots/IO, settings, presets
+│   ├── i18n.mjs               # UI translation shell (core dictionary + end keys)
+│   ├── memory-tool.mjs        # memory tool shell face (core memory single source)
+│   ├── prompt-injections.mjs  # Prompt-anchor values for this end — tool face (bash / question)
+│   ├── repomap.mjs            # Repository dependency outline (workspace.fs data source)
+│   ├── specs.mjs              # Model capability specs (core table + end-side additions)
+│   ├── tools/                 # Host tools — code, context, focus, shell + core tool wiring
+│   └── tools.mjs              # Re-export shim → src/tools/index.mjs
 ├── webview/
 │   ├── chat.js           # Frontend orchestration
 │   ├── ui.js             # DOM helpers
