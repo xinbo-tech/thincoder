@@ -25,7 +25,7 @@ export async function lazyClearIfCommitted(cwd) {
   try {
     const cps = await listCheckpoints(cwd)
     if (cps.length === 0) return
-    const headSec = runGit(cwd, ["log", "-1", "--format=%ct"])
+    const headSec = await runGit(cwd, ["log", "-1", "--format=%ct"])
     const headMs = Number.parseInt(headSec, 10) * 1000
     if (!Number.isFinite(headMs) || headMs <= 0) return
     const newest = cps[0] // listCheckpoints returns newest → oldest

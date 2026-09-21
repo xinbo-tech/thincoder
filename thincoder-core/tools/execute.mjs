@@ -24,9 +24,10 @@
  *   filter     — return only output lines matching this regex (case-insensitive)
  *   timeoutMs  — timeout (default 30s, max 600000ms)
  */
-import { spawn, execFileSync } from "node:child_process"
+import { spawn } from "node:child_process"
 import { resolve } from "node:path"
 import { DESC } from "./shared.mjs"
+import { killProcessTree } from "./process-tree.mjs"
 
 const MAX_SCRIPT = 50_000
 const MAX_OUTPUT = 50_000
@@ -58,18 +59,9 @@ function applyFilter(output, filter) {
   }
 }
 
-/** Platform-aware process tree kill — mirror of system.mjs/verify.mjs killProcessTree.
- *  Timeout/abort must reach grandchildren: a script that spawned children keeps the
- *  pipes open otherwise — "close" never fires and the tool stalls until the 3s kick
- *  while the orphan keeps running (2026-09-05 advisor 🟡#4). */
-function killProcessTree(child) {
-  if (process.platform === "win32") {
-    try { execFileSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { stdio: "ignore" }) } catch {}
-  } else {
-    try { process.kill(-child.pid, "SIGKILL") } catch {}
-    try { child.kill("SIGKILL") } catch {}
-  }
-}
+/** 树杀单源 = `tools/process-tree.mjs`（TOOLS.md §6.14 落位表行 2：自本档抽出以断
+ *  `shared → git-run → execute → shared` 环）；**再导出面保留**（`test/tool-seams.test.mjs:26` 消费，
+ *  `configureProcessTreeKill` 缺省径零改）。 */
 export { killProcessTree }
 
 // ─── 树杀注入缝（#57——「树杀实现按端注入」，形态参 §2.13.5 注入缝）───────────────

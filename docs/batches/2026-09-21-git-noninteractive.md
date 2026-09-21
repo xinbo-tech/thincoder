@@ -32,7 +32,7 @@
 ## §2 批次任务（eng-designer）
 
 
-**状态行**：🔄 设计完成（2026-09-21 · 设计轮 · eng-designer）· 待评审（§3）
+**状态行**：🔄 实施完成（2026-09-21 · 终态 clean）· 收口中（§6）
 
 **设计档落点**：`docs/core/design/TOOLS.md` **§6.14**（新增——git 工具非交互加固 · 台账 #207 承接面）+ 同档变更记录一行。
 
@@ -55,14 +55,19 @@
 
 | # | 文件 | 现状行数 | 改动 |
 |---|---|---|---|
-| 1 | `thincoder-core/tools/git-run.mjs`（拟新增） | 0 | `GIT_ENV` + 两档超时 + `gitTimeoutNote(ms)` + `spawnGit()`（async · 树杀 · kick · 错误形同构） |
-| 2 | `thincoder-core/tools/process-tree.mjs`（拟新增） | 0 | `killProcessTree` 单源（自 `execute.mjs` 抽出） |
+| 1 | `thincoder-core/tools/git-run.mjs`（**已落** · 141 行） | 0 | `GIT_ENV` + 两档超时 + `gitTimeoutNote(ms)` + `spawnGit()`（async · 树杀 · kick · 错误形同构） |
+| 2 | `thincoder-core/tools/process-tree.mjs`（**已落** · 20 行） | 0 | `killProcessTree` 单源（自 `execute.mjs` 抽出） |
 | 3 | `thincoder-core/tools/execute.mjs` | 243 | 改 import + re-export（导出面零变） |
-| 4 | `thincoder-core/tools/shared.mjs` | 467 | `runGit` 改 async 薄壳 + `gitFailureMessage` 增 `timedOut` 分支（≈473 / **500 硬限——本批不得再增**） |
-| 5 | `thincoder-core/tools/git.mjs` | 420 | `runGitRaw` 改 async 薄壳 + **34 处** `await`（7 / 1 / 26） |
-| 6 | `thincoder-core/tools/git-ext.mjs` | 173 | `runGitStrict` 改 async 薄壳 + **15 处** `await`（3 / 12） |
+| 4 | `thincoder-core/tools/shared.mjs` | 467 | `runGit` 改 async 薄壳 + `gitFailureMessage` 增 `timedOut` 分支（实测 **471** / 500 硬限 ✓） |
+| 5 | `thincoder-core/tools/git.mjs` | 421 | `runGitRaw` 改 async 薄壳 + **30 处** `await`（7 / 1 / 22 ✗ 调用点实读） |
+| 6 | `thincoder-core/tools/git-ext.mjs` | 176 | `runGitStrict` 改 async 薄壳 + **15 处** `await`（3 / 12 ✗ 实读一致） |
 | 7 | `thincoder-core/tools/git-checkpoint.mjs` | 143 | 1 处 `await` |
-| 8 | `thincoder-core/test/git-noninteractive.test.mjs`（拟新增） | 0 | A23–A28 用例（scratch 仓 + 挂死夹具 + 本地 401 服务 + 结构断言） |
+| 8 | `thincoder-core/test/git-noninteractive.test.mjs`（**已落**） | 0 | A23–A28 用例（scratch 仓 + 挂死夹具 + 本地 401 服务 + 结构断言） |
+| 9 | `thincoder-vscode/src/tools/ide.mjs`（**已落** · 含 async `changesSection`） | 144 | `changesSection` 转 async + 1 处 `await`（§5 实施事实 ✓）|
+| 10 | `thincoder-vscode/test/tools-ide-changes.test.mjs`（**已落** · 新） | 0 | VSC 三格（真 `git init` 仓）|
+| 11 | `thincoder-vscode/test/files.mjs` | 127 | 用例登记 1 行（127→128）|
+
+> 父侧收正注（9-11 行）：评审轮 2 发现 #12 的「表未列 VSC 三档」补全 ✓ 可 revert。
 
 **验收（机判 · 承 §1）**：A23 编辑器族压制（先红）· A24 凭据 helper 族 + 超时（先红）· A25 凭据原生路（回归守卫）· A26 超时三件套（先红）· A27 形保真（回归）· A28 单点结构断言（先红）· A29 清算表齐全（文档面）。
 **三链同源自检**：§1 四功能点 = 本节覆盖表四行 = §6.14 判据 A23–A29（回指表 = §6.14「验收」节）——逐条对应，无缺口。
@@ -91,6 +96,20 @@
 
 **本轮改动文件**：仅 `docs/core/design/TOOLS.md`（§6.14 逐号 + §6.12/§6.13 边界 + 变更记录 1 条）。**零新语义**（10 条发现逐号落位；需求档 = 主 agent 笔——本轮只收正引用，未触需求档；实现代码零触）。
 **未决 / 登记（不上抛）**：`VISUAL` / `EDITOR` 两段因「最小集裁定（不加探针）」保持 unverified；win32 平台注已由本轮实测回实；A27 的两包全量跑法 = 实施轮跑项（`thincoder-vscode` 侧须先登记 `test/files.mjs`，否则 runner fail-closed 不收）。
+
+**修正轮 2（设计微修轮 · 2026-09-21 · eng-designer）——承 §5「偏离与处置」#1 上抛（win32 动作序分岔）· 父侧裁 = 收正设计档（非改码）；亦 = §3 轮次 1 发现 ⑩「评审发现处置表」的收尾项（`:519` 平台注已落 ⇒ 本轮补 `:516` 行归位）**
+
+逐号收正（as-of 2026-09-21 · 设计档 = `docs/core/design/TOOLS.md` §6.14）：
+
+| 号 | 处置 | 改动落点（`docs/core/design/TOOLS.md` file:line · 本轮末态） |
+|---|---|---|
+| 1 | §6.14 **超时动作序行补 win32 分支**（机制不变、仅分支化——① 步平台分岔；逐字照实现裁决 `thincoder-core/tools/git-run.mjs:107-109`） | `:516`——定值 = 「**win32**：直接树杀（树可寻址时）；**POSIX**：① `SIGTERM` 直接子 → ② 逾 1.5s 树杀 → ③ 逾 1.5s 未 `close` 亦 settle（kick）」；依据 = 「① 仅 POSIX：给 git 一次自行收尾机会（不直接 `SIGKILL`）」——「① 给 git 一次自行收尾机会」表述已限定 POSIX 侧；**上界 `timeout + 3s` 与 A26① 零改** |
+
+**零改面（逐条）**：`:519` 平台注（= win32 分支之据——实测 184ms 硬终止 ⇒ ① 不构成宽限；与分支后口径同向，逐字未动）· `:517` killSignal 行 · A24/A26/A28/A29 判据 · 清算表 / 加固集 / 超时值 · 代码面（实施已终态 clean，零触）✓。设计档**变更记录 +1 行**（`:712-713`）✓。
+
+**机检（触碰档零新增）**：`node scripts/doc-check.mjs` ⇒ 悬空 **3**（`CORE-UNIFICATION.md:1165/1520/1709`——未动）/ 行宽 **4**（3 项既有：`AGENT-LOOP-SUBAGENT.md:2091` · `BATCH-RECORD.md:358/365`；第 4 项 `docs/core/requirements/ENGINEERING-MODE-V2.md:688`（326 字符）= 并发批在飞漂移——只报不追）——`docs/core/design/TOOLS.md` **零新增** ✓（单行 ≤300：新 `:516` = 300 字符整 · `:712`/`:713` = 150/167 ✓）。
+
+**未动面（登记 · 报父侧）**：§2 本体面 lag 本轮未触（点改范围外）——§3 轮 2 发现 #12 两处（`:62` 计数「34 处（7 / 1 / 26）」· 受影响文件表未列 VSC 三档）+ 本轮新观测 1 处（`:35` 状态行仍「设计完成 · 待评审」）⇒ 待收口统一对齐 ✓。
 
 ## §3 设计评审（评审子代理）
 
@@ -152,8 +171,93 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder）
 
-（待批准后。）
+**状态行**：✅ 实施完成（2026-09-21 · eng-coder · 终态 clean）〔本段取代占位行 ✓〕
+
+**状态行**：✅ 实施完成（2026-09-21 · 实施轮 · eng-coder #62）——A23–A29 全绿 · 两包 + CLI 第三端回归全绿 · 内部审计 pass · 顾问代码评审 pass（🔴 0）
+
+**交付摘要（四功能点 → 落点）**
+
+| # | §1 功能点 | 落点 | 判据读数（见下「先红/批后对照」） |
+|---|---|---|---|
+| ① | 编辑器族压制（核心单点） | `tools/git-run.mjs` `GIT_ENV`（9 键加固集）单点 + 三形适配器转异步薄壳 | A23 ✓ · A27 ✓ · A28 ✓ |
+| ② | 凭据 / GUI 族压制 | `GIT_ENV` `GIT_TERMINAL_PROMPT=0` + `GIT_ASKPASS=""` | A24 ✓ · A25 ✓ |
+| ③ | 超时兜底 + 明确报错（冻结绝不再现） | `spawnGit` 两档超时（120s/300s）+ SIGTERM→1.5s 树杀→1.5s kick + `gitTimeoutNote` 文案单源 | A24 ✓ · A26 ✓ |
+| ④ | 全 action 面清算 | §6.14 清算表 32 行（文档面） | A29 ✓（32 行 = enum 逐序 · 四族列非空 · `实害` 恰 1 = `rebase`）· A28 ✓ |
+
+**改动 file:line 表（11 档 · 逐档 = 设计落位表）**
+
+| # | 文件 | 改动 | 行数（`wc -l`） |
+|---|---|---|---|
+| 1 | `thincoder-core/tools/git-run.mjs`（新增） | `GIT_ENV`（`:18-29`）· 两档常量（`:31-32`）· `gitSubcommand`/网络五动作（`:34-49`）· `gitTimeoutNote`（`:53-57`）· 缝 `_setGitTimeoutForTest`/`_resetGitTimeoutForTest`（`:38-41`）· `spawnGit`（`:64-140`） | 0 → 140 |
+| 2 | `thincoder-core/tools/process-tree.mjs`（新增） | `killProcessTree` 单源（自 `execute.mjs` 抽出——断 `shared→git-run→execute→shared` 环） | 0 → 20 |
+| 3 | `thincoder-core/tools/execute.mjs` | `:27` import 换 `spawn` + `:30` 引 `process-tree.mjs`；`:62-65` 定义改再导出（导出面零变） | 243 → 235（**−8**：定义体外移所致） |
+| 4 | `thincoder-core/tools/shared.mjs` | `:11` 引 `spawnGit/gitTimeoutNote/GIT_TIMEOUT_MS`；`:443-445` `gitFailureMessage` 增 `timedOut` 分支；`:456-459` `runGit` 体改 `await spawnGit` 薄壳 | 467 → 471（+4，预算 ≈473 内） |
+| 5 | `thincoder-core/tools/git.mjs` | `:7` import 换 `spawnGit`；`:20-22` `runGitRaw` 薄壳；**30 处 `await`**（`runGit` 7 · `runGitRaw` 1 · `runGitStrict` 22） | 420 → 421（+1：`runGitRaw` 注释 +1 行） |
+| 6 | `thincoder-core/tools/git-ext.mjs` | `:7` import 换 `spawnGit/gitTimeoutNote`；`:21-31` `runGitStrict` 薄壳 + `timedOut` 分支；**15 处 `await`**（`runGit` 3 · `runGitStrict` 12） | 173 → 176（+3：注释 +2 · 分支 +1） |
+| 7 | `thincoder-core/tools/git-checkpoint.mjs` | `:28` 1 处 `await`（`lazyClearIfCommitted`，已在 try/catch 面） | 143 → 143 |
+| 8 | `thincoder-core/test/git-noninteractive.test.mjs`（新增） | A23–A26 行为四格 + A28 结构三式 | 0 → 230 |
+| 9 | `thincoder-vscode/src/tools/ide.mjs` | `:133` `changesSection` 转 async + `:136` 1 处 `await`（端侧扇出；`:70` `collectSection` 已 async ⇒ 受控，`:48` 调用面零改） | 144 → 144 |
+| 10 | `thincoder-vscode/test/tools-ide-changes.test.mjs`（新增） | VSC 三格（未提交变更出段 / 洁净不出 / 非仓零抛错——真 `git init` 仓） | 0 → 60 |
+| 11 | `thincoder-vscode/test/files.mjs` | `:126` 登记 1 行（runner fail-closed） | 127 → 128（+1） |
+
+**先红 / 批后对照（逐条命令 + 读数原文）**
+
+- **A28①**（`execFileSync(` 调用点计数 · 注释剥除 · 四档）：批前（HEAD 洁净 worktree 探针）`count=4 :: tools/shared.mjs, tools/shared.mjs, tools/git.mjs, tools/git-ext.mjs`；批后 `count=1`（`shared.mjs:223` `gitDiffOne` 体内 = 白名单位）⇒ **转绿** ✓
+- **A28③**：批前 `git-run.mjs exists :: false` · `spawnGit importable :: false`；批后三适配器 import 命中 ✓
+- **A23**（先红 = 挂死）：批前探针 `A23-pre call started …` 后**无 RETURNED 行**（外部 25s 界被杀）∧ 编辑器夹具 pid 档在案（夹具被启动）= 冻结复现；批后用例 `✔ A23 … (2142ms)`——返回 · HEAD 前移（`%s=main`）· rebase 目录消失 · **pid 档不出现（编辑器从未启动）** ✓
+- **A24**：批前同形（异步界）`helper launched :: yes … alive=true`（helper 起且挂住 · 同步路无界）；批后 `✔ A24 … (2180ms)`——`git push failed: timed out after 1.2s (killed) — …tree best-effort … checkpoint action=checkpoint checkpointAction=list` · 夹具**不存活** ✓
+- **A25**（回归守卫 · 批前亦快失败）：批前 129ms / `fatal: could not read Username …: terminal prompts disabled`；批后 `✔ A25 (533ms)` 同句（`LC_ALL=C` 钉死）✓
+- **A26**：批前无 `spawnGit`（无超时 / 无树杀能力）；批后 `✔ A26 (2530ms)`——① `settle ≤ timeout+3s`（实测 929ms/800ms 档）② `.timedOut === true` ∧ `.code = "ETIMEDOUT"` ③ 夹具进程树不存活 ④ 孙持管道格仍 settle ✓
+- **A27**（形保真）：`node .thincoder/tmp/gitni-sampling.mjs <coreRoot>` 两读**逐字节同**（`byte-equal: true | bytes: 700 / 700`）——`status` / `diff` / `log` / `branch list` / 洁净仓 / 非仓抛错帧（含 `(repo: …)` 注记与 `— pass workdir …` 指引）✓
+- **A29**（文档面）：§6.14 清算表 `行数 = 32` = `git.mjs` action enum 32 项**逐序同** · 四族列空位 0 · 值域逃逸 0 · `实害` 恰 1 = `rebase（编辑器 + GUI）` ✓
+- **白名单外零命中**：批后四档 `execFileSync(` 调用点 = 1（白名单）✓；`tools/` 域内 `GIT_*` 四加固键仅 `git-run.mjs` + `bash.mjs` ✓
+
+**两包 + 第三端回归（逐档）**
+
+| 档 | 命令 | 读数 |
+|---|---|---|
+| `thincoder-core` | `node test/run.mjs`（`test/run.mjs` 单层 glob ⇒ 新档自动收集） | **522 / 522 pass · fail 0**（批前同档 520/520 pass ⇒ 失败集合 ∅ ⊆ 批前 ✓） |
+| `thincoder-vscode` | `npm test` | **908 / 908 pass · fail 0**（含新用例 `T-IDE1..3`） |
+| 第三端（顾问评审 #10 建议补跑） | `node --test test/git-commit-pathspec.test.mjs` / `test/integration/commit-verify-gate.test.mjs`（`thincoder-cli`） | **5/5 · 3/3 pass** |
+
+**Δ 实测对照（口径 = `wc -l`）**：新增三档 140 / 20 / 230（设计预估 ≈95 / ≈18 / ≈150——差 = 注释密度，均 ≤300）· `shared.mjs` +4（471 < 500 硬限 ✓）· `git.mjs` +1 · `git-ext.mjs` +3 · `git-checkpoint.mjs` ±0 · `execute.mjs` −8（定义外移）· `ide.mjs` ±0 · `files.mjs` +1 ✓
+
+**偏离与处置（逐项 · 均已在报告与代码注释留痕）**
+
+| # | 偏离 | 理由与证据 | 处置 |
+|---|---|---|---|
+| 1 | **win32 动作序分岔**：`spawnGit` 在 win32 上超时**直接树杀**（不经 ① SIGTERM 步），POSIX 保留「SIGTERM → 1.5s 树杀」宽限序（`git-run.mjs:100-112`） | win32 `SIGTERM` = 硬终止且**不连带子进程**（设计 `:519` 平台注实测）；父一死 `taskkill /PID <父> /T` 就够不到孙进程——实测（修前）：helper 孤儿存活 · 管道不放 ⇒ 只能等 kick（4226ms）且 **A24「夹具进程不存活」/ A26③「树杀不存活」必红**。改用「树仍在时可寻址」⇒ 修后 A24 1387ms / A26 929ms 且夹具全灭 ✓ 独立审计与顾问评审均判该处置**满足判据且无更贴逐字的可行替代** | 报告 + 代码注释（`:101-107`）；**建议 §6.14 动作序行补 win32 分支**（设计面 = eng-designer 笔，本档不擅改） |
+| 2 | 超时收尾**补一次树杀**（`settleWith` 的 `mode === "timeout"` 分支，评审 #1） | `close` 早退会清掉 1.5s `killTimer` ⇒ **不持管道**的孙进程漏杀；树杀在头进程死后 POSIX 仍可达全组 | 已修（评审后自修轮）✓ |
+| 3 | 解码改**流级 UTF-8**（`setEncoding`，评审 #2） | 逐 chunk 隐式 `toString()` 会把跨 chunk 的多字节序列解成 U+FFFD——**实测复现**：178KB CJK diff 旧形 `U+FFFD=19` / 新形 `0`；批前三档均经 `execFileSync({encoding:"utf8"})` 整体解码（形保真 ①） | 已修 ✓（另：238KB CJK diff 下 `spawnGit` 原文与 `execFileSync` 基准**逐字节同** ✓） |
+| 4 | 溢出上限按 **byte** 计 + 截断按字符 · stderr 独立计量（评审 #8 微项） | 与 `execFileSync` maxBuffer 口径同源（byte/per-stream）；截断仅影响部分输出的前缀长度，判据只认 `code` + 部分输出 | 注释写明 ✓ |
+| 5 | A28② 谓词取 **4 个 `GIT_*` 专属键**（评审 #6） | 设计 `:624` 原文「加固键字面」未逐键枚举；裸 `EDITOR`/`VISUAL`/`PAGER`/`TERM` 域内散见需词边界归并；四键已能唯一钉住「第二处加固集」（实测命中集 = `{bash.mjs, git-run.mjs}` ✓） | 测试注释写明取键理由 ✓；建议设计面回写精确谓词 |
+| 6 | `_setGitTimeoutForTest` 注入形（设计 `:515` 逐字已授权） | `GIT_ENV` 继承面 = **模块求值期快照**（设计逐字形常量）⇒ A23 敌意 `GIT_EDITOR` / A25 `LC_ALL` 须在**导入工具档之前**落 env；本档 = 独立进程 ⇒ 复位 = `after()`（A24 的缝注入仍走 `finally`） | 测试档头注写明 ✓ |
+| 7 | §2 本体面 lag（`git.mjs` 计数仍「34 处（7/1/26）」· 受影响表未列 VSC 三档） | 设计 `:543`/`:595` 已收正 30/46；`§3` 轮 2 发现 #12 已登记、`§4` 已承「随 §6.14 同步」 | 本档上报；**§2 收口 = 父侧**（eng-designer 笔） |
+
+**跑项之外的行为抽检（本档自证 · 非判据）**：溢出分支 `maxBuffer: 64` ⇒ `code=ERR_CHILD_PROCESS_STDIO_MAXBUFFER` + 64B 部分输出 · 134ms settle ✓；非零退出错误形 `status=128` + stderr + `Command failed: git …` ✓；`bash.mjs` / 表外复核五位 / `gitDiffOne` 零改 ✓；不新增 action / 参数 / 用户选项 ✓（缝为模块级测试导出 · `??` 回落）；checkpoint / 快照语义零改 ✓。
+
+**本档写盘证据（`.thincoder/tmp/` · gitignore 内）**：`gitni-prered-log.txt`（先红读数）· `gitni-prered-probe.mjs` · `gitni-sampling.mjs` · `gitni-sample-before.txt` / `-after.txt` · `gitni-{core,vsc}-full/final/final2.log` · `gitni-cli-git.log` / `gitni-cli-integ.log` · `gitni-doc-check.log`（HEAD 洁净 worktree 已用毕注销）。
+
+**doc-check（触碰档零新增）**：`node scripts/doc-check.mjs` ⇒ 悬空 **3**（`CORE-UNIFICATION.md:1165/1520/1709`，全为 `scripts/check-doc-width.mjs` 迁移期引文）+ 行宽 **3**（`AGENT-LOOP-SUBAGENT.md:2091` · `BATCH-RECORD.md:358/365`）——**本批零触碰文档面**（11 档全为代码 / 用例档）⇒ 读数与批前逐字同，零新增 ✓
+
+**审计与评审轮次（终态）**：内部偏离审计（explore 只读）= **pass**（🔴 0 · 🟡 2 均为文档面：win32 分岔未入档 / §2 lag · 🔵 3）· 顾问代码评审（round 1 全场）= **pass**（🔴 0 · 🟡 5 全标「可选 · 不阻塞」· 🔵 5）；**自修轮 1**（承评审 🔵 #1/#2 + 🔵 #7 兜底）：超时收尾补树杀 + 流级 UTF-8 解码 + `timeoutMs ?? GIT_TIMEOUT_MS`——修后复跑：用例 5/5 ✓ · core 522/522 ✓ · VSC 908/908 ✓ · CJK 对拍实证（19 → 0 U+FFFD）✓。**终态 = clean**（无未决 🔴 / 🟡-必修）。
 
 ## §6 验证与收口（主代理）
 
-（待实施后。）
+**状态行**：✅ 已收口 2026-09-21（实施终态 clean ✗ 父侧复跑用例 5/5 ✗ 台账 #207 已核销；记录冻结）
+
+**交付核验（父侧独立复核 ✗ 非采信自报）**：
+- 体量逐档：`git-run.mjs` **141** ✗ `process-tree.mjs` **20** ✗ `git-noninteractive.test.mjs` **226**（报 230 ✗ 4 行差 = 计数口径类 ✗ 零实质 ✓）✗ `shared.mjs` **471** ✗ `git.mjs` **421** ✗ `git-ext.mjs` **176** ✗ `execute.mjs` **235** ✗ `ide.mjs` **144** ✓
+- 机制面：`GIT_ENV` 9 键全在 ✓ ✗ win32 直树杀分支在（`:100-112` 带实测理由 ✓）✗ **A28① 白名单位实为恰一处**（另两 `execFileSync` 命中 = import 行 + 注释 ✗ 非调用 ✓）✗ 三适配器均经 `spawnGit` ✓
+- 判据：父侧实跑 **A23 1.3s / A24 1.7s / A25 0.4s / A26 2.4s / A28 ✓ 5/5 pass**（批前 = 无限挂死 ✗ 修后秒级返回 ✓✓）✗ 子代理读数：核 **522/522** ✗ VSC **908/908** ✗ CLI 抽档 8/8 ✗ A27 对拍 **byte-equal: true · 700/700** ✓
+- 机检：doc-check 基线不动（悬空 3 ✗ 本批触碰档零新增 ✓）
+
+**上抛处置（4 条 → 全闭）**：
+1. **设计漂移：win32 分岔** → **Fixed**（#68 补 §6.14 `:516` 分支化 + `:517` killSignal 行收正 ✓）
+2. **§2 本体 lag**（`:62` 计数 ✗ VSC 三档 ✗ `:35` 状态行）→ **Fixed**（本轮收正 ✓ 9-11 行补录 ✓）
+3. **A28② 谓词收窄 + 三处自修**（树杀补完 ✗ 流级 UTF-8（CJK 对拍 19→0 实证）✗ `??` 回落）→ 登记 ✓（评审驱动 ✗ 已披露 ✓）
+4. **表外零越界** ✓（`.thincoder/tmp/**` = 证据面 ✓）
+
+**核销**：台账 **#207** = 已核销 ✓（六态走满 ✓）
+
+**提交**：本收口轮（含 `TOOLS.md` ✗ `requirements/TOOLS.md`（F9）✗ VSC `files.mjs` ✗ plan 批 errata 行 ✓）。

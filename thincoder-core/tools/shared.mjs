@@ -8,6 +8,7 @@ import { readFileSync, existsSync, realpathSync, readdirSync, statSync, openSync
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { loadToolDoc, applyPromptInjections } from "../prompt-files.mjs"
+import { spawnGit, gitTimeoutNote, GIT_TIMEOUT_MS } from "./git-run.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 // 工具描述加载面——**核内单一解析面**（D-C13 / 契约 8）：解析根 = `prompt-files.mjs`
@@ -438,8 +439,10 @@ export function htmlToText(html) {
 
 /** git 失败消息构造单点（#55 fail-closed——`runGit` / `runGitRaw` 两读取面同款）：形态 =
  *  `git <args…> failed: <stderr 首行> (cwd: <绝对 cwd>)`；**非仓**失败（退出码 128 ∧ stderr 首行含
- *  `not a git repository`）尾附 workdir 指引；spawn 失败（无 stderr）取 `e.message` 首行——**禁空尾**。 */
+ *  `not a git repository`）尾附 workdir 指引；spawn 失败（无 stderr）取 `e.message` 首行——**禁空尾**。
+ *  **超时**（`e.timedOut`——§6.14）：帧 + 单源超时注（`gitTimeoutNote`，含树杀尽义与恢复指引）。 */
 export function gitFailureMessage(e, cmdArgs, cwd) {
+  if (e?.timedOut) return `git ${cmdArgs.join(" ")} failed: ${gitTimeoutNote(e.timeoutMs ?? GIT_TIMEOUT_MS)} (cwd: ${resolve(cwd ?? ".")})`
   const stderr = String(e?.stderr ?? "").trim()
   const first = stderr.split("\n")[0].trim() || String(e?.message || e?.code || "unknown error").split("\n")[0]
   const notRepo = e?.status === 128 && first.includes("not a git repository")
@@ -449,10 +452,11 @@ export function gitFailureMessage(e, cmdArgs, cwd) {
 
 /** Execute a git command. maxBuffer 10MB prevents large diff/log overflow; on overflow, returns truncated partial output rather than empty.
  *  config: optional array of `-c key=value` overrides (e.g. ["http.proxy=http://10.2.2.112:3128"]) —
- *  inserted verbatim after `git`, so network actions (push/fetch/pull/ls-remote) can route through a proxy. */
-export function runGit(cwd, cmdArgs, config = []) {
+ *  inserted verbatim after `git`, so network actions (push/fetch/pull/ls-remote) can route through a proxy.
+ *  §6.14：体改**异步薄壳**委托 `spawnGit` 单点（加固 env + 两档超时 + 树杀）；trim / `\r` / 溢出 / 抛出四形逐字保留。 */
+export async function runGit(cwd, cmdArgs, config = []) {
   try {
-    return execFileSync("git", [...config, ...cmdArgs], { cwd, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] }).trim().replace(/\r/g, "")
+    return (await spawnGit(cwd, [...config, ...cmdArgs], { maxBuffer: 10 * 1024 * 1024 })).trim().replace(/\r/g, "")
   } catch (e) {
     // maxBuffer overflow: e.stdout contains partial collected output — return it
     // (callers show "(truncated)"-style tails). Every OTHER failure (non-git repo,

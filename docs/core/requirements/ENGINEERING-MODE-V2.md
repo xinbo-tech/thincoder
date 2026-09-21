@@ -685,7 +685,8 @@ v1 三机检 = 必要内核 + 一大坨 thincoder 私有历史包袱（双引擎
 
 ### 13.9 工程模式 plan 面排除（FR31 · 2026-09-21 用户裁定）
 
-**背景**：工程模式主 agent 的职能本身即「设计先行」（设计 → 评审 → 批准 → 实施）——plan 模式与其**语义重叠**，且其退出话术（`PLAN_EXIT_REMINDER`："Start implementing your plan … No need for … further confirmation"〔该文本已于 2026-09-21 收正为「呈计划 ⇒ 待批准 ⇒ 实施」✗ 见批档 `2026-09-21-plan-approval-texts.md` ✓〕）与工程链条**直接冲突**。实测（用户观察 2026-09-21）：glm-5.3-flash 等模型在工程模式下频繁进入 plan 模式 ⇒ 系统性误导源。
+**背景**：工程模式主 agent 的职能本身即「设计先行」（设计 → 评审 → 批准 → 实施）——plan 模式与其**语义重叠**，且其退出话术（`PLAN_EXIT_REMINDER`："Start implementing your plan … No need for … further confirmation"〔该文本已于 2026-09-21 收正为「呈计划 ⇒ 待批准 ⇒ 实施」✗ 见批档 `2026-09-21-plan-approval-texts.md` ✓〕）与工程链条**直接冲突**。
+实测（用户观察 2026-09-21）：glm-5.3-flash 等模型在工程模式下频繁进入 plan 模式 ⇒ 系统性误导源。
 
 **需求（三条 · 用户 2026-09-21 00:57 批准）**：
 

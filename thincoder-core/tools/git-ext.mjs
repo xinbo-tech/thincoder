@@ -4,7 +4,7 @@
  * 供 git.mjs 核心 action 复用——500 行硬限拆分）。CLI 与 VS Code 两端同构（镜像，修改须两端同批）。
  */
 import { runGit, truncate } from "./shared.mjs"
-import { execFileSync } from "node:child_process"
+import { spawnGit, gitTimeoutNote } from "./git-run.mjs"
 
 /** Keep only output lines matching a regex (git filter, case-insensitive). */
 export function filterLines(output, filter) {
@@ -19,12 +19,15 @@ export function filterLines(output, filter) {
 }
 
 /** Run git and report failure (stderr + exit code) instead of swallowing it.
- *  Used by write ops (commit/push/rm) where a silent "" would masquerade as success. */
-export function runGitStrict(cwd, cmdArgs, config = []) {
+ *  Used by write ops (commit/push/rm) where a silent "" would masquerade as success.
+ *  §6.14：体改**异步薄壳**（`spawnGit` 单点——加固 env + 两档超时 + 树杀）；`{ok, out, err}` 形逐字保留
+ *  + 超时分支（`err` = 单源超时注——可辨性不靠 stderr 文本猜）。 */
+export async function runGitStrict(cwd, cmdArgs, config = []) {
   try {
-    const out = execFileSync("git", [...config, ...cmdArgs], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim().replace(/\r/g, "")
+    const out = (await spawnGit(cwd, [...config, ...cmdArgs])).trim().replace(/\r/g, "")
     return { ok: true, out }
   } catch (e) {
+    if (e.timedOut) return { ok: false, out: String(e.stdout || "").trim(), err: gitTimeoutNote(e.timeoutMs) }
     return { ok: false, out: String(e.stdout || "").trim(), err: String(e.stderr || e.message || "").trim() }
   }
 }
@@ -36,7 +39,7 @@ export function validateRef(ref, what = "git ref") {
 }
 
 /** Normalize args.config into `-c key=value` pairs (git -c overrides, e.g. a proxy).
- *  Values are execFileSync array args (no shell injection) — still reject newlines/empty. */
+ *  Values are spawn array args (no shell injection) — still reject newlines/empty. */
 export function gitConfigArgs(config) {
   if (config == null) return []
   if (!Array.isArray(config)) throw new Error("config must be an array of \"key=value\" strings")
@@ -70,11 +73,11 @@ export async function executeExtAction(args, ctx) {
       if (!args.remote) return "Error: clone requires remote (URL or local path)"
       const cmdArgs = ["clone", args.remote]
       if (args.path) cmdArgs.push(args.path)
-      const r = runGitStrict(ctx.cwd, cmdArgs, gitConfigArgs(args.config))
+      const r = await runGitStrict(ctx.cwd, cmdArgs, gitConfigArgs(args.config))
       return r.ok ? truncate(r.out || `Cloned ${args.remote}`) : truncate(`git clone failed: ${r.err || r.out}`)
     }
     case "init": {
-      const r = runGitStrict(ctx.cwd, ["init"])
+      const r = await runGitStrict(ctx.cwd, ["init"])
       return r.ok ? truncate(r.out || "Initialized empty git repository") : truncate(`git init failed: ${r.err || r.out}`)
     }
     case "rebase": {
@@ -89,21 +92,21 @@ export async function executeExtAction(args, ctx) {
       if (sub === "abort") cmdArgs.push("--abort")
       else if (sub === "continue") cmdArgs.push("--continue")
       else { if (!args.ref) return "Error: rebase requires ref (branch/commit to rebase onto)"; cmdArgs.push(validateRef(args.ref)) }
-      const r = runGitStrict(ctx.cwd, cmdArgs)
+      const r = await runGitStrict(ctx.cwd, cmdArgs)
       return r.ok ? truncate(snap + (r.out || `Rebase ${sub} complete`)) : truncate(snap + `git rebase failed: ${r.err || r.out} — use rebaseAction=abort to abort`)
     }
     case "remote": {
       const sub = args.remoteAction ?? "list"
-      if (sub === "list") return truncate(filterLines(runGit(ctx.cwd, ["remote", "-v"]) || "(no remotes)", args.filter))
+      if (sub === "list") return truncate(filterLines(await runGit(ctx.cwd, ["remote", "-v"]) || "(no remotes)", args.filter))
       if (!args.remote) return `Error: remote ${sub} requires remote (name)`
       validateRef(args.remote, "remote name")
       if (sub === "add" || sub === "set-url") {
         if (!args.remoteUrl) return `Error: remote ${sub} requires remoteUrl`
-        const r = runGitStrict(ctx.cwd, ["remote", sub === "add" ? "add" : "set-url", args.remote, args.remoteUrl])
+        const r = await runGitStrict(ctx.cwd, ["remote", sub === "add" ? "add" : "set-url", args.remote, args.remoteUrl])
         return r.ok ? `Remote ${args.remote} ${sub === "add" ? "added" : "URL set"}` : truncate(`git remote ${sub} failed: ${r.err || r.out}`)
       }
       if (sub === "remove") {
-        const r = runGitStrict(ctx.cwd, ["remote", "remove", args.remote])
+        const r = await runGitStrict(ctx.cwd, ["remote", "remove", args.remote])
         return r.ok ? `Remote ${args.remote} removed` : truncate(`git remote remove failed: ${r.err || r.out}`)
       }
       return "Error: remote requires remoteAction — use: list | add | remove | set-url"
@@ -113,7 +116,7 @@ export async function executeExtAction(args, ctx) {
       // dryRun (-n) is a preview: no deletion, no snapshot.
       const snap = args.dryRun ? "" : await snapshotBefore(ctx, "clean")
       const cmdArgs = ["clean", args.dryRun ? "-n" : "-f", "-d"]
-      const r = runGitStrict(ctx.cwd, cmdArgs)
+      const r = await runGitStrict(ctx.cwd, cmdArgs)
       return r.ok ? truncate(snap + (r.out || (args.dryRun ? "Nothing to clean (dry run)" : "Clean complete"))) : truncate(snap + `git clean failed: ${r.err || r.out}`)
     }
     case "switch": {
@@ -122,28 +125,28 @@ export async function executeExtAction(args, ctx) {
       const cmdArgs = ["switch"]
       if (args.create) cmdArgs.push("-c")
       cmdArgs.push(args.name)
-      const r = runGitStrict(ctx.cwd, cmdArgs)
+      const r = await runGitStrict(ctx.cwd, cmdArgs)
       return r.ok ? truncate(r.out || `Switched to branch ${args.name}`) : truncate(`git switch failed: ${r.err || r.out}`)
     }
     case "apply": {
       // Apply a patch — non-destructive (fails cleanly on conflict, applies nothing).
       if (!args.path) return "Error: apply requires path (patch file)"
-      const r = runGitStrict(ctx.cwd, ["apply", "--", args.path])
+      const r = await runGitStrict(ctx.cwd, ["apply", "--", args.path])
       return r.ok ? truncate(r.out || `Applied ${args.path}`) : truncate(`git apply failed: ${r.err || r.out}`)
     }
     case "worktree": {
       const sub = args.worktreeAction ?? "list"
-      if (sub === "list") return truncate(filterLines(runGit(ctx.cwd, ["worktree", "list"]) || "(no worktrees)", args.filter))
+      if (sub === "list") return truncate(filterLines(await runGit(ctx.cwd, ["worktree", "list"]) || "(no worktrees)", args.filter))
       if (sub === "add") {
         if (!args.path) return "Error: worktree add requires path (new worktree directory)"
         const cmdArgs = ["worktree", "add", args.path]
         if (args.ref) cmdArgs.push(validateRef(args.ref))
-        const r = runGitStrict(ctx.cwd, cmdArgs)
+        const r = await runGitStrict(ctx.cwd, cmdArgs)
         return r.ok ? truncate(r.out || `Worktree added at ${args.path}`) : truncate(`git worktree add failed: ${r.err || r.out}`)
       }
       if (sub === "remove") {
         if (!args.path) return "Error: worktree remove requires path"
-        const r = runGitStrict(ctx.cwd, ["worktree", "remove", args.path])
+        const r = await runGitStrict(ctx.cwd, ["worktree", "remove", args.path])
         return r.ok ? truncate(r.out || `Worktree removed: ${args.path}`) : truncate(`git worktree remove failed: ${r.err || r.out}`)
       }
       return "Error: worktree requires worktreeAction — use: list | add | remove"
@@ -154,17 +157,17 @@ export async function executeExtAction(args, ctx) {
       const cmdArgs = ["archive", "--format=tar", "-o", args.path]
       if (args.ref) cmdArgs.push(validateRef(args.ref))
       else cmdArgs.push("HEAD")
-      const r = runGitStrict(ctx.cwd, cmdArgs)
+      const r = await runGitStrict(ctx.cwd, cmdArgs)
       return r.ok ? truncate(r.out || `Archived ${args.ref ?? "HEAD"} to ${args.path}`) : truncate(`git archive failed: ${r.err || r.out}`)
     }
     case "blame": {
       if (!args.path) return "Error: blame requires path (file)"
-      const out = runGit(ctx.cwd, ["blame", "--", args.path])
+      const out = await runGit(ctx.cwd, ["blame", "--", args.path])
       return truncate(out || `(no blame output for ${args.path})`)
     }
     case "mv": {
       if (!args.path || !args.dest) return "Error: mv requires path (source) and dest (destination)"
-      const r = runGitStrict(ctx.cwd, ["mv", "--", args.path, args.dest])
+      const r = await runGitStrict(ctx.cwd, ["mv", "--", args.path, args.dest])
       return r.ok ? truncate(r.out || `Moved ${args.path} → ${args.dest}`) : truncate(`git mv failed: ${r.err || r.out}`)
     }
     default:

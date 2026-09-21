@@ -415,7 +415,7 @@ A13 调用方普查 · 套件级：三包全量 `npm test` 失败集合 ⊆ 批�
 | 1 | `thincoder-core/manifest.mjs` | 新导出 `discoverRepos` + `resolveProjectRoot` 改薄包装 + 头注一行 |
 | 2 | `thincoder-core/tools/git.mjs` | `execute()` 头部：import + 解析序（workdir / 发现 / 歧义 throw）+ 注记前缀（执行体抽模块级函数——**不用 `this`**：VSC 侧 `{...coreGitTool}` 展开装饰，`this` 绑定不可依赖） |
 | 3 | `thincoder-core/test/manifest.test.mjs` | `discoverRepos` 四态 + 候选保序（T41 / T42——用例表住 `docs/core/design/MANIFEST.md` §3.2） |
-| 4 | `thincoder-core/test/git-repo-discovery.test.mjs`（拟新增） | A14–A20 七格（夹具 = 真实 `git init` 仓 + `PROJECT-MANIFEST.json` 档；A20 = 源码结构断言、无夹具） |
+| 4 | `thincoder-core/test/git-repo-discovery.test.mjs`（已落） | A14–A20 七格（夹具 = 真实 `git init` 仓 + `PROJECT-MANIFEST.json` 档；A20 = 源码结构断言、无夹具） |
 
 **用例表（正常 / 边界 / 错误 · 判据 = A14–A20）**：
 
@@ -441,7 +441,7 @@ A17 workdir 优先 + 无注记；A18 两类 cwd 零行为变（既有用例全�
 **前置（已满足）**：A15 依赖 §6.12（#55 fail-closed）——**2026-09-19 实核已落地**
 （`thincoder-core/tools/git.mjs:16-25` `runGitRaw` 失败 throw · `thincoder-core/test/tool-seams.test.mjs:110-118` A7–A12 用例在档；台账 #55 = 已核销）⇒ A15 可判（「前置未满足」记法撤销）。
 
-**测试面**：新档 `thincoder-core/test/git-repo-discovery.test.mjs`（拟新增，`_setProjectRootForTest` **须复位**——发现面走真判据）；
+**测试面**：新档 `thincoder-core/test/git-repo-discovery.test.mjs`（**已落**，`_setProjectRootForTest` **须复位**——发现面走真判据）；
 `thincoder-core/test/manifest.test.mjs` 增 T41 / T42；既有 T-F9（同档）作 `resolveProjectRoot` 的零语义回归守卫（**零改**）。
 #59 审批门用例（`thincoder-core/test/tool-seams.test.mjs:88-106`）的夹具改造归 #55 批，本批**零改**
 （**#55 已落地**——该用例已改真洁净仓，见 `thincoder-core/test/tool-seams.test.mjs:91`）。
@@ -485,7 +485,7 @@ A17 workdir 优先 + 无注记；A18 两类 cwd 零行为变（既有用例全�
 **加固集（逐字 · 实施点 = 单点）**
 
 ```js
-// thincoder-core/tools/git-run.mjs（拟新增）——git spawn 单点
+// thincoder-core/tools/git-run.mjs（已落）——git spawn 单点
 export const GIT_ENV = {
   ...process.env,               // 继承面（PATH / HOME / 用户 proxy 等）——加固键一律置后覆盖，继承面不得反超
   GIT_EDITOR: "true",           // 编辑器族：提交信息编辑器（解析链最高优先键）
@@ -503,7 +503,7 @@ export const GIT_ENV = {
 - **依据（仓内先例优先）**：编辑器族 / pager 族 / 终端族 6 键 = `thincoder-core/tools/bash.mjs:47-59` `buildBashEnv()` 同款（bash 工具不冻、git 工具冻 = 本节缺陷的对照实锤）；凭据族 2 键为**本批新增**（bash 面亦无），依据 = 实测 #5 / #6 / #8。
 - **env 形（非 `-c` 形）**：`git var GIT_EDITOR` 读序实测 env 优先于 `core.editor` ⇒ 宿主 env（桌面 / IDE 注入的 `GIT_EDITOR` / `EDITOR`）在场时 `-c` 形单独不足（实测 #3 / #4）；env 形另具**零命令面改动**（成功路径输出形态零变）。
 - **最小集裁定（不加的项）**：不加 `-c core.askpass=`（实测 #8 冗余）；不加 `GIT_SSH_COMMAND`（会覆盖用户自配 ssh / plink——登记：ssh 面 = stdin 非 TTY ⇒ 密码提示不可达，GUI askpass 由超时兜底）。
-- **单点落位**：`GIT_ENV` + 两档超时 + `spawnGit` 全部住 `thincoder-core/tools/git-run.mjs`（拟新增）；三个形适配器（`runGit` / `runGitRaw` / `runGitStrict`）改**薄壳**——签名 / home / 消费面 import 路径全不变，仅体改异步并委托单点（禁逐调用点补加固）。
+- **单点落位**：`GIT_ENV` + 两档超时 + `spawnGit` 全部住 `thincoder-core/tools/git-run.mjs`（已落）；三个形适配器（`runGit` / `runGitRaw` / `runGitStrict`）改**薄壳**——签名 / home / 消费面 import 路径全不变，仅体改异步并委托单点（禁逐调用点补加固）。
 
 **超时语义（值 / 面 / 动作序 / 文案）**
 
@@ -513,8 +513,8 @@ export const GIT_ENV = {
 | 网络面超时 | `GIT_NET_TIMEOUT_MS = 300_000`（300s） | 网络五动作（`push` / `fetch` / `pull` / `clone` / `ls-remote`）合法耗时可远超本地；依据 = 需求档 `docs/core/requirements/TOOLS.md` **§4.7 TTY-DRIVE N3**（`:141`）「档 ≤ 3 分钟」——该行自述「数值口径**待设计轮定**」⇒ 本批取其作**候选参照值**（非既有契约值） |
 | 适用面 | **全量**（三适配器 · 全 32 action 同款） | 不做读 / 写分档：读面无更长正当耗时；写面网络动作已另提档 ⇒ 分档无收益 |
 | 注入面 | `spawnGit(cwd, args, { timeout, maxBuffer })`（缺省按面取常量 · `??` 回落）+ **测试态缝** `_setGitTimeoutForTest(ms)` / `_resetGitTimeoutForTest()`（模块级 · `git-run.mjs` 导出——先例 `manifest.mjs:40-41` · `thincoder-core/session-gc.mjs:136`；用例 `finally` 复位） | 使 A26（`spawnGit` **直调** + 参数覆盖）与 A24（**适配器层**——`gitTool.execute` → `runGitStrict` → `spawnGit` **缺省解析**）均可机判（小 timeout 夹具，不必等 120s / 300s）；**不进用户参数面**（边界明令不新增用户选项） |
-| 超时动作序 | ① `SIGTERM` 直接子 → ② 逾 1.5s **树杀** → ③ 逾 1.5s 未 `close` 亦 settle（kick） | ① 给 git 一次自行收尾机会（不直接 `SIGKILL`）；② 树杀 = 仓内先例 `killProcessTree`（Windows `taskkill /T /F` · POSIX 组杀）；③ 孙进程持管道时 `close` 永不触发（`thincoder-core/tools/bash.mjs:200-217` 同款注释）⇒ kick 是必需件 |
-| killSignal | `SIGTERM`，逾 1.5s 升级树杀（`SIGKILL` / `taskkill /F`） | 同上；上界 = `timeout + 3s` |
+| 超时动作序 | **win32**：直接树杀（树可寻址时）；**POSIX**：① `SIGTERM` 直接子 → ② 逾 1.5s **树杀** → ③ 逾 1.5s 未 `close` 亦 settle（kick） | ① 仅 POSIX：给 git 一次自行收尾机会（不直接 `SIGKILL`）；② 树杀 = 仓内先例 `killProcessTree`（Windows `taskkill /T /F` · POSIX 组杀）；③ 孙持管道时 `close` 永不触发（`thincoder-core/tools/bash.mjs:200-217` 同款注释）⇒ kick 是必需件 |
+| killSignal | **POSIX**：`SIGTERM`，逾 1.5s 升级树杀（`SIGKILL`）；**win32**：直接 `taskkill /T /F`（见上行动作序）| 同上；上界 = `timeout + 3s` |
 
 **平台注（win32）**：Node 对子进程 `SIGTERM` 在 win32 上实为**硬终止**（本设计轮实测：注册 `SIGTERM` 处理器的子进程仍 184ms 内被杀、处理器未执行 ⇒ ① 不构成宽限、git 侧零收尾窗口）；上界 `timeout + 3s` 与 A26① 不受影响。
 
@@ -588,16 +588,16 @@ timed out after <n>s (killed) — no interactive input is possible here (editor 
 
 | # | 文件 | 现状 | 改动 | 增量 / 体量档 |
 |---|---|---|---|---|
-| 1 | `thincoder-core/tools/git-run.mjs`（拟新增） | 0 | `GIT_ENV` · `GIT_TIMEOUT_MS` / `GIT_NET_TIMEOUT_MS` · `gitTimeoutNote(ms)` · `spawnGit()`（async · SIGTERM→树杀→kick · 错误形 = `execFileSync` 同构 + `.timedOut`） | ≈ +95（< 300 建议档） |
-| 2 | `thincoder-core/tools/process-tree.mjs`（拟新增） | 0 | `killProcessTree(child)` **单源**（自 `execute.mjs` 抽出，行为逐字同；抽出的理由 = 避免 `shared → git-run → execute → shared` 循环——`execute.mjs:29` 在模块求值期调 `DESC`（`const`，TDZ）） | ≈ +18 |
+| 1 | `thincoder-core/tools/git-run.mjs`（已落） | 0 | `GIT_ENV` · `GIT_TIMEOUT_MS` / `GIT_NET_TIMEOUT_MS` · `gitTimeoutNote(ms)` · `spawnGit()`（async · SIGTERM→树杀→kick · 错误形 = `execFileSync` 同构 + `.timedOut`） | ≈ +95（< 300 建议档） |
+| 2 | `thincoder-core/tools/process-tree.mjs`（已落） | 0 | `killProcessTree(child)` **单源**（自 `execute.mjs` 抽出，行为逐字同；抽出的理由 = 避免 `shared → git-run → execute → shared` 循环——`execute.mjs:29` 在模块求值期调 `DESC`（`const`，TDZ）） | ≈ +18 |
 | 3 | `thincoder-core/tools/execute.mjs` | 243 | `killProcessTree` 定义改 import + `export { killProcessTree }` | 导出面不变（`test/tool-seams.test.mjs:26` 与 `configureProcessTreeKill` 缺省消费零改） |
 | 4 | `thincoder-core/tools/shared.mjs` | 467 | `runGit` 体改 `await spawnGit(...)` 薄壳（trim / `\r` / 溢出 / 抛出四形逐字保留）；`gitFailureMessage` 增 `timedOut` 分支（嵌 `gitTimeoutNote`） | ±6 ⇒ **≈473 / 500 硬限**——本批不得在该档再增内容 |
 | 5 | `thincoder-core/tools/git.mjs` | 420 | `runGitRaw` 改 async 薄壳；**30 处**加 `await`（`runGit` 7 · `runGitRaw` 1 · `runGitStrict` **22**——调用点实读；原记 26 系误计） | ±0 |
 | 6 | `thincoder-core/tools/git-ext.mjs` | 173 | `runGitStrict` 改 async 薄壳（`{ok, out, err}` 形逐字保留 + `timedOut` 分支）；**15 处**加 `await`（`runGit` 3 · `runGitStrict` 12） | ±0 |
 | 7 | `thincoder-core/tools/git-checkpoint.mjs` | 143 | `lazyClearIfCommitted` 1 处 `await`（已 try/catch 面——§6.12 普查表行 4 语义零变） | ±0 |
-| 8 | `thincoder-core/test/git-noninteractive.test.mjs`（拟新增） | 0 | A23–A28 用例（scratch 仓 + 挂死夹具 + 本地 401 服务 + 结构断言） | ≈ +150 |
+| 8 | `thincoder-core/test/git-noninteractive.test.mjs`（已落） | 0 | A23–A28 用例（scratch 仓 + 挂死夹具 + 本地 401 服务 + 结构断言） | ≈ +150 |
 | 9 | `thincoder-vscode/src/tools/ide.mjs` | 144 | `changesSection`（`:133`）转 async + `:136` 1 处 `await`（核 `runGit` 转 async 的**端侧扇出面**——`:70` `collectSection` 已 async ⇒ 受控；`:48` 调用面零改） | ±0 |
-| 10 | `thincoder-vscode/test/tools-ide-changes.test.mjs`（拟新增） | 0 | VSC `ide` 工具面 changes 路径用例（= A27 的 VSC 半：未提交变更出段 / 洁净无段 / 非仓零抛错——真 `git init` 仓夹具） | ≈ +45 |
+| 10 | `thincoder-vscode/test/tools-ide-changes.test.mjs`（已落） | 0 | VSC `ide` 工具面 changes 路径用例（= A27 的 VSC 半：未提交变更出段 / 洁净无段 / 非仓零抛错——真 `git init` 仓夹具） | ≈ +45 |
 | 11 | `thincoder-vscode/test/files.mjs` | 127 | 用例登记 1 行（runner fail-closed：未登记 = 永不执行） | +1 |
 
 > 行数口径 = **`wc -l`**（换行符计数——机检同源 = `thincoder-core/test/core-hygiene.test.mjs:141`；读取工具显示值 = **+1**（末行空行）⇒ 计法差异非漂移，同先例 `AGENT-LOOP-SUBAGENT.md:448` · `DOC-CODE-RECONCILE.md:263`）。
@@ -633,9 +633,9 @@ timed out after <n>s (killed) — no interactive input is possible here (editor 
 | ③ 超时兜底 + 明确报错（冻结绝不再现） | A24 · A26 |
 | ④ 全 action 面清算 | A29 · A28 |
 
-**测试面**：新档 `thincoder-core/test/git-noninteractive.test.mjs`（拟新增）——夹具三形态：① scratch 仓（`git init` + 本地 identity + 冲突态构造）② 挂死进程夹具（.cmd / 脚本，启动即写 pid 档——**判据 = pid 档出没**，跨平台可跑）③ 本地 401 HTTP 服务（node `http`）。
+**测试面**：新档 `thincoder-core/test/git-noninteractive.test.mjs`（已落）——夹具三形态：① scratch 仓（`git init` + 本地 identity + 冲突态构造）② 挂死进程夹具（.cmd / 脚本，启动即写 pid 档——**判据 = pid 档出没**，跨平台可跑）③ 本地 401 HTTP 服务（node `http`）。
 `process.env.GIT_EDITOR` 注入须在 `finally` 复位（同式纪律：A25 的 `LC_ALL`、A24 的 `_setGitTimeoutForTest` / `_resetGitTimeoutForTest`）。
-**VSC 侧回归面** = `thincoder-vscode/test/tools-ide-changes.test.mjs`（拟新增 · 经 `test/files.mjs` 登记——runner fail-closed：未登记 = 永不执行；夹具 = temp `git init` 仓 + 未提交改动，真 git 子进程，先例 `thincoder-vscode/test/git-commit-pathspec.test.mjs:25-36`）：
+**VSC 侧回归面** = `thincoder-vscode/test/tools-ide-changes.test.mjs`（**已落** · 经 `test/files.mjs` 登记——runner fail-closed：未登记 = 永不执行；夹具 = temp `git init` 仓 + 未提交改动，真 git 子进程，先例 `thincoder-vscode/test/git-commit-pathspec.test.mjs:25-36`）：
 经 **`ideTool.execute({what:"changes"}, {cwd})` 真工具面**断言三格——① 未提交变更 ⇒ 输出含 `## 未提交变更 (N)` + 文件名行（**中间态红**：核 `runGit` 已 async ∧ `changesSection` 未转 ⇒ 输出变 `(error: …)`——防漏改）② 洁净 ⇒ 不出该段 ③ 非仓 cwd ⇒ 不出该段、零抛错（`catch` 路）。
 回归守卫：`thincoder-core/test/tool-seams.test.mjs`（`killProcessTree` 导出面 + #55 用例）· `thincoder-core/test/git-repo-discovery.test.mjs`（§6.13 A14–A22）· `thincoder-cli/test/git-commit-pathspec.test.mjs`（commit 路径）——**零改**。
 
@@ -709,17 +709,20 @@ timed out after <n>s (killed) — no interactive input is possible here (editor 
 
 ## 变更记录
 
-- 2026-09-21（**plan-approval-texts 批 · 设计轮** · eng-designer——承 `docs/batches/2026-09-21-plan-approval-texts.md` §1 · 台账 #154 修法①）：
-  plan 工具退出文本收正为**批准语义**（退出回执 + `PLAN_EXIT_REMINDER` 两处——`thincoder-core/agent-tools/plan.mjs:21` · `:109`；退出不再自我放行）；逐字文本 / 用例 / 判据 = 批档 §2（D2——本档不重述）。
+- 2026-09-21（**git-noninteractive 批 · 设计微修轮 · eng-designer**——承 `docs/batches/2026-09-21-git-noninteractive.md` §5 偏离 #1：win32 动作序分岔上抛 ⇒ 父侧裁 = 收正设计档）：
+  §6.14 **超时动作序行平台分支化**（机制不变、仅分支化）——win32：直接树杀（树可寻址时）/ POSIX：`SIGTERM` → 宽限 1.5s → 树杀 → kick；「① 给 git 一次自行收尾机会」限定 POSIX 侧（与平台注（win32）口径一致）；上界 `timeout + 3s` 与 A26① 零改。
+
+- 2026-09-21（**plan-approval-texts 批 · 设计 + 实施（终态 clean）** · eng-designer / eng-coder——承 `docs/batches/2026-09-21-plan-approval-texts.md` · 台账 #154 修法①）：
+plan 工具退出文本收正为**批准语义**（**五处**：`thincoder-core/agent-tools/plan.mjs:4` · `:21-23` · `:44` · `:92` · `:109`；退出不再自我放行 ✗ 呈计划 ⇒ 待批准 ⇒ 实施）；逐字文本 / 用例 / 判据 = 批档 §2（D2——本档不重述）。
 
 - 2026-09-21（**git-noninteractive 批 · 设计评审修正轮 1 · eng-designer**——承 `docs/batches/2026-09-21-git-noninteractive.md` §3 轮次 1：🔴 2 · 🟡 4 · 🔵 5 · 发现 11 = 复核回执零动作）：
-  §6.14 逐条收正——①受影响面补 **VSC** `thincoder-vscode/src/tools/ide.mjs`（`changesSection` 转 async + 1 处 `await`）+ 新用例档 `test/tools-ide-changes.test.mjs`（拟新增）+ `test/files.mjs` 登记，A27 回归面扩**两包全量**；②**A28① 改白名单谓词**（四档 `execFileSync` 命中 = `gitDiffOne` 恰一处）；③A24 补**测试态缝**（`_setGitTimeoutForTest`）与层位（适配器层）；
+  §6.14 逐条收正——①受影响面补 **VSC** `thincoder-vscode/src/tools/ide.mjs`（`changesSection` 转 async + 1 处 `await`）+ 新用例档 `test/tools-ide-changes.test.mjs`（已落）+ `test/files.mjs` 登记，A27 回归面扩**两包全量**；②**A28① 改白名单谓词**（四档 `execFileSync` 命中 = `gitDiffOne` 恰一处）；③A24 补**测试态缝**（`_setGitTimeoutForTest`）与层位（适配器层）；
   ④新增**「被杀后仓态与恢复锚」按写动作类表** + 超时文案收正（树杀尽力而为 + git 自持态恢复锚）；⑤300s 依据改指需求档 **§4.7 TTY-DRIVE N3**（候选参照值）；⑥§6.12 / §6.13 边界行补 §6.14 指针；⑦await 计数收正（34 → **30** · 核三档合计 **46**）；
   ⑧未实测段标 unverified（`VISUAL` / `EDITOR` 两段 · #8 归因）；⑨A25 钉 `LC_ALL=C` + 墙钟经验界注；⑩win32 `SIGTERM` = 硬终止（实测 184ms）。**零新语义**（评审发现逐号落位）。
 
 - 2026-09-21（**git-noninteractive 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-21-git-noninteractive.md` §1 · 台账 #207）：
-  新增 **§6.14**——git 工具非交互加固（编辑器 / 凭据 / GUI / pager 四族压制 + 两档超时兜底；`GIT_ENV` + `spawnGit` 单点住 `tools/git-run.mjs`（拟新增），三个形适配器转**异步薄壳**（签名 / home / 消费面零改）；32 项 action 清算表 + A23–A29 判据）。
-  裁定族：env 形（非 `-c` 形）· 超时 = 全量适用（120s 本地 / 300s 网络）· 同步 → 异步（逼退「有界冻结 + 孤儿进程」）· 树杀先行抽 `tools/process-tree.mjs`（拟新增）避循环。
+  新增 **§6.14**——git 工具非交互加固（编辑器 / 凭据 / GUI / pager 四族压制 + 两档超时兜底；`GIT_ENV` + `spawnGit` 单点住 `tools/git-run.mjs`（已落），三个形适配器转**异步薄壳**（签名 / home / 消费面零改）；32 项 action 清算表 + A23–A29 判据）。
+  裁定族：env 形（非 `-c` 形）· 超时 = 全量适用（120s 本地 / 300s 网络）· 同步 → 异步（逼退「有界冻结 + 孤儿进程」）· 树杀先行抽 `tools/process-tree.mjs`（已落）避循环。
   设计轮实测 13 格：`rebase --continue` 起编辑器 = 唯一实害位 · `-c core.editor=true` 单独不足 · credential helper 路不受 env 约束 ⇒ 超时 = 必需项 · pager 族零风险 · 加固不伤已存凭据。
 
 - 2026-09-21（**manifest 解析模型收正批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-21-manifest-resolution.md` §1 · 用户 2026-09-21 11:00–11:29 裁定）：

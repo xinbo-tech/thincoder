@@ -4,7 +4,7 @@ import {
   runGit,
   gitFailureMessage
 } from "./shared.mjs";
-import { execFileSync } from "node:child_process";
+import { spawnGit } from "./git-run.mjs";
 import { resolve } from "node:path";
 import { filterLines, runGitStrict, validateRef, gitConfigArgs, snapshotBefore, executeExtAction } from "./git-ext.mjs";
 import { executeCheckpointAction } from "./git-checkpoint.mjs";
@@ -15,10 +15,11 @@ import { discoverRepos, MANIFEST_REL } from "../manifest.mjs";
  *  strips a porcelain line's leading " " (the unstaged marker) and misclassifies an
  *  unstaged-only first line as staged. status uses this so the staged/unstaged column survives.
  *  #55 fail-closed：失败不再吞成 ""（曾把非仓 / 任意失败渲染成 `(clean — no changes)`）——
- *  溢出保留部分输出；其余 ⇒ throw（消息契约 = `shared.mjs` `gitFailureMessage`）。 */
-function runGitRaw(cwd, cmdArgs, config = []) {
+ *  溢出保留部分输出；其余 ⇒ throw（消息契约 = `shared.mjs` `gitFailureMessage`）。§6.14：体改**异步薄壳**
+ *  （`spawnGit` 单点——加固 env + 两档超时 + 树杀；签名与产出形零变）。 */
+async function runGitRaw(cwd, cmdArgs, config = []) {
   try {
-    return execFileSync("git", [...config, ...cmdArgs], { cwd, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] }).replace(/\r/g, "").replace(/\n$/, "")
+    return (await spawnGit(cwd, [...config, ...cmdArgs], { maxBuffer: 10 * 1024 * 1024 })).replace(/\r/g, "").replace(/\n$/, "")
   } catch (e) {
     if (e.code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER" && e.stdout) return String(e.stdout).replace(/\r/g, "")
     throw new Error(gitFailureMessage(e, cmdArgs, cwd))
@@ -150,13 +151,13 @@ const gitActionCore = {
         if (!/^[A-Za-z0-9._/~^@][A-Za-z0-9._/~^@{}-]*$/.test(ref)) throw new Error(`Invalid git ref: ${ref}`)
         const flags = args.staged ? ["--staged"] : []
         const paths = args.path ? [args.path] : []
-        const out = runGit(ctx.cwd, ["diff", ...flags, ref, "--", ...paths])
+        const out = await runGit(ctx.cwd, ["diff", ...flags, ref, "--", ...paths])
         return truncate(filterLines(out || "(no changes)", args.filter))
       }
       case "status": {
         // Preserve per-line leading whitespace — porcelain " M"/"M " staged/unstaged markers are
         // significant (runGit trims the whole output's leading space, corrupting an unstaged-first-line).
-        const porcelain = runGitRaw(ctx.cwd, ["status", "--porcelain"])
+        const porcelain = await runGitRaw(ctx.cwd, ["status", "--porcelain"])
         if (!porcelain) return "(clean — no changes)"
 
         const staged = []
@@ -196,19 +197,19 @@ const gitActionCore = {
           ? ["log", "-" + n, "--oneline"]
           : ["log", "-" + n, "--format=%h %ad %an %s", "--date=short"]
         if (args.path) cmdArgs.push("--", args.path)
-        const out = runGit(ctx.cwd, cmdArgs)
+        const out = await runGit(ctx.cwd, cmdArgs)
         return truncate(filterLines(out || "(no commits)", args.filter))
       }
       case "show": {
         const ref = args.ref ?? "HEAD"
         if (!/^[A-Za-z0-9._/~^@][A-Za-z0-9._/~^@{}-]*$/.test(ref)) throw new Error(`Invalid git ref: ${ref}`)
-        const out = runGit(ctx.cwd, ["show", "--stat", ref])
+        const out = await runGit(ctx.cwd, ["show", "--stat", ref])
         return truncate(out || "(no such commit)")
       }
       case "rm": {
         if (!args.path) return "Error: rm requires path (the file/directory to untrack, relative to repo root)"
         const paths = args.path.split(/\s+/).filter(Boolean)
-        const r = runGitStrict(ctx.cwd, ["rm", "--cached", "-r", "--", ...paths])
+        const r = await runGitStrict(ctx.cwd, ["rm", "--cached", "-r", "--", ...paths])
         return r.ok ? truncate(r.out || `Untracked ${paths.join(" ")} (kept on disk)`) : truncate(`git rm failed: ${r.err || r.out}`)
       }
       case "commit": {
@@ -222,12 +223,12 @@ const gitActionCore = {
         if (args.path !== undefined && args.path !== null) {
           const trimmed = args.path.trim()
           if (!trimmed) return "Error: commit path is empty/whitespace — give at least one file path (space-separated)"
-          commit = runGitStrict(ctx.cwd, ["commit", "--only", "-m", args.message, "--", ...trimmed.split(/\s+/)])
+          commit = await runGitStrict(ctx.cwd, ["commit", "--only", "-m", args.message, "--", ...trimmed.split(/\s+/)])
         } else {
-          const add = runGitStrict(ctx.cwd, ["add", "-A"])
+          const add = await runGitStrict(ctx.cwd, ["add", "-A"])
           if (!add.ok) return truncate(`git add failed: ${add.err || add.out || "(no output)"}`)
           if (add.out) parts.push(add.out)
-          commit = runGitStrict(ctx.cwd, ["commit", "-m", args.message])
+          commit = await runGitStrict(ctx.cwd, ["commit", "-m", args.message])
         }
         if (commit.ok) {
           if (commit.out) parts.push(commit.out)
@@ -249,7 +250,7 @@ const gitActionCore = {
         if (args.remote) cmdArgs.push(validateRef(args.remote, "remote"))
         if (args.ref) for (const r of args.ref.split(/\s+/).filter(Boolean)) cmdArgs.push(validateRef(r, "ref"))
         if (args.tags) cmdArgs.push("--tags")
-        const r = runGitStrict(ctx.cwd, cmdArgs, cfgArgs)
+        const r = await runGitStrict(ctx.cwd, cmdArgs, cfgArgs)
         return r.ok ? truncate(r.out || "(push complete — no output)") : truncate(`git push failed: ${r.err || r.out || "(no output)"}`)
       }
       case "ls-remote": {
@@ -258,7 +259,7 @@ const gitActionCore = {
         const cmdArgs = ["ls-remote"]
         if (args.remote) cmdArgs.push(validateRef(args.remote, "remote"))
         if (args.ref) for (const r of args.ref.split(/\s+/).filter(Boolean)) cmdArgs.push(validateRef(r, "ref"))
-        const out = runGit(ctx.cwd, cmdArgs, cfgArgs)
+        const out = await runGit(ctx.cwd, cmdArgs, cfgArgs)
         if (!out) return "(no refs / remote unreachable)"
         return truncate(filterLines(out, args.filter))
       }
@@ -267,51 +268,51 @@ const gitActionCore = {
         // 多路径：空格分隔（ref 先例 L175——2026-09-05 发版痛点——git add 单路径被迫 N 次调用）
         const paths = args.path ? args.path.split(/\s+/).filter(Boolean) : null
         const cmdArgs = paths?.length ? ["add", "--", ...paths] : ["add", "-A"]
-        const r = runGitStrict(ctx.cwd, cmdArgs)
+        const r = await runGitStrict(ctx.cwd, cmdArgs)
         return r.ok ? truncate(r.out || `Staged ${paths?.join(" ") || "all changes"}`) : truncate(`git add failed: ${r.err || r.out}`)
       }
       case "tag": {
         const sub = args.tagAction
-        if (sub === "list") return truncate(filterLines(runGit(ctx.cwd, ["tag", "-l"]) || "(no tags)", args.filter))
+        if (sub === "list") return truncate(filterLines(await runGit(ctx.cwd, ["tag", "-l"]) || "(no tags)", args.filter))
         if (sub === "create") {
           if (!args.name) return "Error: tag create requires name"
           validateRef(args.name, "tag")
           const cmdArgs = ["tag", args.name]
           if (args.ref) cmdArgs.push(validateRef(args.ref))
-          const r = runGitStrict(ctx.cwd, cmdArgs)
+          const r = await runGitStrict(ctx.cwd, cmdArgs)
           return r.ok ? `Tag ${args.name} created` : truncate(`git tag failed: ${r.err || r.out}`)
         }
         if (sub === "delete") {
           if (!args.name) return "Error: tag delete requires name"
           validateRef(args.name, "tag")
           const snap = await snapshotBefore(ctx, `tag delete ${args.name}`)
-          const r = runGitStrict(ctx.cwd, ["tag", "-d", args.name])
+          const r = await runGitStrict(ctx.cwd, ["tag", "-d", args.name])
           return r.ok ? truncate(snap + `Tag ${args.name} deleted`) : truncate(`git tag -d failed: ${r.err || r.out}`)
         }
         return "Error: tag requires tagAction — use: list | create | delete"
       }
       case "branch": {
         const sub = args.branchAction
-        if (sub === "list") return truncate(filterLines(runGit(ctx.cwd, ["branch", "--all", "-vv"]) || "(no branches)", args.filter))
+        if (sub === "list") return truncate(filterLines(await runGit(ctx.cwd, ["branch", "--all", "-vv"]) || "(no branches)", args.filter))
         if (sub === "create") {
           if (!args.name) return "Error: branch create requires name"
           validateRef(args.name, "branch")
           const cmdArgs = ["branch", args.name]
           if (args.ref) cmdArgs.push(validateRef(args.ref))
-          const r = runGitStrict(ctx.cwd, cmdArgs)
+          const r = await runGitStrict(ctx.cwd, cmdArgs)
           return r.ok ? `Branch ${args.name} created` : truncate(`git branch failed: ${r.err || r.out}`)
         }
         if (sub === "switch") {
           if (!args.name) return "Error: branch switch requires name"
           validateRef(args.name, "branch")
-          const r = runGitStrict(ctx.cwd, ["checkout", args.name])
+          const r = await runGitStrict(ctx.cwd, ["checkout", args.name])
           return r.ok ? `Switched to branch ${args.name}` : truncate(`git checkout ${args.name} failed: ${r.err || r.out}`)
         }
         if (sub === "delete") {
           if (!args.name) return "Error: branch delete requires name"
           validateRef(args.name, "branch")
           const snap = await snapshotBefore(ctx, `branch delete ${args.name}`)
-          const r = runGitStrict(ctx.cwd, ["branch", "-d", args.name])
+          const r = await runGitStrict(ctx.cwd, ["branch", "-d", args.name])
           return r.ok ? truncate(snap + `Branch ${args.name} deleted`) : truncate(`git branch -d failed: ${r.err || r.out}`)
         }
         return "Error: branch requires branchAction — use: list | create | delete | switch"
@@ -320,12 +321,12 @@ const gitActionCore = {
         if (args.path) {
           // Restore file from index (discards working-tree changes to it) — destructive: snapshot first.
           const snap = await snapshotBefore(ctx, `checkout -- ${args.path}`)
-          const r = runGitStrict(ctx.cwd, ["checkout", "--", args.path])
+          const r = await runGitStrict(ctx.cwd, ["checkout", "--", args.path])
           return r.ok ? truncate(snap + `Restored ${args.path}`) : truncate(`git checkout -- ${args.path} failed: ${r.err || r.out}`)
         }
         if (args.ref) {
           validateRef(args.ref, "ref")
-          const r = runGitStrict(ctx.cwd, ["checkout", args.ref])
+          const r = await runGitStrict(ctx.cwd, ["checkout", args.ref])
           return r.ok ? truncate(r.out || `Checked out ${args.ref}`) : truncate(`git checkout ${args.ref} failed: ${r.err || r.out}`)
         }
         return "Error: checkout requires ref (branch/commit) or path (file to restore)"
@@ -336,21 +337,21 @@ const gitActionCore = {
         const cmdArgs = ["restore"]
         if (args.staged) cmdArgs.push("--staged")
         cmdArgs.push("--", args.path)
-        const r = runGitStrict(ctx.cwd, cmdArgs)
+        const r = await runGitStrict(ctx.cwd, cmdArgs)
         return r.ok ? truncate(snap + `Restored ${args.path}`) : truncate(`git restore failed: ${r.err || r.out}`)
       }
       case "stash": {
         const sub = args.stashAction
-        if (sub === "list") return truncate(filterLines(runGit(ctx.cwd, ["stash", "list"]) || "(no stashes)", args.filter))
+        if (sub === "list") return truncate(filterLines(await runGit(ctx.cwd, ["stash", "list"]) || "(no stashes)", args.filter))
         if (sub === "push") {
           const cmdArgs = ["stash", "push"]
           if (args.message) cmdArgs.push("-m", args.message)
-          const r = runGitStrict(ctx.cwd, cmdArgs)
+          const r = await runGitStrict(ctx.cwd, cmdArgs)
           return r.ok ? truncate(r.out || "Stashed") : truncate(`git stash push failed: ${r.err || r.out}`)
         }
         if (sub === "pop") {
           const snap = await snapshotBefore(ctx, "stash pop")
-          const r = runGitStrict(ctx.cwd, ["stash", "pop"])
+          const r = await runGitStrict(ctx.cwd, ["stash", "pop"])
           return r.ok ? truncate(snap + (r.out || "Popped")) : truncate(`git stash pop failed: ${r.err || r.out}`)
         }
         return "Error: stash requires stashAction — use: push | pop | list"
@@ -359,14 +360,14 @@ const gitActionCore = {
         const cmdArgs = ["fetch"]
         if (args.remote) cmdArgs.push(validateRef(args.remote, "remote"))
         if (args.ref) cmdArgs.push(validateRef(args.ref, "ref"))
-        const r = runGitStrict(ctx.cwd, cmdArgs, cfgArgs)
+        const r = await runGitStrict(ctx.cwd, cmdArgs, cfgArgs)
         return r.ok ? truncate(r.out || "(fetch complete — no output)") : truncate(`git fetch failed: ${r.err || r.out}`)
       }
       case "pull": {
         const cmdArgs = ["pull"]
         if (args.remote) cmdArgs.push(validateRef(args.remote, "remote"))
         if (args.ref) cmdArgs.push(validateRef(args.ref, "ref"))
-        const r = runGitStrict(ctx.cwd, cmdArgs, cfgArgs)
+        const r = await runGitStrict(ctx.cwd, cmdArgs, cfgArgs)
         return r.ok ? truncate(r.out || "(pull complete — no output)") : truncate(`git pull failed: ${r.err || r.out}`)
       }
       case "reset": {
@@ -376,24 +377,24 @@ const gitActionCore = {
         if (mode === "hard") snap = await snapshotBefore(ctx, "reset --hard") // destructive: drops working-tree changes
         const cmdArgs = ["reset", `--${mode}`]
         if (args.ref) cmdArgs.push(validateRef(args.ref))
-        const r = runGitStrict(ctx.cwd, cmdArgs)
+        const r = await runGitStrict(ctx.cwd, cmdArgs)
         return r.ok ? truncate(snap + (r.out || `Reset (${mode}) complete`)) : truncate(`git reset failed: ${r.err || r.out}`)
       }
       case "revert": {
         const ref = validateRef(args.ref ?? "HEAD")
-        const r = runGitStrict(ctx.cwd, ["revert", "--no-edit", ref])
+        const r = await runGitStrict(ctx.cwd, ["revert", "--no-edit", ref])
         return r.ok ? truncate(r.out || `Reverted ${ref}`) : truncate(`git revert failed: ${r.err || r.out}`)
       }
       case "merge": {
         if (!args.ref) return "Error: merge requires ref (branch/commit to merge)"
         validateRef(args.ref, "ref")
-        const r = runGitStrict(ctx.cwd, ["merge", "--no-edit", args.ref])
+        const r = await runGitStrict(ctx.cwd, ["merge", "--no-edit", args.ref])
         return r.ok ? truncate(r.out || `Merged ${args.ref}`) : truncate(`git merge failed: ${r.err || r.out} — resolve conflicts, then commit`)
       }
       case "cherry-pick": {
         if (!args.ref) return "Error: cherry-pick requires ref (commit)"
         validateRef(args.ref, "ref")
-        const r = runGitStrict(ctx.cwd, ["cherry-pick", args.ref])
+        const r = await runGitStrict(ctx.cwd, ["cherry-pick", args.ref])
         return r.ok ? truncate(r.out || `Cherry-picked ${args.ref}`) : truncate(`git cherry-pick failed: ${r.err || r.out}`)
       }
       // F7 扩展 action + checkpoint：实现拆在 git-ext.mjs / git-checkpoint.mjs（500 行硬限）

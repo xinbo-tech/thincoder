@@ -190,4 +190,5 @@ thincoder 自身的 CLI / TUI **不定义**本能力——它只是其中一个�
 - 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：新增 §4.6 **VSC 端条目**（描述外部装载 / 打包面 N6 / 批合并与 child 审批面——自 `thincoder-vscode/docs/requirements/TOOLS.md` 并入；语义同源不重并）；§5 补登记行；**本档新增需求 0**（纯回填）。
 - 2026-09-19（**仓库发现批（台账 #62）收口 · 父侧直接执行 · 可 revert**）：新增 **§4.2 F8**「`git` 工具的 cwd / workdir 与跨仓发现」（缺省 = 发现的项目仓根 · 单源复用 `thincoder-core/manifest.mjs` `discoverRepos` · 零态 fail-closed
  · **多态报错不猜** · `init`/`clone` 例外）；§4.2 标题计数 F1–F7 → **F1–F8**（D3）；源 = `docs/batches/2026-09-18-repo-discovery.md`（设计 id=144 · 评审 pass id=145 · 实现 id=146 · 点修 id=147）；**本档新增需求 1 条**。
-- 2026-09-21（**git-noninteractive 批（台账 #207）需求面补登 · 父侧直接执行 · 可 revert**）：新增 **§4.2 F9**「`git` 工具的非交互与超时」（用户 20:26 实报「会话多次在 git rebase 时卡死」✗ 定因 = 同步 spawn + 零交互加固）；§4.2 标题计数 F1–F8 → **F1–F9**（D3）；源 = `docs/batches/2026-09-21-git-noninteractive.md`（设计 id=57 · 评审 59 changes-required → 修正 60 → **61 pass** · 实现 62）；**本档新增需求 1 条**。
+- 2026-09-21（**git-noninteractive 批（台账 #207）需求面补登 · 父侧直接执行 · 可 revert**）：新增 **§4.2 F9**「`git` 工具的非交互与超时」（用户 20:26 实报「会话多次在 git rebase 时卡死」✗
+定因 = 同步 spawn + 零交互加固）；§4.2 标题计数 F1–F8 → **F1–F9**（D3）；源 = `docs/batches/2026-09-21-git-noninteractive.md`（设计 id=57 · 评审 59 changes-required → 修正 60 → **61 pass** · 实现 62）；**本档新增需求 1 条**。

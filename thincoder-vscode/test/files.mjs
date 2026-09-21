@@ -123,5 +123,6 @@ export default [
   "test/session-gc-command.test.mjs", // T-VSC-SG1/SG2：`thincoder.sessionGc` 处理体（空候选/确认/驳回零删除 + 模态门 + 删除期变活拒绝行 + 汇总跳过计数）+ 命令注册/直调点机检（不消费 runSessionGc）
   // 无工作区守卫批（2026-09-21 · `docs/batches/2026-09-21-vsc-no-folder-guard.md` §2.6 · 台账 #199）：用例 1–17
   "test/workspace-guard.test.mjs", // 无文件夹窗口 ⇒ 拒启 agent（零写入三档）+ 双面逐字提示（host 通知+按钮 / webview toast+占位符第三态）+ 恢复面（空↔非空免重载）；守卫八处 + 派生面 / 结构+行为双锁 / 5 结构锁——机制单源 = PROJECT-SWITCHER.md §4.1
+  "test/tools-ide-changes.test.mjs", // git 工具非交互加固批（2026-09-21 · `docs/batches/2026-09-21-git-noninteractive.md` §2 · 台账 #207）A27 的 VSC 半（TOOLS.md §6.14）：核 `runGit` 转异步薄壳 ⇒ `changesSection` 同批转 async + 1 处 await——三格 = 未提交变更出段 / 洁净不出段 / 非仓零抛错（真 git 子进程；中间态红 = 输出变 `(error: porcelain.split …)`）
 
 ]
