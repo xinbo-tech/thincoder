@@ -25,6 +25,7 @@ VS Code 扩展 = ThinCoder 产品族的独立产品之一（与 CLI 同级——
 | 模型选择 webview 形态 | hover flyout 子菜单 | 两级语义对齐 CLI（契约 = core 档 C5）；webview 无键盘导航 ⇒ 主下拉列 provider 行 + hover 弹出模型子菜单 |
 | 安全边界 | 透明 + 默认保守 + 信任用户判断 | 不搞命令级沙箱；开启 AUTO 时弹一次性警告；审计靠 git + 聊天历史（不建独立审计日志）；prompt injection 防御 v2 再议 |
 | Multi-root 策略 | 目标 = 所有文件夹对 Agent 可见 | 现状 = `workspaceFolders[0]`；状态栏标明工作目录（用户知道限制） |
+| 无工作区文件夹 | **拒启 agent + 明确提示**（不得静默回落 `process.cwd()`——快捷方式启动语义下 = VS Code 安装目录 ✗ 更新即清空）| 用户 2026-09-21 裁定「b，但是要给提示」；设计 = `design/PROJECT-SWITCHER.md` §4.1；实施批档 = `docs/batches/2026-09-21-vsc-no-folder-guard.md` |
 | Webview 技术选型 | vanilla JS | 约 5000+ 行（2025-08-14 时点）仍不值得引入框架；撑不住了再迁 |
 | 国际化 | 中英双语 | `locales/en.json` + `locales/zh.json`；UI 文本集中 i18n 常量文件，webview 启动注入 |
 

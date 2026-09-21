@@ -19,6 +19,8 @@ import { getEmbedder as getSharedEmbedder, getMemoryHandle, loadMemoryFace, memo
 import { loadEmbeddingConfig, saveEmbeddingConfig as saveEmbeddingConfigToFile } from "../embed-config.mjs"
 import { normalizeOrigin } from "@thincoder/core/memory/origin.mjs"
 import { _cwd } from "./panel-messages.mjs"
+// 无工作区守卫（2026-09-21 批 · `PROJECT-SWITCHER.md` §4.1）：⑧ 索引面（leaf——无环）
+import { blockOnNoWorkspace, hasWorkspaceFolder } from "./workspace-guard.mjs"
 
 /** §14 C-12#1/C-15：索引进度 → statusText（webview 状态行段——scan/index/done 三相位；
  *  done 相位由 webview 清段——索引结束回常态）。相位 = 核 sync `onProgress` 原生相位
@@ -119,6 +121,9 @@ export async function saveEmbeddingConfig(panel, { apiKey }) {
  *  changes need NO prompt — the core face invalidates the stale vectors and backfills
  *  lazily on the next search（W8 重建 UX：原「Rebuild now?」提示退场）。 */
 export async function maybePromptIndex(panel) {
+    // ⑧ 无工作区守卫：**邀请零发**（静默跳过——不进 memoryFor，免把用户引向「以安装目录为
+    // 项目」的建档流）；提示面归守卫面各入口（本点不另发通知——慢段路径不吵）。
+    if (!hasWorkspaceFolder()) return
     const cwd = _cwd()
     if (!cwd) return
     const memory = await memoryFor(cwd)
@@ -139,6 +144,8 @@ export async function maybePromptIndex(panel) {
  *  SQLite WAL; CLI `backgroundIndex` 同形). Core sync has no interrupt seam ⇒ the
  *  notification is not cancellable（W8 端差收正）。 */
 export async function buildIndex(panel) {
+    // ⑧ 无工作区守卫：拒（提示 + return）——零索引动作（不达 withProgress / 不建库）
+    if (blockOnNoWorkspace(panel)) return
     const cwd = _cwd()
     if (!cwd) {
       vscode.window.showErrorMessage("No workspace folder open.")

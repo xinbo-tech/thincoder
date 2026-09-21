@@ -121,5 +121,7 @@ export default [
   // STARTUP-LATENCY 批（2026-09-21 · `docs/batches/2026-09-21-startup-latency.md` §2 · 台账 #173）：F-SL3 目录级清理判据（TRACES.md §6.4）+ F-SL2 端侧命令面（SESSION.md §6.17 D-SE38）
   "test/trace-cleanup.test.mjs", // T-SL3.1/3.2/3.4：目录级三段梯（整删零逐 .jsonl stat——计数注入 / 当天跳过 / 含 .txt 逐文件）+ 每写节流（同窗 3 连写 ⇒ 扫描 ≤1 + 在飞合并）+ 缩比存量整删幂等（T-SL3.3 语义保真 = 既有 trace-store.test.mjs D-TR10 用例零改动保绿）
   "test/session-gc-command.test.mjs", // T-VSC-SG1/SG2：`thincoder.sessionGc` 处理体（空候选/确认/驳回零删除 + 模态门 + 删除期变活拒绝行 + 汇总跳过计数）+ 命令注册/直调点机检（不消费 runSessionGc）
+  // 无工作区守卫批（2026-09-21 · `docs/batches/2026-09-21-vsc-no-folder-guard.md` §2.6 · 台账 #199）：用例 1–17
+  "test/workspace-guard.test.mjs", // 无文件夹窗口 ⇒ 拒启 agent（零写入三档）+ 双面逐字提示（host 通知+按钮 / webview toast+占位符第三态）+ 恢复面（空↔非空免重载）；守卫八处 + 派生面 / 结构+行为双锁 / 5 结构锁——机制单源 = PROJECT-SWITCHER.md §4.1
 
 ]

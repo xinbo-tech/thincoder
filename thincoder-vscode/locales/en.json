@@ -260,5 +260,7 @@
   "settings.poolOther": "Other Roles Pool",
   "settings.poolOtherHelp": "Max concurrent explore/plan/coder subagents (async pool, per role domain).",
   "settings.poolAdvisor": "Advisor Review Pool",
-  "settings.poolAdvisorHelp": "Max concurrent background advisor reviews (agent.poolLimits.advisor — independent pool; over-limit or same-scope launches are refused, not queued)."
+  "settings.poolAdvisorHelp": "Max concurrent background advisor reviews (agent.poolLimits.advisor — independent pool; over-limit or same-scope launches are refused, not queued).",
+  "workspace.required": "Open a folder first — ThinCoder needs a workspace to work in.",
+  "workspace.requiredPlaceholder": "Open a folder to start…"
 }

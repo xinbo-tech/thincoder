@@ -14,12 +14,14 @@ import { setSlotAutoApprove, setSlotPlanMode } from "./session-io.mjs"
 import { providerStatus, saveProviderKey, deleteProviderKey, pushStatus, fullStatus, endProbeWindow, agentSettings, proxySettings, shellCandidates, websearchSettings, saveMcpServer, deleteMcpServer } from "./settings.mjs"
 import { loadLocaleStrings } from "../i18n.mjs"
 import { handlePanelMessage, routeUserTurn, _cwd, setProjectFolder, clearProjectOverride, stopLiveHeartbeat } from "./panel-messages.mjs"
+// 无工作区守卫（2026-09-21 批 · `PROJECT-SWITCHER.md` §4.1）：判据单源 + 提示 + 状态推送
+import { blockOnNoWorkspace, pushWorkspaceGuard, releaseWorkspaceGuard, hasWorkspaceFolder } from "./workspace-guard.mjs"
 import { subagentChannelSummary } from "./panel-subagent-relay.mjs"
 import { runPanelChat } from "./panel-chat.mjs"
 import { loadRaw } from "@thincoder/core/config-io.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"
 import { initStopTrace } from "./stop-trace.mjs"
-import { ensureSlot, activeData, activeHistory, activeLines, saveLines, loadModelPrefs, loadSession, loadOlder, newSession, deleteSession, pushSessions, generateTitle, status as bootstrapStatus } from "./panel-session.mjs"
+import { ensureSlot, activeData, activeHistory, activeLines, saveLines, loadModelPrefs, loadSession, loadOlder, newSession, deleteSession, pushSessions, generateTitle, status as bootstrapStatus, openSessionContent } from "./panel-session.mjs"
 import { projectInfo, pushProject, applyProjectSwitch, onProjectChanged, pickProject } from "./panel-project.mjs"
 import { pushIndexStatus, atComplete, saveEmbeddingConfig, maybePromptIndex, buildIndex, maybePromptLegacyIndexRemoval } from "./panel-index.mjs"
 import { closeAllMcp, pushMcpStatus, reconnectMcp, editMcp, testMcp } from "./panel-mcp.mjs"
@@ -93,8 +95,32 @@ export class ChatPanel {
 
     // If the overridden project folder is removed from the workspace, fall back to
     // workspaceFolders[0] (a stale cwd would point agent runs at a dead directory).
+    // 无工作区守卫（2026-09-21 批 · `PROJECT-SWITCHER.md` §4.1 恢复面）：空 ↔ 非空两向覆盖 +
+    // 第三支路（非空 → 非空 = override 失效校验与回落）**逐字保留**。
     context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(() => {
       const folders = vscode.workspace.workspaceFolders ?? []
+      if (!hasWorkspaceFolder()) { // 判据单源（走守卫档——非本地 `folders.length` 形）
+        // 转空：清 override + 槽解绑 + 销毁 agent + 推守卫态 + 主动提示——**不再走
+        // `_onProjectChanged`**（旧路径会把 cwd 绑到 `process.cwd()` 并落槽 = 违背「不落 session 槽」）。
+        // 槽解绑是恢复面「重新认领」的前提：留着旧根的槽号会把转非空后的 boot 钉在
+        // 已移出根的会话上（`ensureSlotAsync` 粘性直返）。
+        clearProjectOverride()
+        this._slot = null
+        // 销毁点（工作区转空即换 cwd——agent 不跨项目复用）
+        this._agent = null
+        pushWorkspaceGuard(this, true)
+        blockOnNoWorkspace(this, { once: true })
+        return
+      }
+      // 转为非空且此前守卫（`_wsGuardNotified` = 空窗实据）：复位去重 + 推放行 + 认领装载
+      // ⇒ 面板直接可用（免重载恢复；后续回合走既有权）。
+      if (this._wsGuardNotified === true) {
+        releaseWorkspaceGuard(this)
+        pushWorkspaceGuard(this, false)
+        openSessionContent(this).catch((e) => console.error("[chat-panel] workspace guard release failed:", e.message))
+        return
+      }
+      // 第三支路（非空 → 非空）：override 失效校验与回落——逐字保留
       const cwd = _cwd()
       if (!cwd || folders.some((f) => f.uri.fsPath === cwd)) return
       clearProjectOverride()
@@ -115,6 +141,9 @@ export class ChatPanel {
    */
   resolveWebviewView(webviewView, _context, _token) {
     this._panel = webviewView
+    // ① 无工作区守卫：面板启用即提示（每空窗**恰一次**——去重，`_wsGuardNotified`）。
+    // 面板照常建（webview 要在位才能显示占位符/toast，且工作区变化时靠它投守卫态）——本点只提示。
+    blockOnNoWorkspace(this, { once: true })
     webviewView.webview.options = {
       enableScripts: true,
       retainContextWhenHidden: true,
@@ -221,6 +250,8 @@ export class ChatPanel {
       vscode.window.showWarningMessage("ThinCoder panel is not ready yet — please wait a moment and try again.")
       return
     }
+    // ③ 无工作区守卫（先于回显 ⇒ 无假气泡；先于回显也先于 routeUserTurn）
+    if (blockOnNoWorkspace(this)) return
     // INPUT-LOCK-ASYNC（C'——F-1/F-3）：busy（_turnState==="running"——回合/digest/标题
     // 窗口——单一判据）输入禁用——外部入口（Ask ThinCoder 命令）先于回显拒绝——不排队
     // 不回显（拒收 = 无假气泡——webview 输入框已由 loading.js 锁——正常发送到不了这里）。

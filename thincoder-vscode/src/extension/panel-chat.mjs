@@ -30,6 +30,8 @@ import { ensureSlot, ensureSlotAsync } from "./panel-session.mjs"
 import { injectAtRefs } from "./file-refs.mjs"
 import { _cwd } from "./panel-messages.mjs"
 import { logEvent, errText } from "@thincoder/core/log.mjs"
+// 无工作区守卫（2026-09-21 批 · `PROJECT-SWITCHER.md` §4.1）：④ 兜底红线（leaf——无环）
+import { blockOnNoWorkspace } from "./workspace-guard.mjs"
 // 2026-09-05 实践轮 module-split：回调工厂迁 panel-callbacks.mjs（webview 桥接面独立决策）
 import { buildPanelCallbacks, makeAskInPanel } from "./panel-callbacks.mjs"
 // 四档拆分批（2026-09-18 · VSC-DEBT §12.2.1）：回合执行循环 + controller 工厂迁 panel-turn-loop.mjs；
@@ -86,6 +88,10 @@ export async function runPanelChat(panel, opts = {}) {
 
 /** runPanelChat 本体（LOGGING 包装之外——见上方 runPanelChat 包装器）。 */
 async function runPanelChatImpl(panel, opts = {}) {
+  // ④ 无工作区守卫（**兜底红线**——函数体首条语句：任何 await / `_publishTurnState("running")`
+  // 之前）。一切回合路径（user / auto / digest / 挂起内回合）经此 ⇒ 不建 agent（manifest 建档
+  // 钩子 `src/agent/setup.mjs` 不可达 = 零 manifest I/O）。结构锁 = `test/workspace-guard.test.mjs` 用例 4。
+  if (blockOnNoWorkspace(panel)) return
   let { text, modelOverride, reasoning, providerName, images, autoTurn = false, upstreamTurn = false, susp = null, skipSession = false } = opts
   if (!panel._panel) { vscode.window.showErrorMessage("_chat: panel is null"); return }
 

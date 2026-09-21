@@ -69,7 +69,10 @@ export function applyBusyLock() {
   ctx.inputEl.readOnly = false // 锁移除——始终可编辑（INPUT-LOCK-BEHAVIOR-REVISED）
   applyModelSwitchGate() // F-W14：忙态门（与中断模态无关——同点派生，两入口同谓词）
   if (ctx._interruptMode) return
-  ctx.inputEl.placeholder = busy ? t("input.busyPlaceholder") : t("input.placeholder")
+  // 无工作区守卫第三态（2026-09-21 批 · `PROJECT-SWITCHER.md` §4.1）：优先级 **守卫 > busy > 常态**
+  ctx.inputEl.placeholder = S._workspaceRequired
+    ? t("workspace.requiredPlaceholder")
+    : (busy ? t("input.busyPlaceholder") : t("input.placeholder"))
 }
 
 /**

@@ -260,5 +260,7 @@
   "settings.poolOther": "其他角色并发池",
   "settings.poolOtherHelp": "explore/plan/coder 子代理并行上限（按角色域分池的 async 池）。",
   "settings.poolAdvisor": "advisor 评审池",
-  "settings.poolAdvisorHelp": "后台 advisor 评审并行上限（agent.poolLimits.advisor——独立池——超限/同 scope 即拒不排队）。"
+  "settings.poolAdvisorHelp": "后台 advisor 评审并行上限（agent.poolLimits.advisor——独立池——超限/同 scope 即拒不排队）。",
+  "workspace.required": "请先打开文件夹——ThinCoder 需要一个工作区才能开工。",
+  "workspace.requiredPlaceholder": "请先打开文件夹…"
 }

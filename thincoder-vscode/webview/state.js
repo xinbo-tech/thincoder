@@ -114,5 +114,9 @@ export const S = {
   // C2 (F-C2c): thinking 态标记——loading 消息经 setLoading 置位/清除；renderStatusBar
   // （#status-line 唯一 writer）据此绘制 thinking 段——不再 innerHTML 覆写状态行（修 H-E）。
   _phase: null, // null | "thinking"
+  // 无工作区守卫（2026-09-21 批）：host `workspaceGuard {active}` 镜像——true = 无文件夹
+  // （拒发出口守卫 = send.js / 占位符第三态 = loading.js `applyBusyLock`——优先级 守卫 > busy > 常态；
+  //  机制单源 = `PROJECT-SWITCHER.md` §4.1）。
+  _workspaceRequired: false,
 }
 

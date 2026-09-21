@@ -19,6 +19,8 @@ import { stripEditorInjection } from "./editor-context.mjs"
 import { stripAtRefs } from "./file-refs.mjs" // F-W15：@ 引用还原（与产者同档）——恢复面显示消费面（标题源剥离面随写面迁至 panel-session-write.mjs）
 import { mergeAdjacentAssistantEchoes } from "@thincoder/core/context.mjs"
 import { _cwd } from "./panel-messages.mjs"
+// 无工作区守卫（2026-09-21 批 · `PROJECT-SWITCHER.md` §4.1）：⑤⑥ + 派生面（leaf——无环）
+import { hasWorkspaceFolder, pushWorkspaceGuard } from "./workspace-guard.mjs"
 // 2026-09-11 第 10 批（§5.1.4 第 4 条——清屏后再断言）：存活投影（读 lines.history 双池）
 import { reassertLiveChildren } from "./suspension.mjs"
 // F-MI7：同伴快照预热（SWR 写面——慢段预热，读面零 exec）
@@ -40,6 +42,9 @@ const bindInflight = new Map()
  *  `openSessionContent` / `onProjectChanged` / 冷路径 `ensureSlot`）；已绑定 ⇒ 直返
  *  （slot 粘性——不再重读共享 manifest 的 active 指针）。失败 ⇒ 抛出（`void` 冷路径自吞）。 */
 export async function ensureSlotAsync(panel) {
+    // ⑥ 无工作区守卫（认领原语——冷路径 / `ensureSlot` 后台认领同址）：不认领不写 ⇒ 不落
+    // session 槽（派生态：`panel._slot` 恒 null ⇒ 槽写面 `setSlot*` 天然返 false）。
+    if (!hasWorkspaceFolder()) return null
     if (panel._slot != null) return panel._slot
     const cwd = _cwd()
     let p = bindInflight.get(cwd)
@@ -61,6 +66,10 @@ export async function ensureSlotAsync(panel) {
  * `panel-messages` 空槽短路 / `setSlot*` 天然返回 false——不写 `.null` 槽）。
  */
 export function ensureSlot(panel) {
+    // ⑥-b 无工作区守卫（冷路径同源）：守卫态恒返 null——不读解析缓存重绑旧槽。转空后缓存
+    // 可能仍持「刚关闭的根」条目（同进程内该 cwd 曾被认领过）⇒ 不挡会破坏派生面不变量
+    // 「守卫态 `_slot` 恒 null」（槽写面随之重新可达）。
+    if (!hasWorkspaceFolder()) return null
     if (panel._slot == null) {
       const s = cachedSlot(_cwd())
       if (s != null) panel._slot = s
@@ -215,6 +224,8 @@ export async function deleteSession(panel, slot) {
   }
 
 export function pushSessions(panel) {
+    // 派生面（同判据）：守卫态不把安装目录家族的会话列表推给面板——否则会话行可点 ⇒ 绕过 ⑦
+    if (!hasWorkspaceFolder()) return
     const cwd = _cwd()
     const listed = listSlots(cwd)
     // 2026-09-05 §6.10 D-5：会话列表本端高亮按端记录（● = 记录槽 ∈ 列表 ? 记录槽 :
@@ -250,6 +261,9 @@ export function pushSessions(panel) {
  * 槽绑定时机随之上移（resolve → webviewReady）——webviewReady 前无 slot 读者（安全）。
  */
 export async function openSessionContent(panel) {
+    // ⑤ 无工作区守卫：跳过认领 + 会话装载（零写），推守卫态——主动提示归 ① / 转空向（本点不重复提示）。
+    if (!hasWorkspaceFolder()) { pushWorkspaceGuard(panel, true); return }
+    pushWorkspaceGuard(panel, false)
     // 2026-09-05 §6.10 D-2：恢复决策 resumeSlot（本端记录/一次性继承/全新分配——与
     // ensureSlot/onProjectChanged 同点）；全新目录下 claim 先行——文件在首保存时落盘。
     // F-MI7：认领 = async 束（`ensureSlotAsync` 单飞 + 粘性直返）——本函数 = 三个绑定入口

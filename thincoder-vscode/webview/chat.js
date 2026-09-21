@@ -8,7 +8,7 @@ import {
   showWelcome, updateWelcomeStatus, showBanner, addUser,
   addTool, finishTool, showError, maybeScrollDown, escHtml, advisorRoundTag,
 } from "./ui.js"
-import { setLoading } from "./loading.js"
+import { setLoading, applyBusyLock } from "./loading.js"
 import { MAX_TOOL_OUTPUT } from "./lib.js"
 import { setStrings, t } from "./i18n.js"
 import { initAutocomplete } from "./autocomplete.js"
@@ -192,6 +192,9 @@ window.addEventListener("message", (e) => {
     case "loading":          setLoading(ctx, m.loading); break
     // C2 (F-C2b): host 忙态单一广播（{type:"turnState", state, counts?}）→ 单一 reducer
     case "turnState":        handleTurnStateMessage(m); break
+    // 无工作区守卫（2026-09-21 批 · `PROJECT-SWITCHER.md` §4.1）：host 守卫态镜像 ⇒
+    // 占位符第三态（拒发出口守卫单源 = send.js）
+    case "workspaceGuard":   S._workspaceRequired = m.active === true; applyBusyLock(); break
     case "complete":         clearStatusText(); finish(); break
     case "aborted":          clearStatusText(); finish(true); break
     case "error":

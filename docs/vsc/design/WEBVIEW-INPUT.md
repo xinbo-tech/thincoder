@@ -16,9 +16,10 @@
 | C-B2-2 | @ 下拉与 send 的 Enter 协调 | 下拉打开时 Enter **只由 autocomplete 接受建议**（插入引用 + 关闭下拉），`input.js` 不发送——让位 = 提前 `return` 且**保留 preventDefault**（防 Enter 默认换行落入输入框）；下拉关闭时 Enter 照常 `send()`（正控）。**注册次序前提**：`input.js` 的 keydown 先于 `autocomplete.js` 注册 | `input.js:79-84` · `chat.js:35`（import）先于 `chat.js:48`（`initAutocomplete`） |
 | C-B2-3 | 打开态判据硬化 | `isAtDropdownOpen()` = `!!el && el.style.display !== "none"`（**元素缺失 ≠ 打开**） | `input.js:135-138` |
 | C-B2-4 | busy 拒发可见提示 | `send()` 出口判 `S._turnState === "running"` → 拒发 + `showToast(t("input.busyPlaceholder"))`（复用既有 toast 机制与既有文案键——零新增 locale 键）；**占位符设置保留** | `thincoder-vscode/webview/send.js:19-24` · `thincoder-vscode/webview/toast.js:10-21` |
+| C-B2-5 | 无工作区拒发可见提示（2026-09-21 批） | `send()` 出口判 `S._workspaceRequired`（host `workspaceGuard` 消息置位）→ 拒发 + `showToast(t("workspace.required"))`（**先于** `addUser` / `setLoading`——无假气泡）；占位符第三态 = `t("workspace.requiredPlaceholder")`（守卫 > busy > 常态） | `thincoder-vscode/webview/send.js`（守卫出口）· `webview/loading.js` `applyBusyLock` · `webview/chat.js` `case "workspaceGuard"` · `locales/{en,zh}.json` +2 键；判据 / 守卫面 = `docs/vsc/design/PROJECT-SWITCHER.md` §4.1 |
 
 - **Shift+Enter** 既有形态零动（`input.js` 分支不处理——换行）。
-- **零改面**：`_turnState` 生命周期 / 单广播 / 派生、`applyBusyLock`、门禁判据（只禁 send 不禁录入）、中断模态、下拉过滤 / 防抖 / seq、CSS、`index.html`。
+- **零改面**：`_turnState` 生命周期 / 单广播 / 派生、门禁判据（只禁 send 不禁录入）、中断模态、下拉过滤 / 防抖 / seq、CSS、`index.html`。（`applyBusyLock` 占位符含**第三态**——守卫 > busy > 常态，见 C-B2-5。）
 - **登记（未做）**：真机 IME 矩阵（mac / Safari 组合确认 Enter 的 `isComposing` 时序差异）未覆盖——`keyCode === 229` 兜底**不引入**（登记项）。
 
 ### 1.1 其他键位（同族既有语义）
@@ -132,6 +133,7 @@
 | U-I4 | 首块说明行 = 一会话一次、纯文本（无新交互元素） | 已定（§3） |
 | U-I5 | 行内代码内容一律字面；代码范围外原始 HTML 全转义 | 已定（§4 · D-I10） |
 | U-I6 | 登记（未做，非 open）：真机 IME 矩阵 · 折行竖移 · 代码内反斜杠折叠 · 跨界配对族外溢 | 已定（§1–§4 逐条登记） |
+| U-I7 | 无工作区拒发 = 保留文本 + 瞬时 toast（同 U-I2 形态）+ 占位符第三态；Send 按钮保持可见（点击即提示） | 已定（§1 C-B2-5 · `PROJECT-SWITCHER.md` §4.1） |
 
 ## 9. 验收与需求回指
 
@@ -148,3 +150,5 @@
 ## 变更记录
 
 - 2026-09-15（**B 式迁移轮 · VSC 第 2 批**）：建档——源档 §9 / §10 / §11 的内容重建入基准层（旧档一字未改、原地作参照历史）；坐标按 as-of 2026-09-15 实核改写（源档坐标漂移多处——如 `input.js` Enter / 下拉判据、`activity-view.js` tail 射程，均按现态改写）；批次材料（问题陈述 / 选型 / 受影响文件 / 用例表 / 验收标准 / 边界）入 §6.1。
+- 2026-09-21（**无工作区守卫批 · 评审轮 1 修正轮 · eng-designer**——承批次档 §3 轮次 1 发现 6）：§1 零改面行改**纯现状表述**（去批次时点措辞——`applyBusyLock` 占位符含第三态（守卫 > busy > 常态））。**契约点 / 键面零变**。
+- 2026-09-21（**无工作区守卫批**）：§1 增 C-B2-5（无工作区拒发可见提示 + 占位符第三态）；§1「零改面」行收正（`applyBusyLock` 出零改面）；§7 增 U-I7。**消息名 / 载荷字段零变**（新增 host → webview 消息 `workspaceGuard` 登记 = `WEBVIEW-PROTOCOL.md` §3.2 行 15）。

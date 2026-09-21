@@ -17,9 +17,13 @@ import * as vscode from "vscode"
 import { t } from "../i18n.mjs"
 import { switchToSlot, setSlotTitle, slotOccupancy } from "./session-io.mjs"
 import { _cwd } from "./panel-messages.mjs"
+// 无工作区守卫（2026-09-21 批 · `PROJECT-SWITCHER.md` §4.1）：⑦ 会话族五 handler（leaf——无环）
+import { blockOnNoWorkspace } from "./workspace-guard.mjs"
 
 /** 迁出自 `panel-messages.mjs` 的 case "newSession"。 */
 export function handleNewSession(panel) {
+  // ⑦ 无工作区守卫：槽写面（新建 = 分配新槽）
+  if (blockOnNoWorkspace(panel)) return
   // §17: session switch during a suspension session would orphan the background pool
   // (its lines/pool belong to the current session). Stop the session first.
   if (panel._susp?.active) { vscode.window.showWarningMessage("ThinCoder: background subagents are still running — stop them before starting a new session."); return }
@@ -28,6 +32,8 @@ export function handleNewSession(panel) {
 
 /** 迁出自 `panel-messages.mjs` 的 case "switchSession"。 */
 export async function handleSwitchSession(panel, msg) {
+  // ⑦ 无工作区守卫：槽写面（切换 = 改共享 active 指针 / 端标记 / 认领集）
+  if (blockOnNoWorkspace(panel)) return
   // 会话切换竞态守卫（GitHub #2/#5，2026-08-28）：运行中禁止切换——此前只改 _slot 指针
   // 不 abort，旧 turn 的 stream/complete/标题会灌进新会话视图（"思考串台"）、内容落错槽
   // （"写错会话文件"）。与 applyProjectSwitch（panel-project.mjs）的运行中拒绝同模式。
@@ -59,12 +65,16 @@ export async function handleSwitchSession(panel, msg) {
 
 /** 迁出自 `panel-messages.mjs` 的 case "deleteSession"。 */
 export async function handleDeleteSession(panel, msg) {
+  // ⑦ 无工作区守卫：槽写面（删除 = 删文件 + 改激活指针）
+  if (blockOnNoWorkspace(panel)) return
   if (panel._susp?.active) { vscode.window.showWarningMessage("ThinCoder: background subagents are still running — stop them before deleting a session."); return }
   await panel._deleteSession(msg.slot)
 }
 
 /** 迁出自 `panel-messages.mjs` 的 case "renameSession"。 */
 export async function handleRenameSession(panel, msg) {
+  // ⑦ 无工作区守卫：槽写面（改名）——先于输入框（不改名不弹框）
+  if (blockOnNoWorkspace(panel)) return
   // Manual rename: prefill the current title; empty input = cancel (keep old title).
   const title = await vscode.window.showInputBox({
     prompt: t("session.renamePrompt"),
@@ -80,6 +90,8 @@ export async function handleRenameSession(panel, msg) {
 
 /** 迁出自 `panel-messages.mjs` 的 case "setProject"。 */
 export async function handleSetProject(panel, msg) {
+  // ⑦ 无工作区守卫：项目切换（多根面）——无文件夹窗口里无可切
+  if (blockOnNoWorkspace(panel)) return
   // §17: project switch mid-suspension would yank cwd out from under the session —
   // the suspension lines/slot belongs to the old project's session store.
   if (panel._susp?.active) { vscode.window.showWarningMessage("ThinCoder: background subagents are still running — stop them before switching projects."); return }

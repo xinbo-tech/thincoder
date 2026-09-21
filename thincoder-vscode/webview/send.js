@@ -16,6 +16,13 @@ export function send() {
   // 守卫——拒发（文本保留不吞——忙完可重按）。busy 期输入框不禁（readOnly 锁已移除——
   // 打字回显）——Enter（input.js keydown）与发送按钮都经此拒。模态不受影响（AC-6）。
   if (!text) return
+  // 无工作区守卫（2026-09-21 批 · `PROJECT-SWITCHER.md` §4.1）：出口守卫先于 busy 与
+  // echo/addUser —— 拒发（文本保留不吞——开文件夹后可重按）+ toast 逐字；无假气泡、无悬挂
+  // loading。占位符不在此直写（单点派生 = `loading.js` `applyBusyLock` 第三态）。
+  if (S._workspaceRequired) {
+    showToast(t("workspace.required"))
+    return
+  }
   if (S._turnState === "running") {
     ctx.inputEl.placeholder = t("input.busyPlaceholder")
     // C-B2-4（§9.2——AC-B2-3）：拒发可见提示——复用既有 toast 机制（文案 = 既有 busy 串，

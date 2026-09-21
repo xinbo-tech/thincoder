@@ -24,6 +24,8 @@ import { savePastedImages, runVisionReader } from "./image-handler.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"
 import { specForModel } from "../specs.mjs"
 import { backgroundStatus, reassertLiveChildren } from "./suspension.mjs"
+// 无工作区守卫（2026-09-21 批 · `PROJECT-SWITCHER.md` §4.1）：② 回合入口守卫（leaf——无环）
+import { blockOnNoWorkspace } from "./workspace-guard.mjs"
 // 2026-09-11 第 10 批（§5.1.4 第 1/2 条）：任务可见性族投递通道（队列 flush 拍——webviewReady case）
 // （W15 事件中继面 + §18 C-5/C-6 permissionResponse 释放面随回合交互族迁出——见 panel-messages-turn.mjs）
 import { flushSubagentOutbox } from "./panel-callbacks.mjs"
@@ -98,6 +100,9 @@ export function clearProjectOverride() {
  * 宿主）并入同入口——导出供其调用——running→拒收（无回显无排队——回显由宿主先决）。
  */
 export async function routeUserTurn(panel, { text, modelOverride, reasoning, providerName, images, visionReader = null }) {
+  // ② 无工作区守卫（**先于** busy 与 `savePastedImages`——图片不落 `<cwd>/.thincoder/tmp/`）：
+  // webview 发消息 / retry 共用本入口 ⇒ 无文件夹窗口里一律拒（提示明示——不静默丢）。
+  if (blockOnNoWorkspace(panel)) return
   // INPUT-LOCK-ASYNC（C'——2026-09-09——F-1/F-3）：busy（_turnState==="running"——回合含
   // digest/标题窗口——单一判据）输入禁用——消息一律拒收不排队（排队机制与排队回执 UI
   // 消息类型全删）——webview 输入框已由 loading.js 锁（正常发送到不了这里——本守卫

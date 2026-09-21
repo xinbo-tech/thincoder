@@ -286,6 +286,10 @@
 **测试档越线登记（2026-09-19 · init-block 批后）**：`thincoder-vscode/test/session-boot.test.mjs` **440**（`wc -l`——>300 咨询线、≤500 硬限）；逐项登记，**非全量普查**（端面其余 >300 档 = 普查面，见批次档 §2）。
 
 **主档越线登记（2026-09-21 · SIGNAL-LINES 批后 · 父侧小项收正 · 可 revert）**：`thincoder-vscode/webview/chat.js` **449**（`wc -l` 口径——>300 咨询线、≤500 硬限；本批净增 +4 = digest 标签两档取键 + `n > 0` 计数元素规则）；逐项登记，**非全量普查**。
+**主档越线登记（2026-09-21 · vsc-no-folder-guard 批后 · 父侧小项收正 · 可 revert）**：
+`thincoder-vscode/src/extension/panel-messages.mjs` **300 → ≈303** · `thincoder-vscode/src/extension/panel-session.mjs` **299 → ≈307**（均本批**首次**越 >300 咨询线、≤500 硬限；增量 = 无工作区守卫接线；无拆分义务，触发 = 下次实质触碰）；
+`thincoder-vscode/webview/chat.js` **449 → 451**（读数复测——存量越线，本批 +2）。逐项登记，**非全量普查**；结论载荷 = 批次档 `docs/batches/2026-09-21-vsc-no-folder-guard.md` §2 跨文件限段。
+**实施后实测补记（2026-09-21 · #53）**：`panel-messages.mjs` **305**（304）· `panel-session.mjs` **313**（312）· `chat-panel.mjs` **487**（486——距 500 硬限 ≈13 行，无拆分义务在册）· `webview/chat.js` **452**（**451** ✓）· 新档 `workspace-guard.mjs` **59**（<300 ✓）✗ `test/workspace-guard.test.mjs` **487**（<500 ✓，超设计估计不阻塞）。
 
 ### 12.2 逐档方案（职责分面 · 六新档）
 
@@ -595,3 +599,4 @@
 - 2026-09-20（**卫生族批 · 台账 #140 · eng-designer**——承 `docs/batches/2026-09-20-hygiene-sweep-batch.md` §2）：§12.1 机制层端差批读数块按现盘刷新
   （`agent.mjs` **494** · `run-stages.mjs` **403** · `execute-tools.mjs` **418** · `setup.mjs` **495** · `files.mjs` **120**）+ **触发线未触**注
   + **逐档触线（单源）**句（源 = vsc-rules-retry 批 §2.4 / §5.8）+ 越档面触发句改指块内单源行。**零新语义**。
+- 2026-09-21（**vsc-no-folder-guard 批 · 父侧小项收正 · 可 revert**）：§12.1 主档越线登记补本批三档（`panel-messages.mjs` ≈303 · `panel-session.mjs` ≈307——首次越线；`webview/chat.js` 451——存量复测），结论载荷 = 批次档 §2 跨文件限段。**零新语义**。

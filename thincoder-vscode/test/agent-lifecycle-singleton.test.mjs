@@ -397,7 +397,7 @@ test("agentState §11.7: 6 fields — tasks/goal/pendingReminders ride the slot 
 })
 
 test("§11.7 closed loop: agentState → saveLines 落盘三字段 → destroy 重建 hydrate 回填（F4）", () => {
-  const cwd = _cwd() // vscode mock workspaceFolders=[] → process.cwd()；sessions dir 已隔离
+  const cwd = _cwd() // vscode mock 默认单根 = process.cwd() ⇒ _cwd() 恒 process.cwd()；sessions dir 已隔离
   const slot = 1
   const agent = buildTopLevelAgent()
   agent._tasks = [{ title: "rt", status: "pending" }]
@@ -455,7 +455,7 @@ test("saveLines: 干净完成空态即权威——无任务/无目标写 []/null
 
 
 slow("§11.2 resumed 随绑定新生：换槽销毁重建 → 恢复事件每 (面板×槽) 绑定一次——同绑定复用不重复（AC2）", async () => {
-  const cwd = _cwd() // vscode mock workspaceFolders=[] → process.cwd()；sessions dir 已隔离
+  const cwd = _cwd() // vscode mock 默认单根 = process.cwd() ⇒ _cwd() 恒 process.cwd()；sessions dir 已隔离
   // 测试注入面钉项目根（本用例面 = 恢复事件语义，非项目根判定）
   _setProjectRootForTest(cwd)
   const provider = { model: "deepseek-v4-pro" }

@@ -7,7 +7,9 @@
  */
 
 export const workspace = {
-  workspaceFolders: [],
+  // 默认单根（= `process.cwd()`）——守卫批（2026-09-21）起：无文件夹默认会让无工作区守卫
+  // 挡住全部回合/boot 套件；`_cwd()` 取值恒等（测试零 chdir ⇒ 同值），守卫态用例显式置空。
+  workspaceFolders: [{ uri: { fsPath: process.cwd() } }],
   getConfiguration: () => ({ get: () => undefined }),
   fs: {
     readFile: async () => new Uint8Array(0),
