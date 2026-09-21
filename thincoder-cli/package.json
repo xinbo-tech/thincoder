@@ -1,6 +1,6 @@
 {
   "name": "thincoder",
-  "version": "0.12.63",
+  "version": "0.12.64",
   "description": "Thin coding agent - zero third-party dependencies, no build step, Node.js native. Sharp code, zero bloat.",
   "keywords": [
     "ai",

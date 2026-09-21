@@ -212,6 +212,13 @@ Code conventions: pure `.mjs`, no semicolons, no third-party npm dependencies al
 
 ## Changelog
 
+### 0.12.64 (2026-09)
+- **PROJECT-MANIFEST model** — per-use project resolution (owning-ancestor discovery + a five-step ladder); a missing manifest is no longer fatal (degrade at startup + a clear prompt to build one).
+- **Batch record lifecycle tool** (`batch`: create / append / status / close), **ledger executor column**, **two-tier signal lines** (digest/ask) with the start line, and **session claim release** (rejections write nothing).
+- **Non-blocking startup** — async session GC, stale sweep, traces cleanup; the CLI start line shares the wrapped-parent + TUI first-paint path.
+- **Engineering mode**: the `plan` role is excluded from the engineering tool set (FR31).
+- **Fixes** — batch-alias residue across assertions, prompt doc-refs and error strings; subagent block-title parity; README dependency claims corrected to zero third-party runtime deps.
+
 ### 0.12.63 (2026-09)
 - **Core dependency live** — now depends on `@thincoder/core@^0.9.1` (the shared-mechanism core's first npm release); installed packages resolve the core from the registry instead of shipping duplicated copies.
 - **Fix: smoke probe always skipped** — `isBailianHost` was imported from the wrong module behind a silent catch, so the pre-release real-endpoint smoke test never actually ran. Fixed; smoke now performs the real three-call thinking-mapping check.
