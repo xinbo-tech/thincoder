@@ -78,7 +78,7 @@
 | 「机制在位无档补建」建档批注 | 建档批序 | 一次性材料——归批次档 |
 | CLI 侧旧档 §2 外部写感知（F6 面板自动刷新 / N5 事件驱动 + 自扰抑制 / N6 可降级——VSC 设置面板面，2026-09-11 第 21 批） | VSC 专有面需求（设置面板 = VSC 界面形态） | **P2 ⇒ VSC 轮**——归 VSC 侧 SETTINGS 板块承载；本档不并 |
 | CLI 侧同名需求档未迁面 | CLI 产品需求正文 | **已并入（2026-09-15 CLI 尾部真批）**——零实质缺口，(d) 类入 §5.1 |
-| VSC 自持镜像面（`thincoder-vscode/src/extension/{peer-instances,session-slots}.mjs`）的活判定身份校验（F-MI6 同源） | 端面实现独立（多实现面纪律——N-MI2 面间不追赶）；判活 / 标记判据以**核单源**为准（F-MI6 / N-MI6）；独立性指其余面 | **本批落地（引核收正 · 2026-09-18 设计评审）**——本地判活 / 标记副本删除，判据引核 `thincoder-core/process-probe.mjs`（端侧只留 END / 命名空间薄壳）；核 / CLI 面本批同修 |
+| VSC 自持镜像面（`thincoder-vscode/src/extension/{peer-instances,session-slots}.mjs`）的活判定身份校验（F-MI6 同源） | 端面实现独立（多实现面纪律——N-MI2）；判活 / 标记判据以**核单源**为准（F-MI6 / N-MI6）；独立性指其余面 | **本批落地（引核收正 · 2026-09-18 设计评审）**——本地判活 / 标记副本删除，判据引核 `thincoder-core/process-probe.mjs`（端侧只留 END / 命名空间薄壳）；核 / CLI 面本批同修 |
 
 ## 变更记录
 
@@ -91,3 +91,4 @@
   F-MI1 / F-MI2 判定句补**核面坐标**（`thincoder-core/peer-instances.mjs`——此前只列 VSC 自持镜像）；§5.2 补 VSC 镜像面同源缺陷去向行（VSC 轮）；§6 体量读数同步。
 - 2026-09-16（**批 1 CORE-DEFECT-FIXES · 复审修正轮** · eng-designer）：**F-MI2 判定句收口**——`peerInstances()` 条目含 `self`；工具输出白名单 = `{pid, end, sessionId, slots}`（= N-MI4）。
 - 2026-09-18（**判据面收正批 · 父侧直接执行 · 可 revert**）：**F-MI4 撤项**——「清单写盘重读合并」的载体已随 M7 checklist 族退役（`docs/core/design/MULTI-INSTANCE-COLLAB.md` §5 历史条）⇒ 该需求条**移除**（现役面不留失效挂尸——承用户 2026-09-18 失效表达裁定）；并发写面现行承载 = 台账 SQLite 存储（台账 #11）。
+- 2026-09-22（**措辞退场批（wording-retire）· 需求面 · 父侧直接执行 · 可 revert**——承用户 2026-09-22 08:15 裁定 + 批档 `docs/batches/2026-09-22-wording-retire.md`）：§5.2 行去「N-MI2」后的并列措辞 gloss（现文 = 「端面实现独立（多实现面纪律——N-MI2）」——判据面零变）；旧并列措辞从活面退场。

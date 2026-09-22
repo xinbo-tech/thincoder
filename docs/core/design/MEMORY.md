@@ -426,8 +426,8 @@ Windows 盘符**大小写随启动拼写**（`cd d:\teamcode` 与 `cd D:\teamcod
   uid 拼装 `matchMemoryRows`（`:56` / `:59` 的 `projectDir` / `teamDir`）· origin 解析 `deleteByUid`（`:171-173`）·
   等值查（`:182`）· 护栏查与 `origin !== dirs[layer]` 比较（`:195-197`——**两侧归一**）· `syncDir` 调用（`:206`）各取归一值。
   （`fetchEntry`（`thincoder-core/memory/core.mjs:120-123`）同形——其 **uid 解析面本轮零改**（path-only 余量兜底（`:131`）仍在）；其 `memory.projectOrigin` 读面仍按读面应用点归一。〔2026-09-18 轮 2 评审收口〕）
-- **端装配文件零改 + 核库读数点例外**（归一在核内——不触 `make-agent.mjs` / `embed-config.mjs` 等端**装配**文件，面间不追赶纪律不破）；
-  **例外 = 核库读数点** `thincoder-vscode/src/extension/panel-index.mjs`（`:20` 归一导入 · `:35-37` `readIndexCounts` 按归一形 origin 取键）——核内写缝归一后不取同形键则面板恒显 `files: 0`（实施轮实测）⇒ 随本批同改（例外判据 = 读同一份核库的投影点）。〔实施后收正 · 2026-09-18〕
+- **端装配文件零改 + 核库读数点例外**（归一在核内——不触 `make-agent.mjs` / `embed-config.mjs` 等端**装配**文件，各面独立实现纪律不破）；
+  **例外 = 核库读数点** `thincoder-vscode/src/extension/panel-index.mjs`（`:20` 归一导入 · `:35-37` `readIndexCounts` 按归一形 origin 取键）——核内写缝归一后不取同形键则面板恒显 `files: 0`（实施轮实测）⇒ 随本批同改（例外判据 = 读同一份核库的投影点）。
 - **不做**：`realpath` / 符号链接解析（会改「origin = 用户项目路径」语义 + 破坏跨机可移植性；同款先例 = D-MEM10「不用 `resolve`」）；
   别名路径（subst / junction / 8.3 短名）与**嵌套 origin 重叠**（仓根 origin 与子仓 origin 各索引一遍）**登记为已知限制**（§8.3）。
 
@@ -488,7 +488,7 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 | D-MEM15 | VSC 忽略文件删除检测 = **`git check-ignore` 圈定 + 存在性检查** | 被忽略文件删除后从 git 输出彻底消失——模式匹配 + 存在性是唯一可达触发；否决全 manifest 逐条扫描（等价全量 stat） |
 | D-MEM17 | 扫描让出 = **时间片预算**（每 64 行读钟，≥ 50 ms 即 `await yieldTick()`），块常量 2000 不动 | 让出只改调度不改结果（N-M2 仍成立）；块常量承载内存上界契约不宜混用。否决「按块让出」（单块物化 + 单块评分 ≈ 秒级，用户仍觉卡）·「worker_thread 化」（结构修法——本轮登记不执行）·「同回合结果缓存」（失效判据 / 内存上界 / 跨回合一致性 = 新面，无实证收益） |
 | D-MEM18 | 子代召回注入 = **depth 门**（depth > 0 不注入） | 需求侧 F-M7 / F-Q2 / F-Q3 已声明 depth-0；`prepareRun` 其余自动注入全为 depth-0 门；子代任务书自含；按需检索工具仍在。否决「加配置开关」（新面，须另批）·「只门文档、不门记忆」（同一次扫描成本，拆门无收益） |
-| D-MEM19 | origin 归一 = **核内纯函数 + 各公共入口一行**（端**装配**文件零改——核库读数点例外见 §6.11） | 端侧赋值点两处（CLI / VSC）——改端 = 面间追赶 + 跨端同步；核内归一让两种拼写落同一键。否决 `realpath`（改 origin 语义 + 破可移植性，同 D-MEM10 口径） |
+| D-MEM19 | origin 归一 = **核内纯函数 + 各公共入口一行**（端**装配**文件零改——核库读数点例外见 §6.11） | 端侧赋值点两处（CLI / VSC）——改端 = 两端连带改动 + 跨端同步；核内归一让两种拼写落同一键。否决 `realpath`（改 origin 语义 + 破可移植性，同 D-MEM10 口径） |
 | D-MEM20 | 既有重复数据 = **迁移方案 + 判据**（执行归父侧 ops） | 库在仓外（`~/.thincoder/memory.db`）；子代理零触碰。去重口径 = 同归一键同 `(path, line_start)` 留 `mtime_ms` 最大者；可回退 = `VACUUM INTO` 前置备份 |
 | D-MEM21 | WAL 卫生 = 开库一次性 `TRUNCATE` + `journal_size_limit`；**不做**写侧逐次 checkpoint | 写侧性能敏感；本机制定位是卫生不是保证（busy 静默跳过）。否决「写侧每次写后 checkpoint」（主库 fsync 拖慢索引）·「PASSIVE 常跑」（不回收文件） |
 | D-MEM22 | 扫描游标 = **PK 序游标**（键列由调用点声明，缺省 `["rowid"]`；键 = 表 PK 去掉等值过滤前缀列） | `ORDER BY rowid` 与索引序不一致 ⇒ 每块 `USE TEMP B-TREE FOR ORDER BY`（重排整个过滤集、排序物化含 blob）= 29.4 s；PK 游标同覆盖 1.71 s（父侧真库实测 · §6.10 修法 A1）。**否决**「全 PK 元组 + 前导列等值并存」（SQLite 不作索引约束 ⇒ 静默二次方：本机 20 万行夹具 2.19 s vs 0.50 s，且无 `TEMP B-TREE`、无报错）· 否决「新索引 `(origin, rowid)`」（SQLite 拒：`no such column: rowid`——rowid 不入索引表达式）· 否决「`entries` / `files` 游标一并改」（现状已零排序：`SEARCH … USING INTEGER PRIMARY KEY (rowid>?)`） |
@@ -560,3 +560,5 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
   §6.11「端文件零改」收窄为「端**装配**文件零改 + **核库读数点例外**」（`thincoder-vscode/src/extension/panel-index.mjs:20` / `:35-37`——实施轮既有改动回填）；§7 D-MEM19 同句收窄 + 指针。语义零改。
 - 2026-09-18（**坐标漂移收正轮 · eng-designer**——承 `docs/batches/2026-09-18-distill-prefix.md` §5 八、登记 · 台账 #76）：§7 D-MEM16 补注记——先例坐标 `thincoder-core/explore-distill.mjs:13` 随蒸馏前缀批序列化面退役（`safeSliceUTF16` import 已删）；**声明本体不变**（函数仍有 memory 族消费方——现体先例 = `thincoder-core/memory/core.mjs:15` 等三档）。
 - 2026-09-20（**卫生族批 · 台账 #138 · eng-designer**）：首部机制面节区改 `§6–§8` + 历史节号指称清理（行数规则废除批残留）；设计源 = `docs/batches/2026-09-20-hygiene-sweep-batch.md` §2。
+- 2026-09-22（**措辞退场批（wording-retire）· 点修轮（发现 1 语族补扫）· eng-designer**——承用户 2026-09-22 裁定（措辞退场 · 语族补扫）；批档 = `docs/batches/2026-09-22-wording-retire.md`）：§6.11「端装配文件零改」行 + §7 D-MEM19 行——「面间不追赶 / 面间追赶」旧名从活面退场（改「各面独立实现」「两端连带改动」平实措辞）；**零新语义**；旧字面仅存记录面 / 归档面。
+- 2026-09-22（**措辞退场批（wording-retire）· 评审轮 1 发现 #4 · 父侧直接执行裁定 · eng-designer**——承 `docs/batches/2026-09-22-wording-retire.md` §3 轮次 1 发现 #4）：§6.11「端装配文件零改 + 核库读数点例外」行尾修订标记「〔实施后收正 · 2026-09-18〕」删除（编辑史尸体形——例外语义 / 判据 / 「实施轮实测」注记行内齐全；日期锚 = 本档 2026-09-18 轮变更记录 + 该批档 §2.12）。同族更大面（全仓修订式表达清理）= 台账 #225。
