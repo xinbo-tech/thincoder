@@ -226,6 +226,13 @@ Code conventions: pure `.mjs`, no semicolons, no third-party npm dependencies al
 
 ## Changelog
 
+### 0.12.65 (2026-09)
+- **Session index** — `thincoder session index [--status|--rebuild]`. `read_history` now answers over-limit sessions and searches across sessions (`path:"all"`), backed by a derived, rebuildable `node:sqlite` index; the session files remain the only source of truth.
+- **Queue submissions while busy** — Enter during a running turn is no longer swallowed: it lands in a single slot with a visible `[sending queued message]` receipt and runs at the turn boundary. The same now applies inside suspended sessions. Ctrl+I stays the interrupt-style channel.
+- **Release claims on exit** — a clean exit frees this process's session claims, so restarts resume directly instead of relying on process probing.
+- **Safer, clearer surfaces** — MCP form headers/env values are masked; `/eng` and `/advisor` write to the bound slot; `git diff`/`log` note an unmatched pathspec instead of looking clean; `session gc` prints progress and estimates.
+- **Fixes** — the TUI exit no longer throws (`ledgerSurface.dispose`); oversized modules split (`key-handler` 498→124 + 5 family modules; `index.mjs` 499→228, `startTUI` 417→149).
+
 ### 0.12.64 (2026-09)
 - **PROJECT-MANIFEST model** — per-use project resolution (owning-ancestor discovery + a five-step ladder); a missing manifest is no longer fatal (degrade at startup + a clear prompt to build one).
 - **Batch record lifecycle tool** (`batch`: create / append / status / close), **ledger executor column**, **two-tier signal lines** (digest/ask) with the start line, and **session claim release** (rejections write nothing).

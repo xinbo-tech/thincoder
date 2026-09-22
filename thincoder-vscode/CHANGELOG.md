@@ -2,6 +2,27 @@
 
 All notable changes to ThinCoder VS Code are documented here.
 
+## [0.9.5] — 2026-09-22
+
+> 0.9.4 → 0.9.5（CalVer 月内序号——发布时定号）
+
+### Added
+
+- **会话索引重建命令**（`thincoder.sessionIndexRebuild`）+ 启动懒建（核索引面——超大会话可查）。
+- **被占会话槽可辨信号**：切换 / 加载遇占用 ⇒ 保持现值 + 明确提示 + 重载（不再静默钉他端槽）。
+- **认领释放扩面**：项目切换（显式 / follow / 工作区兜底三落点）与工作区关闭释放旧 cwd 认领。
+- **冷启镜像补推**：`webviewReady` 握手补推挂起态——Reload 于 digest 期不再假气泡。
+
+### Changed
+
+- **verify guard 工程模式排除**（与核 `completion.mjs` 同判据——端差消）。
+- **busy 归位路径复位时点前移**（`_busyQueuedPending`——消 ≤读图窗误判槽满）。
+- **结构收正（内部）**：`chat.js` 拆 `chat-messages.js` / `chat-status.js`（454 → 147 + 2 档）· 两测试档拆对（用例守恒 26）· 提示词「多实现面纪律」节。
+
+### Fixed
+
+- 会话认领端壳释放信号 + 端壳 `SLOT_OCCUPIED` 零写；挂起窗输入优先于 digest（D-S5）零回归。
+
 ## [0.9.4] — 2026-09-21
 
 > 0.9.3 → 0.9.4（CalVer 月内序号——发布时定号）

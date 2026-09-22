@@ -1,3 +1,27 @@
+## [0.12.65] — 2026-09-22
+
+> 0.12.64 → 0.12.65（连续号——发布时定号）
+
+### Added
+
+- **`session index` 命令**（`--status` 读数 / `--rebuild` 全量重扫）+ 启动后懒建索引；`read_history` 走索引——超大会话可答 + `path:"all"` 跨会话检索。
+- **忙时排队提交**：主会话忙时 Enter 不再被吞——入单槽 + `[sending queued message]` 回执 + 回合边界送达；**挂起会话内**同样受理；Ctrl+I 保持打断式通道。
+- **退出即释放会话认领**：Ctrl+C / 正常退出释放本进程认领——重启恢复直达原槽。
+- **`session gc` 进度 / 预估行**（显式面长跑可见）。
+
+### Changed
+
+- **MCP 表单脱敏**：headers/env 值位改 `••••（masked）`（键名保留）——与设置工具同谓词单源。
+- **槽绑定优先写**：`/eng` · `/advisor` 写面改 `agent._slot ?? activeSlot(cwd)`（不写他槽）。
+- **i18n 单源**：auto-turn 上限行改读核键（`digest.capAuto` / `digest.capStop`）。
+- **`git diff` / `log` 传 path 未命中 ⇒ 加注**（不再显示成假洁净）。
+- **结构收正（内部）**：`key-handler` 拆五族档（498 → 124 + 5 档）· `index.mjs` 拆四新档（`startTUI` 417 → 149）· README 折行。
+
+### Fixed
+
+- **TUI 退出钩子 TypeError**（`ledgerSurface.dispose` 打在 Promise 上）——每次退出抛错，已修（`node test-startup.mjs` 转绿）。
+- 表单 `[object Object]` 渲染瑕疙 · plan 未知 action 报错串断言补全 · 压缩第三去向用例补全。
+
 ## [0.12.64] — 2026-09-21
 
 > 0.12.63 → 0.12.64（连续号——发布时定号）

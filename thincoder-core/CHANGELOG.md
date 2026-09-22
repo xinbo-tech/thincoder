@@ -3,6 +3,29 @@
 All notable changes to the core package are documented here.
 Format: Keep a Changelog · 中文 · 号在发布时定（CalVer——见 `docs/RELEASE.md` §4）。
 
+## [0.9.3] — 2026-09-22
+
+> 0.9.2 → 0.9.3（月内序号——发布时定号）
+
+### Added
+
+- **派生会话索引库**（`node:sqlite` · 零新依赖）：`read_history` 超大会话不再整档拒（>50k 消息经索引可查）+ `path:"all"` 跨会话检索（行携 `session.file` 回查锚）+ `tool_calls` 携参数；索引从记录段增量建 · 可重建（丢/坏自愈）· 主存（会话文件）零改。
+- **子代理「系统固块」**：机制性指令（审计五锚 + 批档行）改由 spawn 单点写入并拼进 system 面（前缀缓存契约——同 child 连跑 `systemPrompt` 逐字节相等）。
+- **进程族单源**：`killProcessTree` 收口为 `tools/process-tree.mjs`（核 / VSC 本地副本全消除）。
+- **退出即释放会话认领**：正常退出释放本进程认领（端标记保留作路标）——重启恢复不再依赖进程探测兜底。
+- **认领释放扩面**：ACP `session/close` · 跨 cwd 释放 · 被占槽返回可区分信号（零写）。
+
+### Changed
+
+- **批档工具词面协议结构化**：`batch status` enum 化（散文走 `note`）+ `create` 补 `source` / `prev` 前缀归一 / 占位自动；append/status 占位残留机检（fail-closed）。
+- **工程模式 `task` 工具机械停用**（追踪面 = 批档 + 台账；普通模式零改）。
+- **设置面**：敏感键谓词导出 + 非敏感父对象 JSON 化渲染（`[object Object]` 瑕疙消除）。
+- FTS 语言面外提 `fts-text.mjs`（`segmentCJK` / `buildFtsQuery` 单源 + re-export 面）。
+
+### Fixed
+
+- 会话索引自愈链（坏库 / 删库现场保留 + 重建）· 段轮转与等长改写的水位判别 · 源消失级联清行。
+
 ## [0.9.2] — 2026-09-21
 
 > 0.9.1 → 0.9.2（月内序号——发布时定号）
