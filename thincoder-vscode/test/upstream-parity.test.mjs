@@ -1,7 +1,7 @@
 /**
  * upstream-parity.test.mjs — VSC 对位面机验收（批 2026-09-19-upstream-channel-availability · F-UC7）。
  *
- * 设计权威：`docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.27.12.12（VSC 对位面）·
+ * 设计权威：`docs/core/design/AGENT-LOOP-UPSTREAM.md` §6.27.12.12（VSC 对位面）·
  * §6.27.12.5 G–L（接口契约）· §6.27.12.9（用例 T-VS-U1–U7）· §6.27.12.10 U9 / U12；
  * 批次档 `docs/batches/2026-09-19-upstream-channel-availability.md` §2.11 行 18 · §2.12 V2。
  *

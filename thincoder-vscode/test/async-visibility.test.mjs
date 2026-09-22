@@ -367,7 +367,7 @@ test("T-V3 清屏恢复（AC-A4）：clearMessages+historyPage 之后再断言 �
   // 清屏前：两块 live（被 clearMessages 抹掉——host 清屏路径）
   applySubagentStatus({ type: "subagent", status: "started", role: "explore", id: 1, pool: true, model: "glm-5.3" })
   applySubagentStatus({ type: "subagent", status: "started", role: "eng-coder", id: 2, pool: true })
-  ctx.messagesEl.replaceChildren() // clearMessages（chat.js case：replaceChildren + resetActivity）
+  ctx.messagesEl.replaceChildren() // clearMessages（chat-messages.js case：replaceChildren + resetActivity）
   resetActivity()
   assert.equal(subBlocks(ctx).length, 0, "清屏抹块 + 清簿记")
   assert.equal(ctx.activityEl.children.length, 0, "区零残留（live + 折叠全清）")

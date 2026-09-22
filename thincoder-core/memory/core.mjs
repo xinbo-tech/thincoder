@@ -12,11 +12,14 @@ import { normalizeOrigin } from "./origin.mjs"
 import { readFile, stat, readdir, writeFile, mkdir } from "node:fs/promises"
 import { join } from "node:path"
 import { segmentCJK, VALID_TYPES, SCHEMA_VERSION } from "./schema.mjs"
+// FTS 语言面单源外提（会话索引批 · SESSION.md §6.19）：本档只取用 + re-export 保名面
+// （零行为变更——实现住叶子档 `fts-text.mjs`）。
+import { buildFtsQuery } from "../fts-text.mjs"
+export { buildFtsQuery } from "../fts-text.mjs"
 import { safeSliceUTF16 } from "../text-budget.mjs"
 
 const EMBED_BATCH_SIZE = 256
 export const EMBED_TEXT_MAX_LEN = 2000
-const FTS_TOKEN_MAX = 16
 const DEFAULT_LIST_LIMIT = 50
 
 /**
@@ -298,21 +301,4 @@ export async function list(memory, { type, limit = DEFAULT_LIST_LIMIT } = {}) {
 export function clearPersonal(memory) {
   const { changes } = memory.db.prepare(`DELETE FROM entries`).run()
   return changes
-}
-
-/**
- * Build an FTS5 query: first split by whitespace/punctuation into tokens,
- * then apply CJK character segmentation to each token.
- * This keeps multi-character CJK words as FTS5 phrases ("分号" → "分 号" → phrase query, exact adjacency match),
- * while different tokens are joined with OR ("命名 规范" → "命 名" OR "规 范", each phrase requires its own adjacency).
- */
-export function buildFtsQuery(query) {
-  const terms = query
-    .split(/[\s,，。、;；!！?？()（）"`]+/)
-    .map((t) => t.trim())
-    .filter(Boolean)
-    .slice(0, FTS_TOKEN_MAX)
-    .map((t) => segmentCJK(t))
-  if (terms.length === 0) return ""
-  return terms.map((t) => `"${t.replaceAll('"', '""')}"`).join(" OR ")
 }

@@ -29,7 +29,7 @@ export function createSlotsHandlers(ctx) {
 
   /** #41 装载后一行重估（F3 准翻列 / F4）：`applySession` 已按槽订正 config ⇒ 工程模式会话
    *  就地判据（单源）+ 附着——缺档格 `writer:'main'` 建档；非工程模式零动作（零 manifest I/O）。
-   *  判据不通过 ⇒ 保持不附着（装载已发生——本行是「装载后订正」位，与入口门槛两分）+ 留痕。 */
+   *  判据不通过 ⇒ 保持不附着（装载已发生——本行是「装载后订正」位；启动侧恒不拒，拒面 = 「翻转可否进」）+ 留痕。 */
   const reattach = (ag) => {
     if (ag?.config?.agent?.engineering !== true) return
     const r = resolveEngineeringManifest(getCwd(), { writer: "main" })

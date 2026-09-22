@@ -5,7 +5,10 @@ import {
   makeDecoder,
   BASH_TIMEOUT_MS,
 } from "./shared.mjs";
-import { spawn, execFileSync } from "node:child_process";
+import { spawn } from "node:child_process";
+// 树杀单源（台账 #208② · TOOLS.md §6.14 落位表行 2）：本地副本删除——改用 `./process-tree.mjs`
+// （行为逐字同：win32 `taskkill /T /F` · POSIX 组杀 + 直杀兜底）。
+import { killProcessTree } from "./process-tree.mjs";
 
 /** Maximum buffer size per stream (stdout / stderr) before truncation */
 const MAX_STREAM_BUF = 2_000_000
@@ -55,20 +58,6 @@ function buildBashEnv() {
     PAGER: "cat",
     TERM: "dumb",
     ...(isWindows ? { PYTHONIOENCODING: "utf-8" } : {}),
-  }
-}
-
-/**
- * Platform-aware process tree kill.
- * POSIX: kill process group (spawned with detached=true).
- * Windows: taskkill /T to reach grandchildren (npm test's subprocesses, etc.).
- */
-function killProcessTree(child) {
-  if (process.platform === "win32") {
-    try { execFileSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { stdio: "ignore" }) } catch {}
-  } else {
-    try { process.kill(-child.pid, "SIGKILL") } catch {}
-    try { child.kill("SIGKILL") } catch {} // fallback: kill directly if group kill fails
   }
 }
 

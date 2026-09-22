@@ -18,7 +18,8 @@ const SENSITIVE_SEGMENT = /(^|[._-])(api[_-]?key|key|token|secret|password|autho
 const SENSITIVE_FAMILY = /(^|[._-])(headers|env)($|[._-])/i
 const MASKED = "••••（masked）"
 
-function isSensitiveKey(path) {
+/** #58（hygiene-sweep 批）：谓词/标记导出——CLI `/mcp` 表单现值脱敏同源（`cmd-mcp-form.mjs`）。 */
+export function isSensitiveKey(path) {
   return SENSITIVE_SEGMENT.test(path) || SENSITIVE_FAMILY.test(path)
 }
 
@@ -184,7 +185,8 @@ function flatten(obj, prefix = "", out = []) {
 
 /** 行格式化：`key = value (type)`——敏感键值遮罩 */
 function formatLine({ path, value }) {
-  const shown = isSensitiveKey(path) ? MASKED : value
+  // #58（hygiene-sweep 批）：对象值渲染收正（原 `[object Object]`——JSON 化；敏感键仍恒遮）
+  const shown = isSensitiveKey(path) ? MASKED : value !== null && typeof value === "object" ? JSON.stringify(value) : value
   return `${path} = ${shown} (${Array.isArray(value) ? "array" : typeof value})`
 }
 

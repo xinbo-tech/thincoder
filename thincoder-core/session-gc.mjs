@@ -229,7 +229,13 @@ export async function deleteColdCwd(hash, { dir = sessionsDir(), now = Date.now(
  *   --confirm <hash>   回收指定组整前缀（警告 + 文件清单 + TOCTOU 重校验）
  *   --confirm --all    逐候选同型回收
  * 返回进程退出码（0/1）。dir/prefix/now/out/err/probeFn 为测试注入缝（默认生产行为）。
+ *
+ * #178（hygiene-sweep 批）：显式面进度 / 预估——**只增显示行，零触判据与删除集**（口径 = 台账
+ * #178 真机实测 ≈6ms/候选（6,887 候选 ≈41.6s），仅用于预估显示）。
  */
+const GC_MS_PER_CANDIDATE = 6
+const fmtGcEstimate = (n) => `~${Math.max(1, Math.round((n * GC_MS_PER_CANDIDATE) / 1000))}s`
+const GC_PROGRESS_MIN = 2 // 候选数 ≥ 本值 ⇒ 出预估 / 逐组进度行（单组面输出逐字零变）
 export async function runSessionGc(args, { dir = sessionsDir(), prefix = null, cwd = process.cwd(), now = Date.now(), out = console.log, err = console.error, probeFn = probeOwnersAsync } = {}) {
   const dryRun = args.includes("--dry-run")
   const confirmIdx = args.indexOf("--confirm")
@@ -261,6 +267,7 @@ export async function runSessionGc(args, { dir = sessionsDir(), prefix = null, c
     for (const name of residue.candidates) out(`  ${name}`)
     out(`Cold/stale project candidates (cold = manifest idle > 90 days; stale = no live owner + cwd unreachable/empty + 7-day window): ${candidates.length}`)
     for (const c of candidates) out(`  ${c.hash}  reason ${c.reason}  files ${c.files.length}`)
+    if (candidates.length >= GC_PROGRESS_MIN) out(`Estimate: ${fmtGcEstimate(candidates.length)} to scan ${candidates.length} candidates (measured ≈${GC_MS_PER_CANDIDATE}ms/candidate).`)
     if (candidates.length) out('Run "thincoder session gc --confirm <hash>" (or --confirm --all) to move a project prefix into the recycle bin (recoverable: sessions-trash/<timestamp>/, 7 days).')
     return 0
   }
@@ -276,7 +283,11 @@ export async function runSessionGc(args, { dir = sessionsDir(), prefix = null, c
     err(`Refused: ${confirmTarget} is not a cold/stale project (active, recent, or unknown) — nothing deleted.`)
     return 1
   }
+  let i = 0
+  if (targets.length >= GC_PROGRESS_MIN) out(`${targets.length} groups to recycle — estimate ${fmtGcEstimate(targets.length)} (progress per group below).`)
   for (const t of targets) {
+    i++
+    if (targets.length >= GC_PROGRESS_MIN) out(`[${i}/${targets.length}] ${t.hash} — ${t.files.length} files`)
     out(`WARNING: 此操作将回收该 cwd 的全部会话历史 (hash ${t.hash}, ${t.files.length} files) → ${trashRootFor(dir)}:`)
     for (const name of t.files) out(`  ${name}`)
     const r = await deleteColdCwd(t.hash, { dir, now, probeFn, entries: loopEntries })

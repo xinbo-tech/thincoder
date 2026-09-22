@@ -1,5 +1,5 @@
 /**
- * async-discard.test.mjs — CLI 侧中止丢弃对称单点用例（设计权威 = `docs/core/design/AGENT-LOOP-SUBAGENT.md`
+ * async-discard.test.mjs — CLI 侧中止丢弃对称单点用例（设计权威 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md`
  * §6.20.6 用例表 U1–U8；需求 = `docs/core/requirements/AGENT-LOOP.md` §4.10 F1–F4 / N1–N3）。
  *
  * 断言面 = **行为面**（§6.20.6：池内容 / 墓碑状态 / 注入 / 事件计数），不做散文锚。

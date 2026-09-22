@@ -102,7 +102,7 @@ export async function maybeGuardPushbacks(agent, st) {
 
   // Verify guard — OPT-IN (config agent.verifyGuard === true, CLI parity). When off
   // the agent is not pushed back to verify before finishing.
-  if (cfgVerifyGuard && agent._touchedFiles.length > 0 && !agent._verifiedThisRun && hasCodeMutations(agent) && pb.guardPushbacks < MAX_VERIFY_PUSHBACKS) {
+  if (cfgVerifyGuard && !agent.config?.agent?.engineering && agent._touchedFiles.length > 0 && !agent._verifiedThisRun && hasCodeMutations(agent) && pb.guardPushbacks < MAX_VERIFY_PUSHBACKS) {
     pb.guardPushbacks++
     pushReal(history, fullHistory, { role: "assistant", content: response.content })
     history.push({

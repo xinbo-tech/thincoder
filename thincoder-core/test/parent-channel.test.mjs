@@ -1,5 +1,5 @@
 /**
- * parent-channel.test.mjs — 子代理上行通道用例表 1:1（设计权威 = `docs/core/design/AGENT-LOOP-SUBAGENT.md`
+ * parent-channel.test.mjs — 子代理上行通道用例表 1:1（设计权威 = `docs/core/design/AGENT-LOOP-UPSTREAM.md`
  * §6.27.9 T1–T17；批 SUBAGENT-UPSTREAM-CHANNEL）。正常 = T1–T4；边界 = T5–T8 / T15–T17；
  * 错误 = T9–T13；T14 = 零回归（本批触碰点的行为面 + 全族由包级 `npm test` 承载）。
  *

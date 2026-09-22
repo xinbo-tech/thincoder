@@ -2,7 +2,7 @@
  * turn-domain-mode.test.mjs — auto-turn digest 域**模式变体**（F10 提醒面第三实例 · tool-discipline 批）。
  *
  * 设计权威 = `docs/core/design/TOOLS.md` §6.15.3（变体文本与选串机制单源）；机制面 =
- * `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.8（digest 动作域两档）。
+ * `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8（digest 动作域两档）。
  * 病征：工程模式下 `task` 既不在工具表又机械拒（F10）⇒ 普通档 digest 域文本第 2 条的
  * 「update the task list … (allowed)」= 死胡同 + 错误陈述 ⇒ 平行导出 + 按模式选串。
  *

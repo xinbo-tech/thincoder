@@ -55,7 +55,7 @@ test("M3-3 探针 A③（正常 · 先红）：直通分支载荷 text = 字符�
 })
 
 test("M3-4 静态链终点取证：对象直通 ⇒ 卡体拼串字面 = `[object Object]`（webview `textContent +=` 语义）", () => {
-  // webview `chat.js` 流式追加 = `ref.b.textContent += m.text` ⇒ 非串走 JS 默认串化
+  // webview `chat-messages.js` 流式追加 = `ref.b.textContent += m.text` ⇒ 非串走 JS 默认串化
   assert.equal(String(CHUNK), "[object Object]", "对象直通时卡体正文字面（修前实况）")
 })
 

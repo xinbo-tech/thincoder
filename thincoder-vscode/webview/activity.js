@@ -312,7 +312,7 @@ export function applySubagentStatus(m) {
       if (!block?._subMeta || block._subMeta.frozen) continue
       const meta = block._subMeta
       meta.status = "running"
-      meta.stateWord = null // queued 头残留等待标注清掉（转 running——由 chunk 状态词接管）
+      meta.stateWord = null // stateWord 写点③（锁面注——台账 #187②）：queued 头残留等待标注清掉（转 running——由 chunk 状态词接管）
       meta.queued = false
       meta.queueInfo = null // C-11②：started 后清排队信息
       // pool 标记语义: async 池条目 started 携 pool:true；同步 spawn 不带 → false。

@@ -224,13 +224,13 @@ export function freezeAllSubTasks(state) {
   }
 }
 
-/** §17.5.5 消化完成逐条冻结回收（2026-09-03 实测修订 + round1 #1 位置裁定）：digest/会话内
+/** 消化完成逐条冻结回收（2026-09-03 实测修订 + round1 #1 位置裁定）：digest/会话内
  *  用户回合消化完 pending 条目（run 首行已注入）后调用——把"已消化但仍驻留面板"的
  *  awaitingDigest 块立即冻结进流（不等池空——块回收与池空解耦；池空 freezeAllSubTasks
  *  仅兜底未消化残项）。归属不变式：会话内任何 run 开始前 pinned 块的条目必在 pending
  *  （settle 即移交）；run 消费后条目不在 pending 的 pinned 块 = 本 run 消化者——无需
- *  快照即精确归属。位置（round1 #1 裁定——与 17.5.5 早版文本的矛盾已消解，见
- *  AGENT-LOOP.md §17.5.5）：**settle 锚点 splice 落位——digest 总览文本之前**——同
+ *  快照即精确归属。位置（round1 #1 裁定——与早版文本的矛盾已消解；digest 面 =
+ *  AGENT-LOOP-ASYNC-POOL.md §6.8）：**settle 锚点 splice 落位——digest 总览文本之前**——同
  *  §7.2 D4 修复轮/D-S8 锚点语义（T-S6/T-S14 位置断言同口径）——锚点降序逐块冻结
  *  （splice 绝对位互不位移）。@returns {number} 回收块数 */
 export function freezeReclaimDigestedBlocks(state, pendingList) {

@@ -6,7 +6,9 @@
  *        buildSpawnChild——双路覆盖 AC12）
  *   T26  错误：batchDoc 指向不存在路径 / 目录 → throw（消息含
  *        "(given path is not a readable file)" 后缀）
- *   T27  正常：batchDoc 存在 → 通过 + child 任务输入含 "Batch record (batchDoc): <abs>"
+ *   T27  正常：batchDoc 存在 → 通过 + spawn 固块含 "Batch record (batchDoc): <abs>"
+ *        （台账 #23 / §6.26：机制性指令改走 system 固块——`child._spawnSystemBlock`；
+ *        `input` 只留任务书）
  *   T28  边界：非 eng-coder（explore）不带 batchDoc → 现行行为零变更
  *   T29  边界：eng-coder 审计受限变体（setup 装配）properties 不含 batchDoc（AC13）
  * 构造手法照两份先例：直驱 buildSpawnChild（test/subagent-scheduler.test.mjs「链路形态」节——
@@ -95,7 +97,8 @@ test("T25b 错误/正常：sync 路径（async:false）同受门禁 + 带存在�
   assert.equal(e?.message, BASE_MSG, "sync 路径缺 batchDoc 同拒（校验在 buildSpawnChild）")
   const { rel, abs } = makeBatchDoc()
   const built = buildEng(parent, { ...args, batchDoc: rel }, false)
-  assert.ok(built.input.includes(`Batch record (batchDoc): ${abs}`), "sync 成功路径同样注入批次档行")
+  assert.ok(built.child._spawnSystemBlock.includes(`Batch record (batchDoc): ${abs}`), "sync 成功路径同样注入批次档行（固块字段）")
+  assert.ok(!built.input.includes("Batch record (batchDoc)"), "input 侧反转：纯任务书（不含固块）")
 })
 
 test("T26 错误：batchDoc 指向不存在路径 / 目录 → throw（含不可读后缀）", () => {
@@ -107,29 +110,30 @@ test("T26 错误：batchDoc 指向不存在路径 / 目录 → throw（含不可
   assert.equal(dir?.message, BASE_MSG + " (given path is not a readable file)")
 })
 
-test("T27 正常：batchDoc 存在 → 通过 + child 任务输入含 Batch record 行（含 `\\` 归一）", () => {
+test("T27 正常：batchDoc 存在 → 通过 + spawn 固块含 Batch record 行（含 `\\` 归一）", () => {
   const { rel, abs } = makeBatchDoc()
   const { parent, args } = engSpawnArgs()
   const built = buildEng(parent, { ...args, batchDoc: rel })
   assert.equal(built.child._engDesignReviewed, true, "token 门照常放行（门禁不误伤既有链）")
-  assert.ok(built.input.includes(`Batch record (batchDoc): ${abs}`), "child 任务输入含批次档绝对路径")
-  assert.ok(built.child._engTaskInput.includes(`Batch record (batchDoc): ${abs}`), "_engTaskInput 同源携带（审计任务书来源）")
+  assert.ok(built.child._spawnSystemBlock.includes(`Batch record (batchDoc): ${abs}`), "spawn 固块含批次档绝对路径（台账 #23）")
+  assert.ok(!built.input.includes("Batch record (batchDoc)"), "input 不含固块（D23-6）")
+  assert.equal(built.child._engTaskInput, built.input, "_engTaskInput 同源携带 = 纯任务书（不含固块——审计任务书来源）")
   // 反斜杠变体（路径语义照 `files` 先例——`\` 归一为 `/`）
   const slashVariant = buildEng(parent, { ...args, batchDoc: rel.replaceAll("/", "\\") })
-  assert.ok(slashVariant.input.includes(`Batch record (batchDoc): ${abs}`), "`\\` 分隔符同判")
-  // 追加行不得破坏 summarizeEngTaskBook 的段匹配（设计 §2.11）——以审计形态驱动一次
-  // 装配（父任务书 = ctx.agent._engTaskInput，追加行在末尾），三要素仍逐段命中。
+  assert.ok(slashVariant.child._spawnSystemBlock.includes(`Batch record (batchDoc): ${abs}`), "`\\` 分隔符同判")
+  // 任务书段匹配（D23-6 语义下固块不在任务书内）：审计形态装配一次——三要素仍逐段命中。
   const taskBook = "# 任务\n\n## Docs involved\n- docs/design/X.md\n\n## 文件清单\n- src/a.mjs\n\n## 验收标准\n- AC1\n"
   const auditParent = {
     cwd: tmp, provider: { name: "p", model: "m" }, config: { agent: {} },
     tools: [{ name: "read", readonly: true }],
   }
-  const auditCtx = { agent: { _touchedFiles: [], _engTaskInput: taskBook + `Batch record (batchDoc): ${abs}` } }
+  const auditCtx = { agent: { _touchedFiles: [], _engTaskInput: taskBook } }
   const audit = buildSpawnChild(auditParent, auditCtx, { task: "audit" }, "explore", true, [], [], 1)
+  assert.ok(audit.child._spawnSystemBlock.includes(`Batch record (batchDoc): ${abs}`) === false, "审计子代理不携批次档行（非工程角色）")
   for (const marker of ["Docs involved", "文件清单", "验收标准"]) {
-    assert.ok(audit.input.includes(marker), `审计任务书段匹配保住：${marker}`)
+    assert.ok(audit.child._spawnSystemBlock.includes(marker), `审计固块段匹配保住：${marker}`)
   }
-  assert.doesNotMatch(audit.input, /not found in the parent task book/, "三要素无缺失（追加行不夺段）")
+  assert.doesNotMatch(audit.child._spawnSystemBlock, /not found in the parent task book/, "三要素无缺失（审计摘要逐段命中）")
 })
 
 test("T28 边界：explore spawn 不带 batchDoc → 现行行为零变更", () => {
@@ -141,9 +145,11 @@ test("T28 边界：explore spawn 不带 batchDoc → 现行行为零变更", () 
   }
   const built = buildSpawnChild(parent, { agent: parent }, { task: "audit" }, "explore", true, [], [], null)
   assert.ok(!built.input.includes("Batch record (batchDoc)"), "非 eng-coder 不注入批次档行")
+  assert.equal(built.child._spawnSystemBlock, undefined, "非工程角色零固块（台账 #23）")
   // 显式传了 batchDoc（且路径不存在）的 explore 同样不被门禁拦（门只管 eng-coder）
   const withArg = buildSpawnChild(parent, { agent: parent }, { task: "audit", batchDoc: "docs/batches/none.md" }, "explore", true, [], [], null)
   assert.ok(!withArg.input.includes("Batch record (batchDoc)"), "explore 不注入、不校验")
+  assert.equal(withArg.child._spawnSystemBlock, undefined, "explore 零固块（不因参数在场而绑）")
 })
 
 test("T29 边界：eng-coder 审计受限变体 properties 不含 batchDoc（AC13）", async () => {
@@ -182,7 +188,8 @@ test("T33b 错误/正常：eng-designer 同受 batchDoc 门禁（文案含实际
   // 带可读路径 → 通过 + 任务输入含 Batch record 行 + sync 路径同款（双路覆盖）
   const { rel, abs } = makeBatchDoc("docs/batches/2026-09-10-designer.md")
   const built = buildDesigner({ task: ENG_TASK_BOOK_MIN, round: "initial", batchDoc: rel }, false)
-  assert.ok(built.input.includes(`Batch record (batchDoc): ${abs}`), "child 任务输入含批次档绝对路径")
+  assert.ok(built.child._spawnSystemBlock.includes(`Batch record (batchDoc): ${abs}`), "spawn 固块含批次档绝对路径（designer 同享）")
+  assert.ok(!built.input.includes("Batch record (batchDoc)"), "designer 任务输入 = 纯任务书")
   assert.ok(!built.child._engDesignReviewed, "designer 不走 token 面（无 token 需求——§1.5 #4）")
   assert.equal(built.child._engTaskAuthorized, undefined, "designer 无任务域授权（写操作仍走人工 ask——§2.15 E）")
 })

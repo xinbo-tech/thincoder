@@ -27,7 +27,7 @@ export async function handleAdvisorCommand(ctx) {
   // Other advisor keys (model/thinking/effort/timeout) stay config-scoped — persist() only.
   const persistGuard = async () => {
     try {
-      const p = slotPath(agent.cwd, activeSlot(agent.cwd))
+      const p = slotPath(agent.cwd, agent._slot ?? activeSlot(agent.cwd))
       const data = JSON.parse(readFileSync(p, "utf8"))
       if (data && typeof data === "object" && Array.isArray(data.history)) {
         data.advisor = { ...(typeof data.advisor === "object" && data.advisor !== null ? data.advisor : {}), guard: cfg.guard === true }

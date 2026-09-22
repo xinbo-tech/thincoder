@@ -159,13 +159,15 @@ test("T33 错误/正常：designer 无 batchDoc → throw（含实际角色名�
   assert.equal(missing?.message, "batchDoc is required for role='eng-designer' — pass the batch record path (docs/batches/<batch>-<topic>.md); spawn refused without it. (given path is not a readable file)", "不可读后缀同款")
   const { rel, abs } = makeBatchDoc()
   const built = buildDesigner(engParent(), { task: ENG_TASK_BOOK_MIN, round: "initial", batchDoc: rel })
-  assert.ok(built.input.includes(`Batch record (batchDoc): ${abs}`), "注入行含绝对路径")
+  assert.ok(built.child._spawnSystemBlock.includes(`Batch record (batchDoc): ${abs}`), "固块含绝对路径（台账 #23——机制性指令走 system 面）")
+  assert.ok(!built.input.includes("Batch record (batchDoc)"), "任务输入 = 纯任务书（不含固块）")
   // sync 路径同款（双路覆盖——校验在 buildSpawnChild）
   const sync = buildDesigner(engParent(), { task: ENG_TASK_BOOK_MIN, round: "initial", batchDoc: rel }, false)
-  assert.ok(sync.input.includes(`Batch record (batchDoc): ${abs}`), "sync 路径同样注入")
+  assert.ok(sync.child._spawnSystemBlock.includes(`Batch record (batchDoc): ${abs}`), "sync 路径同样绑固块")
   // 对照：explore 不带 batchDoc 不受影响（门只管工程角色）
   const explore = buildSpawnChild(engParent(), { agent: engParent(), callbacks: {} }, { task: "audit" }, "explore", true, [], [], null)
   assert.ok(!explore.input.includes("Batch record (batchDoc)"), "explore 不注入、不校验")
+  assert.equal(explore.child._spawnSystemBlock, undefined, "explore 零固块")
 })
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -200,11 +202,13 @@ test("T35b 边界：勘察任务输入不含 Audit scope 块（评审 #4——�
   assert.equal(attempt, null, "designer 路径返回 null")
   const built = buildSpawnChild(surveyParent, { agent: surveyParent, callbacks: {} }, { task: "勘察现状" }, "explore", false, [], [], attempt)
   assert.ok(!built.input.includes("[Audit scope"), "勘察任务书不注入审计范围块")
+  assert.equal(built.child._spawnSystemBlock, undefined, "勘察零固块——连固块字段也不含（防改后空转）")
   assert.ok(!built.input.includes("You are auditing an eng-coder delivery"), "不注入审计指令模板")
   // 对照：eng-coder 审计路径（attempt=1）注入
   const auditParent = engParent({ _role: "eng-coder", _touchedFiles: [], _engTaskInput: "# 任务\n\n## Docs involved\n- docs/design/X.md\n" })
   const audit = buildSpawnChild(auditParent, { agent: auditParent, callbacks: {} }, { task: "audit" }, "explore", false, [], [], 1)
-  assert.ok(audit.input.includes("[Audit scope"), "eng-coder 审计路径照常注入（对照）")
+  assert.ok(audit.child._spawnSystemBlock.includes("[Audit scope"), "eng-coder 审计路径固块照常携带（对照）")
+  assert.ok(!audit.input.includes("[Audit scope"), "审计任务输入仍 = 纯任务书（input 侧反转）")
 })
 
 // ═════════════════════════════════════════════════════════════════════════════

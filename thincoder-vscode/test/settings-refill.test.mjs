@@ -6,7 +6,7 @@
  * §2.4 档 C（W9-1…W9-5 · AC-W2）。
  *
  * 手法：happy-dom + 全量 id 夹具 + 真 `chat.js`（消息 case = 唯一消费位）+ 真 `settings.js`
- * 打开路径；回填断言一律在**消息投递之后**（载荷按 wire 形态——消费位 `webview/chat.js:213-224`
+ * 打开路径；回填断言一律在**消息投递之后**（载荷按 wire 形态——消费位 `webview/chat-messages.js:113-124`
  * / `:275-277`）——**不沿用** smoke-settings.mjs 的灌 SS 手法（建面前只把 SS 置于「快照未达」
  * 态，用以构成先红前提；不断言建面路径）。
  */

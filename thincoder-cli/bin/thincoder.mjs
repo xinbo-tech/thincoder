@@ -8,6 +8,7 @@
  *   thincoder upgrade         Update to the latest version from npm
  *   thincoder completion <sh> Shell completion: bash / zsh / fish
  *   thincoder session gc    Session dir GC: --dry-run report / --confirm delete cold projects (SESSION.md §6.12)
+ *   thincoder session index  Derived session index: --status report / --rebuild (SESSION.md §6.19)
  *   thincoder acp             Agent Client Protocol server (stdio, for Zed/JetBrains/Paseo)
  *   thincoder -v              Print version
  *   thincoder --help          Print help
@@ -118,6 +119,9 @@ Usage:
   thincoder session gc --dry-run | --confirm <hash|--all>
                             Session dir GC: report/recycle cold & stale project data into a 7-day recycle bin
                             (cold = manifest idle >90d; stale = no live owner + unreachable/empty cwd + 7-day window)
+  thincoder session index [--status | --rebuild]
+                            Derived session index (disposable, rebuilt on demand): --status reports sessions /
+                            messages / tool calls + coverage + size; --rebuild reindexes every session file
   thincoder upgrade         Update to the latest version from npm
   thincoder completion <sh>  Generate shell completion script (bash / zsh / fish)
   thincoder -v, --version   Print version
@@ -146,6 +150,13 @@ if (command === undefined || command === "tui" || command === "chat" || command 
     const startupCfg = loadConfig()
     scheduleTraceCleanup({ dir: tracesRoot(), retentionHours: startupCfg.traces?.retentionHours ?? 24 })
   } catch { /* 配置缺失/损坏 → 跳过清理（零风险） */ }
+  // SESSION.md §6.19 D-SE45 触发点②（2026-09-22 会话索引批）：派生索引启动窗外延迟拍
+  // （核侧 `scheduleSessionIndexPass`——3s 起 / 单趟 ≤2s 且 ≤40 会话 / 每进程一次；与轨迹清理
+  // 同址簇、同纪律：失败静默、不 unref）。索引 = 派生品（零权威）——主存零险。
+  try {
+    const { scheduleSessionIndexPass } = await import("@thincoder/core/session-index-pass.mjs")
+    scheduleSessionIndexPass()
+  } catch { /* 拍挂点失败静默——不阻断启动 */ }
 }
 
 switch (command) {
@@ -423,6 +434,13 @@ switch (command) {
   case "session": {
     // SESSION.md §6.12 / §6.17：会话目录 GC 显式面（冷 cwd 90 天面 + 三合取存量组全量面）——
     // 双端同面（2026-09-21 端差注销：VS Code 端命令 `thincoder.sessionGc` 走同一核数据面）。
+    // SESSION.md §6.19 D-SE46（2026-09-22 会话索引批）：`session index` = 派生索引库显式面
+    // （--status 读数 / --rebuild 全量重扫）——同一 `session` 分发族（壳侧分发，实现在核）。
+    if (args[0] === "index") {
+      const { runSessionIndex } = await import("@thincoder/core/session-index-cmd.mjs")
+      process.exitCode = await runSessionIndex(args)
+      break
+    }
     const { runSessionGc } = await import("@thincoder/core/session-gc.mjs")
     process.exitCode = await runSessionGc(args)
     break

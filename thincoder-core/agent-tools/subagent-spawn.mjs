@@ -1,11 +1,14 @@
 /**
  * subagent-spawn.mjs — spawn 路径装配（2026-09-05 module-split：subagent.mjs 726
- * > 500 硬限——spawn 前置 helpers（summarizeEngTaskBook/effectiveSubagentModel/
- * resolveDesignSlot）+ §20 调度参数准入（prepareScheduling）+ child 装配
+ * > 500 硬限——spawn 前置 helpers（effectiveSubagentModel/resolveDesignSlot——审计块
+ * 构造器 2026-09-22 起另立 ./audit-block.mjs）+ §20 调度参数准入（prepareScheduling）+ child 装配
  * （buildSpawnChild）verbatim 迁入（仅闭包变量参数化），语义零变；executeAsyncSpawn
  * 另在 subagent-run.mjs。subagent.mjs execute 经本文件 import 调用。
  * 2026-09-07：executeConsumeDesignAction 消费执行器（token 链终消费制——与 spawn 侧
  * slot 族同域——ENGINEERING-MODE.md §2.6 F1——removeDesignTokenSlot 自 token-ttl.mjs）。
+ * 2026-09-22（台账 #23 · AGENT-LOOP-SUBAGENT.md §6.26）：审计块构造器（summarizeEngTaskBook
+ * + buildAuditBlock）外提 `./audit-block.mjs`；spawn 级固定机制性指令改走 system 固块
+ * （`child._spawnSystemBlock` 单点绑定——消费点 = 核 `prepareRun`），`input` 只留任务书。
  */
 
 import { resolve } from "node:path"
@@ -27,57 +30,9 @@ import {
 // M5 F2（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.3）：任务书六强制字段校验本体落
 // spawn-gates.mjs（纯谓词零依赖）——本处只加 import 调用。
 import { validateTaskBookFields } from "./spawn-gates.mjs"
-
-/**
- * §18.7 D-TS5 (A2): mechanically summarize the parent spawn task book for the
- * audit spawn — the three audit-relevant elements VERBATIM (design doc paths /
- * affected-file list / acceptance criteria); verbose context/background is
- * dropped (the auditor can read the design docs themselves — they stay
- * available outside this input). Independence preserved: the input is
- * _engTaskInput (mechanically kept by the parent spawn) — never the
- * eng-coder's self-report. Sections are located by header marker, prioritizing
- * header lines (structured task books: "## 文件清单 …") and falling back to
- * inline markers (flat one-line task books); a section runs to the next header
- * of the SAME OR HIGHER level ("## 文件清单" survives a "### 修改" sub-header).
- * Marker not found → the section is reported as missing (never fabricate).
- */
-function summarizeEngTaskBook(taskInput) {
-  if (!taskInput) return "(unavailable)"
-  const SECTIONS = [
-    { name: "Design docs involved", markers: [/Docs? involved/i, /涉及文档/] },
-    { name: "Affected-file list", markers: [/Files? (?:list|to (?:modify|change)|modified)/i, /受影响文件/, /文件清单/, /涉及文件/] },
-    { name: "Acceptance criteria", markers: [/Acceptance(?: criteria)?/i, /验收标准/] },
-  ]
-  const lines = taskInput.split("\n")
-  const headerLevel = (l) => {
-    const m = l.match(/^\s*(#{1,6})\s/)
-    return m ? m[1].length : 0
-  }
-  const headerIdx = lines.map((l, i) => (headerLevel(l) > 0 ? i : -1)).filter((i) => i >= 0)
-  const boundsFor = (from, level) => {
-    for (const j of headerIdx) {
-      if (j > from && (level === 0 || headerLevel(lines[j]) <= level)) return j
-    }
-    return lines.length
-  }
-  const out = []
-  for (const { name, markers } of SECTIONS) {
-    let from = -1
-    let level = 0
-    for (const i of headerIdx) {
-      if (markers.some((m) => m.test(lines[i]))) { from = i; level = headerLevel(lines[i]); break }
-    }
-    if (from === -1) {
-      for (let i = 0; i < lines.length; i++) {
-        if (markers.some((m) => m.test(lines[i]))) { from = i; level = 0; break }
-      }
-    }
-    if (from === -1) { out.push(`${name}: (not found in the parent task book)`); continue }
-    const body = lines.slice(from, boundsFor(from, level)).join("\n").trim()
-    out.push(body || `${name}: (empty section)`)
-  }
-  return out.join("\n\n")
-}
+// 台账 #23（AGENT-LOOP-SUBAGENT.md §6.26 · D23-3）：审计块构造器外提（`summarizeEngTaskBook`
+// + `buildAuditBlock` 纯函数）——spawn 档只做「收集 + 绑定」；块文本逐字搬移（D23-4）。
+import { buildAuditBlock } from "./audit-block.mjs"
 
 /**
  * Effective subagent model override for a role (CLI parity shared with VS Code):
@@ -238,8 +193,8 @@ export function prepareScheduling(parent, filesRaw, dependsRaw, wantAsync) {
 /**
  * §20 准入通过后的 child 装配（2026-09-05 module-split——自 execute 参数化提取，
  * 原 318-488 段 verbatim——语义零变）。副作用保留：relay 取号（sync 支 allocRelay——
- * `[model]` 出生声明归 SYNC-CANCEL 单点，#133）/ 子代理 _logId / _engTaskInput 携带
- * 全部在此发生。返回阻塞/异步两路径共用的
+ * `[model]` 出生声明归 SYNC-CANCEL 单点，#133）/ 子代理 _logId / _engTaskInput 携带 /
+ * _spawnSystemBlock 绑定（台账 #23——spawn 固块单点）全部在此发生。返回阻塞/异步两路径共用的
  * { child, input, childOpts, childRunOpts, relayPrefix, childProvider }。
  */
 export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, dependsOn, engAuditAttempt) {
@@ -386,60 +341,33 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // git 只读变体亦随裁定废弃——D-AG5）。顶层主 agent 注入保留（§3 prepareRun——
   // setup.mjs depth===0——D-AG7 范围边界）。
   let input = args.context ? `Context:\n${args.context}\n\nTask:\n${args.task}` : args.task
-  // §2.11 第 1 点（FR16 载体 + FR17 铁律 #5 的机械面）：批次档**绝对路径**随任务输入
-  // 下发给工程角色（eng-coder 实现 / eng-designer 写稿）——追加一行，任务文本本身不动
-  // （批次档 §2 才是任务书本体；本行让子代理"拿到本档路径"）。行文不含
-  // summarizeEngTaskBook 的三组段 marker（Docs involved / Files list / Acceptance
-  // criteria）——段匹配不受影响。仅工程角色注入。
-  if (engineeringRole) input += `\n\nBatch record (batchDoc): ${batchDocAbs}`
+  // 台账 #23（AGENT-LOOP-SUBAGENT.md §6.26 · D23-1）：**spawn 级固定机制性指令改走 system 固块**——
+  // 两处（批次档路径行 + 审计模板块）原随 user 首条下发，压缩把首条并入摘要即丢（长任务中后期
+  // 既看不到批次档路径、也看不到审计模板 ⇒ 过度勘察的真病根）；固块值在 child 生命周期内恒定
+  // ⇒ run 内 system 前缀逐字节稳定（前缀缓存不破），且不在 `agent.history` 内 ⇒ 压缩结构上吞不掉。
+  // 收集序 = 原拼接序（批次档行 → 审计块）；空数组 ⇒ 不绑定（depth-0 / explore / plan / consult
+  // 的 system 逐字节同改前——§6.26 缓存契约兼容证明）。
+  const spawnBlocks = []
+  // §2.11 第 1 点（FR16 载体 + FR17 铁律 #5 的机械面）：批次档**绝对路径**下发给工程角色
+  // （eng-coder 实现 / eng-designer 写稿）——任务文本本身不动（批次档 §2 才是任务书本体；
+  // 本行让子代理"拿到本档路径"）。行文不含 summarizeEngTaskBook 的三组段 marker
+  // （Docs involved / Files list / Acceptance criteria）——段匹配不受影响。仅工程角色注入。
+  if (engineeringRole) spawnBlocks.push(`Batch record (batchDoc): ${batchDocAbs}`)
   // §18 D-E2 ③ (round4 #4, T-E13/T-E15): an eng-coder audit spawn's task book is
   // the eng-coder's OWN spawn task — mechanically kept as _engTaskInput by the
   // parent spawn and injected as the D-TS5 A2 mechanical summary (design docs /
   // affected-file list / acceptance criteria verbatim, verbose context dropped)
   // — ∪ the mechanically tracked _touchedFiles — NEVER the eng-coder's
   // self-written list: a self-report could omit exactly the out-of-scope file
-  // the audit must catch.
-  if (engAuditAttempt !== null) {
-    const touched = (ctx.agent._touchedFiles ?? []).map((f) => `- ${f}`).join("\n") || "- (none yet)"
-    input += `\n\n[Audit scope — mechanical context, independent of the eng-coder's self-report:]\n` +
-      // §18.7 D-TS4 A1：审计指令模板（四类偏差 + 范围限制 + 校验清单格式）——审计语义
-      // 不再靠模型自悟；范围限制是 §18.5 D-AG3 声明（下方 Zero-git scope authority）
-      // 的同源一句指注，不重复声明。
-      `[Audit instructions — mechanical template:]\n` +
-      `You are auditing an eng-coder delivery against its approved design — audit for EXACTLY these four deviation categories:\n` +
-      `- PARTIAL: an acceptance criterion implemented partially or not at all;\n` +
-      `- SILENT-SIMPLIFICATION: a "simpler approximation" of a specified behavior substituted for the spec;\n` +
-      `- DOC-DRIFT: code changed without the owning design-doc section (module map / affected-files table) updated in the same delivery;\n` +
-      `- OUT-OF-LIST: changes outside the approved file list.\n` +
-      `Audit scope = _touchedFiles above UNION the files confirmed by the parent task book (single source — the Zero-git scope authority note below; NOT a second copy): ` +
-      `workspace changes not listed there are unrelated to this delivery and are NOT grounds for an out-of-list finding.\n` +
-      `Scope discipline (F-TS6 A1): read ONLY the audited files and the design-doc sections relevant to this delivery — do NOT re-read whole documents.\n` +
-      `Every deviation item MUST be fieldized: file:line + design reference (doc path + section/AC id) + severity + evidence (quoted code or doc text).\n` +
-      // §18.7 D-TS5 A2：任务书从全量 verbatim 改机械摘要块（三要素逐字——排除冗长上下文）。
-      `[Parent spawn task book — mechanical summary: design docs + affected-file list + acceptance criteria verbatim; verbose context/background dropped — the design docs are still available for reading outside this input:]\n` +
-      `${summarizeEngTaskBook(ctx.agent._engTaskInput)}\n` +
-      `Files actually touched by the eng-coder (mechanical union — audit these against the file list):\n${touched}\n` +
-      // §18.5 D-AG3（2026-09-04）：审计零 git 范围权威声明——本审计任务零 git（不注入
-      // git 上下文——§18.5 全角色零 git）；_touchedFiles 为审计范围；工作区未列于
-      // _touchedFiles 的改动与本任务无关，不作超清单依据（VS Code auditTaskBook 同款措辞）。
-      "Zero-git scope authority: this audit task receives NO git context — nothing is injected. " +
-      "The evidence base is the design documents, the current disk state (read/glob/grep), and the _touchedFiles list above. " +
-      "Workspace changes NOT listed in _touchedFiles are unrelated to this delivery — they are NOT grounds for an out-of-file-list finding." +
-      // §18.13 D-A1.2：审计预算句——A1 指令模板 + A2 摘要块之后、A3 报告模板之前（定序——评审 #7）。
-      // 逐字设计锚（D-A1.2 代码块）：只读该读的——10 轮机械预算——超时报 PROBLEM 下结论。
-      // 前导 \n 与 A3 同款块分隔约定（上一句 Zero-git 句末无换行——不触碰既有句）。
-      `\n[Audit budget — mechanical]: read ONLY the touched files listed above and the design-doc sections the parent task book names (affected-files table, acceptance criteria, status line). Do NOT read whole documents. Budget = 10 tool rounds max — if you cannot conclude within it, report PROBLEM (inconclusive) rather than continuing to explore.\n` +
-      // §18.7 D-TS6 A3：审计输出报告格式模板（三态——字段化行——不让模型自由发挥）。
-      `\n[Audit report format — mechanical template:]\n` +
-      `Report EXACTLY one of three states:\n` +
-      `- CLEAN — no deviation across the four categories: reply the line "Four deviation categories: none found." (四类偏差均未发现);\n` +
-      `- DEVIATIONS — one row per deviation, every row fieldized: | category | file:line | design reference | severity | evidence |;\n` +
-      `- PROBLEM — the audit itself could not run / inconclusive: state what blocked it.\n`
-  }
+  // the audit must catch. 块文本（含模板逐字）住 `./audit-block.mjs`（D23-3 外提）。
+  if (engAuditAttempt !== null) spawnBlocks.push(buildAuditBlock(ctx))
   // The child's own task input rides the child object: an eng-coder's audit
   // spawns reuse it as the task-book SOURCE — injected as the D-TS5 A2
-  // mechanical summary, not verbatim (see above).
+  // mechanical summary, not verbatim (see above). D23-6：语义 = **纯任务书**（不含固块）。
   if (role === "eng-coder") child._engTaskInput = input
+  // spawn 固块单点绑定（sync / async 同点——buildSpawnChild 唯一调用点）：此后只读 ⇒ 同一
+  // child 的任意 run（resume 续跑 / 报告追问重跑）逐字节恒定；消费点 = 核 `prepareRun`。
+  if (spawnBlocks.length > 0) child._spawnSystemBlock = spawnBlocks.join("\n\n")
 
   // Relay content/reasoning/tool/output to the parent TUI via the unified spawn-child
   // pipeline (AGENT-LOOP.md §7.2 D3). Prefix includes a unique id: parallel child agents
@@ -466,7 +394,7 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // LOGGING（LOGGING.md）：子代理内部事件（子内 llm:*/tool:*）以 childId 归属——
   // agent._logId 随 runAgent 的 logCtx 透出（主文件单文件全记、按 childId grep）。
   child._logId = relayPrefix.slice(0, -1)
-  // SUBAGENT-UPSTREAM-CHANNEL（AGENT-LOOP-SUBAGENT.md §6.27.4 W1——spawn 主路径，sync + async
+  // SUBAGENT-UPSTREAM-CHANNEL（AGENT-LOOP-UPSTREAM.md §6.27.4 W1——spawn 主路径，sync + async
   // 共用）：子 → 父在飞通道装配单点（label = relay 前缀去尾；`sync` 供工具返回注分形）。
   child._upstream = { parent, label: relayPrefix.slice(0, -1), sync: !wantAsync }
   const childOpts = {

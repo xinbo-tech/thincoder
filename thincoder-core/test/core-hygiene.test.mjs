@@ -26,7 +26,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
  * 拆分立场」；结构债总账 = 设计档 `STRUCTURE-DEBT.md` §2 另批落笔）。
  * `agent-tools/escalate-async.mjs` = 上行通道批（2026-09-18）新增登记：W3 上行接线（1 行 + 注）
  * 使本档 300 → **302** 越线；本批为**纯接线**（不改变既有拆分结论）
- * ——拆分计划归父侧另案（设计档 `AGENT-LOOP-SUBAGENT.md` §6.27.6 ▸ 越线登记同源；
+ * ——拆分计划归父侧另案（设计档 `AGENT-LOOP-UPSTREAM.md` §6.27.6 ▸ 越线登记同源；
  * 该段未列名本档 ⇒ 读数登记于此）。
  * init-block 批（2026-09-18）登记面收正：**拆分已落地**——`session.mjs` 500 → **244** 与
  * `session-slots.mjs` 498 → **298** 双双回落 ≤300 ⇒ **移出登记**（设计档 `CORE-UNIFICATION.md`
@@ -58,8 +58,14 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
  * 梯④/⑤ + T39/T40 拒翻夹具改歧义，父侧授权表外收正）。前两档拆分计划已登设计档
  * `docs/core/design/MANIFEST.md` §2.3 >300 注块（行 19 = 发现面用例组拆出 `manifest-discovery.test.mjs`；
  * 行 21 = 值变检测组 / 报明行组拆出邻档；触发条件 = 越 500 硬限，或下一次触碰该档的批）；
- * `test/tool-seams-agent.test.mjs` 设计档无对应行（父侧授权表外收正所致）——拆分方案 = 拒翻用例组
- * 随下次触碰该档的批拆出邻档（**待设计侧收正**，见批档 §5 报告）。
+ * `test/tool-seams-agent.test.mjs` 的 >300 审视已由 **hygiene-sweep 批**（2026-09-22 · §2.4.1 行 16）在册（拆分方案 = 拒翻用例组随下次触碰该档的批拆出邻档）；**待设计侧收正**句随之闭口。
+ * hygiene-sweep 批（2026-09-22 · `docs/batches/2026-09-22-hygiene-sweep.md` §2.4.1 行 9）新登记
+ * `session-gc.mjs`（**303**——#178 显式面进度/预估行：越线原因 = 只增显示行（预估 / 逐组进度），
+ * 判据与删除集零变；拆分立场 = 本批不拆（残留面外提姊妹档为下批后手，先例 = STARTUP-LATENCY 批同款预案）；
+ * 触发 = 越 500 硬限或该档下次实质改动）。
+ * hygiene-sweep 批（2026-09-22）另登记**两条用例档**（用例追加越线；设计档对应行待设计侧收正，见批档
+ * §5 报告）：`test/compress-form.test.mjs`（**305**——用例 12 #209 强制路第三去向）·
+ * `test/tool-seams.test.mjs`（**314**——#71 假洁净注记 A13）；两档拆分方案 = 用例组随下次触碰该档的批拆出邻档（先例 = `test/tool-seams-agent.test.mjs` 同款）。
  * EXIT-CLAIM-RELEASE 批（2026-09-21 · `docs/batches/2026-09-21-exit-claim-release.md` §2 现值列 +
  * §5 尺度结论）登记**两档**（评审 #2 预判命中——同批越线）：`session-slots-manifest.mjs`
  * （**316**——`releaseClaimsAll` +~19：释放函数与谓词 / 落盘同档单源 D-SE41，单凝面不拆；
@@ -77,8 +83,8 @@ const SOFT_LINE_REGISTRY = new Set([
   "config.mjs", "context.mjs", "git/checkpoint.mjs", "manifest.mjs", "memory/code-sync.mjs",
   "memory/core.mjs", "memory/docs.mjs",
   "memory/schema.mjs", "process-probe.mjs", "provider/core.mjs", "provider/responses.mjs",
-  "session-lifecycle.mjs", "session-slots-manifest.mjs", "session-store.mjs", "test/batch.test.mjs", "test/manifest.test.mjs", "test/model-specs.test.mjs",
-  "test/provider-merge.test.mjs", "test/session-slot-write.test.mjs", "test/setup-reminders.test.mjs", "test/tool-seams-agent.test.mjs",
+  "session-lifecycle.mjs", "session-slots-manifest.mjs", "session-store.mjs", "session-gc.mjs", "test/batch.test.mjs", "test/manifest.test.mjs", "test/model-specs.test.mjs",
+  "test/provider-merge.test.mjs", "test/session-slot-write.test.mjs", "test/setup-reminders.test.mjs", "test/tool-seams-agent.test.mjs", "test/compress-form.test.mjs", "test/tool-seams.test.mjs",
   "tools/edit-diff.mjs", "tools/file.mjs", "tools/git.mjs",
   "tools/lsp.mjs", "tools/repomap.mjs", "tools/shared.mjs",
 ])

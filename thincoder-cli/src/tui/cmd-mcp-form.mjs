@@ -1,4 +1,6 @@
 import { C } from "./ansi.mjs"
+// #58（hygiene-sweep 批）：headers/env 现值脱敏判据 = 核 settings 同源单点（不再各自为政）。
+import { isSensitiveKey } from "@thincoder/core/agent-tools/settings.mjs"
 
 /** MCP.md §5 v2（D-1）：edit/add 统一字段 picker 表单机制。
  *  fieldPicker 循环：picker 列字段行（label + 当前值打码）+ `✓ Save & test` 末行；
@@ -111,15 +113,19 @@ function formEntries(entry, transport, mode) {
   ]
 }
 
-/** 字段输入提示 `(current: …)`——token 打码（maskToken）、headers/env 列键值对、
+/** #58（hygiene-sweep 批）：headers/env 现值列示——敏感键名（谓词 = 核 settings 同源
+ *  `isSensitiveKey`）的值位一律 `••••`（人读面不再明文）；非敏感键名保可读（`k=v`）。 */
+function currentPairs(v) {
+  const pairs = Object.entries(v ?? {}).map(([k, val]) => (isSensitiveKey(k) ? `${k}=••••` : `${k}=${val}`))
+  return pairs.length ? pairs.join(", ") : "none"
+}
+
+/** 字段输入提示 `(current: …)`——token 打码（maskToken）、headers/env 列键值对（敏感值位遮）、
  *  args 空格串接；空值 → "none"。 */
 function currentText(entry, field) {
   const v = entry[field]
   if (field === "token") return v ? maskToken(v) : "none"
-  if (field === "headers" || field === "env") {
-    const pairs = Object.entries(v ?? {}).map(([k, val]) => `${k}=${val}`)
-    return pairs.length ? pairs.join(", ") : "none"
-  }
+  if (field === "headers" || field === "env") return currentPairs(v)
   if (field === "args") return (v ?? []).length ? v.join(" ") : "none"
   return String(v ?? "") || "none"
 }

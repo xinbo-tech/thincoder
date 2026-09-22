@@ -52,3 +52,26 @@ test("F10-5（端）催更门排除：engineering=true ⇒ 零推回（零新增
   assert.match(String(stNormal.history.at(-1).content), /pending tasks: pending-1/, "提醒句列出 pending 条目")
   assert.equal(normalAgent._taskPushbacks, 1, "预算照常消耗")
 })
+
+/** #217（hygiene-sweep 批 · 端差默认=消）：verify guard 的 engineering 排除——核
+ *  `thincoder-core/agent/completion.mjs:75` 已有 / VSC 原缺（parity 缺口）；工程置位 ⇒ 零推回；
+ *  普通模式正控 ⇒ 照常推回（排除位零副作用）。 */
+test("#217（端）verify guard 排除：engineering=true ⇒ 零推回（零新增 user 行）；普通模式正控 ⇒ 推回", async () => {
+  const mkVerifyAgent = (engineering) => ({
+    ...mkAgent(0), config: { advisor: { guard: false }, agent: { engineering } },
+    _touchedFiles: ["a.mjs"], _verifiedThisRun: false, _mutatedThisRun: true,
+  })
+  const engAgent = mkVerifyAgent(true)
+  const stEng = mkSt()
+  stEng.cfgVerifyGuard = true
+  assert.equal(await maybeGuardPushbacks(engAgent, stEng), false, "工程模式不推回（排除位——核 parity）")
+  assert.equal(stEng.history.filter((m) => m.role === "user").length, 0, "零新增 user 行")
+  assert.equal(stEng.pb.guardPushbacks, 0, "推回预算不消耗")
+  // 正控（反证非空转）：engineering=false 同桩 ⇒ 照常推回
+  const normalAgent = mkVerifyAgent(false)
+  const stNormal = mkSt()
+  stNormal.cfgVerifyGuard = true
+  assert.equal(await maybeGuardPushbacks(normalAgent, stNormal), true, "普通模式照常推回（门本体零改）")
+  assert.match(String(stNormal.history.at(-1).content), /have not verified the changes/, "提醒句在场")
+  assert.equal(stNormal.pb.guardPushbacks, 1, "预算照常消耗")
+})

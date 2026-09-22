@@ -444,3 +444,47 @@ test("⑯ 删本端绑定槽（SESSION.md §6.15 P3/P4）：面板不收养幸�
     _setSessionsDirForTest(join(_tmp, "sessions")) // 还原沙箱（缝亦清缓存）
   }
 })
+
+// ─── ⑰ 受占 TOCTOU 第二判（台账 #171 · SESSION.md §6.15 / §6.16）────────────────
+
+test("⑰ 前置判据与函数内判据之间的 TOCTOU 窗（台账 #171）：收到受占信号 ⇒ 面板保持 _slot 现值（不钉他端活槽）+ 提示 + 重绑本端原槽", async () => {
+  _setSessionsDirForTest(join(_tmp, "sessions5"))
+  const cwd = _cwd()
+  try {
+    assert.equal(await newSlot(cwd), 1, "fixture：本端槽 1")
+    foreignSlot(cwd, 2)
+    // TOCTOU 窗：前置判据（第一次占用探测）判空闲（判死）⇒ 进入 switchToSlot；函数内判据（第二次）
+    // 撞占（判活）——同槽两判结果不同 = 窗内他端认领的真实形态。
+    let probes = 0
+    _setProcessProbeTestImpl({
+      aliveFn: (pids) => { probes += 1; return probes >= 2 ? new Set(pids) : new Set() },
+      cmdlineFn: (pids) => new Map([...pids].map((p) => [p, "node bin/thincoder.cjs"])),
+    })
+    const before = loadManifest(cwd)
+    const markerBefore = readEndMarker(cwd).slot
+
+    const p = bootPanel({ _slot: 1 })
+    const warned = []
+    const realWarn = vscode.window.showWarningMessage
+    vscode.window.showWarningMessage = async (m) => { warned.push(m) }
+    try {
+      await handlePanelMessage(p, { type: "switchSession", slot: 2 })
+    } finally {
+      vscode.window.showWarningMessage = realWarn
+    }
+
+    assert.ok(probes >= 2, "两判各自探测一次（窗确实存在——非空转）")
+    assert.equal(p._slot, 1, "第二判路载荷 = **保持 _slot 现值**（不钉他端活槽 2）")
+    assert.equal(warned.length, 1, "受占提示恰一次")
+    assert.match(warned[0], /is being used by another live process/, "提示文案（与前置判据路同款）")
+    const after = loadManifest(cwd)
+    assert.equal(after.active, before.active, "零写：共享 active 指针零动（受占分支不翻）")
+    assert.deepEqual(after.slotSessions, before.slotSessions, "零写：认领集零动（不认领占槽 2）")
+    assert.equal(after.slotSessions[2], `${OTHER_PID}-other-end`, "他端占槽认领零动（精确比对）")
+    assert.equal(readEndMarker(cwd).slot, markerBefore, "零写：本端记录零动")
+    assert.equal(cachedSlot(cwd), 1, "零写：解析缓存保持原槽 1")
+  } finally {
+    _resetProcessProbeTestImpl()
+    _setSessionsDirForTest(join(_tmp, "sessions")) // 还原沙箱（缝亦清缓存）
+  }
+})

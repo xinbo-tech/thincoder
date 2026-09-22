@@ -76,6 +76,10 @@
       {
         "command": "thincoder.sessionGc",
         "title": "ThinCoder: Recycle Cold Session Data"
+      },
+      {
+        "command": "thincoder.sessionIndexRebuild",
+        "title": "ThinCoder: Rebuild Session Index"
       }
     ],
     "menus": {

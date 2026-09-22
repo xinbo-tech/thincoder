@@ -15,7 +15,7 @@
  */
 import * as vscode from "vscode"
 import { t } from "../i18n.mjs"
-import { switchToSlot, setSlotTitle, slotOccupancy } from "./session-io.mjs"
+import { SLOT_OCCUPIED, switchToSlot, setSlotTitle, slotOccupancy } from "./session-io.mjs"
 import { _cwd } from "./panel-messages.mjs"
 // 无工作区守卫（2026-09-21 批 · `PROJECT-SWITCHER.md` §4.1）：⑦ 会话族五 handler（leaf——无环）
 import { blockOnNoWorkspace } from "./workspace-guard.mjs"
@@ -58,6 +58,15 @@ export async function handleSwitchSession(panel, msg) {
   // 交付评审 🔵#5：manifest 漂移（槽不存在）时 switchToSlot 返回 null 且不切指针——
   // 此时不得把面板绑到幻影槽（否则渲染出空会话）。
   const target = switchToSlot(_cwd(), msg.slot)  // persists the shared active pointer for CLI interop
+  // F-CR2 第二判（台账 #171 · 2026-09-22 · SESSION.md §6.15 / §6.16）：前置判据与函数内判据之间的
+  // TOCTOU 窗内撞占 ⇒ 收到可区分信号——**保持 `_slot` 现值**（不钉他端活槽；四不动不适用——本路
+  // 未进入写入面）+ 提示 + `_loadSession()` 重绑本端原槽。与前置判据路载荷分述：前置路 = `_slot = null`
+  // + 缓存重绑；本路 = **保持现值**。
+  if (target === SLOT_OCCUPIED) {
+    vscode.window.showWarningMessage(`ThinCoder: session ${msg.slot} is being used by another live process — staying on this panel's current session.`)
+    await panel._loadSession()
+    return
+  }
   if (target == null) return
   panel._slot = msg.slot          // bind this panel to the chosen slot
   await panel._loadSession()

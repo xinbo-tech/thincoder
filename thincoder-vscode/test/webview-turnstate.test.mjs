@@ -15,7 +15,7 @@
  * 手法（webview 侧 happy-dom——smoke-settings.mjs 模式）：setupWebview（helpers/
  * webview-env.mjs——happy-dom 注册 + en locale + acquireVsCodeApi 桥桩）+ installChatFixture
  * 后动态 import 真模块（state.js/loading.js/status-bar.js/panels.js——单一运行时对象 S），
- * 直接驱动 host 消息对应的 reducer（chat.js window message case 的行为等价面：
+ * 直接驱动 host 消息对应的 reducer（chat-messages.js window message case 的行为等价面：
  * loading case → setLoading；turnState case → handleTurnStateMessage；suspension →
  * handleSuspensionMessage）——不引导 chat.js 全量模块图。
  * 快层直跑（全部 <800ms——无真实定时器；panels.js 的 2s 状态行 interval 在 after 经

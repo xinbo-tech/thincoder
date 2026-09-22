@@ -137,6 +137,21 @@ test("#55 A7–A12：非仓 cwd 读动作抛错（not a git repository + cwd + w
   })
 })
 
+// ─── #71 假洁净注记（diff/log 两腿 · pathspec 未命中）──────────────────────────
+
+test("#71 A13：传 path 且 pathspec 未命中 ⇒ 注记（diff/log 两腿）；不传 path 逐字零变", async () => {
+  await withTempDir(async (dir) => {
+    execFileSync("git", ["init", "-q", "-b", "main"], { cwd: dir })
+    writeFileSync(join(dir, "a.txt"), "x\n")
+    execFileSync("git", ["add", "a.txt"], { cwd: dir })
+    execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "init"], { cwd: dir })
+    assert.match(await gitTool.execute({ action: "diff", path: "nope.txt" }, { cwd: dir }), /\(no changes — pathspec 'nope\.txt' matched nothing in HEAD\)/, "diff：注记在场（退出 0）")
+    assert.equal(await gitTool.execute({ action: "diff" }, { cwd: dir }), "(no changes)", "不传 path 逐字同修前")
+    assert.match(await gitTool.execute({ action: "log", path: "nope.txt" }, { cwd: dir }), /\(no commits — pathspec 'nope\.txt' matched nothing\)/, "log：注记在场")
+    assert.match(await gitTool.execute({ action: "log" }, { cwd: dir }), /init/, "不传 path ⇒ 正常输出（零改）")
+  })
+})
+
 // ─── #61 / #63 / #96 执行器缝（exec-run 单点）────────────────────────────────────
 
 slow("#61 执行器缝（linter）：检查器命令全经注入执行器；缺省 ⇒ 现行为", async () => {

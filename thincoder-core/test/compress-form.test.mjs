@@ -95,6 +95,26 @@ function pairingViolations(messages) {
   return bad
 }
 
+test("用例 12 #209：强制路第三去向——短历史 + 单条超限消息 + force ⇒ `shrinkOversized` 直落（零 LLM 调用）", async () => {
+  const BIG = "x".repeat(9000)
+  // 短历史形 = **单条超限消息**（切分无从落刀：`keepTailSize` 取 ⌊len×0.4⌋ ⇒ split 为 null）
+  const agent = newAgent([{ role: "user", content: BIG }])
+  const stub = stubFetch()
+  try {
+    assert.equal(await compressIfNeeded(agent, 1, {}, { force: true }), true, "强制路：短历史无从切中段 ⇒ 直落 shrinkOversized（返回 true）")
+    assert.equal(stub.calls.length, 0, "零 LLM 调用（不走摘要路）")
+    assert.notEqual(agent.history[0].content, BIG, "超限消息已截断（copy-on-write 替换）")
+    assert.match(agent.history[0].content, /\[\.\.\. \d+ chars truncated — single message too large for context window \.\.\.\]/, "截断桩在场（确定性截断——非 fallback 路）")
+    assert.ok(agent.history[0].content.length < BIG.length && agent.history[0].content.length <= 8000, "长度降至上限内（8000）")
+    assert.equal(agent._lastCompressInfo ?? null, null, "非 fallback 态（`_lastCompressInfo` 不落）")
+    assert.equal(agent._lastPromptTokens, null, "基线失效（同压缩语义）")
+    // 正控：无 force ⇒ 阈值未达 ⇒ 零动作（第三去向不可达）
+    const agent2 = newAgent([{ role: "user", content: BIG }])
+    assert.equal(await compressIfNeeded(agent2, 10 ** 9, {}, {}), false, "无 force + 阈值未达 ⇒ false")
+    assert.equal(agent2.history[0].content, BIG, "零改写")
+  } finally { stub.restore() }
+})
+
 test("用例 1 正常：消息序 = system + 中段 + 指令（AC1 形态面；声明面见用例 8 / 退化见用例 9）", async () => {
   const history = baseHistory()
   const agent = newAgent(history)

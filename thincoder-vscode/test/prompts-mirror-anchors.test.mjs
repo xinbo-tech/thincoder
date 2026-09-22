@@ -29,7 +29,10 @@ import { fileURLToPath } from "node:url"
 import { PROMPTS_DIR as CORE_PROMPTS_DIR, loadSlot } from "@thincoder/core/prompt-files.mjs"
 
 const VSC = join(dirname(fileURLToPath(import.meta.url)), "..")
+const REPO = join(VSC, "..")
 const readVsc = (rel) => readFileSync(join(VSC, rel), "utf8")
+/** 中文审核面（正本）根 = `docs/core/design/prompts/`——设计档单源：`PROMPT-SYSTEM.md` §6.1（双面落地流程）。 */
+const readMirror = (name) => readFileSync(join(REPO, "docs", "core", "design", "prompts", name), "utf8")
 const mdSet = (rel) => readdirSync(join(VSC, rel)).filter((f) => f.endsWith(".md")).sort()
 /** 英文落地面 = 核包 `prompts/`（W2 改指——单一解析面导出的目录常量）。 */
 const mdSetCore = () => readdirSync(CORE_PROMPTS_DIR).filter((f) => f.endsWith(".md")).sort()
@@ -79,6 +82,36 @@ test("⑤ 本端镜像节引用不悬空（本端可解析，或「（CLI 侧）
     })
   }
   assert.deepStrictEqual(dangling, [], "镜像含悬空节引用（须本端可解析，或按 VSC 端镜像批（2026-09-11 · 第 5 批）判据标注「（CLI 侧）」）")
+})
+
+test("⑦ 多实现面纪律节结构性锚（运行面 + 中文审核面各一；机检形——禁散文锚）", () => {
+  // 结构性锚 = 节标题行（逐字形态，非叙述性转述）——两面各一：运行面 = 核包装配实际执行面；
+  // 中文面 = `docs/core/design/prompts/` 正本（同仓兄弟档，非运行期加载面）。
+  const RUN_TITLE = "### Multi-implementation-face discipline"
+  const MIRROR_TITLE = "### 多实现面纪律"
+  const run = loadSlot("discipline-engineering.md")
+  assert.ok(run.includes(RUN_TITLE), `运行面（核包）含节标题：${RUN_TITLE}`)
+  const mirror = readMirror("discipline-engineering.md")
+  assert.ok(mirror.includes(MIRROR_TITLE), `中文审核面含同节标题：${MIRROR_TITLE}`)
+  // 两面同节 6 条（首条 + 末条逐字在场——计数与列表同时在场，D3）
+  for (const [label, text, first, last] of [
+    ["运行面", run, "1. **Each face implements independently, semantics from one source**", "6. **Cross-face difference disposition (default and exception)**"],
+    ["中文面", mirror, "1. **各面独立实现，语义同源**", "6. **端差处置（默认与例外）**"],
+  ]) {
+    assert.ok(text.includes(first), `${label}：第 1 条逐字在位`)
+    assert.ok(text.includes(last), `${label}：第 6 条逐字在位（端差处置——默认与例外）`)
+  }
+  // 零维护者注（日期 / 批号 / 评审号——提示词编写纪律）：新节正文逐面扫
+  for (const [label, text, title, end] of [
+    ["运行面", run, RUN_TITLE, "### Rules & exceptions"],
+    ["中文面", mirror, MIRROR_TITLE, "### 规则与例外"],
+  ]) {
+    const from = text.indexOf(title)
+    const to = text.indexOf(end, from)
+    assert.ok(from >= 0 && to > from, `${label}：新节可切片（标题 → 下一节）`)
+    const section = text.slice(from, to)
+    assert.ok(!/\d{4}-\d{2}-\d{2}|第\s*\d+\s*批|评审\s*#/.test(section), `${label}：新节零维护者注（日期 / 批号 / 评审号）`)
+  }
 })
 
 // ── ⑨ 机制纪律锚（残留面 = 锚串零维护者注——2026-09-12 PROSE-ANCHOR-RETIRE 后仅存测试内常量检查）──

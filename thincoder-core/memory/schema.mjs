@@ -9,6 +9,10 @@
 import { DatabaseSync } from "node:sqlite"
 import { mkdirSync } from "node:fs"
 import { dirname } from "node:path"
+// FTS 语言面单源外提（会话索引批 · SESSION.md §6.19）：本档只取用 + re-export 保名面
+// （零行为变更——实现住叶子档 `fts-text.mjs`，会话索引面同源）。
+import { segmentCJK } from "../fts-text.mjs"
+export { segmentCJK } from "../fts-text.mjs"
 
 export const VALID_TYPES = new Set(["rule", "knowledge", "decision", "pattern"])
 export const SCHEMA_VERSION = 9
@@ -49,17 +53,6 @@ export const SKIP_DIRS = new Set([
 export const MAX_CODE_FILE_BYTES = 1024 * 1024   // 1 MB
 export const MAX_DOC_FILE_BYTES  = 512 * 1024    // 512 KB
 export const BIG_FILE_LINES = 2000
-
-/**
- * CJK character-by-character spacing: makes unicode61 treat each Han/Kana/Hangul character as an independent token.
- * Both write and query must use the same processing for retrieval to match.
- */
-export function segmentCJK(text) {
-  return text.replace(
-    /[぀-ヿ㐀-䶿一-鿿豈-﫿가-힯]+/g,
-    (run) => [...run].join(" "),
-  )
-}
 
 /**
  * Open/initialize the memory store. dbPath is auto-created if missing.

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * doc-check.mjs — M8 机检引擎 · 单引擎入口（锚 + 行宽）。
- * 权威设计 = M8 机检引擎模块设计（ENGINEERING-MODE-V2-MODULE-MACHINE-CHECK）§2.2
+ * 权威设计 = `docs/core/design/DOC-DISCIPLINE.md` §7（机器可检纪律）（2026-09-22 hygiene 批改指旧归档模块名 · 父侧直接执行 · 可 revert）
  * 单引擎：锚检查 + 行宽检查同一 main 驱动、同一报告；台账一致性不并入（由 M2 SQLite schema 承接，
  * check-ledger* 家族随单引擎作废——无文件）。
  * 声明面：判据全部读 manifest checkConfig（scanDirs / lineWidth / anchors.domain / anchors.exclude /

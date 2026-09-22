@@ -229,7 +229,7 @@ test("T-CL12 reset/清屏（AC-CL1）：resetActivity 只清区子树——流�
   assert.equal(regionBlocks(ctx).length, 0, "区清")
   assert.equal(S._subBlocks.size, 0, "map 清")
   assert.equal(archived.parentNode, ctx.messagesEl, "流内归档块不动（会话历史——C-7）")
-  ctx.messagesEl.replaceChildren() // clearMessages（chat.js case 等价：replaceChildren + resetActivity）
+  ctx.messagesEl.replaceChildren() // clearMessages（chat-messages.js case 等价：replaceChildren + resetActivity）
   resetActivity()
   assert.equal(streamBlocks(ctx).length, 0, "clearMessages 全清")
 })

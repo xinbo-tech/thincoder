@@ -1,6 +1,6 @@
 /**
  * async-discard.mjs — 中止清池的「只清已死」收尾单点（批 4 CLI-ASYNC-DISCARD——CLI 侧对称；
- * 设计权威 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.20，需求 = `docs/core/requirements/AGENT-LOOP.md` §4.10）。
+ * 设计权威 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.20，需求 = `docs/core/requirements/AGENT-LOOP.md` §4.10）。
  *
  * 原作 = 两接线点中止分支的无差别清池（`thincoder-core/agent/run-stages.mjs` 回合尾中止 ·
  * `thincoder-cli/src/tui/suspension-drive.mjs` 挂起会话中止）——`_asyncSubagents.clear()` +

@@ -21,6 +21,7 @@ import { buildToolCallbacks, sweepToolBlocks } from "./tool-events.mjs"
 import { freezeAllSubTasks } from "./subagent-blocks.mjs" // freezeReclaimDigestedBlocks 随 §17 段迁 suspension-drive.mjs
 import { ensureSessionTitle } from "@thincoder/core/generate-title.mjs"
 import { logEvent, errText } from "@thincoder/core/log.mjs"
+import { t } from "@thincoder/core/i18n.mjs"
 import { suspensionSession, poolLive } from "./suspension-drive.mjs"
 
 /** Exit-flush bound for the async end-of-run distillation (SEND-STALL-DISTILL §2.5):
@@ -191,11 +192,11 @@ async function runAgentTurnInner(ctx, text, opts) {
             // §2 统一规则自动 resume（无人值守授权）；手动档静默拒绝（部分消化留在
             // 历史，会话回挂起——结果不丢，只是不再烧轮次）。
             if (agent.autoApprove) {
-              pushLine("[auto-turn: continuing past turn cap…]", C.dim)
+              pushLine(t("digest.capAuto"), C.dim)
               state.controller = makeController()
               continue
             }
-            pushLine(`[auto-turn stopped at ${error.turn} turns — partial digest; finished reports stay in history]`, C.warn)
+            pushLine(t("digest.capStop", { turns: error.turn }), C.warn)
             if (opts?._logOutcome) opts._logOutcome.result = "stopped"
             break
           }

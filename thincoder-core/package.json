@@ -31,8 +31,12 @@
   "exports": {
     "./*": "./*"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "*.mjs",
+    "CHANGELOG.md",
     "advisor/",
     "agent/",
     "agent-tools/",

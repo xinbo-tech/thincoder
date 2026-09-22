@@ -12,7 +12,7 @@ Design docs in `docs/_archive/design/` (migration-period reference — retained,
 - ESM (`.mjs`) throughout — `package.json` declares `"type": "module"`.
 - LLM calls go through native `fetch` with SSE streaming, same as thincoder core.
 - Tool implementations are adapted for VS Code context (workspace root = cwd; no directory restriction on tools since 2026-09-02 — paths resolve relative to cwd, approval gate is the guard).
-- **提示词面（核内唯一副本——2026-09-15 修订）**：运行期提示词/工具描述 = 核内落地（`thincoder-core/prompts/` 15 档槽位 + `thincoder-core/tool-docs/` 24 档工具描述）——本端自持提示词 / 工具描述镜像已删（F9 零残留）；中文设计档（人读正本）= 仓根 `docs/core/design/prompts/*.md`。装配 = 核单点（`@thincoder/core/prompt-overlays.mjs`）+ 本端 `src/prompt-injections.mjs`（13 锚 VSC 取值表）注入端取值。
+- **提示词面（核内唯一副本——2026-09-15 修订）**：运行期提示词/工具描述 = 核内落地（`thincoder-core/prompts/` 15 档槽位 + `thincoder-core/tool-docs/` 24 档工具描述）——本端自持提示词 / 工具描述镜像已删（F9 零残留）；中文设计档（人读正本）= 仓根 `docs/core/design/prompts/*.md`。装配 = 核单点（`@thincoder/core/prompt-overlays.mjs`）+ 本端 `src/prompt-injections.mjs`（2 锚 VSC 取值表）注入端取值。
 
 
 ## Key Conventions
@@ -48,7 +48,7 @@ src/embed-config.mjs  嵌入/向量配置端壳面（消费核 embedding 读点�
 src/explore-distill.mjs  探索摘要端壳适配器（核 `summarizeRunExplorations` 包装——共享 history 原位回收）
 src/i18n.mjs          `t()` 壳（核 `projectDictionary` 投影底座 + 端特有键叠加；locales/{en,zh}.json）
 src/memory-tool.mjs   memory 工具端壳面（核 memory 单源消费）
-src/prompt-injections.mjs  13 名锚 VSC 取值表（W2——数据面；核槽位装配注入值）
+src/prompt-injections.mjs  2 名锚 VSC 取值表（W2——数据面；核槽位装配注入值）
 src/repomap.mjs       Repository dependency graph parsing（workspace.fs 数据源）
 src/specs.mjs         Model capability specs（核 `model-specs.mjs` 表 + 端侧 `reasoningEffortDefault` 增补面）
 src/tools.mjs         Re-export shim → src/tools/index.mjs（端壳工具面 = {code,focus,ide,index,shared,shell}；内置工具实现本体在核）

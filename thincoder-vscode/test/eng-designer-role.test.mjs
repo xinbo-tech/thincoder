@@ -165,6 +165,7 @@ test("T57c 正常：designer 内 spawn explore 允（勘察报告拿到）且不
   const built = buildProbe(parent, { task: "勘察现状", role: "explore", async: false }, "explore")
   assert.ok(built.child, "designer 勘察装配放行")
   assert.ok(!built.input.includes("Audit scope"), "勘察任务不注入审计范围块（设计师勘察 ≠ 审计）")
+  assert.equal(built.child._spawnSystemBlock, undefined, "勘察零固块——连固块字段也不含（防改后空转，台账 #23）")
   assert.equal(gateEngCoderSpawn(parent, 1, "explore", false), null, "勘察路径返回 null（非审计——不计数）")
 })
 

@@ -1,7 +1,6 @@
 /**
  * manifest.test.mjs — M1 项目状态档 manifest 单测。
- * 权威验收 = docs/core/design/modules/ENGINEERING-MODE-V2-MODULE-MANIFEST.md §3
- * （AC-M1-1..5 回指规格 AC 号 + T1–T7 用例表）。
+ * 权威验收 = docs/core/design/MANIFEST.md §3（测试面——AC-M1-1..5 回指规格 AC 号 + T1–T7 用例表）。
  * 隔离：每用例组 mkdtempSync tmpdir 数据档（无真仓污染）；全同步 fs——快层安全。
  * 2026-09-21（#188 按用点解析批）追加：发现梯两表六格（T43）· 不递归不向上（T44）·
  * `resolveProjectRoot` 变更面（T45）· 归属形 / 按用点（T48）· 单源结构（T54）·

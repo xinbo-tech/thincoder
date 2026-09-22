@@ -91,7 +91,8 @@ export async function handleEngCommand(ctx) {
  * 把 plan-active 推回 UI（半状态复活面；验收判据 = 「内存 + 槽位」双清零）。OFF 方向零改。
  */
 async function persistEngineering(agent) {
-  const slot = activeSlot(agent.cwd)
+  // #167：绑定优先（先例 = cmd-session.mjs）——粘性槽优先于 activeSlot（后者有认领副作用）。
+  const slot = agent._slot ?? activeSlot(agent.cwd)
   try {
     const p = slotPath(agent.cwd, slot)
     const data = JSON.parse(readFileSync(p, "utf8"))

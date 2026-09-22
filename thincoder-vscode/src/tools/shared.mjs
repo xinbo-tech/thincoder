@@ -14,11 +14,15 @@
  * 未注入面（懒加载/缺省即端形态）在核内缺省径上语义等价，见各缝落点注释。
  */
 import { join, isAbsolute } from "node:path"
-import { execFileSync, spawn } from "node:child_process"
+import { spawn } from "node:child_process"
 import * as vscode from "vscode"
 import { configureWritePath } from "@thincoder/core/tools/write-path.mjs"
 import { configureExecRun } from "@thincoder/core/tools/exec-run.mjs"
 import { configureProcessTreeKill } from "@thincoder/core/tools/execute.mjs"
+// 树杀单源（台账 #208② · TOOLS.md §6.14 落位表行 2）：本地副本删除——改用核单源
+// `process-tree.mjs`（静态闭包仅 `node:child_process`——engine-floor 守卫契约②零影响；
+// 该档已由 `@thincoder/core/tools/execute.mjs` 在同一静态链上引入）。
+import { killProcessTree } from "@thincoder/core/tools/process-tree.mjs"
 import { configureTreeResolve } from "@thincoder/core/tools/tree.mjs"
 
 /** Maximum buffer size per stream (stdout / stderr) before truncation (bash 端壳面). */
@@ -85,19 +89,7 @@ export function resolvePath(p, cwd) {
 
 // ─── 执行面（configureExecRun / configureProcessTreeKill 供值）──────────
 
-/** Kill the whole process tree of a spawned child (CLI/system.mjs parity):
- *  Windows taskkill /T /F reaches grandchildren (npm test's subprocesses);
- *  POSIX kills the process group. Plain child.kill() only reaps the direct
- *  child — grandchildren hold the stdout/stderr pipes, so "close" never fires
- *  and a watchdog would hang. */
-export function killProcessTree(child) {
-  if (process.platform === "win32") {
-    try { execFileSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { stdio: "ignore" }) } catch { /* already gone */ }
-  } else {
-    try { process.kill(-child.pid, "SIGKILL") } catch { /* */ }
-    try { child.kill("SIGKILL") } catch { /* fallback if group kill fails */ }
-  }
-}
+export { killProcessTree }
 
 /**
  * Run a child process INTERRUPTIBLY (spawn, not execSync).

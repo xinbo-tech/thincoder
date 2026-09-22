@@ -19,7 +19,7 @@ import { join } from "node:path"
 import { handleEngCommand } from "../src/tui/cmd-eng.mjs"
 import { ENG_OFF_REMINDER } from "@thincoder/core/agent.mjs"
 import { planTool } from "@thincoder/core/agent-tools/plan.mjs"
-import { newSession, loadSlotFile } from "@thincoder/core/session.mjs"
+import { newSession, loadSlotFile, activeSlot } from "@thincoder/core/session.mjs"
 import { slotPath, writeSessionFile } from "@thincoder/core/session-slots.mjs"
 import { MANIFEST_REL, DEFAULT_MANIFEST } from "@thincoder/core/manifest.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "@thincoder/core/session-slots.mjs"
@@ -194,3 +194,24 @@ test("T12 翻转清零（FR31 ③ / AC14）：planMode=true + 排队 plan 提示
   assert.equal(agent2.config.agent.engineering, false)
   assert.equal(agent2.planMode, true, "OFF 不碰 planMode（普通面全带宽）")
 })
+
+// ─── #167（台账）：槽写面绑定优先——`_slot` ≠ activeSlot 时不得写他槽 ──────────────
+
+test("T23 #167 绑定优先：`_slot` ≠ activeSlot ⇒ 槽写面落绑定槽、他槽零写", async () => {
+  // 两真槽：A 先建（随后被 B 接任 active）；agent 钉在 A
+  const slotA = await newSession(tmp)
+  const slotB = await newSession(tmp)
+  writeSessionFile(slotPath(tmp, slotA), { ...loadSlotFile(tmp, slotA), engineering: false, history: [] })
+  writeSessionFile(slotPath(tmp, slotB), { ...loadSlotFile(tmp, slotB), engineering: false, history: [] })
+  const active = activeSlot(tmp)
+  assert.equal(active, slotB, "前置：activeSlot ≠ 绑定槽（认领序——他槽可被误写）")
+
+  const lines = []
+  const agent = engAgent({ _slot: slotA })
+  await handleEngCommand(ctxFor(agent, lines))
+  assert.equal(agent.config.agent.engineering, true, "ON 翻转照常")
+
+  assert.equal(JSON.parse(readFileSync(slotPath(tmp, slotA), "utf8")).engineering, true, "写入目标 = 绑定槽（_slot）")
+  assert.equal(JSON.parse(readFileSync(slotPath(tmp, slotB), "utf8")).engineering, false, "他槽零写（activeSlot 槽未被动）")
+})
+// ─── ENG-PLAN-EXCLUSION 批（FR31 ③ / AC14 = T12）：翻转点② `/eng` 清零（内存位 + 槽位）────

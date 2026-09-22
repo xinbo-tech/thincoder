@@ -1,6 +1,6 @@
 /**
  * turn-domains.mjs — 端侧回合域文本组合单点（批 2026-09-19-upstream-channel-availability ·
- * 设计权威 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.27.12.5 L / §6.27.12.12 ④）。
+ * 设计权威 = `docs/core/design/AGENT-LOOP-UPSTREAM.md` §6.27.12.5 L / §6.27.12.12 ④）。
  *
  * 端侧域文本 = **核基座（转口逐字——端侧零自持基座副本）+ 端 overlay（端特有呈递纪律，
  * 端侧自持）**：digest 轮与 ask 唤醒轮共用本组合点——选择仅换基座（轮型 → 模式两级），

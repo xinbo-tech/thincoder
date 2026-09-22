@@ -163,6 +163,15 @@ test("PT-8 正常：plan.mjs 源文面 = 档头句 / 注释引文收正 ∧ 旧�
   assert.ok(lines.some((l) => l.startsWith(" * ") && l.includes("Present your plan")), "注释块含新②引文片段（防删而不换）")
 })
 
+/** #210（hygiene-sweep 批 · 台账 #210）：plan 未知 action 报错串零测试覆盖 ⇒ 补逐字断言
+ *  （口径 = 源文逐字零改——断言面即覆盖）。 */
+test("PT-6 #210 错误：plan 未知 action ⇒ 报错串逐字相等 ∧ 零副作用（源文零改）", async () => {
+  const cwd = process.cwd()
+  const ctx = { cwd, agent: { cwd, history: [], _pendingReminders: [], planMode: false } }
+  assert.equal(await planTool.execute({ action: "nope" }, ctx), 'Error: unknown action "nope". Use "enter" or "exit".', "报错串逐字")
+  assert.equal(ctx.agent.planMode, false, "零副作用（不静默进 plan 模式）")
+})
+
 // ─── #96 verify：执行方式（exec 缝）+ 信息段（诊断段缝）──────────────────────────
 
 slow("#96 verify：git / node --check 经执行器缝；诊断段缝缺省 = 报告不变", async () => {

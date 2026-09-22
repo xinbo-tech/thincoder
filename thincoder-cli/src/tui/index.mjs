@@ -16,35 +16,32 @@
  *   distill-cmd.mjs   — /distill command
  *   mouse.mjs         — SGR mouse parsing + dispatch assembly (createMouseDispatch)
  *   update-notice.mjs — background update notice + startup check
+ *   tui-state.mjs     — TUI state literal factory（structure-debt #159）
+ *   input-face.mjs    — 输入面：stdin 流 + data 处理器 + 键盘/鼠标后置挂载入口（二段接口）
+ *   conversation-writer.mjs — 对话写入面：pushLine / pushLabel / assistant 标签位
+ *   turn-face.mjs     — 回合面：submit / interaction / 粘贴 / turnCtx / turn
  */
 
-import { emitKeypressEvents } from "node:readline"
-import { readFileSync } from "node:fs"
-import { PassThrough } from "node:stream"
 import { saveSession } from "@thincoder/core/session.mjs"
 import { closeAllMcp } from "@thincoder/core/mcp.mjs"
-import { ansi, C } from "./ansi.mjs"
 import { createRenderLoop } from "./render-loop.mjs"
-import { makeDimsState } from "./dims.mjs"
+import { ansi, C } from "./ansi.mjs"
 import { SLASH_COMMANDS, createSlashCommands } from "./slash-commands.mjs"
 import { createWizard } from "./wizard.mjs"
-import { writeStartupSequence, writeLoadingLine, setTuiActive, createExitCleanup } from "./tui-lifecycle.mjs"
+import { createExitCleanup } from "./tui-lifecycle.mjs"
 import { createPickers } from "./pickers.mjs"
 import { runDistill as runDistillImpl } from "./distill-cmd.mjs"
-import { createInteraction } from "./interaction.mjs"
-import { pasteClipboardImage as pasteClipboardImageImpl, insertPastedText, translateShiftEnter, stripKeyboardProtocol } from "./clipboard.mjs"
-import { parseMouseClicks, handleWheel, createMouseDispatch, mouseOob } from "./mouse.mjs"
-import { runAgentTurn } from "./agent-turn.mjs"
-import { createKeyHandler, convMaxScroll, clearAttention } from "./key-handler.mjs"
 // F-XR1 退出释放（EXIT-CLAIM-RELEASE · SESSION.md §6.18）：核薄函数——/exit 与 Ctrl+C×2
 // 同一退出语义双入口；退出恒达（永不抛出）；零触碰 marker 面（F-XR2 路标保留）。
 import { releaseClaimsAll } from "@thincoder/core/session-slots-manifest.mjs"
 import { showStartup, backgroundIndex, createLoadOlder } from "./startup.mjs"
-import { shiftFreezeAnchors } from "./subagent-blocks.mjs"
-import { capLine, accountLine, accountAll, syncLineBudget } from "./display-budget.mjs"
 import { createConfigHelpers } from "./config-helpers.mjs"
 import { createUpdateNotice, pendingNoticeReady } from "./update-notice.mjs"
 import { startLedgerSurface } from "./ledger-surface.mjs"
+import { createTuiState } from "./tui-state.mjs"
+import { createInputFace } from "./input-face.mjs"
+import { createConversationWriter } from "./conversation-writer.mjs"
+import { createTurnFace } from "./turn-face.mjs"
 
 export { upgradeFailureText, pendingNoticeReady } from "./update-notice.mjs"
 
@@ -88,60 +85,7 @@ export async function startTUI(agent, opts = {}) {
   // watchdog, agent-turn finally — never in the render path (2026-08-30).
   const startupCols = process.stdout.columns || 80
   const startupRows = process.stdout.rows || 24
-
-  const state = {
-    lines: [], // conversation lines: { text, color }
-    streaming: "", // current streaming buffer
-    _advisorBlocks: [], // advisor ordered blocks: [{ kind: "think"|"text", text }] — preserves emission order (think ↔ tool interleaving)
-    input: [], // input buffer (codepoint array)
-    cursor: 0,
-    history: [],
-    historyIndex: -1,
-    _draft: null, // stashed unsent input while navigating history (restored on down past newest)
-    scroll: 0, // scroll lines from bottom upward
-    _foldScroll: new Map(), // 2026-08-31 块内滚动：foldKey → 窗口 offset（展开块 ▲▼ 翻窗）
-    _followTail: true, // 2026-08-31 流式跟随：渲染前 scroll=0；用户上滚暂停、到底/新消息恢复
-    processing: false,
-    controller: null, // AbortController for current agent run
-    permission: null, // { name, args, resolve }
-    permissionPreview: [], // content preview lines for permission approval (rendered above input box, without separation)
-    question: null, // { text, options, resolve } — agent question tool callback
-    picker: null, // active picker (stack top) { title, entries, lines, index, scroll, selectedLine, filter }
-    pickerStack: [], // picker 栈：showPicker push，Enter/Esc pop；state.picker 始终指向栈顶
-    pendingNotice: null, // 后台更新提示：有 picker 打开时挂起，picker 全部关闭后再弹
-    wizard: null, // first-launch config wizard { step, index, scroll, selectedLine, fields, error, lines }
-    tasks: agent.tasks ?? [], // task list from task tool (progress shown in status bar); carried over on session restore, auto-collapsed when all done
-    dims: makeDimsState({ cols: startupCols, rows: startupRows }), // terminal dims single source (Windows ConPTY instability, 2026-08-30) — seeded pre-raw-mode, re-sampled by event hooks only (startup retry / resize / idle watchdog)
-    tokens: { prompt: 0, completion: 0, cacheHit: 0, cacheMiss: 0, reasoningTokens: 0 }, // cumulative token usage (shown in status bar)
-    ctxCache: { len: -1, tokens: 0 }, // context utilization estimate cache (estimateTokens is O(n), only recompute when history grows)
-    reasoning: "", // thinking stream buffer (dimmed display)
-    completion: null, // Tab completion state { candidates, index }
-
-    subTasks: {}, // sub-agent activity blocks (§7.2 D4): { "coder#1": { key, role, model, started, done, doneAt, blocks: [{kind,text}], currentTool, toolArgs, turn, maxTurns, approval, lastError, dropped, blockEpoch, awaitingDigest（§17 挂起中间态）, _freezeAt（冻结锚点）, stopped, children: []（SUBAGENT-TAIL：嵌套子代理**守护载体**——内容行并入本块 blocks——subagent-children.mjs） } } — rendered as collapsible in-conversation blocks; persists across turns (blocks are the child activity's ONLY carrier — child tool calls never enter the parent history); bounded by the N2 500-line per-child ring buffer（SUBAGENT-TAIL 单环：内层行同环计数、单载体最旧先行——TUI.md §6）
-    currentTool: null, // currently executing tool name (shown in status bar)
-    processingStarted: 0, // current turn start time (status bar timer)
-    status: "Ready",
-    ledger: { marker: null, warn: false, scannedAt: 0 }, // LEDGER-SURFACE（§2.30.3.4）：L1 标记位——ledger-surface 写 / render-frame 读
-    queue: [], // 交接残项单容器 [{ text }]（INPUT-LOCK：submit 不再排队——仅释放窗口兜底/挂起中止残余——回合尾队列循环续发，至多一条）
-    interruptPrompt: null, // Ctrl+I inject box（第 31 批——TUI-INPUT-BOX.md §8）: { chars: string[], cursor: number } or null
-    attentionAwaiting: false, // 第 33 批（TUI §14.3(f)）：回合结束等待输入——链尾置位 / 用户输入清位；不落盘、不进会话
-    search: null, // Ctrl+F search mode: { query: "", matches: [{lineIndex, charIndex}], index: 0 } or null
-    expandedBlocks: new Set(), // block hashes that are expanded (Enter toggles)
-    foldEnabled: true, // global fold toggle — /fold on|off
-    exitArmed: false, // Ctrl+C double-confirm: first press arms, second (within window) exits
-    // Lazy history window (parity with VS Code): only the latest messages are
-    // materialized on restore; PgUp-at-top loads earlier pages via loadOlder.
-    _historyLoaded: 0, // messages loaded from the TAIL of _fullHistory
-    _historyTotal: 0, // total messages in the restored session
-    _hasOlder: false, // more earlier messages remain unloaded
-    _linesChars: 0, // TUI-OOM-ROOTCAUSE（§15.3.2）：state.lines 全部行与载体文本总量（字符账——唯一新增状态位）
-    _agent: null, // TUI state → agent 回指挂载点：startTUI 装配时置 agent 引用——
-    // ① SYNC-CANCEL ⏹ 门控读 state._agent._syncChildAborts（subagent-panel.mjs，2026-09-09）；
-    // ② CLI-ACTIVITY-DEBLOAT F-3（2026-09-10）：agent._tuiState = state 反向挂载——
-    // action:"panel" 经 ctx.state（= agent._tuiState）**读时现算**面板块（computePanelBlocks
-    // ——subTasks 活值纯推导——单账本）。headless/VS Code 无此装配 = 无面板 → panel 动作
-    // 恒降级池视图（CLI-only 完整能力——AC-P4）。
-  }
+  const state = createTuiState({ cols: startupCols, rows: startupRows, agent })
   state._agent = agent
   agent._tuiState = state // F-3：面板视图现算通道（替代退役的手工面板镜像）
 
@@ -150,188 +94,23 @@ export async function startTUI(agent, opts = {}) {
     state.tasks = []
   }
 
-  // Input stream goes through a filter: mouse sequences (scroll wheel) are intercepted and handled here,
-  // stripped clean before passing to keypress parsing, preventing sequence fragments (e.g. "64;72;42M")
-  // from leaking into the input box
-  const keyStream = new PassThrough()
-  let mousePending = "" // incomplete mouse sequence tail spanning chunks
-  let lastRenderedScroll = 0
-  emitKeypressEvents(keyStream)
-  process.stdin.setRawMode(true)
-  // Keyboard enhancement — enable BOTH protocols (unsupported terminals ignore them):
-  // kitty push (\x1b[>1u): Shift+Enter → \x1b[13;2u (Windows Terminal 1.19+, VS Code, kitty, iTerm2)
-  // modifyOtherKeys lvl 2 (\x1b[>4;2m): Shift+Enter → \x1b[27;2;13~ (mintty / Git Bash)
-  // translateShiftEnter (stdin layer) maps both to \x1b\r → meta+return → multiline branch.
-  writeStartupSequence()
-  // 启动加载画面（2026-09-21 用户）：冷启动剩余期（memory 同步 / 索引扫描）非黑。
-  // 静态读（render-frame 先例——module-load 一次 ✗ 首帧 render 覆盖本行 ✗ 无需清除逻辑）。
-  {
-    let v = ""
-    try { v = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version } catch { /* 尽力面 */ }
-    writeLoadingLine(undefined, v)
-  }
-  setTuiActive(true) // R25（F-R25a）：终端接管完成——置 TUI 活动态（崩溃钩子恢复判定源）
-
-  const utf8Decoder = new TextDecoder("utf-8", { fatal: false })
-
-  let pasteMode = false
-  let pasteAccum = ""
-
-  process.stdin.on("data", (chunk) => {
-    try {
-
-      let text = mousePending + utf8Decoder.decode(chunk, { stream: true })
-      mousePending = ""
-
-    // 第 33 批（TUI §14.3(e) 鼠标点）：stdin 数据到达即用户在场 ⇒ 清 attention 位
-    // （单点覆盖下方滚轮分支与 onMouseClick；键盘入口在 key-handler）。
-    clearAttention(state, render)
-
-    // Bracketed paste: terminal wraps pasted text in \x1b[200~ ... \x1b[201~
-    // Route pasted content to the active text target (question answer / input box) in one shot,
-    // avoiding slow char-by-char keypress render — see insertPastedText in clipboard.mjs
-    if (pasteMode) {
-      const endIdx = text.indexOf("\x1b[201~")
-      if (endIdx >= 0) {
-        pasteAccum += text.slice(0, endIdx)
-        pasteMode = false
-        const pasted = pasteAccum
-        pasteAccum = ""
-        if (pasted) {
-          insertPastedText(state, pasted)
-          render()
-        }
-        text = text.slice(endIdx + 6)
-      } else {
-        pasteAccum += text
-        return
-      }
-    }
-
-    // Check for paste start (may appear mid-chunk alongside other input)
-    const pasteStartIdx = text.indexOf("\x1b[200~")
-    if (pasteStartIdx >= 0) {
-      const before = text.slice(0, pasteStartIdx)
-      const after = text.slice(pasteStartIdx + 6)
-      const endIdx = after.indexOf("\x1b[201~")
-      if (endIdx >= 0) {
-        // Paste begin and end in the same chunk: insert pasted content directly
-        const pasted = after.slice(0, endIdx)
-        if (pasted) {
-          insertPastedText(state, pasted)
-          render()
-        }
-        text = before + after.slice(endIdx + 6)
-      } else {
-        // Paste spans multiple chunks: write prefix, enter paste mode
-        if (before) keyStream.write(before)
-        pasteMode = true
-        pasteAccum = after
-        return
-      }
-    }
-
-    // Scroll wheel: \x1b[<64;col;rowM = up, \x1b[<65;col;rowM = down（3 lines each）
-    // 2026-08-31：坐标命中展开块内容行 → 块内滚动（handleWheel）；未命中 → 会话滚动（现状）
-    for (const m of text.matchAll(/\x1b\[<(\d+);(\d+);(\d+)([Mm])/g)) {
-      const button = Number(m[1])
-      if (button === 64 || button === 65) {
-        // F-3 sane-gate ③（RESIZE-MOUSE-LEAK-FIX）：越界 wheel 禁止会话滚动——handleWheel
-        // 对越界返回未消费会穿到 fallback 滚动（mouse.mjs 内 gate 覆盖不到此路径）
-        const dims = state.dims ? state.dims.get() : { cols: process.stdout.columns || 80, rows: process.stdout.rows || 24 }
-        if (mouseOob(Number(m[2]), Number(m[3]), dims)) continue
-        const consumed = handleWheel(mouseCtx(), button, Number(m[2]), Number(m[3]))
-        if (!consumed) {
-          if (button === 64) {
-            state.scroll += 3
-            state._followTail = false // 2026-08-31：用户上滚 = 暂停流式跟随（不抢视角）
-            // 2026-08-31 用户约定修复：滚动到头自动加载（原来只挂 PgUp 键——违约）
-            if (state._hasOlder && state.scroll >= convMaxScroll(state)) loadOlder()
-          } else {
-            state.scroll = Math.max(0, state.scroll - 3)
-            if (state.scroll === 0) state._followTail = true // 滚回底部恢复跟随
-          }
-        }
-      }
-    }
-
-    // Left-click: \x1b[<0;col;rowM → picker selection / line action menu
-    for (const click of parseMouseClicks(text)) {
-      try {
-        onMouseClick(click.col, click.row)
-      } catch (e) {
-        pushLine(`[mouse] ${e.message || e}`, C.error)
-        render()
-      }
-    }
-
-    // Strip complete mouse sequences; keep incomplete tail for reassembly with next chunk
-    text = text.replace(/\x1b\[<\d+;\d+;\d+[Mm]/g, "")
-    const tail = text.match(/\x1b\[<[\d;]*$/)
-    if (tail) {
-      mousePending = tail[0]
-      text = text.slice(0, -tail[0].length)
-    }
-
-    // Shift+Enter (keyboard-enhanced terminals) → Alt+Enter path (\x1b\r = meta+return)
-    text = translateShiftEnter(text)
-    text = stripKeyboardProtocol(text)
-
-    if (state.scroll !== lastRenderedScroll) {
-      lastRenderedScroll = state.scroll
-      render()
-    }
-    if (text) keyStream.write(text)
-    } catch (e) {
-      pushLine(`[input-error] ${e.message || e}`, C.error)
-    }
+  // 输入面（input-face.mjs，原址 :153 早挂载）：stdin 流过滤 / raw mode / 启动序列 / 解码器 +
+  // data 处理器整块；render / pushLine / loadOlder 以惰性取值器承接（晚定义名——TDZ 语义保持），
+  // 键盘 ③ 与鼠标 ④ 后置挂载入口在命令层之后按原址调用（构造期读值面——见 invariant §2.2）。
+  const inputFace = createInputFace({
+    state,
+    get render() { return render },
+    get pushLine() { return pushLine },
+    get loadOlder() { return loadOlder },
   })
 
   const cleanup = createExitCleanup({ agent, saveSession, closeAllMcp })
   process.on("exit", cleanup)
 
-  const pushLine = (text, color, kind) => {
-    // TUI-OOM-ROOTCAUSE（TUI.md §15.3.1/§15.3.3）：行额度单点——行文本过 capLine
-    // （LINE_MAX_CHARS——单行巨内容/无换行巨 chunk 的堵口）+ 总量账 + 预算对账。
-    const line = { text: capLine(text), color, _kind: kind }
-    state.lines.push(line)
-    accountLine(state, line)
-    if (state.lines.length > 5000) {
-      state.lines.splice(0, 1000)
-      state.lines.unshift({ text: `... [earlier messages trimmed — ${state.lines.length} lines remaining]`, color: C.dim })
-      // 2026-09-03 修复轮（冻结锚点）：头裁对在途 settled 锚点整体前移（锚点是绝对
-      // 流位置）——不校正则池空补发冻结（freezeSubTaskLines splice）落点漂移；校正量
-      // = 净位移（裁 1000 补 1 标记行 → −999，code review round1 #3）。
-      shiftFreezeAnchors(state, 1000)
-      accountAll(state) // 行对象集合已变（splice/unshift 直写）——直算重对账
-    }
-    syncLineBudget(state, { onTrim: (st, n) => shiftFreezeAnchors(st, n) })
-    render()
-  }
-
-  /** Message block label: blank line + label line. Breathing space between user/assistant messages */
-  const pushLabel = (text, color) => {
-    // 行额度同 pushLine（§15.3.1——恢复行/标签行同口径）
-    if (state.lines.length > 0) {
-      const blank = { text: "", color: C.dim }
-      state.lines.push(blank)
-      accountLine(state, blank)
-    }
-    const line = { text: capLine(text), color }
-    state.lines.push(line)
-    accountLine(state, line)
-    syncLineBudget(state, { onTrim: (st, n) => shiftFreezeAnchors(st, n) })
-    render()
-  }
-
-  // Only emit the assistant label once per turn (on first token or first tool call)
-  let assistantLabeled = false
-  const ensureAssistantLabel = () => {
-    if (!assistantLabeled) {
-      assistantLabeled = true
-      pushLabel(`❯ ThinCoder:`, ansi.bold + C.assistant)
-    }
-  }
+  // 对话写入面（conversation-writer.mjs，原址 :293）：行额度单点 + 消息标签 + assistant 标签位
+  // （render 以惰性转发承接——renderLoop 于下方装配）
+  const conversation = createConversationWriter({ state, render: () => render() })
+  const { pushLine, pushLabel, ensureAssistantLabel } = conversation
 
   // ---------------------------------------------------------- Render
 
@@ -361,55 +140,11 @@ export async function startTUI(agent, opts = {}) {
     try { state.dims.refresh(); render() } catch { /* resize error — ignore */ }
   })
 
-  // ---------------------------------------------------------- Submit
-
-  async function submit() {
-    const text = state.input.join("").trim()
-    if (!text) return
-    // INPUT-LOCK 防御（C'——2026-09-09 + F16 busy 单槽——2026-09-21）：门禁在 key-handler
-    // （busy Enter 非模态 = 单槽注入 / 模态·斜杠·空·槽满 = 吞 + 提示，文本保留——TUI-INPUT-BOX.md
-    // §4.1）；submit 只在非 busy 期达此；防御直呼/上游改动：busy 期拒绝（不清输入框不吞内容）。
-    if (state.processing) {
-      pushLine(`[主会话处理中 —— 消息未发送（回合结束后请重按 Enter）]`, C.warn)
-      render()
-      return
-    }
-    state.input = []
-    state.cursor = 0
-    const wasInHistory = state.historyIndex !== -1
-    state.history.push(text) // review #3 fix: single push (was duplicated — every submit appeared twice in ↑/↓ history)
-    state.historyIndex = -1
-    if (!wasInHistory) state._draft = null // submitted — the draft is now history. Keep draft when submitting from history mode (↓ can recover)
-    state.scroll = 0
-    state._followTail = true // 2026-08-31 会诊 deepseek：新消息恢复跟随（注释曾承诺、实现缺漏）
-
-    // Slash commands: handled locally, don't enter agent loop. 斜杠 busy 期提交在 key-handler
-    // 门禁被吞（白名单已删——斜杠同吞——INPUT-LOCK-BEHAVIOR-REVISED）——submit 仅非 busy 期可达。
-    if (text.startsWith("/")) {
-      await handleSlash(text)
-      render()
-      return
-    }
-
-    await turn(text)
-  }
-
-  // Interaction primitives: permission approval + Q&A input, implemented in interaction.mjs
-  const { askPermission, askQuestion, askBatchPermission } = createInteraction({
-    agent, state, pushLine, pushLabel, render, summarize,
+  // 回合面（turn-face.mjs，原址 :366）：submit / interaction（权限 + 提问）/ 图片粘贴 / turnCtx / turn
+  const { submit, turnCtx, askPermission, askQuestion, pasteClipboardImage } = createTurnFace({
+    agent, state, pushLine, pushLabel, render, ensureAssistantLabel, summarize, conversation,
+    handleSlash: (t) => handleSlash(t),
   })
-
-  // Clipboard image paste: implemented in clipboard.mjs
-  const pasteClipboardImage = () => pasteClipboardImageImpl({ agent, state, pushLine, render })
-
-  // Agent loop: implemented in agent-turn.mjs
-  const turnCtx = {
-    agent, state, pushLine, pushLabel, render, scheduleRender: render, ensureAssistantLabel,
-    askPermission, askQuestion, askBatchPermission, handleSlash: null,
-    get assistantLabeled() { return assistantLabeled },
-    set assistantLabeled(v) { assistantLabeled = v },
-  }
-  const turn = (text) => runAgentTurn(turnCtx, text)
 
   // ---------------------------------------------------------- Slash Commands
 
@@ -454,24 +189,15 @@ export async function startTUI(agent, opts = {}) {
 
   // ---------------------------------------------------------- Keyboard / Mouse
 
-  // keypress is attached to filtered keyStream: mouse sequences already intercepted and stripped upstream
-  const onKeypress = createKeyHandler({
+  inputFace.mountKeys({
     agent, state, render, popPicker, renderPickerLines,
     handleSlash, handleTab, submit, pasteClipboardImage,
     wizardChooseProvider, wizardSubmitText, cancelWizard, wizardProviderItems,
     renderWizard, pushLine, cleanup, showPicker, loadOlder,
   })
-  keyStream.on("keypress", (str, key) => {
-    try {
-      onKeypress(str, key)
-    } catch (e) {
-      pushLine(`[input-error] ${e.message || e}`, C.error)
-      render()
-    }
-  })
 
   // 鼠标点击/滚轮 ctx 装配（mouse.mjs createMouseDispatch——D-S1a：cancelSubagent/onMouseClick/mouseCtx）
-  const { onMouseClick, mouseCtx } = createMouseDispatch({ agent, state, pushLine, render, popPicker })
+  inputFace.mountMouse({ agent, state, pushLine, render, popPicker })
 
   // ---------------------------------------------------------- Startup screen + background indexing
 
@@ -482,7 +208,10 @@ export async function startTUI(agent, opts = {}) {
   showStartup({ agent, state, opts, pushLine, pushLabel, render, startWizard })
   // LEDGER-SURFACE（§2.30.3.4）：台账可见面——首扫（setImmediate）+ 周期；dispose 挂进程退出（:278 cleanup 先例）
   const ledgerSurface = startLedgerSurface({ state, agent, pushLine, render })
-  process.on("exit", () => ledgerSurface.dispose())
+  // 前置缺陷最小修（2026-09-22 structure-debt · 父侧授权 · 只修调用点）：K-LX3 归核后
+  // `startLedgerSurface` 返回 **Promise**（resolve 出 `{ dispose }`）——原同步 `.dispose()`
+  // 令每次退钩抛 TypeError（`node test-startup.mjs` 前置红，HEAD 逐字同款）；按 Promise 承接。
+  process.on("exit", () => { void Promise.resolve(ledgerSurface).then((s) => s?.dispose?.()) })
   backgroundIndex({ agent, state, render })
 
   // Check for updates (non-blocking, after startup screen)——实现 update-notice.mjs

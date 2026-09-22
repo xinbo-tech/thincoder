@@ -125,8 +125,8 @@ test("⑥ atComplete seq（H-A）：两次调用乱序 resolve → 只采纳新 
 // ─── ⑨⑩ A2 标题回合内（F-A2——方案 Y）─────────────────
 
 /** A2 真实 runPanelChat 骨架（⑨⑩ 共用）：真实 ChatPanel 原型 + 真实 runPanelChat——
- *  _activeLines 空线（isFirstMessage = true）+ loading:true 首投即抛（try 体内 :241 终止——
- *  命中 finally 时 isFirstMessage 已置位）。_generateTitle 实例覆盖——titleRejects=false →
+ *  _activeLines 空线（无槽标题 ⇒ 标题尝试）+ loading:true 首投即抛（try 体内 :241 终止——
+ *  命中 finally 时标题尝试口已到位）。_generateTitle 实例覆盖——titleRejects=false →
  *  挂起于可控 gate（测试锁标题窗口）；true → 立即 reject（错误路径）。 */
 function a2Panel({ titleRejects = false } = {}) {
   const posted = []
@@ -149,7 +149,7 @@ function a2Panel({ titleRejects = false } = {}) {
     _statusBar: null,
     _context: { workspaceState: { get: () => undefined, update: async () => {} } },
     _panel: { webview: { postMessage: (m) => {
-      // 回合进入 loading:true（impl :241）→ 抛——命中 finally（带 isFirstMessage）而不触网
+      // 回合进入 loading:true（impl :241）→ 抛——命中 finally（标题尝试口）而不触网
       if (m.type === "loading" && m.loading === true && !loadingThrown) {
         loadingThrown = true
         throw new Error("boom-at-loading:true")
@@ -157,7 +157,7 @@ function a2Panel({ titleRejects = false } = {}) {
       posted.push(m)
       return Promise.resolve(true)
     } } },
-    _activeLines() { return { fullHistory: [], contextHistory: [] } }, // 空线——isFirstMessage = true
+    _activeLines() { return { fullHistory: [], contextHistory: [] } }, // 空线——无槽标题 ⇒ 走标题尝试分支
     _chat(...args) { p._chatCalls.push(args); return Promise.resolve() }, // 直发记录器（断言不并发用）
     _generateTitle: titleRejects
       ? async () => { throw new Error("title-boom") }
@@ -172,7 +172,7 @@ test("⑨ A2 标题窗口 = busy（F-A2 测试锁 + C-B2-6）：首回合标题 
   const turn = runPanelChat(p, { text: "first" })
   turn.catch(() => {}) // 防 settle 窗口 unhandled rejection（assert.rejects 稍后接管）
   await settle()
-  assert.equal(titleGate.length, 1, "回合尾标题已触发（isFirstMessage——finally 内归位前）")
+  assert.equal(titleGate.length, 1, "回合尾标题已触发（无标题即尝试——finally 内归位前）")
   assert.equal(p._turnState, "running", "标题 await 期间忙态未归位——仍 running（标题窗口 = busy——修前此点已 idle → 消息直开并发回合）")
 
   // 标题窗口内 userMessage → 普通回合 busy 面入 `_busyQueued` 单槽（C-B2-6——不并发直发；

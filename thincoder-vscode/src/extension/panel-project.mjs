@@ -5,6 +5,9 @@
 import * as vscode from "vscode"
 import { t } from "../i18n.mjs"
 import { resumeSlot } from "./session-io.mjs"
+// F-CR4 跨 cwd 认领释放（台账 #168② · SESSION.md §6.15 / §6.16）：核薄函数（容忍逻辑全在核——
+// 永不抛出 / 返回 boolean）；直引 manifest 档（与 `session-io.mjs` 的退出释放同源面）。
+import { releaseClaimsAll } from "@thincoder/core/session-slots-manifest.mjs"
 import { _cwd, setProjectFolder } from "./panel-messages.mjs"
 import { loadSession } from "./panel-session.mjs"
 import { ensureMemoryHandle } from "../embed-config.mjs"
@@ -24,6 +27,16 @@ export function pushProject(panel) {
     panel._panel?.webview.postMessage({ type: "project", ...panel._projectInfo() })
   }
 
+  /** F-CR4 跨 cwd 释放单点（台账 #168② · SESSION.md §6.15 ③ / §6.16）：换 cwd **之前**记旧 cwd、切换成功后
+   *  调本函数——对**旧 cwd** manifest 补一次同语义释放（保留集 = 空：切换后该 cwd 内本进程已无活绑定）；
+   *  同 cwd（未换）⇒ no-op。核薄函数 `releaseClaimsAll`：无 manifest / 无本进程认领 ⇒ 零写早退；失败
+   *  容忍（永不抛出）。**三个切换落点共用本单点**（显式切换器 / 跟随活动编辑器 / 工作区兜底回落）
+   *  ——防两处漂移；值条件删除（核 `staleClaims`）保证不碰他端进程认领。 */
+export function releaseOldCwdClaims(oldCwd) {
+    if (!oldCwd || oldCwd === _cwd()) return false
+    return releaseClaimsAll(oldCwd)
+  }
+
   /** Apply a project switch (validated): rebind the slot and reload everything per-cwd. */
 export async function applyProjectSwitch(panel, fsPath) {
     // C2（F-C2a）：守卫改谓词 turnBusy()——running 或 susp（含会话等待）一律拒绝
@@ -32,11 +45,18 @@ export async function applyProjectSwitch(panel, fsPath) {
       vscode.window.showWarningMessage("ThinCoder: a task is running — stop it before switching projects.")
       return
     }
+    // F-CR4 跨 cwd 释放（台账 #168② · SESSION.md §6.16）：换 cwd 前先记旧 cwd——切换成功后对**旧 cwd**
+    // manifest 补一次同语义释放（保留集 = 空：切换后该 cwd 内本进程已无活绑定）；不释放则旧 cwd
+    // 认领残留至进程退出（旧行为）。§6.16 假定 + 复核条件：本端单绑定（WebviewViewProvider 单实例
+    // 视图）；多窗口 / 多面板 = 他进程（值条件删除天然不碰他端认领）或本进程多面板（另案）。
+    const oldCwd = _cwd()
     const r = setProjectFolder(fsPath)
     if (!r.ok) {
       vscode.window.showErrorMessage(`ThinCoder: ${r.error}`)
       return
     }
+    // 释放落点：cwd 已翻、本端绑定已失效（下一行 _agent 置空 / onProjectChanged 重绑新 cwd）。
+    releaseOldCwdClaims(oldCwd)
     // 销毁点（2026-09-08）：换项目 → 会话级 agent 销毁（AC4——agent
     // 不跨 cwd 复用；onProjectChanged → loadSession 同款置 null——此处显式接线双保险）
     panel._agent = null

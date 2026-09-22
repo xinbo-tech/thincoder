@@ -12,6 +12,8 @@ import { registerDiffPreviewProvider } from "./src/extension/diff-preview.mjs"
 import { startConfigWatch } from "./src/extension/config-watch.mjs"
 import { startSampler, stopSampler } from "./src/extension/loop-sampler.mjs"
 import { runSessionGcCommand } from "./src/extension/session-gc-command.mjs"
+// SESSION.md §6.19 D-SE46（2026-09-22 会话索引批）：派生会话索引重建命令 + 启动拍（端壳挂点——核面经动态 import）。
+import { runSessionIndexCommand, scheduleSessionIndexPassSafe } from "./src/extension/session-index-command.mjs"
 // F-XR1 退出释放（EXIT-CLAIM-RELEASE · SESSION.md §6.18 F-XR4）：端壳纯转口——workspace
 // 判据在本侧解析（import vscode 侧——评审 #3 参数形钉死），包装保持 vscode-free。
 import { releaseClaimsOnExit } from "./src/extension/session-io.mjs"
@@ -159,7 +161,16 @@ export async function activate(context) {
     vscode.commands.registerCommand("thincoder.sessionGc", () => {
       runSessionGcCommand({ api: vscode }).catch(logFireAndForget)
     }),
+    // SESSION.md §6.19 D-SE46（2026-09-22 会话索引批）：派生会话索引重建（存量首建 / 运维兜底）——
+    // 处理体 = 端侧命令档（核数据面）；CLI 对位 = `thincoder session index --rebuild`。
+    vscode.commands.registerCommand("thincoder.sessionIndexRebuild", () => {
+      runSessionIndexCommand({ api: vscode }).catch(logFireAndForget)
+    }),
   )
+
+  // SESSION.md §6.19 D-SE45 触发点②（同上）：启动窗外延迟拍（核侧 3s / 单趟 ≤2s 且 ≤40 会话）——
+  // 每进程一次；索引 = 派生品，失败静默（拍内部已吞）。与 GC 拍同址簇（核会话档零改）。
+  scheduleSessionIndexPassSafe().catch(logFireAndForget)
 }
 
 /** Surface a fire-and-forget rejection instead of letting it float as an

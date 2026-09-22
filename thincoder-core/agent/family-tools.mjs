@@ -163,7 +163,7 @@ export async function assembleFamilyTools({
     // 挂载形态已随单名化收口退役（过渡别名 §4.14 不入生产挂载面）；depth-0 主 agent 同表挂载
     // `batch`（D-BR18 扩权——create/close + append §1/§4/§6 + status §1（轮 2 裁定②：§4/§6
     // 状态面走普通文档写），目标走可选 path / 在飞扫描）。
-    // SUBAGENT-UPSTREAM-CHANNEL（AGENT-LOOP-SUBAGENT.md §6.27.4 装配接线）：子代理上行通道
+    // SUBAGENT-UPSTREAM-CHANNEL（AGENT-LOOP-UPSTREAM.md §6.27.4 装配接线）：子代理上行通道
     // （`notify_parent`）随 depth>0 段**前置**——4 处携带 = eng-coder / eng-designer / coder / 兜底段
     // （未列名 depth>0 role 落同一兜底段 ⇒ 亦装配；语义 =「depth>0 且非 consult 皆装配」）；
     // 计数口径：`consult` 分支不入 ⇒ 「5 个插入点」读法已作废（实读 `thincoder-core/agent/family-tools.mjs:165-169`）。

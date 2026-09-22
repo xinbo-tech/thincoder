@@ -28,7 +28,7 @@ import {
   AUTO_TURN_DIGEST_DOMAIN,
   AUTO_TURN_DIGEST_DOMAIN_ENG, // §6.15.3（F10 第三面）：工程模式 digest 基座变体（task 指针改批次档 + 台账）
   UPSTREAM_TURN_DOMAIN, // §6.27.12.8：上行唤醒轮域文本（手动档——ask 轮不沿用 digest 域文本）
-  restoreGuard, // §17 D-S6 读侧单点（P2 机制层端差批 §2.18——键清单归核）
+  restoreGuard, // digest D-S6 读侧单点（AGENT-LOOP-ASYNC-POOL.md §6.8；P2 机制层端差批 §2.18——键清单归核）
 } from "./agent/helpers.mjs"
 // ENG 提醒族 + auto-turn domain 2026-09-05 迁 agent/helpers.mjs（agent.mjs 530 > 500 硬限）
 // PROMPT-SYSTEM 施工② G1（2026-09-10）：六件槽位常量装载收口 prompt-overlays.mjs
@@ -164,7 +164,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
       agent._pendingCompact = null
     }
   }
-  // §17 D-S6 manual tier: digest action-domain reminder (system-driven turn — organize only).
+  // digest D-S6 manual tier（AGENT-LOOP-ASYNC-POOL.md §6.8）: action-domain reminder (system-driven turn — organize only).
   // §6.27.12.4 ②: an up-stream wake turn answers a RUNNING subagent waiting for the reply — it
   // must not reuse the digest text ("no one is waiting" is the opposite of the truth).
   if ((autoTurn || upstreamTurn) && !agent.autoApprove) {
@@ -199,7 +199,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
   // `context` 工具的 stats 报**同一口径**（不自行重算第二口径；VSC checkAndCompact 同款暂存）。
   agent._ctxBasis = { threshold, overhead: compactionOverhead }
 
-  // SUBAGENT-UPSTREAM-CHANNEL（AGENT-LOOP-SUBAGENT.md §6.27.4 消费点）：子 → 父在飞消息的
+  // SUBAGENT-UPSTREAM-CHANNEL（AGENT-LOOP-UPSTREAM.md §6.27.4 消费点）：子 → 父在飞消息的
   // 回合边界注入单点取用一次（模块缓存 ⇒ 每 run 一次代价）；动态 import = 零新增静态边
   // （先例 = 上方 injectAsyncResult :113-117）。
   const { drainChildUpstream } = await import("./agent-tools/parent-channel.mjs")

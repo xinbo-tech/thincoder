@@ -43,7 +43,7 @@ export function enqueueAsk(owner, key, ask) {
   return chain
 }
 
-// Async pool limits per role domain (AGENT-LOOP-SUBAGENT.md §6.10 — R14, 2026-09-06):
+// Async pool limits per role domain (AGENT-LOOP-ASYNC-POOL.md §6.10 — R14, 2026-09-06):
 // the old single cap (ASYNC_SUBAGENT_LIMIT = 4, §15 D-A4) evolved into two
 // independent pools — eng-coder 4 / other roles 4 (user ruling "eng-coder 四路，
 // 其他 4 路") — a full engCoder pool never blocks an explore spawn and vice versa
@@ -57,8 +57,8 @@ export const ASYNC_POOL_LIMITS = { engCoder: 4, other: 4 }
 
 /**
  * Role → pool domain (single source of truth — §11.1 修正 #8): the CLI role
- * enum/assembly table is subagent.mjs's ROLES = { explore, plan, coder, eng-coder }
- * (mode-filtered: normal → explore/plan/coder, engineering → explore/plan/eng-coder).
+ * whitelist is subagent.mjs's ROLES = { explore, plan, coder, eng-coder, eng-designer }
+ * (mode-filtered: normal → explore/plan/coder, engineering → explore/eng-designer/eng-coder).
  * eng-coder → engCoder pool; every other role (including unknown roles — fail-safe)
  * → other pool. escalate spawns its expert internally (role "coder" — other pool).
  */

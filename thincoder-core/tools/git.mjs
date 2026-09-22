@@ -152,7 +152,10 @@ const gitActionCore = {
         const flags = args.staged ? ["--staged"] : []
         const paths = args.path ? [args.path] : []
         const out = await runGit(ctx.cwd, ["diff", ...flags, ref, "--", ...paths])
-        return truncate(filterLines(out || "(no changes)", args.filter))
+        // #71（hygiene-sweep 批）：传了 path 且输出空 ⇒ 注记（pathspec 未命中也是 exit 0——
+        // 原样「(no changes)」为假洁净；不传 path 逐字零变）
+        const empty = args.path ? `(no changes — pathspec '${args.path}' matched nothing in ${ref})` : "(no changes)"
+        return truncate(filterLines(out || empty, args.filter))
       }
       case "status": {
         // Preserve per-line leading whitespace — porcelain " M"/"M " staged/unstaged markers are
@@ -198,7 +201,9 @@ const gitActionCore = {
           : ["log", "-" + n, "--format=%h %ad %an %s", "--date=short"]
         if (args.path) cmdArgs.push("--", args.path)
         const out = await runGit(ctx.cwd, cmdArgs)
-        return truncate(filterLines(out || "(no commits)", args.filter))
+        // #71：同上（log 腿——传了 path 且输出空 ⇒ 注记；不传 path 逐字零变）
+        const empty = args.path ? `(no commits — pathspec '${args.path}' matched nothing)` : "(no commits)"
+        return truncate(filterLines(out || empty, args.filter))
       }
       case "show": {
         const ref = args.ref ?? "HEAD"

@@ -320,7 +320,7 @@ export async function suspensionSession(panel, entry) {
         // （可见时刻不晚于回合开跑）；起止两态 + ok 旗标（异常不留"仍在消化"假象，try/finally
         // 保 end 必发）；直投（同 compress 先例——不经任务可见性 outbox）。
         // M4（显示面消差批 §2.1 · 2026-09-20）：**起跑即发**（`n` 可 0）——ask-only 轮亦有可见面
-        // （`AGENT-LOOP-SUBAGENT.md` §6.27.12.12 ⑥ 边界行随本批收正）。
+        // （`AGENT-LOOP-UPSTREAM.md` §6.27.12.12 ⑥ 边界行随本批收正）。
         // F-UC8（§6.27.12.13 ①–② · 2026-09-21 信号提示行批）：`tier` **按因两档**（ask 因恒优先）
         // ——与 CLI 同源同式（`suspension-drive.mjs` `digestTurn`）：`ask` = 未 drain ask（核既有
         // 谓词）/ `digest` = 其余（AUTO 档同判——`auto` 泛句退场）；ask 档**携参** `from` / `msg`

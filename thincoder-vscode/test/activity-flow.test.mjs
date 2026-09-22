@@ -235,7 +235,7 @@ test("T-R11 清屏恢复（AC-CL1）：clearMessages 路径 → 区零残留；�
   applySubagentStatus({ type: "subagent", status: "done", role: "eng-coder", id: 2 }) // 无块终态 → 补桩（折叠 + 归档）
   assert.equal(subBlocks(ctx).length, 1, "清屏前：区内 live 一块（补桩已直归档）")
   assert.equal(streamBlocks(ctx).length, 1, "清屏前：补桩桩块流内可见")
-  ctx.messagesEl.replaceChildren() // clearMessages（chat.js case：replaceChildren + resetActivity）
+  ctx.messagesEl.replaceChildren() // clearMessages（chat-messages.js case：replaceChildren + resetActivity）
   resetActivity()
   assert.equal(ctx.activityEl.children.length, 0, "区零残留（live 全清）")
   assert.equal(S._subBlocks.size, 0, "簿记清空")

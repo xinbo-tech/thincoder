@@ -8,9 +8,15 @@
  * 受门 handler 首行求值，真 ⇒ 放行、假 ⇒ `-32000`。客户端可以不调 `authenticate`
  * （契约逐字「**May** return an `auth_required` error … **if** the agent requires
  * authentication」）。
+ *
+ * #168①（2026-09-22 · SESSION.md §6.15 / §6.16）：`session/close` 入释放面——关闭会话 ⇒
+ * 释放该会话认领（保留集 = 本进程其余在存会话的活绑定槽，同 cwd；落盘判据三条沿用）。
  */
 import { resolve } from "node:path"
-import { normalizeCwd, bindRecordStore, newSession, slotPath } from "@thincoder/core/session.mjs"
+import { loadManifest, normalizeCwd, bindRecordStore, newSession, saveManifest, slotPath } from "@thincoder/core/session.mjs"
+// 认领释放谓词单源（SESSION.md §6.2 / §6.16——与 VSC 端壳 `releaseClaimsAll` 同源档；
+// core `session.mjs` 未 re-export 该名——直引 manifest 档，先例 = `thincoder-vscode/src/extension/session-io.mjs`）。
+import { staleClaims } from "@thincoder/core/session-slots-manifest.mjs"
 import { PLAN_ENGINEERING_REFUSED } from "@thincoder/core/agent-tools/plan.mjs"
 import { ACP_ERRORS } from "./transport.mjs"
 
@@ -107,6 +113,22 @@ export function createSessionHandlers(ctx) {
     return { session: s }
   }
 
+  /** #168①（SESSION.md §6.15 / §6.16——2026-09-22 定裁 · 台账 #168①）：`session/close` ⇒
+   *  释放被关闭会话的槽认领。公式代入：释放 A ⟺ `slotSessions[A]` 为本进程 ∧ `A ∉ 保留集`；
+   *  **保留集 = 本进程其余在存会话的活绑定槽**（同 cwd——ACP 单 cwd 模型）。取值点（实施轮定位报告）：
+   *  会话记录容器 = `ctx.sessions`（`Map<id, session>`——`thincoder-cli/src/acp.mjs:98` 单容器）；
+   *  槽值 = `session.agent._slot`（认领写入同源 = `handlers-slots.mjs:96-100` / `:151-155` /
+   *  `handlers-session.mjs` 的 newSession 认领点）。落盘判据三条由核 `saveManifest` `opts.release`
+   *  自动继承（fresh 同次快照 / 值条件删除 / 内存认领表移除）——**零新增写盘路径**；本进程无残留认领
+   *  ⇒ 零写早退（判据单源 `staleClaims`——同核 `releaseClaimsAll` 早退形）。 */
+  const releaseClosedSessionSlot = () => {
+    const cwd = getCwd()
+    const m = loadManifest(cwd)
+    const keep = [...sessions.values()].map((s) => s.agent?._slot).filter((slot) => slot != null)
+    if (staleClaims(m, keep).length === 0) return
+    saveManifest(cwd, m, null, { release: keep })
+  }
+
   return {
     "session/new": async (params) => {
       const gate = requireConfigured()
@@ -199,7 +221,9 @@ export function createSessionHandlers(ctx) {
         // Abort any in-flight turn first — the client is gone, the agent must
         // stop consuming LLM tokens and emitting notifications.
         found.session.cancel()
+        // 先出容器再释放（保留集 = 其余在存会话——被关闭者不留在保留集内）。
         sessions.delete(String(params.sessionId))
+        releaseClosedSessionSlot() // #168①：释放该会话认领（保留集 = 同 cwd 其余在存会话槽）
         log(`session ${params.sessionId} closed by client`)
       }
       return {}

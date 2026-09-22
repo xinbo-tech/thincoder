@@ -16,10 +16,15 @@
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
+import { mkdtempSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import * as vscode from "vscode"
 import { setupWebview, installFullIndexFixture } from "./helpers/webview-env.mjs"
-import { handlePanelMessage, routeUserTurn } from "../src/extension/panel-messages.mjs"
+import { handlePanelMessage, routeUserTurn, _cwd } from "../src/extension/panel-messages.mjs"
 import { enterSuspensionTurn } from "../src/extension/panel-turn-stages.mjs"
+import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
+import { newSlot, _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-io.mjs"
 // T-V16-7 / T-V16-10：会话在飞受理走真实 `_chat` susp 分支（桩面板 + 原型方法绑定的直驱先例
 // = `chat-panel-messages.test.mjs` ③⑧——生产同码路径，非桩自实现）。
 import { ChatPanel } from "../src/extension/chat-panel.mjs"
@@ -145,7 +150,7 @@ test("T-V16-5 边界（webview 二次提交守卫 · 槽满镜像——C-B2-6 �
   assert.equal(toastEl.textContent, t("input.slotFull"), "toast 文案 = 新键 `input.slotFull`")
   clearTimeout(W.toast.showToast._t)
 
-  // host 推送权威收敛（真 chat.js `case \"busyQueued\"`——消费即清）：镜像复位 ⇒ 再 send 恢复排队
+  // host 推送权威收敛（真 chat-messages.js `case \"busyQueued\"`——消费即清）：镜像复位 ⇒ 再 send 恢复排队
   window.dispatchEvent(new window.MessageEvent("message", { data: { type: "busyQueued", pending: false } }))
   assert.equal(S._busyQueuedPending, false, "镜像随 host 推送复位")
   const mark2 = capturedPosts.length
@@ -264,7 +269,7 @@ test("T-V16-7 边界（host · 载体两态会话侧）：`routeUserTurn` 于 `r
     await settle()
     assert.deepEqual([p1._busyQueued, p1._susp.pendingInput.map((q) => q.text)], [[], ["during-session"]], "入会话单槽（无会话槽零动——载体两态）")
     assert.equal(p1._susp.pendingInput[0].fromBusyQueue, true, "入槽项携来源标记（细则⑥）")
-    assert.deepEqual(p1.posted.map((m) => `${m.type}:${m.pending}`), ["busyQueued:true"], "推槽内实况（两载体合计占用）")
+    assert.deepEqual(p1.posted.map((m) => `${m.type}:${m.pending}`), ["busyQueued:false", "busyQueued:true"], "入口复位推（#221 前移——槽空 false）+ 受理推槽内实况 true")
     assert.deepEqual([warned.length, p1.wakes.n, p1._turnState], [0, 1, "running"], "受理零警告 + 唤醒一次 + 零即时回合（susp 分支 return）")
   })
 
@@ -275,7 +280,7 @@ test("T-V16-7 边界（host · 载体两态会话侧）：`routeUserTurn` 于 `r
     await routeUserTurn(p2, { text: "second" })
     await settle()
     assert.deepEqual([p2._susp.pendingInput.map((q) => q.text), warned.length, p2.wakes.n], [["first"], 1, 0], "槽满拒收：不覆盖 + 恰一次警告 + 零唤醒")
-    assert.deepEqual(p2.posted.map((m) => `${m.type}:${m.pending}`), ["busyQueued:true"], "拒收推实况 true（跨载体守卫判据源——T-V16-8 host 侧）")
+    assert.deepEqual(p2.posted.map((m) => `${m.type}:${m.pending}`), ["busyQueued:true", "busyQueued:true"], "入口推（槽已占 true）+ 拒收推实况 true（跨载体守卫判据源——T-V16-8 host 侧）")
   })
 })
 
@@ -450,4 +455,89 @@ test("T-V16-5b（fix 轮收敛补全 · 评审 🟡#1）：归位受理路径同
   await settle()
   assert.deepEqual(p2.posted.map((m) => `${m.type}:${m.pending}`), ["busyQueued:true"], "有残项 ⇒ 推 true（实况——不误报）")
   assert.deepEqual(p2._busyQueued.map((q) => q.text), ["still-there"], "残项零动（归位路径不入槽不覆盖）")
+})
+
+// ═══ 第四部分：hygiene-sweep 批（#219 冷启 suspension 镜像 / #221 复位推前移）══════
+
+/** #219 用桩面板（ChatPanel 原型真实方法——webviewReady case 需 _pushStatus / _publishTurnState
+ *  等原型面；槽/配置路径由用例内隔离）。先例 = `session-boot.test.mjs` bootPanel。 */
+function protoPanel(over = {}) {
+  const posted = []
+  const p = Object.create(ChatPanel.prototype)
+  Object.assign(p, {
+    _slot: null,
+    _agent: null,
+    _autoApprove: false,
+    _turnState: "idle",
+    _susp: null,
+    _distillController: null,
+    _abortController: null,
+    _statusBar: null,
+    _wvOutbox: [],
+    _context: {
+      subscriptions: [],
+      secrets: { get: async () => undefined, delete: async () => {} },
+      globalState: { get: async () => undefined, update: async () => {} },
+      workspaceState: { get: () => undefined, update: async () => {} },
+    },
+    _panel: { webview: { postMessage: (m) => { posted.push(m); return Promise.resolve(true) } } },
+    posted,
+    ...over,
+  })
+  return p
+}
+
+test("T-V19 #219 冷启镜像：webviewReady 握手补推 `suspension{active:true}` ⇒ webview `_suspended === true`（无会话 ⇒ 零推）", async () => {
+  const tmpd = mkdtempSync(join(tmpdir(), "tc-219-"))
+  const realLang = vscode.env.language
+  _setConfigPathForTest(join(tmpd, "config.json"))
+  _setSessionsDirForTest(join(tmpd, "sessions"))
+  vscode.env.language = "en" // vscode mock 无 env.language——webviewReady 的 i18n 推送需要
+  try {
+    await newSlot(_cwd()) // fixture 槽（webviewReady 快段 resumeSlot 认领确定性）
+    const lines = { history: { _asyncSubagents: new Map([["1", { id: 1, role: "explore", status: "running" }]]), _asyncAdvisors: new Map() }, fullHistory: [] }
+    const p = protoPanel({ _susp: { lines, pendingInput: [] } })
+    await handlePanelMessage(p, { type: "webviewReady" })
+    const susp = p.posted.filter((m) => m.type === "suspension")
+    assert.equal(susp.length, 1, "恰一次 suspension 重推（挂起会话在场——Reload 冷启镜像复位源）")
+    assert.equal(susp[0].active, true, "active:true（会话在飞）")
+    // 真 webview 接收面：`_suspended` 唯一驱动源 = 该消息族（`panels.js:102`）
+    const { handleSuspensionMessage } = await import("../webview/panels.js")
+    W.S._suspended = false
+    handleSuspensionMessage(susp[0])
+    assert.equal(W.S._suspended, true, "冷启镜像复位：`_susp` 在场 ⇒ `_suspended === true`")
+
+    // 负控：无挂起会话 ⇒ 零 suspension 推（与 turnState 分支同判）
+    const q = protoPanel()
+    await handlePanelMessage(q, { type: "webviewReady" })
+    assert.equal(q.posted.filter((m) => m.type === "suspension").length, 0, "无 `_susp` ⇒ 零重推")
+  } finally {
+    vscode.env.language = realLang
+    _setConfigPathForTest(null)
+    _resetSessionsDirForTest()
+    try { rmSync(tmpd, { recursive: true, force: true }) } catch { /* ignore */ }
+  }
+})
+
+test("T-V21 #221 复位推前移：带图消息在降级 await 挂起期 ⇒ 镜像已在 await 前复位（postMessage 序断言）", async () => {
+  const tmpd = mkdtempSync(join(tmpdir(), "tc-221-"))
+  const realFolders = vscode.workspace.workspaceFolders
+  vscode.workspace.workspaceFolders = [{ uri: { fsPath: tmpd } }] // 贴图落盘定向 temp（不污工作树）
+  try {
+    const p = stubPanel({ _turnState: "idle" })
+    let release
+    const gate = new Promise((r) => { release = r })
+    const visionReader = async () => { await gate; return null } // 吊住降级 await（窗内可见序）
+    const DATAURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+    const turn = routeUserTurn(p, { text: "看图", modelOverride: "deepseek-v4-pro", providerName: "ds", images: [DATAURL], visionReader })
+    await settle()
+    assert.deepEqual(p.posted.map((m) => `${m.type}:${m.pending}`), ["busyQueued:false"], "await 挂起期已推复位实况（#221 前移——后置位此点为零推）")
+    assert.deepEqual(p._chatCalls, [], "降级未完成 ⇒ 零回合（窗仍在）")
+    release()
+    await turn
+    assert.equal(p._chatCalls.length, 1, "放行 ⇒ 回合照常（零语义变化）")
+  } finally {
+    vscode.workspace.workspaceFolders = realFolders
+    try { rmSync(tmpd, { recursive: true, force: true }) } catch { /* ignore */ }
+  }
 })

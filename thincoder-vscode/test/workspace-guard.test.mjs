@@ -401,7 +401,7 @@ test("15 webview 出口守卫：守卫态 send() ⇒ 零 userMessage 上行 ∧ 
   assert.equal(t("workspace.required"), "Open a folder first — ThinCoder needs a workspace to work in.", "en 逐字")
   assert.equal(zh["workspace.required"], "请先打开文件夹——ThinCoder 需要一个工作区才能开工。", "zh 逐字")
   window.dispatchEvent(new window.MessageEvent("message", { data: { type: "workspaceGuard", active: true } }))
-  assert.equal(S._workspaceRequired, true, "守卫态镜像入 S（chat.js case）")
+  assert.equal(S._workspaceRequired, true, "守卫态镜像入 S（chat-messages.js case）")
   S._turnState = "idle"
   ctx.inputEl.value = "hello"
   const mark = _capturedPosts.length

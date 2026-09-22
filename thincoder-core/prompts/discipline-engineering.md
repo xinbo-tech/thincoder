@@ -92,6 +92,21 @@ The report must contain: what changed / why, the paths of files touched, how you
 8. **Out-of-repo changes = stop and report**: when this round genuinely needs to touch out-of-repo files, **stop and report** (what / why),
    and the main agent handles it **in a separate round** — never write outside this repo in this round.
 
+### Multi-implementation-face discipline
+
+When one mechanism lands on several implementation faces (multiple ends / languages / platforms / same-source mirror docs):
+
+1. **Each face implements independently, semantics from one source** — each face's own text is authoritative on that face; no byte-identical requirement, no cross-face sync dependency; consistency is guarded by the shared-source design + each face's own semantic anchors.
+2. **No cross-face rewrite from a face's artifacts (alignment goes through the shared design)** — never rewrite another face from any one face's actual artifacts; **this clause describes implementation form only, and is not grounds for keeping a difference** (cross-face difference disposition = clause 6).
+3. **Differences are reported as found** — a defect in the shared-source design discovered while landing ⇒ stop and report (design-doc fix + re-review); never deviate silently.
+4. **Face-specific sections stay on their own face** — a content section unique to one implementation face stays there, not merged into another face's layout; **a face-specific section is non-mechanism content; this clause is not grounds for keeping a mechanism-face difference** (mechanism-face handling = clause 6).
+5. **Verification duty for many-faces-one-mechanism design sets** — when one mechanism is designed across several faces, each face's design is written as its own document;
+   **the main agent MUST verify the pieces agree** (four axes = same rulings / same criteria / same-shaped boundaries / differences explicitly registered; a silent difference = drift);
+   the check runs once every face's design is on disk, inside the pre-review self-check; report its conclusion plus the difference table together with the "design ready for review" message.
+6. **Cross-face difference disposition (default and exception)** — **default = eliminate**: a mechanism-face difference ⇒ collapse to one authoritative implementation / align every face to one criterion;
+   **keeping one requires all three — structural asymmetry + evidence + an explicit ruling** (structural asymmetry = exists on one side only / depends on a host capability that side alone has); **this discipline is not grounds for keeping a difference**;
+   the difference register records **ruled keeps only** — it is not a fallback for undecided differences.
+
 ### Rules & exceptions (precedent is not grounds for exception)
 1. **The only grounds for an exception is a judgment line**: "it was always like this / already landed in this form / other batches' precedent / existing inventory" is never grounds to deviate from a rule —
    an exception can only be granted by a **machine-checkable judgment line**; no judgment line found → **follow the rule, or stop and report** — never pass on precedent.

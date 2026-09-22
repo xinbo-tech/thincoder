@@ -8,7 +8,7 @@
  * （写入 = `thincoder-core/config-io.mjs:201-208` · 整条 filter = `:262-277`）。
  *
  * 手法（跨面夹具 = 批档 §2.2 D-M5）：webview 半 = happy-dom 全量 id 夹具 + 真 `chat.js` 模块图
- * （确认门由 `initSettings()` 经 `chat.js:57` 安装；`#model-btn` 绑定在 `model-picker.js` 模块顶）
+ * （确认门由 `initSettings()` 安装（chat.js 装配面）；`#model-btn` 绑定在 `model-picker.js` 模块顶）
  * ——点击 = 真 DOM `.click()`；host 半 = 捕获消息**逐条喂回**真宿主分发 `handlePanelMessage`
  * （先例 = `test/settings-empty-no-write.test.mjs:86-90`）+ 临时 config（`_setConfigPathForTest`
  * ——**绝不触碰真实 `~/.thincoder/`**）。**禁夹具手写载荷**：喂回的消息必来自真 webview 点击。
@@ -49,7 +49,7 @@ before(async () => {
   cleanupEnv = env.cleanup
   capturedPosts = env.capturedPosts
   installFullIndexFixture()
-  await import("../webview/chat.js") // 真模块图：确认门安装（chat.js:57）+ toolbar/#model-btn 绑定 + 消息 case 唯一消费位
+  await import("../webview/chat.js") // 真模块图：确认门安装（chat.js 装配面）+ toolbar/#model-btn 绑定 + 消息 case 唯一消费位（chat-messages.js）
   send({ type: "models", models: [{ id: "deepseek-chat", provider: "deepseek" }], prefs: {} }) // 设计 §2.5 驱动列：真 `models` 推送（菜单候选区就位；`prefs` 无命中 ⇒ 零回写 post）
   vscodeWindow.showQuickPick = async () => quickPickReply // 宿主 UI 桩（真 QuickPick 由扩展宿主供给——node 下无）
 })

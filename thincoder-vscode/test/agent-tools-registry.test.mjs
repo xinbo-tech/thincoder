@@ -74,3 +74,33 @@ test("W9 ③ 装配消费者（结构机检）：装配面自核登记册动态�
     assert.ok(!/from\s+"\.\.\/agent-tools\.mjs"/.test(src), `${name} 不得再指向已退役的端侧 barrel`)
   }
 })
+
+// ─── #151（台账 · hygiene-sweep 批）：panel 段剥离改形态无关（不依赖档号字面）──────────
+
+test("#151 形态无关剥离：action 描述无 `panel` 残留（核现文 + 携档号旧形皆净）", async () => {
+  const coreMod = await import("@thincoder/core/agent-tools/subagent.mjs")
+  const { vscSubagentFace } = await import("../src/agent/setup-tooltable.mjs")
+  const core = coreMod.subagentTool
+  const actionOf = (t) => t.parameters.properties.action
+
+  const decorated = vscSubagentFace(core)
+  const action = actionOf(decorated)
+  assert.ok(!action.enum.includes("panel"), "action enum 去项（W13 §2.3C）")
+  assert.ok(!action.description.includes("panel"), "装饰后 action 描述不含 panel（核现文形态）")
+  // 逐字一致：装饰结果 = 核描述删去 panel 段（独立删除式——不依赖实现正则）
+  const coreDesc = actionOf(core).description
+  const cut = coreDesc.indexOf("panel (")
+  const end = coreDesc.indexOf("), ", cut) + 3
+  assert.equal(action.description, coreDesc.slice(0, cut) + coreDesc.slice(end), "装饰 = 剥离 panel 段（逐字）")
+
+  // 旧形（携档号 `— §19.6`）同规剥离——形态无关（剥离不依赖档号字面）
+  const legacyCore = {
+    ...core,
+    parameters: {
+      ...core.parameters,
+      properties: { ...core.parameters.properties, action: { ...actionOf(core), description: coreDesc.replace("block)", "block — §19.6)") } },
+    },
+  }
+  const legacyDecorated = vscSubagentFace(legacyCore)
+  assert.ok(!actionOf(legacyDecorated).description.includes("panel"), "携档号旧形同样剥离（形态无关）")
+})

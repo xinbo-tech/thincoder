@@ -14,7 +14,7 @@ import { cleanupConsultSessions } from "../agent-tools/consult.mjs"
 import { logEvent, errText } from "../log.mjs"
 // ASYNC-RESULT-CONTAINER.md D1：池 accessor（absorb 双池——advisor 独立池无队列）
 import { getAsyncPool, releaseSettledEntry } from "../agent-tools/async-settle.mjs"
-// 批 4 CLI-ASYNC-DISCARD（AGENT-LOOP-SUBAGENT.md §6.20）：中止分支「只清已死」收尾单点
+// 批 4 CLI-ASYNC-DISCARD（AGENT-LOOP-ASYNC-POOL.md §6.20）：中止分支「只清已死」收尾单点
 import { discardAbortedPool, discardAbortedAdvisors } from "../agent-tools/async-discard.mjs"
 // R10 L3 (MULTI-INSTANCE-COLLAB §2a.5 D-L3a)：回合末域登记 flush（写工具钩子累积 →
 // 整写一次本实例 peers 文件——无写入跳过；失败容忍不抛）
@@ -173,7 +173,7 @@ export async function finalizeAgentTurn(agent, ctx) {
   // driver aborts them on its own abort unwind.
   // Async subagent turn-end handling (AGENT-LOOP.md §15 D-A3 + §17 D-S1). Lifecycle:
   // - Ctrl+C (plain abort): children were aborted with the parent signal — discard dead
-  //   entries (tombstone/out-of-pool/notice — AGENT-LOOP-SUBAGENT.md §6.20; no stale
+  //   entries (tombstone/out-of-pool/notice — AGENT-LOOP-ASYNC-POOL.md §6.20; no stale
   //   errors injected — user explicitly stopped); consultation sessions are cross-turn
   //   background work since R17 — the abort branch is the ONLY normal-path place that
   //   aborts them (cleanupConsultSessions marks stopped → they never reach the digest).
@@ -227,7 +227,7 @@ export async function finalizeAgentTurn(agent, ctx) {
 }
 
 /**
- * Turn-end async subagent collection (AGENT-LOOP.md §17 D-S1 + §17.5 supersede):
+ * Turn-end async subagent collection (AGENT-LOOP-ASYNC-POOL.md §6.8 — D-S1 + suspension supersede):
  * two modes, selected by the caller's driver context (17.5.2/17.5.4 #2):
  * - suspDriven=false (fallback — headless/direct runAgent callers without a
  *   suspension driver): inject every entry that SETTLED during this run

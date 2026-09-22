@@ -185,7 +185,7 @@ thincoder-vscode/
 │   ├── session.css       # Session bar
 │   └── settings.css      # Settings panel
 └── docs/
-    └── design/           # Design docs
+    └── design/           # Design docs (migration-period archive — authoritative Chinese design docs = repo-root docs/core/design/)
 ```
 
 ## vs. ThinCoder CLI

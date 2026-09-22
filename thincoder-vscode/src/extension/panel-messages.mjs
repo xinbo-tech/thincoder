@@ -111,6 +111,12 @@ export function pushBusyQueued(panel) {
  * 命令直发（chat-panel.mjs）并入同入口——running ⇒ 单槽受理（回显由宿主先决）。
  */
 export async function routeUserTurn(panel, { text, modelOverride, reasoning, providerName, images, visionReader = null }) {
+  // #221（hygiene-sweep 批 · C-B2-6 细则①「归位受理路径同推槽内实况」**前移**至此）：
+  // 入口即推一次（含无工作区早退口与下方降级 await **之前**）——`pushBusyQueued` 恒读 host
+  // 实况、幂等 ⇒ 前移零语义风险；原后置位（降级 await 之后）在挂起期镜像停在旧态（窗口内提交
+  // 被守卫误拒——窄竞态）。补因仍成立：webview 镜像在提交受理时本地先行置位，推文须含归位
+  // 路径（正常槽空 ⇒ `pending:false`；有残项 ⇒ `true`）。同点推的前移使原 :170 推冗余 ⇒ 删。
+  pushBusyQueued(panel)
   // ② 无工作区守卫（**先于** busy 与 `savePastedImages`——图片不落 `<cwd>/.thincoder/tmp/`）：
   // webview 发消息 / retry 共用本入口 ⇒ 无文件夹窗口里一律拒（提示明示——不静默丢）。
   if (blockOnNoWorkspace(panel)) return
@@ -163,11 +169,8 @@ export async function routeUserTurn(panel, { text, modelOverride, reasoning, pro
     saved = d.images
     visionAbort = d.visionAbort
   }
-  // C-B2-6 细则①（fix 轮收敛补全——判据源不变式「host 推送权威收敛」不留死角）：归位受理
-  // 路径同推槽内实况（幂等——正常槽空 ⇒ `pending:false`；有残项 ⇒ `true`）。补因：webview
-  // 镜像在提交受理时本地先行置位，若该消息落归位路径（镜像仍 running 而 host 已归位）则
-  // 入库路零推送 ⇒ 镜像黏滞 true——后续 busy 期提交被守卫误拒至 Reload（窄竞态）。
-  pushBusyQueued(panel)
+  // C-B2-6 细则①（fix 轮收敛补全——判据源不变式「host 推送权威收敛」不留死角）：复位推已
+  // **前移**至本函数入口（见上——含降级 await 前；跨工作区早退口）——本处不再重复推。
   panel._chat(text, modelOverride, reasoning, providerName, saved)
   // C-MA12-4（停止语义 = 启动即中止）：窗内被 Stop → 用户消息照常入 history（at-most-half-
   // a-turn）但回合建立即 abort——置位序必须在 _chat 调用**之后**（其入口清陈旧闩，置前
@@ -288,6 +291,10 @@ export async function handlePanelMessage(panel, msg) {
       panel._panel?.webview.postMessage({ type: "agentSettings", settings: agentSettings(panel._agentSettingsSession?.() ?? null) })
       panel._pushStatus()
       pushBusyQueued(panel) // C-B2-6 细则①：Reload 冷启握手重同步（单槽未消费态镜像——对位 workspaceGuard 先例；排四件握手之后——交握序列零改）
+      // #219（hygiene-sweep 批）：冷启镜像补推——挂起会话在场 ⇒ `suspension{active:true}` 重推
+      // （webview `handleSuspensionMessage` = `_suspended` 唯一驱动源；Reload 冷启动镜像恒 false ⇒
+      // 提交守卫 / 状态行误判为普通 idle）。webview 零改（复用既有消息族）；`_susp` 缺席 ⇒ 零推。
+      if (panel._susp) panel._panel?.webview.postMessage({ type: "suspension", active: true, ...backgroundStatus(panel._susp.lines.history) })
       // B2（SESSION-FLOW-B F-B2a/F-B2b——2026-09-09）：握手后接快段 openSessionContent——
       // 会话打开**单向 boot**：内容（pushProject → loadSession 内部序 autoApprove → planMode
       // → clearMessages → historyPage → sessions）只在 webviewReady 后落定——resolve 期

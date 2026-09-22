@@ -105,7 +105,7 @@ export function buildTopLevelAgent() {
 
 /**
  * hydrateRun —— 顶层 agent 每轮 reconcile：复位（A）→ config/tools/MCP 重建
- * （AC7）→ 槽水合（11.2.1）→ systemPrompt → history 重指 → 上下文注入。复用（opts.agent
+ * （AC7）→ 槽水合（槽↔hydrate 映射表）→ systemPrompt → history 重指 → 上下文注入。复用（opts.agent
  * ——面板回合/续跑）与新建（factory + restore:true）同路径；子代理 depth>0 经 setupAgentRun
  * （opts.agent 仅 depth-0 honored——AC5）。
  * @returns {{ agent, history, fullHistory, toolByName, toolSchemas, cfgVerifyGuard, cfgCompactThreshold, systemPrompt }}
@@ -136,7 +136,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   let cfgConsultTurns = 40
   let cfgConsultTimeoutMs = 600_000
   let cfgPoolLimits = null // §5 D-24a（R14）：async 池角色域容量——每次入池判定时读（effectivePoolLimits 校验）
-  let cfgWaitForTimeoutMs = undefined // wait_for default override (TOOLS.md §16 — CLI parity); undefined → tool default 30s
+  let cfgWaitForTimeoutMs = undefined // wait_for default override (TOOLS.md §6.7 — CLI parity); undefined → tool default 30s
   let cfgProviders = []
   let cfgWebsearch = { apiKey: "" } // structured search; empty key → Bing fallback
   let cfgHooks = null // P2 批 §2.16：hooks 段随 config 读入（`runHooks` 消费面）
@@ -175,7 +175,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // 槽 reconcile：顶层会话绑定（opts.engPersist = {cwd, slot}）每轮读权威槽（settle
   // 落盘在 run 外——hydrate 是唯一 reconcile 点——digest/续跑可见刚落盘的 token）；子代理无
   // 槽绑定 → 回退 opts.engState（父模式镜像）→ cfg。restore（agent 刚由 factory 新建——
-  // 首轮/destroy 重建）→ tasks/goal/pendingReminders 从槽回填（11.2.1 映射表）。
+  // 首轮/destroy 重建）→ tasks/goal/pendingReminders 从槽回填（槽↔hydrate 映射表）。
   const bind = opts.engPersist
   const sessionData = (depth === 0 && bind?.cwd && bind?.slot)
     ? (() => { try { return loadSlot(bind.cwd, bind.slot) } catch { return null } })()
@@ -252,7 +252,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
 
   // Live state channel for the parent (eng-coder mutation merge) — the caller gets a
   // reference to the same array, so it stays current as the child touches files.
-  // §19.5.6 D-SF1 (AGENT-LOOP.md): the agent OBJECT reference (not the array) — the
+  // state-sink face (D-SF1): the agent OBJECT reference (not the array) — the
   // pool entry's status summary re-reads childAgent._touchedFiles live; a bare array
   // reference goes stale when a resume re-runs setup (new per-run agent). Each
   // runAgent re-assigns it, so entry.childAgent always points at the CURRENT run.
@@ -367,7 +367,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // conversation (escalate turn-cap continue).
   if (opts.stateSink) opts.stateSink.history = history
 
-  // ─── Context injection（D-CI1/D-CI2——§17.3 契约 / §17.4 序表）────
+  // ─── Context injection（D-CI1/D-CI2——契约 / 序表；序表 = SESSION.md §6.15）────
   // 块 #1–#6（git → OS/cwd/Session start/快照 → restarted → 依赖大纲 → 文档召回 →
   // 记忆召回）由 context-injections 单一编排注入（只追加、只 transient、
   // 失败静默；门 = depth 0 且非 resume/autoTurn）。原 git 行与 restarted 段随编排退役。
@@ -375,7 +375,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
 
   // resume (interrupt continuation): the input is already in history — pushing it
   // again would duplicate the user message (CLI setup.mjs resume parity).
-  // §17 D-S6 autoTurn (digest): system-driven turn with NO user input — same
+  // digest D-S6 autoTurn（AGENT-LOOP-ASYNC-POOL.md §6.8）: system-driven turn with NO user input — same
   // no-push semantic, but as a fresh run (per-run state resets like a normal turn;
   // resume additionally preserves guard state for ContinueError continuations).
   // The pushed object is captured BY REFERENCE: the paste-image pointer below
@@ -401,7 +401,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // 之后、time reminder 之前（transient；有同伴才注入——peerInstances 惰性 mtime 缓存）。
   if (depth === 0) pushPeerReminder(history, cwd)
 
-  // D-CI2/§17.4 #11/#12：编辑器注入（VSC 独有——D-CI5 同文去重后）在 peer 之后、time 之前；
+  // D-CI2 #11/#12（序表 = SESSION.md §6.15）：编辑器注入（VSC 独有——D-CI5 同文去重后）在 peer 之后、time 之前；
   // time 保持最后（前缀缓存契约——KD-2：cli setup.mjs:145-146/152-156 同为尾位）。
   pushInjections(history, opts.injections)
 

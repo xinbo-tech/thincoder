@@ -22,7 +22,7 @@ import { loadRaw } from "@thincoder/core/config-io.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"
 import { initStopTrace } from "./stop-trace.mjs"
 import { ensureSlot, activeData, activeHistory, activeLines, saveLines, loadModelPrefs, loadSession, loadOlder, newSession, deleteSession, pushSessions, generateTitle, status as bootstrapStatus, openSessionContent } from "./panel-session.mjs"
-import { projectInfo, pushProject, applyProjectSwitch, onProjectChanged, pickProject } from "./panel-project.mjs"
+import { projectInfo, pushProject, applyProjectSwitch, onProjectChanged, pickProject, releaseOldCwdClaims } from "./panel-project.mjs"
 import { pushIndexStatus, atComplete, saveEmbeddingConfig, maybePromptIndex, buildIndex, maybePromptLegacyIndexRemoval } from "./panel-index.mjs"
 import { closeAllMcp, pushMcpStatus, reconnectMcp, editMcp, testMcp } from "./panel-mcp.mjs"
 import { initLedgerSurface, dispose as disposeLedgerSurface } from "./ledger-surface.mjs" // LEDGER-SURFACE（§2.30.3.5）
@@ -86,10 +86,14 @@ export class ChatPanel {
         if (!follow) return
         const folder = vscode.workspace.getWorkspaceFolder(editor.document.uri)
         if (!folder || folder.uri.fsPath === _cwd() || this.turnBusy()) return
+        // F-CR4 跨 cwd 释放（台账 #168② · SESSION.md §6.15 ③ / §6.16）：跟随活动编辑器的**自动**项目
+        // 切换与显式切换器同面（同一缺陷族）——切换前记旧 cwd，成功后补一次同语义释放。
+        const oldCwd = _cwd()
         const r = setProjectFolder(folder.uri.fsPath)
         if (r.ok) {
           // 销毁点（切换边界守卫在上方 turnBusy() 检查——销毁安全）
           this._agent = null
+          releaseOldCwdClaims(oldCwd)
           this._onProjectChanged().catch((e) => console.error("[chat-panel] project switch failed:", e.message))
         }
       } catch (e) {
@@ -130,6 +134,8 @@ export class ChatPanel {
       clearProjectOverride()
       // 销毁点（工作区兜底即换 cwd——agent 不跨项目复用）
       this._agent = null
+      // F-CR4 跨 cwd 释放（台账 #168②）：失效 override 的旧 cwd 认领同释放（回落即换 cwd）。
+      releaseOldCwdClaims(cwd)
       this._onProjectChanged().catch((e) => console.error("[chat-panel] project fallback failed:", e.message))
     }))
   }

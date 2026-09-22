@@ -10,9 +10,9 @@
  *    展开走 `docRootPaths`）。缺 `docRoot` 键 → `readManifest`
  *    的 fillDefaults 已补默认（架构 §2.3 E2 便利 fallback 落点）；整档缺失 / 非法 JSON →
  *    `{ok:false}` → 回退 DEFAULT_MANIFEST.docRoot（本函数是壳门之下的便利层——E2 的
- *    「整档缺失 → 拒进正常循环」由壳面 requireManifest 在启动期拦（**工程模式会话**口径——
- *    普通会话装配钩子零 manifest I/O，KD-M1-12）：CLI make-agent.mjs / VSC
- *    setup.mjs 均 fail-closed）；读错（权限等）→ 上抛不伪装成缺失（manifest.mjs 契约）。
+ *    「整档缺失」由壳面 requireManifest 按用点处置（判 + 报明 / 建档，**不抛**——
+ *    启动侧恒不拒，KD-M1-25；**工程模式会话**口径——普通会话装配钩子零 manifest I/O，
+ *    KD-M1-12）：CLI make-agent.mjs / VSC setup.mjs 同判）；读错（权限等）→ 上抛不伪装成缺失（manifest.mjs 契约）。
  *    M6 的 `advisor.mjs` design-review 分类分支消费本导出
  *    （KD-M6-1——同源不重复实现；落 dispatch.mjs 会让 advisor 反向 import 门禁簇成环）。
  * 2. `freezeWindowConflict(agent, absPaths)` —— D5 冻结窗口判据组装：被审文件集 =
@@ -37,8 +37,8 @@ const REVIEW_ROOT_KEYS = ["requirements", "specs", "design", "modules", "batches
  * 评审目标解析单点（M4 §2.1#1）：读 manifest `docRoot` → 评审对象 / 被审文件的绝对路径
  * 集合（目录级，反斜杠归一；子键值形态 = 串 | 多根数组，逐键经 `docRootPaths` 展开）。
  * 缺 `docRoot` 键 → readManifest 已补默认；整档缺失 / 非法 →
- * `{ok:false}` → 回退 DEFAULT_MANIFEST.docRoot（便利层——E2 的「拒进正常循环」由壳面
- * requireManifest 在启动期拦（**工程模式会话**口径——KD-M1-12），本函数不重复拦）；
+ * `{ok:false}` → 回退 DEFAULT_MANIFEST.docRoot（便利层——E2 的「整档缺失」由壳面
+ * requireManifest 按用点处置（判 + 报明 / 建档，**不抛**——启动侧恒不拒，KD-M1-25；**工程模式会话**口径——KD-M1-12），本函数不重复拦）；
  * 读错（权限等）→ 上抛 fail-closed。
  * @param {Object} agent
  * @returns {string[]} 评审目标目录的绝对路径（去重）

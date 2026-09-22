@@ -387,7 +387,7 @@ export const ENG_OFF_REMINDER =
   "guards apply per config.]"
 
 /** Manual-tier auto-turn digest domain (normal-mode base — engineering variant =
- *  AUTO_TURN_DIGEST_DOMAIN_ENG below): organize-only. Mechanism = AGENT-LOOP-SUBAGENT.md §6.8;
+ *  AUTO_TURN_DIGEST_DOMAIN_ENG below): organize-only. Mechanism = AGENT-LOOP-ASYNC-POOL.md §6.8;
  *  mode variant text = TOOLS.md §6.15.3.
  *  Injected per manual auto-turn run — writes/execute/spawns/questions are also
  *  mechanically denied (no permission handler + spawn gate); this steers first. */
@@ -397,11 +397,11 @@ export const AUTO_TURN_DIGEST_DOMAIN =
 /** Engineering-mode auto-turn digest domain variant (mode = `agent.config.agent.engineering`;
  *  clause 2 drops the task-tool pointer — F10: the task tool is disabled in engineering mode,
  *  the batch record + ledger are the tracking authority). Single line, verbatim from the
- *  design doc (TOOLS.md §6.15.3); mechanism = AGENT-LOOP-SUBAGENT.md §6.8. Content authority = parent side. */
+ *  design doc (TOOLS.md §6.15.3); mechanism = AGENT-LOOP-ASYNC-POOL.md §6.8. Content authority = parent side. */
 export const AUTO_TURN_DIGEST_DOMAIN_ENG =
   "[System reminder: auto-turn — background async subagents finished while there was no user message, and this turn runs automatically to digest their reports (the finished-report reminders above). No one is waiting for this reply, so organize only: 1) summarize each finished report's key points into this conversation for the user to read later; 2) (engineering mode: the task tool is disabled — no task-list update is expected this turn; the batch record + ledger are the tracking authority and are updated in real user turns); 3) write decision points with a suggested next step as text — do not execute it. FORBIDDEN this turn (mechanically enforced): modifying files, bash/execute/verify, spawning subagents, asking questions — those need a real user message. End the turn once the summaries are written.]"
 
-/** Up-stream wake-turn domain (AGENT-LOOP-SUBAGENT.md §6.27.12.8): a running subagent sent
+/** Up-stream wake-turn domain (AGENT-LOOP-UPSTREAM.md §6.27.12.8): a running subagent sent
  *  an in-flight message and is waiting for the reply — the digest domain's "No one is waiting
  *  for this reply" is the opposite of the truth, so the wake turn gets its own text.
  *  Verbatim from the design doc (single line — no newlines). Content authority = parent side. */

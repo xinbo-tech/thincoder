@@ -9,9 +9,12 @@
  *   2. Layer 2 — 命令永不拦截（与 CLI 一致：文本拦截是安全剧场，真实防线 = 审批层 + 快照）。
  */
 
-import { exec, execFileSync } from "node:child_process"
+import { exec } from "node:child_process"
 import * as vscode from "vscode"
 import { DESC, BASH_TIMEOUT_MS, makeDecoder, sanitizeOutput, truncate } from "@thincoder/core/tools/shared.mjs"
+// 树杀单源（台账 #208② · TOOLS.md §6.14 落位表行 2）：本地副本删除——改用核单源
+// `process-tree.mjs`（静态闭包仅 `node:child_process`——engine-floor 守卫契约②零影响）。
+import { killProcessTree } from "@thincoder/core/tools/process-tree.mjs"
 import { MAX_STREAM_BUF } from "./shared.mjs" // W14 拆壳薄壳（端壳常量——核内无此值）
 
 // ─── Terminal modes (A: visible / B: inject) ─────────────────
@@ -111,18 +114,6 @@ const SAFE_ENV = Object.fromEntries(
 SAFE_ENV.GIT_PAGER = "cat"
 SAFE_ENV.PAGER = "cat"
 
-/** Kill the whole process tree of a spawned child (CLI parity): Windows uses
- *  taskkill /T /F (tree + force), POSIX kills the process group. Plain
- *  child.kill() only reaps the direct child — grandchildren (npm test's
- *  subprocesses, etc.) would leak. */
-function killProcessTree(child) {
-  if (process.platform === "win32") {
-    try { execFileSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { stdio: "ignore" }) } catch { /* already gone */ }
-  } else {
-    try { process.kill(-child.pid, "SIGKILL") } catch { /* */ }
-    try { child.kill("SIGKILL") } catch { /* fallback if group kill fails */ }
-  }
-}
 SAFE_ENV.EDITOR = "true"
 SAFE_ENV.TERM = "dumb"
 // Windows: force UTF-8 for Python child output (CLI parity — cmd GBK would garble)

@@ -160,7 +160,7 @@ export function vscSubagentFace(tool) {
         action: {
           ...actionProp,
           enum: (actionProp.enum ?? []).filter((a) => a !== "panel"),
-          description: actionProp.description.replace(/panel \(view the live subagent panel \/ freeze a digested-stuck block — §19\.6\), /, ""),
+          description: actionProp.description.replace(/panel \([^)]*\), ?/, ""),
         },
       },
     },

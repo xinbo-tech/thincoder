@@ -17,7 +17,7 @@ import { _setSessionsDirForTest, _resetSessionsDirForTest } from "@thincoder/cor
 
 // sessions 沙箱缝（STARTUP-LATENCY 批 2026-09-21 修）：本档夹具路径经 `sessionFilePath`
 //（= 核 `sessionPath`）落在 sessions 根，且 `loadSession` → `resumeSlot` 会调度会话 GC——
-// 未隔离时两者都落到**真实** `~/.thincoder/sessions`（实测事故形态：F-SL2 自动面空闲拍把真实
+// 未隔离时两者都落到**真实** `~/.thincoder/sessions`（实测事故形态：F-SL2 自动面**启动窗外延迟拍**把真实
 // 陈旧组移入回收批 + 夹具文件残留）。全档隔离后 fixture 读写与 GC 全落 temp。
 // 断言逐条不变——仅落点隔离。
 let _sdir

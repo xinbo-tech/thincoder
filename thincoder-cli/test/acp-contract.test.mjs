@@ -13,7 +13,7 @@
 import { describe, test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
 import { spawn } from "node:child_process"
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -22,7 +22,7 @@ import { buildAcpHandlers } from "../src/acp.mjs"
 import { buildAcpCallbacks } from "../src/acp/bridge.mjs"
 import { PLAN_ENGINEERING_REFUSED } from "@thincoder/core/agent-tools/plan.mjs"
 import { _setConfigPathForTest, _resetConfigPathForTest } from "@thincoder/core/config.mjs"
-import { _setSessionsDirForTest, _resetSessionsDirForTest, loadManifest, saveManifest, slotPath, writeSessionFile } from "@thincoder/core/session-slots.mjs"
+import { _setSessionsDirForTest, _resetSessionsDirForTest, getSessionId, loadManifest, manifestPath, saveManifest, slotPath, writeSessionFile } from "@thincoder/core/session-slots.mjs"
 import { mockLLM } from "./helpers/mock-llm.mjs"
 
 const __here = dirname(fileURLToPath(import.meta.url))
@@ -185,6 +185,56 @@ describe("§11.3 会话方法响应形状（AC10 / AC11）", () => {
         assert.equal(o.configId, undefined, "响应侧用 id（请求侧用 configId——不对称属契约本身）")
       }
       assert.deepEqual(r.configOptions.map((o) => o.id), ["model", "thinking", "mode"])
+    } finally {
+      rmSync(cwd, { recursive: true, force: true })
+    }
+  })
+})
+
+// ─── SESSION.md §6.16 认领释放（2026-09-22 定裁——台账 #168①）：`session/close` 入释放面 ───
+
+describe("§6.16 ACP `session/close` 释放认领（台账 #168①）", () => {
+  test("T-CR-ACP1 正常：关闭会话 ⇒ 该槽认领条删除 ∧ 同 cwd 其余在存会话槽保留（保留集）", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "tc-acp-contract-close-"))
+    try {
+      const { handlers, sessions } = handlerHarness({ cwd: () => cwd })
+      const a = await handlers["session/new"]({ cwd, mcpServers: [] })
+      const b = await handlers["session/new"]({ cwd, mcpServers: [] })
+      const slotA = sessions.get(a.sessionId).agent._slot
+      const slotB = sessions.get(b.sessionId).agent._slot
+      assert.ok(slotA >= 1 && slotB >= 1 && slotA !== slotB, "两会话各自认领独立槽（既有 newSession 语义）")
+      const before = loadManifest(cwd)
+      assert.equal(before.slotSessions[slotA], getSessionId(), "夹具：槽 A 属本进程")
+      assert.equal(before.slotSessions[slotB], getSessionId(), "夹具：槽 B 属本进程")
+
+      assert.deepEqual(handlers["session/close"]({ sessionId: a.sessionId }), {}, "close 响应 = {}（既有契约）")
+
+      const after = loadManifest(cwd)
+      assert.equal(after.slotSessions[slotA], undefined, "被关闭会话的槽认领条删除（释放）")
+      assert.equal(after.slotSessions[slotB], getSessionId(), "同 cwd 其余在存会话槽保留（保留集——不误放）")
+      assert.equal(sessions.has(a.sessionId), false, "会话记录已出容器")
+
+      // 对照（反证非空转）：关闭最后一个会话 ⇒ 其槽同样释放（保留集 = 空）
+      handlers["session/close"]({ sessionId: b.sessionId })
+      assert.equal(loadManifest(cwd).slotSessions[slotB], undefined, "最后一个会话关闭 ⇒ 零残留认领")
+    } finally {
+      rmSync(cwd, { recursive: true, force: true })
+    }
+  })
+
+  test("T-CR-ACP2 边界：未知会话静默 {} ∧ 盘面零动（无残留认领 ⇒ 零写早退）", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "tc-acp-contract-close2-"))
+    try {
+      const { handlers, sessions } = handlerHarness({ cwd: () => cwd })
+      const a = await handlers["session/new"]({ cwd, mcpServers: [] })
+      const slotA = sessions.get(a.sessionId).agent._slot
+      const raw = readFileSync(manifestPath(cwd), "utf8")
+      assert.deepEqual(handlers["session/close"]({ sessionId: "nope" }), {}, "未知会话静默 {}（既有语义零改）")
+      assert.equal(readFileSync(manifestPath(cwd), "utf8"), raw, "未知会话 ⇒ 盘面逐字节零动（零写盘）")
+      assert.equal(loadManifest(cwd).slotSessions[slotA], getSessionId(), "在存会话认领仍在（零误放）")
+      // 对照：关闭在存会话确实落盘（早退面非空转）
+      handlers["session/close"]({ sessionId: a.sessionId })
+      assert.equal(loadManifest(cwd).slotSessions[slotA], undefined, "对照：close 释放落盘")
     } finally {
       rmSync(cwd, { recursive: true, force: true })
     }

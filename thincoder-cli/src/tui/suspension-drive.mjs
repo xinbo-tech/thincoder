@@ -9,7 +9,7 @@
  * digest）提交亦入同槽（busy-extend 批 2026-09-22——`TUI-INPUT-BOX.md` §4.1）、settle 事件驱动
  * auto-turn 消化（手动档 organize-only / AUTO 档全语义）、池空 + 无待处理输入 → 补发
  * done 冻结自然退出。状态机行表见 AGENT-LOOP.md §9.2。
- * F-UC7（2026-09-19 批，AGENT-LOOP-SUBAGENT.md §6.27.12）：第二开轮源 = 未 drain 的上行
+ * F-UC7（2026-09-19 批，AGENT-LOOP-UPSTREAM.md §6.27.12）：第二开轮源 = 未 drain 的上行
  * ask（`upstreamWaiting` 谓词——ask 入队即唤醒本驱动）；唤醒轮同走 auto-turn（旗标
  * `upstreamTurn` 供核域文本选择）。
  * F-UC8（2026-09-21 批，§6.27.12.13）：可见提示面**按因两档**（ask 携「谁 + 啥」——
@@ -25,12 +25,12 @@ import { logEvent } from "@thincoder/core/log.mjs"
 import { C } from "./ansi.mjs"
 // ASYNC-RESULT-CONTAINER.md D1/D2：池 accessor（双池 absorb）+ pending 单容器停靠
 import { getAsyncPool, parkAsyncPending, releaseSettledEntry } from "@thincoder/core/agent-tools/async-settle.mjs"
-// F-UC7（AGENT-LOOP-SUBAGENT.md §6.27.12——2026-09-19 批）：上行 ask 开轮谓词单点（核导出）
+// F-UC7（AGENT-LOOP-UPSTREAM.md §6.27.12——2026-09-19 批）：上行 ask 开轮谓词单点（核导出）
 // F-UC8（§6.27.12.13 ②——2026-09-21 批）：ask 提示行携参单点（同档导出——显示面单源）
 import { upstreamAskLabelVars, upstreamWaiting } from "@thincoder/core/agent-tools/parent-channel.mjs"
 // X9（2026-09-20 端差·显示面消差批）：消化收尾文案单源 = 核 i18n 容器（禁第三份字面）
 import { t } from "@thincoder/core/i18n.mjs"
-// 批 4 CLI-ASYNC-DISCARD（AGENT-LOOP-SUBAGENT.md §6.20）：中止分支「只清已死」收尾单点
+// 批 4 CLI-ASYNC-DISCARD（AGENT-LOOP-ASYNC-POOL.md §6.20）：中止分支「只清已死」收尾单点
 import { discardAbortedPool, discardAbortedAdvisors } from "@thincoder/core/agent-tools/async-discard.mjs"
 
 // INPUT-LOCK-ASYNC（C'——2026-09-09，本档 INPUT-LOCK-ASYNC.md）：R15 排队
@@ -80,7 +80,7 @@ export function allPendingEntries(agent) {
   return [...(agent?._pendingAsyncResults ?? [])]
 }
 
-// ─── §17 挂起会话（AGENT-LOOP.md §17 D-S2/D-S9 状态机行表）────────────────
+// ─── 挂起会话（AGENT-LOOP-ASYNC-POOL.md §6.8 D-S2/D-S9 状态机行表）────────────────
 
 /** 后台池存活判据（D-S2/F5 口径）：running/queued 子代理或后台评审，或已 settle 未注入结果
  *  （pending 单容器非空 = D-S3 "未注入"），或 running consult 会话（会诊跨回合——
@@ -291,7 +291,7 @@ export async function suspensionSession(ctx) {
     state._suspWake = null
     state.suspAbortArmed = false // round2 偏差 #4：会话退出即解除挂起中止武装（防跨会话粘滞）
     if (aborted) {
-      // §15 abort 语义：只清已死条目（AGENT-LOOP-SUBAGENT.md §6.20——墓碑/出池/队列剔除/
+      // §15 abort 语义：只清已死条目（AGENT-LOOP-ASYNC-POOL.md §6.20——墓碑/出池/队列剔除/
       // 整批一次提醒；存活与已 settle 者留池消化——不注入陈旧错误）。
       discardAbortedPool(agent)
       discardAbortedAdvisors(agent)

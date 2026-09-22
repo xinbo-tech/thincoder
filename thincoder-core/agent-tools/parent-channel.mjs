@@ -1,6 +1,6 @@
 /**
  * parent-channel.mjs — 子代理上行通道（子 → 父 在飞提问 / 上报）（批 SUBAGENT-UPSTREAM-CHANNEL；
- * 设计权威 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.27；需求 = `docs/core/requirements/AGENT-LOOP.md` §4.12）。
+ * 设计权威 = `docs/core/design/AGENT-LOOP-UPSTREAM.md` §6.27；需求 = `docs/core/requirements/AGENT-LOOP.md` §4.12）。
  *
  * 补上子代理通信的第三象限：既有两象限 = 父→子在飞（`subagent action:'send'`）+ 子→父**终态**
  * （报告 → settle → digest）；本档 = 子→父**在飞**——子代理运行中向父（spawn 方）发一条决策级
@@ -30,7 +30,7 @@
  * ≤ `UPSTREAM_MSG_MAX` 且父队列 ≤ `UPSTREAM_QUEUE_MAX`（超限 = 工具**明确报错**，不静默丢）。
  * 射程纪律（两问自检 + 正负清单）在提示词面（§6.27.8），机制面不新增语义判定。
  *
- * 显示面单点（F-UC8 · AGENT-LOOP-SUBAGENT.md §6.27.12.13 ②）：`upstreamAskLabelVars(carrier)`——CLI / VSC
+ * 显示面单点（F-UC8 · AGENT-LOOP-UPSTREAM.md §6.27.12.13 ②）：`upstreamAskLabelVars(carrier)`——CLI / VSC
  * 两端共用的提示行携参（队首 ask 的 `from` + 单行归一截断的 `message`）；两端各持一份 = 漂移源（D2）。
  *
  * 模块图：静态 import 核单点 `async-settle.mjs`（`carrierField` / `getAsyncPool` /

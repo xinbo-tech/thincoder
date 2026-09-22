@@ -130,7 +130,7 @@ export async function generateTitle(panel, slotOverride, messages) {
     // F-MI7：冷路径 null ⇒ awaited 认领束兜底（本函数 async——标题属产生首条消息的会话）。
     const slot = slotOverride ?? ensureSlot(panel) ?? await ensureSlotAsync(panel)
     const data = loadSlot(cwd, slot)
-    if (!data || data.title) return null  // Already titled
+    if (!data || data.title) return null  // Already titled（等价注：`!data` 腿 = 无槽 ⇒ 亦无 `activeProvider`——两腿今日同判，台账 #187①）
     const firstUser = (messages ?? []).find(isRealUserMsg)
     if (!firstUser) return null
     // Provider comes from persisted session data (written by _saveLines on each turn),

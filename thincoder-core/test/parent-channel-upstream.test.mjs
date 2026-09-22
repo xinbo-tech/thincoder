@@ -1,6 +1,6 @@
 /**
  * parent-channel-upstream.test.mjs — 上行通道**唤醒面**用例表 1:1（设计权威 =
- * `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.27.12.9 T18–T22；批 2026-09-19-upstream-channel-availability）。
+ * `docs/core/design/AGENT-LOOP-UPSTREAM.md` §6.27.12.9 T18–T22；批 2026-09-19-upstream-channel-availability）。
  * 正常 = T18（ask 入队即唤醒）；边界 = T19（note 不唤醒——F13 面）/ T20（无等待栓——F11 / F12）；
  * 谓词真值 = T21；结构单点 = T22（机检）。
  * F-UC8（2026-09-21 信号提示行批 · §6.27.12.13 ② / ⑦）：**提示行携参**用例 T-SL1–T-SL4——

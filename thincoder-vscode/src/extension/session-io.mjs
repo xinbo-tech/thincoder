@@ -163,14 +163,22 @@ export async function newSlot(cwd) {
   return slot
 }
 
+/** 受占信号（台账 #171 · SESSION.md §6.15 / §6.16）——`switchToSlot` 被占分支的返回值，与
+ *  「成功（槽数据对象）」「槽不存在 / 损坏（null）」构成三者可判别的第三态。用途 = 面板路径的
+ *  **第二判**：前置判据（`slotOccupancy` 纯读）与函数内判据之间存在 TOCTOU 窗，窗内撞占时
+ *  调用面必须能区分——否则会把本端钉到他端活槽上。**零写语义不变**（不认领 / 不翻共享指针 /
+ *  不写本端记录 / 不写解析缓存）；判据前置**不替代**函数内判据。 */
+export const SLOT_OCCUPIED = Object.freeze({ occupied: true })
+
 /** Switch active slot. Returns the loaded session data (null if slot doesn't exist). Same as CLI switchToSlot.
  *  D-4：成功后写本端记录（「打开历史会话」落点）。
  *  先 loadSlot 成功才翻 active 指针（文件缺失/损坏时返回 null 且不产生幻影 active，与核
  *  「切换不得有认领副作用」对齐）；目标槽被另一活进程占用 ⇒ **F-CR2 判据前置**：受占分支
- *  **零写**（不认领 / 不翻共享指针 / 不写本端记录 / 不写解析缓存——判定前置于 `m.active`
- *  赋值；旧序 = 先无条件赋值 ⇒ 被拒切换仍翻共享指针）。占用判定单源 = 核 `slotOccupancy`
- *  （F-MI7 有界同步例外：槽内单次有界探测、不在每回合面上——§3.1 判据条③）。面板路径另在
- *  调用面前置同判据（`panel-messages-session.handleSwitchSession`——不进入本函数）。
+ *  **零写 + 可区分信号**（`SLOT_OCCUPIED`——台账 #171；不认领 / 不翻共享指针 / 不写本端记录 /
+ *  不写解析缓存——判定前置于 `m.active` 赋值；旧序 = 先无条件赋值 ⇒ 被拒切换仍翻共享指针）。
+ *  占用判定单源 = 核 `slotOccupancy`（F-MI7 有界同步例外：槽内单次有界探测、不在每回合面上——
+ *  §3.1 判据条③）。面板路径另在调用面前置同判据（`panel-messages-session.handleSwitchSession`
+ *  ——不进入本函数），并补**第二判**处置本信号的 TOCTOU 窗。
  *  F-MI7 收敛（SESSION.md §6.15 P3/P4）：占用时本端记录面（`{manifest}.vscode` marker +
  *  解析缓存）**保持原值不动**——被占槽是占用方的事，本端不得把它记成「最后使用槽」
  *  （否则面板 `_slot` 经缓存钉到别人的槽上 = 双写同槽）。
@@ -182,7 +190,7 @@ export function switchToSlot(cwd, slot) {
   if (!data) return null
   // F-CR2 判据前置（SESSION.md §6.15 / §6.16——本节单源）：占用判定前置于 `m.active` 赋值。
   const occ = slotOccupancy(cwd, slot)
-  if (occ.occupied) return data // 受占 ⇒ 零写（只回读面数据；调用面已在前置判据拒掉）
+  if (occ.occupied) return SLOT_OCCUPIED // 受占 ⇒ 零写 + 可区分信号（调用面已在前置判据拒掉；窗内撞占按本信号处置）
   m.active = slot
   m.slotSessions ??= {}
   m.slotSessions[slot] = getSessionId()

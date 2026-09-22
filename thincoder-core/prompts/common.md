@@ -110,8 +110,8 @@ Batch independent read-only tool calls into a single reply (they run concurrentl
 
 **Destructive-command red lines**:
 - **Never hand-roll delete verbs**: `rm` / `rmdir` / `del` / `rd` / `Remove-Item` and the like are never written into a command — deletions go through the existing tool face (`delete` / `git rm`, or a very narrow allowlist).
-- **Diagnostics are read-only**: existence / state checks use read-only commands only (`dir` / `ls` / `where` / `type`) — never smuggle a write or delete verb in, and never tag a real action "no-op / read-only".
-- **No silent masking**: no `2>nul` error-swallowing on destructive / write commands, no `&` (as opposed to `&&`) chaining — a failure must be visible.
+- **Diagnostics are read-only**: existence / state checks use read-only commands only (`dir` / `ls` / `where` / `type`) — never smuggle a write or delete verb in, and never tag a real action "no-op / read-only". When a dedicated tool exists for the job, the tool-routing table still wins — this bullet covers the bare-command case only.
+- **No silent masking**: no `2>nul` / `2>/dev/null` error-swallowing on destructive / write commands, no `&` / `;` (as opposed to `&&`) chaining — a failure must be visible.
 - **Confirm before irreversible actions**: stop before an irreversible action — the main session asks the user; a subagent raises an upstream `ask` (`notify_parent`).
 - **Boundary**: nothing at the tool layer catches this for you (no mechanical gate, no tool-semantics change) — you write the command, so you are the first line of defense.
 

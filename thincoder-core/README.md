@@ -75,6 +75,7 @@ Version numbers are calendar-based (CalVer): `year.month.monthly-count`, where t
 2026 (`0` = 2026). `0.9.1` is therefore the first core release of September 2026.
 
 The number marks release time, not API compatibility — read `CHANGELOG.md` for what changed.
+Per-release notes and artifacts: `CHANGELOG.md` in this package and the [GitHub Releases](https://github.com/xinbo-tech/thincoder/releases) page.
 
 ## Contributing
 

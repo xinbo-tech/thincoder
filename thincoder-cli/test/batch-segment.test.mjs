@@ -170,7 +170,7 @@ test("T47 错误/边界：路径门（若传则须可读）+ 代码评审工具�
 
 slow("T47b 边界：挂载面 + spawn 绑定（eng-designer/eng-coder 有；主 agent depth-0 亦有——D-BR18 · 不变量 3 零回归）", async () => {
   const abs = makeDoc()
-  // §2.20.2 spawn 绑定：buildSpawnChild 把批次档绝对路径记在 child 上
+  // BATCH-RECORD.md §4.2 spawn 绑定：buildSpawnChild 把批次档绝对路径记在 child 上
   const token = `${randomUUID()}:${Date.now() + 3600e3}`
   const parent = {
     cwd: tmp, provider: { name: "p", model: "m" }, config: { agent: { engineering: true } }, tools: [],
