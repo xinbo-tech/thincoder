@@ -113,11 +113,26 @@ const MODEL_SPECS = [
   ["qwen3.6-35b-a3b",    { context: 1_000_000, maxOutput: 65_536, thinking: true, partialMode: true, multimodal: true, cacheMode: "none", thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh"], tempRange: [0, 2] }],
   // MiniMax series
   ["MiniMax-M3",        { context: 1_000_000, maxOutput: 128_000, thinking: true,  multimodal: true, cacheMode: "auto", thinkApi: "type", thinkEnabledValue: "adaptive", tempRange: [0, 2], noUsageStream: true }],
-  // MiMo series (Xiaomi — OpenAI-compatible https://api.xiaomimimo.com/v1;
-  // deep thinking via thinking.type, default ON; multi-turn tool calls MUST echo
-  // reasoning_content back exactly like DeepSeek V4, else 400 on follow-ups)
-  ["mimo-v2.5-pro",     { context: 1_000_000, maxOutput: 128_000, thinking: true,  thinkApi: "type", reasoningEcho: "required", tempRange: [0, 1.5] }],
-  ["mimo-v2.5",         { context: 1_000_000, maxOutput: 128_000, thinking: true,  multimodal: true, thinkApi: "type", reasoningEcho: "required", tempRange: [0, 1.5] }],
+  // MiMo series (Xiaomi — OpenAI-compatible https://api.xiaomimimo.com/v1; deep thinking via
+  // thinking.type, default ON). Family echo policy stays conservative ("required" — tool rounds
+  // always echo); 2026-09-22 re-probe: value / missing field / empty string all 200 — the
+  // 2026-09-20 "must be passed back" 400 was NOT reproduced. v2.5 rows aligned 2026-09-22:
+  // maxOutput 131_072 = **校验级**; cacheMode "auto" = **实测** (2nd same-prefix round cached 18,816).
+  ["mimo-v2.5-pro",     { context: 1_000_000, maxOutput: 131_072, thinking: true,  cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", tempRange: [0, 1.5] }],
+  ["mimo-v2.5",         { context: 1_000_000, maxOutput: 131_072, thinking: true,  multimodal: true, cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", tempRange: [0, 1.5] }],
+  // MiMo V2.6 series (2026-09-22 launch — three independent rows, each probed individually).
+  // maxOutput 131_072 / tempRange [0, 1.5] = **校验级** (400 "at most 131072 completion tokens" /
+  // "temperature must be within [0, 1.5]", per model); thinking = **实测** (bare request carries
+  // reasoning_content; thinking.type disabled → rc gone ⇒ thinkApi "type" = measured face) and
+  // multimodal = **实测** (8×8 pure-red PNG, pro / flash answered "Red"); cacheMode "auto" = **实测**
+  // (cached_tokens 18,688). context 1_000_000 = **官方口径** (docs); reasoningEcho = **族沿用**.
+  ["mimo-v2.6-pro",     { context: 1_000_000, maxOutput: 131_072, thinking: true,  multimodal: true, cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", tempRange: [0, 1.5] }],
+  // mimo-v2.6-flash: same row shape as pro — maxOutput 131_072 / tempRange [0, 1.5] = **校验级**,
+  // thinking / multimodal / cacheMode = **实测**, context = **官方口径**, reasoningEcho = **族沿用**.
+  ["mimo-v2.6-flash",   { context: 1_000_000, maxOutput: 131_072, thinking: true,  multimodal: true, cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", tempRange: [0, 1.5] }],
+  // mimo-v2.6-pro-ultraspeed: same row shape — same grades as flash (**校验级** / **实测** /
+  // **官方口径** / **族沿用**); image answer at a 64-token budget was truncated — "Red" at 512.
+  ["mimo-v2.6-pro-ultraspeed", { context: 1_000_000, maxOutput: 131_072, thinking: true,  multimodal: true, cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", tempRange: [0, 1.5] }],
   ["minimax-m3",        { context: 1_000_000, maxOutput: 128_000, thinking: true,  multimodal: true, cacheMode: "auto", thinkApi: "type", thinkEnabledValue: "adaptive", tempRange: [0, 2], noUsageStream: true }],
   ["minimax-m1",        { context: 256_000,   maxOutput: 128_000, thinking: false, cacheMode: "auto", noUsageStream: true }],
   // Grok series (xAI — OpenAI-compatible)
@@ -254,8 +269,8 @@ export function providerSpec(provider) {
  *
  * `reasoningEcho:"required"` families (deepseek / kimi / mimo) MUST carry the reasoning echo on
  * every tool-call assistant message: the field is NEVER omitted — an absent/non-string
- * `response.reasoning` is echoed as `""` (live-shape probe 2026-09-20: missing field → 400
- * "must be passed back"; empty string → 200 with reasoning still returned). `optional` /
+ * `response.reasoning` is echoed as `""` (2026-09-22 re-probe: value / missing field / empty
+ * string all 200 — the 2026-09-20 "must be passed back" 400 was NOT reproduced). `optional` /
  * undeclared families (incl. DEFAULT_SPEC) never get the field (behavior byte-identical).
  *
  * Callers: thincoder-core/agent.mjs (main loop) · thincoder-core/advisor/loop.mjs (review

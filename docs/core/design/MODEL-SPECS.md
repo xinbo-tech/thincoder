@@ -177,7 +177,7 @@
 | `thincoder-cli/src/tui/slash-commands.mjs:150-157` | `reasoningEffortEnum`（`:154` 补全候选） | **出批零改**（listing-only）：`/think effort <Tab>` 候选随枚举显真相 |
 | `thincoder-cli/src/tui/cmd-config.mjs:172-184` | `reasoningEffortEnum`（`:180` `["none", ...enumList]` · `:205` 过滤 `!== "none"`） | **出批零改**：枚举含 `"none"` 的档 picker 出双 `none` 行 = **既有形态**（`glm-5` / `glm-5.2` 在册）⇒ 收账于台账（父侧面） |
 | `thincoder-core/provider/core.mjs:253` | `partialMode` | 四新行沿用 true ⇒ 与今日蹭 `qwen` 行同值，零变化 |
-| 八个消费点：核 `thincoder-core/tools/index.mjs:62` · `thincoder-core/tools/file.mjs:159` · `thincoder-core/agent/record-results.mjs:51` · `thincoder-core/agent/setup-reminders.mjs:195` · `thincoder-core/provider/normalize.mjs:22` · VSC `thincoder-vscode/src/agent/setup.mjs:173` · `thincoder-vscode/src/extension/vision-channel.mjs:17` · `thincoder-vscode/src/extension/panel-messages.mjs:128` | `multimodal`（共 8 处，逐处语义见 §2.7 第 1 项） | **八个消费点全部零改**；四新行置 true ⇒ 两 flash 档由「蹭来」变「声明」，布尔语义无失真（实测见 §2.7） |
+| 八个消费点：核 `thincoder-core/tools/index.mjs:64` · `thincoder-core/tools/file.mjs:159` · `thincoder-core/agent/record-results.mjs:51` · `thincoder-core/agent/setup-reminders.mjs:251` · `thincoder-core/provider/normalize.mjs:22` · VSC `thincoder-vscode/src/extension/vision-channel.mjs:17` · `thincoder-vscode/src/agent/setup-tooltable.mjs:305` · `thincoder-vscode/src/extension/image-handler.mjs:110` | `multimodal`（共 8 处，逐处语义见 §2.7 第 1 项） | **八个消费点全部零改**；四新行置 true ⇒ 两 flash 档由「蹭来」变「声明」，布尔语义无失真（实测见 §2.7） |
 
 **关键事实（修正批次档 §1.1 的后果评估）**：核/CLI 路径上**没有任何一处读 `spec.thinking`**
 （全仓 `spec.thinking` 仅 1 处消费 = 上面 VSC 那行（`thincoder-vscode/src/extension/provider-probe-window.mjs:66`）+ 1 处测试断言）。
@@ -209,12 +209,12 @@
 
 **裁定：不扩 `modalities` 字段**；音频/视频以**行注承载**，不入结构化字段。
 
-1. **布尔语义无失真（实测）**：`multimodal` 全部 8 个消费点的判据都是**图像**（坐标一律自仓根完整路径，评审发现 #2）：
-   核 `thincoder-core/tools/index.mjs:62`（`read_image` 注册门）· `thincoder-core/tools/file.mjs:159`（读图门）·
-   `thincoder-core/agent/record-results.mjs:51` 与 `thincoder-core/agent/setup-reminders.mjs:195`（多模态注入门）·
+1. **布尔语义无失真（实测）**：`multimodal` 全部 8 个消费点的判据都是**图像**（坐标一律自仓根完整路径，评审发现 #2；读数 as-of 2026-09-22 评审轮实读更正）：
+   核 `thincoder-core/tools/index.mjs:64`（`read_image` 注册门）· `thincoder-core/tools/file.mjs:159`（读图门）·
+   `thincoder-core/agent/record-results.mjs:51` 与 `thincoder-core/agent/setup-reminders.mjs:251`（多模态注入门）·
    `thincoder-core/provider/normalize.mjs:22`（`type:"image_url"` part 剥除门）；
-   VSC `thincoder-vscode/src/agent/setup.mjs:173` · `thincoder-vscode/src/extension/vision-channel.mjs:17` ·
-   `thincoder-vscode/src/extension/panel-messages.mjs:128`（三处贴图门）
+   VSC `thincoder-vscode/src/extension/vision-channel.mjs:17` · `thincoder-vscode/src/agent/setup-tooltable.mjs:305` ·
+   `thincoder-vscode/src/extension/image-handler.mjs:110`（三处贴图门）
    ⇒ 「支持图像输入」这一语义对 omni 档**恰好为真**，不存在「装不下四模态」的实际破损。
 2. **扩字段必造死字段**：全仓**无任何音频发送路径**（实测：无 `input_audio`、
    无 `type:"audio"` 字面量；`RASTER_IMAGE_URL = /^data:image\/(png|jpe?g|gif|webp);base64,/`
@@ -400,10 +400,12 @@
 - 不为 qwen 之外的族新增/删除任何托底或冗余行（`glm` / `mimo` 族泛前缀行为**既有已核验设计**，本批不碰）。
 - 不扩 `modalities` 结构化字段（§2.7 裁定）；不改 8 个 `multimodal` 消费点的任何判据（八处完整坐标 = §2.5 表末行 + §2.7 第 1 项）。
 - 不引入网络探测 / 自动校正；全部字段均**人工登记**。
-- **`cacheMode` 登记形态不统一不入本批面**：`MODEL_SPECS` 在册 **42 行**，34 行登记该键、**8 行缺**（逐名 =
-  `mimo-v2.5-pro` `:75` · `mimo-v2.5` `:76` · `grok-4.6` `:81` · `grok-4.5` `:82` · `grok-4` `:83` ·
-  `grok-4-mini` `:84` · `mistral-large` `:86` · `codestral` `:87`，2026-09-20 实跑计数）——属既有表的面，与本批判据无关；
-  其处置随 `cacheMode` 去留台账待办一并解（本节的「不删 `cacheMode` 字段」条 / §4 D-10）。
+- **`cacheMode` 登记形态不统一不入本批面**：`MODEL_SPECS` 在册规格 **53 行**（2026-09-22 设计轮实读计数）——
+  40 行登记该键、**13 行缺**；本批只处置 mimo 两行（`mimo-v2.5-pro` `:119` · `mimo-v2.5` `:120`，随 v2.5 对齐补键，§12）⇒
+  实施后 = **56 行 / 45 登记 / 11 缺**。其余 11 行 = 既有面两类：① 渠道批五行的**有意不设**（`hy3` / `hy3-preview` /
+  `hy4-preview` / `doubao-seed-2-0-code-preview-260215` / `doubao-seed-2-0-lite-260428`——两族缓存未实测，登记 = 猜，§9.3 表末行）；
+  ② 既有缺口六行（`grok-4.6` / `grok-4.5` / `grok-4` / `grok-4-mini` / `mistral-large` / `codestral`——无缓存证据）。
+  两类均与本批判据无关；其处置随 `cacheMode` 去留台账待办一并解（本节的「不删 `cacheMode` 字段」条 / §4 D-10）。
 - **不删 `cacheMode` 字段**（§4 D-10）：全仓无判据消费、属既有死字段，其去留 = 台账新待办（含字段本体与导出面清理），不入本批。
 - 不修 VSC 默认档兑底链（`thincoder-vscode/webview/settings-state.js:48`：未登记时取枚举首项）——本批由 `EFFORT_DEFAULT_PREFIXES` 逐档登记消除其触发路径（§2.8 / §2.2 端差表），该码零改；**VSC picker 归一同式取值已随本批回归修复落位**（`thincoder-vscode/webview/model-picker.js:85` · `:123`，§2.8-3 / A-17）。
 - 不改探针脚本 `thincoder-cli/test/smoke-qwen-thinking.mjs:24-30`（该脚本取 provider 名参数→ `providers[].model` 选路，全档无硬编码模型名字面量）——扩档需密钥实操作，归父侧/用户（§2.2 末）。
@@ -955,7 +957,224 @@ Q-1..Q-6 · Q-8 落新建核测试档（`thincoder-core/test/model-specs-qwen36.
 | VSC 思考下拉 | 五名默认档 = **high**（§11.4 端差登记）；档位行自动 = 枚举六档（零改码）；快照名同得 high（前缀扫描） |
 | 面板 `max_output` / `context` 显示 | `65_536` / `1M` 双栏（证据等级由行注承载，显示面不区分） |
 
+## 12. MiMo V2.6 三款独立规格行 + v2.5 存量对齐（2026-09-22 快车道批）
+
+> 需求面 = `docs/batches/2026-09-22-mimo26-specs.md` §1（台账 #236）；批次条目 = 同档 §2。
+> §1–§11 机制不变；本节为本批交付面（形状循 §10 / §11 先例）。
+> 取证源 = 同档 §1.2（本机真端点实测：三款逐款探针 + v2.5 两行同日同测）——本节不重复探测。
+
+### 12.1 方案与理由
+
+- **三款各得独立行**（`mimo-v2.6-pro` / `mimo-v2.6-flash` / `mimo-v2.6-pro-ultraspeed`，2026-09-22 上架）：
+  设计轮实跑三名 `specMatch` 全 `matched:false` ⇒ 落 `DEFAULT_SPEC`（128 000 / 32 000 / 无视觉 / 无思考位）——
+  上下文 / 输出 / 视觉 / 思考四类能力位**全面低估且静默**（除一次性告警外无可见性）。
+- **同形不同行**：三款同批同形（同端点、同参数面、逐款探针全绿）⇒ 一套字段口径 × 三行、每名独立一行
+  （同值集 ≠ 同行——§9 `[onboard]` A-3 形状先例）；行独立 = 将来单款取值漂移可单行改。
+- **v2.5 两行随批对齐**（同日同测）：`maxOutput` 128 000 → **131_072**（低于服务端实测上限 = 低估，同档 §1.2 对照面）；
+  补登记 `cacheMode: "auto"`（实测 `cached_tokens` 18 816）。在役期表值须准；两行**不删**（下线节奏归小米，同档 §1.6）。
+- **预设改指 + 对外文本同步**：`mimo` / `mimoplan` 默认模型 → `mimo-v2.6-pro`（v2.5 官网标「即将下线」）；
+  VSC README provider 表两行同变；预设 `maxTokens: 131072` 已在位（= 实测上限）零改。
+- **零机制改动**：查表 / 排序 / 兜底 / off 路径 / 端差机制全不动；三新款无 effort 枚举 ⇒
+  auto-think、consult 钳制、`/think effort` 档位面均与今日同形（§12.4）。
+
+**排序面读码核**（`mimo-v2.6-pro` ⊂ `mimo-v2.6-pro-ultraspeed` 遮蔽自查）：`SORTED_SPECS` 按名**长度降序**预排
+（`thincoder-core/model-specs.mjs:178`）⇒ 长名先命中、短名不可能盖长名（现行行为实读：
+`specForModel("mimo-v2.5-pro-x") === specForModel("mimo-v2.5-pro")` = true）。三名实长 13 / 15 / 24、**两两无并列**
+⇒ 比较器稳定性语义不介入；在册名无 `mimo-v2.6` 前缀条目 ⇒ 三名唯一命中面 = 自身精确行（M-1 / M-4 钉住）。
+
+**关键决策（本批）**：
+
+| # | 决策 | 理由 |
+|---|---|---|
+| D-1 | 三款各得独立行，不修 / 不删 v2.5 两行 | 同值集 ≠ 同行；v2.5 在役（同档 §1.3 / §1.6） |
+| D-2 | `reasoningEcho` 三新款 = `"required"`（族沿用） | 保守策略：两态均安全、零行为回归、覆盖未复现的旧严格条件（同档 §1.4） |
+| D-3 | v2.5 信息性字段断言 = **运行时可推导形**（合成键） | AC-3 要值断言、T-13② 禁字面量 ⇒ 两者并存的唯一形态；张力面见 §12.7 实施约束 |
+| D-4 | `[mimo]` 用例承载 = **新建核测试档**（非 append 主档） | 主档 467 行 / 500 硬限余量 33 行，9 例（~70 行）append 即越硬限；先例 = `model-specs-qwen36.test.mjs` |
+| D-5 | `mimo` / `mimoplan` 预设改指 `mimo-v2.6-pro` | v2.5 将下线；`maxTokens` 与实测上限同值零改（同档 §1.3-3）。**mimoplan 端点未实测**（Token Plan 无 tp- 凭证 ⇒ 未探）= 同平台推断（**unverified**，同档 §1.4）——与 mimo（按量端点实测）证据差在登记面可见 |
+| D-6 | MiMo 族头注块按 2026-09-22 复测改写 | 现句「else 400 on follow-ups」与本批复测矛盾——活性面不留已证伪的处方（§12.3 草案）；同一处方面延伸至 `assistantToolCallMessage` 文档串（评审轮 1 #3 裁定 ①；§12.2 / §12.8） |
+| D-7 | VSC 端差表 `EFFORT_DEFAULT_PREFIXES` 零改 | mimo 未登记 ⇒ 默认档 = 档位首项（三新款 `"enabled"`）——与 v2.5 同形 = 现状，非本批回归 |
+
+### 12.2 表变更清单
+
+`MODEL_SPECS`（`thincoder-core/model-specs.mjs`，设计轮实读 **53 规格行**）：
+
+| 动作 | 行 | 落位（as-of 2026-09-22 设计轮实读） |
+|---|---|---|
+| 新增 | `mimo-v2.6-pro` / `mimo-v2.6-flash` / `mimo-v2.6-pro-ultraspeed` | `["mimo-v2.5", …]`（`:120`）与 `["minimax-m3", …]`（`:121`）之间；行序 = pro / flash / pro-ultraspeed |
+| 改值 | `mimo-v2.5-pro`（`:119`）· `mimo-v2.5`（`:120`） | `maxOutput` 128_000 → 131_072；各补 `cacheMode: "auto"` |
+| 行注改写 | MiMo 族头注块（`:116-118`） | 「else 400 on follow-ups」句按实测改写（§12.3 草案） |
+| 文档串改写 | `assistantToolCallMessage` 文档串（`:255-259`；非规格行 ⇒ 53 行计数不变） | 按 2026-09-22 复测原地换写（原「missing field → 400」句已证伪 ⇒ 与 §12.3 行注同一事实陈述；净增 0 行；评审轮 1 #3 裁定 ①） |
+| 零改 | 其余 **51** 行（MiniMax / grok / claude / gemini / qwen / TokenHub / Seed 各族） | — |
+
+排序面：`SORTED_SPECS` 派生序由机制自排（`thincoder-core/model-specs.mjs:193`——实施后实读，as-of 2026-09-22）⇒ 表内插入位置不改变匹配优先级。
+
+### 12.3 字段口径表（逐字段 + 证据等级）与行注草案
+
+三新款（同形；下列各款均逐款在验）：
+
+| 字段 | 取值 | 证据等级 |
+|---|---|---|
+| `context` | `1_000_000` | **官方口径**（官网 + vLLM recipes「up to 1M」；未探边——同 v2.5 行口径） |
+| `maxOutput` | `131_072` | **校验级**（400 原文「This model supports at most 131072 completion tokens」+ `max_tokens:131072` → 200；三款逐款） |
+| `tempRange` | `[0, 1.5]` | **校验级**（400「temperature must be within [0, 1.5]」；三款逐款） |
+| `thinking` | `true` | **实测**（裸请求 `reasoning_content` 在场 + `reasoning_tokens` 3–12；`thinking:{type:"disabled"}` → 200 且 rc 消失；`{type:"enabled"}` → 200） |
+| `thinkApi` | `"type"` | **实测**（探针即经 `thinking.type` 两态受理 ⇒ 请求面被服务端认可） |
+| `multimodal` | `true` | **实测**（8×8 纯红 PNG 三款受理；pro / flash 答 "Red"；ultraspeed 64 预算截断、512 预算答 "Red"） |
+| `cacheMode` | `"auto"` | **实测**（同前缀二轮 `prompt_tokens_details.cached_tokens` = 18 688，首轮 0）——信息性字段（§4 D-10 零判据消费） |
+| `reasoningEcho` | `"required"` | **族沿用**（保守策略——同档 §1.4 裁定）：本批三形态复测（真值 / 缺字段 / 空串）全 200 ⇒ 9-20 记录的缺字段 400 不可复现，**不翻** |
+| `reasoningEffortEnum` / `partialMode` / `prefixMode` / `noUsageStream` / `thinkEnabledValue` | 不声明 / 不设 | 三款无 effort 档面（`thinking.type` 族，与 v2.5 同形）；续写与 usage 面未实测 ⇒ 不预支 |
+
+v2.5 两行（本批改值面；其余字段零改）：
+
+| 字段 | `mimo-v2.5-pro` | `mimo-v2.5` | 证据等级 |
+|---|---|---|---|
+| `maxOutput` | `131_072` | `131_072` | **校验级**（同日 400 原文 + 131072 → 200） |
+| `cacheMode` | `"auto"` | `"auto"` | **实测**（`cached_tokens` 18 816） |
+
+**行注草案**（AC-5 承载面；证据等级词逐字在场 = 硬判据，文字可微调）——MiMo 段落盘形：
+
+```js
+  // MiMo series (Xiaomi — OpenAI-compatible https://api.xiaomimimo.com/v1; deep thinking via
+  // thinking.type, default ON). Family echo policy stays conservative ("required" — tool rounds
+  // always echo); 2026-09-22 re-probe: value / missing field / empty string all 200 — the
+  // 2026-09-20 "must be passed back" 400 was NOT reproduced. v2.5 rows aligned 2026-09-22:
+  // maxOutput 131_072 = **校验级**; cacheMode "auto" = **实测** (2nd same-prefix round cached 18,816).
+  ["mimo-v2.5-pro",     { context: 1_000_000, maxOutput: 131_072, thinking: true,  cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", tempRange: [0, 1.5] }],
+  ["mimo-v2.5",         { context: 1_000_000, maxOutput: 131_072, thinking: true,  multimodal: true, cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", tempRange: [0, 1.5] }],
+  // MiMo V2.6 series (2026-09-22 launch — three independent rows, each probed individually).
+  // maxOutput 131_072 / tempRange [0, 1.5] = **校验级** (400 "at most 131072 completion tokens" /
+  // "temperature must be within [0, 1.5]", per model); thinking = **实测** (bare request carries
+  // reasoning_content; thinking.type disabled → rc gone ⇒ thinkApi "type" = measured face) and
+  // multimodal = **实测** (8×8 pure-red PNG, pro / flash answered "Red"); cacheMode "auto" = **实测**
+  // (cached_tokens 18,688). context 1_000_000 = **官方口径** (docs); reasoningEcho = **族沿用**.
+  ["mimo-v2.6-pro",     { context: 1_000_000, maxOutput: 131_072, thinking: true,  multimodal: true, cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", tempRange: [0, 1.5] }],
+  // mimo-v2.6-flash: same row shape as pro — maxOutput 131_072 / tempRange [0, 1.5] = **校验级**,
+  // thinking / multimodal / cacheMode = **实测**, context = **官方口径**, reasoningEcho = **族沿用**.
+  ["mimo-v2.6-flash",   { context: 1_000_000, maxOutput: 131_072, thinking: true,  multimodal: true, cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", tempRange: [0, 1.5] }],
+  // mimo-v2.6-pro-ultraspeed: same row shape — same grades as flash (**校验级** / **实测** /
+  // **官方口径** / **族沿用**); image answer at a 64-token budget was truncated — "Red" at 512.
+  ["mimo-v2.6-pro-ultraspeed", { context: 1_000_000, maxOutput: 131_072, thinking: true,  multimodal: true, cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", tempRange: [0, 1.5] }],
+```
+
+**行数预算（软线）**：本段落盘净增 **+15 行**（旧 5 行 → 20 行；另 `assistantToolCallMessage` 文档串换写净增 0——文件级预算见 §12.5）⇒ `thincoder-core/model-specs.mjs` 预测 **293**
+（`split` 口径；`wc -l` 292）——该档**未登记** `SOFT_LINE_REGISTRY`（`thincoder-core/test/core-hygiene.test.mjs:77-90`）
+⇒ 越 300 即红；余量 8 行，**行注草案即行数上限**（写长前须先上报）。
+
+### 12.4 消费面契约（本批动谁、谁零改）
+
+**动 = 数据面**（三新款由兜底变真行；v2.5 两行改值）；**消费码全部零改**：
+
+| 消费点 | 读什么 | 三新款变化（数据驱动） |
+|---|---|---|
+| 压缩阈值 / 上下文占比 | `context`（核侧 `thincoder-core/config.mjs:104-110`（`resolveCompactThreshold`）· `thincoder-core/token-window.mjs:152`（窗口与占比）· `:161`；面板 `thincoder-vscode/src/specs.mjs:73` · `:87`；CLI 帧 `thincoder-cli/src/tui/render-frame.mjs:393`；坐标 as-of 2026-09-22 评审轮实读） | 128K → 1M（长会话截断面解除） |
+| 温度钳位 | `tempRange`（`thincoder-core/provider/core.mjs:187-188`） | 不钳位 → 钳至 [0, 1.5]（越界值不再打到服务端吃 400） |
+| 视觉门（8 处） | `multimodal`（坐标 = §2.7 第 1 项，as-of 2026-09-22 评审轮实读更正） | 无视觉 → `read_image` 注册 + 贴图注入生效 |
+| 工具轮回声构造 | `reasoningEcho`（`thincoder-core/model-specs.mjs:288-290`——实施后实读，as-of 2026-09-22） | 无字段 → 工具轮 assistant 消息恒带 `reasoning_content`（缺值 ⇒ `""`；三形态全 200 实测支撑） |
+| VSC 思考下拉档位 | `thinking`（`thincoder-vscode/src/extension/provider-probe-window.mjs:66`） | 档位空 → 单档 `"enabled"` |
+| 输出上限登记位 | `maxOutput`（非 OpenAI 载荷面 = `thincoder-core/provider/anthropic.mjs:56` · `thincoder-core/provider/responses.mjs:207`——mimo 不走此两格式） | 32K → 131_072（登记面 + 面板显示） |
+
+**零改面（明文）**：CLI 产品码全零改（无枚举 ⇒ `/think` effort 列表走既有回退档，`thincoder-cli/src/tui/cmd-think.mjs:16`）；
+VSC 产品码全零改（`EFFORT_DEFAULT_PREFIXES`（`thincoder-vscode/src/specs.mjs:22-41`）不含 mimo ⇒ 端差默认档不命中 =
+档位首项兑底：三新款 = `"enabled"`、v2.5 同形 = **现状**）；查表 / 排序 / 告警 / 兜底机制零改（`:193` · `:198-212` · `:217-223`——实施后实读，as-of 2026-09-22）；
+`thincoder-core/config-presets.mjs` 除 `model` 两处取值外零改；`thincoder-core/provider/core.mjs` 零改（无枚举名 ⇒ effort 越界门短路 = 现状）；
+`assistantToolCallMessage` 构造零改（仅按既有 `reasoningEcho` 判定）；`resolveEnableThinking`（`thincoder-core/config.mjs:133-140`）零改（百炼主机门控，与 mimo 无关）。
+
+### 12.5 影响文件清单（预读 · split 口径 · as-of 2026-09-22 设计轮）
+
+| 文件 | 现行数（实读） | 预期增删 | 改动 / 拆分计划 |
+|---|---|---|---|
+| `thincoder-core/model-specs.mjs` | 278（`wc -l` 277） | +15（文档串换写净增 0）⇒ ~293 | §12.2 / §12.3（三新行 + 行注块 + v2.5 对齐）+ `assistantToolCallMessage` 文档串原地换写；≤300 软线内、免登记 |
+| `thincoder-core/config-presets.mjs` | 50（`wc -l` 49） | ±0（2 行改值） | `mimo` / `mimoplan` 的 `model` → `mimo-v2.6-pro`；**mimoplan 端点未实测**（无 tp- 凭证）= 同平台推断（**unverified**） |
+| `thincoder-core/test/model-specs-mimo.test.mjs`（拟新增——本批实施轮创建） | **批内新建** | ~95 | `[mimo]` 段 M-1..M-4 · M-6..M-9（§12.7）；新档 ≤300 免登记；单层 glob 自动收集（`thincoder-core/test/run.mjs:42`）零清单改动 |
+| `thincoder-core/test/model-specs.test.mjs` | 468（`wc -l` 467） | +7 ⇒ ~475 | 仅两处：`FAMILY_BASELINE` mimo 行值改（`:201`，128_000 → 131_072）+ M-5。**500 硬限余量 25 行** ⇒ `[mimo]` 段不 append 至此档（硬限口径 = `thincoder-core/test/core-hygiene.test.mjs:149-163`：`>500` 硬红、`300–500` 须登记；D-4） |
+| `thincoder-vscode/README.md` | 205（`wc -l` 204） | ±0（2 行改值） | `:84-85` provider 表模型列 → `mimo-v2.6-pro` |
+| `docs/core/design/MODEL-SPECS.md` | 1096（`wc -l` 1095） | 设计轮笔 | §12（本节）+ 变更记录 + §7 内缺键面坐标/计数收正（`:403-406`） |
+
+**行数上限段**：`thincoder-core/model-specs.mjs` 实施后 ~293（`wc -l` 292 = 277 + 15 行注块净增 + 0 文档串换写）⇒ 低于 300 软线（未登记档），余量 8 行（`wc -l` 口径）；新测试档 ~95（免登记）；
+`thincoder-core/test/model-specs.test.mjs` ~475 ⇒ 越 300 系既有态（登记已落 `thincoder-core/test/core-hygiene.test.mjs:86`；
+拆分计划落点 = `CORE-UNIFICATION.md` §2.8.1 子表行 12，消解窗口 = 越 500 硬限前或该档下次实质改动）。
+
+### 12.6 验收标准回指（逐条指回批次档 §1.5）
+
+| AC | 判据（同档 §1.5 原文） | 本设计落点 | 机检判据（用例号 = §12.7） |
+|---|---|---|---|
+| AC-1 | 三新款 `matched === true`（命中独立行、非兜底；context 1M ≠ 128K） | §12.1 / §12.3 | M-1（+ M-4 前缀面） |
+| AC-2 | 三新款字段逐项 = 口径表（七项） | §12.3 表 | M-2 |
+| AC-3 | v2.5 两行对齐值（131_072 + 信息性字段）；`FAMILY_BASELINE` 同步 | §12.3 表 / §12.5 | M-3（值断言 = 运行时可推导形）+ M-5（基线同步） |
+| AC-4 | `mimo` / `mimoplan` 预设 `model === "mimo-v2.6-pro"` | §12.2 / §12.5 | M-8 |
+| AC-5 | 三新款行注证据等级词逐字在场 | §12.3 行注草案 | M-6 |
+| AC-6 | 三端测试全绿 + `doc-check` 本批面零新增 | §12.5 | 实跑读数（设计轮基线见下方「设计轮机检基线」） |
+| AC-7 | VSC README 两行已更新（实读） | §12.5 行 5 | 实施轮 + 收口目视核（设计轮给出目标行文本） |
+| AC-8 | T-13 保持绿（本批测试面零新增信息性字段字面量） | §12.7 实施约束 | M-7（本批自扫）+ 既有 `[qwen]` T-13 本体 |
+
+**设计轮机检基线（as-of 本批面 · 设计轮实跑）**：core `node test/run.mjs` = **566 pass / 0 fail**；
+cli = **805 / 0**；vsc = **942 / 0**；`node scripts/doc-check.mjs` = 悬空 **4** / 行宽 **2**——逐条落面 =
+`docs/core/design/SESSION.md` · `docs/core/design/TOOLS.md`（悬空）与 `docs/core/design/BATCH-RECORD.md`（行宽），
+**全部为本批面外既有项**；本批面（本档 / 核表 / 预设表 / 测试面）零命中 ⇒ 实施后须保持本读数不增。
+
+### 12.7 用例表（`[mimo]` 段 · 正常 / 边界 / 回归 / 错误）
+
+承载 = **新建核测试档** `thincoder-core/test/model-specs-mimo.test.mjs`（拟新增——本批实施轮创建；D-4）
+＋ 主档 `thincoder-core/test/model-specs.test.mjs` 仅承载 M-5（基线常量所在档，一文件一行内聚）。
+
+| 号 | 类 | 承载 | 输入 / 动作 | 期望 |
+|---|---|---|---|---|
+| M-1 | 正常 | 新档 | 三名 `specMatch` | `matched:true` + `context === 1_000_000` + `maxOutput === 131_072`（≠ 128K/32K 兜底即证非默认面） |
+| M-2 | 正常 | 新档 | 三名 `specForModel` 逐字段 | `assertFields`：`context` / `maxOutput` / `thinking` / `multimodal` / `thinkApi` / `reasoningEcho` / `tempRange`（AC-2 七项；**不含**信息性字段——D-3） |
+| M-3 | 边界 | 新档 | v2.5 两行全字段 | `deepEqual`：pro = 对齐形（`maxOutput` 131_072 + `[{合成键}]: "auto"`）；`mimo-v2.5` = pro 形 + `multimodal: true`；**全文零字面量** |
+| M-4 | 边界 | 新档 | 前缀面 | `mimo-v2.6-pro-ultraspeed` ≠ `mimo-v2.6-pro` 行对象（长名不被短名遮蔽）；三名 × 在册 mimo 名非前缀循环（v2.5 两行不被遮蔽） |
+| M-5 | 回归 | **主档** | `FAMILY_BASELINE` mimo 行 | 行在场（防空扫）+ `assertFields(基线对象)` + `maxOutput === 131_072`（不同步 ⇒ 既有 `[qwen]` T-11 即红） |
+| M-6 | 边界 | 新档 | `rowNote` 三名 | 「实测」「校验级」「官方口径」「族沿用」逐字在场（AC-5） |
+| M-7 | 边界 | 新档 | 本档自扫（合成键） | 字面量命中数 === 0（T-13② 用例面零新增——防自踩） |
+| M-8 | 正常 | 新档 | `PROVIDER_PRESETS.mimo` / `.mimoplan` | `model === "mimo-v2.6-pro"` 且该值 `specMatch().matched === true`（AC-4）；两预设同断；`mimoplan` 端点未实测（**unverified**，同平台推断）——本用例只验预设表取值，不涉端点 |
+| M-9 | 错误 | 新档 | `mimo-v3-pro`（未在册） | `matched:false` + 兜底形状 128K/32K + 告警恰一次 + 表内不补泛前缀行（防空扫对照 = `TABLE_ROW_NAMES`） |
+
+四类齐：正常 = M-1 / M-2 / M-8；边界 = M-3 / M-4 / M-6 / M-7；回归 = M-5；错误 = M-9。
+
+**实施约束（设计钉死）**：
+
+1. 新档 helpers **就地重定义、零 import 主测试档**（主档无导出面）：`SPEC_SOURCE` / `TABLE_ROW_NAMES` / `rowNote` /
+   `assertFields` / 信息性字段**合成键**（`["cache", "Mode"].join("")`——主档 `:221` 同法先例）。
+2. **测试面全文零信息性字段字面量**（含注释与断言消息）——T-13② 逐档计数闸：新增命中即红（M-7 自扫兜底）。
+3. 主档只改两处：`:201` 基线值 + M-5（+7 行）——不得顺带改写既有段（`[qwen]` / `[onboard]` / `[flashx]` 段零触碰）。
+4. 三名常量与期望值取 §12.3 表字面（`131_072` / `[0, 1.5]` / `"type"` / `"required"` / `true`）。
+
+### 12.8 边界（本节不做）
+
+- 不动 mimo 族以外任何规格行 / 预设；**不删** v2.5 两行（在役，下线节奏归小米）。
+- 不补泛 `mimo` 前缀行（未在册名照旧落 `DEFAULT_SPEC` + 一次性告警；M-9 钉住）。
+- 不做全表复核 / 不加新字段 / 不改查表与排序机制 / 不改告警与兜底路径。
+- 不改 CLI / VSC 端差面（`EFFORT_DEFAULT_PREFIXES` 零改——mimo 无 effort 档，本批不涉）。
+- 不写 CHANGELOG（发布轮事务）；不改三端产品码（除预设表 `model` 两处改值）。
+- v2.5 行 `reasoningEcho` 保持 `required`，本批不重议。
+- **机制面回显证据句随批同步（评审轮 1 #3 裁定 ①）**：`assistantToolCallMessage` 文档串（`thincoder-core/model-specs.mjs:265-278`——实施后实读，as-of 2026-09-22）随本批按 2026-09-22 复测同步改写
+  （原「missing field → 400」句已证伪；改写后与 §12.3 行注同一事实陈述；净增 0 行——§12.2 / §12.5）；机制正文（`doc:PROVIDER.md`）本体不在本批改动面。
+- 本节不落实现——改码 = eng-coder，需本批 designToken。
+
+### 12.9 UI/交互决策（全落地，无 open）
+
+| 面 | 决策 |
+|---|---|
+| CLI `/models` | 三新款显示 `1M`（context 官方口径；证据等级由行注承载，显示面不区分）；v2.5 两行显示不变 |
+| CLI `/think` 面板 | mimo 无 effort 枚举 ⇒ effort 列表 = 既有回退档 `high\|max`（`thincoder-cli/src/tui/cmd-think.mjs:16`，零改）；`thinkApi:"type"` ⇒ `isEffortOnly` = false ⇒ 开关行走 `thinking:{type}` 面——与 v2.5 同形（零变化） |
+| VSC 思考下拉 | 三新款 = 单档 `"enabled"`（`thincoder-vscode/src/extension/provider-probe-window.mjs:66`：无枚举 ∧ `thinking:true`）；由「档位空」转「`enabled`」= 本批可见改善；默认档 = 档位首项（端差表不含 mimo，`thincoder-vscode/src/specs.mjs:22-41` 零改，D-7） |
+| 预设面 | `mimo` / `mimoplan` 条目：`model` 改指；`thinking:{type:"enabled"}` 与 `maxTokens:131072` 零改（= 实测上限） |
+| 面板 `max_output` / `context` 显示 | 三新款 `131072` / `1M`；v2.5 两行 `131072`（对齐后）/ `1M`——显示面不区分证据等级 |
+
+无 `open` 项。
+
 ## 变更记录
+
+- 2026-09-22（**MiMo V2.6 三款批 · 设计轮（initial）** · eng-designer——承 `docs/batches/2026-09-22-mimo26-specs.md` §1）：
+  新增 §12（三新款独立行 + v2.5 两行对齐：方案与理由 / 表变更 / 字段口径 + 行注草案 / 消费面 / 影响文件 /
+  AC-1..AC-8 回指 / 用例 M-1..M-9 / 边界 / UI 决策 + 关键决策 D-1..D-7）；§7 内 `cacheMode` 缺键面坐标与计数收正
+  （42/34/8 → 53/40/13；`:75`/`:76` → `:119`/`:120`）；§7 除本条 `cacheMode` 缺键面坐标/计数收正外，§1–§11 其余零触碰。
+
+- 2026-09-22（**MiMo V2.6 三款批 · 设计评审轮 1 修正** · eng-designer——fix 轮；承
+  `docs/batches/2026-09-22-mimo26-specs.md` §3 轮次 1，#1…#6 六针全落）：
+  ① §12.5 预设行 / D-5 / M-8 补 `mimoplan` **unverified** 标注（#1）；② §12.4 压缩阈值行坐标按评审实读收正（#2）；
+  ③ 「文档串随批同步改写」入界 + §12.2 表变更清单补该笔 + §12.5 行数预算重算（#3）；④ §12.4 视觉门行标 as-of + §2.7 第 1 项八消费点坐标收正（#5）；
+  ⑤ 变更记录本批条表述收一致（#6）。零新语义——§1–§11 除 ④ 项坐标收正外未动。
 
 - 2026-09-20（**qwen3.6 五名行批 · 设计评审轮 1 修正** · eng-designer——fix 轮；承
   `docs/batches/2026-09-20-qwen36-family-rows.md` §3 轮次 1，#1…#10 十针全落）：

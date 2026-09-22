@@ -81,8 +81,8 @@ No key (or a bad key) → the tool silently falls back to Bing, so agents never 
 | GLM Coding Plan (智谱 Coding) | `glm-5.2` | `https://open.bigmodel.cn/api/coding/paas/v4` |
 | Qwen (Alibaba) | `qwen3.7-max` | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
 | Qwen Token Plan | `qwen3.7-max` | `https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1` |
-| MiMo (小米) | `mimo-v2.5-pro` | `https://api.xiaomimimo.com/v1` |
-| MiMo Token Plan (小米套餐) | `mimo-v2.5-pro` | `https://token-plan-cn.xiaomimimo.com/v1` |
+| MiMo (小米) | `mimo-v2.6-pro` | `https://api.xiaomimimo.com/v1` |
+| MiMo Token Plan (小米套餐) | `mimo-v2.6-pro` | `https://token-plan-cn.xiaomimimo.com/v1` |
 | MiniMax | `MiniMax-M3` | `https://api.minimaxi.com/v1` |
 | OpenAI | `gpt-4o` | `https://api.openai.com/v1` |
 | Claude (Anthropic) | `claude-sonnet-4` | `https://api.anthropic.com/v1` |

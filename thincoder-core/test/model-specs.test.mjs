@@ -198,7 +198,7 @@ const FAMILY_BASELINE = [
   ["glm-5.3", { context: 1_000_000, maxOutput: 128_000, thinking: true, thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 1], noUsageStream: true }],
   ["gpt-4o", { context: 128_000, maxOutput: 16_000, thinking: false, multimodal: true }],
   ["MiniMax-M3", { context: 1_000_000, maxOutput: 128_000, thinking: true, multimodal: true, thinkApi: "type", thinkEnabledValue: "adaptive", tempRange: [0, 2], noUsageStream: true }],
-  ["mimo-v2.5", { context: 1_000_000, maxOutput: 128_000, thinking: true, multimodal: true, thinkApi: "type", reasoningEcho: "required", tempRange: [0, 1.5] }],
+  ["mimo-v2.5", { context: 1_000_000, maxOutput: 131_072, thinking: true, multimodal: true, thinkApi: "type", reasoningEcho: "required", tempRange: [0, 1.5] }],
 ]
 
 test("[qwen] T-11/§1.3 既有族零回归：六族代表名字段逐项不变（防误删误改行）", () => {
@@ -464,4 +464,14 @@ test("[flashx] F-5 行注证据词：实测 / 校验级 / 族沿用逐字在场 
   }
   assert.ok(note.includes("始终思考"), "行注含「始终思考」（§10.3 行注规格）")
   assert.ok(note.includes("no-op") && note.includes("服务端无关闭路径"), "行注含 off = UI 侧 no-op / 服务端无关闭路径句（§10.3 行注规格）")
+})
+
+// ─── 批 2026-09-22-mimo26-specs（设计 `docs/core/design/MODEL-SPECS.md` §12 · 用例 M-5 承载位）───
+// 本批 [mimo] 段其余用例（M-1..M-4 / M-6..M-9）落新档 `model-specs-mimo.test.mjs`（D-4：本档 500 硬限
+// 余量不足）；本节只承载 M-5——基线常量在本档，值同步与基线同档内聚。
+test("[mimo] M-5 FAMILY_BASELINE mimo 行同步：行在场（防空扫）+ 逐字段 + maxOutput 131_072", () => {
+  const [name, fields] = FAMILY_BASELINE.find(([n]) => n === "mimo-v2.5") ?? []
+  assert.ok(name, "基线内含 mimo 代表行（防空扫）")
+  assertFields(name, fields)
+  assert.equal(specForModel(name).maxOutput, 131_072, "v2.5 对齐值（不同步 ⇒ 既有 [qwen] T-11 即红）")
 })
