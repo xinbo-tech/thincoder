@@ -110,7 +110,7 @@ export async function finalizeTurn(panel, { history, fullHistory, slotStamp, tur
   // 释放窗口守卫（2026-09-02 偏差修复 #2——A2 + INPUT-LOCK-ASYNC 修订）：挂起
   // 决策先于任何释放点登记——归位与回合尾会话接管之间的异步段内消息不得开并发新回合
   // （从磁盘重载 lines 孤儿化池 + abort 池 controller——AC-S2）。窗口 = _turnState==="susp"
-  // 且 _susp 空——A2 标题移入下方归位前（running——routeUserTurn 拒收——禁排队）——标题
+  // 且 _susp 空——A2 标题移入下方归位前（running——路由守卫入单槽——C-B2-6）——标题
   // 不再构成此窗口；会话建立与 susp 广播同同步续段（下方块）——入队容器已废弃。
   // C2（F-C2a/b——忙态归位 + 单一广播）：会话内回合（digest/会话用户回合）尾 → susp
   // （先于 loading:false 广播——webview Stop 派生在 digest 间不闪烁）；普通回合尾池仍
@@ -120,7 +120,7 @@ export async function finalizeTurn(panel, { history, fullHistory, slotStamp, tur
   // D7（§6.7 五环单源）：① 标题先于落盘（源 = 内存人读线 fullHistory——谓词单源 = 核
   // `isRealUserMsg`；触发 = **无标题即尝试**——槽 `title` 在场 ⇒ 端壳短路零触网）；生成失败
   // 静默（返 null ⇒ 不写 title、save 照常）。A2 腿不变：标题上移至此（归位前——_turnState
-  // 仍 running——窗口 = busy：Stop 显 + 路由守卫拒收）；错误不外抛——归位恒执行（评审 #2）。
+  // 仍 running——窗口 = busy：Stop 显 + 路由守卫入单槽）；错误不外抛——归位恒执行（评审 #2）。
   // 风险披露：标题 LLM（核超时 10s）前置于整档 save ⇒ 首次标题拍内容落盘最多延后 10s——
   // 与 CLI 同形（该风险 CLI 既有，非本批新引入）。
   let title = null
@@ -158,7 +158,7 @@ export async function finalizeTurn(panel, { history, fullHistory, slotStamp, tur
  *  直调 `runPanelChat` ⇒ 改注入项 `deps.runChat`（本档零 import 主档）。 */
 export async function enterSuspensionTurn(panel, { turnSlot, distillSlot, history, fullHistory, skipSession, susp, runChat }) {
   // 释放窗口接管（偏差修复 #2——A2 修订 + INPUT-LOCK-ASYNC 2026-09-09）：标题
-  // 已移 finally 归位前（running——routeUserTurn 拒收）——入队容器已随排队机制废弃——释放
+  // 已移 finally 归位前（running——routeUserTurn 入单槽）——入队容器已随排队机制废弃——释放
   // 窗口 = 会话建立的同一同步续段（susp 广播与 suspensionSession 间零 await——无事件窗
   // 口）；本块只做会话入口判定：池 live + controller 未中止 → 进挂起会话（用户输入优先于
   // digest——D-S5）；否则忙态归位 idle（防 susp 悬空——Stop 派生/路由守卫以 idle 收敛）。

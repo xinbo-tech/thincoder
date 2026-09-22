@@ -1,9 +1,11 @@
 /**
- * busy-injection.test.mjs — F16（busy 期消息注入 · 台账 #213）机器验收 · CLI 半。
- * 设计权威：`docs/cli/design/TUI-INPUT-BOX.md` §4.1（放行判据六条 / 执行序 / 二次提交 /
- * 消费回执）+ `docs/cli/design/TUI.md` §7.5（反馈两段式）；批次档
+ * busy-injection.test.mjs — F16（busy 期消息注入 · 台账 #213；busy-extend 扩面 2026-09-22 ·
+ * 台账 #224）机器验收 · CLI 半。
+ * 设计权威：`docs/cli/design/TUI-INPUT-BOX.md` §4.1（放行判据五条 / 执行序 / 二次提交 /
+ * 消费回执）+ `docs/cli/design/TUI.md` §7.5（反馈两段式 + `enterHint` 三态表）；批次档
  * `docs/batches/2026-09-21-busy-injection.md` §2 用例表（T-F16-1…6 住本档；T-F16-7 =
- * `test/input-lock.test.mjs` AC-1 断言翻转 + AC-2/释放窗口/槽满/斜杠 busy 吞零回归面）。
+ * `test/input-lock.test.mjs` AC-1 断言翻转 + AC-2/释放窗口/槽满/斜杠 busy 吞零回归面）+ busy-extend
+ * 批档 §2 用例面（T-F16-8 = 挂起内入槽 / 槽满；T-F16-9 = driver 轮末消费；T-F16-6 扩三态）。
  * 手法：① `createKeyHandler` 桩 ctx 直驱按键（无真实 TTY——先例 `input-lock.test.mjs`）；
  * ② `runAgentTurn` 测试缝（`ctx.runAgent` 桩——回合尾兜底转正 + 队列续发 + 消费回执）；
  * ③ `suspensionSession` 直驱（driver 消费单槽 + 回执——先例 `input-lock.test.mjs` AC-5）；
@@ -67,7 +69,7 @@ test("T-F16-1 busy 入槽：Enter ⇒ pendingInput 单槽 = 该文本 ∧ 输入
   kh("m", { name: "m" }) // busy 期字符照常回显（吞提交不吞字符）
   assert.deepEqual(s.input, [..."msgm"], "字符回显零改")
   pressEnter(kh)
-  assert.deepEqual(s.pendingInput, ["msgm"], "单槽填入该文本（判据六条全满足）")
+  assert.deepEqual(s.pendingInput, ["msgm"], "单槽填入该文本（判据五条全满足——§4.1）")
   assert.deepEqual(s.input, [], "入槽清框（用户视为已发送）")
   assert.equal(s.cursor, 0, "光标复位")
   assert.deepEqual(s.history, ["msgm"], "history 照常收录")
@@ -141,7 +143,7 @@ test("T-F16-3 槽满：pendingInput 既有条目 ⇒ 第二条吞 + 槽满提示
 
 // ─── T-F16-4 边界：排除面四形（模态 / digest / 斜杠 / 空）───
 
-test("T-F16-4 排除面：审批卡（模态消费 Enter）/ 挂起会话内 digest / 斜杠 busy / 空 Enter 四形全吞——文本保留 ∧ 零入槽", () => {
+test("T-F16-4 排除与挂起面：审批卡（模态消费 Enter）/ 斜杠 busy 吞——文本保留 ∧ 零入槽；挂起会话内 busy ⇒ 同判据入槽（清框 + 唤醒）；空 Enter 静默", () => {
   // ① 审批卡挂起（busy + permission）：模态分派链最前——Enter 被模态消费（D-BI1 结构保证：
   //    本路径物理不可达——判据表条件 2 为如实守卫），零入槽零 submit 文本保留
   const s1 = baseState({ processing: true, input: [..."during-approval"], permission: { name: "bash", args: {}, resolve() {} } })
@@ -152,15 +154,19 @@ test("T-F16-4 排除面：审批卡（模态消费 Enter）/ 挂起会话内 dig
   assert.deepEqual(s1.input, [..."during-approval"], "文本保留在输入框")
   assert.equal(c1.calls.lines.length, 0, "模态消费静默（自有面板呈现——不叠 busy 提示行）")
 
-  // ② 挂起会话内 digest（suspended ∧ processing）：条件 3 —— 仍吞 + busy 提示
-  const s2 = baseState({ processing: true, suspended: true, input: [..."during-digest"] })
+  // ② 挂起会话内 busy（suspended ∧ processing）：busy-extend 批改述——同判据入槽（原「仍吞」撤销）
+  const s2 = baseState({ processing: true, suspended: true, input: [..."during-digest"], cursor: 13 })
   const c2 = keyCtx(s2)
   pressEnter(createKeyHandler(c2))
-  assert.deepEqual(s2.pendingInput, [], "digest 期零入槽（挂起两态零改）")
-  assert.deepEqual(s2.input, [..."during-digest"], "文本保留")
-  assert.match(c2.calls.lines[0], /主会话处理中/, "busy 提示同文案")
+  assert.deepEqual(s2.pendingInput, ["during-digest"], "入 pendingInput 单槽（挂起两态不再是吞面）")
+  assert.deepEqual(s2.input, [], "入槽清框 + 光标复位")
+  assert.equal(s2.cursor, 0, "光标复位")
+  assert.deepEqual(s2.history, ["during-digest"], "history 照常收录")
+  assert.equal(c2.calls.wakes, 1, "挂起面入槽同款唤醒（呼叫点执行）")
+  assert.equal(c2.calls.lines.length, 0, "入槽零提示行（反馈 = 状态栏段）")
+  assert.equal(c2.calls.submit, 0, "不经 submit")
 
-  // ③ 斜杠 busy（条件 4）：吞 + busy 提示 + 文本保留（白名单已删语义不变）
+  // ③ 斜杠 busy（条件 3）：吞 + busy 提示 + 文本保留（白名单已删语义不变）
   const s3 = baseState({ processing: true, input: [..."/exit"] })
   const c3 = keyCtx(s3)
   pressEnter(createKeyHandler(c3))
@@ -169,12 +175,63 @@ test("T-F16-4 排除面：审批卡（模态消费 Enter）/ 挂起会话内 dig
   assert.match(c3.calls.lines[0], /主会话处理中/, "斜杠吞同提示")
   assert.equal(c3.calls.submit, 0, "斜杠不经 submit（busy 禁发）")
 
-  // ④ 空 Enter（条件 5）：静默（零提示行零入槽）
+  // ④ 空 Enter（条件 4）：静默（零提示行零入槽）
   const s4 = baseState({ processing: true, input: [..."   "] })
   const c4 = keyCtx(s4)
   pressEnter(createKeyHandler(c4))
   assert.equal(c4.calls.lines.length, 0, "空/纯空白静默无提示")
   assert.deepEqual(s4.pendingInput, [], "零入槽")
+})
+
+// ─── T-F16-8 正常/边界：挂起内 busy 入槽 + 槽满吞（可区分判据）───
+
+test("T-F16-8 挂起内 busy：槽空 ⇒ 入槽（pendingInput + 清框 + history + 唤醒 + 零对话提示行）；槽满 ⇒ 吞（清框不发生 + 槽内既有项不被覆盖 + 单槽非空恒显 dim 段）", () => {
+  // 挂起会话内 busy + 槽空：与普通 busy 同判据入槽（busy-extend 批 AC-1 扩面）
+  const s1 = baseState({ processing: true, suspended: true, input: [..."session-msg"], cursor: 11, })
+  const c1 = keyCtx(s1)
+  pressEnter(createKeyHandler(c1))
+  assert.deepEqual(s1.pendingInput, ["session-msg"], "单槽填入（两面共用同一槽）")
+  assert.deepEqual(s1.input, [], "入槽清框")
+  assert.equal(s1.cursor, 0, "光标复位")
+  assert.deepEqual(s1.history, ["session-msg"], "history 收录")
+  assert.equal(s1._draft, null, "草稿复位")
+  assert.equal(c1.calls.wakes, 1, "挂起面入槽同款唤醒")
+  assert.equal(c1.calls.submit, 0, "不经 submit")
+  assert.equal(c1.calls.lines.length, 0, "零对话提示行（反馈 = 状态栏段）")
+
+  // 槽满形（挂起内 busy · 槽内已占一条）：吞——可区分判据 = 清框不发生 + 既有项不覆盖 + 零入槽
+  const s2 = baseState({ processing: true, suspended: true, pendingInput: ["first"], input: [..."second"], cursor: 6 })
+  const c2 = keyCtx(s2)
+  pressEnter(createKeyHandler(c2))
+  assert.equal(s2.pendingInput.length, 1, "槽内既有不被覆盖（长度不变）")
+  assert.equal(s2.pendingInput[0], "first", "槽内 [0] 逐字不变")
+  assert.deepEqual(s2.input, [..."second"], "清框不发生（输入框段文本逐字不变）")
+  assert.equal(s2.cursor, 6, "光标零动")
+  assert.equal(c2.calls.lines.length, 1, "吞 + 槽满提示一次")
+  assert.match(c2.calls.lines[0], /待发送/, "槽满提示与既有槽满分支逐字同构")
+  assert.equal(c2.calls.wakes, 0, "吞 ⇒ 零唤醒（零入槽）")
+  // 提示段 = 单槽非空恒显 dim 段（零新增提示串——TUI.md §7.5 表第 1 行逐字）
+  const agent = { provider: null, cwd: "x", autoApprove: false, planMode: false, config: null, _currentTurn: 0, _maxTurns: 0 }
+  assert.ok(stripAnsi(renderStatus(s2, agent, 120, [])).includes("已排队 1 条消息"), "单槽非空 ⇒ dim 段在位")
+})
+
+// ─── T-F16-9 正常：会话内回合执行期入槽 ⇒ driver 轮末步骤 1 消费（先于 digest 合并）───
+
+test("T-F16-9 driver 轮末消费：会话内回合执行期投槽一条 ⇒ 步骤 1 以该文本开新回合（首条 = 该文本）∧ 消费回执行在位", async () => {
+  const r = turnRig({ pendingInput: ["u1"], live: true })
+  r.ctx.runAgent = async (_a, text) => {
+    r.calls.push(String(text))
+    if (r.calls.length === 1) r.state.pendingInput.push("u2") // 回合执行期 busy Enter 入槽（§4.1）
+    r.agent._pendingAsyncResults = [] // 核回合头 drain（防 digest 轮连开）
+  }
+  const session = suspensionSession(r.ctx)
+  await new Promise((res) => setTimeout(res, 20))
+  assert.deepEqual(r.calls, ["u1", "u2"], "轮末回 driver ⇒ 步骤 1 消费该文本开新回合（先于 digest 合并——D-S5）")
+  assert.equal(r.lines.filter((l) => l === RECEIPT).length, 2, "两次消费各一条回执（driver 消费点推送）")
+  assert.equal(r.state.pendingInput.length, 0, "消费清槽")
+  r.state._suspAborted = true // 会话终止（防悬挂）
+  r.state._suspWake?.()
+  await session
 })
 
 // ─── T-F16-5 正常：挂起 driver 消费单槽（输入优先）→ 用户回合 + 回执 ───
@@ -193,9 +250,9 @@ test("T-F16-5 driver 消费：池 live + digest pending 前入槽 ⇒ 单槽优�
   assert.equal(r.state.suspended, false, "会话退出复位 suspended")
 })
 
-// ─── T-F16-6 机判：状态栏 queued 段纯函数面（含/不含 + F13 零注意力色对）───
+// ─── T-F16-6 机判：状态栏段三态逐字（TUI.md §7.5）＋ F13 零注意力色对 ───
 
-test("T-F16-6 状态栏段：processing ∧ 槽非空 ⇒ strip-ANSI 含「已排队 1 条消息」∧ 零 \\x1b[43m；槽空/非 processing ⇒ 不含（现状文案零改）", () => {
+test("T-F16-6 状态栏段三态：槽非空 ⇒ 「已排队 1 条消息」（零改）；槽空 ⇒ 普通 busy / 挂起内 busy 排队句逐字；非 processing ⇒ Enter: send；全程零 \\x1b[43m", () => {
   const agent = { provider: null, cwd: "x", autoApprove: false, planMode: false, config: null, _currentTurn: 0, _maxTurns: 0 }
   const st = (over = {}) => ({
     input: [], cursor: 0, scroll: 0, tasks: [], queue: [], history: [], historyIndex: -1, _draft: null,
@@ -207,13 +264,18 @@ test("T-F16-6 状态栏段：processing ∧ 槽非空 ⇒ strip-ANSI 含「已�
     ...over,
   })
   const queued = renderStatus(st({ processing: true, pendingInput: ["x"] }), agent, 120, [])
-  assert.ok(stripAnsi(queued).includes("已排队 1 条消息"), "busy ∧ 槽非空 ⇒ queued 段在位")
+  assert.ok(stripAnsi(queued).includes("已排队 1 条消息"), "单槽非空 ⇒ queued 段逐字零改")
   assert.ok(!queued.includes("\x1b[43m"), "零注意力色对（F13 豁免——dim 信息段非 chip）")
   const busyEmpty = renderStatus(st({ processing: true, pendingInput: [] }), agent, 120, [])
-  assert.ok(!stripAnsi(busyEmpty).includes("已排队 1 条消息"), "槽空 ⇒ 段零注入")
-  assert.match(stripAnsi(busyEmpty), /主会话处理中/, "槽空走既有 busy 文案（零改）")
+  assert.ok(!stripAnsi(busyEmpty).includes("已排队 1 条消息"), "槽空 ⇒ queued 段零注入")
+  assert.ok(stripAnsi(busyEmpty).includes("主会话处理中 — Enter 排队（回合结束后自动发送）"), "槽空 + 非挂起 ⇒ 普通 busy 排队句逐字")
   assert.ok(!busyEmpty.includes("\x1b[43m"), "槽空态零注意力色对")
+  const suspEmpty = renderStatus(st({ processing: true, pendingInput: [], suspended: true }), agent, 120, [])
+  assert.ok(stripAnsi(suspEmpty).includes("会话内回合处理中 — Enter 排队（本轮结束后优先发送）"), "槽空 + 挂起两态 ⇒ 会话内排队句逐字")
+  assert.ok(!suspEmpty.includes("\x1b[43m"), "挂起态零注意力色对")
+  const winEmpty = renderStatus(st({ processing: true, pendingInput: [], _suspPending: true }), agent, 120, [])
+  assert.ok(stripAnsi(winEmpty).includes("会话内回合处理中 — Enter 排队（本轮结束后优先发送）"), "释放窗口（_suspPending）同判")
   const idle = renderStatus(st({ processing: false, pendingInput: ["x"] }), agent, 120, [])
-  assert.ok(!stripAnsi(idle).includes("已排队 1 条消息"), "非 busy ⇒ 段零注入（派生自 processing ∧ 槽）")
+  assert.ok(!stripAnsi(idle).includes("已排队 1 条消息"), "非 processing ⇒ 段零注入（派生自 processing ∧ 槽）")
   assert.match(stripAnsi(idle), /Enter: send/, "空闲文案零改")
 })

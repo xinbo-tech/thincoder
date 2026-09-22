@@ -122,11 +122,11 @@ permission（y/n/a/esc；batch a/o/n；continue / retry y/n）
 
 - **模态分支**（`key-modes.mjs`）：permission / question / interruptPrompt 激活时**消费全部按键**（含未匹配键——不落入下层编辑路径）；
   搜索模态另居 `key-handler-search.mjs`。
-- **busy 门禁**（`processing` 含 digest 单一判据）：**输入不禁**——打字照常进输入框回显（吞提交不吞字符）；
-  **Enter 提交 = busy 单槽注入**（非挂起非模态期——放行判据与二次提交语义 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1，
-  本档不重述——D2）；**斜杠命令同禁发**（白名单机制已删——`/exit` 也发不出，退出靠 Ctrl+C 终端层武装通道）；
+- **busy 门禁**（`processing` 含 digest 单一判据）：**输入不禁**——打字照常进输入框回显（提交面受理分流 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1；吞面不回滚字符）；
+  **Enter 提交 = busy 单槽注入**（非模态期——放行判据 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1（挂起两态不再排除）；
+  二次提交语义同处，本档不重述——D2）；**斜杠命令同禁发**（白名单机制已删——`/exit` 也发不出，退出靠 Ctrl+C 终端层武装通道）；
   空 Enter 静默（text 非空才吞）；反馈面 = §7.5。
-- **挂起空闲**（`docs/core/design/AGENT-LOOP.md` §9——busy 之外）：Enter（非 slash）→ `pendingInput` **单槽**
+- **挂起空闲**（`docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.8——busy 之外）：Enter（非 slash）→ `pendingInput` **单槽**
   （至多一条待交接——槽满吞 + 提示）+ 唤醒（`_suspWake`，不打断后台）；释放窗口期间同语义。
 - **输入编辑键表与 ↑↓ 三规则** = `docs/cli/design/TUI-INPUT-BOX.md` §2 / §3（本档不重述——D2）。
 
@@ -522,7 +522,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 - **起跑数行**：标签行之后、`runAgentTurn` 之前 `pushLine(t("digest.start", { n: pend0 }), C.dim)`——规则 = **`pend0 > 0`**（`pend0 = pendingFamilyCount(agent)` 取数前置，与收尾行同源；ask-only 轮零此行）。
 - **收尾行（X9——显示面消差批）**：轮尾 `pushLine` 一行 dim——完成 ⇒ `digest.done`（`已消化 N 份后台报告（Xs）`）/ 中止与失败 ⇒ `digest.aborted`（`消化中断（Xs）`）；
   **`pend0 > 0` 守卫**（ask-only 轮零收尾行——done / aborted 两形态同判）；**文案单源 = 核 i18n 容器**（`t()` 取值——CLI 侧首个核 i18n 消费点）；**计数口径 = 起跑数**（与 VSC 端同源——消费数另计会引入双口径）；秒位 = `toFixed(1)`（与 VSC 同式）。
-- **边界**：`digest:start` / `digest:end` 日志事件零改（LOGGING 面）；消化轮机制 / 计数语义零改（编排面 = `docs/core/design/AGENT-LOOP.md` §9；可见面口径单源 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.27.12.13 ①–③——本节 = CLI 侧落地形态）。
+- **边界**：`digest:start` / `digest:end` 日志事件零改（LOGGING 面）；消化轮机制 / 计数语义零改（编排面 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.8；可见面口径单源 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.27.12.13 ①–③——本节 = CLI 侧落地形态）。
 
 ## 7. 状态栏与用户介入提醒（attention 态）
 
@@ -586,7 +586,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
   本段取值 = `agent.title` 活读 · **空值零注入**（非回退链）；空窗差（生成前 / 失败期：VSC 顶栏显回退链值 ∥ 本段零注入）= 已登记端差（A9 保留：结构性不对称 + 证据 + 显式裁定；登记 = 批档 §1）。
 - **可机判**：`renderStatus` 纯函数直驱——`agent.title` 置值 / 清空两次调用，strip-ANSI 文本读「含 ` │ <title>` / 零注入」两段（用例 = `test/session-title-surface.test.mjs`）。
 
-### 7.5 queued 反馈面（F16 · busy-injection 批 2026-09-21）
+### 7.5 queued 反馈面（F16 · busy-injection 批 2026-09-21 · busy-extend 批 2026-09-22 扩面）
 
 > 机制面（放行判据 / 二次提交 / 送达链路）= `docs/cli/design/TUI-INPUT-BOX.md` §4.1——本节只落**反馈形态**。
 > F13 豁免对齐（需求判定句④）：pendingInput 不出 attention——本节反馈零注意力色对（非 43 底 + 30 字）、非 chip、
@@ -596,18 +596,27 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 
 | 段 | 载体 | 形态（逐字） | 清除时机 |
 |---|---|---|---|
-| 提交时 | 状态栏 | busy 提示段收正：`processing && pendingInput.length > 0` ⇒ 显示 ` │ 已排队 1 条消息`（C.dim 现有段样式）；否则现状 busy / idle 文案（零改） | 单槽被消费（driver shift / 队列 while shift）⇒ 段消失（派生自 `pendingInput.length`——零簿记零定时器） |
+| 提交时 | 状态栏 | busy 提示段**三态分流**（逐字见下表）：单槽非空 ⇒ ` │ 已排队 1 条消息`（C.dim 现有段样式）；槽空 ⇒ 按 busy 面显示排队句（普通 / 挂起内两句）；非 busy ⇒ `Enter: send` | 单槽被消费（driver shift / 队列 while shift）⇒ queued 段消失（派生自 `pendingInput.length`——零簿记零定时器） |
 | 消费时 | 对话流 | dim 行 `[sending queued message]`（`C.tool`——对位既有 `[continuing…]`）在消费点推送 | 不清除——即送达回执本身 |
+
+**`enterHint` 三态（逐字——`thincoder-cli/src/tui/render-frame.mjs` `enterHint`；判据同源 = `TUI-INPUT-BOX.md` §4.1）**：
+
+| # | 态（判据） | 段文本（逐字） | 依据 |
+|---|---|---|---|
+| 1 | `processing` ∧ 单槽非空 | `已排队 1 条消息` | 零改（F16 原批——`pendingInput.length` 现状派生，消费即消失） |
+| 2 | `processing` ∧ 单槽空 ∧ `!suspended && !_suspPending`（普通回合 busy） | `主会话处理中 — Enter 排队（回合结束后自动发送）` | 本批收正——入槽面（受理即排队）；「Enter 提交禁用」为失效表达（不得留在规范面） |
+| 3 | `processing` ∧ 单槽空 ∧（`suspended \|\| _suspPending`）（挂起会话内 busy） | `会话内回合处理中 — Enter 排队（本轮结束后优先发送）` | 本批扩面——同面入槽；「优先」= driver 步骤 1 输入优先（先于 digest 合并——D-S5） |
+| — | 非 `processing` | `Enter: send` | 零改 |
 
 **否决 dim 对话行**（提交时落 `[queued: <text 预览>]` 进 `state.lines`）：对话区是用户正在读的内容面——
 回合流式输出每帧刷新，queued 行瞬间被顶走不可见；状态栏段常驻可见且随消费自动消失，**生命周期语义 = 单槽现状派生**（零簿记）。
 F13 判定句「pendingInput 不出 attention」约束的是**注意力色对**，dim 信息段不违反。
 
-**可机判**：`renderStatus` 纯函数直驱——构造 `processing: true, pendingInput: ["x"]` → strip-ANSI 含 `已排队 1 条消息` 且零 `\x1b[43m`；
-`pendingInput: []` → 不含。用例宿主 = `thincoder-cli/test/busy-injection.test.mjs`（T-F16-6）。
+**可机判**：`renderStatus` 纯函数直驱——三态各取一条状态字面量：单槽非空 ⇒ strip-ANSI 含 `已排队 1 条消息`；槽空 + 非挂起 ⇒ 含 `主会话处理中 — Enter 排队（回合结束后自动发送）`；槽空 + 挂起 ⇒ 含 `会话内回合处理中 — Enter 排队（本轮结束后优先发送）`；
+三态全程零 `\x1b[43m`（F13 豁免）；非 `processing` ⇒ `Enter: send`。用例宿主 = `thincoder-cli/test/busy-injection.test.mjs`（T-F16-6）。
 
-**VSC 对位**：普通回合 busy 面（`running && !_suspended`）对称修同面送达（queuedUserMessage 链——机制单源 = `WEBVIEW-INPUT.md` §1 C-B2-6）；
-webview 反馈 = 本地气泡（提交入槽即现 / 送达即 user 回声面——形态各端自落，语义同源）。
+**VSC 对位**：**busy 即排队面**（`running`——挂起会话内与普通回合同判据；单槽载体两态：会话在飞入会话单槽 / 无会话入 `_busyQueued`）——
+机制单源 = `WEBVIEW-INPUT.md` §1 C-B2-6；webview 反馈 = 本地气泡（提交入槽即现 / 送达即 user 回声面——形态各端自落，语义同源）。
 
 ## 8. 不并项与历史沿革
 
@@ -654,6 +663,16 @@ webview 反馈 = 本地气泡（提交入槽即现 / 送达即 user 回声面—
   机制面回指 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1。Ctrl+I（§4.2）零改。
 
 - 2026-09-21（**busy-injection 批 · 设计评审轮 1 修正** · eng-designer——承 `docs/batches/2026-09-21-busy-injection.md` §3 发现 1 · 语义源 = 父侧裁定（C-B2-6 ∪ CLI 条件 3））：§7.5 VSC 对位行收正——「挂起会话非 digest 期同面送达」反写口径 → 普通回合 busy 面（`running && !_suspended`）对称修同面送达，机制单源回指 `WEBVIEW-INPUT.md` §1 C-B2-6。反馈形态两段式零变。
+
+- 2026-09-22（**busy-extend 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-22-busy-extend.md` §1（E2））：§7.5 增 **`enterHint` 三态逐字表**（普通 busy / 挂起内 busy / 槽满）；
+  提交时行由「queued / 现状零改」二态改为**三态分流**（槽空两面的排队句 = 失效表达收正）；可机判行同步扩至三态；VSC 对位行改【busy 即排队面（`running`）+ 单槽载体两态】。
+
+- 2026-09-22（**busy-extend 批 · 设计评审轮 1 修正** · eng-designer——承 `docs/batches/2026-09-22-busy-extend.md` §3 轮次 1 发现 #1）：§4 busy 门禁条括注收正（「非挂起非模态期」→「非模态期——放行判据 = `TUI-INPUT-BOX.md` §4.1（挂起两态不再排除）」——残留句与同批 §4.1 收正后口径相抵）。**§7.5 与其余契约点零变**。
+
+- 2026-09-22（**busy-extend 批 · 设计评审轮 1 修正收尾补漏** · eng-designer——承父侧复核实读发现（轮 1 修正 #1 同族同句区）：§4 busy 门禁条 `:125` 括注收正（「吞提交不吞字符」→「提交面受理分流 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1；吞面不回滚字符」——旧括注「吞提交」表征失真〔本批后 busy 提交按受理分流入槽、吞面收敛四〕）。**§7.5 与其余契约点零变**。
+
+- 2026-09-22（**busy-extend 批 · 设计评审轮 2 修正** · eng-designer——承 `docs/batches/2026-09-22-busy-extend.md` §3 轮次 2 发现 #3）：
+  §4 挂起空闲行与 §6.9 边界行的编排面节号收正（`docs/core/design/AGENT-LOOP.md` §9 → **`docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.8**——挂起回合 / 消化轮机制的现住档）。**语义零变**。
 
 - 2026-09-21（**块标题行对齐批 · D8 裁定轮 · eng-designer**——承 `docs/batches/2026-09-21-vsc-block-title-align.md` §2.12 · 父侧代裁）：新增 **§7.4 会话标题段（常显 · D8）**——落点 = `renderStatus` 状态段簇尾（`ledgerHint` 后、键位组前）；取值 = `agent.title` 活对象单读（每帧 recompute · 空值零注入 · 40 显示列截断）；VSC 端零改（顶栏常显保持）。
 

@@ -2,9 +2,11 @@
  * input-lock.test.mjs — INPUT-LOCK-ASYNC（C'——INPUT-LOCK-ASYNC.md——2026-09-09）
  * + INPUT-LOCK-BEHAVIOR-REVISED（INPUT-LOCK-BEHAVIOR-REVISED.md——2026-09-09 修订——
  * 白名单删——忙时斜杠同禁发）：用例表测试锁：busy 普通回合 Enter = 单槽注入（F16 翻转——
- * AC-1；`docs/cli/design/TUI-INPUT-BOX.md` §4.1）/ 挂起两态 · 斜杠 · 槽满 · 空 照旧吞 /
- * 挂起空闲输入开放（单槽）/ 释放窗口单槽交接 / abort 零丢失 / 状态栏 busy 文案。
+ * AC-1；`docs/cli/design/TUI-INPUT-BOX.md` §4.1）/ 挂起空闲输入开放（单槽）/ 释放窗口单槽交接 /
+ * abort 零丢失 / 状态栏 busy 文案。
  * F16 busy-injection（2026-09-21）：T-F16-7 = 本档 AC-1 断言翻转 + 既有语义零回归面。
+ * busy-extend（2026-09-22 · 台账 #224）：挂起会话内 busy 同判据入槽（吞面收敛四 = 模态 /
+ * 斜杠 / 空 / 槽满——T-F16-7 第二块改述 + 释放窗口 busy 入槽格新增）。
  * 手法：createKeyHandler 桩 ctx 直驱按键（无真实 TTY）；suspensionSession 桩 agent/state
  * 直驱驱动循环（ctx.runAgent 注入——runAgentTurn 测试缝——真实单消息交接路径）。快层直跑
  * （<800ms——无定时器悬挂：驱动会话必然终止）。
@@ -54,9 +56,9 @@ function keyCtx(state, over = {}) {
 
 const pressEnter = (kh) => kh("\r", { name: "return" })
 
-// ─── T-F16-7（AC-1 翻转）：busy 普通回合入槽 + 排除面同吞（挂起两态/斜杠/空）─────
+// ─── T-F16-7（AC-1 翻转）：busy 普通回合入槽 + 挂起两态同判据入槽 + 排除面同吞（斜杠/空）─────
 
-test("T-F16-7 busy 普通回合 Enter = 单槽注入（AC-1 翻转——F16 busy-injection 2026-09-21）：pendingInput 填入 + 清框 + history 收录 + 零 submit；digest（processing+suspended）同判据不入槽；忙时斜杠（/exit）同吞禁发；空 Enter 静默；多行编辑照常", () => {
+test("T-F16-7 busy 普通回合 Enter = 单槽注入（AC-1 翻转——F16 busy-injection 2026-09-21）：pendingInput 填入 + 清框 + history 收录 + 零 submit；挂起内 busy（digest ∧ 释放窗口两形——busy-extend 批改述）同判据入槽 + 唤醒；忙时斜杠（/exit）同吞禁发；空 Enter 静默；多行编辑照常", () => {
   // 普通回合 busy：打字照进输入框（回显），Enter = 单槽注入（清框 + history 收录 + 不 submit）
   const s1 = baseState({ processing: true, input: [..."hello"], cursor: 5 })
   const c1 = keyCtx(s1)
@@ -66,18 +68,23 @@ test("T-F16-7 busy 普通回合 Enter = 单槽注入（AC-1 翻转——F16 busy
   pressEnter(kh1)
   assert.equal(c1.calls.submit, 0, "Enter 不经 submit（回合在跑——单槽路径）")
   assert.equal(c1.calls.lines.length, 0, "入槽零提示行（反馈 = 状态栏 queued 段——TUI.md §7.5）")
-  assert.deepEqual(s1.pendingInput, ["helloh"], "入 pendingInput 单槽（F16 放行判据六条）")
+  assert.deepEqual(s1.pendingInput, ["helloh"], "入 pendingInput 单槽（放行判据五条——§4.1）")
   assert.deepEqual(s1.input, [], "入槽清框（用户视为已发送）")
   assert.deepEqual(s1.history, ["helloh"], "history 照常收录")
 
-  // digest 两态（suspended && processing）：条件 3——同一 processing 判据——吞——不落 pendingInput
+  // 挂起会话内 busy（suspended ∧ processing——busy-extend 批改述：原「digest 期吞」）+ 释放窗口形
   const s2 = baseState({ processing: true, suspended: true, input: [..."during-digest"] })
   const c2 = keyCtx(s2)
   pressEnter(createKeyHandler(c2))
-  assert.equal(c2.calls.submit, 0, "digest 期 Enter 提交吞（挂起两态零改——F16 条件 3）")
-  assert.equal(s2.pendingInput.length, 0, "digest 期不入槽（挂起会话内 busy 全吞）")
-  assert.match(c2.calls.lines[0], /主会话处理中/, "digest 期 busy 提示同文案")
-  assert.deepEqual(s2.input, [..."during-digest"], "被吞文本保留在输入框（吞不丢）")
+  assert.deepEqual([c2.calls.submit, s2.pendingInput, s2.input, s2.history], [0, ["during-digest"], [], ["during-digest"]], "入槽全款清理 + 不经 submit（原「挂起两态全吞」撤销）")
+  assert.deepEqual([c2.calls.wakes, c2.calls.lines.length], [1, 0], "同款唤醒 + 零提示行（反馈 = 状态栏段）")
+
+  // 释放窗口（_suspPending）busy：同判据入槽 + 唤醒（busy-extend 批新增格）
+  const s2b = baseState({ processing: true, _suspPending: true, input: [..."window-busy"] })
+  const c2b = keyCtx(s2b)
+  pressEnter(createKeyHandler(c2b))
+  assert.deepEqual(s2b.pendingInput, ["window-busy"], "释放窗口 busy 同判据入槽")
+  assert.deepEqual([c2b.calls.wakes, c2b.calls.lines.length], [1, 0], "同款唤醒 + 零提示行")
 
   // 忙时斜杠同禁发（INPUT-LOCK-BEHAVIOR-REVISED——白名单直执行已删——/exit 也吞——退出靠 Ctrl+C）
   const s3 = baseState({ processing: true, input: [..."/exit"] })
@@ -371,7 +378,7 @@ test("中止丢弃（接线点②）：只清已死条目——出池 + discarde
 
 // ─── busy 提示文案：状态栏（F-3——取代 (queue) 提示）──────────────
 
-test("busy 状态栏文案：processing → 主会话处理中（Enter 提交禁用——无 (queue) 提示——F-7）；空闲 → Enter: send", () => {
+test("busy 状态栏文案：processing → 主会话处理中排队句（TUI.md §7.5——无 (queue) 提示——F-7）；空闲 → Enter: send", () => {
   const agent = { provider: null, cwd: "x", autoApprove: false, planMode: false, config: null, _currentTurn: 0, _maxTurns: 0 }
   const st = () => ({
     processing: true, status: "Processing...", processingStarted: Date.now(), currentTool: null,

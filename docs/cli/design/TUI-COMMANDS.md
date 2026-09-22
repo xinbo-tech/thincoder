@@ -41,7 +41,7 @@
   **自由文本态的键集 / 光标 / 渲染 = `docs/cli/design/TUI-INPUT-BOX.md` §7**（本档不重述——D2）。
 - **权限内容预览**：bash 危险命令 ⚠️ 标注（**只提示不拦截**）、write / edit 落盘内容预览（cap 3000）。
 - **接线条件**：callbacks 的权限 / 批权限 / 问答 handler **按 ctx 提供与否条件接线**——手动档 auto-turn 传 null → denied
-  （不弹面板、question 报错不挂起——挂起 digest 无人值守语义，见 `docs/core/design/AGENT-LOOP.md` §9）。
+  （不弹面板、question 报错不挂起——挂起 digest 无人值守语义，见 `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.8）。
 
 ## 3. 选择面分工与交互契约（三面一表）
 

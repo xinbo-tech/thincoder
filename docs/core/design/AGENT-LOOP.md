@@ -88,7 +88,7 @@
 | `hooks.onDigest(phase, counts)` | 消化轮边界（start / end） | `pushLine("[auto-turn: …]")` + `digest:*` 日志 | webview `{ type: "digest", status }`（现形） |
 | `hooks.reclaim(consumed)` | 消化后块回收（不等池空） | `freezeReclaimDigestedBlocks`（`thincoder-cli/src/tui/subagent-blocks.mjs`） | `reclaimDigestedBlocks`（postMessage done——现形） |
 | `hooks.freezeAll()` | 退出冻结（兜底残项） | `freezeAllSubTasks` + `sweepToolBlocks`（`thincoder-cli/src/tui/subagent-blocks.mjs` · `thincoder-cli/src/tui/tool-events.mjs`） | `postSuspensionEnd(panel, { freeze: true })`（现形） |
-| 唤醒 / 入槽 | `handle.pushInput(msg)` + `handle.wake()` | Enter → `pushInput`；Ctrl+C → 中止 | `routeUserTurn` 拒收 busy + `_chat` → `pushInput`（现形） |
+| 唤醒 / 入槽 | `handle.pushInput(msg)` + `handle.wake()` | Enter → `pushInput`；Ctrl+C → 中止 | `routeUserTurn` busy ⇒ 单槽受理（会话在飞 = `_chat` 单槽 ∥ 无会话 = `_busyQueued`）+ `_chat` → `pushInput`（现形） |
 | 退出回执 | `{ reason: "idle" \| "aborted", residualInput }` | abort 残余 → `state.queue` + 提示行（现形） | abort 残余 → 退出后以普通回合消费（现形） |
 
 **载体字段集与回写义务（2026-09-14 补正轮定 · S2 接线前）**：
@@ -122,7 +122,7 @@
 **端特有面（④ 段——不归核）**：
 
 1. CLI：状态行文本与 1s tick 重绘 · `[auto-turn: …]` 提示行 · Enter / Ctrl+C 键位路由 · 中止残余转 `state.queue` 的处置与提示行 · TUI 块冻结 / 回收（`thincoder-cli/src/tui/subagent-blocks.mjs` · `thincoder-cli/src/tui/tool-events.mjs` 面）。
-2. VSC：`suspension` / `digest` 消息族与 counts 广播 · 文案由 webview 按 locale 组合 · `routeUserTurn` busy 拒收 + loading 锁 · 面板生命周期（dispose 统一中止——`abortControllers` 快照）· webview 块归档回收 · 退出后残余以普通回合消费。
+2. VSC：`suspension` / `digest` 消息族与 counts 广播 · 文案由 webview 按 locale 组合 · `routeUserTurn` busy 单槽受理（吞面收敛四——`docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6）+ loading 锁 · 面板生命周期（dispose 统一中止——`abortControllers` 快照）· webview 块归档回收 · 退出后残余以普通回合消费。
 3. 共同（端差随核内异步面归一后消失）：`_suspended` 标志的读取方（settle 分流）住核内异步面——载体归一后零端差。
 
 **验收点（S1 续轮）**：
@@ -413,7 +413,7 @@ VSC 侧**接线**面（端装配 / 面板 / webview 呈现）——机制本体�
 
 | 接线面 | 端侧形态（实核） | 回指 |
 |---|---|---|
-| 挂起回合 digest | 面板驱动交互层：`panel._suspWake` 唤醒单槽 · `_turnState==="running"` busy 拒收（INPUT-LOCK——可录入禁发、Enter 拒发不排队）· settle 驱动 digest 轮 · 中止残余单槽消息按普通回合兜底执行（零丢失） | 机制核内形态 = §2.3（#184 注入面表）；消化面 = `AGENT-LOOP-SUBAGENT.md` §6.8；呈现 = `docs/vsc/design/WEBVIEW.md` §5 · `docs/vsc/design/WEBVIEW-PROTOCOL.md` §5（digest 轮可见面） |
+| 挂起回合 digest | 面板驱动交互层：`panel._suspWake` 唤醒单槽 · `_turnState==="running"` busy 单槽受理（吞面收敛四——`docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6）· settle 驱动 digest 轮 · 中止残余单槽消息按普通回合兜底执行（零丢失） | 机制核内形态 = §2.3（#184 注入面表）；消化面 = `AGENT-LOOP-SUBAGENT.md` §6.8；呈现 = `docs/vsc/design/WEBVIEW.md` §5 · `docs/vsc/design/WEBVIEW-PROTOCOL.md` §5（digest 轮可见面） |
 | eng-coder 交付协议 | 本端闭环：async 缺省 · explore 受限审计（BLOCKING spawn-only + 审计预算 ≤6 · 任务书三要素机械追加）· token 门（`thincoder-core/agent-tools/subagent-spawn.mjs:112` `resolveDesignSlot`——designId 槽解析 + TTL fail-closed 槽回读；原 VSC 镜像 `authorizeEngCoderDesignToken` 随 W12/W13 迁核退场）· 变更记账 `mergeChildMutations`（取消路径不合并——`thincoder-core/agent-tools/subagent-async.mjs:411`） | token 门机制权威 = `docs/core/design/ENGINEERING-MODE.md`；受限通道描述面 = `AGENT-LOOP-SUBAGENT.md` §6.7.6 （迁移期引文） |
 | 子代理活动显示 | webview 活动区：区驻留 → awaitingDigest → 消化归档落流（`#subagent-activity`）· 终态即时归档 | 呈现权威 = `docs/vsc/design/WEBVIEW.md` §5.1 / §5.2（生命周期 / 块头形态）——本档不复制 |
 | child permission gate | 子代理（depth>0）写操作走审批门：`makeChildPermission`（`thincoder-core/agent-tools/child-permission.mjs:32`——W9 已迁核，原 `thincoder-vscode/src/agent-tools/child-permission.mjs`；announce → ask → 清态）+ `childOwnerLabel`（同档 `:22`——`escalate <model> #<id>` / `<role>#<id>`）· autoApprove 值源 = 父对象字段 `parent.autoApprove`（核引擎 child 权限面三读点：`thincoder-core/agent-tools/subagent-spawn.mjs:305` · `escalate-async.mjs:225` · `subagent-actions.mjs:441`；VSC 侧字段接线 = 本表「自持工具登记面」行）——原 VSC 引擎「三处 autoApprove 形参（eng-coder 恒 true / 其余 `ctx.getAuto?.()`）」坐标随 W12/W13 退役 · 卡释放三路（child abort〔signal = 条目级 controller——端侧供给接回，见下行〕/ Stop / approve-all 连带 `permissionWithdrawn`）· 块头 `⏸` + 态词 `等待审批`（`webview/activity-view.js`） · **端侧供给**（2026-09-16 缺陷修复——承 `docs/batches/2026-09-16-vsc-autoapprove-misalign.md` §2 F1/F2）：手动档子代询问 = `callbacks.onPermissionRequest`（`thincoder-vscode/src/extension/panel-callbacks.mjs` 供给——面板权限卡 + owner 归属 + `⏸` 态）经 `execute-tools.mjs` toolCtx 透传（核同范式 = `thincoder-core/agent/dispatch.mjs:395`）；缺失 ⇒ 静默拒绝不出卡（`thincoder-core/agent-tools/subagent-spawn.mjs:308-309`）· **残环批收正**（2026-09-16——承 `docs/batches/2026-09-16-subagent-panel-residual-rings.md` §2）：① signal 接回——供给按归属键 id 读池条目（`_asyncSubagents.get(String(id))`）⇒ `signal: entry.controller.signal`——路径①（child abort）VSC 转实态（⏹ / `action:'cancel'` / 会话链中止一律 deny 释放 + `permissionWithdrawn`；迟到弹卡 sig 已 abort ⇒ 即释放）；② 询问名携键 + model 供给——飞刀 async 名 = `escalate#<id>/<tool>`、sync 同构包装、`continue` = args.agent 机器键（三生产者同规）⇒ owner 归属 + `escalate <model> #<id>`（model = 池条目值）· tool-ctx `getAuto` / `sessionSignal` 透传 = 历史残留、零消费面（F2 注释收正——核门读父对象 `autoApprove` 字段；会话 signal 经 `agent._sessionSignal` 达核） | §2.1 #166 裁决行 · 权限调度面 §6.4 · 呈现 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §6.2（批 2 按现状落笔） |
@@ -439,7 +439,7 @@ VSC 侧**接线**面（端装配 / 面板 / webview 呈现）——机制本体�
 | D-AL6 | 同文件串行只阻断「先入者」与 running | 后入者不阻断——防两个 queued 同文件互等死锁 |
 | D-AL7 | 依赖取消 / 失败 → 依赖者留 queued `dependency-cancelled`（不自动启动） | 滞留有意、显式可清、不静默；仅父侧显式处置或 AUTO 档自动启动 |
 | D-AL8 | 挂起回合 = **交互层状态**（`runAgent` 保持「单输入 → 输出」不变式） | 挂起循环落在调用方 turn 循环；否决「改 runAgent 语义」（复杂度下沉错位） |
-| D-AL9 | busy 时**提交禁发** + 排队机制整批废弃（`pendingInput` 单槽） | 排队从源头根除（digest 后置意图污染）；`state.queue` 缩为残项单容器 |
+| D-AL9 | busy 时**提交入单槽**（`pendingInput`——至多一条待交接；普通 / 会话内 busy 同判据；吞面收敛四 = 模态 / 斜杠 / 空 / 槽满）（**2026-09-22 busy-extend 批修订**——原「提交禁发 + 排队机制整批废弃」撤销） | 受理 = 入槽（反馈三态 = `docs/cli/design/TUI.md` §7.5）；单槽不变量（多槽排队 / 攒批不引入——防 digest 后置意图污染）；`state.queue` 缩为残项单容器 |
 | D-AL10 | 待答池分域（engCoder / other）按域记账 + 三键可配 | 跨域总量 8、同域仍 4；否决「单池」（eng-coder 与 explore 互相饿死） |
 | D-AL11 | 评审**同 scope 不排队**（同 type+scope → 直接拒）；**池满（异 scope）入队**（**2026-09-16 批 8 修订**——原「超限 / 同 scope 均直接拒」撤销） | 同 scope 续审 stale ⇒ 拒 + 拒文案给指引；异 scope 互不依赖 ⇒ 入队不增 stale 面且复用既有队列语义（不入第二份实现）——落地 = `AGENT-LOOP-SUBAGENT.md` §6.10 / §6.11 |
 | D-AL12 | async 池复用既有 pending / digest / 注入 / 冻结机制（角色无关） | 否决「为 advisor 另造消费链」（第二份实现 = 漂移源） |
@@ -493,6 +493,9 @@ VSC 侧**接线**面（端装配 / 面板 / webview 呈现）——机制本体�
 | VSC 档 §2 / §12 / §17（runAgent 主循环 · async 保真 · 上下文注入对齐） | VSC 侧实现细节叙述 | 与 §2.3 / `AGENT-LOOP-SUBAGENT.md` §6.7–§6.12 已并面同族（端差登记 = §6.18 表）——不重并（D2） |
 
 ## 变更记录
+
+- 2026-09-22（**busy-extend 批 · 同族扩面轮 · eng-designer**——承 `docs/batches/2026-09-22-busy-extend.md` §1 裁定 · 父侧并入本批）：同族残留三处 + 决策一处收正——
+  §2.3「唤醒 / 入槽」行 + §6.8 端特有面行 + §6.18「挂起回合 digest」行的 VSC busy **拒收** → **单槽受理**（回指 `docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6）；§7 **D-AL9** 就地修订（busy 提交入单槽；同表先例形）。机制条文零改。
 
 - 2026-09-20（**显示面消差批 · 批 4 收口轮 · eng-designer**——承 `docs/batches/2026-09-20-display-parity-batch.md` §2.11 未落面 / §5.13 批 2 实施记录）：§1 归属行 + §6.1 模块地图补 **`thincoder-core/agent/child-marks.mjs`**（X6 标记常量唯一定义——零依赖叶，先例 `relay-prefix.mjs`；`spawn-child.mjs:33` 原样再导出 ⇒ 既有 import 面零改；实读 **24 行**）。
 

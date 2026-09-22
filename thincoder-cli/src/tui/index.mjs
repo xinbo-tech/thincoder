@@ -367,8 +367,8 @@ export async function startTUI(agent, opts = {}) {
     const text = state.input.join("").trim()
     if (!text) return
     // INPUT-LOCK 防御（C'——2026-09-09 + F16 busy 单槽——2026-09-21）：门禁在 key-handler
-    // （busy Enter 非挂起非模态 = 单槽注入 / 斜杠·模态·挂起·槽满 = 吞 + 提示，文本保留）——
-    // submit 只在非 busy 期达此；防御直呼/上游改动：busy 期拒绝（不清输入框不吞内容）。
+    // （busy Enter 非模态 = 单槽注入 / 模态·斜杠·空·槽满 = 吞 + 提示，文本保留——TUI-INPUT-BOX.md
+    // §4.1）；submit 只在非 busy 期达此；防御直呼/上游改动：busy 期拒绝（不清输入框不吞内容）。
     if (state.processing) {
       pushLine(`[主会话处理中 —— 消息未发送（回合结束后请重按 Enter）]`, C.warn)
       render()
@@ -383,7 +383,7 @@ export async function startTUI(agent, opts = {}) {
     state.scroll = 0
     state._followTail = true // 2026-08-31 会诊 deepseek：新消息恢复跟随（注释曾承诺、实现缺漏）
 
-    // Slash commands: handled locally, don't enter agent loop. busy 期提交在 key-handler
+    // Slash commands: handled locally, don't enter agent loop. 斜杠 busy 期提交在 key-handler
     // 门禁被吞（白名单已删——斜杠同吞——INPUT-LOCK-BEHAVIOR-REVISED）——submit 仅非 busy 期可达。
     if (text.startsWith("/")) {
       await handleSlash(text)

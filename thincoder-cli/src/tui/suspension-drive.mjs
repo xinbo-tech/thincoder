@@ -6,7 +6,7 @@
  *
  * §17（2026-09-02，AGENT-LOOP.md §9 D-S1..S9）：回合尾后台池非空 → 不阻塞等待，
  * 进入挂起态——挂起空闲输入开放（Enter = 新回合填单槽 + 唤醒）、busy（processing 含
- * digest）输入禁用（INPUT-LOCK-ASYNC C'——提交吞——2026-09-09）、settle 事件驱动
+ * digest）提交亦入同槽（busy-extend 批 2026-09-22——`TUI-INPUT-BOX.md` §4.1）、settle 事件驱动
  * auto-turn 消化（手动档 organize-only / AUTO 档全语义）、池空 + 无待处理输入 → 补发
  * done 冻结自然退出。状态机行表见 AGENT-LOOP.md §9.2。
  * F-UC7（2026-09-19 批，AGENT-LOOP-SUBAGENT.md §6.27.12）：第二开轮源 = 未 drain 的上行
@@ -35,7 +35,7 @@ import { discardAbortedPool, discardAbortedAdvisors } from "@thincoder/core/agen
 
 // INPUT-LOCK-ASYNC（C'——2026-09-09，本档 INPUT-LOCK-ASYNC.md）：R15 排队
 // 用户指令合并（§11.3 D-24c——攒批计划/合并文案/上限常量）整批废弃
-// ——busy 提交吞 + pendingInput 单槽化（至多一条待交接——单消息逐发不攒批）。
+// ——pendingInput 单槽化（至多一条待交接——单消息逐发不攒批；busy 提交入槽 = busy-extend 批 2026-09-22 扩面）。
 
 /** 后台池计数（LOGGING susp/digest 事件字段——pendingN/poolN）。
  *  poolN = _asyncSubagents + _asyncAdvisors（§11.2 D-24b advisor 池同面板计数——queued
@@ -205,7 +205,7 @@ async function digestTurn(ctx, upstream = false) {
  * §17 挂起会话驱动（D-S9 行表；由 runAgentTurn 回合尾进入，池空自然退出）：
  * - suspension：池项 settle → 入 pending → 开 auto-turn（合并消化近邻 settle）；
  *   上行 ask 入队 → 唤醒 + 谓词 → 开唤醒轮（F-UC7——谓词先于池空退出判，见第 2 步）；
- *   挂起空闲用户 Enter → pendingInput 单槽（busy 含 digest 提交吞——INPUT-LOCK-ASYNC）
+ *   挂起空闲用户 Enter、会话内 busy Enter → pendingInput 单槽（busy-extend 2026-09-22 同判据）
  *   ——用户输入优先于 digest；
  * - auto-turn：消化中 settle 不并发开新轮（单 runAgent 循环），轮末按 pending/池态
  *   续开合并消化轮或回挂起；pendingInput 非空 → 以该消息开新回合（不触发新 digest）；
@@ -240,7 +240,7 @@ export async function suspensionSession(ctx) {
     while (!state._suspAborted && !agent._sessionAbort.signal.aborted) {
       sweepSettledToPending(agent)
       // 1. 用户输入优先（D-S5）：pendingInput 单槽（INPUT-LOCK-ASYNC C'——busy（processing
-      //    含 digest）提交吞——Enter 只可能落在挂起空闲/释放窗口——至多一条待交接——driver
+      //    含 digest）提交亦入本槽——TUI-INPUT-BOX.md §4.1；至多一条待交接——driver
       //    消费清槽即开新回合）。R15 攒批/queue 双源已随排队机制废弃收敛（2026-09-09——
       //    单消息交接——无合并无 /cmd 分流——key-handler 只收非斜杠文本——单消息逐发）。
       if ((state.pendingInput?.length ?? 0) > 0) {

@@ -92,37 +92,43 @@ export function clearProjectOverride() {
 }
 
 /**
- * C-B2-6 细则①（busy-injection 批 fix 轮 2026-09-22）：busy 排队单槽未消费态镜像推送——
- * webview 二次提交守卫判据源（`busyQueued { pending }`；判据 = host 单槽实际占用，权威面）。
- * 推送点 = 入槽 / 忙分支判决 / 消费两分支（`panel-turn-stages.mjs` 装载①②）/ `webviewReady`
- * 握手重推（Reload 冷启重同步）。`{ pending }` 值恒 = 单槽实况（非事件——重推幂等）。
+ * C-B2-6 细则①（busy-injection 批 fix 轮 2026-09-22 · busy-extend 2026-09-22）：busy 排队单槽未
+ * 消费态镜像推送——webview 二次提交守卫判据源（`busyQueued { pending }`；判据 = host 单槽实况——
+ * **两载体合计占用**：无会话 `_busyQueued` ∪ 会话在飞 `susp.pendingInput`，权威面）；推送点 =
+ * 入槽 / 忙分支判决 / 消费三支（`panel-turn-stages.mjs` 装载①/② · `suspension.mjs` driver 消费点）
+ * 与 `webviewReady` 握手重推（Reload 冷启重同步）；值恒 = 单槽实况（非事件——重推幂等）。
  */
 export function pushBusyQueued(panel) {
-  panel._panel?.webview.postMessage({ type: "busyQueued", pending: (panel._busyQueued?.length ?? 0) > 0 })
+  const occupied = (panel._busyQueued?.length ?? 0) > 0 || (panel._susp?.pendingInput?.length ?? 0) > 0
+  panel._panel?.webview.postMessage({ type: "busyQueued", pending: occupied })
 }
 
 /**
- * C1（SESSION-FLOW-C F-C1e——retry 并入 userMessage 同入口——修 H-F 守卫双份）：userMessage
- * 与 retry 共用同一路由——busy 拒收（INPUT-LOCK-ASYNC C'）与挂起分流（_chat 内 susp 守卫）
- * 全走一套判断——retry 不再绕过路由直呼 _chat（并发新回合竞态——AC-S2 同款）。
- * savePastedImages 同步落盘；F-1 降级分支（IMAGE-DOWNGRADE-VISION）在 await 前先置 running
- * （C' 忙锁不变量保持——降级窗口内拒收并发回合）。
- * A1（SESSION-FLOW-A F-A1——修 R6 残留）：sendMessage 命令直发（chat-panel.mjs——sendMessage
- * 宿主）并入同入口——导出供其调用——running→拒收（无回显无排队——回显由宿主先决）。
+ * C1（SESSION-FLOW-C F-C1e——retry 并入 userMessage 同入口——修 H-F 守卫双份）：userMessage 与
+ * retry 共用同一路由——busy 单槽受理（C-B2-6 两载体）与挂起分流（_chat 内 susp 守卫）全走一套
+ * 判断——retry 不再绕过路由直呼 _chat（并发新回合竞态——AC-S2 同款）。savePastedImages 同步落盘；
+ * F-1 降级分支在 await 前先置 running（C' 忙锁不变量）；A1（F-A1——修 R6 残留）：sendMessage
+ * 命令直发（chat-panel.mjs）并入同入口——running ⇒ 单槽受理（回显由宿主先决）。
  */
 export async function routeUserTurn(panel, { text, modelOverride, reasoning, providerName, images, visionReader = null }) {
   // ② 无工作区守卫（**先于** busy 与 `savePastedImages`——图片不落 `<cwd>/.thincoder/tmp/`）：
   // webview 发消息 / retry 共用本入口 ⇒ 无文件夹窗口里一律拒（提示明示——不静默丢）。
   if (blockOnNoWorkspace(panel)) return
-  // INPUT-LOCK-ASYNC（C'——2026-09-09——F-1/F-3）→ C-B2-6 busy 排队注入（busy-injection
-  // 2026-09-21）：busy（`_turnState === "running"`——回合含 digest/标题窗口——单一判据）分流两态——
-  //   ① 挂起会话内 busy（`panel._susp` 在场——digest / 会话内用户回合）：拒收不排队
-  //      （C-B2-4 收窄后仅存面）——提示明示（不静默丢）；
-  //   ② 普通回合 busy 面（无会话）：入 `_busyQueued` 单槽（C-B2-6；槽满 = 拒收 + 提示，
-  //      槽内既有不被覆盖）——回合尾由 `enterSuspensionTurn` 装载两分支送达。
-  // susp 等待态（纯后台池跑——主空闲）→ _chat 上游分流（pendingInput 单槽——D-S5 唤醒）；idle 直发。
+  // INPUT-LOCK-ASYNC（C'——2026-09-09——F-1/F-3）→ C-B2-6 busy 排队注入（busy-injection 2026-09-21 ·
+  // busy-extend 2026-09-22 扩面）：busy（`_turnState === "running"`——回合含 digest/标题窗口——
+  // 单一判据）一律排队——单槽载体两态：① 会话在飞（`panel._susp`）⇒ 走既有 `_chat` susp 分支入
+  // `susp.pendingInput`（槽满守卫 / 唤醒同款——入槽项携来源标记，细则⑥）；② 无会话 ⇒ 入
+  // `_busyQueued` 单槽（槽满 = 拒收 + 提示，槽内既有不被覆盖）——回合尾由 `enterSuspensionTurn`
+  // 装载两分支送达。susp 等待态（纯后台池跑——主空闲）→ _chat 上游分流（pendingInput 单槽——
+  // D-S5 唤醒）；idle 直发。
   if (panel._turnState === "running") {
-    if (panel._susp || (panel._busyQueued?.length ?? 0) > 0) {
+    if (panel._susp) { // 会话在飞：同槽受理（拒面收敛四 = 空/槽满/组合期与中断模态/无工作区）
+      const inSess = Array.isArray(images) && images.length > 0 ? savePastedImages(images, _cwd()) : undefined
+      await panel._chat(text, modelOverride, reasoning, providerName, inSess, true, visionReader)
+      pushBusyQueued(panel) // 判决后推实际占用（受理 / 槽满拒收同式——两载体实况）
+      return
+    }
+    if ((panel._busyQueued?.length ?? 0) > 0) {
       pushBusyQueued(panel) // C-B2-6 细则①：判决后推实际占用（拒收 ⇒ 槽内实况——webview 镜像权威收敛）
       vscode.window.showWarningMessage("ThinCoder: a task is running — wait for it to finish before sending.")
       return
@@ -224,7 +230,7 @@ export async function handlePanelMessage(panel, msg) {
     case "setProject": await handleSetProject(panel, msg); break
     case "retry": {
       // C1（F-C1e——H-F）+ INPUT-LOCK（C'）：retry 与 userMessage 同入口（routeUserTurn）——
-      // 回合中（running）retry 不再直开并发回合（拒收提示——禁排队）；idle/susp 直发。
+      // 回合中（running）retry 不直开并发回合（C-B2-6 单槽受理——会话在飞入会话槽）；idle/susp 直发。
       const history = panel._activeHistory()
       const lastUser = [...history].reverse().find((m) => (m.type ?? m.role) === "user")
       if (lastUser) routeUserTurn(panel, { text: lastUser.content, modelOverride: undefined, reasoning: undefined, providerName: lastUser.provider })

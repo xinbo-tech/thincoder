@@ -353,7 +353,7 @@ test("T-D9 边界：墓碑 → depInfo；cancelled 依赖 → depc 停靠；disc
 
 // ═══ T-D10（现状锁——AC-N1/N2 覆盖）：症状 1 不重开 ═════════════════════════
 
-test("T-D10 现状锁：susp 等待态 userMessage 不动池（Map 引用与条目数不变）；普通回合 busy 入单槽 / 挂起会内 busy 拒收（不新开并发回合）", async () => {
+test("T-D10 现状锁：susp 等待态 userMessage 不动池（Map 引用与条目数不变）；普通回合 busy 入单槽 / 挂起会内 busy 同面受理（不新开并发回合）", async () => {
   const pool = new Map([["11", mkEntry({ id: 11, role: "explore" })]])
   const history = []
   history._asyncSubagents = pool
@@ -382,13 +382,11 @@ test("T-D10 现状锁：susp 等待态 userMessage 不动池（Map 引用与条�
     assert.deepEqual(busy._chatCalls, [], "入队不直呼 _chat（无并发回合）")
     assert.equal(warned.length, 0, "入队零警告")
     assert.equal(pool.size, 1, "入队路径不动池")
-    // 挂起会话内 busy（_susp 在场）→ 拒收 + 警告（C-B2-4 收窄后仅存面）：同不开并发
-    const inSusp = { _turnState: "running", _susp: { active: true }, _busyQueued: [], _chatCalls: [], _chat(t) { inSusp._chatCalls.push(t) } }
+    // 挂起会话内 busy（_susp 在场）→ 同面受理（busy-extend 2026-09-22）：经既有 `_chat` susp 分支入会话单槽
+    const inSusp = { _turnState: "running", _susp: { active: true, pendingInput: [] }, _busyQueued: [], _chatCalls: [], _chat(t) { inSusp._chatCalls.push(t); inSusp._susp.pendingInput.push({ text: t }) } }
     await handlePanelMessage(inSusp, { type: "userMessage", text: "during-session" })
-    assert.equal(warned.length, 1, "挂起会内 busy 拒收一次警告（不静默丢）")
-    assert.deepEqual(inSusp._chatCalls, [], "拒收不直呼 _chat（无并发回合）")
-    assert.equal(inSusp._busyQueued.length, 0, "拒收零入槽")
-    assert.equal(pool.size, 1, "拒收路径不动池")
+    assert.deepEqual([inSusp._chatCalls, inSusp._busyQueued.length, pool.size], [["during-session"], 0, 1], "经 `_chat` 受理 + 无需会话槽 + 不动池（零并发回合）")
+    assert.deepEqual(inSusp._susp.pendingInput.map((q) => q.text), ["during-session"], "入会话单槽（同判据同槽——原「拒收 + 警告」随本批撤销）")
   } finally {
     vscode.window.showWarningMessage = realWarn
   }

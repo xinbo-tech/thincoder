@@ -396,10 +396,12 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
   const ctxHint = ctxPct > 0
     ? ctxPct >= 80 ? ` │ ${ansi.reset}${C.warn}context ${ctxPct}%${ctxTokensHint}${ansi.reset}${ansi.dim}` : ` │ context ${ctxPct}%${ctxTokensHint}` : ""
   // INPUT-LOCK-ASYNC（C'——F-3）：busy（processing 含 digest）状态栏提示——取代旧排队提示
-  // （F-7 已删）；F16（TUI.md §7.5）：单槽已填 ⇒ 段收正为 queued 反馈（dim 现有段样式 ·
-  // 零注意力色对——F13 豁免；消费即消失——派生自 pendingInput.length，零簿记零定时器）。
+  // （F-7 已删）；F16（TUI.md §7.5）三态分流：单槽已填 ⇒ queued 段（dim 段样式 · 零注意力色对
+  // ——F13 豁免 · 消费即消失）；槽空 ⇒ 按 busy 面分排队句（判据同 TUI-INPUT-BOX.md §4.1）。
   const enterHint = state.processing
-    ? ((state.pendingInput?.length ?? 0) > 0 ? "已排队 1 条消息" : `主会话处理中 — Enter 提交禁用（字符可输入，回合结束请重按 Enter）`)
+    ? ((state.pendingInput?.length ?? 0) > 0 ? "已排队 1 条消息"
+      : state.suspended || state._suspPending ? `会话内回合处理中 — Enter 排队（本轮结束后优先发送）`
+        : `主会话处理中 — Enter 排队（回合结束后自动发送）`)
     : "Enter: send"
   // LEDGER-SURFACE（§2.30.3.3/§2.30.3.4）：L1 常驻标记——状态段簇尾（scrollHint 后、键位组前）；
   // 空标记零注入（半态逐字节等价——同 :233-238 纪律）；warn = 当前项目老化 > 0（警示色段包裹）

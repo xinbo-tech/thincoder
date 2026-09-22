@@ -57,9 +57,9 @@ export class ChatPanel {
     this._turnState = "idle"
     // §17 挂起（suspension.mjs / panel-chat.mjs，2026-09-02）：
     // _susp/_suspWake 由 suspensionSession 建/清（会话句柄 + 单槽唤醒器）；
-    // 入队容器已随排队机制废弃（INPUT-LOCK-ASYNC C'——2026-09-09——busy（running 含
-    // digest/标题窗口）输入禁用——routeUserTurn 拒收——挂起空闲消息走
-    // susp.pendingInput 单槽（_chat 内分流）。
+    // 入队容器已随排队机制废弃（INPUT-LOCK-ASYNC C'——2026-09-09）：busy（running 含
+    // digest/标题窗口）提交入单槽——routeUserTurn 两载体分流；挂起空闲消息走
+    // susp.pendingInput 单槽（_chat 内分流——busy-extend 批 2026-09-22：会话在飞 busy 同槽）。
     // _turnControllers = 回合内 controller 重建登记（偏差修复 #3——会话 Stop 统一 abort）。
     this._turnControllers = []
     // F16（2026-09-21 busy-injection 批 · `docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6）：
@@ -256,25 +256,17 @@ export class ChatPanel {
     }
     // ③ 无工作区守卫（先于回显 ⇒ 无假气泡；先于回显也先于 routeUserTurn）
     if (blockOnNoWorkspace(this)) return
-    // INPUT-LOCK-ASYNC（C'——F-1/F-3）→ C-B2-6 busy 排队注入（busy-injection 2026-09-21）：
-    // busy（`_turnState === "running"`——回合/digest/标题窗口——单一判据）分流两态——
-    // 挂起会话内 busy（`_susp` 在场）：先于回显拒绝（拒收 = 无假气泡——webview 输入框已由
-    // loading.js 锁——正常发送到不了这里）；普通回合 busy 面：回显（排队气泡面）+ 下方
-    // `routeUserTurn` 同判据入 `_busyQueued` 单槽（C-B2-6 细则③——外部入口与 webview 上行
-    // 同面分流：同判据同槽）。
-    if (this._turnState === "running" && this._susp) {
-      vscode.window.showWarningMessage("ThinCoder: a task is running — wait for it to finish before sending.")
-      return
-    }
+    // INPUT-LOCK-ASYNC（C'——F-1/F-3）→ C-B2-6 busy 排队注入（busy-injection 2026-09-21 ·
+    // busy-extend 2026-09-22 扩面）：busy（`_turnState === "running"`——回合/digest/标题窗口——
+    // 单一判据）一律单槽受理——挂起会内 busy 拒收守卫随本批撤销（同面受理：回显先决 + 下方
+    // `routeUserTurn` 两载体分流——会话在飞入会话单槽 / 无会话入 `_busyQueued`；C-B2-6 细则③）。
     if (this._panel) {
-      // Echo FIRST — the quick-input command renders its own user bubble. 非 running 提交
-      // 才回显（susp 挂起空闲消息经 _chat 上游分流——气泡先行观感一致）。
-      // F（SESSION-RESTORE-PARITY）：echo 补真实时间戳——气泡时间 = 发出时刻（非回退"现在"）
+      // Echo FIRST — the quick-input command renders its own user bubble（排队气泡面同款）；
+      // F（SESSION-RESTORE-PARITY）：echo 补真实时间戳——气泡时间 = 发出时刻（非回退"现在"）。
       this._panel.webview.postMessage({ type: "userMessage", text, timestamp: Date.now() })
       // A1（SESSION-FLOW-A F-A1——修 R6 残留——sendMessage 曾是唯一绕过 routeUserTurn 的
       // 入口——回合中 Ask ThinCoder/发送命令直呼 _chat 杀当前回合）：命令直发并入
-      // userMessage/retry 的单一入口——running 拒收（INPUT-LOCK——禁排队）；susp 两态
-      // （会话活跃/释放窗口）走 _chat 上游分流不变（D-S5 唤醒/接管语义）；idle 直发。
+      // userMessage/retry 的单一入口——busy 单槽受理（C-B2-6；susp 两态 D-S5 分流不变）；idle 直发。
       routeUserTurn(this, { text, modelOverride: undefined, reasoning: undefined, providerName: undefined, images: undefined })
     }
   }
@@ -428,11 +420,12 @@ export class ChatPanel {
 
   // ─── Chat ─────────────────────────────────────
 
-  async _chat(text, modelOverride, reasoning, providerName, images) {
+  async _chat(text, modelOverride, reasoning, providerName, images, fromBusyQueue = false, visionReader = null) {
     // §17 D-S4/D-S5（INPUT-LOCK-ASYNC C'——2026-09-09）：挂起会话活跃期消息走 driver 的
-    // pendingInput 单槽——挂起空闲（driver 纯等待）填槽 + 唤醒即开用户回合；busy（running
-    // 含 digest）由 routeUserTurn 上游拒收（本端只接挂起空闲——单槽语义——至多一条待交接，
-    // 绝不并发开独立回合（会从磁盘重载 lines 孤儿化后台池）。
+    // pendingInput 单槽——挂起空闲（driver 纯等待）与会话在飞 busy（busy-extend 2026-09-22：
+    // routeUserTurn 同判据入同槽）均填槽 + 唤醒即开用户回合；单槽语义——至多一条待交接，
+    // 绝不并发开独立回合（会从磁盘重载 lines 孤儿化后台池）。入槽项携来源标记（`fromBusyQueue`
+    // + `visionReader`——C-B2-6 细则⑥：送达时过 F-1 判定；纯挂起既有路径零携 ⇒ 零改）。
     const susp = this._susp
     if (susp?.active) {
       // 槽满（同事件循环竞态防御——driver 唤醒即消费，正常不可达）→ 拒收提示不覆盖不丢
@@ -440,7 +433,7 @@ export class ChatPanel {
         vscode.window.showWarningMessage("ThinCoder: a task is running — wait for it to finish before sending.")
         return
       }
-      susp.pendingInput.push({ text, modelOverride, reasoning, providerName, images })
+      susp.pendingInput.push({ text, modelOverride, reasoning, providerName, images, ...(fromBusyQueue ? { fromBusyQueue: true, visionReader } : {}) })
       // 唤醒走 panel._suspWake 单槽（waitForSettleOrWake 在纯等待期注入；digest/回合执行期
       // 为 null → no-op——driver 轮末 pendingInput 检查接走）。susp.wake 曾是死字段
       // （2026-09-02 偏差修复 #4 已从 suspension.mjs 删除——唤醒槽单槽化至 _suspWake，
@@ -450,7 +443,7 @@ export class ChatPanel {
     }
     // §17 D-S2 释放窗口（2026-09-02 偏差修复 #2 + A2 修订 + INPUT-LOCK）：回合尾已登记
     // 挂起（池仍 live——_turnState==="susp" 且会话尚未建立）——A2 后标题移入 finally 归位前
-    //（running——routeUserTurn 拒收），会话建立与 susp 广播同同步续段（零事件窗口）——
+    //（running——路由守卫入单槽），会话建立与 susp 广播同同步续段（零事件窗口）——
     // 防御：无会话的 susp 态消息拒收（开并发独立回合 = 从磁盘重载 lines 孤儿化池 + abort
     // 外回合 controller——AC-S2 竞态）。
     if (this._turnState === "susp") {

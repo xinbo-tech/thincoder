@@ -95,8 +95,8 @@ reasoning, provider, images? } → extension _chat()
 | 13 | `suspension`（增字段） | `interrupted`（会话中止事实——自然退出 false） | `suspension.mjs` `postSuspensionEnd` | `panels.js` → `activity.js` `freezeLiveBlocks`（`— interrupted` 注记） |
 | 14 | `digest`（增字段） | `from` / `msg`（ask 档携参——提问者 + 问题摘要；`msg` = 单行 + 截断 ≤120 字符，核单点 `upstreamAskLabelVars`） | `suspension.mjs` 起跑点（ask 档条件携带） | `chat.js` `showDigestStatus`（`digest.turnLabelAsk` 携参取键——§5） |
 | 15 | `workspaceGuard`（**新消息**——host → webview） | `{ active:boolean }`——无工作区守卫态（面板拒发 + 占位符第三态；判据 / 守卫面 = `PROJECT-SWITCHER.md` §4.1） | `src/extension/workspace-guard.mjs` `pushWorkspaceGuard`（推送点 = `panel-session.mjs` `openSessionContent` 两分支 / `chat-panel.mjs` 工作区变化处理；机检发点坐标 = `src/extension/workspace-guard.mjs:38`） | `webview/chat.js:197` `case "workspaceGuard"` |
-| 16 | `queuedUserMessage`（**新消息**——webview → host 输入上行） | `{ text, model, reasoning, provider, images }`——busy 期排队注入（普通回合 busy 面；host 单槽 `_busyQueued`；细则 = `WEBVIEW-INPUT.md` §1 C-B2-6） | `webview/send.js:44`（出口分流——本地气泡先行） | `panel-messages.mjs:174` `case` → `routeUserTurn` 入槽 |
-| 17 | `busyQueued`（**新消息**——host → webview 状态镜像） | `{ pending:boolean }`——busy 排队单槽未消费态（webview 二次提交守卫 = 不出泡 / 不清框 / toast；判据 / 清除时机 / 提示形 = `WEBVIEW-INPUT.md` §1 C-B2-6 ①） | `src/extension/panel-messages.mjs` `pushBusyQueued`（入槽 / 消费两分支 / 忙分支判决 / `webviewReady` 握手重推） | `webview/chat.js` `case "busyQueued"` → `S._busyQueuedPending` |
+| 16 | `queuedUserMessage`（**新消息**——webview → host 输入上行） | `{ text, model, reasoning, provider, images }`——busy 期排队注入（busy 即排队面 = `running`；host 单槽载体两态 = 无会话 `panel._busyQueued` ∥ 会话在飞 `susp.pendingInput`；细则 = `WEBVIEW-INPUT.md` §1 C-B2-6） | `webview/send.js:44`（出口分流——本地气泡先行） | `panel-messages.mjs:174` `case` → `routeUserTurn` 入槽 |
+| 17 | `busyQueued`（**新消息**——host → webview 状态镜像） | `{ pending:boolean }`——busy 排队单槽未消费态（**判据 = 两载体合计占用**：`_busyQueued` ∪ `susp.pendingInput`；webview 二次提交守卫 = 不出泡 / 不清框 / toast；判据 / 清除时机 / 提示形 = `WEBVIEW-INPUT.md` §1 C-B2-6 ①） | `src/extension/panel-messages.mjs` `pushBusyQueued`（入槽 / 消费两分支 / 忙分支判决 / `webviewReady` 握手重推） | `webview/chat.js` `case "busyQueued"` → `S._busyQueuedPending` |
 
 纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）——**新增 / 变更一律入本节登记表**（行 1–17 即全部在案增量；表外增量不入）。发射 / 接收落点：
 `thincoder-vscode/src/extension/panel-callbacks.mjs:169`（statusText）· `:170`（turnFrame）· `thincoder-vscode/src/extension/panel-index.mjs:27` ·
@@ -139,9 +139,11 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 ### 4.1 回合入口秩序
 
 - `userMessage` / `retry` / `sendMessage` 命令直发（quick-input / Ask ThinCoder）共用**单一入口** `routeUserTurn`（`thincoder-vscode/src/extension/panel-messages.mjs:102`）。
-- 回合执行中（`_turnState === "running"`）的消息按**面**分流（C-B2-6）：**普通回合 busy 面**（无挂起会话）→ 入 host 单槽 `panel._busyQueued`（webview 侧 = 本地气泡 + `queuedUserMessage` 上行；单槽满 ⇒ 提交不出泡 / 不清框 / toast——二次提交守卫）；**挂起会话内 busy**（`running && _suspended`）→ 拒收（警告明示，不静默丢）。契约单源 = `WEBVIEW-INPUT.md` §1 C-B2-6。
+- 回合执行中（`_turnState === "running"`）的消息**一律排队受理**（C-B2-6）：单槽载体两态——无会话 ⇒ host 单槽 `panel._busyQueued`；
+  会话在飞（`panel._susp`）⇒ 会话单槽 `susp.pendingInput`（webview 侧 = 本地气泡 + `queuedUserMessage` 上行；单槽满 ⇒ 提交不出泡 / 不清框 / toast——二次提交守卫）。
+  送达 = 三支（driver 步骤 1 输入优先消费 / `enterSuspensionTurn` 预填 / idle 归位续发；会话退出兜底 = 残余直注入，零丢失）。契约单源 = `WEBVIEW-INPUT.md` §1 C-B2-6。
 - `abort` / `interrupt` 等**控制消息永不排队、直通**（延迟红线——杀 Stop 即失败）。
-- `sendMessage` 回显（`userMessage` postMessage）先于路由——挂起会话内 busy 的拒收先于回显（无假气泡）；普通回合 busy 面回显即排队气泡面（C-B2-6 ③ 外部入口同判据同槽）。
+- `sendMessage` 回显（`userMessage` postMessage）先于路由——busy 面（含挂起会话内）回显即排队气泡面（C-B2-6 ③ 外部入口同判据同槽——用户气泡回显保留在 `sendMessage`）。
 
 ### 4.2 question 卡 id 匹配
 
@@ -362,7 +364,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | `agentSettings` | src/extension/chat-panel.mjs:341/:348/src/extension/panel-messages.mjs:253 | webview/chat.js:224 | `活` | 打开拍回批末位（F-W8——机制与判据单源 = `SETTINGS.md` §2.8） |
 | `atResults` | src/extension/panel-index.mjs:78/:82 | webview/chat.js:279 | `活` | — |
 | `autoApprove` | src/extension/panel-messages-turn.mjs:194/src/extension/panel-session.mjs:127 | webview/chat.js:223 | `活` | — |
-| `busyQueued` | src/extension/panel-messages.mjs:101 | webview/chat.js:200 | `活` | busy 排队单槽未消费态（host → webview 状态镜像——二次提交守卫；登记 = §3.2 行 17。② ③ 列 as-of 2026-09-22 实施轮 `--emit`） |
+| `busyQueued` | src/extension/panel-messages.mjs:101 | webview/chat.js:200 | `活` | busy 排队单槽未消费态（判据 = 两载体合计占用；host → webview 状态镜像——二次提交守卫；登记 = §3.2 行 17。② ③ 列 as-of 2026-09-22 实施轮 `--emit`） |
 | `batchPermissionRequest` | src/extension/permission-gate.mjs:109 | webview/chat.js:276 | `活` | 载荷增 `promptId`（§4.6） |
 | `clearMessages` | src/extension/panel-session.mjs:130 | webview/chat.js:190 | `活` | — |
 | `complete` | src/extension/panel-callbacks.mjs:230 | webview/chat.js:177 | `活` | — |
@@ -452,7 +454,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | `panelDiag` | webview/activity-diag.js:81 | src/extension/panel-messages.mjs:274 | `活` | §3.2 行 8——诊断上行（`{ kind:"subTrace", entries }`；批内合并——最多一消息 / 批）；主侧 `logEvent("ev:subtrace", …)` 一行 |
 | `permissionResponse` | webview/permission.js:63/:67/:71（`reply` 返回字面量——定义 `:60`） | src/extension/panel-messages.mjs:214 | `活` | 形状 = 局部箭头函数 |
 | `questionResponse` | webview/question.js:29（`payload` 局部绑定——绑定位 `:27`） | src/extension/panel-messages.mjs:211 | `活` | 形状 = 局部对象绑定 |
-| `queuedUserMessage` | webview/send.js:44 | src/extension/panel-messages.mjs:174 | `活` | busy 期排队注入上行（普通回合 busy 面——webview 本地气泡先行 + host 单槽 `_busyQueued`；登记 = §3.2 行 16。本行 as-of 2026-09-21 实现轮） |
+| `queuedUserMessage` | webview/send.js:44 | src/extension/panel-messages.mjs:174 | `活` | busy 期排队注入上行（busy 即排队面 = `running`——webview 本地气泡先行 + host 单槽载体两态：`_busyQueued` ∥ `susp.pendingInput`；登记 = §3.2 行 16。本行 as-of 2026-09-21 实现轮） |
 | `reconnectMcp` | webview/settings-tools.js:227 | src/extension/panel-messages.mjs:221 | `活` | — |
 | `removeProvider` | webview/model-picker.js:25/webview/settings-providers.js:68 | src/extension/panel-messages.mjs:225 | `活` | — |
 | `renameSession` | webview/session-bar.js:54 | src/extension/panel-messages.mjs:194 | `活` | — |
@@ -483,6 +485,11 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 **方向口径**：本表只收 webview → host。**「删」= host 消费位在位而 webview 发射恒无（死 handler）**——处置逐条入批档（`docs/batches/2026-09-18-vsc-settings-wiring.md` §2）并已随实现落地（三删 + 一接线转活——**本表现零 `删` 行**）；**删除落地 ⇒ 源零位 ⇒ 表行同步退场**（不留悬空行——同 §12 口径）。**「补」= 发射在位而 host 缺消费位**（本表现零行）。
 
 ## 变更记录
+
+- 2026-09-22（**busy-extend 批 · 设计评审轮 2 修正 + 域外并入** · eng-designer——承 `docs/batches/2026-09-22-busy-extend.md` §3 轮次 2 域外注 + 父侧裁定并入本批）：
+  §4.1 两行收正至现行契约（回合执行中消息 → **一律排队受理**：单槽载体两态 + 送达三支在档；回显条 = busy 面回显即排队气泡面）；
+  §3.2 行 16 / 行 17 与 §12 `busyQueued` / `queuedUserMessage` 两行同步（排队面 = `running` · `pending` 判据 = 两载体合计）。
+  **消息名 / 载荷字段 / 首列判别式集零变**（§3.2 十七项 / §7 D-P11 / §6.3 20 键 / §12 · §13 表体零改——本轮只收正描述句）。
 
 - 2026-09-22（**busy-injection 批 · 实施悬空裁定轮（fix round）· eng-designer**——承 `docs/batches/2026-09-21-busy-injection.md` §5 决策透明表 #5 / #6 + 父侧裁定）：
   §3 增 `busyQueued` 行 + §3.2 **十六 → 十七项**（增行 17 = `busyQueued` 新消息——host → webview 状态镜像；D3：计数与列表同改 · §7 D-P11 同改）+ §12 新增 `busyQueued` 行（② ③ 列 = 计划落点，实施轮 `--emit` 重出）+ §6.3 键表 **19 → 20 键**（增 `input.slotFull`——端特有键 + 登记注）。

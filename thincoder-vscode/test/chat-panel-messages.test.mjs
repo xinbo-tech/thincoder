@@ -60,7 +60,7 @@ function stubPanel(overrides = {}) {
 
 // ─── ① busy 分流 + retry 同入口（F-C1e/H-F + C-B2-6）──────────────
 
-test("① busy 分流（INPUT-LOCK C' → C-B2-6）：普通回合 busy 入 `_busyQueued` 单槽（无警告无 _chat——槽满拒收 + 警告）；挂起会话内 busy 拒收 + 警告；空闲直发", async () => {
+test("① busy 分流（INPUT-LOCK C' → C-B2-6 · busy-extend 2026-09-22）：普通回合 busy 入 `_busyQueued` 单槽（无警告无 _chat——槽满拒收 + 警告）；挂起会话内 busy 单槽受理（走既有 `_chat` susp 分支）；空闲直发", async () => {
   const realWarn = vscode.window.showWarningMessage
   const warned = []
   vscode.window.showWarningMessage = async (m) => { warned.push(m) }
@@ -84,11 +84,12 @@ test("① busy 分流（INPUT-LOCK C' → C-B2-6）：普通回合 busy 入 `_bu
     assert.deepEqual(rp._busyQueued.map((q) => q.text), ["retry-me"], "retry 同面入槽（外部入口同判据同槽）")
     assert.equal(warned.length, 1, "retry 入槽零新警告")
 
-    // 挂起会话内 busy（`_susp` 在场）⇒ 拒收 + 警告零入槽（C-B2-4 收窄后仅存面）
+    // 挂起会话内 busy（`_susp` 在场）⇒ 同面受理：经 `_chat` susp 分支入会话单槽（busy-extend 2026-09-22）
     const sp = stubPanel({ _turnState: "running", _susp: { active: true, pendingInput: [] } })
     await handlePanelMessage(sp, { type: "userMessage", text: "in-session" })
-    assert.equal((sp._busyQueued ?? []).length, 0, "挂起会内 busy 零入槽")
-    assert.equal(warned.length, 2, "拒收警告明示")
+    assert.equal((sp._busyQueued ?? []).length, 0, "会话在飞 ⇒ 无需会话槽（载体两态）")
+    assert.deepEqual(sp._chatCalls, [["in-session", undefined, undefined, undefined, undefined, true, null]], "经既有 `_chat` susp 分支受理（来源标记参）")
+    assert.equal(warned.length, 1, "受理零新警告（原「拒收 + 警告」随本批撤销）")
   } finally {
     vscode.window.showWarningMessage = realWarn
   }
@@ -243,9 +244,9 @@ test("⑦ C2 忙态状态机（F-C2a）：_publishTurnState 单一广播幂等 +
   p._refreshStatus()
   assert.deepEqual(seenStatus.at(-1), "idle", "idle → idle")
 
-  // routeUserTurn 按枚举路由（C-B2-6）：running 普通回合 busy → 入 `_busyQueued` 单槽
-  // （不直发——回合尾装载）；running 挂起会内 busy → 拒收 + 警告；susp 两态与 idle →
-  // _chat（_chat 内上游分流 pendingInput 单槽——D-S5 唤醒语义不被队列短路）
+  // routeUserTurn 按枚举路由（C-B2-6 · busy-extend 2026-09-22）：running 普通回合 busy → 入
+  // `_busyQueued` 单槽（不直发——回合尾装载）；running 挂起会内 busy → 经既有 `_chat` susp 分支
+  // 入会话单槽；susp 两态与 idle → _chat（_chat 内上游分流 pendingInput 单槽——D-S5 唤醒不被队列短路）
   const realWarn = vscode.window.showWarningMessage
   const warned = []
   vscode.window.showWarningMessage = async (m) => { warned.push(m) }
@@ -257,7 +258,8 @@ test("⑦ C2 忙态状态机（F-C2a）：_publishTurnState 单一广播幂等 +
     assert.equal(warned.length, 0, "入槽零警告")
     const qs = stubPanel({ _turnState: "running", _susp: { active: true, pendingInput: [] } })
     await handlePanelMessage(qs, { type: "userMessage", text: "in-session" })
-    assert.equal(warned.length, 1, "挂起会内 busy 拒收警告一次")
+    assert.deepEqual(qs._chatCalls, [["in-session", undefined, undefined, undefined, undefined, true, null]], "挂起会内 busy ⇒ 经 `_chat` susp 分支入会话单槽")
+    assert.equal(warned.length, 0, "同面受理零警告（原「拒收 + 警告」随本批撤销）")
 
     const sp = stubPanel({ _turnState: "susp", _susp: null }) // 释放窗口（会话未建——同步零事件窗口）
     await handlePanelMessage(sp, { type: "userMessage", text: "window" })
@@ -277,7 +279,7 @@ test("⑦ C2 忙态状态机（F-C2a）：_publishTurnState 单一广播幂等 +
 
 // ─── ⑧ A1 sendMessage 守卫（F-A1 + INPUT-LOCK）────────────────
 
-test("⑧ A1 sendMessage 走 routeUserTurn（F-A1 + C-B2-6）：普通回合 busy ⇒ 回显 + 入单槽（排队气泡面）；挂起会内 busy 拒收先于回显（无假气泡）；susp 两态回显 + 走 _chat 上游分流；idle 直发；空面板 warning 分支（A1e）", async () => {
+test("⑧ A1 sendMessage 走 routeUserTurn（F-A1 + C-B2-6）：普通回合 busy ⇒ 回显 + 入单槽（排队气泡面）；挂起会内 busy 同面受理（回显 + 会话单槽——busy-extend 2026-09-22 拒收守卫撤销）；susp 两态回显 + 走 _chat 上游分流；idle 直发；空面板 warning 分支（A1e）", async () => {
   // 普通回合 busy：回显先行（排队气泡面）+ 入单槽（不直发 _chat——F16；C-B2-6 细则③ 外部入口同槽）
   const realWarn = vscode.window.showWarningMessage
   const warned = []
@@ -290,12 +292,13 @@ test("⑧ A1 sendMessage 走 routeUserTurn（F-A1 + C-B2-6）：普通回合 bus
     assert.deepEqual(p._busyQueued.map((q) => q.text), ["cmd-during"], "命令面入单槽（同判据同槽）")
     assert.equal(warned.length, 0, "入槽零警告")
 
-    // 挂起会内 busy：拒收先于回显（不画假气泡）
+    // 挂起会内 busy：同面受理（busy-extend 2026-09-22——拒收守卫撤销）：回显 + 入会话单槽
     const ps = stubPanel({ _turnState: "running", _susp: { active: true, pendingInput: [] } })
     ChatPanel.prototype.sendMessage.call(ps, "cmd-in-session")
-    assert.equal(ps.posted.filter((m) => m.type === "userMessage").length, 0, "挂起会内 busy 拒收无回显（无假气泡）")
-    assert.equal((ps._busyQueued ?? []).length, 0, "零入槽")
-    assert.equal(warned.length, 1, "拒收警告一次")
+    assert.equal(ps.posted.filter((m) => m.type === "userMessage").length, 1, "回显先行（排队气泡面）")
+    assert.equal((ps._busyQueued ?? []).length, 0, "无需会话槽（载体两态）")
+    assert.deepEqual(ps._chatCalls, [["cmd-in-session", undefined, undefined, undefined, undefined, true, null]], "经既有 `_chat` susp 分支受理（同判据同槽）")
+    assert.equal(warned.length, 0, "受理零警告")
   } finally {
     vscode.window.showWarningMessage = realWarn
   }

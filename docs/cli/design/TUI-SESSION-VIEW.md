@@ -17,7 +17,7 @@
 |---|---|
 | `thincoder-cli/src/tui/startup.mjs` | 启动屏 + 会话恢复（`historyToLines` 从 history 重建——**display 快照已废弃，恢复唯一路径**；行形态复刻 live）+ 懒加载历史窗口（`restoreLines` / `createLoadOlder`）+ 后台索引 + 崩溃提示 |
 | `thincoder-cli/src/tui/agent-turn.mjs` | `runAgentTurn({ autoTurn, skipSession })` 回合驱动器：状态复位 / `runAgent` 循环（flushStream、AbortError 中断区分、ContinueError）/ finally 收尾（挂起决策、sweep、标题、落盘）/ 交接消息单条续发；`userNeededAtTurnEnd` 谓词（attention 置位——见 `docs/cli/design/TUI.md` §7.2） |
-| `thincoder-cli/src/tui/suspension-drive.mjs` | 挂起会话驱动器（`suspensionSession`）——状态机行表以 `docs/core/design/AGENT-LOOP.md` §9 为权威 |
+| `thincoder-cli/src/tui/suspension-drive.mjs` | 挂起会话驱动器（`suspensionSession`）——状态机行表以 `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.8 为权威 |
 | `thincoder-cli/src/tui/display-budget.mjs` | 显示层字符额度：常量单源 + `lineChars` + `syncLineBudget` 对账（§5） |
 | `thincoder-cli/src/tui/tool-events.mjs` | 工具事件 → TUI 状态（回合期回调装配点——显示面契约见 `docs/cli/design/TUI-TOOL-OUTPUT.md`） |
 
@@ -78,11 +78,11 @@
    **释放窗口守卫**（willSuspend 判定后、挂起会话启动前——期间 `processing = false` 且 `suspended` 未置位，
    无守卫会并发开第二个 `runAgentTurn`——双驱动器竞态）；`sweepToolBlocks`；`ensureSessionTitle`；
    distill flush 有界等待（超时上限——退出路径不挂死）→ `saveSession` 增量落盘。
-6. **交接消息单条续发**：busy 提交吞 + 攒批删——`state.queue` 缩为**残项单容器**（释放窗口兜底池空转正 / 挂起中止残余——
+6. **交接消息单条续发**：busy 提交入单槽（受理判据 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1——吞面收敛四）+ 攒批删——`state.queue` 缩为**残项单容器**（释放窗口兜底池空转正 / 挂起中止残余——
    各至多一条——零丢失）；回合尾单条直发（slash 直接执行——保序）；释放窗口期入 `pendingInput` 的消息在池已空时转回队列。
-7. **挂起会话**（`suspension-drive.mjs`——状态机行表以 `docs/core/design/AGENT-LOOP.md` §9 为权威，本档不复制）：
-   队列清空后池仍 live 且非 skipSession 且未中止 → 进入挂起态——busy 提交吞；**挂起空闲输入开放**
-   （Enter 走 `pendingInput` 单槽——键面契约见 `docs/cli/design/TUI-INPUT-BOX.md` §4）、settle 事件驱动 auto-turn 消化轮、
+7. **挂起会话**（`suspension-drive.mjs`——状态机行表以 `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.8 为权威，本档不复制）：
+   队列清空后池仍 live 且非 skipSession 且未中止 → 进入挂起态——**挂起内 busy 与普通 busy 同判据入槽**（受理判据 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1）；
+   **挂起空闲输入开放**（Enter 走 `pendingInput` 单槽——键面契约见 `docs/cli/design/TUI-INPUT-BOX.md` §4）、settle 事件驱动 auto-turn 消化轮、
    状态行「后台 N 子代理运行中 · M 待消化」、池空 + 无待处理输入 → 补发 done 冻结自然退出；
    彻底中止后会话退出**复位中止标志**（防粘滞——不清则中止后池再 live 永不重新进入挂起态）并把残余输入单消息转回队列（不静默丢）。
 
@@ -196,12 +196,17 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
 |---|---|---|
 | 需求层条目 | F6（修订）/ N10–N11 等 | 需求面——`docs/cli/requirements/TUI.md`（本档只留设计层） |
 | 分页源下沉的机制契约 | 记录存储 / 序号锚定 / 描述符口径 | `docs/core/design/SESSION.md`（本节只落 TUI 面落点） |
-| 挂起会话状态机 / settle 时序 / 池管理 | 编排语义 | `docs/core/design/AGENT-LOOP.md` §9（本档只留 TUI 侧驱动行为） |
+| 挂起会话状态机 / settle 时序 / 池管理 | 编排语义 | `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.8（本档只留 TUI 侧驱动行为） |
 | 回合内工具事件与显示 | 工具载体 / 新区块 / 参数可见性 | `docs/cli/design/TUI-TOOL-OUTPUT.md`（本档只留回调装配点） |
 | attention 置位谓词 | `userNeededAtTurnEnd` 的语义与清位 | `docs/cli/design/TUI.md` §7.2（本档只标调用点） |
 | 显示层额度的常量数值来源 | 常量本体 | `thincoder-cli/src/tui/display-budget.mjs`（单源——本档引用不复制数值之外的口径） |
 
 ## 变更记录
+
+- 2026-09-22（**busy-extend 批 · 同族扩面轮 · eng-designer**——承 `docs/batches/2026-09-22-busy-extend.md` §1 裁定 · 父侧并入本批）：§4 两处旧口径收正——第 6 条「busy 提交吞」→ **入单槽**（受理判据 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1）；第 7 条「进入挂起态——busy 提交吞」→ **挂起内 busy 与普通 busy 同判据入槽**（键面契约回指同处）。机制条文零改。
+
+- 2026-09-22（**busy-extend 批 · 设计评审轮 2 修正** · eng-designer——承 `docs/batches/2026-09-22-busy-extend.md` §3 轮次 2 发现 #3）：
+  §1 模块地图行与 §6.2 不并项登记行的节号收正（`docs/core/design/AGENT-LOOP.md` §9 → **`docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.8**——挂起状态机 / settle 时序 / 池管理的现住档）。**条文语义零变**。
 
 - 2026-09-20（**卫生族二批 · 台账 #141 · eng-designer**——承 `docs/batches/2026-09-20-hygiene-sweep-2-batch.md` §2.1）：§3 分页数据源下沉条机制契约指称收正——`docs/core/design/SESSION.md` 节号改指现核档 `§6.14`；零新语义。
 

@@ -1,8 +1,8 @@
 /**
  * webview-input-enter.test.mjs — 第 28 批 B2（`docs/design/WEBVIEW.md` §9——F-F1~F-F3）：
  * VSC 输入面 Enter 语义——组合期归输入法（C-B2-1）/ @ 下拉与 send 协调（C-B2-2/C-B2-3）/
- * busy 拒发可见提示（C-B2-4——收窄后仅存面 = 挂起会话内 busy；普通回合 busy 排队面 =
- * `busy-injection-vsc.test.mjs` T-V16-1）。用例 1:1 = §9.6 T-B2-1~T-B2-7。
+ * busy 排队受理（C-B2-6——busy-extend 批 2026-09-22：`running` 一律排队；原 C-B2-4 拒发面撤销；
+ * 普通 / 会话在飞两态 = `busy-injection-vsc.test.mjs` T-V16-1 / T-V16-4a）。用例 1:1 = §9.6 T-B2-1~T-B2-7。
  *
  * 手法（§9.6）：setupWebview + installChatFixture + 本档自备补充元素（#at-dropdown /
  * #paste-bar / #paste-badge / #file-input / #attach-btn——共享 fixture 零改）+ 动态 import
@@ -74,6 +74,7 @@ function resetInput(value) {
   pressKey({ key: "Escape" }) // 防御：清残留中断模态（非模态态零副作用）
   S._turnState = "idle"
   S._suspended = false
+  S._busyQueuedPending = false // C-B2-6 细则① 镜像（初启态——队列分支守卫判据源）
   ctx.isRunning = false
   ctx._interruptMode = false
   ac.closeAtDropdown()
@@ -151,24 +152,25 @@ test("T-B2-4 判据硬化：同 T-B2-3 但 #at-dropdown 元素移除后 Enter �
   }
 })
 
-// ─── T-B2-5 正常：busy 拒发可见提示（C-B2-4——收窄后仅存面）───
+// ─── T-B2-5 正常：busy 排队受理（busy-extend 批 2026-09-22——C-B2-6 一律排队）───
 
-test("T-B2-5 busy 拒发（收窄后仅存面 = 挂起会话内 busy：`running ∧ _suspended`——C-B2-6）：零 userMessage/零 queuedUserMessage + 文本保留 + 占位符 = busy 串（既有锁）+ #paste-toast 可见且文案 = busy 串", () => {
+test("T-B2-5 busy 排队（原「拒发 + toast」面随本批撤销）：`running ∧ _suspended` Enter ⇒ 本地气泡 + queuedUserMessage + 清框 ∧ 零 toast ∧ 零 userMessage", () => {
   resetInput("busy 期文本")
   W.S._turnState = "running"
-  W.S._suspended = true // 挂起会话内 busy（digest / 会话内用户回合）——收窄后仅存拒发面
+  W.S._suspended = true // 挂起会话内 busy（digest / 会话内用户回合）——同判据排队面
+  const bubbles = document.querySelectorAll(".message.user").length
   const mark = capturedPosts.length
   pressKey({ key: "Enter" })
-  assert.equal(postsSince(mark).filter((m) => m.type === "userMessage").length, 0, "零 userMessage（拒发）")
-  assert.equal(postsSince(mark).filter((m) => m.type === "queuedUserMessage").length, 0, "零 queuedUserMessage（非普通回合 busy 面）")
-  assert.equal(inputEl().value, "busy 期文本", "文本保留不吞")
-  assert.equal(inputEl().placeholder, W.t("input.busyPlaceholder"), "占位符 = busy 串（既有锁零伤）")
+  const posts = postsSince(mark)
+  const queued = posts.filter((m) => m.type === "queuedUserMessage")
+  assert.equal(queued.length, 1, "恰 1 条 queuedUserMessage 上行（host 侧入会话单槽）")
+  assert.equal(queued[0].text, "busy 期文本", "文本随消息上传")
+  assert.equal(posts.filter((m) => m.type === "userMessage").length, 0, "零 userMessage（不经正常发送面）")
+  assert.equal(document.querySelectorAll(".message.user").length, bubbles + 1, "本地气泡先行上屏（送达时即 user 回声面）")
+  assert.equal(inputEl().value, "", "输入框清空（消息已受理——用户视为已发送）")
   const toastEl = document.getElementById("paste-toast")
-  assert.ok(toastEl, "#paste-toast 已懒建")
-  assert.ok(toastEl.classList.contains("paste-toast"), "class 复用既有 CSS（controls.css:49-65——零 CSS 改动）")
-  assert.ok(toastEl.classList.contains("visible"), "toast 即时可见（.visible）")
-  assert.equal(toastEl.textContent, W.t("input.busyPlaceholder"), "toast 文案 = busy 串（零新增 locale 键）")
-  clearTimeout(W.toast.showToast._t) // 2.6s 自动隐去计时器——本测只断言即时态（§9.6 注）
+  assert.ok(!toastEl?.classList.contains("visible"), "零 toast（受理非拒发——不静默拒亦不误报拒）")
+  clearTimeout(W.toast.showToast._t) // 防御：残留计时器（若实现回退到拒发面）
 })
 
 // ─── T-B2-6 边界：双守卫（下拉打开 + 组合期）───

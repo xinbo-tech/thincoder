@@ -6,6 +6,9 @@
  * fix 轮（2026-09-22 · 批档 §2 实施悬空裁定轮）：T-V16-5 = 二次提交守卫（细则①——host
  * `busyQueued` 镜像 / 槽满不出泡不清框 / 复位恢复排队）；T-V16-6 = 送达侧贴图降级对位
  * （细则⑥——装载②/装载① 同过 F-1 判定 / 来源标记支降级 / mock 成功与 null 两形兜底）。
+ * busy-extend 批（2026-09-22 · 台账 #224 · 批档 §2 用例面）：T-V16-4a 改述（挂起会话内 busy
+ * 同排队面）；T-V16-7 = 载体两态会话侧受理（槽空 / 槽满——真实 `_chat` susp 分支）；
+ * T-V16-8 = 跨载体二次提交守卫；T-V16-10 = 会话在飞入槽项来源标记 + F-1 判定两形。
  * 手法：① webview-env（happy-dom + capturedPosts）驱真 `send()` + 真 `chat.js` 消息 case
  * （`busyQueued` 镜像——先例 `workspace-guard.test.mjs` 15/16 组）；② vscode-mock 载体 +
  * 桩面板驱 `routeUserTurn` / `enterSuspensionTurn`（先例 `chat-panel-messages.test.mjs` /
@@ -17,6 +20,9 @@ import * as vscode from "vscode"
 import { setupWebview, installFullIndexFixture } from "./helpers/webview-env.mjs"
 import { handlePanelMessage, routeUserTurn } from "../src/extension/panel-messages.mjs"
 import { enterSuspensionTurn } from "../src/extension/panel-turn-stages.mjs"
+// T-V16-7 / T-V16-10：会话在飞受理走真实 `_chat` susp 分支（桩面板 + 原型方法绑定的直驱先例
+// = `chat-panel-messages.test.mjs` ③⑧——生产同码路径，非桩自实现）。
+import { ChatPanel } from "../src/extension/chat-panel.mjs"
 
 // ═══ 第一部分：webview 面（真 send()——T-V16-1 / T-V16-4 webview 两态）═══════════
 
@@ -91,21 +97,23 @@ test("T-V16-1 正常：`running && !_suspended` send ⇒ 本地气泡 + `queuedU
   assert.equal(S._turnStart, null, "回合态簿记零触碰（_turnStart 归下一回合起点）")
 })
 
-test("T-V16-4a 边界（webview）：挂起会话内 busy（`running && _suspended`）⇒ 拒发零改（toast + 文本保留 + 零 queuedUserMessage）", () => {
+test("T-V16-4a 边界（webview）：挂起会话内 busy（`running && _suspended`）⇒ 同排队面（busy-extend 批 · C-B2-6）：本地气泡 + `queuedUserMessage` + 清框 ∧ 零 toast ∧ 零 `userMessage`", () => {
   resetSend("digest 期文本")
-  const { S, ctx, send, t } = W
+  const { S, ctx, send } = W
   S._turnState = "running"
-  S._suspended = true
+  S._suspended = true // 挂起会话内 busy（digest / 会话内用户回合）——`_suspended` 不再分流
+  const bubbles = document.querySelectorAll(".message.user").length
   const mark = capturedPosts.length
   send()
-  assert.equal(capturedPosts.slice(mark).filter((m) => m.type === "queuedUserMessage").length, 0, "零 queuedUserMessage（拒发面）")
-  assert.equal(capturedPosts.slice(mark).filter((m) => m.type === "userMessage").length, 0, "零 userMessage")
-  assert.equal(ctx.inputEl.value, "digest 期文本", "文本保留不吞")
-  assert.equal(ctx.inputEl.placeholder, t("input.busyPlaceholder"), "占位符 = busy 串（既有锁零伤）")
+  const posts = capturedPosts.slice(mark)
+  const queued = posts.filter((m) => m.type === "queuedUserMessage")
+  assert.equal(queued.length, 1, "恰 1 条 queuedUserMessage 上行（同面受理）")
+  assert.equal(queued[0].text, "digest 期文本", "文本随消息上传（host 单槽两载体）")
+  assert.equal(posts.filter((m) => m.type === "userMessage").length, 0, "零 userMessage（不经正常发送面）")
+  assert.equal(document.querySelectorAll(".message.user").length, bubbles + 1, "本地气泡先行上屏")
+  assert.equal(ctx.inputEl.value, "", "输入框清空（消息已受理——用户视为已发送）")
   const toastEl = document.getElementById("paste-toast")
-  assert.ok(toastEl?.classList.contains("visible"), "toast 即时可见")
-  assert.equal(toastEl.textContent, t("input.busyPlaceholder"), "toast 文案 = busy 串（零新增 locale 键）")
-  clearTimeout(W.toast.showToast._t)
+  assert.ok(!toastEl?.classList.contains("visible"), "零 toast（受理非拒发——C-B2-4 面随本批撤销）")
 })
 
 test("T-V16-4b 边界（webview）：纯挂起等待面（`susp`）send ⇒ 走既有路径（userMessage 上行——零回归）", () => {
@@ -149,6 +157,32 @@ test("T-V16-5 边界（webview 二次提交守卫 · 槽满镜像——C-B2-6 �
   clearTimeout(W.toast.showToast._t)
 })
 
+// ─── T-V16-8 边界（webview · 二次提交跨载体守卫）：host 推 pending:true（会话槽占用）───
+
+test("T-V16-8 边界（webview 跨载体）：host 推 `pending:true`（会话槽占用——`_busyQueued` 空）⇒ 不出泡 / 不清框 / toast `input.slotFull`；推送 `pending:false` ⇒ 镜像复位恢复受理", () => {
+  resetSend("跨载体槽满")
+  const { S, ctx, send, t } = W
+  S._turnState = "running"
+  S._suspended = true // 挂起会话内 busy（同排队面——判据 = `running`）
+  window.dispatchEvent(new window.MessageEvent("message", { data: { type: "busyQueued", pending: true } }))
+  assert.equal(S._busyQueuedPending, true, "host 推两载体合计占用 ⇒ 镜像置位")
+  const bubbles = document.querySelectorAll(".message.user").length
+  const mark = capturedPosts.length
+  send()
+  const posts = capturedPosts.slice(mark)
+  assert.deepEqual([posts.filter((m) => m.type === "queuedUserMessage").length, posts.filter((m) => m.type === "userMessage").length, document.querySelectorAll(".message.user").length], [0, 0, bubbles], "不出泡 / 零 userMessage / 零新气泡（跨载体守卫生效）")
+  assert.equal(ctx.inputEl.value, "跨载体槽满", "文本保留不吞（不清框）")
+  const toastEl = document.getElementById("paste-toast")
+  assert.ok(toastEl?.classList.contains("visible") && toastEl.textContent === t("input.slotFull"), "toast 即时可见且文案 = `input.slotFull`（守卫判据源扩两载体生效）")
+  clearTimeout(W.toast.showToast._t)
+  // 消费即清（host 推实况）⇒ 镜像复位 ⇒ 恢复受理
+  window.dispatchEvent(new window.MessageEvent("message", { data: { type: "busyQueued", pending: false } }))
+  assert.equal(S._busyQueuedPending, false, "镜像随 host 推送复位")
+  send()
+  assert.equal(ctx.inputEl.value, "", "恢复受理（清框）")
+  clearTimeout(W.toast.showToast._t)
+})
+
 // ═══ 第二部分：host 面（routeUserTurn 分流 + enterSuspensionTurn 装载两分支）═══════
 
 /** 桩面板（vscode-mock 载体——生产 ChatPanel 的被读字段子集 + 记录面）。 */
@@ -184,7 +218,7 @@ async function withWarnings(fn) {
   return warned
 }
 
-test("T-V16-2 host 入槽：普通回合 busy ⇒ `_busyQueued` 单槽 + 不续发（零 _chat）零警告；槽满 ⇒ 拒收 + 提示（不覆盖）；挂起会内 busy ⇒ 拒收 + 提示零入槽", async () => {
+test("T-V16-2 host 入槽：普通回合 busy ⇒ `_busyQueued` 单槽 + 不续发（零 _chat）零警告；槽满 ⇒ 拒收 + 提示（不覆盖）；挂起会内 busy ⇒ 同面受理（经 `_chat` susp 分支入会话单槽）", async () => {
   const p = stubPanel({ _turnState: "running" })
   await withWarnings(async (warned) => {
     // ① 空槽：入槽（webview 上行同入口——queuedUserMessage case 分发）
@@ -201,13 +235,47 @@ test("T-V16-2 host 入槽：普通回合 busy ⇒ `_busyQueued` 单槽 + 不续�
     assert.equal(warned.length, 1, "槽满拒收恰一次提示（不静默丢）")
     assert.equal(p._chatCalls.length, 0, "拒收零回合")
 
-    // ③ 挂起会话内 busy（_susp 在场）：拒收 + 提示——零入槽（C-B2-4 收窄后仅存面）
+    // ③ 挂起会话内 busy（_susp 在场）：busy-extend 批改述——同面受理（走既有 `_chat` susp 分支入会话单槽）
     const sp = stubPanel({ _turnState: "running", _susp: { active: true, pendingInput: [] } })
     await routeUserTurn(sp, { text: "during-digest" })
     await settle()
-    assert.equal(sp._busyQueued.length, 0, "挂起会内 busy 零入槽")
-    assert.equal(warned.length, 2, "拒收提示明示")
-    assert.equal(sp._chatCalls.length, 0, "零回合")
+    assert.equal(sp._busyQueued.length, 0, "会话在飞 ⇒ 不入无会话槽（载体两态）")
+    assert.equal(warned.length, 1, "受理零新警告（原「拒收 + 提示」撤销）")
+    assert.deepEqual(sp._chatCalls, [["during-digest", undefined, undefined, undefined, undefined, true, null]], "经既有 `_chat` susp 分支受理（来源标记参 + visionReader 缝）")
+  })
+})
+
+/** 会话在飞 busy 面板（T-V16-7/T-V16-10）：桩面板 + 真实 `_chat` susp 分支（生产同码路径）
+ *  + `_suspWake` 计数——受理 / 拒收 / 推送三面均可观测。 */
+function sessionPanel() {
+  const p = stubPanel({ _turnState: "running", _susp: { active: true, pendingInput: [] } })
+  const wakes = { n: 0 }
+  p._suspWake = () => { wakes.n++ }
+  p._chat = (...args) => ChatPanel.prototype._chat.apply(p, args)
+  p.wakes = wakes
+  return p
+}
+
+test("T-V16-7 边界（host · 载体两态会话侧）：`routeUserTurn` 于 `running ∧ _susp` ⇒ 槽空：入 `susp.pendingInput`（来源标记）+ 推 `busyQueued{pending:true}` + 唤醒 + 零警告；槽满：拒收 + 警告 + 不覆盖 + 推实况", async () => {
+  // ① 槽空：入会话单槽（无会话槽零动）+ 镜像推送 + 零即时回合
+  const p1 = sessionPanel()
+  await withWarnings(async (warned) => {
+    await routeUserTurn(p1, { text: "during-session" })
+    await settle()
+    assert.deepEqual([p1._busyQueued, p1._susp.pendingInput.map((q) => q.text)], [[], ["during-session"]], "入会话单槽（无会话槽零动——载体两态）")
+    assert.equal(p1._susp.pendingInput[0].fromBusyQueue, true, "入槽项携来源标记（细则⑥）")
+    assert.deepEqual(p1.posted.map((m) => `${m.type}:${m.pending}`), ["busyQueued:true"], "推槽内实况（两载体合计占用）")
+    assert.deepEqual([warned.length, p1.wakes.n, p1._turnState], [0, 1, "running"], "受理零警告 + 唤醒一次 + 零即时回合（susp 分支 return）")
+  })
+
+  // ② 槽满（会话槽已占一条——`_busyQueued` 空）：拒收 + 警告 + 不覆盖 + 推实况 true
+  const p2 = sessionPanel()
+  p2._susp.pendingInput.push({ text: "first" })
+  await withWarnings(async (warned) => {
+    await routeUserTurn(p2, { text: "second" })
+    await settle()
+    assert.deepEqual([p2._susp.pendingInput.map((q) => q.text), warned.length, p2.wakes.n], [["first"], 1, 0], "槽满拒收：不覆盖 + 恰一次警告 + 零唤醒")
+    assert.deepEqual(p2.posted.map((m) => `${m.type}:${m.pending}`), ["busyQueued:true"], "拒收推实况 true（跨载体守卫判据源——T-V16-8 host 侧）")
   })
 })
 
@@ -226,6 +294,7 @@ test("T-V16-3 装载①（池 live 进会话）：`_busyQueued` 残项预填 `su
   assert.deepEqual(turns.map((t) => t.text), ["预填消息"], "driver 以原文开用户回合（预填生效——D-S5 输入优先）")
   assert.equal(turns[0].skipSession, true, "会话内回合（skipSession 形态零改）")
   assert.equal(p._busyQueued.length, 0, "槽随入口移交（避免二次装载）")
+  assert.deepEqual(p.posted.filter((m) => m.type === "busyQueued").map((m) => m.pending), [false, false], "消费即清两推：装载① splice + driver 步骤 1（C-B2-6 细则① 三支消费点——镜像不黏滞）")
   assert.equal(p._susp, null, "会话自然退出（_susp 清）")
 })
 
@@ -330,6 +399,40 @@ test("T-V16-6 正常/边界（C-B2-6 细则⑥）：装载②（idle 归位）�
   assert.equal(called4, 0, "无来源标记 ⇒ 判决函数不可达（纯挂起既有路径零改）")
   assert.equal(turns4[0].text, "纯挂起项", "文本零改动")
   assert.deepEqual(turns4[0].images, BUSY_IMG, "images 原样（零旁路）")
+})
+
+test("T-V16-10 正常/边界（C-B2-6 细则⑥ · 会话在飞面）：入槽项携来源标记 + `visionReader` 缝 ⇒ 送达前过 F-1 判定（成功 ⇒ 描述注入 + images 清空；null ⇒ 原样兜底——不静默丢）", async () => {
+  const OK_DESC = "一只戴帽子的猫"
+  const okMarker = `[图片 ${BUSY_IMG[0]} 描述: ${OK_DESC}]`
+
+  // ① 会话在飞受理：`routeUserTurn` 实产入槽项字段（来源标记 + per-call 缝）
+  const mock = async () => ({ ok: true, description: OK_DESC })
+  const p = sessionPanel()
+  await routeUserTurn(p, { text: "看图", visionReader: mock })
+  await settle()
+  const item = p._susp.pendingInput[0] // 会话在飞实产入槽项（`_chat` susp 分支）
+  assert.deepEqual([item.fromBusyQueue, item.visionReader], [true, mock], "来源标记 + `visionReader` 缝随项（仅该支降级——纯挂起既有路径零改）")
+
+  // ② 送达侧（driver 消费支——`runTurn` 闭包：装载① 与会话在飞同支；images = 已落盘路径形）
+  const history = []
+  history._asyncSubagents = new Map([["1", { id: 1, role: "explore", status: "running" }]])
+  history._suspended = false
+  const p1 = stubPanel({ _turnState: "susp" })
+  p1._busyQueued = [{ ...item, modelOverride: "deepseek-v4-pro", providerName: "ds", images: [...BUSY_IMG] }]
+  const turns = []
+  const runChat1 = async (_panel, args) => { turns.push(args); history._asyncSubagents.clear() } // 消费后池空 → 会话自然退出
+  await enterSuspensionTurn(p1, { turnSlot: 1, distillSlot: null, history, fullHistory: [], skipSession: false, susp: false, runChat: runChat1 })
+  assert.equal(turns.length, 1, "driver 消费单槽开用户回合")
+  assert.deepEqual([turns[0].text, turns[0].images], [`看图\n\n${okMarker}`, undefined], "来源标记支同过降级判定（描述注入 + images 清空）")
+  // ③ mock null（无渠道 / spawn 失败 / 超时 / 空返同路）⇒ 原样兜底——不静默丢
+  const h3 = []
+  h3._asyncSubagents = new Map([["1", { id: 1, role: "explore", status: "running" }]])
+  h3._suspended = false
+  const p3 = stubPanel({ _turnState: "susp" })
+  p3._busyQueued = [{ ...item, visionReader: async () => null, modelOverride: "deepseek-v4-pro", providerName: "ds", images: [...BUSY_IMG] }]
+  const turns3 = []
+  await enterSuspensionTurn(p3, { turnSlot: 1, distillSlot: null, history: h3, fullHistory: [], skipSession: false, susp: false, runChat: async (_p, args) => { turns3.push(args); h3._asyncSubagents.clear() } })
+  assert.deepEqual([turns3[0].text, turns3[0].images], ["看图", BUSY_IMG], "fallback：文本零改动 + images 保留下发（可读不静默丢）")
 })
 
 test("T-V16-5b（fix 轮收敛补全 · 评审 🟡#1）：归位受理路径同推槽内实况——镜像本地先行置位后不留黏滞死角", async () => {
