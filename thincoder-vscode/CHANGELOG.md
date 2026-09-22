@@ -2,6 +2,15 @@
 
 All notable changes to ThinCoder VS Code are documented here.
 
+## [0.9.6] — 2026-09-22
+
+> 0.9.5 → 0.9.6（CalVer 月内序号——发布时定号）
+
+### Changed
+
+- **核依赖升级**：`@thincoder/core` `^0.9.3` → `^0.9.4`（MiMo V2.6 规格行经核生效）。
+- **README provider 表**：MiMo 两行模型列 → `mimo-v2.6-pro`（与预设改指对外一致）。
+
 ## [0.9.5] — 2026-09-22
 
 > 0.9.4 → 0.9.5（CalVer 月内序号——发布时定号）

@@ -226,6 +226,9 @@ Code conventions: pure `.mjs`, no semicolons, no third-party npm dependencies al
 
 ## Changelog
 
+### 0.12.66 (2026-09)
+- **MiMo V2.6 support** — the core `^0.9.4` dependency registers MiMo V2.6 (pro / flash / pro-ultraspeed: 1M context, 131K output, vision, auto caching) and repoints the `mimo` / `mimoplan` presets to `mimo-v2.6-pro`.
+
 ### 0.12.65 (2026-09)
 - **Session index** — `thincoder session index [--status|--rebuild]`. `read_history` now answers over-limit sessions and searches across sessions (`path:"all"`), backed by a derived, rebuildable `node:sqlite` index; the session files remain the only source of truth.
 - **Queue submissions while busy** — Enter during a running turn is no longer swallowed: it lands in a single slot with a visible `[sending queued message]` receipt and runs at the turn boundary. The same now applies inside suspended sessions. Ctrl+I stays the interrupt-style channel.

@@ -1,6 +1,6 @@
 {
   "name": "thincoder",
-  "version": "0.12.65",
+  "version": "0.12.66",
   "description": "Thin coding agent - zero third-party dependencies, no build step, Node.js native. Sharp code, zero bloat.",
   "keywords": [
     "ai",
@@ -20,7 +20,7 @@
     "node": ">=24"
   },
   "dependencies": {
-    "@thincoder/core": "^0.9.3"
+    "@thincoder/core": "^0.9.4"
   },
   "files": [
     "bin/",

@@ -3,6 +3,19 @@
 All notable changes to the core package are documented here.
 Format: Keep a Changelog · 中文 · 号在发布时定（CalVer——见 `docs/RELEASE.md` §4）。
 
+## [0.9.4] — 2026-09-22
+
+> 0.9.3 → 0.9.4（月内序号——发布时定号）
+
+### Added
+
+- **MiMo V2.6 三款规格行**（`mimo-v2.6-pro` / `mimo-v2.6-flash` / `mimo-v2.6-pro-ultraspeed`——同日上架）：此前缺行落兜底（128K / 32K / 无视觉），现按真机实测登记——1M 上下文 · 131_072 输出 · 思考默认开（`thinking.type`）· 全模态 · 自动缓存。
+
+### Changed
+
+- **MiMo v2.5 两行存量对齐**（同日实测）：`maxOutput` 128_000 → 131_072 + 补自动缓存登记；族头注与 `assistantToolCallMessage` 文书句按 2026-09-22 复测改写（原「缺字段 → 400」句已不可复现——回显策略保持保守不变）。
+- **MiMo 预设改指**：`mimo` / `mimoplan` 默认模型 → `mimo-v2.6-pro`（v2.5 官网标注即将下线；Token Plan 端点同平台推断）。
+
 ## [0.9.3] — 2026-09-22
 
 > 0.9.2 → 0.9.3（月内序号——发布时定号）
