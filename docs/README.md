@@ -68,13 +68,13 @@
 - `cli/` **2 档**：`design/RELEASE.md` · `requirements/FEATURES.md`（P2）；
 - `vsc/` **8 档**：`design/` = `VSC-MIGRATION.md` · `SETTINGS.md` · `PROJECT-SWITCHER.md` · `WEBVIEW.md` · `WEBVIEW-PROTOCOL.md` · `WEBVIEW-INPUT.md`；`requirements/` = `VSC-MIGRATION.md` · `WEBVIEW.md`。
 
-**`core/design/` 其余 27 档（工具 · 机制 · 流程面——批 11 补登 · as-of 2026-09-16 · 判据 = `core/design/DOC-MIGRATION.md` §9.3 A21）**：
+**`core/design/` 其余 32 档（工具 · 机制 · 流程面——批 11 补登 · 判据 = `core/design/DOC-MIGRATION.md` §9.3 A21 · 计数随批收正 2026-09-22）**：
 - 文件 / 编辑工具面 **7 档**：`APPLY-PATCH.md` · `EDIT.md` · `EDIT-HELPERS.md` · `HASHLINE-EDIT.md` · `INSERT-AFTER.md` · `TOOL-OUTPUT-LIMITS.md` · `WRITE.md`；
-- 顾问 / 协作 / 子代理面 **7 档**：`ADVISOR-CONVERGENCE.md` · `ADVISOR-GUARDS.md` · `AGENT-LOOP-SUBAGENT.md` · `ESCALATE.md` · `MULTI-INSTANCE-COLLAB.md` · `PROXY.md` · `SEND-STALL-DISTILL.md`；
+- 顾问 / 协作 / 子代理面 **9 档**：`ADVISOR-CONVERGENCE.md` · `ADVISOR-GUARDS.md` · `AGENT-LOOP-ASYNC-POOL.md` · `AGENT-LOOP-SUBAGENT.md` · `AGENT-LOOP-UPSTREAM.md` · `ESCALATE.md` · `MULTI-INSTANCE-COLLAB.md` · `PROXY.md` · `SEND-STALL-DISTILL.md`；
 - 令牌 / 参数 / 设置面 **5 档**：`AGENT-PARAMS.md` · `DESIGN-TOKEN-SETTLEMENT.md` · `ENG-TOKEN-BINDING.md` · `SETTINGS-TOOL.md` · `VERIFY-REDESIGN.md`；
 - 流程 / 文档机制面 **11 档**：`ANCHOR-DEBT-REPAIR.md` · `BATCH-RECORD.md` · `DOC-CODE-RECONCILE.md` · `DOC-DISCIPLINE.md` · `ENGINEERING-MODE-V2.md` · `ENGINEERING-MODE.md` · `LEDGER.md` · `LEDGER-SELF-CONTAINED.md` · `MANIFEST.md` · `TESTING.md` · `TURN-CAP-CONTINUE.md`；
-- **计数核对（复跑 as-of 2026-09-17 · 锚债修复设计轮）**：`core/design/` 实档 **51** = 本图登记 **51**（正向未登 **0** · 反向路径引用悬空 **0**）。
-  （前值 **49 = 49** 为 as-of 2026-09-16 读数；此后增 `MANIFEST.md` · `ENGINEERING-MODE-V2.md` · `ANCHOR-DEBT-REPAIR.md` 三档——**正向未登曾达 2**，本行同批收正。）
+- **计数核对（复跑 as-of 2026-09-22 · structure-debt 批 · 档面车道）**：`core/design/` 实档 **54** = 本图登记 **53** + **待补登 1**（`MODEL-SPECS.md`——他批新档，归属面待其批登记；本批不代裁）。
+  （前值 **51 = 51** 为 as-of 2026-09-17 读数；此后实增三档：`MODEL-SPECS.md`（他批）+ 本批三分面 `AGENT-LOOP-ASYNC-POOL.md` · `AGENT-LOOP-UPSTREAM.md`——后两档本行同批登记。）
 
 **工作流档** = `core/design/CORE-UNIFICATION.md`（注册表 · 事实基线 · 核形态 · 选型 · 分段执行 · 决策 · 验收 · 契约策略 · 测试）——子系统档由它索引、**不复制**其内容（D2 单一权威源）；裁决行的**列定义**亦住该档 §2.5。
 
@@ -88,6 +88,8 @@
 - **三部分不各设地图**——本 README = 三部分（`core/` · `cli/` · `vsc/`）的唯一地图（目标结构 `core/design/DOC-SYSTEM.md` §4）；`cli/` · `vsc/` 两产品面档所对应的产品树旧档（`thincoder-cli/docs/**` · `thincoder-vscode/docs/**`）= 迁移期参照历史（§2 政策——保留 ≠ 维护）。
 
 ## 变更记录
+
+- 2026-09-22：**structure-debt 批（三分面）登记 + 计数收正**——§4「顾问 / 协作 / 子代理面」**7 → 9 档**（+ `AGENT-LOOP-ASYNC-POOL.md` · `AGENT-LOOP-UPSTREAM.md`）；「其余」组标题计数随批收正（27 → 32）；计数核对行收正为 **实档 54 = 登记 53 + 待补登 1**（`MODEL-SPECS.md`——他批）。
 
 - 2026-09-20：**发布计划档迁根登记**（用户裁定「release.md 不应该放在那个目录里，应该直接放在 docs 目录下」）——原 `docs/core/requirements/RELEASE.md` 迁根为总发布计划 ✗ CLI 链设计档同批同迁（后随三端合一并回 ✗ 详见发布计划档变更记录）；§1 内容表补一行。
 - 2026-09-20：**三端合一登记**（用户 23:23「把各端的 release.md 整合成一个」）——CLI 链设计细目并回总发布计划 ✗ 单档承载 ✗ 地图改单行。

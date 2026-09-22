@@ -68,15 +68,15 @@
 - **处理中**（`processing`，含 digest）：**竖移放行**（纯编辑——与字符 / 退格 / ←→ 同权）、**历史导航禁**
   （第 1 / 3 条的历史分支吞——不进入、不切换；Tab 吞等其余 busy 门禁不变；提交面 busy 期分流 = §4.1）。
 
-## 4. 挂起态输入契约（AGENT-LOOP-SUBAGENT §6.8）
+## 4. 挂起态输入契约（AGENT-LOOP-ASYNC-POOL §6.8）
 
-> 挂起会话期间（`state.suspended`）输入框放开。挂起决策 / 队列机制权威 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.8；
+> 挂起会话期间（`state.suspended`）输入框放开。挂起决策 / 队列机制权威 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8；
 > 本节只落输入框侧行为。
 
 - **不变量**：`state.input` **永不被后台事件读写**——settle / 消化轮 / 注入全部经独立通道（token / `state.pendingInput`），
   后台代码零接触输入框；框内文本在后台事件前后逐字不变。
 - **Enter（非 slash 文本）**：不入 `state.queue`、不打断后台——消息入 **`state.pendingInput` 单槽**
-  （**至多一条待交接——见 §4.1**；key-handler 分流 + 清框，与 submit 同款清理；history 照常收录），经 `state._suspWake?.()` 唤醒挂起会话循环；
+  （**至多一条待交接——见 §4.1**；`key-handler-edit.mjs` 分流 + 清框，与 submit 同款清理；history 照常收录），经 `state._suspWake?.()` 唤醒挂起会话循环；
   driver 消费清槽即以该消息开新回合（输入优先——不触发新 digest；见 §4.1 送达链路）。
   **busy 期（`state.processing` 含 digest）提交走 busy 门禁入槽——本分支不触达**（本分支只接挂起空闲 / 释放窗口；两分支同槽同款清理——§4.1）。
 - **斜杠命令**：挂起分流不拦截——走 submit 正常路径（纯挂起期直接执行）；busy 期（`state.processing` 含 digest）经 busy 门禁同吞——不直行 / 不排队 / 不入槽，文本保留在输入框（斜杠 busy 禁发不变——§4.1 条件 3）。
@@ -115,9 +115,9 @@
 **吞面收敛四**（判据表否面——本批放行面之外的全部吞形）：**模态**（条件 2）· **斜杠**（条件 3）· **空**（条件 4）· **槽满**（条件 5）。
 挂起两态（`state.suspended` / `state._suspPending`）**不再是吞面**——挂起内 busy 与普通 busy 入槽判据统一（前批「挂起内 digest 期仍吞」随本批撤销）。
 
-**执行序（`key-handler.mjs` busy 门禁改写——替换「提交吞 + busy 提示」分支）**：
+**执行序（`key-handler-busy.mjs` busy 门禁——替换「提交吞 + busy 提示」分支）**：
 斜杠 → 吞 + busy 提示（文本保留，既有）；空 → 静默（既有）；条件 2 不满足 → 吞 + busy 提示（文本保留，既有）；
-**单槽满（条件 5）→ 吞 + 槽满提示 + 文本保留**（先例 = 挂起态槽满分支 `key-handler.mjs:440-444` 同构——吞 + 提示 + 文本保留；**槽满提示形态 = `docs/cli/design/TUI.md` §7.5 表第 1 行逐字**（`已排队 1 条消息`——单槽非空恒显 dim 段，吞判不新增提示串））；
+**单槽满（条件 5）→ 吞 + 槽满提示 + 文本保留**（先例 = 挂起态槽满分支 `key-handler-edit.mjs:60-64` 同构——吞 + 提示 + 文本保留；**槽满提示形态 = `docs/cli/design/TUI.md` §7.5 表第 1 行逐字**（`已排队 1 条消息`——单槽非空恒显 dim 段，吞判不新增提示串））；
 **其余（1∧2∧3∧4∧5）→ 入槽**：清框 + `history.push` + `historyIndex = -1` + `_draft = null` + `pendingInput.push(text)`
 （与挂起态入槽分支同款清理——`state.input` 永不被后台事件读写的不变量（§4）保持：入槽是**前台**按键路径写自己的槽）。
 **挂起面入槽后同款唤醒**：`state.suspended || state._suspPending` ⇒ `state._suspWake?.()`（§4 既有挂起分支同款）；
@@ -127,8 +127,8 @@ busy 期该槽恒 null ⇒ 零动作——证据 = `suspension-drive.mjs:122`（
 **二次提交（单槽满）= 拒绝 + 提示 + 文本保留**：单槽至多一条 = 需求判定句钉死；覆盖 = 在 busy 不可见窗口静默丢用户文本
 （违背「不静默丢」纪律——先例 `suspension-drive.mjs:306` 中止残余转正注释）；拒绝 + 提示与既有槽满语义同构零新机制。
 
-**submit 双保险同步**（`index.mjs` submit busy 拒分支）：防御语义保持「busy 期拒绝 + 不清框」——直呼路径不因本批开裂；
-本批正常流量的 Enter 在 key-handler 已分流，submit busy 分支仍只服务直呼防御（注释随判据收正同步更新）。
+**submit 双保险同步**（`turn-face.mjs` submit busy 拒分支——`:21-25`）：防御语义保持「busy 期拒绝 + 不清框」——直呼路径不因本批开裂；
+本批正常流量的 Enter 在 key-handler 族（`key-handler-busy.mjs` 门禁 · `key-handler-edit.mjs` 入槽）已分流，submit busy 分支仍只服务直呼防御（注释随判据收正同步更新）。
 
 **消费回执（送达链路侧——两处各一行 dim 行）**：`[sending queued message]` 在**消费时**推送——
 ① 回合尾兜底转正点（`agent-turn.mjs` 队列 while shift 后）；② 挂起 driver 消费点（`suspension-drive.mjs` pendingInput shift 后）。
@@ -149,7 +149,7 @@ pendingInput → `state.queue` → 队列 while 续发新回合）；② 挂起�
 既有 `_chat` 分流——driver 步骤 1 优先消费）。契约单源 = `docs/vsc/design/WEBVIEW-INPUT.md` §1 **C-B2-6**（分流 / 单槽 /
 镜像判据源 / 送达 / 贴图降级细则 = 同处 ①–⑥——D2 不重述）。
 
-**边界**：不引入攒批（单槽语义不变——两面共用同一槽）；不触碰 Ctrl+I 代码与文档条目（`key-handler.mjs:176-183` /
+**边界**：不引入攒批（单槽语义不变——两面共用同一槽）；不触碰 Ctrl+I 代码与文档条目（`key-handler.mjs:81-88` /
 `key-modes.mjs handleInterruptMode` / 本档 §2 表 Ctrl+I 行 / §8——两语义并存）；`_pasting` 锁零触；
 非 busy 期（空闲 / 挂起空闲 / 释放窗口）Enter 语义零改（§4 分流原样）；斜杠 busy 禁发零改；
 F13 attention 判据不破（queued 反馈零注意力色对——`docs/cli/design/TUI.md` §7.5）。
@@ -175,11 +175,11 @@ F13 attention 判据不破（queued 反馈零注意力色对——`docs/cli/desi
    - `\x1b[>4;2m`——xterm modifyOtherKeys level 2（mintty / Git Bash）：Shift+Enter → `\x1b[27;2;13~`；
    - stdin 层 `translateShiftEnter` 把两种序列翻译为 `\x1b\r` → readline 解析为 meta+return → 多行分支；
    - 退出时 `\x1b[<u` + `\x1b[>4m` 复位。
-2. **Ctrl+J（所有终端，含旧版控制台）**：key-handler 的提交分支把 `name === "enter"`（即 `\n`）改为插换行。
+2. **Ctrl+J（所有终端，含旧版控制台）**：`key-handler-edit.mjs` 的提交分支把 `name === "enter"`（即 `\n`）改为插换行。
    唯一风险：终端被配置成 Enter 发送 LF（极罕见——那样 Enter 与 Ctrl+J 同为 `\n`，无换行键）。
 3. **Alt+Enter（第三后备）**：保持 meta+return 分支不动；旧版控制台上被系统截走（切全屏），现代终端可用。
 
-**为什么走 stdin 翻译而不是在 key-handler 里处理 CSI-u**：Node readline 不认识 CSI-u 序列（实测解析为 `name:"undefined"`
+**为什么走 stdin 翻译而不是在 `key-handler-edit.mjs` 里处理 CSI-u**：Node readline 不认识 CSI-u 序列（实测解析为 `name:"undefined"`
 或拆成垃圾字符），必须在进 readline 之前拦截。
 
 **诊断工具**：`node thincoder-cli/scripts/key-probe.mjs`——按键看终端实际发的字节。
@@ -191,7 +191,12 @@ F13 attention 判据不破（queued 反馈零注意力色对——`docs/cli/desi
 
 | 模块 | 职责 |
 |---|---|
-| `thincoder-cli/src/tui/key-handler.mjs` | 按键总分发：permission / question / search / picker / wizard / interruptPrompt / 输入编辑 + 挂起态输入；↑↓ 分流（竖移 / 历史——§3）；Inject 框创建（§8）；busy 期单槽注入（§4.1——`pendingInput` 单槽可达化） |
+| `thincoder-cli/src/tui/key-handler.mjs` | 按键分发**分派器**（#226 拆分后留守）：attention 清位 + 三模态前置委派 + F1 表 + Ctrl+I 入口（§8）+ interrupt 模态 + 五族顺序委派（守卫 = 原块入口条件） |
+| `thincoder-cli/src/tui/key-handler-edit.mjs` | 编辑族：输入编辑（退格 / 删除 / Ctrl+U / Tab 补全）+ Enter（多行 / 挂起态入槽——§4）+ 剪贴板文本 / 图片粘贴 |
+| `thincoder-cli/src/tui/key-handler-busy.mjs` | busy 期单槽注入门禁（§4.1——`pendingInput` 单槽可达化；吞面四 / 入槽五条件） |
+| `thincoder-cli/src/tui/key-handler-scroll.mjs` | ↑↓ 分流（竖移 / 历史——§3）+ ←→ · Home · End + PgUp / PgDn |
+| `thincoder-cli/src/tui/key-handler-modals.mjs` | picker / wizard 键处理（模态面，输入框让位） |
+| `thincoder-cli/src/tui/key-handler-ctrlc.mjs` | Ctrl+C 五分支族（含挂起态两级中止——§4） |
 | `thincoder-cli/src/tui/key-modes.mjs` | 模态层：permission / question / interruptPrompt 独占模态——激活即消费全部按键；question 自由文本态编辑键（§7）；Inject 框编辑键（§8） |
 | `thincoder-cli/src/tui/render.mjs` | `layoutInput`（折行 / 光标行列 + `lineStarts`）/ `charWidth` 纯函数；`moveCursorVertical`（竖移定位——§3 规则 2） |
 | `thincoder-cli/src/tui/layout.mjs` | `computeLayout` 面板布局（输入框 boxLines / cap / offset / 光标行列；question 自由文本态 `layoutAnswer` = `layoutInput` 复用）；`inputContentWidth`（输入框内容宽度单源——布局与竖移共用） |
@@ -199,7 +204,9 @@ F13 attention 判据不破（queued 反馈零注意力色对——`docs/cli/desi
 | `thincoder-cli/src/tui/interaction.mjs` | `askQuestion` 装配：`q.answer` codepoint 数组 + `q.cursor`（options 态无） |
 | `thincoder-cli/src/tui/render-frame.mjs` · `render-loop.mjs` | question 自由文本态光标例外（`hasOverlay` 细化 / `cursorSuffix` 正常发）；Inject 框标题提示与空态占位符（§8.3） |
 | `thincoder-cli/src/tui/ansi.mjs` | `keyboardPush` / `keyboardPop` 序列常量 |
-| `thincoder-cli/src/tui/index.mjs` | state 初始化（含 `_draft` / `interruptPrompt` 空态）；stdin 层 `translateShiftEnter` 接线；启动 `keyboardPush` / 退出 `keyboardPop` |
+| `thincoder-cli/src/tui/tui-state.mjs` | state 初始化单源（`createTuiState`——含 `_draft` / `interruptPrompt` 空态） |
+| `thincoder-cli/src/tui/input-face.mjs` | stdin 层 `translateShiftEnter` 接线（`:151`）+ 键盘 / 鼠标后置挂载入口（`mountKeys` / `mountMouse`） |
+| `thincoder-cli/src/tui/index.mjs` | `startTUI` 装配序列（命令层 / 启动屏 / resize / render loop）；启动 `keyboardPush` / 退出 `keyboardPop`（序列体 = `tui-lifecycle.mjs`——启动调用点 = `input-face.mjs:39`） |
 | `thincoder-cli/test/input-lock.test.mjs` · `thincoder-cli/test/arrow-editing.test.mjs` | 按键分发锁（含 busy 门禁）+ 方向键编辑用例 |
 | `thincoder-cli/test/busy-injection.test.mjs` | F16 用例宿主（T-F16-1…9——放行 / 回合尾送达 / 槽满 / 排除面 / driver 消费 / 状态栏段 / 挂起内入槽 / 消费回执；T-F16-7 = `input-lock.test.mjs` 侧；本批扩面行见批档 §2） |
 
@@ -300,10 +307,10 @@ F13 attention 判据不破（queued 反馈零注意力色对——`docs/cli/desi
 
 | 旧档面 | 内容 | 何故不并（去向 / 触发） |
 |---|---|---|
-| 挂起决策 / 队列机制的正文 | 挂起状态机、settle 时序、池管理 | `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.8——本档只落输入框侧行为（§4） |
+| 挂起决策 / 队列机制的正文 | 挂起状态机、settle 时序、池管理 | `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8——本档只落输入框侧行为（§4） |
 | question 工具协议面 | 提问工具契约、CUSTOM 哨兵定义 | `docs/core/design/TOOLS.md`（question 行）+ `docs/cli/design/TUI-COMMANDS.md` |
 | VSC 端方向键编辑差异 | VSC webview 首行 ↑ 为浏览器默认 no-op（不回落历史） | `docs/vsc/design/WEBVIEW-INPUT.md`——**端差异如实登记**（登记 ≠ 默认保留；**登记面 = 记录已裁的保留项**，✗ 非未决差项兜底）；端差默认 = 消，保留须结构性不对称 + 证据 + 显式裁定（A9）；各端独立实现只述实现形态，✗ 不构成差异保留依据；**本项状态：待裁**（A9 三件未齐——消解路径 = 两端口径统一（↑ 回落语义对齐）∥ 补显式裁定；到期 = 台账 #185「已登记端差逐项 A9 复核」落定） |
-| 输入层状态机的宿主实现细节 | `key-handler` / `key-modes` 内部结构 | 实现面——落点 `thincoder-cli/src/tui/key-handler.mjs` · `key-modes.mjs`（本档只留行为契约） |
+| 输入层状态机的宿主实现细节 | `key-handler` 族 / `key-modes` 内部结构 | 实现面——落点 `thincoder-cli/src/tui/key-handler.mjs` + 五族 `key-handler-{ctrlc,modals,scroll,busy,edit}.mjs` · `key-modes.mjs`（本档只留行为契约） |
 
 ## 变更记录
 
@@ -346,4 +353,8 @@ F13 attention 判据不破（queued 反馈零注意力色对——`docs/cli/desi
 
 - 2026-09-22（**busy-extend 批 · 设计评审轮 2 修正** · eng-designer——承 `docs/batches/2026-09-22-busy-extend.md` §3 轮次 2 发现 #3 / #7）：
   §4 Enter 条容器名收正（「`state.pendingInput` 队列」→ **单槽（至多一条——见 §4.1）**）；§9.2「挂起决策 / 队列机制的正文」去向行的节号收正
-  （`docs/core/design/AGENT-LOOP.md` §9 → **`docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.8**）。**判据表 / 语义零变**。
+  （`docs/core/design/AGENT-LOOP.md` §9 → **`docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8**）。**判据表 / 语义零变**。
+
+- 2026-09-22（**structure-debt 批 · 档面车道（#226 / #159 尾账）· eng-designer**——承 `docs/batches/2026-09-22-structure-debt.md` §2.1 / §2.2 / §2.6 档面行 + 父侧派单）：
+  §4 / §4.1 执行序与先例坐标改指新档（busy 门禁 → `key-handler-busy.mjs`；挂起态槽满先例 `:440-444` → `key-handler-edit.mjs:60-64`；submit 拒分支 → `turn-face.mjs:21-25`）；
+  §5.2 两处 key-handler 指称改指 `key-handler-edit.mjs`；§4.1 边界 Ctrl+I 坐标 `:176-183` → **`:81-88`**；§6 相关模块表按新档清单收正（补五族 + `tui-state.mjs` / `input-face.mjs` 行，`index.mjs` 行收窄为装配序列）。**零语义**：判据表 / 键语义零变。

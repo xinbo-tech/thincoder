@@ -467,6 +467,18 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 **不做**写侧逐次 checkpoint（写侧在性能敏感路径，高频 checkpoint = 每次写多一次主库 fsync；PASSIVE 对本症无收益）。
 **数据面一次性回收 = 父侧 ops**（`wal_checkpoint(TRUNCATE)`；`VACUUM` 可选——需 2× 磁盘与整库重写，收益只在删除后空页）。
 
+### 6.13 死 origin sweep 与写入面归一化强制（2026-09-22 · 台账 #175）
+
+**写入面归一化强制**：`normalizeOrigin`（`thincoder-core/memory/origin.mjs:18-24`——分隔符归一 `/` · 盘符大写 · 去尾斜杠 · 幂等）为唯一归一函数；所有 origin 写入点须经它
+（写面入口 = `thincoder-core/memory/code-sync.mjs:193` / `thincoder-core/memory/docs.mjs:26` / `thincoder-core/memory/core.mjs:213` 与 `:264` 族）；
+判据 = 变体折叠断言（`thincoder-cli/test/memory-origin-normalize.test.mjs` 族）+ 写面结构检查。
+
+**死 origin sweep（二信号判据）**：**信号 A** = `normalizeOrigin(o) !== o`（非归一变体）⇒ **折叠，不删**（§6.11 迁移形态）；**信号 B** = `!existsSync(o) ∧ !existsSync(normalizeOrigin(o))` ⇒ **可删**（树亡；探针仅 ENOENT 判亡——其他错误 fail-safe 保留，先例 `thincoder-core/session-stale.mjs:124-127`）。
+
+**面表**：删除面 = `code_chunks(+fts)` / `doc_chunks(+fts)` / `files(+fts)`（FTS 触发器随行同步——`memory/schema.mjs:344-359` 等）；`entries` 无 origin 列（不涉）；`meta.last_indexed_commit` 全局单键（不涉）。
+
+**边界**：不用时间判据（`code_chunks` / `doc_chunks` 无行级写入时间戳，仅源文件 `mtime_ms`）——「树亡」为唯一删除判据；别名路径 / 可移动介质可假阳 ⇒ 探针 fail-safe；回收形态 / 命令面 / `VACUUM` 时机归实施轮（低风险依据 = §6.11「磁盘为真相 · DB = 可重建索引」）。
+
 ## 7. 并入的关键决策记录（含否决备选）
 
 | # | 决策 | 依据 / 否决备选 |
@@ -533,6 +545,8 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 - **CLI 人类命令面**（`thincoder memory <list|search|put|remove>`）：`list` / `search` / `put` 为 personal-only 核心面（search limit 10、list 支持 `--type`）；`remove` 走同一 `deleteByUid` 路由（uid 全 layer + 裸数字兼容）——命令行与工具核心路由复用，无漂移；命令面**无**共享层 list / 过滤形态、**无** clear / 批量删（那些是 agent 工具面能力）。
 
 ## 变更记录
+
+- 2026-09-22（**pending-triage 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-22-pending-triage.md` §1「#175 立判据」裁）：新增 **§6.13**（写入面归一化强制 + 死 origin sweep 二信号判据 + 面表 + 边界）；**机制条文零改**。
 
 - 2026-09-13：建档——自 `docs/core/design/CORE-UNIFICATION.md` 拆出（§2.5 #75 / #82 / #133–#137 / #168 / 映射行 · §2.5.1 A1–A3 · §2.12.2 第 11 行 · §2.12.3 第 1–2 行）；**语义零改**，行号沿用原编号。
 - 2026-09-14（S1 收口轮）：§5 补**核内落点行数**指针（`index-bin.mjs` · `index-discover.mjs`）；§2 裸 basename 锚补路径前缀（`thincoder-vscode/src/index-discover.mjs:5-8`——机检修复）。

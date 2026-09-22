@@ -376,6 +376,9 @@ M10 测试（独立简化，无依赖）
   ② **VSC 旁路面**（视觉渠道子代理：`thincoder-vscode/src/extension/image-handler.mjs:84` 的 `runAgent(..., { depth: 1, role: "explore", maxTurns: 10 })`——不传 `engState` / `engPersist`）：
   该面工程真值回落 config.json 镜像（`thincoder-vscode/src/agent/setup.mjs:250-252` · `thincoder-vscode/src/agent/agent-state.mjs:88-91`），经核 `eng` 工具 / CLI 侧开的工程会话可派生 false ⇒ 该子代理装配仍含 `plan`。
   **本批补传**（真值 = 槽权威同源）：`thincoder-vscode/src/extension/panel-messages.mjs:133` 取 `agentSettings(panel._agentSettingsSession()).engineering` 传入 `runVisionReader`，`thincoder-vscode/src/extension/image-handler.mjs:84` 携 `engState: { enabled }` ⇒ 该面与 depth-0 同源。
+- **在飞回合翻转窗（边界 · 收下 · 2026-09-22 · 台账 #170）**：VSC 翻转点（`thincoder-vscode/src/extension/panel-messages-settings.mjs:171-186` `handleSetEngineeringEnabled` / `chat-panel.mjs:349-364` `_setPlanMode`）
+  在**在飞回合内**只收正槽位——活体 `agent.config.agent.engineering` / `planMode` 由下一次 hydrate 收正 ⇒ 该回合剩余轮次内 `planMode` 可仍为 true、当轮表内仍有 `plan`。
+  **不新增机械门**（真值 = 槽权威）；**零残留**（下一轮 hydrate 收正）。窗口限定与 AC12 / AC14 / T12 的判据行同口径（非条件断言，均为「仅 VSC · 在飞回合内 · 下一轮 hydrate 收正」）。
 
 **判据链（不变量式，消费面零改）**：
 
@@ -424,7 +427,7 @@ engineering 真值 ──► 固定段裁剪（plan / task 不入表）───
 
 **提示词面（评估结论 = 零改，理由三条）**：① 工程两档（`persona-engineering.md` / `discipline-engineering.md`）与中文模板零处指示 plan 模式（实读 grep 命中仅「并发池上限：其他角色（explore/plan/coder）池」= 角色域枚举，非 plan 模式指令）；② 工具不注册已由结构兜底——再加「不要用 plan 模式」句 = 为不可见选项写限制（承 2026-09-18 反模式之裁）；③ `ENG_ON_REMINDER`（`agent/helpers.mjs:376-381`）无 plan 字样，无悬挂指令。
 
-**边界（不做什么）**：普通模式零改（工具 / 命令 / ACP / 恢复四路径全带宽）· **三条 reminder 文本本体不改**（`PLAN_FULL_REMINDER` / `PLAN_SPARSE_REMINDER` / `PLAN_EXIT_REMINDER`〔`PLAN_EXIT_REMINDER` 文本已于 2026-09-21 收正 ✗ 本句对其作废 ✓ 另两条不动 ✓〕——`thincoder-core/agent-tools/plan.mjs:11` · `:17` · `:21`，普通模式仍用）；
+**边界（不做什么）**：普通模式零改（工具 / 命令 / ACP / 恢复四路径全带宽）· **三条 reminder 文本本体不改**——`PLAN_EXIT_REMINDER` 文本已于 2026-09-21 收正（现行文本 = `thincoder-core/agent-tools/plan.mjs:21`），另两条不动；引用位 `:11` · `:17` · `:21`，普通模式仍用）；
 不新增机械门（拒绝点 = 既有命令面与既有翻转点）· 不改 `_setPlanMode` 的既有槽写契约（合法态仍 = 槽写 + 回推面板；工程态拒绝 = 不写槽 + 回弹）· VSC 新增 i18n 键仅 `toolbar.planDisabled` 一条（plan 按钮禁用态 title，两 locale 同步）。
 
 ### 2.4 模块间接口 / 依赖
@@ -497,9 +500,9 @@ engineering 真值 ──► 固定段裁剪（plan / task 不入表）───
 | AC8 | 与 v2 需求草案无矛盾（引用不越界、不改写需求原文）——**人工评审项**（语义判据，不标可机判） | 全局 |
 | AC10 | 每条机制变更带两端接线（§2.2 接线表：核 + CLI + VSC 各命名文件，零改处显式标「零改」） | 全局（重做锚） |
 | AC11 | 情境值进模型上下文（#28）：逐字行形 / 幂等 / 值变单活体 / 压缩后自愈重推 / depth-0 + 工程模式门——判据 = 模块设计 `docs/core/design/MANIFEST.md` §3.1 AC-N1–AC-N6、AC-N3b | E5.1（台账 #28） |
-| AC12 | 装配面：工程模式装配名集不含 `plan`（depth-0 + 子代理面：核 spawn 子代 + VSC 旁路面），普通模式名集含 `plan`——判据 = T10；核单源（两端传模式位） | FR31 ① |
+| AC12 | 装配面：工程模式装配名集不含 `plan`（depth-0 + 子代理面：核 spawn 子代 + VSC 旁路面），普通模式名集含 `plan`——判据 = T10；核单源（两端传模式位）；**窗口限定**（VSC 在飞回合内翻转 ⇒ 当轮余轮表内可有 `plan`，下一轮 hydrate 收正——端差面边界句） | FR31 ① |
 | AC13 | 命令面：`/plan` · ACP `session/set_mode` / `set_config_option` · VSC 面板开关在工程模式下拒绝且提示可见（ACP = 错误响应携共用文案；VSC = plan 按钮 disabled + title）、状态不变 | FR31 ② |
-| AC14 | 残留清零：开工程模式（核 `eng` 工具 / `/eng` / VSC 面板开关）与槽恢复（CLI / VSC）后 `planMode` 恒 false（内存 + 槽位——恢复面槽值一并收正）——判据 = T12 + T13 | FR31 ③ |
+| AC14 | 残留清零：开工程模式（核 `eng` 工具 / `/eng` / VSC 面板开关）与槽恢复（CLI / VSC）后 `planMode` 恒 false（内存 + 槽位——恢复面槽值一并收正）——判据 = T12 + T13；**窗口限定**：仅 VSC · 在飞回合内 · 下一轮 hydrate 收正（当拍槽位已收正、活体内存值随下轮 hydrate 归位） | FR31 ③ |
 | AC15 | 普通模式全带宽零回归（工具注册 / `/plan` / ACP mode / 槽恢复四路径）——判据 = T14 | FR31 ④ |
 
 ### 3.2 用例表
@@ -516,11 +519,18 @@ engineering 真值 ──► 固定段裁剪（plan / task 不入表）───
 | T9 | 边界：压缩吞掉情境行 | 压缩后 history 无该行 | 下一回合自动重推（活体守卫自愈） |
 | T10 | 正常：固定段模式裁剪 | `assembleFamilyTools({depth:0, engineering:true})` / `{depth:1, role:"eng-coder", engineering:true}` / `{depth:0}` / `{depth:1, role:"plan"}` + VSC 旁路面（视觉渠道子代理携 `engState.enabled:true`） | 工程面名集不含 `plan` ∧ 不含 `task`（含该子代理）；后两者含（普通面回归）；普通面固定段序契约（task → plan → timer）保持 |
 | T11 | 边界：命令面拒绝 | 工程模式下 `/plan` · ACP `set_mode{mode:"plan"}` · `set_config_option{configId:"mode", value:"plan"}` · VSC `setPlanMode{value:true}` | 四处均拒 + 提示可见；`planMode` 保持 false；ACP 拒绝携共用文案（非 `unknown configId`）；VSC 按钮 disabled + title + 回弹；ACP `mode:"normal"` 照常接受 |
-| T12 | 边界：翻转清零 | `planMode=true` 后开工程模式（核 `eng` 工具 / `/eng` / VSC 面板开关） | `planMode=false` + 槽 `planMode=false`（CLI `/eng` · VSC）+ 未注入的 plan 提示语被摘除 |
+| T12 | 边界：翻转清零 | `planMode=true` 后开工程模式（核 `eng` 工具 / `/eng` / VSC 面板开关） | `planMode=false` + 槽 `planMode=false`（CLI `/eng` · VSC）+ 未注入的 plan 提示语被摘除；**VSC 在飞回合内窗口**（AC14 限定）：当拍只收正槽位 ⇒ 该回合余轮内存值可仍 true，下一轮 hydrate 收正 |
 | T13 | 边界：恢复清零 | 槽 `{engineering:true, planMode:true}` → CLI `applySession` / VSC `applySlotSessionState` | 恢复后 `planMode`（VSC `_planMode`）= false，**槽 `planMode` 一并收正**（装载推送不再重推 plan-active） |
 | T14 | 错误：普通模式零回归 | 普通模式装配 / `/plan` 切换 / ACP `mode:"plan"` / 槽 `planMode:true` 恢复 | 四条路径全带宽不变（**除本批所列矩阵镜像收正**——`host-shape-spawn.test.mjs` T5：两条工程行删 `plan` + 增 explore 工程行——外，既有测试零改全绿） |
 
 ## 4. 变更记录
+
+- 2026-09-22（**hygiene-sweep 批 · 文档卫生轮 · eng-designer**——承 `docs/batches/2026-09-22-hygiene-sweep.md` §2 · 台账 #225）：规范面修订式标记清理——FR31 边界行 reminder 括注去「本句对其作废 ✗/✓」对照语（改现态陈述：三条本体不改 + `PLAN_EXIT_REMINDER` 现行文本坐标）。**语义零改**。
+
+
+- 2026-09-22（**pending-triage 批 · 设计评审修正轮 1 · eng-designer**——承 `docs/batches/2026-09-22-pending-triage.md` §3 轮次 1 发现 7）：端差面边界句与判据行口径衔接——AC12 / AC14 / T12 就地加**窗口限定**（仅 VSC · 在飞回合内 · 下一轮 hydrate 收正）+ 边界句回指三行；`:379` 折行（零语义）。**机制条文零改**。
+
+- 2026-09-22（**pending-triage 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-22-pending-triage.md` §1「#170 收下」裁）：端差面节补 **在飞回合翻转窗边界句**（翻转点只收正槽位 · 下一轮 hydrate 收正 · 不新增机械门）；**机制条文零改**。
 
 - 2026-09-22（**tool-discipline 批 · 第三面闭口轮 · eng-designer**——承 `docs/batches/2026-09-21-tool-discipline.md` §5 线外发现 + F10 实施终态）：
   E7 装配面同源断言三处收正（`:348` 行 ① 工程模式固定段 = `[timer]`〔task / plan 皆不入表〕+ 判据补 `task` · `:383` 判据链图 · `:517` T10 判据）；

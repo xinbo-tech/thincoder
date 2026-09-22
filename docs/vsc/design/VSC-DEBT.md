@@ -264,6 +264,9 @@
 **本批范围外的越档面（登记 · 不处理）**：`chat-panel.mjs` **441** · `settings.mjs` **409**（均 >300 咨询线、≤500 硬限；读数 = 2026-09-19 复测——init-block 批后 `wc -l`）；`suspension.mjs` 读数见下行「上行通道批读数收正」块（本批已触碰——读数归该块单源）。
 上述越档面（`chat-panel.mjs` / `suspension.mjs` / `settings.mjs` 三档）不在批次档 §1.2 范围内 ⇒ 本批不动，留后续批（触发 = 下次触碰；触线判据 = 块内**逐档触线（单源）**行）。
 
+**2026-09-22 pending-triage 批复测追加登记（父侧直接执行 · 可 revert）**：`thincoder-vscode/src/extension/chat-panel.mjs` **492**（余 8 行——#168② 三落点接线净增 6；>300 咨询线、≤500 硬限；拆分触发 = 下次实质触碰 ∨ 余量 ≤5）·
+`thincoder-vscode/test/session-boot.test.mjs` **490**（余 10 行——#171 面板级 ⑰ 用例新增；拆分触发 = 下次实质触碰 ∨ 余量 ≤5；拆分面 = 既有用例组族外提）。两档均「结构未变 · 本批不拆」（≤500 硬限在位）。
+
 **上行通道批（2026-09-19-upstream-channel-availability）读数收正（2026-09-20 · 实现轮实核；口径 `find /c /v ""` ≡ `wc -l`）**：
 `thincoder-vscode/src/extension/suspension.mjs` **397 → 406**（>300 咨询线、≤500 硬限；本批净增 = 开轮谓词 + 旗标 + 日志载荷）；
 `thincoder-vscode/src/agent.mjs` **485 → 492**（**逼近 500 硬限（余 8 行）**——N-P3 口径；本批净增 = 端壳 drain 消费点 + 载体表 12 → 14 款 + 旗标 + 域文本组合调用；
@@ -290,6 +293,9 @@
 `thincoder-vscode/src/extension/panel-messages.mjs` **300 → ≈303** · `thincoder-vscode/src/extension/panel-session.mjs` **299 → ≈307**（均本批**首次**越 >300 咨询线、≤500 硬限；增量 = 无工作区守卫接线；无拆分义务，触发 = 下次实质触碰）；
 `thincoder-vscode/webview/chat.js` **449 → 451**（读数复测——存量越线，本批 +2）。逐项登记，**非全量普查**；结论载荷 = 批次档 `docs/batches/2026-09-21-vsc-no-folder-guard.md` §2 跨文件限段。
 **实施后实测补记（2026-09-21 · #53）**：`panel-messages.mjs` **305**（304）· `panel-session.mjs` **313**（312）· `chat-panel.mjs` **487**（486——距 500 硬限 ≈13 行，无拆分义务在册）· `webview/chat.js` **452**（**451** ✓）· 新档 `workspace-guard.mjs` **59**（<300 ✓）✗ `test/workspace-guard.test.mjs` **487**（<500 ✓，超设计估计不阻塞）。
+
+**#163 拆分后越线收正（2026-09-22 · structure-debt 批实施轮 · eng-designer——承批档 `docs/batches/2026-09-22-structure-debt.md` §2.4 / §5）**：
+`thincoder-vscode/webview/chat.js` **454 → 147**（`wc -l` 口径——**越线登记关闭**：现 ≤300 咨询线、≤500 硬限）；本批拆出两新档 = `webview/chat-messages.js` **234** · `webview/chat-status.js` **124**，**均 ≤300 咨询线 ⇒ 不入本登记**（无拆分义务）。逐项登记，**非全量普查**。
 
 ### 12.2 逐档方案（职责分面 · 六新档）
 
@@ -600,3 +606,4 @@
   （`agent.mjs` **494** · `run-stages.mjs` **403** · `execute-tools.mjs` **418** · `setup.mjs` **495** · `files.mjs` **120**）+ **触发线未触**注
   + **逐档触线（单源）**句（源 = vsc-rules-retry 批 §2.4 / §5.8）+ 越档面触发句改指块内单源行。**零新语义**。
 - 2026-09-21（**vsc-no-folder-guard 批 · 父侧小项收正 · 可 revert**）：§12.1 主档越线登记补本批三档（`panel-messages.mjs` ≈303 · `panel-session.mjs` ≈307——首次越线；`webview/chat.js` 451——存量复测），结论载荷 = 批次档 §2 跨文件限段。**零新语义**。
+- 2026-09-22（**structure-debt 批 · 档面车道（#163 尾账）· eng-designer**——承 `docs/batches/2026-09-22-structure-debt.md` §2.4 / §5 + 验收 AC-4）：§12.1 增 **#163 拆分后越线收正块**（`webview/chat.js` **454 → 147** · 越线登记关闭；两新档 `chat-messages.js` **234** / `chat-status.js` **124** 均 ≤300 ⇒ 不入登记）。**零新语义**：不越档面 / 方案体 / 需求档。

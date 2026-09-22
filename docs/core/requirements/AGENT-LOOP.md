@@ -191,7 +191,7 @@ VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` 
 
 **非功能**：N1 **对称语义**（提醒文案 / 动作序 / 事件名与对侧同源；必须不同处须显式登记端差，不静默偏离）· N2 **可机检**（断言面 = 墓碑状态 / 池内容 / 提醒注入 / `ev:discarded` 计数 / 依赖终态）· N3 **尺度与可回退**（源档守 500 硬限，越 300 软线如实登记 + 拆分计划；纯增量接线 ⇒ 整批可回退）。
 
-**设计侧 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.20**（条目标号 F1–F4 / N1–N3 与批次档 `docs/batches/2026-09-15-cli-async-discard.md` §2 **三方一致**）——本档不复制。
+**设计侧 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.20**（条目标号 F1–F4 / N1–N3 与批次档 `docs/batches/2026-09-15-cli-async-discard.md` §2 **三方一致**）——本档不复制。（父侧改指 2026-09-22 · 可 revert）
 
 ### 4.11 回合记忆召回注入（depth-0——新增 · 2026-09-18 · TUI 假死批）
 
@@ -228,7 +228,7 @@ VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` 
 **非功能**：N1 非阻塞**结构保证**（无等待 / 拉取 API——子代理在机制上无法等待）· N2 零回归（既有语义与文案零变化）· N3 可机判（在场性 / 合并注入 / 三闸 / 零回归 = 断言面）·
 N4 范围 = **核侧 + CLI + VSC 两端对位**（**2026-09-19 23:23 用户裁定「vsc 肯定要扩啊，否则不完整啊」**；提示词面本批零改）。
 
-> **窗口口径（父侧 2026-09-18 15:2x 收正 · 承修正轮 id=66 上抛 1）**：F-UC5 闸一窗口 = 「**父队列中未取走（未 drain）**」——机制面不追踪「是否已答复」（唯一可观测注入 = 父 `send`；答复与任意注入不可区分）⇒ 本档措辞与设计档 §6.27.2 ③ 同源（设计侧 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.27.2 ③ / §6.27.8）。
+> **窗口口径（父侧 2026-09-18 15:2x 收正 · 承修正轮 id=66 上抛 1）**：F-UC5 闸一窗口 = 「**父队列中未取走（未 drain）**」——机制面不追踪「是否已答复」（唯一可观测注入 = 父 `send`；答复与任意注入不可区分）⇒ 本档措辞与设计档 §6.27.2 ③ 同源（设计侧 = `docs/core/design/AGENT-LOOP-UPSTREAM.md` §6.27.2 ③ / §6.27.8）。（父侧改指 2026-09-22 · 可 revert）
 
 > **F-UC7 由头（2026-09-19 · 用户实证 · 父侧直接执行 · 可 revert）**：默认异步流实测——`thincoder-core/agent-tools/parent-channel.mjs:83-84` 自陈「**零等待、零唤醒**」⇒ 子代理 ask 只在父侧「下一次回合」被读到，而该回合的唤醒源通常正是**子代理自身的 settle**
  ⇒ 答复恒迟到，「在飞纠偏」（本 § 总体需求 `:210`）在默认流不成立；工具返回注 `:45-49` 自带的退路（「运行先结束 ⇒ 未获答复部分按未做上报」）即默认流实走的那条。批 = `docs/batches/2026-09-19-upstream-channel-availability.md`（台账 #104）。
@@ -236,7 +236,7 @@ N4 范围 = **核侧 + CLI + VSC 两端对位**（**2026-09-19 23:23 用户裁�
 > **F-UC8 由头（2026-09-21 · 用户报告 + 口径）**：用户 01:55 报「子agent完工与上行提问提示同一句 `[auto-turn: continuing background work…]`，很令人迷惑」+ 期望（digest 携数 · ask 携「谁 + 啥」）+ 01:58 口径「**normal 也得带** · **cli 和 vsc 应该都处理**」；
 > 缺口系 2026-09-19 批 §5-CLI.5-3 已登记「AUTO + ask 组合设计未定义」的兑现面。批 = `docs/batches/2026-09-21-subagent-signal-lines.md`（台账 #166）。
 
-**设计侧 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.27**——本档不复制（D2）。
+**设计侧 = `docs/core/design/AGENT-LOOP-UPSTREAM.md` §6.27**——本档不复制（D2）。（父侧改指 2026-09-22 · 可 revert）
 
 ### 4.13 thinking 回传缺口（回声恒带——D-CC22）（新增 · 2026-09-20 · 批 REASONING-ECHO-GAP）
 
@@ -277,12 +277,12 @@ N4 范围 = **核侧 + CLI + VSC 两端对位**（**2026-09-19 23:23 用户裁�
 ## 变更记录
 
 - 2026-09-21（**批 SUBAGENT-SIGNAL-LINES · 父侧直接执行 · 可 revert**——承用户 01:55 报告 + 01:58 口径「全档 × 双端」）：§4.12 新增 **F-UC8 信号提示行**（全档按因分流 + ask 携来源与问题摘要 + CLI digest 起跑对位 VSC；范围 = CLI + VSC 两端）；
-  设计侧 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.27.12.5 D；批 = `docs/batches/2026-09-21-subagent-signal-lines.md`（台账 #166）。**本档新增需求 1**。
+  设计侧 = `docs/core/design/AGENT-LOOP-UPSTREAM.md` §6.27.12.5 D；批 = `docs/batches/2026-09-21-subagent-signal-lines.md`（台账 #166）。**本档新增需求 1**。（父侧改指 2026-09-22 · 可 revert）
 
 - 2026-09-20（**批 REASONING-ECHO-GAP · 父侧直接执行 · 可 revert**——承用户 00:57 截图反馈 + 设计轮真机取证）：新增 **§4.13 thinking 回传缺口（回声恒带——D-CC22）**（F-RC1–F-RC4 / N1–N4 · **三站点** = 核主循环 + 评审镜像 + 端壳）；
   **口径收正**（01:45 补形状限定）= 混合形状面「一律 400」不成立 · **活体形状（尾 tool）缺字段 = 400** / 空串 = 200；价值 = **活体 400 消除 + 推理连续性**；残险 = mimo（保持翻面 + 登记）。本档 261 → **284 行**（实测 · 折行 = 父侧直接执行 · 可 revert）。
 
-- 2026-09-18（**批 SUBAGENT-UPSTREAM-CHANNEL · 父侧直接执行 · 可 revert**——承用户 2026-09-18 14:49 提议「子侧有没有必要向父侧发消息或者问问题」；14:51「立批吧」）：新增 **§4.12 子代理上行通道**（F-UC1–F-UC6 / N1–N4）——设计侧 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.27。
+- 2026-09-18（**批 SUBAGENT-UPSTREAM-CHANNEL · 父侧直接执行 · 可 revert**——承用户 2026-09-18 14:49 提议「子侧有没有必要向父侧发消息或者问问题」；14:51「立批吧」）：新增 **§4.12 子代理上行通道**（F-UC1–F-UC6 / N1–N4）——设计侧 = `docs/core/design/AGENT-LOOP-UPSTREAM.md` §6.27。（父侧改指 2026-09-22 · 可 revert）
   - 2026-09-18 16:1x 父侧直接执行：**§4.12 位置收正**——原误置于「§5 不并项与历史沿革」之后，移回 §4 序列（§4.11 之后）；承设计评审 id=69 发现 6。
 
 - 2026-09-13：建档——自 `docs/core/requirements/CORE-UNIFICATION.md` 拆分（来源：§2 F11 / F6 / F12 / F13 回指）+ 设计档 `AGENT-LOOP.md`（§2.1–§2.2 · §3.1 A7 / A15 / A22 / A23 · §3.2 D2 派生）；**无新增需求**。
@@ -291,9 +291,10 @@ N4 范围 = **核侧 + CLI + VSC 两端对位**（**2026-09-19 23:23 用户裁�
   ——编号与文本承旧档；设计侧指针按批 5 拆分面改指（`AGENT-LOOP-SUBAGENT.md` §6.7.2 / §6.7.3）；**本档新增需求 0**（纯回填）。
 - 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：新增 §4.9 **VSC 端对位与端差**（SUBAGENT-OBSERVE-SEND F-O3/F-O4 · ASYNC-RESULT-CONTAINER F-A6 + 端差——自两 VSC 仓需求档并入；坐标实核）；§5 登记 VSC 两档批次材料；**本档新增需求 0**（纯回填）。
 - 2026-09-15（**批 4 CLI-ASYNC-DISCARD · eng-designer**）：新增 §4.10 **CLI 侧中止丢弃提醒与终态**（F1–F4 / N1–N3）——台账技术待办一条（CLI 侧无「子 agent 被丢弃」提醒与丢弃终态，与 VSC 不对称）；**本档新增需求 1**（自 B 轮以来首次非纯回填增条）。本档 186 → **207 行**（实测）。
-- 2026-09-16（**批 8 ENGINE-DEBT · 设计轮 · eng-designer**——承 `docs/batches/2026-09-16-engine-debt.md` §2 ED-4）：§4.3 新增 **F-B5 池满排队**（异 scope 入队 / 同 scope 仍拒；判定句含 position / 自动起跑 / 取消重编号 / 零回归）+ 撤「不做评审排队」句（范围边界同句重写）；源 = 设计档 `AGENT-LOOP-SUBAGENT.md` §6.10。本档 207 → **209 行**（`wc -l` 实测）。
+- 2026-09-16（**批 8 ENGINE-DEBT · 设计轮 · eng-designer**——承 `docs/batches/2026-09-16-engine-debt.md` §2 ED-4）：§4.3 新增 **F-B5 池满排队**（异 scope 入队 / 同 scope 仍拒；判定句含 position / 自动起跑 / 取消重编号 / 零回归）
+  + 撤「不做评审排队」句（范围边界同句重写）；源 = 设计档 `AGENT-LOOP-ASYNC-POOL.md` §6.10。本档 207 → **209 行**（`wc -l` 实测）。（父侧改指 + 折两行 2026-09-22 · 可 revert）
 - 2026-09-16（**批 8 ENGINE-DEBT · 设计轮 · eng-designer**——承 `docs/batches/2026-09-16-engine-debt.md` §2 ED-5）：§4.3 新增 **F-B6 取号断言（防静默覆写）**（漏调分配器即消费 ⇒ 显式报错 / 同 id 二次入池 ⇒ 显式报错 / 既有分配点前缀号 ≡ ack id 链路零回归）；
   范围 = 仅核侧（不改 id 语义与分配算法）；源 = 设计档 `AGENT-LOOP-SUBAGENT.md` §6.21。本档 209 → **211 行**（`wc -l` 实测——F-B6 行 +1 · 变更记录 +1）。
-- 2026-09-16（**批 8 ENGINE-DEBT · 补充收正 · eng-designer**）：§4.3 F1 说明括注「advisor 无队列独立调度」→「advisor 独立调度——批 8 ED-4 后含排队面」（与 F-B5 · 设计档 `AGENT-LOOP-SUBAGENT.md` §6.10 对齐——残留旧语义清理，该行改写净零）；本档行数 **+1**（变更记录行）——复测 **213 行**。
+- 2026-09-16（**批 8 ENGINE-DEBT · 补充收正 · eng-designer**）：§4.3 F1 说明括注「advisor 无队列独立调度」→「advisor 独立调度——批 8 ED-4 后含排队面」（与 F-B5 · 设计档 `AGENT-LOOP-ASYNC-POOL.md` §6.10 对齐——残留旧语义清理，该行改写净零；父侧改指 2026-09-22 · 可 revert）；本档行数 **+1**（变更记录行）——复测 **213 行**。
 - 2026-09-18（**TUI 假死批 · 父侧直接执行**）：新增 §4.11 **回合记忆召回注入（depth-0）**（F1–F3 / N1–N3——**核心层补位**；依据 = VSC 端条目 `docs/core/requirements/MEMORY.md:146` F-M7 + 迁移期参照档 F-Q2/F-Q3）；源 = 批次档 `docs/batches/2026-09-18-tui-freeze.md` §2 与设计档 `MEMORY.md` §6.10 修法 B。
 

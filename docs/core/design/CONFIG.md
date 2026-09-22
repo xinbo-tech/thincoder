@@ -93,7 +93,7 @@
 
 ### 6.1 并发池配置面（自 `POOL-CONFIG-UNIFIED` 并入 · 2026-09-15 批 5）
 
-来源 = `thincoder-cli/docs/_archive/design/POOL-CONFIG-UNIFIED.md`（130 行 · 旧档一字未改，留参照历史）。**池机制本体**（容量 / 补位 / 调度 / 评审池）住 `AGENT-LOOP-SUBAGENT.md` §6.10 / §6.11——本档只收**配置键面**（D2）。
+来源 = `thincoder-cli/docs/_archive/design/POOL-CONFIG-UNIFIED.md`（130 行 · 旧档一字未改，留参照历史）。**池机制本体**（容量 / 补位 / 调度 / 评审池）住 `AGENT-LOOP-ASYNC-POOL.md` §6.10 / §6.11——本档只收**配置键面**（D2）。
 
 **配置键**：`agent.poolLimits = { engCoder, other, advisor }`——单对象配置键（三池统一，默认 **4 / 4 / 4**）。
 
@@ -109,8 +109,8 @@
 - **界面入口**：CLI `/config` →「并发池」子菜单（`thincoder-cli/src/tui/cmd-config.mjs:245`–`:273`——三域读写 + 主菜单 / view 摘要）；VSC 设置面板并发池三域（`thincoder-vscode/src/extension/settings-panel-write.mjs:94` 白名单 · `thincoder-vscode/src/extension/settings.mjs:176` 回退显 4/4/4——W16 行号重核）。
 - **向后兼容**：旧两键配置值零迁移（`advisor` 缺省 ⇒ 回退 4）；非法值不落盘回退；VSC 面板白名单全非法 ⇒ 删整键回退默认（语义不变）。
 - **模型可见文案去数字化**：advisor 工具描述与拒文案报**生效上限**（`thincoder-core/agent-tools/advisor.mjs:49` · `thincoder-core/agent-tools/advisor-async.mjs:266`）。
-- **同 scope 评审并发守卫**（同批用户裁①）：容量守卫 ⇄ 同 scope 守卫**两关独立**——机制本体见 `AGENT-LOOP-SUBAGENT.md` §6.10（本档不复制）。
-- **范围边界（旧档承接）**：评审轮次**无机械上限**（cap 已撤——见 `ADVISOR-CONVERGENCE.md` §3 · 2026-09-18 用户裁定）；**「评审不排队」表述已废**（2026-09-16 批 8 ED-4 修订——异 scope 入队 / 同 scope 仍拒，见 §7 D-CF3 与 `AGENT-LOOP-SUBAGENT.md` §6.10）；engCoder / other 两域语义不变（本批只界面 / 一致性 / 第三键）；全仓注释大扫 = 旧档挂 TODO 观察项（随两仓合并面收敛，不另立）。
+- **同 scope 评审并发守卫**（同批用户裁①）：容量守卫 ⇄ 同 scope 守卫**两关独立**——机制本体见 `AGENT-LOOP-ASYNC-POOL.md` §6.10（本档不复制）。
+- **范围边界（旧档承接）**：评审轮次**无机械上限**（cap 已撤——见 `ADVISOR-CONVERGENCE.md` §3 · 2026-09-18 用户裁定）；**「评审不排队」表述已废**（2026-09-16 批 8 ED-4 修订——异 scope 入队 / 同 scope 仍拒，见 §7 D-CF3 与 `AGENT-LOOP-ASYNC-POOL.md` §6.10）；engCoder / other 两域语义不变（本批只界面 / 一致性 / 第三键）；全仓注释大扫 = 旧档挂 TODO 观察项（随两仓合并面收敛，不另立）。
 
 ## 7. 并入的关键决策记录（含否决备选）
 
@@ -120,7 +120,7 @@
 |---|---|---|
 | D-CF1 | 三池统一默认 **4/4/4** + 可配 | 统一心智模型；否决「advisor 保持旧限 2」（旧档勘察证：100% 仓内实现——无平台面） |
 | D-CF2 | advisor 第三键 = **独立读取器**（不与 subagent 域读取器共享） | 键表语义不同（advisor = 评审专用池）；否决「并入同一遍历表」（subagent 调度路径误消费）。**2026-09-16 批 8 收正**：理由句中「advisor 无排队」一义已随 D-CF3 修订退场——独立读取器决策本身不变 |
-| D-CF3 | **同 scope 并发守卫**（同 type+scope 有 running 评审 → 拒） | 只查 settled 会放大「并行多实例」歧义；拒文案给指引；否决「**同 scope** 排队」（同 scope 续审 stale）——**异 scope 排队** 2026-09-16 批 8 已采纳（`AGENT-LOOP-SUBAGENT.md` §6.10） |
+| D-CF3 | **同 scope 并发守卫**（同 type+scope 有 running 评审 → 拒） | 只查 settled 会放大「并行多实例」歧义；拒文案给指引；否决「**同 scope** 排队」（同 scope 续审 stale）——**异 scope 排队** 2026-09-16 批 8 已采纳（`AGENT-LOOP-ASYNC-POOL.md` §6.10） |
 | D-CF4 | 模型可见文案**去数字化**（活引用生效上限） | 死数字与配置实值脱节；改插值 / 描述构建时读 |
 
 ## 8. 不并项与历史沿革
@@ -143,8 +143,8 @@
 - 2026-09-13：建档——自 `docs/core/design/CORE-UNIFICATION.md` 拆出（§2.5 #74 / #77 / #79 / #80 / #87 / #128–#132 / #177 · §2.5.1 A4 / A5 · §2.12.1「配置格式」类 · §2.12.2 第 1–4 行）；**语义零改**，行号沿用原编号。
 - 2026-09-14（S1 收口轮）：§5 补**核内落点行数**指针（`config.mjs` · `config-io.mjs` · `config-presets.mjs`——§2.8 新增小节）。
 - 2026-09-14（**B 轮并入 · 第 3 批**）：§6 **机制面 = 同名旧档缺**（`thincoder-cli/docs/{design,requirements}/CONFIG.md` 均不存在——两产品树实核）⇒ 无并入内容（不虚构）；§7 无新增决策；§8 登记配置面机制文本散布于旧档（越段发现 + MEMORY §6.7 指回）；首部加机制面指针一行。
-- 2026-09-15（**迁移批 · 第 5 批 · 并入 · eng-designer**）：新增 §6.1 **并发池配置面**（自 `thincoder-cli/docs/_archive/design/POOL-CONFIG-UNIFIED.md` 并入——配置键表 / 双读取器 / 默认四源 / 界面入口 / 兼容面；机制本体指 `AGENT-LOOP-SUBAGENT.md` §6.10）；§7 补 D-CF1–D-CF4；§8.2 两行指态收正（PROXY 已落 / POOL 已并入）。
+- 2026-09-15（**迁移批 · 第 5 批 · 并入 · eng-designer**）：新增 §6.1 **并发池配置面**（自 `thincoder-cli/docs/_archive/design/POOL-CONFIG-UNIFIED.md` 并入——配置键表 / 双读取器 / 默认四源 / 界面入口 / 兼容面；机制本体指 `AGENT-LOOP-ASYNC-POOL.md` §6.10）；§7 补 D-CF1–D-CF4；§8.2 两行指态收正（PROXY 已落 / POOL 已并入）。
 - 2026-09-15（**W16 实施轮 · eng-coder**）：§1 归属表改「现体」双列（加载器 / 迁移 / 预设 / settings 工具 / 供应持久化面 = 核单源；VSC 端侧镜像 6 档已删——端壳保留写盘通道 / 监视 / 迁移 glue / provider 访问层）+ W16 现况注；§2.2 #130 行注 W16 端侧 consult 读面现体；§6.1 界面入口行号重核（`settings-panel-write.mjs:94` · `thincoder-vscode/src/extension/settings.mjs:176`）。
-- 2026-09-16（**ENGINE-DEBT 批 8 · ED-4 决策面收正 · eng-designer**——承 `docs/batches/2026-09-16-engine-debt.md` §1 裁定 ④）：§7 **D-CF2 理由句 / D-CF3 否决句**按「评审池满 → 异 scope 入队」收正（决策本体不变——独立读取器 / 同 scope 守卫；机制落 `AGENT-LOOP-SUBAGENT.md` §6.10/§6.11）。
-- 2026-09-16（**批 8 ENGINE-DEBT · 补充收正 · eng-designer**）：§6.1 范围边界句「『评审不排队』语义不变」→「**表述已废**」（承 ED-4——与 §7 D-CF3 · `AGENT-LOOP-SUBAGENT.md` §6.10 对齐；残留旧语义清理）。
+- 2026-09-16（**ENGINE-DEBT 批 8 · ED-4 决策面收正 · eng-designer**——承 `docs/batches/2026-09-16-engine-debt.md` §1 裁定 ④）：§7 **D-CF2 理由句 / D-CF3 否决句**按「评审池满 → 异 scope 入队」收正（决策本体不变——独立读取器 / 同 scope 守卫；机制落 `AGENT-LOOP-ASYNC-POOL.md` §6.10/§6.11）。
+- 2026-09-16（**批 8 ENGINE-DEBT · 补充收正 · eng-designer**）：§6.1 范围边界句「『评审不排队』语义不变」→「**表述已废**」（承 ED-4——与 §7 D-CF3 · `AGENT-LOOP-ASYNC-POOL.md` §6.10 对齐；残留旧语义清理）。
 - 2026-09-20（**卫生族批 · 台账 #138 · eng-designer**）：首部机制面节区改 `§6–§8` + 历史节号指称清理（行数规则废除批残留）；设计源 = `docs/batches/2026-09-20-hygiene-sweep-batch.md` §2。

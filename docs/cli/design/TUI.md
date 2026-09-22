@@ -20,10 +20,19 @@
 
 | 文件 | 职责 |
 |---|---|
-| `thincoder-cli/src/tui/index.mjs` | `startTUI` 入口：raw mode、keyStream + readline、分块解码、粘贴协议、Shift+Enter 翻译、resize、state 对象、`pushLine` / `pushLabel`、提交门禁、行缓冲裁剪；装配归位（`createMouseDispatch` / `createLoadOlder` / update-notice re-export）；`state._agent` ↔ `agent._tuiState` 双向挂载 |
+| `thincoder-cli/src/tui/index.mjs` | `startTUI` 入口（**装配序列**——#159 拆分后）：dims 采样 · state 工厂调用 · 输入面早挂载 · cleanup / exit 钩（F-XR1 退出释放）· render loop · `createLoadOlder` · heap-watch · resize · 命令层（`createSlashCommands` + `turnCtx.handleSlash` 回填）· 键盘 / 鼠标后置挂载调用 · 启动屏 / 台账面 / 后台索引 / 升级检查；`state._agent` ↔ `agent._tuiState` 双向挂载 |
+| `thincoder-cli/src/tui/tui-state.mjs` | TUI state 工厂（`createTuiState({ cols, rows, agent })`——state 字面量单源：会话面字段 / dims 种子 / `tasks` 承接） |
+| `thincoder-cli/src/tui/input-face.mjs` | 输入面（`createInputFace(ctx)`——**二段接口**）：早挂载 = keyStream + raw mode + 启动序列 + 解码器 + `process.stdin.on("data")` 整块（粘贴协议 / 鼠标剥离 / Shift+Enter 翻译）；后置挂载入口 = `mountKeys(deps)`（keypress 接线）/ `mountMouse(deps)`（鼠标 dispatch） |
+| `thincoder-cli/src/tui/conversation-writer.mjs` | 对话写入面（`createConversationWriter`）：`pushLine`（行额度单点）/ `pushLabel`（消息标签 + 呼吸空行）/ `ensureAssistantLabel`（回合内单次位）+ 行缓冲裁剪与冻结锚点校正 |
+| `thincoder-cli/src/tui/turn-face.mjs` | 回合面（`createTurnFace(ctx)`）：`submit` 门禁 / interaction 装配（权限 + 提问）/ 剪贴板图片粘贴 / `turnCtx` / `turn` |
 | `thincoder-cli/src/tui/tui-lifecycle.mjs` | TUI 生命周期终端序列：`writeStartupSequence`（alt buffer + 光标 + 鼠标 / 粘贴 / 键盘增强 + **DECRST 7 禁环绕**）、`writeLoadingLine`（启动加载行——首帧渲染自然覆盖）、`writeCleanupSequence`、`RECOVERY_SEQUENCE`（异常退出恢复序列单源——见 `docs/cli/design/CRASH-REPORTS.md` §5）、`createExitCleanup`、`setTuiActive` |
 | `thincoder-cli/src/tui/update-notice.mjs` | 后台升级提示（`upgradeFailureText` / `pendingNoticeReady` 纯函数 + `createUpdateNotice` 装配） |
-| `thincoder-cli/src/tui/key-handler.mjs` | 按键分发：模态入口（permission / question / search / picker / wizard / interruptPrompt）+ 输入编辑；**busy 门禁**（busy 单槽注入——`docs/cli/design/TUI-INPUT-BOX.md` §4.1）；挂起空闲 Enter → pendingInput；Ctrl+C 分支；`convMaxScroll` 导出 |
+| `thincoder-cli/src/tui/key-handler.mjs` | 按键分发**分派器**（#226 拆分后留守）：attention 清位 + 三模态前置委派（permission / question / search）+ Ctrl+C 族委派 + F1 快捷键表 + Ctrl+I 入口 + interrupt 模态 + 五族顺序委派（委派守卫 = 原块入口条件）；`clearAttention` / `convMaxScroll` 导出 |
+| `thincoder-cli/src/tui/key-handler-ctrlc.mjs` | Ctrl+C 族（picker 取消 / 武装窗口全停 / 挂起态两级中止 / 回合 interrupt / 空闲退出武装——五分支） |
+| `thincoder-cli/src/tui/key-handler-modals.mjs` | picker 导航（含窗口高度同源）+ 首启 wizard 两步键处理 |
+| `thincoder-cli/src/tui/key-handler-busy.mjs` | **busy 门禁**（Enter 单槽受理 + 吞面四 / Tab 吞——`docs/cli/design/TUI-INPUT-BOX.md` §4.1） |
+| `thincoder-cli/src/tui/key-handler-scroll.mjs` | 翻页（PgUp / PgDn + `loadOlder` 边界加载）/ ↑↓ 三规则 + 历史导航 / ←→ · Home · End 光标 |
+| `thincoder-cli/src/tui/key-handler-edit.mjs` | 编辑族：Tab 补全 / Ctrl+U 清框 / 退格 · 删除 / Enter（多行换行 · 挂起空闲单槽 · `submit`）/ Ctrl+V 文本 · Alt+V 图片粘贴 / 可打印字符 |
 | `thincoder-cli/src/tui/key-handler-search.mjs` | 搜索模式按键子处理（Ctrl+F 分支） |
 | `thincoder-cli/src/tui/key-modes.mjs` | 按键模态层：permission / question / interruptPrompt 独占模态 handler（激活即消费全部按键） |
 | `thincoder-cli/src/tui/render-frame.mjs` | 帧布局装配：header / conversation / subagent 面板 / todo / input / status 各面板；状态栏（含 attention 态——§7）；question 自由文本态光标例外 |
@@ -58,14 +67,14 @@
 > 读数锚 = 需求档 `docs/cli/requirements/TUI.md` §3 **N12**（启动等待不随存量劣化）；机制单源 = `docs/core/design/SESSION.md` §6.17（会话 GC）· `docs/core/design/TRACES.md` §6.4（轨迹清理）。
 
 - **序**：wrapped 父 spawn 子（`thincoder-cli/src/tui/wrapped-spawn.mjs:27`——父段先写 loading 行）→ 子进程 import → `resumeSlot`（`thincoder-cli/bin/thincoder.mjs:322`）→ 装配（同档 `:323`）
-  → `writeStartupSequence`（alt buffer 接管；`thincoder-cli/src/tui/index.mjs:162`）+ `writeLoadingLine`（同档 `:168`）→ 首帧 render（全屏重绘自然覆盖 loading 行）。
+  → `writeStartupSequence`（alt buffer 接管；`thincoder-cli/src/tui/input-face.mjs:39`）+ `writeLoadingLine`（同档 `:45`）→ 首帧 render（全屏重绘自然覆盖 loading 行）。
 - **纪律**：启动关键路径零同步 fs 阻塞（判据 ≤50ms）——会话 GC 与轨迹清理均为**异步非阻塞**面，且不在纯信息命令启动时执行（触发闸见 `docs/core/design/SESSION.md` §6.17 / `docs/core/design/TRACES.md` §6.4）。
 - **读数（2026-09-21 基线）**：启动到 TTY 门 9.6–16s（sessions 20,227 项 + 轨迹 15,610 个）⇒ 目标 ≤2s；空 HOME 对照 0.495s。
 
 **不在本档的三面**（各挂指针，D2）：命令层与选择面 → `docs/cli/design/TUI-COMMANDS.md` §1；
 会话恢复 / 回合驱动 / 显示层内存 → `docs/cli/design/TUI-SESSION-VIEW.md` §1；输入框键契约 → `docs/cli/design/TUI-INPUT-BOX.md`。
 
-## 2. stdin 输入层（`index.mjs`）
+## 2. stdin 输入层（`input-face.mjs`）
 
 - **keyStream 双流**：`emitKeypressEvents(keyStream)`（`node:readline`）把原始字节转 keypress 事件；
   `keyStream` 是 `process.stdin` 的 PassThrough 副本——**粘贴多块数据先写入 keyStream 再交给 readline 解析**，
@@ -79,7 +88,7 @@
   **消息行点击无动作**（行菜单已移除——终端拖选复制是原生能力）。坐标 1-based、col 在前；release / 滚轮不消费。
 - **粘贴协议（bracketed paste）**：`\x1b[200~` 进入 pasteMode、`\x1b[201~` 退出；跨多 chunk 的粘贴先写前缀 + 累积，
   退出时一次性写入。粘贴文本**跳过按键分发**直接进输入缓冲（`insertPastedText`）。
-- **Shift+Enter**：stdin 层 `translateShiftEnter` 把 CSI-u 的 Shift+Enter 序列翻译为 `\x1b\r` → key-handler 插入 `\n`
+- **Shift+Enter**：stdin 层 `translateShiftEnter` 把 CSI-u 的 Shift+Enter 序列翻译为 `\x1b\r` → `key-handler-edit.mjs` 插入 `\n`
   （多行键三层方案见 `docs/cli/design/TUI-INPUT-BOX.md` §5）。
 - **state 对象**（渲染全部数据源）：`lines` / `streaming` / `reasoning` / `_advisorBlocks` / `input`（codepoint 数组）/
   `cursor` / `history` / `scroll` / `_foldScroll` / `_followTail` / `processing` / `controller` / `permission` / `question` /
@@ -126,7 +135,7 @@ permission（y/n/a/esc；batch a/o/n；continue / retry y/n）
   **Enter 提交 = busy 单槽注入**（非模态期——放行判据 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1（挂起两态不再排除）；
   二次提交语义同处，本档不重述——D2）；**斜杠命令同禁发**（白名单机制已删——`/exit` 也发不出，退出靠 Ctrl+C 终端层武装通道）；
   空 Enter 静默（text 非空才吞）；反馈面 = §7.5。
-- **挂起空闲**（`docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.8——busy 之外）：Enter（非 slash）→ `pendingInput` **单槽**
+- **挂起空闲**（`docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8——busy 之外）：Enter（非 slash）→ `pendingInput` **单槽**
   （至多一条待交接——槽满吞 + 提示）+ 唤醒（`_suspWake`，不打断后台）；释放窗口期间同语义。
 - **输入编辑键表与 ↑↓ 三规则** = `docs/cli/design/TUI-INPUT-BOX.md` §2 / §3（本档不重述——D2）。
 
@@ -318,7 +327,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
    启动 → 清 waiting 标转正常 running 头（同 key 不重建）；取消 / 出队 → 移除块（不冻结）。**`⟦ev⟧cancelled` 发射源（按族 × 落点逐条列名）**：
    - **子代理族**：`executeCancelAction` 工具路径与 mouse ⏹ 直连路径（`thincoder-core/agent-tools/subagent-async.mjs` · `thincoder-cli/src/tui/mouse.mjs`）——两路互斥（同一事件只有其中一路在链上），通道分别是 `ctx.callbacks.onToken` 与 `routeSubToken` 就地路由。
    - **评审族**：核 `cancelAsyncAdvisor` queued 分支 = **唯一发射点**（2026-09-18 设计评审轮 1 #1 裁定单源化；工具路径 / mouse ⏹ / VSC ⏹ 三路各传本层通道、均不另发）——
-     此前缺发射源，评审排队块孤悬不移除（2026-09-17 af 批补；机制细节见 `AGENT-LOOP-SUBAGENT.md` §6.11 第 3 条）。
+     此前缺发射源，评审排队块孤悬不移除（2026-09-17 af 批补；机制细节见 `AGENT-LOOP-ASYNC-POOL.md` §6.11 第 3 条）。
    **已移除块不复建（2026-09-17 af 批 c2——裁定落条文）**：`⟦ev⟧cancelled` 移除分支**同址落键级墓碑**——经**新增 helper** `tombstoneSubKey(state, key)`（定义于 `subagent-freeze.mjs`，与墓碑写点 `freezeSubTaskLines` 同址
    ⇒ **墓碑写入单一权威**保持〔§6.8.3.3〕；**只写** `_frozenSubKeys`、**不写** `_frozenSubTask` 载体行）⇒ 后续 `⟦ev⟧stopped` 经 `ensureSubTaskKey` 直接丢弃（零幻影块——af 批探针实证的 `state.lines` 0 → 1 路径封死）；
    写入条件 = **与移除同一守卫**（`live && !live.done && live.async !== true`——命中即移除 + 写墓碑；无块可移除的 no-op 面不写，语义零扩）。
@@ -522,7 +531,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 - **起跑数行**：标签行之后、`runAgentTurn` 之前 `pushLine(t("digest.start", { n: pend0 }), C.dim)`——规则 = **`pend0 > 0`**（`pend0 = pendingFamilyCount(agent)` 取数前置，与收尾行同源；ask-only 轮零此行）。
 - **收尾行（X9——显示面消差批）**：轮尾 `pushLine` 一行 dim——完成 ⇒ `digest.done`（`已消化 N 份后台报告（Xs）`）/ 中止与失败 ⇒ `digest.aborted`（`消化中断（Xs）`）；
   **`pend0 > 0` 守卫**（ask-only 轮零收尾行——done / aborted 两形态同判）；**文案单源 = 核 i18n 容器**（`t()` 取值——CLI 侧首个核 i18n 消费点）；**计数口径 = 起跑数**（与 VSC 端同源——消费数另计会引入双口径）；秒位 = `toFixed(1)`（与 VSC 同式）。
-- **边界**：`digest:start` / `digest:end` 日志事件零改（LOGGING 面）；消化轮机制 / 计数语义零改（编排面 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.8；可见面口径单源 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.27.12.13 ①–③——本节 = CLI 侧落地形态）。
+- **边界**：`digest:start` / `digest:end` 日志事件零改（LOGGING 面）；消化轮机制 / 计数语义零改（编排面 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8；可见面口径单源 = `docs/core/design/AGENT-LOOP-UPSTREAM.md` §6.27.12.13 ①–③——本节 = CLI 侧落地形态）。
 
 ## 7. 状态栏与用户介入提醒（attention 态）
 
@@ -557,9 +566,9 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
   置位点 = 顶层链尾（**非回合末 finally**——finally 后还有队列续发与挂起会话，在那之后才真正「无人接手」）。
   中断结束与错误结束同样置位（agent 已停、等用户——语义一致）。
 - **清位（2 点——输入即在场）**：**键盘** = `key-handler.mjs` `onKeypress` 入口（模态分派**之前**）清位 + 仅当原值为真时 `render()`；
-  **鼠标** = `index.mjs` stdin `data` 处理器内（滚轮分支与 `onMouseClick` 调用前——单点覆盖滚轮 / 点击）。
+  **鼠标** = `input-face.mjs` stdin `data` 处理器内（`:62`——滚轮分支与 `onMouseClick` 调用前；单点覆盖滚轮 / 点击）。
   blocked 两态无需清位（实时派生——提示消解即消失，零残留）。
-- **state 字段**：`attentionAwaiting: false`（`index.mjs` state 字面量——默认关；不落盘、不进会话）。
+- **state 字段**：`attentionAwaiting: false`（`tui-state.mjs` state 字面量——默认关；不落盘、不进会话）。
 - **边界**：不做闪烁 / 系统级通知 / 终端标题改写 / 响铃；不引入空闲重绘定时器；不改状态栏既有信息面与既有按键 / 模态 / 挂起语义。
   **VSC 对位**：审批 / 提问挂起已有 waiting 态；回合结束等待输入与面板内 attention 态待建——**各端独立实现**，
   语义同源（不做 byte-identical），登记归 VSC 轮。
@@ -651,6 +660,11 @@ F13 判定句「pendingInput 不出 attention」约束的是**注意力色对**�
 
 ## 变更记录
 
+- 2026-09-22（**structure-debt 批 · 档面车道（#226 / #159 尾账）· eng-designer**——承 `docs/batches/2026-09-22-structure-debt.md` §2.1 / §2.2 / §2.6 档面行 + 父侧派单）：
+  §1 模块地图收正——`index.mjs` 行改「装配序列」并按新档清单补 **4 行**（`tui-state` / `input-face` / `conversation-writer` / `turn-face`）；
+  `key-handler.mjs` 行改「分派器」并按新档清单补 **5 行**（`key-handler-{ctrlc,modals,busy,scroll,edit}`）；§2 标题与启动序坐标改指 `input-face.mjs`（`writeStartupSequence` `:39` / `writeLoadingLine` `:45`）；
+  §7.2 attention 清位鼠标点 / state 字面量改指新档。**零语义**：机制 / 键语义 / 判据零变。
+
 - 2026-09-21（**busy-injection 批 · 设计评审轮 2 修正** · eng-designer——承 `docs/batches/2026-09-21-busy-injection.md` §3 轮次 2 发现 4 / 5）：
   §7.5 VSC 对位行改**纯实现形态描述**（去「非同构…各端独立实现」保留口吻——本地气泡两时点（提交入槽即现 / 送达即 user 回声面）+ 形态各端自落 / 语义同源）；
   §7.1 表 `pendingInput` 行标签覆盖两填充面（挂起 / busy 期——「不计」裁决与理由句零改）。
@@ -672,7 +686,7 @@ F13 判定句「pendingInput 不出 attention」约束的是**注意力色对**�
 - 2026-09-22（**busy-extend 批 · 设计评审轮 1 修正收尾补漏** · eng-designer——承父侧复核实读发现（轮 1 修正 #1 同族同句区）：§4 busy 门禁条 `:125` 括注收正（「吞提交不吞字符」→「提交面受理分流 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1；吞面不回滚字符」——旧括注「吞提交」表征失真〔本批后 busy 提交按受理分流入槽、吞面收敛四〕）。**§7.5 与其余契约点零变**。
 
 - 2026-09-22（**busy-extend 批 · 设计评审轮 2 修正** · eng-designer——承 `docs/batches/2026-09-22-busy-extend.md` §3 轮次 2 发现 #3）：
-  §4 挂起空闲行与 §6.9 边界行的编排面节号收正（`docs/core/design/AGENT-LOOP.md` §9 → **`docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.8**——挂起回合 / 消化轮机制的现住档）。**语义零变**。
+  §4 挂起空闲行与 §6.9 边界行的编排面节号收正（`docs/core/design/AGENT-LOOP.md` §9 → **`docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8**——挂起回合 / 消化轮机制的现住档）。**语义零变**。
 
 - 2026-09-21（**块标题行对齐批 · D8 裁定轮 · eng-designer**——承 `docs/batches/2026-09-21-vsc-block-title-align.md` §2.12 · 父侧代裁）：新增 **§7.4 会话标题段（常显 · D8）**——落点 = `renderStatus` 状态段簇尾（`ledgerHint` 后、键位组前）；取值 = `agent.title` 活对象单读（每帧 recompute · 空值零注入 · 40 显示列截断）；VSC 端零改（顶栏常显保持）。
 
@@ -690,7 +704,7 @@ F13 判定句「pendingInput 不出 attention」约束的是**注意力色对**�
 - 2026-09-21（**STARTUP-LATENCY 批 · eng-designer**——承 `docs/batches/2026-09-21-startup-latency.md` §1）：§1 新增 **「启动序（首帧前）」**（序 / 零同步阻塞纪律 / 读数基线——读数锚 = 需求档 §3 N12；机制单源 = `docs/core/design/SESSION.md` §6.17 · `docs/core/design/TRACES.md` §6.4）；`tui-lifecycle.mjs` 地图行补 `writeLoadingLine`。
 
 - 2026-09-21（**SIGNAL-LINES 批 · 设计微修二轮 · eng-designer**——承 `docs/batches/2026-09-21-subagent-signal-lines.md` §2.6 遗留 2 · 父侧 2026-09-21 02:1x 裁定纳入本批）：
-  §6.9 就地同步为 F-UC8 现态——起跑标签**两档**（ask 携参 / digest——manual / AUTO 同判 · `auto` 泛句退场）· **起跑数行**（`pend0 > 0` ⇒ `digest.start`）· 收尾行 **`pend0 > 0` 守卫**（done / aborted 两形态同判）；可见面口径单源回指 `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.27.12.13 ①–③。
+  §6.9 就地同步为 F-UC8 现态——起跑标签**两档**（ask 携参 / digest——manual / AUTO 同判 · `auto` 泛句退场）· **起跑数行**（`pend0 > 0` ⇒ `digest.start`）· 收尾行 **`pend0 > 0` 守卫**（done / aborted 两形态同判）；可见面口径单源回指 `docs/core/design/AGENT-LOOP-UPSTREAM.md` §6.27.12.13 ①–③。
 
 - 2026-09-20（**VSC 行为/能力两则批 · #132 · eng-designer**）：§2 键面枚举补 `retry`；§4.3 未决面（框面 `y`/`n`/`a`）按用户裁定收正为**仅 `y`/`n`**（判据单源 `isYesNoModal`）+ 原文余行 log-only 条（`err:provider`）。设计源 = `docs/batches/2026-09-20-vsc-rules-retry-batch.md` §2。
 

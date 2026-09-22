@@ -215,7 +215,7 @@ docs/core/design/PORTABILITY.md:187              tool-gates.mjs:78/:97          
 
 **闭枚举（as-of 2026-09-16 复扫口径——逐行清单入批次档 §2）**：域 = 六目录顶层 **111** 档（排除① 节内文本 ② 本档规则文本）。
 规则指称族（正则 `R24a|体量|拆分规划|行数标注|行数读数|行数义务`）命中 **143 行** = **处置面 114**（① 指针 **3** · ② 读数 **52** · ③ 枚举 **59**）+ **保留面 29**。
-**旧记「43 行 ∥ 保留 32 ∥ ①12 ②23 ③11」作废**——该模式集漏裸 `体量` 形态（如「§6 体量」「既有体量节顺延」）⇒ 不可复现。
+该模式集漏裸 `体量` 形态（如「§6 体量」「既有体量节顺延」）⇒ 读数**不可复现**（不采用）。
 行号 = as-of，**落笔前逐处回读原文**后落笔——不得照抄本表；落笔轮复扫判据 = 上列模式在活档的命中集 ⊆ 批次档 §2 登记集（新命中 = 0）。
 
 **误删防护（硬）**：逐档 diff 只应出现「该节整块删除 + 上述指称行改写」两类 hunk；**零附带**（其余节 / 表格 / 变更记录他行**逐字不变**）。
@@ -406,7 +406,7 @@ OBL-5  文档面标注义务 = 带当前行数\s*\+?\s*预计增量|行数标注
 | 4 | `thincoder-core/agent-tools/subagent-async.mjs` | `:247` | `(AGENT-LOOP.md §19.5 D-M6)` | 同 1 |
 | 5 | 同上 | `:251` | `(AGENT-LOOP.md §19.5 D-M6)` | 同 1 |
 | 6 | `thincoder-core/agent-tools/subagent-panel.mjs` | `:88` | `(AGENT-LOOP.md §19.6 D-P2)` | 同 1 |
-| 7 | `thincoder-core/agent-tools/advisor.mjs` | `:147` | `(AGENT-LOOP.md §11.2)` | `(AGENT-LOOP-SUBAGENT.md §6.10)` |
+| 7 | `thincoder-core/agent-tools/advisor.mjs` | `:147` | `(AGENT-LOOP.md §11.2)` | `(AGENT-LOOP-ASYNC-POOL.md §6.10)` |
 
 **工具描述串（模型可见 schema 描述）**：
 
@@ -416,7 +416,7 @@ OBL-5  文档面标注义务 = 带当前行数\s*\+?\s*预计增量|行数标注
 | 9 | 同上 | `:120` | `§19.5.6 touched-files summary` | `§6.7.2 touched-files summary` |
 | 10 | 同上 | `:145` | `— §7.2`（observe）· `— §7.2`（send）· `— §19.6`（panel） | 三处均 `— §6.7.2` |
 
-**目标锚存在性实核（2026-09-18）**：`AGENT-LOOP-SUBAGENT.md` 含 `## 6.7`（`:10`）· `### 6.7.2`（`:32`）· `### 6.7.3`（`:75`）· `### 6.7.5`（`:95`）· `## 6.10`（`:181`）——五锚齐备（改指后零悬空）。
+**目标锚存在性实核（2026-09-18）**：`AGENT-LOOP-SUBAGENT.md` 含 `## 6.7`（`:10`）· `### 6.7.2`（`:32`）· `### 6.7.3`（`:75`）· `### 6.7.5`（`:95`）∧ `AGENT-LOOP-ASYNC-POOL.md` 含 `## 6.10`（`:181`）——五锚齐备（改指后零悬空）。
 
 **J-1 残差（零触碰 · 登记——定义 = token 族 + 域 + 逐处坐标清单；2026-09-18 评审修正轮收正 · 评审 #2）**：
 
@@ -1001,7 +1001,7 @@ grep -rEn "R24a|体量|拆分规划|行数标注|行数读数|行数义务" thin
 node thincoder/scripts/doc-check.mjs
 ```
 
-**A-DD15 代码面保留抽样坐标**：`docs/core/design/CORE-UNIFICATION.md` §2.8.1（`:550`）/ §4.4.1（`:1697`）· `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.20.4（`:366`）/ §6.21.4（`:489`）· `docs/vsc/design/VSC-DEBT.md` §4（`:145`）。
+**A-DD15 代码面保留抽样坐标**：`docs/core/design/CORE-UNIFICATION.md` §2.8.1（`:550`）/ §4.4.1（`:1697`）· `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.20.4（`:366`）/ `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.21.4（`:489`）· `docs/vsc/design/VSC-DEBT.md` §4（`:145`）。
 
 **A-DD8 判据（机器可验）**：
 
@@ -1039,7 +1039,7 @@ node thincoder/scripts/doc-check.mjs
 
 **A-DD19 判据（机器可验 · 条目 J = 死名/旧指针收正二轮）**：
 
-1. **改指目标存在性**（前置门——§3.8 用例 I-5 同判）：`docs/core/design/AGENT-LOOP-SUBAGENT.md` 含 `## 6.7` / `### 6.7.2` / `### 6.7.3` / `### 6.7.5` / `## 6.10` 五锚（`grep -c` 各 ≥1）——任一缺失 ⇒ 判违规（错指比死指更坏）。
+1. **改指目标存在性**（前置门——§3.8 用例 I-5 同判）：五锚——`docs/core/design/AGENT-LOOP-SUBAGENT.md` 含 `## 6.7` / `### 6.7.2` / `### 6.7.3` / `### 6.7.5` ∧ `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` 含 `## 6.10`（`grep -c` 各 ≥1）——任一缺失 ⇒ 判违规（错指比死指更坏）。
 2. **门文案 / 描述串逐字对齐（拆两条——2026-09-18 评审修正轮收正 · 评审 #4）**：
    - **②-a 门文案 7 处**（§3.9 J-1 表 #1–#7）：与 `git diff -- thincoder-core/agent-tools` 的 hunk **逐行相符**（逐处改后 = 表「改后」列逐字）。
    - **②-b 描述串 3 行**（J-1 表 #8–#10，域 = `subagent.mjs:118` / `:120` / `:145`）：同上逐行相符。
@@ -1172,6 +1172,9 @@ node -e "const s=require('fs').readFileSync('docs/core/design/DOC-MIGRATION.md',
 
 ## 变更记录
 
+- 2026-09-22（**hygiene-sweep 批 · 文档卫生轮 · eng-designer**——承 `docs/batches/2026-09-22-hygiene-sweep.md` §2 · 台账 #225）：规范面修订式标记清理——模式集读数行去「旧记「43 行 ∥ 保留 32 …」作废」旧读数对照（留不可复现判据）。**语义零改**。
+
+
 - 2026-09-20（**D4 细则新增（消费点坐标完整路径形态）** · eng-designer · 承 `docs/batches/2026-09-20-qwen-flash-specs.md` §1.8-④ 采纳的 R-11 纪律沉淀）：§1 D4 行增纪律句 + 新增 D4 细则块（成因 = V5 唯一 basename 索引失效 · 实例登记 = MODEL-SPECS 设计轮 10 条悬空锚 · 机判 = 归 V5 不另建器）。
 - 2026-09-18（**判据面收正批 · 设计评审修正轮（轮 1 · id=55）** · eng-designer）：三条发现逐号落地（发现原文 = `docs/batches/2026-09-18-arbiter-face.md` §3；父侧逐条裁定接受）——
   ① §5 **A-DD19 ④** 判据改**「除保留面三行外零命中」**：原「四档内三形态零命中」与同批 **⑥ B 类零 diff 不可同真**——实核命中 **10** = J-3 A 类 **7**（实施面；实施后归 `24`）+ 保留面 **3**。
@@ -1193,7 +1196,8 @@ node -e "const s=require('fs').readFileSync('docs/core/design/DOC-MIGRATION.md',
   ⑥ §3.7 增「**批次档同口径**」射程句 · ⑦ §3.8 映射表「M1–M10」注为**模块号区间**（盘上 `_archive/modules/` 实存 9 档）。**同轮补入**：§3.4 判定面两行（A-DD8 判据 ① 与证据行）的旧用例档坐标改述为现行承接档——评审未列、按 §2.2 A′ 定义同源补入。
 
 - 2026-09-18（**批 DEADNAME-SWEEP2 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-18-deadname-sweep2.md` §1）：新增 **§3.9 条目 J**——
-  六条逐条处置裁定（J-1 门族旧编号改指 `AGENT-LOOP-SUBAGENT.md` §6.7.2 / §6.10 · J-2 测试头注 4 处逐处判类（2 改述 + 2 B 类零触碰）+ §4.2.8 登记行**已消解（B 类零触碰）** · J-3 tool-docs 计数 25 → 24（7 处 / 4 档）· J-4 §9.4 台账腿改写口径（不删腿）· J-5 `SEND-STALL-DISTILL.md` **14 坐标** + `:36` 语义改述 · J-6 `docRoot.modules` 空指 = **保留（数据档零改）**）
+  六条逐条处置裁定（J-1 门族旧编号改指 `AGENT-LOOP-SUBAGENT.md` §6.7.2 / `AGENT-LOOP-ASYNC-POOL.md` §6.10 · J-2 测试头注 4 处逐处判类（2 改述 + 2 B 类零触碰）+ §4.2.8 登记行**已消解（B 类零触碰）** · J-3 tool-docs 计数 25 → 24（7 处 / 4 档）· J-4 §9.4 台账腿改写口径（不删腿）·
+  J-5 `SEND-STALL-DISTILL.md` **14 坐标** + `:36` 语义改述 · J-6 `docRoot.modules` 空指 = **保留（数据档零改）**）
   + 三处附加口径（模型可见串 A 类 + 内容权边界 / 数据档 = E 面 / 死名裸名书写纪律）+ 受影响文件表 16 行（逐档行数 / Δ / 尺寸档 / 面别）+ 用例 DD-39–DD-49（初记 `J-1–J-11`——与条目号复用 ⇒ 评审 #6 收正）+ 边界 + 登记；§3 标题枚举同步（`+ 死名/旧指针收正二轮`）· §5 增 **A-DD19**（9 条机判）· 用例表增 DD-34–DD-38；变更记录本条。
   基线实测 as-of 2026-09-18（`node scripts/doc-check.mjs`，cwd = 仓根）：**悬空 28**（用例号 2 + 路径/坐标 26）· **超宽 5 行** · 候选 13991 · 注记豁免 43 · 拟新增 4 · 迁移期引文 230；exit 1（存量红——非本批写域，逐档归属入批次档 §2）。
 - 2026-09-18（**批 DEADNAME-SWEEP2 · 设计评审修正轮（轮 1）** · eng-designer）：七条发现逐号落地（**处置执行人 = 本席**；父侧逐条裁定接受——含 🔵 2 条；发现原文 = 批档 §3，该段本轮落笔时未落档 ⇒ 实现要点以父侧派单为准）——

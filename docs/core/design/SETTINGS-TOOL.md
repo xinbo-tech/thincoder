@@ -45,8 +45,8 @@ CLI 装配 = `thincoder-cli/src/cli/make-agent.mjs`（baseTools）。dispatch �
   族闭合（未知新头名自动进遮罩）是本轮复发根因的处置：只补 `Authorization` 单键 = 把同族下一条漏项留给下次（D-ST13）。
 - **残余类（登记——判定边界）**：段内复合段名（refreshToken / clientSecret / privateKey 类 camelCase / 前缀复合）**不命中**——本批不扩段内边界规则；理由与消解路径 = D-ST13 / D-ST17 / §4 边界行。
 
-命中 ⇒ **值位一律 `••••（masked）`、键名保留可见**；四处调用单点同一谓词：list 行 `formatLine:184` · get 行（同函数）· set 回显 `:255-256` · **错误文案**值位 `_shownValue:85`（D-ST8）。
-`get` 打在敏感**父对象**上（如 `mcp.servers.0.headers`）⇒ 回显 `••••（masked） (object)`；非敏感父对象沿用 `[object Object] (object)` 既有渲染（本批不动）。
+命中 ⇒ **值位一律 `••••（masked）`、键名保留可见**；四处调用单点同一谓词：list 行 `formatLine:187` · get 行（同函数 `:189`）· set 回显 `:260-261` · **错误文案**值位 `_shownValue:88`（D-ST8）。（坐标按现读收正 2026-09-22 · 父侧直接执行 · 可 revert）
+`get` 打在敏感**父对象**上（如 `mcp.servers.0.headers`）⇒ 回显 `••••（masked） (object)`；非敏感父对象 ⇒ **`JSON.stringify` 化渲染**（`thincoder-core/agent-tools/settings.mjs:189`；2026-09-22 hygiene 批 #58 后——父侧收正 · 可 revert）。
 判据面 = 夹具键集**逐键**断言（敏感族全遮 ∧ 非敏感键不误遮 ∧ 明文零出现）；用例表 = 批次档 §2（本档不复制）。
 **DEFAULTS 实核（as-of 2026-09-18——用例表「不误遮」格的前提）**：`flatten(DEFAULTS)` 共 24 叶子，新谓词（两句取或）命中面 = **仅 `websearch.apiKey`**（族句命中 0——DEFAULTS 无 `headers` / `env` 段）
 ⇒「除 `websearch.apiKey` 外零 masked」前提成立（批次档 §2.2③ 同读数）。

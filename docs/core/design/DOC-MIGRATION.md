@@ -27,7 +27,7 @@
 |---|---|---|---|---|
 | 1 | ACP-CLIENT | **本批迁** | 活——根层无同话题档；实装 `thincoder-cli/src/acp/` 在位；VSC 无实现（结构性不对称）；本批实核：relay 文法模块居 `thincoder-core/agent/relay-prefix.mjs`（核包重构后） | 已落 `docs/cli/design/ACP-CLIENT.md` |
 | 2 | ADVISOR-CONVERGENCE | **本批迁** | 活——根层无对应（`docs/core/design/CONSULTATION.md` §8.2 越段登记）；= advisor 评审收敛设计权威；1570 行超硬限 ⇒ 按「收敛本体 ⇄ 边缘守卫」拆两档 | 已落 `docs/core/design/ADVISOR-CONVERGENCE.md` + `docs/core/design/ADVISOR-GUARDS.md` |
-| 3 | AGENT-LOOP | **本批迁** | 未并入面（评审对象锚 / R1–R7 铁律 / byte-identical 取消 / 普通模式轻量审计）已并入；飞刀面由 `ESCALATE.md`（第 3 批已落）承载 | 已并入 `docs/core/design/AGENT-LOOP.md` + 拆分面 `docs/core/design/AGENT-LOOP-SUBAGENT.md`（§6.17 / §6.18 / §6.19） |
+| 3 | AGENT-LOOP | **本批迁** | 未并入面（评审对象锚 / R1–R7 铁律 / byte-identical 取消 / 普通模式轻量审计）已并入；飞刀面由 `ESCALATE.md`（第 3 批已落）承载 | 已并入 `docs/core/design/AGENT-LOOP.md`（§6.17）+ 拆分面 `docs/core/design/AGENT-LOOP-SUBAGENT.md` · `docs/core/design/AGENT-LOOP-ASYNC-POOL.md`（§6.18 / §6.19） |
 | 4 | AGENT-PARAMS | **本批迁** | 活——根层无对应（`AGENT-LOOP.md` §6.1 仅覆盖 maxTurns 默认；`timeoutMs` 面无主）；三参数默认值经实核（`thincoder-core/advisor/compaction.mjs:36` · `thincoder-core/config.mjs:36` · `thincoder-core/agent/helpers.mjs:25`） | 已落 `docs/core/design/AGENT-PARAMS.md` |
 | 5 | APPLY-PATCH | **本批迁** | 根层无正文（`TOOLS.md` §8.2 登记「正文已拆到各工具权威档」= 无档名指针）；VSC 同名对位 | 已落 `docs/core/design/APPLY-PATCH.md` |
 | 6 | ARCHITECTURE | **本批迁** | 活——根层原无架构总览载体（硬约束 / 设计原则 / 模块地图）；§3 模块地图为迁移前 `src/**` 树形态 ⇒ 照现状**重写** | 已落 `docs/core/design/ARCHITECTURE.md` |

@@ -40,7 +40,9 @@
 
 > 2026-09-22 增补（用户 08:05 提问 → 08:11 裁定「可以」· 主 agent 落笔）：主会话**「在途提问」模式**（借 busy 队列的边界送达——非阻塞软转向通道）。
 > **目标**：主 agent 在长执行（子代理在飞 / 长链条）中不必二选一「阻塞等人」或「闷头跑完」——问题随正文流发出 + 给默认值继续推进；用户在忙期提交（排队），回合边界 / 挂起窗消费，下一回合按 steer 校正。
-> **功能点**：① 双档主会话人格（`persona-engineering.md` + `persona-normal.md`）写入该段：触发条件（长执行 ∧ 有可先行默认值）+ 一句式模板 + 收到 steer 即校正；② 通道分界：硬门（新范围 / 口径裁决 / 不可带默认前行）⇒ `question` 工具（阻塞）或停下上报；软转向 ⇒ 在途提问（非阻塞）；例行确认门仍走纯文本（现行零变）；③ 纪律：一次一问（与 `question` 工具 ONE-question 同源）· 不重复索要已授权范围 · 默认先行不空转；④ `tool-docs/question.md` 补两通道分界一句（落点与 TOOLS 面协同——设计裁定）。
+> **功能点**：① 双档主会话人格（`persona-engineering.md` + `persona-normal.md`）写入该段：触发条件（长执行 ∧ 有可先行默认值）+ 一句式模板 + 收到 steer 即校正；
+> ② 通道分界：硬门（新范围 / 口径裁决 / 不可带默认前行）⇒ `question` 工具（阻塞）或停下上报；软转向 ⇒ 在途提问（非阻塞）；例行确认门仍走纯文本（现行零变）；
+> ③ 纪律：一次一问（与 `question` 工具 ONE-question 同源）· 不重复索要已授权范围 · 默认先行不空转；④ `tool-docs/question.md` 补两通道分界一句（落点与 TOOLS 面协同——设计裁定）。（折三行 = 父侧直接执行 · 行宽收正 · 零语义 · 可 revert · 2026-09-22 hygiene 批）
 > **边界（不做）**：busy 队列机制零动（单槽 / 边界送达 / 无中途 pickup）· 不新增工具 · 不替代确认门硬门 · 子代理无此通道（仍「无用户可等」）。
 > **验收**：① 两面 personas（运行期 + 模板双副本）该段在位且逐字一致（node UTF-8 扫描 + `prompts-dual-source` 绿）；② 零文档引用（两界机检族）· 机检净增 0；③ 三包全绿；④ 双面语义等价。
 > **依赖**：F16 busy 队列（TUI 板块——已落 `cc9e0c56`：边界送达 / 挂起窗输入优先）；`tool-docs/question.md` 既有使用纪律；persona-engineering 锚点 = `ENGINEERING-MODE-V2.md` §7.2。**实现序**：待批（归批——可与后续提示词面小项搭同批）。
@@ -106,7 +108,8 @@ discipline-normal.md 内容大纲（每节管什么）：
 
 **附属纪律（已落提示词正本——本档不复制，D2）**：spawn 排队纪律、需求池攒批工作流（六条）——机制权威 = `docs/core/design/LEDGER.md`（v2 台账）。
 
-> 2026-09-21 修正（**tool-discipline 批 · 主 agent 落笔**——承 `docs/batches/2026-09-21-tool-discipline.md` · 台账 #214 · 机制 = `docs/core/requirements/TOOLS.md` F10）：**`task` 工具工程模式机械停用**（装配摘除 + 调用拒）后，提示词面三处撞点仍「指挥已停用工具」= 自相矛盾态 ⇒ 收正：① `discipline-engineering.md` 铁律 3「工作靠任务清单跟踪」→ 工程模式分支（追踪面 = 批次档 §2 + 台账）；② 同档需求完成判据句「任务清单是需求验收的标志」→ 批次档 §2 条目表 + 台账行；③ `persona-engineering.md` 欠账句「立即写进任务清单」→ 批次档 §6 未决（或台账行）。散文纪律句本体不删（机判 + 文案改指双轨）。
+> 2026-09-21 修正（**tool-discipline 批 · 主 agent 落笔**——承 `docs/batches/2026-09-21-tool-discipline.md` · 台账 #214 · 机制 = `docs/core/requirements/TOOLS.md` F10）：**`task` 工具工程模式机械停用**（装配摘除 + 调用拒）后，提示词面三处撞点仍「指挥已停用工具」= 自相矛盾态 ⇒ 收正：
+> ① `discipline-engineering.md` 铁律 3「工作靠任务清单跟踪」→ 工程模式分支（追踪面 = 批次档 §2 + 台账）；② 同档需求完成判据句「任务清单是需求验收的标志」→ 批次档 §2 条目表 + 台账行；③ `persona-engineering.md` 欠账句「立即写进任务清单」→ 批次档 §6 未决（或台账行）。散文纪律句本体不删（机判 + 文案改指双轨）。（折两行 = 父侧直接执行 · 行宽收正 · 零语义 · 可 revert · 2026-09-22 hygiene 批）
 > **逐字文本** = 设计档 `docs/core/design/TOOLS.md` §6.15.2「提示词面条目建议文本」（正本中文 + 核内英文）；**落点** = 双副本四档（`docs/core/design/prompts/{discipline-engineering,persona-engineering}.md` 正本 → `thincoder-core/prompts/…` 运行期）——双源同文，**变更记录只落本档**。
 
 ### 2.5 命名法（层前缀-变体.md）
@@ -209,6 +212,8 @@ discipline-normal.md 内容大纲（每节管什么）：
 - 2026-09-20（**用户定向 · 主 agent 落笔**——用户 20:34「这个说明应该进提示词系统的需求和设计文档，免得以后 agent 又把二者串了」+ 20:33 原话）：§4 编写纪律 **新增第 16 条「提示词与文档分属两界」**——**运行时读不到文档 ⇒ 提示词内一切文档引用（档名/节号/指路句/面级指路句）= 运行时死文本**；
   合法所指白名单五类（工具与参数 · 会话内对象 · 用户项目内文件 · 体系自身段号 · 操作数）；写前自查一句。计数 15 → 16（D3）。**双面分工**：需求面 = 本条（判据与白名单）；设计面 = `PROMPT-SYSTEM.md` §6.6（机判三式 + 域 + 边界——清零批已落 ✓ 承接本条 ✓ designer 微轮回指）。批 = 清零批（台账 #147）。
   **受众口径** = 主链各角色（两模式 + 五个子代理角色 explore / plan / coder / eng-coder / eng-designer），advisor / consult 属特殊模块不入主链（同轮评审 F1 收正）。双源同文（模板 + 运行期）——**变更记录只落本档**。批 = `docs/batches/2026-09-20-batch-record-commons.md`（台账 #106）。（折两行 = 父侧直接执行 · 行宽收正 · 零语义 · 可 revert）
-- 2026-09-21（**tool-discipline 批 · 主 agent 落笔**——承 `docs/batches/2026-09-21-tool-discipline.md` · 台账 #214）：`task` 工程模式机械停用（`docs/core/requirements/TOOLS.md` F10）连带**三处提示词撞点收正**——`discipline-engineering.md` 铁律 3 / 需求完成判据句 + `persona-engineering.md` 欠账句（工程模式追踪面 = 批次档 §2/§6 + 台账）；逐字文本 = 设计档 `docs/core/design/TOOLS.md` §6.15.2；双源同文（正本 → 运行期）；**无计数连带**（节数 / 文件清单零变）。
-- 2026-09-22（**用户定向 · 主 agent 落笔**——用户 08:05 提问「主 agent 的提示词能否充分利用 busy-injection 能力，在执行中向用户提问？」→ 08:11 裁定「可以」）：§2.2 人格层 **新增「在途提问」增补块**（主会话非阻塞软转向通道——借 F16 busy 队列边界送达；触发 = 长执行 ∧ 有可先行默认值；分界 = 硬门走 `question` 工具 / 停轮上报，软转向走在途提问，例行确认门仍走纯文本；纪律 = 一次一问 · 不重复索要 · 默认先行）；落点 = `persona-engineering.md` + `persona-normal.md` 双档 + `tool-docs/question.md` 分界句（设计裁定）；实现序 = 归批待批；台账 #222。
+- 2026-09-21（**tool-discipline 批 · 主 agent 落笔**——承 `docs/batches/2026-09-21-tool-discipline.md` · 台账 #214）：`task` 工程模式机械停用（`docs/core/requirements/TOOLS.md` F10）连带**三处提示词撞点收正**
+  ——`discipline-engineering.md` 铁律 3 / 需求完成判据句 + `persona-engineering.md` 欠账句（工程模式追踪面 = 批次档 §2/§6 + 台账）；逐字文本 = 设计档 `docs/core/design/TOOLS.md` §6.15.2；双源同文（正本 → 运行期）；**无计数连带**（节数 / 文件清单零变）。（折两行 = 父侧直接执行 · 行宽收正 · 零语义 · 可 revert · 2026-09-22 hygiene 批）
+- 2026-09-22（**用户定向 · 主 agent 落笔**——用户 08:05 提问「主 agent 的提示词能否充分利用 busy-injection 能力，在执行中向用户提问？」→ 08:11 裁定「可以」）：§2.2 人格层 **新增「在途提问」增补块**
+  （主会话非阻塞软转向通道——借 F16 busy 队列边界送达；触发 = 长执行 ∧ 有可先行默认值；分界 = 硬门走 `question` 工具 / 停轮上报，软转向走在途提问，例行确认门仍走纯文本；纪律 = 一次一问 · 不重复索要 · 默认先行）；落点 = `persona-engineering.md` + `persona-normal.md` 双档 + `tool-docs/question.md` 分界句（设计裁定）；实现序 = 归批待批；台账 #222。（折两行 = 父侧直接执行 · 行宽收正 · 零语义 · 可 revert · 2026-09-22 hygiene 批）
 - 2026-09-22（**用户定向 · 主 agent 落笔**——用户 08:15 裁定「互不追赶」措辞从活面清零）：N4 行去并列语（实质句保留——各端原文自持 / 端特有段原地保留；对齐语义以 F7-3 为准）；设计面 5+3 行（点修轮补 3——语族变体补扫）同批退场（批 = `docs/batches/2026-09-22-wording-retire.md`）；记录面 / 归档面冻结不动。

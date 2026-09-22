@@ -199,7 +199,7 @@
 - **webview 压缩状态四态（现状登记 · 不变）**：`thincoder-vscode/src/extension/panel-callbacks.mjs` → postMessage `compress` 消息：
   `start` → 状态行 `Compressing context… (summarizing N messages)`；`done` → `Compressed: N tokens freed (Xs)`；
   `fallback` → `Compression failed — fallback: truncated to N messages`；`failed` → `Compression failed: <error>`。
-  `webview/chat.js showCompressStatus` 原地更新 `#compress-status`；摘要正文永不进前端（D11 静默纪律）。
+  `webview/chat-status.js showCompressStatus` 原地更新 `#compress-status`；摘要正文永不进前端（D11 静默纪律）。
   回调链（onCompressStart / onCompress / onCompressFail）由端侧判定点转发——语义同 §6.8（D-C3）。
 - **摘要段形状（迁核后）**：压缩 note + 摘要 + assistant 占位（tail 首条为 assistant 时占位并入该条——§6.10 #7）——VSC 旧档的 `<handoff_notes>` 标签形态随迁核退场，现体 = 核段落形状（§6.7 文案族；两端非 byte-identical 注见 §6.11）。
 - **失败可见化（Q3）**：`run-stages.mjs` catch → console.error + `onCompressFail` → webview 渲染错误文本；`_compressFailures` 连续 3 次（核 `COMPRESS_FAILURE_LIMIT`）后 `compressFallback` 确定性截断；无 middle 可切 → `shrinkOversized` 单消息截断（核内承载——边界重置 2（并入分支 1）/ 基线失效由核 applyCompression / shrinkOversized 自理）。
@@ -230,7 +230,7 @@
 | R3 同 R1（重发） | 747 | 512 |
 | R4 同 R2（重发） | 493 | 256 |
 
-结论 ①（**作废 · 2026-09-18 实施轮受控实测推翻**）：设计期读数「R2 / R4（不带 tools）命中了 R1（带 tools）所建前缀」在生产尺度**不成立**——该 256 命中 = 493 / 747 token 小样本的整块 floor 巧合（见下方「命中面按 `tools` 声明分区」）。
+结论 ①（2026-09-18 裁定）：设计期读数「R2 / R4（不带 tools）命中了 R1（带 tools）所建前缀」在生产尺度**不成立**——该 256 命中 = 493 / 747 token 小样本的整块 floor 巧合（见下方「命中面按 `tools` 声明分区」）。
 结论 ②：命中按 256 token 整块计（floor）；tools 段本身计不计入命中**未判定**（该规则下不可区分）——此项不受推翻影响。
 
 **命中面按 `tools` 声明分区（实施轮受控实测 · 2026-09-18）**：
@@ -245,7 +245,7 @@
 | X3 | v1 压缩形态 **+ tools** | 8345 / 7808 = **93.6%** |
 | X4 | 与 X3 逐字同请求 **去 tools** | 6090 / **0 = 0%** |
 
-**结论**：命中面**按 `tools` 声明分区**——同模式同前缀下，携带 tools 的压缩请求命中了回合请求所建前缀（93.6%），不携带者命中 **0%**（与修前基线 256 / 108590 = 0.2% 相当）⇒ **v1 形态（不带 tools）实测收益 ≈ 0**；v1 的 `tools = 不带` 决定随之作废（下节收正）。
+**结论**：命中面**按 `tools` 声明分区**——同模式同前缀下，携带 tools 的压缩请求命中了回合请求所建前缀（93.6%），不携带者命中 **0%**（与修前基线 256 / 108590 = 0.2% 相当）⇒ **v1 形态（不带 tools）实测收益 ≈ 0**。
 
 **v2 修法——声明面对齐（`tools` + `tool_choice: "none"` · 设计定稿 · 待实施轮）**：
 
@@ -306,10 +306,13 @@ tools    = extras.tools（与回合请求同一声明面；**不随 tool_choice*
                                                             // （v1 曾定「不带」——实施轮实测推翻；v2 全形态（含 tool_choice:"none"）经 S3 实测否决 ⇒ 备选②，见上方分区）
 ```
 
-- **状态**：消息序 v1 **已落**（`thincoder-core/compress-form.mjs` + `context.mjs` 接线）；`tools` 行 = **v2 已实施**（2026-09-18 · `context.mjs` 落盘 494 → v3 后 **495**）——**落备选②**（带 tools、**不随 `tool_choice`**：该参数实测致服务端丢弃 tools 区
- ⇒ 按预注册判定规则采纳备选②）；`reasoningEffort` 行 = **v3 已实施**（2026-09-18——**同源随带**：移除 `reasoningEffort: null` 覆盖 ⇒ 与回合同一字段；不硬编码 · 无配置 ⇒ 缺省）——**真机生产口径首现命中 92.86% / 93.65%**（两次独立运行，对照改前 0%）；派生差两则（百炼 qwen 族 / autoThink 窗口）⇒ 台账 **#56** 登记。
+- **状态**：消息序 v1 **已落**（`thincoder-core/compress-form.mjs` + `context.mjs` 接线）；`tools` 行 = **v2 已实施**（2026-09-18 · `context.mjs` 落盘 494 → v3 后 **495**）——
+  **落备选②**（带 tools、**不随 `tool_choice`**：该参数实测致服务端丢弃 tools 区 ⇒ 按预注册判定规则采纳备选②）；
+  `reasoningEffort` 行 = **v3 已实施**（2026-09-18——**同源随带**：移除 `reasoningEffort: null` 覆盖 ⇒ 与回合同一字段；不硬编码 · 无配置 ⇒ 缺省）——**真机生产口径首现命中 92.86% / 93.65%**（两次独立运行，对照改前 0%）；
+  派生差两则（百炼 qwen 族 / autoThink 窗口）⇒ **认账**（2026-09-22 裁 · 台账 #56）：压缩侧**不设思考**（`thinking:null` = 需求 N1 字面 · 本档 D9）——
+  ① 百炼 qwen 族压缩侧 `enable_thinking:false` = 该字面的派生结果（`thincoder-core/config.mjs:137` 首判命中；非缺陷）；② autoThink turn-0 窗口（压缩检查先于分类）为**已知边界**（影响有界：仅 turn-0 且长史触阈；其后各轮同源）。
 - **前缀构成**（= 可复用面）= `tools` 声明 + `system` + 中段（v2；v1 = `system` + 中段——实测该面未被命中）；**新增未命中面** = 尾部指令一条（+ ≤255 的块对齐残余）。中段 = `splitHistory` 的 `[headEnd, tailStart)`（KEEP_HEAD = 0 ⇒ head 空；§6.4② / ④）。
-- **摘要输入域（选中面）不变 / 表示面改变**（评审 #3 收正）：修前同样只喂中段（尾部不进摘要输入）⇒ **选中范围不变**；中段的**表示面**改变（序列化文本 → 真身消息 · 不截断）——信息量差异见下方质量风险表（旧「模型所见内容面无变化」句作废）。
+- **摘要输入域（选中面）不变 / 表示面改变**（评审 #3 收正）：修前同样只喂中段（尾部不进摘要输入）⇒ **选中范围不变**；中段的**表示面**改变（序列化文本 → 真身消息 · 不截断）——信息量差异见下方质量风险表。
 - **前缀对齐前提**：切点须是配对安全边界（`repairedTailStart` 保证中段自足）——否则发送期配对归一（`thincoder-core/provider/normalize.mjs`）会在压缩请求合成 `[Tool result missing: …]` 占位而回合请求不会，前缀自此分叉。
 - **单一真值**：请求前缀切点与摘要段切点同源（同一个 `tailStart`），不新增第二处切割判据。
 - **落地形态（模块拆分 · 行数预算 · 评审 #1——已落）**：纯函数 `buildCompressMessages` 落核档 `thincoder-core/compress-form.mjs`（落盘 **21 行**（`wc -l`）——零 import 依赖：指令文本由实参传入，不与 `context.mjs` 成环）。
@@ -724,6 +727,16 @@ Compaction so far: {none | last summary freed {freed} tokens | last fallback tru
 旧档需求面（原 §8.1 压缩体验 F1–F4 · §9.2 探索摘要条目 F1–F3 / N1–N3）=== 本板块需求层，已并入本层需求档 `docs/core/requirements/CONTEXT-COMPACTION.md`（**与本档同名成对**）——本档不重复。
 
 ## 变更记录
+
+- 2026-09-22（**structure-debt 批 · 档面车道（#163 尾账）· eng-designer**——承 `docs/batches/2026-09-22-structure-debt.md` §2.4）：
+  §6.13 webview 压缩状态四态**落点改指**（`webview/chat.js showCompressStatus` → **`webview/chat-status.js showCompressStatus`**——#163 拆分后状态显示族迁出；调用链 `compress` 消息消费位 = `chat-messages.js`）。**零语义**：四态形态 / 触发 / 静默纪律零变。
+
+- 2026-09-22（**hygiene-sweep 批 · 文档卫生轮（上抛处置）· eng-designer**——承 `docs/batches/2026-09-22-hygiene-sweep.md` §2 · 台账 #225）：规范面修订式标记清理（上抛 2 处）——结论①「作废 · 实施轮受控实测推翻」转裁定语「（2026-09-18 裁定）」；分区结论条去「v1 决定随之作废（下节收正）」尸语（无裁定锚 ⇒ 整删）。**语义零改**。
+
+- 2026-09-22（**hygiene-sweep 批 · 文档卫生轮 · eng-designer**——承 `docs/batches/2026-09-22-hygiene-sweep.md` §2 · 台账 #225）：规范面修订式标记清理——摘要输入域条去「旧「模型所见内容面无变化」句作废」尸语（留现状陈述）。**语义零改**。
+
+
+- 2026-09-22（**pending-triage 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-22-pending-triage.md` §1「#56 认账」裁）：压缩侧两则派生差（百炼 qwen 族 / autoThink turn-0 窗口）**认账登记**——压缩侧不设思考（需求 N1 字面）；机制条文零改。
 
 - 2026-09-13：建档——自 `docs/core/design/CORE-UNIFICATION.md` 拆出（§2.5 #162–#164）；**语义零改**，行号沿用原编号。
 - 2026-09-14（**B 轮并入 · 第 3 批**）：新增 §6 **机制面**（术语与双线 / 触发 / token 判定 / 切割四约束 / 降级链 / 回注与双线 / 文案与静默 / 压缩面板 / 摘要 ≤1K 与探索摘要 / 行为契约 / parity / 实现位置）· §7 **关键决策（D-CC1–16）** · §8 **不并项与历史沿革**；

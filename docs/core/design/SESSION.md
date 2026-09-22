@@ -58,6 +58,7 @@
 **本批（SESSION-CLAIM · 2026-09-21）落点表** = `docs/batches/2026-09-21-session-claim-release.md` §2（唯一承载面——一次性批次材料）；本档 §6.16 承载判据句 / 边界情形 / 验收回指。
 **本批（STARTUP-LATENCY · 2026-09-21）落点表** = `docs/batches/2026-09-21-startup-latency.md` §2（唯一承载面——一次性批次材料）；本档 §6.17 承载判据句 / 边界情形 / 端差注销 / 验收回指。
 **本批（EXIT-CLAIM-RELEASE · 2026-09-21）落点表** = `docs/batches/2026-09-21-exit-claim-release.md` §2（唯一承载面——一次性批次材料）；本档 §6.18 承载判据句 / 接线序 / 边界情形 / 验收回指。
+**本批（SESSION-INDEX · 2026-09-22）落点表** = `docs/batches/2026-09-22-session-index.md` §2（唯一承载面——一次性批次材料）；本档 §6.19 承载机制判据句 / 取源与水位 / 重建面 / 查询面路由 / 边界情形 / 验收回指。
 
 ## 6. 机制面（自 CLI 产品档并入 · 2026-09-14 · B 轮）
 
@@ -105,7 +106,8 @@
 
 - **认领释放（F-CR1 · 2026-09-21 · SESSION-CLAIM 批）**：认领**随绑定走**——绑定迁移落点执行「释放本进程残留认领」。**保留集公式** = 落点槽 ∪ 本进程其余活绑定槽（同 cwd manifest 内）⇒ 释放谓词 = `slotSessions[A]` 为本进程 ∧ `A ∉ 保留集`；目标被占 ⇒ 保留集 = 空。各落点 = 公式代入（`newSession` ⇒ {新槽} · `switchToSlot` 未占 ⇒ {目标} / 被占 ⇒ 空 · `claimSlot` ⇒ {认领槽}）；活绑定集口径 per end 见 §6.16。
 - 落点 = 三个核原语 + 端壳对应件（对称）：`newSession` 的 `releaseStale` 选项由**调用面 opt-in**（CLI `/new` 传、ACP 不传）· VSC 端壳 `newSlot` / `switchToSlot` / `resumeSlot` 包装同判据（§6.15）。
-- **ACP 不入释放面**：可核调用面清单（`newSession` 四点 / `switchToSlot` / `claimSlot` 逐条实读）= §6.16 表。
+- **ACP 释放面（2026-09-22 · 台账 #168①）**：`session/close` ⇒ 释放该会话槽（保留集 = 本进程其余在存会话的活绑定槽 · 同 cwd）；
+  其余可核调用面（`newSession` 四点 / `switchToSlot` / `claimSlot`——逐条实读零释放）= §6.16 表。
   落盘 = 释放集并入各落点**既有那一次** `saveManifest` 的 `deletions.slotSessions`（**落盘判据三条**——写盘同一次 fresh 快照 / 值条件删除 / 内存认领表移除——见 §6.16）；`active` / `m.slots` / 槽文件 / 端标记一律不动（只删属主条目）。
   安全性：释放后他端可认领；本进程再切入 ⇒ `slotOccupancy` 判占 ⇒ 不认领 + 下次保存 fork ⇒ 零双写（互覆保护不依赖旧认领）。边界情形与不做面见 §6.16。
 
@@ -156,7 +158,7 @@
 **链单源（双端同一套机制 · 2026-09-21 块标题行对齐批）**：源 / 生成 / 触发 / 写 / 读·展示**五环**两端同源（谓词 ∈ 源、时点 ∈ 写），各端只留端壳（触发调用 + chrome）。
 
 - **源 = 首条真实 user 消息**，谓词单源 = `isRealUserMsg`（`thincoder-core/history-window.mjs:17-19`：角色为 `user` ∧ content 为串 ∧ 非 `[System reminder:` 前缀）。
-  CLI 取记录存储 `firstUserMessage()`（绑定态；未绑定回退内存人读线——`thincoder-core/generate-title.mjs:104-123`）；VSC 取内存人读线（`fullHistory` 经 `keepReal` 过滤——端壳 `thincoder-vscode/src/extension/panel-session-write.mjs`）。
+  CLI 取记录存储 `firstUserMessage()`（绑定态；未绑定回退内存人读线——`thincoder-core/generate-title.mjs:104-123`）；VSC 取内存人读线——端壳传原数组、以同一谓词取首条（`messages.find(isRealUserMsg)`，`thincoder-vscode/src/extension/panel-session-write.mjs:134`；**等价注**：端壳不按 `keepReal` 预过滤（该过滤属槽落盘面）；两路径标题源同经核谓词 `isRealUserMsg` ⇒ 今日等价）。
 - **生成** = 核 `generateTitle(userContent, provider)`（`thincoder-core/generate-title.mjs:23`）：三格式分派 · **显式禁用思考**（OpenAI 兼容 body 加 `thinking:{type:"disabled"}`；anthropic / google 分支不传即不思考）· `max_tokens` 100 · 标题规范 ≤40 字符无引号 · 超时 10s · 失败静默返 null。
   两端同调该函数（VSC 端壳 `thincoder-vscode/src/extension/generate-title.mjs` 只做 key / provider 解析——无第二请求实现）。
 - **触发** = 会话**尚无标题**即尝试（一次成功即停；失败静默、下回合再试——两端同判据：CLI `ensureSessionTitle` 的 `title` 在场短路；VSC 端壳读槽 `title` 空判）。
@@ -185,7 +187,7 @@ TUI 路径在 `startTUI` 前置 `agent.provider = null`。
 - **描述**：查本会话消息历史（`agent._fullHistory`——压缩不丢——审计完整）——回忆之前说过 / 做过的事（决策 / 工具时序 / 过去裁定）。
 - **筛选**：role / keyword（content 子串）/ tool（工具消息 name）/ since / until（epoch ms）/ limit（**默认 50、上限 200**）/ direction（oldest|newest——默认 newest）。
 - **时间窗**：since / until **inclusive-inclusive**；since > until → 空结果；排序按数组序（ts 仅过滤不重排）。
-- **返回**：JSON 数组——`{ts, role, name?, tool_call_id?, content 截断, tool_calls 概要}`；内容逐条截断（~500 字符 + 标记）；无 ts 消息：不匹配时间窗 + 返回 `ts: null` 标记。
+- **返回**：JSON 数组——`{ts, role, name?, tool_call_id?, content 截断, tool_calls}`；`tool_calls` = `[{name, arguments}]`（`arguments` = 存储串，上限 300 字符、超限加 `…`——§6.19 D-SE47；工具描述与用例同步）；内容逐条截断（~500 字符 + 标记）；无 ts 消息：不匹配时间窗 + 返回 `ts: null` 标记。
 - **数据源** = `agent._fullHistory`；**readonly: true**（planMode 放行 / 免审批 / explore 只读集自动）；注册 = agent-tools 聚合 + setup——**depth-0 only**（子代理查父历史语义混淆）。
 
 ### 6.10 端分离恢复：本端 end marker
@@ -230,9 +232,10 @@ TUI 路径在 `startTUI` 前置 `agent.provider = null`。
 
 ### 6.13 跨会话历史检索与检索族消歧
 
-- **`read_history` 参数扩展**：新参数 `path`（可选——默认本会话）：目标会话文件路径（显式）或 `cwd:` 前缀指定目录（自动发现该 cwd 的会话槽）；**本会话缺省 = 零行为变化**（既有调用全不传 path）。
+- **`read_history` 参数扩展**：新参数 `path`（可选——默认本会话）：目标会话文件路径（显式）· `cwd:` 前缀指定目录（自动发现该 cwd 的会话槽）· `all` 字面量（**跨会话检索**——D-SE47/§6.19：全部已索引会话，行携回查锚）；**本会话缺省 = 参数面零行为变化**（路由零改——既有调用全不传 path）；**输出形例外** = `tool_calls` 带参数（§6.19 D-SE47——与缺省面共用行构造 ⇒ 缺省面同受；§6.9 已同步）。
 - **发现面**（path = `cwd:xxx`）：列全部槽 + 时间序——**不做死槽过滤**；每槽摘要行 = **槽号 + 完整文件路径 + title / 消息数 / updatedAt**（模型无法自行算 sha1(cwd) 拼文件名）；第二步深查 = `path = <摘要行的完整文件路径>` 重调。
-- **检索护栏（双保险）**：行扫第一道 `READ_HISTORY_SCAN_MAX = 200,000` 行（流式计数）+ 消息数第二道 `READ_HISTORY_MAX_MESSAGES = 50,000`；两道超限返回**同一逐字文案** `{error: "session too large — refine keyword or since/until"}`（双端同常量同文案）；返回条数沿用 §6.9 的 limit 语义（> 200 → 200）。
+- **检索护栏（双保险——射程 = 回落路径面）**：行扫第一道 `READ_HISTORY_SCAN_MAX = 200,000` 行（流式计数）+ 消息数第二道 `READ_HISTORY_MAX_MESSAGES = 50,000`；两道超限返回**同一逐字文案** `{error: "session too large — refine keyword or since/until"}`（双端同常量同文案）。
+  **射程 = 回落路径**（非 sessions 树的 JSON 文件 / 索引不可用 / 库内无此会话）——索引命中路径无护栏（§6.19 D-SE47）；返回条数沿用 §6.9 的 limit 语义（> 200 → 200）。
 - **错误路径**：未知 cwd → 明确错误返回；cwd 无槽 → 空列表 + 提示；目标文件缺失 / 损坏 → 错误返回不崩。
 - **消歧总纲（描述尾段——实现时并入各工具描述）**：查**本会话**说过 / 裁定过 → read_history（默认）；查**别的会话 / 项目**旧对话 → read_history 带 path/cwd；查**本 run 改过哪些文件** → recent_changes；查**跨会话已存知识 / 约定** → memory search；查**项目设计文档** → doc_search；查**代码实现** → code_search；查 git 历史快照 → checkpoint（cat/list）。互相不替代。
 
@@ -253,7 +256,7 @@ TUI 路径在 `startTUI` 前置 `agent.provider = null`。
 → `_fullHistory = store.tail(200)`；读 = read_history 本会话 `store.iterate` / TUI 恢复 `store.tail(200)` + `store.total()` / 翻页 `store.page(绝对区间)`。
 - **TUI 分页契约**：恢复描述符 = `{ history（≤201 = 尾窗 200 + ±1 页沿头一条——不渲染，供跨页回合标签判定）, total, base }`（单源 `sessionDescriptor()`；两调用点同源 = 启动路径与 `/session` 切换）；「N messages」标签口径 = `total`（非窗口长度）；翻页锚 = `state._historyTotal`；`store.page(start, end, { margin = 1 })` 返回 `{ messages, base }`——
 ±1 页沿供跨页回合标签判定与页末 tool_result 配对（缺 ±1 = 标签重复与配对失配回归）；顺带修复「活消息增长使翻页锚漂移」。
-- **read_history 契约**：本会话（无 path）走 `store.iterate` 流式匹配（输出构造 / 字段 / limit 默认值与上限逐字不变）；跨会话（`path=` / `cwd:`）**逐字保持**读槽 JSON（投影全量）+ 既有护栏；未绑定（测试 / 模式 F）回退内存 `_fullHistory` 过滤。
+- **read_history 契约**：本会话（无 path）走 `store.iterate` 流式匹配（输出构造 / 字段 / limit 默认值与上限逐字不变）；跨会话（`path=`）**索引命中 ⇒ SQL 检索**（无行扫 / 无消息数护栏——§6.19 D-SE47），**未命中 / 索引不可用 ⇒ 回落槽 JSON 全量读 + 既有护栏**（判据 / 常量 / 错误文案逐字保留）；`cwd:` 发现面与未绑定（测试 / 模式 F）回退路径零改。
 - **语义 delta 登记**（不修）：匹配基准 = **存储文本（slim 后）**——工具结果 > 500 字符、工具参数 > 300 字符的尾段被 slim 丢弃 ⇒ 落于丢弃段的 keyword **不再命中**；输出截断省略数 N 按存储文本长度计（对已带存储标记者 N ≈ 标记长，不反映原始丢弃量）；真实丢弃量以存储全文为准。
 - **生命周期联动**：`deleteSlot → unlinkRecordStore`（`rmSync` 递归）；`.bak` 轮转对**非本会话活动绑定面**联动改名 sidecar（判据 = `agent._recordStore?.dir`）；`.corrupted` / `.unreadable` 改名**不联动**（现场原地保留，由身份核验在槽号复用时拒采纳）；孤儿 sidecar 在 bind 处被拒并改名 `.stale-*`；冷项目 GC 用 `rmSync` 递归删目录；`/rename` 只改标题（sidecar 零动作）。
 - **VSC 兼容红线**：槽 JSON `version` 2 / `history` 全量数组 / `contextHistory` 逐字节保持——**VSC 零改动**；VSC 继续全量覆写槽 JSON，CLI 侧对账规则保证下次绑定时以更长者为基准或拒采纳重建。
@@ -291,7 +294,7 @@ configDir 版（端侧无直调点）。`sessionsDir()`（`thincoder-vscode/src/
 项目切换经 `applyProjectSwitch` 守卫运行中拒绝 + `setProjectFolder` 校验 + `onProjectChanged`
 重绑，per-cwd UI 随 `_cwd()` 刷新。
 - **slot 粘性 + 钉槽检查**：面板 `_slot` 在打开 / 切换时**绑定一次**，之后所有读写不再重读共享 manifest 的 active 指针；「打开历史会话」**判据前置（F-CR2 · 2026-09-21 · 判据句见 §6.16）**：先 `slotOccupancy`（纯读判据）判占用——
-**受占 ⇒ 拒绝路径不进入 `switchToSlot`**（共享指针 / 本端记录 / 解析缓存 / 认领集四不动）+ 不钉槽（`_slot = null`）+ 提示 → `loadSession` 经缓存重绑本端原槽；
+**受占 ⇒ 拒绝路径不进入 `switchToSlot`**（共享指针 / 本端记录 / 解析缓存 / 认领集四不动）+ 不钉槽（`_slot = null`——**前置判据路载荷**）+ 提示 → `loadSession` 经缓存重绑本端原槽；
 未占 ⇒ `switchToSlot`（读目标槽成功才翻 active；记录 / 缓存仅未占才写穿——`session-io.mjs:186-189`；文件缺失/损坏 → null 不产生幻影指针）+ 绑定 → `_loadSession()`。
 - **跨端 `m.active` 与「他端翻指针」语义（2026-09-19 裁定 · 本节单源）**：`m.active` = **跨端共享当前指针**（D-SE1）——**他端翻动 = 合法事件 + 本进程零运行时效果**：
 绑定点（`panel._slot`）与解析缓存（`session-io` 的 `slotCache`）**永不因外部翻指针迁移**——只在**本进程四落点**维护
@@ -318,6 +321,13 @@ configDir 版（端侧无直调点）。`sessionsDir()`（`thincoder-vscode/src/
 - **（2026-09-21 · SESSION-CLAIM 批 · 本节单源）**：① **F-CR2 收正**——受占目标 ⇒ 面板路径**不进入**端壳 `switchToSlot`（判据前置：占用判定前置于切换调用）；端壳函数内被占分支 = **零写**（不认领 / 不翻共享指针 / 不写本端记录 / 不写解析缓存——占用判定前置于 `m.active` 赋值）；核 `switchToSlot` 受占语义不变（CLI 切换成立——指针 / 记录按 D-6 / D-4 落点 + 保留集 = 空释放旧认领——见 §6.5 / §6.2）。
   ② **F-CR1 端壳释放**——`newSlot` / `switchToSlot` 释放本进程残留认领（§6.2 公式代入：保留集 = {落点槽}；端壳单绑定 = **假定 + 复核条件**——见 §6.16），`resumeSlot` 包装经核 `claimSlot` 同判据；释放集并入各落点既有 `saveManifest` 的 `deletions`（落盘判据见 §6.16）。
 
+- **（2026-09-22 · pending-triage 批 · 本节单源）**：
+  ① **受占返回值可区分（台账 #171）**——端壳 `switchToSlot` 被占分支 = **零写 + 可区分信号**（与成功返回 `data` 相区分；调用面可判别）。
+  面板路径在前置判据之外补**第二判**（TOCTOU 窗内收到受占信号 ⇒ **保持 `_slot` 现值**（不钉他端活槽）+ 提示 + `_loadSession()` 重绑本端原槽）——**第二判路载荷 = 保持现值**，与前置判据路（`_slot = null` + 缓存重绑）分述；四不动与零写语义零改。
+  ② **ACP `session/close` 释放（台账 #168①）**——关闭会话 ⇒ 释放该会话认领（§6.2 公式代入：保留集 = 本进程其余在存会话的活绑定槽（同 cwd）；落盘判据三条沿用 §6.16）。
+  ③ **跨 cwd 释放（台账 #168②）**——VSC 项目切换 ⇒ 对旧 cwd manifest 补一次同语义释放（保留集 = 空；假定 + 复核条件沿用 §6.16）。
+  ④ **端壳释放面机判（台账 #168③）**——`newSlot` / `switchToSlot` 的 release 传参补端壳级用例。
+
 - **否决备选（跨端翻指针）**：删绑定槽时**收养幸存 active**（绑定点 / 缓存 / 记录任一面）——绕开 `usableSlot` / `slotOccupancy` 守卫（可能收养另一活进程的槽 ⇒ 双端双写互覆盖），且与 D-SE2 粘性同病灶（并发翻动被静默跟随）——见 §7 D-SE31。
 - **字段往返完整（key-presence 写，v2 语义）**：槽位文件**全量覆盖写**，`saveLines`
 （`thincoder-vscode/src/extension/panel-session-write.mjs:34`）以 `...existing` 展开式透传不认识字段、仅覆盖扩展自己拥有的字段——CLI 写入的
@@ -333,10 +343,10 @@ finally 保存无 agentState → 缺席保留槽值不误清）。
 version>2 / 异 cwd / 损坏 / 未知槽返回 null（新版 CLI 文件不属本端覆盖——v3 interop 前保守姿态）。
 - **标题触发时机与写形（2026-09-21 块标题行对齐批——链单源 = §6.7）**：标题 await 在回合尾 finally **忙态归位之前**（stream
 完成即触发——`panel-turn-stages.mjs` `finalizeTurn`）；期间 `_turnState` 仍 running——标题窗口 = busy——webview Stop 显
-（running 派生）+ 路由守卫 running→拒收（归位 idle 后标题会让窗口内新消息直开并发回合与标题 LLM 调用赛跑）。**写形 = 单写**：
+（running 派生）+ 路由守卫 running ⇒ **单槽受理**（判定 / 载体 / 送达 = `docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6——新回合恒在标题调用之后开，并发回合无面）。**写形 = 单写**：
 标题值喂入同一拍的整档 `saveLines`（`extra.title`）——不另开 `setSlotTitle` 直写；写后刷会话列表（`pushSessions`）。
 错误路径（评审 #2）：`generateTitle` 内部全 try/catch 吞错 + 调用点兜底 try/catch——**归位恒执行**（标题抛错不卡永久 busy）。
-标题期消息拒收（routeUserTurn running 分支——无排队无回执——拒收警告明示）。
+标题期消息受理（routeUserTurn running 分支 → 单槽——唯一拒面 = 单槽满 + 警告；送达 = 既有三支——零丢失）。
 - **懒加载历史分页（VSC 端**，端壳 `thincoder-vscode/src/extension/history-window.mjs` = 纯转口（`:12`）⇒ 核 `thincoder-core/history-window.mjs`）**：
 `HISTORY_PAGE_SIZE = 200`（核 `:24`——对齐 CLI 首屏）；`historyWindow(history, before)`（核 `:107`）——`before == null`
 取**末页**（首屏只发末页），否则取 `before` 前结束的一页 `[s, e)` 半开区间（loadOlder 页不重渲染边界消息）
@@ -362,17 +372,18 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
   启动恢复（`thincoder-cli/bin/thincoder.mjs:342` 钉槽落点，经 `resumeSlot` → `claimSlot`）· VSC 端壳 `newSlot` / `switchToSlot` / `resumeSlot` 包装（`thincoder-vscode/src/extension/session-io.mjs`）。
 - **落盘判据（D-SE4 同型）**：① 释放集按**写盘同一次 fresh 快照**计算 / 校验（不得以陈旧内存 manifest 直接构 `deletions`）；② 条目删除 = **值条件删除**（仅当该槽 fresh 属主仍为本进程 sessionId——防窗口内他人新认领被误删）；③ 写盘同时从**内存认领表** `m.slotSessions` 移除该条目（防后续保存经条目级合并复活回写）。
 - 落盘载体 = 各落点**既有那一次** `saveManifest` 的 `deletions.slotSessions`（零新增写盘次数）。
-- **活绑定集口径（per end）**：CLI TUI = 本进程唯一 agent 的 `agent._slot`；ACP = 各在存会话 `agent._slot`（多会话多认领属其设计——**本批不入释放面**，F-CR3 零回归）；VSC 见下条。
+- **活绑定集口径（per end）**：CLI TUI = 本进程唯一 agent 的 `agent._slot`；ACP = 各在存会话 `agent._slot`（多会话多认领属其设计）；**`session/close` 入释放面（2026-09-22 定裁 · 台账 #168①）**——关闭会话 ⇒ 释放该会话槽，保留集 = 其余在存会话槽（同 cwd）；VSC 见下条（含跨 cwd 释放 · #168②）。
 - **VSC 单绑定（假定 + 复核条件）**：假定 = WebviewViewProvider 单实例视图 ⇒ 同宿主单绑定（依据 `thincoder-vscode/src/extension/chat-panel.mjs:107-116`）；复核条件 = 同 cwd 出现多于一个活绑定（多窗口 / 多面板）⇒ 该落点**不释放**（或按活绑定全集计算保留集）——假定失效不得释放他端活绑定认领。
 - 释放面只碰 manifest 认领集（删属主条目）；共享指针 / 端标记语义与落点集（D-4 / D-6）零改。
 
-**ACP 调用面（实读 · 2026-09-21）——「ACP 不入释放面」可核清单**
+**ACP 调用面（实读 · 2026-09-21；2026-09-22 收正——`session/close` 入释放面）**
 
 | 释放原语 | ACP 调用点（实读） | 处置 |
 |---|---|---|
 | `newSession` | `thincoder-cli/src/acp/handlers-session.mjs:152`（`session/new`）· `thincoder-cli/src/acp/handlers-slots.mjs:106`（`session/load` fork）· `thincoder-cli/src/acp/handlers-slots.mjs:159`（`session/resume` fork）· `thincoder-cli/src/acp/handlers-slots.mjs:190`（`session/delete` 重钉） | 四点均不传 `releaseStale`（调用面 opt-in）⇒ 零释放 |
 | `switchToSlot` | 零调用点（ACP 侧仅语义引注——`thincoder-cli/src/acp/handlers-slots.mjs:84`） | 释放不可达 |
 | `claimSlot` | 零调用点——调用面 = 核 `resumeSlot`（`thincoder-core/session-slots.mjs:291`）+ VSC 端壳 `resumeSlot`（`thincoder-vscode/src/extension/session-slots.mjs:131`） | ACP 不调 `resumeSlot`（导入面无该名——`thincoder-cli/src/acp/handlers-session.mjs:13` / `thincoder-cli/src/acp/handlers-slots.mjs:16`）；ACP 认领 = 直写 `m.slotSessions`——`thincoder-cli/src/acp/handlers-slots.mjs:96-99` / `:151-154` |
+| 认领释放（close） | `thincoder-cli/src/acp/handlers-session.mjs:193-206`（`session/close`——2026-09-22 补 · 台账 #168①） | 释放该会话槽（保留集 = 其余在存会话槽 · 同 cwd）；落盘判据三条沿用 |
 
 **边界情形**（保留集取值 = 公式代入）
 
@@ -390,7 +401,7 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 
 **验收回指（需求档 §2.3 四条）**：① 切换释放 + 重认领 = 核 / CLI 两档；② 拒绝路径四不动 = 组⑮（四不动断言）+ 端壳零写；③ 他端认领后本端再切入 = 判占 + `allocateFresh` fork（integration 档）；④ 双端对称 = 核三原语 × 端壳三件同判据（保留集口径 / `deletions` 落盘 / 占用判据单源 `slotOccupancy`）。
 
-**不做（边界）**：跨 cwd 释放（绑定迁项目时旧 cwd 认领保留至进程退出——另案登记）· ACP 会话关闭面释放（多会话进程属其设计面——另存待办）· 提示文案（#161①——用户 2026-09-21 01:46 裁「不改」）· 槽文件格式 / `version` / 端标记语义 / 共享 active 语义（D-SE1 / D-SE9 不动）· 不新增机械门。
+**不做（边界）**：提示文案（#161①——用户 2026-09-21 01:46 裁「不改」）· 槽文件格式 / `version` / 端标记语义 / 共享 active 语义（D-SE1 / D-SE9 不动）· 不新增机械门。
 
 
 ### 6.17 启动等待：会话 GC 热路径 + sessions 存量治理（2026-09-21 · STARTUP-LATENCY 批）
@@ -503,7 +514,7 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 | 本进程多认领（历史残留） | 保留集空 = 全释放（F-XR1 全量语义） |
 | 释放写盘失败（IO / 权限） | try/catch 返回 false——退出恒达；盘面 = 认领残留（恢复走探测面——现状形态） |
 | 崩溃路径（kill / 终端窗口关闭 / V8 fatal） | 不可达释放面（信号无 JS 钩子）⇒ 认领保留 ⇒ 恢复走 D-MI10 探测三态（F-XR3 语义零变） |
-| ACP 进程退出 | 零接线（ACP 无 TUI——不经 key-handler / ctx.exit；`session/close` 语义 = #168① 另案不动） |
+| ACP 进程退出 | 零接线（ACP 无 TUI——不经 key-handler / ctx.exit）；`session/close` 释放 = **会话级**（入 §6.16 调用面表——非本退出释放面） |
 | Ctrl+C 单按 / 双按（非空闲退出分支） | 非退出不释放（中止回合 / 全停后台——需求边界原样） |
 | VSC 多窗口同 cwd | B 窗退出只释 B 认领（sessionId 区分 + 值条件删除——A 窗条目 owner ≠ B 天然不动） |
 | 释放后他人即时认领原槽 | fresh 属主 ≠ 本进程 ⇒ 不删（§6.16 值条件 ②）；本进程已退 ⇒ 无后续保存复活面 |
@@ -518,9 +529,116 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 - T5 = VSC 端壳机判（`releaseClaimsOnExit` 沙箱 + deactivate 结构机检）——`thincoder-vscode/test/session-exit-release.test.mjs` 新档。
 - T6 = 三端测试全绿。
 
-**不做（边界）**：探测三态判据（D-MI10）一字不动 · 不做时间窗猜死活启发式 · 崩溃路径不接线（F-XR3）· ACP `session/close`（#168① 另案）· `deleteSlot` 既有语义（含 marker 置空）不动 · 槽文件格式 / `version` / marker 形态与维护点集不动 · NF1 零跨端共享可变字段 · 跨 cwd 认领释放不入本批（§6.16「另案」面原样——本批释放域 = 退出 cwd 单 manifest）· Ctrl+C 单按两按（非退出）不释放。
+**不做（边界）**：探测三态判据（D-MI10）一字不动 · 不做时间窗猜死活启发式 · 崩溃路径不接线（F-XR3）· `deleteSlot` 既有语义（含 marker 置空）不动 · 槽文件格式 / `version` / marker 形态与维护点集不动 · NF1 零跨端共享可变字段 · 本释放面域 = **退出 cwd 单 manifest**（会话级 close 与跨 cwd 释放住 §6.15 / §6.16）· Ctrl+C 单按两按（非退出）不释放。
 
-## 7. 关键决策记录（D-SE1–D-SE42）
+### 6.19 会话派生索引库：全拒洞与跨会话检索（2026-09-22 · SESSION-INDEX 批）
+
+> 需求 = `docs/core/requirements/SESSION.md` §4.3（F-R19a 跨会话检索 · **F-R19c** · **F-R19d**）· §4.4（F-S4 记录存储面）；台账 = #205（用户 2026-09-21 20:12「上下文现在的存储方式好吗？进数据库会不会更有利？」→ 父侧评估呈「不迁主存 + 加派生索引库」→ 2026-09-22 09:25「可以，都按建议」＝ 立批）；批档 = `docs/batches/2026-09-22-session-index.md` §2。
+> 本节承载机制判据句 / 取源与水位 / 重建面 / 查询面路由 / 边界情形 / 验收回指；受影响文件表与用例细表 = 批档 §2（一次性材料——本节不复制）。
+> 与 §6.14 的关系：本节只**读**记录存储（sidecar）与槽 JSON——两线语义 / 追加单点 / 绑定对账 / 降级面一字不动。
+
+**问题形态（设计轮实测 · 2026-09-22）**
+
+- **C 洞（超大会话整档拒）**：`path=` 深查走槽 JSON 整档读，行扫 `READ_HISTORY_SCAN_MAX = 200,000` 行 + 消息数 `READ_HISTORY_MAX_MESSAGES = 50,000` 两道护栏超限即整档拒（`thincoder-core/agent-tools/read-history.mjs:50` / `:54` / `:175` / `:192`），提示 refine keyword 却绕不过。
+- **行扫实测空转**：槽 JSON = 单行（`JSON.stringify` 不产换行——本机最大槽物理行数读数 = 0）⇒ 生效护栏只有消息数一道；本机最大槽 = 15,167 消息 / 22.2MB（`sessions/38478126….json.27`）——未越线，增长方向明确。
+- **E 洞（跨会话检索）**：`path="cwd:<dir>"` 只列槽（`read-history.mjs:202-220`）——不知目录时零检索面。
+- **存量实测**（`~/.thincoder/sessions` · 设计轮实读）：2,845 条目 · 槽文件 464 · sidecar 目录 1,181（**含段者仅 13 个**——合计 108.9MB，即语料主体）· 空 sidecar 1,168（其中 1,119 个槽文件已消失的孤儿 `.d`）· manifest 429 · `.bak-*` 344。
+  ⇒ **取源必须双路**（D-SE44）：只认 sidecar ⇒ 跨会话检索的覆盖面只剩 13 个会话（VSC 端不写 sidecar、§6.14 前的老档亦无）。
+
+**形态（D-SE43）**
+
+- 派生索引库 = 单库 `~/.thincoder/session-index.db`（`node:sqlite`；与 `memory.db` 同区——`configDir` 单源 `thincoder-core/config-io.mjs:32`）；测试缝 `_setSessionIndexDirForTest()` / `_resetSessionIndexDirForTest()`（`_setLedgerDirForTest` 同款）。
+- **零权威**：主存（槽 JSON + sidecar + manifest）= 真源；索引只读主存（整读 / 偏移 `readSync`），**绝不写回** sessions 树；索引丢 / 坏 = 重生成；查询恒可回落主存路径（回落判据 = D-SE47 路由表）。
+- **零第三方依赖**：新档仅 `node:` + 仓内相对 import——三端 `package.json` 依赖面零新增（机检：diff 不含 dependencies 行）。
+- **双端单源**：实现住核（`thincoder-core/session-index.mjs` / `session-index-build.mjs` / `session-index-query.mjs` / `session-index-pass.mjs` / `session-index-cmd.mjs`）——CLI 与 VSC 同取（VSC `thincoder-vscode/src/agent-tools/index.mjs` 转口面零改）。
+- **拆分产物①（预案授权 = 批档 §2「跨档线拆分预案」）**：`thincoder-core/session-index-query.mjs`（102 行，面 = 查询与 FTS 检索）——`session-index.mjs` 实施读数 306 超 300 advisory 线后二分。
+- **拆分产物②（预案授权 = 同上）**：`thincoder-core/session-index-pass.mjs`（95 行，面 = 有界趟 / 全量重建 / 清行 / 延迟拍）——`session-index-build.mjs` 实施读数 409 超线后二分。
+- **语言单源外提**：`segmentCJK` / `buildFtsQuery` 自 `thincoder-core/memory/schema.mjs` / `thincoder-core/memory/core.mjs` 外提至叶子档 `thincoder-core/fts-text.mjs`（两档 re-export 保名面——**零行为变更**）；理由 = 会话索引不得把 memory 模块链拉进 `read_history` 的装配装载面 + 机制单源（D2）。
+
+**schema（D-SE44——四表 + FTS；`index_meta` 元表）**
+
+| 表 | 键与列 | 语义 |
+|---|---|---|
+| `sessions` | `id` PK · `cwd_key` · `slot` · `file` · `cwd` · `title` · `identity` · `src` · `updated_at` · `indexed_at` · `seg_n` · `seg_bytes` · `seg_mtime` · `tail_hash`；`UNIQUE(cwd_key, slot)` | 一行 = 一个槽会话。`file` = 槽文件绝对路径（**回查锚**）；`cwd_key` = sessions 根文件名的 40 位哈希（跨端同源）；`src` ∈ {`sidecar`,`json`}（取源面）；水位四列见 D-SE45 |
+| `messages` | `rowid` PK · `sid`→`sessions` · `idx` · `seg` · `ts` · `role` · `name` · `tool_call_id` · `content`；`UNIQUE(sid, idx)`（兼作查询主索引——同列序不重复建）/ `INDEX(ts)` / `INDEX(name)` | 一行 = 一条消息。`idx` = 会话内绝对序号（与 §6.14 段 / 行算术同源）；`content` = 文本部件拼接文本（多模态取 text 部件）；`ts` 可空（legacy） |
+| `tool_calls` | `id` PK · `sid` · `msg_idx` · `ord` · `call_id` · `name` · `args`；`UNIQUE(sid, msg_idx, ord)` · `INDEX(name)` | 一行 = 一次工具声明。`args` = `tc.function.arguments` 存储串（记录行内 ≤300 字符——`slimForDisplay` 截断面即精度上限） |
+| `messages_fts` | FTS5 `(seg_content, seg_name)` · `tokenize='unicode61'` · `rowid = messages.rowid` | 关键词面（写面自持——无触发器：建 / 重建同径、事务内同步）；CJK 逐字间隔与查询侧同源（`fts-text.mjs`） |
+| `index_meta` | `k` PK · `v` | `v`（schema 版本——不符即重建）· `built_at` · `pass_at`（**最近一次实际写入（变更）时刻**——无源变的 pass 零写、不推进）· 计数快照 |
+
+- `cwd` / `title` / `updated_at` 取源：`cwd` = 槽 JSON 头部 4KB 前缀内的 `"cwd"` 字段（有界读——不整体 parse；取不到留 `NULL`，行仍以 `file` 锚定）；`title` / `updated_at` = `<hash>.json.manifest` 的槽摘要（每 cwd 一次读，覆盖该 cwd 全槽；manifest 缺失留空，不落错值）。
+- 会话枚举面 = sessions 根 `^{40 位哈希}\.json\.\d+$` 文件名（不经 `.d` 目录枚举——孤儿 `.d` 1,119 个，实测）；裸 v1 `{hash}.json` 不入索引（本机 0 档）。
+- **FTS5 可行性（同装配先例）**：`node:sqlite` 装配的 FTS5 已在用——四张 fts5 虚表建于 `thincoder-core/memory/schema.mjs:123` / `:170` / `:232` / `:274`；检索 = `thincoder-core/memory/core.mjs:98` / `:108` 的 `MATCH`；语言面单源 = `thincoder-core/fts-text.mjs`（`segmentCJK` `:19` / `buildFtsQuery` `:32` / `FTS_TOKEN_MAX` `:13`），
+  两档 re-export 保名面（`thincoder-core/memory/schema.mjs:14-15` / `thincoder-core/memory/core.mjs:17-18`）⇒ 本库无新依赖、无需实施期探测。
+- **FTS 同删义务（写面判据句）**：`messages_fts` 无触发器 ⇒ 每条删除路径同事务内同步删 FTS 行，逐条列明——① 区间删行（段重写 / 重扫：删 `messages` 前按 `rowid` 删 FTS 行）；② 会话级重建（`messages` / `tool_calls` / FTS 三面同清）；③ 级联清（源消失 / 槽号回收）；④ `--rebuild`（清四表）。
+- **FTS 删除面实现与取舍**：删除经单点函数收口（`sid` + 可选区间一处）——漏删 ⇒ 残留 FTS 行产出指向不存在消息的命中；不取「外内容表 + 触发器」形态（触发器随行同步在批量建 / 重建面重复消耗、外内容表需 `DROP` + `rebuild` 两段）——写面单点 + 同事务已足。
+
+**取源与水位（D-SE45）**
+
+- **取源选择**：`<槽文件>.d/` 存在且含 `seg-*.jsonl` ⇒ `src=sidecar`（增量面）；否则 `src=json`（槽 JSON `history`——一次性整档读，mtime 键）。
+- **水位** = `(seg_n, seg_bytes, seg_mtime, tail_hash)`（`tail_hash` = 末段尾 4KB 的 sha1）——三条规则：
+  ① 段号 < `seg_n` ⇒ 跳过（已写段不可变——§6.14 段不变式）；
+  ② 段号 = `seg_n`：`size == seg_bytes ∧ mtime == seg_mtime` ⇒ 零动作；`size > seg_bytes` ⇒ 自 `seg_bytes` 偏移读增量（**只落完整行**——末尾半行不建，水位停在最后一个换行处）；`size < seg_bytes` ⇒ 段被重写（`_materialize` / 隔离重建面）⇒ 该段起重建（删 `seg >= seg_n` 行 + 重扫）；
+  ③ 同尺寸异内容（等长重写）⇒ `tail_hash` 比对不符即末段重建（只信 size / mtime 会漏检）。
+- 段号 > `seg_n` ⇒ 整段建（轮转 / 跨段增量）。
+- **会话级重建触发**：`meta.identity` 与库内非空且不等（槽号回收 / 轮转）· 段数缩水 · `src` 切换（sidecar ↔ json）。
+- **源消失**（槽文件与 sidecar 俱不在）⇒ 级联清（`deleteSlot` / `session gc` 连带面；清运无锁、幂等）。
+- **幂等**：写面 = 单事务（`BEGIN IMMEDIATE`）内「按区间删行 → 插行 → 水位推进」；无源变 ⇒ 零读零写（二次 pass 行数与水位不变）。
+- **并发（多进程——CLI + VSC 同启）**：SQLite WAL + `PRAGMA busy_timeout = 3000`（`memory/schema.mjs` 同款）；事务短 + 内容派生幂等 ⇒ 竞争 = 串行等待 / 最坏重复建，零错误面；崩溃中途 = 事务回滚 ⇒ 水位不动、下趟重做。
+- **触发三点**（均不触主存档）：① **懒保证**——查询前对目标会话（`path=<文件>`）/ 当前会话（`all`）`ensure`；**射程 = 有段档（`src=sidecar`）**（增量 = 单段读 / 偏移读，实读量 ≤ 1 段、加一次水位写——单事务）；
+  **`src=json` 档免 ensure**（整档 JSON 读与回落路径同成本、无收益 ⇒ 其索引化只归 ② / ③ 两面）；未入索引的档查询走主存回落 + 逐字护栏（批档「大会话未索引」用例即该语义；「大会话经索引可答」用例的建索引前置 = ② / ③ 面）；
+  ② **启动窗外延迟拍**——`scheduleSessionIndexPass({ delayMs = 3000 })`（`GC_PASS_DELAY_MS` 同款；单趟 ≤ `INDEX_PASS_BUDGET_MS = 2000` 且 ≤ `INDEX_PASS_MAX_SESSIONS = 40`，按源 mtime 降序、水位保证可续跑）；③ **显式命令**（D-SE46）。
+- 拍挂点 = 端壳（CLI `thincoder-cli/bin/thincoder.mjs` 会话型命令白名单分支——与 `scheduleTraceCleanup` 同址；VSC `extension.mjs` activate）——核会话档零改。
+
+**重建面（D-SE46）**
+
+- **丢失 / 损坏检测 = 打开即验**：库文件缺失 ⇒ 建；打开 / DDL 失败（`SQLITE_NOTADB` 族 / `index_meta.v` 不符）⇒ 现场改名 `session-index.db.corrupt-<epochms>` 保留 + 新建空库（**开箱自愈**——下一次 ensure / 拍 / 命令自动重建；与 `memory.db`「丢 / 坏 = 重生成」同族）。
+- **命令面**（CLI `case "session"` 分发 `gc` / `index`）：`thincoder session index --rebuild`（清四表 → 全量建 → 摘要行）/ `--status`（会话 / 消息 / 工具调用行数 + 库字节 + 水位覆盖 + 上次变更时刻（`pass_at`——无源变零写、不推进））/ 无参 = 同 `--status`。
+- **VSC 对位**：命令 `thincoder.sessionIndexRebuild`（`package.json` contributes.commands + `extension.mjs` 处理体）+ 端壳档 `thincoder-vscode/src/extension/session-index-command.mjs`（`session-gc-command.mjs` 同族，消费核数据面）。
+- **不做迁移**：索引可丢弃 ⇒ schema 变更 = `index_meta.v` 不符 ⇒ 重建（无版本迁移路径）。
+- **库体量**：与语料同阶（FTS 面另加）——`--status` 露字节；不做自动清理 / 淘汰（见「不做」）。
+
+**查询面改造（D-SE47——两洞 + 回查锚对位）**
+
+| `path` 取值 | 路由 | 语义 delta |
+|---|---|---|
+| 省略 | 本会话：`store.iterate`（绑定）/ 内存 `_fullHistory`（未绑定）——**零改** | 无 |
+| `cwd:<dir>` | 发现面 `listSlots`——**零改** | 无 |
+| `<文件路径>` ∈ sessions 根 ∧ 库内有行 | **索引**（SQL 检索——无行扫 / 无消息数护栏 ⇒ 超大会话照答） | `keyword` = 子串（`LIKE`——既有契约不变） |
+| `<文件路径>` 其余情形 | 既有 JSON 路径 + 两道护栏（**逐字保留**——非 sessions 树 JSON / 索引不可用 / 库内无此会话） | 无 |
+| `"all"`（新增字面量） | **跨会话检索**（全部**已索引**会话——覆盖语义 / 信号见边界情形表） | `keyword` = **FTS 词 / 短语**（`buildFtsQuery` 单源：CJK 逐字 + 短语邻接；300MB 语料上子串扫描不可行——如实登记） |
+
+- `all` 结果行 = `{session: {slot, cwd, file, title}, idx, ts, role, name?, tool_call_id?, content, tool_calls?}`——`file` = **回查锚**（与发现面同为「寻址字段必露」：第二步深查 = 复制行内路径重调 `path=`）。
+- `tool_calls` 形：`[{name, arguments}]`——`arguments` = 存储串，输出上限 300 字符（与记录行同值，超限加 `…`）；取代「只回名字」形（工具描述与用例同步）。
+- `all` 排序 = `ts` 升序（无 ts 行恒居末尾——`direction` 取端同义：newest 取最新端）；输出恒时间序（`formatMatches` 语义零改）。
+- 过滤面全量对齐（SQL 落同义）：`role` · `tool`（结果行按名字 ∪ 声明行经 `tool_calls` 表）· `since` / `until`（无 ts 行不匹配时间窗）· `limit`（默认 50 / 上限 200）· `direction`。
+- 落点 = `thincoder-core/agent-tools/read-history.mjs` 单一实现（双端同源——VSC 无自持副本）；`node:sqlite` 经**动态 import** 引入（`ledger-db.mjs` 头注 W8 契约② 同款——不在装配期静态装载）。
+
+**边界情形（判据取值）**
+
+| 情形 | 判据 |
+|---|---|
+| 会话只有 `meta.json`（段数 0） | 按 `src=json` 走槽 JSON（空目录 ≠ 有内容——段数 0 不立 sidecar 支） |
+| 槽 JSON 结构非法 / 无 `history` 数组 | 该会话跳过并计入 `--status` 的未索引数；查询回落 JSON 路径（既有错误文案逐字） |
+| 活会话正被写入 | 懒保证读增量（append-only ⇒ 已落盘行为准；半行不建）；查询恒新鲜到「最后一条完整行」 |
+| 源文件已删（库内仍有行） | `ensure` 先清该会话行 ⇒ 走回落路径（`Error: session file not found`——既有文案） |
+| 源被改写为等长新内容 | `tail_hash`（末段尾 4KB）不符 ⇒ 末段重建（水位不误判为「无变」）；**检测窗残余** = 同尺寸 ∧ 尾 4KB 相同（仅前段被改）⇒ 漏检、旧行残留——自愈 = 该段尺寸缩水（规则②）/ 会话级重建触发 / 显式 `--rebuild` |
+| 双进程一建一写 | WAL + `busy_timeout`；改名 / 新建只在打开失败路径发生（持有效句柄者不受影响）；最坏 = 一方全量重建，另一方下趟增量补齐 |
+| 磁盘满 / 库不可写 | 索引写失败 ⇒ 静默降级（查询回落主存路径——主存零险）；`--status` 露错误 |
+| 主存被 GC 回收（`.d` 与槽文件俱删） | 行清；索引不复活数据（零权威）——`sessions-trash/` 期内的组同样按「源已删」清（回收恢复后由下趟重建） |
+| 槽号回收（同槽新会话） | `meta.identity` 变更 ⇒ 整会话重建（新旧行不混） |
+| `keyword` 无 FTS 词元（纯标点 / 空白） | 判据 = **无 unicode61 可用词元**（实现 = `FTS_USABLE` ⟶ `thincoder-core/session-index-query.mjs:25` / `:85`；“`buildFtsQuery` 输出空串”不作判据——纯标点可输出非空串而 FTS 零命中（父侧收正 2026-09-22 · 可 revert））⇒ 该次按 `LIKE '%原文%'` 落（单会话面与 `all` 面同形）；**元字符按字面**（`%` / `_` / `\` 转义 + `ESCAPE '\'`）⇒ keyword 恒字面匹配（形如 `%` 的 keyword 命中含 `%` 的消息，非全匹配）；全空白 ⇒ 近全匹配；**成本口径** = `messages` 全扫上界（无索引可用），`LIMIT` 取满即停——登记为退化路径，不拒答 |
+| `keyword` 含非 ASCII 大小写变体 | 索引面 `LIKE` 折大小写 = **ASCII-only**（SQLite `LIKE` 语义）∥ 回落面正则 `/i`（`thincoder-core/agent-tools/read-history.mjs:375`）非 ASCII 亦折 ⇒ 同一 keyword 两路结果可不等价（非 ASCII 变体上索引面少命中——如实登记） |
+| 库文件被手动删除 / 损坏 | 打开失败 ⇒ 改名保留 + 新建 ⇒ 下趟（或当次 ensure）重建——查询仍可回落主存路径（不因索引故障报错） |
+| `all` 面无命中（会话未入索引） | `all` = **已索引会话面**——未入索引会话该面零命中（≠ 不存在：单会话 `path=<文件>` 面恒可探主存）；首建路径 = ① 查询前对**当前会话** `ensure`（射程 = 有段档；`src=json` 档零动作）/ ② 延迟拍 / ③ `--rebuild`；模型侧覆盖信号 = 工具描述 `path` 句（「`all` 仅已索引；未覆盖会话用 `path=<文件>` 显式查或先跑 `session index --rebuild`」）+ `--status` 覆盖计数 |
+| 延迟拍（②）单趟界 | 会话枚举段受界（≤ `INDEX_PASS_MAX_SESSIONS` = 40 且 ≤ `INDEX_PASS_BUDGET_MS` = 2000——按源 mtime 降序）；拍尾清行段（源消失清运 `pruneMissingSessions`）**不受 40 界约束**——扫库内全量会话行逐条判活（如实登记） |
+
+**验收回指（需求 §4.3 F-R19a / **F-R19c** / **F-R19d** · §4.4 F-S4；用例细表 = 批档 §2）**：
+① 超大会话（> 50,000 消息夹具）经索引可答（返回 JSON 数组，非 `TOO_LARGE`）∧ 未索引同档仍逐字护栏文案（回落面零回归）——F-R19c；② `path:"all"` 跨 cwd 两会话命中 + 行内回查锚——F-R19a / F-R19d；③ 增量 = 追加 1 条 ⇒ 新增恰 1 行（其余行 `rowid` 不变）；④ 幂等 = 二次 pass 零读零写；
+⑤ 重建 = 删库 / 坏库自愈（行数复原）+ `--rebuild` / `--status` 读数（F-R19d——零权威 · 可重建）；⑥ 零新依赖 + 主存零改（F-R19d / F-S4；`session-store.mjs` / `session.mjs` 零 diff + sessions 树文件「路径 / 字节 / mtime」三元组快照对拍不变）；⑦ 三端测试全绿。
+
+**不做（边界）**：不迁主存（双线文件 = 真源——§6.14 语义零动）· 不做向量 / 语义检索（不引 embedding）· 不改默认路径与 `cwd:` 发现面 · 不改两道护栏与错误文案（回落面）· 不复刻其他消费面（`/session` 列表 / TUI 翻页 / `listSlots` 仍走主存）· 不索引裸 v1 `{hash}.json` · 不做 `.d` 孤儿目录清运（`session gc` 后缀表不含 `.d`——另案） · 不做索引自动清理 / 淘汰 · 不做库的跨端同步协议（索引 = 本机派生品）。
+
+## 7. 关键决策记录（D-SE1–D-SE49）
 
 | # | 决策 | 理由 / 否决备选 |
 |---|---|---|
@@ -541,19 +659,19 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 | D-SE15 | `resumed` **按会话跟踪** + 与 `process restarted` 句**双信号解耦** | 「切槽恢复」不得被误当「普通续跑」，也不得误报进程重启；两信号各有独立闸 |
 | D-SE16 | 冷 cwd 删除**含数据文件** | 只删 manifest 而留数据文件会制造孤儿数据（无 manifest 引用却仍占盘）——正是要治理的累积问题 |
 | D-SE17 | 标题写契约改 `{ok, reason}`（四类失败原因可区分） | 裸 boolean 无法区分 file-missing / parse-failure / mtime-conflict / invalid-slot |
-| D-SE18 | 跨会话检索 = **`read_history` 加参数**（非新工具） | 检索族已多（5 工具选错）——单工具扩展 + 消歧总纲，本会话缺省零行为变化 |
+| D-SE18 | 跨会话检索 = **`read_history` 加参数**（非新工具） | 检索族已多（5 工具选错）——单工具扩展 + 消歧总纲；本会话缺省 = **参数面**零行为变化（输出形例外 = `tool_calls` 带参数——§6.13 / §6.19 D-SE47） |
 | D-SE19 | 发现面**不做死槽过滤**（v1） | 摘要必须含寻址字段（槽号 + 完整路径）；死槽过滤收益低、易误判 |
 | D-SE20 | 记录存储 = **定长分段 JSONL sidecar** | 可按页读 / 无索引文件 / 已写段只读；否决槽 JSON 内窗口化 · 单文件 offset 索引 · 字节触发清单 · 全档 offset |
 | D-SE21 | 内存窗口 = **200 条**（与首屏同值） | 上界可控且概念单一；否决 500/1000 · 字节窗 · 无窗（保留窗口 = 安全带 + 快路径） |
 | D-SE22 | 投影 = **流式拼接段文件** | O(1) 内存、与既有形态逐字节同构；否决物化数组再序列化 · 投影降级为「窗口 + 计数」（破坏 version 2 契约） |
 | D-SE23 | 追加 = **pushReal 同步**；失败 = **降级（失败即停 + 追赶 + 标记）** | 崩溃保留最大化、读路径恒新鲜；否决保存点批量 / 周期刷盘；「下次保存对账自愈」不成立（投影源 = store，两侧同缺无修复路径） |
 | D-SE24 | 对账 = **计数比较**（段 vs JSON，不做逐条校验） | 成本低收益足；同长异容退化面如实登记 |
-| D-SE25 | 本会话检索走存储、跨会话保持 JSON | `path=` 换轨收益低（JSON 仍有护栏）+ 避免「外部 slot 的 sidecar 解释权」扩展面；否决「统一走存储」 |
+| D-SE25 | 本会话检索走存储；跨会话面 = **索引优先 + 主存回落**（2026-09-22 由 D-SE47 / §6.19 接管该面） | 边界对齐（§6.19）：索引对 sidecar **只读**——零写回、不寄生记录存储语义（追加单点 / 绑定对账 / 降级面仍单点于 §6.14）⇒「外部 slot 的 sidecar 解释权」零扩张；原「`path=` 换轨收益低」判断已由 C / E 两洞消解（D-SE43） |
 | D-SE26 | **模式 F（未绑定）零回归** | `thincoder chat` / 测试 / 未覆盖路径保留全量物化行为；窗口仅在绑定态或 depth>0 子代理启用 |
 | D-SE27 | VSC 运行中禁止切换 + **turnSlot 纵深防御**（保存 / 标题落回合捕获槽） | 运行中切槽 = 旧 turn 流串台 + 内容落错槽；turnSlot 使并发切换零窗口 |
 | D-SE28 | VSC `setSlot*` 写面 = **Parnas 拆分** + `loadSlotForWrite` 对新槽补默认记录 | 一次性写面档（session-slot-write.mjs）避免槽写逻辑混入既有档；新槽无记录 → 静默丢标志（AUTO-bug） |
 | D-SE29 | VSC 懒历史分页 = **帧容器 + 嵌套 tools[] + 全局 idx**（HISTORY_PAGE_SIZE 200） | 跨页消息永不重编号；工具卡随帧渲染防跨页双显；匹配 CLI 首屏 200 |
-| D-SE30 | VSC 标题触发 = **回合尾、忙态归位之前**；写形 = 标题值随整档 `saveLines` 落盘（单写；链单源 = §6.7） | 标题期 = busy 窗口（webview Stop 显 + 路由守卫拒收）；标题抛错不卡永久 busy；单写免「整档 save + 独立 `renameSlot`」两次落盘 |
+| D-SE30 | VSC 标题触发 = **回合尾、忙态归位之前**；写形 = 标题值随整档 `saveLines` 落盘（单写；链单源 = §6.7） | 标题期 = busy 窗口（webview Stop 显 + 路由守卫入单槽——`docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6）；标题抛错不卡永久 busy；单写免「整档 save + 独立 `renameSlot`」两次落盘 |
 | D-SE31 | 跨端 `m.active` 翻动 = **他端合法事件、本进程零效果**（绑定 / 缓存 / 记录不因外部翻指针迁移；释放时**不收养幸存 active**——§6.15 裁定条 P1–P5） | 收养绕开 `usableSlot` / `slotOccupancy` 守卫（可能接手另一活进程的槽 ⇒ 双端双写互覆盖）；且与 D-SE2 粘性同病灶——本端绑定只在四个本端落点维护 |
 | D-SE32 | 认领**随绑定走**（F-CR1）：绑定迁移落点释放本进程残留认领（保留集 = 落点槽 ∪ 其他活绑定；被占目标 ⇒ 保留集空）；释放集并入落点既有 `deletions` 写；`active` / `m.slots` / 槽文件零动 | 认领只增不减 ⇒ 进程活着期间访问过的槽在他端一律打不开且随会话累积；释放不损互覆保护（他端认领 ⇒ 本端再切入判占 + 保存 fork）。否决：保存面全局清扫（ACP 多会话误伤）· `activeSlot` 内释放（裸调用面会放掉真绑定） |
 | D-SE33 | 拒绝路径**判据前置**（F-CR2）：面板受占切换不进入 `switchToSlot`（共享指针 / 记录 / 缓存 / 认领四不动）；端壳函数内被占分支 = 零写 | 先写后判 ⇒ 被拒切换仍翻共享指针（实测 active 41→40）；回滚形态否决（回滚窗口内他端可读脏指针 + 二次写）。核侧受占 = 切换成立（保留 D-6 / D-4 落点语义——fork 面依赖指针翻至目标槽） |
@@ -566,6 +684,13 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 | D-SE40 | 自动面预算 = **每 pass 总评估组数 ≤ `STALE_SWEEP_LIMIT`**（过 ③ 进 ① 即耗——含 ① manifest 读；余量下一 pass 继续） | 真机复测：① 面原对全部过 ③ 组逐组读（≈6,887 组 ⇒ ≈6.9k 次/pass）⇒ 单 pass 拖至 ≈40s 量级（对照 `session gc --dry-run` 全面 41.6s / 6,887 候选）；否决「上限仅落 ② 面」（① 面无界）·「跳过集」（登记边界 + 显式面兜底） |
 | D-SE41 | 退出释放 = **核薄函数 `releaseClaimsAll(cwd)`**（`staleClaims` 保留集空 + 既有 `saveManifest` release 面；失败容忍返回 boolean 永不抛；无 manifest / 无认领早退零写） | 谓词 / 落盘判据**零新增**（复用 F-CR1 单源——§6.16 落盘判据三条自动继承，防双判据漂移）；失败容忍 = F-XR1 退出恒达（残留 = 现状形态，恢复走探测面）；早退防「退出造盘面」（20k 存量教训同向）。否决：运行期定时清扫（ACP 误伤）· 端壳镜像释放（谓词零端差——镜像即复制） |
 | D-SE42 | 接线 = CLI **同步插行两点**（Ctrl+C 双确认分支 + `/exit`→`ctx.exit`——cleanup 后、exitTimer 注册前；100ms 窗口原值）+ VSC `deactivate` 改 **async 前置释放**（无 workspace 跳过） | 同步写先于定时器注册完成 ⇒ 窗口零竞态（async 化反引入竞态面）；`exitDelay` 原值不动（测试缝 + crash-report 写窗）；VSC 前置 = 最有价值步抢先（截杀由失败容忍兜住）；双入口同源 `ctx.exit` 单收口（「唯一收口」上抛订正） |
+| D-SE43 | 会话检索 = **加派生索引库**（`node:sqlite` · 单库 `~/.thincoder/session-index.db` · 零权威 · 可重建）；**不迁主存** | 主存 = 用户最贵资产（存量迁移风险 + 崩溃 / 身份 / 并发语义重挣）；索引 = 派生品 ⇒ 丢 / 坏零代价；否决「主存迁库」（收益不抵风险——机器线有界性已由压缩治、实测痛点已消）·「每 cwd 一库」（跨会话检索需跨 cwd）·「库住 sessions 树」（污染真源目录 + 落进 VSC 发现面） |
+| D-SE44 | schema = 四表 + FTS（`sessions` / `messages` / `tool_calls` / `messages_fts` + `index_meta`）；**取源双路**（sidecar 增量 ∥ 槽 JSON 一次性） | 实测：含段 sidecar 仅 13 个（451 档无 sidecar——VSC 端不写 sidecar、§6.14 前老档）⇒ 单路取源则跨会话检索近无覆盖；`tool_calls` 独立表 = 参数面与 `tool` 过滤的廉价面；FTS 语言单源外提 `fts-text.mjs`（D2——不让会话索引拉入 memory 模块链） |
+| D-SE45 | 增量 = **水位四列 + 三规则**（段号 / 字节偏移 / mtime / 尾哈希；半行不建；等长重写靠尾哈希检出）；幂等 + 单事务；触发三点（懒保证 / 启动窗外延迟拍 / 显式命令）——拍挂端壳 | 段只追加（§6.14 不变式）⇒ 偏移增量成本 = 单段读；`_materialize` / 隔离重建会重写段 ⇒ 需 size / mtime / 尾哈希三重检出（只信 size 会漏等长改写）；拍挂端壳 = 核会话档零改（边界硬线）；否决「pushReal 挂钩」（触主存档）·「每次查询全量重建」（成本） |
+| D-SE46 | 重建 = **打开即验 + 自愈改名保留**（缺失建 / 失败改名 `.corrupt-<ts>` + 新建）+ 显式命令 `session index --rebuild` / `--status`（双端对位命令）；**不做迁移** | 派生品 ⇒ 迁移无意义（重建即迁移）；改名保留 = 现场可查（零静默丢弃）；命令面 = 存量首建 / 运维兜底；否决「静默删坏库」（丢现场）·「保留迁移路径」（无权威数据可迁） |
+| D-SE47 | 查询面 = **索引优先 + 主存回落**；新增 `path:"all"`（跨会话）；`keyword` 语义分面（单会话 = 子串不变 ∥ `all` = FTS 词 / 短语）；`tool_calls` 带参数 | 回落 = 零回归硬线（非 sessions 树 JSON / 库不可用 / 库内无行 ⇒ 既有路径 + 逐字文案）；子串契约在单会话面成本可承受（单会话 `LIKE`），`all` 面在 300MB 语料上不可行 ⇒ 分面并如实登记；`arguments` 上限 300 = 存储面同值（不虚构超出存储的精度） |
+| D-SE48 | ACP `session/close` **入释放面**：关闭会话 ⇒ 释放该会话槽（保留集 = 本进程其余在存会话的活绑定槽 · 同 cwd）；VSC 项目切换 ⇒ 对旧 cwd manifest 补一次同语义释放（保留集 = 空）；落盘判据三条沿用 §6.16 | 认领只增不减在 ACP 多会话面 = 会话关掉仍占槽（他端打不开）；释放不损互覆保护（他端认领 ⇒ 本端再切入判占 + 保存 fork）。否决：ACP 面保持零释放（挂账不清）· 由进程退出面接管（会话级 close ≠ 进程级退出——D-SE41 面不动） |
+| D-SE49 | 端壳 `switchToSlot` 被占分支 = **零写 + 可区分信号**（与成功返回 `data` 相区分）；面板路径在前置判据外补**第二判**（TOCTOU 窗内收到信号 ⇒ 保持 `_slot` 现值 + 提示 + `_loadSession()` 重绑） | 现值返回与成功**不可区分** ⇒ 调用面无法判别（面板会误当成功）；第二判兜住「前置判据通过后、函数内仍被占」的窗口；零写语义零改 |
 
 ## 8. 不并项与历史沿革
 
@@ -603,6 +728,16 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 | 源档 §10 注入序的 `loadSession` 同步会话级 UI（_autoApprove/planMode 面板标志 + 工具条按钮同步） | VSC 装配细节 | 面板 UI 同步 = VSC 专有面（`thincoder-vscode/**`）；注入序本体已入 §6.15 |
 
 ## 变更记录
+
+- 2026-09-22（**hygiene-sweep 批 · 文档卫生轮 · eng-designer**——承 `docs/batches/2026-09-22-hygiene-sweep.md` §2）：§6.7「源」条 VSC 侧措辞收正——端壳传原数组 + 同一核谓词取首条（`thincoder-vscode/src/extension/panel-session-write.mjs:134`）+ 等价注（端壳不按 `keepReal` 预过滤——该过滤属槽落盘面）。**语义零改**。
+
+
+- 2026-09-22（**pending-triage 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-22-pending-triage.md` §1 裁定 · 台账 #168 / #171）：§6.15 新增 2026-09-22 条（受占返回值可区分 / ACP close 释放 / 跨 cwd 释放 / 端壳释放面机判）；§6.16 活绑定集口径与 ACP 调用面表收正（close 入释放面）；**机制条文零改**（均为既有释放语义的落点补全）。
+
+- 2026-09-22（**pending-triage 批 · 设计评审修正轮 1 · eng-designer**——承 `docs/batches/2026-09-22-pending-triage.md` §3 轮次 1 发现 1 / 4 / 10）：
+  认领释放语境四处旧句收正为现态——§6.2 `:109`（ACP 释放面 = `session/close` 释放 + 其余调用面零释放）· §6.16 `:398` 与 §6.18 `:526`（删「跨 cwd 释放 / ACP `session/close`」两项旧边界——已入释放面）· §6.18 `:511`（ACP 进程退出行改「`session/close` 释放 = 会话级」）；
+  §7 补 **D-SE48**（释放覆盖面）/ **D-SE49**（受占可区分信号），标题随 **D-SE1–D-SE49**；
+  §6.15 / §6.16 两处受占载荷分述（前置判据路 = `_slot = null` + 缓存重绑 ∥ 第二判路 = 保持现值 + `_loadSession()`）。**机制条文零改**。
 
 - 2026-09-13：建档——自 `docs/core/design/CORE-UNIFICATION.md` 拆出（§2.5 #89 / #123–#127 · §2.5.1 A14 · §2.12.3 第 3 行）；**语义零改**，行号沿用原编号。
 - 2026-09-14（**B 轮并入 · 第 2 批**）：新增 §6 **机制面**（存储模型 / 并发安全 / 双线结构 / 保存与恢复 / 切换归档 / 跨端契约 / 标题生成 / 模型重选 / 时间戳与 read_history / end marker / env-state / 残留 GC 与标题契约 / 跨会话检索 / 记录内存有界）· §7 **关键决策记录（D-SE1–26）** · §8 **不并项与历史沿革** · 来源 = `thincoder-cli/docs/design/SESSION.md`（**旧档一字未改**——
@@ -652,3 +787,13 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 - 2026-09-21（**块标题行对齐批 · 设计评审轮 1 修正** · eng-designer——承 `docs/batches/2026-09-21-vsc-block-title-align.md` §2.13 · 发现 1 / 4）：§6.7 两处收正——①「读 / 展示」行限定形（**列表面**同回退链；CLI 段 = `agent.title` 活读 · 空值零注入；空窗差 = 已登记端差〔A9〕）；② 环枚举重基 = **源 / 生成 / 触发 / 写 / 读·展示五环**（谓词 ∈ 源、时点 ∈ 写）。**零新语义**。
 - 2026-09-21（**EXIT-CLAIM-RELEASE 批 · eng-designer**——承 `docs/batches/2026-09-21-exit-claim-release.md` §1）：新增 **§6.18**（判据句 / 核薄函数 / CLI·VSC 接线序 / 端壳裁定 / 边界情形 / 验收回指 T1–T6）；§7 补 **D-SE41 / D-SE42**；§5 补落点指针；来源 = 需求档 §2.5（台账 #211；用户 22:28 批准）。批档 §2 已落地（纠偏复开后父侧直写）。
 - 2026-09-21（**EXIT-CLAIM-RELEASE 批 · 收口前坐标收正** · 父侧直接执行 · 机械形修 · 零语义 · 可 revert）：§6.18 四处引 `file:line` 按实施后实读收正（:484 `key-handler.mjs:152-158` · `index.mjs:444-450`；:491 `extension.mjs:176-190`；:478 `session-io.mjs:210`）——漂移源 = 本批落地所致；核验 = 父侧 2026-09-21 23:5x 键档+源码双读。
+- 2026-09-22（**busy-extend 批 · 同族扩面轮 · eng-designer**——承 `docs/batches/2026-09-22-busy-extend.md` §1 裁定 · 父侧并入本批）：§6.15 标题触发条 + §7 D-SE30 两处收正——标题窗口（`_turnState` 仍 running）= **busy 单槽受理面**（路由守卫 running ⇒ 入槽；新回合恒在标题调用之后开；判定 / 载体 / 送达 = `docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6）。机制条文零改。
+- 2026-09-22（**SESSION-INDEX 批 · eng-designer**——承 `docs/batches/2026-09-22-session-index.md` §1 · 用户 09:25「可以，都按建议」）：新增 **§6.19**（问题形态实测 / 形态 / schema 四表 + FTS / 取源与水位三规则 / 重建面与自愈 / 查询面路由表 / 边界情形表 / 验收回指 / 不做）；
+  §6.13 参数扩展与检索护栏两条收正（新增 `path:"all"`；护栏射程 = 回落路径面）；§6.14 read_history 契约条收正（索引命中 ⇒ SQL 检索，未命中 ⇒ 回落 JSON + 既有护栏）；§5 补本批落点指针；§7 补 **D-SE43–D-SE47**；来源 = 台账 #205（需求档 §4.3 F-R19a / §4.4 F-S4）；新档引用携「拟新增」标记（实施轮创建，收口撤标记）。
+
+- 2026-09-22（**SESSION-INDEX 批 · 设计评审轮 1 修正** · eng-designer——承 `docs/batches/2026-09-22-session-index.md` §3 轮次 1 发现 2–15）：
+  §6.19 懒保证射程钉定（有段档 ensure / `src=json` 档免 ensure）· `pass_at` 语义 = 最近变更时刻（`index_meta` + `--status` 文案）· `all` 覆盖语义入边界表 + 模型侧覆盖信号 ·
+  `tail_hash` 检测窗残余登记 · 退化 `LIKE` 元字符转义与成本口径 · FTS 同删义务逐路径列明 · 删冗余 `INDEX(sid, idx)` · FTS5 可行性实证（memory 面先例）；
+  §6.13 缺省句射程限定（+ 输出形例外）· §6.9 返回行补 `tool_calls` 形 · §7 D-SE25 标取代 + 射程对齐 · §6.19 头部 / 验收回指补 F-R19c / F-R19d。**零新语义**（均为评审发现直接导出项）。
+
+- 2026-09-22（**SESSION-INDEX 批 · 实施后收口轮** · eng-designer——承 `docs/batches/2026-09-22-session-index.md` §5）：源档损坏 ⇒ **查询期不清行**（清行 = 重建 / 趟面职责——查询路径零写纪律）；§6.19 补拆分产物两档行 · FTS5 指针按实读重指 · 撤新档「拟新增」标记 · 边界表登记两处 delta · `all` 首建路径按触发点①收正。**零新语义**（登记类）。

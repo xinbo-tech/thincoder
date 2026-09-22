@@ -43,7 +43,7 @@ _cwd() = _cwdOverride ?? workspaceFolders[0] ?? process.cwd()
 | `thincoder-vscode/src/extension/panel-chat.mjs` | agent 回合 cwd 用 `_cwd()`（回合开始时取快照——`:234`） |
 | `thincoder-vscode/src/extension/panel-session.mjs` | 会话加载 `loadSession`（`:133`）、slot 管理与切换 |
 | `thincoder-vscode/webview/index.html` | `#project-btn`（📁 项目按钮，默认隐藏） |
-| `thincoder-vscode/webview/chat.js` | `case "project"` 消息路由（`:202`）→ `session-bar.js` |
+| `thincoder-vscode/webview/chat-messages.js` | `case "project"` 消息路由（`:134`）→ `session-bar.js` |
 | `thincoder-vscode/webview/session-bar.js` | `handleProjectMessage`（`:124`）——多根显示并更新名称 / tooltip，单根隐藏；点击 → `postMessage({ type:"setProject" })`（`:121`） |
 | `thincoder-vscode/package.json` | 设置 `thincoder.project.followActiveEditor`（boolean，默认 false——`:108`） |
 
@@ -139,6 +139,8 @@ _cwd() = _cwdOverride ?? workspaceFolders[0] ?? process.cwd()
 | U-P9 | 守卫态 Send 按钮**保持可见**（点击即提示）——与 C-14「running 期隐藏」分道：守卫态 = 用户可自解态，保留可发现入口 | 已定（§4.1） |
 
 ## 变更记录
+
+- 2026-09-22（**structure-debt 批 · 档面车道（#163 尾账）· eng-designer**——承 `docs/batches/2026-09-22-structure-debt.md` §2.4）：§3 切换流程表 `case "project"` 消息路由行改指新档（`webview/chat.js` → **`webview/chat-messages.js`**，坐标 `:202` → **`:134`**——#163 拆分后消息分发循环迁出）。**零语义**：机制 / 守卫面 / 提示面零变。
 
 - 2026-09-21（**无工作区守卫批 · 评审轮 1 修正轮 · eng-designer**——承批次档 §3 轮次 1 发现 2 / 6 / 8 / 11）：§2 守卫句口径收窄（「任何工作入口」→「守卫面八处」）；§4 删修订式括注；§4.1 派生面补 `atComplete` 链判定（只读 / 零落盘 / 不入守卫面）+ 恢复面补**第三支路**（非空 → 非空——override 失效校验逐字保留）+ `vscode.openFolder` 行为句标**未验**（提示面 / 恢复面 / U-P7 同标）+ 提示面补键表登记指向（§6.3）。**守卫八处 / 消息面零变**。
 - 2026-09-21（**无工作区守卫批**）：§2 补守卫指针；§4「无工作区：…行为不变」收正；新增 §4.1（判据单源 / 守卫面八处 / 提示面逐字 / 恢复面 / 零写入判据 / 边界 / 被否形）；§6 补 U-P6–U-P9。

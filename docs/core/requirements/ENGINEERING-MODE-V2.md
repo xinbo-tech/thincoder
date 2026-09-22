@@ -694,7 +694,7 @@ v1 三机检 = 必要内核 + 一大坨 thincoder 私有历史包袱（双引擎
 2. **命令面同步禁**：TUI `/plan` 与 ACP plan 模式设置在工程模式下禁用，且给**明确提示**（非静默失败）。
 3. **残留清零**：会话中途开启工程模式且 `planMode` 已为 true ⇒ 强制复位（防「工程纪律 × plan 只读限制」半状态叠加）。
 
-- **边界（不做什么）**：普通模式零改（plan 模式照常全带宽）· **三条** reminder 文本本体不改〔`PLAN_EXIT_REMINDER` 文本已于 2026-09-21 收正 ✗ 本句对其作废 ✓ 另两条不动 ✓〕（`PLAN_FULL_REMINDER`/`PLAN_SPARSE_REMINDER`/`PLAN_EXIT_REMINDER`——`thincoder-core/agent-tools/plan.mjs:11` · `:17` · `:21`，普通模式仍用）· 不为此新增机械门。
+- **边界（不做什么）**：普通模式零改（plan 模式照常全带宽）· **两条** reminder 文本本体不改（`PLAN_FULL_REMINDER`/`PLAN_SPARSE_REMINDER`——`thincoder-core/agent-tools/plan.mjs:11` · `:17`，普通模式仍用；`PLAN_EXIT_REMINDER`（`:21`）文本已于 2026-09-21 收正）· 不为此新增机械门。（父侧直接执行 · 失效表达收正 · 可 revert · 2026-09-22 hygiene 批）
 - **待设计实核**：工程子代理面是否随同排除——`plan` 工具现居固定段（`thincoder-core/agent/family-tools.mjs:173`，全模式全深度注入，2026-09-21 实读）；同类过滤先例 = 同档 `:44-49`（角色 enum 互斥）· `:66-67`（escalate 池装饰门：`action: (consultModels.length && !engineering)`——实读注释同句「装饰只对正常模式有意义」）。排除面矩阵由设计段实读后定。
 - **验收**：① 工程模式装配面不含 `plan`（机检断言 · 双端同源核）；② `/plan` 与 ACP 面在工程模式下拒绝且提示可见；③ 开启工程模式时 `planMode` 强制 false（测试锁定）；④ 普通模式全带宽零回归。
 - **落点**：装配面 = `thincoder-core/agent/family-tools.mjs`（裁剪形态由设计定）；命令面 = `thincoder-cli/src/tui/cmd-plan.mjs`（`/plan` 切换点）· `thincoder-cli/src/acp/handlers-session.mjs`（会话模式设置）；VSC 对位面 = 设计段实核。
