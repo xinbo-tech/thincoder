@@ -118,9 +118,11 @@ export const S = {
   // （拒发出口守卫 = send.js / 占位符第三态 = loading.js `applyBusyLock`——优先级 守卫 > busy > 常态；
   //  机制单源 = `PROJECT-SWITCHER.md` §4.1）。
   _workspaceRequired: false,
-  // C-B2-6 细则①（busy-injection 批 fix 轮 2026-09-22）：host `busyQueued {pending}` 镜像——
-  // true = 普通回合 busy 单槽已有一条未消费排队（webview 二次提交守卫 = 不出泡 / 不清框 / toast）；
-  // 提交受理时本地先行置位、host 推送权威收敛（机制单源 = `WEBVIEW-INPUT.md` §1 C-B2-6）。
-  _busyQueuedPending: false,
+  // C-B2-6 细则①（busy-injection 批 fix 轮 2026-09-22 · queue-visible 批 2026-09-24 多槽）：host
+  // `busyQueued { count }` 镜像——队列未消费条数（webview 二次提交守卫判据 = `count >= QUEUED_MAX_ITEMS`
+  // ⇒ 满队不出泡 / 不清框 / toast）；提交受理时本地先行自增、host 推送权威收敛
+  // （机制单源 = `WEBVIEW-INPUT.md` §1 C-B2-6；待发送标记面 = webview/queued-mark.js）。
+  _busyQueuedCount: 0,
+  _busyQueuedPending: false, // 派生镜像（= count > 0——保留字段）
 }
 

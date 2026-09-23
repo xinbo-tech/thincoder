@@ -89,6 +89,10 @@ TUI 是 CLI 的主界面：**流式输出必须看着像活的**（新内容自�
 
 ## 变更记录
 
+- 2026-09-24（**queue-visible 批 · F16 裁定升级 · 父侧直接执行 · 可 revert**——承 `docs/batches/2026-09-24-busy-queue-visible.md`）：
+  F16 追平现行机制——送达三时机（**步边界 pickup 为主**：当前一步结束即以普通 user 消息生效，不打断在飞工具；回合尾兜底 / 挂起窗消费）+ **多条合并消费**（R15 攒批恢复——≤8 条 ∧ ≤2000 字符；超限拆分）；
+  **待发送标记**（`⏳ 待发送 · …` 标签行 / 气泡 `pending`）+ **队满语义**（容量 8；第 9 条拒 + 提示 + 文本保留）+ 状态栏提示**四态**（队列非空（「已排队 N 条消息」）/ 普通 busy / 挂起内用户回合 / 挂起内系统轮）；**VSC 对位** = busy 即排队面（同判据；容量 8；待发送标记 + 多条批合并成形——`WEBVIEW-INPUT.md` §1 C-B2-6）。
+
 - 2026-09-22（**busy-extend 批（台账 #224）· 需求面扩面 · 父侧直接执行 · 可 revert**——承 `docs/batches/2026-09-22-busy-extend.md` §2 建议稿）：F16 **四笔扩面**落定——条目句（普通回合与会话内回合同判据 · 送达经既有通道）/ 判定句（挂起内 busy 同判据入槽 + 吞面收敛四 + 提示三态）/ 范围边界句（VSC 对位 = busy 即排队面 · 载体两态）/ 回指句（判据表 + 三态表 + C-B2-6 细则 ①–⑥）。**零新增需求**（#224 = F16 扩面 · 非新编号）。
 - 2026-09-21（**busy-injection 批 · 设计轮 + 评审修正轮 · eng-designer/主 agent**——承 `docs/batches/2026-09-21-busy-injection.md` §2/§3 · 设计档落点 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1 + `docs/cli/design/TUI.md` §7.5）：
   F16 范围边界句落定——VSC 对位面从「待设计勘定」改**勘定结果**（busy 同吞实勘：`webview/send.js` 出口守卫拒发 + `panel-messages.mjs` `routeUserTurn` 拒收 ⇒ 对称修：**普通回合 busy 面**（`running && !_suspended`）同面送达；

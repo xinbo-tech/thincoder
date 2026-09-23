@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-09-24 · 来源 = 用户 2026-09-24 02:46「反正在会话流中我是看不到我插入的内容的」+ 02:48/02:50 细化与锁定 + 02:52「可以。你走设计链吧」（批准立批）。
 > 台账 = #249（busy-queue-visible · 归批）。前情 = docs/batches/2026-09-21-busy-injection.md §6（已收口 2026-09-22——busy 排队机制已交付；本批 = 其可视性补全批）。
 ## §1 讨论（主 agent）
-**状态行**：进行中（用户 02:52 批准立批——设计轮待发）
+**状态行**：进行中（§4 父侧代签（03:48）→ 实施轮（eng-coder）已派发——三条件齐备（评审轮 2 pass · 修正 #16 核验 · token））
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 **批件（用户 2026-09-24 02:46–02:52 · 需求锁定后立批）**
@@ -475,6 +475,62 @@ VSC：
 
 **机检读数（修正轮 1 · as-of 2026-09-24 · 本席自跑）**：`node scripts/doc-check.mjs` ⇒ **本批面零闸面新增**——悬空 **8**（逐条 = 基线同，全在他档：`CONSULTATION.md:59` / `MEMORY.md:47` / `SESSION.md:789` / `TOOLS.md:106` / `:114` / `:925` / `:931` ×2）；行宽 **2**（逐条 = 基线同：`BATCH-RECORD.md:358` / `:365`——注：前两轮块记录的「行宽 4（含 `MODEL-BENCH.md:431` / `:856`）」与现跑不符——该两行现已不入闸，非本批面）；用例号悬空 **0**（T-F16-19 / T-V16-16 经本表在册）；拟新增 **15 → 16**（`TUI.md:628` 常量单源句新增一处 `queued-merge.mjs`（拟新增）标记 ⇒ 列报不入闸）。
 
+**收口前文档补述轮（父侧派单 · eng-designer · 2026-09-24）——承 §5 决策透明表 #1–#4 + 待办登记 1 / 2**
+
+**触发与口径**：实施轮（eng-coder #21）交付时披露 4 处「设计档未述而实现必需」（§5 决策透明表 #1–#4）+ 3 档贴限未入 §2「300 线档位登记」（§5 待办登记 2 · 评审 🟡 登记面）。本微轮 = **只动文档**（两档补句各 ×2 + 两档变更记录各 +1 轮 + 本块）——零实现改动、**零新增语义**（逐处只追认已交付实现，对照 §5 登记逐处一致；实现读数照旧 = CLI 815/815 · VSC 951/951——本轮未复跑，实施轮读数在册）。本块 = §2 append-only 段机制下的收口补述（前块条文不改写；其现行增量以本块为准的范围仅限本块所列四处）。
+
+**四处追认（补句 ↔ §5 登记对照——补句落点 = 收正后实读行号）**
+
+| # | §5 登记（决策透明表） | 补句落点（收正后实读） | 补句要点（与实现同口径） |
+|---|---|---|---|
+| 1 | #1 块体行 `_skipDimFold`（连 dim 折叠豁免——设计只述意图「永不被折走」未点名机制） | `docs/cli/design/TUI.md:628`（§7.5 新增「体行折叠豁免（`_skipDimFold`——收口轮补述）」条） | 原文行 / 尾标记行携 `_skipDimFold`（`thincoder-cli/src/tui/render-conversation.mjs:380` / `:383`）——连 dim 折叠 pass（`FOLD_LINES` = 8）命中任一带标记行 ⇒ 整块不折（`:398`）；零新机制（复用既有豁免——先例 = 思考流 / advisor 收缩尾）。 |
+| 2 | #2 块体 wrap 口径 = `cols - 1`（设计逐字；编号前缀未扣——遗留观察） | `docs/cli/design/TUI.md:629`（§7.5 新增「宽度口径（收口轮补述）」条） | 折行宽 `cols - 1` 作用于逐条原文、`i. ` 编号前缀**不预先扣除**（`thincoder-cli/src/tui/render-conversation.mjs:375`）；编号首行总显示宽可超至多 3 列（终端软折行——**登记**：如需扣前缀另轮评估）。 |
+| 3 | #3 VSC 标记匹配第三支（末条同 `data-raw` 未标记气泡 ⇒ 就地标记，不新建） | `docs/vsc/design/WEBVIEW-INPUT.md:47`（§1 C-B2-6 细则⑦「标记」条收正为**三支判据序**） | ① 已标记（`data-raw` 相等）⇒ 保持；② 未标记但存同文气泡（取末条）⇒ 就地标记（不新建——`thincoder-vscode/webview/queued-mark.js:83-85`）；③ 无同文气泡 ⇒ 新建。原「两支」表述收正。 |
+| 4 | #4 步边界对携 `images` 的批让位 + 载体面贴图批退化逐条 | `docs/vsc/design/WEBVIEW-INPUT.md:30`（细则② ⓪ 让位句）+ `:34`（载体面退化句） | 同步面无异步降级 ⇒ 携图批不消费（留既有送达路径——同过 F-1 判定，不静默丢图；`thincoder-vscode/src/extension/queued-pickup.mjs:36`）；载体面取批携图 ⇒ `count = 1` 逐条取（图片随条目元数据走 F-1 降级面；`:53`）。 |
+
+**变更记录（涉及两档各 +1 轮——打标「收口前补述（父侧/设计侧）」）**：`docs/cli/design/TUI.md:694-696` · `docs/vsc/design/WEBVIEW-INPUT.md:222-224`。
+
+**300 线档位登记（补 3 行——续前块九行表；只登记不执行）**
+
+| 档 | 预计终值 | 候选拆分面（评估项——本批不执行） |
+|---|---|---|
+| `thincoder-vscode/webview/ui.js` | 494 | 消息 / 工具卡 DOM 构建面（`buildUserMessage` / `addUser` / `addTool` / `finishTool*` 族）抽档 |
+| `thincoder-vscode/src/agent.mjs` | 496 | 主环体（`runAgent` 主环 + 无工具 / 工具分支）∥ 端差适配段（`:411` 起）分面抽档 |
+| `thincoder-vscode/src/extension/chat-panel.mjs` | 495 | 薄委托族（`_*` 委托块——session / mcp / status / project 域）按域抽档 |
+
+**三档行数复核（本席自跑——末尾换行不计）**：`webview/ui.js` **494** · `src/agent.mjs` **496** · `src/extension/chat-panel.mjs` **495**——与 §5 实测逐字一致。
+
+**机检读数（补述轮终态 · as-of 2026-09-24 · 本席自跑）**：`node scripts/doc-check.mjs` ⇒ **本批面零闸面新增**——悬空 **8**（逐条 = 基线同，全在他档：`CONSULTATION.md:59` / `MEMORY.md:47` / `SESSION.md:789` / `TOOLS.md:106` / `:114` / `:925` / `:931` ×2）；行宽 **2**（逐条 = 基线同：`BATCH-RECORD.md:358` / `:365`）；用例号悬空 **0**；路径/坐标候选 8423 → **8428**（+5 = 本轮新坐标，全部解析在案）；符号·宽候选 12399 → 12404（报告面，不入闸）；拟新增 **8**（零变）。
+
+**本轮边界（零改对照）**：实现代码零触碰；`WEBVIEW-PROTOCOL.md` / `TUI-INPUT-BOX.md` / 核档 / 需求档零触碰（需求档 = 主 agent 笔）；前块条文不改写（append-only——本块所列四处之外零改判）。
+
+**收口前补述轮 2（协议档 `busyQueued.text` 语义收正 · 父侧派单 · eng-designer · 2026-09-24）——承 §5 决策透明表 #7 + 待办登记 5**
+
+**触发与口径**：§5 决策透明表 #7 / 待办登记 5 记「协议档 `text` 语义待与实现逐字对账」（复核实读 = 两说仅受理时刻重合，其余推送点分叉）。本微轮 = **只动文档**：协议档两处描述收正 + 该档变更记录 +1 轮；实现零触碰；**零新增语义 / 零新增字段**（字段面零改——只收正「描述」）。
+
+**逐处收正（改后句 ↔ 实现实读对照）**
+
+| # | 落点（收正后实读行号） | 改后句（`text` 段逐字） | 实现依据（本席实读） |
+|---|---|---|---|
+| 1 | `docs/vsc/design/WEBVIEW-PROTOCOL.md:63`（§3 表 `busyQueued` 行） | `text` = 队列末项原文（队列非空即携——受理 / 消费 / 忙判 / 握手各推送点同式；webview 不读） | `thincoder-vscode/src/extension/panel-messages.mjs:108`（`items[items.length - 1]?.text`）+ `:114`（`text !== undefined` 才携 ⇒ 队列非空即携）；推送点同式 = `:100-102` 注（受理 / 五消费点 / 忙判 / 握手） |
+| 2 | `docs/vsc/design/WEBVIEW-PROTOCOL.md:99`（§3.2 行 17） | 同上；原「（标记源）」归 `items`（退场） | 同上 + `thincoder-vscode/webview/queued-mark.js:78-85`（标记逐条读 `items`） |
+
+**webview 消费方实读结论（复核前轮 #24 · 本席一手核）**：消费单点 = `case "busyQueued"`（`thincoder-vscode/webview/chat-messages.js:101-102`）→ `applyBusyQueued`（`thincoder-vscode/webview/queued-mark.js:63-88`）——读 `count` / `pending` / `merged` / `items` 四字段；**`text` 零读**（`queued-mark.js` 全档 `text` 命中 = 档头注释字段面清单一处，非消费）。结论 = **不读**（措辞 = 注册字段 / 未消费——与 §5 #7 同判）。
+
+**`WEBVIEW-INPUT.md` 零触报告（派单 ② 实读）**：全档 `text` 命中 4 处——`:40`（贴图降级「描述注入 text」· 别语义）· `:80` / `:127`（textarea 折行面 · 别语义）· `:211`（变更记录引协议档 `text` 增字段 · 记录面零语义）；细则⑦ 判据源字段列 = `busyQueued { pending, count, items, merged? }`（`:46`——消费面清单，与本收正同口径）。**零触**。
+
+**需求档复核（顺带 · 本席只读面）**：`docs/cli/requirements/**` 与 `docs/vsc/requirements/**` 全档 `busyQueued` / `text` **零命中** ⇒ §5 待办登记 5 的「需求 F16」项无实际收正面（零触）。
+
+**同族扫描（全仓 `docs`）**：`text` 语义（busyQueued 面）规范性面 **仅协议档两处**（已收正）；其余命中全为记录面——本档 §2 前块 `:136`（锚定三支判据源 `{ pending, text }`）/ `:177`（「两载体 head」）/ `:208`（D-QV5「`text` 恒携槽内项原文」）+ 协议档 `:504`（设计轮变更记录「待发送气泡锚定 / 新建的原文源」句）——**append-only / 记录面不改写，只登记**；现行结论 = 本块（已收正两处 + 本节）。
+
+**协议档变更记录**：新轮 = `docs/vsc/design/WEBVIEW-PROTOCOL.md:492-494`（打标「收口前补述 · 父侧/设计侧」）；原各轮顺移（修正轮 1 = `:496` · fix 轮 = `:498-500` · 裁定升级轮 = `:502-503` · 设计轮 = `:504-506`）。
+
+**机检读数（本席自跑 · as-of 2026-09-24）**：`node scripts/doc-check.mjs`（根 = `thincoder`）⇒ 本批面**零新增闸面**——悬空 **8**（逐条 = 基线同：`CONSULTATION.md:59` / `MEMORY.md:47` / `SESSION.md:789` / `TOOLS.md:106` / `:114` / `:925` / `:931` ×2——全在他档 `docs/core/design/**`）；行宽 **5** = `BATCH-RECORD.md:358` / `:365`（基线同）+ `MODEL-BENCH.md:376` / `:483` / `:979`（**非本批面**——本席零触碰；该档工作树现为 M 态，与他批在飞改动并存）；用例号悬空 **0**；拟新增 **8**；路径/坐标候选 **8442**（上轮读数 8428——增量含他批在飞面；本批新坐标全部解析在案）。
+
+协议门两档复跑**零回归**（工作树 = `thincoder-vscode`）：`node test/protocol-coverage.test.mjs` **4 pass / 0 fail** · `node test/protocol-coverage-reverse.test.mjs` **3 pass / 0 fail**。
+
+**边界（零改对照）**：实现代码零触碰；`pending` / `count` / `items` / `merged` 四字段语义零改；零新增字段；`WEBVIEW-INPUT.md` / 需求档 / 核档 / CLI 面零触碰；批档前块零改写（append-only）。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
@@ -503,6 +559,136 @@ VSC：
 
 VERDICT: changes-required
 
+### 轮次 2（评审子代理）
+
+**设计评审轮 2（修正验证轮）· busy-queue-visible 批 · as-of 2026-09-24 · 复核轮 1 十三项（全数逐处实读）**
+
+| # | Orig# | File | Severity | Status | Notes |
+|---|-------|------|----------|--------|-------|
+| 1 | 1 | `docs/core/design/AGENT-LOOP.md` | 🔴 | Fixed | `:449` 现文「busy 时**提交入队列**（`pendingInput`——**容量 8 条**；普通 / 会话内 busy 同判据；吞面收敛四 = 模态 / 斜杠 / 空 / **队满（第 9 条）**）（**2026-09-24 queue-visible 批修订**……）」——单槽不变量条退场；`:93`「`routeUserTurn` busy ⇒ 队列受理（容量 8……」· `:127` · `:423` · `:479`「**现行机制**（队列容量 8 + 合并消费（R15 形态恢复）+ 步边界 pickup）已入 `AGENT-LOOP-ASYNC-POOL.md` §6.8」同族四处全收；变更记录 `:504-506` 在册 |
+| 2 | 2 | `docs/cli/design/TUI-INPUT-BOX.md` · `docs/cli/design/TUI.md` | 🔴 | Fixed | `TUI-INPUT-BOX.md:42`「提交（busy 期 = §4.1 入队受理——队列容量 8）」· `:78`「消息入 **`state.pendingInput` 队列**（**容量 8——见 §4.1**……」· `:207`「`pendingInput` 队列（容量 8）可达化」——与同档 `:113` 条件 5 同口径；`TUI.md:33` / `:135`「**Enter 提交 = busy 队列受理（容量 8）**」/ `:138-139`（满队（第 9 条）拒 + 提示 + 文本保留）/ `:548` / `:655`「队列载体两态（容量 8）」· `:35` 全收；变更记录 = `TUI-INPUT-BOX.md:383` · `TUI.md:692-694` |
+| 3 | 3 | `docs/vsc/design/WEBVIEW-PROTOCOL.md` · `docs/vsc/design/WEBVIEW-INPUT.md` | 🔴 | Fixed | `WEBVIEW-PROTOCOL.md:142-143`「队列载体两态（容量 8）……满队（第 9 条）⇒ 提交不出泡 / 不清框 / toast——二次提交守卫」· `:98`「host 队列载体两态（容量 8）」· `:460` 同收；`WEBVIEW-INPUT.md:33`「同入会话队列（容量 8）」· `:161`（U-I2「**唯一 busy 拒面 = 满队（第 9 条）**」）· `:173`；变更记录 = `:492` · `:218` |
+| 4 | 4 | `docs/cli/requirements/TUI.md` | 🟡 | Fixed（父侧笔） | `:37`「状态栏提示**四态**逐字（**队列非空**（「已排队 N 条消息」）/ 普通 busy / 挂起内用户回合 / 挂起内系统轮……；队满面 = 第 9 条拒 + 输入区提示 + 文本保留）」——队满退出状态栏态枚举、队列非空补入 |
+| 5 | 5 | `docs/batches/2026-09-24-busy-queue-visible.md` | 🟡 | Fixed | `:414`「**上抛状态收正（#5）**：§2 前块四个上抛①……**全部收正**：**需求档已落（2026-09-24 F16 裁定升级轮）**……**链已闭**」+ `:404`（append-only 段机制：原文不改写、现行结论以本块为准 = 记录面合规） |
+| 6 | 6 | 同上（受影响文件表） | 🟡 | Fixed | `:416-447` 累计口径表（逐档「累计净增（三轮块标注之和）」+「预计终值」）+ `:447` 口径注；抽查核算自洽（`render-conversation` 425+42=467 · `agent-turn` 378+9=387 · `busy-injection.test` 282+118=400 · 核 `agent.mjs` 436+3=439 · VSC `agent.mjs` 495+2=497 · `suspension.mjs` 435+20=455） |
+| 7 | 7 | 同上（300 线档位登记） | 🟡 | Fixed | `:449-463` 九档登记（预计终值 + 候选拆分面）+ `:463`「**本批只登记不执行**（搬迁 ≠ 本批范围）」 |
+| 8 | 8 | 同上（用例表） | 🟡 | Fixed | `:469` T-F16-19 / `:470` T-V16-16 负向锁（`autoTurn` 轮传参面 ⇒ history 零写入 / `pendingInput` 保持 2 条 / 零消费推送 / 块保持） |
+| 9 | 9 | `docs/cli/design/TUI.md` | 🟡 | Fixed | `:628`「**常量单源** = `thincoder-cli/src/tui/queued-merge.mjs`（拟新增）导出，显示面 / 输入门禁同源 import；与合并批上限 `MAX_MERGE_ITEMS`（8）**同值不同名**」 |
+| 10 | 10 | `docs/cli/requirements/TUI.md` | 🔵 | **Unfixed（非阻塞）** | 变更记录（`:90-106`）最新条目仍 = 2026-09-22（无 2026-09-24 queue-visible 条目）；设计席无该档笔，批档 `:109` 自认「余项：需求档变更记录补登 = 父侧自办」⇒ 协调项（R5） |
+| 11 | 11 | `docs/cli/design/TUI.md` | 🔵 | Fixed | `:608`「busy 提示段**四态分流**（逐字见下表）：队列非空 ⇒ ` │ 已排队 N 条消息`……」 |
+| 12 | 12 | `docs/core/design/AGENT-LOOP.md` | 🔵 | Fixed | `:216` 与 `:427` 双处统一为 `thincoder-vscode/src/agent.mjs:197` 邻位（`opts.turnInput?.()` 消费段）——两说收正为单坐标 |
+| 13 | 13 | `docs/core/design/AGENT-LOOP.md` | 🔵 | Fixed | `:201`「`runAgent(agent, input, callbacks, { depth, signal, maxTurns, resume, autoTurn, suspDriven, consumeQueuedInput })`」 |
+
+**域外注（不属本次声明评审面，仅登记，不评severity）**：`docs/core/design/SESSION.md:346/:349/:674`（批档 `:472` 自报同族收正已落）· `docs/core/requirements/PROMPT-SYSTEM.md:46` 边界句「busy 队列机制零动（单槽 / 边界送达 / 无中途 pickup）」= 失效表达（批档 `:474` 已上抛、待父侧笔）。
+
+**范围与未核项（沿轮 1）**：① 受影响文件表一切**现况行数**（源档不在本次只读声明面）**未抽查** ⇒ 判据 8 抽查项 **unverified**；② 批档自跑 `doc-check.mjs` 读数与 R15 旧实现逐字（`formatMergedMessages` / `planQueuedInput` / 归档档）**unverified**（未复跑 / 不在范围）；③ 修正轮新增「同族扫描」域外落点（SESSION.md 三处）不在本次评审面，未核。
+
+**计数**：🔴 0（轮 1 三项全数落地）· 🟡 0 未决 · 🔵 1 未决（#10——父侧笔协调项）——本轮未引入新 🔴 / 新 🟡。
+
+VERDICT: pass
+
+（令牌与 designId 未在档内手写——工具机械剥离凭证值。）
+
 ## §4 用户批准（主 agent）
+
+**2026-09-24 03:48 父侧代签**——依据用户 03:48 授权「**后续自动跑到排空**」（同 2026-09-20 先例：设计评审点火权 + §4 批准权均委托父侧，自缚三条件；新范围 / 用户口径裁决仍停下）。
+
+**三条件核验**：① 设计评审 **pass（0🔴）**——轮 2（reviewId `5223050b` · 🔴 0 未决 / 🟡 0 未决 / 🔵 1）+ §3 双表在册；② **修正轮 #16 已落地并经父侧核验**——轮 2 逐项 13 项复核（12 项落地 + #10 需求档变更记录由父侧本轮补登 `TUI.md:92-94`）；③ **token 已签发**（值零落档——运行时凭证）。
+
+**批准范围** = 本批全量实施（任务书 = 批档 §2 · 设计面 = 需求档 TUI + TUI 设计三档 + AGENT-LOOP 双档 + VSC 双档）——实施轮 = eng-coder（初轮）。
+
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（三端落地（核缝 + CLI + VSC）；偏离审计 1 轮 + 代码评审 1 轮（pass）；两仓门禁 815/951 全绿）
+
+
+### 实施摘要（27 档 = 5 新档 + 22 改档）
+
+- **核**：`thincoder-core/agent.mjs` —— `runAgent` opts 增 `consumeQueuedInput`（缺省 `null`，headless 零开销）+ 循环头第 3 成员（落 `drainChildUpstream` 之后，`pushReal` 语义由端侧闭包自持）。
+- **CLI 源**：新 `thincoder-cli/src/tui/queued-merge.mjs`（常量 `MAX_MERGE_ITEMS` 8 / `MAX_MERGE_CHARS` 2000 / `QUEUED_MAX_ITEMS` 8 + `formatMergedMessages` + `planQueuedInput`——R15 逐字恢复）· 新 `thincoder-cli/src/tui/queued-pickup.mjs`（步边界 pickup）。
+  改 `render-conversation.mjs`（流尾待发送块 + `convCacheKey` 排队签名 + `QUEUED_ITEM_MAX_LINES` 3）· `render-frame.mjs`（状态栏条数段 + `enterHint` 四态）· `key-handler-busy.mjs` / `key-handler-edit.mjs`（容量 8 + 满队字面 + F4 恢复跟随）· `agent-turn.mjs`（opts 传参 + 回合尾按计划取批）· `suspension-drive.mjs`（driver 步骤 1 取批 + 中止残余全量按计划转 queue）。
+- **VSC 源**：新 `src/extension/queued-merge.mjs`（双端同名同值）· `src/extension/queued-pickup.mjs`（载体两态 + 计划取批 + 贴图批退化）· `webview/queued-mark.js`（待发送标记面：逐条标记 / 清标保留 / 多批合泡 / 防悬空 / 引用失效守卫）。
+  改 `panel-messages.mjs`（快照 `{pending,count,items,text,merged?}` + 两载体合计满队判决）· `suspension.mjs`（driver 取批 + 退出残余取批 + 消费快照）· `panel-turn-stages.mjs`（装载①快照 / 装载②取批）· `panel-turn-loop.mjs`（`ro.consumeQueuedInput` = `autoTurn ? null : …`）· `src/agent.mjs`（端壳循环头同址调用）· `webview/{send,ui,chat-messages,state}.js`（守卫 `count >= 8` / `data-raw`+`data-ts` / 快照 case / `_busyQueuedCount`）· `locales/{zh,en}.json`（`queued.pending` 新增 + `input.slotFull` 值改）。
+- **测试**：CLI `test/busy-injection.test.mjs`（+T-F16-10…19）· `test/input-lock.test.mjs`（容量阈收正）；VSC 新 `test/queue-visible-vsc.test.mjs` / `test/queue-visible-shell.test.mjs` + `test/files.mjs` 登记 + 既有两档容量阈收正。
+
+### 测试读数（本席实跑——命令与读数逐条）
+
+| 门 | 命令 | 读数 |
+|---|---|---|
+| CLI 门禁 | `cd thincoder-cli && npm test`（= `node test/run.mjs`） | **815 pass / 0 fail**（suites 14，duration ≈34.7s） |
+| VSC 门禁 | `cd thincoder-vscode && npm test`（= `node test/run.mjs`） | **951 pass / 0 fail**（含协议门 `protocol-coverage{,-reverse}` 两档，duration ≈55.4s） |
+| 语法 | `npm run lint`（两仓） | CLI `213 file(s) OK` · VSC `258 JS files OK` |
+| 文档闸 | `cd thincoder-vscode && npm run doc:check` | 悬空 8 / 行宽 2 = 设计轮基线逐条同（全在他档 `docs/core/design|requirements/**`；本批零触碰文档） |
+
+行数实测（≤500 硬限；末尾换行不计）：核 `agent.mjs` 440 · CLI 新 68 / 34 · `render-conversation` 460 · `render-frame` 423 · `key-handler-busy` 47 · `key-handler-edit` 119 · `agent-turn` 384 · `suspension-drive` 341 · CLI 测 474 / 403 · VSC `src/agent.mjs` 496 · VSC 新 64 / 57 / 88 · `send.js` 88 · `ui.js` 494 · `chat-messages` 236 · `state.js` 128 · `panel-messages` 357 · `suspension` 448 · `panel-turn-stages` 236 · `panel-turn-loop` 188 · `chat-panel` 495 · VSC 测 172 / 139 / 136 · locales 268 / 268。
+（超 500 者仅既有债：`test/busy-injection-vsc.test.mjs` 546（设计日 543 ⇒ 本批 +3）· `webview/chat.css` 514（零改、零新 CSS 类）。）
+
+### 决策透明表（设计档未述处的实现裁定——均已在代码注释内注明）
+
+| # | 事项 | 裁定与依据 |
+|---|---|---|
+| 1 | CLI 待发送块体行 `_skipDimFold`（连 dim 折叠豁免） | 设计只述意图「永不被折走」（§7.5 形态锚）未点名机制；条数 ≥3 时 dim 连跑必超 `FOLD_LINES`(8) ⇒ 用既有豁免机制显式豁免（零新机制） |
+| 2 | 块体 wrap 口径 = `cols - 1`（设计逐字） | 偏离审计指出我先前的 `cols - 1 - 3`（编号前缀扣除）为设计外改动 ⇒ **已按设计逐字收正**；遗留观察：多条态首行 `i. ` 前缀可使该行超宽 3 列（终端软折行）——设计侧如认为需扣前缀，请补句后另轮改 |
+| 3 | VSC 标记匹配第三支（末条同 `data-raw` 未标记气泡 ⇒ 就地标记，不新建） | 依据 = 批档用例表 T-V16-12②（「同文气泡就地标记——不新建」）；与 `WEBVIEW-INPUT.md` 细则⑦「两支」表述相抵 ⇒ 设计侧待补句 |
+| 4 | VSC 步边界对携 `images` 的批让位（不消费，留既有送达路径）+ 载体面取批贴图批退化 `count = 1` | 步边界回调是同步面，F-1 视觉降级（异步读图）不可达；照取批会静默丢图（违「不静默丢」纪律）⇒ 让位 / 退化；设计未述，待补句 |
+| 5 | VSC webview 侧 `QUEUED_MAX_ITEMS` 副本（`webview/queued-mark.js` 导出） | 浏览器面不 import 扩展模块 ⇒ 双写登记（值对拍锁 = T-V16-14）；与 N3「页大小常量双端各自持有」先例同规 |
+| 6 | VSC 消费推送 `merged` = 本批文本（单条批 = 原文 / 多条批 = R15 合并文本） | 单条批也发 `merged` 才能触发 webview「清标保留」支（细则⑦ 判据 = 与已标记气泡原文相等）；纯挂起面（无已标记气泡）零动作、防重复建泡 |
+| 7 | `pushBusyQueued` 快照 `text` 字段 = 队列末项原文（非空即携） | 协议 §3.2 行 17 已注册 `text?`；快照语义（幂等重推），webview 不读它（字段集 ⊆ 注册集由 T-V16-15/15b 自锁） |
+
+### 受影表外改动（逐项 + 理由——全部披露）
+
+| # | 档 | 类型 | 理由 |
+|---|---|---|---|
+| 1 | `thincoder-cli/src/tui/key-handler.mjs` | 注释 1 行 | 序 4 门禁措辞「单槽受理」→「队列受理（容量 8）」 |
+| 2 | `thincoder-cli/src/tui/turn-face.mjs` | 注释 2 行 | submit 防御面措辞收正（设计 `TUI-INPUT-BOX.md` §4.1 预告「注释随判据收正同步更新」，受影表未列该档） |
+| 3 | `thincoder-vscode/src/extension/chat-panel.mjs` | **行为 1 处** + 注释 5 处 | `_chat` 会话载体满队守卫 `> 0` → `>= QUEUED_MAX_ITEMS`（+ 单源 import）：容量 8 必须在第二守卫同源，否则会话载体第 2 条即被拒（routeUserTurn 前置守卫常态遮蔽本支——防御面）；注释为「单槽」口径收正 |
+| 4 | `thincoder-vscode/test/busy-injection-vsc.test.mjs` | 断言收正 | T-V16-5 / T-V16-8 / T-V16-2 / T-V16-7 容量阈 1 → 8（对位 CLI `input-lock.test.mjs` 同款收正）；行数 543 → 546（既有债超限档 +3） |
+| 5 | `thincoder-vscode/test/chat-panel-messages.test.mjs` | 断言收正 | ① / ⑪ 容量阈 1 → 8（并补满队拒收新格） |
+| 6 | `thincoder-vscode/test/queue-visible-shell.test.mjs` | 新档（第二测档） | happy-dom 全局 `fetch` 劫持与 mock-llm 本地链路不可同进程 ⇒ 端壳面（T-V16-15 / 16 / 16b / 13b）分档；用例号与断言面零变 |
+
+### 用例面增减（§2 用例表外——D3 计数登记）
+
+§2 用例表 T-F16-10…19 / T-V16-11…16 全落地（16 行）；另加 3 个加测格：T-V16-13b（会话退出残余取批 + 消费快照）、T-V16-15b（受理面快照字段面）、T-V16-16b（端壳分流机检）；CLI 侧 T-F16-13 附加入队恢复跟随断言（F4）。加测格未入 §2 表——以本节为登记面。
+
+### 审计与代码评审轮次（终态 clean）
+
+1. **内部 explore 偏离审计（1 轮）**：结论 DEVIATIONS（3 实质 + 6 表外/登记面）。处置：① `wrapCols` 设计外扣减 ⇒ **自修收正为设计逐字**（决策表 #2）；② `_skipDimFold` / VSC 第三支 / 贴图让位 ⇒ 保留 + 披露（设计缺口登记，决策表 #1/#3/#4）；③ 表外面 ⇒ 逐项登记（受影表外改动 1–6）；④ 工作树内临时件（R15 旧件副本 + 测试长输出日志）⇒ 已删（零残留）。
+2. **内部 advisor 代码评审（1 轮，全量 26 档）**：VERDICT **pass**（🔴 0 · 🟡 1（可选·登记面）· 🔵 4）。评审后应用收正：🔵「同批改动面注释仍写单槽」——`suspension.mjs` 2 处 + `chat-panel.mjs` 3 处措辞改「队列（容量 8）」（注释面，零行为）。
+   评审未核项（如实登记）：两端门禁未由评审复跑（由本席实跑——读数见上）；VSC 协议档 `text` 字段语义未与协议原文逐字对账；设计档仅读点名段。
+3. **自修轮次 = 2 轮**（审计后合规收正 1 处 + 线数收窄；评审后注释面收正 5 处）——每轮后重跑相关用例与两仓门禁（读数见上，末轮后全绿）。
+
+### 待办登记（交父侧 / eng-designer；非本席笔）
+
+1. **设计档 §7.5 待补句四处**：① 待发送块体行折叠豁免（`_skipDimFold`——把「永不被折走」写成机制句）；② 多条态 wrap 口径（`cols - 1` vs 编号前缀扣除）；③ 细则⑦ 标记第三支（同文未标记气泡就地标记）；④ C-B2-6 细则② ⓪ 贴图批让位 / 退化句。
+2. **300 线档位登记补登**：`thincoder-vscode/webview/ui.js`（494）· `src/agent.mjs`（496）· `src/extension/chat-panel.mjs`（495）——本批均贴 500 硬限，均未入 §2 登记表（评审 🟡 可选·登记面）。
+3. **既有债**：`thincoder-vscode/test/busy-injection-vsc.test.mjs` 546 行（超 500；本批 +3）· `webview/chat.css` 514 行（零改）——是否另批拆分由父侧裁定。
+4. **用例档线数漂移**：CLI `test/busy-injection.test.mjs` 474 行（§2 累计表预计 ~400）——按登记「用例按族分档」下批执行（本批只登记不执行）。
+5. **需求档 / 协议档**：需求 F16 与 `WEBVIEW-PROTOCOL.md` §3.2 行 17 的 `text` 字段语义（多槽口径）如与实现（队尾项原文）不一致，请父侧/设计侧同轮收正。
+
 ## §6 验证与收口（父代理）
+
+### 6.1 实施记录（eng-coder #21 · 初轮 + 收口前文档两轮）
+
+**改动面**：CLI（`queued-merge.mjs` / `queued-pickup.mjs` 新档 + 渲染 / 输入 / 驱动 8 档 + 测试 2 档）· VSC（`extension/queued-merge.mjs` / `queued-pickup.mjs` / `webview/queued-mark.js` 新档 + 面板 / webview 9 档 + 测试 3 档）· 核（`agent.mjs` 循环头第 3 成员 `consumeQueuedInput`）；**超受影响表 6 项全部披露接受**（`chat-panel.mjs` 满队守卫同源 `>=8` 行为 1 处 · 两个新测档 · 用例阈值收正等）。**流程**：内审 1 轮（DEVIATIONS → 1 处自修）→ advisor pass（🔴0 / 🟡1 / 🔵4 → 注释收正 5 处）。
+**文档补述（收口前）**：#24 = 设计档 4 补句（`TUI.md:628-629` · `WEBVIEW-INPUT.md:47` / `:30` / `:34`）+ 300 线登记补 3 行；#25 = 协议档 `busyQueued.text` 语义收正（`:63` / `:99`——「队列末项原文 · 队列非空即携 · webview 不读」——与实现逐字对账）。
+
+### 6.2 父侧验收
+
+| 判据 | 结果 |
+|---|---|
+| CLI 门禁复跑 | `npm test` ⇒ **815/815 · fail 0**（35s）✓ |
+| VSC 门禁复跑 | `npm test` ⇒ **951/951 · fail 0**（57.6s）✓ |
+| 抽读 | `queued-merge.mjs`（常量单源 8 / 2000 · `formatMergedMessages` R15 逐字 · `planQueuedInput` 截批先行）✓ · 核 `agent.mjs` `consumeQueuedInput`（`:99` 签名 + `:239` 循环头，与 `consumeInjected` 同址）✓ |
+| 协议门 | `protocol-coverage` 4 pass · reverse 3 pass（#25 复跑）✓ |
+
+### 6.3 披露裁定 + 登记
+
+- 超表 6 项：**接受**（交付必需 + 披露完整）；`busy-injection-vsc.test.mjs` 546（+3 超 500 既有债）→ 台账 #254（300 线 / 超限拆分轮）。
+- 设计档追认 4 处 + 登记 3 行 + `text` 收正：**已落**（#24 / #25）。
+- 观察项（记录面旧口径 3 条）：**登记不追改**（append-only）。
+- C 段待办全处置：③ 拆分批 → #254；④ 用例档线数漂移 → 下批；⑤ 需求 F16 空靶 → #25 实读澄清。
+
+### 6.4 收口
+
+- **提交**：CLI / VSC / 核源码 + 测试 + 设计档 5 + 需求档 1 + 本批档（见提交记录）。
+- **台账**：#249 → **已核销**。
+- **未落项**：无（全量：实施 + 文档追认 + 协议收正 + 验收）。

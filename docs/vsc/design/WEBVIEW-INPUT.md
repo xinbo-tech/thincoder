@@ -27,9 +27,11 @@
     · 提示形 = toast（既有机制）+ 键 `input.slotFull`（zh/en 逐字 = `WEBVIEW-PROTOCOL.md` §6.3——值改条数阈）；占位符零改。
   - ② **送达 = 四支（均既有通道）**——⓪ **步边界（主——用户回合在飞）**：端壳循环头投递回调（同址——紧随 `opts.turnInput?.()`）按计划取批
     ⇒ `pushReal` 入历史（**下一步生效——不中断**）+ 推 `busyQueued { pending:false, count, items, merged }`（webview 消费成形——单条清标保留 / 多条就地合泡）；系统轮（digest / 上行唤醒轮）不传回调（域 / 门禁降格——同 CLI 判据）；
+    **⓪ 贴图批让位（收口轮补述）**：本回调为同步面（F-1 视觉降级 = 异步读图，不可达）⇒ 批内任一条目携 `images` 即**不消费**——留给既有送达路径（driver 步骤 1 / 装载② / 退出残余；同过 F-1 判定，不静默丢图；`thincoder-vscode/src/extension/queued-pickup.mjs:36`）。
     ① **会话在飞入槽**：driver 步骤 1 输入优先消费（`thincoder-vscode/src/extension/suspension.mjs:285-300`——先于 digest 合并）开用户回合；
     ② **池 live 进会话（回合尾）**：`enterSuspensionTurn` 将 `panel._busyQueued` 残项预填 `susp.pendingInput`（同一 driver 消费点）；③ **池空 idle 归位分支**：`_busyQueued` 非空 ⇒ 直接以该消息续发回合（后清槽）。
     会话退出兜底 = `suspension.mjs` finally 残余直注入（零丢失）。送达侧气泡生命周期 = **与纯挂起既有 queued 路径同款**——送达时本地气泡即视为该消息 user 回声面，回合流式渲染不重复出气泡。
+    **载体面取批贴图批退化（收口轮补述）**：driver 步骤 1 / 装载② / 退出残余三处共用取批——批内任一条目携 `images` ⇒ `count = 1`（逐条取；图片随条目元数据走 F-1 降级面），无贴图 ⇒ 按计划合并（`thincoder-vscode/src/extension/queued-pickup.mjs:53`）。
   - ③ 外部入口（Ask ThinCoder 命令 / retry）经 `routeUserTurn` busy 分支同面分流（同判据同队列）——会话在飞同入会话队列（容量 8）；`chat-panel.mjs` `sendMessage` 的挂起会内 busy 拒收守卫随本批撤销（外部入口同面受理；用户气泡回显保留在 `sendMessage`）。
   - ④ **busy 面统一（digest 例外撤销）**：挂起会话内 digest 与普通回合 busy 同判据（`S._suspended` 只作会话在场指示，不参与受理分流）——CLI 侧同笔（`TUI-INPUT-BOX.md` §4.1 判据表挂起条撤销）。
   - ⑤ 落点 = `webview/send.js`（出口分流——**busy 拒发分支删**：`running` 一律排队；槽满守卫在队列分支内）· `webview/state.js`（`_busyQueuedPending` 镜像字段）· `webview/chat.js`（`case "busyQueued"`）
@@ -42,7 +44,7 @@
     A12/Stop 语义随迁（`panel._visionAbort` 定向中止；`_abortRequested` 置位序 = 呼叫 `runChat` 之后）；装载① 窗内 `_turnState` = susp（无 Stop 面——受读图 60s 超时约束）。
   - ⑦ **排队气泡「待发送」态 + 合并成形**（queue-visible 批 2026-09-24——会话流可见；多槽 / 合并 = 用户 03:01 裁定）：排队项**逐条**在其 user 气泡上带 `pending` 标记——标签行换 `⏳ ${t("queued.pending")}`（原文照常显示；类 `pending` 落 DOM = 机检把手；时间缺失不显示——同既有无 ts 纪律）。
     判据源 = host **队列快照** `busyQueued { pending, count, items, merged? }`（`items` = 队列**剩余**项原文——按队列序；`count` = 剩余条数；`merged` = 本批消费的合并文本——仅消费推送携；协议登记 = `WEBVIEW-PROTOCOL.md` §3 / §3.2 行 17）：
-    · **标记**：`items` 每条——无对应已标记气泡 ⇒ 新建 + 标记（原文 = 该项；`data-raw` 建面处随写）；已存在 ⇒ 保持；本地提交路径出泡即标记（受理即反馈——本地先行置位、host 推送权威收敛）。
+    · **标记（三支判据序——收口轮补述）**：`items` 每条——① 已标记（`data-raw` 相等）⇒ 保持；② 未标记但存同文气泡（`data-raw` 相等，取末条）⇒ **就地标记**（不新建——冷启重放 / 回显入口免重复建泡；`thincoder-vscode/webview/queued-mark.js:83-85`）；③ 无同文气泡 ⇒ 新建 + 标记（原文 = 该项；`data-raw` 建面处随写）；本地提交路径出泡即标记（受理即反馈——本地先行置位、host 推送权威收敛）。
     · **清标与合并**：`merged` 在场 ⇒ 若其文本恰等于某条已标记气泡的原文（**单条批**）⇒ 该气泡清标保留（气泡 = 回声面）；否则（**多条批**）⇒ 移除全部已标记气泡 + 追加一条**合并气泡**（文本 = `merged`——合并形态声明于 `thincoder-vscode/src/extension/queued-merge.mjs`（拟新增），与 CLI 同源）。
     · **防悬空**：已标记气泡的原文 ∉ `items` 且非本批 `merged` ⇒ 移除（已被消费且无回声面）。
     · **推送点**：受理 / **五个消费点**（**步边界 pickup** · driver 步骤 1 · 装载① splice · 装载② shift · **会话退出残余直发循环**）/ 忙分支判决（`count` 实况）/ `webviewReady` 握手重推（Reload 冷启按 `items` 重建 N 气泡——幂等快照）。
@@ -216,3 +218,7 @@
   **容量 / 满队 / 三支既有送达 / 贴图降级 / 零新 CSS 零变**（协议登记 = `WEBVIEW-PROTOCOL.md` §3 / §3.2 行 17 消费点枚举 + §6.3 `queued.pending` 值）。
 
 - 2026-09-24（**queue-visible 批 · 设计评审修正轮 1 · eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §3 轮次 1 发现 #3）：C-B2-6 细则③ + U-I2 + §9 行 1 三处**单槽 → 队列（容量 8）**口径收正（唯一 busy 拒面 = 满队（第 9 条））。**细则① / ② / ⑦ 与契约判别式零变**。
+
+- 2026-09-24（**queue-visible 批 · 收口前补述（父侧/设计侧）· eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §5 决策透明表 #3 / #4）：
+  C-B2-6 细则⑦「标记」补**第三支**（未标记同文气泡 ⇒ 就地标记、不新建——判据序 ①②③）；细则② ⓪ 补**贴图批让位**句（同步面 ⇒ 携 `images` 的批不消费，留既有送达路径）+ 载体面补**贴图批退化**句（批内携图 ⇒ `count = 1` 逐条取）。
+  **契约判别式 / 容量 / 满队 / 消费点枚举 / 贴图降级面零变**——只追认已交付实现（零新增语义）。

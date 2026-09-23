@@ -1,9 +1,9 @@
 /**
  * suspension.mjs — §17 挂起回合会话驱动（AGENT-LOOP.md §7 D-S2/D-S9，VS Code 对齐）。
  * 挂起态是交互层状态：一个用户回合结束后后台 async 池仍 live（running/queued/未注入）
- * → 不阻塞回合，进入挂起会话——挂起空闲输入开放（新消息经 panel._chat 填单槽 + 唤醒）、
- * busy（running 含 digest）提交同入单槽（busy-extend 批 2026-09-22——routeUserTurn 两载体
- * 分流，见 `docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6）、settle 事件驱动 auto-turn 消化
+ * → 不阻塞回合，进入挂起会话——挂起空闲输入开放（新消息经 panel._chat 填队列 + 唤醒）、
+ * busy（running 含 digest）提交同入队列（容量 8——busy-extend 批 2026-09-22 routeUserTurn 两载体
+ * 分流 + queue-visible 批 2026-09-24 容量与合并消费，见 `docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6）、settle 事件驱动 auto-turn 消化
  * （手动档 organize-only / AUTO 档全语义）、池空 + 无待处理输入 → 补发冻结自然退出。状态机行表见 AGENT-LOOP.md §7。
  *
  * 与 CLI 的结构差异（同语义移植）：CLI 的池/pending/_suspended 挂 agent 对象（跨 run
@@ -25,11 +25,14 @@ import { logEvent } from "@thincoder/core/log.mjs"
 // B2 panel-messages↔panel-session 同款）——postSubagentEvent 为函数声明（hoist）——只在
 // 调用期读——环安全（两模块无顶层跨环读取）。
 import { postSubagentEvent, queuedInfoOf } from "./panel-callbacks.mjs"
+// queue-visible 批（2026-09-24 · 台账 #249）：合并计划取批（R15 恢复——与 CLI 同名同值）
+import { takeQueuedBatchItem } from "./queued-pickup.mjs"
 
-// INPUT-LOCK-ASYNC（C'——2026-09-09，设计 thincoder-cli/docs/design/INPUT-LOCK-ASYNC.md——双端）：
-// R15 排队用户指令合并整批废弃（攒批取数/合并文案/上限常量全删）——busy（_turnState running 含
-// digest）提交入单槽（busy-extend 批 2026-09-22——routeUserTurn 两载体分流；原「输入禁用」撤销）——
-// 挂起空闲消息走 pendingInput 单槽（至多一条待交接——单消息逐发不攒批）。废弃记录见 AGENT-LOOP.md §7。
+// queue-visible 批（2026-09-24）：R15 排队用户指令合并**恢复**（攒批计划 / 合并文案 / 上限常量
+// ——`queued-merge.mjs` 单源；待发送标记 / 合泡成形 = `WEBVIEW-INPUT.md` §1 C-B2-6 细则⑦）；
+// busy（_turnState running 含 digest）提交入队列（容量 8——queue-visible 批容量裁定；
+// busy-extend 批 2026-09-22 routeUserTurn 两载体分流；原「输入禁用」撤销）——
+// 挂起空闲消息走 pendingInput 同队列（首批合并消费——多名一批一次）。
 /** 后台池计数（LOGGING susp/digest 事件字段——pendingN/poolN，CLI agent-turn parity；
  *  §9 D-24b：两池合计——advisor 独立池同口径；D2 pending 单容器——四族停靠同一
  *  _pendingAsyncResults——pendingN = 单容器长度） */
@@ -212,7 +215,7 @@ function waitForSettleOrWake(panel, susp) {
 /**
  * §17 挂起会话驱动（D-S9 行表；由 runPanelChat 回合尾进入，池空自然退出）：
  * - suspension：池项 settle → 入 pending → 开 auto-turn（合并消化近邻 settle）；
- *   挂起空闲用户消息、会话内 busy 消息 → pendingInput 单槽（busy-extend 批 2026-09-22 同判据）
+ *   挂起空闲用户消息、会话内 busy 消息 → pendingInput 队列（容量 8——busy-extend 批 2026-09-22 同判据）
  *   ——用户输入优先于 digest；
  * - auto-turn：消化中 settle 不并发开新轮（单 runAgent 循环），轮末按 pending/池态
  *   续开合并消化轮或回挂起；pendingInput 非空 → 以该消息开新回合（不触发新 digest）；
@@ -248,9 +251,9 @@ export async function suspensionSession(panel, entry) {
     distillSlot: entry.distillSlot,
     lines,
     abort: panel._abortController ?? new AbortController(),
-    // pendingInput = 挂起空闲 + 会话在飞 busy 消息单槽（INPUT-LOCK-ASYNC + busy-extend 批
+    // pendingInput = 挂起空闲 + 会话在飞 busy 消息队列（容量 8；INPUT-LOCK-ASYNC + busy-extend 批
     // 2026-09-22——routeUserTurn 两载体分流，会话在飞此项）：挂起空闲与会话内 busy 消息均
-    // 经 panel._chat 直推本数组——driver 消费清槽（用户输入优先于 digest，D-S5）。
+    // 经 panel._chat 直推本数组——driver 按合并计划取批消费（用户输入优先于 digest，D-S5）。
     // F16（busy-injection 2026-09-21）：入口装载缝——entry.pendingInput（普通回合 busy 期
     // 排队残项，由 `enterSuspensionTurn` 预填）优先；缺省空数组（原行为零变）。
     pendingInput: Array.isArray(entry.pendingInput) ? entry.pendingInput : [],
@@ -278,30 +281,32 @@ export async function suspensionSession(panel, entry) {
     const { upstreamWaiting, upstreamAskLabelVars } = await import("@thincoder/core/agent-tools/parent-channel.mjs")
     while (!susp.aborted && !susp.abort.signal.aborted) {
       await sweepSettledToPending(history)
-      // 1. 用户输入优先（D-S5）：pendingInput 单槽——INPUT-LOCK-ASYNC（C'——2026-09-09）+
-      //    busy-extend 批 2026-09-22：挂起空闲与会话内 busy 提交同入本槽（C-B2-6）——至多
-      //    一条待交接——消费清槽即开新回合（消费后同推 `busyQueued` 实况，webview 守卫镜像）。
-      //    R15 攒批已废弃（单消息逐发——无取数计划无合并）。
+      // 1. 用户输入优先（D-S5）：pendingInput 队列（容量 8——INPUT-LOCK-ASYNC（C'——2026-09-09）+
+      //    busy-extend 批 2026-09-22：挂起空闲与会话内 busy 提交同入本队列（C-B2-6）——queue-visible
+      //    批 2026-09-24：按合并计划取批（R15 恢复）——本批合并消息开新回合（消费后推快照，
+      //    webview 守卫镜像复位 + 待发送标记消费成形）。
       if (susp.pendingInput.length > 0) {
-        const q = susp.pendingInput.shift()
-        // C-B2-6 细则①（消费即清——driver 步骤 1 支）：推槽内实况（webview 二次提交守卫镜像
-        // 复位；动态 import = 零新增静态边——panel-messages ↔ 本档反向静态边不上岸）。
-        const { pushBusyQueued } = await import("./panel-messages.mjs")
-        pushBusyQueued(panel)
-        // §17.5.5：run 首行会消费当时 pending——快照本轮消化者（用户回合同样注入）。
-        // D2 pending 单容器同快照（role 分发——漏快照会让 advisor 行的 digest-done 回收
-        // 延迟到会话退出冻结——review fix）；会诊条目无 webview 行——不进。
-        const before = pendingRowSnapshot(history)
-        history._suspended = false // 用户回合 = 普通回合语义（① 直注入 + settle 即冻结）
-        try {
-          await entry.runTurn(q)
-        } finally {
-          history._suspended = true
+        const { item, merged } = takeQueuedBatchItem(susp.pendingInput) // 首动作 = 本批（/cmd = 门禁不可达防御面）
+        if (item) {
+          // C-B2-6 细则①（消费即清——driver 步骤 1 支）：推队列实况 + 本批 `merged`（webview 清标 /
+          // 合泡成形；动态 import = 零新增静态边——panel-messages ↔ 本档反向静态边不上岸）。
+          const { pushBusyQueued } = await import("./panel-messages.mjs")
+          pushBusyQueued(panel, merged ?? undefined)
+          // §17.5.5：run 首行会消费当时 pending——快照本轮消化者（用户回合同样注入）。
+          // D2 pending 单容器同快照（role 分发——漏快照会让 advisor 行的 digest-done 回收
+          // 延迟到会话退出冻结——review fix）；会诊条目无 webview 行——不进。
+          const before = pendingRowSnapshot(history)
+          history._suspended = false // 用户回合 = 普通回合语义（① 直注入 + settle 即冻结）
+          try {
+            await entry.runTurn(item)
+          } finally {
+            history._suspended = true
+          }
+          // §17.5.5：该回合消化完 pending → 逐条补发 done（webview 折叠回收——不等池空）
+          reclaimDigestedBlocks(panel, history, before)
+          postSuspension(panel, susp)
+          continue
         }
-        // §17.5.5：该回合消化完 pending → 逐条补发 done（webview 折叠回收——不等池空）
-        reclaimDigestedBlocks(panel, history, before)
-        postSuspension(panel, susp)
-        continue
       }
       // 2. pending 非空 → 合并消化轮（注入由 runAgent 首行统一完成——D-S3 单注入点）。
       // D2 pending 单容器（_pendingAsyncResults +role——四族统一）——非空即触发消化轮
@@ -403,15 +408,18 @@ export async function suspensionSession(panel, entry) {
     // X11：中止事实随载荷（`aborted` = 本 finally 判定——自然退出 false）。
     postSuspensionEnd(panel, { freeze: true, interrupted: aborted })
     panel._refreshStatus?.()
-      // 排队输入兜底（2026-09-02 code review round2 #2-VS Code 偏差修复 + INPUT-LOCK 单槽化
-      // 2026-09-09）：会话退出时 pendingInput 单槽残余不得静默丢弃——输入框已清空 + 用户气
+      // 排队输入兜底（2026-09-02 code review round2 #2-VS Code 偏差修复 + INPUT-LOCK 队列化
+      // 2026-09-09 / queue-visible 批 2026-09-24——按合并计划取批）：会话退出时 pendingInput 残余不得静默丢弃——输入框已清空 + 用户气
       // 泡已上屏（webview send.js 先 addUser 再 postMessage——用户视为已发送）。中止路径以
       // 普通回合执行（零丢失 AC-S2——中止清的是后台池与消化轮，不撤销用户已发送的回合请
       // 求——气泡不得无响应悬挂）。面板已死（dispose）→ 无渲染目标，消息随会话终止。
       if (panel._panel) {
         while (susp.pendingInput.length > 0) {
-          const q = susp.pendingInput.shift()
-          try { await entry.runTurn(q) } catch { /* surfaced by the turn runner */ }
+          const { item, merged } = takeQueuedBatchItem(susp.pendingInput) // 按合并计划取批（多批 = 多回合）
+          if (!item) break // /cmd 首动作（门禁不可达防御面）——不消费（防死循环）
+          const { pushBusyQueued } = await import("./panel-messages.mjs")
+          pushBusyQueued(panel, merged ?? undefined) // 消费即清（待发送标记随实况收敛）
+          try { await entry.runTurn(item) } catch { /* surfaced by the turn runner */ }
         }
       }
   }

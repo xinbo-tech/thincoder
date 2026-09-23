@@ -132,11 +132,11 @@ test("T-V16-4b 边界（webview）：纯挂起等待面（`susp`）send ⇒ 走�
   assert.equal(posts.filter((m) => m.type === "queuedUserMessage").length, 0, "零排队上行（非普通回合 busy 面）")
 })
 
-test("T-V16-5 边界（webview 二次提交守卫 · 槽满镜像——C-B2-6 细则①）：`running && !_suspended` 且 `S._busyQueuedPending` ⇒ 零上行 / 零新气泡 / 文本保留 / toast = `input.slotFull`；host 推 `pending:false` ⇒ 镜像复位 ⇒ 再 send 恢复排队", () => {
-  resetSend("槽满文本")
+test("T-V16-5 边界（webview 满队守卫——C-B2-6 细则①）：`running && !_suspended` 且 `S._busyQueuedCount >= 8` ⇒ 零上行 / 零新气泡 / 文本保留 / toast = `input.slotFull`；host 推 `count:0` ⇒ 镜像复位 ⇒ 再 send 恢复排队", () => {
+  resetSend("满队文本")
   const { S, ctx, send, t } = W
   S._turnState = "running"
-  S._busyQueuedPending = true // 槽满镜像（host `busyQueued { pending:true }` 权威值）
+  S._busyQueuedCount = 8 // 满队镜像（host `busyQueued { count }` 权威值——queue-visible 批容量 8）
   const bubbles = document.querySelectorAll(".message.user").length
   const mark = capturedPosts.length
   send()
@@ -144,45 +144,45 @@ test("T-V16-5 边界（webview 二次提交守卫 · 槽满镜像——C-B2-6 �
   assert.equal(posts.filter((m) => m.type === "queuedUserMessage").length, 0, "零 queuedUserMessage 上行（不出泡）")
   assert.equal(posts.filter((m) => m.type === "userMessage").length, 0, "零 userMessage（不经正常发送面）")
   assert.equal(document.querySelectorAll(".message.user").length, bubbles, "零新气泡")
-  assert.equal(ctx.inputEl.value, "槽满文本", "文本保留不吞（对位 CLI 槽满面 = 文本保留形）")
+  assert.equal(ctx.inputEl.value, "满队文本", "文本保留不吞（对位 CLI 满队面 = 文本保留形）")
   const toastEl = document.getElementById("paste-toast")
   assert.ok(toastEl?.classList.contains("visible"), "toast 即时可见（不静默拒）")
-  assert.equal(toastEl.textContent, t("input.slotFull"), "toast 文案 = 新键 `input.slotFull`")
+  assert.equal(toastEl.textContent, t("input.slotFull"), "toast 文案 = 新键 `input.slotFull`（值改条数阈 8）")
   clearTimeout(W.toast.showToast._t)
 
   // host 推送权威收敛（真 chat-messages.js `case \"busyQueued\"`——消费即清）：镜像复位 ⇒ 再 send 恢复排队
-  window.dispatchEvent(new window.MessageEvent("message", { data: { type: "busyQueued", pending: false } }))
-  assert.equal(S._busyQueuedPending, false, "镜像随 host 推送复位")
-  const mark2 = capturedPosts.length
+  window.dispatchEvent(new window.MessageEvent("message", { data: { type: "busyQueued", pending: false, count: 0, items: [] } }))
+  assert.equal(S._busyQueuedCount, 0, "镜像随 host 推送复位")
+  const mark2 = capturedPosts.length, bubbles2 = document.querySelectorAll(".message.user").length
   send()
   const posts2 = capturedPosts.slice(mark2)
-  assert.equal(posts2.filter((m) => m.type === "queuedUserMessage").length, 1, "槽空 ⇒ 再 send 恢复排队上行")
-  assert.equal(S._busyQueuedPending, true, "受理即本地先行置位（防同 tick 二连 Enter 竞态）")
-  assert.equal(document.querySelectorAll(".message.user").length, bubbles + 1, "本地气泡上屏（受理面）")
+  assert.equal(posts2.filter((m) => m.type === "queuedUserMessage").length, 1, "队未满 ⇒ 再 send 恢复排队上行")
+  assert.equal(S._busyQueuedCount, 1, "受理即本地先行自增（防同 tick 二连 Enter 竞态）")
+  assert.equal(document.querySelectorAll(".message.user").length, bubbles2 + 1, "本地气泡上屏（受理面）")
   clearTimeout(W.toast.showToast._t)
 })
 
-// ─── T-V16-8 边界（webview · 二次提交跨载体守卫）：host 推 pending:true（会话槽占用）───
+// ─── T-V16-8 边界（webview · 满队跨载体守卫）：host 推 count:8（会话载体占用）───
 
-test("T-V16-8 边界（webview 跨载体）：host 推 `pending:true`（会话槽占用——`_busyQueued` 空）⇒ 不出泡 / 不清框 / toast `input.slotFull`；推送 `pending:false` ⇒ 镜像复位恢复受理", () => {
-  resetSend("跨载体槽满")
+test("T-V16-8 边界（webview 跨载体）：host 推满队（`count:8`——会话载体占用、`_busyQueued` 空）⇒ 不出泡 / 不清框 / toast `input.slotFull`；推送 `count:0` ⇒ 镜像复位恢复受理", () => {
+  resetSend("跨载体满队")
   const { S, ctx, send, t } = W
   S._turnState = "running"
-  S._suspended = true // 挂起会话内 busy（同排队面——判据 = `running`）
-  window.dispatchEvent(new window.MessageEvent("message", { data: { type: "busyQueued", pending: true } }))
-  assert.equal(S._busyQueuedPending, true, "host 推两载体合计占用 ⇒ 镜像置位")
+  // 满队镜像（host 推两载体合计——`items` 面标记渲染 = queue-visible-vsc.test.mjs T-V16-12）
+  window.dispatchEvent(new window.MessageEvent("message", { data: { type: "busyQueued", pending: true, count: 8 } }))
+  assert.equal(S._busyQueuedCount, 8, "host 推两载体合计满队 ⇒ 镜像置位")
   const bubbles = document.querySelectorAll(".message.user").length
   const mark = capturedPosts.length
   send()
   const posts = capturedPosts.slice(mark)
-  assert.deepEqual([posts.filter((m) => m.type === "queuedUserMessage").length, posts.filter((m) => m.type === "userMessage").length, document.querySelectorAll(".message.user").length], [0, 0, bubbles], "不出泡 / 零 userMessage / 零新气泡（跨载体守卫生效）")
-  assert.equal(ctx.inputEl.value, "跨载体槽满", "文本保留不吞（不清框）")
+  assert.deepEqual([posts.filter((m) => m.type === "queuedUserMessage").length, posts.filter((m) => m.type === "userMessage").length, document.querySelectorAll(".message.user").length], [0, 0, bubbles], "不出泡 / 零 userMessage / 零新气泡（跨载体满队守卫生效）")
+  assert.equal(ctx.inputEl.value, "跨载体满队", "文本保留不吞（不清框）")
   const toastEl = document.getElementById("paste-toast")
   assert.ok(toastEl?.classList.contains("visible") && toastEl.textContent === t("input.slotFull"), "toast 即时可见且文案 = `input.slotFull`（守卫判据源扩两载体生效）")
   clearTimeout(W.toast.showToast._t)
   // 消费即清（host 推实况）⇒ 镜像复位 ⇒ 恢复受理
-  window.dispatchEvent(new window.MessageEvent("message", { data: { type: "busyQueued", pending: false } }))
-  assert.equal(S._busyQueuedPending, false, "镜像随 host 推送复位")
+  window.dispatchEvent(new window.MessageEvent("message", { data: { type: "busyQueued", pending: false, count: 0, items: [] } }))
+  assert.equal(S._busyQueuedCount, 0, "镜像随 host 推送复位")
   send()
   assert.equal(ctx.inputEl.value, "", "恢复受理（清框）")
   clearTimeout(W.toast.showToast._t)
@@ -223,30 +223,33 @@ async function withWarnings(fn) {
   return warned
 }
 
-test("T-V16-2 host 入槽：普通回合 busy ⇒ `_busyQueued` 单槽 + 不续发（零 _chat）零警告；槽满 ⇒ 拒收 + 提示（不覆盖）；挂起会内 busy ⇒ 同面受理（经 `_chat` susp 分支入会话单槽）", async () => {
+test("T-V16-2 host 入队：普通回合 busy ⇒ `_busyQueued` 连续入队 + 不续发（零 _chat）零警告；满队（第 9 条）⇒ 拒收 + 提示（不覆盖）；挂起会内 busy ⇒ 同面受理（经 `_chat` susp 分支入会话队列）", async () => {
   const p = stubPanel({ _turnState: "running" })
   await withWarnings(async (warned) => {
-    // ① 空槽：入槽（webview 上行同入口——queuedUserMessage case 分发）
+    // ① 空队：入队（webview 上行同入口——queuedUserMessage case 分发）
     await handlePanelMessage(p, { type: "queuedUserMessage", text: "q1" })
     await settle()
-    assert.deepEqual(p._busyQueued.map((q) => q.text), ["q1"], "普通回合 busy ⇒ 入单槽")
+    assert.deepEqual(p._busyQueued.map((q) => q.text), ["q1"], "普通回合 busy ⇒ 入队")
     assert.deepEqual(p._chatCalls, [], "不续发（零并发回合——回合仍在跑）")
-    assert.equal(warned.length, 0, "入槽零警告（受理即反馈）")
+    assert.equal(warned.length, 0, "入队零警告（受理即反馈）")
 
-    // ② 槽满：拒收 + 提示——槽内既有不被覆盖
+    // ② 容量内再提交 ⇒ 连续入队（queue-visible 批：阈 1 → 8）
     await routeUserTurn(p, { text: "q2" })
     await settle()
-    assert.deepEqual(p._busyQueued.map((q) => q.text), ["q1"], "槽满不覆盖")
-    assert.equal(warned.length, 1, "槽满拒收恰一次提示（不静默丢）")
-    assert.equal(p._chatCalls.length, 0, "拒收零回合")
+    assert.deepEqual([p._busyQueued.map((q) => q.text), warned.length], [["q1", "q2"], 0], "容量内再提交 ⇒ 连续入队（多槽）零警告")
 
-    // ③ 挂起会话内 busy（_susp 在场）：busy-extend 批改述——同面受理（走既有 `_chat` susp 分支入会话单槽）
+    // ③ 满队（第 9 条）：拒收 + 提示——队内既有不被覆盖
+    for (let i = 3; i <= 8; i++) await routeUserTurn(p, { text: `q${i}` })
+    await routeUserTurn(p, { text: "ninth" })
+    await settle()
+    assert.deepEqual([p._busyQueued.length, warned.length, p._chatCalls.length], [8, 1, 0], "满队拒收：不覆盖 + 恰一次提示 + 零回合")
+
+    // ④ 挂起会话内 busy（_susp 在场）：busy-extend 批改述——同面受理（走既有 `_chat` susp 分支入会话队列）
     const sp = stubPanel({ _turnState: "running", _susp: { active: true, pendingInput: [] } })
     await routeUserTurn(sp, { text: "during-digest" })
     await settle()
-    assert.equal(sp._busyQueued.length, 0, "会话在飞 ⇒ 不入无会话槽（载体两态）")
-    assert.equal(warned.length, 1, "受理零新警告（原「拒收 + 提示」撤销）")
-    assert.deepEqual(sp._chatCalls, [["during-digest", undefined, undefined, undefined, undefined, true, null]], "经既有 `_chat` susp 分支受理（来源标记参 + visionReader 缝）")
+    assert.equal(sp._busyQueued.length, 0, "会话在飞 ⇒ 不入无会话队（载体两态）")
+    assert.deepEqual([warned.length, sp._chatCalls.length], [1, 1], "受理零新警告（原「拒收 + 提示」撤销）+ 经 `_chat` 受理")
   })
 })
 
@@ -261,26 +264,26 @@ function sessionPanel() {
   return p
 }
 
-test("T-V16-7 边界（host · 载体两态会话侧）：`routeUserTurn` 于 `running ∧ _susp` ⇒ 槽空：入 `susp.pendingInput`（来源标记）+ 推 `busyQueued{pending:true}` + 唤醒 + 零警告；槽满：拒收 + 警告 + 不覆盖 + 推实况", async () => {
-  // ① 槽空：入会话单槽（无会话槽零动）+ 镜像推送 + 零即时回合
+test("T-V16-7 边界（host · 载体两态会话侧）：`routeUserTurn` 于 `running ∧ _susp` ⇒ 队未满：入 `susp.pendingInput`（来源标记）+ 推 `busyQueued{pending:true}` + 唤醒 + 零警告；满队：拒收 + 警告 + 不覆盖 + 推实况", async () => {
+  // ① 队空：入会话队列（无会话队零动）+ 镜像推送 + 零即时回合
   const p1 = sessionPanel()
   await withWarnings(async (warned) => {
     await routeUserTurn(p1, { text: "during-session" })
     await settle()
-    assert.deepEqual([p1._busyQueued, p1._susp.pendingInput.map((q) => q.text)], [[], ["during-session"]], "入会话单槽（无会话槽零动——载体两态）")
-    assert.equal(p1._susp.pendingInput[0].fromBusyQueue, true, "入槽项携来源标记（细则⑥）")
-    assert.deepEqual(p1.posted.map((m) => `${m.type}:${m.pending}`), ["busyQueued:false", "busyQueued:true"], "入口复位推（#221 前移——槽空 false）+ 受理推槽内实况 true")
+    assert.deepEqual([p1._busyQueued, p1._susp.pendingInput.map((q) => q.text)], [[], ["during-session"]], "入会话队列（无会话队零动——载体两态）")
+    assert.equal(p1._susp.pendingInput[0].fromBusyQueue, true, "入队项携来源标记（细则⑥）")
+    assert.deepEqual(p1.posted.map((m) => `${m.type}:${m.pending}`), ["busyQueued:false", "busyQueued:true"], "入口复位推（#221 前移——队空 false）+ 受理推队内实况 true")
     assert.deepEqual([warned.length, p1.wakes.n, p1._turnState], [0, 1, "running"], "受理零警告 + 唤醒一次 + 零即时回合（susp 分支 return）")
   })
 
-  // ② 槽满（会话槽已占一条——`_busyQueued` 空）：拒收 + 警告 + 不覆盖 + 推实况 true
+  // ② 满队（会话载体 8 条——`_busyQueued` 空）：拒收 + 警告 + 不覆盖 + 推实况 true
   const p2 = sessionPanel()
-  p2._susp.pendingInput.push({ text: "first" })
+  for (let i = 0; i < 8; i++) p2._susp.pendingInput.push({ text: `q${i}` })
   await withWarnings(async (warned) => {
-    await routeUserTurn(p2, { text: "second" })
+    await routeUserTurn(p2, { text: "ninth" })
     await settle()
-    assert.deepEqual([p2._susp.pendingInput.map((q) => q.text), warned.length, p2.wakes.n], [["first"], 1, 0], "槽满拒收：不覆盖 + 恰一次警告 + 零唤醒")
-    assert.deepEqual(p2.posted.map((m) => `${m.type}:${m.pending}`), ["busyQueued:true", "busyQueued:true"], "入口推（槽已占 true）+ 拒收推实况 true（跨载体守卫判据源——T-V16-8 host 侧）")
+    assert.deepEqual([p2._susp.pendingInput.length, warned.length, p2.wakes.n, p2.posted.map((m) => `${m.type}:${m.pending}`).join("|")],
+      [8, 1, 0, "busyQueued:true|busyQueued:true"], "满队拒收：不覆盖 + 恰一次警告 + 零唤醒 + 实况两推（跨载体守卫判据源——T-V16-8 host 侧）")
   })
 })
 

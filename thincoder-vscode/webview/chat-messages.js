@@ -28,6 +28,8 @@ import { showPermissionRequest, showBatchPermissionRequest } from "./permission.
 import { addLedgerNotice } from "./ledger-line.js"
 import { applyHistoryPage } from "./history.js"
 import { clearStatusText, handleStatusText, showCompressStatus, showDigestStatus } from "./chat-status.js"
+// C-B2-6 细则⑦（queue-visible 批 2026-09-24）：排队「待发送」标记面（逐条标记 / 消费即清 / 多批合泡）
+import { applyBusyQueued } from "./queued-mark.js"
 
 /** host → webview 分发循环（分发单表 = 本函数体——协议机检提取对象，D-C2 不拆族）。
  *  @param {{ renderMcpList: Function, updateMcpTools: Function, updateMcpTestResult: Function,
@@ -95,9 +97,9 @@ export function initMessageLoop(deps) {
       // 无工作区守卫（2026-09-21 批 · `PROJECT-SWITCHER.md` §4.1）：host 守卫态镜像 ⇒
       // 占位符第三态（拒发出口守卫单源 = send.js）
       case "workspaceGuard":   S._workspaceRequired = m.active === true; applyBusyLock(); break
-      // C-B2-6 细则①（busy-injection 批 fix 轮 2026-09-22）：host 单槽未消费态镜像（webview
-      // 二次提交守卫判据源 = `send.js` 出口守卫；提交受理时本地先行置位、本推送权威收敛）
-      case "busyQueued":       S._busyQueuedPending = m.pending === true; break
+      // C-B2-6 细则①⑦（busy-injection fix 轮 2026-09-22 · queue-visible 批 2026-09-24）：host 队列快照
+      // （`busyQueued { pending, count, items, text, merged }`）⇒ 镜像（守卫判据源）+「待发送」气泡面
+      case "busyQueued":       applyBusyQueued(ctx, S, m); break
       case "complete":         clearStatusText(); finish(); break
       case "aborted":          clearStatusText(); finish(true); break
       case "error":

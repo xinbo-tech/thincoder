@@ -60,7 +60,7 @@ reasoning, provider, images? } → extension _chat()
 | `suspension` | ext → wv | 挂起态行 / 冻结通知（`settled → done` 补发 / `active:false + freeze`）——计数载荷与 `turnState` 双通道同源；**增字段** `interrupted`（会话中止事实——X11） |
 | `turnState` | ext → wv | `{ state, counts? }`——忙态单一广播（§4.4 权威锚） |
 | `workspaceGuard` | ext → wv | `{ active }`——无工作区守卫态（拒启 + 提示；判据 / 守卫面 / 提示面 = `docs/vsc/design/PROJECT-SWITCHER.md` §4.1）。发射 = `src/extension/workspace-guard.mjs` `pushWorkspaceGuard`（推送点 = `panel-session.mjs` 的 `openSessionContent` 两分支 / `chat-panel.mjs` 工作区变化处理）；消费 = `webview/chat.js` `case`（§3.2 行 15）。机检②/③ 列坐标 = §12 行 |
-| `busyQueued` | ext → wv | `{ pending, count?, items?, text?, merged? }`——busy 排队**队列快照**（`count` = 剩余条数；`items` = 队列剩余项原文（按队列序）；`text` = 刚受理项原文（受理推送携）；`merged` = 本批消费的合并文本（仅消费推送携））。webview 消费 = 二次提交守卫（`count >= 8`）+ 待发送气泡（逐条标记 / 单条批清标保留 / 多条批合并成形——判据 / 清除 / 标记 = `WEBVIEW-INPUT.md` §1 C-B2-6 ①⑦）。发射 = `src/extension/panel-messages.mjs` `pushBusyQueued`（受理 / **五个消费点**（含步边界 pickup） / 忙分支判决 / `webviewReady` 握手重推）；消费 = `webview/chat-messages.js` `case`（§3.2 行 17）。机检②/③ 列坐标 = §12 行 |
+| `busyQueued` | ext → wv | `{ pending, count?, items?, text?, merged? }`——busy 排队**队列快照**（`count` = 剩余条数；`items` = 队列剩余项原文（按队列序）；`text` = 队列末项原文（队列非空即携——受理 / 消费 / 忙判 / 握手各推送点同式；webview 不读）；`merged` = 本批消费的合并文本（仅消费推送携））。webview 消费 = 二次提交守卫（`count >= 8`）+ 待发送气泡（逐条标记 / 单条批清标保留 / 多条批合并成形——判据 / 清除 / 标记 = `WEBVIEW-INPUT.md` §1 C-B2-6 ①⑦）。发射 = `src/extension/panel-messages.mjs` `pushBusyQueued`（受理 / **五个消费点**（含步边界 pickup） / 忙分支判决 / `webviewReady` 握手重推）；消费 = `webview/chat-messages.js` `case`（§3.2 行 17）。机检②/③ 列坐标 = §12 行 |
 | `statusText` | ext → wv | `{ kind:"rateWait"/"rateLimited"/"overloaded"/"quota"/"index", seconds?/message?/phase?/done?/total? }`——限流 / 索引状态段 |
 | `turnFrame` | ext → wv | `{ turn, maxTurns }`——顶层逐轮进展段 |
 | `questionCancelled` | ext → wv | `{ promptId }`——abort 释放未答 question 卡（§4.2） |
@@ -96,7 +96,7 @@ reasoning, provider, images? } → extension _chat()
 | 14 | `digest`（增字段） | `from` / `msg`（ask 档携参——提问者 + 问题摘要；`msg` = 单行 + 截断 ≤120 字符，核单点 `upstreamAskLabelVars`） | `suspension.mjs` 起跑点（ask 档条件携带） | `chat.js` `showDigestStatus`（`digest.turnLabelAsk` 携参取键——§5） |
 | 15 | `workspaceGuard`（**新消息**——host → webview） | `{ active:boolean }`——无工作区守卫态（面板拒发 + 占位符第三态；判据 / 守卫面 = `PROJECT-SWITCHER.md` §4.1） | `src/extension/workspace-guard.mjs` `pushWorkspaceGuard`（推送点 = `panel-session.mjs` `openSessionContent` 两分支 / `chat-panel.mjs` 工作区变化处理；机检发点坐标 = `src/extension/workspace-guard.mjs:38`） | `webview/chat.js:197` `case "workspaceGuard"` |
 | 16 | `queuedUserMessage`（**新消息**——webview → host 输入上行） | `{ text, model, reasoning, provider, images }`——busy 期排队注入（busy 即排队面 = `running`；host 队列载体两态（容量 8）= 无会话 `panel._busyQueued` ∥ 会话在飞 `susp.pendingInput`；细则 = `WEBVIEW-INPUT.md` §1 C-B2-6） | `webview/send.js:44`（出口分流——本地气泡先行） | `panel-messages.mjs:174` `case` → `routeUserTurn` 入槽 |
-| 17 | `busyQueued`（状态镜像 · **增字段 `count` / `items` / `text` / `merged`**） | `{ pending:boolean, count?:number, items?:string[], text?:string, merged?:string }`——队列快照（`count` / `items` = 剩余实况（守卫 = `count >= 8`；Reload 重建源 = `items`）；`text` = 刚受理项（标记源）；`merged` = 本批合并文本（仅消费推送——多条批合泡源）；`WEBVIEW-INPUT.md` §1 C-B2-6 ①⑦） | `src/extension/panel-messages.mjs` `pushBusyQueued`（受理 / **五个消费点**（含步边界 pickup） / 忙分支判决 / `webviewReady` 握手重推） | `webview/chat-messages.js` `case "busyQueued"` → `S._busyQueuedCount` / `S._busyQueuedPending` + 待发送气泡（逐条标记 / 清标 / 合并成形） |
+| 17 | `busyQueued`（状态镜像 · **增字段 `count` / `items` / `text` / `merged`**） | `{ pending:boolean, count?:number, items?:string[], text?:string, merged?:string }`——队列快照（`count` / `items` = 剩余实况（守卫 = `count >= 8`；Reload 重建源 = `items`）；`text` = 队列末项原文（队列非空即携——受理 / 消费 / 忙判 / 握手各推送点同式；webview 不读）；`merged` = 本批合并文本（仅消费推送——多条批合泡源）；`WEBVIEW-INPUT.md` §1 C-B2-6 ①⑦） | `src/extension/panel-messages.mjs` `pushBusyQueued`（受理 / **五个消费点**（含步边界 pickup） / 忙分支判决 / `webviewReady` 握手重推） | `webview/chat-messages.js` `case "busyQueued"` → `S._busyQueuedCount` / `S._busyQueuedPending` + 待发送气泡（逐条标记 / 清标 / 合并成形） |
 
 纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）——**新增 / 变更一律入本节登记表**（行 1–17 即全部在案增量；表外增量不入）。发射 / 接收落点：
 `thincoder-vscode/src/extension/panel-callbacks.mjs:169`（statusText）· `:170`（turnFrame）· `thincoder-vscode/src/extension/panel-index.mjs:27` ·
@@ -488,6 +488,10 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 **方向口径**：本表只收 webview → host。**「删」= host 消费位在位而 webview 发射恒无（死 handler）**——处置逐条入批档（`docs/batches/2026-09-18-vsc-settings-wiring.md` §2）并已随实现落地（三删 + 一接线转活——**本表现零 `删` 行**）；**删除落地 ⇒ 源零位 ⇒ 表行同步退场**（不留悬空行——同 §12 口径）。**「补」= 发射在位而 host 缺消费位**（本表现零行）。
 
 ## 变更记录
+
+- 2026-09-24（**queue-visible 批 · 收口前补述（父侧/设计侧）· eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §5 决策透明表 #7 + 待办登记 5）：§3 `busyQueued` 行与 §3.2 **行 17** 的 `text` 描述收正 = 与实现同口径（实读 `src/extension/panel-messages.mjs:108`）：
+  `text` 段「刚受理项（原文）／（标记源）」→ **队列末项原文（队列非空即携——受理 / 消费 / 忙判 / 握手各推送点同式；webview 不读）**；标记判据源实为 `items`。
+  **消息名 / 字段集 / 判别式集 / 计数零变**（`text` 字段面零改——只收正描述句）。
 
 - 2026-09-24（**queue-visible 批 · 设计评审修正轮 1 · eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §3 轮次 1 发现 #3）：§3.2 行 16 + §4.1 两行 + §12 `queuedUserMessage` 行备注四处**单槽载体两态 → 队列载体两态（容量 8）**；§4.1 满队句改「满队（第 9 条）⇒ 提交不出泡 / 不清框 / toast」。**消息名 / 字段集 / 判别式集 / 计数零变**。
 

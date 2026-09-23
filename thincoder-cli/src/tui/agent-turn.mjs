@@ -23,6 +23,8 @@ import { ensureSessionTitle } from "@thincoder/core/generate-title.mjs"
 import { logEvent, errText } from "@thincoder/core/log.mjs"
 import { t } from "@thincoder/core/i18n.mjs"
 import { suspensionSession, poolLive } from "./suspension-drive.mjs"
+import { planQueuedInput } from "./queued-merge.mjs"
+import { pickupQueuedAtStepBoundary } from "./queued-pickup.mjs"
 
 /** Exit-flush bound for the async end-of-run distillation (SEND-STALL-DISTILL §2.5):
  *  wait at most this long for the in-flight distill before the final session save —
@@ -80,6 +82,9 @@ async function runAgentTurnInner(ctx, text, opts) {
   // 可注入覆盖（测试用）；默认走真实实现
   const runAgentImpl = ctx.runAgent ?? runAgent
   const saveSessionImpl = ctx.saveSession ?? saveSession
+  // F16 步边界 pickup（queue-visible 批 fix 轮 2026-09-24——TUI.md §7.5 消费时机①）：用户回合在飞 ⇒
+  // 核循环头投递回调（不中断——下一步生效，参照系 = 子代理 `send`）；系统轮不传（分流——两者轮不参与）
+  const consumeQueuedInput = autoTurn ? null : () => pickupQueuedAtStepBoundary(ctx)
   // autoTurn（消化轮）：无用户输入——不画 "❯ You:"（系统驱动回合，§17 D-S6）
   if (!autoTurn) {
     pushLabel(`❯ You:`, ansi.bold + C.user)
@@ -151,7 +156,7 @@ async function runAgentTurnInner(ctx, text, opts) {
   try {
     for (let resume = false; ; resume = true) {
       try {
-        await runAgentImpl(agent, text, callbacks, { signal: state.controller.signal, resume, autoTurn, upstreamTurn, suspDriven: true })
+        await runAgentImpl(agent, text, callbacks, { signal: state.controller.signal, resume, autoTurn, upstreamTurn, suspDriven: true, consumeQueuedInput })
         flushStream()
         break // Normal completion, exit loop
       } catch (error) {
@@ -327,17 +332,19 @@ async function runAgentTurnInner(ctx, text, opts) {
     render()
   }
 
-  // §17 偏差 #1 兜底（INPUT-LOCK 单槽化——2026-09-09）：释放窗口期 Enter 已入
-  // pendingInput 单槽——链条走到此处若池已空（挂起会话不会启动，下方 while 是最后一个
-  // 消费点）则转正队列照常续发，消息不滞留不并发。池非空时挂起会话先消费 pendingInput
-  // （D-S5 输入优先），无需此处处理。单槽语义下残余至多一条。
+  // §17 偏差 #1 兜底 + queue-visible 批（2026-09-24）收正：末步入队的排队消息（本 run 无后续
+  // 步边界 ⇒ 步边界 pickup 触不到）——按合并计划取批转 state.queue，队列 while 续发新回合；
+  // 池非空时挂起会话先消费 pendingInput（D-S5 输入优先），无需此处处理。超一批者截批先行
+  // （余下留待下批——仍在队列 ⇒ 待发送块可见，零丢失）。
   if (!skipSession && !state._suspAborted && (state.pendingInput?.length ?? 0) > 0 && !poolLive(agent)) {
-    state.queue.push({ text: String(state.pendingInput.shift()) })
+    const action = planQueuedInput(state.pendingInput)[0]
+    state.pendingInput.splice(0, action.count)
+    state.queue.push({ text: action.text })
   }
 
-  // 交接消息自动续发（INPUT-LOCK 单消息——2026-09-09）：submit 不再排队（busy 提交吞）
-  // + R15 攒批删——state.queue 只剩残项单消息（释放窗口兜底/挂起中止残余——零丢失
-  // 承诺）——逐条直发；斜杠命令直接执行（保序）；回合后的续发由递归层同循环续取。
+  // 交接消息自动续发（queue-visible 批 2026-09-24——R15 攒批恢复）：state.queue 条目 = 合并计划
+  // 的动作（残项：释放窗口兜底 / 挂起中止残余——零丢失承诺）——逐条直发；斜杠命令直接执行
+  // （保序）；回合后的续发由递归层同循环续取。
   while (state.queue.length > 0 && !state.processing) {
     const head = state.queue.shift()
     // F16（TUI.md §7.5）：消费回执——queued dim 行（消费事实的可见锚；对位 [continuing…]）

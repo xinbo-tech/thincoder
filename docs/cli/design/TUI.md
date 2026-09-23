@@ -625,6 +625,8 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 - **载体 = 派生**：判据 = 队列 `state.pendingInput` 非空（渲染期现算）——零 `state.lines` 写入、零生命周期簿记（消费 / 中止随判据消失）；不入搜索面、不注册折叠键与点击命中（派生行无 `_lineId` / `_foldToggle`）。
 - **形态（逐字——单条 / 多条两形）**：标签行单条 = `⏳ 待发送 · 不打断当前执行，自动发送`（`C.warn`）；多条 = `⏳ 待发送 · N 条消息（不打断当前执行，合并发送）`（N ≥ 2）。
   **标签行不声明时机**（面无关——用户回合 / 系统轮两面的精确时机 = 状态栏 `enterHint` 逐字：见下「消费时机」段）；正文 = 逐条直排（`C.dim`——`sanitizeDisplay` + `wrapText(text, cols - 1)`，与正文同口径）：多条带 `i. ` 编号首行 + 续行 2 空格缩进（**编号 = 模型将看到的合并形态预览**——§“合并消费”）；单条不加编号。块前空行（同主输出呼吸行约定）。
+- **体行折叠豁免（`_skipDimFold`——收口轮补述）**：原文行 / 尾标记行携 `_skipDimFold`（`thincoder-cli/src/tui/render-conversation.mjs:380` / `:383`）——连 dim 折叠 pass（`FOLD_LINES` = 8）命中任一带标记行 ⇒ 整块不折（`:398`；零新机制——复用既有豁免，先例 = 思考流 / advisor 收缩尾）；N ≥ 3 时 dim 连跑可过 8 ⇒「永不被折走」由显式豁免保证（N ≤ 2 连跑 ≤ 8，本在阈下）。
+- **宽度口径（收口轮补述）**：折行宽 = `cols - 1`（`wrapText` 作用于逐条原文；多条态 `i. ` 编号前缀**不预先扣除**——`thincoder-cli/src/tui/render-conversation.mjs:375`）；编号首行总显示宽可超 `cols - 1` 至多 3 列（终端软折行——登记：如需扣前缀另轮评估）。
 - **上限**：每条原文行至多 `QUEUED_ITEM_MAX_LINES`（3）；超限 ⇒ 该条尾标记行 `… [该条共 N 行——发送后完整显示]`（`C.dim`）。**队容量** = `QUEUED_MAX_ITEMS`（8——**常量单源** = `thincoder-cli/src/tui/queued-merge.mjs`（拟新增）导出，显示面 / 输入门禁同源 import；与合并批上限 `MAX_MERGE_ITEMS`（8）**同值不同名**——两常量同住该档）；块超视口时条数可见性由状态栏段兜底。
 - **缓存键参与**：`convCacheKey`（`thincoder-cli/src/tui/render-conversation.mjs:121-168`）增排队签名（条数 + 各条长度 + 首 8 字——同 `blocksSig` 口径）；漏挂 ⇒ 缓存命中出陈旧帧（块不现 / 不消）。
 - **跟随（F4「新提交消息 → 恢复跟随」）**：入槽即 `state.scroll = 0` + `state._followTail = true`（`thincoder-cli/src/tui/turn-face.mjs:32-33` submit 同款两行；两条入槽路径同款——busy 门禁 / 挂起态 Enter）。
@@ -688,6 +690,10 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 | VSC webview 对位 | webview 渲染 / 消息协议 / 子标 | `docs/vsc/design/WEBVIEW*.md`——**非同机制**（端差异如实登记——登记 ≠ 默认保留；**登记面 = 记录已裁的保留项**，✗ 非未决差项兜底；端差默认 = 消，保留须结构性不对称 + 证据 + 显式裁定（A9）；各端独立实现只述实现形态，✗ 不构成差异保留依据；**本项状态：待裁**（A9 三件未齐——消解路径 = 两端口径统一（webview 渲染 / 消息协议语义对齐）∥ 补显式裁定；到期 = 台账 #185「已登记端差逐项 A9 复核」落定）） |
 
 ## 变更记录
+
+- 2026-09-24（**queue-visible 批 · 收口前补述（父侧/设计侧）· eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §5 决策透明表 #1 / #2）：
+  §7.5 增补两条——**体行折叠豁免**（`_skipDimFold`：原文行 / 尾标记行携标记，连 dim 折叠 pass 命中即整块不折）· **宽度口径**（折行宽 `cols - 1` 作用于逐条原文、`i. ` 前缀不预先扣除；编号首行总宽可超至多 3 列——终端软折行登记）。
+  形态逐字 / 落位 / 载体 / 上限 / 缓存键 / 跟随 / 消费时机 / F13 豁免零变——只追认已交付实现（零新增语义）。
 
 - 2026-09-24（**queue-visible 批 · 设计评审修正轮 1 · eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §3 轮次 1 发现 #2 / #9 / #11）：
   §1 模块地图两行 + §4 busy 门禁条 + §4 挂起空闲行 + §7.1 表 `pendingInput` 行 + §7.5 VSC 对位行**单槽 → 队列（容量 8）**口径收正；§7.5 提交时行「三态分流」→「四态分流」；

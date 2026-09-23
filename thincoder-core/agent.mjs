@@ -96,7 +96,7 @@ export function streamOutputAllowed(depth, role, streamOutput = false) {
 }
 
 /** Run the agent loop: LLM ↔ tool-call cycle until task completion or turn limit. Returns final text content. */
-export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal, maxTurns: overrideTurns, resume = false, autoTurn = false, upstreamTurn = false, suspDriven = false, consumeInjected = null, streamOutput = false, extraTools = null } = {}) {
+export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal, maxTurns: overrideTurns, resume = false, autoTurn = false, upstreamTurn = false, suspDriven = false, consumeInjected = null, consumeQueuedInput = null, streamOutput = false, extraTools = null } = {}) {
   // Previous run's async exploration distillation must settle before this run pushes
   // input (SEND-STALL-DISTILL §2.2 N1) — await first, or its history replace wipes it.
   if (agent._pendingDistill) {
@@ -233,6 +233,10 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     consumeInjected?.(agent)
     // 子代理在飞消息（子 → 父；§6.27）：空队列 no-op；非空 ⇒ 恰一条合并 user 消息注入。
     drainChildUpstream(agent)
+    // ③ 用户 → 主会话投递（步边界 pickup——queue-visible 批 fix 轮 2026-09-24 · F16）：循环头
+    // 回合边界缝（核只给缝、不给策略——取批 / pushReal / 呈现归端侧闭包）；缺省 null，系统轮不传
+    // （`AGENT-LOOP-ASYNC-POOL.md` §6.8「步边界 pickup」· 适用面 = 用户回合）。
+    consumeQueuedInput?.(agent)
 
     const lastRole = agent.history.at(-1)?.role
     if (lastRole === "user" || lastRole === "tool") {

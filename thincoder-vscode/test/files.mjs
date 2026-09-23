@@ -17,6 +17,8 @@ export default [
   "test/panel-cancel-routing.test.mjs", // 面板取消路由 / 事件中继族（2026-09-22 structure-debt #169A 自 chat-panel-messages.test.mjs 迁出——⑫ F-2 取消路由 / ⑬ W15 事件中继 / ⑭ T-AF11 advisor 目标取消）：桩面板（stubPanel 夹具自持——零跨档 import）+ 真核取消路由（executeCancelAction / relaySubagentEventToken）
   "test/webview-turnstate.test.mjs", // SESSION-FLOW-C C2 webview reducer 组（2026-09-09）：_turnState 枚举转换/renderStatusBar 单 writer/Stop susp 常显/_suspCounts 不陈旧——F-C2a~e（happy-dom——helpers/webview-env.mjs）
   "test/busy-injection-vsc.test.mjs", // F16 busy 排队注入（2026-09-21 busy-injection 批 · WEBVIEW-INPUT.md §1 C-B2-6）：webview 出口分流（本地气泡 + queuedUserMessage，不 setLoading 不清面板）/ host 单槽入槽·槽满拒·挂起会内拒 / enterSuspensionTurn 装载两分支——T-V16-1…4 + 3b（happy-dom + vscode-mock）
+  "test/queue-visible-vsc.test.mjs", // queue-visible 批（2026-09-24 · 台账 #249 · WEBVIEW-INPUT.md §1 C-B2-6 细则①⑦）：webview 待发送标记面（逐条标记 / 清标 / 多批合泡 / Reload 重建 / 引用失效守卫）+ 满队 count 守卫 + 快照字段注册面 + CLI 同族对拍（常量 / 文案 / 计划输出同名同值）——T-V16-11…14 + 15b（happy-dom + vscode-mock）
+  "test/queue-visible-shell.test.mjs", // 同批端壳面（拆分理由：happy-dom 全局 fetch 劫持 vs mock-llm 本地链路不可同进程——用例号与断言面零变）：真 `runAgent` 步边界 pickup（工具期入队 ⇒ 下一步边界入 history + 消费快照）+ 系统轮负向锁 + 分流机检——T-V16-15/16/16b（mock-llm）
   "test/edit-tool-improvement.test.mjs",
   "test/memory-tool.test.mjs",
   "test/eng-settlement.test.mjs",

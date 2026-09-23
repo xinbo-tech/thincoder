@@ -23,6 +23,8 @@ import { handleSaveProviderKey, handleDeleteProviderKey, handleSaveMcpServer, ha
 // C-B2-6 细则⑥（busy-injection 批 fix 轮 2026-09-22）：F-1 降级判决函数已迁 `image-handler.mjs`
 // ——本档只留触发（`downgradeNonVisionImages` + `visionReader` per-call 缝）。
 import { savePastedImages, downgradeNonVisionImages } from "./image-handler.mjs"
+// queue-visible 批（2026-09-24 · 台账 #249）：队容量单源 = `queued-merge.mjs`（与 CLI 同名同值）
+import { QUEUED_MAX_ITEMS } from "./queued-merge.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"
 import { backgroundStatus, reassertLiveChildren } from "./suspension.mjs"
 // 无工作区守卫（2026-09-21 批 · `PROJECT-SWITCHER.md` §4.1）：② 回合入口守卫（leaf——无环）
@@ -92,58 +94,76 @@ export function clearProjectOverride() {
 }
 
 /**
- * C-B2-6 细则①（busy-injection 批 fix 轮 2026-09-22 · busy-extend 2026-09-22）：busy 排队单槽未
- * 消费态镜像推送——webview 二次提交守卫判据源（`busyQueued { pending }`；判据 = host 单槽实况——
- * **两载体合计占用**：无会话 `_busyQueued` ∪ 会话在飞 `susp.pendingInput`，权威面）；推送点 =
- * 入槽 / 忙分支判决 / 消费三支（`panel-turn-stages.mjs` 装载①/② · `suspension.mjs` driver 消费点）
- * 与 `webviewReady` 握手重推（Reload 冷启重同步）；值恒 = 单槽实况（非事件——重推幂等）。
+ * C-B2-6 细则①⑦（busy-injection 批 fix 轮 2026-09-22 · busy-extend 2026-09-22 · queue-visible 批
+ * 2026-09-24 多槽）：busy 队列快照推送——webview 二次提交守卫判据源 + 「待发送」气泡面（逐条标记 /
+ * 清标 / 多批合泡）；判据 = host 队列实况——**两载体合计**（无会话 `_busyQueued` ∪ 会话在飞
+ * `susp.pendingInput`，权威面）；推送点 = 受理 / **五个消费点**（步边界 pickup · driver 步骤 1 ·
+ * 装载① 预填 splice · 装载② 归位 shift · 会话退出残余直发循环）/ 忙分支判决（count 实况）与
+ * `webviewReady` 握手重推（Reload 冷启重建——幂等快照；字段面 = `WEBVIEW-PROTOCOL.md` §3.2 行 17）。
+ * @param {object} panel 面板（两载体）
+ * @param {string} [merged] 本批消费的合并文本（仅消费推送携——webview 清标 / 合泡成形源）
  */
-export function pushBusyQueued(panel) {
-  const occupied = (panel._busyQueued?.length ?? 0) > 0 || (panel._susp?.pendingInput?.length ?? 0) > 0
-  panel._panel?.webview.postMessage({ type: "busyQueued", pending: occupied })
+export function pushBusyQueued(panel, merged) {
+  const items = busyQueueItems(panel)
+  const text = items.length > 0 ? String(items[items.length - 1]?.text ?? "") : undefined
+  panel._panel?.webview.postMessage({
+    type: "busyQueued",
+    pending: items.length > 0,
+    count: items.length,
+    items: items.map((q) => String(q?.text ?? "")),
+    ...(text !== undefined ? { text } : {}),
+    ...(merged !== undefined ? { merged } : {}),
+  })
+}
+
+/** 两载体条目合计（容量判据 / 快照单源——无会话 `_busyQueued` ∪ 会话在飞 `susp.pendingInput`）。 */
+function busyQueueItems(panel) {
+  return [...(panel._busyQueued ?? []), ...(panel._susp?.pendingInput ?? [])]
 }
 
 /**
  * C1（SESSION-FLOW-C F-C1e——retry 并入 userMessage 同入口——修 H-F 守卫双份）：userMessage 与
- * retry 共用同一路由——busy 单槽受理（C-B2-6 两载体）与挂起分流（_chat 内 susp 守卫）全走一套
+ * retry 共用同一路由——busy 队列受理（C-B2-6 两载体）与挂起分流（_chat 内 susp 守卫）全走一套
  * 判断——retry 不再绕过路由直呼 _chat（并发新回合竞态——AC-S2 同款）。savePastedImages 同步落盘；
  * F-1 降级分支在 await 前先置 running（C' 忙锁不变量）；A1（F-A1——修 R6 残留）：sendMessage
- * 命令直发（chat-panel.mjs）并入同入口——running ⇒ 单槽受理（回显由宿主先决）。
+ * 命令直发（chat-panel.mjs）并入同入口——running ⇒ 队列受理（回显由宿主先决）。
  */
 export async function routeUserTurn(panel, { text, modelOverride, reasoning, providerName, images, visionReader = null }) {
-  // #221（hygiene-sweep 批 · C-B2-6 细则①「归位受理路径同推槽内实况」**前移**至此）：
+  // #221（hygiene-sweep 批 · C-B2-6 细则①「归位受理路径同推队列实况」**前移**至此）：
   // 入口即推一次（含无工作区早退口与下方降级 await **之前**）——`pushBusyQueued` 恒读 host
   // 实况、幂等 ⇒ 前移零语义风险；原后置位（降级 await 之后）在挂起期镜像停在旧态（窗口内提交
-  // 被守卫误拒——窄竞态）。补因仍成立：webview 镜像在提交受理时本地先行置位，推文须含归位
-  // 路径（正常槽空 ⇒ `pending:false`；有残项 ⇒ `true`）。同点推的前移使原 :170 推冗余 ⇒ 删。
+  // 被守卫误拒——窄竞态）。补因仍成立：webview 镜像在提交受理时本地先行自增，推文须含归位
+  // 路径（正常队空 ⇒ `count:0`；有残项 ⇒ 实况）。同点推的前移使原 :170 推冗余 ⇒ 删。
   pushBusyQueued(panel)
   // ② 无工作区守卫（**先于** busy 与 `savePastedImages`——图片不落 `<cwd>/.thincoder/tmp/`）：
   // webview 发消息 / retry 共用本入口 ⇒ 无文件夹窗口里一律拒（提示明示——不静默丢）。
   if (blockOnNoWorkspace(panel)) return
-  // INPUT-LOCK-ASYNC（C'——2026-09-09——F-1/F-3）→ C-B2-6 busy 排队注入（busy-injection 2026-09-21 ·
-  // busy-extend 2026-09-22 扩面）：busy（`_turnState === "running"`——回合含 digest/标题窗口——
-  // 单一判据）一律排队——单槽载体两态：① 会话在飞（`panel._susp`）⇒ 走既有 `_chat` susp 分支入
-  // `susp.pendingInput`（槽满守卫 / 唤醒同款——入槽项携来源标记，细则⑥）；② 无会话 ⇒ 入
-  // `_busyQueued` 单槽（槽满 = 拒收 + 提示，槽内既有不被覆盖）——回合尾由 `enterSuspensionTurn`
-  // 装载两分支送达。susp 等待态（纯后台池跑——主空闲）→ _chat 上游分流（pendingInput 单槽——
-  // D-S5 唤醒）；idle 直发。
+  // INPUT-LOCK-ASYNC（C'——2026-09-09——F-1/F-3）→ C-B2-6 busy 排队（busy-injection 2026-09-21 ·
+  // busy-extend 2026-09-22 扩面 · queue-visible 批 2026-09-24 容量 8）：busy（`_turnState === "running"`
+  // ——回合含 digest/标题窗口——单一判据）一律排队——队列载体两态（容量 8）：① 会话在飞（`panel._susp`）
+  // ⇒ 走既有 `_chat` susp 分支入 `susp.pendingInput`（满队守卫 / 唤醒同款——入队项携来源标记，细则⑥）；
+  // ② 无会话 ⇒ 入 `_busyQueued`（满队 = 拒收 + 提示，队内既有不被覆盖）——回合尾由
+  // `enterSuspensionTurn` 装载两分支送达。susp 等待态（纯后台池跑——主空闲）→ _chat 上游分流
+  // （pendingInput 队列——D-S5 唤醒）；idle 直发。
   if (panel._turnState === "running") {
-    if (panel._susp) { // 会话在飞：同槽受理（拒面收敛四 = 空/槽满/组合期与中断模态/无工作区）
-      const inSess = Array.isArray(images) && images.length > 0 ? savePastedImages(images, _cwd()) : undefined
-      await panel._chat(text, modelOverride, reasoning, providerName, inSess, true, visionReader)
-      pushBusyQueued(panel) // 判决后推实际占用（受理 / 槽满拒收同式——两载体实况）
-      return
-    }
-    if ((panel._busyQueued?.length ?? 0) > 0) {
-      pushBusyQueued(panel) // C-B2-6 细则①：判决后推实际占用（拒收 ⇒ 槽内实况——webview 镜像权威收敛）
+    // C-B2-6 细则①（queue-visible 批 2026-09-24——容量 8）：满队（第 9 条——两载体合计）⇒ 拒收 +
+    // 提示（外部入口兜底；webview 侧守卫 = `send.js` 不出泡 / 不清框 / toast）；队内既有消息不被覆盖。
+    if (busyQueueItems(panel).length >= QUEUED_MAX_ITEMS) {
+      pushBusyQueued(panel)
       vscode.window.showWarningMessage("ThinCoder: a task is running — wait for it to finish before sending.")
       return
     }
+    if (panel._susp) { // 会话在飞：同队列受理（拒面收敛四 = 空/满队/组合期与中断模态/无工作区）
+      const inSess = Array.isArray(images) && images.length > 0 ? savePastedImages(images, _cwd()) : undefined
+      await panel._chat(text, modelOverride, reasoning, providerName, inSess, true, visionReader)
+      pushBusyQueued(panel) // 判决后推实际占用（受理 / 满队拒收同式——两载体实况）
+      return
+    }
     const busySaved = Array.isArray(images) && images.length > 0 ? savePastedImages(images, _cwd()) : undefined
-    // 入槽项携来源标记（`fromBusyQueue`——装载① `runTurn` 闭包据此只对排队支降级，纯挂起既有
+    // 入队项携来源标记（`fromBusyQueue`——装载① `runTurn` 闭包据此只对排队支降级，纯挂起既有
     // 路径零改）与 `visionReader` per-call 缝（C-B2-6 细则⑥：送达侧判决与 idle 面同判定同注入形态）。
     ;(panel._busyQueued ??= []).push({ text, modelOverride, reasoning, providerName, images: busySaved, fromBusyQueue: true, visionReader })
-    pushBusyQueued(panel) // 入槽 ⇒ pending:true（受理即反馈——webview 二次提交守卫判据源）
+    pushBusyQueued(panel) // 入队 ⇒ count:true（受理即反馈——webview 守卫判据源 + 待发送标记）
     return
   }
   // Plan B (GitHub thincoder#3): the webview sends pasted images as base64

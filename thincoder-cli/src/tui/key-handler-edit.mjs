@@ -1,8 +1,9 @@
 import { C } from "./ansi.mjs"
 import { readClipboardText, insertPastedText } from "./clipboard.mjs"
+import { QUEUED_MAX_ITEMS } from "./queued-merge.mjs"
 
 /** 编辑族（2026-09-22 structure-debt §2.1 分族 5 · #226）：Tab 补全 / Ctrl+U 清框 /
- *  退格·删除 / Enter（多行换行 · 挂起单槽 · submit）/ 剪贴板文本与图片粘贴 / 可打印字符；
+ *  退格·删除 / Enter（多行换行 · 挂起队列 · submit）/ 剪贴板文本与图片粘贴 / 可打印字符；
  *  各块自 key-handler.mjs createKeyHandler 逐字搬移（仅去缩进）。
  *  路由 = 分派器 createKeyHandler 末族（其后无可达分支 —— 块内 return 即终结本次按键）。 */
 export function handleEditKeys(str, key, ctx) {
@@ -50,15 +51,15 @@ export function handleEditKeys(str, key, ctx) {
       render()
     } else {
       const text = state.input.join("").trim()
-      // §17 D-S5/F3/F7 + 偏差 #1 + INPUT-LOCK 单槽化（F-6——2026-09-09）：挂起态
-      // （suspended 或释放窗口 _suspPending）Enter = 新回合输入（非打断）——填
-      // pendingInput 单槽（至多一条待交接）由挂起会话调度；挂起会话内 busy（含 digest）
-      // 提交经 busy 门禁入同槽（F16 §4.1——两分支同槽、同款清理与唤醒）；输入框零干扰（F3）。
-      // 槽满（竞态防御——不覆盖不丢失）→ 吞 + 提示，文本保留在输入框。
+      // §17 D-S5/F3/F7 + 偏差 #1 + INPUT-LOCK 队列受理（F-6——2026-09-09 · queue-visible 多槽
+      // 容量 8——2026-09-24）：挂起态（suspended 或释放窗口 _suspPending）Enter = 新回合输入
+      // （非打断）——填 pendingInput 队列（容量 QUEUED_MAX_ITEMS）由挂起会话调度；挂起会话内
+      // busy（含 digest）提交经 busy 门禁入同队列（F16 §4.1——两分支同队列、同款清理与唤醒）；
+      // 输入框零干扰（F3）。满队（第 9 条——竞态防御——不覆盖不丢失）→ 吞 + 提示，文本保留在输入框。
       if ((state.suspended || state._suspPending) && text && !text.startsWith("/")) {
         state.pendingInput ??= []
-        if (state.pendingInput.length > 0) {
-          pushLine(`[主会话处理中 —— 已有一条消息待发送，请等其处理完成后再发送]`, C.warn)
+        if (state.pendingInput.length >= QUEUED_MAX_ITEMS) {
+          pushLine(`[主会话处理中 —— 已排队 ${QUEUED_MAX_ITEMS} 条消息，请等其处理完成后再发送]`, C.warn)
           render()
           return
         }
@@ -68,6 +69,9 @@ export function handleEditKeys(str, key, ctx) {
         state.historyIndex = -1
         state._draft = null
         state.pendingInput.push(text)
+        // F4「新提交消息 → 恢复跟随」（§7.5 跟随——排队提交同列；与 turn-face.mjs submit 同款两行）
+        state.scroll = 0
+        state._followTail = true
         state._suspWake?.()
         render()
         return

@@ -15,8 +15,8 @@ export function createTurnFace(ctx) {
   async function submit() {
     const text = state.input.join("").trim()
     if (!text) return
-    // INPUT-LOCK 防御（C'——2026-09-09 + F16 busy 单槽——2026-09-21）：门禁在 key-handler
-    // （busy Enter 非模态 = 单槽注入 / 模态·斜杠·空·槽满 = 吞 + 提示，文本保留——TUI-INPUT-BOX.md
+    // INPUT-LOCK 防御（C'——2026-09-09 + F16 busy 队列——2026-09-21 · queue-visible 2026-09-24）：门禁在 key-handler
+    // （busy Enter 非模态 = 队列受理（容量 8）/ 模态·斜杠·空·满队 = 吞 + 提示，文本保留——TUI-INPUT-BOX.md
     // §4.1）；submit 只在非 busy 期达此；防御直呼/上游改动：busy 期拒绝（不清输入框不吞内容）。
     if (state.processing) {
       pushLine(`[主会话处理中 —— 消息未发送（回合结束后请重按 Enter）]`, C.warn)

@@ -5,8 +5,9 @@
  * 环安全——session-slots ↔ session.mjs 同款先例）。
  *
  * §17（2026-09-02，AGENT-LOOP.md §9 D-S1..S9）：回合尾后台池非空 → 不阻塞等待，
- * 进入挂起态——挂起空闲输入开放（Enter = 新回合填单槽 + 唤醒）、busy（processing 含
- * digest）提交亦入同槽（busy-extend 批 2026-09-22——`TUI-INPUT-BOX.md` §4.1）、settle 事件驱动
+ * 进入挂起态——挂起空闲输入开放（Enter = 新回合入队列 + 唤醒）、busy（processing 含
+ * digest）提交亦入同队列（容量 8——busy-extend 批 2026-09-22 · queue-visible 批 2026-09-24；
+ * `TUI-INPUT-BOX.md` §4.1）、settle 事件驱动
  * auto-turn 消化（手动档 organize-only / AUTO 档全语义）、池空 + 无待处理输入 → 补发
  * done 冻结自然退出。状态机行表见 AGENT-LOOP.md §9.2。
  * F-UC7（2026-09-19 批，AGENT-LOOP-UPSTREAM.md §6.27.12）：第二开轮源 = 未 drain 的上行
@@ -21,6 +22,7 @@
 import { runAgentTurn } from "./agent-turn.mjs"
 import { freezeAllSubTasks, freezeReclaimDigestedBlocks } from "./subagent-blocks.mjs"
 import { sweepToolBlocks } from "./tool-events.mjs"
+import { planQueuedInput } from "./queued-merge.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"
 import { C } from "./ansi.mjs"
 // ASYNC-RESULT-CONTAINER.md D1/D2：池 accessor（双池 absorb）+ pending 单容器停靠
@@ -33,9 +35,9 @@ import { t } from "@thincoder/core/i18n.mjs"
 // 批 4 CLI-ASYNC-DISCARD（AGENT-LOOP-ASYNC-POOL.md §6.20）：中止分支「只清已死」收尾单点
 import { discardAbortedPool, discardAbortedAdvisors } from "@thincoder/core/agent-tools/async-discard.mjs"
 
-// INPUT-LOCK-ASYNC（C'——2026-09-09，本档 INPUT-LOCK-ASYNC.md）：R15 排队
-// 用户指令合并（§11.3 D-24c——攒批计划/合并文案/上限常量）整批废弃
-// ——pendingInput 单槽化（至多一条待交接——单消息逐发不攒批；busy 提交入槽 = busy-extend 批 2026-09-22 扩面）。
+// queue-visible 批（2026-09-24）：R15 排队用户指令合并**恢复**（攒批计划 / 合并文案 / 上限常量
+// ——`queued-merge.mjs` 单源；待发送块 / 状态栏四态 = TUI.md §7.5）；队列容量 8（满队 = 第 9 条
+// 拒 + 提示 + 文本保留）；busy 提交入队 = busy-extend 批 2026-09-22 扩面。
 
 /** 后台池计数（LOGGING susp/digest 事件字段——pendingN/poolN）。
  *  poolN = _asyncSubagents + _asyncAdvisors（§11.2 D-24b advisor 池同面板计数——queued
@@ -205,10 +207,11 @@ async function digestTurn(ctx, upstream = false) {
  * §17 挂起会话驱动（D-S9 行表；由 runAgentTurn 回合尾进入，池空自然退出）：
  * - suspension：池项 settle → 入 pending → 开 auto-turn（合并消化近邻 settle）；
  *   上行 ask 入队 → 唤醒 + 谓词 → 开唤醒轮（F-UC7——谓词先于池空退出判，见第 2 步）；
- *   挂起空闲用户 Enter、会话内 busy Enter → pendingInput 单槽（busy-extend 2026-09-22 同判据）
+ *   挂起空闲用户 Enter、会话内 busy Enter → pendingInput 队列（容量 8——busy-extend
+ *   2026-09-22 同判据；queue-visible 批 2026-09-24 按合并计划取批）
  *   ——用户输入优先于 digest；
  * - auto-turn：消化中 settle 不并发开新轮（单 runAgent 循环），轮末按 pending/池态
- *   续开合并消化轮或回挂起；pendingInput 非空 → 以该消息开新回合（不触发新 digest）；
+ *   续开合并消化轮或回挂起；pendingInput 非空 → 以本批合并消息开新回合（不触发新 digest）；
  * - §17.5.5：每次消化/会话内用户回合消费 pending 后 → freezeReclaimDigestedBlocks
  *   逐条冻结回收（消化完成块不滞留面板——不等池空；settle 锚点 splice——digest 总览
  *   文本之前——round1 #1 裁定）；
@@ -239,22 +242,25 @@ export async function suspensionSession(ctx) {
   try {
     while (!state._suspAborted && !agent._sessionAbort.signal.aborted) {
       sweepSettledToPending(agent)
-      // 1. 用户输入优先（D-S5）：pendingInput 单槽（INPUT-LOCK-ASYNC C'——busy（processing
-      //    含 digest）提交亦入本槽——TUI-INPUT-BOX.md §4.1；至多一条待交接——driver
-      //    消费清槽即开新回合）。R15 攒批/queue 双源已随排队机制废弃收敛（2026-09-09——
-      //    单消息交接——无合并无 /cmd 分流——key-handler 只收非斜杠文本——单消息逐发）。
+      // 1. 用户输入优先（D-S5）：pendingInput 队列（容量 8——INPUT-LOCK-ASYNC C'；busy
+      //    （processing 含 digest）提交亦入本队列——TUI-INPUT-BOX.md §4.1；queue-visible 批
+      //    2026-09-24：按合并计划取批（R15 恢复）——本批合并消息开新回合，先于 digest 合并）。
       if ((state.pendingInput?.length ?? 0) > 0) {
-        const head = String(state.pendingInput.shift())
-        pushLine("[sending queued message]", C.tool) // F16 消费回执（TUI.md §7.5——driver 消费点）
-        agent._suspended = false // 用户回合 = 普通回合语义（① 直注入 + settle 即冻结）
-        await runAgentTurn(ctx, head, { skipSession: true })
-        agent._suspended = true
-        // §17.5.5：该回合消化完 pending（run 首行注入）→ 逐条冻结回收驻留块
-        // （不等池空——settle 锚点 splice——digest 总览文本之前；与 digest 回收同规则）
-        // R17：回收比对 = pending 单容器（四族统一——ASYNC-RESULT-CONTAINER.md D2）
-        freezeReclaimDigestedBlocks(state, allPendingEntries(agent))
-        state.status = backgroundStatusText(agent)
-        continue
+        const action = planQueuedInput(state.pendingInput)[0] // 按合并计划取批（首动作 = 本批）
+        // /cmd 首动作 = 入队门禁不可达的防御面（斜杠 busy 禁发——§4.1 条件 3）⇒ 不消费
+        if (action.kind === "turn") {
+          state.pendingInput.splice(0, action.count)
+          pushLine("[sending queued message]", C.tool) // F16 消费回执（TUI.md §7.5——driver 消费点）
+          agent._suspended = false // 用户回合 = 普通回合语义（① 直注入 + settle 即冻结）
+          await runAgentTurn(ctx, action.text, { skipSession: true })
+          agent._suspended = true
+          // §17.5.5：该回合消化完 pending（run 首行注入）→ 逐条冻结回收驻留块
+          // （不等池空——settle 锚点 splice——digest 总览文本之前；与 digest 回收同规则）
+          // R17：回收比对 = pending 单容器（四族统一——ASYNC-RESULT-CONTAINER.md D2）
+          freezeReclaimDigestedBlocks(state, allPendingEntries(agent))
+          state.status = backgroundStatusText(agent)
+          continue
+        }
       }
       // 2. pending 任一族非空**或存在未 drain 的 ask** → 合并消化轮 / 唤醒轮（注入由 runAgent
       //    首行 + 循环头统一完成——D-S3 单注入点；R17 判据推广——consult/escalate 族同样触发
@@ -301,12 +307,13 @@ export async function suspensionSession(ctx) {
       agent._pendingAsyncResults = []
       const { cleanupConsultSessions } = await import("@thincoder/core/agent-tools/consult.mjs")
       cleanupConsultSessions(agent)
-      // §17 round2 偏差 #2-CLI（code review round2 #2-CLI）+ INPUT-LOCK 单槽化：中止时
-      // 不静默丢弃挂起期输入——Enter 已清空输入框并入 pendingInput（用户视为已发送）——
-      // 单槽语义下残余至多一条——转回 state.queue（{text} 单条目，下个普通回合的队列
-      // 循环续发——零丢失）+ 提示行明示去向（不静默丢）。
+      // §17 round2 偏差 #2-CLI（code review round2 #2-CLI）+ INPUT-LOCK + queue-visible 批
+      // （2026-09-24）：中止时不静默丢弃队列内输入——Enter 已清空输入框并入 pendingInput
+      // （用户视为已发送）——按合并计划全量转回 state.queue（{text} 逐动作条目——多批 = 多回合
+      // 续发，零丢失；不渲染待发送块——TUI.md §7.5 边界）+ 提示行明示去向（不静默丢）。
       if ((state.pendingInput?.length ?? 0) > 0) {
-        state.queue.push({ text: String(state.pendingInput.shift()) })
+        for (const a of planQueuedInput(state.pendingInput)) state.queue.push({ text: a.text })
+        state.pendingInput.length = 0
         pushLine(`[background work stopped — the message you entered will run as a normal turn]`, C.warn)
       }
     } else {

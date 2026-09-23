@@ -20,6 +20,7 @@ import { loadSkills } from "./skills.mjs"
 import { collectEditorInjection } from "./editor-context.mjs"
 import { traceStop } from "./stop-trace.mjs"
 import { postDigestCap } from "./panel-callbacks.mjs"
+import { pickupQueuedAtStepBoundary } from "./queued-pickup.mjs"
 
 /** §17 D-S9 controller 登记（2026-09-02 偏差修复 #3）：池 children 在 spawn 时刻持有当时的
  * turn controller signal——Ctrl+I / ContinueError / AUTO resume 重建 controller 后，旧
@@ -100,6 +101,9 @@ export async function runTurnLoop(panel, deps) {
   // #133 次因：`ro.agent` ⇄ `panel._agent` 同槽活绑定——宿主 `opts.agent = agent` 写回当场
   // 落到面板字段（首回合 run 期载荷产者 / 取消路由即可达；下方回合末写回幂等保留）。
   bindPanelAgent(panel, ro)
+  // F16 步边界 pickup（queue-visible 批 fix 轮 2026-09-24 · 用户 03:06 收正——C-B2-6 细则② ⓪）：
+  // 用户回合在飞 ⇒ 端壳循环头投递回调（非中断——下一步生效）；系统轮（digest / 上行唤醒轮）不传（分流）
+  ro.consumeQueuedInput = autoTurn ? null : () => pickupQueuedAtStepBoundary(panel, { history, fullHistory })
   // Turn-cap continue loop (CLI agent-turn.mjs parity): each ContinueError offers
   // "Continue" — unlimited, resume:true keeps history, fresh budget per run. The loop
   // also folds in the Ctrl+I interrupt resume (same rebuild-controller semantics).

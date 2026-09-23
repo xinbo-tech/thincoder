@@ -110,7 +110,7 @@ export function createKeyHandler(ctx) {
     if (key.name === "up" || key.name === "down") { handleHistoryKeys(key, ctx); return }
     if (key.name === "left" || key.name === "right" || key.name === "home" || key.name === "end") { handleCursorKeys(key, ctx); return }
 
-    // 序 4：busy 门禁（key-handler-busy.mjs）——Enter 单槽受理 + 吞面四 / Tab 吞
+    // 序 4：busy 门禁（key-handler-busy.mjs）——Enter 队列受理（容量 8）+ 吞面四 / Tab 吞
     // （守卫 = busy 块内返回条件：processing 期仅 tab 与无 meta 的 Enter/回车 被吞，余键落空至编辑族）
     if (state.processing && (key.name === "tab" || ((key.name === "return" && !key.meta) || (str === "\r" && !key.meta)))) {
       handleBusyEnter(str, key, state, ctx)

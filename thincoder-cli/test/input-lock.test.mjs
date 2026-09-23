@@ -1,12 +1,14 @@
 /**
  * input-lock.test.mjs — INPUT-LOCK-ASYNC（C'——INPUT-LOCK-ASYNC.md——2026-09-09）
  * + INPUT-LOCK-BEHAVIOR-REVISED（INPUT-LOCK-BEHAVIOR-REVISED.md——2026-09-09 修订——
- * 白名单删——忙时斜杠同禁发）：用例表测试锁：busy 普通回合 Enter = 单槽注入（F16 翻转——
- * AC-1；`docs/cli/design/TUI-INPUT-BOX.md` §4.1）/ 挂起空闲输入开放（单槽）/ 释放窗口单槽交接 /
+ * 白名单删——忙时斜杠同禁发）：用例表测试锁：busy 普通回合 Enter = 队列受理（F16 翻转——
+ * AC-1；`docs/cli/design/TUI-INPUT-BOX.md` §4.1）/ 挂起空闲输入开放（队列）/ 释放窗口队列交接 /
  * abort 零丢失 / 状态栏 busy 文案。
  * F16 busy-injection（2026-09-21）：T-F16-7 = 本档 AC-1 断言翻转 + 既有语义零回归面。
- * busy-extend（2026-09-22 · 台账 #224）：挂起会话内 busy 同判据入槽（吞面收敛四 = 模态 /
- * 斜杠 / 空 / 槽满——T-F16-7 第二块改述 + 释放窗口 busy 入槽格新增）。
+ * busy-extend（2026-09-22 · 台账 #224）：挂起会话内 busy 同判据入队（吞面收敛四 = 模态 /
+ * 斜杠 / 空 / 满队——T-F16-7 第二块改述 + 释放窗口 busy 入队格新增）。
+ * queue-visible（2026-09-24 · 台账 #249）：容量 1 → 8（第 9 条拒 + 提示 + 文本保留——本档断言
+ * 随容量口径收正；R15 合并消费 = `busy-injection.test.mjs` 新用例面）。
  * 手法：createKeyHandler 桩 ctx 直驱按键（无真实 TTY）；suspensionSession 桩 agent/state
  * 直驱驱动循环（ctx.runAgent 注入——runAgentTurn 测试缝——真实单消息交接路径）。快层直跑
  * （<800ms——无定时器悬挂：驱动会话必然终止）。
@@ -110,31 +112,37 @@ test("T-F16-7 busy 普通回合 Enter = 单槽注入（AC-1 翻转——F16 busy
   assert.equal(c5.calls.submit, 0, "多行编辑不提交")
 })
 
-// ─── AC-2：挂起空闲输入开放（单槽）+ 释放窗口同路径 + 槽满吞 ────────────
+// ─── AC-2：挂起空闲输入开放（队列容量 8）+ 释放窗口同路径 + 满队吞 ────
 
-test("挂起空闲输入开放：Enter 填 pendingInput 单槽 + 唤醒（AC-2——F-6）；释放窗口（_suspPending）同路径；槽满吞 + 提示（文本保留——不覆盖不丢失）；斜杠命令挂起空闲直走 submit", () => {
-  // 挂起空闲（纯后台池跑——主空闲）：立即接收入单槽——唤醒 driver
+test("挂起空闲输入开放：Enter 填 pendingInput 队列 + 唤醒（AC-2——F-6）；释放窗口（_suspPending）同路径；满队（第 9 条）吞 + 提示（文本保留——不覆盖不丢失）；斜杠命令挂起空闲直走 submit", () => {
+  // 挂起空闲（纯后台池跑——主空闲）：立即接收入队列——唤醒 driver
   const s1 = baseState({ suspended: true, input: [..."pool-wait-msg"] })
   const c1 = keyCtx(s1)
   pressEnter(createKeyHandler(c1))
-  assert.deepEqual(s1.pendingInput, ["pool-wait-msg"], "单槽填入（至多一条待交接）")
+  assert.deepEqual(s1.pendingInput, ["pool-wait-msg"], "入队（容量 8 首条）")
   assert.equal(c1.calls.wakes, 1, "唤醒 driver（waitForSettleOrWake）")
   assert.deepEqual(s1.input, [], "输入框已清空（用户视为已发送——气泡由回合起点补画）")
   assert.equal(c1.calls.submit, 0, "挂起 Enter 不经 submit")
 
-  // 释放窗口（_suspPending——回合尾池仍 live）：同路径（单槽交接守卫保留——F-8）
+  // 释放窗口（_suspPending——回合尾池仍 live）：同路径（队列交接守卫保留——F-8）
   const s2 = baseState({ _suspPending: true, input: [..."window-msg"] })
   const c2 = keyCtx(s2)
   pressEnter(createKeyHandler(c2))
-  assert.deepEqual(s2.pendingInput, ["window-msg"], "释放窗口 Enter 入单槽（偏差 #1 守卫语义保留）")
+  assert.deepEqual(s2.pendingInput, ["window-msg"], "释放窗口 Enter 入队列（偏差 #1 守卫语义保留）")
 
-  // 槽满：第二条吞 + 提示——文本保留（不覆盖不静默丢）
-  const s3 = baseState({ suspended: true, pendingInput: ["first"], input: [..."second"] })
+  // 容量内再提交：连续入队（多槽——每条各占一项）
+  const s3a = baseState({ suspended: true, pendingInput: ["first"], input: [..."second"] })
+  const c3a = keyCtx(s3a)
+  pressEnter(createKeyHandler(c3a))
+  assert.deepEqual(s3a.pendingInput, ["first", "second"], "容量内再提交 ⇒ 连续入队（阈 1 → 8——queue-visible 批）")
+
+  // 满队（第 9 条）：吞 + 提示——文本保留（不覆盖不静默丢）
+  const s3 = baseState({ suspended: true, pendingInput: Array.from({ length: 8 }, (_, i) => `q${i}`), input: [..."second"] })
   const c3 = keyCtx(s3)
   pressEnter(createKeyHandler(c3))
-  assert.deepEqual(s3.pendingInput, ["first"], "槽满不覆盖（单槽不变量）")
+  assert.deepEqual(s3.pendingInput, Array.from({ length: 8 }, (_, i) => `q${i}`), "满队不覆盖（容量 8——第 9 条拒）")
   assert.deepEqual(s3.input, [..."second"], "被吞文本保留在输入框")
-  assert.match(c3.calls.lines[0], /待发送/, "槽满提示明示")
+  assert.match(c3.calls.lines[0], /已排队 8 条消息/, "满队提示明示（阈 1 → 8）")
 
   // 挂起空闲斜杠命令：submit 直行（submit 侧 handleSlash——控制通道）
   const s4 = baseState({ suspended: true, input: [..."/help"] })
@@ -143,7 +151,7 @@ test("挂起空闲输入开放：Enter 填 pendingInput 单槽 + 唤醒（AC-2�
   assert.equal(c4.calls.submit, 1, "挂起态斜杠命令经 submit（紧急控制不排队）")
 })
 
-// ─── AC-5：单槽交接（释放窗口）+ abort 零丢失（suspensionSession 直驱）───
+// ─── AC-5：队列交接（释放窗口）+ abort 零丢失（suspensionSession 直驱）───
 
 /** 最小驱动 ctx/agent/state（runAgentTurn 测试缝——ctx.runAgent 注入——不触网）。 */
 function driveRig(pendingInput = []) {
@@ -175,15 +183,15 @@ function driveRig(pendingInput = []) {
   return { agent, state, ctx, turns, lines }
 }
 
-test("单槽交接：driver 消费 pendingInput 单条即开回合（原文直发——无合并包裹）；abort 零丢失：中止时单槽残余转 state.queue + 提示（AC-5——F-8/AC-S2）", async () => {
-  // 单槽交接：driver 挂起等待 → 消息入槽 + 唤醒 → 消费清槽 → 以原文开回合
+test("队列交接：driver 消费 pendingInput 单条即开回合（单条批原文直发——无编号包裹）；abort 零丢失：中止时队列残余按合并计划转 state.queue + 提示（AC-5——F-8/AC-S2）", async () => {
+  // 队列交接：driver 挂起等待 → 消息入队 + 唤醒 → 消费清队 → 以原文开回合
   const { agent, state, ctx, turns } = driveRig()
   const session = suspensionSession(ctx)
   await new Promise((r) => setTimeout(r, 5)) // driver 进入 waitForSettleOrWake
   state.pendingInput.push("handover-msg")
   state._suspWake?.()
   await new Promise((r) => setTimeout(r, 15)) // 消费 + runAgentTurn（stub）微任务链
-  assert.deepEqual(turns, ["handover-msg"], "driver 以原文单消息开回合（无合并/编号包裹——R15 废弃）")
+  assert.deepEqual(turns, ["handover-msg"], "driver 以原文单消息开回合（单条批 merged:false——无编号包裹）")
   assert.equal(state.pendingInput.length, 0, "消费清槽")
   // 会话终止（_suspAborted + 唤醒）——防悬挂
   state._suspAborted = true
@@ -191,11 +199,11 @@ test("单槽交接：driver 消费 pendingInput 单条即开回合（原文直�
   await session
   assert.equal(state.suspended, false, "会话退出复位 suspended")
 
-  // abort 零丢失：中止前单槽已有消息（Enter 已清框入槽——用户视为已发送）→ 转 state.queue
+  // abort 零丢失：中止前队列已有消息（Enter 已清框入队——用户视为已发送）→ 转 state.queue
   const r2 = driveRig(["keep-me"])
   r2.agent._sessionAbort.abort() // 驱动首行 while 条件即假——直接走 finally 中止路径
   await suspensionSession(r2.ctx)
-  assert.deepEqual(r2.state.queue, [{ text: "keep-me" }], "中止残余单消息转正队列（下个普通回合续发——零丢失）")
+  assert.deepEqual(r2.state.queue, [{ text: "keep-me" }], "中止残余按计划转正队列（下个普通回合续发——零丢失）")
   assert.equal(r2.lines.length, 1, "提示行明示去向")
   assert.match(r2.lines[0], /will run as a normal turn/, "abort 提示文案（不静默丢）")
 })

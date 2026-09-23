@@ -24,6 +24,7 @@ import { providerNames, getKey, buildProvider } from "./presets.mjs"
 import { specForModel } from "../specs.mjs"
 import { t } from "../i18n.mjs"
 import { _cwd, pushBusyQueued } from "./panel-messages.mjs"
+import { takeQueuedBatchItem } from "./queued-pickup.mjs"
 import { suspensionSession, poolLive, backgroundStatus } from "./suspension.mjs"
 // C-B2-6 细则⑥（busy-injection 批 fix 轮 2026-09-22）：送达侧贴图降级判决（已抽入
 // `image-handler.mjs`——本档零 import 主档纪律保持，该档为 leaf 向）。
@@ -163,9 +164,9 @@ export async function enterSuspensionTurn(panel, { turnSlot, distillSlot, histor
   // 口）；本块只做会话入口判定：池 live + controller 未中止 → 进挂起会话（用户输入优先于
   // digest——D-S5）；否则忙态归位 idle（防 susp 悬空——Stop 派生/路由守卫以 idle 收敛）。
   // F16（busy-injection 2026-09-21 · `WEBVIEW-INPUT.md` §1 C-B2-6 细则②）：普通回合 busy 期
-  // 排队输入（`panel._busyQueued` 单槽）在本入口装载两分支——① 池 live 进会话：残项预填
+  // 排队输入（`panel._busyQueued`）在本入口装载两分支——① 池 live 进会话：残项预填
   // `susp.pendingInput`（driver 输入优先消费开用户回合）；② 池空 idle 归位：直接以该消息
-  // 续发普通回合（消费清槽——不静默丢）。
+  // 续发普通回合（消费清队——不静默丢）。
   // fix 轮（2026-09-22）：两消费点推 `busyQueued { pending:false }`（细则①——webview 镜像消费即清）；
   // 装载①/② 送达前同过 F-1 降级判定（细则⑥——仅带来源标记的排队支降级，纯挂起既有路径零改）。
   const busyQueued = panel._busyQueued ?? []
@@ -190,9 +191,9 @@ export async function enterSuspensionTurn(panel, { turnSlot, distillSlot, histor
         // A12（随迁）：窗内被 Stop ⇒ 置闩（序 = 调 runChat 之后——newTurnController 消费）。
         if (visionAbort?.signal.aborted) panel._abortRequested = true
       }
-      // ① 槽内容随会话入口移交（splice 消费——driver 消费清槽，避免二次装载）
+      // ① 队内容随会话入口移交（splice 消费——driver 消费清队，避免二次装载）
       const seeded = busyQueued.length > 0 ? busyQueued.splice(0) : null
-      if (seeded) pushBusyQueued(panel) // C-B2-6 细则①：消费即清（webview 镜像 pending:false）
+      if (seeded) pushBusyQueued(panel) // C-B2-6 细则①⑦：快照重推（实况——两载体合计；载体迁移零清标）
       await suspensionSession(panel, {
         turnSlot, distillSlot,
         // lines 双键形：driver 用 lines.history/lines.fullHistory；会话内回合（runPanelChat
@@ -220,14 +221,16 @@ export async function enterSuspensionTurn(panel, { turnSlot, distillSlot, histor
 }
 
 /** F16（C-B2-6 细则②——池空 idle 归位分支）：`panel._busyQueued` 残项以普通回合续发
- *  （消费清槽——不静默丢）；面板已死 / 槽空 ⇒ 零动作（消息随面板终止，不开不可见回合）。
+ *  （消费清队——不静默丢）；面板已死 / 队空 ⇒ 零动作（消息随面板终止，不开不可见回合）。
+ *  queue-visible 批 2026-09-24：按合并计划取批（多批 = 多回合）+ 快照携本批 `merged`（webview 清标 / 合泡）。
  *  C-B2-6 细则⑥（fix 轮 2026-09-22）：送达前同过 F-1 降级判定（判决函数内先置 running 再
  *  await——忙锁不变量：降级窗内拒并发回合）；A12 置闩序 = 调 runChat 之后。 */
 async function deliverBusyQueued(panel, busyQueued, runChat) {
   if (!panel._panel || busyQueued.length === 0) return
-  const q = busyQueued.shift()
-  pushBusyQueued(panel) // C-B2-6 细则①：消费即清（webview 镜像 pending:false）
-  const d = await downgradeNonVisionImages(panel, { text: q.text, images: q.images, providerName: q.providerName, modelOverride: q.modelOverride, cwd: _cwd() || process.cwd(), visionReader: q.visionReader })
-  await runChat(panel, { text: d.text, modelOverride: q.modelOverride, reasoning: q.reasoning, providerName: q.providerName, images: d.images })
+  const { item, merged } = takeQueuedBatchItem(busyQueued)
+  if (!item) return // /cmd 首动作（门禁不可达防御面）——零动作
+  pushBusyQueued(panel, merged ?? undefined) // C-B2-6 细则①：消费即清（webview 镜像 + 标记面）
+  const d = await downgradeNonVisionImages(panel, { text: item.text, images: item.images, providerName: item.providerName, modelOverride: item.modelOverride, cwd: _cwd() || process.cwd(), visionReader: item.visionReader })
+  await runChat(panel, { text: d.text, modelOverride: item.modelOverride, reasoning: item.reasoning, providerName: item.providerName, images: d.images })
   if (d.visionAbort?.signal.aborted) panel._abortRequested = true // A12（随迁）：窗内被 Stop ⇒ 置闩
 }

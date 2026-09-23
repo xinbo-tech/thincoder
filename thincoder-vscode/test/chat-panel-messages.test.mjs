@@ -61,7 +61,7 @@ function stubPanel(overrides = {}) {
 
 // ─── ① busy 分流 + retry 同入口（F-C1e/H-F + C-B2-6）──────────────
 
-test("① busy 分流（INPUT-LOCK C' → C-B2-6 · busy-extend 2026-09-22）：普通回合 busy 入 `_busyQueued` 单槽（无警告无 _chat——槽满拒收 + 警告）；挂起会话内 busy 单槽受理（走既有 `_chat` susp 分支）；空闲直发", async () => {
+test("① busy 分流（INPUT-LOCK C' → C-B2-6 · busy-extend 2026-09-22 · queue-visible 容量 8）：普通回合 busy 连续入 `_busyQueued`（无警告无 _chat——满队拒收 + 警告）；挂起会话内 busy 同面受理（走既有 `_chat` susp 分支）；空闲直发", async () => {
   const realWarn = vscode.window.showWarningMessage
   const warned = []
   vscode.window.showWarningMessage = async (m) => { warned.push(m) }
@@ -70,10 +70,17 @@ test("① busy 分流（INPUT-LOCK C' → C-B2-6 · busy-extend 2026-09-22）：
     await handlePanelMessage(p, { type: "userMessage", text: "second" })
     await handlePanelMessage(p, { type: "userMessage", text: "third" })
     assert.deepEqual(p._chatCalls, [], "回合运行中不得开并发回合（直呼 _chat）")
-    assert.deepEqual(p._busyQueued.map((q) => q.text), ["second"], "普通回合 busy ⇒ 入单槽（单槽不变量——至多一条）")
-    assert.equal(warned.length, 1, "槽满拒收恰一次警告（不静默丢——槽内既有不被覆盖）")
+    assert.deepEqual(p._busyQueued.map((q) => q.text), ["second", "third"], "普通回合 busy ⇒ 连续入队（容量 8——queue-visible 批阈 1 → 8）")
+    assert.equal(warned.length, 0, "容量内受理零警告")
     assert.deepEqual(p.posted.map((m) => `${m.type}:${m.pending}`), ["busyQueued:false", "busyQueued:true", "busyQueued:true", "busyQueued:true"],
-      "#221 入口复位推前移：两次提交各带一条入口推（false / true）+ 入槽 + 槽满判决推（末两条恒 true——槽内实况；webview 本地气泡先行）")
+      "#221 入口复位推前移：两次提交各带一条入口推（false / true）+ 入队 + 入队推（末两条恒 true——队内实况；webview 本地气泡先行）")
+
+    // 满队（第 9 条——queue-visible 批容量 8）：拒收 + 警告（队内既有不被覆盖）
+    const fp = stubPanel({ _turnState: "running", _busyQueued: [] })
+    for (let i = 0; i < 8; i++) fp._busyQueued.push({ text: `q${i}` })
+    await handlePanelMessage(fp, { type: "userMessage", text: "ninth" })
+    assert.deepEqual([fp._busyQueued.length, warned.length], [8, 1], "满队拒收：不覆盖 + 恰一次警告（不静默丢）")
+    assert.deepEqual(fp._chatCalls, [], "拒收零回合")
 
     // retry（H-F——守卫双份修复前直呼 _chat 绕过 turnActive 队列）→ 同入口同分流（同判据同槽）
     const rp = stubPanel({
@@ -82,13 +89,13 @@ test("① busy 分流（INPUT-LOCK C' → C-B2-6 · busy-extend 2026-09-22）：
     })
     await handlePanelMessage(rp, { type: "retry" })
     assert.equal(rp._chatCalls.length, 0, "retry 回合中不直呼 _chat")
-    assert.deepEqual(rp._busyQueued.map((q) => q.text), ["retry-me"], "retry 同面入槽（外部入口同判据同槽）")
-    assert.equal(warned.length, 1, "retry 入槽零新警告")
+    assert.deepEqual(rp._busyQueued.map((q) => q.text), ["retry-me"], "retry 同面入队（外部入口同判据同队列）")
+    assert.equal(warned.length, 1, "retry 入队零新警告")
 
-    // 挂起会话内 busy（`_susp` 在场）⇒ 同面受理：经 `_chat` susp 分支入会话单槽（busy-extend 2026-09-22）
+    // 挂起会话内 busy（`_susp` 在场）⇒ 同面受理：经 `_chat` susp 分支入会话队列（busy-extend 2026-09-22）
     const sp = stubPanel({ _turnState: "running", _susp: { active: true, pendingInput: [] } })
     await handlePanelMessage(sp, { type: "userMessage", text: "in-session" })
-    assert.equal((sp._busyQueued ?? []).length, 0, "会话在飞 ⇒ 无需会话槽（载体两态）")
+    assert.equal((sp._busyQueued ?? []).length, 0, "会话在飞 ⇒ 无需会话队（载体两态）")
     assert.deepEqual(sp._chatCalls, [["in-session", undefined, undefined, undefined, undefined, true, null]], "经既有 `_chat` susp 分支受理（来源标记参）")
     assert.equal(warned.length, 1, "受理零新警告（原「拒收 + 警告」随本批撤销）")
   } finally {
@@ -333,24 +340,29 @@ test("⑧ A1 sendMessage 走 routeUserTurn（F-A1 + C-B2-6）：普通回合 bus
   }
 })
 
-// ─── ⑪ _chat 单槽交接（INPUT-LOCK C'——F-6 单槽化测试锁）────────────────
+// ─── ⑪ _chat 队列交接（INPUT-LOCK C'——F-6 · queue-visible 容量 8）────────────────
 
-test("⑪ _chat 单槽（INPUT-LOCK）：挂起会话活跃期消息填 pendingInput 单槽 + 唤醒 driver；槽满/释放窗口（susp 无会话）拒收——零并发守卫不静默丢", async () => {
+test("⑪ _chat 队列（INPUT-LOCK）：挂起会话活跃期消息填 pendingInput 队列 + 唤醒 driver；满队/释放窗口（susp 无会话）拒收——零并发守卫不静默丢", async () => {
   const realWarn = vscode.window.showWarningMessage
   const warned = []
   vscode.window.showWarningMessage = async (m) => { warned.push(m) }
   try {
-    // 会话活跃：真实 _chat 分流——pendingInput 单槽 + _suspWake（挂起空闲唤醒即消费）
+    // 会话活跃：真实 _chat 分流——pendingInput 队列 + _suspWake（挂起空闲唤醒即消费）
     const wakes = []
     const p = stubPanel({ _susp: { active: true, pendingInput: [] }, _suspWake: () => wakes.push("wake") })
     await ChatPanel.prototype._chat.call(p, "m1", undefined, undefined, undefined, undefined)
-    assert.deepEqual(p._susp.pendingInput.map((q) => q.text), ["m1"], "单槽填入（至多一条待交接）")
-    assert.deepEqual(wakes, ["wake"], "唤醒 driver（waitForSettleOrWake 单槽）")
-    // 槽满（同事件循环竞态防御——正常不可达）→ 拒收提示——不覆盖不静默丢
+    assert.deepEqual(p._susp.pendingInput.map((q) => q.text), ["m1"], "入队（容量 8 首条）")
+    assert.deepEqual(wakes, ["wake"], "唤醒 driver（waitForSettleOrWake）")
+    // 容量内再提交：连续入队（queue-visible 批阈 1 → 8）
     await ChatPanel.prototype._chat.call(p, "m2", undefined, undefined, undefined, undefined)
-    assert.equal(p._susp.pendingInput.length, 1, "槽满不覆盖")
+    assert.deepEqual(p._susp.pendingInput.map((q) => q.text), ["m1", "m2"], "容量内再提交 ⇒ 连续入队（多槽）")
+    assert.equal(warned.length, 0, "容量内受理零警告")
+    // 满队（第 9 条——同事件循环竞态防御——正常不可达）→ 拒收提示——不覆盖不静默丢
+    for (let i = 2; i < 8; i++) p._susp.pendingInput.push({ text: `q${i}` })
+    await ChatPanel.prototype._chat.call(p, "ninth", undefined, undefined, undefined, undefined)
+    assert.equal(p._susp.pendingInput.length, 8, "满队不覆盖")
     assert.deepEqual(p._susp.pendingInput[0].text, "m1", "原消息保留（零丢失）")
-    assert.equal(warned.length, 1, "槽满拒收警告一次")
+    assert.equal(warned.length, 1, "满队拒收警告一次")
 
     // 释放窗口（_turnState susp 且无会话——防御：开并发独立回合会孤儿化后台池——AC-S2）
     const rw = stubPanel({ _turnState: "susp", _susp: null })

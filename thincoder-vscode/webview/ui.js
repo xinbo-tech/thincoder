@@ -161,7 +161,9 @@ export function showBanner(ctx, text, keyOk) {
 export function buildUserMessage(ctx, text, timestamp, idx) {
   const el = document.createElement("div")
   el.className = "message user"
+  el.dataset.raw = String(text) // 待发送标记面锚定源（`queued-mark.js`——快照按原文匹配气泡）
   const ts = timestamp ? fmtTime(new Date(timestamp)) : ""
+  if (timestamp) el.dataset.ts = String(timestamp) // 清标重建标签行用（无 ts 不显示纪律保持）
   if (idx !== undefined) el.dataset.idx = String(idx)
   el.innerHTML = `<div class="msg-label">❯ ${t("msg.user")}:${ts ? ` <span class="msg-time">${ts}</span>` : ""}</div><div class="bubble">${mdInline(text)}</div>` // mdInline escapes raw text — single escape point
   return el
@@ -169,9 +171,11 @@ export function buildUserMessage(ctx, text, timestamp, idx) {
 
 export function addUser(ctx, text, timestamp, idx) {
   ctx.assistantLabeled = false // new turn — the next assistant label is allowed once
-  ctx.messagesEl.appendChild(buildUserMessage(ctx, text, timestamp, idx !== undefined ? idx : ctx._nextIdx++))
+  const el = buildUserMessage(ctx, text, timestamp, idx !== undefined ? idx : ctx._nextIdx++)
+  ctx.messagesEl.appendChild(el)
   trimOldMessages(ctx)
   scrollDown(ctx)
+  return el // 标记面（`queued-mark.js`）需持有气泡引用
 }
 
 /** Restored assistant FRAME container (SESSION-RESTORE-PARITY — live-DOM parity):

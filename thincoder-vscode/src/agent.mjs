@@ -205,6 +205,8 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
     // `opts.turnInput?.()` 消费段——与核 `thincoder-core/agent.mjs:223-225` 同址反向（核单源复用；
     // 空队列 no-op —— 零历史变更）。禁另造第二实现（D2 单一权威源）。
     drainChildUpstream(agent)
+    // ③ 用户 → 主会话投递（步边界 pickup——queue-visible 批 fix 轮 2026-09-24 · C-B2-6 细则② ⓪；与核同族）
+    opts.consumeQueuedInput?.()
 
     // Context compaction check — only at safe points: history ends with a complete
     // exchange (user input or tool result), never mid-assistant (CLI parity D1).

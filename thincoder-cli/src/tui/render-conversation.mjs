@@ -23,6 +23,10 @@ import { frozenSubSeg, toolSeg, frozenAdvSeg } from "./render-segments.mjs"
 import { renderMarkdownPreservingWidth as _rmpw } from "./fold-block.mjs"
 export { _rmpw as _renderMarkdownPreservingWidth }
 
+/** 排队块形态上限（`docs/cli/design/TUI.md` §7.5——queue-visible 批 2026-09-24）：每条原文行
+ *  ≤ 该值，超限 ⇒ 该条尾标记行 `… [该条共 N 行——发送后完整显示]`（与 `MAX_INPUT_LINES` 同口径）。 */
+const QUEUED_ITEM_MAX_LINES = 3
+
 let _convCache = { key: "", cols: 0, lines: [] }
 
 /** 2026-08-31 懒加载卡顿优化②：段级行体缓存（行对象→conv 行数组）。
@@ -164,7 +168,11 @@ export function convCacheKey(state, maxRows) {
   // this the cache would serve the pre-search rows and highlight would never
   // appear (P0-1, 2026-08-30 consult). query+index covers match navigation.
   const searchPart = state.search?.query ? `${state.search.query}:${state.search.index ?? 0}` : ""
-  return `${state.lines.length}|${lastLine?.text.length ?? 0}|${state.streaming.length}|${state.reasoning.length}|${blocksSig}|${frozenSig}|${toolSig}|${colorSig}|${state.foldEnabled !== false ? "f" : "u"}|${exp}|${capPart}|${searchPart}|${foldScrollSig}`
+  // queue-visible 批（TUI.md §7.5）：排队签名（条数 + 各条长度 + 首 8 字——同上方 blocksSig 口径）
+  // ——待发送块是**派生插槽**（零 state.lines 写入）⇒ 不入签即缓存命中出陈旧帧（块不现 / 不消）。
+  const queuedItems = state.pendingInput ?? []
+  const queuedPart = `${queuedItems.length}|${queuedItems.map((m) => `${String(m).length}:${String(m).slice(0, 8)}`).join(",")}`
+  return `${state.lines.length}|${lastLine?.text.length ?? 0}|${state.streaming.length}|${state.reasoning.length}|${blocksSig}|${frozenSig}|${toolSig}|${colorSig}|${state.foldEnabled !== false ? "f" : "u"}|${exp}|${capPart}|${searchPart}|${foldScrollSig}|${queuedPart}`
 }
 
 
@@ -345,6 +353,34 @@ function buildConvLines(state, cols, maxRows) {
     for (const line of formatTables(rendered, cols - 1)) {
       for (const wrapped of wrapText(line, cols - 1)) {
         convLines.push({ text: wrapped, color: C.text })
+      }
+    }
+  }
+  // ── 排队期「待发送」块（queue-visible 批 2026-09-24 · TUI.md §7.5）——会话流尾派生插槽：
+  // 判据 = `state.pendingInput` 非空（渲染期现算——零 state.lines 写入 / 零生命周期簿记，
+  // 消费 / 中止随判据消失；不入搜索面、无 `_lineId` / `_foldToggle`）。渲染序在 state.streaming
+  // **之后** ⇒ 流在块上方增长、块恒居会话区底（F1 跟随语义）。体行 `_skipDimFold` = 连 dim
+  // 折叠豁免（§7.5 形态锚「永不被折走」：条数 ≥3 时 dim 连跑必过 FOLD_LINES ⇒ 显式豁免）。
+  const queuedItems = state.pendingInput ?? []
+  if (queuedItems.length > 0) {
+    if (convLines.at(-1)?.text !== "") convLines.push({ text: "", color: C.text }) // 块前空行（主输出呼吸行同约）
+    const multi = queuedItems.length >= 2
+    convLines.push({
+      text: multi
+        ? `⏳ 待发送 · ${queuedItems.length} 条消息（不打断当前执行，合并发送）`
+        : `⏳ 待发送 · 不打断当前执行，自动发送`,
+      color: C.warn,
+    })
+    const indent = multi ? "  " : ""
+    const wrapCols = cols - 1 // 与正文同口径（`sanitizeDisplay` + `wrapText`——TUI.md §7.5 逐字）
+    for (let qi = 0; qi < queuedItems.length; qi++) {
+      const rows = wrapText(sanitizeDisplay(String(queuedItems[qi])), wrapCols)
+      const head = multi ? `${qi + 1}. ` : ""
+      for (let ri = 0; ri < Math.min(rows.length, QUEUED_ITEM_MAX_LINES); ri++) {
+        convLines.push({ text: `${ri === 0 ? head : indent}${rows[ri]}`, color: C.dim, _skipDimFold: true })
+      }
+      if (rows.length > QUEUED_ITEM_MAX_LINES) {
+        convLines.push({ text: `${indent}… [该条共 ${rows.length} 行——发送后完整显示]`, color: C.dim, _skipDimFold: true })
       }
     }
   }
