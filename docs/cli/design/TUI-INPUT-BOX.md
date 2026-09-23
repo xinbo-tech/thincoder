@@ -39,7 +39,7 @@
 | Backspace / Delete | 删光标前 / 处字符 |
 | ← → Home End | 光标移动 |
 | Ctrl+U | 清空输入框 |
-| Enter（`return` / `\r`） | 提交（busy 期 = §4.1 单槽注入） |
+| Enter（`return` / `\r`） | 提交（busy 期 = §4.1 入队受理——队列容量 8） |
 | **Shift+Enter** | **插入换行（多行输入）**——需终端键盘增强协议（§5）；不支持时退化为提交 |
 | Alt+Enter（`meta+return`） | 插入换行（后备多行键，所有终端可用） |
 | Tab | 斜杠命令补全循环 |
@@ -75,8 +75,8 @@
 
 - **不变量**：`state.input` **永不被后台事件读写**——settle / 消化轮 / 注入全部经独立通道（token / `state.pendingInput`），
   后台代码零接触输入框；框内文本在后台事件前后逐字不变。
-- **Enter（非 slash 文本）**：不入 `state.queue`、不打断后台——消息入 **`state.pendingInput` 单槽**
-  （**至多一条待交接——见 §4.1**；`key-handler-edit.mjs` 分流 + 清框，与 submit 同款清理；history 照常收录），经 `state._suspWake?.()` 唤醒挂起会话循环；
+- **Enter（非 slash 文本）**：不入 `state.queue`、不打断后台——消息入 **`state.pendingInput` 队列**
+  （**容量 8——见 §4.1**；`key-handler-edit.mjs` 分流 + 清框，与 submit 同款清理；history 照常收录），经 `state._suspWake?.()` 唤醒挂起会话循环；
   driver 消费清槽即以该消息开新回合（输入优先——不触发新 digest；见 §4.1 送达链路）。
   **busy 期（`state.processing` 含 digest）提交走 busy 门禁入槽——本分支不触达**（本分支只接挂起空闲 / 释放窗口；两分支同槽同款清理——§4.1）。
 - **斜杠命令**：挂起分流不拦截——走 submit 正常路径（纯挂起期直接执行）；busy 期（`state.processing` 含 digest）经 busy 门禁同吞——不直行 / 不排队 / 不入槽，文本保留在输入框（斜杠 busy 禁发不变——§4.1 条件 3）。
@@ -204,7 +204,7 @@ F13 attention 判据不破（queued 反馈零注意力色对——`docs/cli/desi
 |---|---|
 | `thincoder-cli/src/tui/key-handler.mjs` | 按键分发**分派器**（#226 拆分后留守）：attention 清位 + 三模态前置委派 + F1 表 + Ctrl+I 入口（§8）+ interrupt 模态 + 五族顺序委派（守卫 = 原块入口条件） |
 | `thincoder-cli/src/tui/key-handler-edit.mjs` | 编辑族：输入编辑（退格 / 删除 / Ctrl+U / Tab 补全）+ Enter（多行 / 挂起态入槽——§4）+ 剪贴板文本 / 图片粘贴 |
-| `thincoder-cli/src/tui/key-handler-busy.mjs` | busy 期单槽注入门禁（§4.1——`pendingInput` 单槽可达化；吞面四 / 入槽五条件） |
+| `thincoder-cli/src/tui/key-handler-busy.mjs` | busy 期入队门禁（§4.1——`pendingInput` 队列（容量 8）可达化；吞面四 / 入队五条件） |
 | `thincoder-cli/src/tui/key-handler-scroll.mjs` | ↑↓ 分流（竖移 / 历史——§3）+ ←→ · Home · End + PgUp / PgDn |
 | `thincoder-cli/src/tui/key-handler-modals.mjs` | picker / wizard 键处理（模态面，输入框让位） |
 | `thincoder-cli/src/tui/key-handler-ctrlc.mjs` | Ctrl+C 五分支族（含挂起态两级中止——§4） |
@@ -379,3 +379,5 @@ F13 attention 判据不破（queued 反馈零注意力色对——`docs/cli/desi
 - 2026-09-24（**queue-visible 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §1）：§4.1 执行序入槽步补**恢复跟随两行**（F4——`state.scroll = 0` / `state._followTail = true`，submit 同款；两条入槽路径同款）；
   新增「**排队期呈现与消费转正**」段（待发送块回指 `TUI.md` §7.5 + 消费单帧切换声明 + 中止残余边界）；VSC 对位段细则范围 ①–⑥ → **①–⑦** 并补待发送标记同源句；档头反馈面枚举补「排队块」。
   **判据表 / 执行序其余步 / 送达零改声明 / 边界 / 槽宽零变**。
+
+- 2026-09-24（**queue-visible 批 · 设计评审修正轮 1 · eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §3 轮次 1 发现 #2）：§2 Enter 行 + §4 Enter 条 + §6 模块地图 `key-handler-busy.mjs` 行三处**单槽 → 队列（容量 8）**口径收正（§4 与 §4.1 同口径）。**判据表 / 执行序 / 送达链路 / 边界零变**。

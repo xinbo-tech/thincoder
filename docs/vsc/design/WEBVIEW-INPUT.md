@@ -30,7 +30,7 @@
     ① **会话在飞入槽**：driver 步骤 1 输入优先消费（`thincoder-vscode/src/extension/suspension.mjs:285-300`——先于 digest 合并）开用户回合；
     ② **池 live 进会话（回合尾）**：`enterSuspensionTurn` 将 `panel._busyQueued` 残项预填 `susp.pendingInput`（同一 driver 消费点）；③ **池空 idle 归位分支**：`_busyQueued` 非空 ⇒ 直接以该消息续发回合（后清槽）。
     会话退出兜底 = `suspension.mjs` finally 残余直注入（零丢失）。送达侧气泡生命周期 = **与纯挂起既有 queued 路径同款**——送达时本地气泡即视为该消息 user 回声面，回合流式渲染不重复出气泡。
-  - ③ 外部入口（Ask ThinCoder 命令 / retry）经 `routeUserTurn` busy 分支同面分流（同判据同槽）——会话在飞同入会话单槽；`chat-panel.mjs` `sendMessage` 的挂起会内 busy 拒收守卫随本批撤销（外部入口同面受理；用户气泡回显保留在 `sendMessage`）。
+  - ③ 外部入口（Ask ThinCoder 命令 / retry）经 `routeUserTurn` busy 分支同面分流（同判据同队列）——会话在飞同入会话队列（容量 8）；`chat-panel.mjs` `sendMessage` 的挂起会内 busy 拒收守卫随本批撤销（外部入口同面受理；用户气泡回显保留在 `sendMessage`）。
   - ④ **busy 面统一（digest 例外撤销）**：挂起会话内 digest 与普通回合 busy 同判据（`S._suspended` 只作会话在场指示，不参与受理分流）——CLI 侧同笔（`TUI-INPUT-BOX.md` §4.1 判据表挂起条撤销）。
   - ⑤ 落点 = `webview/send.js`（出口分流——**busy 拒发分支删**：`running` 一律排队；槽满守卫在队列分支内）· `webview/state.js`（`_busyQueuedPending` 镜像字段）· `webview/chat.js`（`case "busyQueued"`）
     · `panel-messages.mjs` `routeUserTurn`（分流 + 入槽守卫 + `pushBusyQueued` 推送 / 握手重推——`pending` 判据两载体合计）· `panel-turn-stages.mjs` `enterSuspensionTurn`（装载两分支 + 贴图降级接点）
@@ -158,7 +158,7 @@
 | # | 决策 | 状态 |
 |---|---|---|
 | U-I1 | Enter：发送；组合期归输入法；@ 下拉打开时只接受建议 | 已定（§1） |
-| U-I2 | busy 提交 = 排队（本地气泡 + 单槽——`running` 全面）；**唯一 busy 拒面 = 单槽满**（toast，2.6s 自动隐去 + 文本保留——对位 CLI 槽满面） | 已定（§1 · C-B2-6 · D-I4/D-I5） |
+| U-I2 | busy 提交 = 排队（本地气泡 + 队列（容量 8）——`running` 全面）；**唯一 busy 拒面 = 满队（第 9 条）**（toast，2.6s 自动隐去 + 文本保留——对位 CLI 满队面） | 已定（§1 · C-B2-6 · D-I4/D-I5） |
 | U-I3 | ↑/↓ 五态判定（IME → 下拉 → 历史态 → 单行 → 多行边界门） | 已定（§2） |
 | U-I4 | 首块说明行 = 一会话一次、纯文本（无新交互元素） | 已定（§3） |
 | U-I5 | 行内代码内容一律字面；代码范围外原始 HTML 全转义 | 已定（§4 · D-I10） |
@@ -170,7 +170,7 @@
 
 | # | 本档覆盖 | 回指 |
 |---|---|---|
-| 1 | 输入面 Enter 语义（组合守卫 · @ 协调 · busy 排队注入——唯一 busy 拒面 = 单槽满（C-B2-6 细则①）· 排队期待发送标记（细则⑦）） | F-W5 |
+| 1 | 输入面 Enter 语义（组合守卫 · @ 协调 · busy 排队注入——唯一 busy 拒面 = 满队（第 9 条）（C-B2-6 细则①）· 排队期待发送标记（细则⑦）） | F-W5 |
 | 2 | 输入历史与多行竖移（五态判定 · 草稿 stash · 不劫持原生竖移） | F-W6 · N-W8 |
 | 3 | 首块说明行（一次性 · 文案 · 样式 · tail-3 射程核验） | F-W1 |
 | 4 | 消息渲染契约（行内代码字面量 · 恢复序 · 全转义 · 跨界族登记） | F-W4 · N-W3 |
@@ -214,3 +214,5 @@
 - 2026-09-24（**queue-visible 批 · fix 轮（步边界 pickup）· eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §1.11 / §1.12 / §1.13 · 用户 03:06 收正）：C-B2-6 正文补**步边界消费（主）**句（端壳循环头投递回调——`thincoder-vscode/src/agent.mjs:197` 邻位；系统轮不传回调）；
   细则② 送达 **三支 → 四支**（增 ⓪ 步边界）；细则① / ⑦ 消费点枚举 **四 → 五**；U-I8 / §9 用例面同步。
   **容量 / 满队 / 三支既有送达 / 贴图降级 / 零新 CSS 零变**（协议登记 = `WEBVIEW-PROTOCOL.md` §3 / §3.2 行 17 消费点枚举 + §6.3 `queued.pending` 值）。
+
+- 2026-09-24（**queue-visible 批 · 设计评审修正轮 1 · eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §3 轮次 1 发现 #3）：C-B2-6 细则③ + U-I2 + §9 行 1 三处**单槽 → 队列（容量 8）**口径收正（唯一 busy 拒面 = 满队（第 9 条））。**细则① / ② / ⑦ 与契约判别式零变**。

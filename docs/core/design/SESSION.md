@@ -343,10 +343,10 @@ finally 保存无 agentState → 缺席保留槽值不误清）。
 version>2 / 异 cwd / 损坏 / 未知槽返回 null（新版 CLI 文件不属本端覆盖——v3 interop 前保守姿态）。
 - **标题触发时机与写形（2026-09-21 块标题行对齐批——链单源 = §6.7）**：标题 await 在回合尾 finally **忙态归位之前**（stream
 完成即触发——`panel-turn-stages.mjs` `finalizeTurn`）；期间 `_turnState` 仍 running——标题窗口 = busy——webview Stop 显
-（running 派生）+ 路由守卫 running ⇒ **单槽受理**（判定 / 载体 / 送达 = `docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6——新回合恒在标题调用之后开，并发回合无面）。**写形 = 单写**：
+（running 派生）+ 路由守卫 running ⇒ **队列受理（容量 8）**（判定 / 载体 / 送达 = `docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6——新回合恒在标题调用之后开，并发回合无面）。**写形 = 单写**：
 标题值喂入同一拍的整档 `saveLines`（`extra.title`）——不另开 `setSlotTitle` 直写；写后刷会话列表（`pushSessions`）。
 错误路径（评审 #2）：`generateTitle` 内部全 try/catch 吞错 + 调用点兜底 try/catch——**归位恒执行**（标题抛错不卡永久 busy）。
-标题期消息受理（routeUserTurn running 分支 → 单槽——唯一拒面 = 单槽满 + 警告；送达 = 既有三支——零丢失）。
+标题期消息受理（routeUserTurn running 分支 → 队列（容量 8）——唯一拒面 = 满队（第 9 条）+ 警告；送达 = 四支——零丢失）。
 - **懒加载历史分页（VSC 端**，端壳 `thincoder-vscode/src/extension/history-window.mjs` = 纯转口（`:12`）⇒ 核 `thincoder-core/history-window.mjs`）**：
 `HISTORY_PAGE_SIZE = 200`（核 `:24`——对齐 CLI 首屏）；`historyWindow(history, before)`（核 `:107`）——`before == null`
 取**末页**（首屏只发末页），否则取 `before` 前结束的一页 `[s, e)` 半开区间（loadOlder 页不重渲染边界消息）
@@ -671,7 +671,7 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 | D-SE27 | VSC 运行中禁止切换 + **turnSlot 纵深防御**（保存 / 标题落回合捕获槽） | 运行中切槽 = 旧 turn 流串台 + 内容落错槽；turnSlot 使并发切换零窗口 |
 | D-SE28 | VSC `setSlot*` 写面 = **Parnas 拆分** + `loadSlotForWrite` 对新槽补默认记录 | 一次性写面档（session-slot-write.mjs）避免槽写逻辑混入既有档；新槽无记录 → 静默丢标志（AUTO-bug） |
 | D-SE29 | VSC 懒历史分页 = **帧容器 + 嵌套 tools[] + 全局 idx**（HISTORY_PAGE_SIZE 200） | 跨页消息永不重编号；工具卡随帧渲染防跨页双显；匹配 CLI 首屏 200 |
-| D-SE30 | VSC 标题触发 = **回合尾、忙态归位之前**；写形 = 标题值随整档 `saveLines` 落盘（单写；链单源 = §6.7） | 标题期 = busy 窗口（webview Stop 显 + 路由守卫入单槽——`docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6）；标题抛错不卡永久 busy；单写免「整档 save + 独立 `renameSlot`」两次落盘 |
+| D-SE30 | VSC 标题触发 = **回合尾、忙态归位之前**；写形 = 标题值随整档 `saveLines` 落盘（单写；链单源 = §6.7） | 标题期 = busy 窗口（webview Stop 显 + 路由守卫入队列（容量 8）——`docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6）；标题抛错不卡永久 busy；单写免「整档 save + 独立 `renameSlot`」两次落盘 |
 | D-SE31 | 跨端 `m.active` 翻动 = **他端合法事件、本进程零效果**（绑定 / 缓存 / 记录不因外部翻指针迁移；释放时**不收养幸存 active**——§6.15 裁定条 P1–P5） | 收养绕开 `usableSlot` / `slotOccupancy` 守卫（可能接手另一活进程的槽 ⇒ 双端双写互覆盖）；且与 D-SE2 粘性同病灶——本端绑定只在四个本端落点维护 |
 | D-SE32 | 认领**随绑定走**（F-CR1）：绑定迁移落点释放本进程残留认领（保留集 = 落点槽 ∪ 其他活绑定；被占目标 ⇒ 保留集空）；释放集并入落点既有 `deletions` 写；`active` / `m.slots` / 槽文件零动 | 认领只增不减 ⇒ 进程活着期间访问过的槽在他端一律打不开且随会话累积；释放不损互覆保护（他端认领 ⇒ 本端再切入判占 + 保存 fork）。否决：保存面全局清扫（ACP 多会话误伤）· `activeSlot` 内释放（裸调用面会放掉真绑定） |
 | D-SE33 | 拒绝路径**判据前置**（F-CR2）：面板受占切换不进入 `switchToSlot`（共享指针 / 记录 / 缓存 / 认领四不动）；端壳函数内被占分支 = 零写 | 先写后判 ⇒ 被拒切换仍翻共享指针（实测 active 41→40）；回滚形态否决（回滚窗口内他端可读脏指针 + 二次写）。核侧受占 = 切换成立（保留 D-6 / D-4 落点语义——fork 面依赖指针翻至目标槽） |
@@ -797,3 +797,5 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
   §6.13 缺省句射程限定（+ 输出形例外）· §6.9 返回行补 `tool_calls` 形 · §7 D-SE25 标取代 + 射程对齐 · §6.19 头部 / 验收回指补 F-R19c / F-R19d。**零新语义**（均为评审发现直接导出项）。
 
 - 2026-09-22（**SESSION-INDEX 批 · 实施后收口轮** · eng-designer——承 `docs/batches/2026-09-22-session-index.md` §5）：源档损坏 ⇒ **查询期不清行**（清行 = 重建 / 趟面职责——查询路径零写纪律）；§6.19 补拆分产物两档行 · FTS5 指针按实读重指 · 撤新档「拟新增」标记 · 边界表登记两处 delta · `all` 首建路径按触发点①收正。**零新语义**（登记类）。
+
+- 2026-09-24（**queue-visible 批 · 设计评审修正轮 1 · eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §3 轮次 1 发现 #1 同族扫描）：§6.15 标题触发条 + §7 D-SE30 两处收正——标题窗口 = **busy 队列受理面（容量 8）**（唯一拒面 = 满队（第 9 条）；判定 / 载体 / 送达 = `docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6）。机制条文零改。
