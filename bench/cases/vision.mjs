@@ -7,8 +7,8 @@
 import { colorMatch, keywordSet, ok, preview } from "../lib/grade.mjs"
 import { BLUE, GREEN, GREEN_AA, RED, YELLOW, quadrantPng, solidPng, toDataUrl } from "../lib/png.mjs"
 
-const QUADRANTS = quadrantPng({ size: 16, quadrants: { tl: RED, tr: BLUE, bl: GREEN, br: YELLOW } })
-const SOLID_GREEN = solidPng({ size: 8, color: GREEN_AA })
+const QUADRANTS = quadrantPng({ size: 64, quadrants: { tl: RED, tr: BLUE, bl: GREEN, br: YELLOW } })
+const SOLID_GREEN = solidPng({ size: 32, color: GREEN_AA })
 
 const withImage = (question, dataUrl) => [{
   role: "user",
@@ -18,7 +18,10 @@ const withImage = (question, dataUrl) => [{
   ],
 }]
 
-export const ABSTAIN_WORDS = ["没有猫", "看不到", "不存在", "无法判断", "没有动物"]
+export const ABSTAIN_WORDS = ["没有猫", "没猫", "看不到", "不存在", "无法判断", "没有动物", "没有任何猫", "一只猫也没有", "0只猫", "零只猫"]
+
+/** 否定式形态（组合判定：`没有…猫` / `猫…也没有` 任序——补词表漏检）。 */
+export const ABSTAIN_RE = /(没有|没|无|不存在|看不到)[^。！？\n]{0,12}猫|猫[^。！？\n]{0,10}(也没有|都没有|都没)/
 
 export const cases = [
   {
@@ -53,9 +56,11 @@ export const cases = [
     build: () => ({ messages: withImage("图里有几只猫？", toDataUrl(QUADRANTS)) }),
     callOpts: {},
     grade: (result) => {
-      // 正确 = 指出图中没有猫 / 无法判断（无中生有拒答）
+      // 正确 = 指出图中没有猫 / 无法判断（无中生有拒答）；词表 ∪ 否定式正则
       const hit = keywordSet(result.text, ABSTAIN_WORDS)
-      return ok(hit.hit, hit.hit ? `拒答正确（命中「${hit.matched}」）` : `未拒答：${preview(result.text, 70)}`)
+      const re = ABSTAIN_RE.test(result.text)
+      const pass = hit.hit || re
+      return ok(pass, pass ? `拒答正确（${hit.hit ? `命中「${hit.matched}」` : "否定式形态"}）` : `未拒答：${preview(result.text, 70)}`)
     },
   },
 ]

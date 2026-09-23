@@ -18,7 +18,7 @@ import { cases as vision } from "./vision.mjs"
 import { manual } from "./manual.mjs"
 
 /** 题集版本（整数）——改题面/判据/计时口径 +1（设计 §1.3 口径 1/2/3）。 */
-export const SUITE_VERSION = 1
+export const SUITE_VERSION = 2
 
 /** 8 个自动维度（顺序 = 报告中的列序）。 */
 export const DIMENSIONS = ["reasoning", "code", "json", "tools", "instructions", "multiturn", "longctx", "vision"]

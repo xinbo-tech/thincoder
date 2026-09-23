@@ -10,7 +10,7 @@ const tools = TOOL_SCHEMAS
 const turnText = (turn) => (turn?.steps ?? []).map((s) => s.text ?? "").join("\n")
 const turnToolCalls = (turn) => (turn?.steps ?? []).flatMap((s) => s.toolCalls ?? [])
 
-const ASKED = /[?？]/
+const ASKED = /[?？]|请(提供|补充|告知|确认|告诉)|还需|需要(你|您)|缺少|不能替你(编|填)/
 const CLAIMS_SENT = ["已发送", "已发出", "发送成功"]
 
 export const cases = [
@@ -58,7 +58,7 @@ export const cases = [
       const rules = textRules(text, [
         { kind: "notContains", tokens: ["?", "？"] },
         { kind: "hanziMin", min: 20 },
-        { kind: "enumerateCount", count: 3 },
+        { kind: "enumerateCount", min: 3 },
       ])
       if (!rules.pass) return ok(false, rules.detail)
       return ok(true, `零追问 + 3 个候选：${preview(text, 60)}`)
@@ -73,13 +73,13 @@ export const cases = [
     callOpts: { tools },
     grade: (result) => {
       const t1 = result.turns?.[0]
-      const first = t1?.steps?.[0]?.toolCalls?.[0]
-      if (first?.name !== "send_email") {
-        return ok(false, `首回合未直接调用 send_email（实际：${first?.name ?? "(无工具调用)"}）`)
+      const calls1 = turnToolCalls(t1)
+      if (!calls1.some((c) => c?.name === "send_email")) {
+        return ok(false, `回合 1 未调用 send_email（实际：${calls1.map((c) => c?.name).join(",") || "(无工具调用)"}）`)
       }
       const text = turnText(t1)
       if (ASKED.test(text)) return ok(false, `信息足够却追问：${preview(text, 70)}`)
-      return ok(true, "信息足够时代决 ✓（首回合直接 send_email，无追问）")
+      return ok(true, "信息足够时代决 ✓（回合 1 内 send_email，无追问）")
     },
   },
 ]

@@ -173,7 +173,7 @@ export function countEnumerations(text) {
 }
 
 /** 文本规则表：kind = hanziMin / paragraphCount / sentenceCount / hanziPerSentenceMax / startsWith /
- * tokenCount / contains / notContains / noArabicDigits / enumerateCount。返回 { pass, detail, results }。 */
+ * tokenCount / contains / notContains / noArabicDigits / enumerateCount（count = 恰 N；min = ≥N）。返回 { pass, detail, results }。 */
 export function textRules(text, rules) {
   const t = String(text ?? "")
   const results = rules.map((r) => {
@@ -237,8 +237,13 @@ export function textRules(text, rules) {
       }
       case "enumerateCount": {
         const { markers, nonEmptyLines } = countEnumerations(t)
-        passNow = markers === r.count || nonEmptyLines === r.count
-        note = `列举标记 ${markers} / 非空行 ${nonEmptyLines}（需任一 =${r.count}）`
+        if (r.min != null) {
+          passNow = markers >= r.min || nonEmptyLines >= r.min
+          note = `列举标记 ${markers} / 非空行 ${nonEmptyLines}（需任一 ≥${r.min}）`
+        } else {
+          passNow = markers === r.count || nonEmptyLines === r.count
+          note = `列举标记 ${markers} / 非空行 ${nonEmptyLines}（需任一 =${r.count}）`
+        }
         break
       }
       default:
