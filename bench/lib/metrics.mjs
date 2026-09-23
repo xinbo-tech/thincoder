@@ -20,6 +20,17 @@ export function median(values) {
 const round1 = (n) => (n == null ? null : Math.round(n * 10) / 10)
 const roundMs = (n) => (n == null ? null : Math.round(n))
 
+/** 核归一 usage → 账目 token 三元组（§2.2-1：只认 usage 精确值；缺失 ⇒ null，不近似）。
+ *  单源：被测调用（client.mjs）与判官 / 复核逐尝试账目（judge.mjs）共用。 */
+export function usageTokens(usage) {
+  if (!usage || typeof usage.prompt_tokens !== "number") return null
+  return {
+    prompt: usage.prompt_tokens ?? null,
+    cached: usage.prompt_cache_hit_tokens ?? null,
+    completion: usage.completion_tokens ?? null,
+  }
+}
+
 /** Σ 非 null 样本；全为 null → null（不按 0 计，§2.3-2 之 ④ 同源纪律）。 */
 export function sumPresent(values) {
   const nums = values.filter((v) => typeof v === "number" && Number.isFinite(v))

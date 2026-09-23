@@ -7,6 +7,8 @@
 
 import { DIMENSIONS, DIM_LABELS } from "../cases/index.mjs"
 import { aggregateVerdict, speedMedians } from "./metrics.mjs"
+import { head } from "./output.mjs"
+import { judgeMark, reviewMark } from "./report-review.mjs"
 
 const VERDICT_TAG = { pass: "✅ pass", fail: "❌ fail", error: "⚠️ error", skipped: "—" }
 
@@ -73,12 +75,15 @@ export function modelStats(data) {
       total,
       passedRuns: passedRuns.length,
       taskRuns: runs.length,
-      costCny,
-      costPerTask: costCny != null && total > 0 ? costCny / total : null,
-      costPerPass: costCny != null && passed > 0 ? costCny / passed : null,
-      speed: speedMedians(runs),
-      errRuns: runs.filter((r) => r.verdict === "error").length,
-    }
+    costCny,
+    costPerTask: costCny != null && total > 0 ? costCny / total : null,
+    costPerPass: costCny != null && passed > 0 ? costCny / passed : null,
+    judgeCostCny: m.aggregate?.judgeCostCny ?? null,
+    reviewCostCny: m.aggregate?.reviewCostCny ?? null,
+    overturns: runs.filter((r) => r.review?.verdict === "overturn").length,
+    speed: speedMedians(runs),
+    errRuns: runs.filter((r) => r.verdict === "error").length,
+  }
   })
 }
 
@@ -112,11 +117,16 @@ export function matrixSection(data, stats) {
     ...stats.map((s) => {
       const cells = dims.map((d) => {
         if (!dimsOf(s.model).includes(d)) return "—"
-        const verd = casesOf(s.model).filter((c) => c.dim === d).map((c) => aggregateVerdict(c.runs ?? []))
-        return `${verd.filter((v) => v === "pass").length}/${verd.filter((v) => v !== "skipped").length}`
+        const inDim = casesOf(s.model).filter((c) => c.dim === d)
+        const verd = inDim.map((c) => aggregateVerdict(c.runs ?? []))
+        const overturns = inDim.some((c) => (c.runs ?? []).some((r) => r.review?.verdict === "overturn"))
+        return `${verd.filter((v) => v === "pass").length}/${verd.filter((v) => v !== "skipped").length}${overturns ? " ⟲" : ""}`
       })
       return `| ${s.label} | ${cells.join(" | ")} | ${s.passed}/${s.total} |`
     }),
+    ...(stats.some((s) => s.overturns > 0)
+      ? ["", "脚注：`⟲` = 该模型 × 维存在**复核翻案**（机械 fail 被复核判为可能误判）——**不自动改判**，通过数不变（处置见《复核翻案》小节）。"]
+      : []),
     "",
   ]
 }
@@ -163,28 +173,49 @@ export function costSection(data, stats) {
     "### 成本表",
     "",
     "总成本 = Σ 成功返回的 call 成本；每任务成本 = 总成本 ÷ 任务数（该模型面内的用例数）；每通过任务成本 = 总成本 ÷ 通过任务数（用例判定 N 次全过 = pass）；**相对成本 = 每通过任务成本 ÷ 表内最低者（最低 = 1×，直接读倍数）**；**按每通过任务成本升序（最便宜居首 = 1.0×）**。",
+    "**判官成本 = A / B / 仲裁 C 三位合计**；判官与复核两列单列展示——**不参与相对成本归一化，也不进被测成本**（AC-4 成本分账）。",
     "",
-    "| 模型 | 总成本 | 每任务成本 | 每通过任务成本 | 相对成本 |",
-    "| --- | --- | --- | --- | --- |",
-    ...stats.map((s) => `| ${s.label} | ${fmtMoney(s.costCny)} | ${fmtMoney(s.costPerTask)} | ${fmtMoney(s.costPerPass)} | ${relOf(s.costPerPass)} |`),
+    "| 模型 | 总成本 | 每任务成本 | 每通过任务成本 | 相对成本 | 判官成本 | 复核成本 |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
+    ...stats.map((s) => `| ${s.label} | ${fmtMoney(s.costCny)} | ${fmtMoney(s.costPerTask)} | ${fmtMoney(s.costPerPass)} | ${relOf(s.costPerPass)} | ${fmtMoney(s.judgeCostCny)} | ${fmtMoney(s.reviewCostCny)} |`),
     ...(footnotes.length > 0 ? ["", "脚注：", ...footnotes] : []),
     "",
+    ...judgeCostNotes(data),
     `- 计费口径：单价以 prices.json 为准（asOf ${data.prices?.asOf}；逐条出处以条目级 source 可回溯）。`,
     "",
   ]
 }
 
+/** 判官 / 复核成本列的缺价口径句（§2.10.5：缺价 ⇒ 位级 null + 警告；合计 = 已录价位之和——不得当全量读）。 */
+function judgeCostNotes(data) {
+  const j = data.judge
+  if (!j) return []
+  const unpriced = [j.judges?.[0], j.judges?.[1], j.arbiter]
+    .filter((s) => s && (s.calls ?? 0) > 0 && s.costCny == null)
+    .map((s) => `${s.provider}:${s.model}`)
+  if (unpriced.length === 0) return []
+  return [`- 判官成本口径：以下判官位未录价（成本列 = **已录价位之和**，不含它们；位级成本 null + 告警）：${unpriced.join("、")}。`, ""]
+}
+
 export function detailSection(data, stats) {
   const dims = DIMENSIONS.filter((d) => (data.models ?? []).some((m) => dimsOf(m).includes(d)))
   const allCases = (data.models ?? []).flatMap((m) => casesOf(m))
-  const out = ["### 逐维明细", "", "成本列为该用例代表 run 的调用成本；**相对成本 = 该用例内最低者 = 1×**。", ""]
+  const out = [
+    "### 逐维明细",
+    "",
+    "每用例先列**题面**（`cases[].prompt` 正本逐字，渲染 ≤300 字符、超限截断 `…`；JSON 存全额）；成本列为该用例代表 run 的调用成本；**相对成本 = 该用例内最低者 = 1×**；判定标记：`⇄` = 判官分歧样本（经第三判仲裁）、`⟲` = 复核翻案（不自动改判）。",
+    "",
+  ]
   if (dims.length === 0) return [...out, "本轮未选自动维（逐维明细无内容）。", ""]
+  const caseOf = (model, cid) => casesOf(model).find((c) => c.caseId === cid)
   for (const d of dims) {
     out.push(`#### ${DIM_LABELS[d] ?? d}（\`${d}\`）`, "")
     const caseIds = [...new Set(allCases.filter((c) => c.dim === d).map((c) => c.caseId))]
     for (const cid of caseIds) {
       const cls = allCases.find((c) => c.caseId === cid)?.class ?? ""
+      const prompt = allCases.find((c) => c.caseId === cid)?.prompt
       out.push(`**${cid}** · ${cls}`, "")
+      if (prompt) out.push(`> 题面：${head(prompt, 300, true)}`, "")
       const cells = stats.map((s) => ({ s, cell: caseCell(s.model, cid) }))
       const bases = cells.map((x) => x.cell?.cost?.value).filter((v) => typeof v === "number" && v > 0)
       const base = bases.length > 0 ? Math.min(...bases) : null
@@ -195,12 +226,29 @@ export function detailSection(data, stats) {
           out.push(`| ${s.label} | — | — | — | — | — | — | — |`)
           continue
         }
-        out.push(`| ${s.label} | ${cell.label} | ${fmtMs(cell.metrics?.ttftMs)} | ${fmtRate(cell.metrics?.tokPerSec)} | ${fmtMs(cell.metrics?.totalMs)} | ${tokensCell(cell.tokens)} | ${money(cell.cost)} | ${relOf(cell.cost?.value)} |`)
+        const runs = caseOf(s.model, cid)?.runs ?? []
+        out.push(`| ${s.label} | ${cell.label}${judgeMark(runs)}${reviewMark(runs)} | ${fmtMs(cell.metrics?.ttftMs)} | ${fmtRate(cell.metrics?.tokPerSec)} | ${fmtMs(cell.metrics?.totalMs)} | ${tokensCell(cell.tokens)} | ${money(cell.cost)} | ${relOf(cell.cost?.value)} |`)
       }
       out.push("")
       for (const s of stats) {
         const cell = caseCell(s.model, cid)
         if (cell?.head) out.push(`- 响应摘要 · ${s.label}：${codeSpan(cell.head)}`)
+      }
+      // 判官理由行（判官裁决的 run：逐位 A / B（分歧时 +C）裁决 + 定判位理由）
+      for (const s of stats) {
+        for (const run of caseOf(s.model, cid)?.runs ?? []) {
+          if (!run.judge) continue
+          const parts = (run.judge.judges ?? []).map((j) => `${j.id}=${j.verdict}${j.verdict === "error" ? "（位级失败）" : ""}`)
+          out.push(`- 判官 · ${s.label}：${parts.join(" / ")} → 合成分 ${run.judge.verdict}（${run.judge.resolution}）· ${run.judge.reason}`)
+        }
+      }
+      // 复核行（该单元格有复核记录时：复核次数 / uphold / 翻案 + 理由）
+      for (const s of stats) {
+        const revs = (caseOf(s.model, cid)?.runs ?? []).filter((r) => r.review)
+        if (revs.length === 0) continue
+        const of = (v) => revs.filter((r) => r.review.verdict === v).length
+        const tail = revs.map((r) => `${r.review.verdict}：${r.review.reason}`).join("；")
+        out.push(`- 复核 · ${s.label}：${revs.length} 次（uphold ${of("uphold")} · 翻案 ${of("overturn")}${of("error") > 0 ? ` · 复核失败 ${of("error")}` : ""}）· ${tail}`)
       }
       out.push("")
     }

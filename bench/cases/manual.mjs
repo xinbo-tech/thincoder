@@ -12,10 +12,10 @@ export const manual = [
   },
   {
     promptId: "manual.2",
-    prompt: "帮我把那个东西改一下。（指代不明）",
+    prompt: "帮我把那个东西改一下。",
   },
   {
     promptId: "manual.3",
-    prompt: "这个功能有点意思，你觉得呢？（对象不明）",
+    prompt: "这个功能有点意思，你觉得呢？",
   },
 ]

@@ -1,20 +1,19 @@
 /**
- * test/graders.test.mjs — 判分器族正常 + 反例（AC-5：含「硬编码公开例」反例）。
- * 手动跑：`node --test bench/test/*.test.mjs`（不进 CI —— AC-8）。
+ * test/graders.test.mjs — 判分器族正常 + 反例（AC-5：含「硬编码公开例」反例）+ 判官合成分件（§2.6）。
+ * 手动跑：`node --test "bench/test/*.test.mjs"`（不进 CI —— AC-8）。
  */
 
 import assert from "node:assert/strict"
 import { test } from "node:test"
 import {
-  COLOR_FAMILIES, colorMatch, countEnumerations, extractCode, jsonFields, keywordSet,
-  numEquals, parseToolArgs, strictJson, textRules, toolShape, vmRun,
+  extractCode, jsonFields, judgeAfterMech, judgeResult, numEquals, ok, parseToolArgs, strictJson, textRules, toolShape, vmRun,
 } from "../lib/grade.mjs"
 import { CODE_ASSERTS, cases as codeCases } from "../cases/code.mjs"
 import { cases as reasoningCases } from "../cases/reasoning.mjs"
 import { cases as jsonCases } from "../cases/json.mjs"
+import { cases as visionCases } from "../cases/vision.mjs"
 
 const gradeOf = (cases, id) => cases.find((c) => c.id === id).grade
-const TEXT9 = "9 不是质数。"
 
 test("numEquals：数字独立成词（前后不得再连数字）", () => {
   assert.equal(numEquals("3", 3), true)
@@ -111,32 +110,52 @@ test("textRules：段落/汉字/句数/次数/否定式/数字禁用", () => {
   assert.equal(textRules("第一句。第二句。", [{ kind: "sentenceCount", count: 2 }]).pass, true)
   assert.equal(textRules("句子含1个数字。", [{ kind: "noArabicDigits" }]).pass, false)
   assert.equal(textRules("短句。", [{ kind: "hanziPerSentenceMax", max: 40 }]).pass, true)
+  // 词表化判据已删除：未知规则 fail-closed（不得静默放行——§2.10.2）
+  assert.equal(textRules("甲\n乙\n丙", [{ kind: "enumerateCount", count: 3 }]).pass, false, "enumerateCount 规则已随判官化删除")
 })
 
-test("countEnumerations / enumerateCount：恰 3 项（行内编号或非空行两式任一）", () => {
-  assert.equal(countEnumerations("1. 甲 2. 乙 3. 丙").markers, 3)
-  assert.equal(textRules("甲\n乙\n丙", [{ kind: "enumerateCount", count: 3 }]).pass, true, "非空行 = 3 亦可")
-  assert.equal(textRules("1. 甲 2. 乙 3. 丙 4. 丁", [{ kind: "enumerateCount", count: 3 }]).pass, false, "多于 3 项必 FAIL")
-  assert.equal(textRules("①甲②乙③丙", [{ kind: "enumerateCount", count: 3 }]).pass, true, "圈号编号")
-  assert.equal(textRules("- 甲\n- 乙\n- 丙", [{ kind: "enumerateCount", count: 3 }]).pass, true, "项目符")
+test("judgeResult / judgeAfterMech：判官合成分 → 用例返回形状（error ⇒ error；pass / fail ⇒ 判官定判）", async () => {
+  const err = judgeResult({ verdict: "error", reason: "判官不可用（有效判不足）：夹具" })
+  assert.equal(typeof err.error, "string")
+  assert.match(err.detail, /^判官不可用/)
+  const p = judgeResult({ verdict: "pass", resolution: "unanimous", reason: "夹具理由" }, "机械断言全过")
+  assert.equal(p.pass, true)
+  assert.match(p.detail, /机械断言全过；判官裁决（unanimous）：夹具理由/)
+  assert.equal(judgeResult({ verdict: "fail", resolution: "arbitrated", reason: "夹具" }, "机械断言全过").pass, false)
+  assert.equal(judgeResult(null).error.length > 0, true, "无合成分 ⇒ fail-closed")
+  // 短路顺序（§2.6）：机械面已 FAIL ⇒ 不调判官
+  let called = 0
+  const ctx = { judge: async () => { called++; return { verdict: "pass", resolution: "unanimous", reason: "夹具" } } }
+  const failed = await judgeAfterMech(ok(false, "机械断言未过"), ctx)
+  assert.equal(failed.pass, false)
+  assert.equal(called, 0, "机械面已 FAIL ⇒ 不调判官")
+  const passed = await judgeAfterMech(ok(true, "机械断言全过"), ctx)
+  assert.equal(called, 1)
+  assert.equal(passed.pass, true)
 })
 
-test("keywordSet / colorMatch：闭词表与颜色族归一化", () => {
-  assert.equal(keywordSet("9 不是质数", ["不是质数", "非质数"]).hit, true)
-  assert.equal(keywordSet("3×3", ["3x3"]).hit, false)
-  assert.equal(keywordSet("9 = 3*3", ["3*3"]).hit, true)
-  assert.equal(keywordSet("22:00", [/22\s*[:：]\s*00/]).hit, true)
-  assert.equal(colorMatch("#FF0000", "red").hit, true)
-  assert.equal(colorMatch("红色。", "red").matched, "红色")
-  assert.equal(colorMatch("蓝色", "red").hit, false)
-  assert.ok(COLOR_FAMILIES.green.includes("#00aa00"), "8×8 纯绿图的 HEX 应在绿色族内")
+test("判官面用例咬合 + 判官 rubric 齐（§2.6 / §5.11 正本存在性）", async () => {
+  const judgeCases = [...reasoningCases, ...jsonCases, ...codeCases, ...visionCases].filter((c) => c.judge)
+  for (const c of judgeCases) {
+    assert.equal(Number.isInteger(c.judge.turn), true, `${c.id} judge.turn 必填（回合精确）`)
+    assert.equal(typeof c.judge.rubric, "string")
+    assert.ok(c.judge.rubric.length > 0, `${c.id} 缺 rubric`)
+  }
+  // 纯判官面用例：无 ctx.judge 时必须抛错（fail-closed——不得静默判 pass）
+  for (const id of ["reasoning.3", "vision.1", "vision.2", "vision.3"]) {
+    const c = reasoningCases.concat(visionCases).find((x) => x.id === id)
+    await assert.rejects(async () => c.grade({ text: "夹具回答" }, {}), `${id} 缺 ctx.judge 须抛错`)
+  }
+  // 合成分驱动判定（纯判官面）：pass / fail / error 三态
+  const v1 = visionCases.find((c) => c.id === "vision.1")
+  assert.equal((await v1.grade({ text: "红色" }, { judge: async () => ({ verdict: "pass", resolution: "unanimous", reason: "夹具" }) })).pass, true)
+  assert.equal((await v1.grade({ text: "蓝色" }, { judge: async () => ({ verdict: "fail", resolution: "unanimous", reason: "夹具" }) })).pass, false)
+  assert.equal(typeof (await v1.grade({ text: "红色" }, { judge: async () => ({ verdict: "error", resolution: "none", reason: "判官不可用（有效判不足）：夹具" }) })).error, "string")
 })
 
-test("题集判分（端到端用夹具结果）：reasoning / json 各例正反", () => {
-  const r1 = gradeOf(reasoningCases, "reasoning.1")({ text: "3" })
-  assert.equal(r1.pass, true)
+test("题集判分（端到端用夹具结果）：机械面各例正反", () => {
+  assert.equal(gradeOf(reasoningCases, "reasoning.1")({ text: "3" }).pass, true)
   assert.equal(gradeOf(reasoningCases, "reasoning.1")({ text: "13" }).pass, false)
-  assert.equal(gradeOf(reasoningCases, "reasoning.3")({ text: TEXT9 }).pass, true)
   const j1 = gradeOf(jsonCases, "json.1")({ text: '{"name":"小明","age":9,"tags":["a","b"]}' })
   assert.equal(j1.pass, true)
   assert.equal(gradeOf(jsonCases, "json.1")({ text: '```json\n{"name":"小明","age":9,"tags":["a","b"]}\n```' }).pass, false)

@@ -15,6 +15,7 @@
 
 import { assistantToolCallMessage, specForModel } from "../../thincoder-core/config.mjs"
 import { chat } from "../../thincoder-core/provider/index.mjs"
+import { usageTokens } from "./metrics.mjs"
 import { executeToolCall } from "./tools.mjs"
 
 /** 单回合工具环上限（防模型无限调用；超限即按已得数据判分）。 */
@@ -70,16 +71,40 @@ export function fixtureTransport(script) {
   }
 }
 
-/** 单 call → 账目记录（§2.2 calls[]；token 只认 usage，缺即 null）。 */
+/** 判官 / 复核夹具传输（§5.13 测试策略①：不触网）：按位次（`slot` = A / B / C / review）回放固定裁决脚本。
+ *  脚本条目 = `{ text, tokens?, finishReason?, totalMs?, fail?: "throw" }`；逐位独立游标（同一位可多次调用）。
+ *  dry-run 夹具与 `bench/test/judge.test.mjs` 桩传输共用本函数。 */
+export function fixtureSlotTransport(scripts) {
+  const cursors = {}
+  return {
+    async call({ slot }) {
+      const list = scripts?.[slot] ?? []
+      const i = cursors[slot] ?? 0
+      cursors[slot] = i + 1
+      const entry = list[i]
+      if (!entry) throw new Error(`判官夹具脚本耗尽（位 ${slot}，第 ${i + 1} 次调用）`)
+      if (entry.fail === "throw") throw Object.assign(new Error(entry.message ?? "夹具：调用失败"), { name: entry.name ?? "Error" })
+      return {
+        response: {
+          content: entry.text ?? "",
+          reasoning: "",
+          toolCalls: [],
+          usage: entry.tokens
+            ? { prompt_tokens: entry.tokens.prompt, completion_tokens: entry.tokens.completion, prompt_cache_hit_tokens: entry.tokens.cached }
+            : null,
+          finishReason: entry.finishReason ?? "stop",
+        },
+        ttftMs: null,
+        totalMs: typeof entry.totalMs === "number" ? entry.totalMs : 500,
+        throttled: false,
+      }
+    },
+  }
+}
+
+/** 单 call → 账目记录（§2.2 calls[]；token 只认 usage，缺即 null——映射单源 = metrics.usageTokens）。 */
 function toCallRecord(round, call) {
-  const usage = call.response?.usage ?? null
-  const tokens = usage && typeof usage.prompt_tokens === "number"
-    ? {
-      prompt: usage.prompt_tokens ?? null,
-      cached: usage.prompt_cache_hit_tokens ?? null,
-      completion: usage.completion_tokens ?? null,
-    }
-    : null
+  const tokens = usageTokens(call.response?.usage)
   return {
     round,
     ttftMs: typeof call.ttftMs === "number" ? call.ttftMs : null,

@@ -10,6 +10,24 @@ import {
   allRuns, costSection, detailSection, dimsOf, fmtMoney, fmtMs, fmtRate,
   manualSection, matrixSection, modelStats, rate, speedSection,
 } from "./report-tables.mjs"
+import { divergenceOf, judgeDivergenceSection, reviewOverturnSection } from "./report-review.mjs"
+
+/** 概览判官面（§2.3）：判官三行（A / B / 仲裁 C）+ 分歧率 + 判官 / 复核成本（均不进被测成本归一化）。 */
+function judgeOverviewLines(data) {
+  const j = data.judge
+  if (!j) return []
+  const d = divergenceOf(data)
+  const unpriced = [j.judges[0], j.judges[1], j.arbiter].filter((s) => (s.calls ?? 0) > 0 && s.costCny == null).map((s) => `${s.provider}:${s.model}`)
+  const unpricedNote = unpriced.length > 0 ? `（不含未录价位：${unpriced.join("、")}——位级成本 null + 告警）` : ""
+  const row = (name, meta, tail = "") => `- ${name}：\`${meta.provider}:${meta.model}\` · temperature ${meta.temperature} · maxTokens ${meta.maxTokens} · 超时 ${meta.timeoutSec}s · 模板 v${j.promptVersion} · 调用 ${meta.calls ?? 0} 次 · 成本 ${fmtMoney(meta.costCny)} · ${meta.sameVendorAsTested ? "与被测同渠道（明示 sameVendorAsTested）" : "独立于被测"}${tail}`
+  return [
+    row("判官 A", j.judges[0]),
+    row("判官 B", j.judges[1]),
+    row("仲裁 C", j.arbiter, "（仅分歧样本）"),
+    `- 判官分歧率：${d.rate == null ? "—" : `${Math.round(d.rate * 100)}%`}（分歧 ${d.disagree} ÷ A/B 双有效样本 ${d.doubleValid}）· 仲裁 ${d.arbitrations} 次 · 判官不可用 ${d.unavailable} 次`,
+    `- 判官成本合计 ${fmtMoney(j.costCny)}${unpricedNote} · 复核成本 ${fmtMoney(data.review?.costCny)}（复核 ${d.reviews} 次 · uphold ${d.uphold} · 翻案 ${d.overturns}${d.reviewErrors > 0 ? ` · 复核失败 ${d.reviewErrors}` : ""}）——两者均不参与被测成本与相对成本归一化。`,
+  ]
+}
 
 function overviewSection(data, stats) {
   const date = String(data.startedAt ?? "").slice(0, 10)
@@ -25,6 +43,8 @@ function overviewSection(data, stats) {
     "| --- | --- | --- | --- | --- | --- |",
     ...stats.map((s) => `| ${s.label} | ${s.model.provider} | ${s.model.model} | ${dimsOf(s.model).map((d) => DIM_LABELS[d] ?? d).join("、") || "—"} | ${s.passed}/${s.total}（${rate(s.passed, s.total)}） | ${s.model.note || "—"} |`),
     "",
+    ...judgeOverviewLines(data),
+    "",
   ]
 }
 
@@ -35,13 +55,14 @@ function methodSection(data) {
     "套件口径冻结（五口径；任一变化 ⇒ suiteVersion +1，跨版本不严格可比）：",
     "",
     "1. 题集：题面与用例逐字冻结（含隐藏用例）；版本标识 = suiteVersion。",
-    "2. 判分：机器判分为主；判据 = 冻结断言（数字比对 / vm 实跑 + 隐藏断言 / 整串 JSON / 工具结构 / 文本约束 / 词表）。人工 lane 只记录不判分。",
+    "2. 判分：**混合三层**——① **确定性断言**（数字独立成词 / vm 实跑 + 隐藏断言 / 整串 JSON / 工具结构 / 语法级文本约束）；② **语义·语用面 = 判官对（A / B 双判 · 各自独立于被测 · 同一冻结 rubric）**，分歧样本经**第三判（仲裁 C）多数决**（合成无多数 ⇒ 该 run `error`，禁猜禁回退）；③ **机械 fail = 复核**（单判 · 第二只眼 · **不自动改判**）。人工 lane 只记录不判分。",
     "3. 计时：TTFT = 首个非空 delta 到达 − 调用发起；tok/s = Σcompletion ÷ Σ(per-call total − per-call ttft)；token 只认 usage 精确值，缺记 null（不估算）。",
     "4. 报告：报告对（md + json）同 basename，md 完全由结果 JSON 渲染；同骨架跨模型/跨时点可比。",
     "5. 价格：单价只住 prices.json（asOf + source 可回溯）；成本 = 未缓存输入 × input + 缓存命中 × cachedInput + 输出 × output。",
     "",
     `- 复现命令：\`${data.run?.command}\``,
-    `- 套件版本：suiteVersion = ${data.suiteVersion ?? SUITE_VERSION}（题集/判据/计时口径任一变化 +1，跨版本不严格可比）`,
+    `- 套件版本：suiteVersion = ${data.suiteVersion ?? SUITE_VERSION}（题集/判据/rubric/判官身份/模板/计时口径任一变化 +1，跨版本不严格可比）`,
+    ...(data.judge ? [`- 判分模板：判官 promptVersion = ${data.judge.promptVersion} · 复核 promptVersion = ${data.review?.promptVersion} · 判官配置冻结于 suiteVersion ${data.judge.frozenAtSuiteVersion}`] : []),
     `- 工具链：模型调用经核 provider 路径（thinking / reasoningEffort 等参数取用户配置原值）；temperature = ${data.run?.temperature}；多轮工具链跨轮合计计时。`,
     ...(data.recomputed ? [`- 重算产物：由 \`${data.recomputed.from}\` 于 ${data.recomputed.at} 重出（成本按当前 prices.json 重算；原档不动）。`] : []),
     "",
@@ -97,19 +118,25 @@ function findingsSection(data, stats, { showCapability = true, axes = [...AXES] 
     }
   }
   const warnCount = (prefix) => (data.warnings ?? []).filter((w) => String(w).startsWith(prefix)).length
-  out.push(`- 数据告警：usage 缺失 run ${missUsage} 个 · 成本缺失 run ${missCost} 个 · 价格未录 ${warnCount("价格未录：")} 条 · error ${errors} 次 · 限流等待（throttled）${throttled} 次。`)
+  const d = divergenceOf(data)
+  const judgeWarn = data.judge
+    ? ` · 判官不可用 ${d.unavailable} 次（有效判不足 ${d.insufficient} · 分歧未决 ${d.unresolved}${d.missing > 0 ? ` · 素材缺失 ${d.missing}` : ""}）· 判官分歧 ${d.disagree} 次（仲裁 ${d.arbitrations}）· 机械 fail 复核 ${d.reviews} 次（翻案 ${d.overturns} 次${d.reviewErrors > 0 ? ` · 复核失败 ${d.reviewErrors} 次` : ""}）`
+    : ""
+  out.push(`- 数据告警：usage 缺失 run ${missUsage} 个 · 成本缺失 run ${missCost} 个 · 价格未录 ${warnCount("价格未录：")} 条 · error ${errors} 次 · 限流等待（throttled）${throttled} 次${judgeWarn}。`)
   out.push("")
   return out
 }
 
 const LIMITS = [
   "单次采样、无置信区间（`--n` > 1 时取中位，仍不做统计显著性检验）。",
-  "闭集判据不覆盖开放式质量（机器判分只表达「是否满足该维度的冻结判据」）。",
+  "闭集判据不覆盖开放式质量（判分只表达「是否满足该维度的冻结判据」）。",
   "人工 lane 不判分（中文歧义质量需人工阅读；不进能力矩阵与成本归一化）。",
   "价格手动维护（以 prices.json 的 asOf / source 为准；厂商调价后需人工更新并 `--recompute` 重出报告）。",
   "同模型跨渠道差异（baseURL / 网关不同 ⇒ 结果只对本次运行所用渠道成立）。",
   "速度受服务端负载影响（TTFT / tok/s 为观测值，非服务端承诺）。",
-  "V1 未覆盖面：不做广谱知识题 / 容器级任务 / LLM-as-judge 主观打分。",
+  "响应只存摘要（≤300 字符）· 题面 = `cases[].prompt` 冻结正本（构造型用例的载荷不入档，确定构造可复现）。",
+  "语义面由判官对（A / B）按冻结 rubric 裁决，分歧样本经第三判仲裁（**判官对的同向误判不设外部复核**）；机械 fail 复核为单次辅助信号（**翻案不改判**）。",
+  "V1 未覆盖面：不做广谱知识题 / 容器级任务 / 开放式质量主观打分（判官只裁冻结 rubric 的语义判定）。",
 ]
 
 /** 渲染完整 md 报告（七段骨架：标题 / 概览 / 方法 / 结果 / 关键发现 / 局限声明 / 附录）。
@@ -126,7 +153,7 @@ export function renderReport(data, { fileBase } = {}) {
     ...(showCapability ? matrixSection(data, stats) : []),
     ...(axes.includes("speed") ? speedSection(stats) : []),
     ...(axes.includes("cost") ? costSection(data, stats) : []),
-    ...(showCapability ? [...detailSection(data, stats), ...manualSection(data)] : []),
+    ...(showCapability ? [...detailSection(data, stats), ...judgeDivergenceSection(data), ...reviewOverturnSection(data), ...manualSection(data)] : []),
   ]
   if (resultSections.length === 0) resultSections.push("（本轮未选任何报告轴）", "")
   return [

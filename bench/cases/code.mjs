@@ -39,6 +39,7 @@ export const cases = [
     prompt: "用 JavaScript 实现函数 `chunkEven(arr, size)`：把数组按 size 切分为多个子数组并返回二维数组；`size` 小于 1 时抛出 `RangeError`。公开例：`chunkEven([1,2,3,4,5], 2) → [[1,2],[3,4],[5]]`。只输出函数代码，不要示例调用与解释。",
     build: null,
     callOpts: {},
+    mechRubric: "`chunkEven(arr, size)` 语义 = 按 size 切分；`size < 1` 抛 `RangeError`；以实跑隐藏断言为准（5 条：size=1 / 超长 / 空数组 / size=0 / size=−3）。",
     grade: (result) => vmRun(result.text, CODE_ASSERTS["code.1"]),
   },
   {
@@ -48,6 +49,7 @@ export const cases = [
     prompt: "下面的函数在边界输入下行为不正确，请修复并只输出修复后的完整函数代码。\n\n```js\nfunction sumEven(nums){ let t=0; for (let i=1; i<nums.length; i++){ if (nums[i]%2===0 && nums[i]>0) t+=nums[i] } return t }\n```\n\n语义 = 求数组中所有偶数之和。",
     build: null,
     callOpts: {},
+    mechRubric: "修复后 `sumEven` 须对全部偶数（含 0 与负数）求和；以 5 条实跑断言为准。",
     grade: (result) => vmRun(result.text, CODE_ASSERTS["code.2"]),
   },
   {
@@ -57,6 +59,7 @@ export const cases = [
     prompt: '用 JavaScript 实现函数 `parsePairs(text)`：`text` 形如 `"a=1;b=2"`，返回 `{a:"1", b:"2"}`；规则①空串 → `{}`；②重复键 → 后者覆盖；③不含 `=` 的段 → 跳过；④值保持字符串。公开例：`parsePairs("a=1;b=2") → {a:"1", b:"2"}`。只输出函数代码。',
     build: null,
     callOpts: {},
+    mechRubric: "`parsePairs(text)` 四规则（空串→`{}` / 重复键后者覆盖 / 无 `=` 段跳过 / 值保持字符串）；以 5 条实跑断言为准。",
     grade: (result) => vmRun(result.text, CODE_ASSERTS["code.3"]),
   },
 ]

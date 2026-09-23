@@ -1,46 +1,31 @@
 /**
- * lib/pipeline.mjs — 运行 / 重算编排（run.mjs 超 300 行 ⇒ 按设计档 §3 拆分触发条件拆出）。
+ * lib/pipeline.mjs — 运行编排（run.mjs 超 300 行 ⇒ 拆出；2026-09-24 判官面增量再次拆分：
+ * 落档面 → `lib/output.mjs` · 离线重算面 → `lib/recompute.mjs`——设计档 §3 拆分触发条件）。
  *
- * 两条编排：
- * - `runMain`：真实运行 / dry-run 自检（夹具表由 run.mjs 传入——夹具落点仍住 run.mjs）。
+ * `runMain`：真实运行 / dry-run 自检（夹具表由 run.mjs 传入——夹具落点仍住 run.mjs）。
  *   **动态** `import("./client.mjs")` 只发生在本函数内 ⇒ `--recompute` 分支构造性零网络（AC-10）。
- * - `recomputeMain`：读入结果 JSON → 以当前 prices.json 重算成本 → 落新报告对；不调模型、不触网。
+ * 判官面（§2.10 / §2.11）：槽位闸门 → 用例 `ctx.judge()`（判官对 + 分歧仲裁）→ 逐 run 记录；
+ *   机械 fail ⇒ 复核（辅判信号，不改判）；成本由 `prices.mjs` 后置逐位记账（不进被测成本面）。
  *
- * 产物落盘唯一面 = `writePair`（写档前脱敏断言 fail-closed，§2.8）；同名拒写（KD-10）。
+ * 产物落盘唯一面 = `output.writePair`（写档前脱敏断言 fail-closed，§2.8）；同名拒写（KD-10）。
  */
 
-import { existsSync, mkdirSync, readFileSync } from "node:fs"
-import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path"
+import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { CASES, CLASS_LABELS, MANUAL, SUITE_VERSION } from "../cases/index.mjs"
 import { effectiveDims, loadRoster, selectEntries } from "./roster.mjs"
-import { applyPricesToResult, loadPrices } from "./prices.mjs"
+import { applyPricesToResult, loadPrices, pricesPath } from "./prices.mjs"
 import { runMetrics } from "./metrics.mjs"
 import { renderReport } from "./report.mjs"
-import { assertClean, writeGuarded } from "./sanitize.mjs"
+import {
+  judgeConfigPath, judgeQuestion, judgeSnapshot, judgeWithPair, loadJudgeConfig, resolveJudgeSlots, reviewRun, reviewSnapshot, shouldReview, turnMaterial,
+} from "./judge.mjs"
+import { head, isoLocal, refuseIfExists, writePair } from "./output.mjs"
+
+export { recomputeMain } from "./recompute.mjs"
 
 const BENCH_DIR = dirname(dirname(fileURLToPath(import.meta.url)))
-/** 结果目录：默认 `bench/results/`（相对 bench/ 解析，任意 cwd 可跑）；BENCH_RESULTS_DIR = 测试沙箱缝。 */
-const RESULTS_DIR = process.env.BENCH_RESULTS_DIR ? resolve(process.env.BENCH_RESULTS_DIR) : join(BENCH_DIR, "results")
-/** 价格表路径：默认 `bench/prices.json`；BENCH_PRICES = 改价重算的测试夹具缝（每次读，可运行中切换）。 */
-const pricesPath = () => (process.env.BENCH_PRICES ? resolve(process.env.BENCH_PRICES) : join(BENCH_DIR, "prices.json"))
-
-function isoLocal(d = new Date()) {
-  const pad = (n) => String(n).padStart(2, "0")
-  const off = -d.getTimezoneOffset()
-  const sign = off >= 0 ? "+" : "-"
-  const body = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
-  return `${body}${sign}${pad(Math.floor(Math.abs(off) / 60))}:${pad(Math.abs(off) % 60)}`
-}
-
-const head = (s, max) => {
-  const flat = String(s ?? "").replace(/\s+/g, " ").trim()
-  return flat.length > max ? flat.slice(0, max) : flat
-}
-
-function emptyMetrics() {
-  return { ttftMs: null, totalMs: null, tokPerSec: null, tokens: { prompt: null, cached: null, completion: null }, cost: null }
-}
+const emptyMetrics = () => ({ ttftMs: null, totalMs: null, tokPerSec: null, tokens: { prompt: null, cached: null, completion: null }, cost: null })
 
 function commandFor(opts) {
   const parts = ["node bench/run.mjs"]
@@ -54,43 +39,45 @@ function commandFor(opts) {
   return parts.join(" ")
 }
 
-function refuseIfExists(fileBase) {
-  const jsonPath = join(RESULTS_DIR, `${fileBase}.json`)
-  const mdPath = join(RESULTS_DIR, `${fileBase}.md`)
-  if (existsSync(jsonPath) || existsSync(mdPath)) {
-    throw new Error(`同名产物已存在：bench/results/${fileBase}.{md,json} —— 请换 --label（留档不可被静默覆盖）`)
-  }
-  return { jsonPath, mdPath }
+/** 题面正本（§2.2-11）：静态用例 = `prompt` 逐字；多轮用例 = `prompt` + `build().followUps` 逐字拼接；
+ *  构造型用例（longctx / vision）= 声明 `prompt` 逐字（含载荷括注——载荷入 `build()`、不入档）。 */
+function casePromptText(c) {
+  const built = typeof c.build === "function" ? c.build() : null
+  const followUps = built?.followUps ?? []
+  return followUps.length > 0 ? [c.prompt, ...followUps].join("\n") : c.prompt
 }
 
-function writePair(fileBase, data, md) {
-  const jsonPath = join(RESULTS_DIR, `${fileBase}.json`)
-  const mdPath = join(RESULTS_DIR, `${fileBase}.md`)
-  const jsonText = `${JSON.stringify(data, null, 2)}\n`
-  assertClean(jsonText, "结果 JSON")
-  assertClean(md, "报告 md")
-  mkdirSync(RESULTS_DIR, { recursive: true })
-  writeGuarded(jsonPath, jsonText, "结果 JSON")
-  writeGuarded(mdPath, md, "报告 md")
-  return displayPath(mdPath)
-}
-
-/** 控制台回显路径：能相对化就相对化（默认形态 = `bench/results/<文件>`；不向控制台吐绝对路径）。 */
-function displayPath(p) {
-  const rel = relative(process.cwd(), p)
-  return rel && !rel.startsWith("..") && !isAbsolute(rel) ? rel.replaceAll("\\", "/") : p
-}
-
-/** 单次用例执行（含判分；模型用例失败 = 数据，不影响退出码）。 */
-async function executeRun({ client, caseObj, providerEntry, transport, signal, timeoutMs, n }) {
+/** 单次用例执行（含判分 / 判官 / 复核；模型用例失败 = 数据，不影响退出码）。 */
+async function executeRun({ client, caseObj, providerEntry, transport, signal, timeoutMs, n, judgeEnv }) {
   const res = await client.runCase({ caseObj, providerEntry, transport, signal, timeoutMs })
   const metrics = runMetrics(res.calls)
   let verdict = "error"
   let detail = `接口错误：${head(res.error, 180)}`
+  let judgeRec = null
+  let reviewRec = null
   if (!res.error) {
-    const g = caseObj.grade(client.caseResultView(res.turns), {})
-    verdict = g.pass ? "pass" : "fail"
-    detail = head(g.detail, 200)
+    const ctx = judgeEnv ? judgeEnv.ctxFor(caseObj, res) : {}
+    const g = await caseObj.grade(client.caseResultView(res.turns), ctx)
+    judgeRec = ctx.result ?? null
+    if (g?.error) {
+      verdict = "error"
+      detail = head(g.detail ?? g.error, 200)
+    } else {
+      verdict = g?.pass ? "pass" : "fail"
+      detail = head(g?.detail, 200)
+    }
+    // 机械 fail 复核（§2.11 触发判据 = judge.shouldReview 单源；error / skipped 不触发）
+    if (shouldReview({ verdict, judge: judgeRec }, caseObj)) {
+      reviewRec = await reviewRun({
+        caseObj,
+        turns: res.turns,
+        mechDetail: detail,
+        slots: judgeEnv.slots,
+        transport: judgeEnv.reviewTransportFor(caseObj),
+        providers: judgeEnv.providers,
+        signal,
+      })
+    }
   }
   const last = res.turns[res.turns.length - 1] ?? { text: "", reasoning: "" }
   const toolNames = [...new Set(res.calls.flatMap((c) => c.toolNames))]
@@ -100,6 +87,8 @@ async function executeRun({ client, caseObj, providerEntry, transport, signal, t
     detail,
     metrics,
     calls: res.calls,
+    ...(judgeRec ? { judge: judgeRec } : {}), // §2.2-7：未发生不写字段（不写 null 占位）
+    ...(reviewRec ? { review: reviewRec } : {}),
     summary: {
       textHead: head(last.text, 300),
       textLen: String(last.text ?? "").length,
@@ -109,11 +98,38 @@ async function executeRun({ client, caseObj, providerEntry, transport, signal, t
   }
 }
 
+/** 判官会话装配（§2.10/§2.11）：槽位 → `ctx.judge()`（本用例声明 + 单取值点素材）+ 复核传输面。 */
+function makeJudgeEnv({ client, slots, providers, fixture, signal, dryRun }) {
+  return {
+    slots,
+    providers,
+    ctxFor: (caseObj, res) => {
+      const ctx = {
+        judge: async () => {
+          const decl = caseObj.judge
+          const material = decl ? turnMaterial(res.turns?.[decl.turn]) : null
+          const transport = dryRun
+            ? client.fixtureSlotTransport(fixture?.judge?.[caseObj.id] ?? {})
+            : client.liveTransport
+          const r = await judgeWithPair({ decl, question: judgeQuestion(caseObj), material, slots, transport, providers, signal })
+          ctx.result = r
+          return r
+        },
+      }
+      return ctx
+    },
+    reviewTransportFor: (caseObj) => (dryRun
+      ? client.fixtureSlotTransport({ review: fixture?.review?.[caseObj.id] ?? [] })
+      : client.liveTransport),
+  }
+}
+
 /** 真实运行 / dry-run 自检（fixture = run.mjs 内联固定响应表；dry-run 不读用户 config）。 */
 export async function runMain(opts, sel, fixture) {
   const roster = loadRoster(join(BENCH_DIR, "models.json"))
   const entries = selectEntries(roster, opts.models)
   const prices = loadPrices(pricesPath())
+  const judgeCfg = loadJudgeConfig(judgeConfigPath()) // 判官必备（§2.10.3）：缺文件 / 不合 schema ⇒ 拒跑
   const startedAt = isoLocal()
   const fileBase = `${startedAt.slice(0, 10)}-${opts.label}`
   refuseIfExists(fileBase)
@@ -129,13 +145,16 @@ export async function runMain(opts, sel, fixture) {
     const missing = entries.filter((e) => !providers.some((p) => p.name === e.provider)).map((e) => e.label)
     if (missing.length > 0) throw new Error(`以下条目的 provider 不在用户 config（~/.thincoder/config.json）：${missing.join(", ")}`)
   }
+  // 判官槽位闸门（冻结绑定 + 逐位独立性 + 同渠道明示；dry-run 用夹具身份 ⇒ 跳过 config 检查）
+  const { slots, warnings: judgeWarnings } = resolveJudgeSlots(judgeCfg, { providers: opts.dryRun ? null : providers, tested: entries })
 
   const ac = new AbortController()
   const onSigint = () => ac.abort(new Error("SIGINT"))
   process.once("SIGINT", onSigint)
-  const warnings = []
+  const warnings = [...judgeWarnings]
   const modelsOut = []
   const manualOut = []
+  let allDead = false
   try {
     // 分母按各条目的**有效维度面**计（roster 排除的用例不入分母——它们 push skipped，不 step++）
     const totalSteps = entries.reduce((sum, e) => {
@@ -150,26 +169,36 @@ export async function runMain(opts, sel, fixture) {
         : { ...user, model: entry.model, maxTokens: opts.maxTokens, temperature: 0 }
       const host = providerEntry.baseURL ? new URL(providerEntry.baseURL).host : null
       const dims = effectiveDims(entry, sel.runDims)
+      const judgeEnv = makeJudgeEnv({
+        client,
+        slots,
+        providers: opts.dryRun ? [] : providers,
+        fixture,
+        signal: ac.signal,
+        dryRun: opts.dryRun,
+      })
       const casesOut = []
       for (const c of CASES) {
         if (!sel.runDims.has(c.dim)) continue
+        const prompt = casePromptText(c)
         if (!dims.has(c.dim)) {
           casesOut.push({
-            caseId: c.id, dim: c.dim, class: CLASS_LABELS[c.class],
+            caseId: c.id, dim: c.dim, class: CLASS_LABELS[c.class], prompt,
             runs: [{ n: 1, verdict: "skipped", detail: "不在该模型面", metrics: emptyMetrics(), calls: [], summary: { textHead: "", textLen: 0, reasoningLen: 0, toolNames: [] } }],
           })
           continue
         }
         const runs = []
         for (let n = 1; n <= opts.repeats; n++) {
-          const run = await executeRun({ client, caseObj: c, providerEntry, transport: transportFor(c), signal: ac.signal, timeoutMs: opts.timeoutSec * 1000, n })
+          const run = await executeRun({ client, caseObj: c, providerEntry, transport: transportFor(c), signal: ac.signal, timeoutMs: opts.timeoutSec * 1000, n, judgeEnv })
           step++
           const m = run.metrics
           console.log(`[${step}/${totalSteps}] ${entry.label} ${c.id} → ${run.verdict}${m.ttftMs != null ? ` | ttft ${m.ttftMs}ms` : ""}${m.tokPerSec != null ? ` ${m.tokPerSec} tok/s` : ""}`)
+          if (run.judge?.verdict === "error") console.error(`[bench] 判官不可用：${entry.label} ${c.id} —— ${run.detail}`)
           runs.push(run)
           if (ac.signal.aborted) throw new Error("SIGINT")
         }
-        casesOut.push({ caseId: c.id, dim: c.dim, class: CLASS_LABELS[c.class], runs })
+        casesOut.push({ caseId: c.id, dim: c.dim, class: CLASS_LABELS[c.class], prompt, runs })
       }
       modelsOut.push({ label: entry.label, provider: entry.provider, model: entry.model, host, dims: [...dims], cases: casesOut, note: entry.note ?? "" })
       if (sel.runManual) {
@@ -186,6 +215,9 @@ export async function runMain(opts, sel, fixture) {
       }
     }
     if (ac.signal.aborted) throw new Error("SIGINT")
+    // 运行面全灭（§2.10.4）：进入判官面的 run 全部合成无定判 ⇒ 落档 + 退出码 1（基建故障信号）
+    const judged = modelsOut.flatMap((m) => m.cases).flatMap((c) => c.runs).filter((r) => r.judge)
+    allDead = judged.length > 0 && judged.every((r) => r.judge.verdict === "error")
   } catch (e) {
     if (ac.signal.aborted) {
       console.error("[bench] SIGINT —— 已中止在飞调用，本轮不落档（退出码 130）")
@@ -207,6 +239,8 @@ export async function runMain(opts, sel, fixture) {
     },
     prices: { asOf: prices.asOf, currency: prices.currency, unit: prices.unit, source: prices.source },
     recomputed: null,
+    judge: judgeSnapshot(slots, judgeCfg),
+    review: reviewSnapshot(),
     models: modelsOut,
     manual: manualOut,
     warnings,
@@ -219,60 +253,11 @@ export async function runMain(opts, sel, fixture) {
     const agg = m.aggregate
     console.log(`${m.label.padEnd(28)} 通过 ${agg.passed}/${agg.total}  成本 ${agg.costCny == null ? "—" : `¥${agg.costCny}`}`)
   }
+  const j = data.judge
+  if (j.judgeCalls > 0) {
+    console.log(`判官 ${j.judgeCalls} 次调用（A ${j.judges[0].calls} · B ${j.judges[1].calls} · C ${j.arbiter.calls}）· 分歧 ${j.disagreements} 次 · 仲裁 ${j.arbitrations} 次 · 不可用 ${j.unavailable} 次`)
+  }
+  if (allDead) console.error("[bench] 判官面全灭：进入判官面的 run 全部合成无定判（退出码 1——基建故障信号；本档已落）")
   if (warnings.length > 0) console.log(`告警 ${warnings.length} 条：${warnings.join("；")}`)
-  return 0
-}
-
-/** 结果 JSON 形状校验（recompute.3：损坏 JSON / 缺 calls[].tokens → 退出码 1 且不落任何档）。 */
-function validateResultShape(data) {
-  if (!data || typeof data !== "object") throw new Error("结果 JSON 顶层不是对象")
-  if (!Array.isArray(data.models)) throw new Error("结果 JSON 缺 models[]")
-  for (const [mi, m] of data.models.entries()) {
-    if (!Array.isArray(m.cases)) throw new Error(`models[${mi}] 缺 cases[]`)
-    for (const [ci, c] of m.cases.entries()) {
-      if (!Array.isArray(c.runs)) throw new Error(`models[${mi}].cases[${ci}] 缺 runs[]`)
-      for (const [ri, r] of c.runs.entries()) {
-        if (!Array.isArray(r.calls)) throw new Error(`models[${mi}].cases[${ci}].runs[${ri}] 缺 calls[]`)
-        for (const [ii, call] of r.calls.entries()) {
-          if (!("tokens" in call)) throw new Error(`models[${mi}].cases[${ci}].runs[${ri}].calls[${ii}] 缺 tokens 字段（原子账目不可用）`)
-        }
-      }
-    }
-  }
-}
-
-/** 离线重算（§2.7 / AC-10）：只读结果 JSON + 当前 prices.json；不调模型、不重判分、不触网。 */
-export async function recomputeMain(opts) {
-  const fromPath = resolve(process.cwd(), opts.from)
-  if (!existsSync(fromPath)) throw new Error(`--from 文件不存在：${basename(fromPath)}`)
-  let data
-  try {
-    data = JSON.parse(readFileSync(fromPath, "utf8"))
-  } catch (e) {
-    throw new Error(`--from 结果 JSON 解析失败：${e.message}`)
-  }
-  validateResultShape(data)
-  const prices = loadPrices(pricesPath())
-  const warnings = Array.isArray(data.warnings) ? [...data.warnings] : []
-  applyPricesToResult(data, prices, warnings)
-  data.warnings = warnings
-  data.prices = { asOf: prices.asOf, currency: prices.currency, unit: prices.unit, source: prices.source }
-  data.label = opts.label ?? `${data.label}-recalc`
-  data.recomputed = {
-    from: fromPath.startsWith(RESULTS_DIR) ? `bench/results/${basename(fromPath)}` : basename(fromPath),
-    at: isoLocal(),
-  }
-  // 归档日期**同源**：文件名 = 报告标题日期 = 附录指针日期（取原档运行日；缺失/畸形则退当日）
-  const srcDate = String(data.startedAt ?? "").slice(0, 10)
-  const fileBase = `${/^\d{4}-\d{2}-\d{2}$/.test(srcDate) ? srcDate : isoLocal().slice(0, 10)}-${data.label}`
-  refuseIfExists(fileBase)
-  const md = renderReport(data, { fileBase })
-  const where = writePair(fileBase, data, md)
-  console.log("=== 离线重算完成（零 API 调用）===")
-  console.log(`源：${data.recomputed.from} → 新报告对：${where}`)
-  for (const m of data.models) {
-    console.log(`${m.label.padEnd(28)} 通过 ${m.aggregate.passed}/${m.aggregate.total}  成本 ${m.aggregate.costCny == null ? "—" : `¥${m.aggregate.costCny}`}`)
-  }
-  if (warnings.length > 0) console.log(`告警 ${warnings.length} 条：${warnings.join("；")}`)
-  return 0
+  return allDead ? 1 : 0
 }

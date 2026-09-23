@@ -10,7 +10,9 @@ import { writeFileSync } from "node:fs"
 import { userInfo } from "node:os"
 
 const LEAK_RULES = [
-  { id: "win-disk-path", label: "Windows 绝对路径", re: /(^|[^A-Za-z0-9])[A-Za-z]:[\\/]/g },
+  // 盘符路径：`X:` + 分隔符 + **非引号 / 非分隔符 / 非空白**字符起步。末位负前瞻排除 JSON 转义产物
+  // （`{"a\":\"b:\"2\"}"` 类文本里 `x:\"` 不是路径）——不排除则题面入档（`cases[].prompt`）后必然假阳。
+  { id: "win-disk-path", label: "Windows 绝对路径", re: /(^|[^A-Za-z0-9])[A-Za-z]:[\\/]+(?=[^"\\/\s])/g },
   { id: "unix-home-path", label: "用户目录绝对路径", re: /\/(?:Users|home)\//g },
   { id: "api-key-name", label: "apiKey 字段名", re: /api[-_]?key/gi },
   { id: "sk-key", label: "密钥字面（sk-…）", re: /sk-[A-Za-z0-9_-]{8,}/g },

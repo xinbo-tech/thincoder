@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-09-24 · 来源 = 用户 2026-09-24 01:01「词表机械判读不靠谱，得用更科学的方式，让 ai 判读会不会好点？」+ 01:05「可以」（批准立项）。
 > 台账 = #248（judge-hybrid · 归批）。前情 = docs/batches/2026-09-23-model-bench.md §6（已收口 2026-09-23——bench 套件已交付；本批 = 其判分机制的升级批）。
 ## §1 讨论（主 agent）
-**状态行**：进行中（用户 01:05 批准立项——设计轮待发）
+**状态行**：已收口 2026-09-24
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 **批件（用户 2026-09-24 01:01 提出 + 01:05「可以」批准立项）**
@@ -280,4 +280,86 @@ VERDICT: pass
 **实施轮**：eng-coder（round = initial）已派（设计 token 运行态）；交付含烟测三槽结论 + v3 报告对 + AC-1..AC-14 交付表。
 
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（判官对双判 + 分歧仲裁 + 机械 fail 复核 + 题面入档 + SUITE_VERSION 2→3 + v3 唯一在档报告；67/67 测试 · 烟测/三槽探测/v3 读数见 5.3 · 审计 1 轮 + advisor 2 轮（R2 pass））
+
+
+
+### 5.1 交付摘要（文件清单 · file:line 级要点）
+
+**新增档**（判官面自成一档 = KD-12；拆分档均为「实读超 300 行 ⇒ 按 §3 拆分触发条件执行」）：
+- `bench/lib/judge.mjs`（300 行）——判官 / 复核会话：`judge.json` 装载 + schema / 身份（A≠B · 仲裁员 ∉ {A,B}）/ 独立性 / 冻结绑定校验（全 fail-closed，拒跑面）；顶层 `judge` 快照与 `review` 块初值；判官调用条目（克隆用户条目 + 覆写 `.model`/`maxTokens`/`temperature`，§2.9-1）；逐位调用（严格解析 = trim 后 `{` 起 · 整串 parse · 枚举必中 · 多余键忽略；解析失败放大预算重试一次 ×2 上限 8192；传输面失败不重试；逐尝试账目 `attempt`/`at`/`maxTokens`/`finishReason`/`tokens`）；A / B 并行 + 分歧第三判仲裁 · 多数决 + 无多数 ⇒ `error`（成因「有效判不足」/「分歧未决」）；`judgeQuestion`（题面段单源 = `judge.question` ?? 用例 `prompt`）；`turnMaterial`（该回合模型文本 + 该回合工具调用事实）；`shouldReview`（复核触发判据单源）；复核单判（沿 A 位，`uphold`/`overturn`）。
+- `bench/lib/output.mjs`（62 行）——落档面拆出（结果目录解析 · `isoLocal` · 同名拒写 · 脱敏写档）；`isoLocal` 同时供判官账目 `calls[].at`（时点单源）。
+- `bench/lib/recompute.mjs`（68 行）——离线重算分支拆出（`recomputeMain` + `validateResultShape`）；**不 import `client.mjs`** ⇒ AC-10 构造性零网络。
+- `bench/lib/report-review.mjs`（136 行）——报告层叶子件：判定标记 `⇄`/`⟲` · 分歧面计数（含不可用成因分列与复核失败计数）· 《判官分歧》/《复核翻案》两小节。
+- `bench/judge.json`（26 行）——判官三槽数据档（位序定身份；`frozenAtSuiteVersion: 3`）。
+- 测试面：`bench/test/judge.test.mjs`（288 行／桩传输不触网）· `bench/test/recompute.test.mjs`（重算面）· `bench/test/report-render.test.mjs`（渲染 + dry-run 产物断言）· `bench/test/fixtures.mjs`（两档共用夹具与 CLI 驱动）。
+
+**修改档**：`lib/grade.mjs`（删词表件 `keywordSet`/`COLOR_FAMILIES`/`colorMatch`/`countEnumerations` + `enumerateCount` 规则——判官化后零调用者；增 `{error}` 结果通路与 `judgeResult`/`judgeAfterMech` 合成件；确定性原语行为零改动）· `lib/pipeline.mjs`（判官会话装配 + `ctx.judge()` + judge/review 记录落盘 + `cases[].prompt` 题面采集 + error 通路 + 「判官面全灭 ⇒ 落档 + 退出码 1」；落档/重算两面拆出）· `lib/prices.mjs`（判官 / 复核逐位逐尝试成本 + 位级与合计聚合 + 分歧计数 + 缺价/缺 usage 警告；不进被测成本面）· `lib/report-tables.mjs`（成本表「判官成本 / 复核成本」两列 + 缺价位口径句 + 逐维明细题面行 + 判官理由行 + 复核行 + `⟲`）· `lib/report.mjs`（概览判官三行 + 分歧率 + 判官/复核成本合计 + 方法判分条 + 模板版本 + 告警行成因分列 + 局限两条；结果区段序 = 骨架序）· `run.mjs`（dry-run 判官对 / 仲裁 / 复核夹具脚本 + USAGE）· `cases/*.mjs` 8 档（判官声明 `judge: {turn, rubric, question?}` + `mechRubric` + rubric 逐字取 §5.11 + 判据改写 + 题面修正）+ `cases/index.mjs`（`SUITE_VERSION` 2 → 3 + 判据面集合 `JUDGE_FACE`/`MECH_FACE` 导出）· `lib/client.mjs` / `lib/metrics.mjs`（usage → token 映射单源 `usageTokens`）· `lib/sanitize.mjs`（盘符谓词末位负前瞻，见 5.2-③）· `prices.json`（补录 `deepseek:deepseek-v4-pro` 官方定价）· `README.md`（判官与复核章 · 快速开始 · 结果解读 · 边界）· `test/graders.test.mjs` / `test/suite.test.mjs`。
+**删除档**：`bench/test/report-recompute.test.mjs`（按 §3 拆分触发条件拆为 `recompute.test.mjs` + `report-render.test.mjs` + `fixtures.mjs`）。
+
+### 5.2 决策透明表（实施轮定点 · 逐条给理由与证据）
+
+| # | 决策 | 理由 / 证据 | 性质 |
+|---|---|---|---|
+| ① | **判官素材 = 该回合模型文本 + 该回合工具调用事实（`name(arguments)`）** | 设计 §2.10.1 字面只取 `turns[turn].text`，但 §2.10.2/§5.11 给 `tools.2` 的判官面 = 「email 正文时刻等价」——正文只住 `send_email` 的 arguments ⇒ 字面实现下该例系统性假阴且「判官 fail 不叠加复核」使其无从显影。**父侧 2026-09-24 回执批准**；与 §2.11 复核素材同形（回合精确 / 单取值点不变）。 | 设计缺口处置（已批准） |
+| ② | **v3 被测集走设计 §9 路径 A（三模型）；判官三槽换值 = A `deepseek:deepseek-flash` / B `tokenhub:hy3` / C `deepseek:deepseek-v4-pro`** | 设计 §9 初值两槽实施轮**实测不可用**：`minimax:MiniMax-M3` 原始输出 = JSON 对象**整段重复两遍**（`{...}{...}`）⇒ 严格解析两次尝试均失败；`kimi:kimi-k3` API 直接 400「invalid temperature: only 1 is allowed for this model」⇒ 与「temperature 冻结 0」不相容（探测证据：`.thincoder/tmp/judge-slot-probe*.mjs` 日志；候选实测服从单发 JSON = deepseek-flash / deepseek-v4-pro / tokenhub:hy3 / glm:glm-5.3（同家被测，设计已否）/ ark:doubao（45s 超时））。路径 A（被测 3 模型 + 判官三槽 ∉ 被测厂商集 ⇒ 零 `sameVendorAsTested` 旗标）优于路径 B'（保四家被测 ⇒ 至少两槽与被测同渠道，设计自陈「第二视角被削弱」）。已另发父侧 note 通报。 | 设计 §1.9③ 授权实施轮定（已通报） |
+| ③ | **`sanitize.mjs` 盘符路径谓词加末位负前瞻** `(?=[^"\\/\s])` | 题面入档（`cases[].prompt`）后 JSON 文本出现 `b:\"2\"` 类转义引号 ⇒ 旧谓词把 `b:\"` 判成「Windows 绝对路径」**假阳**，产物无法落档（实测 12 处命中，含 `code.3` 题面）。新谓词仍覆盖真实路径（`C:\Users\…` / `C:\\Users\\…`（JSON 转义形态）/ `D:/data/x`），并加正负控断言（`report-render.test.mjs` F3 回归面）。 | 缺陷修复（题面入档的直接衍生） |
+| ④ | **判官不可用增第四条成因「素材缺失」（`judge.turn` 越界 ⇒ `error` + `resolution: none`）** | 设计 §2.10.4 只定义「有效判不足 / 分歧未决」两类成因。该分支 = 声明面与实际回合数不符的防御面：fail-closed（不猜 / 不进 pass/fail），正常声明下不可达（模型接口错走 `res.error` ⇒ 不进判分面）。告警行仅在 >0 时追加「素材缺失 n」，不改变既有两类口径。 | 加法式防御分支（设计面待记档） |
+| ⑤ | **判官 / 复核成本列显式标注「已录价位之和」+ 缺价位点名** | B 位 `tokenhub:hy3` 无官方价（媒体转载价未采——「不完整不录、不估不转写」）⇒ 位级 `null` + 警告合规格，但「合计」若当全量读即失真。现概览合计行与成本表在存在「有调用但未录价」判官位时附「不含未录价位：<键>」；渲染面无缺价位时该句不出现。 | 缺口补位（审计提示 #4 处置） |
+| ⑥ | **《判官分歧》/《复核翻案》两小节随能力段存废（轴-only 运行不出现）** | 两小节 = 逐 run 记录面，与逐维明细/人工判读同属能力段；`--dims speed,cost`（只出轴）下全隐，与 §2.1-1「只出速度/成本表」一致。设计 §2.3 未定义该场景 ⇒ 按既有轴选口径处理（设计面可补一行）。 | 设计留白处置（建议设计面记档） |
+| ⑦ | **题面口径：构造型用例（longctx / vision）声明 `prompt` = §5 正本逐字（含载荷括注）；判官 `question` = 用户实际所见问句** | §2.2-11 构造型例外（「用例声明 prompt 逐字（含载荷括注）——载荷不入档」）；长题面渲染 ≤300 截断。任务书「longctx.1–3 题面按 §5.7 正本归一」即按此落（另：`multiturn.1` 声明 `prompt` = 回合 1 用户原话、`judge.question` = `prompt` + `followUps` 逐字拼接，符合 §2.6 多轮口径）。 | 规格落点收正 |
+| ⑧ | **判官题面段回退取错对象（评审 🔴）已修** | 原 `buildJudgeMessages({ question: decl?.question ?? decl?.prompt ?? "" })` 中 `decl` = `caseObj.judge`（无 `prompt` 键）⇒ 6 例无显式 `question` 的用例判官素材缺题面段。修法 = 单源 `judgeQuestion(caseObj)`（`judge.question` ?? 用例 `prompt`）由 pipeline 传入 + 回归断言「题面逐字入消息」。 | 评审修复（advisor R1 🔴） |
+| ⑨ | **其余评审 / 审计处置** | README 快速开始改可运行形态（原三条示例会被独立性闸门拒跑）· USAGE 增「缺省全量跑会被拒跑」明示 · dry-run 注释归位 · 测试夹具仲裁位换第三家（原与 B 同模型 = 机制不变量违例）· 复核失败计数落概览复核行与告警行（AC-12 告警面）· 结果区段序归骨架序 · 判官 / 复核成本「已录价位之和」口径句。 | 评审 / 审计处置 |
+
+### 5.3 验证读数（命令 + 结果）
+
+1. **测试面**：`node --test "bench/test/*.test.mjs"` → **67 tests / 67 pass / 0 fail**（含 `judge.test.mjs` 15 例：judge.1–12 + review.1–3 + 三段素材面；两拆分档 recompute / report-render；`suite.test.mjs` 的判据面冻结 + `prompt.1/2` + `fixture.1` 零网络）。
+2. **dry-run 全链路**（测试沙箱）：JSON 顶层齐（`judge` 三槽块 / `review` 块 / `cases[].prompt`）+ md 成对 + 同名拒写 + 脱敏断言 + 毒化 `fetch` 零网络 ✓。
+3. **烟测（§8 三槽服从性 · 换槽后）**：
+   - `--models mimo-v2.6-flash --dims vision --label judge-smoke` → **3/3 pass · 退出码 0** · 判官 6 次（A 3 · B 3 · C 0）· 分歧 0 · 不可用 0（产物落 `.thincoder/tmp/bench-smoke/`——保 `bench/results/` 唯一在档 = v3）。
+   - 修复轮后复烟测 `--dims reasoning --label judge-smoke-postfix` → 3/3 pass · 判官 2 次（A 1 · B 1）· A 位真实理由：「回答给出 9 = 3 × 3，符合判据中允许的 3×3 分解形态。」
+   - **三槽单发服从性探测**（父侧回执要求 · 换槽后）：`judge-slot-probe3.mjs` → A `deepseek:deepseek-flash` judge=pass(897ms)/review=uphold(2808ms) · B `tokenhub:hy3` judge=pass(2512ms)/review=uphold(8589ms) · C `deepseek:deepseek-v4-pro` judge=pass(2139ms)/review=uphold(15108ms)——**三槽 × 两模板共 6 发全部严格解析过 · attempts=1**。
+4. **§9 初值槽位不可用证据（原样登记）**：
+   - `minimax:MiniMax-M3`：原始输出 = `{"verdict": "pass", "reason": "…"}{"verdict": "pass", "reason": "…"}`（JSON 对象**整段重复两遍**）⇒ 严格解析两次尝试均失败（attempts=2 · 放大预算 2048→4096 仍不过）⇒ 位级 `error`。
+   - `kimi:kimi-k3`：API 直接 400 `invalid temperature: only 1 is allowed for this model` ⇒ **与「判官 temperature 冻结 0」不相容**（将来如需启用 kimi 系判官，须为其做温度例外——对设计约束有回馈价值）。
+   - 其余候选：`ark:doubao-seed-2-0-code-preview-260215` 45s 超时；`glm:glm-5.3` 服从单发 JSON 但同家被测（设计已否）。
+5. **v3 全量（AC-7）**：`node bench/run.mjs --models mimo-v2.6-flash,glm-5.3-flash,qwen3.8-flash --label flash-compare-v3` → 报告对落 `bench/results/2026-09-24-flash-compare-v3.{md,json}`（**唯一在档**）；**退出码 0**（判官面非全灭）。
+   读数：三模型各 23/25；判官 **64 次调用（A 31 · B 32 · C 1）· 分歧 1 · 仲裁 1 · 不可用 1**；复核 5 次调用（uphold 1 · 翻案 1 · 复核失败 1）；判官成本 ¥0.0583（含未录价位 `tokenhub:hy3` ⇒ 报告附「已录价位之和」口径句）· 复核成本 ¥0.1037；被测成本面零污染（¥0.0211 / ¥0.0611 / ¥0.0906 各自独立，判官 / 复核两列分列）。
+   **真实机制样本**：仲裁 = `qwen3.8-flash multiturn.3`（A pass · B fail · C pass ⇒ `arbitrated` pass）；不可用 = `qwen3.8-flash multiturn.1`（B 位超时 ⇒ 有效判不足 ⇒ run `error` + 告警成因分列）；**复核翻案 = `glm-5.3-flash instructions.1`**（机械「段落 4（需 =3）」被复核判为可能误判 ⇒ `overturn` · **不自动改判**）；复核维持 = `mimo-v2.6-flash multiturn.1`。
+   报告面：549 行 · **题面行 25 条**（每用例一条）· 判官理由行 31 条 · 复核行 3 条 · 五段在位（《判官分歧》《复核翻案》《逐维明细》《人工判读》+ 成本表判官 / 复核两列）。
+6. **离线重算（AC-10）**：`--recompute` 在真实烟测产物上跑通（判官逐位 / 复核成本随当前价表现算 · 原档不动 · 零 `fetch`）；v3 报告附录已给复跑命令。
+
+### 5.4 审计与代码评审轮次 · 终态
+
+- **内部 explore 分歧审计 1 轮**（对账交付 34 档 + 14 项清单）：发现 = 1 需修（README 快速开始三条示例会被独立性闸门拒跑 ⇒ 已改可运行形态）+ 5 提示（轴选下两小节存废 / 「素材缺失」第四条成因 / 缺价位合计口径 / 行数预算漂移 / 槽位与 §9 口径差）；逐条处置见 5.2 与 5.5。
+- **advisor 代码评审 2 轮**（本会话内 · 同步）：
+  - **R1**：1 🔴（判官题面段回退取错对象 ⇒ 6/11 判官面用例素材缺题面）+ 2 🟡 + 6 🔵 ⇒ 全部处置（🔴 修 = 单源 `judgeQuestion` + 由 pipeline 传值 + 「题面逐字入消息」回归断言；🟡 #3「复核失败」告警落点已补；🔵 逐条见 5.2-⑨）。
+  - **R2（fix 核验）**：逐项对账 ⇒ **VERDICT: pass**（0 🔴 存续；剩余非阻断项 = 判官槽位记录面（父侧已回执批准）· README 示例文件名 · 设计面行数表随动）。
+- **fix round 计数**：2 轮（R1 后一轮修复 + R2 后一轮补位：复核失败计数渲染测试覆盖）；**终态 = clean**（无未处置 🔴 / 无未披露偏离）。
+
+### 5.5 上抛项（父侧面 · 只报不改）
+
+1. **设计面收正**：§9 判官三槽初值 → 实测槽位（含 minimax 输出重复 JSON / kimi 温度仅接受 1 两条证据）；§3 本批行数表随实现（judge.mjs 300 · prices.mjs 282 · suite.test.mjs 295 · judge.test.mjs 288 · report-render.test.mjs 233）；§2.10.4 补第四条成因「素材缺失」（防御面）；§2.3 两小节在轴-only 运行的存废口径。
+2. **B 位缺价与缺 usage**：`tokenhub:hy3` 官方定价页未核（不完整不录）⇒ 位级成本 `null` + 警告；该槽 usage 缺失（`noUsageStream` 类）⇒ tokens 全 `null`（逐尝试照记形状）。
+3. **判官 A 位键 ∈ 候参清单**：缺省全量跑会被独立性闸门拒跑（README / USAGE 已明示两种处置）；是否把 `deepseek-flash` 移出 `models.json` 候参清单由父侧定。
+4. **A / C 同渠道**：不违机检（机检只判 A≠B 与 C∉{A,B}；A/B 同渠道不校验的先例 + 共因故障由合成 fail-closed 兜底），与 §9 选型口径②「跨厂商」初值偏好有差——如实登记（父侧 2026-09-24 回执已批准该取舍）。
+
+### 5.6 收尾修正（append · 覆盖 5.1 / 5.3 / 5.5 中已过时的三处读数）
+
+1. `bench/test/judge.test.mjs`：为压回 300 行线内，把「三段素材」与「turnMaterial 素材面」两例合并为一例、删除未用夹具件、精简头注释 ⇒ 现 **300 行**（≤300 ✓）；**测试读数随之 = 66 tests / 66 pass / 0 fail**（原 67 = 两例合并所致；覆盖面无损失：judge.1–12 / review.1–3 / 三段素材 / turnMaterial 面全在）。
+2. `bench/lib/recompute.mjs`：重算产物 warnings 去重（重算会把原档已有的「价格未录 / usage 缺失」警告再算一遍 ⇒ 重复诊断行；烟测实证 2 条同项）——去重后诊断列表不再有同项重复（`recompute.2` 的「原 warnings 保留」断言不受影响）。
+3. 行数读数按最终态复读：`judge.mjs` 300 · `pipeline.mjs` 264 · `prices.mjs` 282 · `report-tables.mjs` 287 · `report-review.mjs` 136 · `report.mjs` 189 · `grade.mjs` 260 · `output.mjs` 62 · `recompute.mjs` 68 · `run.mjs` 248 · `judge.test.mjs` 300 · `suite.test.mjs` 296 · `recompute.test.mjs` 167 · `report-render.test.mjs` 240 · `fixtures.mjs` 127 · `graders.test.mjs` 165 · `README.md` 160——全部 ≤300（无拆分触发）。5.3 的 v3 报告读数（落档产物）不受以上修正影响（v3 由修正前的实现产出，但修正面 = 测试面 + 重算告警去重，均不触及判分/裁决/报告渲染逻辑）。
+
 ## §6 验证与收口（父代理）
+
+**收口（2026-09-24 03:0x · 父侧）**
+
+**交付判定（逐条核验 · 读实物 · 非采信自报）**：
+- 测试：`node --test "bench/test/*.test.mjs"` 父侧复跑 **exit 0**（与自报 66/66 一致）；`--dry-run` 产物断言过。
+- **v3 报告对** `bench/results/2026-09-24-flash-compare-v3.{md,json}`（**唯一在档**）——父侧实读核验：判官三行（A 31 次 / ¥0.0458 · B 32 次 / 缺价 `—` · C 1 次 / ¥0.0125）· 分歧率 3%（1÷30）· 仲裁 1 · 不可用 1 · 成本表判官 / 复核两列单列（不污染被测成本 ✓）· 逐维明细**题面行 25 条**（`> 题面：…`）· 矩阵 `⟲` 标记 + 脚注 · 骨架五段在位（549 行）。
+- 内部审计 1 轮（1 修 + 5 提示处置）+ advisor 代码评审 2 轮（R1 = 1🔴 + 2🟡 + 6🔵 全处置 → R2 = **VERDICT: pass**）——终态 clean。
+- **AC-1..AC-14 全 Done**（实施轮交付表落点逐条核验）。
+
+**上抛处置（父侧裁定 · 全部落地或入册）**：① 设计面收正已执行（§9 三槽实测槽位 + 证据句 · §3 表注「实测 = 批档 §5.6」· §2.10.4 补「素材缺失」防御成因 · §2.3 两小节仅轴运行口径——父侧直接执行 · 可 revert）；② `tokenhub:hy3` 缺价 = 如实口径（`null` + 告警 + 「已录价位之和」句）→ 新增台账债「hy3 价格补录」；③ **判官 A 位键与候参清单冲突裁定 = 移出 `models.json`**（缺省全量跑必须可跑；要测该键须换判官 A 位——`note` 说明）；④ A / C 同渠道 = 已批准登记（§5.5-4）；⑤ 两处超表披露（`sanitize` 负前瞻 / `recompute` warnings 去重）= 合理缺陷修复，接受。
+
+**核销同步清单（D7）**：角色表 ✓（§5 实施完成 · §6 本段）· 状态行 → **已收口** · 计数 ✓（66/66 · AC 14/14 · v3 3 模型 × 23/25）· 指针 ✓（台账 #248 任务书指针 → 本档）· 变更记录 ✓（设计档变更记录已随本轮收正）· 待办 ✓（#248 核销；新增：hy3 价格补录）· **台账可见面**：#248 → **已核销**（证据 = 本 §6 + v3 报告路径 + 提交哈希）。

@@ -41,6 +41,15 @@
       "note": "峰谷定价——本表取高峰档（空闲档为峰值一半：输入 1 / 输出 4 / 缓存命中 0.02）；高峰时段 = 工作日 9:00-12:00、14:00-18:00（北京时间）"
     },
     {
+      "match": "deepseek:deepseek-v4-pro",
+      "cachedInput": 0.3,
+      "input": 9,
+      "output": 27,
+      "asOf": "2026-09-24",
+      "source": "DeepSeek 开放平台「模型 & 价格」页（api-docs.deepseek.com/zh-cn/quick_start/pricing）",
+      "note": "判官仲裁 C 位；峰谷定价——本表取高峰档（空闲档为峰值一半：输入 4.5 / 输出 13.5 / 缓存命中 0.15）"
+    },
+    {
       "match": "zhipu-plan:glm-5.3-flash",
       "cachedInput": 0.23,
       "input": 0.8,

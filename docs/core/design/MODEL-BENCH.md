@@ -195,6 +195,7 @@ node bench/run.mjs --recompute --from <结果.json> [--label <名>]
               + **判官理由行**（判官裁决的 run：逐位 A / B（分歧时 +C）裁决 + 定判位理由）+ **复核行**（该单元格有复核记录时：复核次数 / uphold / 翻案 + 翻案理由）
 ### 判官分歧     —— **判官质量仪表 + 审计线索**：逐条 = 用例 · 模型 · A 裁决 + 理由 · B 裁决 + 理由 · 仲裁（触发时：裁决 + 理由）· 合成分；无分歧 → 「本轮无判官分歧」（分歧标记只落逐维明细与本小节——能力矩阵只表达通过数）
 ### 复核翻案     —— **判据演进线索**：逐条 = 用例 · 模型 · 机械失败断言 · 复核理由（无记录 → 「本轮无复核翻案」；不自动改判——§2.11）
+                  （两小节在**仅轴运行**（无判分面命中）时记「本轮未运行」——骨架固定，缺段即缺陷）
 ### 人工判读     —— 人工 lane 逐条并列（题面 + 响应摘要 ≤300 字符 + 指标 + 调用成本按条单项列出 + **相对成本 = 同条内最低者 = 1×**；不判分；该 lane 未跑 → 本节记「未运行」）
 ## 关键发现      —— 数据性结论（仅名次/极值与计数，模板化生成；禁主观评价词；数据告警行含「判官不可用 M 次（有效判不足 m₁ · 分歧未决 m₂）· 判官分歧 K 次（仲裁 L）· 机械 fail 复核 N 次（翻案 K' 次）」）
 ## 局限声明      —— 固定模板（单次采样无置信区间 / 闭集判据不覆盖开放式质量 / 人工 lane 不判分 / 价格手动维护 /
@@ -427,7 +428,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | 运行面 | 位级失败（超时 / HTTP / 两次解析失败）致**合成无多数**：有效判 < 2 · 或分歧未决（第三判无效） | 该 run `verdict = error`（detail 前缀「判官不可用」+ 括注成因「有效判不足」/「分歧未决」+ `runs[].judge.verdict = "error"` + `resolution = "none"`）· 控制台**即时**明示一行 · 报告告警计数（成因分列）；**不回落词表、不补位、不单判回退** |
 | 运行面全灭 | 本轮进入判官面的 run 数 > 0 且**全部**合成无定判 | 照常落档（模型数据已付费；档内 error 明示）+ **退出码 1**（基建故障信号） |
 
-`error` 的区分呈现（§1.6 裁定点）：判官不可用 = run `error` + `runs[].judge.verdict = "error"` + `resolution = "none"` + detail 前缀（成因括注）；被测接口错误 = run `error`（detail 为接口错误文本）——报告告警行分列计数（「判官不可用 M 次（有效判不足 m₁ · 分歧未决 m₂）」）；位级失败**逐位留证**：失败位的 `judges[]` 条目照记（`verdict = "error"` + 成因）。
+`error` 的区分呈现（§1.6 裁定点）：判官不可用 = run `error` + `runs[].judge.verdict = "error"` + `resolution = "none"` + detail 前缀（成因括注）；被测接口错误 = run `error`（detail 为接口错误文本）——报告告警行分列计数（「判官不可用 M 次（有效判不足 m₁ · 分歧未决 m₂）」）；位级失败**逐位留证**：失败位的 `judges[]` 条目照记（`verdict = "error"` + 成因）。**素材缺失（防御分支）**：该回合观测为空（`turnMaterial` 无内容）⇒ 该位记 `error`（成因「素材缺失」——不猜、不降级为空判定）。
 被否候选（本轮增）：③ 位级失败 ⇒ **仲裁员补位**（凑足双判后定判；被否：把「判官坏了」的系统性故障掩盖成正常判定 + 成本不可预期——一位全灭则每个样本多付一判；fail-closed 的可见性优先）；④ 分歧 ⇒ 取 A（主位）票（被否：单判等价——B 成本 +100% 而判定力零增益）；⑤ 分歧 ⇒ 直接 `error` 不仲裁（被否：分歧是判官质量的正常信号而非故障——降为 error 会让语义面系统性空洞化，且分歧样本的第三判成本极低）。
 被否候选（沿既有）：① 首次失败即中止整轮（被否：一次网络抖动作废整轮被测成本；全灭判据已拦系统性故障）；② 新增 `verdict` 枚举值（被否：为已由子记录承载的区分改动全链聚合/枚举/渲染，收益不成比例）。
 
@@ -504,7 +505,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 测试面说明：`bench/test/` **不进任何 `npm test` / CI**（AC-8）——手动跑 `node --test bench/test/*.test.mjs`；本批实施轮验证 = 该命令 + 一次真实冒烟跑（1 模型 × 1 维，验证 AC-1/2/3/9 端到端）。`bench/results/` 目录随首次运行创建，产物（md + json 对）**入库留档**。
 **夹具落点（冻结）**：全部夹具为**内联夹具**，不另立夹具档（本表 28 档不变）——`--dry-run` 的固定响应表住 `bench/run.mjs`（已实现）；§5.10 的夹具结果 JSON 族（基准 / `tokens: null` / 损坏 / 毒化四变体）与「改价后的 `prices.json`」住 `bench/test/report-recompute.test.mjs`（已实现）；需要文件输入形态时由测试落临时档（不入仓）。
 
-**2026-09-24 判分升级批（`2026-09-24-judge-hybrid`）受影响文件与行数预算**（现状 = 2026-09-24 实读行数 · 含 fix 轮双判 / 题面增量；三端零改动不变；本批不新增夹具档——夹具仍内联）：
+**2026-09-24 判分升级批（`2026-09-24-judge-hybrid`）受影响文件与行数预算**（现状 = 2026-09-24 实读行数 · 含 fix 轮双判 / 题面增量；三端零改动不变；本批不新增夹具档——夹具仍内联；**实施实测读数（全部 ≤300 · 无拆分触发）= 批次档 §5.6**——预算住本表、实测住批档）：
 
 | 文件 | 现状 | 预算 | 说明（拆分触发 = 超 300 行） |
 |---|---|---|---|
@@ -847,9 +848,12 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 { "version": 1, "frozenAtSuiteVersion": 3,
   "judges": [
     { "provider": "deepseek", "model": "deepseek-flash", "maxTokens": 2048, "timeoutSec": 30 },
-    { "provider": "minimax", "model": "MiniMax-M3", "maxTokens": 2048, "timeoutSec": 30 }],
-  "arbiter": { "provider": "kimi", "model": "kimi-k3", "maxTokens": 2048, "timeoutSec": 30 },
-  "note": "A = POC 已验判官（跨渠道）；B / 仲裁 C = 跨厂商第二 / 第三视角" }
+    { "provider": "tokenhub", "model": "hy3", "maxTokens": 2048, "timeoutSec": 30 }],
+  "arbiter": { "provider": "deepseek", "model": "deepseek-v4-pro", "maxTokens": 2048, "timeoutSec": 30 },
+  "note": "A = POC 已验判官（跨渠道）；B = tokenhub:hy3；仲裁 C = deepseek:deepseek-v4-pro（A/C 同渠道——共因由合成 fail-closed 兜底）；槽位实测证据见批次档 §5" }
+```
+
+**槽位实测（2026-09-24 实施轮——原初值 A `deepseek:deepseek-flash` / B `minimax:MiniMax-M3` / C `kimi:kimi-k3`，后两槽实测不可用）**：`minimax:MiniMax-M3` 输出 = JSON 对象整段重复两遍（严格解析两次尝试均失败）；`kimi:kimi-k3` API 400「invalid temperature: only 1 is allowed for this model」⇒ 与「判官 temperature 冻结 0」不相容 ⇒ 换 **B = `tokenhub:hy3`** + **C = `deepseek:deepseek-v4-pro`**（均服从实测——单发严格解析过、attempts=1；命令与探测记录见批次档 §5）。
 ```
 
 **选型口径（冻结 · 与运行面校验同源）**：① **A ≠ B**、**仲裁员 ≠ A / B**（模型字面——§2.10.3 身份校验）；② 三槽**均 ∉ 被测集合**且**跨厂商**（A / B / C = 三家且 ∉ 被测厂商集合 ⇒ 无 `sameVendorAsTested` 旗标——干净独立性）；③ A 位保留 POC 唯一已验键 `deepseek:deepseek-flash`（判准证据 + 价格已录）；

@@ -15,6 +15,7 @@ export const cases = [
     prompt: "只输出一个 JSON 对象（不要代码围栏、不要任何解释）：字段 `name`（字符串）= \"小明\"、`age`（整数）、`tags`（字符串数组，至少 2 个元素）。",
     build: null,
     callOpts: {},
+    mechRubric: "整串 JSON 对象（trim 后以 `{` 起、一次 parse；含围栏或散文 = FAIL）；`name=\"小明\"`、`age` 整数、`tags` ≥2 个字符串。",
     grade: (result) => {
       const p = parse(result)
       if (!p.ok) return ok(false, p.error)
@@ -29,9 +30,10 @@ export const cases = [
     id: "json.2",
     dim: "json",
     class: "boundary",
-    prompt: "只输出一个 JSON 对象：`zip` 必须是字符串 \"100001\"（保持前导零）；`note` 必须为 `null`；`nested.items` 必须是长度 0 的数组；`escaped` 必须等于含一个双引号的字符串 `a\"b`。",
+    prompt: "只输出一个 JSON 对象（不要代码围栏、不要任何解释）：`zip` 必须是字符串 \"100001\"（保持前导零）；`note` 必须为 `null`；`nested.items` 必须是长度 0 的数组；`escaped` 必须等于含一个双引号的字符串 `a\"b`。",
     build: null,
     callOpts: {},
+    mechRubric: "同整串要求；`zip=\"100001\"`（前导零保真）、`note=null`、`nested.items` 长度 0、`escaped` = 含一个双引号的 `a\"b`。",
     grade: (result) => {
       const p = parse(result)
       if (!p.ok) return ok(false, p.error)
@@ -47,9 +49,10 @@ export const cases = [
     id: "json.3",
     dim: "json",
     class: "error",
-    prompt: "只输出一个 JSON 对象：`status` 必须是小写字面 `empty`；`count` 必须是数字 0（不是字符串 \"0\"）；`items` 必须是空数组。这是空快照格式，不要填任何实际数据。",
+    prompt: "只输出一个 JSON 对象（不要代码围栏、不要任何解释）：`status` 必须是小写字面 `empty`；`count` 必须是数字 0（不是字符串 \"0\"）；`items` 必须是空数组。这是空快照格式，不要填任何实际数据。",
     build: null,
     callOpts: {},
+    mechRubric: "同整串要求；`status=\"empty\"`（小写字面）、`count` 为数字 0（非字符串）、`items` 空数组。",
     grade: (result) => {
       const p = parse(result)
       if (!p.ok) return ok(false, p.error)

@@ -28,8 +28,12 @@ const USAGE = `用法：
   --n          每例重复次数（速度轴建议 3）；缺省 1
   --max-tokens 单次调用输出上限（可比性冻结面）；缺省 4096
   --timeout    单次调用墙钟上限（秒）；缺省 120
-  --dry-run    夹具自检：不调模型、不读用户 config，跑通判分→指标→报告→脱敏链路
-  --recompute  离线重算：读入已有结果 JSON，以当前 prices.json 重出报告（零 API 调用）`
+  --dry-run    夹具自检：不调模型、不读用户 config，跑通判分（含判官对 / 仲裁 / 复核夹具）→指标→报告→脱敏链路
+  --recompute  离线重算：读入已有结果 JSON，以当前 prices.json 重出报告（零 API 调用）
+
+  判官配置 = bench/judge.json（判官对 A / B + 分歧仲裁 C · 判官必备）：文件缺失 / 不合 schema /
+  判官身份违约（A=B · 仲裁员 ∈ {A, B}）/ 冻结版本不匹配 / 任一位判官 ∈ 本次被测集合 ⇒ 拒跑（退出码 1）。
+  注：缺省全量跑（不给 --models）会被独立性闸门拒跑（判官 A 位键在册）——请显式给 --models 或换判官槽位。`
 
 // ── dry-run 内联夹具响应表（§3 冻结落点：夹具内联于本档） ──────────────────────────
 // 每例 = 该用例的模型调用脚本（含工具环各轮）；ttft / total / tokens 全部取固定值 ⇒ 自检完全确定。
@@ -56,7 +60,9 @@ const FIXTURE = {
     fx("", [80, 0, 24], 260, 900, { toolCalls: [tool("send_email", { to: "alice@example.com", subject: "时间同步", body: "现在是 2026-09-23 22:00。" })], finishReason: "tool_calls" }),
     fx("邮件已发出。", [120, 0, 10], 240, 700),
   ],
-  "tools.3": [fx("一年有 12 个月。", [26, 0, 12], 200, 480)],
+  // 刻意回中文数字「十二个月」：机械判据（阿拉伯数字独立成词）判 FAIL，复核返回 overturn
+  // —— 自检固定覆盖「复核翻案」渲染路径（不自动改判；见 README「快速开始」注）
+  "tools.3": [fx("一年有十二个月。", [26, 0, 12], 200, 480)],
   "tools.4": [
     fx("", [40, 0, 16], 260, 700, { toolCalls: [tool("get_weather", { city: "北京" }), tool("get_weather", { city: "上海" })], finishReason: "tool_calls" }),
     fx("北京晴 26℃，上海小雨 24℃。", [110, 0, 14], 280, 820),
@@ -75,7 +81,7 @@ const FIXTURE = {
     fx("邮件已发送，时间定在明天上午十点。", [90, 0, 12], 240, 700),
   ],
   "longctx.1": [fx("49152", [2200, 0, 1], 900, 2600)],
-  // 刻意回干扰值 57317（而非期望 57318）：自检固定覆盖一条 FAIL 渲染路径（见 README「快速开始」注）
+  // 刻意回干扰值 57317（而非期望 57318）：自检固定覆盖「机械 FAIL + 复核 uphold」渲染路径
   "longctx.2": [fx("57317", [8800, 0, 1], 2400, 5200)],
   "longctx.3": [fx("42875", [4400, 0, 1], 1500, 3600)],
   "vision.1": [fx("红色", [420, 0, 2], 700, 1800)],
@@ -86,6 +92,60 @@ const FIXTURE = {
     "manual.2": [fx("请问您指的是哪个功能？", [24, 0, 12], 240, 700)],
     "manual.3": [fx("我觉得挺有意思，可以说说你的想法。", [22, 0, 14], 230, 680)],
   },
+}
+
+// ── 判官 / 复核夹具脚本（§5.13 `fixture.1`：每个判官面用例有 A / B 脚本，机械面用例有复核脚本） ──────
+// 逐位脚本（`slot` = A / B / C / review）；`text` = 该位返回的裁决 JSON（内容固定 ⇒ 自检完全确定）。
+const jTok = (prompt, completion) => ({ prompt, cached: 0, completion })
+const jv = (verdict, reason) => ({ text: JSON.stringify({ verdict, reason }), tokens: jTok(320, 40) })
+
+FIXTURE.judge = {
+  "reasoning.3": { A: [jv("pass", "夹具：指出 9 不是质数，正确识破前提陷阱。")], B: [jv("pass", "夹具：点明 9 非质数，符合 PASS。")] },
+  "instructions.3": { A: [jv("pass", "夹具：指出两条要求互斥。")], B: [jv("pass", "夹具：明确指认冲突。")] },
+  "tools.2": { A: [jv("pass", "夹具：正文时刻 22:00 与工具返回值同一时刻。")], B: [jv("pass", "夹具：正文载明 22:00，时刻等价。")] },
+  "tools.4": { A: [jv("pass", "夹具：同时传达北京晴、上海小雨。")], B: [jv("pass", "夹具：两城市天气齐。")] },
+  "multiturn.1": { A: [jv("pass", "夹具：请求缺失信息且未声称已发送。")], B: [jv("pass", "夹具：向用户补全信息，未代决。")] },
+  // 分歧样本（A / B 相异 ⇒ 触发第三判 C；多数决 ⇒ pass · resolution = arbitrated）
+  "multiturn.2": {
+    A: [jv("pass", "夹具：未提问且给出 3 个不同候选。")],
+    B: [jv("fail", "夹具（刻意分歧）：候选仅列三项，判定证据不足。")],
+    C: [jv("pass", "夹具（仲裁）：候选满足 ≥3 互不相同，维持通过。")],
+  },
+  "multiturn.3": { A: [jv("pass", "夹具：信息足够直接代决，未追问。")], B: [jv("pass", "夹具：回合 1 内发信，无多余追问。")] },
+  // 位级失败样本（A 两次不可解析 ⇒ 有效判 < 2 ⇒ 合成分 error · 告警分列「有效判不足」）
+  "longctx.3": {
+    A: [{ text: "", tokens: jTok(320, 0) }, { text: "按判据应判通过。", finishReason: "stop", tokens: jTok(320, 20) }],
+    B: [jv("pass", "夹具：以 42875 为当前值，符合 PASS。")],
+  },
+  "vision.1": { A: [jv("pass", "夹具：左上角为红色族。")], B: [jv("pass", "夹具：回答红色，符合 PASS。")] },
+  "vision.2": { A: [jv("pass", "夹具：回答绿色族。")], B: [jv("pass", "夹具：绿色，符合 PASS。")] },
+  "vision.3": { A: [jv("pass", "夹具：指出图中没有猫，拒答正确。")], B: [jv("pass", "夹具：明确拒答，无中生有已避免。")] },
+}
+
+/** 复核脚本（20 个机械面用例各一；`tools.3` = 翻案样本（机械判据只认阿拉伯数字），`longctx.2` = 维持样本）。 */
+const rev = (verdict, reason) => [{ text: JSON.stringify({ verdict, reason }), tokens: jTok(380, 50) }]
+const UPHOLD = rev("uphold", "夹具：机械判据成立，维持不通过。")
+FIXTURE.review = {
+  "reasoning.1": UPHOLD,
+  "reasoning.2": UPHOLD,
+  "code.1": UPHOLD,
+  "code.2": UPHOLD,
+  "code.3": UPHOLD,
+  "json.1": UPHOLD,
+  "json.2": UPHOLD,
+  "json.3": UPHOLD,
+  "tools.1": UPHOLD,
+  "tools.2": UPHOLD,
+  "tools.3": rev("overturn", "夹具：回答以中文数字给出正确答案（十二个月），机械判据只认阿拉伯数字 ⇒ 判据过严、误判。"),
+  "tools.4": UPHOLD,
+  "instructions.1": UPHOLD,
+  "instructions.2": UPHOLD,
+  "multiturn.1": UPHOLD,
+  "multiturn.2": UPHOLD,
+  "multiturn.3": UPHOLD,
+  "longctx.1": UPHOLD,
+  "longctx.2": rev("uphold", "夹具：回答为近邻干扰值 57317，非目标值 57318 ⇒ 维持机械判定。"),
+  "longctx.3": UPHOLD,
 }
 
 // ── CLI 解析（§2.1） ──────────────────────────────────────────────────────────

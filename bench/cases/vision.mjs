@@ -1,10 +1,12 @@
 /**
  * cases/vision.mjs — 视觉维 3 例（题面逐字冻结 = 设计档 §5.8；改题 ⇒ SUITE_VERSION + 1）。
- * 图片 = `lib/png.mjs` 手写生成（16×16 四象限 / 8×8 纯色 #00aa00），以 data URL 随消息发送；
- * 判分 = 颜色归一化词表命中（vision.3 = 无中生有拒答闭词表）。
+ * 图片 = `lib/png.mjs` 手写生成（64×64 四象限 / 32×32 纯色 #00aa00），以 data URL 随消息发送。
+ * 题面面（§2.2-11）：构造型用例 = 用例声明 `prompt` 逐字（含载荷括注）；判官 `question` = 用户实际所见问句。
+ * 判分（§2.10.2 分层）：三例**全部为判官面**（色名族 / 无中生有拒答；rubric = §5.11 正本逐字）——
+ * 判官不喂图像（KD-22：事实正本住 rubric）。
  */
 
-import { colorMatch, keywordSet, ok, preview } from "../lib/grade.mjs"
+import { judgeResult } from "../lib/grade.mjs"
 import { BLUE, GREEN, GREEN_AA, RED, YELLOW, quadrantPng, solidPng, toDataUrl } from "../lib/png.mjs"
 
 const QUADRANTS = quadrantPng({ size: 64, quadrants: { tl: RED, tr: BLUE, bl: GREEN, br: YELLOW } })
@@ -18,49 +20,47 @@ const withImage = (question, dataUrl) => [{
   ],
 }]
 
-export const ABSTAIN_WORDS = ["没有猫", "没猫", "看不到", "不存在", "无法判断", "没有动物", "没有任何猫", "一只猫也没有", "0只猫", "零只猫"]
-
-/** 否定式形态（组合判定：`没有…猫` / `猫…也没有` 任序——补词表漏检）。 */
-export const ABSTAIN_RE = /(没有|没|无|不存在|看不到)[^。！？\n]{0,12}猫|猫[^。！？\n]{0,10}(也没有|都没有|都没)/
-
 export const cases = [
   {
     id: "vision.1",
     dim: "vision",
     class: "normal",
-    prompt: "图片被分成四个象限，请只回答左上角象限的颜色。",
+    prompt: "64×64 四象限图（左上红 #ff0000 / 右上蓝 / 左下绿 / 右下黄）。问：图片被分成四个象限，请只回答左上角象限的颜色。",
     build: () => ({ messages: withImage("图片被分成四个象限，请只回答左上角象限的颜色。", toDataUrl(QUADRANTS)) }),
     callOpts: {},
-    grade: (result) => {
-      const hit = colorMatch(result.text, "red")
-      return ok(hit.hit, hit.hit ? `左上角 = 红色族（命中「${hit.matched}」）` : `未命中红色族：${preview(result.text, 60)}`)
+    judge: {
+      turn: 0,
+      question: "图片被分成四个象限，请只回答左上角象限的颜色。",
+      rubric: "四象限图（左上 `#ff0000`）。PASS = 回答左上角为红色族（红 / 红色 / 大红 / 正红 / `#ff0000` / red 等等价表述）。FAIL = 其他颜色、答非所问、或声称无法判断。",
     },
+    grade: async (result, ctx) => judgeResult(await ctx.judge()),
   },
   {
     id: "vision.2",
     dim: "vision",
     class: "boundary",
-    prompt: "这张图是什么颜色？只回答颜色名。",
+    prompt: "32×32 纯色图（纯绿 #00aa00）。问：这张图是什么颜色？只回答颜色名。",
     build: () => ({ messages: withImage("这张图是什么颜色？只回答颜色名。", toDataUrl(SOLID_GREEN)) }),
     callOpts: {},
-    grade: (result) => {
-      const hit = colorMatch(result.text, "green")
-      return ok(hit.hit, hit.hit ? `纯色图 = 绿色族（命中「${hit.matched}」）` : `未命中绿色族：${preview(result.text, 60)}`)
+    judge: {
+      turn: 0,
+      question: "这张图是什么颜色？只回答颜色名。",
+      rubric: "纯色图 `#00aa00`。PASS = 回答绿色族（绿 / 绿色 / `#00aa00` / green 等等价表述）。FAIL = 其他颜色或拒绝回答。",
     },
+    grade: async (result, ctx) => judgeResult(await ctx.judge()),
   },
   {
     id: "vision.3",
     dim: "vision",
     class: "error",
-    prompt: "图里有几只猫？",
+    prompt: "64×64 四象限图同 `vision.1`。问：图里有几只猫？",
     build: () => ({ messages: withImage("图里有几只猫？", toDataUrl(QUADRANTS)) }),
     callOpts: {},
-    grade: (result) => {
-      // 正确 = 指出图中没有猫 / 无法判断（无中生有拒答）；词表 ∪ 否定式正则
-      const hit = keywordSet(result.text, ABSTAIN_WORDS)
-      const re = ABSTAIN_RE.test(result.text)
-      const pass = hit.hit || re
-      return ok(pass, pass ? `拒答正确（${hit.hit ? `命中「${hit.matched}」` : "否定式形态"}）` : `未拒答：${preview(result.text, 70)}`)
+    judge: {
+      turn: 0,
+      question: "图里有几只猫？",
+      rubric: "图为四象限色块（无猫）。PASS = 指出图中没有猫 / 无法回答该问题 / 明确拒答（任何等价表述）。FAIL = 给出任何猫的数量或描述（无中生有）。",
     },
+    grade: async (result, ctx) => judgeResult(await ctx.judge()),
   },
 ]

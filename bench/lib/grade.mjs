@@ -2,9 +2,12 @@
  * lib/grade.mjs — 判分器族（设计 §2.6）：全部纯函数 · 无网络 · 确定性。
  *
  * 族成员：numEquals · vmRun（node:vm + 4000ms 超时 + 追加断言脚本）· strictJson（整串 parse）
- * · toolShape（name / JSON.parse(arguments || "{}") / 轮次）· textRules（汉字计数 / 段落数 / 句数 /
- * 首尾 / 次数 / 否定式「不含」/ 列举项计数）· keywordSet（闭词表命中）· colorMatch（颜色归一化词表）。
+ * · jsonFields（字段断言）· toolShape（name / JSON.parse(arguments || "{}") / 轮次）· textRules
+ * （汉字计数 / 段落数 / 句数 / 首尾 / 次数 / 否定式「不含」/ 阿拉伯数字禁用——语法级约束）
+ * · `judgeResult` / `judgeAfterMech`（判官合成分 → 用例返回形状；**不含网络**——裁决由 `lib/judge.mjs` 取）。
  * 判据的「正本」= 设计档 §5 各例「期望与判据」列；本档只提供实现原语，用例档逐例装配。
+ * 语义·语用面（「表达的意思」）不再有词表 / 正则判据——词表件（keywordSet / COLOR_FAMILIES / colorMatch /
+ * countEnumerations + enumerateCount 规则）已随判官化删除（零调用者；§2.10.2 分层表）。
  */
 
 import vm from "node:vm"
@@ -12,6 +15,25 @@ import vm from "node:vm"
 /** 统一判分结果形状（用例 grade 的返回契约：`{ pass, detail }`，detail ≤200 字符由结果构造面收口）。 */
 export function ok(pass, detail) {
   return { pass: pass === true, detail: String(detail ?? "") }
+}
+
+/** 判官合成分 → 用例返回形状（§2.6 / §2.10.4 合成件）：
+ *  - `error`（有效判不足 / 分歧未决 / 素材缺失）⇒ `{ error }`（该 run 判 error；detail 前缀「判官不可用」）；
+ *  - `pass` / `fail` ⇒ 与机械面结论合成（机械面已过 ⇒ 判官定判；`resolution` 入 detail 供审计）。 */
+export function judgeResult(j, mechDetail = "") {
+  if (!j || j.verdict === "error") {
+    const reason = j?.reason ?? "判官不可用（无合成分）"
+    return { error: reason, detail: preview(reason, 200) }
+  }
+  const leads = mechDetail ? `${mechDetail}；` : ""
+  return ok(j.verdict === "pass", `${leads}判官裁决（${j.resolution ?? "?"}）：${j.reason ?? ""}`)
+}
+
+/** 混合面短路顺序（§2.6 冻结）：先跑机械断言；机械面已 FAIL ⇒ 不调判官（省成本；记录面如实——无 `runs[].judge`）；
+ *  机械面通过 ⇒ 再调判官（`ctx.judge()`）。 */
+export async function judgeAfterMech(mech, ctx) {
+  if (!mech || mech.pass !== true) return mech
+  return judgeResult(await ctx.judge(), mech.detail)
 }
 
 export function escapeRegExp(s) {
@@ -161,19 +183,8 @@ function sentences(text) {
   return String(text ?? "").trim().split(/。+/).map((s) => s.trim()).filter(Boolean)
 }
 
-/** 列举项计数（§5.6 冻结形态）：行首编号（`1.`/`1、`/`1)`）/ 项目符 `-` / 圈号 `①②③` / 行内编号。 */
-export function countEnumerations(text) {
-  const t = String(text ?? "")
-  const bulletLines = (t.match(/^[ \t]*-[ \t]+/gm) ?? []).length
-  const numberedLines = (t.match(/^[ \t]*\d{1,2}[.、)][ \t]*/gm) ?? []).length
-  const circled = (t.match(/[①②③④⑤⑥⑦⑧⑨⑩]/g) ?? []).length
-  const inline = (t.match(/[^\d][ \t]*\d{1,2}[.、)][ \t]*\S/g) ?? []).length
-  const nonEmptyLines = t.split("\n").filter((l) => l.trim()).length
-  return { markers: bulletLines + numberedLines + circled + inline, nonEmptyLines }
-}
-
 /** 文本规则表：kind = hanziMin / paragraphCount / sentenceCount / hanziPerSentenceMax / startsWith /
- * tokenCount / contains / notContains / noArabicDigits / enumerateCount（count = 恰 N；min = ≥N）。返回 { pass, detail, results }。 */
+ * tokenCount / contains / notContains / noArabicDigits。返回 { pass, detail, results }。 */
 export function textRules(text, rules) {
   const t = String(text ?? "")
   const results = rules.map((r) => {
@@ -235,17 +246,6 @@ export function textRules(text, rules) {
         note = `阿拉伯数字 ${hits} 个（需 0）`
         break
       }
-      case "enumerateCount": {
-        const { markers, nonEmptyLines } = countEnumerations(t)
-        if (r.min != null) {
-          passNow = markers >= r.min || nonEmptyLines >= r.min
-          note = `列举标记 ${markers} / 非空行 ${nonEmptyLines}（需任一 ≥${r.min}）`
-        } else {
-          passNow = markers === r.count || nonEmptyLines === r.count
-          note = `列举标记 ${markers} / 非空行 ${nonEmptyLines}（需任一 =${r.count}）`
-        }
-        break
-      }
       default:
         note = `未知规则 ${r.kind}`
     }
@@ -256,32 +256,4 @@ export function textRules(text, rules) {
     ? `文本规则 ${results.length}/${results.length} 通过`
     : `文本规则 ${results.length - failed.length}/${results.length}：${failed.map((f) => f.note).join("；")}`
   return { pass: failed.length === 0, detail, results }
-}
-
-// ── 闭词表 / 颜色族 ────────────────────────────────────────────────────────────
-
-/** 闭词表命中：alternatives = (字符串 | RegExp)[]，命中首个即通过。 */
-export function keywordSet(text, alternatives) {
-  const t = String(text ?? "")
-  for (const alt of alternatives) {
-    if (alt instanceof RegExp) {
-      if (alt.test(t)) return { hit: true, matched: String(alt) }
-    } else if (t.includes(alt)) {
-      return { hit: true, matched: alt }
-    }
-  }
-  return { hit: false, matched: null }
-}
-
-/** 颜色归一化词表（§5.8 冻结）：红族 `{红, 红色, red, #ff0000}` / 绿族 `{绿, 绿色, green, #00aa00}`。 */
-export const COLOR_FAMILIES = {
-  red: ["红色", "红", "red", "#ff0000"],
-  green: ["绿色", "绿", "green", "#00aa00"],
-}
-
-export function colorMatch(text, family) {
-  const words = COLOR_FAMILIES[family] ?? []
-  const flat = String(text ?? "").toLowerCase().replace(/\s+/g, "")
-  const matched = words.find((w) => flat.includes(w.toLowerCase()))
-  return { hit: matched !== undefined, matched: matched ?? null }
 }

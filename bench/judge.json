@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "frozenAtSuiteVersion": 3,
+  "judges": [
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "maxTokens": 2048,
+      "timeoutSec": 30
+    },
+    {
+      "provider": "tokenhub",
+      "model": "hy3",
+      "maxTokens": 2048,
+      "timeoutSec": 30
+    }
+  ],
+  "arbiter": {
+    "provider": "deepseek",
+    "model": "deepseek-v4-pro",
+    "maxTokens": 2048,
+    "timeoutSec": 30
+  },
+  "note": "A = POC 已验判官（跨渠道）；B = 跨厂商第二视角；C = 分歧仲裁（第三方模型）。§9 初值的 minimax:MiniMax-M3（输出重复 JSON ⇒ 严格解析不过）与 kimi:kimi-k3（API 拒绝 temperature 0）在实施轮实测不可用，换槽理由见批次档 §5。"
+}
