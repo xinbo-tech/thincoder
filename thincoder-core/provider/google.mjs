@@ -200,7 +200,16 @@ async function parseGeminiStream(response, { onToken, onReasoning, signal }) {
   const armIdle = () => {
     if (idleTimer) clearTimeout(idleTimer)
     idleTimer = setTimeout(() => {
-      try { response.body?.destroy(timeoutError(`SSE idle timeout: no data for ${READ_IDLE_MS / 1000}s`, "provider", "google-sse-idle")) } catch { /* already gone */ }
+      try {
+        // 2026-09-23 崩溃修复·v2（同 proxy.mjs destroyBody）：无稳定 error 监听者时 destroy(err)
+        // 会以未处理 'error' 事件掀翻整个进程（pipe 的实现会在触发时自摘并重发）。挂一个不自
+        // 摘的兜底监听者；消费者拿到原错误的路径不变。
+        const b = response.body
+        if (b && typeof b.destroy === "function" && !b.destroyed) {
+          if (typeof b.on === "function" && !b._ttpErrGuard) { b._ttpErrGuard = true; b.on("error", () => {}) }
+          b.destroy(timeoutError(`SSE idle timeout: no data for ${READ_IDLE_MS / 1000}s`, "provider", "google-sse-idle"))
+        }
+      } catch { /* already gone */ }
     }, READ_IDLE_MS)
     idleTimer.unref?.()
   }
