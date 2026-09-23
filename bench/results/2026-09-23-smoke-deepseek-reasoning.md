@@ -26,7 +26,7 @@
 - 复现命令：`node bench/run.mjs --models deepseek-flash --dims reasoning --label smoke-deepseek-reasoning`
 - 套件版本：suiteVersion = 1（题集/判据/计时口径任一变化 +1，跨版本不严格可比）
 - 工具链：模型调用经核 provider 路径（thinking / reasoningEffort 等参数取用户配置原值）；temperature = 0；多轮工具链跨轮合计计时。
-- 重算产物：由 `refresh-src.json` 于 2026-09-24T00:19:05+08:00 重出（成本按当前 prices.json 重算；原档不动）。
+- 重算产物：由 `refresh-src.json` 于 2026-09-24T00:21:25+08:00 重出（成本按当前 prices.json 重算；原档不动）。
 
 ## 结果
 
@@ -58,29 +58,31 @@
 
 ### 逐维明细
 
+成本列为该用例代表 run 的调用成本；**相对成本 = 该用例内最低者 = 1×**。
+
 #### 推理（`reasoning`）
 
 **reasoning.1** · 正常
 
-| 模型 | 判定 | TTFT | tok/s | 总耗时 | tokens 入/缓/出 | 成本 |
-| --- | --- | --- | --- | --- | --- | --- |
-| deepseek-flash | ✅ pass 1/1 | 513 ms | 240 | 963 ms | 49/0/108 | ¥0.000962 |
+| 模型 | 判定 | TTFT | tok/s | 总耗时 | tokens 入/缓/出 | 成本 | 相对成本 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| deepseek-flash | ✅ pass 1/1 | 513 ms | 240 | 963 ms | 49/0/108 | ¥0.000962 | 1.0× |
 
 - 响应摘要 · deepseek-flash：`3`
 
 **reasoning.2** · 边界
 
-| 模型 | 判定 | TTFT | tok/s | 总耗时 | tokens 入/缓/出 | 成本 |
-| --- | --- | --- | --- | --- | --- | --- |
-| deepseek-flash | ✅ pass 1/1 | 598 ms | 255 | 1296 ms | 49/0/178 | ¥0.001522 |
+| 模型 | 判定 | TTFT | tok/s | 总耗时 | tokens 入/缓/出 | 成本 | 相对成本 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| deepseek-flash | ✅ pass 1/1 | 598 ms | 255 | 1296 ms | 49/0/178 | ¥0.001522 | 1.0× |
 
 - 响应摘要 · deepseek-flash：`371281`
 
 **reasoning.3** · 错误
 
-| 模型 | 判定 | TTFT | tok/s | 总耗时 | tokens 入/缓/出 | 成本 |
-| --- | --- | --- | --- | --- | --- | --- |
-| deepseek-flash | ✅ pass 1/1 | 416 ms | 216.5 | 1109 ms | 50/0/150 | ¥0.0013 |
+| 模型 | 判定 | TTFT | tok/s | 总耗时 | tokens 入/缓/出 | 成本 | 相对成本 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| deepseek-flash | ✅ pass 1/1 | 416 ms | 216.5 | 1109 ms | 50/0/150 | ¥0.0013 | 1.0× |
 
 - 响应摘要 · deepseek-flash：`3×3`
 

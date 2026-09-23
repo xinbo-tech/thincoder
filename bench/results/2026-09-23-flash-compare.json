@@ -29,7 +29,7 @@
   },
   "recomputed": {
     "from": "refresh-src.json",
-    "at": "2026-09-24T00:19:05+08:00"
+    "at": "2026-09-24T00:21:25+08:00"
   },
   "models": [
     {
@@ -5879,6 +5879,7 @@
     }
   ],
   "warnings": [
+    "usage 缺失：qwen3.8-flash（tokens/cost=null）",
     "usage 缺失：qwen3.8-flash（tokens/cost=null）",
     "usage 缺失：qwen3.8-flash（tokens/cost=null）"
   ]

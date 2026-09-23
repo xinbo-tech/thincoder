@@ -166,7 +166,7 @@ export function costSection(data, stats) {
 export function detailSection(data, stats) {
   const dims = DIMENSIONS.filter((d) => (data.models ?? []).some((m) => dimsOf(m).includes(d)))
   const allCases = (data.models ?? []).flatMap((m) => casesOf(m))
-  const out = ["### 逐维明细", ""]
+  const out = ["### 逐维明细", "", "成本列为该用例代表 run 的调用成本；**相对成本 = 该用例内最低者 = 1×**。", ""]
   if (dims.length === 0) return [...out, "本轮未选自动维（逐维明细无内容）。", ""]
   for (const d of dims) {
     out.push(`#### ${DIM_LABELS[d] ?? d}（\`${d}\`）`, "")
@@ -174,14 +174,17 @@ export function detailSection(data, stats) {
     for (const cid of caseIds) {
       const cls = allCases.find((c) => c.caseId === cid)?.class ?? ""
       out.push(`**${cid}** · ${cls}`, "")
-      out.push("| 模型 | 判定 | TTFT | tok/s | 总耗时 | tokens 入/缓/出 | 成本 |", "| --- | --- | --- | --- | --- | --- | --- |")
-      for (const s of stats) {
-        const cell = caseCell(s.model, cid)
+      const cells = stats.map((s) => ({ s, cell: caseCell(s.model, cid) }))
+      const bases = cells.map((x) => x.cell?.cost?.value).filter((v) => typeof v === "number" && v > 0)
+      const base = bases.length > 0 ? Math.min(...bases) : null
+      const relOf = (v) => (base == null || typeof v !== "number" ? "—" : `${(v / base).toFixed(1)}×`)
+      out.push("| 模型 | 判定 | TTFT | tok/s | 总耗时 | tokens 入/缓/出 | 成本 | 相对成本 |", "| --- | --- | --- | --- | --- | --- | --- | --- |")
+      for (const { s, cell } of cells) {
         if (!cell) {
-          out.push(`| ${s.label} | — | — | — | — | — | — |`)
+          out.push(`| ${s.label} | — | — | — | — | — | — | — |`)
           continue
         }
-        out.push(`| ${s.label} | ${cell.label} | ${fmtMs(cell.metrics?.ttftMs)} | ${fmtRate(cell.metrics?.tokPerSec)} | ${fmtMs(cell.metrics?.totalMs)} | ${tokensCell(cell.tokens)} | ${money(cell.cost)} |`)
+        out.push(`| ${s.label} | ${cell.label} | ${fmtMs(cell.metrics?.ttftMs)} | ${fmtRate(cell.metrics?.tokPerSec)} | ${fmtMs(cell.metrics?.totalMs)} | ${tokensCell(cell.tokens)} | ${money(cell.cost)} | ${relOf(cell.cost?.value)} |`)
       }
       out.push("")
       for (const s of stats) {
@@ -198,17 +201,26 @@ export function manualSection(data) {
   if (!data.manual || data.manual.length === 0) {
     return ["### 人工判读", "", "本节未运行（本轮 `--dims` 未包含 `manual`）。", ""]
   }
+  const byPrompt = new Map()
+  for (const rec of data.manual) {
+    const v = rec.metrics?.cost?.value
+    if (typeof v === "number" && v > 0) byPrompt.set(rec.promptId, Math.min(byPrompt.get(rec.promptId) ?? Infinity, v))
+  }
+  const relOf = (pid, v) => {
+    const b = byPrompt.get(pid)
+    return b == null || typeof v !== "number" ? "—" : `${(v / b).toFixed(1)}×`
+  }
   const out = [
     "### 人工判读",
     "",
-    "人工 lane 不判分、不入能力矩阵与成本归一化；逐条并列题面 + 响应摘要 + 指标 + 调用成本（按条单项列出）。",
+    "人工 lane 不判分、不入能力矩阵与成本归一化；逐条并列题面 + 响应摘要 + 指标 + 调用成本（按条单项列出；**相对成本 = 同条内最低者 = 1×**）。",
     "",
-    "| 模型 | 条目 | 题面 | 响应摘要 | TTFT | tok/s | tokens 入/缓/出 | 调用成本 |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| 模型 | 条目 | 题面 | 响应摘要 | TTFT | tok/s | tokens 入/缓/出 | 调用成本 | 相对成本 |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
   ]
   for (const rec of data.manual) {
     const m = rec.metrics ?? {}
-    out.push(`| ${rec.label ?? "—"} | ${rec.promptId} | ${rec.prompt} | ${rec.responseHead || "—"} | ${fmtMs(m.ttftMs)} | ${fmtRate(m.tokPerSec)} | ${tokensCell(m.tokens)} | ${money(m.cost)} |`)
+    out.push(`| ${rec.label ?? "—"} | ${rec.promptId} | ${rec.prompt} | ${rec.responseHead || "—"} | ${fmtMs(m.ttftMs)} | ${fmtRate(m.tokPerSec)} | ${tokensCell(m.tokens)} | ${money(m.cost)} | ${relOf(rec.promptId, m.cost?.value)} |`)
   }
   out.push("", "说明：本 lane 的成本只作单项展示，不进入成本表的成本归一化（AC-6）。", "")
   return out
