@@ -90,6 +90,14 @@ export function tokensCell(t) {
 
 export const money = (c) => (c ? fmtMoney(c.value) : "—")
 
+/** 摘要的 code-span 安全包裹：动态反引号（内容围栏不截断显示）+ 换行可视（⏎）——保真可审计。 */
+export function codeSpan(s) {
+  const t = String(s ?? "").replace(/\r?\n/g, "⏎")
+  const longest = (t.match(/`+/g) ?? []).reduce((m, r) => Math.max(m, r.length), 0)
+  const fence = "`".repeat(longest + 1)
+  return `${fence}${t}${fence}`
+}
+
 export function matrixSection(data, stats) {
   stats = [...stats].sort((a, b) => b.passed - a.passed || a.label.localeCompare(b.label))
   const dims = DIMENSIONS.filter((d) => (data.models ?? []).some((m) => dimsOf(m).includes(d)))
@@ -192,7 +200,7 @@ export function detailSection(data, stats) {
       out.push("")
       for (const s of stats) {
         const cell = caseCell(s.model, cid)
-        if (cell?.head) out.push(`- 响应摘要 · ${s.label}：\`${cell.head}\``)
+        if (cell?.head) out.push(`- 响应摘要 · ${s.label}：${codeSpan(cell.head)}`)
       }
       out.push("")
     }
@@ -223,7 +231,7 @@ export function manualSection(data) {
   ]
   for (const rec of data.manual) {
     const m = rec.metrics ?? {}
-    out.push(`| ${rec.label ?? "—"} | ${rec.promptId} | ${rec.prompt} | ${rec.responseHead || "—"} | ${fmtMs(m.ttftMs)} | ${fmtRate(m.tokPerSec)} | ${tokensCell(m.tokens)} | ${money(m.cost)} | ${relOf(rec.promptId, m.cost?.value)} |`)
+    out.push(`| ${rec.label ?? "—"} | ${rec.promptId} | ${rec.prompt} | ${rec.responseHead ? codeSpan(rec.responseHead) : "—"} | ${fmtMs(m.ttftMs)} | ${fmtRate(m.tokPerSec)} | ${tokensCell(m.tokens)} | ${money(m.cost)} | ${relOf(rec.promptId, m.cost?.value)} |`)
   }
   out.push("", "说明：本 lane 的成本只作单项展示，不进入成本表的成本归一化（AC-6）。", "")
   return out

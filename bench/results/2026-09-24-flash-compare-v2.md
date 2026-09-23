@@ -29,6 +29,7 @@
 - 复现命令：`node bench/run.mjs --models mimo-v2.6-flash,deepseek-flash,glm-5.3-flash,qwen3.8-flash --label flash-compare-v2`
 - 套件版本：suiteVersion = 2（题集/判据/计时口径任一变化 +1，跨版本不严格可比）
 - 工具链：模型调用经核 provider 路径（thinking / reasoningEffort 等参数取用户配置原值）；temperature = 0；多轮工具链跨轮合计计时。
+- 重算产物：由 `refresh-src.json` 于 2026-09-24T01:04:15+08:00 重出（成本按当前 prices.json 重算；原档不动）。
 
 ## 结果
 
@@ -130,9 +131,9 @@
 | glm-5.3-flash | ✅ pass 1/1 | 1361 ms | 64.5 | 5686 ms | 101/0/279 | ¥0.000862 | 2.6× |
 | qwen3.8-flash | ✅ pass 1/1 | 615 ms | 74 | 6642 ms | 149/0/446 | ¥0.001323 | 4.0× |
 
-- 响应摘要 · mimo-v2.6-flash：````javascript function chunkEven(arr, size) { if (size < 1) throw new RangeError('size must be >= 1'); const result = []; for (let i = 0; i < arr.length; i += size) { result.push(arr.slice(i, i + size)); } return result; } ````
+- 响应摘要 · mimo-v2.6-flash：```````javascript function chunkEven(arr, size) { if (size < 1) throw new RangeError('size must be >= 1'); const result = []; for (let i = 0; i < arr.length; i += size) { result.push(arr.slice(i, i + size)); } return result; } ```````
 - 响应摘要 · deepseek-flash：`function chunkEven(arr, size) { if (!Number.isInteger(size) || size < 1) throw new RangeError('size must be a positive integer'); const result = []; for (let i = 0; i < arr.length; i += size) { result.push(arr.slice(i, i + size)); } return result; }`
-- 响应摘要 · glm-5.3-flash：````js function chunkEven(arr, size) { if (size < 1) { throw new RangeError('size must be at least 1'); } const result = []; for (let i = 0; i < arr.length; i += size) { result.push(arr.slice(i, i + size)); } return result; } ````
+- 响应摘要 · glm-5.3-flash：```````js function chunkEven(arr, size) { if (size < 1) { throw new RangeError('size must be at least 1'); } const result = []; for (let i = 0; i < arr.length; i += size) { result.push(arr.slice(i, i + size)); } return result; } ```````
 - 响应摘要 · qwen3.8-flash：`function chunkEven(arr, size) { if (size < 1) { throw new RangeError("size must be at least 1"); } const result = []; for (let i = 0; i < arr.length; i += size) { result.push(arr.slice(i, i + size)); } return result; }`
 
 **code.2** · 错误
@@ -144,9 +145,9 @@
 | glm-5.3-flash | ✅ pass 1/1 | 1010 ms | 49.3 | 18993 ms | 97/0/886 | ¥0.002558 | 7.0× |
 | qwen3.8-flash | ❌ fail 0/1 | — | — | — | ?/?/? | — | — |
 
-- 响应摘要 · mimo-v2.6-flash：````js function sumEven(nums){ let t=0; for (let i=0; i<nums.length; i++){ if (nums[i]%2===0) t+=nums[i] } return t } ````
+- 响应摘要 · mimo-v2.6-flash：```````js function sumEven(nums){ let t=0; for (let i=0; i<nums.length; i++){ if (nums[i]%2===0) t+=nums[i] } return t } ```````
 - 响应摘要 · deepseek-flash：`function sumEven(nums) { if (!Array.isArray(nums)) return 0; let t = 0; for (let i = 0; i < nums.length; i++) { const n = nums[i]; if (typeof n === "number" && n % 2 === 0) t += n; } return t; }`
-- 响应摘要 · glm-5.3-flash：````js function sumEven(nums) { let t = 0; for (let i = 0; i < nums.length; i++) { if (nums[i] % 2 === 0) t += nums[i]; } return t; } ````
+- 响应摘要 · glm-5.3-flash：```````js function sumEven(nums) { let t = 0; for (let i = 0; i < nums.length; i++) { if (nums[i] % 2 === 0) t += nums[i]; } return t; } ```````
 
 **code.3** · 边界
 
@@ -157,9 +158,9 @@
 | glm-5.3-flash | ✅ pass 1/1 | 775 ms | 46.6 | 13138 ms | 115/0/576 | ¥0.001705 | 5.6× |
 | qwen3.8-flash | ✅ pass 1/1 | 569 ms | 59.1 | 13695 ms | 166/0/776 | ¥0.002228 | 7.3× |
 
-- 响应摘要 · mimo-v2.6-flash：````javascript function parsePairs(text) { if (!text) return {}; const result = {}; for (const seg of text.split(';')) { const i = seg.indexOf('='); if (i === -1) continue; const key = seg.slice(0, i); if (key === '') continue; result[key] = seg.slice(i + 1); } return result; } ````
+- 响应摘要 · mimo-v2.6-flash：```````javascript function parsePairs(text) { if (!text) return {}; const result = {}; for (const seg of text.split(';')) { const i = seg.indexOf('='); if (i === -1) continue; const key = seg.slice(0, i); if (key === '') continue; result[key] = seg.slice(i + 1); } return result; } ```````
 - 响应摘要 · deepseek-flash：`function parsePairs(text) { const result = {}; for (const part of text.split(';')) { const index = part.indexOf('='); if (index === -1) continue; result[part.slice(0, index)] = part.slice(index + 1); } return result; }`
-- 响应摘要 · glm-5.3-flash：````javascript function parsePairs(text) { const result = {}; if (text === "") return result; for (const seg of text.split(";")) { const eq = seg.indexOf("="); if (eq === -1) continue; // 规则③：不含 = 的段跳过 result[seg.slice(0, eq)] = seg.slice(eq + 1); // 规则②覆盖、规则④字符串值 } return result; } ````
+- 响应摘要 · glm-5.3-flash：```````javascript function parsePairs(text) { const result = {}; if (text === "") return result; for (const seg of text.split(";")) { const eq = seg.indexOf("="); if (eq === -1) continue; // 规则③：不含 = 的段跳过 result[seg.slice(0, eq)] = seg.slice(eq + 1); // 规则②覆盖、规则④字符串值 } return result; } ```````
 - 响应摘要 · qwen3.8-flash：`function parsePairs(text) { const result = {}; if (!text) return result; for (const segment of String(text).split(';')) { const eq = segment.indexOf('='); if (eq === -1) continue; const key = segment.slice(0, eq); const value = segment.slice(eq + 1); result[key] = value; } return result; }`
 
 #### 严格 JSON（`json`）
@@ -201,9 +202,9 @@
 | glm-5.3-flash | ❌ fail 0/1 | 1469 ms | 49.8 | 3256 ms | 71/0/89 | ¥0.000306 | 2.5× |
 | qwen3.8-flash | ✅ pass 1/1 | 727 ms | 65.9 | 2382 ms | 115/0/109 | ¥0.000386 | 3.1× |
 
-- 响应摘要 · mimo-v2.6-flash：````json {"status":"empty","count":0,"items":[]} ````
+- 响应摘要 · mimo-v2.6-flash：```````json {"status":"empty","count":0,"items":[]} ```````
 - 响应摘要 · deepseek-flash：`{"status":"empty","count":0,"items":[]}`
-- 响应摘要 · glm-5.3-flash：````json { "status": "empty", "count": 0, "items": [] } ````
+- 响应摘要 · glm-5.3-flash：```````json { "status": "empty", "count": 0, "items": [] } ```````
 - 响应摘要 · qwen3.8-flash：`{"status":"empty","count":0,"items":[]}`
 
 #### 工具调用（`tools`）
@@ -233,8 +234,8 @@
 
 - 响应摘要 · mimo-v2.6-flash：`已完成： - 当前时间：**2026-09-23T22:00:00+08:00** - 已向 alice@example.com 发送主题为「时间同步」的邮件，正文即为该时间 - 发送状态：**queued**（已进入发送队列）`
 - 响应摘要 · deepseek-flash：`已完成： 1. **查询当前时间**：2026-09-23T22:00:00+08:00 2. **发送邮件**：已将该时间作为正文，发送主题为「时间同步」的邮件至 alice@example.com（状态：queued）`
-- 响应摘要 · glm-5.3-flash：`两步操作已完成： 1. **查询时间**：当前时间为 `2026-09-23T22:00:00+08:00` 2. **发送邮件**：已将该时间作为正文，发送主题为「时间同步」的邮件至 alice@example.com（状态：queued，已进入发送队列）`
-- 响应摘要 · qwen3.8-flash：`已完成： 1. **查询当前时间**：`2026-09-23T22:00:00+08:00` 2. **发送邮件**：收件人 alice@example.com，主题「时间同步」，正文为该时间戳。返回状态 `queued`（本地桩，未真正投递）。`
+- 响应摘要 · glm-5.3-flash：``两步操作已完成： 1. **查询时间**：当前时间为 `2026-09-23T22:00:00+08:00` 2. **发送邮件**：已将该时间作为正文，发送主题为「时间同步」的邮件至 alice@example.com（状态：queued，已进入发送队列）``
+- 响应摘要 · qwen3.8-flash：``已完成： 1. **查询当前时间**：`2026-09-23T22:00:00+08:00` 2. **发送邮件**：收件人 alice@example.com，主题「时间同步」，正文为该时间戳。返回状态 `queued`（本地桩，未真正投递）。``
 
 **tools.3** · 错误
 
@@ -319,7 +320,7 @@
 - 响应摘要 · mimo-v2.6-flash：`会议邀请邮件已发送（状态：queued）： - **收件人**：team@example.com - **主题**：周会 - **时间**：2026年9月24日（明天）15:00 如需补充会议地点、线上链接或议程，请告诉我。`
 - 响应摘要 · deepseek-flash：`邮件已发送（已加入发送队列）✅ - **收件人**：team@example.com - **主题**：周会 - **时间**：2026年9月24日（明天，周四）15:00 邮件正文中已注明会议时间，并留了"议程待补充"的占位。如需我补充会议地点、议程或改成具体会议链接，告诉我即可，我可以再发一封更新邮件。`
 - 响应摘要 · glm-5.3-flash：`邮件已成功发出（进入发送队列）✅ **发送详情：** - **收件人：** team@example.com - **主题：** 周会 - **会议时间：** 2026-09-24（周四）15:00 - **内容：** 通知团队明天下午 3 点召开周会，并提醒时间冲突者提前告知 如需补充会议地点、议程或其他信息，随时告诉我！`
-- 响应摘要 · qwen3.8-flash：`已提交，返回状态：`queued`。 **邮件内容** - 收件人：team@example.com - 主题：周会 - 正文：时间 2026年9月24日（周四）15:00，地点待定，并请冲突者提前回复。 两点需要你确认： 1. **会议地点/线上链接**目前是"待定"，你给我具体信息我可以补上。 2. 这个邮件接口是本地桩，只返回排队状态，**并没有真正发出**；如需实际发送，请走真实邮件服务。 需要我改主题、加议程或调整措辞吗？`
+- 响应摘要 · qwen3.8-flash：``已提交，返回状态：`queued`。 **邮件内容** - 收件人：team@example.com - 主题：周会 - 正文：时间 2026年9月24日（周四）15:00，地点待定，并请冲突者提前回复。 两点需要你确认： 1. **会议地点/线上链接**目前是"待定"，你给我具体信息我可以补上。 2. 这个邮件接口是本地桩，只返回排队状态，**并没有真正发出**；如需实际发送，请走真实邮件服务。 需要我改主题、加议程或调整措辞吗？``
 
 **multiturn.2** · 错误
 
@@ -442,18 +443,18 @@
 
 | 模型 | 条目 | 题面 | 响应摘要 | TTFT | tok/s | tokens 入/缓/出 | 调用成本 | 相对成本 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| mimo-v2.6-flash | manual.1 | 最近怎么样？ | 最近挺好的，谢谢关心！我随时待命，准备好帮你解答问题、聊聊天或者一起探索新知识～ 你呢？最近有什么新鲜事想分享吗？或者需要我帮忙做什么吗？ 😊 （悄悄说：如果你正为某个难题头疼，或者想聊聊编程、新知识、甚至电影推荐，我都在这儿呢！） | 2860 ms | 32.4 | 10/0/320 | ¥0.00065 | 3.5× |
-| mimo-v2.6-flash | manual.2 | 帮我把那个东西改一下。（指代不明） | 你好！这确实是一个很典型的**指代不明**的例子 😄 你说"那个东西"，但我完全不知道你指的是什么，所以我们需要先明确： **请告诉我更多信息，比如：** 1. **什么东西？** — 是一段文字、一段代码、一个设计、一份文档、一个句子？ 2. **改什么？** — 改哪里？改成什么样？（比如：改得更正式/更简洁/更友好？） 3. **用在什么场景？** — 什么语境下使用？ --- 📌 **沟通小贴士：** > 指代不明是日常交流中常见的问题。使用**"那个"、"这个"、"它"**等代词时，确保对方能通过上下文理解你指的是什么，否则对方只能靠猜。 你补充一下具体想改什么，我就可以帮你了！ | 536 ms | 36.1 | 18/0/288 | ¥0.000594 | 1.0× |
-| mimo-v2.6-flash | manual.3 | 这个功能有点意思，你觉得呢？（对象不明） | 哈哈，你这个功能问得有点模糊啊，对象不明？我猜你可能是想聊我的什么新特性？比如说我能像朋友一样聊天，还是你有其他具体想探讨的功能？告诉我更多细节，我很乐意分享我的看法！😊 | 16273 ms | 1.8 | 19/0/164 | ¥0.000347 | 1.0× |
-| deepseek-flash | manual.1 | 最近怎么样？ | 我这边一切照常，运行状态不错，随时待命～ 你最近怎么样？有什么想聊聊或需要帮忙的吗？ | 193 ms | 197.6 | 33/0/150 | ¥0.001266 | 6.9× |
-| deepseek-flash | manual.2 | 帮我把那个东西改一下。（指代不明） | 可以，但“那个东西”指代不明，我需要先确认一下： 1. **要改的是哪个东西？**（文件、代码、文案、图片、链接……） 2. **当前内容/位置是什么？** 3. **想改成什么样？** 把原文或截图发我，并说明修改要求，我就能直接帮你改。 | 409 ms | 217.2 | 41/0/546 | ¥0.00445 | 7.5× |
-| deepseek-flash | manual.3 | 这个功能有点意思，你觉得呢？（对象不明） | 哈哈，确实有点意思——但目前这个“意思”主要来自“对象不明”😂。 在没有前文或指代对象时，我没法具体评价“这个功能”。如果这是测试我面对指代不明会怎么做，那我的选择是：**先澄清，不瞎猜**。 你可以补充一下： 1. 是什么功能？ 2. 在哪个产品或场景里？ 3. 你想聊它的创意、交互、技术实现，还是潜在风险？ 给我一个截图、链接或一句话描述，我就能具体说说它哪里有意思、哪里可能有问题、怎么改进。 | 213 ms | 176.3 | 41/0/652 | ¥0.005298 | 15.3× |
-| glm-5.3-flash | manual.1 | 最近怎么样？ | 谢谢你的关心！作为一个AI助手，我没有真正的情感和身体状态，但我一直在正常运作，随时准备为您提供帮助。我会不断学习和更新知识，以提供更好的服务。 有什么特别的事情我可以帮你解答或协助你处理吗？无论是工作、学习还是日常问题，我都很乐意为你提供支持。 | 1206 ms | 28.5 | 15/0/195 | ¥0.000558 | 3.0× |
-| glm-5.3-flash | manual.2 | 帮我把那个东西改一下。（指代不明） | 好的，我很乐意帮忙！不过我需要更多信息才能动手： 1. **要改的是什么？** 比如一篇文章、一段代码、一份简历、PPT 等 2. **改哪方面？** 比如内容、措辞、格式、逻辑等 3. **有什么具体要求？** 比如改成什么风格、达到什么目的 你可以直接把内容贴出来，再简单说明一下想怎么改，我马上帮你处理。 | 653 ms | 47.2 | 23/0/519 | ¥0.001472 | 2.5× |
-| glm-5.3-flash | manual.3 | 这个功能有点意思，你觉得呢？（对象不明） | 哈哈，你自己都标注了“对象不明”——确实如此！我这边看不到任何上下文：没有截图、没有链接，也没有之前聊过什么功能，所以我完全不知道“这个功能”指的是什么。 描述一下？或者把相关内容发过来，我很好奇是什么让你觉得有意思。 | 1670 ms | 39.9 | 23/0/875 | ¥0.002468 | 7.1× |
-| qwen3.8-flash | manual.1 | 最近怎么样？ | 挺好的，谢谢！你呢？最近过得怎么样？ | 573 ms | 51.1 | 64/0/49 | ¥0.000183 | 1.0× |
-| qwen3.8-flash | manual.2 | 帮我把那个东西改一下。（指代不明） | 可以，但我需要先确认“那个东西”具体指什么。请补充以下任意信息： 1. **要修改的对象**：是一段文字、代码、文件、图片、表格，还是其他内容？ 2. **原始内容**：最好直接粘贴原文/代码/截图描述。 3. **修改目标**：想改语气、格式、错别字、逻辑、功能、标题，还是其他？ 4. **使用场景**：例如论文、邮件、简历、公众号、作业、代码提交等。 你可以这样回复我： > 帮我把这段文字改得更正式： > “……” 或者： > 帮我把这段代码改成 Python： > “……” 把具体内容发过来，我就可以直接帮你改。 | 550 ms | 44.9 | 72/0/233 | ¥0.000687 | 1.2× |
-| qwen3.8-flash | manual.3 | 这个功能有点意思，你觉得呢？（对象不明） | 有点意思，不过你现在“对象不明”啊——你说的是哪个功能？ 你可以补一句，比如： - 是某个 App 的新功能？ - 是 AI 的某个能力？ - 是你产品里的功能？ - 还是某段代码/交互设计？ 如果你愿意，我也可以从这几个角度帮你判断它“有意思”在哪： 1. **用户价值**：它解决了什么真实问题？ 2. **新奇感**：是体验创新，还是噱头？ 3. **可复制性**：别人能不能快速抄？ 4. **商业潜力**：能不能带来留存、转化或传播？ 5. **风险点**：会不会有隐私、成本、误用问题？ 你把功能描述发我，我可以帮你拆一下。 | 771 ms | 55.6 | 73/0/246 | ¥0.000723 | 2.1× |
+| mimo-v2.6-flash | manual.1 | 最近怎么样？ | `最近挺好的，谢谢关心！我随时待命，准备好帮你解答问题、聊聊天或者一起探索新知识～ 你呢？最近有什么新鲜事想分享吗？或者需要我帮忙做什么吗？ 😊 （悄悄说：如果你正为某个难题头疼，或者想聊聊编程、新知识、甚至电影推荐，我都在这儿呢！）` | 2860 ms | 32.4 | 10/0/320 | ¥0.00065 | 3.5× |
+| mimo-v2.6-flash | manual.2 | 帮我把那个东西改一下。（指代不明） | `你好！这确实是一个很典型的**指代不明**的例子 😄 你说"那个东西"，但我完全不知道你指的是什么，所以我们需要先明确： **请告诉我更多信息，比如：** 1. **什么东西？** — 是一段文字、一段代码、一个设计、一份文档、一个句子？ 2. **改什么？** — 改哪里？改成什么样？（比如：改得更正式/更简洁/更友好？） 3. **用在什么场景？** — 什么语境下使用？ --- 📌 **沟通小贴士：** > 指代不明是日常交流中常见的问题。使用**"那个"、"这个"、"它"**等代词时，确保对方能通过上下文理解你指的是什么，否则对方只能靠猜。 你补充一下具体想改什么，我就可以帮你了！` | 536 ms | 36.1 | 18/0/288 | ¥0.000594 | 1.0× |
+| mimo-v2.6-flash | manual.3 | 这个功能有点意思，你觉得呢？（对象不明） | `哈哈，你这个功能问得有点模糊啊，对象不明？我猜你可能是想聊我的什么新特性？比如说我能像朋友一样聊天，还是你有其他具体想探讨的功能？告诉我更多细节，我很乐意分享我的看法！😊` | 16273 ms | 1.8 | 19/0/164 | ¥0.000347 | 1.0× |
+| deepseek-flash | manual.1 | 最近怎么样？ | `我这边一切照常，运行状态不错，随时待命～ 你最近怎么样？有什么想聊聊或需要帮忙的吗？` | 193 ms | 197.6 | 33/0/150 | ¥0.001266 | 6.9× |
+| deepseek-flash | manual.2 | 帮我把那个东西改一下。（指代不明） | `可以，但“那个东西”指代不明，我需要先确认一下： 1. **要改的是哪个东西？**（文件、代码、文案、图片、链接……） 2. **当前内容/位置是什么？** 3. **想改成什么样？** 把原文或截图发我，并说明修改要求，我就能直接帮你改。` | 409 ms | 217.2 | 41/0/546 | ¥0.00445 | 7.5× |
+| deepseek-flash | manual.3 | 这个功能有点意思，你觉得呢？（对象不明） | `哈哈，确实有点意思——但目前这个“意思”主要来自“对象不明”😂。 在没有前文或指代对象时，我没法具体评价“这个功能”。如果这是测试我面对指代不明会怎么做，那我的选择是：**先澄清，不瞎猜**。 你可以补充一下： 1. 是什么功能？ 2. 在哪个产品或场景里？ 3. 你想聊它的创意、交互、技术实现，还是潜在风险？ 给我一个截图、链接或一句话描述，我就能具体说说它哪里有意思、哪里可能有问题、怎么改进。` | 213 ms | 176.3 | 41/0/652 | ¥0.005298 | 15.3× |
+| glm-5.3-flash | manual.1 | 最近怎么样？ | `谢谢你的关心！作为一个AI助手，我没有真正的情感和身体状态，但我一直在正常运作，随时准备为您提供帮助。我会不断学习和更新知识，以提供更好的服务。 有什么特别的事情我可以帮你解答或协助你处理吗？无论是工作、学习还是日常问题，我都很乐意为你提供支持。` | 1206 ms | 28.5 | 15/0/195 | ¥0.000558 | 3.0× |
+| glm-5.3-flash | manual.2 | 帮我把那个东西改一下。（指代不明） | `好的，我很乐意帮忙！不过我需要更多信息才能动手： 1. **要改的是什么？** 比如一篇文章、一段代码、一份简历、PPT 等 2. **改哪方面？** 比如内容、措辞、格式、逻辑等 3. **有什么具体要求？** 比如改成什么风格、达到什么目的 你可以直接把内容贴出来，再简单说明一下想怎么改，我马上帮你处理。` | 653 ms | 47.2 | 23/0/519 | ¥0.001472 | 2.5× |
+| glm-5.3-flash | manual.3 | 这个功能有点意思，你觉得呢？（对象不明） | `哈哈，你自己都标注了“对象不明”——确实如此！我这边看不到任何上下文：没有截图、没有链接，也没有之前聊过什么功能，所以我完全不知道“这个功能”指的是什么。 描述一下？或者把相关内容发过来，我很好奇是什么让你觉得有意思。` | 1670 ms | 39.9 | 23/0/875 | ¥0.002468 | 7.1× |
+| qwen3.8-flash | manual.1 | 最近怎么样？ | `挺好的，谢谢！你呢？最近过得怎么样？` | 573 ms | 51.1 | 64/0/49 | ¥0.000183 | 1.0× |
+| qwen3.8-flash | manual.2 | 帮我把那个东西改一下。（指代不明） | `可以，但我需要先确认“那个东西”具体指什么。请补充以下任意信息： 1. **要修改的对象**：是一段文字、代码、文件、图片、表格，还是其他内容？ 2. **原始内容**：最好直接粘贴原文/代码/截图描述。 3. **修改目标**：想改语气、格式、错别字、逻辑、功能、标题，还是其他？ 4. **使用场景**：例如论文、邮件、简历、公众号、作业、代码提交等。 你可以这样回复我： > 帮我把这段文字改得更正式： > “……” 或者： > 帮我把这段代码改成 Python： > “……” 把具体内容发过来，我就可以直接帮你改。` | 550 ms | 44.9 | 72/0/233 | ¥0.000687 | 1.2× |
+| qwen3.8-flash | manual.3 | 这个功能有点意思，你觉得呢？（对象不明） | `有点意思，不过你现在“对象不明”啊——你说的是哪个功能？ 你可以补一句，比如： - 是某个 App 的新功能？ - 是 AI 的某个能力？ - 是你产品里的功能？ - 还是某段代码/交互设计？ 如果你愿意，我也可以从这几个角度帮你判断它“有意思”在哪： 1. **用户价值**：它解决了什么真实问题？ 2. **新奇感**：是体验创新，还是噱头？ 3. **可复制性**：别人能不能快速抄？ 4. **商业潜力**：能不能带来留存、转化或传播？ 5. **风险点**：会不会有隐私、成本、误用问题？ 你把功能描述发我，我可以帮你拆一下。` | 771 ms | 55.6 | 73/0/246 | ¥0.000723 | 2.1× |
 
 说明：本 lane 的成本只作单项展示，不进入成本表的成本归一化（AC-6）。
 
