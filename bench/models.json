@@ -26,6 +26,14 @@
       "note": ""
     },
     {
+      "label": "deepseek-flash",
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "dims": null,
+      "skipDims": null,
+      "note": "峰谷定价（成本表取高峰档）"
+    },
+    {
       "label": "glm-5.3-flash",
       "provider": "zhipu-plan",
       "model": "glm-5.3-flash",
