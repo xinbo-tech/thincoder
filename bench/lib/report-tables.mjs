@@ -145,14 +145,17 @@ export function costSection(data, stats) {
     if (missUsage > 0) notes.push(`${missUsage} 个 run 存在 usage 缺失的 call`)
     if (notes.length > 0) footnotes.push(`- ${s.label}：${notes.join("；")}。`)
   }
+  const bases = stats.map((s) => s.costPerPass).filter((v) => typeof v === "number" && v > 0)
+  const base = bases.length > 0 ? Math.min(...bases) : null
+  const relOf = (v) => (base == null || typeof v !== "number" ? "—" : `${(v / base).toFixed(1)}×`)
   return [
     "### 成本表",
     "",
-    "总成本 = Σ 成功返回的 call 成本；每任务成本 = 总成本 ÷ 任务数（该模型面内的用例数）；每通过任务成本 = 总成本 ÷ 通过任务数（用例判定 N 次全过 = pass）。",
+    "总成本 = Σ 成功返回的 call 成本；每任务成本 = 总成本 ÷ 任务数（该模型面内的用例数）；每通过任务成本 = 总成本 ÷ 通过任务数（用例判定 N 次全过 = pass）；**相对成本 = 每通过任务成本 ÷ 表内最低者（最低 = 1×，直接读倍数）**。",
     "",
-    "| 模型 | 总成本 | 每任务成本 | 每通过任务成本 |",
-    "| --- | --- | --- | --- |",
-    ...stats.map((s) => `| ${s.label} | ${fmtMoney(s.costCny)} | ${fmtMoney(s.costPerTask)} | ${fmtMoney(s.costPerPass)} |`),
+    "| 模型 | 总成本 | 每任务成本 | 每通过任务成本 | 相对成本 |",
+    "| --- | --- | --- | --- | --- |",
+    ...stats.map((s) => `| ${s.label} | ${fmtMoney(s.costCny)} | ${fmtMoney(s.costPerTask)} | ${fmtMoney(s.costPerPass)} | ${relOf(s.costPerPass)} |`),
     ...(footnotes.length > 0 ? ["", "脚注：", ...footnotes] : []),
     "",
     `- 计费口径：单价以 prices.json 为准（asOf ${data.prices?.asOf}；逐条出处以条目级 source 可回溯）。`,
