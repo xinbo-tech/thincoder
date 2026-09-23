@@ -595,37 +595,66 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
   本段取值 = `agent.title` 活读 · **空值零注入**（非回退链）；空窗差（生成前 / 失败期：VSC 顶栏显回退链值 ∥ 本段零注入）= 已登记端差（A9 保留：结构性不对称 + 证据 + 显式裁定；登记 = 批档 §1）。
 - **可机判**：`renderStatus` 纯函数直驱——`agent.title` 置值 / 清空两次调用，strip-ANSI 文本读「含 ` │ <title>` / 零注入」两段（用例 = `test/session-title-surface.test.mjs`）。
 
-### 7.5 queued 反馈面（F16 · busy-injection 批 2026-09-21 · busy-extend 批 2026-09-22 扩面）
+### 7.5 queued 反馈面（F16 · busy-extend 批 2026-09-22 扩面 · 排队期可见 = queue-visible 批 2026-09-24）
 
-> 机制面（放行判据 / 二次提交 / 送达链路）= `docs/cli/design/TUI-INPUT-BOX.md` §4.1——本节只落**反馈形态**。
+> 机制面（放行判据 / 容量 / 合并消费 / 送达链路）= `docs/cli/design/TUI-INPUT-BOX.md` §4.1——本节只落**反馈形态**（三段：提交时 / 排队期 / 消费时）。
 > F13 豁免对齐（需求判定句④）：pendingInput 不出 attention——本节反馈零注意力色对（非 43 底 + 30 字）、非 chip、
 > 不进 `attentionKind` 触发集合（§7.1 表）——queued 反馈是**信息面**，非「需要用户介入」面（用户自己排的队，无需在场）。
 
-**反馈形态（两段式）**：
+**反馈形态（三段式）**：
 
 | 段 | 载体 | 形态（逐字） | 清除时机 |
 |---|---|---|---|
-| 提交时 | 状态栏 | busy 提示段**三态分流**（逐字见下表）：单槽非空 ⇒ ` │ 已排队 1 条消息`（C.dim 现有段样式）；槽空 ⇒ 按 busy 面显示排队句（普通 / 挂起内两句）；非 busy ⇒ `Enter: send` | 单槽被消费（driver shift / 队列 while shift）⇒ queued 段消失（派生自 `pendingInput.length`——零簿记零定时器） |
-| 消费时 | 对话流 | dim 行 `[sending queued message]`（`C.tool`——对位既有 `[continuing…]`）在消费点推送 | 不清除——即送达回执本身 |
+| 提交时 | 状态栏 | busy 提示段**三态分流**（逐字见下表）：队列非空 ⇒ ` │ 已排队 N 条消息`（C.dim 现有段样式）；队空 ⇒ 按 busy 面显示排队句（普通 / 挂起内两句）；非 busy ⇒ `Enter: send` | 队列被消费（driver 取批 / 队列 while 取批 / 中止转残余）⇒ queued 段消失（派生自 `pendingInput.length`——零簿记零定时器） |
+| 排队期（核心） | 会话流**流尾** | **待发送块**（派生插槽——逐字 / 上限 / 合并见下）：标签行（单条 / 多条两形——逐字见下「待发送块」段）+ 逐条原文（`C.dim`，每条 ≤ 3 行 + 该条超限尾标记；多条带 `i. ` 编号） | 队列被按批取走（任一时机——见下「消费时机」段；中止转残余）⇒ 派生块随判据消失——零簿记 |
+| 消费时 | 对话流 | dim 行 `[sending queued message]`（`C.tool`——对位既有 `[continuing…]`）在消费点按批推送（批 = 合并计划取数单位） | 不清除——即送达回执本身 |
 
-**`enterHint` 三态（逐字——`thincoder-cli/src/tui/render-frame.mjs` `enterHint`；判据同源 = `TUI-INPUT-BOX.md` §4.1）**：
+**`enterHint` 四态（逐字——`thincoder-cli/src/tui/render-frame.mjs` `enterHint`；判据同源 = `TUI-INPUT-BOX.md` §4.1）**：
 
 | # | 态（判据） | 段文本（逐字） | 依据 |
 |---|---|---|---|
-| 1 | `processing` ∧ 单槽非空 | `已排队 1 条消息` | 零改（F16 原批——`pendingInput.length` 现状派生，消费即消失） |
-| 2 | `processing` ∧ 单槽空 ∧ `!suspended && !_suspPending`（普通回合 busy） | `主会话处理中 — Enter 排队（回合结束后自动发送）` | 本批收正——入槽面（受理即排队）；「Enter 提交禁用」为失效表达（不得留在规范面） |
-| 3 | `processing` ∧ 单槽空 ∧（`suspended \|\| _suspPending`）（挂起会话内 busy） | `会话内回合处理中 — Enter 排队（本轮结束后优先发送）` | 本批扩面——同面入槽；「优先」= driver 步骤 1 输入优先（先于 digest 合并——D-S5） |
+| 1 | `processing` ∧ 队列非空（N 条） | `已排队 N 条消息` | N 条（多槽）；`pendingInput.length` 现状派生，消费即消失 |
+| 2 | `processing` ∧ 队列空 ∧ `!suspended && !_suspPending`（普通回合 busy——用户回合） | `主会话处理中 — Enter 排队（当前步骤结束后自动发送）` | fix 轮收正——步边界消费（用户回合面） |
+| 3 | `processing` ∧ 队列空 ∧（`suspended \|\| _suspPending`）∧ `agent._inAutoTurn !== true`（挂起内**用户回合**在飞） | `会话内回合处理中 — Enter 排队（当前步骤结束后自动发送）` | fix 轮新增行——driver 用户回合同样步边界消费 |
+| 4 | `processing` ∧ 队列空 ∧（`suspended \|\| _suspPending`）∧ `agent._inAutoTurn === true`（挂起内**系统轮**在飞 = digest / 上行唤醒轮） | `会话内回合处理中 — Enter 排队（本轮结束后优先发送）` | 系统轮消费点 = driver 步骤 1（轮末）；「优先」= driver 输入优先（先于 digest 合并——D-S5） |
 | — | 非 `processing` | `Enter: send` | 零改 |
 
-**否决 dim 对话行**（提交时落 `[queued: <text 预览>]` 进 `state.lines`）：对话区是用户正在读的内容面——
-回合流式输出每帧刷新，queued 行瞬间被顶走不可见；状态栏段常驻可见且随消费自动消失，**生命周期语义 = 单槽现状派生**（零簿记）。
-F13 判定句「pendingInput 不出 attention」约束的是**注意力色对**，dim 信息段不违反。
+**排队期 · 待发送块（queue-visible 批 2026-09-24——会话流尾派生插槽）**：
 
-**可机判**：`renderStatus` 纯函数直驱——三态各取一条状态字面量：单槽非空 ⇒ strip-ANSI 含 `已排队 1 条消息`；槽空 + 非挂起 ⇒ 含 `主会话处理中 — Enter 排队（回合结束后自动发送）`；槽空 + 挂起 ⇒ 含 `会话内回合处理中 — Enter 排队（本轮结束后优先发送）`；
-三态全程零 `\x1b[43m`（F13 豁免）；非 `processing` ⇒ `Enter: send`。用例宿主 = `thincoder-cli/test/busy-injection.test.mjs`（T-F16-6）。
+- **落位 = 会话流尾**（`thincoder-cli/src/tui/render-conversation.mjs` 的 `buildConvLines` 派生行；渲染序在 `state.streaming` 之后）：块上方的流式内容继续增长，块恒居会话区底 ⇒ 跟随开启时排队期全程可见（F1 跟随语义）。
+- **载体 = 派生**：判据 = 队列 `state.pendingInput` 非空（渲染期现算）——零 `state.lines` 写入、零生命周期簿记（消费 / 中止随判据消失）；不入搜索面、不注册折叠键与点击命中（派生行无 `_lineId` / `_foldToggle`）。
+- **形态（逐字——单条 / 多条两形）**：标签行单条 = `⏳ 待发送 · 不打断当前执行，自动发送`（`C.warn`）；多条 = `⏳ 待发送 · N 条消息（不打断当前执行，合并发送）`（N ≥ 2）。
+  **标签行不声明时机**（面无关——用户回合 / 系统轮两面的精确时机 = 状态栏 `enterHint` 逐字：见下「消费时机」段）；正文 = 逐条直排（`C.dim`——`sanitizeDisplay` + `wrapText(text, cols - 1)`，与正文同口径）：多条带 `i. ` 编号首行 + 续行 2 空格缩进（**编号 = 模型将看到的合并形态预览**——§“合并消费”）；单条不加编号。块前空行（同主输出呼吸行约定）。
+- **上限**：每条原文行至多 `QUEUED_ITEM_MAX_LINES`（3）；超限 ⇒ 该条尾标记行 `… [该条共 N 行——发送后完整显示]`（`C.dim`）。**队容量** = `QUEUED_MAX_ITEMS`（8——与合并批上限同常量；常量住 `render-conversation.mjs` / `queued-merge.mjs`）；块超视口时条数可见性由状态栏段兜底。
+- **缓存键参与**：`convCacheKey`（`thincoder-cli/src/tui/render-conversation.mjs:121-168`）增排队签名（条数 + 各条长度 + 首 8 字——同 `blocksSig` 口径）；漏挂 ⇒ 缓存命中出陈旧帧（块不现 / 不消）。
+- **跟随（F4「新提交消息 → 恢复跟随」）**：入槽即 `state.scroll = 0` + `state._followTail = true`（`thincoder-cli/src/tui/turn-face.mjs:32-33` submit 同款两行；两条入槽路径同款——busy 门禁 / 挂起态 Enter）。
+- **合并消费（R15 攒批恢复）**：消费点按同一计划 `planQueuedInput`（纯函数——`thincoder-cli/src/tui/queued-merge.mjs`（拟新增））取数：连续非 `/` 条目攒批**合并为一条消息、一次回合**
+  （单批 ≤ `MAX_MERGE_ITEMS`（8）条 ∧ 合并文本 ≤ `MAX_MERGE_CHARS`（2000）字符；超限截批先行、余下下批；单条 > 2000 字符直发；`/cmd` 逐条保序）；形态逐字 = `你排队了 N 条消息：` + `1. …` + `——一次处理`。
+- **消费时机（三时机——步边界为主 · queue-visible 批 fix 轮 2026-09-24 · 用户 03:06 收正）**：
+
+  | 时机 | 判据 / 落点 | 行为 |
+  |---|---|---|
+  | ① **步边界（主）** | 用户回合在飞（`autoTurn === false`）——核 loop 循环头投递回调（`consumeQueuedInput`；CLI 闭包 = `thincoder-cli/src/tui/queued-pickup.mjs`（拟新增）） | 当前步（一次 LLM 调用 + 其工具执行段）做完即取批 ⇒ `pushReal` 一条 user 消息入 history（**下一步生效**）+ 回执行 + `❯ You:` + 合并文本落 `state.lines`；**不中断**（在飞工具 / signal 零触碰） |
+  | ② 回合尾兜底（零改） | `thincoder-cli/src/tui/agent-turn.mjs:334-353` | 队列在**末步**填充（本 run 无后续边界）⇒ 转 `state.queue` 续发新回合 |
+  | ③ 驱动级（零改） | `thincoder-cli/src/tui/suspension-drive.mjs:246-257` | 挂起面无在飞用户回合；**系统轮在飞时 = 唯一消费点**（轮末——输入优先） |
+
+  **分流（系统轮不参与步边界）**：digest / 上行唤醒轮域文本 = 整理域，手动档机械门禁（无权限 handler ⇒ 写被拒；`_inAutoTurn && !autoApprove` ⇒ spawn 拒）会把用户指令降格 ⇒ 该两轮不传 pickup 回调（机制 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8「步边界 pickup」）。
+  **与 Ctrl+I 区分（逐字）**：Ctrl+I = 立即中断当前回合（在飞段立断）+ 注入 `[User interrupt: …]` + 续跑；本通道 = 零 abort / 零中断标记 + 步边界以普通 user 消息落历史（下一步生效）。
+- **消费转正（单帧切换 + 合并成形）**：**三时机**（上「消费时机」表——步边界 pickup（`thincoder-cli/src/tui/queued-pickup.mjs`（拟新增））/ `thincoder-cli/src/tui/agent-turn.mjs:334-353` 回合尾兜底转正 + 队列续发 / `thincoder-cli/src/tui/suspension-drive.mjs:246-257` driver 输入优先）按计划取批
+  ⇒ 派生块随判据同帧消失；同一同步段内推回执 + `❯ You:` + **本批合并文本**落 `state.lines`（`thincoder-cli/src/tui/agent-turn.mjs:84-87`）
+  ⇒ 渲染帧合并调度（`thincoder-cli/src/tui/render-loop.mjs:38-56`——nextTick + 16ms 节流）只出**一帧**：N 条待发送块 → 回执行 + 一条合并用户消息（零空窗 / 零重复；位置 = 同一流尾）。
+- **边界**：中止残余（`thincoder-cli/src/tui/suspension-drive.mjs:308-311`——按合并计划转 `state.queue`）**不渲染待发送块**（既有提示行明示去向）；吞面四（模态 / 斜杠 / 空 / 队满）零入队 ⇒ 零渲染；F13 豁免（零注意力色对）不变。
+
+**可机判**：`renderStatus` 纯函数直驱——四态各取一条状态字面量：队列非空（N = 2）⇒ strip-ANSI 含 `已排队 2 条消息`；队空 + 非挂起 ⇒ 含 `主会话处理中 — Enter 排队（当前步骤结束后自动发送）`；队空 + 挂起 + `agent._inAutoTurn` 假 ⇒ 含 `会话内回合处理中 — Enter 排队（当前步骤结束后自动发送）`；队空 + 挂起 + `agent._inAutoTurn` 真 ⇒ 含 `会话内回合处理中 — Enter 排队（本轮结束后优先发送）`；
+四态全程零 `\x1b[43m`（F13 豁免）；非 `processing` ⇒ `Enter: send`。
+**排队块面（单条 / 多条两形）**：`renderConversation` / `buildConvLines` 直驱——N = 1 ⇒ 含 `⏳ 待发送 · 不打断当前执行，自动发送` + 原文行；N = 2 ⇒ 含 `1. ` / `2. ` 编号行 ∧ 标签行逐字 = `⏳ 待发送 · 2 条消息（不打断当前执行，合并发送）`；每条超 3 行 ⇒ 含该条尾标记行；队列空 ⇒ 零该串 ∧ 逐字节等价；全程零 `\x1b[43m`。
+**步边界 pickup 面（fix 轮新增）**：`pickupQueuedAtStepBoundary`（`thincoder-cli/src/tui/queued-pickup.mjs`（拟新增））直驱——桩 agent + 队列 2 条 ⇒ history 尾恰 +1 条 user 消息（内容 = R15 合并文本）∧ `state.lines` 含 `[sending queued message]` ∧ `❯ You:` ∧ 合并文本 ∧ `pendingInput` 空 ∧ 零 `[User interrupt:]`（非中断锁）；队列空 ⇒ 逐字节等价（零推送）。
+**合并消费面**：`planQueuedInput` / `formatMergedMessages` 纯函数直驱——2 条短消息 ⇒ 单动作（`merged:true`，文本逐字 = 头 `你排队了 2 条消息：` + 编号 + 尾 `——一次处理`）∧ 跨 8 条 ⇒ 截批（首动作 count ≤ 8）∧ 单条 > 2000 字符 ⇒ `merged:false` 直发。
+用例宿主 = `thincoder-cli/test/busy-injection.test.mjs`（T-F16-6 + 本批新增行——批档 §2 用例表）。
 
 **VSC 对位**：**busy 即排队面**（`running`——挂起会话内与普通回合同判据；单槽载体两态：会话在飞入会话单槽 / 无会话入 `_busyQueued`）——
-机制单源 = `WEBVIEW-INPUT.md` §1 C-B2-6；webview 反馈 = 本地气泡（提交入槽即现 / 送达即 user 回声面——形态各端自落，语义同源）。
+机制单源 = `WEBVIEW-INPUT.md` §1 C-B2-6；webview 反馈 = 本地气泡（提交入槽即现 / 送达即 user 回声面——形态各端自落，语义同源）；
+**排队期标记** = 各条气泡带 `pending` 标记 + 标签行 `⏳ 待发送 · …`（键 = `queued.pending`）；消费即除标记、**多条批就地合并为一条气泡**（单条批就地保留——回声面；细则⑦——同处 C-B2-6）；**步边界消费**（用户回合在飞——端壳循环头同址回调；同判据 = `WEBVIEW-INPUT.md` §1 C-B2-6 细则②④）同走「消费成形」快照。
 
 ## 8. 不并项与历史沿革
 
@@ -659,6 +688,16 @@ F13 判定句「pendingInput 不出 attention」约束的是**注意力色对**�
 | VSC webview 对位 | webview 渲染 / 消息协议 / 子标 | `docs/vsc/design/WEBVIEW*.md`——**非同机制**（端差异如实登记——登记 ≠ 默认保留；**登记面 = 记录已裁的保留项**，✗ 非未决差项兜底；端差默认 = 消，保留须结构性不对称 + 证据 + 显式裁定（A9）；各端独立实现只述实现形态，✗ 不构成差异保留依据；**本项状态：待裁**（A9 三件未齐——消解路径 = 两端口径统一（webview 渲染 / 消息协议语义对齐）∥ 补显式裁定；到期 = 台账 #185「已登记端差逐项 A9 复核」落定）） |
 
 ## 变更记录
+
+- 2026-09-24（**queue-visible 批 · fix 轮（步边界 pickup）· eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §1.11 / §1.12 / §1.13 · 用户 03:06 收正）：§7.5 增**消费时机三时机**表（步边界为主 / 回合尾兜底 / 驱动级 + 系统轮不参与的分流句 + Ctrl+I 区分句）；
+  待发送块标签改**面无关**两形（`⏳ 待发送 · 不打断当前执行，自动发送` / `⏳ 待发送 · N 条消息（不打断当前执行，合并发送）`——时机承诺归状态栏）；
+  `enterHint` 四态表（普通 busy / 挂起内用户回合 = `当前步骤结束后自动发送`；挂起内系统轮 = `本轮结束后优先发送`）；可机判补步边界 pickup 面。**落位 / 载体 / 上限 / 缓存键 / 跟随 / F13 豁免零变**。
+
+- 2026-09-24（**queue-visible 批 · 需求裁定升级轮（多槽 + 合并消费）· eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §1.10）：§7.5 **三段表 / 待发送块 / enterHint 表第 1 行 / 可机判**按多槽重写（容量 8；标签行 `⏳ 待发送 · N 条消息（回合结束后合并发送）`；逐条原文 ≤ 3 行 + `i. ` 编号；状态栏 `已排队 N 条消息`）；
+  新增**合并消费**条（`planQueuedInput` / `MAX_MERGE_ITEMS`（8）/ `MAX_MERGE_CHARS`（2000）/ 编号形态）与「消费转正 = 合并成形」收正；VSC 对位行同步（多条批就地合泡）。**落位 / 载体 / 缓存键 / 跟随 / F13 豁免零变**。
+
+- 2026-09-24（**queue-visible 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §1）：§7.5 反馈面扩**第三段「排队期」**——会话流尾**待发送块**（派生插槽：标签行 `⏳ 待发送 · 回合结束后自动发送` + 原文 ≤5 行 + 超限尾标记；渲染序在 `state.streaming` 之后 ⟹ 不受流式增长顶走；`convCacheKey` 增排队签名；入槽恢复跟随 = F4）；段数改**三段式**（提交时 / 排队期 / 消费时）；
+  可机判行补排队块面；VSC 对位行补待发送标记（细则⑦ 回指）。**消费链谓词 / 槽宽 / 吞面四 / F13 豁免零变**。
 
 - 2026-09-22（**structure-debt 批 · 档面车道（#226 / #159 尾账）· eng-designer**——承 `docs/batches/2026-09-22-structure-debt.md` §2.1 / §2.2 / §2.6 档面行 + 父侧派单）：
   §1 模块地图收正——`index.mjs` 行改「装配序列」并按新档清单补 **4 行**（`tui-state` / `input-face` / `conversation-writer` / `turn-face`）；

@@ -14,9 +14,32 @@
 > 核内形态（状态机 / 载体契约 / 注入面 / 端特有面）见 `AGENT-LOOP.md` §2.3；本节 = 现行机制语义与端面分工。
 
 - **回合尾语义**：回合尾**不再直注入排空**——done 条目留池（settled not consumed）→ `willSuspend`（`poolLive` 覆盖池非空）判 true → 进挂起态 → `sweepSettledToPending` → pending 非空 → digest 回合。**无 suspension 驱动的调用方**（headless / 直连 `runAgent`）保留回合尾直注入兜底（不丢结果）。多条目近邻完成 = **合并一轮消化**。
-- **主会话 busy（processing 含 digest）提交 = 入单槽**：输入不禁（可打字回显），Enter 受理入 `pendingInput` **单槽**（至多一条待交接——普通回合与会话内 busy 同判据）；
-  **吞面收敛四** = 模态 / 斜杠 / 空 / 槽满（逐条 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1；反馈三态 = `docs/cli/design/TUI.md` §7.5；VSC 对位 = `docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6）；
-  `state.queue` = 残项单容器（释放窗口兜底 / 中止残余——零丢失保留）；攒批（多槽）不引入。
+- **主会话 busy（processing 含 digest）提交 = 入 `pendingInput` 队列**（**容量 8 条**——普通回合与会话内 busy 同判据）：输入不禁（可打字回显），Enter 受理入队；
+  **吞面收敛四** = 模态 / 斜杠 / 空 / **队满（第 9 条 ⇒ 拒 + 提示 + 文本保留）**（逐条 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1；反馈 = `docs/cli/design/TUI.md` §7.5；VSC 对位 = `docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6）；
+  `state.queue` = 残项单容器（释放窗口兜底 / 中止残余——零丢失保留）。
+- **合并消费（R15 攒批恢复——queue-visible 批 2026-09-24）**：消费点按同一计划取数——连续非 `/` 条目攒批合并为**一条消息、一次回合**：
+  单批 ≤ `MAX_MERGE_ITEMS`（8）条且合并文本 ≤ `MAX_MERGE_CHARS`（2000）字符（**双端同名常量**）；超限截批先行（余下留待下批——不丢）；单条 > 2000 字符直发（不进批）；`/cmd` 逐条保序即时（不进合并缓冲）。
+  形态 = 编号逐条（`你排队了 N 条消息：` + `1. …` + `——一次处理`）；**双端各自实现、语义 / 常量 / 文案同源**。
+
+**步边界 pickup（用户 → 主会话投送通道——queue-visible 批 fix 轮 2026-09-24 · 用户 03:06 收正 / 03:09 参照模型）**：
+
+- **通道语义（参照系 = 既有「主 agent → 子 agent」`subagent action:'send'`——参照非改造：send 侧代码 / 文档 / 行为本批零触碰）**：
+  入队 → **下一 turn 边界消费**（**非中断**——当前工具先跑完）→ 按**普通用户指令**落历史。本批 = 该行为契约在「用户 → 主会话」方向的**新增通道**（主会话侧原缺失）。
+- **核侧落法（选型 = 复用核既有「回合边界投递」缝）**：`runAgent` opts 增**投递回调** `consumeQueuedInput`——与 `consumeInjected`（`thincoder-core/agent.mjs:233`）同址同族（循环头），落 `drainChildUpstream(agent)`（`:235`）之后（真实用户消息恒为 history 尾）。
+  回调**自持语义**（取批 / `pushReal` / 呈现——核只给缝、不给策略；同 `drainInjectedQueue` 形态）；空队列 no-op、缺省 `null`（headless / 直连 `runAgent` 零开销）。
+  **复用面（核既有底层构件——零新增基础件）** = 循环头回合边界缝 + `pushReal` 历史写原语 + 「非中断 / 下一边界 / 普通 user 消息」语义契约。
+  **被否候选**：① 会话层包装（外层按步重入 `runAgent`）——run 级语义全破（mutation / guard 复位、turn 编号帧、Stop 钩子、续跑、压缩链、`_pendingDistill`）；
+  ② 在 `callbacks.onTurnEnd` 内注入——通知通道承载隐藏写入（消费方 = 增量保存 / 流 flush），且触发点分散（`completion.mjs` 六分支 + `post-turn.mjs`）、其一在「本轮即 return」路径（注入后消息滞留到下一回合）；
+  ③ 核单源 drain 函数 + 载体字段（parent-channel 模式）——队列容器迁移 ⇒ 全部入队路径 / 容量判据 / UI 派生（待发送块 / 状态栏段 / VSC 快照源）连带改（超「只加消费时机」射程）；且合并格式 / 文案属端面 ⇒ 核 drain 须持端文案（域越界）；
+  ④ 与 `send` 消费件合流（`drainInjectedQueue` 泛化）——**触碰 `send` 实现面 ⇒ 出本批范围**（登记上抛）；
+  ⑤ digest / 上行唤醒轮内步边界注入（理由见下「适用面」）；⑥ digest 轮步边界**让位**（run 在边界收束）——核新增退出语义 + 部分消化残面，超本批射程。
+- **适用面 = 用户回合（`autoTurn === false`）**：digest / 上行唤醒轮（系统驱动轮）**不参与**步边界 pickup——该轮域文本 = 整理域，且手动档机械门禁（无权限 handler ⇒ 写被拒；`_inAutoTurn && !autoApprove` ⇒ spawn 拒）会把用户指令降格
+  ⇒ 系统轮消费点保持 driver 步骤 1（轮末，零改）；端侧传参面自带分流（autoTurn 轮不传回调）。
+- **不中断语义（N2 同款）**：检查点 = 循环头——一步 = **一次 LLM 调用 + 其工具执行段**（`executeToolCalls` + `recordToolResults` 已完结）⇒ 在飞工具 / `signal` / 流式输出零触碰。
+- **与 Ctrl+I 的区分（逐字）**：Ctrl+I = `abort({ interrupt: true, message })` ⇒ **中断当前回合**（在飞段立断）+ 注入 `[User interrupt: …]` + 外层重建 controller **续跑**（`AGENT-LOOP.md` §6.2）；
+  本通道 = **零 abort / 零 `[User interrupt:]`** + 步边界以普通 user 消息落历史（**下一步生效**）。两通道并存、互不替代。
+- **兜底面（三时机时间序）**：**步边界（主）** / **回合尾兜底**（队列在末步填充 ⇒ 本 run 无后续边界——既有 `thincoder-cli/src/tui/agent-turn.mjs` 队列续发）/ **驱动级**（挂起面无在飞用户回合——driver 步骤 1）。后两者零改。
+- **双端**：CLI = `thincoder-cli/src/tui/queued-pickup.mjs`（拟新增）闭包（取批 → `pushReal` → 回执 + `❯ You:` + 合并文本）；VSC = 端壳自有 depth-0 循环同址（`thincoder-vscode/src/agent.mjs:197` 邻位——紧随 `opts.turnInput?.()` 消费段；语义同源、各自实现）。
 
 **挂起状态机**：
 
@@ -25,14 +48,14 @@
 | idle | 回合返回且池非空 | 置 `_suspended` → 挂起态 | → suspension |
 | idle | 回合返回且池空 | 正常回 idle | 不变 |
 | suspension | 池项 settle 且无 pendingInput | settle 入 `_pendingAsyncResults` → 开 auto-turn | auto-turn 期间仍挂起 |
-| suspension | 用户 Enter（无 digest 在跑） | 新回合输入入 `pendingInput` 单槽 + 唤醒 | 回合末池空 → idle；非空 → 回 suspension |
-| suspension | 用户 Enter（digest 在跑 = busy） | 入 `pendingInput` 单槽（受理——判据 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1）；槽满 ⇒ 吞 + 提示 | auto-turn 结束后回挂起（该输入由 driver 步骤 1 优先消费开用户回合） |
-| suspension | 释放窗口 / 槽满 Enter | 单槽交接（槽满吞 + 提示） | 不变 |
+| suspension | 用户 Enter（无 digest 在跑） | 新回合输入入 `pendingInput` 队列（容量内）+ 唤醒 | 回合末池空 → idle；非空 → 回 suspension |
+| suspension | 用户 Enter（digest 在跑 = busy） | 入 `pendingInput` 队列（受理——判据 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1）；队满 ⇒ 拒 + 提示 + 文本保留 | auto-turn 结束后回挂起（该输入由 driver 步骤 1 优先按合并计划消费） |
+| suspension | 释放窗口 / 队满 Enter | 队列交接（队满拒 + 提示） | 不变 |
 | auto-turn | 池项 settle（消化中） | settle 入 pending（不并发开新轮——单 `runAgent` 循环） | 轮末按 pending / 池态续开或退出 |
 | auto-turn | 结束且池空 + 无 pendingInput | 补发 done 冻结 + 清 `_suspended` | → idle |
 | auto-turn | 结束且 pending 非空 + 无 pendingInput | 立即续开合并消化轮（一次注入全部 pending） | → 新 auto-turn |
 | auto-turn | 结束且池非空 | 回挂起等下一 settle | → suspension |
-| auto-turn | 结束且有 pendingInput | 自动以该消息开新回合 | → 回合 |
+| auto-turn | 结束且有 pendingInput | 自动以本批**合并消息**开新回合（计划 / 常量见上「合并消费」） | → 回合 |
 
 **时序边界**：settle 与 `_suspended` 翻转竞态——`_suspended` 在 `runAgent` finally 返回后（交互层进入挂起前）置位；settle 回调读到的标志若为 false（回合刚结束瞬间）→ 按正常回合语义发 done 冻结（该块本就在流尾，无害）；门控以回调读取时刻为准（确定性，无锁需求）。
 
@@ -51,7 +74,7 @@
 - **digest 消化完成即逐条补发冻结回收**（不等池空）：pending 条目注入后按 settle 锚点 splice 落位（冻结块位于其 digest 总览文本**之前**）；池空 freeze-out 仅兜底未消化残项。
 - **settle 锚点 splice**：`sub._freezeAt` = settle 时刻流位置；多锚点按 `_freezeAt` **降序**冻结（splice 是绝对位置插入——先插小锚点会把大锚点目标后移一位）；>5000 行头裁切处按净位移校正锚点。
 
-**挂起期 Ctrl+C 武装化（三态一致）**：processing / 挂起态首按 → `abort({ interrupt: true })` 无 message（停当前回合——**不清池**——提示「再按中止全部后台」）+ 武装 3s；3s 内二按 → 全停（清池 + 标记 + 唤醒）。二按检查提升到状态路由之前（两次按下之间状态会迁移）；中止后复位 `state._suspAborted`；残余 `pendingInput` 单槽消息转回 `state.queue`（单条——不静默丢）；回合启动解除 `exitArmed` 残留。
+**挂起期 Ctrl+C 武装化（三态一致）**：processing / 挂起态首按 → `abort({ interrupt: true })` 无 message（停当前回合——**不清池**——提示「再按中止全部后台」）+ 武装 3s；3s 内二按 → 全停（清池 + 标记 + 唤醒）。二按检查提升到状态路由之前（两次按下之间状态会迁移）；中止后复位 `state._suspAborted`；残余 `pendingInput` 队列条目按合并计划转回 `state.queue`（不静默丢）；回合启动解除 `exitArmed` 残留。
 
 ## 6.10 回合外事件后台化统一模型（分域池 + async advisor）
 
@@ -353,5 +376,9 @@ I1 → `thincoder-cli/test/integration/subagent-lifecycle.test.mjs:182`（扩）
 
 ## 变更记录
 
+- 2026-09-24（**queue-visible 批 · fix 轮（步边界 pickup）· eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §1.11 / §1.12 / §1.13 · 用户 03:06 收正）：§6.8 增**步边界 pickup**块——
+  「用户 → 主会话」投送通道（选型 = 复用核「回合边界投递」缝 `consumeQueuedInput`；被否候选六项；不中断语义 = 循环头检查点；与 Ctrl+I 逐字区分；三时机时间序；CLI / VSC 双端落点）。**队列容量 / 合并消费 / 挂起状态机 / 池管理零变**。
+
+- 2026-09-24（**queue-visible 批 · 需求裁定升级轮（多槽 + 合并消费）· eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §1.10）：§6.8 主会话 busy 提交面由「单槽」改**队列（容量 8 条）**+ 新增**合并消费**条（攒批计划 / 双端同名常量 / 编号形态）；挂起状态机行表三行同步（入队 / 队满 / 合并开回合）；Ctrl+C 中止残余句同步（队列条目按计划转回 `state.queue`）。**状态机其余行 / 池管理 / settle 时序零变**。
 - 2026-09-22（**structure-debt 批 · 档面车道 · eng-designer**——承 `docs/batches/2026-09-22-structure-debt.md` §2.5 · 台账 #67）：**建档**——自 `docs/core/design/AGENT-LOOP-SUBAGENT.md` 三分迁出
   §6.8 · §6.10 · §6.11 · §6.18 · §6.19 · §6.20（**段零改动**——逐字搬移、节号沿用；全仓档面指针同批改指本档名）。

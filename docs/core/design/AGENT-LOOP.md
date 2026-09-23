@@ -210,6 +210,11 @@ runAgent(agent, input, callbacks, { depth, signal, maxTurns, resume, autoTurn, s
    → 有 toolCalls ⇒ `executeToolCalls`（§6.4）回喂重入；无 ⇒ `handleCompletion`（§6.5）→ done / continue。
 4. **超 turn 上限 → 抛 `ContinueError`**。续跑规则：`engineering && autoApprove → 自动 resume`，否则询问是否续跑。规则适用所有回合（depth-0 用户回合 / auto-turn / depth>0 子代理）。
 
+**循环头（回合边界）注入族（三成员——同址、各自方向，互不干扰）**：每轮迭代开头（`chat()` 之前）依次 —
+① `consumeInjected?.(agent)`（父→子投递——spawn 方装的入向通道；depth>0）；② `drainChildUpstream(agent)`（子→父在飞消息——`AGENT-LOOP-UPSTREAM.md` §6.27.4）；③ **`consumeQueuedInput`（用户→主会话投递——仅用户回合传参；机制 = `AGENT-LOOP-ASYNC-POOL.md` §6.8「步边界 pickup」）**。
+三成员均**只在循环头触发**（在飞工具 / 在飞 LLM / 流式输出零触碰），写入均为 `pushReal` 普通 history 消息；③ 置族尾 ⇒ 真实用户消息恒为 history 尾（`injectTurnReminders` 的「新用户消息」cadence 判据落在它上）。
+VSC 端壳自有 depth-0 循环同址（`thincoder-vscode/src/agent.mjs:197` 邻位——`opts.turnInput?.()` 消费段之后）。
+
 **`autoTurn`（无输入回合——digest 用）**：`{ autoTurn: true }` = 不 push input + per-run 状态重置 + history 尾 = 已注入的 reminder user 消息；复用 resume 的「不 push input」机制，但不绑 `ContinueError` 语义。
 
 **`resume` 保留集**：`_mutatedThisRun` / `_verifiedThisRun` / `_verifyRetries` / `_touchedFiles` / `_advisorRound` 保留（guard 连续性与收敛预算不被续跑重置）；`_emptyRetries` / `_compressFailures` 亦保留（跨 turn 计数，防刷）。
@@ -495,6 +500,8 @@ VSC 侧**接线**面（端装配 / 面板 / webview 呈现）——机制本体�
 | VSC 档 §2 / §12 / §17（runAgent 主循环 · async 保真 · 上下文注入对齐） | VSC 侧实现细节叙述 | 与 §2.3 / `AGENT-LOOP-SUBAGENT.md` · `AGENT-LOOP-ASYNC-POOL.md` §6.7–§6.12 已并面同族（端差登记 = §6.18 表）——不重并（D2） |
 
 ## 变更记录
+
+- 2026-09-24（**queue-visible 批 · fix 轮（步边界 pickup）· eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §1.11）：§6.2 补**循环头（回合边界）注入族**三成员句（`consumeInjected` → `drainChildUpstream` → 新 `consumeQueuedInput`——用户 → 主会话投递；机制详见 `AGENT-LOOP-ASYNC-POOL.md` §6.8）。**主循环轮序 / 中断语义 / 续跑规则零变**。
 
 - 2026-09-22（**busy-extend 批 · 同族扩面轮 · eng-designer**——承 `docs/batches/2026-09-22-busy-extend.md` §1 裁定 · 父侧并入本批）：同族残留三处 + 决策一处收正——
   §2.3「唤醒 / 入槽」行 + §6.8 端特有面行 + §6.18「挂起回合 digest」行的 VSC busy **拒收** → **单槽受理**（回指 `docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6）；§7 **D-AL9** 就地修订（busy 提交入单槽；同表先例形）。机制条文零改。

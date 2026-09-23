@@ -78,13 +78,14 @@
    **释放窗口守卫**（willSuspend 判定后、挂起会话启动前——期间 `processing = false` 且 `suspended` 未置位，
    无守卫会并发开第二个 `runAgentTurn`——双驱动器竞态）；`sweepToolBlocks`；`ensureSessionTitle`；
    distill flush 有界等待（超时上限——退出路径不挂死）→ `saveSession` 增量落盘。
-6. **交接消息单条续发**：busy 提交入单槽（受理判据 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1——吞面收敛四）+ 攒批删——`state.queue` 缩为**残项单容器**（释放窗口兜底池空转正 / 挂起中止残余——
-   各至多一条——零丢失）；回合尾单条直发（slash 直接执行——保序）；释放窗口期入 `pendingInput` 的消息在池已空时转回队列。
+6. **交接消息按批合并续发**：busy 提交入队列（受理判据 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1——吞面收敛四）+ **合并消费**（R15 恢复：`planQueuedInput` 攒批——连续非 `/` 且 ≤8 条 ∧ 合并 ≤2000 字符 ⇒ 合并为一条、一次回合；超批截批先行；单条 > 2000 字符直发；`/cmd` 逐条保序）——
+   `state.queue` 为**残项单容器**（释放窗口兜底池空转正 / 挂起中止残余——零丢失）；回合尾按批直发（**残项路径**——队列主消费 = **步边界 pickup**：机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8「步边界 pickup」）；
+   释放窗口期入 `pendingInput` 的条目在池已空时按计划转回队列。
 7. **挂起会话**（`suspension-drive.mjs`——状态机行表以 `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8 为权威，本档不复制）：
-   队列清空后池仍 live 且非 skipSession 且未中止 → 进入挂起态——**挂起内 busy 与普通 busy 同判据入槽**（受理判据 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1）；
-   **挂起空闲输入开放**（Enter 走 `pendingInput` 单槽——键面契约见 `docs/cli/design/TUI-INPUT-BOX.md` §4）、settle 事件驱动 auto-turn 消化轮、
+   队列清空后池仍 live 且非 skipSession 且未中止 → 进入挂起态——**挂起内 busy 与普通 busy 同判据入队**（受理判据 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1）；
+   **挂起空闲输入开放**（Enter 走 `pendingInput` 队列——键面契约见 `docs/cli/design/TUI-INPUT-BOX.md` §4）、settle 事件驱动 auto-turn 消化轮、
    状态行「后台 N 子代理运行中 · M 待消化」、池空 + 无待处理输入 → 补发 done 冻结自然退出；
-   彻底中止后会话退出**复位中止标志**（防粘滞——不清则中止后池再 live 永不重新进入挂起态）并把残余输入单消息转回队列（不静默丢）。
+   彻底中止后会话退出**复位中止标志**（防粘滞——不清则中止后池再 live 永不重新进入挂起态）并把残余输入**按合并计划**转回队列（不静默丢）。
 
 ## 5. 显示层内存有界（字符维额度）
 
@@ -203,6 +204,9 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
 
 ## 变更记录
 
+- 2026-09-24（**queue-visible 批 · fix 轮（步边界 pickup）· eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §1.11）：§4 第 6 条收正——回合尾直发句限定为**残项路径**，队列主消费 = **步边界 pickup**（机制单源回指 `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8）。**回合驱动其余步 / 恢复 / 分页 / 额度零变**。
+
+- 2026-09-24（**queue-visible 批 · 需求裁定升级轮（多槽 + 合并消费）· eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §1.10）：§4 第 6 / 7 条改**多槽 + 合并消费**口径（交接消息按批合并续发 / 残余按计划转回队列；机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8）。**回合驱动其余步 / 恢复 / 分页 / 额度零变**。
 - 2026-09-22（**hygiene-sweep 批 · 文档卫生轮 · eng-designer**——承 `docs/batches/2026-09-22-hygiene-sweep.md` §2 · 台账 #225）：规范面修订式标记清理——记账限定条去「原「存量漂移、本批零改」撤」对照语（留现行限定）。**语义零改**。
 
 

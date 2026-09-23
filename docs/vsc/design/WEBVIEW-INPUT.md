@@ -16,16 +16,18 @@
 | C-B2-2 | @ 下拉与 send 的 Enter 协调 | 下拉打开时 Enter **只由 autocomplete 接受建议**（插入引用 + 关闭下拉），`input.js` 不发送——让位 = 提前 `return` 且**保留 preventDefault**（防 Enter 默认换行落入输入框）；下拉关闭时 Enter 照常 `send()`（正控）。**注册次序前提**：`input.js` 的 keydown 先于 `autocomplete.js` 注册 | `input.js:79-84` · `chat.js:35`（import）先于 `chat.js:48`（`initAutocomplete`） |
 | C-B2-3 | 打开态判据硬化 | `isAtDropdownOpen()` = `!!el && el.style.display !== "none"`（**元素缺失 ≠ 打开**） | `input.js:135-138` |
 | C-B2-5 | 无工作区拒发可见提示（2026-09-21 批） | `send()` 出口判 `S._workspaceRequired`（host `workspaceGuard` 消息置位）→ 拒发 + `showToast(t("workspace.required"))`（**先于** `addUser` / `setLoading`——无假气泡）；占位符第三态 = `t("workspace.requiredPlaceholder")`（守卫 > busy > 常态） | `thincoder-vscode/webview/send.js`（守卫出口）· `webview/loading.js` `applyBusyLock` · `webview/chat.js` `case "workspaceGuard"` · `locales/{en,zh}.json` +2 键；判据 / 守卫面 = `docs/vsc/design/PROJECT-SWITCHER.md` §4.1 |
-| C-B2-6 | busy 排队注入（对称修 · busy-injection 批 2026-09-21 · busy-extend 批 2026-09-22 扩面） | busy 提交**一律排队**：判据 = `S._turnState === "running"`（`_suspended` 不再分流——挂起会话内与普通回合同判据）⇒ `addUser` 本地气泡 + `queuedUserMessage` postMessage（不 `setLoading` 不清面板）→ host 单槽（**单槽空时**——槽满 = 不提交，见细则①）。单槽载体两态：无会话 ⇒ `panel._busyQueued`；会话在飞（`panel._susp`）⇒ 会话单槽 `susp.pendingInput`（既有 `_chat` 分流——driver 步骤 1 优先消费）。**零改面**：纯挂起等待（`susp`）既有单槽零改；空输入 = 既有静默（`send()` 出口——`thincoder-vscode/webview/send.js:18`）；无工作区守卫（C-B2-5）零改。细则 · 送达 · 落点见下方列表；CLI 对位 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1 |
+| C-B2-6 | busy 排队注入（对称修 · busy-injection 批 2026-09-21 · busy-extend 批 2026-09-22 扩面 · queue-visible 批 2026-09-24 多槽 + 合并消费 + fix 轮步边界消费） | busy 提交**一律排队**：判据 = `S._turnState === "running"`（`_suspended` 不再分流——挂起会话内与普通回合同判据）⇒ `addUser` 本地气泡 + `queuedUserMessage` postMessage（不 `setLoading` 不清面板）→ host **队列**（**容量 8 条**；满队 = 不提交，见细则①）。队列载体两态：无会话 ⇒ `panel._busyQueued`；会话在飞（`panel._susp`）⇒ 会话队列 `susp.pendingInput`（既有 `_chat` 分流——driver 步骤 1 优先取批）。**步边界消费（主）= 用户回合在飞时端壳循环头投递回调**（`thincoder-vscode/src/agent.mjs:197` 邻位——紧随 `opts.turnInput?.()` 消费段；系统轮不传回调——同 CLI 判据）。**零改面**：纯挂起等待（`susp`）既有队列零改；空输入 = 既有静默（`send()` 出口——`thincoder-vscode/webview/send.js:18`）；无工作区守卫（C-B2-5）零改。细则 · 送达 · 落点见下方列表；CLI 对位 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1 |
 
 - **C-B2-6 细则**：
-  - ① 二次提交（单槽满）= 拒绝 + 提示 + 文本保留——host 侧：`routeUserTurn` busy 分支槽满 ⇒ 拒收 + 提示（`showWarningMessage`——外部入口兜底）；槽内既有消息不被覆盖。
+  - ① 满队再提交（容量 8）= 拒绝 + 提示 + 文本保留——host 侧：`routeUserTurn` busy 分支队满（`count >= QUEUED_MAX_ITEMS`）⇒ 拒收 + 提示（`showWarningMessage`——外部入口兜底）；队内既有消息不被覆盖。
     **webview 守卫**（判据 / 状态清除时机 / 提示形三面）：
-    · 判据 = `S._turnState === "running" && S._busyQueuedPending` ⇒ 提交**不出泡 / 不清框** + toast（对位 CLI 槽满面 `thincoder-cli/src/tui/key-handler.mjs:306-309`）；
-    · 判据源 = host 推送 `busyQueued { pending }`（权威 = **单槽实况**——两载体合计占用：`_busyQueued` ∪ `susp.pendingInput`；外部入口 Ask ThinCoder / retry 同面入槽，webview 不自持真值）；镜像 `S._busyQueuedPending` 于提交受理时本地先行置位，host 推送权威收敛；
-    · 状态清除时机 = **消费即清**——三支消费点（driver 步骤 1 / 装载① 预填 splice / 装载② 归位 shift）后 host 推 `pending:false`；忙分支每次判决后 host 推实际占用；`webviewReady` 握手重推（Reload 冷启重同步——对位 C-B2-5 握手先例）；
-    · 提示形 = toast（既有机制）+ 键 `input.slotFull`（zh/en 逐字 = `WEBVIEW-PROTOCOL.md` §6.3）；占位符零改。
-  - ② **送达 = 三支（均既有通道）**——① **会话在飞入槽**：driver 步骤 1 输入优先消费（`thincoder-vscode/src/extension/suspension.mjs:285-300`——先于 digest 合并）开用户回合；
+    · 判据 = `S._turnState === "running" && S._busyQueuedCount >= QUEUED_MAX_ITEMS`（8——双端同名常量）⇒ 提交**不出泡 / 不清框** + toast（对位 CLI 满队面 = `thincoder-cli/src/tui/key-handler-busy.mjs`）；
+    · 判据源 = host 推送 `busyQueued { count }`（权威 = **队列实况**——两载体合计条数：`_busyQueued` ∪ `susp.pendingInput`；外部入口 Ask ThinCoder / retry 同面入队，webview 不自持真值）；镜像 `S._busyQueuedCount` 于提交受理时本地先行自增（`S._busyQueuedPending` = `count > 0` 保留），host 推送权威收敛；
+    · 状态清除时机 = **消费即清**——五个消费点（**步边界 pickup** / driver 步骤 1 / 装载① 预填 splice / 装载② 归位 shift / **会话退出残余直发循环**）后 host 推实况（`count` / `items` / `merged`）；忙分支每次判决后 host 推实际占用；`webviewReady` 握手重推（Reload 冷启重同步——对位 C-B2-5 握手先例）；
+    · 提示形 = toast（既有机制）+ 键 `input.slotFull`（zh/en 逐字 = `WEBVIEW-PROTOCOL.md` §6.3——值改条数阈）；占位符零改。
+  - ② **送达 = 四支（均既有通道）**——⓪ **步边界（主——用户回合在飞）**：端壳循环头投递回调（同址——紧随 `opts.turnInput?.()`）按计划取批
+    ⇒ `pushReal` 入历史（**下一步生效——不中断**）+ 推 `busyQueued { pending:false, count, items, merged }`（webview 消费成形——单条清标保留 / 多条就地合泡）；系统轮（digest / 上行唤醒轮）不传回调（域 / 门禁降格——同 CLI 判据）；
+    ① **会话在飞入槽**：driver 步骤 1 输入优先消费（`thincoder-vscode/src/extension/suspension.mjs:285-300`——先于 digest 合并）开用户回合；
     ② **池 live 进会话（回合尾）**：`enterSuspensionTurn` 将 `panel._busyQueued` 残项预填 `susp.pendingInput`（同一 driver 消费点）；③ **池空 idle 归位分支**：`_busyQueued` 非空 ⇒ 直接以该消息续发回合（后清槽）。
     会话退出兜底 = `suspension.mjs` finally 残余直注入（零丢失）。送达侧气泡生命周期 = **与纯挂起既有 queued 路径同款**——送达时本地气泡即视为该消息 user 回声面，回合流式渲染不重复出气泡。
   - ③ 外部入口（Ask ThinCoder 命令 / retry）经 `routeUserTurn` busy 分支同面分流（同判据同槽）——会话在飞同入会话单槽；`chat-panel.mjs` `sendMessage` 的挂起会内 busy 拒收守卫随本批撤销（外部入口同面受理；用户气泡回显保留在 `sendMessage`）。
@@ -38,6 +40,13 @@
     三调用点 = idle 面（原样——含 `_turnState !== "susp"` 门）/ 装载②（`panel-turn-stages.mjs:206-210` `deliverBusyQueued`——**先置 running 再 await**，同 F-1 idle 面忙锁不变量）
     / 装载① 与会话在飞（`panel-turn-stages.mjs:173-175` `runTurn` 闭包——入槽项带来源标记，仅该支降级；纯挂起既有路径零改）。
     A12/Stop 语义随迁（`panel._visionAbort` 定向中止；`_abortRequested` 置位序 = 呼叫 `runChat` 之后）；装载① 窗内 `_turnState` = susp（无 Stop 面——受读图 60s 超时约束）。
+  - ⑦ **排队气泡「待发送」态 + 合并成形**（queue-visible 批 2026-09-24——会话流可见；多槽 / 合并 = 用户 03:01 裁定）：排队项**逐条**在其 user 气泡上带 `pending` 标记——标签行换 `⏳ ${t("queued.pending")}`（原文照常显示；类 `pending` 落 DOM = 机检把手；时间缺失不显示——同既有无 ts 纪律）。
+    判据源 = host **队列快照** `busyQueued { pending, count, items, merged? }`（`items` = 队列**剩余**项原文——按队列序；`count` = 剩余条数；`merged` = 本批消费的合并文本——仅消费推送携；协议登记 = `WEBVIEW-PROTOCOL.md` §3 / §3.2 行 17）：
+    · **标记**：`items` 每条——无对应已标记气泡 ⇒ 新建 + 标记（原文 = 该项；`data-raw` 建面处随写）；已存在 ⇒ 保持；本地提交路径出泡即标记（受理即反馈——本地先行置位、host 推送权威收敛）。
+    · **清标与合并**：`merged` 在场 ⇒ 若其文本恰等于某条已标记气泡的原文（**单条批**）⇒ 该气泡清标保留（气泡 = 回声面）；否则（**多条批**）⇒ 移除全部已标记气泡 + 追加一条**合并气泡**（文本 = `merged`——合并形态声明于 `thincoder-vscode/src/extension/queued-merge.mjs`（拟新增），与 CLI 同源）。
+    · **防悬空**：已标记气泡的原文 ∉ `items` 且非本批 `merged` ⇒ 移除（已被消费且无回声面）。
+    · **推送点**：受理 / **五个消费点**（**步边界 pickup** · driver 步骤 1 · 装载① splice · 装载② shift · **会话退出残余直发循环**）/ 忙分支判决（`count` 实况）/ `webviewReady` 握手重推（Reload 冷启按 `items` 重建 N 气泡——幂等快照）。
+    **边界**：外部入口队满拒收 = 既有回显气泡**不带标记**（标记只随受理走；拒收提示 = 既有 `showWarningMessage`）；引用失效守卫（气泡已移除 / 清屏 ⇒ `isConnected` 假即弃引用——快照幂等重推自愈）；纯挂起等待面同款（同一规则——无另一形态）；CLI 对位 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1 + `TUI.md` §7.5（待发送块——语义同源、形态各端自落）。
 
 - **Shift+Enter** 既有形态零动（`input.js` 分支不处理——换行）。
 - **零改面**：`_turnState` 生命周期 / 单广播 / 派生、录入面（录入不禁；提交面受理分流 = C-B2-6）、中断模态、下拉过滤 / 防抖 / seq、CSS、`index.html`。（`applyBusyLock` 占位符含**第三态**——守卫 > busy > 常态，见 C-B2-5。）
@@ -155,19 +164,21 @@
 | U-I5 | 行内代码内容一律字面；代码范围外原始 HTML 全转义 | 已定（§4 · D-I10） |
 | U-I6 | 登记（未做，非 open）：真机 IME 矩阵 · 折行竖移 · 代码内反斜杠折叠 · 跨界配对族外溢 | 已定（§1–§4 逐条登记） |
 | U-I7 | 无工作区拒发 = 保留文本 + 瞬时 toast（同 U-I2 形态）+ 占位符第三态；Send 按钮保持可见（点击即提示） | 已定（§1 C-B2-5 · `PROJECT-SWITCHER.md` §4.1） |
-| U-I8 | busy 排队注入（busy 即排队面 = `S._turnState === "running"`——挂起会话内与普通回合同判据）= 本地气泡 + 单槽（载体两态：无会话 ⇒ `_busyQueued`；会话在飞 ⇒ 会话单槽 `susp.pendingInput`）+ 二次提交守卫（**两载体合计占用 ≥1** ⇒ 不出泡 / 不清框 / toast——对位 CLI 槽满面）；纯挂起等待（`susp`）既有单槽零改；送达 = 三支（driver 步骤 1 / 装载① 预填 / 装载② 归位——携贴图同过 F-1 降级判定） | 已定（§1 C-B2-6） |
+| U-I8 | busy 排队注入（busy 即排队面 = `S._turnState === "running"`——挂起会话内与普通回合同判据）= 本地气泡 + 队列（**容量 8**；载体两态：无会话 ⇒ `_busyQueued`；会话在飞 ⇒ 队列 `susp.pendingInput`）+ 满队守卫（**两载体合计 ≥8** ⇒ 不出泡 / 不清框 / toast——对位 CLI 满队面）；纯挂起等待（`susp`）既有队列零改；送达 = 四支（**步边界（主——用户回合在飞：端壳循环头同址回调）** / driver 步骤 1 / 装载① 预填 / 装载② 归位——携贴图同过 F-1 降级判定）+ **合并消费**；**排队期待发送标记**（逐条气泡 `pending` 标记 + 标签行 `⏳`——标记 / 清标 / 合并成形 = 细则⑦） | 已定（§1 C-B2-6） |
 
 ## 9. 验收与需求回指
 
 | # | 本档覆盖 | 回指 |
 |---|---|---|
-| 1 | 输入面 Enter 语义（组合守卫 · @ 协调 · busy 排队注入——唯一 busy 拒面 = 单槽满（C-B2-6 细则①）） | F-W5 |
+| 1 | 输入面 Enter 语义（组合守卫 · @ 协调 · busy 排队注入——唯一 busy 拒面 = 单槽满（C-B2-6 细则①）· 排队期待发送标记（细则⑦）） | F-W5 |
 | 2 | 输入历史与多行竖移（五态判定 · 草稿 stash · 不劫持原生竖移） | F-W6 · N-W8 |
 | 3 | 首块说明行（一次性 · 文案 · 样式 · tail-3 射程核验） | F-W1 |
 | 4 | 消息渲染契约（行内代码字面量 · 恢复序 · 全转义 · 跨界族登记） | F-W4 · N-W3 |
 | 5 | 机检面（新增档 ≤500 行 · 无 >300 字符单行 · 文档锚零悬空） | N-M3 · N-M2 |
 
-**用例面**：`thincoder-vscode/test/`（`webview-input-enter.test.mjs` · `webview-input-history.test.mjs` · `md-render-escape.test.mjs` · `activity-flow.test.mjs` · `busy-injection-vsc.test.mjs`（C-B2-6 面——含本批扩面行：会话在飞入槽 / 槽满跨载体 / 三支送达）· `chat-panel-messages.test.mjs`（busy 分流族））——用例表归测试层，本档不复制（D2）。
+**用例面**：`thincoder-vscode/test/`（`webview-input-enter.test.mjs` · `webview-input-history.test.mjs` · `md-render-escape.test.mjs` · `activity-flow.test.mjs` ·
+`busy-injection-vsc.test.mjs`（C-B2-6 面——含本批扩面行：会话在飞入槽 / 槽满跨载体 / 三支送达）· `queue-visible-vsc.test.mjs`（细则⑦ 面——逐条标记 / 单条清标 / 多条合并成形 / Reload 重建 / 容量守卫 / 合并常量 / **步边界 pickup**（端壳循环头回调——history 序 + 快照推送；用例表 = 批档 §2））·
+`chat-panel-messages.test.mjs`（busy 分流族））——用例表归测试层，本档不复制（D2）。
 
 ## 变更记录
 
@@ -193,3 +204,13 @@
 - 2026-09-22（**busy-extend 批 · 设计评审轮 1 修正** · eng-designer——承 `docs/batches/2026-09-22-busy-extend.md` §3 轮次 1 发现 #2 / #3 / #11 / #12）：
   §7 U-I8 按 C-B2-6 收正（判据面 `running` 全面 / 载体两态 / 三支送达——「挂起会话内 busy 零改」与「回合尾装载两分支」两残留句退场）；
   §1 C-B2-6 零改面补「空输入 = 既有静默（`send()` 出口）」；§1 零改面行录入面括注改述（录入不禁；提交面受理分流 = C-B2-6）；§9 行 1 枚举收正（去「busy 拒发可见提示」→ C-B2-6 细则①）。**C-B2-1/2/3/5 与 R-1…R-5 / U-I1/I3–I7 零变**。
+
+- 2026-09-24（**queue-visible 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §1）：C-B2-6 细则族增 **⑦ 排队气泡「待发送」态**（锚定三支 = 本地标记 / 快照同文锚定 / 流尾新建；消费即清 = 四消费点推 `pending:false` + 握手重推；标/报面零改 = 标签行 + `data-raw` + `pending` 类，无新 CSS）；
+  §7 U-I8 补标记句；§9 用例面补 `queue-visible-vsc.test.mjs`。**契约判别式 / 槽名 / 送达三支 / 贴图降级面零变**（协议登记 = `WEBVIEW-PROTOCOL.md` §3 / §3.2 行 17 `text` 增字段 + §6.3 键 `queued.pending`）。
+
+- 2026-09-24（**queue-visible 批 · 需求裁定升级轮（多槽 + 合并消费）· eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §1.10）：C-B2-6 正文与细则① / ⑦ 按**容量 8 + 合并消费**重写（满队判据 = `_busyQueuedCount >= 8`；消费 = 快照 `{pending, count, items, merged}` + 多条批**就地合并为一条气泡** / 单条批清标保留；推送点四消费点）；
+  U-I8 / §9 同步。**载体两态 / 三支送达 / 贴图降级 / C-B2-1–5 零变**（协议登记 = `busyQueued` 增 `count` / `items` / `merged` + §6.3 `input.slotFull` 值改）。
+
+- 2026-09-24（**queue-visible 批 · fix 轮（步边界 pickup）· eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §1.11 / §1.12 / §1.13 · 用户 03:06 收正）：C-B2-6 正文补**步边界消费（主）**句（端壳循环头投递回调——`thincoder-vscode/src/agent.mjs:197` 邻位；系统轮不传回调）；
+  细则② 送达 **三支 → 四支**（增 ⓪ 步边界）；细则① / ⑦ 消费点枚举 **四 → 五**；U-I8 / §9 用例面同步。
+  **容量 / 满队 / 三支既有送达 / 贴图降级 / 零新 CSS 零变**（协议登记 = `WEBVIEW-PROTOCOL.md` §3 / §3.2 行 17 消费点枚举 + §6.3 `queued.pending` 值）。
