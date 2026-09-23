@@ -12,14 +12,21 @@ import {
 } from "./report-tables.mjs"
 import { divergenceOf, judgeDivergenceSection, reviewOverturnSection } from "./report-review.mjs"
 
-/** 概览判官面（§2.3）：判官三行（A / B / 仲裁 C）+ 分歧率 + 判官 / 复核成本（均不进被测成本归一化）。 */
+/** 概览判官面（§2.3）：判官三行（A / B / 仲裁 C）+ 分歧率 + 判官 / 复核成本（均不进被测成本归一化）。
+ *  与被测重合标注 = **渲染面三级派生**（判官块不另存字段——重合事实由 `models[]` × 判官槽两侧键共同承载）。 */
 function judgeOverviewLines(data) {
   const j = data.judge
   if (!j) return []
   const d = divergenceOf(data)
+  const testedKeys = new Set((data.models ?? []).map((m) => `${m.provider}:${m.model}`))
+  const testedVendors = new Set((data.models ?? []).map((m) => m.provider))
+  const overlapOf = (meta) => {
+    if (testedKeys.has(`${meta.provider}:${meta.model}`)) return "该位 ∈ 被测（自判）"
+    return testedVendors.has(meta.provider) ? "与被测同渠道（明示 sameVendorAsTested）" : "与被测无重合"
+  }
   const unpriced = [j.judges[0], j.judges[1], j.arbiter].filter((s) => (s.calls ?? 0) > 0 && s.costCny == null).map((s) => `${s.provider}:${s.model}`)
   const unpricedNote = unpriced.length > 0 ? `（不含未录价位：${unpriced.join("、")}——位级成本 null + 告警）` : ""
-  const row = (name, meta, tail = "") => `- ${name}：\`${meta.provider}:${meta.model}\` · temperature ${meta.temperature} · maxTokens ${meta.maxTokens} · 超时 ${meta.timeoutSec}s · 模板 v${j.promptVersion} · 调用 ${meta.calls ?? 0} 次 · 成本 ${fmtMoney(meta.costCny)} · ${meta.sameVendorAsTested ? "与被测同渠道（明示 sameVendorAsTested）" : "独立于被测"}${tail}`
+  const row = (name, meta, tail = "") => `- ${name}：\`${meta.provider}:${meta.model}\` · temperature ${meta.temperature} · maxTokens ${meta.maxTokens} · 超时 ${meta.timeoutSec}s · 模板 v${j.promptVersion} · 调用 ${meta.calls ?? 0} 次 · 成本 ${fmtMoney(meta.costCny)} · ${overlapOf(meta)}${tail}`
   return [
     row("判官 A", j.judges[0]),
     row("判官 B", j.judges[1]),
@@ -55,7 +62,7 @@ function methodSection(data) {
     "套件口径冻结（五口径；任一变化 ⇒ suiteVersion +1，跨版本不严格可比）：",
     "",
     "1. 题集：题面与用例逐字冻结（含隐藏用例）；版本标识 = suiteVersion。",
-    "2. 判分：**混合三层**——① **确定性断言**（数字独立成词 / vm 实跑 + 隐藏断言 / 整串 JSON / 工具结构 / 语法级文本约束）；② **语义·语用面 = 判官对（A / B 双判 · 各自独立于被测 · 同一冻结 rubric）**，分歧样本经**第三判（仲裁 C）多数决**（合成无多数 ⇒ 该 run `error`，禁猜禁回退）；③ **机械 fail = 复核**（单判 · 第二只眼 · **不自动改判**）。人工 lane 只记录不判分。",
+    "2. 判分：**混合三层**——① **确定性断言**（数字独立成词 / vm 实跑 + 隐藏断言 / 整串 JSON / 工具结构 / 语法级文本约束）；② **语义·语用面 = 判官对（A / B 双判 · 同一冻结 rubric）**，分歧样本经**第三判（仲裁 C）多数决**（合成无多数 ⇒ 该 run `error`，禁猜禁回退）；③ **机械 fail = 复核**（单判 · 第二只眼 · **不自动改判**）。人工 lane 只记录不判分。",
     "3. 计时：TTFT = 首个非空 delta 到达 − 调用发起；tok/s = Σcompletion ÷ Σ(per-call total − per-call ttft)；token 只认 usage 精确值，缺记 null（不估算）。",
     "4. 报告：报告对（md + json）同 basename，md 完全由结果 JSON 渲染；同骨架跨模型/跨时点可比。",
     "5. 价格：单价只住 prices.json（asOf + source 可回溯）；成本 = 未缓存输入 × input + 缓存命中 × cachedInput + 输出 × output。",
@@ -136,6 +143,7 @@ const LIMITS = [
   "速度受服务端负载影响（TTFT / tok/s 为观测值，非服务端承诺）。",
   "响应只存摘要（≤300 字符）· 题面 = `cases[].prompt` 冻结正本（构造型用例的载荷不入档，确定构造可复现）。",
   "语义面由判官对（A / B）按冻结 rubric 裁决，分歧样本经第三判仲裁（**判官对的同向误判不设外部复核**）；机械 fail 复核为单次辅助信号（**翻案不改判**）。",
+  "判官可与被测重合（**自判轮次无外部对照**——重合级别逐位明示于概览判官行：同位 / 同渠道 / 无重合）。",
   "V1 未覆盖面：不做广谱知识题 / 容器级任务 / 开放式质量主观打分（判官只裁冻结 rubric 的语义判定）。",
 ]
 

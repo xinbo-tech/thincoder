@@ -11,7 +11,7 @@
 ## 快速开始
 
 ```bash
-# 子集跑（推荐形态：判官独立性闸门的常规姿态——显式给被测集）
+# 子集跑（推荐形态——显式给被测集）
 node bench/run.mjs --models mimo-v2.6-flash,glm-5.3-flash,qwen3.8-flash
 
 # 只跑某几维
@@ -41,12 +41,13 @@ node bench/run.mjs --recompute --from bench/results/2026-09-24-flash-compare-v3.
 | `--dry-run` | 夹具自检：不调模型、不读用户 config | 关 |
 | `--recompute --from` | 离线重算（读已有结果 JSON，按**当前** `prices.json` 重出报告） | —— |
 
-**判官独立性约束对被测集的约束**：当前判官 A 位 = `deepseek:deepseek-flash` ⇒ 该键 ∈ 被测集时**拒跑**（fail-closed）。
-`models.json` 仍保留 `deepseek-flash` 条目（候参清单不因判官配置删条）⇒ **缺省「清单全量」跑会被闸门拒跑**（报错点名位次与冲突条目）；
-两种处置：① 显式给 `--models`（如上行三模型，排除该条目）；② 换判官三槽（改 `bench/judge.json` 并同步 `frozenAtSuiteVersion` + bump `SUITE_VERSION`）。
+**判官与被测重合（允许自判——不拒跑）**：判官三槽（A / B / 仲裁 C）可与本次被测集合重合——**判官不干预被测选择**。
+重合级别**逐位明示**（不得静默）——报告概览判官行三级标注：① 该位 `provider:model` ∈ 被测集合 ⇒ 「该位 ∈ 被测（自判）」；
+② 同渠道（provider 命中 · 异 model）⇒ 「与被测同渠道」；③ 无重合 ⇒ 「与被测无重合」（①② 两态该位 `sameVendorAsTested = true`）；
+重合位另出 `warnings` 一条（逐重合位——点名位次与重合级别）。缺省「清单全量」跑不再受闸门拦截（`models.json` 保留判官同键条目）。
 
 **退出码**：`0` = 跑完（模型用例失败不影响退出码——失败是数据不是错误）· `1` = 基建错误
-（参数错 / 未知模型 / provider 缺配置 / 数据档不合 schema / **判官配置缺或不合 / 判官独立性违约 /
+（参数错 / 未知模型 / provider 缺配置 / 数据档不合 schema / **判官配置缺或不合 /
 判官对身份违约 / 冻结版本不匹配 / 本轮判官面全灭** / 同名产物已存在）· `130` = SIGINT（不落档）。
 
 **覆盖保护**：目标文件已存在 → 拒写（留档不可被静默覆盖）；删旧档 = 人工显式动作。
@@ -56,7 +57,7 @@ node bench/run.mjs --recompute --from bench/results/2026-09-24-flash-compare-v3.
 1. **题集**：题面与用例逐字冻结（含隐藏用例）；`SUITE_VERSION`（整数）为版本标识。
    逐维明细先列**题面**（`cases[].prompt` 正本逐字；构造型用例含载荷括注、载荷不入档），便于只看回答即可判读。
 2. **判分**：**混合三层**——① 确定性断言（数字独立成词 / vm 实跑 + 隐藏断言 / 整串 JSON / 工具结构 / 语法级文本约束）；
-   ② **语义·语用面 = 判官对（A / B 双判 · 各自独立于被测 · 同一冻结 rubric）**，分歧样本经**第三判（仲裁 C）多数决**
+   ② **语义·语用面 = 判官对（A / B 双判 · 同一冻结 rubric）**，分歧样本经**第三判（仲裁 C）多数决**
    （合成无多数 ⇒ 该 run `error`——禁猜 / 不补位 / 不单判回退）；③ **机械 fail = 复核**（LLM 第二只眼 · **不自动改判**）。
    人工项只记录不判分（独立 lane，不阻塞自动判分）。**词表 / 正则不再充当语义判据**。
 3. **计时**：TTFT = 首个**非空** delta 到达 − 调用发起；`tok/s = Σcompletion ÷ Σ(per-call total − per-call ttft)`；
@@ -74,8 +75,9 @@ node bench/run.mjs --recompute --from bench/results/2026-09-24-flash-compare-v3.
 每位 = `provider`（用户 config 的渠道名）/ `model` / `maxTokens`（[1024, 8192]）/ `timeoutSec`（[5, 120]，
 `temperature` 冻结 0）；`frozenAtSuiteVersion` 须 === `SUITE_VERSION`。**缺文件 / 不合 schema / 不在用户 config ⇒ 拒跑**。
 
-- **独立性（逐位）**：任一位的 `provider:model` ∈ 本次被测集合 ⇒ **拒跑**（判分器不得判自己的输出）；
-  同渠道异模型 ⇒ 允许但该位 `sameVendorAsTested = true` + 告警 + 报告判官行明示。**A ≠ B**、**仲裁员 ≠ A / B**（模型字面机检）。
+- **与被测重合（逐位 · 明示不拒跑）**：任一位的 `provider:model` ∈ 本次被测集合 ⇒ **允许自判** + 报告判官行该位标注「该位 ∈ 被测（自判）」；
+  同渠道（provider 命中 · 异 model）⇒ 「与被测同渠道」；两态该位 `sameVendorAsTested = true` + 各出 `warnings` 一条（逐重合位）。
+  **A ≠ B**、**仲裁员 ≠ A / B**（模型字面机检——判官对内身份，违者仍拒跑）。
 - **调用面**：A / B **并行**独立裁决（同一份三段素材：题面 / 冻结 rubric / 该回合响应——含该回合工具调用事实）；
   相异 ⇒ 触发 C（串行依赖步）· 多数决。解析失败 ⇒ 放大预算重试一次（×2 · 上限 8192）；两位不可解析 / 超时 / 传输错 ⇒ 该位 `error`（禁猜）。
 - **复核**：仅机械 fail（非判官裁决）触发一次 LLM 复核（单判 · 沿 A 位）；`uphold` ⇒ fail 维持；

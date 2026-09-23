@@ -1,6 +1,6 @@
 /**
  * test/fixtures.mjs — 重算 / 渲染两档测试共用件（`report-recompute.test.mjs` 超 300 行 ⇒ 按设计档 §3 拆出）。
- * 夹具仍**内联**（不另立夹具档——§3 夹具落点）：`fixtureResult` 族 + CLI 驱动 + 沙箱。
+ * 本档即夹具档（§3 夹具落点——`report-recompute.test.mjs` 超 300 行拆分时提取）：`fixtureResult` 族 + CLI 驱动 + 沙箱。
  * 装载期即设 `BENCH_RESULTS_DIR`（必须在动态 import run.mjs 之前）⇒ 每档写自己的临时沙箱，不触 `bench/results/`。
  */
 
@@ -63,7 +63,7 @@ export const judgeRec = (verdict, resolution, judges, reason = "夹具：判据�
 /** 复核记录（§2.2-7：`runs[].review`）。 */
 export const reviewRec = (verdict, reason = "夹具：机械判据成立。") => ({ verdict, reason, mechDetail: "未命中 371281", attempts: 1, calls: [jCall(TOK(300, 0, 60))] })
 
-const jMeta = (provider, model) => ({ provider, model, host: `${provider}.example.com`, temperature: 0, maxTokens: 2048, timeoutSec: 30, sameVendorAsTested: false, calls: 0, costCny: null })
+const jMeta = (provider, model, sameVendorAsTested = false) => ({ provider, model, host: `${provider}.example.com`, temperature: 0, maxTokens: 2048, timeoutSec: 30, sameVendorAsTested, calls: 0, costCny: null })
 
 /** 基准夹具：含判官对 / 仲裁 / 复核记录（渲染面 + 重算面共用）；价格命中仓内 prices.json 的 deepseek 两条。 */
 export function fixtureResult({ label = "fx-run", nullTokens = false, leakText = null, warnings = [] } = {}) {
@@ -103,7 +103,7 @@ export function fixtureResult({ label = "fx-run", nullTokens = false, leakText =
     recomputed: null,
     judge: {
       promptVersion: 1, frozenAtSuiteVersion: 3,
-      judges: [jMeta("deepseek", "deepseek-flash"), jMeta("deepseek", "deepseek-v4-pro")],
+      judges: [jMeta("deepseek", "deepseek-flash", true), jMeta("deepseek", "deepseek-v4-pro", true)],
       arbiter: jMeta("mimo", "mimo-v2.6-pro"),
       judgeCalls: 0, costCny: null, agreements: 0, disagreements: 0, arbitrations: 0, unavailable: 0,
     },

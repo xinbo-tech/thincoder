@@ -75,7 +75,7 @@ export function loadJudgeConfig(path = judgeConfigPath()) {
   return { version: raw.version ?? 1, frozenAtSuiteVersion: raw.frozenAtSuiteVersion, judges, arbiter, note: raw.note ?? "" }
 }
 
-/** 运行面闸门（§2.10.3）：冻结绑定 + 逐位独立性（三槽）+ 同渠道明示。
+/** 判官槽位解析（§2.10.3）：冻结绑定 + provider 校验 + 与被测重合明示（**无准入闸**——允许自判，判官不得干预被测选择）。
  *  `providers` = 用户 config 条目（`--dry-run` 传夹具条目数组；缺省 ⇒ 跳过在 config 检查）；`tested` = 本次被测条目。
  *  返回 `{ slots, warnings }`——槽位定身份：`[0]` = A · `[1]` = B · `[2]` = 仲裁 C（文件不存 `id`）。 */
 export function resolveJudgeSlots(cfg, { providers, tested, suiteVersion = SUITE_VERSION }) {
@@ -89,11 +89,10 @@ export function resolveJudgeSlots(cfg, { providers, tested, suiteVersion = SUITE
     const key = `${s.provider}:${s.model}`
     const entry = (providers ?? []).find((p) => p.name === s.provider)
     if (providers && !entry) throw new Error(`判官 ${id} 位的 provider 不在用户 config（~/.thincoder/config.json）：${s.provider}`)
-    if (keys.has(key)) {
-      throw new Error(`判官独立性违约：判官 ${id} 位（${key}）∈ 本次被测集合 —— 判分器（含仲裁）不得判自己的输出；请换判官或从被测集移除该条目`)
-    }
     const sameVendorAsTested = vendors.has(s.provider)
-    if (sameVendorAsTested) warnings.push(`判官 ${id} 位（${key}）与被测条目同渠道（异模型）—— 已明示 sameVendorAsTested`)
+    // 重合明示三级（逐重合位各一条；无重合 ⇒ 零条）：同位（自判）优先于同渠道；不拒跑
+    if (keys.has(key)) warnings.push(`判官 ${id} 位（${key}）∈ 本次被测集合（自判 · 重合级别：同位）—— 已明示 sameVendorAsTested`)
+    else if (sameVendorAsTested) warnings.push(`判官 ${id} 位（${key}）与被测条目同渠道（异模型）—— 已明示 sameVendorAsTested`)
     return { id, provider: s.provider, model: s.model, maxTokens: s.maxTokens, timeoutSec: s.timeoutSec, host: entry?.baseURL ? new URL(entry.baseURL).host : null, sameVendorAsTested }
   })
   return { slots, warnings }

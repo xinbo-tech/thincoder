@@ -28,7 +28,7 @@ test("render.1：概览判官三行 + 分歧率 + 方法判分条 + 成本表两
     "（仅分歧样本）",
     "- 判官分歧率：50%（分歧 1 ÷ A/B 双有效样本 2）",
     "- 判官成本合计 ¥0.0171 · 复核成本 ¥0.00216",
-    "判官对（A / B 双判 · 各自独立于被测 · 同一冻结 rubric）",
+    "判官对（A / B 双判 · 同一冻结 rubric）",
     "- 判分模板：判官 promptVersion = 1 · 复核 promptVersion = 1 · 判官配置冻结于 suiteVersion 3",
     "| 模型 | 总成本 | 每任务成本 | 每通过任务成本 | 相对成本 | 判官成本 | 复核成本 |",
     "### 判官分歧",
@@ -37,6 +37,11 @@ test("render.1：概览判官三行 + 分歧率 + 方法判分条 + 成本表两
   ]) {
     assert.ok(md.includes(needle), `缺渲染件：${needle}`)
   }
+  // 判官行 = 与被测重合三级标注（**渲染面派生**：判官块不另存字段）：夹具 A 位同键（自判）/ B 位同渠道 / C 位无重合
+  const judgeRow = (name) => md.split("\n").find((l) => l.startsWith(`- ${name}：`))
+  assert.ok(judgeRow("判官 A").includes("该位 ∈ 被测（自判）"), `同位位标注（实得：${judgeRow("判官 A")}）`)
+  assert.ok(judgeRow("判官 B").includes("与被测同渠道（明示 sameVendorAsTested）"), `同渠道位标注（实得：${judgeRow("判官 B")}）`)
+  assert.ok(judgeRow("仲裁 C").includes("与被测无重合"), `无重合位标注（实得：${judgeRow("仲裁 C")}）`)
   // ⇄ / ⟲ 标记与两小节条目
   assert.ok(md.includes("❌ fail 0/1 ⇄"), "分歧样本加 ⇄")
   assert.ok(md.includes("❌ fail 0/1 ⟲"), "复核翻案加 ⟲")

@@ -4,7 +4,7 @@
  *
  * `runMain`：真实运行 / dry-run 自检（夹具表由 run.mjs 传入——夹具落点仍住 run.mjs）。
  *   **动态** `import("./client.mjs")` 只发生在本函数内 ⇒ `--recompute` 分支构造性零网络（AC-10）。
- * 判官面（§2.10 / §2.11）：槽位闸门 → 用例 `ctx.judge()`（判官对 + 分歧仲裁）→ 逐 run 记录；
+ * 判官面（§2.10 / §2.11）：槽位解析（冻结绑定 + provider 校验 + 与被测重合明示）→ 用例 `ctx.judge()`（判官对 + 分歧仲裁）→ 逐 run 记录；
  *   机械 fail ⇒ 复核（辅判信号，不改判）；成本由 `prices.mjs` 后置逐位记账（不进被测成本面）。
  *
  * 产物落盘唯一面 = `output.writePair`（写档前脱敏断言 fail-closed，§2.8）；同名拒写（KD-10）。
@@ -145,7 +145,7 @@ export async function runMain(opts, sel, fixture) {
     const missing = entries.filter((e) => !providers.some((p) => p.name === e.provider)).map((e) => e.label)
     if (missing.length > 0) throw new Error(`以下条目的 provider 不在用户 config（~/.thincoder/config.json）：${missing.join(", ")}`)
   }
-  // 判官槽位闸门（冻结绑定 + 逐位独立性 + 同渠道明示；dry-run 用夹具身份 ⇒ 跳过 config 检查）
+  // 判官槽位解析（冻结绑定 + provider 校验 + 与被测重合明示——无拒跑闸；dry-run 用夹具身份 ⇒ 跳过 config 检查）
   const { slots, warnings: judgeWarnings } = resolveJudgeSlots(judgeCfg, { providers: opts.dryRun ? null : providers, tested: entries })
 
   const ac = new AbortController()

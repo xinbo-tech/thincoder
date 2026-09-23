@@ -5,7 +5,7 @@
  * 与 `--dry-run` 夹具同一机制）；夹具内联；翻案不改判与题面入档为必测项。手动跑：`node --test "bench/test/*.test.mjs"`（不进 CI —— AC-8）。
  */
 
-import { writeFileSync } from "node:fs"
+import { readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { CASES } from "../cases/index.mjs"
 import { judgeResult } from "../lib/grade.mjs"
@@ -96,41 +96,39 @@ test("judge.4：`frozenAtSuiteVersion` ≠ SUITE_VERSION ⇒ 拒跑（退出码 
   } finally { delete process.env.BENCH_JUDGE }
 })
 
-test("judge.5：判官键 ∈ 被测集合 ⇒ 拒跑点名位次；同 provider 异 model ⇒ 允许 + sameVendorAsTested 明示", async () => {
-  const mk = (judges, arbiter, name) => {
+test("judge.5：判官键 ∈ 被测集合 ⇒ 正常跑（不拒跑 · 自判）+ 该位标注与 warnings；同 provider 异 model ⇒ 允许 + sameVendorAsTested 明示", async () => {
+  const mk = (judges, name) => {
     const p = join(FIXTURES, name)
-    writeFileSync(p, JSON.stringify({ version: 1, frozenAtSuiteVersion: 3, judges, arbiter }), "utf8")
+    writeFileSync(p, JSON.stringify({ version: 1, frozenAtSuiteVersion: 3, judges, arbiter: { provider: "kimi", model: "kimi-k3", maxTokens: 2048, timeoutSec: 30 } }), "utf8")
     return p
   }
-  const conflict = mk(
-    [{ provider: "mimo", model: "mimo-v2.6-flash", maxTokens: 2048, timeoutSec: 30 }, { provider: "deepseek", model: "deepseek-flash", maxTokens: 2048, timeoutSec: 30 }],
-    { provider: "kimi", model: "kimi-k3", maxTokens: 2048, timeoutSec: 30 }, "judge-conflict.json",
-  )
-  process.env.BENCH_JUDGE = conflict
-  try {
-    const { code, out } = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--dims", "reasoning", "--label", `fj5a-${process.pid}`])
-    assert.equal(code, 1)
-    assert.match(out, /判官独立性违约：判官 A 位（mimo:mimo-v2.6-flash）∈ 本次被测集合/)
-  } finally {
-    delete process.env.BENCH_JUDGE
+  const runWith = async (cfgPath, label) => {
+    process.env.BENCH_JUDGE = cfgPath
+    try { return await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--dims", "reasoning", "--label", label]) } finally { delete process.env.BENCH_JUDGE }
   }
-  // 同渠道异 model：允许，但该位必须明示 sameVendorAsTested + warnings 一条 + 报告判官行标注
-  const sameVendor = mk(
-    [{ provider: "mimo", model: "mimo-v2.6-pro", maxTokens: 2048, timeoutSec: 30 }, { provider: "deepseek", model: "deepseek-flash", maxTokens: 2048, timeoutSec: 30 }],
-    { provider: "kimi", model: "kimi-k3", maxTokens: 2048, timeoutSec: 30 }, "judge-samevendor.json",
-  )
-  process.env.BENCH_JUDGE = sameVendor
+  // 同位（自判）：判官 A 位键 = 被测条目 ⇒ 正常启动 + 跑完（退出码 0——判官不干预被测选择）
+  const labelSelf = `fj5a-${process.pid}`
+  const selfJudge = mk([{ provider: "mimo", model: "mimo-v2.6-flash", maxTokens: 2048, timeoutSec: 30 }, { provider: "deepseek", model: "deepseek-flash", maxTokens: 2048, timeoutSec: 30 }], "judge-selfjudge.json")
+  const selfRun = await runWith(selfJudge, labelSelf)
+  assert.equal(selfRun.code, 0, selfRun.out)
+  assert.ok(selfRun.out.includes("通过"), "正常运行（不因同位阻断）")
+  const selfData = readJson(findFile(`${labelSelf}.json`))
+  assert.equal(selfData.judge.judges[0].sameVendorAsTested, true, "同位态 ⇒ 渠道级重合旗标置 true")
+  assert.equal(selfData.judge.judges[1].sameVendorAsTested, false, "无重合位不置旗标")
+  const overlapWarns = selfData.warnings.filter((w) => /判官 [ABC] 位（/.test(w))
+  assert.equal(overlapWarns.length, 1, `逐重合位各一条（B / C 位无重合 ⇒ 零条）：${selfData.warnings.join("；")}`)
+  assert.match(overlapWarns[0], /判官 A 位（mimo:mimo-v2\.6-flash）∈ 本次被测集合（自判 · 重合级别：同位）/)
+  assert.ok(readFileSync(findFile(`${labelSelf}.md`), "utf8").includes("该位 ∈ 被测（自判）"), "报告判官行该位标注（同位）")
+  // 同渠道异 model：允许（不拒跑），但该位必须明示 sameVendorAsTested + warnings 一条 + 报告判官行标注
   const label = `fj5b-${process.pid}`
-  try {
-    const r = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--dims", "reasoning", "--label", label])
-    assert.equal(r.code, 0, r.out)
-    assert.ok(r.out.includes("通过"), "正常运行（不因同渠道阻断）")
-  } finally { delete process.env.BENCH_JUDGE }
+  const sameVendor = mk([{ provider: "mimo", model: "mimo-v2.6-pro", maxTokens: 2048, timeoutSec: 30 }, { provider: "deepseek", model: "deepseek-flash", maxTokens: 2048, timeoutSec: 30 }], "judge-samevendor.json")
+  const r = await runWith(sameVendor, label)
+  assert.equal(r.code, 0, r.out)
+  assert.ok(r.out.includes("通过"), "正常运行（不因同渠道阻断）")
   const data = readJson(findFile(`${label}.json`))
   assert.equal(data.judge.judges[0].sameVendorAsTested, true, "同渠道位明示")
   assert.equal(data.judge.judges[1].sameVendorAsTested, false, "跨渠道位不置旗标")
   assert.ok(data.warnings.some((w) => w.includes("sameVendorAsTested")), "warnings 一条")
-  const { readFileSync } = await import("node:fs")
   assert.ok(readFileSync(findFile(`${label}.md`), "utf8").includes("与被测同渠道（明示 sameVendorAsTested）"), "报告判官行该位标注")
   // provider 不在用户 config（live 路径）⇒ 拒跑（resolveJudgeSlots 直测）
   const cfg = loadJudgeConfig(sameVendor)
