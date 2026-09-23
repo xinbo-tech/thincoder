@@ -29,7 +29,7 @@ run.mjs（CLI 解析 + 编排 + 中断/退出码 + dry-run）
   └─ lib/sanitize.mjs 脱敏谓词 + 写档前断言（报告与 JSON 共用）
 ```
 
-题集档（`cases/`，一维度一档）、工具桩（`lib/tools.mjs`（已实现））、PNG 生成器（`lib/png.mjs`（已实现））、长文生成器（`lib/haystack.mjs`（已实现））见 §3 文件清单。
+题集档（`bench/cases/`，一维度一档）、工具桩（`bench/lib/tools.mjs`）、PNG 生成器（`bench/lib/png.mjs`）、长文生成器（`bench/lib/haystack.mjs`）见 §3 文件清单。
 
 ### 1.3 五口径冻结（设计条文 · 统一标准的核心）
 
