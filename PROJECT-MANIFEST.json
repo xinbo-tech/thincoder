@@ -5,7 +5,8 @@
     "requirements": [
       "docs/core/requirements",
       "docs/cli/requirements",
-      "docs/vsc/requirements"
+      "docs/vsc/requirements",
+      "docs/RELEASE.md"
     ],
     "specs": "docs/core/requirements",
     "design": [
