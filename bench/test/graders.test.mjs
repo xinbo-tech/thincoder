@@ -4,6 +4,9 @@
  */
 
 import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 import { test } from "node:test"
 import {
   extractCode, jsonFields, judgeAfterMech, judgeResult, numEquals, ok, parseToolArgs, strictJson, textRules, toolShape, vmRun,
@@ -11,8 +14,12 @@ import {
 import { CODE_ASSERTS, cases as codeCases } from "../cases/code.mjs"
 import { cases as reasoningCases } from "../cases/reasoning.mjs"
 import { cases as jsonCases } from "../cases/json.mjs"
+import { cases as instructionsCases } from "../cases/instructions.mjs"
 import { cases as visionCases } from "../cases/vision.mjs"
+import { findFile, readJson, runCli } from "./fixtures.mjs"
+import { FIXTURE } from "../run.mjs"
 
+const BENCH_DIR = dirname(dirname(fileURLToPath(import.meta.url)))
 const gradeOf = (cases, id) => cases.find((c) => c.id === id).grade
 
 test("numEquals：数字独立成词（前后不得再连数字）", () => {
@@ -90,13 +97,13 @@ test("toolShape / parseToolArgs：结构断言与 arguments 解析", () => {
   assert.deepEqual(parseToolArgs({ arguments: "" }).value, {}, "空 arguments 视作 {}（§2.6）")
 })
 
-test("textRules：段落/汉字/句数/次数/否定式/数字禁用", () => {
-  const text = "夜里的城市换上另一副面孔。\n\n霓虹在雨里显得固执\n\n霓虹又亮了一次"
+test("text.1：三解释类 kind 已删（未知 kind fail-closed）+ 无解析件；字面 / 计数面行为不变", () => {
+  const text = "夜里的城市换上另一副面孔\n\n霓虹在雨里显得固执\n\n霓虹又亮了一次"
   const r = textRules(text, [
-    { kind: "paragraphCount", count: 3 },
     { kind: "startsWith", char: "夜" },
     { kind: "tokenCount", token: "霓虹", min: 2 },
     { kind: "notContains", tokens: ["，"] },
+    { kind: "hanziMin", min: 15 },
   ])
   assert.equal(r.pass, true, r.detail)
 
@@ -106,12 +113,18 @@ test("textRules：段落/汉字/句数/次数/否定式/数字禁用", () => {
   ])
   assert.equal(bad.pass, false)
   assert.match(bad.detail, /禁用/)
-
-  assert.equal(textRules("第一句。第二句。", [{ kind: "sentenceCount", count: 2 }]).pass, true)
+  assert.equal(textRules("含截止", [{ kind: "contains", tokens: ["截止"] }]).pass, true)
   assert.equal(textRules("句子含1个数字。", [{ kind: "noArabicDigits" }]).pass, false)
-  assert.equal(textRules("短句。", [{ kind: "hanziPerSentenceMax", max: 40 }]).pass, true)
-  // 词表化判据已删除：未知规则 fail-closed（不得静默放行——§2.10.2）
-  assert.equal(textRules("甲\n乙\n丙", [{ kind: "enumerateCount", count: 3 }]).pass, false, "enumerateCount 规则已随判官化删除")
+  // 解释类 kind（段落 / 句结构）已随判据分层重划删除（移判官面，§2.10.2）——零调用者 ⇒ 删即归零，不留快通道
+  for (const kind of ["paragraphCount", "sentenceCount", "hanziPerSentenceMax"]) {
+    const g = textRules("甲\n乙\n丙", [{ kind }])
+    assert.equal(g.pass, false, `${kind} 已删除——未知 kind 须 fail-closed`)
+    assert.match(g.detail, /未知规则/)
+  }
+  // 解析件（paragraphs / sentences）已随件删除——模块内不得留解析快通道
+  const src = readFileSync(join(BENCH_DIR, "lib", "grade.mjs"), "utf8")
+  assert.equal(src.includes("function paragraphs"), false, "解析件 paragraphs 已删")
+  assert.equal(src.includes("function sentences"), false, "解析件 sentences 已删")
 })
 
 test("judgeResult / judgeAfterMech：判官合成分 → 用例返回形状（error ⇒ error；pass / fail ⇒ 判官定判）", async () => {
@@ -161,4 +174,43 @@ test("题集判分（端到端用夹具结果）：机械面各例正反", () =>
   assert.equal(gradeOf(jsonCases, "json.1")({ text: '```json\n{"name":"小明","age":9,"tags":["a","b"]}\n```' }).pass, false)
   const code1 = gradeOf(codeCases, "code.1")({ text: "function chunkEven(arr, size){ if (size<1) throw new RangeError('x'); const o=[]; for(let i=0;i<arr.length;i+=size) o.push(arr.slice(i,i+size)); return o }" })
   assert.equal(code1.pass, true)
+})
+
+test("judge.13：混合面重划 · 定点复现（缺陷形态串 + 桩判官两态 + 短路 + dry-run 全链路）", async () => {
+  const byId = (id) => instructionsCases.find((c) => c.id === id)
+  // 缺陷形态串 = dry-run 夹具响应串（单源）：「正文 3 段（.1）/ 2 句（.2）+ `---` + 自检块」——机械条全过、
+  // 旧机械面读数（段落 / 句数）误判 fail ⇒ 该形态的 pass 腿 = 修复后判据的定点复现（§2.12-3① 关闭证据）
+  const DEFECT = { "instructions.1": FIXTURE["instructions.1"][0].text, "instructions.2": FIXTURE["instructions.2"][0].text }
+  let calls = 0
+  const ctxOf = (verdict) => ({ judge: async () => { calls++; return { verdict, resolution: "unanimous", reason: "夹具裁决" } } })
+  // ① 缺陷形态串 ∧ 桩判官 pass ⇒ run pass 且判官被调（机械面未拦下——修复后 pass 腿）
+  for (const id of ["instructions.1", "instructions.2"]) {
+    calls = 0
+    const g = await byId(id).grade({ text: DEFECT[id] }, ctxOf("pass"))
+    assert.equal(g.pass, true, `${id} 缺陷形态串须 pass（实得：${g.detail}）`)
+    assert.equal(calls, 1, `${id} 机械面全过 ⇒ 判官被调`)
+  }
+  // ② 桩判官 fail ⇒ run fail（判官定判）
+  const gFail = await byId("instructions.1").grade({ text: DEFECT["instructions.1"] }, ctxOf("fail"))
+  assert.equal(gFail.pass, false)
+  assert.match(gFail.detail, /判官裁决（unanimous）/)
+  // ③ 机械违例 ⇒ fail 且不调判官（短路——桩零调用 ⇒ 记录面无 runs[].judge）
+  for (const [id, violated] of [["instructions.1", DEFECT["instructions.1"].replace("。", "，")], ["instructions.2", `${DEFECT["instructions.2"]}2`]]) {
+    calls = 0
+    const g = await byId(id).grade({ text: violated }, ctxOf("pass"))
+    assert.equal(g.pass, false, `${id} 机械违例 ⇒ fail`)
+    assert.equal(calls, 0, `${id} 机械面已 FAIL ⇒ 不调判官（短路）`)
+  }
+  // ④ dry-run 全链路（--dims instructions）：缺陷形态串全链路 pass + 判官记录在场
+  const label = `judge13-${process.pid}`
+  const { code, out } = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--dims", "instructions", "--label", label])
+  assert.equal(code, 0, out)
+  const data = readJson(findFile(`${label}.json`))
+  const runOf = (id) => data.models[0].cases.find((c) => c.caseId === id).runs[0]
+  for (const id of ["instructions.1", "instructions.2"]) {
+    assert.equal(runOf(id).verdict, "pass", `${id} 缺陷形态串全链路 pass（机械面未拦下）`)
+    assert.equal(runOf(id).judge.resolution, "unanimous", `${id} 判官被调（判官记录在场）`)
+    assert.equal("review" in runOf(id), false, "机械面全过 ⇒ 无复核记录")
+  }
+  assert.equal(runOf("instructions.3").verdict, "pass", "同维纯判官面用例不受影响")
 })

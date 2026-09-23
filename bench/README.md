@@ -22,12 +22,12 @@ node bench/run.mjs --models glm-5.3-flash --n 3 --label speed-3x
 
 # 自检（不调模型、不读用户 config；跑通判分（含判官对 / 仲裁 / 复核夹具）→指标→报告→脱敏链路）
 # 注：自检夹具刻意布置——longctx.2 回近邻干扰值（机械 FAIL + 复核 uphold）、tools.3 回中文数字
-#     「十二个月」（机械 FAIL + 复核 **翻案**）、multiturn.2 A / B 刻意分歧（触发第三判仲裁）、
-#     longctx.3 A 位两次不可解析（判官不可用 ⇒ run error）——四类路径固定覆盖
+#     「十二个月」（机械 FAIL + 复核 **翻案** ⇒ 报告《复核翻案》尾部承接清单）、multiturn.2 A / B 刻意分歧（触发第三判仲裁）、
+#     longctx.3 A 位两次不可解析（判官不可用 ⇒ run error）、instructions.1 / .2 回缺陷形态串（正文 3 段 / 2 句 + `---` + 自检块）
 node bench/run.mjs --dry-run --label selfcheck
 
 # 价格更新后离线重算（零 API 调用；判官 / 复核成本随当前 prices.json 一并重算）
-node bench/run.mjs --recompute --from bench/results/2026-09-24-flash-compare-v3.json
+node bench/run.mjs --recompute --from bench/results/2026-09-24-flash-compare-v4.json
 ```
 
 | 参数 | 语义 | 缺省 |
@@ -56,10 +56,12 @@ node bench/run.mjs --recompute --from bench/results/2026-09-24-flash-compare-v3.
 
 1. **题集**：题面与用例逐字冻结（含隐藏用例）；`SUITE_VERSION`（整数）为版本标识。
    逐维明细先列**题面**（`cases[].prompt` 正本逐字；构造型用例含载荷括注、载荷不入档），便于只看回答即可判读。
-2. **判分**：**混合三层**——① 确定性断言（数字独立成词 / vm 实跑 + 隐藏断言 / 整串 JSON / 工具结构 / 语法级文本约束）；
+2. **判分**：**混合三层**——① 确定性断言（数字独立成词 / vm 实跑 + 隐藏断言 / 整串 JSON / 工具结构 / 字面·计数文本约束）；
    ② **语义·语用面 = 判官对（A / B 双判 · 同一冻结 rubric）**，分歧样本经**第三判（仲裁 C）多数决**
    （合成无多数 ⇒ 该 run `error`——禁猜 / 不补位 / 不单判回退）；③ **机械 fail = 复核**（LLM 第二只眼 · **不自动改判**）。
-   人工项只记录不判分（独立 lane，不阻塞自动判分）。**词表 / 正则不再充当语义判据**。
+   人工项只记录不判分（独立 lane，不阻塞自动判分）。**词表 / 正则不再充当语义判据**；
+   **判据分层分界（冻结）= 判定是否需要「机器解释文本」**——需要解释（段落 / 句 / 拒答 / 追问 / 候选质量……
+   文本结构或语义面）⇒ 判官面；字面 / 计数 / 结构 / 执行（字符数字计数 / 字面包含 / 整串 JSON / vm / 工具结构）⇒ 机械面。
 3. **计时**：TTFT = 首个**非空** delta 到达 − 调用发起；`tok/s = Σcompletion ÷ Σ(per-call total − per-call ttft)`；
    token 只认 `usage` 精确值——缺即 `null`（**delta 近似禁用**）。
 4. **报告**：报告对（md + json）同 basename；md 完全由结果 JSON 渲染 ⇒ 两档恒一致、同骨架跨时点可比。
@@ -82,6 +84,8 @@ node bench/run.mjs --recompute --from bench/results/2026-09-24-flash-compare-v3.
   相异 ⇒ 触发 C（串行依赖步）· 多数决。解析失败 ⇒ 放大预算重试一次（×2 · 上限 8192）；两位不可解析 / 超时 / 传输错 ⇒ 该位 `error`（禁猜）。
 - **复核**：仅机械 fail（非判官裁决）触发一次 LLM 复核（单判 · 沿 A 位）；`uphold` ⇒ fail 维持；
   `overturn` = **复核翻案**——**不自动改判**（仍在 fail、不计 pass），处置 = 修题面 / 判据（`SUITE_VERSION + 1`）。
+  **翻案承接（判据修复必修）**：报告《复核翻案》小节尾部自动生成**承接清单**（按用例归一 · 渲染面派生）——
+  承接落台账（`tech_todo` · MODEL-BENCH）、销账人工确认；控制台同步复核计数与「翻案 ⇒ 判据修复必修」提示（翻案不得静默）。
 - **成本**：判官（×2 · 分歧 ×3）与复核成本**单列两列**（成本表 + 概览）——**不进被测成本与相对成本归一化**；
   单价同源 `prices.json`（按各判官位的 `provider:model` 匹配；缺价 ⇒ `null` + 警告，不阻断运行）。
 
@@ -140,7 +144,7 @@ node bench/run.mjs --recompute --from bench/results/2026-09-24-flash-compare-v3.
 ## 边界（不做）
 
 - 不做开放式质量主观打分（判官只裁冻结 rubric 的语义判定）；不做容器级任务（SWE-bench / Terminal-Bench 型）；不做广谱知识题。
-- 复核翻案不自动改判；判官对的同向误判不设外部复核；不另立判据演进清单档（证据面 = 报告小节）。
+- 复核翻案不自动改判；判官对的同向误判不设外部复核；不另立判据演进清单档（承接 = 报告《复核翻案》承接清单 + 台账，销账人工确认）。
 - 不自动定时跑；不自动抓取价格（手动维护，来源必标）。
 - 不存模型完整原始响应（只存 ≤300 字符摘要）；不做跨时点 diff 工具；不做汇率换算。
 - 不进 CI / 发布门 / 三端产物白名单；`bench/test/*.test.mjs` 手动跑（`node --test bench/test/*.test.mjs`）。

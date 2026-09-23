@@ -18,7 +18,7 @@ import { cases as vision } from "./vision.mjs"
 import { manual } from "./manual.mjs"
 
 /** 题集版本（整数）——改题面 / 判据 / rubric / 判官身份 / 提示模板 / 计时口径 +1（设计 §1.3 口径 1/2/3 + §2.10.3 冻结绑定）。 */
-export const SUITE_VERSION = 3
+export const SUITE_VERSION = 4
 
 /** 8 个自动维度（顺序 = 报告中的列序）。 */
 export const DIMENSIONS = ["reasoning", "code", "json", "tools", "instructions", "multiturn", "longctx", "vision"]
@@ -60,6 +60,6 @@ export function casesForDims(runDims) {
 }
 
 /** 判据面分层表（§2.10.2）的机检素材——派生自用例声明（单源）：
- * 判官面 = 声明 `judge` 的用例（11 例）；机械面 = 声明 `mechRubric` 的用例（20 例）；两者之差 = 纯判官面 5 例。 */
+ * 判官面 = 声明 `judge` 的用例（13 例）；机械面 = 声明 `mechRubric` 的用例（20 例）；两者之差 = 纯判官面 5 例。 */
 export const JUDGE_FACE = CASES.filter((c) => c.judge).map((c) => c.id)
 export const MECH_FACE = CASES.filter((c) => c.mechRubric).map((c) => c.id)

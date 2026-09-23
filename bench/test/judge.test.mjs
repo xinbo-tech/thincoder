@@ -92,14 +92,14 @@ test("judge.4：`frozenAtSuiteVersion` ≠ SUITE_VERSION ⇒ 拒跑（退出码 
   try {
     const { code, out } = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--dims", "reasoning", "--label", `fj4-${process.pid}`])
     assert.equal(code, 1)
-    assert.match(out, /判官配置已换代：judge.json.frozenAtSuiteVersion = 2 ≠ SUITE_VERSION = 3/)
+    assert.match(out, /判官配置已换代：judge.json.frozenAtSuiteVersion = 2 ≠ SUITE_VERSION = 4/)
   } finally { delete process.env.BENCH_JUDGE }
 })
 
 test("judge.5：判官键 ∈ 被测集合 ⇒ 正常跑（不拒跑 · 自判）+ 该位标注与 warnings；同 provider 异 model ⇒ 允许 + sameVendorAsTested 明示", async () => {
   const mk = (judges, name) => {
     const p = join(FIXTURES, name)
-    writeFileSync(p, JSON.stringify({ version: 1, frozenAtSuiteVersion: 3, judges, arbiter: { provider: "kimi", model: "kimi-k3", maxTokens: 2048, timeoutSec: 30 } }), "utf8")
+    writeFileSync(p, JSON.stringify({ version: 1, frozenAtSuiteVersion: 4, judges, arbiter: { provider: "kimi", model: "kimi-k3", maxTokens: 2048, timeoutSec: 30 } }), "utf8")
     return p
   }
   const runWith = async (cfgPath, label) => {
@@ -142,7 +142,7 @@ test("judge.6：judge.json schema 不合（maxTokens / timeoutSec / provider / j
     assert.throws(() => loadJudgeConfig(p), re)
   }
   const base = () => ({
-    version: 1, frozenAtSuiteVersion: 3,
+    version: 1, frozenAtSuiteVersion: 4,
     judges: [{ provider: "p", model: "m1", maxTokens: 2048, timeoutSec: 30 }, { provider: "p", model: "m2", maxTokens: 2048, timeoutSec: 30 }],
     arbiter: { provider: "p", model: "m3", maxTokens: 2048, timeoutSec: 30 },
   })
@@ -224,7 +224,7 @@ test("judge.11：A / B 分歧 + 仲裁 C 两次不可解析 ⇒ error（无多�
 test("judge.12：判官对身份违约（A=B / 仲裁员 ∈ {A, B}）⇒ 装载即拒 + 明示违约位次", () => {
   const mk = (judges, arbiter) => {
     const p = join(FIXTURES, `judge-id-${judges.map((j) => j.model).join("-")}-${arbiter.model}.json`)
-    writeFileSync(p, JSON.stringify({ version: 1, frozenAtSuiteVersion: 3, judges, arbiter }), "utf8")
+    writeFileSync(p, JSON.stringify({ version: 1, frozenAtSuiteVersion: 4, judges, arbiter }), "utf8")
     return p
   }
   const ab = mk([{ provider: "p", model: "same", maxTokens: 2048, timeoutSec: 30 }, { provider: "q", model: "same", maxTokens: 2048, timeoutSec: 30 }], { provider: "r", model: "other", maxTokens: 2048, timeoutSec: 30 })
@@ -284,7 +284,7 @@ test("§2.6/§2.10.1 三段素材：题面段 = `judge.question` ?? 用例 `prom
   const r = await judgeWithPair({ decl: r3.judge, question: judgeQuestion(r3), material: "夹具回答", slots: SLOTS, transport, providers: [] })
   assert.equal(r.verdict, "pass")
   const flat = captured.join("\n")
-  assert.ok(flat.includes("## 题面") && flat.includes(r3.prompt), "题面逐字入消息（无显式 question 的 6 例依赖此回退）")
+  assert.ok(flat.includes("## 题面") && flat.includes(r3.prompt), "题面逐字入消息（无显式 question 的 8 例依赖此回退）")
   assert.ok(flat.includes("## 判据条文") && flat.includes("题干前提「9 是质数」为假"), "判据条文逐字入消息")
   assert.ok(flat.includes("## 模型回答") && flat.includes("夹具回答"), "回合素材入消息")
   // turnMaterial = 该回合文本 + 该回合工具事实（父侧裁定 2026-09-24）；缺回合 ⇒ fail-closed

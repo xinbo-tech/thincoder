@@ -257,6 +257,9 @@ export async function runMain(opts, sel, fixture) {
   if (j.judgeCalls > 0) {
     console.log(`判官 ${j.judgeCalls} 次调用（A ${j.judges[0].calls} · B ${j.judges[1].calls} · C ${j.arbiter.calls}）· 分歧 ${j.disagreements} 次 · 仲裁 ${j.arbitrations} 次 · 不可用 ${j.unavailable} 次`)
   }
+  // 复核可见性（§2.11 运行提示 · 行与报告概览同口径——计数行恒在）：翻案不得静默，承接清单住报告《复核翻案》小节（§2.12）
+  console.log(`复核 ${data.review.calls} 次（uphold ${data.review.uphold} · 翻案 ${data.review.overturn}）`)
+  if (data.review.overturn > 0) console.log("翻案 ⇒ 判据修复必修，承接清单见报告《复核翻案》小节")
   if (allDead) console.error("[bench] 判官面全灭：进入判官面的 run 全部合成无定判（退出码 1——基建故障信号；本档已落）")
   if (warnings.length > 0) console.log(`告警 ${warnings.length} 条：${warnings.join("；")}`)
   return allDead ? 1 : 0

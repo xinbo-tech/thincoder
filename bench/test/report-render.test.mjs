@@ -29,7 +29,7 @@ test("render.1：概览判官三行 + 分歧率 + 方法判分条 + 成本表两
     "- 判官分歧率：50%（分歧 1 ÷ A/B 双有效样本 2）",
     "- 判官成本合计 ¥0.0171 · 复核成本 ¥0.00216",
     "判官对（A / B 双判 · 同一冻结 rubric）",
-    "- 判分模板：判官 promptVersion = 1 · 复核 promptVersion = 1 · 判官配置冻结于 suiteVersion 3",
+    "- 判分模板：判官 promptVersion = 1 · 复核 promptVersion = 1 · 判官配置冻结于 suiteVersion 4",
     "| 模型 | 总成本 | 每任务成本 | 每通过任务成本 | 相对成本 | 判官成本 | 复核成本 |",
     "### 判官分歧",
     "### 复核翻案",
@@ -89,12 +89,16 @@ test("render.2：逐维明细题面行 = 题面正本（>300 字符 ⇒ 渲染�
   assert.ok(caseOf("longctx.1").prompt.includes("8K 字符长文"), "构造型题面含载荷括注")
   const md2 = readFileSync(findFile(`${label}.md`), "utf8")
   assert.ok(md2.includes("> 题面：16K 字符长文"), "构造型题面照渲染")
-  const longRow = md2.split("\n").find((l) => l.startsWith("> 题面：") && l.length > 250)
-  if (longRow) {
-    const shown = longRow.replace("> 题面：", "")
-    assert.ok(shown.length <= 300, `题面行须 ≤300 字符（实得 ${shown.length}）`)
-    assert.ok(shown.endsWith("…"), "超限截断以 `…` 标注")
-  }
+  // 截断腿（§5.13 render.2）：夹具显式构造 >300 字符题面 ⇒ 渲染面截断 `…`（JSON 存全额；`head(prompt, 300, true)` = 299 + `…`）
+  const longPrompt = `${"长题面填充。".repeat(60)}尾`
+  assert.ok(longPrompt.length > 300, "夹具题面 >300 字符")
+  const longData = priced()
+  longData.models[0].cases[0].prompt = longPrompt
+  const truncRow = renderReport(longData).split("\n").find((l) => l.startsWith("> 题面：") && l.includes("长题面填充。"))
+  assert.ok(truncRow, "长题面行在场（截断腿不得空转）")
+  const shown = truncRow.replace("> 题面：", "")
+  assert.ok(shown.length <= 300, `题面行须 ≤300 字符（实得 ${shown.length}）`)
+  assert.ok(shown.endsWith("…"), "超限截断以 `…` 标注")
 })
 
 test("report.1：夹具渲染 → 七段骨架齐 + 三表 + 逐维明细 + 人工判读在位；轴-only ⇒ 只出速度/成本表", () => {
@@ -171,7 +175,7 @@ test("AC-2 / AC-14：`--dry-run` 全链路产物断言（判官 / 复核块 + �
   for (const [k, t] of Object.entries({ suiteVersion: "number", label: "string", startedAt: "string", prices: "object", warnings: "object" })) {
     assert.equal(typeof data[k], t, `顶层字段 ${k} 类型不符`)
   }
-  assert.equal(data.suiteVersion, 3, "SUITE_VERSION 2 → 3")
+  assert.equal(data.suiteVersion, 4, "SUITE_VERSION 3 → 4")
   assert.equal(data.label, label)
   assert.match(data.startedAt, /^\d{4}-\d{2}-\d{2}T/)
   assert.equal(data.recomputed, null)
@@ -179,7 +183,7 @@ test("AC-2 / AC-14：`--dry-run` 全链路产物断言（判官 / 复核块 + �
   assert.equal(data.prices.asOf.length, 10)
   // 判官块（三槽元数据入档 · AC-5）：A / B / 仲裁 C 逐位 provider / model / maxTokens / 超时 / 调用 / 成本
   assert.equal(data.judge.promptVersion, 1)
-  assert.equal(data.judge.frozenAtSuiteVersion, 3)
+  assert.equal(data.judge.frozenAtSuiteVersion, 4)
   assert.equal(data.judge.judges.length, 2)
   assert.deepEqual(Object.keys(data.judge.judges[0]).sort(), ["calls", "costCny", "host", "maxTokens", "model", "provider", "sameVendorAsTested", "temperature", "timeoutSec"])
   assert.ok(data.judge.arbiter.provider && data.judge.arbiter.model)
@@ -241,4 +245,30 @@ test("review.2 / §5.13 渲染面：全量 dry-run 产物含 ⟲ 标记 + 《复
   assert.equal(tools3.review.verdict, "overturn")
   assert.equal(data.models[0].aggregate.passed + 3 <= data.models[0].aggregate.total, true, "翻案不计入 pass 计数")
   assert.equal(DIMENSIONS.length, 8)
+})
+
+test("review.4：承接清单（§2.12 产出面）——按 caseId 归一 + 三要点 + 控制台提示；0 翻案 ⇒ 无承接段", async () => {
+  const md = renderReport(priced())
+  const sec = md.split("### 复核翻案")[1].split("## 关键发现")[0]
+  assert.ok(sec.includes("承接清单"), "含翻案 ⇒ 尾部承接清单段")
+  assert.ok(sec.includes("tools.3"), "按用例（caseId）归一")
+  assert.ok(sec.includes("台账") && sec.includes("tech_todo") && sec.includes("MODEL-BENCH"), "承接落点 = 台账（tech_todo · MODEL-BENCH）")
+  assert.ok(sec.includes("`SUITE_VERSION + 1`"), "处置 = 判据修复（版本 +1）")
+  assert.ok(sec.includes("销账") && sec.includes("证据指针"), "销账要点与证据指针在场")
+  // 0 翻案 ⇒ 无承接段（有复核记录但无翻案 / 全无复核记录两形态）
+  const noOverturn = priced()
+  for (const c of noOverturn.models[0].cases) for (const r of c.runs) if (r.review?.verdict === "overturn") r.review.verdict = "uphold"
+  assert.equal(renderReport(noOverturn).split("### 复核翻案")[1].split("## 关键发现")[0].includes("承接清单"), false, "有复核记录但 0 翻案 ⇒ 无承接段")
+  const noReview = priced()
+  for (const c of noReview.models[0].cases) for (const r of c.runs) delete r.review
+  const secNone = renderReport(noReview).split("### 复核翻案")[1].split("## 关键发现")[0]
+  assert.ok(secNone.includes("本轮无复核翻案"), "0 记录 ⇒ 「本轮无复核翻案」保持")
+  assert.equal(secNone.includes("承接清单"), false, "0 记录 ⇒ 无承接段")
+  // 控制台提示（§2.11 运行提示）：dry-run 全链路（夹具 tools.3 = 翻案样本）
+  const label = `review4-${process.pid}`
+  const { code, out } = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--label", label])
+  assert.equal(code, 0, out)
+  assert.match(out, /复核 \d+ 次（uphold \d+ · 翻案 1）/, "控制台复核计数行")
+  assert.ok(out.includes("翻案 ⇒ 判据修复必修，承接清单见报告《复核翻案》小节"), "控制台承接提示行")
+  assert.ok(readFileSync(findFile(`${label}.md`), "utf8").includes("承接清单"), "落档报告含承接清单")
 })

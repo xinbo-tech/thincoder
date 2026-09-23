@@ -3,11 +3,13 @@
  *
  * 族成员：numEquals · vmRun（node:vm + 4000ms 超时 + 追加断言脚本）· strictJson（整串 parse）
  * · jsonFields（字段断言）· toolShape（name / JSON.parse(arguments || "{}") / 轮次）· textRules
- * （汉字计数 / 段落数 / 句数 / 首尾 / 次数 / 否定式「不含」/ 阿拉伯数字禁用——语法级约束）
+ * （汉字计数 / 首尾 / 次数 / 否定式「不含」/ 阿拉伯数字禁用——**纯字面 / 计数约束**）
  * · `judgeResult` / `judgeAfterMech`（判官合成分 → 用例返回形状；**不含网络**——裁决由 `lib/judge.mjs` 取）。
  * 判据的「正本」= 设计档 §5 各例「期望与判据」列；本档只提供实现原语，用例档逐例装配。
- * 语义·语用面（「表达的意思」）不再有词表 / 正则判据——词表件（keywordSet / COLOR_FAMILIES / colorMatch /
- * countEnumerations + enumerateCount 规则）已随判官化删除（零调用者；§2.10.2 分层表）。
+ * 判据分层（§2.10.2 冻结 · 2026-09-24 判据修复批重划）：需要「机器解释文本」的面（文本结构 / 语义）⇒ 判官；
+ * 字面 / 计数 / 结构 / 执行 ⇒ 机械。已删件（零调用者）——语义词表件（keywordSet / COLOR_FAMILIES /
+ * colorMatch / countEnumerations + enumerateCount 规则）+ 解释类规则件（paragraphCount / sentenceCount /
+ * hanziPerSentenceMax 与解析件 paragraphs / sentences——段落 / 句结构移判官面）。
  */
 
 import vm from "node:vm"
@@ -175,16 +177,9 @@ export function hanziCount(text) {
   return (String(text ?? "").match(HANZI) ?? []).length
 }
 
-function paragraphs(text) {
-  return String(text ?? "").trim().split(/\n\s*\n/).map((s) => s.trim()).filter(Boolean)
-}
-
-function sentences(text) {
-  return String(text ?? "").trim().split(/。+/).map((s) => s.trim()).filter(Boolean)
-}
-
-/** 文本规则表：kind = hanziMin / paragraphCount / sentenceCount / hanziPerSentenceMax / startsWith /
- * tokenCount / contains / notContains / noArabicDigits。返回 { pass, detail, results }。 */
+/** 文本规则表：kind = hanziMin / startsWith / tokenCount / contains / notContains / noArabicDigits
+ * （**纯字面 / 计数**——解释类 kind（段落 / 句结构）已随判据分层重划删除，§2.10.2）。
+ *  未知 kind ⇒ fail-closed（不得静默放行）。返回 { pass, detail, results }。 */
 export function textRules(text, rules) {
   const t = String(text ?? "")
   const results = rules.map((r) => {
@@ -195,25 +190,6 @@ export function textRules(text, rules) {
         const n = hanziCount(t)
         passNow = n >= r.min
         note = `汉字 ${n}（需 ≥${r.min}）`
-        break
-      }
-      case "paragraphCount": {
-        const n = paragraphs(t).length
-        passNow = n === r.count
-        note = `段落 ${n}（需 =${r.count}）`
-        break
-      }
-      case "sentenceCount": {
-        const n = sentences(t).length
-        passNow = n === r.count
-        note = `句数（以「。」分）${n}（需 =${r.count}）`
-        break
-      }
-      case "hanziPerSentenceMax": {
-        const counts = sentences(t).map(hanziCount)
-        const over = counts.filter((n) => n > r.max).length
-        passNow = counts.length > 0 && over === 0
-        note = `每句汉字最大 ${Math.max(0, ...counts)}（需 ≤${r.max}）`
         break
       }
       case "startsWith": {

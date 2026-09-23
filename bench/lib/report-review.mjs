@@ -106,20 +106,24 @@ export function judgeDivergenceSection(data) {
   return out
 }
 
-/** 《复核翻案》小节（§2.3 / §2.12）：逐条 = 用例 · 模型 · 机械失败断言 · 复核 · 复核理由。 */
+/** 《复核翻案》小节（§2.3 / §2.12）：逐条 = 用例 · 模型 · 机械失败断言 · 复核 · 复核理由；
+ *  **含翻案 ⇒ 尾部「承接清单」**（§2.12 产出面）：从 `runs[].review.verdict === "overturn"` 派生、
+ *  **按 `caseId` 归一**、不新增 JSON 字段（单源同 §2.10.3）——承接与销账 = 人工确认。 */
 export function reviewOverturnSection(data) {
   const rows = []
+  const overturnCases = []
   for (const m of data.models ?? []) {
     for (const c of m.cases ?? []) {
       for (const run of c.runs ?? []) {
         if (run.review) rows.push({ caseId: c.caseId, model: m.label, review: run.review })
+        if (run.review?.verdict === "overturn" && !overturnCases.includes(c.caseId)) overturnCases.push(c.caseId)
       }
     }
   }
   const out = [
     "### 复核翻案",
     "",
-    "机械 fail 的 run 追加 LLM 复核（单判 · 沿 A 位）；`overturn` = **复核翻案**——**不自动改判**（仍在 `fail`、不计入通过数），正确处置 = 修题面 / 判据（`SUITE_VERSION + 1`）+ 进判据演进清单（§2.12）。",
+    "机械 fail 的 run 追加 LLM 复核（单判 · 沿 A 位）；`overturn` = **复核翻案**——**不自动改判**（仍在 `fail`、不计入通过数），正确处置 = 修题面 / 判据（`SUITE_VERSION + 1`）+ **承接（§2.12：产出机器化 · 落台账 · 修毕销账）**。",
     "",
   ]
   if (rows.length === 0) return [...out, "本轮无复核翻案（机械 fail 复核记录 0 条）。", ""]
@@ -131,5 +135,17 @@ export function reviewOverturnSection(data) {
     out.push(`| ${r.caseId} | ${r.model} | ${cellText(r.review.mechDetail)} | ${r.review.verdict}${r.review.verdict === "overturn" ? "（翻案）" : ""} | ${cellText(r.review.reason)} |`)
   }
   out.push("")
+  if (overturnCases.length > 0) {
+    out.push(
+      "**承接清单（判据修复必修 · 按用例归一 · §2.12）**",
+      "",
+      "| 用例 | 承接落点 | 处置 | 销账 |",
+      "| --- | --- | --- | --- |",
+      ...overturnCases.map((id) => `| ${id} | 台账（\`kind=tech_todo\` · \`board=MODEL-BENCH\` · \`status=待设计\`） | 判据修复 ⇒ \`SUITE_VERSION + 1\` + 重跑；题面 / 判据 / rubric 变更同步设计档 | 定点复现用例在册（修复前 fail / 修复后 pass）+ 版本递增已落 + 条目 evidence 记修复批档坐标 ⇒ 主 agent 确认核销 |`),
+      "",
+      "证据指针 = 本小节逐条记录 + 同名 `.json` 的 `runs[].review`（`verdict = \"overturn\"`；渲染面派生——不新增字段）；承接与销账 = 人工确认（产出侧机器化）。",
+      "",
+    )
+  }
   return out
 }

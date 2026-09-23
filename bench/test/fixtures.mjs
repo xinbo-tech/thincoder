@@ -91,7 +91,7 @@ export function fixtureResult({ label = "fx-run", nullTokens = false, leakText =
     jRec("B", "pass", "夹具：B 判通过。", [jCall(TOK(320, 0, 50))]),
   ], "判官不可用（有效判不足）：A 位失败 · B 位裁决 pass")
   return {
-    suiteVersion: 3,
+    suiteVersion: 4,
     label,
     startedAt: "2026-09-23T22:00:00+08:00",
     finishedAt: "2026-09-23T22:01:00+08:00",
@@ -102,7 +102,7 @@ export function fixtureResult({ label = "fx-run", nullTokens = false, leakText =
     prices: { asOf: "2026-09-23", currency: "CNY", unit: "元 / 百万 token", source: "fixture" },
     recomputed: null,
     judge: {
-      promptVersion: 1, frozenAtSuiteVersion: 3,
+      promptVersion: 1, frozenAtSuiteVersion: 4,
       judges: [jMeta("deepseek", "deepseek-flash", true), jMeta("deepseek", "deepseek-v4-pro", true)],
       arbiter: jMeta("mimo", "mimo-v2.6-pro"),
       judgeCalls: 0, costCny: null, agreements: 0, disagreements: 0, arbitrations: 0, unavailable: 0,
@@ -123,4 +123,37 @@ export function fixtureResult({ label = "fx-run", nullTokens = false, leakText =
     manual: [{ label: "deepseek-flash", promptId: "manual.1", prompt: "最近怎么样？", responseHead: "还行。", metrics: { ttftMs: 90, totalMs: 500, tokPerSec: 20, tokens: TOK(20, 0, 10), cost: null } }],
     warnings,
   }
+}
+
+/** 题面正本冻结清单（§5 逐字 · 28 条 = 25 自动例 + 3 人工条；改题须 `SUITE_VERSION + 1`）。
+ *  落点 = 本夹具档（2026-09-24 判据修复批：自 `suite.test.mjs` 迁出降载——§3 说明列）。 */
+export const FROZEN_PROMPTS = {
+  "reasoning.1": "不使用计算器，计算 7^123 的个位数。只回答一个数字。",
+  "reasoning.2": "计算 17^5 与 2^20 的差。只回答整数。",
+  "reasoning.3": "9 是质数，请把它分解为两个质因数之积。只输出算式。",
+  "code.1": "用 JavaScript 实现函数 `chunkEven(arr, size)`：把数组按 size 切分为多个子数组并返回二维数组；`size` 小于 1 时抛出 `RangeError`。公开例：`chunkEven([1,2,3,4,5], 2) → [[1,2],[3,4],[5]]`。只输出函数代码，不要示例调用与解释。",
+  "code.2": "下面的函数在边界输入下行为不正确，请修复并只输出修复后的完整函数代码。\n\n```js\nfunction sumEven(nums){ let t=0; for (let i=1; i<nums.length; i++){ if (nums[i]%2===0 && nums[i]>0) t+=nums[i] } return t }\n```\n\n语义 = 求数组中所有偶数之和。",
+  "code.3": "用 JavaScript 实现函数 `parsePairs(text)`：`text` 形如 `\"a=1;b=2\"`，返回 `{a:\"1\", b:\"2\"}`；规则①空串 → `{}`；②重复键 → 后者覆盖；③不含 `=` 的段 → 跳过；④值保持字符串。公开例：`parsePairs(\"a=1;b=2\") → {a:\"1\", b:\"2\"}`。只输出函数代码。",
+  "json.1": "只输出一个 JSON 对象（不要代码围栏、不要任何解释）：字段 `name`（字符串）= \"小明\"、`age`（整数）、`tags`（字符串数组，至少 2 个元素）。",
+  "json.2": "只输出一个 JSON 对象（不要代码围栏、不要任何解释）：`zip` 必须是字符串 \"100001\"（保持前导零）；`note` 必须为 `null`；`nested.items` 必须是长度 0 的数组；`escaped` 必须等于含一个双引号的字符串 `a\"b`。",
+  "json.3": "只输出一个 JSON 对象（不要代码围栏、不要任何解释）：`status` 必须是小写字面 `empty`；`count` 必须是数字 0（不是字符串 \"0\"）；`items` 必须是空数组。这是空快照格式，不要填任何实际数据。",
+  "tools.1": "用可用工具查一下当前时间，然后用一句话告诉我。",
+  "tools.2": "先用工具查当前时间，再把该时间作为正文，给 alice@example.com 发一封主题为「时间同步」的邮件。",
+  "tools.3": "请回答：一年有几个月？",
+  "tools.4": "请在同一轮里并行调用两个工具，分别查北京和上海的天气。",
+  "instructions.1": "写一段关于「城市夜景」的短文。硬性要求：① 全文恰好 3 段（以空行分隔）；② 全文汉字数不少于 120；③ 全文不含逗号（中文「，」与英文 \",\" 均不可）；④ 「霓虹」至少出现 2 次；⑤ 以「夜」字开头。",
+  "instructions.2": "写一条会议变更通知。硬性要求：① 全文恰好 2 句（以「。」分隔）；② 每句汉字数不超过 40；③ 必须含「截止」；④ 全文不含任何阿拉伯数字；⑤ 全文不含「请」字。",
+  "instructions.3": "请写一句话。硬性要求：① 必须包含英文大写单词 PASS；② 全文不得包含任何大写字母。",
+  "multiturn.1": "帮我给团队发一封会议邀请邮件。",
+  "multiturn.2": "我要一句面向开发者的口号，主题是「快」。不要问我问题，直接给 3 个候选。",
+  "multiturn.3": "给 team@example.com 发一封主题「发布提醒」的邮件，时间你替我定一个合适的。",
+  "longctx.1": "8K 字符长文；埋「服务 atlas 的监听端口是 49152」。问：文中提到的服务 atlas 的监听端口是多少？只回答数字。",
+  "longctx.2": "32K 字符长文；埋「服务 beacon 的监听端口是 57318」，另布置近邻数字干扰（57317、57310 等）。问句同上（服务 beacon）。",
+  "longctx.3": "16K 字符长文：先出现「服务 helios 的历史端口是 40001（已废弃）」，后出现「服务 helios 当前监听端口是 42875」。问：服务 helios **当前**的监听端口是多少？",
+  "vision.1": "64×64 四象限图（左上红 #ff0000 / 右上蓝 / 左下绿 / 右下黄）。问：图片被分成四个象限，请只回答左上角象限的颜色。",
+  "vision.2": "32×32 纯色图（纯绿 #00aa00）。问：这张图是什么颜色？只回答颜色名。",
+  "vision.3": "64×64 四象限图同 `vision.1`。问：图里有几只猫？",
+  "manual.1": "最近怎么样？",
+  "manual.2": "帮我把那个东西改一下。",
+  "manual.3": "这个功能有点意思，你觉得呢？",
 }
