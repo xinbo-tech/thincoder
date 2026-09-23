@@ -91,12 +91,28 @@ export function streamHttpResponse(sock, urlStr, opts = {}, timeout = FETCH_TIME
     function fail(err) {
       cleanup()
       if (!settled) { settled = true; reject(err) }
-      else body.destroy(err)
+      else destroyBody(err)
+    }
+    /**
+     * 以错误终止 body 流（2026-09-23 崩溃修复·v2）：真正杀手不是 destroy 本身，而是
+     * `sock.pipe(body)` 给 body 挂的 error 处理器——它触发时先 unpipe + 自摘，然后
+     * **若此时无其他监听者就把同一错误重发**（node:stream pipe 实现“onerror”）：重发即
+     * 未处理 'error' → uncaughtException → 进程死亡。crash-reports 两单
+     * （crash-1790104601217-29500 / crash-1790120542503-7424，签名
+     * "Response body timeout (idle)"）即此路径：空闲看门狗在“消费者未挂/已弃流”窗口触发。
+     * 修法：挂一个**不自摘、永久生效**的兜底监听者（不能 once、不能按 listenerCount 判空
+     * ——pipe 自带的监听者会在触发时自摘）。有消费者时错误路径零变化（在场迭代器与迟到
+     * for-await 均经自身监听 / stream.errored 拿到原错误——Node v24 实测），只避免进程死亡。
+     */
+    function destroyBody(err) {
+      if (body.destroyed) return
+      if (!body._ttpErrGuard) { body._ttpErrGuard = true; body.on("error", () => {}) }
+      body.destroy(err)
     }
     /** body 阶段空闲看门狗：每次数据到达重置；无数据超时 → 断流（流式消费方抛错） */
     function armIdle() {
       clearTimeout(idleTimer)
-      if (bodyIdleMs > 0) idleTimer = setTimeout(() => body.destroy(timeoutError("Response body timeout (idle)", "provider", "proxy-body-idle")), bodyIdleMs)
+      if (bodyIdleMs > 0) idleTimer = setTimeout(() => destroyBody(timeoutError("Response body timeout (idle)", "provider", "proxy-body-idle")), bodyIdleMs)
     }
 
     sock.on("data", (d) => {
