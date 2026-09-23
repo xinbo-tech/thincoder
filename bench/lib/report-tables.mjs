@@ -91,12 +91,13 @@ export function tokensCell(t) {
 export const money = (c) => (c ? fmtMoney(c.value) : "—")
 
 export function matrixSection(data, stats) {
+  stats = [...stats].sort((a, b) => b.passed - a.passed || a.label.localeCompare(b.label))
   const dims = DIMENSIONS.filter((d) => (data.models ?? []).some((m) => dimsOf(m).includes(d)))
   if (dims.length === 0) return ["### 能力矩阵", "", "本轮未选自动维（能力矩阵无列）——人工判读见下节。", ""]
   return [
     "### 能力矩阵",
     "",
-    "单元格 = 通过用例数 / 该模型在该维的用例数（用例判定：N 次全过 = pass）；`—` = 不在该模型面。",
+    "单元格 = 通过用例数 / 该模型在该维的用例数（用例判定：N 次全过 = pass）；`—` = 不在该模型面；**按合计通过数降序**。",
     "",
     `| 模型 | ${dims.map((d) => DIM_LABELS[d] ?? d).join(" | ")} | 合计 |`,
     `| --- | ${dims.map(() => "---").join(" | ")} | --- |`,
@@ -113,6 +114,7 @@ export function matrixSection(data, stats) {
 }
 
 export function speedSection(stats) {
+  stats = [...stats].sort((a, b) => (a.speed.ttftMs ?? Infinity) - (b.speed.ttftMs ?? Infinity) || a.label.localeCompare(b.label))
   const footnotes = []
   for (const s of stats) {
     const scored = allRuns(s.model).filter((r) => r.verdict === "pass" || r.verdict === "fail")
@@ -125,7 +127,7 @@ export function speedSection(stats) {
   return [
     "### 速度表",
     "",
-    "只取正常返回的 run（pass / fail）；`--n` > 1 时取中位；token 计入 usage 精确值（缺 ⇒ `—`）。",
+    "只取正常返回的 run（pass / fail）；`--n` > 1 时取中位；token 计入 usage 精确值（缺 ⇒ `—`）；**按 TTFT 中位升序（缺数据者居末）**。",
     "",
     "| 模型 | TTFT 中位 | tok/s 中位 | 总耗时（中位） | 采样 run 数 |",
     "| --- | --- | --- | --- | --- |",
@@ -136,6 +138,7 @@ export function speedSection(stats) {
 }
 
 export function costSection(data, stats) {
+  stats = [...stats].sort((a, b) => (a.costPerPass ?? Infinity) - (b.costPerPass ?? Infinity) || a.label.localeCompare(b.label))
   const footnotes = []
   for (const s of stats) {
     const noCost = allRuns(s.model).filter((r) => r.verdict !== "skipped" && !r.metrics?.cost).length
@@ -151,7 +154,7 @@ export function costSection(data, stats) {
   return [
     "### 成本表",
     "",
-    "总成本 = Σ 成功返回的 call 成本；每任务成本 = 总成本 ÷ 任务数（该模型面内的用例数）；每通过任务成本 = 总成本 ÷ 通过任务数（用例判定 N 次全过 = pass）；**相对成本 = 每通过任务成本 ÷ 表内最低者（最低 = 1×，直接读倍数）**。",
+    "总成本 = Σ 成功返回的 call 成本；每任务成本 = 总成本 ÷ 任务数（该模型面内的用例数）；每通过任务成本 = 总成本 ÷ 通过任务数（用例判定 N 次全过 = pass）；**相对成本 = 每通过任务成本 ÷ 表内最低者（最低 = 1×，直接读倍数）**；**按每通过任务成本升序（最便宜居首 = 1.0×）**。",
     "",
     "| 模型 | 总成本 | 每任务成本 | 每通过任务成本 | 相对成本 |",
     "| --- | --- | --- | --- | --- |",
