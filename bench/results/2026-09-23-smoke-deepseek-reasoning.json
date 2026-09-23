@@ -1,0 +1,197 @@
+{
+  "suiteVersion": 1,
+  "label": "smoke-deepseek-reasoning",
+  "startedAt": "2026-09-23T23:27:02+08:00",
+  "finishedAt": "2026-09-23T23:27:06+08:00",
+  "run": {
+    "dims": [
+      "reasoning"
+    ],
+    "repeats": 1,
+    "maxTokens": 4096,
+    "timeoutSec": 120,
+    "temperature": 0,
+    "node": "v24.19.0",
+    "command": "node bench/run.mjs --models deepseek-flash --dims reasoning --label smoke-deepseek-reasoning",
+    "axes": [
+      "speed",
+      "cost"
+    ]
+  },
+  "prices": {
+    "asOf": "2026-09-23",
+    "currency": "CNY",
+    "unit": "元 / 百万 token",
+    "source": "各厂商官方定价页（条目级 source 为准）"
+  },
+  "recomputed": null,
+  "models": [
+    {
+      "label": "deepseek-flash",
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "host": "api.deepseek.com",
+      "dims": [
+        "reasoning"
+      ],
+      "cases": [
+        {
+          "caseId": "reasoning.1",
+          "dim": "reasoning",
+          "class": "正常",
+          "runs": [
+            {
+              "n": 1,
+              "verdict": "pass",
+              "detail": "命中 3：3",
+              "metrics": {
+                "ttftMs": 513,
+                "totalMs": 963,
+                "tokPerSec": 240,
+                "tokens": {
+                  "prompt": 49,
+                  "cached": 0,
+                  "completion": 108
+                },
+                "cost": {
+                  "value": 0.000962,
+                  "currency": "CNY",
+                  "pricesAsOf": "2026-09-23"
+                }
+              },
+              "calls": [
+                {
+                  "round": 1,
+                  "ttftMs": 513,
+                  "totalMs": 963,
+                  "tokens": {
+                    "prompt": 49,
+                    "cached": 0,
+                    "completion": 108
+                  },
+                  "toolNames": [],
+                  "finishReason": "stop",
+                  "throttled": false,
+                  "costCny": 0.000962
+                }
+              ],
+              "summary": {
+                "textHead": "3",
+                "textLen": 1,
+                "reasoningLen": 145,
+                "toolNames": []
+              }
+            }
+          ]
+        },
+        {
+          "caseId": "reasoning.2",
+          "dim": "reasoning",
+          "class": "边界",
+          "runs": [
+            {
+              "n": 1,
+              "verdict": "pass",
+              "detail": "命中 371281：371281",
+              "metrics": {
+                "ttftMs": 598,
+                "totalMs": 1296,
+                "tokPerSec": 255,
+                "tokens": {
+                  "prompt": 49,
+                  "cached": 0,
+                  "completion": 178
+                },
+                "cost": {
+                  "value": 0.001522,
+                  "currency": "CNY",
+                  "pricesAsOf": "2026-09-23"
+                }
+              },
+              "calls": [
+                {
+                  "round": 1,
+                  "ttftMs": 598,
+                  "totalMs": 1296,
+                  "tokens": {
+                    "prompt": 49,
+                    "cached": 0,
+                    "completion": 178
+                  },
+                  "toolNames": [],
+                  "finishReason": "stop",
+                  "throttled": false,
+                  "costCny": 0.001522
+                }
+              ],
+              "summary": {
+                "textHead": "371281",
+                "textLen": 6,
+                "reasoningLen": 436,
+                "toolNames": []
+              }
+            }
+          ]
+        },
+        {
+          "caseId": "reasoning.3",
+          "dim": "reasoning",
+          "class": "错误",
+          "runs": [
+            {
+              "n": 1,
+              "verdict": "pass",
+              "detail": "给出 3×3：3×3",
+              "metrics": {
+                "ttftMs": 416,
+                "totalMs": 1109,
+                "tokPerSec": 216.5,
+                "tokens": {
+                  "prompt": 50,
+                  "cached": 0,
+                  "completion": 150
+                },
+                "cost": {
+                  "value": 0.0013,
+                  "currency": "CNY",
+                  "pricesAsOf": "2026-09-23"
+                }
+              },
+              "calls": [
+                {
+                  "round": 1,
+                  "ttftMs": 416,
+                  "totalMs": 1109,
+                  "tokens": {
+                    "prompt": 50,
+                    "cached": 0,
+                    "completion": 150
+                  },
+                  "toolNames": [],
+                  "finishReason": "stop",
+                  "throttled": false,
+                  "costCny": 0.0013
+                }
+              ],
+              "summary": {
+                "textHead": "3×3",
+                "textLen": 3,
+                "reasoningLen": 532,
+                "toolNames": []
+              }
+            }
+          ]
+        }
+      ],
+      "note": "峰谷定价（成本表取高峰档）",
+      "aggregate": {
+        "passed": 3,
+        "total": 3,
+        "costCny": 0.003784,
+        "costPerPassCny": 0.00126133
+      }
+    }
+  ],
+  "manual": [],
+  "warnings": []
+}

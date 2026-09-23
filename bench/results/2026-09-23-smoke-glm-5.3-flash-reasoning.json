@@ -1,0 +1,197 @@
+{
+  "suiteVersion": 1,
+  "label": "smoke-glm-5.3-flash-reasoning",
+  "startedAt": "2026-09-23T23:46:22+08:00",
+  "finishedAt": "2026-09-23T23:46:36+08:00",
+  "run": {
+    "dims": [
+      "reasoning"
+    ],
+    "repeats": 1,
+    "maxTokens": 4096,
+    "timeoutSec": 120,
+    "temperature": 0,
+    "node": "v24.19.0",
+    "command": "node bench/run.mjs --models glm-5.3-flash --dims reasoning --label smoke-glm-5.3-flash-reasoning",
+    "axes": [
+      "speed",
+      "cost"
+    ]
+  },
+  "prices": {
+    "asOf": "2026-09-23",
+    "currency": "CNY",
+    "unit": "元 / 百万 token",
+    "source": "各厂商官方定价页（条目级 source 为准）"
+  },
+  "recomputed": null,
+  "models": [
+    {
+      "label": "glm-5.3-flash",
+      "provider": "zhipu-plan",
+      "model": "glm-5.3-flash",
+      "host": "open.bigmodel.cn",
+      "dims": [
+        "reasoning"
+      ],
+      "cases": [
+        {
+          "caseId": "reasoning.1",
+          "dim": "reasoning",
+          "class": "正常",
+          "runs": [
+            {
+              "n": 1,
+              "verdict": "pass",
+              "detail": "命中 3：**3** 7 的幂次个位数按 7, 9, 3, 1 循环（周期为4）。由于 123 ÷ 4 余 3，所以 7¹²³ 的…",
+              "metrics": {
+                "ttftMs": 1226,
+                "totalMs": 5003,
+                "tokPerSec": 42.1,
+                "tokens": {
+                  "prompt": 31,
+                  "cached": 0,
+                  "completion": 159
+                },
+                "cost": {
+                  "value": 0.00047,
+                  "currency": "CNY",
+                  "pricesAsOf": "2026-09-23"
+                }
+              },
+              "calls": [
+                {
+                  "round": 1,
+                  "ttftMs": 1226,
+                  "totalMs": 5003,
+                  "tokens": {
+                    "prompt": 31,
+                    "cached": 0,
+                    "completion": 159
+                  },
+                  "toolNames": [],
+                  "finishReason": "stop",
+                  "throttled": false,
+                  "costCny": 0.00047
+                }
+              ],
+              "summary": {
+                "textHead": "**3** 7 的幂次个位数按 7, 9, 3, 1 循环（周期为4）。由于 123 ÷ 4 余 3，所以 7¹²³ 的个位数与 7³ = 343 相同，为 3。",
+                "textLen": 82,
+                "reasoningLen": 223,
+                "toolNames": []
+              }
+            }
+          ]
+        },
+        {
+          "caseId": "reasoning.2",
+          "dim": "reasoning",
+          "class": "边界",
+          "runs": [
+            {
+              "n": 1,
+              "verdict": "pass",
+              "detail": "命中 371281：371281",
+              "metrics": {
+                "ttftMs": 1097,
+                "totalMs": 2700,
+                "tokPerSec": 58,
+                "tokens": {
+                  "prompt": 29,
+                  "cached": 0,
+                  "completion": 93
+                },
+                "cost": {
+                  "value": 0.0002836,
+                  "currency": "CNY",
+                  "pricesAsOf": "2026-09-23"
+                }
+              },
+              "calls": [
+                {
+                  "round": 1,
+                  "ttftMs": 1097,
+                  "totalMs": 2700,
+                  "tokens": {
+                    "prompt": 29,
+                    "cached": 0,
+                    "completion": 93
+                  },
+                  "toolNames": [],
+                  "finishReason": "stop",
+                  "throttled": false,
+                  "costCny": 0.0002836
+                }
+              ],
+              "summary": {
+                "textHead": "371281",
+                "textLen": 6,
+                "reasoningLen": 142,
+                "toolNames": []
+              }
+            }
+          ]
+        },
+        {
+          "caseId": "reasoning.3",
+          "dim": "reasoning",
+          "class": "错误",
+          "runs": [
+            {
+              "n": 1,
+              "verdict": "pass",
+              "detail": "给出 3×3：9 = 3 × 3",
+              "metrics": {
+                "ttftMs": 556,
+                "totalMs": 6048,
+                "tokPerSec": 45.3,
+                "tokens": {
+                  "prompt": 33,
+                  "cached": 0,
+                  "completion": 249
+                },
+                "cost": {
+                  "value": 0.0007236,
+                  "currency": "CNY",
+                  "pricesAsOf": "2026-09-23"
+                }
+              },
+              "calls": [
+                {
+                  "round": 1,
+                  "ttftMs": 556,
+                  "totalMs": 6048,
+                  "tokens": {
+                    "prompt": 33,
+                    "cached": 0,
+                    "completion": 249
+                  },
+                  "toolNames": [],
+                  "finishReason": "stop",
+                  "throttled": false,
+                  "costCny": 0.0007236
+                }
+              ],
+              "summary": {
+                "textHead": "9 = 3 × 3",
+                "textLen": 9,
+                "reasoningLen": 884,
+                "toolNames": []
+              }
+            }
+          ]
+        }
+      ],
+      "note": "多模态（usage 实测正常）",
+      "aggregate": {
+        "passed": 3,
+        "total": 3,
+        "costCny": 0.0014772,
+        "costPerPassCny": 0.0004924
+      }
+    }
+  ],
+  "manual": [],
+  "warnings": []
+}
