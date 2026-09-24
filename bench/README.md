@@ -27,8 +27,8 @@ node bench/run.mjs --models glm-5.3-flash --n 3 --label speed-3x
 node bench/run.mjs --dry-run --label selfcheck
 
 # 价格更新后离线重算（零 API 调用；判官 / 复核成本随当前 prices.json 一并重算）
-# 注：在档报告对 v4 生成于复核改判前口径（v4 翻案 0 起 ⇒ 判定面等价）；其呈现形态 = 本批前形态
-#     （成本表含判官 / 复核两列、无用时表——报告数值零改，现行形态可由本命令以现行渲染面重出）；版本标识 = 结果 JSON 的 `suiteVersion`
+# 注：在档报告对 v4 生成于复核改判前口径（v4 翻案 0 起 ⇒ 判定面等价）；已按现行呈现形态重出
+#     （2026-09-24 · 用户点名——数值零改 · 形态 = 五列成本表 + 用时表；见报告内「形态重出注」）；版本标识 = 结果 JSON 的 `suiteVersion`
 node bench/run.mjs --recompute --from bench/results/2026-09-24-flash-compare-v4.json
 ```
 
