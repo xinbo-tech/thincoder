@@ -851,6 +851,41 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 **边界（第三面不做）**：不动 `UPSTREAM_TURN_DOMAIN` 与唤醒轮基座选择 · 不动注入条件（`!autoApprove` 门）与 `transient` / 位置 · 不新增配置开关、不改机械拒绝面（装配摘除 + execute 拒零变）·
 提示词面零改 · 压缩后重注入面（`context.mjs`）与 `verify.mjs` 回声（已判非指挥语）零动 · 普通模式文本与行为逐字零变。
 
+### 6.16 子代面 `question` 过滤（2026-09-25 · 批 question-tool-filter · 台账 #289）
+
+**问题**：`question` 是交互式**主会话**工具——「子代无用户可等、不向最终用户提问」的路由指引已写在各人格档明文，但该工具仍留在子代工具表里：模型看得见、点得动，调用只能吃机械门错误（`thincoder-core/tools/question.mjs:20`）。死条目 = 上下文税 + **假可供性**（先试一次再吃错误）；VSC 端提示词面原有的「子代理拿不到它」断言与实读相抵（实况 = 可见不可用）。
+
+**判据（单源）**：**depth>0 工具表一律不含 `question`**——交互工具要有活人在环，子代没有可问的用户；该排除与「只读过滤」同族（都是**装配层按面裁表**），判据 = 一个具名排除集 + 一个按面裁表谓词（不住各调用点各自写字面）。
+
+| 面 | 现状（as-of 2026-09-25） | 处置 |
+|---|---|---|
+| 静态注册表 | `thincoder-core/tools/index.mjs:19-27` 内置表含 `questionTool`（`:23`）——实例无关表，主会话 / 子代同源 | **零改**（静态表不动 = 主会话面零改的机械保证） |
+| 子代 · spawn | `thincoder-core/agent-tools/subagent-spawn.mjs:251-258`——探 / 规走只读过滤，其余角色父表直传 | 两分支同过排除谓词 |
+| 子代 · escalate（同步） | `thincoder-core/agent-tools/subagent-actions.mjs:409-416`——父表直传 | 同过排除谓词 |
+| 子代 · escalate（异步） | `thincoder-core/agent-tools/escalate-async.mjs:193-201`——父表直传 | 同过排除谓词 |
+| 子代 · consult | `thincoder-core/agent-tools/consult.mjs:268-273`——只读过滤 + `main_history` | 继承面同过排除谓词（`main_history` 不属继承面） |
+| 主会话（两端） | CLI 经 `assembleBuiltinTools`（`thincoder-core/tools/index.mjs:57-78`）；VSC 端自持清单（`thincoder-vscode/src/tools/index.mjs`） | **零改**——`question` 在职；机械门（无 UI 抛错）保留为第二道防线 |
+| VSC 端自持 depth>0 装配 | `thincoder-vscode/src/agent/setup-tooltable.mjs:296-300`——已按 `depth === 0 || t.name !== "question"` 过滤（行为正确，字面 = 第二份） | 字面改消费核单源排除集（`SUBAGENT_TOOL_EXCLUSIONS.has(t.name)`；谓词 `excludeSubagentTools(` = 核四点调用形态；**行为零变**——消第二份字面，防漂移） |
+
+**单源落点**：`thincoder-core/agent/helpers.mjs`——与只读谓词 `readonlyToolNames`（`:335-338`）同址新增排除集（`question` 唯一成员）与按面裁表谓词（恒返回新数组，不改父表、不别名）；`thincoder-core/agent.mjs` 的两处再导出面（`:21-32` / `:48-53`）补两名——子代装配点从 `../agent.mjs` 取用，import 面零改。
+
+**生效面与装配序**：子代工具表 = 「**角色选择**（只读 / 全表）→ **排除谓词**」——排除恒在最后一步（两序等价性不得写成分支差异）。
+生效面 = 发给 provider 的工具 schema ∧ 执行面 `toolByName`（两者同源自子代的 `tools` 绑定值——`thincoder-core/agent/setup.mjs:163-171` 的展开面 = 绑定值 + 家族段 + caller 注入）。
+**传子**（受限通道：`eng-coder` / `eng-designer` 的子通道只开 `explore`——`thincoder-core/agent/family-tools.mjs:171-172`）经父绑定值继承 ⇒ 排除随绑定传递，嵌套子代同判。
+
+**措辞面**（`question-ui-face` 锚——核内锚位 = `thincoder-core/tool-docs/question.md:11`；两取值同判据 · 各端自持，失败形态 / UI 形态按端注入 = D-TO6 同族）：
+
+| 端 | 取值 |
+|---|---|
+| CLI（`thincoder-cli/src/prompt-injections.mjs:19`） | **收正取值（逐字）**——「- Availability: this tool needs an interactive UI — in contexts without one (headless runs) it returns an error instead of asking; subagent children (depth>0) never get it (excluded from their tool tables); put the question in your reply text instead.」（headless 主会话面的机械门语义保持准确；`subagent children` 原枚举随过滤收正 = 子代面无此工具） |
+| VSC（`thincoder-vscode/src/prompt-injections.mjs:20`） | **新文案（逐字）**：「- Availability: this tool renders in the chat panel (inline question card). Subagent children (depth>0) never get it — the depth>0 tool table excludes it; put the question in your reply text instead.」（原句 = 无锚断言、与实读相抵；新句 = 锚定装配规则，语义 = 子代面无此工具） |
+
+过滤后该行只对**持有者**（depth-0）渲染 ⇒ 子代面自然失效（子代不再装载该工具描述）。
+
+**边界（本节不做）**：不动工具本体（不删 `question`、不改 `thincoder-core/tools/question.mjs` 的机械门与上限校验）· 不动静态注册表与主会话 / headless 面的**机制**（含 CLI 侧 ACP 排除面 `thincoder-cli/src/acp.mjs:67`；注入措辞面不在本句射程——取值 = 本节措辞面表）· 人格档文案零改（路由指引已在位）· 其他工具零动 · 不加配置开关、不加用户选项 · 只读过滤语义零变（`explore` / `plan` / `consult` 的只读面逐字零变）。
+
+> 判定（用例 A30–A33）/ 受影响文件与行数预算 / 验收回指 = 批档 `docs/batches/2026-09-25-question-tool-filter.md` §2（一次性批次材料——本档不重述）。
+
 ## 7. 并入的关键决策记录（含否决备选）
 
 | # | 决策 | 理由 / 否决备选 |
@@ -865,6 +900,7 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 | D-TO8 | `websearch.provider` 死键 = **移除** | 死键无消费方、零行为变更、单一权威源负担最小；否决接线为后端选择 · 保留现状（见 §6.10） |
 | D-TO9 | VSC 适配增强 = **端差登记入 §6.11**（编辑器 / 语言服务 / 审批面 / 描述装载） | 机制归核 + 端特有面注入（D-TO6 同族）——零归核、零复制（D2）；CLI 面已并 §6.1–§6.10 |
 | D-TO10 | task 工程模式停用 = **双层门**（装配摘除 KD8 + execute 机械拒 escalate 先例）；batch 词面协议 = **值的载体结构化**（note 括注 / create 归一化 / 死占位机检——enum 静态表达不了按段词表 ⇒ 运行时校验 = 唯一真值面〔value 谓词收紧为关键词锚定〕） | 详见 §6.15 六裁定点；否决备选：纯调用时拒绝（保留 token 税）· JSON schema enum 化（表达不了按段）· note 拒绝再入（逼散文回流 value）· BATCH-ID 自造序号（第二编号源违 D2）· 泛占位正则（误杀合法尖括号与模板暂存） |
+| D-TO11 | 子代面 `question` 过滤 = **装配层按面排除**（depth>0 工具表；单源排除集 + 谓词，住 `thincoder-core/agent/helpers.mjs`——静态表 / 工具本体 / 机械门零改；端侧同款字面归一核单源） | 详见 §6.16。死条目 = 上下文税 + 假可供性；路由指引已在人格档 ⇒ 该通道对子代零信息增益。否决备选：只靠机械门兜底（保留 token 税与假可供性）· 给工具本体加声明式标记（触及工具本体——本批边界零改）· 人格档再写一遍（重复指引违 D2） |
 
 ## 8. 不并项与历史沿革
 
@@ -915,6 +951,15 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 **边界（本增量不做）**：不做 task 工具本体改动（保留）；不做台账（M2 承接）；不做「归册三选一」替代流程（M10 一并砍）。
 
 ## 变更记录
+
+- 2026-09-25（**question-tool-filter 批 · 设计评审修正轮 1 · eng-designer**——承 `docs/batches/2026-09-25-question-tool-filter.md` §3 轮次 1 · 父侧裁定 6/6 全收）：
+  §6.16 逐条收正——① 措辞面 **CLI 行改收正取值**（`subagent children` 原枚举随子代面过滤收正；headless 主会话机械门语义保持——逐字见本表）；
+  ② VSC 行消费面符号钉死（**排除集 `.has()`**；谓词 `excludeSubagentTools(` = 核四点调用形态——与批档 §2.3 逐字一致）；③ 边界行补「机制面」限定（与需求档 F12 边界句同形）。**零新语义**（评审发现逐号落位）。
+
+- 2026-09-25（**question-tool-filter 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-question-tool-filter.md` §1 · 台账 #289）：
+  新增 **§6.16**——子代面（depth>0）工具表排除 `question`（交互式主会话工具）：单源排除集 + 谓词住 `thincoder-core/agent/helpers.mjs`（只读谓词同址），
+  四个子代装配点（spawn / escalate 同步·异步 / consult）同过、排除随绑定值传子；静态注册表 / 工具本体 / 机械门 / 主会话面零改；
+  VSC 端自持 depth>0 装配面的同款字面改消费核单源（行为零变）。措辞面 `question-ui-face`：VSC 取值收正（锚定装配规则——子代面无此工具）+ CLI 取值零改（headless 主会话语义保持）。决策 **D-TO11**。
 
 - 2026-09-25（**hygiene-ab 批 · 文档面实施轮 · eng-designer**——承 `docs/batches/2026-09-25-hygiene-ab.md` §2 · 台账 #239）：§2.3 映射表 VSC code 行**补全仓根路径**（→ `thincoder-vscode/src/tools/code.mjs`；改前为裸名形态）；同表后「归属提示」行两处路径形态**去形改述**（以「checkpoint / code 两行（VSC 侧单端档对位行）」指称——消悬空 / 防下轮同类）。**语义零改**。
 
