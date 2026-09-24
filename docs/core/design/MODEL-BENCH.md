@@ -122,18 +122,18 @@ node bench/preflight.mjs [--live]     # 跑前参数预检（枚举面缺省跑 
   "judge": { "promptVersion": 1, "frozenAtSuiteVersion": 7,
              "fallbacks": [
                { "provider": "mimo", "model": "mimo-v2.6-pro", "host": "api.xiaomimimo.com",
-                 "temperature": 0, "maxTokens": 2048, "timeoutSec": 30, "sameVendorAsTested": true, "calls": 2, "costCny": 0.0022 },
+                 "temperature": 0, "maxTokens": 8192, "timeoutSec": 30, "sameVendorAsTested": true, "calls": 2, "costCny": 0.0022 },
                { "provider": "qwen", "model": "qwen3.8-flash", "host": "dashscope.aliyuncs.com",
-                 "temperature": 0, "maxTokens": 2048, "timeoutSec": 30, "sameVendorAsTested": true, "calls": 0, "costCny": null }],
+                 "temperature": 0, "maxTokens": 8192, "timeoutSec": 30, "sameVendorAsTested": true, "calls": 0, "costCny": null }],
              "judges": [
                { "id": "A", "provider": "deepseek", "model": "deepseek-flash", "host": "api.deepseek.com",
-                 "temperature": 0, "maxTokens": 2048, "timeoutSec": 30, "sameVendorAsTested": true,
+                 "temperature": 0, "maxTokens": 8192, "timeoutSec": 30, "sameVendorAsTested": true,
                  "calls": 52, "costCny": 0.0312 },
                { "id": "B", "provider": "glm", "model": "glm-5.3-flashx", "host": "open.bigmodel.cn",
-                 "temperature": 0, "maxTokens": 2048, "timeoutSec": 30, "sameVendorAsTested": true,
+                 "temperature": 0, "maxTokens": 8192, "timeoutSec": 30, "sameVendorAsTested": true,
                  "calls": 52, "costCny": null }],
              "arbiter": { "id": "C", "provider": "deepseek", "model": "deepseek-v4-pro", "host": "api.deepseek.com",
-                 "temperature": 0, "maxTokens": 2048, "timeoutSec": 30, "sameVendorAsTested": true,
+                 "temperature": 0, "maxTokens": 8192, "timeoutSec": 30, "sameVendorAsTested": true,
                  "calls": 1, "costCny": 0.0007 },
              "judgeCalls": 107, "costCny": 0.0341,
              "agreements": 51, "disagreements": 1, "arbitrations": 1, "unavailable": 0,
@@ -159,15 +159,15 @@ node bench/preflight.mjs [--live]     # 跑前参数预检（枚举面缺省跑 
                    "judges": [
                      { "id": "A", "verdict": "pass", "reason": "…≤300 字符", "attempts": 1,
                        "calls": [{ "attempt": 1, "at": "2026-09-24T01:20:03+08:00", "totalMs": 900,
-                                   "maxTokens": 2048, "finishReason": "stop",
+                                   "maxTokens": 8192, "finishReason": "stop",
                                    "tokens": { "prompt": 320, "cached": 0, "completion": 60 }, "costCny": 0.0006 }] },
                      { "id": "B", "verdict": "pass", "reason": "…≤300 字符（替代级定判）", "attempts": 2,
                        "substitutes": [{ "level": 2, "provider": "mimo", "model": "mimo-v2.6-pro",
                                          "cause": "位级失败：TimeoutError: …（传输面失败——进替代级）" }],
                        "calls": [{ "attempt": 1, "at": "2026-09-24T01:20:05+08:00", "totalMs": 30120,
-                                   "maxTokens": 2048, "finishReason": null, "tokens": null, "costCny": null },
+                                   "maxTokens": 8192, "finishReason": null, "tokens": null, "costCny": null },
                                  { "attempt": 1, "at": "2026-09-24T01:21:02+08:00", "totalMs": 2100, "level": 2,
-                                   "maxTokens": 2048, "finishReason": "stop",
+                                   "maxTokens": 8192, "finishReason": "stop",
                                    "tokens": { "prompt": 320, "cached": 0, "completion": 70 }, "costCny": 0.0011 }] }] },
         "summary": { "textHead": "…≤300 字符", "textLen": 96, "reasoningLen": 0, "toolNames": [] }
       }]}, {
@@ -183,7 +183,7 @@ node bench/preflight.mjs [--live]     # 跑前参数预检（枚举面缺省跑 
                     "throttled": false }],
         "review": { "verdict": "overturn", "reason": "…≤300 字符（复核理由）", "mechDetail": "…≤200 字符", "attempts": 1,
                     "calls": [{ "attempt": 1, "at": "2026-09-24T01:21:10+08:00", "totalMs": 1100,
-                                "maxTokens": 2048, "finishReason": "stop",
+                                "maxTokens": 8192, "finishReason": "stop",
                                 "tokens": { "prompt": 380, "cached": 0, "completion": 70 }, "costCny": 0.0007 }] },
         "summary": { "textHead": "…≤300 字符", "textLen": 96, "reasoningLen": 0, "toolNames": [] }
       }]
@@ -211,7 +211,7 @@ node bench/preflight.mjs [--live]     # 跑前参数预检（枚举面缺省跑 
 6. `manual[]` = 人工 lane 记录（每条一次调用）：`metrics` 与用例级 `runs[].metrics` 同形（ttft / total / tokPerSec / tokens / cost 五键）；tokens / cost 缺失纪律同条 1、3（缺 → `null` + `warnings`）；报告按条**单项列出**其调用成本（§2.3-④）。
 7. `judge` / `review`（顶层）= 本轮判官配置快照 + 汇总（§2.10.6；判官面 = 逐位 A / B / 仲裁 C 快照 + 逐位与合计账目 + 分歧计数）；`runs[].judge` / `runs[].review` = 逐 run 裁决记录（判官面 = 合成分 `verdict` + `resolution` + 逐位 `judges[]`）——**未发生则不写字段**（不写 `null` 占位：null 与「未发生」不可分；仲裁位未触发 ⇒ `judges[]` 无 C 条目）。
     **在档 = v5 对（`roster-29-v5` · 本批全量跑批落档验收后；v4 对出档——用户 2026-09-24 16:01 裁定，时点 = v5 落档验收后）**（v3 对已按 KD-25 出档）⇒ 渲染与重算**无历史兼容分支**。
-8. judge / review 的 `calls[]` = **逐尝试账目**（含放大预算重试的一次；tokens 只认 `usage`、缺即 null，纪律同条 1）+ 该次调用的 `at`（ISO 本地时点）——「版本/时点」入档的时点面；`maxTokens` 取该次尝试实际值（重试可能 ≠ 配置值）。判官面 = **逐位各自的 `calls[]`**（同一 run 内 A / B（+C）的账目分列，不合并）。
+8. judge / review 的 `calls[]` = **逐尝试账目**（判官面含各替代级各一发——§2.10.1；tokens 只认 `usage`、缺即 null，纪律同条 1）+ 该次调用的 `at`（ISO 本地时点）——「版本/时点」入档的时点面；`maxTokens` 取该次调用实际值（= 该级配置值——单发语义下无放大分支）。判官面 = **逐位各自的 `calls[]`**（同一 run 内 A / B（+C）的账目分列，不合并）。
 9. `run.verdict` 恒为 `pass | fail | error | skipped`（**不扩展枚举**）：判官**级链穷尽**后方为 `error`（零有效判 / 分歧未决——§2.10.4 物理边界；detail 前缀「判官不可用」+ 括注成因 + `runs[].judge.verdict = "error"` + `resolution = "none"`）；
     **单判定判** ⇒ `resolution = "single"`（该有效判为 run 判定——`resolution` 枚举扩一值，`verdict` 枚举不动）；复核翻案 ⇒ **改判 `pass`**（计入 pass 计数）+ `runs[].review.verdict = "overturn"`（`⟲` 标注 = 经复核纠正 · 原机械 fail；**混合面形态（原机械 fail 短路 ⇒ 无 `runs[].judge`）另标「判官面未裁决」**——§2.11）。
 10. **成本分账（AC-4 · 射程扩至判官对）**：判官（A / B / 仲裁 C）/ 复核成本**不进** `runs[].metrics.cost` 与 `aggregate.costCny`（被测成本面零污染）；只出现在 `runs[].judge.judges[].calls[].costCny` / `runs[].review.calls[].costCny` 与 `aggregate.judgeCostCny`（三位合计）/ `aggregate.reviewCostCny`（+ 顶层逐位与合计汇总）——**md 报告零展示**（成本表 / 概览账目句 / 判官行逐位均不列金额；金额只住结果 JSON——§2.10.5 / KD-29）。
@@ -441,7 +441,7 @@ import { chat } from "../../thincoder-core/provider/index.mjs";
 
 **定位**：语义·语用面（「回复是否表达了某个意思」）不再以词表/正则为单一判据——由**判官对（A / B）**按**同一冻结 rubric**（判位差异只在模型身份）各自独立裁决，输出结构化 `{verdict, reason}`（可审计理由）；**分歧样本**由**第三判（仲裁员 C）多数决**合成（§2.10.1 合成规则）。
 
-#### 2.10.1 接口契约（输入构造 · 输出契约 · fail-closed · 预算与重试）
+#### 2.10.1 接口契约（输入构造 · 输出契约 · fail-closed · 预算与单发语义）
 
 ```js
 // 用例声明面（§2.6）：judge = { turn, rubric, question? }；grade 为 async，经 ctx.judge() 取裁决（合成分）
@@ -451,9 +451,9 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 **输入构造（回合精确 · POC 教训①）**：判官输入 = 三段 = ① 题面（`judge.question` ?? 用例 `prompt`）② **判据条文**（`judge.rubric`，逐字）③ **响应原文 = `result.turns[judge.turn].text`**（该回合模型文本；经**单一取值点** `ctx.judge()` 提取——「声明式 `turn` + 单取值点」结构性防「喂错回合」复现）。**A / B（及 C）收到同一份三段素材**——rubric 单源，判位差异只在模型身份。
 **素材面（frozen）**：判官输入 = 题面 + rubric + **该回合观测**（模型文本 + 该回合工具调用事实 `name` / `arguments`——与 §2.11 复核素材同形；`tools.2` 的 `body` 时刻等价判据只住 `send_email` 的 arguments，纯文本不可达——实施轮发现收正）；**不喂**：对话前后文 / 图像（rubric 载明事实正本；**喂错素材比判错更坏**——被否候选见 §4 KD-22）。**回合精确与单取值点不变**（§2.10.1 首段）。
 **输出契约（逐位）**：`{"verdict": "pass" | "fail", "reason": "…"}`；`reason` 截断 ≤300 字符；**严格解析**（trim 后须以 `{` 起、整串 `JSON.parse`、`verdict` 必在枚举内）——与严格 JSON 面同口径；多余键忽略。
-**调用面（双判 · 冻结）**：A / B **并行**发起（同一 run 的两判无相互依赖、输入素材同一份 ⇒ 并行不引入顺序偏差；判定延迟 = max 而非 sum；失败隔离天然——各自独立重试与记账）。分歧样本的第三判 C 为**依赖步**（待 A / B 结果齐备且相异才发起）⇒ 串行触发。被否候选：串行 A → B（被否：判定时长 ×2 无收益——串行省下的只有「A 位成功」时的 B 位调用，而失败面本就走级联补判）。
-**位级失败与替代判级联（冻结 · 用户 2026-09-25 01:31 裁定「结论必得」——旧冻结「禁补位 / 禁单判回退 / 传输面失败不重试」整体废除）**：判官**位**（A / B / 仲裁 C）取判 = 一条**有序级链** `[原位槽, 替代池第 1 项, 第 2 项, …]`（池 = `judge.json.fallbacks`，§2.10.3——**级联序 = 池序**，池长即级数上限；现行池 6 位逐字 = §9）；**三槽（A / B / C）角色不变**（池只作位失败时的补判级联，不改变正常判定面）。
-- **级内语义（逐级一致）**：严格解析失败（含空输出 / `finishReason=length`）⇒ **该级**放大预算重试一次（`maxTokens × 2`，上限 8192，逐尝试记实际值）；两次皆不可解析、或传输面失败（超时 / HTTP 错）⇒ **该级失败 ⇒ 进下一级**。传输面失败**不重试同模型**（核已含 HTTP 级重试；「换模型」即重试路径——旧「传输面失败即该位 error」终止规则已废）。
+**调用面（双判 · 冻结）**：A / B **并行**发起（同一 run 的两判无相互依赖、输入素材同一份 ⇒ 并行不引入顺序偏差；判定延迟 = max 而非 sum；失败隔离天然——各自独立级联与记账）。分歧样本的第三判 C 为**依赖步**（待 A / B 结果齐备且相异才发起）⇒ 串行触发。被否候选：串行 A → B（被否：判定时长 ×2 无收益——串行省下的只有「A 位成功」时的 B 位调用，而失败面本就走级联补判）。
+**位级失败与替代判级联（冻结 · 用户 2026-09-25 01:31 裁定「结论必得」+ 2026-09-25 01:46 裁定「一次不行就换模型」——旧冻结「禁补位 / 禁单判回退 / 传输面失败不重试」整体废除）**：判官**位**（A / B / 仲裁 C）取判 = 一条**有序级链** `[原位槽, 替代池第 1 项, 第 2 项, …]`（池 = `judge.json.fallbacks`，§2.10.3——**级联序 = 池序**，池长即级数上限；现行池 6 位逐字 = §9）；**三槽（A / B / C）角色不变**（池只作位失败时的补判级联，不改变正常判定面）。
+- **级内语义（逐级一致 · 同模型单发）**：每级**只发一次**——不可解析（含空输出 / `finishReason=length`）**或**传输面失败（超时 / HTTP 错）⇒ **该级失败 ⇒ 进下一级**；不设同模型第二发（含放大预算重试；核已含 HTTP 级重试；「换模型」即重试路径——旧「传输面失败即该位 error」终止规则已废）。
 - **替代级身份（运行期占用规则）**：取用时**跳过本 run 内已被占用的 `model` 字面**（原位 A / B / C + 已选定的替代位）——即**替代 ≠ 失败位模型 ∧ ≠ 存活判官 ∧ ≠ 彼此**（静态校验见 §2.10.3；同模型双判无冗余的运行期延伸）。
 - **终止（逐位）**：某级得有效判（`pass` / `fail`）⇒ 该位定判（后续级不再发起）；级链穷尽 ⇒ 该位 `error`（逐级留证——`substitutes` + `calls[].level`，§2.2-15）。
 **合成规则（冻结 · 多数决；按级联后的**实际有效判**计）**：
@@ -466,7 +466,8 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | 零位有效（A / B 级链皆穷尽） | 不触发 | `error`（**物理边界**） | `none` |
 定判位理由（`runs[].judge.reason`）：一致 ⇒ A 位理由；仲裁 ⇒ C 位理由；单判 ⇒ 该有效位理由；`error` ⇒ 成因说明（≤300 字符；前缀与成因括注 = §2.10.4 分列表）。
 **fail-closed（禁猜、禁回退词表——射程不变）**：解析失败 / 超时 / HTTP 错一律**不猜**（不回落词表、不降级为空判定）；「结论必得」由**替代级联**承担：位级失败不再直接终结该 run——仅**级链穷尽**（或其类型属物理边界，§2.10.4）方为 `error`。
-**预算与超时**：`judge.json.maxTokens` 默认 2048、区间 [1024, 8192]（**低于 1024 装载即拒**——POC 教训②：400 token 被思考烧尽 ⇒ 空输出）；`timeoutSec` 默认 30、区间 [5, 120]；`temperature` 冻结 `0`。**替代池各位同受本区间校验**（§2.10.3）。判官预算与被测调用的 `--max-tokens` **解耦**（同一 suiteVersion 的判分口径不随运行参数漂移）。
+**预算与超时（从宽口径 · 用户 2026-09-25 01:46 裁定）**：`judge.json.maxTokens` 默认 **8192**（= 区间上限——三槽 + 替代池各位同受，§2.10.3）、区间 [1024, 8192]（**低于 1024 装载即拒**——POC 教训②：400 token 被思考烧尽 ⇒ 空输出）；`timeoutSec` 默认 30、区间 [5, 120]；`temperature` 冻结 `0`。
+**从宽理由**：① cap 非实耗、计费按实际 tokens ⇒ 放宽只影响最坏时延，不动成本口径；② 级内单发 ⇒ 无第二发补救，预算须一次到位（截断类 `finishReason=length` 由预算面根治——实证 = v6 A 位 `multiturn.1` 在 4096 仍截断）；③ 取上限 ⇒ 零头部余量、无二次调参。判官预算与被测调用的 `--max-tokens` **解耦**（同一 suiteVersion 的判分口径不随运行参数漂移）。
 **调用路径**：核 `chat`（`thincoder-core/provider/core.mjs:75`）经 `bench/lib/client.mjs`（已实现）的 `liveTransport`（请求构造面 = `judgeProviderEntry`：克隆用户 provider 条目 + 覆写 `.model` / `maxTokens` / `temperature`——**判官面三字段，effort 沿条目原值、不覆写**；与受测面四字段（含 `reasoningEffort`——§2.9-1）之差量见 §2.10.3）。
 
 #### 2.10.2 判据分层表（逐用例 · 冻结）
@@ -502,16 +503,16 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 ```json
 { "version": 1, "frozenAtSuiteVersion": 7,
   "judges": [
-    { "provider": "deepseek", "model": "deepseek-flash", "maxTokens": 2048, "timeoutSec": 30 },
-    { "provider": "glm", "model": "glm-5.3-flashx", "maxTokens": 2048, "timeoutSec": 30 }],
-  "arbiter": { "provider": "deepseek", "model": "deepseek-v4-pro", "maxTokens": 2048, "timeoutSec": 30 },
+    { "provider": "deepseek", "model": "deepseek-flash", "maxTokens": 8192, "timeoutSec": 30 },
+    { "provider": "glm", "model": "glm-5.3-flashx", "maxTokens": 8192, "timeoutSec": 30 }],
+  "arbiter": { "provider": "deepseek", "model": "deepseek-v4-pro", "maxTokens": 8192, "timeoutSec": 30 },
   "fallbacks": [
-    { "provider": "mimo", "model": "mimo-v2.6-pro", "maxTokens": 2048, "timeoutSec": 30 },
-    { "provider": "qwen", "model": "qwen3.8-flash", "maxTokens": 2048, "timeoutSec": 30 },
-    { "provider": "mimo", "model": "mimo-v2.6-pro-ultraspeed", "maxTokens": 2048, "timeoutSec": 30 },
-    { "provider": "qwen", "model": "qwen3.7-max", "maxTokens": 2048, "timeoutSec": 30 },
-    { "provider": "ark", "model": "doubao-seed-2-1-pro-260915", "maxTokens": 2048, "timeoutSec": 30 },
-    { "provider": "qwen", "model": "qwen3.8-27b", "maxTokens": 2048, "timeoutSec": 30 }],
+    { "provider": "mimo", "model": "mimo-v2.6-pro", "maxTokens": 8192, "timeoutSec": 30 },
+    { "provider": "qwen", "model": "qwen3.8-flash", "maxTokens": 8192, "timeoutSec": 30 },
+    { "provider": "mimo", "model": "mimo-v2.6-pro-ultraspeed", "maxTokens": 8192, "timeoutSec": 30 },
+    { "provider": "qwen", "model": "qwen3.7-max", "maxTokens": 8192, "timeoutSec": 30 },
+    { "provider": "ark", "model": "doubao-seed-2-1-pro-260915", "maxTokens": 8192, "timeoutSec": 30 },
+    { "provider": "qwen", "model": "qwen3.8-27b", "maxTokens": 8192, "timeoutSec": 30 }],
   "note": "判官对（A = POC 已验 · B = 第二视角）+ 分歧仲裁 C + 替代池（位级失败 ⇒ 换模型补判 · 逐级 · 池长即级数——§2.10.1）；现行槽值与池序逐字以 §9 为准" }
 ```
 
@@ -543,7 +544,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | 面 | 情形 | 处置 |
 |---|---|---|
 | 启动面 | 配置缺 / schema 不合 / provider 缺 / 判官对身份违约（A=B · 仲裁员 ∈ {A, B} · **替代池身份违约**——§2.10.3 ⑤）/ 冻结版本不匹配 | **拒跑 · 不落档 · 退出码 1** |
-| 运行面（位级） | 位级失败（超时 / HTTP / 两次解析失败） | **替代判级联**（换模型补判 · 逐级——§2.10.1）：透明记档（`substitutes` + `calls[].level`）+ 控制台即时一行 + 告警分列计数；**不坠落词表、不猜** |
+| 运行面（位级） | 位级失败（超时 / HTTP / 不可解析——**单发即败**） | **替代判级联**（换模型补判 · 逐级——§2.10.1）：透明记档（`substitutes` + `calls[].level`）+ 控制台即时一行 + 告警分列计数；**不坠落词表、不猜** |
 | 运行面（单判） | 恰 1 位有效判、另一位级链穷尽 | **单判定判**：该有效判为 run 判定（`resolution = "single"`）+ 逐位留证 + 告警分列计数（单判定判 K 次）——**透明降级，非静默** |
 | 运行面（终局） | 级链穷尽：零有效判 / 分歧未决 | 该 run `verdict = error`（detail 前缀「判官不可用」+ 括注成因「有效判不足」/「分歧未决」+ `runs[].judge.verdict = "error"` + `resolution = "none"`）· 控制台**即时**明示一行 · 报告告警计数（成因分列）· **跑后补判通道可收正**（§2.14） |
 | 运行面全灭 | 本轮进入判官面的 run 数 > 0 且**全部**合成无定判（全池不可达） | 照常落档（模型数据已付费；档内 error 明示）+ **退出码 1**（基建故障信号） |
@@ -554,13 +555,14 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 `error` 的区分呈现（§1.6 裁定点）：判官不可用 = run `error` + `runs[].judge.verdict = "error"` + `resolution = "none"` + detail 前缀（成因括注）；被测接口错误 = run `error`（detail 为接口错误文本）——
 报告告警行分列计数（「判官替代补判 S 次 · 单判定判 T 次 · 判官不可用 M 次（有效判不足 m₁ · 分歧未决 m₂）」）；位级失败**逐级留证**：失败位与替代级的 `judges[]` 条目 / `substitutes` 照记（`verdict = "error"` + 成因）。
 **素材缺失（防御分支）**：该回合观测为空（`turnMaterial` 无内容）⇒ 该位记 `error`（成因「素材缺失」——不猜、不降级为空判定）；**不进级联**（换模型不产生素材——级链对素材面无能为力；跑后补判（重取素材）在列，§2.14）。
-被否候选（本批增）：① 传输面失败 ⇒ 同模型重试一次（被否：系统性超时 / HTTP 故障同模型重试零增益 + 双倍时延预算；「换模型」即重试路径——级联已覆盖）；② 替代级 = 仲裁员 C 承担（被否：位级补判属**替代池**面，C 位职责仍是分歧仲裁——混槽使失败归因变浑）；③ 无界级联 / 替代池不设长上限（被否：成本与时延无上界；池长即级数上限，池面调整 = 数据档改动 + 版本 bump）；④ 替代优先于原位（被否：原位身份 = 判分口径正本，替代仅在原位失败后启用）。
+被否候选（本批增）：① 传输面失败 ⇒ 同模型重试一次（被否：属 ⑤ 一般裁定之一形态——系统性超时 / HTTP 故障同模型重试零增益 + 双倍时延预算；「换模型」即重试路径——级联已覆盖）；② 替代级 = 仲裁员 C 承担（被否：位级补判属**替代池**面，C 位职责仍是分歧仲裁——混槽使失败归因变浑）；③ 无界级联 / 替代池不设长上限（被否：成本与时延无上界；池长即级数上限，池面调整 = 数据档改动 + 版本 bump）；④ 替代优先于原位（被否：原位身份 = 判分口径正本，替代仅在原位失败后启用）；
+⑤ **同模型重试（任何形态——含放大预算重试）**（被否：用户 2026-09-25 01:46 裁定「一次不行就换模型」——级内 = 同模型单发；不可解析 / 传输面失败 ⇒ 该级失败 ⇒ 进下一级；预算从宽 = 根治路径，§2.10.1）。
 被否候选（沿既有）：① 首次失败即中止整轮（被否：一次网络抖动作废整轮被测成本；全灭判据已拦系统性故障）；② 新增 `verdict` 枚举值（被否：为已由子记录承载的区分改动全链聚合/枚举/渲染，收益不成比例——`resolution` 扩 `single` 一值即可，`verdict` 枚举不动）。
 
 #### 2.10.5 成本分账（AC-4 / AC-10 · 射程扩至判官对 · D6）
 
 - 单价**同源** `prices.json`（按**各判官位**的 `provider:model`（A / B / 仲裁 C）走 §2.5 匹配与计算式；缺价 ⇒ 成本 `null` + 警告——**不估不转写**）。
-- 口径（冻结）：**×2**——每个进入判官面的样本付 A + B 两判；**分歧样本 ×3**——追加仲裁 C；**位级失败样本追加替代级调用**（逐级 ×1；级内放大预算重试照计——最坏上界 = 位 × 级链长 × 2）。位级成本摊到 `runs[].judge.judges[].calls[]`（逐尝试）——**按 `calls[].level` 的实际身份键计价**（替代级走池内该级 `provider:model` 的匹配与计算式——不按原位键；缺价 ⇒ `costCny = null` + 警告逐实际身份）。
+- 口径（冻结）：**×2**——每个进入判官面的样本付 A + B 两判；**分歧样本 ×3**——追加仲裁 C；**位级失败样本追加替代级调用**（逐级 ×1——级内单发，无同模型第二发；最坏上界 = 位 × 级链长）。位级成本摊到 `runs[].judge.judges[].calls[]`（逐尝试）——**按 `calls[].level` 的实际身份键计价**（替代级走池内该级 `provider:model` 的匹配与计算式——不按原位键；缺价 ⇒ `costCny = null` + 警告逐实际身份）。
 - 记账面 = `runs[].judge.judges[].calls[]` + `models[].aggregate.judgeCostCny`（该模型位 A+B+C 合计，含替代级）+ 顶层 `judge.judges[].costCny`（逐位）/ `judge.arbiter.costCny` / `judge.fallbacks[].costCny`（池内逐项）/ `judge.costCny`（合计）；**不进** `runs[].metrics.cost` / `aggregate.costCny`（被测成本面零污染——口径不变，射程扩）。
 - 报告（KD-29）：**成本表列集 = 八列**（总成本 / 每任务成本 / 每通过任务成本 / 相对成本 + 交叉列三列——合计通过数 / 累计耗时 / 相对倍率，§2.3-10④）；判官与复核成本**均不进成本表**（评估机制开销整体——仅语义面 / 机械 fail 触发 · 非均匀发生 ⇒ 列于模型成本对比表会被读成模型自身开销，理由同 KD-21）；**评估开销金额报告零展示**（成本表 · 概览账目句 · 判官行逐位成本三处均不列——含「已录价位之和」口径句）；账目面 = **结果 JSON**（`judge.judges[].costCny` / `judge.arbiter.costCny` / `judge.costCny` / `review.costCny` / `aggregate.judgeCostCny` / `aggregate.reviewCostCny`——字段零改）；概览判官行给**逐位元数据**（A / B / C——provider:model / 参数 / 模板版本 / 调用次数 / 与被测重合标记）。
 - `--recompute`：判官 / 复核成本随当前 `prices.json` 一并重算（档内**逐位**逐尝试 tokens = 原子账目，§2.7 结构保证不变）。
@@ -577,7 +579,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 
 - **触发（冻结）**：`run.verdict === "fail"` ∧ 该 fail **非判官裁决**（`runs[].judge.verdict !== "fail"`；机械面 fail ⇒ 短路不调判官（§2.6）⇒ 触发形态 = 纯机械面 fail / 混合面机械 fail 两形态——「判官判 pass 但机械面 fail」不可达）∧ 用例有机械判据面（`mechRubric` 声明）。`error` / `skipped` 不触发；**判官裁决的 fail 不叠加复核**（禁判官叠判官）。
 - **输入**：题面（`judge.question` ?? `prompt`；多轮题 = 逐回合用户文本的声明式拼接）+ **机械判据条文**（`mechRubric`）+ 响应观测（逐回合模型文本 + 各回合工具调用事实 `name` / `arguments`）+ **机械失败断言**（该 run 的 `detail`）。素材全部取自该 run 的真实观测（POC 教训①纪律同源）。
-- **输出契约**：`{"verdict": "uphold" | "overturn", "reason": "…"}`；严格解析 / 预算 / 放大预算重试 / fail-closed 与 §2.10.1 同一套机制（复核模板 `promptVersion` 独立计入 `review.promptVersion`）。
+- **输出契约**：`{"verdict": "uphold" | "overturn", "reason": "…"}`；严格解析 / 预算 / 单发 / fail-closed 与 §2.10.1 同一套机制（复核模板 `promptVersion` 独立计入 `review.promptVersion`）。
 - **处置（用户 2026-09-24 11:23 裁定）**：`uphold` ⇒ fail 维持；`overturn` ⇒ **改判 `pass`**——独立分类「**复核翻案**」，`run.verdict` 置为 `pass`、**计入 pass 计数**（改判落点 = 编排面 `pipeline.mjs`；原机械失败断言住 `runs[].review.mechDetail`，`run.detail` 维持原机械断言原文——判定与 detail 正交）；**混合面形态**（原机械 fail 短路 ⇒ 无 `runs[].judge`；复核输入只含 `mechRubric` ⇒ 只裁机械面）⇒ **判官面未裁决**——改判照旧 `pass`，呈现层逐条标注「判官面未裁决」（标注 = 渲染面派生：用例判官面声明（`JUDGE_FACE` 单源）× `runs[].review` 翻案记录——不新增 JSON 字段（同 §2.10.3「不另存字段」先例）；渲染输入 = 结果 JSON + 当前题集代际的用例声明——§2.3；旧代际处置 = KD-25（在档 = v5 对——时点 = v5 落档验收后 · 同代际 ⇒ 零暴露——§2.2-7 / §3 `bench/results/` 行））；
   同时 = **判据修复必修项** ⇒ 修题面/判据（`SUITE_VERSION + 1`）+ **承接（§2.12：产出机器化 · 落台账 · 修毕销账）**——**改判与修判据并行**（改判不免修：防每次跑都靠复核兜底）。被否候选：不自动改判（复核仅作旁证、不计 pass）（被否：复核产出零判定效力——「机械判 fail 即永不通过」，复核成本只换一条旁注；缺陷修复压力与改判本可并行，不必以扣着不计 pass 换取）。
 - **复核失败**：调用失败 ⇒ fail 维持（**fail-closed**：无有效复核结论 ⇒ 不改判；不把 run 降为 `error`）+ `runs[].review.verdict = "error"` + 告警计数。
@@ -688,7 +690,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 
 | 文件 | 现状 | 预算 | 说明（拆分触发 = 超 300 行） |
 |---|---|---|---|
-| `bench/lib/judge.mjs`（已实现） | 300 | ~265 | 判官对/仲裁/复核会话：`judge.json` 装载 + schema 与身份校验（A≠B · 仲裁员第三方 / 冻结，fail-closed）+ 与被测重合明示（逐位三级 · 无拒跑闸）· provider 条目构造（克隆 + 覆写，§2.9-1）· 核 `chat` 调用（经 `liveTransport`）· 超时 · 解析失败放大预算重试一次 · **A / B 并行发起 + 合成（一致 / 第三判仲裁 · 多数决 / 无多数 ⇒ error）** · **分歧计数** · 逐位逐尝试记账（tokens / cost / at）· 判官与复核两版提示构建 + 严格解析（各自 `promptVersion`） |
+| `bench/lib/judge.mjs`（已实现） | 300 | ~265 | 判官对/仲裁/复核会话：`judge.json` 装载 + schema 与身份校验（A≠B · 仲裁员第三方 / 冻结，fail-closed）+ 与被测重合明示（逐位三级 · 无拒跑闸）· provider 条目构造（克隆 + 覆写，§2.9-1）· 核 `chat` 调用（经 `liveTransport`）· 超时 · 级内单发（不可解析 / 传输失败 ⇒ 该级失败——§2.10.1）· **A / B 并行发起 + 合成（一致 / 第三判仲裁 · 多数决 / 无多数 ⇒ error）** · **分歧计数** · 逐位逐尝试记账（tokens / cost / at）· 判官与复核两版提示构建 + 严格解析（各自 `promptVersion`） |
 | `bench/judge.json`（已实现 · 数据档） | 25 | ~26 | 判官对（A / B）+ 仲裁员（C）身份与预算（§2.10.3） |
 | `bench/lib/grade.mjs` | 288 | ~245 | 增：`{ error }` 结果通路 + 判官结果合成件；删：语义词表件（`keywordSet` / `COLOR_FAMILIES` / `colorMatch` / `countEnumerations` + `enumerateCount` 规则——判官化后零调用者）；`numEquals` / `vmRun` / `strictJson` / `jsonFields` / `toolShape` / `parseToolArgs` / `textRules` 其余规则**行为零改动** |
 | `bench/lib/pipeline.mjs` | 279 | ~295 | 判官会话装配 + judge / review 记录（合成分 + 分歧计数落盘）+ 题面采集（`cases[].prompt`）+ `error` 通路 + 合成全灭退出码；**拆分触发条件**：超 300 行 ⇒ `recomputeMain` + `validateResultShape` → `bench/lib/recompute.mjs`（已实现 ~70 行）· `writePair` / `refuseIfExists` / `isoLocal` / `displayPath` → `bench/lib/output.mjs`（已实现 ~50 行） |
@@ -700,7 +702,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | `bench/cases/{code,json}.mjs` | 63 / 64 | 各 ~+8 | `mechRubric` + json 题面补词（判据零改动） |
 | `bench/run.mjs` | 188 | ~205 | dry-run 夹具增判官对 / 仲裁 / 复核响应表（`FIXTURE.judge` = A / B / C 三脚本 · `FIXTURE.review`）+ 用法文本 |
 | `bench/README.md` | 122 | ~165 | 判官对配置（A≠B · 仲裁员）与与被测重合明示 / 分歧合成口径 / 复核口径 / 题面入档 / 判据分层速览 |
-| `bench/test/judge.test.mjs`（已实现） | 300 | ~265 | 桩传输测试（**不触网**）：解析 / 放大预算重试 / **双判一致 / 分歧仲裁 / 单判官失败 / 无多数** / A≠B 与仲裁员身份 / 与被测重合明示（自判放行 + 标注）/ 冻结 / 逐位成本记账 / 复核触发与改判 / 渲染面断言 |
+| `bench/test/judge.test.mjs`（已实现） | 300 | ~265 | 桩传输测试（**不触网**）：解析 / 单发（不重发同模型）/ **双判一致 / 分歧仲裁 / 单判官失败 / 无多数** / A≠B 与仲裁员身份 / 与被测重合明示（自判放行 + 标注）/ 冻结 / 逐位成本记账 / 复核触发与改判 / 渲染面断言 |
 | `bench/test/graders.test.mjs` | 146 | ~120 | 删被删函数用例；增判官结果合成件用例 |
 | `bench/test/suite.test.mjs` | 161 | ~200 | 判官面 / 机械面集合 = 冻结清单；`judge.turn` / `rubric` 齐；多轮 `question` 含 `followUps`；`judge.json` schema = 三槽 + A≠B + 仲裁员第三方；价格孤儿判据扩「或任一位判官键」 |
 | `bench/test/report-recompute.test.mjs`（已拆删——拆分方案见本行「说明」列） | 300 | ~330 | 判官逐位成本随新价重算 + 题面行渲染 / 截断 + 分歧面渲染（`render.1–3`）；**拆分触发条件**：超 300 行 ⇒ 拆两档（`recompute.test.mjs` ~135 = 重算面；`report-render.test.mjs` ~140 = 渲染 + dry-run 产物断言），夹具提取至 `bench/test/fixtures.mjs`（已实现 ~50 行） |
@@ -855,7 +857,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | 文件 | 现状 | 预期增量 | 说明（拆分触发 = 超 300 行） |
 |---|---|---|---|
 | `bench/lib/judge.mjs` | 298 | −25 ±5 | 合成段迁出（级联编排 / 池装载 → `judge-fallback.mjs`）；`callSlot` / 提示 / 解析 / 记录形状保留（导出复用） |
-| `bench/lib/judge-fallback.mjs`（拟新增） | 0 | ~150 | 替代池装载 + schema / 身份校验（fail-closed）+ 级联执行（级内重试语义 · 身份占用跳过 · 逐级记账）+ 合成裁决（unanimous / arbitrated / single / none）——`judge.mjs` 300 行上限的拆分落点 |
+| `bench/lib/judge-fallback.mjs`（拟新增） | 0 | ~150 | 替代池装载 + schema / 身份校验（fail-closed）+ 级联执行（级内单发语义 · 身份占用跳过 · 逐级记账）+ 合成裁决（unanimous / arbitrated / single / none）——`judge.mjs` 300 行上限的拆分落点 |
 | `bench/judge.json`（数据档） | 25 | +~52 | 增 `fallbacks`（替代池 6 项——§9 逐字）+ `frozenAtSuiteVersion` 6 → 7（§2.10.3 冻结绑定） |
 | `bench/lib/pipeline.mjs` | 277 | +6 ±3 | 替代池传入（`makeJudgeEnv`）+ `--rejudge` 分支判别转派 + 控制台替代行 |
 | `bench/lib/rejudge.mjs`（拟新增） | 0 | ~120 | 补判分支（§2.14）：读档 + 对象筛选 + 定点重取素材（import client——触网分支）+ 级联补判 + 溯源块 + 新对落盘 |
@@ -868,7 +870,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | `bench/lib/params.mjs` | 120 | +6 ±3 | 枚举面射程扩替代池（§2.13） |
 | `bench/cases/index.mjs` | 68 | ±1（注释） | `SUITE_VERSION` 6 → 7（单源）；注释枚举随 §1.3-2 同步 |
 | `bench/test/judge-fallback.test.mjs`（拟新增） | 0 | ~190 | `judge.14–18` / `rejudge.1` 承载（级联 / 终局 / 补判三面；桩传输——不触网） |
-| `bench/test/judge.test.mjs` | 297 | ±0 | 版本字面 6 → 7 传播（四处）+ `judge.10` / `judge.11` 断言就地收正（级联语义——不加行） |
+| `bench/test/judge.test.mjs` | 297 | ±0 | 版本字面 6 → 7 传播（四处）+ `judge.2` / `judge.3` 单发断言 + `judge.10` / `judge.11` 断言就地收正（级联语义——不加行） |
 | `bench/test/suite.test.mjs` | 203 | +8 ±3 | `SUITE_VERSION` 断言 6 → 7 + `judge.json` schema 腿扩 `fallbacks`（区间 / 身份 / 池内两两字面不同） |
 | `bench/test/fixtures.mjs` | 185 | +14 ±4 | 合成结果夹具补级联形态（`substitutes` / `calls[].level` / `resolution: "single"` / `judge.fallbacks` 快照）+ `suiteVersion` 6 → 7 |
 | `bench/test/report-render.test.mjs` | 299 | ±0（**余量 1 行——只换字面 / 断言串，不得加行**；须增行 ⇒ 按既有降载先例迁腿） | 告警行断言串收正（替代 / 单判分列）+ dry-run 计数随夹具重分配同步 |
@@ -915,12 +917,12 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 
 | KD-31 | **模型级温度例外**（2026-09-24 名单扩容批）：`models.json` 增可选字段 `temperature`（0–2 · 缺省 0 = 冻结）——**仅当该模型 API 拒收 `temperature: 0`** 时逐档显式开（准入依据 = 探针实测在册）；透传 = `pipeline.mjs` 读 `entry.temperature ?? 0`（两分支）；入档 = `models[].temperature`（实际值）；呈现 = 概览派生披露句（`(m.temperature ?? run.temperature) ≠ run.temperature` ⇒ 逐档列出）；**版本口径：不 bump**（温度 = 运行参数面，同 `--max-tokens`——§1.3 四轴零改） | ① 判官面实测（`2026-09-24-judge-hybrid` §5：`kimi:kimi-k3` 400「invalid temperature: only 1 is allowed for this model」）+ 本批被测面探针（kimi 四档同拒 0 / 1 通过）——「照实 error 不列」= 用户点名的 kimi 四档全废（非受控选择）；② per-model 例外 = **数据面**（名单档字段）而非命令面（CLI 参数）⇒ 例外随名单持久、可复现（命令串不含例外决策）；③ 披露链 = 入档 + 报告披露句（跨档比较的测量条件差异不得静默）；④ 不 bump 理由同 KD-30 ③：版本轴管规则不管参数——例外档仅涉新增模型，既有档与在档报告的可比性零损 | ① 全局 `--temperature` CLI 参数（被否：破「温度冻结 0」统一口径 + 例外面搬到命令面 ⇒ 报告命令串不复现例外决策）；② 该四档照实 error 不列（被否：用户点名要 kimi——§1.1 名单由用户 14:35–14:44 列表定音）；③ 判官面同开温度例外（被否：用户 14:37 明令判官三槽不动）；④ 核 `model-specs.mjs` 给 kimi 行加 `tempRange: [1, 1]` 靠核裁剪（被否：三端产品树零改动 = 本批边界；该机制面属产品树，另批议题）；⑤ bump `SUITE_VERSION`（被否：题集 / 判分 / 计时 / 数值构成四轴零改——bump 只发「判分口径换代」假信号并连带改 `judge.json`） |
 | KD-32 | **思考强度中档口径**（用户 2026-09-24 18:43「确认一下测试都是用模型的中档思考强度测」）：受测档统一取**该档自身标尺的中档**——① 枚举行含 `medium` ⇒ `medium`；② 枚举行无 `medium` ⇒ 按强度序取**中位档**（偶数项取较弱者；现行实测落 `high`）；③ 无枚举行（透传档）⇒ `medium` 直发（受理面实弹覆盖）——**枚举行分类以实施后 spec 表为准**（`MODEL-SPECS.md` §13 建行后 `doubao-seed-2-1` 三档归 ① 类；§13.3 在册）。载体 = `models.json` 档位级 `reasoningEffort`（与 KD-31 `temperature` 同构；用户 config 零改）；透传 = `pipeline.mjs`（`entry.reasoningEffort ?? user.reasoningEffort`）；入档 = `models[].reasoningEffort` / `reasoningEffortFrom`；**版本口径：不 bump**（运行参数面——§1.3-4 四轴零改，KD-31 同源）；口径代际 = v5 原值口径（不追改）· 中档口径自下一代起效 | ① 用户明令「统一中档」——原值口径实测非中档（max×9 / high×11 / 无值×9）；② **逐档显式值**（非运行时算法）——映射规则在**设计 / 数据面**一次裁定，运行面只读字面（可复现 · 可审）；③ 无 `medium` 档的取法 = **该档自身标尺的中位**（qwen3.7-max {xhigh, high} ⇒ `high`；deepseek / glm / kimi 三值族 ⇒ `high`）——不硬编码 `medium`（服务端只认自身枚举）；④ 无枚举行仍发 `medium`（受理面已实弹 · 批次档 §1.5 · 29/29）——「被忽略档」（mimo×3 / minimax×2）照发：口径统一优先，生效性由披露面如实标注（`models[].note` ⇒ 概览模型表「备注」列——§2.3-9）；⑤ 覆写优先于 config 原值 ⇒ #264 类「配置伪影」结构性消失（档位面自足） | ① 改用户 config 的 effort 值（被否：本批红线「不动用户 config」+ 全局影响日常会话）；② 新建独立 provider 条目（被否：为测试面造配置副本——语义混淆，未来漂移）；③ 核层按模型收敛 effort（被否：产品行为变更，出本批边界）；④ 运行时按枚举算中位（被否：把裁定搬进代码——名单档字面可直接对读，算法面另立测试负担）；⑤ 无枚举行不发 effort（被否：口径分裂——「统一中档」变成「有枚举行的档统一」）；⑥ bump `SUITE_VERSION`（被否：四轴零改——运行参数面；开 bump 口子则 `judge.json` 连带假信号） |
-| KD-33 | **判官 B 位换代**（用户 2026-09-24 18:19）：B `tokenhub:hy3` → **`glm:glm-5.3-flashx`**（原选 `glm:glm-5.3` 经 U2 探针未过 ⇒ 退候选路径走毕；用户 2026-09-25 00:3x 点名终选——见理由③⑤）；换代 ⇒ `SUITE_VERSION` 5 → 6 + `frozenAtSuiteVersion` 同步（§2.10.3 冻结绑定）；**存量重判不可行**——判官素材 = 该回合**响应原文** + 工具调用事实（`name(arguments)`），而结果 JSON 只落 `runs[].summary.textHead`（≤300 字符）+ `toolNames`（仅名字）+ 长度计数（§2.2 / §7-5）⇒ 素材不可重建 ⇒ v5 判官面按当时槽位留档、不追改、不重判 | ① 用户点名「更常见的主流模型」+ B 位须 ≠ A / C（身份机检）；② 候选判据 = 可得性（provider ∈ config + 渠道实测在册）/ 价格在录 / **服从性证据**（严格 JSON 单发读数——`judge-slot-probe` 族：判官 + 复核两模板各 1 发 + 重材料腿）；③ **原选 `glm:glm-5.3` 未过实证**：U2 探针判官模板 ✓ 2.9s · 复核模板**系统性超时**（30s ×3 连测 + 90s 预算 ×2 尝试共 158s 均不过）⇒ 按本决策「未过 ⇒ 退候选」退候选实弹——`qwen:qwen3.7-max` 双过（judge 2.9s / review 18.7s / 重材料 8.7s）· `ark:doubao-seed-2-1-pro-260915` 双过（8.1s / 5.5s / 11.4s）⇒ 备选在案；④ 换代动因 = 实录 B 位 `multiturn.1` 系统性超时（≥6 例 · 跨 6 档）⇒ 可靠性不足；⑤ **flashx 选定依据** = 用户 2026-09-25 00:3x 点名 + 探针读数（judge ✓ 1.6s · review ✓ 8.8s · 重材料 ⚠ 38.6s · attempts=2——放大预算重试后过 = 设计内兜底路径，如实登记）+ v5 实测在册（23/25 · TTFT 1038ms / tok/s 136.2）；身份 = ≠ A / C ✓ ∧ ∈ 被测集（同位自判——03:16 裁定允许，重合标记照常）；⑥ 参数相容 = `glm` 条目 effort `max` ∈ flashx 枚举 {low, high, max} ✓ ∧ temperature 0 ∈ `tempRange` [0, 1] ✓（判官调用沿 provider 条目 effort 原值）；⑦ **B 位成本可读性认账**：`glm` 族带 `noUsageStream`（`thincoder-core/model-specs.mjs:59-74`——flashx = `:68`）⇒ 该位判官成本账目可能整段 `null`（缺 usage 记 null，不估算——§2.10.5）；判定面不受影响（判定不吃 usage） | ① `qwen:qwen3.7-max`（退候选实弹**双过** ⇒ **备选在案**；未选定——用户点名 flashx；同位自判同 `glm`）；② `ark:doubao-seed-2-1-pro-260915`（退候选实弹**双过** ⇒ **备选在案**）；③ `minimax:MiniMax-M3` / `kimi:kimi-k3`（被否：实测不可用——JSON 整段重复 / 拒温度 0）；④ 存量重判（被否：响应原文不落档——不可重建；且「重判旧样本」不构成新测量）；⑤ 不换代 / 只调 `timeoutSec`（被否：用户点名换模型；超时值调大不治「更主流」诉求且预算面改动更大） |
+| KD-33 | **判官 B 位换代**（用户 2026-09-24 18:19）：B `tokenhub:hy3` → **`glm:glm-5.3-flashx`**（原选 `glm:glm-5.3` 经 U2 探针未过 ⇒ 退候选路径走毕；用户 2026-09-25 00:3x 点名终选——见理由③⑤）；换代 ⇒ `SUITE_VERSION` 5 → 6 + `frozenAtSuiteVersion` 同步（§2.10.3 冻结绑定）；**存量重判不可行**——判官素材 = 该回合**响应原文** + 工具调用事实（`name(arguments)`），而结果 JSON 只落 `runs[].summary.textHead`（≤300 字符）+ `toolNames`（仅名字）+ 长度计数（§2.2 / §7-5）⇒ 素材不可重建 ⇒ v5 判官面按当时槽位留档、不追改、不重判 | ① 用户点名「更常见的主流模型」+ B 位须 ≠ A / C（身份机检）；② 候选判据 = 可得性（provider ∈ config + 渠道实测在册）/ 价格在录 / **服从性证据**（严格 JSON 单发读数——`judge-slot-probe` 族：判官 + 复核两模板各 1 发 + 重材料腿）；③ **原选 `glm:glm-5.3` 未过实证**：U2 探针判官模板 ✓ 2.9s · 复核模板**系统性超时**（30s ×3 连测 + 90s 预算 ×2 尝试共 158s 均不过）⇒ 按本决策「未过 ⇒ 退候选」退候选实弹——`qwen:qwen3.7-max` 双过（judge 2.9s / review 18.7s / 重材料 8.7s）· `ark:doubao-seed-2-1-pro-260915` 双过（8.1s / 5.5s / 11.4s）⇒ 备选在案；④ 换代动因 = 实录 B 位 `multiturn.1` 系统性超时（≥6 例 · 跨 6 档）⇒ 可靠性不足；⑤ **flashx 选定依据** = 用户 2026-09-25 00:3x 点名 + 探针读数（judge ✓ 1.6s · review ✓ 8.8s · 重材料 ⚠ 38.6s · attempts=2——探针读数如实登记；当时口径的重发，现行 = 单发 + 预算 8192，§2.10.1）+ v5 实测在册（23/25 · TTFT 1038ms / tok/s 136.2）；身份 = ≠ A / C ✓ ∧ ∈ 被测集（同位自判——03:16 裁定允许，重合标记照常）；⑥ 参数相容 = `glm` 条目 effort `max` ∈ flashx 枚举 {low, high, max} ✓ ∧ temperature 0 ∈ `tempRange` [0, 1] ✓（判官调用沿 provider 条目 effort 原值）；⑦ **B 位成本可读性认账**：`glm` 族带 `noUsageStream`（`thincoder-core/model-specs.mjs:59-74`——flashx = `:68`）⇒ 该位判官成本账目可能整段 `null`（缺 usage 记 null，不估算——§2.10.5）；判定面不受影响（判定不吃 usage） | ① `qwen:qwen3.7-max`（退候选实弹**双过** ⇒ **备选在案**；未选定——用户点名 flashx；同位自判同 `glm`）；② `ark:doubao-seed-2-1-pro-260915`（退候选实弹**双过** ⇒ **备选在案**）；③ `minimax:MiniMax-M3` / `kimi:kimi-k3`（被否：实测不可用——JSON 整段重复 / 拒温度 0）；④ 存量重判（被否：响应原文不落档——不可重建；且「重判旧样本」不构成新测量）；⑤ 不换代 / 只调 `timeoutSec`（被否：用户点名换模型；超时值调大不治「更主流」诉求且预算面改动更大） |
 | KD-34 | **跑批前参数预检**（用户 2026-09-24 18:20「测试模型的用的参数都核对一下，不要再用错参数了」）：① **枚举面**（零网络 · fail-closed）入 `run.mjs` 启动门——逐档 + 判官三槽做「config × spec」兼容判定（provider 在 config / spec 命中 / effort ∈ 枚举（若声明）/ 温度档位值与 `tempRange` 裁剪对账 / 路由与 format 豁免面 / thinking 面组合），有阻断项 ⇒ **拒跑 exit 1 + 点名**；② **实弹面** = `bench/preflight.mjs`（拟新增）`--live`（1 发/档 · 需密钥 · 单轮无工具）——透传档与全档参数受理探针；③ **零落库**（不写 `bench/results/`、不写台账、不改配置）；④ 单源 = `bench/lib/params.mjs`（拟新增）（参数构造 + 枚举面判定，`pipeline.mjs` 与 `preflight.mjs` 共用——防两套漂移） | ① #264 类参数错的**结构性防复发**（核守卫只在「spec 有枚举」面把关——透传档无守卫，只能靠预检）；② 枚举面零网络 ⇒ 可每次跑批自动跑（零成本）；③ 实弹面须密钥 / 花钱 ⇒ **不入 run 自动路径**（点名执行），与「跑批 = 用户点名」口径一致；④ 判官三槽同受检——换槽自身参数错（如 B 换档后 provider effort 越枚举）在跑前显影；⑤ 单源构造档 = 防「预检说没问题、跑批构造另一套」 | ① 只依赖核守卫（被否：透传档零守卫——#264 同类在无枚举行上仍可复发）；② 预检写一份独立构造实现（被否：双实现必然漂移）；③ 实弹面自动跑在 run 启动（被否：每次跑批都花钱 + 需网络 — 与「点名」纪律相抵）；④ 预检落档成报告（被否：零落库 = 用户边界；读数入控制台 + 批次档 §5） |
 | KD-35 | **逐档参数披露**（用户 2026-09-24 18:5x「测试报告里应该有测试用的模型的参数」）：结果 JSON 增 `models[].reasoningEffort` / `reasoningEffortFrom`（`models.json` 格式档 = 档位覆写 / `config` = 用户配置原值；两键同写同缺）；md 概览增**逐档参数表**（模型 · 路由 · temperature · 思考强度（值 + 来源）· maxTokens）；温度 / maxTokens / 路由复用既有单源（`models[].temperature` / `run.maxTokens` / `models[].host` 等——**不立副本**）；**呈现面变化不 bump**（KD-27）；旧档缺键 ⇒ `—`（缺省语义——未采集，非历史兼容分支） | ① 「跨档 / 跨代可比性的前提」= 参数面必须可读（否则「同 suiteVersion」被读成「同条件」）；② 参数错（#264 类）在报告里即可见——报告自身成为预检的第二道显影面；③ 不立副本 = D2（温度例外披露句 / 参数表同源派生自 `models[].temperature`）；④ 与 KD-29（评估开销金额零展示）正交——参数表零金额 | ① 只在 md 写参数（被否：JSON = 数据面单源，md 是渲染）；② 参数表写进「方法」段（被否：方法 = 口径说明，参数 = 逐档事实——概览参测表同区更近）；③ 每档记「完整请求体」（被否：体积 + 泄密面（key 等）+ 与「不存原文」纪律相抵）；④ 把 effort 塞进 `models[].note`（被否：note = 人读自由文本，机读面须结构化字段） |
 | KD-36 | **spec 行补齐的证据等级与「未探不声明」**（用户 2026-09-24 18:44「9 档参数补齐的应该去查表补齐」）：`thincoder-core/model-specs.mjs` 建行 = **机器读源补齐**（逐名显式行，取代泛行继承 / 兜底）；字段取值三态——① 有读数（实测 / 校验级 / 受理级）照写；② 官方口径 / 同族沿用（**点名来源行**）照写 + 行注标级；③ 零口径 ⇒ **不声明该能力位**（尺寸位沿用现盘生效值 + 行注标「未取证」）；**视觉位语义单一**（`multimodal` 仅 `true` 或**不声明**——无视觉 = 不声明，测试锚承载；T-7 零改）；新建行 `tempRange` **取值以 `MODEL-SPECS.md` §13.3 逐行为准**（族沿用有据者照写）；**KD-31 例外准入档不得带 `tempRange`**（保 KD-31 例外档不变量：入档值 = 实发值） | ① 用户点名「查表补齐」= 证据先行；② 机器读源缺口的真实症状 = `warnUnknownModel` 告警 + 兜底 128K/32K 静默低估 + 视觉面靠 note 散文；③ 「未探不声明」= 与 §2.4「零静默退化」同源（宁缺勿猜——不冒充）；④ 视觉位语义单一（T-7 已冻结）⇒ 无视觉档的正确机读形态就是**不声明**（补齐 = 行注 + 测试锚，非改值）；⑤ `tempRange` 不入 KD-31 例外准入档 = KD-31 例外的准入不变量（有 `tempRange` 则核裁剪 ⇒ 入档值 ≠ 实发值） | ① 未探字段按同族类推填满（被否：`MODEL-SPECS.md` D-2 已裁「不据同族类推补行」——本批只沿**已声明机制位**（partialMode / cacheMode / thinkApi / tempRange / noUsageStream）与**定点尺寸口径**）；② 声明 `multimodal: false`（被否：破 T-7「仅 true / undefined」语义单一）；③ 未探档不建行、留兜底（被否：告警 + 兜底低估值长期在盘——本批的目标正是消掉静默面；行注「未取证」已代价最小化）；④ 新建行补 `tempRange: [1, 1]` 靠核裁剪（被否：KD-31 被否候选④同源——产品行为静默改写） |
 | KD-37 | **承接修复面（判据-断言对齐 · #273 / #274）**（复核翻案承接 · 2026-09-24）：① **检索步合法**——`multiturn.1` 回合 1 由「零工具调用」改为检索步白名单 `{get_time}`（其余工具调用 ⇒ fail）；`multiturn.3` 检索步不计违规（锚 = 检索步后**跟进** `send_email`；判定 = 该 run 全记录序列**存在** `send_email`）；② **存在语义**——`send_email` / `to` 匹配以「任一调用命中」判定（多次调用 ≠ 缺失或错误）；③ **容错取值**——`arguments` 严格 JSON 失败 ⇒ 取**首个平衡 JSON 对象**（重复拼接形态取首件；新原语 `firstJsonObject` / `argValue`——落点 `bench/lib/grade.mjs`；`tools.*` 结构面严格语义不动）；④ 版本口径 = 判分口径面 ⇒ 与判官 B 换代**共用一次** `SUITE_VERSION` 5 → 6（§6 末段） | ① 复核实录两类误判（v5 报告《复核翻案》承接表）：`multiturn.1` ×4（`get_time` 误判 / `to` 严格解析误火）· `multiturn.3` ×1；② rubric 已载「允许先经 `get_time`」而断言未随 ⇒ 修复 = 断言向正本对齐（§2.11 判据-断言一致性纪律）；③ 严格解析只能判序列化卫生，不能判「值未传递」——值传递面（`.1` 回合 2）测点 = 值本身 | ① 维持严格解析（被否：把「重复拼接」读成「`to` 缺失」——正是本批误判形态）；② 正则提取 `"to"` 字面（被否：不校验 JSON 结构，截断形态亦命中）；③ 副作用黑名单（被否：引入「哪些算副作用」枚举面——白名单更小且 fail-closed）；④ 只改 rubric 不改断言（被否：重造同一不一致）；⑤ 白名单扩至只读工具集（`get_weather` / `read_file`）（被否：无实弹证据——扩须证据 + 同轮设计改）；⑥ 版本面单列一次 bump（被否：两归因同属判分口径面，共用一次 = 落差语义单一） |
-| KD-38 | **替代判级联（结论必得）**（用户 2026-09-25 01:31 裁定）：判官位级失败（超时 / HTTP / 解析）⇒ **换模型补判**——替代池 = `judge.json.fallbacks`（有序 · 级联序 = 池序 · **池长即级数上限** · 现行池 6 位 = §9；**三槽角色不变**——池只作位失败时的补判级联）；级内语义逐级一致（解析失败 ⇒ 该级放大预算重试一次；传输面失败 ⇒ 进下一级——**不重试同模型**）；替代身份运行期占用跳过（**替代 ≠ 失败位模型 ∧ ≠ 存活判官 ∧ ≠ 彼此**）+ 池面静态校验（两两字面不同 ∧ ∉ {A, B, C}）；**旧冻结「禁补位 / 禁单判回退 / 传输面失败不重试」整体废除**；恰一位有效 ⇒ **单判定判**（`resolution = "single"`）；零有效判 / 分歧未决 ⇒ `error`（物理边界） | ① 用户点名否决旧冻结（「禁补位只是你愚蠢的决定」）+ 实证（v6 `deepseek-flash multiturn.1`：A pass · B 超时 ⇒ 有效判 1 ⇒ error——单点位失败不该终结 run）；② 替代池 = 配置数据（换池不改码 · 池序可审）；③ 池长即上限：不另设人工截断（截断会造成「池内有候选却仍 error」的口径裂缝）；④ 级内重试语义逐级一致 = 每级各自享有解析兜底（POC 教训②同源）；⑤ 传输面失败不重试同模型 = 系统性故障同模型重试零增益 + 双倍时延（核已含 HTTP 级重试）；⑥ 单判定判承担「恰一位有效」的兜底——透明降级、告警分列 | ① 同模型传输面重试（被否：见⑤）；② 替代级由仲裁员 C 承担（被否：职责混槽、失败归因变浑）；③ 无界级联（被否：成本 / 时延无上界）；④ 替代优先于原位（被否：原位 = 判分口径正本）；⑤ 维持旧冻结（被否：用户点名否决）；⑥ 位级失败即 `error`（被否：全灭信号留给真·全池不可达） |
+| KD-38 | **替代判级联（结论必得）**（用户 2026-09-25 01:31 裁定）：判官位级失败（超时 / HTTP / 解析）⇒ **换模型补判**——替代池 = `judge.json.fallbacks`（有序 · 级联序 = 池序 · **池长即级数上限** · 现行池 6 位 = §9；**三槽角色不变**——池只作位失败时的补判级联）；级内语义逐级一致（**同模型单发**：不可解析 / 传输面失败 ⇒ 该级失败 ⇒ 进下一级——不设同模型第二发；预算从宽 = 默认 8192，§2.10.1）；替代身份运行期占用跳过（**替代 ≠ 失败位模型 ∧ ≠ 存活判官 ∧ ≠ 彼此**）+ 池面静态校验（两两字面不同 ∧ ∉ {A, B, C}）；**旧冻结「禁补位 / 禁单判回退 / 传输面失败不重试」整体废除**；恰一位有效 ⇒ **单判定判**（`resolution = "single"`）；零有效判 / 分歧未决 ⇒ `error`（物理边界） | ① 用户点名否决旧冻结（「禁补位只是你愚蠢的决定」）+ 实证（v6 `deepseek-flash multiturn.1`：A pass · B 超时 ⇒ 有效判 1 ⇒ error——单点位失败不该终结 run）；② 替代池 = 配置数据（换池不改码 · 池序可审）；③ 池长即上限：不另设人工截断（截断会造成「池内有候选却仍 error」的口径裂缝）；④ 级内单发语义逐级一致 + **预算一次到位**（默认 8192——§2.10.1；POC 教训② 的根治 = 预算从宽，非同模型重试——用户 2026-09-25 01:46 裁定）；⑤ 同模型单发（解析 / 传输皆不重发）= 系统性故障同模型重试零增益 + 双倍时延（核已含 HTTP 级重试）；⑥ 单判定判承担「恰一位有效」的兜底——透明降级、告警分列 | ① 同模型重试（任何形态——传输面重试 / 放大预算重试；被否：用户 2026-09-25 01:46 裁定「一次不行就换模型」+ 理由⑤）；② 替代级由仲裁员 C 承担（被否：职责混槽、失败归因变浑）；③ 无界级联（被否：成本 / 时延无上界）；④ 替代优先于原位（被否：原位 = 判分口径正本）；⑤ 维持旧冻结（被否：用户点名否决）；⑥ 位级失败即 `error`（被否：全灭信号留给真·全池不可达） |
 | KD-39 | **跑后补判通道（§2.14）**（用户 01:28「可以重判吗」+ 01:31 裁定）：`--rejudge --from <结果.json>`——判官面 error run **定点收正**；**素材面 = 定点重取**（响应原文不落档——§7-5 / KD-33 ⇒ 判官素材不可由档内重建）；落**新对**（缺省标签 `<原标签>-rejudged` · 原档不动 · 收编 = 人工点名）；溯源块 `rejudged` 逐 run `was → now`；与 `--recompute` 分工 = 触网 / 零网络两分档 | ① 用户要「收正 v6 1 例、免整跑重来」；② 素材不可重建是既有事实（KD-33 已裁）⇒ 补判必须重取素材（该 run 被测调用定点重跑 + 级联判分）——不许诺「同素材重判」；③ 原档不动 = 留档不可变（KD-10 精神）+ 收编先例（v5 重出）；④ `--recompute` 零网络结构保证不破（补判独立分档） | ① 覆盖改写原档（被否：留档不可变 + 同名拒写 KD-10）；② 复用 `--recompute` 加旗标（被否：破零网络结构保证——判定面须触网）；③ 只补判不重取素材（被否：物理不可行——档内无素材）；④ 补判覆盖被测侧失败（被否：无素材可判 + 该 error 是实测事实——裁点 ⑥） |
 | KD-40 | **判官级联批版本口径 = 6 → 7**（+ `judge.json.frozenAtSuiteVersion` 同步）：级联替代 / 单判定判 / 替代池（判官身份面）三项均为判分口径面（§1.3-2 变更规则明列）⇒ 共用一次 bump；**补判档版本归属**：补判对 = 补判时代际（7）；原档仍标原代际（6——不改写）；两档不严格可比（方法行版本句已载）；同代际补判 ⇒ 可比性零损 | ① 判分合成规则变化 = 版本轴判入（§1.3-2 / §1.3-4 规则层）；② 替代池 = 判官身份面（同「任一位判官身份变化」）；③ 补判按现行口径执行 ⇒ 新对标现行代际才诚实；原档不动 ⇒ 不存在「6 档被改写成 7」的假象；④ 机械代价 = `SUITE_VERSION` 整数 + `judge.json.frozenAtSuiteVersion` 同步（机检绑定） | ① 不 bump（被否：判分口径实变——跨版本「看似可比」假象，KD-19 同源）；② 补判对沿用原档代际 6（被否：判分机制 ≠ 6 的代际——标 6 即失实）；③ 补判对改标 7 且删除原档（被否：留档不可变 + 收编须人工点名） |
 
@@ -1100,16 +1102,16 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | id | 类 | 输入 | 期望与判据 | 测试档 |
 |---|---|---|---|---|
 | `judge.1` | 正常 | 桩传输返回 `{"verdict":"pass","reason":"…"}` | 该 run 判 pass；`runs[].judge` 记录齐（verdict / reason / turn / attempts / calls 带 at / tokens / cost） | `judge.test.mjs` |
-| `judge.2` | 边界 | 首次返回空输出（模拟思考烧尽），二次返回合法裁决 | 放大预算重试一次（第二次 `maxTokens` = 配置值 ×2、上限 8192）；两次调用均入账；判定取二次裁决 | `judge.test.mjs` |
-| `judge.3` | 错误 | 两次均不可解析 / 超时抛错 | run `verdict = error` + detail 前缀「判官不可用」+ `runs[].judge.verdict = "error"`；**不得回落词表判** | `judge.test.mjs` |
+| `judge.2` | 边界（单发语义收正 · 本批） | 该级返回空输出（模拟思考烧尽——`finishReason=length` 形态） | **单发**：不发生同模型第二发（桩调用计数 = 1）；该级记失败 ⇒ 进下一级（级联语义 = `judge.14` / `judge.15`）；预算 = 默认 8192（§2.10.1——一次到位，不放大） | `judge.test.mjs` |
+| `judge.3` | 错误 | 该级不可解析（单发）或超时抛错 | 该级失败（单发——不重发同模型；级联接管，§2.10.1）；判分**不得回落词表判**（反例断言保持）；级链穷尽 ⇒ run `verdict = error` + detail 前缀「判官不可用」+ `runs[].judge.verdict = "error"`（形态 = `judge.17` / `judge.18`） | `judge.test.mjs` |
 | `judge.4` | 错误 | `judge.json.frozenAtSuiteVersion` ≠ `SUITE_VERSION` | 拒跑（退出码 1）+ 明示提示 | `judge.test.mjs` |
 | `judge.5` | 边界 | 任一位判官 key（A / B / 仲裁 C）∈ 本次被测集合（自判）；另一形态 = 同 provider 异 model（key ∉ 被测） | **正常跑**（不拒跑 · 退出码 0）+ 该位 `sameVendorAsTested = true` + 该位 `warnings` 一条（逐位——点名位次与重合级别）；报告判官行该位标注「该位 ∈ 被测（自判）」（同 provider 异 model 形态 ⇒ 标注「与被测同渠道」） | `judge.test.mjs` |
 | `judge.6` | 错误 | `judge.json` schema 不合（`maxTokens` < 1024 / `timeoutSec` 越界 / `provider` 缺失 / **`judges` 长度 ≠ 2 · `arbiter` 缺**） | 装载即拒（fail-closed） | `judge.test.mjs` |
 | `judge.7` | 边界 | 触发面判定：机械 fail / 判官 fail / error 三类 run | 机械 fail 触发复核；判官 fail **不叠加**复核；error 不触发 | `judge.test.mjs` |
 | `judge.8` | 正常 | 桩传输 A / B 均返回同向裁决 | 合成分 = 该向；`resolution = "unanimous"`；仅 A / B 两次调用（**不触发仲裁**）；`agreements +1` | `judge.test.mjs` |
 | `judge.9` | 边界 | A / B 相异且仲裁 C 返回（多数决） | 合成分 = 多数派；`resolution = "arbitrated"`；三次调用逐位记账；`disagreements` / `arbitrations` 计数 +1；渲染面 = 分歧率与《判官分歧》小节 | `judge.test.mjs` / `report-render` |
-| `judge.10` | 错误 → 正常（级联语义收正 · 本批） | 单判官失败（A 两次不可解析 / 超时，B 成功） | **替代级 1 补判成功 ⇒ 双判合成**（原「有效判 < 2 ⇒ run error」路径已废——旧冻结废除）；A 位 `substitutes` 在档；替代级全败形态 = `judge.16` / `judge.17` | `judge-fallback.test.mjs`（自 `judge.test.mjs` 迁正）/ `judge.test.mjs` |
-| `judge.11` | 错误 → 正常（级联语义收正 · 本批） | A / B 分歧 + 仲裁 C 原位两次不可解析 | **C 替代级补判成功 ⇒ `arbitrated`（多数决）**（原「分歧未决 ⇒ error」收正——C 级链穷尽才 error）；三方调用留证 | `judge-fallback.test.mjs`（自 `judge.test.mjs` 迁正）/ `judge.test.mjs` |
+| `judge.10` | 错误 → 正常（级联语义收正 · 本批） | 单判官失败（A 原位不可解析（单发）/ 超时，B 成功） | **替代级 1 补判成功 ⇒ 双判合成**（原「有效判 < 2 ⇒ run error」路径已废——旧冻结废除）；A 位 `substitutes` 在档；替代级全败形态 = `judge.16` / `judge.17` | `judge-fallback.test.mjs`（自 `judge.test.mjs` 迁正）/ `judge.test.mjs` |
+| `judge.11` | 错误 → 正常（级联语义收正 · 本批） | A / B 分歧 + 仲裁 C 原位不可解析（单发） | **C 替代级补判成功 ⇒ `arbitrated`（多数决）**（原「分歧未决 ⇒ error」收正——C 级链穷尽才 error）；三方调用留证 | `judge-fallback.test.mjs`（自 `judge.test.mjs` 迁正）/ `judge.test.mjs` |
 | `judge.12` | 错误 | 身份违约：A / B 同 `model` 字面；或仲裁员 `model` ∈ {A, B} | 拒跑（退出码 1）+ 明示违约位次（A≠B · 仲裁员第三方） | `judge.test.mjs` |
 | `review.1` | 正常 | 机械 fail 的 run + 桩复核返回 `uphold` | 该 run 仍 fail（**不改判**）；`runs[].review.verdict = "uphold"`；能力矩阵通过数不变 | `judge.test.mjs` / `report-render`（dry-run 全链路 `longctx.2`） |
 | `review.2` | 边界 | 机械 fail + 桩复核返回 `overturn` | **改判**：`run.verdict` 置为 `pass`（计入 pass 计数）；`aggregate.overturns = 1`；渲染 `✅ pass` + `⟲` 标记 +《复核翻案》小节（用例 · 模型 · 机械失败断言 · 复核理由） | `report-render.test.mjs`（dry-run 全链路 `tools.3`：改判 · 计数 · `⟲`）/ `judge.test.mjs`（复核记录形状） |
@@ -1117,8 +1119,8 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | `text.1` | 正常（结构断言） | `textRules` 规则表（`bench/lib/grade.mjs`） | `paragraphCount` / `sentenceCount` / `hanziPerSentenceMax` 三 kind 已删（零调用者；未知 kind ⇒ fail-closed 负断言保持）；无 `paragraphs` / `sentences` 解析件 | `graders.test.mjs` |
 | `judge.13` | 正常（混合面重划 · 定点复现） | `instructions.1` / `.2` **缺陷形态串**（正文 3 段（`.1`）/ 2 句（`.2`）+ `---` + 自检块——机械条全过）+ 桩判官两态 + 机械违例变体 | ① 缺陷形态串 ∧ 桩 A/B pass ⇒ run pass 且判官被调（机械面未拦下——**修复后 pass** 腿）② 桩 A/B fail ⇒ run fail（判官定判）③ 机械违例 ⇒ fail 且**不调判官**（短路——桩零调用 / 无 `runs[].judge`）；dry-run 全链路（`--dims instructions`）同断；分层冻结 13 / 20 / 8 / 5 = `suite.test.mjs` | `graders.test.mjs` |
 | `judge.14` | 正常（级联修复 · 本批新增） | 桩传输：B 位原位超时（`fail:"throw"`）⇒ 替代级 1 返回合法裁决 | 合成分 = 双判（A 原位 + B 替代）一致 ⇒ `unanimous`；B 位 `substitutes` = 级 2 + 其 call 携 `level: 2`；A / B 实际模型两两不同；告警分列 = 替代 1 次 | `judge-fallback.test.mjs` |
-| `judge.15` | 边界（逐级迭代 + 身份跳过 · 本批新增） | 桩传输：A 位两级皆败（原位超时 + 替代 1 空输出 ×2）⇒ 替代 2 成功；B 位原位成功 | A 位 `substitutes` 两级逐项在档（`cause` 逐级）；A 实际模型 ≠ B / C / 池内已用项（跳过规则机检）；合成 `unanimous`；`substitutions` 计数 = 2 | `judge-fallback.test.mjs` |
-| `judge.16` | 边界（单判定判 · 本批新增） | 桩传输：A 位级链穷尽（原位 ×2 + 全池逐级败）、B 位有效 | `resolution = "single"`；`verdict` = B 位裁决；A 位 `error` 逐级留证；告警「单判定判 1 次」+ `singleJudged = 1` | `judge-fallback.test.mjs` |
+| `judge.15` | 边界（逐级迭代 + 身份跳过 · 本批新增） | 桩传输：A 位两级皆败（原位超时 + 替代 1 空输出——单发即败）⇒ 替代 2 成功；B 位原位成功 | A 位 `substitutes` 两级逐项在档（`cause` 逐级）；A 实际模型 ≠ B / C / 池内已用项（跳过规则机检）；合成 `unanimous`；`substitutions` 计数 = 2 | `judge-fallback.test.mjs` |
+| `judge.16` | 边界（单判定判 · 本批新增） | 桩传输：A 位级链穷尽（原位 + 全池逐级各一发，尽败）、B 位有效 | `resolution = "single"`；`verdict` = B 位裁决；A 位 `error` 逐级留证；告警「单判定判 1 次」+ `singleJudged = 1` | `judge-fallback.test.mjs` |
 | `judge.17` | 错误（物理边界 · 本批新增） | 桩传输：A / B 两位级链皆穷尽 | `verdict = error` + `resolution = "none"` + detail 前缀「判官不可用（有效判不足）」+ 全池调用留证（逐位 `substitutes` 尽列）+ 告警分列（不可用 1 · 替代 n） | `judge-fallback.test.mjs` |
 | `judge.18` | 错误（分歧未决 · 本批新增） | 桩传输：A / B 相异、C 位级链穷尽 | `error`（无多数）+ 成因「分歧未决」+ 三方（含替代级）留证；`disagreements` 计数 +1 | `judge-fallback.test.mjs` |
 | `rejudge.1` | 正常（补判通道 · 本批新增） | 夹具结果档（含 `judge.verdict = "error"` run + 一条被测侧 error run）+ 桩传输（重取素材 + 级联判分）；另腿 = 零对象档 | ① 判官面 error run ⇒ 判定替换（`was` / `now` 入 `rejudged.runs`）+ 新对落盘；② **被测侧 error run 不入列**（保持原样——反例控制）；③ **原档逐字节零改**；④ 缺省标签 `<原标签>-rejudged`；⑤ 零对象腿 ⇒ 明示 + 不落档 + 退出码 0 | `judge-fallback.test.mjs` | | 《复核翻案》小节尾部「承接清单」段在场（**改判后仍照出**——承接不因改判而免）：含 `tools.3` · 承接落点（台账）· 处置（`SUITE_VERSION + 1`）· 销账要点；控制台摘要含复核计数 + 承接提示行；夹具 0 翻案 ⇒ 无承接段（「本轮无复核翻案」保持） | `report-render.test.mjs` |
@@ -1175,7 +1177,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 
 | AC | 判据（需求面） | 设计落点 | 判定方式 |
 |---|---|---|---|
-| AC-1 | `aiJudge` 落地：结构化输出 + fail-closed + 输入回合精确 + 预算充足 | §2.10.1（接口契约全项）· §2.6（用例声明面）· §3 `bench/lib/judge.mjs`（已实现） | `judge.1–3`（桩传输）+ `judge.2`（放大预算重试）+ dry-run 全链路 |
+| AC-1 | `aiJudge` 落地：结构化输出 + fail-closed + 输入回合精确 + 预算充足 | §2.10.1（接口契约全项）· §2.6（用例声明面）· §3 `bench/lib/judge.mjs`（已实现） | `judge.1–3`（桩传输）+ `judge.2`（单发——不可解析不重发）+ dry-run 全链路 |
 | AC-2 | 语义判据接入（`vision.3` · `multiturn.1–3` · 其他语义面逐条裁定） | §2.10.2（判据分层表 25 例逐条 + 计数 13 / 20 / 8 / 5 = 计数单源）· §5.11（rubric 正本） | `suite.test.mjs`（判官面 / 机械面集合 = 冻结清单）+ 逐面桩测 |
 | AC-3 | judge 身份机制（配置项 + 校验：A≠B · 仲裁员 ∉ {A, B}）；判官可与被测重合——**允许自判**（用户 2026-09-24 03:16 裁定；判官不得干预被测选择） | §2.10.3（`judge.json` 三槽 + 身份校验 ③/④ + 与被测重合明示） | `judge.5` / `judge.12` |
 | AC-4 | 成本分账（judge 成本单列，不污染被测成本表） | §2.2-10（记账面）· §2.10.5 · §2.3（成本表列集 = 五列 + 相对成本基准不变；评估开销金额 md 零展示） | `render.1`（相对成本不含评估开销）+ `render.3`（列集 / 零金额）+ `recompute.5` |
@@ -1328,7 +1330,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 13. 温度例外**只对「API 拒收 0」的档**开放（逐档显式 + 探针依据在册——KD-31）；不引入 CLI 全局温度参数；判官面温度冻结零改（三槽恒 0）。
 14. 思考强度覆写**只对受测面生效**（`bench/models.json` 档位字段——KD-32）：不改用户 config、不改核层行为；判官 / 复核槽的 effort 面沿 provider 条目原值（本批零改）；覆写值须与受理面对账（预检枚举面 + 实弹面——§2.13）。
 
-15. 判官面替换级联**不做同模型传输面重试**（核已含 HTTP 级重试；替代级即重试路径——KD-38）；**不做无界级联**（池长即级数上限）；判官 / 复核的**判位数不变**（A / B 双判 + C 仲裁；替代 = 同级替换 ≠ 加位）；替代池**不用于复核面**（复核失败 = fail 维持的既有 fail-closed 零改）。
+15. 判官面替换级联**不做同模型重试**（**任何形态——含放大预算重试**；级内单发 + 预算一次到位（默认 8192——§2.10.1）；核已含 HTTP 级重试；替代级即重试路径——KD-38）；**不做无界级联**（池长即级数上限）；判官 / 复核的**判位数不变**（A / B 双判 + C 仲裁；替代 = 同级替换 ≠ 加位）；替代池**不用于复核面**（复核失败 = fail 维持的既有 fail-closed 零改）。
 16. **跑后补判通道**（§2.14）：只覆盖判官面 error run；**不覆盖被测侧失败**（无素材可判——裁点 ⑥）；**不覆盖原档**（落新对 · 收编 = 人工点名）；**不自动触发**（点名执行）；不承诺突破物理边界（重取后仍失败 ⇒ 如实 `error`）。
 17. `--recompute` 的零网络结构保证不因本批收窄（补判为独立触网分支——两分支互斥分档）；不引入判官面自动重跑 / 自动补判的后台机制。
 
@@ -1373,16 +1375,16 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 ```json
 { "version": 1, "frozenAtSuiteVersion": 7,
   "judges": [
-    { "provider": "deepseek", "model": "deepseek-flash", "maxTokens": 2048, "timeoutSec": 30 },
-    { "provider": "glm", "model": "glm-5.3-flashx", "maxTokens": 2048, "timeoutSec": 30 }],
-  "arbiter": { "provider": "deepseek", "model": "deepseek-v4-pro", "maxTokens": 2048, "timeoutSec": 30 },
+    { "provider": "deepseek", "model": "deepseek-flash", "maxTokens": 8192, "timeoutSec": 30 },
+    { "provider": "glm", "model": "glm-5.3-flashx", "maxTokens": 8192, "timeoutSec": 30 }],
+  "arbiter": { "provider": "deepseek", "model": "deepseek-v4-pro", "maxTokens": 8192, "timeoutSec": 30 },
   "fallbacks": [
-    { "provider": "mimo", "model": "mimo-v2.6-pro", "maxTokens": 2048, "timeoutSec": 30 },
-    { "provider": "qwen", "model": "qwen3.8-flash", "maxTokens": 2048, "timeoutSec": 30 },
-    { "provider": "mimo", "model": "mimo-v2.6-pro-ultraspeed", "maxTokens": 2048, "timeoutSec": 30 },
-    { "provider": "qwen", "model": "qwen3.7-max", "maxTokens": 2048, "timeoutSec": 30 },
-    { "provider": "ark", "model": "doubao-seed-2-1-pro-260915", "maxTokens": 2048, "timeoutSec": 30 },
-    { "provider": "qwen", "model": "qwen3.8-27b", "maxTokens": 2048, "timeoutSec": 30 }],
+    { "provider": "mimo", "model": "mimo-v2.6-pro", "maxTokens": 8192, "timeoutSec": 30 },
+    { "provider": "qwen", "model": "qwen3.8-flash", "maxTokens": 8192, "timeoutSec": 30 },
+    { "provider": "mimo", "model": "mimo-v2.6-pro-ultraspeed", "maxTokens": 8192, "timeoutSec": 30 },
+    { "provider": "qwen", "model": "qwen3.7-max", "maxTokens": 8192, "timeoutSec": 30 },
+    { "provider": "ark", "model": "doubao-seed-2-1-pro-260915", "maxTokens": 8192, "timeoutSec": 30 },
+    { "provider": "qwen", "model": "qwen3.8-27b", "maxTokens": 8192, "timeoutSec": 30 }],
   "note": "A = POC 已验判官（跨渠道）；B = 跨厂商第二视角（2026-09-24 换代——原 tokenhub:hy3）；C = 分歧仲裁（第三方模型）；替代池 = 位级失败时的换模型补判链（2026-09-25 扩员——6 位；三槽 A / B / C 角色不变）。" }
 ```
 
@@ -1398,10 +1400,10 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 
 **换代动因（实录）**：v5 全量跑批中 B 位于 `multiturn.1` **系统性超时**（读数时点运行至 ≈380/770：≥6 例 · 跨 6 档模型——判官不可用（有效判未足）⇒ 该 run `error`；读数 = `.thincoder/tmp/bench-v5-run.log`）——长素材面 × 30s 预算下 B 位可靠性不足。
 
-**槽位实测（2026-09-24 实施轮——原初值 A `deepseek:deepseek-flash` / B `minimax:MiniMax-M3` / C `kimi:kimi-k3`，后两槽实测不可用）**：`minimax:MiniMax-M3` 输出 = JSON 对象整段重复两遍（严格解析两次尝试均失败）；
+**槽位实测（2026-09-24 实施轮——原初值 A `deepseek:deepseek-flash` / B `minimax:MiniMax-M3` / C `kimi:kimi-k3`，后两槽实测不可用）**：`minimax:MiniMax-M3` 输出 = JSON 对象整段重复两遍（严格解析不可用——不可判输出）；
 `kimi:kimi-k3` API 400「invalid temperature: only 1 is allowed for this model」⇒ 与「判官 temperature 冻结 0」不相容 ⇒ 换 **B = `tokenhub:hy3`** + **C = `deepseek:deepseek-v4-pro`**（均服从实测——单发严格解析过、attempts=1；命令与探测记录见批次档 §5）。
 **B 位换代实测（本批 · 2026-09-24/25 · 槽位探针 `judge-slot-probe` 族）**：**原选 `glm:glm-5.3` 未过**——判官模板 ✓ 2.9s · 复核模板**系统性超时**（30s ×3 连测 + 90s 预算 ×2 尝试 158s 均不过）⇒ 按 KD-33「未过 ⇒ 退候选」退候选实弹：`qwen:qwen3.7-max` 双过（judge 2.9s / review 18.7s / 重材料 8.7s）· `ark:doubao-seed-2-1-pro-260915` 双过（8.1s / 5.5s / 11.4s）⇒ **备选在案**。
-**B 终值（用户 2026-09-25 00:3x 点名「挑一个实测过的、跑得快的模型 glm5.3-flashX」）** = **`glm:glm-5.3-flashx`**（原厂 `glm` 通道 · v5 实测在册 23/25 · TTFT 1038ms / tok/s 136.2）；flashx 探针 = judge ✓ 1.6s · review ✓ 8.8s · 重材料 ⚠ 38.6s · attempts=2（放大预算重试后过——设计内兜底路径，如实登记）；
+**B 终值（用户 2026-09-25 00:3x 点名「挑一个实测过的、跑得快的模型 glm5.3-flashX」）** = **`glm:glm-5.3-flashx`**（原厂 `glm` 通道 · v5 实测在册 23/25 · TTFT 1038ms / tok/s 136.2）；flashx 探针 = judge ✓ 1.6s · review ✓ 8.8s · 重材料 ⚠ 38.6s · attempts=2（**探针读数如实登记**——当时口径的重发；现行 = 单发 + 预算 8192，§2.10.1）；
 参数相容 = `glm` 条目 effort `max` ∈ flashx 枚举 {low, high, max} ✓ ∧ temperature 0 在 `tempRange` [0, 1] 内 ✓ ∧ 实调零 400 ✓。
 **成本可读性认账（评审轮 1 #10 · 措辞沿家族）**：B = `glm:glm-5.3-flashx` ∈ `glm` 族——族行带 `noUsageStream`（`thincoder-core/model-specs.mjs:59-74`，flashx = `:68`；§2.9-5）⇒ 该位判官成本账目可能整段 `null`（usage 缺失记 null，不估算——§2.10.5）；判定面不受影响（判定不吃 usage）。
 
@@ -1516,9 +1518,13 @@ v3 重跑（AC-7）实测记档（**v3 对已按 KD-25 出档** · **v4 对出�
   ④ 落点 = §2.3（骨架两行 + 规则 7 / 10② / 10④）/ §5.13（`render.3` / `render.4`）/ §6（#276）/ §7-10 / §3 本批表（三行随改）。
 - 2026-09-25：**§2.9-5 坐标收正（批 `2026-09-25-bench-fixnotes` · 台账 #275）**——`noUsageStream` 族址由 `thincoder-core/model-specs.mjs:52-64`（原坐标现落 kimi 行）更新为现读三址（glm 族 `:59-74` / minimax `:134-164` / gemini `:181-183`，本轮 `noUsageStream` 全量 grep 复核）；语义零改（探针相抵与成本记 `null` 处置句不动）；批档 = §2.2。
 - 2026-09-25：**判官替代判级联 + 跑后补判（批次 `2026-09-25-judge-fallback` · `SUITE_VERSION` 6 → 7 · 用户 2026-09-25 01:31 裁定「结论必得」+ 01:34 / 01:40 池扩令）**——① **替代判级联**：位级失败（超时 / HTTP / 解析）⇒ 换模型补判（替代池 `judge.json.fallbacks` · 逐级 · 级联序 = 池序 · 池长即级数上限 · 现行池 6 位 = §9；三槽 A / B / C 角色不变）；
-  级内语义逐级一致（解析失败 ⇒ 该级放大预算重试一次；传输面失败 ⇒ 进下一级——不重试同模型）；替代身份约束 = 静态校验（两两字面不同 ∧ ∉ {A, B, C}）+ 运行期跳过（**替代 ≠ 失败位模型 ∧ ≠ 存活判官 ∧ ≠ 彼此**）；旧冻结「禁补位 / 禁单判回退 / 传输面失败不重试」**整体废除**（§1.3-2 / §2.10.1 / §2.10.3 / §2.10.4 改写）；
+  级内语义逐级一致（**同模型单发**——不可解析 / 传输面失败 ⇒ 该级失败 ⇒ 进下一级；预算从宽 = 默认 8192，§2.10.1）；替代身份约束 = 静态校验（两两字面不同 ∧ ∉ {A, B, C}）+ 运行期跳过（**替代 ≠ 失败位模型 ∧ ≠ 存活判官 ∧ ≠ 彼此**）；旧冻结「禁补位 / 禁单判回退 / 传输面失败不重试」**整体废除**（§1.3-2 / §2.10.1 / §2.10.3 / §2.10.4 改写）；
   ② **终局口径**：级链穷尽 ⇒ 单有效判 = **单判定判**（`resolution = "single"`）· 零有效判 / 分歧未决 ⇒ `error`（物理边界——跑后补判收正）；被测侧失败**不受结论必得**（无素材可判——如实 error）；
   ③ **透明记档**：`runs[].judge.judges[].substitutes[]` + `calls[].level`（KD-20 缺省不写）+ 顶层池快照与 `substitutions` / `singleJudged` 计数 + 报告告警行分列 + 概览替代池行 + 方法句 + 局限句 + 逐维明细替代标注；
   ④ **跑后补判通道**（§2.14）：`--rejudge --from <结果.json>`（`--recompute` 姊妹分支——触网判定补全，零网络结构保证零改）；判官面 error run 定点重取素材（响应原文不落档——§7-5 / KD-33 ⇒ 不可由档内重建）+ 级联补判 + 溯源块 `rejudged` + 新对落档（原档不动 · 收编 = 人工点名）；被测侧失败不入列；
   ⑤ 版本 6 → 7（判分合成规则 + 判官身份面（替代池）——§1.3-2）+ `judge.json.frozenAtSuiteVersion` 同步；补判档版本归属 = 补判时代际（原档不改写——KD-40）；
   ⑥ 测试面：`judge.14–18` / `rejudge.1`（新档 `judge-fallback.test.mjs`）+ `judge.10` / `judge.11` 断言收正 + 夹具重分配（`longctx.3` 级联修复 / `vision.2` 穷尽 error）+ `judge.json` schema 腿扩池；⑦ KD-38 / KD-39 / KD-40 新增；⑧ 三端产品树零改动。
+- 2026-09-25：**设计收正轮（本批 `2026-09-25-judge-fallback` · 用户 2026-09-25 01:46 裁定「别级内这么折腾……一次不行就换模型」）**——① **取消级内放大预算重试**（`maxTokens × 2` 删除）：级内 = **同模型单发**——不可解析（含空输出 / `finishReason=length`）/ 传输面失败 ⇒ 该级失败 ⇒ 进下一级（§2.10.1 / KD-38 / §7-15）；
+  ② **预算从宽**：`judge.json.maxTokens` 默认 2048 → **8192**（= 区间上限；cap 非实耗、计费按实际 tokens；截断类由预算面根治——实证 = v6 A 位 `multiturn.1` 在 4096 仍截断）；区间 [1024, 8192] 维持；三槽 + 池 6 位同受（§2.10.1 / §2.10.3 / §9 样例）；
+  ③ 被否候选补「同模型重试（任何形态——含放大预算重试）」（§2.10.4 ⑤ · KD-38 被否①）；④ 随动面 = §2.2-8 / §2.10.1（级内语义 + 预算段 + 标题）/ §2.10.5（成本上界 = 位 × 级链长）/ §2.11（复核面单发）/ §3（`judge.mjs` / `judge.test.mjs` 两行）/ §5.13（`judge.2` / `judge.3` 收正 + `judge.10–16` 措辞）/ §6（判分升级批 AC-1 判定方式）/ §7-15 / §9（探针读数括注）/ KD-33⑤；
+  ⑤ 样例 `maxTokens` 值全档随动（§2.2 判官块与 calls · §2.10.3 · §9——27 处）；⑥ 本轮 = 定点收正（级联序 / 池成员 / 三槽身份零动——不实现；`bench/results/` 零触）。
