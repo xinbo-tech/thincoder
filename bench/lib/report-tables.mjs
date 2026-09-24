@@ -62,7 +62,7 @@ export function caseCell(model, caseId) {
   }
 }
 
-/** 模型级统计（能力 / 速度 / 用时 / 成本，供四表与关键发现共用）。 */
+/** 模型级统计（能力 / 速度 / 用时 / 成本，供五表与关键发现共用）。 */
 export function modelStats(data) {
   return (data.models ?? []).map((m) => {
     const runs = allRuns(m)
