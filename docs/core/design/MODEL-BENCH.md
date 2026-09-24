@@ -188,12 +188,12 @@ node bench/run.mjs --recompute --from <结果.json> [--label <名>]
 5. **离线重算友好**：`calls[].tokens` 为原子账目 ⇒ 仅凭本档 + 新 `prices.json` 即可重算全部成本（AC-10）。
 6. `manual[]` = 人工 lane 记录（每条一次调用）：`metrics` 与用例级 `runs[].metrics` 同形（ttft / total / tokPerSec / tokens / cost 五键）；tokens / cost 缺失纪律同条 1、3（缺 → `null` + `warnings`）；报告按条**单项列出**其调用成本（§2.3-④）。
 7. `judge` / `review`（顶层）= 本轮判官配置快照 + 汇总（§2.10.6；判官面 = 逐位 A / B / 仲裁 C 快照 + 逐位与合计账目 + 分歧计数）；`runs[].judge` / `runs[].review` = 逐 run 裁决记录（判官面 = 合成分 `verdict` + `resolution` + 逐位 `judges[]`）——**未发生则不写字段**（不写 `null` 占位：null 与「未发生」不可分；仲裁位未触发 ⇒ `judges[]` 无 C 条目）。
-   **在档档 = v4**（v3 对已按 KD-25 出档；2026-09-24 `review-override` 批改判口径 · **不重跑**——v4 翻案 0 起 ⇒ 判定面与现行口径等价，代际标注见 §3 `bench/results/` 行）⇒ 渲染与重算**无历史兼容分支**。
+    **在档 = v5 对（`roster-29-v5` · 本批全量跑批落档后）+ v4 对（`flash-compare-v4` · 例外在档——2026-09-24 `review-override` 批改判口径 · **不重跑**；批件边界「除新增报告对外零改」；v4 翻案 0 起 ⇒ 判定面与现行口径等价，代际标注见 §3 `bench/results/` 行）**（v3 对已按 KD-25 出档）⇒ 渲染与重算**无历史兼容分支**。
 8. judge / review 的 `calls[]` = **逐尝试账目**（含放大预算重试的一次；tokens 只认 `usage`、缺即 null，纪律同条 1）+ 该次调用的 `at`（ISO 本地时点）——「版本/时点」入档的时点面；`maxTokens` 取该次尝试实际值（重试可能 ≠ 配置值）。判官面 = **逐位各自的 `calls[]`**（同一 run 内 A / B（+C）的账目分列，不合并）。
 9. `run.verdict` 恒为 `pass | fail | error | skipped`（**不扩展枚举**）：判官**合成无多数**（有效判 < 2 / 分歧未决）⇒ `error`（detail 前缀「判官不可用」+ 括注成因 + `runs[].judge.verdict = "error"` + `resolution = "none"`）；复核翻案 ⇒ **改判 `pass`**（计入 pass 计数）+ `runs[].review.verdict = "overturn"`（`⟲` 标注 = 经复核纠正 · 原机械 fail；**混合面形态（原机械 fail 短路 ⇒ 无 `runs[].judge`）另标「判官面未裁决」**——§2.11）。
 10. **成本分账（AC-4 · 射程扩至判官对）**：判官（A / B / 仲裁 C）/ 复核成本**不进** `runs[].metrics.cost` 与 `aggregate.costCny`（被测成本面零污染）；只出现在 `runs[].judge.judges[].calls[].costCny` / `runs[].review.calls[].costCny` 与 `aggregate.judgeCostCny`（三位合计）/ `aggregate.reviewCostCny`（+ 顶层逐位与合计汇总）——**md 报告零展示**（成本表 / 概览账目句 / 判官行逐位均不列金额；金额只住结果 JSON——§2.10.5 / KD-29）。
 11. `cases[].prompt` = **题面正本逐字**（单源取用例声明，不做二次重构）：静态用例 = 实际发送串逐字（与 §5 题面列口径同源）；多轮用例 = `prompt` + `build().followUps` 逐字声明式拼接（同 §2.6 `judge.question` 口径）；**构造型用例**（`build()` 带载荷：`longctx` 长文 / `vision` 图像）= 用例声明 `prompt` 逐字（含载荷括注）——**载荷不入档**（haystack / PNG 为确定性构造 ⇒ 可复现）。
-   **采集面 = 运行期写入**（不依赖重跑用例源）⇒ `--recompute` 自足。**在档档 = v4**（v3 对已按 KD-25 出档）⇒ 本字段**无历史兼容分支**。
+    **采集面 = 运行期写入**（不依赖重跑用例源）⇒ `--recompute` 自足。**在档 = v5 对（本批全量跑批落档后）+ v4 对（例外在档）**（v3 对已按 KD-25 出档）⇒ 本字段**无历史兼容分支**。
 12. `models[].temperature` = 该档实际温度（缺省 0；例外档逐档——KD-31）；渲染面据 `(models[].temperature ?? run.temperature) ≠ run.temperature` 派生概览**温度例外披露句**（§2.3）——旧档缺该字段 ⇒ 等价缺省（无例外；**缺省语义，非历史兼容分支**），`--recompute` 自足。
 
 ### 2.3 md 报告契约（AC-3 / AC-9）
@@ -483,7 +483,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 - 记账面 = `runs[].judge.judges[].calls[]` + `models[].aggregate.judgeCostCny`（该模型位 A+B+C 合计）+ 顶层 `judge.judges[].costCny`（逐位）/ `judge.arbiter.costCny` / `judge.costCny`（合计）；**不进** `runs[].metrics.cost` / `aggregate.costCny`（被测成本面零污染——口径不变，射程扩）。
 - 报告（KD-29）：**成本表列集 = 五列**（总成本 / 每任务成本 / 每通过任务成本 / 相对成本）；判官与复核成本**均不进成本表**（评估机制开销整体——仅语义面 / 机械 fail 触发 · 非均匀发生 ⇒ 列于模型成本对比表会被读成模型自身开销，理由同 KD-21）；**评估开销金额报告零展示**（成本表 · 概览账目句 · 判官行逐位成本三处均不列——含「已录价位之和」口径句）；账目面 = **结果 JSON**（`judge.judges[].costCny` / `judge.arbiter.costCny` / `judge.costCny` / `review.costCny` / `aggregate.judgeCostCny` / `aggregate.reviewCostCny`——字段零改）；概览判官行给**逐位元数据**（A / B / C——provider:model / 参数 / 模板版本 / 调用次数 / 与被测重合标记）。
 - `--recompute`：判官 / 复核成本随当前 `prices.json` 一并重算（档内**逐位**逐尝试 tokens = 原子账目，§2.7 结构保证不变）。
-- 价格表孤儿判据（`bench/test/suite.test.mjs`）扩为「命中在册条目 **或** **任一位判官键**」。
+- 价格表孤儿判据（`bench/test/roster.test.mjs` · `roster.3`——2026-09-24 名单扩容批自 `bench/test/suite.test.mjs` 迁入）：命中在册条目 **或** **任一位判官键**（无孤儿）；已录价键 `matchPrice` 命中自身键（大小写 / 错拼守卫）。
 - 被否候选：成本表按判官位拆三列（被否：表宽 + 归因面重复——概览判官行已逐位分列，成本表的行身份是被测模型）。
 
 #### 2.10.6 元数据入档（AC-5 · 射程扩至判官对 · D4）
@@ -680,6 +680,16 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | `bench/results/` | 1 对（v4 · `flash-compare-v4`） | **±0** | 不重跑（跑批 v5 = 批尾点火——用户点名）；不重出（旧档缺 `models[].temperature` ⇒ 渲染按缺省走，与实态一致） |
 | `bench/cases/index.mjs` · `bench/judge.json` | 66 · 25 | **±0** | 不 bump（`SUITE_VERSION` 恒 5 · `frozenAtSuiteVersion` 恒 5——KD-31） |
 | `docs/core/design/MODEL-BENCH.md` | 1138（本批前读数——就地更新后 **1187** 行 · 2026-09-24 修正轮实读 · 计数尺 = 末行含换行者不计空尾行） | 就地更新 | 本档（§1.3 / §2.1-4 / §2.2-12 / §2.3 / §2.4 / §3 / §4 KD-31 / §5.13 / §6 / §7-13 / §9 指针 / 变更记录） |
+
+**2026-09-24 bench v5 批（`2026-09-24-bench-v5`）受影响文件**（现状 = 本批设计轮实读行数 · 2026-09-24 · 计数尺 = 末行含换行者不计空尾行；三端产品树零改动；**零新增档**；版本口径 = **不 bump**（价格 / 名单数据面不入版本轴——KD-2 / KD-31）；`bench/models.json` · `bench/README.md` 零改）：
+
+| 文件 | 现状 | 预期增量 | 说明 |
+|---|---|---|---|
+| `bench/prices.json` | 252 | +~9（28 → 29 条） | ark 价格收尾：`ark:doubao-seed-2-1-lite-260915` 录入（0.80 / 2.70 / 缓存 0.16）+ `ark:doubao-seed-2-1-turbo-260628` 缓存价补 0.60 + `ark:doubao-seed-2-1-pro-260915` 来源句升级（值 6 / 30 / 1.2 零改）；三条 `source` = 火山方舟「模型价格」页（用户 2026-09-24 供页实读）· `asOf` 2026-09-24 · note 注缓存存储另计（成本式无该计费项）——逐条字面 = 批次档 §2.2 |
+| `bench/test/report-render.test.mjs` | 291 | ±0 | `render.1` 缺价腿键字面替换：`ark:doubao-seed-2-1-lite-260915` → **合成键** `fixture:unpriced-model`（断言语义零改；价格补录不再连带改测试——§5.13 `render.1`） |
+| `bench/results/` | 1 对（v4 · `flash-compare-v4`） | +1 对（`roster-29-v5` · 运行日命名） | v5 全量跑批报告对入库（**点火 = 用户点名**）；v4 保留在档（批件边界「除新增报告对外零改」）——在档注见 §2.2-7 / §2.2-11 |
+| `bench/cases/index.mjs` · `bench/judge.json` | 66 · 25 | **±0** | 不 bump（`SUITE_VERSION` 恒 5 · `frozenAtSuiteVersion` 恒 5——价格 / 名单数据面，KD-2 / KD-31） |
+| `docs/core/design/MODEL-BENCH.md` | 1187（本批前读数——就地更新后 **1213** 行 · 计数尺 = 末行含换行者不计空尾行） | 就地更新 | 本档（§2.2-7 / §2.2-11 在档注 · §2.10.5 判据指针 · §3 本表 · §5.13 `render.1` 缺价腿 · §6 本批 AC 回指 · §9 价格面 · 变更记录） |
 
 ## 4. 关键决策记录（含被否候选）
 
@@ -912,7 +922,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | `judge.13` | 正常（混合面重划 · 定点复现） | `instructions.1` / `.2` **缺陷形态串**（正文 3 段（`.1`）/ 2 句（`.2`）+ `---` + 自检块——机械条全过）+ 桩判官两态 + 机械违例变体 | ① 缺陷形态串 ∧ 桩 A/B pass ⇒ run pass 且判官被调（机械面未拦下——**修复后 pass** 腿）② 桩 A/B fail ⇒ run fail（判官定判）③ 机械违例 ⇒ fail 且**不调判官**（短路——桩零调用 / 无 `runs[].judge`）；dry-run 全链路（`--dims instructions`）同断；分层冻结 13 / 20 / 8 / 5 = `suite.test.mjs` | `graders.test.mjs` |
 | `review.4` | 正常 | 夹具含 1 条 `overturn`（`tools.3`） | 《复核翻案》小节尾部「承接清单」段在场（**改判后仍照出**——承接不因改判而免）：含 `tools.3` · 承接落点（台账）· 处置（`SUITE_VERSION + 1`）· 销账要点；控制台摘要含复核计数 + 承接提示行；夹具 0 翻案 ⇒ 无承接段（「本轮无复核翻案」保持） | `report-render.test.mjs` |
 | `review.5` | 边界（混合面翻案形态） | 夹具 `fixtureResult({ mixedOverturn: true })`：混合面用例（`instructions.1`）机械 fail 被翻案（该 run 无 `runs[].judge`——短路实录；判定 = 改判后 `pass`） | ① 「**判官面未裁决**」标注在位：逐维明细复核行 + 《复核翻案》逐条 + 图例 / 脚注（两形态口径句）；② **反例控制**：纯机械面翻案（`tools.3` 复核行）**不携**该标注（断言限定行内——图例句自含该词）；③ 判定单元格照旧 `✅ pass … ⟲`（改判口径不因混合面而变） | `report-render.test.mjs` |
-| `render.1` | 正常 | 含判官对 / 分歧 / 复核记录的夹具结果 | 概览判官三行（A / B / C · **逐位元数据无金额**）+ 分歧率 + 方法判分条 + 成本表（列集 = **五列**）+ 相对成本基准**不含**评估开销 + 概览**评估开销分账句**（不列金额）+ 逐维明细 `⇄` 标记 + 《判官分歧》小节 + 告警计数（判官不可用（成因分列）/ 分歧 / 仲裁 / 复核 / 翻案） | `report-render` |
+| `render.1` | 正常 | 含判官对 / 分歧 / 复核记录的夹具结果（**缺价腿 = 合成键 `fixture:unpriced-model`**——不取现盘缺价档：价格补录不连带改测试） | 概览判官三行（A / B / C · **逐位元数据无金额**）+ 分歧率 + 方法判分条 + 成本表（列集 = **五列**）+ 相对成本基准**不含**评估开销 + 概览**评估开销分账句**（不列金额）+ 逐维明细 `⇄` 标记 + 《判官分歧》小节 + 告警计数（判官不可用（成因分列）/ 分歧 / 仲裁 / 复核 / 翻案）+ **缺价腿三断言**（位级成本 `null` · 位级「价格未录：判官 B（…）」警告在位 · md 零评估开销金额） | `report-render` |
 | `render.2` | 正常 | 含 `cases[].prompt` 的夹具结果（含构造型长题面 / 多轮拼接题面） | 逐维明细题面行 = 题面正本逐字；超 300 字符 ⇒ 截断 `…`（仅渲染面）；JSON 内 `prompt` 存全额 | `report-render` |
 | `render.3` | 正常（成本表列集收正 · 定域） | 夹具结果渲染 | ① 成本表表头 = **五列**精确串；② **定域反例**：成本表块内零 `判官成本` / 零 `复核成本` / 零「两列」字样；③ 脚注 = 分账原则句（**逐字 = §2.3-8 冻结字符串**；含「不参与相对成本归一化」· **块内零金额**）；④ **报告零金额反控**：概览判官行零「成本 ¥」+ 全 md 零「判官成本」金额串；⑤ **统计在位**（非成本面）：判官行「调用 N 次」· 分歧率行 · 告警行复核计数；⑥ **账目面反控**：JSON `judge.judges[].costCny` / `aggregate.judgeCostCny` / `aggregate.reviewCostCny` 照旧（字段零改——金额只住 JSON） | `report-present`（新增档） |
 | `render.4` | 正常（用时表 · 定域） | 夹具结果渲染（判官 / 复核 `calls[].totalMs` 刻意置大值） | ① 用时表在位（速度表后）+ 列集 = {模型 · 累计耗时 · 相对倍率 · 排名 · 采样 run 数}；② 累计耗时 = Σ `runs[].metrics.totalMs`（**定域反例**：判官 / 复核调用的 `totalMs` 不计入——大值不入合计）；③ 相对倍率最低者 = 1.0×；④ 排名升序 + 同值并列顺延（夹具含并列腿）+ 缺数据 `—` 居末 + 脚注；⑤ **采样 run 数列 = 参与累计的 run 数**（夹具含 `skipped` 腿与 `totalMs = null` 腿 ⇒ 该格 = 参与累计数，非该模型面 run 总数——反例控制）；⑥ 轴门控：`run.axes = ["cost"]`（无 speed）⇒ 用时表不出；⑦ **口径行（本批收正）**：含「error run 已记录耗时照计」与「`null` = 未记录」两短语（字面 = §2.3 骨架口径行逐字冻结子串）；**全部 call 已记录**的 `error` run ⇒ 累计 / 倍率 / 排名 / 采样全含且不入脚注（子腿：单 `error` run 模型——反例控制 = null 腿仍入脚注；部分未记录 ⇒ 按 ⑧ 处置（入脚注））；⑧ **部分未记录腿**：夹具 run 的 `calls[]` = 一 call 有值 + 其余 `totalMs` = `null`（run 级 `metrics.totalMs` = 已记录之和；**判定类型不受限——`error` / `fail` 同规则（含 `error` 腿可选）**）⇒ ① 该 run 按已记录之和入累计（累计格含该和）；② 该 run **入脚注**（含「部分 call 未记录」字面——§2.3-7 同源） | `report-present`（新增档） |
@@ -1047,6 +1057,15 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | AC-5 | 29 档复现命令在档 | 批次档 §2.1（复现命令）· §3 本批表 `bench/README.md` 行 | 命令在档 + README 名单注（人工对读） |
 | AC-6 | 版本口径 = 不 bump | §1.3（温度 = 运行参数面 · KD-31） | `SUITE_VERSION` / `frozenAtSuiteVersion` 断言零改（恒 5） |
 
+**2026-09-24 bench v5 批（`2026-09-24-bench-v5`）AC 回指**（需求面 = `docs/batches/2026-09-24-bench-v5.md` §1.1–§1.4；用户 2026-09-24 15:50「走」+ 15:45 供火山方舟定价页）：
+
+| AC | 判据（需求面） | 设计落点 | 判定方式 |
+|---|---|---|---|
+| AC-1 | ark 价格收尾落盘（lite 录入 · turbo 缓存价补录 · pro 来源句升级）⇒ **在册 29 键全价**；缺价路径保留不变 | §2.5（schema / 取值纪律零改）· §3 本批表 `bench/prices.json` 行 · KD-6 | `roster.3`（无孤儿 + 已录价键 `matchPrice` 命中自身）+ 现盘计数（`bench/models.json` 29 键 ↔ `bench/prices.json` 29 条目 · 零缺键）+ 逐条 `source` / `asOf` 对读（读数入批次档 §5） |
+| AC-2 | 缺价腿校准后测试全绿（预期入 §2 · 实测入 §5） | §5.13 `render.1`（缺价腿 = 合成键）· §3 本批表 `bench/test/report-render.test.mjs` 行 | `render.1` 三条断言（位级成本 `null` · 位级缺价警告在位 · md 零评估开销金额）+ `node --test "bench/test/*.test.mjs"` 全绿 |
+| AC-3 | 跑批命令与产物名在档 · **可跑准备就绪**（点火 = 用户点名） | §2.1-6（结果对落 `bench/results/`）· §2.7 全量复跑 · §3 本批表 `bench/results/` 行 | 命令 = `node bench/run.mjs --label roster-29-v5`（缺省 = 清单全量 29 档 · 28 项/档 ≈ 812 run）；就绪三检 = 全价 ∧ 测试全绿 ∧ provider 覆盖（29 档 provider ∈ 用户 config——`bench/lib/pipeline.mjs` 缺即拒跑）+ 判官三槽冻结 5；产物 = `bench/results/<运行日>-roster-29-v5.{md,json}`（同名拒写——KD-10） |
+| AC-4 | §2 条目表逐条对到落点与判定方式 | 批次档 §2（与本表同源） | 本表三列逐条对读（AC ↔ 设计落点 ↔ 判定方式） |
+
 ## 7. 边界（不做）
 
 1. 不做**开放式质量**主观打分（判官只裁 §5.11 冻结 rubric 的语义判定，不做「写得好不好」评分）；不做容器级任务（SWE-bench / Terminal-Bench 型）；不做 MMLU 类广谱知识题。
@@ -1120,7 +1139,8 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 
 v3 重跑（AC-7）实测记档（**v3 报告对已按 KD-25 出档**；下述为记录面留存）：被测三模型（`mimo-v2.6-flash` / `glm-5.3-flash` / `qwen3.8-flash`）；判官三槽 = 上「槽位实测」段三值——当批三槽与被测无重合（`sameVendorAsTested` 全 `false`）。**v4 代际差异**：被测集含 `deepseek-flash` ⇒ A 位（`deepseek:deepseek-flash`）同位自判（§2.10.3 三级明示；样参见 §2.2）。
 
-价格面：A 位（`deepseek:deepseek-flash`）价格已录 ⇒ 该位成本可入账；其余键实施轮按官方定价页补录（**不完整不录、不估不转写**——缺价 ⇒ 成本 `null` + 警告，不阻断运行，§2.10.5；价格表孤儿判据已扩「命中在册条目 **或** 任一位判官键」——§5.13 `suite`）。
+价格面：**在册 29 档 + 判官三槽键全价在录**（2026-09-24 v5 批收尾：`ark:doubao-seed-2-1-lite-260915` 录入 · `ark:doubao-seed-2-1-turbo-260628` 缓存价补录——判官 A 位 `deepseek:deepseek-flash` 已录 ⇒ 该位成本可入账）；
+缺价路径保留（**不完整不录 · 不估不转写**——缺价 ⇒ 成本 `null` + 警告，不阻断运行，§2.10.5；价格表孤儿判据 = 「命中在册条目 **或** 任一位判官键」——§5.13 `roster.3`）。
 
 ## 变更记录
 
@@ -1165,7 +1185,7 @@ v3 重跑（AC-7）实测记档（**v3 报告对已按 KD-25 出档**；下述�
   ⑥ §2.2 样例按 v5 口径收正（改判形态 = `verdict: "pass"` + `review.overturn`；`judge` / `review` 二记录分属不同 run——机械 fail 短路不调判官）；⑦ 三端产品树零改动。
 - 2026-09-24：**评审修正轮（批次 `2026-09-24-review-override` · 评审轮 1 #1–#7）**——① `⟲` 两形态口径（纯机械面完整纠正 / 混合面「判官面未裁决」标注——判定仍计 `pass`）+ 用例 `review.5` + 夹具 `mixedOverturn` 形态（标注 = 渲染面派生，不新增 JSON 字段）；
   ② §2.2 判官记录样例改挂判官面用例（`reasoning.1` → `vision.1`）+ 样例 `aggregate.total` 按 25 例族对齐（20 → 25）；③ §1.3-2 / KD-2 触发面枚举补「判分合成 / 复核处置」；④ 结构收正（§9 多余闭合围栏删除 / KD-26 接表）；
-  ⑤ 实现面增量更新（§3 表：`report-review.mjs` · `report-tables.mjs` · `report.mjs` · `bench/README.md` · `fixtures.mjs` · `report-render.test.mjs`；`cases/index.mjs` 注释枚举同步）。
+  ⑤ 实现面增量更新（§3 表：`report-review.mjs` · `report-tables.mjs` · `report.mjs` · `bench/README.md` · `fixtures.mjs` · `report-render.test.mjs`；`bench/cases/index.mjs` 注释枚举同步）。
 - 2026-09-24：**复审修正轮（批次 `2026-09-24-review-override` · 复审轮 2 #1–#2）**——① 渲染单源对账（#1）：§2.3 补派生例外句（渲染输入 = 结果 JSON + 当前题集代际的用例声明；与 §2.2-11 `--recompute` 自足面的关系一并说清）· §2.11 括注按实收正（旧代际处置 = KD-25；v4 = 例外在档——翻案 0 起 ⇒ 零暴露）· §2.6 判官面谓词导出落点注明（`JUDGE_FACE` = `bench/cases/index.mjs` 单源导出，渲染面 import 不重建）；
   ② 样例自洽（#2）：§2.2 顶层 `review.costCny` 0.0006 → 0.0007（`calls = 1` ⇒ 合计 = 调用值）+ 样例判读注（`models[]` 节选——顶层 `judge` / `review` = 全参测面汇总、`aggregate.*` = 该模型面）；零新增 JSON 字段 / 记录形状零改。
 - 2026-09-24：**用词收正（父侧直接执行 · 可 revert）**——§2.2 判读注「只列一例」→「只列一个模型条目」（消歧：「例」在本档主流用法 = 用例）。
@@ -1173,7 +1193,7 @@ v3 重跑（AC-7）实测记档（**v3 报告对已按 KD-25 出档**；下述�
   ② 新增**用时表**（Σ `runs[].metrics.totalMs` + 相对倍率（最低 = 1.0×）+ 排名（升序 · 同值并列顺延）· 落位速度表后 · 轴门控 `speed` · 不含判官 / 复核调用；聚合规则 §2.3-7）；③ **版本口径（KD-27）：两项均属呈现面 ⇒ 不 bump**（`SUITE_VERSION` 恒 5 · `judge.json` 零改）；在档 v4 对产物零改 + 形态注（现行形态 = `--recompute`）；④ 新增档 `bench/lib/report-time.mjs` / `bench/test/report-present.test.mjs`（越线降载）；⑤ 入库 `render.3` / `render.4` 用例 + `render.1` 断言收正；⑥ KD-27（呈现面不入版本轴）/ KD-28（用时表口径）/ KD-29（评估开销金额零展示）新增；⑦ 三端产品树零改动。
 - 2026-09-24：**在档 v4 报告按现行呈现形态重出**（用户 13:20 点名——同一结果 JSON 重渲染 · 成本按当前 prices.json 重算 · 数字面零改——**重出非重跑**；原「不重渲染」裁定由用户指令覆盖；报告内「形态重出注」在册）。
 - 2026-09-24：**评审修正轮（批次 `2026-09-24-report-cost-table` · 评审轮 1 #1–#6）**——① 成本表脚注定为**单一字符串**（§2.3 骨架 + §2.3-8）：「评估开销（判官 / 复核）不进被测成本、不参与相对成本归一化——报告不列评估开销金额；账目见结果 JSON」——与 `render.3` ②③ 断言逐字对齐（含「不参与相对成本归一化」字面；不含 `判官成本` / `复核成本` / 「两列」字面 ⇒ 互斥消除）、`render.3` ③ 加冻结字符串指针；
-  ② §2.3-7 补「采样 run 数」口径（= 参与累计的 run 数 · 含 `error` · 排除 `skipped` / `totalMs = null`）+ `render.4` 增该列 null / `skipped` 腿断言（原 ⑤ 顺延 ⑥）；③ KD-2 bump 枚举补「结果数值构成规则」+ §1.3-4 注明**版本轴枚举单源 = 本行**（KD-2 / 方法行版本句 / `cases/index.mjs` 注释 / README 版本口径行的字面欠列处按本行判读——字面同步未随本批）；④ §8 `open` 条收正为「0 条——已按整面落 · 已裁定无回退」+ KD-29 被否候选 ① 的 §8 回退指针删除；⑤ 评审 #4 由父侧就地收正（AC-1 五列）· #5 行数口径差以实施读数入批档 §5。
+  ② §2.3-7 补「采样 run 数」口径（= 参与累计的 run 数 · 含 `error` · 排除 `skipped` / `totalMs = null`）+ `render.4` 增该列 null / `skipped` 腿断言（原 ⑤ 顺延 ⑥）；③ KD-2 bump 枚举补「结果数值构成规则」+ §1.3-4 注明**版本轴枚举单源 = 本行**（KD-2 / 方法行版本句 / `bench/cases/index.mjs` 注释 / README 版本口径行的字面欠列处按本行判读——字面同步未随本批）；④ §8 `open` 条收正为「0 条——已按整面落 · 已裁定无回退」+ KD-29 被否候选 ① 的 §8 回退指针删除；⑤ 评审 #4 由父侧就地收正（AC-1 五列）· #5 行数口径差以实施读数入批档 §5。
 - 2026-09-24：**失败调用耗时记录并计入用时表（批次 `2026-09-24-error-duration` · 用户 13:26 指令「报错你就不算？时间呢？算进去了吗？」）**——① **采集面补全**：`runCase` 失败分支原硬编码 `totalMs: null` ⇒ 改为**发起 → 失败墙钟**（观测点 = `client.mjs` 调用侧；`ttftMs` / `tokens` 照实缺 `null`）；
   ② 用时表口径句收正：**`null` = 未记录**（仅未记录不计入）+ 脚注「未记录」定性——`error` run 已记录耗时照计（既有规则零改）；③ **版本口径：不 bump**（记录面补全 ≠ 口径变化——版本轴判入 = 规则层，§1.3-4）；
   ④ v4 追溯 = **在档保持**（不重跑 · 不重出——其脚注已明示 1 个 run 未参与累计）；实核：v4 三次 `error` 中两次（mimo / glm `multiturn.1` = 判官面失败）耗时**已记录照计**，缺口只在被测调用失败路径（qwen `instructions.3` 超时）；
@@ -1184,4 +1204,10 @@ v3 重跑（AC-7）实测记档（**v3 报告对已按 KD-25 出档**；下述�
   ② 批档 §2.8 镜像承接（单源声明 + 六行承接表——批档 `:162-179`）；③ §6 AC-1 / AC-2 判定方式补 ④ / ⑧（`:1002` / `:1003`）。
 - 2026-09-24：**受测名单扩容（批次 `2026-09-24-bench-roster-expand` · 用户 14:35–14:44 连续追加 + 「开」定音）**——① 名单 6 → **29 档**（24 新增 − 1：deepseek-v4-pro / glm 三档 / qwen 九档 / kimi 四档 / minimax 两档 / doubao 三档〔`doubao-seed-2-0-code-preview-260215` 按用户 2026-09-24 14:57 裁定排除〕/ hy3；provider 映射按渠道实测——glm 三档走 `glm` 原厂（`zhipu-plan` 实测无 flashx 权限）；无视觉位档 `skipDims: ["vision"]`）；
   ② **模型级温度例外（KD-31）**：kimi 四档被测面实测拒 `temperature: 0`（400「only 1 is allowed」）⇒ `models.json.temperature = 1` + `pipeline` 透传 + `models[].temperature` 入档 + 概览派生披露句；版本口径 = **不 bump**（运行参数面）；③ 价格补录 22 候选（逐条官方定价页取证 `source` + `asOf`；取不到 ⇒ 缺价如实）；④ 测试面：新增 `bench/test/roster.test.mjs`（数据面二测自 `suite.test.mjs` 迁入 + `roster.1–3` / `temperature.1`）+ `report-present.test.mjs` 增 `render.5`；⑤ §1.3 / §2.1-4 / §2.2-12 / §2.3 / §2.4 / §3 / §4 KD-31 / §5.13 / §6 / §7-13 / §9 指针 就地更新；⑥ 三端产品树零改动。
-- 2026-09-24：**评审修正轮（批次 `2026-09-24-bench-roster-expand` · 评审轮 1 #3–#7 逐号处置 + 用户 14:57 / 14:58 裁定并入）**——① §2.4 models.json 样例补 `temperature` 形（缺省省略 + 例外档示例）；② §5.13 分档句补 `bench/test/report-present.test.mjs`（呈现面）/ `bench/test/roster.test.mjs`（数据面）；③ §3 本档行控点对齐（1138 本批前读数 + 就地更新后读数）+ `cases/index.mjs` · `judge.json` 现状数按实读收正（→ 66 · 25）；④ `render.5` 增旧档缺字段腿（缺字段 ≡ 全 0——`??` 缺省语义，§2.2-12）；⑤ **名单 30 → 29 档**（`doubao-seed-2-0-code-preview-260215` 按用户 2026-09-24 14:57 裁定排除）；价格候选 23 → 22；§3 表 / §5.13 `roster.1` / §6 AC-1 · AC-5 / §9 名单注 / 变更记录同步；⑥ 探针结论逐档在册（批次档 §2.2）。
+- 2026-09-24：**评审修正轮（批次 `2026-09-24-bench-roster-expand` · 评审轮 1 #3–#7 逐号处置 + 用户 14:57 / 14:58 裁定并入）**——① §2.4 models.json 样例补 `temperature` 形（缺省省略 + 例外档示例）；② §5.13 分档句补 `bench/test/report-present.test.mjs`（呈现面）/ `bench/test/roster.test.mjs`（数据面）；③ §3 本档行控点对齐（1138 本批前读数 + 就地更新后读数）+ `bench/cases/index.mjs` · `judge.json` 现状数按实读收正（→ 66 · 25）；④ `render.5` 增旧档缺字段腿（缺字段 ≡ 全 0——`??` 缺省语义，§2.2-12）；⑤ **名单 30 → 29 档**（`doubao-seed-2-0-code-preview-260215` 按用户 2026-09-24 14:57 裁定排除）；价格候选 23 → 22；§3 表 / §5.13 `roster.1` / §6 AC-1 · AC-5 / §9 名单注 / 变更记录同步；⑥ 探针结论逐档在册（批次档 §2.2）。
+- 2026-09-24：**bench v5 批（`2026-09-24-bench-v5`）——ark 价格收尾 + 缺价腿校准 + 全量跑批在档**：
+  ① **ark 价格收尾**（逐条字面 = 批次档 §2.2）：`ark:doubao-seed-2-1-lite-260915` 录入（0.80 / 2.70 / 缓存 0.16）· `ark:doubao-seed-2-1-turbo-260628` 缓存价补 0.60 · `ark:doubao-seed-2-1-pro-260915` 来源句升级（值 6 / 30 / 1.2 零改）——三条同源 = 火山方舟「模型价格」页（用户供页实读 · `asOf` 2026-09-24）⇒ **在册 29 键全价**；表级 `asOf` 不动（条目级覆盖，§2.5）；
+  ② **缺价腿校准**（§5.13 `render.1`）：腿键改**合成键** `fixture:unpriced-model`（不取现盘缺价档——价格补录不连带改测试；断言语义零改）；
+  ③ **全量跑批在档**（命令 `node bench/run.mjs --label roster-29-v5` · 缺省 = 清单全量 29 档 · 28 项/档 ≈ 812 run）：产物 = `bench/results/<运行日>-roster-29-v5.{md,json}` 入库；**点火 = 用户点名**（§3 本批表 `bench/results/` 行 · §6 AC-3）；v4 对保留在档 —— 在档注收正（§2.2-7 / §2.2-11）；
+  ④ **一致性面收正**：§2.10.5 孤儿判据指针 → `bench/test/roster.test.mjs`（`roster.3`）+ 变更记录三处相对路径补 `bench/` 前缀（doc-check 悬空锚 11 → 8）+ §9 价格面补录指令句收正；
+  ⑤ 版本口径 = **不 bump**（价格 / 名单数据面——KD-2 / KD-31）；⑥ 三端产品树零改动。
