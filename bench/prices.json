@@ -220,6 +220,33 @@
       "asOf": "2026-09-24",
       "source": "MiniMax 开放平台「按量计费」页（platform.minimaxi.com/docs/guides/pricing-paygo；语言模型表）",
       "note": "缓存写入 2.625 元/百万 tokens（成本式无该计费项）；同表标准档 MiniMax-M2.7 = 2.1 / 8.4 / 0.42"
+    },
+    {
+      "match": "tokenhub:hy3",
+      "cachedInput": 0.25,
+      "input": 1,
+      "output": 4,
+      "asOf": "2026-09-24",
+      "source": "腾讯云 TokenHub「模型价格」页（cloud.tencent.com/document/product/1823/130055；页更新 2026-09-23）",
+      "note": "腾讯混元在售主力（Hy4 preview 按 preview 原则不采）；页内转售价不混用（本批各家走原厂渠道）"
+    },
+    {
+      "match": "ark:doubao-seed-2-1-pro-260915",
+      "cachedInput": 1.2,
+      "input": 6,
+      "output": 30,
+      "asOf": "2026-09-24",
+      "source": "火山方舟（官网摘要 + 多源交叉一致——官方定价页 JS 门控不可直读，父侧 2026-09-24 收）",
+      "note": "缓存命中 1.2（多源一致）"
+    },
+    {
+      "match": "ark:doubao-seed-2-1-turbo-260628",
+      "cachedInput": null,
+      "input": 3,
+      "output": 15,
+      "asOf": "2026-09-24",
+      "source": "火山方舟（官网摘要 + 多源交叉一致——官方定价页 JS 门控不可直读，父侧 2026-09-24 收）",
+      "note": "turbo ≈ Pro 一半（多源）；缓存价未得 ⇒ null"
     }
   ]
 }
