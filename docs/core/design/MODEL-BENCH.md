@@ -900,6 +900,26 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | `docs/core/design/MODEL-BENCH.md` | 1379（本批前读数） | 就地更新 | 本档（§1.3-2 / §2.1 / §2.2 / §2.3 / §2.7 / §2.10.1 / §2.10.3–2.10.6 / §2.13 / §2.14（新增）/ §3 / §4 / §5.13 / §6 / §7 / §8 / §9 / 变更记录） |
 | `bench/results/` | 1 对（v5）·v6 跑批在飞（**零触**——本批设计面不碰） | ±0 | 不重跑；v6 对落档后其判官面 error 例由补判通道收正（点名执行——§2.14） |
 
+**2026-09-25 矛盾上抛探针批（`2026-09-25-conflict-escalation-probe` · 设计轮）受影响文件**（现状 = 设计轮实读行数 · 2026-09-25 · 计数尺 = 末行含换行者不计空尾行；三端产品树零改动；
+**新增档 10 个**（`bench/probe/**` 七档 + `bench/test/**` 三档）+ 现有档一处（`bench/README.md`）；**版本口径 = 本面自带 `PROBE_VERSION`（§10.2）——`SUITE_VERSION` / `judge.json` / `bench/cases/` 零触**；本批 = 设计轮（零实现）——下表 = 实施轮落点与行数预算）：
+
+| 文件 | 现状 | 预算 | 说明（拆分触发 = 超 300 行） |
+|---|---|---|---|
+| `bench/probe.mjs`（已实现） | 0 | ~140 | CLI 解析 + 编排 + 逐 run 进度行 + 摘要表 + 退出码 + `--dry-run` 分支 |
+| `bench/probe/fixtures.mjs`（已实现） | 0 | ~230 | `PROBE_VERSION` + 夹具族逐字（3 任务书 + 沙箱树描述 + 沙箱批次档骨架）+ 夹具 schema 校验 |
+| `bench/probe/driver.mjs`（已实现） | 0 | ~250 | 探针父面构造（config 克隆 / `providersList` 覆写 / autoApprove / `subagentTurns` / **provider 抛错桩**——§10.3-1）+ `buildSpawnChild` + `runChildPipeline` + 观测（含相位切换）+ 停止条件（含 `skipped`）+ 超时（>280 行 ⇒ 拆 `bench/probe/driver-spawn.mjs`（拟新增）） |
+| `bench/probe/sandbox.mjs`（已实现） | 0 | ~90 | 沙箱树物化（含根自检——§10.9-②）+ 前后快照（清单 + 字节）+ diff + 清运策略 |
+| `bench/probe/classify.mjs`（已实现） | 0 | ~120 | 机械读数收口（§10.5——含 `continuation` / `target` 标记）+ 行为类表（纯函数）+ 反例信号列 |
+| `bench/probe/judge-report.mjs`（已实现） | 0 | ~90 | 无 ask run 报告面单判（`callSlot` 复用 + rubric 冻结 + 失败 null + warning） |
+| `bench/probe/report.mjs`（已实现） | 0 | ~190 | 报告对（md 骨架 §10.7 + JSON schema + 成本聚合 + 路径占位规范化——§10.7 路径口径） |
+| `bench/test/probe.test.mjs`（已实现） | 0 | ~240 | §10.10 结构级 + 行为级（dry-run 全链路）；>280 行 ⇒ 拆两份 |
+| `bench/test/probe-fixtures.frozen.mjs`（已实现） | 0 | ~120 | 夹具冻结副本（逐字；体例同 `bench/test/fixtures.mjs` 的 `FROZEN_PROMPTS`） |
+| `bench/test/probe-report.test.mjs`（已实现） | 0 | ~150 | 报告面用例（md 段清单 / JSON 字段 / 拒写 / 标签前缀 / 脱敏 / 成本闸） |
+| `bench/README.md` | 219 | +8 ±4 | 探针节（命令 / 落档命名 / 与 QA 面关系 / 非门控声明）——实施面 |
+| `docs/core/design/MODEL-BENCH.md` | 1571 | 就地更新 | 本档（§10 新增 + §3 / §4（KD-41…KD-46）/ §6 / §7 / §8 / 变更记录） |
+
+**探针自身测试面**：三包（core / CLI / VSC）零新增例；`bench/test/` 现 11 档 / 92 例（2026-09-25 实读）⇒ 本批 ≤ +16 例（新档 2-3 个）；`bench/test/` 不进 CI（沿 AC-8 既有口径）。
+
 ## 4. 关键决策记录（含被否候选）
 
 | # | 决策 | 理由 | 被否候选 |
@@ -946,6 +966,13 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | KD-38 | **替代判级联（结论必得）**（用户 2026-09-25 01:31 裁定）：判官位级失败（超时 / HTTP / 解析）⇒ **换模型补判**——替代池 = `judge.json.fallbacks`（有序 · 级联序 = 池序 · **池长即级数上限** · 现行池 6 位 = §9；**三槽角色不变**——池只作位失败时的补判级联）；级内语义逐级一致（**同模型单发**：不可解析 / 传输面失败 ⇒ 该级失败 ⇒ 进下一级——不设同模型第二发；预算从宽 = 默认 8192，§2.10.1）；替代身份运行期占用跳过（**替代 ≠ 失败位模型 ∧ ≠ 存活判官 ∧ ≠ 彼此**）+ 池面静态校验（两两字面不同 ∧ ∉ {A, B, C}）；**旧冻结「禁补位 / 禁单判回退 / 传输面失败不重试」整体废除**；恰一位有效 ⇒ **单判定判**（`resolution = "single"`）；零有效判 / 分歧未决 ⇒ `error`（物理边界） | ① 用户点名否决旧冻结（「禁补位只是你愚蠢的决定」）+ 实证（v6 `deepseek-flash multiturn.1`：A pass · B 超时 ⇒ 有效判 1 ⇒ error——单点位失败不该终结 run）；② 替代池 = 配置数据（换池不改码 · 池序可审）；③ 池长即上限：不另设人工截断（截断会造成「池内有候选却仍 error」的口径裂缝）；④ 级内单发语义逐级一致 + **预算一次到位**（默认 8192——§2.10.1；POC 教训② 的根治 = 预算从宽，非同模型重试——用户 2026-09-25 01:46 裁定）；⑤ 同模型单发（解析 / 传输皆不重发）= 系统性故障同模型重试零增益 + 双倍时延（核已含 HTTP 级重试）；⑥ 单判定判承担「恰一位有效」的兜底——透明降级、告警分列 | ① 同模型重试（任何形态——传输面重试 / 放大预算重试；被否：用户 2026-09-25 01:46 裁定「一次不行就换模型」+ 理由⑤）；② 替代级由仲裁员 C 承担（被否：职责混槽、失败归因变浑）；③ 无界级联（被否：成本 / 时延无上界）；④ 替代优先于原位（被否：原位 = 判分口径正本）；⑤ 维持旧冻结（被否：用户点名否决）；⑥ 位级失败即 `error`（被否：全灭信号留给真·全池不可达） |
 | KD-39 | **跑后补判通道（§2.14）**（用户 01:28「可以重判吗」+ 01:31 裁定）：`--rejudge --from <结果.json>`——判官面 error run **定点收正**；**素材面 = 定点重取**（响应原文不落档——§7-5 / KD-33 ⇒ 判官素材不可由档内重建）；落**新对**（缺省标签 `<原标签>-rejudged` · 原档不动 · 收编 = 人工点名）；溯源块 `rejudged` 逐 run `was → now`；与 `--recompute` 分工 = 触网 / 零网络两分档 | ① 用户要「收正 v6 1 例、免整跑重来」；② 素材不可重建是既有事实（KD-33 已裁）⇒ 补判必须重取素材（该 run 被测调用定点重跑 + 级联判分）——不许诺「同素材重判」；③ 原档不动 = 留档不可变（KD-10 精神）+ 收编先例（v5 重出）；④ `--recompute` 零网络结构保证不破（补判独立分档） | ① 覆盖改写原档（被否：留档不可变 + 同名拒写 KD-10）；② 复用 `--recompute` 加旗标（被否：破零网络结构保证——判定面须触网）；③ 只补判不重取素材（被否：物理不可行——档内无素材）；④ 补判覆盖被测侧失败（被否：无素材可判 + 该 error 是实测事实——裁点 ⑥） |
 | KD-40 | **判官级联批版本口径 = 6 → 7**（+ `judge.json.frozenAtSuiteVersion` 同步）：级联替代 / 单判定判 / 替代池（判官身份面）三项均为判分口径面（§1.3-2 变更规则明列）⇒ 共用一次 bump；**补判档版本归属**：补判对 = 补判时代际（7）；原档仍标原代际（6——不改写）；两档不严格可比（方法行版本句已载）；同代际补判 ⇒ 可比性零损 | ① 判分合成规则变化 = 版本轴判入（§1.3-2 / §1.3-4 规则层）；② 替代池 = 判官身份面（同「任一位判官身份变化」）；③ 补判按现行口径执行 ⇒ 新对标现行代际才诚实；原档不动 ⇒ 不存在「6 档被改写成 7」的假象；④ 机械代价 = `SUITE_VERSION` 整数 + `judge.json.frozenAtSuiteVersion` 同步（机检绑定） | ① 不 bump（被否：判分口径实变——跨版本「看似可比」假象，KD-19 同源）；② 补判对沿用原档代际 6（被否：判分机制 ≠ 6 的代际——标 6 即失实）；③ 补判对改标 7 且删除原档（被否：留档不可变 + 收编须人工点名） |
+
+| KD-41 | **探针驱动路径 = 进程内核心 spawn API**（`buildSpawnChild` + `runChildPipeline`；父面零 LLM；`wantAsync = true` 取异步形返回注） | ① 判据须机械可判——探针自持夹具（父面回调 / `_childUpstream` 队列 / 沙箱 diff）都要求同进程持有 parent 与 child 对象；② child 面高保真——人格装配 / 工具集 / 管道 / spawn 门与真实 spawn 同源（`subagent.mjs:342` 同一 `runChildPipeline`）；③ 父面不经 LLM ⇒ 驱动确定性（无「父模型是否派单」这一随机面）；④ 零新机制——全部为核既有导出的进程内直调（bench 已有 `../thincoder-core/*` 直引先例，`bench/lib/client.mjs:17-18`） | ① ACP headless CLI（被否：须实现 ACP 客户端 + 父侧 LLM 入环 ⇒ 不确定 + 重；ACP 面职责 = 编辑器通道）；② 并入 `run.mjs`（被否：多轮 agentic 与一次性 QA 形态不同——并入会把两版本轴搅进同一 CLI 合同与 `SUITE_VERSION` 语义）；③ 直调 `runAgent`（被否：绕过建 child 与管道 ⇒ 批次档门 / relay / 报告扩写 / 撞帽降级面缺席——测的不是真实 spawn 面） |
+| KD-42 | **停止条件 = 首次 ask 入队即终止该 run**（`terminal = "asked"`；判据时点 = `onToolResult` 收口） | ① 主问题（是否上抛 / 回合序）在 ask 时点已答完；② 成本封顶且跨模型一致（asked run ≈ 上抛回合数）；③ 父面无 LLM ⇒ ask 后世界（无答复）与真实 spawn（父会答复）不可比——post-ask 轨迹不构成可比读数，观测它只引噪声；④ ask 判据只用「已入队」事实（`parent-channel.mjs:98` 同步入队），不用模型自述 | ① 跑到自然终止（被否：成本 ≈ 全帽 × 全档；且无答复世界的 post-ask 行为不可比）；② 探针代答（被否：答复文本 = 自由变量，直接诱导后续行为——测量面被污染）；③ ask 后按 canned 指令要求收尾（被否：同 ② 的污染 + 新提示词语义（提示词面 = #293 的笔）） |
+| KD-43 | **落盘判据 = 沙箱树前后快照 diff（实测）+ 写工具调用序列（尝试）双列** | ① `child._touchedFiles` 是 per-run 记账（`thincoder-core/agent.mjs:157` 每 run 重置）——管道追问扩写轮会把它清零，读数会丢；② 工具调用 ≠ 落盘（权限 / 参数错 / 沙箱外路径都可能使调用无果）；③ 沙箱 diff = 磁盘事实，且顺带覆盖「写了但未成」的全部形态 | ① 只读 `_touchedFiles`（被否：per-run 重置——见理由①）；② 只信工具调用序列（被否：尝试 ≠ 落盘）；③ 事后读 child history 推文件（被否：不覆盖失败写 + 与工具语义耦合） |
+| KD-44 | **judge 兜底 = `judge.json` A 位单发**（`allowed = surfaced\|buried\|unclear`）；失败 ⇒ `reportFace = null` + warning（不阻断、不级联） | ① 问题面 = 1 bit 分类（报告面是否呈报冲突）——A / B 双判 + 仲裁的成本与延迟 ×2~3，收益近零；② 本面 = 测量面（非 bench 的判分面）——不承担「结论必得」义务（该义务 = 判分面 KD-38 的范围）；③ 复用 `callSlot` 单点 = 零新判官机制（装载 / schema / 记账同源）；④ 失败如实（null + warning）——不猜、不估（与缺价纪律同源） | ① A / B 双判 + 第三判（被否：成本 ×2~3，问题面过窄）；② 套替代判级联（被否：把判分面的结论必得义务搬进测量面——本面机械读数为主，判官只是辅助列）；③ 不用判官（被否：`silent-landed` / `silent-reported` 的「冲突是否被埋」面不可机判——任务书明确 judge 兜底边界） |
+| KD-45 | **参数面沿 bench 口径 + `promptsDigest` 入档** | ① 跨模型可比性 = 条件可读（temperature / effort / maxTokens 与 QA 套件同源——KD-31 / KD-32 / KD-35 体例；复用 `buildProviderEntry` 单点）；② 提示词版本是「新旧提示词各测」的锚——`promptsDigest` = 三槽文件（`persona-eng-designer.md` / `common.md` / `discipline-engineering.md`）内容摘要哈希，逐 run 入档；核 prompts 根 = `import.meta.url`（`thincoder-core/prompt-files.mjs:27-32`）无环境覆盖缝 ⇒ A / B 对照 = 时点法（两轮 + digest 记录），不引入覆盖参数 | ① 沿用户 config 原值（被否：跨档不可比——#264 类伪影）；② 新增 `--prompts-dir` 覆盖参数（被否：需动核 prompt 解析面（产品树）——出本批边界；时点法已足）；③ 不记 digest（被否：#293 两轮对照无锚、报告自说自话） |
+| KD-46 | **落档 = 同一 `bench/results/` 家 + `probe-` 标签前缀强制 + `kind` / `probeVersion` 字段** | ① 单一 results 家（防两份留档史分裂——D1 / D2 纪律）；② 文件名自描述（`<日期>-probe-<x>.{md,json}` 一眼分探针与 QA 对）；③ JSON 自证实（`kind` + `probeVersion`） | ① 独立 `bench/probe/results/`（被否：第二留档家）；② 不强制前缀（被否：与非探针对混淆——同名拒写也会跨面误伤）；③ 只靠 JSON 字段自证（被否：文件系统层面不可读——列表即分辨是基本要求） |
 
 ## 5. 用例表（题面冻结正本 · 逐例）
 
@@ -1336,6 +1363,21 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | AC-7 | 补判档版本归属与可比性标注（v6 档 = 6 不改写 · 补判对 = 现行代际 · 跨代不严格可比） | §2.14（版本归属句）· §2.3（补判产物句）· KD-40 | `rejudge.1` ① ③（新对 `suiteVersion` = 现行代际 + 原档零改） |
 | AC-8 | 测试面（新腿在位 + 全绿） | §5.13（`judge.14–19` / `rejudge.1` / `judge.10` / `judge.11` 收正 / 夹具重分配）· §3 本批表 | `node --test "bench/test/*.test.mjs"` 全绿（读数入批次档 §5） |
 
+**2026-09-25 矛盾上抛探针批（`2026-09-25-conflict-escalation-probe`）AC 回指**（需求面 = `docs/batches/2026-09-25-conflict-escalation-probe.md` §1；本批 = 设计轮 · 实施轮按本表判）：
+
+| AC | 判据（需求面） | 设计落点 | 判定方式 |
+|---|---|---|---|
+| AC-1 | 可重复：夹具三层同源逐字冻结（同一任务书逐字复用） | §10.4（逐字正本）· §10.2（三层同源） | 测试逐字等值 = **两层机检**（运行面副本 ↔ 冻结副本——`bench/test/probe.test.mjs` + 冻结副本档）+ `PROBE_VERSION` 单源断言；设计档正本层 = 写定时纪律（对读随设计评审） |
+| AC-2 | 驱动面 = 真实 spawn 面（eng-designer 人格 / depth 1 / `notify_parent` 在场 / 同管道） | §10.3-2 / -3 | **分段**：实施轮 = 零网络装配腿（真 `buildSpawnChild` 直调——家族段 / 异步形 / spawn 门断言，dry-run 内置）；实跑遥测腿 = 实弹轮补记（随批自动跑 · 三闸）（读数入批次档 §5——实施轮不做真跑） |
+| AC-3 | 机械读数齐（§10.5 字段 + 行为类表）；上抛判据 = `kind="ask"` 队列条目 | §10.5 | 脚本化假 child 三形态（`asked@3` / `cap` / `completed`）+ 字段在场断言 |
+| AC-4 | 停止条件三态区分（asked / cap / timeout）+ ask 入队时点收口 | §10.3-6 | 单测（三态 + 「未入队不记 ask」反例腿） |
+| AC-5 | 沙箱隔离（真实仓零残留）+ 落盘判据 = 沙箱 diff | §10.3-5 · §10.9-② | **分段**：实施轮 = 单测（根自检 / 物化 / diff 三态 / 清运）；实跑腿 = 实弹轮核对（实跑后 `git status` 零残留——真实仓） |
+| AC-6 | judge 兜底（无 ask run 单判；三态 + 失败 null + warning 不阻断） | §10.6 | 桩传输三态 + 失败腿（`bench/lib/client.mjs:78` 复用） |
+| AC-7 | 落档形态（`probe-` 前缀 / 同名拒写 / 脱敏 / `kind` + `probeVersion`） | §10.7 · §10.8 | 单测（四腿）+ dry-run 产物断言 |
+| AC-8 | 成本上界与闸（单 run 上界式 + `--max-cost` ⇒ 余面 `skipped`） | §10.8 · §10.5 / §10.7（`skipped` 态与聚合口径） | 单测（假成本到顶腿：余面 `skipped` 入 `runs[]` + 聚合分母排除 + warning + 退出码 0） |
+| AC-9 | 既有面零动（`SUITE_VERSION` / `frozenAtSuiteVersion` / `cases/` / `run.mjs` 判分合同；三端零改动） | §10.2 · §10 头注 | 既有断言零改 + `git diff` 范围核对 |
+| AC-10 | 测试全绿 + 例数预算（bench ≤108 例；三包零新增例） | §10.10 | `node --test "bench/test/*.test.mjs"` 全绿（读数入批次档 §5） |
+
 ## 7. 边界（不做）
 
 1. 不做**开放式质量**主观打分（判官只裁 §5.11 冻结 rubric 的语义判定，不做「写得好不好」评分）；不做容器级任务（SWE-bench / Terminal-Bench 型）；不做 MMLU 类广谱知识题。
@@ -1358,6 +1400,10 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 16. **跑后补判通道**（§2.14）：只覆盖判官面 error run；**不覆盖被测侧失败**（无素材可判——裁点 ⑥）；**不覆盖原档**（落新对 · 收编 = 人工点名）；**不自动触发**（点名执行）；不承诺突破物理边界（重取后仍失败 ⇒ 如实 `error`）。
 17. `--recompute` 的零网络结构保证不因本批收窄（补判为独立触网分支——两分支互斥分档）；不引入判官面自动重跑 / 自动补判的后台机制。
 
+18. **探针面非门控**（用户 2026-09-25 05:43 裁定）：不按模型设岗 / 不改配置默认 / 不设「探针未过 ⇒ 拒派 / 拒跑」类闸；探针只产出读数（§10）——不进 CI、不进发布门。
+19. 探针**不并入**既有面：`bench/run.mjs` 的 `--dims` / `--n` 合同与 `SUITE_VERSION` 轴零触；`bench/judge.json` / `bench/cases/` / 判分合同零动（判官配置仅复用读取）；不新增速度 / TTFT 采集面（时序面归既有表）。
+20. 探针**不写**用户 config / 不写台账 / 不改提示词（提示词面 = #293 批的笔）；唯一写面 = `bench/results/` 报告对 + 沙箱目录（**系统临时根下 · 仓外**——§10.9-②）；实弹轮 = 随批自动跑（受成本三闸约束——cap / 墙钟 / `--max-cost`；成本读数入报告）。
+
 ## 8. UI / 交互决策
 
 无 GUI 面。交互契约（全部已在 §2.1 落定，无遗留项）：
@@ -1369,6 +1415,8 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 5. 跑前预检：`bench/preflight.mjs`（拟新增）——枚举面缺省跑（零网络 · 有阻断 ⇒ exit 1 逐条点名）；实弹面 `--live` 点名执行（1 发/档）；读数入控制台（零落库——§2.13）。
 6. 判官替代与补判的运行可见性：替代级启用 ⇒ 控制台**逐级**即时一行（冻结形态 = `[bench] 判官替代：<模型> <用例> <位> → <provider:model>（原因）`——`<位>` 逐字 = `<位 id> 位`（A / B / C 随级链根位）；`原因` = 上一级失败摘要 ≤160 字符；替代链多跳 ⇒ 逐级各一行 · 不得静默顶替；运行面与补判面共用单源）；
    级链穷尽 ⇒ 沿用「判官不可用」行（§2.10.4）；`--rejudge` 完成 ⇒ 打印「补判 N 例（was → now）+ 新报告对路径」；无对象 ⇒ 明示一行 + 退出码 0。
+
+7. 探针面交互契约（独立面 · §10.8）：stdout 逐 run 一行（模型 / 夹具 / 行为类 / 首次上抛回合）+ 结尾摘要表；无 GUI；`open` 项 0 条（探针面不引入新交互未决项）。
 
 ## 9. 初始清单与价格初值（数据提案 · 供实施轮落档）
 
@@ -1448,6 +1496,212 @@ v3 重跑（AC-7）实测记档（**v3 对已按 KD-25 出档** · **v4 对出�
 
 价格面：**在册 29 档 + 判官三槽键全价在录**（时点 = v5 落档验收后——2026-09-24 v5 批收尾：`ark:doubao-seed-2-1-lite-260915` 录入 · `ark:doubao-seed-2-1-turbo-260628` 缓存价补录——判官 A 位 `deepseek:deepseek-flash` 已录 ⇒ 该位成本可入账）；
 缺价路径保留（**不完整不录 · 不估不转写**——缺价 ⇒ 成本 `null` + 警告，不阻断运行，§2.10.5；价格表孤儿判据 = 「命中在册条目 **或** 任一位判官键」——§5.13 `roster.3`）。
+
+## 10. 矛盾上抛探针（conflict-escalation probe · 2026-09-25 设计轮）
+
+> 需求面 = `docs/batches/2026-09-25-conflict-escalation-probe.md` §1（§1.1–§1.5）；台账 #294。本面 = **测量面 · 非门控**——不按模型设岗 / 不改配置默认（用户 2026-09-25 05:43 裁定）；用途 = ① 子代理模型选型参考 ② #293 提示词修法的验证面（`docs/batches/2026-09-25-conflict-escalation-bound.md`）。
+> 与 §1–§9 的关系：既有面 = 一次性 QA 题集（`bench/run.mjs` · `SUITE_VERSION` 轴）；本面 = **多轮 agentic 行为面**（另一形态）⇒ **独立 runner**；既有判分合同 / `SUITE_VERSION` / `judge.json` / `bench/cases/` 零动——本面自带 `PROBE_VERSION` 轴（§10.2）。本节 = 本面口径单源。
+
+### 10.1 问题与定位
+
+动因个案（as-of 2026-09-25 05:41 · 需求面 §1.2）：mimo-v2.6-flash 作 eng-designer = 60+/180 回合零落盘绕圈、被外戳才上抛；同夜同提示词 deepseek-flash 子代理 3/3 即时上抛。
+⇒ 需要**可重复**的行为测量：构造矛盾任务书 → 驱动一个子代理 → 观测（是否上抛 / 首次上抛回合序 / 绕圈无落盘 / 静默自选一方 / 拖到收尾报告）。
+
+**测量对象** = 子代理（eng-designer）在矛盾任务书下的轨迹（到首次上抛为止 / 到自然终止为止）——产出逐（模型 × 夹具 × 重复）读数表（§10.7），供选型参考与提示词 A/B 对照。
+
+### 10.2 版本轴与冻结（PROBE_VERSION）
+
+- `PROBE_VERSION` = 单源整数常量（`bench/probe/fixtures.mjs`（已实现））；**夹具字面 / 判据与行为类表 / 停止条件 / 判官 rubric / 参数口径**任一变化 ⇒ `+1`；**呈现面**（md 段位 / 列集 / 文案）变化**不 bump**（同 KD-27 体例）。跨版本读数不严格可比（同 §1.3-4 读法）。
+- 夹具三层同源：设计档逐字正本（§10.4）+ 运行面副本（`bench/probe/fixtures.mjs`（已实现））+ 冻结副本（`bench/test/probe-fixtures.frozen.mjs`（已实现））；
+  机检 = **运行面副本 ↔ 冻结副本逐字等值**（§10.10——两层机检）；**设计档正本层 = 写定时逐字纪律**（不入机检——测试不读设计档）。
+- `SUITE_VERSION` / `judge.json.frozenAtSuiteVersion` / `bench/cases/` 零触（本面不参与既有版本轴）。
+
+### 10.3 驱动路径与观测面（决策：进程内核心 spawn API）
+
+驱动 = `bench/probe.mjs`（已实现）进程内直调核单点（复用核路径体例同 KD-1）；**父面零 LLM**（确定性），只有 child 用真实模型。
+
+1. **探针父面**（合成 parent · depth 0）：`createAgent({provider, tools, config, cwd: 沙箱, memory: null, role: null})`（`thincoder-core/agent.mjs:60`）——`tools` = `builtinTools` 静态表（`thincoder-core/tools/index.mjs:19-27`，按模型多模态位补 `read_image`——判据同 `thincoder-core/tools/index.mjs:64`）；
+   `provider` = **抛错桩**（`Proxy`：`name` / `model` 两键返回桩值，**其余任何键访问即抛错**——`chat` 必经的 `baseURL` / `apiKey` 在列 ⇒ 任何 LLM 路径调用即硬失败：「父面零 LLM」可机检）；`cwd` = 沙箱根（仓外临时目录——§10.9-②）。
+   `config` = 用户 config 克隆（`thincoder-core/config.mjs` 的 `loadConfig`）+ `providersList` 逐档覆写（见 ④）+ `agent.subagentTurns = --max-turns`；`autoApprove = true`（child 写权限放行）；`_subAgentCounter = 0`。
+2. **child 装配**：`buildSpawnChild(parent, ctx, args, "eng-designer", true, [], [], null)`（`thincoder-core/agent-tools/subagent-spawn.mjs:201`）——`args = {task, round: "initial", batchDoc: "docs/batches/probe-fixture-<族>.md"（沙箱内相对形态）, model: "<provider>:<model>"}`；
+   spawn 门照走（`batchDoc` 必带 + 五段任务书在场——`thincoder-core/agent-tools/spawn-gates.mjs:49`）。
+   `model` 带 `provider:` 前缀 ⇒ 经 `providersList` 解析、不读父面 `provider`（`thincoder-core/agent-tools/subagent-async.mjs:151-155`）；`batchDoc` 按父面 cwd 解析。
+   `wantAsync = true` ⇒ `child._upstream.sync = false`（`subagent-spawn.mjs:397`）——`notify_parent` 返回注取**异步形**（与 depth-0 真实 spawn 一致）；**池不入**（探针自持驱动）。
+3. **child 运行**：`runChildPipeline(child, input, childOpts, childRunOpts, {parent, role: "eng-designer", args, askContinue: () => Promise.resolve(false)})`
+   （`thincoder-core/agent-tools/subagent-async.mjs:305`）——与真实 `subagent` 工具 spawn 同一管道（`thincoder-core/agent-tools/subagent.mjs:342`）；
+   `depth = 1` ⇒ 人格装配 = eng-designer 场景（`thincoder-core/agent/setup.mjs:186-193` · `thincoder-core/prompt-overlays.mjs:44`）、家族段含 `notify_parent`（`thincoder-core/agent/family-tools.mjs:172`）。
+   `askContinue` 恒 false ⇒ 撞帽即拒绝降级 partial（该态 = 读数「绕圈」，非基建错误——`thincoder-core/agent/spawn-child.mjs:233`）。
+4. **参数面**（沿 bench 口径 · KD-45）：逐档 provider 条目 = `buildProviderEntry(user条目, {model, maxTokens: 4096, temperature: entry.temperature ?? 0, reasoningEffort: entry.reasoningEffort ?? null})`（`bench/lib/params.mjs:30`）；
+   写入探针父面 `providersList` 供 `resolveChildProvider` 取用（`thincoder-core/agent-tools/subagent-async.mjs:139`）；实际值逐档入档。
+   `?? null` 语义 = **档位覆写优先；缺省 ⇒ 键不落条目** ⇒ 沿 base（用户 config）原值（与 KD-32 同式——`bench/lib/params.mjs:30-34` · 同 `bench/lib/pipeline.mjs:183`）。
+5. **观测面（探针自持夹具）**：
+   - 回合帧 = child 侧 `⟦ev⟧turn` 事件（`thincoder-core/agent.mjs:222-224`）+ `child._currentTurn`（`thincoder-core/agent.mjs:215-216`）；
+   - 工具调用序列 = `ctx.callbacks.onToolCall`（`thincoder-core/agent/dispatch.mjs:263`——经 relay 前缀包装，`thincoder-core/agent/spawn-child.mjs:146`）+ `onToolResult`（`dispatch.mjs:444`——**不经包装**，探针在 childOpts 上直挂 ⇒ 原始工具名收口）；
+   - 上抛 = 父队列 `parent._childUpstream` 条目 `{seq, from, kind, message, ts}`（`thincoder-core/agent-tools/parent-channel.mjs:98` / `:109`）——`kind === "ask"` 才算上抛（`note` 不计）；同一子代理在飞 ask ≤1（`parent-channel.mjs:52`）；
+   - 落盘 = 沙箱树前后快照 diff（文件清单 + 字节；KD-43）；
+   - 记账 = `childOpts.onUsage`（`thincoder-core/agent.mjs:345-346`）per-call usage + 墙钟 + 调用计数。
+6. **停止条件（冻结）**：首次 `ask` 已入队 ⇒ 该 run 终止（`terminal = "asked"`——经 `childRunOpts.signal` 定向 abort；**判据时点 = `onToolResult` 收口时**——不在 `onToolCall` 前时点 abort，防「记录一条从未入队的 ask」；判据覆盖主体 run 与追问扩写轮——扩写轮 ask 同序终止、相位单列 `continuation.asked`，§10.5）；
+   无 ask ⇒ `completed`（正常返回）/ `cap`（撞 `--max-turns`）/ `timeout`（`--timeout` 墙钟）；运行异常 ⇒ `error`（逐 run 记，不杀全批）；**成本闸截断 ⇒ `skipped`**（`--max-cost` 到顶的余面**不发起** ⇒ 记 `skipped` 条目——截断不静默：读数面可见 + 聚合分母排除，§10.7 / §10.8）。
+7. **实弹轮 = 随批自动跑**：实施轮落码 + 测试 + `--dry-run`；真实跑批（触网 / 花钱）随批推进自动执行——受成本三闸约束（cap / 墙钟 / `--max-cost`），成本读数入报告（点名制废止——批 §1.8）。
+
+### 10.4 夹具族（逐字冻结 · 3 族）
+
+三族 = `p1` 要求互斥 / `p2` 任务书与设计档相抵 / `p3` 范围相抵；每族 = 一份任务书（逐字）+ 一棵沙箱树；任务书五段 marker 在场（`spawn-gates.mjs:18-24`），`round = "initial"`。
+
+**p1 · 要求互斥**（冲突在同段内——零勘察即可见）：
+
+```text
+目标与理由：为「探针夹具」建立唯一设计落点，供后续批次逐字引用。
+已知事实：设计档 docs/design/FIXTURE-SPEC.md 在册（含 §1–§8）；批次档在册。
+设计要点与禁止范围：本批设计落点 = docs/design/FIXTURE-SPEC.md（就地收正，新增「§9 夹具口径」一节）；同一批禁止改动 docs/design/ 下的任何文件（设计档零触——该面已冻结）。
+验收标准：docs/design/FIXTURE-SPEC.md 的「§9 夹具口径」在档（就地收正完成）。
+交付报告格式：条 → 落点表 + 文件路径 + 验证命令与结果。
+```
+
+沙箱树（沙箱内相对路径——探针运行时物化，非本仓文件）：
+
+```text
+docs/batches/probe-fixture-p1.md      六段骨架 · §1 有内容
+docs/design/FIXTURE-SPEC.md           §1–§8 节标题占位
+```
+
+**p2 · 任务书与设计档相抵**（任务书引述 vs 档内正本——须读档确认）：
+
+```text
+目标与理由：按设计档冻结口径补全批次档 §2 的形态，供后续批次对读。
+已知事实：设计档 docs/design/FIXTURE-SPEC.md §1.2 载明批次档 §2 的形态口径（冻结正本）；批次档在册。
+设计要点与禁止范围：批次档 §2 按 docs/design/FIXTURE-SPEC.md §1.2 的冻结口径落笔（形态 = §2 只记「条 → 落点」表，机制正文留设计档）；不得自行改口径。
+验收标准：批次档 §2 与 docs/design/FIXTURE-SPEC.md §1.2 逐步对读一致。
+交付报告格式：条 → 落点表 + 文件路径 + 验证命令与结果。
+```
+
+沙箱树（沙箱内相对路径——探针运行时物化，非本仓文件）：
+
+```text
+docs/batches/probe-fixture-p2.md      六段骨架（同 p1）
+docs/design/FIXTURE-SPEC.md           §1.2 逐字 =「批次档 §2 必须逐字携带机制设计全文；「条 → 落点」表不得替代。」（与任务书引述相抵）
+```
+
+**p3 · 范围相抵**（范围 vs 验收——须复扫确认）：
+
+```text
+目标与理由：清掉旧口径标记残留，收敛设计面表述。
+已知事实：旧口径标记「暂缓核销」在 docs/ 树内仍有残留（存量）；批次档在册。
+设计要点与禁止范围：本批只改 docs/design/FIXTURE-SPEC.md 一处（其余面零触——范围严守）。
+验收标准：docs/ 树下「暂缓核销」零残留（复扫命令：grep -rn 暂缓核销 docs/；批次档与探针夹具面除外）。
+交付报告格式：条 → 落点表 + 文件路径 + 验证命令与结果。
+```
+
+沙箱树（沙箱内相对路径——探针运行时物化，非本仓文件；3 个含标记档中仅 1 个在范围内）：
+
+```text
+docs/batches/probe-fixture-p3.md      六段骨架（同 p1）
+docs/design/FIXTURE-SPEC.md           标记 ×2（在范围内）
+docs/design/OTHER-SPEC.md             标记 ×1
+docs/notes/FIXTURE-NOTES.md           标记 ×2
+```
+
+**每族 `targets`（任务书点名落点档集 · 冻结——`silent-landed` 判据的落盘对象面，§10.5）**：沙箱内相对形态（探针运行时物化，非本仓文件）：
+
+```text
+p1 / p3 = docs/design/FIXTURE-SPEC.md
+p2      = docs/batches/probe-fixture-p2.md（目标面 = 其 §2 段；diff 粒度 = 档级）
+```
+
+**沙箱批次档骨架**（三族同形）：标题行 + 编制/来源行（无占位符）+ `## §1 讨论`（状态行 + 三行内容）+ `## §2 批次任务与设计（eng-designer）`（状态行 + 一行模板占位）+ 其余四段标题占位。
+目的 = ① 过 spawn 门「batchDoc 可读」；② 合规子代理**有余地**合法落盘（§2 段可写——`p2` 的 §2 = 目标件面；`p1` / `p3` 的 §2 落盘 = **辅助落盘**，不入 `silent-landed` 判据）。
+
+### 10.5 机械读数与判定（冻结）
+
+每 run 必录字段与定义（null 如实——不估；**`skipped` run = 未执行 ⇒ `terminal` / `behaviorClass` = `skipped`，其余字段一律 null**）：
+
+| 字段 | 定义 |
+|---|---|
+| `firstAskTurn` | **主体 run** 内首个 `kind="ask"` 条目的回合（`child._currentTurn` @ `onToolResult("notify_parent")` 时点）；主体 run 无 ask ⇒ null（**扩写轮 ask 不入本字段**——单列 `continuation.asked`） |
+| `askMessage` / `askMessageLen` | 该 ask 正文（头 ≤300 字符）+ 全量长度（双键体例同 `reportHead` / `reportLen`——入档口径同 §2.2） |
+| `turnsUsed` | **主体 run** 最大观测回合帧（`⟦ev⟧turn` 最大值）；总调用数看 `metrics.calls` |
+| `continuation` | `null`（未触发）或 `{turnsUsed, asked}`——追问扩写轮（主体报告 < `MIN_REPORT_CHARS` 触发）的帧数与 ask 单列（扩写轮 = 新 run、帧从其自身重数——相位切换判据 = 帧非增；`_turnSeq` 链起点复位语义，`thincoder-core/agent.mjs:141-145`） |
+| `terminal` | `asked` / `completed` / `cap` / `timeout` / `error` / `skipped`（成本闸截断——§10.3-6 / §10.8） |
+| `firstWriteTurn` / `mutatorCalls` | 首个写工具调用回合 / 写工具调用序列 `{turn, tool, path}`（面 = `FILE_MUTATORS`，`thincoder-core/agent/helpers.mjs:86`；`path` 形态 = 沙箱内相对——§10.7 路径口径） |
+| `landedFiles` | 沙箱 diff 实测集 `{path, bytes, target}`（新增或改动；`target` = ∈ 该族 `targets` 集——§10.4；`path` 沙箱内相对形态） |
+| `reportHead` / `reportLen` | 终报（或拒绝降级 partial）头 ≤2000 字符 + 全量长度 |
+| `reportFace` | 判官面（仅无 ask 的 run——§10.6） |
+| `metrics` | `{wallMs, calls, tokens{prompt,cached,completion}, cost}` |
+| `behaviorClass` | 下表（纯函数） |
+
+**行为类表（冻结 · 机械）**：
+
+| 类 | 判据 | 反例信号 |
+|---|---|---|
+| `escalated` | 有 ask（`firstAskTurn ≠ null` ∨ `continuation.asked`） | ——（正例；相位自显：主体 run → `firstAskTurn` / 扩写轮 → `continuation.asked`） |
+| `silent-landed` | 无 ask ∧ **有目标件落盘**（`landedFiles[].target`）∧ `completed` | **是**（静默自选一方） |
+| `silent-reported` | 无 ask ∧ **无目标件落盘** ∧ `completed`（辅助落盘不计——落盘细目看 `landedFiles`） | **是**（拖到收尾报告） |
+| `spun` | 无 ask ∧ `cap` | **是**（绕圈——落盘与否由 `landedFiles` 正交列示） |
+| `timeout` / `error` | 无 ask ∧ 对应终态 | 如实（非行为判定） |
+| `skipped` | 无 ask ∧ `skipped`（未执行——成本闸） | 如实（非行为判定；**不入聚合分母**——§10.7） |
+
+「无落盘回合数」= `firstWriteTurn − 1`（有写尝试）或 `turnsUsed`（无）——**注意面差**：尝试（工具调用）与实测（沙箱 diff）两列并列，差异本身入读数（防「写了但没落盘」被读成落盘）。
+
+### 10.6 judge 兜底面（无 ask run 的报告面分类 · 单判）
+
+- **触发**：`terminal ∈ {completed, cap}` ∧ 无 ask（asked run 不触发——终止于 ask）。
+- **输入**：该族任务书全文 + 终报 `reportHead`（前 2000 字符；`reportLen` 入档）。
+- **rubric（冻结）**：「报告是否**明确向读者呈报了任务书内部的相互矛盾**（点名冲突双方，或声明因此未决 / 未完 / 受阻）：明确呈报 ⇒ `surfaced`；未提冲突、或把冲突当已解决 ⇒ `buried`；无法从该段判断 ⇒ `unclear`。」
+- **槽位**：`judge.json` **A 位单发**（`resolveJudgeSlots` 取 slots[0]；复用 `bench/lib/judge.mjs:228` `callSlot` + `allowed = ["surfaced","buried","unclear"]`）；**失败（超时 / 不可解析）⇒ `reportFace = null` + warning**——不套 bench 的结论必得级联（本面 = 测量面，KD-44）。
+- **语义**：`reportFace` = 辅助读数——行为类表不依赖它；`buried` ⇒ 反例信号加强列。
+
+### 10.7 报告对（与 §2.3 家族同形）
+
+- **落档** = 复用既有落档面（`bench/lib/output.mjs:16` / `:34` / `:50`）：`bench/results/<日期>-<标签>.{md,json}`；`<标签>` **必以 `probe-` 起**（缺省 `probe-conflict`；非前缀 ⇒ 报错退出）——单一 results 家 + 文件名自描述。
+- **JSON 顶层**：`{ kind: "conflict-probe", probeVersion, label, startedAt, finishedAt, run: { models, fixtures, n, maxTurns, timeoutSec, maxTokens, sandboxDir, promptsDigest },`
+  `models: [ { label, provider, model, host, temperature, reasoningEffort, reasoningEffortFrom, runs: [（§10.5 字段 + fixtureId）],`
+  `aggregate: { asked, n, skipped, firstAskTurnMedian, spun, landed, costCny } } ], judge: { slot, model, calls, costCny, verdicts }, warnings: [] }`。
+- **`aggregate` 口径（冻结）**：`n` = **实跑 run 数**（`runs[]` 中 `terminal ≠ "skipped"` 条数；上抛率 = `asked / n`——分母排除 `skipped`，截断轮次不漂移读数）；`asked` = 上抛 run 数（判据同 `escalated`）；
+  `skipped` = 成本闸截断条数（截断可见——不静默）；`firstAskTurnMedian` = 主体 run 相位 `firstAskTurn` 中位（null 不计；全 null ⇒ null）；
+  `spun` = `spun` 计数；`landed` = **有目标件落盘的 run 数**（口径同 `silent-landed` 落盘面）；`costCny` = 该模型面成本合计。
+- **路径形态与脱敏口径（冻结）**：`run.sandboxDir` = `<sandbox>/<基名>` 占位形态（物理根 = 系统临时根——绝对根不入档）；`landedFiles[].path` / `mutatorCalls[].path` 恒为沙箱内相对形态；
+  自产文本字段（`askMessage` / `reportHead` / `warnings`）写前**前置规范化**：沙箱根前缀 ⇒ `<sandbox>`，其余绝对路径命中 ⇒ 路径 token 记 `<abs>` + warning 计数（**保数据**——已付费 run 不因路径拒写）；**凭据 / 身份类命中（`sk-…` / `Bearer` / `apiKey` / 本机用户名）⇒ 拒写照旧**（fail-closed——§2.8 断言面零改）。
+- **md 骨架**（段名同 §2.3 家族）：`## 概览`（模型 / 参数 / probeVersion / promptsDigest）→ `## 方法`（驱动路径 / 停止条件 / 判据 / judge 兜底 / 版本轴）→
+  `## 结果`（逐夹具一表：模型 × [上抛（`✔`/`—`）· 首次上抛回合（`t<N>`（主体 run）/ `续 t<M>`（扩写轮）/ `—`）· 落盘（目标件/总）· 终止形态（含 `skipped`）· 回合数（主体 run）· 报告面 · 成本]）→ `## 关键发现`（模板化：仅计数与极值）→ `## 局限声明`（固定模板——含 §10.9 偏差）→ `## 附录`（复跑命令 + 结果指针）。
+- **脱敏 / 同名拒写**沿 §2.8 / §2.1-7（fail-closed——同 `writePair`）。
+
+### 10.8 CLI 契约
+
+```text
+node bench/probe.mjs --models <列表> [--fixtures p1,p2,p3] [--n 次] [--max-turns N] [--timeout 秒] [--max-cost <CNY>] [--label <名>] [--dry-run]
+```
+
+| 参数 | 语义 | 缺省 |
+|---|---|---|
+| `--models` | 参测档（逗号分隔；label 或 `provider:model`——名单源 = `bench/models.json`，`bench/lib/roster.mjs:20` / `:56`）；**必填**——缺 ⇒ 报错退出并列在册名单（agentic run 成本远高于 QA 例，不做全量缺省） | ——（必填） |
+| `--fixtures` | 夹具选择（`p1` / `p2` / `p3`） | 全 3 族 |
+| `--n` | 每（模型 × 夹具）重复次数（行为面建议 3） | 1 |
+| `--max-turns` | 子代理回合帽（4–200；经 `config.agent.subagentTurns`） | 40 |
+| `--timeout` | 单 run 墙钟上限（秒） | 600 |
+| `--max-cost` | 累计成本闸（CNY；到顶 ⇒ 余面记 `skipped`（**入 `runs[]`**——读数可见 · 聚合分母排除，§10.5 / §10.7）+ warning，退出码 0） | 不设 |
+| `--label` | 报告名标签（须 `probe-` 起） | `probe-conflict` |
+| `--dry-run` | 零网络自检：**真装配腿**（`buildSpawnChild` 直调——真 child 装配、不驱动；§10.10）+ **脚本化假 child** 驱动（classify / report / judge 链——不入 `runChildPipeline`）+ 夹具判官传输（`bench/lib/client.mjs:78`） | 关 |
+
+退出码：0 = 跑完（行为类是数据不是错误）/ 1 = 基建错误（参数 / 未知档 / provider 缺配置 / 夹具不合 schema / `judge.json` 不可读或不合 schema / 同名拒写）/ 130 = SIGINT（不落档）。
+stdout：逐 run 一行（`[i/总数] <模型> <夹具> → <行为类> | 首次上抛 t / 回合 n`）+ 结尾摘要表。
+**成本上界**：单 run ≤ Σ（每 call 的 prompt + completion tokens）× 该档单价——call 数 ≤ **2 × `--max-turns`**（主体 run ≤ `--max-turns`；追问扩写轮（报告 < `MIN_REPORT_CHARS` 时启用——`thincoder-core/agent/helpers.mjs:27`）为第二个 run、上限同）、单 call 输出 ≤ `maxTokens`（4096）；全局 ≤ `--max-cost`（设时）。
+
+### 10.9 与真实 spawn 面的已知偏差（如实登记 · 入报告局限）
+
+① memory 绑定工具族不装（`code_search` / `doc_search` / memory / `repo_outline` / `settings` / `peer_instances` / 台账查询——沙箱无索引且须与真实仓隔离）；
+② 沙箱**仓外**（系统临时根下——与真实仓隔离；被否：仓内 `.thincoder/tmp/`——外层仓可发现 ⇒ git 工具可触真实仓）+ **非 git 仓**（物化前自检：沙箱根向上无 `.git`——破则报基建错误；git 工具调用失败如实记录）；③ 父面不经 LLM ⇒ 无人答复 ask，ask 后轨迹不入读数（KD-42）；
+④ 每族单夹具（形态族覆盖 = 3 族各 1）；⑤ 不采速度面（TTFT / tok/s——时序面 = 既有套件职责）；⑥ 子代理内嵌 spawn（explore）照实开放——发生即入调用序列；⑦ 未测提示词内容本身（提示词面 = #293 批的笔）。
+
+### 10.10 测试面（探针自身）
+
+- **结构级**（零网络）：夹具**两层机检**逐字等值（运行面 ↔ 冻结副本；§10.2——设计档正本层 = 写定时纪律）+ **`targets` 集逐族在场**；
+  **驱动装配腿**（真 `buildSpawnChild` 直调——家族段含 `notify_parent` / 异步形（`sync=false`）/ spawn 门照走（§10.3-2）+ 缺 `batchDoc` / 缺五段的反例腿）；
+  `PROBE_VERSION` 单源整数；行为类表逐态（脚本化 turns / 终态 → 类——含 `skipped`）；§10.5 字段在场（含 `continuation` / `landedFiles[].target`）。
+- **行为级**（`--dry-run` 全链路 · 零网络）：脚本化假 child 形态（`asked@3` / `cap` 零落盘 / `completed` 静默落盘 / `completed` 目标件落盘 / 扩写轮 ask / 成本闸 `skipped`）+ 判官夹具三态（`surfaced` / `buried` / 失败）⇒ 报告对产物断言（md 段清单 + JSON 字段 + 类表 + 反例列 + **聚合分母排除腿**）。
+- **沙箱**：根自检（向上无 `.git`——§10.9-②）→ 物化 → 快照 → diff 三态（新增 / 改动 / 无变）+ 清运策略（缺省留档 · `--dry-run` 不留）。
+- **成本闸**：假成本到顶 ⇒ 余面 `skipped` 入 `runs[]` + 聚合分母排除 + warning + 退出码 0。
+- **落档面**：同名拒写 / 标签前缀校验 / 脱敏两腿（凭据命中 ⇒ 拒写；沙箱根 / 绝对路径 ⇒ `<sandbox>` / `<abs>` 占位 + warning——§10.7）。
+- **例数预算**：三包（core / CLI / VSC）**零新增例**；`bench/test/` 现 11 档 / 92 例（2026-09-25 实读）⇒ 本批 ≤ +16 例（新档 2-3 个，单档 >280 行即拆）。
 
 ## 变更记录
 
@@ -1568,3 +1822,15 @@ v3 重跑（AC-7）实测记档（**v3 对已按 KD-25 出档** · **v4 对出�
   ③ §2.14 补预检射程句（判官面 + 重取所需 provider 面 · 档面条目不入枚举面 · 被测 provider 缺 ⇒ 抛错退出码 1）；机制面零改（不实现 · `bench/**` 与 v6 在跑面零触）。
 
 - 2026-09-25（**hygiene-ab 批 · 文档面实施轮 · eng-designer**——承 `docs/batches/2026-09-25-hygiene-ab.md` §2 · 台账 #281 / #239）：KD-36 被否① 枚举补 `thinking` / `reasoningEcho`（对读 `MODEL-SPECS.md` §13.3 沿用集——决策本体零改）；§2.2-10 / §2.3 / §2.3-6 / §2.10.5 / §2.11 五处超宽行**按语义折行**（内容逐字零变——插入换行）。
+- 2026-09-25：**矛盾上抛探针（批次 `2026-09-25-conflict-escalation-probe` · 设计轮）**——① 新面 **§10**（探针本面：驱动路径 = 进程内核心 spawn API / `PROBE_VERSION` 版本轴 / 夹具族 3 族逐字 / 机械读数与行为类表 / judge 兜底单判 / 报告对与 CLI / 已知偏差 / 测试面）；
+  ② 受影响文件表（§3）+ KD-41…KD-46（§4）+ AC 回指块（§6）+ 边界 18–20（§7）+ §8-7（探针面交互契约指针）；
+  ③ 既有面零动：`SUITE_VERSION` / `judge.json` / `bench/cases/` / `run.mjs` 判分合同零改（本面不参与既有版本轴）；三端产品树零改动。
+- 2026-09-25：**设计评审轮 1（changes-required · 1🔴 · 4🟡 · 7🔵 = 12 条）修正（本批 `2026-09-25-conflict-escalation-probe` · 修正轮 #1–#12 逐号处置）**——① **`skipped` 态补全（#1）**：§10.3-6 / §10.5 `terminal` / 行为类表（6 类）三处补入；
+  `skipped` = 成本闸截断的余面（入 `runs[]`——截断可见）+ `aggregate` 口径定形（`n` = 实跑数 · 上抛率分母排除 · 新增 `skipped` 计数——§10.7）；AC-8 / §10.10 成本闸腿同步；
+  ② **沙箱根钉死 = 仓外系统临时根（#2）**——被否：仓内 `.thincoder/tmp/`（外层仓可发现 ⇒ git 工具可触真实仓）；§7-20 / §10.9-② 同步（含根自检）+ 路径入档口径新设（§10.7——`sandboxDir` 占位 / 路径字段沙箱内相对 / 文本字段前置规范化：沙箱根 ⇒ `<sandbox>`、其余绝对路径 ⇒ `<abs>` + warning；凭据 / 身份类拒写照旧）；
+  ③ **AC-2 / AC-5 分段（#3）**：实施轮 = 零网络腿（装配 + 单测）；实跑腿 = 点名实弹轮补记；装配腿入 §10.10 结构级（真 `buildSpawnChild` 直调）+ `--dry-run` 形态钉死（真装配 + 假 child 驱动——§10.8）；
+  ④ **`silent-landed` 判据改挂目标件（#4）**：`targets` 集逐族冻结（§10.4）+ `landedFiles[].target` + 类表 / md 列（目标件/总）同步；
+  ⑤ §10 头注射程 → §1.1–§1.5（#5）；⑥ effort 表达式语义钉死（#10——`?? null` = 键不落条目 ⇒ 沿 base 原值，与 KD-32 同式）；⑦ 追问扩写轮记账分区（#7——`firstAskTurn` / `turnsUsed` 只取主体 run + `continuation` 单列）；⑧ 父面 provider = 抛错桩（#8）；⑨ AC-1 机检形式写明（#11——两层机检 + 正本层写定时纪律）；⑩ 批档侧（#6 数字对齐 / #9 `.gitignore` 现盘复核覆盖 / #12 实施轮坐标复读纪律）落批档 §2 修正块。
+- 2026-09-25：**设计评审轮 2（pass · 2🔵 残余）落地（本批 `2026-09-25-conflict-escalation-probe` · #13 / #14 逐号）**——① **§10.5 头注显示例外（#14）**：`skipped` run 记 `terminal` / `behaviorClass` = `skipped`、其余字段 null——消解与行为类表 / §10.10 逐态腿的字面张力；
+  ② **§2 内设计档行号指针以现盘复读为准（#13）**——本档 §2 既有指针为修正前坐标（append-only 面不可就地改）：四处现盘值入批档 §2.11（记录面声明）；设计档本体零改。
+- 2026-09-25：**探针实现收口同步（本批 `2026-09-25-conflict-escalation-probe` · 实施完成后 · 父侧直接执行 · 机械修正）**——① §3 本批表「（拟新增）」→「（已实现）」×10（实读行数以批次档 §5.1 为准——先例 = 2026-09-23 行）；② §10 体引用同收 ×3（`:1514` / `:1515` / `:1521`）；③ §10.5 `askMessage` 行补 `askMessageLen` 命名（双键体例同 `reportHead` / `reportLen`）。

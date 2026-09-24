@@ -158,6 +158,18 @@ node bench/run.mjs --rejudge --from bench/results/<档>.json
 - **人工判读**：中文歧义 lane 逐条并列（题面 + 摘要 + 指标 + 单项成本）；不判分、不入矩阵与成本归一化。
 - **关键发现**：只由数据 + 固定句式生成（名次/极值/计数），禁主观评价词。
 
+## 矛盾上抛探针（conflict-escalation probe · 独立面）
+
+```bash
+node bench/probe.mjs --models mimo-v2.6-flash --fixtures p1,p2,p3 --n 3 --label probe-conflict   # 真实跑批（触网 / 花钱——随批自动跑）
+node bench/probe.mjs --models mimo-v2.6-flash --dry-run --label probe-selfcheck                  # 零网络自检（真装配腿 + 脚本化假 child）
+```
+
+- 测**行为**：矛盾任务书 → 进程内驱动 `eng-designer` 子代理（真实模型 · 父面零 LLM）→ 读数 = 是否上抛 / 首次上抛回合 / 绕圈无落盘 / 静默自选一方 / 拖到收尾报告（设计 `MODEL-BENCH.md` §10；逐参数见 `--help`）。
+- 落档 = 同一 `bench/results/` 家：`<日期>-probe-<标签>.{md,json}`（标签**必以 `probe-` 起**；JSON 自带 `kind` / `probeVersion`）。
+- 与 QA 面（`run.mjs` / `SUITE_VERSION`）互不参与：独立 runner + 自带 `PROBE_VERSION` 轴；判官兜底只读取 `judge.json` A 位（单判 · 失败 ⇒ `reportFace = null` + warning）。
+- **非门控**：不按模型设岗 / 不改配置默认 / 不进 CI。沙箱 = 系统临时根下（仓外 · 非 git 仓）；缺省留档、`--dry-run` 不留。真实跑批随批自动跑——成本受三闸（cap / 墙钟 / `--max-cost`）约束，读数照常入报告。
+
 ## 维护
 
 **`bench/models.json`（参测清单）**：现行受测名单 = **29 档**（2026-09-24 名单扩容批）；增删模型 = 编辑此档，不改代码。
