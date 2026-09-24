@@ -14,7 +14,8 @@ import { logEvent, errText, headText } from "@thincoder/core/log.mjs"
 // P2 机制层端差批 §2.17：派发面 hooks 四调用点（静态合法——`hooks.mjs` 闭包仅 `node:child_process`）
 import { runHooks } from "@thincoder/core/hooks.mjs"
 import { manifestPath } from "../extension/session-slots.mjs"
-import { peerDomains, registerDomains } from "../extension/peer-domains.mjs"
+// 认领面（§4.4）与足迹面同档接线：登记 / 落盘 / 命中查询 / 提示合成都在本模块（端侧就地扩）。
+import { peerDomains, registerDomains, registerClaims, peerNotes, markPeerNoted } from "../extension/peer-domains.mjs"
 // §9 D-24b：文件变更事件记账（async 评审陈旧判定数据源）——W12（2026-09-15）：原端侧
 // `advisor-async.mjs` 的 `recordFileMutation`（history._fileMutEvents）随镜像删旧退役，改指核
 // `noteMutations`（`advisor-settle.mjs`——写 `agent._mutLog`/`_mutationSeq`，核 `reviewIsStale` /
@@ -28,20 +29,6 @@ import { injectScopedRules } from "./rules-face.mjs"
 // R10 L3（MULTI-INSTANCE-COLLAB.md D-L3a/b——VS Code 接线面）：结构化写工具集 =
 // FILE_MUTATORS ∪ file_ops（bash 大通道不可拦——诚实边界：L3 覆盖结构化写工具足迹）。
 const L3_WRITE_TOOLS = new Set([...FILE_MUTATORS, "file_ops"])
-
-
-/** L3 冲突软提示文案（决策⑥ A——工具结果附注，不阻止） */
-function peerConflictNote(hits) {
-  const seen = new Set()
-  const parts = []
-  for (const h of hits) {
-    const k = `${h.file}|${h.pid}`
-    if (seen.has(k)) continue
-    seen.add(k)
-    parts.push(`${h.file} (pid=${h.pid}${h.end ? `, ${h.end}` : ""})`)
-  }
-  return `[peer conflict notice] another live ThinCoder instance recently wrote the same file(s): ${parts.join("; ")} — coordinate to avoid overlapping edits (soft notice — the write was not blocked).`
-}
 
 
 /**
@@ -190,15 +177,21 @@ export async function executeToolBatches(agent, { response, history, fullHistory
 
       callbacks.onToolCall?.(toolName, args, tc.id) // subagents forward to the activity stream (depth guard removed)
 
-      // R10 L3（MULTI-INSTANCE-COLLAB.md D-L3b）：结构化写工具执行前查冲突（软提示数据源——
-      // 纯读 + 缓存命中零扫描——N3）。门控：本 cwd 无会话 manifest（无头测试/未绑定面板的
-      // 回合）不参与 L3——测试卫生（不向真实 ~/.thincoder/peers 写任何东西）。
+      // R10 L3（MULTI-INSTANCE-COLLAB.md D-L3b / §4.4.4）：结构化写工具执行前查冲突与认领
+      // 命中（软提示数据源——纯读 + 缓存命中零扫描——N3；两查共用同一聚合）。门控：本 cwd
+      // 无会话 manifest（无头测试/未绑定面板的回合）不参与 L3——测试卫生（不向真实
+      // ~/.thincoder/peers 写任何东西）。
       let l3Paths = []
       let l3Hits = []
+      let l3Claims = []
       if (L3_WRITE_TOOLS.has(toolName)) {
         l3Paths = l3TouchedPaths(toolName, tool, args, cwd)
         if (l3Paths.length > 0 && existsSync(manifestPath(cwd))) {
-          try { l3Hits = peerDomains(cwd).conflicts(l3Paths) } catch { l3Hits = [] }
+          try {
+            const pd = peerDomains(cwd)
+            l3Hits = pd.conflicts(l3Paths)
+            l3Claims = pd.claimConflicts(l3Paths)
+          } catch { l3Hits = []; l3Claims = [] }
         }
       }
 
@@ -253,12 +246,18 @@ export async function executeToolBatches(agent, { response, history, fullHistory
           if (typeof raw !== "string") throw new Error(`${toolName} must return a string value — got ${raw === null ? "null" : typeof raw}`)
           result = raw
 
-          // R10 L3（D-L3a 累积 + 决策⑥ 软提示——D-L3b 工具结果附注，不阻止）：
-          // 写成功（无 Error 返回）→ 记入本回合域集合（回合末 flushDomains 整写——
-          // run-stages finalizeAgentTurn）；写前查到的他实例 hot 域命中 → 结果附提示。
+          // R10 L3（D-L3a 累积 + §4.4.3 认领登记 + 决策⑥ 软提示——D-L3b 工具结果附注，不阻止）：
+          // 写成功（无 Error 返回）→ 记入本回合域集合（回合末 flushDomains 整写——run-stages
+          // finalizeAgentTurn）+ 认领登记（新目标即刻落盘 / 续约节流）；命中提示 = 认领行逐 target
+          // + 足迹聚合行过滤已覆盖 target（§4.4.4——零双报）；提示已附加 ⇒ 落去重标记。
           if (l3Paths.length > 0 && !result.startsWith("Error")) {
             registerDomains(l3Paths)
-            if (l3Hits.length > 0) result += "\n\n" + peerConflictNote(l3Hits)
+            registerClaims(l3Paths, cwd)
+            const peerNote = peerNotes(agent, { claimHits: l3Claims, footHits: l3Hits })
+            if (peerNote) {
+              result += "\n\n" + peerNote.text
+              markPeerNoted(agent, peerNote.keys)
+            }
           }
           // §29 fix A（AGENT-LOOP.md §29——2026-09-07——唯一记账点）：FILE_MUTATORS 执行成功
           // 即刻记文件变更事件——取代批后提交循环的 recordFileMutation（不双计）——同批 launch

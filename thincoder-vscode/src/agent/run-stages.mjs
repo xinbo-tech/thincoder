@@ -40,7 +40,7 @@ import { runHooks } from "@thincoder/core/hooks.mjs" // P2 机制层端差批 §
 // 已在端壳静态闭包内。
 import { restoreGuard, snapshotGuard } from "@thincoder/core/agent/helpers.mjs"
 import { ContinueError } from "../agent.mjs"
-import { flushDomains } from "../extension/peer-domains.mjs"
+import { flushDomains, clearPeerNoted } from "../extension/peer-domains.mjs"
 // 2026-09-05 实践轮：maybeGuardPushbacks——收尾前 guard 推回组（自 runAgent 无工具分支）
 
 /**
@@ -413,8 +413,9 @@ export async function finalizeAgentTurn(agent, ctx) {
   }
   // R10 L3（MULTI-INSTANCE-COLLAB.md D-L3a——VS Code 回合收尾）：回合级登记 flush——
   // 顶层回合末整写一次本实例 peers 文件（无写入回合跳过——hot 窗口自然老化；子代理写入
-  // 累积在本回合集合内一并落盘；失败容忍 NF2——不影响回合主流程）。
+  // 累积在本回合集合内一并落盘；失败容忍 NF2——不影响回合主流程）。首步清认领去重集
+  // （§4.4.4——先于「无写入即返回」早退：去重集不随无写回合泄漏）。
   if (depth === 0) {
-    try { flushDomains(cwd) } catch { /* NF2：登记失败不影响回合 */ }
+    try { clearPeerNoted(agent); flushDomains(cwd) } catch { /* NF2：登记失败不影响回合 */ }
   }
 }

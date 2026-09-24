@@ -6,9 +6,9 @@ import { offloadToolResult, FILE_MUTATORS } from "./helpers.mjs"
 import { runHooks } from "../hooks.mjs"
 import { snapshotForUndo } from "../undo-stack.mjs"
 import { isCodePath, loadConventions } from "../conventions.mjs"
-// R10 L3 (MULTI-INSTANCE-COLLAB §2a.5 D-L3b)：写工具钩子——peerCollabNote（执行前冲突
-// 检测——软提示不阻止）+ recordPeerWrites（成功后累积本回合写足迹——回合末 flush）。
-import { PEER_WRITE_TOOLS, peerCollabNote, recordPeerWrites } from "../peer-domains.mjs"
+// R10 L3 (MULTI-INSTANCE-COLLAB §2a.5 D-L3b / §4.4 D-MI17–D-MI21)：写工具钩子——peerCollabNote
+// （执行前冲突与认领命中检测——软提示不阻止）+ recordPeerWrites（成功后足迹与认领登记）。
+import { PEER_WRITE_TOOLS, peerCollabNote, recordPeerWrites, markClaimNoted } from "../peer-domains.mjs"
 import { writeFileSync, mkdirSync, existsSync } from "node:fs"
 import { join, resolve, relative } from "node:path"
 import { homedir } from "node:os"
@@ -352,11 +352,11 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
     const toolName = item.toolCall.name
     logEvent("tool:call", { tool: toolName, child: agent?._logId })
     try {
-      // R10 L3 (MULTI-INSTANCE-COLLAB §2a.5 D-L3b)：结构化写工具执行前查 conflicts
-      // （命中他实例 hot 域 → 结果附软提示——决策⑥ A 不阻止；一次目录 stat——N3 度量）；
-      // 足迹累积（D-L3a——"检测+记录一次完成"）延后到执行成功（实际写过的文件）。
+      // R10 L3 (MULTI-INSTANCE-COLLAB §2a.5 D-L3b / §4.4.4)：结构化写工具执行前查冲突与认领
+      // 命中（软提示——决策⑥ A 不阻止；一次目录 stat——N3 度量）；足迹累积（D-L3a——"检测+
+      // 记录一次完成"）与认领登记延后到执行成功（实际写过的文件）。
       const isPeerWriteTool = PEER_WRITE_TOOLS.has(toolName)
-      const peerNote = isPeerWriteTool ? peerCollabNote(agent.cwd, item.tool, item.args) : null
+      const peerNote = isPeerWriteTool ? peerCollabNote(agent, item.tool, item.args) : null
       // Snapshot for undo before side-effect tools (setupOutputPanel already fired in Phase 1)
       if (!item.tool?.readonly && item.args) {
         snapshotForUndo(agent, item.toolCall.name, item.args, agent.cwd)
@@ -367,7 +367,8 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
         const routed = await callbacks.toolRouter(item.toolCall.name, item.args)
         if (routed?.handled) {
           const routedOk = !String(routed.result).startsWith("Error:")
-          const routedResult = peerNote && routedOk ? `${routed.result}\n${peerNote}` : routed.result
+          const routedResult = peerNote && routedOk ? `${routed.result}\n${peerNote.text}` : routed.result
+          if (peerNote && routedOk) markClaimNoted(agent, peerNote.keys) // 提示已附加 ⇒ 落去重标记
           if (isPeerWriteTool && routedOk) recordPeerWrites(agent, item.tool, item.args)
           // §29 fix A：routed 写成功（客户端执行）同样执行期即刻记账（唯一记账点）
           if (routedOk && FILE_MUTATORS.has(toolName)) noteExecutedMutation(agent, item.tool, item.args)
@@ -434,9 +435,11 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       const resultWithConsole = capturedConsole.length > 0
         ? `${result}\n[console during ${item.toolCall.name}]\n${capturedConsole.join("\n")}`
         : result
-      // R10 L3：冲突软提示附在工具结果末尾（模型可见——不阻止写）
-      const resultForModel = peerNote && !raw.startsWith("Error:")
-        ? `${resultWithConsole}\n${peerNote}`
+      // R10 L3：冲突 / 认领软提示附在工具结果末尾（模型可见——不阻止写；提示附加成功才落去重标记）
+      const notedOk = Boolean(peerNote) && !raw.startsWith("Error:")
+      if (notedOk) markClaimNoted(agent, peerNote.keys)
+      const resultForModel = notedOk
+        ? `${resultWithConsole}\n${peerNote.text}`
         : resultWithConsole
       callbacks.onToolResult?.(item.toolCall.name, resultForModel, item.toolCall.id, toolCtx._subagentKey)
       // PostToolUse hooks: fire-and-forget (result not awaited on hook failure)

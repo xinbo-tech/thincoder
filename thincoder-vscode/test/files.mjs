@@ -132,5 +132,6 @@ export default [
   "test/session-exit-release.test.mjs", // 退出认领释放批（2026-09-21 · `docs/batches/2026-09-21-exit-claim-release.md` §2 · 台账 #211）T5（SESSION.md §6.18）：`releaseClaimsOnExit` 沙箱三格（转核 / 无 workspace 跳过 / 核 false 透传——他端零动）+ deactivate 结构机检（async 形 / 释放前置 / workspace 判据参数形 / 包装 vscode-free）
   "test/session-index-command.test.mjs", // 会话索引批（2026-09-22 · `docs/batches/2026-09-22-session-index.md` §2 · 台账 #205）T-14 VSC 侧 + AC-7：`runSessionIndexCommand` 处理体（重建临时 sessions 根 ⇒ 摘要 + 宿主提示）+ 接线机检（contributes.commands / extension.mjs 处理体与启动拍 / 端壳零静态核索引 import）+ T-17 VSC 侧依赖面（SESSION.md §6.19 D-SE46）
   "test/session-release-shell.test.mjs", // 会话认领释放端壳面（2026-09-22 pending-triage 批 · 台账 #168②③；SESSION.md §6.15 / §6.16）：T1/T2 未占落点 release 传参在效（newSlot / switchToSlot——残留认领释放）+ T3 被占分支零释放零写 + 可区分信号（`SLOT_OCCUPIED`——台账 #171 形态面）+ T4 项目切换 ⇒ 旧 cwd 认领释放（跨 cwd）
+  "test/peer-claims.test.mjs", // intent-claims 批（2026-09-25 · 台账 #23 · MULTI-INSTANCE-COLLAB.md §4.4/§4.4.7 端半）：意图认领面端侧镜像——TV1 双端对位（两常量等值 + 文案/who/age/left 逐字同串）/ TV2–TV6 写入·续约节流·过期·命中去重降级·属主死与探测失败 / TV7 混合命中合成（认领行逐 target + 足迹聚合行过滤已覆盖 target）
 
 ]
