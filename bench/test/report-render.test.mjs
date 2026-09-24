@@ -18,7 +18,7 @@ function priced(over = {}) {
   return data
 }
 
-test("render.1：概览判官三行 + 分歧率 + 方法判分条 + 成本表五列 + ⇄ 标记 + 《判官分歧》 + 告警计数", () => {
+test("render.1：概览判官三行 + 分歧率 + 方法判分条 + 成本表八列 + ⇄ 标记 + 《判官分歧》 + 告警计数", () => {
   const data = priced()
   const md = renderReport(data)
   for (const needle of [
@@ -30,7 +30,7 @@ test("render.1：概览判官三行 + 分歧率 + 方法判分条 + 成本表五
     "评估开销（判官 / 复核）不进被测成本、不参与相对成本归一化——报告不列评估开销金额；账目见结果 JSON",
     "判官对（A / B 双判 · 同一冻结 rubric）",
     "- 判分模板：判官 promptVersion = 1 · 复核 promptVersion = 1 · 判官配置冻结于 suiteVersion 6",
-    "| 模型 | 总成本 | 每任务成本 | 每通过任务成本 | 相对成本 |",
+    "| 模型 | 总成本 | 每任务成本 | 每通过任务成本 | 相对成本 | 合计通过数 | 累计耗时 | 相对倍率 |",
     "### 判官分歧",
     "### 复核翻案",
     "判官不可用 1 次（有效判不足 1 · 分歧未决 0）· 判官分歧 1 次（仲裁 1）· 机械 fail 复核 2 次（翻案 1 次）",
@@ -55,7 +55,7 @@ test("render.1：概览判官三行 + 分歧率 + 方法判分条 + 成本表五
   assert.ok(md.includes("- 判官 · deepseek-flash：A=pass / B=pass → 合成分 pass（unanimous）"), "判官理由行")
   assert.ok(md.includes("- 复核 · deepseek-flash：1 次（uphold 1 · 翻案 0）"), "复核行")
   // 缺价位（§2.10.5）**四断言**（台账 #263 加固——原恒真弱守卫换**正控**）：① 位级成本 `null` ② 位级缺价警告在场
-  // ③ **成本表表头五列正控**（可失败的结构断言）④ md 零评估开销金额；外加 `host` / `sameVendorAsTested` 覆写 + 判官 B 行标注（合成键——现表零通配 ⇒ 恒未录价）
+  // ③ **成本表表头八列正控**（可失败的结构断言）④ md 零评估开销金额；外加 `host` / `sameVendorAsTested` 覆写 + 判官 B 行标注（合成键——现表零通配 ⇒ 恒未录价）
   const unpricedData = priced()
   unpricedData.judge.judges[1] = {
     ...unpricedData.judge.judges[1], provider: "fixture", model: "unpriced-model", host: "fixture.example.com", sameVendorAsTested: false,
@@ -66,7 +66,7 @@ test("render.1：概览判官三行 + 分歧率 + 方法判分条 + 成本表五
   assert.ok(unpricedData.warnings.some((w) => w.includes("价格未录：判官 B（fixture:unpriced-model）")), "② 位级缺价警告在位")
   const unpricedMd = renderReport(unpricedData)
   const unpricedCostBlock = unpricedMd.split("### 成本表")[1].split("### 逐维明细")[0]
-  assert.ok(unpricedCostBlock.includes("| 模型 | 总成本 | 每任务成本 | 每通过任务成本 | 相对成本 |"), "③ 成本表表头五列正控（结构断言——真实可失败，非弱守卫）")
+  assert.ok(unpricedCostBlock.includes("| 模型 | 总成本 | 每任务成本 | 每通过任务成本 | 相对成本 | 合计通过数 | 累计耗时 | 相对倍率 |"), "③ 成本表表头八列正控（结构断言——真实可失败，非弱守卫）")
   assert.equal(/判官成本|复核成本/.test(unpricedMd), false, "④ 缺价形态 md 零评估开销金额（零展示整面）")
   const bRow = unpricedMd.split("\n").find((l) => l.startsWith("- 判官 B："))
   assert.ok(bRow.includes("`fixture:unpriced-model`") && bRow.includes("与被测无重合"), "判官 B 行：缺价键照渲染 ∧ 重合标注 = 与被测无重合（三级派生——不另存字段）")

@@ -70,7 +70,7 @@
       "model": "glm-5.3",
       "dims": null,
       "skipDims": ["vision"],
-      "note": "旗舰（走 glm 原厂）；判官 B 位同键",
+      "note": "旗舰（走 glm 原厂）",
       "reasoningEffort": "high"
     },
     {
@@ -79,7 +79,7 @@
       "model": "glm-5.3-flashx",
       "dims": null,
       "skipDims": null,
-      "note": "多模态；走 glm 原厂（plan 无权限）",
+      "note": "多模态；走 glm 原厂（plan 无权限）；判官 B 位同键",
       "reasoningEffort": "high"
     },
     {

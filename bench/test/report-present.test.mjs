@@ -1,7 +1,7 @@
 /**
  * test/report-present.test.mjs — 报告呈现面用例（§5.13 `render.3` / `render.4` / `render.5`；`report-render.test.mjs` 超 300 行 ⇒ 拆分）。
- * `render.3` = 成本表列集收正（五列 · 定域反例）+ 报告零金额（md）与账目面反控（JSON 零改）；
- * `render.4` = 用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采样 run 数 / 轴门控 + ⑦ 口径行两短语与已记录 `error` run 照计 / ⑧ 部分未记录腿——2026-09-24 error-duration 批）；
+ * `render.3` = 成本表列集（八列 · 定域反例）+ 报告零金额（md）与账目面反控（JSON 零改）+ 交叉列三列（⑦⑧⑨⑩——同源对读 / 缺数据 / 行序 / 轴子集——增补③ · #276）；
+ * `render.4` = 用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采样 run 数 / 轴门控 + ⑦ 口径行两短语与已记录 `error` run 照计 / ⑧ 部分未记录腿——2026-09-24 error-duration 批 + ⑨⑩⑪ 交叉列两列——#276）；
  * `render.5` = 温度例外披露句（例外档在位 / 全 0 不在位 / 旧档缺字段 ≡ 全 0——2026-09-24 roster-expand 批）；
  * `render.6` = 逐档参数表（列集 / 来源两态 / 旧档缺键 `—` / 温度例外注 / note 披露腿——2026-09-24 params-judge 批 · #269）；
  * `render.7` = 速度表双排序（A 升 / B 降 / 列集正控 / 脚注一份 / 轴门控——#271）；`render.8` = 能力矩阵两列（同源照搬 / 反例控制——#272）。
@@ -22,11 +22,11 @@ function priced(over = {}) {
 /** 评估开销分账原则句（§2.3-8 逐字冻结——测试侧硬编码：串一改即红）。 */
 const SPLIT_NOTE = "评估开销（判官 / 复核）不进被测成本、不参与相对成本归一化——报告不列评估开销金额；账目见结果 JSON"
 
-test("render.3：成本表五列 + 定域反例 + 脚注逐字 + 报告零金额（md）+ 统计在位 + 账目面反控（JSON 零改）", () => {
+test("render.3：成本表八列 + 定域反例 + 脚注逐字 + 报告零金额（md）+ 统计在位 + 账目面反控（JSON 零改）+ 交叉列（同源对读 / 缺数据 / 行序 / 轴子集）", () => {
   const data = priced()
   const md = renderReport(data)
   const costBlock = md.split("### 成本表")[1].split("### 逐维明细")[0]
-  assert.ok(costBlock.includes("| 模型 | 总成本 | 每任务成本 | 每通过任务成本 | 相对成本 |"), "① 成本表表头 = 五列精确串")
+  assert.ok(costBlock.includes("| 模型 | 总成本 | 每任务成本 | 每通过任务成本 | 相对成本 | 合计通过数 | 累计耗时 | 相对倍率 |"), "① 成本表表头 = 八列精确串（增补③ 扩三交叉列）")
   for (const banned of ["判官成本", "复核成本", "两列"]) assert.equal(costBlock.includes(banned), false, `② 成本表块内不得含：${banned}`)
   assert.ok(costBlock.includes(SPLIT_NOTE), "③ 脚注 = 分账原则句（逐字 = §2.3-8 冻结字符串）")
   assert.equal(costBlock.includes("¥0.0171"), false, "③ 块内零判官开销金额")
@@ -41,6 +41,33 @@ test("render.3：成本表五列 + 定域反例 + 脚注逐字 + 报告零金额
   assert.ok(md.includes("机械 fail 复核 2 次（翻案 1 次）"), "⑤ 告警行复核计数在位")
   assert.deepEqual([data.judge.costCny, data.judge.judges[0].costCny, data.models[0].aggregate.judgeCostCny, data.models[0].aggregate.reviewCostCny].map((v) => typeof v === "number"), [true, true, true, true], "⑥ 账目面反控：JSON 字段照旧（字段零改）")
   assert.deepEqual([data.judge.costCny, data.models[0].aggregate.reviewCostCny], [0.017075, 0.00216], "⑥ 数值照旧（金额只住 JSON）")
+  // ⑦ 交叉列同源对读（增补③ · #276）：合计通过数格 = 矩阵「合计」同档格；累计耗时 / 相对倍率格 = 用时表同档格
+  const xMd = renderReport({ ...data, models: xModels })
+  const xCost = xMd.split("### 成本表")[1].split("### 逐维明细")[0]
+  const xMatrix = xMd.split("### 能力矩阵")[1].split("### 速度表 A")[0]
+  const xTime = xMd.split("### 用时表")[1].split("### 成本表")[0]
+  for (const label of ["fx-x1", "fx-x2"]) {
+    assert.equal(cellOf(xCost, label, 6), cellOf(xMatrix, label, 3), `⑦ 合计通过数格 = 矩阵「合计」同档格（${label}）`)
+    assert.equal(cellOf(xCost, label, 7), cellOf(xTime, label, 2), `⑦ 累计耗时格 = 用时表同档格（${label}）`)
+    assert.equal(cellOf(xCost, label, 8), cellOf(xTime, label, 3), `⑦ 相对倍率格 = 用时表同档格（${label}）`)
+  }
+  assert.deepEqual([cellOf(xCost, "fx-x1", 6), cellOf(xCost, "fx-x2", 6)], ["1/2", "1/1"], "⑦ 合计通过数 = k/N 同源定域")
+  assert.deepEqual([cellOf(xCost, "fx-x1", 7), cellOf(xCost, "fx-x2", 7)], ["2000 ms", "1000 ms"], "⑦ 累计耗时 = 用时表算式同源定域")
+  assert.deepEqual([cellOf(xCost, "fx-x1", 8), cellOf(xCost, "fx-x2", 8)], ["2.0×", "1.0×"], "⑦ 相对倍率 = ÷ 全表最低正值（定域）")
+  // ⑧ 缺数据 `—`：无耗时样本档 ⇒ 累计耗时 / 相对倍率 `—`；无价档 ⇒ 相对成本 `—`（其余列照出值）
+  const xMissCost = renderReport({ ...data, models: xMissModels }).split("### 成本表")[1].split("### 逐维明细")[0]
+  assert.deepEqual([cellOf(xMissCost, "fx-nt", 7), cellOf(xMissCost, "fx-nt", 8)], ["—", "—"], "⑧ 无耗时样本档 ⇒ 累计耗时 / 相对倍率 `—`")
+  assert.equal(cellOf(xMissCost, "fx-nt", 6), "0/1", "⑧ 合计通过数不受耗时面缺数据影响（判定面独立）")
+  assert.deepEqual([cellOf(xMissCost, "fx-nc", 5), cellOf(xMissCost, "fx-nc", 8)], ["—", "1.0×"], "⑧ 无价档 ⇒ 相对成本（源表算式）`—` ∧ 相对倍率照出值")
+  // ⑨ 行序不变（新列不参与排序——两表排序键与交叉列取值互异）
+  assert.deepEqual(orderOf(xCost), ["fx-x1", "fx-x2"], "⑨ 成本表行序 = 每通过任务成本升序（反例控制：相对倍率列序相反）")
+  assert.deepEqual(orderOf(xTime), ["fx-x2", "fx-x1"], "⑨ 用时表行序 = 累计耗时升序（反例控制：相对成本列序相反）")
+  // ⑩ 轴子集腿（本收正轮）：`run.axes = ["cost"]`（无 capability / speed ⇒ 矩阵 / 用时表不出为前置）⇒ 交叉列三列照出值
+  const xCostOnly = renderReport({ ...data, models: xModels, run: { ...data.run, dims: ["speed", "cost"], axes: ["cost"] } })
+  assert.equal(xCostOnly.includes("### 能力矩阵") || xCostOnly.includes("### 用时表"), false, "⑩ 源表（矩阵 / 用时表）不出为前置")
+  const xCostOnlyBlock = xCostOnly.split("### 成本表")[1].split("### 逐维明细")[0]
+  assert.deepEqual([cellOf(xCostOnlyBlock, "fx-x1", 6), cellOf(xCostOnlyBlock, "fx-x1", 7), cellOf(xCostOnlyBlock, "fx-x1", 8)],
+    [cellOf(xCost, "fx-x1", 6), cellOf(xCost, "fx-x1", 7), cellOf(xCost, "fx-x1", 8)], "⑩ 轴子集：交叉列三列照出值（与全表渲染同串）")
 })
 
 // ── render.4 夹具：显式 run 耗时（用例一一对应；判定面与耗时面正交） ────────────────
@@ -53,8 +80,18 @@ const mkModel = (label, runs) => ({
   label, provider: "deepseek", model: "deepseek-flash", host: "api.deepseek.com", dims: ["reasoning"], note: "", aggregate: {},
   cases: runs.map((r, i) => ({ caseId: `reasoning.${i + 1}`, dim: "reasoning", class: "正常", prompt: "夹具题面", runs: [r] })),
 })
+/** 交叉列腿夹具（增补③ · #276）：显式耗时 + 计价（两档——对读非平凡；两表排序键与交叉列取值互异 ⇒ 行序腿非空转）。
+ *  fx-x1 = 1 通过 / 1 失败（合计 1/2）· 成本 0.001（全表最低 ⇒ 相对成本 1.0×）· 耗时 2000（⇒ 相对倍率 2.0×）；
+ *  fx-x2 = 1/1 · 成本 0.002（⇒ 2.0×）· 耗时 1000（⇒ 1.0×）。 */
+const xRun = (ms, cost, over = {}) => mkRun(ms, { ...over, metrics: { ttftMs: 100, totalMs: ms, tokPerSec: 100, tokens: TOK(10, 0, 5), cost: cost == null ? null : { value: cost, currency: "CNY", pricesAsOf: "2026-09-23" } } })
+const xModels = [
+  mkModel("fx-x1", [xRun(1000, 0.0005), xRun(1000, 0.0005, { verdict: "fail" })]),
+  mkModel("fx-x2", [xRun(1000, 0.002)]),
+]
+/** 交叉列缺数据夹具：fx-nt = 无耗时样本（累计 / 倍率 `—`）· fx-nc = 无价档（相对成本 `—` · 相对倍率照出值）。 */
+const xMissModels = [mkModel("fx-nt", [mkRun(null, { verdict: "error", detail: "无耗时记录" })]), mkModel("fx-nc", [mkRun(500)])]
 
-test("render.4：用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采样 run 数 / 轴门控 + ⑦/⑧ 口径行与部分未记录腿）", () => {
+test("render.4：用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采样 run 数 / 轴门控 + ⑦/⑧ 口径行与部分未记录腿 + ⑨⑩⑪ 交叉列同源对读 / 缺数据 / 轴子集）", () => {
   const data = fixtureResult()
   // 定域反例：判官 / 复核调用的 `totalMs` 刻意置大值 ⇒ 不得计入累计（只认 `runs[].metrics.totalMs`）
   const big = { totalMs: 999999 }
@@ -74,11 +111,11 @@ test("render.4：用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采
   const md = renderReport({ ...data, models })
   const block = md.split("### 用时表")[1].split("### 成本表")[0]
   assert.ok(md.indexOf("### 速度表 A") < md.indexOf("### 速度表 B") && md.indexOf("### 速度表 B") < md.indexOf("### 用时表") && md.indexOf("### 用时表") < md.indexOf("### 成本表"), "① 落位 = 速度表 A / B 后（用时表 / 成本表前）")
-  assert.ok(block.includes("| 模型 | 累计耗时 | 相对倍率 | 排名 | 采样 run 数 |"), "① 列集 = {模型 · 累计耗时 · 相对倍率 · 排名 · 采样 run 数}")
+  assert.equal(block.split("\n").find((l) => l.startsWith("| 模型 |")), "| 模型 | 累计耗时 | 相对倍率 | 排名 | 采样 run 数 | 合计通过数 | 相对成本 |", "① 列集 = {模型 · 累计耗时 · 相对倍率 · 排名 · 采样 run 数 · 合计通过数 · 相对成本}（尾接）")
   const cellsOf = (label) => block.split("\n").find((l) => l.startsWith(`| ${label} |`)).split("|").map((s) => s.trim())
   assert.deepEqual([cellsOf("fx-fast")[2], cellsOf("fx-heavy")[2]], ["6000 ms", "12000 ms"], "② 累计耗时 = Σ runs[].metrics.totalMs（判官 / 复核调用不计入）")
   assert.equal(block.includes("999999"), false, "② 定域反例：大值调用不入合计")
-  assert.deepEqual([cellsOf("fx-fast")[3], cellsOf("fx-heavy")[3]], ["1.0×", "2.0×"], "③ 相对倍率 = ÷ 表内最低者（1.0×）")
+  assert.deepEqual([cellsOf("fx-fast")[3], cellsOf("fx-heavy")[3]], ["1.0×", "2.0×"], "③ 相对倍率 = ÷ 全表最低正值（1.0×）")
   assert.deepEqual(["fx-fast", "fx-tie", "fx-heavy", "fx-nodata"].map((l) => cellsOf(l)[4]), ["1", "1", "3", "—"], "④ 排名升序 + 同值并列顺延")
   const order = block.split("\n").filter((l) => /^\| fx-/.test(l)).map((l) => l.split("|")[1].trim())
   assert.deepEqual(order, ["fx-fast", "fx-tie", "fx-heavy", "fx-nodata"], "④ 用时表行序 = 升序 · 缺数据居末")
@@ -108,6 +145,27 @@ test("render.4：用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采
   ] }).split("### 用时表")[1].split("### 成本表")[0]
   assert.deepEqual([cellsIn(partBlock, "fx-part")[2], cellsIn(partBlock, "fx-part-err")[2]], ["300 ms", "500 ms"], "⑧ 部分未记录 ⇒ 按已记录之和（下界）入累计")
   assert.ok(partBlock.includes("- fx-part：1 个 run 部分 call 未记录") && partBlock.includes("- fx-part-err：1 个 run 部分 call 未记录"), "⑧ 该 run 入脚注（含「部分 call 未记录」字面）")
+  // ⑨ 交叉列同源对读（增补③ · #276）：合计通过数格 = 矩阵「合计」同档格；相对成本格 = 成本表「相对成本」同档格
+  const xMd = renderReport({ ...data, models: xModels })
+  const xTime = xMd.split("### 用时表")[1].split("### 成本表")[0]
+  const xMatrix = xMd.split("### 能力矩阵")[1].split("### 速度表 A")[0]
+  const xCost = xMd.split("### 成本表")[1].split("### 逐维明细")[0]
+  for (const label of ["fx-x1", "fx-x2"]) {
+    assert.equal(cellOf(xTime, label, 6), cellOf(xMatrix, label, 3), `⑨ 合计通过数格 = 矩阵「合计」同档格（${label}）`)
+    assert.equal(cellOf(xTime, label, 7), cellOf(xCost, label, 5), `⑨ 相对成本格 = 成本表同档格（${label}）`)
+  }
+  assert.deepEqual([cellOf(xTime, "fx-x1", 7), cellOf(xTime, "fx-x2", 7)], ["1.0×", "2.0×"], "⑨ 相对成本 = 成本表算式同源定域（每通过任务成本 ÷ 全表最低正值）")
+  assert.deepEqual(orderOf(xTime), ["fx-x2", "fx-x1"], "⑨ 用时表行序 = 累计耗时升序（新列不参与排序——反例控制：相对成本列序相反）")
+  // ⑩ 缺数据 `—`（相对成本：全缺样本 / 无价两形态；④ 行序腿不回归）
+  const xMissTime = renderReport({ ...data, models: xMissModels }).split("### 用时表")[1].split("### 成本表")[0]
+  assert.deepEqual([cellOf(xMissTime, "fx-nt", 6), cellOf(xMissTime, "fx-nt", 7)], ["0/1", "—"], "⑩ 全缺样本档 ⇒ 相对成本 `—`（合计通过数照出值）")
+  assert.deepEqual([cellOf(xMissTime, "fx-nc", 6), cellOf(xMissTime, "fx-nc", 7)], ["1/1", "—"], "⑩ 无价档 ⇒ 相对成本 `—`")
+  // ⑪ 轴子集腿（本收正轮）：`run.axes = ["speed"]`（无 cost ⇒ 成本表不出为前置）⇒ 交叉列两列照出值
+  const xSpeedOnly = renderReport({ ...data, models: xModels, run: { ...data.run, dims: ["speed", "cost"], axes: ["speed"] } })
+  assert.equal(xSpeedOnly.includes("### 成本表"), false, "⑪ 源表（成本表）不出为前置")
+  const xSpeedOnlyBlock = xSpeedOnly.split("### 用时表")[1].split("## 关键发现")[0]
+  assert.deepEqual([cellOf(xSpeedOnlyBlock, "fx-x2", 6), cellOf(xSpeedOnlyBlock, "fx-x2", 7)],
+    [cellOf(xTime, "fx-x2", 6), cellOf(xTime, "fx-x2", 7)], "⑪ 轴子集：交叉列两列照出值（与全表渲染同串）")
 })
 
 test("render.5：温度例外披露句（例外档在位 / 全 0 不在位 / 旧档缺字段 ≡ 全 0）", () => {

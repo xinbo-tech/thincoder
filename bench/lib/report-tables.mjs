@@ -93,6 +93,22 @@ export function modelStats(data) {
   })
 }
 
+/** 相对成本算式（§2.3-10② / 10④ **冻结 · 三表同源**）：每通过任务成本 ÷ **全表最低正值**（缺 ⇒ `—`）。
+ *  单源 = 本函数——矩阵两列 / 成本表 / 用时表交叉列逐表对读恒同串（不另立算式）。 */
+export function costRelOf(stats) {
+  const bases = stats.map((s) => s.costPerPass).filter((v) => typeof v === "number" && v > 0)
+  const base = bases.length > 0 ? Math.min(...bases) : null
+  return (v) => (base == null || typeof v !== "number" ? "—" : `${(v / base).toFixed(1)}×`)
+}
+
+/** 相对倍率算式（§2.3-7 / §2.3-10④ **冻结 · 两表同源**）：累计耗时 ÷ **全表最低正值**（缺 ⇒ `—`）。
+ *  单源 = 本函数——用时表 / 成本表交叉列逐表对读恒同串（不另立算式）。 */
+export function timeRelOf(stats) {
+  const bases = stats.map((s) => s.totalMsSum).filter((v) => typeof v === "number" && v > 0)
+  const base = bases.length > 0 ? Math.min(...bases) : null
+  return (v) => (base == null || typeof v !== "number" ? "—" : `${(v / base).toFixed(1)}×`)
+}
+
 export function tokensCell(t) {
   if (!t) return "—"
   const part = (v) => (v == null ? "?" : String(v))
@@ -113,10 +129,8 @@ export function matrixSection(data, stats) {
   stats = [...stats].sort((a, b) => b.passed - a.passed || a.label.localeCompare(b.label))
   const dims = DIMENSIONS.filter((d) => (data.models ?? []).some((m) => dimsOf(m).includes(d)))
   if (dims.length === 0) return ["### 能力矩阵", "", "本轮未选自动维（能力矩阵无列）——人工判读见下节。", ""]
-  // 相对成本 = 成本表同源照搬（每通过任务成本 ÷ 表内最低者 = 1×——§2.3-10②；不另立口径）
-  const bases = stats.map((s) => s.costPerPass).filter((v) => typeof v === "number" && v > 0)
-  const base = bases.length > 0 ? Math.min(...bases) : null
-  const relOf = (v) => (base == null || typeof v !== "number" ? "—" : `${(v / base).toFixed(1)}×`)
+  // 相对成本 = 成本表同源照搬（每通过任务成本 ÷ 全表最低正值 = 1×——§2.3-10②；不另立口径）
+  const relOf = costRelOf(stats)
   return [
     "### 能力矩阵",
     "",
@@ -152,17 +166,16 @@ export function costSection(data, stats) {
     if (missUsage > 0) notes.push(`${missUsage} 个 run 存在 usage 缺失的 call`)
     if (notes.length > 0) footnotes.push(`- ${s.label}：${notes.join("；")}。`)
   }
-  const bases = stats.map((s) => s.costPerPass).filter((v) => typeof v === "number" && v > 0)
-  const base = bases.length > 0 ? Math.min(...bases) : null
-  const relOf = (v) => (base == null || typeof v !== "number" ? "—" : `${(v / base).toFixed(1)}×`)
+  const relOf = costRelOf(stats)
+  const relTime = timeRelOf(stats)
   return [
     "### 成本表",
     "",
-    "总成本 = Σ 成功返回的 call 成本；每任务成本 = 总成本 ÷ 任务数（该模型面内的用例数）；每通过任务成本 = 总成本 ÷ 通过任务数（用例判定 N 次全过 = pass）；**相对成本 = 每通过任务成本 ÷ 表内最低者（最低 = 1×，直接读倍数）**；**按每通过任务成本升序（最便宜居首 = 1.0×）**。",
+    "总成本 = Σ 成功返回的 call 成本；每任务成本 = 总成本 ÷ 任务数（该模型面内的用例数）；每通过任务成本 = 总成本 ÷ 通过任务数（用例判定 N 次全过 = pass）；**相对成本 = 每通过任务成本 ÷ 全表最低正值（最低 = 1×，直接读倍数）**；**按每通过任务成本升序（最便宜居首 = 1.0×）**；**交叉列三列 = 同源照搬**（合计通过数 = 能力矩阵「合计」格 · 累计耗时 / 相对倍率 = 用时表同列；缺数据 `—`；不参与本表排序）。",
     "",
-    "| 模型 | 总成本 | 每任务成本 | 每通过任务成本 | 相对成本 |",
-    "| --- | --- | --- | --- | --- |",
-    ...stats.map((s) => `| ${s.label} | ${fmtMoney(s.costCny)} | ${fmtMoney(s.costPerTask)} | ${fmtMoney(s.costPerPass)} | ${relOf(s.costPerPass)} |`),
+    "| 模型 | 总成本 | 每任务成本 | 每通过任务成本 | 相对成本 | 合计通过数 | 累计耗时 | 相对倍率 |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    ...stats.map((s) => `| ${s.label} | ${fmtMoney(s.costCny)} | ${fmtMoney(s.costPerTask)} | ${fmtMoney(s.costPerPass)} | ${relOf(s.costPerPass)} | ${s.passed}/${s.total} | ${fmtMs(s.totalMsSum)} | ${relTime(s.totalMsSum)} |`),
     ...(footnotes.length > 0 ? ["", "脚注：", ...footnotes] : []),
     "",
     EVAL_SPLIT_NOTE,
