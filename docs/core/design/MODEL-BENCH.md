@@ -93,7 +93,7 @@ node bench/run.mjs --recompute --from <结果.json> [--label <名>]
 4. 温度 = `0`（缺省 · 冻结；经核 `tempRange` 归一裁剪，`thincoder-core/provider/core.mjs:186-192`）；**模型级例外**（仅当该模型 API 拒收 0——探针依据在册）：取 `models.json` 档位 `temperature`（0–2），实际取值逐档入档（`models[].temperature`）+ 报告披露（§2.3 · KD-31）；`thinking` / `reasoningEffort` 等其余参数取用户 `~/.thincoder/config.json` 的 provider 条目原值（测「该配置下的实际表现」）。
 5. 退出码：`0` = 跑完（**模型用例失败不影响退出码**——失败是数据不是错误）；`1` = 基建错误（参数错 / 未知模型 / provider 缺配置 / `prices.json` / `models.json` / `judge.json` 不可读或不合 schema
 （**判分路径**；`--dry-run` / `--recompute` 的判官配置按 §2.10.3 豁免）/ 判官 provider 缺配置 / 判官对身份违约（A=B · 仲裁员 ∈ {A, B}）/ 判官冻结版本不匹配 / 本轮合成全灭——§2.10.4）；中断（SIGINT）→ 中止在飞调用、**不落档**、退出码 130（半程结果不得混入留档）。
-6. 输出：stdout 逐例进度行 + 结尾摘要表；`--dry-run` 不触网。结果对落 `bench/results/`（相对 `bench/` 目录解析，任意 cwd 可跑；目录不存在则创建）。
+6. 输出：stdout 逐例进度行 + 结尾摘要表；`--dry-run` 不触网。结果对落 `bench/results/`（相对 `bench/` 目录解析，任意 cwd 可跑；目录不存在则创建）；结果目录可由环境变量 `BENCH_RESULTS_DIR` 覆盖（测试 / 沙箱用；缺省 = `bench/results/`，相对 `bench/` 解析；覆盖值 = 绝对路径直用、相对路径按 cwd 解析）。
 7. 覆盖保护：目标文件已存在 → **拒写并提示换 `--label`**（留档不可被静默覆盖；删旧档 = 人工显式动作）。
 
 ### 2.2 结果 JSON schema（`bench/results/<日期>-<标签>.json`）
@@ -690,7 +690,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | `bench/results/` | 1 对（v4 · `flash-compare-v4`） | +1 对（`roster-29-v5` · 运行日命名）· −1 对（v4 出档） | v5 全量跑批报告对入库（**点火 = 用户点名**）；v4 对出档（用户 2026-09-24 16:01 裁定——时点 = v5 落档并验收之后；动作 + 验收见批次档 §2.4 / K2）——在档注见 §2.2-7 / §2.2-11 |
 | `bench/README.md` | 178 | ±1（`:29-32` 块收正） | v4 出档连带面——`--recompute` 示例改指在档 v5 报告对（`bench/results/<v5 实测文件名>.json`，以落档实测名为准）+ `:30-31` 注按在档实态同步 · 消 v4 死指针；时点 = v5 落档并验收之后 · **随 v4 删除同一提交**；落笔 = 文档面（父侧届时定点）——动作 / 验收见批次档 §2.4 |
 | `bench/cases/index.mjs` · `bench/judge.json` | 66 · 25 | **±0** | 不 bump（`SUITE_VERSION` 恒 5 · `frozenAtSuiteVersion` 恒 5——价格 / 名单数据面，KD-2 / KD-31） |
-| `docs/core/design/MODEL-BENCH.md` | 1187（本批前读数——就地更新后 **1214** 行 · 计数尺 = 末行含换行者不计空尾行） | 就地更新 | 本档（在档面全档扫齐——§2.2-7 / §2.2-11 / §2.3 / §2.11 / §3 / §6 注 / §7-12 / §9；另 §2.10.5 判据指针 · §5.13 `render.1` 缺价腿 · §6 本批 AC 回指 · §9 价格面 · 变更记录） |
+| `docs/core/design/MODEL-BENCH.md` | 1187（本批前读数——就地更新后 **1217** 行 · 计数尺 = 末行含换行者不计空尾行；小修级现盘复测） | 就地更新 | 本档（在档面全档扫齐——§2.2-7 / §2.2-11 / §2.3 / §2.11 / §3 / §6 注 / §7-12 / §9；另 §2.10.5 判据指针 · §5.13 `render.1` 缺价腿 · §6 本批 AC 回指 · §9 价格面 · 变更记录） |
 
 ## 4. 关键决策记录（含被否候选）
 
@@ -1141,7 +1141,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 
 v3 重跑（AC-7）实测记档（**v3 对已按 KD-25 出档** · **v4 对出档**（16:01 裁定——时点 = v5 落档验收后）；记录面留存）：被测三模型（`mimo-v2.6-flash` / `glm-5.3-flash` / `qwen3.8-flash`）；判官三槽 = 上「槽位实测」段三值——当批三槽与被测无重合（`sameVendorAsTested` 全 `false`）。**v4 代际差异**：被测集含 `deepseek-flash` ⇒ A 位（`deepseek:deepseek-flash`）同位自判（§2.10.3 三级明示；样参见 §2.2）。
 
-价格面：**在册 29 档 + 判官三槽键全价在录**（2026-09-24 v5 批收尾：`ark:doubao-seed-2-1-lite-260915` 录入 · `ark:doubao-seed-2-1-turbo-260628` 缓存价补录——判官 A 位 `deepseek:deepseek-flash` 已录 ⇒ 该位成本可入账）；
+价格面：**在册 29 档 + 判官三槽键全价在录**（时点 = v5 落档验收后——2026-09-24 v5 批收尾：`ark:doubao-seed-2-1-lite-260915` 录入 · `ark:doubao-seed-2-1-turbo-260628` 缓存价补录——判官 A 位 `deepseek:deepseek-flash` 已录 ⇒ 该位成本可入账）；
 缺价路径保留（**不完整不录 · 不估不转写**——缺价 ⇒ 成本 `null` + 警告，不阻断运行，§2.10.5；价格表孤儿判据 = 「命中在册条目 **或** 任一位判官键」——§5.13 `roster.3`）。
 
 ## 变更记录
@@ -1214,3 +1214,4 @@ v3 重跑（AC-7）实测记档（**v3 对已按 KD-25 出档** · **v4 对出�
   ④ **一致性面收正**：§2.10.5 孤儿判据指针 → `bench/test/roster.test.mjs`（`roster.3`）+ 变更记录三处相对路径补 `bench/` 前缀（doc-check 悬空锚 11 → 8）+ §9 价格面补录指令句收正；
   ⑤ 版本口径 = **不 bump**（价格 / 名单数据面——KD-2 / KD-31）；⑥ 三端产品树零改动。
 - 2026-09-24：**评审修正轮（批次 `2026-09-24-bench-v5` · 评审轮 1 #1–#6 逐号处置）**——① 在档面时点限定补全（§2.3 / §2.11 / §7-12 / §9：v4 出档 / v5 在档一律带「时点 = v5 落档验收后」）；② 本批 AC 块补 **AC-5**（v4 对出档 + `bench/README.md` 零 v4 死指针 + 同一提交）+ 需求面引用补 §1.5。
+- 2026-09-24：**复审修正轮（批次 `2026-09-24-bench-v5` · 复审轮 2 #1–#2 逐号处置）**——① §2.1-6 补契约句：结果目录可由环境变量 `BENCH_RESULTS_DIR` 覆盖（测试 / 沙箱用——沙箱缝升契约面）；② §9 价格面补「时点 = v5 落档验收后」限定（同段同形）。
