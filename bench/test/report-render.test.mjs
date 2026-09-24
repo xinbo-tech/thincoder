@@ -1,5 +1,5 @@
 /**
- * test/report-render.test.mjs — 报告渲染面用例（§5.10 `report.1/2` + §5.13 `render.1/2` / `review.1/2`）
+ * test/report-render.test.mjs — 报告渲染面用例（§5.10 `report.1/2` + §5.13 `render.1/2` / `review.1/2/4/5`）
  * + `--dry-run` 全链路产物断言（AC-2 / AC-14）+ 矩阵与脱敏回归（D1 / F3）。
  * 夹具与 CLI 驱动在 `test/fixtures.mjs`。手动跑：`node --test "bench/test/*.test.mjs"`（不进 CI —— AC-8）。
  */
@@ -29,7 +29,7 @@ test("render.1：概览判官三行 + 分歧率 + 方法判分条 + 成本表两
     "- 判官分歧率：50%（分歧 1 ÷ A/B 双有效样本 2）",
     "- 判官成本合计 ¥0.0171 · 复核成本 ¥0.00216",
     "判官对（A / B 双判 · 同一冻结 rubric）",
-    "- 判分模板：判官 promptVersion = 1 · 复核 promptVersion = 1 · 判官配置冻结于 suiteVersion 4",
+    "- 判分模板：判官 promptVersion = 1 · 复核 promptVersion = 1 · 判官配置冻结于 suiteVersion 5",
     "| 模型 | 总成本 | 每任务成本 | 每通过任务成本 | 相对成本 | 判官成本 | 复核成本 |",
     "### 判官分歧",
     "### 复核翻案",
@@ -44,7 +44,7 @@ test("render.1：概览判官三行 + 分歧率 + 方法判分条 + 成本表两
   assert.ok(judgeRow("仲裁 C").includes("与被测无重合"), `无重合位标注（实得：${judgeRow("仲裁 C")}）`)
   // ⇄ / ⟲ 标记与两小节条目
   assert.ok(md.includes("❌ fail 0/1 ⇄"), "分歧样本加 ⇄")
-  assert.ok(md.includes("❌ fail 0/1 ⟲"), "复核翻案加 ⟲")
+  assert.ok(md.includes("✅ pass 1/1 ⟲"), "复核翻案 ⇒ 改判（✅）+ ⟲ 标注")
   assert.ok(md.includes("| multiturn.2 | deepseek-flash | pass |"), "《判官分歧》逐条列 A / B / C")
   assert.ok(md.includes("| tools.3 | deepseek-flash |"), "《复核翻案》逐条列机械失败断言与复核理由")
   assert.ok(md.includes("overturn（翻案）"), "翻案单列")
@@ -65,10 +65,12 @@ test("render.1：概览判官三行 + 分歧率 + 方法判分条 + 成本表两
   const mdUnpriced = renderReport(unpricedData)
   assert.ok(mdUnpriced.includes("不含未录价位：tokenhub:hy3"), "合计口径句（缺价位不明示 ⇒ 部分和冒充合计）")
   assert.ok(mdUnpriced.includes("- 判官成本口径：以下判官位未录价"), "成本表缺价说明句")
-  // 复核失败（AC-12 告警面）：运行记录挂一条 review error ⇒ 概览复核行与关键发现告警行均显影
+  // 复核失败（AC-12 告警面 + AC-1 第三态 fail-closed）：注入 review error ⇒ 该 run 保持 fail（无有效复核结论 ⇒ 不改判）
   const withRevErr = priced()
-  withRevErr.models[0].cases.find((c) => c.caseId === "tools.3").runs[0].review.verdict = "error"
+  const revErrRun = withRevErr.models[0].cases.find((c) => c.caseId === "tools.3").runs[0]
+  revErrRun.review.verdict = "error"; revErrRun.verdict = "fail"
   applyPricesToResult(withRevErr, loadPrices(pricesPath()), []) // 账目主位按生产同源重算（uphold / 翻案 / 失败计数）
+  assert.equal(withRevErr.models[0].aggregate.passed, 2, "复核失败 ⇒ 不改判（不计入通过数——fail-closed）")
   const mdErr = renderReport(withRevErr)
   assert.ok(mdErr.includes("复核 2 次 · uphold 1 · 翻案 0 · 复核失败 1"), "概览复核行含复核失败计数")
   assert.ok(mdErr.includes("机械 fail 复核 2 次（翻案 0 次 · 复核失败 1 次）"), "告警行含复核失败计数（成因分列口径）")
@@ -107,7 +109,7 @@ test("report.1：夹具渲染 → 七段骨架齐 + 三表 + 逐维明细 + 人�
     assert.ok(md.includes(section), `缺段：${section}`)
   }
   assert.match(md, /^# 模型基准报告 · fx-run · 2026-09-23/m)
-  assert.ok(md.includes("| 2/6 |"), "能力矩阵 = 通过用例数/该维用例数（合计列）")
+  assert.ok(md.includes("| 3/6 |"), "能力矩阵 = 通过用例数/该维用例数（合计列；夹具含 1 例改判）")
   assert.ok(md.includes("manual.1"), "人工判读逐条并列题面")
   assert.ok(md.includes("node bench/run.mjs --recompute --from bench/results/2026-09-23-fx-run.json"), "附录给复跑命令（相对路径形态）")
   // 轴选择（§2.1-1）：`--dims speed,cost` = 只出速度/成本表
@@ -175,7 +177,7 @@ test("AC-2 / AC-14：`--dry-run` 全链路产物断言（判官 / 复核块 + �
   for (const [k, t] of Object.entries({ suiteVersion: "number", label: "string", startedAt: "string", prices: "object", warnings: "object" })) {
     assert.equal(typeof data[k], t, `顶层字段 ${k} 类型不符`)
   }
-  assert.equal(data.suiteVersion, 4, "SUITE_VERSION 3 → 4")
+  assert.equal(data.suiteVersion, 5, "SUITE_VERSION 4 → 5")
   assert.equal(data.label, label)
   assert.match(data.startedAt, /^\d{4}-\d{2}-\d{2}T/)
   assert.equal(data.recomputed, null)
@@ -183,7 +185,7 @@ test("AC-2 / AC-14：`--dry-run` 全链路产物断言（判官 / 复核块 + �
   assert.equal(data.prices.asOf.length, 10)
   // 判官块（三槽元数据入档 · AC-5）：A / B / 仲裁 C 逐位 provider / model / maxTokens / 超时 / 调用 / 成本
   assert.equal(data.judge.promptVersion, 1)
-  assert.equal(data.judge.frozenAtSuiteVersion, 4)
+  assert.equal(data.judge.frozenAtSuiteVersion, 5)
   assert.equal(data.judge.judges.length, 2)
   assert.deepEqual(Object.keys(data.judge.judges[0]).sort(), ["calls", "costCny", "host", "maxTokens", "model", "provider", "sameVendorAsTested", "temperature", "timeoutSec"])
   assert.ok(data.judge.arbiter.provider && data.judge.arbiter.model)
@@ -226,24 +228,25 @@ test("AC-2 / AC-14：`--dry-run` 全链路产物断言（判官 / 复核块 + �
   assert.match(again.out, /同名产物已存在/)
 })
 
-test("review.2 / §5.13 渲染面：全量 dry-run 产物含 ⟲ 标记 + 《复核翻案》 + 分歧率与仲裁计数", async () => {
+test("review.2 / §5.13 渲染面：全量 dry-run —— `overturn` ⇒ 改判 pass（计入通过数 · ⟲ · 《复核翻案》）+ 三态读数", async () => {
   const label = `dryfull-${process.pid}`
   const { code, out } = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--label", label])
   assert.equal(code, 0, out)
   const data = readJson(findFile(`${label}.json`))
   const md = readFileSync(findFile(`${label}.md`), "utf8")
-  assert.ok(data.models[0].aggregate.overturns >= 1, "夹具含翻案样本（aggregate.overturns）")
+  const m = data.models[0]
+  const runOf = (id) => m.cases.find((c) => c.caseId === id).runs[0]
+  assert.ok(m.aggregate.overturns >= 1, "夹具含翻案样本（aggregate.overturns）")
   assert.ok(data.judge.disagreements >= 1 && data.judge.arbitrations >= 1, "夹具含分歧 / 仲裁样本")
   assert.equal(data.judge.judges[0].calls > data.judge.judges[1].calls, true, "A 位含放大预算重试 ⇒ 调用数多于 B（逐位记账）")
-  assert.ok(md.includes("⟲"), "矩阵 / 判定格含 ⟲ 标记")
-  assert.ok(md.includes("### 复核翻案"))
-  assert.ok(md.includes("不自动改判"), "翻案口径在档")
-  assert.ok(md.includes("### 判官分歧"))
-  assert.ok(md.includes("判官不可用"), "判官不可用成因入告警行")
-  const tools3 = data.models[0].cases.find((c) => c.caseId === "tools.3").runs[0]
-  assert.equal(tools3.verdict, "fail", "复核翻案不自动改判（仍 fail）")
-  assert.equal(tools3.review.verdict, "overturn")
-  assert.equal(data.models[0].aggregate.passed + 3 <= data.models[0].aggregate.total, true, "翻案不计入 pass 计数")
+  // AC-1 三态（第三态 = 夹具注入腿，住 `render.1`）：overturn ⇒ pass（计入通过数）；uphold ⇒ fail 维持
+  const [t3, l2] = [runOf("tools.3"), runOf("longctx.2")]
+  assert.equal(`${t3.verdict}/${t3.review.verdict}|${l2.verdict}/${l2.review.verdict}`, "pass/overturn|fail/uphold", "overturn ⇒ 改判 pass；uphold ⇒ fail 维持")
+  assert.match(t3.detail, /^零工具调用但未命中 12/, "原机械断言原文留档（D2：判定与 detail 正交）")
+  assert.equal(`${m.aggregate.passed}/${m.aggregate.total}`, "23/25", "改判计入通过数（改前 22/25）")
+  for (const needle of ["✅ pass 1/1 ⟲", "| 4/4 ⟲ |", "| 23/25 |", "经复核纠正", "### 复核翻案", "### 判官分歧", "判官不可用"]) {
+    assert.ok(md.includes(needle), `缺渲染件：${needle}`)
+  }
   assert.equal(DIMENSIONS.length, 8)
 })
 
@@ -271,4 +274,20 @@ test("review.4：承接清单（§2.12 产出面）——按 caseId 归一 + 三
   assert.match(out, /复核 \d+ 次（uphold \d+ · 翻案 1）/, "控制台复核计数行")
   assert.ok(out.includes("翻案 ⇒ 判据修复必修，承接清单见报告《复核翻案》小节"), "控制台承接提示行")
   assert.ok(readFileSync(findFile(`${label}.md`), "utf8").includes("承接清单"), "落档报告含承接清单")
+})
+
+test("review.5：混合面翻案 ⇒ 「判官面未裁决」标注（明细复核行 / 《复核翻案》逐条 / 图例）+ 纯机械面反例控制", () => {
+  const data = priced({ mixedOverturn: true })
+  const md = renderReport(data)
+  const mixed = data.models[0].cases.find((c) => c.caseId === "instructions.1").runs[0]
+  assert.equal(`${"judge" in mixed}|${mixed.verdict}|${md.includes("| 4/7 |")}`, "false|pass|true", "混合面实景：原机械 fail 短路 ⇒ 无 runs[].judge（复核只裁机械面）+ 改判 pass + 计入通过数（默认 3/6 + 该例）")
+  const detailRow = (cid) => md.split(`**${cid}**`)[1].split("\n- 复核 · ")[1].split("\n")[0]
+  const revRow = (cid) => md.split("### 复核翻案")[1].split("## 关键发现")[0].split("\n").find((l) => l.startsWith(`| ${cid} |`))
+  for (const [where, row] of [["明细复核行", detailRow], ["《复核翻案》逐条", revRow]]) {
+    assert.ok(row("instructions.1").includes("判官面未裁决"), `${where}：混合面须注「判官面未裁决」`)
+    assert.equal(row("tools.3").includes("判官面未裁决"), false, `${where}：纯机械面不得携该标注（反例控制）`)
+  }
+  const blocks = [md.split("### 能力矩阵")[1].split("### 速度表")[0], md.split("### 逐维明细")[1].split("### 判官分歧")[0]]
+  assert.ok(blocks.every((b) => b.includes("两形态") && b.includes("经复核纠正")), "矩阵脚注 / 明细图例含「经复核纠正」+ 两形态口径句（定域断言）")
+  assert.ok(md.split("### 逐维明细")[1].includes("✅ pass 1/1 ⟲"), "判定单元格 = ✅ pass + ⟲（改判口径不因混合面而变）")
 })

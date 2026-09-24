@@ -2,7 +2,7 @@
  * test/judge.test.mjs — 判官 / 复核机制面用例（§5.13 `judge.1–12` / `review.1–3`）。
  *
  * 测试策略（§5.13 冻结）：**不依赖真网络**——一切判官 / 复核调用走桩传输（`fixtureSlotTransport`，逐位脚本回放；
- * 与 `--dry-run` 夹具同一机制）；夹具内联；翻案不改判与题面入档为必测项。手动跑：`node --test "bench/test/*.test.mjs"`（不进 CI —— AC-8）。
+ * 与 `--dry-run` 夹具同一机制）；夹具内联；复核三态（uphold 维持 / overturn 改判 / error 维持）与题面入档为必测项。手动跑：`node --test "bench/test/*.test.mjs"`（不进 CI —— AC-8）。
  */
 
 import { readFileSync, writeFileSync } from "node:fs"
@@ -92,14 +92,14 @@ test("judge.4：`frozenAtSuiteVersion` ≠ SUITE_VERSION ⇒ 拒跑（退出码 
   try {
     const { code, out } = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--dims", "reasoning", "--label", `fj4-${process.pid}`])
     assert.equal(code, 1)
-    assert.match(out, /判官配置已换代：judge.json.frozenAtSuiteVersion = 2 ≠ SUITE_VERSION = 4/)
+    assert.match(out, /判官配置已换代：judge.json.frozenAtSuiteVersion = 2 ≠ SUITE_VERSION = 5/)
   } finally { delete process.env.BENCH_JUDGE }
 })
 
 test("judge.5：判官键 ∈ 被测集合 ⇒ 正常跑（不拒跑 · 自判）+ 该位标注与 warnings；同 provider 异 model ⇒ 允许 + sameVendorAsTested 明示", async () => {
   const mk = (judges, name) => {
     const p = join(FIXTURES, name)
-    writeFileSync(p, JSON.stringify({ version: 1, frozenAtSuiteVersion: 4, judges, arbiter: { provider: "kimi", model: "kimi-k3", maxTokens: 2048, timeoutSec: 30 } }), "utf8")
+    writeFileSync(p, JSON.stringify({ version: 1, frozenAtSuiteVersion: 5, judges, arbiter: { provider: "kimi", model: "kimi-k3", maxTokens: 2048, timeoutSec: 30 } }), "utf8")
     return p
   }
   const runWith = async (cfgPath, label) => {
@@ -142,7 +142,7 @@ test("judge.6：judge.json schema 不合（maxTokens / timeoutSec / provider / j
     assert.throws(() => loadJudgeConfig(p), re)
   }
   const base = () => ({
-    version: 1, frozenAtSuiteVersion: 4,
+    version: 1, frozenAtSuiteVersion: 5,
     judges: [{ provider: "p", model: "m1", maxTokens: 2048, timeoutSec: 30 }, { provider: "p", model: "m2", maxTokens: 2048, timeoutSec: 30 }],
     arbiter: { provider: "p", model: "m3", maxTokens: 2048, timeoutSec: 30 },
   })
@@ -224,7 +224,7 @@ test("judge.11：A / B 分歧 + 仲裁 C 两次不可解析 ⇒ error（无多�
 test("judge.12：判官对身份违约（A=B / 仲裁员 ∈ {A, B}）⇒ 装载即拒 + 明示违约位次", () => {
   const mk = (judges, arbiter) => {
     const p = join(FIXTURES, `judge-id-${judges.map((j) => j.model).join("-")}-${arbiter.model}.json`)
-    writeFileSync(p, JSON.stringify({ version: 1, frozenAtSuiteVersion: 4, judges, arbiter }), "utf8")
+    writeFileSync(p, JSON.stringify({ version: 1, frozenAtSuiteVersion: 5, judges, arbiter }), "utf8")
     return p
   }
   const ab = mk([{ provider: "p", model: "same", maxTokens: 2048, timeoutSec: 30 }, { provider: "q", model: "same", maxTokens: 2048, timeoutSec: 30 }], { provider: "r", model: "other", maxTokens: 2048, timeoutSec: 30 })
@@ -233,7 +233,7 @@ test("judge.12：判官对身份违约（A=B / 仲裁员 ∈ {A, B}）⇒ 装载
   assert.throws(() => loadJudgeConfig(ac), /仲裁员身份违约——arbiter 模型「m2」∈ \{A, B\}/)
 })
 
-test("review.1 / review.2：复核 uphold ⇒ fail 维持；overturn ⇒ 翻案记录（不自动改判）", async () => {
+test("review.1 / review.2：复核 uphold ⇒ fail 维持；overturn ⇒ 翻案记录（改判落点 = 编排面——case 级只断记录形状）", async () => {
   const mk = (scripts) => reviewRun({
     caseObj: { prompt: "夹具题面", mechRubric: "夹具机械条文", judge: DECL },
     turns: [{ text: "夹具回答", steps: [{ toolCalls: [{ name: "send_email", arguments: '{"to":"x"}' }] }] }],
@@ -250,8 +250,8 @@ test("review.1 / review.2：复核 uphold ⇒ fail 维持；overturn ⇒ 翻案�
   const ov = await mk([{ text: v("overturn", "机械判据过严") }])
   assert.equal(ov.verdict, "overturn")
   assert.equal(ov.reason, "机械判据过严")
-  // 翻案不改判：复核记录只是旁证（run.verdict 由机械 / 判官决定——见 §2.11）
-  assert.equal(typeof ov.verdict === "string", true)
+  // 改判落点 = 编排面（`pipeline.mjs`）：本档只产 `runs[].review` 记录（形状零改——本断言即其机检）；全链路腿 = `report-render` 的 dry-run
+  assert.deepEqual(Object.keys(ov).sort(), ["attempts", "calls", "mechDetail", "reason", "verdict"], "复核记录形状零改（不因改判新增字段）")
 })
 
 test("review.3：复核调用失败 ⇒ `review.verdict = \"error\"`（fail 维持，不降 error）", async () => {

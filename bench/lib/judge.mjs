@@ -285,7 +285,7 @@ export function shouldReview(run, caseObj) {
   return run?.verdict === "fail" && run?.judge?.verdict !== "fail" && Boolean(caseObj?.mechRubric)
 }
 
-/** 机械 fail 复核（§2.11）：单判沿 A 位；`uphold` ⇒ fail 维持；`overturn` ⇒ 复核翻案（**不自动改判**）。 */
+/** 机械 fail 复核（§2.11）：单判沿 A 位；`uphold` ⇒ fail 维持；`overturn` ⇒ 复核翻案（**改判落点在编排面** `pipeline.mjs`——本档只产记录，形状零改）。 */
 export async function reviewRun({ caseObj, turns, mechDetail, slots, transport, providers, signal }) {
   const messages = buildReviewMessages({
     question: judgeQuestion(caseObj),

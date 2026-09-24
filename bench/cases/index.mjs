@@ -17,8 +17,9 @@ import { cases as longctx } from "./longctx.mjs"
 import { cases as vision } from "./vision.mjs"
 import { manual } from "./manual.mjs"
 
-/** 题集版本（整数）——改题面 / 判据 / rubric / 判官身份 / 提示模板 / 计时口径 +1（设计 §1.3 口径 1/2/3 + §2.10.3 冻结绑定）。 */
-export const SUITE_VERSION = 4
+/** 题集版本（整数）——改题面 / 判据 / rubric / 判官身份 / 提示模板 / 复核触发面 / 判分合成 · 复核处置规则 /
+ *  计时口径 +1（设计 §1.3 口径 1/2/3 + §2.10.3 冻结绑定）。 */
+export const SUITE_VERSION = 5
 
 /** 8 个自动维度（顺序 = 报告中的列序）。 */
 export const DIMENSIONS = ["reasoning", "code", "json", "tools", "instructions", "multiturn", "longctx", "vision"]

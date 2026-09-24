@@ -65,8 +65,17 @@ export const reviewRec = (verdict, reason = "夹具：机械判据成立。") =>
 
 const jMeta = (provider, model, sameVendorAsTested = false) => ({ provider, model, host: `${provider}.example.com`, temperature: 0, maxTokens: 2048, timeoutSec: 30, sameVendorAsTested, calls: 0, costCny: null })
 
-/** 基准夹具：含判官对 / 仲裁 / 复核记录（渲染面 + 重算面共用）；价格命中仓内 prices.json 的 deepseek 两条。 */
-export function fixtureResult({ label = "fx-run", nullTokens = false, leakText = null, warnings = [] } = {}) {
+/** 混合面翻案用例（`review.5` 夹具）：`instructions.1` 机械 fail 短路（§2.6 ⇒ 该 run 无 `runs[].judge`）
+ *  ⇒ 复核翻案 ⇒ 改判 `pass`（计入通过数）；呈现层须注「判官面未裁决」——纯机械面翻案（`tools.3`）不携该标注。 */
+function mixedOverturnCase() {
+  const r = run("pass", TOK(1000, 0, 100), "全文汉字数 110 < 120（机械断言原文）")
+  r.review = reviewRec("overturn", "夹具：汉字计数口径误判（机械断言原文）——复核只裁机械面。")
+  return { caseId: "instructions.1", dim: "instructions", class: "正常", prompt: FROZEN_PROMPTS["instructions.1"], runs: [r] }
+}
+
+/** 基准夹具：含判官对 / 仲裁 / 复核记录（渲染面 + 重算面共用）；价格命中仓内 prices.json 的 deepseek 两条。
+ *  `mixedOverturn` = 追加混合面翻案用例（默认关——既有读数零扰动）。 */
+export function fixtureResult({ label = "fx-run", nullTokens = false, leakText = null, warnings = [], mixedOverturn = false } = {}) {
   const good = TOK(1000, 0, 100)
   const pass = run("pass", good, leakText ?? "命中 3")
   const fail = nullTokens ? run("fail", null, "未命中 371281") : run("fail", good, "未命中 371281")
@@ -83,7 +92,7 @@ export function fixtureResult({ label = "fx-run", nullTokens = false, leakText =
     jRec("B", "fail", "夹具：B 判不通过。", [jCall(TOK(320, 0, 45))]),
     jRec("C", "fail", "夹具：仲裁判不通过。", [jCall(TOK(330, 0, 55))]),
   ], "夹具：仲裁判不通过。")
-  const overturn = run("fail", good, "零工具调用但未命中 12")
+  const overturn = run("pass", good, "零工具调用但未命中 12") // 改判形态（§2.11）：翻案记录 ⇒ run 判定 = pass
   overturn.review = reviewRec("overturn", "夹具：机械判据过严 ⇒ 翻案。")
   const unavailable = run("error", good, "判官不可用（有效判不足）：A 位失败 · B 位裁决 pass")
   unavailable.judge = judgeRec("error", "none", [
@@ -91,7 +100,7 @@ export function fixtureResult({ label = "fx-run", nullTokens = false, leakText =
     jRec("B", "pass", "夹具：B 判通过。", [jCall(TOK(320, 0, 50))]),
   ], "判官不可用（有效判不足）：A 位失败 · B 位裁决 pass")
   return {
-    suiteVersion: 4,
+    suiteVersion: 5,
     label,
     startedAt: "2026-09-23T22:00:00+08:00",
     finishedAt: "2026-09-23T22:01:00+08:00",
@@ -102,7 +111,7 @@ export function fixtureResult({ label = "fx-run", nullTokens = false, leakText =
     prices: { asOf: "2026-09-23", currency: "CNY", unit: "元 / 百万 token", source: "fixture" },
     recomputed: null,
     judge: {
-      promptVersion: 1, frozenAtSuiteVersion: 4,
+      promptVersion: 1, frozenAtSuiteVersion: 5,
       judges: [jMeta("deepseek", "deepseek-flash", true), jMeta("deepseek", "deepseek-v4-pro", true)],
       arbiter: jMeta("mimo", "mimo-v2.6-pro"),
       judgeCalls: 0, costCny: null, agreements: 0, disagreements: 0, arbitrations: 0, unavailable: 0,
@@ -118,6 +127,7 @@ export function fixtureResult({ label = "fx-run", nullTokens = false, leakText =
         { caseId: "tools.3", dim: "tools", class: "错误", prompt: "请回答：一年有几个月？", runs: [overturn] },
         { caseId: "multiturn.2", dim: "multiturn", class: "错误", prompt: "我要一句面向开发者的口号，主题是「快」。不要问我问题，直接给 3 个候选。", runs: [disputed] },
         { caseId: "instructions.3", dim: "instructions", class: "错误", prompt: "请写一句话。硬性要求：① 必须包含英文大写单词 PASS；② 全文不得包含任何大写字母。", runs: [unavailable] },
+        ...(mixedOverturn ? [mixedOverturnCase()] : []),
       ],
     }],
     manual: [{ label: "deepseek-flash", promptId: "manual.1", prompt: "最近怎么样？", responseHead: "还行。", metrics: { ttftMs: 90, totalMs: 500, tokPerSec: 20, tokens: TOK(20, 0, 10), cost: null } }],

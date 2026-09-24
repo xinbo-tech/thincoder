@@ -1,9 +1,15 @@
 /**
  * lib/report-review.mjs — 报告面判官 / 复核渲染（设计 §2.3；`report-tables.mjs` 超 300 行 ⇒ 按设计档 §3 拆分）。
  *
- * 本档 = 叶子件：只吃结果对象做纯字符串 / 数字拼接（不 import 报告层其它档 ⇒ 无环）。
+ * 本档 = 叶子件：只吃结果对象做纯字符串 / 数字拼接（不 import 报告层其它档 ⇒ 无环）；
+ * 判官面成员资格直接 import 题集单源 `cases/index.mjs` 的 `JUDGE_FACE`（不重建派生谓词——§2.6 导出落点）。
  * 内容 = 判定标记（`⇄` 分歧 / `⟲` 翻案）+ 分歧面计数 + 《判官分歧》/《复核翻案》两小节。
  */
+
+import { JUDGE_FACE } from "../cases/index.mjs"
+
+/** 判官面用例集（题集代际声明单源——渲染面 import，不自行重建）。 */
+const JUDGE_FACE_IDS = new Set(JUDGE_FACE)
 
 /** 分歧面计数（§2.3 概览分歧率 = 分歧 ÷ A/B 双有效样本）：账目主位 = 顶层 `judge` / `review`（prices.mjs 聚合）。 */
 export function divergenceOf(data) {
@@ -55,7 +61,7 @@ export function isDivergent(run) {
   return j.resolution === "arbitrated" || String(j.reason ?? "").includes("分歧未决")
 }
 
-/** 判定标记（§2.3 逐维明细）：`⇄` = 该用例 × 模型存在判官分歧样本；`⟲` = 存在复核翻案（不自动改判）。 */
+/** 判定标记（§2.3 逐维明细）：`⇄` = 该用例 × 模型存在判官分歧样本；`⟲` = 存在复核翻案（经复核纠正 · 原机械 fail）。 */
 export function judgeMark(runs) {
   return (runs ?? []).some(isDivergent) ? " ⇄" : ""
 }
@@ -63,6 +69,11 @@ export function judgeMark(runs) {
 export function reviewMark(runs) {
   return (runs ?? []).some((r) => r?.review?.verdict === "overturn") ? " ⟲" : ""
 }
+
+/** 「判官面未裁决」标注谓词（§2.11 · 混合面翻案）：用例判官面声明（`JUDGE_FACE` 单源）× 该 run 翻案记录
+ *  ——原机械 fail 短路未调判官（§2.6）⇒ 复核只裁机械面；纯机械面翻案不携本标注（反例控制）。 */
+export const MIXED_NOTE = "判官面未裁决"
+export const isMixedOverturn = (caseId, review) => review?.verdict === "overturn" && JUDGE_FACE_IDS.has(caseId)
 
 const cellText = (s) => String(s ?? "").replace(/\|/g, "\\|").replace(/\r?\n/g, " ").trim() || "—"
 
@@ -115,7 +126,7 @@ export function reviewOverturnSection(data) {
   for (const m of data.models ?? []) {
     for (const c of m.cases ?? []) {
       for (const run of c.runs ?? []) {
-        if (run.review) rows.push({ caseId: c.caseId, model: m.label, review: run.review })
+        if (run.review) rows.push({ caseId: c.caseId, model: m.label, review: run.review, mixed: isMixedOverturn(c.caseId, run.review) })
         if (run.review?.verdict === "overturn" && !overturnCases.includes(c.caseId)) overturnCases.push(c.caseId)
       }
     }
@@ -123,7 +134,8 @@ export function reviewOverturnSection(data) {
   const out = [
     "### 复核翻案",
     "",
-    "机械 fail 的 run 追加 LLM 复核（单判 · 沿 A 位）；`overturn` = **复核翻案**——**不自动改判**（仍在 `fail`、不计入通过数），正确处置 = 修题面 / 判据（`SUITE_VERSION + 1`）+ **承接（§2.12：产出机器化 · 落台账 · 修毕销账）**。",
+    "机械 fail 的 run 追加 LLM 复核（单判 · 沿 A 位）；`overturn` = **复核翻案**——**改判 `pass`**（计入通过数；原机械失败断言与复核理由留档——判定与 `detail` 正交），同时 = **判据修复必修**：修题面 / 判据（`SUITE_VERSION + 1`）+ **承接（§2.12：产出机器化 · 落台账 · 修毕销账）**——**改判不免修**。",
+    "两形态：纯机械面翻案 = 判定完整纠正；**混合面翻案**（原机械 fail 短路 ⇒ 未调判官 · 复核只裁机械面）⇒ 逐条注「判官面未裁决」。",
     "",
   ]
   if (rows.length === 0) return [...out, "本轮无复核翻案（机械 fail 复核记录 0 条）。", ""]
@@ -132,7 +144,8 @@ export function reviewOverturnSection(data) {
     "| --- | --- | --- | --- | --- |",
   )
   for (const r of rows) {
-    out.push(`| ${r.caseId} | ${r.model} | ${cellText(r.review.mechDetail)} | ${r.review.verdict}${r.review.verdict === "overturn" ? "（翻案）" : ""} | ${cellText(r.review.reason)} |`)
+    const tail = r.review.verdict === "overturn" ? `（翻案${r.mixed ? ` · ${MIXED_NOTE}` : ""}）` : ""
+    out.push(`| ${r.caseId} | ${r.model} | ${cellText(r.review.mechDetail)} | ${r.review.verdict}${tail} | ${cellText(r.review.reason)} |`)
   }
   out.push("")
   if (overturnCases.length > 0) {

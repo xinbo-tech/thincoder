@@ -61,7 +61,7 @@ const FIXTURE = {
     fx("邮件已发出。", [120, 0, 10], 240, 700),
   ],
   // 刻意回中文数字「十二个月」：机械判据（阿拉伯数字独立成词）判 FAIL，复核返回 overturn
-  // —— 自检固定覆盖「复核翻案」渲染路径（不自动改判；见 README「快速开始」注）
+  // —— 自检固定覆盖「复核翻案」渲染路径（改判 `pass` + `⟲` 标注；见 README「快速开始」注）
   "tools.3": [fx("一年有十二个月。", [26, 0, 12], 200, 480)],
   "tools.4": [
     fx("", [40, 0, 16], 260, 700, { toolCalls: [tool("get_weather", { city: "北京" }), tool("get_weather", { city: "上海" })], finishReason: "tool_calls" }),

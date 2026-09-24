@@ -5,7 +5,7 @@
  * `runMain`：真实运行 / dry-run 自检（夹具表由 run.mjs 传入——夹具落点仍住 run.mjs）。
  *   **动态** `import("./client.mjs")` 只发生在本函数内 ⇒ `--recompute` 分支构造性零网络（AC-10）。
  * 判官面（§2.10 / §2.11）：槽位解析（冻结绑定 + provider 校验 + 与被测重合明示）→ 用例 `ctx.judge()`（判官对 + 分歧仲裁）→ 逐 run 记录；
- *   机械 fail ⇒ 复核（辅判信号，不改判）；成本由 `prices.mjs` 后置逐位记账（不进被测成本面）。
+ *   机械 fail ⇒ 复核（第二只眼 · `overturn` ⇒ **改判 `pass`**——§2.11 处置，落点 = 编排面）；成本由 `prices.mjs` 后置逐位记账（不进被测成本面）。
  *
  * 产物落盘唯一面 = `output.writePair`（写档前脱敏断言 fail-closed，§2.8）；同名拒写（KD-10）。
  */
@@ -77,6 +77,8 @@ async function executeRun({ client, caseObj, providerEntry, transport, signal, t
         providers: judgeEnv.providers,
         signal,
       })
+      // 改判落点（§2.11 处置 · D1 = 编排面）：复核翻案 ⇒ 该 run 判 `pass`（计入通过数）；原机械失败断言留档（`review.mechDetail` + `detail` 原文——判定与 detail 正交）
+      if (reviewRec.verdict === "overturn") verdict = "pass"
     }
   }
   const last = res.turns[res.turns.length - 1] ?? { text: "", reasoning: "" }

@@ -8,7 +8,7 @@
 import { DIMENSIONS, DIM_LABELS } from "../cases/index.mjs"
 import { aggregateVerdict, speedMedians } from "./metrics.mjs"
 import { head } from "./output.mjs"
-import { judgeMark, reviewMark } from "./report-review.mjs"
+import { MIXED_NOTE, isMixedOverturn, judgeMark, reviewMark } from "./report-review.mjs"
 
 const VERDICT_TAG = { pass: "✅ pass", fail: "❌ fail", error: "⚠️ error", skipped: "—" }
 
@@ -125,7 +125,7 @@ export function matrixSection(data, stats) {
       return `| ${s.label} | ${cells.join(" | ")} | ${s.passed}/${s.total} |`
     }),
     ...(stats.some((s) => s.overturns > 0)
-      ? ["", "脚注：`⟲` = 该模型 × 维存在**复核翻案**（机械 fail 被复核判为可能误判）——**不自动改判**，通过数不变（处置见《复核翻案》小节）。"]
+      ? ["", "脚注：`⟲` = 该模型 × 维存在**复核翻案**——翻案**已改判计入通过数**（`⟲` = 经复核纠正 · 原机械 fail；两形态 = 纯机械面完整纠正 / 混合面「判官面未裁决」——处置见《复核翻案》小节）。"]
       : []),
     "",
   ]
@@ -197,13 +197,19 @@ function judgeCostNotes(data) {
   return [`- 判官成本口径：以下判官位未录价（成本列 = **已录价位之和**，不含它们；位级成本 null + 告警）：${unpriced.join("、")}。`, ""]
 }
 
+/** 复核行标注（§2.11 呈现）：混合面翻案 ⇒ 附「判官面未裁决」（原短路未调判官 · 复核只裁机械面）；
+ *  纯机械面翻案不携该词（行内断言 = 反例控制）。 */
+function mixedNoteOf(caseId, revs) {
+  return revs.some((r) => isMixedOverturn(caseId, r.review)) ? ` · ${MIXED_NOTE}（原机械 fail 短路未调判官 · 复核只裁机械面）` : ""
+}
+
 export function detailSection(data, stats) {
   const dims = DIMENSIONS.filter((d) => (data.models ?? []).some((m) => dimsOf(m).includes(d)))
   const allCases = (data.models ?? []).flatMap((m) => casesOf(m))
   const out = [
     "### 逐维明细",
     "",
-    "每用例先列**题面**（`cases[].prompt` 正本逐字，渲染 ≤300 字符、超限截断 `…`；JSON 存全额）；成本列为该用例代表 run 的调用成本；**相对成本 = 该用例内最低者 = 1×**；判定标记：`⇄` = 判官分歧样本（经第三判仲裁）、`⟲` = 复核翻案（不自动改判）。",
+    "每用例先列**题面**（`cases[].prompt` 正本逐字，渲染 ≤300 字符、超限截断 `…`；JSON 存全额）；成本列为该用例代表 run 的调用成本；**相对成本 = 该用例内最低者 = 1×**；判定标记：`⇄` = 判官分歧样本（经第三判仲裁）、`⟲` = 复核翻案（**已改判计入通过数**——经复核纠正 · 原机械 fail；两形态 = 纯机械面完整纠正 / 混合面「判官面未裁决」）。",
     "",
   ]
   if (dims.length === 0) return [...out, "本轮未选自动维（逐维明细无内容）。", ""]
@@ -248,7 +254,7 @@ export function detailSection(data, stats) {
         if (revs.length === 0) continue
         const of = (v) => revs.filter((r) => r.review.verdict === v).length
         const tail = revs.map((r) => `${r.review.verdict}：${r.review.reason}`).join("；")
-        out.push(`- 复核 · ${s.label}：${revs.length} 次（uphold ${of("uphold")} · 翻案 ${of("overturn")}${of("error") > 0 ? ` · 复核失败 ${of("error")}` : ""}）· ${tail}`)
+        out.push(`- 复核 · ${s.label}：${revs.length} 次（uphold ${of("uphold")} · 翻案 ${of("overturn")}${of("error") > 0 ? ` · 复核失败 ${of("error")}` : ""}）· ${tail}${mixedNoteOf(cid, revs)}`)
       }
       out.push("")
     }

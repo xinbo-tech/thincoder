@@ -29,7 +29,7 @@ const notesIn = (text) => NOTE_WORDS.filter((w) => String(text).includes(w))
 test("SUITE_VERSION = 单源整数（KD-2）；judge.json 冻结绑定同值（§2.10.3）", () => {
   assert.equal(Number.isInteger(SUITE_VERSION), true)
   assert.ok(SUITE_VERSION >= 1)
-  assert.equal(SUITE_VERSION, 4, "本批：判据分层重划（instructions.1/.2 混合面）+ 复核翻案承接机制 = 3 → 4")
+  assert.equal(SUITE_VERSION, 5, "本批：复核翻案 ⇒ 改判 pass（判分合成 · 复核处置规则换代）= 4 → 5")
   assert.equal(loadJudgeConfig(join(BENCH_DIR, "judge.json")).frozenAtSuiteVersion, SUITE_VERSION)
 })
 

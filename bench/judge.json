@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "frozenAtSuiteVersion": 4,
+  "frozenAtSuiteVersion": 5,
   "judges": [
     {
       "provider": "deepseek",
