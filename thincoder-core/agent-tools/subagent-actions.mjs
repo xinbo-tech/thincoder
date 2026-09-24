@@ -1,13 +1,13 @@
 /**
- * subagent-actions.mjs — subagent 动作执行器（§19/§19.5/§19.6——2026-09-05 自
+ * subagent-actions.mjs — subagent 动作执行器（AGENT-LOOP-SUBAGENT.md §6.7——2026-09-05 自
  * subagent-async.mjs 拆分——Module Split Policy §20.9——纯迁移零行为变化）。
- * 内容：executeStatusAction（§19.5 D-M5——非阻塞池查询——touchedSummary/
+ * 内容：executeStatusAction（AGENT-LOOP-SUBAGENT.md §6.7.2 D-M5——非阻塞池查询——touchedSummary/
  * shortTouchedPath/statusFields 摘要助手随行）/ executeObserveAction + executeSendAction
- * （SUBAGENT-OBSERVE-SEND——observe 只读/send 控制豁免注入）/ executeEscalateAction（§19
+ * （SUBAGENT-OBSERVE-SEND——observe 只读/send 控制豁免注入）/ executeEscalateAction（AGENT-LOOP-SUBAGENT.md §6.7
  * D-M4——飞刀——touchedFilesNote 随行）。
- * §19.8 check 删除后仅 cancel 动作执行器与共享 post-spawn 管线留在 subagent-async.mjs；
+ * AGENT-LOOP-SUBAGENT.md §6.7.5 check 删除后仅 cancel 动作执行器与共享 post-spawn 管线留在 subagent-async.mjs；
  * §20 调度器 + 文件域组在 ./subagent-scheduler.mjs（describeBlockers 由此导入）。
- * 2026-09-08 二次拆分：§19.6 面板段迁至 ./subagent-panel.mjs（601 > 500 硬限跨档——
+ * 2026-09-08 二次拆分：AGENT-LOOP-SUBAGENT.md §6.7.2 面板段迁至 ./subagent-panel.mjs（601 > 500 硬限跨档——
  * 尾部 re-export executePanelAction 保 subagent.mjs 既有 import 面）+ ASYNC-RESULT-
  * CONTAINER.md D1 落地（池访问点改 getAsyncPool accessor）。
  */
@@ -27,11 +27,11 @@ import { RECORD_WINDOW_MESSAGES } from "../session-store.mjs"
 import { getAsyncPool } from "./async-settle.mjs"
 
 /**
- * subagent action:"status" (§19 D-M2, new): NON-BLOCKING async-pool query —
+ * subagent action:"status" (AGENT-LOOP-SUBAGENT.md §6.7 D-M2, new): NON-BLOCKING async-pool query —
  * returns immediately and never consumes a result (results belong to the auto
- * channel — §19.8: no check action any more). Source of truth = the pool
+ * channel — AGENT-LOOP-SUBAGENT.md §6.7.5: no check action any more). Source of truth = the pool
  * (_asyncSubagents): entries moved to _pendingAsyncResults during a suspension
- * (§17 D-S3 ② — injected at the next run start) are no longer in the pool and
+ * (AGENT-LOOP-ASYNC-POOL.md §6.8 D-S3 ② — injected at the next run start) are no longer in the pool and
  * are NOT counted as done-waiting.
  * - id given → { id, role, status, model?, elapsedSec?, turn?, maxTurns?,
  *   touchedFiles?/touchedMore?/touched? ... } for that entry; unknown id → error
@@ -39,20 +39,20 @@ import { getAsyncPool } from "./async-settle.mjs"
  * - id omitted → { overview: { running: [{id, role, model, elapsedSec, turn,
  *   maxTurns, touchedFiles?/touched?}], queued: [{id, role, position, touched?}],
  *   done: [{id, role}] } } — live queue positions (index in _asyncQueue + 1).
- * §19.5.6: running 条目带 touched files 摘要（touchedFiles 前 5 + touchedMore 超出
+ * AGENT-LOOP-SUBAGENT.md §6.7.2: running 条目带 touched files 摘要（touchedFiles 前 5 + touchedMore 超出
  * 计数——相对查询方 cwd；0 改动 → touched 占位）；queued 条目带 touched 占位
  * "—（未启动）"；done/error/取消条目无 touched 字段（round3 #9）。
  * A settled-but-unconsumed entry (settled during a NORMAL turn) reports done
  * with a "not yet consumed" note — the auto channel (turn-end collection / the
- * suspension digest) still delivers it afterwards (§19.8: sole consumption path).
+ * suspension digest) still delivers it afterwards (AGENT-LOOP-SUBAGENT.md §6.7.5: sole consumption path).
  */
-/** §19.5 D-M5 decision-field assembly (F9): running entries report
+/** AGENT-LOOP-SUBAGENT.md §6.7.2 D-M5 decision-field assembly (F9): running entries report
  *  {id, role, model, elapsedSec, turn, maxTurns} — the data needed to decide
  *  WHO to cancel. Model is recorded at spawn (childProvider), startedAt at
  *  ACTUAL start (queued waits don't count), turn/maxTurns mirrored from the
  *  child's ⟦ev⟧turn events at the callbacks-wrap layer (subagent.mjs tracker).
  *  elapsedSec computed at call time from startedAt. */
-/** §19.5.6 D-SF2/N-SF1 摘要形态：status 调用时实时读 entry.childAgent._touchedFiles
+/** AGENT-LOOP-SUBAGENT.md §6.7.2 D-SF2/N-SF1 摘要形态：status 调用时实时读 entry.childAgent._touchedFiles
  *  （绝对路径——per-run 记账——§18.12）→ 相对查询方 cwd；cwd 之外保留绝对形态 +
  *  "../" 前缀；>80 字符截尾（不超行）；前 5 个 + 独立截断字段 touchedMore（超出
  *  计数——不混入数组——消费方按类型区分）。占位：running 0 改动 → "—（尚无改动）"
@@ -94,10 +94,10 @@ function statusFields(entry, cwd) {
     base.elapsedSec = entry.startedAt ? Math.max(0, Math.floor((Date.now() - entry.startedAt) / 1000)) : 0
     base.turn = entry.turn ?? 0
     base.maxTurns = entry.maxTurns ?? 0
-    // §19.5.6：touched files 摘要（T-SF1..4——新字段追加——既有字段零破坏）
+    // AGENT-LOOP-SUBAGENT.md §6.7.2：touched files 摘要（T-SF1..4——新字段追加——既有字段零破坏）
     Object.assign(base, touchedSummary(entry, cwd))
   } else if (entry.status === "queued") {
-    // §19.5.6 T-SF2b：未启动——确定性占位（不崩；无对象可读）
+    // AGENT-LOOP-SUBAGENT.md §6.7.2 T-SF2b：未启动——确定性占位（不崩；无对象可读）
     base.touched = "—（未启动）"
   }
   return base
@@ -151,7 +151,7 @@ export function executeStatusAction(args, ctx) {
       return JSON.stringify(out)
     }
     // done = settled during this turn and not yet consumed — the auto channel still
-    // delivers it (§19.8: turn-end collection / the suspension digest — no fetch action).
+    // delivers it (AGENT-LOOP-SUBAGENT.md §6.7.5: turn-end collection / the suspension digest — no fetch action).
     target.status = "done"
     target.done = true
     if (entry.error) target.error = entry.error
@@ -164,7 +164,7 @@ export function executeStatusAction(args, ctx) {
     if (entry.status === "running") overview.running.push(statusFields(entry, agent.cwd))
     else if (entry.status === "queued") {
       // §20：queued 条目补 waiting/reason（F-SD4——依赖/冲突原因模型可见）；
-      // §19.5.6 T-SF2b：未启动占位（确定性——不崩）。
+      // AGENT-LOOP-SUBAGENT.md §6.7.2 T-SF2b：未启动占位（确定性——不崩）。
       const blk = describeBlockers(agent, entry)
       const row = statusFields(entry, agent.cwd)
       row.position = queuedPosition(String(entry.id)) ?? entry.position
@@ -327,16 +327,16 @@ export function executeSendAction(args, ctx) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// §19.6 subagent panel 检查工具（AGENT-LOOP.md §19.6——F-P1..P3/D-P1..P4）
+// subagent panel 检查工具（AGENT-LOOP-SUBAGENT.md §6.7.2——F-P1..P3/D-P1..P4）
 // ═══════════════════════════════════════════════════════════════════════════
-// 2026-09-08 拆分（Module Split Policy——601 > 500 硬限跨档）：§19.6 面板段迁至
+// 2026-09-08 拆分（Module Split Policy——601 > 500 硬限跨档）：AGENT-LOOP-SUBAGENT.md §6.7.2 面板段迁至
 // ./subagent-panel.mjs（executePanelAction/panelFreezeGate/blockKeyIn——verbatim +
 // ASYNC-RESULT-CONTAINER D1/D2 落地）；本面保留 re-export 保 subagent.mjs 既有
 // import 面（subagent-async 尾部 re-export 先例）。
 export { executePanelAction } from "./subagent-panel.mjs"
 
 /**
- * subagent action:"escalate"（§19 D-M4——退役 escalate 工具语义原样，ESCALATE.md；
+ * subagent action:"escalate"（AGENT-LOOP-SUBAGENT.md §6.7 D-M4——退役 escalate 工具语义原样，ESCALATE.md；
  * §25 D-R17b——R17：缺省 async——后台飞刀 + settle 三分类 digest——async:false 保
  * 同步旧路径）。飞刀——交给 consultModels 池里更强模型（WRITE + 术后报告）。约束全
  * 保留：depth-0 only / 工程模式拒 / consultModels 空拒 / relay 前缀 `escalate#N/`

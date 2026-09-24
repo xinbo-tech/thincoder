@@ -68,7 +68,7 @@ export function createInteraction(ctx) {
       pushLine(`  [auto] ${name}${argSummary ? ` ${argSummary}` : ""}`, C.warn)
       return Promise.resolve(true)
     }
-    // 闸语义 / 请示流程 = 核单源（P2 批 §2.20）；本端只供展示面——卡片预览经 `io.ask` 缝
+    // 闸语义 / 请示流程 = 核单源（P2 批 docs/batches/2026-09-20-mechanism-parity-batch.md §2.20）；本端只供展示面——卡片预览经 `io.ask` 缝
     // 注入（permissionPreview 渲染在输入框上方，与 "Allow?" 提示同帧）。
     return coreAskPermission(name, args, {
       ask: ({ name: n, toolArgs }) => new Promise((resolve) => {

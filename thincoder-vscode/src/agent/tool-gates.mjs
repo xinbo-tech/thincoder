@@ -60,11 +60,11 @@ function agentHasLiveEngSlot(agent) {
  * 被前置门禁拦下的工具不计入批询问）。返回 { blocked, content }。
  */
 export function preGateBlocked(agent, { tool, toolName, args, depth }) {
-  // Plan mode guard — §19 round2 #2 (AGENT-LOOP.md): readonly classification is
+  // Plan mode guard — AGENT-LOOP-SUBAGENT.md §6.7 round2 #2 (AGENT-LOOP.md): readonly classification is
   // ACTION-LEVEL. A tool may declare action-level readonly-ness (isReadonlyAction —
   // e.g. subagent action:'status'): those pass plan mode like readonly tools,
   // while the same tool's side-effecting actions (subagent spawn/escalate) stay denied.
-  // §19.5 D-M6 round2 #4: control actions (isControlAction — subagent action:'cancel')
+  // AGENT-LOOP-SUBAGENT.md §6.7.2 D-M6 round2 #4: control actions (isControlAction — subagent action:'cancel')
   // are a separate exemption class: 只停不启（无新副作用）——planMode 放行（取消既有
   // 子代理——spawn 仍拒）、免权限审批、批审批分组不入组、手动档 digest 放行。
   // W9（2026-09-15）端差适配：plan 工具已换核实现（写 CLI 载体名 `agent.planMode`）——
@@ -106,7 +106,7 @@ export function preGateBlocked(agent, { tool, toolName, args, depth }) {
   // E（F25/§14.4(c)）：D5 冻结窗口写前拦截——设计评审在途（点火 → 结算）期间父侧对被审文件
   // 集的写入被拒（在途写使本轮结算 stale——pass 轮 token 白丢）；判据与 advisorStale 设计面
   // 同源（含 legacy 面）；位置 = 工程门后、权限阶段前（审批不得绕过冻结）。
-  // B3 契约 1（群 B 批 §17.2 E-扩 1——F31(a)）：键扩 file_ops；路径提取统一走 l3TouchedPaths
+  // B3 契约 1（群 B 批 E-扩 1——F31(a)）：键扩 file_ops；路径提取统一走 l3TouchedPaths
   // （move/rename 源+目标；copy 仅目标——非 file_ops 支与现等价：touchedPaths 优先 / [path] 兜底）。
   if (FILE_MUTATORS.has(toolName) || toolName === "file_ops") {
     let absPaths = []
@@ -148,7 +148,7 @@ export async function collectBatchPermission(agent, { response, toolByName, getA
     const pre = preGateBlocked(agent, { tool, toolName: tc.name, args, depth })
     if (pre.blocked) continue // 前置门禁拦下的不计入批询问（评审 #7）
     const actionReadonly = tool?.isReadonlyAction?.(args) ?? false
-    // §19.5 D-M6 round2 #4: cancel 类控制动作不入批审批组（免询问——只停不启）；
+    // AGENT-LOOP-SUBAGENT.md §6.7.2 D-M6 round2 #4: cancel 类控制动作不入批审批组（免询问——只停不启）；
     // consume-design 同款免审直行（§2.6——无文件写）
     const controlAction = tool?.isControlAction?.(args) ?? false
     if (!tool || tool.readonly || actionReadonly || controlAction || isSubagentConsumeDesignAction(tc.name, args)) continue

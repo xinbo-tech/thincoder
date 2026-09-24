@@ -1,5 +1,5 @@
 /**
- * agent/suspension.mjs — §17 挂起 / 唤醒驱动（核内形态——AGENT-LOOP.md §2.3 #184 定案）。
+ * agent/suspension.mjs — 挂起 / 唤醒驱动（核内形态——AGENT-LOOP.md §2.3 #184 定案；机制面 = AGENT-LOOP-ASYNC-POOL.md §6.8）。
  *
  * 语义（两端同源，逐字承两端现行挂起驱动——CLI 侧 tui 面 / VSC 侧 extension 面，同语义移植）：
  * 回合尾后台池仍 live → 挂起会话——池项 settle → 入 pending；pending 非空 **或存在未 drain 的

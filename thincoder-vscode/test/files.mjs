@@ -57,8 +57,8 @@ export default [
   "test/prompts-mirror-anchors.test.mjs", // 提示词双源镜像锚（VSC 端镜像批（2026-09-11 · 第 5 批）；双源/端特有段现行权威 = PROMPT-SYSTEM.md §6）：A1-A8/A11/A12 逐字 + 双源 15 档集合 + 端特有段（T62/T65）
   "test/config-watch.test.mjs", // 第 21 批（2026-09-11）：外部 config.json 写盘感知 B5——watcher 注册形状/去抖合并/自写基线回填抑制/稳态零推送/create·delete/dispose/降级（T-S1~T-S6；SETTINGS.md §2.6）
   "test/digest-visibility.test.mjs", // 第 21 批（2026-09-11）：消化轮起跑可见指示 B6——起止两态+ok 旗标时序（host）+ #digest-status 三态渲染与幂等（真 chat.js——happy-dom）（T-D1~T-D5；WEBVIEW.md §7.4）
-  "test/turn-across-segments.test.mjs", // 第 19 批（2026-09-11）：跨段累计编号 VSC 面——turnFrame 帧向量/不变式扫描 + applyTurnFrame 消费助手 + webview 冻结头消费累计值 + 真 runAgent 直驱段间断言/真 runChild 接线 + 种子源码锚（T1–T11；TURN-CAP-CONTINUE.md §19）
-  "test/webview-input-enter.test.mjs", // 第 28 批（2026-09-11）：VSC 输入面 Enter 语义——组合期归输入法（三路）/ @ 下拉与 send 协调（含打开态判据硬化）/ busy 拒发可见 toast（T-B2-1~T-B2-7；WEBVIEW.md §9）
+  "test/turn-across-segments.test.mjs", // 第 19 批（2026-09-11）：跨段累计编号 VSC 面——turnFrame 帧向量/不变式扫描 + applyTurnFrame 消费助手 + webview 冻结头消费累计值 + 真 runAgent 直驱段间断言/真 runChild 接线 + 种子源码锚（T1–T11；TURN-CAP-CONTINUE.md §3–§5）
+  "test/webview-input-enter.test.mjs", // 第 28 批（2026-09-11）：VSC 输入面 Enter 语义——组合期归输入法（三路）/ @ 下拉与 send 协调（含打开态判据硬化）/ busy 入队受理（容量 8）+ 满队拒发可见 toast（T-B2-1~T-B2-7；WEBVIEW.md §9）
   "test/async-parity.test.mjs", // 第 35 批（2026-09-11）：VSC async 子代理保真（GitHub #6）——spawn ack 契约锁 + 类型守卫 + 只清已死（丢弃提醒/墓碑/ev:discarded）+ status 四终态回显 + dependsOn depc 停靠 + digest 轮 AbortError 容忍 + 症状1 现状锁（T-D1~T-D10；AGENT-LOOP.md §12）
   "test/md-render-escape.test.mjs", // 第 34 批（2026-09-11）：VSC webview 行内代码字面量契约 + 转义回归（GitHub #7）——行内代码不被后续替换二次处理（esc-first 保持）+ 转义面钉死——T-H1~T-H15 + AC-H5 接线（WEBVIEW.md §10）
   // 批次二（可移植性 VSC 镜像面——2026-09-11）：VP-1–VP-12 落地机判面（PORTABILITY.md §6/§7）
@@ -117,7 +117,7 @@ export default [
   // 端差·机制层端差批（2026-09-20 · `docs/batches/2026-09-20-mechanism-parity-batch.md` · 车道 2 = VSC）
   "test/lifecycle-hooks.test.mjs", // §2.16 端侧 Stop 钩子 + advisor-run 收口（T-LH1–T-LH9；先红 = 端侧零 `runHooks` + 零收口）
   "test/dispatch-hooks.test.mjs", // §2.17 派发面 hooks 四调用点（T-DH1–T-DH7；先红 = 零调用点/零阻断文案）
-  "test/permission-gate-seam.test.mjs", // §2.20 VSC 半——门改经核 `io.ask` 缝（T-PT6–T-PT8；先红 = 核 `permission.mjs` 零 importer）
+  "test/permission-gate-seam.test.mjs", // docs/batches/2026-09-20-mechanism-parity-batch.md §2.20 VSC 半——门改经核 `io.ask` 缝（T-PT6–T-PT8；先红 = 核 `permission.mjs` 零 importer）
   "test/vsc-stream-rules.test.mjs", // VSC 行为/能力两则批（2026-09-20 · 台账 #130）：A 面 stream 规则在 VSC 端生效——T-A1…T-A4（装配合并/abort 端到端/子回合继承/warn 文案逐字；批档 §2.5）
   "test/scoped-rules.test.mjs", // 同批 B 面 `.cursor/rules` 作用域规则：T-B1…T-B4（三分类按序判定/JIT 注入+去重/[4] 层尾块零改/CLI 零对位；批档 §2.5）
   "test/subagent-queued-payload.test.mjs", // §2.22 同族事件载荷机检锚（T-QP1–6）：载荷逐 kind 对表 + 缓存单源 + 五路作废点（含 `⟦ev⟧stopped`——§2.29 #7c）+ 重生投影同形（先红后绿 = 收口轮变异探针——停用 stopped 路 `forgetQueued` ⇒ T-QP5 恰该路红）

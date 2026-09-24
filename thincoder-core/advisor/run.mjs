@@ -122,7 +122,7 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
     }
   }
 
-  // §2.20.3 批次档写通道的绑定（仅设计评审）：同步路径 = 调用方（advisor 工具）传入的
+  // BATCH-RECORD.md §4.3 批次档写通道的绑定（仅设计评审）：同步路径 = 调用方（advisor 工具）传入的
   // callbacks.batchDoc（即 resolved.run 的实例绑定）；异步路径 = 本实例在跑池条目的
   // run.batchDoc（同文档集实例键——各评审各取各档，不用单值会话态）。
   const boundBatchDoc = reviewType === "design" ? batchDocForReview(agent, documents, callbacks) : null

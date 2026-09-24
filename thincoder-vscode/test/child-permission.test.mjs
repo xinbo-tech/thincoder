@@ -1,7 +1,7 @@
 /**
  * child-permission.test.mjs — VSC 子代理审批面对齐批（2026-09-12）机器验收。
  * 设计权威：`docs/design/AGENT-LOOP.md` §18（C-1..C-13 · T-CP1..T-CP19 · AC-CP1..AC-CP9）；
- * 需求：`docs/requirements/AGENT-LOOP.md` §17（F-CP1/F-CP2）；批次档
+ * 需求：VSC 子代理审批面对齐（F-CP1/F-CP2）；批次档
  * `2026-09-12-VSC-CHILD-PERMISSION.md` §2（任务书）。
  *
  * 手法（§18.7）：host 直驱（permission-gate / panel-messages + panel 假体——`test/chat-panel-messages.test.mjs`

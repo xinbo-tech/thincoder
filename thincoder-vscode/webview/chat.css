@@ -336,10 +336,10 @@
 /* §5.6（渲染粒度对齐批）：tool 行携 RAW 拼接的输出（零分隔符）⇒ 输出自带换行结构无损还原 */
 .advisor-tool-line { color: var(--accent); opacity: 0.8; margin-top: 2px; white-space: pre-wrap; }
 
-/* §19.5 D-M8 嵌套子代理子标（块内行首 dim 归属标记——"explore#1 · …"） */
+/* AGENT-LOOP-SUBAGENT.md §6.7.2 D-M8 嵌套子代理子标（块内行首 dim 归属标记——"explore#1 · …"） */
 .advisor-sub { opacity: 0.55; font-style: italic; }
 
-/* §19.5 D-M7 子代理块 ⏹ 停止控件（仅 running 显示——done/stopped 后移除）。
+/* AGENT-LOOP-SUBAGENT.md §6.7.2 D-M7 子代理块 ⏹ 停止控件（仅 running 显示——done/stopped 后移除）。
    块级 overlay：absolute 定位在标题行右缘——不改变 summary 文本/折叠语义。 */
 .advisor-block.sub-block { position: relative; }
 .sub-stop-btn {

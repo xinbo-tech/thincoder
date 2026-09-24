@@ -115,7 +115,7 @@ export async function wireAgentToolSeams() {
  * start / subagent action:'escalate' call can pick from — it would hallucinate
  * provider:model names or never pass `model`. The tool table is assembled per-run from
  * loadRaw(), so the list stays fresh. Description-only: the tool object is cloned
- * shallowly, execute untouched. §19 (2026-09-03): applied to the depth-0 subagentTool
+ * shallowly, execute untouched. AGENT-LOOP-SUBAGENT.md §6.7 (2026-09-03): applied to the depth-0 subagentTool
  * too — its escalate action picks from the same pool (the standalone escalate tool was
  * merged in as action:"escalate").
  */
@@ -137,7 +137,7 @@ export function withPool(tool) {
  * 不另立档；承 W14 `gitTool` 装饰先例）：
  *   ① `modeRoleField`（模式互斥 role enum + suffix）——原档 verbatim 迁入（核 `agent/setup.mjs`
  *      同族逻辑在核内装配面，未导出 ⇒ 端侧装配面自持该面至 W15 收敛）。
- *   ② #99（CORE-UNIFICATION §2.13.4 / AGENT-LOOP.md §19.6 AC-P4）：核登记册的工具面含 `panel`
+ *   ② #99（CORE-UNIFICATION §2.13.4 / AGENT-LOOP-SUBAGENT.md §6.7.2 AC-P4）：核登记册的工具面含 `panel`
  *      动作（CLI TUI 面板镜像），VSC 载荷面不存在 ⇒ **装配层剔除**（端侧过滤、零核改动）——
  *      action enum 去项 + 描述去 panel 段 + view/freeze 两参数（仅 panel 消费）移除。
  *   ③ 动作级分类（`isReadonlyAction` status/observe · `isControlAction` cancel/send）——端审批面

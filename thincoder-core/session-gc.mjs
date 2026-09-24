@@ -3,7 +3,9 @@
  *
  * F1 残留 GC（自动）：进程启动时对当前 cwd hash 前缀做一次轻量清理——.corrupted /
  * .unreadable / .manifest.corrupted / .bak-* 保留 30 天，孤儿 .tmp 保留 7 天
- *（mtime < now − retention 才删，等于保留期保留——older-than 边界语义）。
+ *（mtime < now − retention 才删，等于保留期保留——older-than 边界语义）；**孤儿 sidecar
+ * 记录目录 `.d`**（主文件 `{prefix}.{N}` 不存在）保留 30 天（数据现场族口径）⇒ **回收**
+ *（rename 进 `sessions-trash`——目录承载记录存储本体，不可直删；D-SE36 同语义）。
  * 安全（N1）：活跃槽（主文件在 + manifest slotSessions[N] 属主活）的现场一律保留；
  * manifest 主文件 / end marker / 数据主文件永不进入候选（后缀预过滤只匹配残留后缀）。
  *
@@ -35,6 +37,9 @@ import { configDir } from "./config.mjs"
 import { sessionPath, ownerPid } from "./session-slots.mjs"
 import { probeOwnersAsync, ownerState } from "./process-probe.mjs"
 import { listStaleCwds, deleteStaleCwd, recycleGroup, sweepStale, trashRootFor } from "./session-stale.mjs"
+// sidecar 记录目录后缀常量（单源 = `session-segments.mjs:13`——本档经该常量判后缀形态；
+// 两处名形匹配式（`classifyResidue` / `sweepOrphanRecordDirs`）按 `{prefix}.{N}` + 后缀内联，不构成第二单源）。
+import { RECORD_DIR_SUFFIX } from "./session-segments.mjs"
 
 /** 保留期（§6.12）：损坏现场（.corrupted/.unreadable/.manifest.corrupted）与并发轮转
  *  备份（.bak-*）30 天；孤儿 .tmp 7 天（崩溃现场恢复窗口）。 */
@@ -46,8 +51,9 @@ export const COLD_CWD_RETENTION_MS = 90 * 24 * 3600 * 1000
 function sessionsDir() { return join(configDir, "sessions") }
 
 /** 残留分类（§6.12 后缀表）：name 须以 `${prefix}.` 开头（prefix = `${hash}.json`）。
- *  返回 { retention, slot, tmp } 或 null（主文件/end marker/他前缀——不动）。
- *  slot = 关联槽号（`.N.` 段），无则 null（如 .manifest.corrupted）。 */
+ *  返回 { retention, slot, tmp, dir } 或 null（主文件/end marker/他前缀——不动）。
+ *  slot = 关联槽号（`.N.` 段），无则 null（如 .manifest.corrupted）；`dir` = sidecar 记录目录
+ *  形（`{prefix}.{N}.d`——孤儿判据反向：**主文件在 ⇒ 跳过**）。 */
 function classifyResidue(name, prefix) {
   if (!name.startsWith(prefix + ".")) return null
   const slotMatch = name.slice(prefix.length).match(/^\.(\d+)\./)
@@ -55,6 +61,7 @@ function classifyResidue(name, prefix) {
   if (name.endsWith(".corrupted") || name.endsWith(".unreadable")) return { retention: RESIDUE_RETENTION_MS, slot, tmp: false }
   if (/\.bak-\d+$/.test(name)) return { retention: RESIDUE_RETENTION_MS, slot, tmp: false }
   if (name.endsWith(".tmp")) return { retention: ORPHAN_TMP_RETENTION_MS, slot, tmp: true }
+  if (name.endsWith(RECORD_DIR_SUFFIX) && /\.\d+\.d$/.test(name)) return { retention: RESIDUE_RETENTION_MS, slot, tmp: false, dir: true }
   return null
 }
 
@@ -105,15 +112,58 @@ export async function gcResidue({ dir = sessionsDir(), prefix, now = Date.now(),
     if (c.slot !== null && active.has(c.slot)) continue // N1：活跃槽现场一律保留（T3）
     const p = join(dir, c.name)
     if (c.tmp && existsSync(p.slice(0, -".tmp".length))) continue // 非孤儿 .tmp（主文件在——写中/回退候选）
+    if (c.dir && existsSync(p.slice(0, -RECORD_DIR_SUFFIX.length))) continue // 非孤儿 sidecar（主文件在 ⇒ 记录存储本体——不动；仅孤儿目录入候选）
     let st
     try { st = await stat(p) } catch { continue }
     if (st.mtimeMs >= now - c.retention) continue // 边界：older-than 才删，等于保留期保留（§6.12）
     result.candidates.push(c.name)
-    if (!dryRun) {
-      try { await unlink(p); result.deleted.push(c.name) } catch { /* 占用/竞态——跳过 */ }
+    if (dryRun) continue
+    if (c.dir) {
+      // 目录承载记录存储本体 ⇒ **回收**（rename 进 `sessions-trash/<批次>/`——不 unlink / 不同步 fs；
+      // 失败 ⇒ 跳过并计数（candidates − deleted）+ 原目录零删除）
+      const r = await recycleGroup({ prefix, files: [c.name] }, { dir, now })
+      if (r.moved.length) result.deleted.push(c.name)
+      continue
     }
+    try { await unlink(p); result.deleted.push(c.name) } catch { /* 占用/竞态——跳过 */ }
   }
   return result
+}
+
+/** ② 显式面清运腿（§6.12 / §6.17 补充——存量通路）：全目录孤儿 sidecar 记录目录
+ *（`{prefix}.{N}.d`——主文件不存在 ∧ 该槽非活跃）⇒ 逐条**回收**（rename 进 `sessions-trash/<批次>/`，同 ① 语义）。
+ *  与 ① 两面之差：① = 自动面（单前缀 / 当前 cwd / **带 30 天保留期**——只治本前缀未来新增）；
+ *  本函数 = **用户显式面**（跳前缀遍历全目录 / **不设保留期**——存量孤儿跨多前缀且多为近期孤儿，
+ *  自动面望不到；进程入口 = `--dry-run` 先列 / `--confirm --all` 才动，且回收可回退）。
+ *  `dryRun` ⇒ 只列不删；目录不可读 ⇒ 空集。失败 ⇒ 跳过（不 unlink 兜底——原目录零删除）。 */
+export async function sweepOrphanRecordDirs({ dir = sessionsDir(), now = Date.now(), dryRun = false, probeFn = probeOwnersAsync, entries = null } = {}) {
+  const out = { candidates: [], recycled: [] }
+  let names = entries
+  if (!names) {
+    try { names = await readdir(dir) } catch { return out }
+  }
+  const present = new Set(names)
+  const byPrefix = new Map() // prefix → [{ name, slot }]
+  for (const name of names) {
+    const m = /^(.+\.json)\.(\d+)\.d$/.exec(name)
+    if (!m) continue
+    if (present.has(`${m[1]}.${m[2]}`)) continue // 主文件在 ⇒ 非孤儿（记录存储本体——不动）
+    if (!byPrefix.has(m[1])) byPrefix.set(m[1], [])
+    byPrefix.get(m[1]).push({ name, slot: Number(m[2]) })
+  }
+  for (const [prefix, items] of byPrefix) {
+    const active = await liveSlots(dir, prefix, probeFn) // N1：活跃槽现场一律保留
+    for (const it of items) {
+      if (active.has(it.slot)) continue
+      let st
+      try { st = await stat(join(dir, it.name)) } catch { continue }
+      if (st) out.candidates.push(it.name)
+      if (dryRun) continue
+      const r = await recycleGroup({ prefix, files: [it.name] }, { dir, now })
+      if (r.moved.length) out.recycled.push(it.name)
+    }
+  }
+  return out
 }
 
 /** 启动**窗外延迟拍** pass（§6.17 编排——点火见 `scheduleSessionGC`）：① 一次**异步目录快照**
@@ -265,6 +315,10 @@ export async function runSessionGc(args, { dir = sessionsDir(), prefix = null, c
     const residue = p ? await gcResidue({ dir, prefix: p, now, dryRun: true, probeFn }) : { candidates: [] }
     out(`Residue candidates for current project (${p ?? "unknown"}): ${residue.candidates.length}`)
     for (const name of residue.candidates) out(`  ${name}`)
+    // 孤儿 sidecar 记录目录（② 存量面——全目录；主文件不在 + 该槽非活跃——不设保留期）
+    const orphanDirs = await sweepOrphanRecordDirs({ dir, now, dryRun: true, probeFn })
+    out(`Orphan record-dir (.d) candidates (main file gone; explicit face — no retention): ${orphanDirs.candidates.length}`)
+    for (const name of orphanDirs.candidates) out(`  ${name}`)
     out(`Cold/stale project candidates (cold = manifest idle > 90 days; stale = no live owner + cwd unreachable/empty + 7-day window): ${candidates.length}`)
     for (const c of candidates) out(`  ${c.hash}  reason ${c.reason}  files ${c.files.length}`)
     if (candidates.length >= GC_PROGRESS_MIN) out(`Estimate: ${fmtGcEstimate(candidates.length)} to scan ${candidates.length} candidates (measured ≈${GC_MS_PER_CANDIDATE}ms/candidate).`)
@@ -279,7 +333,9 @@ export async function runSessionGc(args, { dir = sessionsDir(), prefix = null, c
     try { loopEntries = await readdir(dir) } catch { loopEntries = null }
   }
   const targets = confirmTarget === "--all" ? candidates : candidates.filter((c) => c.hash === confirmTarget)
-  if (!targets.length) {
+  // ② 面候选预列（孤儿 sidecar 记录目录——存量通路；只列不删——实回收在组循环后）
+  const orphanDirs = confirmTarget === "--all" ? await sweepOrphanRecordDirs({ dir, now, dryRun: true, probeFn, entries: loopEntries }) : { candidates: [] }
+  if (!targets.length && !orphanDirs.candidates.length) {
     err(`Refused: ${confirmTarget} is not a cold/stale project (active, recent, or unknown) — nothing deleted.`)
     return 1
   }
@@ -298,6 +354,11 @@ export async function runSessionGc(args, { dir = sessionsDir(), prefix = null, c
       continue
     }
     out(`Moved ${r.deleted.length} files for ${t.hash} into the recycle bin (${r.batch})${r.skipped?.length ? ` — skipped ${r.skipped.length} (locked/racing, kept in place)` : ""}.`)
+  }
+  // ② 显式面清运腿（孤儿 sidecar 记录目录——存量通路；与 ① 同语义：rename 进回收批）
+  if (confirmTarget === "--all" && orphanDirs.candidates.length) {
+    const moved = await sweepOrphanRecordDirs({ dir, now, probeFn, entries: loopEntries })
+    out(`Orphan record dirs (.d): moved ${moved.recycled.length}/${moved.candidates.length} into the recycle bin (${trashRootFor(dir)}).`)
   }
   return 0
 }

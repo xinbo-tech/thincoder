@@ -1,13 +1,12 @@
 /**
  * agent/context-injections.mjs — per-run context injection blocks + the single
- * orchestration entry (VSC-CONTEXT-PARITY 批 D-CI1；设计 = VSC docs/design/AGENT-LOOP.md
- * §17.3/§17.4/§17.5）。
+ * orchestration entry (VSC-CONTEXT-PARITY 批 D-CI1；设计 = VSC-CONTEXT-PARITY 批上下文注入面契约)。
  *
- * 块序（§17.4 目标序——编排一处可见）：#1 git → #2 OS/cwd/Session start/快照 →
+ * 块序（目标序——编排一处可见）：#1 git → #2 OS/cwd/Session start/快照 →
  * #3 restarted → #4 依赖大纲 → #5 文档召回 → #6 记忆召回。
  * 纪律：全部「只追加（单调）、只 transient、失败静默」——新块只 push 到 history 尾，
  * 禁中段插入、禁改写已入线消息；全部 depth-0 且非 resume/autoTurn 门（召回面仅 depth 0
- * ——差异登记 §17.10：CLI 召回门 = agent.memory 载荷，本端索引/记忆为 cwd 级句柄态）。
+ * ——差异登记（VSC 上下文注入面）：CLI 召回门 = agent.memory 载荷，本端索引/记忆为 cwd 级句柄态）。
  * CLI 对位（语义同源、本端原文自持；行号 as-of 2026-09-11）：agent/helpers.mjs:275-348 ·
  * agent/setup.mjs:54-139。
  * W8（2026-09-15）：#5/#6 数据源 = 核面（`docSearch` / `search`——sqlite；端壳文件制
@@ -136,7 +135,7 @@ export async function pushOutline(history, cwd) {
  * 文档召回（cli setup.mjs:100-113 行形态）：核面 `docSearch`（FTS5 + 惰性向量——无
  * embedder 时纯 FTS 回退；无索引 = 零命中，静默跳过）；行 = `- path > heading:
  * <untrusted_doc_chunk>…</untrusted_doc_chunk>`，预览 300 字符（safeSliceUTF16）；
- * chunk 总数不可得 → 省略 `(N chunks indexed…)` 后缀（差异登记 §17.10）。
+ * chunk 总数不可得 → 省略 `(N chunks indexed…)` 后缀（差异登记——内容格式同构、取数面不同）。
  * W8（2026-09-15）：数据源 = 核检索面（端壳文件制索引删旧）。
  */
 export async function pushDocRecall(history, cwd, input) {
@@ -175,8 +174,8 @@ export async function pushMemoryRecall(history, cwd, input) {
 
 
 /**
- * 编排入口（D-CI1）：块 #1–#6 按 §17.4 目标序注入；门 = `depth === 0 && !resume &&
- * !autoTurn`（§17.3）。每块失败静默（该块跳过、其余块与用户输入零影响——失败不重试）。
+ * 编排入口（D-CI1）：块 #1–#6 按目标序注入；门 = `depth === 0 && !resume &&
+ * !autoTurn`（注入门）。每块失败静默（该块跳过、其余块与用户输入零影响——失败不重试）。
  */
 export async function injectRunContext(agent, { history, cwd, input, depth, resume, autoTurn, platform }) {
   if (depth !== 0 || resume || autoTurn) return

@@ -191,7 +191,7 @@ export function describeBlockers(parent, entry) {
  * 文件冲突只阻断后入者——id 序）——混合环仅人工注入可构造（T-SD5 同族防御断言）——
  * 但状态既可能成环即机械可检——不依赖可达性论证。maybeRefillAsync 空转处不调用：refill
  * 嵌在 settle/cancel 链上无模型可见输出通道（抛错即破坏池操作）——status 视图（actions
- * 模块）即 F-SL2 的报错/标记落点（§19.8：check 守卫随 check 删除）。 */
+ * 模块）即 F-SL2 的报错/标记落点（AGENT-LOOP-SUBAGENT.md §6.7.5：check 守卫随 check 删除）。 */
 export const STALL_NOTE = "cancel one task in the loop (action:'cancel') to break the cycle, then re-spawn it"
 
 export function detectStall(parent) {

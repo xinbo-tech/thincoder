@@ -208,10 +208,9 @@ export async function startTUI(agent, opts = {}) {
   showStartup({ agent, state, opts, pushLine, pushLabel, render, startWizard })
   // LEDGER-SURFACE（§2.30.3.4）：台账可见面——首扫（setImmediate）+ 周期；dispose 挂进程退出（:278 cleanup 先例）
   const ledgerSurface = startLedgerSurface({ state, agent, pushLine, render })
-  // 前置缺陷最小修（2026-09-22 structure-debt · 父侧授权 · 只修调用点）：K-LX3 归核后
-  // `startLedgerSurface` 返回 **Promise**（resolve 出 `{ dispose }`）——原同步 `.dispose()`
-  // 令每次退钩抛 TypeError（`node test-startup.mjs` 前置红，HEAD 逐字同款）；按 Promise 承接。
-  process.on("exit", () => { void Promise.resolve(ledgerSurface).then((s) => s?.dispose?.()) })
+  // 端壳契约 = **恒同步返回 `{ dispose }`**（K-LX3 归核后与核形一致——核句柄异步就绪后桥接；
+  // 载入失败 ⇒ 空句柄）⇒ 退钩同步 `.dispose()`（零 TypeError）。
+  process.on("exit", () => ledgerSurface.dispose())
   backgroundIndex({ agent, state, render })
 
   // Check for updates (non-blocking, after startup screen)——实现 update-notice.mjs

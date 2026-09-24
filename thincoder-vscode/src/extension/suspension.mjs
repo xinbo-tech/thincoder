@@ -1,5 +1,5 @@
 /**
- * suspension.mjs — §17 挂起回合会话驱动（AGENT-LOOP.md §7 D-S2/D-S9，VS Code 对齐）。
+ * suspension.mjs — AGENT-LOOP-ASYNC-POOL.md §6.8 挂起回合会话驱动（AGENT-LOOP.md §7 D-S2/D-S9，VS Code 对齐）。
  * 挂起态是交互层状态：一个用户回合结束后后台 async 池仍 live（running/queued/未注入）
  * → 不阻塞回合，进入挂起会话——挂起空闲输入开放（新消息经 panel._chat 填队列 + 唤醒）、
  * busy（running 含 digest）提交同入队列（容量 8——busy-extend 批 2026-09-22 routeUserTurn 两载体
@@ -86,14 +86,14 @@ export async function sweepSettledToPending(history) {
   }
 }
 
-/** 消化轮快照（§17.5.5 回收判据——本 run 消费了谁）：有 webview 池行的 pending 条目
+/** 消化轮快照（AGENT-LOOP-ASYNC-POOL.md §6.8 回收判据——本 run 消费了谁）：有 webview 池行的 pending 条目
  *  （subagent/advisor/escalate 池行——会诊 per-model 行由活动流承载无会话级行——不进）。 */
 function pendingRowSnapshot(history) {
   // D2 pending 单容器——role 过滤（consult 无 webview 行）
   return (history._pendingAsyncResults ?? []).filter((e) => e?.role !== "consult")
 }
 
-/** §17.5.5 消化完成逐条冻结回收（2026-09-03 实测修订——CLI freezeReclaimDigestedBlocks
+/** AGENT-LOOP-ASYNC-POOL.md §6.8 消化完成逐条冻结回收（2026-09-03 实测修订——CLI freezeReclaimDigestedBlocks
  *  parity）：digest/会话内用户回合消化完 pending 条目（run 首行已注入）后调用——对该轮
  *  已消化条目（before 快照中已不在 pending 者）逐条补发 {type:"subagent", status:"done"}
  *  通知 → webview 把 awaitingDigest 驻留块**归档落流**（WEBVIEW.md §14 C-3；不等池空——
@@ -113,7 +113,7 @@ function reclaimDigestedBlocks(panel, history, before) {
 }
 
 /** 后台模式状态行数据（D-S8；17.5.4 #6 顺手对齐）：{ running, queued, pending, done }
- *  —— webview 端按 locale 组合文案。"done" = §17.5 回合尾留池的 settled 未消费项
+ *  —— webview 端按 locale 组合文案。"done" = AGENT-LOOP-ASYNC-POOL.md §6.8 回合尾留池的 settled 未消费项
  *  （挂起会话首轮 sweep 前的可见窗口——纯 settled 池进挂起时首帧不误报 0）。
  *  §9 D-24b：advisor 池条目同列（role=advisor 行——计数含两池）。
  *  §25 R17：pending 单容器计入 pending（D2）；running 会诊会话计入 running
@@ -129,7 +129,7 @@ export function backgroundStatus(history) {
     running: entries.filter((e) => e.status === "running").length + consultLive.length,
     queued: entries.filter((e) => e.status === "queued").length,
     pending: history?._pendingAsyncResults?.length ?? 0, // D2 pending 单容器
-    done: entries.filter((e) => e.done).length, // §17.5 留池未消费（sweep 前窗口）
+    done: entries.filter((e) => e.done).length, // AGENT-LOOP-ASYNC-POOL.md §6.8 留池未消费（sweep 前窗口）
   }
 }
 
@@ -213,13 +213,13 @@ function waitForSettleOrWake(panel, susp) {
 }
 
 /**
- * §17 挂起会话驱动（D-S9 行表；由 runPanelChat 回合尾进入，池空自然退出）：
+ * AGENT-LOOP-ASYNC-POOL.md §6.8 挂起会话驱动（D-S9 行表；由 runPanelChat 回合尾进入，池空自然退出）：
  * - suspension：池项 settle → 入 pending → 开 auto-turn（合并消化近邻 settle）；
  *   挂起空闲用户消息、会话内 busy 消息 → pendingInput 队列（容量 8——busy-extend 批 2026-09-22 同判据）
  *   ——用户输入优先于 digest；
  * - auto-turn：消化中 settle 不并发开新轮（单 runAgent 循环），轮末按 pending/池态
  *   续开合并消化轮或回挂起；pendingInput 非空 → 以该消息开新回合（不触发新 digest）；
- * - §17.5.5：每次消化/会话内用户回合消费 pending 后 → reclaimDigestedBlocks 对该
+ * - AGENT-LOOP-ASYNC-POOL.md §6.8：每次消化/会话内用户回合消费 pending 后 → reclaimDigestedBlocks 对该
  *   轮已消化条目逐条补发 done（webview 折叠回收——不等池空；CLI freezeReclaim
  *   DigestedBlocks parity）；
  * - 退出：池空 + pending 空 + 无待处理输入 → 残余直注入（③）→ 补发冻结（freeze 仅
@@ -292,7 +292,7 @@ export async function suspensionSession(panel, entry) {
           // 合泡成形；动态 import = 零新增静态边——panel-messages ↔ 本档反向静态边不上岸）。
           const { pushBusyQueued } = await import("./panel-messages.mjs")
           pushBusyQueued(panel, merged ?? undefined)
-          // §17.5.5：run 首行会消费当时 pending——快照本轮消化者（用户回合同样注入）。
+          // AGENT-LOOP-ASYNC-POOL.md §6.8：run 首行会消费当时 pending——快照本轮消化者（用户回合同样注入）。
           // D2 pending 单容器同快照（role 分发——漏快照会让 advisor 行的 digest-done 回收
           // 延迟到会话退出冻结——review fix）；会诊条目无 webview 行——不进。
           const before = pendingRowSnapshot(history)
@@ -302,7 +302,7 @@ export async function suspensionSession(panel, entry) {
           } finally {
             history._suspended = true
           }
-          // §17.5.5：该回合消化完 pending → 逐条补发 done（webview 折叠回收——不等池空）
+          // AGENT-LOOP-ASYNC-POOL.md §6.8：该回合消化完 pending → 逐条补发 done（webview 折叠回收——不等池空）
           reclaimDigestedBlocks(panel, history, before)
           postSuspension(panel, susp)
           continue
@@ -348,7 +348,7 @@ export async function suspensionSession(panel, entry) {
         }
         const left = history._pendingAsyncResults?.length ?? 0 // D2 单容器
         logEvent("digest:end", { pendingN: left, ms: Date.now() - d0, ...(upstream ? { upstream: true } : {}) })
-        // §17.5.5 实测修订（2026-09-03）：digest 消化完成（pending 条目已注入）→ 对该轮
+        // AGENT-LOOP-ASYNC-POOL.md §6.8 实测修订（2026-09-03）：digest 消化完成（pending 条目已注入）→ 对该轮
         // 已消化条目逐条补发 done（webview 折叠回收——不等池空；块回收与池空解耦——
         // CLI freezeReclaimDigestedBlocks parity——池空 freeze 仅兜底未消化残项）
         reclaimDigestedBlocks(panel, history, before)

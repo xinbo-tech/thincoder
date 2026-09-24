@@ -1,11 +1,11 @@
 /**
- * turn-across-segments.test.mjs — TURN-ACROSS-SEGMENTS（设计档 docs/design/
- * TURN-CAP-CONTINUE.md §19.1-19.8）用例表 1:1：T1-T7。
+ * turn-across-segments.test.mjs — TURN-ACROSS-SEGMENTS（设计档 docs/core/design/
+ * TURN-CAP-CONTINUE.md §3–§5）用例表 1:1：T1-T7。
  * T1-T4 编号帧向量（段 1 首/末轮 · 续跑段首轮 · 第 3 段中段）· T5 不变式扫描（限可达域）·
  * T6-T7 消费面解析（turn/approval 同帧——显示面零改动）。
  * AC 映射：AC1←T1-T5 · AC2←T6 · AC4←T7 · AC5←T6（AC3 / AC6 原由源码锚用例覆盖——已随
  * 2026-09-12 散文锚退役批退役，行为面由 T1-T7 承载）。
- * 用例面声明（设计 §19.6）：接缝式（无 runAgent 直驱先例）——纯函数缝 + TUI routing 缝；
+ * 用例面声明（设计 `TURN-CAP-CONTINUE.md` §3–§5）：接缝式（无 runAgent 直驱先例）——纯函数缝 + TUI routing 缝；
  * 全量回归缝 = `npm test` / `node test/run.mjs`（验收命令）。
  */
 import { test } from "node:test"

@@ -4,7 +4,7 @@
  * The advisor tool runs reviews in a background pool at depth 0 (default async —
  * ruling ②-3 A): the launch returns an ack, the turn ends naturally, the session
  * suspends, the review settles into _pendingAsyncResults and a digest turn
- * delivers the report (§17 consumption machinery — role-agnostic; entries carry
+ * delivers the report (AGENT-LOOP-ASYNC-POOL.md §6.8 consumption machinery — role-agnostic; entries carry
  * role "advisor" and ride the subagent panel as a pseudo-role, ruling ②-4 A).
  *
  * This module owns:
@@ -51,7 +51,7 @@ import { normAbs, mutationSeqOf, settleAdvisorRun } from "./advisor-settle.mjs"
 export {
   mutationSeqOf, noteMutations, reviewIsStale, settleAdvisorRun, inflightDesignReviewConflict,
 } from "./advisor-settle.mjs"
-// 第 33 批（§17.5）：doc-set 键迁事实面档（实例续跑与陈旧判定同锚单源；原为私有——零 import 面）。
+// 第 33 批（评审失败护栏）：doc-set 键迁事实面档（实例续跑与陈旧判定同锚单源；原为私有——零 import 面）。
 // 本文件继续在实例解析 / 池 entries 上消费它。
 import { docSetKey } from "./review-facts.mjs"
 // F31（2026-09-18 顾问面治理批）：拒回文案对象标识行单源。

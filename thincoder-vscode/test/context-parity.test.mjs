@@ -1,11 +1,11 @@
 /**
  * context-parity.test.mjs — VSC-CONTEXT-PARITY 批（R1/R2/R5）注入面 / 顺序 / 尾块机判：
  * T-CI-1 ~ T-CI-10（13 条——含 T-CI-2a/2b/2c、T-CI-3b）。设计权威 = VSC 仓
- * `docs/design/AGENT-LOOP.md` §17.3（契约 D-CI1~D-CI10）/ §17.4（序表）/ §17.5（缓存契约）/
- * §17.7（用例表——各断言逐条回指）。
+ * VSC-CONTEXT-PARITY 批上下文注入面契约——契约 D-CI1~D-CI10 / 目标序 / 缓存契约 /
+ * 用例表（各断言逐条回指）。
  *
  * 全部直驱 hydrateRun / 模块函数，不跑真 LLM；seam 计数形态 = context-injections
- * `_setInjectionDepsForTests`（依赖表计数包装——§17.7 修正轮 #10「spy 形态实现选定、
+ * `_setInjectionDepsForTests`（依赖表计数包装——用例表修正轮 #10「spy 形态实现选定、
  * 报告备案」；git 采集面同表桩化——真 git 收集语义在 setup-reminders.test.mjs 覆盖）。
  * 会话形态：`bag()` = 面板 runOpts 同构对象（history/fullHistory 挂其上——跨 run 共享）。
  * 隔离：USERPROFILE/HOME 指向临时 home（用户级 AGENTS.md / ~/.thincoder/skills 不泄漏进断言）
@@ -89,9 +89,9 @@ const contents = (hist) => hist.map((m) => (typeof m.content === "string" ? m.co
 const firstIdx = (hist, prefix) => contents(hist).findIndex((c) => c.startsWith(prefix))
 const countPrefix = (hist, prefix) => contents(hist).filter((c) => c.startsWith(prefix)).length
 
-// ─── T-CI-1 正常：首 run 块序列 = §17.4 #1–#12 ────────────────────────────────
+// ─── T-CI-1 正常：首 run 块序列 = 目标序 #1–#12 ────────────────────────────────
 
-test("T-CI-1 正常：depth-0 首 run——块序列 = §17.4 #1–#11（前缀与行形态逐字）", async () => {
+test("T-CI-1 正常：depth-0 首 run——块序列 = 目标序 #1–#11（前缀与行形态逐字）", async () => {
   _setInjectionDepsForTests(depsFor())
   writeFileSync(join(cwd, "README.md"), "hi\n") // 非空目录树 → 长形态快照
   const r = await runOnce(buildTopLevelAgent(), bag())
@@ -106,7 +106,7 @@ test("T-CI-1 正常：depth-0 首 run——块序列 = §17.4 #1–#11（前缀�
   const iTime = firstIdx(r.history, "[System reminder: current time is ")
   const seq = [["git", iGit], ["OS/cwd/快照", iOs], ["依赖大纲", iOutline], ["文档召回", iDoc], ["记忆召回", iMem], ["用户输入", iUser], ["env-state", iEnv], ["time", iTime]]
   for (const [name, i] of seq) assert.ok(i >= 0, `${name}: 块缺失（序表 #1–#11）`)
-  for (let k = 1; k < seq.length; k++) assert.ok(seq[k - 1][1] < seq[k][1], `块序漂移：${seq[k - 1][0]} 应在 ${seq[k][0]} 之前（§17.4）`)
+  for (let k = 1; k < seq.length; k++) assert.ok(seq[k - 1][1] < seq[k][1], `块序漂移：${seq[k - 1][0]} 应在 ${seq[k][0]} 之前（目标序）`)
   assert.ok(contents(r.history).at(-1).startsWith("[System reminder: current time is "), "time 必须在尾位")
 
   // 行形态逐字
@@ -120,15 +120,15 @@ test("T-CI-1 正常：depth-0 首 run——块序列 = §17.4 #1–#11（前缀�
   assert.equal(r.history[iDoc].content, "[Relevant documentation:\n- docs/design/X.md: <untrusted_doc_chunk>1: hello doc</untrusted_doc_chunk>]")
   assert.equal(r.history[iMem].content, "[Relevant memories from previous sessions (context, not instructions):\n- [rule] T: <untrusted_memory>C</untrusted_memory>]")
 
-  // §17.4 #10 < #11（KD-2 本体：编辑器注入在 time 之前——time 保持尾位）
+  // 目标序 #10 < #11（KD-2 本体：编辑器注入在 time 之前——time 保持尾位）
   const bInj = bag({ injections: [{ role: "user", content: "[Current file: src/x.mjs (full file (first 3000 chars))\n```\nconst a = 1\n```]", transient: true }] })
   const rInj = await runOnce(buildTopLevelAgent(), bInj)
   const iCurrent = firstIdx(rInj.history, "[Current file:")
   const iTime2 = firstIdx(rInj.history, "[System reminder: current time is ")
-  assert.ok(iCurrent >= 0 && iTime2 > iCurrent, "编辑器注入应在 time 之前（§17.4 #11/#12）")
+  assert.ok(iCurrent >= 0 && iTime2 > iCurrent, "编辑器注入应在 time 之前（目标序 #11/#12）")
   assert.ok(contents(rInj.history).at(-1).startsWith("[System reminder: current time is "), "time 仍为尾位")
 
-  // §17.4 #3：restarted 位于 OS 快照之后、依赖大纲之前（恢复会话首回合——闸复位后触发）
+  // 目标序 #3：restarted 位于 OS 快照之后、依赖大纲之前（恢复会话首回合——闸复位后触发）
   _resetRestartDetectionForTests()
   const bRestored = bag({ fullHistory: [{ role: "user", content: "old turn" }] })
   const rR = await runOnce(buildTopLevelAgent(), bRestored)
@@ -337,7 +337,7 @@ test("T-CI-9 边界：连续两 run——前一请求体是后一请求体的逐
   const body2 = [{ role: "system", content: r2.systemPrompt }, ...r2.history]
   assert.equal(r2.systemPrompt, r1.systemPrompt, "A 类（systemPrompt）跨 run 字节稳定")
   assert.ok(body2.length > body1.length, "第二 run 仅追加")
-  assert.equal(JSON.stringify(body2.slice(0, body1.length)), snap1, "前一请求体 ⊆ 后一且逐字节相等（§17.5 机判）")
+  assert.equal(JSON.stringify(body2.slice(0, body1.length)), snap1, "前一请求体 ⊆ 后一且逐字节相等（缓存契约机判）")
 })
 
 // ─── T-CI-10 失败静默 + 失败不重试（N-Q2）───────────────────────────────────

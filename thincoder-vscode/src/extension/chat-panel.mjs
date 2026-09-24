@@ -57,7 +57,7 @@ export class ChatPanel {
     // 池仍 live）；waiting（权限/question 队列）为 running 修饰态非互斥——只经 _refreshStatus
     // 呈现（"waiting 优先 running"语义保留），不入枚举。读者一律走谓词 turnBusy()（缩小迁移面）。
     this._turnState = "idle"
-    // §17 挂起（suspension.mjs / panel-chat.mjs，2026-09-02）：
+    // AGENT-LOOP-ASYNC-POOL.md §6.8 挂起（suspension.mjs / panel-chat.mjs，2026-09-02）：
     // _susp/_suspWake 由 suspensionSession 建/清（会话句柄 + 单槽唤醒器）；
     // 入队容器已随排队机制废弃（INPUT-LOCK-ASYNC C'——2026-09-09）⇒ queue-visible 批（2026-09-24）
     // 恢复为队列（容量 8）：busy（running 含 digest/标题窗口）提交入队列——routeUserTurn 两载体分流；挂起空闲消息走
@@ -114,10 +114,12 @@ export class ChatPanel {
         // `_onProjectChanged`**（旧路径会把 cwd 绑到 `process.cwd()` 并落槽 = 违背「不落 session 槽」）。
         // 槽解绑是恢复面「重新认领」的前提：留着旧根的槽号会把转非空后的 boot 钉在
         // 已移出根的会话上（`ensureSlotAsync` 粘性直返）。
+        const oldCwd = _cwd() // F-CR4 跨 cwd 释放（#168②——同族第三落点）：转空即换 cwd
         clearProjectOverride()
         this._slot = null
         // 销毁点（工作区转空即换 cwd——agent 不跨项目复用）
         this._agent = null
+        releaseOldCwdClaims(oldCwd) // 旧 cwd 认领补一次同语义释放（单点 = panel-project.mjs；同 cwd ⇒ no-op）
         pushWorkspaceGuard(this, true)
         blockOnNoWorkspace(this, { once: true })
         return
@@ -285,7 +287,7 @@ export class ChatPanel {
     this._agent = null
     this._abortController?.abort()
     this._distillController?.abort()  // in-flight async distillation belongs to the dying panel (SEND-STALL-DISTILL)
-    // §17: a live suspension session dies with the panel — abort the session controller
+    // AGENT-LOOP-ASYNC-POOL.md §6.8: a live suspension session dies with the panel — abort the session controller
     // AND the entering turn's full controller set (偏差修复 #3: children spawned under
     // rebuilt controllers would otherwise escape; their settles then no-op on the
     // aborted signal).
@@ -429,7 +431,7 @@ export class ChatPanel {
   // ─── Chat ─────────────────────────────────────
 
   async _chat(text, modelOverride, reasoning, providerName, images, fromBusyQueue = false, visionReader = null) {
-    // §17 D-S4/D-S5（INPUT-LOCK-ASYNC C'——2026-09-09）：挂起会话活跃期消息走 driver 的
+    // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S4/D-S5（INPUT-LOCK-ASYNC C'——2026-09-09）：挂起会话活跃期消息走 driver 的
     // pendingInput 队列——挂起空闲（driver 纯等待）与会话在飞 busy（busy-extend 2026-09-22：
     // routeUserTurn 同判据入同队列）均填队 + 唤醒即开用户回合；容量 8（queue-visible 批 2026-09-24）
     // ——绝不并发开独立回合（会从磁盘重载 lines 孤儿化后台池）。入队项携来源标记（`fromBusyQueue`
@@ -450,7 +452,7 @@ export class ChatPanel {
       this._suspWake?.()
       return
     }
-    // §17 D-S2 释放窗口（2026-09-02 偏差修复 #2 + A2 修订 + INPUT-LOCK）：回合尾已登记
+    // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S2 释放窗口（2026-09-02 偏差修复 #2 + A2 修订 + INPUT-LOCK）：回合尾已登记
     // 挂起（池仍 live——_turnState==="susp" 且会话尚未建立）——A2 后标题移入 finally 归位前
     // （running——路由守卫入队列），会话建立与 susp 广播同同步续段（零事件窗口）——
     // 防御：无会话的 susp 态消息拒收（开并发独立回合 = 从磁盘重载 lines 孤儿化池 + abort

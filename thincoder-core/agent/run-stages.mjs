@@ -171,7 +171,7 @@ export async function finalizeAgentTurn(agent, ctx) {
   // resumes); the Ctrl+C abort branch below is the only path that aborts them
   // (cleanupConsultSessions — marked stopped → no digest), and the suspension
   // driver aborts them on its own abort unwind.
-  // Async subagent turn-end handling (AGENT-LOOP.md §15 D-A3 + §17 D-S1). Lifecycle:
+  // Async subagent turn-end handling (AGENT-LOOP.md §15 D-A3 + AGENT-LOOP-ASYNC-POOL.md §6.8 D-S1). Lifecycle:
   // - Ctrl+C (plain abort): children were aborted with the parent signal — discard dead
   //   entries (tombstone/out-of-pool/notice — AGENT-LOOP-ASYNC-POOL.md §6.20; no stale
   //   errors injected — user explicitly stopped); consultation sessions are cross-turn
@@ -217,7 +217,7 @@ export async function finalizeAgentTurn(agent, ctx) {
     }
   }
   agent._inAutoTurn = false
-  // §17 D-S6: auto-turn guard marks survive into the next USER run (restored at its
+  // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S6: auto-turn guard marks survive into the next USER run (restored at its
   // !resume reset above). Normal ends only — abort discards; ContinueError lets the
   // auto-resumed run snapshot at its own end.
   if (autoTurn && !(signal?.aborted && !signal?.reason?.interrupt) && !(thrownError instanceof ContinueError)) {
@@ -236,8 +236,8 @@ export async function finalizeAgentTurn(agent, ctx) {
  *   queued STAY — no allSettled wait. Results never lost without a session.
  * - suspDriven=true (the interaction layer runs suspensionSession after this
  *   run): NO direct inject — settled entries STAY pooled (settled not consumed)
- *   for the session's first sweepSettledToPending → digest turn (§17.5 — done
- *   条目留池等消化轮注入；status 在 sweep 前仍从池读——17.5.2 不变面（§19.8：check 已删——自动通道为唯一消费方）)。
+ *   for the session's first sweepSettledToPending → digest turn (AGENT-LOOP-ASYNC-POOL.md §6.8 — done
+ *   条目留池等消化轮注入；status 在 sweep 前仍从池读——17.5.2 不变面（AGENT-LOOP-SUBAGENT.md §6.7.5：check 已删——自动通道为唯一消费方）)。
  * maybeRefillAsync runs in both modes (starts queued heads whose slot freed).
  * Single ownership: entries settled inside a suspension session were moved to
  * _pendingAsyncResults by the settle callback, so this only sees user-turn
@@ -250,7 +250,7 @@ async function collectSettledAsync(agent, { suspDriven = false } = {}) {
   if (maps.length === 0) return false
   const { maybeRefillAsync, injectAsyncResult } = await import("../agent-tools/subagent.mjs")
   maybeRefillAsync(agent) // start queued heads now that slots may have freed — no waiting
-  if (suspDriven) return false // §17.5: settled stays pooled — the suspension session digests it
+  if (suspDriven) return false // AGENT-LOOP-ASYNC-POOL.md §6.8: settled stays pooled — the suspension session digests it
   let injectedAdvisor = false
   for (const map of maps) {
     for (const e of [...map.values()]) {

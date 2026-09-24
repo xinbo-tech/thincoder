@@ -3,7 +3,7 @@
  * 满足 500 行硬限）。只做「事件 → TUI 状态/对话行」的映射：
  *
  *  - onToken/onReasoning  : 子agent 前缀分流（routeSub*）→ 主流 streaming/reasoning
- *  - onToolCall           : 状态栏 + `❯ name args` 标题行 + 计时 + §19 action 记录
+ *  - onToolCall           : 状态栏 + `❯ name args` 标题行 + 计时 + AGENT-LOOP-SUBAGENT.md §6.7 action 记录
  *  - onToolResult         : 子agent 完成冻结（finishSubTaskKey 精确冻 + freezeDoneSubTasks——
  *                           F-2 后 finishSubTask 为 no-op 兼容保留）、
  *                           工具块结果入块、advisor 评审冻结框
@@ -11,8 +11,8 @@
  *  - 其余                 : usage 累计、等待提示、task 面板、回合末增量落盘
  *
  * flushStream 同时返回给调用方（回合循环 / onTurnEnd 共用）。纯回调装配，无终端副作用
- * （除经 deps 注入的 pushLine/render）。§19: subagent_check/escalate 工具退役后
- * （§19.8——check 动作已删），subagent 家族全部调用以工具名 "subagent" +
+ * （除经 deps 注入的 pushLine/render）。AGENT-LOOP-SUBAGENT.md §6.7: subagent_check/escalate 工具退役后
+ * （AGENT-LOOP-SUBAGENT.md §6.7.5——check 动作已删），subagent 家族全部调用以工具名 "subagent" +
  * action 到达——完成路由按 onToolCall 时记录的 action 分流（spawn 区块 / escalate
  * 区块 / status/observe/send 普通工具块——observe/send 不建子代理区块）。
  */
@@ -115,7 +115,7 @@ export function buildToolCallbacks(deps) {
       // Subagent tool call: prefix role#id/toolName → open a fresh tool block and
       // set currentTool for the header summary line.
       if (routeSubToolCall(state, name, args, scheduleRender)) return
-      // §19: record the action of a merged subagent-family call (spawn is the
+      // AGENT-LOOP-SUBAGENT.md §6.7: record the action of a merged subagent-family call (spawn is the
       // default — only non-spawn actions need a record for result-time routing).
       if (name === "subagent" && args?.action && args.action !== "spawn") {
         if (toolId !== undefined && toolId !== null) _subActions.set(toolId, args.action)
@@ -179,7 +179,7 @@ export function buildToolCallbacks(deps) {
     // 签名（普通工具/老回调/错误路径不带 key）。
     onToolResult: (name, result, toolId, subKey) => {
       state.currentTool = null
-      // §19 merged family: route per the action recorded at onToolCall (no record = default spawn).
+      // AGENT-LOOP-SUBAGENT.md §6.7 merged family: route per the action recorded at onToolCall (no record = default spawn).
       let subAction = null
       if (name === "subagent") {
         subAction = (toolId !== undefined && toolId !== null)
@@ -192,7 +192,7 @@ export function buildToolCallbacks(deps) {
       // Subagent complete: mark the earliest running child as done — the block
       // persists (✓ frozen elapsed header, expandable) as the ONLY carrier of the
       // child's activity; memory bounded by the N2 line cap.
-      // §19.5: cancel 动作排除在 isSubagent 外——ack/错误 JSON 走普通工具块；区块冻结由
+      // AGENT-LOOP-SUBAGENT.md §6.7.2: cancel 动作排除在 isSubagent 外——ack/错误 JSON 走普通工具块；区块冻结由
       // ⟦ev⟧stopped settle 事件承担（此处 finishSubTask 会误冻最早 running 区块）。
       if (isSubagent) {
         // The dispatch-level tool-block carrier for this call would otherwise
@@ -362,7 +362,7 @@ export function buildToolCallbacks(deps) {
       scheduleRender()
     },
     // Manual-tier auto-turn digests (agent-turn.mjs suspension driver) pass null
-    // handlers — permission requests then deny WITHOUT a panel (§17 D-S7: no modal
+    // handlers — permission requests then deny WITHOUT a panel (AGENT-LOOP-ASYNC-POOL.md §6.8 D-S7: no modal
     // during unattended digestion) and question errors out instead of hanging.
     ...(askPermission ? { onPermissionRequest: (name, args) => askPermission(name, args) } : {}),
     // Merged batch ask (§16 D-B1): one confirmation for N non-readonly tools in

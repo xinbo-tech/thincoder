@@ -93,7 +93,7 @@ export function handleSubagentMessage(m) {
   applySubagentStatus(m)
 }
 
-/** §17 D-S2/D-S8: the suspension-session message from the host — activates the
+/** AGENT-LOOP-ASYNC-POOL.md §6.8 D-S2/D-S8: the suspension-session message from the host — activates the
  *  background mode (input stays usable; Stop 语义 = susp 纯池跑不显——子代理停止靠逐块
  *  ⏹——无全停——池空自然消化完), updates the status-line counts, and on session exit
  *  archives the whole activity region into the conversation (CLI freezeAllSubTasks

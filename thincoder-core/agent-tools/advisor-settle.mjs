@@ -14,7 +14,7 @@
  *    `reviewIsStale` 同族（同 docAbs / 同 normAbs）、仅扫 running 且未取消的设计条目
  *    （dispatch Phase-1 预闸消费）。
  *
- * 第 33 批（2026-09-11——评审失败护栏 §17.5）：`normAbs` 本体迁 `review-facts.mjs`
+ * 第 33 批（2026-09-11——评审失败护栏）：`normAbs` 本体迁 `review-facts.mjs`
  * （原处 re-export 保面）；**2026-09-18 顾问面治理批**：计数落账（`designReviewOutcome` →
  * `noteDesignReviewOutcome`）随会话级计数器整体退场——改治**失败结论**：结算出口按
  * `settlementCriterion`（纯函数单源，`advisor/notice.mjs`）追加结论块（**两轨共用**——
@@ -25,7 +25,7 @@ import { settleDesignReview, makeDesignTokenRegex, stripApprovedSuffix } from ".
 import { looksLikeReviewOutput, advisorIncompleteMarker, ADVISOR_LAUNCH_REFUSAL_PREFIX } from "../advisor/run.mjs"
 import { isCodePath, loadConventions } from "../conventions.mjs"
 import { logEvent } from "../log.mjs"
-// 第 33 批（§17.5）：`normAbs` 迁 `review-facts.mjs`（中立模块——陈旧判定与事实面共用同一归一）；
+// 第 33 批（评审失败护栏）：`normAbs` 迁 `review-facts.mjs`（中立模块——陈旧判定与事实面共用同一归一）；
 // 2026-09-18：结算分类 / 结论文案单源迁 `advisor/notice.mjs`（纯函数、零状态、零计数载体）。
 import { normAbs } from "./review-facts.mjs"
 import { settlementCriterion, buildSettlementConclusion, scopeSummary } from "../advisor/notice.mjs"
@@ -51,7 +51,7 @@ export function noteMutations(agent, paths) {
   if (log.length > 200) log.splice(0, log.length - 200)
 }
 
-// 第 33 批（§17.5）：`normAbs` 本体迁 `review-facts.mjs`；原处 re-export 保既有 import 面
+// 第 33 批（评审失败护栏）：`normAbs` 本体迁 `review-facts.mjs`；原处 re-export 保既有 import 面
 // （advisor-async / 测试）零变。
 export { normAbs } from "./review-facts.mjs"
 
@@ -121,7 +121,7 @@ export function inflightDesignReviewConflict(agent, absPaths) {
  * 第 11 批增补（A/F11）：`incomplete` = 宿主尾族判定（单谓词）——design 结算未完成即不
  * 签发（`settleDesignReview` 的 `opts.incomplete`）；code 完成守卫的失败判定改用同谓词
  * （六形态语义零丢——旧 `^` 锚正则退役）。
- * 第 33 批增补（§17.5）：design 结算按分类单源落账到会话级护栏——**2026-09-18 撤**（零载体）。
+ * 第 33 批增补（评审失败护栏）：design 结算按分类单源落账到会话级护栏——**2026-09-18 撤**（零载体）。
  * 现行：结算出口按判据名单源（`settlementCriterion`）追加失败结论块（两轨共用；F28/F29）——
  * 判据名非空 ⇒ 块在位（块首行 = 对象标识行）；可用判决 / 中断 / 拒发 ⇒ 零噪声（无块）。
  * Cancelled / parent-aborted reviews consume nothing (the user dropped the
@@ -143,7 +143,7 @@ export function settleAdvisorRun(agent, entry) {
   // 宿主尾族判定（单谓词——design 结算与 code 守卫共用；§14.3 消费点 1/2）。
   const incomplete = result != null ? advisorIncompleteMarker(String(result)) : null
   // 启动拒绝报告（未发起请求——无评审产出）：第 33 批上移为本结算段**单点**——消费 = ① design
-  // 失败分类（neutral——无尝试发生，§17.3 #1）② code 守卫 failureVerdict（既有语义零变）。
+  // 失败分类（neutral——无尝试发生；`ADVISOR-GUARDS.md` §7 失败结算表行 1）② code 守卫 failureVerdict（既有语义零变）。
   const launchRefused = result != null && String(result).startsWith(ADVISOR_LAUNCH_REFUSAL_PREFIX)
   if (!stale) {
     if (run.reviewType === "design" && entry.designToken && result) {

@@ -22,7 +22,7 @@ import {
   escapeXml, repairHistory, listWorkDir,
   readonlyToolNames, collectGitContext, loadProjectInstructions,
   ContinueError,
-  turnFrame, // 第 19 批（TURN-ACROSS-SEGMENTS）：跨段累计编号帧（设计 §19.3）
+  turnFrame, // 第 19 批（TURN-ACROSS-SEGMENTS）：跨段累计编号帧（设计 TURN-CAP-CONTINUE.md §4）
   DEFAULT_MAX_TURNS, DEFAULT_SUBAGENT_TURNS,
   MIN_REPORT_CHARS, REPORT_CONTINUATION,
   AUTO_TURN_DIGEST_DOMAIN,
@@ -104,7 +104,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     agent._pendingDistill = null
     await p
   }
-  // §17 D-S3: suspension-settled async results inject before EVERY run's prepareRun
+  // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S3: suspension-settled async results inject before EVERY run's prepareRun
   // (user + auto-turn); spliced = consumed. collectSettledAsync owns a different
   // container, so no double-inject across the two consumption points.
   // ASYNC-RESULT-CONTAINER.md D2 (2026-09-08)：pending 单容器 `_pendingAsyncResults`
@@ -124,7 +124,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
       releaseSettledEntry(e)
     }
   }
-  agent._inAutoTurn = autoTurn // spawn gate for manual-tier digests (§17 D-S6/N3；上行唤醒轮同持 autoTurn——§6.27.12.4 ①)
+  agent._inAutoTurn = autoTurn // spawn gate for manual-tier digests (AGENT-LOOP-ASYNC-POOL.md §6.8 D-S6/N3；上行唤醒轮同持 autoTurn——§6.27.12.4 ①)
   const { maxTurns, threshold, tools, toolSchemas, toolByName, systemPrompt } = await prepareRun(
     // G1/G2（施工②）：prompt 装配收口 prepareRun 内部（assemblePrompt——prompt-overlays.mjs
     // 槽位常量，与子代理角色常量同源——单一权威锚 D1）；本调用不再携带 prompt 常量。
@@ -139,11 +139,11 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
   // Per-run bookkeeping reset — PRESERVED on `resume` (ContinueError continuation):
   // mutation/guard continuity and the convergence budget must survive a continuation.
   if (!resume) {
-    // 第 19 批（TURN-ACROSS-SEGMENTS——设计 TURN-CAP-CONTINUE.md §19.3）：链内累计编号
+    // 第 19 批（TURN-ACROSS-SEGMENTS——设计 TURN-CAP-CONTINUE.md §4）：链内累计编号
     // 只在链起点复位——续跑（resume:true）不重置、不回退（编号帧公式见 helpers.mjs
     // turnFrame）。与下方 mutation/guard 复位同条件同点（全档唯一复位点）。
     agent._turnSeq = 0
-    // §17 D-S6: an auto-turn's guard marks are inherited by the next USER run (not
+    // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S6: an auto-turn's guard marks are inherited by the next USER run (not
     // reset) so auto-turn changes never escape the guard silently.
     const g = agent._inheritedGuard
     if (g) {
@@ -207,7 +207,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
   let thrownError = null
   try {
     for (let turn = 0; turn < maxTurns; turn++) {
-    // 第 19 批（TURN-ACROSS-SEGMENTS——设计 TURN-CAP-CONTINUE.md §19.3）：编号帧——
+    // 第 19 批（TURN-ACROSS-SEGMENTS——设计 TURN-CAP-CONTINUE.md §4）：编号帧——
     // `_turnSeq` 每轮 +1（跨段累计，仅 `!resume` 链起点复位）；面向消费面的两字段
     // （状态行 + ⟦ev⟧turn / ⟦ev⟧approval 事件共用）在此同点赋值（编号唯一权威；帧
     // 公式 = helpers.mjs turnFrame）。段内帽判定不读帧（下行循环条件只读段内

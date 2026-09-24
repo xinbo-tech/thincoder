@@ -23,7 +23,7 @@ import { AUTO_REMINDER, ENG_OFF_REMINDER, ENG_ON_REMINDER, injectEngineeringRemi
 import { composeTurnDomain } from "./agent/turn-domains.mjs"
 // 主循环阶段函数（压缩检查/蒸馏发射/回合收尾/响应提醒）2026-09-05 实践轮迁 agent/run-stages.mjs
 import { checkAndCompact, fireEndOfRunDistill, finalizeAgentTurn, injectResponseReminders, maybeGuardPushbacks } from "./agent/run-stages.mjs"
-// D-CI4（VSC-CONTEXT-PARITY §17.3）：plan-mode 节律常量/计数（W9 起 = 核单源 agent-tools/plan.mjs）
+// D-CI4（VSC-CONTEXT-PARITY 批——上下文注入面）：plan-mode 节律常量/计数（W9 起 = 核单源 agent-tools/plan.mjs）
 import { planReminderForTurn } from "@thincoder/core/agent-tools/plan.mjs"
 
 /** W13 载体字段集（跨 run 存活——住共享 depth-0 history；`docs/core/design/AGENT-LOOP.md §2.3` :93 **13 字段全集**〔设计 13 款 + 端自持 `_engDesignTokens` = 本表 14 绑定〕）。
@@ -49,12 +49,12 @@ export { builtinTools } from "./tools.mjs"
 // re-export 保 import 面（eng.mjs / 测试从 agent.mjs import）
 export { ENG_OFF_REMINDER, ENG_ON_REMINDER } from "./agent/setup-reminders.mjs"
 
-/** Run the agent loop: opts — { depth, role, maxTurns, autoTurn (§17 digest), … }. */
+/** Run the agent loop: opts — { depth, role, maxTurns, autoTurn (AGENT-LOOP-ASYNC-POOL.md §6.8 digest), … }. */
 export async function runAgent(provider, cwd, input, callbacks = {}, signal, autoApprove = true, opts = {}) {
   const depth = opts.depth ?? 0
   const role = opts.role ?? null
   const overrideTurns = opts.maxTurns
-  const autoTurn = opts.autoTurn === true // §17 D-S6: system-driven digest turn (no user input)
+  const autoTurn = opts.autoTurn === true // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S6: system-driven digest turn (no user input)
   // §6.27.12.12 ③/④: up-stream wake turn (a running subagent's in-flight ask opened it) — the flag
   // only SELECTS the domain text (§6.27.12.5 L); it enters no gate (autoTurn keeps the auto-turn class).
   const upstreamTurn = opts.upstreamTurn === true
@@ -72,7 +72,7 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
     await prev
   }
 
-  // §17 D-S3 ② run-start injection: suspension-settled entries parked on
+  // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S3 ② run-start injection: suspension-settled entries parked on
   // history._pendingAsyncResults are consumed BEFORE setupAgentRun pushes this run's
   // input (spliced = consumed — single injection point; turn-end pool entries are ①).
   // ASYNC-RESULT-CONTAINER.md D2（2026-09-08）：pending 单容器 +role——四族（subagent/
@@ -111,13 +111,13 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
   // 存活——下轮 hydrate 复用同一对象；panel._agent 同步是调用方职责——ensurePanelAgent）。
   if (depth === 0) opts.agent = agent
 
-  // §17 per-run flags: _inAutoTurn = manual-tier digest spawn gate; _sessionSignal =
+  // AGENT-LOOP-ASYNC-POOL.md §6.8 per-run flags: _inAutoTurn = manual-tier digest spawn gate; _sessionSignal =
   // suspension-session abort signal — digest's own Stop/interrupt never kills the pool.
   agent._inAutoTurn = autoTurn
   agent._sessionSignal = opts.sessionSignal ?? null
-  // §17 D-S6: an auto-turn's guard marks are inherited by the next USER run (not reset).
+  // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S6: an auto-turn's guard marks are inherited by the next USER run (not reset).
   if (!opts.resume && opts.inheritedGuard) restoreGuard(agent, opts.inheritedGuard)
-  // §17 D-S6 manual tier + §6.27.12.12 ④: system-driven turn domain reminder — the base switches by
+  // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S6 manual tier + §6.27.12.12 ④: system-driven turn domain reminder — the base switches by
   // turn type (digest / up-stream wake), the end-side overlay is always present (§6.27.12.5 L).
   if ((autoTurn || upstreamTurn) && !getAuto()) {
     history.push({ role: "user", content: composeTurnDomain(upstreamTurn, agent.config?.agent?.engineering === true), transient: true })
@@ -162,7 +162,7 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
 
   // ─── Main loop ─────────────────────────────
   const maxTurns = overrideTurns || configuredMaxTurns()
-  // 跨段累计编号（TURN-CAP-CONTINUE §19.3——第 19 批）：_turnSeq = 链内累计序数。
+  // 跨段累计编号（TURN-CAP-CONTINUE.md §4——第 19 批）：_turnSeq = 链内累计序数。
   // 复位点唯一（仅 !resume——无条件复位会使续跑段累计失效）；续跑段的种子经 opts 从消费侧
   // 传入（本端子代理面每段续跑 = 新 agent 对象——载体缺口修正轮修法 A：仅 `_turnSeq == null`
   // 时落种子、非空不覆盖；CLI 面同一 child 对象跨段存活 → 种子零作用）。每轮 ++ 见循环头。
@@ -182,9 +182,9 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
   try {
   for (let turn = 0; turn < maxTurns; turn++) {
     if (signal?.aborted) { traceStop(`agent loop turn ${turn}: aborted at loop head`) ; throw new DOMException("Aborted", "AbortError") }
-    // §19.5 D-M5 per-child turn hook (CLI ⟦ev⟧turn 解析的 VS Code 等价): 每轮迭代通报
+    // AGENT-LOOP-SUBAGENT.md §6.7.2 D-M5 per-child turn hook (CLI ⟦ev⟧turn 解析的 VS Code 等价): 每轮迭代通报
     // turn 号——subagent runChild 同步进 async 池条目的 entry.turn（status 决策字段）。
-    // §19.3 跨段累计：`++_turnSeq` 每轮无条件递增（与回调存在与否无关）；帧经 turnFrame
+    // TURN-CAP-CONTINUE.md §4 跨段累计：`++_turnSeq` 每轮无条件递增（与回调存在与否无关）；帧经 turnFrame
     // 唯一计算点得出（累计编号 / 累计预算），回调双参发出（签名扩展——向后兼容）。
     const frame = turnFrame(++agent._turnSeq, turn, maxTurns)
     callbacks.onAgentTurn?.(frame.turn, frame.maxTurns)
@@ -485,7 +485,7 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
     throw e
   } finally {
     // 2026-09-05 实践轮：回合收尾（consult 清理/async 池收集/guardCarry 继承）为 finalizeAgentTurn 模块函数——finally 只剩一行调用 + 骨架注释。
-    // §19.8（2026-09-06）：checkN 持久步骤随 action:'check' 删除退役。
+    // 2026-09-06 删 check 轮（AGENT-LOOP-SUBAGENT.md §6.7.5）：checkN 持久步骤随 action:'check' 删除退役。
     await finalizeAgentTurn(agent, { signal, history, fullHistory, cwd, depth, thrownError, autoTurn, guardCarry: opts.guardCarry, suspDriven: opts.suspDriven === true })
   }
 }

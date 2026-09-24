@@ -22,7 +22,8 @@ import {
   saveSessionToSlot, readEndMarker, _setSessionsDirForTest, _resetSessionsDirForTest,
 } from "../src/extension/session-io.mjs"
 import { applyProjectSwitch, releaseOldCwdClaims } from "../src/extension/panel-project.mjs"
-import { _cwd, clearProjectOverride } from "../src/extension/panel-messages.mjs"
+import { _releaseStats } from "@thincoder/core/session-slots-manifest.mjs"
+import { _cwd, clearProjectOverride, setProjectFolder } from "../src/extension/panel-messages.mjs"
 import { ChatPanel } from "../src/extension/chat-panel.mjs"
 import { _setProcessProbeTestImpl, _resetProcessProbeTestImpl } from "@thincoder/core/process-probe.mjs"
 import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
@@ -220,3 +221,104 @@ test("T6 释放单点（三落点共用）：同 cwd ⇒ no-op；异 cwd ⇒ 释
     clearProjectOverride()
   }
 })
+
+
+// ─── RL：工作区转空支路（#231——F-CR4 同族第三落点接线）─────────────────────
+
+test("RL-1 正常：工作区转空 ⇒ 旧 cwd 释放恰一次（桩计数 = 1）+ 守卫态 / 槽解绑 / agent 销毁零变", () => {
+  const oldCwd = "C:\\proj\\tc-release-empty-old"
+  const otherCwd = "C:\\proj\\tc-release-empty-other"
+  const cfgDir = mkdtempSync(join(tmpdir(), "tc-release-empty-cfg-"))
+  _setConfigPathForTest(join(cfgDir, "config.json"))
+  claimSlot(oldCwd, 4) // 旧 cwd 认领（转空后本进程已无活绑定 ⇒ 应释放）
+  claimSlot(otherCwd, 5) // 异 cwd 对照（不得被误放）
+  assert.equal(loadManifest(oldCwd).slotSessions[4], getSessionId(), "夹具：旧 cwd 4 号属本进程")
+
+  const saved = {
+    folders: vscode.workspace.workspaceFolders,
+    onFolders: vscode.workspace.onDidChangeWorkspaceFolders,
+    getCfg: vscode.workspace.getConfiguration,
+    onCfg: vscode.workspace.onDidChangeConfiguration,
+    getFolder: vscode.workspace.getWorkspaceFolder,
+    lang: vscode.env.language,
+    warning: vscode.window.showWarningMessage,
+  }
+  const handlers = []
+  vscode.workspace.workspaceFolders = [{ uri: { fsPath: oldCwd } }, { uri: { fsPath: otherCwd } }]
+  clearProjectOverride()
+  assert.equal(setProjectFolder(oldCwd).ok, true, "夹具：override = 旧 cwd（多根显式切换后）")
+  assert.equal(_cwd(), oldCwd, "夹具：_cwd() = override = 旧 cwd")
+  vscode.workspace.onDidChangeWorkspaceFolders = (cb) => { handlers.push(cb); return { dispose: () => {} } }
+  vscode.workspace.getConfiguration = () => ({ get: (_k, d) => d })
+  vscode.workspace.onDidChangeConfiguration = () => ({ dispose: () => {} })
+  vscode.workspace.getWorkspaceFolder = () => undefined
+  vscode.env.language = "en" // 面板装载链需 i18n locale（mock 缺省——同 T5 手法）
+  vscode.window.showWarningMessage = async () => undefined // 守卫提示面（不真弹）
+  try {
+    const before = _releaseStats.calls
+    const p = new ChatPanel({
+      subscriptions: [],
+      secrets: { get: async () => undefined, delete: async () => {} },
+      globalState: { get: async () => undefined, update: async () => {} },
+      workspaceState: { get: () => undefined, update: async () => {} },
+    }) // 真构造（workspaceFolders 监听器注册在构造器内）
+    assert.equal(handlers.length, 1, "workspaceFolders 监听器已注册（激活路径）")
+    p._slot = 4
+    p._agent = { fake: true }
+
+    vscode.workspace.workspaceFolders = [] // 工作区转空
+    handlers[0]()
+
+    assert.equal(_releaseStats.calls - before, 1, "旧 cwd 释放恰一次（releaseClaimsAll 桩计数 = 1）")
+    assert.equal(loadManifest(oldCwd).slotSessions?.[4], undefined, "旧 cwd 认领已释放")
+    assert.equal(loadManifest(otherCwd).slotSessions?.[5], getSessionId(), "异 cwd 认领零动（不误放）")
+    assert.equal(p._slot, null, "槽解绑零变")
+    assert.equal(p._agent, null, "agent 销毁零变")
+    assert.equal(p._wsGuardNotified, true, "守卫态推送（once 去重标志置位）")
+    assert.equal(releaseOldCwdClaims(oldCwd), false, "重复释放 = no-op（恰一次的效果面）")
+  } finally {
+    vscode.workspace.onDidChangeWorkspaceFolders = saved.onFolders
+    vscode.workspace.getConfiguration = saved.getCfg
+    vscode.workspace.onDidChangeConfiguration = saved.onCfg
+    vscode.workspace.getWorkspaceFolder = saved.getFolder
+    vscode.env.language = saved.lang
+    vscode.window.showWarningMessage = saved.warning
+    clearProjectOverride()
+    _setConfigPathForTest(null)
+    try { rmSync(cfgDir, { recursive: true, force: true }) } catch { /* ignore */ }
+  }
+})
+
+test("RL-2 边界：转空后 `_cwd()` 与旧 cwd 同 ⇒ `releaseOldCwdClaims` 返回 false（no-op——既有语义保回归）", () => {
+  const savedFolders = vscode.workspace.workspaceFolders
+  const savedOnFolders = vscode.workspace.onDidChangeWorkspaceFolders
+  const savedGetCfg = vscode.workspace.getConfiguration
+  const savedLang = vscode.env.language
+  const savedWarning = vscode.window.showWarningMessage
+  const handlers = []
+  vscode.workspace.workspaceFolders = [] // 无根 + 无 override ⇒ _cwd() = process.cwd()
+  clearProjectOverride()
+  vscode.workspace.onDidChangeWorkspaceFolders = (cb) => { handlers.push(cb); return { dispose: () => {} } }
+  vscode.workspace.getConfiguration = () => ({ get: (_k, d) => d })
+  vscode.env.language = "en"
+  vscode.window.showWarningMessage = async () => undefined
+  try {
+    const p = new ChatPanel({ subscriptions: [], secrets: { get: async () => undefined, delete: async () => {} }, globalState: { get: async () => undefined, update: async () => {} }, workspaceState: { get: () => undefined, update: async () => {} } })
+    assert.equal(handlers.length, 1, "workspaceFolders 监听器已注册")
+    p._slot = 7 // 假活绑定（同 cwd 面：解绑照走，释放不调）
+    const same = _cwd() // 旧 cwd = process.cwd()（转空前后同值——桩）
+    const before = _releaseStats.calls
+    handlers[0]()
+    assert.equal(_releaseStats.calls - before, 0, "同 cwd ⇒ 零释放（单点内 no-op 分支）")
+    assert.equal(p._slot, null, "槽解绑零变（支路其余动作不受影响）")
+    assert.equal(releaseOldCwdClaims(same), false, "返回 false（no-op——既有语义保回归）")
+  } finally {
+    vscode.workspace.workspaceFolders = savedFolders
+    vscode.workspace.onDidChangeWorkspaceFolders = savedOnFolders
+    vscode.workspace.getConfiguration = savedGetCfg
+    vscode.env.language = savedLang
+    vscode.window.showWarningMessage = savedWarning
+    clearProjectOverride()
+  }
+})
+

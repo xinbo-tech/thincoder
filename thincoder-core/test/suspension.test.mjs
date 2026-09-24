@@ -1,5 +1,5 @@
 /**
- * suspension.test.mjs — §17 挂起 / 唤醒状态机用例（AGENT-LOOP.md §2.3 验收点 1 / 2）。
+ * suspension.test.mjs — 挂起 / 唤醒状态机用例（AGENT-LOOP.md §2.3 验收点 1 / 2；机制面 = AGENT-LOOP-ASYNC-POOL.md §6.8）。
  *
  * 纯 Node 驱动：假 carrier / 假 runTurn / 假 hooks——不加载端模块（T-C4 / N3）。
  * **载体双夹具**：CLI 形（agent 字段对象）与 VSC 形（history 字段对象——数组加附加属性）

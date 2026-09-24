@@ -15,7 +15,7 @@ export function handleCtrlCFamily(str, key, ctx) {
       popPicker(null)
       return
     }
-    // §17.6（2026-09-03）：武装窗口内第二次 Ctrl+C = 显式全停（D-C4 /abort 语义）。
+    // AGENT-LOOP-ASYNC-POOL.md §6.8（2026-09-03）：武装窗口内第二次 Ctrl+C = 显式全停（D-C4 /abort 语义）。
     // 在状态路由前检查（picker 取消分支例外——picker 打开时 Ctrl+C 语义 = 取消
     // picker，武装让位；场景极窄——3s 窗口内需另有 picker 被打开）——两次按下之间
     // 状态会迁移（首按停回合 → 释放窗口/挂起会话启动），武装必须跨态桥接：只查挂起
@@ -51,10 +51,10 @@ export function handleCtrlCFamily(str, key, ctx) {
       // 无目标可停 → 落空继续到下方分支（processing 已停 → 空闲态 exitArmed 双确认）
     }
     if (state.suspended) {
-      // §17 D-S9 + round2 偏差 #4（2026-09-02）+ §17.6 修订（2026-09-03）：挂起态
+      // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S9 + round2 偏差 #4（2026-09-02）+ AGENT-LOOP-ASYNC-POOL.md §6.8 修订（2026-09-03）：挂起态
       // Ctrl+C = 武装窗口两级中止——一次按键直接清池中止全部后台子代理的误触代价高
       // （digest 刷屏时用户可能只想停住当前回合）；仿空闲态退出武装语义（同下方空闲态
-      // exitArmed 双确认分支）。§17.6 修订 ①：中止当前回合的 abort 带 interrupt
+      // exitArmed 双确认分支）。AGENT-LOOP-ASYNC-POOL.md §6.8 修订 ①：中止当前回合的 abort 带 interrupt
       // （无 message）——此前平 abort 命中 agent.mjs 回合收尾清池分支（aborted &&
       // !reason.interrupt → 无条件 _asyncSubagents.clear()），一次首按即误杀全部后台
       // 子代理（2026-09-03 用户两次实测——提示"再按才杀"与实际"一次就全杀"不符）；
@@ -80,7 +80,7 @@ export function handleCtrlCFamily(str, key, ctx) {
       return
     }
     if (state.processing && state.controller) {
-      // §17.6 D-C1（2026-09-03 紧急修复——processing 态曾无武装窗口，第一按直接平
+      // AGENT-LOOP-ASYNC-POOL.md §6.8 D-C1（2026-09-03 紧急修复——processing 态曾无武装窗口，第一按直接平
       // abort() → 命中 agent.mjs 回合收尾清池分支 → 一次 Ctrl+C 误杀全部后台子代理，
       // 用户两次实测被坑）：首按 = interrupt 语义（无 message——停当前回合不续跑——
       // interrupt 排除 agent.mjs 清池分支——后台池保留——agent-turn 区分不重建续跑）

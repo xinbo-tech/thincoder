@@ -8,7 +8,7 @@
  * （routeSub* / finishSubTask / freeze*SubTasks）在 subagent-blocks.mjs；标题生成
  * 在 generate-title.mjs ensureSessionTitle。
  *
- * 2026-09-05 module-split：§17 挂起会话段（suspensionSession/digestTurn/poolLive/
+ * 2026-09-05 module-split：AGENT-LOOP-ASYNC-POOL.md §6.8 挂起会话段（suspensionSession/digestTurn/poolLive/
  * poolCounts 等——agent-turn.mjs 535 > 500 硬限）verbatim 迁至 suspension-drive.mjs——
  * 本文件回合尾经 suspensionSession 进入驱动器；驱动器内 digest/用户回合经 runAgentTurn
  * 递归回本文件（函数级静态环——模块求值期无顶层调用，环安全——session-slots ↔
@@ -18,7 +18,7 @@ import { runAgent, ContinueError } from "@thincoder/core/agent.mjs"
 import { saveSession } from "@thincoder/core/session.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { buildToolCallbacks, sweepToolBlocks } from "./tool-events.mjs"
-import { freezeAllSubTasks } from "./subagent-blocks.mjs" // freezeReclaimDigestedBlocks 随 §17 段迁 suspension-drive.mjs
+import { freezeAllSubTasks } from "./subagent-blocks.mjs" // freezeReclaimDigestedBlocks 随 AGENT-LOOP-ASYNC-POOL.md §6.8 段迁 suspension-drive.mjs
 import { ensureSessionTitle } from "@thincoder/core/generate-title.mjs"
 import { logEvent, errText } from "@thincoder/core/log.mjs"
 import { t } from "@thincoder/core/i18n.mjs"
@@ -85,7 +85,7 @@ async function runAgentTurnInner(ctx, text, opts) {
   // F16 步边界 pickup（queue-visible 批 fix 轮 2026-09-24——TUI.md §7.5 消费时机①）：用户回合在飞 ⇒
   // 核循环头投递回调（不中断——下一步生效，参照系 = 子代理 `send`）；系统轮不传（分流——两者轮不参与）
   const consumeQueuedInput = autoTurn ? null : () => pickupQueuedAtStepBoundary(ctx)
-  // autoTurn（消化轮）：无用户输入——不画 "❯ You:"（系统驱动回合，§17 D-S6）
+  // autoTurn（消化轮）：无用户输入——不画 "❯ You:"（系统驱动回合，AGENT-LOOP-ASYNC-POOL.md §6.8 D-S6）
   if (!autoTurn) {
     pushLabel(`❯ You:`, ansi.bold + C.user)
     pushLine(text, C.text)
@@ -94,7 +94,7 @@ async function runAgentTurnInner(ctx, text, opts) {
   ctx.assistantLabeled = false
   state.processing = true
   state.status = "Processing..."
-  // §17.6（advisor round2 🟡）：回合启动即解除空闲退出武装——exitArmed 只属于空闲态
+  // AGENT-LOOP-ASYNC-POOL.md §6.8（advisor round2 🟡）：回合启动即解除空闲退出武装——exitArmed 只属于空闲态
   // 双确认，跨回合残留会让"停回合后的 armed 落空穿透 + 陈旧 exitArmed"组合把一次
   // 意图为全停/退出的按下变成无二次确认的即时退出（key-handler 落空分支落回空闲
   // 分支时 `!state.exitArmed` 判假即 exit）；计时一并清（key-handler 空闲分支按
@@ -114,7 +114,7 @@ async function runAgentTurnInner(ctx, text, opts) {
   // bounded by the N2 per-child 500-line ring buffer.
   state.currentTool = null
   state.processingStarted = Date.now()
-  // §17 偏差修复 #3（会话 abort 全覆盖）：回合链 controller 登记。链头 = 非挂起会话内
+  // AGENT-LOOP-ASYNC-POOL.md §6.8 偏差修复 #3（会话 abort 全覆盖）：回合链 controller 登记。链头 = 非挂起会话内
   // 且非释放窗口期（suspended/_suspPending 均 false）开启的回合——登记表清零；队列
   // 递归回合（_suspPending 置位期）与会话内回合（suspended=true）继续累积。链条内每次
   // 重建（Ctrl+I 续跑 / ContinueError 续跑 / AUTO 续跑）都登记——挂起会话的 abort 集合
@@ -163,7 +163,7 @@ async function runAgentTurnInner(ctx, text, opts) {
         flushStream()
         if (error.name === "AbortError" || state.controller?.signal.aborted) {
           const reason = state.controller?.signal?.reason
-          // §17.6 D-C1（round1 #1 区分机制——2026-09-03）：interrupt 两种语义——
+          // AGENT-LOOP-ASYNC-POOL.md §6.8 D-C1（round1 #1 区分机制——2026-09-03）：interrupt 两种语义——
           //  有 message（Ctrl+I 注入——key-modes handleInterruptMode）= 重建 controller
           //  续跑（既有语义——agent loop 已把消息注入 history，中止的 signal 不能重试）；
           //  无 message（Ctrl+C 首按停回合——key-handler abort({ interrupt: true })
@@ -193,7 +193,7 @@ async function runAgentTurnInner(ctx, text, opts) {
         }
         if (error instanceof ContinueError) {
           if (autoTurn) {
-            // §17 digest turn-cap 规则（D-S9 ContinueError 行）：无面板——AUTO 档按
+            // AGENT-LOOP-ASYNC-POOL.md §6.8 digest turn-cap 规则（D-S9 ContinueError 行）：无面板——AUTO 档按
             // §2 统一规则自动 resume（无人值守授权）；手动档静默拒绝（部分消化留在
             // 历史，会话回挂起——结果不丢，只是不再烧轮次）。
             if (agent.autoApprove) {
@@ -262,12 +262,12 @@ async function runAgentTurnInner(ctx, text, opts) {
     clearInterval(ticker)
     state.processing = false
     state._advisorBlocks = []
-    // §17 D-S1/D-S8：回合正常结束且后台池仍 live → 挂起会话：子agent 区块保持 live
+    // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S1/D-S8：回合正常结束且后台池仍 live → 挂起会话：子agent 区块保持 live
     // （不冻结——各 settle 事件自行处理），本次回合 controller 交会话层作 abort 句柄
     // （挂起期 Ctrl+C 中止全部后台子代理）；池空 / 中断 / 错误 → 现状 freezeAllSubTasks
     // （中断态块标 interrupted；正常态块已在 settle 时各自冻结）。
     const willSuspend = poolLive(agent)
-    // §17.5.5：挂起会话内回合（digest/会话内用户回合——skipSession 且 suspended）的
+    // AGENT-LOOP-ASYNC-POOL.md §6.8：挂起会话内回合（digest/会话内用户回合——skipSession 且 suspended）的
     // 收尾**不冻结驻留块**——已消化（pinned 且条目已注入）块由 suspensionSession 在
     // run 返回后 freezeReclaimDigestedBlocks 逐条回收（settle 锚点 splice——digest 总览文本
     // 之前——round1 #1 裁定，不等池空）；
@@ -282,7 +282,7 @@ async function runAgentTurnInner(ctx, text, opts) {
     } else if (!agent._sessionAbort) {
       agent._sessionAbort = state.controller // 会话 abort 句柄（children 共享此 signal）
     }
-    // §17 偏差修复 #1（回合释放窗口守卫）：willSuspend 判定后、进入任何 await 之前置位
+    // AGENT-LOOP-ASYNC-POOL.md §6.8 偏差修复 #1（回合释放窗口守卫）：willSuspend 判定后、进入任何 await 之前置位
     // 挂起待定标志。suspensionSession 真正启动前还有真实 await（ensureSessionTitle /
     // distill flush ≤5s / saveSession），其间 processing=false 且 suspended 尚未置位——
     // 无此标志 key-handler Enter 会走 submit 并发开第二个 runAgentTurn（双驱动器竞态：
@@ -290,7 +290,7 @@ async function runAgentTurnInner(ctx, text, opts) {
     // 有效区间 = 释放窗口（suspensionSession 启动即清除）；会话内回合（skipSession）
     // 由 state.suspended 覆盖；_suspAborted 时挂起会话不会启动（下方会话入口同条件）。
     state._suspPending = willSuspend && !skipSession && !state._suspAborted
-    // §17 偏差修复 #3（会话 abort 全覆盖）：abort 集合快照 = 本链条内全部 controller
+    // AGENT-LOOP-ASYNC-POOL.md §6.8 偏差修复 #3（会话 abort 全覆盖）：abort 集合快照 = 本链条内全部 controller
     // （含 Ctrl+I/ContinueError 重建的旧 controller——其下 spawn 的 async children 持旧
     // signal，Ctrl+C 只 abort 最后一个会让它们跑完整个 turn 预算，正常完成后仍
     // mergeChildMutations 写父 guard 标记，绕过 advisor/verify 门）。会话内回合的 finally
@@ -332,7 +332,7 @@ async function runAgentTurnInner(ctx, text, opts) {
     render()
   }
 
-  // §17 偏差 #1 兜底 + queue-visible 批（2026-09-24）收正：末步入队的排队消息（本 run 无后续
+  // AGENT-LOOP-ASYNC-POOL.md §6.8 偏差 #1 兜底 + queue-visible 批（2026-09-24）收正：末步入队的排队消息（本 run 无后续
   // 步边界 ⇒ 步边界 pickup 触不到）——按合并计划取批转 state.queue，队列 while 续发新回合；
   // 池非空时挂起会话先消费 pendingInput（D-S5 输入优先），无需此处处理。超一批者截批先行
   // （余下留待下批——仍在队列 ⇒ 待发送块可见，零丢失）。
@@ -359,12 +359,12 @@ async function runAgentTurnInner(ctx, text, opts) {
     return
   }
 
-  // §17 D-S2: 回合尾后台池非空 → 挂起会话（D-S9 状态机——输入放开、settle 驱动
+  // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S2: 回合尾后台池非空 → 挂起会话（D-S9 状态机——输入放开、settle 驱动
   // auto-turn 消化、池空自然退出回 idle）。skipSession：会话内回合（消化轮/会话内
   // 用户回合）由 suspensionSession 统一调度，不再递归进入新会话。
   if (!skipSession && poolLive(agent) && !state._suspAborted) {
     await suspensionSession(ctx)
-    // §17 round2 偏差 #1（_suspAborted 粘滞，code review round2 #1）：挂起会话退出
+    // AGENT-LOOP-ASYNC-POOL.md §6.8 round2 偏差 #1（_suspAborted 粘滞，code review round2 #1）：挂起会话退出
     // （自然耗尽或 Ctrl+C 中止）即复位中止标志——中止 unwind 已完成、池已清空/耗尽，
     // 复位不会误触发重入。不清则 _suspPending 守卫与下方会话入口被同一标志永久门控：
     // 中止后用户再 spawn async、回合尾池再 live 时永不再次进入挂起态（suspensionSession

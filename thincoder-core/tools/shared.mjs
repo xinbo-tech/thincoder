@@ -373,7 +373,7 @@ export function detectDanger(command) {
 }
 
 
-/** Glob dialect (TOOLS.md §17) lives in glob-dialect.mjs — single authority for
+/** Glob dialect (TOOLS.md §6.7) lives in glob-dialect.mjs — single authority for
  *  brace expansion / exclusion / explicit syntax errors (extracted 2026-09-06 —
  *  advisor #5: shared.mjs exceeded 500 lines). Re-exported so existing importers
  *  (system.mjs tools, ls filter, tests) keep their import paths unchanged. */

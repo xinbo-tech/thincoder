@@ -228,7 +228,7 @@ export function buildPanelCallbacks(panel, deps) {
       panel._panel?.webview.postMessage({ type: "complete" })
       panel._pushSessions()
       // Native notification when the user is in another window (no-op when focused).
-      // §17: digests are system-driven turns — no completion notification per digest
+      // AGENT-LOOP-ASYNC-POOL.md §6.8: digests are system-driven turns — no completion notification per digest
       // (the user sees the summarized results when they return).
       if (!autoTurn) notifyCompletionIfUnfocused()
     },
@@ -245,7 +245,7 @@ export function buildPanelCallbacks(panel, deps) {
     // §16 D-B1: same-response non-readonly tools ask ONCE (approveAll / oneByOne / deny).
     onBatchPermissionRequest: batchPermissionGate(panel),
     onQuestion: (question, options) => askInPanel(question, options),
-    // §17: async settle events wake the suspension driver (no-op when it isn't parked —
+    // AGENT-LOOP-ASYNC-POOL.md §6.8: async settle events wake the suspension driver (no-op when it isn't parked —
     // panel._suspWake is set only while the driver waits for the next settle).
     // C2 (SESSION-FLOW-C F-C2e——触发点补)：挂起会话活跃期间（digest 间——轮末 282/300
     // 重发之间的窗口）每个 settle 都会改变池/待消化计数——即时重发到忙态单广播

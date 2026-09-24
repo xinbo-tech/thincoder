@@ -57,7 +57,7 @@ export async function executeToolBatches(agent, { response, history, fullHistory
   // Group tool calls into batches — consecutive readonly tools run in parallel,
   // consecutive subagent calls also run in parallel (each has its own agent).
   // sideEffectExempt tools (like subagent) don't block readonly merging.
-  // §19 round2 #2: action-level readonly classification joins the grouping — subagent
+  // AGENT-LOOP-SUBAGENT.md §6.7 round2 #2: action-level readonly classification joins the grouping — subagent
   // action:'status' calls merge into the readonly parallel batch like the
   // retired readonly subagent_check tool did; spawn/escalate keep the subagent path.
   const batches = []
@@ -126,7 +126,7 @@ export async function executeToolBatches(agent, { response, history, fullHistory
       // planMode、design-token 门全部先行（preGateBlocked）且原样生效（T-E14）。
       // Tools may declare action-level readonly-ness (e.g. git diff/status/log/show) —
       // those skip approval while write actions (git commit/push/rm) still prompt.
-      // §19.5 D-M6 round2 #4: control actions (cancel) skip approval the same way —
+      // AGENT-LOOP-SUBAGENT.md §6.7.2 D-M6 round2 #4: control actions (cancel) skip approval the same way —
       // 只停不启（无新副作用）——控制类豁免（无 permission handler 也不拒）。
       const actionReadonly = tool?.isReadonlyAction?.(args) ?? false
       const controlAction = tool?.isControlAction?.(args) ?? false
@@ -264,7 +264,7 @@ export async function executeToolBatches(agent, { response, history, fullHistory
           // 即刻记文件变更事件——取代批后提交循环的 recordFileMutation（不双计）——同批 launch
           // 前的写在 eventsAtLaunch 之前落地 → async 评审 settle 不误判陈旧；中断批（commit
           // 循环被跳过）不再丢事件（中断分支不另行记账——seq 单计）。
-          // B3 契约 2（群 B 批 §17.2 E-扩 2——F31(b)）：键同扩 file_ops + 同点把 l3Paths 逐项
+          // B3 契约 2（群 B 批 E-扩 2——F31(b)）：键同扩 file_ops + 同点把 l3Paths 逐项
           // 记入 _touchedFiles（includes 去重守卫——子代理合入载体；评审实例面未挂数组 → 零记账）。
           if ((FILE_MUTATORS.has(toolName) || toolName === "file_ops") && !result.startsWith("Error:") && l3Paths.length > 0) {
             // W12：核 `noteMutations` 单点记账（一次提交一笔 seq——paths 数组）；原逐路径

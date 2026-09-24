@@ -1,6 +1,6 @@
 /**
- * turn-across-segments.test.mjs — 跨段累计编号（VSC 端——设计档 docs/design/
- * TURN-CAP-CONTINUE.md §19.1-19.8）用例表 1:1：T1-T11。
+ * turn-across-segments.test.mjs — 跨段累计编号（VSC 端——设计档 docs/core/design/
+ * TURN-CAP-CONTINUE.md §3–§5）用例表 1:1：T1-T11。
  * T1-T3 编号帧向量（段 1 首轮 · 续跑段首轮 · 第 3 段中段）· T4 不变式扫描（限可达域）·
  * T5/T6 消费助手 applyTurnFrame（fixture entry / 空 entry）· T7 webview 冻结头（显示面零改动）·
  * T9 真 runAgent 直驱段间生产断言（载体缺口核心）· T10 真 runChild 消费侧接线（段前累计 →
@@ -9,7 +9,7 @@
  * T11 裁为 escalate-async 种子最小锚（agent.mjs/runChild 两份已被 T9/T10 行为覆盖，删）。
  * AC 映射：AC1′←T1-T4/T9 · AC2′←T5/T6/T10 · AC3′←T11 · AC4′←T7 · AC5′←T9
  * （全量回归缝 = `npm test` / `npm run test:full`）。
- * 接缝注（T9/T10——设计 §19.6）：T9 provider 桩 = 不可解析（无 baseURL——chat 即抛）；
+ * 接缝注（T9/T10——设计 `TURN-CAP-CONTINUE.md` §3–§5）：T9 provider 桩 = 不可解析（无 baseURL——chat 即抛）；
  * fetch 桩以 AbortError 立即重抛（绕开 requestWithRetry 的 1s/2s/4s 退避——机械保证零网络；
  * 每段 ~0.8s 为 agent setup 开销）。onAgentTurn 在循环头先于 chat 发射——测试 catch 抛错、
  * 只收帧。T10 夹具 = entry 空对象 + onQuestion 返回 "Continue" + 空 parent（merge 空 sink

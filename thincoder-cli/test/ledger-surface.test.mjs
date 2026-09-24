@@ -22,7 +22,7 @@ import {
   _setLedgerDirForTest,
 } from "@thincoder/core/ledger.mjs"
 import { _resetProcessProbeTestImpl, _setProcessProbeTestImpl } from "@thincoder/core/process-probe.mjs"
-import { runLedgerScan } from "../src/tui/ledger-surface.mjs"
+import { runLedgerScan, startLedgerSurface, _setLoadCoreForTest } from "../src/tui/ledger-surface.mjs"
 import { renderStatus } from "../src/tui/render-frame.mjs"
 import { C } from "../src/tui/ansi.mjs"
 
@@ -36,6 +36,7 @@ afterEach(() => {
   _resetLedgerDirForTest()
   _resetProcessProbeTestImpl()
   _setExecutorProbeTtlForTest(null) // 判活 TTL 缝恢复（裁定 #8——测试间不串）
+  _setLoadCoreForTest(null) // 载核缝复位（#233——LS 组）
   rmSync(tmp, { recursive: true, force: true })
 })
 
@@ -344,4 +345,34 @@ slow("AC89 批级：单次刷新 ≤500ms（两项目族 + SQLite 行集）", as
   const dt = Date.now() - t0
   assert.ok(dt <= 500, `单次刷新 ${dt}ms ≤ 500ms（两项目族——SQLite）`)
   assert.equal(state.ledger.marker, "台账 1·10", "扫描结果到位（非空转）")
+})
+
+// ── LS1–LS3 端壳句柄契约（#233——恒同步返回 `{ dispose }`） ─────────────────────
+
+test("LS-1 正常：`startLedgerSurface({})` 返回具 `dispose` 函数；调用不抛（核可载入）", async () => {
+  const h = startLedgerSurface({}) // 原生载核（真核可载入——动态 import）
+  assert.equal(typeof h.dispose, "function", "返回值具 dispose 函数（同步句柄形）")
+  assert.doesNotThrow(() => h.dispose(), "dispose() 不抛")
+  await new Promise((r) => setTimeout(r, 20))
+})
+
+test("LS-2 错误：核载入失败 ⇒ 同形空句柄；`dispose()` 不抛（N1 降级不崩）", async () => {
+  _setLoadCoreForTest(() => Promise.reject(new Error("load failed")))
+  const h = startLedgerSurface({})
+  assert.equal(typeof h.dispose, "function", "载入失败仍返回句柄（空）")
+  assert.doesNotThrow(() => h.dispose(), "空句柄 dispose() 不抛")
+  await new Promise((r) => setTimeout(r, 10)) // 拒绝路径不产生 unhandled rejection
+})
+
+test("LS-3 边界：`dispose()` 先于核就绪（载入挂起）⇒ 置位且跳过启动（核侧零调用 / 零周期）", async () => {
+  let resolveCore
+  const pending = new Promise((r) => { resolveCore = r })
+  _setLoadCoreForTest(() => pending)
+  let started = 0
+  const h = startLedgerSurface({})
+  h.dispose() // 先于载入完成——置位
+  resolveCore({ startLedgerSurface: () => { started += 1; return { dispose() {} } }, runLedgerScan: async () => {} })
+  await new Promise((r) => setTimeout(r, 10))
+  assert.equal(started, 0, "已置位 ⇒ 跳过启动：核 startLedgerSurface 零调用（零周期）")
+  assert.doesNotThrow(() => h.dispose(), "置位后重复 dispose 幂等不抛")
 })

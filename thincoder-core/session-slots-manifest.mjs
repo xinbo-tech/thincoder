@@ -289,6 +289,10 @@ export function claimSlot(cwd, slot, m = loadManifest(cwd), deadParam = null) {
   saveManifest(cwd, m, deadParam?.() ?? null, { setActive: true, release: [slot] })
 }
 
+/** 观测计数（测试缝——`_storeStats` / `_staleHooks` 同惯例）：`releaseClaimsAll` 调用计数。
+ *  端壳「工作区转空 ⇒ 旧 cwd 释放恰一次」类断言以此为桩计数（生产零消费）。 */
+export const _releaseStats = { calls: 0 }
+
 /** 退出全释放（EXIT-CLAIM-RELEASE 批 · F-XR1 · SESSION.md §6.18 D-SE41）：优雅退出前释放
  *  本进程**全部**槽认领（保留集空——`staleClaims` 释放谓词单源）；落盘判据 = `saveManifest`
  *  `opts.release` 三条自动继承（fresh 同次快照取释放集 / 值条件删除——他人窗口内新认领不误删 /
@@ -299,6 +303,7 @@ export function claimSlot(cwd, slot, m = loadManifest(cwd), deadParam = null) {
  *  （true = 有释放且落盘成功；false = 早退 / 失败——断言面）；写失败盘面 = 认领残留 →
  *  恢复走既有探测面（现状形态，数据零险）。 */
 export function releaseClaimsAll(cwd) {
+  _releaseStats.calls += 1
   try {
     if (!existsSync(manifestPath(cwd))) return false // 无 manifest ⇒ 零写（不造盘面）
     const m = loadManifest(cwd)

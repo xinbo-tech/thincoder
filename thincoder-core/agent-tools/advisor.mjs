@@ -174,10 +174,10 @@ export const advisorTool = {
     // scopes agent._advisorRound/_lastAdvisorOutput so the message builder and
     // the run.mjs cap read THIS instance's round/prior (multi-review isolation).
     const resolved = resolveAdvisorLaunch(agent, reviewType, { documents })
-    // §2.20.2 评审侧批次档门禁 + 实例键绑定（batch_segment 的唯一路径来源）：
+    // BATCH-RECORD.md §4.2 评审侧批次档门禁 + 实例键绑定（batch_segment 的唯一路径来源）：
     // 口径 = **「若传则须可读」**（空/不可读 → throw；不强制必传——无批次档的在途设计评审
     // 零回归，N5）；绑定落在 resolved.run（评审实例键，与 reviewType/round/designId 同族）——
-    // 并发设计评审各绑各档，不用单值会话态（§2.20.8 #6）。
+    // 并发设计评审各绑各档，不用单值会话态（BATCH-RECORD.md §4.7 #6）。
     if (args.batchDoc !== undefined && args.batchDoc !== null) {
       resolved.run.batchDoc = resolveBatchDocPath(agent.cwd, args.batchDoc)
     }
@@ -246,7 +246,7 @@ export const advisorTool = {
 
     // B 启动拒绝（§14.4 #2——稳定前缀）：拒发登记（同池满 / cap 款——不置 called、不耗轮次），
     // 可见报错照常返回（record-results 的 REFUSED 契约）。第 33 批：判定单点——同时供设计
-    // 失败分类复用（launchRefused ⇒ neutral——无尝试发生，§17.3 #1）。
+    // 失败分类复用（launchRefused ⇒ neutral——无尝试发生；`ADVISOR-GUARDS.md` §7 失败结算表行 1）。
     const launchRefused = String(result).startsWith(ADVISOR_LAUNCH_REFUSAL_PREFIX)
     if (launchRefused && ctx._toolCallId !== undefined) {
       (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)

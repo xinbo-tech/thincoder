@@ -6,10 +6,10 @@
  * 2026-09-03 拆分轮: subagent.mjs 超 500 硬顶——async 常量、共享 post-spawn 管线
  *（runChildPipeline）与队列/注入/并账机械迁至 ./subagent-async.mjs。execute
  *（async 分支 + 阻塞路径）原样保留于本文件；导出面由文末 re-export shim 兜住。
- * 2026-09-03 §19 合体轮: subagent_check/escalate 工具退役——status/escalate
+ * 2026-09-03 合体轮（AGENT-LOOP-SUBAGENT.md §6.7）: subagent_check/escalate 工具退役——status/escalate
  * 动作执行器并入 ./subagent-async.mjs，本文件只承载工具面（action schema）与
  * spawn 路径 + 动作分流。
- * 2026-09-06 §19.8 删 check 轮: check 动作删除——工具面五动作（spawn/status/
+ * 2026-09-06 删 check 轮（AGENT-LOOP-SUBAGENT.md §6.7.5）: check 动作删除——工具面五动作（spawn/status/
  * escalate/cancel/panel）——async 结果仅自动通道送达。
  * 2026-09-05 拆分轮: status/escalate/panel 动作执行器 → ./subagent-actions.mjs；§20
  * 调度器全套 → ./subagent-scheduler.mjs——本文件 import 源随之改写。
@@ -100,15 +100,15 @@ export function buildSyncStoppedReport(role, capturedOutput, designId) {
 }
 
 /**
- * subagent tool — ONE tool, EIGHT actions (AGENT-LOOP.md §19/§19.5/§19.6/§19.8 +
+ * subagent tool — ONE tool, EIGHT actions (AGENT-LOOP-SUBAGENT.md §6.7 +
  * SUBAGENT-OBSERVE-SEND): spawn (default) / status (non-blocking pool query) / observe
  * (inspect a running/queued/done async child's recent activity + current tool — §7.2) /
  * send (inject a direction into a RUNNING async child — consumed at its next turn
  * boundary as an ordinary instruction — §7.2) / escalate (飞刀 — hand implementation to
- * a stronger model) / cancel (stop ONE background subagent — §19.5) / panel (view + fix
- * the live subagent panel — §19.6) / consume-design (parent-side chain-terminal token
+ * a stronger model) / cancel (stop ONE background subagent — AGENT-LOOP-SUBAGENT.md §6.7.2) / panel (view + fix
+ * the live subagent panel — AGENT-LOOP-SUBAGENT.md §6.7.2) / consume-design (parent-side chain-terminal token
  * consumption — ENGINEERING-MODE.md §2.6, 2026-09-07). The check
- * action was deleted (§19.8): async results reach the model only via the auto channel.
+ * action was deleted (AGENT-LOOP-SUBAGENT.md §6.7.5): async results reach the model only via the auto channel.
  * - action:"spawn" roles: "explore" — read-only tools, search/read/analyze
  *   (suitable for codebase exploration); "coder" — full tool set, self-contained
  *   implementation tasks; "plan" — read-only planning; "eng-coder" —
@@ -174,20 +174,20 @@ export const subagentTool = {
   sideEffectExempt: true, // child agent may write files; parent can't introspect its _mutatedThisRun
   parallel: true,
   async execute(args, ctx) {
-    // §19 action dispatch: default spawn keeps every legacy call unchanged
+    // AGENT-LOOP-SUBAGENT.md §6.7 action dispatch: default spawn keeps every legacy call unchanged
     // (no action parameter → the spawn path below, byte-identical semantics).
     const action = args?.action !== undefined && args?.action !== null && String(args.action) !== ""
       ? String(args.action)
       : "spawn"
     if (action !== "spawn") {
-      // §19 restricted-variant action gate (round2 #3): the engineering-child channel
+      // AGENT-LOOP-SUBAGENT.md §6.7 restricted-variant action gate (round2 #3): the engineering-child channel
       // (depth>0, role eng-coder or eng-designer) is spawn-only — escalate spawns a
       // coder+WRITE child (violates explore-only intent) and status/panel/observe/send
       // have no async pool / panel mirror to query in a child context.
       if ((ctx.depth ?? 0) > 0 && (ctx.agent?._role === "eng-coder" || ctx.agent?._role === "eng-designer")) {
         throw new Error(`only action:'spawn' (sync explore children) is available inside an ${ctx.agent._role} — escalate/status/cancel/panel/consume-design/observe/send are not`)
       }
-      // §17 N3/D-S6 spawn gate (manual tier): auto-turn digests may not spawn —
+      // AGENT-LOOP-ASYNC-POOL.md §6.8 N3/D-S6 spawn gate (manual tier): auto-turn digests may not spawn —
       // async OR blocking — the digest must stay organize-only. The escalate
       // action spawns a write child too, so the same mechanical refusal applies
       // (AUTO tier exempt — user authorized unattended continuation).
@@ -196,14 +196,14 @@ export const subagentTool = {
       }
       if (action === "status") return executeStatusAction(args, ctx)
       if (action === "escalate") return await executeEscalateAction(args, ctx)
-      // §19.5 控制类动作：digest 内放行（D-S7 分类——控制/自省；dispatch 控制类
+      // AGENT-LOOP-SUBAGENT.md §6.7.2 控制类动作：digest 内放行（D-S7 分类——控制/自省；dispatch 控制类
       // 豁免同批生效——19.5.2b round2 #4；escalate 的 digest 拒绝在上一分支）
       if (action === "cancel") return executeCancelAction(args, ctx)
       // 2026-09-07 token 链终消费制（ENGINEERING-MODE.md §2.6 F1）：父侧核销消费——
       // 非只读控制动作——depth-0 + 工程模式限定（本分流已过受限变体门；工程模式门在
       // 执行器内）——planMode 拒绝（dispatch 不豁免）——不入批审批分组（dispatch 免审）。
       if (action === "consume-design") return executeConsumeDesignAction(args, ctx)
-      // §19.6 panel 动作：view（readonly 面——digest 内放行——自省类）与 freeze
+      // AGENT-LOOP-SUBAGENT.md §6.7.2 panel 动作：view（readonly 面——digest 内放行——自省类）与 freeze
       // （控制类——同 cancel——digest 内放行）。深度/门控检查在 executePanelAction 内。
       // CLI-ACTIVITY-DEBLOAT F-3（2026-09-10）接线：executePanelAction 经 ctx.state
       // （= agent._tuiState——startTUI 反向挂载）读时现算面板块（computePanelBlocks）——
@@ -263,7 +263,7 @@ export const subagentTool = {
       throw new Error("Engineering mode is not active — role='eng-designer' is engineering-mode only (it writes the requirements/design documents inside the engineering workflow); use role='explore' or role='plan' for read-only work.")
     }
 
-    // §17 N3/D-S6 spawn gate (manual tier): auto-turn digests may not spawn — async
+    // AGENT-LOOP-ASYNC-POOL.md §6.8 N3/D-S6 spawn gate (manual tier): auto-turn digests may not spawn — async
     // OR blocking — the digest must stay organize-only. AUTO tier (autoApprove) is
     // exempt (推进型 — user authorized unattended continuation). Mechanical refusal
     // so the digest never pops a permission panel or chains new background work.
@@ -397,7 +397,7 @@ export const subagentTool = {
   },
 }
 
-// Re-export shim (2026-09-03 拆分轮 + §19 合体轮 + 2026-09-05 拆分轮): 机械与动作
+// Re-export shim (2026-09-03 拆分轮 + 合体轮 + 2026-09-05 拆分轮): 机械与动作
 // 执行器迁至 ./subagent-async.mjs、./subagent-actions.mjs、./subagent-scheduler.mjs
 // ——本文件保留导出面，消费点（agent.mjs / agent-turn.mjs / consult.mjs / 测试）导入
 // 路径零改动；池逻辑/准入见 subagent-run.mjs（executeAsyncSpawn）与 subagent-scheduler.mjs

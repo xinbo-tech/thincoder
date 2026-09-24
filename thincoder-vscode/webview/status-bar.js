@@ -46,12 +46,12 @@ export function renderStatusBar(m) {
   if (S._turnFrame) parts.push(t("status.turn", { n: S._turnFrame.turn, m: S._turnFrame.maxTurns })) // C-15：turn N/M 段（旧 status.turns 段退役）
   if (S._turnStart) parts.push(`${t("status.elapsed")} ${Math.round((Date.now() - S._turnStart) / 1000)}s`)
   if (S._taskStatus) parts.push(`<span id="task-badge" role="button" tabindex="0" aria-label="Task progress" style="cursor:pointer">${S._taskStatus}</span>`) // 子代理计数徽标已撤（SESSION-ACTIVITY-REVISED 评审 #2——活动区自动显隐——计数由 ⏳ 挂起段承担）
-  // §17 background-mode status line (D-S8): "后台 N 子代理运行中" while the suspension
+  // AGENT-LOOP-ASYNC-POOL.md §6.8 background-mode status line (D-S8): "后台 N 子代理运行中" while the suspension
   // session is live — appended after the usage stats, dim badge.
   if (S._suspended) {
     const c = S._suspCounts
     const n = (c?.running ?? 0) + (c?.queued ?? 0)
-    // §17.5（17.5.4 #6 文案区分）：pending 移交项 + 回合尾留池 settled 未消费项（done）
+    // AGENT-LOOP-ASYNC-POOL.md §6.8（17.5.4 #6 文案区分）：pending 移交项 + 回合尾留池 settled 未消费项（done）
     // 同为"完成待消化"——纯 settled 池进挂起时首帧不误报 winding/0
     const digesting = (c?.pending ?? 0) + (c?.done ?? 0)
     const text = n > 0

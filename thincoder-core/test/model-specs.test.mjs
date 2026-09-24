@@ -315,7 +315,7 @@ test("[onboard] A-4 未证字段行注证据等级词逐字在场（参考实配
   }
 })
 
-test("[onboard] A-5 两 preview = 仅尺寸行：能力位全不声明（不跨名沿用——D-11）", () => {
+test("[onboard] A-5 两 preview = 仅尺寸行：能力位全不声明（无族据——D-11）", () => {
   for (const name of [HY3_PREVIEW, HY4_PREVIEW]) {
     assert.equal(specMatch(name).matched, true, `${name} 命中独立行`)
     const spec = specForModel(name)

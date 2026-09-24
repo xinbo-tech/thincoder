@@ -32,7 +32,7 @@ export const globTool = {
   readonly: true,
   async execute(args, ctx) {
     const base = resolveInCwd(ctx, args.path ?? ".")
-    // §17 调用侧拆分（评审 #5 职责分层）：空格分隔 include !exclude 多模式在这里拆；
+    // TOOLS.md §6.7 调用侧拆分（评审 #5 职责分层）：空格分隔 include !exclude 多模式在这里拆；
     // globToRegex 只收单个模式（数组由 compileGlobMatchers 收）。
     let match
     try {
@@ -115,7 +115,7 @@ export const grepTool = {
     } catch {
       return `grep error: path not found: ${base}`
     }
-    // §17 调用侧拆分：glob 参数支持空格分隔 include !exclude 多模式（include/exclude 求交）。
+    // TOOLS.md §6.7 调用侧拆分：glob 参数支持空格分隔 include !exclude 多模式（include/exclude 求交）。
     let fileTest = null
     if (args.glob) {
       try {

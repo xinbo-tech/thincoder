@@ -1,5 +1,5 @@
 /**
- * panel-blocks.mjs — §19.6 D-P1 面板块列表（读时现算，纯函数）。
+ * panel-blocks.mjs — AGENT-LOOP-SUBAGENT.md §6.7.2 D-P1 面板块列表（读时现算，纯函数）。
  *
  * 来源 = `thincoder-cli/src/tui/subagent-freeze.mjs` 的 `computePanelBlocks`——**逐字随迁**
  * （CORE-UNIFICATION §2.5 #159：`panel` 动作以 CLI 为准；#99：VSC 无 panel ＝ **有意端差**

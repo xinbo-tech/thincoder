@@ -140,7 +140,7 @@ export function handleMouseClick(ctx, col, row) {
     // 评审 #4：保底截断后可见行 ≠ 前 h 行——命中映射与 render-frame 同一几何契约
     // （subagentLineIndex：分隔线 + 末尾区块行优先）。
     const lineEl = layout.subagentLines[subagentLineIndex(layout.subagentLines, P.subagent.h, r - P.subagent.y)]
-    // §19.5 D-M7/D-M7b ⏹ 停止标记（round1 #6 + 用户裁定 B 形态）+ SYNC-CANCEL F3
+    // AGENT-LOOP-SUBAGENT.md §6.7.2 D-M7/D-M7b ⏹ 停止标记（round1 #6 + 用户裁定 B 形态）+ SYNC-CANCEL F3
     // （2026-09-09）：列级命中——⏹ 列点击 = cancel（定向该子代理——ctx.cancelSubagent
     // 直连池/registry abort 路径，不经模型回合），不触发折叠翻转；**async 区块与 registry
     // live 的 sync 区块带 _stopSub 元数据**（headless 无 _agent → sync 不钉——零回归）；
@@ -192,7 +192,7 @@ export function handleMouseClick(ctx, col, row) {
 
 /** 鼠标装配簇（2026-09-03 D-S1a 自 index.mjs 迁入）：index.mjs 只留装配调用。
  *  ctx: { agent, state, pushLine, render, popPicker }；返回 { onMouseClick, mouseCtx }。
- *  cancelSubagent（⏹ 停止标记，§19.5 D-M7）：UI 停止不经模型回合，直连池 abort——
+ *  cancelSubagent（⏹ 停止标记，AGENT-LOOP-SUBAGENT.md §6.7.2 D-M7）：UI 停止不经模型回合，直连池 abort——
  *  与 action:"cancel" 同实现路径。block key "role#id" → 池条目 id。 */
 export function createMouseDispatch({ agent, state, pushLine, render, popPicker }) {
   const cancelSubagent = (key) => {

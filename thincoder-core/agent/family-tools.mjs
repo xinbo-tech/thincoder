@@ -63,7 +63,7 @@ export async function assembleFamilyTools({
       properties: {
         ...subagentTool.parameters.properties,
         role: { ...subagentTool.parameters.properties.role, ...subagentRoles },
-        // §19: escalate 动作的候选池 = consultModels（缺省池首 / 指定 provider:model）。
+        // AGENT-LOOP-SUBAGENT.md §6.7: escalate 动作的候选池 = consultModels（缺省池首 / 指定 provider:model）。
         // 池装饰挂在 action 属性描述（原 escalate 工具注册时 withPool 同款意图——模型
         // 需要知道可选候选人）。escalate 在工程模式禁用——装饰只对正常模式有意义。
         action: (consultModels.length && !engineering)
@@ -80,15 +80,15 @@ export async function assembleFamilyTools({
   // §18 D-E3 + ENGINEERING-MODE.md §2.15 D（第 2 批——参数化复用，不并列第二个 IIFE）：
   // 工程子代理（depth>0；eng-coder = 偏差审计 / eng-designer = 自己勘察）get a restricted
   // spawn channel — role enum limited to explore, NO async parameter (sync only) and action
-  // pinned to spawn（§19 D-M3 restricted-variant action gate——escalate/check/status are
+  // pinned to spawn（AGENT-LOOP-SUBAGENT.md §6.7 D-M3 restricted-variant action gate——escalate/check/status are
   // refused here at the schema level too；the mechanical re-check lives in subagent.mjs
-  // execute → the §19 action gate + gateEngCoderSpawn (spawn-child.mjs) — schema enums are
+  // execute → the AGENT-LOOP-SUBAGENT.md §6.7 action gate + gateEngCoderSpawn (spawn-child.mjs) — schema enums are
   // advisory, providers don't enforce them）。描述文案按父角色分流（审计 vs 勘察）。
   const engChildRole = depth > 0 && (role === "eng-coder" || role === "eng-designer") ? role : null
   const engChildSubagent = engChildRole
     ? (() => {
         const props = { ...subagentTool.parameters.properties }
-        // §19 review hygiene: the child channel is spawn-only sync explore — drop
+        // AGENT-LOOP-SUBAGENT.md §6.7 review hygiene: the child channel is spawn-only sync explore — drop
         // async, the check/status params (id/n), the eng-coder token params
         // (designToken/designId are meaningless for a read-only spawn; the parent
         // spawn already carried the token) and batchDoc (an audit child derives no
@@ -130,7 +130,7 @@ export async function assembleFamilyTools({
     : null
 
   // consult 工具仅在配置时注册（consultModels 空池时注册会让模型调用后吃一个错误回合）——
-  // §19: escalate 已并入常驻 subagent 的 action:"escalate"（无空池注册问题——动作在
+  // AGENT-LOOP-SUBAGENT.md §6.7: escalate 已并入常驻 subagent 的 action:"escalate"（无空池注册问题——动作在
   // 池空时返回既有错误语义，工程模式 fail-closed 在 execute 内拒绝）。
   // §25 D-R17a: consult_check 已退役（digest 自动注入是唯一消费通道）——consult 家族
   // 只剩 2 工具（consult_start/consult_stop——setup 注册点与描述面同步清零）。
@@ -159,7 +159,7 @@ export async function assembleFamilyTools({
     // eng-designer (§2.15 D): the survey-only subagent channel alone — no advisor
     // (it does not fire reviews) and no verify (its deliverable is documents, not code).
     // BATCH-RECORD §4.3 挂载表（批次档生命周期工具化批）：eng 两分支各挂主名 `batch`
-    // （绑定段 append/status；目标 = spawn 绑定 `child._batchDoc`）——§2.20.3 的 batch_segment
+    // （绑定段 append/status；目标 = spawn 绑定 `child._batchDoc`）——BATCH-RECORD.md §4.2 的 batch_segment
     // 挂载形态已随单名化收口退役（过渡别名 §4.14 不入生产挂载面）；depth-0 主 agent 同表挂载
     // `batch`（D-BR18 扩权——create/close + append §1/§4/§6 + status §1（轮 2 裁定②：§4/§6
     // 状态面走普通文档写），目标走可选 path / 在飞扫描）。

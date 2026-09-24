@@ -15,7 +15,7 @@
  * ① opts.signal（child 定向取消/⏹）② panel._abortController（轮级 Stop）
  * ③ approve-all 连带（panel-messages.mjs 消费同一 helper）。
  *
- * P2 批 §2.20（#165 落点）：**闸语义 / 请示流程改经核单源**——`askPermission`
+ * P2 批 docs/batches/2026-09-20-mechanism-parity-batch.md §2.20（#165 落点）：**闸语义 / 请示流程改经核单源**——`askPermission`
  * （`@thincoder/core/permission.mjs:60-64`）的 `io.ask` 缝；本端只供**展示面**
  * （面板卡片 / 队列 / 释放三路）——卡片形态与载荷零改。
  */
@@ -52,7 +52,7 @@ export function releasePermission(panel, entry, verdict, queue) {
  * @param {{ _autoApprove: boolean, _permissionQueue: {resolve: Function}[], _panel?: { webview: { postMessage: Function } } }} panel
  */
 export function permissionGate(panel) {
-  // 闸语义 / 请示流程 = 核单源（P2 批 §2.20——`askPermission` 的 `io.ask` 缝）；本端只供展示面。
+  // 闸语义 / 请示流程 = 核单源（P2 批 docs/batches/2026-09-20-mechanism-parity-batch.md §2.20——`askPermission` 的 `io.ask` 缝）；本端只供展示面。
   return (toolName, args, diffInfo, opts) => askPermission(toolName, args, {
     ask: () => new Promise((resolve) => {
       // Re-check on every invocation: approve-all / AUTO may have flipped the

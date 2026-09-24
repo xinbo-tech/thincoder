@@ -37,7 +37,7 @@ export function createTuiState({ cols, rows, agent }) {
     reasoning: "", // thinking stream buffer (dimmed display)
     completion: null, // Tab completion state { candidates, index }
 
-    subTasks: {}, // sub-agent activity blocks (§7.2 D4): { "coder#1": { key, role, model, started, done, doneAt, blocks: [{kind,text}], currentTool, toolArgs, turn, maxTurns, approval, lastError, dropped, blockEpoch, awaitingDigest（§17 挂起中间态）, _freezeAt（冻结锚点）, stopped, children: []（SUBAGENT-TAIL：嵌套子代理**守护载体**——内容行并入本块 blocks——subagent-children.mjs） } } — rendered as collapsible in-conversation blocks; persists across turns (blocks are the child activity's ONLY carrier — child tool calls never enter the parent history); bounded by the N2 500-line per-child ring buffer（SUBAGENT-TAIL 单环：内层行同环计数、单载体最旧先行——TUI.md §6）
+    subTasks: {}, // sub-agent activity blocks (§7.2 D4): { "coder#1": { key, role, model, started, done, doneAt, blocks: [{kind,text}], currentTool, toolArgs, turn, maxTurns, approval, lastError, dropped, blockEpoch, awaitingDigest（AGENT-LOOP-ASYNC-POOL.md §6.8 挂起中间态）, _freezeAt（冻结锚点）, stopped, children: []（SUBAGENT-TAIL：嵌套子代理**守护载体**——内容行并入本块 blocks——subagent-children.mjs） } } — rendered as collapsible in-conversation blocks; persists across turns (blocks are the child activity's ONLY carrier — child tool calls never enter the parent history); bounded by the N2 500-line per-child ring buffer（SUBAGENT-TAIL 单环：内层行同环计数、单载体最旧先行——TUI.md §6）
     currentTool: null, // currently executing tool name (shown in status bar)
     processingStarted: 0, // current turn start time (status bar timer)
     status: "Ready",

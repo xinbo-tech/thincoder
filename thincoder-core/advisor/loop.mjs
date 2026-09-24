@@ -40,8 +40,8 @@ function advisorCodeSearchTool(agent) {
 
 function advisorToolsFor(agent, reviewType = "code", batchDoc = null) {
   const tools = [readTool, globTool, grepTool, lsTool, lspTool, advisorCodeSearchTool(agent)]
-  // §2.20.3（第 4 批）：**只有绑定了批次档的设计评审**额外拿到写通道——代码评审工具集
-  // 逐字节不变（零 git + 只读不变量，§2.20.8 #1）；未绑定 → 不挂载（fail-closed）。
+  // BATCH-RECORD.md §4.3（第 4 批）：**只有绑定了批次档的设计评审**额外拿到写通道——代码评审工具集
+  // 逐字节不变（零 git + 只读不变量，BATCH-RECORD.md §4.7 #1）；未绑定 → 不挂载（fail-closed）。
   if (reviewType === "design" && batchDoc) tools.push(batchTool(batchDoc, { review: true }))
   return { schemas: tools.map(toOpenAISchema), byName: new Map(tools.map((t) => [t.name, t])) }
 }

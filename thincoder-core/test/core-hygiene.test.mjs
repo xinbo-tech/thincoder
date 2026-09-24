@@ -77,6 +77,9 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
  * 新增登记 `model-specs.mjs`（**326**——bench 名单面 10 档建行 + 4 档视觉声明分态 + 行注补录）：拆分计划已登
  * §13.6「行数处置」段（拆点 = `MODEL_SPECS` 表块外提；落点 `model-specs-table.mjs`（主档 re-export 保 import 面零改）；
  * 消解窗口 = 越 500 硬限前或该档下次实质改动）。
+ * hygiene-ab 批（2026-09-25 · `docs/batches/2026-09-25-hygiene-ab.md` §2.3 / 台账 #227）同批登记 `test/session-gc-stale.test.mjs`
+ * （**395**——孤儿 sidecar 记录目录 `.d` 清运用例组 GC-D1–D6：自动面四态 + 回收失败跳过 + 显式面存量腿；
+ * 夹具 `seedRecordDir` 与既有组同根；拆档 = 复制沙箱脚手架——不拆；触发条件 = 越 500 硬限或该档下次实质改动）。
  */
 const SOFT_LINE_REGISTRY = new Set([
   "agent/dispatch.mjs", "agent/helpers.mjs", "agent/setup.mjs", "agent.mjs",
@@ -87,7 +90,7 @@ const SOFT_LINE_REGISTRY = new Set([
   "config.mjs", "context.mjs", "git/checkpoint.mjs", "manifest.mjs", "memory/code-sync.mjs",
   "memory/core.mjs", "memory/docs.mjs",
   "memory/schema.mjs", "model-specs.mjs", "process-probe.mjs", "provider/core.mjs", "provider/responses.mjs",
-  "session-lifecycle.mjs", "session-slots-manifest.mjs", "session-store.mjs", "session-gc.mjs", "test/batch.test.mjs", "test/manifest.test.mjs", "test/model-specs.test.mjs",
+  "session-lifecycle.mjs", "session-slots-manifest.mjs", "session-store.mjs", "session-gc.mjs", "test/batch.test.mjs", "test/manifest.test.mjs", "test/model-specs.test.mjs", "test/session-gc-stale.test.mjs",
   "test/provider-merge.test.mjs", "test/session-slot-write.test.mjs", "test/setup-reminders.test.mjs", "test/tool-seams-agent.test.mjs", "test/compress-form.test.mjs", "test/tool-seams.test.mjs",
   "tools/edit-diff.mjs", "tools/file.mjs", "tools/git.mjs",
   "tools/lsp.mjs", "tools/repomap.mjs", "tools/shared.mjs",

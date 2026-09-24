@@ -51,7 +51,7 @@ export function handleEditKeys(str, key, ctx) {
       render()
     } else {
       const text = state.input.join("").trim()
-      // §17 D-S5/F3/F7 + 偏差 #1 + INPUT-LOCK 队列受理（F-6——2026-09-09 · queue-visible 多槽
+      // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S5/F3/F7 + 偏差 #1 + INPUT-LOCK 队列受理（F-6——2026-09-09 · queue-visible 多槽
       // 容量 8——2026-09-24）：挂起态（suspended 或释放窗口 _suspPending）Enter = 新回合输入
       // （非打断）——填 pendingInput 队列（容量 QUEUED_MAX_ITEMS）由挂起会话调度；挂起会话内
       // busy（含 digest）提交经 busy 门禁入同队列（F16 §4.1——两分支同队列、同款清理与唤醒）；

@@ -5,6 +5,11 @@
  *
  * 三面语义（启动行 / 变化行 / 状态位）见核档头注；判活展示（F-LX1）亦随归核自动带上——
  * 本档零实现、零复刻（KD-M2-3）。
+ *
+ * 两端契约（#233——端壳与核形一致）：`startLedgerSurface` **恒同步返回 `{ dispose }`**——
+ * 核句柄异步就绪（动态 import）后桥接；载入失败 ⇒ 空句柄（`dispose` 恒可调）；`dispose()`
+ * 早于核就绪 ⇒ 置位且**跳过启动**（核侧零调用——零周期；N1 降级不崩）。调用点因此恒可按
+ * 同步形态挂进程退钩（`process.on("exit", () => handle.dispose())`）。
  */
 import { C } from "./ansi.mjs"
 
@@ -18,15 +23,31 @@ function loadCore() {
   return _core
 }
 
+/** 测试注入缝（`_setLedgerDirForTest` 同款缝族）：`fn` ⇒ 载核改走该桩；`null` ⇒ 回退原生
+ *  `loadCore`（`??` 默认）；用例 `afterEach` 复位。 */
+let _loadCoreForTest = null
+export function _setLoadCoreForTest(fn) { _loadCoreForTest = fn }
+const loadCoreNow = () => (_loadCoreForTest ?? loadCore)()
+
 /** 单次扫描（直驱面——直通核实现；TUI 色表 `C` 注入）。 */
 export async function runLedgerScan(opts = {}) {
-  const core = await loadCore()
+  const core = await loadCoreNow()
   return core.runLedgerScan({ ...opts, colors: C })
 }
 
-/** TUI 挂载（首扫 + 周期——直通核实现；载入失败 → 空句柄 = 无周期，N1 降级不崩）。 */
+/** TUI 挂载（首扫 + 周期——直通核实现）：**恒同步返回 `{ dispose }`**——核句柄异步就绪后
+ *  桥接；载入失败 ⇒ 空句柄（无周期，N1 降级不崩）；`dispose()` 早于核就绪 ⇒ 置位且
+ *  **跳过启动**（核侧零调用——零周期）。 */
 export function startLedgerSurface(ctx = {}) {
-  return loadCore()
-    .then((core) => core.startLedgerSurface({ ...ctx, colors: C }))
-    .catch(() => ({ dispose() {} }))
+  let disposed = false
+  let handle = null
+  loadCoreNow()
+    .then((core) => { if (!disposed) handle = core.startLedgerSurface({ ...ctx, colors: C }) })
+    .catch(() => { /* 载入失败 ⇒ 空句柄（N1） */ })
+  return {
+    dispose() {
+      disposed = true
+      handle?.dispose?.()
+    },
+  }
 }

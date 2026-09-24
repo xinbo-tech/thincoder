@@ -9,7 +9,7 @@ import { closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, 
 import { tmpdir } from "node:os"
 import { basename, join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { gcResidue, runSessionGc, deleteColdCwd, COLD_CWD_RETENTION_MS, GC_PASS_DELAY_MS, _setSessionGcDelayForTest } from "../session-gc.mjs"
+import { gcResidue, runSessionGc, deleteColdCwd, COLD_CWD_RETENTION_MS, RESIDUE_RETENTION_MS, GC_PASS_DELAY_MS, _setSessionGcDelayForTest } from "../session-gc.mjs"
 import {
   STALE_SAFETY_WINDOW_MS, STALE_SWEEP_LIMIT, TRASH_RETENTION_MS, _staleHooks,
   groupSessionEntries, judgeStaleGroup, listStaleCwds, deleteStaleCwd, purgeTrash, sweepStale, trashRootFor,
@@ -295,3 +295,100 @@ test("T-SL2.11 冷面回归：90 天冷判据仍为显式面（cwd 存活组唯�
   assert.equal(existsSync(join(dir, `${g.prefix}.manifest`)), false, "经回收目录（不再直删）")
   assert.equal(readdirSync(r.batch).length, 3, "回收批在（可回退）")
 })
+
+// ─── GC-D：孤儿 sidecar 记录目录（`.d`）清运（hygiene-ab 批 #227） ───────────────
+// ①② 两腿：#227① 自动面（单前缀——`gcResidue` 后缀表扩展）；#227② 显式面（全目录存量通路）。
+
+/** `.d` 夹具：建记录目录（含一段）+ mtime 回拨（Windows：`utimesSync` 需 Date）。返回目录名。 */
+function seedRecordDir(dir, prefix, slot, ageMs) {
+  const name = `${prefix}.${slot}.d`
+  mkdirSync(join(dir, name), { recursive: true })
+  writeFileSync(join(dir, name, "seg-000001.jsonl"), "{}")
+  const t = new Date(Date.now() - ageMs)
+  utimesSync(join(dir, name), t, t)
+  return name
+}
+const PAST_RESIDUE = RESIDUE_RETENTION_MS + 86_400_000
+
+test("GC-D1 正常：孤儿 .d（主文件不在 + 越保留期）⇒ 回收（rename 进 sessions-trash，原地消失）", async () => {
+  const { dir } = sessionsRoot()
+  const prefix = `${HASH_A}.json`
+  const name = seedRecordDir(dir, prefix, 3, PAST_RESIDUE)
+  const r = await gcResidue({ dir, prefix, now: Date.now(), probeFn: deadProbe })
+  assert.deepEqual(r.candidates, [name], "孤儿 .d 入候选")
+  assert.deepEqual(r.deleted, [name], "回收（原地消失）")
+  assert.equal(existsSync(join(dir, name)), false, "原目录已移出")
+  const batches = readdirSync(trashRootFor(dir))
+  assert.equal(batches.length, 1, "回收批在场")
+  assert.ok(existsSync(join(trashRootFor(dir), batches[0], name, "seg-000001.jsonl")), "目录内容随迁（可回退——非直删）")
+})
+
+test("GC-D2 边界：.d 主文件在（非孤儿）⇒ 保留（零动作）", async () => {
+  const { dir } = sessionsRoot()
+  const prefix = `${HASH_A}.json`
+  writeFileSync(join(dir, `${prefix}.3`), JSON.stringify({ version: 2, cwd: join(tmpdir(), "gc-gone-x"), history: [] }))
+  const name = seedRecordDir(dir, prefix, 3, PAST_RESIDUE)
+  const r = await gcResidue({ dir, prefix, now: Date.now(), probeFn: deadProbe })
+  assert.deepEqual(r.candidates, [], "非孤儿（主文件在）不入候选")
+  assert.ok(existsSync(join(dir, name)), "记录存储本体零动")
+})
+
+test("GC-D3 边界：孤儿 .d 但 mtime 未过期（< 30 天）⇒ 保留", async () => {
+  const { dir } = sessionsRoot()
+  const prefix = `${HASH_B}.json`
+  const name = seedRecordDir(dir, prefix, 1, 86_400_000) // 1 天
+  const r = await gcResidue({ dir, prefix, now: Date.now(), probeFn: deadProbe })
+  assert.deepEqual(r.candidates, [], "保留期内不入候选")
+  assert.ok(existsSync(join(dir, name)), "保留期内保留")
+})
+
+test("GC-D4 边界：.d 其槽 ∈ 活跃槽集合 ⇒ 保留（N1 现场）", async () => {
+  const { dir } = sessionsRoot()
+  const prefix = `${HASH_C}.json`
+  writeFileSync(join(dir, `${prefix}.3`), JSON.stringify({ version: 2, cwd: join(tmpdir(), "gc-live-cwd"), history: [] }))
+  writeFileSync(join(dir, `${prefix}.manifest`), JSON.stringify({ slots: { 3: { ts: 1, title: "t" } }, active: 3, slotSessions: { 3: "5150-1-x" } }))
+  const name = seedRecordDir(dir, prefix, 3, PAST_RESIDUE)
+  const alive = () => ({ aliveSet: new Set([5150]), cmds: new Map([[5150, "node thincoder.mjs"]]) })
+  const r = await gcResidue({ dir, prefix, now: Date.now(), probeFn: alive })
+  assert.deepEqual(r.candidates, [], "活跃槽现场一律保留（N1）")
+  assert.deepEqual(r.deleted, [], "零动作")
+  assert.ok(existsSync(join(dir, name)))
+})
+
+test("GC-D5 错误：回收不可达（回收根被占位）⇒ 跳过并计数（不 unlink 兜底——原目录零删除）", async () => {
+  const { dir } = sessionsRoot()
+  const prefix = `${HASH_A}.json`
+  const name = seedRecordDir(dir, prefix, 4, PAST_RESIDUE)
+  writeFileSync(trashRootFor(dir), "block") // 回收根位置被文件占位 ⇒ mkdir 失败
+  const r = await gcResidue({ dir, prefix, now: Date.now(), probeFn: deadProbe })
+  assert.deepEqual(r.candidates, [name], "入候选（计数面）")
+  assert.deepEqual(r.deleted, [], "零删除（不 unlink 兜底）")
+  assert.equal(r.candidates.length - r.deleted.length, 1, "跳过并计数（候选 − 已回收）")
+  assert.ok(existsSync(join(dir, name)), "原目录零删除")
+})
+
+test("GC-D6 显式面（② 存量通路）：dry-run 列孤儿 .d 计数 + `--confirm --all` 逐条回收（不设保留期）", async () => {
+  const { dir } = sessionsRoot()
+  const prefixA = `${HASH_A}.json`
+  const prefixB = `${HASH_B}.json`
+  const now = Date.now() + 8 * 86_400_000
+  // manifest 新鲜（mtime 置 now − 1h ⇒ ③ 安全窗内）⇒ 组面零候选——本用例只验 ② 腿
+  for (const prefix of [prefixA, prefixB]) {
+    const mp = join(dir, `${prefix}.manifest`)
+    writeFileSync(mp, JSON.stringify({ slots: {}, active: null }))
+    utimesSync(mp, new Date(now - 3_600_000), new Date(now - 3_600_000))
+  }
+  // A = 近期孤儿（1 天——① 面保留期内；② 面无保留期 ⇒ 照收：两面之差的可判面）· B = 陈旧孤儿
+  const names = [seedRecordDir(dir, prefixA, 1, 86_400_000), seedRecordDir(dir, prefixB, 2, PAST_RESIDUE)]
+  const lines = []
+  assert.equal(await runSessionGc(["gc", "--dry-run"], { dir, prefix: prefixA, now, out: (s) => lines.push(s), err: () => {}, probeFn: deadProbe }), 0)
+  assert.ok(lines.some((l) => l.includes("Orphan record-dir (.d) candidates") && l.trim().endsWith(": 2")), "dry-run 列孤儿 .d 计数行（近期孤儿亦收——② 无保留期）")
+  for (const n of names) assert.ok(lines.includes(`  ${n}`), `逐条列名：${n}`)
+  assert.equal(readdirSync(dir).filter((n) => n.endsWith(".d")).length, 2, "dry-run 零删")
+  assert.equal(await runSessionGc(["gc", "--confirm", "--all"], { dir, prefix: prefixA, now, ...OUT, probeFn: deadProbe }), 0)
+  assert.equal(readdirSync(dir).filter((n) => n.endsWith(".d")).length, 0, "confirm --all 后原地消失")
+  const batches = readdirSync(trashRootFor(dir))
+  const moved = batches.flatMap((b) => readdirSync(join(trashRootFor(dir), b)))
+  for (const n of names) assert.ok(moved.includes(n), `回收批在场：${n}`)
+})
+

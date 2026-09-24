@@ -1,11 +1,11 @@
 /**
  * subagent-async.mjs — async subagent 机械 + 共享 post-spawn 管线 + cancel 动作执行器
- * （AGENT-LOOP.md §19：subagent 单工具多动作——spawn/status/escalate/cancel/panel/
- * consume-design + observe/send（SUBAGENT-OBSERVE-SEND）——§19.8 check 已删；spawn 路径与
- * 工具面在 subagent.mjs；cancel 动作执行器与机械、管线在本模块——check 执行器随 §19.8 删除）。
+ * （AGENT-LOOP-SUBAGENT.md §6.7：subagent 单工具多动作——spawn/status/escalate/cancel/panel/
+ * consume-design + observe/send（SUBAGENT-OBSERVE-SEND）——AGENT-LOOP-SUBAGENT.md §6.7.5 check 已删；spawn 路径与
+ * 工具面在 subagent.mjs；cancel 动作执行器与机械、管线在本模块——check 执行器随 AGENT-LOOP-SUBAGENT.md §6.7.5 删除）。
  * 内容：resolveChildProvider / async 池常量与域助手（ASYNC_POOL_LIMITS/poolDomainOf/
  * resolvePoolLimits/poolLimitsFor/runningPoolCount——§11.1）/ executeCancelAction +
- * cancelAsyncSubagent（§19.5 D-M6——工具与 TUI ⏹ 共用）/ runChildPipeline /
+ * cancelAsyncSubagent（AGENT-LOOP-SUBAGENT.md §6.7.2 D-M6——工具与 TUI ⏹ 共用）/ runChildPipeline /
  * injectAsyncResult / buildChildRunOpts / mergeChildMutations / enqueueAsk（批 6——
  * _permQueue 审批/继续弹窗串行收 helper——消费位 subagent.mjs/subagent-spawn.mjs/
  * escalate-async.mjs）。
@@ -48,7 +48,7 @@ export function enqueueAsk(owner, key, ask) {
 // independent pools — eng-coder 4 / other roles 4 (user ruling "eng-coder 四路，
 // 其他 4 路") — a full engCoder pool never blocks an explore spawn and vice versa
 // (same-domain cap still 4, cross-domain total up to 8). The per-turn check
-// budget was deleted with the check action (§19.8 — results arrive only via the
+// budget was deleted with the check action (AGENT-LOOP-SUBAGENT.md §6.7.5 — results arrive only via the
 // auto channel; no loop guard needed).
 // ⚠ 与 config.mjs DEFAULTS.agent.poolLimits 的 SUBAGENT 两键（engCoder/other）逐键同值
 // （loadConfig/settings 默认源）——耦合锚 T-24a4 断言锁住——勿单侧改默认。advisor 第三键
@@ -163,7 +163,7 @@ export function resolveChildProvider(parent, modelArg) {
 }
 
 /**
- * §19.5 D-M6 cancel 核心（工具路径与 TUI ⏹ 共用）：定向中止单个后台子代理，id 必填。
+ * AGENT-LOOP-SUBAGENT.md §6.7.2 D-M6 cancel 核心（工具路径与 TUI ⏹ 共用）：定向中止单个后台子代理，id 必填。
  * - queued 目标（未启动无 controller）：出队 + 后续 position 前移 + settle waiter
  *   → { id, status:"cancelled", was:"queued" }——无 abort（T-M27）
  * - running 目标：置 entry.cancelled + 条目 controller abort（child runAgent signal）
@@ -183,7 +183,7 @@ export function cancelAsyncSubagent(agent, id) {
   }
   if (entry.cancelled) return { id: key, status: "cancelled" } // abort already in flight — idempotent
   if (entry.status === "queued") {
-    // 出队 + position 释放/前移（§19.5 D-M6——无 abort）
+    // 出队 + position 释放/前移（AGENT-LOOP-SUBAGENT.md §6.7.2 D-M6——无 abort）
     const queue = agent._asyncQueue ?? []
     const qi = queue.indexOf(entry)
     if (qi >= 0) {
@@ -237,7 +237,7 @@ export function cancelSyncChild(agent, key) {
   return { id: k, status: "cancelled" }
 }
 
-/** subagent action:"cancel" (§19.5 D-M6): depth-0 main-session control only.
+/** subagent action:"cancel" (AGENT-LOOP-SUBAGENT.md §6.7.2 D-M6): depth-0 main-session control only.
  *  §20 D-SD5/round1 #4（queued 依赖取消——无 settle 事件）：出队后**返回即**重估
  *  依赖者——依赖者留 queued 标 dependency cancelled（refreshQueuedTokens 发更新块头
  *  token）+ 工具结果内注依赖者（模型可见——工具结果内——round1 #4 明示通道）+ 补位
@@ -349,7 +349,7 @@ export async function runChildPipeline(child, input, childOpts, childRunOpts, { 
 
 /**
  * Inject one settled async entry into the parent history as a user-role reminder
- * (§17 D-S3 — the auto channel, sole consumption path since §19.8: turn-end
+ * (AGENT-LOOP-ASYNC-POOL.md §6.8 D-S3 — the auto channel, sole consumption path since AGENT-LOOP-SUBAGENT.md §6.7.5: turn-end
  * collection (collectSettledAsync, agent.mjs) and the run-start _pendingAsyncResults
  * injection; the message shape is identical to the §15 collector's). Consumed =
  * the caller removes the entry from its container; no double-inject across the
@@ -386,7 +386,7 @@ export async function injectAsyncResult(agent, entry) {
   })
   // §20 D-SD5 终态墓碑：本函数是全部自动注入路径的共享形态（回合尾 collect + 挂起
   // digest 首行注入）——注入即消费（调用方随即从容器移除）——dependsOn 引用该 id 的
-  // 后续 spawn 视为已满足（T-SD14 消费终态语义——§19.8 后 check 消费路径删除，本自动
+  // 后续 spawn 视为已满足（T-SD14 消费终态语义——AGENT-LOOP-SUBAGENT.md §6.7.5 后 check 消费路径删除，本自动
   // 通道为唯一消费方；error 条目记 failed——依赖取消/失败分支照旧，不误标成功）。
   writeTombstone(agent, entry.id, entry.error != null ? "failed" : "consumed", entry.role)
 }
@@ -396,7 +396,7 @@ export async function injectAsyncResult(agent, entry) {
  * child: without it, Ctrl+C aborts the parent's controller but the child keeps
  * running its full turn budget (up to subagentTurns) while the parent awaits —
  * the interrupt appears to do nothing.
- * §17 D-S9: during a suspension session children share the SESSION signal instead
+ * AGENT-LOOP-ASYNC-POOL.md §6.8 D-S9: during a suspension session children share the SESSION signal instead
  * (agent._sessionSignal) — a digest's own Ctrl+I/Ctrl+C must not abort the whole
  * pool; the session driver aborts the session controller to stop everything.
  */

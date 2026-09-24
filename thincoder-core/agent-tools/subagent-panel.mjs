@@ -1,6 +1,6 @@
 /**
- * subagent-panel.mjs — subagent action:"panel" 执行器（§19.6——2026-09-08 自
- * subagent-actions.mjs 拆分——Module Split Policy：601 > 500 硬限跨档，§19.6 面板段
+ * subagent-panel.mjs — subagent action:"panel" 执行器（AGENT-LOOP-SUBAGENT.md §6.7.2——2026-09-08 自
+ * subagent-actions.mjs 拆分——Module Split Policy：601 > 500 硬限跨档，AGENT-LOOP-SUBAGENT.md §6.7.2 面板段
  * verbatim 迁入 + ASYNC-RESULT-CONTAINER.md D1/D2 落地（池 accessor getAsyncPool +
  * pending 单容器 _pendingAsyncResults 四族统一——escalate/consult 独立族退役））。
  * 内容：executePanelAction（D-P2——readonly 视图面 + 门控 freeze）+ panelFreezeGate
@@ -21,7 +21,7 @@ function blockKeyIn(container, key) {
 }
 
 /**
- * §19.6 D-P3 冻结门控（安全）：仅允许冻结 awaitingDigest 且池（_asyncSubagents/
+ * AGENT-LOOP-SUBAGENT.md §6.7.2 D-P3 冻结门控（安全）：仅允许冻结 awaitingDigest 且池（_asyncSubagents/
  * _asyncAdvisors——经 getAsyncPool accessor——D1）无对应运行条目 + pending 单容器
  * （_pendingAsyncResults——D2）无对应条目的块（= 已消化驻留块——报告已入模型上下文
  * ——pending 已消费——状态滞后——补发冻结不破坏任何顺序）。
@@ -63,7 +63,7 @@ function panelFreezeGate(ctx, key) {
 }
 
 /**
- * §19.6 subagent action:"panel"（D-P2——readonly 视图面 + 门控干预面——单动作双参，
+ * AGENT-LOOP-SUBAGENT.md §6.7.2 subagent action:"panel"（D-P2——readonly 视图面 + 门控干预面——单动作双参，
  * freeze 优先）：
  * - view（缺省——返回面板块列表）：ctx.state（= agent._tuiState——CLI TUI 装配）经
  *   computePanelBlocks **读时现算**（F-3 单账本——与用户所见一致）。awaitingDigest 条目
@@ -72,7 +72,7 @@ function panelFreezeGate(ctx, key) {
  *   = 报告已消化但块仍驻留——异常块——freeze 候选；模型可定位解释 UI 怪相）。
  * - freeze:key（D-P3 门控通过 → 发 key + "/" + ⟦ev⟧done 哨兵字面 token——
  *   onToken——TUI routeSubToken 冻结回收——落位复用 sub._freezeAt settle 锚点
- *   splice，无锚点尾推兜底——§17.5.5 同口径——round1 #2）。
+ *   splice，无锚点尾推兜底——AGENT-LOOP-ASYNC-POOL.md §6.8 同口径——round1 #2）。
  * 无 TUI state（headless/VS Code——D-P2 round1 #1：webview 无 state.subTasks 对应物——
  * 7.2.3.2 #8 先例）→ view 恒降级池视图（双池经 getAsyncPool + pending 单容器
  * 合成）+ no panel 注；freeze 报不可用。CLI-only 完整能力（AC-P4）。

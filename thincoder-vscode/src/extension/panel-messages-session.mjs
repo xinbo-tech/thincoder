@@ -24,7 +24,7 @@ import { blockOnNoWorkspace } from "./workspace-guard.mjs"
 export function handleNewSession(panel) {
   // ⑦ 无工作区守卫：槽写面（新建 = 分配新槽）
   if (blockOnNoWorkspace(panel)) return
-  // §17: session switch during a suspension session would orphan the background pool
+  // AGENT-LOOP-ASYNC-POOL.md §6.8: session switch during a suspension session would orphan the background pool
   // (its lines/pool belong to the current session). Stop the session first.
   if (panel._susp?.active) { vscode.window.showWarningMessage("ThinCoder: background subagents are still running — stop them before starting a new session."); return }
   panel._newSession()
@@ -101,7 +101,7 @@ export async function handleRenameSession(panel, msg) {
 export async function handleSetProject(panel, msg) {
   // ⑦ 无工作区守卫：项目切换（多根面）——无文件夹窗口里无可切
   if (blockOnNoWorkspace(panel)) return
-  // §17: project switch mid-suspension would yank cwd out from under the session —
+  // AGENT-LOOP-ASYNC-POOL.md §6.8: project switch mid-suspension would yank cwd out from under the session —
   // the suspension lines/slot belongs to the old project's session store.
   if (panel._susp?.active) { vscode.window.showWarningMessage("ThinCoder: background subagents are still running — stop them before switching projects."); return }
   // Current-project switcher (multi-root): with fsPath → switch directly;

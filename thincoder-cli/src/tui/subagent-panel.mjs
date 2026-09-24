@@ -6,11 +6,11 @@
  * 运行中区块的渲染行数（F2，会话区被挤小）；无运行中区块 → 返回 []（F6 空态，
  * 无悬空分隔线）。子 agent 完成后立即冻结进会话流（subagent-blocks.mjs
  * freezeSubTaskLines，✓ 头 + 可展开，§7.2 D4 现状不变），面板下一帧自然移除
- * 该区块（F5）——本模块只渲染 `!done` 条目。§17 T-S14 中间态例外：挂起期已结算
+ * 该区块（F5）——本模块只渲染 `!done` 条目。AGENT-LOOP-ASYNC-POOL.md §6.8 T-S14 中间态例外：挂起期已结算
  * 区块（sub.done && sub.awaitingDigest）冻结被延迟，驻留面板显示
  * "done · awaiting digestion"，池空补发冻结后才移除。
  *
- * §19.5 D-M7 ⏹：运行中（非 done）折叠头右缘停止标记（dim，仅折叠头）——点击 =
+ * AGENT-LOOP-SUBAGENT.md §6.7.2 D-M7 ⏹：运行中（非 done）折叠头右缘停止标记（dim，仅折叠头）——点击 =
  * cancel（mouse.mjs 列级命中 _stopCol——不触发折叠翻转）。
  * SUBAGENT-TAIL（supersede §27 R23 子块段方案；显示契约 docs/design/TUI.md §6）：嵌套
  * 子代理内容行并入本块 blocks（数据层——append 目标上移）——面板与冻结渲染只读
@@ -53,7 +53,7 @@ export function renderSubagentPanel(state, cols, maxRows) {
     // 与冻结头 `[✓ …]` 格式统一（任务简报 UI 决策）。
     const icon = sub.approval ? "⏸" : sub.done ? "✓" : "▶"
     const elapsed = Math.floor(((sub.done ? (sub.doneAt ?? Date.now()) : Date.now()) - sub.started) / 1000)
-    // §19.5 D-M7b ②: sync/async 显式头标（B 形态——不靠"没标推断"）——async 由
+    // AGENT-LOOP-SUBAGENT.md §6.7.2 D-M7b ②: sync/async 显式头标（B 形态——不靠"没标推断"）——async 由
     // ⟦ev⟧async 标记置位；sync 区块（无标记）显式标 sync。真实 subagent 角色
     // （escalate/consult/compress 等复用面板槽的条目无语义——非 spawn 角色豁免）；
     // §11.2 D-24b：role "advisor" 伪角色同面板（块/⏹/冻结复用——ruling ②-4 A）。
@@ -109,7 +109,7 @@ export function renderSubagentPanel(state, cols, maxRows) {
       : ""
     let headText = `${bracket} ${sliceByWidth(statePart + argSummary, Math.max(0, cols - 2 - bracketWidth))}`
     const line = { color: C.tool, _foldToggle: foldKey }
-    // §19.5 D-M7 ⏹ + D-M7b ③ 门控 + SYNC-CANCEL F3（2026-09-09）：⏹ 只对 **live 可中止**
+    // AGENT-LOOP-SUBAGENT.md §6.7.2 D-M7 ⏹ + D-M7b ③ 门控 + SYNC-CANCEL F3（2026-09-09）：⏹ 只对 **live 可中止**
     // 区块——async（running && sub.async——⟦ev⟧async 置位）∪ **sync registry live**
     // （state._agent?._syncChildAborts?.has(sub.key)——阻塞 spawn 运行期注册——成功/折叠/
     // 整回合停后 finally 注销——门控自动放下）——杜绝"可见但不可中止"误导。真实 subagent

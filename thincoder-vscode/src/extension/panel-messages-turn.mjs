@@ -58,7 +58,7 @@ export function handleAbort(panel) {
 
 /** 迁出自 `panel-messages.mjs` 的 case "cancelSubagent"。 */
 export async function handleCancelSubagent(panel, msg) {
-  // §19.5 D-M7 UI 停止（VS Code ⏹——不经模型回合——直连 extension 层定向 abort）：
+  // AGENT-LOOP-SUBAGENT.md §6.7.2 D-M7 UI 停止（VS Code ⏹——不经模型回合——直连 extension 层定向 abort）：
   // webview 子块标题行 ⏹ 点击 → cancelSubagent 消息 → 定位 live lines 的池条目 →
   // 条目级 abort（cancelSubagent——与工具 action:'cancel' 同实现路径——D-M6）。
   // live lines 锚点 = panel._liveLines（runPanelChat 每回合登记——挂起期与

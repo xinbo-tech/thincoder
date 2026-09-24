@@ -22,7 +22,7 @@ import { traceStop } from "./stop-trace.mjs"
 import { postDigestCap } from "./panel-callbacks.mjs"
 import { pickupQueuedAtStepBoundary } from "./queued-pickup.mjs"
 
-/** §17 D-S9 controller 登记（2026-09-02 偏差修复 #3）：池 children 在 spawn 时刻持有当时的
+/** AGENT-LOOP-ASYNC-POOL.md §6.8 D-S9 controller 登记（2026-09-02 偏差修复 #3）：池 children 在 spawn 时刻持有当时的
  * turn controller signal——Ctrl+I / ContinueError / AUTO resume 重建 controller 后，旧
  * controller 的 children 仍在跑。每次重建都登记进 panel._turnControllers：会话入口快照为
  * susp.abortControllers，Stop 统一 abort——否则会话中止句柄只取最后一个 controller，旧
@@ -62,7 +62,7 @@ export function bindPanelAgent(panel, holder) {
 }
 
 /**
- * §17 D-S6 guard-carry 主循环（2026-09-05 实践轮——自 runPanelChatImpl 按骨干—细节
+ * AGENT-LOOP-ASYNC-POOL.md §6.8 D-S6 guard-carry 主循环（2026-09-05 实践轮——自 runPanelChatImpl 按骨干—细节
  * 两层提取，verbatim + 签名化，语义零变）：runOpts 构造（guard 继承/会话句柄/持久化
  * 载荷）+ ContinueError/Ctrl+I 续跑循环 + 错误/中止持久化分支。回合骨架事件
  * （turn:start）留在调用点（impl 骨干）；本函数只跑 runAgent 续跑循环。
@@ -85,9 +85,9 @@ export async function runTurnLoop(panel, deps) {
     injections: [collectEditorInjection(cwd)].filter(Boolean), resume: false,
     distillState: panel._distillState, distillSignal: panel._distillController?.signal,
     engPersist: { cwd, slot: turnSlot },
-    // §17 D-S6/D-S9: digest turns skip the input push (setupAgentRun autoTurn),
+    // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S6/D-S9: digest turns skip the input push (setupAgentRun autoTurn),
     // session children share the session abort signal, guard marks flow per tier.
-    // §17.5: the panel is the suspension driver — turn-end collection must NOT
+    // AGENT-LOOP-ASYNC-POOL.md §6.8: the panel is the suspension driver — turn-end collection must NOT
     // drain settled entries (they stay pooled → the session digests them).
     // §6.27.12.12 ③（上行通道批）：`upstreamTurn` 三跳末段（解构 → 本 opts 字面量 → 核 `runAgent`
     // 读点）——仅选域文本基座，不进任何门（autoTurn 维持 auto 轮类语义）。
@@ -127,7 +127,7 @@ export async function runTurnLoop(panel, deps) {
       }
       if (e instanceof ContinueError) {
         if (autoTurn) {
-          // §17 D-S9 ContinueError row (digest): NO panel — AUTO auto-resumes (§2 unified rule);
+          // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S9 ContinueError row (digest): NO panel — AUTO auto-resumes (§2 unified rule);
           // manual stops silently (partial digest stays in history — no lost reports).
           if (panel._autoApprove) {
             postDigestCap(panel, "auto", e.turn) // §14 C-10：cap 行（auto——继续推进）

@@ -67,7 +67,7 @@ export function send() {
   ctx.inputEl.style.height = "auto"
   setLoading(ctx, true)
   ctx.hadToolResult = false
-  // §17: panel reset happens per NORMAL turn only — a send during the suspension
+  // AGENT-LOOP-ASYNC-POOL.md §6.8: panel reset happens per NORMAL turn only — a send during the suspension
   // session belongs to the running session (its subagent rows/blocks stay live).
   if (!S._suspended) clearPanels()
   addUser(ctx, text, Date.now()) // F（SESSION-RESTORE-PARITY）：本地气泡补真实时间戳——无 ts 不显示的配套

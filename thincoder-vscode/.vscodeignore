@@ -15,3 +15,5 @@ docs/**
 AGENTS.md
 package-lock.json
 assets/candidates/**
+*.log
+**/*.log

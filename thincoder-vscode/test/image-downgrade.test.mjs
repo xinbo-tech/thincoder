@@ -114,7 +114,7 @@ test("视觉判据（MODEL-SELECTION）：判据 = 渠道默认单值模型的 s
 test("T36 第 6 批：DeepSeek V4.1-Flash 三行 = 契约（R11–R13）+ 新名/退役名渠道入视觉判据", async () => {
   const { specForModel } = await import("../src/specs.mjs")
   const { findVisionChannel } = await import("../src/extension/vision-channel.mjs")
-  // §19.2（a）契约（VSC 侧——每行多 reasoningEffortDefault: "high"）
+  // PROVIDER.md §6.11（a）契约（VSC 侧——每行多 reasoningEffortDefault: "high"）
   const CONTRACT = {
     context: 1_000_000, maxOutput: 384_000, thinking: true, prefixMode: true, multimodal: true,
     cacheMode: "auto", thinkApi: "type", reasoningEcho: "required",

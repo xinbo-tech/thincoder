@@ -189,6 +189,10 @@
   ② **工具作用域限制全部移除**（§10.1）：resolveInCwd 去边界断言（信任模型 + 权限门禁为唯一防线，与 bash 一致）；git workdir / execute scriptFile / file_ops 目录限制一并移除；工具描述与提示词 "confined to workspace" 措辞清理（两端 byte-identical）
   ③ **模型上下文长度可配置**（PROVIDER.md §15）：`providers[].context`（K 单位，如 128 = 128K）覆盖 MODEL_SPECS——providerSpec 拷贝覆盖不污染共享 spec；压缩阈值（auto ×0.6）/ TOKEN 窗口 / 状态栏显示 / advisor 预算全链路跟随；数字字符串（"128"）两端统一归一；非法值忽略 + 警告一次；CLI /model 管理流 + VS Code settings.json 配置界面
 
+## [0.12.58] — 2026-09-02
+
+- 维护性发布（本期无单独变更条目）
+
 ## [0.12.57] — 2026-09-02
 
 ### Added
@@ -349,6 +353,10 @@
 ### Tests
 
 - 新增 `test/session-eng-advisor.test.mjs`：/eng 双写断言（slot+config）、applySession slot 恢复（true/false/显式 false 压过 config true）、旧槽位无字段回退 config 锁定、saveSession 每 turn 往返、/advisor guard 双写（model 等仍 config-scoped）
+
+## [0.12.50] — 2026-08-29
+
+- 维护性发布（本期无单独变更条目）
 
 ## [0.12.49] — 2026-08-29
 

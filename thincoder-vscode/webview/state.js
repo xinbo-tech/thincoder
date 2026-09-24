@@ -97,7 +97,7 @@ export const S = {
   // the settings panel has the full advisor configuration).
   _advisorOn: false,
   _engOn: false,
-  // §17 suspension session (AGENT-LOOP.md D-S2..S9): active while background async
+  // AGENT-LOOP-ASYNC-POOL.md §6.8 suspension session (AGENT-LOOP.md D-S2..S9): active while background async
   // subagents run after a turn — the input box stays usable (Enter queues instead of
   // breaking digests), the status line shows the background counts. Never touched by
   // background events beyond these host-driven updates (F3).

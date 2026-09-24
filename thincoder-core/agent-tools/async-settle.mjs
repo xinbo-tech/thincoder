@@ -232,7 +232,7 @@ export function settleAsyncEntry(parent, entry, opts = {}) {
   }
   // ③ 分流
   if (entry.cancelled) {
-    // §19.5 cancelled settle 分支（D-M6）：不入 pending、不参与回合尾直注入——清池 +
+    // AGENT-LOOP-SUBAGENT.md §6.7.2 cancelled settle 分支（D-M6）：不入 pending、不参与回合尾直注入——清池 +
     // 终态墓碑（dependsOn 取消语义）+ ⟦ev⟧stopped 冻结 + 族提醒（半成品警示对模型可见）。
     pool?.delete(String(entry.id))
     writeTombstone(parent, entry.id, "cancelled", role) // §20 D-SD5：单点写入（#94 载体吸收）
@@ -263,7 +263,7 @@ export function settleAsyncEntry(parent, entry, opts = {}) {
     // 族记账 hook（advisor 陈旧判定/token D1 落盘；escalate 三分类 merge 决策；subagent/
     // escalate 腾槽补位）——可改写 entry.report（settle 分支输出——digest 原样进）。
     onAccounting?.(parent, entry)
-    // 挂起分流（§17 D-S8 + D-S3 记账——以读取时刻为准）：挂起期 settle → 移交 pending
+    // 挂起分流（AGENT-LOOP-ASYNC-POOL.md §6.8 D-S8 + D-S3 记账——以读取时刻为准）：挂起期 settle → 移交 pending
     // 单容器（digest 注入）+ 出池 + ⟦ev⟧settled 驻留；回合内 → ⟦ev⟧done 立即冻结
     // （条目留池——done-in-pool 统一表示——回合尾 collectSettledAsync 注入）。
     // consult 族恒停靠（settle 即出会话池入 pending——无 TUI 冻结事件——子块各自冻结）。

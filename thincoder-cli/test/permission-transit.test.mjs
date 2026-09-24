@@ -1,5 +1,5 @@
 /**
- * permission-transit.test.mjs — P2 机制层端差批 · 车道 1（批档 §2.20 CLI 半）：
+ * permission-transit.test.mjs — P2 机制层端差批 · 车道 1（批档 docs/batches/2026-09-20-mechanism-parity-batch.md §2.20 CLI 半）：
  * T-PT1–T-PT5——转口恒等（函数对象 ===）/ 假 io.ask 语义（恰调一次 + 返回值为准）/
  * io.ask 未处理 ⇒ 回默认通道（非 TTY ⇒ [deny] + false）/ TUI 缝置位 + resolve 贯通核闸 /
  * TUI 行式预览保留（edit / apply_patch 分支）。

@@ -2,13 +2,13 @@
  * panel-chat.mjs — ChatPanel chat turn runner (split out of chat-panel.mjs).
  * Resolves the provider, loads the dual history lines, runs the agent with
  * streaming callbacks, persists the lines on complete.
- * §17 (2026-09-02，AGENT-LOOP.md §7 D-S1..S9): a turn ending with the async pool
+ * AGENT-LOOP-ASYNC-POOL.md §6.8 (2026-09-02，AGENT-LOOP.md §7 D-S1..S9): a turn ending with the async pool
  * still live enters the suspension session (suspension.mjs) — susp-idle input stays
- * usable (fills the single pendingInput slot + wake), busy (running incl. digest)
- * input is disabled (INPUT-LOCK-ASYNC C' — 2026-09-09 — routeUserTurn rejects, no
- * queue), settles drive auto-turn digests (manual tier organize-only / AUTO full
- * semantics), pool-empty + no queued input exits naturally back to idle.
- * §17 偏差修复（2026-09-02 #2/#3）: 挂起入口在 finally 先于任何释放点登记（释放窗口——
+ * usable (fills the single pendingInput slot + wake), busy (running incl. digest) input is
+ * queued instead (routeUserTurn splits into the two carriers; cap QUEUED_MAX_ITEMS = 8,
+ * 满队 ⇒ 拒发 toast + 文本保留), settles drive auto-turn digests (manual tier organize-only /
+ * AUTO full semantics), pool-empty + no queued input exits naturally back to idle.
+ * AGENT-LOOP-ASYNC-POOL.md §6.8 偏差修复（2026-09-02 #2/#3）: 挂起入口在 finally 先于任何释放点登记（释放窗口——
  * 关闭 generateTitle 释放窗口的并发新回合）；控制器重建全部登记（_turnControllers →
  * 会话统一 abort）。
  * C2（SESSION-FLOW-C F-C2a——2026-09-09）：_suspPending/_turnActive 布尔退役——忙态单一
@@ -190,12 +190,12 @@ async function runPanelChatImpl(panel, opts = {}) {
   // history = machine line (compaction shrinks it); old sessions fall back to the human line.
   // runAgent appends this turn's real messages (user input, assistant replies, tool results) to
   // both lines via its internal pushReal — chat-panel only supplies the lines and persists them.
-  // §17: suspension-session turns keep the session's LIVE lines (the pool map, pending results
+  // AGENT-LOOP-ASYNC-POOL.md §6.8: suspension-session turns keep the session's LIVE lines (the pool map, pending results
   // and _suspended flag ride the history array — reloading from disk would orphan the pool).
   const loadedLines = suspLines ?? panel._activeLines(turnSlot)
   fullHistory = loadedLines.fullHistory
   history = loadedLines.contextHistory // activeLines 已处理机读线判定（length>0 + strip 截断 args）
-  // §19.5 UI ⏹ cancel 路由锚点（extension 层直连路径——不经模型）：本回合 live lines
+  // AGENT-LOOP-SUBAGENT.md §6.7.2 UI ⏹ cancel 路由锚点（extension 层直连路径——不经模型）：本回合 live lines
   // 常驻面板——池（history._asyncSubagents）与机读线跨 runAgent/挂起期都存活在这同一
   // 数组上；挂起会话期 susp 路径传入的 suspLines 即 panel._susp.lines 同一引用——
   // cancelSubagent 消息据此定位池条目 + 注入模型可见提醒（panel-messages.mjs）。
@@ -214,7 +214,7 @@ async function runPanelChatImpl(panel, opts = {}) {
 
   panel._panel?.webview.postMessage({ type: "loading", loading: true })
   panel._setStatus("running")
-  // §17: suspension-session turns must NOT abort the previous controller — the session
+  // AGENT-LOOP-ASYNC-POOL.md §6.8: suspension-session turns must NOT abort the previous controller — the session
   // handle (susp.abort = the entering turn's controller) is what pool children hold; a
   // digest's Stop must not kill the pool. Per-turn controllers only exist for the turn.
   // 顶层回合起点的僵尸清理已上移至函数入口（C1 F-C1b——见上方注释——任何 await 之前清闩 +
@@ -228,7 +228,7 @@ async function runPanelChatImpl(panel, opts = {}) {
   // 面——token/reasoning/tool 流/压缩生命周期/落盘/权限/问答 25 个 onX）verbatim 迁
   // panel-callbacks.mjs buildPanelCallbacks——总用量累计与 lastAgentState 随工厂闭包。
   const callbacks = buildPanelCallbacks(panel, { cwd, p, fullHistory, history, providerName, turnSlot, distillSlot, autoTurn, askInPanel, slotStamp })
-  // §17 D-S7 (manual tier): digest turns must not pop permission/question UI — an
+  // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S7 (manual tier): digest turns must not pop permission/question UI — an
   // unattended digest may neither hang on a panel prompt nor be interrupted by one.
   // The VS Code dispatch executes un-gated when no handler is present (unlike the CLI's
   // "no handler = denied"), so explicit deny stubs replace the panel prompts — the
@@ -239,7 +239,7 @@ async function runPanelChatImpl(panel, opts = {}) {
     callbacks.onQuestion = async () => null
   }
 
-  // §17 D-S6 guard-carry bookkeeping: auto-turn end-state guard marks (mutations,
+  // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S6 guard-carry bookkeeping: auto-turn end-state guard marks (mutations,
   // verify/advisor flags) accumulate on panel._guardCarry and are inherited by the
   // next USER run (runAgent applies opts.inheritedGuard at its start; consumed once).
   // 2026-09-05 实践轮：主循环（runOpts 构造 + ContinueError/Ctrl+I 续跑 + 错误持久化

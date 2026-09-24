@@ -36,7 +36,7 @@ import { closeBatchRecord, createBatchRecord, findInFlightBatch, statusBatchReco
 
 export { SEGMENT_BY_ROLE }
 
-/** text 单次上限（§2.20.1——超出引导分段追加，不承诺"不新盖戳"）。append 迁移域私有区常量
+/** text 单次上限（BATCH-RECORD.md §4.1——超出引导分段追加，不承诺"不新盖戳"）。append 迁移域私有区常量
  *  （随执行体自 batch-segment.mjs 迁入——骨架档只住骨架/状态行单源，lifecycle 档头枚举口径）；
  *  export = shim 导出全超集（旧 `batch-segment.mjs` 导出面等价保持）。 */
 export const MAX_TEXT_CHARS = 20000
@@ -67,7 +67,7 @@ function readableFile(abs) {
 }
 
 /**
- * 批次档路径门禁（评审侧 §2.20.2 口径 = **「若传则须可读」**）：空/非字符串/不可读 → throw。
+ * 批次档路径门禁（评审侧 BATCH-RECORD.md §4.2 口径 = **「若传则须可读」**）：空/非字符串/不可读 → throw。
  * 非空且可读 → 返回绝对路径（`\` 归一——照 `files`/`batchDoc` spawn 门先例）。
  * v2：cwd 不可读 → manifest `docRoot.batches` 复判（M3 模块设计 §2.1#4——N3 可迁移；
  * 值形态 = 串 | 多根数组——逐基底按序复判，首个可读者胜）。
@@ -111,7 +111,7 @@ export function batchDocBases(cwd) {
 }
 
 /**
- * 设计评审的实例绑定解析（§2.20.2/§2.20.3——评审实例的唯一路径来源）：
+ * 设计评审的实例绑定解析（BATCH-RECORD.md §4.2/§4.3——评审实例的唯一路径来源）：
  *  - 同步路径：调用方（advisor 工具）把实例绑定显式放进 callbacks（**带 batchDoc 键**，
  *    未绑定即 null）——以此为准，不再回看池条目（防同步/异步混跑时串档）；
  *  - 异步路径：本评审所在**池条目**的 `run.batchDoc`（文档集 = 实例键，各评审各取各条）。
@@ -143,7 +143,7 @@ function allowedSegment(agent, review) {
 }
 
 /**
- * 凭证剥除 + 伪造轮次标题丢弃（§2.20.1 F6/AC30/AC34）。
+ * 凭证剥除 + 伪造轮次标题丢弃（BATCH-RECORD.md §4.1 F6/AC30/AC34）。
  * 逐行处理：含凭证形态的行 → 剥除该子串，剥后为空则整行丢弃（其余内容逐字保留）。
  * `dropStamp`（仅 §3 目标段）：调用方自带的 `### 轮次 N（评审子代理）` 行被丢弃——
  * 工具生成才是唯一来源戳（否则伪造戳会污染 N 计数）。

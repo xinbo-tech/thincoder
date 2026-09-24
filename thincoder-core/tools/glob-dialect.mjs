@@ -1,5 +1,5 @@
 /**
- * glob-dialect.mjs — glob 方言（TOOLS.md §17 — 2026-09-06）单一权威模块（CLI）。
+ * glob-dialect.mjs — glob 方言（TOOLS.md §6.7 — 2026-09-06）单一权威模块（CLI）。
  *
  * `{a,b}` brace expansion is handled BEFORE the sentinel/escape flow (braces must
  * not be literal-escaped — a bare "star-star slash star .{js,txt}" pattern
@@ -12,7 +12,7 @@
  * intersects includes and excludes.
  *
  * Extracted from shared.mjs (2026-09-06 advisor #5 — shared.mjs exceeded the
- * 500-line cap after §17); shared.mjs re-exports these symbols so all existing
+ * 500-line cap after the TOOLS.md §6.7 move); shared.mjs re-exports these symbols so all existing
  * importers (system.mjs / ls filter / tests) keep their import paths.
  */
 
@@ -77,7 +77,7 @@ export function globToRegex(pattern) {
 /** Whitespace-split a glob expression into parts WITHOUT splitting inside {a,b}
  *  brace groups and WITHOUT splitting literal spaces inside a single pattern
  *  (2026-09-06 audit F1 / advisor #4): a whitespace run is a pattern separator
- *  ONLY when the next non-space token starts an exclusion ("!" — the §17
+ *  ONLY when the next non-space token starts an exclusion ("!" — the TOOLS.md §6.7
  *  "include !exclude" form). So a BARE pattern like "docs/my file/*.md" and an
  *  exclude like "!docs/my file/**" each stay ONE part; the standard
  *  "js-pattern 空格 !test-pattern" form still splits into its two parts. */

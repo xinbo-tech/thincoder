@@ -1,9 +1,9 @@
 /**
  * subagent-freeze.mjs — 子agent 区块完成/冻结族（2026-09-05 module-split：
- * subagent-blocks.mjs 625 > 500 硬限——§19.6 面板现算 computePanelBlocks + finish/
+ * subagent-blocks.mjs 625 > 500 硬限——AGENT-LOOP-SUBAGENT.md §6.7.2 面板现算 computePanelBlocks + finish/
  * freeze 家族迁入；subagent-blocks.mjs import 回（routeSub* 与 compression panel
  * 调用点）+ re-export 保外部 import 面（index.mjs 等）。
- * CLI-ACTIVITY-DEBLOAT F-3（2026-09-10）：§19.6 面板**手工镜像退役**（镜像读写
+ * CLI-ACTIVITY-DEBLOAT F-3（2026-09-10）：AGENT-LOOP-SUBAGENT.md §6.7.2 面板**手工镜像退役**（镜像读写
  * 全删）——改读时现算 computePanelBlocks(state)：四字段 key/
  * role/status/startedAt 均为 state.subTasks 活值纯推导（评审 #2 确证），读时现算
  * 与 sync 时刻镜像等价——双账本结构性漂移根治（单账本）。完成/冻结族不再逐点刷镜
@@ -16,7 +16,7 @@ import { closeOpenSubChildren } from "./subagent-children.mjs"
 // zero-block 批（§6.8.3.2）：摘除路径负向出账——releaseLine（增删均须过账）。
 import { accountLine, releaseLine } from "./display-budget.mjs"
 
-// ─── §19.6 D-P1 面板视图（subagent panel 检查工具）───
+// ─── AGENT-LOOP-SUBAGENT.md §6.7.2 D-P1 面板视图（subagent panel 检查工具）───
 // CLI-ACTIVITY-DEBLOAT F-3：面板区块列表由消费面**读时现算**（action:"panel" 经
 // ctx.state = agent._tuiState（index.mjs startTUI 装配）取 TUI state——subTasks
 // 活值纯推导——视图与用户所见一致（同一数据源单账本））。未挂载（headless/VSC/
@@ -201,7 +201,7 @@ export function finishSubTasksByRole(state, roles, lastError = null) {
 
 /** 回合尾/挂起退出清扫（runAgentTurn finally / suspensionSession finally）：冻结全部
  *  剩余块——中断（Ctrl+C/错误）不留下钉住输入框的 ghost；未 done 者
- *  lastError="interrupted"（Ready 态跳过）。§17.5.5：挂起自然退出时本函数只兜底
+ *  lastError="interrupted"（Ready 态跳过）。AGENT-LOOP-ASYNC-POOL.md §6.8：挂起自然退出时本函数只兜底
  *  **未消化残项**（已消化块由 freezeReclaimDigestedBlocks 逐条先行回收——块回收与
  *  池空解耦）。锚点降序同 freezeDoneSubTasks（挂起期 settle 锚点交错批次各按其
  *  settle 位置落位）。

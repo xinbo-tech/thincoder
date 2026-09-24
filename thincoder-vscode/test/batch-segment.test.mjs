@@ -193,7 +193,7 @@ test("T60 错误/边界：只读面——代码评审工具集逐字节不变；
 // launch 随 advisor 镜像删旧退役，核 `launchAsyncAdvisor(parent, ctx, launch)` 无同形缝（真跑评审）
 // 且实例键绑定（`batchDocForReview`）为核实现——该面覆盖归核测试（`thincoder-core/test/batch-segment.test.mjs`）。
 
-// ── T-FZ3（群 B 批 B3 §17.2 E-扩 3）：成功写入记写域 / 失败零记账 ─────────────
+// ── T-FZ3（群 B 批 B3 E-扩 3）：成功写入记写域 / 失败零记账 ─────────────
 // W9（2026-09-15）：记账面 = 核注入缝 #84（公开删除前的内联直写——本端装配层注册
 // `configureBatchSegment({ onWrite })`，见 src/agent/setup.mjs）；测试侧注册镜像端壳回调
 // （与 setup.mjs 同形）验工具契约；装配在位由本文末结构机检钉死。

@@ -78,7 +78,7 @@ ctx.messagesEl.addEventListener("keydown", (e) => {
   if (link) { e.preventDefault(); link.click() }
 })
 
-// §19.5 D-M7 UI 停止（VS Code）：子代理块 ⏹ 点击 → postMessage cancelSubagent →
+// AGENT-LOOP-SUBAGENT.md §6.7.2 D-M7 UI 停止（VS Code）：子代理块 ⏹ 点击 → postMessage cancelSubagent →
 // extension 层定向 abort——不经模型回合（失控子代理时模型可能不可靠——直连路径）。
 // preventDefault + stopPropagation：⏹ 命中区不触发 details 折叠翻转（T-M22 断言——
 // 与 CLI handleMouseClick 的 ⏹ 列级区分同规则）。2026-09-11 活动区回归（WEBVIEW.md

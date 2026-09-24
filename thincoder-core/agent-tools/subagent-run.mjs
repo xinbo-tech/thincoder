@@ -36,7 +36,7 @@ export function drainInjectedQueue(entry, agent) {
  * The child runs the EXACT blocking pipeline (runChildPipeline — relay /
  * turn-cap / permission / MIN_REPORT_CHARS / mergeChildMutations all unchanged),
  * but the parent does not await it: the promise is parked in _asyncSubagents and
- * consumed by the auto channel (§19.8 — turn-end collection / suspension digest;
+ * consumed by the auto channel (AGENT-LOOP-SUBAGENT.md §6.7.5 — turn-end collection / suspension digest;
  * the check action is gone). Slot queue (§11.1 D-24a/R14 — 分域): the entry carries a
  * pool domain (_pool = poolDomainOf(role)); running count < limit[its domain]
  * (agent.poolLimits — default engCoder 4 / other 4) → start now; ≥ → enqueue
@@ -64,13 +64,13 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
     position: undefined,
     report: null, error: null, done: false, cancelled: false,
     promise: null, _settle: null, _settleSeq: 0,
-    // §19.5 D-M5 可决策字段（status 数据装配锚点）：model 在 spawn 时记录；
+    // AGENT-LOOP-SUBAGENT.md §6.7.2 D-M5 可决策字段（status 数据装配锚点）：model 在 spawn 时记录；
     // startedAt 在 ACTUAL start（queued 等待不计 elapsed）；turn/maxTurns 由
     // 下方 onToken 拦截层从子代理 ⟦ev⟧turn 事件镜像（T-M18 正确性断言）。
     model: childProvider?.model ?? null,
     startedAt: null,
     turn: 0, maxTurns: 0,
-    // §19.5 D-M6 (round2 #2)：条目级 AbortController——cancel 定向 abort 本
+    // AGENT-LOOP-SUBAGENT.md §6.7.2 D-M6 (round2 #2)：条目级 AbortController——cancel 定向 abort 本
     // 条目（runAgent signal 链）；Ctrl+C 全停语义不变（基信号 abort 逐链传播）。
     controller: null,
     // §20 D-SD2 域元数据（AGENT-LOOP.md §20）：running ∪ queued 条目全带——
@@ -97,15 +97,15 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
   }
   // The settle signal — resolves when the run chain settles (never rejects).
   entry.promise = new Promise((res) => { entry._settle = res })
-  // §19.5 D-M6：条目 controller 链到会话/回合基信号（_sessionSignal 优先——
-  // §17 挂起会话内 children 持会话 signal，digest 自身 Ctrl+C 不误伤）。
+  // AGENT-LOOP-SUBAGENT.md §6.7.2 D-M6：条目 controller 链到会话/回合基信号（_sessionSignal 优先——
+  // AGENT-LOOP-ASYNC-POOL.md §6.8 挂起会话内 children 持会话 signal，digest 自身 Ctrl+C 不误伤）。
   // D6 buildChildSignal 单点（ASYNC-RESULT-CONTAINER.md）。
   const ctrl = new AbortController()
   entry.controller = ctrl
   // §20.3 站点 #10（第 24 批）：hop 逐跳保 reason；#98 链结单点（interrupt 豁免面——
   // Ctrl+I 不逐链中止池内子代理）。
   bindChildController(ctrl, buildChildSignal(parent, ctx))
-  // §19.5 D-M5：turn 镜像拦截层（callbacks 包装层——在既有
+  // AGENT-LOOP-SUBAGENT.md §6.7.2 D-M5：turn 镜像拦截层（callbacks 包装层——在既有
   // wrapChildCallbacks 之外再包一层，只解析 ⟦ev⟧turn 更新条目，其余原样转发）。
   const trackOpts = { ...childOpts }
   const parentOnToken = trackOpts.onToken
@@ -127,7 +127,7 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
     entry.status = "running"
     entry.position = undefined
     entry.startedAt = Date.now()
-    // §19.5.6 D-SF1（round3 #1）：绑定子代理对象引用——绑定时刻 = 实际启动时
+    // AGENT-LOOP-SUBAGENT.md §6.7.2 D-SF1（round3 #1）：绑定子代理对象引用——绑定时刻 = 实际启动时
     // （queued 条目 spawn-ack 时刻尚无子代理对象——§20 D-SD3b）；绑定对象 = 子代理
     // 对象（不是 _touchedFiles 数组引用——per-run 记账在 prepareRun 重置——数组
     // 引用会陈旧——对象引用保证 status 查询时实时读——杀前一刻最新）。
@@ -139,7 +139,7 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
     // 持 entry + child；空队列 no-op（每轮尝试——零开销）。N2：不打断在跑工具——入队
     // 消息只在下一回合边界（当前工具完成后的下轮 chat 前）进上下文。
     const consumeInjected = (ag) => { drainInjectedQueue(entry, ag ?? child) }
-    // §19.5 D-M7b ①: async 标记事件——零字段 ⟦ev⟧async token（sync 不发）。
+    // AGENT-LOOP-SUBAGENT.md §6.7.2 D-M7b ①: async 标记事件——零字段 ⟦ev⟧async token（sync 不发）。
     // 锚点 = 实际启动（与 [model] 同步——queued 入队不 paint，补位启动才发）；
     // 先于 [model] 发出——区块创建即知 sub.async（routeSubToken 解析——
     // ⏹ 门控与头标 async 的判定源）。父级直接 emit（depth-0 专属路径——

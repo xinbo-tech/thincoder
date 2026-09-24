@@ -120,9 +120,9 @@ async function buildDepGraph(cwd) {
 
 /**
  * Build the dependency-outline summary pushed as a per-run context injection
- * (VSC-CONTEXT-PARITY §17.3 pushOutline). Reuses buildDepGraph; the content format is
+ * (VSC-CONTEXT-PARITY 批 pushOutline). Reuses buildDepGraph; the content format is
  * isomorphic to the CLI's buildSummary (directory deps / hub files / entry points).
- * 差异登记 §17.10：CLI 走索引 DB 断点（doc_chunks），本端 = live buildDepGraph
+ * 差异登记（VSC 上下文注入面）：CLI 走索引 DB 断点（doc_chunks），本端 = live buildDepGraph
  * （workspace.findFiles ≤5000）——内容格式同构。无源文件 → `(no …` 开头（调用方跳过）。
  */
 export async function buildSummary(cwd) {

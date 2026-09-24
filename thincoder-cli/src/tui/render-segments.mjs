@@ -75,7 +75,7 @@ export function toolSeg(state, l, i, cols, maxRows) {
 function frozenSubTaskLines(state, sub, cols, maxRows) {
   const foldKey = `sub-${sub.key}`
   const elapsed = Math.floor(((sub.doneAt ?? Date.now()) - sub.started) / 1000)
-  // §19.5 D-M7b ②: 冻结头保留 sync/async 标识（done 头含历史语义——与 model 标识
+  // AGENT-LOOP-SUBAGENT.md §6.7.2 D-M7b ②: 冻结头保留 sync/async 标识（done 头含历史语义——与 model 标识
   // 同生命周期）；仅真实 subagent 角色（compress 冻结等无语义）。整行 dim——
   // 无需 ANSI 注入（running 面板头则套 dim + 恢复行色——subagent-panel.mjs）。
   const isSubRole = SUBAGENT_ROLES.includes(sub.role)
@@ -89,7 +89,7 @@ function frozenSubTaskLines(state, sub, cols, maxRows) {
   // 图标三态互斥（2026-09-20 端差·显示面消差批 M5）：修前 stopped 冻结头 `✓` 与 verb 相抵
   // ⇒ 补齐 VSC `webview/activity-view.js:46-49` 已成的 cancelled → `⏹` 形态（VSC 标尺，CLI 缺面）。
   const icon = sub.approval ? "⏸" : sub.stopped ? "⏹" : "✓"
-  const verb = sub.stopped ? "stopped" : "done" // §19.5: cancel 冻结标题 "stopped"
+  const verb = sub.stopped ? "stopped" : "done" // AGENT-LOOP-SUBAGENT.md §6.7.2: cancel 冻结标题 "stopped"
   const header = `[${icon} ${sub.key}${modePart}${modelPart} · ${verb} ${elapsed}s${turnPart}${errPart}]`
   const out = []
   if (isExpanded(state, foldKey)) {

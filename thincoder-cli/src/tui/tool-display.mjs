@@ -26,7 +26,7 @@ export const REMINDER_CAP = 3               // max pending reminders shown on tu
 export const REMINDER_PERSIST_TURNS = 5     // persist reminders every N turns
 
 export const _toolTicks = new Map()
-// §19 action registry: tool_call id → subagent action (non-spawn only — spawn is
+// AGENT-LOOP-SUBAGENT.md §6.7 action registry: tool_call id → subagent action (non-spawn only — spawn is
 // the default when no record exists). onToolCall sees the args, onToolResult only
 // the name; without the record every subagent result would route as a spawn.
 export const _subActions = new Map()

@@ -210,7 +210,7 @@ export class ContinueError extends Error {
   }
 }
 
-/** §17 D-S6 auto-turn guard 标记集（核内单源）：快照/回填两 helper 共用本清单——
+/** AGENT-LOOP-ASYNC-POOL.md §6.8 D-S6 auto-turn guard 标记集（核内单源）：快照/回填两 helper 共用本清单——
  *  端侧宿主载体（`panel._guardCarry`）与核载体（`agent._inheritedGuard`）同清单。 */
 export const INHERITED_GUARD_KEYS = [
   "_mutatedThisRun", "_verifiedThisRun", "_verifyPassed", "_calledAdvisorThisRun",
@@ -231,7 +231,7 @@ export function restoreGuard(target, snap) {
   for (const k of INHERITED_GUARD_KEYS) if (k in snap) target[k] = snap[k]
 }
 
-/** 跨段累计编号帧（TURN-CAP-CONTINUE.md §19.3——第 19 批 TURN-ACROSS-SEGMENTS）：
+/** 跨段累计编号帧（TURN-CAP-CONTINUE.md §4——第 19 批 TURN-ACROSS-SEGMENTS）：
  *  唯一计算点（纯函数）——把链内累计序数换算成面向消费面的编号载荷。
  *  - seq      = 该轮链内累计序数（1 起——`agent._turnSeq` 每轮 +1，续跑不重置）
  *  - turn     = 段内轮号（0 起——段内帽判定的循环变量）

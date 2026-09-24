@@ -1,9 +1,9 @@
 /**
  * subagent-blocks.mjs — 子agent 活动区块缓冲（AGENT-LOOP.md §7.2 D4，消费端）。
- * state.subTasks[key] = { key, role, model, async（§19.5 D-M7b——⟦ev⟧async 标记——
+ * state.subTasks[key] = { key, role, model, async（AGENT-LOOP-SUBAGENT.md §6.7.2 D-M7b——⟦ev⟧async 标记——
  * undefined = sync）, started, done, doneAt, blocks:
  * [{kind,text}], currentTool, toolArgs, turn, maxTurns, approval, lastError,
- * dropped, blockEpoch, awaitingDigest（§17）, _freezeAt（冻结锚点）, stopped（§19.5）,
+ * dropped, blockEpoch, awaitingDigest（AGENT-LOOP-ASYNC-POOL.md §6.8）, _freezeAt（冻结锚点）, stopped（AGENT-LOOP-SUBAGENT.md §6.7.2）,
  * children: []（SUBAGENT-TAIL：嵌套子代理**守护载体**——内容并入本块 blocks——见
  * subagent-children.mjs）}。
  * 职责：前缀路由（parseRelayPath——**SUBAGENT-TAIL（D-ST1）：嵌套段内容行并入外层
@@ -26,7 +26,7 @@ import {
   closeSubChild,
 } from "./subagent-children.mjs"
 export { SUB_BLOCK_LINE_LIMIT, appendSubBlock } from "./subagent-children.mjs"
-// 2026-09-05 module-split：finish/freeze 族 + §19.6 面板现算迁 subagent-freeze.mjs——
+// 2026-09-05 module-split：finish/freeze 族 + AGENT-LOOP-SUBAGENT.md §6.7.2 面板现算迁 subagent-freeze.mjs——
 // routeSub*/compression panel 内部用本地 import；re-export 保外部 import 面（index.mjs 等）
 // CLI-ACTIVITY-DEBLOAT F-3（2026-09-10）：面板手工镜像退役——re-export 面换现算导出
 // computePanelBlocks（读时现算），本文件全部刷镜调用点删除（单账本——变更点不再手动同步）。
@@ -36,13 +36,13 @@ export { computePanelBlocks, finishSubTask, finishSubTaskKey, freezeSubTaskLines
 // 前缀文法/解析已迁 src/agent/relay-prefix.mjs（第 27 批 §12.3②）——本文件不自持副本。
 /** ⟦ev⟧ token parser：`⟦ev⟧<name>\x1e<n>\x1e<max>\x1e<phase>\x1e<detail>`。phase done
  *  = async 完成即冻结（settle 时发）；settled = 挂起期完成——冻结延迟至 digest 消化
- *  完成（§17.5.5 freezeReclaimDigestedBlocks 逐条回收——不等池空）或池空退出兜底补发；
- *  stopped（§19.5 D-M6）= cancel 中止——interrupted 语义立即冻结（标题 "stopped"）；
+ *  完成（AGENT-LOOP-ASYNC-POOL.md §6.8 freezeReclaimDigestedBlocks 逐条回收——不等池空）或池空退出兜底补发；
+ *  stopped（AGENT-LOOP-SUBAGENT.md §6.7.2 D-M6）= cancel 中止——interrupted 语义立即冻结（标题 "stopped"）；
  *  queued（§20 D-SD3b）= 排队 spawn 返回即建 waiting 块（round2 #2 事件通道——
  *  `⟦ev⟧queued\x1e<kind>\x1e<position>\x1equeued\x1e<detail>`——kind slot/wait/depc）——
  *  启动后 ⟦ev⟧async 转 running（同 key 不重建）；cancelled（§20）= 出队/取消——**零字段**
  *  移除块（不冻结——无活动可冻结）——与 async 同型单独解析（不入本正则）；
- *  async（§19.5 D-M7b + 处置 #4）= **零字段**标记（`⟦ev⟧async\x1e`——无 n/max/phase/detail 段）——
+ *  async（AGENT-LOOP-SUBAGENT.md §6.7.2 D-M7b + 处置 #4）= **零字段**标记（`⟦ev⟧async\x1e`——无 n/max/phase/detail 段）——
  *  routeSubToken 单独解析设 sub.async = true（不入本正则——本正则要求 4 字段）；**缺失 key
  *  （块尚未创建）缓冲 `state._pendingAsyncKeys`——ensureSubTaskKey 块创建时应用（兜底）。 */
 export const SUB_EVENT_RE = /^⟦ev⟧(turn|approval|done|settled|stopped|queued)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e?([\s\S]*)$/
@@ -78,7 +78,7 @@ export function throttleSubRender(scheduleRender) {
   _subRenderTimer.unref?.()
 }
 
-/** §19.5: key/role 分拆版核心（routeSub* 经 parseRelayPath；兼容 ensureSubTask(match)）。 */
+/** AGENT-LOOP-SUBAGENT.md §6.7.2: key/role 分拆版核心（routeSub* 经 parseRelayPath；兼容 ensureSubTask(match)）。 */
 export function ensureSubTaskKey(state, key, role) {
   // Tombstone guard：abort 子代理冻结后晚到 token 不得复活区块（2026-08-30 残项）
   state._frozenSubKeys ??= new Set()
@@ -101,10 +101,10 @@ export function ensureSubTaskKey(state, key, role) {
       blocks: [], currentTool: null, toolArgs: null, turn: 0, maxTurns: 0, approval: null,
       lastError: null, dropped: 0,
       _lineCount: 0, _charCount: 0, // 双维记账（TUI.md §15.3.4——行数维 + 字符维，subagent-children.mjs）
-      stopped: false, // §19.5: ⟦ev⟧stopped 冻结标记（标题 "stopped"）
+      stopped: false, // AGENT-LOOP-SUBAGENT.md §6.7.2: ⟦ev⟧stopped 冻结标记（标题 "stopped"）
       children: [], // SUBAGENT-TAIL: 嵌套子代理守护载体（内容并入本块——subagent-children.mjs）
     }
-    // §19.5 D-M7b ①（处置 #4 兜底——2026-09-03）：缺失 key 的 ⟦ev⟧async 事件已缓冲
+    // AGENT-LOOP-SUBAGENT.md §6.7.2 D-M7b ①（处置 #4 兜底——2026-09-03）：缺失 key 的 ⟦ev⟧async 事件已缓冲
     // pending 标志（routeSubToken——async 先于块创建到达：排队条目补位启动的时序窗口）
     // ——块创建（此处）即应用——sub.async 区块创建即知（⏹ 门控/头标判定源保真）。
     if (state._pendingAsyncKeys?.delete(key)) state.subTasks[key].async = true
@@ -150,7 +150,7 @@ export function routeSubToken(state, t, scheduleRender) {
   if (!path) return false
   const payload = path.rest
   const nested = path.inner.length > 0
-  // §19.5 D-M7b ① + 处置 #4（2026-09-03 评审 #4——兜底）：零字段 async 标记在
+  // AGENT-LOOP-SUBAGENT.md §6.7.2 D-M7b ① + 处置 #4（2026-09-03 评审 #4——兜底）：零字段 async 标记在
   // ensureSubTaskKey **之前**单独消费（async spawn 实际启动即发——sync 不发——精确
   // 匹配：async 后须 RS 或串尾——正文伪前缀形态不误吞；内容侧伪哨兵已由生成侧
   // stripEventToken 先行剥除——本分支只见真事件）。live 区块直接置位 sub.async；
@@ -197,8 +197,8 @@ export function routeSubToken(state, t, scheduleRender) {
   const sub = ensureSubTaskKey(state, path.head, path.head.slice(0, path.head.lastIndexOf("#")))
   if (!sub) return true // frozen tombstone — late token from an aborted child: drop
   // ⟦ev⟧：turn/approval 进度 → 仅头部（D1——不进 blocks/主流）；done（§15 D-A3）=
-  // 完成即冻结（settle 时发）；settled（§17 D-S8）= 挂起期完成——驻留面板中间态
-  // "done · awaiting digestion"，池空补发冻结；stopped（§19.5）= cancel——立即冻结；
+  // 完成即冻结（settle 时发）；settled（AGENT-LOOP-ASYNC-POOL.md §6.8 D-S8）= 挂起期完成——驻留面板中间态
+  // "done · awaiting digestion"，池空补发冻结；stopped（AGENT-LOOP-SUBAGENT.md §6.7.2）= cancel——立即冻结；
   // queued（§20 D-SD3b）= 排队 spawn 等待块（spawn 返回即建/状态变迁刷新——覆盖式
   // 更新 sub.queued——块不可展开（无活动流）；启动后 async 事件清标转 running）。
   if (payload.startsWith("⟦ev⟧")) {
@@ -239,7 +239,7 @@ export function routeSubToken(state, t, scheduleRender) {
       sub.done = true
       sub.doneAt = Date.now()
       sub.awaitingDigest = true
-      // 冻结锚点（2026-09-03 修复轮）：settle 时刻流位置——§17.5.5 digest 完成逐条回收
+      // 冻结锚点（2026-09-03 修复轮）：settle 时刻流位置——AGENT-LOOP-ASYNC-POOL.md §6.8 digest 完成逐条回收
       // （freezeReclaimDigestedBlocks）与未消化残项的池空退出兜底（freezeAllSubTasks）
       // 都按它 splice 落位——digest 总览文本之前（round1 #1 裁定——T-S6/T-S14 同口径）。
       sub._freezeAt = state.lines?.length ?? 0

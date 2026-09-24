@@ -51,18 +51,18 @@ function logToolError(toolName, args, error) {
 }
 
 /**
- * §19 action-level classification (AGENT-LOOP.md §19 D-M1): the merged subagent
+ * action-level classification (AGENT-LOOP-SUBAGENT.md §6.7 D-M1): the merged subagent
  * tool expresses spawn (side effect) and status (read-only query) through
  * its `action` parameter — the tool-level readonly flag can no longer express both.
  * dispatch Phase-1/Phase-2 classifies per action: status behaves as readonly
  * (planMode pass / no permission ask / batchable), spawn keeps its non-readonly
  * gates, escalate runs non-readonly AND serially (the retired escalate tool had no
  * parallel flag — zero behavior change under the merged surface).
- * §19.5 cancel (19.5.2b round2 #4): CONTROL-class exemption — cancel only
+ * AGENT-LOOP-SUBAGENT.md §6.7.2 cancel (19.5.2b round2 #4): CONTROL-class exemption — cancel only
  * stops, never starts. isSubagentControlAction feeds the SAME two gate sites as
  * readonly (planMode pass / no permission ask — never joins a batch approval
  * group / no handler → not denied — digest 内 cancel 放行).
- * §19.6 panel (round1 #5): view 面归只读类（同 status——planMode 放行、免
+ * AGENT-LOOP-SUBAGENT.md §6.7.2 panel (round1 #5): view 面归只读类（同 status——planMode 放行、免
  * 审批、可批并行）；freeze 面归控制类（同 cancel——planMode 放行、免权限审批、
  * 批审批不入组、digest 内放行）。freeze 存在（非空 key）即控制类——否则只读类。
  */
@@ -83,11 +83,11 @@ function isSubagentReadonlyAction(toolName, args) {
   }
   if (toolName !== "subagent" || !args || typeof args !== "object") return false
   const action = args.action
-  // §19.8: check 动作已删除——只读面仅剩 status（planMode 放行/免权限审批/可批并行）
+  // AGENT-LOOP-SUBAGENT.md §6.7.5: check 动作已删除——只读面仅剩 status（planMode 放行/免权限审批/可批并行）
   if (action === "status") return true
   // SUBAGENT-OBSERVE-SEND：observe = readonly 查询（同 status——digest/planMode 放行）
   if (action === "observe") return true
-  // §19.6 panel view 面（freeze 缺省/空 = 视图请求——readonly；非空 freeze 归控制类）
+  // AGENT-LOOP-SUBAGENT.md §6.7.2 panel view 面（freeze 缺省/空 = 视图请求——readonly；非空 freeze 归控制类）
   if (action === "panel" && (args.freeze === undefined || args.freeze === null || String(args.freeze) === "")) return true
   return false
 }
@@ -97,7 +97,7 @@ function isSubagentControlAction(toolName, args) {
   // SUBAGENT-OBSERVE-SEND：send = 控制类豁免（同 cancel——父回合内显式调用即授权——
   // 写子输入队列属父对子轻量引导，非产品代码写——免审批、planMode 放行、digest 内放行）
   if (args?.action === "send") return true
-  // §19.6 panel freeze 面（D-P3 门控在 executor——只读/控制分类在此）
+  // AGENT-LOOP-SUBAGENT.md §6.7.2 panel freeze 面（D-P3 门控在 executor——只读/控制分类在此）
   if (args?.action === "panel" && args.freeze !== undefined && args.freeze !== null && String(args.freeze) !== "") return true
   return false
 }
@@ -478,7 +478,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
   }
   for (const item of prepared) {
     // escalate action keeps the retired escalate tool's serial placement (no
-    // parallel flag): it flushes the batch and runs alone in call order (§19 —
+    // parallel flag): it flushes the batch and runs alone in call order (AGENT-LOOP-SUBAGENT.md §6.7 —
     // spawn stays parallel; status classifies as readonly and batch freely).
     if (item.tool && !item.tool.readonly
         && (!item.tool.parallel || isSubagentEscalateAction(item.tool.name, item.args))) {

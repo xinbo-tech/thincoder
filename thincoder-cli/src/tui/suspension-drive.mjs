@@ -1,10 +1,10 @@
 /**
- * suspension-drive.mjs — §17 挂起会话驱动器（2026-09-05 module-split：agent-turn.mjs
- * 535 > 500 硬限——poolCounts + §17 挂起会话段 verbatim 迁入，语义零变；agent-turn.mjs
+ * suspension-drive.mjs — AGENT-LOOP-ASYNC-POOL.md §6.8 挂起会话驱动器（2026-09-05 module-split：agent-turn.mjs
+ * 535 > 500 硬限——poolCounts + AGENT-LOOP-ASYNC-POOL.md §6.8 挂起会话段 verbatim 迁入，语义零变；agent-turn.mjs
  * re-import（runAgentTurn ↔ suspensionSession 函数级静态环——模块求值期无顶层调用，
  * 环安全——session-slots ↔ session.mjs 同款先例）。
  *
- * §17（2026-09-02，AGENT-LOOP.md §9 D-S1..S9）：回合尾后台池非空 → 不阻塞等待，
+ * AGENT-LOOP-ASYNC-POOL.md §6.8（2026-09-02，AGENT-LOOP.md §9 D-S1..S9）：回合尾后台池非空 → 不阻塞等待，
  * 进入挂起态——挂起空闲输入开放（Enter = 新回合入队列 + 唤醒）、busy（processing 含
  * digest）提交亦入同队列（容量 8——busy-extend 批 2026-09-22 · queue-visible 批 2026-09-24；
  * `TUI-INPUT-BOX.md` §4.1）、settle 事件驱动
@@ -144,7 +144,7 @@ function waitForSettleOrWake(agent, state) {
 
 /** 后台模式状态行文本（D-S8；17.5.4 #6 顺手对齐）："后台 N 子代理运行中 · M 完成待消化"
  *  ——"运行中" = running + queued（含后台评审——§11.2 D-24b 同面板计数）+ running consult
- *  children（R17——会诊跨回合）；"完成待消化" = pending 任一族移交项 + §17.5 回合尾留池
+ *  children（R17——会诊跨回合）；"完成待消化" = pending 任一族移交项 + AGENT-LOOP-ASYNC-POOL.md §6.8 回合尾留池
  *  的 settled 未消费项（挂起会话 sweep 前的可见窗口）。 */
 function backgroundStatusText(agent) {
   const map = agent._asyncSubagents
@@ -155,7 +155,7 @@ function backgroundStatusText(agent) {
   const queued = agent._asyncQueue?.length ?? 0
   const pending = pendingFamilyCount(agent)
   const doneInPool = (map ? [...map.values()].filter((e) => e.done).length : 0)
-    + (adv ? [...adv.values()].filter((e) => e.done).length : 0) // §17.5 留池未消费
+    + (adv ? [...adv.values()].filter((e) => e.done).length : 0) // AGENT-LOOP-ASYNC-POOL.md §6.8 留池未消费
   const awaiting = pending + doneInPool
   const active = running + queued
   return active > 0 || awaiting > 0
@@ -204,7 +204,7 @@ async function digestTurn(ctx, upstream = false) {
 }
 
 /**
- * §17 挂起会话驱动（D-S9 行表；由 runAgentTurn 回合尾进入，池空自然退出）：
+ * AGENT-LOOP-ASYNC-POOL.md §6.8 挂起会话驱动（D-S9 行表；由 runAgentTurn 回合尾进入，池空自然退出）：
  * - suspension：池项 settle → 入 pending → 开 auto-turn（合并消化近邻 settle）；
  *   上行 ask 入队 → 唤醒 + 谓词 → 开唤醒轮（F-UC7——谓词先于池空退出判，见第 2 步）；
  *   挂起空闲用户 Enter、会话内 busy Enter → pendingInput 队列（容量 8——busy-extend
@@ -212,7 +212,7 @@ async function digestTurn(ctx, upstream = false) {
  *   ——用户输入优先于 digest；
  * - auto-turn：消化中 settle 不并发开新轮（单 runAgent 循环），轮末按 pending/池态
  *   续开合并消化轮或回挂起；pendingInput 非空 → 以本批合并消息开新回合（不触发新 digest）；
- * - §17.5.5：每次消化/会话内用户回合消费 pending 后 → freezeReclaimDigestedBlocks
+ * - AGENT-LOOP-ASYNC-POOL.md §6.8：每次消化/会话内用户回合消费 pending 后 → freezeReclaimDigestedBlocks
  *   逐条冻结回收（消化完成块不滞留面板——不等池空；settle 锚点 splice——digest 总览
  *   文本之前——round1 #1 裁定）；
  * - 退出：池空 + pending 空 + 无待处理输入 → freezeAllSubTasks 补发冻结（仅兜底
@@ -254,7 +254,7 @@ export async function suspensionSession(ctx) {
           agent._suspended = false // 用户回合 = 普通回合语义（① 直注入 + settle 即冻结）
           await runAgentTurn(ctx, action.text, { skipSession: true })
           agent._suspended = true
-          // §17.5.5：该回合消化完 pending（run 首行注入）→ 逐条冻结回收驻留块
+          // AGENT-LOOP-ASYNC-POOL.md §6.8：该回合消化完 pending（run 首行注入）→ 逐条冻结回收驻留块
           // （不等池空——settle 锚点 splice——digest 总览文本之前；与 digest 回收同规则）
           // R17：回收比对 = pending 单容器（四族统一——ASYNC-RESULT-CONTAINER.md D2）
           freezeReclaimDigestedBlocks(state, allPendingEntries(agent))
@@ -269,7 +269,7 @@ export async function suspensionSession(ctx) {
       const upstream = upstreamWaiting(agent)
       if (pendingFamiliesNonEmpty(agent) || upstream) {
         await digestTurn(ctx, upstream)
-        // §17.5.5 实测修订（2026-09-03）：digest 消化完成（pending 条目已注入）→ 逐条补发
+        // AGENT-LOOP-ASYNC-POOL.md §6.8 实测修订（2026-09-03）：digest 消化完成（pending 条目已注入）→ 逐条补发
         // done 冻结回收——不等池空——块从面板移除进流（settle 锚点 splice 落位——digest
         // 总览文本之前——round1 #1 裁定）；池空 freeze-out 仅兜底未消化残项（挂起会话
         // 结束统一清场）——块回收与池空解耦（T-H7/AC-H5）。
@@ -307,7 +307,7 @@ export async function suspensionSession(ctx) {
       agent._pendingAsyncResults = []
       const { cleanupConsultSessions } = await import("@thincoder/core/agent-tools/consult.mjs")
       cleanupConsultSessions(agent)
-      // §17 round2 偏差 #2-CLI（code review round2 #2-CLI）+ INPUT-LOCK + queue-visible 批
+      // AGENT-LOOP-ASYNC-POOL.md §6.8 round2 偏差 #2-CLI（code review round2 #2-CLI）+ INPUT-LOCK + queue-visible 批
       // （2026-09-24）：中止时不静默丢弃队列内输入——Enter 已清空输入框并入 pendingInput
       // （用户视为已发送）——按合并计划全量转回 state.queue（{text} 逐动作条目——多批 = 多回合
       // 续发，零丢失；不渲染待发送块——TUI.md §7.5 边界）+ 提示行明示去向（不静默丢）。

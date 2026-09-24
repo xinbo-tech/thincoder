@@ -3,7 +3,7 @@
  * runAgent ≥300 单体按骨干—细节两层提取后，三阶段函数先同文件后移、又因文件总量
  * 超 500 硬限迁入本文件——verbatim，语义零变）：压缩检查（checkAndCompact——回合
  * 循环内安全点压缩）、回合末蒸馏发射（fireEndOfRunDistill）、回合收尾
- * （finalizeAgentTurn——consult 清理/async 池收集/guardCarry 继承——§19.8 2026-09-06：
+ * （finalizeAgentTurn——consult 清理/async 池收集/guardCarry 继承——AGENT-LOOP-SUBAGENT.md §6.7.5 2026-09-06：
  * checkN 持久已随 action:'check' 删除退役——步骤枚举同步）。
  * 注：ContinueError 自 ../agent.mjs import 构成函数级静态环（模块求值期无顶层调用——
  * 运行期 instanceof 时 agent.mjs 已完成求值——环安全，session-slots ↔ session.mjs
@@ -330,12 +330,12 @@ export async function finalizeAgentTurn(agent, ctx) {
       history._pendingAsyncResults = history._pendingAsyncResults.filter((e) => e?.role !== "consult" && e?.role !== "escalate")
     }
   }
-  // Async subagent turn-end handling (AGENT-LOOP.md §15 D-A3 + §17 D-S1 + §17.5
+  // Async subagent turn-end handling (AGENT-LOOP.md §15 D-A3 + AGENT-LOOP-ASYNC-POOL.md §6.8 D-S1 + AGENT-LOOP-ASYNC-POOL.md §6.8
   // supersede; the collector has moved to the core single-source injector — 500-line split):
   // Stop (plain abort) → clear WITHOUT injecting stale errors (Ctrl+I keeps the pool);
   // ContinueError → no wait/no injection; else → collect SETTLED entries (D-S3 ①) —
   // running/queued STAY (no allSettled wait) — the suspension session digests them (D-S2).
-  // §17.5: a suspension-driven run (opts.suspDriven — the panel-chat layer runs
+  // AGENT-LOOP-ASYNC-POOL.md §6.8: a suspension-driven run (opts.suspDriven — the panel-chat layer runs
   // suspensionSession after this run) NO LONGER drains settled entries at turn end —
   // they stay pooled (settled not consumed) so the session's first sweep → digest
   // turn digests them (17.5.2 方案 B). Undriven callers keep the direct turn-end
@@ -404,7 +404,7 @@ export async function finalizeAgentTurn(agent, ctx) {
   if (depth === 0) history._asyncSubagents = (asyncMap && asyncMap.size > 0) ? asyncMap : undefined
   if (depth === 0) history._asyncAdvisors = (advMap && advMap.size > 0) ? advMap : undefined
   agent._inAutoTurn = false
-  // §17 D-S6: an auto-turn's end-state guard marks carry into the next USER run via
+  // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S6: an auto-turn's end-state guard marks carry into the next USER run via
   // opts.guardCarry (restored at its start above). Normal ends only — Stop discards
   // (user cancelled the work); ContinueError lets the auto-resumed run snapshot at
   // its own end (CLI parity).

@@ -190,7 +190,7 @@ const MODEL_SPECS = [
   // **参考实配**（网关对 max_tokens 不硬拒 ⇒ 上限未证）；context 256_000 = **网络口径**（他仓/文档 256K，未本渠道实测）。
   ["hy3",               { context: 256_000, maxOutput: 128_000, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"] }],
   // hy3-preview（在场实测：/models + 401 前验活；能力位**未探针**）——**尺寸行**：仅登记尺寸位，取值 =
-  // hy3 **同族沿用**（maxOutput 参考实配 / context 网络口径）。D-11：能力位不跨名沿用 ⇒ thinking / 枚举 / 视觉全不声明。
+  // hy3 **同族沿用**（maxOutput 参考实配 / context 网络口径）。D-11（2026-09-25 收窄现口径）：能力位**无族据**一律不声明 ⇒ 该名无族据 ⇒ thinking / 枚举 / 视觉全不声明。
   ["hy3-preview",       { context: 256_000, maxOutput: 128_000 }],
   // hy4-preview（在场实测：/models + 401；能力位**未探针**）——尺寸行：取值 = hy3 族**同族沿用**
   // （maxOutput 参考实配级取值 / context 网络口径；批次档 §1.2 未给该名尺寸行 ⇒ 上报清单 2，行注即标级）。

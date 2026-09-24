@@ -33,7 +33,7 @@ export function buildAdvisorBlock(roundLabel) {
  * Append one advisor progress chunk ({ kind: "think"|"tool"|"text", text }) to
  * the block's scrolling content region. Same-kind text runs merge; nothing is
  * ever truncated — the full review stays in the block (scrolling).
- * §19.5 D-M8 nested sub-label: `sub` (e.g. "explore#1" — an INNER spawn's
+ * AGENT-LOOP-SUBAGENT.md §6.7.2 D-M8 nested sub-label: `sub` (e.g. "explore#1" — an INNER spawn's
  * attribution, carried on the chunk by subagent.mjs runChild forward) renders as
  * a dim row-start tag. The tag repeats only when the attribution CHANGES or a
  * run starts — rows of the same sub follow unprefixed (CLI sub-label parity);
@@ -373,7 +373,7 @@ export function finishTool(ctx, name, id, text, links, truncated) {
 }
 
 // ─── Loading / Error ───────────────────────────
-// setLoading moved to loading.js (§17 split — ui.js stays free of the state.js
+// setLoading moved to loading.js (AGENT-LOOP-ASYNC-POOL.md §6.8 split — ui.js stays free of the state.js
 // bridge dependency; suspension-aware loading state lives with state.js consumers)
 
 /** Historical tool call rendered from the human line (collapsed card, read-only). */
