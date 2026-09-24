@@ -27,7 +27,10 @@
     "unit": "元 / 百万 token",
     "source": "各厂商官方定价页（条目级 source 为准）"
   },
-  "recomputed": null,
+  "recomputed": {
+    "from": "2026-09-24-roster-29-v5.json",
+    "at": "2026-09-25T00:17:01+08:00"
+  },
   "judge": {
     "promptVersion": 1,
     "frozenAtSuiteVersion": 5,
