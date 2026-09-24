@@ -55,13 +55,13 @@ test("render.1：概览判官三行 + 分歧率 + 方法判分条 + 成本表五
   assert.ok(md.includes("- 判官 · deepseek-flash：A=pass / B=pass → 合成分 pass（unanimous）"), "判官理由行")
   assert.ok(md.includes("- 复核 · deepseek-flash：1 次（uphold 1 · 翻案 0）"), "复核行")
   // 缺价位（§2.10.5）：B 位换成未录价键 ⇒ 位级成本 null + 缺价警告在位（金额零展示 ⇒ 缺价面由 warnings / 控制台承载）
-  // （键取当下仍缺价者；原用 `tokenhub:hy3`——该键 2026-09-24 补录后换 `ark:doubao-seed-2-1-lite-260915`，父侧直接校准 · 可 revert）
+  // （合成键——不取现盘缺价档（价格补录不连带改测试）· 现表零通配 ⇒ fixture 恒未录价，通配命中则该腿显式报红）
   const unpricedData = priced()
-  unpricedData.judge.judges[1] = { ...unpricedData.judge.judges[1], provider: "ark", model: "doubao-seed-2-1-lite-260915" }
+  unpricedData.judge.judges[1] = { ...unpricedData.judge.judges[1], provider: "fixture", model: "unpriced-model" }
   unpricedData.warnings = []
   applyPricesToResult(unpricedData, loadPrices(pricesPath()), unpricedData.warnings)
   assert.equal(unpricedData.judge.judges[1].costCny, null, "缺价 ⇒ 位级成本 null")
-  assert.ok(unpricedData.warnings.some((w) => w.includes("价格未录：判官 B（ark:doubao-seed-2-1-lite-260915）")), "缺价警告在位")
+  assert.ok(unpricedData.warnings.some((w) => w.includes("价格未录：判官 B（fixture:unpriced-model）")), "缺价警告在位")
   assert.equal(/判官成本|复核成本/.test(renderReport(unpricedData)), false, "缺价形态渲染零评估开销字样（md 无缺价口径句）")
   // 复核失败（AC-12 告警面 + AC-1 第三态 fail-closed）：注入 review error ⇒ 该 run 保持 fail（无有效复核结论 ⇒ 不改判）
   const withRevErr = priced()
