@@ -10,7 +10,7 @@
     },
     {
       "provider": "glm",
-      "model": "glm-5.3",
+      "model": "glm-5.3-flashx",
       "maxTokens": 2048,
       "timeoutSec": 30
     }

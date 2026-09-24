@@ -89,7 +89,7 @@ node bench/run.mjs --recompute --from bench/results/2026-09-24-roster-29-v5.json
 **`bench/judge.json`（必备）**：`judges`（**恰 2 位 = A / B**，位序定身份）+ `arbiter`（**仲裁 C · 必备**）。
 每位 = `provider`（用户 config 的渠道名）/ `model` / `maxTokens`（[1024, 8192]）/ `timeoutSec`（[5, 120]，
 `temperature` 冻结 0）；`frozenAtSuiteVersion` 须 === `SUITE_VERSION`。**缺文件 / 不合 schema / 不在用户 config ⇒ 拒跑**。
-**现行三槽** = A `deepseek:deepseek-flash` · B `glm:glm-5.3`（2026-09-24 换代——原 `tokenhub:hy3`；换代 ⇒ `SUITE_VERSION + 1`）
+**现行三槽** = A `deepseek:deepseek-flash` · B `glm:glm-5.3-flashx`（2026-09-24 换代——原 `tokenhub:hy3`；换代 ⇒ `SUITE_VERSION + 1`）
 · 仲裁 C `deepseek:deepseek-v4-pro`。
 
 - **与被测重合（逐位 · 明示不拒跑）**：任一位的 `provider:model` ∈ 本次被测集合 ⇒ **允许自判** + 报告判官行该位标注「该位 ∈ 被测（自判）」；
