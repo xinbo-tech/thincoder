@@ -1163,7 +1163,156 @@ cli = **805 / 0**；vsc = **942 / 0**；`node scripts/doc-check.mjs` = 悬空 **
 
 无 `open` 项。
 
+## 13. bench 名单面 14 档规格行补齐（2026-09-24 参数口径与判官面收正批 · 台账 #267）
+
+### 13.1 方案与理由
+
+基准名单（`bench/models.json` 29 档）的机器读源缺口（父侧对账 2026-09-24）：**10 档无专行**（落泛前缀行 / 兜底 `DEFAULT_SPEC`——`warnUnknownModel` 告警 + 尺寸静默低估 + 视觉面只存 note 散文）
++ **4 档专行缺视觉位声明**（`deepseek-v4-pro` / `glm-5.3` / `qwen3.7-max` / `hy3`）+ 尺寸失实面（doubao 2.1 系兜底 128K/32K 而其 `max_tokens` 受理至 524 288）。
+
+处置口径（用户 18:44「9 档参数补齐的应该去查表补齐」+ 批次档 §1.3-⑤）：**建行 = 机器读源补齐**；取值三态——① 有读数（实测 / 校验级 / 受理级）照写；② 官方口径 / 同族沿用（**点名来源行**）照写 + 行注标级；③ 零口径 ⇒ **不声明该能力位**（尺寸位沿现盘生效值 + 行注标「未取证」）。
+**不猜**：无实测、无口径的字段一律不冒充——宁可行注登记「未探」，不写猜测值（循 §2.4 D-2「不据同族类推补行」的裁定精神）。
+**视觉位语义单一**（§2.7 + T-7 冻结）：`multimodal` 仅 `true` 或**不声明**——「实测无视觉」的正确机读形态 = 不声明（补齐 = 行注 + 测试锚，非改值）。
+
+### 13.2 表变更清单（10 行新增 + 4 档声明面裁定 + 行注补录；零删除、零改既有行取值）
+
+| # | 名 | 动作 | 落点 |
+|---|---|---|---|
+| 1 | `glm-4.5-air` | 建行（族沿用 `glm-4` 行取值 + 实测温度事实） | 新增行（`glm-4` 行之后） |
+| 2 | `qwen3.7-plus` | 建行（context 官方口径 + 机制位族沿用 `qwen3.7-flash` 行；枚举 / 视觉不声明） | 新增行（`qwen3.7-flash` 行之后） |
+| 3 | `qwen3.5-27b` | 建行（context 官方口径 · 定价页分档佐证；其余族沿用 `qwen3.6-27b` 行） | 新增行（`qwen3.6-27b` 行之后） |
+| 4–6 | `kimi-k2.6` / `kimi-k2.7-code` / `kimi-k2.7-code-highspeed` | 建行（温度「仅受理 1」= 校验级；尺寸位未取证 ⇒ 沿现盘兜底值 + 标级；**不得带 `tempRange`**） | 新增三行（`k3` 行之后） |
+| 7–9 | `doubao-seed-2-1-pro-260915` / `-turbo-260628` / `-lite-260915` | 建行（thinking / 枚举 / maxOutput = 实弹；context 族沿用 2.0 行；视觉**未探**不声明） | 新增三行（`doubao-seed-2-0-lite-260428` 行之后） |
+| 10 | `MiniMax-M2.7`（前缀行——覆盖标准档与 `-highspeed`） | 建行（thinking 实测；尺寸 / 机制位族沿用 `minimax-m1` 行；`thinkApi` / 枚举不声明） | 新增行（`minimax-m1` 行之后） |
+| 11 | `qwen3.7-max` | 声明面裁定：**保持不声明**（实测拒图像——T-7 语义下的「无视觉」形态）+ 补测试锚 | 行注（既有行）+ 测试档 |
+| 12 | `hy3` | 同 11（实测无视觉——A-1 锚已在位，行注 / 测试零改） | —— |
+| 13 | `deepseek-v4-pro` | 声明面裁定：**保持不声明** + 行注升级「视觉面未探」+ 补探登记（§13.4） | 行注（既有行） |
+| 14 | `glm-5.3` | 同 13 | 行注（既有行） |
+| 15 | `mimo-v2.6-{pro,flash,pro-ultraspeed}` | 行注补录：effort **无生效面**（实弹：effort 被忽略；off 路径 = `thinking:{type:"disabled"}` ✓） | 行注（既有三行） |
+| 16 | `MiniMax-M3` / `minimax-m3` | 同 15（off 路径 = `type:"disabled"` ✓；effort 被忽略） | 行注（既有两行） |
+
+### 13.3 字段口径表（取值 + 证据等级）
+
+**新建行取值（逐名 · 证据等级括注）**：
+
+| 名 | context | maxOutput | thinking / 枚举 | 视觉 | 机制位（partialMode / cacheMode / thinkApi / tempRange / 其它） |
+|---|---|---|---|---|---|
+| `glm-4.5-air` | 128_000（族沿用 `glm-4` 行） | 32_000（族沿用 `glm-4` 行） | true（族沿用）；枚举**不声明**（未探） | 不声明（未探） | cacheMode `auto` / thinkApi `type` / reasoningEcho `optional` / tempRange [0, 1] / noUsageStream（均族沿用 `glm-4` 行） |
+| `qwen3.7-plus` | 1_000_000（**官方口径 · 网络转述**——2026-09-20 qwen-flash-specs 批 AC-6 已裁「允许入表 + 行注标级」） | 131_072（族沿用 `qwen3.7-flash` 行） | true（族沿用）；枚举**不声明**（零口径） | 不声明（未探） | partialMode / cacheMode `none` / thinkApi `effort` / tempRange [0, 2]（族沿用 `qwen3.7-flash` 行） |
+| `qwen3.5-27b` | 262_144（**官方口径 · 定价页分档佐证**——[128K, 256K) 档在售；规格页未逐名核） | 65_536（族沿用 `qwen3.6-27b` 行） | true（族沿用）；枚举**不声明**（零口径） | 不声明（未探） | partialMode / cacheMode `none` / thinkApi `effort` / tempRange [0, 2]（族沿用） |
+| `kimi-k2.6` · `kimi-k2.7-code` · `kimi-k2.7-code-highspeed` | 128_000（**未取证**——沿现盘兜底值；建行不改变生效值） | 32_000（同左） | 不声明（未探）；枚举**不声明** | 不声明（未探） | **零机制位声明**（`tempRange` 不得给——KD-31 例外档不变量） |
+| `doubao-seed-2-1-pro-260915` · `-turbo-260628` · `-lite-260915` | 256_000（族沿用 `doubao-seed-2-0-*` 两行；官方口径未逐名取证） | **524_288**（**受理级**——262 144 / 524 288 均 200；**上限未证**） | true（**实测**：裸请求 rc 在场）+ thinkApi `effort`（实测）+ 枚举七值（**受理级**——七值全 200、乱值 400 泛化） | **不声明（未探）**——如实标级 | 无（与 2.0 行同形：零 cacheMode / partialMode / tempRange / reasoningEcho 声明） |
+| `MiniMax-M2.7` | 256_000（族沿用 `minimax-m1` 行） | 128_000（族沿用） | true（**实测**：裸请求 rc 在场）；thinkApi **不声明**（off 路径**未找到**——`disabled` 不生效）；枚举**不声明**（effort 被忽略 ⇒ 无生效面） | 不声明（未探） | cacheMode `auto` / noUsageStream（族沿用 `minimax-m1` 行） |
+
+**行注草案（逐行 JS 注释 · 实现轮照抄；行注 = 证据等级承载面）**：
+
+```js
+// glm-4.5-air（智谱轻档 · 2026-09-24 bench 名单批）：temperature 0 受理 = **实测**（roster-expand §2.2）；其余 = **族沿用 glm-4 行**
+// （逐名官方口径未取证）；枚举 / 视觉面 = **未探**（不声明）。medium 直发实测受理（batch-params-judge §1.5）。
+["glm-4.5-air", { context: 128_000, maxOutput: 32_000, thinking: true, cacheMode: "auto", thinkApi: "type", reasoningEcho: "optional", tempRange: [0, 1], noUsageStream: true }],
+
+// qwen3.7-plus：context = **官方口径（网络转述）**（2026-09-20 qwen-flash-specs 批 AC-6 已裁允许入表——「100 万长文档」族点名）；
+// maxOutput / partialMode / cacheMode / thinkApi / tempRange / thinking = **族沿用 qwen3.7-flash 行**；枚举 / 视觉面 = **未探**（不声明）。
+["qwen3.7-plus", { context: 1_000_000, maxOutput: 131_072, thinking: true, partialMode: true, cacheMode: "none", thinkApi: "effort", tempRange: [0, 2] }],
+
+// qwen3.5-27b：context 262_144 = **官方口径（定价页分档佐证——[128K, 256K) 档在售；规格页未逐名核）**；
+// maxOutput / 机制位 = **族沿用 qwen3.6-27b 行**；枚举 / 视觉面 = **未探**（不声明）。
+["qwen3.5-27b", { context: 262_144, maxOutput: 65_536, thinking: true, partialMode: true, cacheMode: "none", thinkApi: "effort", tempRange: [0, 2] }],
+
+// kimi-k2.6 / kimi-k2.7-code / kimi-k2.7-code-highspeed（三行同形）：temperature **仅受理 1** = **校验级**
+// （400 原文「invalid temperature: only 1 is allowed for this model」· roster-expand §2.2）；尺寸位 = **未取证**
+// （沿现盘兜底值——建行不改变生效值）；**不得声明 tempRange**（KD-31 例外档不变量：入档值 = 实发值）；枚举 / 视觉面 = **未探**。
+["kimi-k2.6",                { context: 128_000, maxOutput: 32_000 }],
+["kimi-k2.7-code",           { context: 128_000, maxOutput: 32_000 }],
+["kimi-k2.7-code-highspeed", { context: 128_000, maxOutput: 32_000 }],
+
+// doubao-seed-2-1 三档（火山方舟 · 2026-09-24 bench 名单批 · 三行同形）：thinking / thinkApi / 枚举 = **实测**
+// （裸请求 rc 在场；`reasoning_effort:"none"` → rc=0；七值全 200、乱值 400 泛化 ⇒ **受理级**——等级低于 2.0 行的
+// 「真校验」，同值集不混级）；maxOutput 524_288 = **受理级**（262 144 / 524 288 均受理；**上限未证**）；
+// context = **族沿用 2.0 行**（官方口径未逐名取证）；**视觉面未探**（不声明——如实标级，不冒充实测）。
+["doubao-seed-2-1-pro-260915",   { context: 256_000, maxOutput: 524_288, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"] }],
+["doubao-seed-2-1-turbo-260628", { context: 256_000, maxOutput: 524_288, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"] }],
+["doubao-seed-2-1-lite-260915",  { context: 256_000, maxOutput: 524_288, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"] }],
+
+// MiniMax-M2.7（前缀行——覆盖标准档与 -highspeed）：thinking = **实测**（裸请求 rc 在场）；off 路径 **未找到**
+// （`thinking:{type:"disabled"}` 不生效——如实，不声明 thinkApi）；effort 被忽略 ⇒ **无生效面**（枚举不声明；medium 照发仅口径统一）；
+// 尺寸 / cacheMode / noUsageStream = **族沿用 minimax-m1 行**；视觉面 = **未探**（不声明）。
+["MiniMax-M2.7", { context: 256_000, maxOutput: 128_000, thinking: true, cacheMode: "auto", noUsageStream: true }],
+```
+
+### 13.4 未探登记（明确不声明 + 补探路径）
+
+| # | 面 | 现状（本批） | 补探路径 |
+|---|---|---|---|
+| 1 | `deepseek-v4-pro` 视觉 | 不声明（未探；行注注明） | 真值彩图 1 发探针（循 §9.2 先例）——**若证有视觉 ⇒ 同批改两处**（spec 声明 + `bench/models.json` 去 `skipDims:["vision"]`） |
+| 2 | `glm-5.3` 视觉 | 同上 | 同上 |
+| 3 | `doubao-seed-2-1-×3` 视觉 + `maxOutput` 上限 | 视觉未探（不声明）；上限未证（524 288 = 受理级下界） | 彩图探针 + 上限二分探针；随渠道面触碰或另批 |
+| 4 | `kimi-k2.6` / `k2.7-code` / `k2.7-code-highspeed` 尺寸位 | 未取证（沿现盘兜底值） | Moonshot 模型页 / 实弹探边；随渠道面触碰或另批 |
+| 5 | `glm-4.5-air` 尺寸位 + 枚举面 | 未取证（族沿用 `glm-4` 行）/ 未探 | 官方定价 / 模型页 + 实弹 effort 探针 |
+| 6 | `qwen3.7-plus` / `qwen3.5-27b` 枚举面 + 视觉面 | 未探（不声明） | 同族 qwen 实弹探针法（§9.2 先例） |
+| 7 | `MiniMax-M2.7` off 路径 | 未找到（`disabled` 不生效） | MiniMax 官方文档三档 thinking 模式交叉 + 实弹 |
+
+**告警面变化（如实登记）**：建行后 10 名不再触发 `warnUnknownModel`（「not found in MODEL_SPECS」控制台告警）——替代信号 = 行注「未取证 / 未探」字面 + 测试锚（§13.8 G-3）。
+
+### 13.5 消费面契约（本批动谁、谁零改）
+
+**零改面**：`thincoder-core/provider/core.mjs` 守卫与裁剪逻辑（effort 枚举校验 / `tempRange` 裁剪 / 路由与 format 豁免）· `auto-think.mjs` 与 `spawn-child.mjs` 的档位读取 · CLI `/think` 面板与 VSC 思考下拉（新建行未声明枚举的档 = 既有回退档形——与建行前同形）· `bench/models.json` 的 `skipDims`（10 名现状照旧）。
+**动面**：`model-specs.mjs` 表行（§13.2）；`bench` 中档口径的覆写值住 `models.json`，与 spec 表正交（两处各自的测试分档承载）。
+
+### 13.6 影响文件清单（as-of 2026-09-24 设计轮 · 实测行数以批次档 §5 为准 · **行数处置 = 评审轮 1 #1/#2 就地收正**）
+
+| 文件 | 现状 | 预期增量 | 说明 |
+|---|---|---|---|
+| `thincoder-core/model-specs.mjs` | 292 | +~45（10 行 + 行注块 + 4 处行注升级）⇒ ~337 | 见 §13.2 / §13.3；行序取「同族相邻」（查表按前缀长度排序，行序不影响命中——防遮蔽由 G-1 / T-11 覆盖）；**>300 ⇒ 登记 + 拆分计划**——见本节末「行数处置」段 |
+| `thincoder-core/test/model-specs.test.mjs` | 477 | **±0**（G-1..G-7 迁新载体档——500 硬限余量 23 行） | 仅 `[qwen] T-4/A-14` 退化锚**就地同名替换**（`qwen3.7-plus` 建行后不再是退化样本——改用仍在兜底的名字）；新增锚（建行逐名命中 / 「未探」词在场 / `multimodal` 分态）随 G-1..G-7 落新载体档（下行） |
+| `thincoder-core/test/model-specs-bench.test.mjs`（拟新增——名实施轮定） | 0 | ~90–140 | G-1..G-7 承载档（§13.8）；循 `model-specs-mimo.test.mjs` / `model-specs-qwen36.test.mjs` 先例（helpers 就地重定义 · 零 import 主档）；≤300 免登记；实施读数入批次档 §5 |
+| `thincoder-core/test/core-hygiene.test.mjs` | 183 | +4 ±1 | `SOFT_LINE_REGISTRY` 增 `model-specs.mjs`（建行后 >300 登记——规则源 = `thincoder-core/test/core-hygiene.test.mjs:149-162`）；注释块登记句 + Set 行 |
+
+**行数处置（登记 + 拆分计划 · 评审轮 1 #2）**：行数上限复读 = 软线 **300** / 硬限 **500**（`thincoder-core/test/core-hygiene.test.mjs:149-162` 实读规则：>500 硬红 · >300 未登记即红）——`model-specs.mjs` 292 + ~45 ⇒ ~337 ⇒ **登记**（上行 `core-hygiene.test.mjs` 同批落）；
+**拆分计划** = 拆点 `MODEL_SPECS` 表块（行 + 行注）外提；落点 `thincoder-core/model-specs-table.mjs`（拟新增——主档 re-export 保 import 面零改）；连带面 = 测试档文本扫描 helpers（`SPEC_SOURCE` 族）随拆分批改读两档；**消解窗口 = 越 500 硬限前或该档下次实质改动时**（循 `CORE-UNIFICATION.md` §2.8.1 子表行 12 / 13 体例）。
+
+### 13.7 验收标准回指（条目 #267 · 批次档 §1.1 / §1.3-⑤）
+
+| 判据 | 设计落点 | 判定方式 |
+|---|---|---|
+| 10 档无专行 ⇒ 建行逐名命中 | §13.2 / §13.3 | G-1（`specMatch(name).matched === true`）+ G-2（取值逐字段对读） |
+| 4 档视觉声明分态（实测无视觉 / 未探）且 T-7 零改 | §13.1 / §13.2 | G-6（`qwen3.7-max` / `hy3` 不声明 + 理由锚；未探两档行注「未探」在场） |
+| 尺寸失实面（doubao 2.1 上限低估）收正 | §13.3 | G-2（`maxOutput = 524_288` 受理级 + 行注「上限未证」） |
+| 未探面如实标级（不冒充实测） | §13.4 | G-3（「未探 / 未取证」词在场）+ 本表登记 |
+| 三端产品行为零回归 | §13.5 | G-7（既有族代表名字段零改）+ 核测试全绿 |
+
+### 13.8 用例表（`[bench-specs]` 段 · 循 `[flashx]` / `[qwen36]` / `[mimo]` 先例）
+
+**承载档（评审轮 1 #1 收正）**：G-1..G-7 = **新载体测试档**（拟新增——名实施轮定；循 `model-specs-mimo.test.mjs` / `model-specs-qwen36.test.mjs` 先例）；主测试档 **±0**（500 硬限余量 23 行 ⇒ 新增锚不得落主档；G-5 的退化锚改指 = 主档就地同名替换，其余锚落新档）。
+
+| id | 类 | 输入 | 期望与判据 |
+|---|---|---|---|
+| G-1 | 正常 | 10 个新建名（§13.2 #1–#10） | `specMatch(name).matched === true`（命中独立行，非兜底）；表行名提取含全 10 名（正则空扫防护同 T-7） |
+| G-2 | 正常 | 逐名关键字段 | 取值 = §13.3 表逐字段（context / maxOutput / thinking / 枚举 / 视觉 / 机制位）；`doubao` 三行枚举七值 + `maxOutput = 524_288`；`kimi` 三行 `tempRange === undefined` |
+| G-3 | 正常 | 行注证据词 | 新建行注含「未探 / 未取证」字面（`glm-4.5-air` / `kimi×3` / `doubao×3` / `MiniMax-M2.7`）+ 按 §13.3 在位「受理级 / 实测 / 官方口径 / 族沿用」 |
+| G-4 | 边界 | KD-31 例外档不变量 | `kimi-k2.6` / `k2.7-code` / `k2.7-code-highspeed` 的 `tempRange === undefined`（入档值 = 实发值） |
+| G-5 | 边界（退化锚改指） | `qwen3.7-plus`（建行后不再走退化面） | T-4/A-14 改指仍在兜底的名字（如 `qwen3.5-flash`）+ 保留「退化形状已知」判据；`qwen3.7-plus` 新增「建行命中」断言 |
+| G-6 | 边界 | `qwen3.7-max` / `hy3` | `multimodal === undefined` + 行注含实测理由（拒图像 / 不识图）；T-7 全表扫描零改 |
+| G-7 | 回归 | 既有族代表名（T-11 清单） | 字段逐项不变（防误删误改行） |
+
+### 13.9 边界（本节不做）
+
+- 不做未探字段的推测填充（「未探不声明」——用户「查表补齐」的证据面到此为止，余下入 §13.4 登记）。
+- 不声明 `multimodal: false`（T-7 语义单一——无视觉 = 不声明）。
+- 不落主测试档（`thincoder-core/test/model-specs.test.mjs` 477——500 硬限余量 23 行）：G-1..G-7 新增锚一律落新载体档；`model-specs.mjs` 越 300 的处置 = 登记 + 拆分计划（§13.6「行数处置」段），**本批不拆**。
+- 不改核侧行为（守卫 / 裁剪 / 豁免零改）；不改 `bench/models.json` 的 `skipDims` 与中档覆写值。
+- 不做实弹探针（需密钥 = 父侧 / 用户执行面）；探针结论落地时另批改行。
+
+### 13.10 UI/交互决策（全落地，无 open）
+
+CLI `/think` 面板与 VSC 思考下拉的可见面：新建行未声明枚举的档 = 与建行前同形（回退档 / 单档 `enabled`）⇒ **零可见变化**；`doubao-seed-2-1` 三档因声明七值枚举，选择面由「兜底档」转「七值」（与 2.0 行同形）；`MiniMax-M2.7` 前缀行对标准档与 `-highspeed` 同效。无 `open` 项。
+
 ## 变更记录
+
+- 2026-09-24：**新增 §13（bench 名单面 14 档规格行补齐 · 批次 `2026-09-24-bench-params-judge` · 台账 #267）**——10 档建行（取值三态：实弹 / 官方口径 / 族沿用；零口径不声明）+ 4 档视觉声明分态 + `MiniMax-M2.7` 前缀行 + 未探登记（§13.4）+ 用例 G-1..G-7；`thincoder-core/model-specs.mjs` 及其测试 = 本批交付面。
+
+- 2026-09-24：**设计评审轮 1（changes-required）修正（批次 `2026-09-24-bench-params-judge` · 修正轮 · §13 面）**——
+  ① G-1..G-7 迁新载体测试档（拟新增——名实施轮定；主测试档 477 回 **±0**——500 硬限余量 23 行）；② `model-specs.mjs` 越 300 处置就地补足 = 登记（`thincoder-core/test/core-hygiene.test.mjs` +4 ±1）+ 拆分计划（拆点 / 落点 / 消解窗口——§13.6「行数处置」段）；§13.6 / §13.8 / §13.9 同步。
 
 - 2026-09-22（**MiMo V2.6 三款批 · 设计轮（initial）** · eng-designer——承 `docs/batches/2026-09-22-mimo26-specs.md` §1）：
   新增 §12（三新款独立行 + v2.5 两行对齐：方案与理由 / 表变更 / 字段口径 + 行注草案 / 消费面 / 影响文件 /
