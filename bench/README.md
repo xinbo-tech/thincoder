@@ -26,6 +26,10 @@ node bench/run.mjs --models glm-5.3-flash --n 3 --label speed-3x
 #     longctx.3 A 位两次不可解析（判官不可用 ⇒ run error）、instructions.1 / .2 回缺陷形态串（正文 3 段 / 2 句 + `---` + 自检块）
 node bench/run.mjs --dry-run --label selfcheck
 
+# 跑前参数预检（枚举面零网络 · 每次跑批自动跑；本命令单看读数）
+# `--live` = 实弹面：全档参数受理探针（1 发/档 · 需密钥 · 花钱——跑批前点名执行）
+node bench/preflight.mjs
+
 # 价格更新后离线重算（零 API 调用；判官 / 复核成本随当前 prices.json 一并重算）
 # 注：在档报告对 = `roster-29-v5`（29 档全量跑批 · 判官三槽与复核记录在报告内）；版本标识 = 结果 JSON 的 `suiteVersion`
 node bench/run.mjs --recompute --from bench/results/2026-09-24-roster-29-v5.json
@@ -48,8 +52,13 @@ node bench/run.mjs --recompute --from bench/results/2026-09-24-roster-29-v5.json
 重合位另出 `warnings` 一条（逐重合位——点名位次与重合级别）。缺省「清单全量」跑不再受闸门拦截（`models.json` 保留判官同键条目）。
 
 **退出码**：`0` = 跑完（模型用例失败不影响退出码——失败是数据不是错误）· `1` = 基建错误
-（参数错 / 未知模型 / provider 缺配置 / 数据档不合 schema / **判官配置缺或不合 /
+（参数错 / 未知模型 / provider 缺配置 / 数据档不合 schema / **跑前预检枚举面阻断** / **判官配置缺或不合 /
 判官对身份违约 / 冻结版本不匹配 / 本轮判官面全灭** / 同名产物已存在）· `130` = SIGINT（不落档）。
+
+**跑前参数预检**（枚举面 · 零网络 · fail-closed）：逐档 + 判官三槽做「config × spec」兼容判定
+（① provider 在 config ② spec 命中 ③ `reasoningEffort` ∈ 该档枚举【①②③ = **阻断**】④ 温度裁剪对账【报警】
+⑤ 路由 / format 豁免 ⑥ thinking 面不设判定）——有阻断 ⇒ **拒跑（退出码 1 + 逐条点名）**；
+单看读数 = `node bench/preflight.mjs`（与 `run.mjs` 启动门同源判定——防「预检一套、跑批另一套」）；**零落库**。
 
 **覆盖保护**：目标文件已存在 → 拒写（留档不可被静默覆盖）；删旧档 = 人工显式动作。
 
@@ -72,12 +81,16 @@ node bench/run.mjs --recompute --from bench/results/2026-09-24-roster-29-v5.json
 **结果数值构成规则（分账 · 归一化 · 聚合口径）** / 计时口径）⇒ `SUITE_VERSION + 1`
 （`bench/cases/index.mjs`；判官侧机检闸 = `judge.json.frozenAtSuiteVersion`），跨版本不严格可比；
 **价格变动不 bump 版本号**（另记 `prices.asOf`）；**呈现面变化（段位增删 / 表列集 / 排序 / 图例与脚注文案）不 bump**——在档报告可由 `--recompute` 以现行形态重出。
+现行 `SUITE_VERSION` = **6**（判官 B 换代 + 判据修订——承接修复，共用一次）；**参数面**（档位覆写 / 参数披露）
+与**呈现面**不入版本轴。
 
 ## 判官与复核（配置 · 口径）
 
 **`bench/judge.json`（必备）**：`judges`（**恰 2 位 = A / B**，位序定身份）+ `arbiter`（**仲裁 C · 必备**）。
 每位 = `provider`（用户 config 的渠道名）/ `model` / `maxTokens`（[1024, 8192]）/ `timeoutSec`（[5, 120]，
 `temperature` 冻结 0）；`frozenAtSuiteVersion` 须 === `SUITE_VERSION`。**缺文件 / 不合 schema / 不在用户 config ⇒ 拒跑**。
+**现行三槽** = A `deepseek:deepseek-flash` · B `glm:glm-5.3`（2026-09-24 换代——原 `tokenhub:hy3`；换代 ⇒ `SUITE_VERSION + 1`）
+· 仲裁 C `deepseek:deepseek-v4-pro`。
 
 - **与被测重合（逐位 · 明示不拒跑）**：任一位的 `provider:model` ∈ 本次被测集合 ⇒ **允许自判** + 报告判官行该位标注「该位 ∈ 被测（自判）」；
   同渠道（provider 命中 · 异 model）⇒ 「与被测同渠道」；两态该位 `sameVendorAsTested = true` + 各出 `warnings` 一条（逐重合位）。
@@ -111,8 +124,12 @@ node bench/run.mjs --recompute --from bench/results/2026-09-24-roster-29-v5.json
 ## 结果解读
 
 - **能力矩阵**：模型 × 维度 → 通过用例数 / 该维用例数。用例判定 = `--n` 次**全过**才记 pass（表达「稳定具备」）；
-  `—` = 不在该模型面（`models.json` 的 `dims` / `skipDims`）或本轮未选该维。
-- **速度表**：只取正常返回的 run（pass/fail），逐 run 取值后取中位；`—` = 数据缺失（不按 0 计）。
+  `—` = 不在该模型面（`models.json` 的 `dims` / `skipDims`）或本轮未选该维；**末尾两列 = 总耗时 / 相对成本**
+  （**同源照搬**：总耗时 = 速度表「总耗时（中位）」· 相对成本 = 成本表「相对成本」；缺数据 `—`；**行序不变**——按合计通过数降序）。
+- **速度表 A / B（双表）**：同一列集两张表——**A = 按 TTFT 中位升序**（同现状口径）/ **B = 按 tok/s 中位降序（快者在前）**；
+  只取正常返回的 run（pass/fail），逐 run 取值后取中位；`—` = 数据缺失（不按 0 计）；两表缺数据均居末、共用一份脚注（列于表 B 之后）。
+- **逐档参数表**（概览）：逐档列出**实际发送的请求参数**（路由 / temperature / 思考强度（值 + 来源）/ maxTokens）——
+  跨档 / 跨代可比性的前提；缺键（旧档未采集）⇒ `—`；温度例外档注「档位例外」；生效性事实（如「服务端忽略 effort」）随概览模型表「备注」列披露。
 - **用时表**：累计耗时 = Σ 该模型面内实际执行的 run 的 `runs[].metrics.totalMs`（`skipped` 不入 · **error run 已记录耗时照计** · **`null` = 未记录** ⇒ 不计入累计、不按 0 计 + 脚注 · 部分 call 未记录 ⇒ 按已记录之和（下界）入累计 + 脚注）；
   **相对倍率** = 累计耗时 ÷ 表内最低者（1.0×）· **排名** = 升序（同值并列顺延）· 采样 run 数 = 参与累计的 run 数。
   仅被测模型执行耗时（不含判官 / 复核调用）；与速度表「总耗时（中位）」口径不同、并存。
@@ -141,7 +158,12 @@ node bench/run.mjs --recompute --from bench/results/2026-09-24-roster-29-v5.json
 - `temperature`（0–2；缺省 0）：**模型级温度例外**——**仅当该模型 API 拒收 `temperature: 0` 时逐档显式开**
   （准入依据 = 探针实测；现行例外 = kimi 四档恒 `1`）。实际取值入结果 JSON 的 `models[].temperature`，
   报告概览派生「温度例外」披露句（无例外 ⇒ 该句不出现）——跨档比较的测量条件差异不得静默。
-- 调模型经**核 provider 路径**（`thinking` / `reasoningEffort` 等取用户配置原值；`temperature = 0`（例外档取档位值）、
+- `reasoningEffort`（可选）：**档位级思考强度覆写**（**中档口径**——受测档统一取该档自身标尺的中档：
+  枚举行含 `medium` ⇒ `medium`；无 `medium` ⇒ 该档枚举行中位档；无枚举行（透传档）⇒ `medium` 直发）。
+  取值 ∈ {`none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`}；缺省 ⇒ 沿用户 config 原值
+  （两处皆无 ⇒ **不发该字段**）；非法值 ⇒ 装载即拒。**用户 config 零改**；实际发送值与来源逐档入结果 JSON
+  （`models[].reasoningEffort` / `reasoningEffortFrom`）并由报告概览**逐档参数表**披露；值越该档 spec 枚举 ⇒ **跑前预检拦**。
+- 调模型经**核 provider 路径**（`thinking` 等其余参数取用户配置原值；**思考强度 = 中档口径 · 档位覆写优先**——逐档实发值与来源见报告概览逐档参数表；`temperature = 0`（例外档取档位值）、
   `maxTokens` 与 `.model` 由本轮参数覆写）⇒ 请求构造即产品真实所见。
 
 **`bench/judge.json`（判官配置）**：换判官 / 模板 / rubric ⇒ **`SUITE_VERSION + 1`** 并同步 `frozenAtSuiteVersion`（否则拒跑）。
@@ -166,7 +188,8 @@ node bench/run.mjs --recompute --from bench/results/2026-09-24-roster-29-v5.json
 
 ```text
 bench/
-  run.mjs            CLI 入口（解析 / 退出码 / dry-run 内联夹具表（含判官对 / 仲裁 / 复核脚本））
+  run.mjs            CLI 入口（解析 / 退出码 / 跑前枚举面预检启动门 / dry-run 内联夹具表（含判官对 / 仲裁 / 复核脚本））
+  preflight.mjs      跑前参数预检（枚举面零网络缺省跑 · `--live` 实弹面 1 发/档 · 零落库）
   models.json        参测清单（配置文件）
   prices.json        价格表（手动维护 · asOf + source）
   judge.json         判官配置（判官对 A / B + 分歧仲裁 C · 必备）

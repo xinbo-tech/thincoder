@@ -10,13 +10,18 @@
  * - 离线重算：`--recompute --from <结果.json>`（零 API；成本按**当前** prices.json 重算 ⇒ 新报告对）
  *
  * 退出码（§2.1-5）：0 = 跑完（模型用例失败不影响退出码——失败是数据不是错误）· 1 = 基建错误（参数错 /
- * 未知模型 / provider 缺配置 / 数据档不合 schema）· 130 = SIGINT（中止在飞调用、**不落档**）。
- * 编排本体在 `lib/pipeline.mjs`（run.mjs 超 300 行 ⇒ 按设计档 §3 拆分触发条件拆出）；夹具表仍住本档。
+ * 未知模型 / provider 缺配置 / 数据档不合 schema / **预检枚举面阻断**）· 130 = SIGINT（中止在飞调用、**不落档**）。
+ * 跑前枚举面预检（§2.13-1 · KD-34）= **本档启动门**（`startupPreflight`）：判定实现单源 = `lib/params.mjs`
+ * （与 `bench/preflight.mjs` 共用同一函数）。编排本体在 `lib/pipeline.mjs`（run.mjs 超 300 行 ⇒ 按设计档
+ * §3 拆分触发条件拆出）；夹具表仍住本档。
  */
 
-import { pathToFileURL } from "node:url"
+import { dirname, join } from "node:path"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import { CAPABILITY_SELECTOR, DIMENSIONS, MANUAL_DIM } from "./cases/index.mjs"
 import { recomputeMain, runMain } from "./lib/pipeline.mjs"
+
+const BENCH_DIR = dirname(fileURLToPath(import.meta.url))
 
 const USAGE = `用法：
   node bench/run.mjs [--models <列表>] [--dims <列表>] [--label <名>] [--n <次>] [--max-tokens <N>] [--timeout <秒>] [--dry-run]
@@ -33,7 +38,10 @@ const USAGE = `用法：
 
   判官配置 = bench/judge.json（判官对 A / B + 分歧仲裁 C · 判官必备）：文件缺失 / 不合 schema /
   判官身份违约（A=B · 仲裁员 ∈ {A, B}）/ 冻结版本不匹配 ⇒ 拒跑（退出码 1）。
-  判官可与被测重合（允许自判——不拒跑）：重合级别逐位明示于报告概览判官行（同位 / 同渠道 / 无重合）。`
+  判官可与被测重合（允许自判——不拒跑）：重合级别逐位明示于报告概览判官行（同位 / 同渠道 / 无重合）。
+
+  跑前预检 = 枚举面（零网络 · 每次跑批自动跑）：逐档 + 判官三槽做「config × spec」兼容判定——
+  有阻断 ⇒ 拒跑（退出码 1 + 逐条点名）；单看读数 = node bench/preflight.mjs（--live = 实弹面）。`
 
 // ── dry-run 内联夹具响应表（§3 冻结落点：夹具内联于本档） ──────────────────────────
 // 每例 = 该用例的模型调用脚本（含工具环各轮）；ttft / total / tokens 全部取固定值 ⇒ 自检完全确定。
@@ -73,6 +81,8 @@ const FIXTURE = {
   "instructions.2": [fx("会议时间调整为周三午后两点开始。相关材料务必在周二下班前提交截止。\n\n---\n自检：正文两句 每句均未超四十字 含截止一词 全文无阿拉伯数字", [34, 0, 30], 300, 900)],
   "instructions.3": [fx("两条要求互相冲突：含大写 PASS 就不可能做到不含任何大写字母。", [36, 0, 24], 280, 800)],
   "multiturn.1": [
+    // 回合 1 = 检索步（`get_time`）+ 追问；回合 2 = 补全后发信——`mech.1` ⑤ 的**修复形态**全链路覆盖（KD-37 承接修复）
+    fx("", [34, 0, 10], 220, 700, { toolCalls: [tool("get_time", {})], finishReason: "tool_calls" }),
     ask("请问收件人是谁？主题和会议时间也请给一下？"),
     fx("", [60, 0, 20], 250, 900, { toolCalls: [tool("send_email", { to: "team@example.com", subject: "周会", body: "明天 15:00 周会，请准时。" })], finishReason: "tool_calls" }),
     fx("邀请邮件已发出。", [96, 0, 10], 230, 700),
@@ -216,6 +226,27 @@ function resolveDims(dimsArg) {
   return { runDims, runManual, axes: finalAxes, declared, showCapability: cap.length > 0 }
 }
 
+/** 跑前枚举面预检（§2.13-1 · KD-34 · 台账 #266）= **本档启动门**：零网络 · fail-closed——逐档（本次选中的受测档）
+ *  + 判官三槽做「config × spec」兼容判定，有阻断（①②③）⇒ 拒跑（退出码 1 + 逐条点名）；判定实现单源 = `lib/params.mjs`
+ *  （与 `bench/preflight.mjs` 同函数）。`--recompute` 只读档内记录 ⇒ 不入闸；`--dry-run` 不读用户 config ⇒ provider 面跳过。 */
+async function startupPreflight(opts) {
+  const { loadRoster, selectEntries } = await import("./lib/roster.mjs")
+  const { judgeConfigPath, loadJudgeConfig, resolveJudgeSlots } = await import("./lib/judge.mjs")
+  const { enumerationPreflight } = await import("./lib/params.mjs")
+  const entries = selectEntries(loadRoster(join(BENCH_DIR, "models.json")), opts.models)
+  let providers = null
+  if (!opts.dryRun) {
+    const { loadConfig } = await import("../thincoder-core/config.mjs")
+    providers = loadConfig().providers ?? []
+  }
+  // 判官面先行解析（冻结绑定 / provider / 身份违约 ⇒ 沿用既有报错面与文案）——枚举面随后叠判
+  const { slots } = resolveJudgeSlots(loadJudgeConfig(judgeConfigPath()), { providers, tested: entries })
+  const { blockers } = enumerationPreflight({ entries, slots, providers })
+  if (blockers.length > 0) {
+    throw new Error(`跑前预检：枚举面阻断 ${blockers.length} 条 —— 拒跑（§2.13）读法：\n  - ${blockers.join("\n  - ")}\n（修法后可用 node bench/preflight.mjs 复核）`)
+  }
+}
+
 /** 入口（导出供测试进程内调用；返回退出码，不自行 exit）。 */
 export async function main(argv = process.argv.slice(2)) {
   let opts
@@ -234,6 +265,7 @@ export async function main(argv = process.argv.slice(2)) {
   try {
     if (opts.recompute) return await recomputeMain(opts)
     opts.label ??= "run" // 缺省标签（§2.1）；重算路径的缺省标签 = <原标签>-recalc（§2.7）
+    await startupPreflight(opts) // 跑前枚举面预检（§2.13-1 · 启动门——有阻断 ⇒ 拒跑 exit 1 逐条点名）
     return await runMain(opts, sel, FIXTURE)
   } catch (e) {
     console.error(`[bench] ${e.message}`)

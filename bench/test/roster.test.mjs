@@ -58,7 +58,7 @@ test("roster.1：名单全量 29 档 + 逐名解析（label 与 provider:model �
   assert.throws(() => selectEntries(roster, "no-such-model"), /未知模型/)
 })
 
-test("roster.2：temperature 字段 schema（0–2 有限数字；非法 ⇒ 装载即拒）+ 例外档白名单（数据面）", () => {
+test("roster.2：temperature / reasoningEffort 字段 schema（非法 ⇒ 装载即拒）+ 温度例外档白名单（数据面）", () => {
   const dir = tmpDir()
   const write = (name, obj) => {
     const p = join(dir, name)
@@ -78,6 +78,14 @@ test("roster.2：temperature 字段 schema（0–2 有限数字；非法 ⇒ 装
   assert.throws(() => loadRoster(write("b.json", { models: [{ label: "ok", model: "m" }] })), /provider 缺失/)
   assert.throws(() => loadRoster(write("c.json", { models: [{ label: "ok", provider: "p", model: "m", dims: ["nope"] }] })), /未知维度/)
   assert.throws(() => loadRoster(write("d.json", { models: [] })), /非空数组/)
+  // reasoningEffort（KD-32 中档口径的档位覆写）——七值词表；非法 ⇒ 装载即拒（体例同 temperature）
+  assert.equal(loadRoster(write("e1.json", one({ reasoningEffort: "medium" }))).models[0].reasoningEffort, "medium", "词表内合法")
+  assert.equal(loadRoster(write("e2.json", one({ reasoningEffort: "xhigh" }))).models[0].reasoningEffort, "xhigh", "词表内合法（非中档值亦受理——档位面自足）")
+  assert.equal("reasoningEffort" in loadRoster(write("en.json", one({}))).models[0], false, "缺省 ⇒ 不设字段（缺省语义 = 沿用户 config 原值）")
+  assert.equal(loadRoster(write("enull.json", one({ reasoningEffort: null }))).models[0].reasoningEffort ?? null, null, "显式 null 视为缺省")
+  assert.throws(() => loadRoster(write("e3.json", one({ reasoningEffort: "zzz" }))), /reasoningEffort 非法/, "词表外（乱值）⇒ 装载即拒")
+  assert.throws(() => loadRoster(write("e4.json", one({ reasoningEffort: 3 }))), /reasoningEffort 非法/, "非字符串 ⇒ 装载即拒")
+  assert.throws(() => loadRoster(write("e5.json", one({ reasoningEffort: "Medium" }))), /reasoningEffort 非法/, "大小写异形 ⇒ 装载即拒（词表字面）")
   // 数据面：例外只对该四档开放（其余档缺省 ⇒ 无例外——仅「API 拒收 0」的档显式开）
   const exceptions = loadRoster(ROSTER_PATH).models.filter((m) => m.temperature != null)
   assert.deepEqual(exceptions.map((m) => m.label).sort(), [...TEMP_EXCEPTION_LABELS].sort(), "温度例外档白名单 = kimi 四档")
@@ -108,6 +116,32 @@ test("roster.3：价格键对齐（无孤儿 + 已录价档 matchPrice 命中自
     const exact = intended.find((e) => !e.match.includes("*") && e.match.toLowerCase() === k.toLowerCase())
     if (exact) assert.equal(got.match.toLowerCase(), exact.match.toLowerCase(), `「${k}」须命中自身键条目（大小写 / 错拼）`)
   }
+})
+
+/** 中档映射表（KD-32 · 批次档 §1.5 逐档表）：① 枚举行含 `medium` ⇒ `medium`（8 档）· ② 枚举行无 `medium` ⇒ 该档枚举行中位档（现行实测落 `high`——偶数项取较弱者，7 档）· ③ 无枚举行（透传档）⇒ `medium` 直发（14 档）。 */
+const EFFORT_MAP = {
+  "qwen3.8-flash": "medium", "qwen3.8-max": "medium", "qwen3.6-plus": "medium", "qwen3.6-flash": "medium",
+  "qwen3.7-flash": "medium", "qwen3.8-27b": "medium", "qwen3.6-27b": "medium", "hy3": "medium",
+  "deepseek-flash": "high", "deepseek-v4-pro": "high", "glm-5.3": "high", "glm-5.3-flash": "high",
+  "glm-5.3-flashx": "high", "qwen3.7-max": "high", "kimi-k3": "high",
+  "mimo-v2.6-pro": "medium", "mimo-v2.6-flash": "medium", "mimo-v2.6-pro-ultraspeed": "medium",
+  "minimax-m3": "medium", "minimax-m2.7-highspeed": "medium",
+  "doubao-seed-2-1-pro-260915": "medium", "doubao-seed-2-1-turbo-260628": "medium", "doubao-seed-2-1-lite-260915": "medium",
+  "qwen3.7-plus": "medium", "qwen3.5-27b": "medium", "glm-4.5-air": "medium",
+  "kimi-k2.6": "medium", "kimi-k2.7-code": "medium", "kimi-k2.7-code-highspeed": "medium",
+}
+
+test("roster.4：中档取值表逐档对读（29 档 × 映射规则——KD-32 · #264 / #268）", () => {
+  const roster = loadRoster(ROSTER_PATH)
+  assert.equal(Object.keys(EFFORT_MAP).length, 29, "映射表 = 29 档（防名单漂移）")
+  for (const m of roster.models) {
+    assert.equal(m.reasoningEffort, EFFORT_MAP[m.label], `${m.label} 覆写值 = 中档映射值（KD-32）`)
+  }
+  const byValue = (v) => roster.models.filter((m) => m.reasoningEffort === v).length
+  assert.deepEqual([byValue("medium"), byValue("high")], [22, 7], "medium 22 档（①8 + ③14）· high 7 档（②）——三态落点不混")
+  assert.deepEqual(roster.models.filter((m) => m.reasoningEffort == null).map((m) => m.label), [], "零缺省档（全档显式覆写——中档口径逐档可读）")
+  // 覆写值 ∈ 该档 spec 枚举（若有）⇒ 由预检枚举面在同批拦（`preflight.1` ③——双层防护）；本腿只对读名单字面
+  assert.equal(byValue("medium") + byValue("high"), 29)
 })
 
 test("temperature.1：温度透传（dry-run 全链路）——例外档实际取值 1 · 缺省档 0，零网络", async () => {

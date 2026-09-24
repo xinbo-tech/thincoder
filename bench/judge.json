@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "frozenAtSuiteVersion": 5,
+  "frozenAtSuiteVersion": 6,
   "judges": [
     {
       "provider": "deepseek",
@@ -9,8 +9,8 @@
       "timeoutSec": 30
     },
     {
-      "provider": "tokenhub",
-      "model": "hy3",
+      "provider": "glm",
+      "model": "glm-5.3",
       "maxTokens": 2048,
       "timeoutSec": 30
     }
@@ -21,5 +21,5 @@
     "maxTokens": 2048,
     "timeoutSec": 30
   },
-  "note": "A = POC 已验判官（跨渠道）；B = 跨厂商第二视角；C = 分歧仲裁（第三方模型）。§9 初值的 minimax:MiniMax-M3（输出重复 JSON ⇒ 严格解析不过）与 kimi:kimi-k3（API 拒绝 temperature 0）在实施轮实测不可用，换槽理由见批次档 §5。"
+  "note": "A = POC 已验判官（跨渠道）；B = 跨厂商第二视角（2026-09-24 换代——原 tokenhub:hy3）；C = 分歧仲裁（第三方模型）。"
 }

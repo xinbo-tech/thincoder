@@ -73,6 +73,10 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
  * （**358**——T1/T2/T3 释放用例新组：夹具 `seedReleaseState` / `countingProbe` 与既有组共享，
  * 拆档 = 复制脚手架；触发条件同前——随批拆出退出释放组）。
  * TOOL-DISCIPLINE 批（2026-09-21 · `docs/batches/2026-09-21-tool-discipline.md`）新增登记 `agent-tools/batch-lifecycle.mjs`（**301**——create source/prev 归一 + status note + value 谓词收紧 + 占位机检挂点；设计预裁「登记不拆」：create 面外提为后手，消解条件 = 越 500 硬限或该档下次实质改动）；同批 `test/batch.test.mjs` 380 → **473**（F11 A/B 组；C 组按行数纪律拆出邻档 `test/batch-placeholder-gate.test.mjs`（89）——≤300 不登记）。
+ * 参数口径与判官面收正批（2026-09-24 · `docs/batches/2026-09-24-bench-params-judge.md` · 设计档 `docs/core/design/MODEL-SPECS.md` §13）
+ * 新增登记 `model-specs.mjs`（**326**——bench 名单面 10 档建行 + 4 档视觉声明分态 + 行注补录）：拆分计划已登
+ * §13.6「行数处置」段（拆点 = `MODEL_SPECS` 表块外提；落点 `model-specs-table.mjs`（主档 re-export 保 import 面零改）；
+ * 消解窗口 = 越 500 硬限前或该档下次实质改动）。
  */
 const SOFT_LINE_REGISTRY = new Set([
   "agent/dispatch.mjs", "agent/helpers.mjs", "agent/setup.mjs", "agent.mjs",
@@ -82,7 +86,7 @@ const SOFT_LINE_REGISTRY = new Set([
   "agent-tools/subagent-scheduler.mjs", "agent-tools/subagent-spawn.mjs", "agent-tools/subagent.mjs",
   "config.mjs", "context.mjs", "git/checkpoint.mjs", "manifest.mjs", "memory/code-sync.mjs",
   "memory/core.mjs", "memory/docs.mjs",
-  "memory/schema.mjs", "process-probe.mjs", "provider/core.mjs", "provider/responses.mjs",
+  "memory/schema.mjs", "model-specs.mjs", "process-probe.mjs", "provider/core.mjs", "provider/responses.mjs",
   "session-lifecycle.mjs", "session-slots-manifest.mjs", "session-store.mjs", "session-gc.mjs", "test/batch.test.mjs", "test/manifest.test.mjs", "test/model-specs.test.mjs",
   "test/provider-merge.test.mjs", "test/session-slot-write.test.mjs", "test/setup-reminders.test.mjs", "test/tool-seams-agent.test.mjs", "test/compress-form.test.mjs", "test/tool-seams.test.mjs",
   "tools/edit-diff.mjs", "tools/file.mjs", "tools/git.mjs",

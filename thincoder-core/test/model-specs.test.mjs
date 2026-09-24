@@ -159,9 +159,9 @@ test("[qwen] T-3/A-9 托底行已删：qwen / qwen-flash 均落 DEFAULT_SPEC（m
   }
 })
 
-test("[qwen] T-4/A-14 借旧托底名的退化形状已知：qwen3.7-plus ⇒ 128K / 无视觉 / 无枚举", () => {
-  const spec = silent(() => specForModel("qwen3.7-plus"))
-  assert.equal(spec.context, 128_000, "1M → 128K（§2.4 第 5 行认账）")
+test("[qwen] T-4/A-14 借旧托底名的退化形状已知：qwen3.5-flash ⇒ 128K / 无视觉 / 无枚举", () => {
+  const spec = silent(() => specForModel("qwen3.5-flash"))
+  assert.equal(spec.context, 128_000, "无专行 ⇒ 兜底 128K（§2.4 第 5 行认账；原样本 qwen3.7-plus 已建行 ⇒ 改指仍在兜底的名字——§13.8 G-5）")
   assert.equal(spec.multimodal, undefined, "视觉能力消失（读图路径摘除）")
   assert.equal(spec.reasoningEffortEnum, undefined, "思考档位缺失（选择面空）")
 })

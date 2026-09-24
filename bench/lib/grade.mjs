@@ -4,6 +4,8 @@
  * 族成员：numEquals · vmRun（node:vm + 4000ms 超时 + 追加断言脚本）· strictJson（整串 parse）
  * · jsonFields（字段断言）· toolShape（name / JSON.parse(arguments || "{}") / 轮次）· textRules
  * （汉字计数 / 首尾 / 次数 / 否定式「不含」/ 阿拉伯数字禁用——**纯字面 / 计数约束**）
+ * · `firstJsonObject` / `argValue`（**值提取容错**——KD-37③：`arguments` 严格 JSON 失败 ⇒ 取首个平衡 JSON 对象
+ * 子串 / 首件取值；**值传递面**用，`toolShape` 等结构面严格语义不动）
  * · `judgeResult` / `judgeAfterMech`（判官合成分 → 用例返回形状；**不含网络**——裁决由 `lib/judge.mjs` 取）。
  * 判据的「正本」= 设计档 §5 各例「期望与判据」列；本档只提供实现原语，用例档逐例装配。
  * 判据分层（§2.10.2 冻结 · 2026-09-24 判据修复批重划）：需要「机器解释文本」的面（文本结构 / 语义）⇒ 判官；
@@ -166,6 +168,48 @@ export function parseToolArgs(tc) {
     return { ok: true, value: JSON.parse(raw) }
   } catch (e) {
     return { ok: false, error: preview(e?.message, 60), value: null }
+  }
+}
+
+/** 首个**平衡 JSON 对象**子串（KD-37③ · 2026-09-24 承接修复）：自首个 `{` 起按深度配对——字符串 / 转义内的
+ *  括号不计深度；未闭合（或无 `{`）⇒ `null`。重复拼接形态（同一对象拼两遍）取**首件**。 */
+export function firstJsonObject(text) {
+  const s = String(text ?? "")
+  const start = s.indexOf("{")
+  if (start < 0) return null
+  let depth = 0
+  let inStr = false
+  let esc = false
+  for (let i = start; i < s.length; i++) {
+    const ch = s[i]
+    if (inStr) {
+      if (esc) esc = false
+      else if (ch === "\\") esc = true
+      else if (ch === '"') inStr = false
+      continue
+    }
+    if (ch === '"') inStr = true
+    else if (ch === "{") depth++
+    else if (ch === "}") {
+      depth--
+      if (depth === 0) return s.slice(start, i + 1)
+    }
+  }
+  return null
+}
+
+/** 工具调用参数取值（KD-37③）：严格 `parseToolArgs` 优先；失败 ⇒ 首平衡 JSON 对象取键；皆无 ⇒ `undefined`。
+ *  **值传递面**（`multiturn.1` 回合 2 的 `to`）用——严格解析只能判序列化卫生，不能判「值未传递」（真误判形态）；
+ *  结构面（`toolShape` / `parseToolArgs` 直用）严格语义不动。 */
+export function argValue(tc, key) {
+  const strict = parseToolArgs(tc)
+  if (strict.ok) return strict.value?.[key]
+  const first = firstJsonObject(tc?.arguments)
+  if (first == null) return undefined
+  try {
+    return JSON.parse(first)?.[key]
+  } catch {
+    return undefined
   }
 }
 

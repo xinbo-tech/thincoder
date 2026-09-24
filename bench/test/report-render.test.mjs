@@ -29,7 +29,7 @@ test("render.1：概览判官三行 + 分歧率 + 方法判分条 + 成本表五
     "- 判官分歧率：50%（分歧 1 ÷ A/B 双有效样本 2）",
     "评估开销（判官 / 复核）不进被测成本、不参与相对成本归一化——报告不列评估开销金额；账目见结果 JSON",
     "判官对（A / B 双判 · 同一冻结 rubric）",
-    "- 判分模板：判官 promptVersion = 1 · 复核 promptVersion = 1 · 判官配置冻结于 suiteVersion 5",
+    "- 判分模板：判官 promptVersion = 1 · 复核 promptVersion = 1 · 判官配置冻结于 suiteVersion 6",
     "| 模型 | 总成本 | 每任务成本 | 每通过任务成本 | 相对成本 |",
     "### 判官分歧",
     "### 复核翻案",
@@ -54,15 +54,22 @@ test("render.1：概览判官三行 + 分歧率 + 方法判分条 + 成本表五
   // 判官理由行 / 复核行（逐维明细）
   assert.ok(md.includes("- 判官 · deepseek-flash：A=pass / B=pass → 合成分 pass（unanimous）"), "判官理由行")
   assert.ok(md.includes("- 复核 · deepseek-flash：1 次（uphold 1 · 翻案 0）"), "复核行")
-  // 缺价位（§2.10.5）：B 位换成未录价键 ⇒ 位级成本 null + 缺价警告在位（金额零展示 ⇒ 缺价面由 warnings / 控制台承载）
-  // （合成键——不取现盘缺价档（价格补录不连带改测试）· 现表零通配 ⇒ fixture 恒未录价，通配命中则该腿显式报红）
+  // 缺价位（§2.10.5）**四断言**（台账 #263 加固——原恒真弱守卫换**正控**）：① 位级成本 `null` ② 位级缺价警告在场
+  // ③ **成本表表头五列正控**（可失败的结构断言）④ md 零评估开销金额；外加 `host` / `sameVendorAsTested` 覆写 + 判官 B 行标注（合成键——现表零通配 ⇒ 恒未录价）
   const unpricedData = priced()
-  unpricedData.judge.judges[1] = { ...unpricedData.judge.judges[1], provider: "fixture", model: "unpriced-model" }
+  unpricedData.judge.judges[1] = {
+    ...unpricedData.judge.judges[1], provider: "fixture", model: "unpriced-model", host: "fixture.example.com", sameVendorAsTested: false,
+  }
   unpricedData.warnings = []
   applyPricesToResult(unpricedData, loadPrices(pricesPath()), unpricedData.warnings)
-  assert.equal(unpricedData.judge.judges[1].costCny, null, "缺价 ⇒ 位级成本 null")
-  assert.ok(unpricedData.warnings.some((w) => w.includes("价格未录：判官 B（fixture:unpriced-model）")), "缺价警告在位")
-  assert.equal(/判官成本|复核成本/.test(renderReport(unpricedData)), false, "缺价形态渲染零评估开销字样（md 无缺价口径句）")
+  assert.equal(unpricedData.judge.judges[1].costCny, null, "① 缺价 ⇒ 位级成本 null")
+  assert.ok(unpricedData.warnings.some((w) => w.includes("价格未录：判官 B（fixture:unpriced-model）")), "② 位级缺价警告在位")
+  const unpricedMd = renderReport(unpricedData)
+  const unpricedCostBlock = unpricedMd.split("### 成本表")[1].split("### 逐维明细")[0]
+  assert.ok(unpricedCostBlock.includes("| 模型 | 总成本 | 每任务成本 | 每通过任务成本 | 相对成本 |"), "③ 成本表表头五列正控（结构断言——真实可失败，非弱守卫）")
+  assert.equal(/判官成本|复核成本/.test(unpricedMd), false, "④ 缺价形态 md 零评估开销金额（零展示整面）")
+  const bRow = unpricedMd.split("\n").find((l) => l.startsWith("- 判官 B："))
+  assert.ok(bRow.includes("`fixture:unpriced-model`") && bRow.includes("与被测无重合"), "判官 B 行：缺价键照渲染 ∧ 重合标注 = 与被测无重合（三级派生——不另存字段）")
   // 复核失败（AC-12 告警面 + AC-1 第三态 fail-closed）：注入 review error ⇒ 该 run 保持 fail（无有效复核结论 ⇒ 不改判）
   const withRevErr = priced()
   const revErrRun = withRevErr.models[0].cases.find((c) => c.caseId === "tools.3").runs[0]
@@ -101,9 +108,9 @@ test("render.2：逐维明细题面行 = 题面正本（>300 字符 ⇒ 渲染�
   assert.ok(shown.endsWith("…"), "超限截断以 `…` 标注")
 })
 
-test("report.1：夹具渲染 → 七段骨架齐 + 四表 + 逐维明细 + 人工判读在位；轴-only ⇒ 只出速度/成本表", () => {
+test("report.1：夹具渲染 → 七段骨架齐 + 五表（含速度表 A / B）+ 逐维明细 + 人工判读在位；轴-only ⇒ 只出速度/成本表", () => {
   const md = renderReport(fixtureResult())
-  for (const section of ["## 概览", "## 方法", "## 结果", "### 能力矩阵", "### 速度表", "### 用时表", "### 成本表", "### 逐维明细", "### 人工判读", "### 判官分歧", "### 复核翻案", "## 关键发现", "## 局限声明", "## 附录", "### 复跑命令", "### 结果指针"]) {
+  for (const section of ["## 概览", "## 方法", "## 结果", "### 能力矩阵", "### 速度表 A", "### 速度表 B", "### 用时表", "### 成本表", "### 逐维明细", "### 人工判读", "### 判官分歧", "### 复核翻案", "## 关键发现", "## 局限声明", "## 附录", "### 复跑命令", "### 结果指针"]) {
     assert.ok(md.includes(section), `缺段：${section}`)
   }
   assert.match(md, /^# 模型基准报告 · fx-run · 2026-09-23/m)
@@ -113,7 +120,7 @@ test("report.1：夹具渲染 → 七段骨架齐 + 四表 + 逐维明细 + 人�
   // 轴选择（§2.1-1）：`--dims speed,cost` = 只出速度/成本表
   const base = fixtureResult()
   const axesOnly = renderReport({ ...base, run: { ...base.run, dims: ["speed", "cost"], axes: ["speed", "cost"] } })
-  assert.ok(axesOnly.includes("### 速度表") && axesOnly.includes("### 成本表"), "已选轴必须在位")
+  assert.ok(axesOnly.includes("### 速度表 A") && axesOnly.includes("### 速度表 B") && axesOnly.includes("### 成本表"), "已选轴必须在位")
   for (const absent of ["### 能力矩阵", "### 逐维明细", "### 人工判读", "### 判官分歧", "### 复核翻案", "- 能力通过率："]) {
     assert.equal(axesOnly.includes(absent), false, `未选能力轴 ⇒ 不得出现：${absent}`)
   }
@@ -150,12 +157,13 @@ test("D1：roster 排除的维在矩阵显示 `—`（不是 0/0）；概览维�
   const skipModel = { ...base.models[0], label: "fx-skip", dims: ["reasoning"], cases: [...base.models[0].cases, { ...visionCase, runs: [skippedRun] }] }
   const fullModel = { ...base.models[0], label: "fx-full", dims: ["reasoning", "vision"], cases: [...base.models[0].cases, visionCase] }
   const md = renderReport({ ...base, models: [skipModel, fullModel] })
-  const matrixBlock = md.split("### 能力矩阵")[1].split("### 速度表")[0]
+  const matrixBlock = md.split("### 能力矩阵")[1].split("### 速度表 A")[0]
   assert.ok(matrixBlock.split("\n").find((l) => l.startsWith("| fx-full |")).includes("1/1"), "在面模型照常计分")
-  const cells = matrixBlock.split("\n").filter((l) => l.startsWith("| fx-")).flatMap((l) => l.split("|").slice(2, -2).map((s) => s.trim()))
+  const cells = matrixBlock.split("\n").filter((l) => l.startsWith("| fx-")).flatMap((l) => l.split("|").slice(2, 4).map((s) => s.trim()))
   assert.equal(cells.includes("0/0"), false, "矩阵单元格不得出现 0/0（应为 —）")
   const skipRow = matrixBlock.split("\n").find((l) => l.startsWith("| fx-skip |"))
-  assert.equal(skipRow.split("|").map((s) => s.trim()).filter((s) => s === "—").length, 1, `排除维格应为 —（实得：${skipRow}）`)
+  // 行 = 模型 | 推理 | 视觉 | 合计 | 总耗时 | 相对成本（后两列 = 增补轮 #272；本腿只数维度格）
+  assert.deepEqual(skipRow.split("|").slice(2, 4).map((s) => s.trim()).filter((s) => s === "—").length, 1, `排除维格应为 —（实得：${skipRow}）`)
   const overviewLine = md.split("\n").find((l) => l.startsWith("| fx-skip | deepseek |"))
   assert.ok(overviewLine.includes("推理") && !overviewLine.includes("视觉"), "概览维度面 = 有效面（不含排除维）")
   assert.equal(md.includes("#### 视觉（`vision`）"), true, "有模型在面 ⇒ 该维小节仍在")
@@ -175,7 +183,7 @@ test("AC-2 / AC-14：`--dry-run` 全链路产物断言（判官 / 复核块 + �
   for (const [k, t] of Object.entries({ suiteVersion: "number", label: "string", startedAt: "string", prices: "object", warnings: "object" })) {
     assert.equal(typeof data[k], t, `顶层字段 ${k} 类型不符`)
   }
-  assert.equal(data.suiteVersion, 5, "SUITE_VERSION 4 → 5")
+  assert.equal(data.suiteVersion, 6, "SUITE_VERSION 5 → 6（判官 B 换代 + 判据修订）")
   assert.equal(data.label, label)
   assert.match(data.startedAt, /^\d{4}-\d{2}-\d{2}T/)
   assert.equal(data.recomputed, null)
@@ -183,7 +191,7 @@ test("AC-2 / AC-14：`--dry-run` 全链路产物断言（判官 / 复核块 + �
   assert.equal(data.prices.asOf.length, 10)
   // 判官块（三槽元数据入档 · AC-5）：A / B / 仲裁 C 逐位 provider / model / maxTokens / 超时 / 调用 / 成本
   assert.equal(data.judge.promptVersion, 1)
-  assert.equal(data.judge.frozenAtSuiteVersion, 5)
+  assert.equal(data.judge.frozenAtSuiteVersion, 6)
   assert.equal(data.judge.judges.length, 2)
   assert.deepEqual(Object.keys(data.judge.judges[0]).sort(), ["calls", "costCny", "host", "maxTokens", "model", "provider", "sameVendorAsTested", "temperature", "timeoutSec"])
   assert.ok(data.judge.arbiter.provider && data.judge.arbiter.model)
@@ -285,7 +293,7 @@ test("review.5：混合面翻案 ⇒ 「判官面未裁决」标注（明细复�
     assert.ok(row("instructions.1").includes("判官面未裁决"), `${where}：混合面须注「判官面未裁决」`)
     assert.equal(row("tools.3").includes("判官面未裁决"), false, `${where}：纯机械面不得携该标注（反例控制）`)
   }
-  const blocks = [md.split("### 能力矩阵")[1].split("### 速度表")[0], md.split("### 逐维明细")[1].split("### 判官分歧")[0]]
+  const blocks = [md.split("### 能力矩阵")[1].split("### 速度表 A")[0], md.split("### 逐维明细")[1].split("### 判官分歧")[0]]
   assert.ok(blocks.every((b) => b.includes("两形态") && b.includes("经复核纠正")), "矩阵脚注 / 明细图例含「经复核纠正」+ 两形态口径句（定域断言）")
   assert.ok(md.split("### 逐维明细")[1].includes("✅ pass 1/1 ⟲"), "判定单元格 = ✅ pass + ⟲（改判口径不因混合面而变）")
 })

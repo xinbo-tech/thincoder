@@ -9,12 +9,13 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { test } from "node:test"
 import {
-  extractCode, jsonFields, judgeAfterMech, judgeResult, numEquals, ok, parseToolArgs, strictJson, textRules, toolShape, vmRun,
+  argValue, extractCode, firstJsonObject, jsonFields, judgeAfterMech, judgeResult, numEquals, ok, parseToolArgs, strictJson, textRules, toolShape, vmRun,
 } from "../lib/grade.mjs"
 import { CODE_ASSERTS, cases as codeCases } from "../cases/code.mjs"
 import { cases as reasoningCases } from "../cases/reasoning.mjs"
 import { cases as jsonCases } from "../cases/json.mjs"
 import { cases as instructionsCases } from "../cases/instructions.mjs"
+import { cases as multiturnCases } from "../cases/multiturn.mjs"
 import { cases as visionCases } from "../cases/vision.mjs"
 import { findFile, readJson, runCli } from "./fixtures.mjs"
 import { FIXTURE } from "../run.mjs"
@@ -213,4 +214,65 @@ test("judge.13：混合面重划 · 定点复现（缺陷形态串 + 桩判官�
     assert.equal("review" in runOf(id), false, "机械面全过 ⇒ 无复核记录")
   }
   assert.equal(runOf("instructions.3").verdict, "pass", "同维纯判官面用例不受影响")
+})
+
+// ── mech.1 / mech.2：承接修复定点复现（#273 / #274 · KD-37 · §5.13；不调模型——合成 `result.turns`） ──────────
+const mtCase = (id) => multiturnCases.find((c) => c.id === id)
+const tc = (name, args, id = "c1") => ({ id, name, arguments: typeof args === "string" ? args : JSON.stringify(args) })
+const stepOf = (text, toolCalls = []) => ({ text, reasoning: "", toolCalls, call: null })
+const retrieve = () => stepOf("", [tc("get_time", {})])
+const SEND = (to = "team@example.com") => stepOf("", [tc("send_email", { to })])
+const turnOf = (...steps) => ({ text: "", reasoning: "", toolCalls: [], steps })
+
+/** 单腿：跑该用例 `grade` 并按期望核判定 + **判官调用数**（机械面 FAIL ⇒ 不调判官——短路，§2.6）。 */
+async function mechLeg(caseId, turns, wantPass, why) {
+  const box = { calls: 0 }
+  const ctx = { judge: async () => { box.calls++; return { verdict: "pass", resolution: "unanimous", reason: "夹具裁决" } } }
+  const g = await mtCase(caseId).grade({ turns }, ctx)
+  assert.equal(g.pass, wantPass, `${why} ⇒ 须 ${wantPass ? "pass" : "fail"}（实得：${g.detail}）`)
+  assert.equal(box.calls, wantPass ? 1 : 0, `${why} ⇒ 判官调用 ${wantPass ? 1 : 0} 次（${wantPass ? "机械面全过" : "短路"}）`)
+  return g
+}
+
+test("mech.1：`multiturn.1` 判据修复定点复现（检索步 + 存在语义 + 原语三态 + 旧判据串负断言 + dry-run 全链路）", async () => {
+  // ①② 修复形态（检索步 + 追问 / 实录形态：回合 2 多条 `send_email` ∧ `arguments` = 同一 JSON 对象重复拼接）
+  await mechLeg("multiturn.1", [turnOf(retrieve(), stepOf("请问收件人是谁？主题和会议时间也请给一下？")), turnOf(SEND())], true, "① 修复形态（修复前 fail「回合 1 信息不全却调用了工具：get_time」）")
+  const dup = '{"to":"team@example.com","subject":"周会"}{"to":"team@example.com","subject":"周会"}'
+  await mechLeg("multiturn.1", [turnOf(retrieve(), stepOf("请补充收件人与时间")), turnOf(stepOf("", [tc("send_email", dup, "c2"), tc("send_email", dup, "c3")]))], true, "② 实录形态（重复拼接——修复前严格解析失败 ⇒ to 读空 ⇒ fail「send_email.to=（需 team@example.com）」）")
+  // ③ 反例三条：`to` 为他值 / 回合 1 出 `send_email` / 回合 2 无 `send_email` ⇒ 各 fail 且不调判官（不放松真违规支）
+  for (const turns of [
+    [turnOf(retrieve(), stepOf("请补充")), turnOf(SEND("other@example.com"))],
+    [turnOf(SEND()), turnOf(SEND())],
+    [turnOf(retrieve(), stepOf("请补充")), turnOf(stepOf("好的，邮件稍后发出"))],
+  ]) await mechLeg("multiturn.1", turns, false, "③ 反例")
+  // ④ 原语三态（`firstJsonObject` / `argValue`）：严格过 / 拼接取首件 / 不闭合 ⇒ null
+  assert.equal(firstJsonObject('{"a":1}'), '{"a":1}', "严格形态取整串")
+  assert.equal(firstJsonObject('{"a":1}{"a":1}'), '{"a":1}', "重复拼接取首件")
+  assert.equal(firstJsonObject('{"a":1'), null, "不闭合 ⇒ null")
+  assert.equal(argValue({ arguments: '{"to":"x"}{"to":"x"}' }, "to"), "x", "argValue 拼接形态取首件（`.1` 判别形态）")
+  // ⑤ dry-run 全链路（`.1` 夹具 = 检索步形态）+ 旧判据串负断言（循 `text.1` 先例）
+  const label = `mech1-${process.pid}`
+  const { code, out } = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--dims", "multiturn", "--label", label])
+  assert.equal(code, 0, out)
+  const run1 = readJson(findFile(`${label}.json`)).models[0].cases.find((c) => c.caseId === "multiturn.1").runs[0]
+  assert.equal(run1.verdict, "pass", "⑤ dry-run 全链路：修复形态 run pass")
+  assert.ok(run1.judge, "⑤ 判官记录在场")
+  assert.equal("review" in run1, false, "⑤ 机械面全过 ⇒ 无复核记录")
+  const src = readFileSync(join(BENCH_DIR, "cases", "multiturn.mjs"), "utf8")
+  for (const gone of ["回合 1 信息不全却调用了工具", "回合 1 未调用 send_email"]) assert.equal(src.includes(gone), false, `旧判据串已删：${gone}（修复前 fail 凭证 = v5 报告《复核翻案》承接表实录）`)
+})
+
+test("mech.2：`multiturn.3` 判据修复定点复现（全序列存在语义 + 跨回合跟进 + 反例 + dry-run 全链路）", async () => {
+  // ①② 修复形态（回合 1 = 检索步 → 跟进 `send_email`）/ 跨回合跟进形态（修复判别形态：回合 1 检索步、回合 2 发信）
+  await mechLeg("multiturn.3", [turnOf(retrieve(), SEND())], true, "① 修复形态")
+  await mechLeg("multiturn.3", [turnOf(retrieve()), turnOf(SEND())], true, "② 跨回合跟进（修复前 = 只查回合 1 ⇒ fail「回合 1 未调用 send_email（实际：get_time）」）")
+  // ③ 反例：仅检索步无跟进 / 无任何调用（追问推脱形态）⇒ 各 fail（信息足够仍不得追问 / 仍须发信）
+  for (const turns of [[turnOf(retrieve())], [turnOf(stepOf("时间可以定在明天上午十点——你看行吗？"))]]) await mechLeg("multiturn.3", turns, false, "③ 反例")
+  // ④ dry-run 全链路（`.3` 夹具）run pass ∧ 判官记录在场
+  const label = `mech2-${process.pid}`
+  const { code, out } = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--dims", "multiturn", "--label", label])
+  assert.equal(code, 0, out)
+  const run3 = readJson(findFile(`${label}.json`)).models[0].cases.find((c) => c.caseId === "multiturn.3").runs[0]
+  assert.equal(run3.verdict, "pass", "④ dry-run 全链路：`.3` 夹具 run pass")
+  assert.ok(run3.judge, "④ 判官记录在场")
 })

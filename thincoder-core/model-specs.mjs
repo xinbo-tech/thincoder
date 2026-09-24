@@ -33,8 +33,8 @@ const MODEL_SPECS = [
   ["deepseek-flash",    { context: 1_000_000, maxOutput: 384_000, thinking: true,  prefixMode: true,  cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 2], multimodal: true }],
 // deepseek-v4.1-flash = qwen-plan channel name for DeepSeek V4.1-Flash (token-plan GET /models verified 2026-09-15) — same fields as the row above; ".1" ≠ "-" so plain prefix lookup misses the existing rows (D-PR25)
   ["deepseek-v4.1-flash", { context: 1_000_000, maxOutput: 384_000, thinking: true,  prefixMode: true,  cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 2], multimodal: true }],
-  // deepseek-v4-pro (V4-Pro-0813): fields unchanged — vision capability NOT verified, so no
-  // multimodal (conservative). From 2026-09-14 12:00 Beijing all requests route to V4.1-Flash.
+  // deepseek-v4-pro (V4-Pro-0813): fields unchanged — 视觉面 **未探**（不声明 multimodal——保守；
+  // 补探登记见 MODEL-SPECS.md §13.4）. From 2026-09-14 12:00 Beijing all requests route to V4.1-Flash.
   ["deepseek-v4-pro",   { context: 1_000_000, maxOutput: 384_000, thinking: true,  prefixMode: true,  cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 2] }],
   // deepseek-v4-flash: RETIRED name — still accepted, served by V4.1-Flash today → aligned row
   ["deepseek-v4-flash", { context: 1_000_000, maxOutput: 384_000, thinking: true,  prefixMode: true,  cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 2], multimodal: true }],
@@ -46,9 +46,16 @@ const MODEL_SPECS = [
   ["kimi/kimi-k3",      { context: 1_000_000, maxOutput: 131_072, thinking: true,  partialMode: true, multimodal: true, cacheMode: "auto",  thinkApi: "effort", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"] }],
   // Kimi For Coding endpoint uses the short model ID "k3" (same specs as kimi-k3) — IK5VGJ
   ["k3",                { context: 1_000_000, maxOutput: 131_072, thinking: true,  partialMode: true, multimodal: true, cacheMode: "auto",  thinkApi: "effort", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"] }],
+  // kimi-k2.6 / kimi-k2.7-code / kimi-k2.7-code-highspeed（三行同形 · 2026-09-24 bench 名单批）：temperature **仅受理 1** = **校验级**
+  // （400 原文「invalid temperature: only 1 is allowed for this model」· roster-expand §2.2）；尺寸位 = **未取证**
+  // （沿现盘兜底值——建行不改变生效值）；**不得声明 tempRange**（KD-31 例外档不变量：入档值 = 实发值）；枚举 / 视觉面 = **未探**。
+  ["kimi-k2.6",                { context: 128_000, maxOutput: 32_000 }],
+  ["kimi-k2.7-code",           { context: 128_000, maxOutput: 32_000 }],
+  ["kimi-k2.7-code-highspeed", { context: 128_000, maxOutput: 32_000 }],
   // GLM series
   // GLM-5.3: thinking always-on (no "disabled"); effort converges to low/high/max — NOT the
-  //          7-level glm-5.2 enum (verified vs docs.bigmodel.cn GLM-5.3 page, 2026-08)
+  //          7-level glm-5.2 enum (verified vs docs.bigmodel.cn GLM-5.3 page, 2026-08).
+  //          视觉面 **未探**（不声明 multimodal——保守；补探登记见 MODEL-SPECS.md §13.4）。
   ["glm-5.3",           { context: 1_000_000, maxOutput: 128_000, thinking: true,  cacheMode: "auto", thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 1], noUsageStream: true }],
   ["glm-5.3-flash",     { context: 1_000_000, maxOutput: 128_000, thinking: true, multimodal: true, cacheMode: "auto", thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 1], noUsageStream: true }],
   // glm-5.3-flashx（GLM-5.3-FlashX，2026-09 上线）——独立行（不再蹭 flash 前缀行）：maxOutput 131_072 =
@@ -62,13 +69,17 @@ const MODEL_SPECS = [
   ["glm-5.2",           { context: 1_000_000, maxOutput: 128_000, thinking: true,  cacheMode: "auto", thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["max", "xhigh", "high", "medium", "low", "minimal", "none"], tempRange: [0, 1], noUsageStream: true }],
   ["glm-5",             { context: 1_000_000, maxOutput: 128_000, thinking: true,  cacheMode: "auto", thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["max", "xhigh", "high", "medium", "low", "minimal", "none"], tempRange: [0, 1], noUsageStream: true }],
   ["glm-4",             { context: 128_000,   maxOutput: 32_000,  thinking: true,  cacheMode: "auto", thinkApi: "type", reasoningEcho: "optional", tempRange: [0, 1], noUsageStream: true }],
+  // glm-4.5-air（智谱轻档 · 2026-09-24 bench 名单批）：temperature 0 受理 = **实测**（roster-expand §2.2）；其余 = **族沿用 glm-4 行**
+  // （逐名官方口径未取证）；枚举 / 视觉面 = **未探**（不声明）。medium 直发实测受理（batch-params-judge §1.5）。
+  ["glm-4.5-air", { context: 128_000, maxOutput: 32_000, thinking: true, cacheMode: "auto", thinkApi: "type", reasoningEcho: "optional", tempRange: [0, 1], noUsageStream: true }],
   // GPT series
   ["gpt-5.6-sol",       { context: 1_050_000, maxOutput: 128_000, thinking: false, multimodal: true, cacheMode: "prompt" }],
   ["gpt-5.6",           { context: 1_050_000, maxOutput: 128_000, thinking: false, multimodal: true, cacheMode: "prompt" }],
   ["gpt-4.1",           { context: 1_000_000, maxOutput: 128_000, thinking: false, cacheMode: "prompt" }],
   ["gpt-4o",            { context: 128_000,   maxOutput: 16_000,  thinking: false, multimodal: true, cacheMode: "prompt" }],
   // Qwen series
-  // qwen3.7-max rejects image parts outright (DashScope 400 "Unexpected item type in content") — text-only
+  // qwen3.7-max：**实测拒图像**（DashScope 400 "Unexpected item type in content"——真值彩图探针，2026-09-20）
+  // ⇒ 无视觉 = **不声明**（T-7 语义单一：multimodal 仅 true / undefined；补探已毕，无需再探）
   ["qwen3.7-max",       { context: 1_000_000, maxOutput: 131_072, thinking: true, partialMode: true, cacheMode: "none", thinkApi: "effort", reasoningEffortEnum: ["xhigh", "high"], tempRange: [0, 2] }],
   // qwen3.7-flash / qwen3.8-flash (2026-09-20): thinking + effort enum + maxOutput + image intake
   // are server-MEASURED (batch 2026-09-20-qwen-flash-specs §1.2 — bare request carries reasoning_tokens
@@ -78,6 +89,9 @@ const MODEL_SPECS = [
   // partialMode / cacheMode / thinkApi / tempRange = same-family carry-over (not independently
   // measured on these rows); reasoningEcho stays undeclared (cross-turn echo unverified — R-4).
   ["qwen3.7-flash",     { context: 1_000_000, maxOutput: 131_072, thinking: true, partialMode: true, multimodal: true, cacheMode: "none", thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh"], tempRange: [0, 2] }],
+  // qwen3.7-plus（2026-09-24 bench 名单批）：context = **官方口径（网络转述）**（2026-09-20 qwen-flash-specs 批 AC-6 已裁允许入表——「100 万长文档」族点名）；
+  // maxOutput / partialMode / cacheMode / thinkApi / tempRange / thinking = **族沿用 qwen3.7-flash 行**；枚举 / 视觉面 = **未探**（不声明）。
+  ["qwen3.7-plus",      { context: 1_000_000, maxOutput: 131_072, thinking: true, partialMode: true, cacheMode: "none", thinkApi: "effort", tempRange: [0, 2] }],
   ["qwen3.8-flash",     { context: 1_000_000, maxOutput: 131_072, thinking: true, partialMode: true, multimodal: true, cacheMode: "none", thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"], tempRange: [0, 2] }],
   ["qwen3.8-max",       { context: 1_000_000, maxOutput: 131_072, thinking: true, partialMode: true, multimodal: true, cacheMode: "none", thinkApi: "effort", reasoningEffortEnum: ["xhigh", "medium", "low"], tempRange: [0, 2] }],
   // qwen3.8-omni-flash / qwen3.8-27b — parent 80-token probe (batch §1.8-①): reasoning_content
@@ -109,9 +123,14 @@ const MODEL_SPECS = [
   ["qwen3.6-max-preview", { context: 1_000_000, maxOutput: 65_536, thinking: true, partialMode: true, multimodal: true, cacheMode: "none", thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh"], tempRange: [0, 2] }],
   // qwen3.6-27b：同形行——校验级 maxOutput / 六档枚举、官方口径 context（未探边）、族沿用机制位。
   ["qwen3.6-27b",        { context: 1_000_000, maxOutput: 65_536, thinking: true, partialMode: true, multimodal: true, cacheMode: "none", thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh"], tempRange: [0, 2] }],
+  // qwen3.5-27b（2026-09-24 bench 名单批）：context 262_144 = **官方口径（定价页分档佐证——[128K, 256K) 档在售；规格页未逐名核）**；
+  // maxOutput / 机制位 = **族沿用 qwen3.6-27b 行**；枚举 / 视觉面 = **未探**（不声明）。
+  ["qwen3.5-27b",        { context: 262_144, maxOutput: 65_536, thinking: true, partialMode: true, cacheMode: "none", thinkApi: "effort", tempRange: [0, 2] }],
   // qwen3.6-35b-a3b：MoE 后缀（a3b = 激活参数量级）——校验级 maxOutput / 六档枚举、官方口径 context、族沿用机制位。
   ["qwen3.6-35b-a3b",    { context: 1_000_000, maxOutput: 65_536, thinking: true, partialMode: true, multimodal: true, cacheMode: "none", thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh"], tempRange: [0, 2] }],
   // MiniMax series
+  // effort（`reasoning_effort`）在 MiniMax 族 = **无生效面**（**实测**：effort 被忽略——`none` / `medium` 均 rc 在场；
+  // off 路径 = `thinking:{type:"disabled"}` ✓ rc=0）——medium 照发仅口径统一（batch-params-judge §1.2 / KD-32④）。
   ["MiniMax-M3",        { context: 1_000_000, maxOutput: 128_000, thinking: true,  multimodal: true, cacheMode: "auto", thinkApi: "type", thinkEnabledValue: "adaptive", tempRange: [0, 2], noUsageStream: true }],
   // MiMo series (Xiaomi — OpenAI-compatible https://api.xiaomimimo.com/v1; deep thinking via
   // thinking.type, default ON). Family echo policy stays conservative ("required" — tool rounds
@@ -126,6 +145,8 @@ const MODEL_SPECS = [
   // reasoning_content; thinking.type disabled → rc gone ⇒ thinkApi "type" = measured face) and
   // multimodal = **实测** (8×8 pure-red PNG, pro / flash answered "Red"); cacheMode "auto" = **实测**
   // (cached_tokens 18,688). context 1_000_000 = **官方口径** (docs); reasoningEcho = **族沿用**.
+  // effort（`reasoning_effort`）在三款 V2.6 = **无生效面**（**实测**：effort 被忽略——`none` / `medium` 均 rc 在场；
+  // off 路径 = `thinking:{type:"disabled"}` ✓ rc=0）——medium 照发仅口径统一（batch-params-judge §1.2 / KD-32④）。
   ["mimo-v2.6-pro",     { context: 1_000_000, maxOutput: 131_072, thinking: true,  multimodal: true, cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", tempRange: [0, 1.5] }],
   // mimo-v2.6-flash: same row shape as pro — maxOutput 131_072 / tempRange [0, 1.5] = **校验级**,
   // thinking / multimodal / cacheMode = **实测**, context = **官方口径**, reasoningEcho = **族沿用**.
@@ -133,8 +154,14 @@ const MODEL_SPECS = [
   // mimo-v2.6-pro-ultraspeed: same row shape — same grades as flash (**校验级** / **实测** /
   // **官方口径** / **族沿用**); image answer at a 64-token budget was truncated — "Red" at 512.
   ["mimo-v2.6-pro-ultraspeed", { context: 1_000_000, maxOutput: 131_072, thinking: true,  multimodal: true, cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", tempRange: [0, 1.5] }],
+  // minimax-m3（小写前缀行——与上方 MiniMax-M3 行同值，同族两写法）：effort 同按**无生效面**处置
+  // （**实测**：effort 被忽略；off 路径 = `thinking:{type:"disabled"}` ✓ rc=0——batch-params-judge §1.2 / KD-32④）。
   ["minimax-m3",        { context: 1_000_000, maxOutput: 128_000, thinking: true,  multimodal: true, cacheMode: "auto", thinkApi: "type", thinkEnabledValue: "adaptive", tempRange: [0, 2], noUsageStream: true }],
   ["minimax-m1",        { context: 256_000,   maxOutput: 128_000, thinking: false, cacheMode: "auto", noUsageStream: true }],
+  // MiniMax-M2.7（前缀行——覆盖标准档与 -highspeed · 2026-09-24 bench 名单批）：thinking = **实测**（裸请求 rc 在场）；off 路径 **未找到**
+  // （`thinking:{type:"disabled"}` 不生效——如实，不声明 thinkApi）；effort 被忽略 ⇒ **无生效面**（枚举不声明；medium 照发仅口径统一）；
+  // 尺寸 / cacheMode / noUsageStream = **族沿用 minimax-m1 行**；视觉面 = **未探**（不声明）。
+  ["MiniMax-M2.7", { context: 256_000, maxOutput: 128_000, thinking: true, cacheMode: "auto", noUsageStream: true }],
   // Grok series (xAI — OpenAI-compatible)
   // grok-4.x: 500K context per xAI Grok 4.6 spec (corrected 2026-08; earlier entries said 1M)
   ["grok-4.6",          { context: 500_000,   maxOutput: 64_000,  thinking: false, multimodal: true, tempRange: [0, 2] }],
@@ -177,6 +204,13 @@ const MODEL_SPECS = [
   // seed-lite = 同族全针（批次档 §1.2 lite 行：思考 tok=161 / 视觉 "Red" / 上限 131 072 / echo 真名）——
   // context 同按 **官方口径** + **实测**下界标注；行独立（同值集 ≠ 同行：改一行不动另一行）。
   ["doubao-seed-2-0-lite-260428", { context: 256_000, maxOutput: 131_072, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"], multimodal: true }],
+  // doubao-seed-2-1 三档（火山方舟 · 2026-09-24 bench 名单批 · 三行同形）：thinking / thinkApi / 枚举 = **实测**
+  // （裸请求 rc 在场；`reasoning_effort:"none"` → rc=0；七值全 200、乱值 400 泛化 ⇒ **受理级**——等级低于 2.0 行的
+  // 「真校验」，同值集不混级）；maxOutput 524_288 = **受理级**（262 144 / 524 288 均受理；**上限未证**）；
+  // context = **族沿用 2.0 行**（官方口径未逐名取证）；**视觉面未探**（不声明——如实标级，不冒充实测）。
+  ["doubao-seed-2-1-pro-260915",   { context: 256_000, maxOutput: 524_288, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"] }],
+  ["doubao-seed-2-1-turbo-260628", { context: 256_000, maxOutput: 524_288, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"] }],
+  ["doubao-seed-2-1-lite-260915",  { context: 256_000, maxOutput: 524_288, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"] }],
 ]
 const DEFAULT_SPEC = { context: 128_000, maxOutput: 32_000, cacheMode: "none" }
 

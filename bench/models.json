@@ -7,7 +7,8 @@
       "model": "mimo-v2.6-pro",
       "dims": null,
       "skipDims": null,
-      "note": ""
+      "note": "服务端忽略 effort（实弹 2026-09-24）",
+      "reasoningEffort": "medium"
     },
     {
       "label": "mimo-v2.6-flash",
@@ -15,7 +16,8 @@
       "model": "mimo-v2.6-flash",
       "dims": null,
       "skipDims": null,
-      "note": ""
+      "note": "服务端忽略 effort（实弹 2026-09-24）",
+      "reasoningEffort": "medium"
     },
     {
       "label": "mimo-v2.6-pro-ultraspeed",
@@ -23,7 +25,8 @@
       "model": "mimo-v2.6-pro-ultraspeed",
       "dims": null,
       "skipDims": null,
-      "note": ""
+      "note": "服务端忽略 effort（实弹 2026-09-24）",
+      "reasoningEffort": "medium"
     },
     {
       "label": "deepseek-flash",
@@ -31,7 +34,8 @@
       "model": "deepseek-flash",
       "dims": null,
       "skipDims": null,
-      "note": "峰谷定价（成本表取高峰档）"
+      "note": "峰谷定价（成本表取高峰档）",
+      "reasoningEffort": "high"
     },
     {
       "label": "glm-5.3-flash",
@@ -39,7 +43,8 @@
       "model": "glm-5.3-flash",
       "dims": null,
       "skipDims": null,
-      "note": "多模态（usage 实测正常）"
+      "note": "多模态（usage 实测正常）",
+      "reasoningEffort": "high"
     },
     {
       "label": "qwen3.8-flash",
@@ -47,7 +52,8 @@
       "model": "qwen3.8-flash",
       "dims": null,
       "skipDims": null,
-      "note": "多模态"
+      "note": "多模态",
+      "reasoningEffort": "medium"
     },
     {
       "label": "deepseek-v4-pro",
@@ -55,7 +61,8 @@
       "model": "deepseek-v4-pro",
       "dims": null,
       "skipDims": ["vision"],
-      "note": "旗舰；判官 C 位同键"
+      "note": "旗舰；判官 C 位同键",
+      "reasoningEffort": "high"
     },
     {
       "label": "glm-5.3",
@@ -63,7 +70,8 @@
       "model": "glm-5.3",
       "dims": null,
       "skipDims": ["vision"],
-      "note": "旗舰（走 glm 原厂）"
+      "note": "旗舰（走 glm 原厂）；判官 B 位同键",
+      "reasoningEffort": "high"
     },
     {
       "label": "glm-5.3-flashx",
@@ -71,7 +79,8 @@
       "model": "glm-5.3-flashx",
       "dims": null,
       "skipDims": null,
-      "note": "多模态；走 glm 原厂（plan 无权限）"
+      "note": "多模态；走 glm 原厂（plan 无权限）",
+      "reasoningEffort": "high"
     },
     {
       "label": "glm-4.5-air",
@@ -79,7 +88,8 @@
       "model": "glm-4.5-air",
       "dims": null,
       "skipDims": ["vision"],
-      "note": "轻档（走 glm 原厂）"
+      "note": "轻档（走 glm 原厂）",
+      "reasoningEffort": "medium"
     },
     {
       "label": "qwen3.8-max",
@@ -87,7 +97,8 @@
       "model": "qwen3.8-max",
       "dims": null,
       "skipDims": null,
-      "note": "多模态"
+      "note": "多模态",
+      "reasoningEffort": "medium"
     },
     {
       "label": "qwen3.6-plus",
@@ -95,7 +106,8 @@
       "model": "qwen3.6-plus",
       "dims": null,
       "skipDims": null,
-      "note": "多模态"
+      "note": "多模态",
+      "reasoningEffort": "medium"
     },
     {
       "label": "qwen3.6-flash",
@@ -103,7 +115,8 @@
       "model": "qwen3.6-flash",
       "dims": null,
       "skipDims": null,
-      "note": "多模态"
+      "note": "多模态",
+      "reasoningEffort": "medium"
     },
     {
       "label": "qwen3.7-max",
@@ -111,7 +124,8 @@
       "model": "qwen3.7-max",
       "dims": null,
       "skipDims": ["vision"],
-      "note": "无视觉（实测拒图像输入）"
+      "note": "无视觉（实测拒图像输入）",
+      "reasoningEffort": "high"
     },
     {
       "label": "qwen3.7-plus",
@@ -119,7 +133,8 @@
       "model": "qwen3.7-plus",
       "dims": null,
       "skipDims": ["vision"],
-      "note": "无视觉（spec 未建行）"
+      "note": "无视觉（实弹待探——spec 行已建，视觉面不声明）",
+      "reasoningEffort": "medium"
     },
     {
       "label": "qwen3.7-flash",
@@ -127,7 +142,8 @@
       "model": "qwen3.7-flash",
       "dims": null,
       "skipDims": null,
-      "note": "多模态"
+      "note": "多模态",
+      "reasoningEffort": "medium"
     },
     {
       "label": "qwen3.8-27b",
@@ -135,7 +151,8 @@
       "model": "qwen3.8-27b",
       "dims": null,
       "skipDims": null,
-      "note": "多模态（27B 本地族）"
+      "note": "多模态（27B 本地族）",
+      "reasoningEffort": "medium"
     },
     {
       "label": "qwen3.6-27b",
@@ -143,7 +160,8 @@
       "model": "qwen3.6-27b",
       "dims": null,
       "skipDims": null,
-      "note": "多模态（27B 本地族）"
+      "note": "多模态（27B 本地族）",
+      "reasoningEffort": "medium"
     },
     {
       "label": "qwen3.5-27b",
@@ -151,7 +169,8 @@
       "model": "qwen3.5-27b",
       "dims": null,
       "skipDims": ["vision"],
-      "note": "无视觉（spec 未建行）"
+      "note": "无视觉（实弹待探——spec 行已建，视觉面不声明）",
+      "reasoningEffort": "medium"
     },
     {
       "label": "kimi-k3",
@@ -160,7 +179,8 @@
       "dims": null,
       "skipDims": null,
       "note": "多模态；API 仅受理温度 1",
-      "temperature": 1
+      "temperature": 1,
+      "reasoningEffort": "high"
     },
     {
       "label": "kimi-k2.6",
@@ -168,8 +188,9 @@
       "model": "kimi-k2.6",
       "dims": null,
       "skipDims": ["vision"],
-      "note": "API 仅受理温度 1",
-      "temperature": 1
+      "note": "API 仅受理温度 1（spec 行已建，尺寸 / 视觉未取证）",
+      "temperature": 1,
+      "reasoningEffort": "medium"
     },
     {
       "label": "kimi-k2.7-code",
@@ -177,8 +198,9 @@
       "model": "kimi-k2.7-code",
       "dims": null,
       "skipDims": ["vision"],
-      "note": "代码档；API 仅受理温度 1",
-      "temperature": 1
+      "note": "代码档；API 仅受理温度 1（spec 行已建，尺寸 / 视觉未取证）",
+      "temperature": 1,
+      "reasoningEffort": "medium"
     },
     {
       "label": "kimi-k2.7-code-highspeed",
@@ -186,8 +208,9 @@
       "model": "kimi-k2.7-code-highspeed",
       "dims": null,
       "skipDims": ["vision"],
-      "note": "极速档；API 仅受理温度 1",
-      "temperature": 1
+      "note": "极速档；API 仅受理温度 1（spec 行已建，尺寸 / 视觉未取证）",
+      "temperature": 1,
+      "reasoningEffort": "medium"
     },
     {
       "label": "minimax-m3",
@@ -195,7 +218,8 @@
       "model": "MiniMax-M3",
       "dims": null,
       "skipDims": null,
-      "note": "多模态；model ID = API 字面"
+      "note": "多模态；model ID = API 字面；服务端忽略 effort（实弹 2026-09-24）",
+      "reasoningEffort": "medium"
     },
     {
       "label": "minimax-m2.7-highspeed",
@@ -203,7 +227,8 @@
       "model": "MiniMax-M2.7-highspeed",
       "dims": null,
       "skipDims": ["vision"],
-      "note": "极速档；model ID = API 字面"
+      "note": "极速档；model ID = API 字面；服务端忽略 effort（实弹 2026-09-24）",
+      "reasoningEffort": "medium"
     },
     {
       "label": "hy3",
@@ -211,7 +236,8 @@
       "model": "hy3",
       "dims": null,
       "skipDims": ["vision"],
-      "note": "无视觉（实测）；判官 B 位同键"
+      "note": "无视觉（实测）",
+      "reasoningEffort": "medium"
     },
     {
       "label": "doubao-seed-2-1-pro-260915",
@@ -219,7 +245,8 @@
       "model": "doubao-seed-2-1-pro-260915",
       "dims": null,
       "skipDims": ["vision"],
-      "note": "字节旗舰（spec 未建行）"
+      "note": "字节旗舰（spec 行已建；视觉面未探）",
+      "reasoningEffort": "medium"
     },
     {
       "label": "doubao-seed-2-1-turbo-260628",
@@ -227,7 +254,8 @@
       "model": "doubao-seed-2-1-turbo-260628",
       "dims": null,
       "skipDims": ["vision"],
-      "note": "中档（spec 未建行）"
+      "note": "中档（spec 行已建；视觉面未探）",
+      "reasoningEffort": "medium"
     },
     {
       "label": "doubao-seed-2-1-lite-260915",
@@ -235,7 +263,8 @@
       "model": "doubao-seed-2-1-lite-260915",
       "dims": null,
       "skipDims": ["vision"],
-      "note": "轻档；已实测通过（404 已翻转）"
+      "note": "轻档；已实测通过（404 已翻转）；spec 行已建（视觉面未探）",
+      "reasoningEffort": "medium"
     }
   ]
 }

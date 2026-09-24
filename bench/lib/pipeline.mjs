@@ -16,6 +16,7 @@ import { CASES, CLASS_LABELS, MANUAL, SUITE_VERSION } from "../cases/index.mjs"
 import { effectiveDims, loadRoster, selectEntries } from "./roster.mjs"
 import { applyPricesToResult, loadPrices, pricesPath } from "./prices.mjs"
 import { runMetrics } from "./metrics.mjs"
+import { buildProviderEntry, effortFace } from "./params.mjs"
 import { renderReport } from "./report.mjs"
 import {
   judgeConfigPath, judgeQuestion, judgeSnapshot, judgeWithPair, loadJudgeConfig, resolveJudgeSlots, reviewRun, reviewSnapshot, shouldReview, turnMaterial,
@@ -166,9 +167,15 @@ export async function runMain(opts, sel, fixture) {
     let step = 0
     for (const entry of entries) {
       const user = providers ? providers.find((p) => p.name === entry.provider) : null
-      const providerEntry = opts.dryRun
-        ? { name: entry.provider, model: entry.model, baseURL: "", apiKey: "", maxTokens: opts.maxTokens, temperature: entry.temperature ?? 0 }
-        : { ...user, model: entry.model, maxTokens: opts.maxTokens, temperature: entry.temperature ?? 0 }
+      // 条目构造 = `lib/params.mjs` 单源（§2.9-1 四字段覆写；与预检 / `run.mjs` 启动门同一构造面）
+      const base = opts.dryRun ? { name: entry.provider, model: entry.model, baseURL: "", apiKey: "" } : user
+      const providerEntry = buildProviderEntry(base, {
+        model: entry.model,
+        maxTokens: opts.maxTokens,
+        temperature: entry.temperature ?? 0,
+        reasoningEffort: entry.reasoningEffort ?? null, // 档位覆写优先；缺省 ⇒ 沿 base（用户 config）原值（KD-32）
+      })
+      const effort = effortFace(entry, user) // 实发面（豁免 / 两处皆无 ⇒ null ⇒ 两键不写——KD-35）
       const host = providerEntry.baseURL ? new URL(providerEntry.baseURL).host : null
       const dims = effectiveDims(entry, sel.runDims)
       const judgeEnv = makeJudgeEnv({
@@ -202,7 +209,9 @@ export async function runMain(opts, sel, fixture) {
         }
         casesOut.push({ caseId: c.id, dim: c.dim, class: CLASS_LABELS[c.class], prompt, runs })
       }
-      modelsOut.push({ label: entry.label, provider: entry.provider, model: entry.model, host, temperature: providerEntry.temperature, dims: [...dims], cases: casesOut, note: entry.note ?? "" })
+      // 逐档参数披露（KD-35 · §2.2-13）：两键同写同缺；未发送（豁免 / 两处皆无）⇒ 两键不写
+      const effortKeys = effort ? { reasoningEffort: effort.value, reasoningEffortFrom: effort.from } : {}
+      modelsOut.push({ label: entry.label, provider: entry.provider, model: entry.model, host, temperature: providerEntry.temperature, dims: [...dims], cases: casesOut, note: entry.note ?? "", ...effortKeys })
       if (sel.runManual) {
         for (const mp of MANUAL) {
           const manualCase = { id: mp.promptId, promptId: mp.promptId, prompt: mp.prompt, callOpts: {} }

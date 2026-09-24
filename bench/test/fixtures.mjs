@@ -76,16 +76,20 @@ function mixedOverturnCase() {
 /** 逐档温度注入（`modelTemperatures` 变体开关）：数字 ⇒ 设字段；`null`/缺省 ⇒ 不设字段（旧档形态——§2.2-12）。 */
 const withTemp = (m, t) => (t == null ? m : { ...m, temperature: t })
 
-/** 温度例外档夹具（`modelTemperatures.length > 1` 时追加为第二档——披露句断言用）。 */
+/** 温度例外档夹具（`modelTemperatures.length > 1` 时追加为第二档——披露句断言用）。
+ *  `reasoningEffortFrom = "config"` = **配置原值态**（`render.6` ② 来源两态之一）。 */
 const kimiTempModel = () => ({
   label: "kimi-k3", provider: "kimi", model: "kimi-k3", host: "api.moonshot.cn", dims: ["reasoning"], note: "多模态；API 仅受理温度 1",
+  reasoningEffort: "high", reasoningEffortFrom: "config",
   cases: [{ caseId: "reasoning.1", dim: "reasoning", class: "正常", prompt: FROZEN_PROMPTS["reasoning.1"], runs: [run("pass", TOK(1000, 0, 100), "命中 3")] }],
 })
 
 /** 基准夹具：含判官对 / 仲裁 / 复核记录（渲染面 + 重算面共用）；价格命中仓内 prices.json 的 deepseek 两条。
  *  `mixedOverturn` = 追加混合面翻案用例（默认关——既有读数零扰动）。
  *  `modelTemperatures` = 逐档温度（数组按 models 序：数字 ⇒ 设字段 / `null` ⇒ 不设字段〔旧档形态〕；
- *  长度 > 1 ⇒ 追加 `kimi-k3` 例外档——概览温度例外披露句断言用）。 */
+ *  长度 > 1 ⇒ 追加 `kimi-k3` 例外档——概览温度例外披露句断言用）。
+ *  逐档参数披露（KD-35）：基准档 = **档位覆写态**（`reasoningEffort` + `from = "models.json"`）；
+ *  `kimi-k3` = **配置原值态**（`from = "config"`）；旧档缺两键态由调用方删键构造（`render.6` ③）。 */
 export function fixtureResult({ label = "fx-run", nullTokens = false, leakText = null, warnings = [], mixedOverturn = false, modelTemperatures = [0] } = {}) {
   const good = TOK(1000, 0, 100)
   const pass = run("pass", good, leakText ?? "命中 3")
@@ -111,7 +115,7 @@ export function fixtureResult({ label = "fx-run", nullTokens = false, leakText =
     jRec("B", "pass", "夹具：B 判通过。", [jCall(TOK(320, 0, 50))]),
   ], "判官不可用（有效判不足）：A 位失败 · B 位裁决 pass")
   return {
-    suiteVersion: 5,
+    suiteVersion: 6,
     label,
     startedAt: "2026-09-23T22:00:00+08:00",
     finishedAt: "2026-09-23T22:01:00+08:00",
@@ -122,7 +126,7 @@ export function fixtureResult({ label = "fx-run", nullTokens = false, leakText =
     prices: { asOf: "2026-09-23", currency: "CNY", unit: "元 / 百万 token", source: "fixture" },
     recomputed: null,
     judge: {
-      promptVersion: 1, frozenAtSuiteVersion: 5,
+      promptVersion: 1, frozenAtSuiteVersion: 6,
       judges: [jMeta("deepseek", "deepseek-flash", true), jMeta("deepseek", "deepseek-v4-pro", true)],
       arbiter: jMeta("mimo", "mimo-v2.6-pro"),
       judgeCalls: 0, costCny: null, agreements: 0, disagreements: 0, arbitrations: 0, unavailable: 0,
@@ -131,6 +135,7 @@ export function fixtureResult({ label = "fx-run", nullTokens = false, leakText =
     models: [withTemp({
       label: "deepseek-flash", provider: "deepseek", model: "deepseek-flash", host: "api.deepseek.com",
       dims: ["reasoning", "tools", "multiturn", "instructions"], note: "",
+      reasoningEffort: "medium", reasoningEffortFrom: "models.json",
       cases: [
         { caseId: "reasoning.1", dim: "reasoning", class: "正常", prompt: "不使用计算器，计算 7^123 的个位数。只回答一个数字。", runs: [pass] },
         { caseId: "reasoning.2", dim: "reasoning", class: "边界", prompt: "计算 17^5 与 2^20 的差。只回答整数。", runs: [fail] },

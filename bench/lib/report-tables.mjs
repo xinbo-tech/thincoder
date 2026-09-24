@@ -113,13 +113,17 @@ export function matrixSection(data, stats) {
   stats = [...stats].sort((a, b) => b.passed - a.passed || a.label.localeCompare(b.label))
   const dims = DIMENSIONS.filter((d) => (data.models ?? []).some((m) => dimsOf(m).includes(d)))
   if (dims.length === 0) return ["### 能力矩阵", "", "本轮未选自动维（能力矩阵无列）——人工判读见下节。", ""]
+  // 相对成本 = 成本表同源照搬（每通过任务成本 ÷ 表内最低者 = 1×——§2.3-10②；不另立口径）
+  const bases = stats.map((s) => s.costPerPass).filter((v) => typeof v === "number" && v > 0)
+  const base = bases.length > 0 ? Math.min(...bases) : null
+  const relOf = (v) => (base == null || typeof v !== "number" ? "—" : `${(v / base).toFixed(1)}×`)
   return [
     "### 能力矩阵",
     "",
-    "单元格 = 通过用例数 / 该模型在该维的用例数（用例判定：N 次全过 = pass）；`—` = 不在该模型面；**按合计通过数降序**。",
+    "单元格 = 通过用例数 / 该模型在该维的用例数（用例判定：N 次全过 = pass）；`—` = 不在该模型面；**按合计通过数降序**；**总耗时 / 相对成本两列 = 同源照搬**（总耗时 = 速度表「总耗时（中位）」· 相对成本 = 成本表「相对成本」）——本列「总耗时」与用时表「累计耗时」不同源（并存：前者 = 单次响应中位，后者 = Σ 执行耗时）。",
     "",
-    `| 模型 | ${dims.map((d) => DIM_LABELS[d] ?? d).join(" | ")} | 合计 |`,
-    `| --- | ${dims.map(() => "---").join(" | ")} | --- |`,
+    `| 模型 | ${dims.map((d) => DIM_LABELS[d] ?? d).join(" | ")} | 合计 | 总耗时 | 相对成本 |`,
+    `| --- | ${dims.map(() => "---").join(" | ")} | --- | --- | --- |`,
     ...stats.map((s) => {
       const cells = dims.map((d) => {
         if (!dimsOf(s.model).includes(d)) return "—"
@@ -128,35 +132,11 @@ export function matrixSection(data, stats) {
         const overturns = inDim.some((c) => (c.runs ?? []).some((r) => r.review?.verdict === "overturn"))
         return `${verd.filter((v) => v === "pass").length}/${verd.filter((v) => v !== "skipped").length}${overturns ? " ⟲" : ""}`
       })
-      return `| ${s.label} | ${cells.join(" | ")} | ${s.passed}/${s.total} |`
+      return `| ${s.label} | ${cells.join(" | ")} | ${s.passed}/${s.total} | ${fmtMs(s.speed.totalMs)} | ${relOf(s.costPerPass)} |`
     }),
     ...(stats.some((s) => s.overturns > 0)
       ? ["", "脚注：`⟲` = 该模型 × 维存在**复核翻案**——翻案**已改判计入通过数**（`⟲` = 经复核纠正 · 原机械 fail；两形态 = 纯机械面完整纠正 / 混合面「判官面未裁决」——处置见《复核翻案》小节）。"]
       : []),
-    "",
-  ]
-}
-
-export function speedSection(stats) {
-  stats = [...stats].sort((a, b) => (a.speed.ttftMs ?? Infinity) - (b.speed.ttftMs ?? Infinity) || a.label.localeCompare(b.label))
-  const footnotes = []
-  for (const s of stats) {
-    const scored = allRuns(s.model).filter((r) => r.verdict === "pass" || r.verdict === "fail")
-    const nullTtft = scored.filter((r) => r.metrics?.ttftMs == null).length
-    const nullTok = scored.filter((r) => r.metrics?.tokPerSec == null).length
-    if (nullTtft > 0 || nullTok > 0) {
-      footnotes.push(`- ${s.label}：${nullTtft} 个 run 无 TTFT / ${nullTok} 个 run 无 tok/s（无非空 delta 或无 usage）——未参与中位（报告格「—」= 数据缺失，不按 0 计）。`)
-    }
-  }
-  return [
-    "### 速度表",
-    "",
-    "只取正常返回的 run（pass / fail）；`--n` > 1 时取中位；token 计入 usage 精确值（缺 ⇒ `—`）；**按 TTFT 中位升序（缺数据者居末）**。",
-    "",
-    "| 模型 | TTFT 中位 | tok/s 中位 | 总耗时（中位） | 采样 run 数 |",
-    "| --- | --- | --- | --- | --- |",
-    ...stats.map((s) => `| ${s.label} | ${fmtMs(s.speed.ttftMs)} | ${fmtRate(s.speed.tokPerSec)} | ${fmtMs(s.speed.totalMs)} | ${s.speed.samples} |`),
-    ...(footnotes.length > 0 ? ["", "脚注：", ...footnotes] : []),
     "",
   ]
 }

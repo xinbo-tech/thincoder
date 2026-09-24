@@ -1,17 +1,20 @@
 /**
  * lib/report.mjs — 结果对象 → md 报告（设计 §2.3：骨架固定，缺段即缺陷）。
  *
- * md 完全由结果 JSON 渲染 ⇒ 两档恒一致。表格分段与聚合件在 `lib/report-tables.mjs` / `lib/report-time.mjs`（拆分触发条件）；
+ * md 完全由结果 JSON 渲染 ⇒ 两档恒一致。表格分段与聚合件在 `lib/report-tables.mjs` / `lib/report-time.mjs` /
+ * `lib/report-speed.mjs` / `lib/report-params.mjs`（拆分触发条件）；
  * 本档 = 概览 / 方法 / 关键发现 / 局限声明 / 附录 + 骨架装配。关键发现只由数据 + 固定句式生成（禁主观评价词）。
  */
 
 import { AXES, CAPABILITY_SELECTOR, DIMENSIONS, DIM_LABELS, MANUAL_DIM, SUITE_VERSION } from "../cases/index.mjs"
 import {
   EVAL_SPLIT_NOTE, allRuns, costSection, detailSection, dimsOf, fmtMoney, fmtMs, fmtRate,
-  manualSection, matrixSection, modelStats, rate, speedSection,
+  manualSection, matrixSection, modelStats, rate,
 } from "./report-tables.mjs"
 import { divergenceOf, judgeDivergenceSection, reviewOverturnSection } from "./report-review.mjs"
 import { timeSection } from "./report-time.mjs"
+import { speedSection } from "./report-speed.mjs"
+import { paramsSection } from "./report-params.mjs"
 
 /** 概览判官面（§2.3）：判官三行（A / B / 仲裁 C · **逐位元数据无金额**）+ 分歧率 + **评估开销分账句**。
  *  与被测重合标注 = **渲染面三级派生**（判官块不另存字段——重合事实由 `models[]` × 判官槽两侧键共同承载）。
@@ -56,6 +59,7 @@ function overviewSection(data, stats) {
     ...(tempExceptions.length > 0
       ? [`- 温度例外：${tempExceptions.map((m) => `${m.label} = ${m.temperature}`).join(" · ")}（模型级例外——仅该档 API 拒收温度 ${runTemp} 时开启；其余档恒 ${runTemp}）`, ""]
       : []),
+    ...paramsSection(data),
     ...judgeOverviewLines(data),
     "",
   ]
@@ -76,7 +80,7 @@ function methodSection(data) {
     `- 复现命令：\`${data.run?.command}\``,
     `- 套件版本：suiteVersion = ${data.suiteVersion ?? SUITE_VERSION}（题集/判据/rubric/判官身份/模板/计时口径/结果数值构成规则任一变化 +1；呈现面变化——段位增删 / 表列集 / 排序 / 图例与脚注文案——不 bump；跨版本不严格可比）`,
     ...(data.judge ? [`- 判分模板：判官 promptVersion = ${data.judge.promptVersion} · 复核 promptVersion = ${data.review?.promptVersion} · 判官配置冻结于 suiteVersion ${data.judge.frozenAtSuiteVersion}`] : []),
-    `- 工具链：模型调用经核 provider 路径（thinking / reasoningEffort 等参数取用户配置原值）；temperature = ${data.run?.temperature}；多轮工具链跨轮合计计时。`,
+    `- 工具链：模型调用经核 provider 路径（thinking 等其余参数取用户配置原值；思考强度 = 中档口径 · 档位覆写优先——逐档实发值与来源见概览逐档参数表）；temperature = ${data.run?.temperature}；多轮工具链跨轮合计计时。`,
     ...(data.recomputed ? [`- 重算产物：由 \`${data.recomputed.from}\` 于 ${data.recomputed.at} 重出（成本按当前 prices.json 重算；原档不动）。`] : []),
     "",
   ]

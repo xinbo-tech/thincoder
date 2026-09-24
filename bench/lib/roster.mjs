@@ -1,15 +1,18 @@
 /**
  * lib/roster.mjs — models.json 参测清单：装载 + 校验 + 解析（设计 §2.4）。
  *
- * 条目 = { label, provider, model, dims?, skipDims?, note?, temperature? }；`provider` 只存用户 config 的
- * providers[].name（**只存名字，不落密钥**）；`--models` 解析：label 首选匹配，或 `provider:model`
+ * 条目 = { label, provider, model, dims?, skipDims?, note?, temperature?, reasoningEffort? }；`provider` 只存用户
+ * config 的 providers[].name（**只存名字，不落密钥**）；`--models` 解析：label 首选匹配，或 `provider:model`
  * 复合引用；未在册 → 报错（列在册名单）。维度面 = CLI 能力项 ∩ dims（若给）− skipDims（若给）。
  * `temperature` = 模型级温度例外（0–2；缺省 ⇒ 0——仅当该模型 API 拒收 0 时显式给；非法 ⇒ 装载即拒）。
- * 准入附带核面：例外档宜核对应 spec 无 `tempRange`（核按 `spec.tempRange` 裁剪——有该字段则入档值 ≠ 实发值）。
+ * `reasoningEffort` = 档位级思考强度覆写（中档口径 KD-32；取值 ∈ 七值词表——缺省 ⇒ 沿用户 config 原值；
+ * 非法 ⇒ 装载即拒，与预检枚举面同源 §2.13）；准入附带核面：例外档宜核对应 spec 无 `tempRange`
+ * （核按 `spec.tempRange` 裁剪——有该字段则入档值 ≠ 实发值）。
  */
 
 import { readFileSync } from "node:fs"
 import { DIMENSIONS, MANUAL_DIM } from "../cases/index.mjs"
+import { EFFORT_VALUES } from "./params.mjs"
 
 const LABEL_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/ // 文件名安全（英文/数字/连字符/点）
 const KNOWN_DIMS = new Set([...DIMENSIONS, MANUAL_DIM])
@@ -41,6 +44,9 @@ export function loadRoster(path) {
     }
     if (m.temperature != null && (typeof m.temperature !== "number" || !Number.isFinite(m.temperature) || m.temperature < 0 || m.temperature > 2)) {
       throw new Error(`models.json：${at}.temperature 非法（须为 0–2 的有限数字；缺省 = 0）`)
+    }
+    if (m.reasoningEffort != null && !EFFORT_VALUES.includes(m.reasoningEffort)) {
+      throw new Error(`models.json：${at}.reasoningEffort 非法（须 ∈ {${EFFORT_VALUES.join(", ")}}；缺省 = 沿用户 config 原值）`)
     }
   }
   return raw
