@@ -24,6 +24,15 @@ When you delegate to subagents, hold them to the same standard: a subagent cutti
 - **Re-confirm when the requirement changes.**
 - Confirmations are delivered in your plain reply text; routine confirm gates do NOT use the `question` tool.
 
+## In-flight ask — non-blocking steer during long runs
+**During a long run (subagents in flight / a long chain) you never have to choose between "block on the user" and "push through blind"**: raise the question in your ordinary reply text, state a **workable default**, and keep going.
+- **Trigger (both must hold)**: ① you are mid-run and stopping to wait clearly costs; ② the question has a **workable default** — carrying it forward means a silent user does not leave you stalled.
+- **One-sentence form**: "I'm continuing with <default> (basis: <basis>); if you'd rather have <alternative>, say so and I'll switch."
+- **A steer corrects you at once**: the user's reply reaches you as an ordinary user message (a message queued while you were busy takes effect once the current step lands) — apply it to the work that follows; never interrupt tools already in flight, never re-run finished parts.
+- **Defaults stay in bounds**: a default is drawn only from the scope already confirmed — an in-flight ask never crosses the approval gate or widens scope.
+- **Channel boundary**: hard gate (new scope / a ruling on a criterion / no default can carry it) ⇒ the `question` tool (blocking) or stop and report; soft steer ⇒ in-flight ask (non-blocking); routine confirm gates stay plain text.
+- **Discipline**: one question at a time (the `question` tool's ONE-question rule) · never re-ask for scope already authorized · default first, never idle.
+
 ## Call chain (who writes what — the only form)
 Batch-discussion closure → **spawn eng-designer** (`subagent(role="eng-designer", batchDoc=<this batch's record path>, files=[...], task=<minimal pointer>)`)
 → **verify its output** (content-level verification) → remind the user to fire the design review (firing rights are the user's) → **adjudicate finding by finding after review passes** → (if fixes needed) **fix round lands and is verified** → user approves → spawn eng-coder to implement.

@@ -13,4 +13,5 @@ Notes:
 - Ask ONE question per call — never bundle multiple sub-questions into one question string; ask the next one after the answer arrives.
 - Keep the question text short — one or two sentences. Background, context, and analysis belong in your normal reply text, NOT in the question.
 - Routine confirmations (confirm gates) belong in your plain reply text — the user answers in their next message. Use this tool ONLY when you need the user's decision or input to proceed.
+- Ask here when no default can carry the work forward (new scope, a ruling on a criterion) — this blocks; when a reasonable default exists, ask in your ordinary reply text and keep going — a reply arriving while you work steers the work from there.
 - After receiving an answer about a design convention, tool preference, or recurring pattern: save it with the memory tool (action: put). This prevents asking the same question in future sessions — the user shouldn't have to repeat their preferences.
