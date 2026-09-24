@@ -257,11 +257,15 @@ export const editTool = {
   touchedPaths(args) {
     // 2026-09-05 用户裁定：顶层 path = 批默认——仅当有条目缺 path 时计入（条目全带 path
     // 时顶层 path 不实际使用——不虚报进 _touchedFiles）
-    if (args.edits) {
-      const out = args.edits.map((e) => e.path).filter(Boolean)
-      if (args.path && args.edits.some((e) => !e.path)) out.push(args.path)
+    // #325：本钩子**零抛**（execute 之前被多处消费，首个未守卫点即会逸出裸错）——形态
+    // 拒绝统一归 execute（edit-batch/桥 同单源成形错误）；真值非数组 ⇒ 返 []、零触达
+    // （不虚报顶层 path）；非对象条目按「缺 path」尽力提取（e?.path）。
+    if (Array.isArray(args.edits)) {
+      const out = args.edits.map((e) => e?.path).filter(Boolean)
+      if (args.path && args.edits.some((e) => !e?.path)) out.push(args.path)
       return out
     }
+    if (args.edits) return [] // 真值非数组：调用必被 execute 拒绝（成形错误）——零触达
     return args.path ? [args.path] : []
   },
   async execute(args, ctx) {

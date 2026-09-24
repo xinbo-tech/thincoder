@@ -16,6 +16,8 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { computeEditEntry, applyPatchLines, runSingleEdit } from "@thincoder/core/tools/edit-diff.mjs"
 import { applyEditBatch, FUZZY_MATCH_NOTE, normalizeEditLine } from "@thincoder/core/tools/edit-batch.mjs"
+import { editTool } from "@thincoder/core/tools/file.mjs"
+import { buildAcpCallbacks } from "../src/acp/bridge.mjs"
 import { slow } from "./slow.mjs"
 
 const OPTS = { path: "f.txt" }
@@ -272,6 +274,99 @@ test("阶段2 防误匹配: 行内多空格结构差异（文字相同）不命�
     () => computeEditEntry(content, { old_string: old, new_string: "x" }, OPTS),
     /old_string not found/
   )
+})
+
+// ---- #325 入参守卫（EDIT.md §5——核 5 例 + 桥 4 例） --------------------------
+
+const CTX0 = { cwd: process.cwd() } // 守卫先于任何读盘——ctx 不进 fs
+
+// 真值非数组三态（客观形式 / JSON 字符串 / 数字）——假值（"" / 0 / false / null）视同缺席、
+// 不触守卫（EDIT.md §5），故不入例。
+const NOT_ARRAY = ["[]", { path: "x.txt" }, 42]
+
+// 非对象条目三态（字符串 / 数字 / 数组）
+const NOT_OBJECT = ["foo", 42, ["x"]]
+
+test("#325 核: touchedPaths 真值非数组三态零抛（带/不带顶层 path 两形）", () => {
+  for (const bad of NOT_ARRAY) {
+    assert.doesNotThrow(() => editTool.touchedPaths({ edits: bad }))
+    assert.deepEqual(editTool.touchedPaths({ edits: bad }), [])
+    assert.deepEqual(editTool.touchedPaths({ path: "f.txt", edits: bad }), [])
+  }
+})
+
+test("#325 核: touchedPaths 非对象条目按「缺 path」尽力提取", () => {
+  assert.deepEqual(editTool.touchedPaths({ edits: [null] }), [])
+  assert.deepEqual(editTool.touchedPaths({ path: "f.txt", edits: [null] }), ["f.txt"])
+  assert.deepEqual(editTool.touchedPaths({ edits: [null, { path: "b.txt" }] }), ["b.txt"])
+  assert.deepEqual(editTool.touchedPaths({ edits: NOT_OBJECT }), [])
+})
+
+test("#325 核: 成形错误——真值非数组三态 + 空数组 ⇒ 容器文案（单源）", async () => {
+  for (const bad of [...NOT_ARRAY, []]) {
+    await assert.rejects(applyEditBatch({ edits: bad }, CTX0), /edits must be a non-empty array of/)
+  }
+})
+
+test("#325 核: 成形错误——null 条目 ⇒ 条目级文案（含下标）", async () => {
+  await assert.rejects(applyEditBatch({ edits: [null] }, CTX0), /edits\[0\] must be an object of/)
+  await assert.rejects(applyEditBatch({ edits: [{ line: 1 }, null] }, CTX0), /edits\[1\] must be an object of/)
+})
+
+test("#325 核: 成形错误——非对象条目（字符串 / 数字 / 数组）⇒ 同文案", async () => {
+  for (const bad of NOT_OBJECT) {
+    await assert.rejects(applyEditBatch({ edits: [bad] }, CTX0), /edits\[0\] must be an object of/)
+  }
+})
+
+// 桥面（ACP editBatch）直驱 harness——捕获式 request（零 fs：缓冲内容由 mock 提供）。
+function bridgeHarness(text = "a\nb\n") {
+  const requests = []
+  const cb = buildAcpCallbacks({
+    sessionId: "s1",
+    notify: () => {},
+    request: async (method, params) => {
+      requests.push({ method, params })
+      return method === "fs/read_text_file" ? { text } : {}
+    },
+    log: () => {},
+    clientCaps: { fs: { readTextFile: true, writeTextFile: true } },
+  })
+  return { cb, requests }
+}
+
+test("#325 桥: edits: [] ⇒ 成形错误（单源同句）、零反向 RPC", async () => {
+  const h = bridgeHarness()
+  const r = await h.cb.toolRouter("edit", { edits: [] })
+  assert.equal(r.handled, true)
+  assert.match(r.result, /^Error: edits must be a non-empty array of/)
+  assert.equal(h.requests.length, 0)
+})
+
+test("#325 桥: [null] ⇒ 含下标成形错误、零反向 RPC", async () => {
+  const h = bridgeHarness()
+  const r = await h.cb.toolRouter("edit", { edits: [null] })
+  assert.equal(r.handled, true)
+  assert.match(r.result, /^Error: edits\[0\] must be an object of/)
+  assert.equal(h.requests.length, 0)
+})
+
+test("#325 桥: 非对象条目（字符串 / 数字 / 数组）⇒ 同文案含下标（坏条目下标 1）", async () => {
+  for (const bad of NOT_OBJECT) {
+    const h = bridgeHarness()
+    const r = await h.cb.toolRouter("edit", { path: "a.txt", edits: [{ old_string: "a", new_string: "A" }, bad] })
+    assert.equal(r.handled, true)
+    assert.match(r.result, /^Error: edits\[1\] must be an object of/)
+    assert.equal(h.requests.length, 0) // 预扫先于任何 fs 反向 RPC（零部分读取）
+  }
+})
+
+test("#325 桥: 正向对照——合法批量经桥仍通（守卫零误拦）", async () => {
+  const h = bridgeHarness()
+  const r = await h.cb.toolRouter("edit", { path: "a.txt", edits: [{ old_string: "a", new_string: "A" }] })
+  assert.equal(r.handled, true)
+  assert.match(r.result, /^OK: edited a\.txt via IDE \(1 occurrence\(s\)\)/)
+  assert.deepEqual(h.requests.map((x) => x.method), ["fs/read_text_file", "fs/write_text_file"])
 })
 
 // ---- 端到端（fs 落盘——slow 层） -------------------------------------------

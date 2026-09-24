@@ -20,7 +20,7 @@
  * `{ stopReason: "end_turn" }` (kimi session.ts parity).
  */
 import { detectDanger, normalizeEOL, joinWithEol } from "@thincoder/core/tools/shared.mjs"
-import { computeEditEntry, validateEditEntry, assertEditArgsExclusive, hasLineParams } from "@thincoder/core/tools/edit-diff.mjs"
+import { computeEditEntry, validateEditEntry, assertEditArgsExclusive, assertEditsContainer, assertEditEntries, hasLineParams, EDIT_ENTRY_NO_PATH, EDIT_ABORT_PREFIX, editEntryLabel } from "@thincoder/core/tools/edit-diff.mjs"
 // 第 27 批 §12.3①/③：relay 前缀文法单一权威（模块直连——不自持正则副本）。
 import { parseRelayPath } from "@thincoder/core/agent/relay-prefix.mjs"
 // 批 1 CORE-DEFECT-FIXES B3：onWait 相位值域 + 文案单源（本面仅日志——PROVIDER.md §6.20）
@@ -106,7 +106,6 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {}, 
   // （edit-diff.mjs——校验→判定序→应用：行级 LCS、零重叠→替换即删、replace_all 字面替换全部）。
   // 桥只留「读 IDE 缓冲 → computeEditEntry → 写回 IDE 缓冲」——错误文本经抛错原样透传
   // ——与本地通道逐字一致（NF15.6b / AC15.10：not found / occurrences / 空 old / 空 new）。
-  const EDIT_ABORT_PREFIX = "edit aborted (atomic — no files written): "
 
   // 不变量（§11.7-2）：**任何** fs/* 反向 RPC 发出前必过客户端能力位——守卫住在本函数内
   // （防御面：路由分支先判，守卫兜底，漏判不发静默超时）。
@@ -137,24 +136,23 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {}, 
     await writeBuffer(p, joinWithEol(normalizeEOL(out.updated).split("\n"), raw))
     return `OK: edited ${p} via IDE (${out.occurrences} occurrence(s))${out.note ? ` — ${out.note}` : ""}`
   }
-  /** 数组形态（D15.7）：条目校验（path——顶层默认自 args.path ?? args.filePath（pathOf）——
-   *  2026-09-05 用户裁定 CLI parity——/validateEditEntry/互斥（只对顶层 old/new）——同本地 edit-batch 措辞）→
-   *  读全部涉及文件缓冲（同文件去重——一次读）→ 逐条 computeEditEntry（abortPrefix——批量
+  /** 数组形态（D15.7）：守卫与文案单源 = 本地 edit-diff（assertEditsContainer / assertEditEntries /
+   *  validateEditEntry——EDIT.md §8 D-7：核 edit-batch 与桥同调用、桥零字面副本）→
+   *  读全部涉及文件缓冲（同文件去重——一次读）→ 逐条 computeEditEntry（EDIT_ABORT_PREFIX——批量
    *  原子前缀；同文件条目按数组序串行累积——第二条基于第一条结果）→ 全部通过 → 逐文件写回
    *  一次（判失败 → 零写；写失败 → 同本地 edit-batch 既有原子语义）。 */
   const editBatch = async (args) => {
     const edits = args.edits
-    if (!Array.isArray(edits) || edits.length === 0) {
-      throw new Error("edits must be a non-empty array of {path, old_string | line/startLine+endLine, new_string}")
-    }
+    assertEditsContainer(edits)
     assertEditArgsExclusive(args)
+    assertEditEntries(edits)
     const groups = new Map() // path → { path, raw, content, edits }
     for (const e of edits) {
       // 2026-09-05 用户裁定（CLI parity——本地 edit-batch 同句）：条目自带 path 优先；
       // 缺省回退顶层 path（pathOf——path/filePath 别名同单形态）
       const p = e.path ?? pathOf(args)
-      if (!p) throw new Error("each edit must have a path — give each entry its own path or pass a top-level path")
-      validateEditEntry(e, { label: `edit for ${p}: `, rich: false })
+      if (!p) throw new Error(EDIT_ENTRY_NO_PATH)
+      validateEditEntry(e, { label: editEntryLabel(p), rich: false })
       let g = groups.get(p)
       if (!g) {
         g = { path: p, raw: "", content: "", edits: [] }

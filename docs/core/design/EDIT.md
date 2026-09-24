@@ -56,6 +56,13 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 - **行号校验**：`line`/`startLine`/`endLine` 正整数；`startLine ≤ endLine`；`endLine ≤ 文件行数`（越界报错）；删行形态同校验。
 - **`replace_all`**：每处 old→new **字面替换**（不做插入 / 分支 0）；多匹配无 `replace_all` → occurrences 错误。
 - **`edits` 数组**：同文件多条**串行累积**、跨 path 并行、**全判后原子写**（任一失败全不写）；条目内同样二选一（`old_string` 或行号）；顶层 `path` = 无自带 path 条目的默认，条目自带 path 优先。
+- **入参容器守卫（#325）**：`edits` 真值非数组（字符串 / 对象 / 数字等）或空数组 ⇒ 成形错误「edits must be a non-empty array of {path, old_string | line/startLine+endLine, new_string}」——空数组与真值非数组 = 同一错误面；假值 `edits`（`""` / `0` / `false` / `null`）视同缺席 ⇒ 单形态面（不触本守卫）。
+- **条目守卫（#325）**：条目非对象（`null` / 字符串 / 数字 / 数组）⇒ 条目级成形错误「edits[i] must be an object of {path, old_string | line/startLine+endLine, new_string}」（i = 数组下标）。
+- **守卫与文案单源（#325）**：两守卫（`assertEditsContainer` / `assertEditEntries`）+ 五文案（`EDITS_CONTAINER_ERROR` / `editsEntryError(i)` / `EDIT_ENTRY_NO_PATH` / `EDIT_ABORT_PREFIX` / `editEntryLabel(p)`）单源 = `thincoder-core/tools/edit-diff.mjs`。
+- **调用点（#325）**：核 `edit-batch.mjs` 与 ACP 桥 `bridge.mjs` 一律引用调用——桥零字面副本（§6 入参守卫行 / §8 D-7）。
+- **零裸抛（#325）**：`touchedPaths` 钩子（`execute` 前被多处消费）不抛——真值非数组容器 ⇒ 零触达（返 `[]`；假值视同缺席 ⇒ 顶层 `path` 分支）、非对象条目 ⇒ 按「缺 path」尽力提取（§8 D-6）。
+- **桥面同口径（#325）**：ACP 桥 `editBatch` 与核同调用两守卫（同单源、同句）——`[null]` / 非对象条目 ⇒ 同文案含下标成形错误（经 `toolRouter` catch 渲染 `Error: <msg>` 工具结果——零裸 TypeError、零反向 RPC）。
+- **非数组容器回落（#325）**：`edits` 非数组不入桥批量分支（`toolRouter` 判据 `Array.isArray`）——不可成单形态（或能力位缺失）⇒ 回落本地通道、与核同错误面（`execute` 真值判 ⇒ 容器错误）；携合法单形态参数 ⇒ 桥径单形态应用、核径容器错误（同一入参两通道归宿分歧——登记项，见 §8 D-8）。
 - **行数上限**：old/new 各 ≤1000（超限报 edit region too large）。
 - **not-found 引导**：错误含 `searched:` + grep 建议 + `similar lines (top 3, score)` 段（LCS 连续子串 / 阈值 0.5 / top3，单行亦覆盖；零候选省略——算法权威见 `docs/core/design/EDIT-HELPERS.md` §2 `findCandidates`）。
 - **数据新鲜度**：`old_string` / 行号只来自最新 `read`——改前 re-read。
@@ -65,9 +72,10 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 | 面 | 落点 | 实核 |
 |---|---|---|
 | 工具对象 / schema | `thincoder-core/tools/file.mjs:224`（`editTool`） | 导出在位 |
-| diff 内核 / 判定序 | `thincoder-core/tools/edit-diff.mjs:76`（`applyPatchLines`）· `:253`（`computeEditEntry`） | 导出在位 |
-| 校验 / 互斥 / 删行 | `thincoder-core/tools/edit-diff.mjs:129`（`assertEditArgsExclusive`）· `:143`（`validateEditEntry`）· `:55`（`deleteTarget`）· `:49`（`hasLineParams`）· `:63`（`splitLines`） | 导出在位 |
-| D1/D2 纯函数 | `thincoder-core/tools/edit-batch.mjs:129`（`normalizeEditLine`）· `:150`（`findFuzzyWindow`）· `:184`（`applyLineEdit`）· `:141`（`FUZZY_MATCH_NOTE`） | 导出在位（edit-diff 调用期导入——ESM 循环安全） |
+| diff 内核 / 判定序 | `thincoder-core/tools/edit-diff.mjs:88`（`applyPatchLines`）· `:280`（`computeEditEntry`） | 导出在位 |
+| 校验 / 互斥 / 删行 | `thincoder-core/tools/edit-diff.mjs:141`（`assertEditArgsExclusive`）· `:170`（`validateEditEntry`）· `:67`（`deleteTarget`）· `:61`（`hasLineParams`）· `:75`（`splitLines`） | 导出在位 |
+| 入参守卫（#325） | 单源 `thincoder-core/tools/edit-diff.mjs`（`assertEditsContainer` / `assertEditEntries` + 五文案——两通道共用）· 调用点 `thincoder-core/tools/edit-batch.mjs` / `thincoder-cli/src/acp/bridge.mjs` · `thincoder-core/tools/file.mjs:257`（`touchedPaths`——零抛、尽力提取） | 本批落（#325） |
+| D1/D2 纯函数 | `thincoder-core/tools/edit-batch.mjs:128`（`normalizeEditLine`）· `:149`（`findFuzzyWindow`）· `:183`（`applyLineEdit`）· `:140`（`FUZZY_MATCH_NOTE`） | 导出在位（edit-diff 调用期导入——ESM 循环安全） |
 | 三通道共用 | 本地单形态 / `edits` 批量 / ACP 桥 | 同内核 |
 | 注册面 | `thincoder-core/tools/index.mjs:4` · `:21` | file 组 |
 | 描述面（模型可见） | `thincoder-core/tool-docs/edit.md` | 在位（`DESC()` 加载） |
@@ -77,9 +85,13 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 ② 编辑器路径——doc 已打开 → WorkspaceEdit range 替换（定位偏移与 `doc.positionAt` 同坐标系——`lfOffsetToRaw` 把 LF 域偏移映射回 CRLF 原文，见 `docs/core/design/EDIT-HELPERS.md` §6）；③ 测试面——VSC 侧 30 用例
 （`thincoder-vscode/test/edit-tool-improvement.test.mjs`：删行形态 / 空串拒 / normalize 逐字同算法 / 批量混用行号+内容条目）。
 
+**同类扫描（#325 · as-of 2026-09-25）**：「真值判断后点链」缺陷类——`thincoder-core/tools/**` 全扫仅 `file.mjs` 的 `touchedPaths` 一处（本批已卫）；其余工具触摸面（`read` / `insert_after` / `hashline_edit` 单参形态；`apply_patch` 有 try/catch 包裹）无一命中。**桥面**（`thincoder-cli/src/acp/bridge.mjs`）：`[null]` / 非对象条目同守卫同文案、跨档文案零副本（同批收——§5 / §8 D-7）。
+
 ## 7. 测试
 
-`thincoder-cli/test/edit-tool-improvement.test.mjs`（**33 用例——29 快 + 4 slow**：删行形态全路径 / 显式空串拒含 `replace_all` / normalize 弯引号命中 + 单遍映射单元 / 防误匹配 / 批量删行 + 模糊端到端）；VSC 侧同名档 `thincoder-vscode/test/edit-tool-improvement.test.mjs`。
+`thincoder-cli/test/edit-tool-improvement.test.mjs`（**42 用例——38 快 + 4 slow**：删行形态全路径 / 显式空串拒含 `replace_all` / normalize 弯引号命中 + 单遍映射单元 / 防误匹配 / 批量删行 + 模糊端到端 / **#325 入参守卫 9 例**）。
+**#325 守卫 9 例** = 核 5（真值非数组三态 `"[]"` / `{…}` / `42` + `[null]` / 非对象条目 ⇒ 成形错误、零裸抛）+ 桥 4（空数组 / `[null]` / 非对象条目经 `toolRouter` ⇒ `Error: <msg>`、零反向 RPC + 合法批量正向对照）。
+VSC 侧同名档 `thincoder-vscode/test/edit-tool-improvement.test.mjs`（同引核面——守卫随核生效、端档零改）。
 
 ## 8. 并入的关键决策记录（含否决备选）
 
@@ -90,6 +102,9 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 | D-3 | **零重叠 ⇒ 替换即删**（breaking） | 「插入保留旧行」使简单替换产生双份内容（实害）；否决保留旧语义（新增行有 insert_after 正路） |
 | D-4 | 显式空串 = **错误**、省略 = 删行 | 空串是手滑最可能形态（防误删）；省略是有界显式意图 |
 | D-5 | `edits` 数组**全判后原子写** | 半应用批量 = 不自洽工作树 |
+| D-6 | 入参守卫落 **`touchedPaths` 零抛 + 执行阶段单源成形错误**（#325） | 钩子消费点 10 处（核 6 · VSC 4）未守卫者过半（try/catch 兜底仅 4 处）——钩子内抛错（即便成形文案）会从首个未守卫点逸出（实测 = VSC L3 前置查询 `thincoder-vscode/src/agent/execute-tools.mjs:188`→`Promise.all` 批级拒绝、裸 TypeError 直达用户）；零抛 ⇒ 拒绝统一落 `applyEditBatch`（与空数组同点同文）。否决：钩子内抛同文案（第二抛点、逸出不可控） |
+| D-7 | 跨档单源 = **`thincoder-core/tools/edit-diff.mjs`**（#325 · 桥面同批收）：两守卫 + 五文案，核 `edit-batch.mjs` 与 ACP 桥 `bridge.mjs` 同调用、桥零副本 | 两侧已共同导入 `edit-diff` 校验词汇（`assertEditArgsExclusive` / `validateEditEntry` 等先例）——单源住共用导入面，条件与文案同时锁死；否决：常量导自 `edit-batch.mjs`（桥依赖本地实现模块、条件可分叉）；否决：桥自持副本（D2 双源） |
+| D-8 | 非数组容器的通道归宿分歧 = **登记不触**（#325）：桥判据 `Array.isArray`（批量 → 单形态 → 回落本地）vs 核 `execute` 真值判——`edits` 真值非数组且携合法单形态参数时，桥径单形态应用、核径容器错误（同一入参两通道不同归宿） | 触发未实证；收口涉桥路由判据改动 = 扩面（父侧裁定不扩面）——登记承载 = `docs/batches/2026-09-25-edit-arg-guard.md` §2.8 项 4① · 台账 #327 项 ③；桥/核的批量守卫与文案已同源（D-7） |
 
 ## 9. 不并项与历史沿革
 
@@ -117,3 +132,7 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 - 2026-09-15（**B 式迁移轮 · 第 1 批**）：建档——`thincoder-cli/docs/design/EDIT.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；旧结构编号统一为本文档节号；坐标改写为现状路径（`thincoder-core/tools/{edit-diff,edit-batch,file}.mjs` · VSC `file-edit.mjs`）；批次材料 / 状态行 / 变更流水不并（§9）。
 - 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：§6 增 **VSC 端差异块**（内嵌描述机制 / WorkspaceEdit 编辑器路径 / 30 用例）；§8.2 登记 VSC 源档批次材料；坐标实核。
 - 2026-09-15（**S2 W14 落地 · eng-coder**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W14）：双端行 + §6「VSC 对位实现」行补迁核注（VSC 自持档已删——现体 = 核 `thincoder-core/tools/{file.mjs, edit-diff.mjs, edit-batch.mjs}`）；§6 末行补 `lfOffsetToRaw` 退场注（现体 = 核全文写路径）；机制条文零改。
+- 2026-09-25（**#325 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-edit-arg-guard.md` §2）：§5 增「入参容器守卫 / 条目守卫」（非数组容器与 `[null]` / 非对象条目 ⇒ 成形错误、零裸抛）；§6 增「入参守卫」行 + 同类扫描结论；§7 测试面纳入守卫 5 例（33 → 38）；§8 增 D-6（守卫落点与否决备选）。
+- 2026-09-25（**#325 批 · fix 轮 · eng-designer**——承 `docs/batches/2026-09-25-edit-arg-guard.md` §2 修正块）：桥面同批收——§5 增守卫/文案单源条（两守卫 + 五文案单源 = `edit-diff.mjs`，核・桥同调用）；§6 入参守卫行 + 同类扫描补桥面；§7 桥面 4 例（38 → 42）；§8 增 D-7；桥内四处文案副本改引用。
+- 2026-09-25（**#325 批 · 评审轮 1 落地（fix 轮 2）· eng-designer**——承 `docs/batches/2026-09-25-edit-arg-guard.md` §2 修正块轮 2）：§5 三处收正（容器守卫补「真值」限定 + 假值归宿；零裸抛条同限定；非数组回落条限定适用范围——不可成单形态 ⇒ 回落本地、同错误面；携合法单形态 ⇒ 两通道归宿分歧，回指 §8 D-8）；§7 核 5 例写「真值」样本；§8 增 D-8（分歧登记）。机制语义零改。
+- 2026-09-25（**#325 批 · 实现后坐标重锚 · 父侧直接执行 · 机械修正 · 可 revert**——承批档 §5.6-3）：§6 坐标表重锚 11 处（`edit-diff.mjs` ×7 = 76/253/129/143/55/49/63 → 88/280/141/170/67/61/75；`edit-batch.mjs` ×4 = 129/150/184/141 → 128/149/183/140——实现插入所致）；`file.mjs:257` 与「入参守卫」行正确，零改。

@@ -45,6 +45,18 @@ export const EMPTY_NEW_STRING = "empty new_string — for deletion, keep the con
 export const EMPTY_NEW_STRING_LINE = "empty new_string with line-based targeting is an explicit error — OMIT new_string to delete the line/range (deleting by number is explicit intent; an empty replacement is a mistake, not a delete)"
 export const EDIT_ARGS_MUTEX = "edits array is mutually exclusive with top-level old_string/new_string/line/startLine/endLine — a top-level path is allowed (default for entries without their own path); provide each change's targeting (old_string or line range) and new_string inside its edits entry"
 
+// ─── #325 入参守卫文案（单源——EDIT.md §5 / §8 D-7：核 edit-batch 与 ACP 桥 bridge.mjs 同调用）───
+/** 容器级成形错误（真值非数组 / 空数组——同一错误面）。 */
+export const EDITS_CONTAINER_ERROR = "edits must be a non-empty array of {path, old_string | line/startLine+endLine, new_string}"
+/** 条目级成形错误（i = 数组下标；非对象条目 = null / 字符串 / 数字 / 数组）。 */
+export const editsEntryError = (i) => `edits[${i}] must be an object of {path, old_string | line/startLine+endLine, new_string}`
+/** 条目缺 path 且无顶层默认路径。 */
+export const EDIT_ENTRY_NO_PATH = "each edit must have a path — give each entry its own path or pass a top-level path"
+/** 批量原子失败前缀（条目判定失败时拼在消息前的 abortPrefix）。 */
+export const EDIT_ABORT_PREFIX = "edit aborted (atomic — no files written): "
+/** 批量条目校验前缀（validateEditEntry 的 opts.label）。 */
+export const editEntryLabel = (path) => `edit for ${path}: `
+
 /** D1（2026-09-08）：条目带按行号改参数（line / startLine / endLine 任一）。 */
 export function hasLineParams(entry) {
   return entry.line !== undefined || entry.startLine !== undefined || entry.endLine !== undefined
@@ -132,13 +144,28 @@ export function assertEditArgsExclusive(args) {
   }
 }
 
+/** 入参容器守卫（#325——EDIT.md §5）：edits 真值非数组 / 空数组 ⇒ 成形错误（同句单源——
+ *  核 edit-batch 与 ACP 桥 bridge.mjs 同调用）。批量判定序：容器 → 互斥 → 条目预扫 → 条目循环。 */
+export function assertEditsContainer(edits) {
+  if (!Array.isArray(edits) || edits.length === 0) throw new Error(EDITS_CONTAINER_ERROR)
+}
+
+/** 入参条目守卫（#325——EDIT.md §5）：条目非对象（null / 字符串 / 数字 / 数组）⇒ 含下标成形
+ *  错误——预扫于条目循环之前（不读盘、不触盘、零部分应用）。 */
+export function assertEditEntries(edits) {
+  for (let i = 0; i < edits.length; i++) {
+    const e = edits[i]
+    if (e === null || typeof e !== "object" || Array.isArray(e)) throw new Error(editsEntryError(i))
+  }
+}
+
 /**
  * 前置校验——内容形态：空 old / 非字符串 new；按行号改形态（D1，2026-09-08；阶段 2
  * 删行——EDIT.md §5）：与 old_string 互斥 / line 与 startLine|endLine 互斥 /
  * startLine+endLine 须成对 / 正整数 / endLine ≥ startLine / replace_all 不适用 /
  * new_string：省略（undefined）= 删行 / 显式空串 = 显式错（防误删）/ 其他类型报错。
  * error 文本按调用形态（单形态 rich / 批量 label）。
- * opts: { label = ""（批量前缀 "edit for <path>: "）, rich = true（单形态完整文本） }
+ * opts: { label = ""（批量前缀 = editEntryLabel(path)）, rich = true（单形态完整文本） }
  */
 export function validateEditEntry(entry, opts = {}) {
   const label = opts.label ?? ""
@@ -213,7 +240,7 @@ function isSingleLineReplace(entry) {
  * LCS 替换 / replace_all 字面）→
  * 元数据（受影响区首行/行数差/次数——recordWrite 与结果回显用）。
  * 返回 { updated, editStartLine, lineShift, occurrences, note?, deleted? }；失败抛错（含路径/引导）。
- * opts: { path, abortPrefix（批量 "edit aborted (atomic — no files written): "） }
+ * opts: { path, abortPrefix（批量 = EDIT_ABORT_PREFIX） }
  */
 /**
  * P15.11（2026-09-05 用户裁定——edit 连续失败分析）：old_string 逐字 not-found 时——

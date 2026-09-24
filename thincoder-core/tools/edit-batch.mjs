@@ -19,17 +19,16 @@ import { writeThroughPath } from "./write-path.mjs"
 // EDIT.md §6：批量条目判定+应用共用 edit-diff（EDIT.md §4 分支 0 单行替换 + 行级 LCS——零重叠→替换即删）；
 // EDIT.md §5：edits 互斥错误文本随前置校验分支迁出至 edit-diff.mjs。
 // #69：回执组装共用 edit-diff 的 composeEditReceipt（回执形态按端注入——缺省 = CLI 形态）。
-import { assertEditArgsExclusive, validateEditEntry, computeEditEntry, splitLines, EMPTY_NEW_STRING_LINE, deleteTarget, composeEditReceipt } from "./edit-diff.mjs"
+import { assertEditArgsExclusive, assertEditsContainer, assertEditEntries, validateEditEntry, computeEditEntry, splitLines, EMPTY_NEW_STRING_LINE, EDIT_ENTRY_NO_PATH, EDIT_ABORT_PREFIX, editEntryLabel, deleteTarget, composeEditReceipt } from "./edit-diff.mjs"
 
 /**
  * Apply the `edits` array form: multi-file atomic replacement. Throws on any
  * failure (atomic — nothing written). Returns the per-entry result text (joined).
  */
 export async function applyEditBatch(args, ctx) {
-  if (!Array.isArray(args.edits) || args.edits.length === 0) {
-    throw new Error("edits must be a non-empty array of {path, old_string | line/startLine+endLine, new_string}")
-  }
+  assertEditsContainer(args.edits)
   assertEditArgsExclusive(args)
+  assertEditEntries(args.edits) // #325 条目预扫（非对象条目 ⇒ 含下标成形错误；不读盘）
   // 原子：先全量检查（所有文件的替换都可执行）——任一失败全不写。
   // 2026-09-01 缺陷修复（TOOLS.md §9 ②"同文件多条规则"）：同一 path 的多条编辑
   // 按序**串行累积应用**——第 n 条基于前 n-1 条已应用后的累积内容做匹配与替换
@@ -40,9 +39,9 @@ export async function applyEditBatch(args, ctx) {
     // 2026-09-05 用户裁定：顶层 path + edits 并存合法化——`e.path || args.path`（条目优先；
     // 缺省入口仅在此兜底）；两者皆无 → 原错误文本（措辞补顶层选项）。
     const p = e.path || args.path
-    if (!p) throw new Error("each edit must have a path — give each entry its own path or pass a top-level path")
+    if (!p) throw new Error(EDIT_ENTRY_NO_PATH)
     // 前置校验（空 old / 非字符串 new——文本同 edit-diff 批量形态；读盘前校验）
-    validateEditEntry(e, { label: `edit for ${p}: `, rich: false })
+    validateEditEntry(e, { label: editEntryLabel(p), rich: false })
     const abs = resolveInCwd(ctx, p)
     let g = groups.get(abs)
     if (!g) {
@@ -61,7 +60,7 @@ export async function applyEditBatch(args, ctx) {
       const out = computeEditEntry(g.content, e, {
         path: g.path,
         absPath: g.abs,
-        abortPrefix: "edit aborted (atomic — no files written): ",
+        abortPrefix: EDIT_ABORT_PREFIX,
       })
       prepared.push({
         g,
