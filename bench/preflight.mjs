@@ -3,7 +3,7 @@
  * bench/preflight.mjs — 跑前参数预检（设计 §2.13 · KD-34 · 台账 #266）。
  *
  * 两面：
- * - **枚举面**（缺省跑 · 零网络 · fail-closed）= 逐档 + 判官三槽做「config × spec」兼容判定（六项逐项裁定）
+ * - **枚举面**（缺省跑 · 零网络 · fail-closed）= 逐档 + 判官三槽 + **替代池逐项**做「config × spec」兼容判定（六项逐项裁定）
  *   ——有阻断（①②③）⇒ 逐条点名 + 退出码 1；判定实现单源 = `lib/params.mjs`（与 `run.mjs` 启动门同函数）。
  * - **实弹面**（`--live` · 需密钥 · 1 发/档 · 单轮无工具 · 与运行面同构参数）= 全档参数受理探针（透传档为
  *   必测面——无枚举行时核守卫不把关）；读数 = 受理 / 400 / 抛错 + 时延，逐档打印。
@@ -73,15 +73,17 @@ export async function main(argv = process.argv.slice(2)) {
     const providers = loadConfig().providers ?? []
     const blockers = []
     let slots = []
+    let pool = []
     try {
       const r = resolveJudgeSlots(loadJudgeConfig(judgeConfigPath()), { providers, tested: entries })
       slots = r.slots
+      pool = r.pool
       for (const w of r.warnings) console.log(`信息 判官槽位：${w}`)
     } catch (e) {
       blockers.push(`判官配置：${e.message}`)
     }
-    const pre = enumerationPreflight({ entries, slots, providers })
-    console.log(`跑前参数预检 · 枚举面（零网络）——受测 ${entries.length} 档 + 判官 ${slots.length} 槽`)
+    const pre = enumerationPreflight({ entries, slots, pool, providers })
+    console.log(`跑前参数预检 · 枚举面（零网络）——受测 ${entries.length} 档 + 判官 ${slots.length} 槽 + 替代池 ${pool.length} 项`)
     for (const line of pre.lines) console.log(line)
     const all = [...blockers, ...pre.blockers]
     if (all.length > 0) {

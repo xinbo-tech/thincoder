@@ -19,14 +19,18 @@ import { runMetrics } from "./metrics.mjs"
 import { buildProviderEntry, effortFace } from "./params.mjs"
 import { renderReport } from "./report.mjs"
 import {
-  judgeConfigPath, judgeQuestion, judgeSnapshot, judgeWithPair, loadJudgeConfig, resolveJudgeSlots, reviewRun, reviewSnapshot, shouldReview, turnMaterial,
+  judgeConfigPath, judgeQuestion, judgeSnapshot, loadJudgeConfig, resolveJudgeSlots, reviewRun, reviewSnapshot, shouldReview, turnMaterial,
 } from "./judge.mjs"
+import { judgeWithPair } from "./judge-fallback.mjs"
 import { head, isoLocal, refuseIfExists, writePair } from "./output.mjs"
 
 export { recomputeMain } from "./recompute.mjs"
 
 const BENCH_DIR = dirname(dirname(fileURLToPath(import.meta.url)))
 const emptyMetrics = () => ({ ttftMs: null, totalMs: null, tokPerSec: null, tokens: { prompt: null, cached: null, completion: null }, cost: null })
+
+/** 控制台替代行（§8-6 冻结形态）：`[bench] 判官替代：<模型> <用例> <位> → <provider:model>（原因）`——运行面与补判面共用单源。 */
+export const substituteLine = (label, caseId, j, s) => `[bench] 判官替代：${label} ${caseId} ${j.id} 位 → ${s.provider}:${s.model}（${s.cause}）`
 
 function commandFor(opts) {
   const parts = ["node bench/run.mjs"]
@@ -48,8 +52,9 @@ function casePromptText(c) {
   return followUps.length > 0 ? [c.prompt, ...followUps].join("\n") : c.prompt
 }
 
-/** 单次用例执行（含判分 / 判官 / 复核；模型用例失败 = 数据，不影响退出码）。 */
-async function executeRun({ client, caseObj, providerEntry, transport, signal, timeoutMs, n, judgeEnv }) {
+/** 单次用例执行（含判分 / 判官（含替代判级联）/ 复核；模型用例失败 = 数据，不影响退出码）。
+ *  导出供补判面复用（`lib/rejudge.mjs`——同一执行语义，不另立第二套编排）。 */
+export async function executeRun({ client, caseObj, providerEntry, transport, signal, timeoutMs, n, judgeEnv }) {
   const res = await client.runCase({ caseObj, providerEntry, transport, signal, timeoutMs })
   const metrics = runMetrics(res.calls)
   let verdict = "error"
@@ -101,27 +106,29 @@ async function executeRun({ client, caseObj, providerEntry, transport, signal, t
   }
 }
 
-/** 判官会话装配（§2.10/§2.11）：槽位 → `ctx.judge()`（本用例声明 + 单取值点素材）+ 复核传输面。 */
-function makeJudgeEnv({ client, slots, providers, fixture, signal, dryRun }) {
+/** 判官会话装配（§2.10/§2.11）：槽位 + 替代池 → `ctx.judge()`（本用例声明 + 单取值点素材）+ 复核传输面。
+ *  `judgeTransport` = 传输面覆盖（补判面复用本装配时传桩 / 自定义面；缺省按 `dryRun` 取夹具或核实时）。 */
+export function makeJudgeEnv({ client, slots, pool, providers, fixture, signal, dryRun, judgeTransport = null }) {
   return {
     slots,
+    pool,
     providers,
     ctxFor: (caseObj, res) => {
       const ctx = {
         judge: async () => {
           const decl = caseObj.judge
           const material = decl ? turnMaterial(res.turns?.[decl.turn]) : null
-          const transport = dryRun
+          const transport = judgeTransport ?? (dryRun
             ? client.fixtureSlotTransport(fixture?.judge?.[caseObj.id] ?? {})
-            : client.liveTransport
-          const r = await judgeWithPair({ decl, question: judgeQuestion(caseObj), material, slots, transport, providers, signal })
+            : client.liveTransport)
+          const r = await judgeWithPair({ decl, question: judgeQuestion(caseObj), material, slots, fallbacks: pool, transport, providers, signal })
           ctx.result = r
           return r
         },
       }
       return ctx
     },
-    reviewTransportFor: (caseObj) => (dryRun
+    reviewTransportFor: (caseObj) => judgeTransport ?? (dryRun
       ? client.fixtureSlotTransport({ review: fixture?.review?.[caseObj.id] ?? [] })
       : client.liveTransport),
   }
@@ -149,7 +156,7 @@ export async function runMain(opts, sel, fixture) {
     if (missing.length > 0) throw new Error(`以下条目的 provider 不在用户 config（~/.thincoder/config.json）：${missing.join(", ")}`)
   }
   // 判官槽位解析（冻结绑定 + provider 校验 + 与被测重合明示——无拒跑闸；dry-run 用夹具身份 ⇒ 跳过 config 检查）
-  const { slots, warnings: judgeWarnings } = resolveJudgeSlots(judgeCfg, { providers: opts.dryRun ? null : providers, tested: entries })
+  const { slots, pool, warnings: judgeWarnings } = resolveJudgeSlots(judgeCfg, { providers: opts.dryRun ? null : providers, tested: entries })
 
   const ac = new AbortController()
   const onSigint = () => ac.abort(new Error("SIGINT"))
@@ -181,6 +188,7 @@ export async function runMain(opts, sel, fixture) {
       const judgeEnv = makeJudgeEnv({
         client,
         slots,
+        pool,
         providers: opts.dryRun ? [] : providers,
         fixture,
         signal: ac.signal,
@@ -204,6 +212,10 @@ export async function runMain(opts, sel, fixture) {
           const m = run.metrics
           console.log(`[${step}/${totalSteps}] ${entry.label} ${c.id} → ${run.verdict}${m.ttftMs != null ? ` | ttft ${m.ttftMs}ms` : ""}${m.tokPerSec != null ? ` ${m.tokPerSec} tok/s` : ""}`)
           if (run.judge?.verdict === "error") console.error(`[bench] 判官不可用：${entry.label} ${c.id} —— ${run.detail}`)
+          // 替代透明（§2.10.4 运行面 / §8-6 冻结形态）：替代级启用 ⇒ 逐级控制台即时一行（含成因，不得静默顶替）
+          for (const j of run.judge?.judges ?? []) {
+            for (const s of j.substitutes ?? []) console.log(substituteLine(entry.label, c.id, j, s))
+          }
           runs.push(run)
           if (ac.signal.aborted) throw new Error("SIGINT")
         }
@@ -250,7 +262,7 @@ export async function runMain(opts, sel, fixture) {
     },
     prices: { asOf: prices.asOf, currency: prices.currency, unit: prices.unit, source: prices.source },
     recomputed: null,
-    judge: judgeSnapshot(slots, judgeCfg),
+    judge: judgeSnapshot(slots, pool, judgeCfg),
     review: reviewSnapshot(),
     models: modelsOut,
     manual: manualOut,

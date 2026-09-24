@@ -103,8 +103,12 @@ v6 在跑（209/770）——判官不可用累计 **2 例，均命中 `multiturn
 
 ⇒ 默认 8192 在现行九位上**无 400 风险**（观察项销账；实施轮 `--live` 面仍按设计覆盖）。
 
+### 1.8 授权补充（用户 2026-09-25 02:51「自动跑完吧」）
+
+本批剩余链（#60 实施 → 核验 → §6 → 核销 #282）与 **v6 落档后之判官面 error 例补判收正**（含 `--rejudge` 实跑 + 新对落盘 + 收编〔原对留档不动〕）均入本次授权射程——父侧自动执行至完结；异常 / 需新范围 ⇒ 停下上抛。
+
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（轮 2 复审后观察收正（#58 三条：②③ `render.9` 期望面补两条腿 · ① §2.4 AC-1 补正行 = §2.10）；设计档 1550 行（wc 法）· 机检 悬空 8 / 行宽 13 零新增；待批准）
+**状态行**：设计完成（轮 2 复审后观察收正（#58 三条）+ 实施后漂移收正（#60 §5.6 三项：§3 表两行与余量句 / §2.10.4 与 §8-6 措辞收口 / §2.14 预检射程裁明）；设计档 1558 行（wc 法）· 机检 悬空 8 / 行宽 13 零新增）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 ### 2.0 本批范围（一句）
@@ -237,6 +241,20 @@ v6 在跑（209/770）——判官不可用累计 **2 例，均命中 `multiturn
 
 **本轮不做（零扩面）**：实现零动 · §1 零触 · 三条之外零动 · `bench/results/` 与 v6 在跑面零触。
 
+### 2.11 实施后漂移收正（fix · #60 §5.6 三项 · 父侧受理 · 处置执行人 = 本席）
+
+**触发**：#60 实施轮 §5.6 遗留观察三项（父侧已受理——设计档漂移收正）。**行数证据链**（`find /c /v ""` 同尺）：`bench/preflight.mjs` 现状 118（= `git show HEAD:bench/preflight.mjs` 实读）→ 实施读数 **120**；`bench/test/preflight.test.mjs` 126 → **136**（同法）；`bench/test/report-present.test.mjs` **299**（= 286 + 13，与 §5.5 一致）。**性质**：定点收正（**仅三项** · 机制面零改 · 实现零动 · §1 零触 · `bench/**` 与 v6 在跑面零触）。
+
+| 条 | 处置 | 改动 file:line（修正后坐标） |
+|---|---|---|
+| ① | §3 本批表**补两行**（`bench/preflight.mjs` 118 → 120 · `bench/test/preflight.test.mjs` 126 → 136——out-of-list 补登记 · Δ 注 = #60 §5.2-7「§2.13 射程句强制」）+ `bench/test/report-present.test.mjs` 行补**余量句**（实施读数 299/300——余量 1 行） | `docs/core/design/MODEL-BENCH.md:880` · `:887` · `:888` |
+| ② | 措辞两处按实现实况收口：① §2.10.4 素材缺失分支——**合成分记 `error` + 逐位记录为空**（`judges[] = []`；实读 = `bench/lib/judge-fallback.mjs:63-65` 对读）；② §8-6 `<位>` 渲染口径——逐级即时行 · `<位 id> 位`（A / B / C 随级链根位）· 含成因 · 不得静默顶替（实读 = `bench/lib/pipeline.mjs:33`；补判面共用单源 = `bench/lib/rejudge.mjs:104-107`） | `:561` · `:1360`–`:1361` |
+| ③ | §2.14 补「预检射程（补判面）」句（父侧口径：补判面预检 = **判官面 + 重取所需 provider 面**；**档面条目不入枚举面**；被测 provider 缺 ⇒ 抛错 · 退出码 1——实读 = `bench/lib/rejudge.mjs:62` / `:82`）+ 变更记录 +1 条 | `:640` · `:1556`–`:1558` |
+
+**机检与行数（收正轮实跑 · as-of 2026-09-25 03:0x · cwd = 仓根）**：`node scripts/doc-check.mjs` ⇒ **悬空 8 = 基线（零新增——八条逐条与基线一致 · MODEL-BENCH 零悬空）** · **行宽 13 = 基线（零新增——MODEL-BENCH 11 行仅随插入位移，字符数与基线逐行一致）**。`find /c /v ""` = **MODEL-BENCH.md 1558 行**（收正轮前 1550 ⇒ +8 = §2.14 段 +2 · §3 两行 +2 · §8-6 折行 +1 · 变更记录 +3）；三档实读 = `bench/preflight.mjs` 120 · `bench/test/preflight.test.mjs` 136 · `bench/test/report-present.test.mjs` 299。
+**本轮不做（零扩面）**：实现零动 · §1 零触 · `bench/**` 与 v6 在跑面零触 · 三项之外零动。
+**遗留观察（非阻塞 · 报父侧）**：① **语义面**——§3 表 `bench/lib/judge.mjs` / `bench/lib/judge-fallback.mjs` 两行「说明」列仍述「（级联编排 / 池装载 → `judge-fallback.mjs`）」「替代池装载 + schema / 身份校验」，实施实况 = 池装载 / 身份校验落 `judge.mjs` 的 `loadJudgeConfig`（#60 §5.2-1 父侧已接受 · §5.2-7 处置注「说列落点句一并收正」）——本轮未动（三项之外），待父侧裁；② **收口同步面**——§3 本批表其余行仍为设计轮读数、四行「（拟新增）」标记未翻（`judge-fallback.mjs` / `prices-judge.mjs` / `rejudge.mjs` / `judge-fallback.test.mjs`）——按先例属实现收口同步（§6 / 收口轮），实施读数 = §5.5。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
@@ -299,5 +317,58 @@ VERDICT: changes-required
 VERDICT: pass
 
 ## §4 用户批准（主 agent）
+
+**2026-09-25 02:33 用户批准**（会话面原话：「批准」；承父侧 02:3x 批准请求——非代签）。
+
+**三条件核验**：① 评审 **pass**（轮 2 · 🔴 0 · 13/13 Fixed · §3 轮次 1/2 在档）；② 修正轮 **#56 / #58 / #59** 落地并经父侧逐条核验（§2.8 / §2.9 / §2.10 在档）；③ **token 已签发**（值不落档——运行时凭证）。
+
+**批准范围** = 本批全量：`docs/core/design/MODEL-BENCH.md` 判官失败面重设计（§2.10.1 级联 / §2.10.3 配置 / §2.10.4 降级 / §2.14 补判通道 + §9 替代池段 + 连带 AC / KD / 测试面）+ 本档 §2 实施任务书（含 §2.8 / §2.9 / §2.10 修正块——**以修正块为准**）。
+
+**下一步**：派 eng-coder 实施轮（任务书 = 本档 §2 · token 就绪）。
+
 ## §5 实施记录（eng-coder）
+
+**状态行**：实施完成（首轮 · 内部审计 1 轮 4 项全修 · advisor 代码评审 1 轮 pass（3🟡 可选 + 6🔵 · 已修 5 报 4）· 测试 92/92 绿 · dry-run 退出 0 · bench/results 零 diff · doc-check 零新增）
+
+### 5.1 交付摘要（一句）
+
+判官位失败 ⇒ **换模型级联补判**（`judge.json.fallbacks` 6 位 · 级内单发 · 预算 8192 · 运行期占用跳过 · 合成分 `single` 接入）+ **跑后 `--rejudge` 补判通道** + 全套透明入档（`substitutes[]` / `calls[].level` / 顶层池快照 + 两计数 / 概览替代池行 / 方法句 / 局限句 / 逐维替代标注 / 控制台逐级行）+ `SUITE_VERSION` 6 → 7；三槽身份与池序零改，既有判定面（被测 / 复核 / 机械）零改。
+
+### 5.2 决策透明表（实施侧主动偏差与自主决策 · 逐条理由）
+
+| # | 决策 / 偏差 | 理由 | 父侧裁定 |
+|---|---|---|---|
+| 1 | **替代池装载 + schema / 身份校验落 `judge.mjs` 的 `loadJudgeConfig`**（§3 说列划给 `judge-fallback.mjs`） | 「装载即拒」是 §2.10.3 ⑤ / §2.10.4 启动面的机检闸——落在**唯一装载点**才不存在「直调 loader 绕过池校验」的洞；反之需 judge.mjs ⇄ judge-fallback.mjs 环状 import（`callSlot` 按 §3 明令留在 judge.mjs） | 已接受（父侧 02:4x 回复，按现方案继续） |
+| 2 | **`data.judge` 快照在补判产物中按补判时现行配置重建**（§2.14 未明写） | 新档 `suiteVersion` = 补判时代际 ⇒ 代际自述面（判官行 / 替代池行）须同代际；逐 run 记录零改（原判记录与替代记录照留） | 无需裁（内部一致性所需） |
+| 3 | **级内单发语义下 `attempt` 恒 1 / `maxTokens` = 该级配置值**（级内放大重试整体删除） | 用户 01:46 裁定「一次不行就换模型」+ §2.10.1 预算一次到位 | 设计已在档 |
+| 4 | **运行期占用跳过为 per-run 共享认领**（`claims` 数组 · 同步检查-置位） | 「替代 ≠ 失败位模型 ∧ ≠ 存活判官 ∧ ≠ 彼此」在 A / B 并行级链下的单线程安全实现；单链已用项由 `used` 另闸 | 设计已在档（§2.10.1） |
+| 5 | **`--dry-run × --rejudge` 加互斥闸**（`run.mjs:205`） | advisor 评审 🟡：`--dry-run` 声明语义 = 零网络自检，同给会静默触网付费 | 内部评审驱动 |
+| 6 | **`validateResultShape` 由 `recompute.mjs` 导出、补判面复用**（out-of-list 一档） | §2.14 退出码 1「档不可读 / 不符 schema」须有闸；复用 = 单源（不另写第二套形状校验） | 内部评审驱动 |
+| 7 | **`bench/preflight.mjs` + `bench/test/preflight.test.mjs` 两档落池腿**（out-of-list —— §3 表未列这两行） | §2.13 射程句（`:616`）+ §5.13 `preflight.1` 池内项腿（`:1156`）+ §6 AC-1 判定方式（`:1316`）三处强制；判读 = §3 表漏行，非扩面 | 待父侧补表（说列落点句一并收正） |
+| 8 | **`bench/test/recompute.test.mjs` 数值随夹具收正**（out-of-list 一档） | 夹具 `unavailable` 记录由已废的「两次不可解析 + 放大预算」形态收正为**单发 + 级链穷尽**形态（advisor 🟡）⇒ A 位调用数 4 → 3、逐位成本 0.0032 → 0.00256 等 6 处派生读数同步；语义面（成本重算）零改 | 内部评审驱动 |
+
+### 5.3 审计与代码评审轮次与终态
+
+1. **内部偏离审计（explore · 只读）**：1 轮 · 报告 4 项（🟡 补判档形闸缺 / 🔵 补判被测 provider 静默 / 🔵 控制台替代行缺成因 / 🔵 out-of-list 两档）⇒ **4/4 已修**（档形闸复用 `recompute.validateResultShape`；被测 provider 缺 ⇒ 抛错（退出码 1）；替代行按 §8-6 冻结形态逐级含成因；两档补进透明表）。
+2. **内部代码评审（advisor · type=code）**：1 轮（全量）· **VERDICT: pass**（0🔴）· 报告 3🟡（可选）+ 6🔵 ⇒ 处置：**已修 5 项**（夹具已废形态收正 · `--dry-run × --rejudge` 互斥闸 · 身份不明替代级不按原位计价 + 告警 · 补判面控制台替代行复用单源 · 同名拒写前置到重取之前）；**报父侧 4 项**（素材缺失记录形态与 §2.10.4 措辞两说 · 控制台 `<位>` 逐字形态 · 补判面预检射程只含判官面 · 行数预算漂移）+ 环状 import 实测收正（真环一处：`prices.mjs ⇄ prices-judge.mjs`；`judge.mjs` 未 import `judge-fallback.mjs`——单向）。
+3. **终态：clean**（无未处置 🔴 / 无 must-fix 残留）。
+4. **fix round 记录**：R1 = 审计 4 项（含 `bench/lib/{rejudge,recompute}.mjs` · `bench/lib/pipeline.mjs` · `bench/test/judge-fallback.test.mjs`）· R2 = 评审 5 项（含 `bench/test/{fixtures,recompute,report-present}.test.mjs` · `bench/lib/prices-judge.mjs` · `bench/run.mjs`）。
+
+### 5.4 读数（实跑 · 本机 · 2026-09-25 02:5x–03:0x）
+
+- **测试**：`node --test "bench/test/*.test.mjs"` ⇒ **tests 92 · pass 92 · fail 0**（基线 84 + 新 8 = 6×`judge-fallback.test.mjs`（`judge.14–18` + `rejudge.1`）+ `judge.19` + `render.9`）。
+- **dry-run 冒烟**：`BENCH_RESULTS_DIR=<temp> node bench/run.mjs --dry-run --label dryrun-smoke-jf` ⇒ **退出码 0** · 29 档 770 步全链路零网络（夹具判官）· 读数 = `suiteVersion 7` · `judgeCalls 818`（A 335 + B 335 + C 29 + 池 119）· `substitutions 119` = Σ 池内逐项 calls（44 + 15×5）· `singleJudged 0` · `unavailable 15`（`vision.2` 全级穷尽 —— 物理边界保留覆盖）· `longctx.3` = A 位原位超时 ⇒ 替代级 1 定判（`resolution = unanimous`）· 告警行 = 「判官替代补判 119 次 · 单判定判 0 次 · 判官不可用 15 次（有效判不足 15 · 分歧未决 0）…」。
+- **`bench/results/` 零 diff**：跑前 / 跑后 sha256 逐档一致（`2026-09-24-roster-29-v5.{json,md}` 未动 · v6 在飞对未落）。
+- **v6 跑批进程**：pid 11124 跑前 / 跑后均在（未重启 / 未杀 / 未近其树）。
+- **`node scripts/doc-check.mjs`**：悬空 8 / 行宽 13 = 基线（**零新增**）。
+- **零联网**：测试全走桩传输（`fixtureSlotTransport` / `fixtureTransport`）；补判面测试用注入传输 + `BENCH_JUDGE` 桩配置 ⇒ 零真实端点。
+
+### 5.5 行数实测（`wc` 口径 · 末行含换行者不计空尾行）与 §3 预算对读
+
+`bench/run.mjs` **295**（预算 [291,299] · 上界 299 ✓）· `bench/judge.json` **63**（+~52 ⇒ ~77，实少 14——池 6 项紧凑写法）· `bench/cases/index.mjs` **68** ✓ · `bench/README.md` **218**（预算 [216,226] ✓）· `bench/preflight.mjs` **120**（out-of-list）· `bench/lib/judge.mjs` **271**（预算 [268,278] ✓）· `bench/lib/judge-fallback.mjs` **87**（预算 ~150——落点偏差见 §5.2-1）· `bench/lib/prices.mjs` **155**（预算 [171,191]，迁出多于预计）· `bench/lib/prices-judge.mjs` **169**（~155）· `bench/lib/pipeline.mjs` **289**（预算 [280,286]，+3）· `bench/lib/rejudge.mjs` **133**（~120）· `bench/lib/recompute.mjs` **67**（+1 = 导出形状校验）· `bench/lib/report.mjs` **214**（预算 [215,223]，低 1）· `bench/lib/report-tables.mjs` **288**（预算 [283,289] ✓）· `bench/lib/report-review.mjs` **164**（±0 ✓）· `bench/lib/params.mjs` **123**（预算 [123,129] ✓）· `bench/test/judge-fallback.test.mjs` **228**（~190）· `bench/test/judge.test.mjs` **297**（±0 ✓）· `bench/test/suite.test.mjs` **226**（预算 [208,214]，+12 = `judge.19` 五态 + 池序逐字 + 默认预算腿）· `bench/test/fixtures.mjs` **203**（预算 [195,203] ✓）· `bench/test/report-render.test.mjs` **299**（±0 = 红线 ✓）· `bench/test/report-present.test.mjs` **299**（预算 [291,297]，+2；≤300 ✓）· `bench/test/preflight.test.mjs` **136**（out-of-list）· `bench/test/recompute.test.mjs` **166**（out-of-list 数值收正）。**全部触碰档 ≤300 ⇒ 无档位违规**。
+
+### 5.6 遗留观察（非阻塞 · 报父侧）
+
+① 设计档 §3 表两处需补：`bench/preflight.mjs` / `bench/test/preflight.test.mjs` 两行（本批池腿落点）；`report-present.test.mjs` 余量句（299/300）。② 设计档措辞两处建议收口：素材缺失分支的记录形态（§2.10.4「该位记 error」vs 实现「合成分 + 空逐位」）· §8-6 `<位>` 的渲染口径。③ 补判面预检射程（是否含档面条目）建议在设计档裁明。
+
 ## §6 验证与收口（父代理）

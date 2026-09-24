@@ -75,6 +75,15 @@ test("preflight.1：枚举面六项对齐腿（① 全合法 / ② provider 缺 
   assert.match(r7.blockers[0], /判官 B 位：reasoningEffort「medium」∉ 该档枚举/)
   const r8 = enumerationPreflight({ slots: [{ id: "A", provider: "missing", model: "glm-5.3" }], providers: judgeProviders })
   assert.match(r8.blockers[0], /判官 A 位：provider「missing」不在用户 config/)
+  // 替代池逐项同受检（§2.13 射程扩池 · 池内项腿）：provider 缺 / spec 未命中 / effort 越枚举 ⇒ 阻断；豁免档 ⇒ 判定跳过
+  const r9 = enumerationPreflight({ pool: [{ id: "替代级 1", provider: "missing", model: "glm-5.3" }], providers: judgeProviders })
+  assert.match(r9.blockers[0], /判官替代级 1：provider「missing」不在用户 config/, "池项 provider 缺 ⇒ 阻断")
+  const r10 = enumerationPreflight({ pool: [{ id: "替代级 2", provider: "jp", model: "no-such-model-x" }], providers: judgeProviders })
+  assert.match(r10.blockers[0], /判官替代级 2：spec 未命中「no-such-model-x」/, "池项 spec 未命中 ⇒ 阻断")
+  const r11 = enumerationPreflight({ pool: [{ id: "替代级 3", provider: "jp", model: "glm-5.3" }], providers: judgeProviders })
+  assert.match(r11.blockers[0], /判官替代级 3：reasoningEffort「medium」∉ 该档枚举/, "池项 effort 越枚举 ⇒ 阻断")
+  const r12 = enumerationPreflight({ pool: [{ id: "替代级 4", provider: "jp", model: "kimi/kimi-k3" }], providers: judgeProviders })
+  assert.deepEqual(r12.blockers, [], "池项豁免档（model 含 /）⇒ 判定跳过 · 零阻断")
 })
 
 test("lib/params.mjs 单源构造面：四字段覆写 + 透传 / 两处皆无键不落 + effortFace 两态与未发送语义 + 温度裁剪单源", () => {
@@ -106,12 +115,13 @@ test("run.mjs 启动门：枚举面零阻断 ⇒ 照跑 exit 0；有阻断（判
     const bad = join(tmpDir(), "judge-unknown-slot.json")
     writeFileSync(bad, JSON.stringify({
       version: 1,
-      frozenAtSuiteVersion: 6,
+      frozenAtSuiteVersion: 7,
       judges: [
         { provider: "deepseek", model: "no-such-judge-model", maxTokens: 2048, timeoutSec: 30 },
         { provider: "deepseek", model: "deepseek-v4-pro", maxTokens: 2048, timeoutSec: 30 },
       ],
       arbiter: { provider: "deepseek", model: "deepseek-flash", maxTokens: 2048, timeoutSec: 30 },
+      fallbacks: [{ provider: "deepseek", model: "glm-5.3-flashx", maxTokens: 2048, timeoutSec: 30 }],
     }), "utf8")
     process.env.BENCH_JUDGE = bad
     const blocked = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--dims", "reasoning", "--label", `pf-blocked-${process.pid}`])

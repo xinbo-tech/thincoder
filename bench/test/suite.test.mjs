@@ -14,7 +14,7 @@ import {
 } from "../cases/index.mjs"
 import { CODE_ASSERTS } from "../cases/code.mjs"
 import { loadJudgeConfig } from "../lib/judge.mjs"
-import { FROZEN_PROMPTS, runCli } from "./fixtures.mjs"
+import { FROZEN_PROMPTS, runCli, writeFixture } from "./fixtures.mjs"
 
 const BENCH_DIR = dirname(dirname(fileURLToPath(import.meta.url)))
 const counts = (list, key) => list.reduce((acc, x) => ({ ...acc, [x[key]]: (acc[x[key]] ?? 0) + 1 }), {})
@@ -26,7 +26,7 @@ const notesIn = (text) => NOTE_WORDS.filter((w) => String(text).includes(w))
 test("SUITE_VERSION = 单源整数（KD-2）；judge.json 冻结绑定同值（§2.10.3）", () => {
   assert.equal(Number.isInteger(SUITE_VERSION), true)
   assert.ok(SUITE_VERSION >= 1)
-  assert.equal(SUITE_VERSION, 6, "本批：判官 B 换代（tokenhub:hy3 → glm:glm-5.3-flashx）+ 判据修订（承接修复 #273 / #274）= 5 → 6")
+  assert.equal(SUITE_VERSION, 7, "本批：级联替代 / 单判定判 + 判官身份面扩替代池（判分口径面）= 6 → 7")
   assert.equal(loadJudgeConfig(join(BENCH_DIR, "judge.json")).frozenAtSuiteVersion, SUITE_VERSION)
 })
 
@@ -153,18 +153,41 @@ test("prompt.2：注记隔离（闭词表）+ 反例控制（反例串必须被�
   }
 })
 
-test("judge.json：三槽 schema + 身份机检（A≠B · 仲裁员第三方）+ 预算 / 超时区间", () => {
+test("judge.json：三槽 + 替代池 schema / 身份机检 / 区间 + 池序逐字（§9 定稿序 = 级联序）", () => {
   const cfg = loadJudgeConfig(join(BENCH_DIR, "judge.json"))
   assert.equal(cfg.judges.length, 2, "判官对恰 2 位")
   assert.ok(cfg.arbiter, "仲裁员必备（无仲裁跑法不存在）")
   assert.notEqual(cfg.judges[0].model, cfg.judges[1].model, "A ≠ B（同模型双判无冗余）")
-  for (const s of [cfg.judges[0], cfg.judges[1], cfg.arbiter]) {
+  assert.ok(cfg.fallbacks.length >= 1, "替代池必备（长度 ≥1——「无替代池的跑法」不存在）")
+  for (const s of [cfg.judges[0], cfg.judges[1], cfg.arbiter, ...cfg.fallbacks]) {
     assert.equal(typeof s.provider, "string")
     assert.ok(s.provider.length > 0)
     assert.ok(s.maxTokens >= 1024 && s.maxTokens <= 8192, "预算区间 [1024, 8192]")
     assert.ok(s.timeoutSec >= 5 && s.timeoutSec <= 120, "超时区间 [5, 120]")
   }
   assert.ok(![cfg.judges[0].model, cfg.judges[1].model].includes(cfg.arbiter.model), "仲裁员 ≠ A / B")
+  assert.equal(new Set(cfg.fallbacks.map((f) => f.model)).size, cfg.fallbacks.length, "池内两两 model 字面不同")
+  assert.equal(cfg.fallbacks.some((f) => [cfg.judges[0].model, cfg.judges[1].model, cfg.arbiter.model].includes(f.model)), false, "池项 ∉ {A, B, C}（可复读票无价值）")
+  assert.deepEqual(cfg.fallbacks.map((f) => `${f.provider}:${f.model}`), ["mimo:mimo-v2.6-pro", "qwen:qwen3.8-flash", "mimo:mimo-v2.6-pro-ultraspeed", "qwen:qwen3.7-max", "ark:doubao-seed-2-1-pro-260915", "qwen:qwen3.8-27b"], "池序 = §9 定稿序（级联序 = 池序）")
+  assert.equal([cfg.judges[0].maxTokens, cfg.judges[1].maxTokens, cfg.arbiter.maxTokens].every((n) => n === 8192), true, "默认预算 = 区间上限 8192（一次到位——§2.10.1）")
+})
+
+let poolSeq = 0
+/** 池面夹具（judge.19 四态）：自定 fallbacks，其余字段合法。 */
+const poolCfg = (fallbacks) => writeFixture(`judge-pool-${process.pid}-${++poolSeq}.json`, {
+  version: 1, frozenAtSuiteVersion: SUITE_VERSION,
+  judges: [{ provider: "p", model: "m1", maxTokens: 8192, timeoutSec: 30 }, { provider: "p", model: "m2", maxTokens: 8192, timeoutSec: 30 }],
+  arbiter: { provider: "p", model: "m3", maxTokens: 8192, timeoutSec: 30 },
+  fallbacks,
+})
+
+test("judge.19：池面静态身份违约 / 区间越界 ⇒ 装载即拒（四态）+ 全合法对照腿", () => {
+  assert.throws(() => loadJudgeConfig(poolCfg([{ provider: "p", model: "m4", maxTokens: 8192, timeoutSec: 30 }, { provider: "p", model: "m4", maxTokens: 8192, timeoutSec: 30 }])), /替代池身份违约——池内两项同模型「m4」/, "① 池内两项同 model 字面")
+  assert.throws(() => loadJudgeConfig(poolCfg([{ provider: "p", model: "m2", maxTokens: 8192, timeoutSec: 30 }])), /替代池身份违约——fallbacks\[0\] 模型「m2」∈ \{A, B, C\}/, "② 池项 ∈ {A, B, C}")
+  assert.throws(() => loadJudgeConfig(poolCfg([{ provider: "p", model: "m4", maxTokens: 400, timeoutSec: 30 }])), /fallbacks\[0\]（替代级 1）maxTokens 越界/, "③ 池项区间越界（逐位校验——§2.10.3）")
+  assert.throws(() => loadJudgeConfig(poolCfg([{ provider: "p", model: "m4", maxTokens: 8192, timeoutSec: 999 }])), /fallbacks\[0\]（替代级 1）timeoutSec 越界/, "③ 同腿变体：超时越界")
+  assert.throws(() => loadJudgeConfig(poolCfg(undefined)), /缺 fallbacks/, "池缺失 ⇒ 装载即拒（必备面）")
+  assert.doesNotThrow(() => loadJudgeConfig(poolCfg([{ provider: "p", model: "m4", maxTokens: 8192, timeoutSec: 30 }])), "④ 全合法对照腿")
 })
 
 test("fixture.1：dry-run 夹具覆盖（判官面 A / B（分歧样本 + C）/ 机械面复核脚本）+ 全链路零网络", async () => {

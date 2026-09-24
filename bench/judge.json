@@ -1,25 +1,63 @@
 {
   "version": 1,
-  "frozenAtSuiteVersion": 6,
+  "frozenAtSuiteVersion": 7,
   "judges": [
     {
       "provider": "deepseek",
       "model": "deepseek-flash",
-      "maxTokens": 2048,
+      "maxTokens": 8192,
       "timeoutSec": 30
     },
     {
       "provider": "glm",
       "model": "glm-5.3-flashx",
-      "maxTokens": 2048,
+      "maxTokens": 8192,
       "timeoutSec": 30
     }
   ],
   "arbiter": {
     "provider": "deepseek",
     "model": "deepseek-v4-pro",
-    "maxTokens": 2048,
+    "maxTokens": 8192,
     "timeoutSec": 30
   },
-  "note": "A = POC 已验判官（跨渠道）；B = 跨厂商第二视角（2026-09-24 换代——原 tokenhub:hy3）；C = 分歧仲裁（第三方模型）。"
+  "fallbacks": [
+    {
+      "provider": "mimo",
+      "model": "mimo-v2.6-pro",
+      "maxTokens": 8192,
+      "timeoutSec": 30
+    },
+    {
+      "provider": "qwen",
+      "model": "qwen3.8-flash",
+      "maxTokens": 8192,
+      "timeoutSec": 30
+    },
+    {
+      "provider": "mimo",
+      "model": "mimo-v2.6-pro-ultraspeed",
+      "maxTokens": 8192,
+      "timeoutSec": 30
+    },
+    {
+      "provider": "qwen",
+      "model": "qwen3.7-max",
+      "maxTokens": 8192,
+      "timeoutSec": 30
+    },
+    {
+      "provider": "ark",
+      "model": "doubao-seed-2-1-pro-260915",
+      "maxTokens": 8192,
+      "timeoutSec": 30
+    },
+    {
+      "provider": "qwen",
+      "model": "qwen3.8-27b",
+      "maxTokens": 8192,
+      "timeoutSec": 30
+    }
+  ],
+  "note": "A = POC 已验判官（跨渠道）；B = 跨厂商第二视角（2026-09-24 换代——原 tokenhub:hy3）；C = 分歧仲裁（第三方模型）；替代池 = 位级失败时的换模型补判链（2026-09-25 扩员——6 位；级联序 = 池序 · 池长即级数上限；三槽 A / B / C 角色不变）。"
 }

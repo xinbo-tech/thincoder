@@ -40,7 +40,7 @@ test("render.3：成本表八列 + 定域反例 + 脚注逐字 + 报告零金额
   assert.ok(md.includes("- 判官分歧率：50%（分歧 1 ÷ A/B 双有效样本 2）"), "⑤ 分歧率行在位")
   assert.ok(md.includes("机械 fail 复核 2 次（翻案 1 次）"), "⑤ 告警行复核计数在位")
   assert.deepEqual([data.judge.costCny, data.judge.judges[0].costCny, data.models[0].aggregate.judgeCostCny, data.models[0].aggregate.reviewCostCny].map((v) => typeof v === "number"), [true, true, true, true], "⑥ 账目面反控：JSON 字段照旧（字段零改）")
-  assert.deepEqual([data.judge.costCny, data.models[0].aggregate.reviewCostCny], [0.017075, 0.00216], "⑥ 数值照旧（金额只住 JSON）")
+  assert.deepEqual([data.judge.costCny, data.models[0].aggregate.reviewCostCny], [0.016435, 0.00216], "⑥ 数值照旧（金额只住 JSON）")
   // ⑦ 交叉列同源对读（增补③ · #276）：合计通过数格 = 矩阵「合计」同档格；累计耗时 / 相对倍率格 = 用时表同档格
   const xMd = renderReport({ ...data, models: xModels })
   const xCost = xMd.split("### 成本表")[1].split("### 逐维明细")[0]
@@ -283,4 +283,17 @@ test("render.8：能力矩阵两列（同源照搬 / 反例控制 / 缺数据 `�
   assert.deepEqual([cellOf(matrixBlock, "fx-m3", 4), cellOf(matrixBlock, "fx-m3", 5)], ["—", "—"], "⑤ 缺数据（无 pass/fail 样本 / 无价）⇒ `—`")
   assert.deepEqual(orderOf(matrixBlock), ["fx-m1", "fx-m2", "fx-z9", "fx-m3"], "⑥ 行序不变（合计通过数降序 · 同值字典序——fx-z9（1 通过）在 fx-m3（0 通过）前，非标签字典序）")
   assert.ok(matrixBlock.includes("与用时表「累计耗时」不同源"), "⑦ 注文区分（矩阵注文含区分句）")
+})
+
+test("render.9：替代面渲染（替代池行 / 替代位标注 / 单判定判注 / 告警分列计数 / 方法段级联句 / 缺键缺省）", () => {
+  const md = renderReport(fixtureResult({ cascade: true }))
+  const ov = md.split("## 概览")[1].split("## 方法")[0]
+  assert.ok(ov.includes("1 `mimo:mimo-v2.6-pro`（1 次") && ov.includes("2 `qwen:qwen3.8-flash`（1 次") && ov.includes("suiteVersion = 7"), "① 概览替代池行（级序 × provider:model + 启用次数——逐项对读池快照）+ 版本字面 7")
+  assert.ok(md.includes("- 判官 · deepseek-flash：A=pass（替代：mimo:mimo-v2.6-pro） / B=error（位级失败）（替代：qwen:qwen3.8-flash） → 合成分 pass（single · 单判定判）"), "① 逐维明细：替代位标注 + 单判定判注在同一行")
+  assert.ok(md.includes("判官替代补判 2 次 · 单判定判 1 次"), "① 告警行分列计数（与顶层计数同源对读）")
+  assert.ok(md.split("## 方法")[1].split("## 结果")[0].includes("位级失败经替代判级联换模型补判"), "① 方法段级联句在位")
+  const legacy = fixtureResult({ cascade: true })
+  for (const k of ["fallbacks", "substitutions", "singleJudged"]) delete legacy.judge[k]
+  const legacyMd = renderReport(legacy)
+  assert.ok(legacyMd.split("## 概览")[1].split("## 方法")[0].includes("- 替代池：未采集") && legacyMd.includes("判官替代补判 0 次 · 单判定判 0 次"), "② 旧代际档缺池快照 / 两计数 ⇒「未采集」+「0 次启用」缺省渲染（反例控制）")
 })

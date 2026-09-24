@@ -4,7 +4,8 @@
 （能力 × 速度 × token 消耗 × 价格）。
 
 判分 = **混合三层**：确定性断言（机器）· **判官对（A / B 双判 · LLM）**——分歧经第三判仲裁 ·
-**机械 fail 复核**（第二只眼 · **`overturn` ⇒ 改判 `pass`**）。判官配置 = `bench/judge.json`（**必备**）。
+**机械 fail 复核**（第二只眼 · **`overturn` ⇒ 改判 `pass`**）。判官配置 = `bench/judge.json`（**必备**：三槽 + **替代池**）：
+判官**位级失败 ⇒ 换模型级联补判**（结论必得 · 逐级 · 池长即级数上限）；跑后另可 `--rejudge` 对已落档的判官面 `error` run 定点收正。
 
 设计档 = `docs/core/design/MODEL-BENCH.md`（本目录的实现以它为准；README 只讲怎么用）。
 
@@ -20,10 +21,11 @@ node bench/run.mjs --models mimo-v2.6-flash,glm-5.3-flash --dims reasoning
 # 速度轴建议 3 次重复（取中位）
 node bench/run.mjs --models glm-5.3-flash --n 3 --label speed-3x
 
-# 自检（不调模型、不读用户 config；跑通判分（含判官对 / 仲裁 / 复核夹具）→指标→报告→脱敏链路）
+# 自检（不调模型、不读用户 config；跑通判分（含判官对 / 仲裁 / 级联替代 / 复核夹具）→指标→报告→脱敏链路）
 # 注：自检夹具刻意布置——longctx.2 回近邻干扰值（机械 FAIL + 复核 uphold）、tools.3 回中文数字
 #     「十二个月」（机械 FAIL + 复核 **翻案 ⇒ 改判 pass** + `⟲` 标注 ⇒ 报告《复核翻案》尾部承接清单）、multiturn.2 A / B 刻意分歧（触发第三判仲裁）、
-#     longctx.3 A 位两次不可解析（判官不可用 ⇒ run error）、instructions.1 / .2 回缺陷形态串（正文 3 段 / 2 句 + `---` + 自检块）
+#     longctx.3 A 位原位超时（⇒ **替代级 1 补判成功** · 替代透明）、vision.2 A / B 两阶链尽败（判官不可用 ⇒ run error）、
+#     instructions.1 / .2 回缺陷形态串（正文 3 段 / 2 句 + `---` + 自检块）
 node bench/run.mjs --dry-run --label selfcheck
 
 # 跑前参数预检（枚举面零网络 · 每次跑批自动跑；本命令单看读数）
@@ -33,6 +35,9 @@ node bench/preflight.mjs
 # 价格更新后离线重算（零 API 调用；判官 / 复核成本随当前 prices.json 一并重算）
 # 注：在档报告对 = `roster-29-v5`（29 档全量跑批 · 判官三槽与复核记录在报告内）；版本标识 = 结果 JSON 的 `suiteVersion`
 node bench/run.mjs --recompute --from bench/results/2026-09-24-roster-29-v5.json
+
+# 跑后补判（判官面 error run 定点收正——**触网**：重取素材 + 级联补判；原档不动，落 <原标签>-rejudged 新对）
+node bench/run.mjs --rejudge --from bench/results/<档>.json
 ```
 
 | 参数 | 语义 | 缺省 |
@@ -45,6 +50,7 @@ node bench/run.mjs --recompute --from bench/results/2026-09-24-roster-29-v5.json
 | `--timeout` | 单次调用墙钟上限（秒） | 120 |
 | `--dry-run` | 夹具自检：不调模型、不读用户 config | 关 |
 | `--recompute --from` | 离线重算（读已有结果 JSON，按**当前** `prices.json` 重出报告） | —— |
+| `--rejudge --from` | 跑后补判（读结果 JSON：判官面 `error` run 定点重取素材 + 级联补判 → 新报告对；**触网**；原档不动） | —— |
 
 **判官与被测重合（允许自判——不拒跑）**：判官三槽（A / B / 仲裁 C）可与本次被测集合重合——**判官不干预被测选择**。
 重合级别**逐位明示**（不得静默）——报告概览判官行三级标注：① 该位 `provider:model` ∈ 被测集合 ⇒ 「该位 ∈ 被测（自判）」；
@@ -67,8 +73,8 @@ node bench/run.mjs --recompute --from bench/results/2026-09-24-roster-29-v5.json
 1. **题集**：题面与用例逐字冻结（含隐藏用例）；`SUITE_VERSION`（整数）为版本标识（`bench/cases/index.mjs`）。
    逐维明细先列**题面**（`cases[].prompt` 正本逐字；构造型用例含载荷括注、载荷不入档），便于只看回答即可判读。
 2. **判分**：**混合三层**——① 确定性断言（数字独立成词 / vm 实跑 + 隐藏断言 / 整串 JSON / 工具结构 / 字面·计数文本约束）；
-   ② **语义·语用面 = 判官对（A / B 双判 · 同一冻结 rubric）**，分歧样本经**第三判（仲裁 C）多数决**
-    （合成无多数 ⇒ 该 run `error`——禁猜 / 不补位 / 不单判回退）；③ **机械 fail = 复核**（LLM 第二只眼 · **`overturn` ⇒ 改判 `pass`**——计入通过数 + `⟲` 标注；承接照出）。
+   ② **语义·语用面 = 判官对（A / B 双判 · 同一冻结 rubric；位级失败经替代判级联换模型补判）**，分歧样本经**第三判（仲裁 C）多数决**
+    （合成无多数 ⇒ 该 run `error`，禁猜；恰一位有效 ⇒ **单判定判** `resolution = single`）；③ **机械 fail = 复核**（LLM 第二只眼 · **`overturn` ⇒ 改判 `pass`**——计入通过数 + `⟲` 标注；承接照出）。
    人工项只记录不判分（独立 lane，不阻塞自动判分）。**词表 / 正则不再充当语义判据**；
    **判据分层分界（冻结）= 判定是否需要「机器解释文本」**——需要解释（段落 / 句 / 拒答 / 追问 / 候选质量……
    文本结构或语义面）⇒ 判官面；字面 / 计数 / 结构 / 执行（字符数字计数 / 字面包含 / 整串 JSON / vm / 工具结构）⇒ 机械面。
@@ -81,12 +87,13 @@ node bench/run.mjs --recompute --from bench/results/2026-09-24-roster-29-v5.json
 **结果数值构成规则（分账 · 归一化 · 聚合口径）** / 计时口径）⇒ `SUITE_VERSION + 1`
 （`bench/cases/index.mjs`；判官侧机检闸 = `judge.json.frozenAtSuiteVersion`），跨版本不严格可比；
 **价格变动不 bump 版本号**（另记 `prices.asOf`）；**呈现面变化（段位增删 / 表列集 / 排序 / 图例与脚注文案）不 bump**——在档报告可由 `--recompute` 以现行形态重出。
-现行 `SUITE_VERSION` = **6**（判官 B 换代 + 判据修订——承接修复，共用一次）；**参数面**（档位覆写 / 参数披露）
+现行 `SUITE_VERSION` = **7**（判分合成规则变化——替代判级联 / 单判定判 + 判官身份面扩替代池，共用一次）；**参数面**（档位覆写 / 参数披露）
 与**呈现面**不入版本轴。
 
 ## 判官与复核（配置 · 口径）
 
-**`bench/judge.json`（必备）**：`judges`（**恰 2 位 = A / B**，位序定身份）+ `arbiter`（**仲裁 C · 必备**）。
+**`bench/judge.json`（必备）**：`judges`（**恰 2 位 = A / B**，位序定身份）+ `arbiter`（**仲裁 C · 必备**）
++ `fallbacks`（**替代池 · 必备**：有序数组 ≥1 项 · 级联序 = 池序 · 池长即级数上限）。
 每位 = `provider`（用户 config 的渠道名）/ `model` / `maxTokens`（[1024, 8192]）/ `timeoutSec`（[5, 120]，
 `temperature` 冻结 0）；`frozenAtSuiteVersion` 须 === `SUITE_VERSION`。**缺文件 / 不合 schema / 不在用户 config ⇒ 拒跑**。
 **现行三槽** = A `deepseek:deepseek-flash` · B `glm:glm-5.3-flashx`（2026-09-24 换代——原 `tokenhub:hy3`；换代 ⇒ `SUITE_VERSION + 1`）
@@ -96,7 +103,13 @@ node bench/run.mjs --recompute --from bench/results/2026-09-24-roster-29-v5.json
   同渠道（provider 命中 · 异 model）⇒ 「与被测同渠道」；两态该位 `sameVendorAsTested = true` + 各出 `warnings` 一条（逐重合位）。
   **A ≠ B**、**仲裁员 ≠ A / B**（模型字面机检——判官对内身份，违者仍拒跑）。
 - **调用面**：A / B **并行**独立裁决（同一份三段素材：题面 / 冻结 rubric / 该回合响应——含该回合工具调用事实）；
-  相异 ⇒ 触发 C（串行依赖步）· 多数决。解析失败 ⇒ 放大预算重试一次（×2 · 上限 8192）；两位不可解析 / 超时 / 传输错 ⇒ 该位 `error`（禁猜）。
+  相异 ⇒ 触发 C（串行依赖步）· 多数决。**级内单发**：不可解析（含空输出 / `finishReason=length`）/ 超时 / 传输错
+  ⇒ 该级失败 ⇒ 进替代级（不重发同模型）；预算默认 8192（一次到位——§2.10.1）。
+- **替代判级联（结论必得）**：判官位级失败 ⇒ **换模型补判**（按池序逐级取用，得有效判即止；级链穷尽 ⇒ 该位 `error`）。
+  替代身份约束：**替代 ≠ 失败位模型 ∧ ≠ 存活判官 ∧ ≠ 彼此**（池面静态机检 + 运行期占用跳过）；替代**透明**
+  （`substitutes` + `calls[].level` 入档 + 控制台即时行 + 告警分列计数）；恰一位有效 ⇒ **单判定判**（`resolution = single`）。
+- **补判通道**：`--rejudge --from <结果.json>`——只对**判官面** `error` run（被测侧失败无素材可判 · 不入列）；**触网**
+  （定点重取素材）+ 落新对（缺省 `<原标签>-rejudged`；原档逐字节不动）；补判按**补判时**判分口径执行（代际标注见报告方法行）。
 - **复核**：仅机械 fail（非判官裁决）触发一次 LLM 复核（单判 · 沿 A 位）；`uphold` ⇒ fail 维持；复核 `error` ⇒ fail 维持（fail-closed）。
   `overturn` = **复核翻案**——**改判 `pass`**（计入通过数；`⟲` 标注 = 经复核纠正 · 原机械 fail；原机械断言与复核理由留档），
   同时 = 判据修复必修 ⇒ 修题面 / 判据（`SUITE_VERSION + 1`）。**两形态**：纯机械面 = 判定完整纠正；
@@ -107,13 +120,14 @@ node bench/run.mjs --recompute --from bench/results/2026-09-24-roster-29-v5.json
   （成本表列集 = 八列 · 概览分账句不列数字——金额只住结果 JSON：逐位 `costCny` / 合计）；
   单价同源 `prices.json`（按各判官位的 `provider:model` 匹配；缺价 ⇒ `null` + 警告，不阻断运行）。
 
-## 复跑工作流（三场景）
+## 复跑工作流（四场景）
 
 | 场景 | 命令形态 | 行为 |
 |---|---|---|
 | **全量复跑**（模型对比） | `--models <列表> --label <标签>` | 常规运行 → 报告对 |
 | **子集复跑**（只看部分维度） | `--models <列表> --dims <维度列表>` | 只跑选中维度；报告轴缺省全出 |
 | **零 API 复跑**（价格更新 / 重排报告） | `--recompute --from <结果.json>` | 读入结果 JSON → 以当前价格重算 → 落新报告对；**不调模型、不重判分、不触网** |
+| **判定补全**（判官面 error run 收正） | `--rejudge --from <结果.json>` | 读入结果 JSON → 判官面 `error` run 定点重取素材 + 级联补判 → 落新报告对；**触网**；原档不动（§2.14） |
 
 **何时复跑**：新模型上架（改 `models.json` 后全量跑）· 模型换代（同 label 重跑，对比两份报告对）·
 价格调整（改 `prices.json` 后 `--recompute`）· 定期回归（按需 `--n 3`）。
@@ -168,8 +182,10 @@ node bench/run.mjs --recompute --from bench/results/2026-09-24-roster-29-v5.json
 - 调模型经**核 provider 路径**（`thinking` 等其余参数取用户配置原值；**思考强度 = 中档口径 · 档位覆写优先**——逐档实发值与来源见报告概览逐档参数表；`temperature = 0`（例外档取档位值）、
   `maxTokens` 与 `.model` 由本轮参数覆写）⇒ 请求构造即产品真实所见。
 
-**`bench/judge.json`（判官配置）**：换判官 / 模板 / rubric ⇒ **`SUITE_VERSION + 1`** 并同步 `frozenAtSuiteVersion`（否则拒跑）。
+**`bench/judge.json`（判官配置 · 含替代池）**：换判官 / 模板 / rubric / **池内任一项** ⇒ **`SUITE_VERSION + 1`** 并同步 `frozenAtSuiteVersion`（否则拒跑）。
 三槽选型纪律：三槽取实质不同模型（同模型异名机检不可判）；判官模型宜取跨厂商强模型（第二 / 第三视角）。
+**替代池维护**：池 = 有序数组（级联序 = 池序 · 池长即级数上限）；增删项 / 改序 / 改身份 ⇒ 同样 bump；
+静态机检 = 池内两两 `model` 字面不同 ∧ ∉ {A, B, C}（违者拒跑）；池内项与三槽同受跑前预检（provider / spec / effort）。
 
 **`bench/prices.json`（价格表 · 手动维护）**：单位 = 元 / 百万 token；对齐键 = `provider:model`。
 
@@ -194,7 +210,7 @@ bench/
   preflight.mjs      跑前参数预检（枚举面零网络缺省跑 · `--live` 实弹面 1 发/档 · 零落库）
   models.json        参测清单（配置文件）
   prices.json        价格表（手动维护 · asOf + source）
-  judge.json         判官配置（判官对 A / B + 分歧仲裁 C · 必备）
+  judge.json         判官配置（判官对 A / B + 分歧仲裁 C + 替代池 fallbacks · 必备）
   cases/             题集（一维度一档 + 注册表 index.mjs = SUITE_VERSION）
   lib/               判分器族 / 判官与复核 / 计时聚合 / 价格 / 清单 / 落档脱敏 / 长文与 PNG 生成 / 编排 / 重算 / 落档 / 报告
   test/              自检（手动跑，不进 CI）

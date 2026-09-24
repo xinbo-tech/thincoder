@@ -1,15 +1,17 @@
 /**
  * test/judge.test.mjs — 判官 / 复核机制面用例（§5.13 `judge.1–12` / `review.1–3`）。
  *
- * 测试策略（§5.13 冻结）：**不依赖真网络**——一切判官 / 复核调用走桩传输（`fixtureSlotTransport`，逐位脚本回放；
- * 与 `--dry-run` 夹具同一机制）；夹具内联；复核三态（uphold 维持 / overturn 改判 / error 维持）与题面入档为必测项。手动跑：`node --test "bench/test/*.test.mjs"`（不进 CI —— AC-8）。
+ * 测试策略（§5.13 冻结）：**不依赖真网络**——判官 / 复核调用走桩传输（`fixtureSlotTransport` 逐位脚本回放；
+ * **级内单发** ⇒ 脚本第 n 发 = 该位第 n 级）；夹具内联；复核三态（uphold / overturn / error）与题面入档为必测项；
+ * 级联 / 终局 / 补判面（`judge.14–18` / `rejudge.1`）= `judge-fallback.test.mjs`。手动跑：`node --test "bench/test/*.test.mjs"`。
  */
 
 import { readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { CASES } from "../cases/index.mjs"
 import { judgeResult } from "../lib/grade.mjs"
-import { reviewRun, callSlot, judgeQuestion, judgeWithPair, loadJudgeConfig, resolveJudgeSlots, shouldReview, turnMaterial } from "../lib/judge.mjs"
+import { reviewRun, callSlot, judgeQuestion, loadJudgeConfig, resolveJudgeSlots, shouldReview, turnMaterial } from "../lib/judge.mjs"
+import { judgeWithPair } from "../lib/judge-fallback.mjs"
 import { fixtureSlotTransport } from "../lib/client.mjs"
 import { applyJudgeCosts } from "../lib/prices.mjs"
 import { FIXTURES, assert, findFile, readJson, runCli, test } from "./fixtures.mjs"
@@ -20,10 +22,11 @@ const slotOf = (id, model, provider = "p") => ({ id, provider, model, maxTokens:
 const SLOTS = [slotOf("A", "m-a"), slotOf("B", "m-b"), slotOf("C", "m-c")]
 const DECL = { turn: 0, rubric: "夹具判据条文。" }
 
-const pair = (scripts, slots = SLOTS) => judgeWithPair({
+const pair = (scripts, slots = SLOTS, fallbacks = []) => judgeWithPair({
   decl: DECL,
   material: "夹具模型回答",
   slots,
+  fallbacks,
   transport: fixtureSlotTransport(scripts),
   providers: [],
 })
@@ -45,40 +48,34 @@ test("judge.1：桩传输 A / B 同向 ⇒ 合成分该向 + `runs[].judge` 记�
   }
 })
 
-test("judge.2：首次空输出 ⇒ 放大预算重试一次（×2 · 上限 8192）；两次均入账；判定取二次", async () => {
-  const r = await pair({ A: [{ text: "" }, { text: v("fail", "二次成功") }], B: sel("pass") })
-  assert.equal(r.verdict, "error", "A fail / B pass 相异须仲裁——此处无 C 脚本 ⇒ C 位失败")
-  const a = r.judges.find((j) => j.id === "A")
-  assert.equal(a.attempts, 2)
-  assert.equal(a.calls[0].maxTokens, 2048)
-  assert.equal(a.calls[1].maxTokens, 4096, "放大预算 = 配置值 ×2")
-  assert.equal(a.verdict, "fail", "判定取二次裁决")
-  const capped = await callSlot({ slot: slotOf("A", "m-a", "p"), messages: [], transport: fixtureSlotTransport({ A: [{ text: "" }, { text: v("pass") }] }), providers: [] })
-  assert.equal(capped.verdict, "pass")
-  const big = await callSlot({ slot: { ...slotOf("A", "m-a", "p"), maxTokens: 8192 }, messages: [], transport: fixtureSlotTransport({ A: [{ text: "" }, { text: v("pass") }] }), providers: [] })
-  assert.equal(big.calls[1].maxTokens, 8192, "放大预算上限 = 8192")
-  assert.equal(big.verdict, "pass")
-  // `finishReason=length`（截断）视同不可解析 ⇒ 同样放大预算重试
-  const truncated = await pair({ A: [{ text: "{\"verdict\"", finishReason: "length" }, { text: v("pass", "重试成功") }], B: sel("pass") })
-  assert.equal(truncated.verdict, "pass")
-  assert.equal(truncated.judges.find((j) => j.id === "A").attempts, 2)
+test("judge.2：级内单发（空输出 / `finishReason=length` ⇒ 该级即败——不重发同模型；预算无放大分支）+ 严格解析", async () => {
+  // 桩只给 1 发：若发生同模型第二发，夹具即「脚本耗尽」抛错 ⇒ 「级内单发」由计数断言机检
+  const empty = await callSlot({ slot: slotOf("A", "m-a", "p"), messages: [], transport: fixtureSlotTransport({ A: [{ text: "" }] }), providers: [] })
+  assert.equal(empty.verdict, "error")
+  assert.equal(empty.attempts, 1, "级内单发：calls[] 恰 1 条")
+  assert.match(empty.reason, /空输出/)
+  assert.equal(empty.calls[0].maxTokens, 2048, "预算 = 该级配置值（无放大重试分支——§2.10.1）")
+  assert.equal("level" in empty.calls[0], false, "原位级不写 `level`（缺省语义）")
+  const truncated = await callSlot({ slot: slotOf("A", "m-a", "p"), messages: [], transport: fixtureSlotTransport({ A: [{ text: "{\"verdict\"", finishReason: "length" }] }), providers: [] })
+  assert.equal(truncated.verdict, "error")
+  assert.match(truncated.reason, /finishReason=length/, "截断视同不可解析（单发即败）")
   // 严格解析：围栏 / 多余键外的散文 / 枚举外取值均不可过
   for (const badText of ["```json\n{\"verdict\":\"pass\"}\n```", "结论：pass", JSON.stringify({ verdict: "ok" }), JSON.stringify({ verdict: "pass" }) + "（补充说明）"]) {
-    const r = await callSlot({ slot: slotOf("A", "m-a", "p"), messages: [], transport: fixtureSlotTransport({ A: [{ text: badText }, { text: badText }] }), providers: [] })
+    const r = await callSlot({ slot: slotOf("A", "m-a", "p"), messages: [], transport: fixtureSlotTransport({ A: [{ text: badText }] }), providers: [] })
     assert.equal(r.verdict, "error", `严格解析须拒：${badText}`)
   }
   const extraKeys = await callSlot({ slot: slotOf("A", "m-a", "p"), messages: [], transport: fixtureSlotTransport({ A: [{ text: JSON.stringify({ verdict: "pass", reason: "x", confidence: 0.9 }) }] }), providers: [] })
   assert.equal(extraKeys.verdict, "pass", "多余键忽略（§2.10.1）")
 })
 
-test("judge.3：两次均不可解析 ⇒ 该位 error ⇒ run error（detail 前缀「判官不可用」；不得回落词表判）", async () => {
-  const r = await pair({ A: [{ text: "" }, { text: "说不清" }], B: sel("pass") })
+test("judge.3：两位皆不可解析（单发即败）⇒ 级链穷尽 ⇒ run error（detail 前缀「判官不可用」；不得回落词表判）", async () => {
+  const r = await pair({ A: [{ text: "" }], B: [{ text: "说不清" }] })
   assert.equal(r.verdict, "error")
   assert.equal(r.resolution, "none")
   assert.match(r.reason, /^判官不可用（有效判不足）：/)
   const a = r.judges.find((j) => j.id === "A")
   assert.equal(a.verdict, "error")
-  assert.equal(a.attempts, 2, "失败位逐位留证")
+  assert.equal(a.attempts, 1, "级内单发（不重发同模型）+ 位级留证")
   const g = judgeResult(r)
   assert.equal(typeof g.error, "string", "合成分 error ⇒ 用例返回 `{ error }`（run 判 error，不猜 fail/pass）")
   assert.match(g.detail, /^判官不可用/)
@@ -87,19 +84,19 @@ test("judge.3：两次均不可解析 ⇒ 该位 error ⇒ run error（detail �
 
 test("judge.4：`frozenAtSuiteVersion` ≠ SUITE_VERSION ⇒ 拒跑（退出码 1）+ 明示提示", async () => {
   const p = join(FIXTURES, "judge-stale.json")
-  writeFileSync(p, JSON.stringify({ version: 1, frozenAtSuiteVersion: 2, judges: [{ provider: "deepseek", model: "m1", maxTokens: 2048, timeoutSec: 30 }, { provider: "deepseek", model: "m2", maxTokens: 2048, timeoutSec: 30 }], arbiter: { provider: "deepseek", model: "m3", maxTokens: 2048, timeoutSec: 30 } }), "utf8")
+  writeFileSync(p, JSON.stringify({ version: 1, frozenAtSuiteVersion: 2, judges: [{ provider: "deepseek", model: "m1", maxTokens: 2048, timeoutSec: 30 }, { provider: "deepseek", model: "m2", maxTokens: 2048, timeoutSec: 30 }], arbiter: { provider: "deepseek", model: "m3", maxTokens: 2048, timeoutSec: 30 }, fallbacks: [{ provider: "deepseek", model: "m4", maxTokens: 2048, timeoutSec: 30 }] }), "utf8")
   process.env.BENCH_JUDGE = p
   try {
     const { code, out } = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--dims", "reasoning", "--label", `fj4-${process.pid}`])
     assert.equal(code, 1)
-    assert.match(out, /判官配置已换代：judge.json.frozenAtSuiteVersion = 2 ≠ SUITE_VERSION = 6/)
+    assert.match(out, /判官配置已换代：judge.json.frozenAtSuiteVersion = 2 ≠ SUITE_VERSION = 7/)
   } finally { delete process.env.BENCH_JUDGE }
 })
 
 test("judge.5：判官键 ∈ 被测集合 ⇒ 正常跑（不拒跑 · 自判）+ 该位标注与 warnings；同 provider 异 model ⇒ 允许 + sameVendorAsTested 明示", async () => {
   const mk = (judges, name) => {
     const p = join(FIXTURES, name)
-    writeFileSync(p, JSON.stringify({ version: 1, frozenAtSuiteVersion: 6, judges, arbiter: { provider: "kimi", model: "kimi-k3", maxTokens: 2048, timeoutSec: 30 } }), "utf8")
+    writeFileSync(p, JSON.stringify({ version: 1, frozenAtSuiteVersion: 7, judges, arbiter: { provider: "kimi", model: "kimi-k3", maxTokens: 2048, timeoutSec: 30 }, fallbacks: [{ provider: "qwen", model: "qwen3.8-flash", maxTokens: 2048, timeoutSec: 30 }] }), "utf8")
     return p
   }
   const runWith = async (cfgPath, label) => {
@@ -142,9 +139,10 @@ test("judge.6：judge.json schema 不合（maxTokens / timeoutSec / provider / j
     assert.throws(() => loadJudgeConfig(p), re)
   }
   const base = () => ({
-    version: 1, frozenAtSuiteVersion: 6,
+    version: 1, frozenAtSuiteVersion: 7,
     judges: [{ provider: "p", model: "m1", maxTokens: 2048, timeoutSec: 30 }, { provider: "p", model: "m2", maxTokens: 2048, timeoutSec: 30 }],
     arbiter: { provider: "p", model: "m3", maxTokens: 2048, timeoutSec: 30 },
+    fallbacks: [{ provider: "p", model: "m4", maxTokens: 2048, timeoutSec: 30 }],
   })
   bad("{ not json", /不可读或非 JSON/)
   const c1 = base(); c1.judges[0].maxTokens = 400; bad(c1, /maxTokens 越界（须 1024–8192 的整数，得 400）/)
@@ -172,8 +170,8 @@ test("judge.7：复核触发面（fail ∧ 非判官裁决 ∧ 用例有机械�
   const runOf = (id) => data.models[0].cases.find((c) => c.caseId === id).runs[0]
   assert.equal(runOf("longctx.2").verdict, "fail")
   assert.equal(runOf("longctx.2").review.verdict, "uphold", "机械 fail ⇒ 复核（uphold 维持）")
-  assert.equal(runOf("longctx.3").verdict, "error")
-  assert.equal("review" in runOf("longctx.3"), false, "error 不触发复核")
+  assert.equal(runOf("vision.2").verdict, "error")
+  assert.equal("review" in runOf("vision.2"), false, "error 不触发复核")
   assert.equal("review" in runOf("multiturn.3"), false, "判官裁决的 run 不带复核记录")
   assert.equal("judge" in runOf("reasoning.1"), false, "未调判官的 run 不写 judge 字段（§2.2-7）")
 })
@@ -201,30 +199,32 @@ test("judge.9：A / B 相异 + 仲裁 C ⇒ 多数决（arbitrated）+ 三位逐
   assert.equal(data.judge.judgeCalls, 3)
 })
 
-test("judge.10：单判官失败 ⇒ 有效判 < 2 ⇒ run error（不单判回退）+ 成因「有效判不足」+ 位级留证", async () => {
-  const r = await pair({ A: [{ text: "" }, { text: "" }], B: sel("pass") })
-  assert.equal(r.verdict, "error")
-  assert.equal(r.resolution, "none")
-  assert.match(r.reason, /判官不可用（有效判不足）/)
-  assert.equal(r.judges.length, 2, "不补位（仲裁员不替失败位）")
-  assert.equal(r.judges[0].verdict, "error")
-  assert.equal(r.judges[0].attempts, 2)
-  assert.equal(r.judges[1].verdict, "pass")
+test("judge.10：单判官失败（A 原位不可解析）⇒ 替代级 1 补判成功 ⇒ 双判合成 + A 位 substitutes 在档", async () => {
+  const r = await pair({ A: [{ text: "" }, sel("pass")[0]], B: sel("pass") }, SLOTS, [slotOf("替代级 1", "m-f1")])
+  assert.equal(r.verdict, "pass")
+  assert.equal(r.resolution, "unanimous", "替代补判成功 ⇒ 双判合成（全败形态 = judge.16 / judge.17）")
+  const a = r.judges.find((j) => j.id === "A")
+  assert.equal(a.verdict, "pass")
+  assert.deepEqual(a.substitutes.map((s) => [s.level, s.model]), [[2, "m-f1"]], "A 位 substitutes 在档（替代级 1 定判 · 级链基址 level 2）")
+  assert.equal(a.attempts, 2)
+  assert.equal(r.judges.length, 2, "C 位未被调用（未触发仲裁）")
+  assert.match(a.substitutes[0].cause, /位级失败/, "cause 逐级在档")
 })
 
-test("judge.11：A / B 分歧 + 仲裁 C 两次不可解析 ⇒ error（无多数）+ 成因「分歧未决」+ 三方留证", async () => {
-  const r = await pair({ A: sel("pass"), B: sel("fail"), C: [{ text: "" }, { text: "{}" }] })
-  assert.equal(r.verdict, "error")
-  assert.equal(r.resolution, "none")
-  assert.match(r.reason, /判官不可用（分歧未决）/)
-  assert.deepEqual(r.judges.map((j) => j.id), ["A", "B", "C"])
-  assert.equal(r.judges[2].attempts, 2)
+test("judge.11：A / B 分歧 + 仲裁 C 原位不可解析 ⇒ C 替代级补判成功 ⇒ arbitrated（多数决）+ 三方留证", async () => {
+  const r = await pair({ A: sel("pass"), B: sel("fail"), C: [{ text: "" }, sel("pass")[0]] }, SLOTS, [slotOf("替代级 1", "m-f1")])
+  assert.equal(r.verdict, "pass", "多数决：A pass + C（替代级）pass")
+  assert.equal(r.resolution, "arbitrated")
+  assert.deepEqual(r.judges.map((j) => j.id), ["A", "B", "C"], "三方留证")
+  const c = r.judges[2]
+  assert.equal(c.attempts, 2)
+  assert.deepEqual(c.substitutes.map((s) => [s.level, s.model]), [[2, "m-f1"]], "C 位替代级在档")
 })
 
 test("judge.12：判官对身份违约（A=B / 仲裁员 ∈ {A, B}）⇒ 装载即拒 + 明示违约位次", () => {
   const mk = (judges, arbiter) => {
     const p = join(FIXTURES, `judge-id-${judges.map((j) => j.model).join("-")}-${arbiter.model}.json`)
-    writeFileSync(p, JSON.stringify({ version: 1, frozenAtSuiteVersion: 6, judges, arbiter }), "utf8")
+    writeFileSync(p, JSON.stringify({ version: 1, frozenAtSuiteVersion: 7, judges, arbiter, fallbacks: [{ provider: "s", model: "m-fb", maxTokens: 2048, timeoutSec: 30 }] }), "utf8")
     return p
   }
   const ab = mk([{ provider: "p", model: "same", maxTokens: 2048, timeoutSec: 30 }, { provider: "q", model: "same", maxTokens: 2048, timeoutSec: 30 }], { provider: "r", model: "other", maxTokens: 2048, timeoutSec: 30 })

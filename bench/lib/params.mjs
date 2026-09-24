@@ -16,7 +16,7 @@
  * （名单档无专行 = 尺寸静默低估面）· ③ `reasoningEffort` ∈ 该档 `reasoningEffortEnum` = **阻断**
  * （#264 类结构性防复发）· ④ 温度档位值与 `tempRange` 裁剪对账 = **报警**（入档值 ≠ 实发值提示）·
  * ⑤ 路由 / format 豁免面 = **豁免**（③ 判定跳过）· ⑥ thinking 面组合 = **豁免——不设判定**
- * （运行面组合语义归核守卫单源，预检不复制）。**阻断集 = ①②③**。
+ * （运行面组合语义归核守卫单源，预检不复制）。**阻断集 = ①②③**；**射程 = 逐档 + 判官三槽 + 替代池逐项**（§2.13）。
  */
 
 import { specMatch } from "../../thincoder-core/config.mjs"
@@ -78,12 +78,15 @@ function checkFace({ who, provider, model, effort, temperature, user, providers 
   note("信息", `${who}：thinkApi ${spec.spec.thinkApi ?? "—"}（项⑥ 不设判定——thinking 组合语义归核守卫单源，供目检）`)
 }
 
+/** 受检面点名（§2.13 射程扩替代池）：三槽 = `判官 A 位`；替代池项 = `判官替代级 1`（id 来自 `resolveJudgeSlots`）。 */
+const whoOf = (s) => (String(s.id ?? "").length === 1 ? `判官 ${s.id} 位` : `判官${s.id}`)
+
 /**
- * 枚举面判定（§2.13-1 · 六项对齐腿）：逐档 + 判官三槽做「config × spec」兼容判定——零网络 · 纯判定。
+ * 枚举面判定（§2.13-1 · 六项对齐腿）：逐档 + 判官三槽 + **替代池逐项**做「config × spec」兼容判定——零网络 · 纯判定。
  * `providers == null` ⇒ provider 面（①）与槽位 config 面跳过（`--dry-run` 不读用户 config）。
  * 返回 `{ blockers, warnings, lines }`：blockers = 阻断集（①②③，拒跑依据——逐条点名）· warnings = 报警集（④）。
  */
-export function enumerationPreflight({ entries = [], slots = [], providers = null } = {}) {
+export function enumerationPreflight({ entries = [], slots = [], pool = [], providers = null } = {}) {
   const blockers = []
   const warnings = []
   const lines = []
@@ -104,10 +107,10 @@ export function enumerationPreflight({ entries = [], slots = [], providers = nul
       providers,
     }, note)
   }
-  for (const s of slots) {
+  for (const s of [...slots, ...pool]) {
     const user = (providers ?? []).find((p) => p.name === s.provider) ?? null
     checkFace({
-      who: `判官 ${s.id} 位`,
+      who: whoOf(s),
       provider: s.provider,
       model: s.model,
       effort: user?.reasoningEffort ?? null, // 判官面 effort 沿 provider 条目原值（不覆写——§2.10.3）

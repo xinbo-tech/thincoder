@@ -5,12 +5,18 @@
  *   cost = (prompt − cached) × input + cached × (cachedInput ?? input) + completion × output
  *   单价单位 = `unit`（元 / 百万 token）⇒ 先用 1e6 除；cached 取 usage.prompt_cache_hit_tokens，
  *   缺失 ⇒ 0 并记 cachedUnknown 警告。schema 校验 fail-closed（input/output 缺失或非数字 ⇒ 装载即拒）。
+ *
+ * 判官 / 复核账目（`applyJudgeCosts`——按 `calls[].level` 的实际身份键计价 + 替代池逐项）自本档迁出至
+ * `prices-judge.mjs`（本档 300 行上限）；本档保留**被测与人工 lane**账目，并经 `applyPricesToResult` 调其入账。
  */
 
 import { readFileSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { aggregateVerdict } from "./metrics.mjs"
+import { applyJudgeCosts } from "./prices-judge.mjs"
+
+export { applyJudgeCosts }
 
 const PER_UNIT = 1e6
 const BENCH_DIR = dirname(dirname(fileURLToPath(import.meta.url)))
@@ -146,136 +152,4 @@ export function applyPricesToResult(data, prices, warnings) {
   return data
 }
 
-/** 位次 → 顶层 `judge` 块条目（§2.10.6：位序定身份 A / B / C）。 */
-function slotMetas(judge) {
-  const list = [
-    { id: "A", meta: (judge?.judges ?? [])[0] },
-    { id: "B", meta: (judge?.judges ?? [])[1] },
-    { id: "C", meta: judge?.arbiter },
-  ]
-  return list.filter((s) => s.meta)
-}
-
-/** 逐位记账累加器（calls = 逐尝试条数；cost = 成功计价尝试之和，无成功 ⇒ null）。 */
-function newSlotAcc() {
-  return { calls: 0, cost: null, priced: 0, noPrice: false, usageMissing: false }
-}
-
-function accAdd(acc, cost, call) {
-  acc.calls++
-  if (call?.tokens == null) acc.usageMissing = true
-  if (cost) {
-    acc.cost = (acc.cost ?? 0) + cost.value
-    acc.priced++
-  }
-}
-
-/**
- * 判官 / 复核成本应用与聚合（§2.10.5 / AC-4 / AC-10 · 射程 = 判官对 + 仲裁）：
- * - 单价同源 `prices.json`（按**各判官位**的 `provider:model` 走同一匹配与计算式）；缺价 / 缺 usage ⇒ `null` + 警告；
- * - 逐位逐尝试填充 `runs[].judge.judges[].calls[].costCny` / `runs[].review.calls[].costCny`（原子账目 ⇒ 重算友好）；
- * - 聚合：逐 run → `aggregate.judgeCostCny` / `aggregate.reviewCostCny` / `aggregate.overturns`；
- *   全局 → 顶层 `judge`（逐位 + 合计 + 分歧计数）/ 顶层 `review`（账目主位，§2.2-7 不双写）；
- * - **不进** `runs[].metrics.cost` / `aggregate.costCny`（被测成本面零污染）。
- */
-export function applyJudgeCosts(data, prices, warnings) {
-  const metas = slotMetas(data.judge)
-  if (metas.length === 0) return data
-  const mBySlot = new Map(metas.map((s) => [s.id, s.meta]))
-  const acc = new Map(metas.map((s) => [s.id, newSlotAcc()]))
-  const reviewAcc = newSlotAcc()
-  let judgeCalls = 0
-  let reviewCalls = 0
-  const counts = { agreements: 0, disagreements: 0, arbitrations: 0, unavailable: 0, uphold: 0, overturn: 0 }
-
-  const priceCall = (call, meta) => {
-    const entry = meta ? matchPrice(prices, meta.provider, meta.model) : null
-    const cost = costOf(entry, call?.tokens ?? null, prices)
-    call.costCny = cost ? cost.value : null
-    return { cost, noPrice: !entry }
-  }
-  const byVerdict = (m, id) => (m?.judges ?? []).find((j) => j.id === id)
-
-  for (const m of data.models ?? []) {
-    let jCost = null
-    let rCost = null
-    let overturns = 0
-    for (const c of m.cases ?? []) {
-      for (const run of c.runs ?? []) {
-        for (const j of run.judge?.judges ?? []) {
-          const a = acc.get(j.id)
-          if (!a) continue
-          for (const call of j.calls ?? []) {
-            const { cost, noPrice } = priceCall(call, mBySlot.get(j.id))
-            if (noPrice) a.noPrice = true
-            accAdd(a, cost, call)
-            if (cost) jCost = (jCost ?? 0) + cost.value
-          }
-        }
-        if (run.review) {
-          for (const call of run.review.calls ?? []) {
-            const { cost, noPrice } = priceCall(call, mBySlot.get("A"))
-            if (noPrice) reviewAcc.noPrice = true
-            accAdd(reviewAcc, cost, call)
-            if (cost) rCost = (rCost ?? 0) + cost.value
-          }
-          if (run.review.verdict === "overturn") {
-            counts.overturn++
-            overturns++
-          } else if (run.review.verdict === "uphold") counts.uphold++
-        }
-        // 分歧计数（§2.3 概览分歧率 = 分歧 ÷ A/B 双有效样本）
-        const jr = run.judge
-        if (jr) {
-          const A = byVerdict(jr, "A")
-          const B = byVerdict(jr, "B")
-          const validA = A && (A.verdict === "pass" || A.verdict === "fail")
-          const validB = B && (B.verdict === "pass" || B.verdict === "fail")
-          if (validA && validB) {
-            if (A.verdict === B.verdict) counts.agreements++
-            else counts.disagreements++
-          }
-          if (jr.resolution === "arbitrated") counts.arbitrations++
-          if (jr.verdict === "error") counts.unavailable++
-        }
-      }
-    }
-    m.aggregate = m.aggregate ?? {}
-    m.aggregate.judgeCostCny = jCost == null ? null : round8(jCost)
-    m.aggregate.reviewCostCny = rCost == null ? null : round8(rCost)
-    m.aggregate.overturns = overturns
-  }
-  const slotSnap = (id) => {
-    const a = acc.get(id)
-    return { calls: a.calls, costCny: a.cost == null ? null : round8(a.cost), noPrice: a.noPrice, usageMissing: a.usageMissing, priced: a.priced }
-  }
-  for (const s of metas) {
-    const snap = slotSnap(s.id)
-    s.meta.calls = snap.calls
-    s.meta.costCny = snap.costCny
-    judgeCalls += snap.calls
-    if (snap.noPrice && snap.priced === 0) warnings.push(`价格未录：判官 ${s.id}（${s.meta.provider}:${s.meta.model}）（cost=null）`)
-    if (snap.usageMissing) warnings.push(`usage 缺失：判官 ${s.id}（${s.meta.provider}:${s.meta.model}）（tokens/cost=null）`)
-  }
-  if (data.judge) {
-    data.judge.judgeCalls = judgeCalls
-    data.judge.costCny = [...acc.values()].some((a) => a.cost != null) ? round8([...acc.values()].reduce((n, a) => n + (a.cost ?? 0), 0)) : null
-    data.judge.agreements = counts.agreements
-    data.judge.disagreements = counts.disagreements
-    data.judge.arbitrations = counts.arbitrations
-    data.judge.unavailable = counts.unavailable
-  }
-  if (data.review) {
-    reviewCalls = reviewAcc.calls
-    data.review.calls = reviewCalls
-    data.review.costCny = reviewAcc.cost == null ? null : round8(reviewAcc.cost)
-    data.review.uphold = counts.uphold
-    data.review.overturn = counts.overturn
-    if (reviewAcc.noPrice && reviewAcc.priced === 0 && reviewCalls > 0) {
-      warnings.push(`价格未录：复核（沿 A 位 ${mBySlot.get("A")?.provider}:${mBySlot.get("A")?.model}）（cost=null）`)
-    }
-    if (reviewAcc.usageMissing) warnings.push(`usage 缺失：复核（沿 A 位）（tokens/cost=null）`)
-  }
-  return data
-}
 

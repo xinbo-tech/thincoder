@@ -16,8 +16,9 @@ import { timeSection } from "./report-time.mjs"
 import { speedSection } from "./report-speed.mjs"
 import { paramsSection } from "./report-params.mjs"
 
-/** 概览判官面（§2.3）：判官三行（A / B / 仲裁 C · **逐位元数据无金额**）+ 分歧率 + **评估开销分账句**。
- *  与被测重合标注 = **渲染面三级派生**（判官块不另存字段——重合事实由 `models[]` × 判官槽两侧键共同承载）。
+/** 概览判官面（§2.3）：判官三行（A / B / 仲裁 C · **逐位元数据无金额**）+ **替代池行** + 分歧率 + **评估开销分账句**。
+ *  与被测重合标注 = **渲染面三级派生**（判官块不另存字段——重合事实由 `models[]` × 判官槽两侧键共同承载）；
+ *  **替代池逐项同受本明示**（池快照含 `sameVendorAsTested`）；旧档缺池快照 ⇒ 该行渲染「未采集」（缺省语义）。
  *  金额零展示（KD-29）：判官 / 复核金额与缺价金额句均不入 md——账目只住结果 JSON（统计住告警行 / 《复核翻案》）。 */
 function judgeOverviewLines(data) {
   const j = data.judge
@@ -30,10 +31,15 @@ function judgeOverviewLines(data) {
     return testedVendors.has(meta.provider) ? "与被测同渠道（明示 sameVendorAsTested）" : "与被测无重合"
   }
   const row = (name, meta, tail = "") => `- ${name}：\`${meta.provider}:${meta.model}\` · temperature ${meta.temperature} · maxTokens ${meta.maxTokens} · 超时 ${meta.timeoutSec}s · 模板 v${j.promptVersion} · 调用 ${meta.calls ?? 0} 次 · ${overlapOf(meta)}${tail}`
+  // 替代池行（§2.3 / §2.2-16）：级序 × provider:model + 启用次数（池内逐项调用数——与 substitutions 同源）；缺池快照 ⇒ 未采集
+  const poolRow = (j.fallbacks ?? []).length > 0
+    ? `- 替代池（位级失败时按序补判 · 级联序 = 池序）：${j.fallbacks.map((f, i) => `${i + 1} \`${f.provider}:${f.model}\`（${f.calls ?? 0} 次 · ${overlapOf(f)}）`).join(" · ")}`
+    : "- 替代池：未采集（旧代际档缺池快照——缺省语义 · §2.2-16）"
   return [
     row("判官 A", j.judges[0]),
     row("判官 B", j.judges[1]),
     row("仲裁 C", j.arbiter, "（仅分歧样本）"),
+    poolRow,
     `- 判官分歧率：${d.rate == null ? "—" : `${Math.round(d.rate * 100)}%`}（分歧 ${d.disagree} ÷ A/B 双有效样本 ${d.doubleValid}）· 仲裁 ${d.arbitrations} 次 · 判官不可用 ${d.unavailable} 次`,
     `- ${EVAL_SPLIT_NOTE}`,
   ]
@@ -72,7 +78,7 @@ function methodSection(data) {
     "套件口径冻结（五口径；任一变化 ⇒ suiteVersion +1，跨版本不严格可比）：",
     "",
     "1. 题集：题面与用例逐字冻结（含隐藏用例）；版本标识 = suiteVersion。",
-    "2. 判分：**混合三层**——① **确定性断言**（数字独立成词 / vm 实跑 + 隐藏断言 / 整串 JSON / 工具结构 / 语法级文本约束）；② **语义·语用面 = 判官对（A / B 双判 · 同一冻结 rubric）**，分歧样本经**第三判（仲裁 C）多数决**（合成无多数 ⇒ 该 run `error`，禁猜禁回退）；③ **机械 fail = 复核**（单判 · 第二只眼 · **`overturn` ⇒ 改判 `pass`**——计入通过数 + `⟲` 标注）。人工 lane 只记录不判分。",
+    "2. 判分：**混合三层**——① **确定性断言**（数字独立成词 / vm 实跑 + 隐藏断言 / 整串 JSON / 工具结构 / 语法级文本约束）；② **语义·语用面 = 判官对（A / B 双判 · 同一冻结 rubric；位级失败经替代判级联换模型补判）**，分歧样本经**第三判（仲裁 C）多数决**（合成无多数 ⇒ 该 run `error`，禁猜禁回退；恰一位有效 ⇒ **单判定判** `resolution = single`）；③ **机械 fail = 复核**（单判 · 第二只眼 · **`overturn` ⇒ 改判 `pass`**——计入通过数 + `⟲` 标注）。人工 lane 只记录不判分。",
     "3. 计时：TTFT = 首个非空 delta 到达 − 调用发起；tok/s = Σcompletion ÷ Σ(per-call total − per-call ttft)；token 只认 usage 精确值，缺记 null（不估算）。",
     "4. 报告：报告对（md + json）同 basename，md 完全由结果 JSON 渲染；同骨架跨模型/跨时点可比。",
     "5. 价格：单价只住 prices.json（asOf + source 可回溯）；成本 = 未缓存输入 × input + 缓存命中 × cachedInput + 输出 × output。",
@@ -82,6 +88,7 @@ function methodSection(data) {
     ...(data.judge ? [`- 判分模板：判官 promptVersion = ${data.judge.promptVersion} · 复核 promptVersion = ${data.review?.promptVersion} · 判官配置冻结于 suiteVersion ${data.judge.frozenAtSuiteVersion}`] : []),
     `- 工具链：模型调用经核 provider 路径（thinking 等其余参数取用户配置原值；思考强度 = 中档口径 · 档位覆写优先——逐档实发值与来源见概览逐档参数表）；temperature = ${data.run?.temperature}；多轮工具链跨轮合计计时。`,
     ...(data.recomputed ? [`- 重算产物：由 \`${data.recomputed.from}\` 于 ${data.recomputed.at} 重出（成本按当前 prices.json 重算；原档不动）。`] : []),
+    ...(data.rejudged ? [`- 补判产物：由 \`${data.rejudged.from}\` 于 ${data.rejudged.at} 重出（判官面 error run 定点重取素材 + 级联补判；原档不动）——**判分代际 = 补判时**（suiteVersion ${data.suiteVersion}）⇒ 与原档不严格可比（同代际补判 ⇒ 可比性零损——§2.14 版本归属）。`] : []),
     "",
   ]
 }
@@ -137,7 +144,7 @@ function findingsSection(data, stats, { showCapability = true, axes = [...AXES] 
   const warnCount = (prefix) => (data.warnings ?? []).filter((w) => String(w).startsWith(prefix)).length
   const d = divergenceOf(data)
   const judgeWarn = data.judge
-    ? ` · 判官不可用 ${d.unavailable} 次（有效判不足 ${d.insufficient} · 分歧未决 ${d.unresolved}${d.missing > 0 ? ` · 素材缺失 ${d.missing}` : ""}）· 判官分歧 ${d.disagree} 次（仲裁 ${d.arbitrations}）· 机械 fail 复核 ${d.reviews} 次（翻案 ${d.overturns} 次${d.reviewErrors > 0 ? ` · 复核失败 ${d.reviewErrors} 次` : ""}）`
+    ? ` · 判官替代补判 ${data.judge.substitutions ?? 0} 次 · 单判定判 ${data.judge.singleJudged ?? 0} 次 · 判官不可用 ${d.unavailable} 次（有效判不足 ${d.insufficient} · 分歧未决 ${d.unresolved}${d.missing > 0 ? ` · 素材缺失 ${d.missing}` : ""}）· 判官分歧 ${d.disagree} 次（仲裁 ${d.arbitrations}）· 机械 fail 复核 ${d.reviews} 次（翻案 ${d.overturns} 次${d.reviewErrors > 0 ? ` · 复核失败 ${d.reviewErrors} 次` : ""}）`
     : ""
   out.push(`- 数据告警：usage 缺失 run ${missUsage} 个 · 成本缺失 run ${missCost} 个 · 价格未录 ${warnCount("价格未录：")} 条 · error ${errors} 次 · 限流等待（throttled）${throttled} 次${judgeWarn}。`)
   out.push("")
@@ -152,7 +159,7 @@ const LIMITS = [
   "同模型跨渠道差异（baseURL / 网关不同 ⇒ 结果只对本次运行所用渠道成立）。",
   "速度受服务端负载影响（TTFT / tok/s 为观测值，非服务端承诺）。",
   "响应只存摘要（≤300 字符）· 题面 = `cases[].prompt` 冻结正本（构造型用例的载荷不入档，确定构造可复现）。",
-  "语义面由判官对（A / B）按冻结 rubric 裁决，分歧样本经第三判仲裁（**判官对的同向误判不设外部复核**）；机械 fail 复核为单判信号（**`overturn` ⇒ 改判 `pass` + `⟲` 标注**；原机械断言与复核理由留档；混合面形态的翻案只裁机械面——判官面未裁决 · 逐条标注）。",
+  "语义面由判官对（A / B）按冻结 rubric 裁决；位级失败经替代池级联补判（替代身份 / 原因入档 · 告警分列），级链穷尽时单有效判定判或 `error`（透明记档）；分歧样本经第三判仲裁（**判官对的同向误判不设外部复核**）；机械 fail 复核为单判信号（**`overturn` ⇒ 改判 `pass` + `⟲` 标注**；原机械断言与复核理由留档；混合面形态的翻案只裁机械面——判官面未裁决 · 逐条标注）。",
   "判官可与被测重合（**自判轮次无外部对照**——重合级别逐位明示于概览判官行：同位 / 同渠道 / 无重合）。",
   "V1 未覆盖面：不做广谱知识题 / 容器级任务 / 开放式质量主观打分（判官只裁冻结 rubric 的语义判定）。",
 ]

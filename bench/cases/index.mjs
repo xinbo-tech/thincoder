@@ -19,9 +19,9 @@ import { manual } from "./manual.mjs"
 
 /** 题集版本（整数）——改题面 / 判据 / rubric / 判官身份 / 提示模板 / 复核触发面 / 判分合成 · 复核处置规则 /
  *  计时口径 / 结果数值构成规则 +1（设计 §1.3 口径 1/2/3 + §1.3-4 版本轴 + §2.10.3 冻结绑定；呈现面变化不 bump）。
- *  本批 5 → 6：**归因 = 判官 B 换代（`tokenhub:hy3` → `glm:glm-5.3-flashx`）+ 判据修订**（承接修复
- *  #273 / #274——两项均属判分口径面，共用一次；§6 末段）。 */
-export const SUITE_VERSION = 6
+ *  本批 6 → 7：**归因 = 判分合成规则变化（位级失败 ⇒ 替代判级联换模型补判 / 单判定判）
+ *  + 判官身份面扩替代池**（`judge.json.fallbacks` 6 位——§1.3-2 变更规则明列；共用一次 bump）。 */
+export const SUITE_VERSION = 7
 
 /** 8 个自动维度（顺序 = 报告中的列序）。 */
 export const DIMENSIONS = ["reasoning", "code", "json", "tools", "instructions", "multiturn", "longctx", "vision"]

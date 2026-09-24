@@ -12,8 +12,8 @@ import { applyPricesToResult, loadPrices, pricesPath } from "./prices.mjs"
 import { renderReport } from "./report.mjs"
 import { isoLocal, refuseIfExists, resultsDir, writePair } from "./output.mjs"
 
-/** 结果 JSON 形状校验（recompute.3：损坏 JSON / 缺 calls[].tokens → 退出码 1 且不落任何档）。 */
-function validateResultShape(data) {
+/** 结果 JSON 形状校验（recompute.3 / rejudge：损坏 JSON / 缺 calls[].tokens → 退出码 1 且不落任何档）——两分支共用单源。 */
+export function validateResultShape(data) {
   if (!data || typeof data !== "object") throw new Error("结果 JSON 顶层不是对象")
   if (!Array.isArray(data.models)) throw new Error("结果 JSON 缺 models[]")
   for (const [mi, m] of data.models.entries()) {

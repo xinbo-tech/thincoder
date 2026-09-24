@@ -20,12 +20,14 @@ import { dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { CAPABILITY_SELECTOR, DIMENSIONS, MANUAL_DIM } from "./cases/index.mjs"
 import { recomputeMain, runMain } from "./lib/pipeline.mjs"
+import { rejudgeMain } from "./lib/rejudge.mjs"
 
 const BENCH_DIR = dirname(fileURLToPath(import.meta.url))
 
 const USAGE = `用法：
   node bench/run.mjs [--models <列表>] [--dims <列表>] [--label <名>] [--n <次>] [--max-tokens <N>] [--timeout <秒>] [--dry-run]
   node bench/run.mjs --recompute --from <结果.json> [--label <名>]
+  node bench/run.mjs --rejudge --from <结果.json> [--label <名>]
 
   --models     参测模型（逗号分隔；条目 = models.json 的 label 或 provider:model）；缺省 = 清单全量
   --dims       选择器（逗号分隔：capability / 各维度键 / manual / speed / cost）；缺省 = 全跑 + 全轴
@@ -35,9 +37,11 @@ const USAGE = `用法：
   --timeout    单次调用墙钟上限（秒）；缺省 120
   --dry-run    夹具自检：不调模型、不读用户 config，跑通判分（含判官对 / 仲裁 / 复核夹具）→指标→报告→脱敏链路
   --recompute  离线重算：读入已有结果 JSON，以当前 prices.json 重出报告（零 API 调用）
+  --rejudge    跑后补判：读入结果 JSON，对判官面 error run 定点重取素材（重跑该 run 的被测调用）+ 级联补判
+               ⇒ 落新报告对（触网；原档不动；缺省标签 <原标签>-rejudged §2.14）
 
-  判官配置 = bench/judge.json（判官对 A / B + 分歧仲裁 C · 判官必备）：文件缺失 / 不合 schema /
-  判官身份违约（A=B · 仲裁员 ∈ {A, B}）/ 冻结版本不匹配 ⇒ 拒跑（退出码 1）。
+  判官配置 = bench/judge.json（判官对 A / B + 分歧仲裁 C + 替代池 fallbacks · 判官必备）：文件缺失 / 不合 schema /
+  身份违约（A=B · 仲裁员 ∈ {A, B} · 替代池违约）/ 冻结版本不匹配 ⇒ 拒跑（退出码 1）。位级失败 ⇒ 换模型级联补判（池序）。
   判官可与被测重合（允许自判——不拒跑）：重合级别逐位明示于报告概览判官行（同位 / 同渠道 / 无重合）。
 
   跑前预检 = 枚举面（零网络 · 每次跑批自动跑）：逐档 + 判官三槽做「config × spec」兼容判定——
@@ -110,6 +114,8 @@ const FIXTURE = {
 // 逐位脚本（`slot` = A / B / C / review）；`text` = 该位返回的裁决 JSON（内容固定 ⇒ 自检完全确定）。
 const jTok = (prompt, completion) => ({ prompt, cached: 0, completion })
 const jv = (verdict, reason) => ({ text: JSON.stringify({ verdict, reason }), tokens: jTok(320, 40) })
+// 全级皆不可解析（级链穷尽夹具）：`1 + 池长` 发——原位 + 替代级逐级各一发（级内单发 ⇒ 逐发对应一级）
+const drySlot = (n = 7) => Array.from({ length: n }, () => ({ text: "", tokens: jTok(320, 0) }))
 
 FIXTURE.judge = {
   "reasoning.3": { A: [jv("pass", "夹具：指出 9 不是质数，正确识破前提陷阱。")], B: [jv("pass", "夹具：点明 9 非质数，符合 PASS。")] },
@@ -126,13 +132,14 @@ FIXTURE.judge = {
     C: [jv("pass", "夹具（仲裁）：候选满足 ≥3 互不相同，维持通过。")],
   },
   "multiturn.3": { A: [jv("pass", "夹具：信息足够直接代决，未追问。")], B: [jv("pass", "夹具：回合 1 内发信，无多余追问。")] },
-  // 位级失败样本（A 两次不可解析 ⇒ 有效判 < 2 ⇒ 合成分 error · 告警分列「有效判不足」）
+  // 位级失败样本（A 位原位超时 ⇒ **替代级 1 补判成功** ⇒ 双判合成；替代透明 = substitutes + calls[].level + 告警分列）
   "longctx.3": {
-    A: [{ text: "", tokens: jTok(320, 0) }, { text: "按判据应判通过。", finishReason: "stop", tokens: jTok(320, 20) }],
+    A: [{ fail: "throw", name: "TimeoutError", message: "夹具：判官超时（级内单发 ⇒ 进替代级）", text: "" }, jv("pass", "夹具（替代级定判）：以 42875 为当前值，符合 PASS。")],
     B: [jv("pass", "夹具：以 42875 为当前值，符合 PASS。")],
   },
   "vision.1": { A: [jv("pass", "夹具：左上角为红色族。")], B: [jv("pass", "夹具：回答红色，符合 PASS。")] },
-  "vision.2": { A: [jv("pass", "夹具：回答绿色族。")], B: [jv("pass", "夹具：绿色，符合 PASS。")] },
+  // 全级穷尽样本（A / B 两条级链尽败 ⇒ 合成分 error 保留覆盖 · 告警分列「有效判不足」——§2.10.4 物理边界）
+  "vision.2": { A: drySlot(), B: drySlot() },
   "vision.3": { A: [jv("pass", "夹具：指出图中没有猫，拒答正确。")], B: [jv("pass", "夹具：明确拒答，无中生有已避免。")] },
 }
 
@@ -173,7 +180,7 @@ function intArg(raw, flag, min) {
 function parseArgs(argv) {
   const opts = {
     models: null, dims: null, label: null, repeats: 1, maxTokens: 4096,
-    timeoutSec: 120, dryRun: false, recompute: false, from: null, help: false,
+    timeoutSec: 120, dryRun: false, recompute: false, rejudge: false, from: null, help: false,
   }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
@@ -191,11 +198,15 @@ function parseArgs(argv) {
     else if (a === "--from") opts.from = need()
     else if (a === "--dry-run") opts.dryRun = true
     else if (a === "--recompute") opts.recompute = true
+    else if (a === "--rejudge") opts.rejudge = true
     else if (a === "--help" || a === "-h") opts.help = true
     else throw new Error(`未知参数 ${a}（--help 看用法）`)
   }
+  if (opts.dryRun && opts.rejudge) throw new Error("--dry-run 与 --rejudge 不可同给（零网络自检 vs 触网补判——§2.14）")
+  if (opts.recompute && opts.rejudge) throw new Error("--recompute 与 --rejudge 互斥（零网络重算 vs 触网补判——§2.14）")
   if (opts.recompute && !opts.from) throw new Error("--recompute 需要 --from <结果.json>")
-  if (opts.from && !opts.recompute) throw new Error("--from 只与 --recompute 连用")
+  if (opts.rejudge && !opts.from) throw new Error("--rejudge 需要 --from <结果.json>")
+  if (opts.from && !opts.recompute && !opts.rejudge) throw new Error("--from 只与 --recompute / --rejudge 连用")
   if (opts.label != null && !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(opts.label)) {
     throw new Error(`--label 非法（须英文/数字/连字符）：${opts.label}`)
   }
@@ -240,8 +251,8 @@ async function startupPreflight(opts) {
     providers = loadConfig().providers ?? []
   }
   // 判官面先行解析（冻结绑定 / provider / 身份违约 ⇒ 沿用既有报错面与文案）——枚举面随后叠判
-  const { slots } = resolveJudgeSlots(loadJudgeConfig(judgeConfigPath()), { providers, tested: entries })
-  const { blockers } = enumerationPreflight({ entries, slots, providers })
+  const { slots, pool } = resolveJudgeSlots(loadJudgeConfig(judgeConfigPath()), { providers, tested: entries })
+  const { blockers } = enumerationPreflight({ entries, slots, pool, providers })
   if (blockers.length > 0) {
     throw new Error(`跑前预检：枚举面阻断 ${blockers.length} 条 —— 拒跑（§2.13）读法：\n  - ${blockers.join("\n  - ")}\n（修法后可用 node bench/preflight.mjs 复核）`)
   }
@@ -264,6 +275,7 @@ export async function main(argv = process.argv.slice(2)) {
   }
   try {
     if (opts.recompute) return await recomputeMain(opts)
+    if (opts.rejudge) return await rejudgeMain(opts) // 跑后补判（触网——§2.14；缺省标签 = <原标签>-rejudged）
     opts.label ??= "run" // 缺省标签（§2.1）；重算路径的缺省标签 = <原标签>-recalc（§2.7）
     await startupPreflight(opts) // 跑前枚举面预检（§2.13-1 · 启动门——有阻断 ⇒ 拒跑 exit 1 逐条点名）
     return await runMain(opts, sel, FIXTURE)

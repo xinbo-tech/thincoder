@@ -185,6 +185,13 @@ export function costSection(data, stats) {
   ]
 }
 
+/** 替代位标注（§2.3 逐维明细判官理由行）：该位启用了替代级 ⇒ 附 `（替代：<provider:model>）`
+ *  （末级身份 = 定判级 / 最后尝试级——替代透明，不得静默顶替）。 */
+function subMark(j) {
+  const s = (j?.substitutes ?? []).at(-1)
+  return s ? `（替代：${s.provider}:${s.model}）` : ""
+}
+
 /** 复核行标注（§2.11 呈现）：混合面翻案 ⇒ 附「判官面未裁决」（原短路未调判官 · 复核只裁机械面）；
  *  纯机械面翻案不携该词（行内断言 = 反例控制）。 */
 function mixedNoteOf(caseId, revs) {
@@ -228,12 +235,13 @@ export function detailSection(data, stats) {
         const cell = caseCell(s.model, cid)
         if (cell?.head) out.push(`- 响应摘要 · ${s.label}：${codeSpan(cell.head)}`)
       }
-      // 判官理由行（判官裁决的 run：逐位 A / B（分歧时 +C）裁决 + 定判位理由）
+      // 判官理由行（判官裁决的 run：逐位 A / B（分歧时 +C）裁决 + 替代位标注 + 定判位理由；单判定判 run 另注）
       for (const s of stats) {
         for (const run of caseOf(s.model, cid)?.runs ?? []) {
           if (!run.judge) continue
-          const parts = (run.judge.judges ?? []).map((j) => `${j.id}=${j.verdict}${j.verdict === "error" ? "（位级失败）" : ""}`)
-          out.push(`- 判官 · ${s.label}：${parts.join(" / ")} → 合成分 ${run.judge.verdict}（${run.judge.resolution}）· ${run.judge.reason}`)
+          const parts = (run.judge.judges ?? []).map((j) => `${j.id}=${j.verdict}${j.verdict === "error" ? "（位级失败）" : ""}${subMark(j)}`)
+          const single = run.judge.resolution === "single" ? " · 单判定判" : ""
+          out.push(`- 判官 · ${s.label}：${parts.join(" / ")} → 合成分 ${run.judge.verdict}（${run.judge.resolution}${single}）· ${run.judge.reason}`)
         }
       }
       // 复核行（该单元格有复核记录时：复核次数 / uphold / 翻案 + 理由）

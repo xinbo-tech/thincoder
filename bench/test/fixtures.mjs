@@ -63,7 +63,7 @@ export const judgeRec = (verdict, resolution, judges, reason = "夹具：判据�
 /** 复核记录（§2.2-7：`runs[].review`）。 */
 export const reviewRec = (verdict, reason = "夹具：机械判据成立。") => ({ verdict, reason, mechDetail: "未命中 371281", attempts: 1, calls: [jCall(TOK(300, 0, 60))] })
 
-const jMeta = (provider, model, sameVendorAsTested = false) => ({ provider, model, host: `${provider}.example.com`, temperature: 0, maxTokens: 2048, timeoutSec: 30, sameVendorAsTested, calls: 0, costCny: null })
+export const jMeta = (provider, model, sameVendorAsTested = false) => ({ provider, model, host: `${provider}.example.com`, temperature: 0, maxTokens: 2048, timeoutSec: 30, sameVendorAsTested, calls: 0, costCny: null })
 
 /** 混合面翻案用例（`review.5` 夹具）：`instructions.1` 机械 fail 短路（§2.6 ⇒ 该 run 无 `runs[].judge`）
  *  ⇒ 复核翻案 ⇒ 改判 `pass`（计入通过数）；呈现层须注「判官面未裁决」——纯机械面翻案（`tools.3`）不携该标注。 */
@@ -71,6 +71,22 @@ function mixedOverturnCase() {
   const r = run("pass", TOK(1000, 0, 100), "全文汉字数 110 < 120（机械断言原文）")
   r.review = reviewRec("overturn", "夹具：汉字计数口径误判（机械断言原文）——复核只裁机械面。")
   return { caseId: "instructions.1", dim: "instructions", class: "正常", prompt: FROZEN_PROMPTS["instructions.1"], runs: [r] }
+}
+
+/** 级联形态池快照（`cascade: true` 夹具——池内逐项启用 1 次 · Σ = `substitutions` = 2；§2.2-16）。 */
+const CASCADE_POOL = [
+  { provider: "mimo", model: "mimo-v2.6-pro", host: "api.xiaomimimo.com", temperature: 0, maxTokens: 8192, timeoutSec: 30, sameVendorAsTested: false, calls: 1, costCny: 0.0022 },
+  { provider: "qwen", model: "qwen3.8-flash", host: "dashscope.aliyuncs.com", temperature: 0, maxTokens: 8192, timeoutSec: 30, sameVendorAsTested: false, calls: 1, costCny: 0.0011 },
+]
+function cascadeCase() {
+  const r = run("pass", TOK(900, 0, 50), "判官裁决（single）：夹具——A 位替代级 1 定判。")
+  r.judge = judgeRec("pass", "single", [
+    jRec("A", "pass", "夹具：替代级 1 定判（原位不可解析 ⇒ 换模型补判）。", [jCall(TOK(320, 0, 0), { finishReason: "length" }), jCall(TOK(320, 0, 40), { level: 2 })]),
+    jRec("B", "error", "位级失败：输出被截断（finishReason=length）（级链穷尽）", [jCall(TOK(320, 0, 80), { finishReason: "length" }), jCall(TOK(320, 0, 60), { level: 3, finishReason: "length" })]),
+  ], "夹具：替代级 1 判定成立。")
+  r.judge.judges[0].substitutes = [{ level: 2, provider: "mimo", model: "mimo-v2.6-pro", cause: "位级失败：输出被截断（finishReason=length）" }]
+  r.judge.judges[1].substitutes = [{ level: 3, provider: "qwen", model: "qwen3.8-flash", cause: "位级失败：输出被截断（finishReason=length）" }]
+  return { caseId: "multiturn.1", dim: "multiturn", class: "正常", prompt: FROZEN_PROMPTS["multiturn.1"], runs: [r] }
 }
 
 /** 逐档温度注入（`modelTemperatures` 变体开关）：数字 ⇒ 设字段；`null`/缺省 ⇒ 不设字段（旧档形态——§2.2-12）。 */
@@ -90,7 +106,7 @@ const kimiTempModel = () => ({
  *  长度 > 1 ⇒ 追加 `kimi-k3` 例外档——概览温度例外披露句断言用）。
  *  逐档参数披露（KD-35）：基准档 = **档位覆写态**（`reasoningEffort` + `from = "models.json"`）；
  *  `kimi-k3` = **配置原值态**（`from = "config"`）；旧档缺两键态由调用方删键构造（`render.6` ③）。 */
-export function fixtureResult({ label = "fx-run", nullTokens = false, leakText = null, warnings = [], mixedOverturn = false, modelTemperatures = [0] } = {}) {
+export function fixtureResult({ label = "fx-run", nullTokens = false, leakText = null, warnings = [], mixedOverturn = false, modelTemperatures = [0], cascade = false } = {}) {
   const good = TOK(1000, 0, 100)
   const pass = run("pass", good, leakText ?? "命中 3")
   const fail = nullTokens ? run("fail", null, "未命中 371281") : run("fail", good, "未命中 371281")
@@ -111,11 +127,11 @@ export function fixtureResult({ label = "fx-run", nullTokens = false, leakText =
   overturn.review = reviewRec("overturn", "夹具：机械判据过严 ⇒ 翻案。")
   const unavailable = run("error", good, "判官不可用（有效判不足）：A 位失败 · B 位裁决 pass")
   unavailable.judge = judgeRec("error", "none", [
-    jRec("A", "error", "位级失败（2 次不可解析）：空输出", [jCall(TOK(320, 0, 0)), jCall(TOK(320, 0, 0), { attempt: 2, maxTokens: 4096 })]),
+    jRec("A", "error", "位级失败：空输出（级链穷尽）", [jCall(TOK(320, 0, 0), { finishReason: null })]),
     jRec("B", "pass", "夹具：B 判通过。", [jCall(TOK(320, 0, 50))]),
   ], "判官不可用（有效判不足）：A 位失败 · B 位裁决 pass")
   return {
-    suiteVersion: 6,
+    suiteVersion: 7,
     label,
     startedAt: "2026-09-23T22:00:00+08:00",
     finishedAt: "2026-09-23T22:01:00+08:00",
@@ -126,10 +142,11 @@ export function fixtureResult({ label = "fx-run", nullTokens = false, leakText =
     prices: { asOf: "2026-09-23", currency: "CNY", unit: "元 / 百万 token", source: "fixture" },
     recomputed: null,
     judge: {
-      promptVersion: 1, frozenAtSuiteVersion: 6,
+      promptVersion: 1, frozenAtSuiteVersion: 7,
       judges: [jMeta("deepseek", "deepseek-flash", true), jMeta("deepseek", "deepseek-v4-pro", true)],
       arbiter: jMeta("mimo", "mimo-v2.6-pro"),
-      judgeCalls: 0, costCny: null, agreements: 0, disagreements: 0, arbitrations: 0, unavailable: 0,
+      ...(cascade ? { fallbacks: CASCADE_POOL.map((f) => ({ ...f })) } : {}),
+      judgeCalls: 0, costCny: null, agreements: 0, disagreements: 0, arbitrations: 0, substitutions: cascade ? 2 : 0, singleJudged: cascade ? 1 : 0, unavailable: 0,
     },
     review: { promptVersion: 1, calls: 0, uphold: 0, overturn: 0, costCny: null },
     models: [withTemp({
@@ -144,6 +161,7 @@ export function fixtureResult({ label = "fx-run", nullTokens = false, leakText =
         { caseId: "multiturn.2", dim: "multiturn", class: "错误", prompt: "我要一句面向开发者的口号，主题是「快」。不要问我问题，直接给 3 个候选。", runs: [disputed] },
         { caseId: "instructions.3", dim: "instructions", class: "错误", prompt: "请写一句话。硬性要求：① 必须包含英文大写单词 PASS；② 全文不得包含任何大写字母。", runs: [unavailable] },
         ...(mixedOverturn ? [mixedOverturnCase()] : []),
+        ...(cascade ? [cascadeCase()] : []),
       ],
     }, modelTemperatures[0]), ...(modelTemperatures.length > 1 ? [withTemp(kimiTempModel(), modelTemperatures[1])] : [])],
     manual: [{ label: "deepseek-flash", promptId: "manual.1", prompt: "最近怎么样？", responseHead: "还行。", metrics: { ttftMs: 90, totalMs: 500, tokPerSec: 20, tokens: TOK(20, 0, 10), cost: null } }],

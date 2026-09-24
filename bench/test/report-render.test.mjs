@@ -28,12 +28,12 @@ test("render.1：概览判官三行 + 分歧率 + 方法判分条 + 成本表八
     "（仅分歧样本）",
     "- 判官分歧率：50%（分歧 1 ÷ A/B 双有效样本 2）",
     "评估开销（判官 / 复核）不进被测成本、不参与相对成本归一化——报告不列评估开销金额；账目见结果 JSON",
-    "判官对（A / B 双判 · 同一冻结 rubric）",
-    "- 判分模板：判官 promptVersion = 1 · 复核 promptVersion = 1 · 判官配置冻结于 suiteVersion 6",
+    "位级失败经替代判级联换模型补判",
+    "- 判分模板：判官 promptVersion = 1 · 复核 promptVersion = 1 · 判官配置冻结于 suiteVersion 7",
     "| 模型 | 总成本 | 每任务成本 | 每通过任务成本 | 相对成本 | 合计通过数 | 累计耗时 | 相对倍率 |",
     "### 判官分歧",
     "### 复核翻案",
-    "判官不可用 1 次（有效判不足 1 · 分歧未决 0）· 判官分歧 1 次（仲裁 1）· 机械 fail 复核 2 次（翻案 1 次）",
+    "判官替代补判 0 次 · 单判定判 0 次 · 判官不可用 1 次（有效判不足 1 · 分歧未决 0）· 判官分歧 1 次（仲裁 1）· 机械 fail 复核 2 次（翻案 1 次）",
   ]) {
     assert.ok(md.includes(needle), `缺渲染件：${needle}`)
   }
@@ -183,7 +183,7 @@ test("AC-2 / AC-14：`--dry-run` 全链路产物断言（判官 / 复核块 + �
   for (const [k, t] of Object.entries({ suiteVersion: "number", label: "string", startedAt: "string", prices: "object", warnings: "object" })) {
     assert.equal(typeof data[k], t, `顶层字段 ${k} 类型不符`)
   }
-  assert.equal(data.suiteVersion, 6, "SUITE_VERSION 5 → 6（判官 B 换代 + 判据修订）")
+  assert.equal(data.suiteVersion, 7, "SUITE_VERSION 6 → 7（级联替代 / 单判定判 + 判官身份面扩替代池）")
   assert.equal(data.label, label)
   assert.match(data.startedAt, /^\d{4}-\d{2}-\d{2}T/)
   assert.equal(data.recomputed, null)
@@ -191,7 +191,7 @@ test("AC-2 / AC-14：`--dry-run` 全链路产物断言（判官 / 复核块 + �
   assert.equal(data.prices.asOf.length, 10)
   // 判官块（三槽元数据入档 · AC-5）：A / B / 仲裁 C 逐位 provider / model / maxTokens / 超时 / 调用 / 成本
   assert.equal(data.judge.promptVersion, 1)
-  assert.equal(data.judge.frozenAtSuiteVersion, 6)
+  assert.equal(data.judge.frozenAtSuiteVersion, 7)
   assert.equal(data.judge.judges.length, 2)
   assert.deepEqual(Object.keys(data.judge.judges[0]).sort(), ["calls", "costCny", "host", "maxTokens", "model", "provider", "sameVendorAsTested", "temperature", "timeoutSec"])
   assert.ok(data.judge.arbiter.provider && data.judge.arbiter.model)
@@ -244,7 +244,7 @@ test("review.2 / §5.13 渲染面：全量 dry-run —— `overturn` ⇒ 改判 
   const runOf = (id) => m.cases.find((c) => c.caseId === id).runs[0]
   assert.ok(m.aggregate.overturns >= 1, "夹具含翻案样本（aggregate.overturns）")
   assert.ok(data.judge.disagreements >= 1 && data.judge.arbitrations >= 1, "夹具含分歧 / 仲裁样本")
-  assert.equal(data.judge.judges[0].calls > data.judge.judges[1].calls, true, "A 位含放大预算重试 ⇒ 调用数多于 B（逐位记账）")
+  assert.equal(`${data.judge.fallbacks.reduce((n, f) => n + f.calls, 0)}|${data.judge.substitutions}`, "7|7", "替代池逐项记账合计 = substitutions（longctx.3 补判 ×1 + vision.2 全级穷尽 ×6）")
   // AC-1 三态（第三态 = 夹具注入腿，住 `render.1`）：overturn ⇒ pass（计入通过数）；uphold ⇒ fail 维持
   const [t3, l2] = [runOf("tools.3"), runOf("longctx.2")]
   assert.equal(`${t3.verdict}/${t3.review.verdict}|${l2.verdict}/${l2.review.verdict}`, "pass/overturn|fail/uphold", "overturn ⇒ 改判 pass；uphold ⇒ fail 维持")
