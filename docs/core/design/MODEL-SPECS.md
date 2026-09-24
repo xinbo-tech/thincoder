@@ -435,14 +435,14 @@
 
 ### 9.1 登记规则（本批立 · D-11）
 
-**能力位不跨名沿用，尺寸位可沿用**——按证据等级分档：
+**能力位无族据一律不声明（族沿用须点名来源行 + 行注标级）；尺寸位可沿用**——按证据等级分档：
 
 | 字段类别 | 错登记的后果 | 登记策略 |
 |---|---|---|
 | 尺寸类（`context` / `maxOutput`） | 保守侧退化（压缩阈值偏早 / 显示偏小），不发往服务端 | 实测值优先；无实测 ⇒ 同族沿用或参考口径，**行注必标** |
-| 能力位（`thinking` / `thinkApi` / `reasoningEffortEnum` / `multimodal`） | **用户可见硬失败**：越界档位被 `thincoder-core/provider/core.mjs:198` 客户端抛错门拦截；`thinking` 参数误发被服务端 400 | **只登记到有实测证据的名**，未实测名一律不声明 |
+| 能力位（`thinking` / `thinkApi` / `reasoningEffortEnum` / `multimodal`） | **用户可见硬失败**：越界档位被 `thincoder-core/provider/core.mjs:198` 客户端抛错门拦截；`thinking` 参数误发被服务端 400 | **实测值优先；无实测有族据（同表已声明族行——点名来源行，取值适用）⇒ 可族沿用照写 + 行注标级；无族据 ⇒ 一律不声明**（不得凭同族类推 / 跨渠道同模型推断补声明） |
 
-判据出处：`docs/batches/2026-09-20-channel-onboarding.md` §1.5 开放项 1/2 裁定 + §1.2 实测面。
+判据出处：`docs/batches/2026-09-20-channel-onboarding.md` §1.5 开放项 1/2 裁定 + §1.2 实测面；族沿用准入（点名来源行 + 行注标级）= `MODEL-BENCH.md` §4 KD-36 三态②。
 
 **消费点随登记同变（本批适用项）**：`thinkApi` 现有消费点三处（本轮实 grep 入仓码面：**核内零读取**，读点均在端侧）
 = `thincoder-cli/src/tui/cmd-think.mjs:13`（交互命令的 effort-only 分叉）· `thincoder-cli/src/tui/cmd-advisor.mjs:104` 与 `:234`
@@ -476,7 +476,7 @@
 `hy-vision-2.0-instruct` / `hunyuan-t1-vision-*` / `hunyuan-turbos-vision-video-*` / `hy-mt2-{pro,plus,lite}` / `hy-role` /
 `hunyuan-role-latest` / `hy-3d-*` 族 / `hy-asr-*` / `hy-world2-*` / `hy-video-*` / `hy-image-lite`——**无一以 `hy3` 起头** ⇒
 `hy3` 行落盘后现盘前缀继承命中面 = `hy3-preview` 一枚（已显式在册，非继承）；其余名不入 `hy3` 前缀面（落 `DEFAULT_SPEC` + 告警）。
-未来同族名随台账 #11 巡检（D-11「能力位不跨名沿用」＝ 本核对的计数口径，不受影响）。
+未来同族名随台账 #11 巡检（D-11「族沿用须点名来源行 + 行注标级」＝ 本核对的计数口径，不受影响）。
 
 ### 9.3 字段口径表（逐字段 + 证据等级）
 
@@ -485,7 +485,7 @@
 | `thinking` | `true` | 不声明 | 不声明 | `true` | `true` | 实测：裸请求 `reasoning_content` 在场（hy3 tok=16 / code 219 / lite 161）；`effort:"none"` 即消失 |
 | `thinkApi` | `"effort"` | 不声明 | 不声明 | `"effort"` | `"effort"` | 实测：档位经 `reasoning_effort` 参数生效（seed 系 400 原文即该参数） |
 | `reasoningEffortEnum` | `["none","minimal","low","medium","high","xhigh","max"]` | 不声明 | 不声明 | `["none","minimal","low","medium","high","xhigh","max"]` | 同 code 行（同族全针） | hy3 = **受理级探针**（批次档 §1.10-①：七值全 200 受理；乱值 `zzz` → 400 泛化拒收，服务端不列枚举）；seed = 服务端**真校验**（`zzz` → 400 明列 invalid + 七档全 200）；两族**同值集、行独立**（受理级 ≠ 校验级，等级不混）；lite = 同族全针（代价说明见表下 D-11 代价句） |
-| `multimodal` | **不声明**（实测无视觉） | 不声明 | 不声明 | `true` | `true` | hy3 = 真值 32×32 纯红图答 "Unknown"（对照无图组明说看不到图）⇒ **不得声明**；seed = 答 "Red"。**`hy3-preview` 补记**：该名服务端默认能力 = 思考 + 视觉（hy 系百炼实测同模型，父侧口径），本批**不声明 = 认账**（未本渠道探针 ⇒ 不跨名沿用，D-11）；不声明的代价 = 该名面板不展图，与今日无行时同形 |
+| `multimodal` | **不声明**（实测无视觉） | 不声明 | 不声明 | `true` | `true` | hy3 = 真值 32×32 纯红图答 "Unknown"（对照无图组明说看不到图）⇒ **不得声明**；seed = 答 "Red"。**`hy3-preview` 补记**：该名服务端默认能力 = 思考 + 视觉（hy 系百炼实测同模型，父侧口径），本批**不声明 = 认账**（未本渠道探针 ⇒ 无族据（同表无适用来源行）⇒ 不声明，D-11）；不声明的代价 = 该名面板不展图，与今日无行时同形 |
 | `maxOutput` | `128_000` | `128_000` | `128_000` | `131_072` | `131_072` | hy3 / hy3-preview = **参考实配**（网关对 `max_tokens` 不硬拒 ⇒ 上限未证，行注标）；hy4-preview = 同族沿用（本批次档 §1.2 **未给该名尺寸行** ⇒ 上报项 §9.9 清单 2）；seed = **实测**（262 144 → 400 `above maximum`） |
 | `context` | `256_000` | `256_000` | `256_000` | `256_000` | `256_000` | hy3 族 = **网络/他仓口径**（未实测；hy4-preview 同 §9.9 清单 2）；seed = 官方 256K 口径 + **实测下界 210K 输入受理**（探至账号 429 停手）⇒ 行注逐字标 |
 | `reasoningEcho` | 不声明 | 不声明 | 不声明 | 不声明 | 不声明 | 两族均实测 tool 历史三形态 200 ⇒ optional；不声明 = 现状默认，行为字节等价（与 §2.2 qwen 族同款处置） |
@@ -495,7 +495,7 @@
 
 **只有「实测」列进交付判据**；「参考口径」「同族沿用」两类必须逐条落行注，测试面只断言已登记值本身。
 
-**D-11 不声明的代价（显式认账，不默带）**：`hy3-preview` / `hy4-preview` 两行因能力位无实测 ⇒ 不声明枚举，后果可观：
+**D-11 不声明的代价（显式认账，不默带）**：`hy3-preview` / `hy4-preview` 两行因能力位无实测（无族据）⇒ 不声明枚举，后果可观：
 VSC 探测下拉该两名的档位枚举空（`thincoder-vscode/src/extension/provider-probe-window.mjs:66`）、CLI `/think effort`
 无枚举时走回退档 `high|max`（`thincoder-cli/src/tui/cmd-think.mjs:16`）——两者与今日（无行时代靠 `DEFAULT_SPEC`）同形
 ⇒ **零新增退化**，不属本批回归；补实测随台账 #11（覆盖面巡检）。
@@ -1308,6 +1308,9 @@ cli = **805 / 0**；vsc = **942 / 0**；`node scripts/doc-check.mjs` = 悬空 **
 CLI `/think` 面板与 VSC 思考下拉的可见面：新建行未声明枚举的档 = 与建行前同形（回退档 / 单档 `enabled`）⇒ **零可见变化**；`doubao-seed-2-1` 三档因声明七值枚举，选择面由「兜底档」转「七值」（与 2.0 行同形）；`MiniMax-M2.7` 前缀行对标准档与 `-highspeed` 同效。无 `open` 项。
 
 ## 变更记录
+
+- 2026-09-25：**D-11 登记句收窄（批 `2026-09-25-bench-fixnotes` · 台账 #277）**——§9.1 能力位登记策略由「未实测名一律不声明」收窄为「**无族据一律不声明；有族据（同表已声明族行——点名来源行，取值适用）⇒ 可族沿用照写 + 行注标级**」（族沿用准入 = `MODEL-BENCH.md` §4 KD-36 三态②）；
+  §9.1 段首句 / 判据出处 / §9.2 计数句 / §9.3 两处引文话术同步——**零行为变更**：已交付行值（`thincoder-core/model-specs.mjs`）/ G-2 断言 / §13.3 逐行表述未动。
 
 - 2026-09-24：**新增 §13（bench 名单面 14 档规格行补齐 · 批次 `2026-09-24-bench-params-judge` · 台账 #267）**——10 档建行（取值三态：实弹 / 官方口径 / 族沿用；零口径不声明）+ 4 档视觉声明分态 + `MiniMax-M2.7` 前缀行 + 未探登记（§13.4）+ 用例 G-1..G-7；`thincoder-core/model-specs.mjs` 及其测试 = 本批交付面。
 

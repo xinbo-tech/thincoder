@@ -412,7 +412,7 @@ import { chat } from "../../thincoder-core/provider/index.mjs";
 2. 计时钩子 = `onToken` / `onReasoning` 首次回调（§1.3 口径 3）。
 3. 多轮工具链 = bench 侧小工具环：执行本地桩 → `assistantToolCallMessage(result, specForModel(model))` 构造工具回合 assistant 消息（**reasoning 回显策略随核规格**，`thincoder-core/model-specs.mjs:279-289`）→ 追加 tool 结果消息 → 续调。
 4. 继承的核行为（如实记录、不改造）：重试 / 续写（`finishReason:"length"`）/ 限流门（`rateGate`）/ 日志与轨迹钩子（`traces` 默认关，落盘受用户配置门控）。暂停（限流等待）发生时该 call 记 `throttled: true`。
-5. 已知缺口（上抛项 ①）：核按模型 spec 的 `noUsageStream` 抑制 `stream_options.include_usage`（`thincoder-core/model-specs.mjs:52-64` 的 glm 族 / minimax / gemini 带此标），与当日四家探针「include_usage 全部支持」相抵 ⇒ 这些模型可能无 usage ⇒ 成本记 `null`。**处置 = 如实记录 + 报告脚注**（改核越本批边界——零三端改动）。
+5. 已知缺口（上抛项 ①）：核按模型 spec 的 `noUsageStream` 抑制 `stream_options.include_usage`（`thincoder-core/model-specs.mjs` 的 glm 族 `:59-74` / minimax `:134-164` / gemini `:181-183` 带此标），与当日四家探针「include_usage 全部支持」相抵 ⇒ 这些模型可能无 usage ⇒ 成本记 `null`。**处置 = 如实记录 + 报告脚注**（改核越本批边界——零三端改动）。
 
 ### 2.10 判官机制（语义·语用面 · AC-1/2/3/5/6 + AC-13 双判）
 
@@ -1376,3 +1376,4 @@ v3 重跑（AC-7）实测记档（**v3 对已按 KD-25 出档** · **v4 对出�
   ② 测试腿 = `render.3` / `render.4` 扩展（同源对读 / 缺数据 / 行序）+ `render.1` 头串同步；③ 呈现面 ⇒ **不 bump**（KD-27）；④ 落点 = §2.3（骨架两行 + 规则 10④）/ §2.10.5（列集读数同步八列）/ §5.13 / §6（#276 回指）/ §3 本批表（`report-time.mjs` 行新 + 四行随改）。
 - 2026-09-25：**设计收正轮（批次 `2026-09-24-bench-params-judge` · 轮 4 复审 #2 / #5 / #6）**——① 规则 10④ 补**轴子集口径**（交叉列不受轴门控：源表未出照出值 · 缺数据仍 `—`）+ 轴子集腿（`render.3` ⑩ / `render.4` ⑪）；② §7-10 括注随交叉列同步（只述原批件射程）；③ 分母措辞统一「**全表最低正值**」（骨架两处 + 规则 7 / 10②）；
   ④ 落点 = §2.3（骨架两行 + 规则 7 / 10② / 10④）/ §5.13（`render.3` / `render.4`）/ §6（#276）/ §7-10 / §3 本批表（三行随改）。
+- 2026-09-25：**§2.9-5 坐标收正（批 `2026-09-25-bench-fixnotes` · 台账 #275）**——`noUsageStream` 族址由 `thincoder-core/model-specs.mjs:52-64`（原坐标现落 kimi 行）更新为现读三址（glm 族 `:59-74` / minimax `:134-164` / gemini `:181-183`，本轮 `noUsageStream` 全量 grep 复核）；语义零改（探针相抵与成本记 `null` 处置句不动）；批档 = §2.2。
