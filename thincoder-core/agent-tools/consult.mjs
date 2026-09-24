@@ -22,7 +22,7 @@
  * Each child settles its own TUI block with a ⟦ev⟧done event at settle (R17 —
  * the old in-turn check consumption is gone).
  */
-import { createAgent, runAgent, readonlyToolNames } from "../agent.mjs"
+import { createAgent, runAgent, readonlyToolNames, excludeSubagentTools } from "../agent.mjs"
 import { resolveChildProvider } from "./subagent.mjs"
 import { pushReal } from "../context.mjs"
 import { offloadToolResult, escapeXml } from "../agent/helpers.mjs"
@@ -268,7 +268,7 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
     // Read-only consultant: filter the parent tool set down to readonly tools + main_history.
     const allowed = readonlyToolNames(agent.tools ?? [])
     const tools = [
-      ...(agent.tools ?? []).filter((t) => allowed.has(t.name)),
+      ...excludeSubagentTools((agent.tools ?? []).filter((t) => allowed.has(t.name))), // TOOLS.md §6.16：继承面过谓词
       makeMainHistoryTool(agent),
     ]
 

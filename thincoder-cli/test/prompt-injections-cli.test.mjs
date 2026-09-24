@@ -77,7 +77,7 @@ test("② 配置态：七场景 + consult 装配零锚字面，且「CLI 列」�
   } finally { resetPromptInjections() }
 })
 
-test("③ 配置态：工具描述面零锚字面（bash 无终极端行 / question Availability 恰一份）", () => {
+test("③ 配置态：工具描述面零锚字面（bash 无终极端行 / question Availability 恰一份 + 表值逐字在场）", () => {
   try {
     configurePromptInjections(CLI_PROMPT_INJECTIONS)
     const schemas = builtinTools.map(toOpenAISchema)
@@ -86,7 +86,9 @@ test("③ 配置态：工具描述面零锚字面（bash 无终极端行 / quest
     assert.ok(!descOf("bash").includes('terminal: "visible"'), "bash: CLI 面无终极端参数行")
     const avail = descOf("question").match(/Availability/g) ?? []
     assert.equal(avail.length, 1, "question: Availability 行恰一份（替换非追加）")
-    assert.ok(descOf("question").includes("headless runs, subagent children"), "question: CLI 措辞在场")
+    const face = CLI_PROMPT_INJECTIONS["question-ui-face"]
+    assert.ok(face.length > 0, "CLI 表值非空（防 includes('') 恒真）")
+    assert.ok(descOf("question").includes(face), "question: CLI 表值逐字在场（值驱动形——措辞重写零波及）")
   } finally { resetPromptInjections() }
 })
 

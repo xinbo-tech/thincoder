@@ -25,7 +25,7 @@
  *   domain still follows the consuming turn's tier — no family exception).
  */
 import { relative, isAbsolute } from "node:path"
-import { runAgent, createAgent, DEFAULT_SUBAGENT_TURNS } from "../agent.mjs"
+import { runAgent, createAgent, DEFAULT_SUBAGENT_TURNS, excludeSubagentTools } from "../agent.mjs"
 import { runWithContinue, TURN_CAP_MARK, wrapChildCallbacks } from "../agent/spawn-child.mjs"
 // TUI-OOM-ROOTCAUSE §23.3.1：子代理人读线窗口常量（单源——store 零依赖）。
 import { RECORD_WINDOW_MESSAGES } from "../session-store.mjs"
@@ -192,7 +192,7 @@ export function launchEscalateAsync(parent, ctx, launch) {
     ctx.callbacks?.onToken?.(relayPrefix + "[model]" + (provider.model ?? ""))
     const child = createAgent({
       provider,
-      tools: parent.tools,
+      tools: excludeSubagentTools(parent.tools), // TOOLS.md §6.16：子代面按面排除（行内改——本档 Δ±0）
       config: parent.config,
       cwd: parent.cwd,
       memory: parent.memory,

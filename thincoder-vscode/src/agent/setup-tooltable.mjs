@@ -18,6 +18,7 @@ import { configureBatchSegment } from "@thincoder/core/agent-tools/batch-segment
 import { configureVerifyDiagnostics } from "@thincoder/core/agent-tools/verify.mjs" // 叶子面（闭包 4 档零 node:sqlite）——静态面安全
 import { CONFIG_CONFLICT_HINT, conflictError } from "@thincoder/core/config-io.mjs"
 import { applyPromptInjections } from "@thincoder/core/prompt-files.mjs"
+import { SUBAGENT_TOOL_EXCLUSIONS } from "@thincoder/core/agent/helpers.mjs" // 子代面排除集（核单源——TOOLS.md §6.16）
 import { loadSkills, readSkill } from "../extension/skills.mjs"
 import { vscPersistRaw } from "../extension/settings-panel-write.mjs"
 import { setSlotEngineering } from "../extension/session-slot-write.mjs"
@@ -291,13 +292,13 @@ export async function buildToolTable({ depth, role, engineering, provider, mcpSe
   }
 
   // Subagent role-based tool filtering: explore/plan/consult get read-only tools only.
-  // `question` is excluded from ALL subagents (depth > 0) — it's an interactive main-agent
-  // tool; a background subagent (parallel consultants especially) must never prompt the user.
+  // The depth>0 face also drops the depth-excluded tools (core single source `SUBAGENT_TOOL_EXCLUSIONS`
+  // — TOOLS.md §6.16): a background subagent (parallel consultants especially) never prompts the user.
   const isReadOnlyRole = depth > 0 && (role === "explore" || role === "plan" || role === "consult")
   const baseTools = [
     ...(isReadOnlyRole ? builtinTools.filter((t) => t.readonly) : builtinTools),
     ledgerQueryTool, ledgerCountTool, // M2 查询两工具（只读——只读角色同放行；恒入基础集）
-  ].filter((t) => depth === 0 || t.name !== "question")
+  ].filter((t) => depth === 0 || !SUBAGENT_TOOL_EXCLUSIONS.has(t.name))
   // L1 契约（VSC-TOOL-TABLE-DUP §2.1A）：`agent.tools` 绑定值 = **基础集**（下方 `baseSet`）
   // ——不含端侧 meta 工具族 `agentTools`（核 `assembleFamilyTools` 追加族与端侧 meta 族实测
   // 重叠 11 名 ⇒ 入绑定值必致子代装配重名）；全表 `tools` 原样保留（端侧 schema / 执行面

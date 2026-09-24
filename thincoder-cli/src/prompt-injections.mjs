@@ -16,5 +16,5 @@ export const CLI_PROMPT_INJECTIONS = {
   // bash 宿主终端面——CLI 无 terminal 参数（工具面 review 再统一）
   "bash-terminal-face": "",
   // question 工具可用性行（核内正文该行已移出正文、锚原位替换——本端填回 CLI 措辞）
-  "question-ui-face": "- Availability: this tool needs an interactive UI — in contexts without one (headless runs, subagent children) it returns an error instead of asking; put the question in your reply text instead.",
+  "question-ui-face": "- Availability: this tool needs an interactive UI — in contexts without one (headless runs) it returns an error instead of asking; subagent children (depth>0) never get it (excluded from their tool tables); put the question in your reply text instead.",
 }

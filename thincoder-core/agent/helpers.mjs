@@ -337,6 +337,16 @@ export function readonlyToolNames(tools) {
   return new Set(tools.filter((t) => t.readonly).map((t) => t.name))
 }
 
+/** Depth>0 tool exclusions — subagents never get the interactive main-session tools (`question`:
+ *  no user to ask; the routing guidance already lives in every persona file). Single source for
+ *  the repo: the shell-side depth>0 filter consumes this set (design = TOOLS.md §6.16 / D-TO11). */
+export const SUBAGENT_TOOL_EXCLUSIONS = new Set(["question"])
+
+/** Apply the depth>0 exclusion set — always returns a NEW array (parent table untouched). */
+export function excludeSubagentTools(tools) {
+  return tools.filter((t) => !SUBAGENT_TOOL_EXCLUSIONS.has(t.name))
+}
+
 const MAX_INSTRUCTION_CHARS = 32_000
 
 /** Load AGENTS.md / project_rules.md from user home and project root.

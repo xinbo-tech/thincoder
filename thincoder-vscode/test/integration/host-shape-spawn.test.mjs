@@ -8,7 +8,7 @@
  *
  * 用例（两条崩点分支各面）：
  *   T1 explore（结构）——只读过滤分支（修复前更早一步崩：`readonlyToolNames` → `filter`）；
- *   T2 coder（结构）——非只读分支直传（同一引用）；
+ *   T2 coder（结构）——非只读分支 = 父表 − 深度排除项 ∧ VSC 自持 depth>0 基础集零含（`question` 退场——批 question-tool-filter §6.16）；
  *   T3 eng-designer（结构）——工程装配 + batchDoc 绑定（用户实测角色同支）；
  *   T4 coder（行为）——真跑 sync spawn + 断言 A（工具名唯一性——本批 L1）；
  *   T5 eng-designer（行为 + 断言 A/B）——真跑（用户实测角色）+ 断言 A（工具名唯一）+
@@ -154,11 +154,16 @@ test("T1 explore（结构）：生产形状父表非空；只读过滤分支产�
   assert.notEqual(built.child.tools, parent.tools, "只读过滤生效——子代表为新数组（非父表直传）")
 })
 
-test("T2 coder（结构）：非只读分支直传父表（同一引用）", async () => {
+test("T2 coder（结构）：非只读分支 = 父表 − 深度排除项（`question` 退场，写面留存）", async () => {
   const parent = await hostParent()
   const built = buildProbe(parent, { task: "实现小功能", role: "coder", async: false }, "coder")
   assert.ok(Array.isArray(built.child.tools) && built.child.tools.length > 0, "coder 子代工具表非空")
-  assert.equal(built.child.tools, parent.tools, "非只读分支 = 父表直传（同一引用）")
+  const gone = parent.tools.map((t) => t.name).filter((n) => !built.child.tools.some((t) => t.name === n))
+  assert.deepEqual(gone, ["question"], "名集差恰 1 项 = 深度排除项（§6.16——子代面无交互式主会话工具）")
+  assert.ok(built.child.tools.some((t) => !t.readonly), "写面留存（非只读分支——序 = 角色选择 → 排除）")
+  // VSC 自持 depth>0 装配面同判据（`setup-tooltable.mjs` 的 depth 过滤 → 核排除集——Q3 判定句锁）
+  const deep = await hostShape({ depth: 1, role: "coder" })
+  assert.ok(!deep.agent.tools.map((t) => t.name).includes("question"), "VSC 端 depth>0 基础集零含 `question`（既有行为锁）")
 })
 
 test("T3 eng-designer（结构——用户实测角色同支）：工程装配 + batchDoc 绑定", async () => {

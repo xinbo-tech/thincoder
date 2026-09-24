@@ -13,7 +13,7 @@
 
 import {
   createAgent,
-  readonlyToolNames, escapeXml,
+  readonlyToolNames, escapeXml, excludeSubagentTools,
 } from "../agent.mjs"
 import { allocRelay, wrapChildCallbacks, relayPrefixOf } from "../agent/spawn-child.mjs"
 // TUI-OOM-ROOTCAUSE（AGENT-LOOP.md §23.3.1）：子代理人读线窗口常量单源（store 零依赖）。
@@ -256,6 +256,9 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   } else {
     tools = parent.tools
   }
+  // Then the depth>0 exclusion (TOOLS.md §6.16): role selection above, exclusion LAST — both
+  // branches converge here (`question` = interactive main-session tool; a child has no user to ask).
+  tools = excludeSubagentTools(tools)
 
   // PROMPT-SYSTEM 施工② G3（2026-09-10）：overlay（人格）装载随装配改造退役——人格槽
   // 由 assemblePrompt 的 D1 场景表按 role 承载（persona-{role}，explore/coder/plan =
