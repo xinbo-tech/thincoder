@@ -1,7 +1,7 @@
 /**
  * test/report-present.test.mjs — 报告呈现面用例（§5.13 `render.3` / `render.4`；`report-render.test.mjs` 超 300 行 ⇒ 拆分）。
  * `render.3` = 成本表列集收正（五列 · 定域反例）+ 报告零金额（md）与账目面反控（JSON 零改）；
- * `render.4` = 用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采样 run 数 / 轴门控）。
+ * `render.4` = 用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采样 run 数 / 轴门控 + ⑦ 口径行两短语与已记录 `error` run 照计 / ⑧ 部分未记录腿——2026-09-24 error-duration 批）。
  * 夹具与 CLI 驱动在 `test/fixtures.mjs`；手动跑：`node --test "bench/test/*.test.mjs"`（不进 CI）。
  */
 
@@ -51,7 +51,7 @@ const mkModel = (label, runs) => ({
   cases: runs.map((r, i) => ({ caseId: `reasoning.${i + 1}`, dim: "reasoning", class: "正常", prompt: "夹具题面", runs: [r] })),
 })
 
-test("render.4：用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采样 run 数 / 轴门控）", () => {
+test("render.4：用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采样 run 数 / 轴门控 + ⑦/⑧ 口径行与部分未记录腿）", () => {
   const data = fixtureResult()
   // 定域反例：判官 / 复核调用的 `totalMs` 刻意置大值 ⇒ 不得计入累计（只认 `runs[].metrics.totalMs`）
   const big = { totalMs: 999999 }
@@ -86,4 +86,23 @@ test("render.4：用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采
   const costOnly = renderReport({ ...data, models, run: { ...data.run, dims: ["speed", "cost"], axes: ["cost"] } })
   assert.equal(costOnly.includes("### 用时表"), false, "⑥ 轴门控 = speed（无 speed ⇒ 用时表不出）")
   assert.ok(costOnly.includes("### 成本表"), "⑥ cost 轴表仍在位")
+  // ⑦ 口径行（本批收正）+ 全部 call 已记录的 error run 照计且不入脚注（子腿 = 单 error run 模型；反例控制 = null 腿仍入脚注）
+  assert.ok(block.includes("error run 已记录耗时照计") && block.includes("`null` = 未记录"), "⑦ 口径行两短语（逐字 = §2.3 骨架冻结子串）")
+  const cellsIn = (b, l) => b.split("\n").find((x) => x.startsWith(`| ${l} |`)).split("|").map((s) => s.trim())
+  const recCall = (ms) => ({ round: 1, ttftMs: null, totalMs: ms, tokens: null, toolNames: [], finishReason: null, throttled: false })
+  const errBlock = renderReport({ ...data, models: [
+    mkModel("fx-err", [mkRun(700, { verdict: "error", detail: "超时（夹具）", calls: [recCall(700)] })]),
+    mkModel("fx-null2", [mkRun(null, { verdict: "error", detail: "无耗时记录" })]),
+  ] }).split("### 用时表")[1].split("### 成本表")[0]
+  assert.deepEqual([cellsIn(errBlock, "fx-err")[2], cellsIn(errBlock, "fx-err")[3], cellsIn(errBlock, "fx-err")[4], cellsIn(errBlock, "fx-err")[5]], ["700 ms", "1.0×", "1", "1"], "⑦ 已记录 error run：累计 / 倍率 / 排名 / 采样全含")
+  assert.equal(errBlock.includes("- fx-err："), false, "⑦ 全部 call 已记录的 error run 不入脚注")
+  assert.ok(errBlock.includes("- fx-null2：1 个 run 无 totalMs"), "⑦ 反例控制：null 腿仍入脚注")
+  // ⑧ 部分未记录腿（run 级 = 已记录之和 ∧ 存在未记录 call ⇒ 按和入累计 + 入脚注；判定类型不受限——fail / error 同规则）
+  const partCalls = (ms) => [recCall(ms), { ...recCall(null), round: 2 }]
+  const partBlock = renderReport({ ...data, models: [
+    mkModel("fx-part", [mkRun(300, { verdict: "fail", detail: "部分未记录（夹具）", calls: partCalls(300) })]),
+    mkModel("fx-part-err", [mkRun(500, { verdict: "error", detail: "部分未记录（夹具）", calls: partCalls(500) })]),
+  ] }).split("### 用时表")[1].split("### 成本表")[0]
+  assert.deepEqual([cellsIn(partBlock, "fx-part")[2], cellsIn(partBlock, "fx-part-err")[2]], ["300 ms", "500 ms"], "⑧ 部分未记录 ⇒ 按已记录之和（下界）入累计")
+  assert.ok(partBlock.includes("- fx-part：1 个 run 部分 call 未记录") && partBlock.includes("- fx-part-err：1 个 run 部分 call 未记录"), "⑧ 该 run 入脚注（含「部分 call 未记录」字面）")
 })

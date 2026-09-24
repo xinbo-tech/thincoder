@@ -7,7 +7,8 @@
  *
  * 计时口径（§1.3-3）：TTFT = 首个**非空** delta（onToken / onReasoning 先到者）− 调用发起——核的流读面
  * 只在非空 delta 时回调（provider/sse.mjs:142-149）。工具回合的 assistant 消息按 `assistantToolCallMessage`
- * 构造（reasoning 回显策略随核规格）。
+ * 构造（reasoning 回显策略随核规格）。失败调用亦落 `totalMs` = 发起 → 失败墙钟（成功 = 传输面实测；
+ * `ttftMs` / `tokens` 照实缺记 `null`）——失败执行也是执行（KD-30）。
  *
  * 传输面参数化：`liveTransport` = 核 chat（真实运行）；`fixtureTransport` = dry-run / 测试的固定响应表
  * （`bench/run.mjs` 内联夹具经此消费——不触网）。
@@ -140,12 +141,13 @@ export async function runCase({ caseObj, providerEntry, transport, signal, timeo
       const callSignal = timeoutMs == null
         ? signal
         : AbortSignal.any([...(signal ? [signal] : []), AbortSignal.timeout(timeoutMs)])
+      const callT0 = Date.now() // call 尝试点（墙钟起点）——失败路径据其记「发起 → 失败」耗时（§1.3-3 / KD-30）
       let call
       try {
         call = await transport.call({ provider: providerEntry, messages, tools, parallelToolCalls, signal: callSignal })
       } catch (e) {
         const rec = {
-          round, ttftMs: null, totalMs: null, tokens: null, toolNames: [], finishReason: null, throttled: false,
+          round, ttftMs: null, totalMs: Date.now() - callT0, tokens: null, toolNames: [], finishReason: null, throttled: false,
         }
         calls.push(rec)
         turn.calls.push(rec)

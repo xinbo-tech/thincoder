@@ -5,6 +5,8 @@
  * - TTFT = 首个**非空** delta 到达 − 调用发起（观测点由 client.mjs 的 onToken/onReasoning 首次回调采集）。
  * - tok/s = Σcompletion ÷ Σ(per-call total − per-call ttft)，只计入 ttft/total/completion 皆非 null
  *   且 total > ttft 的 call；参与 call 为空 → null（§2.3-2 之 ③）。
+ * - 单次调用 totalMs = 该 call 实际占用墙钟（发起 → 返回 / 失败）——成功 = 传输面实测、失败照记（§1.3-3 / KD-30）；
+ *   用例级 total = Σ per-call 耗时（`sumPresent`——已记录值之和；缺记的 call 不入和）。
  * - 中位数剔除 null（不按 0 计）；样本全 null → 该指标 null（§2.3-2 之 ①）。
  * - token 只认 usage 精确值（缺即 null，不近似——KD-6）。
  */
@@ -57,7 +59,8 @@ export function tokPerSecOf(calls) {
   return round1(completion / (denomMs / 1000))
 }
 
-/** 用例级 run 指标（§2.2 runs[].metrics）：ttft = 首轮首个非空 delta；total = Σ per-call 耗时。 */
+/** 用例级 run 指标（§2.2 runs[].metrics）：ttft = 首轮首个非空 delta；total = Σ per-call 耗时
+ *  （成功 = 传输面实测；失败 = 发起 → 失败墙钟照记——缺记的 call 不入和、全缺即 null）。 */
 export function runMetrics(calls) {
   const list = calls ?? []
   const ttftMs = list.length > 0 && typeof list[0].ttftMs === "number" ? roundMs(list[0].ttftMs) : null
