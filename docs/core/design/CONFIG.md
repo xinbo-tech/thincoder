@@ -110,7 +110,7 @@
 - **向后兼容**：旧两键配置值零迁移（`advisor` 缺省 ⇒ 回退 4）；非法值不落盘回退；VSC 面板白名单全非法 ⇒ 删整键回退默认（语义不变）。
 - **模型可见文案去数字化**：advisor 工具描述与拒文案报**生效上限**（`thincoder-core/agent-tools/advisor.mjs:49` · `thincoder-core/agent-tools/advisor-async.mjs:266`）。
 - **同 scope 评审并发守卫**（同批用户裁①）：容量守卫 ⇄ 同 scope 守卫**两关独立**——机制本体见 `AGENT-LOOP-ASYNC-POOL.md` §6.10（本档不复制）。
-- **范围边界（旧档承接）**：评审轮次**无机械上限**（cap 已撤——见 `ADVISOR-CONVERGENCE.md` §3 · 2026-09-18 用户裁定）；**「评审不排队」表述已废**（2026-09-16 批 8 ED-4 修订——异 scope 入队 / 同 scope 仍拒，见 §7 D-CF3 与 `AGENT-LOOP-ASYNC-POOL.md` §6.10）；engCoder / other 两域语义不变（本批只界面 / 一致性 / 第三键）；全仓注释大扫 = 旧档挂 TODO 观察项（随两仓合并面收敛，不另立）。
+- **范围边界（旧档承接）**：评审轮次**无机械上限**（cap 已撤——见 `ADVISOR-CONVERGENCE.md` §3 · 2026-09-18 用户裁定）；**排队口径 = 异 scope 入队 / 同 scope 仍拒**（2026-09-16 批 8 ED-4 裁定——见 §7 D-CF3 与 `AGENT-LOOP-ASYNC-POOL.md` §6.10）；engCoder / other 两域语义不变（本批只界面 / 一致性 / 第三键）；全仓注释大扫 = 旧档挂 TODO 观察项（随两仓合并面收敛，不另立）。
 
 ## 7. 并入的关键决策记录（含否决备选）
 
@@ -148,3 +148,4 @@
 - 2026-09-16（**ENGINE-DEBT 批 8 · ED-4 决策面收正 · eng-designer**——承 `docs/batches/2026-09-16-engine-debt.md` §1 裁定 ④）：§7 **D-CF2 理由句 / D-CF3 否决句**按「评审池满 → 异 scope 入队」收正（决策本体不变——独立读取器 / 同 scope 守卫；机制落 `AGENT-LOOP-ASYNC-POOL.md` §6.10/§6.11）。
 - 2026-09-16（**批 8 ENGINE-DEBT · 补充收正 · eng-designer**）：§6.1 范围边界句「『评审不排队』语义不变」→「**表述已废**」（承 ED-4——与 §7 D-CF3 · `AGENT-LOOP-ASYNC-POOL.md` §6.10 对齐；残留旧语义清理）。
 - 2026-09-20（**卫生族批 · 台账 #138 · eng-designer**）：首部机制面节区改 `§6–§8` + 历史节号指称清理（行数规则废除批残留）；设计源 = `docs/batches/2026-09-20-hygiene-sweep-batch.md` §2。
+- 2026-09-25（**hygiene-ab 批 · 文档面实施轮 · eng-designer**——承 `docs/batches/2026-09-25-hygiene-ab.md` §2 · 台账 #229）：§6.1 范围边界句「『评审不排队』表述已废」**转裁定语**（现文 = 「排队口径 = 异 scope 入队 / 同 scope 仍拒（2026-09-16 批 8 ED-4 裁定）」——D8 修订式标记清理）。**语义零改**。

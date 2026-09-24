@@ -13,7 +13,7 @@
 | 台账（项目级唯一真相） | SQLite——用户数据目录键控库 `~/.thincoder/ledger/<sha1(项目根)>.db`（2026-09-17 落点裁定：不在项目目录） | ✅ 唯一台账面 = SQLite（`/ledger` 查询）；`TODO.md` · `TODO-archive.md` = 退役历史（md 形态，无机械校验） |
 | 板块档（需求 / 设计） | `core/requirements/` · `core/design/` | ✅ 核心统一已迁入（2026-09-13）；后续新板块档直接落此。**子系统档（设计 / 需求各 15 档）见 §4** |
 | 批次档 | `batches/` | ✅ 核心统一已迁入（2026-09-13） |
-| 部分档（CLI / VSC 面） | `cli/requirements/` · `cli/design/` · `vsc/requirements/` · `vsc/design/` | ✅ 三部分落点齐（`core/` · `cli/` · `vsc/`）——**10 档**（`cli/` 2 · `vsc/` 8；2026-09-15 建）；逐档登记见 §4 |
+| 部分档（CLI / VSC 面） | `cli/requirements/` · `cli/design/` · `vsc/requirements/` · `vsc/design/` | ✅ 三部分落点齐（`core/` · `cli/` · `vsc/`）——**23 档**（`cli/` 12 = design 7 + requirements 5 · `vsc/` 11 = design 8 + requirements 3；2026-09-15 建 · 实盘对账 as-of 2026-09-25）；逐档登记见 §4 |
 
 ## 2. 迁移政策（2026-09-13 用户裁定——「逐步建立 · 旧档留参照 · 不一刀切」；2026-09-14 层级裁定——根仓 `docs/` = 基准层，产品 `docs/**` = 迁移期保留的参照历史）
 
@@ -64,20 +64,21 @@
 
 **迁移批迁入档（2026-09-15——非核心统一拆分）**：按 §2 政策「逐档随批迁」自产品树迁入（B 式重建——源档留原地作参照历史），落点按 `core/design/DOC-SYSTEM.md` §5.1 判据（P1 统一面 ⇒ `core/` · P2 产品面 ⇒ `cli/` ∥ `vsc/`）：
 - `core/design/` **5 档**：`ARCHITECTURE.md` · `PORTABILITY.md` · `STRUCTURE-DEBT.md` · `TWO-REPO-MERGE.md` · `DOC-MIGRATION.md`（迁移台账——承 `core/design/DOC-SYSTEM.md` §11 拆分规划）；
-- `core/requirements/` **3 档**：`PHILOSOPHY.md` · `RELEASE.md` · `TWO-REPO-MERGE.md`；
-- `cli/` **2 档**：`design/RELEASE.md` · `requirements/FEATURES.md`（P2）；
-- `vsc/` **8 档**：`design/` = `VSC-MIGRATION.md` · `SETTINGS.md` · `PROJECT-SWITCHER.md` · `WEBVIEW.md` · `WEBVIEW-PROTOCOL.md` · `WEBVIEW-INPUT.md`；`requirements/` = `VSC-MIGRATION.md` · `WEBVIEW.md`。
+- `core/requirements/` **2 档**：`PHILOSOPHY.md` · `TWO-REPO-MERGE.md`（`RELEASE.md` 同批迁入后 2026-09-20 再迁根 = `docs/RELEASE.md`——§1 首行）；
+- `cli/` **12 档**——设计 7：`ACP-CLIENT.md` · `CRASH-REPORTS.md` · `TUI-COMMANDS.md` · `TUI-INPUT-BOX.md` · `TUI-SESSION-VIEW.md` · `TUI-TOOL-OUTPUT.md` · `TUI.md`；
+  需求 5：`ACP-CLIENT.md` · `CRASH-REPORTS.md` · `FEATURES.md` · `TUI-TOOL-OUTPUT.md` · `TUI.md`（P2——2026-09-15 首迁 2 档后历批续迁；`design/RELEASE.md` 已随三端合一迁根 = `docs/RELEASE.md`——2026-09-20）；
+- `vsc/` **11 档**：`design/` = `VSC-MIGRATION.md` · `SETTINGS.md` · `PROJECT-SWITCHER.md` · `WEBVIEW.md` · `WEBVIEW-PROTOCOL.md` · `WEBVIEW-INPUT.md` · `VSC-DEBT.md` · `VSC-MIGRATION-INVENTORY.md`；`requirements/` = `VSC-MIGRATION.md` · `WEBVIEW.md` · `PROJECT.md`。
 
 **`core/design/` 其余 33 档（工具 · 机制 · 流程面——批 11 补登 · 判据 = `core/design/DOC-MIGRATION.md` §9.3 A21 · 计数随批收正 2026-09-23）**：
 - 文件 / 编辑工具面 **7 档**：`APPLY-PATCH.md` · `EDIT.md` · `EDIT-HELPERS.md` · `HASHLINE-EDIT.md` · `INSERT-AFTER.md` · `TOOL-OUTPUT-LIMITS.md` · `WRITE.md`；
 - 顾问 / 协作 / 子代理面 **9 档**：`ADVISOR-CONVERGENCE.md` · `ADVISOR-GUARDS.md` · `AGENT-LOOP-ASYNC-POOL.md` · `AGENT-LOOP-SUBAGENT.md` · `AGENT-LOOP-UPSTREAM.md` · `ESCALATE.md` · `MULTI-INSTANCE-COLLAB.md` · `PROXY.md` · `SEND-STALL-DISTILL.md`；
 - 令牌 / 参数 / 设置面 **5 档**：`AGENT-PARAMS.md` · `DESIGN-TOKEN-SETTLEMENT.md` · `ENG-TOKEN-BINDING.md` · `SETTINGS-TOOL.md` · `VERIFY-REDESIGN.md`；
-- 流程 / 文档机制面 **11 档**：`ANCHOR-DEBT-REPAIR.md` · `BATCH-RECORD.md` · `DOC-CODE-RECONCILE.md` · `DOC-DISCIPLINE.md` · `ENGINEERING-MODE-V2.md` · `ENGINEERING-MODE.md` · `LEDGER.md` · `LEDGER-SELF-CONTAINED.md` · `MANIFEST.md` · `TESTING.md` · `TURN-CAP-CONTINUE.md`；
-- 基准测试面 **1 档**：`MODEL-BENCH.md`（模型基准测试套件——仓级 `bench/`（拟新增）工具的设计面；2026-09-23 model-bench 批建档）；
-- **计数核对（复跑 as-of 2026-09-23 · model-bench 批 · 档面车道）**：`core/design/` 实档 **55** = 本图登记 **54** + **待补登 1**（`MODEL-SPECS.md`——他批新档，归属面待其批登记；本档不代裁）。
+- 流程 / 文档机制面 **10 档**：`ANCHOR-DEBT-REPAIR.md` · `BATCH-RECORD.md` · `DOC-CODE-RECONCILE.md` · `DOC-DISCIPLINE.md` · `ENGINEERING-MODE-V2.md` · `LEDGER.md` · `LEDGER-SELF-CONTAINED.md` · `MANIFEST.md` · `TESTING.md` · `TURN-CAP-CONTINUE.md`；
+- 基准测试面 **2 档**：`MODEL-BENCH.md`（模型基准测试套件——仓级 `bench/` 工具的设计面；2026-09-23 model-bench 批建档）· `MODEL-SPECS.md`（模型规格表设计档——bench 名单面规格行承载；2026-09-24 参数批建行）；
+- **计数核对（复跑 as-of 2026-09-25 · hygiene-ab 批 · 档面车道 · 按名对账）**：`core/design/` 实档 **55** = 本图登记 **55** + **待补登 0**（逐名相等；幻影 `ENGINEERING-MODE.md` 撤登 · `MODEL-SPECS.md` 补登 · 工作流档 `CORE-UNIFICATION.md` 计入——登记位 = 下行）。
   （前值 **51 = 51** 为 as-of 2026-09-17 读数；此后实增四档：`MODEL-SPECS.md`（他批）+ `AGENT-LOOP-ASYNC-POOL.md` · `AGENT-LOOP-UPSTREAM.md`（structure-debt 批同批登记）+ `MODEL-BENCH.md`（model-bench 批同批登记）。）
 
-**工作流档** = `core/design/CORE-UNIFICATION.md`（注册表 · 事实基线 · 核形态 · 选型 · 分段执行 · 决策 · 验收 · 契约策略 · 测试）——子系统档由它索引、**不复制**其内容（D2 单一权威源）；裁决行的**列定义**亦住该档 §2.5。
+**工作流档** = `core/design/CORE-UNIFICATION.md`（注册表 · 事实基线 · 核形态 · 选型 · 分段执行 · 决策 · 验收 · 契约策略 · 测试——**计入上条实档计数**）——子系统档由它索引、**不复制**其内容（D2 单一权威源）；裁决行的**列定义**亦住该档 §2.5。
 
 **两产品旧子系统档的处置（建议 · 未代裁）**：按本层 §2 迁移政策「**旧档不批量搬 · 保留原地作参照 · 被触碰时随批迁**」——各子系统于 **S2 迁移该子系统时**逐档 `git mv` 入本层（一次一档 + 引用改写 + 机检），并在产品地图撤登记行。
 
@@ -89,6 +90,9 @@
 - **三部分不各设地图**——本 README = 三部分（`core/` · `cli/` · `vsc/`）的唯一地图（目标结构 `core/design/DOC-SYSTEM.md` §4）；`cli/` · `vsc/` 两产品面档所对应的产品树旧档（`thincoder-cli/docs/**` · `thincoder-vscode/docs/**`）= 迁移期参照历史（§2 政策——保留 ≠ 维护）。
 
 ## 变更记录
+
+- 2026-09-25（**hygiene-ab 批 · 文档面实施轮 · eng-designer**——承 `docs/batches/2026-09-25-hygiene-ab.md` §2 · 台账 #230 / #245）：
+  §4 按名对账收正（幻影 `ENGINEERING-MODE.md` 撤登 · `MODEL-SPECS.md` 补登 · 工作流档计入口径写明）；计数 = **实档 55 = 登记 55 + 待补登 0**；§1 部分档 **10 → 23**（`cli/` 12 · `vsc/` 11——实盘对账）；§4 迁移批迁入档行 `cli/` / `vsc/` 逐档重出 + `RELEASE.md` 死指针收正。
 
 - 2026-09-23：**model-bench 批登记 + 计数收正**——§4「其余」组 **32 → 33 档**（+ 基准测试面 `MODEL-BENCH.md`——模型基准测试套件设计档，2026-09-23 建档）；计数核对行收正为 **实档 55 = 本图登记 54 + 待补登 1**（`MODEL-SPECS.md`——他批）。
 

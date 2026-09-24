@@ -56,7 +56,7 @@
 | 106 | `advisor/repos.mjs` | 同路径 | 0.6435 · 异 | ② | 进核 | 融合：取一侧 + `isDocOnlyChange` 语义归一（临时文件算不算「只文档」） | 分叉 ＝ 判定语义不同（CLI 非代码即「只文档」/ VSC 要求「非代码且是文档」）；**两端当前均无消费方** ⇒ 潜伏差异，归一时取一侧并登记 | — | S1（建核补齐） |
 | 107 | `advisor/compaction.mjs` | 同路径 | 0.5665 · 异 | ② | 进核 | 融合：取一侧（空响应标记字面归一） | 分叉 ＝ 空响应标记字面（CLI `Advisor: empty response` / VSC `Advisor: (empty response`）+ VSC 多 `incompleteNotice`；数值与提醒文案族同 | — | S1（建核补齐） |
 | 108 | `advisor/messages.mjs` | 同路径 | 0.4965 · 异 | ② | 进核 | 融合：正文取一侧（逐字相同）+ 装配管道（声明注入点 / 轮次来源 / 相对路径前缀守卫）按核内结构归一 | 分叉 ＝ 装配管道（CLI 正文内插对象声明 + 全局 `_advisorRound` / VSC 由 `run.mjs` 注入 + 评审实例 `rv`）；前提（评审正文同源）仍成立 | — | S1（建核补齐） |
-| 109 | `advisor/loop.mjs` | 同路径 | 0.3889 · 异 | ② | 进核 | 融合：取 CLI 限额族 + 工具集取并集（`code_search` 恒在）+ 进度行按端注入（④ 段） | 分叉 ＝ 评审工具集（CLI 需 `agent.memory` 才挂 `code_search` `src/advisor/loop.mjs:37-46` / VSC 恒在 `src/advisor/tools.mjs:29-37`）+ 进度行实现；墙 / 轮帽 / 预算同 | — | S1（建核补齐） |
+| 109 | `advisor/loop.mjs` | 同路径 | 0.3889 · 异 | ② | 进核 | 融合：取 CLI 限额族 + 工具集取并集（`code_search` 恒在）+ 进度行按端注入（④ 段） | 分叉 ＝ 评审工具集（CLI 需 `agent.memory` 才挂 `code_search` `src/advisor/loop.mjs:37-46` / VSC 恒在 `code_search`（现体 = 核 `thincoder-core/advisor/loop.mjs:31`——检索面恒在句））+ 进度行实现；墙 / 轮帽 / 预算同 | — | S1（建核补齐） |
 | 110 | `thincoder-core/advisor/run.mjs` | 同路径 | 0.3589 · 异 | ③ | 进核 | 取并集：以 CLI 为准（含设计评审连续失败止损护栏 `src/advisor/run.mjs:15-17,59-75,199-204`）+ VSC 的评审实例上下文并入 | 分叉 ＝ CLI 多一道止损闸（VSC 全仓零 `review-streak` 命中）+ 轮次载体（全局字段 vs 实例 `rv`）；前提（同职责）仍成立 | **①** | S1（建核补齐） （迁移期引文） |
 
 > **#106 S2 接线前口径确认项（只记——S2 动作；设计面收正轮 3 补 · 2026-09-14）**：
@@ -254,3 +254,4 @@ consult_stop
   实核（`thincoder-vscode/src/agent-tools/consult.mjs:29,223`）。
 - 2026-09-15（**W12 收正 · VSC 壳接线批**）：§6.5 加 W12 状态行；坐标收正：`runConsultChild` = 核 `thincoder-core/agent-tools/consult.mjs:215`、`makeMainHistoryTool` = 同档 `:82`（端档删旧退役）。机制条文零改。
 - 2026-09-20（**卫生族批 · 台账 #138 · eng-designer**）：首部机制面节区改 `§6–§8` + 历史节号指称清理（行数规则废除批残留）；设计源 = `docs/batches/2026-09-20-hygiene-sweep-batch.md` §2。
+- 2026-09-25（**hygiene-ab 批 · 文档面实施轮 · eng-designer**——承 `docs/batches/2026-09-25-hygiene-ab.md` §2 · 台账 #239）：§2.3 行 109 前提校验列 VSC 侧坐标 `src/advisor/tools.mjs:29-37`（盘上无）**改指**核现体 `thincoder-core/advisor/loop.mjs:31`（检索面恒在句——承接实核 = `grep code_search thincoder-core/advisor/*.mjs`）。**语义零改**。

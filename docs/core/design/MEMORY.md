@@ -44,7 +44,7 @@
 
 | 单端档 | 对位 / 处置 |
 |---|---|
-| VSC `tools/code.mjs` | ↔ CLI `memory/docs.mjs` 的 `codeSearchTool` / `docSearchTool` ⇒ 随 #82 |
+| VSC `thincoder-vscode/src/tools/code.mjs` | ↔ CLI `memory/docs.mjs` 的 `codeSearchTool` / `docSearchTool` ⇒ 随 #82 |
 
 ## 3. 须用户裁条目（自 `CORE-UNIFICATION.md` §2.5.1 搬入 · 逐字）
 
@@ -545,6 +545,8 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 - **CLI 人类命令面**（`thincoder memory <list|search|put|remove>`）：`list` / `search` / `put` 为 personal-only 核心面（search limit 10、list 支持 `--type`）；`remove` 走同一 `deleteByUid` 路由（uid 全 layer + 裸数字兼容）——命令行与工具核心路由复用，无漂移；命令面**无**共享层 list / 过滤形态、**无** clear / 批量删（那些是 agent 工具面能力）。
 
 ## 变更记录
+
+- 2026-09-25（**hygiene-ab 批 · 文档面实施轮 · eng-designer**——承 `docs/batches/2026-09-25-hygiene-ab.md` §2 · 台账 #239）：§2.3 工具实现面单端档映射行 VSC 档坐标**补全仓根路径**（→ `thincoder-vscode/src/tools/code.mjs`；改前为裸名形态——消悬空）。**语义零改**。
 
 - 2026-09-22（**pending-triage 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-22-pending-triage.md` §1「#175 立判据」裁）：新增 **§6.13**（写入面归一化强制 + 死 origin sweep 二信号判据 + 面表 + 边界）；**机制条文零改**。
 

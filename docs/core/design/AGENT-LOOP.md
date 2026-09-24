@@ -251,7 +251,7 @@ VSC 端壳自有 depth-0 循环同址（`thincoder-vscode/src/agent.mjs:197` 邻
 ### 6.4 工具调度与权限（`dispatch` 两段式）
 
 **工具轮 assistant 消息构造（回声恒带——`CONTEXT-COMPACTION.md` §7 D-CC22）**：模型回复带 `tool_calls` 时，入史消息由核单点 `assistantToolCallMessage(response, spec)`（`thincoder-core/model-specs.mjs`）构造后 `pushReal`（`thincoder-core/agent.mjs:366-376`）——`reasoningEcho:"required"`
- 族（deepseek / kimi / mimo）**恒带** `reasoning_content`，本轮无推理取**空串**（真机实证 · **活体形状（请求尾 = tool）**：空串 / 真值被接受 · 缺字段 **400**（`must be passed back`）；「缺字段 **200** · 服务端不再回推理」= **设计轮形状（尾 =
+ 族（deepseek / kimi / mimo）**恒带** `reasoning_content`，本轮无推理取**空串**（真机实证 · **活体形状（请求尾 = tool）**：三形态全 **200**（2026-09-22 复测——2026-09-20 的缺字段 **400**「`must be passed back`」**未复现**）；「缺字段 **200** · 服务端不再回推理」= **设计轮形状（尾 =
  user）**读数——形状限定见批次档 `docs/batches/2026-09-20-reasoning-echo-gap.md` §2.11 ①）。`optional`（glm 族）/ 未声明族恒不带（行为不变）。显示面零改（`history-window.mjs` `reasoningOf` 对空串返回 null——不出幽灵帧）。**第三站点（2026-09-20 补）**：VSC 端壳自有 depth-0
  循环同经本单点（`thincoder-vscode/src/agent.mjs:387-397`——端 `thincoder-vscode/src/specs.mjs` 取值 × 单点构造；静态引合法（W8 契约②）= 结论——**闭包读数单源 = 批次档 `docs/batches/2026-09-20-reasoning-echo-gap.md` §2.9 ①**）；端侧接线事实见 §6.18 表。
 
@@ -500,6 +500,8 @@ VSC 侧**接线**面（端装配 / 面板 / webview 呈现）——机制本体�
 | VSC 档 §2 / §12 / §17（runAgent 主循环 · async 保真 · 上下文注入对齐） | VSC 侧实现细节叙述 | 与 §2.3 / `AGENT-LOOP-SUBAGENT.md` · `AGENT-LOOP-ASYNC-POOL.md` §6.7–§6.12 已并面同族（端差登记 = §6.18 表）——不重并（D2） |
 
 ## 变更记录
+
+- 2026-09-25（**hygiene-ab 批 · 文档面实施轮 · eng-designer**——承 `docs/batches/2026-09-25-hygiene-ab.md` §2 · 台账 #283）：§6.4 工具轮构造行「活体形状缺字段 **400**」证据句按 **2026-09-22 复测**改述（三形态全 **200**——缺字段 400「`must be passed back`」**未复现**）。**机制条文零改**（`reasoningEcho:"required"` 决策不变——只改证据句）。
 
 - 2026-09-24（**queue-visible 批 · 设计评审修正轮 1 · eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §3 轮次 1 发现 #1 / #12 / #13 · 父侧逐条裁定）：
   §2.3「唤醒 / 入槽」行 · §6.8 端特有面行 · §6.18「挂起回合 digest」行三处 VSC busy **单槽受理 → 队列受理（容量 8）**；§7 **D-AL9** 就地修订（提交入队列（容量 8）+ 合并消费（R15 恢复）——单槽不变量条退场）；

@@ -103,7 +103,7 @@
 | CLI `tools/patch.mjs` | 核内 `apply_patch` / `delete` 实现（VSC 住 `file-edit.mjs`）⇒ 随 #10 / #12（同路径 `.md`） |
 | CLI `thincoder-core/tools/repomap.mjs` | ↔ VSC `repomap.mjs`（同一 repo 大纲；VSC 头注自述「Ported from thincoder CLI `thincoder-core/tools/repomap.mjs`」）⇒ 融合 |
 | VSC `tools/checkpoint.mjs` | ↔ CLI `git/checkpoint.mjs`（行 #167）——**该端档已退役**（W14 删除集；现体 = 核 `thincoder-core/git/checkpoint.mjs`） （迁移期引文） |
-| VSC `tools/code.mjs` | ↔ CLI `memory/docs.mjs` 的 `codeSearchTool` / `docSearchTool` ⇒ 随 #82 |
+| VSC `thincoder-vscode/src/tools/code.mjs` | ↔ CLI `memory/docs.mjs` 的 `codeSearchTool` / `docSearchTool` ⇒ 随 #82 |
 | VSC `thincoder-vscode/src/tools/ide.mjs`（**已落**——2026-09-21 自 `context.mjs` 改名 · 旧路径删除态；让出 `context` 名与核新工具） | **④ 端特有段**（IDE 上下文 = 宿主能力；CLI 无 IDE） |
 | VSC `tools/edit-fuzzy-match.mjs` · `edit-line-params.mjs` · `file-edit.mjs` · `more-file.mjs` · `hashline-edit.mjs` | 核内 edit / read / insert 实现切分 ⇒ 随 #68 / #69（W14 已迁核——上述 VSC 自持档已删，现体 = 核 `thincoder-core/tools/{file.mjs, edit-diff.mjs, edit-batch.mjs, patch.mjs, search.mjs}`） （迁移期引文） |
 | VSC `tools/focus.mjs` | **④ 端特有段**（驱动编辑器光标 = 宿主能力） |
@@ -111,7 +111,7 @@
 | VSC `tools/shell.mjs` | ↔ CLI `tools/bash.mjs`（同首行） |
 | VSC `tools/wait_for.mjs`（W14 已迁核——自持镜像已删，现体 = 核 `thincoder-core/tools/ops.mjs`） | 核内 `wait_for`（CLI 并回 `tools/ops.mjs`）⇒ 随 #62 （迁移期引文） |
 
-> **归属提示**：表中 `VSC `tools/checkpoint.mjs`` 与 `VSC `tools/code.mjs`` 两行的裁决分别住 `docs/core/design/CHECKPOINT.md` / `docs/core/design/MEMORY.md`（本表 = 该映射表的权威副本，两行仅作指针）。
+> **归属提示**：表中 checkpoint / code 两行（VSC 侧单端档对位行）的裁决分别住 `docs/core/design/CHECKPOINT.md` / `docs/core/design/MEMORY.md`（本表 = 该映射表的权威副本，两行仅作指针）。
 
 ## 3. 须用户裁条目（自 `CORE-UNIFICATION.md` §2.5.1 搬入 · 逐字）
 
@@ -915,6 +915,8 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 **边界（本增量不做）**：不做 task 工具本体改动（保留）；不做台账（M2 承接）；不做「归册三选一」替代流程（M10 一并砍）。
 
 ## 变更记录
+
+- 2026-09-25（**hygiene-ab 批 · 文档面实施轮 · eng-designer**——承 `docs/batches/2026-09-25-hygiene-ab.md` §2 · 台账 #239）：§2.3 映射表 VSC code 行**补全仓根路径**（→ `thincoder-vscode/src/tools/code.mjs`；改前为裸名形态）；同表后「归属提示」行两处路径形态**去形改述**（以「checkpoint / code 两行（VSC 侧单端档对位行）」指称——消悬空 / 防下轮同类）。**语义零改**。
 
 - 2026-09-22（**hygiene-sweep 批 · 文档卫生轮（上抛处置）· eng-designer**——承 `docs/batches/2026-09-22-hygiene-sweep.md` §2）：§6.15 面 VSC verify guard 缺差状态重述——「另册（台账 #217）——本批零触碰」改现态（已并入本批 C 面，随本批落）。**语义零改**。
 
