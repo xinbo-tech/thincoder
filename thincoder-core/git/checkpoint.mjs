@@ -13,6 +13,10 @@ import { existsSync, readFileSync, statSync } from "node:fs"
 import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { configDir } from "../config.mjs"
+// normalizeCwd 单源（2026-09-25 批 ledger-key-normalize · 台账 #286）：盘符大写契约归一住
+// `session-slots.mjs`（session / checkpoint / traces / peers 同契约消费面）；本档原私有副本删除，
+// 跨端 cwdHash12（CHECKPOINT.md F5/T7）赖同一实现，不再各自持字面。
+import { normalizeCwd } from "../session-slots.mjs"
 
 const CWD_HASH_LEN = 12
 
@@ -31,14 +35,6 @@ function git(cwd, args, { allowFail = false } = {}) {
     if (allowFail) return null
     throw new Error(`git ${args.join(" ")} failed: ${error.stderr?.toString().trim() || error.message}`, { cause: error })
   }
-}
-
-/** Normalize cwd for hashing: uppercase the Windows drive letter so the VS Code
- *  extension's uri.fsPath (lowercased) produces the SAME cwdHash12 as the CLI's
- *  process.cwd() — cross-end snapshot sharing (CHECKPOINT.md F5/T7) depends on this
- *  contract. Same normalization as session storage (session-slots.mjs normalizeCwd). */
-function normalizeCwd(cwd) {
-  return cwd.replace(/^([a-z]):/, (_, d) => d.toUpperCase() + ":")
 }
 
 function checkpointRoot(cwd) {

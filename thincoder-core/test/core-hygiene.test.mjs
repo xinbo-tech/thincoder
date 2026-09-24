@@ -80,10 +80,14 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
  * hygiene-ab 批（2026-09-25 · `docs/batches/2026-09-25-hygiene-ab.md` §2.3 / 台账 #227）同批登记 `test/session-gc-stale.test.mjs`
  * （**395**——孤儿 sidecar 记录目录 `.d` 清运用例组 GC-D1–D6：自动面四态 + 回收失败跳过 + 显式面存量腿；
  * 夹具 `seedRecordDir` 与既有组同根；拆档 = 复制沙箱脚手架——不拆；触发条件 = 越 500 硬限或该档下次实质改动）。
+ * ledger-key-normalize 批（2026-09-25 · `docs/batches/2026-09-25-ledger-key-normalize.md` §2.3 · 台账 #286）：
+ * `agent-tools/batch-lifecycle.mjs` 302 → **293** ≤300（解析体迁叶档 `batch-paths.mjs`（**142**——新档 ≤300 不登记））
+ * ⇒ **移出登记**（消解条件 = 本批落地，设计档预裁）；同批 `agent-tools/batch.mjs` 411 → **366**（>300 保留登记）·
+ * `git/checkpoint.mjs` 449 → **444**（副本单源化）。
  */
 const SOFT_LINE_REGISTRY = new Set([
   "agent/dispatch.mjs", "agent/helpers.mjs", "agent/setup.mjs", "agent.mjs",
-  "agent-tools/advisor-async.mjs", "agent-tools/batch-lifecycle.mjs", "agent-tools/batch.mjs", "agent-tools/consult.mjs", "agent-tools/escalate-async.mjs",
+  "agent-tools/advisor-async.mjs", "agent-tools/batch.mjs", "agent-tools/consult.mjs", "agent-tools/escalate-async.mjs",
   "agent-tools/read-history.mjs",
   "agent-tools/subagent-actions.mjs", "agent-tools/subagent-async.mjs",
   "agent-tools/subagent-scheduler.mjs", "agent-tools/subagent-spawn.mjs", "agent-tools/subagent.mjs",

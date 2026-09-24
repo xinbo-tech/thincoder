@@ -7,8 +7,10 @@
  * 本档静态 import node:sqlite ⇒ 消费侧一律动态 import 本模块链（W8 契约②——KD-M2-3）。
  *
  * 落点（2026-09-17 用户裁定收正）：台账库**不在项目目录**——住用户数据目录
- * `~/.thincoder/ledger/<sha1(项目根绝对路径)[:16]>.db`（工作树外、天然不进 git；
+ * `~/.thincoder/ledger/<sha1(normalizeCwd(项目根绝对路径))[:16]>.db`（工作树外、天然不进 git；
  * 同区先例 = configDir 的 memory.db / tool-results）。项目根仅作**关联键**，不在项目内留任何文件。
+ * 键归一（2026-09-25 批 ledger-key-normalize · 台账 #286）：盘符大写契约直引 `session-slots.mjs`
+ * `normalizeCwd`——与 session / checkpoint / traces / peers 同契约，跨端同 cwd 同键同库。
  */
 import { createHash } from "node:crypto"
 import { existsSync, mkdirSync } from "node:fs"
@@ -17,6 +19,8 @@ import { DatabaseSync } from "node:sqlite"
 
 import { configDir } from "./config-io.mjs"
 import { resolveProjectRoot } from "./manifest.mjs"
+// 归一步单源（KD-LN1——直引，不抽新 util：先例 = peer-domains.mjs / traces/trace-store.mjs）。
+import { normalizeCwd } from "./session-slots.mjs"
 
 /** 台账库目录（默认 = 用户数据目录；测试注入面 `_setLedgerDirForTest` 覆盖）。 */
 let ledgerDir = join(configDir, "ledger")
@@ -25,11 +29,27 @@ let ledgerDir = join(configDir, "ledger")
 export function _setLedgerDirForTest(dir) { ledgerDir = dir }
 export function _resetLedgerDirForTest() { ledgerDir = join(configDir, "ledger") }
 
-/** 项目根 → 库路径（稳定键 = sha1(规范化项目根绝对路径) 前 16 位——路径唯一标识，不含分隔符。
- *  项目根与 manifest 同一判据（git 仓根 / 显式声明容器根）——两端会话键一致）。 */
+/** 台账库目录读数（设计档 §7.1 导出面）：键控库住它；迁移 / 审计面默认根 = 本值——备份 /
+ *  回收目录取它的**兄弟位**（同派生于可覆盖基⇒ `_setLedgerDirForTest` 覆盖后三者同随）。 */
+export function ledgerDirPath() { return ledgerDir }
+
+/** 项目根 → 库键（**键式单源**——设计档 `LEDGER.md` §2.1：键只在**本函数**一处生成）：
+ *  `sha1(normalizeCwd(root))[:16]`——`normalizeCwd`（盘符统一大写）是唯一补丁面：`resolve()`
+ *  已覆盖分隔符 / 点段 / 尾斜杠；非盘符段大小写**不折叠**（§2.1 不做段）。
+ *  @param {string} root 项目根绝对路径
+ *  @returns {string} 16 位十六进制键 */
+export function ledgerKey(root) {
+  return createHash("sha1").update(normalizeCwd(root)).digest("hex").slice(0, 16)
+}
+
+/** 项目根 → 库路径（稳定键 = `ledgerKey` 前 16 位——路径唯一标识，不含分隔符）。
+ *  项目根与 manifest 同一判据（归属 ∨ 发现——`resolveProjectRoot`；无 manifest ⇒ `resolve(cwd ?? ".")`
+ *  兜底且**单值**）——与写门指针基准同一子表达式（键另加 `normalizeCwd` 一步，§2.1）。
+ *  v2 键归一（2026-09-25 批）：盘符本大写（CLI）⇒ 键恒等零变；小写盘符（VSC `uri.fsPath`）
+ *  并入同键 ⇒ 同项目两端同库（收正前 = 同项目两键两库）。 */
 export function ledgerDbPath(cwd) {
-  const key = createHash("sha1").update(resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")).digest("hex").slice(0, 16)
-  return join(ledgerDir, `${key}.db`)
+  const root = resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")
+  return join(ledgerDir, `${ledgerKey(root)}.db`)
 }
 
 /** 未决四态（「活条目」口径 = 计数单源 WHERE 集；已核销 / 已废弃 = 归档态）。 */

@@ -208,6 +208,7 @@ export function saveNotifyState(file, state) {
 }
 
 // ── re-export（拆分件接口——命令面接线 = 动态 import 本档，KD-M2-3） ──
-export { ALLOWED_MIGRATIONS, ledgerDbPath, openLedger, PENDING_STATUSES, _setLedgerDirForTest, _resetLedgerDirForTest, ensureExecutorColumn } from "./ledger-db.mjs"
+export { ALLOWED_MIGRATIONS, ledgerDbPath, ledgerKey, ledgerDirPath, openLedger, PENDING_STATUSES, _setLedgerDirForTest, _resetLedgerDirForTest, ensureExecutorColumn } from "./ledger-db.mjs"
 export { ledgerAdd, ledgerAddTool, ledgerClose, ledgerCloseTool, ledgerCount, ledgerCountTool, ledgerQuery, ledgerQueryTool, ledgerUpdate, ledgerUpdateTool } from "./ledger-cmd.mjs"
+export { runLedgerAudit, runLedgerMigrate } from "./ledger-migrate.mjs"
 export { resolveExecutorStates, executorTail, _setExecutorProbeTtlForTest } from "./ledger-executors.mjs"

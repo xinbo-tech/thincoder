@@ -122,6 +122,8 @@ Usage:
   thincoder session index [--status | --rebuild]
                             Derived session index (disposable, rebuilt on demand): --status reports sessions /
                             messages / tool calls + coverage + size; --rebuild reindexes every session file
+  thincoder ledger migrate --dry-run | --confirm   Ledger variant-key merge (dry-run report / backup then import; source recycled)
+  thincoder ledger audit                           Read-only ledger dir audit (classify every db + suggestions)
   thincoder upgrade         Update to the latest version from npm
   thincoder completion <sh>  Generate shell completion script (bash / zsh / fish)
   thincoder -v, --version   Print version
@@ -443,6 +445,19 @@ switch (command) {
     }
     const { runSessionGc } = await import("@thincoder/core/session-gc.mjs")
     process.exitCode = await runSessionGc(args)
+    break
+  }
+
+  case "ledger": {
+    // LEDGER.md §2.2（2026-09-25 批）：台账存量收正面——变体键合并迁移（migrate）/ 残档审计（audit）；
+    // 核内实现（ledger-migrate.mjs），壳侧只分发（先例 = `session gc` 双档：--dry-run 只读 / --confirm 执行）。
+    if (args[0] === "migrate" || args[0] === "audit") {
+      const m = await import("@thincoder/core/ledger-migrate.mjs")
+      process.exitCode = await (args[0] === "migrate" ? m.runLedgerMigrate(args) : m.runLedgerAudit(args))
+      break
+    }
+    console.error("Usage: thincoder ledger migrate --dry-run | --confirm [--from <key>] | thincoder ledger audit [--root <dir>]")
+    exitSoon(1)
     break
   }
 

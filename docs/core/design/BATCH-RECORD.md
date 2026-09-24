@@ -26,6 +26,7 @@
 | 参数 schema | spawn 参数面新增 `batchDoc` 属性（否则参数无处传入）；模型面描述文案按**角色集**（eng-coder / eng-designer）参数化 |
 | 角色域 | 门**只对 `NEEDS_BATCH_DOC = { eng-coder, eng-designer }` 生效**——其余角色（`explore` / `plan` / `coder`）**零变更**（不带 batchDoc 照常 spawn） |
 | 校验落点 | **单一共用装配点 + 与 token 门同出口**（阻塞/异步两路命中同一校验函数；错误生命周期一致） |
+| 路径解析 | 相对路径解析序（cwd → 项目根 → 基底）**单源 = §4.15**（`batch-paths.mjs`）——门判据仍「参数在 + 路径可读」，解析面与 append / create 同源（2026-09-25 批 · 台账 #287） |
 | 注入 | 通过校验后 child 携带批次档绝对路径；**child 任务文本含一行 `Batch record (batchDoc): <abs>`**（同形镜像，无变体退路） |
 | 受限变体 | 审计 / 勘察子代理的 `delete props` 清单**同步加 `batchDoc`**（不得透传给子代） |
 | 越界文案 | 越界错误文案**带实际角色名**参数化（designer 越界时不误导为 eng-coder 专属措辞） |
@@ -147,6 +148,15 @@
 | BR-24 | 错误 | eng 子代理 / 评审调 `close` | throw（「close is main-agent-only」） |
 | BR-25 | 边界 | create 时目标目录不存在 | mkdir -p 后落位（骨架一次预齐） |
 | BR-26 | 边界 | 过渡期 `batch_segment({segment, text})` 调用 | 等价 append（别名导出——挂载 / 绑定 / 拒面同）；撤除判据见 §4.14 |
+| BR-27 | 正常 | create `cwd` = 项目根 + 根相对串（`docs/batches/<x>.md`） | 落 `docs/batches/<x>.md`（**不嵌套**——#287 主症） |
+| BR-28 | 正常 | create `cwd` = 项目内子目录 / 项目根的上级目录（两形态各一拍）+ 根相对串 | 同上（解析序「项目根」腿命中） |
+| BR-29 | 正常 | append / spawn 门 `cwd` = 项目根的上级目录（非项目根）+ 根相对串指向在档 | 解析成功（该形态此前必 throw） |
+| BR-30 | 正常 | create `cwd` = **基底父目录**（项目子目录形——如 `docs`）+ cwd 相对串（`batches/<x>.md`） | 落 `docs/batches/<x>.md`（选中 = 首个落基底内候选） |
+| BR-31 | 边界 | create + 绝对路径（基底内 / 越基底） | 照旧：基底内通过 / 越基底拒（文案零变） |
+| BR-32 | 错误 | create + **锚定串**（以基底的项目根相对前缀打头、段边界判——§4.15 条 3）解析后**不落任一基底内**（如 `docs/batches/../../<x>.md`） | fail-closed 带提示（**不二次拼接**——§4.15 新文案） |
+| BR-33 | 正常 | spawn 门 `cwd` = 子目录 + 根相对串 | 通过（门内解析与 append 同源；不可读后缀文案逐字零变） |
+| BR-34 | 边界 | 非项目 cwd（无 manifest） | 基底回退默认值（`<cwd>/docs/batches`）；四形矩阵零回归 |
+| BR-35 | 边界 | 串 `docs/batches-old/<x>.md`（基底前缀同形——`-` 非段边界）+ 根相对形 | **不锚定**（段边界判据）⇒ 照候选序、零 fail-closed（fail-closed 只属锚定腿——BR-32）；读面取首个可读 / create 取首个落基底内（与 #287 前形态零变） |
 
 ### 4.9 状态行冻结拒写 + `docRoot.batches` 双基底（v2——M3 增量）
 
@@ -157,7 +167,10 @@
 
 **在途性真值 = 批次档状态行自身**（本档 ① 冻结门读它）。
 
-**落点接线（N3 可迁移）**：`resolveBatchDocPath(cwd, given)` 加双基底——先按 cwd 解析（v1 语义，既有调用形态零变），不可读时按 manifest `docRoot.batches` 复判（M1 缺键 → M1 默认值 fallback；注入缝 = `configureBatchSegment`）；仍不可读 → throw（fail-closed 不变）。`batch` append/status 行内解析改复用该函数（门禁单源——AC-M3-1 拒面与落点接线同一函数）。
+**落点接线（N3 可迁移）**：解析序与防嵌套**单源 = §4.15**（2026-09-25 批收正——`batch-paths.mjs`）。
+`resolveBatchDocPath(cwd, given)` = 该解析序的**读面形态**（首个可读文件胜；不可读 → throw，fail-closed 不变）。
+manifest `docRoot.batches` 复判（M1 缺键 → M1 默认值 fallback；注入缝 = `configureBatchSegment`）= 解析序内**基底腿**。
+`batch` append/status 行内解析改复用该函数（门禁单源——AC-M3-1 拒面与落点接线同一函数）。
 
 **边界（本增量不做）**：不做评审本身（M6）；不做**完整批次档模板定义**（**骨架块 = §4.10 本档**；需求侧 = 指针与同步位——2026-09-20 收正，承 §4.10〔父侧直接执行 · 可 revert〕）；不做批边界判定（判定权归主 agent）；不机械拦截前情指针形态（F5 判据归属 = 主 agent 写纪律 + M8 锚检查）。与 D5 冻结窗口（M4）**不同窗口**（评审在途 vs 已收口），不重叠、不互相替代。
 
@@ -190,7 +203,7 @@
 
 **参数**：`path`（新批次档路径——相对基底取**基底单源** `resolveBatchDocPath` 声明面解析（manifest `docRoot.batches`，缺省回退默认值——轮 2 评审发现 #2 收正，不写死字面路径）或绝对；**非法判据**：非 `.md` 后缀或解析后越出解析基底 ⇒ throw——评审发现 #12）、`topic`（主题词，档名与档头共用）、`date`（缺省今天）、`prev`（前情指针，缺省「无（独立批）」）。
 **身份判据**：仅 depth-0 放行——eng 子代理 / 评审调用 ⇒ throw「create is main-agent-only」。
-**基底行为**（2026-09-21 实施轮）：解析基底 = manifest `docRoot.batches`（用户项目可声明他值——载体不假定项目形如本仓）；目录缺失 ⇒ mkdir -p 后落位。
+**基底行为**（2026-09-21 实施轮；解析序 = §4.15 · 2026-09-25 批）：解析基底 = manifest `docRoot.batches`（用户项目可声明他值——载体不假定项目形如本仓）；**选中判据 = 首个落在基底根内的解析候选**（根相对串不再二次拼接——§4.15）；目录缺失 ⇒ mkdir -p 后落位。
 **fail-closed**：目标已存在 ⇒ throw（不覆盖）；路径不可写 ⇒ throw；目录缺失 ⇒ mkdir -p 后落位。
 **骨架** = §4.10 模板（占位状态行含 gate 合法关键字「进行中」——建档即过 gate，痛点 ② 直除）。**不代建台账条目**（create 只管档骨架；条目登记 = 主 agent 既有义务，照旧）。
 
@@ -215,6 +228,28 @@
 ```text
 node -e "const fs=require('fs');const r=[];for(const f of fs.readdirSync('docs/batches'))if(f.endsWith('.md')&&!String(fs.readFileSync('docs/batches/'+f,'utf8').match(/^\*\*状态行\*\*：.*$/m)).includes('已收口'))r.push(f);console.log(r.join(' ')||'(空=无在飞批)')"
 ```
+
+### 4.15 相对路径解析序与防嵌套（台账 #287 · 2026-09-25 批）
+
+**问题**：同一批次档路径串在不同动作 / 不同 cwd 下解析结果不同——create 只按基底解析（根相对串静默嵌套成 `docs/batches/docs/batches/…`）；append / status / close 与评审门按「cwd → 基底」解析（cwd ≠ 项目根时根相对串必 throw）；spawn 门只按 cwd 解析（单基底）。四处调用点 = 三条规则各解各的。
+
+**契约（单源 = `agent-tools/batch-paths.mjs`；四处调用点全部经它——create / append·status·close / 评审门 / spawn 门）**。**矩阵 cwd 四形** = 项目根 / 项目内子目录 / 项目根的上级目录 / 非项目目录（无 manifest）——用例 BR-27–BR-35 以此四形为准：
+
+1. **候选序（相对路径）**：① `resolve(cwd, p)` → ② `resolve(项目根, p)` → ③ 逐基底 `resolve(基底, p)`（**基底取值两段**：**声明面** = manifest `docRoot.batches`；**缺省回退默认值** = 声明面为空时 `resolve(docRootBase(cwd), "docs/batches")`（docRootBase = 项目根 ?? cwd））。
+   **取面分野（基底腿）**：**create / 在飞扫描 / 锚定面**取「声明面 + 缺省回退」合体（`batchDocBases(cwd)`——恒非空）；**读面 ③ 腿只取声明面**（无 manifest ⇒ **无基底腿**——读面零回归）。
+   **「项目根」取根单源** = `resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")`（归属 ∨ 发现两段——`thincoder-core/manifest.mjs` `resolveProjectRoot`；`no-project` / 无 manifest ⇒ `resolve(cwd ?? ".")` 兜底；同式 = 库键式的同一子表达式，`design/LEDGER.md` §6.1 口径 2）。
+   **单值**——基底可多根，项目根不受基底数影响（多基底不产生多项目根）。
+2. **判据分野（唯一差异）**：**读面**选候选序中**首个可读文件**（判据仍「参数在 + 路径可读」逐字不变）；**create** 选候选序中**首个落在基底根内**者（新档不存在，可读性无判别力）。
+3. **防嵌套（锚定规则）**：`p`（归一 `/`）以**任一基底的「项目根相对前缀」**（如 `docs/batches`）打头**且前缀后为路径段边界（`/` 或串尾）** ⇒ **只解析项目根形**（候选②，跳过 ①③）——已含基底相对前缀的串不再二次拼接；项目根形不落基底内 ⇒ fail-closed 带提示。**段边界例**：`docs/batches-old/<x>.md`（前缀同形、`-` 非段边界）⇒ **不锚定**，照候选序解析、不触发 fail-closed（BR-35）。
+4. **零变面**：绝对路径照旧取用（create 仍过越基底判据）；「参数在 + 路径可读」判据句、冻结门、段白名单、错误文案（spawn 门逐字 / `resolveBatchDocPath` 逐字）全部零变。
+
+**行为变更登记（有意收正）**：① create 收根相对串（原静默嵌套）；② create 在 cwd = 子目录 / 上级 时收 cwd 相对串（原嵌套）；③ 读面在 cwd ≠ 项目根时收根相对串（原 throw）；④ 读面不再命中「同前缀嵌套幽灵档」（防御性收窄）。其余当前成功路径逐字零变（读面候选序对既有命中为**追加**关系——**唯一序内边界 = ② 先于 ③**：`<项目根>/p` 与 `<基底>/p` 并存且皆可读 ⇒ 读面取 ②；该优先级即本条登记面）。
+
+**fail-closed 新文案（逐字）**：`batch: create path is anchored at a batch base root but does not resolve under the declared docRoot.batches root(s) — refusing to nest it (fail-closed). Path: <raw>`
+
+**射程**：create 的相对路径语义变更 = 对外可见行为变更（工具参数解析）——登记面 = 本性 + 批档 §2；不改工具参数 schema、不改判据句。
+
+**边界**：不做 basename 搜索 / 全仓 glob（启发式找档）；前缀匹配只认**锚定面基底**（「声明面 + 缺省回退」合体——`batchDocBases`，条 1 取面分野）的相对前缀且**按路径段（段边界）判**（条 3；前缀不匹配者不做启发式改写——登记）；不做 UNC / URL 形路径语义扩展；不改 VSC 侧路径面（VSC 经核消费本解析序）。
 
 ## 5. 行为纪律（提示词层，双源同步）
 
@@ -331,6 +366,8 @@ node -e "const fs=require('fs');const r=[];for(const f of fs.readdirSync('docs/b
 | D-BR20 | **别名撤除判据 = 在飞批收口（状态行首行扫描机判——node 单行式见 §4.14），非 TTL** | 在飞批收口 = 混版窗口语义闭合的地面真值、可机核；TTL 任意不可核；否决「立即撤」（打挂在飞批 §3 自写通道——CORE-UNIFICATION 批先例）、否决「全文匹配 grep」（讨论正文提及「已收口」即假阳——fix 轮 #5） |
 | D-BR21 | **depth-0 的 append / status 增可选 `path` 参数**（子代理语法不变——目标仍由 spawn 注入） | 主 agent 无 spawn 绑定且多批同时在飞——无 path 则「主 agent → §1/§4/§6」通道无从定位目标档（能力被声明而参数面缺失）；沿 D-BR17 破例逻辑（depth-0 身份判据兜住授权面）；缺省规则 = 在飞批唯一时取该批、复数时必传。否决「删主 agent append/status 能力」（§4.7#3 / §4.12 已声明该通道——挂载本意含 §1/§4/§6 append 与 §1 status 通道，砍能力不如补参数） |
 
+| D-BR22 | 批次档相对路径 = **统一解析序**（cwd → 项目根 → 基底，单源 `batch-paths.mjs`，四处调用点共用）+ **锚定防嵌套**（含基底相对前缀者只解析项目根形；不落基底内 ⇒ fail-closed） | 同一串在不同动作 / 不同 cwd 下必须同解（三规则各解各的 = #287 病灶）；读面判据仍「可读」、create 判据仍「落基底内」；否决「basename 搜索 / 全仓 glob」（启发式不可判）·「只修 create」·「保留嵌套以兼容」 |
+
 ## 8. 边界（本档不做）
 
 1. 不写实现代码（工具本体 / 门禁 / 装配 = eng-coder 写域）。
@@ -340,6 +377,7 @@ node -e "const fs=require('fs');const r=[];for(const f of fs.readdirSync('docs/b
 5. 不做批次档内容模板化（append 载荷自由正文——批次档是记录不是表单；模板只覆盖**骨架与占位**，§4.10）。
 6. 不动 §1/§4/§6 主 agent 普通文档写语义（create / close 是**新增**有门通道，既有写法零回归）。
 7. 需求档面（`requirements/`）零改动（需求笔归主 agent——若需同步收口由主代理裁量，上抛项见批档 §2）。
+8. 不做批次档路径的启发式查找（basename 搜索 / 全仓 glob）——解析只认候选序与声明基底的相对前缀（§4.15 边界）。
 
 ## 9. 不并项与历史沿革
 
@@ -354,6 +392,13 @@ node -e "const fs=require('fs');const r=[];for(const f of fs.readdirSync('docs/b
 | 一次性勘察读数 | 行数剖析、评审轮次处置流水 | 一次性材料 |
 
 ## 变更记录
+
+- 2026-09-25（**批 ledger-key-normalize · 实施后设计措辞收正** · eng-designer——fix 轮 #87；承批档 §1.4 项 1–2）：§4.15 条 1 基底面拆两段（读面 ③ 腿 = 声明面——无 manifest ⇒ 无基底腿；缺省回退默认值限 create / 在飞扫描 / 锚定面）；§4.8 BR-30 cwd 条件化（= 基底父目录）+ BR-32 按实现口径收正（锚定 + 越出 ⇒ 新文案）。
+
+- 2026-09-25（**批 ledger-key-normalize · 设计评审轮 1 修正** · eng-designer——fix 轮；承批档 §3 发现 1–13 父侧裁定）：§4.15 候选序 ② 腿补**取根单源**（`resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")`——无 manifest 兜底 / 单值）+ **cwd 四形**口径；防嵌套改**按路径段（段边界）**匹配 + `docs/batches-old/<x>.md` 边界例；
+  行为变更登记补「② 先于 ③」序内边界；§4.8 BR-28/29 cwd 措辞消歧 + 增 **BR-35**。
+
+- 2026-09-25（**批 ledger-key-normalize · 设计轮 · 射程 +6 = 台账 #287** · eng-designer）：新增 **§4.15 相对路径解析序与防嵌套**（候选序 cwd → 项目根 → 基底 · 读面 / create 唯一分野 · 锚定规则 · 行为变更登记 · fail-closed 新文案 · 边界）；§2 门禁表增「路径解析」行；§4.9 / §4.11 解析表述改指 §4.15（单源）；§4.8 增 BR-27–BR-34；§7 增 D-BR22；§8 增边界 8。
 
 - 2026-09-21（**批次档生命周期工具化批 · initial 设计轮** · eng-designer——承 `docs/batches/2026-09-21-batch-lifecycle-tool.md` §1）：§4 扩为生命周期工具 `batch`（action = create/append/status/close）——§4.1 契约表收正（action 分发行 / append 无路径参数限定 / 状态行单行改写豁免）+ §4.3 主 agent depth-0 挂载 + §4.5 提示词侧改指 create/append + §4.6 V3 与建批形态解耦注 + §4.8 增 BR-18–BR-26 + §4.10 骨架改 create 模板规格 + 新增 §4.11–§4.14（create / status / close / 过渡别名）+ §5.1 L4 机械兑底改指 batch + §6.2 锚 A2/A8 收正 + §7 增 D-BR17–D-BR20（含 D-BR4 收窄注）+ §8 边界增 5–7；`batch_segment` 转过渡别名（撤除判据 §4.14）。**零语义变面**：append 判定函数（段白名单 / 来源戳 / 凭证剥除 / 超量 / 冻结）逐一复用；V3 触发判据零变；冻结真值仍 = §1 行。
 

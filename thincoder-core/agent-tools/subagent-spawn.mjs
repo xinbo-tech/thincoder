@@ -11,8 +11,6 @@
  * （`child._spawnSystemBlock` 单点绑定——消费点 = 核 `prepareRun`），`input` 只留任务书。
  */
 
-import { resolve } from "node:path"
-import { existsSync, statSync } from "node:fs"
 import {
   createAgent,
   readonlyToolNames, escapeXml,
@@ -33,6 +31,9 @@ import { validateTaskBookFields } from "./spawn-gates.mjs"
 // 台账 #23（AGENT-LOOP-SUBAGENT.md §6.26 · D23-3）：审计块构造器外提（`summarizeEngTaskBook`
 // + `buildAuditBlock` 纯函数）——spawn 档只做「收集 + 绑定」；块文本逐字搬移（D23-4）。
 import { buildAuditBlock } from "./audit-block.mjs"
+// 批次档路径解析单源（BATCH-RECORD.md §4.15 · 台账 #287）：门内解析改经叶档（读面非抛形），
+// 与 append / create 同源——门判据仍「参数在 + 路径可读」，错误文案逐字零变。
+import { resolveBatchReadPath } from "./batch-paths.mjs"
 
 /**
  * Effective subagent model override for a role (CLI parity shared with VS Code):
@@ -206,20 +207,17 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // 批次档路径（需求 §1.11 铁律 #5 随件传递的机械面）。落点 = 本装配点（token 门之前）：
   // sync 与 async 两条 spawn 路径都经过 buildSpawnChild——一处校验双路生效，错误出口与
   // token 门一致（§2.13.1 选型 A）。
-  // 判据只到"参数在 + 路径可读"——**不校验内容/措辞**（不做"已收口"正则、不匹配模板、
-  // 不生成；内容够不够由执行者拒收兜底——需求 §1.14 #9 行为面）。路径语义照
-  // `files` 先例：cwd 相对或绝对均可，`\` 归一为 `/`。错误文案带**实际角色名**（§2.15
-  // 越界文案参数化——designer 撞门时不误导）。
+  // 路径语义照 `files` 先例：cwd 相对或绝对均可，`\` 归一为 `/`；解析序单源 = §4.15（cwd → 项目根 →
+  // 逐基底，读面取首个可读）——cwd 非项目根时根相对串不再必拒（BR-29/BR-33）。错误文案带
+  // **实际角色名**（§2.15 越界文案参数化——designer 撞门时不误导）与逐字不可读后缀。
   let batchDocAbs = null
   if (role === "eng-coder" || role === "eng-designer") {
     const given = typeof args.batchDoc === "string" ? args.batchDoc.trim() : ""
     const refusal = (suffix = "") => new Error(
       `batchDoc is required for role='${role}' — pass the batch record path (docs/batches/<batch>-<topic>.md); spawn refused without it.` + suffix)
     if (!given) throw refusal()
-    batchDocAbs = resolve(parent.cwd ?? process.cwd(), given.replace(/\\/g, "/"))
-    let readable = false
-    try { readable = existsSync(batchDocAbs) && statSync(batchDocAbs).isFile() } catch { readable = false }
-    if (!readable) throw refusal(" (given path is not a readable file)")
+    batchDocAbs = resolveBatchReadPath(parent.cwd ?? process.cwd(), given)
+    if (!batchDocAbs) throw refusal(" (given path is not a readable file)")
   }
 
   // M5 F2（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.2）：任务书六强制字段门——

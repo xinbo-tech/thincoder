@@ -27,14 +27,13 @@
  * 语义零行为变；端装配经 `configureBatchSegment({ onWrite })` 覆盖（VSC 侧现形 = `_touchedFiles`
  * 记账）。核内零端名分支（契约 5——只认 `onWrite` 函数名）。
  */
-import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs"
-import { resolve } from "node:path"
+import { readFileSync, writeFileSync } from "node:fs"
 
-import { docRootBase, docRootPaths, readManifest } from "../manifest.mjs"
 import { SEGMENT_BY_ROLE, readBatchStatusLine, sectionHeaderRe, findPlaceholderResidue, placeholderResidueError } from "./batch-skeleton.mjs"
+import { batchDocBases, resolveBatchDocPath } from "./batch-paths.mjs"
 import { closeBatchRecord, createBatchRecord, findInFlightBatch, statusBatchRecord } from "./batch-lifecycle.mjs"
 
-export { SEGMENT_BY_ROLE }
+export { SEGMENT_BY_ROLE, batchDocBases, resolveBatchDocPath }
 
 /** text 单次上限（BATCH-RECORD.md §4.1——超出引导分段追加，不承诺"不新盖戳"）。append 迁移域私有区常量
  *  （随执行体自 batch-segment.mjs 迁入——骨架档只住骨架/状态行单源，lifecycle 档头枚举口径）；
@@ -60,55 +59,12 @@ export function configureBatchSegment(impl) {
 /** 撤销注入（测试与端装配生命周期用——缺省态 = 零记账）。 */
 export function resetBatchSegment() { injectedOnWrite = null }
 
-/** 可读文件判据（存在且为文件——目录/缺失同判不可读；与 lifecycle 档同名 helper 同型——
- *  KD-4 单向依赖下各自持有，三行谓词不构成第二权威源）。 */
-function readableFile(abs) {
-  try { return existsSync(abs) && statSync(abs).isFile() } catch { return false }
-}
-
 /**
- * 批次档路径门禁（评审侧 BATCH-RECORD.md §4.2 口径 = **「若传则须可读」**）：空/非字符串/不可读 → throw。
- * 非空且可读 → 返回绝对路径（`\` 归一——照 `files`/`batchDoc` spawn 门先例）。
- * v2：cwd 不可读 → manifest `docRoot.batches` 复判（M3 模块设计 §2.1#4——N3 可迁移；
- * 值形态 = 串 | 多根数组——逐基底按序复判，首个可读者胜）。
+ * 批次档路径解析单源（`BATCH-RECORD.md` §4.15 · 台账 #287——实现住 `batch-paths.mjs`，本档 re-export）：
+ * 候选序 cwd → 项目根 → 逐基底 · 读面取首个**可读**（口径仍「若传则须可读」，错误文案逐字零变）·
+ * create 取首个落基底内 · 锚定防嵌套（按路径段判）。四处调用点（create / 读面 / 评审门 / spawn 门）
+ * 均经该叶档——本档不再持第二份解析实现。
  */
-export function resolveBatchDocPath(cwd, given) {
-  const base = cwd ?? process.cwd()
-  const raw = typeof given === "string" ? given.trim() : ""
-  if (!raw) {
-    throw new Error("batchDoc must be a non-empty path to the batch record — pass the batch record currently in flight, or omit the parameter entirely when no batch record is in flight.")
-  }
-  const abs = resolve(base, raw.replace(/\\/g, "/"))
-  if (readableFile(abs)) return abs
-  // 双基底（M3 模块设计 §2.1#4）：cwd 不可读 → manifest docRoot.batches 复判（逐基底按序，
-  // 首个可读者胜）；manifest 缺失 / 非法 / 读错 → 无第二基底（v1 单基底语义零变），
-  // 全不可读 → throw。
-  let man = { ok: false }
-  try { man = readManifest(base) } catch { /* 权限等读错——按无 manifest 处理（v1 语义） */ }
-  if (man.ok) {
-    for (const root of docRootPaths(man.manifest?.docRoot?.batches, base)) {
-      const alt = resolve(root, raw.replace(/\\/g, "/"))
-      if (readableFile(alt)) return alt
-    }
-  }
-  throw new Error(`batchDoc is not a readable file: ${raw} — pass the path of the batch record currently in flight (a path that resolves to an existing file), or omit the parameter when no batch record is in flight.`)
-}
-
-/**
- * 批次档基底根数组（**声明面单源**——轮 2 裁定：create 相对基底 / depth-0 在飞扫描共用，
- * 不写死 `docs/batches`）：manifest `docRoot.batches`（串 | 多根数组）→ `docRootPaths`
- * 归一去重（相对基底按项目根解析）；manifest 缺失/非法/读错 → 回退默认基底 `"docs/batches"`
- * （v1 单基底语义零变）。恒返回非空数组（create 的 bases[0] / findInFlightBatch 扫描面消费）。
- * @param {string} cwd
- * @returns {string[]}
- */
-export function batchDocBases(cwd) {
-  const base = cwd ?? process.cwd()
-  let man = { ok: false }
-  try { man = readManifest(base) } catch { /* 读错 → 按无 manifest 处理（回退默认基底） */ }
-  const roots = man.ok ? docRootPaths(man.manifest?.docRoot?.batches, base) : []
-  return roots.length ? roots : [resolve(docRootBase(base), "docs/batches")]
-}
 
 /**
  * 设计评审的实例绑定解析（BATCH-RECORD.md §4.2/§4.3——评审实例的唯一路径来源）：

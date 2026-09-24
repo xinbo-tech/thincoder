@@ -193,3 +193,36 @@ test("T33b 错误/正常：eng-designer 同受 batchDoc 门禁（文案含实际
   assert.ok(!built.child._engDesignReviewed, "designer 不走 token 面（无 token 需求——§1.5 #4）")
   assert.equal(built.child._engTaskAuthorized, undefined, "designer 无任务域授权（写操作仍走人工 ask——§2.15 E）")
 })
+
+// ── 第 3 批（BATCH-RECORD.md §4.15 · 台账 #287）：门内解析改经 batch-paths 单源（BR-29 / BR-33）──
+/** 项目根立档（门内解析「项目根腿」判据 = 归属链 / 发现梯——真 fs）。 */
+const makeProjectRoot = (dir) => writeFileSync(join(dir, "PROJECT-MANIFEST.json"), "{}\n")
+/** designer 最小 parent（cwd 可指定——门内解析序 cwd 形可变）。 */
+const designerParent = (cwd) => ({ cwd, provider: { name: "p", model: "m" }, config: { agent: { engineering: true } }, tools: [] })
+const buildDesignerIn = (parent, args) => buildSpawnChild(parent, { agent: parent, callbacks: {} }, args, "eng-designer", false, [], [], null)
+
+test("BR-33 正常：spawn 门 cwd = 项目内子目录 + 根相对串 ⇒ 通过（门内解析与 append 同源；拒面文案零变）", () => {
+  makeProjectRoot(tmp)
+  const { rel, abs } = makeBatchDoc()
+  const sub = join(tmp, "sub")
+  mkdirSync(sub, { recursive: true })
+  const parent = designerParent(sub)
+  const built = buildDesignerIn(parent, { task: ENG_TASK_BOOK_MIN, round: "initial", batchDoc: rel })
+  assert.ok(built.child._spawnSystemBlock.includes(`Batch record (batchDoc): ${abs}`), "根相对串经项目根腿解析（单基底旧实现必拒）")
+  // 零回归硬线：不可读后缀文案逐字不变
+  const e = catchErr(() => buildDesignerIn(parent, { task: ENG_TASK_BOOK_MIN, round: "initial", batchDoc: "docs/batches/none.md" }))
+  assert.equal(e?.message, baseMsg("eng-designer") + " (given path is not a readable file)")
+})
+
+test("BR-33b 正常：spawn 门 cwd = 项目根的上级目录 + 根相对串 ⇒ 通过（此前必拒）", () => {
+  const nest = join(tmp, "nest")
+  const proj = join(nest, "proj")
+  mkdirSync(join(proj, "docs", "batches"), { recursive: true })
+  makeProjectRoot(proj)
+  const abs = join(proj, "docs", "batches", "b.md")
+  writeFileSync(abs, "# 批次档（测试夹具）\n")
+  const parent = designerParent(nest)
+  const built = buildDesignerIn(parent, { task: ENG_TASK_BOOK_MIN, round: "initial", batchDoc: "docs/batches/b.md" })
+  assert.ok(built.child._spawnSystemBlock.includes(`Batch record (batchDoc): ${abs}`), "上级目录 cwd + 根相对串 ⇒ 项目根腿命中")
+})
+

@@ -5,9 +5,9 @@
  * depth-0 在飞批定位（findInFlightBatch——D-BR21）。判定字面全部单源自 batch-skeleton.mjs
  * （SEGMENT_BY_ROLE / STATUS_WORDS / STATUS_LINE_RE / readBatchStatusLine / sectionHeaderRe /
  * batchSkeleton / TEMPLATE_PLACEHOLDERS / findPlaceholderResidue / placeholderResidueError）；
- * 路径解析单源（resolveBatchDocPath / batchDocBases）与 #84 记账缝住 batch.mjs
- * 主档——**依赖单向（KD-4）：skeleton ← lifecycle ← 主档**，主档把解析后的 cwd/bases/目标闭包
- * 传进来，本档不回 import 主档（防环）。
+ * 路径解析单源（`resolveBatchDocPath` / `batchDocBases` / `resolveBatchCreatePath`——住 `batch-paths.mjs`，
+ * 本档 import 取用）与 #84 记账缝住 batch.mjs 主档——**依赖单向（KD-4）：paths ← skeleton ← lifecycle
+ * ← 主档**，主档把解析后的 cwd/bases/目标闭包传进来，本档不回 import 主档（防环）。
  *
  * 身份判据（D-BR17/D-BR18/D-BR21）：主 agent 的工具调用 ctx 带 `depth === 0`（dispatch 装配）；
  * eng 子代理 `ctx.depth > 0`；评审实例 ctx 无 depth 但工具以 `review: true` 绑定。create/close
@@ -16,12 +16,13 @@
  * 状态面走普通文档写）；depth-0 的 status/path 面按 D-BR21（可选 path，缺省 = 在飞批唯一时取）。
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
-import { dirname, isAbsolute, resolve, sep } from "node:path"
+import { dirname, resolve } from "node:path"
 
 import {
   SEGMENT_BY_ROLE, STATUS_WORDS, STATUS_LINE_RE, readBatchStatusLine, sectionHeaderRe, batchSkeleton,
   TEMPLATE_PLACEHOLDERS, findPlaceholderResidue, placeholderResidueError,
 } from "./batch-skeleton.mjs"
+import { resolveBatchCreatePath } from "./batch-paths.mjs"
 
 /** 可读文件判据（存在且为文件——目录/缺失同判不可读；与主档同名 helper 同型——KD-4 单向
  *  依赖下各自持有，三行谓词不构成第二权威源）。 */
@@ -87,21 +88,13 @@ export function findInFlightBatch(cwd, bases) {
   return candidates[0]
 }
 
-/** create 路径越界判据（fix 轮 #12）：解析后须落在某一基底根之内；win32 大小写不敏感比较。 */
-function assertInsideBases(abs, bases, raw) {
-  const norm = (p) => (process.platform === "win32" ? p.toLowerCase() : p)
-  const target = norm(abs)
-  for (const b of bases) {
-    const root = norm(b)
-    if (target === root || target.startsWith(root.endsWith(sep) ? root : root + sep)) return
-  }
-  throw new Error(`batch: create path resolves outside the batch-record base roots — a batch record must live under the declared docRoot.batches base (fail-closed). Path: ${raw}`)
-}
+/** create 路径越界判据已迁 `batch-paths.mjs`（`resolveBatchCreatePath` 内含——§4.15 单源）。 */
 
 /**
  * create——建档（§4.11，仅 depth-0）。六段骨架一次预齐（骨架模板单源 = batchSkeleton），
  * 建档即过 gate（§1 占位状态行含「进行中」）；fail-closed：非 .md / 越基底 / 目标已存在 ⇒ throw
  * （不覆盖既有批档，BR-20）；目录缺失 ⇒ mkdir -p 后落位（BR-25）。不代建台账条目。
+ * 路径解析 = `resolveBatchCreatePath`（§4.15 单源：候选序首个落基底内者 / 锚定串只解析项目根形）。
  * F11-B：`source` **必填**（topic 同款空拒——骨架编制行实参化；不传 = 死占位残留必被 F11-C 拒
  * ⇒ create 即拒，不留死锁）；`prev` 传入值**幂等剥**「前情 = 」前缀（值规范化；默认值零变）。
  * @returns {string} 成功消息（含落盘绝对路径）
@@ -119,8 +112,7 @@ export function createBatchRecord({ args, ctx, review, cwd, bases, onWritten }) 
   if (!primary) {
     throw new Error("batch: no batch-record base root is available — fix PROJECT-MANIFEST.json docRoot.batches (or its default) before creating a record. Nothing was written.")
   }
-  const abs = isAbsolute(raw) ? resolve(raw) : resolve(primary, raw.replace(/\\/g, "/"))
-  assertInsideBases(abs, bases, raw)
+  const abs = resolveBatchCreatePath(cwd, raw, bases)
   if (readableFile(abs)) {
     throw new Error(`batch: create target already exists — refusing to overwrite an existing batch record (fail-closed, BR-20): ${raw}`)
   }
