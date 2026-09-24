@@ -18,7 +18,7 @@ function priced(over = {}) {
   return data
 }
 
-test("render.1：概览判官三行 + 分歧率 + 方法判分条 + 成本表两列 + ⇄ 标记 + 《判官分歧》 + 告警计数", () => {
+test("render.1：概览判官三行 + 分歧率 + 方法判分条 + 成本表五列 + ⇄ 标记 + 《判官分歧》 + 告警计数", () => {
   const data = priced()
   const md = renderReport(data)
   for (const needle of [
@@ -27,10 +27,10 @@ test("render.1：概览判官三行 + 分歧率 + 方法判分条 + 成本表两
     "- 仲裁 C：`mimo:mimo-v2.6-pro`",
     "（仅分歧样本）",
     "- 判官分歧率：50%（分歧 1 ÷ A/B 双有效样本 2）",
-    "- 判官成本合计 ¥0.0171 · 复核成本 ¥0.00216",
+    "评估开销（判官 / 复核）不进被测成本、不参与相对成本归一化——报告不列评估开销金额；账目见结果 JSON",
     "判官对（A / B 双判 · 同一冻结 rubric）",
     "- 判分模板：判官 promptVersion = 1 · 复核 promptVersion = 1 · 判官配置冻结于 suiteVersion 5",
-    "| 模型 | 总成本 | 每任务成本 | 每通过任务成本 | 相对成本 | 判官成本 | 复核成本 |",
+    "| 模型 | 总成本 | 每任务成本 | 每通过任务成本 | 相对成本 |",
     "### 判官分歧",
     "### 复核翻案",
     "判官不可用 1 次（有效判不足 1 · 分歧未决 0）· 判官分歧 1 次（仲裁 1）· 机械 fail 复核 2 次（翻案 1 次）",
@@ -48,23 +48,20 @@ test("render.1：概览判官三行 + 分歧率 + 方法判分条 + 成本表两
   assert.ok(md.includes("| multiturn.2 | deepseek-flash | pass |"), "《判官分歧》逐条列 A / B / C")
   assert.ok(md.includes("| tools.3 | deepseek-flash |"), "《复核翻案》逐条列机械失败断言与复核理由")
   assert.ok(md.includes("overturn（翻案）"), "翻案单列")
-  // 相对成本基准 = 每通过任务成本（判官 / 复核成本不参与归一化）
+  // 相对成本基准 = 每通过任务成本（评估开销不参与归一化——成本表脚注 = 分账原则句，§2.3-8）
   const costBlock = md.split("### 成本表")[1].split("### 逐维明细")[0]
-  assert.ok(costBlock.includes("不参与相对成本归一化"), "成本表注明两列口径")
-  assert.equal(costBlock.includes("判官成本 = Σ"), false, "判官成本不并入总成本口径句")
+  assert.ok(costBlock.includes("不参与相对成本归一化"), "成本表脚注 = 分账原则句")
   // 判官理由行 / 复核行（逐维明细）
   assert.ok(md.includes("- 判官 · deepseek-flash：A=pass / B=pass → 合成分 pass（unanimous）"), "判官理由行")
   assert.ok(md.includes("- 复核 · deepseek-flash：1 次（uphold 1 · 翻案 0）"), "复核行")
-  // 缺价位口径句（§2.10.5）：B 位换成未录价键 ⇒ 合计标注「不含未录价位」+ 成本表说明（不得当全量读）
+  // 缺价位（§2.10.5）：B 位换成未录价键 ⇒ 位级成本 null + 缺价警告在位（金额零展示 ⇒ 缺价面由 warnings / 控制台承载）
   const unpricedData = priced()
   unpricedData.judge.judges[1] = { ...unpricedData.judge.judges[1], provider: "tokenhub", model: "hy3" }
   unpricedData.warnings = []
   applyPricesToResult(unpricedData, loadPrices(pricesPath()), unpricedData.warnings)
   assert.equal(unpricedData.judge.judges[1].costCny, null, "缺价 ⇒ 位级成本 null")
   assert.ok(unpricedData.warnings.some((w) => w.includes("价格未录：判官 B（tokenhub:hy3）")), "缺价警告在位")
-  const mdUnpriced = renderReport(unpricedData)
-  assert.ok(mdUnpriced.includes("不含未录价位：tokenhub:hy3"), "合计口径句（缺价位不明示 ⇒ 部分和冒充合计）")
-  assert.ok(mdUnpriced.includes("- 判官成本口径：以下判官位未录价"), "成本表缺价说明句")
+  assert.equal(/判官成本|复核成本/.test(renderReport(unpricedData)), false, "缺价形态渲染零评估开销字样（md 无缺价口径句）")
   // 复核失败（AC-12 告警面 + AC-1 第三态 fail-closed）：注入 review error ⇒ 该 run 保持 fail（无有效复核结论 ⇒ 不改判）
   const withRevErr = priced()
   const revErrRun = withRevErr.models[0].cases.find((c) => c.caseId === "tools.3").runs[0]
@@ -72,7 +69,7 @@ test("render.1：概览判官三行 + 分歧率 + 方法判分条 + 成本表两
   applyPricesToResult(withRevErr, loadPrices(pricesPath()), []) // 账目主位按生产同源重算（uphold / 翻案 / 失败计数）
   assert.equal(withRevErr.models[0].aggregate.passed, 2, "复核失败 ⇒ 不改判（不计入通过数——fail-closed）")
   const mdErr = renderReport(withRevErr)
-  assert.ok(mdErr.includes("复核 2 次 · uphold 1 · 翻案 0 · 复核失败 1"), "概览复核行含复核失败计数")
+  assert.ok(mdErr.includes("（uphold 0 · 翻案 0 · 复核失败 1）"), "逐维明细复核行含复核失败计数（统计住非成本面）")
   assert.ok(mdErr.includes("机械 fail 复核 2 次（翻案 0 次 · 复核失败 1 次）"), "告警行含复核失败计数（成因分列口径）")
 })
 
@@ -103,9 +100,9 @@ test("render.2：逐维明细题面行 = 题面正本（>300 字符 ⇒ 渲染�
   assert.ok(shown.endsWith("…"), "超限截断以 `…` 标注")
 })
 
-test("report.1：夹具渲染 → 七段骨架齐 + 三表 + 逐维明细 + 人工判读在位；轴-only ⇒ 只出速度/成本表", () => {
+test("report.1：夹具渲染 → 七段骨架齐 + 四表 + 逐维明细 + 人工判读在位；轴-only ⇒ 只出速度/成本表", () => {
   const md = renderReport(fixtureResult())
-  for (const section of ["## 概览", "## 方法", "## 结果", "### 能力矩阵", "### 速度表", "### 成本表", "### 逐维明细", "### 人工判读", "### 判官分歧", "### 复核翻案", "## 关键发现", "## 局限声明", "## 附录", "### 复跑命令", "### 结果指针"]) {
+  for (const section of ["## 概览", "## 方法", "## 结果", "### 能力矩阵", "### 速度表", "### 用时表", "### 成本表", "### 逐维明细", "### 人工判读", "### 判官分歧", "### 复核翻案", "## 关键发现", "## 局限声明", "## 附录", "### 复跑命令", "### 结果指针"]) {
     assert.ok(md.includes(section), `缺段：${section}`)
   }
   assert.match(md, /^# 模型基准报告 · fx-run · 2026-09-23/m)

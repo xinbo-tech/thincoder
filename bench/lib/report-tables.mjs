@@ -6,11 +6,15 @@
  */
 
 import { DIMENSIONS, DIM_LABELS } from "../cases/index.mjs"
-import { aggregateVerdict, speedMedians } from "./metrics.mjs"
+import { aggregateVerdict, speedMedians, sumPresent } from "./metrics.mjs"
 import { head } from "./output.mjs"
 import { MIXED_NOTE, isMixedOverturn, judgeMark, reviewMark } from "./report-review.mjs"
 
 const VERDICT_TAG = { pass: "✅ pass", fail: "❌ fail", error: "⚠️ error", skipped: "—" }
+
+/** 评估开销分账原则句（§2.3-8 **逐字冻结 · 单一字符串**）：成本表脚注 + 概览分账句同源。
+ *  约束（`render.3` ②③ 逐字对齐）：含「不参与相对成本归一化」；**不含** `判官成本` / `复核成本` / 「两列」；零金额。 */
+export const EVAL_SPLIT_NOTE = "评估开销（判官 / 复核）不进被测成本、不参与相对成本归一化——报告不列评估开销金额；账目见结果 JSON"
 
 export const fmtMs = (n) => (n == null ? "—" : `${Math.round(n)} ms`)
 export const fmtRate = (n) => (n == null ? "—" : String(Math.round(n * 10) / 10))
@@ -58,7 +62,7 @@ export function caseCell(model, caseId) {
   }
 }
 
-/** 模型级统计（能力 / 速度 / 成本，供三表与关键发现共用）。 */
+/** 模型级统计（能力 / 速度 / 用时 / 成本，供四表与关键发现共用）。 */
 export function modelStats(data) {
   return (data.models ?? []).map((m) => {
     const runs = allRuns(m)
@@ -68,6 +72,8 @@ export function modelStats(data) {
     const total = caseVerd.filter((v) => v !== "skipped").length
     const costs = runs.map((r) => r.metrics?.cost?.value).filter((v) => typeof v === "number")
     const costCny = costs.length > 0 ? costs.reduce((a, b) => a + b, 0) : null
+    // 用时面（§2.3-7）：参与面 = 实际执行的 run（`skipped` 不入；`totalMs` 为 null 不计入——不按 0 计）
+    const timed = runs.filter((r) => r.verdict !== "skipped" && typeof r.metrics?.totalMs === "number")
     return {
       model: m,
       label: m.label,
@@ -75,15 +81,15 @@ export function modelStats(data) {
       total,
       passedRuns: passedRuns.length,
       taskRuns: runs.length,
-    costCny,
-    costPerTask: costCny != null && total > 0 ? costCny / total : null,
-    costPerPass: costCny != null && passed > 0 ? costCny / passed : null,
-    judgeCostCny: m.aggregate?.judgeCostCny ?? null,
-    reviewCostCny: m.aggregate?.reviewCostCny ?? null,
-    overturns: runs.filter((r) => r.review?.verdict === "overturn").length,
-    speed: speedMedians(runs),
-    errRuns: runs.filter((r) => r.verdict === "error").length,
-  }
+      costCny,
+      costPerTask: costCny != null && total > 0 ? costCny / total : null,
+      costPerPass: costCny != null && passed > 0 ? costCny / passed : null,
+      overturns: runs.filter((r) => r.review?.verdict === "overturn").length,
+      totalMsSum: sumPresent(timed.map((r) => r.metrics.totalMs)),
+      sampledRuns: timed.length,
+      speed: speedMedians(runs),
+      errRuns: runs.filter((r) => r.verdict === "error").length,
+    }
   })
 }
 
@@ -173,28 +179,17 @@ export function costSection(data, stats) {
     "### 成本表",
     "",
     "总成本 = Σ 成功返回的 call 成本；每任务成本 = 总成本 ÷ 任务数（该模型面内的用例数）；每通过任务成本 = 总成本 ÷ 通过任务数（用例判定 N 次全过 = pass）；**相对成本 = 每通过任务成本 ÷ 表内最低者（最低 = 1×，直接读倍数）**；**按每通过任务成本升序（最便宜居首 = 1.0×）**。",
-    "**判官成本 = A / B / 仲裁 C 三位合计**；判官与复核两列单列展示——**不参与相对成本归一化，也不进被测成本**（AC-4 成本分账）。",
     "",
-    "| 模型 | 总成本 | 每任务成本 | 每通过任务成本 | 相对成本 | 判官成本 | 复核成本 |",
-    "| --- | --- | --- | --- | --- | --- | --- |",
-    ...stats.map((s) => `| ${s.label} | ${fmtMoney(s.costCny)} | ${fmtMoney(s.costPerTask)} | ${fmtMoney(s.costPerPass)} | ${relOf(s.costPerPass)} | ${fmtMoney(s.judgeCostCny)} | ${fmtMoney(s.reviewCostCny)} |`),
+    "| 模型 | 总成本 | 每任务成本 | 每通过任务成本 | 相对成本 |",
+    "| --- | --- | --- | --- | --- |",
+    ...stats.map((s) => `| ${s.label} | ${fmtMoney(s.costCny)} | ${fmtMoney(s.costPerTask)} | ${fmtMoney(s.costPerPass)} | ${relOf(s.costPerPass)} |`),
     ...(footnotes.length > 0 ? ["", "脚注：", ...footnotes] : []),
     "",
-    ...judgeCostNotes(data),
+    EVAL_SPLIT_NOTE,
+    "",
     `- 计费口径：单价以 prices.json 为准（asOf ${data.prices?.asOf}；逐条出处以条目级 source 可回溯）。`,
     "",
   ]
-}
-
-/** 判官 / 复核成本列的缺价口径句（§2.10.5：缺价 ⇒ 位级 null + 警告；合计 = 已录价位之和——不得当全量读）。 */
-function judgeCostNotes(data) {
-  const j = data.judge
-  if (!j) return []
-  const unpriced = [j.judges?.[0], j.judges?.[1], j.arbiter]
-    .filter((s) => s && (s.calls ?? 0) > 0 && s.costCny == null)
-    .map((s) => `${s.provider}:${s.model}`)
-  if (unpriced.length === 0) return []
-  return [`- 判官成本口径：以下判官位未录价（成本列 = **已录价位之和**，不含它们；位级成本 null + 告警）：${unpriced.join("、")}。`, ""]
 }
 
 /** 复核行标注（§2.11 呈现）：混合面翻案 ⇒ 附「判官面未裁决」（原短路未调判官 · 复核只裁机械面）；

@@ -1,19 +1,21 @@
 /**
  * lib/report.mjs — 结果对象 → md 报告（设计 §2.3：骨架固定，缺段即缺陷）。
  *
- * md 完全由结果 JSON 渲染 ⇒ 两档恒一致。表格分段与聚合件在 `lib/report-tables.mjs`（拆分触发条件）；
+ * md 完全由结果 JSON 渲染 ⇒ 两档恒一致。表格分段与聚合件在 `lib/report-tables.mjs` / `lib/report-time.mjs`（拆分触发条件）；
  * 本档 = 概览 / 方法 / 关键发现 / 局限声明 / 附录 + 骨架装配。关键发现只由数据 + 固定句式生成（禁主观评价词）。
  */
 
 import { AXES, CAPABILITY_SELECTOR, DIMENSIONS, DIM_LABELS, MANUAL_DIM, SUITE_VERSION } from "../cases/index.mjs"
 import {
-  allRuns, costSection, detailSection, dimsOf, fmtMoney, fmtMs, fmtRate,
+  EVAL_SPLIT_NOTE, allRuns, costSection, detailSection, dimsOf, fmtMoney, fmtMs, fmtRate,
   manualSection, matrixSection, modelStats, rate, speedSection,
 } from "./report-tables.mjs"
 import { divergenceOf, judgeDivergenceSection, reviewOverturnSection } from "./report-review.mjs"
+import { timeSection } from "./report-time.mjs"
 
-/** 概览判官面（§2.3）：判官三行（A / B / 仲裁 C）+ 分歧率 + 判官 / 复核成本（均不进被测成本归一化）。
- *  与被测重合标注 = **渲染面三级派生**（判官块不另存字段——重合事实由 `models[]` × 判官槽两侧键共同承载）。 */
+/** 概览判官面（§2.3）：判官三行（A / B / 仲裁 C · **逐位元数据无金额**）+ 分歧率 + **评估开销分账句**。
+ *  与被测重合标注 = **渲染面三级派生**（判官块不另存字段——重合事实由 `models[]` × 判官槽两侧键共同承载）。
+ *  金额零展示（KD-29）：判官 / 复核金额与缺价金额句均不入 md——账目只住结果 JSON（统计住告警行 / 《复核翻案》）。 */
 function judgeOverviewLines(data) {
   const j = data.judge
   if (!j) return []
@@ -24,15 +26,13 @@ function judgeOverviewLines(data) {
     if (testedKeys.has(`${meta.provider}:${meta.model}`)) return "该位 ∈ 被测（自判）"
     return testedVendors.has(meta.provider) ? "与被测同渠道（明示 sameVendorAsTested）" : "与被测无重合"
   }
-  const unpriced = [j.judges[0], j.judges[1], j.arbiter].filter((s) => (s.calls ?? 0) > 0 && s.costCny == null).map((s) => `${s.provider}:${s.model}`)
-  const unpricedNote = unpriced.length > 0 ? `（不含未录价位：${unpriced.join("、")}——位级成本 null + 告警）` : ""
-  const row = (name, meta, tail = "") => `- ${name}：\`${meta.provider}:${meta.model}\` · temperature ${meta.temperature} · maxTokens ${meta.maxTokens} · 超时 ${meta.timeoutSec}s · 模板 v${j.promptVersion} · 调用 ${meta.calls ?? 0} 次 · 成本 ${fmtMoney(meta.costCny)} · ${overlapOf(meta)}${tail}`
+  const row = (name, meta, tail = "") => `- ${name}：\`${meta.provider}:${meta.model}\` · temperature ${meta.temperature} · maxTokens ${meta.maxTokens} · 超时 ${meta.timeoutSec}s · 模板 v${j.promptVersion} · 调用 ${meta.calls ?? 0} 次 · ${overlapOf(meta)}${tail}`
   return [
     row("判官 A", j.judges[0]),
     row("判官 B", j.judges[1]),
     row("仲裁 C", j.arbiter, "（仅分歧样本）"),
     `- 判官分歧率：${d.rate == null ? "—" : `${Math.round(d.rate * 100)}%`}（分歧 ${d.disagree} ÷ A/B 双有效样本 ${d.doubleValid}）· 仲裁 ${d.arbitrations} 次 · 判官不可用 ${d.unavailable} 次`,
-    `- 判官成本合计 ${fmtMoney(j.costCny)}${unpricedNote} · 复核成本 ${fmtMoney(data.review?.costCny)}（复核 ${d.reviews} 次 · uphold ${d.uphold} · 翻案 ${d.overturns}${d.reviewErrors > 0 ? ` · 复核失败 ${d.reviewErrors}` : ""}）——两者均不参与被测成本与相对成本归一化。`,
+    `- ${EVAL_SPLIT_NOTE}`,
   ]
 }
 
@@ -68,7 +68,7 @@ function methodSection(data) {
     "5. 价格：单价只住 prices.json（asOf + source 可回溯）；成本 = 未缓存输入 × input + 缓存命中 × cachedInput + 输出 × output。",
     "",
     `- 复现命令：\`${data.run?.command}\``,
-    `- 套件版本：suiteVersion = ${data.suiteVersion ?? SUITE_VERSION}（题集/判据/rubric/判官身份/模板/计时口径任一变化 +1，跨版本不严格可比）`,
+    `- 套件版本：suiteVersion = ${data.suiteVersion ?? SUITE_VERSION}（题集/判据/rubric/判官身份/模板/计时口径/结果数值构成规则任一变化 +1；呈现面变化——段位增删 / 表列集 / 排序 / 图例与脚注文案——不 bump；跨版本不严格可比）`,
     ...(data.judge ? [`- 判分模板：判官 promptVersion = ${data.judge.promptVersion} · 复核 promptVersion = ${data.review?.promptVersion} · 判官配置冻结于 suiteVersion ${data.judge.frozenAtSuiteVersion}`] : []),
     `- 工具链：模型调用经核 provider 路径（thinking / reasoningEffort 等参数取用户配置原值）；temperature = ${data.run?.temperature}；多轮工具链跨轮合计计时。`,
     ...(data.recomputed ? [`- 重算产物：由 \`${data.recomputed.from}\` 于 ${data.recomputed.at} 重出（成本按当前 prices.json 重算；原档不动）。`] : []),
@@ -160,6 +160,7 @@ export function renderReport(data, { fileBase } = {}) {
   const resultSections = [
     ...(showCapability ? matrixSection(data, stats) : []),
     ...(axes.includes("speed") ? speedSection(stats) : []),
+    ...(axes.includes("speed") ? timeSection(stats) : []),
     ...(axes.includes("cost") ? costSection(data, stats) : []),
     ...(showCapability ? [...detailSection(data, stats), ...judgeDivergenceSection(data), ...reviewOverturnSection(data), ...manualSection(data)] : []),
   ]
