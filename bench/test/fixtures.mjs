@@ -73,9 +73,20 @@ function mixedOverturnCase() {
   return { caseId: "instructions.1", dim: "instructions", class: "正常", prompt: FROZEN_PROMPTS["instructions.1"], runs: [r] }
 }
 
+/** 逐档温度注入（`modelTemperatures` 变体开关）：数字 ⇒ 设字段；`null`/缺省 ⇒ 不设字段（旧档形态——§2.2-12）。 */
+const withTemp = (m, t) => (t == null ? m : { ...m, temperature: t })
+
+/** 温度例外档夹具（`modelTemperatures.length > 1` 时追加为第二档——披露句断言用）。 */
+const kimiTempModel = () => ({
+  label: "kimi-k3", provider: "kimi", model: "kimi-k3", host: "api.moonshot.cn", dims: ["reasoning"], note: "多模态；API 仅受理温度 1",
+  cases: [{ caseId: "reasoning.1", dim: "reasoning", class: "正常", prompt: FROZEN_PROMPTS["reasoning.1"], runs: [run("pass", TOK(1000, 0, 100), "命中 3")] }],
+})
+
 /** 基准夹具：含判官对 / 仲裁 / 复核记录（渲染面 + 重算面共用）；价格命中仓内 prices.json 的 deepseek 两条。
- *  `mixedOverturn` = 追加混合面翻案用例（默认关——既有读数零扰动）。 */
-export function fixtureResult({ label = "fx-run", nullTokens = false, leakText = null, warnings = [], mixedOverturn = false } = {}) {
+ *  `mixedOverturn` = 追加混合面翻案用例（默认关——既有读数零扰动）。
+ *  `modelTemperatures` = 逐档温度（数组按 models 序：数字 ⇒ 设字段 / `null` ⇒ 不设字段〔旧档形态〕；
+ *  长度 > 1 ⇒ 追加 `kimi-k3` 例外档——概览温度例外披露句断言用）。 */
+export function fixtureResult({ label = "fx-run", nullTokens = false, leakText = null, warnings = [], mixedOverturn = false, modelTemperatures = [0] } = {}) {
   const good = TOK(1000, 0, 100)
   const pass = run("pass", good, leakText ?? "命中 3")
   const fail = nullTokens ? run("fail", null, "未命中 371281") : run("fail", good, "未命中 371281")
@@ -117,7 +128,7 @@ export function fixtureResult({ label = "fx-run", nullTokens = false, leakText =
       judgeCalls: 0, costCny: null, agreements: 0, disagreements: 0, arbitrations: 0, unavailable: 0,
     },
     review: { promptVersion: 1, calls: 0, uphold: 0, overturn: 0, costCny: null },
-    models: [{
+    models: [withTemp({
       label: "deepseek-flash", provider: "deepseek", model: "deepseek-flash", host: "api.deepseek.com",
       dims: ["reasoning", "tools", "multiturn", "instructions"], note: "",
       cases: [
@@ -129,7 +140,7 @@ export function fixtureResult({ label = "fx-run", nullTokens = false, leakText =
         { caseId: "instructions.3", dim: "instructions", class: "错误", prompt: "请写一句话。硬性要求：① 必须包含英文大写单词 PASS；② 全文不得包含任何大写字母。", runs: [unavailable] },
         ...(mixedOverturn ? [mixedOverturnCase()] : []),
       ],
-    }],
+    }, modelTemperatures[0]), ...(modelTemperatures.length > 1 ? [withTemp(kimiTempModel(), modelTemperatures[1])] : [])],
     manual: [{ label: "deepseek-flash", promptId: "manual.1", prompt: "最近怎么样？", responseHead: "还行。", metrics: { ttftMs: 90, totalMs: 500, tokPerSec: 20, tokens: TOK(20, 0, 10), cost: null } }],
     warnings,
   }

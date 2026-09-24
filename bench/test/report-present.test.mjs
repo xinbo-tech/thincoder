@@ -1,7 +1,8 @@
 /**
- * test/report-present.test.mjs — 报告呈现面用例（§5.13 `render.3` / `render.4`；`report-render.test.mjs` 超 300 行 ⇒ 拆分）。
+ * test/report-present.test.mjs — 报告呈现面用例（§5.13 `render.3` / `render.4` / `render.5`；`report-render.test.mjs` 超 300 行 ⇒ 拆分）。
  * `render.3` = 成本表列集收正（五列 · 定域反例）+ 报告零金额（md）与账目面反控（JSON 零改）；
- * `render.4` = 用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采样 run 数 / 轴门控 + ⑦ 口径行两短语与已记录 `error` run 照计 / ⑧ 部分未记录腿——2026-09-24 error-duration 批）。
+ * `render.4` = 用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采样 run 数 / 轴门控 + ⑦ 口径行两短语与已记录 `error` run 照计 / ⑧ 部分未记录腿——2026-09-24 error-duration 批）；
+ * `render.5` = 温度例外披露句（例外档在位 / 全 0 不在位 / 旧档缺字段 ≡ 全 0——2026-09-24 roster-expand 批）。
  * 夹具与 CLI 驱动在 `test/fixtures.mjs`；手动跑：`node --test "bench/test/*.test.mjs"`（不进 CI）。
  */
 
@@ -105,4 +106,19 @@ test("render.4：用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采
   ] }).split("### 用时表")[1].split("### 成本表")[0]
   assert.deepEqual([cellsIn(partBlock, "fx-part")[2], cellsIn(partBlock, "fx-part-err")[2]], ["300 ms", "500 ms"], "⑧ 部分未记录 ⇒ 按已记录之和（下界）入累计")
   assert.ok(partBlock.includes("- fx-part：1 个 run 部分 call 未记录") && partBlock.includes("- fx-part-err：1 个 run 部分 call 未记录"), "⑧ 该 run 入脚注（含「部分 call 未记录」字面）")
+})
+
+test("render.5：温度例外披露句（例外档在位 / 全 0 不在位 / 旧档缺字段 ≡ 全 0）", () => {
+  const overviewOf = (md) => md.split("## 概览")[1].split("## 方法")[0]
+  // ① 例外档（kimi-k3 = 1）+ 缺省档（deepseek-flash = 0）⇒ 概览含披露句（逐档列 label 与取值）
+  const ovExc = overviewOf(renderReport(fixtureResult({ modelTemperatures: [0, 1] })))
+  assert.ok(ovExc.includes("温度例外"), "① 存在例外档 ⇒ 概览含披露句")
+  assert.ok(ovExc.includes("kimi-k3 = 1"), "① 逐档列出 label 与取值")
+  assert.equal(ovExc.includes("deepseek-flash = "), false, "① 非例外档不入披露句（取值 = 运行参数温度）")
+  // ② 全 0（无例外）⇒ 该句不出现（反例控制）
+  const ovZero = overviewOf(renderReport(fixtureResult({ modelTemperatures: [0, 0] })))
+  assert.equal(ovZero.includes("温度例外"), false, "② 无例外档 ⇒ 披露句不出现")
+  // ③ 旧档缺字段（在档 v4 实态——§2.2-12：缺字段 ≡ 全 0，由 `??` 缺省语义保证）⇒ 同 ②
+  const ovLegacy = overviewOf(renderReport(fixtureResult({ modelTemperatures: [null, null] })))
+  assert.equal(ovLegacy.includes("温度例外"), false, "③ 旧档缺 `models[].temperature` ⇒ 等价缺省（句不出现）")
 })

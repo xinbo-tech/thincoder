@@ -167,8 +167,8 @@ export async function runMain(opts, sel, fixture) {
     for (const entry of entries) {
       const user = providers ? providers.find((p) => p.name === entry.provider) : null
       const providerEntry = opts.dryRun
-        ? { name: entry.provider, model: entry.model, baseURL: "", apiKey: "", maxTokens: opts.maxTokens, temperature: 0 }
-        : { ...user, model: entry.model, maxTokens: opts.maxTokens, temperature: 0 }
+        ? { name: entry.provider, model: entry.model, baseURL: "", apiKey: "", maxTokens: opts.maxTokens, temperature: entry.temperature ?? 0 }
+        : { ...user, model: entry.model, maxTokens: opts.maxTokens, temperature: entry.temperature ?? 0 }
       const host = providerEntry.baseURL ? new URL(providerEntry.baseURL).host : null
       const dims = effectiveDims(entry, sel.runDims)
       const judgeEnv = makeJudgeEnv({
@@ -202,7 +202,7 @@ export async function runMain(opts, sel, fixture) {
         }
         casesOut.push({ caseId: c.id, dim: c.dim, class: CLASS_LABELS[c.class], prompt, runs })
       }
-      modelsOut.push({ label: entry.label, provider: entry.provider, model: entry.model, host, dims: [...dims], cases: casesOut, note: entry.note ?? "" })
+      modelsOut.push({ label: entry.label, provider: entry.provider, model: entry.model, host, temperature: providerEntry.temperature, dims: [...dims], cases: casesOut, note: entry.note ?? "" })
       if (sel.runManual) {
         for (const mp of MANUAL) {
           const manualCase = { id: mp.promptId, promptId: mp.promptId, prompt: mp.prompt, callOpts: {} }

@@ -128,7 +128,8 @@ node bench/run.mjs --recompute --from bench/results/2026-09-24-flash-compare-v4.
 
 ## 维护
 
-**`bench/models.json`（参测清单）**：增删模型 = 编辑此档，不改代码。
+**`bench/models.json`（参测清单）**：现行受测名单 = **29 档**（2026-09-24 名单扩容批）；增删模型 = 编辑此档，不改代码。
+**preview 档不入测试名单**（通用原则——今后名单维护照此）。
 
 ```json
 { "label": "mimo-v2.6-flash", "provider": "mimo", "model": "mimo-v2.6-flash",
@@ -138,7 +139,10 @@ node bench/run.mjs --recompute --from bench/results/2026-09-24-flash-compare-v4.
 - `provider` = 用户 `~/.thincoder/config.json` 的 `providers[].name`（**只存名字，密钥只住用户 config**）；
   条目 provider 不在 config → 运行报错退出（缺失名单点名）。
 - `dims`（白名单）/ `skipDims`（黑名单）：限定/跳过该模型的维度；两者同给 = 先白后黑。
-- 调模型经**核 provider 路径**（`thinking` / `reasoningEffort` 等取用户配置原值；`temperature = 0`、
+- `temperature`（0–2；缺省 0）：**模型级温度例外**——**仅当该模型 API 拒收 `temperature: 0` 时逐档显式开**
+  （准入依据 = 探针实测；现行例外 = kimi 四档恒 `1`）。实际取值入结果 JSON 的 `models[].temperature`，
+  报告概览派生「温度例外」披露句（无例外 ⇒ 该句不出现）——跨档比较的测量条件差异不得静默。
+- 调模型经**核 provider 路径**（`thinking` / `reasoningEffort` 等取用户配置原值；`temperature = 0`（例外档取档位值）、
   `maxTokens` 与 `.model` 由本轮参数覆写）⇒ 请求构造即产品真实所见。
 
 **`bench/judge.json`（判官配置）**：换判官 / 模板 / rubric ⇒ **`SUITE_VERSION + 1`** 并同步 `frozenAtSuiteVersion`（否则拒跑）。

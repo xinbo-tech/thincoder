@@ -48,6 +48,194 @@
       "dims": null,
       "skipDims": null,
       "note": "多模态"
+    },
+    {
+      "label": "deepseek-v4-pro",
+      "provider": "deepseek",
+      "model": "deepseek-v4-pro",
+      "dims": null,
+      "skipDims": ["vision"],
+      "note": "旗舰；判官 C 位同键"
+    },
+    {
+      "label": "glm-5.3",
+      "provider": "glm",
+      "model": "glm-5.3",
+      "dims": null,
+      "skipDims": ["vision"],
+      "note": "旗舰（走 glm 原厂）"
+    },
+    {
+      "label": "glm-5.3-flashx",
+      "provider": "glm",
+      "model": "glm-5.3-flashx",
+      "dims": null,
+      "skipDims": null,
+      "note": "多模态；走 glm 原厂（plan 无权限）"
+    },
+    {
+      "label": "glm-4.5-air",
+      "provider": "glm",
+      "model": "glm-4.5-air",
+      "dims": null,
+      "skipDims": ["vision"],
+      "note": "轻档（走 glm 原厂）"
+    },
+    {
+      "label": "qwen3.8-max",
+      "provider": "qwen",
+      "model": "qwen3.8-max",
+      "dims": null,
+      "skipDims": null,
+      "note": "多模态"
+    },
+    {
+      "label": "qwen3.6-plus",
+      "provider": "qwen",
+      "model": "qwen3.6-plus",
+      "dims": null,
+      "skipDims": null,
+      "note": "多模态"
+    },
+    {
+      "label": "qwen3.6-flash",
+      "provider": "qwen",
+      "model": "qwen3.6-flash",
+      "dims": null,
+      "skipDims": null,
+      "note": "多模态"
+    },
+    {
+      "label": "qwen3.7-max",
+      "provider": "qwen",
+      "model": "qwen3.7-max",
+      "dims": null,
+      "skipDims": ["vision"],
+      "note": "无视觉（实测拒图像输入）"
+    },
+    {
+      "label": "qwen3.7-plus",
+      "provider": "qwen",
+      "model": "qwen3.7-plus",
+      "dims": null,
+      "skipDims": ["vision"],
+      "note": "无视觉（spec 未建行）"
+    },
+    {
+      "label": "qwen3.7-flash",
+      "provider": "qwen",
+      "model": "qwen3.7-flash",
+      "dims": null,
+      "skipDims": null,
+      "note": "多模态"
+    },
+    {
+      "label": "qwen3.8-27b",
+      "provider": "qwen",
+      "model": "qwen3.8-27b",
+      "dims": null,
+      "skipDims": null,
+      "note": "多模态（27B 本地族）"
+    },
+    {
+      "label": "qwen3.6-27b",
+      "provider": "qwen",
+      "model": "qwen3.6-27b",
+      "dims": null,
+      "skipDims": null,
+      "note": "多模态（27B 本地族）"
+    },
+    {
+      "label": "qwen3.5-27b",
+      "provider": "qwen",
+      "model": "qwen3.5-27b",
+      "dims": null,
+      "skipDims": ["vision"],
+      "note": "无视觉（spec 未建行）"
+    },
+    {
+      "label": "kimi-k3",
+      "provider": "kimi",
+      "model": "kimi-k3",
+      "dims": null,
+      "skipDims": null,
+      "note": "多模态；API 仅受理温度 1",
+      "temperature": 1
+    },
+    {
+      "label": "kimi-k2.6",
+      "provider": "kimi",
+      "model": "kimi-k2.6",
+      "dims": null,
+      "skipDims": ["vision"],
+      "note": "API 仅受理温度 1",
+      "temperature": 1
+    },
+    {
+      "label": "kimi-k2.7-code",
+      "provider": "kimi",
+      "model": "kimi-k2.7-code",
+      "dims": null,
+      "skipDims": ["vision"],
+      "note": "代码档；API 仅受理温度 1",
+      "temperature": 1
+    },
+    {
+      "label": "kimi-k2.7-code-highspeed",
+      "provider": "kimi",
+      "model": "kimi-k2.7-code-highspeed",
+      "dims": null,
+      "skipDims": ["vision"],
+      "note": "极速档；API 仅受理温度 1",
+      "temperature": 1
+    },
+    {
+      "label": "minimax-m3",
+      "provider": "minimax",
+      "model": "MiniMax-M3",
+      "dims": null,
+      "skipDims": null,
+      "note": "多模态；model ID = API 字面"
+    },
+    {
+      "label": "minimax-m2.7-highspeed",
+      "provider": "minimax",
+      "model": "MiniMax-M2.7-highspeed",
+      "dims": null,
+      "skipDims": ["vision"],
+      "note": "极速档；model ID = API 字面"
+    },
+    {
+      "label": "hy3",
+      "provider": "tokenhub",
+      "model": "hy3",
+      "dims": null,
+      "skipDims": ["vision"],
+      "note": "无视觉（实测）；判官 B 位同键"
+    },
+    {
+      "label": "doubao-seed-2-1-pro-260915",
+      "provider": "ark",
+      "model": "doubao-seed-2-1-pro-260915",
+      "dims": null,
+      "skipDims": ["vision"],
+      "note": "字节旗舰（spec 未建行）"
+    },
+    {
+      "label": "doubao-seed-2-1-turbo-260628",
+      "provider": "ark",
+      "model": "doubao-seed-2-1-turbo-260628",
+      "dims": null,
+      "skipDims": ["vision"],
+      "note": "中档（spec 未建行）"
+    },
+    {
+      "label": "doubao-seed-2-1-lite-260915",
+      "provider": "ark",
+      "model": "doubao-seed-2-1-lite-260915",
+      "dims": null,
+      "skipDims": ["vision"],
+      "note": "轻档；已实测通过（404 已翻转）"
     }
   ]
 }

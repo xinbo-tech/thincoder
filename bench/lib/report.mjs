@@ -38,6 +38,9 @@ function judgeOverviewLines(data) {
 
 function overviewSection(data, stats) {
   const date = String(data.startedAt ?? "").slice(0, 10)
+  const runTemp = data.run?.temperature ?? 0
+  // 温度例外披露句（§2.3）：实际温度 ≠ 运行参数温度的档逐条列出；无例外 ⇒ 不出现；旧档缺字段 ≡ 缺省
+  const tempExceptions = (data.models ?? []).filter((m) => (m.temperature ?? runTemp) !== runTemp)
   return [
     "## 概览",
     "",
@@ -50,6 +53,9 @@ function overviewSection(data, stats) {
     "| --- | --- | --- | --- | --- | --- |",
     ...stats.map((s) => `| ${s.label} | ${s.model.provider} | ${s.model.model} | ${dimsOf(s.model).map((d) => DIM_LABELS[d] ?? d).join("、") || "—"} | ${s.passed}/${s.total}（${rate(s.passed, s.total)}） | ${s.model.note || "—"} |`),
     "",
+    ...(tempExceptions.length > 0
+      ? [`- 温度例外：${tempExceptions.map((m) => `${m.label} = ${m.temperature}`).join(" · ")}（模型级例外——仅该档 API 拒收温度 ${runTemp} 时开启；其余档恒 ${runTemp}）`, ""]
+      : []),
     ...judgeOverviewLines(data),
     "",
   ]
