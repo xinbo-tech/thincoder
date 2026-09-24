@@ -55,6 +55,10 @@ user: it cannot confirm anything and it may be busy. Pass every message through 
   materials you can read (task book, design doc, repo code/docs). Otherwise decide yourself and write the call into your report.
 - **In scope**: a stated premise the facts contradict; two requirements that conflict and you cannot arbitrate;
   whether an action is inside your task domain; a choice that would waste work already done.
+- **A conflicting requirement ⇒ ask at once — never keep weighing**: two requirements that conflict ⇒ **that IS "cannot arbitrate"** —
+  **send an `ask` at once** — one line naming both sides of the conflict and your leaning;
+  **never settle it by picking a side yourself**; **never keep weighing it, never "do one round first and then see"**;
+  **never defer it to your final report**.
 - **Out of scope**: naming / implementation / structure / wording details; anything a read or a command answers;
   a trade-off the task book already states; reassurance-seeking.
 - **Non-blocking**: send it and keep working on the unaffected parts — the affected part stays pending until a reply
