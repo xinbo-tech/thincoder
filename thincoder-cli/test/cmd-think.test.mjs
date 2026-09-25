@@ -11,11 +11,15 @@
  * **关思考**（非「强度零」）⇒ `applyThink` 入口归一到 off 路径（effort 型 = `thinking:null`＋删
  * effort；type 型 = `{type:"disabled"}`，取其原生 off 形）；载荷面 = 百炼 qwen 出
  * `enable_thinking:false`（`config.mjs:133-139`）且不发 `reasoning_effort`（`provider/core.mjs:197` 门）。
+ *
+ * 2026-09-25 追加（MODEL-SPECS 清理批 §14.7 AC-5 / §14.8 E-4——纯补测，`cmd-think.mjs` 码面零改）：
+ * 回执面断言——快速径 `:37` 与环内 `:82` 回执、次拍菜单头 `:47-48` 在 `thinking:null`（NF1 显式 off）
+ * 下必须报 OFF（`!== null` 守卫缺失 ⇒ effort 型 off 后误报 ON = 红）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
 
-import { applyThink } from "../src/tui/cmd-think.mjs"
+import { applyThink, handleThinkCommand } from "../src/tui/cmd-think.mjs"
 import { specForModel, resolveEnableThinking } from "@thincoder/core/config.mjs"
 
 /** 本批四新档（核表独立行——枚举首项即 `"none"` = 旧实现会把思考关掉的那一类）。 */
@@ -150,4 +154,47 @@ test("修复轮 #11 边界：非 none 档零回归（off 标记清除 + effort �
   assert.equal("thinking" in agent.provider, false, "显式 off 标记被清除")
   assert.deepEqual(calls, [["p1", "thinking", undefined], ["p1", "reasoningEffort", "high"]])
   assert.equal(resolveEnableThinking(agent.provider, spec), true, "载荷 enable_thinking:true（随 reasoning_effort 同行）")
+})
+
+// ─── 追加（MODEL-SPECS 清理批 §14.7 AC-5 / §14.8 E-4）：`effort none` 回执面（码面零改——纯补测） ───
+
+/** ctx 直驱夹具：`pick(entries, n)` 收到第 n 拍的真渲染条目、返回选中项（null = Esc）。 */
+function thinkCtx(agent, pick) {
+  const lines = []
+  const seen = []
+  const calls = []
+  const ctx = {
+    agent,
+    syncProviderField: async (name, field, value) => { calls.push([name, field, value]) },
+    showPicker: async (title, entries) => { seen.push(entries); return pick(entries, seen.length - 1) },
+    pushLine: (t) => lines.push(t),
+    pushLabel: () => {},
+  }
+  return { ctx, lines, seen, calls }
+}
+
+test("E-4 回归（快速径）：`/think effort none` ⇒ 回执 Thinking: OFF（不比照档位报 none）", async () => {
+  const { agent } = onFixture("qwen3.8-flash")
+  const { ctx, lines, calls } = thinkCtx(agent, () => null)
+  await handleThinkCommand(ctx, ["effort", "none"])
+
+  assert.deepEqual(lines, ["Thinking: OFF"], "回执 = off 文案")
+  assert.equal(agent.provider.thinking, null, "off 形落 provider（NF1）")
+  assert.equal("reasoningEffort" in agent.provider, false, "零 effort 残留")
+  assert.deepEqual(calls, [["p1", "thinking", null], ["p1", "reasoningEffort", undefined]])
+})
+
+test("E-4 回归（环内）：effort none ⇒ 回执 OFF ∧ 次拍菜单头 Thinking: OFF（守卫缺失即误报 ON = 红）", async () => {
+  const { agent } = onFixture("qwen3.8-flash")
+  // 选项从首拍真渲染条目里取（none 门的真实性 = 渲染面自证，非合成 action）。
+  const { ctx, lines, seen, calls } = thinkCtx(agent, (entries, n) =>
+    n === 0 ? entries.find((e) => e.action === "effort" && e.level === "none") : null)
+  await handleThinkCommand(ctx, [])
+
+  assert.deepEqual(lines, ["Thinking: OFF"], "环内 none 档回执 = off 文案（:82）")
+  assert.equal(agent.provider.thinking, null, "off 形落 provider")
+  assert.equal("reasoningEffort" in agent.provider, false, "零 effort 残留（残留会被载荷层当强度档送）")
+  assert.deepEqual(calls, [["p1", "thinking", null], ["p1", "reasoningEffort", undefined]])
+  assert.equal(seen[1][0].text.includes("Thinking: OFF"), true, "次拍菜单头随状态报 OFF（:47-48）")
+  assert.equal(seen[1][0].text.includes("Thinking: ON"), false, "守卫缺失时此处误报 ON ⇒ 红")
 })

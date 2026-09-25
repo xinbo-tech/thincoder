@@ -4,7 +4,7 @@
  */
 import { escHtml } from "./ui.js"
 import { t } from "./i18n.js"
-import { SS, effortEnumFor, defaultEffortFor } from "./settings-state.js"
+import { SS, effortSelectView, effortPayloadValue } from "./settings-state.js"
 import { readConsultRowsFromDom, collectConsultRows, mountModelMenus, bindConsultRows } from "./settings-models.js"
 
 /** Agent card HTML (run parameters + subagent model assignments). */
@@ -44,10 +44,10 @@ export function consultAdvisorCardHtml() {
   const consultRows = liveRows.length > 0 ? liveRows
     : (Array.isArray(as.consultModels) ? as.consultModels : [])
   for (const cm of consultRows) {
-    const effortEnum = cm?.model ? effortEnumFor(cm.model) : null
+    const effortView = effortSelectView(cm?.model, cm?.effort)
     html += `<div class="key-field consult-row" data-provider="${escHtml(cm?.provider || "")}" data-model="${escHtml(cm?.model || "")}">`
     html += `<span class="consult-model-slot"></span>`
-    html += effortEnum && effortEnum.length > 0 ? `<select class="consult-effort">${effortEnum.map((e) => `<option value="${escHtml(e)}" ${(cm?.effort || defaultEffortFor(cm?.model)) === e ? "selected" : ""}>${escHtml(e)}</option>`).join("")}</select>` : ""
+    html += effortView ? `<select class="consult-effort">${effortView.levels.map((e) => `<option value="${escHtml(e)}" ${effortView.selected === e ? "selected" : ""}>${escHtml(e)}</option>`).join("")}</select>` : ""
     html += `<button class="consult-del" title="${t("settings.consultRemove")}">✕</button></div>`
   }
   html += `</div>`
@@ -59,8 +59,8 @@ export function consultAdvisorCardHtml() {
   const advProvider = adv.provider || ""
   html += `<div class="key-field"><label title="${t("settings.advisorProviderHelp")}">${t("settings.advisorProvider")}</label><span id="adv-model-slot" class="adv-model-slot" data-provider="${escHtml(advProvider)}" data-model="${escHtml(adv.model || "")}"></span></div>`
   {
-    const advEffortEnum = adv.model ? effortEnumFor(adv.model) : null
-    if (advEffortEnum && advEffortEnum.length > 0) html += `<div class="key-field"><label title="${t("settings.advisorEffortHelp")}">${t("settings.advisorEffort")}</label><select id="adv-effort">${advEffortEnum.map((e) => `<option value="${escHtml(e)}" ${(adv.effort || defaultEffortFor(adv.model)) === e ? "selected" : ""}>${escHtml(e)}</option>`).join("")}</select></div>`
+    const advEffortView = effortSelectView(adv.model, adv.effort)
+    if (advEffortView) html += `<div class="key-field"><label title="${t("settings.advisorEffortHelp")}">${t("settings.advisorEffort")}</label><select id="adv-effort">${advEffortView.levels.map((e) => `<option value="${escHtml(e)}" ${advEffortView.selected === e ? "selected" : ""}>${escHtml(e)}</option>`).join("")}</select></div>`
   }
   html += `<div class="settings-subtitle">${t("settings.consultBudgetSection")}</div>`
   html += `<div class="key-field"><label title="${t("settings.consultTurnsHelp")}">${t("settings.consultTurns")}</label><input id="consult-turns" type="number" min="1" value="${as.consultTurns ?? 40}"></div>`
@@ -122,7 +122,8 @@ export function bindAgentControls() {
           // missing now BACKFILLS from config.json (GitHub #3), only null clears.
           provider: document.getElementById("adv-model-slot")?.dataset.provider || null,
           model: document.getElementById("adv-model-slot")?.dataset.model || null,
-          effort: document.getElementById("adv-effort")?.value || null,
+          // 落盘归一：「—」（未注册占位）/ `none`（= 关思考）/ 空 ⇒ null（删键不写字面——§14.10）
+          effort: effortPayloadValue(document.getElementById("adv-effort")?.value),
         },
         consultModels: models,
       },

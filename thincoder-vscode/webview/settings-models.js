@@ -4,7 +4,7 @@
  */
 import { t } from "./i18n.js"
 import { openModelMenu } from "./model-menu.js"
-import { SS, labelFor } from "./settings-state.js"
+import { SS, labelFor, effortPayloadValue } from "./settings-state.js"
 import { buildEffortSelect } from "./settings-widgets.js"
 
 /** Read every consult row's live state from the DOM (including half-filled — a rebuild
@@ -22,11 +22,14 @@ export function readConsultRowsFromDom() {
 }
 
 /** Complete rows for saving (≤5). Half-filled rows are simply not saved yet —
- *  they stay in the DOM and become part of the payload once completed. */
+ *  they stay in the DOM and become part of the payload once completed.
+ *  effort 落盘前归一：「—」（未注册占位）/ `none`（= 关思考）/ 空 ⇒ null（删键不写字面——§14.10）；
+ *  读取面 `readConsultRowsFromDom` 保持原始值（行重建要原样回灌）。 */
 export function collectConsultRows() {
   return readConsultRowsFromDom()
     .filter((r) => r.provider && r.model)
     .slice(0, 5)
+    .map((r) => ({ ...r, effort: effortPayloadValue(r.effort) }))
 }
 
 /** Wire add/remove/cascade for consult rows (idempotent — called after each buildSettings). */

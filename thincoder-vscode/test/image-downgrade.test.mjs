@@ -117,7 +117,7 @@ test("T36 第 6 批：DeepSeek V4.1-Flash 三行 = 契约（R11–R13）+ 新名
   // PROVIDER.md §6.11（a）契约（VSC 侧——每行多 reasoningEffortDefault: "high"）
   const CONTRACT = {
     context: 1_000_000, maxOutput: 384_000, thinking: true, prefixMode: true, multimodal: true,
-    cacheMode: "auto", thinkApi: "type", reasoningEcho: "required",
+    thinkApi: "type", reasoningEcho: "required",
     reasoningEffortEnum: ["low", "high", "max"], reasoningEffortDefault: "high", tempRange: [0, 2],
   }
   for (const name of ["deepseek-flash", "deepseek-v4-flash", "deepseek-v4-flash-vision-exp"]) {
@@ -270,4 +270,22 @@ test("[qwen36] Q-7 端差默认档：五名 ⇒ high 且 ∈ 枚举（不落首�
     assert.equal(spec.reasoningEffortDefault, "high", `${snap} 前缀命中母名条目 ⇒ 同得 high（有意继承非遮蔽）`)
     assert.equal(spec.maxOutput, 65_536, `${snap} 核表同经母名行继承（校验级上限）`)
   }
+})
+
+// ─── 批 2026-09-25-model-specs-cleanup（设计 `docs/core/design/MODEL-SPECS.md` §14 · §14.2 #12/#15 · C-2 端差面）───
+// kimi 三行端差默认档：k3-256k 专行（最长前缀优先）解原 `k3` 行的错默认；kimi-for-coding 由 `kimi` 前缀同值覆盖
+// （零加登记）；highspeed = 继承披露（端差面有档 max / 行面无 effort 块 ⇒ 枚举缺位、该默认无果——下拉侧零渲染）。
+
+test("[cleanup] C-2 端差面：k3-256k ⇒ high（∈ 枚举，脱 `k3` 前缀错默认）；highspeed 继承 = 端差 max / 行面零枚举", async () => {
+  const { specForModel } = await import("../src/specs.mjs")
+  const k3256k = specForModel("k3-256k")
+  assert.equal(k3256k.reasoningEffortDefault, "high", "k3-256k 端差默认 = high（专行登记，最长前缀优先于 `k3`）")
+  assert.ok(k3256k.reasoningEffortEnum.includes("high"), "默认档 ∈ 枚举（下拉预选可选——§14.3 前置）")
+  assert.equal(specForModel("k3").reasoningEffortDefault, "max", "`k3` 本体零回归（前缀语义不变）")
+  const kfc = specForModel("kimi-for-coding")
+  assert.equal(kfc.reasoningEffortDefault, "max", "kimi-for-coding 端差默认 = max（`kimi` 前缀覆盖同值，零加登记）")
+  assert.ok(kfc.reasoningEffortEnum.includes("max"), "默认档 ∈ 枚举（活测三档 low/high/max）")
+  const hs = specForModel("kimi-for-coding-highspeed")
+  assert.equal(hs.reasoningEffortDefault, "max", "继承披露：`kimi` 前缀命中 ⇒ 端差面 max（裁定接受继承）")
+  assert.equal(hs.reasoningEffortEnum, undefined, "行面无 effort 块 ⇒ 枚举缺位（默认无果——`默认须 ∈ 枚举` 前置零生效）")
 })

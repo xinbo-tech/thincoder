@@ -1,14 +1,15 @@
 /**
  * config-presets.test.mjs — 渠道预设表并入面用例（设计 `docs/core/design/MODEL-SPECS.md` §9.7 / §9.9
- * 用例 P-1…P-4；批 2026-09-20-channel-onboarding）。
+ * 用例 P-1…P-4；批 2026-09-20-channel-onboarding。§14.7/§14.8 用例 C-7/C-8；批 2026-09-25-model-specs-cleanup）。
  *
  * 断言面 = 行为面：预设计数 / 条目形状 / 预设默认模型命中规格行 / 预置取值随模型上限同变（D-13「不设 = 不发」的预设面 +
- * D-14 判据面的模型侧前提）。白名单 = 尚未登记规格行的预设——**只减不增**（行补上 ⇒ 从名单删名）。
+ * D-14 判据面的模型侧前提）。白名单两处、面不同：`NO_SPEC_ROW` = 尚未登记规格行的预设（行补上 ⇒ 删名）；
+ * `OVER_LIMIT` = 预置 `maxTokens` 超规格行 `maxOutput` 的预设（§14.7 AC-7）——两处**只减不增**。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { PROVIDER_PRESETS, presetToEntry } from "../config-presets.mjs"
-import { specMatch } from "../model-specs.mjs"
+import { specForModel, specMatch } from "../model-specs.mjs"
 
 /** §9.9 P-3 白名单：未登记规格行的预置（本批 volcengine 改值后出名单）。 */
 const NO_SPEC_ROW = ["hunyuan", "siliconflow", "groq"]
@@ -48,4 +49,29 @@ test("P-3 预设默认模型零落面：除白名单外全部命中规格行（�
 
 test("P-4 volcengine 预置 maxTokens 随改指模型同变（seed-code 实测上限 131072 · 批 DR-5）", () => {
   assert.equal(PROVIDER_PRESETS.volcengine.maxTokens, 131072, "预置 maxTokens 随改指模型同变（= seed-code 实测输出上限）")
+})
+
+/** §14.7 AC-7 超限白名单六家（as-of 2026-09-25 实测：预置 `maxTokens` > 规格行 `maxOutput`）——**只减不增**
+ *  （六家存量不本批修 = §14.9；修值 ⇒ 从名单删名）。与 `NO_SPEC_ROW` 不同源：本名单 = 超限集，非「无规格行」集。 */
+const OVER_LIMIT = ["grok", "mistral", "hunyuan", "siliconflow", "openrouter", "groq"]
+
+test("C-7 deepseek 预置 maxTokens 384_000 ∧ ≤ 规格行 maxOutput（#19 · §14.2 #13）", () => {
+  const p = PROVIDER_PRESETS.deepseek
+  assert.equal(p.maxTokens, 384_000, "预置 maxTokens 降值（393216 → 384_000）")
+  assert.ok(p.maxTokens <= specForModel(p.model).maxOutput, `预置 ≤ 规格行（${p.model} 行 = 384_000）`)
+})
+
+test("C-8 全预设逐条不变式：超限集恒等于白名单六家（僵尸名单红 / 新增超限红——双向）", () => {
+  const orig = console.warn
+  console.warn = () => {} // 无规格行的预置（hunyuan / siliconflow / groq）必然告警——本用例只断超限集
+  let over = []
+  try {
+    for (const [name, p] of Object.entries(PROVIDER_PRESETS)) {
+      if (!("maxTokens" in p)) continue // 不设 = 不发（D-13 同则）
+      if (p.maxTokens > specForModel(p.model).maxOutput) over.push(name)
+    }
+  } finally { console.warn = orig }
+  over = over.toSorted()
+  assert.deepEqual(over, [...OVER_LIMIT].toSorted(), `超限集 ≠ 白名单：${JSON.stringify(over)}（修值 ⇒ 删名单名）`)
+  assert.equal(over.length, 6, "六家存量（不本批修——§14.9）")
 })

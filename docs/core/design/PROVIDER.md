@@ -146,7 +146,7 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`）
 
 ### 6.9 规格表（MODEL_SPECS）与能力位
 
-规格表中枢 = `thincoder-core/model-specs.mjs`：所有模型能力差异在此声明——`context` / `maxOutput` / `thinking` / `partialMode` / `prefixMode` / `multimodal` / `cacheMode` / `thinkApi`（`type` = thinking.type 字段 / `effort` = reasoning_effort）/ `thinkEnabledValue` / `reasoningEcho`（required = 必须回传）
+规格表中枢 = `thincoder-core/model-specs.mjs`：所有模型能力差异在此声明——`context` / `maxOutput` / `thinking` / `partialMode` / `prefixMode` / `multimodal` / `thinkApi`（`type` = thinking.type 字段 / `effort` = reasoning_effort）/ `thinkEnabledValue` / `reasoningEcho`（required = 必须回传）
 / `reasoningEffortEnum` / `tempRange` / `noUsageStream`；VSC 侧每行多 `reasoningEffortDefault`。
 
 - 新模型只加一行 spec，transport / 续写 / thinking 全自动适配；未知模型保守 `DEFAULT_SPEC`（128K 上下文 / 32K 输出）+ warn once。
@@ -443,3 +443,4 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` → 
   **零新语义**（D-14 系批档 §1.7-① 已批项；余 = 评审发现的直接导出项）。
   行集与逐字段取值真源 = `doc:MODEL-SPECS.md:§9`，本档只承载渠道/预设面（D2 不重述数值）。
 - 2026-09-20（**卫生族批 · 台账 #138 · eng-designer**）：首部机制面节区改 `§6–§8` + 历史节号指称清理（行数规则废除批残留）；设计源 = `docs/batches/2026-09-20-hygiene-sweep-batch.md` §2。
+- 2026-09-25（**model-specs 清理批 · DOC 面残留收正轮 · eng-designer**——承 `docs/batches/2026-09-25-model-specs-cleanup.md` §2/§4 · 台账 #14）：§6.9 字段清单删 `cacheMode`（该档唯一命中；字段本体随 `doc:MODEL-SPECS.md:§14` 批整体删除——§14.2 #11）。本档其余零改。

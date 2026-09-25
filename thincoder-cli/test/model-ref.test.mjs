@@ -82,7 +82,7 @@ test("T21 specMatch：已知模型 matched:true / 未知模型 matched:false（D
   assert.equal(known.spec.context, 1_000_000)
   const unknown = specMatch("totally-unknown-model-x")
   assert.equal(unknown.matched, false)
-  assert.deepEqual(unknown.spec, { context: 128_000, maxOutput: 32_000, cacheMode: "none" })
+  assert.deepEqual(unknown.spec, { context: 128_000, maxOutput: 32_000 })
 })
 
 // ── M2：会话面 L2 候选 = 运行期拉取（mock 注入断言）+ 失败态（M8）──

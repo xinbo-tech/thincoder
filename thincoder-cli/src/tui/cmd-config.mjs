@@ -20,6 +20,14 @@ export function poolCur(pl, defaults) {
   return (k) => (Number.isInteger(pl?.[k]) && pl[k] >= 1 ? pl[k] : defaults.agent.poolLimits[k])
 }
 
+/** Effort 菜单档位构造（#16 双 `none` 去重——枚举自带 `none` 的族如 qwen3.8-flash 时原来出两行）：
+ *  `none` 恒为首项且唯一，其余档序保持（`filter` 保序）。语义面零改——`none` = 清档，
+ *  消费点 `:205`/`:232` 只认 `=== "none"`；空枚举在 `pickEffort` 处已早退 null、不经本函数。
+ *  Exported for unit tests (`cmd-config-effort.test.mjs`). */
+export function effortMenuLevels(enumList) {
+  return ["none", ...(enumList ?? []).filter((l) => l !== "none")]
+}
+
 /** /config command: view and set agent/embedding/proxy config. */
 export async function handleConfigCommand(ctx, args = []) {
   const { agent, pushLine, pushLabel, showPicker, askQuestion, persistRaw, maskKey, pickModelForSlot } = ctx
@@ -177,7 +185,7 @@ export async function handleConfigCommand(ctx, args = []) {
     // min/low/medium/high/max list made the user pick values that the runtime then
     // silently dropped as out-of-enum (2026-08-17 audit). Show the model's real enum.
     if (!enumList || enumList.length === 0) return null // model has no effort — skip
-    const levels = ["none", ...enumList] // "none" = clear the effort
+    const levels = effortMenuLevels(enumList) // "none" = clear the effort（自带去重——#16）
     const entries = levels.map((l) => ({ type: "item", text: l === current ? `${l}  ← current` : l, action: l }))
     const c = await showPicker("Reasoning effort", entries, { defaultIndex: Math.max(0, levels.indexOf(current ?? "none")) })
     return c ? c.action : null // Esc → null (keep unchanged)

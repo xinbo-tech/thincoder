@@ -54,6 +54,15 @@ export async function handleAdvisorCommand(ctx) {
     return `    ${advisorStatus()}`.replace(/\|/g, ansi.dim + "|" + ansi.reset)
   }
 
+  /** off 形落盘（`think_off` 与归一后的 `effort_none` 共用——单一口径，防同状态两公式）：
+   *  自定义开值族（`thinkEnabledValue` ≠ "enabled"）取 `null`（NF1 显式 off）；其余取 `{type:"disabled"}`。 */
+  async function applyThinkOff() {
+    const { specForModel } = await import("@thincoder/core/config.mjs")
+    const spec = specForModel(getEffectiveModel(agent, cfg))
+    const isCustomThink = (spec.thinkEnabledValue ?? "enabled") !== "enabled"
+    cfg.thinking = isCustomThink ? null : { type: "disabled" }
+  }
+
   // ── Model picker sub-loop ──
   async function modelPicker() {
     if (!modelCache) {
@@ -106,10 +115,16 @@ export async function handleAdvisorCommand(ctx) {
         pushLabel("❯ Advisor", ansi.bold + C.tool)
         pushLine(`Thinking: ON`, C.tool)
       } else if (c.action === "think_off") {
-        const { specForModel } = await import("@thincoder/core/config.mjs")
-        const spec = specForModel(getEffectiveModel(agent, cfg))
-        const isCustomThink = (spec.thinkEnabledValue ?? "enabled") !== "enabled"
-        cfg.thinking = isCustomThink ? null : { type: "disabled" }
+        await applyThinkOff()
+        await persist()
+        pushLabel("❯ Advisor", ansi.bold + C.tool)
+        pushLine("Thinking: OFF", C.tool)
+      } else if (c.action === "effort_none") {
+        // 归一（镜像 `cmd-think.mjs:104` 归一式 / `:127` 删档 / `:82` 回执）：档位 `none` 不是
+        // 「强度零」而是**关思考**——与菜单 off 项同语义。不归一则残留 `reasoningEffort:"none"`
+        // 被载荷层当强度档送（`provider/core.mjs:197-204`）⇒ 与 off 形矛盾同发、服务端仍思考。
+        delete cfg.reasoningEffort
+        await applyThinkOff()
         await persist()
         pushLabel("❯ Advisor", ansi.bold + C.tool)
         pushLine("Thinking: OFF", C.tool)

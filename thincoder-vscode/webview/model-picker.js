@@ -79,9 +79,9 @@ function selectModel(m) {
   ctx.modelBtn.textContent = m.id; closeModelMenu()
   vscode.postMessage({ type: "selectModel", model: m.id, provider: m.provider || "" })
   const levels = m.reasoning || []
-  // 归一优先**端侧默认档**（spec `reasoningEffortDefault`——表 = `src/specs.mjs:22-36`；同式
-  // `settings-state.js:48`）：未声明该档时才回落枚举首项——effort 型新档（qwen3.7/3.8-flash 族）
-  // 枚举首项 = `"none"`，取首项即等于把思考关掉（静默 off）。
+  // 归一优先**端侧默认档**（spec `reasoningEffortDefault`——表 = `src/specs.mjs:22-42`）：未声明该档时
+  // 才回落枚举首项——effort 型新档（qwen3.7/3.8-flash 族）枚举首项 = `"none"`，取首项即等于把思考关掉
+  // （静默 off）。设置面板侧同根面 = `settings-state.js` 的 `effortSelectView`（占位「—」取代首项回落）。
   if (levels.length > 0 && !levels.includes(ctx.selectedReasoning)) ctx.selectedReasoning = m.effortDefault || levels[0]
   const visible = levels.length > 0 ? ctx.selectedReasoning : "off"
   ctx.reasoningBtn.textContent = visible === "none" ? "off" : (reasoningLabel(visible))

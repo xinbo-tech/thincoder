@@ -72,9 +72,10 @@ test("[mimo] M-2 三款逐字段 = §12.3 口径表七项（AC-2；信息性字�
   for (const name of V26) assertFields(name, V26_FIELDS)
 })
 
-test("[mimo] M-3 v2.5 两行对齐（全字段 deepEqual）：pro = 131_072 + 信息性字段 auto；mimo-v2.5 = pro 形 + 视觉位", () => {
-  // 对齐形（§12.3 表：maxOutput 131_072 + 信息性字段 "auto"）——键集差 / 值差任一即红。
-  const ALIGNED = { context: 1_000_000, maxOutput: 131_072, thinking: true, thinkApi: "type", reasoningEcho: "required", tempRange: [0, 1.5], [INFO_FIELD]: "auto" }
+test("[mimo] M-3 v2.5 两行对齐（全字段 deepEqual）：pro = 131_072 形；mimo-v2.5 = pro 形 + 视觉位", () => {
+  // 对齐形（§12.3 表：maxOutput 131_072）——键集差 / 值差任一即红。信息性字段已随清理批整体删除
+  // （`docs/core/design/MODEL-SPECS.md` §14.2 #11）⇒ 该键退出对齐形；本档只留 M-7 的字面归零自扫。
+  const ALIGNED = { context: 1_000_000, maxOutput: 131_072, thinking: true, thinkApi: "type", reasoningEcho: "required", tempRange: [0, 1.5] }
   const pro = specForModel(V25[0])
   assert.deepEqual(pro, ALIGNED, "pro 行全字段 = 对齐形（无视觉位键——本批零改面）")
   assert.deepEqual(specForModel(V25[1]), { ...ALIGNED, multimodal: true }, "mimo-v2.5 = pro 形 + 视觉位")

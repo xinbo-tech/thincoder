@@ -149,8 +149,8 @@ test("[qwen] T-2/A-3 两 flash 档枚举不等：3.8 比 3.7 多且仅多 max（
   assert.notDeepEqual(e37, e38, "两档枚举不等")
 })
 
-test("[qwen] T-3/A-9 托底行已删：qwen / qwen-flash 均落 DEFAULT_SPEC（matched:false）", () => {
-  for (const name of ["qwen", "qwen-flash"]) {
+test("[qwen] T-3/A-9 托底行已删：泛前缀名 qwen 落 DEFAULT_SPEC（matched:false）——qwen-flash 本批已建专行（§14.2 #5），不再是托底样本", () => {
+  for (const name of ["qwen"]) {
     const r = silent(() => specMatch(name))
     assert.equal(r.matched, false, `${name} 不再命中泛前缀托底行`)
     assert.equal(r.spec.context, 128_000, `${name} 退化形状 = 128K`)
@@ -247,18 +247,18 @@ function scanFieldHits(needle) {
   return { prod, tests }
 }
 
-test("[qwen] T-13/D-10 信息性字段零判据消费：生产码命中 ⊆ 表自身 + 端差拷贝；用例面零新增", () => {
+test("[qwen] T-13/D-10 零字面门（AC-2 唯一权威）：码面 + 用例面全仓零命中——字段已整体删除", () => {
   const { prod, tests } = scanFieldHits(INFO_FIELD)
-  // ① 生产码：允许面 = 规格表中枢 + VSC 端差拷贝（设计 §6 T-13 ①）——其余任何位置 ⇒ 红
-  assert.ok(prod.some(([rel]) => rel === "thincoder-core/model-specs.mjs"), `表中枢须命中（防空扫）：${JSON.stringify(prod)}`)
-  assert.equal(SPEC_SOURCE.includes(INFO_FIELD), true, "登记面实据：表中枢含该键")
-  const allowedProd = ["thincoder-core/model-specs.mjs", "thincoder-vscode/src/specs.mjs"]
-  assert.deepEqual(prod.filter(([rel]) => !allowedProd.includes(rel)), [], "生产码零判据消费点（新增命中 ⇒ 出现消费者，须回 D-10 重裁）")
-  // ② 用例面：零新增取值断言（T-13 ②）——基线 = 批前既有命中**逐档计数**；被本批改写的
-  //    image-downgrade.test.mjs 也在基线内，其新增段多出一处断言即计数 1→2 ⇒ 红（档级名单会漏掉这一形态）
-  const BASELINE_TESTS = { "thincoder-cli/test/model-ref.test.mjs": 1, "thincoder-vscode/test/image-downgrade.test.mjs": 1 }
-  assert.deepEqual(tests.filter(([rel, n]) => BASELINE_TESTS[rel] !== n), [], `用例面零新增取值断言（基线逐档计数）：${JSON.stringify(tests)}`)
-  assert.equal(tests.some(([rel]) => rel === "thincoder-core/test/model-specs.test.mjs"), false, "本档上段旧取值断言已删（§6 删除行账）")
+  // 字段已删（D-10 结项 / §14.2 #11）⇒ 任何位置再现该字面 = 字段复活或新消费者，两者都须回 D-10 重裁；
+  // 本门取代旧「生产码 ⊆ 允许面 + 用例面逐档计数基线」两段式（字段已不在表中枢，旧锚点全部失效）。
+  // 防空扫：控制针（表常量名）须命中原载体（`model-specs.mjs`）——证明扫域覆盖到该档，零命中 ≠ 扫域失效。
+  const ctrl = scanFieldHits("MODEL_SPECS").prod.find(([rel]) => rel === "thincoder-core/model-specs.mjs")
+  assert.ok(ctrl && ctrl[1] > 1, `扫域在场（防空扫——控制针命中表中枢）：${JSON.stringify(ctrl)}`)
+  assert.deepEqual(prod, [], `生产码零命中（原 61 处字面 → 0；出现 ⇒ 消费者复活）：${JSON.stringify(prod)}`)
+  // 用例面：针由拼接构造（:221），本档正文/注释/消息若写出该字面，自扫即命中 ⇒ 本门自证；其余档
+  // 新增命中同判 ⇒ 红（「逐档计数冻结」已由「全零」取代：字段已删，任何计数 > 0 都是新增）。
+  assert.deepEqual(tests, [], `用例面零命中（含本档自证）：${JSON.stringify(tests)}`)
+  assert.equal(SPEC_SOURCE.includes(INFO_FIELD), false, "表源零残留（删除面实据）")
 })
 
 // ─── 批 2026-09-20-channel-onboarding（设计 `docs/core/design/MODEL-SPECS.md` §9 · 用例 A-1..A-12）───
@@ -423,10 +423,10 @@ test("[onboard] A-12 两族枚举各自七值且行独立（受理级 ≠ 校验
 const FLASHX = "glm-5.3-flashx"
 const GLM_FLASH = "glm-5.3-flash"
 
-test("[flashx] F-1 独立行命中：specMatch matched 且 maxOutput 131_072（≠ flash 行 128_000，排序面同证）", () => {
+test("[flashx] F-1 独立行命中：specMatch matched 且 maxOutput 131_072（§14.2 #1：flash 行同步收正 ⇒ 差异判据 = 行独立性）", () => {
   const r = specMatch(FLASHX)
   assert.equal(r.matched, true, "命中独立行（非前缀兜底蹭 flash 行）")
-  assert.equal(r.spec.maxOutput, 131_072, "maxOutput = 校验级实测 131_072（≠ 128_000）")
+  assert.equal(r.spec.maxOutput, 131_072, "maxOutput = 校验级实测 131_072")
   assert.equal(r.spec.context, 1_000_000, "context = 族口径 1M（非 128K 兜底）")
   assert.notEqual(specForModel(FLASHX), specForModel(GLM_FLASH), "与 flash 行非同一对象（独立行）")
 })
@@ -448,7 +448,7 @@ test("[flashx] F-3 glm 族回归零变化：glm-5.3 / glm-5.3-flash 逐字段不
   // flashx 对 flash 的信息性字段一致性由 F-2 运行时推导承载。
   assertFields("glm-5.3", FAMILY_BASELINE.find(([n]) => n === "glm-5.3")[1])
   assertFields(GLM_FLASH, {
-    context: 1_000_000, maxOutput: 128_000, thinking: true, multimodal: true, thinkApi: "type",
+    context: 1_000_000, maxOutput: 131_072, thinking: true, multimodal: true, thinkApi: "type",
     reasoningEcho: "optional", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 1], noUsageStream: true,
   })
 })

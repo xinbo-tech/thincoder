@@ -14,7 +14,7 @@
 
 /** Built-in provider presets: shared by /provider add <preset> and first-run wizard. */
 export const PROVIDER_PRESETS = {
-  deepseek: { baseURL: "https://api.deepseek.com", model: "deepseek-flash", thinking: { type: "enabled" }, reasoningEffort: "max", maxTokens: 393216, desc: "DeepSeek" },
+  deepseek: { baseURL: "https://api.deepseek.com", model: "deepseek-flash", thinking: { type: "enabled" }, reasoningEffort: "max", maxTokens: 384_000, desc: "DeepSeek" },
   kimi:     { baseURL: "https://api.moonshot.cn/v1", model: "kimi-k3", thinking: null, reasoningEffort: "max", maxTokens: 131072, desc: "Kimi / Moonshot" },
   "kimi-code": { baseURL: "https://api.kimi.com/coding/v1", model: "k3", thinking: null, reasoningEffort: "max", maxTokens: 131072, desc: "Kimi For Coding (platform.kimi.com — sk-kimi- keys; NOT interchangeable with Moonshot)" },
   glm:      { baseURL: "https://open.bigmodel.cn/api/paas/v4", model: "glm-5.2", thinking: { type: "enabled" }, reasoningEffort: "max", maxTokens: 128000, desc: "Zhipu GLM" },

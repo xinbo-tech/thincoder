@@ -4,7 +4,7 @@
  */
 import { escHtml } from "./ui.js"
 import { t } from "./i18n.js"
-import { effortEnumFor, defaultEffortFor } from "./settings-state.js"
+import { effortSelectView } from "./settings-state.js"
 
 /** Shared key-edit row (provider/embedding/websearch keys were three copy-paste blocks).
  *  Renders input + Save + Cancel into the row; Enter saves, Escape cancels. */
@@ -40,14 +40,15 @@ export function keyRowEdit(row, { label, placeholder, onSave, onCancel }) {
 }
 
 /** Shared effort dropdown (consult rows / advisor were three copies). Returns null for
- *  non-thinking models (caller hides the control). */
+ *  non-thinking models (caller hides the control — `view === null` = 旧「空枚举返 null」语义）。
+ *  同一规则源 = `effortSelectView`（首项「—」占位 + 预选 = 已存值 > 注册默认∈枚举 > 「—」）
+ *  ——与初渲染径（`settings-agent.js` 内联 HTML 串）共判据。 */
 export function buildEffortSelect({ model, current, onChange, className = "consult-effort" }) {
-  const enum_ = model ? effortEnumFor(model) : null
-  if (!enum_ || enum_.length === 0) return null
+  const view = effortSelectView(model, current)
+  if (!view) return null
   const sel = document.createElement("select")
   sel.className = className
-  const value = current || defaultEffortFor(model)
-  sel.innerHTML = enum_.map((e) => `<option value="${escHtml(e)}" ${value === e ? "selected" : ""}>${escHtml(e)}</option>`).join("")
+  sel.innerHTML = view.levels.map((e) => `<option value="${escHtml(e)}" ${view.selected === e ? "selected" : ""}>${escHtml(e)}</option>`).join("")
   if (onChange) sel.addEventListener("change", () => onChange(sel.value))
   return sel
 }

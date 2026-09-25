@@ -18,13 +18,14 @@ export { providerSpec, assistantToolCallMessage }
 
 /** 端差字段表（`reasoningEffortDefault`）：前缀匹配、最长优先；未命中且 ID 含 `vendor/` 命名空间
  *  时按裸模型段重试（与核 `lookupSpec` 命名空间剥离同法——聚合网关惯例 `vendor/model`）；仍未命中 → undefined
- *  （webview 侧取枚举**首项**兑底——`webview/settings-state.js:48`）。行为 = 旧 VSC 规格表逐行同值。 */
+ *  （webview 侧 `effortSelectView` 落占位「—」——`webview/settings-state.js`，不再取枚举首项回落）。行为 = 旧 VSC 规格表逐行同值。 */
 const EFFORT_DEFAULT_PREFIXES = [
   ["deepseek-v4-flash-vision-exp", "high"],
   ["deepseek-v4-flash", "high"],
   ["deepseek-flash", "high"],
   ["deepseek-v4-pro", "high"],
   ["kimi", "max"],
+  ["k3-256k", "high"],
   ["k3", "max"],
   ["glm-5", "max"],
   ["qwen3.7-max", "xhigh"],

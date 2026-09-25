@@ -22,22 +22,20 @@ const NEW_ROWS = [
   "MiniMax-M2.7",
 ]
 
-/** 信息性字段名 = 运行时合成（T-13② 用例面计数闸：本档全文——含注释与断言消息——零该字段字面；
- *  主档 `:221` / `model-specs-mimo.test.mjs:35` 同法先例）。 */
-const INFO_FIELD = ["cache", "Mode"].join("")
-
-/** §13.3 字段口径表（新建行逐字段登记值；`reasoningEffortEnum` / `multimodal` 不在此列——另有分态腿）。 */
+/** §13.3 字段口径表（新建行逐字段登记值；`reasoningEffortEnum` / `multimodal` 不在此列——另有分态腿）。
+ *  信息性字段（原以运行时合成针登记）已随清理批整体删除（`docs/core/design/MODEL-SPECS.md` §14.2 #11）
+ *  ⇒ 本表去键（取值断言随字段一起撤出；其字面归零由主档 `model-specs.test.mjs` T-13 门作唯一权威）。 */
 const FIELDS = {
-  "glm-4.5-air": { context: 128_000, maxOutput: 32_000, thinking: true, [INFO_FIELD]: "auto", thinkApi: "type", reasoningEcho: "optional", tempRange: [0, 1], noUsageStream: true },
-  "qwen3.7-plus": { context: 1_000_000, maxOutput: 131_072, thinking: true, partialMode: true, [INFO_FIELD]: "none", thinkApi: "effort", tempRange: [0, 2] },
-  "qwen3.5-27b": { context: 262_144, maxOutput: 65_536, thinking: true, partialMode: true, [INFO_FIELD]: "none", thinkApi: "effort", tempRange: [0, 2] },
+  "glm-4.5-air": { context: 128_000, maxOutput: 32_000, thinking: true, thinkApi: "type", reasoningEcho: "optional", tempRange: [0, 1], noUsageStream: true },
+  "qwen3.7-plus": { context: 1_000_000, maxOutput: 131_072, thinking: true, partialMode: true, thinkApi: "effort", tempRange: [0, 2] },
+  "qwen3.5-27b": { context: 262_144, maxOutput: 65_536, thinking: true, partialMode: true, thinkApi: "effort", tempRange: [0, 2] },
   "kimi-k2.6": { context: 128_000, maxOutput: 32_000 },
   "kimi-k2.7-code": { context: 128_000, maxOutput: 32_000 },
   "kimi-k2.7-code-highspeed": { context: 128_000, maxOutput: 32_000 },
   "doubao-seed-2-1-pro-260915": { context: 256_000, maxOutput: 524_288, thinking: true, thinkApi: "effort" },
   "doubao-seed-2-1-turbo-260628": { context: 256_000, maxOutput: 524_288, thinking: true, thinkApi: "effort" },
   "doubao-seed-2-1-lite-260915": { context: 256_000, maxOutput: 524_288, thinking: true, thinkApi: "effort" },
-  "MiniMax-M2.7": { context: 256_000, maxOutput: 128_000, thinking: true, [INFO_FIELD]: "auto", noUsageStream: true },
+  "MiniMax-M2.7": { context: 256_000, maxOutput: 128_000, thinking: true, noUsageStream: true },
 }
 
 /** §13.2 #4–#10 的「尺寸 / 枚举未取证」面（G-3 词面）。 */
