@@ -101,7 +101,9 @@ export function ledgerUpdate({ cwd, id, patch, executorSessionId }) {
   } finally { db.close() }
 }
 
-/** 收口（写命令，仅主 agent）：勾销（待核销 → 已核销）/ 撤回（任意态 → 已废弃），事务包裹；归档 = 软删除。 */
+/** 收口（写命令，仅主 agent）：核销两源（勾销：待核销 → 已核销；追认核销：待讨论 / 待设计 → 已核销，
+ *  行 `evidence` 非空，缺 / 全空白 ⇒ 拒）/ 撤回（任意态 → 已废弃），事务包裹；归档 = 软删除。
+ *  判序（同函数体同层）：目标集判 → 行取 → 源态判 → `evidence` 门 → UPDATE（LEDGER.md §3 收口两源）。 */
 export function ledgerClose({ cwd, id, status }) {
   if (status !== "已核销" && status !== "已废弃") throw new Error(`ledgerClose：目标态 ${status} ∉ {已核销, 已废弃}`)
   const db = openLedger(cwd, { create: true })
@@ -110,9 +112,11 @@ export function ledgerClose({ cwd, id, status }) {
     try {
       const row = db.prepare("SELECT * FROM items WHERE id = ?").get(id)
       if (!row) throw new Error(`ledgerClose：行 ${id} 不存在`)
-      if (status === "已核销" && row.status !== "待核销") throw new Error(`ledgerClose：勾销仅限待核销（现态 ${row.status}）`)
+      // 判序：源态判（核销仅三源——在途不可跳）→ 追认口 `evidence` 门（行字段非空，缺 / 全空白 ⇒ 拒）
+      if (status === "已核销" && !["待讨论", "待设计", "待核销"].includes(row.status)) throw new Error(`ledgerClose：核销仅限 待讨论 / 待设计 / 待核销（现态 ${row.status}）`)
+      if (status === "已核销" && ["待讨论", "待设计"].includes(row.status) && (row.evidence == null || String(row.evidence).trim() === "")) throw new Error(`ledgerClose：追认核销须带 evidence（现态 ${row.status}）`)
       const now = nowIso()
-      // 撤回（任意态 → 已废弃——含在途直撤）同步 executor = NULL（LEDGER.md §3.1 ④）；勾销路径 executor 已在离场迁移清空，零触碰
+      // 撤回（任意态 → 已废弃——含在途直撤）同步 executor = NULL（LEDGER.md §3.1 ④）；核销两源（勾销 / 追认）executor 零触碰（非在途出边）
       db.prepare("UPDATE items SET status = ?, closed_at = ?, updated_at = ?, executor = ? WHERE id = ?").run(status, now, now, status === "已废弃" ? null : row.executor, id)
       db.exec("COMMIT")
       return { id, status }
@@ -215,14 +219,14 @@ export const ledgerUpdateTool = {
 
 export const ledgerCloseTool = {
   name: "ledger_close",
-  description: "台账收口（写命令，仅主 agent）——勾销：待核销 → 已核销；撤回：任意态 → 已废弃。归档 = 软删除（写 closed_at，行保留）。",
+  description: "台账收口（写命令，仅主 agent）——勾销：待核销 → 已核销；追认核销：待讨论 / 待设计 → 已核销（须已有 evidence，缺则拒）；在途 → 已核销 不可跳（仍经 待核销）；撤回：任意态 → 已废弃。归档 = 软删除（写 closed_at，行保留）。",
   parameters: {
     type: "object",
     required: ["id", "status"],
     properties: {
       cwd: { type: "string", description: "项目根目录——台账按项目根关联存储于用户数据目录（工作树外、不进 git）。相对路径按当前工作目录解析；查/写别的项目请给绝对路径。缺省 = 当前会话项目根" },
       id: { type: "number", description: "条目 id" },
-      status: { type: "string", enum: ["已核销", "已废弃"], description: "目标态（勾销 / 撤回）" },
+      status: { type: "string", enum: ["已核销", "已废弃"], description: "目标态（勾销 / 追认核销 / 撤回）" },
     },
   },
   readonly: false,
