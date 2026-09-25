@@ -14,7 +14,7 @@ export function printCompletion(shell) {
     chat)    COMPREPLY=( \\$(compgen -W "--auto" -- "\\$cur") ) ;;
     memory)
       case "\\$prev" in
-        memory) COMPREPLY=( \\$(compgen -W "list search put remove" -- "\\$cur") ) ;;
+        memory) COMPREPLY=( \\$(compgen -W "list search put remove sweep" -- "\\$cur") ) ;;
         list)   COMPREPLY=( \\$(compgen -W "--type=rule --type=knowledge --type=decision --type=pattern" -- "\\$cur") ) ;;
         put)    COMPREPLY=( \\$(compgen -W "--type= --title= --content= --tags=" -- "\\$cur") ) ;;
       esac ;;
@@ -57,6 +57,7 @@ _thincoder() {
           case "\\$words[2]" in
             list) _arguments '--type=[Filter by type]' ;;
             put)  _arguments '--type=[Entry type]' '--title=[Title]' '--content=[Content]' '--tags=[Space-separated tags]' ;;
+            sweep) _arguments '--origin=[Origin path]' '--dry-run[Report only]' '--confirm[Apply writes]' ;;
           esac ;;
         distill) _arguments '--yes[Skip confirmation]' '--layer=[Layer filter]' ;;
         completion) _values 'shell' 'bash' 'zsh' 'fish' ;;
@@ -93,6 +94,7 @@ complete -c thincoder -n '__fish_seen_subcommand_from memory' -a list   -d 'List
 complete -c thincoder -n '__fish_seen_subcommand_from memory' -a search -d 'Search memory'
 complete -c thincoder -n '__fish_seen_subcommand_from memory' -a put    -d 'Add entry'
 complete -c thincoder -n '__fish_seen_subcommand_from memory' -a remove -d 'Remove entry'
+complete -c thincoder -n '__fish_seen_subcommand_from memory' -a sweep  -d 'Sweep dead origins'
 
 # memory list flags
 complete -c thincoder -n '__fish_seen_subcommand_from memory; and __fish_seen_subcommand_from list' -l type -d 'Filter by type' -xa 'rule knowledge decision pattern'

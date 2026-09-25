@@ -37,7 +37,10 @@ settle 即落盘权威台账；凭证值只进槽文件（会话态），永不�
 ## 4. 端差登记（多实现面——语义同源、各端原文自持；登记面 = 已裁的保留项；端差默认 = 消；保留仅限结构性不对称 + 证据 + 显式裁定）
 
 - 语义对位（对端 = `thincoder-cli/docs/requirements/DESIGN-TOKEN-SETTLEMENT.md` §2，**已并入本档**——2026-09-15 CLI 尾部真批）：结算可靠（不再 `designId not found`）· 废单值镜像 · 凭证不落文档——逐条同源。
-- 端差（本端实况）：**结算载体** = 会话槽 `engDesignTokens` 多槽表（`thincoder-vscode/src/extension/session-slot-write.mjs:100-166`——对端 = persistState 单源面）；本端断点修复面（快照 / 写侧清零 / 落盘时序）= 本端实现史实，语义结果两端一致（settle 即落盘）。
+- 端差（本端实况 · 保留三件齐）：**结算载体** = 会话槽 `engDesignTokens` 多槽表（`thincoder-vscode/src/extension/session-slot-write.mjs:100-166`——对端 = persistState 单源面）；本端断点修复面（快照 / 写侧清零 / 落盘时序）= 本端实现史实，语义结果两端一致（settle 即落盘）。
+  - **① 结构性不对称**：VSC 宿主基线不同——agent 对象**每 run 重建**（`thincoder-vscode/src/agent/setup.mjs`——非 CLI 常驻单对象）⇒ 结算面多出「死对象 / 快照 / 清零」三类 VSC 独有断点域；载体随端壳存储面走（CLI 无对应面，不引入）。
+  - **② 证据**：设计档 §6.2 / §6.3 + 源码注释逐字登记（`thincoder-core/token-ttl.mjs:181-186`）+ 端 `test/eng-settlement.test.mjs` 14 例。
+  - **③ 显式裁定**：设计档 §6.2「已知有意差异（非偏差）」声明（B 式迁移轮 2026-09-15 实核并入）。
 
 ## 5. 范围边界（不做）
 

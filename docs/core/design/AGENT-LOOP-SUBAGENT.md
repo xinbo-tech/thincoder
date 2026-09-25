@@ -763,7 +763,68 @@ A-3 机检（单行 · cmd.exe · cwd = `thincoder-vscode/`；§3 复评 🔵#3 
 归核批）；错误串 `batch_segment:` 前缀零改（核 §4.1 锚）；T5 已定性机械面（fixture 钉改前形状），零行为裁决；
 `thincoder-vscode/src/agent/setup.mjs` 现量 **421**（as-of 2026-09-22 实测——拆分后；本批 ±0）——该档后续净增的拆分归父侧派单登记。
 
+## 6.29 队列条目自携任务书 + 批次档写门（2026-09-25 · 批 GUARD-SCHEDULER · 台账 #309）
+
+**问题（实例）**：2026-09-20 05:0x–06:1x（qwen 批档 `docs/batches/2026-09-20-qwen-flash-specs.md` §1.9 实录）：同文件域等待下，排在前位的**渠道批设计轮 #4** 启动后按**同步轮（11 号点修）的任务书**作业——其本职（渠道批 §2）交付为空；qwen 侧产物内容按其所执行的任务书正确，**批身份串了**：跨批写了非自己绑定 `batchDoc` 的批档 §2、凭据 / 编号引用错位。
+
+**根因：未定（如实登记）**。实读结论：两 payload（子代理对象与任务书文本）在 spawn 时刻由 `buildSpawnChild` **逐条目**产出
+（`thincoder-core/agent-tools/subagent-spawn.mjs:344` 拼 `input`；`:319` 绑 `child._batchDoc`），`entry.start` 闭包捕获、启动时原样消费
+（`thincoder-core/agent-tools/subagent-run.mjs:157`）——**现码内未见可致「A 条目启动携 B 任务书」的路径**；观测侧亦无轨迹
+（`child:spawn` 事件不记任务身份，事后无法对账）。故本条目**不声称修一个已定位缺陷**，落三形：**containment（批次档写门）+ 可诊断性（自携留痕）+ 回归锁（串扰用例）**。
+
+### 6.29.1 形一 · 批次档写门（containment）
+
+**判据（逐字）**：工程角色子代理（`depth > 0` ∧ `agent._batchDoc` 在场）对**批次档文件**（目标路径落 `batchDocBases(cwd)` 任一基底内——声明面单源 `thincoder-core/agent-tools/batch-paths.mjs`）的写（`FILE_MUTATORS`）⇒ 目标 ≠ 绑定 `_batchDoc` ⇒ **拒绝**（fail-closed）；写自己绑定的档 ⇒ 放行（正常面）。比较键 = 绝对路径 + win32 大小写归一。
+
+**拒绝文案（实现单源）**：`write refused — cross-batch batch-record write: this child is bound to <A>; <B> is a different batch record. Write only your own bound record (the batch tool targets your bound record); the parent agent handles other batch records.`（A / B = 基名）
+
+**落点（两端对齐）**：核 `thincoder-core/agent/dispatch.mjs` Phase 1（与 D5 冻结窗同区——同为写前门 · 共用同一路径集）；
+VSC `thincoder-vscode/src/agent/tool-gates.mjs` 的 `preGateBlocked`（CLI parity 单点）。判据本体 = `thincoder-core/agent/write-gate.mjs` 新导出
+`batchRecordWriteConflict(agent, depth, absPaths)`（与 `freezeWindowConflict` 同址——写前判据单源）；基底集按子代理 run 记忆化（每 run 一次 manifest 读）。
+
+**接口契约（实现面）**（形照 `docs/core/design/TOOLS.md` §6.17「接口契约（实现面）」表）：
+
+| 面 | 落点 | 形态 |
+|---|---|---|
+| 判据本体 | `thincoder-core/agent/write-gate.mjs` | `export function batchRecordWriteConflict(agent, depth, absPaths)` → 命中 = `{ bound, target, message }`（`bound` / `target` = 绝对路径；`message` = 逐字拒绝文案——A / B 基名已填）· 无冲突 / 不进本门 = `null` · **恒零抛**（形照 `freezeWindowConflict` 先例） |
+| 拒绝文案单源 | `thincoder-core/agent/write-gate.mjs` | 文案字面**只出该档**（与判据同址——判据与文案同时锁死）；两端直取 `conflict.message`——**零字面副本** |
+| 两端取用 | 核 `thincoder-core/agent/dispatch.mjs` Phase 1 · VSC `thincoder-vscode/src/agent/tool-gates.mjs` `preGateBlocked` | 各一次 import（`@thincoder/core/agent/write-gate.mjs`）+ 拒因分支；文案取上表单源（T12 的「文案含 A / B 基名」由此保证） |
+
+**与 `batch` 工具的关系（分层，不重复）**：`batch` 工具的绑定面管**段维度**（身份 → 可写段白名单，`BATCH-RECORD.md` §4.1 / §4.2）；本门管**档维度**——绑定档**之外**的同族文件此前无门（`write` / `edit` 直写批档 = 绕过工具绑定的通道，正是本实例的损害通道）。
+
+**豁免 / 边界**：depth 0（主 agent）不受门约束（跨档处置是父侧职责）；无 `_batchDoc` 的子代理不进本门（非工程绑定族——行为零变）；`file_ops` 不入门（门判据集 = `FILE_MUTATORS`，两端同集）；读类工具零影响；**非 `FILE_MUTATORS` 写通道（`bash` / `execute` 等）不在射程**——理由：判据面 = 工具面 mutator 集（文本拦截已被否——`docs/core/design/TOOLS.md` §7 D-TO2），且事故真实通道未定 ⇒ 本门只收工具面直写通道、不宣称全面封闭。
+
+### 6.29.2 形二 · 条目自携 + 双点留痕（可诊断性）
+
+- **条目自携**：`executeAsyncSpawn` 在条目上记 `_batchDoc`（= `child._batchDoc ?? null`）与 `_taskSeal`（任务书文本摘要——12 hex；不留全文，NF-L3 同族）；`_files` / `_dependsOn` / `role` 既有。
+- **双点留痕**：`child:spawn`（既有事件）与 `child:start`（新事件——条目实际启动点）键面同为 `{ role, id, batchDocBase, taskSeal }`（**基名 + 摘要，零内容**）——事后可对账「哪条任务书在哪个 id 下起跑」（本实例缺失的正是这条轨迹）。
+- **不做的**：以条目记录**重建** payload（原「出队重绑」形态）——现启动路径已按条目闭包取值（等价于已重绑），重建 = 无收益的结构重写（否决）。
+
+### 6.29.3 形三 · task↔batchDoc 观测留痕（不阻断）
+
+spawn 门区（`thincoder-core/agent-tools/subagent-spawn.mjs` 的 `batchDoc` 门；扫描对象 = `args.task` 任务书文本）——提取与命中三定：
+
+- **token 提取判据**：以 `.md` 结尾、且含路径分隔符（`/` / `\`）或为绝对路径的**连续非空白字面**（裸名 `AGENTS.md` 形态不取、纯散文不取）；
+- **解析输入形态**：逐 token 经 `resolveBatchReadPath(parent.cwd ?? process.cwd(), token)` 解析（输入 = token 原值——相对 / 绝对、`\` 与 `/` 混写均可；契约单源 = `thincoder-core/agent-tools/batch-paths.mjs`）；
+- **命中判据**：解析结果 ≠ null ∧ 落 `batchDocBases(cwd)` 任一基底内 ∧ ≠ 绑定档绝对路径 ⇒ 留痕**一条**（同一档多 token ⇒ 按解析后绝对路径去重）；他 `.md` 引用（设计档 / 需求档等）不命中。
+
+**留痕通道 / 事件名**（与 §6.29.2 同通道——`logEvent`，`thincoder-core/log.mjs`）：`child:batchdoc-ref`，键面 = `{ role, batchDocBase, refBase }`（两侧基名，零任务书内容）；**spawn 照常放行**（不阻断）。
+
+**断言面（T15 两态）**：`THINCODER_LOG_DIR` 隔离目录（先例 = `thincoder-core/test/log.test.mjs`）按 `child:batchdoc-ref` 计条数——提及他批存在档 ⇒ 1；只提绑定档 / 无路径型 `.md` 字面 ⇒ 0；两态均放行。
+
+**不取硬拒（否决）**：任务书合法引用他批档是常态（前情指针 / 证据引用——台账 #309 的 evidence 自身即引 `docs/batches/2026-09-20-qwen-flash-specs.md` §1.9）——硬拒 = 假拒面。
+
+### 6.29.4 串扰回归锁（可机检）
+
+「每条目启动消费**自携** payload」以用例固定：同 `files` 域两个 async spawn（任务书文本各异、绑定档各异）⇒ 入队两条；启动序 = 先入者；断言逐条 `_batchDoc` / `_taskSeal` 与 spawn 入参一致、且两条目互不相等（零跨条目文本）。既有调度器用例（同域串行 / 依赖 / 终态守卫）零改。
+
+> 用例表 / 受影响文件与行数预算 / 验收回指 = 批档 `docs/batches/2026-09-25-guard-scheduler.md` §2（一次性批次材料——本档不重述）。
+
 ## 变更记录
+
+- 2026-09-25（**guard-scheduler 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-guard-scheduler.md` §1 · 台账 #309）：
+  新增 **§6.29**——队列条目自携任务书 + 批次档写门：形一 = 批次档写门（containment——绑定档之外的批次档写拒，两端同判据）；形二 = 条目自携 `_batchDoc` / `_taskSeal` + 双点留痕（可诊断性）；形三 = task↔batchDoc 观测留痕（不阻断）；串扰回归锁。
+  **根因未定如实登记**（payload 已按条目闭包取值——现码内未见跨投递路径）；「出队重绑」原形与 task↔batchDoc 硬拒均否决（§6.29.2 / §6.29.3）；批次档写门与 `batch` 工具段白名单分层不重叠（档维度 vs 段维度）。
 
 - 2026-09-22（**structure-debt 批 · 档面车道 · eng-designer**——承 `docs/batches/2026-09-22-structure-debt.md` §2.5 · 台账 #67）：**三分**——
   迁出 §6.8 · §6.10 · §6.11 · §6.18 · §6.19 · §6.20 ⇒ `docs/core/design/AGENT-LOOP-ASYNC-POOL.md`；迁出 §6.27 全族（含 §6.27.12.13 + §6.27.8 内两段无编号提示词面文本块）⇒ `docs/core/design/AGENT-LOOP-UPSTREAM.md`。

@@ -29,6 +29,7 @@ Every factual/behavioral assertion you make MUST be verified from the code/docs 
 — read them, cite `file:line` — or explicitly marked `unverified`.
 NEVER assert "Known behavior…" or "I'm confident…", and never rely on remembered API semantics
 when the source is readable — a behavioral question is an EVIDENCE question, not a reasoning question.
+**Take evidence only for the assertions you are about to make**: facts the task book or context already gave you are cited as-is — no re-reading to verify them; do not pre-read unrelated code (no surveying forever "just to be safe").
 
 ## 文档写作纪律（Document writing discipline — semantic merge, no script ghost-writing）
 - **NEVER batch-rewrite documents with scripts/programs**: scripted section splicing, regex bulk replacement, whole-file appending, "verbatim porting" via script — all count. Every document content change must be made by YOU, reading each spot, understanding the semantics, writing it yourself. (Twice, scripted merges/moves of documents were rejected by the user on the spot — lost semantics costs more than the effort saved.)
@@ -56,7 +57,7 @@ user: it cannot confirm anything and it may be busy. Pass every message through 
 - **In scope**: a stated premise the facts contradict; two requirements that conflict and you cannot arbitrate;
   whether an action is inside your task domain; a choice that would waste work already done.
 - **A conflicting requirement ⇒ ask at once — never keep weighing**: two requirements that conflict ⇒ **that IS "cannot arbitrate"** —
-  **send an `ask` at once** — one line naming both sides of the conflict and your leaning;
+  **send an `ask` (`notify_parent`) at once** — one line naming both sides of the conflict and your leaning;
   **never settle it by picking a side yourself**; **never keep weighing it, never "do one round first and then see"**;
   **never defer it to your final report**.
 - **Out of scope**: naming / implementation / structure / wording details; anything a read or a command answers;

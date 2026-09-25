@@ -8,6 +8,7 @@ import { ctx, vscode } from "./state.js"
 import { t } from "./i18n.js"
 import { openModelMenu, closeModelMenu } from "./model-menu.js"
 import { modelSwitchBlocked } from "./loading.js"
+import { effortSelection } from "./settings-state.js"
 
 ctx.modelBtn.addEventListener("click", (e) => {
     e.stopPropagation()
@@ -79,13 +80,13 @@ function selectModel(m) {
   ctx.modelBtn.textContent = m.id; closeModelMenu()
   vscode.postMessage({ type: "selectModel", model: m.id, provider: m.provider || "" })
   const levels = m.reasoning || []
-  // 归一优先**端侧默认档**（spec `reasoningEffortDefault`——表 = `src/specs.mjs:22-42`）：未声明该档时
-  // 才回落枚举首项——effort 型新档（qwen3.7/3.8-flash 族）枚举首项 = `"none"`，取首项即等于把思考关掉
-  // （静默 off）。设置面板侧同根面 = `settings-state.js` 的 `effortSelectView`（占位「—」取代首项回落）。
-  if (levels.length > 0 && !levels.includes(ctx.selectedReasoning)) ctx.selectedReasoning = m.effortDefault || levels[0]
+  // 归一 = 单源 `effortSelection`（§15.4-1）：已存值∈枚举 > 注册默认∈枚举 > **中性档 `""`**
+  // （不显式 effort ⇒ 回合侧 `if (reasoning)` 假值不 patch——`panel-turn-stages.mjs:98`）。
+  // 不得回落 `levels[0]`：effort 型新档（qwen3.7/3.8-flash 族）首项 = `"none"` ⇒ 换模型即静默关思考。
+  if (levels.length > 0) ctx.selectedReasoning = effortSelection(levels, ctx.selectedReasoning, m.effortDefault) ?? ""
   const visible = levels.length > 0 ? ctx.selectedReasoning : "off"
-  ctx.reasoningBtn.textContent = visible === "none" ? "off" : (reasoningLabel(visible))
-  ctx.reasoningBtn.classList.toggle("active", levels.length > 0 && visible !== "off")
+  ctx.reasoningBtn.textContent = visible === "" ? "—" : visible === "none" ? "off" : (reasoningLabel(visible))
+  ctx.reasoningBtn.classList.toggle("active", levels.length > 0 && visible !== "off" && visible !== "")
 }
 
 function toggleDropdown(el, build) {
@@ -119,10 +120,12 @@ export function handleModelsMessage(m) {
       ctx.modelBtn.textContent = match.id
       ctx.selectedReasoning = prefs.reasoning || "off"
       const levels = match.reasoning || []
-      // 归一（单一出处 = `selectModel` 内注释）：`effortDefault` 优先，未声明回落 `levels[0]`。
-      if (levels.length > 0 && !levels.includes(ctx.selectedReasoning)) ctx.selectedReasoning = match.effortDefault || levels[0]
-      ctx.reasoningBtn.textContent = ctx.selectedReasoning === "none" ? "off" : (reasoningLabel(ctx.selectedReasoning))
-      ctx.reasoningBtn.classList.toggle("active", levels.length > 0 && ctx.selectedReasoning !== "off")
+      // 归一（单源 = `effortSelection`，同 `selectModel` 内注释）：已存值∈枚举 > 注册默认∈枚举 >
+      // 中性档 `""`——不得回落 `levels[0]`（§15.4；`levels[0] === "none"` 族两径都不再被静默关思考）。
+      if (levels.length > 0) ctx.selectedReasoning = effortSelection(levels, ctx.selectedReasoning, match.effortDefault) ?? ""
+      const visible = levels.length > 0 ? ctx.selectedReasoning : "off"
+      ctx.reasoningBtn.textContent = visible === "" ? "—" : visible === "none" ? "off" : (reasoningLabel(visible))
+      ctx.reasoningBtn.classList.toggle("active", levels.length > 0 && visible !== "off" && visible !== "")
       // F-W14：忙态零回写（显示仍更新——上列已刷）——不携快照覆写槽；idle 零回归（照发）
       if (!modelSwitchBlocked()) {
         vscode.postMessage({ type: "selectModel", model: match.id, provider: match.provider })

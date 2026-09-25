@@ -1,6 +1,5 @@
 /**
- * explore-distill.mjs — End-of-run exploration distillation (AGENT-LOOP §13 +
- * CONTEXT-COMPACTION §6.9 H1, 2026-08-23). 2026-09-05 module-split: moved verbatim out of
+ * explore-distill.mjs — End-of-run exploration distillation (CONTEXT-COMPACTION.md §6.9 H1, 2026-08-23). 2026-09-05 module-split: moved verbatim out of
  * context.mjs (524 > 500 hard limit). The main agent's machine line is flooded by inline
  * step-by-step exploration (read/grep/...). At run end we distill THIS run's exploration
  * tool-results into one semantic summary note that replaces them in the machine line,

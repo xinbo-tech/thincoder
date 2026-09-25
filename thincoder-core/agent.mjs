@@ -9,7 +9,7 @@ import { specForModel, assistantToolCallMessage } from "./config.mjs"
 import { resolve } from "node:path"
 import { executeToolCalls } from "./agent/dispatch.mjs"
 import { recordToolResults } from "./agent/record-results.mjs"
-import { FILE_MUTATORS } from "./agent/helpers.mjs"
+import { FILE_MUTATORS, toolTouchPaths } from "./agent/helpers.mjs"
 import { prepareRun } from "./agent/setup.mjs"
 import { injectPostTurn } from "./agent/post-turn.mjs"
 import { handleCompletion } from "./agent/completion.mjs"
@@ -117,7 +117,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
   if (pendingAsync?.length) {
     const { injectAsyncResult } = await import("./agent-tools/subagent.mjs")
     const { injectConsultResult } = await import("./agent-tools/consult.mjs")
-    // TUI-OOM-ROOTCAUSE（AGENT-LOOP.md §23.3.1 消费点②——run 起始 pending 注入）：
+    // TUI-OOM-ROOTCAUSE（AGENT-LOOP.md §6.15 消费点②——run 起始 pending 注入）：
     // 注入完成后释放条目对子代理对象的持有（childAgent/report 置空——幂等 helper）。
     const { releaseSettledEntry } = await import("./agent-tools/async-settle.mjs")
     for (const e of pendingAsync.splice(0)) {
@@ -217,7 +217,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     const frame = turnFrame(++agent._turnSeq, turn, maxTurns)
     agent._currentTurn = frame.turn
     agent._maxTurns = frame.maxTurns
-    // D2 (AGENT-LOOP.md §7.2): depth>0 children emit a ⟦ev⟧turn progress token each turn —
+    // D2 (AGENT-LOOP-SUBAGENT.md §6.7.2): depth>0 children emit a ⟦ev⟧turn progress token each turn —
     // single emit point covering all three spawn tools; phase=llm (tool/done progress rides
     // the onToolCall/onToolResult relay — no token for those). 第 19 批：载荷取上方帧值
     // （agent._currentTurn / _maxTurns——字段形态 / 字段数 / phase 零变化，N5）。
@@ -398,7 +398,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
         agent._verifyPassed = undefined
         try {
           const args = JSON.parse(toolCall.arguments)
-          const paths = tool.touchedPaths ? tool.touchedPaths(args) : [args.path]
+          const paths = toolTouchPaths(tool, args)
           for (const p of paths) {
             const abs = resolve(agent.cwd, p)
             if (!agent._touchedFiles.includes(abs)) agent._touchedFiles.push(abs)

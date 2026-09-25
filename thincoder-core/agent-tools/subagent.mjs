@@ -300,7 +300,7 @@ export const subagentTool = {
         // stopped 折叠语义丢失：无 ⟦ev⟧stopped/无 STOPPED_MARK——块冻结标 done 而非
         // stopped——评审 🟡#2）。stopped 分支改抛 AbortError——runWithContinue 只捕
         // ContinueError——原样上抛 → 阻塞 catch 三分支②折叠（"child 随即在 abort 检出点
-        // 解绕折叠"——AGENT-LOOP §7.2 机制文）。abort 恒已在途（stopped 只由
+        // 解绕折叠"——AGENT-LOOP-SUBAGENT.md §6.7.2 机制文）。abort 恒已在途（stopped 只由
         // cancelSyncChild 与 ctrl.abort 同时置位）——信号语义真实。
         if (parent._syncChildAborts?.get(key)?.stopped) throw abortError(ctrl.signal, "settle", "sync-stopped")
         const go = await ctx.onPermissionRequest("continue", { turns: e.turn, agent: key })

@@ -308,9 +308,12 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {}, 
       // 2026-09-08 D1：单形态按行号改（path + line/startLine/endLine + new_string——无
       // old_string）同样走 IDE 缓冲通道（hasLineParams 判定）——否则回落本地写盘会与
       // IDE 缓冲脱敏；editSingle → computeEditEntry 行号语义自动继承。
-      if (base === "edit" && canReadFile && canWriteFile && (Array.isArray(args?.edits) || (path && typeof args?.new_string === "string" && (typeof args?.old_string === "string" || hasLineParams(args))))) {
+      // #327（TOOLS.md §6.17 裁定 3）：路由判据**归一**——`edits` 真值判（与核 execute 同判据）：
+      // 真值 ⇒ 批量分支（共享容器守卫、同一错误面）；假值 ⇒ 单形态面——「桥径单形态应用」分支消除。
+      const hasEdits = Boolean(args?.edits)
+      if (base === "edit" && canReadFile && canWriteFile && (hasEdits || (path && typeof args?.new_string === "string" && (typeof args?.old_string === "string" || hasLineParams(args))))) {
         try {
-          const text = Array.isArray(args?.edits) ? await editBatch(args) : await editSingle(path, args)
+          const text = hasEdits ? await editBatch(args) : await editSingle(path, args)
           return { handled: true, result: text }
         } catch (e) {
           return { handled: true, result: `Error: ${e.message}` }

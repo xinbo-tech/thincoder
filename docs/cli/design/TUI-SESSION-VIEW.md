@@ -4,7 +4,7 @@
 > **回合驱动**（`runAgentTurn` / 挂起会话驱动器）· **显示层内存有界**（字符维度额）。
 > 配对需求档 = `docs/cli/requirements/TUI.md`（本板块三档设计共用一份需求档——层归属不对称，理由见该档 §1 注）。
 > 同板块其余两档 = `docs/cli/design/TUI.md`（界面核心）· `docs/cli/design/TUI-COMMANDS.md`（命令层与选择面）。
-> 对位档 = **无**（VSC webview 的历史窗口显示面独立——端差异登记、各端独立实现）。
+> 对位档 = **无**（VSC webview 的历史窗口显示面独立——**已裁保留（A9 · 复核 = 2026-09-25 本批）**：结构性不对称 = 历史窗口显示面各随宿主渲染（VSC webview 分页容器 ∥ CLI 终端窗口）；证据 = 两端实现树；显式裁定 = CORE-UNIFICATION §2.5 端特有桶族（2026-09-13）+ 本批确认）。
 > 建档：2026-09-15（**B 式迁移轮 · 第 6 批**——`thincoder-cli/docs/design/TUI.md` 的 §7 / §8 / §15 面重建入本档；
 > 旧档原地一字不改、留作参照历史）。
 > 本档坐标与行数 = **as-of 2026-09-16 实核**（仓根 = `thincoder/`）。
@@ -203,6 +203,8 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
 | 显示层额度的常量数值来源 | 常量本体 | `thincoder-cli/src/tui/display-budget.mjs`（单源——本档引用不复制数值之外的口径） |
 
 ## 变更记录
+
+- 2026-09-25（**misc-four 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-misc-four.md` §2 · 台账 #185）：档头对位行裸读法收正——补 A9 三件（结构性不对称 / 证据 / 裁定）。**零新机制**。
 
 - 2026-09-24（**queue-visible 批 · fix 轮（步边界 pickup）· eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §1.11）：§4 第 6 条收正——回合尾直发句限定为**残项路径**，队列主消费 = **步边界 pickup**（机制单源回指 `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8）。**回合驱动其余步 / 恢复 / 分页 / 额度零变**。
 

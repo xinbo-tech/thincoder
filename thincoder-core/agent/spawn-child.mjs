@@ -1,5 +1,5 @@
 /**
- * spawn-child.mjs — 生成侧统一子代理管线（AGENT-LOOP.md §7.2 D3）。
+ * spawn-child.mjs — 生成侧统一子代理管线（AGENT-LOOP-SUBAGENT.md §6.7.2）。
  *
  * 收编 subagent/escalate/consult 三份机械同构的重复实现：
  *   - allocRelay / emitRelayModel: relay 取号段 ∥ 出生声明（`[model]`）发射段——两段分离
@@ -35,7 +35,7 @@ const RS = "\x1e"
 export { TURN_CAP_MARK, STOPPED_MARK } from "./child-marks.mjs"
 
 /**
- * §18 D-E3 工程子代理内部 spawn 机械门（AGENT-LOOP.md §18 D-E2 round5 #2 后备 +
+ * D-E3 工程子代理内部 spawn 机械门（AGENT-LOOP-SUBAGENT.md §6.7.6 后备 +
  * ENGINEERING-MODE.md §2.15 D）：eng-coder（偏差审计）与 **eng-designer（自己勘察）**
  * 同为受限通道——depth>0 且父角色 ∈ 集合时，内部 spawn 只允许 role='explore'、
  * async 强制同步。
@@ -178,7 +178,7 @@ export function emitNestedChildEvent(ctx, relayPrefix, kind) {
   return true
 }
 
-/** 捕获额度（TUI-OOM-ROOTCAUSE——AGENT-LOOP.md §23.3.1 表 1 候选 1：滞后水位截断）：
+/** 捕获额度（TUI-OOM-ROOTCAUSE——AGENT-LOOP.md §6.15：滞后水位截断）：
  *  `_capturedOutput` 是子代理流式文本的第二份全量拷贝（原无上限——勘察 C2）；超 hard 即
  *  裁至头 16K + 标记 + 尾 48K（摊还 O(1)）——消费面读时已各自 slice(0, 2000/4000)，头尾
  *  保真覆盖；停止报告内联场景出现截断标记（可断言——D-SM1）。纯函数本体住

@@ -11,6 +11,7 @@ import { persistRaw, conflictError, loadRaw } from "@thincoder/core/config-io.mj
 import { probeTargetFromEntry, sanitizeConsultModels } from "./presets.mjs"
 import { probeChannelModels } from "@thincoder/core/provider/list-models.mjs"
 import { overrideAdmissionIfHostBusy } from "./loop-sampler.mjs"
+import { specForModel } from "../specs.mjs"
 
 /** VSC 端 `$schema` 指针（§2.5 #80 端差——本端写盘注入；CLI 不注入）。 */
 export const VSC_CONFIG_SCHEMA = "https://thincoder.dev/schemas/config.json"
@@ -52,6 +53,18 @@ function probeDefaultModelChannel(dm) {
     // 写面同步契约零改——探针仍 fire-and-forget（本链已全兜底）。
     if (!r.ok) overrideAdmissionIfHostBusy(name, r.error)
   })().catch(() => { /* 探针绝不阻断写面 */ })
+}
+
+/** off 形按族取形（off 形的族别单源 = `docs/core/design/MODEL-SPECS.md` §15.4-2）：effort 族
+ *  （`thinkApi === "effort"`）与自定义开值族（`thinkEnabledValue` ≠ "enabled"）⇒ `thinking = null`
+ *  （载荷层 off 门首款要求 `provider.thinking === null`——`{type:"disabled"}` 不开门 ⇒ effort 族关思考静默失效）；
+ *  其余（type 族默认，如 `deepseek-v4-flash` 形）⇒ `{ type: "disabled" }`。
+ *  取形源 = payload 内 `adv.model`（off 档只在 select 已渲染时可达 ⇒ spec 可解；未给名 ⇒ 查表兜底 DEFAULT_SPEC）。 */
+function advisorOffShape(model) {
+  const spec = specForModel(model ?? "")
+  if (spec.thinkApi === "effort") return null
+  if ((spec.thinkEnabledValue ?? "enabled") !== "enabled") return null
+  return { type: "disabled" }
 }
 
 /** Panel persistence: build the agent.* patch from a webview payload (CLI-parity field names).
@@ -118,22 +131,40 @@ export function saveAgentSettingsFromPanel(payload) {
     // Seed from disk: every scalar/plain-object advisor key survives the merge.
     // Arrays (and functions, which JSON files can't have) are never written by either
     // side — don't resurrect them.
+    // §15.4-5 null carve-out（只 `thinking` 一键）：该键的 `null` = **有意义值**（NF1 显式 off）——
+    // 不穿透种子循环则下一次任意面板保存（恒携 advisor 载荷）就静默删掉 off 形；其余键维持
+    // 「null = 清空、不复活」。
     const merged = {}
     for (const [k, v] of Object.entries(current)) {
-      if (v === null || Array.isArray(v)) continue
+      if (v === null && k !== "thinking") continue
+      if (Array.isArray(v)) continue
       merged[k] = v
     }
-    // Payload wins where it speaks (guard / timeoutMs / effort / provider / model).
+    // Payload wins where it speaks (guard / timeoutMs / reasoningEffort / provider / model).
     merged.guard = adv.guard !== undefined ? !!adv.guard : (merged.guard ?? false)
     // timeoutMs passthrough (AGENT-PARAMS-TUNING, P4): the panel has no timeoutMs
     // input — an explicit valid payload value wins, otherwise the hand-written
     // config.json value survives a panel save (never silently dropped, never stored invalid).
     if (typeof adv.timeoutMs === "number" && adv.timeoutMs > 0) merged.timeoutMs = adv.timeoutMs
     if (!Number.isFinite(merged.timeoutMs) || merged.timeoutMs <= 0) delete merged.timeoutMs
-    if ("effort" in adv) {
-      if (typeof adv.effort === "string" && adv.effort.trim()) merged.effort = adv.effort.trim()
-      else delete merged.effort
+    // §15.4-6（台账 #331——死键接线）：写键 = `advisor.reasoningEffort`（单源 = 核读取键
+    // `thincoder-core/advisor/run.mjs:48/:64`——as-of 本批实施，与 CLI `/advisor` 菜单同键）。三态：`none` = 关思考 ⇒
+    // 族别 off 形（§15.4-2）+ 删键；「—」/ 空 ⇒ 删键（不写档、**不动** thinking）；其余档 = 字面值
+    // + 清 `null` 标记（选档 = 要思考；`{type:"disabled"}` 不动——同 CLI `cmd-think.mjs:119-120`）。
+    if ("reasoningEffort" in adv) {
+      const v = adv.reasoningEffort
+      if (v === "none") {
+        merged.thinking = advisorOffShape(adv.model)
+        delete merged.reasoningEffort
+      } else if (typeof v === "string" && v.trim()) {
+        merged.reasoningEffort = v.trim()
+        if (merged.thinking === null) delete merged.thinking
+      } else {
+        delete merged.reasoningEffort
+      }
     }
+    // legacy `advisor.effort`（写而无人读的死键）——保存即删，不迁移值（静默激活历史死值）、不复活。
+    delete merged.effort
     for (const key of ["provider", "model"]) {
       if (key in adv) {
         if (typeof adv[key] === "string" && adv[key].trim()) merged[key] = adv[key].trim()

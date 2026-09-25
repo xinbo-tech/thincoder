@@ -5,6 +5,8 @@
  * 用（只此一处）；§20 补位/排队刷新仍来自 subagent-scheduler.mjs。
  */
 
+import { createHash } from "node:crypto"
+import { basename } from "node:path"
 import { ASYNC_POOL_LIMITS, poolDomainOf, poolLimitsFor, runningPoolCount } from "./subagent-async.mjs"
 import { runChildPipeline } from "./subagent-async.mjs"
 import { logEvent } from "../log.mjs"
@@ -15,6 +17,11 @@ import {
 } from "./subagent-scheduler.mjs"
 // ASYNC-RESULT-CONTAINER.md D3/D6：settle 公共收尾单点 + child signal 构建单点
 import { bindChildController, buildChildSignal, settleAsyncEntry } from "./async-settle.mjs"
+
+/** #309 任务书文本摘要（12 hex——**不留全文**，NF-L3 同族）：条目自携与双点留痕的标识面。 */
+function taskSeal(text) {
+  return createHash("sha256").update(String(text ?? "")).digest("hex").slice(0, 12)
+}
 
 /**
  * SUBAGENT-OBSERVE-SEND D2：注入队列回合边界消费核心——把 entry._injected 全部消息按普通
@@ -32,12 +39,12 @@ export function drainInjectedQueue(entry, agent) {
 }
 
 /**
- * Async branch (AGENT-LOOP.md §15 D-A1/D-A6): spawn without waiting.
+ * Async branch (AGENT-LOOP-SUBAGENT.md §6.7.3 D-A1/D-A6): spawn without waiting.
  * The child runs the EXACT blocking pipeline (runChildPipeline — relay /
  * turn-cap / permission / MIN_REPORT_CHARS / mergeChildMutations all unchanged),
  * but the parent does not await it: the promise is parked in _asyncSubagents and
  * consumed by the auto channel (AGENT-LOOP-SUBAGENT.md §6.7.5 — turn-end collection / suspension digest;
- * the check action is gone). Slot queue (§11.1 D-24a/R14 — 分域): the entry carries a
+ * the check action is gone). Slot queue (AGENT-LOOP-ASYNC-POOL.md §6.10 — D-24a/R14 分域): the entry carries a
  * pool domain (_pool = poolDomainOf(role)); running count < limit[its domain]
  * (agent.poolLimits — default engCoder 4 / other 4) → start now; ≥ → enqueue
  * (status "queued", position = queue index) — never rejected, never requiring the
@@ -73,17 +80,25 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
     // AGENT-LOOP-SUBAGENT.md §6.7.2 D-M6 (round2 #2)：条目级 AbortController——cancel 定向 abort 本
     // 条目（runAgent signal 链）；Ctrl+C 全停语义不变（基信号 abort 逐链传播）。
     controller: null,
-    // §20 D-SD2 域元数据（AGENT-LOOP.md §20）：running ∪ queued 条目全带——
+    // D-SD2 域元数据（AGENT-LOOP-SUBAGENT.md §6.9）：running ∪ queued 条目全带——
     // _files（归一化绝对路径）/ _dependsOn（字符串 id）——冲突检测与补位判据
     // 的事实源；无调度参数 spawn 两字段皆空（legacy——不参与冲突检测——零改动）。
     _files: files,
     _dependsOn: dependsOn,
+    // #309（AGENT-LOOP-SUBAGENT.md §6.29.2——可诊断性）：条目**自携**绑定档与任务书摘要
+    // （启动路径按条目闭包取值——入队/补位不再有第二个取值面）；`child:spawn` / `child:start`
+    // 双点同键面留痕（基名 + 摘要，零内容）——事后可对账「哪条任务书在哪个 id 下起跑」。
+    _batchDoc: child?._batchDoc ?? null,
+    _taskSeal: taskSeal(input),
     _lastQueuedSig: null, // ⟦ev⟧queued 去重 sig（refreshQueuedTokens）
     // SUBAGENT-OBSERVE-SEND D2：父侧 send 注入队列——父 action:'send' push 消息，子
     // 回合边界经 consumeInjected 回调消费（drain + pushReal 成 user 回合）；settle 收尾
     // 时仍残留 = 未投递（消息入队后子在下一回合边界前 settle）→ 附 settle 报告提示。
     _injected: [],
   }
+  // 留痕面基名（零内容——§6.29.2）：绑定档绝对路径 → 基名；无绑定（非工程族）⇒ null（字段不落）。
+  const batchDocBase = entry._batchDoc ? basename(entry._batchDoc) : null
+
   // §20 D-SD3 准入落点：等待态（依赖未满足/域冲突/depc）→ queued（waiting-deps——
   // 不占槽不启动——即使槽空）；纯槽满（kind slot）→ 按域计数判定（§11.1 D-24a：
   // runningIn(domain) < limit(domain)——跨域互不阻塞——每次入池判定时读配置）。
@@ -147,6 +162,8 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
     ctx.callbacks?.onToken?.(relayPrefix + "⟦ev⟧async\x1e")
     // Deferred [model] emit: the TUI block is created at ACTUAL start.
     ctx.callbacks?.onToken?.(relayPrefix + "[model]" + (childProvider.model ?? ""))
+    // #309 §6.29.2 双点留痕第二点（条目**实际启动点**——与 child:spawn 同键面）：哪条任务书在哪个 id 下起跑。
+    logEvent("child:start", { role, id: `${role}#${id}`, batchDocBase, taskSeal: entry._taskSeal })
     // Turn-cap on background children NEVER pops the continue panel (D-A3):
     // §15 D-A3 exception (2026-09-02 unified rule, AGENT-LOOP.md §2): in an
     // engineering && AUTO session the child auto-resumes — the user authorized
@@ -187,7 +204,7 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
   parent._asyncSubagents.set(String(id), entry)
   // LOGGING（LOGGING.md）：child:spawn（async——注册即事件；status 记 queued/running 分流；
   // 实际启动由补位 start() 触发——运行中由子内 llm/tool 事件可见）
-  logEvent("child:spawn", { role, id: `${role}#${id}`, kind: "async", status: entry.status, ms: 0 })
+  logEvent("child:spawn", { role, id: `${role}#${id}`, kind: "async", status: entry.status, ms: 0, batchDocBase, taskSeal: entry._taskSeal })
   if (entry.status === "queued") {
     parent._asyncQueue.push(entry)
     entry.position = parent._asyncQueue.length

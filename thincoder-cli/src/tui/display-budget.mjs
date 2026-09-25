@@ -3,7 +3,7 @@
  *
  * 职责（§15.3.2）：常量单源（D-TB4）+ 行/载体计长（`lineChars`）+ `state.lines` 总量
  * 对账（`syncLineBudget`）。纯函数本体（`capText` / `appendCappedText`）住
- * `thincoder-core/text-budget.mjs`（零依赖）——与 agent 侧捕获共用（AGENT-LOOP.md §23.3.1，D2 单源）；
+ * `thincoder-core/text-budget.mjs`（零依赖）——与 agent 侧捕获共用（AGENT-LOOP.md §6.15，D2 单源）；
  * 本模块只承载 TUI 面常量与对账。
  *
  * 依赖方向：本模块只引 `./ansi.mjs` + `@thincoder/core/text-budget.mjs`（叶子——不引 subagent 族，

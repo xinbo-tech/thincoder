@@ -23,6 +23,8 @@ import { peerDomains, registerDomains, registerClaims, peerNotes, markPeerNoted 
 import { noteMutations } from "@thincoder/core/agent-tools/advisor-settle.mjs"
 // §18 C-11（2026-09-12——500 硬限归位）：前置门禁族 + 批权限扫描自本档 verbatim 迁至 tool-gates
 import { l3TouchedPaths, preGateBlocked, isSubagentConsumeDesignAction, collectBatchPermission } from "./tool-gates.mjs"
+// #327（`docs/core/design/TOOLS.md` §6.17）：记账面触达路径提取单源谓词（核单源——零副本）。
+import { toolTouchPaths } from "@thincoder/core/agent/helpers.mjs"
 // #130 B-4：`.cursor/rules` 作用域集 JIT 注入（派发前——判据单源 `rules-face.mjs`）
 import { injectScopedRules } from "./rules-face.mjs"
 
@@ -259,7 +261,7 @@ export async function executeToolBatches(agent, { response, history, fullHistory
               markPeerNoted(agent, peerNote.keys)
             }
           }
-          // §29 fix A（AGENT-LOOP.md §29——2026-09-07——唯一记账点）：FILE_MUTATORS 执行成功
+          // fix A（2026-09-07——唯一记账点）：FILE_MUTATORS 执行成功
           // 即刻记文件变更事件——取代批后提交循环的 recordFileMutation（不双计）——同批 launch
           // 前的写在 eventsAtLaunch 之前落地 → async 评审 settle 不误判陈旧；中断批（commit
           // 循环被跳过）不再丢事件（中断分支不另行记账——seq 单计）。
@@ -346,7 +348,7 @@ export async function executeToolBatches(agent, { response, history, fullHistory
           agent._calledAdvisorThisRun = false
           agent._verifiedThisRun = false
           agent._verifyPassed = undefined
-          const paths = tool.touchedPaths ? tool.touchedPaths(args) : [args?.path]
+          const paths = toolTouchPaths(tool, args)
           for (const p of paths) {
             if (typeof p !== "string") continue
             // R-bug join→resolve 双前缀（2026-09-06——CLI 同修）：

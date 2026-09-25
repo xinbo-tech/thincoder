@@ -224,11 +224,13 @@ function callRecord(res, { level, at, maxTokens }) {
 
 /** 单级调用 + 严格解析（§2.10.1 **级内单发**：不可解析（含空输出 / `finishReason=length`）或传输面失败 ⇒ 该级失败，
  *  **不设同模型第二发**——级链推进 / 替代级取用住 `judge-fallback.mjs`）。
- *  `level` = 该级在级链中的级号（1 = 原位；替代级 k ⇒ 记档 k+1）；`slot.id` = 级链根位次（A / B / C / review——传输面按链取用）。 */
+ *  `level` = 该级在级链中的级号（1 = 原位；替代级 k ⇒ 记档 k+1）；`slot.id` = 级链根位次（A / B / C / review——传输面按链取用）。
+ *  传输面抛错亦然：逐尝试账目 `totalMs` = 发起 → 失败墙钟（§2.2-8 / KD-47①）。 */
 export async function callSlot({ slot, messages, allowed = VERDICTS, transport, providers, signal, level = 1 }) {
   const at = isoLocal()
   const rec = (res) => callRecord(res, { level, at, maxTokens: slot.maxTokens })
   let res = null
+  const t0 = Date.now() // 尝试点墙钟起点——失败照记「发起 → 失败」耗时（§2.2-8 / KD-47①）
   try {
     res = await transport.call({
       provider: judgeProviderEntry(slot, providers),
@@ -237,7 +239,7 @@ export async function callSlot({ slot, messages, allowed = VERDICTS, transport, 
       slot: slot.id,
     })
   } catch (e) {
-    return { id: slot.id, verdict: "error", reason: `位级失败：${e?.name ?? "Error"}: ${head(e?.message ?? String(e), 160)}（传输面失败）`, attempts: 1, calls: [rec(null)] }
+    return { id: slot.id, verdict: "error", reason: `位级失败：${e?.name ?? "Error"}: ${head(e?.message ?? String(e), 160)}（传输面失败）`, attempts: 1, calls: [rec({ totalMs: Date.now() - t0 })] }
   }
   const calls = [rec(res)]
   let failure = null

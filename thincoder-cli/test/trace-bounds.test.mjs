@@ -1,5 +1,5 @@
 /**
- * trace-bounds.test.mjs — TUI-OOM-ROOTCAUSE 批 组 2（B2-trace——AGENT-LOOP.md §23.3.2）
+ * trace-bounds.test.mjs — TUI-OOM-ROOTCAUSE 批 组 2（B2-trace——TRACES.md §6.2）
  * 用例表 1:1：T-TR1–T-TR5（单遍序列化等价 / 完整落盘 / 序号缓存）。
  *
  * 形态：快层 unit——临时 THINCODER_TRACES_DIR（写门开启——NODE_TEST_CONTEXT 下需显式

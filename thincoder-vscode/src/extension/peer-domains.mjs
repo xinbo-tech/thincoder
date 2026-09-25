@@ -6,15 +6,15 @@
  * 内容 { sessionId, pid, end, cwd, domains: [绝对路径], updatedAt } + 意图认领面
  * `claims` / `claimsUpdatedAt`（§4.4.1）；两面**字段级合并写**（各写各的字段，未知字段与
  * 另一面字段逐字保留）。写点 = 回合级（registerDomains 累积 + flushDomains 回合末整写一次
- * ——tmp+rename 原子写——rename 翻目录 mtime → 目录 mtime 惰性缓存生效）；无写入回合不
- * flush（hot 窗口自然老化）。
+ * ——落盘原语 = 核 `writeSessionFile`（经端壳 `./session-slots.mjs` 单源转口），rename 翻目录
+ * mtime → 目录 mtime 惰性缓存生效）；无写入回合不 flush（hot 窗口自然老化）。
  *
  * 意图认领面（§4.4 / D-MI17–D-MI21——端侧自持复本）：认领 = 结构化写成功即登记（新目标
  * 即刻落盘 / 续约节流 CLAIM_RENEW_FLUSH_MS；租约 CLAIM_TTL_MS，同域再写续约）；命中 =
  * 写前预检（与足迹面同点同聚合）目标 ∩ 他实例未过期认领 ⇒ 认领级软提示（逐字锚，与核
  * `peer-claims.mjs` 同串——跨端对拍）；去重集 = `agent._peerNoted`（每（目标 × 属主）每
  * run 一行——`markPeerNoted` 在提示附加时落标记；清空落点 = `run-stages.mjs` depth-0 收尾）；
- * 混合命中合成 = 认领行逐 target + 足迹聚合行过滤已覆盖 target（零双报）。
+ * 混合命中合成 = 认领行逐 target + 足迹行逐 target（过滤已覆盖 target——零双报）。
  *
  * 聚合（peerDomains(cwd).conflicts(targets)）：扫描目录中他活实例文件 → 聚合按 peers
  * 目录 mtime 惰性缓存（评审修正 #2——缓存命中零扫描）；崩溃残留惰性清理（读到死 pid
@@ -31,12 +31,13 @@
 
 import { readdirSync, readFileSync, statSync, unlinkSync } from "node:fs"
 import { join } from "node:path"
-import { getSessionId, END, normalizeCwd } from "./session-slots.mjs"
+import { getSessionId, END, normalizeCwd, writeSessionFile } from "./session-slots.mjs"
 import { batchAlive } from "./peer-instances.mjs"
 // 认领面（§4.4）归口 `peer-claims.mjs`（越 300 软线外提——设计档 §4.4.6 落点）；本档 re-export
-// 路径缝与落盘原语，保既有 import 名面（消费方零改）。
+// 路径缝与认领 API，保既有 import 名面（消费方零改）；落盘原语 = 核 `writeSessionFile`（经端壳
+// `./session-slots.mjs` 转口——端档零本地原子写实现，§4.4.1 单一实现）。
 import {
-  peersDir, peerFilePath, readRecord, writeRecordAtomic, parseClaims, claimsNow, claimsOverlap,
+  peersDir, peerFilePath, readRecord, parseClaims, claimsNow, claimsOverlap,
   claimNoted, claimWho, claimAge, claimLeft, claimNoteText, claimNoteKey, _resetPeerClaimsForTest,
 } from "./peer-claims.mjs"
 
@@ -66,6 +67,7 @@ export function registerDomains(absPaths) {
 
 /** 回合末整写本实例登记文件（合并写——认领字段与未知字段逐字保留）。
  *  无写入回合跳过（文件不刷新——5 分钟 hot 窗口自然老化——registration 反映真实写足迹）。
+ *  落盘原语 = 核 `writeSessionFile`（经端壳转口——含末级兜底支）。
  *  NF2：写失败容忍（不影响回合主流程）。 */
 export function flushDomains(cwd) {
   if (pendingDomains.size === 0) return
@@ -80,7 +82,7 @@ export function flushDomains(cwd) {
     updatedAt: Date.now(),
   }
   try {
-    writeRecordAtomic(file, payload)
+    writeSessionFile(file, payload)
     pendingDomains.clear()
   } catch { /* NF2：登记失败不影响回合 */ }
 }
@@ -207,25 +209,20 @@ function sameCwd(a, b) {
   return typeof a === "string" && typeof b === "string" && normalizeCwd(a) === normalizeCwd(b)
 }
 
-/** L3 冲突软提示文案（决策⑥ A——工具结果附注，不阻止；既有形态，D-MI5 面零变） */
-function peerConflictNote(hits) {
-  const seen = new Set()
-  const parts = []
-  for (const h of hits) {
-    const k = `${h.file}|${h.pid}`
-    if (seen.has(k)) continue
-    seen.add(k)
-    parts.push(`${h.file} (pid=${h.pid}${h.end ? `, ${h.end}` : ""})`)
-  }
-  return `[peer conflict notice] another live ThinCoder instance recently wrote the same file(s): ${parts.join("; ")} — coordinate to avoid overlapping edits (soft notice — the write was not blocked).`
+/** 足迹软提示单行（§4.3 字面规范面——逐 target 出行；与核 `peerCollabNote` 同串）。
+ *  `who` = 该 target 命中属主集：`${end} pid=${pid}`（无 end 则 `pid=${pid}`），以 ", " 连接
+ *  （与核同构——不去重：聚合 hit 集按属主天然唯一，逐项照列）。 */
+function footNoteLine(target, hits) {
+  const who = hits.map((h) => (h.end ? `${h.end} pid=${h.pid}` : `pid=${h.pid}`))
+  return `[peer-collab] ${target} — another live instance (${who.join(", ")}) registered writing it within the last 5 minutes; concurrent edits may overwrite each other. Write not blocked — coordinate before proceeding.`
 }
 
 /**
  * 认领 / 足迹软提示合成（§4.4.4——端侧混合命中定形）：认领命中目标各出认领行（逐字锚 · 逐
- * target；`who` = 新提示的认领属主 + 该目标仅足迹命中的属主带 ` (recent write)`）；足迹聚合行
- * 剔除已被认领行覆盖的 target 后照原形态拼接（零双报）；余项零 ⇒ 该行不出。去重 = 同一
- * （目标 × 认领属主）每 run 至多一行。返回 `{ text, keys }`（`keys` = 本次新提示的去重键——
- * 调用方在**提示真正附加**时落标记）；无提示 / 降级 ⇒ null。
+ * target；`who` = 新提示的认领属主 + 该目标仅足迹命中的属主带 ` (recent write)`）；足迹行 = 逐
+ * target 一行（§4.3 字面规范面——与核同形），已被认领行覆盖的 target 不出足迹行（零双报）。
+ * 去重 = 同一（目标 × 认领属主）每 run 至多一行。返回 `{ text, keys }`（`keys` = 本次新提示
+ * 的去重键——调用方在**提示真正附加**时落标记）；无提示 / 降级 ⇒ null。
  * 块内多行以空行分隔（端侧既有附加形态 `\n\n`——与核逐行 `\n` 不同；单行文案逐字锚不受影响）。
  */
 export function peerNotes(agent, { claimHits = [], footHits = [] } = {}) {
@@ -254,7 +251,15 @@ export function peerNotes(agent, { claimHits = [], footHits = [] } = {}) {
       for (const h of fresh) keys.push(claimNoteKey(target, h))
     }
     const rest = footHits.filter((f) => !covered.has(f.file))
-    if (rest.length > 0) lines.push(peerConflictNote(rest))
+    if (rest.length > 0) {
+      const byFootTarget = new Map() // 逐 target 出行（§4.3 字面规范面——对齐核形态）
+      for (const f of rest) {
+        const list = byFootTarget.get(f.file) ?? []
+        list.push(f)
+        byFootTarget.set(f.file, list)
+      }
+      for (const [target, hits] of byFootTarget) lines.push(footNoteLine(target, hits))
+    }
     if (lines.length === 0) return null
     return { text: lines.join("\n\n"), keys }
   } catch {

@@ -68,7 +68,7 @@ export function validateTaskBookFields(args) {
 }
 
 /**
- * F6 过程档 basename 族（父侧维护文件——AGENT-LOOP.md §28 R26 F-R26b 同族扩展）：
+ * F6 过程档 basename 族（父侧维护文件——AGENT-LOOP-SUBAGENT.md §6.9 R26 同族扩展）：
  * CHANGELOG.md。（台账 = 用户数据目录键控库——项目内无文件，不再入族；老台账族 todo.md /
  * todo-archive.md / checklist 族随 M2 SQLite 化 + M7 checklist 废除退役。）
  * 大小写不敏感全名匹配（路径任意层——归一化在调用点 normalizeFileList 已做）。

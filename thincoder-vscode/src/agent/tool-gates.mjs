@@ -14,16 +14,18 @@ import { readSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
 // 改指核 `advisor-settle.mjs`（同读池条目 `docAbs`/`launchSeq`/`_mutLog`）；M4（2026-09-17）
 // 上移单点：消费核 `agent/write-gate.mjs` 的 `freezeWindowConflict`（被审文件集 = 声明
 // 文档集 + 批次档的合流点）——与 CLI dispatch.mjs 同源镜像，端侧不再直连 settle 谓词。
-import { freezeWindowConflict } from "@thincoder/core/agent/write-gate.mjs"
+import { freezeWindowConflict, batchRecordWriteConflict } from "@thincoder/core/agent/write-gate.mjs"
+// #327（`docs/core/design/TOOLS.md` §6.17）：触达路径提取单源谓词——端侧同引核单源（零副本）。
+import { toolTouchPaths } from "@thincoder/core/agent/helpers.mjs"
 
-/** L3 触达路径（绝对）：FILE_MUTATORS 走 tool.touchedPaths（既有收口）；file_ops 按动作
+/** L3 触达路径（绝对）：FILE_MUTATORS 走 #327 单源谓词；file_ops 按动作
  *  取源/目标（move/rename 动两端；copy 只写目标——源仅读取不算写域）。 */
 export function l3TouchedPaths(toolName, tool, args, cwd) {
   let rel = []
   if (toolName === "file_ops") {
     rel = args?.action === "copy" ? [args?.dest] : [args?.source, args?.dest]
   } else {
-    rel = tool?.touchedPaths ? tool.touchedPaths(args ?? {}) : [args?.path]
+    rel = toolTouchPaths(tool, args)
   }
   return rel.filter((p) => typeof p === "string" && p).map((p) => resolve(cwd, p))
 }
@@ -91,7 +93,7 @@ export function preGateBlocked(agent, { tool, toolName, args, depth }) {
   // copy that let a nested layout (packages/foo/src/x.md) slip through the gate.
   // AC4: 判定资格 = "任一活槽存在"（内存 Map / 权威槽回读）——单值镜像已退役（D5）。
   if (agent.config?.agent?.engineering && depth === 0 && FILE_MUTATORS.has(toolName)) {
-    const paths = tool.touchedPaths ? tool.touchedPaths(args) : [args.path]
+    const paths = toolTouchPaths(tool, args)
     const conv = loadConventions(agent.cwd)
     // Unknown/missing paths (non-string) are treated as code — block conservatively.
     const touchesCode = paths.some((p) => typeof p !== "string" || isCodePath(p, conv))
@@ -111,6 +113,11 @@ export function preGateBlocked(agent, { tool, toolName, args, depth }) {
   if (FILE_MUTATORS.has(toolName) || toolName === "file_ops") {
     let absPaths = []
     try { absPaths = l3TouchedPaths(toolName, tool, args ?? {}, agent.cwd) } catch { absPaths = [] }
+    // #309 批次档写门（AGENT-LOOP-SUBAGENT.md §6.29.1——判据集 = FILE_MUTATORS；file_ops / 读类不在门内）
+    if (FILE_MUTATORS.has(toolName)) {
+      const crossBatch = batchRecordWriteConflict(agent, depth, absPaths)
+      if (crossBatch) return { blocked: true, content: `Error: ${crossBatch.message}` }
+    }
     const conflict = freezeWindowConflict(agent, absPaths)
     if (conflict) {
       return { blocked: true, content: `Error: write refused — design review #${conflict.id} is in flight over ${relative(agent.cwd, conflict.path)} (D5 freeze window). A write now would settle it stale — no token for a pass (the round is lost). Wait for the report, or cancel the review first (subagent action:'cancel' id:'${conflict.id}') and re-launch after the change.` }

@@ -308,7 +308,7 @@ test("F-2 落盘失败兜底：persist 失败 → 回退常规 inline（不吞�
   }
 })
 
-// ─── 群 B 批 B5（§16 D-DG2——AGENT-LOOP.md §16）：四族接线（T-DG3 —— W12 改判）───
+// ─── 群 B 批 B5（AGENT-LOOP.md §6.14）：四族接线（T-DG3 —— W12 改判）───
 // W12（2026-09-15）：T-DG1（同族 advisor 双条）/ T-DG2（escalate/consult 族标签面）退役——其
 // 断言对象 = 端侧逐族注入器（随 advisor 镜像删旧）；预算单源（核 `digestBudgetOver`）的**跨族**
 // 面由下方 T-DG3 直驱核统一注入器继续锁（同族面由本档 F-2 四例的核单源预算面承载）。

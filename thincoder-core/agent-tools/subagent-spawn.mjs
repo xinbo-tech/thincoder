@@ -11,12 +11,13 @@
  * （`child._spawnSystemBlock` 单点绑定——消费点 = 核 `prepareRun`），`input` 只留任务书。
  */
 
+import { basename, isAbsolute, relative } from "node:path"
 import {
   createAgent,
   readonlyToolNames, escapeXml, excludeSubagentTools,
 } from "../agent.mjs"
 import { allocRelay, wrapChildCallbacks, relayPrefixOf } from "../agent/spawn-child.mjs"
-// TUI-OOM-ROOTCAUSE（AGENT-LOOP.md §23.3.1）：子代理人读线窗口常量单源（store 零依赖）。
+// TUI-OOM-ROOTCAUSE（AGENT-LOOP.md §6.15）：子代理人读线窗口常量单源（store 零依赖）。
 import { RECORD_WINDOW_MESSAGES } from "../session-store.mjs"
 import { validateDesignToken } from "./advisor.mjs"
 import { tokenExpired, removeDesignTokenSlot, reconcileEngTokensFromSlot, persistEngTokens } from "../token-ttl.mjs"
@@ -33,7 +34,35 @@ import { validateTaskBookFields } from "./spawn-gates.mjs"
 import { buildAuditBlock } from "./audit-block.mjs"
 // 批次档路径解析单源（BATCH-RECORD.md §4.15 · 台账 #287）：门内解析改经叶档（读面非抛形），
 // 与 append / create 同源——门判据仍「参数在 + 路径可读」，错误文案逐字零变。
-import { resolveBatchReadPath } from "./batch-paths.mjs"
+import { resolveBatchReadPath, batchDocBases } from "./batch-paths.mjs"
+// LOGGING（LOGGING.md）：#309 形三观测留痕走同一事件通道。
+import { logEvent } from "../log.mjs"
+
+/** #309 任务书 token 判据（`AGENT-LOOP-SUBAGENT.md` §6.29.3）：`.md` 结尾的连续路径型字面
+ *  （含盘符形态——裸名 `AGENTS.md` 无分隔符且非绝对，见调用点过滤）。 */
+const MD_PATH_TOKEN = /[A-Za-z0-9_@.:\\/-]+\.md\b/g
+
+/** #309 形三·task↔batchDoc 观测留痕（§6.29.3——**不阻断**，spawn 照常放行）：任务书文本提及
+ *  **他批存在档** ⇒ `logEvent` 留痕一条（键面 = 两侧基名，零任务书内容）；只提绑定档 / 无路径型
+ *  `.md` 字面 ⇒ 零事件。token 逐条经 `resolveBatchReadPath` 解析（路径单源），命中 = 可读 ∧
+ *  落基底内 ∧ ≠ 绑定档（同一档多 token 按解析后绝对路径去重）。 */
+function logBatchDocRefs(parent, role, task, boundAbs) {
+  const cwd = parent?.cwd ?? process.cwd()
+  const text = typeof task === "string" ? task : ""
+  const key = (p) => (process.platform === "win32" ? p.toLowerCase() : p)
+  const bases = batchDocBases(cwd)
+  const seen = new Set()
+  for (const m of text.matchAll(MD_PATH_TOKEN)) {
+    const token = m[0]
+    if (!/[/\\]/.test(token) && !isAbsolute(token)) continue // 裸名（AGENTS.md 形态）不取
+    const abs = resolveBatchReadPath(cwd, token)
+    if (!abs || key(abs) === key(boundAbs ?? "")) continue // 不可读 / 就是绑定档 ⇒ 零事件
+    const inBase = bases.some((b) => { const r = relative(b, abs); return r && !r.startsWith("..") && !isAbsolute(r) })
+    if (!inBase || seen.has(key(abs))) continue // 他 .md 引用（设计档 / 需求档等）/ 同档重复
+    seen.add(key(abs))
+    logEvent("child:batchdoc-ref", { role, batchDocBase: basename(boundAbs ?? ""), refBase: basename(abs) })
+  }
+}
 
 /**
  * Effective subagent model override for a role (CLI parity shared with VS Code):
@@ -145,14 +174,14 @@ export function executeConsumeDesignAction(args, ctx) {
   return `design slot consumed — designId ${designId ?? "(single-design session)"} is closed out; a further eng-coder spawn for this design is mechanically rejected, and any new work (including deviation fixes) requires a fresh advisor(type='design') review and token.`
 }
 
-// ── §20 spawn 调度参数准入（AGENT-LOOP.md §20 D-SD1/D-SD3 + 20.4 round2 #5/#7）──
+// ── spawn 调度参数准入（AGENT-LOOP-SUBAGENT.md §6.9 D-SD1/D-SD3）────────────
 // files/dependsOn 声明即契约（v1：不做任务书文本自动解析——不可靠）。缺省（两者皆
 // 缺）= 既有语义零改动（不参与冲突检测/无校验——legacy spawn 零开销直通）。
 // 校验序：参数形态 → 依赖 unknown id（非 consumed 墓碑——T-SD10）→ 依赖环可达
 // （T-SD5——防御断言：自然流程不可达）→ 等待态判定。判定结果：wait/depc 阻塞 →
 // async 入 queued 等位（spawn 返回带 reason——D-SD3b）；**sync spawn（async:false）
 // 命中阻塞 → 明确错误——不队列化 sync——sync 语义零变更（round2 #7——T-SD13）**。
-/** §20 准入（参数化提取——2026-09-05 module-split）：返回归一化 { files, dependsOn }。
+/** 准入（参数化提取——2026-09-05 module-split）：返回归一化 { files, dependsOn }。
  *  filesRaw 目录声明 fail-closed（检测器 throw → 错误即工具结果 JSON）。 */
 export function prepareScheduling(parent, filesRaw, dependsRaw, wantAsync) {
   const files = []
@@ -218,6 +247,8 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
     if (!given) throw refusal()
     batchDocAbs = resolveBatchReadPath(parent.cwd ?? process.cwd(), given)
     if (!batchDocAbs) throw refusal(" (given path is not a readable file)")
+    // #309 形三：任务书中的他批批次档引用观测留痕（不阻断——放行不受影响）。
+    logBatchDocRefs(parent, role, args.task, batchDocAbs)
   }
 
   // M5 F2（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.2）：任务书六强制字段门——
@@ -308,7 +339,7 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
     overlay,
     role,
   })
-  // TUI-OOM-ROOTCAUSE（AGENT-LOOP.md §23.3.1）：子代理人读线窗口置位（常量单源
+  // TUI-OOM-ROOTCAUSE（AGENT-LOOP.md §6.15）：子代理人读线窗口置位（常量单源
   // session-store.mjs）——机制复用主 agent 同路径（context.mjs pushReal 驱逐）；
   // 每个 child 原先各自一份永不压缩的 _fullHistory（勘察 C2 乘数面）。
   child._historyWindow = RECORD_WINDOW_MESSAGES
@@ -371,10 +402,10 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   if (spawnBlocks.length > 0) child._spawnSystemBlock = spawnBlocks.join("\n\n")
 
   // Relay content/reasoning/tool/output to the parent TUI via the unified spawn-child
-  // pipeline (AGENT-LOOP.md §7.2 D3). Prefix includes a unique id: parallel child agents
+  // pipeline (AGENT-LOOP-SUBAGENT.md §6.7.2 D3). Prefix includes a unique id: parallel child agents
   // with the same role stay independent and don't overwrite each other.
   // Format: role#id/  →  onToken("coder#2/writing..."), onToolCall("coder#2/read", args)
-  // Async id allocation (AGENT-LOOP.md §15 D-A1): reserve the relay counter at
+  // Async id allocation (AGENT-LOOP-SUBAGENT.md §6.7.3 D-A1): reserve the relay counter at
   // spawn time — the returned id must be stable while the item sits in the queue.
   // The [model] token (TUI block creation) is DEFERRED to actual start so queued
   // children don't paint an empty panel block ("queued 态不显示").

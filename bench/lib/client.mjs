@@ -8,7 +8,8 @@
  * 计时口径（§1.3-3）：TTFT = 首个**非空** delta（onToken / onReasoning 先到者）− 调用发起——核的流读面
  * 只在非空 delta 时回调（provider/sse.mjs:142-149）。工具回合的 assistant 消息按 `assistantToolCallMessage`
  * 构造（reasoning 回显策略随核规格）。失败调用亦落 `totalMs` = 发起 → 失败墙钟（成功 = 传输面实测；
- * `ttftMs` / `tokens` 照实缺记 `null`）——失败执行也是执行（KD-30）。
+ * `ttftMs` / `tokens` 照实缺记 `null`）——失败执行也是执行（KD-30）。失败路径的记录式与成功路径**同源单点**
+ * （`toCallRecord` 单形状函数）；`throttled` 失败观测通道 = `markFailureObservation`（§2.9-4 / KD-47② / KD-48）。
  *
  * 传输面参数化：`liveTransport` = 核 chat（真实运行）；`fixtureTransport` = dry-run / 测试的固定响应表
  * （`bench/run.mjs` 内联夹具经此消费——不触网）。
@@ -21,6 +22,12 @@ import { executeToolCall } from "./tools.mjs"
 
 /** 单回合工具环上限（防模型无限调用；超限即按已得数据判分）。 */
 export const MAX_TOOL_ROUNDS = 5
+
+/** 失败路径观测挂载（§2.9-4 / KD-48）：true ∧ 对象 ∧ 可扩展才挂 `throttled: true`（原始值 / 冻结对象原样返回、错误本体零改）。 */
+export function markFailureObservation(err, throttled) {
+  if (throttled === true && err !== null && typeof err === "object" && Object.isExtensible(err)) err.throttled = true
+  return err
+}
 
 /** 真实传输：核 provider 路径（请求构造 / 重试 / 续写 / 限流门全随核）。 */
 export const liveTransport = {
@@ -37,7 +44,12 @@ export const liveTransport = {
       signal,
       ...(parallelToolCalls ? { parallelToolCalls: true } : {}),
     }
-    const response = await chat(provider, opts)
+    let response
+    try {
+      response = await chat(provider, opts)
+    } catch (e) {
+      throw markFailureObservation(e, throttled) // 失败路径观测出洞（§2.9-4 / KD-48）
+    }
     const totalMs = Date.now() - t0
     return { response, ttftMs: firstDeltaAt == null ? null : firstDeltaAt - t0, totalMs, throttled }
   },
@@ -103,8 +115,8 @@ export function fixtureSlotTransport(scripts) {
   }
 }
 
-/** 单 call → 账目记录（§2.2 calls[]；token 只认 usage，缺即 null——映射单源 = metrics.usageTokens）。 */
-function toCallRecord(round, call) {
+/** 单 call → 账目记录（§2.2 calls[]；token 只认 usage，缺即 null——映射单源 = metrics.usageTokens；成功 / 失败两路径**同过本函数** · KD-47②）。 */
+function toCallRecord(round, call = {}) {
   const tokens = usageTokens(call.response?.usage)
   return {
     round,
@@ -146,9 +158,7 @@ export async function runCase({ caseObj, providerEntry, transport, signal, timeo
       try {
         call = await transport.call({ provider: providerEntry, messages, tools, parallelToolCalls, signal: callSignal })
       } catch (e) {
-        const rec = {
-          round, ttftMs: null, totalMs: Date.now() - callT0, tokens: null, toolNames: [], finishReason: null, throttled: false,
-        }
+        const rec = toCallRecord(round, { totalMs: Date.now() - callT0, throttled: e?.throttled === true })
         calls.push(rec)
         turn.calls.push(rec)
         turn.steps.push({ text: "", reasoning: "", toolCalls: [], call: rec })

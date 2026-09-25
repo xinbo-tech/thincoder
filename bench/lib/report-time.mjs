@@ -30,7 +30,8 @@ export function timeSection(stats) {
       footnotes.push(`- ${s.label}：${miss} 个 run 无 totalMs（**未记录**——未参与累计，不按 0 计${s.totalMsSum == null ? "；样本全缺 ⇒ 累计 / 倍率 / 排名记 —（居末）" : ""}）。`)
     }
     // 部分未记录分支（§2.3-7）：run 级总耗时为数值 ∧ 存在未记录的 call ⇒ 按已记录之和（下界）入累计 + 入脚注
-    const partial = runs.filter((r) => typeof r?.metrics?.totalMs === "number" && (r.calls ?? []).some((c) => typeof c?.totalMs !== "number")).length
+    // `skipped` run 不入本分支（未执行 ⇒ 无「部分未记录」可言——谓词排除 · KD-47③）
+    const partial = runs.filter((r) => r.verdict !== "skipped" && typeof r?.metrics?.totalMs === "number" && (r.calls ?? []).some((c) => typeof c?.totalMs !== "number")).length
     if (partial > 0) footnotes.push(`- ${s.label}：${partial} 个 run 部分 call 未记录（按已记录之和（下界）入累计——未记录部分不按 0 计）。`)
   }
   return [

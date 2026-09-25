@@ -80,7 +80,7 @@ export function createInteraction(ctx) {
     })
   }
 
-  /** Batch permission ask (AGENT-LOOP.md §16 D-B1): one merged prompt covering N
+  /** Batch permission ask (D-B1): one merged prompt covering N
    *  non-readonly tools from the same toolCalls array — approve all / one by one /
    *  deny. Verdicts resolve as "approveAll" | "oneByOne" | "deny". */
   const BATCH_PREVIEW_LINES_PER_TOOL = 8

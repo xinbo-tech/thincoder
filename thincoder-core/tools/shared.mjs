@@ -3,7 +3,7 @@
  * Imported by tools/file.mjs / system.mjs / web.mjs / git.mjs
  */
 
-import { spawn, execFileSync, execFile } from "node:child_process"
+import { execFile } from "node:child_process"
 import { readFileSync, existsSync, realpathSync, readdirSync, statSync, openSync, readSync, closeSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -217,12 +217,14 @@ export function makeDecoder() {
   }
 }
 
-/** Single-file git diff. Silently returns empty on failure. Large diffs that exceed maxBuffer are truncated rather than swallowed. */
-export function gitDiffOne(cwd, abs) {
+/** Single-file git diff. Silently returns empty on failure. Large diffs that exceed maxBuffer are truncated rather than swallowed.
+ *  #208①（2026-09-25）：体转 async 薄壳委托 `spawnGit` 单点（GIT_ENV 加固 + 两档超时 + 树杀 + 非阻塞）；
+ *  形保真 = trim / 200 行截断 / 10MB 溢出取部分输出 / 失败静默回 `""`（调用面 5 处 `await` 化）。 */
+export async function gitDiffOne(cwd, abs) {
   try {
-    const diff = execFileSync("git", ["--no-pager", "diff", "--no-color", "--", abs], {
-      cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], maxBuffer: 10 * 1024 * 1024,
-    }).trim()
+    const diff = (await spawnGit(cwd, ["--no-pager", "diff", "--no-color", "--", abs], {
+      maxBuffer: 10 * 1024 * 1024,
+    })).trim()
     if (!diff) return ""
     const lines = diff.split("\n")
     if (lines.length <= 200) return diff

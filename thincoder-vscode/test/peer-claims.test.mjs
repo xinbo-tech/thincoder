@@ -5,7 +5,7 @@
  * 用例 → AC 对照（批档 §2.5）：TV1=AC-IC11（双端对位：两常量等值 + 认领文案 / who / age /
  * left 逐字同串）/ TV2=AC-IC12 写入（新目标即刻落盘 + 时钟缝等值 + 落盘门控）/ TV3=AC-IC12
  * 续约与节流 / TV4=AC-IC12 过期（读面零命中 + 落盘剪除）/ TV5=AC-IC12 命中 · 去重 · 降级 /
- * TV6=AC-IC12 属主死 / 探测失败 / TV7=AC-IC13 混合命中合成（认领行逐 target + 足迹聚合行
+ * TV6=AC-IC12 属主死 / 探测失败 / TV7=AC-IC13 混合命中合成（认领行逐 target + 足迹行逐 target
  * 过滤已覆盖 target · 零双报 · 过滤后无余项 ⇒ 无足迹行）。
  *
  * 沙箱 = `_setSessionsDirForTest` + `_setPeersDirForTest`（真目录零触）；时钟 = `_setPeerClaimsTestImpl`
@@ -175,7 +175,7 @@ test("TV6 属主死 / 探测失败（AC-IC12）：死属主零命中 + 惰性清
   assert.equal(existsSync(join(peersDirPath, `${FOREIGN.sid}.json`)), true, "探测失败 ⇒ 保守不删（D-MI10）")
 })
 
-test("TV7 混合命中合成（AC-IC13）：认领行逐 target + 足迹聚合行过滤已覆盖 target（零双报）", () => {
+test("TV7 混合命中合成（AC-IC13）：认领行逐 target + 足迹行逐 target（过滤已覆盖 target——零双报）", () => {
   const { cwd, clock } = newCwd()
   const t1 = join(cwd, "src", "a.mjs")
   const t2 = join(cwd, "src", "b.mjs")
@@ -187,12 +187,14 @@ test("TV7 混合命中合成（AC-IC13）：认领行逐 target + 足迹聚合�
   const pd = peerDomains(cwd)
   const mixed = peerNotes(agent, { claimHits: pd.claimConflicts([t1, t2]), footHits: pd.conflicts([t1, t2]) })
   const lines = mixed.text.split("\n\n")
-  assert.equal(lines.length, 2, "混合 ⇒ 认领行 + 过滤后足迹聚合行")
+  assert.equal(lines.length, 2, "混合 ⇒ 认领行 + 逐 target 足迹行")
   assert.equal(lines[0], claimNoteText(t1, "vscode pid=9800, vscode pid=9700 (recent write)", "just now", 30), "认领行 = 逐字锚 + 仅足迹属主 recent write")
-  assert.ok(lines[1].includes(t2) && !lines[1].includes(t1), "足迹聚合行剔除已覆盖 target（零双报）")
+  assert.ok(lines[1].includes(t2) && !lines[1].includes(t1), "足迹行仅含未覆盖 target（已覆盖 target 不出行——零双报）")
+  assert.ok(lines[1].startsWith(`[peer-collab] ${t2} — another live instance (vscode pid=9700) registered writing it within the last 5 minutes;`), "足迹行 = §4.3 字面规范面逐字（逐 target 行）")
   // ② 过滤后余项零（足迹命中全被认领覆盖 ⇒ 无足迹行——本条直接构造该分支）
   const coveredOnly = peerNotes(agent, { claimHits: pd.claimConflicts([t1]), footHits: pd.conflicts([t1]) })
-  assert.ok(!coveredOnly.text.includes("[peer conflict notice]"), "足迹命中全被认领覆盖 ⇒ 无足迹行（余项零）")
+  assert.equal(coveredOnly.text.split("\n\n").length, 1, "足迹命中全被认领覆盖 ⇒ 恰一行（无足迹行）")
+  assert.ok(!coveredOnly.text.includes("registered writing it within the last 5 minutes"), "无足迹行残句（余项零）")
   assert.equal(coveredOnly.text, claimNoteText(t1, "vscode pid=9800, vscode pid=9700 (recent write)", "just now", 30), "仅认领行（含仅足迹属主注记）")
   // ③ 纯认领（该目标零足迹命中 ⇒ 仅认领行）
   const t3 = join(cwd, "src", "c.mjs")
@@ -202,12 +204,12 @@ test("TV7 混合命中合成（AC-IC13）：认领行逐 target + 足迹聚合�
   const pd2 = peerDomains(cwd)
   const pure = peerNotes(agent, { claimHits: pd2.claimConflicts([t3]), footHits: pd2.conflicts([t3]) })
   assert.equal(pure.text, claimNoteText(t3, "vscode pid=9600", "just now", 30), "纯认领 ⇒ 仅认领行（无足迹行）")
-  // ④ 纯足迹（既有文案逐字零变——D-MI5 面不动）
+  // ④ 纯足迹（逐 target 行——§4.3 字面规范面逐字，D-MI5 面文案单源）
   const footOnly = peerNotes(agent, { claimHits: [], footHits: pd.conflicts([t2]) })
   assert.equal(
     footOnly.text,
-    `[peer conflict notice] another live ThinCoder instance recently wrote the same file(s): ${t2} (pid=9700, vscode) — coordinate to avoid overlapping edits (soft notice — the write was not blocked).`,
-    "纯足迹 ⇒ 既有聚合行逐字",
+    `[peer-collab] ${t2} — another live instance (vscode pid=9700) registered writing it within the last 5 minutes; concurrent edits may overwrite each other. Write not blocked — coordinate before proceeding.`,
+    "纯足迹 ⇒ §4.3 字面规范面逐字",
   )
 })
 

@@ -85,6 +85,33 @@ const MAX_GIT_CHANGES_DISPLAY = 20
 export const OUTLINE_INJECT_PREFIX = "[System reminder: project dependency outline:"
 export const FILE_MUTATORS = new Set(["write", "edit", "insert_after", "apply_patch", "delete", "hashline_edit"])
 
+/**
+ * 工具自报触达面提取**单源谓词**（`docs/core/design/TOOLS.md` §6.17 / D-TO12——批 GUARD-SCHEDULER ·
+ * 台账 #327）：与 `FILE_MUTATORS` 同址（门禁 / 变更记账 / L3 足迹 / 作用域规则四条面的公共输入）。
+ * 契约（恒数组 · 恒零抛）：
+ * - `args` 为 null **或非对象** ⇒ 一律规范化为 `{}` 再交钩子；
+ * - 有钩子 ⇒ **钩子裁决**；无钩子 ⇒ 单参兜底（形态零变——缺 path 同样返含 `undefined` 的单元素数组，
+ *   由消费方按「未知路径 ⇒ 保守」自行判定）；
+ * - 钩子 throw / 返回非数组 ⇒ `[]`；
+ * - **不过滤非字符串项**（未知路径的保守判据归门禁自身——`thincoder-cli/test/portability-classification.test.mjs`
+ *   T-22 语义零变）。
+ * @param {Object|undefined} tool — 工具对象（可选钩子 `touchedPaths(args)`）
+ * @param {unknown} args — 工具入参（畸形入参不抛）
+ * @returns {unknown[]} 触达路径候选（可能含非字符串项——消费方过滤）
+ */
+export function toolTouchPaths(tool, args) {
+  const a = args && typeof args === "object" ? args : {}
+  const hook = tool?.touchedPaths
+  if (typeof hook !== "function") return [a.path]
+  try {
+    const out = hook(a)
+    return Array.isArray(out) ? out : []
+  } catch {
+    return []
+  }
+}
+
+
 /** Escape XML special characters in a string for safe embedding in XML/HTML */
 export function escapeXml(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;")

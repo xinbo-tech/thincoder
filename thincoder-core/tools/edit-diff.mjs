@@ -372,7 +372,7 @@ export async function runSingleEdit(args, ctx) {
     op: "write",
     record: { type: "edit", startLine: out.editStartLine, shift: out.lineShift },
   })
-  const diff = gitDiffOne(ctx.cwd, abs)
+  const diff = await gitDiffOne(ctx.cwd, abs)
   const baseResult = out.deleted
     ? `Deleted ${deleteTarget(out)} of ${args.path}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}`
     : `Edited ${args.path}: replaced ${out.occurrences} occurrence(s)${out.note ? ` — ${out.note}` : ""}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}`

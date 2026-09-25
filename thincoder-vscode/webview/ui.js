@@ -34,10 +34,8 @@ export function buildAdvisorBlock(roundLabel) {
  * the block's scrolling content region. Same-kind text runs merge; nothing is
  * ever truncated — the full review stays in the block (scrolling).
  * AGENT-LOOP-SUBAGENT.md §6.7.2 D-M8 nested sub-label: `sub` (e.g. "explore#1" — an INNER spawn's
- * attribution, carried on the chunk by subagent.mjs runChild forward) renders as
- * a dim row-start tag. The tag repeats only when the attribution CHANGES or a
- * run starts — rows of the same sub follow unprefixed (CLI sub-label parity);
- * the block's current sub rides a DOM expando (block._subCur).
+ * attribution, carried on the chunk by subagent.mjs runChild forward) rides `dataset.sub` — 数据面
+ * 保留（下方合并判据读它），**行首无可见子标**（两端同形 · 台账 #185 2026-09-25 收口；对齐方向 = VSC → CLI）。
  * §5.6 (渲染粒度对齐批): `meta` (optional structured chunk — absent = old behavior) carries
  * `face` / `tool` for the tool-face merge judgment: an output row (face "toolOutput") merges
  * into the last row iff that row is a tool row with the same face / tool / sub ⇒ RAW text-node
@@ -52,7 +50,6 @@ export function appendAdvisorChunk(block, kind, text, sub, meta) {
   const str = String(text ?? "")
   if (!str) return
   const subLabel = typeof sub === "string" && sub ? sub : null
-  const changedSub = subLabel !== null && (block._subCur ?? null) !== subLabel
   if (kind === "tool") {
     const face = typeof meta?.face === "string" ? meta.face : null, tool = typeof meta?.tool === "string" && meta.tool ? meta.tool : null
     const last = content.lastElementChild
@@ -65,20 +62,8 @@ export function appendAdvisorChunk(block, kind, text, sub, meta) {
     const line = document.createElement("div")
     line.className = "advisor-tool-line"
     if (face) line.dataset.face = face; if (tool) line.dataset.tool = tool
-    if (subLabel) {
-      line.dataset.sub = subLabel
-      if (changedSub) {
-        const tag = document.createElement("span")
-        tag.className = "advisor-sub"
-        tag.textContent = subLabel + " · "
-        line.appendChild(tag)
-      }
-      block._subCur = subLabel
-    } else {
-      block._subCur = null
-    }
-    if (line.childNodes.length > 0) line.appendChild(document.createTextNode(str))
-    else line.textContent = str
+    if (subLabel) line.dataset.sub = subLabel
+    line.textContent = str
     content.appendChild(line)
     return
   }
@@ -87,24 +72,14 @@ export function appendAdvisorChunk(block, kind, text, sub, meta) {
   const sameRow = last && last.classList.contains("advisor-text")
     && last.dataset.kind === k && (last.dataset.sub ?? "") === (subLabel ?? "")
   if (sameRow) {
-    // textContent += would nuke the row's child nodes (sub-label span) — append a text node
+    // 续写 = 追加文本节点（chunk RAW 拼接零分隔符；首行 `textContent = str` 同效）
     last.appendChild(document.createTextNode(str))
   } else {
     const div = document.createElement("div")
     div.className = "advisor-text" + (k === "think" ? " advisor-think" : "")
     div.dataset.kind = k
-    if (subLabel) {
-      div.dataset.sub = subLabel
-      const tag = document.createElement("span")
-      tag.className = "advisor-sub"
-      tag.textContent = subLabel + " · "
-      div.appendChild(tag)
-      div.appendChild(document.createTextNode(str))
-      block._subCur = subLabel
-    } else {
-      block._subCur = null
-      div.textContent = str
-    }
+    if (subLabel) div.dataset.sub = subLabel
+    div.textContent = str
     content.appendChild(div)
   }
 }

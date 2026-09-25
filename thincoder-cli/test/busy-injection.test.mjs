@@ -1,32 +1,29 @@
 /**
  * busy-injection.test.mjs — F16（busy 期消息注入 · 台账 #213；busy-extend 扩面 2026-09-22 ·
- * 台账 #224）机器验收 · CLI 半。
+ * 台账 #224）机器验收 · CLI 半（按键门 + 入队族留守档）。
+ *
+ * 拆分（2026-09-25 file-tier-sweep 批 S4 · KD-23「用例族 + 夹具自持」——原档 474 行拆分；
+ * 触发 = 前批登记「用例按族分档 · 下批执行」）：渲染 / 状态栏族已迁
+ * `busy-injection-render.test.mjs`，消费 / 送达 / 步边界族已迁 `busy-injection-consume.test.mjs`；
+ * 本档留守 = 按键门 + 入队族（T-F16-1 / 3 / 4 / 8 / 13 + `baseState` / `keyCtx` / `pressEnter`
+ * 夹具）。用例号零改零重排；夹具自持（零跨档 import）。
+ *
  * 设计权威：`docs/cli/design/TUI-INPUT-BOX.md` §4.1（放行判据五条 / 执行序 / 二次提交 /
  * 消费回执）+ `docs/cli/design/TUI.md` §7.5（反馈两段式 + `enterHint` 三态表）；批次档
- * `docs/batches/2026-09-21-busy-injection.md` §2 用例表（T-F16-1…6 住本档；T-F16-7 =
+ * `docs/batches/2026-09-21-busy-injection.md` §2 用例表（T-F16-1…6；T-F16-7 =
  * `test/input-lock.test.mjs` AC-1 断言翻转 + AC-2/释放窗口/槽满/斜杠 busy 吞零回归面）+ busy-extend
- * 批档 §2 用例面（T-F16-8 = 挂起内入槽 / 槽满；T-F16-9 = driver 轮末消费；T-F16-6 扩三态）。
- * 手法：① `createKeyHandler` 桩 ctx 直驱按键（无真实 TTY——先例 `input-lock.test.mjs`）；
- * ② `runAgentTurn` 测试缝（`ctx.runAgent` 桩——回合尾兜底转正 + 队列续发 + 消费回执）；
- * ③ `suspensionSession` 直驱（driver 消费单槽 + 回执——先例 `input-lock.test.mjs` AC-5）；
- * ④ `renderStatus` 纯函数直驱（状态栏 queued 段 + F13 零注意力色对——先例
- * `session-title-surface.test.mjs`）。快层直跑（无定时器悬挂：驱动会话必然终止）。
- * queue-visible 批（2026-09-24 · 台账 #249）：容量 8 + 合并消费（R15 恢复）+ 步边界 pickup——
- * 用例表 T-F16-10…19（本档）；设计 = `TUI.md` §7.5（待发送块 / 四态 / 三时机）· `TUI-INPUT-BOX.md`
- * §4.1（容量 / 满队）· `AGENT-LOOP-ASYNC-POOL.md` §6.8（步边界 pickup）。
+ * 批档 §2 用例面（T-F16-8 = 挂起内入槽 / 槽满）+ queue-visible 批（2026-09-24 · 台账 #249）§2
+ * （T-F16-13 = 容量 8 连续性）。
+ * 手法：`createKeyHandler` 桩 ctx 直驱按键（无真实 TTY——先例 `input-lock.test.mjs`）+
+ * `renderStatus` 纯函数直驱（状态栏 queued 段 + F13 零注意力色对——先例
+ * `session-title-surface.test.mjs`）。快层直跑（无定时器悬挂）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { createKeyHandler } from "../src/tui/key-handler.mjs"
-import { runAgentTurn } from "../src/tui/agent-turn.mjs"
-import { suspensionSession } from "../src/tui/suspension-drive.mjs"
 import { renderStatus } from "../src/tui/render-frame.mjs"
-import { buildConvLines } from "../src/tui/render-conversation.mjs"
-import { planQueuedInput, formatMergedMessages, MAX_MERGE_ITEMS, MAX_MERGE_CHARS } from "../src/tui/queued-merge.mjs"
-import { pickupQueuedAtStepBoundary } from "../src/tui/queued-pickup.mjs"
 
 const stripAnsi = (s) => String(s).replace(/\x1b\[[0-9;]*m/g, "")
-const RECEIPT = "[sending queued message]"
 
 /** 最小按键态（挂起/释放窗口字段齐备——busy 判据三面全在；含状态栏渲染所需字段）。 */
 function baseState(over = {}) {
@@ -88,50 +85,6 @@ test("T-F16-1 busy 入队：Enter ⇒ pendingInput 队列 = 该文本 ∧ 输入
   const agent = { provider: null, cwd: "x", autoApprove: false, planMode: false, config: null, _currentTurn: 0, _maxTurns: 0 }
   const flat = stripAnsi(renderStatus(s, agent, 120, []))
   assert.ok(flat.includes("已排队 1 条消息"), `状态栏 queued 段在位（实到 ${JSON.stringify(flat)}）`)
-})
-
-// ─── T-F16-2 正常：回合尾兜底转正 → 队列续发新回合 + 消费回执 ───
-
-/** 回合 rig（runAgentTurn / suspensionSession 共用；`ctx.runAgent` 桩——不触网）。 */
-function turnRig({ pendingInput = [], live = false, pending = [] } = {}) {
-  const lines = []
-  const calls = []
-  const agent = {
-    provider: { name: "glm", baseURL: "https://api.example.com/v1", model: "glm-5.3" },
-    history: [], title: "locked", autoApprove: false, planMode: false,
-    _asyncSubagents: new Map(), _asyncAdvisors: new Map(), _pendingAsyncResults: pending,
-    _sessionAbort: new AbortController(), _sessionAbortAll: [], _suspended: false,
-  }
-  if (live) agent._asyncSubagents.set("1", { id: 1, role: "explore", status: "running" })
-  const state = baseState({
-    pendingInput, queue: [],
-    status: "Ready", processingStarted: 0, currentTool: null, streaming: "", reasoning: "", lines: [],
-    permissionPreview: [], _advisorBlocks: [], attentionAwaiting: false, exitArmed: false, controller: null,
-    tokens: { prompt: 0, completion: 0, cacheHit: 0, cacheMiss: 0, reasoningTokens: 0 }, ctxCache: { tokens: 0 },
-    _turnControllers: [],
-  })
-  const ctx = {
-    agent, state,
-    pushLine: (text) => lines.push(String(text)), pushLabel: (text) => lines.push(String(text)),
-    render() {}, scheduleRender() {}, ensureAssistantLabel() {},
-    askPermission: null, askBatchPermission: null, askQuestion: null,
-    handleSlash: async () => {}, saveSession: async () => {},
-    runAgent: async (_a, text) => {
-      calls.push(String(text))
-      agent._pendingAsyncResults = [] // 核回合头 drain（消费即清——防 digest 轮连开）
-    },
-  }
-  return { agent, state, ctx, lines, calls }
-}
-
-test("T-F16-2 回合尾送达：池死 ⇒ 单槽转正队列 + 队列 while 续发新回合（首条 = 该文本）∧ 消费回执行在位", async () => {
-  const r = turnRig({ pendingInput: ["msg"] })
-  await runAgentTurn(r.ctx, "first")
-  assert.deepEqual(r.calls, ["first", "msg"], "队列续发新回合——首条 user 文本 = 单槽文本")
-  assert.equal(r.state.queue.length, 0, "转正条目消费清空（单槽语义：至多一条）")
-  assert.ok(r.lines.includes(RECEIPT), `消费回执行在位（${RECEIPT}）`)
-  assert.equal(r.state.pendingInput.length, 0, "单槽已清")
-  assert.ok(r.lines.indexOf(RECEIPT) > r.lines.indexOf("first"), "回执在首回合之后（消费时推送）")
 })
 
 // ─── T-F16-3 边界：容量 8（第 9 条）= 拒绝 + 提示 + 文本保留（不覆盖）───
@@ -231,130 +184,9 @@ test("T-F16-8 挂起内 busy：队列未满 ⇒ 入队（pendingInput + 清框 +
   assert.ok(stripAnsi(renderStatus(s2, agent, 120, [])).includes("已排队 8 条消息"), "队列非空 ⇒ dim 段在位（N = 8）")
 })
 
-// ─── T-F16-9 正常：会话内回合执行期入槽 ⇒ driver 轮末步骤 1 消费（先于 digest 合并）───
-
-test("T-F16-9 driver 轮末消费：会话内回合执行期投槽一条 ⇒ 步骤 1 以该文本开新回合（首条 = 该文本）∧ 消费回执行在位", async () => {
-  const r = turnRig({ pendingInput: ["u1"], live: true })
-  r.ctx.runAgent = async (_a, text) => {
-    r.calls.push(String(text))
-    if (r.calls.length === 1) r.state.pendingInput.push("u2") // 回合执行期 busy Enter 入槽（§4.1）
-    r.agent._pendingAsyncResults = [] // 核回合头 drain（防 digest 轮连开）
-  }
-  const session = suspensionSession(r.ctx)
-  await new Promise((res) => setTimeout(res, 20))
-  assert.deepEqual(r.calls, ["u1", "u2"], "轮末回 driver ⇒ 步骤 1 消费该文本开新回合（先于 digest 合并——D-S5）")
-  assert.equal(r.lines.filter((l) => l === RECEIPT).length, 2, "两次消费各一条回执（driver 消费点推送）")
-  assert.equal(r.state.pendingInput.length, 0, "消费清槽")
-  r.state._suspAborted = true // 会话终止（防悬挂）
-  r.state._suspWake?.()
-  await session
-})
-
-// ─── T-F16-5 正常：挂起 driver 消费单槽（输入优先）→ 用户回合 + 回执 ───
-
-test("T-F16-5 driver 消费：池 live + digest pending 前入槽 ⇒ 单槽优先消费开用户回合（首条 = 该文本）∧ 回执行在位", async () => {
-  const r = turnRig({ pendingInput: ["u-msg"], live: true, pending: [{ role: "subagent", id: 2 }] })
-  const session = suspensionSession(r.ctx)
-  await new Promise((res) => setTimeout(res, 15)) // 消费 + runAgentTurn（桩）微任务链
-  assert.equal(r.calls[0], "u-msg", "driver 步骤 1 输入优先（先于 digest 轮——D-S5）")
-  assert.ok(r.lines.includes(RECEIPT), `消费回执行在位（${RECEIPT}）`)
-  assert.equal(r.state.pendingInput.length, 0, "消费清槽")
-  // 会话终止（防悬挂）
-  r.state._suspAborted = true
-  r.state._suspWake?.()
-  await session
-  assert.equal(r.state.suspended, false, "会话退出复位 suspended")
-})
-
-// ─── T-F16-6 机判：状态栏段四态逐字（TUI.md §7.5）＋ F13 零注意力色对 ───
-
-test("T-F16-6 状态栏段四态：队列非空 N = 2 ⇒ 「已排队 2 条消息」；队空 ⇒ 普通 busy / 挂起内用户回合 / 挂起内系统轮排队句逐字；非 processing ⇒ Enter: send；全程零 \\x1b[43m", () => {
-  const agent = { provider: null, cwd: "x", autoApprove: false, planMode: false, config: null, _currentTurn: 0, _maxTurns: 0 }
-  const autoAgent = { ...agent, _inAutoTurn: true }
-  const st = (over = {}) => ({
-    input: [], cursor: 0, scroll: 0, tasks: [], queue: [], history: [], historyIndex: -1, _draft: null,
-    processing: false, processingStarted: Date.now(), status: "Ready", currentTool: null,
-    tokens: { prompt: 0, completion: 0, cacheHit: 0, cacheMiss: 0, reasoningTokens: 0 },
-    ctxCache: { tokens: 0 },
-    permission: null, question: null, picker: null, wizard: null, search: null, interruptPrompt: null,
-    suspended: false, _suspPending: false, attentionAwaiting: false, pendingInput: [],
-    ...over,
-  })
-  const queued = renderStatus(st({ processing: true, pendingInput: ["x", "y"] }), agent, 120, [])
-  assert.ok(stripAnsi(queued).includes("已排队 2 条消息"), "队列非空 ⇒ 条数段逐字（N = 2——多槽）")
-  assert.ok(!queued.includes("\x1b[43m"), "零注意力色对（F13 豁免——dim 信息段非 chip）")
-  const busyEmpty = renderStatus(st({ processing: true, pendingInput: [] }), agent, 120, [])
-  assert.ok(!stripAnsi(busyEmpty).includes("已排队"), "队空 ⇒ 条数段零注入")
-  assert.ok(stripAnsi(busyEmpty).includes("主会话处理中 — Enter 排队（当前步骤结束后自动发送）"), "队空 + 非挂起 ⇒ 普通 busy 排队句逐字（步边界承诺）")
-  assert.ok(!busyEmpty.includes("\x1b[43m"), "队空态零注意力色对")
-  const suspUser = renderStatus(st({ processing: true, pendingInput: [], suspended: true }), agent, 120, [])
-  assert.ok(stripAnsi(suspUser).includes("会话内回合处理中 — Enter 排队（当前步骤结束后自动发送）"), "挂起内用户回合（_inAutoTurn 假）⇒ 步边界句逐字")
-  assert.ok(!suspUser.includes("\x1b[43m"), "挂起态零注意力色对")
-  const suspSys = renderStatus(st({ processing: true, pendingInput: [], suspended: true }), autoAgent, 120, [])
-  assert.ok(stripAnsi(suspSys).includes("会话内回合处理中 — Enter 排队（本轮结束后优先发送）"), "挂起内系统轮（_inAutoTurn 真）⇒ 轮末句逐字")
-  const winEmpty = renderStatus(st({ processing: true, pendingInput: [], _suspPending: true }), agent, 120, [])
-  assert.ok(stripAnsi(winEmpty).includes("会话内回合处理中 — Enter 排队（当前步骤结束后自动发送）"), "释放窗口（_suspPending）同判")
-  const idle = renderStatus(st({ processing: false, pendingInput: ["x"] }), agent, 120, [])
-  assert.ok(!stripAnsi(idle).includes("已排队"), "非 processing ⇒ 段零注入（派生自 processing ∧ 队列）")
-  assert.match(stripAnsi(idle), /Enter: send/, "空闲文案零改")
-})
-
 // ═══ queue-visible 批（2026-09-24 · 台账 #249）：待发送块 / 合并计划 / 步边界 pickup ═══
 // 设计 = `TUI.md` §7.5（待发送块 · 四态 · 三时机）· `TUI-INPUT-BOX.md` §4.1（容量 / 满队）·
 // `AGENT-LOOP-ASYNC-POOL.md` §6.8（步边界 pickup）。用例表 T-F16-10…19（批档 §2）。
-
-/** 会话渲染夹具（`buildConvLines` 直驱——cols 给足免折行干扰形态断言）。 */
-function convState(queued, over = {}) {
-  return baseState({
-    lines: [], streaming: "", reasoning: "", _advisorBlocks: [], expandedBlocks: new Set(),
-    foldEnabled: true, search: null, _foldScroll: null, pendingInput: queued, ...over,
-  })
-}
-const convText = (state, cols = 120) => buildConvLines(state, cols, 0).map((l) => l.text)
-
-test("T-F16-10 排队块单条：队列 N = 1 ⇒ 标签行逐字 + 原文行 ∧ 无编号头 ∧ 渲染序在 state.streaming 之后 ∧ 零 state.lines 写入（派生插槽）", () => {
-  const flat = convText(convState(["hello world"]))
-  assert.ok(flat.includes("⏳ 待发送 · 不打断当前执行，自动发送"), `标签行逐字（实到 ${JSON.stringify(flat)}）`)
-  assert.ok(flat.includes("hello world"), "原文行在位（含用户原文）")
-  assert.ok(!flat.some((t) => /^\d+\. /.test(t)), "单条不加编号")
-  // 渲染序（旧否决的正面处置）：块在 state.streaming 渲染行之后 ⇒ 流在上方增长、块恒居会话区底
-  const flat2 = convText(convState(["tail-msg"], { streaming: "streamed-reply-line" }))
-  assert.ok(flat2.indexOf("⏳ 待发送 · 不打断当前执行，自动发送") > flat2.indexOf("streamed-reply-line"), "块行序在 streaming 渲染行之后")
-  // 载体 = 派生（零生命周期簿记——判据消失即消）
-  const s = convState(["derived-only"])
-  convText(s)
-  assert.equal(s.lines.length, 0, "派生零写入（不入 state.lines / 不入会话历史）")
-})
-
-test("T-F16-11 排队块多条：N = 2 ⇒ 标签含条数逐字 ∧ `1. ` / `2. ` 编号行（顺序 = 入队序，编号 = 合并形态预览）", () => {
-  const flat = convText(convState(["alpha", "beta"]))
-  assert.ok(flat.includes("⏳ 待发送 · 2 条消息（不打断当前执行，合并发送）"), `多条标签逐字（N ≥ 2，实到 ${JSON.stringify(flat)}）`)
-  const i1 = flat.indexOf("1. alpha")
-  const i2 = flat.indexOf("2. beta")
-  assert.ok(i1 >= 0 && i2 > i1, "编号行按入队序")
-  assert.ok(flat.indexOf("⏳ 待发送 · 2 条消息（不打断当前执行，合并发送）") < i1, "标签行置于块首（C.warn 前置于 dim 连跑）")
-})
-
-test("T-F16-12 排队块边界（负向锁）：队列空 ⇒ 零该串 ∧ 字段缺省逐字节等价；超 3 行 ⇒ 原文行 ≤ 3 + 尾标记行逐字；全程零 \\x1b[43m", () => {
-  // 负向锁（同 renderStatus 负向锁纪律）：队列空 / 字段缺省 ⇒ 零该串
-  const emptyLines = buildConvLines(convState([]), 100, 0)
-  assert.ok(!emptyLines.some((l) => l.text.includes("待发送")), "队列空 ⇒ 零该串")
-  const undefLines = buildConvLines(convState([], { pendingInput: undefined }), 100, 0)
-  assert.deepEqual(undefLines.filter((l) => l.text.includes("待发送")), [], "字段缺省同判（逐字节等价面）")
-  // 超限：每条原文行 ≤ QUEUED_ITEM_MAX_LINES（3）+ 该条尾标记行逐字
-  const longItem = Array.from({ length: 6 }, (_, i) => `body-${i}`).join("\n")
-  const flat = convText(convState([longItem]))
-  assert.equal(flat.filter((t) => t.startsWith("body-")).length, 3, "原文行 ≤ 3（QUEUED_ITEM_MAX_LINES）")
-  assert.ok(flat.includes("… [该条共 6 行——发送后完整显示]"), "该条尾标记行逐字（N = 总行数）")
-  // 超宽 / 长单行：折行后同样受上限约束（不劈半由既有 wrapText 保证）
-  const wide = "宽".repeat(400)
-  const wideLines = convText(convState([wide]), 40)
-  assert.ok(wideLines.filter((t) => t.includes("宽")).length <= 3, "超宽长单行 ⇒ 折行后仍 ≤ 3 行")
-  assert.ok(wideLines.some((t) => /共 \d+ 行——发送后完整显示/.test(t)), "折行数进尾标记")
-  // F13 豁免（零注意力色对）——渲染帧全程
-  const frame = convText(convState(["x"]))
-  assert.ok(!frame.join("").includes("\x1b[43m"), "全程零 \\x1b[43m")
-})
 
 test("T-F16-13 容量 8：连续入队 8 条全入（长度 === 8）∧ 第 9 条拒 + 提示含「已排队 8 条消息」+ 文本保留 ∧ 入队恢复跟随", () => {
   const s = baseState({ processing: true, scroll: 42, _followTail: false })
@@ -373,102 +205,5 @@ test("T-F16-13 容量 8：连续入队 8 条全入（长度 === 8）∧ 第 9 �
   assert.deepEqual(s.input, [..."ninth"], "被拒文本保留在输入框")
   assert.equal(c.calls.lines.length, 1, "拒 + 提示一次")
   assert.match(c.calls.lines[0], /已排队 8 条消息/, "满队提示逐字")
-})
-
-test("T-F16-14 合并计划（`planQueuedInput` 纯函数 · R15 逐字恢复）：2 条短 ⇒ 单动作 merged 批；9 条 ⇒ 截批先行；单条 > 2000 字符 ⇒ 直发；/cmd ⇒ 逐条动作（保序、不进合并）", () => {
-  const p2 = planQueuedInput(["a", "b"])
-  assert.equal(p2.length, 1, "2 条 ⇒ 单动作（一次消费）")
-  assert.deepEqual([p2[0].kind, p2[0].count, p2[0].merged], ["turn", 2, true], "合并批（merged:true）")
-  assert.equal(p2[0].text, "你排队了 2 条消息：\n1. a\n2. b\n——一次处理", "形态逐字 = R15（头 + 编号 + 尾）")
-  assert.equal(p2[0].text, formatMergedMessages(["a", "b"]), "与格式化函数同源")
-  const p9 = planQueuedInput(Array.from({ length: 9 }, (_, i) => `m${i}`))
-  assert.equal(p9[0].count, 8, "9 条 ⇒ 首动作满批 8 条（≤ MAX_MERGE_ITEMS）")
-  assert.equal(p9[1].count, 1, "余下留待下批（不丢——多回合）")
-  const big = "x".repeat(MAX_MERGE_CHARS + 1)
-  const pBig = planQueuedInput([big])
-  assert.deepEqual([pBig[0].merged, pBig[0].count], [false, 1], "单条 > 2000 字符 ⇒ merged:false 直发（不进批）")
-  assert.equal(pBig[0].text, big, "原文直发（零包裹）")
-  const charCapped = planQueuedInput(["y".repeat(1500), "z".repeat(1500)])
-  assert.equal(charCapped[0].count, 1, "合并文本超 2000 字符 ⇒ 截批先行")
-  const pMix = planQueuedInput(["/help", "a", "b", "/exit", "c"])
-  assert.deepEqual(pMix.map((a) => a.kind), ["slash", "turn", "slash", "turn"], "/cmd 逐条动作（保序——不进合并缓冲）")
-  assert.equal(pMix[1].text, formatMergedMessages(["a", "b"]), "非 / 连续条目攒批")
-})
-
-test("T-F16-15 回合尾兜底：入队 2 条 → 回合收尾 ⇒ state.queue 恰 1 项（合并文本）∧ 回执行 1 行 ∧ `❯ You:` 携合并文本（一次回合）", async () => {
-  const r = turnRig({ pendingInput: ["u1", "u2"] })
-  await runAgentTurn(r.ctx, "first")
-  const merged = formatMergedMessages(["u1", "u2"])
-  assert.deepEqual(r.calls, ["first", merged], "队列续发一次回合（合并文本——替代逐条转正）")
-  assert.equal(r.state.queue.length, 0, "队列条目消费清空（`state.queue` 取走后零残留）")
-  assert.equal(r.lines.filter((l) => l === RECEIPT).length, 1, "回执行 1 行（按批）")
-  assert.ok(r.lines.includes("❯ You:"), "`❯ You:` 标签在位")
-  assert.ok(r.lines.includes(merged), "合并文本落 state.lines")
-  assert.equal(r.state.pendingInput.length, 0, "取批移出（队列清空——块随判据消失）")
-})
-
-test("T-F16-16 driver 取批 + 中止残余：池 live ⇒ 合并批开一回合（一次）；会话中止 ⇒ 残余按计划转 state.queue（零丢失）∧ 不渲染待发送块", async () => {
-  // driver 步骤 1：队列 2 条 ⇒ 合并批开新回合（先于 digest 合并——D-S5 输入优先）
-  const r = turnRig({ pendingInput: ["d1", "d2"], live: true })
-  const session = suspensionSession(r.ctx)
-  await new Promise((res) => setTimeout(res, 20))
-  const merged = formatMergedMessages(["d1", "d2"])
-  assert.deepEqual(r.calls, [merged], "driver 以本批合并消息开新回合（一次）")
-  assert.equal(r.lines.filter((l) => l === RECEIPT).length, 1, "回执按批 1 行")
-  assert.equal(r.state.pendingInput.length, 0, "消费清队（块随判据消失）")
-  r.state._suspAborted = true // 会话终止（防悬挂）
-  r.state._suspWake?.()
-  await session
-  // 中止残余：全量按计划转 state.queue（不渲染待发送块——TUI.md §7.5 边界）
-  const r2 = turnRig({ pendingInput: ["k1", "k2"] })
-  r2.agent._sessionAbort.abort() // 驱动首行 while 条件即假——直接走 finally 中止路径
-  await suspensionSession(r2.ctx)
-  assert.deepEqual(r2.state.queue, [{ text: formatMergedMessages(["k1", "k2"]) }], "残余按计划转 queue（合并条目——零丢失）")
-  assert.equal(r2.state.pendingInput.length, 0, "队列清空（块随判据消失）")
-  assert.ok(r2.lines.some((l) => /will run as a normal turn/.test(l)), "提示行明示去向（不静默丢）")
-  assert.ok(!convText(r2.state).some((t) => t.includes("待发送")), "中止残余不渲染待发送块")
-})
-
-test("T-F16-17 状态栏条数段（机判）：队列非空 N = 2 ⇒ 含「已排队 2 条消息」∧ 全程零 \\x1b[43m", () => {
-  const agent = { provider: null, cwd: "x", autoApprove: false, planMode: false, config: null, _currentTurn: 0, _maxTurns: 0 }
-  const s = baseState({ processing: true, processingStarted: Date.now(), status: "Processing...", pendingInput: ["p", "q"] })
-  const out = renderStatus(s, agent, 120, [])
-  assert.ok(stripAnsi(out).includes("已排队 2 条消息"), `条数段逐字（N = 2——实到 ${JSON.stringify(stripAnsi(out))}）`)
-  assert.ok(!out.includes("\x1b[43m"), "全程零 \\x1b[43m（F13 豁免）")
-})
-
-test("T-F16-18 步边界 pickup：队列 2 条 ⇒ 取批 ⇒ history 尾恰 +1 条 user 消息（合并文本）∧ lines 含回执 + `❯ You:` + 合并文本 ∧ 队列空 ∧ 零 `[User interrupt:]`（非中断锁）；空队列 ⇒ no-op", () => {
-  const r = turnRig({ pendingInput: ["s1", "s2"] })
-  pickupQueuedAtStepBoundary(r.ctx)
-  const merged = formatMergedMessages(["s1", "s2"])
-  assert.equal(r.agent.history.length, 1, "history 尾恰 +1 条")
-  assert.deepEqual({ ...r.agent.history[0], ts: undefined }, { role: "user", content: merged, ts: undefined }, "内容 = R15 合并文本（普通 user 消息——下一步生效）")
-  assert.ok(r.lines.includes(RECEIPT), "回执行在位")
-  assert.ok(r.lines.includes("❯ You:") && r.lines.includes(merged), "`❯ You:` + 合并文本落 state.lines")
-  assert.equal(r.state.pendingInput.length, 0, "取批清队")
-  assert.ok(!r.lines.some((l) => String(l).includes("[User interrupt:")), "非中断锁（零 [User interrupt:]）")
-  // 空队列 ⇒ 逐字节等价（零推送）
-  const r2 = turnRig({ pendingInput: [] })
-  pickupQueuedAtStepBoundary(r2.ctx)
-  assert.deepEqual([r2.agent.history.length, r2.lines.length], [0, 0], "空队列 no-op（零推送）")
-  // 单条批 ⇒ 原文直发（无编号包裹——与 planQueuedInput merged:false 同判）
-  const r3 = turnRig({ pendingInput: ["solo"] })
-  pickupQueuedAtStepBoundary(r3.ctx)
-  assert.equal(r3.agent.history[0].content, "solo", "单条批原文直发")
-})
-
-test("T-F16-19 负向锁（系统轮不参与步边界）：autoTurn 轮传参面 ⇒ consumeQueuedInput 缺省（null）∧ history 零写入 ∧ 队列保持 2 条 ∧ 零回执 ∧ 状态栏条数段 ∧ 待发送块保持", async () => {
-  const r = turnRig({ pendingInput: ["a1", "a2"] })
-  let seen = null
-  r.ctx.runAgent = async (_a, text, _cb, opts) => { r.calls.push(String(text)); seen = opts; opts?.consumeQueuedInput?.(_a) } // 核循环头同址（缺省 ⇒ 零调用）
-  await runAgentTurn(r.ctx, "", { autoTurn: true, skipSession: true }) // digestTurn 同形（skipSession——轮末消费点归 driver）
-  assert.equal(seen?.consumeQueuedInput, null, "autoTurn 轮不传 pickup 回调（端侧分流 = `autoTurn ? null : …`）")
-  assert.equal(r.agent.history.length, 0, "history 零写入（零合并消息）")
-  assert.deepEqual(r.state.pendingInput, ["a1", "a2"], "队列保持 2 条（零消费）")
-  assert.ok(!r.lines.includes(RECEIPT), "零 `[sending queued message]`")
-  const agent = { provider: null, cwd: "x", autoApprove: false, planMode: false, config: null, _currentTurn: 0, _maxTurns: 0, _inAutoTurn: true }
-  r.state.processing = true // 状态栏段判据 = processing（busy 帧读数——回合已收尾故同态取帧）
-  assert.ok(stripAnsi(renderStatus(r.state, agent, 120, [])).includes("已排队 2 条消息"), "状态栏条数段在位（零消费证据）")
-  assert.ok(convText(r.state).includes("⏳ 待发送 · 2 条消息（不打断当前执行，合并发送）"), "待发送块保持")
 })
 

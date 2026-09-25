@@ -19,7 +19,7 @@ import { discardAbortedPool, discardAbortedAdvisors } from "../agent-tools/async
 // R10 L3 (MULTI-INSTANCE-COLLAB §2a.5 D-L3a)：回合末域登记 flush（写工具钩子累积 →
 // 整写一次本实例 peers 文件——无写入跳过；失败容忍不抛）
 import { flushPeerDomains } from "../peer-domains.mjs"
-// 第 30 批 D1（Stop 钩子——AGENT-LOOP.md §21）：主会话 run 终止事件（触发块见 finalizeAgentTurn）
+// 第 30 批 D1（Stop 钩子——AGENT-LOOP.md §6.13）：主会话 run 终止事件（触发块见 finalizeAgentTurn）
 import { runHooks } from "../hooks.mjs"
 
 /**
@@ -164,14 +164,14 @@ export async function finalizeAgentTurn(agent, ctx) {
       },
     }).catch(() => {})
   }
-  // R17（AGENT-LOOP.md §25 D-R17a）: consultation sessions are cross-turn
+  // R17（CONSULTATION.md §6.2）: consultation sessions are cross-turn
   // background work now — NO unconditional turn-end cleanup (the old rule aborted
   // leftover consult children at every turn end because check-loop consumption was
   // turn-scoped). Sessions stay alive across normal turn ends (and ContinueError
   // resumes); the Ctrl+C abort branch below is the only path that aborts them
   // (cleanupConsultSessions — marked stopped → no digest), and the suspension
   // driver aborts them on its own abort unwind.
-  // Async subagent turn-end handling (AGENT-LOOP.md §15 D-A3 + AGENT-LOOP-ASYNC-POOL.md §6.8 D-S1). Lifecycle:
+  // Async subagent turn-end handling (AGENT-LOOP-SUBAGENT.md §6.7.3 D-A3 + AGENT-LOOP-ASYNC-POOL.md §6.8 D-S1). Lifecycle:
   // - Ctrl+C (plain abort): children were aborted with the parent signal — discard dead
   //   entries (tombstone/out-of-pool/notice — AGENT-LOOP-ASYNC-POOL.md §6.20; no stale
   //   errors injected — user explicitly stopped); consultation sessions are cross-turn

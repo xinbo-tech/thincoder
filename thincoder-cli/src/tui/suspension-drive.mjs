@@ -4,12 +4,12 @@
  * re-import（runAgentTurn ↔ suspensionSession 函数级静态环——模块求值期无顶层调用，
  * 环安全——session-slots ↔ session.mjs 同款先例）。
  *
- * AGENT-LOOP-ASYNC-POOL.md §6.8（2026-09-02，AGENT-LOOP.md §9 D-S1..S9）：回合尾后台池非空 → 不阻塞等待，
+ * AGENT-LOOP-ASYNC-POOL.md §6.8（2026-09-02）：回合尾后台池非空 → 不阻塞等待，
  * 进入挂起态——挂起空闲输入开放（Enter = 新回合入队列 + 唤醒）、busy（processing 含
  * digest）提交亦入同队列（容量 8——busy-extend 批 2026-09-22 · queue-visible 批 2026-09-24；
  * `TUI-INPUT-BOX.md` §4.1）、settle 事件驱动
  * auto-turn 消化（手动档 organize-only / AUTO 档全语义）、池空 + 无待处理输入 → 补发
- * done 冻结自然退出。状态机行表见 AGENT-LOOP.md §9.2。
+ * done 冻结自然退出。状态机行表见 AGENT-LOOP-ASYNC-POOL.md §6.8。
  * F-UC7（2026-09-19 批，AGENT-LOOP-UPSTREAM.md §6.27.12）：第二开轮源 = 未 drain 的上行
  * ask（`upstreamWaiting` 谓词——ask 入队即唤醒本驱动）；唤醒轮同走 auto-turn（旗标
  * `upstreamTurn` 供核域文本选择）。

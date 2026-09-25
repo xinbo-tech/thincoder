@@ -1,5 +1,5 @@
 /**
- * trace-store.mjs — §18.6 完整轨迹存档（AGENT-LOOP.md §18.6 D-TR1..TR8 权威规格）。
+ * trace-store.mjs — 完整轨迹存档（TRACES.md §6 机制 + §7 决策表 D-TR1–4 / D-TR6 / D-TR10–13 权威规格）。
  *
  * 完整请求-响应轨迹落盘：每次 chat() 调用一个 JSONL 文件到
  * ~/.thincoder/traces/YYYY-MM-DD/<sessionKey>-<seq>.jsonl。采集点唯一 = core.mjs

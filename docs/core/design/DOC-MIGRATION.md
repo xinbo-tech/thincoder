@@ -31,7 +31,7 @@
 | 4 | AGENT-PARAMS | **本批迁** | 活——根层无对应（`AGENT-LOOP.md` §6.1 仅覆盖 maxTurns 默认；`timeoutMs` 面无主）；三参数默认值经实核（`thincoder-core/advisor/compaction.mjs:36` · `thincoder-core/config.mjs:36` · `thincoder-core/agent/helpers.mjs:25`） | 已落 `docs/core/design/AGENT-PARAMS.md` |
 | 5 | APPLY-PATCH | **本批迁** | 根层无正文（`TOOLS.md` §8.2 登记「正文已拆到各工具权威档」= 无档名指针）；VSC 同名对位 | 已落 `docs/core/design/APPLY-PATCH.md` |
 | 6 | ARCHITECTURE | **本批迁** | 活——根层原无架构总览载体（硬约束 / 设计原则 / 模块地图）；§3 模块地图为迁移前 `src/**` 树形态 ⇒ 照现状**重写** | 已落 `docs/core/design/ARCHITECTURE.md` |
-| 7 | ASYNC-RESULT-CONTAINER | 历史 | 机制结论已全文入 `docs/core/design/AGENT-LOOP.md` §6.7.3（D2–D6 覆盖面）；余为批材料 | 不迁（就地留参照） |
+| 7 | ASYNC-RESULT-CONTAINER | 历史 | 机制结论已全文入 `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.7.3（D2–D6 覆盖面）；余为批材料 | 不迁（就地留参照） |
 | 8 | CHECKPOINT | 已清 | 对账：CLI §2–§8 ↔ 根层 §6.1–§6.8 + §7（§5.5 与附录由根层 §8.2 登记不并） | 无动作 |
 | 9 | CONSULTATION | 已清 | 对账：CLI §2.1–§2.6 ↔ 根层 §6.1–§6.4 + §7 | 无动作 |
 | 10 | CONTEXT-COMPACTION | 已清 | 对账：CLI §1–§12 ↔ 根层 §6.1–§6.12（D1–D13 / H1 / E1 全在场） | 无动作 |
@@ -61,7 +61,7 @@
 | 34 | SETTINGS-TOOL | **本批迁** | 设计侧根层无档（需求侧同名根档已由 VSC 批 4 建）⇒ 纯新建；null 形状表 / parseValue 去引号裁定按现行实装落笔 | 已落 `docs/core/design/SETTINGS-TOOL.md`（新建） |
 | 35 | STRUCTURE-DEBT | **本批迁** | 活 · **统一面**（横切总账 / 分批入口路由）——旧债逐条实核后按现状重建：现行债入「现行债」节、已消解项入「已消解」节（防回潮） | 已落 `docs/core/design/STRUCTURE-DEBT.md` |
 | 36 | SUBAGENT-ID-COUNTER-AGENT | 历史 | 已交付闭环（台账已核销）；机制已入核代码（`thincoder-core/agent-tools/subagent-scheduler.mjs`） | 不迁；取号公式句 ⇒ 后续批并入 `docs/core/design/AGENT-LOOP.md` 子代理池节 |
-| 37 | SUBAGENT-OBSERVE-SEND | 历史 | 契约正文已入 `docs/core/design/AGENT-LOOP.md` §6.7.2 | 不迁（就地留参照） |
+| 37 | SUBAGENT-OBSERVE-SEND | 历史 | 契约正文已入 `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.7.2 | 不迁（就地留参照） |
 | 38 | TESTING | **本批迁** | 活——根层无对应（`CORE-UNIFICATION.md` 仅作跨树承载指针）；995 行超硬限 ⇒ 端到端 harness 另立一档 | 已落 `docs/core/design/TESTING.md`（+ `docs/core/design/E2E-HARNESS.md`——**该档 2026-09-15 已删除**） （迁移期引文） |
 | 39 | TOOL-OUTPUT-LIMITS | **本批迁** | 活——根层无对应（`AGENT-LOOP.md` §6.16 显式外指「工具输出上限系（CLI 仓·设计）」）；常量与坐标经实核 | 已落 `docs/core/design/TOOL-OUTPUT-LIMITS.md` |
 | 40 | TOOLS | 已清 | 对账：根层 §6.1–§6.10 ↔ CLI §1–§11（根层反多 `timer` 校验句） | 无动作 |

@@ -190,7 +190,7 @@ test("depth gate: observe/send unavailable inside a subagent (depth>0)", () => {
   assert.match(snd.error, /depth 0/)
 })
 
-// ═══ 第 10 批（AGENT-LOOP.md §18——advisor 池接入面：status 双池 / cancel 落点 / 指引）═══════
+// ═══ 第 10 批（AGENT-LOOP-ASYNC-POOL.md §6.11——advisor 池接入面：status 双池 / cancel 落点 / 指引）═══════
 
 /** 评审池条目真形状（advisor-async launchAsyncAdvisor：role/reviewType/round/status/done）。 */
 function advisorEntry(over = {}) {

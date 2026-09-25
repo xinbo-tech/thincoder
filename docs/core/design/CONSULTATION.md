@@ -96,7 +96,7 @@
 > **本节 = 该档中「根层所缺」内容的并入面**：(a) 机制 / 契约的实质描述 · (b) 实现细节与坐标 · (c) 关键决策依据（§7）。
 > **不并**者见 §8：一次性批次材料（受影响文件表 / 测试与验收）· 头注状态行 / 变更流水账 / 需求迁出注 · 跨板面（飞刀 / advisor——见 §8.2 越段登记）。
 > **坐标口径** = as-of 2026-09-14：**旧档路径形态为迁移前**——本节一律按**现状路径**落笔（CLI 侧实现已住 `thincoder-core/**`；`thincoder-cli/src/tui/**` = CLI 壳体面；VSC 侧 = `thincoder-vscode/src/**`）。符号名与档路径为契约面，行号未逐条复核。
-> **泛化机制不复制**：digest / settle / pending 单容器的机制本体 → 本层 `AGENT-LOOP.md` §6.7.3 / §6.8（不复制）；async 结果容器契约 → `thincoder-cli/docs/_archive/design/ASYNC-RESULT-CONTAINER.md`（CLI 档 · 未迁）。
+> **泛化机制不复制**：digest / settle / pending 单容器的机制本体 → 本层 `AGENT-LOOP-SUBAGENT.md` §6.7.3 / `AGENT-LOOP-ASYNC-POOL.md` §6.8（不复制）；async 结果容器契约 → `thincoder-cli/docs/_archive/design/ASYNC-RESULT-CONTAINER.md`（CLI 档 · 未迁）。
 
 ### 6.1 架构与数据流
 
@@ -184,7 +184,7 @@ consult_stop
 
 ### 6.5 VS Code 端级实现接线（VSC 轮并入 · 2026-09-15）
 
-> **来源** = `thincoder-vscode/docs/design/CONSULTATION.md`（161 行 · VSC 产品档——迁移期参照历史）。本节 = 该档中「根层所缺」的 **VSC 端级接线表**（(a) 机制 / (b) 坐标）；digest / settle / 单容器机制本体已入 §6.2 / §6.3 与 `AGENT-LOOP.md` §6.7.3，不重复（D2）。
+> **来源** = `thincoder-vscode/docs/design/CONSULTATION.md`（161 行 · VSC 产品档——迁移期参照历史）。本节 = 该档中「根层所缺」的 **VSC 端级接线表**（(a) 机制 / (b) 坐标）；digest / settle / 单容器机制本体已入 §6.2 / §6.3 与 `AGENT-LOOP-SUBAGENT.md` §6.7.3，不重复（D2）。
 > **W12 收正（2026-09-15——VSC 壳接线批）**：VSC 端实现面迁核（端 `thincoder-vscode/src/agent-tools/consult.mjs` 删旧退役）——下表坐标现体 = 核 `thincoder-core/agent-tools/consult.mjs`（删除记录 = 批次档 §5，`2026-09-15-vsc-core-wiring.md`）；只收正坐标/状态行，机制条文零改。
 
 | 环节 | VS Code（现状坐标） |

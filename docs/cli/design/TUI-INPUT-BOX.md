@@ -2,7 +2,7 @@
 
 > 板块 = **TUI 输入框**（主输入框 / question 自由文本态 / Ctrl+I 注入框的按键与状态契约）。
 > 配对需求档 = `docs/cli/requirements/TUI.md`（F11 / N8 等输入面条目住该档——本板块不单起需求档）。
-> 对位档 = `docs/vsc/design/WEBVIEW-INPUT.md`（VSC webview 输入面——语义同源、各端独立实现；差异登记见 §9.2）。
+> 对位档 = `docs/vsc/design/WEBVIEW-INPUT.md`（VSC webview 输入面——语义同源、各端独立实现；端差已消解——历史见变更记录 misc-four 行）。
 > **本档是输入框的唯一行为契约：任何对输入框 / 键处理的修改，先读这里，改完更新这里。**
 > 建档：2026-09-15（**B 式迁移轮 · 第 6 批**——`thincoder-cli/docs/design/TUI-INPUT-BOX.md` 内容重建；
 > 旧档**二态混装**（当前态 + 第 31 批目标态）已按「第 31 批设计已实现」收口为单态现行契约——见 §9.1）。
@@ -219,7 +219,7 @@ F13 attention 判据不破（queued 反馈零注意力色对——`docs/cli/desi
 | `thincoder-cli/src/tui/input-face.mjs` | stdin 层 `translateShiftEnter` 接线（`:151`）+ 键盘 / 鼠标后置挂载入口（`mountKeys` / `mountMouse`） |
 | `thincoder-cli/src/tui/index.mjs` | `startTUI` 装配序列（命令层 / 启动屏 / resize / render loop）；启动 `keyboardPush` / 退出 `keyboardPop`（序列体 = `tui-lifecycle.mjs`——启动调用点 = `input-face.mjs:39`） |
 | `thincoder-cli/test/input-lock.test.mjs` · `thincoder-cli/test/arrow-editing.test.mjs` | 按键分发锁（含 busy 门禁）+ 方向键编辑用例 |
-| `thincoder-cli/test/busy-injection.test.mjs` | F16 用例宿主（T-F16-1…9——放行 / 回合尾送达 / 槽满 / 排除面 / driver 消费 / 状态栏段 / 挂起内入槽 / 消费回执；T-F16-7 = `input-lock.test.mjs` 侧；本批扩面行见批档 §2） |
+| `thincoder-cli/test/busy-injection.test.mjs`（留守）· `busy-injection-render.test.mjs` · `busy-injection-consume.test.mjs`（2026-09-25 file-tier-sweep 批按族拆分产物） | F16 用例宿主——按族三档：留守 T-F16-1 / 3 / 4 / 8 / 13 · 渲染族 6 / 10 / 11 / 12 / 14 / 17 · 消费族 2 / 5 / 9 / 15 / 16 / 18 / 19；T-F16-7 = `input-lock.test.mjs` 侧；逐例映射见批档 §2「四·S4」 |
 
 ## 7. question 自由文本输入态：光标与编辑键
 
@@ -320,10 +320,16 @@ F13 attention 判据不破（queued 反馈零注意力色对——`docs/cli/desi
 |---|---|---|
 | 挂起决策 / 队列机制的正文 | 挂起状态机、settle 时序、池管理 | `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8——本档只落输入框侧行为（§4） |
 | question 工具协议面 | 提问工具契约、CUSTOM 哨兵定义 | `docs/core/design/TOOLS.md`（question 行）+ `docs/cli/design/TUI-COMMANDS.md` |
-| VSC 端方向键编辑差异 | VSC webview 首行 ↑ 为浏览器默认 no-op（不回落历史） | `docs/vsc/design/WEBVIEW-INPUT.md`——**端差异如实登记**（登记 ≠ 默认保留；**登记面 = 记录已裁的保留项**，✗ 非未决差项兜底）；端差默认 = 消，保留须结构性不对称 + 证据 + 显式裁定（A9）；各端独立实现只述实现形态，✗ 不构成差异保留依据；**本项状态：待裁**（A9 三件未齐——消解路径 = 两端口径统一（↑ 回落语义对齐）∥ 补显式裁定；到期 = 台账 #185「已登记端差逐项 A9 复核」落定） |
 | 输入层状态机的宿主实现细节 | `key-handler` 族 / `key-modes` 内部结构 | 实现面——落点 `thincoder-cli/src/tui/key-handler.mjs` + 五族 `key-handler-{ctrlc,modals,scroll,busy,edit}.mjs` · `key-modes.mjs`（本档只留行为契约） |
 
 ## 变更记录
+
+- 2026-09-25（**misc-four 批 · 设计评审修正轮 2（发现 #16）· eng-designer**——承 `docs/batches/2026-09-25-misc-four.md` §3 轮次 2）：档头对位行「差异登记见 §9.2」悬空指针改述为「端差已消解——历史见变更记录 misc-four 行」（§9.2 该登记行已随本批设计轮删除）。**语义零改**。
+
+- 2026-09-25（**file-tier-sweep 批 · 评审轮 1 修正轮** · eng-designer——承 `docs/batches/2026-09-25-file-tier-sweep.md` §3 轮次 1 发现 4）：§6 档位表 `busy-injection.test.mjs` 行随 S4 拆分收正——按族三档宿主 + 逐例映射指向批档 §2「四·S4」。**判据表 / 执行序 / 契约面零变**。
+
+- 2026-09-25（**misc-four 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-misc-four.md` §2 · 台账 #185）：§9.2「VSC 端方向键编辑差异」**登记行删除**——
+  实核 = 端差已消解（VSC ↑/↓ 五态判定与 CLI 同形：`thincoder-vscode/webview/input.js:92-110` ∥ `thincoder-cli/src/tui/key-handler-scroll.mjs:39-82`；VSC 面契约 = `docs/vsc/design/WEBVIEW-INPUT.md` §2）。无效登记不留规范面（历史见本行）。
 
 - 2026-09-15（**B 式迁移轮 · 第 6 批**）：建档——`thincoder-cli/docs/design/TUI-INPUT-BOX.md` 内容重建入基准层（旧档一字未改、原地作参照历史）。
   ① **二态混装收口**（台账 §3 注意项）：旧档「当前态 + 第 31 批目标态」按「设计已实现」折算为**单态现行契约**——目标态并入 §3 / §8；

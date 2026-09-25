@@ -6,9 +6,10 @@
  *     端面纪律 = **TTL 单一新鲜度判据**（§3.1:102「端 TTL = 新鲜度上界，不复刻 mtime 判据」）；
  *   · 判据面**全引核** `process-probe.mjs`：判活 `batchAliveAsync` / 命令行 `probeCmdlinesAsync`
  *     / 身份复核 `isProductProc` / 端标签 `classifyEnd`；TTL 常量单源 = 核 `PEER_PROBE_TTL_MS`；
- *   · 本档只保留**聚合半段**（manifest → 按 sessionId 分组 → self 条 → 排序）——核
- *     `groupSlotSessions` 为核内私有件（未导出）⇒ 镜像 16 行（核 `:84-99` ⇄ 本档 `:78-93`）；
- *     §3.1 删除清单三件 `batchAlive` / `classifyEnd` / `probeCmdlines` 已退场（聚合保留·如实披露）。
+ *   · 本档只保留**壳形**（SWR 快照读 / TTL 新鲜度 / 异步对偶 / 预热）+ self 条 + 排序半段；
+ *     分组半段（manifest → 按 sessionId 分组）**引核**（`groupSlotSessions` 具名导出——
+ *     §3.1「聚合半段单源」；共享分组半段 ≠ 委托整面）；
+ *     §3.1 删除清单三件 `batchAlive` / `classifyEnd` / `probeCmdlines` 已退场。
  *   · **SWR 读形**（stale-while-revalidate）：同步 `peerInstances(cwd)` = 快照读——新鲜
  *     （age < TTL）直返 / 过期返旧 + 后台刷新 / 无快照返空 + 后台刷新 ⇒ 每回合调用面
  *     （`pushPeerReminder`）**零同步 exec**（N-MI3 / N-MI2）；异步对偶 `peerInstancesAsync(cwd)`
@@ -27,9 +28,9 @@ import {
   batchAlive, batchAliveAsync, probeCmdlinesAsync, isProductProc, classifyEnd,
   _setProcessProbeTestImpl, _resetProcessProbeTestImpl,
 } from "@thincoder/core/process-probe.mjs"
-import { PEER_PROBE_TTL_MS } from "@thincoder/core/peer-instances.mjs"
+import { PEER_PROBE_TTL_MS, groupSlotSessions } from "@thincoder/core/peer-instances.mjs"
 
-// 既有 import 面零破（`peer-domains.mjs:124` 零改）：`batchAlive` 实现单源 = 核 `process-probe`。
+// 既有 import 面零破（`peer-domains.mjs` 的 `batchAlive` 聚合消费点零改）：`batchAlive` 实现单源 = 核 `process-probe`。
 // 语义变化披露：核版探测失败 ⇒ **null**（未知，不作死判据——D-MI10），旧端侧副本失败返空集；
 // `peer-domains` 的调用点对 null 会抛 TypeError 并被其 try 吞 ⇒ 失败路径**不删**（保守方向）。
 export { batchAlive }
@@ -70,27 +71,7 @@ export function _resetPeerInstancesForTest() {
   _resetProcessProbeTestImpl() // 核缝（双清：端 + 核）
 }
 
-// ─── 聚合（核 `groupSlotSessions` 逐字镜像——核内私有件未导出）──────────────────
-
-/** manifest slotSessions → 按 sessionId 去重分组 [{ sessionId, pid, slots }]。
- *  sessionId 形如 "{pid}-{ts}-{rand}"（进程级——可去重分组）；pid 不可解析的条目 pid:null
- *  （调用面跳过——存量清理归 saveManifest 的 cleanDeadOwners；本模块纯只读不写）。 */
-function groupSlotSessions(m) {
-  const byId = new Map()
-  for (const [slot, sessionId] of Object.entries(m.slotSessions ?? {})) {
-    if (typeof sessionId !== "string" || sessionId.length === 0) continue
-    let g = byId.get(sessionId)
-    if (!g) {
-      const pid = Number.parseInt(sessionId.split("-")[0], 10)
-      g = { sessionId, pid: Number.isInteger(pid) ? pid : null, slots: [] }
-      byId.set(sessionId, g)
-    }
-    if (/^\d+$/.test(slot)) g.slots.push(Number(slot))
-  }
-  const groups = [...byId.values()]
-  for (const g of groups) g.slots.sort((a, b) => a - b)
-  return groups
-}
+// ─── 快照与真算（分组半段引核——见头注）──────────────────
 
 /** 快照写入（上限 CACHE_MAX——旧条目先出）。 */
 function putSnapshot(cwd, entries) {

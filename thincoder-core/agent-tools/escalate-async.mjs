@@ -1,5 +1,5 @@
 /**
- * escalate-async.mjs — async 飞刀 runner (AGENT-LOOP.md §25 D-R17b — R17, 2026-09-06).
+ * escalate-async.mjs — async 飞刀 runner (ESCALATE.md §5 — R17, 2026-09-06).
  *
  * The subagent action:"escalate" is DEFAULT-async at depth 0 (decision ③: the
  * depth-0-only escalate flips to async like every other background family;
@@ -148,7 +148,7 @@ export function launchEscalateAsync(parent, ctx, launch) {
   const { task, provider, tag, effortNote } = launch
   parent._asyncSubagents ??= new Map()
   parent._asyncQueue ??= []
-  // Async id allocation (AGENT-LOOP.md §15 D-A1 precedent): reserve the relay
+  // Async id allocation (AGENT-LOOP-SUBAGENT.md §6.7.3 D-A1 precedent): reserve the relay
   // counter at launch — the returned id stays stable while the entry sits queued.
   // The [model] token (TUI block creation) is DEFERRED to actual start so queued
   // flights don't paint an empty panel block (subagent-parity).

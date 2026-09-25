@@ -4,7 +4,7 @@
 > （picker / wizard / question 三面契约）以及 agent ↔ 用户之间的**交互桥**（权限 / 提问）。
 > 配对需求档 = `docs/cli/requirements/TUI.md`（本板块三档设计共用一份需求档——层归属不对称，理由见该档 §1 注）。
 > 同板块其余两档 = `docs/cli/design/TUI.md`（界面核心）· `docs/cli/design/TUI-SESSION-VIEW.md`（会话视图 / 回合 / 内存）。
-> 对位档 = `docs/vsc/design/WEBVIEW*.md`（VSC webview——无 picker / wizard 面；端差异登记、各端独立实现）。
+> 对位档 = `docs/vsc/design/WEBVIEW*.md`（VSC webview——无 picker / wizard 面）——**已裁保留（A9 · 复核 = 2026-09-25 本批）**：结构性不对称 = picker / wizard 交互面仅 CLI 侧存在（VSC 宿主面走 webview 控件）；证据 = 两实现树（本档 §2 / §3 面集 ∥ `WEBVIEW*.md`）；显式裁定 = CORE-UNIFICATION §2.5 端特有桶族（2026-09-13）+ 本批确认。
 > 建档：2026-09-15（**B 式迁移轮 · 第 6 批**——`thincoder-cli/docs/design/TUI.md` 的 §9 / §12 / §13 面重建入本档；
 > 旧档原地一字不改、留作参照历史）。
 > 本档坐标与行数 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
@@ -190,6 +190,8 @@
 | VSC 侧对位面 | webview 无 picker / wizard 面 | 登记「无镜像面」；VSC 轮 |
 
 ## 变更记录
+
+- 2026-09-25（**misc-four 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-misc-four.md` §2 · 台账 #185）：档头对位行裸读法收正——补 A9 三件（结构性不对称 / 证据 / 裁定）。**零新机制**。
 
 - 2026-09-19（**CLI 端删除二次确认批（台账 #96）· 设计轮 · eng-designer**）：新增 **§5.4 删除类入口显式确认门**——判据句（不可复得 ⇒ 一次显式确认）·
   确认件单源 `confirmDelete`（形态 = 既有二次确认 picker，先例 `cmd-clear.mjs:6-9` / `cmd-new.mjs:30-33`）· 入口册 4 行（渠道删除 / MCP 删除 ×2 路 / 冷 GC 已覆盖）·

@@ -25,7 +25,7 @@
  */
 import { pushReal } from "../context.mjs"
 import { specForModel } from "../config.mjs"
-import { FILE_MUTATORS } from "./helpers.mjs"
+import { FILE_MUTATORS, toolTouchPaths } from "./helpers.mjs"
 import { resolve } from "node:path"
 import { advisorRuns, stripApprovedSuffix } from "../agent-tools/advisor-async.mjs"
 import { looksLikeReviewOutput, advisorIncompleteMarker } from "../advisor/run.mjs"
@@ -78,7 +78,7 @@ export async function recordToolResults(agent, toolByName, results) {
         // Direct file edit — code was changed. The prior advisor review and
         // verify are stale: a review that ran before the edit no longer
         // covers the current file state.
-        // §29 fix A（AGENT-LOOP.md §29——2026-09-07）：mutation-seq 记账已移到 dispatch
+        // fix A（2026-09-07）：mutation-seq 记账已移到 dispatch
         // runOne 执行成功即刻（唯一记账点——取代本批后段 + agent.mjs 中断分支——不双计）——
         // 此处仅剩 guard 标志失效（顺序语义：批内同消息的 sync advisor 提交仍在其后置位）。
         agent._mutatedThisRun = true
@@ -145,23 +145,26 @@ export async function recordToolResults(agent, toolByName, results) {
         }
       }
       if (FILE_MUTATORS.has(toolCall.name)) {
-        const args = JSON.parse(toolCall.arguments)
-        const paths = tool.touchedPaths ? tool.touchedPaths(args) : [args.path]
-        for (const p of paths) {
-          const abs = resolve(agent.cwd, p)
-          if (!agent._touchedFiles.includes(abs)) agent._touchedFiles.push(abs)
-          if (agent.memory) {
-            // Fire-and-forget: don't block the agent loop on indexing.
-            // Reuses a single cached import; errors surface as pending reminders on next turn.
-            if (!_reindexFile) {
-              const mod = await import("../memory.mjs")
-              _reindexFile = mod.reindexFile
+        try {
+          const args = JSON.parse(toolCall.arguments)
+          const paths = toolTouchPaths(tool, args)
+          for (const p of paths) {
+            if (typeof p !== "string" || !p) continue // 非字符串项不拖累合法路径（与 dispatch / VSC 消费面同口径）
+            const abs = resolve(agent.cwd, p)
+            if (!agent._touchedFiles.includes(abs)) agent._touchedFiles.push(abs)
+            if (agent.memory) {
+              // Fire-and-forget: don't block the agent loop on indexing.
+              // Reuses a single cached import; errors surface as pending reminders on next turn.
+              if (!_reindexFile) {
+                const mod = await import("../memory.mjs")
+                _reindexFile = mod.reindexFile
+              }
+              _reindexFile(agent.memory, agent.cwd, abs).catch((e) => {
+                agent._pendingReminders.push(`[System reminder: background indexing failed for ${toolCall.name} on ${abs}: ${e.message}. This does not affect your work — the code index will catch up on next reindex.]`)
+              })
             }
-            _reindexFile(agent.memory, agent.cwd, abs).catch((e) => {
-              agent._pendingReminders.push(`[System reminder: background indexing failed for ${toolCall.name} on ${abs}: ${e.message}. This does not affect your work — the code index will catch up on next reindex.]`)
-            })
           }
-        }
+        } catch { /* #327：畸形 args（含 null）/ 畸形路径不再裸抛——touchedFiles 尽力而为 */ }
       }
     }
   }

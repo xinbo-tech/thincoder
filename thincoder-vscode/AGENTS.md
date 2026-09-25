@@ -40,7 +40,7 @@ Design docs in `docs/_archive/design/` (migration-period reference — retained,
 （机制本体 = `@thincoder/core`（prompts / provider / mcp / memory / checkpoint / tools / tool-docs / traces / advisor / agent-tools 族）——本端只列端壳 / 装配面；已删的自持镜像不再列行）
 extension.mjs        Extension entry — 注册 ChatPanel（类已迁 src/extension/chat-panel.mjs）为 WebviewViewProvider + commands/status bar（session CRUD/设置/标题生成/CSP 注入随类迁移）
 src/agent.mjs         Agent main loop — parallel tool batching, multimodal image injection, context compaction, subagent spawning, reasoningEcho
-src/agent/           端壳装配面（W15 重定保留）—— setup.mjs（装配/注入/工具表）· setup-tooltable.mjs（工具表装配装饰面——W9 记账缝 / W14 三缝 / 池装配与子代理面）· turn-domains.mjs（端侧回合域文本组合单点——核基座转口 + 端 overlay，digest 轮与 ask 唤醒轮共用）· run-stages.mjs（回合级阶段）· setup-reminders.mjs（端特有提醒 + 核转口）· agent-state.mjs · context-injections.mjs · execute-tools.mjs · tool-gates.mjs · run-helpers.mjs
+src/agent/           端壳装配面（W15 重定保留）—— setup.mjs（装配/注入/工具表）· setup-tooltable.mjs（工具表装配装饰面——W9 记账缝 / W14 三缝 / 池装配与子代理面）· turn-domains.mjs（端侧回合域文本组合单点——核基座转口 + 端 overlay，digest 轮与 ask 唤醒轮共用）· run-stages.mjs（回合级阶段）· response-stages.mjs（响应后处理段——traceStop/内置工具本地化/interrupt/usage/流规则 abort/提醒；2026-09-25 file-tier-sweep 批 S2 外提）· setup-reminders.mjs（端特有提醒 + 核转口）· agent-state.mjs · context-injections.mjs · execute-tools.mjs · tool-gates.mjs · run-helpers.mjs
 src/agent-tools/index.mjs  自持工具集转口（W9 起 = 核登记册 `@thincoder/core/agent-tools.mjs` 单源；端侧不再自持名清单）
 src/agent-tools/async-discard.mjs  Stop 丢弃面（端壳档；池/墓碑读改指核 `async-settle` 单源）
 src/config-mcp.mjs    MCP 配置端壳（面板增删改 → 端壳写盘通道 `vscPersistRaw`）
@@ -53,7 +53,7 @@ src/repomap.mjs       Repository dependency graph parsing（workspace.fs 数据�
 src/specs.mjs         Model capability specs（核 `model-specs.mjs` 表 + 端侧 `reasoningEffortDefault` 增补面）
 src/tools.mjs         Re-export shim → src/tools/index.mjs（端壳工具面 = {code,focus,ide,index,shared,shell}；内置工具实现本体在核）
 src/tools/{index,shell,code,ide,focus,shared}.mjs  端壳工具面（index = 核工具装配 · shell/code/ide/focus = 宿主工具 · shared = 拆壳薄壳 + 四缝供值；D-CC26：宿主 IDE 快照工具自 `context` 改名 `ide`——让名给核 `context` 工具）
-src/extension/        ChatPanel 分解模块（chat-panel.mjs 类本体 + panel-chat/panel-messages/panel-session/panel-project/panel-mcp/panel-index/panel-toolpanel/panel-callbacks 等载荷分模块 + session-io/session-slots/settings/presets）
+src/extension/        ChatPanel 分解模块（chat-panel.mjs 类本体 + panel-chat/panel-messages/panel-session/panel-project/panel-mcp/panel-index/panel-toolpanel/panel-callbacks/panel-settings-push 等载荷分模块 + session-io/session-slots/settings/presets）
 webview/chat.js
 webview/state.js     UI 状态单一持有（S + DOM ctx + vscode——全模块共享同一运行时对象——WEBVIEW.md）
 webview/streaming.js  token/reasoning 流式渲染（rAF 节流）+ 回合收尾 + 活动块路由（块出生即活动区 `#subagent-activity` 区尾——activity.js——subagentChunk 空安全守卫）

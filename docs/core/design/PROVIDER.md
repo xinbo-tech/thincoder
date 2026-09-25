@@ -159,6 +159,7 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`）
   （理由与逐名后果 = `docs/core/design/MODEL-SPECS.md` §2.4，本档不重述）。**约束：以后不得以蹭泛前缀的方式给新 qwen 档配能力**——
   音/视频能力在 schema 上**未表达且未接入**（`multimodal` 仅承载「可收图像 part」），新档声明只写实测到的字段。
 - **re-export 契约**：`config.mjs` re-export `specForModel` / `providerSpec` / `specMatch`；`providerSpec` = spec + provider 级 context 覆盖。
+- **`noUsageStream` 语义 = 「核不主动发 `stream_options.include_usage`」（保守抑制，**非**服务端能力断言）**：唯一消费点 = 载荷组装段的 OpenAI 兼容支（`thincoder-core/provider/core.mjs:183`；`format:"google"` 行走原生 transport ⇒ 对 gemini 行为**惰性声明**）。逐族裁据与保留裁定 = `doc:MODEL-SPECS.md:§15.2`（本档不复述数值/名单）。
 
 ### 6.10 畸形 tool_calls 防御解析
 
@@ -173,6 +174,7 @@ name 空槽丢弃并计数、缺 id 合成 `call_N`。告警（`droppedToolCalls
   该载荷面未实测，不设即不发）；`volcengine` = 火山方舟，默认模型 = `doubao-seed-2-0-code-preview-260215`（实测在册；
   改值动因与旧值 = 批次档 `2026-09-20-channel-onboarding.md` §1.2–§1.3）。既有 `hunyuan` 预设 = 另一主机，本轮未实测 ⇒ **不动**。
   行集与逐字段取值 = `doc:MODEL-SPECS.md:§9`；护栏用例 = 预置↔规格漂移白名单（只减不增）。
+- **预置 `maxTokens` ⇄ 规格行对齐（2026-09-25 批）**：不变式 `maxTokens ≤ specForModel(preset.model).maxOutput`（**基准 = 生效规格值**，含 `DEFAULT_SPEC` 兜底）；六对超限已逐对对齐（真行三对降行值 / 无行三对降生效基准），`OVER_LIMIT` 白名单 → **空名单**。逐对表与覆盖缺口（挂 `#11`） = `doc:MODEL-SPECS.md:§15.3`。
 - 能力差异全走规格表；`kimi/kimi-k3`（router 前缀）与 `k3` 保留显式 alias 行；未知模型保守 `DEFAULT_SPEC`。
 - **DeepSeek V4.1-Flash 行集**：新行 `deepseek-flash`（1M 上下文 / 384K 输出 / thinking 默认开 / 前缀补全 Beta / 磁盘缓存默认开 / `multimodal: true`）；
 qwen-plan 渠道同名模型以 `deepseek-v4.1-flash` 提供（`token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1`——2026-09-15 实测 GET /models 含该名 · chat 200）——独立行、字段逐字对齐 `deepseek-flash`（`.1` ≠ `-` ⇒ 纯前缀查表不命中既有行）；
@@ -199,6 +201,13 @@ on 分支默认 effort 契约 = 取 `spec.reasoningEffortEnum` 的**首个非 `"
 **零变面五 guard**：无枚举名 / 显式档在场（档位优先）/ 枚举不含 `none` / 百炼 qwen（`enable_thinking:false` 照发 + 同义多携该字段）/ 
 路由形态名（含 `/`）；后台调用路径（`context.mjs` / `explore-distill.mjs` 的 `{...provider, thinking:null}`）同命 = 有意认账
 （不再空想，与 qwen 侧同方向）。判据 = `doc:MODEL-SPECS.md:§9.6`（D-14）+ 用例 B-5；落点 = `thincoder-core/provider/core.mjs` 载荷组装段（+~5 行）。
+
+**off 形不得在解析链上被抹（2026-09-25 批 · 台账 #329——本节谓词的前置条件单源）**：谓词首款 `provider.thinking === null` 要求 **off 标记活着到达载荷层**——
+advisor 径的 provider 解析（`thincoder-core/advisor/run.mjs` `resolveAdvisorProvider`）**须保形**（`cfg.thinking === null` ⇒ 结果对象 `thinking` 保持 `null`，不得归一为 `undefined`）
+**且**显式 off 时不得携继承档（渠条目 / 主 provider 的 `reasoningEffort` 一律清出）。两分支（自定义渠道 / 主 provider 兜底）同判据；
+`cfg.thinking === false`（非法原值）仍归一为 `undefined`（零变）。载荷层谓词本体**零改**（本批只补解析链前置）；用例 = `doc:MODEL-SPECS.md:§15.7` AD-1..AD-4。
+无 off 路径的族（effort 型枚举不含 `none` / 服务端强制思考族）不受本条影响——谓词 guard ④ 照旧不命中（无该字段、不抛错）。
+**生产者面**（off 形的族别取形——effort 族须落 `thinking: null`；CLI `/advisor` 与 VSC 面板写面两处同式）单源 = `doc:MODEL-SPECS.md:§15.4-2`。
 
 ### 6.13 Responses API transport
 
@@ -444,3 +453,6 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` → 
   行集与逐字段取值真源 = `doc:MODEL-SPECS.md:§9`，本档只承载渠道/预设面（D2 不重述数值）。
 - 2026-09-20（**卫生族批 · 台账 #138 · eng-designer**）：首部机制面节区改 `§6–§8` + 历史节号指称清理（行数规则废除批残留）；设计源 = `docs/batches/2026-09-20-hygiene-sweep-batch.md` §2。
 - 2026-09-25（**model-specs 清理批 · DOC 面残留收正轮 · eng-designer**——承 `docs/batches/2026-09-25-model-specs-cleanup.md` §2/§4 · 台账 #14）：§6.9 字段清单删 `cacheMode`（该档唯一命中；字段本体随 `doc:MODEL-SPECS.md:§14` 批整体删除——§14.2 #11）。本档其余零改。
+- 2026-09-25（**规格·effort 轮 · eng-designer**——承 `docs/batches/2026-09-25-spec-effort.md` §2 · 台账 #241 / #326 / #329）：§6.9 新登 `noUsageStream` 语义（保守抑制 · 非能力断言 · 消费点惰性面）；§6.11 新登预置 `maxTokens` ⇄ 规格行对齐与空名单白名单；§6.12 新登 **off 形解析链保形条**（#329——advisor 径 `thinking:null` 保形 + 显式 off 清继承档；谓词本体零改）。
+  数值与逐对表真源 = `doc:MODEL-SPECS.md:§15`，本档只承载机制面（D2）。
+- 2026-09-25（**规格·effort 轮 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承 `docs/batches/2026-09-25-spec-effort.md` §3 轮次 1）：§6.12 补**生产者面**指针（off 形按族取形——effort 族须落 `thinking: null`；单源 = `doc:MODEL-SPECS.md:§15.4-2`）+ 用例号收正（`A-13..A-16` → `AD-1..AD-4`，避与判据号同号）。谓词本体零改（单源不变）。

@@ -78,7 +78,7 @@ export async function chat(provider, opts = {}) {
   // 格式分派（anthropic/google/responses）在内部——单点覆盖即 llm:* 全覆盖。
   // 续写/重试各自为独立 HTTP 请求——续写递归（下方 chatImpl 内）会再包一层（嵌套
   // llm:start/done 对——每请求一事件）；重试在 requestWithRetry 内部不可见。
-  // §18.6 完整轨迹存档（AGENT-LOOP.md §18.6 N-TR2——权威句 D-TR1）：采集点唯一=
+  // 完整轨迹存档（TRACES.md §6.1——权威句 D-TR1）：采集点唯一=
   // 本函数出口——所有 chat 调用（主回合/消化轮/compress/distill/advisor/子代理/
   // auto-think/consult）都经本函数；续写/重试在出口已合并——reasoning 全量才完整。
   const logCtx = opts.logCtx ?? {}
@@ -179,7 +179,7 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
     messages,
     stream: true,
   }
-  // Skip usage stream for models that don't support it (GLM, MiniMax, Gemini)
+  // 保守抑制（非能力断言）：带 `noUsageStream` 的行 = 核不主动发 stream_options.include_usage（glm 族已实测带该参数全 200）；逐族等级 = MODEL-SPECS.md §15.2
   if (!spec.noUsageStream) body.stream_options = { include_usage: true }
   if (provider.maxTokens) body.max_tokens = provider.maxTokens
   if (provider.temperature != null) {

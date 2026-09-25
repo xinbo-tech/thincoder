@@ -1,9 +1,9 @@
 /**
- * subagent-scheduler.mjs — §20 子 agent 任务调度器 + 文件域组（2026-09-05 自
+ * subagent-scheduler.mjs — 子 agent 任务调度器 + 文件域组（2026-09-05 自
  * subagent-async.mjs 拆分——Module Split Policy §20.9——纯迁移零行为变化——
- * AGENT-LOOP.md §20 D-SD1..SD5 + §21.1 D-SL1 环形死锁修正）。
+ * AGENT-LOOP-SUBAGENT.md §6.9 D-SD1..SD5 + D-SL1 环形死锁修正）。
  * 内容：normalizeFileList / filesOverlap / effectiveFiles（SCHEDULER-DYNAMIC-DOMAIN
- * 动态域——声明 ∪ running touched）/ depInfo / describeBlockers / detectStall（§21.1
+ * 动态域——声明 ∪ running touched）/ depInfo / describeBlockers / detectStall（
  * P-SL2 停滞机械检测）/ queueRunnable / assertNoDepCycle / dependentLabels /
  * refreshQueuedTokens / maybeRefillAsync。
  * ASYNC_POOL_LIMITS/poolLimitsFor/runningPoolCount 回引自 subagent-async.mjs（主体保有——
@@ -24,7 +24,7 @@ import { poolLimitsFor, runningPoolCount, ASYNC_POOL_LIMITS } from "./subagent-a
 import { carrierField, getAsyncPool, tombstoneOf } from "./async-settle.mjs"
 
 // ═══════════════════════════════════════════════════════════════════════════
-// §20 子 agent 任务调度器（AGENT-LOOP.md §20——D-SD1..SD5 + 20.4 处置注）
+// 子 agent 任务调度器（AGENT-LOOP-SUBAGENT.md §6.9——D-SD1..SD5）
 // 池条目域元数据（D-SD2：entry._files/_dependsOn——running ∪ queued 全带）、准入
 // （D-SD3：域冲突/依赖未满足 → queued 等位）、补位扫描（D-SD4：最早可启动——
 // 依赖全满足 + 域无冲突——waiting 越行不阻塞 slot 位）、释放规则（D-SD5——round2
@@ -35,14 +35,14 @@ import { carrierField, getAsyncPool, tombstoneOf } from "./async-settle.mjs"
 
 /** 文件域归一化（round1 #5——路径归一化再交集）：相对 cwd 解析为绝对路径 + 去重；
  *  非字符串/空项静默跳过（声明错误 = false-negative 明示风险——v1 边界）。
- *  §20.8 D-F1.1（2026-09-04）：目录声明检测——fail-closed——尾斜杠形态 / 指向既有目录
+ *  D-F1.1（2026-09-04）：目录声明检测——fail-closed——尾斜杠形态 / 指向既有目录
  *  → throw（含路径——错误字符串英文定稿）——目录声明静默绕过冲突检测的通道闭合；
  *  调用方（subagent.mjs spawn 入口）catch → 错误即工具结果（模型可见——无静默）。
- *  已知限制（§20.8 未编号段——评审 #4）：不存在的目录声明（无尾斜杠 + 目录未创建）仍通过——不处理。
- *  §28 R26 F-R26b（2026-09-07）：父侧维护文件黑名单——归一化后 basename 全名匹配 +
+ *  已知限制（评审 #4）：不存在的目录声明（无尾斜杠 + 目录未创建）仍通过——不处理。
+ *  R26（2026-09-07）：父侧维护文件黑名单——归一化后 basename 全名匹配 +
  *  大小写不敏感（todo.md/changelog.md 精确——路径任意层含 docs/、根、.thincoder/）——
  *  命中 → throw（fail-closed——先于调度器准入——无排队残留——错误即工具结果）；
- *  提示列出全部违规条目——英文模板逐字定稿（AGENT-LOOP.md §28）。
+ *  提示列出全部违规条目——英文模板逐字定稿（AGENT-LOOP-SUBAGENT.md §6.9「父侧文件拦截（R26）」）。
  *  M5 F6（2026-09-17）：黑名单随同迁入 spawn-gates.mjs（rejectEngineeringFilePaths——族 = ledger.db / CHANGELOG + scripts/**；老台账 md 族随 M2 退役）——本函数只留调用（错误文案逐字保留）。 */
 export function normalizeFileList(files, cwd) {
   const out = []
@@ -176,7 +176,7 @@ export function describeBlockers(parent, entry) {
   return { kind: "slot", detail: "" }
 }
 
-/** §21.1 P-SL2（D-SL2——混合边环形等待停滞机械检测——AGENT-LOOP.md §21.1 扩展注）：
+/** P-SL2（D-SL2——混合边环形等待停滞机械检测——AGENT-LOOP-SUBAGENT.md §6.9）：
  * 判据（收窄——零误报优先——宁可漏报不可误打断）：池内 running = 0 && queued ≥ 2 &&
  * 无 dependency-cancelled 标记条目 && 每 queued 的 blocker（files 冲突者 + 未 settle
  * 依赖目标——与 describeBlockers/queueRunnable 同界——"真正会阻断我的"语义：files 只
@@ -362,12 +362,11 @@ export function refreshQueuedTokens(parent, onToken) {
 }
 
 /**
- * Slot-queue refill (AGENT-LOOP.md §15 D-A1/D-A6 + §20 D-SD4 + §11.1 D-24a/R14 分域):
+ * Slot-queue refill (AGENT-LOOP-SUBAGENT.md §6.7.3 D-A1/D-A6 + §6.9 D-SD4 + AGENT-LOOP-ASYNC-POOL.md §6.10 D-24a/R14 分域):
  * start queue heads while a running slot is free — called from every settle
- * (completion frees a slot) and from the turn-end collection's refill loop. §20：
- * 队列现可混合 waiting-deps 与 slot-queued——扫描选"依赖全满足 + 域无冲突"的最早
+ * (completion frees a slot) and from the turn-end collection's refill loop. 队列现可混合 waiting-deps 与 slot-queued——扫描选"依赖全满足 + 域无冲突"的最早
  * 条目启动（waiting 越行不阻塞槽位；多任务同时解除按 queued 序逐个启动）。
- * §11.1 D-24a（R14）：槽位判定按域——条目 _pool 域内 running 数 < 该域上限才启动
+ * D-24a/R14（分域）：槽位判定按域——条目 _pool 域内 running 数 < 该域上限才启动
  * （同域仍 4——纯单域队列行为与旧 shift 完全一致；跨域总量 8——各域独立腾槽，
  * 互不阻塞）。配置每次补位时读（poolLimitsFor——变更即生效下个补位）。
  */

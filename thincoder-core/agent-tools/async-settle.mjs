@@ -193,7 +193,7 @@ export function releaseSettledEntry(entry) {
  *   设计偏差注（advisor code review 发现——交付报告同步）：设计 D3 把 maybeRefillAsync
  *   归入 onAccounting hook（仅 settled 分支执行）——running 取消的 cancelled 分支将不再
  *   补位（槽释放但 queued 头停滞——挂起会话无回合尾补位覆盖），违背既有不变式
- *   （AGENT-LOOP.md §10 + subagent-scheduler maybeRefillAsync 文档 "called from every
+ *   （AGENT-LOOP-SUBAGENT.md §6.9 + subagent-scheduler maybeRefillAsync 文档 "called from every
  *   settle"）与 VSC 镜像（无条件 refill）。修正：腾槽补位移入公共尾部（subagent/escalate
  *   族恒补——旧行为零回归；advisor/consult 豁免——同 VSC refill!==false 语义）。
  */

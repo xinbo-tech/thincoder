@@ -9,8 +9,9 @@
  * （INPUT-LOCK-BEHAVIOR-REVISED——2026-09-09）：⑤ 状态派生组——busy（running 含 digest——
  * 单一判据）不禁录入（readOnly 锁移除——打字回显）+ busy 占位符 + send 拒发（Enter/发送
  * 按钮——文本保留）/susp·idle 默认占位符——Ctrl+I 中断模态占位符归属（ctx._interruptMode）。
- * 活动区收口批（2026-09-12 §14 C-14——T-CL20）：**Send 按钮 running 期隐藏**（与拒发同判据——
- * 消除假 affordance；susp/idle 恢复 flex）——⑤ 尾段 + ⑥ 锁该可见性（send.js 出口守卫机检属散文锚——2026-09-12 删）。
+ * 活动区收口批（2026-09-12 §14 C-14——T-CL20）：**Send 按钮 running 期隐藏**（busy 提交 = 入队受理
+ * （容量 8）+ 待发送标记——源 `thincoder-vscode/webview/send.js:32-56`；满队（第 9 条）⇒ 拒发 toast
+ * + 文本保留）——消除假 affordance；susp/idle 恢复 flex）——⑤ 尾段 + ⑥ 锁该可见性（send.js 出口守卫机检属散文锚——2026-09-12 删）。
  *
  * 手法（webview 侧 happy-dom——smoke-settings.mjs 模式）：setupWebview（helpers/
  * webview-env.mjs——happy-dom 注册 + en locale + acquireVsCodeApi 桥桩）+ installChatFixture

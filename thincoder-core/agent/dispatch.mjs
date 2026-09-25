@@ -2,7 +2,7 @@
  * agent/dispatch.mjs — two-phase tool call execution
  */
 import { logEvent, errText, headText } from "../log.mjs"
-import { offloadToolResult, FILE_MUTATORS } from "./helpers.mjs"
+import { offloadToolResult, FILE_MUTATORS, toolTouchPaths } from "./helpers.mjs"
 import { runHooks } from "../hooks.mjs"
 import { snapshotForUndo } from "../undo-stack.mjs"
 import { isCodePath, loadConventions } from "../conventions.mjs"
@@ -12,15 +12,15 @@ import { PEER_WRITE_TOOLS, peerCollabNote, recordPeerWrites, markClaimNoted } fr
 import { writeFileSync, mkdirSync, existsSync } from "node:fs"
 import { join, resolve, relative } from "node:path"
 import { homedir } from "node:os"
-// §29 fix A（AGENT-LOOP.md §29——2026-09-07）：FILE_MUTATORS 的 mutation-seq 记账从
+// fix A（2026-09-07）：FILE_MUTATORS 的 mutation-seq 记账从
 // 批后提交（record-results noteMutations）移到执行成功即刻——唯一记账点（取代批后段
 // + agent.mjs 中断分支记账——不双计）——同消息 [写 + async advisor launch] 时 launch 前
-// 完成的写在 launchSeq 之前落地 → settle 不再误判 stale（§29 症状根因）。
+// 完成的写在 launchSeq 之前落地 → settle 不再误判 stale（fix A 症状根因）。
 import { noteMutations } from "../agent-tools/advisor-async.mjs"
 import { anyLiveDesignSlot } from "../token-ttl.mjs"
 // M4 写权门禁（模块设计 §2.1#2）：冻结窗口判据组装（被审文件集 = 声明文档集 + 批次档
 // 的合流点）落 write-gate.mjs 单一权威源——本档只 import 消费（KD-M4-4 拆分点）。
-import { freezeWindowConflict } from "./write-gate.mjs"
+import { freezeWindowConflict, batchRecordWriteConflict } from "./write-gate.mjs"
 
 const ERRORS_DIR = join(homedir(), ".thincoder", "tool-errors")
 
@@ -116,17 +116,14 @@ function isSubagentEscalateAction(toolName, args) {
 }
 
 /**
- * §29 fix A — 唯一记账点：FILE_MUTATORS 工具执行成功即刻记 mutation seq（abs 路径）。
+ * fix A — 唯一记账点：FILE_MUTATORS 工具执行成功即刻记 mutation seq（abs 路径）。
  * 取代 record-results 批后段 + agent.mjs 中断分支的 noteMutations（不双计——中断+同批
- * launch 场景 seq 单计，AGENT-LOOP.md §29 T-A1i）。调用时机 = 写执行成功（非 Error 前缀
+ * launch 场景 seq 单计，T-A1i）。调用时机 = 写执行成功（非 Error 前缀
  * 结果——recordPeerWrites 同款门）；routed（M2 ACP 客户端执行）成功同样记账。
  */
-function noteExecutedMutation(agent, tool, args) { 
-  let paths
-  try {
-    paths = tool.touchedPaths ? tool.touchedPaths(args ?? {}) : [args?.path]
-  } catch { return }
-  const abs = (paths ?? [])
+function noteExecutedMutation(agent, tool, args) {
+  // #327（TOOLS.md §6.17）：单源谓词恒数组 · 恒零抛——原 try/catch 外壳退休。
+  const abs = toolTouchPaths(tool, args)
     .filter((p) => typeof p === "string" && p)
     .map((p) => resolve(agent.cwd, p))
   if (abs.length > 0) noteMutations(agent, abs)
@@ -198,7 +195,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
     if (agent.config?.agent?.engineering && depth === 0
         && !anyLiveDesignSlot(agent)
         && FILE_MUTATORS.has(toolCall.name)) {
-      const paths = tool.touchedPaths ? tool.touchedPaths(args) : [args.path]
+      const paths = toolTouchPaths(tool, args)
       const conv = loadConventions(agent.cwd)
       // Unknown/missing paths (non-string, e.g. no path argument) are treated
       // as code — cannot tell what they touch, so block conservatively. Known
@@ -228,11 +225,15 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
     // 位置：只读 / autoApprove 短路之前——审批不得绕过冻结；拒绝 = 可见 denied + 逃生门
     // （先 cancel → 改 → 重发）。
     if (FILE_MUTATORS.has(toolCall.name)) {
-      let touched = []
-      try { touched = tool.touchedPaths ? tool.touchedPaths(args) : [args.path] } catch { touched = [] }
-      const absPaths = (touched ?? [])
+      // #327：单源谓词（同集合内两处消费共用）；#309 批次档写门与 D5 冻结窗同区、共用同一路径集。
+      const absPaths = toolTouchPaths(tool, args)
         .filter((p) => typeof p === "string" && p)
         .map((p) => resolve(agent.cwd, p))
+      const crossBatch = batchRecordWriteConflict(agent, depth, absPaths)
+      if (crossBatch) {
+        prepared.push({ toolCall, tool, denied: true, reason: "cross-batch record write", hint: crossBatch.message })
+        continue
+      }
       const conflict = freezeWindowConflict(agent, absPaths)
       if (conflict) {
         prepared.push({
@@ -292,7 +293,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       else if (batchAllowed === false) allowed = false
       else if (callbacks.onPermissionRequest) {
         allowed = await (async () => {
-          // D2 (AGENT-LOOP.md §7.2): announce the wait BEFORE prompting — the TUI
+          // D2 (AGENT-LOOP-SUBAGENT.md §6.7.2): announce the wait BEFORE prompting — the TUI
           // subagent block header flips to "等待审批" so a waiting child is visibly
           // different from a stalled one. Depth>0 only (the parent TUI shows its own
           // permission panel). turn n/max = the child's live turn counters.
@@ -330,7 +331,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
         ? "Error: plan mode is active — only read-only tools are allowed. Exit plan mode first."
         : item.reason === "engineering design gate"
           ? `Error: design review required before any file modification. ${item.hint}`
-          : item.reason === "d5 freeze window"
+          : item.reason === "d5 freeze window" || item.reason === "cross-batch record write"
           ? `Error: ${item.hint}`
           : item.reason === "denied by user"
           ? "Error: permission denied by user"
@@ -458,11 +459,12 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       //（vscode execute-tools parity；阻塞子代理 child:error 同款抑制）
       logEvent("tool:error", { tool: toolName, ms: Date.now() - toolT0, err: errText(error, 200), child: agent?._logId })
       runHooks("PostToolUseFailure", { agent, toolName: item.toolCall.name, toolArgs: item.args, error }).catch(() => {})
-      // Build contextual error: tool name + key args so the model can reason about what went wrong
+      // Build contextual error: tool name + key args — #327 same family: no raw args deref (`arguments:"null"` reachable)
+      const a = item.args ?? {}
       const ctxParts = []
-      if (item.args.path) ctxParts.push(`path=${item.args.path}`)
-      if (item.args.pattern) ctxParts.push(`pattern=${item.args.pattern}`)
-      if (item.args.command) ctxParts.push(`cmd=${item.args.command.slice(0, 80)}`)
+      if (a.path) ctxParts.push(`path=${a.path}`)
+      if (a.pattern) ctxParts.push(`pattern=${a.pattern}`)
+      if (a.command) ctxParts.push(`cmd=${String(a.command).slice(0, 80)}`)
       const ctx = ctxParts.length > 0 ? ` [${ctxParts.join(", ")}]` : ""
       // 2026-08-31：异常路径同样回显捕获的 console（工具报错前的探查输出最有价值）
       const consolePart = capturedConsole.length > 0

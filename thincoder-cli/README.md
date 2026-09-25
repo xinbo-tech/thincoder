@@ -91,6 +91,7 @@ thincoder memory put --type=rule --title="code style" --content="no semicolons"
 thincoder memory search "code style"
 thincoder memory list
 thincoder memory remove 1
+thincoder memory sweep
 
 # Team memory (optional, available after configuring memory.team)
 thincoder sync                       # pull the team repo and rebuild the index

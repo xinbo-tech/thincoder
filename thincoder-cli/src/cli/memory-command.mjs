@@ -3,10 +3,12 @@ import { loadConfig } from "@thincoder/core/config.mjs"
 import { teamConfig } from "./make-agent.mjs"
 import { put, search, list } from "@thincoder/core/memory/core.mjs"
 import { deleteByUid } from "@thincoder/core/memory/delete.mjs"
+import { sweepMemory, formatSweepReport } from "@thincoder/core/memory/sweep.mjs"
 
-/** thincoder memory <list|search|put|remove> subcommands.
+/** thincoder memory <list|search|put|remove|sweep> subcommands.
  *  opts.dirs: { project, team } layer directories for project/team file deletion (tests inject their own);
- *  falls back to the same config-derived dirs the agent uses. */
+ *  falls back to the same config-derived dirs the agent uses.
+ *  opts.dbPath: 库路径覆盖（sweep 的备份命名依据——缺省 = `config.memory.dbPath` 展开值）。 */
 export async function memoryCommand(memory, args, opts = {}) {
   const [sub, ...rest] = args
 
@@ -57,10 +59,46 @@ export async function memoryCommand(memory, args, opts = {}) {
       }
       break
     }
+    case "sweep": {
+      const parsed = parseSweepArgs(rest)
+      if (parsed.error) {
+        console.error(parsed.error)
+        console.error(SWEEP_USAGE)
+        return 1
+      }
+      try {
+        const result = sweepMemory(memory, { origin: parsed.origin, confirm: parsed.confirm, dbPath: opts.dbPath ?? loadConfig().memory.dbPath })
+        for (const line of formatSweepReport(result)) console.log(line)
+        if (result.dryRun) console.log("(dry-run——零写；要落写加 --confirm)")
+      } catch (e) {
+        console.error(e.message)
+        return 1
+      }
+      break
+    }
     default:
-      console.error("Usage: thincoder memory <list|search|put|remove>")
+      console.error("Usage: thincoder memory <list|search|put|remove|sweep>")
       return 1
   }
+}
+
+const SWEEP_USAGE = "Usage: thincoder memory sweep [--origin <o>] [--dry-run|--confirm]"
+
+/** sweep 参数面：`--origin <o>` / `--origin=<o>` 两形 + 裸 `--dry-run` / `--confirm`（缺省 = 干跑；两者互斥）。 */
+function parseSweepArgs(rest) {
+  let origin = null, sawDry = false, sawConfirm = false
+  for (let i = 0; i < rest.length; i++) {
+    const a = rest[i]
+    const eq = a.match(/^--origin=(.*)$/)
+    if (eq) { origin = eq[1]; continue }
+    if (a === "--origin") { origin = rest[++i] ?? ""; continue }
+    if (a === "--dry-run") { sawDry = true; continue }
+    if (a === "--confirm") { sawConfirm = true; continue }
+    return { error: `Unknown argument: ${a}` }
+  }
+  if (origin === "") return { error: "--origin 需要一个非空路径" }
+  if (sawDry && sawConfirm) return { error: "--dry-run 与 --confirm 互斥" }
+  return { origin, confirm: sawConfirm }
 }
 
 /** Layer directories for project/team file deletion — derived from the same config the agent uses. */

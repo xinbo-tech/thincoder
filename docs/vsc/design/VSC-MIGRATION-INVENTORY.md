@@ -41,7 +41,7 @@
 | 6 | `AGENT-PARAMS-TUNING.md` | 114 | 活 · 统一面 | ① `docs/core/design/AGENT-PARAMS.md` 在位；该档 `:114` 登记「VSC 端 30 硬帽 ⇒ 归 VSC 轮」 | **并入既有** → 待父侧另批（§8B-2） |
 | 7 | `APPLY-PATCH.md` | 41 | 活 · 统一面 | ① `docs/core/design/APPLY-PATCH.md` 在位 | **并入既有**（§8B-13） |
 | 8 | `ARCHITECTURE.md` | 266 | 活 · 统一面 | ① `docs/core/design/ARCHITECTURE.md` 在位；该档 `:6` 明载「VSC 侧未迁——VSC 轮并入本档」 | **并入既有** → 待父侧另批（§8B-3） |
-| 9 | `ASYNC-RESULT-CONTAINER.md` | 87 | **历史**（复判修订 §4.4-1） | ② 机制结论已由 `docs/core/design/AGENT-LOOP.md` §6.7.3（`:332`）+ `:175`（`async-settle.mjs` helper 登记）承载；正文 = 施工骨架 | 不迁（就地留） |
+| 9 | `ASYNC-RESULT-CONTAINER.md` | 87 | **历史**（复判修订 §4.4-1） | ② 机制结论已由 `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.7.3 + `async-settle.mjs` helper 登记承载；正文 = 施工骨架 | 不迁（就地留） |
 | 10 | `CHECKPOINT.md` | 105 | 活 · 统一面 | ① `docs/core/design/CHECKPOINT.md` 在位 | **并入既有**（§8B-11） |
 | 11 | `CONSULTATION.md` | 161 | 活 · 统一面 | ① `docs/core/design/CONSULTATION.md` 在位；其 §6.4 明标「CLI 实现接线」 | **并入既有**（§8B-12） |
 | 12 | `CONTEXT-COMPACTION.md` | 146 | 活 · 统一面 | ① `docs/core/design/CONTEXT-COMPACTION.md` 在位 | **并入既有**（§8B-9） |
@@ -75,7 +75,7 @@
 | 40 | `SESSION-RESTORE-PARITY.md` | 104 | 历史 | ② 档头自述「已交付核销」；现态 = `SESSION（VSC 侧）` + `WEBVIEW（VSC 侧）` | 不迁（就地留） |
 | 41 | `SESSION.md` | 520 | 活 · 统一面 | ① `docs/core/design/SESSION.md` 在位 | **并入既有**（§8B-6） |
 | 42 | `SETTINGS.md` | 178 | 活 · 专有 | ④ webview 设置面板（5 卡信息架构 + 面板读写链）——VSC 独有面 | **已迁** `docs/vsc/design/SETTINGS.md`（§9.1） |
-| 43 | `SUBAGENT-OBSERVE-SEND.md` | 79 | **历史**（复判修订 §4.4-2） | ② 契约正文已由 `docs/core/design/AGENT-LOOP.md` §6.7.2（`:297`-`:311`，observe / send 契约与载荷表）承载；正文 = 施工骨架 | 不迁（就地留） |
+| 43 | `SUBAGENT-OBSERVE-SEND.md` | 79 | **历史**（复判修订 §4.4-2） | ② 契约正文已由 `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.7.2（observe / send 契约与载荷表）承载；正文 = 施工骨架 | 不迁（就地留） |
 | 44 | `TESTING.md` | 283 | 活 · 统一面 | ① **核层同名档已由并行 CLI 批建**（`docs/core/design/TESTING.md`；核侧 `E2E-HARNESS.md` **已删除**（2026-09-15））；机制在现行代码在位（测试基建族） | **并入既有**——VSC 面内容未并 ⇒ 转 §8B |
 | 45 | `TOOL-OUTPUT-LIMITS-TUNING.md` | 139 | 活 · 统一面 | ① `docs/core/design/TOOL-OUTPUT-LIMITS.md` 在位；该档 `:99` 登记「VSC 树档未迁」 | **并入既有**（§8B-15） |
 | 46 | `TOOLS.md` | 382 | 活 · 统一面 | ① `docs/core/design/TOOLS.md` 在位 | **并入既有**（§8B-14） |
@@ -91,7 +91,7 @@
 | 1 | `ADVISOR-CONVERGENCE.md` | 57 | 活 · 统一面 | ① **核层同名档已由并行 CLI 批建并提交**（`docs/core/requirements/ADVISOR-CONVERGENCE.md`——其 `:8` / §7 登记「VSC 端对位面不并入，触发 = VSC 轮」） | **并入既有**——VSC 端对位面未并 ⇒ §8B-26（批 5 落笔时点复判：原「新建」翻转） |
 | 2 | `AGENT-LOOP.md` | 355 | 活 · 统一面 | ① `docs/core/requirements/AGENT-LOOP.md` 在位；该档 §5（`:129`-`:132`）显式登记「VSC 面需求节 ⇒ 归属 `docs/vsc/requirements/`」 | **D3 已裁定（2026-09-15）：维持现状**——VSC 面需求节留 core 档 §5 内（结构变更非本批题）；§8B-18 销项 |
 | 3 | `AGENT-PARAMS.md` | 42 | 活 · 统一面 | ① 根层无对应（CLI 台账同判「后续批」） | **已迁（批 4）**——落 `docs/core/requirements/AGENT-PARAMS.md`（§9.4） |
-| 4 | `ASYNC-RESULT-CONTAINER.md` | 45 | 活 · 统一面 | ① 根层无对应；机制本体已入 `docs/core/design/AGENT-LOOP.md` §6.7.3（条目未并入） | **并入既有** `docs/core/requirements/AGENT-LOOP.md` → 待父侧另批（§8B-21） |
+| 4 | `ASYNC-RESULT-CONTAINER.md` | 45 | 活 · 统一面 | ① 根层无对应；机制本体已入 `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.7.3（条目未并入） | **并入既有** `docs/core/requirements/AGENT-LOOP.md` → 待父侧另批（§8B-21） |
 | 5 | `CHECKPOINT.md` | 49 | 活 · 统一面 | ① `docs/core/requirements/CHECKPOINT.md` 在位（CLI 已对账） | **并入既有**（§8B-23 · VSC 条目面） |
 | 6 | `CONSULTATION.md` | 46 | 活 · 统一面 | ① 同上（`docs/core/requirements/CONSULTATION.md` 在位） | **并入既有**（§8B-23） |
 | 7 | `CONTEXT-COMPACTION.md` | 46 | 活 · 统一面 | ① 同上 | **并入既有**（§8B-23） |
@@ -146,8 +146,8 @@
 
 | # | 档 | 原判 | 复判 | 依据（实核） |
 |---|---|---|---|---|
-| 1 | `thincoder-vscode/docs/_archive/design/ASYNC-RESULT-CONTAINER.md`（87） | 活 · 统一面 | **历史** | ② 机制结论已由 `docs/core/design/AGENT-LOOP.md` §6.7.3（`:332`）与 `:175`（`async-settle.mjs` helper 登记）承载；正文 = 施工骨架 |
-| 2 | `thincoder-vscode/docs/_archive/design/SUBAGENT-OBSERVE-SEND.md`（79） | 活 · 统一面 | **历史** | ② 契约正文已由 `docs/core/design/AGENT-LOOP.md` §6.7.2（`:297`-`:311`）承载；正文 = 施工骨架 |
+| 1 | `thincoder-vscode/docs/_archive/design/ASYNC-RESULT-CONTAINER.md`（87） | 活 · 统一面 | **历史** | ② 机制结论已由 `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.7.3 与 `async-settle.mjs` helper 登记承载；正文 = 施工骨架 |
+| 2 | `thincoder-vscode/docs/_archive/design/SUBAGENT-OBSERVE-SEND.md`（79） | 活 · 统一面 | **历史** | ② 契约正文已由 `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.7.2 承载；正文 = 施工骨架 |
 | 3 | `design/RELEASE.md`（202） | 活 · 统一面（→ core） | **活 · 专有（P2）** | ② 发布通道只属本产品；CLI 同判 ⇒ 主档 §7.1-D1（**已裁定 2026-09-15 → 另落 `docs/vsc/design/`**） |
 | 4 | `requirements/FEATURES.md`（21） | 活 · 统一面（→ core） | **活 · 专有（P2）** | ② v1 功能范围 = 产品面清单；CLI 同判 ⇒ 主档 §7.1-D2（**已裁定 2026-09-15 → 另落 `docs/vsc/requirements/`**） |
 

@@ -72,7 +72,7 @@ export function modelStats(data) {
     const total = caseVerd.filter((v) => v !== "skipped").length
     const costs = runs.map((r) => r.metrics?.cost?.value).filter((v) => typeof v === "number")
     const costCny = costs.length > 0 ? costs.reduce((a, b) => a + b, 0) : null
-    // 用时面（§2.3-7）：参与面 = 实际执行的 run（`skipped` 不入；`totalMs` 为 null 不计入——不按 0 计）
+    // 用时面（§2.3-7）：参与面 = 实际执行的 run（`skipped` 不入；`totalMs` 为 null = **未记录** ⇒ 不计入——不按 0 计）
     const timed = runs.filter((r) => r.verdict !== "skipped" && typeof r.metrics?.totalMs === "number")
     return {
       model: m,

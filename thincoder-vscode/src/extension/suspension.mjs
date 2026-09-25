@@ -1,10 +1,10 @@
 /**
- * suspension.mjs — AGENT-LOOP-ASYNC-POOL.md §6.8 挂起回合会话驱动（AGENT-LOOP.md §7 D-S2/D-S9，VS Code 对齐）。
+ * suspension.mjs — AGENT-LOOP-ASYNC-POOL.md §6.8 挂起回合会话驱动（VS Code 对齐）。
  * 挂起态是交互层状态：一个用户回合结束后后台 async 池仍 live（running/queued/未注入）
  * → 不阻塞回合，进入挂起会话——挂起空闲输入开放（新消息经 panel._chat 填队列 + 唤醒）、
  * busy（running 含 digest）提交同入队列（容量 8——busy-extend 批 2026-09-22 routeUserTurn 两载体
  * 分流 + queue-visible 批 2026-09-24 容量与合并消费，见 `docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6）、settle 事件驱动 auto-turn 消化
- * （手动档 organize-only / AUTO 档全语义）、池空 + 无待处理输入 → 补发冻结自然退出。状态机行表见 AGENT-LOOP.md §7。
+ * （手动档 organize-only / AUTO 档全语义）、池空 + 无待处理输入 → 补发冻结自然退出。状态机行表见 AGENT-LOOP-ASYNC-POOL.md §6.8。
  *
  * 与 CLI 的结构差异（同语义移植）：CLI 的池/pending/_suspended 挂 agent 对象（跨 run
  * 存活）；VS Code 的 agent 对象 per-run 重建——池（_asyncSubagents）、pending

@@ -4,6 +4,10 @@
  * 覆盖：saveAgentSettingsFromPanel 白名单键（含新 defaultModel 顶层键——写 raw.defaultModel /
  * 空串删除——agent.* 合并语义不变）；selectModel 消息 = 写当前会话槽（saveLines 通道带
  * activeModel）——config 文件内容字节不变；会话文件双字段落盘（CLI 恢复同形）。
+ *
+ * 批 2026-09-25-spec-effort（设计 `docs/core/design/MODEL-SPECS.md` §15.4 / `docs/vsc/design/SETTINGS.md` §2.13 ·
+ * 台账 #331 · 用例 V-1..V-4 / V-6）：advisor effort 键接线面板写面组——键位（`reasoningEffort` 在盘 ∧
+ * 旧 `effort` 不在盘）· 三态归一（档位 / `none` 族别 off 形 / 「—」）· off 形跨保存存活（种子循环 carve-out）。
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
@@ -112,4 +116,70 @@ test("W16 回归（审计 🔴）：MCP 删条目走端壳写盘通道——可�
   assert.equal(loadMcpServers().some((s) => s.name === "ctx7"), false, "条目已移除（盘面）")
   assert.equal(removeMcpServer("ctx7"), 'No MCP server named "ctx7"', "未知名 → 错误串（不抛）")
   assert.equal(loadRaw().$schema, VSC_CONFIG_SCHEMA, "MCP 写面同样注入/保留 $schema 指针")
+})
+
+// ─── 批 2026-09-25-spec-effort：advisor effort 键接线（V-1..V-4 / V-6）───────────────────────
+
+/** 盘面 advisor 段直写（前置态注入——不经面板写面）。 */
+function seedAdvisor(obj) {
+  const raw = loadRaw()
+  raw.agent = { ...(raw.agent ?? {}), advisor: obj }
+  writeFileSync(cfgPath, JSON.stringify(raw, null, 2) + "\n", "utf8")
+}
+const advOf = () => loadRaw().agent?.advisor ?? {}
+
+test("V-1 键位：面板选档 low ⇒ 盘上 advisor.reasoningEffort = \"low\" ∧ 旧 `effort` 键不在盘", () => {
+  seedAdvisor({ guard: true, effort: "high" }) // 旧死键在盘（读回兜底后保存即删）
+  saveAgentSettingsFromPanel({ advisor: { reasoningEffort: "low" } })
+  assert.equal(advOf().reasoningEffort, "low", "写键 = 核读取键（单源 = `advisor/run.mjs:48/:64`——as-of 本批实施）")
+  assert.equal("effort" in advOf(), false, "旧 `effort` 键不在盘（死键不复活、值不迁移）")
+  assert.equal(advOf().guard, true, "其余键零改")
+})
+
+test("V-2 关思考族别字面量：effort 族（hy3）⇒ thinking null ∧ 无档键；type 族默认 ⇒ {type:\"disabled\"}", () => {
+  seedAdvisor({ reasoningEffort: "high" })
+  saveAgentSettingsFromPanel({ advisor: { model: "hy3", reasoningEffort: "none" } })
+  assert.equal(advOf().thinking, null, "effort 族 off 形 = null（载荷层 off 门首款要求）")
+  assert.equal("reasoningEffort" in advOf(), false, "档键删除（off 门第四款 = 无显式档）")
+
+  seedAdvisor({ reasoningEffort: "high", thinking: null })
+  saveAgentSettingsFromPanel({ advisor: { model: "deepseek-v4-flash", reasoningEffort: "none" } })
+  assert.deepEqual(advOf().thinking, { type: "disabled" }, "type 族默认 off 形 = {type:\"disabled\"}")
+  assert.equal("reasoningEffort" in advOf(), false, "档键同删")
+})
+
+test("V-2′ 「—」态：删档键且不动 thinking（off 形不被保存抹掉）", () => {
+  seedAdvisor({ reasoningEffort: "low", thinking: null })
+  saveAgentSettingsFromPanel({ advisor: { model: "hy3", reasoningEffort: null } }) // 「—」⇒ webview 载荷 null
+  assert.equal("reasoningEffort" in advOf(), false, "「—」⇒ 删档键")
+  assert.equal(advOf().thinking, null, "不触 thinking（off 形跨保存存活）")
+})
+
+test("V-3 写面半：载荷缺席该键（select 未渲染）⇒ 盘上手写档键存活（缺席 ≠ 清空）", () => {
+  seedAdvisor({ reasoningEffort: "low", thinking: null })
+  saveAgentSettingsFromPanel({ advisor: { guard: true } }) // 载荷无 reasoningEffort 字段
+  assert.equal(advOf().reasoningEffort, "low", "手写档键存活（写面无该字段 ⇒ 零触碰）")
+  assert.equal(advOf().thinking, null, "off 形同存活")
+})
+
+test("V-4 跨保存存活：盘上 advisor.thinking = null + 面板任意保存 ×2 ⇒ 每次保存后 off 形仍在盘", () => {
+  seedAdvisor({ thinking: null })
+  saveAgentSettingsFromPanel({ advisor: { guard: true } })
+  assert.equal(advOf().thinking, null, "第一次保存后 off 形仍在盘（种子循环 null carve-out）")
+  saveAgentSettingsFromPanel({ advisor: { guard: false } })
+  assert.equal(advOf().thinking, null, "第二次保存后仍在盘（无静默清除）")
+})
+
+test("V-6 档位态：盘上 thinking:null（off 标记）+ 选档 low（两族别）⇒ 标记清除 ∧ 写档键", () => {
+  for (const model of ["hy3", "deepseek-v4-flash"]) {
+    seedAdvisor({ thinking: null })
+    saveAgentSettingsFromPanel({ advisor: { model, reasoningEffort: "low" } })
+    assert.equal("thinking" in advOf(), false, `${model}：null 标记清除（键删，不落 null）`)
+    assert.equal(advOf().reasoningEffort, "low", `${model}：档位态 = 写 reasoningEffort`)
+  }
+  // type 形 off 值（`{type:"disabled"}`）不动——同 CLI `cmd-think.mjs:119-120`（只清 null 标记）
+  seedAdvisor({ thinking: { type: "disabled" } })
+  saveAgentSettingsFromPanel({ advisor: { model: "deepseek-v4-flash", reasoningEffort: "low" } })
+  assert.deepEqual(advOf().thinking, { type: "disabled" }, "type 形不动")
+  assert.equal(advOf().reasoningEffort, "low")
 })

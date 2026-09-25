@@ -9,6 +9,8 @@
 import { discoverRules } from "@thincoder/core/rules.mjs"
 import { loadRules, matchesGlob } from "../extension/rules.mjs"
 import { FILE_MUTATORS, pushReal } from "./run-helpers.mjs"
+// #327（`docs/core/design/TOOLS.md` §6.17）：触达路径提取单源谓词（核单源——零副本；恒数组 · 恒零抛）。
+import { toolTouchPaths } from "@thincoder/core/agent/helpers.mjs"
 
 // ─── A 面：stream 规则（两端同义）───────────────────────────────────────────
 
@@ -88,7 +90,7 @@ function matchCandidates(p, cwd) {
  *  `[System reminder — project rule "<name>" (globs: <g>): <content>]`。语义一句话 =
  *  「Agent 将触碰匹配文件时，该文件作用域的规则先入上下文」。去重键 = `name`；去重域 =
  *  会话（`agent._rulesInjected` 惰性建 Set——顶层 agent 单例；子代理 agent 每 run 新对象
- *  ⇒ 去重域 = 该子回合）。路径候选 = `tool.touchedPaths?.(args) ?? [args?.path]`（设计
+ *  ⇒ 去重域 = 该子回合）。路径候选 = #327 单源谓词（`toolTouchPaths`——设计
  *  B-4 公式）——`read.filePath` 别名与 `glob.pattern` **不作候选**（登记边界）。
  *  @returns {number} 本次注入条数（测试直驱面）。 */
 export function injectScopedRules(agent, history, calls) {
@@ -98,7 +100,7 @@ export function injectScopedRules(agent, history, calls) {
   let count = 0
   for (const { tool, args } of calls ?? []) {
     if (!PATH_TOOLS.has(tool?.name)) continue
-    const raw = tool.touchedPaths ? tool.touchedPaths(args ?? {}) : [args?.path]
+    const raw = toolTouchPaths(tool, args)
     const paths = (raw ?? []).filter((p) => typeof p === "string" && p).flatMap((p) => matchCandidates(p, agent.cwd))
     if (paths.length === 0) continue
     for (const rule of scoped) {

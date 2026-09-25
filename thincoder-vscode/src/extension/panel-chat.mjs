@@ -2,7 +2,7 @@
  * panel-chat.mjs — ChatPanel chat turn runner (split out of chat-panel.mjs).
  * Resolves the provider, loads the dual history lines, runs the agent with
  * streaming callbacks, persists the lines on complete.
- * AGENT-LOOP-ASYNC-POOL.md §6.8 (2026-09-02，AGENT-LOOP.md §7 D-S1..S9): a turn ending with the async pool
+ * AGENT-LOOP-ASYNC-POOL.md §6.8 (2026-09-02): a turn ending with the async pool
  * still live enters the suspension session (suspension.mjs) — susp-idle input stays
  * usable (fills the single pendingInput slot + wake), busy (running incl. digest) input is
  * queued instead (routeUserTurn splits into the two carriers; cap QUEUED_MAX_ITEMS = 8,

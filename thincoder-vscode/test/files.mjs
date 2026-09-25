@@ -11,12 +11,13 @@ export default [
   // （git 核验——残条目让清单虚报套件组成）。chat-panel.test.mjs 为 C1 重建（本行保留）。
   "test/activity-flow.test.mjs", // SESSION-FLOW-B B1（2026-09-09）：子代理块流内出生/原地冻结/resetActivity/150 计入/⏹ 规则/parseChannel——F-B1a~f + N3 无 DOM move（happy-dom——helpers/webview-env.mjs）
   "test/async-visibility.test.mjs", // 第 10 批条目 A（2026-09-11）：VSC live 块出生可靠性——投递队列/flush/溢出留痕·新代接管·终态补桩成员表·清屏恢复（pool+⏹+位置）——T-V1~V8 + AC-A1~A8（WEBVIEW.md §5.1）
-  "test/wait-for-advisor-pool.test.mjs", // 第 10 批条目 B（2026-09-11）：`advisor settled` 判据 = 评审池真实态（红→绿——双载体）——T-B4/T-B5（CLI AGENT-LOOP.md §18.6）
+  "test/wait-for-advisor-pool.test.mjs", // 第 10 批条目 B（2026-09-11）：`advisor settled` 判据 = 评审池真实态（红→绿——双载体）——T-B4/T-B5（CLI 对拍同款）
   "test/chat-panel.test.mjs", // 真实模块直驱面（2026-09-09；2026-09-12 拆分）：turn 句柄保底（④ F-C1a/H-B）/ atComplete seq（⑥ F-C1c/H-A）/ A2 标题回合内（⑨⑩ F-A2）/ 模型·stamp 决策（⑪ MODEL-MERGE-SESSION）——真 runPanelChat + 真 atComplete + resolveTurnModelAndStamp（面板入口组已迁 chat-panel-messages.test.mjs；切点判据 = LEDGER-SELF-CONTAINED.md D18 四条）
   "test/chat-panel-messages.test.mjs", // 面板入口（消息/控制/状态）面（2026-09-12 拆分自 chat-panel.test.mjs——500 行硬限无豁免）：桩面板驱动（stubPanel 夹具自持——零跨档 import）——拒收（①）/ 控制直通（②）/ 启动闩（③）/ 响应器匹配（⑤）/ 忙态状态机（⑦）/ sendMessage（⑧）/ _chat 单槽（⑪）
   "test/panel-cancel-routing.test.mjs", // 面板取消路由 / 事件中继族（2026-09-22 structure-debt #169A 自 chat-panel-messages.test.mjs 迁出——⑫ F-2 取消路由 / ⑬ W15 事件中继 / ⑭ T-AF11 advisor 目标取消）：桩面板（stubPanel 夹具自持——零跨档 import）+ 真核取消路由（executeCancelAction / relaySubagentEventToken）
   "test/webview-turnstate.test.mjs", // SESSION-FLOW-C C2 webview reducer 组（2026-09-09）：_turnState 枚举转换/renderStatusBar 单 writer/Stop susp 常显/_suspCounts 不陈旧——F-C2a~e（happy-dom——helpers/webview-env.mjs）
-  "test/busy-injection-vsc.test.mjs", // F16 busy 排队注入（2026-09-21 busy-injection 批 · WEBVIEW-INPUT.md §1 C-B2-6）：webview 出口分流（本地气泡 + queuedUserMessage，不 setLoading 不清面板）/ host 单槽入槽·槽满拒·挂起会内拒 / enterSuspensionTurn 装载两分支——T-V16-1…4 + 3b（happy-dom + vscode-mock）
+  "test/busy-injection-vsc.test.mjs", // F16 busy 排队注入 · VSC 桩面板族留守档（2026-09-25 file-tier-sweep 批 S3 拆分——原档 546 行越 500 硬限；webview 引导族迁下行新档）：host 单槽入槽·槽满拒·挂起会内拒 / enterSuspensionTurn 装载两分支 / 送达侧贴图降级对位 / #221 复位推前移——T-V16-2/3/3b/4c/5b/6/7/10 + T-V21（vscode-mock；原登记注释「T-V16-1…4 + 3b」随现盘收正——1/4a/4b/5/8 随引导族迁出）
+  "test/busy-injection-vsc-webview.test.mjs", // 同批 S3 迁出档（拆分理由 = 越 500 硬限；用例号与断言面零变）：webview 出口分流（本地气泡 + queuedUserMessage，不 setLoading 不清面板）/ 满队跨载体守卫 / #219 冷启 suspension 镜像——T-V16-1/4a/4b/5/8 + T-V19（happy-dom + vscode-mock）
   "test/queue-visible-vsc.test.mjs", // queue-visible 批（2026-09-24 · 台账 #249 · WEBVIEW-INPUT.md §1 C-B2-6 细则①⑦）：webview 待发送标记面（逐条标记 / 清标 / 多批合泡 / Reload 重建 / 引用失效守卫）+ 满队 count 守卫 + 快照字段注册面 + CLI 同族对拍（常量 / 文案 / 计划输出同名同值）——T-V16-11…14 + 15b（happy-dom + vscode-mock）
   "test/queue-visible-shell.test.mjs", // 同批端壳面（拆分理由：happy-dom 全局 fetch 劫持 vs mock-llm 本地链路不可同进程——用例号与断言面零变）：真 `runAgent` 步边界 pickup（工具期入队 ⇒ 下一步边界入 history + 消费快照）+ 系统轮负向锁 + 分流机检——T-V16-15/16/16b（mock-llm）
   "test/edit-tool-improvement.test.mjs",
@@ -30,7 +31,7 @@ export default [
   "test/subagent-id-counter.test.mjs", // SUBAGENT-ID-COUNTER-AGENT（2026-09-09）：id 计数器载体 = agent 本体——压缩换线后 spawn id 仍递增 + 两池 poolMax 兜底
   "test/smoke-settings.mjs",
   "test/verify-redesign.test.mjs",
-  "test/prompts-async-guidance.test.mjs", // AGENT-LOOP §7.7.1（2026-09-08）：escalate/advisor/spawn 顶层一律异步——async:false 同步引导内容断言（CLI 对拍同款）
+  "test/prompts-async-guidance.test.mjs", // AGENT-LOOP-SUBAGENT.md §6.7.5（2026-09-08）：escalate/advisor/spawn 顶层一律异步——async:false 同步引导内容断言（CLI 对拍同款）
   "test/agent-lifecycle-singleton.test.mjs", // agent 生命周期单例（2026-09-08）：resetRunState/reconcile/applySlot 映射/绑定判定
   "test/agent-session-fields-roundtrip.test.mjs", // 会话级三字段 round-trip 面（2026-09-22 structure-debt #169B 自 agent-lifecycle-singleton.test.mjs 迁出——§11.7 agentState 6 字段 / saveLines 落盘闭环 / 键缺席保留 / 干净完成空态即权威）：装置面夹具自持——零跨档 import
   "test/setup-reminders.test.mjs", // SESSION §11.2（2026-09-08）：env-state slot 字段 + resumed 按会话跟踪 + 注入句解耦
@@ -59,7 +60,7 @@ export default [
   "test/digest-visibility.test.mjs", // 第 21 批（2026-09-11）：消化轮起跑可见指示 B6——起止两态+ok 旗标时序（host）+ #digest-status 三态渲染与幂等（真 chat.js——happy-dom）（T-D1~T-D5；WEBVIEW.md §7.4）
   "test/turn-across-segments.test.mjs", // 第 19 批（2026-09-11）：跨段累计编号 VSC 面——turnFrame 帧向量/不变式扫描 + applyTurnFrame 消费助手 + webview 冻结头消费累计值 + 真 runAgent 直驱段间断言/真 runChild 接线 + 种子源码锚（T1–T11；TURN-CAP-CONTINUE.md §3–§5）
   "test/webview-input-enter.test.mjs", // 第 28 批（2026-09-11）：VSC 输入面 Enter 语义——组合期归输入法（三路）/ @ 下拉与 send 协调（含打开态判据硬化）/ busy 入队受理（容量 8）+ 满队拒发可见 toast（T-B2-1~T-B2-7；WEBVIEW.md §9）
-  "test/async-parity.test.mjs", // 第 35 批（2026-09-11）：VSC async 子代理保真（GitHub #6）——spawn ack 契约锁 + 类型守卫 + 只清已死（丢弃提醒/墓碑/ev:discarded）+ status 四终态回显 + dependsOn depc 停靠 + digest 轮 AbortError 容忍 + 症状1 现状锁（T-D1~T-D10；AGENT-LOOP.md §12）
+  "test/async-parity.test.mjs", // 第 35 批（2026-09-11）：VSC async 子代理保真（GitHub #6）——spawn ack 契约锁 + 类型守卫 + 只清已死（丢弃提醒/墓碑/ev:discarded）+ status 四终态回显 + dependsOn depc 停靠 + digest 轮 AbortError 容忍 + 症状1 现状锁（T-D1~T-D10）
   "test/md-render-escape.test.mjs", // 第 34 批（2026-09-11）：VSC webview 行内代码字面量契约 + 转义回归（GitHub #7）——行内代码不被后续替换二次处理（esc-first 保持）+ 转义面钉死——T-H1~T-H15 + AC-H5 接线（WEBVIEW.md §10）
   // 批次二（可移植性 VSC 镜像面——2026-09-11）：VP-1–VP-12 落地机判面（PORTABILITY.md §6/§7）
   "test/portability-vsc-classification.test.mjs", // T-V01–T-V06 + AC-V01/V02/V03：分类唯一权威（嵌套/声明/损坏回退）+ 门禁拒绝与声明切换 + 静态副本扫描
@@ -132,7 +133,9 @@ export default [
   "test/session-exit-release.test.mjs", // 退出认领释放批（2026-09-21 · `docs/batches/2026-09-21-exit-claim-release.md` §2 · 台账 #211）T5（SESSION.md §6.18）：`releaseClaimsOnExit` 沙箱三格（转核 / 无 workspace 跳过 / 核 false 透传——他端零动）+ deactivate 结构机检（async 形 / 释放前置 / workspace 判据参数形 / 包装 vscode-free）
   "test/session-index-command.test.mjs", // 会话索引批（2026-09-22 · `docs/batches/2026-09-22-session-index.md` §2 · 台账 #205）T-14 VSC 侧 + AC-7：`runSessionIndexCommand` 处理体（重建临时 sessions 根 ⇒ 摘要 + 宿主提示）+ 接线机检（contributes.commands / extension.mjs 处理体与启动拍 / 端壳零静态核索引 import）+ T-17 VSC 侧依赖面（SESSION.md §6.19 D-SE46）
   "test/session-release-shell.test.mjs", // 会话认领释放端壳面（2026-09-22 pending-triage 批 · 台账 #168②③；SESSION.md §6.15 / §6.16）：T1/T2 未占落点 release 传参在效（newSlot / switchToSlot——残留认领释放）+ T3 被占分支零释放零写 + 可区分信号（`SLOT_OCCUPIED`——台账 #171 形态面）+ T4 项目切换 ⇒ 旧 cwd 认领释放（跨 cwd）
-  "test/peer-claims.test.mjs", // intent-claims 批（2026-09-25 · 台账 #23 · MULTI-INSTANCE-COLLAB.md §4.4/§4.4.7 端半）：意图认领面端侧镜像——TV1 双端对位（两常量等值 + 文案/who/age/left 逐字同串）/ TV2–TV6 写入·续约节流·过期·命中去重降级·属主死与探测失败 / TV7 混合命中合成（认领行逐 target + 足迹聚合行过滤已覆盖 target）
+  "test/peer-claims.test.mjs", // intent-claims 批（2026-09-25 · 台账 #23 · MULTI-INSTANCE-COLLAB.md §4.4/§4.4.7 端半）：意图认领面端侧镜像——TV1 双端对位（两常量等值 + 文案/who/age/left 逐字同串）/ TV2–TV6 写入·续约节流·过期·命中去重降级·属主死与探测失败 / TV7 混合命中合成（认领行逐 target + 足迹行逐 target 过滤已覆盖 target）
+  "test/peer-domains.test.mjs", // peer 收口批（2026-09-25 · 台账 #290 · MULTI-INSTANCE-COLLAB.md §4.2/§4.3/§4.4.4 端半）：足迹面专面网——T-L3v1 登记累积与整写（字段级合并写）/ T-L3v2 冲突查询（hot 窗口 + 路径/cwd 端差）/ T-L3v3 聚合缓存与目录 stat 上界 / T-L3v4 判活与惰性清理 / T-L3v5 预检门控 / T-L3v6 逐 target 足迹行与混合合成（与核 peerCollabNote 逐行对拍——AC-291）
+  "test/peer-instances.test.mjs", // peer 收口批（2026-09-25 · 台账 #302 · MULTI-INSTANCE-COLLAB.md §3.1）：分组半段引核对拍——T-PI1 同 manifest 四形态（多槽同 sessionId / 非数字槽 / 空 sessionId / pid 不可解析）⇒ 端聚合产物 ≡ 核 groupSlotSessions 产物（AC-302-2）
   "test/effort-select-views.test.mjs", // MODEL-SPECS 清理批（2026-09-25 · `docs/batches/2026-09-25-model-specs-cleanup.md` §2 · `docs/core/design/MODEL-SPECS.md` §14.8 E-5）：思考档三视图消费面——未注册默认 ⇒「—」（非枚举首项）/ 注册默认 ∈ 枚举预选 · ∉ 枚举回落 / 空枚举零渲染 + 两径同源（初渲染内联串 ∥ `buildEffortSelect` 重建）+ 载荷归一（none/「—」⇒ null——删键不写字面）——E-5 两例（先红 = 首项静默预设关思考 + 落盘写字面）
 
 ]

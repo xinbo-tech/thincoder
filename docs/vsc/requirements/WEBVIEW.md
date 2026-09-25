@@ -77,7 +77,7 @@ webview 只做 UI 渲染与用户交互；agent 循环与工具执行在 extensi
 **本批登记（不修——消解路径 + 到期条件在册）**
 
 - **P2-3 默认值物化**：`settings-agent.js:16-23` / `:66-67` / `:78-130` 用硬编码回退渲染且一次提交全部字段 ⇒ 首次改动即把默认值钉进 `config.json`（与核 `DEFAULTS` 现同值，故今天无行为差）。消解路径 = 差异提交（只发被编辑字段）；到期 = agent 卡下次触碰。
-- **P2-4 元素缺席 ≡ 显式清空**：`settings-agent.js:123-125`（`|| null`）+ `settings-panel-write.mjs:129-138`（显式 null ⇒ delete）⇒ 改动 agent 卡任一控件会删掉手写 `agent.advisor.effort`。消解路径 = 缺席字段发 `undefined`；到期 = 同上。
+- **P2-4 元素缺席 ≡ 显式清空**：`settings-agent.js:123-125`（`|| null`）+ `settings-panel-write.mjs:129-138`（显式 null ⇒ delete）⇒ 改动 agent 卡任一控件会删掉手写 `agent.advisor.effort`。消解路径 = 缺席字段发 `undefined`。**advisor-effort 半** = `2026-09-25-spec-effort` 批在办（select 未渲染 ⇒ 不发字段——#331 接线；实施验证后核销）；余项（advisor `provider` / `model` 等字段）在册。
 - **P2-5 保存面零校验**：`thincoder-vscode/src/extension/settings.mjs:246-256` 只 trim + 非空 ⇒ 可落盘缺 scheme 的 URI，错误延后到每次请求才抛（`thincoder-core/proxy.mjs:184-190`）。消解路径 = URI 形态校验前置到保存；到期 = 代理面下次触碰。
 - **P2-6 providers 卡重建清空半填表单**：`settings-providers.js:237-242` ⇒ 后台准入变化会丢未落盘输入。消解路径 = 重建前保留在编输入；到期 = providers 面下次触碰。
 - **P2-7 面板关闭时 `providerError` 不可见**：`webview/chat.js:208` → `settings.js:47-58` ⇒ 配置写入失败在 UI 无痕。消解路径 = 关闭态转系统级提示；到期 = 下批。

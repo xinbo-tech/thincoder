@@ -417,7 +417,7 @@ Windows 盘符**大小写随启动拼写**（`cd d:\teamcode` 与 `cd D:\teamcod
 
 **修法（核内单点归一）**：
 
-- 新叶模块 `thincoder-core/memory/origin.mjs`（拟新增；纯函数叶档）：`normalizeOrigin(p)`——分隔符归一 `/` ·
+- 新叶模块 `thincoder-core/memory/origin.mjs`（纯函数叶档——现体在盘）：`normalizeOrigin(p)`——分隔符归一 `/` ·
   Windows 盘符统一大写 · 去尾斜杠（根除外）· 非字符串原样透传。
 - 应用点 = **各公共入口一行**（写缝与读缝各自入口取归一值，函数体内一律用归一值）：
   写面 `codeSync` / `docSync` / `gitSync` / `reindexFile` / `syncDir` / `indexMarkdownFile` 的 `dir`（含按 origin 的查 / 删）；
@@ -473,11 +473,24 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 （写面入口 = `thincoder-core/memory/code-sync.mjs:193` / `thincoder-core/memory/docs.mjs:26` / `thincoder-core/memory/core.mjs:213` 与 `:264` 族）；
 判据 = 变体折叠断言（`thincoder-cli/test/memory-origin-normalize.test.mjs` 族）+ 写面结构检查。
 
-**死 origin sweep（二信号判据）**：**信号 A** = `normalizeOrigin(o) !== o`（非归一变体）⇒ **折叠，不删**（§6.11 迁移形态）；**信号 B** = `!existsSync(o) ∧ !existsSync(normalizeOrigin(o))` ⇒ **可删**（树亡；探针仅 ENOENT 判亡——其他错误 fail-safe 保留，先例 `thincoder-core/session-stale.mjs:124-127`）。
+**死 origin sweep（二信号判据）**：**信号 A** = `normalizeOrigin(o) !== o`（非归一变体）⇒ **折叠，不删**（§6.11 迁移形态）；**信号 B** = 原样 / 归一形两路径皆 ENOENT ⇒ **可删**（树亡；探针仅 ENOENT 判亡——其他错误 fail-safe 保留，先例 `thincoder-core/session-stale.mjs:124-127`）。
 
 **面表**：删除面 = `code_chunks(+fts)` / `doc_chunks(+fts)` / `files(+fts)`（FTS 触发器随行同步——`memory/schema.mjs:344-359` 等）；`entries` 无 origin 列（不涉）；`meta.last_indexed_commit` 全局单键（不涉）。
 
-**边界**：不用时间判据（`code_chunks` / `doc_chunks` 无行级写入时间戳，仅源文件 `mtime_ms`）——「树亡」为唯一删除判据；别名路径 / 可移动介质可假阳 ⇒ 探针 fail-safe；回收形态 / 命令面 / `VACUUM` 时机归实施轮（低风险依据 = §6.11「磁盘为真相 · DB = 可重建索引」）。
+**边界**：不用时间判据（`code_chunks` / `doc_chunks` 无行级写入时间戳，仅源文件 `mtime_ms`）——**全扫档（缺省）**「树亡」为唯一删除判据；**`--origin` 档 = 显式点名档**（删除判据 = 用户点名整档——不以树存活为判据、不在信号 A/B 射程；安全档见下）；别名路径 / 可移动介质可假阳 ⇒ 探针 fail-safe（低风险依据 = §6.11「磁盘为真相 · DB = 可重建索引」）。
+
+**命令面与安全设计（2026-09-25 · 实施轮落点——台账 #175 余项）**：
+
+- **命令面**：`thincoder memory sweep [--origin <o>] [--dry-run|--confirm]`——新核档 `thincoder-core/memory/sweep.mjs`（现体在盘）+ `thincoder-cli/src/cli/memory-command.mjs` 新子命令；
+  缺省 = 全扫（信号 A 折叠 + 信号 B 删除——删除判据 = 「树亡」，见下边界）；调用面 = CLI shell 子命令（VSC 无 shell 子命令面——结构性端差登记见 §2.2 #135）。
+- **`--origin <o>` 档语义（显式句 · 2026-09-25 修正轮）**：`--origin` = **靶向整档删除**（台账所称缺位面：现有删除面仅文件级 `origin=? AND path=?`）——删除范围 = 三表内 `normalizeOrigin(origin) = normalizeOrigin(<o>)` 的**全部行**（含该 origin 的全部非归一变体——折叠与删除一步到位）；**不以树存活为判据（输出仍报树存活供警示）、不走信号 A/B**（显式点名 ≠ 树亡推断——**活树 origin 亦可整删**；此即与全扫档的判据分界）。
+- **安全设计（三件）**：① **备份前置** = `VACUUM INTO <path>`（判据同 §6.11 步 1：文件存在 ∧ 大小 > 0 ∧ 打开后 `PRAGMA integrity_check` = `ok`；失败 ⇒ 中止零写）；
+  **取备份档位** = `--confirm` 档**且命中行 > 0**（写前置）；dry-run 档与零命中档不取（零写 ⇒ 无回退对象）；**路径与命名** = `<dbPath>.sweep-backup-<UTC yyyymmddHHMMSS>`（同目录；`dbPath` = `config.memory.dbPath` 展开值——缺省 `~/.thincoder/memory.db`，`thincoder-core/config.mjs:66`）；
+  **同域命名先例** = 会话索引隔离名 `session-index.db.corrupt-`（`thincoder-core/test/session-index.test.mjs:215`）；**目标已存在 ⇒ 中止零写**（fail-closed，不覆盖）。
+  ② **干跑默认**（`--confirm` 才写；零写判据 = 库字节 / 行数不变）；**输出形态（含 `--origin` 档）** = 逐 origin 一行 `origin=<归一形> · 树存活=<是|否> · code=<n> / doc=<n> / files=<n> / 合计=<n>`（树存活 = 原样 / 归一形两路径探针读数——活树附警示行）+ 末行合计；`--confirm` 档同形 + 备份路径。
+  ③ **审计** = 输出逐 origin 折叠映射 / 删除行数 / 备份路径；**写后回读判据按档分列**：折叠（全扫）档 = 归一键集合大小 = 1 ∧ 任一 `(归一键, path[, line_start])` 恰一行 ∧ `COUNT(*)` ≤ 前（同 §6.11 步 3）∥ **`--origin` 档 = 目标归一键三表零命中 ∧ 非目标 origin 零变**（非目标归一键集合与各键计数逐键等前值；FTS 随触发器同步）。
+- **折叠规则单源 = §6.11 步 2**（同归一键内 `(path, line_start)`（`files` = `(layer, path)`）恰一行——保留 `mtime_ms` 最大者，并列取 `rowid` 最小者；FTS 由触发器随行同步）：sweep 不另立规则。
+- **执行分工**：真实库写 = **父侧 ops**（同 §6.11 迁移面纪律：备份 → dry-run 复核 → `--confirm`）；实现轮只落工具 + 沙箱用例 + 干跑读数（只读）。
 
 ## 7. 并入的关键决策记录（含否决备选）
 
@@ -542,9 +555,19 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 - **VSC 镜像面**：memory 工具面（五动作 + layer 值域按端）语义同源；**VSC 存储 = 核 sqlite（与 CLI 同库）——见 §6.9（W8 归一落地 2026-09-15）**。原「VSC 存储为**文件制**（检索实时扫文件）」为 W8 前现状，与 §6.9 相抵——2026-09-18 修正轮收正；原随之的「存量根目录 legacy 条目 search 可见但 delete 不可删」所述路径 = 文件制检索面，已随 W8 退场而失据（存量文件条目去向 = `memory import` 一次性导入器——未落，登记于该批次档）。
 - **只读子代理不能 `memory search`**（§6.5——工具级 readonly 过滤）；如需恢复，改 allowed 集为动作感知。
 - **doc-sweep**：`docs/` 若干现状描述文件仍含旧 memory 三工具名 / 向量目录旧说——活文收正列为独立后续任务。
-- **CLI 人类命令面**（`thincoder memory <list|search|put|remove>`）：`list` / `search` / `put` 为 personal-only 核心面（search limit 10、list 支持 `--type`）；`remove` 走同一 `deleteByUid` 路由（uid 全 layer + 裸数字兼容）——命令行与工具核心路由复用，无漂移；命令面**无**共享层 list / 过滤形态、**无** clear / 批量删（那些是 agent 工具面能力）。
+- **CLI 人类命令面**（`thincoder memory <list|search|put|remove|sweep>`）：`list` / `search` / `put` 为 personal-only 核心面（search limit 10、list 支持 `--type`）；`remove` 走同一 `deleteByUid` 路由（uid 全 layer + 裸数字兼容）——命令行与工具核心路由复用，无漂移；命令面**无**共享层 list / 过滤形态、**无** clear / 批量删（那些是 agent 工具面能力）。
+- **`sweep` 子命令（2026-09-25 新增）**：`thincoder memory sweep [--origin <o>] [--dry-run|--confirm]`——origin 级库治理（缺省 = 死 origin 全扫；`--origin` = 靶向整档删除）；干跑默认、写档 `--confirm`；机制 / 安全设计 / 执行分工 = §6.13。与上列 personal-only 面并列（命令面写闸 = `--confirm`）——**不属** agent 工具面能力（`clear` / 批量删仍无）。
 
 ## 变更记录
+
+- 2026-09-25（**misc-four 批 · 设计评审修正轮 2（发现 #17）· eng-designer**——承 `docs/batches/2026-09-25-misc-four.md` §3 轮次 2）：§6.13「不查树存在性」字面两处（`:480` 边界句 / `:486` `--origin` 档语义句）改述为「不以树存活为判据」类无歧义形（`:486` 补「输出仍报树存活供警示」）——消与 `:490` 输出形态句（`existsSync` 读数 · 活树附警示行）的字面相抵。**判据零改**（删除判据 = 点名 / 树亡，未变）。
+
+- 2026-09-25（**misc-four 批 · 设计评审修正轮 1（发现 #1 / #5 / #8 / #11）· eng-designer**——承 `docs/batches/2026-09-25-misc-four.md` §3 轮次 1）：
+  §6.13 补 **`--origin` 档显式语义句**（靶向整档删除——不走信号 A/B）+ 边界句射程收窄（「树亡」判据只辖全扫档）+ 安全档细目（备份档位 / 路径命名 / 冲突行为 / `--origin` × dry-run 输出形态 + **按档分列写后回读判据**）；
+  §8.3 命令面枚举补 `sweep`；§6.11 撤 `origin.mjs`「（拟新增）」标（现体在盘）。**零新机制**（发现逐号落位）。
+
+- 2026-09-25（**misc-four 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-misc-four.md` §2 · 台账 #175）：§6.13 新增**命令面与安全设计**块——`memory sweep [--origin] [--dry-run|--confirm]`（核新档 `memory/sweep.mjs`（拟新增）+ CLI 子命令）+
+  安全三件（备份前置 `VACUUM INTO` / 干跑默认 / 审计 + 写后回读判据）；折叠规则单源 = §6.11 步 2；真实库写 = 父侧 ops。**判据面零新语义**（二信号与面表已在位）。
 
 - 2026-09-25（**hygiene-ab 批 · 文档面实施轮 · eng-designer**——承 `docs/batches/2026-09-25-hygiene-ab.md` §2 · 台账 #239）：§2.3 工具实现面单端档映射行 VSC 档坐标**补全仓根路径**（→ `thincoder-vscode/src/tools/code.mjs`；改前为裸名形态——消悬空）。**语义零改**。
 

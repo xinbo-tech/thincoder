@@ -91,7 +91,7 @@ export async function applyEditBatch(args, ctx) {
   for (const p of prepared) {
     // #4（2026-09-01 交付评审尾巴）：与单文件路径对齐——每条结果附 git diff +
     // autoSyntaxCheck（同文件多条会重复 diff/检查，换取格式一致、实现零分支）
-    const diff = gitDiffOne(ctx.cwd, p.g.abs)
+    const diff = await gitDiffOne(ctx.cwd, p.g.abs)
     const base = p.deleted
       ? `Deleted ${deleteTarget(p)} of ${p.g.path}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(p.g.abs)}`
       : `Edited ${p.g.path}: replaced ${p.occurrences} occurrence(s)${p.note ? ` — ${p.note}` : ""}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(p.g.abs)}`

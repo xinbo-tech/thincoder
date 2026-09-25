@@ -1,5 +1,5 @@
 /**
- * subagent-memory-bounds.test.mjs — TUI-OOM-ROOTCAUSE 批 组 2（A2——AGENT-LOOP.md §23）
+ * subagent-memory-bounds.test.mjs — TUI-OOM-ROOTCAUSE 批 组 2（A2——AGENT-LOOP.md §6.15）
  * 用例表 1:1：T-SM1–T-SM4（捕获截断 / 额下零改 / 子代理窗口 / 释放点）。
  *
  * 形态：快层 unit——零网络、零真实子代理运行（runner 替身令牌流 + 真 runWithContinue 闭包）。

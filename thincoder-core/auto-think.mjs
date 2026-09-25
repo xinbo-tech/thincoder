@@ -81,7 +81,7 @@ export async function classifyAndApply(agent, turn) {
       ],
       tools: [],
       signal: AbortSignal.timeout(5_000),
-      // D-TS12 (AGENT-LOOP.md §18.7): full logCtx field set at the chat call
+      // D-TS12 (TRACES.md §6.1): full logCtx field set at the chat call
       // point — traces/session/cwd/role/depth/kind (this call point carried
       // only {stage,turn,child}). The traces field closes the D-TR6 "off = no
       // persist" switch: without it the tracer treated the auto-think call as

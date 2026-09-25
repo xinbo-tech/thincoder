@@ -1,5 +1,5 @@
 /**
- * digest-budget.mjs — digest 注入批量预算单源（群 B 批 B5——AGENT-LOOP.md §22 语义源）。
+ * digest-budget.mjs — digest 注入批量预算单源（群 B 批 B5——AGENT-LOOP.md §6.14 语义源）。
  * 原预算块居 subagent-async.mjs（只覆盖经 injectAsyncResult 的三族：subagent / advisor /
  * escalate），consult 族注入器（injectConsultResult）绕过 ⇒ 多族条目同轮合并注入时可累计
  * 超限（BATCH-3-STRUCTURE F-2 原始事故面 1.3MB 请求体）。本档把常量 / 判超 / 记账 / 落盘

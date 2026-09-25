@@ -1,8 +1,8 @@
 /**
  * wait-for-advisor-pool.test.mjs — 第 10 批条目 B ②（CLI 端）：`wait_for "advisor settled"`
  * 判据 = **评审池真实态**（双载体）。
- * 设计权威：`docs/design/AGENT-LOOP.md` §18.3 #2 / §18.6（T-B4/T-B5）/ §18.7（AC-B2）；
- * 需求：`docs/requirements/AGENT-LOOP.md` §4（F-B2）。VSC 镜像同构（各端独立实现·同输入同
+ * 设计权威：`docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.11（advisor 池接入面）；
+ * 需求：`docs/core/requirements/AGENT-LOOP.md` §4（F-B2）。VSC 镜像同构（各端独立实现·同输入同
  * 判定——NFR-B1）。
  *
  * 红→绿（修前病灶复现）：判据读**子代理池**的 role==="advisor" 条目（`src/tools/ops.mjs`

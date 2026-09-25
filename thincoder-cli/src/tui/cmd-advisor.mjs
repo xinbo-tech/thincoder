@@ -55,10 +55,18 @@ export async function handleAdvisorCommand(ctx) {
   }
 
   /** off 形落盘（`think_off` 与归一后的 `effort_none` 共用——单一口径，防同状态两公式）：
-   *  自定义开值族（`thinkEnabledValue` ≠ "enabled"）取 `null`（NF1 显式 off）；其余取 `{type:"disabled"}`。 */
+   *  effort 族（`thinkApi === "effort"`）⇒ `thinking: null` **+ 删 `reasoningEffort` 键**（§15.4-2 单源；
+   *  载荷层 off 门首款要求 `thinking === null`——`{type:"disabled"}` 不开门 ⇒ 关思考静默失效；
+   *  内式同 `cmd-think.mjs:124-134` isEffortOnly 支）；自定义开值族（`thinkEnabledValue` ≠ "enabled"）取
+   *  `null`（NF1 显式 off）；其余（type 族默认）取 `{type:"disabled"}`。 */
   async function applyThinkOff() {
     const { specForModel } = await import("@thincoder/core/config.mjs")
     const spec = specForModel(getEffectiveModel(agent, cfg))
+    if (spec.thinkApi === "effort") {
+      cfg.thinking = null
+      delete cfg.reasoningEffort
+      return
+    }
     const isCustomThink = (spec.thinkEnabledValue ?? "enabled") !== "enabled"
     cfg.thinking = isCustomThink ? null : { type: "disabled" }
   }

@@ -78,10 +78,11 @@ function cachePut(cwd, entry) {
   peerInstanceCache.set(cwd, entry)
 }
 
-/** manifest slotSessions → 按 sessionId 去重分组 [{ sessionId, pid, slots }]。
+/** manifest slotSessions → 按 sessionId 去重分组 [{ sessionId, pid, slots }]（纯函数·零 IO）。
  *  sessionId 形如 "{pid}-{ts}-{rand}"（进程级——可去重分组，MULTI-INSTANCE-COLLAB §3.1）；pid 不可解析
- *  的条目跳过（存量清理归 saveManifest 的 cleanDeadOwners——本模块纯只读不写）。 */
-function groupSlotSessions(m) {
+ *  的条目跳过（存量清理归 saveManifest 的 cleanDeadOwners——本模块纯只读不写）。
+ *  **具名导出**（§3.1「聚合半段单源」）：VSC 端引本件分组半段（端侧零本地副本）。 */
+export function groupSlotSessions(m) {
   const byId = new Map()
   for (const [slot, sessionId] of Object.entries(m.slotSessions ?? {})) {
     if (typeof sessionId !== "string" || sessionId.length === 0) continue

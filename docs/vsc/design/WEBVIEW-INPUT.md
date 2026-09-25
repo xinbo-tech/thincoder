@@ -179,7 +179,7 @@
 | 5 | 机检面（新增档 ≤500 行 · 无 >300 字符单行 · 文档锚零悬空） | N-M3 · N-M2 |
 
 **用例面**：`thincoder-vscode/test/`（`webview-input-enter.test.mjs` · `webview-input-history.test.mjs` · `md-render-escape.test.mjs` · `activity-flow.test.mjs` ·
-`busy-injection-vsc.test.mjs`（C-B2-6 面——含本批扩面行：会话在飞入槽 / 槽满跨载体 / 三支送达）· `queue-visible-vsc.test.mjs`（细则⑦ 面——逐条标记 / 单条清标 / 多条合并成形 / Reload 重建 / 容量守卫 / 合并常量 / **步边界 pickup**（端壳循环头回调——history 序 + 快照推送；用例表 = 批档 §2））·
+`busy-injection-vsc.test.mjs` · `busy-injection-vsc-webview.test.mjs`（C-B2-6 面——含本批扩面行：会话在飞入槽 / 三支送达；「槽满跨载体」= T-V16-8——2026-09-25 file-tier-sweep 批拆分迁入）· `queue-visible-vsc.test.mjs`（细则⑦ 面——逐条标记 / 单条清标 / 多条合并成形 / Reload 重建 / 容量守卫 / 合并常量 / **步边界 pickup**（端壳循环头回调——history 序 + 快照推送；用例表 = 批档 §2））·
 `chat-panel-messages.test.mjs`（busy 分流族））——用例表归测试层，本档不复制（D2）。
 
 ## 变更记录
@@ -222,3 +222,5 @@
 - 2026-09-24（**queue-visible 批 · 收口前补述（父侧/设计侧）· eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §5 决策透明表 #3 / #4）：
   C-B2-6 细则⑦「标记」补**第三支**（未标记同文气泡 ⇒ 就地标记、不新建——判据序 ①②③）；细则② ⓪ 补**贴图批让位**句（同步面 ⇒ 携 `images` 的批不消费，留既有送达路径）+ 载体面补**贴图批退化**句（批内携图 ⇒ `count = 1` 逐条取）。
   **契约判别式 / 容量 / 满队 / 消费点枚举 / 贴图降级面零变**——只追认已交付实现（零新增语义）。
+
+- 2026-09-25（**file-tier-sweep 批 · 评审轮 1 修正轮** · eng-designer——承 `docs/batches/2026-09-25-file-tier-sweep.md` §3 轮次 1 发现 4）：§9 用例面行收正——S3 拆分后 C-B2-6 面两档（`busy-injection-vsc.test.mjs` / `busy-injection-vsc-webview.test.mjs`）；「槽满跨载体」= T-V16-8 入 webview 档。**契约点 / 判别式零变**。

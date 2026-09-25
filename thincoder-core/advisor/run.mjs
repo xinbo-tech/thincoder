@@ -36,7 +36,14 @@ export function resolveAdvisorProvider(agent) {
       // 单值）；渠道无默认模型 → 父 provider 兜底（与 subagent F-2c 同构）——绝不产出静默
       // undefined-model 请求（最极端两者皆无 → chat 前 assertProviderModel fail-fast）。
       const result = cfg.model ? { ...provider, model: cfg.model } : { ...provider, model: provider.model ?? agent.provider?.model }
-      if (cfg.thinking === null || cfg.thinking === false) result.thinking = undefined  // explicitly off
+      // 台账 #329 / 设计 §15.4-3：off 形须**活着到达载荷层**——载荷层 off 门首款 = `provider.thinking === null`
+      // （`thincoder-core/provider/core.mjs:213-219`）；归一为 `undefined` 会让该门永不开（effort 族 advisor
+      // 关思考静默失效）。显式 off 同清**继承档**（渠条目自带 / 主 provider 的 `reasoningEffort` 不得随行——
+      // 随行则显式档支先命中、off 意图作废）。`false`（非法原值）仍归一 `undefined`（零变）。
+      if (cfg.thinking === null) {
+        result.thinking = null
+        delete result.reasoningEffort
+      } else if (cfg.thinking === false) result.thinking = undefined  // invalid raw value — normalized
       else if (cfg.thinking !== undefined) result.thinking = cfg.thinking
       if (cfg.reasoningEffort !== undefined) result.reasoningEffort = cfg.reasoningEffort
       return result
@@ -47,9 +54,12 @@ export function resolveAdvisorProvider(agent) {
   }
   const provider = { ...agent.provider }
   if (cfg?.model) provider.model = cfg.model
-  // thinking off: null AND false both mean "explicitly off" — a raw `false`
+  // thinking off: null = NF1 显式 off 标记（保形——同自定义渠道分支；§15.4-3），a raw `false`
   // value is invalid for providers that expect undefined or an object.
-  if (cfg?.thinking === null || cfg?.thinking === false) provider.thinking = undefined
+  if (cfg?.thinking === null) {
+    provider.thinking = null
+    delete provider.reasoningEffort  // 继承档（主 provider）不得随显式 off 同行
+  } else if (cfg?.thinking === false) provider.thinking = undefined
   else if (cfg?.thinking !== undefined) provider.thinking = cfg.thinking
   if (cfg?.reasoningEffort !== undefined) provider.reasoningEffort = cfg.reasoningEffort
   return provider

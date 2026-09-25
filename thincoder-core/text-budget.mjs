@@ -1,5 +1,5 @@
 /**
- * text-budget.mjs — 文本额度纯函数（零依赖——TUI-OOM-ROOTCAUSE 批，AGENT-LOOP.md §23.3.1 / TUI.md §15.3.2）。
+ * text-budget.mjs — 文本额度纯函数（零依赖——TUI-OOM-ROOTCAUSE 批，AGENT-LOOP.md §6.15 / TUI.md §15.3.2）。
  *
  * 单一来源（D2）：agent 侧捕获截断（spawn-child.mjs——子代理 `_capturedOutput`）与 TUI 面
  * 载体额度（tui/display-budget.mjs）共用本体的 `capText` / `appendCappedText`——两处各自

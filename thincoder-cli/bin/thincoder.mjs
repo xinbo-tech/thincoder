@@ -4,7 +4,7 @@
  * thincoder — CLI entry point
  *   thincoder                 Launch the interactive TUI
  *   thincoder chat "..."      One-shot agent run (tools enabled, streamed)
- *   thincoder memory <sub>    Memory management: list / search / put / remove
+ *   thincoder memory <sub>    Memory management: list / search / put / remove / sweep（sweep：origin 级库治理）
  *   thincoder upgrade         Update to the latest version from npm
  *   thincoder completion <sh> Shell completion: bash / zsh / fish
  *   thincoder session gc    Session dir GC: --dry-run report / --confirm delete cold projects (SESSION.md §6.12)
@@ -111,6 +111,7 @@ Usage:
   thincoder memory search <query>              Search memory
   thincoder memory put --type=<t> --title=<t> --content=<c> [--tags=<t>]
   thincoder memory remove <id>                 Remove an entry
+  thincoder memory sweep [--origin <o>] [--dry-run|--confirm]
   thincoder sync              Sync team memory repo (pull --rebase + reindex)
   thincoder reindex           Rebuild the local index from markdown sources
   thincoder distill <file> [--yes] [--layer=<s>]

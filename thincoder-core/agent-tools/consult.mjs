@@ -1,7 +1,7 @@
 /**
  * consult.mjs — multi-model consultation ("会诊", docs/design/CONSULTATION.md). CLI port.
  *
- * Two tools (AGENT-LOOP.md §25 D-R17a — R17, 2026-09-06): consult_start
+ * Two tools (CONSULTATION.md §6.3 — R17, 2026-09-06): consult_start
  * (non-blocking spawn) / consult_stop (cancel a running session). consult_check
  * was RETIRED with the digest auto-injection: the mechanism does ZERO judging —
  * when every model of a session settles (pending 0), the session moves to the
@@ -132,7 +132,7 @@ export function makeMainHistoryTool(parentAgent) {
 }
 
 /**
- * Full-session settle routing (R17 — AGENT-LOOP.md §25 D-R17a): a session whose
+ * Full-session settle routing (R17 — CONSULTATION.md §6.2): a session whose
  * pending count reached 0 has no more replies coming — the session leaves
  * `_consultSessions` and, unless it was cancelled (consult_stop / turn-end
  * abort), moves into the pending single container (`_pendingAsyncResults` +role

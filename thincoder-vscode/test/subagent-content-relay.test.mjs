@@ -83,7 +83,7 @@ test("T3 嵌套子标：eng-coder#2/explore#1/act → name=sub:eng-coder#2 + sub
   assert.equal(m.name, "sub:eng-coder#2", "块路由 = head（外层块）")
   assert.equal(m.kind, "text")
   assert.equal(m.text, "act", "内容 = 外层前缀剥净后的 rest")
-  assert.equal(m.sub, "explore#1", "子标 = 嵌套链（webview 行首 dim 子标）")
+  assert.equal(m.sub, "explore#1", "子标 = 嵌套链（数据面 `sub`：面板行合并判据消费）")
 })
 
 // ─── T4 无前缀零误改（正控）──────────────────────────────────

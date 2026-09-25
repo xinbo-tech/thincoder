@@ -4,7 +4,7 @@
  */
 import { escHtml } from "./ui.js"
 import { t } from "./i18n.js"
-import { SS, effortSelectView, effortPayloadValue } from "./settings-state.js"
+import { SS, effortSelectView, advisorEffortCurrent, advisorEffortPayloadValue } from "./settings-state.js"
 import { readConsultRowsFromDom, collectConsultRows, mountModelMenus, bindConsultRows } from "./settings-models.js"
 
 /** Agent card HTML (run parameters + subagent model assignments). */
@@ -59,7 +59,9 @@ export function consultAdvisorCardHtml() {
   const advProvider = adv.provider || ""
   html += `<div class="key-field"><label title="${t("settings.advisorProviderHelp")}">${t("settings.advisorProvider")}</label><span id="adv-model-slot" class="adv-model-slot" data-provider="${escHtml(advProvider)}" data-model="${escHtml(adv.model || "")}"></span></div>`
   {
-    const advEffortView = effortSelectView(adv.model, adv.effort)
+    // 读面（读面优先级单源 = §15.4-4）：`thinking` off 形 ⇒ 预选 `none` > `reasoningEffort` > legacy `effort`
+    // > 「—」——旧 `effort` 键只作读回兜底（保存即删，写面见 `settings-panel-write.mjs`）。
+    const advEffortView = effortSelectView(adv.model, advisorEffortCurrent(adv))
     if (advEffortView) html += `<div class="key-field"><label title="${t("settings.advisorEffortHelp")}">${t("settings.advisorEffort")}</label><select id="adv-effort">${advEffortView.levels.map((e) => `<option value="${escHtml(e)}" ${advEffortView.selected === e ? "selected" : ""}>${escHtml(e)}</option>`).join("")}</select></div>`
   }
   html += `<div class="settings-subtitle">${t("settings.consultBudgetSection")}</div>`
@@ -79,6 +81,7 @@ export function bindAgentControls() {
     const get = (id) => document.getElementById(id)?.value?.trim()
     const chk = (id) => document.getElementById(id)?.checked ?? false
     const compactRaw = get("ag-compact")
+    const advEffortEl = document.getElementById("adv-effort") // select 未渲染 ⇒ null（载荷不发该字段）
     const subModels = {}
     for (const role of ["explore", "plan", "coder", "eng-coder", "eng-designer"]) {
       const v = document.getElementById(`submodel-slot-${role}`)?.dataset.value || ""
@@ -122,8 +125,10 @@ export function bindAgentControls() {
           // missing now BACKFILLS from config.json (GitHub #3), only null clears.
           provider: document.getElementById("adv-model-slot")?.dataset.provider || null,
           model: document.getElementById("adv-model-slot")?.dataset.model || null,
-          // 落盘归一：「—」（未注册占位）/ `none`（= 关思考）/ 空 ⇒ null（删键不写字面——§14.10）
-          effort: effortPayloadValue(document.getElementById("adv-effort")?.value),
+          // §15.4-6 / §2.13：写键 = `advisor.reasoningEffort`（单源 = 核读取键；旧 `effort` 键退场——写面删）。
+          // 三态：「—」/ 空 ⇒ null（写面删键，不动 thinking）/ `none`（关思考）原样上送（写面按族取 off 形）/
+          // 其余档 = 字面值。select 未渲染（枚举空）⇒ **不发**该字段（缺席 ≠ 清空——手写键存活）。
+          ...(advEffortEl ? { reasoningEffort: advisorEffortPayloadValue(advEffortEl.value) } : {}),
         },
         consultModels: models,
       },

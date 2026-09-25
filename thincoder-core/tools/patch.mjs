@@ -7,7 +7,7 @@ import {
   majorityEol
 } from "./shared.mjs";
 import { writeThroughPath, TMP_SUFFIX, markDirty } from "./write-path.mjs";
-import { execFileSync } from "node:child_process";
+import { spawnGit } from "./git-run.mjs";
 import { mkdir, readFile, lstat, unlink } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { relative, dirname } from "node:path";
@@ -275,7 +275,9 @@ export const deleteTool = {
     const rel = relative(ctx.cwd, abs).replace(/\\/g, "/")
     let tracked = false
     try {
-      execFileSync("git", ["ls-files", "--error-unmatch", "--", rel], { cwd: ctx.cwd, stdio: "ignore" })
+      // #208①（2026-09-25）：表外同步 spawn 收口——探针转 `spawnGit` 单点（GIT_ENV 加固 + 超时 + 树杀）；
+      // 失败语义零变（未跟踪 / 非仓 ⇒ tracked 保持 false）。
+      await spawnGit(ctx.cwd, ["ls-files", "--error-unmatch", "--", rel])
       tracked = true
     } catch {
       // untracked / non-git repo

@@ -1,7 +1,7 @@
 /**
  * explore-distill.mjs — 端壳/适配器（W15 · `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W15）：
  * 轮末探索蒸馏的**机制本体 = 核单源** `@thincoder/core/explore-distill.mjs`
- * （`summarizeRunExplorations`——AGENT-LOOP §13 + CONTEXT-COMPACTION §5）；本档只保留
+ * （`summarizeRunExplorations`——CONTEXT-COMPACTION §5）；本档只保留
  * **调用期适配**（F7「循环契约位移」——核 re-export 签名异，W6 段已登记）：
  *
  *   核形：`summarizeRunExplorations(agent, callbacks, signal, depth, extras)` —— agent 载体

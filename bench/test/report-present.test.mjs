@@ -1,7 +1,7 @@
 /**
  * test/report-present.test.mjs — 报告呈现面用例（§5.13 `render.3` / `render.4` / `render.5`；`report-render.test.mjs` 超 300 行 ⇒ 拆分）。
  * `render.3` = 成本表列集（八列 · 定域反例）+ 报告零金额（md）与账目面反控（JSON 零改）+ 交叉列三列（⑦⑧⑨⑩——同源对读 / 缺数据 / 行序 / 轴子集——增补③ · #276）；
- * `render.4` = 用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采样 run 数 / 轴门控 + ⑦ 口径行两短语与已记录 `error` run 照计 / ⑧ 部分未记录腿——2026-09-24 error-duration 批 + ⑨⑩⑪ 交叉列两列——#276）；
+ * `render.4` = 用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采样 run 数 / 轴门控 + ⑦ 口径行两短语与已记录 `error` run 照计 / ⑧ 部分未记录腿——2026-09-24 error-duration 批 + ⑨⑩⑪ 交叉列两列——#276 + ⑫ `skipped` 排除腿——2026-09-25 bench-micro 批）；
  * `render.5` = 温度例外披露句（例外档在位 / 全 0 不在位 / 旧档缺字段 ≡ 全 0——2026-09-24 roster-expand 批）；
  * `render.6` = 逐档参数表（列集 / 来源两态 / 旧档缺键 `—` / 温度例外注 / note 披露腿——2026-09-24 params-judge 批 · #269）；
  * `render.7` = 速度表双排序（A 升 / B 降 / 列集正控 / 脚注一份 / 轴门控——#271）；`render.8` = 能力矩阵两列（同源照搬 / 反例控制——#272）。
@@ -166,6 +166,11 @@ test("render.4：用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采
   const xSpeedOnlyBlock = xSpeedOnly.split("### 用时表")[1].split("## 关键发现")[0]
   assert.deepEqual([cellOf(xSpeedOnlyBlock, "fx-x2", 6), cellOf(xSpeedOnlyBlock, "fx-x2", 7)],
     [cellOf(xTime, "fx-x2", 6), cellOf(xTime, "fx-x2", 7)], "⑪ 轴子集：交叉列两列照出值（与全表渲染同串）")
+  // ⑫ `skipped` 腿不入部分未记录分支（KD-47③）：构造 `skipped` run 携数值 `totalMs` + 未记录 call ⇒ 不入脚注
+  const skipPart = renderReport({ ...data, models: [mkModel("fx-skip", [mkRun(900, { verdict: "skipped", detail: "不在该模型面（夹具）", calls: partCalls(900) })])] })
+    .split("### 用时表")[1].split("### 成本表")[0]
+  assert.equal(skipPart.includes("- fx-skip：1 个 run 部分 call 未记录"), false, "⑫ `skipped` run 不入部分未记录脚注（谓词排除——未执行 ⇒ 无「部分未记录」可言；守卫前反例 = 脚注出现）")
+  assert.deepEqual([cellsIn(skipPart, "fx-skip")[2], cellsIn(skipPart, "fx-skip")[5]], ["—", "0"], "⑫ 累计格 `—` + 采样 `0`（`skipped` 不入累计面）")
 })
 
 test("render.5：温度例外披露句（例外档在位 / 全 0 不在位 / 旧档缺字段 ≡ 全 0）", () => {

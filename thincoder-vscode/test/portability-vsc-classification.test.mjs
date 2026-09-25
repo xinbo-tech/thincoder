@@ -181,3 +181,56 @@ test("T-V06 边界（门禁）：嵌套 packages/foo/src/x.md 与非字符串路
   assert.deepEqual(executed, [], "零执行（保守面）")
 })
 
+// ─── #327 / #309（TOOLS.md §6.17 · AGENT-LOOP-SUBAGENT.md §6.29.1——端侧对位）──────────
+
+test("T-V07 边界（#327）：args = null ⇒ 端侧设计闸零裸抛、保守拒（原裸 TypeError 逸出）", async () => {
+  const ws = mkws()
+  const { executed, runWrite } = gateFixture(ws)
+  const blocked = await runWrite(null) // JSON.stringify(null) = "null"（#327 触发面）
+  assert.ok(blocked.includes("Error: engineering design gate"), `args=null ⇒ 未知路径保守拦截；实测：${blocked}`)
+  assert.deepEqual(executed, [], "零执行")
+})
+
+test("T-V08 边界（#327）：消费面 args = null 同形 ⇒ 零裸抛、零记账", async () => {
+  const ws = mkws()
+  const parent = { cwd: ws, history: {}, config: { agent: {} }, _touchedFiles: [] }
+  const tool = { name: "write", readonly: false, touchedPaths: (a) => [a.path], execute: async () => "ok" }
+  const history = []
+  await executeToolBatches(parent, {
+    response: { toolCalls: [{ id: "t1", name: "write", arguments: "null" }] },
+    history, fullHistory: [], toolByName: new Map([["write", tool]]),
+    getAuto: () => true, callbacks: {}, cwd: ws, recentSigs: [], depth: 0,
+  })
+  const content = String(history.find((m) => m.role === "tool")?.content ?? "")
+  assert.ok(!content.startsWith("Error:"), `args=null 在消费面成形（零裸抛）；实测：${content}`)
+  assert.deepEqual(parent._touchedFiles, [], "畸形 args ⇒ 零记账（尽力而为面）")
+})
+
+test("T-V09 错误（#309 端侧写门）：绑定档 A 的子代理写 B ⇒ 拒（文案含两侧基名）· 写 A 自己放行", async () => {
+  const ws = mkws()
+  write(ws, "docs/batches/a.md", "# A\n")
+  write(ws, "docs/batches/b.md", "# B\n")
+  const parent = { cwd: ws, history: {}, config: { agent: {} }, _batchDoc: join(ws, "docs", "batches", "a.md"), _touchedFiles: [] }
+  const executed = []
+  const tool = {
+    name: "write", readonly: false, touchedPaths: (a) => [a.path],
+    execute: async (args) => { executed.push(args.path); return `Wrote ${args.path}` },
+  }
+  const run = async (path) => {
+    const history = []
+    await executeToolBatches(parent, {
+      response: { toolCalls: [{ id: "t1", name: "write", arguments: JSON.stringify({ path, content: "x" }) }] },
+      history, fullHistory: [], toolByName: new Map([["write", tool]]),
+      getAuto: () => true, callbacks: {}, cwd: ws, recentSigs: [], depth: 1,
+    })
+    return String(history.find((m) => m.role === "tool")?.content ?? "")
+  }
+  const refused = await run(join(ws, "docs", "batches", "b.md"))
+  assert.ok(refused.startsWith("Error: write refused — cross-batch batch-record write:"), `跨批写被拒；实测：${refused}`)
+  assert.ok(refused.includes("a.md") && refused.includes("b.md"), "文案含两侧基名")
+  assert.deepEqual(executed, [], "拒绝 ⇒ 零执行")
+  const allowed = await run(join(ws, "docs", "batches", "a.md"))
+  assert.ok(!allowed.startsWith("Error:"), `写自己绑定的档 ⇒ 放行（正控）；实测：${allowed}`)
+  assert.deepEqual(executed, [join(ws, "docs", "batches", "a.md")], "正控恰执行一次")
+})
+

@@ -50,7 +50,7 @@ test("新 15 件在位于 prompts 树（AC-2——退役旧件不存在检查收
 // 开关段 C1-C4（PROMPT-ATTENTION 阶段 C——推进档位）。
 // C1/C2/C3 逐字保真限 engineering 三结构位（随迁后宿主 = persona-engineering + discipline-eng）。
 // ─────────────────────────────────────────────────────────────────────────────
-test("ASYNC 全族：docs/design/AGENT-LOOP.md §14.2 顶层一律异步陈述（旧句负向锚收归接收档 T76）", () => {
+test("ASYNC 全族：`docs/_archive/design/AGENT-LOOP.md` §14.2 顶层一律异步陈述（旧句负向锚收归接收档 T76）", () => {
   const loopDoc = read("docs/_archive/design/AGENT-LOOP.md")
   const sec142 = loopDoc.slice(loopDoc.indexOf("### 14.2 飞刀（escalate）"), loopDoc.indexOf("## 15. 操作纪律"))
   assert.ok(sec142.length > 100, "§14.2 slice non-empty")

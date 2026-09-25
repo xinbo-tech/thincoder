@@ -201,7 +201,7 @@ test("dispatch §4.1 分类：observe readonly / send 控制豁免——planMode
   assert.match(String(rSpawn[0].result), /plan mode/)
 })
 
-// ═══ 第 10 批（AGENT-LOOP.md §18——advisor 池接入面：status 双池 / cancel 落点 / 指引）═══
+// ═══ 第 10 批（AGENT-LOOP-ASYNC-POOL.md §6.11——advisor 池接入面：status 双池 / cancel 落点 / 指引）═══
 
 /** 评审池条目真形状（advisor-async launchAsyncAdvisor：role/reviewType/run.round/status/done）。 */
 const advisorEntry = (id, over = {}) => ({

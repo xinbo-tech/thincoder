@@ -27,16 +27,16 @@ export const PROVIDER_PRESETS = {
   openai:   { baseURL: "https://api.openai.com/v1", model: "gpt-4o", desc: "OpenAI" },
   claude:   { baseURL: "https://api.anthropic.com/v1", model: "claude-sonnet-4", format: "anthropic", maxTokens: 8192, desc: "Claude (Anthropic)" },
   gemini:   { baseURL: "https://generativelanguage.googleapis.com/v1beta", model: "gemini-2.5-flash", format: "google", maxTokens: 8192, desc: "Gemini (Google)" },
-  grok:     { baseURL: "https://api.x.ai/v1", model: "grok-4.5", maxTokens: 65536, desc: "Grok (xAI)" },
-  mistral:  { baseURL: "https://api.mistral.ai/v1", model: "mistral-large", maxTokens: 32768, desc: "Mistral" },
+  grok:     { baseURL: "https://api.x.ai/v1", model: "grok-4.5", maxTokens: 64_000, desc: "Grok (xAI)" },
+  mistral:  { baseURL: "https://api.mistral.ai/v1", model: "mistral-large", maxTokens: 32_000, desc: "Mistral" },
   volcengine: { baseURL: "https://ark.cn-beijing.volces.com/api/v3", model: "doubao-seed-2-0-code-preview-260215", maxTokens: 131072, desc: "Volcengine Ark (豆包)" },
-  hunyuan:  { baseURL: "https://api.hunyuan.cloud.tencent.com/v1", model: "hunyuan-pro", maxTokens: 32768, desc: "Hunyuan (腾讯混元)" },
+  hunyuan:  { baseURL: "https://api.hunyuan.cloud.tencent.com/v1", model: "hunyuan-pro", maxTokens: 32_000, desc: "Hunyuan (腾讯混元)" },
   // TokenHub = Tencent MaaS 聚合网关（另一主机；`hy3` 在本规格表有行）。`thinking` / `reasoningEffort` /
   // `maxTokens` 一律**不设 = 不发**（两新渠道的 thinking 载荷与 max_tokens 行为未测 —— MODEL-SPECS §9.6 D-13）。
   tokenhub: { baseURL: "https://tokenhub.tencentmaas.com/v1", model: "hy3", desc: "Tencent TokenHub (腾讯混元网关)" },
-  siliconflow: { baseURL: "https://api.siliconflow.cn/v1", model: "deepseek-ai/DeepSeek-V3", maxTokens: 32768, desc: "SiliconFlow (硅基流动)" },
-  openrouter: { baseURL: "https://openrouter.ai/api/v1", model: "anthropic/claude-sonnet-4", maxTokens: 32768, desc: "OpenRouter" },
-  groq:     { baseURL: "https://api.groq.com/openai/v1", model: "llama-3.3-70b-versatile", maxTokens: 32768, desc: "Groq" },
+  siliconflow: { baseURL: "https://api.siliconflow.cn/v1", model: "deepseek-ai/DeepSeek-V3", maxTokens: 32_000, desc: "SiliconFlow (硅基流动)" },
+  openrouter: { baseURL: "https://openrouter.ai/api/v1", model: "anthropic/claude-sonnet-4", maxTokens: 32_000, desc: "OpenRouter" },
+  groq:     { baseURL: "https://api.groq.com/openai/v1", model: "llama-3.3-70b-versatile", maxTokens: 32_000, desc: "Groq" },
 }
 
 /** Build the stored provider entry from a preset — strip the display field, keep the rest

@@ -7,6 +7,10 @@
  * ——**均不在本档**（§14.7 载明）；AC-1 锚（C-1..C-4）落本新档，循 `-mimo` / `-qwen36` / `-bench`
  * 载体先例。断言面 = 行为面（`specMatch` / `specForModel` 返回形状 + 显式字段值）+ C-2 行注标级词
  * （行注即交付物本体——`-bench` 档 G-3 先例）。helpers 就地重定义、零 import 主测试档。
+ *
+ * 批 `2026-09-25-spec-effort` §15.2 / §15.6-AC-1 · 用例 **N-1** 也挂本档（`noUsageStream` 标集 = 十四名 +
+ * 单消费点在位）——该批设计 §15.5 未点名载体，本档已有 `model-specs.mjs` 源扫 helpers（`SPEC_SOURCE`）
+ * ⇒ 复用零新脚手架；主档 `model-specs.test.mjs` 的 500 硬限余量按设计保留。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
@@ -109,4 +113,22 @@ test("[cleanup] C-4 未知名落 DEFAULT_SPEC（兜底语义零改）+ grok-4.7/
     assert.equal(r.spec.context, 500_000, `${n}.context = 实测 500_000（与泛前缀行相符）`)
     assert.equal(r.spec.maxOutput, 64_000, `${n}.maxOutput = 泛前缀行值（未取到 = 零口径，不改）`)
   }
+})
+
+/** §15.2 / §15.6-AC-1 · 用例 N-1（批 `2026-09-25-spec-effort`）：`noUsageStream` 标集 = 十四名逐行在场
+ *  （glm 7 / minimax 4 / gemini 3）。裁定 = **保留不收窄**（字段语义收正为「保守抑制、非能力断言」——
+ *  散文面不设测试锚，本档只锁标集与消费点）。 */
+const NO_USAGE_SET = [
+  "glm-5.3", "glm-5.3-flash", "glm-5.3-flashx", "glm-5.2", "glm-5", "glm-4", "glm-4.5-air",
+  "MiniMax-M3", "minimax-m3", "minimax-m1", "MiniMax-M2.7",
+  "gemini-3-pro", "gemini-2.5-pro", "gemini-2.5-flash",
+]
+
+test("[spec-effort] N-1 noUsageStream 标集 = 十四名（逐名在场；多余/缺失即红）+ 单消费点在位", () => {
+  const marked = [...SPEC_SOURCE.matchAll(/^\s*\["([^"]+)",\s*\{[^\n]*noUsageStream:\s*true/gm)].map((m) => m[1])
+  assert.deepEqual(marked.toSorted(), [...NO_USAGE_SET].toSorted(), `标集 ≠ 十四名（实读 ${JSON.stringify(marked)}）`)
+  assert.equal(marked.length, 14, "计数 = 14（glm 7 / minimax 4 / gemini 3）")
+  const core = readFileSync(new URL("../provider/core.mjs", import.meta.url), "utf8")
+  assert.equal((core.match(/spec\.noUsageStream/g) ?? []).length, 1, "唯一消费点（`spec.noUsageStream` 恰一处引用）")
+  assert.match(core, /if \(!spec\.noUsageStream\) body\.stream_options = \{ include_usage: true \}/, "消费点形态未改")
 })

@@ -48,6 +48,7 @@ test("judge.14：位级失败 ⇒ 替代级 1 补判（B 原位超时）⇒ 双�
   assert.match(b.substitutes[0].cause, /位级失败：TimeoutError/, "cause = 上一级失败摘要")
   assert.equal(b.attempts, 2, "attempts = calls[] 条数 = 实际发起级数")
   assert.deepEqual(b.calls.map((c) => c.level), [undefined, 2], "level 1（原位）不写 · 替代级携 2（缺省语义）")
+  assert.equal(typeof b.calls[0].totalMs, "number", "失败级 calls[0].totalMs 为数字（失败尝试照记——KD-47① / timing.2 ②）")
   assert.equal(b.calls.every((c) => c.attempt === 1), true, "级内单发 ⇒ attempt 恒 1")
   assert.equal(b.calls[0].maxTokens, 2048, "预算 = 该级配置值（无放大分支——§2.10.1）")
   const models = [judgeOf(r, "A").substitutes, b.substitutes].flatMap((x) => x ?? []).map((s) => s.model)

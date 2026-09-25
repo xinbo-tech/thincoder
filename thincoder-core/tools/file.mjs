@@ -214,7 +214,7 @@ export const writeTool = {
     const content = eol === "\r\n" ? normalizeEOL(args.content).replace(/\n/g, "\r\n") : args.content
     // 单一写路径点：默认 = writeFile + 记账；端侧注入 ⇒ 编辑器径（§2.13.5）。
     await writeThroughPath(abs, content, { op: "write", record: { type: "write", startLine: 1, shift: 0 } }) // 全文重写——全文件受影响
-    const diff = gitDiffOne(ctx.cwd, abs)
+    const diff = await gitDiffOne(ctx.cwd, abs)
     return `Wrote ${args.content.length} chars to ${args.path}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}`
   },
 }
@@ -365,7 +365,7 @@ export const insertAfterTool = {
       op: "write",
       record: { type: "insert", startLine: targetLine, shift: normalizeEOL(args.content).split("\n").length },
     })
-    const diff = gitDiffOne(ctx.cwd, abs)
+    const diff = await gitDiffOne(ctx.cwd, abs)
     const baseResult = `Inserted after line ${targetLine} in ${args.path}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}`
     return await appendWriteContext(abs, targetLine + 1, baseResult)
   },
@@ -460,7 +460,7 @@ export const hashlineEditTool = {
       op: "write",
       record: { type: "edit", startLine: pos + 1, shift: newLines.length - target.length },
     })
-    const diff = gitDiffOne(ctx.cwd, abs)
+    const diff = await gitDiffOne(ctx.cwd, abs)
     const baseResult = `Edited ${args.path}: replaced ${target.length} line(s) at L${pos + 1} with ${newLines.length} line(s)${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}${corrupted ? `\n${FFFD_WARNING}` : ""}`
     return await appendWriteContext(abs, pos + 1, baseResult)
   },

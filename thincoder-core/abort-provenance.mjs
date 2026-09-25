@@ -1,8 +1,8 @@
 /**
- * abort-provenance.mjs — abort 来源标注词汇表（单一权威源——AGENT-LOOP.md §20.3 第 1/2 条）
+ * abort-provenance.mjs — abort 来源标注词汇表（单一权威源——AGENT-LOOP-SUBAGENT.md §6.12）
  *
  * 子代理 / 评审 / 会诊死亡的可诊断性：产生点标注结构化来源（`err.abortInfo`）→
- * controller 链 hop 逐跳保 reason（§20.3 第 4 条 #10）→ 结算 / 报告面用 `deathLine`
+ * controller 链 hop 逐跳保 reason（AGENT-LOOP-SUBAGENT.md §6.12 形态④ #10）→ 结算 / 报告面用 `deathLine`
  * 合成死亡行（原 message 前缀逐字保留 + 来源后缀）。
  *
  * 纯函数、零 import——任意层可引、无环（provider / proxy / agent / settle 族共用）。
@@ -12,7 +12,7 @@
  * - layer（3 值）：`provider` / `agent` / `settle`；未标注错误回落 `unrecorded`（合成器 token）。
  */
 
-/** trigger 枚举权威（测试锁计数 5——AGENT-LOOP.md §20.3 第 1 条表）。 */
+/** trigger 枚举权威（测试锁计数 5——AGENT-LOOP-SUBAGENT.md §6.12 trigger 表）。 */
 export const TRIGGERS = ["user", "timeout", "cancel", "stop", "unknown"]
 
 /**
@@ -65,14 +65,14 @@ export function annotateAbort(err, signal, layer, detail) {
   return err
 }
 
-/** 死亡行长度上限（AGENT-LOOP.md §20.3 第 3 条——超长优先截 detail）。 */
+/** 死亡行长度上限（AGENT-LOOP-SUBAGENT.md §6.12 死亡行形态——超长优先截 detail）。 */
 const MAX_LEN = 300
-/** unknown 形态 detail token（§20.3 第 3 条逐字）。 */
+/** unknown 形态 detail token（AGENT-LOOP-SUBAGENT.md §6.12 逐字）。 */
 const NO_REASON = "no reason on signal"
 /** 未标注回落 token（layer / detail 两面兜底）。 */
 const UNRECORDED = "unrecorded"
 
-/** 信号域 detail 回落（§20.3 第 1 条形态③——`abortDetail` 载站点名；错误未标注时仍可辨发起动作）。 */
+/** 信号域 detail 回落（AGENT-LOOP-SUBAGENT.md §6.12 形态③——`abortDetail` 载站点名；错误未标注时仍可辨发起动作）。 */
 const detailOf = (signal) => (typeof signal?.reason?.abortDetail === "string" ? signal.reason.abortDetail : null)
 
 /** 求值链（§20.3 第 1 条：err.abortInfo → triggerOf(signal) → err.name 兜底）。 */

@@ -18,6 +18,7 @@ import {
 } from "@thincoder/core/conventions.mjs"
 import { hasCodeMutations } from "@thincoder/core/advisor/repos.mjs"
 import { executeToolCalls } from "@thincoder/core/agent/dispatch.mjs"
+import { recordToolResults } from "@thincoder/core/agent/record-results.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "@thincoder/core/session-slots.mjs"
 
 let tmp, sessionsDir
@@ -176,4 +177,44 @@ test("T-22 边界（门禁·保守）：touchedPaths 返回非字符串/缺失 �
   const noPathsTool = { name: "write", readonly: false, touchedPaths: () => [], execute: async () => "written" }
   const r2 = await executeToolCalls(engParent(), new Map([["write", noPathsTool]]), [call({ path: "docs/a.md" })], {}, 0, undefined)
   assert.match(String(r2[0].result), /no permission handler configured/, "空路径集 → 不吃保守分支（文档豁免按声明判）")
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// #327（TOOLS.md §6.17）：`args = null` 边界——消费面零裸抛（T-22 族扩）
+// ─────────────────────────────────────────────────────────────────────────────
+
+test("T-23 边界（#327）：args = null 两态 ⇒ 设计闸零裸抛、保守拒（原裸 TypeError 逸出）", async () => {
+  // 态①：有钩子——钩子对 null 裸解引用（#327 前的裸抛根因）
+  const hooked = { name: "write", readonly: false, touchedPaths: (a) => [a.path], execute: async () => "written" }
+  const r1 = await executeToolCalls(engParent(), new Map([["write", hooked]]), [{ name: "write", arguments: "null", id: "c1" }], {}, 0, undefined)
+  assert.equal(r1[0].ok, false)
+  assert.match(String(r1[0].result), /design review required/, "未知路径（非字符串）⇒ 保守拦截保持")
+  // 态②：无钩子——单参兜底 ⇒ [undefined]（同判）
+  const bare = { name: "write", readonly: false, execute: async () => "written" }
+  const r2 = await executeToolCalls(engParent(), new Map([["write", bare]]), [{ name: "write", arguments: "null", id: "c2" }], {}, 0, undefined)
+  assert.equal(r2[0].ok, false)
+  assert.match(String(r2[0].result), /design review required/)
+})
+
+test("T-25 边界（#327 同族）：畸形 args（null）下工具抛错 ⇒ 整跑不崩、收口为成形 Error 结果", async () => {
+  // 触发面 = autoApprove 短路（非工程面，设计闸不入）——异常路径同样不得裸解引用 args
+  const boom = { name: "write", readonly: false, touchedPaths: (a) => [a.path], execute: async () => { throw new TypeError("boom: tool-side null deref") } }
+  const agent = engParent({ autoApprove: true, config: { agent: {} }, _touchedFiles: [] })
+  const r = await executeToolCalls(agent, new Map([["write", boom]]), [{ name: "write", arguments: "null", id: "c1" }], {}, 0, undefined)
+  assert.equal(r[0].ok, false)
+  assert.match(String(r[0].result), /^Error: boom: tool-side null deref/, "成形 Error 结果（不得以裸 TypeError 逸出整跑）")
+})
+
+test("T-24 消费面（#327）：畸形 arguments（null）零裸抛——记账面跳过、流程成形收口", async () => {
+  const agent = { cwd: tmp, history: [], config: { agent: {} }, _touchedFiles: [] }
+  const tool = { name: "write", readonly: false, touchedPaths: (a) => [a.path] }
+  await assert.doesNotReject(recordToolResults(agent, new Map([["write", tool]]), [
+    { toolCall: { name: "write", arguments: "null", id: "c1" }, result: "written", ok: true },
+  ]), "畸形 args 不再裸抛（#327 前 = TypeError 逸出 agent 循环）")
+  assert.deepEqual(agent._touchedFiles, [], "畸形 args ⇒ 零记账（尽力而为面）")
+  // 对照（正常面零回归）：合法 args ⇒ 记账在位
+  await recordToolResults(agent, new Map([["write", tool]]), [
+    { toolCall: { name: "write", arguments: JSON.stringify({ path: "src/x.mjs" }), id: "c2" }, result: "written", ok: true },
+  ])
+  assert.deepEqual(agent._touchedFiles, [join(tmp, "src", "x.mjs")])
 })

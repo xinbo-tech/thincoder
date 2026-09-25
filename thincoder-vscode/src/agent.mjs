@@ -14,15 +14,16 @@ import {
 } from "./agent/run-helpers.mjs"
 import { executeToolBatches } from "./agent/execute-tools.mjs"
 import { hydrateRun, setupAgentRun } from "./agent/setup.mjs"
-// #130 A-3：stream 规则 abort 消费（部分输出入线 + 规则提醒 + `continue` 重入）
-import { applyRuleTriggered } from "./agent/rules-face.mjs"
+// 响应后处理段（traceStop / 内置工具本地化 / interrupt / usage / #130 A-3 流规则 abort / 提醒）
+// 2026-09-25 file-tier-sweep 批 S2 外提 = agent/response-stages.mjs。
+import { applyResponseStages } from "./agent/response-stages.mjs"
 // #45（WEBVIEW-PROTOCOL.md §3.3）：工具驱动的模式 / 参数变更 → 端显示同步 cell（纯函数）
 import { syncToolDrivenDisplayState } from "./agent/agent-state.mjs"
 import { AUTO_REMINDER, ENG_OFF_REMINDER, ENG_ON_REMINDER, injectEngineeringReminder, pushManifestStateReminder } from "./agent/setup-reminders.mjs"
 // 端侧回合域文本组合单点（核基座 + 端 overlay——§6.27.12.5 L；原自持基座常量块外提 = 拆分计划落地）。
 import { composeTurnDomain } from "./agent/turn-domains.mjs"
 // 主循环阶段函数（压缩检查/蒸馏发射/回合收尾/响应提醒）2026-09-05 实践轮迁 agent/run-stages.mjs
-import { checkAndCompact, fireEndOfRunDistill, finalizeAgentTurn, injectResponseReminders, maybeGuardPushbacks } from "./agent/run-stages.mjs"
+import { checkAndCompact, fireEndOfRunDistill, finalizeAgentTurn, maybeGuardPushbacks } from "./agent/run-stages.mjs"
 // D-CI4（VSC-CONTEXT-PARITY 批——上下文注入面）：plan-mode 节律常量/计数（W9 起 = 核单源 agent-tools/plan.mjs）
 import { planReminderForTurn } from "@thincoder/core/agent-tools/plan.mjs"
 
@@ -297,51 +298,11 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
         traces: agent.config?.traces?.enabled !== false,
       },
     })
-    traceStop(`turn ${turn}: LLM stream ended`)
-
-    // 内置工具（Responses web_search）结果本地化：服务端已执行——入历史为 tool 消息，
-    // 模型下一轮可见；全量回传时 transport 依 tool_call_id 前缀还原 web_search_call item。
-    // 服务端 item id 是 msg_xxx 非 web_search_call_ 前缀——必须合成前缀（toItems 识别锚点），
-    // 原始 id 存入 content（真机冒烟 2026-08-31，与 CLI 同修）。
-    for (const btr of response.builtinToolResults ?? []) {
-      if (!btr?.id) continue
-      pushReal(history, fullHistory, {
-        role: "tool",
-        tool_call_id: `web_search_call_${btr.id}`,
-        content: JSON.stringify({ id: btr.id, query: btr.query ?? "", sources: btr.sources ?? [], status: btr.status ?? "completed" }),
-      })
-    }
-
-    // Interrupt (Ctrl+I, CLI agent.mjs parity): the SSE stream returned the
-    // partial result — commit the partial assistant output, inject the user's
-    // message, and throw so the outer loop rebuilds the controller and resumes.
-    if (response.interrupted) {
-      if (response.content) pushReal(history, fullHistory, { role: "assistant", content: response.content })
-      history.push({ role: "user", content: `[User interrupt: ${response.interruptMessage}]` })
-      const err = new DOMException("Aborted", "AbortError")
-      err.reason = { interrupt: true, message: response.interruptMessage }
-      throw err
-    }
-
-    if (response.usage && depth === 0) {
-      callbacks.onUsage?.(response.usage)
-      // Measured compaction baseline (CLI parity D3): the full-context prompt_tokens from
-      // this response anchors the next compaction check; appended messages count as increments.
-      if (response.usage.prompt_tokens != null) {
-        agent._lastPromptTokens = response.usage.prompt_tokens
-        agent._usageAtLen = history.length
-      }
-    }
-
-    // Stream rule triggered (action: "abort"): halt, inject the rule message, retry from the
-    // same context (CLI `agent.mjs:305-315` parity — response 后处理段、injectResponseReminders 之前)。
-    // 注：核中 ruleTriggered 先于 interrupted，本端反之——两标志互斥（核 provider/sse.mjs：
-    // abort 规则命中即 return，interrupted 仅在 catch 置位）⇒ 次序无观测差。
-    if (applyRuleTriggered(agent, history, fullHistory, response)) continue
-
-    // Warnings from this response + abnormal finish-reason reminder (D-CI9——cli
-    // agent.mjs:293 同位：interrupt/builtin 处理之后、toolCalls 分支之前)。
-    injectResponseReminders(agent, response)
+    // 响应后处理段（traceStop → 内置工具本地化 → interrupt → usage → 流规则 abort → 提醒）
+    // 2026-09-25 file-tier-sweep 批 S2 外提 = agent/response-stages.mjs；控制流保真——interrupt
+    // 的 throw 随栈传播（本调用点在主 try 内）、abort 的 continue 由判别式回传（此处翻译）。
+    const responseStage = applyResponseStages({ agent, history, fullHistory, response, turn, depth, callbacks })
+    if (responseStage?.action === "continue") continue
 
     // ─── No tool calls ──────────────────────
     if (response.toolCalls.length === 0) {

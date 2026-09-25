@@ -15,8 +15,8 @@ import { injectProjectGuide, injectDocumentMap, injectProjectStandards, NO_GIT_N
 export { findProjectRoot, injectProjectGuide } from "./project-context.mjs"
 
 /**
- * Build the mechanical review-object declaration block (AGENT-LOOP.md §18.8
- * D-OA2 — English anchored form). Injected at the START of the review user
+ * Build the mechanical review-object declaration block (AGENT-LOOP-ASYNC-POOL.md §6.18
+ * — English anchored form). Injected at the START of the review user
  * message every round: round 1 (design + code), the legacy convergence path,
  * and the round-2+ follow-up (see buildAdvisorFollowUp) — the reviewer must
  * not re-derive "who is being reviewed / why" from the documents (T-OA2:

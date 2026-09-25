@@ -1,11 +1,11 @@
 /**
- * subagent-panel.mjs — 运行中子 agent 固定底部面板渲染（AGENT-LOOP.md §7.2.1 D1/D2）。
+ * subagent-panel.mjs — 运行中子 agent 固定底部面板渲染（docs/cli/design/TUI.md §6.8）。
  *
  * 面板位于 conversation 与 todo 之间（布局顺序 header → conversation → 面板 →
  * todo → picker → permission → queue → input → status），高度完全自适应 = 全部
  * 运行中区块的渲染行数（F2，会话区被挤小）；无运行中区块 → 返回 []（F6 空态，
  * 无悬空分隔线）。子 agent 完成后立即冻结进会话流（subagent-blocks.mjs
- * freezeSubTaskLines，✓ 头 + 可展开，§7.2 D4 现状不变），面板下一帧自然移除
+ * freezeSubTaskLines，✓ 头 + 可展开，现状不变），面板下一帧自然移除
  * 该区块（F5）——本模块只渲染 `!done` 条目。AGENT-LOOP-ASYNC-POOL.md §6.8 T-S14 中间态例外：挂起期已结算
  * 区块（sub.done && sub.awaitingDigest）冻结被延迟，驻留面板显示
  * "done · awaiting digestion"，池空补发冻结后才移除。

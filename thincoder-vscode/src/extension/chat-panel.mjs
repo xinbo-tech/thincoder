@@ -10,8 +10,7 @@ import * as vscode from "vscode"
 import { readFileSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
-import { setSlotAutoApprove, setSlotPlanMode } from "./session-io.mjs"
-import { providerStatus, saveProviderKey, deleteProviderKey, pushStatus, fullStatus, endProbeWindow, agentSettings, proxySettings, shellCandidates, websearchSettings, saveMcpServer, deleteMcpServer } from "./settings.mjs"
+import { endProbeWindow } from "./settings.mjs" // F-W19（探针窗口终止）——消费点在 resolveWebviewView/dispose（本档留守面）
 import { loadLocaleStrings } from "../i18n.mjs"
 import { handlePanelMessage, routeUserTurn, _cwd, setProjectFolder, clearProjectOverride, stopLiveHeartbeat } from "./panel-messages.mjs"
 // queue-visible 批（2026-09-24 · 台账 #249）：队容量单源 = `queued-merge.mjs`（会话载体满队守卫）
@@ -20,13 +19,14 @@ import { QUEUED_MAX_ITEMS } from "./queued-merge.mjs"
 import { blockOnNoWorkspace, pushWorkspaceGuard, releaseWorkspaceGuard, hasWorkspaceFolder } from "./workspace-guard.mjs"
 import { subagentChannelSummary } from "./panel-subagent-relay.mjs"
 import { runPanelChat } from "./panel-chat.mjs"
-import { loadRaw } from "@thincoder/core/config-io.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"
 import { initStopTrace } from "./stop-trace.mjs"
 import { ensureSlot, activeData, activeHistory, activeLines, saveLines, loadModelPrefs, loadSession, loadOlder, newSession, deleteSession, pushSessions, generateTitle, status as bootstrapStatus, openSessionContent } from "./panel-session.mjs"
 import { projectInfo, pushProject, applyProjectSwitch, onProjectChanged, pickProject, releaseOldCwdClaims } from "./panel-project.mjs"
 import { pushIndexStatus, atComplete, saveEmbeddingConfig, maybePromptIndex, buildIndex, maybePromptLegacyIndexRemoval } from "./panel-index.mjs"
 import { closeAllMcp, pushMcpStatus, reconnectMcp, editMcp, testMcp } from "./panel-mcp.mjs"
+// Settings 段整段外提（2026-09-25 file-tier-sweep 批 S1——同名薄委托传 `this`，外部调用点零改）。
+import { providerStatus, saveProviderKey, deleteProviderKey, saveMcpServer, deleteMcpServer, setAutoApprove, setPlanMode, engineeringOn, pushStatus, pushSettingsLight, pushSettings, agentSettingsSession } from "./panel-settings-push.mjs"
 import { initLedgerSurface, dispose as disposeLedgerSurface } from "./ledger-surface.mjs" // LEDGER-SURFACE（§2.30.3.5）
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -331,91 +331,20 @@ export class ChatPanel {
   _editMcp(name, config) { return editMcp(this, name, config) }
   async _testMcp(name) { return testMcp(this, name) }
 
-  // ─── Settings ─────────────────────────────────
+  // ─── Settings (implementations in panel-settings-push.mjs) ───
 
-  _providerStatus() { return providerStatus() }
-  async _saveProviderKey(name, key) { await saveProviderKey(name, key); this._pushStatus() }
-  async _deleteProviderKey(name) { await deleteProviderKey(name); this._pushStatus() }
-  _saveMcpServer(name, config) { return saveMcpServer(name, config) }
-  _deleteMcpServer(name) { return deleteMcpServer(name) }
-
-  async _setAutoApprove(value) {
-    this._autoApprove = value  // mid-turn source of truth for the permission gate
-    // Session-level persistence (CLI parity): autoApprove lives in the slot file shared
-    // with the CLI — NOT in VS Code settings.json. Workspace-scope overrides of the old
-    // `thincoder.autoApprove` setting are gone with it (the setting is removed).
-    try {
-      setSlotAutoApprove(_cwd(), this._ensureSlot(), value)
-    } catch { /* slot unwritable — the live flag still governs this turn */ }
-  }
-
-  /** Toggle plan mode (session-level, like autoApprove). Persists to the slot so the
-   *  toolbar button and the model's own plan tool stay in sync across turns.
-   *  ENG-PLAN-EXCLUSION（FR31 ② / AC13/T11）：工程模式 ⇒ **开方向拒绝**——不写槽 + 回弹
-   *  `{type:"planMode", active:false}`（真值 = 槽权威面 `agentSettings(_agentSettingsSession())`
-   *  ——`_agentSettingsSession` 先例同档 `:359-364`；不读 `_agent`，恢复后的工程会话首回合前也不
-   *  fail-open）。关方向（value:false）是归零语义（`handleSetEngineeringEnabled` ON 时就地调它），
-   *  照常走既有契约（槽写 + 回推）——工程态下它只会把残留半状态清干净。 */
-  async _setPlanMode(value) {
-    if (value === true && this._engineeringOn()) {
-      this._panel?.webview.postMessage({ type: "planMode", active: false })
-      return
-    }
-    try {
-      setSlotPlanMode(_cwd(), this._ensureSlot(), value)
-    } catch { /* slot unwritable — the flag still governs this turn */ }
-    this._panel?.webview.postMessage({ type: "planMode", active: value })
-  }
-
-  /** 工程模式真值（槽权威面——`agentSettings` 槽优先/ config 回退；读失败 ⇒ 非工程——不制造假拒）。 */
-  _engineeringOn() {
-    try { return agentSettings(this._agentSettingsSession()).engineering === true } catch { return false }
-  }
-
-  _pushStatus() {
-    pushStatus(this._panel)
-  }
-
-  /** Settings snapshot push WITHOUT the provider-model network probe (fullStatus).
-   *  Used for save acknowledgements — the panel already shows what the user typed;
-   *  a full re-probe would rebuild the settings panel and drop in-progress edits.
-   *  **序 = 契约**（`SETTINGS.md` §2.8）：`agentSettings` 居末位——它是打开等待器的唯一
-   *  触发拍（`webview/settings.js` 的 `requestAgentSettingsThen`），末位才能保证建面时
-   *  其余快照已在位。 */
-  async _pushSettingsLight() {
-    // Snapshot-only (no network probe) — but the snapshot must be COMPLETE: providerStatus
-    // (per-provider proxy checkboxes revert without it) and shellCandidates WITH current
-    // (the webview nulls the shell value when current is missing).
-    // F-W18（`SETTINGS.md` §2.11）：shell 候选面探测 = 异步（`await`，不阻塞宿主事件循环）——
-    // **相对序零改**：agentSettings 仍居末位（打开等待器唯一触发拍——W8-1 序契约）。
-    pushStatus(this._panel)
-    this._panel?.webview.postMessage({ type: "proxySettings", settings: proxySettings() })
-    this._panel?.webview.postMessage({ type: "websearchSettings", settings: websearchSettings() })
-    this._panel?.webview.postMessage({ type: "shellCandidates", candidates: await shellCandidates(), current: loadRaw().shell ?? null })
-    this._panel?.webview.postMessage({ type: "agentSettings", settings: agentSettings(this._agentSettingsSession()) })
-  }
-
-  async _pushSettings() {
-    fullStatus(this._panel)
-    // F-W18（§2.11）：候选面就绪后再发快照族（异步探测——不阻塞事件循环；相对序零改）。
-    const candidates = await shellCandidates()
-    this._panel?.webview.postMessage({ type: "agentSettings", settings: agentSettings(this._agentSettingsSession()) })
-    this._panel?.webview.postMessage({ type: "proxySettings", settings: proxySettings() })
-    this._panel?.webview.postMessage({ type: "websearchSettings", settings: websearchSettings() })
-    this._panel?.webview.postMessage({ type: "shellCandidates", candidates, current: loadRaw().shell ?? null })
-    this._pushMcpStatus()
-    this._pushIndexStatus()
-  }
-
-  /** Session reference for the agentSettings snapshot: engineering/advisor.guard are
-   *  session-level (slot authority) — the ENG/GUARD buttons must reflect the session,
-   *  not global config. Unbound panel (no slot yet) → null → config fallback. */
-  _agentSettingsSession() {
-    try {
-      const slot = this._slot ?? this._ensureSlot()
-      return slot != null ? { cwd: _cwd(), slot } : null
-    } catch { return null }
-  }
+  _providerStatus() { return providerStatus(this) }
+  async _saveProviderKey(name, key) { return saveProviderKey(this, name, key) }
+  async _deleteProviderKey(name) { return deleteProviderKey(this, name) }
+  _saveMcpServer(name, config) { return saveMcpServer(this, name, config) }
+  _deleteMcpServer(name) { return deleteMcpServer(this, name) }
+  async _setAutoApprove(value) { return setAutoApprove(this, value) }
+  async _setPlanMode(value) { return setPlanMode(this, value) }
+  _engineeringOn() { return engineeringOn(this) }
+  _pushStatus() { return pushStatus(this) }
+  async _pushSettingsLight() { return pushSettingsLight(this) }
+  async _pushSettings() { return pushSettings(this) }
+  _agentSettingsSession() { return agentSettingsSession(this) }
 
   // ─── Index (implementations in panel-index.mjs) ───
 

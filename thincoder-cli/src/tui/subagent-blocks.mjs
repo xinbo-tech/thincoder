@@ -1,5 +1,5 @@
 /**
- * subagent-blocks.mjs — 子agent 活动区块缓冲（AGENT-LOOP.md §7.2 D4，消费端）。
+ * subagent-blocks.mjs — 子agent 活动区块缓冲（docs/cli/design/TUI.md §6.8，消费端）。
  * state.subTasks[key] = { key, role, model, async（AGENT-LOOP-SUBAGENT.md §6.7.2 D-M7b——⟦ev⟧async 标记——
  * undefined = sync）, started, done, doneAt, blocks:
  * [{kind,text}], currentTool, toolArgs, turn, maxTurns, approval, lastError,

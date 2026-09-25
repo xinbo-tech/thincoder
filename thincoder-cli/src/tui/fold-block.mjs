@@ -7,7 +7,7 @@
  * 最高占屏 60%，底控件必落在视口内，展开永远可逆。
  *
  * 消费方（render-conversation.mjs 六处折叠点）：
- *   1. 子agent 活动区块（运行中 / 冻结，AGENT-LOOP §7.2 D4）
+ *   1. 子agent 活动区块（运行中 / 冻结，docs/cli/design/TUI.md §6.8）
  *   2. advisor 评审块（运行中 _advisorBlocks / 冻结 _frozenAdvisor）
  *   3. 长消息折叠（long-N）/ 连续 dim 折叠（fold-N）
  *

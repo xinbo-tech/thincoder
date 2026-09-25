@@ -112,7 +112,7 @@ test("done-in-pool 统一表示（AC3）：回合内 settle 留池 done:true—�
   assert.equal(entry._inPending, true)
 })
 
-test("腾槽补位（旧行为零回归）：cancelled settle 释放槽 → queued 头自动启动（AGENT-LOOP.md §10 settle/cancel 释放槽后启动到槽满）", () => {
+test("腾槽补位（旧行为零回归）：cancelled settle 释放槽 → queued 头自动启动（AGENT-LOOP-SUBAGENT.md §6.9：settle/cancel 释放槽后启动到槽满）", () => {
   let started = 0
   const queued = {
     id: 9, role: "coder", status: "queued", done: false, cancelled: false,

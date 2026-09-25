@@ -1,6 +1,6 @@
 /**
  * abort-provenance.test.mjs — 第 24 批（子代理 abort 来源标注——可诊断性）测试用例表：
- * T-AP1–T-AP8（AGENT-LOOP.md §20.7 表）。
+ * T-AP1–T-AP8。
  *
  * T-AP8（既有 abort / 结算 / 取消五族全绿 = N-D1.1 零回归）判定 = 命令级：
  *   node --test test/sync-cancel.test.mjs test/async-settle.test.mjs test/queued-stop.test.mjs \

@@ -1,7 +1,7 @@
 /**
  * git-noninteractive.test.mjs — git 工具非交互加固（TOOLS.md §6.14 · 批 GIT-NONINTERACTIVE · 台账 #207）。
  * 本档 = A23–A26（行为面：编辑器族压制 / 凭据 helper + 超时兜底 / 凭据原生路 / 超时三件套）
- *      + A28（结构面：四档 `execFileSync` 白名单恰一处 / 加固键单点 / 三适配器经 `spawnGit`）。
+ *      + A28（结构面：五档 `execFileSync` 命中 = 零 / 加固键单点 / `gitDiffOne` 与三适配器经 `spawnGit`）。
  * A27（**两包**全量回归）· A29（清算表齐全）= 跑项 / 文档面，不在本档。
  *
  * 夹具三形态（设计测试面）：① scratch 仓（`git init` + 本地 identity + 冲突态）② 挂死进程夹具
@@ -198,28 +198,32 @@ test("A26 超时三件套：≤ timeout+3s settle ∧ timedOut 形 ∧ 树不存
 
 const stripComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1")
 
-test("A28 结构：execFileSync 白名单恰一处 ∧ 加固键单点 ∧ 三适配器经 spawnGit", () => {
-  const FOUR = ["tools/shared.mjs", "tools/git.mjs", "tools/git-ext.mjs", "tools/git-checkpoint.mjs"]
+test("A28 结构：五档 `execFileSync` 命中 = 零 ∧ `gitDiffOne` 经 `spawnGit` ∧ 加固键单点 ∧ 三适配器经 `spawnGit`", () => {
+  const FIVE = ["tools/shared.mjs", "tools/git.mjs", "tools/git-ext.mjs", "tools/git-checkpoint.mjs", "tools/patch.mjs"]
   const read = (rel) => stripComments(readFileSync(join(ROOT, rel), "utf8"))
-  // ① 调用点（`execFileSync(`——非 import 行）：白名单恰一处（`gitDiffOne` 函数体内 = file/edit 族
-  //    预览面、表外复核位、零改）∧ 白名单外零命中（含三适配器体内零命中）
+  // ① 调用点（`execFileSync(`——非 import 行）：五档命中 = **零**。#208①（2026-09-25）判据更新——
+  //    表外同步 spawn 两处（`shared.mjs` `gitDiffOne` · `patch.mjs` `ls-files` 探针）已转 `spawnGit`；
+  //    as-of git-noninteractive 批前 = 4 处命中（`shared.mjs` 2 · `git.mjs` 1 · `git-ext.mjs` 1）⇒
+  //    该批后四档命中恰一处（白名单位 = `gitDiffOne` 体内），本批后归零。
   const calls = []
-  for (const rel of FOUR) for (const m of read(rel).matchAll(/execFileSync\s*\(/g)) calls.push({ rel, idx: m.index })
-  assert.equal(calls.length, 1, `四档命中须恰一处（实读 ${calls.length}：${calls.map((c) => c.rel).join(", ")}）`)
+  for (const rel of FIVE) for (const m of read(rel).matchAll(/execFileSync\s*\(/g)) calls.push(rel)
+  assert.deepEqual(calls, [], `五档 execFileSync 命中须零（实读 ${calls.length}：${calls.join(", ")}）`)
+  // ② `gitDiffOne` 经 `spawnGit`：定义位为 async 壳 ∧ 体内 await `spawnGit` ∧ 体内零同步形态
   const shared = read("tools/shared.mjs")
-  const bodyStart = shared.indexOf("export function gitDiffOne(")
+  const bodyStart = shared.indexOf("export async function gitDiffOne(")
   const bodyEnd = shared.indexOf("\n}", bodyStart)
-  assert.ok(bodyStart >= 0 && bodyEnd > bodyStart, "`gitDiffOne` 函数体在盘")
-  assert.equal(calls[0].rel, "tools/shared.mjs", "唯一命中 = `shared.mjs`")
-  assert.ok(calls[0].idx > bodyStart && calls[0].idx < bodyEnd, "唯一命中 = `gitDiffOne` 函数体内（白名单位）")
-  // ② 加固键字面在 `tools/` 域内仅 `git-run.mjs`（单点）+ 既有 `bash.mjs`（零改先例）。
+  assert.ok(bodyStart >= 0 && bodyEnd > bodyStart, "`gitDiffOne` async 函数体在盘")
+  const body = shared.slice(bodyStart, bodyEnd)
+  assert.match(body, /\bawait\s+spawnGit\(/, "`gitDiffOne` 体经 `spawnGit` 单点（async）")
+  assert.ok(!body.includes("execFileSync"), "`gitDiffOne` 体内零 `execFileSync`")
+  // ③ 加固键字面在 `tools/` 域内仅 `git-run.mjs`（单点）+ 既有 `bash.mjs`（零改先例）。
   //    取键 = **GIT_* 四专属键**（非通用词形——裸 `EDITOR` / `VISUAL` / `PAGER` / `TERM` 在域内散见，
   //    并入需词边界归并；四键已能唯一钉住「第二处加固集」）。
   const KEYS = ["GIT_EDITOR", "GIT_SEQUENCE_EDITOR", "GIT_TERMINAL_PROMPT", "GIT_ASKPASS"]
   const hits = readdirSync(join(ROOT, "tools")).filter((n) => n.endsWith(".mjs"))
     .filter((n) => KEYS.some((k) => read(`tools/${n}`).includes(k)))
   assert.deepEqual(hits.sort(), ["bash.mjs", "git-run.mjs"], "加固键单点（第二处 = 重复实现嫌疑）")
-  // ③ 三适配器均经 `spawnGit`（import 命中）
+  // ④ 三适配器均经 `spawnGit`（import 命中）
   for (const rel of ["tools/shared.mjs", "tools/git.mjs", "tools/git-ext.mjs"]) {
     assert.match(read(rel), /import\s*{[^}]*\bspawnGit\b[^}]*}\s*from\s*"\.\/git-run\.mjs"/, `${rel} 经 spawnGit 单点`)
   }

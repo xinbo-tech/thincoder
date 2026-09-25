@@ -16,7 +16,8 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { computeEditEntry, applyPatchLines, runSingleEdit } from "@thincoder/core/tools/edit-diff.mjs"
 import { applyEditBatch, FUZZY_MATCH_NOTE, normalizeEditLine } from "@thincoder/core/tools/edit-batch.mjs"
-import { editTool } from "@thincoder/core/tools/file.mjs"
+import { editTool, writeTool, insertAfterTool, hashlineEditTool } from "@thincoder/core/tools/file.mjs"
+import { applyPatchTool, deleteTool } from "@thincoder/core/tools/patch.mjs"
 import { buildAcpCallbacks } from "../src/acp/bridge.mjs"
 import { slow } from "./slow.mjs"
 
@@ -367,6 +368,45 @@ test("#325 桥: 正向对照——合法批量经桥仍通（守卫零误拦）"
   assert.equal(r.handled, true)
   assert.match(r.result, /^OK: edited a\.txt via IDE \(1 occurrence\(s\)\)/)
   assert.deepEqual(h.requests.map((x) => x.method), ["fs/read_text_file", "fs/write_text_file"])
+})
+
+// ---- #327（TOOLS.md §6.17——判据归一 / 前提机检） ---------------------------
+
+const NARROW = { path: "f.txt", edits: "not-an-array", old_string: "a", new_string: "b" }
+const SIX_MUTATORS = [writeTool, editTool, insertAfterTool, hashlineEditTool, applyPatchTool, deleteTool]
+/** 必败判据（形态不参与判定——`Error:` 串 ∥ 抛错同收；AC-4 只取「必败 ∧ 零变更」）。 */
+const failed = async (fn) => { try { return String(await fn()).startsWith("Error:") } catch { return true } }
+
+test("#327 T7 核: 窄形态（edits 真值非数组 + 合法单形态参数）⇒ 容器面成形错误", async () => {
+  await assert.rejects(editTool.execute({ ...NARROW }, CTX0), /edits must be a non-empty array of/,
+    "该调用必败——不再走单形态落地（回 #325 容器守卫同一错误面）")
+})
+
+test("#327 T8 桥: 同参数经 toolRouter ⇒ 同错误面（同句）、零反向 RPC（目标零变更）", async () => {
+  let coreMsg = ""
+  await assert.rejects(editTool.execute({ ...NARROW }, CTX0), (e) => { coreMsg = e.message; return true })
+  const h = bridgeHarness()
+  const r = await h.cb.toolRouter("edit", { ...NARROW })
+  assert.equal(r.handled, true)
+  assert.equal(r.result, `Error: ${coreMsg}`, "两通道同句（容器守卫单源）——不再有「桥径单形态应用」分支")
+  assert.equal(h.requests.length, 0, "守卫先于任何 fs 反向 RPC（零读零写）")
+})
+
+slow("#327 T9: FILE_MUTATORS 六成员 × args=null ⇒ 必败 ∧ 目标零变更（+ edit 窄形态）", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "thincoder-edit-"))
+  try {
+    const p = join(dir, "t9.txt")
+    await writeFile(p, "alpha\nbeta\n", "utf8")
+    const ctx = { cwd: dir, agent: { cwd: dir }, depth: 0 }
+    for (const tool of SIX_MUTATORS) {
+      assert.equal(await failed(() => tool.execute(null, ctx)), true, `${tool.name} × args=null ⇒ 必败（先跑读数 = 抛错；形态不参与判定）`)
+      assert.equal(await readFile(p, "utf8"), "alpha\nbeta\n", `${tool.name}: 目标零变更`)
+    }
+    assert.equal(await failed(() => editTool.execute({ ...NARROW, path: p, old_string: "alpha", new_string: "ALPHA" }, ctx)), true, "edit 窄形态 ⇒ 必败")
+    assert.equal(await readFile(p, "utf8"), "alpha\nbeta\n", "窄形态目标零变更")
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
 })
 
 // ---- 端到端（fs 落盘——slow 层） -------------------------------------------

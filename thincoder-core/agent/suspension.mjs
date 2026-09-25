@@ -143,7 +143,7 @@ function waitForSettleOrWake(carrier, abortSignal, latch) {
 /**
  * 启动挂起会话（同步返回句柄；宿主 `await handle.done` ⇒ `{ reason, residualInput }`）。
  *
- * 状态机行表（承 AGENT-LOOP.md §9/§7 行表）：
+ * 状态机行表（承 AGENT-LOOP-ASYNC-POOL.md §6.8 行表）：
  * 1. 用户输入优先（D-S5）：pendingInput 非空 → 以该消息开普通回合（`_suspended=false`）；
  * 2. pending 非空 或 存在未 drain 的 ask（`upstreamWaiting`）→ 合并消化轮 / 唤醒轮（auto-turn；
  *    注入由宿主 runTurn 首行完成——单注入点）；

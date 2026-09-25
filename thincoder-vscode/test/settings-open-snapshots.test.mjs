@@ -161,7 +161,7 @@ test("W8-4（F-W18 ②）注入延迟伪探测：打开拍序零变 + 相邻两�
 })
 
 test("W8-5（F-W18 ①）静态扫描：探测链零同步形态（调用形态判据）+ 扫描域完整性 fail-closed", () => {
-  const chain = ["src/extension/settings.mjs", "src/extension/chat-panel.mjs", "src/extension/panel-messages-settings.mjs"]
+  const chain = ["src/extension/settings.mjs", "src/extension/panel-settings-push.mjs", "src/extension/panel-messages-settings.mjs"] // S1（2026-09-25 file-tier-sweep）：链集常量换位 chat-panel.mjs → panel-settings-push.mjs（引用 shellCandidates 的源档随拆换位——同轮更新）
   const syncCall = /\b(spawnSync|execSync)\s*\(/ // 调用形态——注释里出现名字不算
   for (const rel of chain) {
     const src = readFileSync(new URL(`../${rel}`, import.meta.url), "utf8")

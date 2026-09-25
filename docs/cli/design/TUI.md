@@ -5,7 +5,10 @@
 > 本档 = 三档之一：**界面核心**（本档）· `docs/cli/design/TUI-COMMANDS.md`（命令层与选择面）·
 > `docs/cli/design/TUI-SESSION-VIEW.md`（会话视图 / 回合驱动 / 显示层内存）。
 > 另有输入框契约档 `docs/cli/design/TUI-INPUT-BOX.md` 与工具输出档 `docs/cli/design/TUI-TOOL-OUTPUT.md`。
-> 对位档 = `docs/vsc/design/WEBVIEW*.md`（VSC webview 族——**非同机制**：CLI 为裸 ANSI 终端渲染、VSC 为 webview DOM；差异如实登记，各端独立实现）。
+> 对位档 = `docs/vsc/design/WEBVIEW*.md`（VSC webview 族——**非同机制**）——**已裁保留（A9 三件齐）**：
+> ① 结构性不对称 = 渲染宿主不同（VSC webview DOM + 宿主↔面板消息协议 ∥ CLI 裸 ANSI 终端行内渲染；消息协议仅单侧存在）；
+> ② 证据 = 两实现树（`thincoder-vscode/webview/**` + `WEBVIEW-PROTOCOL.md` ∥ `thincoder-cli/src/tui/**`）；
+> ③ 显式裁定 = 2026-09-14「逻辑 / 渲染分家」（同判据）+ 2026-09-25 本批确认（台账 #185）。
 > 建档：2026-09-15（**B 式迁移轮 · 第 6 批**——`thincoder-cli/docs/design/TUI.md`（1529 行）内容重建入基准层并**按读者面拆三档**；旧档原地一字不改、留作参照历史）。
 > 本档坐标与行数 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
 
@@ -376,8 +379,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 - **已知失效前提（未来复核项）**：同一外层块若出现两个**并发**内层子块交错，内层输出会并入末块的他人工具头块
   （`pushBlock` 仅按 kind 合并）；当前不可达——`depth > 0` spawn 恒同步（下游对 `depth > 0` 拒 async），
   未来放开并行嵌套时须复核。
-- **端差异**：VSC 侧嵌套活动保留「子标」形态（行首 dim 子标）——本批后**两端不再同构**（CLI 内层行无归属标）；
-  **端差异如实登记**（登记 ≠ 默认保留；**登记面 = 记录已裁的保留项**，✗ 非未决差项兜底）；**端差默认 = 消**（机制面差异 ⇒ 归核单源 / 两端口径统一）——保留仅限结构性不对称 + 证据 + 显式裁定（A9）；各端独立实现只述实现形态，✗ 不构成差异保留依据；**本项状态：待裁**（A9 三件未齐——消解路径 = 两端口径统一（嵌套归属标语义对齐）∥ 补显式裁定；到期 = 台账 #185「已登记端差逐项 A9 复核」落定）。
+- **嵌套归属标（已裁：消——台账 #185 二态落定 · 2026-09-25）**：两端同形——嵌套活动行**无归属标**（VSC 侧行首 dim 子标渲染删除，对齐 CLI 形；`dataset.sub` 合并判据保留 = 机制面，与 CLI `fresh` 判别同族）。**裁定 = 2026-09-22 复核「按推荐推进」+ 2026-09-25 本批落定**（A9 ✗✗✗ ⇒ 按「端差默认 = 消」收正）；消解落点 = `thincoder-vscode/webview/ui.js`；判据 = 可见面零「`<role>#<id> · `」前缀 ∧ 嵌套合并语义零回归（既有用例族）。
 
 #### 6.8.3 异步子代理「零块」修复（subagent-zero-block——2026-09-17）
 
@@ -592,7 +594,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 - **宽度预算**：标题段入既有 `statusMax` 链（整行 ≤ `cols − 1` 口径不变）；宽度紧张时键位组先让位（标题在键位组之前 ⇒ 标题存活优先）。
 - **可见态**：idle / processing 常态在行；模态提示态（question / permission / picker / wizard / slash 提示）状态行整行让位（既有形态，零改）。
 - **VSC 对位**：顶栏常显（`#session-title`）保持、端侧零改；**列表面**（`/session` / VSC `pushSessions`）两端同字段（`title`）同回退链（`listSlots` 派生——VSC `panel-session.mjs:227-231`）；
-  本段取值 = `agent.title` 活读 · **空值零注入**（非回退链）；空窗差（生成前 / 失败期：VSC 顶栏显回退链值 ∥ 本段零注入）= 已登记端差（A9 保留：结构性不对称 + 证据 + 显式裁定；登记 = 批档 §1）。
+  本段取值 = `agent.title` 活读 · **空值零注入**（非回退链）；空窗差（生成前 / 失败期：VSC 顶栏显回退链值 ∥ 本段零注入）= 已登记端差（**A9 保留 · 三件齐**：① 结构性不对称 = 宿主面——顶栏恒需占位 ∥ 状态行段可零注入；② 证据 = `thincoder-vscode/src/extension/panel-session.mjs:227-231` 回退链；③ 显式裁定 = 2026-09-21 父侧代裁（vsc-block-title-align 批 · D8 行）——复核（台账 #185）= 2026-09-25 本批确认）。
 - **可机判**：`renderStatus` 纯函数直驱——`agent.title` 置值 / 清空两次调用，strip-ANSI 文本读「含 ` │ <title>` / 零注入」两段（用例 = `test/session-title-surface.test.mjs`）。
 
 ### 7.5 queued 反馈面（F16 · busy-extend 批 2026-09-22 扩面 · 排队期可见 = queue-visible 批 2026-09-24）
@@ -652,7 +654,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 **排队块面（单条 / 多条两形）**：`renderConversation` / `buildConvLines` 直驱——N = 1 ⇒ 含 `⏳ 待发送 · 不打断当前执行，自动发送` + 原文行；N = 2 ⇒ 含 `1. ` / `2. ` 编号行 ∧ 标签行逐字 = `⏳ 待发送 · 2 条消息（不打断当前执行，合并发送）`；每条超 3 行 ⇒ 含该条尾标记行；队列空 ⇒ 零该串 ∧ 逐字节等价；全程零 `\x1b[43m`。
 **步边界 pickup 面（fix 轮新增）**：`pickupQueuedAtStepBoundary`（`thincoder-cli/src/tui/queued-pickup.mjs`（拟新增））直驱——桩 agent + 队列 2 条 ⇒ history 尾恰 +1 条 user 消息（内容 = R15 合并文本）∧ `state.lines` 含 `[sending queued message]` ∧ `❯ You:` ∧ 合并文本 ∧ `pendingInput` 空 ∧ 零 `[User interrupt:]`（非中断锁）；队列空 ⇒ 逐字节等价（零推送）。
 **合并消费面**：`planQueuedInput` / `formatMergedMessages` 纯函数直驱——2 条短消息 ⇒ 单动作（`merged:true`，文本逐字 = 头 `你排队了 2 条消息：` + 编号 + 尾 `——一次处理`）∧ 跨 8 条 ⇒ 截批（首动作 count ≤ 8）∧ 单条 > 2000 字符 ⇒ `merged:false` 直发。
-用例宿主 = `thincoder-cli/test/busy-injection.test.mjs`（T-F16-6 + 本批新增行——批档 §2 用例表）。
+用例宿主 = 2026-09-25 file-tier-sweep 批按族拆分后三档（`busy-injection.test.mjs`（留守）· `busy-injection-render.test.mjs` · `busy-injection-consume.test.mjs`）——T-F16-6 随渲染族入 `busy-injection-render.test.mjs`；逐例映射见 `docs/batches/2026-09-25-file-tier-sweep.md` §2「四·S4」。
 
 **VSC 对位**：**busy 即排队面**（`running`——挂起会话内与普通回合同判据；队列载体两态（容量 8）：会话在飞入会话队列 `susp.pendingInput` / 无会话入 `_busyQueued`）——
 机制单源 = `WEBVIEW-INPUT.md` §1 C-B2-6；webview 反馈 = 本地气泡（提交入槽即现 / 送达即 user 回声面——形态各端自落，语义同源）；
@@ -687,9 +689,13 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 | 会话恢复 / 懒加载 / 回合驱动 / 显示层额度 | 恢复管道 / 三层缓存 / runAgentTurn / 字符额度 | `docs/cli/design/TUI-SESSION-VIEW.md` |
 | 挂起会话状态机 / 子代理编排语义 | settle 时序 / 池管理 / 调度排队 | `docs/core/design/AGENT-LOOP.md`（本档只留显示层契约） |
 | 压缩面板 / MCP 表单 / 会话存档 | 跨板块机制 | `docs/core/design/CONTEXT-COMPACTION.md` §8 · `docs/core/design/MCP.md` §5/§8 · `docs/core/design/SESSION.md` |
-| VSC webview 对位 | webview 渲染 / 消息协议 / 子标 | `docs/vsc/design/WEBVIEW*.md`——**非同机制**（端差异如实登记——登记 ≠ 默认保留；**登记面 = 记录已裁的保留项**，✗ 非未决差项兜底；端差默认 = 消，保留须结构性不对称 + 证据 + 显式裁定（A9）；各端独立实现只述实现形态，✗ 不构成差异保留依据；**本项状态：待裁**（A9 三件未齐——消解路径 = 两端口径统一（webview 渲染 / 消息协议语义对齐）∥ 补显式裁定；到期 = 台账 #185「已登记端差逐项 A9 复核」落定）） |
+| VSC webview 对位 | webview 渲染 / 消息协议 | `docs/vsc/design/WEBVIEW*.md`——**非同机制**（端差异如实登记——登记 ≠ 默认保留；**登记面 = 记录已裁的保留项**，✗ 非未决差项兜底；端差默认 = 消，保留须结构性不对称 + 证据 + 显式裁定（A9）；各端独立实现只述实现形态，✗ 不构成差异保留依据；**已裁保留 · A9 三件齐**：① 结构性不对称 = 渲染宿主不同（VSC webview DOM + 宿主↔面板消息协议 ∥ CLI 裸 ANSI 终端行内渲染；消息协议仅单侧存在）；② 证据 = 两实现树（`thincoder-vscode/webview/**` + `WEBVIEW-PROTOCOL.md` ∥ `thincoder-cli/src/tui/**`）；③ 显式裁定 = 2026-09-14「逻辑 / 渲染分家」（同判据 · `CORE-UNIFICATION.md` §2.5 端特有桶）+ 2026-09-25 本批确认（台账 #185）） |
 
 ## 变更记录
+
+- 2026-09-25（**file-tier-sweep 批 · 评审轮 1 修正轮** · eng-designer——承 `docs/batches/2026-09-25-file-tier-sweep.md` §3 轮次 1 发现 4）：§7.5 用例宿主句随 S4 拆分收正——按族三档（留守 / 渲染族 / 消费族），逐例映射指向批档 §2「四·S4」。**机制面 / 契约点零变**。
+
+- 2026-09-25（**misc-four 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-misc-four.md` §2 · 台账 #185）：端差登记项二态落定三处——档头对位行 + §8.2「VSC webview 对位」行 = **保留（A9 三件齐回填）**；§6.8.2 嵌套归属标行 = **消**（两端同形——VSC 侧行首 dim 子标渲染删除，`dataset.sub` 合并判据保留）；§7.4 空窗差行 ③ 裁定来源回填（2026-09-21 父侧代裁 · D8）。**零新机制**（登记面语义收正）。
 
 - 2026-09-24（**queue-visible 批 · 收口前补述（父侧/设计侧）· eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §5 决策透明表 #1 / #2）：
   §7.5 增补两条——**体行折叠豁免**（`_skipDimFold`：原文行 / 尾标记行携标记，连 dim 折叠 pass 命中即整块不折）· **宽度口径**（折行宽 `cols - 1` 作用于逐条原文、`i. ` 前缀不预先扣除；编号首行总宽可超至多 3 列——终端软折行登记）。

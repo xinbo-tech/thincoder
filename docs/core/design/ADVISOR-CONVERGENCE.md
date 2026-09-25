@@ -4,9 +4,9 @@
 > 轮次提示词与机械执行层（轮次衰减 / citations / guard / 失败结算结论）是本档语义的执行实现；评审契约句以本档为准。
 > 需求层指针 = `docs/core/requirements/ADVISOR-CONVERGENCE.md`（该板块需求档——现状绝对路径）。
 > 兄弟档：`design/ADVISOR-GUARDS.md`（评审链边缘守卫：判定族 / 凭证链 / 引文候选链 / 预算 / 冻结窗口 / 护栏 / 预算跟随 / 加权）·
-> `design/ENGINEERING-MODE-V2.md`（token / 门禁 / guard 开关 / 信任模型——v1 设计档已归档 `_archive/`）· `design/AGENT-LOOP.md`（异步评审实例机制 · 判定铁律 · 评审对象锚）。
-> 权威边界：**同步评审路径 = 本档**；**异步评审路径 = `design/AGENT-LOOP.md` §11.2**（轮次语义以实例机制落地）；
-> **判定铁律 R1–R7 = `design/AGENT-LOOP.md` §12.2**——与本档**正交**（本档管轮次衰减 / 终止语义——**无机械上限**（§3）；铁律管严重级怎么定）；冲突时以本档轮次表为准。
+> `design/ENGINEERING-MODE-V2.md`（token / 门禁 / guard 开关 / 信任模型——v1 设计档已归档 `_archive/`）· `design/AGENT-LOOP-ASYNC-POOL.md`（异步评审实例机制 · 判定铁律 · 评审对象锚）。
+> 权威边界：**同步评审路径 = 本档**；**异步评审路径 = `design/AGENT-LOOP-ASYNC-POOL.md` §6.10**（轮次语义以实例机制落地）；
+> **判定铁律 R1–R7 = `design/AGENT-LOOP-ASYNC-POOL.md` §6.19**——与本档**正交**（本档管轮次衰减 / 终止语义——**无机械上限**（§3）；铁律管严重级怎么定）；冲突时以本档轮次表为准。
 > 实现载体：轮次提示词（`thincoder-core/prompts/advisor-round1.md` / `advisor-round2.md` / `advisor-round3.md` / `advisor-design.md`——硬加载，缺失即抛错）·
 > `thincoder-core/advisor.mjs`（system prompt 轮次选择 / follow-up 构建 / 评审会话组装）· `thincoder-core/advisor/run.mjs`（评审执行与启动拒绝契约）· `thincoder-core/advisor/notice.mjs`（失败结论 / 拒回文案 + 对象标识行单源）·
 > `thincoder-core/advisor/loop.mjs`（工具循环：硬墙 / 预算提示 / 结构化尾）· `thincoder-core/advisor/compaction.mjs`（压缩与守卫族）·
@@ -45,7 +45,7 @@
 - **轮次计数 = 已完成**的 advisor 评审尝试次数（同步路径：工具调用完成后记账——含失败/错误返回的尝试；拒发——类型门 / 池满 / 无范围——不计不置；异步路径：结算时递增——attempts 语义一致）。
 - round1 与 round2+ 的**语义判定是确定性的**：`轮次 > 0` **且**存有上一轮评审输出 → round 2+；否则 round 1（重启后归零 → 保守全量重评）。**无解析**：不解析 prior 表头、不匹配 all-clear 短语。
 - **提示词选择**：调用时已完成 0 → ROUND1，1 → ROUND2，≥2 → ROUND3。实现用「已完成次数 + 1」推导**即将进行**的轮次号——与已完成的次数相差 1，勿混淆。
-- **轮次预算按 review 实例计**（同步与异步工具路径共用实例注册表——reviewId = designId / 随机 id——round/prior 随实例；并发多评审的 round/prior 互不污染）。实例解析与结算细节权威 = `design/AGENT-LOOP.md` §11.2。
+- **轮次预算按 review 实例计**（同步与异步工具路径共用实例注册表——reviewId = designId / 随机 id——round/prior 随实例；并发多评审的 round/prior 互不污染）。实例解析与结算细节权威 = `design/AGENT-LOOP-ASYNC-POOL.md` §6.10。
 - **重置语义**：无 prior 且本 run 未改代码 → 轮次归零、开新评审周期（首次评审 / 上次 all-clear / 纯文档或无修改的 run——各自获得完整预算）；本 run 改过代码 → **保留轮次**（completion guard 必推回；轮次用于提示词衰减与显示——**不作终止判据**）。每 runAgent 起始重置镜像状态（resume 续写保留——轮次跨续跑延续）。
 
 ### 2.3 工具轮预算
@@ -57,7 +57,7 @@
 
 - **通过 = 无未决 🔴**：全部 🔴 已解决、仅剩 🟡/🔵 → 评审通过（🟡/🔵 不阻断 approval——照列不隐藏）。任一 🔴 未决 → 不得声称 passed。
 - **宿主判定面**：评审的“通过/不通过”**不是宿主控制流输入**——宿主不做 findings/短语解析——guard 只消费“评审发生”+ 轮次预算；是否通过由主 agent 读评审输出自行判断。**唯一机械例外** = 设计评审的凭证回显即通过信号（凭证入槽 / 门禁解锁）。
-- **文档状态矛盾不卡 pass**：文档矛盾 / 状态不一致 → 🟡 报出即过（report-and-pass，评审只读不改）——**机制级描述不一致除外（= 🔴——必须处理后才可过）**。判据来源 = 判定铁律（`design/AGENT-LOOP.md` §12.2）——本档不重复铁律正文。
+- **文档状态矛盾不卡 pass**：文档矛盾 / 状态不一致 → 🟡 报出即过（report-and-pass，评审只读不改）——**机制级描述不一致除外（= 🔴——必须处理后才可过）**。判据来源 = 判定铁律（`design/AGENT-LOOP-ASYNC-POOL.md` §6.19）——本档不重复铁律正文。
 
 ## 3. 轮次与终止（无机械上限）
 
@@ -326,6 +326,8 @@ advisor design review 标准维度补一条：
 | 状态行与落笔流水 | 「实现未启动 / 待 coder / 已落」类状态句 | 运行时状态 |
 
 ## 变更记录
+
+- 2026-09-25（**hygiene-items 批 · 档面 · eng-designer**——承 `docs/batches/2026-09-25-hygiene-items.md` §2 · 台账 #285）：头部兄弟档名录 + 权威边界两行 + §2.2 / §2.4 各一行共**五处**死指针改指——`design/AGENT-LOOP.md` §11.2 → `design/AGENT-LOOP-ASYNC-POOL.md` §6.10（异步评审池接入面）· §12.2 → 同档 §6.19（判定铁律 R1–R7）。**零新语义**（指向对象 = 已迁节现住档）。
 
 - 2026-09-20（**thinking 回传缺口批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-20-reasoning-echo-gap.md` §1 · 台账 #109）：§12 新增「工具轮 assistant 消息构造（回声恒带）」契约行——本档持有
  `thincoder-core/advisor/loop.mjs`（实现载体表 `:12`，非 `AGENT-LOOP-SUBAGENT.md`）⇒ advisor 镜像推入面（`:205-215`）的规范条文落此；判据与机制单源 = `CONTEXT-COMPACTION.md` §6.10 #9 / §7 D-CC22。机制条文其余零改。

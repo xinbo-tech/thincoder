@@ -166,7 +166,7 @@
 - **时点** = 回合尾、整档 save **之前**生成（两端同序）；标题期 = busy 窗口（VSC 面另见 §6.15）。
 - **读 / 展示**：**列表面**（CLI `/session` / VSC `pushSessions`）两端同读 `listSlots` 的标题（回退链 `title → firstMessage → "(empty)"`——VSC `pushSessions` 同链）；
   **常显 = 两端 chrome 常驻**（VSC 面板顶栏 / CLI 状态行段——CLI 段取值 = `agent.title` 活读 · **空值零注入**（非回退链）；落点设计 = `docs/cli/design/TUI.md` §7.4；D8 消 · 2026-09-21）；
-  空窗差（生成前 / 失败期：VSC 顶栏显回退链值 ∥ CLI 段零注入）= **已登记端差**（A9——结构性不对称 + 证据 + 显式裁定）；`/session` 列表按需面不变。
+  空窗差（生成前 / 失败期：VSC 顶栏显回退链值 ∥ CLI 段零注入）= **已登记端差**（A9——① 结构性不对称 = 宿主面（顶栏恒需占位 ∥ 状态行段可零注入）；② 证据 = `panel-session.mjs:227-231` 回退链；③ 显式裁定 = 2026-09-21 父侧代裁（vsc-block-title-align 批 D8）；复核 = 2026-09-25 本批）；`/session` 列表按需面不变。
 - **边界**：标题规范 / 超时 / 失败语义 / 手动重命名链（`renameSlot`）零改；机器注入消息（`[System reminder:` 前缀）永不入标题源。
 
 ### 6.8 会话恢复时 provider/model 无效 → 模型重选
@@ -276,13 +276,13 @@ TUI 路径在 `startTUI` 前置 `agent.provider = null`。
 （随核 `_setSessionsDirForTest` 沙箱缝）；核 `gcResidue` / `listColdCwds` / `deleteColdCwd` 的默认 `dir` 为核内
 configDir 版（端侧无直调点）。`sessionsDir()`（`thincoder-vscode/src/extension/session-slots.mjs:52`）= 核 `sessionPath` 反推
 （核未导出根访问器）。
-**端壳保留 = 端差两款**：
+**端壳保留 = 端差两款（已裁保留 · A9——复核 = 台账 #185 · 2026-09-25 本批）**：
 ① end marker 层（`thincoder-vscode/src/extension/session-slots.mjs`：`END = "vscode"` `:60` · `readEndMarker` `:69` · `writeEndMarker` `:82`）
 与其四个维护落点（`resumeSlot` / `newSlot` / `switchToSlot` / `deleteSlotAndUpdate`——`thincoder-vscode/src/extension/session-io.mjs`：`:88` / `:123` / `:175` / `:199`；
 §6.10 D-4「VSC 镜像」——核对应件写死核端 marker `.cli`，直接消费 = 跨端互写；数据层 = 核 `loadSlotFile`，
 端壳无核 `resumeSlot` 的裸 v1 单文件兜底——差异登记见批次档 §5）；`deleteSlotAndUpdate` 随槽删记录存储 sidecar
 （核 `deleteSlot` 同源步 `unlinkRecordStore`——`thincoder-core/session-store.mjs:376`）；
-② **（cwd, slot）型** token 台账三式（`thincoder-vscode/src/extension/session-slot-write.mjs:48` 起——核 token 面为 agent 型）。
+② **（cwd, slot）型** token 台账三式（`thincoder-vscode/src/extension/session-slot-write.mjs:48` 起——核 token 面为 agent 型）——**A9 三件**：① 结构性不对称 = 端壳载体单侧存在（end marker 端字面 / 端槽载体）；② 证据 = 本段坐标 + §6.10 D-4（VSC 镜像）；③ 显式裁定 = 2026-09-15 W11 批（端差保留两款登记本体）+ 本批确认。
 
 - **运行中禁止切换（会话切换竞态修复）**：`newSession` / `deleteSession` / `switchSession`（webview loadSession）/ 项目切换三处均以 `_turnActive` + `_susp.active` 守卫（warning 拒绝——对齐 CLI `applyProjectSwitch` 模式）。运行中放行会让旧 turn 的 stream / complete / 标题灌进新会话视图（「思考串台」）、内容落错槽。
 - **turnSlot / slotOverride（纵深防御）**：`saveLines` / `_saveLines` / `generateTitle` 带 slotOverride——`runPanelChat`（`thincoder-vscode/src/extension/panel-chat.mjs`）回合入口捕获 `turnSlot`，onComplete / abort / finally 的保存与标题一律落 `turnSlot` 而非面板当前 `_slot`——运行中即便并发切换，旧 turn 流也不灌新会话视图、内容不落错槽。
@@ -315,7 +315,9 @@ configDir 版（端侧无直调点）。`sessionsDir()`（`thincoder-vscode/src/
 | 删非绑定槽 | `deleteSession(panel, 其他槽)` | 绑定 / 缓存 / 记录三者零变 |
 | 列表高亮回退 | 本端记录槽被对端删除 | 高亮回退共享 active——只读、零绑定效果（P5） |
 
-- **端差登记 · 记录面写条件（2026-09-19 · init-block 批）**：目标槽被另一活进程占用时——核 = **无条件写**记录（`thincoder-core/session-lifecycle.mjs:284-285`——D-2① 不满足 ⇒ 落 D-2③ 全新分配）；端 = **条件写**（`thincoder-vscode/src/extension/session-io.mjs:186-189`——仅未占才写记录 / 缓存）。
+- **端差登记 · 记录面写条件（2026-09-19 · init-block 批）**：目标槽被另一活进程占用时——核 = **无条件写**记录（`thincoder-core/session-lifecycle.mjs:284-285`——D-2① 不满足 ⇒ 落 D-2③ 全新分配）；端 = **条件写**（`thincoder-vscode/src/extension/session-io.mjs:186-189`——仅未占才写记录 / 缓存）——
+  **状态：已裁保留（A9——复核 = 台账 #185 · 2026-09-25 本批）**：① 结构性不对称 = 两侧各为其机制本体（端侧条件写 = F-CR2「判据前置 / 拒绝路径零写」语义；核侧无条件写 = 切换成立 + fork 语义（D-6）——非同一函数两形）；
+  ② 证据 = 行内两侧坐标 + §6.16 F-CR2 判据句；③ 显式裁定 = 2026-09-21 SESSION-CLAIM 批（F-CR2）+ 本批确认。
 - 场景：打开被另一活进程占用的历史槽 ⇒ 核落 D-2③ 并写新槽记录；端不写 + `_slot = null` → 经缓存重绑本端原槽（占槽判定 `panel-messages-session.mjs:48-55`）。
 
 - **（2026-09-21 · SESSION-CLAIM 批 · 本节单源）**：① **F-CR2 收正**——受占目标 ⇒ 面板路径**不进入**端壳 `switchToSlot`（判据前置：占用判定前置于切换调用）；端壳函数内被占分支 = **零写**（不认领 / 不翻共享指针 / 不写本端记录 / 不写解析缓存——占用判定前置于 `m.active` 赋值）；核 `switchToSlot` 受占语义不变（CLI 切换成立——指针 / 记录按 D-6 / D-4 落点 + 保留集 = 空释放旧认领——见 §6.5 / §6.2）。
@@ -728,6 +730,8 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 | 源档 §10 注入序的 `loadSession` 同步会话级 UI（_autoApprove/planMode 面板标志 + 工具条按钮同步） | VSC 装配细节 | 面板 UI 同步 = VSC 专有面（`thincoder-vscode/**`）；注入序本体已入 §6.15 |
 
 ## 变更记录
+
+- 2026-09-25（**misc-four 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-misc-four.md` §2 · 台账 #185）：端差登记项三处二态落定——§6.7 空窗差行 ③ 裁定来源回填（2026-09-21 父侧代裁 · D8；两处同源行同批收正）；§6.15「端壳保留两款」补状态词 + A9 三件；§6.15 记录面写条件行补状态词 + A9 三件（① = 两侧机制本体；③ = 2026-09-21 SESSION-CLAIM 批）。**零新机制**。
 
 - 2026-09-22（**hygiene-sweep 批 · 文档卫生轮 · eng-designer**——承 `docs/batches/2026-09-22-hygiene-sweep.md` §2）：§6.7「源」条 VSC 侧措辞收正——端壳传原数组 + 同一核谓词取首条（`thincoder-vscode/src/extension/panel-session-write.mjs:134`）+ 等价注（端壳不按 `keepReal` 预过滤——该过滤属槽落盘面）。**语义零改**。
 

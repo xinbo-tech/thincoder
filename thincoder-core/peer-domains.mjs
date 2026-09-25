@@ -23,7 +23,7 @@ import { statSync, readdirSync, readFileSync, unlinkSync } from "node:fs"
 import { join, resolve } from "node:path"
 import { normalizeCwd, getSessionId, END, writeSessionFile } from "./session-slots.mjs"
 import { batchAlive } from "./peer-instances.mjs"
-import { FILE_MUTATORS } from "./agent/helpers.mjs"
+import { FILE_MUTATORS, toolTouchPaths } from "./agent/helpers.mjs"
 // 认领面（§4.4）归口 `peer-claims.mjs`；re-export 路径与谓词保既有 import 面（单源不复制）。
 import {
   peersDir, peerFilePath, pathsOverlap, claimHits, claimNoteText, claimAge, claimLeft,
@@ -73,15 +73,13 @@ function statDirMtimeMs(dir) {
   }
 }
 
-/** 目标路径解析（工具 touchedPaths 优先——apply_patch/edit-batch 多文件；file_ops 无
- *  touchedPaths——source/dest 双算；其余 path 单参兜底）。相对路径按 cwd 解析为绝对
+/** 目标路径解析（#327 单源谓词 `toolTouchPaths`——`docs/core/design/TOOLS.md` §6.17：钩子裁决 /
+ *  file_ops 无钩子 ⇒ source/dest 双算；其余单参兜底）。相对路径按 cwd 解析为绝对
  *  路径（resolve：绝对入参原样保留）。解析失败/畸形入参跳过（零目标 = 无检测无登记）。 */
 export function peerWriteTargets(tool, args, cwd) {
-  const raw = tool?.touchedPaths
-    ? tool.touchedPaths(args ?? {})
-    : tool?.name === "file_ops"
-      ? [args?.source, args?.dest]
-      : [args?.path]
+  const raw = tool?.name === "file_ops" && !tool?.touchedPaths
+    ? [args?.source, args?.dest] // file_ops 无钩子：源 + 目标双算
+    : toolTouchPaths(tool, args) // 其余：单源谓词（恒数组 · 恒零抛——原裸抛面收口）
   const out = []
   for (const p of raw) {
     if (typeof p !== "string" || p.length === 0) continue

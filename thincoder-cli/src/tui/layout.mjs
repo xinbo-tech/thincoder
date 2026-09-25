@@ -5,10 +5,10 @@
  *
  *   header → conversation → subagent 面板 → todo → picker → permission → input → status
  * Running subagent activity renders in a FIXED bottom panel between the
- * conversation and the todo panel (AGENT-LOOP.md §7.2.1) — full adaptive height
+ * conversation and the todo panel (docs/cli/design/TUI.md §6.8) — full adaptive height
  * (the conversation shrinks); compressed away first on small terminals (to 0 =
  * hidden, data stays in the buffer). Done children are frozen into the
- * conversation stream (§7.2 D4, unchanged). Output panels abolished (§7.2 D6).
+ * conversation stream (unchanged). Output panels abolished.
  * Fixed panels deducted first, conditional panels allocated by priority, remaining space to conversation.
  */
 import { layoutInput, wrapText } from "./render.mjs"

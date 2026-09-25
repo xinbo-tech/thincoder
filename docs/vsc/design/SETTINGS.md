@@ -362,6 +362,26 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 `provider-admission.test.mjs` 扩（重试计数 ≤ 2 + 在飞去重 + 三清除语义 + 双向词档判据）·
 `settings-open-snapshots.test.mjs` 扩（§2.11 时序断言）。核侧锚（探测束 / 同步有界例外 / 零 execSync 扫描）= `MULTI-INSTANCE-COLLAB.md` §3.1 判据条（不在本档重复）。
 
+### 2.13 Advisor effort 键接线（2026-09-25 批 · 台账 #331 · #330 面板半）
+
+**开题事实（实读）**：面板写 `agent.advisor.effort`（`thincoder-vscode/src/extension/settings-panel-write.mjs:133-136`），而核侧只读 `advisor.reasoningEffort`（`thincoder-core/advisor/run.mjs:48/:64`）⇒ 该键**写而无人读**（死键）+ 面板自身的读面（快照 `advisor` 对象）也只服务于同一死键的展示。
+
+**裁定 = 接线（非确认死键）**：核侧消费方已在（CLI `/advisor` 菜单写 `cfg.reasoningEffort`，核读同键）⇒ 键位不对，不是能力缺失。
+
+| 面 | 契约 |
+|---|---|
+| 写入键 | `agent.advisor.reasoningEffort`（单源 = 核读取键；与 CLI 菜单同键） |
+| 档位值（枚举档） | 写字面档值（如 `low`/`high`/`max`） |
+| 关思考（枚举 `none`） | **off 形按族取形**（规则单源 = `doc:MODEL-SPECS.md:§15.4-2`）：effort 族（`thinkApi === "effort"`）⇒ `advisor.thinking = null`；自定义开值族 ⇒ `null`；其余 ⇒ `{type:"disabled"}`。载荷面：`none` **原样上送**（写面归一，不写字面进盘）+ **删** `reasoningEffort` 键 |
+| 「—」（未注册占位） | 删 `reasoningEffort` 键；**不动** `advisor.thinking`（off 形 `null` 的跨保存存活 = 写面种子循环 carve-out——`doc:MODEL-SPECS.md:§15.4-5`） |
+| 旧 `effort` 键 | 读面兜底：`reasoningEffort` 缺席时按 `effort` 日值显示（且 `thinking` off 形 ⇒ 预选 `none`；优先级 = `doc:MODEL-SPECS.md:§15.4-4`）；保存时删旧键（不回写的死键不得复活） |
+| select 未渲染（枚举空） | 载荷**不发** `reasoningEffort` 字段（缺席 ≠ 清空）——手写键存活 |
+| 读面（预选取值） | `advisorEffortCurrent`（`settings-state.js`）：`thinking` off 形 ⇒ `none` > `advisor.reasoningEffort` > legacy `advisor.effort` > 「—」（规则单源 = `doc:MODEL-SPECS.md:§15.4-4`）；快照面（`thincoder-vscode/src/extension/settings.mjs:204`）为 spread 透传（新旧两键与 `thinking` 均随行）——端侧零改 |
+
+**归一规则（两 select 同源）**：`doc:MODEL-SPECS.md:§15.4` 的 `effortSelection`（已存值∈枚举 > 注册默认∈枚举 > 中性档）；面板渲染面 = `effortSelectView`（「—」恒首项）。
+
+**与需求档登记的关系（报告结论）**：`docs/vsc/requirements/WEBVIEW.md` P2-4「元素缺席 ≡ 显式清空」的 **advisor-effort 半由本节消解**（select 未渲染 ⇒ 不发字段）；P2-4 余项（advisor `provider` / `model` 与其他面板字段的缺席语义）= 需求档条目，本批不动。
+
 ## 3. 已知待办与已知限制
 
 - **运行时当次展开缺口**（§2.6）：磁盘原文保留 `~` 的配置在面板 / `settings` 工具写面不展开——登记在案（与对端同姿态）。
@@ -396,6 +416,10 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 
 - **入口 6 的确认不绑定目标**（交互面 · §2.10「模型菜单入口」段登记）：确认弹框发生在宿主 QuickPick 选定**之前**（文案 = 类通用式 `settings.secretDeleteConfirm`、不携 `name`）⇒ 与入口 1–5（目标 = 载体所在行）的确认力度不同；本批按批档 §1.3 ②「取消 ⇒ 零删除 ∧ 零消息副作用」的**严格读法**选门位（webview 侧调用点），代价入册。
   补偿 = 目标选定步（QuickPick）自身是显式选择（见 §2.10 补偿两条）；消解路径 = ① 若父侧裁定确认须绑定目标，则须先裁定该半句读法（严格 = 零发值 / 宽松 = 无持久副作用）+ 登记第二确认形态（VS Code 原生件）例外；② 或宿主把选定 `name` 回传 webview 走同件（须协议 +1 条消息）；到期条件 = 本门下次被触碰 / 父侧裁定。
+
+- **`thincoder-vscode/src/extension/settings.mjs` 越 300 行建议线（拆分复核 · 评审发现 #3）**（结构面 · §2.13 载体档）：该档现 **409 行**（`wc -l` 口径；read 面 410）——**复核结论 = 本批不拆**（本批 ±0、零结构变更；快照面透传语义不变）。
+  拆分组边界 = ① 快照族（`agentSettings` / `proxySettings` / `websearchSettings` / `fullStatus`）② 渠道路由族（provider 增删 / 代理旗标 / 连接测试）③ 密钥与 MCP 族（`saveProviderKey` / `deleteProviderKey` / MCP 三件）——① 拆出 = `thincoder-vscode/src/extension/settings-snapshots.mjs`（拟新增）。
+  拆分计划 = 触发阈值 **450 行** 或该档下次结构改动（先到即拆）；到期条件 = 触发阈值到达时。
 
 ## 4. 不并项与历史沿革
 
@@ -435,6 +459,7 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 | U-S9 | Shell 控件接线：`System default` 项 = 重置（删键）；自定义路径空值 = 不发值 | 已定（§2.9） |
 | U-S10 | 回填跳过聚焦中的控件（用户输入优先于推送） | 已定（§2.8） |
 | U-S11 | 不可复得类（凭证原文随删除消失）删除 = **面板内确认弹框**（复用 `.auto-confirm` 件）；可重填类 = 直通门 `_confirmDelete`——**本批后为空域**（入口册 **6 行**全数入本门；直通门零调用点） | 已定（§2.10；类名与实例按可复得性判据重述——MCP server 行（2026-09-18）+ provider 行 −（2026-09-19 裁定 A）+ **模型菜单 footer 行（2026-09-19 入口册 #6/6**——口径 = 册序）入本门） |
+| U-S12 | Advisor effort 选择三态：档位值 = 写 `advisor.reasoningEffort`；`none` = 关思考（写 `thinking` off 形 + 删 effort 键）；「—」= 不设档（删 effort 键，不动 thinking） | 已定（§2.13 · §15.4 规则单源） |
 
 ## 变更记录
 
@@ -490,3 +515,8 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
   判据域边界 **8 → 9 档**（+`webview/model-picker.js`）+ **D3 计数映射 6 行 ↔ 5 名**（行 4 / 行 6 同名 `removeProvider`——域内 **2 处**发射）；
   机检面 +`thincoder-vscode/test/model-menu-delete-confirm.test.mjs`（拟新增 · W17-31…W17-34）+ W17-17 改判（域扩）；§3 +1 条（确认不绑定目标——代价 + 补偿 + 消解路径 + 到期条件）。
   **零新语义**（均为批档 §1 条目 + 门位选型 + 本席实跑读数的直接导出；机制条文其余零改）。
+- 2026-09-25（**规格·effort 轮 · eng-designer**——承 `docs/batches/2026-09-25-spec-effort.md` §2 · 台账 #331 / #330）：新增 **§2.13 Advisor effort 键接线**（`effort` → `reasoningEffort`、off 形、旧键读回+删、未渲染不发字段）+ **U-S12**（三态语义）；effort 归一规则单源指 `doc:MODEL-SPECS.md:§15.4`（本档不复述规则体）。
+  需求档 P2-4 的 advisor-effort 半消解（只报，需求档笔不在本席）。
+- 2026-09-25（**规格·effort 轮 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承 `docs/batches/2026-09-25-spec-effort.md` §3 轮次 1）：§2.13 off 形行**收正为族别形**（规则单源 = `doc:MODEL-SPECS.md:§15.4-2`——原单式只覆盖自定义开值族，effort 族落 `{type:"disabled"}` 时载荷门不开）
+  + 「—」行补 off 形跨保存存活注（写面种子循环 carve-out——`§15.4-5`）+ 旧键行补读面优先级指针（`§15.4-4`）+ **新增读面行**；§3 新增 `settings.mjs`（**409** 行）拆分复核登记（结论 = 本批不拆 · 组边界 · 阈值 450）。
+  **零新语义**（= 评审发现 #1 / #3 / #5 的直接导出项）。

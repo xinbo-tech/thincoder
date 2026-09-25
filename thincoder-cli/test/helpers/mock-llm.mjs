@@ -1,5 +1,5 @@
 /**
- * Shared test helper (extracted per AGENT-LOOP.md §18.14 D-T1.6 — mockLLM appears in 10+ split test files;
+ * Shared test helper (extracted — mockLLM appears in 10+ split test files;
  * the canonical body is the agent-style variant: step.toolCall singular + reasoning/delay/fail/usage steps).
  */
 export function mockLLM(script) {

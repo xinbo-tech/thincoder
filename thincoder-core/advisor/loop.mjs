@@ -204,7 +204,7 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
     // Mirrors the main agent's push (agent.mjs).
     messages.push(assistantToolCallMessage(response, providerSpec(provider)))
 
-    // B1 (AGENT-LOOP.md §18.7 D-TS7): the SAME LLM reply's multiple read-only
+    // B1: the SAME LLM reply's multiple read-only
     // tool calls run in PARALLEL (Promise.all) — results are backfilled in
     // toolCalls order (Promise.all preserves the input order → tool_call_id
     // never mismatches); each tool's timeout/error is captured independently

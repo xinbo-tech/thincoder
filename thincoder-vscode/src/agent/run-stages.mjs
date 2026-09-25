@@ -330,7 +330,7 @@ export async function finalizeAgentTurn(agent, ctx) {
       history._pendingAsyncResults = history._pendingAsyncResults.filter((e) => e?.role !== "consult" && e?.role !== "escalate")
     }
   }
-  // Async subagent turn-end handling (AGENT-LOOP.md §15 D-A3 + AGENT-LOOP-ASYNC-POOL.md §6.8 D-S1 + AGENT-LOOP-ASYNC-POOL.md §6.8
+  // Async subagent turn-end handling (AGENT-LOOP-SUBAGENT.md §6.7.3 D-A3 + AGENT-LOOP-ASYNC-POOL.md §6.8 D-S1 + AGENT-LOOP-ASYNC-POOL.md §6.8
   // supersede; the collector has moved to the core single-source injector — 500-line split):
   // Stop (plain abort) → clear WITHOUT injecting stale errors (Ctrl+I keeps the pool);
   // ContinueError → no wait/no injection; else → collect SETTLED entries (D-S3 ①) —

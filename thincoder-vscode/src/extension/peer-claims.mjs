@@ -7,10 +7,11 @@
  * 的 `claims` / `claimsUpdatedAt` 两字段，与足迹面 `domains` / `updatedAt` **分字段分存**
  * （落盘 = 字段级合并写、互不改写、未知字段与身份字段逐字保留）；租约 `CLAIM_TTL_MS`，同域
  * 再写续约（`claimedAt` 保持首次；覆盖去冗 = 方向性 `coversClaim` 三分支，集内无被覆盖项）；
- * 落盘 = 新目标即刻 + 续约节流 `CLAIM_RENEW_FLUSH_MS`（届内零 IO）；原子写 tmp+rename（rename
- * 翻目录 mtime ⇒ 对端聚合缓存失效）；落盘门控 = 本 cwd 会话 manifest 在场（测试卫生——端侧
- * 既有 L3 门同法）；失败容忍 NF2（下次写重试）。释放 = 租约到期 / 属主进程死亡 / 记录被死
- * 清理——无显式释放面（D-MI19）。
+ * 落盘 = 新目标即刻 + 续约节流 `CLAIM_RENEW_FLUSH_MS`（届内零 IO）；落盘原语 = 核 `writeSessionFile`
+ * （经端壳 `./session-slots.mjs` 单源转口——.tmp + rename，rename 翻目录 mtime ⇒ 对端聚合缓存
+ * 失效；含末级兜底支（§4.4.1 单一实现）；端档零本地原子写实现）；落盘门控 = 本 cwd 会话
+ * manifest 在场（测试卫生——端侧既有 L3 门同法）；失败容忍 NF2（下次写重试）。释放 = 租约
+ * 到期 / 属主进程死亡 / 记录被死清理——无显式释放面（D-MI19）。
  *
  * 命中 / 文案（§4.4.4）：读面按 `expiresAt > now` 过滤；命中查询由 `peer-domains.mjs` 的
  * `peerDomains(cwd).claimConflicts(targets)` 供（同一聚合扫描）；`claimAge` / `claimLeft` /
@@ -22,9 +23,9 @@
  * re-export）+ `_setPeerClaimsTestImpl({ nowFn })`（时钟——续约 / 过期两侧零真实等待）+
  * `_resetPeerClaimsForTest`（状态复位）。
  */
-import { existsSync, readFileSync, mkdirSync, writeFileSync, renameSync, unlinkSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
-import { sessionsDir, getSessionId, END, manifestPath } from "./session-slots.mjs"
+import { sessionsDir, getSessionId, END, manifestPath, writeSessionFile } from "./session-slots.mjs"
 
 /** 认领租约 / 续约节流（§4.4.2 / §4.4.3——双端等值：与核 `peer-claims.mjs` 同值，AC-IC11 对拍）。 */
 export const CLAIM_TTL_MS = 30 * 60 * 1000
@@ -72,7 +73,7 @@ export function _resetPeerClaimsForTest() {
   claimsFlushedAt = 0
 }
 
-// ─── 记录读写（单文件两面共用：合并写基线 + 原子写原语）──────────────────
+// ─── 记录读写（单文件两面共用：合并写基线）──────────────────────
 
 /** 读既有实例登记（字段级合并写基线）：缺失 / 损坏 / 结构非法 ⇒ `{}`（按缺失降级——损坏件
  *  不删，本次落盘覆盖）。 */
@@ -83,14 +84,6 @@ export function readRecord(file) {
   } catch {
     return {}
   }
-}
-
-/** 原子写（tmp+rename——rename 翻目录 mtime ⇒ 对端聚合缓存失效）。 */
-export function writeRecordAtomic(file, payload) {
-  mkdirSync(peersDir(), { recursive: true })
-  const tmp = `${file}.tmp`
-  writeFileSync(tmp, JSON.stringify(payload), "utf8")
-  try { renameSync(tmp, file) } catch { unlinkSync(file) /* 旧文件占位——再试一次 */; renameSync(tmp, file) }
 }
 
 /** 聚合载荷中的认领项（结构非法 / 缺时间戳 ⇒ 按缺失降级）。 */
@@ -158,8 +151,8 @@ export function registerClaims(absPaths, cwd) {
   } catch { /* NF2：登记失败不影响工具主流程 */ }
 }
 
-/** 认领落盘（字段级合并写——只改 claims / claimsUpdatedAt；原子写 tmp+rename；过期条目剪除；
- *  门控 = 本 cwd 会话 manifest 在场）。 */
+/** 认领落盘（字段级合并写——只改 claims / claimsUpdatedAt；落盘原语 = 核 `writeSessionFile`
+ *  （经端壳转口——含末级兜底支）；过期条目剪除；门控 = 本 cwd 会话 manifest 在场）。 */
 function flushClaims(cwd, now = claimsNow()) {
   try {
     if (!cwd || !existsSync(manifestPath(cwd))) return // 落盘门控（§4.4.3 测试卫生）
@@ -175,7 +168,7 @@ function flushClaims(cwd, now = claimsNow()) {
     if (payload.cwd === undefined) payload.cwd = cwd
     payload.claims = claims
     payload.claimsUpdatedAt = now
-    writeRecordAtomic(file, payload)
+    writeSessionFile(file, payload)
     flushedClaims = new Set(claims.map((c) => c.target))
     claimsFlushedAt = now
   } catch { /* NF2：失败容忍——下次写重试 */ }
