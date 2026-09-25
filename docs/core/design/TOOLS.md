@@ -791,7 +791,7 @@ the tracking authority is the batch record + the ledger.)」
 
 #### 6.15.3 F10 第三面——auto-turn digest 域的模式变体（2026-09-22 · 承本批批档 `docs/batches/2026-09-21-tool-discipline.md` §5 线外发现 · 父侧裁定并入本批）
 
-**问题（F10 提醒面家族第三实例——同族死胡同）**：manual 档 auto-turn 域文本（`AUTO_TURN_DIGEST_DOMAIN`，核 `thincoder-core/agent/helpers.mjs:392-393`）第 2 条指挥「update the task list with the task tool (allowed)」——
+**问题（F10 提醒面家族第三实例——同族死胡同）**：manual 档 auto-turn 域文本（`AUTO_TURN_DIGEST_DOMAIN`，核 `thincoder-core/agent/helpers.mjs:436`）第 2 条指挥「update the task list with the task tool (allowed)」——
 F10 后工程模式下 task 既**不在工具表**（装配摘除）又**机械拒**（execute 门）⇒ 该句 = 死胡同 ∧「(allowed)」= 错误陈述。
 注入点 = 核 `thincoder-core/agent.mjs:169-170`（条件 `(autoTurn || upstreamTurn) && !agent.autoApprove`——零 engineering 排除）+ VSC 组合点 `thincoder-vscode/src/agent/turn-domains.mjs:28-31`（base 恒取 `AUTO_TURN_DIGEST_DOMAIN`）。
 前两实例（核催更门 / VSC 守卫副本）= §6.15.1 已闭口。
@@ -867,7 +867,7 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 | 主会话（两端） | CLI 经 `assembleBuiltinTools`（`thincoder-core/tools/index.mjs:57-78`）；VSC 端自持清单（`thincoder-vscode/src/tools/index.mjs`） | **零改**——`question` 在职；机械门（无 UI 抛错）保留为第二道防线 |
 | VSC 端自持 depth>0 装配 | `thincoder-vscode/src/agent/setup-tooltable.mjs:296-300`——已按 `depth === 0 || t.name !== "question"` 过滤（行为正确，字面 = 第二份） | 字面改消费核单源排除集（`SUBAGENT_TOOL_EXCLUSIONS.has(t.name)`；谓词 `excludeSubagentTools(` = 核四点调用形态；**行为零变**——消第二份字面，防漂移） |
 
-**单源落点**：`thincoder-core/agent/helpers.mjs`——与只读谓词 `readonlyToolNames`（`:335-338`）同址新增排除集（`question` 唯一成员）与按面裁表谓词（恒返回新数组，不改父表、不别名）；`thincoder-core/agent.mjs` 的两处再导出面（`:21-32` / `:48-53`）补两名——子代装配点从 `../agent.mjs` 取用，import 面零改。
+**单源落点**：`thincoder-core/agent/helpers.mjs`——与只读谓词 `readonlyToolNames`（`:368`）同址新增排除集（`question` 唯一成员）与按面裁表谓词（恒返回新数组，不改父表、不别名）；`thincoder-core/agent.mjs` 的两处再导出面（`:21-32` / `:48-53`）补两名——子代装配点从 `../agent.mjs` 取用，import 面零改。
 
 **生效面与装配序**：子代工具表 = 「**角色选择**（只读 / 全表）→ **排除谓词**」——排除恒在最后一步（两序等价性不得写成分支差异）。
 生效面 = 发给 provider 的工具 schema ∧ 执行面 `toolByName`（两者同源自子代的 `tools` 绑定值——`thincoder-core/agent/setup.mjs:163-171` 的展开面 = 绑定值 + 家族段 + caller 注入）。
@@ -943,7 +943,7 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 | 面 | 落点 | 形态 |
 |---|---|---|
 | 谓词 | `thincoder-core/agent/helpers.mjs` | `export function toolTouchPaths(tool, args)` → 恒数组 · 恒零抛 |
-| 核消费 | `thincoder-core/agent/dispatch.mjs` · `thincoder-core/agent/record-results.mjs` · `thincoder-core/agent.mjs` · `thincoder-core/peer-domains.mjs` | 六处替换调用（#1/#3/#5 的 try/catch 外壳退休） |
+| 核消费 | `thincoder-core/agent/dispatch.mjs` · `thincoder-core/agent/record-results.mjs` · `thincoder-core/agent.mjs` · `thincoder-core/peer-domains.mjs` | 六处替换调用（#1/#3/#5 的旧 try/catch 外壳退休；**#5 现存 try/catch = `JSON.parse` 失败降级——非外壳**） |
 | 端消费 | `thincoder-vscode/src/agent/tool-gates.mjs` · `thincoder-vscode/src/agent/execute-tools.mjs` · `thincoder-vscode/src/agent/rules-face.mjs` | 四处替换调用；`l3TouchedPaths` 整面转调谓词（零本地 `file_ops` 分支——动作感知随核单源） |
 | 桥判据 | `thincoder-cli/src/acp/bridge.mjs` | `edit` 路由：`Boolean(args?.edits)` 单点取值，条件与分支同用 |
 

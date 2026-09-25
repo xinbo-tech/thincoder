@@ -316,12 +316,12 @@ M10 测试（独立简化，无依赖）
 |---|---|---|
 | 1 | 注入形态 | **逐回合 transient 机器行**（`{role:"user", content:"[System reminder: …]", transient:true}`——与 env 行同族，不进人读记录） |
 | 2 | 字段集 | `phase`（唯一模型侧无其他载体的情境值）；`docRoot` **不入本行**（路径已由提示词层承载，注入五路径 = 噪声 + 双源冲突；模型侧读 `docRoot` 另议） |
-| 3 | 逐字行形 | `[System reminder: project state: phase: <值> (discipline: <light\|strict>).]`（未知 phase → 无标签：`…phase: <值>.]`，只出值、不编判据） |
+| 3 | 逐字行形 | `[System reminder: project state: phase: <值> (rigor: <light\|strict>).]`（未知 phase → 无标签：`…phase: <值>.]`，只出值、不编判据） |
 | 4 | 推送时机 | **depth-0 逐回合**（CLI = `thincoder-core/agent/run-stages.mjs` 回合注入组 · VSC = `thincoder-vscode/src/agent.mjs` 同点）；**幂等**——history 已有同文行即不推（零副作用） |
 | 5 | 压缩生存 | **活体守卫自愈重推**——压缩吞掉该行 → 下一回合守卫判「无活体」→ 重推；**不落 system 槽**（system 提示词 = 静态槽文件装配 + 前缀缓存契约，写可变值即破缓存语义；技术待办 #23 的 system 槽方案不适用于本行） |
 | 6 | 值变化 | **单活体**：值变（如阶段推进 `initial-dev` → `production`）→ 就地摘旧行 + 推新行（保 `history` 数组引用） |
 | 7 | 注入深度 | **仅 depth-0**（manifest 是主 agent 的状态账；子代理读任务书，M5 零 manifest 读面——§2.4） |
-| 8 | 模式门 | **仅工程模式**（`agent.config.agent.engineering === true`）——normal 模式无 manifest 纪律，不注入 |
+| 8 | 模式门 | **仅工程模式**——判据 = **会话权威值**（恢复槽带 `engineering` 字段 ? 槽值 : `config.agent.engineering`——槽优先 + config 回退）；口径 = 本档 §2.3 E2，机制权威 = `MANIFEST.md` §2.2；**归属分层**：模式状态 = **会话级**（槽字段——`SESSION.md` §6.3 / §6.4），项目级 = 台账 · `PROJECT-MANIFEST.json` · `.thincoder/conventions.json`；唯一耦合 = 本门读 manifest 作 ON 准入判据；normal 模式无 manifest 纪律，不注入 |
 
 **行的语义**：`phase` = 纪律强度档（需求 v2 §9.1「初始开发（探索方向，纪律可轻）/ 上线运行（防回归，纪律要强）」——行内标签是对 §9.1 的**呈现**，不新增判据）。**值 → 行为的完整映射**（各档具体怎么调纪律）住提示词层——本批只落「模型可感知」；提示词侧映射句属提示词内容权（主 agent），不在本批。
 
@@ -338,7 +338,7 @@ M10 测试（独立简化，无依赖）
 
 #### E7 工程模式 plan 面排除（FR31 · v2 §13.9 · 2026-09-21）
 
-**问题**：工程模式主 agent 的职能本身即「设计先行」（设计 → 评审 → 批准 → 实施），与 plan 模式语义重叠；其退出话术（`PLAN_EXIT_REMINDER`，`thincoder-core/agent-tools/plan.mjs:21-23`：「Start implementing your plan … No need for … further confirmation」〔该文本已于 2026-09-21 收正为「呈计划 ⇒ 待批准 ⇒ 实施」✗ 见批档 `2026-09-21-plan-approval-texts.md` ✓〕）
+**问题**：工程模式主 agent 的职能本身即「设计先行」（设计 → 评审 → 批准 → 实施），与 plan 模式语义重叠；其退出话术（`PLAN_EXIT_REMINDER`，`thincoder-core/agent-tools/plan.mjs:21-23`——现行文本 = 「呈计划 ⇒ 待批准 ⇒ 实施」）
 与工程链条直接冲突 ⇒ 模型在工程模式下频繁入 plan 模式（用户实测 glm-5.3-flash）= 系统性误导源。
 
 **三结构面（= FR31 三条裁决，各带判据）**：
@@ -515,7 +515,7 @@ engineering 真值 ──► 固定段裁剪（plan / task 不入表）───
 | T4 | 边界：台账六态枚举 | 写入枚举外 status | schema CHECK 拒 |
 | T5 | 边界：manifest 缺字段 | 缺 `docRoot` 键 | 用默认值（便利 fallback） |
 | T7 | 错误：token 过期 | spawn 带过期 token | 门禁拒 + 清理槽 |
-| T8 | 正常：情境行进模型上下文 | 工程模式 + depth-0 + manifest 有 `phase` | 逐回合恰一行情境行（`…phase: <值> (discipline: <light\|strict>).`）；值不变不重复、值变换新 |
+| T8 | 正常：情境行进模型上下文 | 工程模式 + depth-0 + manifest 有 `phase` | 逐回合恰一行情境行（`…phase: <值> (rigor: <light\|strict>).`）；值不变不重复、值变换新 |
 | T9 | 边界：压缩吞掉情境行 | 压缩后 history 无该行 | 下一回合自动重推（活体守卫自愈） |
 | T10 | 正常：固定段模式裁剪 | `assembleFamilyTools({depth:0, engineering:true})` / `{depth:1, role:"eng-coder", engineering:true}` / `{depth:0}` / `{depth:1, role:"plan"}` + VSC 旁路面（视觉渠道子代理携 `engState.enabled:true`） | 工程面名集不含 `plan` ∧ 不含 `task`（含该子代理）；后两者含（普通面回归）；普通面固定段序契约（task → plan → timer）保持 |
 | T11 | 边界：命令面拒绝 | 工程模式下 `/plan` · ACP `set_mode{mode:"plan"}` · `set_config_option{configId:"mode", value:"plan"}` · VSC `setPlanMode{value:true}` | 四处均拒 + 提示可见；`planMode` 保持 false；ACP 拒绝携共用文案（非 `unknown configId`）；VSC 按钮 disabled + title + 回弹；ACP `mode:"normal"` 照常接受 |
@@ -524,6 +524,11 @@ engineering 真值 ──► 固定段裁剪（plan / task 不入表）───
 | T14 | 错误：普通模式零回归 | 普通模式装配 / `/plan` 切换 / ACP `mode:"plan"` / 槽 `planMode:true` 恢复 | 四条路径全带宽不变（**除本批所列矩阵镜像收正**——`host-shape-spawn.test.mjs` T5：两条工程行删 `plan` + 增 explore 工程行——外，既有测试零改全绿） |
 
 ## 4. 变更记录
+
+- 2026-09-25（**工程模式归属口径统一批（eng-ownership）· 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-eng-ownership.md` §1 · 台账 #358）：
+  ② 归属分层落 E5.1 表第 8 行——模式门判据 = **会话权威值**（槽优先 + config 回退）；口径指本档 §2.3 E2，机制权威指 `MANIFEST.md` §2.2；模式状态 = **会话级**（槽字段），项目级 = 台账 / `PROJECT-MANIFEST.json` / `.thincoder/conventions.json`，唯一耦合 = ON 准入判据读 manifest。
+  ③ phase 标签 `discipline` → **`rigor`**（E5.1 行形 + T8；与模式面档名 `discipline-engineering.md` 脱同词——码面 / 测试 / `MANIFEST.md` 同步改名）。
+  **机制条文零改**（注入形态 / 字段集 / 时机 / 幂等 / 值变 / 深度判据逐条不动）。
 
 - 2026-09-22（**hygiene-sweep 批 · 文档卫生轮 · eng-designer**——承 `docs/batches/2026-09-22-hygiene-sweep.md` §2 · 台账 #225）：规范面修订式标记清理——FR31 边界行 reminder 括注去「本句对其作废 ✗/✓」对照语（改现态陈述：三条本体不改 + `PLAN_EXIT_REMINDER` 现行文本坐标）。**语义零改**。
 

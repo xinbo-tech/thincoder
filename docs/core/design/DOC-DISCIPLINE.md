@@ -143,7 +143,7 @@
 **问题**：抽取式只覆盖 `:N` 与 `:N-M` ⇒ **并列组尾**（路径 token 后接 `:N/:M` 形态）不可见——扩前只剥**末组**，残留中间组使带目录段路径 token 整条失配；两入口（A3 引擎 / V5-A 引擎）之间亦无同义断言。
 台账条目 = `docs/TODO.md` 技术组 `:49`。
 
-**证据（file:line）**：`scripts/doc-check-anchors.mjs:44`（`PATH_RE`——坐标尾并列组整段消费、整段尾不参与存在性判）· `:45`（`CASE_RE` 右界强制）· §4.2.1 射程句与围栏抽取式（判据面与实现同址）。
+**证据（file:line）**：`scripts/doc-check-anchors.mjs:45`（`PATH_RE`——坐标尾并列组整段消费、整段尾不参与存在性判）· `:46`（`CASE_RE` 右界强制）· §4.2.1 射程句与围栏抽取式（判据面与实现同址）。
 
 **候选对比**：
 
@@ -590,13 +590,13 @@ node -e "const fs=require('fs');let n=0;fs.readdirSync('.',{recursive:true}).for
 | 6 | `thincoder-cli/test/batch-segment.test.mjs` | 298 | 0（1 行改述） | 贴 300 软线（Δ0 不越） | 代码·测试头注 | eng-coder |
 | 7 | `thincoder-cli/test/eng-designer-role.test.mjs` | 269 | 0（1 行改述） | ≤300 | 代码·测试头注 | eng-coder |
 | 8 | `thincoder-cli/test/prompts-async-guidance.test.mjs` | 173 | **0（零触碰——B 类）** | ≤300 | 代码·测试头注（在册残差） | —（零改） |
-| 9 | `docs/core/design/DOC-DISCIPLINE.md` | 961 → **1181**（**`wc -l` 口径** = 换行符计数 · as-of 2026-09-18 二轮修正轮复读；读数随并行写入浮动） | **+220（含他实例同档写入 + 本席两轮增量——无法逐席分离）** | 文档（行数规则已废——§3.7） | 设计档 | **eng-designer**（设计轮已落） |
-| 10 | `docs/core/design/DOC-MIGRATION.md` | 505 | 0（**4 行**改述——J-4） | 文档 | 设计档 | **eng-designer** |
-| 11 | `docs/core/design/SEND-STALL-DISTILL.md` | 153 | 0（**14 坐标** + 2 句改述） | 文档 | 设计档 | **eng-designer** |
-| 12 | `docs/core/design/ARCHITECTURE.md` | 191 | 0（1 处） | 文档 | 设计档 | **eng-designer** |
-| 13 | `docs/core/design/DOC-SYSTEM.md` | **401** | 0（1 处） | 文档 | 设计档 | **eng-designer** |
-| 14 | `docs/core/design/PROMPT-SYSTEM.md` | **323** | 0（4 处） | 文档 | 设计档 | **eng-designer** |
-| 15 | `docs/core/design/TOOLS.md` | 514 | 0（1 处） | 文档（行数规则已废） | 设计档 | **eng-designer** |
+| 9 | `docs/core/design/DOC-DISCIPLINE.md` | — | — | 文档 | 设计档 | **eng-designer**（设计轮已落） |
+| 10 | `docs/core/design/DOC-MIGRATION.md` | — | — | 文档 | 设计档 | **eng-designer** |
+| 11 | `docs/core/design/SEND-STALL-DISTILL.md` | — | — | 文档 | 设计档 | **eng-designer** |
+| 12 | `docs/core/design/ARCHITECTURE.md` | — | — | 文档 | 设计档 | **eng-designer** |
+| 13 | `docs/core/design/DOC-SYSTEM.md` | — | — | 文档 | 设计档 | **eng-designer** |
+| 14 | `docs/core/design/PROMPT-SYSTEM.md` | — | — | 文档 | 设计档 | **eng-designer** |
+| 15 | `docs/core/design/TOOLS.md` | — | — | 文档 | 设计档 | **eng-designer** |
 | 16 | `PROJECT-MANIFEST.json` | 34 | **0（零改裁定——J-6）** | 数据档 | 数据 | —（零改） |
 
 **落笔（写域拆分——2026-09-18 二轮修正轮 · 评审 #6）**：**设计档文本（行 9–15）= eng-designer**——依据 = §1 表 **D1**（唯一作者——**需求档 = 主 agent · 设计档 = eng-designer**）+ §3.7「实施面归属」先例。
@@ -877,7 +877,7 @@ V5-B: /(?<![A-Za-z0-9-])((?:T-[A-Z]{1,5}\d{1,3}(?:-\d{1,3})?|T-\d{1,3}|T[A-Z]?\d
 | 8 | 退场 / 换名 / 归档叙述句 | 三通道：① 豁免声明注记集（§4.2.3 · 14 词）② 并档叙述形态（§4.2.3）③ **「迁移期引文」行级标记族**（§4.2.10——史实叙述句的正规通道） |
 | 9 | 裸 `T<数>.<数>`（台账/条目号） | V5-B 排除式 ② |
 | 10 | 标识符撞用例号形态（`TLS12` / `TAB123`） | V5-B 形态收紧（裸 `T` 后 ≤1 字母且直接数字——不入抽取） |
-| 11 | 包说明符伪影（npm 域前缀形态 `@scope/pkg/<子路径>` 被抽为仓内路径 token） | **判据面修正**（左界守卫补 `@`——`scripts/doc-check-anchors.mjs:44` 的 `PATH_RE`）——**已实装〔小债批〕**：本族照红归 **0**（§4.2.7 判据面登记第 5 条）；文档侧**零触碰**（原文 = 正确包说明符形态）；**不得打标记**（防滥用② 同源） |
+| 11 | 包说明符伪影（npm 域前缀形态 `@scope/pkg/<子路径>` 被抽为仓内路径 token） | **判据面修正**（左界守卫补 `@`——`scripts/doc-check-anchors.mjs:45` 的 `PATH_RE`）——**已实装〔小债批〕**：本族照红归 **0**（§4.2.7 判据面登记第 5 条）；文档侧**零触碰**（原文 = 正确包说明符形态）；**不得打标记**（防滥用② 同源） |
 
 #### 4.2.5 报告态 → 阻断态（切换条件与阈值）
 
@@ -926,7 +926,7 @@ V5-B: /(?<![A-Za-z0-9-])((?:T-[A-Z]{1,5}\d{1,3}(?:-\d{1,3})?|T-\d{1,3}|T[A-Z]?\d
    **现读数（as-of 2026-09-18 修正轮 2 · `node scripts/doc-check.mjs` 复跑）**：立案时五坐标 = **收正前原读数**（本批落笔与同刻他链写入使之位移——D4：行号只作 as-of）；**用例号类悬空 = 0**（`:515` 改述已生效）；
    现红集（闸态）= **0 条**——包说明符伪影族（立案 5 条 · 本登记第 5 条）随〔小债批〕左界守卫 `@` 实装**归零**；
    本档列报行 = `DOC-DISCIPLINE.md:1170`（§4.2.10 族内命中——C1 / C3 面 · 报告面）；全局读数 = 悬空 5 · 注记豁免 43 · 拟新增 14 · 迁移期引文 222 · 行宽 6。
-5. **包说明符伪影族（#64 ① · 立案 5 条 · 零触碰）**：`@thincoder/core/…` 形态被抽为仓内路径 token ⇒ 悬空；原文 = **正确包说明符形态** ⇒ 文档侧无正当修法；处置 = **保留原文 + 本登记 + §4.2.4 行 11**；到期条件 = 判据面轮实装左界守卫 `@` 排除（`scripts/doc-check-anchors.mjs:44`）——**已达成**（已实装〔小债批〕）。
+5. **包说明符伪影族（#64 ① · 立案 5 条 · 零触碰）**：`@thincoder/core/…` 形态被抽为仓内路径 token ⇒ 悬空；原文 = **正确包说明符形态** ⇒ 文档侧无正当修法；处置 = **保留原文 + 本登记 + §4.2.4 行 11**；到期条件 = 判据面轮实装左界守卫 `@` 排除（`scripts/doc-check-anchors.mjs:45`）——**已达成**（已实装〔小债批〕）。
 
 #### 4.2.8 参照历史面豁免族（「迁移期参照历史树」）——**已撤除（历史沿革 + 时点标注）**
 

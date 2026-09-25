@@ -234,7 +234,7 @@
 **`_archive` 可解析性（引擎证据 · 2026-09-18 只读取证；评审轮 1 #7）**：
 
 - **解析序不经 `SKIP_DIRS`**：`resolveFile`（`scripts/doc-check-anchors.mjs:147-153`）按仓根 → 锚域根 → 本档目录 → 前缀剥离给候选，命中判据 = `isFile`（同档 `scripts/doc-check-anchors.mjs:53` = `statSync(p).isFile()`）——无目录排除面。
-- **`SKIP_DIRS` 的作用面**（同档 `scripts/doc-check-anchors.mjs:46` / `scripts/doc-check-anchors.mjs:56-68`）= `walk()`，只喂 basename 索引与用例索引；源域排除另在 `scripts/doc-check-targets.mjs:20-32`（扫描面，非解析面）。
+- **`SKIP_DIRS` 的作用面**（同档 `scripts/doc-check-anchors.mjs:54` / `:65-71`）= `walk()`，只喂 basename 索引与用例索引；源域排除另在 `scripts/doc-check-targets.mjs:20-32`（扫描面，非解析面）。
 - **实证**：docs/core/requirements/METHODOLOGY.md:100 指 thincoder-cli/docs/design/_archive/METHODOLOGY.md（实核为真，2026-09-18）⇒ 复跑**未入 837 悬空清单**——该档非唯一 basename ⇒ 只能由解析序命中。
 - **与三处反向读法不冲突**：`docs/core/design/DOC-DISCIPLINE.md:162` / `docs/core/design/DOC-DISCIPLINE.md:467` / `docs/core/design/DOC-DISCIPLINE.md:575` 锁的是**扫描面**（源域 exclude）与**现状依据面**（归档档不作现状依据）——解析面另属。
 - **结论**：P2 修法分支「补全归档落点」与 §3-Q5 适用前提③ **成立、保留**；边界用例见 §6 U11。
