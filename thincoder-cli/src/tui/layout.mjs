@@ -109,7 +109,7 @@ export function computeLayout(state, { cols, rows }) {
   // Squeeze target: the divider line yields first under small terminals (the
   // task rows themselves never compress away — put() truncates by panel h).
 
-  // Subagent panel (§7.2.1 D1): RUNNING blocks only, between conversation and
+  // Subagent panel (docs/cli/design/TUI.md §6.8 D1): RUNNING blocks only, between conversation and
   // todo. Height = the FULL rendered height of every running block (F2 — fully
   // adaptive, no cap; the conversation shrinks accordingly). Precomputed here
   // via renderSubagentPanel (neutral module, no layout↔render-frame cycle);
@@ -152,7 +152,7 @@ export function computeLayout(state, { cols, rows }) {
   let todoFinalH = taskPanelH
   const overflow = fixedH + convH - rows
   if (overflow > 0) {
-    // 压缩链第 1 级（§7.2.1 NF1/评审 #2 措辞统一）：subagent 面板最先让位——
+    // 压缩链第 1 级（docs/cli/design/TUI.md §6.8 NF1/评审 #2 措辞统一）：subagent 面板最先让位——
     // 可压缩至 0 隐藏（运行中活动仍在缓冲区不丢），输入框/状态栏/会话区不可挤没。
     let afterSub = fixedH
     if (subagentH > 0) {
@@ -212,7 +212,7 @@ export function computeLayout(state, { cols, rows }) {
 }
 
 /**
- * §7.2.1 评审 #4：面板部分压缩（subagentFinalH < subagentLines.length）时 render-frame
+ * docs/cli/design/TUI.md §6.8 评审 #4：面板部分压缩（subagentFinalH < subagentLines.length）时 render-frame
  * 实际显示的行——**保底截断**：分隔线 + 末尾 (h-1) 行（最新启动区块优先；小终端上仍
  * 能看到最新子 agent 活动，旧 slice(0,h) 保留顶部会把最新活动裁掉）。分隔线始终保留
  * （面板边界语义）。h ≥ 全长 → 原样；h = 0 → []（layout 侧 panels.subagent 已为 null，

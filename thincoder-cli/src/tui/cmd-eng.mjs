@@ -52,7 +52,7 @@ export async function handleEngCommand(ctx) {
   // FR31 ③ / KD10（翻转点②·CLI `/eng`）：ON ⇒ 清 plan 残留（内存位 + 未注入的 plan 提示语）；
   // OFF 方向不动（普通模式零改——FR31 边界）。提示行仅在真清到东西时出（不喧宾）。
   const planReset = agent.config.agent.engineering ? clearPlanMode(agent) : false
-  // §11.2 D-24b: per-review instances die with the mode (fresh convergence cycles
+  // AGENT-LOOP-ASYNC-POOL.md §6.10 D-24b: per-review instances die with the mode (fresh convergence cycles
   // on the next toggle).
   agent._advisorRuns = new Map()
   if (!agent.config.agent.engineering) {

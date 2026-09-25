@@ -286,7 +286,7 @@ test("T-B6b（AC-B3 机读线提醒）：cancelled 评审 settle → 「评审�
   parent._asyncAdvisors.set("6", entry)
   settleAsyncEntry(parent, entry, { pool: parent._asyncAdvisors, ctx: { signal: { aborted: false }, callbacks: { onToken: () => {} } } })
   assert.match(parent.history.at(-1).content, /cancelled — the review did not settle; token not issued/, "机读线提醒（token 未签发）")
-  assert.ok(!parent._pendingAsyncResults.includes(entry), "取消不入 pending（§18.3 #3 边界）")
+  assert.ok(!parent._pendingAsyncResults.includes(entry), "取消不入 pending（AGENT-LOOP-ASYNC-POOL.md §6.11 边界）")
   assert.equal(parent._asyncAdvisors.has("6"), false, "取消出池")
 })
 

@@ -90,6 +90,27 @@ test("T-DC-3 错误·截断反证：形态正确 ∧ 判定照红（零静默）
   assert.equal(scan(root).dang.path, 1, "档缺失 ⇒ 照红（不得回退 .js 形态骗过守卫）");
 });
 
+test("T-DC-18 正常·左界守卫 `@` 排除：包规格形四形态零锚（假阳归零）", () => {
+  const forms = [
+    'import x from "@thincoder/core/session.mjs"', // 引号内
+    "`@thincoder/core/session.mjs`", // 反引号内
+    "@thincoder/core/session.mjs", // 行首（边界·无包裹符）
+    "`@thincoder/core/agent-tools/batch.mjs:32`", // 带坐标尾（边界·坐标尾交互）
+  ];
+  for (const line of forms) assert.equal(extractAnchors(line).paths.length, 0, `包规格形零锚：${line}`);
+  const root = makeFixture({ "docs/a.md": "@thincoder/core/ghost.mjs\n" });
+  const r = scan(root);
+  assert.equal(r.cand.path, 0, "包规格形不入候选（假阳归零）");
+  assert.equal(r.dang.path, 0, "零候选 ⇒ 零悬空");
+});
+
+test("T-DC-19 错误·左界面收窄反证：同形去 `@` 照判存在性", () => {
+  const root = makeFixture({ "docs/a.md": "见 `pkg/ghost.mjs`。\n" });
+  const r = scan(root);
+  assert.equal(r.cand.path, 1, "同形去 `@` ⇒ 入候选");
+  assert.equal(r.dang.path, 1, "无此档（basename 零命中）⇒ 照红——守卫不吞真锚");
+});
+
 // ── ② 谓词闭枚举 + 路径形态码段不产符号锚 ────────────────────────
 test("T-DC-4 正常·谓词闭枚举：`定义在` 产锚 ∧ `在` 已删不产锚", () => {
   const withPred = "`fooBar` 定义在 `m/host.mjs:3`。";

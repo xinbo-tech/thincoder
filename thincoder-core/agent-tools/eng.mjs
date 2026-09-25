@@ -59,7 +59,7 @@ export const engTool = {
       // R16 (F-R16a): OFF 不清 token——有效 token 跨模式存活（设计评审过的产物不因
       // 开关重复烧）。过期清理跑在另外三处（恢复过滤 / 开模式 / spawn 门禁拒）。
       ctx.agent._advisorRound = 0          // reset convergence budget
-      ctx.agent._advisorRuns = new Map()   // §11.2 D-24b: per-review instances die with the mode (fresh cycles)
+      ctx.agent._advisorRuns = new Map()   // AGENT-LOOP-ASYNC-POOL.md §6.10 D-24b: per-review instances die with the mode (fresh cycles)
       ctx.agent._touchedFiles = []         // clear mutation tracking
       ctx.agent._lastEngState = false
       ctx.agent._pendingReminders = ctx.agent._pendingReminders ?? []
@@ -90,7 +90,7 @@ export const engTool = {
       // R16 (F-R16b ②): off→on 不重评——只清过期 token（用户裁定"打开工程模式时
       // 应该清理"），有效 token 原样保留——遍历 Map 删过期，返回文案含清理个数。
       const cleared = purgeExpiredDesignTokens(ctx.agent)
-      ctx.agent._advisorRuns = new Map() // §11.2 D-24b: per-review instances die with the mode (fresh cycles)
+      ctx.agent._advisorRuns = new Map() // §6.10 D-24b: per-review instances die with the mode (fresh cycles)
       ctx.agent._lastEngState = true
       ctx.agent._pendingReminders = ctx.agent._pendingReminders ?? []
       ctx.agent._pendingReminders.push(ENG_ON_REMINDER)

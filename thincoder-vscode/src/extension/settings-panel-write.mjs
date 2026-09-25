@@ -8,6 +8,7 @@
  * §2.13.3 `opts.schema` 缝；本端直写面统一经此）。
  */
 import { persistRaw, conflictError, loadRaw } from "@thincoder/core/config-io.mjs"
+import { thinkOffShape } from "@thincoder/core/think-off.mjs"
 import { probeTargetFromEntry, sanitizeConsultModels } from "./presets.mjs"
 import { probeChannelModels } from "@thincoder/core/provider/list-models.mjs"
 import { overrideAdmissionIfHostBusy } from "./loop-sampler.mjs"
@@ -55,16 +56,13 @@ function probeDefaultModelChannel(dm) {
   })().catch(() => { /* 探针绝不阻断写面 */ })
 }
 
-/** off 形按族取形（off 形的族别单源 = `docs/core/design/MODEL-SPECS.md` §15.4-2）：effort 族
- *  （`thinkApi === "effort"`）与自定义开值族（`thinkEnabledValue` ≠ "enabled"）⇒ `thinking = null`
- *  （载荷层 off 门首款要求 `provider.thinking === null`——`{type:"disabled"}` 不开门 ⇒ effort 族关思考静默失效）；
- *  其余（type 族默认，如 `deepseek-v4-flash` 形）⇒ `{ type: "disabled" }`。
+/** off 形按族取形（取形 = **单源** `@thincoder/core/think-off.mjs` 的 `thinkOffShape`——`docs/core/design/MODEL-SPECS.md`
+ *  §16.2 生产者表第 4 行 / §15.4-2 族别判据；本地零形体，只剩取源一步）：effort 族（`thinkApi === "effort"`）
+ *  ⇒ `null`（载荷层 off 门首款要求 `provider.thinking === null`——`{type:"disabled"}` 不开门 ⇒ effort 族关思考静默失效）；
+ *  其余（type 族默认 / 自定义开值族）⇒ `{ type: "disabled" }`（达载荷层）。
  *  取形源 = payload 内 `adv.model`（off 档只在 select 已渲染时可达 ⇒ spec 可解；未给名 ⇒ 查表兜底 DEFAULT_SPEC）。 */
 function advisorOffShape(model) {
-  const spec = specForModel(model ?? "")
-  if (spec.thinkApi === "effort") return null
-  if ((spec.thinkEnabledValue ?? "enabled") !== "enabled") return null
-  return { type: "disabled" }
+  return thinkOffShape(specForModel(model ?? ""))
 }
 
 /** Panel persistence: build the agent.* patch from a webview payload (CLI-parity field names).

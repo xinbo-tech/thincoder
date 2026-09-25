@@ -1,7 +1,7 @@
 /**
- * display-budget.mjs — TUI 显示层额度（TUI-OOM-ROOTCAUSE 批——TUI.md §15.3）。
+ * display-budget.mjs — TUI 显示层额度（TUI-OOM-ROOTCAUSE 批——TUI-SESSION-VIEW.md §5）。
  *
- * 职责（§15.3.2）：常量单源（D-TB4）+ 行/载体计长（`lineChars`）+ `state.lines` 总量
+ * 职责（§5.1/§5.2）：常量单源（D-TB4）+ 行/载体计长（`lineChars`）+ `state.lines` 总量
  * 对账（`syncLineBudget`）。纯函数本体（`capText` / `appendCappedText`）住
  * `thincoder-core/text-budget.mjs`（零依赖）——与 agent 侧捕获共用（AGENT-LOOP.md §6.15，D2 单源）；
  * 本模块只承载 TUI 面常量与对账。
@@ -9,7 +9,7 @@
  * 依赖方向：本模块只引 `./ansi.mjs` + `@thincoder/core/text-budget.mjs`（叶子——不引 subagent 族，
  * 冻结锚点平移由调用方经 `onTrim` 注入，避环）。
  *
- * 计量口径 = UTF-16 码元（`String.length`——TUI.md §15.2 表 1）；行数维（5000 行环 /
+ * 计量口径 = UTF-16 码元（`String.length`——TUI-SESSION-VIEW.md §5.1）；行数维（5000 行环 /
  * 500 行块环 / 200 条目环）**原样保留**，字符维为第二维（D-TB5——既有 N5/N6 语义不动）。
  */
 import { C } from "./ansi.mjs"
@@ -17,7 +17,7 @@ import { capText, appendCappedText, fillMarker } from "@thincoder/core/text-budg
 
 export { capText }
 
-// ─── 常量（§15.3.1——单源；数值改动一处生效）────────────────────────────────
+// ─── 常量（§5.1——单源；数值改动一处生效）────────────────────────────────
 
 /** 单行（pushLine/pushLabel/恢复行/流式 flush 行）字符额度。 */
 export const LINE_MAX_CHARS = 64_000
@@ -42,7 +42,7 @@ export const LINES_TRIM_FLOOR = 200
 /** 搜索匹配计数上限（超出截断 + 提示行）。 */
 export const SEARCH_MATCH_CAP = 10_000
 
-// ─── 标记形态（逐字——§15.3.2 进测试断言）──────────────────────────────────
+// ─── 标记形态（逐字——§5.1 进测试断言）──────────────────────────────────
 
 export const LINE_TRUNC_MARKER = "… [line truncated: N chars omitted]"
 export const MIDDLE_TRUNC_MARKER = "… [middle truncated: N chars omitted]"
@@ -76,7 +76,7 @@ export function appendCapped(prev, add, opts) {
   return appendCappedText(prev, add, opts)
 }
 
-/** 评审文本单次截断（§15.3.1：头 32K + 尾 96K 保裁决尾部 + 中段标记——与累积侧同源）。 */
+/** 评审文本单次截断（§5.1：头 32K + 尾 96K 保裁决尾部 + 中段标记——与累积侧同源）。 */
 export function capAdvisorText(text) {
   return capText(text, { max: ADVISOR_TEXT_MAX_CHARS, keepHead: 32_000, keepTail: 96_000, marker: MIDDLE_TRUNC_MARKER })
 }
@@ -109,7 +109,7 @@ export function capLines(lines, max, marker = MIDDLE_TRUNC_MARKER) {
   return out
 }
 
-// ─── 计长与总量对账（§15.3.2 / §15.3.4）───────────────────────────────────
+// ─── 计长与总量对账（§5.2 / §5.4）───────────────────────────────────
 
 const arrChars = (a) => {
   if (!Array.isArray(a)) return 0
@@ -166,7 +166,7 @@ export function accountAll(state) {
 const RECEIPT_RESERVE_CHARS = 96
 
 /**
- * `state.lines` 总量对账（§15.3.3 落点表末行）：超 `LINES_CHAR_BUDGET` → **最小步进**裁头 +
+ * `state.lines` 总量对账（§5.3 落点表末行）：超 `LINES_CHAR_BUDGET` → **最小步进**裁头 +
  * 收据行，且不使 `lines.length` 低于 `LINES_TRIM_FLOOR`（触底 = 内层 break——接受超额，
  * 不靠守卫退出：FLOOR+1 且残余超额时守卫仍为真）。每轮裁「至额度内所需最少行数」
  * （need = 超额 + 收据上界预留；上限 = 可裁至保底的行数）；`onTrim(state, removedCount)` 由

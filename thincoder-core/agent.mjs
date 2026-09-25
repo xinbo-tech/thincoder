@@ -75,8 +75,8 @@ export function createAgent({
     // (AC3 零写) — no field initializer; the multi-slot Map `_engDesignTokens` is the
     // authoritative ledger (hydrated by restoreEngTokens / written by settle).
     _touchedFiles: [], _verifyRetries: 0, _advisorRound: 0, _advisorSession: null,
-    _advisorRuns: new Map(), // §11.2 D-24b: per-review convergence instances (rounds/prior/designId)
-    _mutationSeq: 0, _mutLog: [], // §11.2 D-24b: mutation log (in-flight review staleness scan)
+    _advisorRuns: new Map(), // AGENT-LOOP-ASYNC-POOL.md §6.10 D-24b: per-review convergence instances (rounds/prior/designId)
+    _mutationSeq: 0, _mutLog: [], // AGENT-LOOP-ASYNC-POOL.md §6.10 D-24b: mutation log (in-flight review staleness scan)
     _lastAdvisorOutput: null, // full review output from the most recent advisor call (convergence rounds inject it verbatim)
     _lastEngState: false,
     _pendingReminders: [],
@@ -111,7 +111,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
   // container, so no double-inject across the two consumption points.
   // ASYNC-RESULT-CONTAINER.md D2 (2026-09-08)：pending 单容器 `_pendingAsyncResults`
   // +role——四族（subagent/advisor/escalate/consult）统一停靠；注入器按 role 分发
-  // （consult → injectConsultResult；其余 → injectAsyncResult——族分支同 §25 D-R17a/b）
+  // （consult → injectConsultResult；其余 → injectAsyncResult——族分支同 CONSULTATION.md §6.2 D-R17a/b）
   // ——单容器一处清，不再逐族三段。
   const pendingAsync = agent._pendingAsyncResults
   if (pendingAsync?.length) {
@@ -193,7 +193,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
   const compactionOverhead = {
     systemPrompt,
     tools: toolSchemas,
-    // §18.6 D-TR4：compress 轨迹 depth 元数据（runAgent 的 depth 在此作用域——
+    // TRACES.md §6.1 D-TR4：compress 轨迹 depth 元数据（runAgent 的 depth 在此作用域——
     // context.mjs compressIfNeeded 经 extras 透出到 logCtx）
     traceDepth: depth,
   }
@@ -272,7 +272,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
         firedPatterns: streamRuleFired,
         // LOGGING（LOGGING.md）：llm:* 事件的语义上下文（stage=turn 主循环回合——含
         // digest 消化轮 auto=true；child=子代理 id（spawn 时 stamp 于 child._logId））
-        // §18.6 D-TR4：轨迹元数据增补（role/depth/kind/session/cwd——trace-store 只读
+        // TRACES.md §6.1 D-TR4：轨迹元数据增补（role/depth/kind/session/cwd——trace-store 只读
         // logCtx，签名不变）；kind：depth>0 = subagent（consult 孩子 = consult）——子代理
         // 对回靠 role+depth+child id（children 无 _sessionStart——不经 depth-0 设置——
         // session 字段对子代理轨迹为 null——见 trace-store/agent.mjs 注释）。
@@ -340,7 +340,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
         role: "user",
         content: `[User interrupt: ${response.interruptMessage}]`,
       })
-      // §20.3 站点 #8（第 24 批）：错误对象已自带 name/message——只补来源标注（缺 abortInfo 才补）
+      // AGENT-LOOP-SUBAGENT.md §6.12 站点 #8（第 24 批）：错误对象已自带 name/message——只补来源标注（缺 abortInfo 才补）
       throw annotateAbort(Object.assign(new Error("User interrupted"), { name: "AbortError" }), signal, "agent", "interrupted-response")
     }
 
@@ -365,7 +365,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
         // End-of-run exploration distillation (CONTEXT-COMPACTION §5 + SEND-STALL-DISTILL
         // §2.1): async — the promise hangs on _pendingDistill, settling at the next run's
         // start or the TUI exit flush. Silent (N3): failure never blocks return/history.
-        // §18.6 D-TR4：depth 透传（distill 轨迹元数据——与 compress 同通道）；extras = 会话续写前缀面（§6.15）
+        // TRACES.md §6.1 D-TR4：depth 透传（distill 轨迹元数据——与 compress 同通道）；extras = 会话续写前缀面（§6.15）
         const distill = summarizeRunExplorations(agent, callbacks, signal, depth,
           { systemPrompt, tools: toolSchemas }).catch(() => {}) // 与回合请求同源（无第二构造点）
         agent._pendingDistill = distill

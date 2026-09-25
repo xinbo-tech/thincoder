@@ -16,11 +16,9 @@ import * as vscode from "vscode"
 import { resolve } from "node:path"
 import { configureBatchSegment } from "@thincoder/core/agent-tools/batch-segment.mjs" // 叶子（node:fs/node:path）——静态面安全
 import { configureVerifyDiagnostics } from "@thincoder/core/agent-tools/verify.mjs" // 叶子面（闭包 4 档零 node:sqlite）——静态面安全
-import { CONFIG_CONFLICT_HINT, conflictError } from "@thincoder/core/config-io.mjs"
 import { applyPromptInjections } from "@thincoder/core/prompt-files.mjs"
 import { SUBAGENT_TOOL_EXCLUSIONS } from "@thincoder/core/agent/helpers.mjs" // 子代面排除集（核单源——TOOLS.md §6.16）
 import { loadSkills, readSkill } from "../extension/skills.mjs"
-import { vscPersistRaw } from "../extension/settings-panel-write.mjs"
 import { setSlotEngineering } from "../extension/session-slot-write.mjs"
 import { loadConsultPool } from "../extension/presets.mjs"
 import { builtinTools, toOpenAISchema, readImageTool } from "../tools.mjs"
@@ -40,8 +38,8 @@ configureBatchSegment({
 // ─── W14（2026-09-15）：agent-tools 三缝端侧接线（#88 skill loader / #91 eng mirror / #96 verify 诊断段）──
 // 端侧供值随删旧迁入装配层（同 W9 先例）：① `configureSkillLoader` —— 本端 loader 形态 = 同步
 // 实现（`src/extension/skills.mjs`，D-CI3 与核 skills.mjs 同构语义）；② `configureEngMirror` ——
-// 工程模式翻转后的双持久化镜像（槽权威 + config.json CLI 兼容镜像——迁自删除档
-// `src/agent-tools/eng.mjs:92-105`，逐字同语义）；③ `configureVerifyDiagnostics` —— 编辑器诊断
+// 工程模式翻转后的槽写（**会话槽唯一权威**，无 config.json 镜像；迁自删除档
+// `src/agent-tools/eng.mjs:92-105`）；③ `configureVerifyDiagnostics` —— 编辑器诊断
 // 段（advisory——迁自删除档 `src/agent-tools/verify.mjs:250-275`，逐字同语义）。
 // skill / eng 两缝**动态**载入（核 `agent-tools/skill.mjs` / `eng.mjs` 静态链经核 agent 栈可达
 // `node:sqlite`——W8 契约②机判；verify 闭包 4 档零 sqlite ⇒ 静态面安全）。
@@ -94,15 +92,7 @@ export async function wireAgentToolSeams() {
       try {
         const p = agent?._engPersist
         if (p) setSlotEngineering(p.cwd, p.slot, enabled)
-      } catch { /* slot unwritable — config mirror still written */ }
-      try {
-        const r = vscPersistRaw((raw) => {
-          raw.agent = raw.agent && typeof raw.agent === "object" ? raw.agent : {}
-          raw.agent.engineering = enabled
-        })
-        // F5b：config 并发被改 → 放弃镜像写（槽权威仍持态）；提示串由核缝追加到结果尾
-        return conflictError(r) ? `${CONFIG_CONFLICT_HINT} — config.json mirror not written (slot state still holds for this session).` : null
-      } catch { return null /* config unreadable — in-memory state still holds for this run */ }
+      } catch { /* slot unwritable — the slot is the only persistence face (no config mirror) */ }
     },
   })
   // 旗标在两处 configure* 之后置位（评审修正）：载入中途 reject 时下一轮仍会补接，
@@ -144,7 +134,7 @@ export function withPool(tool) {
  *   ③ 动作级分类（`isReadonlyAction` status/observe · `isControlAction` cancel/send）——端审批面
  *      （execute-tools 权限门/批分组 + tool-gates planMode 门）按谓词读；核 subagent 工具无该钩子
  *      （核内零端名/零端概念）⇒ 装饰面承载（逐字同删除档谓词）。
- *   ④ C-5 终态回显（AGENT-LOOP（VSC 仓）§12.3）：核 `status` 不读墓碑（未命中即 unknown），
+ *   ④ C-5 终态回显（AGENT-LOOP-ASYNC-POOL.md §6.20）：核 `status` 不读墓碑（未命中即 unknown），
  *      端契约要求 discarded/cancelled/consumed/failed 四态回显 ⇒ 装配面接管 `execute`（仅在核
  *      输出为 unknown-错误时查核墓碑单点 `tombstoneOf` 补回显——其余输出原样透传）。
  */
@@ -180,7 +170,7 @@ export function vscSubagentFace(tool) {
 }
 
 /** C-5 终态回显表（墓碑 status → 返回 status + note；未列值不入表——不虚构语义）。
- *  文案 = 删除前端侧同表逐字（§12.3 C-5 四态：discarded/cancelled/consumed→done/failed）。 */
+ *  文案 = 删除前端侧同表逐字（§6.20 C-5 四态：discarded/cancelled/consumed→done/failed）。 */
 const VSC_TERMINAL_ECHO = {
   discarded: { status: "discarded", note: "discarded by the user's Stop — its report will NOT arrive (partial changes stay unmerged/unaudited; re-spawn if the work is still needed)" },
   cancelled: { status: "cancelled", note: "cancelled — its report will NOT arrive (its work was stopped; partial changes stay unmerged/unaudited)" },

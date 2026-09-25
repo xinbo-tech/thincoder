@@ -147,7 +147,7 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`）
 ### 6.9 规格表（MODEL_SPECS）与能力位
 
 规格表中枢 = `thincoder-core/model-specs.mjs`：所有模型能力差异在此声明——`context` / `maxOutput` / `thinking` / `partialMode` / `prefixMode` / `multimodal` / `thinkApi`（`type` = thinking.type 字段 / `effort` = reasoning_effort）/ `thinkEnabledValue` / `reasoningEcho`（required = 必须回传）
-/ `reasoningEffortEnum` / `tempRange` / `noUsageStream`；VSC 侧每行多 `reasoningEffortDefault`。
+/ `thinkAlwaysOn`（服务端强制思考标记——语义单源 = `doc:MODEL-SPECS.md:§16.3`）/ `reasoningEffortEnum` / `tempRange` / `noUsageStream`；VSC 侧每行多 `reasoningEffortDefault`。
 
 - 新模型只加一行 spec，transport / 续写 / thinking 全自动适配；未知模型保守 `DEFAULT_SPEC`（128K 上下文 / 32K 输出）+ warn once。
 - **厂商前缀剥离**：完整名未命中且含 `/` 时剥掉首个 `/` 前 namespace 再匹配一次（`ZHIPU/GLM-5.3 → glm-5.3`）；显式 alias 行保留；只影响 spec 查询，不改 `provider.model`。
@@ -208,6 +208,7 @@ advisor 径的 provider 解析（`thincoder-core/advisor/run.mjs` `resolveAdviso
 `cfg.thinking === false`（非法原值）仍归一为 `undefined`（零变）。载荷层谓词本体**零改**（本批只补解析链前置）；用例 = `doc:MODEL-SPECS.md:§15.7` AD-1..AD-4。
 无 off 路径的族（effort 型枚举不含 `none` / 服务端强制思考族）不受本条影响——谓词 guard ④ 照旧不命中（无该字段、不抛错）。
 **生产者面**（off 形的族别取形——effort 族须落 `thinking: null`；CLI `/advisor` 与 VSC 面板写面两处同式）单源 = `doc:MODEL-SPECS.md:§15.4-2`。
+**「有效 off 路径」判据与回执可宣称性**（生产者全表 · 单源实现 `thincoder-core/think-off.mjs`（拟新增））= `doc:MODEL-SPECS.md:§16`——谓词本体（本节）零改。
 
 ### 6.13 Responses API transport
 
@@ -313,7 +314,7 @@ VSC 调用面已无相位传参点（W10 已迁核）——相位参数由核 ch
 finishReason 区分（`response.incomplete` 非长度原因不得报成 `length`）**保留为端侧验收面**。
 
 **能力适配端差**（语义同源不重并——坐标即指）：`specForModel` / `providerSpec` / `resolveEnableThinking` / `isBailianHost`（`thincoder-vscode/src/config.mjs:106 / :142 / :183 / :166`——W16 面）·
-reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` → `thinking: null` + `reasoningEffort: null` 真 off）· escape v5 与 UTF-16 安全截断（核 `escape.mjs` + 端 `src/agent/run-helpers.mjs` `safeSliceUTF16`——§6.7 同构）·
+reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 真 off；**载荷形随 `doc:MODEL-SPECS.md:§16.2` 按族取形**）· escape v5 与 UTF-16 安全截断（核 `escape.mjs` + 端 `src/agent/run-helpers.mjs` `safeSliceUTF16`——§6.7 同构）·
 畸形 tool_calls 防御（W10 已迁核——现体 = 核 `provider/sse.mjs`；§6.10 同构）· 前缀剥离与 `DEFAULT_SPEC` 兜底（§6.9 同构）；
 规格表每行多 `reasoningEffortDefault`（§6.9 已登记端差）。**`provider.headers`：VS Code 端无 `providers[].headers` 概念**（§6.17 域外与端面已登记——对位引入属新需求）。
 
@@ -456,3 +457,6 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` → 
 - 2026-09-25（**规格·effort 轮 · eng-designer**——承 `docs/batches/2026-09-25-spec-effort.md` §2 · 台账 #241 / #326 / #329）：§6.9 新登 `noUsageStream` 语义（保守抑制 · 非能力断言 · 消费点惰性面）；§6.11 新登预置 `maxTokens` ⇄ 规格行对齐与空名单白名单；§6.12 新登 **off 形解析链保形条**（#329——advisor 径 `thinking:null` 保形 + 显式 off 清继承档；谓词本体零改）。
   数值与逐对表真源 = `doc:MODEL-SPECS.md:§15`，本档只承载机制面（D2）。
 - 2026-09-25（**规格·effort 轮 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承 `docs/batches/2026-09-25-spec-effort.md` §3 轮次 1）：§6.12 补**生产者面**指针（off 形按族取形——effort 族须落 `thinking: null`；单源 = `doc:MODEL-SPECS.md:§15.4-2`）+ 用例号收正（`A-13..A-16` → `AD-1..AD-4`，避与判据号同号）。谓词本体零改（单源不变）。
+- 2026-09-25（**off 形族收尾批 · eng-designer**——承 `docs/batches/2026-09-25-off-family-closeout.md` §2 · 台账 #334 / #335 / #346）：§6.12 补 **「有效 off 路径」判据与回执可宣称性**指针（生产者全表 + 单源实现 `thincoder-core/think-off.mjs`（拟新增）——真源 = `doc:MODEL-SPECS.md:§16`）；谓词本体零改。
+- 2026-09-25（**off 形族收尾批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承 `docs/batches/2026-09-25-off-family-closeout.md` §3 轮次 1 + §2 修正块 · 台账 #334 / #335 / #346）：
+  §6.9 规格字段清单补 `thinkAlwaysOn`（服务端强制思考标记——语义单源 = `doc:MODEL-SPECS.md:§16.3`，循 `cacheMode` 同笔同步先例）；§6.19 旧形字面收正（`"off"` 载荷**按族取形**——真源 = `doc:MODEL-SPECS.md:§16.2`）。谓词本体零改。

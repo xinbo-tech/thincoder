@@ -158,7 +158,7 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
         onToken: (t) => { if (String(t ?? "").trim()) reviewTextProduced = true; onText(t) },
         onReasoning: onThink,
         // LOGGING（vscode advisor/run.mjs parity——按 stage 可 grep）
-        // §18.6 D-TR4：轨迹元数据增补——kind=advisor（评审独立于子代理——T-TR2）；role
+        // TRACES.md §6.1 D-TR4：轨迹元数据增补——kind=advisor（评审独立于子代理——T-TR2）；role
         // 透出调用方角色（eng-coder 内嵌评审时为 "eng-coder"）；session/cwd 供轨迹对回；
         // traces 开关沿 agent.config（D-TR6）。
         logCtx: {

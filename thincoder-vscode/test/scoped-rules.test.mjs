@@ -133,6 +133,22 @@ test("T-B3 作用域集 JIT：命中 ⇒ 派发前注入一次；同会话二次
   assert.equal(ruleHits(h4).length, 1, `绝对路径同样命中（归一候选生效；实读 path=${flipped}）`)
 })
 
+// ─── T-B3b 作用域集 JIT · `file_ops` 动作感知（#333 单源谓词——AC-8）──────────
+
+test("T-B3b 作用域集 JIT · file_ops 动作感知（AC-8 · 台账 #333）：copy 命中（只 dest）· move 命中（双端）· copy 源仅读取 ⇒ 零注入", async () => {
+  const cwd = mkCursor("jit-file-ops")
+  const ruleHits = (h) => h.filter((m) => typeof m.content === "string" && m.content.includes('project rule "py"'))
+  // ① copy ⇒ 候选 = dest ⇒ 命中（#333 前谓词对该工具返 `[args.path]`（无 path 参）⇒ 零候选 = 死路；本批由死转活）
+  const h1 = await dispatch({ cwd, config: {}, _rules: loadScopedRules(cwd) }, cwd, [{ name: "file_ops", args: { action: "copy", source: "a.txt", dest: "b.py" } }])
+  assert.equal(ruleHits(h1).length, 1, "copy ⇒ 只 dest 作候选 ⇒ 命中（JIT 注入一次）")
+  // ② move ⇒ 候选 = source + dest（两端皆动）⇒ 命中
+  const h2 = await dispatch({ cwd, config: {}, _rules: loadScopedRules(cwd) }, cwd, [{ name: "file_ops", args: { action: "move", source: "c.py", dest: "c.txt" } }])
+  assert.equal(ruleHits(h2).length, 1, "move ⇒ source + dest 双端候选 ⇒ 命中")
+  // ③ copy 源仅读取（不属写域）⇒ 不作候选 ⇒ 零注入（动作感知判别格）
+  const h3 = await dispatch({ cwd, config: {}, _rules: loadScopedRules(cwd) }, cwd, [{ name: "file_ops", args: { action: "copy", source: "d.py", dest: "d.txt" } }])
+  assert.equal(ruleHits(h3).length, 0, "copy 源不作候选 ⇒ 零注入（先红 = 死路期两格皆零）")
+})
+
 // ─── T-B4 CLI 无对位（登记面）──────────────────────────────────────────────
 
 test("T-B4 登记面：thincoder-cli 树对 `.cursor/rules` 零读点（本批不改 CLI）", () => {

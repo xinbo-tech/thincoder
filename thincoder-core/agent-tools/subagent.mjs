@@ -14,7 +14,7 @@
  * 2026-09-05 拆分轮: status/escalate/panel 动作执行器 → ./subagent-actions.mjs；§20
  * 调度器全套 → ./subagent-scheduler.mjs——本文件 import 源随之改写。
  * 2026-09-05 模块拆分轮（726 > 500 硬限）: spawn 前置 helpers（summarizeEngTaskBook/
- * effectiveSubagentModel/resolveDesignSlot）+ §20 准入（prepareScheduling）+ child
+ * effectiveSubagentModel/resolveDesignSlot）+ AGENT-LOOP-SUBAGENT.md §6.9 准入（prepareScheduling）+ child
  * 装配（buildSpawnChild）→ ./subagent-spawn.mjs；async 分支（executeAsyncSpawn）
  * → ./subagent-run.mjs——execute 只保留动作分流 + 装配调用 + 阻塞路径。
  */
@@ -71,7 +71,7 @@ export function classifySyncAbort(ctxSignal, baseSignal, ctrlSignal, err) {
 export function armSyncChildAbort(parent, key, baseSignal, announce = null) {
   const ctrl = new AbortController()
   if (baseSignal) {
-    // §20.3 站点 #10（第 24 批）：hop 逐跳保 reason（下游可判定「谁杀的」）
+    // AGENT-LOOP-SUBAGENT.md §6.12 站点 #10（第 24 批）：hop 逐跳保 reason（下游可判定「谁杀的」）
     if (baseSignal.aborted) ctrl.abort(baseSignal.reason)
     else baseSignal.addEventListener("abort", () => ctrl.abort(baseSignal.reason), { once: true })
   }
@@ -102,9 +102,9 @@ export function buildSyncStoppedReport(role, capturedOutput, designId) {
 /**
  * subagent tool — ONE tool, EIGHT actions (AGENT-LOOP-SUBAGENT.md §6.7 +
  * SUBAGENT-OBSERVE-SEND): spawn (default) / status (non-blocking pool query) / observe
- * (inspect a running/queued/done async child's recent activity + current tool — §7.2) /
+ * (inspect a running/queued/done async child's recent activity + current tool — docs/cli/design/TUI.md §6.8) /
  * send (inject a direction into a RUNNING async child — consumed at its next turn
- * boundary as an ordinary instruction — §7.2) / escalate (飞刀 — hand implementation to
+ * boundary as an ordinary instruction — §6.8) / escalate (飞刀 — hand implementation to
  * a stronger model) / cancel (stop ONE background subagent — AGENT-LOOP-SUBAGENT.md §6.7.2) / panel (view + fix
  * the live subagent panel — AGENT-LOOP-SUBAGENT.md §6.7.2) / consume-design (parent-side chain-terminal token
  * consumption — ENGINEERING-MODE.md §2.6, 2026-09-07). The check
@@ -239,7 +239,7 @@ export const subagentTool = {
     if (!ROLES.has(role)) {
       throw new Error(`Unknown subagent role: ${JSON.stringify(role)}. Valid roles: explore, plan, coder, eng-coder, eng-designer (exact spelling).`)
     }
-    // §18 D-E3 internal-spawn gate: an eng-coder sub-agent may only spawn sync
+    // AGENT-LOOP-SUBAGENT.md §6.7.6 D-E3 internal-spawn gate: an eng-coder sub-agent may only spawn sync
     // explore (audit) children — non-explore roles and async are refused here
     // (mechanical), the audit budget is enforced (7th audit spawn refused), and
     // the returned attempt number marks this spawn as an audit for the task-book
@@ -348,14 +348,14 @@ export const subagentTool = {
       const cls = classifySyncAbort(ctx.signal, baseSignal, ctrl.signal, e)
       if (cls === "base") {
         // ① 整回合停（现状逐字保留——挂起场景 base 命中而 ctx.signal 未 abort——R2）：
-        // §27 R23：外层 abort 传播的中断——内层开块随之外层冻结前先收尾定格
+        // docs/cli/design/TUI.md §6.8.2 R23：外层 abort 传播的中断——内层开块随之外层冻结前先收尾定格
         // （D-R23c1 stopped——T-R23c.2a 生成侧路径；TUI 冻结兜底仍在 freezeSubTaskLines）
         emitNestedChildEvent(ctx, relayPrefix, "stopped")
         throw e // 用户停——不落错误事件
       }
       if (cls === "error") {
         // ③ 其他错误（现状逐字保留——:249-253）：
-        // §27 R23 error-run 映射（实现批补一行）：run 错误（非 abort）→ 同样发 stopped
+        // §6.8.2 R23 error-run 映射（实现批补一行）：run 错误（非 abort）→ 同样发 stopped
         // ——内层子块定格不悬空（T-R23a.3——工具错/运行错误路径）。
         emitNestedChildEvent(ctx, relayPrefix, "stopped")
         logEvent("child:error", { role, id: child._logId, ms: Date.now() - blockT0, err: errText(deathLine(e, ctrl?.signal), 200) })
@@ -370,7 +370,7 @@ export const subagentTool = {
       // 块冻结标 stopped（R6——非 done）：⏹ 定向中止的 TUI 顶层块立即定格 stopped
       // （async settle cancelled 分支同款直发——async-settle.mjs settleAsyncEntry）；
       // 嵌套（eng-coder 内 explore 审计）经 emitNestedChildEvent 定格子块——stopped
-      // 幂等无害（重复/迟到 done 由 §27.1 F2 done 子块定格丢弃兜底）。
+      // 幂等无害（重复/迟到 done 由 docs/cli/design/TUI.md §6.8.2 F2 done 子块定格丢弃兜底）。
       ctx.callbacks?.onToken?.(`${relayPrefix}⟦ev⟧stopped\x1e0\x1e0\x1estopped\x1e`)
       emitNestedChildEvent(ctx, relayPrefix, "stopped")
     } finally {
@@ -378,7 +378,7 @@ export const subagentTool = {
       // 口径 = 成功/折叠/整回合停——错误③ 同样 rethrow 经 finally——同归本注销）
       disarm()
     }
-    // §27 R23 D-R23c1（评审 #1 🅰——生成侧补发射）：sync spawn 同步收尾——若本 spawn
+    // §6.8.2 R23 D-R23c1（评审 #1 🅰——生成侧补发射）：sync spawn 同步收尾——若本 spawn
     // 处于嵌套上下文（ctx.callbacks 已是嵌套 wrapper——eng-coder 内 explore 审计）→
     // 发内层 ⟦ev⟧done（完整嵌套前缀——wrapper 链自动补外层）→ 主 TUI 路由子块定格
     // （T-R23c.1）。非嵌套（depth-0）零变化——冻结仍由 dispatch subKey 精确冻承接。
@@ -386,7 +386,7 @@ export const subagentTool = {
     // 冻结管线复用——迟到 done 对已定格 stopped 块被丢弃——幂等无害）。
     emitNestedChildEvent(ctx, relayPrefix, "done")
     logEvent("child:done", { role, id: child._logId, ms: Date.now() - blockT0, kind: String(pipelineReport).includes(TURN_CAP_MARK) || String(pipelineReport).includes(STOPPED_MARK) ? "partial" : "ok" })
-    // §7.2.3 sync spawn 完成精确冻结（方案 e）：execute 返回前 ctx 留子代理 key
+    // docs/cli/design/TUI.md §6.8 sync spawn 完成精确冻结（方案 e）：execute 返回前 ctx 留子代理 key
     // （relayPrefix 去尾 = `role#N`）——dispatch runOne 读它作 onToolResult 第 4 参 →
     // TUI finishSubTaskKey 按 key 精确冻（async eng-coder 先启动时不再误冻其块——
     // T-F2）。仅成功/折叠路径设置：async 分支不设（round2 #2——ack 带 status:running 由

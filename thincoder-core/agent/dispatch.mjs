@@ -140,7 +140,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
   // ---- Phase 1: serial preparation ----
   // Pre-gates run per tool (parse/planMode/engineering gates); non-readonly tools
   // that REACH the permission stage are collected into one batch — a single merged
-  // ask covers the whole toolCalls array (§16 D-B1, "approve all / one by one /
+  // ask covers the whole toolCalls array (D-B1, "approve all / one by one /
   // deny"). Tools stopped by a pre-gate never join the batch (review #7).
   const prepared = []
   const permPending = [] // { toolCall, tool, args } — reached the permission stage
@@ -216,7 +216,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       }
     }
 
-    // E（第 11 批·F17/§14.14 E-3d）：D5 冻结窗口写前拦截——设计评审在途（点火 → 结算）期间，
+    // E（第 11 批·F17/ADVISOR-GUARDS.md §5 E-3d）：D5 冻结窗口写前拦截——设计评审在途（点火 → 结算）期间，
     // 父侧对被审文件集（声明文档集 + 批次档）的写入会被拒绝：在途写使本轮结算 stale——pass 轮
     // = token 直接丢失（实证：第 10 批 id=20 整轮作废）。工具面 = FILE_MUTATORS（与变更记账
     // 同集——不记入日志的写面既不判 stale 也不拦）；判据与 reviewIsStale 同源、单一权威源 =
@@ -247,7 +247,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
 
     // Readonly tools (and autoApprove — the short-circuit, unchanged for the
     // whole batch too) skip the permission stage entirely.
-    // §18 D-E3 task-domain authorization (spawn-time): an eng-coder child's
+    // AGENT-LOOP-SUBAGENT.md §6.7.6 D-E3 task-domain authorization (spawn-time): an eng-coder child's
     // tools skip the permission ASK stage exactly like autoApprove — granted by
     // the parent spawn (approved design + task = authorization; subagent.mjs
     // sets _engTaskAuthorized on the child). Everything EARLIER in Phase 1
@@ -268,7 +268,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
     permPending.push({ toolCall, tool, args })
   }
 
-  // ---- Permission stage: one merged ask for the whole batch (§16 D-B1) ----
+  // ---- Permission stage: one merged ask for the whole batch (D-B1) ----
   // >1 non-readonly tools in the same toolCalls array → a single
   // onBatchPermissionRequest({ tools, count }) ask; verdicts:
   //   "approveAll" → batch-scope allowance (autoApprove style, NOT persistent)
@@ -371,7 +371,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
           const routedResult = peerNote && routedOk ? `${routed.result}\n${peerNote.text}` : routed.result
           if (peerNote && routedOk) markClaimNoted(agent, peerNote.keys) // 提示已附加 ⇒ 落去重标记
           if (isPeerWriteTool && routedOk) recordPeerWrites(agent, item.tool, item.args)
-          // §29 fix A：routed 写成功（客户端执行）同样执行期即刻记账（唯一记账点）
+          // fix A：routed 写成功（客户端执行）同样执行期即刻记账（唯一记账点）
           if (routedOk && FILE_MUTATORS.has(toolName)) noteExecutedMutation(agent, item.tool, item.args)
           callbacks.onToolResult?.(item.toolCall.name, routedResult, item.toolCall.id)
           logEvent("tool:done", { tool: toolName, ms: Date.now() - toolT0, head: headText(routedResult, 200), child: agent?._logId })
@@ -383,7 +383,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       console.log = (...a) => capturedConsole.push(a.map(String).join(" "))
       console.error = (...a) => capturedConsole.push("[err] " + a.map(String).join(" "))
       let rawResult
-      // ctx 对象提升为变量（§7.2.3）：subagent 阻塞 execute 返回前在 ctx 上留
+      // ctx 对象提升为变量（docs/cli/design/TUI.md §6.8）：subagent 阻塞 execute 返回前在 ctx 上留
       // _subagentKey（relayPrefix 去尾）——runOne 在 execute 返回后读它作 onToolResult
       // 第 4 参（普通工具/错误路径无此字段——undefined 兼容既有签名）。每次工具调用
       // 独立 ctx——并行同名工具（批并行 runOne）各自带自己的 key，互不串扰。
@@ -393,7 +393,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
         depth,
         signal,
         callbacks,
-        // §11.2 D-24b: per-call id — the advisor tool marker-keys its launch so
+        // AGENT-LOOP-ASYNC-POOL.md §6.10 D-24b: per-call id — the advisor tool marker-keys its launch so
         // recordToolResults can split async-ack accounting from sync settles.
         _toolCallId: item.toolCall.id,
         onOutput: (chunk) => callbacks.onToolOutput?.(item.toolCall.name, chunk, item.toolCall.id),
@@ -422,7 +422,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       if (isPeerWriteTool && !raw.startsWith("Error:")) {
         recordPeerWrites(agent, item.tool, item.args)
       }
-      // §29 fix A：FILE_MUTATORS 执行成功即刻记账（唯一记账点——取代 record-results 批后
+      // fix A：FILE_MUTATORS 执行成功即刻记账（唯一记账点——取代 record-results 批后
       // 段 + agent.mjs 中断分支——不双计）——同批 launch 前的写在 launchSeq 之前落地 →
       // async advisor settle 不误判 stale（同批 launch 后写仍保守 stale——T-A2/T-24b9）。
       if (FILE_MUTATORS.has(toolName) && !raw.startsWith("Error:")) {

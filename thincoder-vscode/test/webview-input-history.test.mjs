@@ -4,7 +4,7 @@
  *
  * 覆盖：连续上溯与 ↓ 回落（含草稿恢复）/ 单行任意位置触发（↑ 载入、↓ 吞键 no-op）/ 多行
  * 非边界零劫持（原生竖移保留＝零 preventDefault）/ IME 两分支守卫 / 下拉让位 / 边界门。
- * 手法（§11.1.5）：setupWebview + installChatFixture + 动态 import 真 `input.js`（副作用注册）；
+ * 手法：setupWebview + installChatFixture + 动态 import 真 `input.js`（副作用注册）；
  * 历史夹具直设 ctx._inputHistory / _historyIdx / _inputDraft（逐测复位）；
  * 断言面 = 输入框值 + dispatchEvent 返回值（false = 已 preventDefault）+ ctx 指针。
  */

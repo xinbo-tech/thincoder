@@ -40,7 +40,7 @@ If the session is long, prioritize conclusions that appeared last and are still 
 Session log:
 `
 
-/** §18.6 D-TR6（2026-09-04 fix round1）：distill 调用点无 agent 作用域——traces 开关
+/** TRACES.md §6.1 D-TR6（2026-09-04 fix round1）：distill 调用点无 agent 作用域——traces 开关
  *  缺省回退磁盘配置（loadConfig——与 agent.config 同源：traces.enabled 缺省 on）；
  *  配置不可读时按缺省 on（注：CLI 启动早已 loadConfig——此处仅是兜底防御）。 */
 function tracesEnabledFromConfig() {
@@ -54,14 +54,14 @@ function tracesEnabledFromConfig() {
 /**
  * Extract candidates from a session transcript. transcript: plain-text session record.
  * Returns [{ type, title, content, tags, layer }], or [] on parse failure.
- * opts.traces（可选）：§18.6 D-TR6 开关显式透传（测试隔离/未来调用方）——缺省回退
+ * opts.traces（可选）：TRACES.md §6.1 D-TR6 开关显式透传（测试隔离/未来调用方）——缺省回退
  * 磁盘配置（tracesEnabledFromConfig）——关 = chat() 出口不落盘。
  */
 export async function extractCandidates(provider, transcript, opts = {}) {
   const traces = opts.traces ?? tracesEnabledFromConfig()
   const res = await chat(provider, {
     messages: [{ role: "user", content: DISTILL_PROMPT + transcript }],
-    // §18.6 D-TR4/D-TR6（fix round1）：distill 调用经 chat() 唯一采集点——补轨迹
+    // TRACES.md §6.1 D-TR4/D-TR6（fix round1）：distill 调用经 chat() 唯一采集点——补轨迹
     // 元数据 + traces 开关透传（关=不落盘必须全覆盖——不再静默越过开关）
     logCtx: { stage: "distill", kind: "distill", traces },
   })

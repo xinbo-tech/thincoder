@@ -10,7 +10,7 @@
  */
 
 import { providerSpec } from "../config.mjs" // 第 25 批：预算派生（与 loop.mjs:11 同源导入）
-// B4（群 B 批，CLI §18.3——F32）：CJK 加权单源（provider/rate.mjs 叶子向无环）
+// B4（群 B 批，ADVISOR-GUARDS.md §9——F32）：CJK 加权单源（provider/rate.mjs 叶子向无环）
 import { estimateText } from "../provider/rate.mjs"
 
 export const MAX_ADVISOR_TURNS = 100
@@ -37,7 +37,7 @@ export const REVIEW_TIMEOUT_MS = 600_000 // whole review timeout (10 minutes)
 export const MAX_RESULT_CHARS = 64 * 1024 // tool result truncation (line-aware; 64K, aligned with main offload limit)
 const MAX_KEY_FILES_IN_COMPACTION = 5 // files named in the compaction summary
 
-/** Estimate token count from messages（B4——群 B 批 CLI §18.3：扁平 chars/4 改 `estimateText`
+/** Estimate token count from messages（B4——群 B 批 ADVISOR-GUARDS.md §9：扁平 chars/4 改 `estimateText`
  *  加权式——ASCII/4 + 非 ASCII/1；纯 ASCII 与旧式逐值相等；CJK 低估 ~3-4× 修正；
  *  walker（content / tool_calls 两源）与计数口径零改）。 */
 export function estimateTokens(messages) {

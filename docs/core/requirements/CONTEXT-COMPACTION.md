@@ -79,8 +79,10 @@
 
 语义同源——VSC 档 F-K1–F-K6 / N-K1–N-K4 与 §4.1 逐条同义（不重并）；**VSC 独有条目** = **F-K7 压缩可见性（本端）**：
 回调链 onCompressStart → onCompress / onCompressFail → webview `compress` 消息四态（start / done / fallback / failed）渲染至 `#compress-status` 状态行（仅生命周期可见——摘要正文不进前端）。坐标（实核）＝ 旧档 `thincoder-vscode/src/compact.mjs:18,28,31,115`（**W6 已删**——现体 `thincoder-core/context.mjs`） （迁移期引文）
-（THRESHOLD_FRACTION 0.60 / KEEP_HEAD 0 / COMPRESS_FAILURE_LIMIT 3 / SUMMARIZE_PROMPT）+ `src/extension/panel-callbacks.mjs:144-152`（compress 回调接线）。端差 = 呈现面（webview 状态行四态 vs TUI 压缩面板）；
+（THRESHOLD_FRACTION 0.60 / KEEP_HEAD 0 / COMPRESS_FAILURE_LIMIT 3 / SUMMARIZE_PROMPT）+ `src/extension/panel-callbacks.mjs:144-152`（compress 回调接线）。**端差（已裁保留 · 形态类——类判据单源 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §6.1 首）**：呈现面（webview 状态行四态 vs TUI 压缩面板）；
 提示词（`SUMMARIZE_PROMPT`）**单源 = 核 export**（W6 迁核后旧「各端原文自持」口径退役——`thincoder-core/context.mjs:61`）。**测试缺口（发现即报）**：VSC `test/` 对压缩面零专属用例（as-of 2026-09-12 全扫零命中）——补测触发 = 该面下次被触碰。
+
+**二态化裁定行（2026-09-25 · 台账 #339① 需求层复核）**：端差（呈现面四态）= **已裁保留**（形态类——类判据单源 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §6.1 首）；提示词面 = **单源 = 核 export**（W6 迁核后旧「各端原文自持」口径退役——非端差）。
 
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）
 
@@ -104,4 +106,5 @@
 - 2026-09-18（**压缩续写批 · 实施轮 v3 实测收正 · 父侧直接执行**——用户「好」裁定 + 批档 §5 v3 读数）：§2.1 条目补**「随带与回合请求同源的 `reasoningEffort`」**（不硬编码 · 无配置 ⇒ 缺省）——真机生产口径首现命中 **92.86% / 93.65%**（两次独立运行，对照改前 0%）；**判定句不变**；派生差两则（百炼 qwen 族 `enable_thinking` 首判差 / autoThink 窗口）⇒ 台账 #56。
 - 2026-09-21（**用户需求落档 · 主 agent**——用户 20:00–20:03 讨论定形 · 台账 #18）：§2.1 新增 **模型主动整理上下文（`context` 工具）**条目 F-CC1–F-CC5（感知 / 主动压缩携要求 + 自动附任务目标 / 噪声清理 / 方向转换轻推 / 单工具多操作——阈值压缩保留为兜底 ✗ 记录面不死 ✗ 不做自动压缩 ✗ 不新增用户侧命令）；**本档新增需求 1 条**（用户原话级 ✗ 非派生）。
 - 2026-09-21（**父侧直接执行 · 可 revert**——用户 20:11「好」裁 A/D 搭 context-tool 批 · 承台账 #204）：F-CC2 补**「回执须露可回查锚」**（全史路径 + 取回路径 ⇒ 一步可行动）+ 边界条**子代理面改带可回查性论证**（不得无论证默认 ✓）。
+- 2026-09-25（**end-diff-registry 批 · 需求层二态化轮 · eng-designer**——承 `docs/batches/2026-09-25-end-diff-registry.md` §2 上抛①〔父侧明示委托本轮落〕 · 台账 #339①）：§4.3 端差（呈现面四态）补**已裁保留**状态词 + 类判据句（提示词面单源 = 核 export——非端差标注）；裁定行落地。**零新语义**。
 

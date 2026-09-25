@@ -22,6 +22,10 @@
  * 无注册默认 ⇒ **中性档 `""`（不显式 effort）**，**不得**回落 `levels[0]`（`levels[0] === "none"` 族会被静默关思考）；
  * 故 ② 的负控判据随之**改判**（原「无 `effortDefault` ⇒ 仍落 `levels[0]`」退场），两渲染点
  * （`:82-88` / `:121-125`）同判据：中性档 ⇒ 按钮「—」+ 无 ✓ + 无 active + 回合侧零 patch（`""` 假值）。
+ *
+ * 2026-09-25 收尾批追加（批 `2026-09-25-off-family-closeout` · 设计 `docs/core/design/MODEL-SPECS.md` §16.5 / §16.6-⑴ ·
+ * 台账 #334 / #346-①③ · 用例 W-5 / W-10）：off 哨兵避支（共享规则 ⓪ 支——`effortSelection`）⇒ `"none"` ×
+ * 枚举无 `none` ⇒ **中性档**（不落注册默认档）；`reasoning:["enabled"]` 族 ⇒ 中性档 `""`（列表仍渲染该单档）。
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
@@ -272,6 +276,114 @@ test("E-9 中性档（真点击流径）：换模型 ⇒ 同判据（按钮「�
 
   assert.equal(ctx.selectedModel, "hy3", "选中已切换（点击流真到达 selectModel）")
   assert.equal(ctx.selectedReasoning, "", "换模型径同判据：中性档 `\"\"`（不落 levels[0] = \"none\"）")
+  assert.equal(ctx.reasoningBtn.textContent, "—", "按钮「—」")
+  assert.equal(ctx.reasoningBtn.classList.contains("active"), false, "无 active")
+
+  document.querySelectorAll(".mm-overlay").forEach((el) => el.remove()) // 菜单闭合清理
+})
+
+// ─── ⑤ off 哨兵 / `["enabled"]` 族（批 2026-09-25-off-family-closeout · §16.5 / §16.6-⑴ · W-5 / W-10）──
+
+/** 无 `none` 档族 + 注册默认（§16.5 判据面：off 哨兵不得降级为档位——旧式 ② 支落 `effortDefault`）。 */
+const NO_NONE_LIST = [
+  { id: "m-nonone", provider: "p10", group: "P10", label: "m-nonone", reasoning: ["low", "high", "max"], effortDefault: "high" },
+]
+/** 含 `none` 档族（对照：off 语义不变）。 */
+const NONE_LIST = [
+  { id: "m-none", provider: "pn", group: "PN", label: "m-none", reasoning: ["none", "low", "high"], effortDefault: "high" },
+]
+/** 思考开关族（`reasoning: ["enabled"]`——`provider-probe-window.mjs:66` 形态）。 */
+const SWITCH_LIST = [
+  { id: "m-switch", provider: "ps", group: "PS", label: "m-switch", reasoning: ["enabled"] },
+]
+
+test("W-10 直驱：off 哨兵（`none`）× 枚举无 `none` ∧ 有注册默认 ⇒ 中性档 `\"\"`（不得落注册默认）", async () => {
+  const { ctx, handleModelsMessage } = await loadPicker()
+  resetPicker(ctx)
+  const prefs = { model: "m-nonone", provider: "p10", reasoning: "none" } // off 哨兵（读面 off 形字面）
+
+  handleModelsMessage({ type: "models", models: NO_NONE_LIST, prefs })
+
+  assert.equal(ctx.selectedReasoning, "", "⓪ 支：off 哨兵避支 ⇒ 中性档（不经 ② 支）")
+  assert.equal(ctx.reasoningBtn.textContent, "—", "按钮「—」")
+  assert.equal(ctx.reasoningBtn.classList.contains("active"), false, "无 active")
+  assert.ok(slotPosts().some((m) => m.type === "selectReasoning" && m.reasoning === ""), "归一结果照旧 post（空值 ⇒ 回合侧零 patch）")
+  assert.ok(!slotPosts().some((m) => m.type === "selectReasoning" && m.reasoning === "high"), "不得落注册默认档（用户从未选过）")
+})
+
+test("W-10 对照：含 `none` 档族 ⇒ off 语义不变（照旧预选 `none`）", async () => {
+  const { ctx, handleModelsMessage } = await loadPicker()
+  resetPicker(ctx)
+  const prefs = { model: "m-none", provider: "pn", reasoning: "none" }
+
+  handleModelsMessage({ type: "models", models: NONE_LIST, prefs })
+
+  assert.equal(ctx.selectedReasoning, "none", "`none` ∈ 枚举 ⇒ ① 支取之（不触发 ⓪ 支）")
+  assert.equal(ctx.reasoningBtn.textContent, "off", "按钮 = off（既有形）")
+})
+
+test("W-10 真点击流：换模型 ⇒ 同判据（off 哨兵不落注册默认）", async () => {
+  const { ctx } = await loadPicker()
+  resetPicker(ctx)
+  ctx._models = NO_NONE_LIST
+  ctx.selectedModel = "kimi-k3"; ctx.selectedProvider = "kimi"; ctx.modelBtn.textContent = "kimi-k3"
+  ctx.selectedReasoning = "none" // off 哨兵（旧模型残留）
+
+  ctx.modelBtn.click()
+  const provRows = [...document.querySelectorAll(".mm-panel > .mm-row")]
+  const provRow = provRows.find((el) => el.textContent.includes("P10"))
+  assert.ok(provRow, `菜单 provider 行在位（实读 ${JSON.stringify(provRows.map((r) => r.textContent))}）`)
+  provRow.click()
+  const modelRows = [...document.querySelectorAll(".mm-flyout .mm-row")]
+  const row = modelRows.find((el) => el.textContent.includes("m-nonone"))
+  assert.ok(row, `飞窗候选行在位（实读 ${JSON.stringify(modelRows.map((r) => r.textContent))}）`)
+  row.click() // pickModel ⇒ onPick ⇒ selectModel
+
+  assert.equal(ctx.selectedModel, "m-nonone", "选中已切换（点击流真到达 selectModel）")
+  assert.equal(ctx.selectedReasoning, "", "换模型径同判据：off 哨兵 ⇒ 中性档（不落注册默认 high）")
+  assert.equal(ctx.reasoningBtn.textContent, "—", "按钮「—」")
+  assert.equal(ctx.reasoningBtn.classList.contains("active"), false, "无 active")
+
+  document.querySelectorAll(".mm-overlay").forEach((el) => el.remove()) // 菜单闭合清理
+})
+
+test("W-5 回归：`reasoning:[\"enabled\"]` 族 ⇒ 中性档 `\"\"`（零 patch）∧ 列表仍渲染该单档", async () => {
+  const { ctx, handleModelsMessage } = await loadPicker()
+  resetPicker(ctx)
+  const prefs = { model: "m-switch", provider: "ps", reasoning: "off" } // 旧模型残留（"off" ∉ ["enabled"]）
+
+  handleModelsMessage({ type: "models", models: SWITCH_LIST, prefs })
+
+  assert.equal(ctx.selectedReasoning, "", "①/② 两前置皆不成立 ⇒ 中性档 `\"\"`")
+  assert.equal(Boolean(ctx.selectedReasoning), false, "回合侧 `if (reasoning)` 假值 ⇒ 零 patch（`panel-turn-stages.mjs:98`）")
+  assert.equal(ctx.reasoningBtn.textContent, "—", "按钮「—」")
+  assert.equal(ctx.reasoningBtn.classList.contains("active"), false, "无 active")
+  // 列表仍渲染该单档（不空列表——`levels.length > 0` 分支；列表本体 = 模型能力档，不新增/不减项）
+  ctx.reasoningDropdown.style.display = "none" // 前置：浮层闭合态（toggle 语义：开态首击 = 收起）
+  ctx.reasoningBtn.click()
+  assert.equal(ctx.reasoningDropdown.querySelectorAll(".dropdown-item").length, 1, "列表项 = 该单档（非空列表）")
+  assert.deepEqual([...ctx.reasoningDropdown.querySelectorAll(".check")], [], "中性档 = 无 ✓")
+})
+
+test("W-5 真点击流：换到 `[\"enabled\"]` 族 ⇒ 同判据（状态 `\"\"` / 按钮「—」/ 无 active）", async () => {
+  const { ctx } = await loadPicker()
+  resetPicker(ctx)
+  ctx._models = SWITCH_LIST
+  ctx.selectedModel = "kimi-k3"; ctx.selectedProvider = "kimi"; ctx.modelBtn.textContent = "kimi-k3"
+  ctx.selectedReasoning = "off" // 旧模型残留（∉ ["enabled"] ⇒ 归一必触发）
+
+  ctx.modelBtn.click()
+  const provRows = [...document.querySelectorAll(".mm-panel > .mm-row")]
+  const provRow = provRows.find((el) => el.textContent.includes("PS"))
+  assert.ok(provRow, `菜单 provider 行在位（实读 ${JSON.stringify(provRows.map((r) => r.textContent))}）`)
+  provRow.click()
+  const modelRows = [...document.querySelectorAll(".mm-flyout .mm-row")]
+  const row = modelRows.find((el) => el.textContent.includes("m-switch"))
+  assert.ok(row, `飞窗候选行在位（实读 ${JSON.stringify(modelRows.map((r) => r.textContent))}）`)
+  row.click() // pickModel ⇒ onPick ⇒ selectModel
+
+  assert.equal(ctx.selectedModel, "m-switch", "选中已切换（点击流真到达 selectModel）")
+  assert.equal(ctx.selectedReasoning, "", "换模型径同判据：中性档 `\"\"`")
   assert.equal(ctx.reasoningBtn.textContent, "—", "按钮「—」")
   assert.equal(ctx.reasoningBtn.classList.contains("active"), false, "无 active")
 

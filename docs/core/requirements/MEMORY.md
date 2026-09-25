@@ -157,8 +157,10 @@ N-M3 零依赖 / 可移植（无迭代器则**键序分页**——游标键随�
 | 存储 | 文件式 markdown + frontmatter（两层都是文件）；无 FTS5 / sqlite | 对端 = 单文件 `~/.thincoder/memory.db`（FTS5 + BM25 + 向量 BLOB） |
 | 层数 | personal / project 两层；无 team | 对端三层（team 由 CLI 管）；本端 `layer:"team"` 明确拒绝并指路 |
 | 索引形态 | 独立 `.thincoder/index/`（manifest + vectors.bin）+ 按 kind 单库检索（**已裁归一 2026-09-15——随 W8 删旧退场；数据面零迁移 / 零兼容**） | 对端 = DB 内三表 |
-| 配置面 | 记忆锚定 cwd——无记忆路径配置字段；`~` 展开唯一接线 = `shell` 字段 | 对端四字段展开 |
-| 命名面 | 模型可见全 `layer`；内部存储 helper 仍名 scope（映射点 = 工具层） | 同源（内部词保留） |
+| 配置面 | 记忆锚定 cwd——无记忆路径配置字段；`~` 展开唯一接线 = `shell` 字段 | 对端四字段展开——**形态（非登记项）**：配置键面按端自持、语义同源 |
+| 命名面 | 模型可见全 `layer`；内部存储 helper 仍名 scope（映射点 = 工具层） | 同源（内部词保留——非端差） |
+
+**二态化裁定行（2026-09-25 · 台账 #339① 需求层复核）**：存储 / 索引形态两行 = **已消解**（W8 归一核面——零动作，承上归一注）；层数行 = **已裁保留**（结构性不对称——team 管理面单侧存在：端面 `layer:"team"` 明确拒绝并指路）；配置面行 = **形态（非登记项）**；命名面行 = **同源**（内部词保留——非端差）。
 
 > VSC 端证据坐标（实核 as-of 2026-09-15）：`thincoder-vscode/src/memory.mjs:30`（`memoryDir`）· `:36`（`scopeDir`）· `:170`–`:177`（legacy 根 + `_scope` 标注）· `thincoder-vscode/src/memory-tool.mjs:117`（action 级只读）· `:151`（向量通道） （迁移期引文——档已删）
 > · `thincoder-vscode/src/indexer.mjs:162`（`model-changed`；W8 已退役——核面现体 `thincoder-core/memory/code-sync.mjs`）· `:170`–`:258`（`needsRebuild` 七词表）· `thincoder-vscode/src/extension/panel-index.mjs:171`（未列入提示行）。 （迁移期引文）
@@ -215,3 +217,4 @@ ASCII / BMP 跨界 · emoji 全内（代理对完整）· 短文本 ⇒ 与裸 `
 - 2026-09-15（**索引面覆退场注 · eng-designer**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 修正轮-4 发现 #4）：§4.4 F6–F9 逐行加「随归一退场」标 + 章头裁定收口注 + 判定句退场注（核面承接 = `docs/core/design/MEMORY.md` §6.9 / D-MEM14）；对外可见面变更在 `docs/core/design/CORE-UNIFICATION.md` §2.12.2 第 11 行同批补登记。
 - 2026-09-15（**embedding UTF-16 截断缺陷批 · eng-designer**——承 `docs/batches/2026-09-15-embedding-utf16-truncation.md` 的 §2）：新增 §4.8「嵌入输入编码安全」（F-EM1 / N-EM1 + 判定句）；设计面 = 设计档 MEMORY.md 的 §6.3 / §7 D-MEM16。
 - 2026-09-18（**TUI 假死批 · 父侧直接执行**）：新增 §4.9「扫描面响应性 / origin 归一 / WAL 卫生」（F-S1–F-S5 / N-S1–N-S3——评审 §3 发现的 3 项缺位条目补齐）；另 §4.6 **N-M3 措辞收正**（「无迭代器则 rowid 分页」→「键序分页」，语义 = 可移植分页不变）；源 = 批次档 `docs/batches/2026-09-18-tui-freeze.md` §2 与设计档 `MEMORY.md` §6.10–§6.12。
+- 2026-09-25（**end-diff-registry 批 · 需求层二态化轮 · eng-designer**——承 `docs/batches/2026-09-25-end-diff-registry.md` §2 上抛①〔父侧明示委托本轮落〕 · 台账 #339①）：§4.7 端差五行二态化——存储 / 索引两行 = 已消解（零动作）；层数行 = **已裁保留**（结构性）；配置面行改述为**形态（非登记项）**；命名面行标**同源**（非端差）；裁定行落地。**零新语义**。

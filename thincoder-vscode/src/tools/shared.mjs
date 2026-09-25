@@ -89,8 +89,6 @@ export function resolvePath(p, cwd) {
 
 // ─── 执行面（configureExecRun / configureProcessTreeKill 供值）──────────
 
-export { killProcessTree }
-
 /**
  * Run a child process INTERRUPTIBLY (spawn, not execSync).
  * execSync blocks the extension-host event loop — a Stop click during a long

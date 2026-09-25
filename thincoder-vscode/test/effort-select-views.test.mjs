@@ -10,6 +10,8 @@
  *   §15.4 追加：归一链单源 `effortSelection` 三分支直驱（E-6..E-8）· 「已存值 ∉ 枚举」⇒ 「—」（E-10）·
  *   advisor 读面三态（V-5：off 形 > `reasoningEffort` > legacy `effort`）· advisor 载荷键 = `reasoningEffort`
  *   （`none` **原样上送**——写面按族取 off 形；select 未渲染 ⇒ **不发**字段——V-3 面板半）。
+ *   §16.5 追加（批 2026-09-25-off-family-closeout · 台账 #346-②）：off 哨兵避支（⓪ 支）——`"none"` ×
+ *   枚举无 `none` ⇒ 预选「—」（不经注册默认支；三视图同判据——W-9）。
  *
  * 两径同源（§14.10）：径① 初渲染 = `settings-agent.js` 内联串；径② 换模型重建 =
  * `settings-widgets.js buildEffortSelect`（`settings-models.js:149/:157` 两重建位同用它）。载荷两点 =
@@ -30,6 +32,8 @@ const MODELS = [
   { id: "m-def", reasoning: ["none", "low", "high"], effortDefault: "high" }, // 注册默认 ∈ 枚举
   { id: "m-def-out", reasoning: ["low"], effortDefault: "max" },              // 注册默认 ∉ 枚举（继承形）
   { id: "m-empty", reasoning: [] },                                           // 空枚举（真例 highspeed 形）
+  { id: "m-no-none", reasoning: ["low", "high"], effortDefault: "high" },    // 无 none 档 + 注册默认（§16.5 ⓪ 支面）
+  { id: "m-none-def", reasoning: ["none", "low"], effortDefault: "low" },   // 含 none 档（W-9 对照）
 ]
 
 /** 下拉读数 = { levels, selected }；无控件 ⇒ null（零渲染）。 */
@@ -170,3 +174,18 @@ test("V-3 面板半：advisor effort select 未渲染（枚举空）⇒ 载荷�
   assert.equal("reasoningEffort" in msg.settings.advisor, false, "select 未渲染 ⇒ 载荷无该字段（手写键存活；缺席 ≠ 清空）")
   assert.equal(msg.settings.advisor.guard, true, "该字段外的 payload 零改")
 })
+
+// ─── 批 2026-09-25-off-family-closeout（设计 MODEL-SPECS.md §16.5 · 台账 #346-② · 用例 W-9 / AC-4）───
+
+test("W-9 边界：off 哨兵 × 枚举无 `none` ⇒ 预选「—」（不经注册默认支）∧ 含 `none` ⇒ 照旧预选 `none`", () => {
+  // ⓪ 支直驱（共享规则本体 = `effortSelection`）
+  assert.equal(M.effortSelection(["low", "high"], "none", "high"), null,
+    "⓪ 支：off 哨兵避支 ⇒ 中性档（**不得**经 ② 支落注册默认——用户从未选过该档）")
+  assert.equal(M.effortSelection(["none", "low"], "none", "low"), "none", "含 `none` ⇒ ① 支照旧（不触发 ⓪ 支）")
+  // 三视图同判据（径① consult / 径① advisor / 径② 重建）
+  assert.deepEqual(bothPaths("m-no-none", "none"), Array(3).fill({ levels: ["—", "low", "high"], selected: "—" }),
+    "off 哨兵 × 无 `none` 档 ∧ 有注册默认 ⇒ 预选「—」（旧式 = 落注册默认 high = 面板显一个从未选的档）")
+  assert.deepEqual(bothPaths("m-none-def", "none"), Array(3).fill({ levels: ["—", "none", "low"], selected: "none" }),
+    "含 `none` 族不受影响（照旧预选 none = off，语义不变）")
+})
+

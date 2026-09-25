@@ -203,7 +203,7 @@ export function agentSettings(session) {
     // then the config flag coerced to boolean.
     advisor: { ...(s.advisor ?? {}), guard: slotData?.advisor?.guard ?? (s.advisor?.guard === true) },
     consultModels: s.consultModels ?? [],
-    poolLimits: s.poolLimits ?? { engCoder: 4, other: 4, advisor: 4 }, // §11.1/§11.2: async pool per-role-domain limits + advisor 评审池（面板并发池三域项——回退显 4/4/4）
+    poolLimits: s.poolLimits ?? { engCoder: 4, other: 4, advisor: 4 }, // async pool per-role-domain limits + advisor 评审池（面板并发池三域项——回退显 4/4/4）
     // Spec-derived effort enums — offline, always available; the webview's model list
     // (network probe) may not have arrived when the panel opens, and the effort dropdown
     // must not depend on that timing.

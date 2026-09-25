@@ -4,7 +4,7 @@
  * consume-design + observe/send（SUBAGENT-OBSERVE-SEND）——AGENT-LOOP-SUBAGENT.md §6.7.5 check 已删；spawn 路径与
  * 工具面在 subagent.mjs；cancel 动作执行器与机械、管线在本模块——check 执行器随 AGENT-LOOP-SUBAGENT.md §6.7.5 删除）。
  * 内容：resolveChildProvider / async 池常量与域助手（ASYNC_POOL_LIMITS/poolDomainOf/
- * resolvePoolLimits/poolLimitsFor/runningPoolCount——§11.1）/ executeCancelAction +
+ * resolvePoolLimits/poolLimitsFor/runningPoolCount——AGENT-LOOP-ASYNC-POOL.md §6.10）/ executeCancelAction +
  * cancelAsyncSubagent（AGENT-LOOP-SUBAGENT.md §6.7.2 D-M6——工具与 TUI ⏹ 共用）/ runChildPipeline /
  * injectAsyncResult / buildChildRunOpts / mergeChildMutations / enqueueAsk（批 6——
  * _permQueue 审批/继续弹窗串行收 helper——消费位 subagent.mjs/subagent-spawn.mjs/
@@ -22,13 +22,13 @@ import { pushReal } from "../context.mjs"
 import { offloadToolResult } from "../agent/helpers.mjs"
 import { logEvent } from "../log.mjs"
 import { digestBudgetOver, persistOverflowReport } from "./digest-budget.mjs"
-// 群 B 批 B5（§22 D-DG4）：预算单源迁出（digest-budget.mjs）——原处 re-export 保测试
+// 群 B 批 B5（AGENT-LOOP.md §6.14 D-DG4）：预算单源迁出（digest-budget.mjs）——原处 re-export 保测试
 // 导入面零改（DIGEST_INJECT_BUDGET / _setDigestOffloadDirForTest）。
 export { DIGEST_INJECT_BUDGET, _setDigestOffloadDirForTest } from "./digest-budget.mjs"
 import {
   dependentLabels, maybeRefillAsync, refreshQueuedTokens,
 } from "./subagent-scheduler.mjs"
-// §11.2 (R13): advisor-pool cancel fallback + mutation logging for merged
+// §6.10 (R13): advisor-pool cancel fallback + mutation logging for merged
 // code（lazy function-level cycle——advisor-async → async-settle → scheduler →
 // 本模块——全函数级绑定无求值期依赖，环安全）。
 import { cancelAsyncAdvisor, noteMutations, refreshAdvisorQueuedTokens } from "./advisor-async.mjs"
@@ -44,7 +44,7 @@ export function enqueueAsk(owner, key, ask) {
 }
 
 // Async pool limits per role domain (AGENT-LOOP-ASYNC-POOL.md §6.10 — R14, 2026-09-06):
-// the old single cap (ASYNC_SUBAGENT_LIMIT = 4, §15 D-A4) evolved into two
+// the old single cap (ASYNC_SUBAGENT_LIMIT = 4, AGENT-LOOP-SUBAGENT.md §6.7.3 D-A4) evolved into two
 // independent pools — eng-coder 4 / other roles 4 (user ruling "eng-coder 四路，
 // 其他 4 路") — a full engCoder pool never blocks an explore spawn and vice versa
 // (same-domain cap still 4, cross-domain total up to 8). The per-turn check
@@ -56,7 +56,7 @@ export function enqueueAsk(owner, key, ask) {
 export const ASYNC_POOL_LIMITS = { engCoder: 4, other: 4 }
 
 /**
- * Role → pool domain (single source of truth — §11.1 修正 #8): the CLI role
+ * Role → pool domain (single source of truth — §6.10 修正 #8): the CLI role
  * whitelist is subagent.mjs's ROLES = { explore, plan, coder, eng-coder, eng-designer }
  * (mode-filtered: normal → explore/plan/coder, engineering → explore/eng-designer/eng-coder).
  * eng-coder → engCoder pool; every other role (including unknown roles — fail-safe)
@@ -116,7 +116,7 @@ function warnPoolFallback(what, sig) {
   console.warn(`[config] agent.poolLimits: ${what} — must be a positive integer ≥1 — falling back to default ${JSON.stringify(ASYNC_POOL_LIMITS)}`)
 }
 
-/** Running count within ONE pool domain (口径同 §15 D-A1/T6: queued 与已完成不计入；
+/** Running count within ONE pool domain (口径同 AGENT-LOOP-SUBAGENT.md §6.7.3 D-A1/T6: queued 与已完成不计入；
  *  条目带 _pool 域字段——spawn 时 poolDomainOf(role) 落位；缺字段（手工/旧条目）按
  *  other——既有 coder 域测试语义不变)。 */
 export function runningPoolCount(parent, pool) {
@@ -194,7 +194,7 @@ export function cancelAsyncSubagent(agent, id) {
     entry.done = true
     entry.status = "done"
     map.delete(key)
-    // §20 D-SD5 终态墓碑：queued 取消（无 settle 事件——出队即终态）——依赖者经
+    // AGENT-LOOP-SUBAGENT.md §6.9 D-SD5 终态墓碑：queued 取消（无 settle 事件——出队即终态）——依赖者经
     // 墓碑查得 cancelled 分支（round1 #4——cancel 返回时即重估标注）。
     writeTombstone(agent, key, "cancelled", entry.role)
     // af 批 F-6（§6.11 日志面）：queued 取消不经 settle ⇒ 出队点直记一条 ev:cancelled
@@ -205,7 +205,7 @@ export function cancelAsyncSubagent(agent, id) {
   }
   // running：标记 + 条目 abort——settle finally 跑 cancelled 分支（移除 + stopped + 提醒）
   entry.cancelled = true
-  // §20.3 站点 #11（第 24 批）：定向中止 = cancel（reason 载荷——下游可判「谁杀的」）
+  // AGENT-LOOP-SUBAGENT.md §6.12 站点 #11（第 24 批）：定向中止 = cancel（reason 载荷——下游可判「谁杀的」）
   entry.controller?.abort?.({ abortTrigger: "cancel", abortDetail: "subagent-cancel" })
   return { id: key, status: "cancelled" }
 }
@@ -238,7 +238,7 @@ export function cancelSyncChild(agent, key) {
 }
 
 /** subagent action:"cancel" (AGENT-LOOP-SUBAGENT.md §6.7.2 D-M6): depth-0 main-session control only.
- *  §20 D-SD5/round1 #4（queued 依赖取消——无 settle 事件）：出队后**返回即**重估
+ *  §6.9 D-SD5/round1 #4（queued 依赖取消——无 settle 事件）：出队后**返回即**重估
  *  依赖者——依赖者留 queued 标 dependency cancelled（refreshQueuedTokens 发更新块头
  *  token）+ 工具结果内注依赖者（模型可见——工具结果内——round1 #4 明示通道）+ 补位
  *  （AUTO 档依赖者自动启动/槽位竞态释放）。被取消条目自身发 ⟦ev⟧cancelled 移除等待块。 */
@@ -253,7 +253,7 @@ export function executeCancelAction(args, ctx) {
   const key = String(id)
   const agent = ctx.agent
   const entry = getAsyncPool(agent, "subagent")?.get(key)
-  // §11.2 (②-6b): an id that names no async SUBAGENT falls through to the
+  // §6.10 (②-6b): an id that names no async SUBAGENT falls through to the
   // async ADVISOR pool (the background reviews share the cancel surface — ⏹ on
   // an advisor block / action:'cancel' with an advisor id abort that review).
   // af 批 fix 轮（T-AF2 终态确认面 · §6.11 第 3 条「幂等」）：已出队取消的 advisor id
@@ -277,7 +277,7 @@ export function executeCancelAction(args, ctx) {
   const hadDependents = entry ? dependentLabels(agent, key).length > 0 : false
   const result = cancelAsyncSubagent(agent, key)
   if (wasQueued && result.status === "cancelled" && result.was === "queued" && entry) {
-    // §20 D-SD3b：取消/出队 → 移除等待块（不冻结——TUI routeSubToken cancelled 分支）
+    // §6.9 D-SD3b：取消/出队 → 移除等待块（不冻结——TUI routeSubToken cancelled 分支）
     ctx.callbacks?.onToken?.(`${entry.relayPrefix}⟦ev⟧cancelled\x1e`)
     // 依赖者标注 + 位置前移 + AUTO 自动启动（round2 #3：AUTO 档才启动——手动留 queued）
     maybeRefillAsync(agent)
@@ -297,10 +297,10 @@ export function executeCancelAction(args, ctx) {
 }
 
 /**
- * 共享 post-spawn 管线（阻塞与 async 同一条——§15 D-A1 "全不变"）：turn-cap continue
+ * 共享 post-spawn 管线（阻塞与 async 同一条——AGENT-LOOP-SUBAGENT.md §6.7.3 D-A1 "全不变"）：turn-cap continue
  * 循环 → 拒绝降级 partial 返回 → MIN_REPORT_CHARS 扩写 → eng-coder mutation merge →
  * designId 后缀。onDeclined 在此（两路同一形态）——只有 askContinue 不同：阻塞经权限
- * 面板询问；async 永不弹面板（自动拒绝；engineering && AUTO 自动 resume——§15 D-A3）。
+ * 面板询问；async 永不弹面板（自动拒绝；engineering && AUTO 自动 resume——§6.7.3 D-A3）。
  */
 export async function runChildPipeline(child, input, childOpts, childRunOpts, { parent, role, args, askContinue }) {
   const declined = { partial: null }
@@ -344,29 +344,29 @@ export async function runChildPipeline(child, input, childOpts, childRunOpts, { 
 }
 
 // ─── BATCH-3-STRUCTURE F-2：digest 注入批量预算（2026-09-09）───
-// §22 D-DG1（群 B 批 B5）：常量 / 判超 / 记账 / 落盘四处合一入 digest-budget.mjs 叶子模块
+// AGENT-LOOP.md §6.14 D-DG1（群 B 批 B5）：常量 / 判超 / 记账 / 落盘四处合一入 digest-budget.mjs 叶子模块
 // （四族共享单源——D2）；本文件保留 re-export（顶部）与经本入口的三族注入器接线。
 
 /**
  * Inject one settled async entry into the parent history as a user-role reminder
  * (AGENT-LOOP-ASYNC-POOL.md §6.8 D-S3 — the auto channel, sole consumption path since AGENT-LOOP-SUBAGENT.md §6.7.5: turn-end
  * collection (collectSettledAsync, agent.mjs) and the run-start _pendingAsyncResults
- * injection; the message shape is identical to the §15 collector's). Consumed =
+ * injection; the message shape is identical to the §6.7.3 collector's). Consumed =
  * the caller removes the entry from its container; no double-inject across the
  * two paths (D-S3 "inject once" invariant).
  */
 export async function injectAsyncResult(agent, entry) {
   const body = entry.error ?? entry.report ?? "(no report)"
-  // F-2（BATCH-3-STRUCTURE）+ §22 D-DG2（群 B 批 B5）：注入前查轮累计（单源）——超限条目不
+  // F-2（BATCH-3-STRUCTURE）+ AGENT-LOOP.md §6.14 D-DG2（群 B 批 B5）：注入前查轮累计（单源）——超限条目不
   // inline 全文，改清单行（全文经 persistOverflowReport 落盘——path 随行）。首条豁免
   // （used===0 不判超）：单条大报告 >64K offload 预览照旧——轮预算只约束累计。
   const raw = String(body)
   const over = digestBudgetOver(agent, raw.length)
   const preview = (over && await persistOverflowReport(raw, { tag: `async-subagent-${entry.id}` })) || await offloadToolResult(raw, `async-subagent-${entry.id}`)
-  // §11.2: advisor entries label themselves (role "advisor") — the digest
+  // §6.10: advisor entries label themselves (role "advisor") — the digest
   // reminder says "async advisor review #N finished" (T-24b2 shape); subagent
   // entries keep the legacy wording verbatim.
-  // §25 D-R17b (R17): escalate entries (role "escalate" — async 飞刀) label
+  // ESCALATE.md §5 D-R17b (R17): escalate entries (role "escalate" — async 飞刀) label
   // themselves the same way — the entry report body carries the merge/overlap
   // notes composed at settle (done/error classification — digest 指令语义 = 已
   // merge 报告可继续处置——动作域仍按消费回合档位——无族例外).
@@ -384,7 +384,7 @@ export async function injectAsyncResult(agent, entry) {
     role: "user",
     content: label,
   })
-  // §20 D-SD5 终态墓碑：本函数是全部自动注入路径的共享形态（回合尾 collect + 挂起
+  // §6.9 D-SD5 终态墓碑：本函数是全部自动注入路径的共享形态（回合尾 collect + 挂起
   // digest 首行注入）——注入即消费（调用方随即从容器移除）——dependsOn 引用该 id 的
   // 后续 spawn 视为已满足（T-SD14 消费终态语义——AGENT-LOOP-SUBAGENT.md §6.7.5 后 check 消费路径删除，本自动
   // 通道为唯一消费方；error 条目记 failed——依赖取消/失败分支照旧，不误标成功）。
@@ -438,7 +438,7 @@ export function mergeChildMutations(parent, child) {
     if (!parent._touchedFiles.includes(abs)) parent._touchedFiles.push(abs)
     merged.push(abs)
   }
-  // §11.2: merged code mutates the parent's state — log it for the stale
+  // §6.10: merged code mutates the parent's state — log it for the stale
   // scan of in-flight reviews (a review whose code changed under it is stale).
   noteMutations(parent, merged)
   if (parent._calledAdvisorThisRun) parent._calledAdvisorThisRun = false

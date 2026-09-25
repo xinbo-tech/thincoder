@@ -36,7 +36,7 @@ export function handleWheel(ctx, button, col, row) {
   if (mouseOob(col, row, dims)) return false // F-3 sane-gate ②：越界滚轮丢弃——不落面板（> 非 >=——末行列合法）
   const layout = computeLayout(state, dims)
   const P = layout.panels
-  // §7.2.1 D4: 固定子agent 面板（conversation 与 todo 之间）——面板行默认穿出
+  // docs/cli/design/TUI.md §6.8 D4: 固定子agent 面板（conversation 与 todo 之间）——面板行默认穿出
   // 滚会话（F3，与 todo 面板同型）；命中展开区块内容行（_foldBlock 标记）→
   // 块内滚动（现状能力不丢）。
   if (P.subagent && r >= P.subagent.y && r < P.subagent.y + P.subagent.h) {
@@ -134,7 +134,7 @@ export function handleMouseClick(ctx, col, row) {
     return true
   }
 
-  // ── §7.2.1 D4: 固定子agent 面板（conversation 与 todo 之间）——折叠/展开/翻窗
+  // ── docs/cli/design/TUI.md §6.8 D4: 固定子agent 面板（conversation 与 todo 之间）——折叠/展开/翻窗
   // 坐标映射到面板行（与 todo 面板同型；layout.subagentLines = 面板渲染行）。
   if (P.subagent && r >= P.subagent.y && r < P.subagent.y + P.subagent.h) {
     // 评审 #4：保底截断后可见行 ≠ 前 h 行——命中映射与 render-frame 同一几何契约
@@ -201,7 +201,7 @@ export function createMouseDispatch({ agent, state, pushLine, render, popPicker 
       const isAdvisorBlock = key.startsWith("advisor#")
       // af 批 #1（发射单源化）：`emit` = 本层通道，传进核调用供其单点发射（本层不另发）。
       const emit = (t) => { if (!routeSubToken(state, t, render)) pushLine(t, C.dim) }
-      // §11.2 D-24b (②-6b): ⏹ on an advisor block cancels the background review
+      // AGENT-LOOP-ASYNC-POOL.md §6.10 D-24b (②-6b): ⏹ on an advisor block cancels the background review
       // (directed abort → cancelled settle: no pending entry / no token).
       // SYNC-CANCEL F3: async 池/advisor miss 后查 sync registry（⏹ 门控已放开 sync——
       // cancelSyncChild 与 async cancel 同模块同形态——subagent-async.mjs）。

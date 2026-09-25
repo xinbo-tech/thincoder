@@ -199,10 +199,13 @@
 
 - 语义对位：收敛三件套（轮次衰减 / 会话隔离 / 证据校验）+ 六 kind 护栏 + 异步池 + 冻结窗口 + 启动断言——逐条同源（CLI = §2 / §3 / ADVISOR-GUARDS.md）。
 - 端差登记（迁移前 VSC 端实况，逐条；**W12 收正**：端侧实现面已迁核删旧（删除记录 = 批次档 §5，`2026-09-15-vsc-core-wiring.md`）——指向已删端档的坐标自此为迁移前实况，仍有端侧落点者照旧）：
-  1. **硬墙中止形态**：VSC 中止返回 `interrupted` 字段（非抛错）——墙判定以信号状态为主判据（`thincoder-vscode/src/advisor/` 设计档 §13.6 / §13.10）。
-  2. **结算拒发不记账载体** = per-call `ctx._advisorRefused`（CLI 用 `agent._advisorRefusals` Set）——载体差异，语义零差。
-  3. **冻结窗口实现点** = `src/agent/execute-tools.mjs`（单一预闸点——VSC 无独立 dispatch 模块）；事件面 = 核 `_mutLog`（`noteMutations`——W12 改指；原端侧 `_fileMutEvents` 已随删旧退役）。
-  4. **项目方法论指针** = 仅声明（`advisor.standardsDoc`——硬探针已退役）；文档地图 = 声明优先 → 兜底链。
+  1. **硬墙中止形态**：VSC 中止返回 `interrupted` 字段（非抛错）——墙判定以信号状态为主判据（`thincoder-vscode/src/advisor/` 设计档 §13.6 / §13.10）。**= 已消解**（2026-09-25 实读复核：
+     端侧 `thincoder-vscode/src/advisor/` 不存在——W12 删旧；中止形态 = 核单源——`thincoder-core/advisor/loop.mjs:100` · `:184`（返回「Advisor: interrupted.」尾）∥ `thincoder-core/advisor/run.mjs:178`（`AbortError` + `signal.reason.interrupt` 重抛））。
+  2. **结算拒发不记账载体** = per-call `ctx._advisorRefused`（CLI 用 `agent._advisorRefusals` Set）——载体差异，语义零差——**形态（非登记项）**。
+  3. **冻结窗口实现点** = `src/agent/execute-tools.mjs`（单一预闸点——VSC 无独立 dispatch 模块）；事件面 = 核 `_mutLog`（`noteMutations`——W12 改指；原端侧 `_fileMutEvents` 已随删旧退役）——**形态（非登记项）**（实现点各端自持，语义同源）。
+  4. **项目方法论指针** = 仅声明（`advisor.standardsDoc`——硬探针已退役）；文档地图 = 声明优先 → 兜底链——**形态（非登记项）**（指针形态；两端同机制）。
+
+**二态化裁定行（2026-09-25 · 台账 #339① 需求层复核）**：① = **已消解**（W12 迁核——端侧实现面不存在；中止形态 = 核单源）；② = **形态（非登记项）**（载体差异，语义零差）；③ = **形态（非登记项）**（实现点差异，语义同源）；④ = **形态（非登记项）**（指针形态，两端同机制）。
 - 差异若有 → 逐条补登记（不静默）；本档不代述对端正文。
 
 ## 9. 工具面误配与文案面（2026-09-18 增——台账 #85 / #86）
@@ -227,3 +230,5 @@
   - 2026-09-18 16:16 用户补裁（逐字）：「我的观点是不带 type 就要拒，不静默降级。」⇒ **§9 F30 改判**：顶层 `type` 必填、缺失即拒（撤「无 `object` 时缺省 = code」旧语义）；调用面全量收正入判定句 ③。
   - 2026-09-18 16:2x 父侧直接执行（承设计轮 id=73 上抛 1/2/3/4 的裁定）：**F29 / F31 措辞收正**——轮次记 `N（无上限）`、尝试表 = 本次单行（零载体）、F31 枚举改「失败结论 / 范围拒回 / 误配拒回」+ 前缀-标识块形态写明。
   - 2026-09-18 16:3x 父侧裁定（承设计轮 id=78 上抛 9）：**F30 判定句 ② 收正**——显式 `type` 须与 `object.type`（若声明）**一致**；**矛盾对 ⇒ 拒**（判据名 `type-object-conflict`）——闭合「显式误配仍静默走错轨」最后一孔（今日事故同族：声明面与实际轨不一致）。
+- 2026-09-25（**end-diff-registry 批 · 需求层二态化轮 · eng-designer**——承 `docs/batches/2026-09-25-end-diff-registry.md` §2 上抛①〔父侧明示委托本轮落〕 · 台账 #339①）：§8.3 端差四条二态化——① = **已消解**（实读复核：端侧 `src/advisor/` 不存在；
+  中止形态 = 核单源 `thincoder-core/advisor/loop.mjs:100` · `:184` ∥ `thincoder-core/advisor/run.mjs:178`）；②③④ = **形态（非登记项）**；裁定行落地。**零新语义**。

@@ -40,7 +40,7 @@ const L3_WRITE_TOOLS = new Set([...FILE_MUTATORS, "file_ops"])
  * readonly merging. Batch order is serial — results are committed in call order.
  */
 export async function executeToolBatches(agent, { response, history, fullHistory, toolByName, getAuto, callbacks, signal, sessionSignal = null, cwd, recentSigs, depth }) {
-  // §16 D-B1：同批（同一 toolCalls 数组）权限合并询问——执行前一次聚合，deny/approveAll
+  // D-B1：同批（同一 toolCalls 数组）权限合并询问——执行前一次聚合，deny/approveAll
   // 以 tc.id 标记，逐项执行时套用；oneByOne/无 handler 走既有逐项通道。
   const batchPerm = await collectBatchPermission(agent, { response, toolByName, getAuto, callbacks, depth })
   // Group tool calls into batches — consecutive readonly tools run in parallel,
@@ -120,7 +120,7 @@ export async function executeToolBatches(agent, { response, history, fullHistory
       const actionReadonly = tool?.isReadonlyAction?.(args) ?? false
       const controlAction = tool?.isControlAction?.(args) ?? false
       if (!getAuto() && tool && !tool.readonly && !actionReadonly && !controlAction && !isSubagentConsumeDesignAction(toolName, args) && callbacks.onPermissionRequired) {
-        // §16 D-B1 批确认结果套用：deny → 全批拒绝（无二次询问）；approveAll → 本批放行
+        // D-B1 批确认结果套用：deny → 全批拒绝（无二次询问）；approveAll → 本批放行
         if (batchPerm?.denied?.has(tc.id)) {
           return { tool_call_id: tc.id, toolName, content: "Denied by user (permission mode).", meta: null }
         }
@@ -187,7 +187,7 @@ export async function executeToolBatches(agent, { response, history, fullHistory
       let l3Hits = []
       let l3Claims = []
       if (L3_WRITE_TOOLS.has(toolName)) {
-        l3Paths = l3TouchedPaths(toolName, tool, args, cwd)
+        l3Paths = l3TouchedPaths(tool, args, cwd)
         if (l3Paths.length > 0 && existsSync(manifestPath(cwd))) {
           try {
             const pd = peerDomains(cwd)
@@ -394,7 +394,7 @@ export async function executeToolBatches(agent, { response, history, fullHistory
         }
       }
 
-      // Stall detection (stable serialization). §25 R17: consult_check 退役——免检分支
+      // Stall detection (stable serialization). CONSULTATION.md §6.2 R17: consult_check 退役——免检分支
       // 随删（自动 digest 后无 check 循环——无设计用法需豁免）。
       try {
         const sig = `${toolName}:${meta?.args ? JSON.stringify(meta.args, Object.keys(meta.args).sort()) : ""}`

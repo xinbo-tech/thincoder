@@ -23,7 +23,7 @@ export function buildApprovedSuffix(designToken, designId, slotCount) {
   return `Approved. Pass this exact token to eng-coder (designToken parameter): ${designToken}\ndesignId: ${designId} (pass as the designId parameter when spawning eng-coder — optional while this session holds a single design; ${slotCount} approved design slot(s) held as of this approval, and the count may have changed since — with several designs the spawn gate refuses a missing designId and lists the held ids)`
 }
 
-/** F2e (§29.1): strip the engine-generated Approved suffix from a report before
+/** F2e: strip the engine-generated Approved suffix from a report before
  *  it becomes a prior — the suffix is deterministic (buildApprovedSuffix), so the
  *  truncation is exact; a text not ending in it passes through untouched. */
 export function stripApprovedSuffix(text, suffix) {
@@ -83,7 +83,7 @@ export function settleDesignReview(agent, run, designToken, rawResult, opts = {}
   if (!designToken || typeof rawResult !== "string") {
     return { passed: false, output: rawResult ?? "" }
   }
-  // A（F11/§14.3 消费点 1）：未完成即不签发——判据与 code 完成守卫同源（单谓词）。
+  // A（F11/ADVISOR-GUARDS.md §1 消费点 1）：未完成即不签发——判据与 code 完成守卫同源（单谓词）。
   const incomplete = opts?.incomplete ?? null
   if (incomplete) {
     const stripped = rawResult.replace(makeDesignTokenRegex(designToken, "g"), "").trim()
@@ -107,7 +107,7 @@ export function settleDesignReview(agent, run, designToken, rawResult, opts = {}
   if (agent._role === "eng-coder") agent._engDesignReviewed = true
   run.open = false // approval closes this doc-set instance — next review is fresh
   const clean = rawResult.replace(makeDesignTokenRegex(designToken, "g"), "").trim()
-  // F2c (§29.1): id echo + omission guidance + point-in-time slot snapshot — the
+  // F2c: id echo + omission guidance + point-in-time slot snapshot — the
   // same suffix the F2e prior stores strip with (stored for the exact truncation).
   run.approvedSuffix = buildApprovedSuffix(designToken, run.designId, agent._engDesignTokens.size)
   return {

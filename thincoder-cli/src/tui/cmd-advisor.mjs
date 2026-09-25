@@ -4,11 +4,16 @@
 import { readFileSync } from "node:fs"
 import { ansi, C } from "./ansi.mjs"
 import { activeSlot, slotPath } from "@thincoder/core/session.mjs"
+// off 形族单源（`docs/core/design/MODEL-SPECS.md` §16.2 / §16.3 / §16.4）——取形与「有效 off 路径」
+// 判据一律自本档取，本档零副本（叶档：零 import 纯函数）。
+import { thinkOffShape, thinkOffPath } from "@thincoder/core/think-off.mjs"
 import { writeSessionFile } from "./cmd-eng.mjs"
 
 export async function handleAdvisorCommand(ctx) {
   const { agent, showPicker, pushLine, pushLabel } = ctx
   const cfg = agent.config.advisor ??= {}
+  // 入口预载规格面（懒加载面零改：不做顶层静态 import）——同步的状态行（`advisorStatus`）亦须取 spec。
+  const { specForModel } = await import("@thincoder/core/config.mjs")
   // Deprecated field cleanup (2026-08-21): advisor.enabled is no longer read
   // anywhere; drop it here so persist() never re-writes the stale flag.
   delete cfg.enabled
@@ -41,11 +46,16 @@ export async function handleAdvisorCommand(ctx) {
   let modelCache = null
 
   // ── State helpers ──
+  /** 状态行（§16.4）：无有效 off 路径（`thinkOffPath === false`）⇒ **不报 off**——残留 off 标记
+   *  （`null` / `{type:"disabled"}`）按「未设档」渲染：有档报 `on (<档>)`，无档报 `on`
+   *  （服务端恒思考 / 形不发字段 ⇒ 「Think: off」会是假断言）。 */
   function advisorStatus() {
     const curModel = cfg.model || agent.provider.model
-    const thinkInfo = cfg.thinking === null ? "off"
-      : cfg.thinking?.type === "disabled" ? "off"
+    const offPath = thinkOffPath(specForModel(getEffectiveModel(agent, cfg)))
+    const offMarked = cfg.thinking === null || cfg.thinking?.type === "disabled"
+    const thinkInfo = offPath && offMarked ? "off"
       : cfg.reasoningEffort ? `on (${cfg.reasoningEffort})`
+      : offMarked ? "on"
       : cfg.thinking ? `on (${cfg.thinking.type})` : "(main)"
     return `Advisor | Model: ${curModel} | Think: ${thinkInfo}`
   }
@@ -55,20 +65,14 @@ export async function handleAdvisorCommand(ctx) {
   }
 
   /** off 形落盘（`think_off` 与归一后的 `effort_none` 共用——单一口径，防同状态两公式）：
-   *  effort 族（`thinkApi === "effort"`）⇒ `thinking: null` **+ 删 `reasoningEffort` 键**（§15.4-2 单源；
-   *  载荷层 off 门首款要求 `thinking === null`——`{type:"disabled"}` 不开门 ⇒ 关思考静默失效；
-   *  内式同 `cmd-think.mjs:124-134` isEffortOnly 支）；自定义开值族（`thinkEnabledValue` ≠ "enabled"）取
-   *  `null`（NF1 显式 off）；其余（type 族默认）取 `{type:"disabled"}`。 */
+   *  取形 = 单源 `thinkOffShape`（`@thincoder/core/think-off.mjs`；§15.4-2 族别判据 / §16.2 生产者表）——
+   *  effort 族（`thinkApi === "effort"`）⇒ `thinking: null`（载荷层 off 门首款要求；`{type:"disabled"}`
+   *  不开门 ⇒ 关思考静默失效）；其余（type 族默认 / 自定义开值族）⇒ `{type:"disabled"}`（达载荷层）。
+   *  三支同清 `reasoningEffort`（§16.6-⑵：off 标记与档位不得同盘——F2 违约族）。 */
   async function applyThinkOff() {
-    const { specForModel } = await import("@thincoder/core/config.mjs")
     const spec = specForModel(getEffectiveModel(agent, cfg))
-    if (spec.thinkApi === "effort") {
-      cfg.thinking = null
-      delete cfg.reasoningEffort
-      return
-    }
-    const isCustomThink = (spec.thinkEnabledValue ?? "enabled") !== "enabled"
-    cfg.thinking = isCustomThink ? null : { type: "disabled" }
+    cfg.thinking = thinkOffShape(spec)
+    delete cfg.reasoningEffort
   }
 
   // ── Model picker sub-loop ──
@@ -115,7 +119,6 @@ export async function handleAdvisorCommand(ctx) {
         pushLabel("❯ Advisor", ansi.bold + C.tool)
         pushLine("Thinking: using main model settings", C.tool)
       } else if (c.action === "think_on") {
-        const { specForModel } = await import("@thincoder/core/config.mjs")
         const spec = specForModel(getEffectiveModel(agent, cfg))
         cfg.thinking = { type: spec.thinkEnabledValue ?? "enabled" }
         if (spec.thinkApi === "effort") delete cfg.thinking
@@ -137,6 +140,10 @@ export async function handleAdvisorCommand(ctx) {
         pushLabel("❯ Advisor", ansi.bold + C.tool)
         pushLine("Thinking: OFF", C.tool)
       } else if (c.action.startsWith("effort_")) {
+        // #346-①（§16.4 表末行）：选档 = 要思考 ⇒ 先清 `thinking === null` 标记（对齐
+        // `cmd-think.mjs:119-120` 先例 / §15.4-2 末句）；`{type:"disabled"}` 不动（同先例；
+        // 残余登记 = §16.6-⑸——type 族 off ⇒ 选档 后该标记保持）。
+        if (cfg.thinking === null) delete cfg.thinking
         cfg.reasoningEffort = c.action.slice(7)
         await persist()
         pushLabel("❯ Advisor", ansi.bold + C.tool)
@@ -255,6 +262,7 @@ async function buildThinkingEntries(agent, cfg) {
   const thinkOnValue = spec.thinkEnabledValue ?? "enabled"
   const isCustomThink = thinkOnValue !== "enabled"
   const isEffortOnly = spec.thinkApi === "effort"
+  const offPath = thinkOffPath(spec)
   const effortLevels = spec.reasoningEffortEnum ?? ["high", "max"]
 
   const curEffort = cfg.reasoningEffort ?? providerForDefaults.reasoningEffort
@@ -268,7 +276,11 @@ async function buildThinkingEntries(agent, cfg) {
   if (!isEffortOnly) {
     entries.push({ type: "header", text: "Thinking mode" })
     entries.push({ type: "item", text: `Enabled  ${thinkingEnabled ? "← current" : ""}`, action: "think_on" })
-    entries.push({ type: "item", text: `Disabled ${(curThinking?.type === "disabled" || curThinking === null) ? "← current" : ""}`, action: "think_off" })
+    // §16.4：无有效 off 路径（服务端强制族 / 形不发字段）⇒ Disabled 项**不渲染**；
+    // Enabled 项保留 = 残留 `{type:"disabled"}` 标记的恢复径（`/think on` 同旨）。
+    if (offPath) {
+      entries.push({ type: "item", text: `Disabled ${(curThinking?.type === "disabled" || curThinking === null) ? "← current" : ""}`, action: "think_off" })
+    }
   }
   entries.push({ type: "header", text: "Reasoning effort" })
   for (const level of effortLevels) {

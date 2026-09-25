@@ -96,7 +96,7 @@ export async function chat(provider, opts = {}) {
       finish: result?.finishReason ?? null,
       tools: Array.isArray(result?.toolCalls) ? result.toolCalls.length : 0,
     })
-    // §18.6 D-TR1/D-TR5：出口收集——成功路径轨迹（含 content/reasoning 全文/toolCalls）
+    // TRACES.md §6.1 D-TR1/D-TR5：出口收集——成功路径轨迹（含 content/reasoning 全文/toolCalls）
     recordChatTrace(provider, opts, result, null)
     return result
   } catch (e) {
@@ -107,7 +107,7 @@ export async function chat(provider, opts = {}) {
       err: errText(deathLine(e, opts.signal), 200),
       kind: classifyErr(e, opts.signal),
     })
-    // §18.6 D-TR5：失败路径也落盘——error（errText 截断 + 类别）+ finishReason:null
+    // TRACES.md §6.1 D-TR5：失败路径也落盘——error（errText 截断 + 类别）+ finishReason:null
     recordChatTrace(provider, opts, null, e)
     throw e
   }
@@ -276,7 +276,7 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
         onReasoning,
         onWait,
         signal,
-        // §18.6：续写是同一逻辑调用的子请求——logCtx 原样透传（元数据与门控
+        // TRACES.md §6.1：续写是同一逻辑调用的子请求——logCtx 原样透传（元数据与门控
         // traces.enabled 对续写调用同样生效，不在出口静默越过开关）
         // fix round1（D-TR1）：续写子请求标记 isContinuation:true（T-TR14——true =
         // 该调用是续写链的一环；外层新调用 false）——分析"纠结"时区分续写/重试链。
@@ -433,7 +433,7 @@ async function requestWithRetry(provider, body, signal, onWait) {
         ? await proxyFetch(url, opts, provider.proxyUri)
         : await fetch(url, opts)
     } catch (error) {
-      // §20.3 站点 #2（第 24 批）：fetch 拒否面补标来源（undici 拒否的 AbortError 现场无 reason）
+      // AGENT-LOOP-SUBAGENT.md §6.12 站点 #2（第 24 批）：fetch 拒否面补标来源（undici 拒否的 AbortError 现场无 reason）
       if (error.name === "AbortError") throw annotateAbort(error, signal, "provider", "request")
       lastError = error
       continue

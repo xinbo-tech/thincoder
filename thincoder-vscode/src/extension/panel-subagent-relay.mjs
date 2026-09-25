@@ -264,7 +264,7 @@ export function postSubagentStatus(panel, info) {
 }
 
 /** 子代理审批态投递转口（载荷构造逐字承原 `panel-callbacks.mjs` `onSubagentApproval` 内联式
- *  ——§18 C-8 child 权限通道 announce 块头通知；返回值原样回传）。原调用点改委托（R-4）。 */
+ *  ——AGENT-LOOP-SUBAGENT.md §6.7.6 C-8 child 权限通道 announce 块头通知；返回值原样回传）。原调用点改委托（R-4）。 */
 export function postSubagentApproval(panel, info) {
   return postSubagentEvent(panel, { type: "subagentApproval", ...info })
 }

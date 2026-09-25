@@ -121,7 +121,7 @@ export function handleCompletion(agent, response, depth, turn, guardPushbacks, h
   const cfg = agent.config?.advisor
   const advisorReview = cfg?.guard === true
   if (depth === 0 && advisorReview && !agent.config?.agent?.engineering) {
-    // §11.2 D-24b (T-24b4 — guard timing): an async review that is still in flight
+    // AGENT-LOOP-ASYNC-POOL.md §6.10 D-24b (T-24b4 — guard timing): an async review that is still in flight
     // (or queued in the advisor pool) means the review was launched — the guard
     // does NOT push back while it is pending (未决不算未评审); once it settles
     // non-stale it marks _calledAdvisorThisRun, and a STALE settle leaves the

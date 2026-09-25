@@ -9,7 +9,7 @@
  * 与 CLI 的结构差异（同语义移植）：CLI 的池/pending/_suspended 挂 agent 对象（跨 run
  * 存活）；VS Code 的 agent 对象 per-run 重建——池（_asyncSubagents）、pending
  * （_pendingAsyncResults）与挂起标志（_suspended）全部挂在**共享的 depth-0 history
- * 数组**上（与既有 §15 的 history._asyncSubagents 同一载体；JSON 序列化只走数组下标，
+ * 数组**上（与既有 AGENT-LOOP-SUBAGENT.md §6.7.3 的 history._asyncSubagents 同一载体；JSON 序列化只走数组下标，
  * 附加属性不污染会话文件）。settle 回调（subagent.mjs）以读取时刻为准（确定性）。
  *
  * 驱动不 import runPanelChat（循环依赖）：回合执行器经 runTurn 注入（panel-chat.mjs
@@ -34,7 +34,7 @@ import { takeQueuedBatchItem } from "./queued-pickup.mjs"
 // busy-extend 批 2026-09-22 routeUserTurn 两载体分流；原「输入禁用」撤销）——
 // 挂起空闲消息走 pendingInput 同队列（首批合并消费——多名一批一次）。
 /** 后台池计数（LOGGING susp/digest 事件字段——pendingN/poolN，CLI agent-turn parity；
- *  §9 D-24b：两池合计——advisor 独立池同口径；D2 pending 单容器——四族停靠同一
+ *  AGENT-LOOP-ASYNC-POOL.md §6.10 D-24b：两池合计——advisor 独立池同口径；D2 pending 单容器——四族停靠同一
  *  _pendingAsyncResults——pendingN = 单容器长度） */
 function poolCounts(history) {
   const maps = [history?._asyncSubagents, history?._asyncAdvisors].filter((m) => m instanceof Map)
@@ -65,7 +65,7 @@ export function poolLive(history) {
  *  回合刚结束、_suspended 尚未置位的窗口，或 ContinueError 停止的回合）补入 pending。
  *  幂等：回调已移交的条目已从 map 删除并带 _inPending 标记（settle/sweep 同一表示——
  *  D2 done-in-pool 统一），不会重复入列。
- *  §9 D-24b：advisor 池同扫（同机制角色无关）；D2：两池统一扫入 pending 单容器
+ *  §6.10 D-24b：advisor 池同扫（同机制角色无关）；D2：两池统一扫入 pending 单容器
  *  （_pendingAsyncResults +role）。 */
 export async function sweepSettledToPending(history) {
   // W13（2026-09-15）：pending 单容器停靠 = 核单源（`@thincoder/core/agent-tools/async-settle.mjs`
@@ -115,8 +115,8 @@ function reclaimDigestedBlocks(panel, history, before) {
 /** 后台模式状态行数据（D-S8；17.5.4 #6 顺手对齐）：{ running, queued, pending, done }
  *  —— webview 端按 locale 组合文案。"done" = AGENT-LOOP-ASYNC-POOL.md §6.8 回合尾留池的 settled 未消费项
  *  （挂起会话首轮 sweep 前的可见窗口——纯 settled 池进挂起时首帧不误报 0）。
- *  §9 D-24b：advisor 池条目同列（role=advisor 行——计数含两池）。
- *  §25 R17：pending 单容器计入 pending（D2）；running 会诊会话计入 running
+ *  §6.10 D-24b：advisor 池条目同列（role=advisor 行——计数含两池）。
+ *  CONSULTATION.md §6.2 R17：pending 单容器计入 pending（D2）；running 会诊会话计入 running
  *  （会话级计数——per-model 行已由 consult 活动流承载）。 */
 export function backgroundStatus(history) {
   const entries = []
@@ -338,7 +338,7 @@ export async function suspensionSession(panel, entry) {
           await entry.runTurn({ autoTurn: true, text: "", upstreamTurn: upstream })
         } catch (e) {
           ok = false
-          // C-8（AGENT-LOOP（VSC 仓）§12.3）：digest 轮被 Stop（回合级 abort——F-6）不是会话
+          // C-8（AGENT-LOOP-ASYNC-POOL.md §6.20）：digest 轮被 Stop（回合级 abort——F-6）不是会话
           // 停止——不搁置：记 digest:stopped 重入循环（池空+无 pending 由步骤 3 自然退出）；
           // 非 AbortError 照旧上抛（digest-visibility T-D3 契约零变）。
           if (e?.name === "AbortError") { logEvent("digest:stopped", { pendingN }); continue }
@@ -366,14 +366,14 @@ export async function suspensionSession(panel, entry) {
     logEvent("susp:exit", { ...poolCounts(history), ms: Date.now() - s0, reason: aborted ? "aborted" : "idle" })
     history._suspended = false
     if (aborted) {
-      // §15 abort 语义：清池不注入（用户显式停——不注入陈旧错误）。
+      // AGENT-LOOP-SUBAGENT.md §6.7.3 abort 语义：清池不注入（用户显式停——不注入陈旧错误）。
       // 排队中的用户消息不是池产物——由下方兜底以普通回合消费（不静默丢，
-      // 2026-09-02 code review round2 #2-VS Code 偏差修复）。§9 D-24b：评审池同清。
-      // §25 R17：会诊会话同清（abort 子代理——停 = 弃——T-R17c 取消语义）；会诊/飞刀
+      // 2026-09-02 code review round2 #2-VS Code 偏差修复）。§6.10 D-24b：评审池同清。
+      // CONSULTATION.md §6.2 R17：会诊会话同清（abort 子代理——停 = 弃——T-R17c 取消语义）；会诊/飞刀
       // pending 单容器同清（中止清池不注入陈旧结果——四族同池语义——D2）。
       history._asyncSubagents?.clear()
       history._asyncAdvisors?.clear()
-      // §25 R17：会诊会话中止清理（核单源——W12 改指；载体读 = history._consultSessions
+      // CONSULTATION.md §6.2 R17：会诊会话中止清理（核单源——W12 改指；载体读 = history._consultSessions
       // 优先，回落 agent 字段面：核 consult 会话池挂 agent，端侧旧镜像挂 history）。
       {
         const { cleanupConsultSessions } = await import("@thincoder/core/agent-tools/consult.mjs")
@@ -387,7 +387,7 @@ export async function suspensionSession(panel, entry) {
       const residual = history._pendingAsyncResults
       if (residual?.length) {
         // W13（2026-09-15）：核统一注入器单源（原端侧 `injectPendingAsync` 适配器随镜像删旧退役）
-        // ——consult 族按核 `agent.mjs` 同构分派（§25 D-R17a/b）。动态 import：核链可达 node:sqlite
+        // ——consult 族按核 `agent.mjs` 同构分派（CONSULTATION.md §6.2 D-R17a/b）。动态 import：核链可达 node:sqlite
         //（W8 契约②）。载体稳定化：同一 `{history, _fullHistory}` 对象跨本轮全部残余（核
         // `injectAsyncResult` 的 digest 轮预算按载体键累计——同轮多条累计面保持）。
         const injectCtx = { history, _fullHistory: lines.fullHistory }

@@ -27,7 +27,7 @@
 import { relative, isAbsolute } from "node:path"
 import { runAgent, createAgent, DEFAULT_SUBAGENT_TURNS, excludeSubagentTools } from "../agent.mjs"
 import { runWithContinue, TURN_CAP_MARK, wrapChildCallbacks } from "../agent/spawn-child.mjs"
-// TUI-OOM-ROOTCAUSE §23.3.1：子代理人读线窗口常量（单源——store 零依赖）。
+// TUI-OOM-ROOTCAUSE·AGENT-LOOP.md §6.15：子代理人读线窗口常量（单源——store 零依赖）。
 import { RECORD_WINDOW_MESSAGES } from "../session-store.mjs"
 import { logEvent } from "../log.mjs"
 import { deathLine } from "../abort-provenance.mjs"
@@ -90,7 +90,7 @@ function touchedFilesNote(child, cwd) {
 }
 
 /**
- * Async escalate settle — three-way classification (§25 D-R17b review #4):
+ * Async escalate settle — three-way classification (ESCALATE.md §5 D-R17b review #4):
  *  - done: merge ALL mutations (the escalation's changes are the parent's —
  *    verify/advisor guards must see them) + overlap warning into the report
  *    (report-level hint — not a gate — round2 #4);
@@ -104,7 +104,7 @@ function touchedFilesNote(child, cwd) {
  */
 export function classifyEscalateSettle(parent, entry) {
   if (entry.cancelled) return { cancelled: true }
-  // §23.3.1（TUI-OOM-ROOTCAUSE）——childAgent 语义面：settle 分类（touched 摘要/partial
+  // AGENT-LOOP.md §6.15（TUI-OOM-ROOTCAUSE）——childAgent 语义面：settle 分类（touched 摘要/partial
   // merge）与 status/observe 摘要的读取源；**消化注入完成后由 `releaseSettledEntry`
   // （async-settle.mjs）置 null**（池内未消化窗口不释放——表 2 候选 2 否决）。
   const child = entry.childAgent
@@ -161,7 +161,7 @@ export function launchEscalateAsync(parent, ctx, launch) {
   const relayPrefix = `escalate#${id}/`
   const entry = {
     id, role: "escalate", relayPrefix,
-    _pool: poolDomainOf("escalate"), // other — shares the domain with explore/plan/coder (§11.1 D-24a)
+    _pool: poolDomainOf("escalate"), // other — shares the domain with explore/plan/coder (AGENT-LOOP-ASYNC-POOL.md §6.10 D-24a)
     status: "queued",
     position: undefined,
     report: null, error: null, done: false, cancelled: false,
@@ -200,7 +200,7 @@ export function launchEscalateAsync(parent, ctx, launch) {
       role: "coder",
     })
     entry.childAgent = child // settle 分类/status touched 摘要绑定（start 时刻）
-    child._historyWindow = RECORD_WINDOW_MESSAGES // TUI-OOM-ROOTCAUSE §23.3.1：子代理人读线窗口（四处创建点同置）
+    child._historyWindow = RECORD_WINDOW_MESSAGES // TUI-OOM-ROOTCAUSE·AGENT-LOOP.md §6.15：子代理人读线窗口（四处创建点同置）
     child._logId = relayPrefix.slice(0, -1)
     // SUBAGENT-UPSTREAM-CHANNEL（§6.27.4 W3——escalate **async**：工具返回注走异步形）。
     child._upstream = { parent, label: relayPrefix.slice(0, -1), sync: false }
@@ -242,7 +242,7 @@ export function launchEscalateAsync(parent, ctx, launch) {
       { ...childCallbacks, onPermissionRequest: childPermission },
       runOpts,
       {
-        // 后台飞行不弹 continue 面板（D-A3 §15 例外同款）：AUTO && engineering 自动
+        // 后台飞行不弹 continue 面板（D-A3 AGENT-LOOP-SUBAGENT.md §6.7.3 例外同款）：AUTO && engineering 自动
         // resume——escalate 只在 normal 模式可用（engineering 拒）——恒自动拒 → partial。
         askContinue: () => Promise.resolve(Boolean(parent.config?.agent?.engineering && parent.autoApprove)),
         onDeclined: (e, output) => `escalate (${tag})${entry.effortNote} ${TURN_CAP_MARK} (${e.turn} turns) — work may be partial; review recent_changes before deciding next steps.\nPartial output: ${output.slice(0, 2000)}`,
@@ -265,7 +265,7 @@ export function launchEscalateAsync(parent, ctx, launch) {
         // 运行失败/中止：错误文本落 entry.error（子代理同款——cancel 分支忽略它；
         // Ctrl+I 中止的残条目由收尾消化带错误文本——不落空 "(no report)" digest）。
         const child = entry.childAgent
-        // §20.3 第 3 条合成器（第 24 批）：原 message 前缀逐字保留 + 来源后缀
+        // AGENT-LOOP-SUBAGENT.md §6.12 第 3 条合成器（第 24 批）：原 message 前缀逐字保留 + 来源后缀
         entry.error = `escalate (${tag}) error: ${deathLine(e, entry.controller?.signal)}\nPartial output: ${(child?._capturedOutput ?? "").slice(0, 2000)}`
       })
       .finally(() => {

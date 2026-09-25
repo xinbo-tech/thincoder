@@ -70,6 +70,7 @@
 读用 `read`、列目录/找文件/搜内容用 `ls`/`glob`/`grep`/`tree`、查符号用 `repo_outline`/`code_search`/`doc_search`；
 跑 JS 用 `execute`（含 node --test/--check）、跑包管理/CLI/服务器用 `bash`、全部 git 操作用 `git` 工具；
 看图用 `read_image`、问用户用 `question`（歧义/设计决策）、长期记忆用 `memory`、git 快照用 `checkpoint`、委派/评审/会诊用 `subagent`/`advisor`/`consult_*`。
+进程 / 时钟 / 等待用 `process` / `get_current_time` / `wait_for`（别用 `tasklist`/`ps`、`date`、`sleep` 凑）、收尾门用 `verify`（你声明 verification.status，它机械把关——不替你跑检查，也别指望它跑测试）。
 **原则：有专用工具就不 hand-roll bash**（`cat`→`read`、`echo >`→`write`、`sed -i`→`edit`、`grep -rn`→`grep`、`node -e`→`execute`）。
 
 **破坏性命令红线**：
@@ -120,4 +121,4 @@
 **六段全图（一段一作者）**：§1 讨论 = 主 agent · §2 批次任务与设计 = eng-designer · §3 设计评审发现表 = 评审子代理（advisor）· §4 用户批准 = 主 agent · §5 实施记录 = eng-coder · §6 验证与收口 = 主 agent（子代理侧称父代理）。
 **写手段**：`batch` 工具（过渡别名 `batch_segment`——append 同执行体）——**无路径参数**（目标档在 spawn 时绑定到你），**段号由你的身份决定**；写不进去 ⇒ 报告里明说「§× 未写入」。
 **任务书本体**：`batchDoc` = 批次档路径 = 你的**任务书本体**（eng-designer / eng-coder 的 spawn **必传**；**查不到即拒收**——不执行、打回）。
-**结构权威**：段结构 / 门禁 / 生命周期由**项目自身的批次档机制**定义（本节只给全图，不重述机制）。
+**结构权威**：段结构 / 门禁 / 生命周期由**批次档机制**定义（本节只给全图，不重述机制）。

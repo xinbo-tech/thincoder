@@ -21,6 +21,7 @@ import assert from "node:assert/strict"
 
 import { applyThink, handleThinkCommand } from "../src/tui/cmd-think.mjs"
 import { specForModel, resolveEnableThinking } from "@thincoder/core/config.mjs"
+import { thinkOffPath } from "@thincoder/core/think-off.mjs"
 
 /** 本批四新档（核表独立行——枚举首项即 `"none"` = 旧实现会把思考关掉的那一类）。 */
 const NEW_ROWS = ["qwen3.7-flash", "qwen3.8-flash", "qwen3.8-omni-flash", "qwen3.8-27b"]
@@ -182,6 +183,73 @@ test("E-4 回归（快速径）：`/think effort none` ⇒ 回执 Thinking: OFF�
   assert.equal(agent.provider.thinking, null, "off 形落 provider（NF1）")
   assert.equal("reasoningEffort" in agent.provider, false, "零 effort 残留")
   assert.deepEqual(calls, [["p1", "thinking", null], ["p1", "reasoningEffort", undefined]])
+})
+
+// ─── 批 2026-09-25-off-family-closeout（设计 `docs/core/design/MODEL-SPECS.md` §16.4 · 用例 W-1..W-4 / AC-2）───
+// 回执条件化（本质 = 「不宣称做不到的事」——台账 #334）：无有效 off 路径的族（effort 枚举无 `none` /
+// 服务端强制思考族）⇒ 拒 `/think off`（零写盘）· 头与回执恒报 ON · Thinking 开关项不渲染。
+
+/** 无有效 off 路径两族：`kimi-k3`（effort 枚举无 `none`）/ `glm-5.3-flashx`（服务端强制思考族）。 */
+const NO_OFF_PATH = ["kimi-k3", "glm-5.3-flashx"]
+/** 拒绝文案（§16.4 定形——单行 · `C.error` 通道）。 */
+const NO_OFF_MSG = "No off path for this model — thinking cannot be turned off here (use /think effort <level>)"
+
+test("W-1/W-2 错误：`/think off`（两族）⇒ 拒绝行 + 零写盘（不落标记 / 不落档）", async () => {
+  for (const model of NO_OFF_PATH) {
+    assert.equal(thinkOffPath(specForModel(model)), false, `${model}：前提——§16.4 判据 false`)
+    const { agent } = onFixture(model) // 档位「high」在位
+    agent.provider.thinking = { type: "disabled" } // 残留 off 标记（拒绝面：两键零改）
+    const { ctx, lines, calls, seen } = thinkCtx(agent, () => null)
+    await handleThinkCommand(ctx, ["off"])
+
+    assert.deepEqual(lines, [NO_OFF_MSG], `${model}：拒绝行 = §16.4 文案`)
+    assert.deepEqual(calls, [], `${model}：零 syncProviderField（不写盘）`)
+    assert.equal(agent.provider.reasoningEffort, "high", `${model}：档位键零改`)
+    assert.deepEqual(agent.provider.thinking, { type: "disabled" }, `${model}：残留标记零改`)
+    assert.deepEqual(seen, [], `${model}：快速径不进菜单`)
+  }
+})
+
+test("W-3 边界①：`/think` 环（kimi-k3 + 残留 thinking:null）⇒ 头与回执报 ON（不误报 OFF）", async () => {
+  const { agent } = fixture("kimi-k3") // thinking: null = 残留 off 标记
+  assert.equal(thinkOffPath(specForModel("kimi-k3")), false, "前提——无有效 off 路径")
+  const { ctx, seen } = thinkCtx(agent, () => null)
+  await handleThinkCommand(ctx, [])
+  assert.equal(seen[0][0].text.includes("Thinking: ON"), true, "首拍菜单头报 ON（判据 false ⇒ 恒报 ON）")
+  assert.equal(seen[0][0].text.includes("Thinking: OFF"), false, "残留标记不误报 OFF")
+  assert.deepEqual(seen[0].filter((e) => e.action === "effort").map((e) => e.level), ["low", "high", "max"], "档位项照旧")
+
+  // 回执行 = 公式锁（该族 UI 本无 off 入口——`!isEffortOnly` 旧门已排除 + 判据 false；防公式回退成
+  // 单看的标记式 ⇒ 直驱合成 action 锁「回执条件化」本身）。
+  const { agent: agent2 } = fixture("kimi-k3")
+  const { ctx: ctx2, lines: lines2 } = thinkCtx(agent2, (entries, n) => (n === 0 ? { type: "item", action: "off" } : null))
+  await handleThinkCommand(ctx2, [])
+  assert.deepEqual(lines2, ["Thinking: ON"], "回执恒报 ON（残留标记不生效——OFF 会是假断言）")
+})
+
+test("W-3 边界②：`/think` 环（glm-5.3-flashx + 残留 {type:\"disabled\"}）⇒ 无 Thinking 开关项 ∧ 头报 ON", async () => {
+  const { agent } = fixture("glm-5.3-flashx")
+  agent.provider.thinking = { type: "disabled" } // 残留 off 形
+  assert.equal(thinkOffPath(specForModel("glm-5.3-flashx")), false, "前提——服务端强制族")
+  const { ctx, seen } = thinkCtx(agent, () => null)
+  await handleThinkCommand(ctx, [])
+
+  const head = seen[0]
+  assert.equal(head[0].text.includes("Thinking: ON"), true, "头报 ON（残留标记不误报 OFF）")
+  assert.equal(head.some((e) => e.action === "on" || e.action === "off"), false,
+    "无 Thinking 开关项（§16.4 新合门生效面——现行门对非 effort 族本会渲染 = 旧态）")
+  assert.deepEqual(head.filter((e) => e.action === "effort").map((e) => e.level), ["low", "high", "max"], "档位项照旧")
+})
+
+test("W-4 正常：`/think on`（glm-5.3-flashx，残留 {type:\"disabled\"}）⇒ 写 ON 形覆盖（恢复径可达）", async () => {
+  const { agent } = fixture("glm-5.3-flashx")
+  agent.provider.thinking = { type: "disabled" }
+  const { ctx, lines, calls } = thinkCtx(agent, () => null)
+  await handleThinkCommand(ctx, ["on"])
+
+  assert.deepEqual(agent.provider.thinking, { type: "enabled" }, "on 形覆盖残留 off 标记（恢复径）")
+  assert.deepEqual(calls, [["p1", "thinking", { type: "enabled" }], ["p1", "reasoningEffort", "high"]], "落盘：on 形 + 默认档")
+  assert.deepEqual(lines, ["Thinking: on"], "回执 = 快速径既有文案（`Thinking: ${sub}`；大小写即现有形，零改）")
 })
 
 test("E-4 回归（环内）：effort none ⇒ 回执 OFF ∧ 次拍菜单头 Thinking: OFF（守卫缺失即误报 ON = 红）", async () => {

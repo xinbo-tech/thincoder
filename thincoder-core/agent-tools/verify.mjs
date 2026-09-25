@@ -34,7 +34,7 @@ export function configureVerifyDiagnostics(impl) {
 export function resetVerifyDiagnostics() { injectedDiagnostics = null }
 
 /**
- * §18.12 D-VR1 path normalization — mirrors the §20.5 file-domain handling:
+ * D-VR1 path normalization — mirrors the file-domain handling (AGENT-LOOP-SUBAGENT.md §6.9):
  * resolved to an absolute path with forward slashes; dedup uses the win32
  * lowercase comparison key (changedFileKey) so "D:/x/src/a.mjs" and
  * "d:\\x\SRC\a.mjs" count as the same file.
@@ -95,7 +95,7 @@ export const verifyTool = {
   readonly: true,
   async execute(args, ctx) {
     const cwd = ctx.agent.cwd
-    // Changed-file resolution (§18.12 D-VR3): _touchedFiles (per-run bookkeeping,
+    // Changed-file resolution (D-VR3): _touchedFiles (per-run bookkeeping,
     // absolute paths) ∪ git diff fallback — git is tried at testCwd
     // (workdir-resolved) first, then at ctx.agent.cwd; first success wins.
     // git-diff paths are repo-root-relative — resolved against the discovered
@@ -105,7 +105,7 @@ export const verifyTool = {
     lines.push("=== VERIFICATION REPORT ===")
     lines.push("")
 
-    // 1. Changed files — _touchedFiles ∪ git diff (§18.12 D-VR1)
+    // 1. Changed files — _touchedFiles ∪ git diff (D-VR1)
     let gitOk = false
     let gitStat = ""
     let gitFiles = []
@@ -131,7 +131,7 @@ export const verifyTool = {
       lines.push("Changed files: (not a git repo or git unavailable)")
     }
     // _touchedFiles: files written by the tools this run — captured regardless
-    // of git state (§18.12 F-VR1: subagent cwd ≠ git root must still locate).
+    // of git state (F-VR1: subagent cwd ≠ git root must still locate).
     const touchedFiles = (ctx.agent._touchedFiles ?? []).map((p) => normalizeChangedPath(p, cwd))
     const gitKeys = new Set(gitFiles.map(changedFileKey))
     const touchedOnly = touchedFiles.filter((p) => !gitKeys.has(changedFileKey(p)))

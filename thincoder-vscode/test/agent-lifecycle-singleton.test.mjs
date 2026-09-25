@@ -2,11 +2,11 @@
  * agent-lifecycle-singleton.test.mjs — agent 生命周期对齐 CLI（2026-09-08——
  * 面板会话级顶层 agent 单例）纯函数单测（对标 eng-settlement.test 模式——快层可测）：
  *  - buildTopLevelAgent 字段默认（A/C/B 归类起点——loop/tools 读面）；
- *  - resetRunState §11.2 A 复位清单：回合级计数器/预算/守卫回合边界清零（AC6——不跨回合
+ *  - resetRunState 复位清单 A：回合级计数器/预算/守卫回合边界清零（AC6——不跨回合
  *    累计），C 类（_tasks/_goal/_engDesignTokens/config engineering）保留；
- *  - reconcileEngDesignTokens §11.2 C：Map 永不复位清空（内存未结算项保留——双载体漂移
+ *  - reconcileEngDesignTokens C：Map 永不复位清空（内存未结算项保留——双载体漂移
  *    根因消除）+ 槽权威合入（TTL 过滤）+ legacy 镜像一次性迁移；
- *  - applySlotSessionState §11.2.1 槽↔hydrate 映射：engineering/advisor.guard/planMode/
+ *  - applySlotSessionState 槽↔hydrate 映射：engineering/advisor.guard/planMode/
  *    engDesignTokens 每轮槽权威；restore（首轮/destroy 重建）回填 tasks/goal/
  *    pendingReminders——复用路径内存权威（不覆盖）；
  *  - agentSlotMatches / ensurePanelAgent 绑定判定（cwd×slot 匹配复用/不匹配销毁——AC1/AC4）；
@@ -194,7 +194,7 @@ test("reconcileEngDesignTokens: memory kept (C), slot merged with TTL, expired d
   assert.equal(reconcileEngDesignTokens(kept, null, null).map.get("k"), memTok)
 })
 
-test("applySlotSessionState §11.2.1: slot authority for modes/tokens; restore backfills session fields", () => {
+test("applySlotSessionState: slot authority for modes/tokens; restore backfills session fields", () => {
   const cfg = cfgBag({ advisor: { guard: false, provider: "cfg-provider" } })
   const slot = {
     engineering: true,
@@ -363,7 +363,7 @@ test("hydrateRun #175a: agent.config.agent.autoThink 随 config 归一（显式�
   }
 })
 
-slow("§11.2 resumed 随绑定新生：换槽销毁重建 → 恢复事件每 (面板×槽) 绑定一次——同绑定复用不重复（AC2）", async () => {
+slow("resumed 随绑定新生：换槽销毁重建 → 恢复事件每 (面板×槽) 绑定一次——同绑定复用不重复（AC2）", async () => {
   const cwd = _cwd() // vscode mock 默认单根 = process.cwd() ⇒ _cwd() 恒 process.cwd()；sessions dir 已隔离
   // 测试注入面钉项目根（本用例面 = 恢复事件语义，非项目根判定）
   _setProjectRootForTest(cwd)

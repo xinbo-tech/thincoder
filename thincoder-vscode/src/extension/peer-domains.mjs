@@ -101,10 +101,6 @@ function dirStat(dir) {
   } catch { return null }
 }
 
-function normalizeForCompare(p) {
-  return process.platform === "win32" ? p.toLowerCase() : p
-}
-
 /** 扫描 + 聚合其他活实例的登记（含惰性死清理）。返回
  *  [{ sessionId, pid, end, domains, updatedAt }]——不含本实例、不含死 pid、损坏按缺失降级。 */
 function aggregate() {
@@ -154,7 +150,7 @@ function aggregate() {
  * peerDomains(cwd) → { conflicts(targets), claimConflicts(targets) }——**一次聚合**（同一扫描供两面
  * ——§4.4.4 零二次扫描；每次调用目录 stat 一次）。
  * conflicts(targets)：targets 命中他活实例 5 分钟 hot 登记域 → 返回 [{ file, pid, end, sessionId }]
- * （足迹面保持端侧既有 cwd 无关形态——D-MI5 零改）。
+ * （**与核同判据**：`claimsOverlap` 重叠 + 同 cwd 过滤 + hot 窗口 + self 排除——§4.3 / 台账 #344）。
  * claimConflicts(targets)：targets ∩ 他实例（**同 cwd** · self 排除——§4.4.4 判据）**未过期认领**
  * （`claimsOverlap` 同核判据）→ 返回 [{ file, pid, end, sessionId, claimedAt, expiresAt }]。
  * 纯读（N3——不写任何东西）。
@@ -170,10 +166,10 @@ export function peerDomains(cwd) {
         const now = Date.now()
         const hits = []
         for (const p of snapshot()) {
+          if (typeof cwd === "string" && cwd && !sameCwd(p.cwd, cwd)) continue // 同 cwd 判据（§4.3——与核 `peerDomains` 同）
           if (now - p.updatedAt > PEER_DOMAIN_HOT_MS) continue // 冷登记不提示（hot 窗口）
-          const set = new Set(p.domains.map(normalizeForCompare))
           for (const t of list) {
-            if (set.has(normalizeForCompare(t))) hits.push({ file: t, pid: p.pid, end: p.end, sessionId: p.sessionId })
+            if (p.domains.some((d) => claimsOverlap(t, d))) hits.push({ file: t, pid: p.pid, end: p.end, sessionId: p.sessionId })
           }
         }
         return hits

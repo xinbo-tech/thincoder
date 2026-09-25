@@ -98,7 +98,7 @@ async function distillExplorations(history, start, provider, signal, agent, dept
       messages: buildCompressMessages(history, cut, extras?.systemPrompt, EXPLORE_SUMMARY_PROMPT),
       tools: extras?.tools,
       signal,
-      // §18.6 D-TR4：轨迹元数据增补——kind=distill（探索蒸馏面——agent 元数据透出；
+      // TRACES.md §6.1 D-TR4：轨迹元数据增补——kind=distill（探索蒸馏面——agent 元数据透出；
       // depth 经 summarizeRunExplorations 参数透传——agent.mjs 主作用域传入）
       logCtx: {
         stage: "distill", child: agent?._logId ?? null, kind: "distill",

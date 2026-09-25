@@ -268,7 +268,7 @@ export function renderRows(state, agent, opts) {
 
   put(panels.header.y, [renderHeader(agent, cols)])
   put(panels.conversation.y, renderConversation(state, cols, panels.conversation.h, state.scroll, rows))
-  // §7.2.1 D2: running-subagent fixed panel (between conversation and todo) —
+  // docs/cli/design/TUI.md §6.8 D2: running-subagent fixed panel (between conversation and todo) —
   // lines precomputed by layout (subagent-panel.mjs, neutral module), put
   // directly (no double render); absent when no block is running (F6). Lines
   // are objects ({text, color, _foldToggle/_foldBlock…} — mouse hit-testing

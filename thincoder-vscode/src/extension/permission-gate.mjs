@@ -22,7 +22,7 @@
 import { askPermission } from "@thincoder/core/permission.mjs"
 
 /**
- * Unified release（§18 C-6）: dequeue + resolve + post `permissionWithdrawn`
+ * Unified release（AGENT-LOOP-SUBAGENT.md §6.7.6 C-6）: dequeue + resolve + post `permissionWithdrawn`
  * （webview 据此移除对应卡——不再依赖本地点击）+ `_refreshStatus`（F-W13 族：释放 ⇒ 状态栏必刷
  * ——刷新点单源 = 本通道；判据与落点 = WEBVIEW-PROTOCOL.md §4.4 · §4.6）。
  * 三路释放共用本 helper；批合并卡同族（`queue` = 批队——判定值域不同故队列分立）。
@@ -86,12 +86,12 @@ export function permissionGate(panel) {
 }
 
 /**
- * §16 D-B1 batch permission gate: one merged ask for a same-response batch of non-readonly
+ * D-B1 batch permission gate: one merged ask for a same-response batch of non-readonly
  * tools. Returns "approveAll" / "oneByOne" / "deny" (deny → the whole batch is refused,
  * no second ask; oneByOne → the caller falls back to the per-item channel).
  * No handler → execute-tools falls back to per-item asks (NF-B1: ACP bridge / headless /
  * old versions are never blocked by the batch).
- * §18 C-1/Q1：批合并保持 depth-0（child 不入批合并——逐项卡）。
+ * AGENT-LOOP-SUBAGENT.md §6.7.6 C-1/Q1：批合并保持 depth-0（child 不入批合并——逐项卡）。
  * @param {{ _autoApprove: boolean, _batchPermissionQueue: {resolve: Function}[], _panel?: { webview: { postMessage: Function } } }} panel
  */
 export function batchPermissionGate(panel) {

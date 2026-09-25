@@ -1,7 +1,7 @@
 /**
  * advisor-context-budget.test.mjs — 第 25 批（评审上下文预算跟随模型窗口——120K 硬编码退场）
  * 用例表 1:1 落地：T-CB1–T-CB5（设计档 `docs/design/ADVISOR-CONVERGENCE.md` §16.9；
- * AC-CB1–AC-CB5；需求 §10 F27）；群 B 批 B4 追补 T-EST1/T-EST2（`§18.3`——评审估算器
+ * AC-CB1–AC-CB5；需求 §10 F27）；群 B 批 B4 追补 T-EST1/T-EST2（`ADVISOR-GUARDS.md §9`——评审估算器
  * CJK 加权，F32）。
  *
  * 单测零网络、零真实 LLM（`_runAdvisorToolLoop` 的 `seams.chat` 覆写）、零长等待（字符串
@@ -83,7 +83,7 @@ test("T-CB5 压缩触发线在位：1M + ~737K → 真裁剪后正常收尾（�
   assert.equal(messages.length, 22, "压缩真裁剪（system + 压缩注记 + 最近 20 条）")
 })
 
-// ─── T-EST1/T-EST2：B4 评审估算器 CJK 加权（群 B 批 §18.3——F32）───────────────
+// ─── T-EST1/T-EST2：B4 评审估算器 CJK 加权（群 B 批 ADVISOR-GUARDS.md §9——F32）───────────────
 
 test("T-EST1 正常：estimateTokens 纯 ASCII 与旧扁平式逐值相等（零回归）", () => {
   assert.equal(estimateTokens([{ role: "user", content: "a".repeat(400) }]), 100, "400 ASCII / 4 = 100（ceil 同式）")

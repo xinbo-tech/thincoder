@@ -34,7 +34,7 @@ export function denyModalForOwner(state, key, { pushLine, render } = {}) {
   return true
 }
 
-/** permission 确认模态：y/n/a（a = approve + AUTO ON）；batch（§16 D-B1）：a/o/n（Esc = deny）。
+/** permission 确认模态：y/n/a（a = approve + AUTO ON）；batch（D-B1）：a/o/n（Esc = deny）。
  *  `continue` / `retry` = y/n-only 族（判据单源 `isYesNoModal`——X8 跟进①：`retry` 框不
  *  广告 `a`，零会话级 AUTO 副作用）。
  *  consume：valid 键或 Esc 走 resolve 分支；其余键静默吞掉（模态独占）。 */

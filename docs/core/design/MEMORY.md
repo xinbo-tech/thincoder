@@ -285,15 +285,15 @@
   `embedder` 经 getter 跟随共享 config（惰性向量回填）；`codeOrigin` = 当前项目根（逐调用限定——多项目单库）；`projectOrigin` = `memory.projectDir`（缺省 `.thincoder/memory`，首次逐项目 `syncDir`——CLI 启动同形）。
 - **检索 = 核 `codeSearch` / `docSearch` / `search`**（FTS5 + 惰性向量，无 embedder → 纯 FTS 回退非空〔限非空 query〕）；
   端壳文件制索引（`indexer` 族）与宿主 regex 回退**退役**——`code_search` / `doc_search` 面经核工具生成器调用（描述/输出契约同文）。
-- **工具面 = 端自持（结构事实登记 · 2026-09-20）**：`thincoder-vscode/src/memory-tool.mjs:42-60` = 端侧前端形态（五动作 + `layer` 值域 `personal|project` + 无 team）；执行器与输出契约取自核工具生成器 `memoryTools`（`thincoder-core/memory/docs.mjs:251`）⇒ **同一契约两份形态——改动须双改**。
+- **工具面（契约规范源 + 端面形态 · 2026-09-25 并一处）**：**规范源 = 核**——执行器 / 输出契约 = 核工具生成器 `memoryTools`（`thincoder-core/memory/docs.mjs:251`；§6.6.4 同文）；端面形态 = `thincoder-vscode/src/memory-tool.mjs:42-60`（五动作 + 工具级 `readonly: false` + 动作级只读分类〔search / list 只读放行——planMode 放行、免审批、可并行〕+
+  put / delete / clear 副作用门 + `layer` 值域按端：`personal|project`、无 team——`team` 拒回并指引 CLI，`:39-40`）。
+  **语义同源**（team 归属句两面同契：核「team (CLI only)」∥ 端「team is managed by the CLI」——非机制面差异，不作端差登记）；描述 / 参数按端 = 形态面（改动须双改）；
+  单源化方向（如需）= 端 description / params 转口核生成器 + 端面只留 `layer` 值域守卫；到期 = memory 工具面下次触碰。
 - **迁移路径**：VSC 老用户文件制 personal 记忆 = `memory import` 一次性导入器（CLI 面——**未落**，登记于该批次档「发现」清单）；project 层 = `.thincoder/memory/*.md`（双端同目录，磁盘为真相）。
 - **重建面（端壳）**：入口 = 面板「构建索引」（`thincoder.buildIndex`）→ 核序 `gitSync` → 回退 `codeSync`+`docSync`（并行）；
   进度 = Notification + 状态行段（`scan` / `index` 相位）；取消面 = `cancellable: false`（核 sync 无中断缝——端差收正）；
   模型变更**零手动重建**（失效向量置空 + 检索懒回填——不产无效结果）；`mismatch` 载荷与「Rebuild now?」提示**退场**；
   旧目录 `.thincoder/index/` 清退 = 告示 + 显式删除动作（每项目一次 · 零自动删除路径）。
-- **工具契约端差**：`memory` 五动作（search / put / list / delete / clear）；layer 值域 personal / project——**无 team 层**（收到 team 明确拒绝并指引 CLI）；
-  工具级 `readonly: false`、动作级只读分类（search / list 只读放行——planMode 放行、免审批、可并行）；put / delete / clear 副作用门；
-  执行器 / 输出契约 = 核工具生成器（§6.6.4 同文——单一实现）。
 
 **退场登记（文件制面——(d) 类不并）**：文件制 markdown 存储（root / personal / project 三物理目录 · 旧 `.json` 只读兼容）与向量优先 + 关键词回退的检索链（title 3 / tag 2 / content 1 分 · CJK bigram）随 W8 删旧退场（坐标见该批次档 W8 段）；
 B1–B4（`indexCompat` 模型/维度校验 · gitignored 触发重建 · `listMemoryFiles` 递归自检 · reason 词表）为文件制索引特有设计——核面承接 = 模型变更 ⇒ 该表向量置空 + 检索懒回填（失效向量绝不进评分）；
@@ -559,6 +559,8 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 - **`sweep` 子命令（2026-09-25 新增）**：`thincoder memory sweep [--origin <o>] [--dry-run|--confirm]`——origin 级库治理（缺省 = 死 origin 全扫；`--origin` = 靶向整档删除）；干跑默认、写档 `--confirm`；机制 / 安全设计 / 执行分工 = §6.13。与上列 personal-only 面并列（命令面写闸 = `--confirm`）——**不属** agent 工具面能力（`clear` / 批量删仍无）。
 
 ## 变更记录
+
+- 2026-09-25（**end-diff-registry 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-end-diff-registry.md` §1 · 台账 #336）：§6.9 端差登记项二态化——「工具面」与「工具契约端差」两条**并一处**（规范源 = 核 `memoryTools`；端面表单态 + `layer` 值域按端 = 形态面；team 归属句两面同契）＋单源化方向 / 到期登记。**零新语义**（双源冻结择一）。
 
 - 2026-09-25（**misc-four 批 · 设计评审修正轮 2（发现 #17）· eng-designer**——承 `docs/batches/2026-09-25-misc-four.md` §3 轮次 2）：§6.13「不查树存在性」字面两处（`:480` 边界句 / `:486` `--origin` 档语义句）改述为「不以树存活为判据」类无歧义形（`:486` 补「输出仍报树存活供警示」）——消与 `:490` 输出形态句（`existsSync` 读数 · 活树附警示行）的字面相抵。**判据零改**（删除判据 = 点名 / 树亡，未变）。
 

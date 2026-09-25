@@ -1,8 +1,8 @@
 /**
  * agent/agent-state.mjs — §11.2 agent 状态纯函数层（setup.mjs 拆分——2026-09-08
  * 500 行硬限触碰执行——VSC TODO L15 / CLI TODO L10 同物登记；原注释随函数逐字迁入）：
- * resetRunState（§11.2 A per-run 复位清单）/ reconcileEngDesignTokens（§11.2 C
- * engDesignTokens 水合）/ applySlotSessionState（§11.2.1 槽字段 ↔ hydrate 映射）——
+ * resetRunState（per-run 复位清单 A）/ reconcileEngDesignTokens（C
+ * engDesignTokens 水合）/ applySlotSessionState（槽字段 ↔ hydrate 映射）——
  * 纯函数、无 IO（test/agent-lifecycle-singleton.test.mjs 单测锚点）。
  */
 // W12（2026-09-15）：原 `../agent-tools/advisor.mjs` 的 token 工具随 advisor 镜像删旧退役——
@@ -17,7 +17,7 @@ import { DEFAULTS } from "@thincoder/core/config.mjs"
 const tokenUUID = (token) => String(token).split(":")[0]
 
 /**
- * §11.2 A —— per-run 复位清单（现靠重建清零的字段回合边界显式复位——预算/守卫不跨回合
+ * per-run 复位清单 A —— 现靠重建清零的字段回合边界显式复位——预算/守卫不跨回合
  * 累计——AC6；顺序纪律：hydrateRun 先复位、agent.mjs 的 inheritedGuard 应用在后）。
  * 纯函数（单测锚点）。C 类（槽回填源）与 B 类（hydrate 立即重指）不受影响。
  */
@@ -49,7 +49,7 @@ export function resetRunState(agent) {
 }
 
 /**
- * §11.2 C / 11.2.1 engDesignTokens 水合（纯函数）：Map 永不复位清空——内存未结算项保留
+ * engDesignTokens 水合（纯函数）：Map 永不复位清空——内存未结算项保留
  * （sync advisor 通过后 abort / settle 槽写失败的内存-only token 不因回合边界丢——双载体
  * 漂移根因消除）；槽权威条目合入（TTL 过滤——expired 从不授权）；过期计数回写（D2 触发③）；
  * 单值镜像 engDesignToken 仅 Map 空时一次性迁移读（AC3 唯一镜像读点）。
@@ -76,7 +76,7 @@ export function reconcileEngDesignTokens(existing, slotTokens, legacyToken) {
 }
 
 /**
- * §11.2.1 槽字段 ↔ hydrate 映射（纯函数——单测锚点）。槽 = 权威（每轮 apply）：
+ * 槽字段 ↔ hydrate 映射（纯函数——单测锚点）。槽 = 权威（每轮 apply）：
  * engineering/advisor.guard → agent.config（槽字段钉；缺席 → engState（子代理镜像）→ cfg）；
  * traces → agent.config.traces（cfg.traces 或核 DEFAULTS.traces 合并——TRACE-STORE-VSC
  * D-TR6——恒有定义——chat 调用点开关读 agent.config.traces.enabled）；

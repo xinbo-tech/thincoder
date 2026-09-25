@@ -165,13 +165,15 @@ VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` 
 现体 = 核 `thincoder-core/agent-tools/` 同族、语义同源。）
 
 **ASYNC-RESULT-CONTAINER（VSC 仓版）**：语义同源（F1–F6 / N1–N4 已并 §4.8）；VSC 端条目 = ① F-A6 挂起期注入与消化面（settle → 单容器 → digest 轮驱动；中止 → 容器清不注入陈旧结果）·
-② 端差——统一前 pending **5 族**（对端 3 族，含 advisor 独立族）· 池载体 = 共享 history 数组双查询（`history?._X ?? agent._X`——accessor 吸收，语义同源）。坐标（实核）＝
+② 端差——**统一前 pending 5 族（对端 3 族，含 advisor 独立族）——已消解（W12 迁核；现体 = 核面同族）**·池载体 = 共享 history 数组双查询（`history?._X ?? agent._X`——accessor 吸收，语义同源——**形态（非登记项）**）。坐标（实核）＝
 `thincoder-vscode/src/agent-tools/async-settle.mjs`（`settleAsyncEntry`——四族调用点 = advisor-async / consult / subagent-async / subagent-escalate-async）· `thincoder-vscode/src/extension/suspension.mjs:32-55`（挂起期单容器）·
 `thincoder-vscode/src/agent.mjs:66-74`。
 （**迁核注 2026-09-20**：`async-settle.mjs` 已退役——**W12 迁核删除集**；现体 = 核面同族。
 后两项坐标按现状仍在位。）
 
 端差差异若有 → 逐条补登记（不静默）；本档不代述对端正文（D2）。旧档 = 各自 VSC 仓需求档（一字未改 · 参照历史）。
+
+**二态化裁定行（2026-09-25 · 台账 #339① 需求层复核）**：② 端差（统一前 pending 5 族）= **已消解**（W12 迁核——现体 = 核面同族）；池载体（accessor 吸收）= **形态（非登记项）**（语义同源）；① F-A6 = 语义同源端条目（非端差）；末句程序句保留（上句）。
 
 ### 4.10 CLI 侧中止丢弃提醒与终态（CLI-ASYNC-DISCARD——新增 · 2026-09-15 批 4）
 
@@ -297,4 +299,5 @@ N4 范围 = **核侧 + CLI + VSC 两端对位**（**2026-09-19 23:23 用户裁�
   范围 = 仅核侧（不改 id 语义与分配算法）；源 = 设计档 `AGENT-LOOP-SUBAGENT.md` §6.21。本档 209 → **211 行**（`wc -l` 实测——F-B6 行 +1 · 变更记录 +1）。
 - 2026-09-16（**批 8 ENGINE-DEBT · 补充收正 · eng-designer**）：§4.3 F1 说明括注「advisor 无队列独立调度」→「advisor 独立调度——批 8 ED-4 后含排队面」（与 F-B5 · 设计档 `AGENT-LOOP-ASYNC-POOL.md` §6.10 对齐——残留旧语义清理，该行改写净零；父侧改指 2026-09-22 · 可 revert）；本档行数 **+1**（变更记录行）——复测 **213 行**。
 - 2026-09-18（**TUI 假死批 · 父侧直接执行**）：新增 §4.11 **回合记忆召回注入（depth-0）**（F1–F3 / N1–N3——**核心层补位**；依据 = VSC 端条目 `docs/core/requirements/MEMORY.md:146` F-M7 + 迁移期参照档 F-Q2/F-Q3）；源 = 批次档 `docs/batches/2026-09-18-tui-freeze.md` §2 与设计档 `MEMORY.md` §6.10 修法 B。
+- 2026-09-25（**end-diff-registry 批 · 需求层二态化轮 · eng-designer**——承 `docs/batches/2026-09-25-end-diff-registry.md` §2 上抛①〔父侧明示委托本轮落〕 · 台账 #339①）：§4.9 ASYNC-RESULT-CONTAINER（VSC 仓版）② 端差收正——「统一前 pending 5 族」迁移期陈述 ⇒ **已消解**（W12 迁核）；池载体 = **形态（非登记项）**；裁定行落地；末句程序句保留。**零新语义**。
 

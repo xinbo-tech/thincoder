@@ -1,7 +1,7 @@
 /**
  * subagent-spawn.mjs — spawn 路径装配（2026-09-05 module-split：subagent.mjs 726
  * > 500 硬限——spawn 前置 helpers（effectiveSubagentModel/resolveDesignSlot——审计块
- * 构造器 2026-09-22 起另立 ./audit-block.mjs）+ §20 调度参数准入（prepareScheduling）+ child 装配
+ * 构造器 2026-09-22 起另立 ./audit-block.mjs）+ AGENT-LOOP-SUBAGENT.md §6.9 调度参数准入（prepareScheduling）+ child 装配
  * （buildSpawnChild）verbatim 迁入（仅闭包变量参数化），语义零变；executeAsyncSpawn
  * 另在 subagent-run.mjs。subagent.mjs execute 经本文件 import 调用。
  * 2026-09-07：executeConsumeDesignAction 消费执行器（token 链终消费制——与 spawn 侧
@@ -105,7 +105,7 @@ export function resolveDesignSlot(parent, designIdArg) {
     const rec = reconcileEngTokensFromSlot(parent)
     if (rec && rec !== slots) slots = rec
   }
-  // F2d (§29.1): both refusal branches carry the HELD id list — after a
+  // F2d: both refusal branches carry the HELD id list — after a
   // persistence restore the parent has no digest to look the id up in; the error
   // list is the only discovery path (ids are not credentials — the token is).
   const size = slots instanceof Map ? slots.size : 0
@@ -221,7 +221,7 @@ export function prepareScheduling(parent, filesRaw, dependsRaw, wantAsync) {
 }
 
 /**
- * §20 准入通过后的 child 装配（2026-09-05 module-split——自 execute 参数化提取，
+ * AGENT-LOOP-SUBAGENT.md §6.9 准入通过后的 child 装配（2026-09-05 module-split——自 execute 参数化提取，
  * 原 318-488 段 verbatim——语义零变）。副作用保留：relay 取号（sync 支 allocRelay——
  * `[model]` 出生声明归 SYNC-CANCEL 单点，#133）/ 子代理 _logId / _engTaskInput 携带 /
  * _spawnSystemBlock 绑定（台账 #23——spawn 固块单点）全部在此发生。返回阻塞/异步两路径共用的
@@ -351,7 +351,7 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
 
   // Token-verified design review → child is authorized to modify files without re-reviewing
   if (role === "eng-coder") child._engDesignReviewed = true
-  // §18 D-E3 task-domain authorization: approved design + spawn task = authorization.
+  // AGENT-LOOP-SUBAGENT.md §6.7.6 D-E3 task-domain authorization: approved design + spawn task = authorization.
   // The child's OWN tools skip ONLY the onPermissionRequest ask (autoApprove
   // equivalent — dispatch.mjs permission stage); every other gate (JSON parse /
   // unknown tool / planMode / design-token) still applies (T-E14). Non-eng-coder
@@ -366,7 +366,7 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
     child._engDesignId = args.designId ?? null
   }
 
-  // §18.5 子代理零 git（D-AG1——2026-09-04 用户裁定）：explore/plan 一律不注入
+  // §6.7.4 子代理零 git（D-AG1——2026-09-04 用户裁定）：explore/plan 一律不注入
   // git 上下文——子代理证据链 = 任务书 ∪ 磁盘当前状态（read/glob/grep）∪（审计时）
   // _touchedFiles，无一项来自 git；注入的全工作区脏状态快照与任务域无关，会误导
   // 审计/探索（"status 里这个文件算不算超清单？"）。注入分支整体删除（B 方案
@@ -385,7 +385,7 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // 本行让子代理"拿到本档路径"）。行文不含 summarizeEngTaskBook 的三组段 marker
   // （Docs involved / Files list / Acceptance criteria）——段匹配不受影响。仅工程角色注入。
   if (engineeringRole) spawnBlocks.push(`Batch record (batchDoc): ${batchDocAbs}`)
-  // §18 D-E2 ③ (round4 #4, T-E13/T-E15): an eng-coder audit spawn's task book is
+  // AGENT-LOOP-SUBAGENT.md §6.7.6 D-E2 ③ (round4 #4, T-E13/T-E15): an eng-coder audit spawn's task book is
   // the eng-coder's OWN spawn task — mechanically kept as _engTaskInput by the
   // parent spawn and injected as the D-TS5 A2 mechanical summary (design docs /
   // affected-file list / acceptance criteria verbatim, verbose context dropped)

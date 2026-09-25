@@ -2,7 +2,7 @@
  * tool-gates.mjs — pre-stage gates + batch-permission scan（§18 C-11 拆分——2026-09-12）。
  * 自 execute-tools.mjs verbatim 迁出（506 > 500 硬限归位——零语义）：前置门禁
  * （planMode / 工程设计闸 / D5 冻结窗口）· L3 触达路径 helper · consume-design 谓词 ·
- * §16 D-B1 同批权限合并扫描。execute-tools 单向 import 本档（无环）——`executeToolBatches`
+ * D-B1 同批权限合并扫描。execute-tools 单向 import 本档（无环）——`executeToolBatches`
  * 与 L3 记账面留原档；agentHasLiveEngSlot 仅本档内部消费（不导出）。
  */
 import { resolve, relative } from "node:path"
@@ -18,16 +18,10 @@ import { freezeWindowConflict, batchRecordWriteConflict } from "@thincoder/core/
 // #327（`docs/core/design/TOOLS.md` §6.17）：触达路径提取单源谓词——端侧同引核单源（零副本）。
 import { toolTouchPaths } from "@thincoder/core/agent/helpers.mjs"
 
-/** L3 触达路径（绝对）：FILE_MUTATORS 走 #327 单源谓词；file_ops 按动作
- *  取源/目标（move/rename 动两端；copy 只写目标——源仅读取不算写域）。 */
-export function l3TouchedPaths(toolName, tool, args, cwd) {
-  let rel = []
-  if (toolName === "file_ops") {
-    rel = args?.action === "copy" ? [args?.dest] : [args?.source, args?.dest]
-  } else {
-    rel = toolTouchPaths(tool, args)
-  }
-  return rel.filter((p) => typeof p === "string" && p).map((p) => resolve(cwd, p))
+/** L3 触达路径（绝对）：整面走 #327 单源谓词（路径工具的动作感知随核单源——`docs/core/design/TOOLS.md`
+ *  §6.17 裁定 5）。 */
+export function l3TouchedPaths(tool, args, cwd) {
+  return toolTouchPaths(tool, args).filter((p) => typeof p === "string" && p).map((p) => resolve(cwd, p))
 }
 
 /**
@@ -58,7 +52,7 @@ function agentHasLiveEngSlot(agent) {
 }
 
 /**
- * 前置门禁（planMode / 工程设计闸）——单点判定，批扫描与逐项执行共用（§16 D-B1：
+ * 前置门禁（planMode / 工程设计闸）——单点判定，批扫描与逐项执行共用（D-B1：
  * 被前置门禁拦下的工具不计入批询问）。返回 { blocked, content }。
  */
 export function preGateBlocked(agent, { tool, toolName, args, depth }) {
@@ -105,14 +99,14 @@ export function preGateBlocked(agent, { tool, toolName, args, depth }) {
       return { blocked: true, content: `Error: engineering design gate — Engineering mode: write the design document first（location per your project's document conventions）, then call advisor with type='design' to review it, and wait for user approval. Implementation is done by eng-coder subagents.${convNote}` }
     }
   }
-  // E（F25/§14.4(c)）：D5 冻结窗口写前拦截——设计评审在途（点火 → 结算）期间父侧对被审文件
+  // E（F25/ADVISOR-GUARDS.md §5）：D5 冻结窗口写前拦截——设计评审在途（点火 → 结算）期间父侧对被审文件
   // 集的写入被拒（在途写使本轮结算 stale——pass 轮 token 白丢）；判据与 advisorStale 设计面
   // 同源（含 legacy 面）；位置 = 工程门后、权限阶段前（审批不得绕过冻结）。
   // B3 契约 1（群 B 批 E-扩 1——F31(a)）：键扩 file_ops；路径提取统一走 l3TouchedPaths
-  // （move/rename 源+目标；copy 仅目标——非 file_ops 支与现等价：touchedPaths 优先 / [path] 兜底）。
+  // （整面转调单源谓词——file_ops 动作感知随核单源，见该 helper 注）。
   if (FILE_MUTATORS.has(toolName) || toolName === "file_ops") {
     let absPaths = []
-    try { absPaths = l3TouchedPaths(toolName, tool, args ?? {}, agent.cwd) } catch { absPaths = [] }
+    try { absPaths = l3TouchedPaths(tool, args ?? {}, agent.cwd) } catch { absPaths = [] }
     // #309 批次档写门（AGENT-LOOP-SUBAGENT.md §6.29.1——判据集 = FILE_MUTATORS；file_ops / 读类不在门内）
     if (FILE_MUTATORS.has(toolName)) {
       const crossBatch = batchRecordWriteConflict(agent, depth, absPaths)
@@ -139,7 +133,7 @@ export function isSubagentConsumeDesignAction(toolName, args) {
 }
 
 /**
- * §16 D-B1 同批权限合并询问：扫描同一 response.toolCalls 中所有通过前置门禁、到达权限
+ * D-B1 同批权限合并询问：扫描同一 response.toolCalls 中所有通过前置门禁、到达权限
  * 询问阶段的非只读工具（深度 0 + 手动模式 + 有 onPermissionRequired），≥2 个时一次询问
  * （onBatchPermissionRequest）→ "approveAll"（本批放行）/ "oneByOne"（回退逐项）/
  * "deny"（全批拒绝、无二次询问）。无 handler 或不足 2 个 → 返回 null（逐项通道原样）。

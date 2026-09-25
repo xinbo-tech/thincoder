@@ -204,7 +204,7 @@ export async function finalizeAgentTurn(agent, ctx) {
     // keep _asyncSubagents/_asyncAdvisors/_consultSessions — the resumed run continues them
   } else {
     const injectedAdvisor = await collectSettledAsync(agent, { suspDriven })
-    // §11.2 D-24b: a normally-ended USER run with no review/child activity closes
+    // AGENT-LOOP-ASYNC-POOL.md §6.10 D-24b: a normally-ended USER run with no review/child activity closes
     // the OPEN code instances — the converged/abandoned thread must not burn the
     // 5-round cap of a later task (the next code review starts a fresh round 1).
     // Digest auto-turns are exempt (their disposition precedes the fix round).
@@ -242,7 +242,7 @@ export async function finalizeAgentTurn(agent, ctx) {
  * Single ownership: entries settled inside a suspension session were moved to
  * _pendingAsyncResults by the settle callback, so this only sees user-turn
  * settles (no double inject — D-S3 points ①/②). The ⟦ev⟧done freeze is NOT
- * emitted here — each settle callback emits it (§15 D-A3).
+ * emitted here — each settle callback emits it (AGENT-LOOP-SUBAGENT.md §6.7.3 D-A3).
  * 2026-09-05 实践轮：自 agent.mjs 迁入（agent.mjs 内仅 finalize 引用——随收尾同迁）。
  */
 async function collectSettledAsync(agent, { suspDriven = false } = {}) {
@@ -257,7 +257,7 @@ async function collectSettledAsync(agent, { suspDriven = false } = {}) {
       if (!e.done) continue // still running — stays in the pool (D-S1)
       await injectAsyncResult(agent, e)
       if (e.role === "advisor") injectedAdvisor = true
-      // TUI-OOM-ROOTCAUSE（§23.3.1 消费点①——回合尾收集）：注入完成 → 释放条目持有
+      // TUI-OOM-ROOTCAUSE（AGENT-LOOP.md §6.15 消费点①——回合尾收集）：注入完成 → 释放条目持有
       releaseSettledEntry(e)
       map.delete(String(e.id))
     }

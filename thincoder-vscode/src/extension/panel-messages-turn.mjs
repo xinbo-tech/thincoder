@@ -63,7 +63,7 @@ export async function handleCancelSubagent(panel, msg) {
   // 条目级 abort（cancelSubagent——与工具 action:'cancel' 同实现路径——D-M6）。
   // live lines 锚点 = panel._liveLines（runPanelChat 每回合登记——挂起期与
   // susp.lines 同一数组）。未知 id（陈旧按钮/池已清）→ no-op（无虚构状态）。
-  // §9 D-24b（R13）：role="advisor" 伪角色条目在独立评审池（_asyncAdvisors）——
+  // AGENT-LOOP-ASYNC-POOL.md §6.10 D-24b（R13）：role="advisor" 伪角色条目在独立评审池（_asyncAdvisors）——
   // ⏹ 路由到 cancelAdvisorReview（②-6b——controller abort——取消不入 pending/不签发 token）。
   const lines = panel._liveLines ?? panel._susp?.lines
   // W13 键形单源（评审 🔴 收口）：核池键恒 `String(id)`（核 spawn/launch 写侧 `set(String(id))`
@@ -178,7 +178,7 @@ export async function handleAtComplete(panel, msg) { await panel._atComplete(msg
 
 /** 迁出自 `panel-messages.mjs` 的 case "permissionResponse"。 */
 export async function handlePermissionResponse(panel, msg) {
-  // §18 C-5（child permission gate）：promptId 精确匹配（question F-C1d 同构）；无 id（旧 webview）
+  // AGENT-LOOP-SUBAGENT.md §6.7.6 C-5（child permission gate）：promptId 精确匹配（question F-C1d 同构）；无 id（旧 webview）
   // → 回退队头；未知 → no-op（陈旧卡不误 resolve）。
   const entry = msg.promptId != null
     ? panel._permissionQueue.find((e) => e.id === msg.promptId) ?? null
@@ -188,7 +188,7 @@ export async function handlePermissionResponse(panel, msg) {
   if (pi >= 0) panel._permissionQueue.splice(pi, 1)
   if (msg.approved === "approveAll") {
     entry.resolve(true)
-    // §18 C-6 ③：approve-all 连带——其余 pending 逐个 release（permissionWithdrawn）；AUTO 置位（零改）
+    // §6.7.6 C-6 ③：approve-all 连带——其余 pending 逐个 release（permissionWithdrawn）；AUTO 置位（零改）
     for (const e of [...panel._permissionQueue]) releasePermission(panel, e, true)
     await panel._setAutoApprove(true)
     panel._panel?.webview.postMessage({ type: "autoApprove", value: true })
@@ -200,7 +200,7 @@ export async function handlePermissionResponse(panel, msg) {
 
 /** 迁出自 `panel-messages.mjs` 的 case "batchPermissionResponse"。 */
 export function handleBatchPermissionResponse(panel, msg) {
-  // §16 D-B1 + §4.6（F-W13）：合并卡并入逐项卡族——id 精确匹配（非 `shift`）；无 promptId
+  // D-B1 + §4.6（F-W13）：合并卡并入逐项卡族——id 精确匹配（非 `shift`）；无 promptId
   // （旧 webview）→ 回退队头；零命中 ⇒ 孤儿回写（可见处置——不改队列 ⇒ 零刷新）。
   const q = panel._batchPermissionQueue ?? []
   const entry = msg.promptId != null

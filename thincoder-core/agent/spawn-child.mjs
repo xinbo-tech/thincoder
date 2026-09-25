@@ -20,8 +20,8 @@ import { specForModel } from "../config.mjs"
 import { ContinueError } from "../agent.mjs"
 import { relayPrefixOf } from "./relay-prefix.mjs"
 import { appendCappedText } from "../text-budget.mjs"
-// 第 27 批 §12.3①：relay 前缀文法单一权威模块（`src/agent/relay-prefix.mjs`）——
-// 生成侧枢纽再导出（TUI/ACP 消费方可经此导入；消费方按 §12.3① 直连模块亦可）。
+// 第 27 批：relay 前缀文法单一权威模块（`src/agent/relay-prefix.mjs`）——
+// 生成侧枢纽再导出（TUI/ACP 消费方可经此导入；消费方直连模块亦可）。
 export { RELAY_PREFIX_RE, parseRelayPath, relayPrefixOf } from "./relay-prefix.mjs"
 
 /** 事件 token 哨兵串（D1）——LLM 正常内容混淆概率极低；字段分隔用 RS (\x1e)。 */
@@ -109,7 +109,7 @@ export function makeRelay(parent, label, emit, model) {
 // Single source for the event grammar branch lists (consult P3, 2026-08-30):
 // stripEventToken (display) and stripEventTokensForCapture (capture) shared them
 // literally — extending the event set meant touching both regexes.
-// "done" = §15 D-A3 async-child completion event (emitted by the parent's
+// "done" = AGENT-LOOP-SUBAGENT.md §6.7.3 D-A3 async-child completion event (emitted by the parent's
 // turn-end collection, not by children — listed so the grammar stays honest).
 const EVENT_PHASE = "turn|approval|done"
 const EVENT_TYPE = "llm|tool|approval|done"
@@ -139,7 +139,7 @@ export function stripEventTokensForCapture(text) {
  * - onToolOutput 带**已加前缀**的 name 走父 onToolOutput（name 形如
  *   "coder#1/bash"，消费端剥前缀路由进对应区块；chunk 对象/裸串原样透传）。
  * 父回调缺省时不包装（headless 嵌入）。
- * §27 R23 D-R23c1：包装产物在 onToken 上留 `_relayPrefix` 标记——同步收尾段据此
+ * docs/cli/design/TUI.md §6.8.2 R23 D-R23c1：包装产物在 onToken 上留 `_relayPrefix` 标记——同步收尾段据此
  * 判定"ctx.callbacks 已是嵌套 wrapper"（本 spawn 处于更深一层——eng-coder 内
  * explore）→ emitNestedChildEvent 补发射内层完成事件（T-R23c.2b 断言源）。
  */
@@ -163,7 +163,7 @@ export function wrapChildCallbacks(relayPrefix, parentCallbacks = {}) {
 }
 
 /**
- * §27 R23 D-R23c1（生成侧补发射——评审 #1 🅰）：sync spawn 同步收尾时若父回调已是
+ * §6.8.2 R23 D-R23c1（生成侧补发射——评审 #1 🅰）：sync spawn 同步收尾时若父回调已是
  * 嵌套 wrapper（onToken 带 `_relayPrefix` 标记——即本 spawn 的父本身是子代理，如
  * eng-coder 内 explore 审计）→ 发内层 done/stopped 事件（带完整嵌套前缀——wrapper
  * 链自动补外层前缀）→ 主 TUI routeSubToken 路由到子块定格。非嵌套（depth-0 直连主
@@ -235,7 +235,7 @@ export async function runWithContinue(runner, child, input, callbacks, runOpts, 
   // Review #4 fix: strip sentinel/control chars from the capture — `output` feeds
   // onDeclined's partial-output return, which lands in the PARENT LLM history where
   // the display-layer sanitizeDisplay backstop does not apply.
-  // TUI-OOM-ROOTCAUSE（§23.3.1）：捕获滞后水位截断——超 CAPTURE_CAP_OPTS.hard 裁至
+  // TUI-OOM-ROOTCAUSE（AGENT-LOOP.md §6.15）：捕获滞后水位截断——超 CAPTURE_CAP_OPTS.hard 裁至
   // 头 + 标记 + 尾（_capturedOutput 有界；续跑同闭包累积，语义一致）。
   const capture = callbacks?.onToken
     ? (t) => { output = appendCappedText(output, stripEventTokensForCapture(String(t)), CAPTURE_CAP_OPTS); child._capturedOutput = output; callbacks.onToken(t) }

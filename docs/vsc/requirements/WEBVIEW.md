@@ -106,32 +106,33 @@ webview 只做 UI 渲染与用户交互；agent 循环与工具执行在 extensi
 
 > 读法：逐行对位 CLI 需求行 → 本端对位 → 端差；「等价」= 语义同源且形态对位；端差 = 各端形态差异（登记不静默）。
 > 端差判据以本端实测与 `design/WEBVIEW-PROTOCOL.md` §6.1 · §6.2 对位表为准；对端行号以其文档为准（本档不代述对端正文）。TTO = `TUI-TOOL-OUTPUT（CLI 侧·需求）`（下文行标简写）。
+> **端差二态词汇（2026-09-25 · 台账 #337 复核）**：**已裁保留**（显示宿主不同——类判据单源 = `design/WEBVIEW-PROTOCOL.md` §6.1 首；A9 三件齐）· **消解路径 + 到期条件**（行为 / 判据面差异——按「端差默认 = 消」）· **不做项**（非端差留存——归设计档 U-P5）。等价 / 对齐 / 无端差行零动作。
 
 | CLI 行（对位参照） | 本端对位 | 端差（登记） |
 |---|---|---|
-| TUI F1–F5（跟随 / 暂停 / 锚定补偿 / 恢复 / 滚动入口） | F-W2 | 入口 = 滚动容器 + 悬浮回底钮（对端 = PgUp/PgDn + 滚轮）；`scrolled N` 不做（钮替代）；锚定补偿面 = 历史 prepend（`thincoder-vscode/webview/history.js:58-61`）——追加不位移 DOM 视口 |
+| TUI F1–F5（跟随 / 暂停 / 锚定补偿 / 恢复 / 滚动入口） | F-W2 | 入口 = 滚动容器 + 悬浮回底钮（对端 = PgUp/PgDn + 滚轮）；`scrolled N` 不做（钮替代）；锚定补偿面 = 历史 prepend（`thincoder-vscode/webview/history.js:58-61`）——追加不位移 DOM 视口——**已裁保留**（类判据 = `design/WEBVIEW-PROTOCOL.md` §6.1 首） |
 | TUI F6（懒加载） | F-W3 | 触发 = 滚动近顶（`scrollTop ≤ 40`）；页大小 200（两端对齐——N-W4）；数据源 = 宿主会话记录（磁盘为准） |
-| TUI F7（头部分页标记） | F-W3（加载指示器） | 本端 = `loadOlder` 加载指示（`thincoder-vscode/webview/history.js:23/33`）+ `hasOlder` 门；无「N more」计数行 |
-| TUI F8（子代理嵌套活动显示） | F-W1 | 块形态 = 活动区驻留 + 收口落流两态（设计 = `design/WEBVIEW.md` §5.1）；嵌套行随外层块（`thincoder-vscode/webview/ui.js:38` 注释口径）；不做嵌套独立小节 |
-| TUI F9（picker 附注渲染） | 本端无全屏 picker——模型选择 = 下拉部件（`thincoder-vscode/webview/model-picker.js` / `model-menu.js`） | 形态端差：全屏列表 vs 下拉 / 面板；无 80 列渲染预算概念 |
-| TUI F10（选择面分工与契约） | question 卡（`thincoder-vscode/webview/question.js`）+ 模型下拉 + 设置对话框 | 各端组件面自持（不镜像）；交互契约差异登记于各端设计 |
+| TUI F7（头部分页标记） | F-W3（加载指示器） | 本端 = `loadOlder` 加载指示（`thincoder-vscode/webview/history.js:23/33`）+ `hasOlder` 门；无「N more」计数行——**已裁保留**（类判据 = `design/WEBVIEW-PROTOCOL.md` §6.1 首） |
+| TUI F8（子代理嵌套活动显示） | F-W1 | 块形态 = 活动区驻留 + 收口落流两态（设计 = `design/WEBVIEW.md` §5.1）；嵌套行随外层块（`thincoder-vscode/webview/ui.js:38` 注释口径）；不做嵌套独立小节——**已裁保留**（类判据 = `design/WEBVIEW-PROTOCOL.md` §6.1 首） |
+| TUI F9（picker 附注渲染） | 本端无全屏 picker——模型选择 = 下拉部件（`thincoder-vscode/webview/model-picker.js` / `model-menu.js`） | 形态端差：全屏列表 vs 下拉 / 面板；无 80 列渲染预算概念——**已裁保留**（类判据 = `design/WEBVIEW-PROTOCOL.md` §6.1 首） |
+| TUI F10（选择面分工与契约） | question 卡（`thincoder-vscode/webview/question.js`）+ 模型下拉 + 设置对话框 | 各端组件面自持（不镜像）；交互契约差异登记于各端设计——**已裁保留**（类判据 = `design/WEBVIEW-PROTOCOL.md` §6.1 首） |
 | TUI F11（输入框方向键编辑） | F-W6 | 语义同源（同款竖移规则——对端文档明载其口径引本端同款）；呈现载体各端自持 |
-| TUI F12（`/advisor` 子菜单） | advisor 配置面 = 设置面板（`thincoder-vscode/webview/settings-models.js` advisor 区） | 命令子菜单（对端）vs 面板表单（本端）——入口形态端差 |
-| TUI F13（attention 态） | 本端对位 = 工具条按钮 active + plan 徽标 + 权限 / 提问卡流内可见 | **端差（明确登记）：attention chip 不做**（设计 = `design/WEBVIEW-PROTOCOL.md` §6.1）；无系统级通知 / 闪烁 |
-| TUI N1–N2（滚动 / 加载不卡） | N-W3 / N-W2 | 机制端差：终端渲染缓存 vs DOM 窗口化 + 离屏跳过 |
+| TUI F12（`/advisor` 子菜单） | advisor 配置面 = 设置面板（`thincoder-vscode/webview/settings-models.js` advisor 区） | 命令子菜单（对端）vs 面板表单（本端）——入口形态端差——**已裁保留**（类判据 = `design/WEBVIEW-PROTOCOL.md` §6.1 首） |
+| TUI F13（attention 态） | 本端对位 = 工具条按钮 active + plan 徽标 + 权限 / 提问卡流内可见 | **端差（明确登记）：attention chip 不做**（设计 = `design/WEBVIEW-PROTOCOL.md` §6.1）；无系统级通知 / 闪烁——**已裁保留**（类判据 = `design/WEBVIEW-PROTOCOL.md` §6.1 首）+ **不做项在册**（attention chip——归 U-P5） |
+| TUI N1–N2（滚动 / 加载不卡） | N-W3 / N-W2 | 机制端差：终端渲染缓存 vs DOM 窗口化 + 离屏跳过——**已裁保留**（类判据 = `design/WEBVIEW-PROTOCOL.md` §6.1 首） |
 | TUI N3（跨端对齐） | N-W4 | 等价（分页常量两端对齐 200） |
 | TUI N4（零依赖） | N-W1 | 等价（两端同政策） |
-| TUI N5–N6（防刷屏 / 省略计数真值） | 块折叠形态（冻结头 + tail——设计 = `design/WEBVIEW-PROTOCOL.md` §6.2） | 冻结头 + tail-3 同形态保持（等价）；本端截断标记不含计数（`thincoder-vscode/webview/lib.js:30` 注文本）——「省略 N 行」体系端差 |
-| **本端 F-W15**（`@file` 展开面） | 人读线 = **两端共文件**（CLI 同读该线） | **端差（登记 2026-09-18）**：本端取**端侧显示边界剥离**（`stripAtRefs`——恢复回读 + 标题面还原简洁形，`thincoder-vscode/src/extension/panel-session.mjs`）；**CLI 面渲染仍显 `[File: …]` 展开文**（同源人读线、未随本端剥离）——是否随端处置待裁 |
-| **本端 F-W16**（工具失败可见面） | 对位 = `TTO`（工具输出上限系） | **端差（登记 2026-09-18）**：① **卡态语义为本端独有**（红 / 保持展开 / 摘要含退出状态三信号——CLI 无卡态）；② **成功面不拼 `(exit code 0)`**（CLI 摘要侧拼退出状态；本端仅失败面拼非零状态） |
-| TUI N7（选择面行宽预算） | —（本端无 cols 固定宽面） | 不适用：面板自适应宽度；预算式不入本端 |
+| TUI N5–N6（防刷屏 / 省略计数真值） | 块折叠形态（冻结头 + tail——设计 = `design/WEBVIEW-PROTOCOL.md` §6.2） | 冻结头 + tail-3 同形态保持（等价）；本端截断标记不含计数（`thincoder-vscode/webview/lib.js:30` 注文本）——「省略 N 行」体系端差——**已裁保留**（类判据 = `design/WEBVIEW-PROTOCOL.md` §6.1 首） |
+| **本端 F-W15**（`@file` 展开面） | 人读线 = **两端共文件**（CLI 同读该线） | **端差（登记 2026-09-18）**：本端取**端侧显示边界剥离**（`stripAtRefs`——恢复回读 + 标题面还原简洁形，`thincoder-vscode/src/extension/panel-session.mjs`）；**CLI 面渲染仍显 `[File: …]` 展开文**（同源人读线、未随本端剥离）——**消解路径 + 到期条件在册**（2026-09-25 · 二态化）：消解路径 = **CLI 恢复渲染同款剥离**（须 CLI 对位同裁）∥ 维持登记（须显式裁定）；**到期 = CLI 恢复渲染面 / 本档 §4 面下次触碰**（设计侧同判 = `design/WEBVIEW.md` §4.4 N-W6 行） |
+| **本端 F-W16**（工具失败可见面） | 对位 = `TTO`（工具输出上限系） | **端差（登记 2026-09-18；已裁保留 2026-09-25——类判据 = `design/WEBVIEW-PROTOCOL.md` §6.1 首）**：① **卡态语义为本端独有**（红 / 保持展开 / 摘要含退出状态三信号——CLI 无卡态）；② **成功面不拼 `(exit code 0)`**（CLI 摘要侧拼退出状态；本端仅失败面拼非零状态） |
+| TUI N7（选择面行宽预算） | —（本端无 cols 固定宽面） | 不适用：面板自适应宽度；预算式不入本端——**已裁保留**（类判据 = `design/WEBVIEW-PROTOCOL.md` §6.1 首） |
 | TUI N8（方向键编辑约束） | F-W6 | 等价（零列记忆两端同）；载体 = 浏览器输入框原生编辑 + 判定五态 |
-| TUI N9（attention 零侵入） | —（随 F13 行） | attention chip 不做（登记态）；无空闲重绘面 |
-| TUI N10（显示层内存有界） | N-W2 | 口径端差：对端 = 各载体字符额度族；本端 = 块窗 150 + 卡体 64K + 离屏跳过（DOM 面） |
-| TTO FR1–FR3（行间区块 / 滚动内容 / 完成行） | F-W4 | 形态端差：卡片（折叠 / 展开）vs 行间区块（`❯` / `│` 前缀）；完成语义同（done / 失败 + 耗时 + 摘要） |
+| TUI N9（attention 零侵入） | —（随 F13 行） | attention chip 不做（登记态）；无空闲重绘面——**已裁保留**（类判据 = `design/WEBVIEW-PROTOCOL.md` §6.1 首）+ **不做项在册**（attention chip——归 U-P5） |
+| TUI N10（显示层内存有界） | N-W2 | 口径端差：对端 = 各载体字符额度族；本端 = 块窗 150 + 卡体 64K + 离屏跳过（DOM 面）——**已裁保留**（类判据 = `design/WEBVIEW-PROTOCOL.md` §6.1 首） |
+| TTO FR1–FR3（行间区块 / 滚动内容 / 完成行） | F-W4 | 形态端差：卡片（折叠 / 展开）vs 行间区块（`❯` / `│` 前缀）；完成语义同（done / 失败 + 耗时 + 摘要）——**已裁保留**（类判据 = `design/WEBVIEW-PROTOCOL.md` §6.1 首） |
 | TTO FR4（完整输出落盘） | `TOOL-OUTPUT-LIMITS（VSC 侧·需求）`（本档不重述——D2）；呈现面 = 卡体预览 | 无端差（同机制——本端已自持对位档） |
 | TTO NFR1（区块渲染性能） | N-W3 | 等价（增量路径） |
-| TTO NFR2（单一输出入口） | 消息族 `toolCall` / `toolOutput` / `toolResult`（`thincoder-vscode/webview/chat.js:139-141`） | 接口形态端差：宿主回调 vs postMessage 消息族 |
+| TTO NFR2（单一输出入口） | 消息族 `toolCall` / `toolOutput` / `toolResult`（`thincoder-vscode/webview/chat.js:139-141`） | 接口形态端差：宿主回调 vs postMessage 消息族——**已裁保留**（类判据 = `design/WEBVIEW-PROTOCOL.md` §6.1 首） |
 
 ## 5. 不并项与历史沿革
 
@@ -177,3 +178,7 @@ webview 只做 UI 渲染与用户交互；agent 循环与工具执行在 extensi
   **F-W17 判据句与产出格收正**（原「非密钥类保持单击即删」/「非密钥类行为零回归」**两处作废**）；「单击即删」类自此**为空域**。新批 = `docs/batches/2026-09-19-vsc-provider-delete-confirm.md`。
 - 2026-09-19 20:5x（**父侧直接执行 · 可 revert**）：**实测入口册补第六行**（模型菜单 footer「Remove provider」——载体 `webview/model-picker.js:25` 直发 `removeProvider`（无 name ⇒ 宿 QuickPick 选）·
  渲染位 `model-menu.js:128-134`；同消息第二载体、与 settings 面同判据入确认门）；**计数口径定案 = 册序**（本入口 = 入口册 #6/6，「不计死 handler」的口径作废）。批 = `docs/batches/2026-09-19-vsc-model-menu-delete-confirm.md`（设计评 pass id=142）。
+
+- 2026-09-25（**end-diff-registry 批 · 需求层二态化轮 · eng-designer**——承 `docs/batches/2026-09-25-end-diff-registry.md` §2 上抛②〔父侧明示委托本轮落〕 · 台账 #337）：§4 表逐行二态化——**已裁保留**（类判据单源 = `design/WEBVIEW-PROTOCOL.md` §6.1 首）十四行；
+  **不做项**在册（attention chip——归设计档 U-P5）两行（F13 / N9，随行并载保留形）；**F-W15 行 = 消解路径 + 到期条件**（同设计档 `design/WEBVIEW.md` §4.4 N-W6 行）；**F-W16 行 = 已裁保留**；
+  等价 / 对齐 / 无端差行零动作；§4 读法补**端差二态词汇**段。**零新语义**（需求层登记面收正）。

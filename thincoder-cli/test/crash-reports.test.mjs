@@ -1,6 +1,7 @@
-/** crash-reports.test.mjs — CRASH-REPORTS F3（近堆上限堆快照——docs/design/CRASH-REPORTS.md §6
- * 用例 T1-T5 / T7 / T7b）：武装注入缝 + env 开关矩阵 + 武装失败不阻断 + API 存在性守护 +
- * purge/判定集两态。**真快照不跑**（实测代价 236MB / ≈10s @64MB 堆——T8 = 手动 QA 面，不进套件）；
+/** crash-reports.test.mjs — CRASH-REPORTS 用例宿主（近堆上限堆快照 F3 + 提示行事实段——台账
+ * #212；设计档 = docs/cli/design/CRASH-REPORTS.md §2.2/§3）：用例 T1-T5 / T7 / T7b / T7c——
+ * 武装注入缝 + env 开关矩阵 + 武装失败不阻断 + API 存在性守护 + purge/判定集两态。
+ * **真快照不跑**（实测代价 236MB / ≈10s @64MB 堆——T8 = 手动 QA 面，不进套件）；
  * 全部用例快层（无真 spawn / 无真快照——AC8）。 */
 import { test, after } from "node:test"
 import assert from "node:assert/strict"
@@ -62,15 +63,18 @@ test("T5 API 存在性守护：node:v8.setHeapSnapshotNearHeapLimit 为 function
   assert.equal(typeof v8.setHeapSnapshotNearHeapLimit, "function", "Node ≥ 24 基线——武装面可用")
 })
 
-test("T7 清理与判定集（正例）：旧 Heap 快照被 purge；新记录在场 → 返回提示（AC7）", () => {
+test("T7 清理与判定集（正例）：旧 Heap 快照被 purge；新记录在场 → 返回提示 + 事实两段（AC7 / #212）", () => {
   const dir = tmpRoot()
   const snap = "Heap.20260901.010203.4242.0.001.heapsnapshot" // Node 命名形态（§3.3）
   writeFileSync(join(dir, snap), "snapshot-bytes")
   utimesSync(join(dir, snap), OLD, OLD)
-  writeFileSync(join(dir, `crash-${Date.now()}-4242.json`), "{}") // 新 crash 记录（24h 窗内）
+  const recordCwd = join(dir, "proj") // 记录内 cwd（真形记录体——#212 事实段源）
+  writeFileSync(join(dir, `crash-${Date.now()}-4242.json`), JSON.stringify({ uptime: 1.5, cwd: recordCwd })) // 新 crash 记录（24h 窗内）
   const hint = recentCrashHint({ dir })
   assert.ok(!readdirSync(dir).includes(snap), "旧快照纳入 30 天写时清理（purge 模式扩展）")
   assert.match(hint ?? "", /上次运行异常终止/, "新 crash 记录在场 → 照常提示")
+  assert.ok(hint.includes(" · 运行 1.5s"), "uptime 段在场（一位小数）")
+  assert.ok(hint.includes(` · cwd ${recordCwd}`), "cwd 段在场（原样字符串）")
 })
 
 test("T7b 清理与判定集（负例）：仅新 Heap 快照 → null 且文件留存（不误报——AC7）", () => {
@@ -79,4 +83,28 @@ test("T7b 清理与判定集（负例）：仅新 Heap 快照 → null 且文件
   writeFileSync(join(dir, snap), "snapshot-bytes")
   assert.equal(recentCrashHint({ dir }), null, "快照不入提示判定集——无 crash/report 记录不误报「异常终止」")
   assert.ok(readdirSync(dir).includes(snap), "窗内快照不被误删（仅 >30 天淘汰）")
+})
+
+test("T7c 提示行事实段（退化三格）：不可解析 → 基础形；report 类 → 仅 cwd；型不符 → 段级降级（#212）", () => {
+  // ① 记录体不可解析 ⇒ 基础形（不抛、仍提示）
+  const d1 = tmpRoot()
+  writeFileSync(join(d1, `crash-${Date.now()}-1.json`), "not-json")
+  const h1 = recentCrashHint({ dir: d1 }) ?? ""
+  assert.match(h1, /^上次运行异常终止（记录：.+）$/, "不可解析 ⇒ 基础形（原文案逐字）")
+  assert.ok(!h1.includes(" · 运行 ") && !h1.includes(" · cwd "), "零事实段")
+  // ② report.*.json（Node fatal）⇒ header.cwd 段在场、uptime 段略去（Node 报告无该字段）
+  const d2 = tmpRoot()
+  const nativeCwd = "D:\\node-work"
+  writeFileSync(join(d2, "report.20260925.010203.4242.0.001.json"), JSON.stringify({ header: { cwd: nativeCwd } }))
+  const h2 = recentCrashHint({ dir: d2 }) ?? ""
+  assert.ok(h2.includes(` · cwd ${nativeCwd}`), "Node 报告取 header.cwd")
+  assert.ok(!h2.includes(" · 运行 "), "Node 报告无 uptime 段（实测无该字段）")
+  assert.ok(h2.includes("report.20260925.010203.4242.0.001.json"), "选中记录 = 该 report 档")
+  // ③ 型不符（uptime 非有限非负数）⇒ 该段略去、cwd 段照出（段级降级）
+  const d3 = tmpRoot()
+  const c3 = "C:\\proj-x"
+  writeFileSync(join(d3, `crash-${Date.now()}-3.json`), JSON.stringify({ uptime: "abc", cwd: c3 }))
+  const h3 = recentCrashHint({ dir: d3 }) ?? ""
+  assert.ok(!h3.includes(" · 运行 "), "型不符 ⇒ uptime 段略去")
+  assert.ok(h3.includes(` · cwd ${c3}`), "另一段照出（段级降级）")
 })

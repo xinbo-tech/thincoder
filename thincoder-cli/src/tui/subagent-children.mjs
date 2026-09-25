@@ -16,7 +16,7 @@
  * 省略计数真值（N6——D-ST5）：`…（已省略 N 行）` 的 N 只随内容移除增长；标记自身
  * 不占额度、不被丢弃、不计入 N。
  *
- * TUI-OOM-ROOTCAUSE（TUI.md §15.1 事实 3 / §15.3.3）：原环按 `\n` 计数——无换行巨 chunk
+ * TUI-OOM-ROOTCAUSE（TUI-SESSION-VIEW.md §5 动机注 / §5.3）：原环按 `\n` 计数——无换行巨 chunk
  * 净增 0 行 → 环永不触发、文本无界。本模块加**字符维**（第二维——行数维逐字不动，D-TB5）：
  * `carrier._charCount` 与 `SUB_BLOCK_CHAR_LIMIT` 双维同时满足（先到先裁）；字符维裁剪
  * 按被裁文本行数折算 N（无幽灵计数——N6）。
@@ -25,7 +25,7 @@ import { SUB_BLOCK_CHAR_LIMIT, MIDDLE_TRUNC_MARKER, capText } from "./display-bu
 
 export const SUB_BLOCK_LINE_LIMIT = 500
 
-/** 单块自身额度（TUI-OOM-ROOTCAUSE §15.1 事实 3：无换行巨 chunk —— 行数维净增 0、
+/** 单块自身额度（TUI-OOM-ROOTCAUSE·TUI-SESSION-VIEW.md §5 动机注 / §5.1：无换行巨 chunk —— 行数维净增 0、
  *  环永不触发；入块文本先过本条（头 3/4 + 尾 1/4 + 中段标记）——单行内容不因字符维
  *  裁剪被整行丢光（环总量裁剪仍按最旧先行）。 */
 const SUB_BLOCK_CAP_OPTS = {
@@ -105,7 +105,7 @@ function dropCarrierLines(carrier, want) {
   return dropped
 }
 
-/** 字符维裁剪（§15.3.3——无换行巨 chunk 的堵口）：逐行丢最旧直至释放 ≥ want 字符；
+/** 字符维裁剪（§5.3——无换行巨 chunk 的堵口）：逐行丢最旧直至释放 ≥ want 字符；
  *  行数按实际被丢行折算 N（无幽灵计数——N6）；标记不占额度。返回释放字符数。 */
 function dropCarrierChars(carrier, want) {
   if (!(want > 0)) return 0
@@ -123,7 +123,7 @@ function dropCarrierChars(carrier, want) {
 }
 
 /** 单载体 trim（原树级 trimSubTree 收窄——D-ST4）：超 500 显示行 → 最旧先行丢行；
- *  超 SUB_BLOCK_CHAR_LIMIT 字符 → 同款最旧先行（双维先到先裁——TUI.md §15.3.4）。 */
+ *  超 SUB_BLOCK_CHAR_LIMIT 字符 → 同款最旧先行（双维先到先裁——TUI-SESSION-VIEW.md §5.4）。 */
 function trimSubCarrier(carrier) {
   const over = (carrier._lineCount ?? 0) - SUB_BLOCK_LINE_LIMIT
   if (over > 0) dropCarrierLines(carrier, over)
@@ -132,7 +132,7 @@ function trimSubCarrier(carrier) {
 }
 
 /** kind 合并追加（载体级）——净增行记账（显示行口径；省略标记不参与合并——N6）；
- *  字符账同步累加（第二维——§15.3.4）。 */
+ *  字符账同步累加（第二维——§5.4）。 */
 function pushBlock(carrier, kind, text, fresh) {
   if (!text) return
   const capped = capText(text, SUB_BLOCK_CAP_OPTS) // 单块自身额度（无换行巨 chunk 堵口）

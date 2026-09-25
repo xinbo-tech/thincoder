@@ -1,12 +1,12 @@
 /**
- * text-budget.mjs — 文本额度纯函数（零依赖——TUI-OOM-ROOTCAUSE 批，AGENT-LOOP.md §6.15 / TUI.md §15.3.2）。
+ * text-budget.mjs — 文本额度纯函数（零依赖——TUI-OOM-ROOTCAUSE 批，AGENT-LOOP.md §6.15 / TUI-SESSION-VIEW.md §5.2）。
  *
  * 单一来源（D2）：agent 侧捕获截断（spawn-child.mjs——子代理 `_capturedOutput`）与 TUI 面
  * 载体额度（tui/display-budget.mjs）共用本体的 `capText` / `appendCappedText`——两处各自
  * 复制截断逻辑的漂移面被消除。本模块零 import（可被任意层直接引用）。
  *
  * 计量口径 = **UTF-16 码元**（`String.length`——与 JS 字符串内存近似、确定、O(1) 计长；
- * TUI.md §15.2 表 1）。截断形态 = 头保 + 中段标记 + 尾保（标记含真实省略数 N）。
+ * TUI-SESSION-VIEW.md §5.1）。截断形态 = 头保 + 中段标记 + 尾保（标记含真实省略数 N）。
  *
  * 标记串约定：`marker` 模板中以字面 `N` 为省略数占位（逐字进测试断言——如
  * `… [captured output truncated: N chars omitted] …`）。

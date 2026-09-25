@@ -242,7 +242,7 @@ export function buildPanelCallbacks(panel, deps) {
       catch (e) { console.error("[chat-panel] distill save failed:", e.message) }
     },
     onPermissionRequired: permissionGate(panel),
-    // §16 D-B1: same-response non-readonly tools ask ONCE (approveAll / oneByOne / deny).
+    // D-B1: same-response non-readonly tools ask ONCE (approveAll / oneByOne / deny).
     onBatchPermissionRequest: batchPermissionGate(panel),
     onQuestion: (question, options) => askInPanel(question, options),
     // AGENT-LOOP-ASYNC-POOL.md §6.8: async settle events wake the suspension driver (no-op when it isn't parked —

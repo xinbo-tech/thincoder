@@ -30,7 +30,7 @@ import { backgroundStatus, reassertLiveChildren } from "./suspension.mjs"
 // 无工作区守卫（2026-09-21 批 · `PROJECT-SWITCHER.md` §4.1）：② 回合入口守卫（leaf——无环）
 import { blockOnNoWorkspace } from "./workspace-guard.mjs"
 // 2026-09-11 第 10 批（§5.1.4 第 1/2 条）：任务可见性族投递通道（队列 flush 拍——webviewReady case）
-// （W15 事件中继面 + §18 C-5/C-6 permissionResponse 释放面随回合交互族迁出——见 panel-messages-turn.mjs）
+// （W15 事件中继面 + AGENT-LOOP-SUBAGENT.md §6.7.6 C-5/C-6 permissionResponse 释放面随回合交互族迁出——见 panel-messages-turn.mjs）
 import { flushSubagentOutbox } from "./panel-callbacks.mjs"
 // LEDGER-SURFACE（§2.30.3.5）：台账启动行投递（webviewReady 时机）
 import { pushLedgerStartup } from "./ledger-surface.mjs"

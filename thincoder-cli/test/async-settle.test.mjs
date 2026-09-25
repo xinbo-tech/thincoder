@@ -336,7 +336,7 @@ test("F-2 落盘失败兜底：persist 失败 → 回退常规 inline（不吞�
   }
 })
 
-// ─── 群 B 批 B5（§22 D-DG2）：四族全接线（T-DG1~T-DG3）───
+// ─── 群 B 批 B5（AGENT-LOOP.md §6.14 D-DG2）：四族全接线（T-DG1~T-DG3）───
 // 预算单源 = digest-budget.mjs（常量/判超/记账/落盘四处合一）——四族注入器共用同一轮累计
 // （跨族合计生效）；raw = 报告正文（不含 `[System reminder: …]` 标签行）；首条豁免保留；
 // 落盘 tag = 写入族 + 条目 id（文件名后缀——subagent/advisor/escalate 经本入口沿用既有

@@ -1,5 +1,5 @@
 /**
- * crash-reports.mjs — 崩溃捕获与取证（docs/design/CRASH-REPORTS.md——F1/F2 为 R25 与
+ * crash-reports.mjs — 崩溃捕获与取证（docs/cli/design/CRASH-REPORTS.md——F1/F2 为 R25 与
  * TUI-STDERR-CAPTURE 存量迁移；F3 近堆上限堆快照 = TUI-OOM-FORENSICS 批新增）。
  *
  * 能力（与设计逐项对应）：
@@ -23,7 +23,7 @@
  * 纪律：全部同步 API（崩溃路径无异步）；调用方按执行序列各步独立 try/catch（复审 #2——
  * 写失败/恢复失败不阻断后续步——exit 非 0 恒达）。
  */
-import { chmodSync, existsSync, mkdirSync, readdirSync, statSync, unlinkSync, writeFileSync } from "node:fs"
+import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 // F3① 命名空间 import：API 缺失（旧 Node）降级为调用期异常并被武装 try 吞掉——不做 import 期硬失败
 import * as v8 from "node:v8"
@@ -43,8 +43,14 @@ export function crashReportsDir() {
  *  Heap.*.heapsnapshot（CRASH-REPORTS F3③——快照 GB 级、TUI 落点须自动兜底）——但
  *  recentCrashHint 两类均不计（N3）：tui-stderr 每次 TUI 启动都生成（正常退出也留档）、
  *  快照非「异常终止」证据类——计入即正常会话误报。 */
+/** 记录类判定单源（`isCrashRecordName` 与 `recordFacts` 共用——防两处正则漂移）：自写 / Node fatal / 其余。 */
+function recordClassOf(name) {
+  if (/^crash-.+\.json$/.test(name)) return "self"
+  if (/^report\..+\.json$/.test(name)) return "native"
+  return null
+}
 function isCrashRecordName(name) {
-  return /^crash-.+\.json$/.test(name) || /^report\..+\.json$/.test(name)
+  return recordClassOf(name) !== null
 }
 function isPurgeRecordName(name) {
   return isCrashRecordName(name) || /^tui-stderr-.+\.log$/.test(name) || /^Heap\..+\.heapsnapshot$/.test(name)
@@ -125,9 +131,32 @@ export function writeCrashRecord({ type, error }) {
 }
 
 /**
+ * 提示行事实段（台账 #212 · 用户裁 B）：从选中记录读回 `uptime` / `cwd` 两段——段序固定 =
+ * uptime 段（` · 运行 <u>s`，一位小数）在前 / cwd 段（` · cwd <c>`）在后。
+ * 字段源按记录类分：自写记录（`crash-*.json`）取顶部 `uptime` / `cwd`；Node fatal 报告
+ * （`report.*.json`）取 `header.cwd`——Node 报告无 uptime 字段（2026-09-25 实测），该段略去。
+ * 退化（尽力面 · N1）：读档 / 解析失败、记录类不明、字段缺 / 型不符（`uptime` 非有限非负数 ·
+ * `cwd` 非非空字符串）⇒ 对应段略去；两段皆缺 ⇒ 空串（基础形）。不抛、不阻断启动。
+ */
+function recordFacts(file, name) {
+  const cls = recordClassOf(name)
+  if (cls === null) return "" // 记录类不明 ⇒ 零事实
+  let rec
+  try { rec = JSON.parse(readFileSync(file, "utf8")) } catch { return "" }
+  if (rec === null || typeof rec !== "object") return ""
+  let facts = ""
+  if (cls === "self" && typeof rec.uptime === "number" && Number.isFinite(rec.uptime) && rec.uptime >= 0) {
+    facts += ` · 运行 ${rec.uptime.toFixed(1)}s`
+  }
+  const cwd = cls === "native" ? rec.header?.cwd : rec.cwd
+  if (typeof cwd === "string" && cwd !== "") facts += ` · cwd ${cwd}`
+  return facts
+}
+
+/**
  * F-R25c：启动扫描——crash-reports 24h 窗内是否有记录（两类模式——mtime 判定）。
  * @param {object} [opts] 可选 { dir }——目录注入（测试用）；默认 crashReportsDir()
- * @returns {string|null} 提示文本（含最新记录完整路径）；无匹配 → null（负例——不提示）
+ * @returns {string|null} 提示文本（含最新记录完整路径 + 事实段——#212）；无匹配 → null（负例——不提示）
  */
 export function recentCrashHint({ dir = crashReportsDir() } = {}) {
   purgeOldCrashReports(dir) // F-R25c 启动扫描搭车清理（复审 #4）
@@ -141,10 +170,10 @@ export function recentCrashHint({ dir = crashReportsDir() } = {}) {
     try {
       const st = statSync(join(dir, name))
       if (st.mtimeMs >= cutoff && (!best || st.mtimeMs > best.mtimeMs)) {
-        best = { path: join(dir, name), mtimeMs: st.mtimeMs }
+        best = { path: join(dir, name), name, mtimeMs: st.mtimeMs }
       }
     } catch { /* 单文件 stat 失败跳过 */ }
   }
   if (!best) return null
-  return `上次运行异常终止（记录：${best.path}）`
+  return `上次运行异常终止（记录：${best.path}${recordFacts(best.path, best.name)}）`
 }

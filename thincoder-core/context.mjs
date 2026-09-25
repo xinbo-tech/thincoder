@@ -314,7 +314,7 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
     messages,
     tools: extras?.tools,
     signal,
-    // §18.6 D-TR4：轨迹元数据增补——kind=compress（上下文构建面——agent 元数据透出；
+    // TRACES.md §6.1 D-TR4：轨迹元数据增补——kind=compress（上下文构建面——agent 元数据透出；
     // depth 经 extras.traceDepth——agent.mjs 主作用域传入——compress 调用点补齐）
     logCtx: {
       stage: "compress", child: agent._logId, kind: "compress",

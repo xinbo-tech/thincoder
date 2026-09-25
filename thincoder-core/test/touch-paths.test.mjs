@@ -1,6 +1,7 @@
 /**
  * touch-paths.test.mjs — 单源谓词 `toolTouchPaths`（#327 · `docs/core/design/TOOLS.md` §6.17 / D-TO12）：
- * 用例 T1–T5（正常 / 边界 / 错误——恒数组 · 恒零抛 · `args` 规范化）+ 消费面一例（peer-domains 原裸抛点）
+ * 用例 T1–T6（正常 / 边界 / 错误——恒数组 · 恒零抛 · `args` 规范化；T6 = `file_ops` 动作感知）
+ * + 消费面一例（peer-domains 原裸抛点）
  * + AC-1 单源结构机检（两条具名谓词——扫描面 = `thincoder-core/**`（除 `test/**`）+ `thincoder-vscode/src/**`）。
  * 判据面 = 谓词本体（无 fs / 无网络）；结构机检读源码（先例 = `thincoder-core/test/write-path.test.mjs`）。
  */
@@ -58,6 +59,17 @@ test("T5b 消费面：#327 后 peerWriteTargets 畸形入参零裸抛（原裸�
   assert.deepEqual(peerWriteTargets({ name: "write" }, { path: "src/a.mjs" }, W), [resolve(W, "src/a.mjs")])
   assert.deepEqual(peerWriteTargets({ name: "file_ops" }, { source: "a", dest: "b" }, W), [resolve(W, "a"), resolve(W, "b")])
   assert.deepEqual(peerWriteTargets({ name: "file_ops" }, null, W), [])
+})
+
+test("T6 file_ops 动作感知（#333 · `docs/core/design/TOOLS.md` §6.17 裁定 5 / D-TO13）", () => {
+  const ops = { name: "file_ops" }
+  assert.deepEqual(toolTouchPaths(ops, { action: "copy", source: "a.txt", dest: "b.txt" }), ["b.txt"], "copy ⇒ 只 dest（源仅读取，不属写域）")
+  assert.deepEqual(toolTouchPaths(ops, { action: "move", source: "a.txt", dest: "b.txt" }), ["a.txt", "b.txt"], "move ⇒ source + dest")
+  assert.deepEqual(toolTouchPaths(ops, { action: "rename", source: "a.txt", dest: "b.txt" }), ["a.txt", "b.txt"], "rename ⇒ source + dest")
+  assert.deepEqual(toolTouchPaths(ops, { source: "a.txt", dest: "b.txt" }), ["a.txt", "b.txt"], "未知 / 缺失 action ⇒ 保守双算")
+  // 有钩子 ⇒ 钩子裁决优先（两树 file_ops 现盘零钩子——形态锁）
+  const hooked = { name: "file_ops", touchedPaths: () => ["hooked.txt"] }
+  assert.deepEqual(toolTouchPaths(hooked, { action: "copy", source: "a.txt", dest: "b.txt" }), ["hooked.txt"], "有钩子 ⇒ 钩子裁决优先")
 })
 
 // ─────────────────────────────────────────────────────────────────────────────

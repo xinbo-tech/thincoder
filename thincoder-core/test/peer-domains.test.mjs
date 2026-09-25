@@ -6,8 +6,9 @@
  * `PEER_WRITE_TOOLS` · `conflicts` · `recordPeerWrites` / `flushPeerDomains` · dispatch 钩点 ·
  * 回合收尾接线——本文之前该面零专面断言（既有命中皆在认领面档的脚手架路径）。
  *
- * 用例 → 批档 §2.3 对照：T-L3a 目标解析（touchedPaths 优先）/ T-L3b 目标解析（双算 · 兜底 ·
- * 畸形 · 相对 · 绝对）/ T-L3c 写工具集 / T-L3d hot 窗口双侧界 / T-L3e 目录包含与 self · cwd
+ * 用例 → 批档 §2.3 对照：T-L3a 目标解析（touchedPaths 优先）/ T-L3b 目标解析（`file_ops` 动作感知（#333）：
+ * copy 只 dest / move·rename·缺 action 双算 · 兜底 · 相对 / 绝对）/ T-L3c 写工具集 / T-L3d hot 窗口双侧界 /
+ * T-L3e 目录包含与 self · cwd
  * 过滤 / T-L3f 保守不删与死清理 / T-L3g 回合累积与整写一次 / T-L3h 无写回合零写 ∧ 去重集先清 /
  * T-L3i 失败容忍保账 / T-L3j dispatch 钩点端到端 / T-L3k 收尾接线。
  *
@@ -84,9 +85,11 @@ test("T-L3a 目标解析：touchedPaths 优先（多文件产物为准——args
   )
 })
 
-test("T-L3b 目标解析：file_ops 双算 · 单参兜底 · 畸形跳过 · 相对按 cwd resolve · 绝对原样", () => {
+test("T-L3b 目标解析：file_ops 动作感知（copy 只 dest / move 双算 / 缺 action 保守）· 单参兜底 · 畸形跳过 · 相对按 cwd resolve · 绝对原样", () => {
   const cwd = newCwd()
-  assert.deepEqual(peerWriteTargets({ name: "file_ops" }, { source: "s.mjs", dest: "d.mjs" }, cwd), [join(cwd, "s.mjs"), join(cwd, "d.mjs")], "file_ops 源 + 目标双算")
+  assert.deepEqual(peerWriteTargets({ name: "file_ops" }, { action: "copy", source: "s.mjs", dest: "d.mjs" }, cwd), [join(cwd, "d.mjs")], "copy ⇒ 只 dest（源仅读取，不属写域——#333）")
+  assert.deepEqual(peerWriteTargets({ name: "file_ops" }, { action: "move", source: "s.mjs", dest: "d.mjs" }, cwd), [join(cwd, "s.mjs"), join(cwd, "d.mjs")], "move ⇒ 源 + 目标双算（两端皆动）")
+  assert.deepEqual(peerWriteTargets({ name: "file_ops" }, { source: "s.mjs", dest: "d.mjs" }, cwd), [join(cwd, "s.mjs"), join(cwd, "d.mjs")], "缺 action ⇒ 保守双算（未知 ⇒ 同 move）")
   assert.deepEqual(peerWriteTargets(writeTool, { path: "a.mjs" }, cwd), [join(cwd, "a.mjs")], "其余工具 path 单参兜底")
   assert.deepEqual(peerWriteTargets(writeTool, {}, cwd), [], "零路径入参 ⇒ 零目标")
   assert.deepEqual(peerWriteTargets(writeTool, { path: 42 }, cwd), [], "畸形入参跳过（不抛）")

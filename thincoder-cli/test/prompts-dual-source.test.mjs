@@ -3,7 +3,7 @@
  * **逐字迁出**；拆法见 ENGINEERING-MODE.md §2.26.3）。
  *
  * 2026-09-12 散文锚退役批（PROSE-ANCHOR-RETIRE）：原双源「锚句/子串驻留」断言族（第 2 / 9 / 15 / 16 /
- * 23 批锚与 TD 锚组的驻留断言 17 例）整删——判据见 `docs/design/TESTING.md` §11.1（读非测试档断言
+ * 23 批锚与 TD 锚组的驻留断言 17 例）整删——判据见 `docs/core/design/TESTING.md` §11.1（读非测试档断言
  * 句子在场/缺席 = 散文锚）。
  * 保留面 = 结构机检（AC21 双源槽文件存在性 + 头注格式；T-CL1 ## 块计数；T-RO6 / T-TD3–T-TD4
  * 锚串零维护者注反证）。
@@ -11,7 +11,7 @@
  * 纯文件读取 + 字符串匹配——快层 glob 自动发现直跑。
  *
  * U2（CORE-UNIFICATION §2.6.3）：英文落地面已随迁移改指核包（`thincoder-core/prompts/`——
- * `src/prompts/` 已删；中文权威面 `docs/design/prompts/` 原地保留，裁定 B）——本档面内改判。
+ * `src/prompts/` 已删；中文权威面 `docs/core/design/prompts/` 原地保留，裁定 B）——本档面内改判。
  *
  * 并档注（2026-09-11 TEST-LIFECYCLE 扫①——设计档 TESTING.md §7.2 #2）：原 prompts-normal-audit.test.mjs
  * 并入（源档随并删除）；并入条款锚族已随 2026-09-12 散文锚退役批整删。
@@ -41,12 +41,12 @@ const NEW_PROMPTS = [
 // （其余锚族已随 2026-09-12 散文锚退役批整删）。
 // ─────────────────────────────────────────────────────────────────────────────
 const pdes = readCore("persona-eng-designer.md")
-const pdesZh = read("docs/_archive/design/prompts/persona-eng-designer.md")
+const pdesZh = read("../docs/core/design/prompts/persona-eng-designer.md")
 
 test("AC21 新槽文件双源齐备 + 已入 NEW_PROMPTS（首行头注合格式——漏入则格式/宽行断言不覆盖）", () => {
   assert.ok(NEW_PROMPTS.includes("persona-eng-designer.md"), "已入 NEW_PROMPTS（15 文件全集）")
   assert.ok(existsCore("persona-eng-designer.md"), "英文落地位（核包）")
-  assert.ok(exists("docs/_archive/design/prompts/persona-eng-designer.md"), "中文权威位")
+  assert.ok(exists("../docs/core/design/prompts/persona-eng-designer.md"), "中文权威位")
   assert.match(pdes.split("\n")[0], /^<!-- slot:\[1\] consumers:\[.+\] -->$/, "英文落地头注格式")
   assert.match(pdesZh.split("\n")[0], /^<!-- 槽位:\[1\] 消费方:\[.+\] -->$/, "中文权威头注格式")
 })

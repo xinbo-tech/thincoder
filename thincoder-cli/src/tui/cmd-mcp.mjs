@@ -181,7 +181,7 @@ Return ONLY the JSON object:`,
         }],
         tools: [],
         signal: AbortSignal.timeout(15_000),
-        // §18.6 D-TR4/D-TR6（2026-09-04 fix round1）：/mcp ai 生成调用经 chat() 唯一
+        // TRACES.md §6.1 D-TR4/D-TR6（2026-09-04 fix round1）：/mcp ai 生成调用经 chat() 唯一
         // 采集点——补轨迹元数据 + traces 开关透传（agent.config.traces.enabled——
         // 关=不落盘必须全覆盖——与 agent.mjs/context.mjs 同模式）
         logCtx: {

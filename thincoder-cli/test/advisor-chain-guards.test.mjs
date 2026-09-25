@@ -1,6 +1,6 @@
 /**
- * advisor-chain-guards.test.mjs — 第 11 批（评审/凭证链边缘守卫）用例表 1:1 落地：T-CG1–T-CG14（A–D——设计 §14.11）+
- * T-CG19–T-CG21（修正轮）+ T-CG15–T-CG18（E：冻结窗口——§14.14 E-7）。单测零网络、零真实 LLM（chat / 时钟覆写 =
+ * advisor-chain-guards.test.mjs — 第 11 批（评审/凭证链边缘守卫）用例表 1:1 落地：T-CG1–T-CG14（A–D——设计 ADVISOR-GUARDS.md §1–§3）+
+ * T-CG19–T-CG21（修正轮）+ T-CG15–T-CG18（E：冻结窗口——ADVISOR-GUARDS.md §5 E-7）。单测零网络、零真实 LLM（chat / 时钟覆写 =
  * 循环 seams——生产路径默认回退，不可达）、零长等待（T-CG13 零真实等待；T-CG20 ① ~0.1s = 真实墙定时器驱动）。
  * 断言判据全文 = docs/design/ADVISOR-CONVERGENCE.md §14.11 / §14.12 / §14.14 E-7/E-8。
  */
@@ -218,7 +218,7 @@ test("T-CG7 启动断言：无 token 直调 design 评审 → 拒绝前缀 + 未
   assert.ok(result.includes("Nothing was sent"), "可见性：未发送")
   assert.ok(result.includes("Re-run advisor(type='design')"), "恢复指引")
   assert.equal(chunks.length, 0, "未进入循环（零 chat —— 进循环必先 emit think 占位）")
-  // 异步结算面（§14.4）：拒绝报告 = 无评审产出 → 不置 _calledAdvisorThisRun（与同步工具面同前缀）
+  // 异步结算面（ADVISOR-GUARDS.md §5）：拒绝报告 = 无评审产出 → 不置 _calledAdvisorThisRun（与同步工具面同前缀）
   const agent2 = { cwd: "C:/proj/cg", _mutLog: [], _engDesignTokens: new Map(), _advisorRound: 0, _calledAdvisorThisRun: false }
   const refused = settleAdvisorRun(agent2, {
     id: 12, cancelled: false,
@@ -462,7 +462,7 @@ test("T-CG17 dispatch 集成：在途设计评审 × write 指向 docAbs → 逐
   assert.ok(ctrl.includes("no permission handler"), "拒因 = 权限层（过闸证明）")
   assert.equal(touched.length, 0, "两项均未执行（冻结项被拦 + 对照项停在权限层）")
   assert.ok(!existsSync(otherAbs), "对照文件未落地（进权限层后未执行）")
-  // autoApprove 不得绕过冻结（design §14.14 E-3d：闸位在只读/审批短路之前）
+  // autoApprove 不得绕过冻结（design ADVISOR-GUARDS.md §5 E-3d：闸位在只读/审批短路之前）
   const auto = await executeToolCalls(
     { ...agent, autoApprove: true }, toolByName,
     [{ name: "write", arguments: JSON.stringify({ path: "docs/design/X.md" }), id: "c3" }], {}, 0, undefined,

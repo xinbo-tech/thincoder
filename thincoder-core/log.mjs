@@ -138,7 +138,7 @@ export function logEvent(kind, fields = {}) {
   }
 }
 
-/** 共享脱敏（§18.6 D-TR2——trace-store 复用；logEvent 自身保持"丢弃字段"语义，
+/** 共享脱敏（TRACES.md §6.1 D-TR2——trace-store 复用；logEvent 自身保持"丢弃字段"语义，
  *  本函数提供"遮蔽标记"语义——同一字段名黑名单 + 同一 SECRET_FORM 形态扫描，
  *  不发明新遮蔽模式）。字段名命中黑名单 → "[REDACTED]（整个字段遮蔽）；内容命中
  *  密钥形态 → 截断到形态前 + "[redacted]" 标记（宁可丢信息不漏密钥——§2.4）。 */

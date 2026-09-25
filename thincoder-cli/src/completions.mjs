@@ -17,11 +17,12 @@ export function printCompletion(shell) {
         memory) COMPREPLY=( \\$(compgen -W "list search put remove sweep" -- "\\$cur") ) ;;
         list)   COMPREPLY=( \\$(compgen -W "--type=rule --type=knowledge --type=decision --type=pattern" -- "\\$cur") ) ;;
         put)    COMPREPLY=( \\$(compgen -W "--type= --title= --content= --tags=" -- "\\$cur") ) ;;
+        sweep)  COMPREPLY=( \\$(compgen -W "--origin= --dry-run --confirm" -- "\\$cur") ) ;;
       esac ;;
     distill) COMPREPLY=( \\$(compgen -W "--yes --layer=" -- "\\$cur") ) ;;
     completion) COMPREPLY=( \\$(compgen -W "bash zsh fish" -- "\\$cur") ) ;;
     *)
-      COMPREPLY=( \\$(compgen -W "tui chat acp memory sync reindex distill upgrade completion session -v --version -h --help" -- "\\$cur") ) ;;
+      COMPREPLY=( \\$(compgen -W "tui chat acp memory sync reindex distill upgrade completion session ledger -v --version -h --help" -- "\\$cur") ) ;;
   esac
 }
 complete -F _thincoder thincoder
@@ -48,7 +49,8 @@ _thincoder() {
         'distill[Extract knowledge from session transcript]' \\
         'upgrade[Update to latest version from npm]' \\
         'completion[Generate shell completion script]' \\
-        'session[Session dir GC: session gc --dry-run|--confirm]'
+        'session[Session dir GC: session gc --dry-run|--confirm]' \\
+        'ledger[Ledger variants: migrate / audit]'
       ;;
     args)
       case "\\$words[1]" in
@@ -80,6 +82,7 @@ complete -c thincoder -a distill  -d 'Extract knowledge from session'
 complete -c thincoder -a upgrade  -d 'Update to latest version'
 complete -c thincoder -a completion -d 'Shell completion'
 complete -c thincoder -a session -d 'Session dir GC (session gc --dry-run|--confirm)'
+complete -c thincoder -a ledger -d 'Ledger variants: migrate / audit'
 complete -c thincoder -a acp -d 'Agent Client Protocol server for IDEs'
 
 # Flags
@@ -104,6 +107,11 @@ complete -c thincoder -n '__fish_seen_subcommand_from memory; and __fish_seen_su
 complete -c thincoder -n '__fish_seen_subcommand_from memory; and __fish_seen_subcommand_from put' -l title   -d 'Title'
 complete -c thincoder -n '__fish_seen_subcommand_from memory; and __fish_seen_subcommand_from put' -l content -d 'Content'
 complete -c thincoder -n '__fish_seen_subcommand_from memory; and __fish_seen_subcommand_from put' -l tags    -d 'Space-separated tags'
+
+# memory sweep flags
+complete -c thincoder -n '__fish_seen_subcommand_from memory; and __fish_seen_subcommand_from sweep' -l origin -d 'Origin path'
+complete -c thincoder -n '__fish_seen_subcommand_from memory; and __fish_seen_subcommand_from sweep' -l dry-run -d 'Report only'
+complete -c thincoder -n '__fish_seen_subcommand_from memory; and __fish_seen_subcommand_from sweep' -l confirm -d 'Apply writes'
 
 # distill flags
 complete -c thincoder -n '__fish_seen_subcommand_from distill' -l yes   -d 'Skip confirmation'

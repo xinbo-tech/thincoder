@@ -67,7 +67,7 @@ export function toolSeg(state, l, i, cols, maxRows) {
   return rows
 }
 
-/** 冻结子agent 活动块渲染（§7.2 D4）：state.lines 载体 {_frozenSubTask: sub}（subagent-blocks.mjs
+/** 冻结子agent 活动块渲染（docs/cli/design/TUI.md §6.8 D4）：state.lines 载体 {_frozenSubTask: sub}（subagent-blocks.mjs
  *  freezeSubTaskLines 推入）。折叠 = 身份头 + tail 3；展开 = 共享组件（60% 屏幕封顶 + 底部可达
  *  折叠控制）。折叠键 `sub-${key}`——与运行中面板区块同键，折叠态跨冻结边界无缝延续。
  *  SUBAGENT-TAIL：内层内容已并入 sub.blocks（数据层——取代小节；docs/design/TUI.md §6）
@@ -79,7 +79,7 @@ function frozenSubTaskLines(state, sub, cols, maxRows) {
   // 同生命周期）；仅真实 subagent 角色（compress 冻结等无语义）。整行 dim——
   // 无需 ANSI 注入（running 面板头则套 dim + 恢复行色——subagent-panel.mjs）。
   const isSubRole = SUBAGENT_ROLES.includes(sub.role)
-  // §20：冻结的 queued 块（中止清场兜底——interrupted）标 waiting——不误标 sync
+  // AGENT-LOOP-SUBAGENT.md §6.9：冻结的 queued 块（中止清场兜底——interrupted）标 waiting——不误标 sync
   const modePart = isSubRole
     ? ` · ${sub.queued ? "waiting" : (sub.async === true ? "async" : "sync")}`
     : ""

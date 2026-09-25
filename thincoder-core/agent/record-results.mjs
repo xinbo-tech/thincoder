@@ -100,7 +100,7 @@ export async function recordToolResults(agent, toolByName, results) {
       }
       if (toolCall.name === "verify") agent._verifiedThisRun = true
       if (toolCall.name === "advisor") {
-        // §11.2 D-24b (settle accounting split — fix #2): an ASYNC launch returns an
+        // AGENT-LOOP-ASYNC-POOL.md §6.10 D-24b (settle accounting split — fix #2): an ASYNC launch returns an
         // ack and settles later — the settle callback owns its called/round/token
         // accounting. Only the SYNC path (depth>0 / explicit async:false) accounts
         // here — per-review instance round++ (marker-keyed by tool call id) + the
@@ -117,7 +117,7 @@ export async function recordToolResults(agent, toolByName, results) {
         } else {
           const reviewId = agent._advisorSyncCalls?.get(toolCall.id)
           const run = reviewId !== undefined ? advisorRuns(agent).get(reviewId) : undefined
-          // F16 同步面（第 13 批 §15.2——ADVISOR-CONVERGENCE.md §15）：未完成尾 + 非设计面
+          // F16 同步面（第 13 批——ADVISOR-GUARDS.md §6）：未完成尾 + 非设计面
           // （含类型不可判——run 缺失的 legacy 直调）⇒ 不置「已覆盖」（与 settle 面
           // 逐条 parity；设计评审保持计入——无代码面）。
           const incomplete = advisorIncompleteMarker(String(result))
@@ -127,7 +127,7 @@ export async function recordToolResults(agent, toolByName, results) {
               run.round++
               agent._advisorRound = run.round
               // Prior of round 2+ = the last REVIEW-LOOKING output (run.mjs parity).
-              // F2e (§29.1): the sync settle's engine-approved suffix (stored on the
+              // F2e: the sync settle's engine-approved suffix (stored on the
               // run by settleDesignReview) is stripped with exact truncation — the
               // prior never carries the raw token / designId.
               if (looksLikeReviewOutput(result)) {

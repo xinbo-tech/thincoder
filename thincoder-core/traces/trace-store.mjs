@@ -24,7 +24,7 @@
  *   与写盘同在 fire-and-forget 异步体内）。2026-09-21（TRACES.md §6.4）：判据改**目录级三段梯**
  *   + 每写 prune **节流**；清理实现外提 `trace-cleanup.mjs`（本档包装保既有 import 面）。
  * - seq = 当日目录内最大已有 seq + 1（D-TR3——跨会话/进程重启不覆写既有旧轨迹——
- *   18.6.1 评审 #3）；**进程内 seqCache（§23.3.2——消除逐调用同步扫目录）**：首次
+ *   18.6.1 评审 #3）；**进程内 seqCache（TRACES.md §6.2——消除逐调用同步扫目录）**：首次
  *   readdirSync 后进程内递增预留，目录被清理（retention）后取下界重扫一次（防御）。
  *   多进程语义（修正轮 #10——登记）：同 cwd 多实例各自进程内缓存——seq 可撞、同
  *   sessionKey 记录并入同名文件（append 不覆写）；**可容忍**（本机 traces = 诊断面、
@@ -93,7 +93,7 @@ export function tracesDirFor(dateStr) {
 // 完整落盘：不截断、不丢行（无单消息/单记录额度，无在途丢弃）；清理 = 每写一次 prune
 // （写盘成功后顺带清理——与写盘同在 fire-and-forget 异步体内，永不阻塞 chat）。
 
-// 进程内 seq 缓存（§23.3.2：dir → 已预留 max；首次读盘后递增预留，目录被清理后取下界重扫一次）。
+// 进程内 seq 缓存（TRACES.md §6.2：dir → 已预留 max；首次读盘后递增预留，目录被清理后取下界重扫一次）。
 const _seqCache = new Map()
 // 每写 prune 节流（D-TR12 · §6.4）：窗 = 10 分钟 + 在飞合并（同窗 3 连写 ⇒ 扫描 ≤1 次）。
 export const PRUNE_THROTTLE_MS = 10 * 60_000
@@ -132,7 +132,7 @@ function scanMaxSeq(dir) {
 
 /** seq = max(当日目录最大已有 seq, 进程内已预留) + 1（D-TR3——跨会话/进程重启
  *  不覆写——T-TR8/T-TR10；同步预留 = 异步写盘启动前的原子号位分配）。
- *  §23.3.2：seqCache 进程内递增——不逐调用 readdirSync（目录被清理/缺失 → 重扫一次）。 */
+ *   TRACES.md §6.2：seqCache 进程内递增——不逐调用 readdirSync（目录被清理/缺失 → 重扫一次）。 */
 export function nextTraceSeq(dateStr) {
   const dir = tracesDirFor(dateStr)
   let max = _seqCache.get(dir)
@@ -152,7 +152,7 @@ export function tracesEnabled(logCtx) {
   return logCtx?.traces !== false
 }
 
-// ─── 单遍序列化（§23.3.2 D-TR1——脱敏内联、零复制图、字段名/次序同构）────────
+// ─── 单遍序列化（TRACES.md §6.2 D-TR1——脱敏内联、零复制图、字段名/次序同构）────────
 
 const OMIT = Symbol("omit") // JSON.stringify 语义：对象属性省略（数组元素 → null）
 

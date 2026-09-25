@@ -40,9 +40,9 @@ import { discardAbortedPool, discardAbortedAdvisors } from "@thincoder/core/agen
 // 拒 + 提示 + 文本保留）；busy 提交入队 = busy-extend 批 2026-09-22 扩面。
 
 /** 后台池计数（LOGGING susp/digest 事件字段——pendingN/poolN）。
- *  poolN = _asyncSubagents + _asyncAdvisors（§11.2 D-24b advisor 池同面板计数——queued
+ *  poolN = _asyncSubagents + _asyncAdvisors（AGENT-LOOP-ASYNC-POOL.md §6.10 D-24b advisor 池同面板计数——queued
  *  条目同样在 map 内——2026-09-03 code review #2：不再 +queue.length 双计）。
- *  R17（§25 D-R17a/b）：pendingN = pending 单容器 `_pendingAsyncResults` 条数（
+ *  R17（CONSULTATION.md §6.2 D-R17a/b）：pendingN = pending 单容器 `_pendingAsyncResults` 条数（
  *  ASYNC-RESULT-CONTAINER.md D2——四族统一停靠——digest 驱动判据同单容器）。 */
 export function poolCounts(agent) {
   const map = agent?._asyncSubagents
@@ -66,13 +66,13 @@ function consultRunningChildren(agent) {
   return n
 }
 
-/** pending 单容器条数（§25 D-R17a 消费驱动判据——T-R17j——ASYNC-RESULT-CONTAINER.md
+/** pending 单容器条数（CONSULTATION.md §6.2 D-R17a 消费驱动判据——T-R17j——ASYNC-RESULT-CONTAINER.md
  *  D2：四族统一 `_pendingAsyncResults` +role，不再分族三容器）。 */
 export function pendingFamilyCount(agent) {
   return agent?._pendingAsyncResults?.length ?? 0
 }
 
-/** pending 单容器非空（digest 触发判据——D-S2/D-S9——§25 D-R17a）。 */
+/** pending 单容器非空（digest 触发判据——D-S2/D-S9——§6.2 D-R17a）。 */
 export function pendingFamiliesNonEmpty(agent) {
   return pendingFamilyCount(agent) > 0
 }
@@ -86,8 +86,8 @@ export function allPendingEntries(agent) {
 
 /** 后台池存活判据（D-S2/F5 口径）：running/queued 子代理或后台评审，或已 settle 未注入结果
  *  （pending 单容器非空 = D-S3 "未注入"），或 running consult 会话（会诊跨回合——
- *  §25 D-R17a 挂起活度钩子——consult 启动回合尾即入挂起态）。回合尾与每次轮末都用它
- *  评估退出。§11.2 D-24b：_asyncAdvisors（后台评审池）与子代理池同判——评审飞行中挂起
+ *  CONSULTATION.md §6.2 D-R17a 挂起活度钩子——consult 启动回合尾即入挂起态）。回合尾与每次轮末都用它
+ *  评估退出。AGENT-LOOP-ASYNC-POOL.md §6.10 D-24b：_asyncAdvisors（后台评审池）与子代理池同判——评审飞行中挂起
  *  会话必须存活。 */
 export function poolLive(agent) {
   const map = agent._asyncSubagents
@@ -143,7 +143,7 @@ function waitForSettleOrWake(agent, state) {
 }
 
 /** 后台模式状态行文本（D-S8；17.5.4 #6 顺手对齐）："后台 N 子代理运行中 · M 完成待消化"
- *  ——"运行中" = running + queued（含后台评审——§11.2 D-24b 同面板计数）+ running consult
+ *  ——"运行中" = running + queued（含后台评审——§6.10 D-24b 同面板计数）+ running consult
  *  children（R17——会诊跨回合）；"完成待消化" = pending 任一族移交项 + AGENT-LOOP-ASYNC-POOL.md §6.8 回合尾留池
  *  的 settled 未消费项（挂起会话 sweep 前的可见窗口）。 */
 function backgroundStatusText(agent) {
@@ -297,7 +297,7 @@ export async function suspensionSession(ctx) {
     state._suspWake = null
     state.suspAbortArmed = false // round2 偏差 #4：会话退出即解除挂起中止武装（防跨会话粘滞）
     if (aborted) {
-      // §15 abort 语义：只清已死条目（AGENT-LOOP-ASYNC-POOL.md §6.20——墓碑/出池/队列剔除/
+      // abort 语义：只清已死条目（AGENT-LOOP-ASYNC-POOL.md §6.20——墓碑/出池/队列剔除/
       // 整批一次提醒；存活与已 settle 者留池消化——不注入陈旧错误）。
       discardAbortedPool(agent)
       discardAbortedAdvisors(agent)
@@ -327,7 +327,7 @@ export async function suspensionSession(ctx) {
         for (const e of residual.splice(0)) {
           if (e.role === "consult") await injectConsultResult(agent, e)
           else await injectAsyncResult(agent, e)
-          // TUI-OOM-ROOTCAUSE（§23.3.1 消费点③——挂起残差注入）：注入完成 → 释放条目持有
+          // TUI-OOM-ROOTCAUSE（AGENT-LOOP.md §6.15 消费点③——挂起残差注入）：注入完成 → 释放条目持有
           releaseSettledEntry(e)
         }
       }

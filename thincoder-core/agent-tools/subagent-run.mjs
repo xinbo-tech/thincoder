@@ -2,7 +2,7 @@
  * subagent-run.mjs — async spawn 执行器 executeAsyncSpawn（2026-09-05 module-split：
  * subagent.mjs 726 > 500 硬限——execute 的 async 分支 verbatim 迁入（闭包变量参数化：
  * parent/ctx/role/args + buildSpawnChild 产物），语义零变——subagent.mjs execute 调
- * 用（只此一处）；§20 补位/排队刷新仍来自 subagent-scheduler.mjs。
+ * 用（只此一处）；AGENT-LOOP-SUBAGENT.md §6.9 补位/排队刷新仍来自 subagent-scheduler.mjs。
  */
 
 import { createHash } from "node:crypto"
@@ -64,7 +64,7 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
   consumeSubagentToken(parent, id, "async spawn", role)
   const entry = {
     id, role, relayPrefix,
-    // §11.1 D-24a/R14：池域字段（域判定单一事实源——poolDomainOf——role 枚举见
+    // AGENT-LOOP-ASYNC-POOL.md §6.10 D-24a/R14：池域字段（域判定单一事实源——poolDomainOf——role 枚举见
     // subagent.mjs ROLES；未知角色归 other）——running 计数/补位按域过滤。
     _pool: poolDomainOf(role),
     status: "queued", // 下面按等待态/槽位重定（避免两处判断漂移）
@@ -99,8 +99,8 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
   // 留痕面基名（零内容——§6.29.2）：绑定档绝对路径 → 基名；无绑定（非工程族）⇒ null（字段不落）。
   const batchDocBase = entry._batchDoc ? basename(entry._batchDoc) : null
 
-  // §20 D-SD3 准入落点：等待态（依赖未满足/域冲突/depc）→ queued（waiting-deps——
-  // 不占槽不启动——即使槽空）；纯槽满（kind slot）→ 按域计数判定（§11.1 D-24a：
+  // AGENT-LOOP-SUBAGENT.md §6.9 D-SD3 准入落点：等待态（依赖未满足/域冲突/depc）→ queued（waiting-deps——
+  // 不占槽不启动——即使槽空）；纯槽满（kind slot）→ 按域计数判定（§6.10 D-24a：
   // runningIn(domain) < limit(domain)——跨域互不阻塞——每次入池判定时读配置）。
   const blockers = describeBlockers(parent, entry)
   if (blockers.kind === "slot") {
@@ -117,7 +117,7 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
   // D6 buildChildSignal 单点（ASYNC-RESULT-CONTAINER.md）。
   const ctrl = new AbortController()
   entry.controller = ctrl
-  // §20.3 站点 #10（第 24 批）：hop 逐跳保 reason；#98 链结单点（interrupt 豁免面——
+  // AGENT-LOOP-SUBAGENT.md §6.12 站点 #10（第 24 批）：hop 逐跳保 reason；#98 链结单点（interrupt 豁免面——
   // Ctrl+I 不逐链中止池内子代理）。
   bindChildController(ctrl, buildChildSignal(parent, ctx))
   // AGENT-LOOP-SUBAGENT.md §6.7.2 D-M5：turn 镜像拦截层（callbacks 包装层——在既有
@@ -133,7 +133,7 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
       }
       return parentOnToken(t)
     }
-    // §27 R23 D-R23c1：嵌套 wrapper 标记随镜像层透传（wrapChildCallbacks 产物带
+    // docs/cli/design/TUI.md §6.8.2 R23 D-R23c1：嵌套 wrapper 标记随镜像层透传（wrapChildCallbacks 产物带
     // _relayPrefix——本层重包后丢失会让异步子代理（默认 async——depth-0）内嵌 spawn
     // 的生成侧补发射失效（emitNestedChildEvent 判据）——同步复制标记保语义）。
     trackOpts.onToken._relayPrefix = parentOnToken._relayPrefix ?? null
@@ -143,7 +143,7 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
     entry.position = undefined
     entry.startedAt = Date.now()
     // AGENT-LOOP-SUBAGENT.md §6.7.2 D-SF1（round3 #1）：绑定子代理对象引用——绑定时刻 = 实际启动时
-    // （queued 条目 spawn-ack 时刻尚无子代理对象——§20 D-SD3b）；绑定对象 = 子代理
+    // （queued 条目 spawn-ack 时刻尚无子代理对象——§6.9 D-SD3b）；绑定对象 = 子代理
     // 对象（不是 _touchedFiles 数组引用——per-run 记账在 prepareRun 重置——数组
     // 引用会陈旧——对象引用保证 status 查询时实时读——杀前一刻最新）。
     entry.childAgent = child
@@ -168,7 +168,7 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
     // §15 D-A3 exception (2026-09-02 unified rule, AGENT-LOOP.md §2): in an
     // engineering && AUTO session the child auto-resumes — the user authorized
     // unattended runs, no one is at the panel. Every other tier auto-declines
-    // and the partial-work report carries the cap reason. §18 D-E2 relies on
+    // and the partial-work report carries the cap reason. AGENT-LOOP-SUBAGENT.md §6.7.6 D-E2 relies on
     // this exception as the turn-cap fallback for the default-async eng-coder
     // delivery (the internal protocol does not raise the 100-turn cap).
     runChildPipeline(child, input, trackOpts, { ...childRunOpts, signal: entry.controller.signal, consumeInjected }, {
@@ -176,7 +176,7 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
       askContinue: () => Promise.resolve(Boolean(parent.config?.agent?.engineering && parent.autoApprove)),
     })
       .then((report) => { entry.report = report })
-      // §20.3 第 3 条合成器（第 24 批）：原 message 前缀逐字保留 + 来源后缀
+      // §6.12 第 3 条合成器（第 24 批）：原 message 前缀逐字保留 + 来源后缀
       .catch((err) => { entry.error = deathLine(err, entry.controller?.signal) })
       .finally(() => {
         // SUBAGENT-OBSERVE-SEND D3（send→settle 竞态）：settle 收尾时 _injected 仍残留
@@ -208,7 +208,7 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
   if (entry.status === "queued") {
     parent._asyncQueue.push(entry)
     entry.position = parent._asyncQueue.length
-    // §20 D-SD3b：排队 spawn 返回即建面板 waiting 块（⟦ev⟧queued 事件——spawn 侧
+    // §6.9 D-SD3b：排队 spawn 返回即建面板 waiting 块（⟦ev⟧queued 事件——spawn 侧
     // 发——TUI routeSubToken 消费建块/更新头；启动后 ⟦ev⟧async 转 running——同 key
     // 不重建）。refreshQueuedTokens 同时校正既有排队条目的位置/等待态头。
     refreshQueuedTokens(parent, ctx.callbacks?.onToken)

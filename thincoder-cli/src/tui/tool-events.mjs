@@ -26,7 +26,7 @@ import {
   ensureCompressPanel, markCompressFailed, markCompressDone, markCompressFallback,
   shiftFreezeAnchors,
 } from "./subagent-blocks.mjs"
-// 第 27 批 §12.3②：前缀正则换名 + import 源改文法模块（纯换名——语义零改）。
+// 第 27 批：前缀正则换名 + import 源改文法模块（纯换名——语义零改）。
 import { RELAY_PREFIX_RE } from "@thincoder/core/agent/relay-prefix.mjs"
 import { TURN_CAP_MARK, STOPPED_MARK } from "@thincoder/core/agent/spawn-child.mjs"
 // 批 1 CORE-DEFECT-FIXES B3：onWait 相位值域 + 文案单源（消费面禁各自枚举——PROVIDER.md §6.20）
@@ -40,14 +40,14 @@ import {
   findToolBlock, findToolLine, slimToolResultForDisplay, sweepToolBlocks,
 } from "./tool-display.mjs"
 export { sweepToolBlocks, slimToolResultForDisplay } from "./tool-display.mjs"
-// TUI-OOM-ROOTCAUSE（TUI.md §15.3.1/§15.3.3）：显示层额度（行/载体/输出环/评审/流式）。
+// TUI-OOM-ROOTCAUSE（TUI-SESSION-VIEW.md §5.1/§5.3）：显示层额度（行/载体/输出环/评审/流式）。
 import {
   capText, capLine, capLines, appendCapped, capAdvisorText, accountLine, syncLineBudget,
   LINE_TRUNC_MARKER, MIDDLE_TRUNC_MARKER, ADVISOR_CAP_OPTS, STREAM_CAP_OPTS,
   TOOL_OUTPUT_ENTRY_MAX_CHARS, TOOL_OUTPUT_TOTAL_MAX_CHARS, ADVISOR_TEXT_MAX_CHARS,
 } from "./display-budget.mjs"
 
-/** 输出环字符维总量（§15.3.1 TOOL_OUTPUT_TOTAL_MAX_CHARS——与 200 条目环同款丢最旧）。 */
+/** 输出环字符维总量（§5.1 TOOL_OUTPUT_TOTAL_MAX_CHARS——与 200 条目环同款丢最旧）。 */
 function trimOutputChars(block) {
   let total = 0
   for (const s of block.output) total += s.length
@@ -60,9 +60,9 @@ function trimOutputChars(block) {
  *          askPermission, askQuestion, saveSessionImpl } */
 export function buildToolCallbacks(deps) {
   const { agent, state, pushLine, render, scheduleRender, ensureAssistantLabel, askPermission, askBatchPermission, askQuestion, saveSessionImpl } = deps
-  // 行集总量对账便捷式（§15.3.3——冻结锚点平移交 subagent 族函数）
+  // 行集总量对账便捷式（§5.3——冻结锚点平移交 subagent 族函数）
   const budgetSync = () => syncLineBudget(state, { onTrim: (st, n) => shiftFreezeAnchors(st, n) })
-  /** Advisor 有序块累积 + 额度（§15.3.1 ADVISOR_TEXT_MAX_CHARS——头 32K/尾 96K/中段标记）。 */
+  /** Advisor 有序块累积 + 额度（§5.1 ADVISOR_TEXT_MAX_CHARS——头 32K/尾 96K/中段标记）。 */
   const pushAdvisorChunk = (raw, kind) => {
     const blocks = state._advisorBlocks ??= []
     const last = blocks.at(-1)
@@ -100,7 +100,7 @@ export function buildToolCallbacks(deps) {
       // block content, never the main stream (D1). Routing details in subagent-blocks.
       if (routeSubToken(state, t, scheduleRender)) return
       ensureAssistantLabel()
-      state.streaming = appendCapped(state.streaming, t, STREAM_CAP_OPTS) // §15.3.1 STREAM_MAX_CHARS
+      state.streaming = appendCapped(state.streaming, t, STREAM_CAP_OPTS) // §5.1 STREAM_MAX_CHARS
       scheduleRender()
     },
     onReasoning: (t) => {
@@ -108,7 +108,7 @@ export function buildToolCallbacks(deps) {
       // buffer as kind=think (F2: same treatment as the main reasoning stream).
       if (routeSubReasoning(state, t, scheduleRender)) return
       ensureAssistantLabel()
-      state.reasoning = appendCapped(state.reasoning, t, STREAM_CAP_OPTS) // §15.3.1 STREAM_MAX_CHARS
+      state.reasoning = appendCapped(state.reasoning, t, STREAM_CAP_OPTS) // §5.1 STREAM_MAX_CHARS
       scheduleRender()
     },
     onToolCall: (name, args, toolId) => {
@@ -170,11 +170,11 @@ export function buildToolCallbacks(deps) {
           done: false,
         },
       })
-      accountLine(state, state.lines[state.lines.length - 1]) // 载体入总量账（§15.3.4）
+      accountLine(state, state.lines[state.lines.length - 1]) // 载体入总量账（§5.4）
       budgetSync()
       tickStart(name, toolId)
     },
-    // §7.2.3（方案 e）：dispatch runOne 把工具 ctx 上的 _subagentKey（sync spawn/
+    // docs/cli/design/TUI.md §6.8（方案 e）：dispatch runOne 把工具 ctx 上的 _subagentKey（sync spawn/
     // escalate 成功路径设置——relayPrefix 去尾）作为第 4 参传来——undefined 兼容既有
     // 签名（普通工具/老回调/错误路径不带 key）。
     onToolResult: (name, result, toolId, subKey) => {
@@ -199,11 +199,11 @@ export function buildToolCallbacks(deps) {
         // never be marked done (its result lands in the subagent block, not the
         // carrier) and the turn sweep would mislabel it "(interrupted)".
         settleToolBlock(state, name, toolId, "completed")
-        // Async spawn (§15 D-A1): the result is a status JSON, not a report — the
+        // Async spawn (AGENT-LOOP-SUBAGENT.md §6.7.3 D-A1): the result is a status JSON, not a report — the
         // child KEEPS running; skip the freeze (it would tombstone a live block and
         // drop its relay stream). The block freezes on the ⟦ev⟧done settle event.
         if (!isAsyncSpawnResult(result)) {
-          // §7.2.3 sync spawn 完成精确冻结：结果按 key 归属三支——
+          // §6.8 sync spawn 完成精确冻结：结果按 key 归属三支——
           // ① dispatch 同步成功路径带 subKey（ctx._subagentKey = relayPrefix 去尾）：
           //    finishSubTaskKey 按 key 精确冻——不再落 finishSubTask 的"最早 started"
           //    启发式（async eng-coder 先启动时 explore 完成会误冻其块——7.2.3.1/T-F2）；
@@ -232,12 +232,12 @@ export function buildToolCallbacks(deps) {
         // 飞刀 post-op report landed under the subagent tool name — freeze the
         // escalate#N activity block (no preview; legacy surface).
         settleToolBlock(state, name, toolId, "completed")
-        // §25 D-R17b (R17): async escalate ack ({id, role:"escalate", status:
+        // ESCALATE.md §5 D-R17b (R17): async escalate ack ({id, role:"escalate", status:
         // running|queued}) — the child KEEPS running — skip the freeze like the
         // async spawn path (the block freezes on the ⟦ev⟧done/stopped settle
         // event at flight end). Sync results (async:false) freeze below.
         if (!isAsyncSpawnResult(result)) {
-          // §7.2.3（round1 #2）：escalate 成功返回带 subKey（escalate#N）→ 精确冻；
+          // §6.8（round1 #2）：escalate 成功返回带 subKey（escalate#N）→ 精确冻；
           // 失败/老回调无 subKey → 不冻结任何块（F-2 收窄——finishSubTask 恒 no-op，
           // 块由回合尾 freezeAllSubTasks 兜底清场）。
           // SYNC-CANCEL（R6）：同上——escalate 路径同款扩展（sync escalate 无 registry——
@@ -251,7 +251,7 @@ export function buildToolCallbacks(deps) {
           freezeDoneSubTasks(state)
         }
       } else if (name === "consult_stop") {
-        // R17（§25 D-R17a——check 已删）：consult_stop = 取消指定会诊会话。被 abort 的
+        // R17（CONSULTATION.md §6.2 D-R17a——check 已删）：consult_stop = 取消指定会诊会话。被 abort 的
         // children 各自 settle（settleChild）时发 ⟦ev⟧done 冻结自己的卡——此处**不做按
         // 角色整组清扫**（会诊会话可并发——按角色会误冻其他仍在运行的会话的卡，冻结即
         // 截断其活动流——tool-events advisor 复评 🟡1 修正）；取消的即时可见性由 abort
@@ -269,7 +269,7 @@ export function buildToolCallbacks(deps) {
           // screen of garbage (user report 2026-08-30). The model gets the image
           // via the multimodal channel (agent.mjs), the human needs only the
           // text part: strip image parts from the displayed result.
-          block.result = slimToolResultForDisplay(result) // §15.3.1 RESULT 额度（行 400 + 字符 64K 双维）
+          block.result = slimToolResultForDisplay(result) // §5.1 RESULT 额度（行 400 + 字符 64K 双维）
           block.summary = formatToolSummary(name, result)
           block.done = true
           const started = tickTake(name, toolId)
@@ -290,7 +290,7 @@ export function buildToolCallbacks(deps) {
         // _advisorBlocks keep rendering the running view until cleared at turn end.
         const blocks = state._advisorBlocks ?? []
         if (blocks.length > 0) {
-          // 冻结文本额度（§15.3.1：头 32K + 尾 96K 保裁决尾部 + 中段标记——非静默截断，
+          // 冻结文本额度（§5.1：头 32K + 尾 96K 保裁决尾部 + 中段标记——非静默截断，
           // 代码评审 #3：capLines(...)[0] 会丢标记且截尾）
           const text = capAdvisorText(blocks
             .map((b) => b.text.replaceAll(ADVISOR_THINKING_PLACEHOLDER, ""))
@@ -338,14 +338,14 @@ export function buildToolCallbacks(deps) {
         const isString = typeof chunk === "string"
         const raw = isString ? chunk : String(chunk?.text ?? "")
         const kind = isString ? "text" : (chunk?.kind ?? "text")
-        pushAdvisorChunk(raw, kind) // §15.3.1 累积额度（多块丢最旧）
+        pushAdvisorChunk(raw, kind) // §5.1 累积额度（多块丢最旧）
         scheduleRender()
         return
       }
       // Append into the CURRENT tool block's output buffer (the block is the
       // display; no _live scroll lines anymore). N2-style cap keeps memory
       // bounded: keep the LAST 200 output lines per call; 字符维双维
-      // （§15.3.1：单条目 ≤ TOOL_OUTPUT_ENTRY_MAX_CHARS、总量 ≤ TOOL_OUTPUT_TOTAL_MAX_CHARS 丢最旧）。
+      // （§5.1：单条目 ≤ TOOL_OUTPUT_ENTRY_MAX_CHARS、总量 ≤ TOOL_OUTPUT_TOTAL_MAX_CHARS 丢最旧）。
       const block = findToolBlock(state, name, toolId)
       if (block) {
         for (const line of part.text.split("\n")) {
@@ -365,7 +365,7 @@ export function buildToolCallbacks(deps) {
     // handlers — permission requests then deny WITHOUT a panel (AGENT-LOOP-ASYNC-POOL.md §6.8 D-S7: no modal
     // during unattended digestion) and question errors out instead of hanging.
     ...(askPermission ? { onPermissionRequest: (name, args) => askPermission(name, args) } : {}),
-    // Merged batch ask (§16 D-B1): one confirmation for N non-readonly tools in
+    // Merged batch ask (D-B1): one confirmation for N non-readonly tools in
     // the same response — "approve all / one by one / deny" (key-handler resolves
     // the verdict string; approveAll is batch-scope only, never the AUTO flag).
     ...(askBatchPermission ? { onBatchPermissionRequest: (req) => askBatchPermission(req) } : {}),

@@ -133,7 +133,7 @@ export function convCacheKey(state, maxRows) {
   // Content prefix in the signature: same kind+length with different content
   // would otherwise collide (stale render); 8 chars disambiguate in practice.
   const blocksSig = (state._advisorBlocks ?? []).map((b) => `${b.kind}:${b.text?.length ?? 0}:${String(b.text ?? "").slice(0, 8)}`).join(",")
-  // NOTE (§7.2.1): running subagent blocks are NOT part of the conversation
+  // NOTE (docs/cli/design/TUI.md §6.8): running subagent blocks are NOT part of the conversation
   // anymore — they render in the fixed bottom panel (subagent-panel.mjs,
   // uncached per frame: the 1s ticker refreshes the panel's elapsed display).
   // The old subSig (blockEpoch/turn/elapsed invalidation) is removed: the panel
@@ -279,7 +279,7 @@ function buildConvLines(state, cols, maxRows) {
       blankAfter = false
     }
   }
-  // ── Subagent activity blocks (§7.2.1 D2) — RUNNING blocks MOVED to the fixed
+  // ── Subagent activity blocks (docs/cli/design/TUI.md §6.8 D2) — RUNNING blocks MOVED to the fixed
   // bottom panel (subagent-panel.mjs renderSubagentPanel, layout.mjs precomputes
   // the panel height; render-frame puts it between conversation and todo).
   // buildConvLines no longer renders running children: on completion

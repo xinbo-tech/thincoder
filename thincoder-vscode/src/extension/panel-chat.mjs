@@ -53,7 +53,7 @@ export function agentSlotMatches(agent, cwd, slot) {
 
 /** §11 ensurePanelAgent（runPanelChatImpl ensureSlot 后调用）：绑定匹配 → 复用；否则销毁
  *  （panel._agent = null——内存态随对象回收，槽文件仍权威）。销毁后由本回合 runAgent 的
- *  factory 路径新建（首轮/destroy 重建同路径——hydrate 含 §11.2.1 槽字段回填）。返回当前
+ *  factory 路径新建（首轮/destroy 重建同路径——hydrate 含槽字段回填）。返回当前
  *  agent（复用对象或 null——供调用方/runOpts 引用）。 */
 export function ensurePanelAgent(panel, turnSlot) {
   if (panel._agent && !agentSlotMatches(panel._agent, _cwd(), turnSlot)) panel._agent = null

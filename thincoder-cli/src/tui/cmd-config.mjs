@@ -250,7 +250,7 @@ export async function handleConfigCommand(ctx, args = []) {
     }
   }
 
-  // ── 并发池子菜单（§11.1/§11.2——agent.poolLimits——读/改三域；保存经 saveProxy
+  // ── 并发池子菜单（agent.poolLimits——读/改三域；保存经 saveProxy
   // 落盘 + reloadConfig 热应用——下个 spawn 生效）──
   async function poolMenu() {
     let poolIdx = 0

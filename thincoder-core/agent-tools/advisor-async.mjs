@@ -110,7 +110,7 @@ function openDesignRun(agent, key) {
 }
 
 /**
- * Resolve the review instance a launch continues (§11.2 ③ — per-review
+ * Resolve the review instance a launch continues (AGENT-LOOP-ASYNC-POOL.md §6.10 ③ — per-review
  * rounds/prior; reviewId = designId for design reviews, a random id for code).
  *  - design: continue the OPEN instance of the same document set (fix rounds of
  *    a review thread keep its designId and its round/prior); none → new instance.
@@ -172,7 +172,7 @@ export function effectiveAdvisorRound(agent) {
 
 export const ADVISOR_POOL_LIMIT = 4
 
-/** §11.2 advisor 池生效上限（纯——读 agent.poolLimits.advisor——合法 ≥1 整数生效——
+/** AGENT-LOOP-ASYNC-POOL.md §6.10 advisor 池生效上限（纯——读 agent.poolLimits.advisor——合法 ≥1 整数生效——
  *  非法/缺省回退 ADVISOR_POOL_LIMIT——与 subagent 域 resolvePoolLimits 独立不共享
  *  （subagent 两键表不含本键——键表语义不同——POOL-CONFIG-UNIFIED F-2））。 */
 export function resolveAdvisorPoolLimit(raw) {
@@ -185,7 +185,7 @@ export function resolveAdvisorPoolLimit(raw) {
 export function advisorPoolLimitFor(agent) {
   return resolveAdvisorPoolLimit(agent?.config?.agent?.poolLimits)
 }
-/** §11.2 同 scope 守卫（F-5——用户裁①）：同 reviewType+scope 有 running 评审 → true
+/** §6.10 同 scope 守卫（F-5——用户裁①）：同 reviewType+scope 有 running 评审 → true
  *  （拒——running 并行多实例歧义放大——settled 续跑语义不变）。design scope = 文档集键
  *  （docSetKey）；code = 单 code 线程（记录不记路径键——与 openCodeRun 语义一致）。
  *  与池容量守卫独立：容量 = 全局 ≤N——scope = 同 scope ≤1——两关都过才启动。 */
@@ -257,7 +257,7 @@ export function cancelAsyncAdvisor(agent, id, onToken) {
     return { id: key, status: "cancelled", was: "queued" }
   }
   entry.cancelled = true
-  // §20.3 站点 #11（第 24 批）：定向中止 = cancel（reason 载荷）
+  // AGENT-LOOP-SUBAGENT.md §6.12 站点 #11（第 24 批）：定向中止 = cancel（reason 载荷）
   entry.controller?.abort?.({ abortTrigger: "cancel", abortDetail: "advisor-cancel" })
   return { id: key, status: "cancelled" }
 }
@@ -352,13 +352,13 @@ export function refillAdvisorQueue(parent, onToken) {
  * digest/panel/freeze consumers route it like any other settled block.
  * @returns {{ok: true, id: string}} — ack; or {{ok: true, id: string, queued: true,
  *   position: number}} — ED-4 排队 ack（池满 + 异 scope——slot 释放自动起跑）; or
- *   {{error: string}} — scope guard (same reviewType+scope running — §11.2 F-5)
+ *   {{error: string}} — scope guard (same reviewType+scope running — §6.10 F-5)
  *   or invalid ctx.
  */
 export function launchAsyncAdvisor(parent, ctx, launch) {
   const { reviewType, documents, paths, object, designToken, designId, run } = launch
   const limit = advisorPoolLimitFor(parent)
-  // §11.2 same-scope guard（F-5——用户裁①）：同 type+scope 有 running → 拒——与池容量
+  // §6.10 same-scope guard（F-5——用户裁①）：同 type+scope 有 running → 拒——与池容量
   // 守卫独立两关都过才启动——同 scope 不等不排（settled 续跑不变；排队仅异 scope 面）。
   if (runningAdvisorOfScope(parent, reviewType, run?.docSetKey ?? null)) {
     const scopeNote = reviewType === "design"
@@ -398,7 +398,7 @@ export function launchAsyncAdvisor(parent, ctx, launch) {
   // D6 buildChildSignal 单点（ASYNC-RESULT-CONTAINER.md）。
   const ctrl = new AbortController()
   entry.controller = ctrl
-  // §20.3 站点 #10（第 24 批）：hop 逐跳保 reason；#98 链结单点（interrupt 豁免面——
+  // §6.12 站点 #10（第 24 批）：hop 逐跳保 reason；#98 链结单点（interrupt 豁免面——
   // Ctrl+I 不逐链中止飞行评审）。
   bindChildController(ctrl, buildChildSignal(parent, ctx))
   entry.promise = new Promise((res) => { entry._settle = res })
@@ -416,7 +416,7 @@ export function launchAsyncAdvisor(parent, ctx, launch) {
       signal: entry.controller.signal,
     }, designToken, documents, paths, object, designId)
       .then((report) => { entry.report = report })
-      // §20.3 第 3 条合成器（第 24 批）：原 message 前缀逐字保留 + 来源后缀
+      // §6.12 第 3 条合成器（第 24 批）：原 message 前缀逐字保留 + 来源后缀
       .catch((err) => { entry.error = deathLine(err, entry.controller?.signal) })
       .finally(() => {
         // settle 公共收尾单点（ASYNC-RESULT-CONTAINER.md D3——settleAsyncEntry）：日志三连
@@ -430,7 +430,7 @@ export function launchAsyncAdvisor(parent, ctx, launch) {
           ctx,
           onAccounting: () => {
             const settled = settleAdvisorRun(parent, entry)
-            // §29 fix B：settle 分支输出（清洗/未签发提示）写回 entry.report——digest 原样进。
+            // fix B：settle 分支输出（清洗/未签发提示）写回 entry.report——digest 原样进。
             if (settled.report != null) entry.report = settled.report
           },
         })

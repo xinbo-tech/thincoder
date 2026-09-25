@@ -15,7 +15,7 @@
  */
 
 import { C } from "./ansi.mjs"
-// 第 27 批 §12.3①/②：relay 前缀文法单一权威 = src/agent/relay-prefix.mjs——本文件
+// 第 27 批：relay 前缀文法单一权威 = src/agent/relay-prefix.mjs——本文件
 // 不再自持前缀正则/解析副本（防第二套平行正则再漂移）。
 import { parseRelayPath } from "@thincoder/core/agent/relay-prefix.mjs"
 // zero-block 批（TUI.md §6.8.3.2 P1）：墓碑存活闸复活分支留痕——日志面（零新增 UI 形态）。
@@ -33,21 +33,21 @@ export { SUB_BLOCK_LINE_LIMIT, appendSubBlock } from "./subagent-children.mjs"
 import { freezeSubTaskLines, finishSubTaskKey, finishSubTask, freezeDoneSubTasks, finishSubTasksByRole, freezeAllSubTasks, freezeReclaimDigestedBlocks, shiftFreezeAnchors, livePoolHas, removeFrozenSubTaskLine, tombstoneSubKey } from "./subagent-freeze.mjs"
 export { computePanelBlocks, finishSubTask, finishSubTaskKey, freezeSubTaskLines, shiftFreezeAnchors, freezeDoneSubTasks, finishSubTasksByRole, freezeAllSubTasks, freezeReclaimDigestedBlocks } from "./subagent-freeze.mjs"
 
-// 前缀文法/解析已迁 src/agent/relay-prefix.mjs（第 27 批 §12.3②）——本文件不自持副本。
+// 前缀文法/解析已迁 src/agent/relay-prefix.mjs（第 27 批）——本文件不自持副本。
 /** ⟦ev⟧ token parser：`⟦ev⟧<name>\x1e<n>\x1e<max>\x1e<phase>\x1e<detail>`。phase done
  *  = async 完成即冻结（settle 时发）；settled = 挂起期完成——冻结延迟至 digest 消化
  *  完成（AGENT-LOOP-ASYNC-POOL.md §6.8 freezeReclaimDigestedBlocks 逐条回收——不等池空）或池空退出兜底补发；
  *  stopped（AGENT-LOOP-SUBAGENT.md §6.7.2 D-M6）= cancel 中止——interrupted 语义立即冻结（标题 "stopped"）；
- *  queued（§20 D-SD3b）= 排队 spawn 返回即建 waiting 块（round2 #2 事件通道——
+ *  queued（AGENT-LOOP-SUBAGENT.md §6.9 D-SD3b）= 排队 spawn 返回即建 waiting 块（round2 #2 事件通道——
  *  `⟦ev⟧queued\x1e<kind>\x1e<position>\x1equeued\x1e<detail>`——kind slot/wait/depc）——
- *  启动后 ⟦ev⟧async 转 running（同 key 不重建）；cancelled（§20）= 出队/取消——**零字段**
+ *  启动后 ⟦ev⟧async 转 running（同 key 不重建）；cancelled（§6.9）= 出队/取消——**零字段**
  *  移除块（不冻结——无活动可冻结）——与 async 同型单独解析（不入本正则）；
  *  async（AGENT-LOOP-SUBAGENT.md §6.7.2 D-M7b + 处置 #4）= **零字段**标记（`⟦ev⟧async\x1e`——无 n/max/phase/detail 段）——
  *  routeSubToken 单独解析设 sub.async = true（不入本正则——本正则要求 4 字段）；**缺失 key
  *  （块尚未创建）缓冲 `state._pendingAsyncKeys`——ensureSubTaskKey 块创建时应用（兜底）。 */
 export const SUB_EVENT_RE = /^⟦ev⟧(turn|approval|done|settled|stopped|queued)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e?([\s\S]*)$/
 
-// parseRelayPath 自 src/agent/relay-prefix.mjs import（第 27 批 §12.3①——文法单一权威，
+// parseRelayPath 自 src/agent/relay-prefix.mjs import（第 27 批——文法单一权威，
 // 语义与迁移前逐字一致；“嵌套解析任意深度/无前缀 → null”见该模块）。
 
 /** N1: render-layer throttle for child tool-output appends (generation relays verbatim). */
@@ -100,7 +100,7 @@ export function ensureSubTaskKey(state, key, role) {
       key, role, model: undefined, started: Date.now(), done: false, doneAt: null,
       blocks: [], currentTool: null, toolArgs: null, turn: 0, maxTurns: 0, approval: null,
       lastError: null, dropped: 0,
-      _lineCount: 0, _charCount: 0, // 双维记账（TUI.md §15.3.4——行数维 + 字符维，subagent-children.mjs）
+      _lineCount: 0, _charCount: 0, // 双维记账（TUI-SESSION-VIEW.md §5.4——行数维 + 字符维，subagent-children.mjs）
       stopped: false, // AGENT-LOOP-SUBAGENT.md §6.7.2: ⟦ev⟧stopped 冻结标记（标题 "stopped"）
       children: [], // SUBAGENT-TAIL: 嵌套子代理守护载体（内容并入本块——subagent-children.mjs）
     }
@@ -158,7 +158,7 @@ export function routeSubToken(state, t, scheduleRender) {
   // pending 标志**（state._pendingAsyncKeys——ensureSubTaskKey 块创建时应用——async
   // 事件先于块存在到达不丢——queued→running ⏹ 可见性保真——⏹ 门控与头标 async 判定源）。
   // 内层（嵌套 explore#M/）async 剥除不路由（防污染外层块头）。
-  // §20 D-SD3b：queued 等待块实际启动（补位/释放）→ **转 running——同 key 不重建**
+  // §6.9 D-SD3b：queued 等待块实际启动（补位/释放）→ **转 running——同 key 不重建**
   // ——清 waiting 标注（sub.queued）+ started 归零（elapsed 从实际启动计时——与池
   // startedAt 语义一致——排队等待不计 elapsed）。
   if (!nested && /^⟦ev⟧async(\x1e|$)/.test(payload)) {
@@ -177,7 +177,7 @@ export function routeSubToken(state, t, scheduleRender) {
     scheduleRender()
     return true
   }
-  // §20 D-SD3b（round2 #2——cancelled 事件）：取消/出队 → 移除等待块（**不冻结**——
+  // §6.9 D-SD3b（round2 #2——cancelled 事件）：取消/出队 → 移除等待块（**不冻结**——
   // 从未启动无活动可冻结；running 取消走 ⟦ev⟧stopped 冻结——两者通道分明）。守卫：
   // 仅 !async 块（waiting 块未启动——async 置位 = running——running 的取消以 stopped
   // 通道表达，cancelled 永不合法指向 running 块——迟到/失序事件不误删）。缺失块
@@ -196,10 +196,10 @@ export function routeSubToken(state, t, scheduleRender) {
   }
   const sub = ensureSubTaskKey(state, path.head, path.head.slice(0, path.head.lastIndexOf("#")))
   if (!sub) return true // frozen tombstone — late token from an aborted child: drop
-  // ⟦ev⟧：turn/approval 进度 → 仅头部（D1——不进 blocks/主流）；done（§15 D-A3）=
+  // ⟦ev⟧：turn/approval 进度 → 仅头部（D1——不进 blocks/主流）；done（AGENT-LOOP-SUBAGENT.md §6.7.3 D-A3）=
   // 完成即冻结（settle 时发）；settled（AGENT-LOOP-ASYNC-POOL.md §6.8 D-S8）= 挂起期完成——驻留面板中间态
   // "done · awaiting digestion"，池空补发冻结；stopped（AGENT-LOOP-SUBAGENT.md §6.7.2）= cancel——立即冻结；
-  // queued（§20 D-SD3b）= 排队 spawn 等待块（spawn 返回即建/状态变迁刷新——覆盖式
+  // queued（§6.9 D-SD3b）= 排队 spawn 等待块（spawn 返回即建/状态变迁刷新——覆盖式
   // 更新 sub.queued——块不可展开（无活动流）；启动后 async 事件清标转 running）。
   if (payload.startsWith("⟦ev⟧")) {
     // 内层完成信号（沿革：D-M8 子标 → R23 子块段 → SUBAGENT-TAIL 并入——显示契约

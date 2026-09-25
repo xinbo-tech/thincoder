@@ -12,7 +12,7 @@
 
 import { C } from "./ansi.mjs"
 import { closeOpenSubChildren } from "./subagent-children.mjs"
-// TUI-OOM-ROOTCAUSE（TUI.md §15.3.3 落点表末行）：state.lines 总量账——splice 插入路径过账。
+// TUI-OOM-ROOTCAUSE（TUI-SESSION-VIEW.md §5.3 落点表末行）：state.lines 总量账——splice 插入路径过账。
 // zero-block 批（§6.8.3.2）：摘除路径负向出账——releaseLine（增删均须过账）。
 import { accountLine, releaseLine } from "./display-budget.mjs"
 
@@ -23,7 +23,7 @@ import { accountLine, releaseLine } from "./display-budget.mjs"
 // 子代理——agent._tuiState 缺省）→ 返 null = 无面板——消费面降级池视图/freeze 报
 // 不可用（T-P5 语义不变）。status 三态映射（纯函数）：done+awaitingDigest →
 // "awaitingDigest"；done → "done"；queued（waiting/等位未启动）→ "queued"；
-// 其余 → "running"（§20 D-SD3b queued 态入镜口径保留）。
+// 其余 → "running"（AGENT-LOOP-SUBAGENT.md §6.9 D-SD3b queued 态入镜口径保留）。
 
 /** 现算面板块列表（state.subTasks 活值纯推导——无时点快照语义）。 */
 export function computePanelBlocks(state) {
@@ -31,7 +31,7 @@ export function computePanelBlocks(state) {
   if (!subs) return null // 未挂载（headless/mock 无 TUI state）——无面板
   const blocks = []
   for (const sub of Object.values(subs)) {
-    // §20 D-SD3b：waiting/等位块（sub.queued——未启动）以 queued 态入镜（视图与面板
+    // AGENT-LOOP-SUBAGENT.md §6.9 D-SD3b：waiting/等位块（sub.queued——未启动）以 queued 态入镜（视图与面板
     // 所见一致——action:'panel' 视图 + freeze 门控读此态）。
     const status = sub.done ? (sub.awaitingDigest ? "awaitingDigest" : "done") : (sub.queued ? "queued" : "running")
     blocks.push({ key: sub.key, role: sub.role ?? null, status, startedAt: sub.started ?? Date.now() })
@@ -40,7 +40,7 @@ export function computePanelBlocks(state) {
 }
 
 /** §7.2.3 完成冻结——CLI-ACTIVITY-DEBLOAT F-2（2026-09-10）收窄：本函数是历史启发式
- *  入口（"最早 started"角色匹配——§15 async 化后的 7.2.3.1 实测误冻源：async eng-coder
+ *  入口（"最早 started"角色匹配——AGENT-LOOP-SUBAGENT.md §6.7.3 async 化后的 7.2.3.1 实测误冻源：async eng-coder
  *  先启动时 explore 完成会误冻其块）。评审 #4 路线定死：签名保留、函数体收窄为精确
  *  匹配校验——本签名无 key 参数，无从精确归属 → 恒 no-op 返 null，不再猜任何块
  *  （宁可 no-op 不误冻——被否决备选"保留兜底加告警日志"：冻错块是错动作，日志救不回）。
@@ -53,7 +53,7 @@ export function finishSubTask(state, roles, lastError = null) {
 }
 
 /** §7.2.3 sync spawn 完成精确冻结（2026-09-03）：按 relay key 精确 settle。finishSubTask
- *  的"最早 started"启发式只在面板单 running 块时成立——§15 async 化后 async eng-coder
+ *  的"最早 started"启发式只在面板单 running 块时成立——AGENT-LOOP-SUBAGENT.md §6.7.3 async 化后 async eng-coder
  *  （先启动）与 sync explore 并存时 explore 完成会误冻先启动的 eng-coder 块（7.2.3.1）。
  *  dispatch 沿 ctx._subagentKey（relayPrefix 去尾 = `role#N`）把 key 传进 onToolResult——
  *  有 key 即精确标 done（冻结载体进流 + 删条目由调用方 freezeDoneSubTasks 承接——与
@@ -71,9 +71,9 @@ export function finishSubTaskKey(state, key, lastError = null) {
   return sub
 }
 
-/** 冻结完成/中断区块进 state.lines（§7.2 D4——_frozenSubTask 载体行，渲染端
+/** 冻结完成/中断区块进 state.lines（docs/cli/design/TUI.md §6.8 D4——_frozenSubTask 载体行，渲染端
  *  render-conversation 识别；折叠交互 key = sub-${key} 与运行面板同源跨冻结延续）。
- *  §27 R23 D-R23c2 收尾语义（T-R23c.2a）：外层先冻结而内层子块未收尾（外层 abort/
+ *  docs/cli/design/TUI.md §6.8.2 R23 D-R23c2 收尾语义（T-R23c.2a）：外层先冻结而内层子块未收尾（外层 abort/
  *  中断）→ 子块随外层冻结定格 stopped（closeOpenSubChildren——不悬空）。SUBAGENT-TAIL：
  *  ② 语义照旧（防御性保留——无正读者、不设断言；显示契约 docs/design/TUI.md §6）。
  *  锚点插入（2026-09-03 修复轮）：settled 块带 _freezeAt（settle 时刻流位置）——
@@ -91,7 +91,7 @@ export function freezeSubTaskLines(state, sub) {
     text: `subagent activity: ${sub.key}`, color: C.dim, _frozenSubTask: sub,
   }
   state.lines.splice(Math.min(anchor, state.lines.length), 0, line)
-  // TUI-OOM-ROOTCAUSE（TUI.md §15.3.3 落点表末行「冻结子代理 splice 插入——经
+  // TUI-OOM-ROOTCAUSE（TUI-SESSION-VIEW.md §5.3 落点表末行「冻结子代理 splice 插入——经
   // syncLineBudget 同款对账」）：冻结行进 state.lines 总量账（splice 插入路径）。
   accountLine(state, line)
 }
@@ -231,7 +231,7 @@ export function freezeAllSubTasks(state) {
  *  （settle 即移交）；run 消费后条目不在 pending 的 pinned 块 = 本 run 消化者——无需
  *  快照即精确归属。位置（round1 #1 裁定——与早版文本的矛盾已消解；digest 面 =
  *  AGENT-LOOP-ASYNC-POOL.md §6.8）：**settle 锚点 splice 落位——digest 总览文本之前**——同
- *  §7.2 D4 修复轮/D-S8 锚点语义（T-S6/T-S14 位置断言同口径）——锚点降序逐块冻结
+ *  docs/cli/design/TUI.md §6.8 D4 修复轮/D-S8 锚点语义（T-S6/T-S14 位置断言同口径）——锚点降序逐块冻结
  *  （splice 绝对位互不位移）。@returns {number} 回收块数 */
 export function freezeReclaimDigestedBlocks(state, pendingList) {
   const pend = pendingList ?? []

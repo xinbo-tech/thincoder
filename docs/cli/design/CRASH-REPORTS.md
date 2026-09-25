@@ -30,14 +30,22 @@
 - **预建是必要动作**（非「零成本保险」）：目录缺失时 Node 对 fatal **静默不写**报告。
 - **落点更正（实测）**：`report.*.json` 实测落 `~/.thincoder/crash-reports/`——`process.report.directory` 已由进程内设定，
   **非 CWD**。
-- 接口（注入缝）：`prepareCrashReporting({ dir, env, armHeapSnapshot })`（`thincoder-cli/src/crash-reports.mjs:80`）
+- 接口（注入缝）：`prepareCrashReporting({ dir, env, armHeapSnapshot })`（`thincoder-cli/src/crash-reports.mjs` 导出）
   ——默认参数保调用点零改；`dir` 选项同时服务 mkdir / `report.directory` / purge / 返回。返回值 = 目录路径。
 
 ### 2.2 JS 异常记录与启动提示
 
-- `writeCrashRecord({ type, error })`（`:102`）：同步落盘 `crash-<epochms>-<pid>.json`——内容 = 时间 / 类型 / 消息 + 堆栈 /
+- `writeCrashRecord({ type, error })`（`crash-reports.mjs` 导出）：同步落盘 `crash-<epochms>-<pid>.json`——内容 = 时间 / 类型 / 消息 + 堆栈 /
   `uptime` / argv / cwd / 内存 / node 版本；权限 `0o600`。写失败返回 `null`（不抛——步隔离）。
-- `recentCrashHint({ dir })`（`:132`）：启动扫描——24h 窗内是否有记录（mtime 判定）→ 返回提示文本或 `null`（无匹配不提示）。
+- `recentCrashHint({ dir })`（`crash-reports.mjs` 导出）：启动扫描——24h 窗内是否有记录（mtime 判定）→ 返回提示文本或 `null`（无匹配不提示）。
+- **提示行带记录内事实（2026-09-25 · 台账 #212 · 用户裁 = B：判定面增强 · 原文案保留）**：选中记录（窗内 mtime 最新者）读回
+  **`uptime` + `cwd`** 两段，提示形 = `上次运行异常终止（记录：<path> · 运行 <u>s · cwd <c>）`（`<u>` = `uptime.toFixed(1)`）。
+  目的 = 「1.5s 启动尝试」与「真会话」在提示面一眼可辨（24h 窗内两条记录的形态差）。段序固定 = uptime 段在前 / cwd 段在后。
+  - **字段源按记录类分**：自写记录（`crash-*.json`）取顶部 `uptime`（秒 · number）/ `cwd`（string）；Node fatal 报告
+    （`report.*.json` 档）取 `header.cwd`——**Node 报告无 uptime 字段**（2026-09-25 实测），该段略去。
+  - **退化（尽力面）**：读档 / 解析失败、记录类不明、字段缺 / **型不符**（`uptime` 非有限非负数 · `cwd` 非非空字符串）⇒ **对应段略去**；两段皆缺 ⇒ 基础形
+    `上次运行异常终止（记录：<path>）`。不抛、不阻断启动（N1）。
+  - **消费面零改**：两处调用点（`bin/thincoder.mjs` 内 `recentCrashHint` 调用：chat 分支 stderr 行 · `startTUI` 载荷 `crashNotice` 字段）只消费返回串。
 
 ### 2.3 30 天写时自清理（purge）
 
@@ -174,6 +182,12 @@
 | VSC 端对应能力 | —— | 无此面（CLI 单端）——**登记项，不设镜像档** |
 
 ## 变更记录
+
+- 2026-09-25（**cli-small-items 批 · 设计修正轮 · 评审轮 1 发现 9/10 收正**）：§2.2 退化句补**型不符**（`uptime` 非有限非负数 · `cwd` 非非空字符串）；
+  §2.1 / §2.2 四处行号锚改**符号形**（`prepareCrashReporting` / `writeCrashRecord` / `recentCrashHint` / `bin/thincoder.mjs` 调用点描述——承 `thincoder-cli/AGENTS.md:33`「符号而非行号」）。
+
+- 2026-09-25（**cli-small-items 批 · 台账 #212 · 用户裁 15:28 = B**）：§2.2 `recentCrashHint` 增提示行事实面（`uptime` + `cwd` 两段 · 记录类字段源 · 退化形）；
+  「A 文案弱化」未采纳（原文案保留）· purge / 提示判定集（N3）零改 · 需求面零改（提示仍为 24h 窗存在性提示）。
 
 - 2026-09-15（**B 式迁移轮 · 第 6 批**）：建档——`thincoder-cli/docs/design/CRASH-REPORTS.md` 内容重建入基准层（旧档一字未改、原地作参照历史）。
   ① 落点 = `docs/cli/design/`（P2：CLI 单端面，VSC 无对应能力）；

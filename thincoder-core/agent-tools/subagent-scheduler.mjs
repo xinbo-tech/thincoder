@@ -1,6 +1,6 @@
 /**
  * subagent-scheduler.mjs — 子 agent 任务调度器 + 文件域组（2026-09-05 自
- * subagent-async.mjs 拆分——Module Split Policy §20.9——纯迁移零行为变化——
+ * subagent-async.mjs 拆分——Module Split Policy——纯迁移零行为变化——
  * AGENT-LOOP-SUBAGENT.md §6.9 D-SD1..SD5 + D-SL1 环形死锁修正）。
  * 内容：normalizeFileList / filesOverlap / effectiveFiles（SCHEDULER-DYNAMIC-DOMAIN
  * 动态域——声明 ∪ running touched）/ depInfo / describeBlockers / detectStall（
@@ -102,7 +102,7 @@ export function effectiveFiles(e) {
 }
 
 /**
- * §20 依赖终态查询（单点事实——池条目 / pending（挂起期 settle 移交——注入前）/
+ * AGENT-LOOP-SUBAGENT.md §6.9 依赖终态查询（单点事实——池条目 / pending（挂起期 settle 移交——注入前）/
  * 终态墓碑（自动通道注入消费——consumed；取消/失败——D-SD5 分支））：
  * - ok      = settle 成功（报告已产出）/ consumed（自动通道注入消费——T-SD14 视为满足）
  * - pending = running/queued 未终态（等启动/等完成）
@@ -131,7 +131,7 @@ export function depInfo(parent, id) {
   return { state: "unknown", role: null }
 }
 
-/** §20 等待态派生（无存储——refill/status/面板/spawn 返回同一事实源）。kind：
+/** AGENT-LOOP-SUBAGENT.md §6.9 等待态派生（无存储——refill/status/面板/spawn 返回同一事实源）。kind：
  *  - slot = 无阻塞（依赖全满足 + 域无冲突）——纯槽满等位（可启动——等 slot）
  *  - wait = 依赖未完成 / 域冲突（running ∪ queued——D-SD3 同界——self 除外）
  *  - depc = 依赖取消/失败（round2 #3——非 AUTO 锁住——需父显式处置；AUTO 视为可启动）
@@ -159,7 +159,7 @@ export function describeBlockers(parent, entry) {
       const hitDeclared = filesOverlap(myFiles, e._files ?? [])
       const hit = hitDeclared ?? filesOverlap(myFiles, effectiveFiles(e))
       if (!hit) continue
-      // §21.1 D-SL1.2（环形死锁修正——与 queueRunnable 同界——展示一致）：后入
+      // AGENT-LOOP-SUBAGENT.md §6.9 D-SL1.2（环形死锁修正——与 queueRunnable 同界——展示一致）：后入
       // 者（spawn 序晚于我——数字 id 比较）不列——只列"会真正阻断我的"（running
       // 任意序 + 先入 queued）；列后入者 = 误导"等一个其实等不到的人"。
       if (e.status === "queued" && Number(e.id) > Number(entry.id)) continue
@@ -185,7 +185,7 @@ export function describeBlockers(parent, entry) {
  * 条目一条阻塞链——沿首个 blocker 走到首个重复节点（闭环）——每节点自带"等谁 + 为何等"
  * 理由注（`X（reason） → Y` 形态——X 等 Y 因 reason）；不满足 → null。
  * 不报（F-SL2.2 收窄判据）：running 锚点存在（依赖链/文件串行正常排队）；depc 滞留
- * （外部决策可解——§20 NF-SD 滞留有意——cancel 先入者即释放）；单 queued；blocker
+ * （外部决策可解——§6.9 NF-SD 滞留有意——cancel 先入者即释放）；单 queued；blocker
  * 外逃（unknown 依赖目标/池外条目）；blocker 空（runnable——settle/cancel 驱动 refill
  * 会启动——非停滞）。自然流程中 wait 边恒指向先入者（依赖必须先前 spawn——unknown 拒 +
  * 文件冲突只阻断后入者——id 序）——混合环仅人工注入可构造（T-SD5 同族防御断言）——
@@ -239,7 +239,7 @@ export function detectStall(parent) {
   }
   // 链组装：每 queued 条目一条——沿首个 blocker 走到首个重复节点（闭环）——每节点
   // 自带"我等谁 + 为何等"段（`X（reason） → Y`——本节点 blocker 理由注于本节点旁——
-  // 读取无歧义：X 等 Y 因为 reason——dependsOn 边不误读为目标属性——§21.1 扩展注
+  // 读取无歧义：X 等 Y 因为 reason——dependsOn 边不误读为目标属性——§6.9 扩展注
   // 示例同信息形态——闭环以起始节点重复闭合（末节点不再注——闭合自明）。
   const chains = []
   for (const start of queued) {
@@ -271,10 +271,10 @@ export function entryTerminal(entry) {
   return entry?.cancelled === true || entry?.done === true
 }
 
-/** §20 D-SD4 补位判据：依赖全满足（AUTO 下 depc 放行）+ 域无冲突（running 任意序 +
- *  queued 先入者——§21.1 D-SL1.1 序判定：同文件串行 = 先入者先启动、后入者等先入者
+/** AGENT-LOOP-SUBAGENT.md §6.9 D-SD4 补位判据：依赖全满足（AUTO 下 depc 放行）+ 域无冲突（running 任意序 +
+ *  queued 先入者——§6.9 D-SL1.1 序判定：同文件串行 = 先入者先启动、后入者等先入者
  *  ——不自锁；先入者启动后以 running 身份继续挡住后入者——self 除外）。
- *  已知限制（§21.1 评审 #4——与 §20 NF-SD 同语义——滞留有意义不静默）：先入者被
+ *  已知限制（§6.9 评审 #4——与 §6.9 NF-SD 同语义——滞留有意义不静默）：先入者被
  *  depc 锁定时（依赖取消/失败且非 AUTO——永不自动启动），后入者滞留等它——cancel
  *  先入者即释放（父显式可清；AUTO 档 depc 视为可启动——不滞留）。 */
 export function queueRunnable(parent, entry) {
@@ -292,7 +292,7 @@ export function queueRunnable(parent, entry) {
       if (e === entry) continue
       if (e.status !== "running" && e.status !== "queued") continue
       if (!filesOverlap(myFiles, effectiveFiles(e))) continue // 动态域：声明 ∪ running touched
-      // §21.1 D-SL1.1 序判定：queued 仅"先入者"（spawn 序早于我——数字 id 比较）阻断；
+      // §6.9 D-SL1.1 序判定：queued 仅"先入者"（spawn 序早于我——数字 id 比较）阻断；
       // 后入者不阻断——先入者先启动——两个 queued 同文件不再互等（环形死锁修正）。
       // 防御（评审 #3——id 形态）：池条目 id 为数字递增（_subAgentCounter——已核实）；
       // 异常形态 Number() 得 NaN → 比较 false → 不跳过 → 保守阻断（宁可多等——
@@ -304,7 +304,7 @@ export function queueRunnable(parent, entry) {
   return true
 }
 
-/** §20 D-SD5 环防御（round2 #5——自然流程不可达：unknown id 拒 + spawn 序天然无环——
+/** §6.9 D-SD5 环防御（round2 #5——自然流程不可达：unknown id 拒 + spawn 序天然无环——
  *  仅人工向池注入可构造——防御断言定位）：从新 spawn 的依赖集出发沿池内条目
  *  _dependsOn 边做路径 DFS——路径上重复访问（可达环）→ 拒绝（A→B→A 永不自启——
  *  错误明确——T-SD5）。运行/排队条目皆可成环节点；池小（≤4 槽 + 有限队列）深度有限。 */
@@ -337,7 +337,7 @@ export function dependentLabels(parent, depId) {
   return out
 }
 
-/** §20 D-SD3b 排队态面板刷新（⟦ev⟧queued 事件族——TUI routeSubToken 消费）：对全部
+/** §6.9 D-SD3b 排队态面板刷新（⟦ev⟧queued 事件族——TUI routeSubToken 消费）：对全部
  *  queued 条目重算等待态并发射变化（去重 sig——kind/position/detail 全变才发）——
  *  调用点 = 一切队列突变与等待态变迁（spawn 入队 / settle 后补位与依赖转移 / cancel
  *  出队 / 自动通道消费）。position = 队列序（D-A1 既有——cancel 前移同源）。
@@ -396,7 +396,7 @@ export function maybeRefillAsync(parent) {
  * next = max(counter ?? 0, poolMax) + 1——取号后 counter 同步（首取号初始化）。id 作用
  * 域 = 进程内（不做槽持久化——reload 后池清块消失，新进程从 1 无冲突——设计范围边界）。
  * spawn（subagent-spawn.mjs async 分支）、escalate（escalate-async.mjs）、async-advisor
- * 池（advisor-async.mjs——§11.2 跨池共号）共用；executeAsyncSpawn 直读 counter（分配与
+ * 池（advisor-async.mjs——§6.10 跨池共号）共用；executeAsyncSpawn 直读 counter（分配与
  * 消费同步——无 await 间隙）。CLI 两池键均为字符串（set(String(id))——解析分支防御保留）。
  * @returns {number} 全池唯一的下一 id（单调——进程内）
  */

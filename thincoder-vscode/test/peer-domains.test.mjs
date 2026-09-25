@@ -6,8 +6,8 @@
  * .conflicts` 聚合与缓存）/ §4.4.4（`peerNotes` 逐 target 足迹行与混合合成）——本文之前该面
  * 零专面断言（既有命中皆在认领面档的钩点路径）。
  *
- * 用例 → 批档 §2.3 对照：T-L3v1 登记累积与整写 / T-L3v2 冲突查询（hot 窗口 + 路径判据 +
- * cwd 面）/ T-L3v3 聚合缓存与目录 stat 上界 / T-L3v4 判活与惰性清理 / T-L3v5 预检门控 /
+ * 用例 → 批档 §2.3 对照：T-L3v1 登记累积与整写 / T-L3v2 冲突查询（hot 窗口 + 路径重叠 + 同 cwd 过滤——
+ * 台账 #344 与核同判据）/ T-L3v3 聚合缓存与目录 stat 上界 / T-L3v4 判活与惰性清理 / T-L3v5 预检门控 /
  * T-L3v6 逐 target 足迹行与混合合成（AC-291：与核 `peerCollabNote` 跨端逐行对拍——双端同串）。
  *
  * 沙箱 = `_setSessionsDirForTest` + `_setPeersDirForTest`（真目录零触）+ 端探针缝
@@ -132,23 +132,23 @@ test("T-L3v1 登记累积与整写：两目标入文件；认领 / 未知字段�
 
 // ── D-L3b：冲突查询与缓存 ─────────────────────────────────
 
-test("T-L3v2 冲突查询（端实态）：hot 界内命中 · 超界零命中；路径 / cwd 判据 → 端差第三项（见注释）", () => {
+test("T-L3v2 冲突查询（与核同判据——台账 #344）：目录包含 ⇒ 命中 · 同路径 ⇒ 命中 · 他 cwd / hot 界外 ⇒ 零命中", () => {
   const cwd = newCwd()
   const dirD = join(cwd, "src")
   const target = join(dirD, "a.mjs")
   _setAliveProbeForTest(() => new Set([process.pid, FOREIGN.pid]))
+  // ① 路径重叠（核 T-L3e 同判：端 `claimsOverlap` = 相等或互为目录包含——§4.3 端差已消）
+  putPeer(peerRec(cwd, { domains: [dirD], updatedAt: Date.now() }))
+  assert.equal(peerDomains(cwd).conflicts([target]).length, 1, "域为目录 D、target 为 D 下文件 ⇒ 互为包含 ⇒ 命中（与核同判据）")
+  assert.equal(peerDomains(cwd).conflicts([dirD]).length, 1, "同路径 ⇒ 命中（正控）")
+  // ② 同 cwd 过滤（§4.3——与核 `peerDomains` 同）：他 cwd 登记不参与
+  putPeer(peerRec(join(dir, "other-cwd"), { domains: [target], updatedAt: Date.now() }))
+  assert.deepEqual(peerDomains(cwd).conflicts([target]), [], "他 cwd 登记 ⇒ 零命中（同 cwd 过滤）")
+  // ③ hot 窗口（两侧界）：界内命中 · 界外零命中
   putPeer(peerRec(cwd, { domains: [target], updatedAt: Date.now() }))
   assert.equal(peerDomains(cwd).conflicts([target]).length, 1, "hot 界内（updatedAt 在 5 分钟内）⇒ 命中")
   putPeer(peerRec(cwd, { domains: [target], updatedAt: Date.now() - 6 * 60 * 1000 }))
   assert.deepEqual(peerDomains(cwd).conflicts([target]), [], "超界（> 5 分钟）⇒ 零命中（冷登记不提示）")
-  // 与核 T-L3e 判据差 = **端差第三项**：端「归一后精确匹配 + cwd 无关」∥ 核「`pathsOverlap` 互为包含 + 同 cwd 过滤」
-  // （端码守界零改——D-MI5 / 端 `conflicts` 判据零改；登记面 = 设计档 §4.3 / 本批档 §5）
-  putPeer(peerRec(cwd, { domains: [dirD], updatedAt: Date.now() }))
-  assert.deepEqual(peerDomains(cwd).conflicts([target]), [], "域为目录 D、target 为 D 下文件 ⇒ 端零命中（精确匹配）")
-  assert.equal(peerDomains(cwd).conflicts([dirD]).length, 1, "同路径 ⇒ 命中（正控）")
-  // cwd 面：端 conflicts 与 cwd 无关 ⇒ 他 cwd 登记照常命中（核按同 cwd 过滤）
-  putPeer(peerRec(join(dir, "other-cwd"), { domains: [target], updatedAt: Date.now() }))
-  assert.equal(peerDomains(cwd).conflicts([target]).length, 1, "他 cwd 登记照常命中（端 cwd 无关形态）")
 })
 
 test("T-L3v3 聚合缓存（N-MI7）：目录 mtime+size 未变 ⇒ 零重扫；单次查询目录 stat ≤ 1", async () => {

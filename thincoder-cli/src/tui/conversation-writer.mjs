@@ -11,7 +11,7 @@ import { shiftFreezeAnchors } from "./subagent-blocks.mjs"
  *              assistantLabeled: boolean }} */
 export function createConversationWriter({ state, render }) {
   const pushLine = (text, color, kind) => {
-    // TUI-OOM-ROOTCAUSE（TUI.md §15.3.1/§15.3.3）：行额度单点——行文本过 capLine
+    // TUI-OOM-ROOTCAUSE（TUI-SESSION-VIEW.md §5.1/§5.3）：行额度单点——行文本过 capLine
     // （LINE_MAX_CHARS——单行巨内容/无换行巨 chunk 的堵口）+ 总量账 + 预算对账。
     const line = { text: capLine(text), color, _kind: kind }
     state.lines.push(line)
@@ -31,7 +31,7 @@ export function createConversationWriter({ state, render }) {
 
   /** Message block label: blank line + label line. Breathing space between user/assistant messages */
   const pushLabel = (text, color) => {
-    // 行额度同 pushLine（§15.3.1——恢复行/标签行同口径）
+    // 行额度同 pushLine（§5.1——恢复行/标签行同口径）
     if (state.lines.length > 0) {
       const blank = { text: "", color: C.dim }
       state.lines.push(blank)

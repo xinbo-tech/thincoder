@@ -182,7 +182,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 
 - **族键 = `promptId`**：逐项卡（`permissionRequest`）与合并卡（`batchPermissionRequest`）**共用同一单调计数器**（`permission-gate.mjs` 的 `panel._permissionSeq`）——id 跨族唯一（同一移除选择器不误删）。
 - **单一释放通道 = `releasePermission(panel, entry, verdict, queue)`**：出队 + resolve + `permissionWithdrawn` 三步同点；合并卡走 `_batchPermissionQueue`（**队列分立**——判定值域不同：逐项 boolean / 合并字符串；否决并队——`panel-messages.mjs` 的 approve-all 连带循环会以 boolean 释放合并条目）。
-- **三路释放对合并卡同源**：轮级 Stop / Ctrl+I（`panel._abortController` abort）⇒ deny 释放 + 卡移除（一次机制覆盖两入口）；child 定向取消 / approve-all 连带两路仅及逐项族（合并卡恒 depth-0——§18 C-1/Q1）。
+- **三路释放对合并卡同源**：轮级 Stop / Ctrl+I（`panel._abortController` abort）⇒ deny 释放 + 卡移除（一次机制覆盖两入口）；child 定向取消 / approve-all 连带两路仅及逐项族（合并卡恒 depth-0——`AGENT-LOOP-SUBAGENT.md` §6.7.6 C-1/Q1）。
 - **响应 = id 精确匹配（非 `shift`）**：`batchPermissionResponse { choice, promptId }` 按 id 查 `_batchPermissionQueue`；无 `promptId`（旧 webview）→ 回退队头（向后兼容）；未知 id ⇒ 零命中（不误 resolve 队头）。
 - **孤儿响应零静默无效**：队列无命中条目 ⇒ host 回 `permissionWithdrawn { promptId }`（可见处置——卡由既有消费者移除）；不 resolve 任何条目、不新造条目（幂等）。
 - **释放即刷新（状态栏）**：`releasePermission` 三步（出队 + resolve + `permissionWithdrawn`）之后**同点**调 `panel._refreshStatus?.()`——轮级 Stop / Ctrl+I 释放合并卡、approve-all 连带、孤儿处置同源同刷（零散点；判据 = §4.4）；no-op 释放（重复释放 / 条目不在队）不改队列 ⇒ 零刷新（幂等）。
@@ -209,6 +209,10 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 
 ### 6.1 状态行段位（本端 × CLI）
 
+> **显示形态类判据（2026-09-25 · 端差二态化 · 台账 #337）**：本节 / §6.2 各显示形态行 = **显示形态差**（渲染宿主不同）——按 A9 三件**保留**：
+> ① 结构性不对称 = 宿主单侧存在（本端 webview DOM + 宿主↔面板消息协议 ∥ CLI 裸 ANSI 终端行内渲染——消息协议仅单侧存在）；② 证据 = 两实现树（`thincoder-vscode/webview/**` + 本档 §3.2 协议登记）∥ `thincoder-cli/src/tui/**`；③ 显式裁定 = 2026-09-14「逻辑 / 渲染分家」（单源 = `docs/cli/design/TUI.md` §8.2〔A9 回填面〕——本类判据不复述）。
+> **边界**：本类判据只辖显示形态；判据 / 行为面差异不适用（本表零此类——若有 ⇒ 按「端差默认 = 消」对齐）。
+
 | 字段 | CLI 形态 | 本端现状（`webview/status-bar.js`） | 结论 |
 |---|---|---|---|
 | 状态文本段 | `state.status`（Processing / Indexing… / Running: cmd / TPM throttle wait / overloaded / Rate-limited / Waiting: X） | 新增 `statusText` 段（`:27-30`）；活动恢复即清（`chat.js:339-348`） | 采用（C-12#1） |
@@ -217,21 +221,21 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | 任务 | `✓N/M` | task 徽标 `✓d/total`（`:48`） | 等价 |
 | 轮次 | `turn N/M` | `turn N/M`（`:46`）——旧 `轮次 N` 段退役 | 采用（C-12#2） |
 | token | `↑X ↓Y ✦R hitN%` | `↑X ↓Y hitN%`（`:31-33`）——✦ 仅 `reasoning_tokens > 0` | 采用（C-12#6） |
-| context | `context X% Yk` | `context X%`（`status-bar.js:34-40`；≥80% 警告色） | 端差登记（绝对数不做——本端 pct 源 = 核 `estimateTokens(history)` 分子 ÷ `providerSpec(provider).context`，**与 CLI 状态行同源同式**；派生单点 = `thincoder-vscode/src/specs.mjs` `ctxPercentForHistory`——详 `WEBVIEW.md` §4.6） |
-| 滚动 | `scrolled N` | 悬浮回底钮（`thincoder-vscode/webview/scroll.js:29-34`） | 端差登记（钮为可点击超集；N 需新造单位） |
-| 输入提示 / 键位串 | enterHint + 键位串 | 无（按钮 / 占位符承载） | 端差登记 |
-| 横幅 | PLAN / AUTO / ADVISOR / ENG + attention chip | 工具条按钮 active + plan 徽标（`:23`） | 端差登记（attention chip 不做——权限 / 提问卡流内可见） |
+| context | `context X% Yk` | `context X%`（`status-bar.js:34-40`；≥80% 警告色） | 保留（类判据见 §6.1 首；绝对数不做——本端 pct 源 = 核 `estimateTokens(history)` 分子 ÷ `providerSpec(provider).context`，**与 CLI 状态行同源同式**；派生单点 = `thincoder-vscode/src/specs.mjs` `ctxPercentForHistory`——详 `WEBVIEW.md` §4.6） |
+| 滚动 | `scrolled N` | 悬浮回底钮（`thincoder-vscode/webview/scroll.js:29-34`） | 保留（类判据见 §6.1 首；钮为可点击超集；N 需新造单位） |
+| 输入提示 / 键位串 | enterHint + 键位串 | 无（按钮 / 占位符承载） | 保留（类判据见 §6.1 首） |
+| 横幅 | PLAN / AUTO / ADVISOR / ENG + attention chip | 工具条按钮 active + plan 徽标（`:23`） | 保留（类判据见 §6.1 首）+ 不做项在册（U-P5；attention chip——权限 / 提问卡流内可见） |
 | 后台段 | `后台 N 子代理运行中 · M 完成待消化` | `⏳ …`（`:51-60`——running+queued / pending+done 两段） | 等价 |
 
 ### 6.2 块头字段对位（本端 × CLI）
 
 | 字段 | CLI 形态 | 本端现状 | 结论 |
 |---|---|---|---|
-| icon | `⏸ / ⏹ / ✓ / ▶`（审批 / 停 / 完成 / 运行——冻结头三态互斥见 `TUI.md` §6.8 / M5） | `⏳ / ▶ / ✓ / ⏹ / ⏸`（排队 / 运行 / 完成 / 停 / 审批） | 端差登记（语义对位——本端 ⏳ 排队图标为 CLI 所无） |
+| icon | `⏸ / ⏹ / ✓ / ▶`（审批 / 停 / 完成 / 运行——冻结头三态互斥见 `TUI.md` §6.8 / M5） | `⏳ / ▶ / ✓ / ⏹ / ⏸`（排队 / 运行 / 完成 / 停 / 审批） | 保留（类判据见 §6.1 首；语义对位——本端 ⏳ 排队图标为 CLI 所无） |
 | 键 | `role#N` | 同（label） | 等价 |
 | 模式词 | ` · sync/async` | ` · 同步/异步`（family 角色；queued 不携） | 等价（queued 信息走状态区） |
 | 状态词·queued | ` · queued` / ` · waiting`（`thincoder-cli/src/tui/subagent-panel.mjs:73` 判定 · `:75` 落地） | ` · ${t("sub.queued")}` / ` · ${t("sub.waiting")}`（en = `queued` / `waiting` 逐字；zh = `排队中` / `等待中`）——选用判据 = 载荷 `kind`：`slot` ⇒ queued、其余（含缺省）⇒ waiting（`WEBVIEW.md` §5.2） | 对齐（C-11② · #118 落） |
-| 模型 | ` · model`（宽截断） | ` · model`（**来源 = 事件载荷字段** `model`；键形 `sub:<role>#<id>` **不含模型段**——`WEBVIEW.md` §5.3 键形收正；consult / escalate 头词现状不携该段——`activity-view.js:69`） | 端差登记（consult / escalate 模型段） |
+| 模型 | ` · model`（宽截断） | ` · model`（**来源 = 事件载荷字段** `model`；键形 `sub:<role>#<id>` **不含模型段**——`WEBVIEW.md` §5.3 键形收正；consult / escalate 头词现状不携该段——`activity-view.js:69`） | 保留（类判据见 §6.1 首；consult / escalate 模型段） |
 | 计时 | ` · Ns`（done 定格） | ` · Ns`（事件驱动 + 2 s 同点刷——`panels.js:69-72` → `activity.js:403` `refreshLiveHeaders`） | 语义不变 |
 | turn | ` · turn N/M` | ` · turn N/M`（`maxTurns > 0` 且 `turn > 0`；快照 + `status:"turn"` 实时） | 对齐 |
 | 状态区·running | `currentTool` + `command≤60`（`thincoder-cli/src/tui/subagent-panel.mjs:105-110`） | `${tool} — ${cmd ≤60}`（嵌套 = `label/tool`——`thincoder-cli/src/tui/subagent-blocks.mjs:337` 同构）/ `思考中…` | 对齐（C-11①；**输出面零写入**——判据单源 = `WEBVIEW.md` §5.2） |
@@ -242,8 +246,8 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 
 ### 6.3 i18n 键表（21 键 · zh/en 逐字）
 
-> 键面 = **webview 可渲染键**（消费位见各注）；文案实体 = **核容器** `thincoder-core/i18n.mjs`（投影面）+ **本地档** `thincoder-vscode/locales/{zh,en}.json`（端特有键）——本地档同值副本的冻结面见 `thincoder-vscode/src/i18n.mjs:18-20`（本表只作对照，不复制为第二单源）。
-> **收录口径（2026-09-20 补 · 库存清账批）**：本表 = **对位冻结面**（收录与 CLI 逐字对位 / 端差登记所需的键）——**非 locales 全量**；全量实体 = `thincoder-vscode/locales/{en,zh}.json` + 核容器 `thincoder-core/i18n.mjs`；**新增对位键须同轮登记本表**（登记义务 = 承 **D3** 计数·枚举纪律，本表为其落点——非本表新立；防「新键落表滞后」型缺口）。
+> 键面 = **webview 可渲染键**（消费位见各注）；文案实体 = **核容器** `thincoder-core/i18n.mjs`（投影面）+ **本地档** `thincoder-vscode/locales/{zh,en}.json`（端特有键）——本地档核域键同值副本的处置（摘除消解路径在册）见设计档 `I18N.md` §3.1 D1（本表只作对照，不复制为第二单源）。
+> **端特有键类判据（2026-09-25 · 端差二态化）**：端特有键 = **显示宿主单侧存在的消费面**（webview 面元素——CLI 无对位）⇒ 按 A9 **保留**：① 消费面仅端侧存在；② 证据 = 各键注内消费点坐标；③ 裁定 = W15 D1「容器归一、投影端差」（2026-09-13 已裁）+ 本表收录口径（D3）。核容器键 = 投影单源（本地零重复定义）。
 
 | 键 | zh | en |
 |---|---|---|
@@ -298,7 +302,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | D-P7 | digest 轮 = 标签行 + **每轮独立**状态元素 | 否决单元素跨轮复用 + 搬运（跨轮漂移 + 一位移逻辑）· 否决新增 `turnStart` 消息族（比复用 `digest start` 重） |
 | D-P8 | 状态文本载体 = **结构化 `statusText` 消息**（kind 判别 → webview 按 locale 渲染） | 否决 host 直发成品文本（host 不知 locale——复制 i18n = 双源）· 否决不做（判定句要求用例锁新增状态文本） |
 | D-P9 | Send 可见性 = running 期**隐藏** | 否决禁用态（双范式 + 仍占位） |
-| D-P10 | `scrolled N` = 端差保持（悬浮回底钮替代） | 否决补文本段（N 需新造单位 + 与钮重复） |
+| D-P10 | `scrolled N` = **保留**（类判据 §6.1 首——悬浮回底钮替代） | 否决补文本段（N 需新造单位 + 与钮重复） |
 | D-P11 | 协议增量 = **只增不改**、**十七项**登记（§3.2） | 否决 host 直发成品文本 · 否决新增 `turnStart` 族 |
 | D-P12 | 合并权限卡**并入 `promptId` 族**（单一释放通道 `releasePermission` + id 精确匹配 + 孤儿回写） | 否决单开释放语义（同语义两通道 · 消费者按类分支）；`shift()` 队列头匹配已驳（D-P4 同据——陈旧卡不误 resolve） |
 | D-P13 | `waiting` 判据含**批权限队列** + **释放即刷**（刷新点 = 释放通道单点 `releasePermission`） | 否决逐路径各补 `_refreshStatus()`（散点——漏一处即残留）· 否决判据只列权限 / question（批卡停驻期读作 idle——状态栏失去「需你输入」语义） |
@@ -334,7 +338,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | U-P2 | 状态文本段 = 单段（活动恢复即清——无 TTL） | 已定（§6.1 · D-P8） |
 | U-P3 | `turn N/M` 段替旧「轮次 N」段；✦ 段条件显（> 0） | 已定（§6.1） |
 | U-P4 | Send 隐藏 / Stop 显 = running 派生 | 已定（§4.4 · D-P9） |
-| U-P5 | 端差不做项：`scrolled N` · ctx 绝对数 · attention chip · 键位提示段 | 已定（§6.1——逐条登记，不静默） |
+| U-P5 | **端差保留**（类判据单源 = §6.1 首）：`scrolled N` · ctx 段 · 键位提示段；**不做项**（非端差留存）：attention chip · ctx 绝对数 | 已定（§6.1——逐条登记，不静默） |
 | U-P6 | 可调常量（批准环节可翻转）：elapsed 刷新节拍（复用 2s）；状态文本保留时长（无 TTL） | 已定（open 面 = 数值，非语义） |
 | U-P7 | 合并卡释放形态 = **卡消失**（同移除选择器；不做「已拒绝态」变体） | 已定（§4.6 · `WEBVIEW.md` §4.1） |
 | U-P8 | VS Code 状态栏 `waiting` 覆盖**批权限卡**：停驻必读 waiting · 释放即刷（不残留） | 已定（§4.4 · §4.6 · D-P13） |
@@ -489,6 +493,11 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 
 ## 变更记录
 
+- 2026-09-25（**end-diff-registry 批 · 设计评审修正轮 1（发现 #2 / #7）· eng-designer**——承 `docs/batches/2026-09-25-end-diff-registry.md` §3 轮次 1 · 父侧裁定接受）：§6.1 首类判据块「（原「端差登记」格）」修订式括注删除（历史归变更记录——本批设计轮二态化行已载）；U-P5 行两类分列——**端差保留**（类判据单源 = §6.1 首）∥ **不做项**（非端差留存）。**零新语义**。
+
+- 2026-09-25（**end-diff-registry 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-end-diff-registry.md` §1 · 台账 #337）：端差登记行**逐行二态化**——§6.1 / §6.2 六行 + §6.3 端特有键族 = **保留**（类判据单源 = §6.1 首：显示宿主不同 + A9 回填面 = `docs/cli/design/TUI.md` §8.2）；D-P10 / U-P5 状态词同轮收正；
+  §6.3 收录口径行补端特有键类判据；本地核域键副本指针对齐消解路径（`I18N.md` §3.1 D1）。**零新语义**。
+
 - 2026-09-25（**hygiene-items 批 · 坐标 sweep 轮 · eng-designer**——承 `docs/batches/2026-09-25-hygiene-items.md` §2 · 台账 #284）：§12 / §13 两表 ② ③ 列逐行按 `--emit` 现跑读数重出（as-of = 2026-09-25——提取器为唯一权威；**两表行数不变** = 53 / 51）；
   ③ 列 webview 消费位累积位移（+2 为主）+ ② 列 host 发射点位移全量收正；两条 as-of 头注刷新；`ledgerNotice` / `providerStatus` 两行 ② 列**保留** `thincoder-vscode/` 前缀形（锚可解析性——doc-check 闸态；行值与提取器读数同值），`digest` / `suspension` 两行同文件重复路径折 `:N/:M` 形（同上原则）。
   **协议语义 / 消息名 / 载荷字段 / 首列判别式集 / ④ 处置列零变**。
@@ -615,3 +624,4 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
   §3 / §3.2 行 15 去「（拟新增 / 实现轮到位）」标记，换实测落点。**消息名 / 载荷字段 / 首列判别式集零变**（新增一行 = 实现落地登记，非协议面新语义——§3.2 行 15 早已登记）。
 - 2026-09-21（**无工作区守卫批 · 评审轮 1 修正轮 · eng-designer**——承批次档 §3 轮次 1 发现 4 / 5）：§6.3 键表 **17 → 19 键**（增 `workspace.required` / `workspace.requiredPlaceholder`——端特有键；D3：计数与列表同改）+ 两键登记注；§7 D-P11 计数 **十四项 → 十五项**（与 §3.2 标题 `:78` 同轮对齐）。**消息名 / 载荷字段 / 首列判别式集零变**（§12 / §13 表体零改）。
 - 2026-09-21（**无工作区守卫批 · eng-designer**）：§3 增 `workspaceGuard` 行（新消息——无工作区守卫态）；§3.2 **十四项 → 十五项**（增行 15 = `workspaceGuard` 新消息，拟新增标记；D3：计数与列表同改）。§12 / §13 表体零改（两表只收实测在位行——新消息未实现；实现轮落位后补 §12 行）。
+- 2026-09-25（**文档面收尾批 · 设计档收正轮 · eng-designer**——承 `docs/batches/2026-09-25-doc-face-closeout.md` §2 收正轮修正块）：§4.6 死引收正——「§18 C-1/Q1」改指 `AGENT-LOOP-SUBAGENT.md` §6.7.6 C-1/Q1（child permission gate 归核后现行家；靶节存在性先核 ✓）。**消息名 / 载荷字段 / 首列判别式集零变**（判据句面收正，机制零改）。

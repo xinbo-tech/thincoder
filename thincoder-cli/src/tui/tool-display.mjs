@@ -7,7 +7,7 @@
  * 不禁内容变更（.set/.delete/.push），调用方行为与同模块时代一致。
  */
 
-// TUI-OOM-ROOTCAUSE（TUI.md §15.3.1）：显示层额度常量/工具行定位（display-budget 叶子）。
+// TUI-OOM-ROOTCAUSE（TUI-SESSION-VIEW.md §5.1）：显示层额度常量/工具行定位（display-budget 叶子）。
 import { capLines, TOOL_RESULT_MAX_CHARS } from "./display-budget.mjs"
 
 // Tool execution start timestamps (performance.now ms). Keyed by tool_call id
@@ -77,7 +77,7 @@ export function sweepToolBlocks(state) {
  *     the human needs only the text part (model gets images via the multimodal
  *     channel); 2) results beyond maxRows are truncated in the block (full
  *     text always lives in history for the model). Returns row array.
- *  TUI-OOM-ROOTCAUSE（§15.3.1 TOOL_RESULT_MAX_CHARS）：总量额度与 400 行双维
+ *  TUI-OOM-ROOTCAUSE（§5.1 TOOL_RESULT_MAX_CHARS）：总量额度与 400 行双维
  *  （单行任意大——无 `\n` 巨 chunk/JSON 尾行），尾截断 + 标记。 */
 export function slimToolResultForDisplay(result, maxRows = 400) {
   let displayResult = result
@@ -112,10 +112,10 @@ export function settleToolBlock(state, name, toolId, summary) {
   }
 }
 
-/** Async spawn detection (§15 D-A1): the subagent tool's async:true result is a
+/** Async spawn detection (AGENT-LOOP-SUBAGENT.md §6.7.3 D-A1): the subagent tool's async:true result is a
  *  status JSON ({id, role, status: running|queued}), NOT a report — the child
  *  keeps running, so its activity block must not be frozen at spawn time (it
- *  freezes via the ⟦ev⟧done event at settle — §15 D-A3). */
+ *  freezes via the ⟦ev⟧done event at settle — §6.7.3 D-A3). */
 export function isAsyncSpawnResult(result) {
   try {
     const o = JSON.parse(result)
@@ -125,7 +125,7 @@ export function isAsyncSpawnResult(result) {
   }
 }
 
-/** §7.2.3 spawn 门拒错误探测（T-F5）：subagent spawn 的机械拒绝以 {status:"error"}
+/** docs/cli/design/TUI.md §6.8 spawn 门拒错误探测（T-F5）：subagent spawn 的机械拒绝以 {status:"error"}
  *  JSON 返回（例：manual auto-turn digest spawn 门——digest 语义 organize-only）——
  *  错误路径不得触发完成冻结（round1 #1——错误路径不冻结任何 running 块）。该形态只
  *  出现在无 subKey 的拒绝路径（成功路径恒带 dispatch 传的 ctx._subagentKey）。 */

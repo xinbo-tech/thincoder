@@ -3,7 +3,7 @@
  * 2026-09-12 散文锚退役批后仅余结构面）。
  *
  * 2026-09-12 散文锚退役批（PROSE-ANCHOR-RETIRE）：原「提示词句子驻留」断言族（MAIN-DESIGN-ENHANCE
- * A1-A4 / §2.9 锚#1-#7 / 开关段 C1-C4 / ASYNC-RESIDUE / advisor VERDICT 面 / §7.5-§7.7.1 工具描述
+ * A1-A4 / §2.9 锚#1-#7 / 开关段 C1-C4 / ASYNC-RESIDUE / advisor VERDICT 面 / 工具描述
  * / 搜索条款宿主 / 特殊模块降级面 / §2.7 前 20% 巡检词）与旧件不存在检查的镜像面整删——判据见
  * `docs/design/TESTING.md` §11.1（读非测试档断言句子在场/缺席 = 散文锚）。退役旧件不存在检查
  * 已收归接收档 test/doc-consistency.test.mjs T75（扫① 2026-09-11）。

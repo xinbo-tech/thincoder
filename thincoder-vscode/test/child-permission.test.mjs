@@ -4,7 +4,7 @@
  * 需求：VSC 子代理审批面对齐（F-CP1/F-CP2）；批次档
  * `2026-09-12-VSC-CHILD-PERMISSION.md` §2（任务书）。
  *
- * 手法（§18.7）：host 直驱（permission-gate / panel-messages + panel 假体——`test/chat-panel-messages.test.mjs`
+ * 手法（AGENT-LOOP-SUBAGENT.md §6.7.6）：host 直驱（permission-gate / panel-messages + panel 假体——`test/chat-panel-messages.test.mjs`
  * 模式）+ webview 面（installChatFixture + 真 activity/activity-view/permission——
  * activity-closure 模式）+ fs 直读（i18n）。
  * 引擎接线组（T-CP6/T-CP7/T-CP19/T-CP10/T-CP11/T-CP15）迁 `test/child-permission-wiring.test.mjs`
@@ -270,7 +270,7 @@ test("T-CP12 depth-0 零回归（AC-CP3）：既有 3 参调用 → owner null �
   await handlePanelMessage(panel, { type: "permissionResponse", approved: true, promptId: req.promptId })
   assert.equal(await ask, true)
 
-  // 批合并（§16 D-B1）零回归：depth 0 两写 → 一次聚合（approveAll → 零逐项卡）
+  // 批合并（D-B1）零回归：depth 0 两写 → 一次聚合（approveAll → 零逐项卡）
   const bpanel = stubPanel()
   const batches = []
   const executed = []

@@ -40,7 +40,7 @@ export const liveTransport = {
       ...(tools?.length ? { tools } : {}),
       onToken: () => { if (firstDeltaAt == null) firstDeltaAt = Date.now() },
       onReasoning: () => { if (firstDeltaAt == null) firstDeltaAt = Date.now() },
-      onWait: (w) => { if (w?.phase && w.phase !== "warn") throttled = true }, // 实际暂停（gate/retry/overloaded）才记；“warn” 相位不等待 ⇒ 不记（§2.9-4）
+      onWait: (w) => { if (w?.phase && w.phase !== "warn") throttled = true }, // 记 = 非 “warn” 相位（gate / quota / retry / overloaded）——谓词口径；“warn” 相位不等待 ⇒ 不记（§2.9-4）
       signal,
       ...(parallelToolCalls ? { parallelToolCalls: true } : {}),
     }

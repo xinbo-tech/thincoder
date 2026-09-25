@@ -1,9 +1,9 @@
 /**
- * relay-prefix.mjs — relay 前缀（`role#id/`）文法**单一权威**（第 27 批 §12.3①——R-A2.3）。
+ * relay-prefix.mjs — relay 前缀（`role#id/`）文法**单一权威**（第 27 批——R-A2.3）。
  *
  * 零依赖（不 import 任何模块）——TUI（`src/tui/`）与 ACP（`src/acp/`）双向可导入，无环；
  * 生成侧 `src/agent/spawn-child.mjs` 再导出（枢纽）。文法 = 自
- * `src/tui/subagent-blocks.mjs` 逐字迁入（第 27 批 §12.3②——零语义改动）。
+ * `src/tui/subagent-blocks.mjs` 逐字迁入（第 27 批——零语义改动）。
  */
 
 /** `role#id/` prefix router — hyphen included since the eng-coder fix (2026-08-21). */

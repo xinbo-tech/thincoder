@@ -6,11 +6,11 @@
  *
  * 内容 = 迁入（逐字搬移含注释）+ 本批两处接线：
  *  - `settleAdvisorRun` —— 记账本体零改（轮次 / 陈旧 / token D1 落盘 / prior）；A 族
- *    未完成判定改用单谓词 `advisorIncompleteMarker`（§14.3 消费点 1/2）：design 结算经
+ *    未完成判定改用单谓词 `advisorIncompleteMarker`（ADVISOR-GUARDS.md §1 消费点 1/2）：design 结算经
  *    `settleDesignReview(…, { incomplete })` 未完成即不签发；code 完成守卫同谓词
  *    （旧 `^` 锚首行失败正则退役——六形态语义零丢，含 review_failed 字符串
  *    resolve 形态）；
- *  - `inflightDesignReviewConflict` —— E 族（F17/§14.14）D5 冻结窗口冲突检测：与
+ *  - `inflightDesignReviewConflict` —— E 族（F17/ADVISOR-GUARDS.md §5）D5 冻结窗口冲突检测：与
  *    `reviewIsStale` 同族（同 docAbs / 同 normAbs）、仅扫 running 且未取消的设计条目
  *    （dispatch Phase-1 预闸消费）。
  *
@@ -40,7 +40,7 @@ export function mutationSeqOf(agent) {
 }
 
 /** Record a file-mutation commit — bounded ring feeding the stale scan. paths = ABSOLUTE.
- *  唯一记账点（§29 fix A）：dispatch runOne 写执行成功即刻调用（取代批后段 + 中断分支——
+ *  唯一记账点（fix A）：dispatch runOne 写执行成功即刻调用（取代批后段 + 中断分支——
  *  不双计）；mergeChildMutations（子代理合入）是独立事件面。 */
 export function noteMutations(agent, paths) {
   const list = (paths ?? []).filter((p) => typeof p === "string" && p.length > 0)
@@ -75,7 +75,7 @@ export function reviewIsStale(agent, entry) {
 }
 
 /**
- * E 族（F17/§14.14 E-3d）——D5 冻结窗口写前拦截的冲突检测：设计评审**在途**（点火 → 结算）
+ * E 族（F17/ADVISOR-GUARDS.md §5 E-3d）——D5 冻结窗口写前拦截的冲突检测：设计评审**在途**（点火 → 结算）
  * 期间，父侧对被审文件集（`docAbs` = 声明文档集，含批次档）的写入会被 dispatch 预闸拒绝。
  * 判据与 `reviewIsStale` **同源**（同一 docAbs / 同一 normAbs）；仅扫 **running 且未取消**
  * 的设计条目（已结算 / 已取消条目不拦——结算后写不再致 stale、取消的结算早退不判）。
@@ -112,7 +112,7 @@ export function inflightDesignReviewConflict(agent, absPaths) {
  *     mirror retired per DESIGN-TOKEN-SETTLEMENT D3) + D1 settle-time slot persist
  *     (persistEngTokens — write failure = settle failure: no registration, no
  *     Approved echo, re-review — 评审 #1);
- *  4. §29 fix B — branch-shaped report output (the caller writes it back to
+ *  4. fix B — branch-shaped report output (the caller writes it back to
  *     entry.report; digest injects the CLEANED form): pass → stripped +
  *     Approved/designId suffix (sync 参照形态); persist-failed → stripped +
  *     "D1: …token could NOT be durably written…" re-review notice (no Approved
@@ -140,7 +140,7 @@ export function settleAdvisorRun(agent, entry) {
   let report = result
   let passed = false
   let persistFailed = false
-  // 宿主尾族判定（单谓词——design 结算与 code 守卫共用；§14.3 消费点 1/2）。
+  // 宿主尾族判定（单谓词——design 结算与 code 守卫共用；ADVISOR-GUARDS.md §1 消费点 1/2）。
   const incomplete = result != null ? advisorIncompleteMarker(String(result)) : null
   // 启动拒绝报告（未发起请求——无评审产出）：第 33 批上移为本结算段**单点**——消费 = ① design
   // 失败分类（neutral——无尝试发生；`ADVISOR-GUARDS.md` §7 失败结算表行 1）② code 守卫 failureVerdict（既有语义零变）。
@@ -199,7 +199,7 @@ export function settleAdvisorRun(agent, entry) {
     // 第 11 批（F16/A3）：失败判定 = 单谓词六 kind（含 review_failed 字符串 resolve 形态）
     // ——旧 `^` 锚正则只认首行形态，漏「时间线 + 尾」；语义零丢（六形态全覆盖）。
     // 另：设计评审的**启动拒绝报告**（未发起请求——无评审产出）同样不得计为评审覆盖
-    // （§14.4 异步结算面判据；与同步工具面 _advisorRefusals 同源前缀；正常链不可达＝防御纵深）
+    // （异步结算面判据；与同步工具面 _advisorRefusals 同源前缀；正常链不可达＝防御纵深）
     // ——判定已上移为本结算段单点（launchRefused，上方）。
     const failureVerdict = (run.reviewType !== "design" && (
       incomplete !== null ||
@@ -209,7 +209,7 @@ export function settleAdvisorRun(agent, entry) {
       agent._calledAdvisorThisRun = true
     }
   } else if (run.reviewType === "design" && entry.designToken && result != null) {
-    // §29 fix B（stale 分支）：陈旧评审不签发——digest 不得展示未注册 token——先剥
+    // fix B（stale 分支）：陈旧评审不签发——digest 不得展示未注册 token——先剥
     // 方括号回显 + 前置 "评审目标已变更——token 未签发"（不变式——两分支都清洗）。
     const stripped = String(result)
       .replace(makeDesignTokenRegex(entry.designToken, "g"), "")
@@ -217,7 +217,7 @@ export function settleAdvisorRun(agent, entry) {
     report = `评审目标已变更——token 未签发 (review target changed after launch — this review judged a stale state; no design token was issued — re-run the review on the current state)\n\n${stripped}`.trim()
   }
   // Prior of round 2+ = the last REVIEW-LOOKING output (mirror of run.mjs's guard).
-  // F2e (§29.1): strip the engine-approved suffix FIRST — the prior must never
+  // F2e: strip the engine-approved suffix FIRST — the prior must never
   // carry the raw token / designId (exact truncation — zero collateral).
   // 结论块（下方）刻意晚于 prior 归一：prior 只承载评审正文，不携带机制文案。
   if (report && looksLikeReviewOutput(report)) {

@@ -9,14 +9,14 @@ export async function handleClearCommand(ctx) {
     ], { defaultIndex: 1 })
     if (e?.action === "yes") {
       state.lines = []
-      state._linesChars = 0 // TUI-OOM-ROOTCAUSE（§15.3.2）：行集清空 → 字符账同步归零
+      state._linesChars = 0 // TUI-OOM-ROOTCAUSE（TUI-SESSION-VIEW.md §5.3）：行集清空 → 字符账同步归零
       state.streaming = ""
       render()
     }
     return
   }
   state.lines = []
-  state._linesChars = 0 // TUI-OOM-ROOTCAUSE（§15.3.2）：行集清空 → 字符账同步归零
+  state._linesChars = 0 // TUI-OOM-ROOTCAUSE（TUI-SESSION-VIEW.md §5.3）：行集清空 → 字符账同步归零
   state.streaming = ""
   render()
 }

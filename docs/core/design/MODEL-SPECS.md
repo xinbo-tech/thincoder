@@ -419,7 +419,7 @@
 |---|---|
 | CLI `/think` 面板（四新档） | effort 列表从硬回退 `["high","max"]` 变真实 6/7 档；`/think on` 取首个非 `"none"` 档（四新档 ⇒ `"minimal"`，§2.8-1 · A-16）；`/think effort none` = 关思考（§2.8-2 · A-18）；Thinking 开关行仍隐藏（`thinkApi:"effort"` 既有语义，`thincoder-cli/src/tui/cmd-think.mjs:55`） |
 | VSC 思考下拉（两 flash 档） | 6 / 7 档逐档列出（读 `reasoningEffortEnum`），**无** `"enabled"` 项；默认标签 = `high`（`EFFORT_DEFAULT_PREFIXES` 逐档登记，`thincoder-vscode/src/specs.mjs:19-21`）；切/开模型归一 = §15.4 单源规则（注册默认优先 > 中性档「—」；`levels[0]` 回落退场）（`thincoder-vscode/webview/model-picker.js:85` · `:123`——§2.8-3 · A-17） |
-| VSC 下拉 off 项 | 沿用 `thincoder-vscode/webview/model-picker.js:61` 既有渲染：`"none"` 档按钮文案显 `"off"`（零改）；选中 `"none"` 的载荷 = **真 off**（`thincoder-vscode/src/extension/reasoning-mode.mjs:22-24`：`{thinking:null, reasoningEffort:null}`）——与 CLI 侧 §2.8-2 同语义 |
+| VSC 下拉 off 项 | 沿用 `thincoder-vscode/webview/model-picker.js:61` 既有渲染：`"none"` 档按钮文案显 `"off"`（零改）；选中 `"none"` 的载荷 = **真 off**（`thincoder-vscode/src/extension/reasoning-mode.mjs:22-24`——**载荷形随 §16.2 按族取形**）——与 CLI 侧 §2.8-2 同语义 |
 | 未知 qwen 名的可见性 | 走既有 `warnUnknownModel` 一次性 `console.warn`（`thincoder-core/model-specs.mjs:154-160`），**不进 TUI 对话流**、不入状态栏——启动诊断面，非交互内容 |
 | **两端默认强度分叉（已知后果 · 裁定注）** | 同一模型 CLI `/think on` ⇒ `"minimal"`、VSC 面板默认 ⇒ `"high"`——两端默认档**有意不同**，不是缺陷：CLI 侧取「首个非 `none`」是 `"off` 翻转」修复的产物（父侧裁定 · §2.8 / D-9），VSC 侧取服务端默认档（文档口径 · R-6）⇒ 本批**不并入统一**，后续批次若要统一须新裁定（评审发现 #10 · 防当缺陷返工）|
 
@@ -739,11 +739,11 @@ UI 显示 OFF、服务端照想 = 与 PROVIDER.md §6.12 初始缺陷同类。�
   之间。`SORTED_SPECS` 按名长降序预排（`thincoder-core/model-specs.mjs:153`——**as-of 读数**：
   同档 §2.1（`:57`）与变更记录「修复轮 #11」条均记 `:130`，坐标以实施轮实读复验为准；**收口核销值 = `:161`**（实施轮 #4 实读，父侧复验））⇒
   flashx(14) > flash(13) > 5.3(7) 自洽，长前缀优先天然成立（用例 F-1 钉住）。
-- **「始终思考」= 仅行注，不加机制位**（开放项 批档 §1.5-① 裁定）：枚举
-  `["low","high","max"]` 无 `none` ⇒「off 不可达」已由枚举本身表达
-  （`thincoder-core/provider/core.mjs:213-219` D-14 五 guard 第 4 面 `includes("none")`
-  = false ⇒ off 载荷惰性不发字段）；机制无此字段、无消费者 ⇒ 加字段 = 死字段（同 §2.7
-  D-10 判）。先例 = `glm-5.3` 行注（`thincoder-core/model-specs.mjs:50-51`）。
+- **「始终思考」= 行注 + 机制位 `thinkAlwaysOn`（单源 = `doc:MODEL-SPECS.md:§16.3`）**：枚举
+  `["low","high","max"]` 无 `none`（D-14 五 guard 第 4 面 `includes("none")` = false ⇒ off 载荷本就惰性不发字段）之外，
+  「`{type:"disabled"}` 被服务端拒」这一事实亦须机器可判 ⇒ 三行（`glm-5.3` / `glm-5.3-flash` / `glm-5.3-flashx`）落
+  `thinkAlwaysOn: true`，消费方 = `thinkOffPath` 回执判据（`thincoder-core/think-off.mjs`（拟新增））；行注照旧承载证据等级
+  （先例 = `thincoder-core/model-specs.mjs:63-64`）。
 - **零机制改动**：查表 / 排序 / off 路径机制全部不动（零改面 = §10.4）。
 
 ### 10.2 表变更清单（一行新增，零删除、零改既有行）
@@ -1491,7 +1491,7 @@ effort 同根三面（#15 VSC 未注册默认落 `levels[0]` = “none” = off�
 
 **表内现状（本设计轮实扫）**：带该标 = **14 行**——glm 族 7（`glm-5.3` / `glm-5.3-flash` / `glm-5.3-flashx` / `glm-5.2` / `glm-5` / `glm-4` / `glm-4.5-air`）·
 minimax 族 4（`MiniMax-M3` / `minimax-m3` / `minimax-m1` / `MiniMax-M2.7`）· gemini 族 3（`gemini-3-pro` / `gemini-2.5-pro` / `gemini-2.5-flash`）。
-台账 #241 记「glm 族 8 行」= 计数偏差 1（见 §15.6 上报面）。
+台账 #241 记「glm 族 8 行」= 计数偏差 1（上报 = `docs/batches/2026-09-25-spec-effort.md` §2.7 上抛 1；台账面收正 = 主 agent 笔）。
 
 **唯一消费点** = `thincoder-core/provider/core.mjs:183`（`if (!spec.noUsageStream) body.stream_options = { include_usage: true }`），位于 **OpenAI 兼容体组装段**：
 
@@ -1535,12 +1535,15 @@ minimax 族 4（`MiniMax-M3` / `minimax-m3` / `minimax-m1` / `MiniMax-M2.7`）·
 
 ```
 effortSelection(levels, current, registeredDefault) → value ∈ levels ∪ { null }
+  ⓪ current === "none" ∧ "none" ∉ levels → null   （off 哨兵避支：不经注册默认支——§16.5 · 2026-09-25 收尾批并入）
   ① current ∈ levels            → current          （已存值优先）
   ② registeredDefault ∈ levels   → registeredDefault（注册默认须在枚举内）
   ③ 否则                        → null             （中性档：不显式档）
 ```
 
 **「已存值 ∉ 枚举」定义（本批新登）**：**按枚举显式判成员**——不在枚举内即不成立（不得由浏览器「无匹配 option ⇒ value 落空」的代发行为承载结果）。中性档（`null`）语义 = **不写 effort 载荷**：服务端默认与渠道条目原值照旧生效。
+
+**off 哨兵避支（2026-09-25 收尾批并入——§16.5）**：`current === "none"`（读面 off 形字面）∧ 枚举不含 `"none"` ⇒ **中性档**（不经 ② 支）——两消费面同源：设置面板预选「—」、聊天面板 picker 落「—」（`""` ⇒ 回合侧零 patch）。
 
 **三面映射（同一 value，三种落法）**：
 
@@ -1555,18 +1558,20 @@ effortSelection(levels, current, registeredDefault) → value ∈ levels ∪ { n
 
 **#330 收口判据**：picker 两处取值式不再出现「无注册默认 ⇒ 落 `levels[0]`」——`levels[0] === "none"` 的族（hy3 / doubao 六名）在**换模型 / 首推**两径都不再被静默关思考；`model-picker-fallback.test.mjs` 的负控判据随之改判（原「无 `effortDefault` ⇒ 仍落 `levels[0]`」→「无 `effortDefault` ⇒ 中性档（不写载荷）」）。
 
-**§15.4-2 · off 形（按族统一 · 本档单源）**：「选 `none` = 关思考」的落盘形**按族取形**（三支，取首中者为是）——
+**§15.4-2 · off 形（按族统一 · 本档单源）**：「选 `none` = 关思考」的落盘形**按族取形**（逐族判据见下表——取首中者为是）——
 
 | 族判据 | off 形 | 依据 |
 |---|---|---|
 | `spec.thinkApi === "effort"`（hy3 / doubao / qwen / kimi-k3 形） | `thinking = null` **+ 删 `reasoningEffort` 键** | 载荷层 §6.12 谓词首款要求 `thinking === null`（`{type:"disabled"}` 不开门 ⇒ 载荷层不发 `reasoning_effort:"none"`）；先例 = `thincoder-cli/src/tui/cmd-think.mjs:124-134` isEffortOnly 支（`:127` 落 `null` + 删档） |
-| `spec.thinkEnabledValue ?? "enabled"` ≠ `"enabled"`（MiniMax 自定义开值族） | `thinking = null` | NF1 显式 off（CLI `applyThinkOff` 既有支） |
+| `spec.thinkEnabledValue ?? "enabled"` ≠ `"enabled"`（MiniMax 自定义开值族） | `thinking = { type: "disabled" }` | **实测**（off 路径 = `thinking:{type:"disabled"}` ✓ rc=0——`thincoder-core/model-specs.mjs:144-145` / `:169-171`；父侧 2026-09-25 裁决落位——§16.12 项 1） |
 | 其余（type 族默认，如 `deepseek-v4-flash` 形） | `thinking = { type: "disabled" }` | type 机制原生 off 形（MiniMax / mimo 实测路径） |
 
-**两生产者（本批同步落）**：① CLI `/advisor` 的 `applyThinkOff`（`thincoder-cli/src/tui/cmd-advisor.mjs:59-64`）——现行规则（自定义族 ⇒ `null`，其余 ⇒ `{type:"disabled"}`）
-对 effort 族落 `{type:"disabled"}` ⇒ 门不开（静默失效）；补 effort 族支 ⇒ `null`。
+**两生产者**：① CLI `/advisor` 的 `applyThinkOff`（`thincoder-cli/src/tui/cmd-advisor.mjs:59-64`）——取形 = §16.2 单源（effort 族 ⇒ `null`；其余 ⇒ `{type:"disabled"}`——自定义开值族随 §15.4-2 表改判同归此行）；
+补 effort 族支的原因 = 缺该支时对 effort 族落 `{type:"disabled"}` ⇒ 门不开（静默失效）。
 ② VSC 面板写面（`thincoder-vscode/src/extension/settings-panel-write.mjs`）同式取形（`specForModel(adv.model)`；`none` 档只在 select 已渲染时可达 ⇒ 模型名在 payload 内，spec 可解）。
 **选档 / 「—」两态**：写档位 = 要思考 ⇒ **写 `reasoningEffort`（字面档值）** + 清 `thinking === null` 标记（与 CLI `cmd-think.mjs:119-120` 同式：`:119` 清标记 · `:120` 置档；`{type:"disabled"}` 不动——CLI 同式）；「—」= 不设档 ⇒ **不触** `thinking`；**删键只适用 off（`none`）与「—」两态**（档位态 = 写键——V-1 / V-6）。
+
+**收尾批指针（2026-09-25 · 台账 #334 / #335 / #346）**：off 形的**生产者全表 / 单一实现源 / 「有效 off 路径」判据（回执条件化）/ 面板读面口径** = `doc:MODEL-SPECS.md:§16`——本节三支形、谓词本体（`doc:PROVIDER.md:§6.12`）与两菜单形态零改。
 
 **§15.4-3 · off 形须达载荷层（advisor 径 · #329 本体）**：载荷层 off 门（`thinking === null` ∧ `thinkApi === "effort"` ∧ 枚举含 `none` ∧ 无显式档 ∧ 非路由名）
 **单源 = `doc:PROVIDER.md:§6.12`**。本批补两层：**① 生产者面**（§15.4-2——effort 族须落 `thinking: null`，否则门不可达）；**② 解析链前置条件**——advisor 的 provider 解析不得把 off 形抹掉：
@@ -1574,8 +1579,9 @@ effortSelection(levels, current, registeredDefault) → value ∈ levels ∪ { n
 + 显式 off 时**清继承档**（渠道条目 / 主 provider 的 `reasoningEffort` 不得随行）。谓词本体**零改**。
 
 **§15.4-4 · 读面（面板预选取值）**：`advisorEffortCurrent(adv)`（新 helper，`settings-state.js`）——`thinking` 为 off 形（`null` / `{type:"disabled"}`）⇒ 字面 `"none"`（**优先于**档位键——与 CLI 状态行 `cmd-advisor.mjs:46-49` 同序）；
-否则 `advisor.reasoningEffort`；再缺席 ⇒ legacy `advisor.effort`（日值兜底）；三支结果均经 `effortSelection` 判成员（非成员 ⇒ 中性档「—」，不落列表外值）。
+否则 `advisor.reasoningEffort`；再缺席 ⇒ legacy `advisor.effort`（日值兜底）；三支结果均经 `effortSelection` 判成员（非成员 ⇒ ② 支注册默认 = E-7；**off 哨兵例外**——`"none"` 不经注册默认支、落中性档「—」（§16.5 ⓪ 支）；不落列表外值）。
 legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vscode/src/extension/settings.mjs:204`）为 spread 透传 ⇒ 新旧两键与 `thinking` 均随行，端侧零改。
+**收尾批指针（2026-09-25 · 台账 #346-②）**：off 哨兵避支（不经注册默认支、落中性档）= `doc:MODEL-SPECS.md:§16.5`（共享规则 ⓪ 支——§15.4-1）。
 
 **§15.4-5 · off 形跨保存存活**：写面种子循环（`settings-panel-write.mjs:121-125` 的 `if (v === null || Array.isArray(v)) continue`）丢 null 值键
 ⇒ `advisor.thinking = null` 在下一次任意面板保存即被静默删除（面板每次保存恒携 `advisor` 载荷——`settings-agent.js:118-127`；`payload.advisor !== undefined` 即入合并面 `:106`）。
@@ -1638,7 +1644,7 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 | AD-3 | 正常 | 载荷面：effort 族（`hy3` 形）+ off 形（`thinking:null` ∧ 无档） | 请求体携 `reasoning_effort:"none"`（D-14 门开） |
 | AD-4 | 错误 | off 形 + 枚举不含 `none`（`kimi-k3` 形） | 无该字段（guard ④ 零变）+ 不抛错 |
 | E-6 | 正常 | `effortSelection`：已存值 ∈ 枚举 | 取已存值 |
-| E-7 | 边界 | 已存值 ∉ 枚举 ∧ 注册默认 ∈ 枚举 | 取注册默认 |
+| E-7 | 边界 | 已存值 ∉ 枚举 ∧ 注册默认 ∈ 枚举（off 哨兵 `"none"` 除外——§16.5 ⓪ 支） | 取注册默认 |
 | E-8 | 边界 | 已存值 ∉ 枚举 ∧ 无注册默认（hy3 / doubao 六名形） | `null`（中性档）——**不得**落 `levels[0]`（`"none"`） |
 | E-9 | 回归 | picker 两径：`selectModel` / `handleModelsMessage` | 同判据（同源 helper）；中性档 ⇒ 按钮「—」+ 无 ✓ + 回合侧零 patch（两渲染点 `:86-88` / `:124-125` 同判据——§15.4 三面映射） |
 | E-10 | 正常 | 面板存值 ∉ 枚举 ⇒ 渲染与载荷 | selected = 「—」；保存后载荷 = 删键（不写字面） |
@@ -1659,7 +1665,7 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 - **不改 `resolveEnableThinking` 主机门控 / `tempRange` 裁剪 / 枚举越界抛错门**（§9.7 裁定沿用）。
 - **不给聊天面板 picker 中性档加列表项**（列表 = 模型能力档；中性档 = 兜底渲染，§15.4）。
 - **不改 CLI `/config` / `/think` / `/advisor` 菜单形态**（§14 已定面）。
-- 无 off 路径的族（effort 型枚举不含 `none` / 服务端强制思考族）**仍无 off 路径**——回执措辞面不动（越本批条目，见 §15.6 上报面）。
+- 无 off 路径的族（effort 型枚举不含 `none` / 服务端强制思考族）**仍无 off 路径**——回执条件化（不提供动作 / 不显示状态）判据与两菜单面落点 = `doc:MODEL-SPECS.md:§16.4`；本节面零改。
 
 ### 15.9 UI/交互决策（全落地，无 open）
 
@@ -1670,7 +1676,220 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 
 无 `open` 项。
 
+## 16. off 形族收尾（2026-09-25 批 · 台账 #334 / #335 / #346）
+
+> 前情 = §15 规格·effort 批（§15.4-2 立 off 形族规则 · §15.8 锁批内边界）。本节 = 该批的**补口 / 残余收口**：off 形族的**单一实现源**（§16.2）· **服务端强制族可判**（§16.3）· **「何时可宣称 OFF」判据 + 两菜单面落点**（§16.4）· **面板读面口径**（§16.5）· **三补口 + 冗余 import**（§16.6）。**§15 规则面不重开**（§16.10）。
+
+### 16.1 方案与理由
+
+**问题（台账三条 · 实读坐标）**：① **假断言**——无有效 off 路径的族（effort 型枚举不含 `none` 者，如 `kimi-k3`；服务端强制族，如 `glm-5.3-flashx`——
+`{type:"disabled"}` → 400）**仍回执「Thinking: OFF」**（`thincoder-cli/src/tui/cmd-think.mjs` 快速径 / 环内头与回执；`thincoder-cli/src/tui/cmd-advisor.mjs` 状态行）；
+② **形差**——VSC 主模型面 off **全族一形**（`thincoder-vscode/src/extension/reasoning-mode.mjs:22-24` 落 `thinking:null`）⇒ type 族 off 不发字段 = 未达载荷层；
+③ **残余**——选档不清 off 标记 / type 族 off 的读面落错值 / `reasoning:["enabled"]` 族无用例钉 / 冗余 import。
+
+**三条判定总纲**：
+
+1. **规则面零改、实现面收敛**——§15.4-2 的族别形**不动**（唯一例外 = 自定义开值族行的 off 形裁决——§16.12 项 1）；本批补其**单一实现源**（四处手写 → 一叶档）与**判据面**（「可宣称性」）。
+2. **不宣称做不到的事**——「Thinking: OFF」是对**服务端状态**的断言：只有当本端写入的 off 形**能到达载荷层且服务端受之**时该断言成立；否则 **不提供该动作、不显示该状态**——不得静默降级为「显示一个档位」或「写一个不生效的标记」。
+3. **副本 = 漂移源（实证）**——四处生产者中已有两处漂移（VSC 主模型面全族 `null` = #335 本体；CLI `/think` 自定义开值族支写 `undefined`——与该族 off 形不一致（§15.4-2 表））⇒ 单源化。
+
+### 16.2 单源实现（#335 手段裁定 · 端引核 · 零副本）
+
+**接线口径**：新建叶档 `thincoder-core/think-off.mjs`（拟新增——零 import 纯函数 · ~40 行；两端经 `@thincoder/core/think-off.mjs` 直引——`thincoder-core/package.json` 的 `exports: "./*"` 覆盖）。
+
+| 函数 | 签名 | 语义 |
+|---|---|---|
+| `thinkOffShape(spec)` | `spec → null \| { type:"disabled" }` | **写面取形**——§15.4-2 判据的单一实现：`thinkApi === "effort"` ⇒ `null`；其余（含自定义开值族——其 off 形随 §15.4-2 表改判同归）⇒ `{ type:"disabled" }` |
+| `thinkOffPath(spec)` | `spec → boolean` | **有效 off 路径**（判据本体 = §16.4）——**由 `thinkOffShape` 派生**：`null` 形只有 effort 族的载荷门据它补发 `reasoning_effort:"none"`（谓词单源 = `doc:PROVIDER.md:§6.12`）⇒ 仅 `thinkApi === "effort"` ∧ 枚举含 `none` ∧ `thinkAlwaysOn !== true` 成立；`{type:"disabled"}` 形 ⇒ `thinkAlwaysOn !== true` 成立 |
+
+**四处生产者改写（逐处 · 语义保形——例外 = 第 2 行自定义族支：随 §15.4-2 表改判升为真 off）**：
+
+| # | 位置（as-of 本设计轮实读） | 现形 | 改后 |
+|---|---|---|---|
+| 1 | `thincoder-cli/src/tui/cmd-advisor.mjs:62-72`（`applyThinkOff`） | 三支手写 | `cfg.thinking = thinkOffShape(spec)`；effort 支的 `delete cfg.reasoningEffort` **扩至三支**（§16.6-⑵） |
+| 2 | `thincoder-cli/src/tui/cmd-think.mjs:124-141`（`applyThink` off 支） | effort 支 `null`；非 effort 支 `isCustomThink ? undefined : {type:"disabled"}` | `cur.thinking = thinkOffShape(spec)`——自定义族支由 `undefined` 改 `{type:"disabled"}`（§15.4-2 表改判后的该族 off 形；**行为变更**：`undefined` 不发字段（服务端默认 = 想），`{type:"disabled"}` 达载荷层 = 真 off——与 #335 同旨） |
+| 3 | `thincoder-vscode/src/extension/reasoning-mode.mjs:22-24`（off 支） | **全族** `{ thinking:null, reasoningEffort:null }` | `{ thinking: thinkOffShape(spec), reasoningEffort: null }`——**#335 本体**：type 族（`deepseek-v4-flash` 形）off 落 `{type:"disabled"}` ⇒ 达载荷层（服务端默认不再「仍想」） |
+| 4 | `thincoder-vscode/src/extension/settings-panel-write.mjs:63-68`（`advisorOffShape`） | 三支手写（与 ① 同规则副本） | 本地体删除 → `thinkOffShape(specForModel(model ?? ""))`（单源零副本） |
+
+**被否（端对齐）**：只在 `reasoning-mode.mjs` 内补 type 族支（改动 ~5 行、零新文件）——副本由 4 处变 5 处，本次已实证的漂移（#335 本体 + `/think` 自定义族支）无判据可拦。**父侧如裁端对齐** ⇒ 本表仅第 3 行落地，第 1 / 2 / 4 行不动（§16.4 谓词仍单源，不必随动）。
+
+### 16.3 字段面：`thinkAlwaysOn`（服务端强制族可判 · 新机制位）
+
+**事实**（`glm-5.3` 族 = 服务端恒思考：`thinking:{type:"disabled"}` 被拒）今日只住行注（`thincoder-core/model-specs.mjs:63-64` 与 `:68-73` 的「始终思考 / 服务端无关闭路径」句）——§16.4 的条件化回执需**机器可判**。
+
+**裁定 = 新增布尔机制位 `thinkAlwaysOn`**（`true` = 服务端强制思考 / 无关闭路径）。落点 = `thincoder-core/model-specs.mjs` 三行 + 表头字段注（`:21` 邻位，与 `thinkApi` / `thinkEnabledValue` 同段）：
+
+| 行 | 值 | 证据等级 |
+|---|---|---|
+| `glm-5.3` | `true` | **官方口径**（智谱 GLM-5.3 文档：thinking always-on、无 `disabled`） |
+| `glm-5.3-flash` | `true` | **族沿用**（族据 = `glm-5.3` 行） |
+| `glm-5.3-flashx` | `true` | **实测**（`thinking:{type:"disabled"}` → 400；裸请求默认开） |
+
+行注保留现有句（`thincoder-core/test/model-specs.test.mjs` 的 `[flashx] F-5` 词锚不变），各补一句「该事实 = 机制位 `thinkAlwaysOn`（单源 = `doc:MODEL-SPECS.md:§16.3`）」**并携逐行证据等级词**——
+`glm-5.3` = **官方口径** · `glm-5.3-flash` = **族沿用**（族据 = `glm-5.3` 行）· `glm-5.3-flashx` = **实测**（与本档证据纪律齐：非实测类须逐条写进行注）。**未取证行一律不声明**（含 `glm-5.2` / `glm-5`——其 `{type:"disabled"}` 受理面未测；D-11 无据不标 ⇒ 判据默认侧 = 可宣称）。
+
+### 16.4 判据面：`thinkOffPath` —— 「何时可宣称 OFF」（#334 · 定形）
+
+**判据（本档单源）**：**OFF 可宣称 ⟺ 该族有有效 off 路径**（`thinkOffPath(spec) === true`）：
+
+| 族 | 判据 | off 形 | 有效？ |
+|---|---|---|---|
+| effort 族（`thinkApi === "effort"`） | 枚举含 `none` | `thinking:null` + 删档 | 含 `none`（hy3 / doubao / qwen3.7-flash 等）⇒ **有效**（载荷门补发 `reasoning_effort:"none"`）；无枚举 / 无 `none`（`kimi-k3` · `k3-256k` · `k3` · `kimi-for-coding` · `qwen3.7-max` · `qwen3.8-max` · `qwen3.7-plus` · `qwen3.5-27b`）⇒ **无效**（形不发任何字段） |
+| 服务端强制族（`thinkAlwaysOn === true`） | — | `{type:"disabled"}` | **无效**（服务端拒 / 恒思考） |
+| 自定义开值族（`MiniMax-M3` / `minimax-m3`） | — | `{type:"disabled"}` | **有效**（达载荷层——实测路径：off 路径 = `thinking:{type:"disabled"}` ✓ rc=0）；off 形随 §15.4-2 表改判（裁决 = §16.12 项 1） |
+| 其余（`type` 族默认，如 `deepseek-v4-flash` / `mimo-v2.5`；`thinkApi` 未声明行） | 未标 `thinkAlwaysOn` | `{type:"disabled"}` | **有效**（达载荷层；MiniMax / mimo 实测路径） |
+
+**两菜单面落点（CLI）**：
+
+| 面 | 落点（as-of 本设计轮实读） | 行为 |
+|---|---|---|
+| `/think` 快速径 | `thincoder-cli/src/tui/cmd-think.mjs:20-26` | `offPath === false` ⇒ **拒绝** `/think off`（不写盘）+ 理由行；`/think on` 与档位面零改（`on` = 恢复径：清残留标记 / 重写 ON 形） |
+| `/think` 环内 | 同档 `:44-90` | 菜单头与回执**条件化**（无有效 off 路径 ⇒ 恒报 `ON`——残留 off 标记不再误报 `OFF`）；**Thinking 开关项不渲染**（`:55` 现行 `!isEffortOnly` 门**再合取 `thinkOffPath`**——生效面 = 非 effort 且无有效 off 路径族） |
+| `/advisor` 状态行 | `thincoder-cli/src/tui/cmd-advisor.mjs:44-51`（`advisorStatus`）+ 调用点 `:156` / `:158` / `:171` | `offPath === false` ⇒ **不报 off**（残留标记按「未设档」渲染：有档报 `on (<档>)`，无档报 `on`） |
+| `/advisor` 思考菜单 | 同档 `buildThinkingEntries`（`:248-278`） | **Disabled 项**加门（无有效 off 路径不渲染）；**Enabled 项保留**（残留 `{type:"disabled"}` 的恢复径）；档位面零改（`effort_none` 本由枚举驱动） |
+| `/advisor` 选档支 | 同档 `:139-143` | **#346-①**：选档 = 要思考 ⇒ 先清 `cfg.thinking === null` 标记（对齐 `thincoder-cli/src/tui/cmd-think.mjs:119-120` 先例 / §15.4-2 末句）；`{type:"disabled"}` 不动（同先例；**残余登记 = §16.6-⑸**——type 族 off→选档 后该标记保持） |
+
+**拒绝文案（定形）**：`No off path for this model — thinking cannot be turned off here (use /think effort <level>)`（单行 · `C.error` 通道，循 `thincoder-cli/src/tui/cmd-think.mjs:21` 的 autoThink 拒绝先例）。
+
+**VSC off 入口面零改（本批）**：聊天面板 picker 与设置面板 select 的 off 入口**本由枚举驱动**（`off` / `none` 项只在 `reasoning` / 档枚举含它时存在）⇒ 无有效 off 路径的族本就不渲染 off 入口；**读面**（off 哨兵避支——§16.5）另落。
+
+### 16.5 读面口径（面板预选 —— #346-②）
+
+**问题（实读）**：type 族 off 形（`advisor.thinking = {type:"disabled"}`）经 `thincoder-vscode/webview/settings-state.js:71-75`（`advisorEffortCurrent`）落字面 `"none"`，
+而 type 族档枚举不含 `none`（`deepseek-v4-flash` = `["low","high","max"]`）⇒ `effortSelection` 的 ② 支（注册默认 ∈ 枚举）命中 ⇒ **面板显一个档位**（用户从未选过）；
+且**任意无关保存**（guard 开关等）会把该渲染值当档位写盘（`thincoder-vscode/webview/settings-agent.js:131` 恒携 `reasoningEffort`）⇒ off 状态被粘上档位。
+
+**裁定**：**off 哨兵值不得降级为档位**——本条并入**共享规则 `effortSelection`**（§15.4-1 ⓪ 支）⇒ 两消费面同源生效：`effortSelectView`（`thincoder-vscode/webview/settings-state.js:60-65`）对 `current === "none"` ∧ `levels` 不含 `"none"` ⇒ 预选 **`—`（中性档）**，**不经注册默认支**。效果：
+
+- 面板显示「—」= 如实（off 态下盘上无档位键——off 动作按 §16.6-⑵ 清档）；**不再显示用户从未选的档位**。
+- 无关保存落「—」支（`advisorEffortPayloadValue("—")` ⇒ `null` ⇒ 写面删档键、**不触** `thinking`）⇒ off 形跨保存存活（§15.4-5 carve-out 同径）、零误写。
+- 含 `none` 的族不受影响（`"none" ∈ levels` ⇒ 照旧预选 `none` = off，语义不变）。
+- **面板能力边界（如实登记）**：type 族的 off 状态在面板**不可视 / 不可选**（档表无 off 项）；本批**不新增 off 选项**（列表 = 模型能力档，增设 = §15.9 UI 形态变更 + 能力面，须另批裁定）。
+- consult 行同径（同一 `effortSelectView`）：手写 `effort: "none"` 在无 `none` 档的模型上亦落「—」（写面结果不变——`effortPayloadValue("none")` 本就归 `null`）。
+- **聊天面板 picker 同源（本批并入）**：`selectedReasoning === "none"` × 模型枚举无 `none`（`selectModel` / `handleModelsMessage` 两径）⇒ 落中性档（按钮「—」/ 无 ✓ / `""` ⇒ 回合侧零 patch）——不落注册默认档（同判据 = §15.4-1 ⓪ 支；用例 W-10）。
+
+### 16.6 残余补口 + 冗余 import（#346）
+
+⑴ **`reasoning:["enabled"]` 族用例补格（#346-③）**：无 effort 枚举的思考开关族（`reasoning` = `["enabled"]`——
+`thincoder-vscode/src/extension/provider-probe-window.mjs:66` 的 `spec.reasoningEffortEnum || (spec.thinking ? ["enabled"] : [])` 形态）在 §15.4 归一改判后：
+① 支（已存值）与 ② 支（注册默认）均不命中该单元素枚举 ⇒ 落**中性档 `""`**（按钮「—」/ 无 active / 回合侧零 patch）。**零实现改动**，补用例钉（§16.9 用例 W-5）。
+
+⑵ **off 动作清档（生产者完整性）**：§15.4-2 末句「删键只适用 off（`none`）与「—」两态」——CLI `/advisor` 的 `applyThinkOff` 现只在 **effort 支**清 `reasoningEffort`
+（`thincoder-cli/src/tui/cmd-advisor.mjs:65-68`），自定义 / type 支不清 ⇒ 「off 标记 + 档位」同盘（载荷层 `thinking` 关值与 `reasoning_effort:<档>` 矛盾同发——F2 违约族）。
+**裁定 = 三支同清**（`delete cfg.reasoningEffort` 提至支外）；VSC 面板写面已是此形（`thincoder-vscode/src/extension/settings-panel-write.mjs:154-165`）⇒ 本项 = CLI 侧对齐（conformance 面，非新语义）。
+
+⑶ **选档清标记（#346-①）**：见 §16.4 表末行（`/advisor` 选档支清 `thinking === null`）——与 `thincoder-cli/src/tui/cmd-think.mjs:119-120` 先例 / §15.4-2 末句同式（原设计只点名 off 生产者，选档生产者面未点名 ⇒ 本条 = **生产者范围补全**）。
+
+⑷ **冗余 import（#346-④ · pre-existing）**：`thincoder-core/advisor/run.mjs:12` 的 `advisorIncompleteMarker` 与同档 `:19` 的 re-export 重复（函数体零使用——`:171` 只消费 `estimateTokens`）⇒ 该行只留 `estimateTokens`。零行为变更。
+
+⑸ **type 族 off→选档 残余（登记 · 与 ⑵ 方向差并案）**：⑵ 闭「off 动作 ⇒ 清档位键」方向；「选档动作 ⇒ 清 off 标记」方向只覆盖 `thinking === null`（§16.4 表末行——同 `thincoder-cli/src/tui/cmd-think.mjs:111` 注释「仅清 null」先例）⇒ type 族「off（`{type:"disabled"}`）⇒ 选档」后标记保持——同盘「off 标记 + 档位」（= ⑵ 已定性的 F2 违约族）。
+**裁定 = 本批登记（不闭）**：闭该方向 = 改既有「仅清 null」语义（越本批条目）。**复评条件** = ① 该组合的服务端实测后果（400 / 静默忽略）读数到位；或 ② 与 `thincoder-cli/src/cli/setup-wizard.mjs:70` 在册项（`thinking:null` 落盘口径统一）并案处置时随拍闭。
+
+### 16.7 受影响文件清单（as-of 2026-09-25 设计轮实测 · `wc -l` 口径 = `split("\n").length - 1`）
+
+| 文件 | 现状 | 预期增删 | 说明 |
+|---|---|---|---|
+| `thincoder-core/think-off.mjs`（拟新增） | 0 | ~40 | §16.2 单源两函数（叶档 · 零 import；≤300 免登记） |
+| `thincoder-core/model-specs.mjs` | 348 | +~6 | §16.3 三行 `thinkAlwaysOn` + 表头字段注 + 行注句；**>300 已登记**（`thincoder-core/test/core-hygiene.test.mjs:96`）+ 拆分计划（§13.6）——本次 = 字段面补充（拆点未触发——判定见下注） |
+| `thincoder-core/advisor/run.mjs` | 200 | ±0（−1 标识符） | §16.6-⑷ |
+| `thincoder-cli/src/tui/cmd-think.mjs` | 151 | +~14 −3 | §16.2-2 + §16.4（拒绝 / 开关项门 / 头与回执条件化） |
+| `thincoder-cli/src/tui/cmd-advisor.mjs` | 278 | +~16 −6 | §16.2-1 + §16.4（状态行条件化 / Disabled 门）+ §16.6-⑵⑶ |
+| `thincoder-cli/test/cmd-think.test.mjs` | 200 | +~35 | W-1..W-4 |
+| `thincoder-cli/test/cmd-advisor.test.mjs` | 110 | +~30 | W-6..W-8 |
+| `thincoder-core/test/think-off.test.mjs`（拟新增） | 0 | ~55 | T-1..T-4 |
+| `thincoder-vscode/src/extension/reasoning-mode.mjs` | 34 | +~4 −2 | §16.2-3（#335 本体） |
+| `thincoder-vscode/src/extension/settings-panel-write.mjs` | 200 | +~2 −6 | §16.2-4（本地形体删） |
+| `thincoder-vscode/webview/settings-state.js` | 95 | +~5 −1 | §16.5（off 哨兵 ⓪ 支并入共享规则——§15.4-1） |
+| `thincoder-vscode/test/reasoning-mode.test.mjs`（拟新增） | 0 | ~45 | R-1..R-3（该面首测——无既有测试档） |
+| `thincoder-vscode/test/model-picker-fallback.test.mjs` | 279 | +~20 | W-5 / W-10（off 哨兵 × picker 两径） |
+| `thincoder-vscode/test/effort-select-views.test.mjs` | 172 | +~12 | W-9 |
+| 设计档 | — | 本节 + §10.1 订正 + §15.4-1 / §15.4-2 / §15.4-4 / §15.8 档面（指针 / 收正）+ `doc:PROVIDER.md:§6.9` / `§6.12` / `§6.19` + `doc:SETTINGS.md:§2.13` 指针 + 变更记录 | — |
+
+**`model-specs.mjs` 消解窗口判定（§13.6 口径——本次改动 ∉「实质改动」）**：本批改动 = 字段面补充（三行机制位 + 表头字段注 + 行注句；零结构 / 零表块位移 / 零导出面变更）⇒ **∉ §13.6「实质改动」**——拆点（`MODEL_SPECS` 表块外提）未触发；改后 ~354 距 500 硬限余量 ~146 行。
+
+### 16.8 验收标准回指（与批次档 §2 / 台账三分同源）
+
+| 判据 | 条目 | 设计落点 | 判定方式（机器核） |
+|---|---|---|---|
+| AC-1 | #334 | §16.3 / §16.4 | `thinkAlwaysOn` 三行在场（`specForModel` 逐行断 `true`——防空扫）；`thinkOffPath` 逐族采样：`hy3` / `qwen3.7-flash` / `deepseek-v4-flash` / `mimo-v2.5` / `MiniMax-M3` / `minimax-m3` ⇒ `true`；`kimi-k3` / `k3-256k` / `qwen3.8-max` / `qwen3.7-plus` / `glm-5.3` / `glm-5.3-flash` / `glm-5.3-flashx` ⇒ `false` |
+| AC-2 | #334 | §16.4 两菜单面 | `/think off`（`kimi-k3` · `glm-5.3-flashx`）⇒ 零写盘 + 拒绝行在场；`/think` 环（`kimi-k3` + 残留 `thinking:null`）⇒ 头与回执不含 `OFF`；`/think` 环（`glm-5.3-flashx` + 残留 `{type:"disabled"}`）⇒ **无 Thinking 开关项**（`:55` 门生效面）∧ 头报 `ON`；`/advisor`（`glm-5.3-flashx`）⇒ 无 Disabled 项 ∧ 状态行不报 off |
+| AC-3 | #335 | §16.2（第 3 / 4 行） | `resolveReasoningMode("off","deepseek-v4-flash",…)` ⇒ `{ thinking:{type:"disabled"}, reasoningEffort:null }`；`hy3` ⇒ `{ thinking:null, reasoningEffort:null }`；`minimax-m3` ⇒ `{ thinking:{type:"disabled"}, reasoningEffort:null }`（自定义族 off 形随 §15.4-2 表改判）；`advisorOffShape` 委派核单源（本地无形体） |
+| AC-4 | #346-①/② | §16.4 表末行 / §16.5 / §16.6-⑵ | 选档清标记（`thinking` 键不在 cfg ∧ 档在位）；`effortSelection` off 哨兵（`"none"`）× 无 `none` 档 ⇒ 中性档 `null`（不经注册默认支——§15.4-1 ⓪ 支）；`effortSelectView` ⇒ `selected === "—"`；picker 两径 ⇒ 按钮「—」/ 零 patch；`applyThinkOff` 三支皆清档 |
+| AC-5 | #346-③/④ | §16.6-⑴ / ⑷ | `reasoning:["enabled"]` 族 ⇒ 按钮「—」/ `""` / 无 active / 零 patch ∧ 列表仍渲染该单档；`thincoder-core/advisor/run.mjs:12` 行不含 `advisorIncompleteMarker` ∧ `:19` re-export 在 |
+
+### 16.9 用例表（正常 / 边界 / 错误）
+
+**用例号注**：`T-` = 核谓词 / 字段面 · `W-` = CLI 与面板面 · `R-` = VSC reasoning-mode 面（`R-` 前缀避与本档 §5 判据号 `A-` / §14.8 号 `E-` / §15.7 号 `V-` 同空间）。
+
+| id | 类 | 输入 / 动作 | 期望输出与判据 |
+|---|---|---|---|
+| T-1 | 正常 | `thinkOffPath(specForModel(m))`：`hy3` / `qwen3.7-flash` / `deepseek-v4-flash` / `mimo-v2.5` | `true`（有效 off 路径） |
+| T-2 | 边界 | 同上：`kimi-k3` / `k3-256k` / `qwen3.8-max` / `qwen3.7-plus`（无枚举） | `false`（枚举无 `none` / 无枚举） |
+| T-3 | 边界 | 同上：`glm-5.3` / `glm-5.3-flash` / `glm-5.3-flashx` | `false` ∧ 三行 `thinkAlwaysOn === true`（在场，防空扫） |
+| T-4 | 边界 | 同上：`MiniMax-M3` / `minimax-m3` | `true`（`{type:"disabled"}` 达载荷层——§16.4 表第 3 行） |
+| W-1 | 错误 | `/think off`（`kimi-k3`） | 拒绝行 = §16.4 文案；`provider.thinking` / `reasoningEffort` **零改**（不写盘） |
+| W-2 | 错误 | `/think off`（`glm-5.3-flashx`） | 同上（服务端强制族同拒） |
+| W-3 | 边界 | `/think` 环两例：① `kimi-k3` + 残留 `thinking:null`；② `glm-5.3-flashx` + 残留 `{type:"disabled"}` | ① 头与回执报 `Thinking: ON`（不误报 OFF——`offPath === false` ⇒ 恒报 `ON`）；② **无 Thinking 开关项**（`:55` 新合门生效面——现行门对非 effort 族本会渲染）；两例档位项照旧 |
+| W-4 | 正常 | `/think on`（`glm-5.3-flashx`，残留 `{type:"disabled"}`） | 写 ON 形覆盖（恢复径可达）；回执 `Thinking: ON` |
+| W-5 | 回归 | 聊天面板 `reasoning: ["enabled"]` 族（直驱 + 真点击流） | 归一落 `""`（按钮「—」/ 无 active / 零 patch）；列表仍渲染该单档（不空列表） |
+| W-6 | 边界 | `/advisor`（`glm-5.3-flashx`）思考菜单 | **无 Disabled 项**；Enabled 项在场；档位三行在场 |
+| W-7 | 边界 | `/advisor` 状态行：`kimi-k3` + 残留 `thinking:null`；`glm-5.3-flashx` + 残留 `{type:"disabled"}` | 两例均**不报 off**（无档 ⇒ `on`） |
+| W-8 | 正常 | `/advisor`（`qwen3.8-flash`）：先 `think_off`（`thinking:null`）⇒ 再 `effort_low`；反向用例 = type 族（`deepseek-v4-flash`）`think_off` 且预置 `reasoningEffort` | 选档后 `thinking` 键**不在** cfg ∧ `reasoningEffort = "low"`（#346-①）；反向：off 后 `reasoningEffort` 键清出（§16.6-⑵） |
+| W-9 | 边界 | `effortSelectView`：off 哨兵 × 枚举无 `none` ∧ 有注册默认 | `selected = "—"`（**不得**落注册默认）；枚举含 `none` ⇒ 照旧预选 `none` |
+| W-10 | 边界 | `effortSelection` / 聊天面板 picker：off 哨兵（`"none"`）× 枚举无 `none` ∧ 有注册默认（两径：换模型 / 首推） | 落中性档（`null`；picker ⇒ 按钮「—」/ 无 ✓ / `""` 零 patch）——**不得**落注册默认档（同判据 = §15.4-1 ⓪ 支） |
+| R-1 | 正常 | `resolveReasoningMode("off", "deepseek-v4-flash", specForModel)` | `{ thinking: { type:"disabled" }, reasoningEffort: null }`（#335 本体） |
+| R-2 | 边界 | 同上：`hy3`；`minimax-m3` | `hy3` ⇒ `{ thinking: null, reasoningEffort: null }`；`minimax-m3` ⇒ `{ thinking: { type:"disabled" }, reasoningEffort: null }`（族别形 = §15.4-2 表） |
+| R-3 | 回归 | `resolveReasoningMode("enabled" / 档位值, …)` | 既有两支逐字零变 |
+
+### 16.10 边界（本节不做）
+
+- **§15.4-2 表的唯一改动 = 自定义开值族行**（父侧 2026-09-25 裁决 · §16.12 项 1）：off 形由 `null` 改 `{ type: "disabled" }`——该行依据与规格表实测（`MiniMax-M3` / `minimax-m3`：off 路径 = `thinking:{type:"disabled"}` ✓ rc=0）均指此形；表其余两行零改。
+- **不改载荷层**：off 门谓词本体（`doc:PROVIDER.md:§6.12`）· `resolveEnableThinking` · 枚举越界抛错门零改。
+- **不给面板 select 增设 off 选项**（§16.5 能力边界）；不动聊天面板 picker 的列表本体与 ✓ 规则。
+- **不清理既存失配态**：修复前写入的「强制族 + `{type:"disabled"}`」标记会照发（服务端 400）——本批只保证**不再产生**新失配（入口已关），不做自愈扫描。
+- **不动 `/think effort none` 的归一**（`thincoder-cli/src/tui/cmd-think.mjs:104`）：其可达性由枚举门保证（`none` 只在枚举含它时渲染）；**复评条件** = 出现「`thinkAlwaysOn` ∧ 枚举含 `none`」的行时，该归一须加 `thinkOffPath` 门；**同拍复评 `thinkOffPath` 谓词本体**（§16.2——effort 支的 `thinkAlwaysOn !== true` 合取须随该行逐款复核）。
+- 不动 `thincoder-cli/src/cli/setup-wizard.mjs:70` 已登记的「`thinking:null` 落盘差异口径统一」（父侧在册项，另一面）。
+- 需求档零改（主 agent 笔）。
+
+### 16.11 UI / 交互决策（全落地，无 `open`）
+
+| 面 | 决策 |
+|---|---|
+| CLI `/think` | 无有效 off 路径：**Thinking 开关项不渲染** + 头与回执恒报 `ON` + `/think off` 拒绝（理由行）——`on` 侧与档位面零改 |
+| CLI `/advisor` | 无有效 off 路径：**Disabled 项不渲染**（Enabled 保留 = 残留标记恢复径）+ 状态行不报 off |
+| VSC 设置面板 | 读面：off 形在无 `none` 档的族落「—」（不落档位）；**不新增 off 选项** |
+| VSC 聊天面板 | off 入口零改（本由 `reasoning` 数组驱动）；**读面**：off 哨兵值不经注册默认支、落中性档「—」（§16.5 · §15.4-1 ⓪ 支） |
+
+无 `open` 项。
+
+### 16.12 关键决策（含被否）与上抛
+
+**关键决策**：
+
+1. **#335 = 端引核（零副本）**（被否：端对齐——§16.2 末段）。
+2. **`thinkAlwaysOn` 机制位**（被否：把强制族名单写进代码 = 数据住代码面，D2 违例）。
+3. **回执条件化 = 动作面**（不提供不可达的 off 动作），非「提供动作 + 措辞免责」——被否理由：动作存在即承诺效果，措辞免责 = 半实现（§15.4 渲染注同旨）。
+4. **读面落「—」而非新增 off 项**（§16.5；被否：面板增设 `none` / off 选项 = 能力面 + §15.9 形态变更）。
+5. **判据由 `thinkOffShape` 派生**（被否：判据独立手写三支——两处同语义即两处漂移源，D2）。
+
+**上抛项与裁决**：
+
+1. **§15.4-2 自定义开值族行与实测相抵**（`MiniMax-M3` / `minimax-m3`）——**已裁 · 落位（父侧 2026-09-25）**：该行依据「type 机制原生 off 形」与规格表实测
+（`thincoder-core/model-specs.mjs:144-145` / `:169-171`：off 路径 = `thinking:{type:"disabled"}` ✓ rc=0）均指 `{type:"disabled"}` ⇒ 自定义开值族 off 形改 `{ type: "disabled" }`（off 可达）。
+连带面（同变）= §15.4-2 表 · §16.2 派生与生产者第 2 行 · §16.4 表第 3 行 · §16.8 AC-1 / AC-3 · §16.9 T-4 / R-2。
+2. **`glm-5.2` / `glm-5` 的 `thinkAlwaysOn` 未取证**（其枚举含 `none`，但 `{type:"disabled"}` 的受理面未实测）：本批**不标**（D-11）⇒ 判据默认侧 = `true`。取证路径 = 各自渠道的校验级读数；到期 = 该族下次触碰。
+
 ## 变更记录
+
+- 2026-09-25 · **off 形族收尾 · 设计评审轮 1（pass）修正（fix 轮）**（批次 `2026-09-25-off-family-closeout` · 评审发现 1..12 逐条落位）——主要笔：
+  §15.4-1 共享规则并入 **off 哨兵避支**（⓪ 支——设置面板 / 聊天面板 picker 两消费面同源；§16.5 对齐）· §15.4-2 自定义开值族行 **off 形改判 `{type:"disabled"}`**（父侧裁决 · §16.12 项 1——off 可达；
+  §16.2 / §16.4 / §16.8 / §16.9 连通变）· `thinkOffPath` effort 支补 `thinkAlwaysOn !== true` 合取 · §16.3 行注句携逐行等级词 · W-3 断言改钉非 effort 无 off 路径族（判别力）；
+  旧形字面 / 死回指 / 交叉引用收正（§8 · §15.2 · §15.4-4 · §15.8 · §16.4）；`PROVIDER.md` §6.9 字段清单补 `thinkAlwaysOn`（§6.19 同收正）。**零新语义**——除父侧裁决项外均为发现表的直接导出项。
+
+- 2026-09-25 · **off 形族收尾（批次 `2026-09-25-off-family-closeout` · 台账 #334 / #335 / #346）**——新增 **§16**：off 形族**单源叶档** `thincoder-core/think-off.mjs`（拟新增）
+  （`thinkOffShape` / `thinkOffPath`，四处生产者改写 = 端引核零副本）· **`thinkAlwaysOn` 机制位**（`glm-5.3` 族三行）· **回执条件化判据定形**（「有效 off 路径」四族判定 + `/think` / `/advisor` 两菜单面落点）
+  · 面板读面口径（off 哨兵不降级为档位）· 三补口 + 冗余 import；§10.1「仅行注」句收正为「行注 + 机制位」；§15.4-2 补收尾批指针。
+  上抛 2 条（自定义开值族行与实测相抵 / `glm-5.2` 族 `thinkAlwaysOn` 未取证）。**零新语义**——均为台账三条 + 批档 §1 边界（载荷形态以 CLI 现形为准）的直接导出项。
 
 - 2026-09-25 · **设计评审轮 2（pass）修正（批次 `2026-09-25-spec-effort` · §15 面 · 新行 8/9/11）**——三条落笔：
   ① §15.4-2「选档 / 「—」两态」句收正——档位态 = **写 `reasoningEffort`**（清 `null` 标记），**删键只适用 off 与「—」两态**（原「两态均删键」字面违同档契约——档位值 = 写字面档值，`doc:SETTINGS.md:§2.13`）；

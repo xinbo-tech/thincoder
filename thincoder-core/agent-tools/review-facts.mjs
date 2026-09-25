@@ -13,7 +13,7 @@
  */
 import { join } from "node:path"
 
-/** ABS 归一（cwd 相对 → cwd 拼接）——陈旧判定 / 冻结拦截 / 评审范围键同源（§14.14 E-4）。 */
+/** ABS 归一（cwd 相对 → cwd 拼接）——陈旧判定 / 冻结拦截 / 评审范围键同源（ADVISOR-GUARDS.md §5 E-4）。 */
 export function normAbs(p, cwd) {
   const s = String(p)
   return /^[a-zA-Z]:[\\/]/.test(s) || s.startsWith("/") || s.startsWith("\\\\") ? s : join(cwd, s)

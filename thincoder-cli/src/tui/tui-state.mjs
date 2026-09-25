@@ -37,7 +37,7 @@ export function createTuiState({ cols, rows, agent }) {
     reasoning: "", // thinking stream buffer (dimmed display)
     completion: null, // Tab completion state { candidates, index }
 
-    subTasks: {}, // sub-agent activity blocks (§7.2 D4): { "coder#1": { key, role, model, started, done, doneAt, blocks: [{kind,text}], currentTool, toolArgs, turn, maxTurns, approval, lastError, dropped, blockEpoch, awaitingDigest（AGENT-LOOP-ASYNC-POOL.md §6.8 挂起中间态）, _freezeAt（冻结锚点）, stopped, children: []（SUBAGENT-TAIL：嵌套子代理**守护载体**——内容行并入本块 blocks——subagent-children.mjs） } } — rendered as collapsible in-conversation blocks; persists across turns (blocks are the child activity's ONLY carrier — child tool calls never enter the parent history); bounded by the N2 500-line per-child ring buffer（SUBAGENT-TAIL 单环：内层行同环计数、单载体最旧先行——TUI.md §6）
+    subTasks: {}, // sub-agent activity blocks (docs/cli/design/TUI.md §6.8 D4): { "coder#1": { key, role, model, started, done, doneAt, blocks: [{kind,text}], currentTool, toolArgs, turn, maxTurns, approval, lastError, dropped, blockEpoch, awaitingDigest（AGENT-LOOP-ASYNC-POOL.md §6.8 挂起中间态）, _freezeAt（冻结锚点）, stopped, children: []（SUBAGENT-TAIL：嵌套子代理**守护载体**——内容行并入本块 blocks——subagent-children.mjs） } } — rendered as collapsible in-conversation blocks; persists across turns (blocks are the child activity's ONLY carrier — child tool calls never enter the parent history); bounded by the N2 500-line per-child ring buffer（SUBAGENT-TAIL 单环：内层行同环计数、单载体最旧先行——TUI.md §6）
     currentTool: null, // currently executing tool name (shown in status bar)
     processingStarted: 0, // current turn start time (status bar timer)
     status: "Ready",
@@ -54,7 +54,7 @@ export function createTuiState({ cols, rows, agent }) {
     _historyLoaded: 0, // messages loaded from the TAIL of _fullHistory
     _historyTotal: 0, // total messages in the restored session
     _hasOlder: false, // more earlier messages remain unloaded
-    _linesChars: 0, // TUI-OOM-ROOTCAUSE（§15.3.2）：state.lines 全部行与载体文本总量（字符账——唯一新增状态位）
+    _linesChars: 0, // TUI-OOM-ROOTCAUSE（TUI-SESSION-VIEW.md §5.2）：state.lines 全部行与载体文本总量（字符账——唯一新增状态位）
     _agent: null, // TUI state → agent 回指挂载点：startTUI 装配时置 agent 引用——
     // ① SYNC-CANCEL ⏹ 门控读 state._agent._syncChildAborts（subagent-panel.mjs，2026-09-09）；
     // ② CLI-ACTIVITY-DEBLOAT F-3（2026-09-10）：agent._tuiState = state 反向挂载——

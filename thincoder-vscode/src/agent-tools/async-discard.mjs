@@ -1,26 +1,26 @@
 /**
- * async-discard.mjs — 中止清池的「只清已死」收尾单点（第 35 批 §12 建——群 B 批 B1 扩
- * advisor 池同构面，AGENT-LOOP.md（VSC 仓）§15）。
+ * async-discard.mjs — 中止清池的「只清已死」收尾单点（第 35 批建——群 B 批 B1 扩
+ * advisor 池同构面，AGENT-LOOP-ASYNC-POOL.md §6.20）。
  *
- * 原作 = run-stages.mjs 中止分支的 `asyncMap.clear()` 全清（§12.1 ②③）：会话子代持
+ * 原作 = run-stages.mjs 中止分支的 `asyncMap.clear()` 全清（AGENT-LOOP-ASYNC-POOL.md §6.20 ②③）：会话子代持
  * **会话 signal**（F-6 后 Stop 只停当前轮 controller——async-settle.mjs buildChildSignal
  * 单点），轮级中止时存活子代被静默清出池 = 孤儿（其 settle 的 removeFromAsyncPools 作用
- * 于已空 Map——报告静默丢失）。§15 复议（群 B 批 B1）：advisor 池（`_asyncAdvisors`——
+ * 于已空 Map——报告静默丢失）。§6.20 复议（群 B 批 B1）：advisor 池（`_asyncAdvisors`——
  * run-stages 中止分支原 `advMap.clear()`）与子代理同款前提（评审条目 controller 经
  * buildChildSignal 链到会话 signal）⇒ 同构缺口同修。
  *
- * 单不变量（§12.2c 选定 c3）：**清池 ⟺ 该条目已死且其报告不可达**。
+ * 单不变量（§6.20 选定 c3）：**清池 ⟺ 该条目已死且其报告不可达**。
  * - 丢弃 ⟺ entry.done !== true ∧ entry.cancelled !== true ∧ parentAborted(entry) === true
  *   （parentAborted 复用 async-settle.mjs 既有单点守卫——零新谓词；advisor 条目无
  *   entry.signal 字段——谓词天然走 controller 支）；
  * - 保留 ⟺ 其余——存活条目（会话 signal 未中止；报告沿自动通道到达）/ done-in-pool
  *   （回合尾收集 / 挂起 sweep 消化）/ cancelled（settle cancelled 分支收尾）。
  *
- * 每条目动作序（§12.3 C-2 / §15.3 C-10b）：写终态记录（discarded 墓碑——跨 run 终态单
+ * 每条目动作序（§6.20 C-2 / C-10b）：写终态记录（discarded 墓碑——跨 run 终态单
  * 账本）→ 出池（removeFromAsyncPools）→ 汇总 → 整批**一次**注入提醒（C-4 / C-10c 模板
  * ——escapeXml 后 user-role 注入）+ 一条 `ev:discarded` 日志（有丢弃才记——零丢弃零噪音）。
  *
- * 双导出 + 私有共享核（§15.2 选定候选 1）：`discardAbortedPool`（subagent 面签名/文案零变
+ * 双导出 + 私有共享核（§6.20 选定候选 1）：`discardAbortedPool`（subagent 面签名/文案零变
  * ——T-D3/T-D4 断言零回归）+ `discardAbortedAdvisors`（C-10 新面）；判定/出池/墓碑/汇总
  * 单核承载（D2——实现单核无重复）。
  *
@@ -86,7 +86,7 @@ function discardRole(parent, spec) {
   return out
 }
 
-/** subagent 族 spec（§12 C-1~C-4——返形/文案逐字零变）。 */
+/** subagent 族 spec（§6.20 C-1~C-4——返形/文案逐字零变）。 */
 const SUBAGENT_SPEC = {
   pool: "subagent",
   describe: (entry) => ({ id: entry.id, role: entry.role, wasStatus: entry.status === "queued" ? "queued" : "running" }),

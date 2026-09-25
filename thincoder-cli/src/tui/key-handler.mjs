@@ -44,7 +44,7 @@ export function createKeyHandler(ctx) {
     // 第 33 批（TUI §14.3(e) 键盘点）：模态分派**之前**——任意按键 = 用户在场 ⇒ 清 attention
     // 位（仅复位呈现态字段，按键语义 / 模态判定 / busy 门禁零改）。
     clearAttention(state, render)
-    // permission confirm: y/n/a (a = approve + AUTO ON); batch (§16 D-B1): a/o/n (Esc = deny)
+    // permission confirm: y/n/a (a = approve + AUTO ON); batch (D-B1): a/o/n (Esc = deny)
     // ——模态实现 key-modes.mjs handlePermissionMode（2026-09-03 D-S4）
     if (handlePermissionMode(str, key, { state, agent, pushLine, render })) return
 

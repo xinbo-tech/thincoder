@@ -1,12 +1,12 @@
 /**
  * subagent-actions.mjs — subagent 动作执行器（AGENT-LOOP-SUBAGENT.md §6.7——2026-09-05 自
- * subagent-async.mjs 拆分——Module Split Policy §20.9——纯迁移零行为变化）。
+ * subagent-async.mjs 拆分——Module Split Policy——纯迁移零行为变化）。
  * 内容：executeStatusAction（AGENT-LOOP-SUBAGENT.md §6.7.2 D-M5——非阻塞池查询——touchedSummary/
  * shortTouchedPath/statusFields 摘要助手随行）/ executeObserveAction + executeSendAction
  * （SUBAGENT-OBSERVE-SEND——observe 只读/send 控制豁免注入）/ executeEscalateAction（AGENT-LOOP-SUBAGENT.md §6.7
  * D-M4——飞刀——touchedFilesNote 随行）。
  * AGENT-LOOP-SUBAGENT.md §6.7.5 check 删除后仅 cancel 动作执行器与共享 post-spawn 管线留在 subagent-async.mjs；
- * §20 调度器 + 文件域组在 ./subagent-scheduler.mjs（describeBlockers 由此导入）。
+ * AGENT-LOOP-SUBAGENT.md §6.9 调度器 + 文件域组在 ./subagent-scheduler.mjs（describeBlockers 由此导入）。
  * 2026-09-08 二次拆分：AGENT-LOOP-SUBAGENT.md §6.7.2 面板段迁至 ./subagent-panel.mjs（601 > 500 硬限跨档——
  * 尾部 re-export executePanelAction 保 subagent.mjs 既有 import 面）+ ASYNC-RESULT-
  * CONTAINER.md D1 落地（池访问点改 getAsyncPool accessor）。
@@ -21,7 +21,7 @@ import { logEvent, errText } from "../log.mjs"
 import { describeBlockers, detectStall, STALL_NOTE } from "./subagent-scheduler.mjs"
 import { resolveChildProvider, mergeChildMutations } from "./subagent-async.mjs"
 import { launchEscalateAsync } from "./escalate-async.mjs"
-// TUI-OOM-ROOTCAUSE §23.3.1：子代理人读线窗口常量（单源——store 零依赖）。
+// TUI-OOM-ROOTCAUSE·AGENT-LOOP.md §6.15：子代理人读线窗口常量（单源——store 零依赖）。
 import { RECORD_WINDOW_MESSAGES } from "../session-store.mjs"
 // ASYNC-RESULT-CONTAINER.md D1：池 accessor（absorb 双池——advisor 独立池无队列）
 import { getAsyncPool } from "./async-settle.mjs"
@@ -53,7 +53,7 @@ import { getAsyncPool } from "./async-settle.mjs"
  *  child's ⟦ev⟧turn events at the callbacks-wrap layer (subagent.mjs tracker).
  *  elapsedSec computed at call time from startedAt. */
 /** AGENT-LOOP-SUBAGENT.md §6.7.2 D-SF2/N-SF1 摘要形态：status 调用时实时读 entry.childAgent._touchedFiles
- *  （绝对路径——per-run 记账——§18.12）→ 相对查询方 cwd；cwd 之外保留绝对形态 +
+ *  （绝对路径——per-run 记账）→ 相对查询方 cwd；cwd 之外保留绝对形态 +
  *  "../" 前缀；>80 字符截尾（不超行）；前 5 个 + 独立截断字段 touchedMore（超出
  *  计数——不混入数组——消费方按类型区分）。占位：running 0 改动 → "—（尚无改动）"
  *  （T-SF2a）；queued 未启动 → "—（未启动）"（T-SF2b）；done/error/取消条目不含
@@ -79,7 +79,7 @@ function shortTouchedPath(f, cwd) {
 }
 
 function statusFields(entry, cwd) {
-  // §18.3 #1（第 10 批——双池并表）：评审池条目专属字段面——role 区分两池；子代理条目
+  // AGENT-LOOP-ASYNC-POOL.md §6.11 #1（第 10 批——双池并表）：评审池条目专属字段面——role 区分两池；子代理条目
   // 字段面零变化（NFR-B2）。reviewType(design|code) / round / elapsedSec——与子代理
   // 的 turn/maxTurns 而非（评审无子回合预算语义）。
   if (entry.role === "advisor") {
@@ -121,7 +121,7 @@ export function executeStatusAction(args, ctx) {
   const { id } = args ?? {}
   if (id !== undefined && id !== null && String(id) !== "") {
     const key = String(id)
-    // §11.2 D-24b: by-id queries fall through to the advisor pool (shared counter —
+    // AGENT-LOOP-ASYNC-POOL.md §6.10 D-24b: by-id queries fall through to the advisor pool (shared counter —
     // ids are unique across both pools; role identifies the kind).
     const entry = map.get(key) ?? advisors.get(key)
     if (!entry) {
@@ -133,7 +133,7 @@ export function executeStatusAction(args, ctx) {
     const target = statusFields(entry, agent.cwd)
     if (entry.status === "running") return JSON.stringify({ ...target, status: "running" })
     if (entry.status === "queued") {
-      // §20 F-SD4/D-SD3b：waiting 语义对模型可见——排队原因（冲突对象/依赖对象）随
+      // AGENT-LOOP-SUBAGENT.md §6.9 F-SD4/D-SD3b：waiting 语义对模型可见——排队原因（冲突对象/依赖对象）随
       // status 返回；纯槽满等位（kind slot）无 waiting 字段（position 已足够）。
       const blk = describeBlockers(agent, entry)
       const out = { ...target, status: "queued", position: queuedPosition(key) ?? entry.position }
@@ -141,7 +141,7 @@ export function executeStatusAction(args, ctx) {
         out.waiting = blk.kind === "depc" ? "dependency-cancelled" : "waiting-deps"
         out.reason = blk.detail
       }
-      // §21.1 P-SL2（D-SL2）：停滞机械标记——池停滞时本任务所在闭环阻塞链随 status
+      // §6.9 P-SL2（D-SL2）：停滞机械标记——池停滞时本任务所在闭环阻塞链随 status
       // 返回（F-SL2——status 视图可显示停滞——模型可见——零正常路径字段变化）。
       const stall = detectStall(agent)
       if (stall) {
@@ -163,7 +163,7 @@ export function executeStatusAction(args, ctx) {
   for (const entry of mapEntries) {
     if (entry.status === "running") overview.running.push(statusFields(entry, agent.cwd))
     else if (entry.status === "queued") {
-      // §20：queued 条目补 waiting/reason（F-SD4——依赖/冲突原因模型可见）；
+      // §6.9：queued 条目补 waiting/reason（F-SD4——依赖/冲突原因模型可见）；
       // AGENT-LOOP-SUBAGENT.md §6.7.2 T-SF2b：未启动占位（确定性——不崩）。
       const blk = describeBlockers(agent, entry)
       const row = statusFields(entry, agent.cwd)
@@ -176,7 +176,7 @@ export function executeStatusAction(args, ctx) {
     }
     else if (entry.done) overview.done.push({ id: String(entry.id), role: entry.role })
   }
-  // §21.1 P-SL2（D-SL2）：停滞机械标记——overview 级标注（可显示停滞——F-SL2）——
+  // §6.9 P-SL2（D-SL2）：停滞机械标记——overview 级标注（可显示停滞——F-SL2）——
   // 链文本随视图返回（逐条——每 queued 条目一行——闭环可破环引导同挂）。
   const stall = detectStall(agent)
   if (stall) {
@@ -337,7 +337,7 @@ export { executePanelAction } from "./subagent-panel.mjs"
 
 /**
  * subagent action:"escalate"（AGENT-LOOP-SUBAGENT.md §6.7 D-M4——退役 escalate 工具语义原样，ESCALATE.md；
- * §25 D-R17b——R17：缺省 async——后台飞刀 + settle 三分类 digest——async:false 保
+ * ESCALATE.md §5 D-R17b——R17：缺省 async——后台飞刀 + settle 三分类 digest——async:false 保
  * 同步旧路径）。飞刀——交给 consultModels 池里更强模型（WRITE + 术后报告）。约束全
  * 保留：depth-0 only / 工程模式拒 / consultModels 空拒 / relay 前缀 `escalate#N/`
  * （与既有前缀同名——TUI 路由零改动）/ mutations merge 回父（async 路径在 settle 分类）。
@@ -380,7 +380,7 @@ export async function executeEscalateAction(args, ctx) {
 
   const tag = label(pick)
 
-  // §25 D-R17b (R17 — 决策点 ③): escalate 缺省 async — the launch returns an ack
+  // ESCALATE.md §5 D-R17b (R17 — 决策点 ③): escalate 缺省 async — the launch returns an ack
   // {id, role:"escalate", status:"running"|"queued"} and the flight runs in the
   // background (shared other pool; settle 三分类 → pending 单容器 digest——
   // ASYNC-RESULT-CONTAINER.md D2)。
@@ -414,7 +414,7 @@ export async function executeEscalateAction(args, ctx) {
       memory: parent.memory,
       role: "coder",
     })
-    child._historyWindow = RECORD_WINDOW_MESSAGES // TUI-OOM-ROOTCAUSE §23.3.1：子代理人读线窗口（四处创建点同置）
+    child._historyWindow = RECORD_WINDOW_MESSAGES // TUI-OOM-ROOTCAUSE·AGENT-LOOP.md §6.15：子代理人读线窗口（四处创建点同置）
     child._logId = escId // LOGGING：子内事件归属（escalate#N）
     // SUBAGENT-UPSTREAM-CHANNEL（§6.27.4 W2——escalate **sync**：单向；工具返回注走同步形）。
     child._upstream = { parent, label: escId, sync: true }
@@ -428,7 +428,7 @@ export async function executeEscalateAction(args, ctx) {
       // §2.5 #78 并入：escalate 子代理输出流式（VSC subagent-escalate 同款豁免）。
       streamOutput: true,
     }
-    // Continue 经 runWithContinue（§7.2 D3，主会话同等 y/n 面板）：resume:true 不重注入
+    // Continue 经 runWithContinue（docs/cli/design/TUI.md §6.8 D3，主会话同等 y/n 面板）：resume:true 不重注入
     // task 文本（setup 跳 input）且保留 child history + mutation 记账，刷新 turn 预算；
     // 无权限 handler（headless）或拒绝 → 部分工作返回；continue 次数无限（每轮可拒）。
     // 残环批（2026-09-16）：飞刀询问名同规包装（`escalate#<id>/<tool>`——端侧键形解析的
@@ -465,7 +465,7 @@ export async function executeEscalateAction(args, ctx) {
     mergeChildMutations(parent, child)
     if (escErr) logEvent("child:error", { role: "escalate", id: escId, ms: Date.now() - escT0, err: errText(escErr.err, 200) })
     else logEvent("child:done", { role: "escalate", id: escId, ms: Date.now() - escT0, kind: String(report).includes(TURN_CAP_MARK) ? "partial" : "ok" })
-    // §7.2.3（round1 #2）：escalate 与 spawn 同享 ctx._subagentKey——同步完成精确冻
+    // docs/cli/design/TUI.md §6.8（round1 #2）：escalate 与 spawn 同享 ctx._subagentKey——同步完成精确冻
     // （relayPrefix 去尾 = `escalate#N`）。仅成功路径（escErr = 运行中途失败——不设
     // key——TUI 回落 escalate 角色启发式：escalate 串行 + 角色限定，天然精确——legacy
     // 行为不变——错误路径不触发冻结 round1 #1）。

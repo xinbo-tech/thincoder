@@ -1,5 +1,5 @@
 /**
- * tui-memory-budget.test.mjs — TUI-OOM-ROOTCAUSE 批 组 3（B1——TUI.md §15.3/§15.6）
+ * tui-memory-budget.test.mjs — TUI-OOM-ROOTCAUSE 批 组 3（B1——TUI-SESSION-VIEW.md §5 机制 · 用例宿主 = 本档）
  * 用例表 1:1：T-TB1–T-TB10（行/载体/子块/评审/流式/总量/翻页/搜索）。
  *
  * TUI-HISTORY-TRIM 批（2026-09-16）追加 U1–U6 / U8–U10：保底 `LINES_TRIM_FLOOR` + 最小步进裁剪

@@ -3,7 +3,7 @@
  * T-HS1–T-HS11——Stop 触发面五态 / 载荷三态 / 非阻塞（信号同步）/ matcher 忽略 /
  * 失败静默 / PreToolUse matcher 回归 / 事件集静态收口（AC-HS1–AC-HS5）。
  * 快层零网络：假 hook 脚本 = tmpdir 运行期生成（command = process.execPath——
- * 免 PATH / Windows 差异）；配置注入面 = 既有缝（桩 agent.config.hooks[event]，§21.6 注记）。
+ * 免 PATH / Windows 差异）；配置注入面 = 既有缝（桩 agent.config.hooks[event]，AGENT-LOOP.md §6.13 注记）。
  * 归册（2026-09-12 收尾轮 9）：真 spawn 用例（T-HS1/2/3/6/7/9/10）走 slow() 门控（子进程类——
  * 快层 skip、test:full 照跑）；T-HS4/5/8/11 零真进程留快层。
  */
@@ -67,7 +67,7 @@ function hookEntry({ script, payload, started = "-", go = "-", ...rest }) {
   return { command: process.execPath, args: [script, payload, started, go], ...rest }
 }
 
-/** 桩 agent（§21.6 勘察注记：finalizeAgentTurn 依赖对最小桩零崩溃）。 */
+/** 桩 agent（AGENT-LOOP.md §6.13 勘察注记：finalizeAgentTurn 依赖对最小桩零崩溃）。 */
 function stubAgent(hooks = {}) {
   return { config: { hooks }, _currentTurn: 7 }
 }
@@ -83,7 +83,7 @@ function probeStopConfig() {
 
 const readIfExists = (p) => (existsSync(p) ? readFileSync(p, "utf8") : null)
 
-/** 轮询（≤5s 上限——§21.6 注记）：命中返回真值，超时返回 null。 */
+/** 轮询（≤5s 上限——AGENT-LOOP.md §6.13 注记）：命中返回真值，超时返回 null。 */
 async function poll(fn, timeoutMs = 5000, intervalMs = 50) {
   const deadline = Date.now() + timeoutMs
   for (;;) {
@@ -96,7 +96,7 @@ async function poll(fn, timeoutMs = 5000, intervalMs = 50) {
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms))
 
-/** 失败信息（§21.6 注记统一形态）：目标路径 + 脚本 stderr 摘要（errSource 缺省 = target——
+/** 失败信息（AGENT-LOOP.md §6.13 注记统一形态）：目标路径 + 脚本 stderr 摘要（errSource 缺省 = target——
  *  T-HS2 的 started 失败需指向 payload 的 .err——脚本错误只落该处）。 */
 function artifactFail(target, label, errSource = target) {
   const errFile = `${errSource}.err`

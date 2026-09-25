@@ -16,7 +16,7 @@
 export const TRIGGERS = ["user", "timeout", "cancel", "stop", "unknown"]
 
 /**
- * trigger 判定（判据序 = §20.3 第 1 条表；signal.reason 四形态：
+ * trigger 判定（判据序 = AGENT-LOOP-SUBAGENT.md §6.12 第 1 条表；signal.reason 四形态：
  * ① `{interrupt:true(,message)}`（既有 user 面）② `TimeoutError`（原生——timeout 面）
  * ③ `{abortTrigger:"cancel"|"stop"|"timeout"(,abortDetail)}`（新增——程序性中止）
  * ④ 缺失 / 无已知键（→ unknown——诊断告警态，不得静默）。
@@ -75,7 +75,7 @@ const UNRECORDED = "unrecorded"
 /** 信号域 detail 回落（AGENT-LOOP-SUBAGENT.md §6.12 形态③——`abortDetail` 载站点名；错误未标注时仍可辨发起动作）。 */
 const detailOf = (signal) => (typeof signal?.reason?.abortDetail === "string" ? signal.reason.abortDetail : null)
 
-/** 求值链（§20.3 第 1 条：err.abortInfo → triggerOf(signal) → err.name 兜底）。 */
+/** 求值链（§6.12 第 1 条：err.abortInfo → triggerOf(signal) → err.name 兜底）。 */
 function resolveAbort(err, signal) {
   const info = err?.abortInfo
   if (info?.trigger) return { trigger: info.trigger, layer: info.layer ?? UNRECORDED, detail: info.detail || null }
@@ -93,7 +93,7 @@ function clipDetail(detail, budget) {
 }
 
 /**
- * 死亡行合成器（§20.3 第 3 条——报告面单点）：
+ * 死亡行合成器（§6.12 第 3 条——报告面单点）：
  * `<原 message>[ ← cause: <cause.message>][ · abort(<trigger>@<layer>:<detail>)]`
  * - 原 message 前缀逐字保留（既有前缀 / 包含断言零回归）；
  * - 后缀出现条件 = `err.abortInfo` 存在 ∨ `signal?.aborted` ∨ `err.name ∈ {AbortError, TimeoutError}`；
@@ -108,7 +108,7 @@ export function deathLine(err, signal) {
   if (abortish) {
     const { trigger, layer, detail } = resolveAbort(err, signal)
     const head = `${line} · abort(${trigger}@${layer}:`
-    // unknown 形态逐字用告警 token（§20.3 第 3 条——站点 detail 不进告警行）；非串 detail 归一化
+    // unknown 形态逐字用告警 token（§6.12 第 3 条——站点 detail 不进告警行）；非串 detail 归一化
     const text = trigger === "unknown" ? NO_REASON : (detail == null ? UNRECORDED : String(detail))
     line = `${head}${clipDetail(text, MAX_LEN - head.length - 1)})`
   }

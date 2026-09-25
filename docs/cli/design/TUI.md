@@ -483,7 +483,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 **跨文件限**：三份源档预计后均 < 500 硬限（460 / 205 / 437）——**无拆分需要**。
 
 **>300 advisory 档审视结论（F-R24a——评审 #6 收正）**：
-- `subagent-blocks.mjs`（437 → ~460）：改动面 = 既有 `ensureSubTaskKey` 内一分支 + 一条摘行调用（未新增职责 / 未新增模块级函数）⇒ **无需拆分**；>300 为存量（2026-09-05 由 625 行拆出后的漂移）——登记存量债。
+- `subagent-blocks.mjs`：改动面 = 既有 `ensureSubTaskKey` 内一分支 + 一条摘行调用（未新增职责 / 未新增模块级函数）⇒ **无需拆分**；>300 为存量（2026-09-05 由 625 行拆出后的漂移）——档位登记（读数 / 触发）= `docs/cli/design/CLI-DEBT.md` §2.1 A9 行（数据单一活面；本档不复读读数）。
 - `subagent-scheduler.mjs`（429 → ~437）：改动面 = 既有 `catch` 内补一条 `logEvent` + 顶注 import（未新增职责）⇒ **无需拆分**；>300 为存量——登记存量债。
 
 **6.8.3.5 关键决策记录（含否决备选）**
@@ -692,6 +692,8 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 | VSC webview 对位 | webview 渲染 / 消息协议 | `docs/vsc/design/WEBVIEW*.md`——**非同机制**（端差异如实登记——登记 ≠ 默认保留；**登记面 = 记录已裁的保留项**，✗ 非未决差项兜底；端差默认 = 消，保留须结构性不对称 + 证据 + 显式裁定（A9）；各端独立实现只述实现形态，✗ 不构成差异保留依据；**已裁保留 · A9 三件齐**：① 结构性不对称 = 渲染宿主不同（VSC webview DOM + 宿主↔面板消息协议 ∥ CLI 裸 ANSI 终端行内渲染；消息协议仅单侧存在）；② 证据 = 两实现树（`thincoder-vscode/webview/**` + `WEBVIEW-PROTOCOL.md` ∥ `thincoder-cli/src/tui/**`）；③ 显式裁定 = 2026-09-14「逻辑 / 渲染分家」（同判据 · `CORE-UNIFICATION.md` §2.5 端特有桶）+ 2026-09-25 本批确认（台账 #185）） |
 
 ## 变更记录
+
+- 2026-09-25（**cli-small-items 批 · 设计修正轮 · eng-designer**——承 `docs/batches/2026-09-25-cli-small-items.md` §3 发现 5）：§6.8.3.4 `subagent-blocks.mjs` 行的档位登记**指针化**——读数 / 触发改指 `docs/cli/design/CLI-DEBT.md` §2.1 A9 行（数据单一活面；本档不复读读数）。**机制面零变**。
 
 - 2026-09-25（**file-tier-sweep 批 · 评审轮 1 修正轮** · eng-designer——承 `docs/batches/2026-09-25-file-tier-sweep.md` §3 轮次 1 发现 4）：§7.5 用例宿主句随 S4 拆分收正——按族三档（留守 / 渲染族 / 消费族），逐例映射指向批档 §2「四·S4」。**机制面 / 契约点零变**。
 

@@ -33,7 +33,7 @@ export function handleCtrlCFamily(str, key, ctx) {
         state.suspended
       if (hasStopTarget) {
         // 当前回合平 abort（无 interrupt——命中 agent.mjs 回合收尾清池分支——全停）
-        // §20.3 站点 #11（第 24 批）：整批 / 会话级停 = stop（reason 载荷）
+        // AGENT-LOOP-SUBAGENT.md §6.12 站点 #11（第 24 批）：整批 / 会话级停 = stop（reason 载荷）
         if (state.processing && state.controller) state.controller.abort({ abortTrigger: "stop", abortDetail: "session-stop" })
         // 会话 abort 集合 = 链条内全部 controller（含 Ctrl+I/ContinueError 重建的旧
         // controller——children 不逃逸，round1 偏差 #3）。挂起态才标记 _suspAborted +

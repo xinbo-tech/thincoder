@@ -76,7 +76,7 @@ export function createRenderLoop(state, agent, ctx, pushLine, write = (s) => pro
       }
       state._pauseAnchorLen = convLen
 
-      // NOTE (§7.2 D6): the old state.outputPanels prune is gone — output panels
+      // NOTE (docs/cli/design/TUI.md §6.8 D6): the old state.outputPanels prune is gone — output panels
       // are abolished; subagent blocks live in the conversation and are never
       // auto-pruned (bounded by the N2 per-child line cap instead).
 

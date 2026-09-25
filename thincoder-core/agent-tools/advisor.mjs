@@ -3,7 +3,7 @@
  * The agent calls this explicitly to get an independent review.
  * The top-level `type` is REQUIRED and must be exactly "code" or "design"
  * (F30 fail-closed — no silent default; ADVISOR-GUARDS.md §2.4).
- * §11.2 (R13 — async advisor): at depth 0 the review launches into the
+ * AGENT-LOOP-ASYNC-POOL.md §6.10 (R13 — async advisor): at depth 0 the review launches into the
  * background pool by DEFAULT (async:true / omitted; async:false forces the
  * blocking review); depth>0 (eng-coder self-review) stays synchronous always.
  */
@@ -96,7 +96,7 @@ export const advisorTool = {
   outputPanel: true,
   async execute(args, ctx) {
     const agent = ctx.agent
-    // Review-object declaration (§18.8 D-OA3): the PARENT constructs it and the
+    // Review-object declaration (AGENT-LOOP-ASYNC-POOL.md §6.18 D-OA3): the PARENT constructs it and the
     // advisor tool passes it through — mechanical anchoring, not model inference.
     // Any non-object value (string/array/primitive, possibly from a malformed
     // tool call) degrades to null = no injection (legacy calls unchanged).
@@ -150,7 +150,7 @@ export const advisorTool = {
       }
     }
 
-    // §11.2 (R13 — ruling ②-3 A): async gate. Depth-0 defaults to the
+    // §6.10 (R13 — ruling ②-3 A): async gate. Depth-0 defaults to the
     // background pool; depth>0 (eng-coder internal self-review) is ALWAYS sync —
     // an explicit async:true there is rejected, the default never flips.
     // depth 显式校验（归一形态——判定单点：`depth` 取一次 + `asyncRequested` 显式布尔，
@@ -168,7 +168,7 @@ export const advisorTool = {
     }
     const isAsync = asyncRequested || (depth === 0 && args.async !== false)
 
-    // Per-review instance resolution (§11.2 ③ — ruling ②-5 A): fix rounds
+    // Per-review instance resolution (§6.10 ③ — ruling ②-5 A): fix rounds
     // continue the same reviewId (design = the doc-set instance's designId —
     // slot/spawn continuity; code = the newest OPEN instance). The resolution
     // scopes agent._advisorRound/_lastAdvisorOutput so the message builder and
@@ -185,7 +185,7 @@ export const advisorTool = {
     // a clean pass; on pass it is slotted under the instance's designId at settle
     // (sync: right here; async: the settle callback — fix #2). A NEW instance
     // gets a fresh designId; a continued fix round keeps the original one — and a
-    // same-scope re-review after a pass REUSES the session's id (F2h §29.1).
+    // same-scope re-review after a pass REUSES the session's id (F2h).
     const designToken = reviewType === "design" ? generateDesignToken(agent) : null
     const designId = reviewType === "design" ? resolved.designId : null
 
@@ -209,7 +209,7 @@ export const advisorTool = {
       if (ctx._toolCallId !== undefined) {
         (agent._advisorAsyncAcks ??= new Set()).add(ctx._toolCallId)
       }
-      // E（F17/§14.14 E-3c）：设计评审点火回执追加冻结句（代码评审 ack 零改）——窗口下界以
+      // E（F17/ADVISOR-GUARDS.md §5 E-3c）：设计评审点火回执追加冻结句（代码评审 ack 零改）——窗口下界以
       // 可观察信号表达：报告送达 / 取消前，被审文档（含批次档）零写入。
       const freezeNote = reviewType === "design"
         ? "；D5 冻结窗口：被审文档（含批次档）在报告送达前零写入——在途写入会被拒绝，写入将使本轮结算为陈旧 (pass 不发 token)"
@@ -244,7 +244,7 @@ export const advisorTool = {
       batchDoc: resolved.run.batchDoc ?? null,
     }, designToken, documents, paths, reviewObject, designId)
 
-    // B 启动拒绝（§14.4 #2——稳定前缀）：拒发登记（同池满 / cap 款——不置 called、不耗轮次），
+    // B 启动拒绝（稳定前缀）：拒发登记（同池满 / cap 款——不置 called、不耗轮次），
     // 可见报错照常返回（record-results 的 REFUSED 契约）。第 33 批：判定单点——同时供设计
     // 失败分类复用（launchRefused ⇒ neutral——无尝试发生；`ADVISOR-GUARDS.md` §7 失败结算表行 1）。
     const launchRefused = String(result).startsWith(ADVISOR_LAUNCH_REFUSAL_PREFIX)
@@ -265,12 +265,12 @@ export const advisorTool = {
       const settled = settleDesignReview(agent, resolved.run, designToken, result, { incomplete })
       // 撤计数（2026-09-18 用户裁定）：原同步面“分类落账”随会话级计数器整体退场（零载体——F28③）；
       // 失败结论块由**结算出口**产出（异步结算 `settleAdvisorRun`——两轨共用，ADVISOR-GUARDS.md §7）。
-      // F2e (§29.1): the sync prior mirror must not carry the raw echo the runner
+      // F2e: the sync prior mirror must not carry the raw echo the runner
       // stored — overwrite with the clean settled form (exact-suffix truncation).
       if (settled.passed) {
         agent._lastAdvisorOutput = stripApprovedSuffix(settled.output, resolved.run.approvedSuffix)
       } else if (incomplete) {
-        // 未完成 ⇒ 同步 prior 镜像覆写为清洗后输出（防未注册 token 进 prior——§14.3）。
+        // 未完成 ⇒ 同步 prior 镜像覆写为清洗后输出（防未注册 token 进 prior——ADVISOR-GUARDS.md §1）。
         agent._lastAdvisorOutput = settled.output
       }
       return settled.output

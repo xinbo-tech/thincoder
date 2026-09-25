@@ -12,7 +12,7 @@
  *
  * AGENT-LOOP-SUBAGENT.md §6.7.2 D-M7 ⏹：运行中（非 done）折叠头右缘停止标记（dim，仅折叠头）——点击 =
  * cancel（mouse.mjs 列级命中 _stopCol——不触发折叠翻转）。
- * SUBAGENT-TAIL（supersede §27 R23 子块段方案；显示契约 docs/design/TUI.md §6）：嵌套
+ * SUBAGENT-TAIL（supersede §6.8.2 R23 子块段方案；显示契约 docs/cli/design/TUI.md §6.8）：嵌套
  * 子代理内容行并入本块 blocks（数据层——append 目标上移）——面板与冻结渲染只读
  * sub.blocks（无子块段/无子块头/无每层折叠键）；折叠键只剩 `sub-${key}`（面板 ↔
  * 冻结同键——D5 无缝衔接不变）。
@@ -22,7 +22,7 @@
  * 渲染）——若本函数放 render-frame 会引入 layout↔render-frame 循环依赖。
  *
  * 区块渲染逻辑自 render-conversation.mjs buildConvLines runningSubs 段迁移
- * （§7.2.1 D2）：折叠头 `[▶/⏸ key · model · elapsed · turn] state`（⏸ = 等待
+ * （docs/cli/design/TUI.md §6.8 D2）：折叠头 `[▶/⏸ key · model · elapsed · turn] state`（⏸ = 等待
  * 审批态图标，sub.approval 非空时显示）+ tail 3；展开态经 fold-block.mjs 公共
  * 组件（renderBlockTimeline + renderExpandedBlock，60% 封顶 + 块内滚动）。
  * 折叠状态 key = `sub-${key}` 跨 turn 保持（D5，与冻结区块同一 key——冻结边界
@@ -43,7 +43,7 @@ export function renderSubagentPanel(state, cols, maxRows) {
   const runningSubs = Object.values(state.subTasks ?? {}).filter((s) => !s.done || s.awaitingDigest)
   if (runningSubs.length === 0) return []
   const out = []
-  // 面板顶部边界线（现状分隔线语义迁移，§7.2.1 D2/NF2）——面板存在即画线，
+  // 面板顶部边界线（现状分隔线语义迁移，docs/cli/design/TUI.md §6.8 D2/NF2）——面板存在即画线，
   // 无运行区块时面板整体不渲染（F6：无悬空线）。
   out.push({ text: "─".repeat(Math.max(1, cols - 1)), color: C.dim, _skipDimFold: true })
   for (const sub of runningSubs) {
@@ -56,14 +56,14 @@ export function renderSubagentPanel(state, cols, maxRows) {
     // AGENT-LOOP-SUBAGENT.md §6.7.2 D-M7b ②: sync/async 显式头标（B 形态——不靠"没标推断"）——async 由
     // ⟦ev⟧async 标记置位；sync 区块（无标记）显式标 sync。真实 subagent 角色
     // （escalate/consult/compress 等复用面板槽的条目无语义——非 spawn 角色豁免）；
-    // §11.2 D-24b：role "advisor" 伪角色同面板（块/⏹/冻结复用——ruling ②-4 A）。
+    // AGENT-LOOP-ASYNC-POOL.md §6.10 D-24b：role "advisor" 伪角色同面板（块/⏹/冻结复用——ruling ②-4 A）。
     // 冻结后保留（与 model 标识同生命周期——render-conversation frozenSubTaskLines
     // 同款 modePart）。**颜色后置注入**（code review 🔵#4）：bracket 宽度预算用纯文
     // 本（dim ANSI 内嵌会被 sliceByWidth 截断在 restore 之前 → 行尾残留 dim）——
     // 截断后对完整存活的 mode word 单独套 dim + 恢复行色（自闭合——截断落在词内
     // 则 replace 不命中 → 无 ANSI 泄漏，词以行色显示）。
     const isSubRole = SUBAGENT_ROLES.includes(sub.role) || sub.role === "advisor"
-    // §20 D-SD3b waiting 块（sub.queued——排队 spawn 返回即建——未启动无 relay 流）：
+    // AGENT-LOOP-SUBAGENT.md §6.9 D-SD3b waiting 块（sub.queued——排队 spawn 返回即建——未启动无 relay 流）：
     // 括号状态词 = waiting（依赖/域冲突等位——detail 即原因）或 queued（槽满等位——
     // 状态区显示 position）；不显示 sync/async 词（尚未启动——无 async 标记可言——
     // sync 词会误导：async spawn 排队的块不是 sync）；⏹ 门控（QUEUED-VISIBILITY F-2——

@@ -896,32 +896,42 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 2. **同参两通道归宿分歧**：`edits` 真值非数组 + 合法单形态参数并存时——ACP 桥路由按 `Array.isArray` 判 ⇒ 走单形态、**写入落地**；核 `execute` 按真值判 ⇒ 容器成形错误（`thincoder-cli/src/acp/bridge.mjs:311` / `:313` ↔ `thincoder-core/tools/file.mjs:274`）。
 3. **零触达语义的前提被 2 打穿**：`touchedPaths` 真值非数组 ⇒ 返 `[]`（#325 D-6「该调用必败 ⇒ 零触达」）；分歧形态下该调用**不败**（桥径写成功），而门禁 / 记账 / L3 看到零路径 ⇒ 写落地但零门禁、零变更记账（fail-open 面）。
 
-**消费点逐点实读（as-of 2026-09-25 · 仓根完整路径）**：
+**消费点逐点实读（行号 = 现盘重锚 · 2026-09-25 修正轮 + 实施后重锚；形态 / 守卫列 = 本批（#327）落地前实读——变化面见下裁定）**：
 
 | # | 消费点 | 形态 | 守卫 |
 |---|---|---|---|
-| 1 | `thincoder-core/agent/dispatch.mjs:127`（执行即刻记账 `noteExecutedMutation`） | `args ?? {}` + `[args?.path]` | 有（try/catch 包体） |
-| 2 | `thincoder-core/agent/dispatch.mjs:201`（工程设计闸） | `touchedPaths(args)` + `[args.path]` | **无** |
-| 3 | `thincoder-core/agent/dispatch.mjs:232`（D5 冻结窗） | `touchedPaths(args)` + `[args.path]` | 有（try/catch → `[]`） |
-| 4 | `thincoder-core/agent/record-results.mjs:149`（`_touchedFiles` + 重建索引） | `touchedPaths(args)` + `[args.path]`；`:148` 二次 `JSON.parse` 无守卫 | **无** |
+| 1 | `thincoder-core/agent/dispatch.mjs:126`（执行即刻记账 `noteExecutedMutation`） | `args ?? {}` + `[args?.path]` | 有（try/catch 包体） |
+| 2 | `thincoder-core/agent/dispatch.mjs:198`（工程设计闸） | `touchedPaths(args)` + `[args.path]` | **无** |
+| 3 | `thincoder-core/agent/dispatch.mjs:229`（D5 冻结窗） | `touchedPaths(args)` + `[args.path]` | 有（try/catch → `[]`） |
+| 4 | `thincoder-core/agent/record-results.mjs:150`（`_touchedFiles` + 重建索引） | `touchedPaths(args)` + `[args.path]`；`:148` 二次 `JSON.parse` 无守卫 | **无** |
 | 5 | `thincoder-core/agent.mjs:401`（中断分支记账） | `touchedPaths(args)` + `[args.path]` | 有（try/catch 包体） |
-| 6 | `thincoder-core/peer-domains.mjs:81`（L3 写前查 + 足迹登记） | `touchedPaths(args ?? {})` | **无**（调用本体无零抛兜底） |
-| 7 | `thincoder-vscode/src/agent/tool-gates.mjs:26`（`l3TouchedPaths` 定义——端侧路径提取单源） | `touchedPaths(args ?? {})` + 尾 `.filter` | **无** |
-| 8 | `thincoder-vscode/src/agent/execute-tools.mjs:349`（`_touchedFiles` 记账） | `touchedPaths(args)` + `[args?.path]` | **无** |
-| 9 | `thincoder-vscode/src/agent/tool-gates.mjs:94`（工程设计闸） | `touchedPaths(args)` + `[args.path]` | **无** |
-| 10 | `thincoder-vscode/src/agent/rules-face.mjs:101`（作用域规则 JIT） | `touchedPaths(args ?? {})` + `(raw ?? [])` | **无** |
+| 6 | `thincoder-core/peer-domains.mjs:80`（L3 写前查 + 足迹登记） | `touchedPaths(args ?? {})` | **无**（调用本体无零抛兜底） |
+| 7 | `thincoder-vscode/src/agent/tool-gates.mjs:23`（`l3TouchedPaths` 定义——端侧路径提取单源） | `touchedPaths(args ?? {})` + 尾 `.filter`（本批裁定 5 落地后 = 整面转调单源谓词 + `toolName` 参删） | **无** |
+| 8 | `thincoder-vscode/src/agent/execute-tools.mjs:351`（`_touchedFiles` 记账） | `touchedPaths(args)` + `[args?.path]` | **无** |
+| 9 | `thincoder-vscode/src/agent/tool-gates.mjs:90`（工程设计闸） | `touchedPaths(args)` + `[args.path]` | **无** |
+| 10 | `thincoder-vscode/src/agent/rules-face.mjs:103`（作用域规则 JIT） | `touchedPaths(args ?? {})` + `(raw ?? [])` | **无** |
 
-（台账 #327 点名六点 = 2 / 4 / 8 / 9 / 10 + 第 7 点的调用方 `thincoder-vscode/src/agent/execute-tools.mjs:188`；第 6 点为本轮实勘新增同族点。）
+（台账 #327 点名六点 = 2 / 4 / 8 / 9 / 10 + 第 7 点的调用方 `thincoder-vscode/src/agent/execute-tools.mjs:190`；第 6 点为本轮实勘新增同族点。）
 
 **裁定（一谓词三面收敛）**：
 
 1. **单源提取谓词 `toolTouchPaths(tool, args)`**——落 `thincoder-core/agent/helpers.mjs`（与 `FILE_MUTATORS` / 子代排除集同址：两树共引的守卫谓词面）。契约：
    - `args` 为 null 或非对象 ⇒ 一律规范化为 `{}` 再交钩子；有钩子 ⇒ **钩子裁决**；无钩子 ⇒ `[args.path]` 兜底（形态零变）；
+   - **`file_ops` 动作感知**（无钩子径——2026-09-25 · 批 single-source-closeout · 台账 #333）：`action === "copy"` ⇒ `[args.dest]`（源仅读取，不属写域）；`move` / `rename` / 未知或缺失 `action` ⇒ `[args.source, args.dest]`（保守双算）；
+     钩子在位 ⇒ 仍以钩子裁决为先（现两树 `file_ops` 零钩子——`thincoder-core/tools/ops.mjs:17-44` 无 `touchedPaths`；动作枚举 = `move` / `copy` / `rename`）；
    - 钩子 throw / 返回非数组 ⇒ `[]`；
    - **不过滤非字符串项**（「未知路径 ⇒ 保守」判据归门禁自身——`thincoder-cli/test/portability-classification.test.mjs` T-22 语义零变）。
 2. **十处消费点一律改调该谓词**：未守卫七处为行为变更（`args = null` 从裸抛变为成形结果）；已守卫三处为**零变对齐**（其 try/catch 外壳随之退休——谓词内部即保险）。
 3. **判据归一**：ACP 桥 `edit` 路由判据由 `Array.isArray(args?.edits)` 改为**真值判**（与核 `execute` 同判据）——`edits` 真值 ⇒ 批量分支（共享容器守卫、同一错误面）；`edits` 假值 ⇒ 单形态面。分歧形态（真值非数组 + 合法单形态参数）此后两通道同拒，**「桥径单形态应用」分支消除**。
 4. **前提机检**：`[]` 零触达语义以「该调用必败」为支撑——以用例固定该前提：`FILE_MUTATORS` 六成员 × 畸形入参（`args = null`；`edit` 的 `edits` 真值非数组）⇒ `execute` **必败** ∧ 目标文件零变更（形态据实施轮先跑读数定——`Error:` 串 ∥ 抛错；判据只取「必败 ∧ 零变更」，形态不参与判定）。
+
+5. **`file_ops` 动作感知入谓词 + 端特例分支清零**（2026-09-25 · 批 single-source-closeout · 台账 #333——**用户裁 15:16「先修正核、再单源化」**）：核 `peer-domains.mjs` 的 `file_ops` 双算特例分支与端 `tool-gates.mjs` 的 `l3TouchedPaths` 本地分支**双删**（两侧整面走谓词；
+   端 `l3TouchedPaths` 的 `toolName` 参数随删——两个调用点（`thincoder-vscode/src/agent/tool-gates.mjs` · `thincoder-vscode/src/agent/execute-tools.mjs`）同步改签名，仓内零测试消费者）。
+   **十消费点语义复核**（核 6 / 端 4——逐点清单 = 批档 §2）：行为变仅两处——
+   ① 核 #6 `thincoder-core/peer-domains.mjs`（L3 写前查 / 足迹登记）：`copy` 源不再计入写域（本裁定目标面）；
+   ② 端 #10 `thincoder-vscode/src/agent/rules-face.mjs`（作用域规则 JIT）：`file_ops` 覆盖面**由死转活**——谓词此前对 `file_ops` 返 `[args.path]`（`file_ops` 无 `path` 参）⇒ 该工具在 `PATH_TOOLS` 内实零候选；本裁定如实登记为行为面变化。
+   **补一格用例位**（本批修正轮 · 承评审发现 3）：`file_ops` `copy` / `move` ⇒ 作用域规则候选命中——落点 = `thincoder-vscode/test/scoped-rules.test.mjs`（T-B3 族续编——`file_ops` 径；用例 = T-B3b）。
+   其余八点零变（核 #1–#5 与端 #8 / #9 由 `FILE_MUTATORS` 门卫隔断——`file_ops` 不达；端 #7 `l3TouchedPaths` 端侧本已 `copy ⇒ dest`）。
 
 **已批判据零改（明示）**：`thincoder-core/tools/file.mjs:257` 的容器守卫（真值非数组 ⇒ `[]`、不虚报顶层 path）**语义零改**——裁定 3 恢复其前提（该调用必败）后，`[]` 的语义重新为真。
 **否决**保守形 `args.path ? [args.path] : []`：与已批 E1「零触达」相抵，且掩盖真因——真因 = 通道判据分歧，非 `[]` 本身。
@@ -934,11 +944,13 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 |---|---|---|
 | 谓词 | `thincoder-core/agent/helpers.mjs` | `export function toolTouchPaths(tool, args)` → 恒数组 · 恒零抛 |
 | 核消费 | `thincoder-core/agent/dispatch.mjs` · `thincoder-core/agent/record-results.mjs` · `thincoder-core/agent.mjs` · `thincoder-core/peer-domains.mjs` | 六处替换调用（#1/#3/#5 的 try/catch 外壳退休） |
-| 端消费 | `thincoder-vscode/src/agent/tool-gates.mjs` · `thincoder-vscode/src/agent/execute-tools.mjs` · `thincoder-vscode/src/agent/rules-face.mjs` | 四处替换调用；`l3TouchedPaths` 保留 `file_ops` 特例分支、其余转调谓词 |
+| 端消费 | `thincoder-vscode/src/agent/tool-gates.mjs` · `thincoder-vscode/src/agent/execute-tools.mjs` · `thincoder-vscode/src/agent/rules-face.mjs` | 四处替换调用；`l3TouchedPaths` 整面转调谓词（零本地 `file_ops` 分支——动作感知随核单源） |
 | 桥判据 | `thincoder-cli/src/acp/bridge.mjs` | `edit` 路由：`Boolean(args?.edits)` 单点取值，条件与分支同用 |
 
 **登记面判定（桥路由归一 · 裁定 3）**：判 = **纯缺陷修复**（判据未变——桥向核对齐；窄形态 = 畸形入参的 fail-open 面收口）⇒ **零对外契约登记、零 CHANGELOG 行**
 （§4 契约表的「登记 + CHANGELOG」管归一变更 / 模型可见**新形态**，本项不属）；**发布关联** = 修复随下一代 CLI 发布（发布动作 = 用户门——照 §6.14 先例）。
+
+**登记面判定（`file_ops` 动作感知 · 裁定 5 · 同批 #344 同判）**：判 = **纯缺陷修复**（#333 = 写域语义收正 + 端特例分支清零；#344 = 端 `conflicts` 判据向核单源对齐——判据未变、无模型可见新形态）⇒ **零对外契约登记、零 CHANGELOG 行**；**发布关联** = 修复随下一代发布（发布动作 = 用户门——照 §6.14 先例）。
 
 **边界（本节不做）**：不改钩子本体语义（`thincoder-core/tools/file.mjs` 零改）· 不改门禁对空路径集的判据（T-22 语义保持）· 不动 `touchedPaths` 契约形状（仍是「工具自报 · 可选钩子」）· 不新增工具面标记 / 配置开关。
 
@@ -960,6 +972,7 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 | D-TO10 | task 工程模式停用 = **双层门**（装配摘除 KD8 + execute 机械拒 escalate 先例）；batch 词面协议 = **值的载体结构化**（note 括注 / create 归一化 / 死占位机检——enum 静态表达不了按段词表 ⇒ 运行时校验 = 唯一真值面〔value 谓词收紧为关键词锚定〕） | 详见 §6.15 六裁定点；否决备选：纯调用时拒绝（保留 token 税）· JSON schema enum 化（表达不了按段）· note 拒绝再入（逼散文回流 value）· BATCH-ID 自造序号（第二编号源违 D2）· 泛占位正则（误杀合法尖括号与模板暂存） |
 | D-TO11 | 子代面 `question` 过滤 = **装配层按面排除**（depth>0 工具表；单源排除集 + 谓词，住 `thincoder-core/agent/helpers.mjs`——静态表 / 工具本体 / 机械门零改；端侧同款字面归一核单源） | 详见 §6.16。死条目 = 上下文税 + 假可供性；路由指引已在人格档 ⇒ 该通道对子代零信息增益。否决备选：只靠机械门兜底（保留 token 税与假可供性）· 给工具本体加声明式标记（触及工具本体——本批边界零改）· 人格档再写一遍（重复指引违 D2） |
 | D-TO12 | 工具钩子消费 = **单源谓词 + 判据归一**（#327）：`toolTouchPaths` 住 `thincoder-core/agent/helpers.mjs`，两树十处消费点一律调用；ACP 桥 `edit` 路由判据改与核同（真值判）⇒ 同参两通道同归宿 | 详见 §6.17。五份守卫形态 = 下轮漂移源（否决逐点 try/catch）；钩子内抛成形文案会逸出（否决，#325 D-6）；核侧迁就桥 = 弱化容器守卫（否决）；`[]` 零触达语义以「该调用必败」为支撑——归一恢复该前提，而非改判据（否决 #327④ 保守形 `args.path ? [args.path] : []`） |
+| D-TO13 | `file_ops` 动作感知 = **入单源谓词**（`copy` ⇒ 只 `dest`；`move` / `rename` 等 ⇒ `source` + `dest`）+ **端特例分支清零** | 详见 §6.17 裁定 5（台账 #333）。否决备选：① 核向端对齐（端窄形态转正）——单源化只消灭两处漂移、不判规则对错，先让核吃正确规则（用户 2026-09-25 15:16「先修正核、再单源化」）；② 只改设计档字面而谓词不动（核仍登记 `copy` 源 ⇒ 对端假提示不消）；③ 逐消费点各自按动作判别（多份形态 = 下轮漂移源——D-TO12 同旨） |
 
 ## 8. 不并项与历史沿革
 
@@ -1010,6 +1023,16 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 **边界（本增量不做）**：不做 task 工具本体改动（保留）；不做台账（M2 承接）；不做「归册三选一」替代流程（M10 一并砍）。
 
 ## 变更记录
+
+- 2026-09-25（**single-source-closeout 批 · 实施后重锚（fix）· eng-designer**——承 `docs/batches/2026-09-25-single-source-closeout.md` §5 漂移清单 · 父侧派单）：
+  §6.17 消费点表行号按实施后现盘逐行复读——实改两行（行 6 `thincoder-core/peer-domains.mjs` `:82→:80`；行 9 `thincoder-vscode/src/agent/tool-gates.mjs` `:96→:90`），余八行 + 脚注调用方 `:190` 零漂；
+  表头行号 as-of 补「实施后重锚」；用例位句「现盘 T-B3 只走 `read` 径」随实施落为「`file_ops` 径 · 用例 = T-B3b」。**零新语义**（实施后坐标 / 实态同步）。
+
+- 2026-09-25（**single-source-closeout 批 · 设计评审轮 1 修正轮（fix）· eng-designer**——承 `docs/batches/2026-09-25-single-source-closeout.md` §3 轮次 1 发现 3 / 5 / 6 · 父侧裁定）：
+  §6.17 消费点表行号全表重锚现盘（行 1–10 = `:126` / `:198` / `:229` / `:150` / `:401` / `:82` / `:23` / `:351` / `:96` / `:103`；脚注调用方 `:190`）+ 表头标形态 / 守卫列 as-of；行 7 形态列补裁定 5 落地后形；裁定 5 ② 补 `file_ops` 作用域用例位（`thincoder-vscode/test/scoped-rules.test.mjs`）；补**登记面判定（#333 / #344）**句。**零新语义**（评审发现逐号落位）。
+
+- 2026-09-25（**single-source-closeout 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-single-source-closeout.md` §1 · 台账 #333）：
+  §6.17 契约补 **`file_ops` 动作感知**（`copy` ⇒ 只 `dest`；`move` / `rename` / 未知 ⇒ `source` + `dest`）+ 新**裁定 5**（端 `l3TouchedPaths` 特例分支清零 + 十消费点语义复核结论：行为变仅核 #6 与端 #10）、接口契约表端消费行同步；决策 **D-TO13**。**零新机制**（谓词契约的射程补全）。
 
 - 2026-09-25（**misc-four 批 · 设计评审修正轮（冻结窗延后项 · 发现 #3 / #13）· eng-designer**——承 `docs/batches/2026-09-25-misc-four.md` §2 修正块）：§6.14 收正汇一条——表外复核表标题（`:607`）与两行（`:611` / `:612`）、边界行（`:645`）完成态措辞改「本批落（#208 · as-of 2026-09-25 设计轮）」；A28 行（`:626`）三列收正（输入列改五档 / 期望列完成态措辞 / 先红列两数字各标 as-of）。**零新语义**。
 

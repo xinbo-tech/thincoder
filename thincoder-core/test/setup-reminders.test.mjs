@@ -75,12 +75,12 @@ const engAgent = (manifest = { phase: "initial-dev" }) =>
 const stateLines = (agent) => agent.history.filter((m) => m.content.startsWith("[System reminder: project state: "))
 
 test("AC-N1/T8 情境行逐字：phase 单字段（两合法值 + 未知值）；落线恰一行", () => {
-  assert.equal(manifestStateLine({ phase: "initial-dev" }), "[System reminder: project state: phase: initial-dev (discipline: light).]")
-  assert.equal(manifestStateLine({ phase: "production" }), "[System reminder: project state: phase: production (discipline: strict).]")
+  assert.equal(manifestStateLine({ phase: "initial-dev" }), "[System reminder: project state: phase: initial-dev (rigor: light).]")
+  assert.equal(manifestStateLine({ phase: "production" }), "[System reminder: project state: phase: production (rigor: strict).]")
   assert.equal(manifestStateLine({ phase: "custom" }), "[System reminder: project state: phase: custom.]", "未知 phase → 只出值、不编判据（无标签）")
   const agent = engAgent()
   assert.equal(pushManifestStateReminder(agent, { depth: 0 }), true)
-  assert.deepEqual(agent.history.map((m) => m.content), ["[System reminder: project state: phase: initial-dev (discipline: light).]"], "落线恰一行")
+  assert.deepEqual(agent.history.map((m) => m.content), ["[System reminder: project state: phase: initial-dev (rigor: light).]"], "落线恰一行")
   assert.equal(agent.history[0].transient, true)
 })
 
@@ -105,7 +105,7 @@ test("AC-N3/T10 单活体：值变后该前缀行恰 1 条、旧文零命中、�
 
 test("AC-N3b 会话重建：history 带旧行而 _manifestLine 缺失 → 值变仍单活体", () => {
   const agent = engAgent()
-  agent.history.push({ role: "user", content: "[System reminder: project state: phase: initial-dev (discipline: light).]", transient: true })
+  agent.history.push({ role: "user", content: "[System reminder: project state: phase: initial-dev (rigor: light).]", transient: true })
   agent.manifest = { phase: "production" }
   assert.equal(pushManifestStateReminder(agent, { depth: 0 }), true)
   assert.equal(stateLines(agent).length, 1, "旧行被摘（从 history 认领现存活体）")
@@ -179,7 +179,7 @@ const diskAgent = (cwd, phase) =>
   ({ cwd, config: { agent: { engineering: true } }, manifest: { phase }, history: [], _fullHistory: [] })
 
 const DATA_FILE = "PROJECT-MANIFEST.json"
-const lineOf = (phase, discipline) => `[System reminder: project state: phase: ${phase} (discipline: ${discipline}).]`
+const lineOf = (phase, rigor) => `[System reminder: project state: phase: ${phase} (rigor: ${rigor}).]`
 
 test("AC-N7/T32 值变重推（盘面驱动）：会话内盘上 phase 变（mtime 推进）→ 下回合行 = 新值", () => {
   const root = makeRoot("initial-dev", T0)

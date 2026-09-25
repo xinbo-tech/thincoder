@@ -1,12 +1,12 @@
 /**
- * provider-headers.test.mjs — `provider.headers` 全通路铺开（第 32 批 · PROVIDER.md §21–§24）
+ * provider-headers.test.mjs — `provider.headers` 全通路铺开（第 32 批 · PROVIDER.md §6.17）
  *
- * 用例表 = 设计 §24.1（T39–T47）；判据 = §24.2 AC-18。
+ * 用例表 = 设计 PROVIDER.md §6.17（T39–T47）；判据 = 同节 AC-18。
  * T39 core 参照面 / T40 responses / T41 anthropic / T42 google / T43 generate-title（直连+proxy）
  * ——定制头到达；T44 同名冲突 → 内置头胜出（5 通路）；T45 零配置回归（头集合逐字不变）；
  * T46 config → 请求全链（装载面净化 + 装配展开）；T47 非 2xx 路径定制头携行 + 错误语义不变。
  *
- * mock 形态（§24.1 注）：`globalThis.fetch` 注入记录 (url, opts)；native 三格式最小 SSE 帧
+ * mock 形态（PROVIDER.md §6.17 注）：`globalThis.fetch` 注入记录 (url, opts)；native 三格式最小 SSE 帧
  * （responses / anthropic / google）；OpenAI 面非 SSE 单 chunk JSON 兜底；generate-title proxy
  * 分支经 `_deps.proxyFetchImpl` 注入；config 面经 `_setConfigPathForTest` + tmp config.json
  * （夹具形态同 config-merge.test.mjs）。无定时器等待——快层直跑（D-T6 阈值内）。
@@ -65,7 +65,7 @@ function jsonResponse(body, status = 200) {
 /** OpenAI 面兜底 chunk（readSSE 的非 SSE 单 chunk JSON 路径）。 */
 const openaiChunk = () => ({ choices: [{ message: { content: "hi" }, finish_reason: "stop" }], usage: { prompt_tokens: 1, completion_tokens: 1 } })
 
-// native 三格式最小 SSE 帧（§24.1 注）
+// native 三格式最小 SSE 帧（PROVIDER.md §6.17 注）
 const RESPONSES_FRAMES =
   `event: response.output_text.delta\ndata: ${JSON.stringify({ type: "response.output_text.delta", delta: "hi" })}\n\n` +
   `event: response.completed\ndata: ${JSON.stringify({ type: "response.completed", response: { id: "resp_1", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 } } })}\n\n`
@@ -90,7 +90,7 @@ const CHANNELS = [
   { label: "generate-title", provider: OPENAI, reply: () => jsonResponse({ choices: [{ message: { content: "T" } }] }), title: true },
 ]
 
-/** 无定制头时的内置头基线（T44/T45 判据——§24.1）。 */
+/** 无定制头时的内置头基线（T44/T45 判据——PROVIDER.md §6.17）。 */
 const BUILTIN = {
   core: { "Content-Type": "application/json", Authorization: "Bearer k-test" },
   responses: { "Content-Type": "application/json", Authorization: "Bearer k-test" },
@@ -174,7 +174,7 @@ test("T43 会话标题定制头到达（直连 + proxy 两分支）", async () =
     assert.equal(title, "ProxyTitle", "proxy 分支：注入缝生效")
     assert.equal(captured.length, 1)
     assert.equal(captured[0].uri, "http://127.0.0.1:9/proxy", "走 proxy 分支（非直连）")
-    assert.deepEqual(captured[0].opts.headers, { "X-Device-Id": "dev-1", ...BUILTIN["generate-title"] }, "两分支共用同一 opts（§23.2 #4）")
+    assert.deepEqual(captured[0].opts.headers, { "X-Device-Id": "dev-1", ...BUILTIN["generate-title"] }, "两分支共用同一 opts（PROVIDER.md §6.17）")
   } finally { _deps.proxyFetchImpl = origImpl }
 })
 

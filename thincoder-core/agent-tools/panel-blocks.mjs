@@ -8,14 +8,14 @@
  *
  * 现算面板块列表（state.subTasks 活值纯推导——无时点快照语义）。
  * status 三态映射：done+awaitingDigest → "awaitingDigest"；done → "done"；
- * queued（waiting/等位未启动）→ "queued"；其余 → "running"（§20 D-SD3b queued 态入镜口径保留）。
+ * queued（waiting/等位未启动）→ "queued"；其余 → "running"（AGENT-LOOP-SUBAGENT.md §6.9 D-SD3b queued 态入镜口径保留）。
  */
 export function computePanelBlocks(state) {
   const subs = state?.subTasks
   if (!subs) return null // 未挂载（headless/mock 无 TUI state）——无面板
   const blocks = []
   for (const sub of Object.values(subs)) {
-    // §20 D-SD3b：waiting/等位块（sub.queued——未启动）以 queued 态入镜（视图与面板
+    // AGENT-LOOP-SUBAGENT.md §6.9 D-SD3b：waiting/等位块（sub.queued——未启动）以 queued 态入镜（视图与面板
     // 所见一致——action:'panel' 视图 + freeze 门控读此态）。
     const status = sub.done ? (sub.awaitingDigest ? "awaitingDigest" : "done") : (sub.queued ? "queued" : "running")
     blocks.push({ key: sub.key, role: sub.role ?? null, status, startedAt: sub.started ?? Date.now() })

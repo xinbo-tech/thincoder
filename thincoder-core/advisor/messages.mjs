@@ -39,7 +39,7 @@ export function buildObjectDeclarationBlock(object = null) {
 }
 
 /**
- * Approval-signal block for design reviews (round 1 and round 2+ — §11.2 D-24b:
+ * Approval-signal block for design reviews (round 1 and round 2+ — AGENT-LOOP-ASYNC-POOL.md §6.10 D-24b:
  * an async fix-round continuation must be able to re-approve, so the token is
  * injected into EVERY design round; the reviewer echoes it only on a clean pass).
  * §29.1 F2a (2026-09-07): BOTH values are injected — the token AND the designId
@@ -67,10 +67,10 @@ export function buildDesignApprovalBlock(designToken, designId) {
  *   When set, the review input is built from this list ONLY — no git-diff change-set collection.
  *   When absent, the legacy git-diff-based scope is kept (backward compatible).
  * @param {string[]|null} [paths] — code review only: explicit list of file/dir paths to review (deduped; shown under Review Scope)
- * @param {Object|null} [object] — review-object declaration (§18.8 D-OA1/D-OA3):
+ * @param {Object|null} [object] — review-object declaration (AGENT-LOOP-ASYNC-POOL.md §6.18 D-OA1/D-OA3):
  *   { type, target, status, reason, exclude } — mechanically injected at the
  *   start of the user message; absent → no injection (legacy calls unchanged).
- * @param {string|null} [designId] — §29.1 F2a: injected next to the token in the
+ * @param {string|null} [designId] — F2a: injected next to the token in the
  *   Approval Signal (both values — the reviewer copies both verbatim); null →
  *   token-only degradation (legacy direct callers).
  * @returns {string} the user message

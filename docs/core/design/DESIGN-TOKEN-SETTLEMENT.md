@@ -79,7 +79,9 @@
 ### 6.2 双端与依赖方向
 
 - **双端**：CLI 与 VSC 各自实现、**语义同源**（同一批「结算即落盘 / 门禁读权威 / 镜像退役」三条）。CLI 无 VSC 的快照 / 清零修复面（不存在对应 bug），**不引入**。
-- **已知有意差异**（非偏差）：`reconcileEngTokensFromSlot` 同 id 冲突**以槽为准**（本仓——「槽 = 权威」）；VSC 版为内存优先，且 VSC 有当场权威台账回写一步，本形态回写为**惰性**（随下次 `persistEngTokens` / `saveSession` 携带清理后的 Map）——源码注释逐字登记（`thincoder-core/token-ttl.mjs:181`–`:186`）。
+- **已知有意差异（二态化 · 2026-09-25 · 台账 #339）**：两项——① **同 id 冲突裁决**（本仓 = **槽为准**〔「槽 = 权威」〕；VSC = 内存优先——`thincoder-vscode/src/agent/agent-state.mjs:58-76` `reconcileEngDesignTokens`：`!map.has(id)` 才合入）——**A9 核查 = ① 不成立**（两面同具备 Map 与槽两载体，无单侧对象）⇒ 按「端差默认 = 消」转**消解路径 + 到期条件**：
+  两面对齐同一裁决规则（方向 = token 结算 / 合并面设计轮裁定——候选 = 槽为准〔核现径〕∥ 内存优先〔端现径，防丢新铸〕）；**到期 = token 结算 / 合并面下次触碰**。
+  ② **过期清理回写时序**（VSC = 当场权威台账回写；本形态 = 惰性〔随下次 `persistEngTokens` / `saveSession` 携带〕）——**形态（写回时序）· 语义零差**（清理对象 = 过期项——任何门禁均不授权，早清晚清不改变授权结果）⇒ 非登记项。源码注释逐字登记（`thincoder-core/token-ttl.mjs:181`–`:186`）。
 - **依赖环（有意、安全）**：`token-ttl.mjs` 只 import 底层槽 I/O（`session-slots.mjs` + `session-guard.mjs`）；`session.mjs` 同时 import `token-ttl.mjs` → 静态环，与既有 session ↔ session-slots 环同构（函数声明实例化期已初始化，环安全）。
 
 ### 6.3 VSC 端结算接线（B 式并入 · 实核 as-of 2026-09-15）
@@ -93,12 +95,13 @@
 | token 入槽 + Approved 后缀（echo 即裁决） | **W12 已迁核**——现体 = 核 `thincoder-core/agent-tools/design-token.mjs:22`（`buildApprovedSuffix`）· `:82`（`settleDesignReview`）；原 `advisor-async.mjs:389` / `:392` 已删 |
 | 门禁读权威（miss 回读槽——D4） | **W12/W13 已迁核**——现体 = 核 `thincoder-core/agent-tools/subagent-spawn.mjs:112`（`resolveDesignSlot`——内存 miss 回读槽 reconcile + TTL 过滤保留）；原端侧 `src/agent-tools/subagent-spawn-gate.mjs:70` / `:124` 已删（`authorizeEngCoderDesignToken` 名随核化退场——核 `:158-169` 内联验证；仅过期拒才删槽） （迁移期引文） |
 | 写侧保留槽 + union 合并（D2 + D6——忙时不清 settle 落盘项） | **W11 转口核**——端壳 `thincoder-vscode/src/extension/session-slot-write.mjs:23`（`engTokensMergeForSave` = 核 `mergeEngTokensForSave` re-export）→ 核 `thincoder-core/session-slot-write.mjs:156`（并集 + 同 key 新铸者胜）；原 `session-slot-write.mjs:166` 自持实现已删 （迁移期引文） |
-| 会话内回合从槽新读（D3——快照已删） | 端壳 hydrate 面：`thincoder-vscode/src/agent/setup.mjs`（`hydrateRun` 每轮 `loadSlot` → `applySlotSessionState`）+ `thincoder-vscode/src/agent/agent-state.mjs:56`（`reconcileEngDesignTokens` 槽权威合入——内存项永不清空）；原 `suspension.mjs` 快照 / `panel-chat.mjs` 回合读行随 W13 重排（旧坐标已退场） |
+| 会话内回合从槽新读（D3——快照已删） | 端壳 hydrate 面：`thincoder-vscode/src/agent/setup.mjs`（`hydrateRun` 每轮 `loadSlot` → `applySlotSessionState`）+ `thincoder-vscode/src/agent/agent-state.mjs:56`（`reconcileEngDesignTokens` 槽源合入——同 id 冲突**内存优先**〔状态词 = §6.2 ①〕；内存项永不清空——「槽 = 权威」仅指门禁读源 = D-S3）；原 `suspension.mjs` 快照 / `panel-chat.mjs` 回合读行随 W13 重排（旧坐标已退场） |
 | 单值镜像退役（D5） | `_engDesignToken` 单值镜像**零运行时读写**（dispatch 写门资格问「任一活槽存在」——核 `resolveDesignSlot`（`thincoder-core/agent-tools/subagent-spawn.mjs:115`））；仅 `thincoder-vscode/src/agent/agent-state.mjs:70-71` 一次性迁移读（legacy 残留——`ENG-TOKEN-BINDING.md` §6.3 已列） |
 | 消费落盘对称（consume 后不复活） | **W12/W13 已迁核**——现体 = 核 `thincoder-core/agent-tools/subagent-spawn.mjs:152`（`executeConsumeDesignAction`——删内存槽 + `persistEngTokens` 当场同步落盘 + 失败回滚 `:172-178`）；原 `subagent-spawn-gate.mjs:145` 已删 （迁移期引文） |
 | 测试面 | `thincoder-vscode/test/eng-settlement.test.mjs`（14 用例——settle 落盘 / union 忙时 / restore / consume 不复活） |
 
-**VSC 侧差异**（有意——§6.2「已知有意差异」的 VSC 载体坐标）：`engTokensMergeForSave` 同 key 冲突以 **expiresAt 大者胜**（新 mint——防 async 重评审同 designId 丢新 token）；CLI 侧 `reconcileEngTokensFromSlot` 同 id 冲突以槽为准（两处源码注释逐字登记）。
+**VSC 侧差异（二态化 · 2026-09-25）**：① `engTokensMergeForSave` 同 key 冲突「**expiresAt 大者胜**（新 mint）」——**已消解**（W11 转口后同一实现：端壳 = 核 `mergeEngTokensForSave` re-export；
+  「新铸者胜」与「expiresAt 大者胜」= 同一规则——核档 `thincoder-core/session-slot-write.mjs:152-153`）；② `reconcileEngTokensFromSlot` 同 id 冲突以槽为准（VSC 版内存优先）——**消解路径 + 到期条件在册**（A9 核查与处置 = §6.2 ①）。
 
 ## 7. 并入的关键决策记录（含否决备选）
 
@@ -161,6 +164,10 @@
 **边界（本增量不做）**：不做评审判据本身（advisor 内部——继承）；不做凭证格式改造（`uuid:expiresAt` 继承 v1，不重设 HMAC/签名层——已随 2026-09-06 裁定退役）。
 
 ## 变更记录
+
+- 2026-09-25（**end-diff-registry 批 · 设计评审修正轮 1（发现 #3）· eng-designer**——承 `docs/batches/2026-09-25-end-diff-registry.md` §3 轮次 1 · 父侧裁定接受）：§6.3 表 D3 行措辞收正——`reconcileEngDesignTokens` 「槽权威合入」→ **「槽源合入——同 id 冲突内存优先」**（与 §6.2 ① 口径一致；「槽 = 权威」限定为门禁读源〔D-S3〕）。**零新语义**（口径对齐）。
+
+- 2026-09-25（**end-diff-registry 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-end-diff-registry.md` §1 · 台账 #339）：设计档侧同族复核（二项）——§6.2「已知有意差异」二项化（① reconcile 同 id 冲突裁决 = **消解路径 + 到期条件**〔A9 ① 不成立〕；② 过期清理回写时序 = 形态 · 非登记项）；§6.3 尾段「VSC 侧差异」收正（merge 规则差异 = **已消解**——W11 单源转口；余项 = §6.2 ①）。**零新语义**。
 
 - 2026-09-17（**v2 就地更新 · 退役批** · 主 agent）：M6 模块设计语义融合——新增 §9 评审凭证（F1/F2/F4/F5 继承 v1 零改 + F3 评审对象来源改读 `docRoot` 复用 M4 `write-gate.mjs` 同源导出；AC-M6 验收）；原旁路档 `_archive/modules/ENGINEERING-MODE-V2-MODULE-REVIEW-CREDENTIAL.md` 归档 `_archive/modules/`。
 

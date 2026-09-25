@@ -9,7 +9,7 @@
  */
 
 /**
- * §18.7 D-TS5 (A2): mechanically summarize the parent spawn task book for the
+ * AGENT-LOOP-SUBAGENT.md §6.7.6 D-TS5 (A2): mechanically summarize the parent spawn task book for the
  * audit spawn — the three audit-relevant elements VERBATIM (design doc paths /
  * affected-file list / acceptance criteria); verbose context/background is
  * dropped (the auditor can read the design docs themselves — they stay
@@ -70,8 +70,8 @@ export function summarizeEngTaskBook(taskInput) {
 export function buildAuditBlock(ctx) {
   const touched = (ctx.agent._touchedFiles ?? []).map((f) => `- ${f}`).join("\n") || "- (none yet)"
   return `[Audit scope — mechanical context, independent of the eng-coder's self-report:]\n` +
-    // §18.7 D-TS4 A1：审计指令模板（四类偏差 + 范围限制 + 校验清单格式）——审计语义
-    // 不再靠模型自悟；范围限制是 §18.5 D-AG3 声明（下方 Zero-git scope authority）
+    // §6.7.6 D-TS4 A1：审计指令模板（四类偏差 + 范围限制 + 校验清单格式）——审计语义
+    // 不再靠模型自悟；范围限制是 §6.7.4 D-AG3 声明（下方 Zero-git scope authority）
     // 的同源一句指注，不重复声明。
     `[Audit instructions — mechanical template:]\n` +
     `You are auditing an eng-coder delivery against its approved design — audit for EXACTLY these four deviation categories:\n` +
@@ -83,21 +83,21 @@ export function buildAuditBlock(ctx) {
     `workspace changes not listed there are unrelated to this delivery and are NOT grounds for an out-of-list finding.\n` +
     `Scope discipline (F-TS6 A1): read ONLY the audited files and the design-doc sections relevant to this delivery — do NOT re-read whole documents.\n` +
     `Every deviation item MUST be fieldized: file:line + design reference (doc path + section/AC id) + severity + evidence (quoted code or doc text).\n` +
-    // §18.7 D-TS5 A2：任务书从全量 verbatim 改机械摘要块（三要素逐字——排除冗长上下文）。
+    // §6.7.6 D-TS5 A2：任务书从全量 verbatim 改机械摘要块（三要素逐字——排除冗长上下文）。
     `[Parent spawn task book — mechanical summary: design docs + affected-file list + acceptance criteria verbatim; verbose context/background dropped — the design docs are still available for reading outside this input:]\n` +
     `${summarizeEngTaskBook(ctx.agent._engTaskInput)}\n` +
     `Files actually touched by the eng-coder (mechanical union — audit these against the file list):\n${touched}\n` +
     // §18.5 D-AG3（2026-09-04）：审计零 git 范围权威声明——本审计任务零 git（不注入
-    // git 上下文——§18.5 全角色零 git）；_touchedFiles 为审计范围；工作区未列于
+    // git 上下文——§6.7.4 全角色零 git）；_touchedFiles 为审计范围；工作区未列于
     // _touchedFiles 的改动与本任务无关，不作超清单依据（VS Code auditTaskBook 同款措辞）。
     "Zero-git scope authority: this audit task receives NO git context — nothing is injected. " +
     "The evidence base is the design documents, the current disk state (read/glob/grep), and the _touchedFiles list above. " +
     "Workspace changes NOT listed in _touchedFiles are unrelated to this delivery — they are NOT grounds for an out-of-file-list finding." +
-    // §18.13 D-A1.2：审计预算句——A1 指令模板 + A2 摘要块之后、A3 报告模板之前（定序——评审 #7）。
+    // §6.7.6 D-A1.2：审计预算句——A1 指令模板 + A2 摘要块之后、A3 报告模板之前（定序——评审 #7）。
     // 逐字设计锚（D-A1.2 代码块）：只读该读的——10 轮机械预算——超时报 PROBLEM 下结论。
     // 前导 \n 与 A3 同款块分隔约定（上一句 Zero-git 句末无换行——不触碰既有句）。
     `\n[Audit budget — mechanical]: read ONLY the touched files listed above and the design-doc sections the parent task book names (affected-files table, acceptance criteria, status line). Do NOT read whole documents. Budget = 10 tool rounds max — if you cannot conclude within it, report PROBLEM (inconclusive) rather than continuing to explore.\n` +
-    // §18.7 D-TS6 A3：审计输出报告格式模板（三态——字段化行——不让模型自由发挥）。
+    // §6.7.6 D-TS6 A3：审计输出报告格式模板（三态——字段化行——不让模型自由发挥）。
     `\n[Audit report format — mechanical template:]\n` +
     `Report EXACTLY one of three states:\n` +
     `- CLEAN — no deviation across the four categories: reply the line "Four deviation categories: none found." (四类偏差均未发现);\n` +

@@ -29,11 +29,11 @@ import { offloadToolResult, escapeXml } from "../agent/helpers.mjs"
 import { logEvent, errText } from "../log.mjs"
 import { deathLine } from "../abort-provenance.mjs"
 import { makeRelay, wrapChildCallbacks, runWithContinue, ensureChildApiKey, clampEffort } from "../agent/spawn-child.mjs"
-// TUI-OOM-ROOTCAUSE §23.3.1：子代理人读线窗口常量（单源——store 零依赖）。
+// TUI-OOM-ROOTCAUSE·AGENT-LOOP.md §6.15：子代理人读线窗口常量（单源——store 零依赖）。
 import { RECORD_WINDOW_MESSAGES } from "../session-store.mjs"
 // ASYNC-RESULT-CONTAINER.md D2/D3/D6：pending 单容器停靠 + settle 公共收尾 + child signal 单点
 import { bindChildController, buildChildSignal, settleAsyncEntry } from "./async-settle.mjs"
-import { digestBudgetOver, persistOverflowReport } from "./digest-budget.mjs" // B5（群 B 批 §22 D-DG2）：digest 注入预算单源
+import { digestBudgetOver, persistOverflowReport } from "./digest-budget.mjs" // B5（群 B 批 AGENT-LOOP.md §6.14 D-DG2）：digest 注入预算单源
 
 // Named consult defaults (consult P2, 2026-08-30).
 const CONSULT_TIMEOUT_MS = 600_000 // default consult lifecycle timeout
@@ -183,7 +183,7 @@ export function composeConsultDigest(session) {
  */
 export async function injectConsultResult(agent, entry) {
   const full = String(entry?.report ?? "(no consultation result)")
-  // §22 D-DG3（群 B 批 B5）：计入预算的 raw = 报告正文（标签行不计）——首行标签拆出；超限
+  // §6.14 D-DG3（群 B 批 B5）：计入预算的 raw = 报告正文（标签行不计）——首行标签拆出；超限
   // 路径保留族标签行（与 VSC 镜像同形）；落盘内容 = raw（与其余三族同口径）。
   const at = full.indexOf("\n")
   const label = at === -1 ? "" : full.slice(0, at + 1)
@@ -219,7 +219,7 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
   const armWatchdog = () => {
     const t = setTimeout(() => {
       timedOut = true
-      // §20.3 站点 #12 信号面（第 24 批）：watchdog 中止带 timeout reason
+      // AGENT-LOOP-SUBAGENT.md §6.12 站点 #12 信号面（第 24 批）：watchdog 中止带 timeout reason
       try { ctrl.abort({ abortTrigger: "timeout", abortDetail: "consult-watchdog" }) } catch { /* already settled */ }
     }, timeoutMs)
     t.unref?.()
@@ -282,11 +282,11 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
       // role "consult" (overlay + base would concatenate it twice).
       role: "consult",
     })
-    // TUI-OOM-ROOTCAUSE §23.3.1：子代理人读线窗口（四处创建点同置）——consult 会话跨回合驻留，
+    // TUI-OOM-ROOTCAUSE·AGENT-LOOP.md §6.15：子代理人读线窗口（四处创建点同置）——consult 会话跨回合驻留，
     // 不置窗则 _fullHistory 仍无界（F-O1 覆盖 depth>0 全部创建点）
     child._historyWindow = RECORD_WINDOW_MESSAGES
 
-    // Activity relay via the unified spawn-child pipeline (§7.2 D3): `consult#<subId>/`
+    // Activity relay via the unified spawn-child pipeline (docs/cli/design/TUI.md §6.8 D3): `consult#<subId>/`
     // prefix (same channel subagent uses — parallel consultants stay independent) +
     // onToolOutput passthrough so the consultant's tool output lands in its TUI block.
     relayPrefix = makeRelay(agent, "consult", ctx.callbacks?.onToken, provider.model ?? "")
@@ -464,7 +464,7 @@ export const consultStopTool = {
     if (!s) return JSON.stringify({ error: "unknown consult id" })
     const abandoned = s.pending
     s.stopped = true
-    // §20.3 站点 #11（第 24 批）：会话级停 = stop
+    // §6.12 站点 #11（第 24 批）：会话级停 = stop
     for (const c of s.controllers) { try { c.abort({ abortTrigger: "stop", abortDetail: "consult-stop" }) } catch { /* already settled */ } }
     return JSON.stringify({ abandoned, cancelled: true })
   },

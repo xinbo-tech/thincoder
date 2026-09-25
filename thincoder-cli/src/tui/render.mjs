@@ -242,7 +242,7 @@ const ANSI_SEQUENCE_RE = new RegExp(ANSI_SEQUENCE.source, "g")
 export function sanitizeDisplay(s) {
   return s
     .replace(ANSI_SEQUENCE_RE, "")
-    // §7.2 D5 fallback: an unparsed ⟦ev⟧ event token must never reach the grid —
+    // docs/cli/design/TUI.md §6.8 D5 fallback: an unparsed ⟦ev⟧ event token must never reach the grid —
     // strip the sentinel + its RS-wrapped payload (⟦ev⟧turn\x1e…\x1e / bare RS/GS chars).
   // 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
     .replace(/⟦ev⟧[^\x1e\x1d]*\x1e[^\x1e\x1d]*\x1e[^\x1e\x1d]*\x1e[^\x1e\x1d]*\x1e?/g, "")

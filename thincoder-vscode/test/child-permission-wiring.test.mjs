@@ -7,7 +7,7 @@
  * 需求：VSC 子代理审批面对齐（F-CP1/F-CP2）；批次档
  * `2026-09-12-VSC-CHILD-PERMISSION.md` §2（任务书）。
  *
- * 手法（§18.7）：引擎接线——runChild 真接线（假 runAgent 捕获 callbacks + autoApprove 实参）。
+ * 手法（AGENT-LOOP-SUBAGENT.md §6.7.6）：引擎接线——runChild 真接线（假 runAgent 捕获 callbacks + autoApprove 实参）。
  * W12（2026-09-15）改判：escalate 引擎接线组（T-CP6/T-CP7/T-CP19）退役——执行面 = 核
  * 引擎（见下方退役注）；本档保留 T-CP10/T-CP11/T-CP15（角色域与无通道）。
  * 夹具自持（零跨档 import——不引 `./child-permission.test.mjs`）：stubPanel / writeToolSink /

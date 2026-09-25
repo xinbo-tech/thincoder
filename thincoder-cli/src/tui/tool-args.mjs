@@ -75,7 +75,7 @@ export function describeToolArgs(name, args) {
 }
 
 /** 恢复路径用：全量参数 pretty JSON 的 dim 行（非空才输出）。
- *  与工具结果的恢复惯例一致——完整落行；**总量额度**（TUI-OOM-ROOTCAUSE §15.3.1
+ *  与工具结果的恢复惯例一致——完整落行；**总量额度**（TUI-OOM-ROOTCAUSE·TUI-SESSION-VIEW.md §5.1
  *  ARGS_JSON_MAX_CHARS——`write`/`apply_patch` 整文件内容进显示层的堵口）：超出尾截断
  *  + 标记，首行保真。 */
 export function toolArgsLines(args) {

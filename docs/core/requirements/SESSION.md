@@ -153,8 +153,10 @@ N-S3 CLI 写出的槽文件 `history` 数组与旧实现同构（version 2 + his
 语义同源——VSC 档 F-N1–F-N8 / N-N1–N-N5 与 §4.1–§4.4 逐条同义（不重并）；**VSC 端差（登记）**：① marker `END = "vscode"`——只写 `.manifest.vscode`、永不碰 `.cli`（认领面隔离）·
 ② 历史分页步长 **200**（`HISTORY_PAGE_SIZE`——`thincoder-vscode/src/extension/history-window.mjs:18-22`，对端 20）· ③ 恢复呈现 = assistant 帧容器 + 嵌套工具卡（配对语义同源）·
 ④ 冷 cwd 手动 GC 无 shell 通道（只接线自动残留 GC）——**注销（2026-09-21）**：VSC 已补命令入口 `thincoder.sessionGc`（数据面 API——双端同面；见 `docs/core/design/SESSION.md` §6.17 D-SE38）
-· ⑤ 记录存储形态 = 本端零该机制（如实登记）· ⑥ `turnBusy()` 拒新会话 / 删除 / 切换 / 换项目（回合互斥）。坐标（实核）＝ `thincoder-vscode/src/extension/session-slots.mjs`（400 行）· `session-io.mjs`（437 行）· `panel-session.mjs`（339 行）· `session-gc.mjs`。
+· ⑤ 记录存储形态 = **端面事实**（本端零该机制——非端差，如实登记）· ⑥ `turnBusy()` 拒新会话 / 删除 / 切换 / 换项目（回合互斥）。坐标（实核）＝ `thincoder-vscode/src/extension/session-slots.mjs`（400 行）· `session-io.mjs`（437 行）· `panel-session.mjs`（339 行）· `session-gc.mjs`。
 用例面 = `test/session-boot.test.mjs`（447 行 / 4 例，2026-09-21 实测）· `test/history-window.test.mjs`（192 行 / 8 例）· `test/history-restore.test.mjs`（237 行 / 9 例）· 集成 `test/integration/scenario-04-session-recovery.test.mjs`（140 行 / 5 例）。
+
+**二态化裁定行（2026-09-25 · 台账 #339① 需求层复核）**：① = **已裁保留**（结构性不对称——端 marker 单侧存在：只写 `.manifest.vscode`、永不碰 `.cli`）；②③⑥ = **已裁保留**（形态类——显示 / 互斥面；类判据单源 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §6.1 首）；④ = **已注销**（2026-09-21 VSC 补命令入口，双端同面——零动作）；⑤ = **端面事实**（非端差——行内改述）。
 
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）
 
@@ -176,3 +178,4 @@ N-S3 CLI 写出的槽文件 `history` 数组与旧实现同构（version 2 + his
 - 2026-09-22（**session-index 批 · 需求面 · 主 agent 落笔**——承用户 09:25「a 立批」裁决 + 批档 `docs/batches/2026-09-22-session-index.md`）：**新增 F-R19c / F-R19d**（索引优先 · 大会话可查 / 跨会话全库检索）+ **NF-R19 性能句收正**（「v1 逐文件流式读（无索引）」→「索引优先 · 主存回落」）+ §4.4 范围边界句收正（「不改 JSON 读取路径」→「保留为回落面」）。**本档新增需求 2 条**（R19 族扩面）。
 - 2026-09-22（**session-index 批 · 评审轮 1 修正 · 主 agent 落笔**——评审 id=18 · 🔴#1）：**F-S4 第二句收正**（「跨会话 `path=` 保持读槽文件 JSON（投影全量——兼容不变）」→「索引优先 + 主存回落（索引不可用 / 库内无行 ⇒ 既有读径与护栏逐字保留）」）+ **F-R19c / F-R19d 补设计落点指针**（评审 #8 需求侧半幅）。
 - 2026-09-22（**pending-triage 批 · 需求面 · 主 agent 落笔**——承用户裁决（#168① 认账改做）+ 批档 `docs/batches/2026-09-22-pending-triage.md` §1 上抛③）：**F-CR1 释放覆盖面扩展**（ACP `session/close` 关闭面 · 跨 cwd 释放 · VSC 端壳机判）+ **F-CR3 零回归条款加 `session/close` 除外**（该批评审轮 1 的 #168 相抵项）。
+- 2026-09-25（**end-diff-registry 批 · 需求层二态化轮 · eng-designer**——承 `docs/batches/2026-09-25-end-diff-registry.md` §2 上抛①〔父侧明示委托本轮落〕 · 台账 #339①）：§4.5 端差六条二态化——①/②③⑥ = **已裁保留**（① 结构性不对称；②③⑥ 形态类）；④ = 已注销（零动作）；⑤ 改述为**端面事实**；裁定行落地。**零新语义**。

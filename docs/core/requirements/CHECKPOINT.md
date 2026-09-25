@@ -75,10 +75,12 @@
 
 ### 4.4 VSC 端条目（并入 · 2026-09-15 批 8 · 自 `thincoder-vscode/docs/requirements/CHECKPOINT.md`）
 
-语义同源——VSC 档 F-C1–F-C7 / N-C1–N-C4 与上列条目逐条同义（机制体 = 设计档 §6 承载），**不重并**（D2）。VSC 端差 = ① **共享存储**
+语义同源——VSC 档 F-C1–F-C7 / N-C1–N-C4 与上列条目逐条同义（机制体 = 设计档 §6 承载），**不重并**（D2）。**端共享面（非端差 · 2026-09-25 复核）**：① **共享存储**
 （`~/.thincoder/checkpoints/{cwdHash12}/`——与 CLI 同目录同格式、快照跨端互通；盘符归一后同 cwdHash12——core §1.1 已载）· ② **非 git cwd 变体**
 （`createNonGitCheckpoint` 全目录拷贝 + SKIP 集——core §4.2 已载）。坐标（实核 · W5 收正——自持镜像已删）＝ `@thincoder/core/git/checkpoint.mjs` · `@thincoder/core/tools/git-checkpoint.mjs` · `thincoder-vscode/src/tools/git.mjs`（379 行 · 本端装配面保留）· `thincoder-vscode/src/tools/shell.mjs`（318 行 · 本端装配面保留）。
 **测试缺口（发现即报）**：VSC `test/` 对 checkpoint 面零专属用例（as-of 2026-09-12 全扫零命中）——补测触发 = 该面下次被触碰。
+
+**二态化裁定行（2026-09-25 · 台账 #339① 需求层复核）**：①② 两条 = **共享 / 同源事实（非端差）**——（「与 CLI 同目录同格式、快照跨端互通」/「core §4.2 已载」）；描述形态缺陷已改述（去「VSC 端差 =」标签）；本档 §4.4 无端差登记项。
 
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）
 
@@ -95,3 +97,4 @@
 - 2026-09-14（**B 轮并入 · 第 3 批**）：新增 §4 **需求条目**（四层闭环 / 范围与接受风险 / NF1–NF7——自 `thincoder-cli/docs/requirements/CHECKPOINT.md` 逐节比对后并入需求正文；**编号与文本承旧档**）+ §5 **不并项与历史沿革**；**本档新增需求 0**（纯回填）；首部加需求条目面指针一行。
 - 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：新增 §4.4 **VSC 端条目**（共享存储 / 非 git cwd 变体已载注 + 坐标 + 测试缺口——自 `thincoder-vscode/docs/requirements/CHECKPOINT.md` 并入；语义同源不重并）；§5 登记 VSC 档批次材料；**本档新增需求 0**（纯回填）。
 - 2026-09-15（**S2 W5 接线 · VSC 端** · eng-coder 实施轮）：§1 基线句标记「迁移前基线」（两端已迁核——CLI U5 / VSC W5）+ §4.4 VSC 端坐标收正——`src/tools/checkpoint.mjs` / `git-checkpoint.mjs` / `git-ext.mjs` 随 W5 删档，改引核子路径；**本档新增需求 0**（纯坐标收正）。
+- 2026-09-25（**end-diff-registry 批 · 需求层二态化轮 · eng-designer**——承 `docs/batches/2026-09-25-end-diff-registry.md` §2 上抛①〔父侧明示委托本轮落〕 · 台账 #339①）：§4.4 「VSC 端差 = ①②」改述为**端共享面（非端差）**（共享存储 / 非 git 变体 = 同源事实）；裁定行落地。**零新语义**。

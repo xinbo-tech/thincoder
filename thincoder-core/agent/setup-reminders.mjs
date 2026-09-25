@@ -63,16 +63,16 @@ export function pushEnvStateReminder(agent) {
 /** 情境行前缀——本行族识别符（摘旧行 / 会话重建认领同用；行形逐字见 manifestStateLine）。 */
 const MANIFEST_LINE_PREFIX = "[System reminder: project state: "
 
-/** phase → discipline 标签映射（判据单源 = 需求 v2 §9.1）；未知值不在表内 → 无标签。 */
-const MANIFEST_DISCIPLINE = Object.freeze({ "initial-dev": "light", production: "strict" })
+/** phase → rigor 标签映射（判据单源 = 需求 v2）；未知值不在表内 → 无标签。 */
+const MANIFEST_RIGOR = Object.freeze({ "initial-dev": "light", production: "strict" })
 
 /** 情境行构造 — pure, unit-testable（模块契约 `docs/core/design/MANIFEST.md` §2.6，与
  *  envStateLine 同族）。行形逐字（**单字段**——2026-09-17 裁撤批后）：
- *  `[System reminder: project state: phase: <值> (discipline: <light|strict>).]`
+ *  `[System reminder: project state: phase: <值> (rigor: <light|strict>).]`
  *  未知 phase → 只出值、不编判据（无标签）。 */
 export function manifestStateLine({ phase }) {
-  const discipline = MANIFEST_DISCIPLINE[phase]
-  return `${MANIFEST_LINE_PREFIX}phase: ${phase}${discipline ? ` (discipline: ${discipline})` : ""}.]`
+  const rigor = MANIFEST_RIGOR[phase]
+  return `${MANIFEST_LINE_PREFIX}phase: ${phase}${rigor ? ` (rigor: ${rigor})` : ""}.]`
 }
 
 /**

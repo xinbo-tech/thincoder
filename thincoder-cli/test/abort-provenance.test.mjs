@@ -137,7 +137,7 @@ test("T-AP8 零回归判定面：新错误对象仍命中既有谓词（N-D1.1�
   // classifySyncAbort（SYNC-CANCEL ② 折叠）：AbortError + 自属 ctrl aborted → targeted 语义不变
   const sig = (aborted) => ({ aborted })
   assert.equal(classifySyncAbort(sig(false), sig(false), ctrl.signal, err), "targeted")
-  // 形态③不含 interrupt 键（§20.3 第 1 条末——既有 {interrupt} 判据点零触碰）
+  // 形态③不含 interrupt 键（AGENT-LOOP-SUBAGENT.md §6.12 第 1 条末——既有 {interrupt} 判据点零触碰）
   assert.equal(ctrl.signal.reason.interrupt, undefined)
   assert.equal(timeoutError("x", "provider", "t").name, "Error")
 })

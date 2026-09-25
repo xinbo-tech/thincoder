@@ -20,7 +20,7 @@ export async function handleRenameCommand(ctx, args) {
     pushLine(`Title too long (max 80 chars)`, C.error)
     return
   }
-  // §12.2.5：renameSlot 契约 { ok, reason }——失败原因对用户可见（F3）
+  // renameSlot 契约 { ok, reason }——失败原因对用户可见（F3）
   const r = renameSlot(agent.cwd, slot, title)
   if (!r.ok) {
     const why = {
@@ -114,11 +114,11 @@ export async function handleSessionCommand(ctx) {
   // #41 准翻列：附着动作 = 翻转面自己赋值（`agent.manifest` ← 判据结果——相位行当回合起活）。
   if (manifestAfterSwitch) agent.manifest = manifestAfterSwitch
   // Rebuild from history (lazy) — the display snapshot is deprecated.
-  // §14.3.6：描述符 { history（尾窗+±1）, total, base }——标签口径 = total（非窗口长度）；
+  // SESSION.md §6.14：描述符 { history（尾窗+±1）, total, base }——标签口径 = total（非窗口长度）；
   // 未绑定（占用分支——模式 F）回退全量数组。
   const desc = sessionDescriptor(agent, data)
   state.lines = []
-  state._linesChars = 0 // TUI-OOM-ROOTCAUSE（§15.3.2）：切槽重建行集 → 字符账归零，restoreLines 重新入账
+  state._linesChars = 0 // TUI-OOM-ROOTCAUSE（TUI-SESSION-VIEW.md §5.3）：切槽重建行集 → 字符账归零，restoreLines 重新入账
   restoreLines(state, desc)
   state.tasks = agent.tasks ?? []
   if (state.tasks.length > 0 && state.tasks.every((t) => t.status === "done")) {

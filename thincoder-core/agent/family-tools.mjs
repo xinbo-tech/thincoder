@@ -77,7 +77,7 @@ export async function assembleFamilyTools({
     },
   } : subagentTool
 
-  // §18 D-E3 + ENGINEERING-MODE.md §2.15 D（第 2 批——参数化复用，不并列第二个 IIFE）：
+  // AGENT-LOOP-SUBAGENT.md §6.7.6 D-E3 + ENGINEERING-MODE.md §2.15 D（第 2 批——参数化复用，不并列第二个 IIFE）：
   // 工程子代理（depth>0；eng-coder = 偏差审计 / eng-designer = 自己勘察）get a restricted
   // spawn channel — role enum limited to explore, NO async parameter (sync only) and action
   // pinned to spawn（AGENT-LOOP-SUBAGENT.md §6.7 D-M3 restricted-variant action gate——escalate/check/status are
@@ -132,7 +132,7 @@ export async function assembleFamilyTools({
   // consult 工具仅在配置时注册（consultModels 空池时注册会让模型调用后吃一个错误回合）——
   // AGENT-LOOP-SUBAGENT.md §6.7: escalate 已并入常驻 subagent 的 action:"escalate"（无空池注册问题——动作在
   // 池空时返回既有错误语义，工程模式 fail-closed 在 execute 内拒绝）。
-  // §25 D-R17a: consult_check 已退役（digest 自动注入是唯一消费通道）——consult 家族
+  // CONSULTATION.md §6.2 D-R17a: consult_check 已退役（digest 自动注入是唯一消费通道）——consult 家族
   // 只剩 2 工具（consult_start/consult_stop——setup 注册点与描述面同步清零）。
   const consultTools = consultModels.length
     ? [decorate?.consultStart ?? withPool(consultStartTool), decorate?.consultStop ?? consultStopTool]
@@ -155,7 +155,7 @@ export async function assembleFamilyTools({
     // the system prompt names verify (system.md) and advisor (discipline.md) — without them an
     // escalate hit "unknown tool" and fell back to bash node --check / npm test to
     // self-verify (2026-08-16 deepseek escalate diagnosis; plugin parity).
-    // eng-coder: advisor + verify + the §18 audit-only subagent channel (D-E3).
+    // eng-coder: advisor + verify + the AGENT-LOOP-SUBAGENT.md §6.7.6 audit-only subagent channel (D-E3).
     // eng-designer (§2.15 D): the survey-only subagent channel alone — no advisor
     // (it does not fire reviews) and no verify (its deliverable is documents, not code).
     // BATCH-RECORD §4.3 挂载表（批次档生命周期工具化批）：eng 两分支各挂主名 `batch`

@@ -11,13 +11,13 @@
 
 import { existsSync, readFileSync, renameSync, statSync } from "node:fs"
 import { basename } from "node:path"
-// §14.3.8①（修正轮 #1）：.bak 轮转对**非本会话活动绑定面**联动改名 sidecar（`{p}.d → {bak}.d`）。
+// SESSION.md §6.12①（修正轮 #1）：.bak 轮转对**非本会话活动绑定面**联动改名 sidecar（`{p}.d → {bak}.d`）。
 import { RECORD_DIR_SUFFIX } from "./session-store.mjs"
 
 /** 轮转时随迁记录存储（.bak 路径联动）——本会话活动绑定面跳过（防拔掉活动存储）。 */
 function moveSidecar(src, dst, agent) {
   const dir = src + RECORD_DIR_SUFFIX
-  if (agent?._recordStore?.dir === dir) return // 本会话活动绑定面——原地保留（§14.3.8①）
+  if (agent?._recordStore?.dir === dir) return // 本会话活动绑定面——原地保留（SESSION.md §6.12①）
   try {
     if (existsSync(dir)) renameSync(dir, dst + RECORD_DIR_SUFFIX)
   } catch { /* 随迁失败不阻断轮转（现场原地保留——读侧身份核验兜底） */ }

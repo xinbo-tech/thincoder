@@ -79,7 +79,7 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
   // ASYNC-RESULT-CONTAINER.md D2（2026-09-08）：pending 单容器 +role——四族（subagent/
   // advisor/escalate/consult）统一停靠同一容器（独立族废弃），注入器按 role 分发。
   // W13（2026-09-15）：注入器 = 核单源（`@thincoder/core/agent-tools/subagent.mjs`
-  // `injectAsyncResult`；consult 族按核 agent.mjs 同构分派 `injectConsultResult`——§25
+  // `injectAsyncResult`；consult 族按核 agent.mjs 同构分派 `injectConsultResult`——CONSULTATION.md §6.2
   // D-R17a/b）——原端侧适配器随镜像删旧退役。动态 import：核链可达 node:sqlite（W8
   // 契约②）。载体 = 同一 `{history, _fullHistory}` 对象（核 digest 轮预算按载体键累计）。
   // splice 即 consumed——单注入点——注入一次。
@@ -100,15 +100,15 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
   // agent 生命周期对齐 CLI（2026-09-08）：顶层 agent 会话级单例复用。
   // opts.agent（仅 depth-0 honored）存在 → hydrateRun 复用同一对象（面板多回合/续跑共享——
   // AC1/F1——resume 迭代传同一 opts.agent）；缺省（首轮/destroy 重建/子代理/直连）→
-  // setupAgentRun = factory 新建 + hydrate（restore:true——§11.2.1 槽字段回填）。复用与新建
-  // 都走 hydrateRun：其内部先 resetRunState（§11.2 A 清单——顺序纪律：复位在 hydrate 内、
+  // setupAgentRun = factory 新建 + hydrate（restore:true——槽字段回填）。复用与新建
+  // 都走 hydrateRun：其内部先 resetRunState（per-run 复位清单 A——顺序纪律：复位在 hydrate 内、
   // 先于下方 inheritedGuard 应用——guard 标记继承到"复位过的"下一 run）。
   const existingAgent = (depth === 0 && opts.agent) || null
   const { agent, history, fullHistory, toolByName, toolSchemas, cfgVerifyGuard, cfgCompactThreshold, systemPrompt } =
     await (existingAgent
       ? hydrateRun(existingAgent, { provider, cwd, input, opts, depth, role, getAuto })
       : setupAgentRun({ provider, cwd, input, opts, depth, role, getAuto }))
-  // §11 write-back：把建好的顶层单例写回调用方 opts（panel-chat 的 runOpts 对象跨续跑迭代
+  // write-back：把建好的顶层单例写回调用方 opts（panel-chat 的 runOpts 对象跨续跑迭代
   // 存活——下轮 hydrate 复用同一对象；panel._agent 同步是调用方职责——ensurePanelAgent）。
   if (depth === 0) opts.agent = agent
 
@@ -124,7 +124,7 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
     history.push({ role: "user", content: composeTurnDomain(upstreamTurn, agent.config?.agent?.engineering === true), transient: true })
   }
 
-  // §15 D-A3（VS Code 对齐）：async 注册表挂 agent 上；depth-0 的容器沿共享 history
+  // AGENT-LOOP-SUBAGENT.md §6.7.3 D-A3（VS Code 对齐）：async 注册表挂 agent 上；depth-0 的容器沿共享 history
   // 数组跨 runAgent 调用存活。
   // W13（2026-09-15）载体绑定不变式收口（`docs/core/design/AGENT-LOOP.md §2.3` :93/:107——**13 字段**
   // 全集〔af 批 2026-09-17 补 `_asyncAdvisorQueue`；上行通道批 2026-09-19 补 `_childUpstream` / `_childUpstreamSeq`；
@@ -284,9 +284,9 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
       streamRules: agent.config?.agent?.streamRules ?? [],
       firedPatterns: streamRuleFired,
       // LOGGING（LOGGING.md——CLI parity）：llm:* 语义上下文（stage=turn 主循环回合——
-      // digest autoTurn=true；role/depth = 子代理上下文归属——§11 后顶层 agent 为面板会话级
+      // digest autoTurn=true；role/depth = 子代理上下文归属——单例化后顶层 agent 为面板会话级
       // 单例（复用 hydrate），per-run 对象仅子代理/destroy 重建路径）
-      // TRACE-STORE-VSC（§18.6 D-TR4 镜像——CLI agent.mjs logCtx 同款）：kind/cwd/session/
+      // TRACE-STORE-VSC（TRACES.md §6.1 D-TR4 镜像——CLI agent.mjs logCtx 同款）：kind/cwd/session/
       // traces 开关——kind 按 depth/role 分域（consult 孩子 = consult——CLI 同判据）；session =
       // agent._sessionStart（setup hydrate 打点——子代理不经 depth-0 设置——轨迹 session 为
       // null——CLI 同语义）；traces 沿 agent.config.traces.enabled（D-TR6——缺省 OFF 隐私裁定）。

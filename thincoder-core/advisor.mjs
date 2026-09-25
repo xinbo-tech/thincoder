@@ -127,7 +127,7 @@ export function buildAdvisorSystemPrompt(agent, prior, reviewType) {
  * @param {Object} agent — the parent agent (history used for the response table)
  * @param {Object|null} prior — prior issue table (extracted from history when null)
  * @param {string[]|null} [scopeFiles] — review surface for the no-response fallback (cwd-relative)
- * @param {Object|null} [object] — review-object declaration (§18.8): mechanically
+ * @param {Object|null} [object] — review-object declaration (AGENT-LOOP-ASYNC-POOL.md §6.18): mechanically
  *   prepended to the round-2+ follow-up so every round stays anchored (T-OA2).
  * @returns {string} the follow-up user message — or a plain "System reminder: …"
  *   fresh-review fallback (NO brackets — some OpenAI-compatible servers parse
@@ -183,10 +183,10 @@ export { escapeLiteralEscapes }
  * @param {string|null} [designToken] — design-review approval token (design only)
  * @param {string[]|null} [documents] — design review only: explicit list of doc paths to review (passed through to buildAdvisorUserMessage)
  * @param {string[]|null} [paths] — code review only: explicit list of file/dir paths to review
- * @param {Object|null} [object] — review-object declaration (§18.8 D-OA1): passed through
+ * @param {Object|null} [object] — review-object declaration (AGENT-LOOP-ASYNC-POOL.md §6.18 D-OA1): passed through
  *   to the user-message builders; mechanically injected at the start of every review
  *   round (round 1 design/code + round 2+ follow-up). Absent → legacy behavior.
- * @param {string|null} [designId] — §29.1 F2a: injected next to the design token in
+ * @param {string|null} [designId] — F2a: injected next to the design token in
  *   the Approval Signal (round 1 + round 2+ — both values, verbatim anchor).
  */
 export function prepareAdvisorMessages(agent, reviewType, designToken = null, documents = null, paths = null, priorParam = null, object = null, designId = null) {
@@ -258,7 +258,7 @@ export function prepareAdvisorMessages(agent, reviewType, designToken = null, do
   // review surface.
   const scopeFiles = resolveScopeFiles(agent, paths)
   const followUp = buildAdvisorFollowUp(agent, prior, scopeFiles, object)
-  // §11.2 D-24b (design round 2+ — async fix-round continuations must be able to
+  // AGENT-LOOP-ASYNC-POOL.md §6.10 D-24b (design round 2+ — async fix-round continuations must be able to
   // re-approve): re-anchor the review scope (the convergence follow-up carries no
   // document list) and inject the round's design token with the approval signal.
   if (reviewType === "design") {

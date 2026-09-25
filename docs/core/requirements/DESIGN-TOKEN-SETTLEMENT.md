@@ -40,7 +40,10 @@ settle 即落盘权威台账；凭证值只进槽文件（会话态），永不�
 - 端差（本端实况 · 保留三件齐）：**结算载体** = 会话槽 `engDesignTokens` 多槽表（`thincoder-vscode/src/extension/session-slot-write.mjs:100-166`——对端 = persistState 单源面）；本端断点修复面（快照 / 写侧清零 / 落盘时序）= 本端实现史实，语义结果两端一致（settle 即落盘）。
   - **① 结构性不对称**：VSC 宿主基线不同——agent 对象**每 run 重建**（`thincoder-vscode/src/agent/setup.mjs`——非 CLI 常驻单对象）⇒ 结算面多出「死对象 / 快照 / 清零」三类 VSC 独有断点域；载体随端壳存储面走（CLI 无对应面，不引入）。
   - **② 证据**：设计档 §6.2 / §6.3 + 源码注释逐字登记（`thincoder-core/token-ttl.mjs:181-186`）+ 端 `test/eng-settlement.test.mjs` 14 例。
-  - **③ 显式裁定**：设计档 §6.2「已知有意差异（非偏差）」声明（B 式迁移轮 2026-09-15 实核并入）。
+  - **③ 显式裁定**：**已裁保留**（2026-09-25 · 设计档同轮二态化复核）——声明面 = 设计档 §6.2 二态化块（`docs/core/design/DESIGN-TOKEN-SETTLEMENT.md:82-84`——同节两项余项状态词在册）+ §6.3 载体基线段（`:89-90`）；本项（载体）与余项两项分列（本项无消解项）。
+
+**二态化裁定行（2026-09-25 · 台账 #339① 需求层复核）**：载体一项 = **已裁保留**（三件齐——① 结构性不对称 = VSC agent 每 run 重建，结算面多出三类独有断点；② 证据 = 设计档 §6.3 + `thincoder-core/token-ttl.mjs:181-186` 注释逐字登记 + `thincoder-vscode/test/eng-settlement.test.mjs` 14 例；
+③ 显式裁定 = 见上条）；设计档侧同轮二态化 = §6.2 ① **消解路径 + 到期条件** · §6.2 ② **形态（非登记项）**（本档 §4 不重述——D2）。
 
 ## 5. 范围边界（不做）
 
@@ -75,6 +78,8 @@ settle 即落盘权威台账；凭证值只进槽文件（会话态），永不�
 | CLI 侧同名需求档（`thincoder-cli/docs/requirements/DESIGN-TOKEN-SETTLEMENT.md`） | CLI 产品需求正文 | **已并入（2026-09-15 CLI 尾部真批）**——零实质缺口，(d) 类入 §6.1 |
 
 ## 变更记录
+
+- 2026-09-25（**end-diff-registry 批 · 需求层二态化轮 · eng-designer**——承 `docs/batches/2026-09-25-end-diff-registry.md` §2 上抛①〔父侧明示委托本轮落〕 · 台账 #339①）：§4 端差登记二态化——载体一项 = **已裁保留**（三件齐；③ 标注收正为设计档 §6.2 二态化块 + §6.3 载体基线段指称）+ **二态化裁定行**落地；设计档侧同轮两项余项状态词相应。**零新语义**。
 
 - 2026-09-15（**CLI 尾部真批 · 并入既有 · eng-designer**）：`thincoder-cli/docs/requirements/DESIGN-TOKEN-SETTLEMENT.md` 逐节对账——**零实质缺口**
   （R1 ⇒ F-D1 · R2 ⇒ F-D4 + F-D5 · R3 ⇒ N-D3 · R4 ⇒ N-D1），零新增正文；§4 对位句与 §6.2 两行销项（对端档已并）；(d) 类入 §6.1。

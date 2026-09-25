@@ -19,6 +19,7 @@
  * multimodal:        whether multimodal (image/vision input supported)
  * thinkApi:          thinking API type: "type"=thinking.type field / "effort"=reasoning_effort field
  * thinkEnabledValue: when thinkApi is "type", the value used to enable thinking (default "enabled"; MiniMax uses "adaptive")
+ * thinkAlwaysOn:     server-enforced thinking (true = always on — no off path; single source = MODEL-SPECS.md §16.3)
  * reasoningEcho:     reasoning_content cross-turn echo strategy: "required"=must echo (error if missing) / "optional"=echo optional (default: don't echo)
  * reasoningEffortEnum: valid reasoning_effort enum values (if undeclared, no validation — passed through as-is)
  * tempRange:         valid temperature range [min, max] (if undeclared, no clamping)
@@ -63,16 +64,21 @@ const MODEL_SPECS = [
   // GLM-5.3: thinking always-on (no "disabled"); effort converges to low/high/max — NOT the
   //          7-level glm-5.2 enum (verified vs docs.bigmodel.cn GLM-5.3 page, 2026-08).
   //          视觉面 **未探**（不声明 multimodal——保守；补探登记见 MODEL-SPECS.md §13.4）。
-  ["glm-5.3",           { context: 1_000_000, maxOutput: 128_000, thinking: true,  thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 1], noUsageStream: true }],
-  ["glm-5.3-flash",     { context: 1_000_000, maxOutput: 131_072, thinking: true, multimodal: true,  thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 1], noUsageStream: true }],
+  //          该事实 = 机制位 `thinkAlwaysOn`（单源 = `docs/core/design/MODEL-SPECS.md` §16.3）——**官方口径**
+  //          （智谱 GLM-5.3 文档：thinking always-on、无 `disabled`）。
+  ["glm-5.3",           { context: 1_000_000, maxOutput: 128_000, thinking: true,  thinkAlwaysOn: true, thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 1], noUsageStream: true }],
+  // glm-5.3-flash：始终思考——该事实 = 机制位 `thinkAlwaysOn`（单源 = `docs/core/design/MODEL-SPECS.md` §16.3）
+  //          ——**族沿用**（族据 = `glm-5.3` 行）；其余字段见其下行注与规格面。
+  ["glm-5.3-flash",     { context: 1_000_000, maxOutput: 131_072, thinking: true,  thinkAlwaysOn: true, multimodal: true,  thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 1], noUsageStream: true }],
   // glm-5.3-flashx（GLM-5.3-FlashX，2026-09 上线）——独立行（不再蹭 flash 前缀行）：maxOutput 131_072 =
   // **校验级**（400「max_tokens…限制数值范围[1,131072]」）；effort 枚举 ["low","high","max"] = **校验级**
   // （400 原文点名：low/high/max 受理，其余拒绝）。multimodal = **实测**（8×8 纯红 PNG → 答「红色」）。
   // thinking = **实测**且**始终思考**（`thinking:{type:"disabled"}` → 400；裸请求默认开）——off 动作在
-  // UI 侧为 no-op（服务端无关闭路径）。其余 = **族沿用** flash 行（context 网络口径未探边；
+  // UI 侧为 no-op（服务端无关闭路径）。该事实 = 机制位 `thinkAlwaysOn`（单源 = `docs/core/design/MODEL-SPECS.md`
+  // §16.3）——**实测**（`thinking:{type:"disabled"}` → 400；裸请求默认开）。其余 = **族沿用** flash 行（context 网络口径未探边；
   // thinkApi / reasoningEcho / tempRange / noUsageStream = 前缀命中路径日常在用）。
   // flash 行 maxOutput 131_072 = **校验级**（#20 批 §1.2 同源 · 2026-09-25 批 §14.2 #1 收正）——两行独立（改一行不动另一行）。
-  ["glm-5.3-flashx",    { context: 1_000_000, maxOutput: 131_072, thinking: true, multimodal: true,  thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 1], noUsageStream: true }],
+  ["glm-5.3-flashx",    { context: 1_000_000, maxOutput: 131_072, thinking: true,  thinkAlwaysOn: true, multimodal: true,  thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 1], noUsageStream: true }],
   ["glm-5.2",           { context: 1_000_000, maxOutput: 128_000, thinking: true,  thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["max", "xhigh", "high", "medium", "low", "minimal", "none"], tempRange: [0, 1], noUsageStream: true }],
   ["glm-5",             { context: 1_000_000, maxOutput: 128_000, thinking: true,  thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["max", "xhigh", "high", "medium", "low", "minimal", "none"], tempRange: [0, 1], noUsageStream: true }],
   ["glm-4",             { context: 128_000,   maxOutput: 32_000,  thinking: true,  thinkApi: "type", reasoningEcho: "optional", tempRange: [0, 1], noUsageStream: true }],

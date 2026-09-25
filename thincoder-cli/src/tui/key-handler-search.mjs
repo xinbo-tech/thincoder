@@ -1,5 +1,5 @@
 /** Perform search on state.lines, update state.search.matches and clamp index
- *  TUI-OOM-ROOTCAUSE（TUI.md §15.3.1 SEARCH_MATCH_CAP）：匹配计数上限——超限截断 +
+ *  TUI-OOM-ROOTCAUSE（TUI-SESSION-VIEW.md §5.1 SEARCH_MATCH_CAP）：匹配计数上限——超限截断 +
  *  `state.search.capped` 提示标志（渲染面提示行；次要无界面）。
  */
 import { SEARCH_MATCH_CAP } from "./display-budget.mjs"

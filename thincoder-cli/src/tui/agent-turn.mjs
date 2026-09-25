@@ -107,7 +107,7 @@ async function runAgentTurnInner(ctx, text, opts) {
   state.streaming = ""
   state.reasoning = ""
   state._advisorBlocks = []
-  // NOTE (§7.2 D4): state.subTasks is intentionally NOT reset here — subagent
+  // NOTE (docs/cli/design/TUI.md §6.8 D4): state.subTasks is intentionally NOT reset here — subagent
   // activity blocks persist across turns (the user can still expand a finished
   // child's block from a previous turn). Child tool calls never enter the parent
   // history, so the blocks are the only trace of child activity; memory is
@@ -137,7 +137,7 @@ async function runAgentTurnInner(ctx, text, opts) {
   state.controller = makeController()
   state.interruptPrompt = null
   // Refresh status bar every second during processing; also refresh when any
-  // subagent block is still running so its header elapsed ticks (§7.2 D4 —
+  // subagent block is still running so its header elapsed ticks (docs/cli/design/TUI.md §6.8 D4 —
   // no new timer, the existing ticker carries it). Blocks stay visible after
   // the turn ends, but frozen headers don't need 1s refreshes.
   const subRunning = () => Object.values(state.subTasks ?? {}).some((s) => !s.done)

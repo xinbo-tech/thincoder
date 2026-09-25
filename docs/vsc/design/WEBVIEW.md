@@ -114,15 +114,16 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
   三成员同形 = 独占行 + 括号 + 状态词；**退出码槽只接受数字**（`error.code` 非数字 ⇒ 不许塞进退出码槽：宿主产者曾产 `(exit code ENOENT)`，判据不认 ⇒ 卡读绿，本批收正）；判据布尔与摘要状态文本同经 `toolFailureStatus(text)` 一处产出（语法零第二份）。
 - 活卡（`thincoder-vscode/webview/ui.js` `finishToolCard`）与恢复卡（`thincoder-vscode/webview/tool-card-restore.mjs` `buildFinishedToolCard`）**同读该判据**——两卡面终态同形（F-W4）的机器面。
 - 失败面三信号（同一判据派生，零散点）：状态词 = `tool.error` + 红；**保持展开**（不自动折叠）；摘要含状态位（`→ bash: <末行输出> (exit code 1)`；无输出时 `→ bash: (exit code 1)`——不读作 `(empty)`；spawn 失败则 `→ bash: (spawn failed)`——`bash: ` 前缀随 X7 摘要分派落位）。
-- **CLI 对位**：失败面口径同源（末行输出 + 状态位入摘要——`thincoder-cli/src/tui/tool-summaries.mjs:60-68`）；端差二条（卡态为本端独有形态 / 成功面不拼 `(exit code 0)`）——登记面 = `requirements/WEBVIEW.md` §4。
+- **CLI 对位**：失败面口径同源（末行输出 + 状态位入摘要——`thincoder-cli/src/tui/tool-summaries.mjs:60-68`）；端差二条（卡态为本端独有形态 / 成功面不拼 `(exit code 0)`）——**已裁保留**（类判据 = `WEBVIEW-PROTOCOL.md` §6.1 首；F-W16 判据句允许「按端差登记」）；登记面 = `requirements/WEBVIEW.md` §4。
   **spawn 形态两端同读**：CLI 摘要 = `bash: (spawn failed)`（同档「末条非包装行」规则 ⇒ 端侧零改即得可见信号；2026-09-18 实跑读数在案）；本端 = 红 + 保持展开 + 同文本。
-  **失败信号数端差**：本端 = 判据（红 + 保持展开）+ 摘要两处；CLI = 摘要一处（TUI 无卡态、完成行不判色）——登记面 = `requirements/WEBVIEW.md` §4。
+  **失败信号数端差**：本端 = 判据（红 + 保持展开）+ 摘要两处；CLI = 摘要一处（TUI 无卡态、完成行不判色）——**已裁保留**（类判据 = `WEBVIEW-PROTOCOL.md` §6.1 首）；登记面 = `requirements/WEBVIEW.md` §4。
 - **摘要族单源与分派（X3 · X7——显示面消差批）**：活卡与恢复卡的**一行式摘要** = 端侧单源叶 `thincoder-vscode/webview/tool-summary.js` 的 `formatToolSummary(name, text)`（自 `ui.js` `resultSummary` 整段迁出——500 行硬限；先例 `thincoder-vscode/webview/tool-card-restore.mjs`）；
   分派族 = `advisor`（`N critical, N advisory, N style` / `passed` / 拒因首句）· `read`（`N lines`）· `write`（`wrote N bytes`）· `grep`（`N matches` / `1 match` / `no matches`）· `glob`（`N files` / `1 file` / `no files`）· `bash`（`bash: <末行>`）· 默认分支（`name: <首个非空行>`）——
-  **字面与分派逐字承 CLI**（`thincoder-cli/src/tui/tool-summaries.mjs`——跨端等值断言 = 直驱对端纯函数对拍，禁复制常量）；状态位族仍由 `lib.js` `toolFailureStatus` 单源附加（不另立第二份状态语法）。**端差（已裁决）**：成功面**不拼** `(exit code 0)`；`verify` 分支本端不登记（不落）。
+  **字面与分派逐字承 CLI**（`thincoder-cli/src/tui/tool-summaries.mjs`——跨端等值断言 = 直驱对端纯函数对拍，禁复制常量）；状态位族仍由 `lib.js` `toolFailureStatus` 单源附加（不另立第二份状态语法）。**端差（已裁保留——类判据 = `WEBVIEW-PROTOCOL.md` §6.1 首）**：成功面**不拼** `(exit code 0)`；`verify` 分支本端不登记（不落）。
   **重复形态登记**：摘要族两端各一份（CLI `tool-summaries.mjs` ∥ 本端 `tool-summary.js`）——并核 = 跨批结构面（在册）。
 - 边界：**非 `Error:` 前缀仍判失败**（F-W16 判据扩的本体）；仅「独立成行」的状态位触发——正文里提及 `(exit code 1)` / `(spawn failed)` 不误报；
-  **判据只认状态位、不认产者措辞**（`Command failed:` 前缀不入判据——跨端措辞耦合路线已否，见 D-W19）；`(stopped)`（`execute` 工具的用户中止自报形——`thincoder-core/tools/execute.mjs:147`）**不在判据集内**（该面判据扩不做——宿主 bash 的用户中止同形 `(stopped)`（`thincoder-vscode/src/tools/shell.mjs:88` · `:248` · `:300`）⇒ 两端中止面形态端差在册，见批档 §2.8）。
+  **判据只认状态位、不认产者措辞**（`Command failed:` 前缀不入判据——跨端措辞耦合路线已否，见 D-W19）；`(stopped)`（`execute` 工具的用户中止自报形——`thincoder-core/tools/execute.mjs:147`）**不在判据集内**（该面判据扩不做——宿主 bash 的用户中止同形 `(stopped)`（`thincoder-vscode/src/tools/shell.mjs:88` · `:248` · `:300`）
+  ⇒ 两端中止面形态端差 = **消解路径在册**（宿主中止形对齐核形〔`killed: user interrupted`〕∥ 并入失败族〔须先推翻既有 `(stopped)` 裁定〕）；**到期 = 宿主 bash 终止面下次触碰**——见 `docs/batches/2026-09-18-tool-failure-spawn-form.md` §2.8 #8 ②）。
   **非数字退出码槽不入判据**：`(exit code ENOENT)` / `(killed — timeout 400ms)`（收正前的宿主历史形）均不判失败——判据只认族形态；两产者同批收正后该二形在仓内不可达，再现 = 新残（登记路径同 `docs/batches/2026-09-18-vsc-session-wiring.md` §2.6 #11 体例）。
 - **形态可达性两则**：① spawn 失败形态**天然短**（子进程未启动 ⇒ 无输出体）⇒ `docs/batches/2026-09-18-vsc-session-wiring.md` §2.6 #9 的人读线瘦身截尾（`thincoder-core/session-segments.mjs:53-55` 头 500 字符 + 尾标记）对该形态**不可达**——恢复卡同判据在此成立（长结果面残项另案）。
   ② `tool-summary.js` 的 `BASH_MARKER`（bash 分支的包装行过滤正则）是状态位族在**消费面的第二份枚举**（族扩面时须同看）。
@@ -136,9 +137,10 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
 - **落点 = 端侧显示边界**（`thincoder-vscode/src/extension/panel-session.mjs` 的 `sendHistoryPage` user 分支——与既有 `stripEditorInjection` 同点同序：先剔机器注入、再还原 `@` 引用）；**剥离函数与注入产者同档**（`thincoder-vscode/src/extension/file-refs.mjs`——语法与其逆变换同住一处）。
 - **消费面二处（同源剥离）**：① 恢复面显示（`sendHistoryPage` user 分支——上条）② **标题源文本**——回合尾自动标题读首条真实 user 消息处（`thincoder-vscode/src/extension/panel-session-write.mjs` `generateTitle`；as-of 2026-09-21 块标题行对齐批）同接同档剥离函数 ⇒ 标题不得由 `[File: …]` 文件正文生成；两处同读一函数（零第二实现）。
 - **标题链（双端同一套机制 · 2026-09-21 块标题行对齐批）**：源 / 生成 / 触发 / 写 / 读·展示**五环单源**——机制条文单源 = `docs/core/design/SESSION.md` §6.7（本节只记 VSC 端壳面）：源 = 内存人读线（`fullHistory` 经 `keepReal` 过滤）首条真实 user 消息、谓词单源 = 核 `isRealUserMsg`；
-  生成 = 核 `generateTitle`（端壳只做 key / provider 解析）；触发 = 会话尚无标题即尝试（与 CLI `ensureSessionTitle` 同判据）；写 = 标题值随回合尾整档 `saveLines` 落盘（`extra.title`——**无第二写**，原 `setSlotTitle` 直写退场）；读·展示 = 列表面（`pushSessions`）同回退链 + 顶栏常显（槽 `title` 回退链——空窗差 = 已登记端差〔A9〕；对位 = `docs/cli/design/TUI.md` §7.4）。
+  生成 = 核 `generateTitle`（端壳只做 key / provider 解析）；触发 = 会话尚无标题即尝试（与 CLI `ensureSessionTitle` 同判据）；写 = 标题值随回合尾整档 `saveLines` 落盘（`extra.title`——**无第二写**，原 `setSlotTitle` 直写退场）；
+  读·展示 = 列表面（`pushSessions`）同回退链 + 顶栏常显（槽 `title` 回退链——空窗差 = **已裁保留**〔A9 三件齐；类判据 = `WEBVIEW-PROTOCOL.md` §6.1 首〕；对位 = `docs/cli/design/TUI.md` §7.4）。
 - **落点判据（不落核 `history-window.mjs`）**：① 该窗口面现消费方 = VSC 端独有（核内 re-export 只供 `isRealUserMsg`；CLI 恢复渲染不经此档——全仓零 CLI 消费）⇒ 落核零收益；② 注入语法的产者住端侧；③ 人读线盘面与机读线（模型输入）**零触碰**。
-- **端差（N-W6）**：人读线为 CLI 与本端**共文件**、本批只动端侧显示边界 ⇒ **CLI 恢复渲染仍显 `[File: …]` 展开文**（同一消息两端不同形）——登记面 = `requirements/WEBVIEW.md` §4（父侧同轮写入）+ 批次档 §2.6 #10。
+- **端差（N-W6）**：人读线为 CLI 与本端**共文件**、本批只动端侧显示边界 ⇒ **CLI 恢复渲染仍显 `[File: …]` 展开文**（同一消息两端不同形）——**二态化（2026-09-25）**：**消解路径 = CLI 恢复渲染同款剥离（须 CLI 对位同裁）∥ 维持登记（须显式裁定）；到期 = CLI 恢复渲染面 / 需求档 §4 面下次触碰**；登记面 = `requirements/WEBVIEW.md` §4（父侧同轮写入）+ 批次档 §2.6 #10。
 - **剥离判据（fail-closed）**：仅当文本尾部为**注入摘要块**（`[Referenced files:` 头 + 逐行 `  - <raw> (<N> chars)` + 尾 `]`）时，按「`[File: <raw>]` 头 + 围栏 + 恰 N 字符正文 + 收尾围栏 ⇒ `@<raw>`」逐条还原并删摘要块；**任一条不吻合 ⇒ 整条原样返回**（用户手打的 `[File: x]` / 形近文本零误伤）。
 - 活面与展开本体零改：`injectAtRefs` 的返回值（= 落线文本 / 模型输入）逐字不变。
 
@@ -166,7 +168,7 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
   派生单点 = `thincoder-vscode/src/specs.mjs` `ctxPercentForHistory(history, provider)`，消费点 = 宿主 `panel-callbacks.mjs` `onUsage`（`ctxPercentForModel` 保留给 provider 报告值消费面——本段不取）。
   - **消差本体**：同一会话不得在同标签下读到两个百分比——单口径消的是「provider 报告值 `prompt_tokens` ∥ CLI 估算」两式并存面。
   - **刷新路径**：状态行唯一载体 = `S._lastCtxPct`（`thincoder-vscode/webview/status-bar.js`），消费面 = `usage` 消息驱动 + 2 s 拍（`running` 门内）⇒ 两路径同值；渲染句零改（`context X%` + ≥80 警示色 = CLI 同形）。
-- **边界**：不改 CLI；不改 ≥80 阈值；不新增绝对 token 段（端差登记面另计）；不引入核改动。
+- **边界**：不改 CLI；不改 ≥80 阈值；不新增绝对 token 段（不做项在册——`WEBVIEW-PROTOCOL.md` §6.1 类判据 + U-P5）；不引入核改动。
 
 ## 5. 子代理活动块与活动区
 
@@ -412,7 +414,8 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 **为什么必须改**：relay chunk = **任意字节边界碎片**（CLI 同注释实证：逐 chunk 补 `\n` 会把词拦腰断行——`subagent-blocks.mjs:351-355`）；旧形（`webview/ui.js:51-68`）每 chunk 新建 `div.advisor-tool-line` ⇒ 逐 chunk 断行（台账 #148 症状「一 chunk 一行」）。
 
 **面随载荷（协议字段 `face`）**：CLI 以「哪个路由函数被调用」表达面；本端四面压成单 `toolPanel` 载荷 ⇒ 面必须随载荷，否则调用行与输出行不可分（输出并入调用行 ⇒ 工具名粘连）。取值与登记 = `WEBVIEW-PROTOCOL.md` §3（`toolPanel` 行）· §3.2 行 3。
-**端差登记（2026-09-20 · 台账 #150-B）**：CLI 首条 ``toolOutput`` **并入调用块**（`fresh = sub.currentTool !== toolName` ⇒ 调用后同名输出不新开块——`thincoder-cli/src/tui/subagent-blocks.mjs:369`；调用行自带 `\n`——`:346`）⇒ 块面 1 段；本端面门（`face` ⇒ 调用行 / 输出行各成行）⇒ **2 段**。**视觉等价**（CLI 调用行内换行、输出紧随下一行）⇒ **维持 R3 面门**。
+**端差登记（2026-09-20 · 台账 #150-B · 已裁保留〔类判据 = `WEBVIEW-PROTOCOL.md` §6.1 首〕）**：CLI 首条 ``toolOutput`` **并入调用块**（`fresh = sub.currentTool !== toolName` ⇒ 调用后同名输出不新开块——`thincoder-cli/src/tui/subagent-blocks.mjs:369`；调用行自带 `\n`——`:346`）⇒ 块面 1 段；
+  本端面门（`face` ⇒ 调用行 / 输出行各成行）⇒ **2 段**。**视觉等价**（CLI 调用行内换行、输出紧随下一行）⇒ **维持 R3 面门**。
 
 **RAW 与换行**：并入 = 逐字文本节点拼接（零分隔符，同 CLI `subagent-children.mjs:143`）+ `.advisor-tool-line` 加 `white-space: pre-wrap`（`webview/chat.css:336`）⇒ 输出自带换行结构无损还原、chunk 边界不可见。
 
@@ -458,7 +461,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 | D-W30 | `onToolResult` 第 4 参（`_subagentKey`——核 `dispatch.mjs:441`）**端侧消费** ⇒ sync 子代理块终态落定 | 否决不消费（块永不折叠——静默不一致）；仅 sync 路径带该参（`subagent.mjs:380-384`）⇒ async 零误冻 |
 | D-W31 | 心跳射程 = **池条目**；sync spawn 出生面由出生闸承担（不在心跳射程） | 否决扩心跳到 sync（sync 子代理阻塞当前回合、无跨拍存活语义——轮次级实体） |
 | D-W32 | 工具卡「已结算」= 卡对象 `done` 旗标（**唯一写点** = `finishToolCard` 首行；建卡 `addTool` 置 `done:false`）+ 回合尾**无条件**清扫未结算卡（`webview/streaming.js` `sweepUnsettledToolCards`——`finish()` 内 complete / aborted 两路径同规）（M1） | 否决「收尾前恒有 `toolResult`」时序假设（中止路径不成立——CLI `sweepToolBlocks` 为对位标尺）· 否决 TTL / 自动消失（迟到结果无消费者）· 否决 webview 侧按长度 / 超时改判 |
-| D-W33 | `context X%` **单口径**：分子 = 核 `estimateTokens(history)` ∥ 分母 = `providerSpec(provider).context`（与 CLI 状态行同源同式——派生单点 = `thincoder-vscode/src/specs.mjs` `ctxPercentForHistory`）（M2） | 否决保留 provider 报告值分子（同标签双口径 = 本缺陷本体）· 否决两端各自实现（漂移源）· 否决新增绝对 token 段（端差登记面另计） |
+| D-W33 | `context X%` **单口径**：分子 = 核 `estimateTokens(history)` ∥ 分母 = `providerSpec(provider).context`（与 CLI 状态行同源同式——派生单点 = `thincoder-vscode/src/specs.mjs` `ctxPercentForHistory`）（M2） | 否决保留 provider 报告值分子（同标签双口径 = 本缺陷本体）· 否决两端各自实现（漂移源）· 否决新增绝对 token 段（不做项在册——`WEBVIEW-PROTOCOL.md` §6.1 类判据 + U-P5） |
 | D-W34 | 对象 chunk（核 sync 评审 `{kind, text}`）在**端边界归一**为串（`thincoder-vscode/src/extension/panel-callbacks.mjs` `onToolOutput`——**CLI 逐字先例** `thincoder-cli/src/tui/tool-events.mjs:322-324`）（M3） | 否决核侧字符串化（毁 `kind` 三态语义）· 否决 webview 侧再归一（载荷已定型）· 否决 relay 面改动（对象已在 relay 内归一） |
 | D-W35 | digest 起跑携 `tier` ∈ `ask` / `digest`（**按因两档**——判据与 CLI 同源：ask 因优先；ask 档同携 `from` / `msg` 问题摘要）；计数元素随 **`n > 0`**（两档同规；`n = 0` ⇒ 零元素、end 侧零兜底——禁幻影计数行）（M4 · F-UC8） | 否决 VSC 自造第二判据 · 否决按档判计数元素（两因同轮吞计数）· 否决 end 侧兜底建元素 |
 | D-W36 | advisor 卡头 / 状态行轮次标签 = **端侧单源** `advisorRoundTag`（字面 = CLI `roundTag` 逐字 `(round N · model)`；无 `model` ⇒ `(round N)`；非 advisor 零字段）（X2） | 否决 webview 侧写工具名字面比较（`protocol-coverage` 提取器按 `.name === "x"` 形态误判消息判别式）· 否决宿主侧拼整串（双源） |
@@ -677,3 +680,8 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 - 2026-09-20（卫生族三批 · 台账 #145 · eng-designer）：D8 划改/修订式残句清理（2 处去划改形保裁定 + 2 处去修订框架/删残句）；**零新语义**。
 - 2026-09-20（**扩面族批 · 台账 #150-B · eng-designer**）：§5.6 补端差登记句（CLI 首条 ``toolOutput`` 并入调用块 ∥ 本端面门 2 段——视觉等价 ⇒ 维持 R3 面门）。**零新语义**。
 - 2026-09-25（**规格·effort 轮 · eng-designer**——承 `docs/batches/2026-09-25-spec-effort.md` §2 · 台账 #330）：§6 增 **D-W41**（推理下拉归一改走单源 `effortSelection`；无注册默认 ⇒ 中性档）+ §8 增 **U-W20**（中性档渲染「—」、不新增列表项）。规则体 = `doc:MODEL-SPECS.md:§15.4`（本档不复述）。
+- 2026-09-25（**end-diff-registry 批 · 设计评审修正轮 1（发现 #6 / #7）· eng-designer**——承 `docs/batches/2026-09-25-end-diff-registry.md` §3 轮次 1 · 父侧裁定接受）：四处「已裁保留」的类判据指称统一为**单源 = `WEBVIEW-PROTOCOL.md` §6.1 首**（§4.3 三条 + §5.6 一条）；
+  不再以 `docs/cli/design/TUI.md` §8.2 作类判据单源（该 §8.2 = A9 ③ 裁定回填面，住单源句内）；§4.4 空窗差行状态词收正（「已登记端差〔A9〕」→ **已裁保留**〔A9 三件齐〕）；
+  §4.3 `(stopped)` 行批档指针补全（`docs/batches/2026-09-18-tool-failure-spawn-form.md` §2.8 #8 ②）。**零新语义**。
+- 2026-09-25（**end-diff-registry 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-end-diff-registry.md` §1 · 台账 #337）：端差登记行**逐行二态化**——四处 = **已裁保留**（§4.3 三条 + §5.6 一条；类判据 = 显示宿主不同——A9 单源 = `docs/cli/design/TUI.md` §8.2）；
+  两处 = **消解路径 + 到期条件**在册（§4.3 `(stopped)` 中止形 · §4.4 F-W15）；两处「不做项」指针对齐 `WEBVIEW-PROTOCOL.md` §6.1 类判据 + U-P5（§4.6 边界 · D-W33）。**零新语义**。

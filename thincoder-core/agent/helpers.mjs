@@ -90,8 +90,10 @@ export const FILE_MUTATORS = new Set(["write", "edit", "insert_after", "apply_pa
  * 台账 #327）：与 `FILE_MUTATORS` 同址（门禁 / 变更记账 / L3 足迹 / 作用域规则四条面的公共输入）。
  * 契约（恒数组 · 恒零抛）：
  * - `args` 为 null **或非对象** ⇒ 一律规范化为 `{}` 再交钩子；
- * - 有钩子 ⇒ **钩子裁决**；无钩子 ⇒ 单参兜底（形态零变——缺 path 同样返含 `undefined` 的单元素数组，
- *   由消费方按「未知路径 ⇒ 保守」自行判定）；
+ * - 有钩子 ⇒ **钩子裁决**；无钩子 ⇒ `file_ops` **动作感知**（D-TO13 · 台账 #333）——`action === "copy"`
+ *   ⇒ `[args.dest]`（源仅读取，不属写域）；`move` / `rename` / 未知或缺失 `action` ⇒ `[args.source,
+ *   args.dest]`（保守双算）；其余工具单参兜底（形态零变——缺 path 同样返含 `undefined` 的单元素
+ *   数组，由消费方按「未知路径 ⇒ 保守」自行判定）；
  * - 钩子 throw / 返回非数组 ⇒ `[]`；
  * - **不过滤非字符串项**（未知路径的保守判据归门禁自身——`thincoder-cli/test/portability-classification.test.mjs`
  *   T-22 语义零变）。
@@ -102,7 +104,10 @@ export const FILE_MUTATORS = new Set(["write", "edit", "insert_after", "apply_pa
 export function toolTouchPaths(tool, args) {
   const a = args && typeof args === "object" ? args : {}
   const hook = tool?.touchedPaths
-  if (typeof hook !== "function") return [a.path]
+  if (typeof hook !== "function") {
+    if (tool?.name === "file_ops") return a.action === "copy" ? [a.dest] : [a.source, a.dest]
+    return [a.path]
+  }
   try {
     const out = hook(a)
     return Array.isArray(out) ? out : []
@@ -411,7 +416,7 @@ export async function loadProjectInstructions(cwd) {
 
 /** Engineering mode reminder — shared with eng.mjs tool. */
 export const ENG_ON_REMINDER =
-  "[System reminder: engineering mode is ON — design-before-code enforced. " +
+  "[System reminder: engineering mode is ON (session-scoped) — design-before-code enforced. " +
   "Workflow: Requirements doc → Design doc → advisor(type='design') → " +
   "user approval → eng-coder implementation. Code changes go through eng-coder " +
   "subagents only. Advisor calls are NOT per-turn-mandatory — call only at " +

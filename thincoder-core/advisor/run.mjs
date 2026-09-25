@@ -9,7 +9,7 @@ import { prepareAdvisorMessages } from "../advisor.mjs"
 import { buildObjectDeclarationBlock, buildDesignApprovalBlock } from "./messages.mjs"
 import { appendCitationReport } from "./citations.mjs"
 import { runAdvisorToolLoop } from "./loop.mjs"
-import { advisorIncompleteMarker, estimateTokens } from "./compaction.mjs"
+import { estimateTokens } from "./compaction.mjs"
 import { batchDocForReview } from "../agent-tools/batch.mjs"
 
 // 拆分后 import 面（既有导出名逐一保面——re-export；谓词为本批新增）。
@@ -94,8 +94,8 @@ function buildPinnedBrief(reviewType, documents, object, designToken, designId) 
  * @param {string|null} [designToken] — injected into the design-review prompt; the advisor echoes it only on approval.
  * @param {string[]|null} [documents] — design review only: explicit list of doc paths to review; passed through to the message builder.
  * @param {string[]|null} [paths] — code review only: explicit list of file/dir paths to review.
- * @param {Object|null} [object] — review-object declaration (§18.8 D-OA1/D-OA3): { type, target, status, reason, exclude }; absent → legacy behavior (no injection).
- * @param {string|null} [designId] — §29.1 F2a: injected next to the design token in
+ * @param {Object|null} [object] — review-object declaration (AGENT-LOOP-ASYNC-POOL.md §6.18 D-OA1/D-OA3): { type, target, status, reason, exclude }; absent → legacy behavior (no injection).
+ * @param {string|null} [designId] — F2a: injected next to the design token in
  *   the Approval Signal (passed through to the message builders).
  */
 export async function runAdvisorReview(agent, reviewType, callbacks, designToken = null, documents = null, paths = null, object = null, designId = null) {

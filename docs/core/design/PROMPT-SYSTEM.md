@@ -170,13 +170,11 @@
 ### 6.3 端特有段与多实现面纪律
 
 - 各实现面（CLI / VSC / 中文正本 / 运行期落地）**语义同源、原文自持**：端特有段**原地保留**、不加面间同步依赖、差异如实上报（多实现面纪律；CORE-UNIFICATION 契约面）——**例外：端差默认 = 消**（机制面差异 ⇒ 归核单源 / 两端口径统一）；**保留仅限结构性不对称 + 证据 + 显式裁定**（A9）；本纪律只述实现形态，✗ 不构成差异保留依据；差异登记面 = 记录已裁的保留项。
-- 端特有段示例（VSC）：`discipline-engineering` 的池规则段 / `persona-engineering` 的 Multi-Task 段 / `persona-eng-coder` 的实现纪律段——**状态：已裁保留（A9 三件齐——复核 = 台账 #185 · 2026-09-25 本批）**：
-  ① 结构性不对称 = **段级仅单侧存在**（三段所述机制对象在 CLI 面无同类实现）；
-  ② 证据 = 逐示例对位（本档行号）：`discipline-engineering` 池规则段 = §2.4 #117（`:115`）/ #120（`:118`）+ §3.1 A16（`:128`）；`persona-engineering` Multi-Task 段 = §2.4 #47（`:69`）/ #122（`:120`）+ §3.1 C2（`:137`）；`persona-eng-coder` 实现纪律段 = §2.4 #119（`:117`）/ #121（`:119`）+ §3.1 A18（`:130`）；
-  **归属复核（2026-09-25 修正轮实读）**：三段正文现体均在核内（2026-09-17 消端差「通用化并入核内正文」——`thincoder-cli/src/prompt-injections.mjs:9-12` ∥ VSC 端同形）：
-  Multi-Task 段与池规则内容同落 `thincoder-core/prompts/persona-engineering.md`「Parallel dispatch & multi-task」（`:154` 起；cn 正本「并行委派与多任务」`:151` 起）；实现纪律段落 `thincoder-core/prompts/persona-eng-coder.md`（`:17` · `:30`）；
-  「Multi-Task Parallelism = `discipline-engineering` 的段」= 2026-09-17 时点旧记法，非现体。**示例一现体归属（应报告 · 未改字面）**：池规则内容现落 `persona-engineering.md`；`discipline-engineering.md` 现体 = 「并行调用（通用——与普通模式同源）」节（`:128`；EN `:135`）。
-  ③ 显式裁定 = 2026-09-13「端特有段按注入」（A16 / C2 / A18）+ 2026-09-25 本批确认。
+- **端特有段（现体）**：提示词面**现余 0**——三示例段（池规则 / Multi-Task / 实现纪律）内容现体均在核内（2026-09-17 消端差批「端特有段通用化并入核内正文」；`thincoder-cli/src/prompt-injections.mjs:9-11` ∥ VSC 端同形——提示词面注入锚全消），逐段落点：
+  `thincoder-core/prompts/persona-engineering.md`「Parallel dispatch & multi-task」（`:154` 起——多任务派发 + `agent.poolLimits` 池规则同节 `:158`；CN 正本「并行委派与多任务」`docs/core/design/prompts/persona-engineering.md:151` 起）·
+  `thincoder-core/prompts/persona-eng-coder.md` 实现纪律（`:17` 不得静默降级 / `:23` 收尾自审；CN 正本 `:18` / `:30`）。
+- **遗留注入锚（工具面 2 锚）**：`bash-terminal-face` · `question-ui-face`（锚位 = `thincoder-core/tool-docs/bash.md:15` ∥ `thincoder-core/tool-docs/question.md:11`；
+  取值表 = `thincoder-cli/src/prompt-injections.mjs` ∥ `thincoder-vscode/src/prompt-injections.mjs`）——真实工具差异，处置 = 待工具面 review。
 
 ### 6.4 byte-identical 取消（2026-09-04——设计锚为准）（并入 · 2026-09-15）
 
@@ -325,9 +323,15 @@
 | 10 | `persona-eng-coder` | ✓ | 6/6（同） | 对齐 | 双语正当差（token 零差） |
 | 11 | `persona-eng-designer` | ✓ | 10/10（同） | 对齐 | 双语正当差（占位符翻译：`<批>-<主题>.md` ↔ `<batch>-<topic>.md`） |
 | 12 | `persona-engineering` | ✓ | 16/17 | **差** | 切分差：EN 将「一次实现轮的界」五条独立为 `## Batch-record lifecycle (five rules)`，CN 并在「项目状态档」节内（内容对应） |
-
+| 13 | `persona-explore` | ✓ | 3/3（同） | 对齐 | 双语正当差（2026-09-25 补列——结构级复核；EN 侧标题语言同 `persona-plan` 形） |
 | 14 | `persona-normal` | ✓ | 4/4（**同数不同节**） | 漂移 | **CN 领先 1 节**：CN「确认与批准门」EN 无；EN 另有 `## Main-agent role`（CN 该内容并在「能力边界」节内） |
 | 15 | `persona-plan` | ✓ | 3/3（同） | 对齐 | 双语正当差 |
+
+**双源内容差收正（2026-09-25 · 台账 #342——本表第 5 行「EN 领先 7 项」逐项处置）**：
+
+- **四行并入 CN**（判据 = **D-PS1**「中文审核面 = 内容权威」——权威面缺行即补权威面，不把 EN 表降为内容源）：`verify` · `process` · `get_current_time` · `wait_for` ⇒ CN 正本 `docs/core/design/prompts/common.md` 工具路由块增补（逐字 = 批档 §2 · 落笔走双面流程）；EN 运行面该四行现体已在（`:108` `:109`）——零改。
+- **余三项判非缺**：`fetch` · `websearch` · MCP 搜索——CN 工具观节「搜索」条（`:64`）已载同义路由（MCP 首选 / Bing 后备 / 抓页前先扫工具表），与 EN 表行语义重叠 ⇒ 不重复落 CN 工具路由块。
+- **机检面收正**：`thincoder-cli/test/prompts-dual-source.test.mjs` 中文侧读点改指**真实 CN 权威面**（`docs/core/design/prompts/`）——原读 CLI 仓归档副本（`thincoder-cli/docs/_archive/design/prompts/**`）⇒ CN 权威面不在机检射程；断言面不变（存在性 + 头注格式），零新增断言。
 
 ### 10.5 验收（回指 AC-M9）
 
@@ -345,6 +349,11 @@
 **边界（本节不做）**：不做提示词内容权（内容 = 主 agent 内容权 + coder 落笔）；不手改落地档（生成物）；不新增机检门。
 
 ## 变更记录
+
+- 2026-09-25（**doc-face-closeout 批 · 设计评审修正轮 1（发现 6）· eng-designer**——承 `docs/batches/2026-09-25-doc-face-closeout.md` §3 轮次 1）：§10.2 表补 **#13 行**（`persona-explore` 对——槽标 ✓ · 标题树 3/3 同 · 结构对齐；读数 as-of 2026-09-25）∧ 表体接回（去行间中断空行）——「15 对」计数与列表同改（D3）。**零新机制**。
+
+- 2026-09-25（**doc-face-closeout 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-doc-face-closeout.md` §1 · 台账 #341 / #342）：§6.3 端特有段示例块收正为**现体陈述**（提示词面端特有段现余 0——三示例段内容现体均在核内，逐段落点行号在档；遗留 = 工具面 2 锚）；
+  §10.2 补**双源内容差收正**块（四行按 D-PS1 并入 CN 正本 + 余三项判非缺 + 机检中文侧读点改指真实 CN 面）。**零新增机制 / 零提示词档落盘**（CN 逐字并入与机检改指 = 实施轮；提示词内容权 = 主 agent）。
 
 - 2026-09-25（**hygiene-items 批 · fix 轮（#292 冻窗顺延项补写）· eng-designer**——承 `docs/batches/2026-09-25-hygiene-items.md` §2.3-B · 台账 #292）：§6.1 补**批次收尾核对（内容漂移防线）**一条 + §7 补 **D-PS8**（漂移防线 = 流程步；否决「结构级检查」〔读非测试档断言句子在场 = 散文锚 · 禁新增〕· 否决「落常驻锁」「只加核验清单」）。**零常驻锁 / 零新增断言 / 零提示词档改动**。
 

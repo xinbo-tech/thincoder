@@ -91,7 +91,7 @@ export function tombstoneOf(parent, id) {
 /**
  * 条目 controller 链到基信号单点（#98 VSC 侧并入——interrupt 豁免面；原 subagent-run /
  * advisor-async / escalate-async / consult 四处逐字同构）：
- * - 基信号**已 aborted** 且非 interrupt ⇒ 立即 abort（reason 逐跳保留——§20.3 站点 #10）；
+ * - 基信号**已 aborted** 且非 interrupt ⇒ 立即 abort（reason 逐跳保留——AGENT-LOOP-SUBAGENT.md §6.12 站点 #10）；
  * - interrupt aborted（Ctrl+I——中断消息注入后同回合续跑）⇒ **不逐链中止**（池保留；
  *   子代理 / 评审继续跑完，settle 照常注入——「Ctrl+I keeps the pool」意图对齐）；
  * - 未来 abort ⇒ 非 interrupt 才逐链传播（Stop / 会话中止全停语义不变）。
@@ -155,7 +155,7 @@ export function buildChildSignal(parent, ctx) {
 // ─── D3 settle 共享 helper ───────────────────────────────────────────────────
 
 /**
- * §23.3.1 消化窗口持有释放（TUI-OOM-ROOTCAUSE——D-SM2 表 2 候选 1）：注入完成后置空条目
+ * AGENT-LOOP.md §6.15 消化窗口持有释放（TUI-OOM-ROOTCAUSE——D-SM2 表 2 候选 1）：注入完成后置空条目
  * 对子代理对象的引用（`childAgent`/`report`——条目前此从不显式释放，挂起期 = 分钟级驻留）。
  * 幂等（重入不抛）；池内/挂起未消化窗口语义零变（settle 时刻不释放——表 2 候选 2 否决：
  * status/observe 在窗口内仍读 child 摘要）。三消费点（回合尾收集 / run 起始 pending 注入 /
@@ -181,7 +181,7 @@ export function releaseSettledEntry(entry) {
  *      单容器 + 出池 + ⟦ev⟧settled；回合内 ⟦ev⟧done 留池 done:true）；
  *   ④ 公共尾部：settleSeq 递增 + `_settle` 唤醒 waiter + 腾槽补位（subagent/escalate 族
  *      恒补——settle/cancel 释放槽 → maybeRefillAsync + refreshQueuedTokens——AGENT-LOOP.md
- *      §10 "settle/cancel 释放槽后…启动到槽满"；advisor 经 refillAdvisorQueue 补位
+ *      AGENT-LOOP-SUBAGENT.md §6.9 "settle/cancel 释放槽后…启动到槽满"；advisor 经 refillAdvisorQueue 补位
  *      （ED-4——评审池有排队语义后不再豁免）；consult（会话池）豁免）。
  * opts（设计签名 `{pool, onAccounting}` + 实现参数 ctx）：
  * - pool：条目所在池 Map（出池 delete 目标；consult 传 null——会话池无条目）。
@@ -235,7 +235,7 @@ export function settleAsyncEntry(parent, entry, opts = {}) {
     // AGENT-LOOP-SUBAGENT.md §6.7.2 cancelled settle 分支（D-M6）：不入 pending、不参与回合尾直注入——清池 +
     // 终态墓碑（dependsOn 取消语义）+ ⟦ev⟧stopped 冻结 + 族提醒（半成品警示对模型可见）。
     pool?.delete(String(entry.id))
-    writeTombstone(parent, entry.id, "cancelled", role) // §20 D-SD5：单点写入（#94 载体吸收）
+    writeTombstone(parent, entry.id, "cancelled", role) // AGENT-LOOP-SUBAGENT.md §6.9 D-SD5：单点写入（#94 载体吸收）
     ctx?.callbacks?.onToken?.(`${entry.relayPrefix}⟦ev⟧stopped\x1e0\x1e0\x1estopped\x1e`)
     if (role === "advisor") {
       // ②-6b：评审取消——token 未签发提醒（settleAdvisorRun 不消费预算）。
@@ -249,7 +249,7 @@ export function settleAsyncEntry(parent, entry, opts = {}) {
         content: `[System reminder: async escalate #${entry.id} (${entry.tag}) cancelled by user — partial changes not merged/audited]`,
       })
     } else {
-      // §20 D-SD5：running 依赖取消——提醒列出依赖者（供模型决策）。
+      // §6.9 D-SD5：running 依赖取消——提醒列出依赖者（供模型决策）。
       const dependents = dependentLabels(parent, String(entry.id))
       const autoNote = parent.autoApprove
         ? " — AUTO session: they auto-start on slot availability (round2 #3)"
@@ -279,7 +279,7 @@ export function settleAsyncEntry(parent, entry, opts = {}) {
   entry._settleSeq = (parent._asyncSettleSeq = (parent._asyncSettleSeq ?? 0) + 1)
   entry._settle?.()
   wakeAsyncWaiters(parent) // §6.27.12.4 ①：挂起驱动唤醒单点（settle 尾 / 上行 ask 入队尾两处调用）
-  // §20 D-SD4 释放点：settle/cancel 释放槽 + 依赖终态转移 → 补位（依赖满足者/域冲突
+  // §6.9 D-SD4 释放点：settle/cancel 释放槽 + 依赖终态转移 → 补位（依赖满足者/域冲突
   // 解除者自动启动——槽 ≤4）→ 排队态面板刷新（等待块头标注随终态更新——dependency
   // cancelled / 位置前移）。subagent/escalate 族恒补（旧行为零回归——cancelled 分支
   // 同样补位）；advisor（ED-4——独立评审池的排队语义）经 refillAdvisorQueue 补位；
