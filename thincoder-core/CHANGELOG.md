@@ -3,6 +3,33 @@
 All notable changes to the core package are documented here.
 Format: Keep a Changelog · 中文 · 号在发布时定（CalVer——见 `docs/RELEASE.md` §4）。
 
+## [0.9.5] — 2026-09-25
+
+> 0.9.4 → 0.9.5（月内序号——发布时定号）
+
+### Added
+
+- **规格表覆盖扩面（新名专行）**：`qwen-flash` / `qwen-vl-max`（实测输出上限 32_768——服务端直报 `[1, 32768]`；前者思考默认可开、后者不支持）、`claude-fable-5.1`（1_000_000 / 128_000）、`gemini-3.1-pro`（1_048_576 / 65_536）、`stepfun/step-3.7-flash`（262_144）；kimi-code 平台三行（`kimi-for-coding` / `kimi-for-coding-highspeed` / `k3-256k`——含 effort 枚举与默认档）——掉兜底名不再退默认。
+- **bench 受测 10 档规格行**：此前经泛前缀/兜底解析的受测模型补独立行 + 视觉声明分态登记。
+- **跨实例意图认领层（P1）**：`peers/{sessionId}.json` 增 claims 意图域（TTL 30 分钟租约 · 进程死亡即失效）；写前命中他实例活认领 ⇒ 软提示（不阻写；与写后足迹登记分开存）。
+
+### Changed
+
+- **提示词面**：`question` 工具从子代理工具表排除（子代理无提问通道——可见但不可用，不再注入）；子代理**在途提问通道**（问询即上抛，不等收尾）与「矛盾要求 ⇒ 立即 ask、不得自行解套」自止边界落档（common + 各人格面）。
+- **`glm-5.3-flash` 行 `maxOutput` 128_000 → 131_072**（校验级实测；本体 `glm-5.3` 128_000 冻结零改）。
+
+### Removed
+
+- **`cacheMode` 字段整体删除**：全仓零判据消费的死字段（假能力位——看着像能力声明、实际零行为）；表键 / 行注 / `DEFAULT_SPEC` / 注释提及字面清零。
+
+### Fixed
+
+- **deepseek 预设 `maxTokens` 393_216 → 384_000**（对齐规格行——消 K×1024 vs 十进制口径差；预置 ≤ 规格不变式 + 历史超限白名单锁定）。
+- **edit 工具非数组 `edits` 入参** ⇒ 成形错误（原裸 `TypeError` 外泄；core 与 ACP 桥同收）。
+- **台账库键跨端归一**（盘符大小写 ⇒ 同项目双库）+ `ledger-migrate` 迁移引擎（备份两道 → dry-run → confirm → 记存根审计；源库进回收不删）。
+- **batch 工具相对路径基底统一**（create / append / 评审门 / spawn 门四调用点单源解析 + 防嵌套 fail-closed）。
+- **会话 GC 加固**：无主会话清扫（无活属主 + cwd 不可达/空 + 7 天窗收口）· 多处指针/文句收正。
+
 ## [0.9.4] — 2026-09-22
 
 > 0.9.3 → 0.9.4（月内序号——发布时定号）

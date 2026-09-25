@@ -226,6 +226,12 @@ Code conventions: pure `.mjs`, no semicolons, no third-party npm dependencies al
 
 ## Changelog
 
+### 0.12.67 (2026-09)
+- **Visible busy queue (multi-slot)** — queue up to 8 messages while a turn runs: a "to send" block shows each queued message in the stream, the status bar has four states, and batches are picked up at step boundaries (without interrupting in-flight tools) and merged into one message per turn (`/cmd` entries keep their order). New ledger commands: `thincoder ledger migrate --dry-run|--confirm` and `thincoder ledger audit`.
+- **Effort menus fixed** — the consult effort picker no longer shows a duplicated `none`; advisor effort "off" normalizes to `think_off` with an accurate receipt.
+- **Core `^0.9.5`** — wider model coverage (qwen-flash / qwen-vl-max / claude-fable-5.1 / gemini-3.1-pro / step-3.7-flash / kimi-code rows), the `cacheMode` dead field removed, deepseek preset aligned to 384K, plus peer intent claims and cross-platform ledger key fixes.
+- **Fixes** — the edit tool now returns a formed error for non-array `edits` (ACP bridge too); `question` is excluded from subagent tool tables.
+
 ### 0.12.66 (2026-09)
 - **MiMo V2.6 support** — the core `^0.9.4` dependency registers MiMo V2.6 (pro / flash / pro-ultraspeed: 1M context, 131K output, vision, auto caching) and repoints the `mimo` / `mimoplan` presets to `mimo-v2.6-pro`.
 
