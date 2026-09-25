@@ -170,6 +170,18 @@ node bench/probe.mjs --models mimo-v2.6-flash --dry-run --label probe-selfcheck 
 - 与 QA 面（`run.mjs` / `SUITE_VERSION`）互不参与：独立 runner + 自带 `PROBE_VERSION` 轴；判官兜底只读取 `judge.json` A 位（单判 · 失败 ⇒ `reportFace = null` + warning）。
 - **非门控**：不按模型设岗 / 不改配置默认 / 不进 CI。沙箱 = 系统临时根下（仓外 · 非 git 仓）；缺省留档、`--dry-run` 不留。真实跑批随批自动跑——成本受三闸（cap / 墙钟 / `--max-cost`）约束，读数照常入报告。
 
+## 工具面调用准确率探针（tool-call probe · 独立面）
+
+```bash
+node bench/toolcall.mjs --models mimo-v2.6-flash,deepseek-flash --n 3 --max-cost 12 --label toolcall-baseline  # 真实跑批（触网 / 花钱——随批自动跑）
+node bench/toolcall.mjs --models mimo-v2.6-flash --dry-run --label toolcall-selfcheck                         # 零网络自检（夹具传输 + 真载荷构造）
+```
+
+- 测**单发工具选择**：同一工具载荷 × 三描述形态变体（V0 现形逐字 / V1 枚举补强（5 档枚举块 + 参数描述缺口补齐）/ V2 结构极简（路由句））× 14 例（含最近邻对偶与边界）⇒ 三轴读数（选择命中 / schema 合法 / 参数语义正确）+ 上下文成本读数（静态 `chars` / `bytes` / `descriptionChars` + 实测 `prompt tokens` 中位与 Δ vs V0）。设计 `MODEL-BENCH.md` §11；逐参数见 `--help`。
+- 落档 = 同一 `bench/results/` 家：`<日期>-<标签>.{md,json}`（`<标签>` = **含 `toolcall-` 前缀的完整标签**（例：`2026-09-25-toolcall-baseline`）；JSON 自带 `kind` / `toolProbeVersion` / `casesDigest` / `payloadDigest`——两份报告对同摘要 = 严格可比）。
+- 与 QA 面（`run.mjs` / `SUITE_VERSION`）及 §10 探针面（`probe.mjs` / `PROBE_VERSION`）**互不参与**：独立 runner + 自带 `TOOL_PROBE_VERSION` 轴；产品面（`tool-docs/**` / schema 本体 / 工具注册面）零改——三变体只在探针载荷内构造。
+- **非门控**：不按模型设岗 / 不改配置默认 / 不进 CI。真实跑批受成本三闸（`--max-cost` 累计闸 / 单调用 `--timeout` / 单发上界）约束；`--dry-run` 产物 = 自检（命令串里可见 `--dry-run`），同名标签同样拒写。
+
 ## 维护
 
 **`bench/models.json`（参测清单）**：现行受测名单 = **29 档**（2026-09-24 名单扩容批）；增删模型 = 编辑此档，不改代码。

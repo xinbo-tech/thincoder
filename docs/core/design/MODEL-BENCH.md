@@ -942,6 +942,26 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | `bench/results/` | 11 档（5 对 + v6-rejudged pdf） | **±0** | 不重跑 · 不重出 · 不追改；在档对拍（一次性）以 `2026-09-25-roster-29-v6-rejudged` 为锚（现盘可逐字节复现——实测 `IDENTICAL`） |
 | `docs/core/design/MODEL-BENCH.md` | 1836（本批前读数——就地更新后 **1881** 行（fix 轮含） · 计数尺 = 末行含换行者不计空尾行） | 就地更新 | 本档（§1.3-3 / §2.2-2 / §2.2-8 / §2.3-7 / §2.9-4 / §3 / §4（KD-47 / KD-48）/ §5.13（`timing.2` / `timing.3` + `judge.14` / `render.4` 延伸）/ §6 / §7-21 / 变更记录） |
 
+**2026-09-25 工具面调用准确率探针批（`2026-09-25-tool-call-probe` · 设计轮）受影响文件**（现状 = 设计轮实读行数 · 2026-09-25 · 计数尺 = 末行含换行者不计空尾行；三端产品树零改动；
+**新增档 9 个**（`bench/toolcall/**` 六档含入口 + `bench/test/**` 三档）+ 现有档两处（`bench/README.md` · `docs/core/design/MODEL-BENCH.md`）；**版本口径 = 本面自带 `TOOL_PROBE_VERSION`（§11.2）——`SUITE_VERSION` / `PROBE_VERSION` / `judge.json` / `bench/cases/` 零触**；
+本批 = 设计轮（零实现）——下表 = 实施轮落点与行数预算；**实施收口（2026-09-25）：「（拟新增）」→「（已实现）」，实读行数以批次档 §5.1 为准**——父侧直接执行 · 可 revert）：
+
+| 文件 | 现状 | 预算 | 说明（拆分触发 = 超 300 行） |
+|---|---|---|---|
+| `bench/toolcall.mjs`（已实现） | 0 | ~160 | CLI 解析 + 编排（模型 × 变体 × 用例 × n）+ 成本闸（`skipped`）+ 进度行 + 摘要表 + 退出码 + `--dry-run` 分支 |
+| `bench/toolcall/fixture.mjs`（已实现） | 0 | ~150 | `TOOL_PROBE_VERSION` 单源 + `SYSTEM_BASE` + V1 枚举块逐字（5 档——§11.4）+ V2 取句规则 |
+| `bench/toolcall/cases.mjs`（已实现） | 0 | ~240 | 用例集 14 例逐字（§11.5：题面 / 期望工具名 / 参数谓词）+ 覆盖矩阵 |
+| `bench/toolcall/variants.mjs`（已实现） | 0 | ~180 | 三变体载荷构造（V0 实面逐字 / V1 变换 / V2 变换）+ 静态读数（chars / bytes / descriptionChars）；>280 行 ⇒ 拆 `bench/toolcall/variants-v2.mjs`（拟新增） |
+| `bench/toolcall/grade.mjs`（已实现） | 0 | ~150 | 轻量 schema 校验（`type` / `required` / `enum` / `items` / `minimum` / `maximum`——§11.1 全集）+ 三轴判定与分母口径 + 聚合 |
+| `bench/toolcall/report.mjs`（已实现） | 0 | ~200 | 报告对（md 骨架 §11.8 + JSON）+ 混淆矩阵 + 成本聚合 |
+| `bench/test/toolcall.test.mjs`（已实现） | 0 | ~250 | §11.11 结构级 + 行为级（`--dry-run` 全链路）；>280 行 ⇒ 拆两份 |
+| `bench/test/toolcall-fixtures.frozen.mjs`（已实现） | 0 | ~150 | 夹具冻结副本（用例集 + V1 块 + `SYSTEM_BASE` + 版本——两层机检另一侧） |
+| `bench/test/toolcall-report.test.mjs`（已实现） | 0 | ~150 | 报告面 / 落档（前缀强制 / 拒写 / 脱敏）/ 成本闸 |
+| `bench/README.md` | 231 | +8 ±4 | 工具调用探针节（命令 / 落档命名 / 与 QA 面关系 / 非门控声明）——实施面 |
+| `docs/core/design/MODEL-BENCH.md` | 1882（本批前读数） | 就地更新 | 本档（§11 新增 + §3 / §4（KD-49…KD-56）/ §6 / §7 / §8 / 变更记录） |
+
+**探针自身测试面**：三包（core / CLI / VSC）零新增例；`bench/test/` 现盘读数 13 档 / 105 例（2026-09-25 实读）⇒ 本批 ≤ **+14 例（≤ 119）**（新档 3 个）；`bench/test/` 不进 CI（沿 AC-8 既有口径）。
+
 ## 4. 关键决策记录（含被否候选）
 
 | # | 决策 | 理由 | 被否候选 |
@@ -998,6 +1018,15 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 
 | KD-47 | **失败路径补全族（记录面 · 台账 #259 / #260）**：① 判官 / 复核逐尝试 `calls[].totalMs` **失败照记**（发起 → 失败墙钟——观测点 = `callSlot` 调用侧；对齐 §2.2-8 既冻结语义与 §2.2 样例 B 位 attempt 1 = 30120）；② 失败记录**形状单源**（成功 / 失败两路径同过 `client.mjs` `toCallRecord`——失败路径传合成 call）；③ 用时表「部分未记录」谓词**排除 `skipped`**（口径钉死——生产形态天然不触发）；④ `report-tables.mjs:75` 注释补「未记录」定性（与 §2.3-7 同源）。**版本口径：不 bump**（采集完整度 / 记录形状 / 注释 / 谓词口径——规则层零改，KD-30③ 同源） | ① 与 KD-30 同族（失败执行也是执行）——判官逐尝试账目 = 同口径姊妹面，且 §2.2 样例本就载此语义（实现未随）；② 「新增 per-call 字段须两处同步」= error-duration 评审 #4 既报缺陷面——单形状函数把漂移面结构性消除；③ 谓词未排除 `skipped` 时，构造形态下脚注会为**未入累计的 run** 声言「按已记录之和入累计」（设计轮实测：`- fx-skip：1 个 run 部分 call 未记录` 与累计格 `—` 并存）——自相矛盾的脚注；④ 注释与口径行同源 = `render.4` ⑦ 字面断言的对读前提 | ① 判官面耗时由**传输面自报**（被否：KD-30 被否① 同源——隐式契约 + 多传输面重复实现）；② 失败记录维持**字面双写**（被否：每次新增 per-call 字段两处同步——既报漂移面不消）；③ 谓词**不加守卫**、仅凭「生产不可达」论证（被否：构造形态即自相矛盾——见理由③；文句与实现对读失锚）；④ 部分未记录分支改判整 run 不计（被否：error-duration 已裁「下界和入累计」——本批只补 `skipped` 排除，不改既裁） |
 | KD-48 | **传输面失败路径观测通道（`throttled` · 台账 #259② · 单列裁定项）**：`liveTransport` 抛错前把观测到的暂停状态挂上错误对象（挂载原语 = `client.mjs` `markFailureObservation`——对象 ∧ 可扩展才挂，错误本体零改）；`runCase` 失败记录读 `e?.throttled === true`。契约扩展 = 「传输面抛错时错误对象**可携带** `throttled: true`（本轮确实发生过实际暂停）」——成功路径返回式契约与调用签名零改。**须单列裁定**（§3 评审 + §4 用户）：否决 ⇒ 该项保持现态并留缺口登记，其余四项照做 | ① 暂停状态**只有传输面能观测**（`onWait` 相位住核内回调）——调用侧无法事后测量（与 KD-30 被否① 的关键差异：耗时调用侧可自测、暂停状态不可）⇒ 「只挂调用侧不可观测的量」；② 消费侧后果真实：失败记录恒 `false` 会把「等待后失败」的调用从报告告警行的限流计数（`throttled` 面）漏掉——该计数系统性低估；③ 最小面：只扩失败路径的一个可选字段——夹具 / 判官面 / 成功路径全零改 | ① 调用侧状态盒（`transport.call` 增 `observe` 汇点参数）（被否：调用签名扩面更大——每个调用点须分配并传盒，判官 / 复核面同受影响）；② 失败记录记 `null`（未观测）（被否：`throttled` 语义 = 布尔观测值，引入第三态 = schema 与告警过滤连锁改；且暂停状态**本可**观测——只是没出洞）；③ 维持恒 `false`（被否：该值在「等待后失败」形态下**是错的**——不完整可接受，错误值不可接受）；④ 由核把暂停披露进错误（被否：改核 = 产品树面，出本批边界） |
+
+| KD-49 | **本面形态 = API 级直测 · 单发单轮**：`bench/lib/client.mjs:137` `runCase({…, maxRounds: 1})` + 一行固定中性 system（`SYSTEM_BASE`）+ 核 provider 路径 | ① 三轴（选择 / schema 合法 / 参数语义）都是**单点可判**的量——首调用即答；② 归因：多轮 agentic 会把「选择」与「读过工具结果后改主意」混在一起；③ 复用既有单点（传输 / 记账 / 超时 / 参数构造）⇒ 零新机制、样本量可放大（单发 ≈ ¥0.015–0.03 / 次）；④ 可行性已实证（设计轮探针：`runCase` + 夹具传输 + 真载荷 ⇒ 一次调用返回 `toolCalls` 可读） | ① spawn 级变体注入（被否：须改产品面或猴补 `DESC()` 装载点——`thincoder-core/tools/shared.mjs:19`；前者违「产品面零改」、后者非真实面；且归因被多轮搅拌；成本 ≈ ¥0.073 / run × 同规模 ≈ ¥18–40）；② 自写 provider 调用（被否：复制请求构造 / usage 归一 / 重试，与核漂移——KD-1 同源）；③ 无 system 行（被否：部分档纯文本作答、选择面读不出——固定行保可比） |
+| KD-50 | **变体构造 = 声明式变换**：V0 = 实面逐字 · V1 = 枚举块（5 档）+ V0 文本逐字 + 参数描述唯一缺口补齐（`edit.edits[].*` 7 项）· V2 = 路由句（取句规则）+ 实面参数面逐字 | ① 实读所得：参数面（`type` / `required` / `enum` / `items`）在现形已近饱和（103 带类型参数 / 7 缺描述，全在 `edit.edits[].*`——`thincoder-core/tools/file.mjs:240-251`）⇒ 可动自变量主要是**描述文本（= 选择面）**；② V1 样本 = 近邻枢纽档（`read` / `grep` / `bash` / `git` / `edit`——逐档证据 = `thincoder-core/tool-docs/*.md` 的路由散文）；③ V2 取句 = 确定性规则（不涉判断）；④ 差异面可机检（V1 − V0 = 5 档描述 + 7 项嵌套参数描述；V2 参数面逐字节等值） | ① 全档重写描述（被否：夹具体积 × 全档载荷（23 档静态表 + 能力位 `read_image`——§11.4 计数口径），且与「3–5 档样例」需求相抵）；② 只做 V0 vs V2（被否：缺「枚举补强」中枢臂）；③ V2 也删参数描述（被否：需求面「仅路由句 + schema」——schema 面逐字保留）；④ 探针自抄描述快照（被否：与产品面漂移——V0 必须经产品单点构造，KD-54） |
+| KD-51 | **三轴判据与分母口径（冻结）**：轴① = 首调用名（`expect.name === null` ⇒ 判「无调用」）· 轴② = 全调用 schema 合法 · 轴③ = 轴① ∧ 逐例参数谓词；分母 = 轴① 全有效 run（`terminal ∉ {error, skipped}`）· 轴② / ③ 期望有调用的 run；无调用 run 逐轴按轴表判（轴① 期望无调用者 `true` / 期望有调用者 `false`；轴② / ③ 期望有调用者 `false`、期望无调用者 `null`）+ 单列 `noCall` | ① 需求面三轴逐例机读；② 「首调用」= 单点判定面（多调用 run 单列 `multiCall`，不改主判定面）；③ 分母显式成文（承 §10 评审 🔴#1 教训——截断 / 失败面不入分母，读数不漂移）；④ `perfect = legal ∧ semOk`（完全正确率 = 四率之一，可拆解） | ① 轴③ 用判官（被否：谓词机械可判——判官只增成本与方差，本面无「结论必得」义务）；② 分母混用且不成文（被否：读数不可比）；③ 多调用 run 整体判失败（被否：与「首调用」单点判定面相抵、且丢 `multiCall` 信息） |
+| KD-52 | **上下文成本读数 = 静态 + 实测两腿**：静态 = 逐变体载荷 `chars` / `bytes` / `descriptionChars`（确定性）；实测 = 逐 run `usage.prompt_tokens` → 逐变体中位 + Δ vs V0（同案同模型差分） | ① 「散文 vs 结构」的核心代价 / 收益就是上下文成本；② 静态腿零网络可复跑、实测腿同源核 usage（不估）；③ 差分法消掉提示 / 模型面常数 | ① 按字符估 token（被否：KD-6 同源——估算把口径漂移藏进数字）；② 只出静态（被否：真实 token 面受分词器影响——须实测腿）；③ 只出实测（被否：缺确定性基线，跨运行不可对读） |
+| KD-53 | **独立 runner + 自持版本轴与落档前缀**：`bench/toolcall.mjs`（拟新增）· `TOOL_PROBE_VERSION` · 标签必 `toolcall-` 起 · JSON `kind` / `toolProbeVersion` | ① `bench/probe.mjs` 已 299 行（§10 面 · 300 上限余量 1）⇒ 并入即超线；② 两探针形态不同（多轮行为面 vs 单发工具选择面）⇒ CLI 合同与版本轴分立（§10.2 同源理由）；③ 单一 `bench/results/` 家 + 文件名自描述（KD-46 体例） | ① 并入 `bench/probe.mjs` 加 `--mode`（被否：超 300 行 + 两版本轴搅进同一 CLI）；② 并入 `bench/run.mjs` 的 `--dims`（被否：动既有判分合同与 `SUITE_VERSION` 轴）；③ 独立 `bench/toolcall/results/`（被否：第二留档家——D1 / D2 纪律） |
+| KD-54 | **产品面零改：V0 载荷经产品单点构造**（`builtinTools`（`thincoder-core/tools/index.mjs:19-27`）+ `toOpenAISchema`（`thincoder-core/tools/shared.mjs:169`）+ 能力位判据 `:64`）——探针只做载荷级变换，不写 `tool-docs/**` / schema 本体 / 注册面 | ① 边界红线（产品面零改）；② V0 必须 = 用户真实所见（否则测的不是现形）；③ 变体只在夹具内构造 ⇒「没改产品面而改的描述面」可审计（`git diff` 零命中） | ① 探针自抄描述快照（被否：与产品面漂移，「现形」失真）；② 运行时猴补 `DESC()` / 装载点（被否：脆 + 非真实面 + 隐蔽改行为）；③ 直改 `tool-docs/**` 造变体后回滚（被否：违红线 + git 面留痕） |
+| KD-55 | **版本轴独立**：`TOOL_PROBE_VERSION` 单源（夹具 / 用例 / 判据 / system / 参数口径变化 ⇒ +1；呈现面不 bump）；`SUITE_VERSION`（恒 7）/ `PROBE_VERSION` / `judge.json.frozenAtSuiteVersion` / `bench/cases/` 零触 | ① 三轴与夹具 = 测量口径 ⇒ 版本轴承载（同 §10.2 / KD-27 体例）；② 本面不参与既有两条版本轴——三条轴各管自己的面（QA 判分面 / 行为面 / 本面） | ① 复用 `PROBE_VERSION`（被否：两探针夹具面互不相关，合轴会让一方变化误标另一方）；② 不设版本轴（被否：夹具 / 判据一变，历史读数失真且无迹可查） |
+| KD-56 | **建议面归批次档收口**：报告只出读数；「要不要结构补强 / 怎么补」= 批次档 §5 / §6 人工判读（父侧 / 用户笔），并接池内 #15 并案 | ① 报告面纪律 = 模板化读数、禁主观评价词（§2.3《关键发现》同源）；② 建议是**判断**——须在读数之上由人（或父侧）作；③ 报告是对外可留档物，掺评价会失真 | ① 报告内直接写建议句（被否：破模板化纪律 + 留档掺评价）；② 报告加「建议」段但由模板生成（被否：模板不能作判断——空段或伪判断） |
 
 ## 5. 用例表（题面冻结正本 · 逐例）
 
@@ -1417,6 +1446,20 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | AC-4 | #260②③ 失败记录形状单源 + `report-tables.mjs:75` 注释「未记录」定性 | §2.2-2（单形状函数句）· KD-47②④ · §2.3-7（口径同源） | `timing.3` ⑤（键集同形）+ 注释逐字对读（含「未记录」定性——与 §2.3 骨架口径行同源） |
 | AC-5 | 批次边界：既有报告对拍（零回归锚）+ 版本面零改 + 在档零改写 | §3 本批表（`bench/results/` ±0）· §1.3-4（采集完整度不入轴）· KD-47（不 bump） | ① `node --test "bench/test/*.test.mjs"` 全绿；② **在档对拍**：`bench/results/2026-09-25-roster-29-v6-rejudged.{json,md}`——`renderReport(JSON)` 与在档 `.md` **逐字节相同**（现盘实测 = `IDENTICAL` · 237025 字符；内存渲染、不落档）；③ `git status --porcelain bench/results/` 空；④ `SUITE_VERSION` 恒 7 ∧ `judge.json.frozenAtSuiteVersion` 恒 7（两档 ±0 行） |
 
+**2026-09-25 工具面调用准确率探针批（`2026-09-25-tool-call-probe`）AC 回指**（需求面 = `docs/batches/2026-09-25-tool-call-probe.md` §1；本批 = 设计轮 · 实施轮按本表判）：
+
+| AC | 判据（需求面） | 设计落点 | 判定方式 |
+|---|---|---|---|
+| AC-1 | 用例集 ≥12（含 ≥4 最近邻对偶 + ≥2 边界）；逐例 = {题面 · 期望工具名 · 参数谓词（机读）} | §11.5（14 例逐字正本）· §11.2（冻结） | 用例集 schema 断言（计数 14 / id 唯一 / 逐例字段在场 / 期望名 ∈ 载荷面）+ 冻结副本**两层逐字等值**（§11.11） |
+| AC-2 | 三变体构造（V0 现形 / V1 enum 补强 / V2 结构极简）+ 版本轴单源 | §11.4（构造法 + 5 档块逐字）· §11.2 · KD-50 / KD-55 | 差异面断言（V0 = 实面逐字；V1 − V0 = 5 档描述 + 7 项嵌套参数描述，差集恰好；V2 参数面逐字节等值）+ 版本单源断言 |
+| AC-3 | 三轴逐例机读判据（选择命中 / schema 合法 / 参数语义正确）+ 分母口径 | §11.6（判据与分母冻结）· KD-51 | dry-run 夹具六形态（命中 / 误选近邻 / 无调用 / 多调用 / 非 JSON / schema 违规）+ 轴面与分母断言 + 字段在场 |
+| AC-4 | 上下文成本读数（token） | §11.7（静态 + 实测两腿）· KD-52 | 静态读数确定性断言（三变体 chars / bytes）+ 报告成本列与 Δ vs V0 在场 + 缺 usage ⇒ `null` + warning |
+| AC-5 | 报告对入 `bench/results/`（md + json；逐例 × 变体矩阵 + 汇总 + 成本） | §11.8（报告对）· KD-53 | dry-run 产物断言（`BENCH_RESULTS_DIR` 重定向）：md 段清单 + JSON 顶层字段 + 混淆矩阵 + 矩阵行数 = 用例数 × 变体数；前缀强制 / 同名拒写 / 脱敏腿 |
+| AC-6 | 失败与成本面不静默（单 run 失败 / 成本闸截断） | §11.3-6 · §11.6（`error` / `skipped`）· §11.9 | 假接口错腿（`error` 逐 run 记 · 不入分母 · 不杀全批）+ 假成本到顶腿（余面 `skipped` 入 `runs[]` + 分母排除 + warning + 退出码 0） |
+| AC-7 | 规模与预算（模型 ≥2 · n ≥3）+ 实弹读数回填 | §11.9（规模基线 + 成本上界 + 建议命令）· §11.10 | 实施轮：落码 + 测试 + `--dry-run`（零网络）；**实弹腿 = 随批自动跑**（三闸：`--max-cost` 累计闸 / 单调用 `--timeout` / 单发上界——§11.3-6）——读数入批次档 §5 / §6 |
+| AC-8 | 产品面零改（`tool-docs/**` / schema 本体 / 工具注册面零触）+ 既有面零动 | §11.4 · KD-54 · §11 头注 · §7-22…-25 | `git diff --stat` 范围核对（写域 = 新增 9 档 + `bench/README.md` + 本档）+ `SUITE_VERSION` 恒 7 ∧ `bench/probe.mjs` ±0 ∧ `bench/cases/**` ±0 断言 |
+| AC-9 | 测试全绿 + 例数预算（bench ≤ +14 例；三包零新增例） | §11.11（测试面 + 例数预算）· §3 本批表 | `node --test "bench/test/*.test.mjs"` 全绿（读数入批次档 §5） |
+
 ## 7. 边界（不做）
 
 1. 不做**开放式质量**主观打分（判官只裁 §5.11 冻结 rubric 的语义判定，不做「写得好不好」评分）；不做容器级任务（SWE-bench / Terminal-Bench 型）；不做 MMLU 类广谱知识题。
@@ -1444,6 +1487,11 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 20. 探针**不写**用户 config / 不写台账 / 不改提示词（提示词面 = #293 批的笔）；唯一写面 = `bench/results/` 报告对 + 沙箱目录（**系统临时根下 · 仓外**——§10.9-②）；实弹轮 = 随批自动跑（受成本三闸约束——cap / 墙钟 / `--max-cost`；成本读数入报告）。
 21. 失败路径补全族**不改写在档 / 不扩账目形状**：判官 / 复核 `calls[]` **不增 `throttled` 字段**（判官面暂停不入报告告警行的限流计数——射程 = 被测调用面；判官面形状扩 = 另批）；在档档的失败尝试 `totalMs: null` / 失败路径 `throttled: false` 照旧留档（采集完整度只对后续运行生效——不重跑 / 不重出 / 不追改，KD-10 精神）。
 
+22. **探针面非门控**（承 §7-18 口径）：不按模型设岗 / 不改配置默认 / 不设「探针未过 ⇒ 拒派 / 拒跑」类闸；本面只产出读数（§11）——不进 CI、不进发布门；报告只出读数（建议面归批次档收口——KD-56）。
+23. **本面不并入既有面**：`bench/run.mjs` 的 `--dims` / `--n` 合同与 `SUITE_VERSION` 轴零触；`bench/judge.json` / `bench/cases/` 零动；`bench/probe.mjs` 与 `bench/probe/**`（§10 面）零动；不新增速度 / TTFT 采集面（时序面归既有表）。
+24. **本面产品面零改**：`thincoder-core/tool-docs/**` / schema 本体（`thincoder-core/tools/*.mjs` 的 `parameters`）/ 工具注册面（`builtinTools` / `assembleBuiltinTools`）**零触**——变体只在探针载荷内构造（KD-54）；不改提示词（提示词面 = #293 批的笔）/ 不写用户 config / 不写台账；唯一写面 = `bench/results/` 报告对。
+25. **本面不测面**（如实登记 · §11.10）：system prompt 面 / 多轮与跨步序 / 工具真执行 / 实例绑定工具族（memory 族）与 depth 绑定工具族参与的选择面 / 统计显著性（不做区间估计）。
+
 ## 8. UI / 交互决策
 
 无 GUI 面。交互契约（全部已在 §2.1 落定，无遗留项）：
@@ -1457,6 +1505,8 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
    级链穷尽 ⇒ 沿用「判官不可用」行（§2.10.4）；`--rejudge` 完成 ⇒ 打印「补判 N 例（was → now）+ 新报告对路径」；无对象 ⇒ 明示一行 + 退出码 0。
 
 7. 探针面交互契约（独立面 · §10.8）：stdout 逐 run 一行（模型 / 夹具 / 行为类 / 首次上抛回合）+ 结尾摘要表；无 GUI；`open` 项 0 条（探针面不引入新交互未决项）。
+
+8. 工具调用探针面交互契约（独立面 · §11.9）：stdout 逐 run 一行（模型 / 变体 / 用例 / 首调用 / 三轴）+ 结尾摘要表（逐模型 × 变体三轴率 + 成本）；无 GUI；`open` 项 0 条（本面不引入新交互未决项）。
 
 ## 9. 初始清单与价格初值（数据提案 · 供实施轮落档）
 
@@ -1743,6 +1793,237 @@ stdout：逐 run 一行（`[i/总数] <模型> <夹具> → <行为类> | 首次
 - **落档面**：同名拒写 / 标签前缀校验 / 脱敏两腿（凭据命中 ⇒ 拒写；沙箱根 / 绝对路径 ⇒ `<sandbox>` / `<abs>` 占位 + warning——§10.7）。
 - **例数预算**：三包（core / CLI / VSC）**零新增例**；`bench/test/` 设计轮读数 11 档 / 92 例（**读数时点 = 探针实现前** · 2026-09-25 实读；现盘 = 13 档 / 105 例）⇒ 本批 ≤ +16 例（新档 2-3 个，单档 >280 行即拆）。
 
+## 11. 工具面调用准确率探针（tool-call probe · 2026-09-25 设计轮）
+
+> 需求面 = `docs/batches/2026-09-25-tool-call-probe.md` §1；台账 #385。本面 = **测量面 · 非门控**——不按模型设岗 / 不改配置默认 / 不设「探针未过 ⇒ 拒派 / 拒跑」类闸；用途 = ① 对「工具描述该散文还是该结构补强」出机读读数 ② 池内 #15（描述外置瘦身——反方向）的并案输入。
+> 与 §10 的关系：§10 = 多轮 agentic 行为面（进程内 spawn 驱动）；本面 = **单发工具选择面**（API 级直测）——两面形态不同、版本轴各自独立（§11.2）；`bench/probe.mjs` 与 `bench/probe/**` 零触。本节 = 本面口径单源。
+
+### 11.1 问题与定位
+
+动因（需求面 §1 来源）：用户 2026-09-25 18:21 提问——「工具说明现在是散文，如果像 mcp 那样改成 json schema 会不会改善模型调用工具的准确性？」父侧讨论 4 点（与 MCP 同形 / 准确性三轴拆分 / MCP 反例在册 / 最大杠杆未必在描述形态）中，**可测部分** = 「同一语义的工具面 × 描述形态变体」的调用准确率差。
+
+**测量对象** = 给定工具载荷（`tools` 参数）与一条用户提示时的**首个工具调用**（名字 + 参数）——产出逐（模型 × 变体 × 用例 × 重复）读数，供选型 / 描述形态决策参考。
+
+**实读所得的面结构（设计输入 · 2026-09-25 设计轮实读）**：现形参数面**已高度结构化**——23 档 `builtinTools` 共 **103 个带类型参数**，其中仅 **7 个缺 `description`**（全在 `edit.edits[].*` 嵌套项）；schema 关键词全集 = `type` / `properties` / `description` / `required` / `items` / `enum` / `minimum` / `maximum`（后两者仅 `execute` 档）——即本面校验器射程。
+⇒「散文 vs schema」的**参数面**在现形已近饱和；本面的主要差分面落在**描述文本（= 选择面）**上——这正是 §11.4 变体构造法的依据。
+
+### 11.2 版本轴与冻结（TOOL_PROBE_VERSION）
+
+- `TOOL_PROBE_VERSION` = 单源整数常量（`bench/toolcall/fixture.mjs`（已实现））；**V1 枚举块字面 / V2 取句规则 / 用例集 / 判据与分母口径 / `SYSTEM_BASE` / 参数口径** 任一变化 ⇒ `+1`；**呈现面**（md 段位 / 列集 / 文案）变化**不 bump**（同 KD-27 体例）。跨版本读数不严格可比（同 §1.3-4 读法）。
+- **V0 载荷面（产品面实面——KD-54）不入本轴**：产品面描述 / schema 变动不 bump，由报告 **`payloadDigest`**（V0 载荷摘要）锚记（复跑可比判读——§11.8；体例同 KD-45 `promptsDigest`）。
+- 夹具两层同源：运行面副本（`bench/toolcall/fixture.mjs`（已实现）+ `bench/toolcall/cases.mjs`（已实现））+ 冻结副本（`bench/test/toolcall-fixtures.frozen.mjs`（已实现））；
+  机检 = **运行面副本 ↔ 冻结副本逐字等值**（§11.11——两层机检）；**设计档正本层 = 写定时逐字纪律**（不入机检——测试不读设计档）。
+- `SUITE_VERSION`（恒 7）/ `PROBE_VERSION` / `judge.json.frozenAtSuiteVersion` / `bench/cases/` 零触——本面不参与既有两条版本轴（KD-55）。
+
+### 11.3 驱动路径（决策：API 级直测 · 单发单轮）
+
+```text
+用例提示 + 变体载荷(tools)  →（核 provider 路径 chat）→ 首个响应 → 读 toolCalls[0]{name, arguments}
+```
+
+1. **调用面** = `bench/lib/client.mjs:137` 的 `runCase({caseObj, providerEntry, transport, maxRounds: 1, timeoutMs})`——`caseObj = {prompt, callOpts: {tools: <变体载荷>}}`；`maxRounds: 1` ⇒ **恰好一次模型调用**（工具桩的执行在无第二回合时自然丢弃，不影响读数）。
+   复用面 = 传输面（`liveTransport` / `fixtureTransport`（`bench/lib/client.mjs:59`））+ 逐调用记账 + 单调用超时（皆既有单点，零新机制）。
+   - **可行性已实证**（设计轮探针 · 2026-09-25）：`runCase` + 夹具传输 + 真载荷（23 档 `toOpenAISchema`）⇒ 一次调用返回、`toolCalls` 可读（该实证 = 形态落地依据，非新机制）。
+2. **provider 面** = `bench/lib/params.mjs:30` `buildProviderEntry(base, {model, maxTokens, temperature, reasoningEffort})`——沿 bench 口径（KD-31 / KD-32 / KD-35 体例；复用单点防第二套构造）；实发值逐档入档。
+3. **system 面** = 一行固定中性 system（`SYSTEM_BASE` 逐字冻结，全变体全例一致）——真实会话的工具选择发生在「人格 / 纪律槽 + 项目 AGENTS.md」上下文中，本面不含该面（§11.10-①）；固定行 = 让「是否调用 / 调哪个」在可比条件下显影。
+4. **工具不真执行**：调用只被记录（bench 桩对未知名返回 error 字符串）——单发 ⇒ 无第二回合，不影响读数；提示中的路径为**假想路径**（无文件系统，判定只看参数成形——§11.10-④）。
+5. **为什么不是 spawn 级变体注入**（被否 · KD-49）：① 变体注入须改产品面（描述源 = `DESC()` 读 `tool-docs/*.md`——`thincoder-core/tools/shared.mjs:19`）或运行时猴补装载点——前者违「产品面零改」、后者测的不是真实面；
+   ② 归因：多轮 agentic 会把「选择」与「读过工具结果后改主意」搅在一起，三轴读数不可归因；
+   ③ 成本 / 样本量：本面单发 ≈ ¥0.015–0.03 / 次（≈15K prompt token 量级 · 逐档单价实读），同规模样本 ≈ ¥4–7；spawn 级（参考 §10 基线 ≈ ¥0.073 / run）同规模 ≈ ¥18–40 且墙钟 ×5 以上。
+6. **停止条件**：单发即终（无停止条件面）；**接口错 / 空响应 ⇒ `terminal = "error"`**（逐 run 记，不杀全批）；**成本三闸** = `--max-cost` 累计闸 / 单调用 `--timeout` / 单发上界（单 run 恰 1 次调用——§11.9 成本上界）——累计闸到顶 ⇒ 截断：余面 `skipped`（不发起——入 `runs[]`、不入分母，§11.6 / §11.9；截断不静默）。
+
+**`SYSTEM_BASE` 逐字正本（§11.3-3 · 冻结 · 全变体全例一致）**——改字 ⇒ `TOOL_PROBE_VERSION + 1`（§11.2）、入复跑锚（`casesDigest`——§11.8）：
+
+```text
+你是通用助手。请按用户请求作答：需要工具时调用工具；不需要时直接回答。
+```
+
+### 11.4 变体构造法（三载荷 · 声明式变换）
+
+载荷 = `builtinTools`（`thincoder-core/tools/index.mjs:19-27`）经 `toOpenAISchema`（`thincoder-core/tools/shared.mjs:169`）——**逐档实面构造**（含能力位 `read_image`：判据 `specForModel(model)?.multimodal` 同 `thincoder-core/tools/index.mjs:64`）；探针**不改写产品描述文本**，只在载荷上做声明式变换（KD-54）。
+
+| 变体 | 描述面 | 参数面 |
+|---|---|---|
+| **V0**（现形） | 实面逐字（`DESC(name)` → `toOpenAISchema`） | 实面逐字 |
+| **V1**（枚举补强） | **枚举块（新）+ V0 文本逐字**（5 档——见下） | 实面 + **唯一缺口补齐**（`edit.edits[].*` 7 项 `description`） |
+| **V2**（结构面极简） | **路由句（取句规则）**——无正文 | 实面逐字 |
+
+**枚举块**（V1 · 逐字冻结于 `bench/toolcall/fixture.mjs`（已实现））：5 档样本 = **近邻枢纽档**——`read` / `grep` / `bash` / `git` / `edit`；逐档「选择面藏散文」证据 = `thincoder-core/tool-docs/read.md:5-9` · `grep.md:18` · `bash.md:3-9` 与 `:37` · `git.md:3` · `edit.md:3-10`。
+
+```text
+read：
+**选择面（枚举）**
+- 单文件整读 / 分页读（已知文件）⇒ read
+- 找行 / 找符号位置（尚不知在哪）⇒ grep（不选 read）
+- 只按名找文件 ⇒ glob；列目录 ⇒ ls；目录树 ⇒ tree（不选 read）
+- 看图 ⇒ read_image（不选 read）
+```
+
+```text
+grep：
+**选择面（枚举）**
+- 按内容模式（正则 / 字面）在文件或目录里找行 ⇒ grep
+- 按文件名 / 路径模式找文件 ⇒ glob（不选 grep）
+- 已知文件、要读内容或某段 ⇒ read（不选 grep）
+```
+
+```text
+bash：
+**选择面（枚举）**
+- 构建 / 测试 / 包管理 / 一次性管道（无专用工具可表达）⇒ bash
+- 读文件（cat / type / head / tail）⇒ read；列目录（ls / dir）⇒ ls；按名找文件（find）⇒ glob；按内容找行（grep / rg / findstr）⇒ grep
+- 写文件（echo > / sed -i / printf >）⇒ write / edit / hashline_edit / apply_patch
+- 仓内 git 操作（status / diff / log / add / commit / push…）⇒ git
+- 删单文件 ⇒ delete；删目录（含递归）⇒ bash（rm -rf）
+- 要解析 / 计算 / 循环的复杂逻辑 ⇒ execute（node 进程内）
+```
+
+```text
+git：
+**选择面（枚举）**
+- 仓内 git 操作（状态 / 差异 / 提交 / 分支 / 标签 / 快照 / 远端）⇒ git
+- 非 git 的 shell 命令（构建 / 测试 / 包管理）⇒ bash（不选 git）
+- 改文件内容 ⇒ edit / write（git 只管版本面，不改内容）
+```
+
+```text
+edit：
+**选择面（枚举）**
+- 已知目标区（内容或行号）做替换 / 删除 ⇒ edit
+- 整篇重写 ⇒ write（不选 edit）
+- 在某行之后新增一行 ⇒ insert_after（不选 edit）
+- 多文件同改 / 一次建多档 ⇒ apply_patch
+- 行号可能漂移 / 空白噪声大 ⇒ hashline_edit
+```
+
+**其余 18 档**（= 23 档静态表 − 5 档枚举块）：V1 = V0（逐字）——V1 的差分面**仅 5 档**（机检断言：V1 与 V0 的差集 = 5 档描述 + 7 项嵌套参数描述，多一处即红）；**计数基准** = `builtinTools` 静态表 23 档——`read_image` 为能力位、不入该表（`thincoder-core/tools/index.mjs:17-18`），档支持视觉时并入载荷，不入上述计数。
+
+**V2 取句规则**（确定性 · 不涉判断）：取 V0 文本**首行**（至首个换行）；>120 字符 ⇒ 取其首个 `. ` / `。` 之前的片段；仍 >120 字符 ⇒ 硬截 120 字符 + `…`。
+
+**逐例 V1 影响面（覆盖矩阵 · 冻结）**：`home` = 用例期望工具被 V1 枚举（读数对 V1 敏感）· `steer` = 期望工具未被枚举、但其最近邻被他档枚举块点名（V1 有转向效应）· `—` = V1 = V0 面（差分只在 V2）。
+
+| 用例 | 期望工具 | V1 影响面 |
+|---|---|---|
+| tool.1 | `read` | home |
+| tool.2 | `grep` | home |
+| tool.3 | `edit` | home |
+| tool.4 | `write` | steer（`edit` 块「整篇重写 ⇒ write」） |
+| tool.5 | `bash` | home |
+| tool.6 | `git` | home |
+| tool.7 | `insert_after` | steer（`edit` 块「在某行之后新增 ⇒ insert_after」） |
+| tool.8 | `edit` | home |
+| tool.9 | `delete` | steer（`bash` 块「删单文件 ⇒ delete」） |
+| tool.10 | `bash` | home |
+| tool.11 | `git` | home |
+| tool.12 | `grep` | home |
+| tool.13 | （期望无调用） | — |
+| tool.14 | `get_current_time` | — |
+
+### 11.5 用例集（14 例 · 逐例机读判据 · 冻结）
+
+逐例 = `{id, kind, prompt（逐字）, expect{name, argsOk}}`；`kind` ∈ `pair`（最近邻对偶）/ `boundary` / `normal`；计数 = **14 例 = 5 对偶 × 2 + 3 边界 + 1 常规**（需求面 ≥12 / ≥4 对偶 / ≥2 边界 ✓）。
+题面逐字冻结（运行面副本住 `bench/toolcall/cases.mjs`（已实现）；改题 ⇒ `TOOL_PROBE_VERSION + 1`）；题面中的文件路径 = **夹具假想路径**（扩展名取 `.txt`——不指向本仓 · 不入文档锚机检面；判定只看参数成形——§11.10-④）。
+
+| id | 类别 | 题面（逐字） | 期望工具 | 参数谓词（机读） |
+|---|---|---|---|---|
+| tool.1 | pair·read↔grep | 看一下 `docs/a.txt` 从第 10 行开始的 5 行。 | `read` | `path === "docs/a.txt"` ∧ `offset === 10` ∧ `limit === 5` |
+| tool.2 | pair·read↔grep | 在 `src/` 下搜索字符串 `TODO(`——按**字面**匹配，不要当正则。 | `grep` | `pattern === "TODO("` ∧ `literal === true` ∧ `path === "src"` |
+| tool.3 | pair·edit↔write | 把 `docs/notes.txt` 里**所有** `旧口径` 替换成 `已收正`。 | `edit` | `path === "docs/notes.txt"` ∧ `old_string === "旧口径"` ∧ `new_string === "已收正"` ∧ `replace_all === true` |
+| tool.4 | pair·edit↔write | 新建 `docs/plan.txt`，整篇内容就是三行：`A` / `B` / `C`（各占一行，没有别的）。 | `write` | `path === "docs/plan.txt"` ∧ `content` 去空行后 = [A, B, C]（顺序在场） |
+| tool.5 | pair·git↔bash | 跑一下全量测试（`node --test`），把输出贴给我。 | `bash` | `typeof command === "string"` ∧ `/node\s+--test/` 命中 |
+| tool.6 | pair·git↔bash | 看看当前工作树里有哪些**还没提交**的改动（只要文件清单）。 | `git` | `action === "status"` |
+| tool.7 | pair·edit↔insert_after | 在 `docs/CHANGELOG.txt` 第 12 行**之后**插入一行：`- 2026-09-25：工具面探针。` | `insert_after` | `path === "docs/CHANGELOG.txt"` ∧ `after_line === 12` ∧ `content` 含「工具面探针」 |
+| tool.8 | pair·edit↔insert_after | 把 `docs/notes.txt` 的第 40 行整行删掉（别的行不要动）。 | `edit` | `path === "docs/notes.txt"` ∧ `line === 40` ∧ `new_string` 键**缺席**（删除信号 = 省略） |
+| tool.9 | pair·delete↔bash | 把临时文件 `tmp/scratch.txt` 删掉。 | `delete` | `path === "tmp/scratch.txt"` ∧ `force` 未给或 `false` |
+| tool.10 | pair·delete↔bash | 把 `tmp/build-out/` 这整个目录连同里面的东西一起删掉。 | `bash` | `command` 含 `tmp/build-out` ∧ 含递归删除旗标（`-[a-zA-Z]*[rRfF]` 或 `--recursive`） |
+| tool.11 | boundary·enum 选择 | 把 git 标签 `v1.2.0` 删掉。 | `git` | `action === "tag"` ∧ `tagAction === "delete"` ∧ `name === "v1.2.0"` |
+| tool.12 | boundary·多参 dispatch | 在 `docs/` 下搜 `暂缓核销`，只看 `.md` 文件（排除 `tmp/` 子目录），每条命中前后各带 2 行上下文。 | `grep` | `pattern === "暂缓核销"` ∧ `glob` 含 `.md` ∧ 含 `!`（排除语法）∧ `before === 2` ∧ `after === 2` |
+| tool.13 | boundary·零调用纪律 | 一年有几个月？直接回答，不用工具。 | （无——期望不调用） | 无任何工具调用（零调用 ⇒ 轴① `true`；轴② / 轴③ 判 `null`——§11.6） |
+| tool.14 | normal·零参直选 | 现在几点了？用工具取当前时间。 | `get_current_time` | 无参数（解析后为空对象） |
+
+### 11.6 三轴判据与分母口径（冻结）
+
+每 run 必录字段（null 如实——不估）：`{n, terminal, called, firstTool, toolNames, args, parseOk, schemaErrors[], hit, legal, semOk, finishReason, textHead, metrics{wallMs, tokens{prompt,cached,completion}, cost}}`。
+
+- **截断口径（冻结）**：`textHead` = 响应文本头 **≤300 字符**（超出截断——全文不落档，沿 §7-5 摘要纪律）；`args` **不截断**（轴② / 轴③ 的判定对象——截断破坏可判性；单发 `maxTokens` 已给体量上界）。
+
+| 轴 | 判据（冻结） |
+|---|---|
+| ① 选择命中 `hit` | `expect.name === null ? !called : (called ∧ firstTool === expect.name)`——判定面 = **首条工具调用** |
+| ② schema 合法 `legal` | `called` ∧ **全部调用**：`arguments` 可解析为 JSON 对象 ∧ 符合该工具 `parameters`（校验射程 = `type` / `required` / `enum` / `items` / `minimum` / `maximum`——§11.1 实读全集）；**载荷外工具名**（∉ 载荷面）⇒ `legal = false` + `offPayload` 单列计数；`expect.name === null` 的例 ⇒ `null` |
+| ③ 参数语义正确 `semOk` | `hit` ∧ `argsOk(args(firstTool))`（逐例谓词——§11.5）；`expect.name === null` 的例 ⇒ `null` |
+
+- **分母口径（冻结）**：`n` = 有效 run 数（`terminal ∉ {error, skipped}`）；**轴① 分母 = `n`**；**轴② / 轴③ 分母 = `n − Σ(expect.name === null 的 run)`**；**无调用 run 逐轴按轴表判**（轴① 按 `expect.name === null` 表判——期望无调用者 `true`、期望有调用者 `false`；轴② / 轴③ 期望有调用者判 `false`、期望无调用者判 `null`）并单列 `noCall` 计数（读数可拆解）。
+- **辅助计数**：`noCall`（无调用）/ `multiCall`（调用数 > 1）/ `parseFail`（`arguments` 非 JSON）/ `offPayload`（出现载荷外工具名调用——轴② 判 `false` 依据）/ `error`（接口错 / 空响应）/ `skipped`（成本闸截断）。
+- **聚合块**（逐（模型 × 变体）面与逐（模型 × 变体 × 用例）格同形）：`{n, hit, legal, semOk, perfect, noCall, multiCall, parseFail, offPayload, error, skipped}`；**`perfect` = `legal ∧ semOk` 为真的 run 计数**（完全正确率——四率之一，可拆解）；`expect.name === null` 例（轴② / 轴③ 判 `null`）**不入 `perfect` 分子与分母**（同轴② / 轴③ 分母口径）。
+- **`terminal = "error"`（接口错 / 空响应）**：三轴判 `null` 且不入任何分母（`n` 口径已排除——本段前条）；`noCall` 辅助计数只计 `completed` 面（error run 不误入）——按实现实况收正（2026-09-25 实施轮 · 报告方法段披露同口径）。
+- 单发 ⇒ **无轮次 / 停止条件面**（与 §10 的形态差——§11.10-③）。
+
+### 11.7 上下文成本读数（两腿）
+
+- **静态腿（确定性 · 零网络）**：逐变体载荷 `{tools, chars, bytes, descriptionChars}`——V0 / V1 / V2 三行并排 ⇒ 描述面压缩 / 膨胀的直接读数。
+- **实测腿**：逐 run `tokens.prompt`（核 usage 归一）⇒ 逐（模型 × 变体）`promptTokensMedian` + **Δ vs V0**（同案同模型差分 = 描述面 token 成本；跨模型绝对值不可比——分词面不同）。
+- **不按字符估 token**（KD-6 同源：估算把口径漂移藏进数字）；缺 usage ⇒ 该 run 记 `null` + warning（不估）。
+
+### 11.8 报告对（与 §2.3 家族同形）
+
+- **落档** = 复用既有落档面（`bench/lib/output.mjs:34` `refuseIfExists` / `:50` `writePair`）：`bench/results/<日期>-<标签>.{md,json}`；`<标签>` **必以 `toolcall-` 起**（缺省 `toolcall-baseline`；非前缀 ⇒ 报错退出）——单一 results 家 + 文件名自描述（同 KD-46 体例）。
+- **JSON 顶层**：`{kind: "toolcall-probe", toolProbeVersion, label, startedAt, finishedAt,`
+  `run: {models, cases, variants, n, maxTokens, timeoutSec, systemBase, casesDigest, payloadDigest},`
+  `models: [ {label, provider, model, host, temperature, reasoningEffort, reasoningEffortFrom,`
+  `variants: [ {id, payload{tools, chars, bytes, descriptionChars}, cases: [ {caseId, runs:[（§11.6 字段）], axis{…}} ], axis{…}, confusion: [ {expected, actual, count} ]} ]} ], warnings: [] }`。
+  成本字段 = 逐 run `metrics.cost = {value, currency, pricesAsOf}`（`bench/lib/prices.mjs:71` `costOf` + `:56` `matchPrice` 单点；缺价 / 缺 usage ⇒ `null` + warning——KD-6）；`casesDigest` = 用例集 + V1 块 + `SYSTEM_BASE` 的摘要（夹具面复跑锚）；
+  `payloadDigest` = **V0 载荷摘要**（产品面实面——V0 = 实面逐字（§11.4）⇒ 产品面描述 / schema 变动由本锚显影；体例同 KD-45 `promptsDigest`）。
+- **md 骨架**（段名同 §2.3 家族）：`## 概览`（模型 / 参数 / `toolProbeVersion` / `casesDigest` / `payloadDigest` / 载荷静态读数表）→ `## 方法`（形态 / 变体构造法 / 三轴判据与分母 / 成本式 / 偏差指针）→
+  `## 结果`（**变体总览**（变体 × [轴①②③率 / 完全正确 / 无调用 / error · skipped / 成本 / prompt tokens 中位]——分母列于表头行）+ **逐例 × 变体**（首调用名 + 命中标记 + 三轴 + 成本）+ **混淆矩阵**（逐变体：期望 × 实际首调用）+ **成本读数**（静态 + 实测 Δ））→
+  `## 关键发现`（模板化：仅计数与极值；禁主观评价词）→ `## 局限声明`（固定模板——含 §11.10 偏差逐条）→ `## 附录`（复跑命令 + 结果指针 + 用例清单）。
+- **脱敏 / 同名拒写**沿 §2.8 / §2.1-7（fail-closed——同 `writePair`）；本面提示 / 工具名面为探针自产常量，无沙箱路径面。
+- **建议面不在报告内**（KD-56）：报告 = 读数；「要不要结构补强 / 怎么补」= 批次档 §5 / §6 人工判读（父侧 / 用户笔），并接池内 #15 并案。
+
+### 11.9 CLI 契约
+
+```text
+node bench/toolcall.mjs --models <列表> [--variants V0,V1,V2] [--cases <id 列表>] [--n 3] [--max-tokens 4096] [--timeout 120] [--max-cost <CNY>] [--label toolcall-baseline] [--dry-run]
+```
+
+| 参数 | 语义 | 缺省 |
+|---|---|---|
+| `--models` | 参测档（逗号分隔；label 或 `provider:model`——名单源 = `bench/models.json`，`bench/lib/roster.mjs:56`）；**必填**——缺 ⇒ 报错退出并列在册名单 | ——（必填） |
+| `--variants` | 变体选择（`V0` / `V1` / `V2`） | 全 3 变体 |
+| `--cases` | 用例选择（`tool.1`…） | 全 14 例 |
+| `--n` | 每（模型 × 变体 × 用例）重复次数（需求面 ≥3） | 3 |
+| `--max-tokens` | 单次调用输出上限（可比性冻结面——沿既有 bench 值；工具参数体量面） | 4096 |
+| `--timeout` | 单次调用墙钟上限（秒） | 120 |
+| `--max-cost` | 累计成本闸（CNY；到顶 ⇒ 余面记 `skipped`（**入 `runs[]`** · 聚合分母排除）+ warning，退出码 0）；**闸射程 = 已录成本**（逐 run `cost` 非 `null` 之和——缺 usage / 缺价 ⇒ 该 run 记 `null` 不入累计（KD-6）；全 `null` 极端情形闸不生效 = 认账） | 不设 |
+| `--label` | 报告名标签（须 `toolcall-` 起） | `toolcall-baseline` |
+| `--dry-run` | 零网络自检：夹具传输（`bench/lib/client.mjs:59`）+ 真载荷构造 ⇒ 三轴 / 报告 / 落档全链（不读用户 config） | 关 |
+
+退出码：0 = 跑完（未命中 / 无调用是数据不是错误）/ 1 = 基建错误（参数 / 未知档 / provider 缺配置 / 载荷构造失败 / 同名拒写）/ 130 = SIGINT（不落档）。
+stdout：逐 run 一行（`[i/总数] <模型> <变体> <用例> → <首调用|—> | hit/legal/sem`）+ 结尾摘要表（逐模型 × 变体三轴率 + 成本）。
+**成本上界**：单 run = 1 次调用 ⇒ ≤（prompt + completion tokens）× 该档单价；全局 ≤ `--max-cost`（设时）。
+**规模基线（建议实弹命令）**：`node bench/toolcall.mjs --models mimo-v2.6-flash,deepseek-flash --n 3 --max-cost 12 --label toolcall-baseline` ⇒ **2 档 × 3 变体 × 14 例 × n=3 = 252 次调用**；
+实读价格估算 ≈ **¥4–7**（15K prompt token 量级 · 无缓存命中上界；前缀缓存命中则更低）、墙钟估算 ≈ **15–25 分钟**（单发短调用 3–6 s / 次）；**建议闸值 = `--max-cost 12`**（≈ 上限估算 ¥7 × 1.7——用量 / 定价波动余量；到顶截断不静默——§11.3-6）。
+档选择理由 = 与 §10 基线同 2 档 ⇒ 跨探针可对读；**实弹轮 = 随批自动跑**（受三闸约束：`--max-cost` 累计闸 / 单调用 `--timeout` / 单发上界——§11.3-6）。
+
+### 11.10 与真实工具面的已知偏差（如实登记 · 入报告局限）
+
+① system 面 = 仅 `SYSTEM_BASE` 一行（真实会话另有人格 / 纪律槽 + 项目 AGENTS.md）——**绝对值不可外推**；变体间可比性不受影响；
+② 载荷面 = `builtinTools` 静态表 + 能力位 `read_image`；**不含**实例绑定族（memory / `code_search` / `doc_search` / `repo_outline` / `settings` / `peer_instances` / 台账查询）与 depth 绑定族（`subagent` / `advisor` / …）⇒ 那些工具参与的选择面（如 `read` ↔ `code_search`）不在本面；
+③ 单发单轮（`maxRounds = 1`）⇒ 无「读过工具结果后修正选择」面、无跨步序面；
+④ 工具不真执行、提示中的路径为假想路径（无文件系统）——判定只看参数成形；
+⑤ 每档样本量 = n（缺省 3）⇒ 不构成统计显著性检验（不做区间估计——同 §7-6 口径）；
+⑥ 提示词面不参与（#293 批的笔）；本面只动**工具载荷**这一自变量。
+
+### 11.11 测试面（探针自身）
+
+- **结构级**（零网络）：用例集 schema（计数 14 / id 唯一 / 逐例 `prompt` + `expect` 在场 / 期望工具名 ∈ 载荷面（`expect.name === null` 例除外）/ 5 对偶与 3 边界计数）+ 冻结副本**逐字等值** + `TOOL_PROBE_VERSION` 单源；
+  变体差异面断言：**V0 = 实面逐字**（`builtinTools` + `toOpenAISchema` 逐档等值）· **V1 − V0 = 5 档描述前缀 + 7 项嵌套参数描述**（差集恰好，多一处即红）· **V2 − V0 = 描述替换**（参数面逐字节等值）· `read_image` 能力位两态 · **`payloadDigest` 确定性**（V0 载荷同源单点构造 ⇒ 复算等值——§11.8）。
+  **V1 枚举块点名工具名 ⊆ 载荷面**（5 块逐名对读——载荷外工具名零命中；载荷面口径 = §11.10-②）。
+- **行为级**（`--dry-run` 全链路 · 零网络）：夹具响应六形态（命中 / 误选近邻 / 无调用 / 多调用 / `arguments` 非 JSON / schema 违规（缺 `required` 或 enum 越界））⇒ 三轴判定 + 分母口径 + 报告对产物断言（md 段清单 + JSON 字段 + 混淆矩阵 + 逐例 × 变体矩阵行数）+ 期望无调用例（tool.13）的轴面处置腿（零调用 ⇒ 轴① `true` · 轴② / 轴③ `null` · `noCall` 计数；误答调用 ⇒ 轴① `false`——§11.6）。
+- **落档面**：标签前缀强制 / 同名拒写 / 脱敏（`writePair` 断言）——沿既有单点。
+- **成本闸**：假成本到顶 ⇒ 余面 `skipped` 入 `runs[]` + 分母排除 + warning + 退出码 0。
+- **例数预算**：三包（core / CLI / VSC）**零新增例**；`bench/test/` 现盘 **13 档 / 105 例**（2026-09-25 实读）⇒ 本批 ≤ **+14 例（≤ 119）**（新档 3 个，单档 >280 行即拆）；`bench/test/` 不进 CI（沿 AC-8 既有口径）。
+
 ## 变更记录
 
 - 2026-09-23：建档（批次 `2026-09-23-model-bench` 设计轮）——V1 五口径冻结、8 自动维 + 人工 lane、报告对（md + json）与脱敏、复跑三场景（含离线重算）、参测清单/价格表双数据档、AC-1..AC-10 回指、用例表 25 例 + 人工 lane 3 条。
@@ -1879,3 +2160,13 @@ stdout：逐 run 一行（`[i/总数] <模型> <夹具> → <行为类> | 首次
 - 2026-09-25：**设计评审轮 1（pass · 2🟡 / 4🔵 = 6 条）修正落地（本批 `2026-09-25-bench-micro` · 发现 #1–#6 全数接受；#5 = 批次档侧 · 本档零改）**——① KD-48 否决支补测试面处置（`markFailureObservation` + `timing.3` ①–④ 随撤；⑤ **保留**——AC-4 判定方式依赖；§6 AC-2）；
   ② `report-present.test.mjs` 拆分触发句钉无歧义形（**本批之后**首次触碰该档或 ≥ 320 行 · 先到者——§3 本批表）；③ 测试面读数更新（现盘 13 档 / 105 例；§3 探针块与 §10.10 旧读数 11 档 / 92 例补「读数时点 = 探针实现前」注）；
   ④ §3 本批块首「零新常驻腿」补限定语（对拍 = 一次性验收命令 · **非常驻腿**；本批新腿 = `timing.2` / `timing.3`）；⑥ §6 AC-1 判定方式补复核面单点覆盖注（`bench/lib/judge.mjs:269`——不另设专属腿）。
+- 2026-09-25：**工具面调用准确率探针（批次 `2026-09-25-tool-call-probe` · 设计轮）**——① 新面 **§11**（API 级直测 · 单发单轮 / `TOOL_PROBE_VERSION` 版本轴 / 三变体构造法（V0 实面逐字 · V1 枚举补强 5 档 + 参数描述唯一缺口补齐 · V2 路由句）/ 用例集 14 例逐字 / 三轴判据与分母口径 / 双腿成本读数 / 报告对 / CLI 契约 / 偏差登记 / 测试面）；
+  ② 受影响文件表（§3）+ KD-49…KD-56（§4）+ AC 回指块（§6）+ 边界 22–25（§7）+ §8-8（交互契约指针）；
+  ③ 既有面零动：`SUITE_VERSION`（恒 7）/ `PROBE_VERSION` / `judge.json` / `bench/cases/` / `bench/probe.mjs` 零改；三端产品树（含 `thincoder-core/tool-docs/**`）零改动。
+- 2026-09-25：**设计评审轮 1（changes-required · 1🔴 / 4🟡 / 3🔵 = 8 条）修正（本批 `2026-09-25-tool-call-probe` · F1–F8 逐号处置）**——① **零调用 run 判据全表式化（F1）**：§11.6 分母口径句改写（轴① 按 `expect.name === null` 表判；轴② / 轴③ 期望有调用者 `false`、期望无调用者 `null`）+ KD-51 / §11.5 tool.13 行 / §11.11 处置腿同步；
+  ② **`SYSTEM_BASE` 逐字正本**落 §11.3（F2——一行中性 system；版本轴与 `casesDigest` 基准字面在册）；③ V1 枚举块**去载荷外名**（F3——`code_search` / `doc_search` 两处清除）+ 轴② 补**载荷外工具名**分支（`legal = false` + `offPayload` 单列计数）；
+  ④ **`payloadDigest`（V0 载荷摘要）入报告与复跑锚**（F4——体例同 KD-45 `promptsDigest`；§11.2 / §11.8 / §11.11 同步）；⑤ **`textHead` 截断口径**钉死 ≤300 字符（F5——沿 §7-5 摘要纪律）+ `args` 不截断理由；
+  ⑥ `其余 19 档` → **`18 档`** + `read_image` 计数口径（F6）；⑦ `--max-cost` **闸射程 = 已录成本**（F7）+ 建议命令补闸值 + 三闸表述收正（§11.3-6 / §11.9 / §6 AC-7）；⑧ `perfect` 的 **null 例处置**（F8）；批档 = §2.9。
+- 2026-09-25：**设计评审轮 2（pass · 2🔵 残余）落地（本批 `2026-09-25-tool-call-probe` · N1 / N2 逐条）**——① N1：KD-50 被否① 计数基数收正（`24 档` → 全档载荷口径「23 档静态表 + 能力位 `read_image`——§11.4 计数口径」，与 §11.4 计数基准逐字对齐）；
+  ② N2：§11.11 结构级补机检腿「**V1 枚举块点名工具名 ⊆ 载荷面**」（5 块逐名对读——载荷外工具名零命中；载荷面口径 = §11.10-②）；机制面零改（不实现 · 产品面零触）。
+- 2026-09-25：**实施收口同步（本批 `2026-09-25-tool-call-probe` · 实施完成后 · 父侧直接执行 · 可 revert）**——① §3 表本批行「（拟新增）」→「（已实现）」×9 + 表头注实读行数以批次档 §5.1 为准；② §11 体引用同收 ×6（`:1811` / `:1813`×3 / `:1850` / `:1924`）；③ §11.6 补 `terminal = "error"` 口径行（按实现实况收正——三轴 `null` · 不入分母 · `noCall` 只计 `completed`）。
