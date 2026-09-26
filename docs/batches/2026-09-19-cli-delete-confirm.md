@@ -7,7 +7,7 @@
 
 ## §1 批次任务（父侧）
 
-**状态行**：🔄 进行中（设计轮 · eng-designer）
+**状态行**：已收口 2026-09-26
 
 > 形态说明（父侧自正 · 2026-09-19 08:2x）：状态行**必居 §1 段内**——`batch_segment` 解析域 = `## §1` 标题到下一个 `## §N`（`thincoder-core/agent-tools/batch-segment.mjs:98-110`），仅置档头 ⇒ `status = unknown` ⇒ fail-closed 拒写（设计 id=136 实核）。档案头行保留双置。
 

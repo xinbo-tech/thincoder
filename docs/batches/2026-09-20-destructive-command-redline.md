@@ -2,7 +2,7 @@
 
 ## §1 讨论（主 agent）
 
-**状态行**：🔄 进行中（设计轮）
+**状态行**：已收口 2026-09-26
 
 **前情** = `docs/batches/2026-09-20-batch-record-commons.md`（#106 · 进行中）· **事故母本** = `docs/batches/2026-09-19-upstream-channel-availability.md` §5.5（`.git` 误删 · 台账 #107 / #108）
 

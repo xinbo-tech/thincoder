@@ -3,6 +3,7 @@
 > 前情 = `docs/batches/2026-09-15-{core-defect-fixes,check-tooling-debt,eng-discipline-prompts,cli-async-discard,doc-contract-reconcile}.md`（五批均已收口 2026-09-16；提交 `5b0387b5`）
 
 ## §1 需求讨论与裁定（主 agent）
+**状态行**：已收口 2026-09-26（**清账轮补机读位** ✓——原收口日见 §6 ✓）。
 
 > **批次状态：设计轮待发**（2026-09-16——§1 已落；§2 待 eng-designer）
 

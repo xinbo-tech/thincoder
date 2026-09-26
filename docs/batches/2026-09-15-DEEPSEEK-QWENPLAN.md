@@ -6,6 +6,7 @@
 > multimodal **给 true、对齐 `deepseek-flash`**。
 
 ## §1 批次任务（主 agent · 父代理）
+**状态行**：已收口 2026-09-26（**清账轮补机读位** ✓——原收口日见 §6 ✓）。
 
 **目标**：`deepseek-v4.1-flash`（qwen-plan 渠道访问 DeepSeek V4.1-Flash 的模型名）加入核内
 `MODEL_SPECS` 表（`thincoder-core/model-specs.mjs`），能力位**逐字段对齐 `deepseek-flash` 行**
