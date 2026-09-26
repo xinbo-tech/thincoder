@@ -1,0 +1,184 @@
+/**
+ * ipc.mjs — IPC 通道注册与分发（`docs/desktop/design/IPC.md` §1 / §2）：**二十五项** = 配置读取 + 项目面
+ * `project:open` / `project:recent` + 会话面 `sessions:list` / `session:create` / `session:switch` /
+ * `session:rename` / `session:delete` / `session:resume` + 审批响应 `approval:respond` + 历史页 `history:page`
+ * + 回合驱动 `msg:send` / `msg:interrupt`（宿主未注入 ⇒ fail-loud）+ **设置族十二项**
+ * （provider 四 / model / agent 参数 / MCP 三 / 配置写 / 语言）+ **项目级信息两项**（台账 / 相位）
+ * （定序 = 预载白名单同序）。
+ * 白名单**单源** = `src/preload/preload.cjs` 的 `CHANNELS`（批档 §2.6 D-3）：主侧经 `createRequire` 读之并**据以注册**
+ * （一条白名单项 = 一个 `ipcMain.handle` 面 ⇒ 无通道名第二副本）；白名单项无处理体 ⇒ 注册期抛（fail-closed）。
+ * 预载档顶层零装配副作用（守卫调用 / 守卫导出）⇒ 主进程侧读取不触 `electron`（批档 §2.11 收正②）。
+ * `channels` 读数口径 = 本次运行**实际分发集合**（顺序去重 —— 批档 §2.11 收正⑦）。
+ */
+import { createRequire } from "node:module"
+import { dialog, ipcMain } from "electron"
+import { loadConfig } from "@thincoder/core/config.mjs"
+import { normalizeLocale, projectDictionary } from "@thincoder/core/i18n.mjs"
+import { PRELOAD_PATH } from "./window.mjs"
+import { currentCwd, openProject, recentDirs } from "./projects.mjs"
+import { listSessions } from "./sessions.mjs"
+import {
+  createSession, deleteSession, renameSession, resumeSession, switchSession,
+} from "./session-actions.mjs"
+import { pageHistory } from "./session-slots.mjs"
+import { configWrite, isConfigured, modelList, settingsAgent } from "./settings.mjs"
+import { providerList, providerRemove, providerSave, providerVerify } from "./providers.mjs"
+import { mcpList, mcpRemove, mcpSave } from "./mcp-servers.mjs"
+import { batchStatus, ledgerRead } from "./project-info.mjs"
+
+const require = createRequire(import.meta.url)
+
+/** 白名单（唯一副本在预载——本处只是读取面，不再拷副本）。 */
+export const CHANNELS = require(PRELOAD_PATH).CHANNELS
+
+/** 读数（冒烟字段源）：`channels` = 实际分发集合；`configKeys` = 最近一次 `config:read` 的配置键数。 */
+export const ipcStats = { channels: [], configKeys: 0 }
+
+/** 宿主装配桥句柄（本批增）：启动序经 `setAgentHost` 注入 —— 处理体经 `requireAgentHost()` 取值。 */
+let agentHost = null
+
+/** 注入宿主（`main.mjs` 启动序：通道注册前）—— 本档只此一处赋值。 */
+export function setAgentHost(host) {
+  agentHost = host
+}
+
+/** 宿主取值：未装配 ⇒ 抛（fail-loud ⇒ `invoke` 拒绝；不吞 / 不落假成功）。 */
+function requireAgentHost() {
+  if (!agentHost) throw new Error("[ipc] agent host not assembled")
+  return agentHost
+}
+
+/** `config:read`（无入参）⇒ `{ config, locale, dict, configured }`：`locale` = 配置语言字段**经核归一**
+ *  （缺 / 未知 ⇒ `"en"`）；`dict` 与 `locale` 同源同归一 ⇒ 供受面与词面一致。`configured` = **配置档存在性**
+ *  （`settings.mjs` `isConfigured()` = `existsSync(configPath)`——首启向导闸读数，有意比 CLI `isConfigured`
+ *  宽：档在即视为已配；批档 §2.10 项 3）。配置载入失败 ⇒ **抛出**（fail-loud：`invoke` 拒绝、引导位落
+ *  `error` —— D-6 fail-soft 只覆盖路径无效面）。 */
+function readConfig() {
+  const config = loadConfig()
+  const locale = normalizeLocale(config?.locale)
+  ipcStats.configKeys = Object.keys(config).length
+  return { config, locale, dict: projectDictionary(locale), configured: isConfigured() }
+}
+
+/** 通道 → 处理体（新增行即新增白名单项，两处同时动）。 */
+const HANDLERS = Object.freeze({
+  "config:read": readConfig,
+  "project:open": openProjectChannel,
+  "project:recent": recentProjects,
+  "sessions:list": sessionList,
+  "session:create": sessionCreate,
+  "session:switch": sessionSwitch,
+  "session:rename": sessionRename,
+  "session:delete": sessionDelete,
+  "session:resume": sessionResume,
+  "approval:respond": approvalRespond,
+  "history:page": historyPage,
+  "msg:send": msgSend,
+  "msg:interrupt": msgInterrupt,
+  "provider:list": providerListChannel,
+  "provider:save": providerSaveChannel,
+  "provider:remove": providerRemoveChannel,
+  "provider:verify": providerVerifyChannel,
+  "model:list": modelListChannel,
+  "settings:agent": settingsAgentChannel,
+  "mcp:list": mcpListChannel,
+  "mcp:save": mcpSaveChannel,
+  "mcp:remove": mcpRemoveChannel,
+  "config:write": configWriteChannel,
+  "ledger:read": ledgerReadChannel,
+  "batch:status": batchStatusChannel,
+})
+
+/** `project:open(payload)` ⇒ `{ cwd, recent }`：载荷 `{ path }` **可选**（`docs/desktop/design/IPC.md:42`）——
+ *  给定时直接采用（不走对话框）；缺省 ⇒ 主进程**原生目录选择**（`dialog` 注入 —— D-2；
+ *  取消 ⇒ `filePaths[0] ?? null`）；路径无效 ⇒ fail-soft（`projects.mjs` 判据：现状不变 + 零写）。 */
+function openProjectChannel(payload) {
+  const pick = async () => {
+    const { filePaths } = await dialog.showOpenDialog({ properties: ["openDirectory"] })
+    return filePaths[0] ?? null
+  }
+  return openProject({ path: payload?.path, pick })
+}
+
+/** `project:recent`（无入参）⇒ `{ cwd, recent }`：族最新 mtime 降序前 10 —— 核槽面回读、零新存储（KD-9）。 */
+function recentProjects() {
+  return { cwd: currentCwd(), recent: recentDirs() }
+}
+
+/** `sessions:list`（无入参）⇒ `{ cwd, rows }`：`cwd` 取主进程当前项目内存态；读面转口 `sessions.mjs`（零算法副本）。 */
+function sessionList() { return listSessions(currentCwd()) }
+
+/** 会话族五通道处理体（本批增）：入参到动作层即止 —— cwd 取主进程当前项目内存态（动作层收 `cwd` 入参
+ *  是为可脱壳直测，KD-a；信封 / reason 分档单源 = `session-actions.mjs`）。无载荷通道（create / resume）
+ *  忽略 `payload`；载荷形 = `{slot}`（switch / delete）· `{slot, title}`（rename）。 */
+function sessionCreate() { return createSession(currentCwd()) }
+function sessionSwitch(payload) { return switchSession(currentCwd(), payload?.slot) }
+function sessionRename(payload) { return renameSession(currentCwd(), payload?.slot, payload?.title) }
+function sessionDelete(payload) { return deleteSession(currentCwd(), payload?.slot) }
+function sessionResume() { return resumeSession(currentCwd()) }
+
+/** `history:page(payload)` ⇒ `{ ok, messages, hasOlder, next, meta }` ∥ `{ ok:false, reason }`：读面转口
+ *  `session-slots.mjs`（零算法副本；cwd 取主进程当前项目内存态 —— 同会话族）。载荷 `{ key, before }`。 */
+function historyPage(payload) { return pageHistory(currentCwd(), payload) }
+
+/** `msg:send(payload)` ⇒ `{ ok:true }`（**立即回** —— 过程走 `ev:*` 出站）∥ `{ ok:false, reason }`
+ *  （`bad-key` / `busy` / `provider-invalid`）：载荷 `{ key, text }`，转口宿主回合驱动。 */
+function msgSend(payload) { return requireAgentHost().send(payload?.key, payload?.text) }
+
+/** `msg:interrupt(payload)` ⇒ `{ ok:true }` ∥ `{ ok:false, reason }`（`idle` / `bad-key`）：载荷 `{ key }`。 */
+function msgInterrupt(payload) { return requireAgentHost().interrupt(payload?.key) }
+
+/** `approval:respond(payload)` ⇒ 审批出口：载荷 `{ promptId, verdict }`（形已在册，本批接线**语义**面）。
+ *  转口宿主待决表（`agent-host.mjs`）：未知 id / 跨形 verdict / 表外 verdict 皆有 `{ok:false}` 档，且
+ *  非法 verdict **不 resolve**（挂起保留）——**通道名与载荷形不动**；宿主未注入 ⇒ fail-loud 直抛
+ *  （不吞 / 不落假成功 / 本档零假成功字面 —— 沿 `docs/desktop/design/IPC.md` §2 会话族注项 5 与「禁假数据」）。 */
+function approvalRespond(payload) {
+  if (!agentHost) throw new Error("[ipc] approval:respond: approval source not assembled")
+  return agentHost.respond(payload)
+}
+
+/** 在装配 agent 列表（MCP 随动面用）：宿主未注入 ⇒ `null`（无宿主面 ⇒ 随动空操作，非报错——
+ *  配置已落盘，下次装配生效）。 */
+function liveAgents() {
+  if (!agentHost) return null
+  return [...agentHost.agents.values()]
+}
+
+/* ─── 设置族十二项处理体（本批增）：转口三档模块，本档零算法副本（§2.5 行表） ─── */
+/** `provider:list`（无入参）⇒ `{ ok, providers, active }`（密钥只回遮罩值）。 */
+function providerListChannel() { return providerList() }
+/** `provider:save(payload)` ⇒ `{ ok, reason }`：载荷 `{ name, shape, preset?, baseURL?, model?, key?, format?, active? }`。 */
+function providerSaveChannel(payload) { return providerSave(payload) }
+/** `provider:remove(payload)` ⇒ `{ ok, reason }`：载荷 `{ name }`（激活渠道保护 = 核错误串直传）。 */
+function providerRemoveChannel(payload) { return providerRemove(payload) }
+/** `provider:verify(payload)` ⇒ `{ ok, models }` ∥ `{ ok:false, reason }`（`timeout`/`malformed`/`unavailable`；
+ *  探不通**仍可保存**——本通道只回报，不拦写）。 */
+function providerVerifyChannel(payload) { return providerVerify(payload) }
+/** `model:list(payload)` ⇒ `{ ok, models }` ∥ `{ ok:false, reason }`：载荷 `{ provider }`（provider 名）。 */
+function modelListChannel(payload) { return modelList(payload) }
+/** `settings:agent(payload)`：读 `{}` ⇒ `{ ok, fields }`；写 `{ patch }` ⇒ `{ ok, reason, fields }`（写后回读）。 */
+function settingsAgentChannel(payload) { return settingsAgent(payload) }
+/** `mcp:list`（无入参）⇒ `{ ok, servers }`（只列已配；不连接）。 */
+function mcpListChannel() { return mcpList() }
+/** `mcp:save(payload)` ⇒ `{ ok, tools }` ∥ `{ ok:false, reason, detail? }`（探活不通 ⇒ 零写盘）。 */
+function mcpSaveChannel(payload) { return mcpSave(payload, { listAgents: liveAgents }) }
+/** `mcp:remove(payload)` ⇒ `{ ok }` ∥ `{ ok:false, reason }`：载荷 `{ name }`。 */
+function mcpRemoveChannel(payload) { return mcpRemove(payload, { listAgents: liveAgents }) }
+  /** `config:write(payload)` ⇒ `{ ok, reason, locale, dict, configured }` ∥ `{ ok:false, reason }`：载荷 `{ patch }`（仅 `locale`）。 */
+function configWriteChannel(payload) { return configWrite(payload) }
+/** `ledger:read(payload)` ⇒ `{ ok, counts, thresholdReached }` ∥ `{ ok:false, reason }`：载荷 `{ cwd? }`。 */
+function ledgerReadChannel(payload) { return ledgerRead(payload) }
+/** `batch:status(payload)` ⇒ `{ ok, phase }` ∥ `{ ok:false, reason }`：载荷 `{ cwd? }`（`missing`/`invalid`）。 */
+function batchStatusChannel(payload) { return batchStatus(payload) }
+
+/** 按白名单逐项注册（白名单项无处理体 ⇒ 抛——装配期即知，不静默）。 */
+export function registerIpcHandlers() {
+  for (const channel of CHANNELS) {
+    const handler = HANDLERS[channel]
+    if (typeof handler !== "function") throw new Error(`[ipc] whitelisted channel without handler: ${channel}`)
+    ipcMain.handle(channel, (_event, payload) => {
+      if (!ipcStats.channels.includes(channel)) ipcStats.channels.push(channel)
+      return handler(payload)
+    })
+  }
+}

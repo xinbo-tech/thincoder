@@ -1,0 +1,170 @@
+/* chat.css — 对话流面（`docs/desktop/design/UI.md` §1 对话流行 / 工具卡行 · `docs/desktop/design/RENDERER.md` §2 / §3）。
+   滚动容器 = `.flow` 宿主自身（骨架 `styles.css:86` 已给 flex / 溢出 / 内边距——本档只补 `overflow-anchor: none`：
+   补偿**单权源**（RENDERER.md §3）——头侧变更的视口锚定只由 `compensateTop` 显式承担，免浏览器自动锚定叠算。
+   字形面 = 改动增删符号 / 流式游标（`content` —— **视图档零字形字面**，与标签条 / 关闭控件同纪律 KD-f）；
+   未接线控件 `disabled` 与可点态**同形**（诚实非死控 —— 同 `styles.css` 行形态律）；本题零主题变量（沿 `styles.css`）。 */
+
+.flow {
+  overflow-anchor: none;
+}
+
+/* 块（五型单序列）：纯文本落面（`pre-wrap` —— 零 Markdown / 零 HTML 注入）；块间留白 = 相邻块上边距。 */
+.block {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.block + .block {
+  margin-top: 8px;
+}
+.block-user {
+  background: var(--bg);
+}
+.block-reasoning {
+  color: var(--fg-muted);
+  font-style: italic;
+}
+.block-error {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+/* 流式游标：末块追加态 ⇒ 文本尾随 `▌`（`content` 不入 DOM ⇒ 不入选区 / 不入断言面）。 */
+.block-assistant[data-streaming="1"]::after {
+  content: "▌";
+  color: var(--fg-muted);
+}
+
+/* 工具卡三行（同档 §1 工具卡行）：头行（可折叠 ⇒ `button` 形）· 改动摘要行 · 展开结果区。 */
+.tool-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.tool-head[data-status="error"] {
+  color: var(--accent);
+}
+.tool-head[data-status="running"] {
+  color: var(--fg-muted);
+}
+.tool-head:not(:disabled) {
+  cursor: pointer;
+}
+.tool-changes {
+  margin-top: 6px;
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+/* 每文件行：`path` + 增删数节点（字形 = 本档 `::before`，数 = 视图档文本 ⇒ 字形不入数据面）。 */
+.tool-file {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+  font-size: 12px;
+}
+.tool-file [data-add]::before {
+  content: "+";
+}
+.tool-file [data-del]::before {
+  content: "−";
+}
+.tool-result {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  white-space: pre-wrap;
+}
+
+/* 摘要块（根首子 · 未渲染更早块 > 0）：文本 + 回填控件（回填接线缺省 ⇒ `disabled`）。 */
+.chat-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+.chat-backfill {
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--fg-muted);
+  font: inherit;
+}
+/* 药丸（根末子 · `!following`）：`sticky` 尾随 + **单行 `nowrap` 定高**（高度增量在帧尾读数区间外 ⇒ ΔH = 头侧净增量）。 */
+.chat-pill {
+  position: sticky;
+  bottom: 0;
+  display: block;
+  margin: 8px auto 0;
+  padding: 4px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg-raised);
+  color: inherit;
+  font: inherit;
+  white-space: nowrap;
+}
+.chat-backfill:not(:disabled):hover,
+.chat-pill:not(:disabled):hover {
+  background: var(--bg);
+  cursor: pointer;
+}
+
+/* 空态（有活动会话 · 零块 —— 禁假数据）：单提示节点。 */
+.chat-empty {
+  color: var(--fg-muted);
+}
+
+/* 审批卡（流内**非块节点** · 独立卡片 —— `docs/desktop/design/UI.md` §1 审批呈现行 · 批 7）：
+   首行（标称片 + 状态词）· 改动摘要行（锚与工具卡**共用**——样式的另一处 = `.tool-changes`）· 三出口操作区
+   （卡面与池面条目**共用** ⇒ 本段为操作区样式单源）。 */
+.approval-card {
+  padding: 8px 10px;
+  margin-top: 8px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+}
+.approval-card + .block,
+.block + .approval-card {
+  margin-top: 8px;
+}
+.approval-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.approval-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.approval-action {
+  padding: 2px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+/* 最安全键（置焦锚 —— 逐项 ⇒ 拒绝 / 批 ⇒ 全否）：差异只经边框色，不落第二字形。 */
+.approval-action[data-autofocus="1"] {
+  border-color: var(--accent);
+}
+.approval-action:not(:disabled):hover {
+  background: var(--bg);
+  cursor: pointer;
+}

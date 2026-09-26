@@ -1,0 +1,272 @@
+/* settings.css — 设置面 / 首启向导 / 项目级信息行三面样式（形态单源 = `docs/desktop/design/UI.md` §1 设置面 / 信息行 · 批档 §2.12–§2.15）。
+   分档理由（沿 `pool.css` / `chat.css` 先例：零搬移 · 零断点 · 零重立变量）：`styles.css` 实读 284 行贴 300 层
+   （批档 §2.13 表）⇒ 三面随视图出档。挂载面（两容器住 `renderer/index.html`）：
+     ① `[data-slot="settings"]` = **窗口级覆盖层面**（三列栅格之外 —— body 末子元素）：**一容器两树互斥占槽**
+        （向导 ∥ 设置 —— 占槽裁决 = `renderer/mount-settings.mjs`）；两退场都清容器（构零子节点）⇒ 本档兜住
+        空容器 / 关态（`:empty` + `[data-state="closed"]` 整层退场），否则定层盖住主 UI。
+     ② `[data-slot="info"]` = 左列底行（rail 内 · 会话区之后 —— 唯一入口 = 设置面开）。
+   树面锚（本档零新类名）：`views/settings.mjs`（头 / 段 / 体）· `views/settings-sections.mjs`（四段体 · 行 / 表单）·
+   `views/onboarding.mjs`（向导）· `views/info-row.mjs`（信息行）。字形面 = 关闭 / 退场两控件的 ✕（`content` ——
+   **视图档零字形字面**，沿 `pool.css` 折叠控件同纪律）；变量单源 = `styles.css` `:root`（零新变量 · 零断点常量）。 */
+
+/* ── ① 设置 / 向导：窗口级覆盖层面 ─────────────────────────────────────── */
+[data-slot="settings"] {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  padding: calc(var(--gap) * 1.5) var(--gap);
+  overflow: auto;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.5 var(--font);
+}
+/* 内容列：顶节点居中成可读列宽（容器自身满窗 —— 覆盖面不透底）。 */
+[data-slot="settings"] > * {
+  width: 100%;
+  max-width: 48rem;
+  margin: 0 auto;
+}
+/* 整层退场：两退场都清容器（`:empty`）+ 关态属性残留兜底（`[data-state="closed"]`）。 */
+[data-slot="settings"]:empty,
+[data-slot="settings"][data-state="closed"] { display: none; }
+/* 两树根（同容器元素持 `.settings` / `.wizard`）：纵向排布（换树不换形）。 */
+.settings,
+.wizard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+/* ── ② 设置面：头 / 失败面 / 段 / 行 / 表单 ─────────────────────────────── */
+.settings-head,
+.wizard-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.settings-title,
+.wizard-title {
+  margin: 0;
+  font-size: 16px;
+}
+.settings-lang { margin-left: auto; }
+.wizard-dismiss { margin-left: auto; }
+
+/* 控件形（关闭 / 退场 / 提交 / 推进 / 语言 / 入口 —— 同一形；未接线态不另立样式：诚实非死控）。 */
+.settings-lang,
+.settings-close,
+.settings-submit,
+.wizard-dismiss,
+.wizard-submit,
+.wizard-next,
+.wizard-finish,
+.info-entry {
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+}
+.settings-lang,
+.settings-close,
+.wizard-dismiss,
+.info-entry {
+  color: var(--fg-muted);
+}
+.wizard-next,
+.wizard-finish {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.settings-lang:not(:disabled),
+.settings-close:not(:disabled),
+.settings-submit:not(:disabled),
+.wizard-dismiss:not(:disabled),
+.wizard-submit:not(:disabled),
+.wizard-next:not(:disabled),
+.wizard-finish:not(:disabled),
+.info-entry:not(:disabled) {
+  cursor: pointer;
+}
+/* 字形面：关闭 / 退场两控件的 ✕（视图档 children 为空 —— 字形单源住本档 content）。 */
+.settings-close::before,
+.wizard-dismiss::before {
+  content: "✕";
+  line-height: 1;
+}
+
+/* 失败面（核错误串直传）：段标 + 串 —— 警示色沿 `pool.css` 错误条目同档。 */
+.settings-notice,
+.wizard-notice {
+  display: flex;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--accent);
+}
+.settings-notice-scope {
+  color: var(--fg-muted);
+}
+/* 串体 `.settings-notice-text`：零专规则 —— 承 `.settings-notice` 警示色（核错误串直传，整行同色）。 */
+
+/* 段（标题 + 体）与段态词（`none` / `loading` —— 体零节点时单行占位，非空壳）。 */
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.settings-section-title {
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.settings-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.settings-section-state,
+.settings-empty { color: var(--fg-muted); }
+
+/* 行（名 + [值] + 行动作）：渠道 / 模型 / MCP 三体共形（单源）。 */
+.settings-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.settings-row[data-active],
+.settings-row[data-current] { border-color: var(--accent); }
+.settings-row-name { font-weight: 600; }
+.settings-row-value,
+.settings-key {
+  color: var(--fg-muted);
+}
+.settings-row-action { margin-left: auto; }
+.settings-key[data-key="none"] { font-style: italic; }
+.settings-mark {
+  padding: 0 6px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  color: var(--accent);
+  font-size: 12px;
+}
+/* 校验读数两态（`ok` / `fail`）。 */
+.settings-verify { color: var(--fg-muted); }
+.settings-verify[data-verify="fail"] {
+  color: var(--accent);
+}
+
+/* 表单（渠道序列 / 渠道自定 / MCP 增 —— 同形）：字段行 + 标 + 控件。 */
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.settings-field-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.settings-field-row > .settings-field-label {
+  flex: 0 0 6rem;
+}
+.settings-field-label { color: var(--fg-muted); }
+.settings-field {
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  color: var(--fg);
+  font: inherit;
+}
+input.settings-field:not([type="checkbox"]),
+textarea.settings-field {
+  flex: 1;
+  min-width: 0;
+}
+input.settings-field[type="checkbox"] {
+  align-self: flex-start;
+}
+.settings-field-readonly,
+.settings-readonly-hint {
+  color: var(--fg-muted);
+}
+.settings-readonly-hint { font-size: 12px; }
+.settings-submit { align-self: flex-start; }
+
+/* ── ③ 首启向导：步标 / 体 / 足 ────────────────────────────────────────── */
+.wizard-steps {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wizard-step {
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+.wizard-step[data-current] {
+  color: var(--fg);
+  font-weight: 600;
+}
+.wizard-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wizard-hint { color: var(--fg-muted); }
+.wizard-foot {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* ── ④ 项目级信息行（左列底行）─────────────────────────────────────────── */
+[data-slot="info"] {
+  padding: 8px 12px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+[data-slot="info"],
+.info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.info-title { font-weight: 600; }
+.info-read,
+.info-phase {
+  display: flex;
+  gap: 4px;
+  color: var(--fg-muted);
+}
+.info-read-value { color: var(--fg); }
+/* 标词 `.info-read-label`：零专规则 —— 承 `.info-read` / `.info-phase` 灰阶（值另色 = `.info-read-value`）。 */
+/* 超阈标（与核台账同词「可开批」）· 项目未发现等提示串。 */
+.info-threshold,
+.info-notice {
+  color: var(--accent);
+}
+.info-state {
+  color: var(--fg-muted);
+  font-style: italic;
+}

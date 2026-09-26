@@ -1,0 +1,20 @@
+{
+  "name": "thincoder-desktop",
+  "version": "0.0.0",
+  "private": true,
+  "description": "ThinCoder desktop — Electron shell (main / preload / renderer), zero-build, zero third-party runtime deps beyond @thincoder/core.",
+  "type": "module",
+  "main": "src/main/main.mjs",
+  "scripts": {
+    "test": "node test/run.mjs",
+    "package": "electron-builder",
+    "postpackage": "node scripts/check-dist.mjs"
+  },
+  "dependencies": {
+    "@thincoder/core": "^0.9.5"
+  },
+  "devDependencies": {
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3"
+  }
+}

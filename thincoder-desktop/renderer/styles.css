@@ -1,0 +1,284 @@
+/* styles.css — 三列栅格 + 窗口级状态栏底行 + 主题变量 + 单断点（`docs/desktop/design/UI.md` §1 布局 / 状态栏 / 断点 / 主题行）。
+   主题事实源 = 系统（与主进程 `nativeTheme` 同一事实）：本档经 `prefers-color-scheme` 直接消费、变量集中此处
+   （零主题通道 —— 批档 §2.6 D-8）。断点 = 单常量（见本档唯一断点 `@media` 行；数值保 open · 实施批实测调）。 */
+
+:root {
+  color-scheme: light dark;
+  --bg: #f7f8fa;
+  --bg-raised: #ffffff;
+  --fg: #1b1f24;
+  --fg-muted: #5c6672;
+  --line: #dfe3e8;
+  --accent: #2f6feb;
+  --radius: 8px;
+  --gap: 12px;
+  --rail-w: 15rem;
+  --rail-w-collapsed: 3.25rem;
+  --pool-w: 18rem;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15171c;
+    --bg-raised: #1b1e24;
+    --fg: #e6e9ee;
+    --fg-muted: #9aa4b2;
+    --line: #2a2f37;
+    --accent: #5b8def;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.5 var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 三列栅格 + 窗口级状态栏底行：左（项目与会话）· 中（会话）· 右（活动池）——中列 `minmax(0, 1fr)` 防内容撑破栅格；
+   第二行 = 状态栏底行（`auto` 高、跨三列——需求 §3.1 图：状态栏在三列框外）。 */
+.app {
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--pool-w);
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: var(--gap);
+  height: 100%;
+  padding: var(--gap);
+}
+
+.rail,
+.session,
+.pool,
+.status {
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.rail,
+.pool,
+.session {
+  display: flex;
+  flex-direction: column;
+}
+
+.rail-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.rail-body,
+.pool-body,
+.flow {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--gap);
+}
+
+.session-head {
+  min-height: 44px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.status {
+  grid-column: 1 / -1;
+  min-height: 32px;
+  padding: 6px 12px;
+  color: var(--fg-muted);
+}
+
+/* 左列内容面（`docs/desktop/design/UI.md` §1 左列会话行 / 启动态 / 空态行）：区 = 项目 / 最近目录 / 会话；
+   行 = 标题 + 来源端标（无标行不占位）；未接线控件 `disabled`（R-3 —— 未接线态与可点态同形：诚实非死控）。 */
+.rail-sections,
+.rail-section,
+.rail-list {
+  display: flex;
+  flex-direction: column;
+}
+.rail-sections {
+  gap: 16px;
+}
+.rail-section {
+  gap: 6px;
+}
+.rail-list {
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rail-title,
+.rail-origin {
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+.rail-title {
+  font-weight: 600;
+}
+.rail-hint {
+  margin: 0;
+  color: var(--fg-muted);
+}
+/* 控件（打开目录 / 最近项 / 会话行）= 同一条行形态（零分叉：未接线态不另立样式）。 */
+.rail-control,
+.rail-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.rail-control:not(:disabled):hover,
+.rail-row:not(:disabled):hover {
+  background: var(--bg);
+  cursor: pointer;
+}
+.rail-row-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rail-row[data-active="1"] {
+  border-color: var(--accent);
+}
+
+/* 单断点：宽 < 900px ⇒ 左列折叠为图标条（骨架；交互随视图批）。 */
+@media (width < 900px) {
+  .app {
+    grid-template-columns: var(--rail-w-collapsed) minmax(0, 1fr) var(--pool-w);
+  }
+
+  .rail-head {
+    justify-content: center;
+  }
+}
+
+/* 中区外壳面（`docs/desktop/design/UI.md` §1 标签条 / 会话头 / 状态栏行 · 批 4）：标签条（标签宽域 + 溢出横滚 +
+   两端渐隐）· 位标 · 会话头字段槽 · 状态栏告警位。字形面 = 关闭 / 新建控件的 `content`（视图档零字形字面 —— KD-f）；
+   非活动标签 `inert`（不收 Tab 序 / 不响应焦点）= 浏览器原生面，零样式分叉。 */
+.tabbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  mask-image: linear-gradient(90deg, transparent, #000 12px, #000 calc(100% - 12px), transparent);
+}
+.tabbar-item {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+  min-width: 1.75rem;
+  max-width: 14rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+}
+.tabbar-item[data-active="1"] { border-color: var(--accent); }
+.tabbar-tab {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.tabbar-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 位标词面（标签位 + 状态栏告警位 —— 两处同源同词：`data-badge` / `data-alert` 码由视图落，词由词表出）。 */
+.tabbar-badge,
+.status-alert {
+  flex: 0 0 auto;
+  color: var(--fg-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.tabbar-close,
+.tabbar-new {
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--fg-muted);
+  font: inherit;
+}
+.tabbar-close::before { content: "×"; }
+.tabbar-new::before { content: "+"; }
+/* 关闭确认面两键（同档 §1 交互行）：文本按钮形 —— 词面由视图出串（**零新字形**）；取消 = 常态色，确认 = 强调色。 */
+.tabbar-cancel,
+.tabbar-confirm {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: transparent;
+  font: inherit;
+}
+.tabbar-cancel { color: var(--fg-muted); }
+.tabbar-confirm { color: var(--accent); }
+.tabbar-tab:not(:disabled):hover,
+.tabbar-close:not(:disabled):hover,
+.tabbar-new:not(:disabled):hover,
+.tabbar-cancel:not(:disabled):hover,
+.tabbar-confirm:not(:disabled):hover {
+  background: var(--bg);
+  cursor: pointer;
+}
+
+/* 会话头字段面（同档 §1 会话头行）：槽序布局 + 字段锚形态（序单源 = `renderer/views/chrome.mjs` `FIELD_ORDER`）；
+   值串 = 供给面数据（非词表）；`data-meta="none"`（供给未落）= 常态：零字段节点（禁假数据 —— KD-e）。 */
+.head-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.head-field {
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+
+/* 状态栏面（同档 §1 状态栏行）：本批只落告警位（非活动标签的待审批 / 运行中）——上下文读数供给未落 ⇒ 零读数节点。 */
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}

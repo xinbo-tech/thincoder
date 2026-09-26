@@ -1,0 +1,284 @@
+/**
+ * host-floor.test.mjs — E-7 用例（PROJECT.md §2 KD-7；批档 §2.5 U1–U4 + U13 + U74 · 本批 §2.11 收正⑤/⑥ + U76/U77/U95）。
+ * 覆盖：版本闸边界（24.0 · Node 主版本底线语义）/ 探针分支（Node 够而 `node:sqlite` 缺）/ 本机真探针过闸
+ * （兼作环境契约：测试机即产品下限面）/ 启动序机检（下限自检调用点先于协议 / 窗口注册 · 失败走显式退出 ·
+ * `main` 值锁 · 本档入册）/ 预载三面（主进程可读不抛 · 平 node 装配判红 · 主侧读取面 = `createRequire`）/
+ * 通道配线两向（`CHANNELS` 二十五项 · `HANDLERS` 键集≡白名单集 · 三新处理体转口 · 未装配处理体 fail-loud 源面判红）/
+ * 订阅面白名单（`EVENT_CHANNELS` 恰九 ∧ 冻结 · 表内订阅收单参载荷 · 表外 throw · 退订同引用幂等）/
+ * 行数触发线（批 8 主进程侧 / 渲染侧新档 ≤ 300 · 批 9 新增六档〔用例模块〕≤ 300 · 在册例外两向〔越层档不入 `fresh` 清单〕· 宿主档源面零 `electron`）/
+ * 退场复位回路（三薄挂载宿主属性面无残留 —— `docs/desktop/design/RENDERER.md` §1 退场口径 · 属性面）。
+ */
+import { test } from "node:test"
+import assert from "node:assert/strict"
+import { spawnSync } from "node:child_process"
+import { readFileSync } from "node:fs"
+import { createRequire } from "node:module"
+import { fileURLToPath } from "node:url"
+import { engineFloorMet, hostFloorMet, MIN_NODE, sqliteAvailable } from "../src/main/host-floor.mjs"
+import { mountInfo } from "../renderer/views/info-row.mjs"
+import { mountWizard } from "../renderer/views/onboarding.mjs"
+import { mountSettings } from "../renderer/views/settings.mjs"
+import { installFakeDom, selfCheck } from "./fake-dom.mjs"
+import files from "./files.mjs"
+import { stateOf } from "./views-harness.mjs"
+
+/** 剥注释（块 / 行）：源码机检须看**调用点**——否则启动序注释里的 `registerAppScheme()` 字样会被当成挂点（本轮实测踩中）。 */
+function stripComments(source) {
+  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ \t]*\/\/.*$/gm, "")
+}
+
+// ─── U1 版本闸边界（FLOOR = 24.0）──────────────────────────────
+
+test("U1: 宿主版本谓词边界（24.0）", () => {
+  assert.equal(MIN_NODE, "24.0.0", "下限值 = 宿主 Node 主版本底线（单源）")
+  assert.equal(hostFloorMet("24.0.0"), true)
+  assert.equal(hostFloorMet("24.18.0"), true)
+  assert.equal(hostFloorMet("25.0.0"), true)
+  assert.equal(hostFloorMet("23.9.9"), false)
+  assert.equal(hostFloorMet("20.18.1"), false)
+  assert.equal(hostFloorMet("24"), true, "major-only 按 24.0 判——恰达过闸（下限 minor 归 0）")
+  assert.equal(hostFloorMet("24.0.0-rc.1"), false, "预发布标记不解析——保守不过闸")
+})
+
+// ─── U2 探针分支：Node 够、node:sqlite 缺 ──────────────────────
+
+test("U2: Node 够而 node:sqlite 缺 ⇒ 不过闸（探针分支）", async () => {
+  const missing = await engineFloorMet({
+    version: "24.18.0",
+    loadSqlite: async () => { throw new Error("No such built-in module: node:sqlite") },
+  })
+  assert.equal(missing, false)
+  assert.equal(await sqliteAvailable(async () => {}), true, "探针可载 = true（对照）")
+  assert.equal(await engineFloorMet({ version: "24.18.0", loadSqlite: async () => {} }), true)
+})
+
+// ─── U3 本机真探针（环境契约：测试机即下限面）──────────────────
+
+test("U3: 本机真探针过闸（实时环境读数）", async () => {
+  assert.equal(hostFloorMet(process.versions.node), true, `本机 node ${process.versions.node} 须 ≥ ${MIN_NODE}`)
+  assert.equal(await sqliteAvailable(), true, "本机 node:sqlite 可动态导入")
+  assert.equal(await engineFloorMet({ version: process.versions.node }), true)
+})
+
+// ─── U4 启动序机检（删挂点 / 乱序 / 抛栈即红）───────────────────
+
+test("U4: 下限自检调用点先于协议 / 窗口注册 + 失败不抛 + main 值锁 + 本档入册", () => {
+  assert.ok(files.includes("test/host-floor.test.mjs"), "本档已登记 test/files.mjs（未登记 = 不跑）")
+  const source = readFileSync(new URL("../src/main/main.mjs", import.meta.url), "utf8")
+  const code = stripComments(source)
+  const floorAt = code.indexOf("hostFloorMet(process.versions.node")
+  assert.ok(floorAt > -1, "下限自检调用点在位（挂点缺失 ⇒ 运行期核验失效）")
+  for (const later of ["registerAppScheme(", "serveAppProtocol(", "createWindow("]) {
+    const at = code.indexOf(later)
+    assert.ok(at > -1, `${later} 在位`)
+    assert.ok(floorAt < at, `下限自检先于 ${later}（实 ${floorAt} vs ${at}）`)
+  }
+  const branch = code.slice(floorAt, code.indexOf("\n\n", floorAt))
+  assert.ok(!/\bthrow\b/.test(branch), "失败分支不抛栈")
+  assert.ok(branch.includes("report(") && code.includes("app.exit("), "失败分支走显式退出面（report ⇒ app.exit）")
+  const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"))
+  assert.equal(pkg.main, "src/main/main.mjs", "main 值锁")
+})
+
+// ─── U13 预载档三面 ────────────────────────────────────────────
+
+test("U13: 预载档主进程可读不抛 / 平 node 装配判红 / 主侧读取面 = createRequire", () => {
+  const preloadPath = fileURLToPath(new URL("../src/preload/preload.cjs", import.meta.url))
+  const preload = createRequire(import.meta.url)(preloadPath) // ① 主进程侧读取：不触 electron ⇒ 不抛
+  assert.deepEqual(
+    [...preload.CHANNELS],
+    [
+      "config:read", "project:open", "project:recent", "sessions:list",
+      "session:create", "session:switch", "session:rename", "session:delete", "session:resume",
+      "approval:respond", "history:page", "msg:send", "msg:interrupt",
+      "provider:list", "provider:save", "provider:remove", "provider:verify",
+      "model:list", "settings:agent", "mcp:list", "mcp:save", "mcp:remove",
+      "config:write", "ledger:read", "batch:status",
+    ],
+    "白名单 = 二十五项（既有十三项 + 新增十二项：provider 四 · model 一 · settings 一 · MCP 三 · config:write · ledger:read · batch:status · 顺序锁定）",
+  )
+  assert.ok(Object.isFrozen(preload.CHANNELS), "CHANNELS 冻结（运行期不可改）")
+
+  // ② 平 node 且守卫被满足（有 window）⇒ 装配尝试 ⇒ require("electron") 失败 ⇒ 非零退出、错面提 electron
+  const code = `globalThis.window = {}; require(${JSON.stringify(preloadPath)})`
+  const child = spawnSync(process.execPath, ["-e", code], { encoding: "utf8" })
+  assert.notEqual(child.status, 0, "平 node 满足守卫即判红（不静默降级）")
+  const face = `${child.stderr}${child.stdout}`
+  assert.match(face, /exposeInMainWorld|electron/i, `错面须指向装配面（实 = ${face.slice(0, 160)}）`)
+
+  // ③ 主侧白名单单源：经 createRequire 读取面（不拷副本）
+  const ipcSrc = readFileSync(new URL("../src/main/ipc.mjs", import.meta.url), "utf8")
+  assert.ok(ipcSrc.includes("createRequire"), "主侧经 createRequire 读预载白名单")
+})
+
+// ─── U74 通道配线两向（批 7 + 本批 §2.11 ⑥ 随动）─────────────
+
+test("U74: 白名单二十五项 ∧ 既有十三项序锁定（第 10 项 = approval:respond）∧ HANDLERS ≡ CHANNELS 两向 ∧ 未装配处理体 fail-loud", () => {
+  const preload = createRequire(import.meta.url)(fileURLToPath(new URL("../src/preload/preload.cjs", import.meta.url)))
+  const channels = [...preload.CHANNELS]
+  assert.equal(channels.length, 25, "白名单 = 二十五项（既有十三项 + 新增十二项）")
+  assert.equal(channels[9], "approval:respond", "既有十三项序锁定 —— 第 10 项 = 审批出口（新增段追加其后，不动既有段）")
+  assert.deepEqual(channels.slice(10, 13), ["history:page", "msg:send", "msg:interrupt"], "第 11–13 项 = 历史页 + 回合驱动二项（批 7 段）")
+  assert.deepEqual(
+    channels.slice(13),
+    [
+      "provider:list", "provider:save", "provider:remove", "provider:verify",
+      "model:list", "settings:agent", "mcp:list", "mcp:save", "mcp:remove",
+      "config:write", "ledger:read", "batch:status",
+    ],
+    "第 14–25 项 = 新增十二项（序同预载档头注定序）",
+  )
+
+  const ipc = stripComments(readFileSync(new URL("../src/main/ipc.mjs", import.meta.url), "utf8"))
+  const block = ipc.match(/const HANDLERS = Object\.freeze\(\{([\s\S]*?)\n\}\)/)
+  assert.ok(block, "HANDLERS 表在册（源面判据 —— 处理体注册表未导出）")
+  const handled = [...block[1].matchAll(/"([^"]+)":/g)].map((hit) => hit[1])
+  assert.equal(new Set(handled).size, handled.length, "HANDLERS 无重键（重键 = 静默覆盖处理体）")
+  assert.deepEqual([...handled].sort(), [...channels].sort(), "HANDLERS 键集 ≡ CHANNELS 集（两向：多一 / 少一皆判红）")
+
+  const body = ipc.match(/function approvalRespond\([^)]*\)\s*\{([\s\S]*?)\n\}/)
+  assert.ok(body, "approvalRespond 处理体在册（审批出口定名点）")
+  assert.match(body[1], /\bthrow\b/, "未装配 ⇒ throw（fail-loud 直传拒绝 —— 不吞）")
+  assert.ok(!/reason/.test(body[1]), "未装配处理体零 `reason` 码字面（不造第二 reason 语义）")
+  assert.ok(!/ok\s*:\s*true/.test(body[1]), "未装配处理体零 `{ ok: true }` 字面（不造假成功）")
+})
+
+// ─── U76 出站订阅面白名单（批档 §2.11 收正②/③ · IPC.md §1 九行）─────
+
+test("U76: EVENT_CHANNELS 恰九 ∧ 冻结 · 表内订阅收单参载荷 · 表外 throw · 退订同引用幂等", () => {
+  const preload = createRequire(import.meta.url)(fileURLToPath(new URL("../src/preload/preload.cjs", import.meta.url)))
+  const names = [...preload.EVENT_CHANNELS]
+  assert.equal(names.length, 9, "恰九条 —— 与九回调桥一一对应")
+  assert.deepEqual(names, [
+    "ev:token", "ev:activity", "ev:tool-call", "ev:tool-output", "ev:tool-result",
+    "ev:approval", "ev:question", "ev:task", "ev:error",
+  ], "出站白名单 = 九条 `ev:*`（序 = 桥面表）")
+  assert.ok(Object.isFrozen(preload.EVENT_CHANNELS), "EVENT_CHANNELS 冻结（运行期不可改）")
+
+  const calls = []
+  const live = new Set()
+  const on = preload.makeOn({
+    on: (name, listener) => { calls.push(["on", name, listener]); live.add(listener) },
+    removeListener: (name, listener) => { calls.push(["off", name, listener]); live.delete(listener) },
+  })
+  const seen = []
+  const off = on("ev:token", (...args) => seen.push(args))
+  assert.equal(calls.length, 1, "表内名 ⇒ 恰一次订阅（零额外副作用）")
+  assert.equal(calls[0][1], "ev:token", "订阅名原样（白名单名面直传）")
+  calls[0][2]({ sender: "webContents" }, { key: "3", text: "hi" }) // 注入面实发 (event, payload)
+  assert.deepEqual(seen, [[{ key: "3", text: "hi" }]], "回调只收 payload 单参（`event` 不外泄）")
+  assert.equal(live.size, 1, "订阅在册（退订面有物可销）")
+  assert.throws(() => on("ev:bogus", () => {}), /event channel not allowed: ev:bogus/, "表外名 ⇒ throw（不入 IPC · 零静默返回）")
+  assert.equal(calls.length, 1, "表外名零副作用（未订阅）")
+  off()
+  assert.deepEqual([calls.at(-1)[0], calls.at(-1)[1]], ["off", "ev:token"], "退订 ⇒ removeListener（同名）")
+  assert.equal(calls.at(-1)[2], calls[0][2], "退订收同一 listener 引用（核 removeListener 幂等前提）")
+  off()
+  assert.equal(live.size, 0, "二次退订零抛 ∧ 零订阅残留（幂等）")
+})
+
+// ─── U77 本批三新通道接线面（批档 §2.11 ④/⑤/⑥）──────────────────
+
+test("U77: 二十五项含三新行 ∧ 两向 ≡ ∧ 三新处理体转口 ∧ 零假成功 / 零 reason 字面", () => {
+  const preload = createRequire(import.meta.url)(fileURLToPath(new URL("../src/preload/preload.cjs", import.meta.url)))
+  const channels = [...preload.CHANNELS]
+  const ipc = stripComments(readFileSync(new URL("../src/main/ipc.mjs", import.meta.url), "utf8"))
+  const block = ipc.match(/const HANDLERS = Object\.freeze\(\{([\s\S]*?)\n\}\)/)
+  assert.ok(block, "HANDLERS 表在册")
+  const handled = [...block[1].matchAll(/"([^"]+)":/g)].map((hit) => hit[1])
+  for (const name of ["history:page", "msg:send", "msg:interrupt"]) {
+    assert.ok(channels.includes(name), `${name} 在预载白名单内（§2.11 ⑤ 序末三）`)
+    assert.ok(handled.includes(name), `${name} 在 HANDLERS 表内`)
+  }
+  assert.deepEqual([...handled].sort(), [...channels].sort(), "两向 ≡（多一 / 少一皆判红）")
+
+  const body = (name) => {
+    const hit = ipc.match(new RegExp(`function ${name}\\([^)]*\\)\\s*\\{([\\s\\S]*?)\\}`))
+    assert.ok(hit, `${name} 处理体在册（三新处理体皆单行体）`)
+    return hit[1]
+  }
+  assert.match(body("msgSend"), /requireAgentHost\(\)\.send\(/, "`msg:send` 转口宿主回合驱动")
+  assert.match(body("msgInterrupt"), /requireAgentHost\(\)\.interrupt\(/, "`msg:interrupt` 转口宿主中断")
+  assert.match(body("historyPage"), /pageHistory\(currentCwd\(\), payload\)/, "`history:page` 转口读面（cwd = 主进程当前项目）")
+  for (const name of ["msgSend", "msgInterrupt", "historyPage"]) {
+    assert.ok(!/ok\s*:\s*true/.test(body(name)), `${name} 处理体零 \`{ ok: true }\` 字面（不造假成功）`)
+    assert.ok(!/reason/.test(body(name)), `${name} 处理体零 \`reason\` 码字面（语义单源在动作 / 读面）`)
+  }
+})
+
+// ─── 退场复位回路（`docs/desktop/design/RENDERER.md` §1 退场口径 · 属性面 —— 批 9 码面池）─────
+
+test("退场复位回路：三薄挂载宿主属性面无残留（换树 / 退场形两路 · 骨架属性零动）", () => {
+  assert.equal(selfCheck(), true, "假 DOM 载体自检（选择器闭集 / 锚缺抛 / 写计三档）")
+  const fake = installFakeDom()
+  try {
+    const handlers = new Proxy({}, { get: () => () => {} })
+    const names = (node) => [...node.getAttributeNames()].sort()
+    const wizard = stateOf({ open: false, configured: false })
+    const slot = fake.element("section")
+    slot.setAttribute("data-slot", "settings") // 挂载前基线 = 骨架属性（宿主已有面）
+    // ① 换树（一容器两树互斥 = 生产拓扑）：向导占槽 ⇒ 设置树接管 —— 离职树所加属性零残留
+    mountWizard(slot, wizard, handlers)
+    assert.deepEqual(names(slot), ["class", "data-onboarding", "data-slot", "data-state", "data-step"], "向导占槽：宿主 = 骨架 ∪ 现树声明")
+    mountSettings(slot, stateOf({ open: true }), handlers)
+    assert.deepEqual(names(slot), ["class", "data-settings", "data-slot", "data-state"], "换树 ⇒ `data-onboarding` / `data-step` 摘除（只增不减 ⇒ 判据不达）")
+    assert.equal(slot.getAttribute("class"), "settings", "接任树声明落宿主（`class` 就地改值）")
+    // ② 反向换树 + 退场形（退场 = 容器清空 —— 零子节点树接管）
+    mountWizard(slot, wizard, handlers)
+    assert.deepEqual(names(slot), ["class", "data-onboarding", "data-slot", "data-state", "data-step"], "反向换树 ⇒ `data-settings` 摘除")
+    mountSettings(slot, stateOf({ open: false, configured: true }), handlers)
+    assert.deepEqual(names(slot), ["class", "data-settings", "data-slot", "data-state"], "退场：关态标留存（现树声明，非残留）")
+    assert.equal(slot.getAttribute("data-state"), "closed", "关态字落宿主（退场形自带面）")
+    assert.equal(slot.childNodes.length, 0, "退场 = 容器清空（非 `hidden`）")
+    assert.equal(slot.getAttribute("data-slot"), "settings", "骨架属性自始不动")
+    // ③ 信息行（另一挂载 · 另一槽）：态字随行改值 ∧ 三挂载共用一张复位表（跨面接管零残留）
+    const info = fake.element("aside")
+    info.setAttribute("data-slot", "info")
+    const withInfo = (slice) => stateOf({}, { projectInfo: slice })
+    mountInfo(info, withInfo({ counts: { pool: 3, tech: 1, aged: 0 }, phase: "production", thresholdReached: true }), handlers)
+    assert.deepEqual(names(info), ["class", "data-info", "data-slot", "data-state"], "信息行：宿主 = 骨架 ∪ 现树声明")
+    assert.equal(info.getAttribute("data-state"), "ready", "行态字落宿主（读数在手 ⇒ `ready`）")
+    mountInfo(info, withInfo({ counts: null, phase: null, notice: "boom" }), handlers)
+    assert.equal(info.getAttribute("data-state"), "error", "态字就地改值（重挂零残留）")
+    mountWizard(info, wizard, handlers)
+    assert.deepEqual(names(info), ["class", "data-onboarding", "data-slot", "data-state", "data-step"], "跨面接管 ⇒ `data-info` 摘除（复位表 = 三挂载共用单源）")
+  } finally { fake.restore() }
+})
+
+// ─── U95 行数触发线与形态面（批档 §2.4 U95；四条一并落本档）───────────
+
+test("U95: fresh 新档 ≤ 300 行（越层档走例外面）∧ `app.mjs` 拆后 ≤ 300 ∧ 宿主档源面零 electron", () => {
+  // 行数口径 = 内容行数（文末换行不计 —— 同 `docs/desktop/design/PROJECT.md` §4.1 回填口径）。
+  const rows = (rel) => readFileSync(new URL(`../${rel}`, import.meta.url), "utf8").replace(/\n$/, "").split("\n").length
+  const fresh = [
+    // 主进程侧（8a）
+    "src/main/agent-host.mjs", "src/main/agent-bridge.mjs", "src/main/suspensions.mjs", "src/main/session-io.mjs",
+    "test/agent-host.test.mjs", "test/history-page.test.mjs", "test/session-io.test.mjs", "test/slot-sandbox.mjs",
+    // 渲染侧（8b —— 本批三新档 + 其测试档；行数臂由 8a 落）
+    "renderer/events.mjs", "renderer/events-subscribe.mjs", "renderer/mount-pool.mjs",
+    "test/events-page.test.mjs",
+    // 批 9 六档（用例模块 —— 清单一律文件级读数；越层档不入本清单，走下表例外面）
+    //   其余新档行数面（主进程侧四源档 / `settings.css`）= §4.1 值列表（父侧臂清单随动项；本清单补入 = 六用例档）。
+    "test/settings.test.mjs", "test/providers.test.mjs", "test/mcp-servers.test.mjs", "test/project-info.test.mjs",
+    "test/views-settings.test.mjs", "test/views-onboarding.test.mjs",
+  ]
+  for (const rel of fresh) {
+    const n = rows(rel)
+    assert.ok(n <= 300, `${rel} ≤ 300 行（触发线：贴层即拆；实 ${n}）`)
+  }
+  // 在册例外（越层档**逐一登记** —— 不混进 ≤300 臂 / 不入 `fresh` 清单）：两向判据 = 真越层（>300 ⇒ 例外不得
+  // 静默变常档）∧ 未触硬限（≤500）；消解窗口 = 该档下次被触碰的批（登记面 = `docs/desktop/design/PROJECT.md` §4.1）。
+  for (const { rel, limit } of [{ rel: "renderer/mount-settings.mjs", limit: 500 }]) {
+    const n = rows(rel)
+    assert.ok(n > 300, `${rel} 仍在册例外面（实 ${n} —— 回落 ≤300 须撤销例外登记）`)
+    assert.ok(n <= limit, `${rel} ≤ ${limit} 硬限（实 ${n} —— 距硬限余 ${limit - n} 行）`)
+    assert.ok(!fresh.includes(rel), `${rel} 不入 \`fresh\` 清单（越层档 = 例外面，非 ≤300 臂）`)
+  }
+  // 判据 = 行数规则线本身（「无文件 >300 行」· **含线上** —— 恰 300 合规 · 非余量口径）：接线族已在
+  // `mount-*.mjs` 出档，`app.mjs` 无设置族接线可移。
+  assert.ok(rows("renderer/app.mjs") <= 300, `renderer/app.mjs 拆后 ≤ 300（实 ${rows("renderer/app.mjs")}）`)
+  const host = readFileSync(new URL("../src/main/agent-host.mjs", import.meta.url), "utf8")
+  assert.ok(!/electron/i.test(host), "宿主档源面零 `electron`（脱壳直测前提）")
+  // 渲染 import 面（零 `node:` / 零裸包）= U5 单源：其闭包自 `renderer/app.mjs` 递归走边、本批三渲染新档
+  // 已入 U5 正控（`test/guard-closure.test.mjs`）⇒ 本臂不重复实现同规则（双份走边 = 漂移源）。
+})

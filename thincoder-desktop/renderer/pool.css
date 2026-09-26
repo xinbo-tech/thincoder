@@ -1,0 +1,77 @@
+/* pool.css — 活动池面（`docs/desktop/design/UI.md` §2 项 1 池落形 · 批档 §2.2（c）KD-13 分档）。
+   分档理由（KD-13）：`styles.css` 实读 284 贴 300 层 ⇒ 池面样式单立一档（沿 `chat.css` 批 6 先例：分档零搬移 · 零断点）。
+   字形面 = 折叠控件箭头（`content` —— **视图档零字形字面**，与 `chat.css` / 标签条同纪律）；
+   本题零断点（单断点常量仍单源 = `styles.css`）· 零主题变量（沿 `styles.css` :root）。
+   树面锚（`renderer/views/activity.mjs`）：宿主 `.pool-body[data-slot="pool"]` = 池根（`data-pool` + `data-state`）
+   ⇒ 本档选择器一律以宿主为根；条目操作区锚 `.approval-actions` 与卡面**共用**（样式单源 = `chat.css`）。 */
+
+.pool-head {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  background: var(--bg-raised);
+}
+.pool-title {
+  font-weight: 600;
+}
+.pool-read {
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+.pool-read::before {
+  content: "·";
+  margin-right: 4px;
+}
+.pool-toggle {
+  margin-left: auto;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--fg-muted);
+  font: inherit;
+}
+.pool-toggle::before {
+  content: "▾";
+}
+.pool-toggle[aria-expanded="false"]::before {
+  content: "▸";
+}
+.pool-toggle:not(:disabled) {
+  cursor: pointer;
+}
+
+/* 族（序固定 = 待审批 → 活动块 → 队列；空族零节点 ⇒ 无空壳样式）与条目（零内容回显 = 标称 + 状态词）。 */
+.pool-family {
+  margin-top: 8px;
+}
+.pool-family-label {
+  color: var(--fg-muted);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.pool-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.pool-item-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.pool-item[data-status="error"] .pool-item-label {
+  color: var(--accent);
+}
+.pool-empty {
+  color: var(--fg-muted);
+}
