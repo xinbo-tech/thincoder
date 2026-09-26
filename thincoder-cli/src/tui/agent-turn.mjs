@@ -193,14 +193,9 @@ async function runAgentTurnInner(ctx, text, opts) {
         }
         if (error instanceof ContinueError) {
           if (autoTurn) {
-            // AGENT-LOOP-ASYNC-POOL.md §6.8 digest turn-cap 规则（D-S9 ContinueError 行）：无面板——AUTO 档按
-            // §2 统一规则自动 resume（无人值守授权）；手动档静默拒绝（部分消化留在
-            // 历史，会话回挂起——结果不丢，只是不再烧轮次）。
-            if (agent.autoApprove) {
-              pushLine(t("digest.capAuto"), C.dim)
-              state.controller = makeController()
-              continue
-            }
+            // TURN-CAP-CONTINUE.md §1 #7 / D-TC15（2026-09-26）：digest 无人值守档**不再自续**
+            // （原 AUTO 自动 resume 支退役——静默续期 = F8 禁止；无人可答 ⇒ 撞帽即收口）。
+            // 部分消化留在历史，会话回挂起——结果不丢，只是不再烧轮次。
             pushLine(t("digest.capStop", { turns: error.turn }), C.warn)
             if (opts?._logOutcome) opts._logOutcome.result = "stopped"
             break

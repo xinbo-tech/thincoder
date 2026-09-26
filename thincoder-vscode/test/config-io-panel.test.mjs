@@ -8,6 +8,9 @@
  * 批 2026-09-25-spec-effort（设计 `docs/core/design/MODEL-SPECS.md` §15.4 / `docs/vsc/design/SETTINGS.md` §2.13 ·
  * 台账 #331 · 用例 V-1..V-4 / V-6）：advisor effort 键接线面板写面组——键位（`reasoningEffort` 在盘 ∧
  * 旧 `effort` 不在盘）· 三态归一（档位 / `none` 族别 off 形 / 「—」）· off 形跨保存存活（种子循环 carve-out）。
+ *
+ * 批 2026-09-25-config-mirror-closeout 的两键写面组（`advisor.guard` / `agent.engineering` 翻转与
+ * 通用保存零写——T-1..T-8）另立 `test/config-io-panel-guard.test.mjs`（实施轮末实读 307 > 300 拆分）。
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
@@ -157,16 +160,20 @@ test("V-2′ 「—」态：删档键且不动 thinking（off 形不被保存抹
 
 test("V-3 写面半：载荷缺席该键（select 未渲染）⇒ 盘上手写档键存活（缺席 ≠ 清空）", () => {
   seedAdvisor({ reasoningEffort: "low", thinking: null })
-  saveAgentSettingsFromPanel({ advisor: { guard: true } }) // 载荷无 reasoningEffort 字段
+  // 载荷中性（不携 guard / reasoningEffort——面板未渲染的字段）：承载段带真实键 timeoutMs，
+  // 缺它则 `payload.advisor === undefined` ⇒ advisor 整段跳过 ⇒ 本用例断言退化为恒真（失去守门力）。
+  saveAgentSettingsFromPanel({ advisor: { timeoutMs: 60000 } })
+  assert.equal(advOf().timeoutMs, 60000, "载体段已落盘（证明本次保存走了 advisor 合并分支）")
   assert.equal(advOf().reasoningEffort, "low", "手写档键存活（写面无该字段 ⇒ 零触碰）")
   assert.equal(advOf().thinking, null, "off 形同存活")
 })
 
 test("V-4 跨保存存活：盘上 advisor.thinking = null + 面板任意保存 ×2 ⇒ 每次保存后 off 形仍在盘", () => {
   seedAdvisor({ thinking: null })
-  saveAgentSettingsFromPanel({ advisor: { guard: true } })
+  saveAgentSettingsFromPanel({ advisor: { timeoutMs: 60000 } }) // 载荷中性（同 V-3 口径）
+  assert.equal(advOf().timeoutMs, 60000, "载体段已落盘（同 V-3 前提）")
   assert.equal(advOf().thinking, null, "第一次保存后 off 形仍在盘（种子循环 null carve-out）")
-  saveAgentSettingsFromPanel({ advisor: { guard: false } })
+  saveAgentSettingsFromPanel({ advisor: { timeoutMs: 60000 }, maxTurns: 111 }) // 外加键（跨键同轮保存）
   assert.equal(advOf().thinking, null, "第二次保存后仍在盘（无静默清除）")
 })
 

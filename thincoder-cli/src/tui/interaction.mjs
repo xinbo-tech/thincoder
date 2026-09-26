@@ -63,7 +63,9 @@ export function createInteraction(ctx) {
 
   function askPermission(name, args) {
     // auto mode: fully authorized, no more prompts
-    if (agent.autoApprove) {
+    // TURN-CAP-CONTINUE.md §1 #7 / D-TC15（2026-09-26）：`continue` 不在 AUTO 授权面——续期恒须人答；
+    // 无人值守档（depth-0 digest / AUTO）撞帽即收口（静默自续 = F8 禁止）。
+    if (agent.autoApprove && name !== "continue") {
       const argSummary = summarize(args)
       pushLine(`  [auto] ${name}${argSummary ? ` ${argSummary}` : ""}`, C.warn)
       return Promise.resolve(true)

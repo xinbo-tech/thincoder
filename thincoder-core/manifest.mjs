@@ -1,5 +1,5 @@
 /**
- * manifest.mjs — M1 项目状态档（ENGINEERING-MODE v2 基础模块）。
+ * manifest.mjs — M1 项目状态档（项目级状态账——工程模式是其**读侧消费者**之一）。
  * 权威设计 = docs/core/design/MANIFEST.md §2
  * （机制代码在核，操作对象 = 被开发项目 cwd 根的 PROJECT-MANIFEST.json 数据档）。
  *
@@ -21,7 +21,7 @@
  *  - resolveProjectRoot(cwd) = owningProject(cwd) ?? discoverProjects(cwd).root（KD-M1-30）。
  *  - resolveEngineeringManifest(cwd, { writer, init }) → 入口决策树（**非抛错**——KD-M1-20）：
  *    两端入口钩子与翻转面（拒翻）共用同一张树（判据单源；§2.8 F1）——失败码五枚
- *    `missing` / `invalid` / `no-project` / `ambiguous` / `init-failed`（KD-M1-28）。
+ *    `missing` / `invalid` / `no-project` / `ambiguous` / `init-failed`（KD-M1-28）。名中 `Engineering` = 历史命名（沿用不改名）；消费面 = 两端入口钩子 + 翻转面——**非**「模式拥有本模块」。
  *  - manifestFilePath(cwd) → 数据档绝对路径（档路径单源 KD-M1-18——读 / 写 / mtime 门控三处同源）。
  *  - initManifest(cwd, { writer = 'subagent' } = {}) → 经写门写 DEFAULT_MANIFEST，缺省拒。
  *  - writeManifest(cwd, manifest, { writer = 'subagent' } = {}) → 落盘前先校验（ok:false 拒

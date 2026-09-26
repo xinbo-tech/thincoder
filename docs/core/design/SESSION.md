@@ -59,6 +59,7 @@
 **本批（STARTUP-LATENCY · 2026-09-21）落点表** = `docs/batches/2026-09-21-startup-latency.md` §2（唯一承载面——一次性批次材料）；本档 §6.17 承载判据句 / 边界情形 / 端差注销 / 验收回指。
 **本批（EXIT-CLAIM-RELEASE · 2026-09-21）落点表** = `docs/batches/2026-09-21-exit-claim-release.md` §2（唯一承载面——一次性批次材料）；本档 §6.18 承载判据句 / 接线序 / 边界情形 / 验收回指。
 **本批（SESSION-INDEX · 2026-09-22）落点表** = `docs/batches/2026-09-22-session-index.md` §2（唯一承载面——一次性批次材料）；本档 §6.19 承载机制判据句 / 取源与水位 / 重建面 / 查询面路由 / 边界情形 / 验收回指。
+**本批（SLOT-END-PARAM · 2026-09-25）落点表** = `docs/batches/2026-09-25-slot-end-param.md` §2（唯一承载面——一次性批次材料）；本档 §6.20 承载端名参数化判据句 / 创建端字段取值链 / 端差注销 / 边界情形 / 验收回指。
 
 ## 6. 机制面（自 CLI 产品档并入 · 2026-09-14 · B 轮）
 
@@ -194,14 +195,14 @@ TUI 路径在 `startTUI` 前置 `agent.provider = null`。
 
 > 解决的问题：CLI 与 VSC 面板同开同一项目时，共享 manifest 的 active 指针两端互写——退出重进恢复进「另一个不是退出前」的会话。用户裁定：① 完全各记各的；② 迁移一次性继承（无本端记录时继承共享 active 的死主槽**一次**——记录写下后永久分离）。
 
-- **D-1 记录形态**：路径 `{hash}.json.manifest.cli|.vscode`（manifest 旁的独立小文件——**非 manifest 内嵌字段**）；内容 `{"slot": <number|null>, "updatedAt": <epoch ms>}`；**文件缺失 = 从未记录**（迁移窗口，可继承一次）；**`slot: null` = 显式置空**（删过本端槽）——两者必须区分；读侧降级 = 缺失或解析失败一律按「缺失」处理（不 rename 不 unlink），`slot: null` 除外（**绝不继承**）；写者仅本端；
-端常量 CLI `"cli"` / VSC `"vscode"`。
+- **D-1 记录形态**：路径 `{hash}.json.manifest.{端名}`（manifest 旁的独立小文件——**非 manifest 内嵌字段**；端名闭集 = `"cli"` / `"vscode"` / `"desktop"`）；内容 `{"slot": <number|null>, "updatedAt": <epoch ms>}`；**文件缺失 = 从未记录**（迁移窗口，可继承一次）；**`slot: null` = 显式置空**（删过本端槽）——两者必须区分；写者仅本端；
+  读侧降级 = 缺失或解析失败一律按「缺失」处理（不 rename 不 unlink），`slot: null` 除外（**绝不继承**）；端名的进程级声明与 marker 家族端参数（判据单源）见 §6.20。
 - **D-2 恢复决策**（`await resumeSlot(cwd) → {slot, data}`——**async**，2026-09-18 起）：① 本端记录可用（slot ≠ null 且 ∈ m.slots 且槽文件在盘 且属主 空/死/本进程）→ 认领 + 读槽；② 记录缺失 → 一次性继承（m.active 在且 ∈ m.slots 且文件在盘 且属主 空/死）→ 认领 + 写记录；③ 其余一切（slot:null / 槽已被删 / 属主为活外人 / 继承失败）→ 全新分配 + 写记录 + data = null。
 - **claim 后读槽失败**（解析失败 / `.unreadable`）→ **保持已 claim 槽 + data:null**——不回滚认领、不改 marker；下次保存原地重建该槽。
 - **missing → 继承、null → 全新**的区分理由：删槽后置 null 使「删过」可辨认——用户删除自己会话后重开 = 全新起步，不继承对方遗留、不复活被删会话。
 - **D-3 启动钉 `_slot`**：`await resumeSlot` → `applySession` 之后 `agent._slot = slot`——否则并发方在首回合前翻 active，首次保存会静默迁移到新槽（恢复确定性要求**首保存必落恢复槽**）。
 - **D-4 marker 维护点**（每次落点原子写，失败容忍）：CLI `resumeSlot` 各步 / `saveSession` 首认领之后 / `newSession` 成功后 / `switchToSlot` 成功后 / `deleteSlot` 删到本端记录槽 → 置 null（文件保留）；
-  VSC 镜像（ensureSlot·status / newSlot / 打开历史会话 / deleteSlotAndUpdate；**2026-09-18 起 `ensureSlot` 冷路径零探测**——收敛成功落 marker，维护点语义不变；**打开历史会话 = 未占目标槽才写**——端差判据见 §6.15）。
+  VSC 落点（经端壳绑定核同名件 §6.20；ensureSlot·status / newSlot / 打开历史会话 / deleteSlotAndUpdate；**2026-09-18 起 `ensureSlot` 冷路径零探测**——收敛成功落 marker，维护点语义不变；**打开历史会话 = 未占目标槽才写**——端差判据见 §6.15）。
   **非维护点**：日常保存（`_slot` 粘性已定，不写 marker）。
 - **D-5 listSlots 高亮按端**：`listSlots` 保持 manifest active 语义（ACP session/list 零变化）；TUI `/session` 与面板高亮改以本端记录槽为准；manifest active 保留为跨端回退高亮。
 - **D-6 manifest.active 定位修订**：认领 / 新建 / 切换 / 删除的 setActive 纪律**原样保留**（旧版端互操作 + ACP + 继承读取 + 列表回退）；仅新型恢复决策不再以它为第一依据。
@@ -276,13 +277,14 @@ TUI 路径在 `startTUI` 前置 `agent.provider = null`。
 （随核 `_setSessionsDirForTest` 沙箱缝）；核 `gcResidue` / `listColdCwds` / `deleteColdCwd` 的默认 `dir` 为核内
 configDir 版（端侧无直调点）。`sessionsDir()`（`thincoder-vscode/src/extension/session-slots.mjs:52`）= 核 `sessionPath` 反推
 （核未导出根访问器）。
-**端壳保留 = 端差两款（已裁保留 · A9——复核 = 台账 #185 · 2026-09-25 本批）**：
-① end marker 层（`thincoder-vscode/src/extension/session-slots.mjs`：`END = "vscode"` `:60` · `readEndMarker` `:69` · `writeEndMarker` `:82`）
-与其四个维护落点（`resumeSlot` / `newSlot` / `switchToSlot` / `deleteSlotAndUpdate`——`thincoder-vscode/src/extension/session-io.mjs`：`:88` / `:123` / `:175` / `:199`；
-§6.10 D-4「VSC 镜像」——核对应件写死核端 marker `.cli`，直接消费 = 跨端互写；数据层 = 核 `loadSlotFile`，
-端壳无核 `resumeSlot` 的裸 v1 单文件兜底——差异登记见批次档 §5）；`deleteSlotAndUpdate` 随槽删记录存储 sidecar
-（核 `deleteSlot` 同源步 `unlinkRecordStore`——`thincoder-core/session-store.mjs:376`）；
-② **（cwd, slot）型** token 台账三式（`thincoder-vscode/src/extension/session-slot-write.mjs:48` 起——核 token 面为 agent 型）——**A9 三件**：① 结构性不对称 = 端壳载体单侧存在（end marker 端字面 / 端槽载体）；② 证据 = 本段坐标 + §6.10 D-4（VSC 镜像）；③ 显式裁定 = 2026-09-15 W11 批（端差保留两款登记本体）+ 本批确认。
+**端壳保留 = 端差一款（已裁保留 · A9——原登记 = 2026-09-15 W11 批；台账 #185 复核 = 2026-09-25 misc-four 批；本轮复核 = 2026-09-25 SLOT-END-PARAM 批）**：
+① **end marker 层 = 零副本转口**（**端差注销 · 不计入保留款数**——2026-09-25 SLOT-END-PARAM 批；判据单源 = §6.20 判据句 3）：
+端壳 `session-slots.mjs` 副本（marker 三式 + `usableSlot` / `resumeSlot` 本体）改为逐行绑定转口（`(cwd) => coreX(cwd, END)` 形态）；
+四个维护落点（`resumeSlot` / `newSlot` / `switchToSlot` / `deleteSlotAndUpdate`——`thincoder-vscode/src/extension/session-io.mjs`：`:88` / `:123` / `:175` / `:199`）
+经端壳绑定核同名件（**调用点零改**）；端壳副本原无的裸 v1 单文件兜底差异随副本注销（端壳消费核 `resumeSlot` 后获得核兜底——§6.20 端差注销）；
+`deleteSlotAndUpdate` 随槽删记录存储 sidecar（核 `deleteSlot` 同源步 `unlinkRecordStore`——`thincoder-core/session-store.mjs:376`）不变。
+② **（cwd, slot）型** token 台账三式（`thincoder-vscode/src/extension/session-slot-write.mjs:48` 起——核 token 面为 agent 型）——**A9 三件**：① 结构性不对称 = 端壳载体单侧存在（端槽载体）；
+② 证据 = 本段坐标；③ 显式裁定 = 2026-09-15 W11 批（端差登记本体）+ 2026-09-25 SLOT-END-PARAM 批确认。
 
 - **运行中禁止切换（会话切换竞态修复）**：`newSession` / `deleteSession` / `switchSession`（webview loadSession）/ 项目切换三处均以 `_turnActive` + `_susp.active` 守卫（warning 拒绝——对齐 CLI `applyProjectSwitch` 模式）。运行中放行会让旧 turn 的 stream / complete / 标题灌进新会话视图（「思考串台」）、内容落错槽。
 - **turnSlot / slotOverride（纵深防御）**：`saveLines` / `_saveLines` / `generateTitle` 带 slotOverride——`runPanelChat`（`thincoder-vscode/src/extension/panel-chat.mjs`）回合入口捕获 `turnSlot`，onComplete / abort / finally 的保存与标题一律落 `turnSlot` 而非面板当前 `_slot`——运行中即便并发切换，旧 turn 流也不灌新会话视图、内容不落错槽。
@@ -316,8 +318,8 @@ configDir 版（端侧无直调点）。`sessionsDir()`（`thincoder-vscode/src/
 | 列表高亮回退 | 本端记录槽被对端删除 | 高亮回退共享 active——只读、零绑定效果（P5） |
 
 - **端差登记 · 记录面写条件（2026-09-19 · init-block 批）**：目标槽被另一活进程占用时——核 = **无条件写**记录（`thincoder-core/session-lifecycle.mjs:284-285`——D-2① 不满足 ⇒ 落 D-2③ 全新分配）；端 = **条件写**（`thincoder-vscode/src/extension/session-io.mjs:186-189`——仅未占才写记录 / 缓存）——
-  **状态：已裁保留（A9——复核 = 台账 #185 · 2026-09-25 本批）**：① 结构性不对称 = 两侧各为其机制本体（端侧条件写 = F-CR2「判据前置 / 拒绝路径零写」语义；核侧无条件写 = 切换成立 + fork 语义（D-6）——非同一函数两形）；
-  ② 证据 = 行内两侧坐标 + §6.16 F-CR2 判据句；③ 显式裁定 = 2026-09-21 SESSION-CLAIM 批（F-CR2）+ 本批确认。
+  **状态：已裁保留（A9——原登记 = 2026-09-19 init-block 批；台账 #185 复核 = 2026-09-25 misc-four 批）**：① 结构性不对称 = 两侧各为其机制本体（端侧条件写 = F-CR2「判据前置 / 拒绝路径零写」语义；核侧无条件写 = 切换成立 + fork 语义（D-6）——非同一函数两形）；
+  ② 证据 = 行内两侧坐标 + §6.16 F-CR2 判据句；③ 显式裁定 = 2026-09-21 SESSION-CLAIM 批（F-CR2）+ 2026-09-25 misc-four 批确认。
 - 场景：打开被另一活进程占用的历史槽 ⇒ 核落 D-2③ 并写新槽记录；端不写 + `_slot = null` → 经缓存重绑本端原槽（占槽判定 `panel-messages-session.mjs:48-55`）。
 
 - **（2026-09-21 · SESSION-CLAIM 批 · 本节单源）**：① **F-CR2 收正**——受占目标 ⇒ 面板路径**不进入**端壳 `switchToSlot`（判据前置：占用判定前置于切换调用）；端壳函数内被占分支 = **零写**（不认领 / 不翻共享指针 / 不写本端记录 / 不写解析缓存——占用判定前置于 `m.active` 赋值）；核 `switchToSlot` 受占语义不变（CLI 切换成立——指针 / 记录按 D-6 / D-4 落点 + 保留集 = 空释放旧认领——见 §6.5 / §6.2）。
@@ -505,7 +507,7 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 - cwd = 面板域 `_cwd()`（`thincoder-vscode/src/extension/panel-messages.mjs:37`——workspaceFolders[0]，与认领落点同域）；`workspaceFolders` 空 ⇒ **跳过释放**（`_cwd()` 回退宿主任意 process.cwd()——不给宿主 cwd 造盘面 / 误放他项目认领）。
 - 薄包装 `releaseClaimsOnExit(dir, hasWorkspace)` 住 `thincoder-vscode/src/extension/session-io.mjs`（node 可测缝——`extension.mjs` 依赖 vscode 模块不可直测）：无 workspace ⇒ false；否则转核 `releaseClaimsAll`（容忍逻辑全在核——端侧零重复）。
 
-**端壳裁定（F-XR4 双端同源）**：释放机制核内单点；端壳对位 = **纯转口两行**（`session-slots.mjs` / `session-io.mjs` 各一——W11 转口纪律形态）。端壳镜像的既有理由 = marker 端差与 resumeSlot 算法（§6.10 D-1/D-2）——本面两者不涉（谓词 = `getSessionId` 字符串比较，零探测零束零端差）⇒ 无镜像必要。NF1 红线：零新增跨端共享可变字段。
+**端壳裁定（F-XR4 双端同源）**：释放机制核内单点；端壳对位 = **纯转口两行**（`session-slots.mjs` / `session-io.mjs` 各一——W11 转口纪律形态）。端壳镜像按端差必要性判定：marker 层 / `resumeSlot` 算法端差已注销（2026-09-25 SLOT-END-PARAM 批——§6.20 判据句 3）；本面谓词 = `getSessionId` 字符串比较（零探测零束）⇒ 无镜像必要。NF1 红线：零新增跨端共享可变字段。
 
 **边界情形**
 
@@ -640,7 +642,51 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 
 **不做（边界）**：不迁主存（双线文件 = 真源——§6.14 语义零动）· 不做向量 / 语义检索（不引 embedding）· 不改默认路径与 `cwd:` 发现面 · 不改两道护栏与错误文案（回落面）· 不复刻其他消费面（`/session` 列表 / TUI 翻页 / `listSlots` 仍走主存）· 不索引裸 v1 `{hash}.json` · 不做 `.d` 孤儿目录清运（`session gc` 后缀表不含 `.d`——另案） · 不做索引自动清理 / 淘汰 · 不做库的跨端同步协议（索引 = 本机派生品）。
 
-## 7. 关键决策记录（D-SE1–D-SE49）
+### 6.20 端名参数化与创建端字段（2026-09-25 · SLOT-END-PARAM 批）
+
+> 解决的问题：① 端分离要求 marker 只由本端书写（NF1「本端记录 = 本端单写者文件」）——端名若不可在端进程内声明，非 CLI 端消费核 marker 入口即写 `.cli`（跨端互写），各端只能各自持一套行为副本（重复实现 + 端差）。② 「这个会话是哪个端建的」**数据不存在**：marker = 本端最后使用槽（端分离恢复用），槽元数据面无端名字段。
+
+- **判据句 1（端名单源）**：端名 = **端进程内的单值声明**——模块级 `_end`（初值 = `END` = `"cli"`），`setSessionEnd(<端常量>)` 一次声明、`sessionEnd()` 读取；**缺省取值 = 进程端名 `sessionEnd()`**（`END` 仅模块级初值——CLI 进程零声明即得 `"cli"`）。核内**零端名分支**（端名是值不是分支——核不按端名走任何条件路径）。
+- **判据句 2（marker 家族端参数）**：`endMarkerPath(cwd, end = sessionEnd())` / `readEndMarker(cwd, end = sessionEnd())` / `writeEndMarker(cwd, slot, end = sessionEnd())`；**显式参 > 进程端名**。
+  写 marker 的核入口随动（枚举 = §6.10 D-4 维护点集）：显式端参 = `resumeSlot(cwd, { end = sessionEnd() } = {})` / `switchToSlot(cwd, slot, { end = sessionEnd() } = {})` / `deleteSlot(cwd, slot, { end = sessionEnd() } = {})`；
+  进程端名 = `newSession`（D-4「成功后」写点——零改）/ `saveSession` / `persistEngTokens`；**未列写点一律走进程端名**（枚举遗漏不致跨端互写）。
+- **判据句 3（零副本）**：端壳只允许**一行绑定转口**（`(cwd) => coreX(cwd, END)` 形态）——端壳内不得再有 marker 读写实现 / `usableSlot` / `resumeSlot` 本体的算法副本。
+- **判据句 4（创建端字段）**：槽数据文件顶层 `createdBy`（值 = 端名）。**写**：本端**首次物化**该槽数据文件时写一次；此后每次整档重写**透传盘上键**；盘上文件无该键（老槽）⇒ **不写该键**（禁回填、禁冒充）。**读**：有键 ⇒ 端名；无键 ⇒ 「**未知**」（核只给「无值」；渲染文案归消费面）。
+- **判据句 5（NF1 不动）**：marker 内容形态不变（`{slot, updatedAt}`）——**`createdBy` 不进 marker**（跨端事实不得落进本端单写者文件）。
+
+**取值链（agent 写面 = `saveSession` / `persistEngTokens`）**：`guardForeignSlotFile` 一次磁盘解析**顺带解析创建端**并缓存 `agent._slotCreatedBy`——四分支：
+
+| 守卫分支 | `agent._slotCreatedBy` | 依据 |
+|---|---|---|
+| 文件不在盘（`!existsSync`） | `sessionEnd()`（本端即首次物化者） | 盘上无记录可透传 |
+| 解析通过、未轮转 | `disk.createdBy ?? null`（有键 = 端名；老槽 = `null`） | 盘 = 真值（守卫是全量解析的唯一落点） |
+| 轮转（`.bak`）/ 损坏改名（`.corrupted`） | `sessionEnd()`（现场已挪走 ⇒ 本端重物化） | 活文件由本端写下 |
+| mtime 命中（自上次检查/自写未变） | **不改**（沿用上次解析值） | 稳态零解析（既有 mtime 缓存契约） |
+
+`saveSession` 在守卫调用**之后**注入 `fields.createdBy`（值为 `null` / `undefined` ⇒ 键不落盘 = 禁回填；**注入点必须先于守卫之后的写、且晚于守卫调用**）；`persistEngTokens` 既有文件分支读盘对象即自带该键，全新分支（最小记录）取 `agent._slotCreatedBy ?? sessionEnd()`。
+
+**（cwd, slot）写面**：`newSlotData(cwd)`（首物化构造器——覆盖 `loadSlotForWrite` 全新分支 / VSC `newSlot` / `newSession` 并入）写 `createdBy: sessionEnd()`；`saveSlotData(cwd, slot, data)` 补一条——入参无 `createdBy` **且槽文件不在盘** ⇒ 落 `sessionEnd()`（本端首物化），文件在盘 ⇒ 不动（老槽禁回填）。
+
+**读面（摘要 / 列表）**：`slotDigest(data)` / `digestFromStore(fields, counters)` 带 `createdBy`（**有值才带**——同 `activeModel` 先例）；`listSlots` 输出条目加 `createdBy`（缺键 ⇒ `""`——消费面自行渲染「未知」）。
+
+**边界情形（读数面）**：
+
+| 情形 | 读数 | 说明 |
+|---|---|---|
+| 老槽（文件在盘、无 `createdBy` 键） | 未知 | 禁回填；不得以占用端 / 本端名冒充 |
+| 槽数据文件不在盘（认领先行、首保存落盘前） | 本端名 | 该文件由本端写下（本次物化） |
+| 异会话现场轮转后重物化 | 本端名 | 轮转前的创建端随 `.bak` 现场保留 |
+| 端名拼错（非常量） | 该端退化为「缺失」+ 孤儿 marker 文件 | 核不校验端名（端名 = 各端编译期常量）——登记为边界，不新增机制 |
+| 同端多活进程 | 端名同值（端名 = 端级事实，非进程级事实） | marker 的「端内最后认领者」语义不变 |
+| ACP 显式钉槽 / 模式 F（未绑定） | 与创建端字段无关 | 两套语义互不牵连 |
+
+**验收回指**：① 三端零 marker 副本 → 判据句 3；② 端分离恢复零回归 + 三态不破 → 判据句 1 / 2（缺省 = 进程端名 `sessionEnd()`——CLI 零声明即 `"cli"` ⇒ CLI 全调用点零改；marker 路径与三态语义逐条不变）；③ 老槽缺字段 ⇒ 未知零猜测 → 判据句 4；④ 三包测试全绿 + `doc-check` 零新增闸态失败 → 落点表（批档 §2）。
+
+**端差注销**：扩展端改消费核 `resumeSlot` 后获得核的 legacy 单文件兜底（端壳副本原无此项——端壳项登记 = §6.15 端壳款①（端差注销 · 零副本转口））——两端口径归一（D-SE38 纪律：端差默认消除）。
+
+**不做（边界）**：不做端名校验 / 端名闭集机检 · 不改 marker 内容形态（NF1）· 不改桌面端设计档（`docs/desktop/**`）· 不迁 ACP 显式钉槽面（不经 marker）· 不回填老槽 · 不做「仅 digest 承载」（派生品重建即丢）。
+
+## 7. 关键决策记录（D-SE1–D-SE52）
 
 | # | 决策 | 理由 / 否决备选 |
 |---|---|---|
@@ -693,6 +739,9 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 | D-SE47 | 查询面 = **索引优先 + 主存回落**；新增 `path:"all"`（跨会话）；`keyword` 语义分面（单会话 = 子串不变 ∥ `all` = FTS 词 / 短语）；`tool_calls` 带参数 | 回落 = 零回归硬线（非 sessions 树 JSON / 库不可用 / 库内无行 ⇒ 既有路径 + 逐字文案）；子串契约在单会话面成本可承受（单会话 `LIKE`），`all` 面在 300MB 语料上不可行 ⇒ 分面并如实登记；`arguments` 上限 300 = 存储面同值（不虚构超出存储的精度） |
 | D-SE48 | ACP `session/close` **入释放面**：关闭会话 ⇒ 释放该会话槽（保留集 = 本进程其余在存会话的活绑定槽 · 同 cwd）；VSC 项目切换 ⇒ 对旧 cwd manifest 补一次同语义释放（保留集 = 空）；落盘判据三条沿用 §6.16 | 认领只增不减在 ACP 多会话面 = 会话关掉仍占槽（他端打不开）；释放不损互覆保护（他端认领 ⇒ 本端再切入判占 + 保存 fork）。否决：ACP 面保持零释放（挂账不清）· 由进程退出面接管（会话级 close ≠ 进程级退出——D-SE41 面不动） |
 | D-SE49 | 端壳 `switchToSlot` 被占分支 = **零写 + 可区分信号**（与成功返回 `data` 相区分）；面板路径在前置判据外补**第二判**（TOCTOU 窗内收到信号 ⇒ 保持 `_slot` 现值 + 提示 + `_loadSession()` 重绑） | 现值返回与成功**不可区分** ⇒ 调用面无法判别（面板会误当成功）；第二判兜住「前置判据通过后、函数内仍被占」的窗口；零写语义零改 |
+| D-SE50 | 端名 = **进程级单值声明**（`setSessionEnd` / `sessionEnd`——`END` 仅模块级初值；**缺省取值 = 进程端名**）+ marker 家族**逐函数显式端参**（显式 > 进程默认）；核内零端名分支 | 否决「逐调用点传端名」（CLI/ACP 侧 ~10 处调用点，漏一处 = 跨端互写——正是本批要消的病）；否决「端名进 marker 内容」（跨端事实落进本端单写者文件 = NF1 破）；进程默认 = 端壳/启动点一行，跨仓契约面最小（桌面端 1 行接入） |
+| D-SE51 | 创建端字段 = `createdBy`，**落槽数据文件**（首次物化写一次、此后透传、老槽禁回填 ⇒ 读数「未知」） | 否决「marker 内嵌」（marker 是每端自己的文件，他端读不到 + 语义错位：marker = 最后使用端）；否决「仅 digest 承载」（派生品：槽文件重建即丢事实）；否决「回填老槽」（猜测——边界明令禁止） |
+| D-SE52 | `createdBy` 透传取值 = **守卫解析缓存**（`agent._slotCreatedBy`，盘为真值；无文件 / 轮转后 ⇒ 本端名） | 守卫是磁盘全量解析的唯一落点 ⇒ 顺带解析零额外成本（mtime 缓存保稳态零解析）；否决「`applySession` 置值」（会把旧槽端名粘到 `/new` 新槽）；否决「`saveSession` 现场读盘」（每回合全量解析 ⇒ O(n²) 退化，F2 守卫的原始动因） |
 
 ## 8. 不并项与历史沿革
 
@@ -730,6 +779,14 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 | 源档 §10 注入序的 `loadSession` 同步会话级 UI（_autoApprove/planMode 面板标志 + 工具条按钮同步） | VSC 装配细节 | 面板 UI 同步 = VSC 专有面（`thincoder-vscode/**`）；注入序本体已入 §6.15 |
 
 ## 变更记录
+
+- 2026-09-25（**SLOT-END-PARAM 批 · 设计评审修正轮 2 · eng-designer**——承 `docs/batches/2026-09-25-slot-end-param.md` §3 轮次 2 发现 11 / 12）：端差登记行**归属口径收正**——原登记批 / 台账 #185 复核批 / 本轮复核批三角色分述（§6.15 `:280` / `:321` / `:322`）；§6.20 端差注销指针词改「§6.15 端壳款①（端差注销 · 零副本转口）」（与 §6.15 `:281` 状态词一致）。**零语义变更（发现 11 / 12 直导）**。
+
+- 2026-09-25（**SLOT-END-PARAM 批 · 设计评审修正轮 1 · eng-designer**——承 `docs/batches/2026-09-25-slot-end-param.md` §3 轮次 1 发现 1–9）：§6.15 端壳面收正——**A9 原保留款「end marker 层」改端差注销**（端壳副本归核 ⇒ 零副本转口；四维护落点经端壳绑定核同名件、调用点零改；裸 v1 单文件兜底差异随副本注销）；端差保留余一款（token 台账三式）；
+  §6.18 端壳镜像理由行随动；§6.20 判据句 1 **缺省语义钉定**（缺省取值 = 进程端名 `sessionEnd()`，`END` 仅初值）· 判据句 2 写点枚举按 §6.10 D-4 维护点集对齐（`newSession` 零改 + 未列写点走进程端名）· 验收回指 ② 同词收正 · 端差注销登记指针收正；§7 `D-SE50` 同词收正。**零新语义（发现 1–9 直导）**。
+
+- 2026-09-25（**SLOT-END-PARAM 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-slot-end-param.md` §2 · 台账 #371 / #372）：新增 **§6.20 端名参数化与创建端字段**（判据句 5 / 取值链四分支 / 边界情形 6 / 端差注销 1 / 验收回指）；
+  §6.10 D-1 路径形态与端常量行收正（端名闭集 + 判据单源指针）、D-4 「VSC 镜像」改「VSC 落点（经端壳绑定核同名件）」；§7 补 **D-SE50 / D-SE51 / D-SE52**，标题随 **D-SE1–D-SE52**；§5 加本批落点指针。**零新机制（marker 三态 / 继承 / 端分离语义逐条不变）**。
 
 - 2026-09-25（**misc-four 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-misc-four.md` §2 · 台账 #185）：端差登记项三处二态落定——§6.7 空窗差行 ③ 裁定来源回填（2026-09-21 父侧代裁 · D8；两处同源行同批收正）；§6.15「端壳保留两款」补状态词 + A9 三件；§6.15 记录面写条件行补状态词 + A9 三件（① = 两侧机制本体；③ = 2026-09-21 SESSION-CLAIM 批）。**零新机制**。
 

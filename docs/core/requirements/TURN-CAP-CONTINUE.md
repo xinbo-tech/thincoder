@@ -1,7 +1,7 @@
 # 撞轮数墙可继续（TURN-CAP-CONTINUE）· 需求
 
 > 板块 = **Agent 循环 · 轮数预算耗尽后的续跑**（撞墙可继续）。
-> 本档 = 该机制的**需求层权威**（F1–F7 / N1–N6 判定句）。
+> 本档 = 该机制的**需求层权威**（**F1–F9 / N1–N6** 判定句）。
 > 设计侧 = `docs/core/design/TURN-CAP-CONTINUE.md`（统一语义 / 四执行体 / 跨段累计编号 / 双端坐标）。
 > 相邻需求档 = `docs/core/requirements/AGENT-LOOP.md`（主循环与子代理）。
 > 建档：2026-09-15（**B 式迁移轮 · VSC 批 3**——`thincoder-vscode/docs/requirements/TURN-CAP-CONTINUE.md` 内容重建入基准层；
@@ -17,13 +17,15 @@ agent 撞上轮数上限时**不该丢掉已完成的工作**——可就地续�
 
 | # | 需求 | 判定句（可机器验证） |
 |---|---|---|
-| **F1** | 统一语义 | 撞墙 = `runAgent` 耗尽 `maxTurns` 抛 `ContinueError`（VSC `thincoder-vscode/src/agent.mjs:36`（类）/ `:371`（抛点））；继续 = `resume:true` 重跑同一执行体 |
-| **F2** | 续跑不重来 | 继续**不重新注入任务文本**、保留 history 与改动——`resume` 把子执行体的活 history 交回（VSC `thincoder-vscode/src/agent-tools/subagent-run.mjs:141`） |
+| **F1** | 统一语义 | 撞墙 = `runAgent` 耗尽 `maxTurns` 抛 `ContinueError`（VSC `thincoder-vscode/src/agent.mjs:36`（类）/ `:371`（抛点）；继续 = `resume:true` 重跑同一执行体 （迁移期引文） |
+| **F2** | 续跑不重来 | 继续**不重新注入任务文本**、保留 history 与改动——`resume` 把子执行体的活 history 交回（VSC `thincoder-vscode/src/agent-tools/subagent-run.mjs:141`） （迁移期引文） |
 | **F3** | 全执行体覆盖 | 四类执行体均有续跑分支：主 agent（`thincoder-vscode/src/extension/panel-chat.mjs` 回合循环）· 子 agent（`agent-tools/subagent-run.mjs:85`/`:175`）· 飞刀（`agent-tools/subagent-escalate.mjs:163`/`:197`；async 面 `subagent-escalate-async.mjs:76`——两档已退役·W12 删除集，现体 = 核 `thincoder-core/agent-tools/subagent-actions.mjs`）· 会诊（`agent-tools/consult.mjs:310`） （迁移期引文） |
-| **F4** | 拒绝返回部分成果 | 拒绝 / headless / 无法续跑 → 部分成果 + turn-cap 标记（VSC `agent-tools/subagent-run.mjs:195`/`:199`，文本含 "work may be partial"）——报告据此判定「撞墙中断、工作可能不完整」 |
+| **F4** | 拒绝返回部分成果 | 拒绝 / headless / 无法续跑 → 部分成果 + turn-cap 标记（VSC `agent-tools/subagent-run.mjs:195`/`:199`，文本含 "work may be partial"）——报告据此判定「撞墙中断、工作可能不完整」 （迁移期引文） |
 | **F5** | 用户 Stop 优先 | 中止路径（`AbortError` / `signal.aborted`）始终优先于继续提示——不弹继续卡、不自动续跑 |
-| **F6** | 继续提示串行 | 按会话级队列串行（`continueQueue`——`thincoder-vscode/src/agent-tools/consult.mjs:319`）——并行执行体同时撞墙不弹多个卡；后台 async 子代理**永不弹卡**（engineering && AUTO 自动续跑，否则降级 partial） |
+| **F6** | 继续提示串行 | 按会话级队列串行（`continueQueue`——`thincoder-vscode/src/agent-tools/consult.mjs:319`）——并行执行体同时撞墙不弹多个卡；后台 async 子代理**永不弹用户卡**——撞帽改走**父代理检查点**（F8）；无父代理 ⇒ 降级 partial （迁移期引文） |
 | **F7** | 编号跨段累计 | 触发回合帽续跑后，面向上层的逐轮编号**跨段累计为唯一单调序列**（不重置、不倒退）——展示口径 `turn n/max`：n = 链内累计已跑轮数，max = 累计已授予预算（段数 × 段预算）；双端同源（各端独立实现）（批 5 并入） |
+| **F8** | 撞帽即续期检查点（**2026-09-26 裁定 A**） | 撞帽（`ContinueError`——核 `thincoder-core/agent.mjs:439`）**不再静默自动续期**：**异步族**（后台子代理 / 异步飞刀 / 会诊）⇒ **向父代理报请**（ask；答「续期」⇒ `resume:true` 重入 · 答「停」⇒ 部分成果 + turn-cap 标记）；**同步族**（阻塞子代理 / 同步飞刀）⇒ **用户卡路径保留**（父代理被本次调用阻塞 · 应答不可达）；depth-0 ⇒ 回用户；**AUTO 一律不再自动批准续期**（无人应答 ⇒ partial）；续期**留痕** = 累计轮次 / 段数可查；**撞帽检查 = 无条件**（**有无产出皆检查**——**不设零产出阈值**，2026-09-26 裁定 D） |
+| **F9** | 载入面自证（**2026-09-26 裁定 E**——即父侧 15:00 裁定「A+B」之 B 面） | **运行面**必须可自证：① **启动期一行诊断** = 记录当前 core 的**实体路径 + 版本**；② **打包面机检** = 扩展打包内 core 须含撞帽检查点接线（`checkpoint.mjs` + `subagent-run.mjs` 接线）——防「仓内已修、运行面仍旧」✗（实盘教训 = 安装面冻结旧构建 ⇒ 静默续段半天） |
 
 ## 3. 非功能性需求
 
@@ -31,7 +33,7 @@ agent 撞上轮数上限时**不该丢掉已完成的工作**——可就地续�
 |---|---|---|
 | **N1** | 继续次数不设上限 | 防卡死靠用户 Stop——无次数帽（`MAX_RESUMES` 形态已移除——VSC 侧 `src/` 面零命中实核） |
 | **N2** | 预算可配 | `agent.maxTurns` / `agent.subagentTurns` / `agent.consultTurns`（默认 200 / 100 / 40——单源 `thincoder-core/agent/helpers.mjs:24-25`）；explore 执行体走 `subagentTurns`（30 硬帽已移除，双端对齐）（批 5 并入） |
-| **N3** | 时钟语义 | 会诊继续 = 新预算 = 墙钟 watchdog 重置（重挂点 VSC `agent-tools/consult.mjs:323-325`） |
+| **N3** | 时钟语义 | 会诊继续 = 新预算 = 墙钟 watchdog 重置（重挂点 VSC `agent-tools/consult.mjs:323-325`） （迁移期引文） |
 | **N4** | 显示 / 协议零改动 | 编号经既有回调与终态快照消费——**桥消息字段零新增**；webview 显示文件零改动 |
 | **N5** | 回归锁 | 跨段编号用例族（VSC `thincoder-vscode/test/turn-across-segments.test.mjs`）全绿 + 全量回归全绿；双端语义同源、**异载体**（VSC 种子经 `opts`、核侧同一 child 对象跨段 ⇒ 种子零作用） |
 | **N6** | 零机制改动 | 段内帽判定（`turn < maxTurns`）与 `ContinueError` 抛点、续跑预算语义**零变化**——F7 只改展示 / 协议编号值（批 5 并入） |
@@ -39,7 +41,8 @@ agent 撞上轮数上限时**不该丢掉已完成的工作**——可就地续�
 ## 4. 范围边界（不做）
 
 - 不建 live 头逐轮跳动（需桥通道——登记保持开放；本项只修**值语义**）。
-- 不改段内帽判定（`turn < maxTurns`）与 `ContinueError` 载荷 / 续跑循环结构。
+- 不改段内帽判定（`turn < maxTurns`）与 `ContinueError` 载荷；**续期决策点改由检查点裁定**（F8）——续跑循环结构与 `resume` 语义不变。
+- **无人值守的已知后果**（F8 接受）：无父代理 / 无人应答 ⇒ **停在段边界交付部分成果**（F4），不再无限续跑；脚本 / CI / headless 侧按此预期调整（原「AUTO 静默续跑」行为退役）。
 - 不改继续提示文案（`Ran N turns (limit N)`）：描述**本段**撞墙事件（ContinueError 载荷 = 段预算），非任务累计进度。
 - 不做分段显式显示（段号 + 段内号——`turn 30/100 · seg 2` 形态）：选型 = 跨段累计（协议字段零新增）（批 5 并入）。
 - 不设继续次数上限（N1）。
@@ -69,3 +72,13 @@ agent 撞上轮数上限时**不该丢掉已完成的工作**——可就地续�
 - 2026-09-15（**B 式迁移轮 · VSC 批 3**）：建档——`thincoder-vscode/docs/requirements/TURN-CAP-CONTINUE.md` 内容重建入基准层
   （旧档一字未改、原地作参照历史）；判定句坐标按现状实核改写（双端）；与设计档成对（N-b 镜像同名）。
 - 2026-09-15（**B 式迁移轮 · CLI 批 5**）：`thincoder-cli/docs/requirements/TURN-CAP-CONTINUE.md` **对账并入**——新增 **F7 编号跨段累计** + **N6 零机制改动**；N2 补 explore 硬帽补注；§4 补分段显示边界；**并整 F3 重复行**（本档原含两行 F3——重复行移除，保留完整版）；§5.2「CLI 侧同名需求档未迁面」**销项**。
+- 2026-09-26（**用户裁定 A+C**——撞帽续期检查点 + 零产出护栏）：新增 **F8**（撞帽 ⇒ 子执行体报请父代理 · depth-0 回用户 · 续期留痕）与 **N7**（连续 K 轮无实质进展 ⇒ 停并报 · K 待设计给值）；
+  **F6 就地改写**（「后台 async 永不弹卡」⇒「永不弹**用户**卡 · 撞帽改走父代理检查点」）；§4 随动（续期决策点改写 + 无人值守后果显式化）；档头计数 **F1–F7 / N1–N6 ⇒ F1–F8 / N1–N7**。
+- 2026-09-26 10:17（**设计轮冲突裁定 B**——F8 射程收窄 · `docs/batches/2026-09-26-turn-cap-checkpoint.md` §1.7）：F8 明确**异步族**（后台子代理 / 异步飞刀 / 会诊）⇒ 父代理检查点、**同步族**（阻塞子代理 / 同步飞刀）⇒ 用户卡路径保留（父代理被调用阻塞 · 应答不可达）、**AUTO 一律不再自动批准续期**。
+- 2026-09-26 10:21（**坐标收正 · 父侧机械直改**）：F8 核抛点坐标原载行 420 ⇒ **`thincoder-core/agent.mjs:432`**（设计轮 #86 实核：`throw new ContinueError(maxTurns)`）。
+- 2026-09-26 10:47（**迁移期引文标 · 父侧机械直改**——评审轮次 1 🟡7 收正）：F1 / F2 / F4 / F6 / N3 五行加「（迁移期引文）」标（沿 F3 先例；各指 VSC 迁移前坐标或已退役路径 `thincoder-vscode/src/agent-tools/*`——设计档 §3.2 已登记退役）；F1 的行内语法一并收正。
+- 2026-09-26 12:22（**坐标随实施漂移收正 · 父侧机械直改**）：F8 核抛点 `:432` ⇒ **`:439`**（实施批自身插入 7 行所致——设计修正轮 #95 全族复核；10:21 行此前被父侧误替换，已同轮修复）。
+- 2026-09-26 14:53（**用户裁定 D**——取消零产出阈值 · 父侧落形）：**N7 整条撤销**（原「连续 K 轮无实质进展 ⇒ 主动停并报」）——理由（用户原话）：「不要零产出那个阈值，这样会让行为不容易判断，**有没有产出都要撞轮检查一下**。否则第一轮有产出，然后再跑一万轮也不会撞线了」。
+  **替换口径**：**撞帽即检查、无条件**（**段预算 `agent.subagentTurns` 为唯一触发点**；产出状态不参与判定）——已并入 **F8**；档头计数 **F1–F8 / N1–N7 ⇒ F1–F8 / N1–N6**。
+  撤销面（代码 / 设计 / 用例 / 参数登记）= **`docs/batches/2026-09-26-turn-cap-live-gap.md`**（父侧立项 · 根因定位 + 修复同批）。
+- 2026-09-26 15:05（**父侧落形**——新增 F9 · 载入面自证）：来源 = 根因实证（实盘跑**安装面冻结旧构建** ⇒ 撞帽静默续段 · `docs/batches/2026-09-26-turn-cap-live-gap.md` §1.9）；档头计数 **F1–F8 / N1–N6 ⇒ F1–F9 / N1–N6** ✓。

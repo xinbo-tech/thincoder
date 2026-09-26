@@ -127,13 +127,9 @@ export async function runTurnLoop(panel, deps) {
       }
       if (e instanceof ContinueError) {
         if (autoTurn) {
-          // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S9 ContinueError row (digest): NO panel — AUTO auto-resumes (§2 unified rule);
-          // manual stops silently (partial digest stays in history — no lost reports).
-          if (panel._autoApprove) {
-            postDigestCap(panel, "auto", e.turn) // §14 C-10：cap 行（auto——继续推进）
-            newTurnController(panel)
-            continue
-          }
+          // TURN-CAP-CONTINUE.md §1 #7 / D-TC15 (2026-09-26): the digest path no longer self-resumes —
+          // an unattended tier has no one to answer, so the cap settles the turn (a partial digest
+          // stays in history — no lost reports).
           postDigestCap(panel, "stop", e.turn) // §14 C-10：cap 行（stop——部分消化）
           tLog.result = "stopped"
           break

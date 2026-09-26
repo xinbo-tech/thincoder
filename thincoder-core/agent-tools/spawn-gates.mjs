@@ -76,7 +76,7 @@ export function validateTaskBookFields(args) {
 const PROCESS_BASENAMES = new Set(["changelog.md"])
 
 /**
- * 工程模式写入面 basename（#33 二道防线——设计 docs/core/design/MANIFEST.md §2.5 / KD-M1-14）：
+ * 写域 basename（**模式无关**——#33 二道防线；`PROJECT-MANIFEST.json` 是项目级状态档，其写门对任何会话生效；设计 docs/core/design/MANIFEST.md §2.5 / KD-M1-14）：
  * PROJECT-MANIFEST.json = M1 项目状态档——写门唯主 agent（`manifest.mjs` `writeManifest` 的
  * `writer` 闸，fail-closed）；本常量 = `files` 声明面**第二道防线**（子代理无法把该路径声明为
  * 写域）。字面量（匹配前已大小写归一；**不** import `MANIFEST_REL`——保本模块「叶子·零 import」
@@ -98,7 +98,7 @@ export function rejectEngineeringFilePaths(files) {
     const segs = String(f).replace(/\\/g, "/").split("/").filter((s) => s)
     const base = (segs[segs.length - 1] ?? "").toLowerCase()
     if (segs.some((s) => s.toLowerCase() === "scripts")) {
-      violations.push(`engineering tool path ${f} must not be listed in files — scripts/** is the engineering-tool face, not a content product (files carries source/test/design-doc paths only)`)
+      violations.push(`engineering-tools face path ${f} must not be listed in files — scripts/** is the engineering-tools face, not a content product (applies to every session, not engineering-mode-scoped; files carries source/test/design-doc paths only)`)
     } else if (PROCESS_BASENAMES.has(base)) {
       violations.push(`Parent-side maintained file ${f} must not be listed in files — reconciliation is the parent's duty; use the design-doc path if you need to edit a design doc`)
     } else if (base === MANIFEST_BASENAME) {

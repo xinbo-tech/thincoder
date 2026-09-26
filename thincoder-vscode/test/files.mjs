@@ -27,6 +27,7 @@ export default [
   "test/provider-admission.test.mjs", // MODEL-SELECTION（2026-09-10）：VSC 渠道准入——三 format 拉取/翻页（T1–T4/T26/T27）+ M9 配置阶段两态（T23/T24——含 fullStatus 拉取失败=不可选）+ 运行期零探测（T25）+ 面板行 `不可用` 标注（happy-dom）；W10（2026-09-15）改判：list-models/proxy 实现面迁核（`@thincoder/core/provider/list-models.mjs`）——面板行为断言原文保留；init-block 批（2026-09-18）F-W19：T-W19a 失败分类三档落账（malformed/timeout/hostBusy + 统一 ts）+ 双向词档（词 ⇔ 落账单源）· T-W19b 重试成功拍三清除（落账/available 载荷/展示回绿）· T-W19c 重试 ≤2 耗尽 · T-W19d 宿主忙闸零重试 · T-W19e 在飞去重（SETTINGS.md §2.12）
   "test/model-picker-fallback.test.mjs", // MODEL-SELECTION v2 范围追加（2026-09-11）：M10/T29——面板候选未命中不写会话槽（零 selectModel/selectReasoning post + 显示与状态回落会话槽复合 prefs 复合）+ 命中分支同值回写正控（happy-dom 直驱 handleModelsMessage）
   "test/config-io-panel.test.mjs", // MODEL-MERGE-SESSION（2026-09-09）：defaultModel 面板键白名单 + selectModel 消息 = 写会话槽（内容字节断言——config 零写——槽播种 + digest p:m）
+  "test/config-io-panel-guard.test.mjs", // 配置镜像收口批（2026-09-25 · `docs/vsc/design/SETTINGS.md` §2.14/§3）：两键写面唯一性——`advisor.guard`/`agent.engineering` 翻转只写会话槽（config 字节恒等）+ 通用保存面伪造载荷零写（三格恒等 / null 登记钉住 / 未认领槽不崩）——T-1..T-8（实施轮末自 `config-io-panel.test.mjs` 拆出——原档越 300 软线）
   "test/subagent-observe-send.test.mjs",
   "test/subagent-id-counter.test.mjs", // SUBAGENT-ID-COUNTER-AGENT（2026-09-09）：id 计数器载体 = agent 本体——压缩换线后 spawn id 仍递增 + 两池 poolMax 兜底
   "test/smoke-settings.mjs",

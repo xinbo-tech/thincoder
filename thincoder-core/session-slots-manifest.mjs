@@ -42,10 +42,13 @@ export function extractSlotMeta(history, activeProvider, updatedAt, title = "") 
 }
 
 /** Extract preview summary from session data for manifest storage (with current timestamp)
- *  MODEL-MERGE-SESSION：摘要升级带 activeModel——listSlots 合成显 "p:m"（双端同规则）。 */
+ *  MODEL-MERGE-SESSION：摘要升级带 activeModel——listSlots 合成显 "p:m"（双端同规则）。
+ *  SLOT-END-PARAM 批（SESSION.md §6.20 判据句 4 读面）：创建端**有值才带**（老槽无键 ⇒
+ *  键缺席 = 未知——禁回填、禁以占用端冒充）。 */
 export function slotDigest(data) {
   const meta = extractSlotMeta(data.history ?? [], data.activeProvider, data.updatedAt, data.title ?? "")
   if (data.activeModel) meta.activeModel = data.activeModel
+  if (data.createdBy) meta.createdBy = data.createdBy
   return { ts: Date.now(), ...meta }
 }
 

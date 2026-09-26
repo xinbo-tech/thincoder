@@ -774,7 +774,7 @@ Error: engineering mode is ON — task is unavailable (the batch record + the le
 **边界（本节不做）**：台账工具自身零改（六态 enum 已是对照面）· eng/plan/escalate 既有门零改 · 普通模式 task 行为零变（不移注册不加开关）· batch 六段 / append-only / 一段一作者 / 冻结门语义零变 · 散文纪律句不删 · 铁律 3 提示词分支 = PROMPT-SYSTEM 板块（本批带上——条目建议文本 = §6.15.2「提示词面条目建议文本」逐字固化；落档 = 主 agent 笔面）。
 VSC 副本 verify guard 分支同类缺差（`thincoder-vscode/src/agent/run-stages.mjs:105` 零 engineering 条件 vs 核 `thincoder-core/agent/completion.mjs:75` 有）= **台账 #217——已并入本批 C 面（hygiene-sweep），随本批落**。
 
-**提示词面条目建议文本（逐字固化——供 PROMPT-SYSTEM 板块落条目；三撞点 = 核内运行期落地档 `thincoder-core/prompts/discipline-engineering.md:6` / `:35` · `persona-engineering.md:68`，正本同句 = `docs/core/design/prompts/discipline-engineering.md:6` / `:35` · `persona-engineering.md:67`）**：
+**提示词面条目建议文本（逐字固化——供 PROMPT-SYSTEM 板块落条目；三撞点 = 核内运行期落地档 `thincoder-core/prompts/discipline-engineering.md:6` / `:35` · `persona-engineering.md:68`，正本同句 = `docs/core/design/prompts/discipline-engineering.md:6` / `:35` · `persona-engineering.md:67`；**行号 as-of 2026-09-21——各「建议」文本已落档**）**：
 
 ① **铁律 3**（`discipline-engineering.md:6`）——现行「**工作靠任务清单跟踪**：需求确认后逐条建任务条目（`task` 会话级 + 持久条目落需求档 / 台账）；没有条目 = 需求没落地。」
    建议（正本·中文）「**工作靠批次档 + 台账跟踪**：需求确认后逐条建任务条目（条目落批次档 §2 + 台账行）；没有条目 = 需求没落地。（工程模式 `task` 工具机械停用——追踪权威面 = 批次档 + 台账。）」

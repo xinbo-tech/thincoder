@@ -8,6 +8,8 @@
  *   ② escalate / continue 询问卡归属标签不闭——核名不携 id/model；
  *   ③ model 分支不可达（供给未传 `model`——`childOwnerLabel` 的 `<model>` 支恒不可达）。
  * 修复 = 端侧供给三补（条目级 signal / model / continue 键形解析——核侧名形态改见 T-A 档）。
+ * 追加（2026-09-26 · 批次档 `docs/batches/2026-09-26-turn-cap-checkpoint.md` §2.5 用例 10
+ * VSC 半）：T-R6 = AUTO 档续期（`continue`）不自动批准——gate「本询 AUTO 豁免」`forceAsk` 面。
  *
  * 夹具 = panel 假体 + `buildPanelCallbacks` 真工厂（供给本体消费入口）+ 池假体（挂
  * `panel._liveLines.history`——与 ⏹ 路由同源读取面）+ 生产形宿主 run（`hydrateRun`——
@@ -205,6 +207,39 @@ test("T-R3 归属（continue）：键形 args.agent ⇒ owner `coder#7` + announ
   assert.equal(panel.posted.filter((m) => m.type === "subagentApproval").length, annBefore, "回退分支零 announce")
   await handlePanelMessage(panel, { type: "permissionResponse", approved: true, promptId: c2.promptId })
   assert.equal(await p2, true, "回退批复 → true")
+})
+
+// ─── T-R6：AUTO 豁免（正常 + 反例 · 用例 10 VSC 半——TURN-CAP-CONTINUE 批）────────────
+
+test("T-R6 AUTO 豁免（continue）：AUTO 档续期不自动批准（键形 + 非键形皆落卡待答）；其余名 AUTO 直批零卡不变", async () => {
+  const panel = stubPanel({ _autoApprove: true })
+  const cbs = buildPanelCallbacks(panel, { cwd: work, autoTurn: false })
+  bindFakePool(panel, [["7", { id: "7", role: "coder", model: null }]])
+
+  // ① 键形 ContinueError 询问：AUTO 开 ⇒ 不短路 ⇒ 出卡待答（放行源唯一 = 人答；「父调用方不被挂起」=
+  //    仍走本权限卡通道，非检查点式挂起）
+  const p1 = cbs.onPermissionRequest("continue", { turns: 3, agent: "coder#7" })
+  await until(() => panel._permissionQueue.length === 1)
+  const c1 = panel.posted.findLast((m) => m.type === "permissionRequest")
+  assert.equal(c1.tool, "continue", "AUTO 档续期仍出卡（未被静默自动批准）")
+  assert.equal(c1.owner, "coder#7", "归属随行不变（键形文法单源）")
+  assert.deepEqual(panel.posted.filter((m) => m.type === "subagentApproval").map((m) => m.tool), ["continue"], "announce 仍在卡前（顺序不变）")
+  await handlePanelMessage(panel, { type: "permissionResponse", approved: true, promptId: c1.promptId })
+  assert.equal(await p1, true, "人答 true ⇒ resolve(true)")
+
+  // ② 非键形（args.agent 非键）⇒ 回退分支同携豁免——AUTO 档也不过直通
+  const p2 = cbs.onPermissionRequest("continue", { turns: 3, agent: "zhipu:glm-5.2" })
+  await until(() => panel._permissionQueue.length === 1)
+  const c2 = panel.posted.findLast((m) => m.type === "permissionRequest")
+  assert.equal(c2.owner, null, "非键 ⇒ 无归属（回退面）")
+  await handlePanelMessage(panel, { type: "permissionResponse", approved: false, promptId: c2.promptId })
+  assert.equal(await p2, false, "人答 false ⇒ resolve(false)（拒续期零重入）")
+
+  // ③ 反例臂：AUTO 既有直批零卡不变（子代普通名 / 顶层普通名 / 不可解名三形——豁免面不扩）
+  assert.equal(await cbs.onPermissionRequest("coder#7/write", { path: "a.txt" }), true, "子代普通名 ⇒ AUTO 直批")
+  assert.equal(await cbs.onPermissionRequest("write", { path: "b.txt" }), true, "顶层普通名 ⇒ AUTO 直批（短路支）")
+  assert.equal(await cbs.onPermissionRequest("a/b/c", { x: 1 }), true, "不可解名 ⇒ 回退支亦直批")
+  assert.equal(panel._permissionQueue.length, 0, "反例臂零出卡")
 })
 
 // ─── T-R4：释放（正常 · 全链 —— 修复前必红：卡不释放）───────────────────────

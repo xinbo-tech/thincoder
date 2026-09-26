@@ -85,7 +85,6 @@ export function saveAgentSettingsFromPanel(payload) {
   }
   if (payload.compactThreshold !== undefined) patch.compactThreshold = payload.compactThreshold === "" ? undefined : (Number(payload.compactThreshold) || undefined)
   if (payload.verifyGuard !== undefined) patch.verifyGuard = !!payload.verifyGuard
-  if (payload.engineering !== undefined) patch.engineering = !!payload.engineering
   if (payload.consultTurns != null) patch.consultTurns = Number(payload.consultTurns) || undefined
   if (payload.consultTimeoutMs != null) patch.consultTimeoutMs = Number(payload.consultTimeoutMs) || undefined
   // Consultation models (CONSULTATION.md): array of {provider, model}, ≤5, validated.
@@ -123,7 +122,7 @@ export function saveAgentSettingsFromPanel(payload) {
     // null / '' / undefined in the payload is a CLEARED field and deletes the key
     // (the webview sends null because postMessage JSON serialization drops undefined
     // keys — "slot missing" and "explicitly cleared" must stay distinguishable on the wire).
-    // advisor.enabled is deprecated (2026-08-21) — never written; guard defaults OFF.
+    // advisor.enabled is deprecated (2026-08-21) — never written (nor is guard — see below).
     const adv = payload.advisor ?? {}
     const current = loadRaw().agent?.advisor ?? {}
     // Seed from disk: every scalar/plain-object advisor key survives the merge.
@@ -138,8 +137,10 @@ export function saveAgentSettingsFromPanel(payload) {
       if (Array.isArray(v)) continue
       merged[k] = v
     }
-    // Payload wins where it speaks (guard / timeoutMs / reasoningEffort / provider / model).
-    merged.guard = adv.guard !== undefined ? !!adv.guard : (merged.guard ?? false)
+    // Payload wins where it speaks (timeoutMs / reasoningEffort / provider / model).
+    // `guard` is NOT a payload field on this face: the slot write path (`setSlotAdvisorGuard`)
+    // is its only writer, so seed-loop survival above is the whole of its generic-save
+    // treatment (a `null` on disk is a cleared field and stays absent — no `?? false` default).
     // timeoutMs passthrough (AGENT-PARAMS-TUNING, P4): the panel has no timeoutMs
     // input — an explicit valid payload value wins, otherwise the hand-written
     // config.json value survives a panel save (never silently dropped, never stored invalid).

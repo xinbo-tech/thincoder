@@ -6,8 +6,11 @@
  * （并行条目歧义；`key-modes.mjs` / 端侧 `parseRelayPath` 归属解析的输入契约）：
  *   ① async 飞刀询问名 = 裸 `escalate/${tool}`（`escalate-async.mjs`）——修复后 `escalate#<id>/${tool}`；
  *   ② sync 飞刀询问 = 裸工具名直通（`subagent-actions.mjs`——连前缀都无）——修复后同规包装；
- *   ③ continue（撞帽续跑）args.agent = 显示名（tag / consult label）——修复后 = 机器键
- *      （`escalate#<id>` / `consult#<relayN>`）。
+ *   ③ continue（撞帽续跑）args.agent = 显示名（tag）——修复后 = 机器键
+ *      （`escalate#<id>`）。
+ *
+ * 会诊族 continue 撞帽自 2026-09-26 起走检查点报请（不再经权限面 ⇒ 无 "continue" 询问）——
+ * 本档原 T-A3（consult continue 捕获）随之退役；该面新落点 = `test/turn-cap-checkpoint.test.mjs` 用例 3。
  *
  * 夹具 = 最小 parent（config / providersList / 池字段——两形同构的核侧字段）+ 注入
  * `ctx.runAgent` 假 runner（**零网络**：runner 整体替换 ⇒ 不触 provider 请求；`createAgent`
@@ -18,7 +21,6 @@ import assert from "node:assert/strict"
 import { ContinueError } from "../agent.mjs"
 import { launchEscalateAsync } from "../agent-tools/escalate-async.mjs"
 import { executeEscalateAction } from "../agent-tools/subagent-actions.mjs"
-import { consultStartTool } from "../agent-tools/consult.mjs"
 
 const sleep = (ms = 5) => new Promise((r) => setTimeout(r, ms))
 async function until(cond, ms = 8000) {
@@ -96,22 +98,8 @@ test("T-A2 核（sync 飞刀名 + continue）：捕获 escalate#<N>/write 与 (c
   assert.deepEqual(calls[1], ["continue", { turns: 2, agent: "escalate#1" }], "continue args.agent = 机器键（修复前 tag）")
 })
 
-// ─── T-A3：consult continue（正常——修复前必红：label）─────────────────────────
-
-test("T-A3 核（consult continue）：捕获 (continue, agent consult#<relayN>)", async () => {
-  const parent = makeParent()
-  let pass = 0
-  const runner = async () => {
-    pass++
-    if (pass === 1) throw new ContinueError(3)
-    return "consultant reply"
-  }
-  const { ctx, calls } = makeCtx(parent, runner)
-  const started = JSON.parse(await consultStartTool.execute({ problem: "hard problem" }, ctx))
-  assert.ok(started.id, "会诊会话建立（ack 携 id）")
-  await until(() => calls.length === 1)
-  assert.deepEqual(calls[0], ["continue", { turns: 3, agent: "consult#1" }], "consult continue args.agent = 机器键（修复前 label）")
-})
+// ─── T-A3 退役：consult continue 捕获（会诊族 2026-09-26 起走检查点报请，不再发权限询问）
+//     新落点 = test/turn-cap-checkpoint.test.mjs 用例 3（父侧 ask + send 续期）。
 
 // ─── T-A4n：反证（边界 · 无询问通道 —— 不崩 + 退化返回）───────────────────────
 

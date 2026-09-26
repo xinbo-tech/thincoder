@@ -160,10 +160,9 @@ export async function handleGetAgentSettings(panel) {
 
 /** 迁出自 `panel-messages.mjs` 的 case "setAdvisorGuard"。 */
 export function handleSetAdvisorGuard(panel, msg) {
-  // Slot first (session-level authority, 2026-08-29), then the config.json mirror
-  // (CLI compat). A slot write failure must not block the config write.
+  // Slot only (session-level authority, 2026-08-29) — no config.json mirror: the slot is the
+  // single writer of `advisor.guard` on the panel face (a slot write failure blocks nothing else).
   try { setSlotAdvisorGuard(_cwd(), panel._ensureSlot(), !!msg.value) } catch {}
-  saveAgentSettingsFromPanel({ advisor: { guard: !!msg.value } })
   panel._pushSettingsLight()
 }
 
@@ -175,9 +174,7 @@ export function handleSetEngineeringEnabled(panel, msg) {
   // 既有槽写契约；工程位写后 plan 面才是拒绝态）。否则槽 `{engineering:true, planMode:true}`
   // 半状态每次装载复活（FR31 ③ 要消灭的形态）。
   if (on) void panel._setPlanMode(false)
-  // Same dual-write contract as setAdvisorGuard above: slot authority + config mirror.
   try { setSlotEngineering(_cwd(), panel._ensureSlot(), on) } catch {}
-  saveAgentSettingsFromPanel({ engineering: on })
   panel._pushSettingsLight()
 }
 

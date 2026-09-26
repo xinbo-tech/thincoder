@@ -25,6 +25,7 @@ import { launchEscalateAsync } from "./escalate-async.mjs"
 import { RECORD_WINDOW_MESSAGES } from "../session-store.mjs"
 // ASYNC-RESULT-CONTAINER.md D1：池 accessor（absorb 双池——advisor 独立池无队列）
 import { getAsyncPool } from "./async-settle.mjs"
+import { settleConsultCheckpoint, settleTurnCheckpoint, resumedSendResult, turnCapTrace } from "./checkpoint.mjs"
 
 /**
  * subagent action:"status" (AGENT-LOOP-SUBAGENT.md §6.7 D-M2, new): NON-BLOCKING async-pool query —
@@ -95,7 +96,7 @@ function statusFields(entry, cwd) {
     base.turn = entry.turn ?? 0
     base.maxTurns = entry.maxTurns ?? 0
     // AGENT-LOOP-SUBAGENT.md §6.7.2：touched files 摘要（T-SF1..4——新字段追加——既有字段零破坏）
-    Object.assign(base, touchedSummary(entry, cwd))
+    Object.assign(base, touchedSummary(entry, cwd), { turnCap: turnCapTrace(entry) })
   } else if (entry.status === "queued") {
     // AGENT-LOOP-SUBAGENT.md §6.7.2 T-SF2b：未启动——确定性占位（不崩；无对象可读）
     base.touched = "—（未启动）"
@@ -259,7 +260,7 @@ export function executeObserveAction(args, ctx) {
   if (entry.status === "running") {
     out.turn = entry.turn ?? 0
     out.maxTurns = entry.maxTurns ?? 0
-    Object.assign(out, touchedSummary(entry, agent.cwd))
+    Object.assign(out, touchedSummary(entry, agent.cwd), { turnCap: turnCapTrace(entry) })
     // in-flight 当前工具（评审 #1）：child._inflightTools Set——dispatch runOne 在工具
     // 执行前后维护——LLM 生成/工具间空隙为空；子代理 await 长工具调用时父回合可见它。
     const inflight = child?._inflightTools
@@ -308,6 +309,7 @@ export function executeSendAction(args, ctx) {
     if (getAsyncPool(agent, "advisor")?.has(key)) {
       return JSON.stringify({ status: "error", error: `id ${key} is an async ADVISOR review — send is for async subagents; you cannot inject direction into a running review — track it with action:'status' (role:"advisor") or wait for its report to arrive automatically` })
     }
+    if (settleConsultCheckpoint(agent, key, message)) return resumedSendResult(key, "consult") // 检查点兑现 ②（会诊会话）
     return JSON.stringify({ status: "error", error: `unknown async subagent id: ${key}` })
   }
   if (entry.done || entry.cancelled) {
@@ -318,6 +320,7 @@ export function executeSendAction(args, ctx) {
   }
   entry._injected ??= []
   entry._injected.push(String(message).trim())
+  if (settleTurnCheckpoint(entry)) return resumedSendResult(key, entry.role ?? "subagent") // 检查点兑现 ①（池条目）
   return JSON.stringify({
     id: key,
     status: "delivered",

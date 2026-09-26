@@ -17,6 +17,7 @@ import {
 } from "./subagent-scheduler.mjs"
 // ASYNC-RESULT-CONTAINER.md D3/D6：settle 公共收尾单点 + child signal 构建单点
 import { bindChildController, buildChildSignal, settleAsyncEntry } from "./async-settle.mjs"
+import { registerTurnCapCheckpoint } from "./checkpoint.mjs"
 
 /** #309 任务书文本摘要（12 hex——**不留全文**，NF-L3 同族）：条目自携与双点留痕的标识面。 */
 function taskSeal(text) {
@@ -164,16 +165,13 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
     ctx.callbacks?.onToken?.(relayPrefix + "[model]" + (childProvider.model ?? ""))
     // #309 §6.29.2 双点留痕第二点（条目**实际启动点**——与 child:spawn 同键面）：哪条任务书在哪个 id 下起跑。
     logEvent("child:start", { role, id: `${role}#${id}`, batchDocBase, taskSeal: entry._taskSeal })
-    // Turn-cap on background children NEVER pops the continue panel (D-A3):
-    // §15 D-A3 exception (2026-09-02 unified rule, AGENT-LOOP.md §2): in an
-    // engineering && AUTO session the child auto-resumes — the user authorized
-    // unattended runs, no one is at the panel. Every other tier auto-declines
-    // and the partial-work report carries the cap reason. AGENT-LOOP-SUBAGENT.md §6.7.6 D-E2 relies on
-    // this exception as the turn-cap fallback for the default-async eng-coder
-    // delivery (the internal protocol does not raise the 100-turn cap).
+    // Turn-cap on background children no longer auto-resumes (TURN-CAP-CONTINUE.md §1 #7 · 2026-09-26):
+    // a capped async child registers a parent-side checkpoint and stays suspended
+    // (no panel, no re-dispatch) until the parent answers send / cancel — AUTO included.
+    // The partial-work report carries TURN_CAP_MARK when the cap stopped the run.
     runChildPipeline(child, input, trackOpts, { ...childRunOpts, signal: entry.controller.signal, consumeInjected }, {
       parent, role, args,
-      askContinue: () => Promise.resolve(Boolean(parent.config?.agent?.engineering && parent.autoApprove)),
+      askContinue: (e) => registerTurnCapCheckpoint(child, entry, { turn: e.turn, signal: entry.controller.signal }),
     })
       .then((report) => { entry.report = report })
       // §6.12 第 3 条合成器（第 24 批）：原 message 前缀逐字保留 + 来源后缀

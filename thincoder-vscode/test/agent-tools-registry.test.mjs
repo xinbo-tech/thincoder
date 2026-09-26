@@ -56,7 +56,7 @@ test("W9 ③ 装配消费者（结构机检）：装配面自核登记册动态�
   assert.ok(m, "装配面必须以 await import() 动态载入核登记册（静态链破 W8 契约②）")
   const imported = m[1]
     .split(",")
-    .map((s) => s.replace(/\/\/.*$/s, "").trim()) // 行内注释剥离（§25 R17 句）
+    .map((s) => s.replace(/\/\/.*$/s, "").trim()) // 行内注释剥离（CONSULTATION.md §6.2 R17 句）
     .filter(Boolean)
   // VSC-TOOL-TABLE-DUP（2026-09-15 §2.3C）：解构面收窄——本端只需装饰实例
   // （subagent/consult 装饰链；settings 为端自持工厂）——角色矩阵不再自持。

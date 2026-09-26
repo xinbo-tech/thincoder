@@ -6,11 +6,11 @@
  * `session-slots` / `session-slot-write` / `session-gc`）；存储契约 version 1/2 不变
  * （同一 `~/.thincoder/sessions/<sha1(cwd)>.json.{N,manifest}`，与 CLI 共文件——
  * A14 存储契约以 CLI 为准）。
- * 本档保留 = 真端差面（`docs/core/design/SESSION.md` §6.10 D-4「VSC 镜像」——**本端**记录
+ * 本档保留 = 真端差面（`docs/core/design/SESSION.md` §6.10 D-4「VSC 落点」——**本端**记录
  * `{manifest}.vscode` 的四个维护落点）：`resumeSlot` / `newSlot` / `switchToSlot` /
- * `deleteSlotAndUpdate`。核对应件（`resumeSlot`/`newSession`/`switchToSlot`/`deleteSlot`）
- * 把核端 marker（`.cli`）写死 ⇒ 直接消费 = 跨端互写（D-SE9/D-SE10 反例）⇒ 端壳按本端 marker
- * 自持该四个落点（认领 / 选号 / 落盘序列 = 核同源步骤 + 核原语复用）。
+ * `deleteSlotAndUpdate`。marker 读写**单源 = 核**（SLOT-END-PARAM 批 2026-09-25 · §6.20 判据句
+ * 2/3：端壳 `session-slots.mjs` 按端名做绑定转口）⇒ 本档四落点照旧调用同名件、**调用面零改**
+ * （认领 / 选号 / 落盘序列 = 核原语复用）。
  * 另两件端侧自有：`loadModelPrefs`/`saveModelPrefs`（workspaceState，非会话文件）·
  * `stripTruncatedToolArgs`（核内私有件、未导出——`applySession` 机读线播种同规则）。
  *

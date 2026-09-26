@@ -27,12 +27,12 @@ grid-template-rows: auto minmax(0, 1fr) auto auto auto;
 
 - 行模板 ↔ 垂直序：header(session-bar) / `#messages`(1fr) / `#subagent-activity`(auto) / `#panels`(auto) / `#toolbar`(auto)——后三层均 auto，隐藏项不占高 ⇒ 消息区高 = 容器 − 活动区 − 面板 − 输入（grid `1fr` 自动吸收）。
 - 消息区钉底/滚动语义**限定在 `#messages` 内**：`overflow-y: auto` + `overscroll-behavior: contain`（`thincoder-vscode/webview/base.css:93-97`）。
-- **活动区**：位于 `#messages` 与 `#panels` 之间（`thincoder-vscode/webview/index.html:25`——`role="region"`）；**空区隐藏零高**（`base.css:109` `#subagent-activity:empty { display: none; }`——零显隐 JS）；内容自适应 + `max-height: 32vh` 封顶 + 区内自滚（`base.css:102-107`）。
+- **活动区**：位于 `#messages` 与 `#panels` 之间（`thincoder-vscode/webview/index.html:35`——`role="region"`）；**空区隐藏零高**（`base.css:109` `#subagent-activity:empty { display: none; }`——零显隐 JS）；内容自适应 + `max-height: 32vh` 封顶 + 区内自滚（`base.css:102-107`）。
 - **活动区独立 pin**（`thincoder-vscode/webview/ui.js:442-445` `maybeScrollActivity`）——与消息区**互不拉扯**（两层状态独立——§5.5）。
 - shell 结构（`thincoder-vscode/webview/index.html:14-92`）：启动加载画面 `#loading-screen`（`:18-23`——静态默认可见；端壳握手落定后由 `dismissLoadingScreen` 移除（定义 `webview/chat.js:31`；落定点 `webview/chat-messages.js:141`）+ 3 s 兜底（`:43`））+ `#chat-container`（`:24-92`）内含 `#session-bar` / `#messages` / `#subagent-activity` /
   `#panels`（goal、task 两个行面板）/ `#toolbar` / `#settings-panel`（dialog）/ `#welcome-panel`（首次运行 onboarding）。
 - `#toolbar` 内 = `#status-line` + `#input-row`（attach / send / abort）+ `#paste-bar` + `#controls-row`。
-- 注入占位：CSS 五档经 `__CSS_*_URI__`、模块脚本经 `__CHAT_URI__`、CSP 经 `__CSP__`（`index.html:6-11` · `index.html:83`）。
+- 注入占位：CSS 五档经 `__CSS_*_URI__`、模块脚本经 `__CHAT_URI__`、CSP 经 `__CSP__`（`thincoder-vscode/webview/index.html:6-11` · `thincoder-vscode/webview/index.html:93`）。
 
 ## 3. 文件结构（现行）
 
@@ -73,10 +73,10 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
 
 - **权限弹窗 / 批确认 UI**（`permission.js`）：approve / deny / approve-all + 原生 diff 预览；AUTO 按钮翻转会话级 autoApprove。
 - **question 卡**（`question.js`，内联卡非原生弹窗）：选项按钮包 `.question-options` 容器（成列——`base.css:327`），底部操作行 `.question-actions`（input + submit + cancel——`base.css:340`）；卡内字号/字重 scoped 覆盖；`.question-text` pre-wrap 保形（`base.css:316`）。
-- **粘贴图片**：attach 按钮 / 粘贴 → dataURL 预览条 `#paste-bar`（`index.html:40`）→ 发送时随 `userMessage` 上送（`send.js:47-50`）。
+- **粘贴图片**：attach 按钮 / 粘贴 → dataURL 预览条 `#paste-bar`（`thincoder-vscode/webview/index.html:50`）→ 发送时随 `userMessage` 上送（`send.js:47-50`）。
 - **设置面板**：模型 / Provider / 代理 / 工具 / agent 分页（`settings-*.js`）；agent 页含 poolLimits、guard / engineering 反射。
 - **会话标题**：session-bar 顶栏显示活动槽标题（`#session-title`——`thincoder-vscode/webview/session-bar.js:111`，来自 `sessions` 消息的 `active.title`）；
-  会话下拉 `#session-dropdown`（`index.html:20`）列 switch / rename / delete。
+  会话下拉 `#session-dropdown`（`thincoder-vscode/webview/index.html:30`）列 switch / rename / delete。
   首条消息发送后 LLM 自动生成标题（`thincoder-vscode/src/extension/generate-title.mjs`）；标题未生成前显示自动占位
   （`Session N` + 生成中提示——`send.js:53-54`），生成完成后经 `sessions` 刷新。
 - **模型选择 UI**：主下拉列 provider 行 + hover flyout 子菜单选模型（两级菜单——`model-picker.js` / `model-menu.js`）；底部含 add / remove / key 管理入口。
@@ -586,6 +586,10 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 **边界（本节不做）**：不做常驻仪表（默认一次性探针）；不加 webview `performance` 标记（真画证据归真机 QA · 台账 #162）；口径 A 不入本批。**读数留档** = 批次档 §5 / §6（一次性材料）；探针撤除后 `git diff` 空 = 方案自身验证面。
 
 ## 变更记录
+
+- 2026-09-25（**config 镜像写收口批 · 坐标 / 措辞收正（fix 轮 2）· eng-designer**——承 `docs/batches/2026-09-25-config-mirror-closeout.md`）：
+  §2 / §4 五处 `index.html` 引用收正——四处裸锚补全路径前缀（`:6-11` · `:83→:93` · `:40→:50` · `:20→:30`；其中 `:6-11` 号不变）+ §2 活动区行号收正（`:25→:35`）；
+  动因 = 桌面端 renderer 目录新增 `index.html` 使域内 basename 撞名、裸锚悬空（doc-check 回归）。**零新语义**。
 
 - 2026-09-25（**misc-four 批 · 设计评审修正轮 1（发现 #6 / #10 / #12）· eng-designer**——承 `docs/batches/2026-09-25-misc-four.md` §3 轮次 1）：
   档头注收正（「不镜像、互不指」→ **实现不镜像 ∥ 文档面互挂对位指针**——与 `docs/cli/design/TUI.md` 档头 / §8.2 的 A9 保留口径同判）；

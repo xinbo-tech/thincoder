@@ -29,15 +29,17 @@ export function childOwnerLabel(role, id, model) {
  * 构建 child 权限通道。返回 null（无 `ctx.callbacks.onPermissionRequired`——headless /
  * 无关角色调用侧未挂；AUTO 判定走父门询问时 live 读——同判据单源，ED-2 2026-09-16）或
  * `async (toolName, args, diffInfo) => boolean`。
- * @param {{ ctx: object, id: number, role: string, model?: string|null, signal?: AbortSignal|null }} deps
+ * `forceAsk`（默认 false）= 本询 AUTO 豁免**透传**（续期恒须人答——TURN-CAP-CONTINUE.md §1 #7；
+ * 置位点唯一 = VSC `panel-callbacks.mjs` 的 `continue` 名分支）——其余调用逐字零变化。
+ * @param {{ ctx: object, id: number, role: string, model?: string|null, signal?: AbortSignal|null, forceAsk?: boolean }} deps
  */
-export function makeChildPermission({ ctx, id, role, model = null, signal = null }) {
+export function makeChildPermission({ ctx, id, role, model = null, signal = null, forceAsk = false }) {
   if (!ctx?.callbacks?.onPermissionRequired) return null
   const owner = { label: childOwnerLabel(role, id, model), role, id }
   return async (toolName, args, diffInfo) => {
     ctx.callbacks.onSubagentApproval?.({ id, role, model, tool: toolName })
     try {
-      return await ctx.callbacks.onPermissionRequired(toolName, args, diffInfo, { owner, signal })
+      return await ctx.callbacks.onPermissionRequired(toolName, args, diffInfo, { owner, signal, forceAsk })
     } finally {
       ctx.callbacks.onSubagentApproval?.({ id, role, model, tool: null })
     }

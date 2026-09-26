@@ -10,6 +10,9 @@
  *   §15.4 追加：归一链单源 `effortSelection` 三分支直驱（E-6..E-8）· 「已存值 ∉ 枚举」⇒ 「—」（E-10）·
  *   advisor 读面三态（V-5：off 形 > `reasoningEffort` > legacy `effort`）· advisor 载荷键 = `reasoningEffort`
  *   （`none` **原样上送**——写面按族取 off 形；select 未渲染 ⇒ **不发**字段——V-3 面板半）。
+ *   批 2026-09-25-config-mirror-closeout（设计 `docs/vsc/design/SETTINGS.md` §2.14）追加（V-3 / V-7）：
+ *   `#adv-guard` 改走专线（post `setAdvisorGuard`）——通用保存触发件列表只剩 `consult-turns`/`consult-timeout`，
+ *   载荷 advisor 面零 `guard` 键（该键唯一写面 = 会话槽）。
  *   §16.5 追加（批 2026-09-25-off-family-closeout · 台账 #346-②）：off 哨兵避支（⓪ 支）——`"none"` ×
  *   枚举无 `none` ⇒ 预选「—」（不经注册默认支；三视图同判据——W-9）。
  *
@@ -166,13 +169,32 @@ test("V-3 面板半：advisor effort select 未渲染（枚举空）⇒ 载荷�
   document.body.innerHTML = M.agentCardHtml() + M.consultAdvisorCardHtml()
   assert.equal(document.getElementById("adv-effort"), null, "前置：枚举空 ⇒ 零渲染（view = null）")
   M.bindAgentControls()
-  const guard = document.getElementById("adv-guard")
-  guard.checked = true
-  guard.dispatchEvent(new window.Event("change"))
+  const turns = document.getElementById("consult-turns") // 通用保存触发件（原用 `#adv-guard`——本批已改走专线）
+  turns.value = "4"
+  turns.dispatchEvent(new window.Event("change"))
   const msg = capturedPosts.at(-1)
-  assert.equal(msg.type, "saveAgentSettings", "guard 切换 ⇒ 照发落盘消息")
+  assert.equal(msg.type, "saveAgentSettings", "通用保存触发件变更 ⇒ 照发落盘消息")
   assert.equal("reasoningEffort" in msg.settings.advisor, false, "select 未渲染 ⇒ 载荷无该字段（手写键存活；缺席 ≠ 清空）")
-  assert.equal(msg.settings.advisor.guard, true, "该字段外的 payload 零改")
+  assert.equal("guard" in msg.settings.advisor, false, "载荷 advisor 面零 `guard` 键（该键唯一写面 = 会话槽——通用保存链不携带）")
+})
+
+test("V-7 专线：`#adv-guard` 变更 ⇒ post `setAdvisorGuard`（值随 checked）且零通用保存", () => {
+  M.SS.agentSettings = { consultModels: [], advisor: { model: "m-def" } }
+  document.body.innerHTML = M.agentCardHtml() + M.consultAdvisorCardHtml()
+  M.bindAgentControls()
+  const guard = document.getElementById("adv-guard")
+  assert.ok(guard, "前置：复选框在盘")
+  const flip = (on) => {
+    const n0 = capturedPosts.length
+    guard.checked = on
+    guard.dispatchEvent(new window.Event("change"))
+    assert.equal(capturedPosts.length, n0 + 1, "翻转只发一条消息（零双发——专线不叠加通用保存）")
+    const m = capturedPosts.at(-1)
+    assert.equal(m.type, "setAdvisorGuard", "走专线（真值 / 假值同型）")
+    assert.equal(m.value, on, "值随 checked 上送（假值可辨——不被真值兜底吃掉）")
+  }
+  flip(true)
+  flip(false)
 })
 
 // ─── 批 2026-09-25-off-family-closeout（设计 MODEL-SPECS.md §16.5 · 台账 #346-② · 用例 W-9 / AC-4）───

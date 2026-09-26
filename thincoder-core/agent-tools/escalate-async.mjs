@@ -38,6 +38,8 @@ import { refreshQueuedTokens, nextSubagentId, consumeSubagentToken, assertPoolKe
 import { mutationSeqOf } from "./advisor-async.mjs"
 // ASYNC-RESULT-CONTAINER.md D3/D6：settle 公共收尾单点 + child signal 构建单点
 import { bindChildController, buildChildSignal, settleAsyncEntry } from "./async-settle.mjs"
+import { registerTurnCapCheckpoint } from "./checkpoint.mjs"
+import { drainInjectedQueue } from "./subagent-run.mjs"
 
 /** Parent-side mutations (absolute paths) committed AFTER the escalate launch —
  *  the overlap scan feeds the settle classification (review #4/round2 #4: the
@@ -224,6 +226,9 @@ export function launchEscalateAsync(parent, ctx, launch) {
       signal: entry.controller.signal,
       // §2.5 #78 并入：escalate 子代理输出流式（VSC subagent-escalate-async 同款豁免）。
       streamOutput: true,
+      // SUBAGENT-OBSERVE-SEND 缺口补配（TURN-CAP-CONTINUE.md §3.1 :85）：send 注入队列
+      // 回合边界消费（否则续段文本静默丢弃）。空队列 no-op。
+      consumeInjected: (ag) => { drainInjectedQueue(entry, ag ?? child) },
     }
     // 权限按 async 子代理同款装配：AUTO 直放行；手动档经父 _permQueue（并行子代理
     // 审批不叠弹窗）——背景飞行撞门时无 handler → denied 不悬挂（D-S7 同规则）。
@@ -242,9 +247,9 @@ export function launchEscalateAsync(parent, ctx, launch) {
       { ...childCallbacks, onPermissionRequest: childPermission },
       runOpts,
       {
-        // 后台飞行不弹 continue 面板（D-A3 AGENT-LOOP-SUBAGENT.md §6.7.3 例外同款）：AUTO && engineering 自动
-        // resume——escalate 只在 normal 模式可用（engineering 拒）——恒自动拒 → partial。
-        askContinue: () => Promise.resolve(Boolean(parent.config?.agent?.engineering && parent.autoApprove)),
+        // F8（TURN-CAP-CONTINUE.md §1 #7）：撞帽 ⇒ 父代理检查点（同池、同载具——send 兑现 /
+        // cancel 走既有 abort ⇒ partial + TURN_CAP_MARK）；原 AUTO 自动 resume 由 #7 取代。
+        askContinue: (e) => registerTurnCapCheckpoint(child, entry, { turn: e.turn, signal: entry.controller.signal }),
         onDeclined: (e, output) => `escalate (${tag})${entry.effortNote} ${TURN_CAP_MARK} (${e.turn} turns) — work may be partial; review recent_changes before deciding next steps.\nPartial output: ${output.slice(0, 2000)}`,
       },
     )

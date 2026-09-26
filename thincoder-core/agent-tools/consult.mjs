@@ -33,6 +33,8 @@ import { makeRelay, wrapChildCallbacks, runWithContinue, ensureChildApiKey, clam
 import { RECORD_WINDOW_MESSAGES } from "../session-store.mjs"
 // ASYNC-RESULT-CONTAINER.md D2/D3/D6：pending 单容器停靠 + settle 公共收尾 + child signal 单点
 import { bindChildController, buildChildSignal, settleAsyncEntry } from "./async-settle.mjs"
+import { registerTurnCapCheckpoint } from "./checkpoint.mjs"
+import { drainInjectedQueue } from "./subagent-run.mjs"
 import { digestBudgetOver, persistOverflowReport } from "./digest-budget.mjs" // B5（群 B 批 AGENT-LOOP.md §6.14 D-DG2）：digest 注入预算单源
 
 // Named consult defaults (consult P2, 2026-08-30).
@@ -285,6 +287,9 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
     // TUI-OOM-ROOTCAUSE·AGENT-LOOP.md §6.15：子代理人读线窗口（四处创建点同置）——consult 会话跨回合驻留，
     // 不置窗则 _fullHistory 仍无界（F-O1 覆盖 depth>0 全部创建点）
     child._historyWindow = RECORD_WINDOW_MESSAGES
+    // SUBAGENT-UPSTREAM-CHANNEL 补赋（TURN-CAP-CONTINUE.md §3.1）：会诊 = 后台族（consult_start
+    // 发后即返）⇒ 父在飞可答——撞帽检查点的上行 ask 与 notify_parent 同源通道。
+    child._upstream = { parent: agent, label, sync: false }
 
     // Activity relay via the unified spawn-child pipeline (docs/cli/design/TUI.md §6.8 D3): `consult#<subId>/`
     // prefix (same channel subagent uses — parallel consultants stay independent) +
@@ -311,13 +316,18 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
         (childAgent, input, cbs, opts) => runner(childAgent, input, cbs, opts),
         child, "# Problem\n" + problem,
         childCallbacks,
-        { depth: 1, maxTurns: agent?.config?.agent?.consultTurns ?? CONSULT_TURNS, signal: ctrl.signal },
         {
+          depth: 1, maxTurns: agent?.config?.agent?.consultTurns ?? CONSULT_TURNS, signal: ctrl.signal,
+          // send 注入队列回合边界消费（缺口补配——续段文本落 rec.child._injected 后由此消费）。
+          consumeInjected: (ag) => { drainInjectedQueue(child, ag ?? child) },
+        },
+        {
+          // F8（TURN-CAP-CONTINUE.md §1 #7 / #5）：撞帽 ⇒ 报请父代理（检查点）——不再弹
+          // continue 卡；报请串行在会话级 `continueQueue` 上（唯一会话级队列消费者）。
+          // 续期 ⇒ 新段预算 + watchdog 重挂（N3）。headless 亦登记（答复通道 = 父 send，
+          // 非权限 handler——§2.5 用例 13）。
           askContinue: (e) => {
-            if (!ctx.onPermissionRequest) return Promise.resolve(false)
-            // 残环批（2026-09-16）：归属键形态（`consult#<relayN>`——端侧键形解析的输入契约；
-            // 原 label = 显示名不携 id）；relay 未建立（spawn 前失败路径不可达此 ask）时回落 label。
-            const ask = () => ctx.onPermissionRequest("continue", { turns: e.turn, agent: relayPrefix ? relayPrefix.slice(0, -1) : label })
+            const ask = () => registerTurnCapCheckpoint(child, session, { turn: e.turn, signal: ctrl.signal })
             session.continueQueue = (session.continueQueue ?? Promise.resolve()).then(ask, ask)
             return session.continueQueue.then((go) => {
               if (go) {

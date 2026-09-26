@@ -104,7 +104,7 @@ test("T3 normalizeFileList: 内容产物（源文件 + 设计档）→ 放行并
 
 test("T8 rejectEngineeringFilePaths: scripts/** 任一层段 → 拒（工程工具面不入域）", () => {
   for (const f of ["scripts/x.mjs", "thincoder/scripts/y.mjs", "C:/w/thincoder/scripts/z.mjs", "SCRIPTS/a.mjs"]) {
-    assert.throws(() => rejectEngineeringFilePaths([f]), /engineering tool path/, f)
+    assert.throws(() => rejectEngineeringFilePaths([f]), /engineering-tools face path/, f)
   }
 })
 
@@ -120,13 +120,13 @@ test("T8c rejectEngineeringFilePaths: 内容产物 + 违规混合 → 收集全�
     rejectEngineeringFilePaths(["src/a.mjs", "scripts/x.mjs", "CHANGELOG.md"])
     assert.fail("should have thrown")
   } catch (e) {
-    assert.match(e.message, /engineering tool path scripts\/x\.mjs/)
+    assert.match(e.message, /engineering-tools face path scripts\/x\.mjs/)
     assert.match(e.message, /Parent-side maintained file CHANGELOG\.md/)
   }
 })
 
 test("T8d normalizeFileList: scripts / 过程档 → 同拒（谓词已接线——错误经同一通道）", () => {
-  assert.throws(() => normalizeFileList(["scripts/x.mjs"], CWD), /engineering tool path/)
+  assert.throws(() => normalizeFileList(["scripts/x.mjs"], CWD), /engineering-tools face path/)
   assert.throws(() => normalizeFileList(["CHANGELOG.md"], CWD), /Parent-side maintained file/)
 })
 

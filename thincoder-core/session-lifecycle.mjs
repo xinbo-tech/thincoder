@@ -20,12 +20,15 @@ import { existsSync } from "node:fs"
 import { resolveCompactThreshold } from "./config.mjs"
 import {
   slotPath, loadManifest, saveManifest, slotDigest, writeSessionFile, getSessionId,
-  writeEndMarker, ownerPid, ownerPids,
+  writeEndMarker, sessionEnd, ownerPid, ownerPids,
   resumeSlot as slotsResumeSlot,
 } from "./session-slots.mjs"
 import { probeOwnersSync, probeOwnersAsync, ownerState } from "./process-probe.mjs"
 // 环 import：见头注（loadSlotFile 属 session.mjs 的 data 层读面）。
 import { loadSlotFile } from "./session.mjs"
+// 全新槽首物化构造器单源（SLOT-END-PARAM 批 §6.20 判据句 4 写面：「`newSession` 并入」——
+// 与 VSC `newSlot` / `loadSlotForWrite` 全新分支同一构造器；环 import 同上，函数体内运行时使用）。
+import { newSlotData } from "./session-slot-write.mjs"
 import { mergeAdjacentAssistantEchoes } from "./context.mjs"
 import { scheduleSessionGC } from "./session-gc.mjs"
 import { restoreEngTokens } from "./token-ttl.mjs"
@@ -34,10 +37,12 @@ import { bindRecordStore, unbindRecordStore, RECORD_WINDOW_MESSAGES } from "./se
 
 /** 恢复决策包装（SESSION.md §6.12 启动钩子，2026-09-06）：本端恢复入口触发一次残留 GC——
  *  scheduleSessionGC 内部**启动窗外延迟拍**（`GC_PASS_DELAY_MS` = 3s）+ 每进程每前缀去重，
- *  **异步非阻塞**启动路径（N4；§6.17 D-SE39）；**async**（F-MI7——调用面必须 await）。 */
-export async function resumeSlot(cwd) {
+ *  **异步非阻塞**启动路径（N4；§6.17 D-SE39）；**async**（F-MI7——调用面必须 await）。
+ *  `opts.end`（§6.20 判据句 2——显式端参 > 进程端名）：本端记录端名透传（端壳经绑定转口
+ *  传本端常量；缺省 = 进程端名 ⇒ CLI 全调用点零改）。 */
+export async function resumeSlot(cwd, { end = sessionEnd() } = {}) {
   scheduleSessionGC(cwd)
-  return slotsResumeSlot(cwd)
+  return slotsResumeSlot(cwd, { end })
 }
 
 /** slimForDisplay 截断的 arguments 以 U+2026（…）结尾——不是合法 JSON 的完整值。
@@ -211,8 +216,10 @@ export async function newSession(cwd, opts = {}) {
   while (m.slots[slot] || existsSync(slotPath(cwd, slot)) || liveClaimed(slot)) slot++
 
   // Write empty session — 2026-09-01 advisor 🔵：补 contextHistory/planMode 字段与
-  // VS Code newSlot 对齐（SESSION.md §6.3 v2 格式双端一致；两端读侧均有兜底，功能等价）
-  const data = { version: 2, cwd, title: "", updatedAt: Date.now(), history: [], contextHistory: [], tasks: [], planMode: false, goal: null, autoApprove: false, advisor: null, pendingReminders: [], sessionStart: null }
+  // VS Code newSlot 对齐（SESSION.md §6.3 v2 格式双端一致；两端读侧均有兜底，功能等价）。
+  // SLOT-END-PARAM 批（§6.20 判据句 4 写面）：改用首物化构造器单源 `newSlotData(cwd)`
+  // （原字面逐字同形——并入后随其带创建端 = 本端名）。
+  const data = newSlotData(cwd)
   writeSessionFile(slotPath(cwd, slot), data)
   m.slots[slot] = slotDigest(data)
   m.active = slot
@@ -279,7 +286,7 @@ export function resetSessionState(agent) {
  *  （无认领副作用）；目标槽空闲则一并认领、被另一活进程占用则不认领（slotOccupancy——
  *  下次保存经 activeSlot 自然 fork 到新槽）；只改 manifest 指针（setActive 意图）。
  *  2026-09-01 会诊三家 🟡：saveManifest 条目级合并 + setActive（不把并发方刚翻的指针回滚）。 */
-export function switchToSlot(cwd, slot) {
+export function switchToSlot(cwd, slot, { end = sessionEnd() } = {}) {
   const m = loadManifest(cwd)
   if (!m.slots[slot]) return null
   const data = loadSlotFile(cwd, slot)
@@ -294,8 +301,9 @@ export function switchToSlot(cwd, slot) {
   // （不认领目标 + 旧认领一并释放——下次保存经 `allocateFresh` fork，既有语义）。核受占 =
   // 切换成立（D-SE33：指针 / 记录按 D-6 / D-4 落点——fork 面依赖指针翻至目标槽）。
   saveManifest(cwd, m, null, { setActive: true, release: occ.occupied ? [] : [slot] })
-  // 2026-09-05 §6.10 D-4：/session N 跟随"最后查看的槽"（成功切换才写）
-  writeEndMarker(cwd, slot)
+  // 2026-09-05 §6.10 D-4：/session N 跟随"最后查看的槽"（成功切换才写）；§6.20 判据句 2：
+  // 写点端名随动（显式端参 > 进程端名——端壳经绑定转口传本端常量）
+  writeEndMarker(cwd, slot, end)
   return data
 }
 

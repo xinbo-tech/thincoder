@@ -30,7 +30,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs"
 import {
   slotPath, writeSessionFile, activeSlot, loadManifest, saveManifest, slotDigest,
-  writeEndMarker,
+  writeEndMarker, sessionEnd,
 } from "./session-slots.mjs"
 // F2 轮转守卫自 2026-09-08 迁至 session-guard.mjs（session-slots 再越 500 行硬限拆分）
 import { guardForeignSlotFile } from "./session-guard.mjs"
@@ -260,6 +260,9 @@ export function persistEngTokens(agent) {
       advisor: agent.config?.advisor ?? null,
       pendingReminders: agent._pendingReminders ?? [],
       sessionStart: agent._sessionStart ?? null,
+      // 创建端（SLOT-END-PARAM 批 §6.20 判据句 4 写面——全新分支）：取值链已由守卫（上方
+      // `guardForeignSlotFile`）解析入 `agent._slotCreatedBy`（文件不在盘 ⇒ 进程端名）。
+      createdBy: agent._slotCreatedBy ?? sessionEnd(),
     }
   }
   const fields = engTokenSlotFields(agent)

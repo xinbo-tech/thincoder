@@ -121,3 +121,24 @@ test("T-PT5 TUI 行式预览保留——edit / apply_patch 分支仍在", async 
   state.permission.resolve(true)
   assert.equal(await p, true)
 })
+
+// ── 用例 10 CLI 半（TURN-CAP-CONTINUE.md §1 #7 / D-TC15）：AUTO 档 continue 卡不被自动批准 ──
+
+test("T-PT6 AUTO 档 continue 卡不自动批准——卡面仍置位、无 [auto] 行；普通工具名短路零回归", async () => {
+  const auto = tuiFixture({ autoApprove: true })
+  let settled = false
+  const p = auto.interaction
+    .askPermission("continue", { turns: 2, agent: "explore#1" })
+    .then((v) => { settled = true; return v })
+  await new Promise((r) => setTimeout(r, 20))
+  assert.equal(auto.state.permission?.name, "continue", "AUTO 档下 continue 卡仍置位（等人答——无静默放行）")
+  assert.deepEqual(auto.state.permission.args, { turns: 2, agent: "explore#1" }, "卡面 args 透传（turns / 归属键）")
+  assert.equal(settled, false, "无人应答前不 resolve（不自动重入）")
+  assert.ok(!auto.lines.some((l) => l.text.includes("[auto] continue")), "无 [auto] continue 放行轨迹行")
+  auto.state.permission.resolve(false)
+  assert.equal(await p, false, "人答「停」⇒ 既有拒绝路径保留")
+
+  // 零回归：普通工具名（侧效应面）在 AUTO 档仍短路放行
+  assert.equal(await auto.interaction.askPermission("bash", { command: "ls" }), true)
+  assert.ok(auto.lines.some((l) => l.text.includes("[auto] bash")), "普通工具名 [auto] 行保留")
+})

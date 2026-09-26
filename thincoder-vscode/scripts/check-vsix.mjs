@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * scripts/check-vsix.mjs — vsix 含核断言（T-C7 vsix 域：断言 B + D——CORE-UNIFICATION N4/N5/F7/F8）。
+ * scripts/check-vsix.mjs — vsix 含核断言（T-C7 vsix 域：断言 B + D + E——CORE-UNIFICATION N4/N5/F7/F8；E = 撞帽检查点接线 · 2026-09-26）。
  *
  * 零构建 · 只读：解 vsix 逐条断言，任何一条不过即 exit 1（fail-closed——vsce 自身对
  * 「成功但无核 / 缺提示词档」的静默产物 exit 0，R6/R8①/R12 实证 ⇒ 必须断言化）。
@@ -8,6 +8,9 @@
  *     存在，且其 `version` 逐字等于仓内 `thincoder-core/package.json` 的 `version`。
  *   断言 D（提示词面完备性）：vsix 内同目录 `prompts/` 15 档 + `tool-docs/` 24 档——
  *     ① 档数硬等设计口径（15 / 24）；② 档名集合逐字等于仓内 `thincoder-core/` 同名目录；③ 各档内容 sha256 等于仓内同档。
+ *
+ *   断言 E（撞帽检查点接线 · 2026-09-26 · F9② / T6）：vsix 内 `extension/node_modules/@thincoder/core/agent-tools/checkpoint.mjs`
+ *     存在，且同目录 `subagent-run.mjs` 含 `registerTurnCapCheckpoint` 接线——防「仓内已修、运行面仍旧」（实盘教训）。
  *
  * Usage: node scripts/check-vsix.mjs [<vsix>]   # 缺省 = <root>/<name>-<version>.vsix
  * Exit: 0 = 断言全过 · 1 = 任一断言失败（逐条打印）
@@ -54,6 +57,18 @@ else {
   else bad(`断言 B：vsix 内核版本 ${got} ≠ 仓内 thincoder-core/package.json ${CORE_PKG.version}`)
 }
 
+// 断言 E —— 打包核含撞帽检查点接线（2026-09-26 · F9② / T6）
+//   防「仓内已修、运行面仍旧」：实盘教训 = 安装面冻结旧构建 ⇒ 撞帽静默续段。
+const cpEntry = entries.find((e) => e.fileName === `${IN_VSIX}agent-tools/checkpoint.mjs`)
+const srEntry = entries.find((e) => e.fileName === `${IN_VSIX}agent-tools/subagent-run.mjs`)
+if (!cpEntry) bad(`断言 E：vsix 缺 ${IN_VSIX}agent-tools/checkpoint.mjs（撞帽检查点未打包）`)
+else if (!srEntry) bad(`断言 E：vsix 缺 ${IN_VSIX}agent-tools/subagent-run.mjs`)
+else {
+  const wired = (await readEntry(zip, srEntry)).toString("utf8").includes("registerTurnCapCheckpoint")
+  if (wired) ok("断言 E：打包核含撞帽检查点接线（checkpoint.mjs 在场 + subagent-run.mjs 已接线）")
+  else bad(`断言 E：${IN_VSIX}agent-tools/subagent-run.mjs 未见 registerTurnCapCheckpoint（接线缺失——旧构建打包？）`)
+}
+
 // 断言 D —— 提示词面完备性（档名集合逐字 + 同档 sha256）
 for (const dir of ["prompts", "tool-docs"]) {
   const repo = repoFace(dir)
@@ -67,5 +82,5 @@ for (const dir of ["prompts", "tool-docs"]) {
 }
 
 zip.close()
-console.log(failures.length ? `\n✘ check-vsix：${failures.length} 条断言失败` : "\n✔ check-vsix：断言 B + D 全过")
+console.log(failures.length ? `\n✘ check-vsix：${failures.length} 条断言失败` : "\n✔ check-vsix：断言 B + D + E 全过")
 process.exit(failures.length ? 1 : 0)

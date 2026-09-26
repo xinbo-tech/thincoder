@@ -6,13 +6,15 @@
       "docs/core/requirements",
       "docs/cli/requirements",
       "docs/vsc/requirements",
+      "docs/desktop/requirements",
       "docs/RELEASE.md"
     ],
     "specs": "docs/core/requirements",
     "design": [
       "docs/core/design",
       "docs/cli/design",
-      "docs/vsc/design"
+      "docs/vsc/design",
+      "docs/desktop/design"
     ],
     "modules": "docs/core/design/modules",
     "batches": "docs/batches"

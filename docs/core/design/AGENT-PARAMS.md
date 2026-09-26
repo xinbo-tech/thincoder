@@ -137,3 +137,5 @@ const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_T
   新增 §5 参数总表（本档为参数族唯一权威）；批次材料 / 状态行 / 变更流水不并（§8）。
 - 2026-09-15（**B 式迁移轮 · VSC 第 6 批 · 并入 · eng-designer**）：新增 §6.3 VSC 端接线——自 `thincoder-vscode/docs/_archive/design/AGENT-PARAMS-TUNING.md` 并入（评审超时 / 面板透传 / explore 30 硬帽移除 / maxTurns 200 逐项实核；VSC 默认落在 `advisor/compaction.mjs` 而非旧档所记 `run.mjs`——按现状收正）；
   §4 补 VSC 注 + §8.2 VSC 行收口（(d) 类批次材料登记）；需求侧头注随批 4 建档收正。
+- 2026-09-26（**撞帽检查点批 · eng-coder**）：§5 总表 +1 行——登记 N7 零写盘带护栏键 `agent.barrenTurnLimit`（默认 120，常量单源；解析 / 计数 / 跳闸三点坐标实核，as-of 2026-09-26）。
+- 2026-09-26（**载入面缺口批 · eng-designer**——用户 14:50 裁定 D「取消零产出阈值」）：§5 总表 **删「零写盘带护栏（N7）」整行**——`agent.barrenTurnLimit` / `DEFAULT_BARREN_TURN_LIMIT` 常量与解析 / 计数 / 跳闸三点坐标一并撤销（N7 整条撤销；撞帽检查 = 无条件，取舍口径见 `docs/core/design/TURN-CAP-CONTINUE.md` §1 #8 / §5 D-TC18）。

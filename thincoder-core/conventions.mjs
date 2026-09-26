@@ -2,13 +2,13 @@
  * conventions.mjs — the single authority for code / doc / temp path classification,
  * plus the project convention declaration surface (`.thincoder/conventions.json`).
  *
- * Why one module: engineering-mode gates and guards (design gate, review-doc gate,
+ * Why one module: the write-domain gates and guards (design gate, review-doc gate,
  * mutation accounting, verify fast path) each carried their own copy of the
  * "what counts as product code" predicate — anchored `^src/` regexes, `docs/`
  * prefix checks, component regexes. Each copy drifted, and each hardcoded THIS
  * repository's layout: a project whose code lives outside `src/` slipped through
  * the design gate silently (PORTABILITY FR12 / PO-10). One classifier + one
- * declaration file = one truth.
+ * declaration file = one truth. It is a **shared** classification surface: the gates are consumers, not owners (consumer faces: advisor / agent-tools / both ends).
  *
  * Defaults are DATA (`DEFAULT_CODE_PATHS`) — overridable per project through the
  * declaration file (§4.1 schema). Missing file → pure defaults (no noise);

@@ -15,6 +15,8 @@ import { join } from "node:path"
 import { runAgentTurn } from "../src/tui/agent-turn.mjs"
 import { handlePermissionMode } from "../src/tui/key-modes.mjs"
 import { renderRows, renderStatus } from "../src/tui/render-frame.mjs"
+import { ContinueError } from "@thincoder/core/agent.mjs"
+import { t } from "@thincoder/core/i18n.mjs"
 
 const PROVIDER = { name: "glm", baseURL: "https://api.example.com/v1", model: "glm-5.3" }
 /** 供应商错误原文（首行含 baseURL——脱敏面判据；次行 = 不应进首行的后续行）。 */
@@ -121,6 +123,26 @@ test("X8 边界：非 Error 抛出（字符串）也出首行（VSC `e.message |
   answer(r, "n")
   await p
   assert.ok(r.lines.some((l) => l === "[error] boom-from-provider"), `字符串抛出仍出首行（实读：${JSON.stringify(r.lines)}）`)
+})
+
+// ─── 用例 11 CLI 半（TURN-CAP-CONTINUE.md §1 #7 / D-TC15）：AUTO + digest 无人值守 ⇒ 撞帽不再自续 ──
+
+test("T-CAP1 AUTO digest 撞帽：不再自续（单调用）· digest.capStop 行 · 无 continue 卡 · 终态 stopped", async () => {
+  const r = rig()
+  r.ctx.runAgent = async (_a, text, _cb, opts) => {
+    r.calls.push({ text: String(text), opts: { ...(opts ?? {}) } })
+    throw new ContinueError(2)
+  }
+  const result = await runAgentTurn(r.ctx, "digest payload", { autoTurn: true })
+  assert.equal(result, "stopped", "回合终态 = stopped（无人值守档收口）")
+  assert.equal(r.calls.length, 1, "不再二次调用（静默自续支退役）")
+  assert.equal(r.calls[0].opts.resume, false, "首调 resume=false")
+  assert.equal(r.calls[0].opts.autoTurn, true, "digest 轮 autoTurn 透传")
+  assert.equal(r.state.permission, null, "无 continue 卡（无人可答——不弹卡）")
+  assert.ok(!r.lines.some((l) => l.includes("Continue?")), "不含人工档询问行")
+  assert.ok(!r.lines.some((l) => l.includes("[continuing…]")), "无静默续跑轨迹行")
+  assert.ok(r.lines.includes(t("digest.capStop", { turns: 2 })), `capStop 行逐字（t() 同源；实读 ${JSON.stringify(r.lines)}）`)
+  assert.equal(r.state.processing, false, "回合收尾（不悬挂）")
 })
 
 // ─── #132 ① Retry 仅 y/n（框面 + 键面）────────────────────────────────────

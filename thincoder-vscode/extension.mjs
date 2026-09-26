@@ -93,6 +93,8 @@ export async function activate(context) {
   console.warn("[thincoder] activate starting, globalStorageUri =", context.globalStorageUri?.fsPath)
   // W8 pre-pen engine-floor guard (A8 ruling 2026-09-15) — first step; never throws.
   await applyEngineFloorGuard()
+  let coreFace = "unresolved"; try { const face = import.meta.resolve("@thincoder/core/agent.mjs"); coreFace = `${face} (v${(await import(new URL("package.json", face), { with: { type: "json" } })).default.version})` } catch { /* 只留证据——不抛、不拒载 */ }
+  console.warn(`[thincoder] core face = ${coreFace}`)
   initLocale(vscode.env.language)
   // F-W19（`SETTINGS.md` §2.12）：宿主事件循环采样器随激活起（幂等）——渠道准入探针的
   // 「宿主忙」证据面与延迟重试闸均读它；`hostBusy()` 纯内存零 I/O（采样器自身不作阻塞源）。

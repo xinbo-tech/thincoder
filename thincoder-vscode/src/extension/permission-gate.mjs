@@ -14,6 +14,7 @@
  * `releasePermission`（出队 + resolve + `permissionWithdrawn`）——挂三路：
  * ① opts.signal（child 定向取消/⏹）② panel._abortController（轮级 Stop）
  * ③ approve-all 连带（panel-messages.mjs 消费同一 helper）。
+ * （例外 = `opts.forceAsk`——本询 AUTO 豁免（续期恒须人答）；置位点唯一，见 `permissionGate` JSDoc。）
  *
  * P2 批 docs/batches/2026-09-20-mechanism-parity-batch.md §2.20（#165 落点）：**闸语义 / 请示流程改经核单源**——`askPermission`
  * （`@thincoder/core/permission.mjs:60-64`）的 `io.ask` 缝；本端只供**展示面**
@@ -48,7 +49,10 @@ export function releasePermission(panel, entry, verdict, queue) {
  * judgment is the live `panel._autoApprove` read at ASK time, never at build
  * （ED-2 2026-09-16：删构建期早退——构建期取值 = 半 live 缺口；父级与子代同判据单源）。
  * Signature: `(toolName, args, diffInfo, opts?) => Promise<boolean>` — `opts` =
- * `{ owner, signal }`（child 通道传——child-permission.mjs；depth-0 既有调用不传）。
+ * `{ owner, signal, forceAsk? }`（child 通道传——child-permission.mjs；depth-0 既有调用不传）。
+ * `forceAsk: true` = **本询 AUTO 豁免**：续期（`continue`）恒须人答——AUTO 开也不得自动放行
+ * （TURN-CAP-CONTINUE.md §1 #7 / D-TC15，2026-09-26）；默认缺省 ⇒ 既有调用逐字零变化，
+ * 置位点唯一 = `panel-callbacks.mjs` 的 `continue` 名分支。
  * @param {{ _autoApprove: boolean, _permissionQueue: {resolve: Function}[], _panel?: { webview: { postMessage: Function } } }} panel
  */
 export function permissionGate(panel) {
@@ -58,7 +62,8 @@ export function permissionGate(panel) {
       // Re-check on every invocation: approve-all / AUTO may have flipped the
       // flag after this gate was built. Honoring it immediately stops repeated
       // permission prompts for the rest of the running turn.
-      if (panel._autoApprove) { resolve(true); return }
+      // 例外 = `opts.forceAsk`（本询豁免——续期恒须人答；AUTO 其余名短路不变）。
+      if (panel._autoApprove && !opts?.forceAsk) { resolve(true); return }
       // C-4：promptId = 单调计数（question 的 `_questionSeq` 同构）——webview 响应按 id 精确路由
       panel._permissionSeq = (panel._permissionSeq ?? 0) + 1
       const id = panel._permissionSeq

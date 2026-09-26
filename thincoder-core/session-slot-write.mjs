@@ -23,7 +23,7 @@
 
 import { existsSync, readFileSync, renameSync, statSync } from "node:fs"
 
-import { getSessionId, loadManifest, saveManifest, slotDigest, slotPath, writeSessionFile } from "./session-slots.mjs"
+import { getSessionId, loadManifest, saveManifest, slotDigest, slotPath, writeSessionFile, sessionEnd } from "./session-slots.mjs"
 import { loadSlotFile } from "./session.mjs"
 // token 形态单源（格式校验 + 到期时刻）——本档的保存面合并规则复用同一判定。
 import { tokenExpiryMs } from "./token-ttl.mjs"
@@ -34,13 +34,16 @@ import { tokenExpiryMs } from "./token-ttl.mjs"
 const slotMtimeCache = new Map()
 export function _resetSlotMtimeCacheForTest() { slotMtimeCache.clear() }
 
-/** Fresh slot data default：全新空槽的规范结构（`newSession` 写盘面同形）。 */
+/** Fresh slot data default：全新空槽的规范结构（`newSession` 写盘面**同源**——SLOT-END-PARAM
+ *  批起 `newSession` 与本构造器单源）。首物化即记创建端（§6.20 判据句 4 写面：本端物化者 =
+ *  进程端名；「禁回填」不适用——本构造器只产全新槽）。 */
 export function newSlotData(cwd) {
   return {
     version: 2, cwd, title: "", updatedAt: Date.now(),
     history: [], contextHistory: [], tasks: [],
     planMode: false, goal: null, autoApprove: false, advisor: null,
     pendingReminders: [], sessionStart: null,
+    createdBy: sessionEnd(),
   }
 }
 
@@ -84,11 +87,16 @@ function rotateIfForeign(p, slot, data) {
 /**
  * 槽落盘单点（读-改-写面共用）：轮转判定 → 写槽文件 → 回写 manifest 摘要。
  * 返回轮转出的 `.bak` 路径或 null（调用方按需透出）。
+ *
+ * 创建端（SLOT-END-PARAM 批 §6.20 判据句 4 写面）：入参无 `createdBy` **且**槽文件不在盘
+ * （**轮转后**判据——`rotateIfForeign` 已让位现场）⇒ 本端即将首物化 ⇒ 落进程端名；
+ * 文件在盘（含老槽无键）⇒ 不动（禁回填）。
  */
 export function saveSlotData(cwd, slot, data) {
   data.updatedAt = Date.now()
   const p = slotPath(cwd, slot)
   const rotated = rotateIfForeign(p, slot, data)
+  if (data.createdBy === undefined && !existsSync(p)) data.createdBy = sessionEnd()
   writeSessionFile(p, data)
   slotMtimeCache.set(p, (() => { try { return statSync(p).mtimeMs } catch { return 0 } })())
   try {

@@ -125,6 +125,11 @@ Batch record, dispatch task books, verification conclusions, review firing, requ
   **Acceptance criteria** (machine-verifiable: commands, thresholds, assertion counts — no vague "do it well")
   **Delivery report format**.
   Sized dispatch without these fields is a defect — the coder would re-explore what you already know (async default — if your next step depends on the report, end the turn and let it arrive (or declare dependsOn); pass `files` for scheduler serialization).
+- **Dispatch size discipline (pre-flight · one dispatch, one change face)**: an implementation dispatch's `files` declaration is **≤15 files and must not span change faces** — **spanning faces ⇒ split the dispatch by face**.
+  **Three gates, every one of them**: **>15 files ⇒ split** · **spanning faces ⇒ split by face** · **an undecided call inside the implementation face ⇒ settle it first** (never leave "it depends" to the implementer).
+  **Structure decisions belong to design / dispatch**: split boundaries / landing points / shapes are **pinned at design time** — the implementer only writes code against the table; **an open structure decision left to the implementer = an entry point into the read loop**.
+  **A task book is a table, not prose**: the core of a dispatch is a **row-by-row action table** (action / `file:line` landing point / expected result);
+  prose carries only the **goal and the boundary**; **a "read these files first" list counts against the exploration budget** — a task book whose budget contradicts its reading surface is a dispatch defect.
 - **file-domain declaration semantics = expected touch surface (queue scheduling + transparent disclosure baseline) — not an authorization boundary; beyond-declaration ≠ violation, just disclose truthfully**:
   **the files declaration lists only the implementer's write domain** (source, test, design-doc files)
   ——the project's own process files (requirement pool / changelog / task-list family) must not be listed;

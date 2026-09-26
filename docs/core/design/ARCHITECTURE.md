@@ -3,7 +3,8 @@
 > 板块 = **架构总览**（横切薄枢纽）；本档 = 合并仓的**模块地图 + 硬约束 + 设计原则 + 接口速览**的唯一权威处。
 > 逐板块机制正文各归其档（`docs/core/design/<板块>.md`）——本档**只留速览与指针，不复制**（D2 单一权威源）。
 > 需求侧 = `docs/core/requirements/PHILOSOPHY.md`（三观——最高层需求）；产品级定性 = `docs/core/requirements/PROJECT.md`（CLI 侧旧档已并入）；VSC 专有面 = `docs/vsc/requirements/PROJECT.md`。
-> 双端对位 = 本档 §3.1 壳层装配地图 + §4.1 差异表（VSC 端接线面已并入——批 6）。
+> 桌面端（第四端）专有面 = 需求 `docs/desktop/requirements/PROJECT.md` + 设计**五档**（`docs/desktop/design/PROJECT.md` 总览 · `docs/desktop/design/SHELL.md` 宿主适配层 · `docs/desktop/design/IPC.md` 通道契约 · `docs/desktop/design/UI.md` 界面形态 · `docs/desktop/design/RENDERER.md` 渲染工艺）。
+> 三端对位 = 本档 §3.1 壳层装配地图 + §4.1 差异表（VSC 端接线面已并入——批 6）+ §4.2 三端壳面对位（桌面端并入 · 2026-09-25）。
 > 建档：2026-09-15（**B 式迁移轮 · 第 2 批**——`thincoder-cli/docs/design/ARCHITECTURE.md` 内容重建入基准层；旧档原地一字不改、留作参照历史）。
 > 本档坐标与行数 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`；行数口径 = 含末行的行计数）。
 
@@ -20,6 +21,7 @@
 | 3 | **Node 版本**：CLI 产品 `>=24` · 核包 `>=22.13.0` | `thincoder-cli/package.json:19` · `thincoder-core/package.json:8` |
 | 4 | **零第三方运行期依赖**——唯一运行期依赖 = 仓内核包 `@thincoder/core`（本地链接，非 registry 第三方） | `thincoder-cli/package.json:22` · `thincoder-cli/node_modules/@thincoder` |
 | 5 | **仓内三目录分工**：核包 `thincoder-core/`（共享实现）· CLI 壳 `thincoder-cli/` · VSC 壳 `thincoder-vscode/` | 仓根目录树（§3） |
+| 6 | **第四端（桌面端）适用面**：主进程纯 ESM（`.mjs`）· 预载 = 沙箱 CJS（`.cjs`——官方约束：沙箱预载不支持 ESM import）· 渲染面零 Node（原生 ESM + 手写 DOM，**无构建步骤**）· 零第三方**运行期**依赖（唯一 = 核包；Electron 与打包器 = **构建期 devDep**） | 设计 = `docs/desktop/design/PROJECT.md` §1–§2（KD-1 / KD-3 / KD-4 / KD-6）；宿主下限判据 = 启动自检（该档 §2 KD-7） |
 
 ## 2. 设计原则
 
@@ -40,7 +42,7 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 │   ├── cli/ · vsc/                 ← 产品面板块档
 │   ├── TODO.md · TODO-archive.md   ← 项目级台账（单仓单账）
 │   └── batches/                    ← 批次档
-├── scripts/                        ← 仓根统一机检族（doc-anchors / check-doc-width / check-ledger 及判据核；mirror-divergence 度量工具已退役 2026-09-17）
+├── scripts/                        ← 仓根统一机检族（单引擎四档：doc-check.mjs 入口 + doc-check-anchors.mjs 锚 / doc-check-targets.mjs 采集 / doc-check-width.mjs 行宽；判据全读 manifest 声明面。台账机检腿随台账面 SQLite 化退役 · mirror-divergence 度量已退役 2026-09-17）
 │
 ├── thincoder-core/                 ← 核包（@thincoder/core——共享机制实现 + 共享提示词与工具描述）
 │   ├── agent.mjs                   主循环（createAgent / runAgent）——见 AGENT-LOOP
@@ -71,10 +73,17 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 │   └── src/                        壳面——tui/（终端界面 + 命令族，60+ 档）· cli/（装配与引导）·
 │                                   acp/（协议桥）· crash-reports / heap-watch / upgrade / prompt-injections
 │
-└── thincoder-vscode/               ← VSC 产品（vsix）
-    ├── extension.mjs               扩展入口
-    ├── src/                        壳面——extension/ · agent/ · agent-tools/ · tools/（advisor/ · provider/ · memory/ · prompts/ 四目录随 W2/W8/W10/W12 迁核删旧）
-    └── webview/                    前端界面（VSC 独有面——对偶 = CLI 终端 TUI，两者不镜像）
+├── thincoder-vscode/               ← VSC 产品（vsix）
+│   ├── extension.mjs               扩展入口
+│   ├── src/                        壳面——extension/ · agent/ · agent-tools/ · tools/（advisor/ · provider/ · memory/ · prompts/ 四目录随 W2/W8/W10/W12 迁核删旧）
+│   └── webview/                    前端界面（VSC 独有面——对偶 = CLI 终端 TUI，两者不镜像）
+│
+└── thincoder-desktop/              ← 桌面端产品（Electron 宿主随产物分发——第四端；拟新增，实施批建）
+    ├── src/main/                   主进程壳面——入口 / 窗口 / 协议供给 / IPC / 壳装配第三份 / 端侧会话副本
+    ├── src/preload/                沙箱窄桥（contextBridge——渲染面零 Node）
+    ├── renderer/                   前端（原生 ESM + 手写 DOM——零框架零构建）
+    ├── scripts/                    产物校验（check-dist——照 VSC 侧 check-vsix 先例）
+    └── test/                       单入口 + 显式清单（权威 = `docs/core/design/TESTING.md` §10）
 ```
 
 ### 3.1 VSC 壳层装配地图（并入 · 批 6）
@@ -118,6 +127,7 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 | acp | ACP 协议桥 | IDE 缓冲 / 工具调用桥接 | `docs/cli/design/ACP-CLIENT.md` |
 | crash-reports | 崩溃捕获与取证 | fatal 报告 / 记录 / stderr 捕获 / 近堆快照 | `docs/cli/design/CRASH-REPORTS.md` |
 | bin/thincoder.mjs | CLI 命令表 | 命令分发入口 | ——（`thincoder-cli/bin/thincoder.mjs:1`） |
+| desktop 壳 | 宿主适配 + IPC 通道族 | 桌面端第四壳（Electron 宿主——主进程持核 · 渲染面零 Node；宿主面与通道面分档） | `docs/desktop/design/SHELL.md` · `docs/desktop/design/IPC.md` |
 
 **provider 关键决策（reasoning 语义）**：
 
@@ -149,6 +159,24 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 
 **VSC 专属设计取向**（承 VSC 源档 §1——与 core §2 重叠者不重述）：① **薄封装**——扩展是 agent 核心的 VS Code 适配层（负责任，不是办公设备）；② **职责分离**——extension host 负责 agent 循环与工具执行，Webview 只负责 UI 渲染与用户交互（`postMessage` 单向通信）；③ **VS Code 原生能力优先**——工具执行经 VS Code API 增强（如 `workspace.openTextDocument` 写入后自动在编辑器中打开文件）。
 
+### 4.2 三端壳面对位（桌面端并入 · 2026-09-25）
+
+> 速览级——机制细节归各端设计档（D2）：桌面端 = `docs/desktop/design/PROJECT.md`（入口；**五档导航**见其档头——`docs/desktop/design/SHELL.md` / `docs/desktop/design/IPC.md` / `docs/desktop/design/UI.md` / `docs/desktop/design/RENDERER.md`）；VSC 端 = 本档 §3.1 / §4.1 与 `docs/vsc/design/*`。
+
+| 方面 | CLI | VS Code | 桌面端 |
+|------|-----|---------|--------|
+| 用户界面 | 裸 ANSI TUI | Webview（隔离 iframe） | 原生窗口 + DOM（会话标签页） |
+| 宿主 | 终端（无宿主） | VS Code 扩展宿主 | Electron（随产物分发） |
+| 前端形态 | TUI 自绘 | Webview 前端（iframe 内） | 渲染面原生 ESM + 手写 DOM（零框架零构建） |
+| 渲染面 Node 能力 | 不适用（同进程） | 无（postMessage 桥） | 无（沙箱预载 + contextBridge 桥） |
+| 会话存储 | 共享目录 + 端 marker `.cli` | 共享目录 + 端 marker `.vscode` | 共享目录 + 端 marker `.desktop` |
+| 配置存储 | 共享 `config.json` | 同一文件 | 同一文件 |
+| 权限审批 | TUI 交互（y/n/a） | 弹窗 + 批确认 | 流内卡片 + 活动池计数 + 标签位（同一待决项三种视图） |
+| 活动渲染 | TUI 面板 | 活动面板 + 冻结入流 | 会话内右栏活动池（随会话入标签页，可折叠） |
+| 壳装配 | `assembleAgent` | `buildTopLevelAgent` | 第三份（形态对齐——共享化 = 独立议题） |
+| 测试面 | 单入口 `npm test` | `node thincoder-vscode/test/run.mjs` + 显式清单 | 同形（单入口 + 显式清单） |
+| 发行 | npm 包 | vsix（Marketplace / Open VSX） | 三平台安装包（win / mac / linux） |
+
 ## 5. 跨模块机制（未被板块文档分走的）
 
 - **自律工具注入范围表**——task / plan / goal / verify / subagent 各自主注入范围与 depth 限制（goal / verify 仅顶层；subagent / skill 防递归）。
@@ -159,7 +187,8 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 
 ## 6. 未决设计批
 
-- （暂无）
+- **桌面端 · 会话行「来源端」标注**：需核侧新增字段（槽创建端）方可实现——当前设计标 open（`docs/desktop/design/UI.md` §2 项 3）；待裁定：开核侧小批，或撤该标注。
+- **壳装配第三份是否抽共享层**（三端装配同形）：独立议题，不并入桌面端设计批（`docs/desktop/design/SHELL.md` §4）。
 
 ## 7. 不并项与历史沿革
 
@@ -183,6 +212,11 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 | VSC 源档 §1 设计原则（与 core §2 重叠者） · §2 整体架构图 · 文首未决 / 待办状态行 · 变更记录 | 重叠面 / 时点面 / 流水 | **不并**——VSC 专属取向已并入 §4.1；待办状态行与变更流水 = 时点材料（(d) 类） |
 
 ## 变更记录
+
+- 2026-09-25（**桌面端设计批 1 · 修正轮 · eng-designer**——设计评审 §3 轮次 1 发现 5）：桌面端指针随五档分档收正——档头专有面行改指**五档**路径 · §3 模块地图 desktop 壳行改指 `docs/desktop/design/SHELL.md` / `docs/desktop/design/IPC.md` · §4.2 行注改指五档导航 · §6 两项改指 `docs/desktop/design/UI.md` §2 项 3 / `docs/desktop/design/SHELL.md` §4。
+- 2026-09-25（**桌面端设计批 1 · eng-designer**——承 `docs/desktop/requirements/PROJECT.md`）：**补第四端**——档头专有面行 · §1.1 硬约束表增**桌面端适用面**行（第 6 行：主进程 ESM / 沙箱 CJS 预载 / 渲染面零 Node 零构建 / Electron 与打包器 = 构建期 devDep）。
+  §3 模块地图增 `thincoder-desktop/` 块 · §4 接口速览增 desktop 壳行 · 新增 §4.2 **三端壳面对位**表（CLI / VS Code / 桌面端）· §6 未决设计批登记两项（来源端标注需核字段 · 壳装配共享化）。
+  同批顺修：§3 机检族行**死指针**收正（`check-ledger` 等 v1 名 → 现体单引擎四档 `doc-check{,-anchors,-targets,-width}.mjs`）——一致性面，当场修并报。
 
 - 2026-09-20（**显示面消差批 · 批 4 收口轮 · eng-designer**——承 `docs/batches/2026-09-20-display-parity-batch.md` §2.11 未落面 / §5.13 批 2 实施记录）：§3 模块地图 `thincoder-core/agent/` 行补 **`child-marks.mjs`**（X6 标记常量下沉零依赖叶——先例 `relay-prefix.mjs`；`spawn-child.mjs:33` 再导出保 import 面；实读 **24 行**）。
 

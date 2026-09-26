@@ -2,7 +2,7 @@
 
 > 板块：工程模式 / 文档体系自持——**各仓记各仓的**：台账射程、批次档同规、文档体系自持、机检闸 L4 与形态合规 V4、例外判据。
 > 需求层指针 = `requirements/ENGINEERING-MODE-V2.md` §13.4（各仓自持 FR25 · F1–F14 / N1–N4）。
-> 兄弟档：`design/LEDGER.md`（台账条目契约 · L1–L3 机检 · 可见面）· `design/DOC-DISCIPLINE.md`（V1–V5 族）· `design/BATCH-RECORD.md`（批次档载体）。
+> 兄弟档：`design/LEDGER.md`（台账条目契约 · L1–L3 机检 · 可见面）· `design/DOC-DISCIPLINE.md`（**V1–V6** 族）· `design/BATCH-RECORD.md`（批次档载体）。
 > 判据指针：两轴面与 V1 跨仓边界的关系 = `design/DOC-DISCIPLINE.md` §2；正文引用形态规范落 `docs/README.md` §3.7。
 
 ## 1. 问题陈述与定位

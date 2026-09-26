@@ -94,6 +94,21 @@ test("engine floor wiring: activate() runs the guard first + engines.vscode pinn
   assert.equal(pkg.engines.vscode, "^1.104.0", "引擎下限值 = 用户裁定 ^1.104.0")
 })
 
+// ─── F9 接线机检：core 面自证诊断行（activate 内 · 护栏之后）───────
+
+test("core face wiring: activate() logs the resolved core entity face after the guard", () => {
+  const extSrc = readFileSync(new URL("../extension.mjs", import.meta.url), "utf8")
+  const bodyLines = extSrc.slice(extSrc.indexOf("export async function activate(")).split("\n")
+  const outIdx = bodyLines.findIndex((l) => l.includes("[thincoder] core face = "))
+  assert.ok(outIdx > -1, "activate() 记 core 面诊断行（F9 载入面自证）")
+  assert.ok(outIdx > bodyLines.findIndex((l) => l.includes("await applyEngineFloorGuard()")), "诊断行在引擎护栏之后")
+  assert.ok(bodyLines[outIdx].includes("console.warn"), "观察通道 = console.warn（Extension Host 日志）")
+  const readLine = bodyLines[outIdx - 1]
+  assert.ok(readLine.includes("import.meta.resolve") && readLine.includes("package.json"), "读取行取核实体同目录 package.json")
+  assert.ok(readLine.includes("unresolved"), "读取失败兜底 = core face = unresolved（不抛 / 不拒载）")
+  assert.ok(readLine.includes(".default.version"), "读取行取 core 实体版本（诊断行随带 v<version>）")
+})
+
 // ─── W8 接线契约机判（§2 W8——引擎护栏接线契约①/②）────────────────
 
 /** 静态 import 闭包：{ files, builtins, unresolved }。只走静态 import/export-from 边

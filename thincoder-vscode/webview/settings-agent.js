@@ -119,7 +119,6 @@ export function bindAgentControls() {
         consultTimeoutMs: (() => { const m = get("consult-timeout"); return m ? String(Math.round(Number(m) * 60000)) : undefined })(),
         verifyGuard: chk("ag-verifyguard"),
         advisor: {
-          guard: chk("adv-guard"),
           // null (not undefined) for empty slots: JSON serialization drops undefined
           // keys, so "slot missing" and "explicitly cleared" would arrive identical —
           // missing now BACKFILLS from config.json (GitHub #3), only null clears.
@@ -157,16 +156,20 @@ export function bindAgentControls() {
   }
   agCard.querySelectorAll("input, select").forEach((el) => el.addEventListener("change", autoSaveAgent))
   // Consult & Advisor is a SEPARATE card since the reorg — its static controls live outside
-  // agCard and must be bound explicitly (adv-guard was silently unbound after the
-  // split; consult-turns/consult-timeout are new). Consult rows and the advisor model slot
-  // already save via fireAgentSave/consult-rows-changed, so only these three need binding here.
-  for (const id of ["adv-guard", "consult-turns", "consult-timeout"]) {
+  // agCard and must be bound explicitly. Consult rows and the advisor model slot already save
+  // via fireAgentSave/consult-rows-changed, so only these two need the generic save binding here.
+  for (const id of ["consult-turns", "consult-timeout"]) {
     document.getElementById(id)?.addEventListener("change", autoSaveAgent)
   }
+  // adv-guard is NOT part of the generic agent save: its value is a session-slot flag, not a
+  // config field — it posts its own message instead (`setAdvisorGuard` = slot write + push).
+  document.getElementById("adv-guard")?.addEventListener("change", (e) => {
+    window._vscode.postMessage({ type: "setAdvisorGuard", value: !!e.target.checked })
+  })
   // 交付评审 🔴（GitHub #3 batch, 2026-08-29）：静态渲染的 effort select（adv-effort + 各
   // consult 行的 .consult-effort）由 innerHTML 生成、不在上面任何绑定路径里——只有 model
   // pick 后 refreshAdvisorEffort/refreshRowEffort 替换出的 select 才带监听。用户只改档位
-  // 不碰 model → 静默不保存（与当年 adv-guard 同类的 split 断链）。绑定 build 时存在的
+  // 不碰 model → 静默不保存（split 遗留的同类断链）。绑定 build 时存在的
   // 全部 effort select；替换件自带监听，这里不会重复。
   document.getElementById("adv-effort")?.addEventListener("change", autoSaveAgent)
   document.querySelectorAll("#consult-rows .consult-effort").forEach((el) => el.addEventListener("change", autoSaveAgent))

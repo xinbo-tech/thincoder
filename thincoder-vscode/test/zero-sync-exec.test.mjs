@@ -67,7 +67,10 @@ test("零同步 exec 扫描（F-MI7 判据① · 端侧半）：slot / peer 两�
   const consumers = refs.filter((rel) => stripComments(read(rel)).includes(SEAM_REF)).sort()
   assert.deepEqual(
     consumers,
-    ["src/extension/peer-instances.mjs", "src/extension/session-io.mjs", "src/extension/session-slots.mjs"],
+    // SLOT-END-PARAM 批（2026-09-25 · SESSION.md §6.20）：端壳 `session-slots.mjs` 的 marker /
+    // `resumeSlot` 算法副本注销归核 ⇒ 该档零自有探测、不再消费核探测束（本轮显式过目；域内
+    // 该档仍在 §3.1 条① 端域，扫描面不变）。
+    ["src/extension/peer-instances.mjs", "src/extension/session-io.mjs"],
     "端侧探测面消费者变更 ⇒ 零同步 exec 扫描域须复核（增删即须显式过目）",
   )
 })

@@ -90,6 +90,8 @@ function digestFromStore(fields, counters) {
     title: fields.title ?? "",
   }
   if (fields.activeModel) meta.activeModel = fields.activeModel
+  // 创建端（SLOT-END-PARAM 批 §6.20 判据句 4 读面——有值才带；老槽无键 ⇒ 键缺席 = 未知）
+  if (fields.createdBy) meta.createdBy = fields.createdBy
   return { ts: Date.now(), ...meta }
 }
 
@@ -153,6 +155,10 @@ export function saveSession(agent) {
   // saveSession 与 token-ttl persistEngTokens（settle 当场落盘）共用同一份（检查按
   // mtime 缓存 _slotMtime：自写未变跳过全量解析）。
   const rotated = guardForeignSlotFile(agent, p, slot)
+  // 创建端（SLOT-END-PARAM 批 §6.20 判据句 4 写面）：取值链在守卫内顺带解析（轮转/损坏/文件
+  // 不在盘 ⇒ 进程端名；解析通过 ⇒ 盘上键或 null）——**守卫之后**注入，本端首物化写一次，
+  // 此后透传盘上键；盘上无键（老槽）⇒ null ⇒ 键不落盘（禁回填）。
+  if (agent._slotCreatedBy != null) fields.createdBy = agent._slotCreatedBy
   // 绑定态 → 流式投影（段原文拼接——VSC 兼容面逐字同形）；未绑定 → 既有全量物化写
   if (agent._recordStore) saveProjectedSlot(agent, p, fields, contextHistory)
   else writeSessionFile(p, { ...fields, history: legacyHistory(agent), contextHistory })

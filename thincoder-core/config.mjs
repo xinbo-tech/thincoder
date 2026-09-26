@@ -48,7 +48,7 @@ export const DEFAULTS = {
     streamRules: [],      // time-traveling stream rules: [{ pattern: "regex", message: "reminder", action: "abort"|"warn", repeat: "always"|"once" }]
     advisor: { guard: false },  // code review is always available; guard: true pushes completion back until reviewed (opt-in). Also accepts provider/model/thinking/reasoningEffort/timeoutMs overrides. Deprecated: enabled (2026-08-21)
     autoThink: false,     // auto-classify task difficulty and set reasoning effort per-turn
-    engineering: false,   // strict methodology enforcement — design-before-code (design review + user approval before code)
+    engineering: false,   // initial default only — the runtime value is the session authority (MANIFEST.md §2.2 / ENGINEERING-MODE-V2.md §2.3 E5.1). Strict methodology enforcement — design-before-code (design review + user approval before code)
     // Async pool limits (AGENT-LOOP-ASYNC-POOL.md §6.10 D-24a/R14 + R13 — POOL-CONFIG-
     // UNIFIED 2026-09-09): { engCoder, other, advisor } — eng-coder pool / other-role
     // pool / advisor-review pool, defaults 4/4/4 (user ruling "eng-coder 四路，其他

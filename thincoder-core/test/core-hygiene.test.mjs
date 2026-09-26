@@ -84,6 +84,22 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
  * `agent-tools/batch-lifecycle.mjs` 302 → **293** ≤300（解析体迁叶档 `batch-paths.mjs`（**142**——新档 ≤300 不登记））
  * ⇒ **移出登记**（消解条件 = 本批落地，设计档预裁）；同批 `agent-tools/batch.mjs` 411 → **366**（>300 保留登记）·
  * `git/checkpoint.mjs` 449 → **444**（副本单源化）。
+ * SLOT-END-PARAM 批（2026-09-25 · `docs/batches/2026-09-25-slot-end-param.md` §2.3 行限段）登记
+ * `session-slots.mjs`（**321**——端名缝 + marker 三式端参 + `resumeSlot`/`deleteSlot` 端参）：越线原因 = 核
+ * marker 面端参数化（端名单源与 marker 家族同档内聚——判据单源）；设计 §2.3 预裁「**不拆**」（299 → 预计
+ * 317，实读 321；远低于 500 硬限）。拆分方案（设计 §2.3 备选 / §2.9 发现 7）= 端名缝（`END` +
+ * `setSessionEnd` + `sessionEnd`，~15 行）外提核内新档 `session-end.mjs`（该档零 import ⇒ 环外节点；
+ * marker 家族与守卫从该档 import）；触发条件 = 实施中可读性受损 · 端名取值点需在模块实例化期 / 顶层求值 ·
+ * 越 500 硬限 · 该档下次实质改动。
+ * 撞帽检查点批（2026-09-26 · `docs/batches/2026-09-26-turn-cap-checkpoint.md` §2.3 行 15 · 用例表 §2.5）登记
+ * `test/turn-cap-checkpoint.test.mjs`（**456**（`wc -l` · 2026-09-26 live-gap 实施后现读）——用例 1–3 / T2 / 7–9 / 12 / 13：检查点登记与兑现（async · sync · headless 三族）
+ * + 会诊 `consult_stop` 去向 + 续段预算/watchdog 重置；**补例 14** = 异步飞刀族（F8 第二执行体——
+ * send 续期文本落新段 + cancel 档 partial；登记 = `docs/batches/2026-09-26-turn-cap-live-gap.md` §2.7 T8））；设计预估 ~200
+ * （§2.3「新增 | ~200」），实施后越线（用例面与夹具随实核扩列）⇒ 处置 = **登记不拆**（同族夹具共享——
+ * `installStub` fetch 桩 / `PROBE` 探针 / `makeParent`+`CTX` 与各用例同根，拆档 = 复制脚手架；沿
+ * `test/batch.test.mjs` 先例）。
+ * 拆分方案 = 越 500 硬限时按族现裁（会诊 / 同步族候选外提——夹具同根 ⇒ 拆档 = 复制脚手架）；
+ * 触发条件 = 越 500 硬限 · 该档下次实质改动。
  */
 const SOFT_LINE_REGISTRY = new Set([
   "agent/dispatch.mjs", "agent/helpers.mjs", "agent/setup.mjs", "agent.mjs",
@@ -94,7 +110,7 @@ const SOFT_LINE_REGISTRY = new Set([
   "config.mjs", "context.mjs", "git/checkpoint.mjs", "manifest.mjs", "memory/code-sync.mjs",
   "memory/core.mjs", "memory/docs.mjs",
   "memory/schema.mjs", "model-specs.mjs", "process-probe.mjs", "provider/core.mjs", "provider/responses.mjs",
-  "session-lifecycle.mjs", "session-slots-manifest.mjs", "session-store.mjs", "session-gc.mjs", "test/batch.test.mjs", "test/manifest.test.mjs", "test/model-specs.test.mjs", "test/session-gc-stale.test.mjs",
+  "session-lifecycle.mjs", "session-slots.mjs", "session-slots-manifest.mjs", "session-store.mjs", "session-gc.mjs", "test/batch.test.mjs", "test/manifest.test.mjs", "test/model-specs.test.mjs", "test/session-gc-stale.test.mjs", "test/turn-cap-checkpoint.test.mjs",
   "test/provider-merge.test.mjs", "test/session-slot-write.test.mjs", "test/setup-reminders.test.mjs", "test/tool-seams-agent.test.mjs", "test/compress-form.test.mjs", "test/tool-seams.test.mjs",
   "tools/edit-diff.mjs", "tools/file.mjs", "tools/git.mjs",
   "tools/lsp.mjs", "tools/repomap.mjs", "tools/shared.mjs",

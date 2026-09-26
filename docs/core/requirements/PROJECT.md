@@ -1,6 +1,6 @@
 # 产品定性（PROJECT）· 需求
 
-> 板块 = **产品定性**——ThinCoder 产品族的定位与跨产品共享契约（两独立产品 / 共享配置与会话 / Provider 契约）。
+> 板块 = **产品定性**——ThinCoder 产品族的定位与跨产品共享契约（三独立产品 / 共享配置与会话 / Provider 契约）。
 > 本档 = 产品级定性面的**需求层权威**（决策表 + 共享契约——承旧 VSC 档 `PROJECT.md` 的产品级定性面）。
 > VSC 专有面（界面 / 入口 / 审批 / webview 形态 / 会话流时序）= `docs/vsc/requirements/PROJECT.md`（本批同 split——切分规则见 §5.2）。
 > CLI 侧同名档（`thincoder-cli/docs/requirements/PROJECT.md`——产品定性更完整）**已并入（2026-09-15 · CLI 尾部真批 · 按其档头自注对账合并）**——
@@ -10,44 +10,42 @@
 
 ## 1. 总体定位
 
-ThinCoder 产品族 = **两个独立产品**（终端 CLI + VS Code 扩展）——同级独立、用户只装哪一个都行；
-共享设计理念、提示词体系，以及**会话数据与配置数据**（两端读写同一份磁盘文件，可无缝接续同一会话、同一组 provider）。
+ThinCoder 产品族 = **三个独立产品**（终端 CLI + VS Code 扩展 + 桌面端应用）——同级独立、用户只装哪一个都行；
+共享设计理念、提示词体系，以及**会话数据与配置数据**（各端读写同一份磁盘文件，可无缝接续同一会话、同一组 provider）。
 
 ## 2. 产品族定性决策
 
 | 项 | 决策 | 备注 |
 |---|---|---|
 | 语言 | 纯 JavaScript（`.mjs`） | 无 TypeScript，无构建步骤，ESM 原生 |
-| 依赖 | 零 npm 运行时依赖 | 仅 `node:` 标准库 + 各端宿主 API（VSC 端宿主 = VS Code Extension API——见 `docs/vsc/requirements/PROJECT.md`） |
+| 依赖 | 零 npm 运行时依赖 | 仅 `node:` 标准库 + 各端宿主 API（VSC 端宿主 = VS Code Extension API——见 `docs/vsc/requirements/PROJECT.md`；桌面端宿主 = Electron，随发行物分发——见 `docs/desktop/requirements/PROJECT.md`） |
 | 产品关系 | 同级独立产品 | 互不依赖；同时装则共享配置与会话，切换无感 |
 
 ## 3. 跨产品共享契约
 
 | # | 契约 | 内容 |
 |---|---|---|
-| **C1** | 配置共享 | 两端读写 `~/.thincoder/config.json`（`providers[]` + `activeProvider`）；`apiKey` 缺省回退环境变量；旧 VS Code settings 一次性迁移后停用 |
-| **C2** | 会话共享 | `~/.thincoder/sessions/`（完整 sha1(cwd) + 槽位）——两端互读，可无缝接续同一会话 |
+| **C1** | 配置共享 | 各端读写 `~/.thincoder/config.json`（`providers[]` + `activeProvider`）；`apiKey` 缺省回退环境变量；旧 VS Code settings 一次性迁移后停用 |
+| **C2** | 会话共享 | `~/.thincoder/sessions/`（完整 sha1(cwd) + 槽位）——各端互读，可无缝接续同一会话 |
 | **C3** | Provider 预设权威 | preset 表以核 `thincoder-core/config-presets.mjs` 的 `PROVIDER_PRESETS` 为唯一权威（当前全集 **21** 个，含 `kimi-code` / `glm-code` / `mimo` / `mimoplan` / `claude`（format: anthropic）/ `gemini`（format: google））——各端不再各自硬编码（避免漂移）。〔2026-09-20 渠道接入批同步：旧述权威路径 `thincoder-cli/src/config.mjs` 已不存在（#129 融合后表体住核）；计数 20→21 与 `thincoder-core/config-presets.mjs` 同变〕 |
 | **C4** | custom 三协议 | 手动输入 name / baseURL / model，并选 API format：`openai`（默认）/ `anthropic` / `google`，写入 `provider.format`；三协议均有 transport |
 | **C5** | 模型选择两级结构 | provider → 模型 两级 + add / remove / key 管理项（对齐 CLI `openModelPicker → openModelListForProvider`）；各端按各自界面形态实现（VSC 端形态见 `docs/vsc/requirements/PROJECT.md`） |
 | **C6** | 添加 / 删除 provider 流程 | 对齐 CLI `addProviderFlow` / `removeProviderFlow` / `setKeyFlow`：添加 = 选 preset（过滤已添加）→ 自动填 baseURL / model → 输入 API key（custom 走 C4 手动流程）；删除 = 列出非 active 的 provider；key 管理 = 单独入口 |
 | **C7** | 多 Provider 默认选择 | 自动选第一个有 key 的 provider（用户配 key 本身就是选择行为；配了多个按列表顺序取第一个） |
-| **C8** | API Key 存储 | Key 落 `~/.thincoder/config.json` 明文，与 CLI 共享同一份配置（决策动因：两端共享配置 > 密钥链隔离）；旧版 SecretStorage 仅用于一次性迁移，迁移后清除 |
+| **C8** | API Key 存储 | Key 落 `~/.thincoder/config.json` 明文，各端共享同一份配置（决策动因：各端共享配置 > 密钥链隔离）；旧版 SecretStorage 仅用于一次性迁移，迁移后清除 |
 | **C9** | 与 CLI 记忆互通 | **暂不处理**——VSC 文件式记忆（`.thincoder/memory/` markdown + frontmatter）与 CLI 条目格式兼容；自动互通 / 合并检索未做，决策保留 |
 
-## 4. 与 thincoder CLI 的关系
+## 4. 三端关系
 
-```
-thincoder CLI                          thincoder-vscode
-├── 终端 TUI（裸 ANSI）               ├── VS Code 侧面板（Webview）
-├── 3 层记忆 + MCP                    ├── 文件式记忆 + MCP
-└── npm i -g thincoder                └── VS Code Marketplace
-两端共享（同一磁盘位置，互相读写）
-├── ~/.thincoder/config.json 配置（providers + activeProvider）
-└── ~/.thincoder/sessions/ 会话（完整 sha1(cwd) + 槽位）
-```
+| 端 | 界面 | 记忆面 | 发行 |
+|---|---|---|---|
+| thincoder CLI | 终端 TUI（裸 ANSI） | 3 层记忆 + MCP | `npm i -g thincoder` |
+| thincoder-vscode | VS Code 侧面板（Webview） | 文件式记忆 + MCP | VS Code Marketplace |
+| thincoder-desktop | Electron 壳（前端本端自持） | 复用核记忆面 | 三平台安装包 |
 
-同级独立产品。用户只装哪一个都行；同时装则共享配置与会话，切换无感。
+共享面（同一磁盘位置，互相读写）：`~/.thincoder/config.json` 配置（providers + activeProvider）· `~/.thincoder/sessions/` 会话（完整 sha1(cwd) + 槽位）。
+
+三端同级独立产品。用户只装哪一个都行；同时装则共享配置与会话，切换无感。
 
 ## 5. 产品定性（单产品面——CLI 侧同名档并入 · 2026-09-15）
 
@@ -57,7 +55,7 @@ thincoder CLI                          thincoder-vscode
 
 ### 5.1 品类与用户
 
-- **品类**：**通用 AI 编码智能体**——能读写代码、与人协作完成软件开发任务。CLI/TUI、VS Code 扩展、ACP 接入是接入面，不是定性。
+- **品类**：**通用 AI 编码智能体**——能读写代码、与人协作完成软件开发任务。CLI/TUI、VS Code 扩展、桌面端、ACP 接入是接入面，不是定性。
 - **用户**：**把代码交给 agent 负责、自己保留决策权的开发者与团队**——人定方向、agent 写代码。
   不假设用户在中国、不假设用户用 Node、不假设用户项目的目录形状（见 `docs/core/requirements/PORTABILITY.md` §2——FR10 正文随 v1 需求档归档待搬迁归位）。
 
@@ -73,7 +71,7 @@ thincoder CLI                          thincoder-vscode
 
 ### 5.3 明确不做什么（产品边界）
 
-- **不做通用编辑器 / IDE**——不重造编辑器；IDE 内以扩展 / ACP 接入（接入面属形态，不属定性）；
+- **不做通用编辑器 / IDE**——不重造编辑器；IDE 内以扩展 / ACP 接入（接入面属形态，不属定性）；桌面端同受此限——不含文件视图与编辑器（2026-09-25 用户裁定，暂缓）；
 - **不做云服务 / 托管平台**——本地运行、本地存储；团队记忆用 git 同步而非自建云；
 - **不做模型 / 推理服务**——只做 agent 层，直连各家 API（原生 fetch）；
 - **不做工作流引擎**——v2+ 也不当成重心；
@@ -104,7 +102,7 @@ v1 不需要团队记忆、先把 agent 主干做薄做扎实；存储 / 记忆�
 
 - **v1 功能范围（已全部超额交付）**：Agent 主循环、基础工具集、上下文压缩、TUI、三层记忆体系（超原计划）、
   Agent 自律工具链（task / plan / goal / verify / recent_changes / question / checkpoint）、子 agent 并行 / MCP / checkpoint 断点恢复（提前交付）；
-  明确不做（留 v2+）：工作流引擎、桌面 GUI。
+  明确不做（留 v2+）：工作流引擎。
 - **v2 团队记忆（远期——核心原则：存储 / 同步与检索性能分层解耦）**：真相源 = Git 仓库（markdown 条目）；本地索引 = SQLite（`node:sqlite`，可重建易失品）；
   全文检索 = SQLite FTS5（BM25）；语义检索 = embedding 向量存 sqlite BLOB + JS 余弦；混合排序 = FTS5 + 向量 RRF；远期升级位 = pgvector / 中心化服务端（接口预留）。
   架构方向细化 = `thincoder-cli/docs/design/_archive/ARCHITECTURE-v2.md`（旧树历史档，就地留参照——v2 未启动，以其为输入）。
@@ -162,6 +160,8 @@ v1 不需要团队记忆、先把 agent 主干做薄做扎实；存储 / 记忆�
 | CLI 侧同名档（`thincoder-cli/docs/requirements/PROJECT.md`） | CLI 产品定性正文（更完整） | **已并入（2026-09-15 CLI 尾部真批——按其档头自注对账合并）**——产品级定性面入 §5；(d) 类入 §6.1；VSC 专有面本就不在该档（CLI 档无 VSC 面） |
 
 ## 变更记录
+
+- 2026-09-25（**桌面端立项** · 需求面实施轮 · 主 agent——需求档笔权）：产品族由两产品扩为三产品——§1 产品族句 · §2 依赖行补桌面端宿主 · §3 契约主体改「各端」（C1 / C2 / C8）· §4 改「三端关系」表（原 CLI↔VSC 双端图）；§5.1 品类接入面枚举补「桌面端」；§5.3 边界补「桌面端不含文件视图与编辑器（暂缓）」；§5.6 撤「桌面 GUI」不做项（用户裁定立项）。新档 = `docs/desktop/requirements/PROJECT.md`（第四部分首档）。
 
 - 2026-09-15（**CLI 尾部真批 · 并入既有（对账合并——用户裁定②）· eng-designer**）：`thincoder-cli/docs/requirements/PROJECT.md` 逐节对账并入——
   产品级定性面入新增 §5（品类 / 用户 / 核心承诺 C1–C5 / 产品边界 / 定位坐标 / 两种工作模式 / 总体需求与 v1 范围 / v2 团队记忆分层与已细化决策 /

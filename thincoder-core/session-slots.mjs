@@ -10,6 +10,11 @@
  * sessionId）· 端记录（end marker）· 列表面（listSlots / loadSlotMeta）· 删槽 · 恢复决策面
  * （usableSlot / loadLegacyFile / resumeSlot）。
  *
+ * 端名缝（SESSION.md §6.20 D-SE50 · 2026-09-25 SLOT-END-PARAM 批）：端名 = **进程内的单值
+ * 声明**（`setSessionEnd` / `sessionEnd`；`END` 仅模块级初值——CLI 零声明即得「cli」）。
+ * marker 家族三式与写 marker 的核入口逐函数带**显式端参**（缺省 = 进程端名）——端壳经绑定
+ * 转口传本端常量（`(cwd) => coreX(cwd, END)`），核内零端名分支；未列写点一律走进程端名。
+ *
  * 模型：每个项目（cwd hash）拥有无限编号 slot；manifest 记录 active 指针 + 每个
  * slot 的属主进程（slotSessions: slot → "pid-timestamp-random"，CLI ↔ VS Code
  * 共享 manifest 以互斥认领）。
@@ -85,7 +90,7 @@ export function sessionPath(cwd) {
 }
 
 export function slotPath(cwd, n) { return sessionPath(cwd) + "." + n }
-export function manifestPath(cwd) { return sessionPath(cwd) + ".manifest" }
+export function manifestPath(cwd) { return sessionPath(cwd) + ".manifest" } // 会话级槽索引——≠ 项目级 PROJECT-MANIFEST.json
 
 // ========== end marker（SESSION.md §6.10 端分离恢复——本端"最后使用槽位"记录）==========
 
@@ -93,16 +98,28 @@ export function manifestPath(cwd) { return sessionPath(cwd) + ".manifest" }
  *  （NF1：本端记录是本端单写者文件——不新增跨端共享可变字段）。 */
 export const END = "cli"
 
-/** 本端记录路径：{manifest}.{END}（manifest 旁的独立小文件，非内嵌字段——NF1）。 */
-export function endMarkerPath(cwd) { return `${manifestPath(cwd)}.${END}` }
+/** 进程端名（SESSION.md §6.20 判据句 1 / D-SE50）：端名 = **端进程内的单值声明**——
+ *  模块级 `_end`，初值 = `END`；端壳（VS Code / 桌面）模块求值期一次 `setSessionEnd(<端名>)`，
+ *  CLI 进程零声明即得「cli」。marker 家族三式与写 marker 的核入口**逐函数缺省取本值**
+ *  （显式端参优先）；端名单源 = 本对函数，核内零端名分支（端名是值不是分支）。 */
+let _end = END
+/** 声明本进程端名（端壳一次；核不校验端名——拼错 = 该端退化为「缺失」，§6.20 边界行 4）。 */
+export function setSessionEnd(end) { _end = end }
+/** 本进程端名（marker 家族缺省参的单源）。 */
+export function sessionEnd() { return _end }
+
+/** 本端记录路径：{manifest}.{end}（manifest 旁的独立小文件，非内嵌字段——NF1）。端参三式
+ *  （本式 + `readEndMarker` / `writeEndMarker`）缺省 = 本进程端名（§6.20 判据句 2——显式参 >
+ *  进程端名）；端壳经绑定转口传本端常量。 */
+export function endMarkerPath(cwd, end = sessionEnd()) { return `${manifestPath(cwd)}.${end}` }
 
 /** 读本端记录：返回 { slot: <number|null>, updatedAt } 或 null。三态语义（D-1）：
  *  文件缺失 = 从未记录（升级/首用迁移窗口——可能触发一次性继承）；
  *  JSON 解析失败/结构非法（损坏）= 按"缺失"降级——不 rename 不 unlink（幂等、不误伤，
  *  T-M13）；`slot: null` = 显式置空（删过本端记录槽——绝不触发继承，T-M4）。 */
-export function readEndMarker(cwd) {
+export function readEndMarker(cwd, end = sessionEnd()) {
   try {
-    const p = endMarkerPath(cwd)
+    const p = endMarkerPath(cwd, end)
     if (!existsSync(p)) return null
     const m = JSON.parse(readFileSync(p, "utf8"))
     if (m && m.slot === null) return { slot: null, updatedAt: m.updatedAt ?? null }
@@ -113,9 +130,9 @@ export function readEndMarker(cwd) {
 
 /** 写本端记录（原子 .tmp+rename，复用 writeSessionFile）：slot = 目标槽号或 null（显式置空）。
  *  失败容忍（NF2）：写失败按无记录路径降级——不抛错，不影响会话数据（T-M14）。 */
-export function writeEndMarker(cwd, slot) {
+export function writeEndMarker(cwd, slot, end = sessionEnd()) {
   try {
-    writeSessionFile(endMarkerPath(cwd), { slot, updatedAt: Date.now() })
+    writeSessionFile(endMarkerPath(cwd, end), { slot, updatedAt: Date.now() })
   } catch { /* NF2：失败容忍 */ }
 }
 
@@ -163,6 +180,8 @@ function loadSlotMeta(cwd, slot, v) {
     const history = data.history ?? []
     const meta = extractSlotMeta(history, data.activeProvider, data.updatedAt ?? ts, data.title ?? "")
     if (data.activeModel) meta.activeModel = data.activeModel
+    // 创建端（§6.20 判据句 4 读面——有值才带：老槽无键 ⇒ 此处不带键 = 未知）
+    if (data.createdBy) meta.createdBy = data.createdBy
     return { ts, ...meta }
   } catch {
     return { ts }
@@ -194,6 +213,8 @@ export function listSlots(cwd) {
         updatedAt: meta.updatedAt ?? meta.ts,
         updatedDate: new Date(meta.updatedAt ?? meta.ts).toLocaleString(),
         title: meta.title ?? "",
+        // 创建端（§6.20 判据句 4 读面——缺键/老槽 ⇒ "" = 未知；「未知」的渲染文案归消费面）
+        createdBy: meta.createdBy ?? "",
       }
     })
     .sort((a, b) => b.updatedAt - a.updatedAt)
@@ -201,7 +222,7 @@ export function listSlots(cwd) {
 
 /** Delete a slot: remove its file and manifest entry. Deleting the active slot
  *  resets the manifest active pointer (the next claim re-creates one). */
-export function deleteSlot(cwd, slot) {
+export function deleteSlot(cwd, slot, { end = sessionEnd() } = {}) {
   const n = Number(slot)
   if (!Number.isInteger(n) || n < 1) return false
   const m = loadManifest(cwd)
@@ -215,7 +236,7 @@ export function deleteSlot(cwd, slot) {
   // 保留 fresh.active，2026-09-01 会诊三家 🟡）
   saveManifest(cwd, m, { slots: [n], slotSessions: [n] }, { setActive: true })
   // 2026-09-05 §6.10 D-4/F4：删到本端记录槽 → 记录显式置空（文件保留 + slot:null——下次全新起步，不复活——T-M4/T-M8）
-  if (readEndMarker(cwd)?.slot === n) writeEndMarker(cwd, null)
+  if (readEndMarker(cwd, end)?.slot === n) writeEndMarker(cwd, null, end)
   return true
 }
 
@@ -273,15 +294,17 @@ function loadLegacyFile(cwd) {
  *   ③ 其余一切（slot:null 显式置空 / 槽被删 / 属主为活外人 / 继承失败）→ allocateFresh。
  * 每次落点都写本端记录；claim 后读槽失败（.corrupted/.unreadable——loadSlotFile 既有改名
  * 保全语义）→ 保持已 claim 槽 + data:null——不改 marker——下次保存原地重建（T-M15）。
+ * `opts.end`（§6.20 判据句 2——显式端参 > 进程端名）：本端记录的读写端名——端壳经绑定转口
+ * 传本端常量（消费核本体的端壳零副本）；缺省 = 进程端名（CLI 全调用点零改）。
  */
-export async function resumeSlot(cwd) {
+export async function resumeSlot(cwd, { end = sessionEnd() } = {}) {
   const m = loadManifest(cwd)
   m.slotSessions ??= {}
   // 入口一次**异步束**（F-MI7——整链 async）：清理 / 可用 / 空闲全部查表，零逐 pid 探测。
   const bundle = await probeOwnersAsync(ownerPids(m))
   // 与 ensureActive 同型的死主清理（认领路径持久化——F5a 纪律：仅传 m 等于没删）
   const deadParam = cleanDeadOwners(m, bundle)
-  const rec = readEndMarker(cwd) // null = 缺失/损坏；{slot:null|N} = 文件在（D-1）
+  const rec = readEndMarker(cwd, end) // null = 缺失/损坏；{slot:null|N} = 文件在（D-1）
   let slot = null
   if (rec?.slot != null && usableSlot(cwd, m, rec.slot, bundle)) slot = rec.slot // ① 本端记录可用
   else if (rec === null) {
@@ -293,6 +316,6 @@ export async function resumeSlot(cwd) {
   // data 层：读已认领槽（loadSlotFile 自 session.mjs——环 import 见文件头）；读失败/槽文件不在 → legacy 单文件兜底（仅 data）
   let data = loadSlotFile(cwd, slot)
   if (!data) data = loadLegacyFile(cwd)
-  writeEndMarker(cwd, slot)
+  writeEndMarker(cwd, slot, end)
   return { slot, data }
 }

@@ -264,10 +264,10 @@
 1. **行构造 = 纯函数** `manifestStateLine({ phase })`（`thincoder-core/agent/setup-reminders.mjs`，与 `envStateLine` 同族、可单测）：
 
    ```text
-   [System reminder: project state: phase: <值> (discipline: <light|strict>).]
+   [System reminder: project state: phase: <值> (rigor: <light|strict>).]
    ```
 
-   - `discipline` 标签映射（判据单源 = 需求 v2 §9.1）：`initial-dev` → `light` · `production` → `strict`；未知值 → 无标签（只出值，不编判据）——行形 = `…phase: <值>.]`。
+   - `rigor` 标签映射（判据单源 = 需求 v2 §9.1）：`initial-dev` → `light` · `production` → `strict`；未知值 → 无标签（只出值，不编判据）——行形 = `…phase: <值>.]`。
    - 行族前缀 `MANIFEST_LINE_PREFIX`（`[System reminder: project state: `）与行内容**解耦**（前缀零改——摘旧行 / 会话重建认领同用它）。
 
 1b. **报明行构造 = 纯函数** `manifestReportLine({ state, cwd, root, path, candidates, errors, matched })`（同档——**本批新增**，KD-M1-26）——同一行族前缀，四态逐字（**歧义按 `matched` 两变体**）：
@@ -487,7 +487,7 @@ resolveEngineeringManifest(cwd, { writer = "subagent", init = true })
 
 | # | 验收标准 | 可机判 |
 |---|---|---|
-| AC-N1 | 行形逐字：`manifestStateLine` 三态（`initial-dev` · `production` · 未知值）输出与 §2.6 逐字行形一致 | ✅ 纯函数断言（两 `phase` 值各带 `discipline: light` / `strict`；未知值 → 无标签、只出值） |
+| AC-N1 | 行形逐字：`manifestStateLine` 三态（`initial-dev` · `production` · 未知值）输出与 §2.6 逐字行形一致 | ✅ 纯函数断言（两 `phase` 值各带 `rigor: light` / `strict`；未知值 → 无标签、只出值） |
 | AC-N2 | 幂等：同值重调 `pushManifestStateReminder` → `false`，且 history 长度不变 | ✅ 同 agent 连调两次 |
 | AC-N3 | 单活体：值变后 history 中该前缀行恰 1 条（旧文零命中） | ✅ `initial-dev` 推 → 切 `production` 再推 → 过滤计数 = 1 |
 | AC-N3b | 单活体（会话重建）：`history` 带旧行而 `_manifestLine` 缺失（跨会话——状态位不随历史回来）→ 值变后该前缀行仍恰 1 条（认领步） | ✅ 预置旧行（`transient` 机器行）+ 改 `agent.manifest.phase` → 推 → 该前缀行过滤计数 = 1（用例 = `thincoder-core/test/setup-reminders.test.mjs` `AC-N3b`，落点以用例名为准） |
@@ -533,7 +533,7 @@ resolveEngineeringManifest(cwd, { writer = "subagent", init = true })
 | T3b | 边界：`docRoot` 子键缺 | manifest 有 `docRoot` 但缺其一子键（如 `specs`） | `ok:true` + 补该子键默认值 + `missingKeys` 含子键路径 |
 | T5 | 错误：整档缺失 | 无 `PROJECT-MANIFEST.json` | `readManifest` 返回 `reason:'missing'`，不 fallback |
 | T7 | 错误：非主 agent 写 | `writeManifest(..., {writer:'subagent'})` / `initManifest(..., {writer:'subagent'})` | 拒（fail-closed） |
-| T8 | 正常：情境行落线 | 工程模式 + depth-0 + manifest `{phase:"initial-dev"}` | 恰一行 `[System reminder: project state: phase: initial-dev (discipline: light).]`；`transient:true` |
+| T8 | 正常：情境行落线 | 工程模式 + depth-0 + manifest `{phase:"initial-dev"}` | 恰一行 `[System reminder: project state: phase: initial-dev (rigor: light).]`；`transient:true` |
 | T9 | 边界：幂等 | 同 agent 连调两次（值不变） | 第二次 `false`，history 长度不变 |
 | T10 | 边界：值变单活体 | 先 `phase:"initial-dev"` 推，再置 `phase:"production"` 推 | 旧行被摘、恰一行新行（`history` 数组引用不变） |
 | T11 | 边界：压缩吞行 | 推后从 history 移除该行 | 下一回合重推（`true`，行回来） |
@@ -562,7 +562,7 @@ resolveEngineeringManifest(cwd, { writer = "subagent", init = true })
 | T29 | 边界：翻转清陈旧 | 工程模式已附着 → 置 `engineering:false` → 重调 | `agent.manifest === null`（AC-17） |
 | T30 | 错误：#33 files 声明面 | `["PROJECT-MANIFEST.json"]` / `["sub/project-manifest.JSON"]` / `["CHANGELOG.md","PROJECT-MANIFEST.json"]` | 拒，文案含 `/Manifest file/`（混合例两条文案齐：`/Manifest file/` + `/Parent-side maintained file/`）（AC-18） |
 | T31 | 端到端：CLI 非仓 normal 启动 | 子进程 `chat "hello"`（伪 HOME + 非仓 cwd + mock 端点；config 无 `agent.engineering`） | 退出码 0；stderr 无「工程模式启动拒绝」（AC-14） |
-| T32 | 正常：**值变重推（盘面驱动——#34）** | 临时项目根 + 真实数据档（`initial-dev`）+ 工程 agent（cwd = 该根）；推 → 改盘上 `production`（mtime 推进）→ 再推 | 第二次 `true`；行 = `phase: production (discipline: strict)`；该前缀恰 1 条（AC-N7——**先红**） |
+| T32 | 正常：**值变重推（盘面驱动——#34）** | 临时项目根 + 真实数据档（`initial-dev`）+ 工程 agent（cwd = 该根）；推 → 改盘上 `production`（mtime 推进）→ 再推 | 第二次 `true`；行 = `phase: production (rigor: strict)`；该前缀恰 1 条（AC-N7——**先红**） |
 | T33 | 边界：首次观测对齐（缓存未设） | 内存档 `initial-dev` + 盘上 `production` | 首推即 `production`（读一次对齐）（AC-N7d） |
 | T34 | 边界：未变零重读（mtime 未推进） | 首推后：改档内容 + `utimesSync` 复位 mtime → 再推 | `false`；行不变（未重读）（AC-N7b） |
 | T35 | 错误：stat 失败（档被删） | 首推后删档 → 再推 | 不抛；行不变（沿用已知值）（AC-N7c） |
@@ -712,3 +712,7 @@ AC-16 接线锁（`bin` 源码序）零改 · **AC-N5 / T13 收正**（门控第
   同轮判**保**（记录面——逐处给理由）：§2.3 表下 as-of 说明 + 上批批档指针（出处注）· §2.5 schema 计数句（带日期出处注）。历史沿革 = 批档 `docs/batches/2026-09-18-stale-expression-purge.md`。
 
 - 2026-09-18（**失效表达清理批 · 第 5 轮（终轮）· 本批直接执行 · 可 revert**——同批 §1 裁定 · 承第 4 轮上抛坐标）：§1.4 去批标签「**F7 腿（已完成）**」（留现值边界句）· §2.5 两条「原登记——现已落定」修订式收正（去原后果叙述——现值承接 = §2.8 / F4）· §2.5 键集条去「（本批变）」+「六 → 五」修订式（留键集现值句）。历史沿革 = 本档既有历史段 + 批档 `docs/batches/2026-09-18-stale-expression-purge.md`。
+
+- 2026-09-25（**工程模式归属口径统一批（eng-ownership）· 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-eng-ownership.md` §1 · 台账 #358）：
+  phase 标签 `discipline` → **`rigor`**（§2.6 逐字行形 / 标签映射 · §3.1 AC-N1 · §3.2 T8 / T32 五处原地改；与「会话模式 / 模式面档名」脱同词）。
+  语义零改（值域 `light` / `strict`、未知值无标签、判据单源 = 需求 v2 §9.1 逐条不动）。

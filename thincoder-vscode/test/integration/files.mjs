@@ -20,4 +20,5 @@ export default [
   "test/integration/vsc-panel-rings.test.mjs",
   "test/integration/vsc-autoapprove-midturn.test.mjs",
   "test/integration/reasoning-echo-live.test.mjs", // #109 D-CC22 活体推入面回声恒带（required 族恒带 / optional 族零回声）+ 端壳单点结构面（A-C8 / A-C9）
+  "test/integration/vsc-turn-cap-digest.test.mjs", // 批次 2026-09-26-turn-cap-checkpoint §2.5 用例 11 VSC 半（T-DG1/T-DG2）：系统轮撞帽收口——真 runTurnLoop + 临时 cfg maxTurns=2 ⇒ 恰 2 次调用 / result=stopped / digest cap 行在场 / 零 continue 卡零询问零重建 / 工具副作用在盘（TURN-CAP-CONTINUE.md §1 #7 D-TC15）
 ]

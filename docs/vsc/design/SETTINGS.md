@@ -376,11 +376,38 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 | 「—」（未注册占位） | 删 `reasoningEffort` 键；**不动** `advisor.thinking`（off 形 `null` 的跨保存存活 = 写面种子循环 carve-out——`doc:MODEL-SPECS.md:§15.4-5`） |
 | 旧 `effort` 键 | 读面兜底：`reasoningEffort` 缺席时按 `effort` 日值显示（且 `thinking` off 形 ⇒ 预选 `none`；优先级 = `doc:MODEL-SPECS.md:§15.4-4`）；保存时删旧键（不回写的死键不得复活） |
 | select 未渲染（枚举空） | 载荷**不发** `reasoningEffort` 字段（缺席 ≠ 清空）——手写键存活 |
-| 读面（预选取值） | `advisorEffortCurrent`（`settings-state.js`）：`thinking` off 形 ⇒ `none` > `advisor.reasoningEffort` > legacy `advisor.effort` > 「—」（规则单源 = `doc:MODEL-SPECS.md:§15.4-4`）；快照面（`thincoder-vscode/src/extension/settings.mjs:204`）为 spread 透传（新旧两键与 `thinking` 均随行）——端侧零改 |
+| 读面（预选取值） | `advisorEffortCurrent`（`settings-state.js`）：`thinking` off 形 ⇒ `none` > `advisor.reasoningEffort` > legacy `advisor.effort` > 「—」（规则单源 = `doc:MODEL-SPECS.md:§15.4-4`）；**off 哨兵 × 档枚举无 `none` 的族 ⇒ 预选「—」（不落注册默认档——`doc:MODEL-SPECS.md:§16.5`）**；快照面（`thincoder-vscode/src/extension/settings.mjs:204`）为 spread 透传（新旧两键与 `thinking` 均随行）——端侧零改 |
 
 **归一规则（两 select 同源）**：`doc:MODEL-SPECS.md:§15.4` 的 `effortSelection`（已存值∈枚举 > 注册默认∈枚举 > 中性档）；面板渲染面 = `effortSelectView`（「—」恒首项）。
 
 **与需求档登记的关系（报告结论）**：`docs/vsc/requirements/WEBVIEW.md` P2-4「元素缺席 ≡ 显式清空」的 **advisor-effort 半由本节消解**（select 未渲染 ⇒ 不发字段）；P2-4 余项（advisor `provider` / `model` 与其他面板字段的缺席语义）= 需求档条目，本批不动。
+
+### 2.14 Advisor guard 写面收口：槽唯一权威 + 两键通用保存通路关闭（2026-09-25 批 · 台账 #362 / #380 · 承 #358）
+
+**开题事实（实读 · as-of 2026-09-25）**：面板 guard 复选框走 `setAdvisorGuard` 消息（`thincoder-vscode/src/extension/panel-messages-settings.mjs` `handleSetAdvisorGuard:161-167`）——
+该 handler 原为「slot authority + **config mirror**」双写（原 `:163-166`；本批已删镜像行）；而 engineering 键经 #358 收口后已为槽唯一权威 ⇒ **同一面板内两键行为分叉**。
+另：通用保存写面（`thincoder-vscode/src/extension/settings-panel-write.mjs`）原留两条通路——白名单含 `engineering`（原 `:88`；本批已删）· guard 赋值行（原 `:142`：载荷直写 + 缺席物化 `guard:false`；本批已删）。
+
+**写面契约（本批后态）**：
+
+| 键 | 唯一写面 | 通用保存面（`settings-panel-write.mjs`） | 翻转路径 |
+|---|---|---|---|
+| `agent.advisor.guard` | 会话槽（`setSlotAdvisorGuard`） | **删 guard 赋值行**（原 `:142`；本批已删）——只经种子循环（`:135-139`）**verbatim 存活**（在场原值回写 / 缺席保持缺席 / 零强制转换） | `setAdvisorGuard` 消息 ⇒ 槽写 + `_pushSettingsLight()`，零 config 写 |
+| `agent.engineering` | 会话槽（#358 已收口——`setSlotEngineering`） | **白名单删项**（原 `:88`；本批已删）——通用保存不可达 | `setEngineeringEnabled` 消息 ⇒ 槽写 + `_pushSettingsLight()`（本行只作同口径对照，零改） |
+
+**面板复选框接线（webview）**：`thincoder-vscode/webview/settings-agent.js` 的通用保存载荷删 `guard` 字段；
+`#adv-guard` 改挂 change 监听直接 post 既有消息 `{ type: "setAdvisorGuard", value: checked }`——**协议零增量**（消息类型 / 形状与工具栏 `webview/mode-buttons.js:37` 同型）。文案 / 本地化零改。
+**无「已保存」徽标（观感面）**：翻转走专线不经 `autoSaveAgent`（其徽标闪点 = `thincoder-vscode/webview/settings-agent.js:153-154`）⇒ 翻转不闪「已保存」徽标；与工具栏开关同口径（`webview/mode-buttons.js:37` 亦零徽标）。
+**发值面穷尽旁证（实读）**：webview 通用保存发值面 = `settings-agent.js` 唯一载荷构造点 + `webview/settings-providers.js:89`（只 `defaultModel`）⇒ engineering 零发值、guard 仅专线（无第二旁路）。
+
+**读面零改**：guard 取值链每次快照构建按槽优先（`thincoder-vscode/src/extension/settings.mjs:204`——`slotData?.advisor?.guard ?? (config === true)`）；
+复选框随建面 / 重开按快照渲染（推送不重建面板——`thincoder-vscode/webview/settings-agent.js:146-147`/`:181-183`（`updateAgentSettings`））。
+
+**机检面（本批）**：`thincoder-vscode/test/config-io-panel-guard.test.mjs`（用例 T-1–T-8：两键翻转 config 逐字不变 · 伪造旁路直测 · 缺席 / `true` / `false` 三格 · `null` ⇒ 保存后键缺席）+
+`thincoder-vscode/test/effort-select-views.test.mjs`（载荷无 `guard` 键 · guard 变更 ⇒ post `setAdvisorGuard` 且零 `saveAgentSettings`）——用例表 = 批档 §2。
+
+**边界登记**：磁盘 `advisor.guard: null` 形态被种子循环丢弃（`v: null` 除 `thinking` 外 continue——既有通例，本批零改）⇒
+判据「翻转 / 任意保存前后对应键逐字不变」的用例域 = {键缺席 / `true` / `false`}；`null` 形态见 §3 登记行。
 
 ## 3. 已知待办与已知限制
 
@@ -421,6 +448,17 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
   拆分组边界 = ① 快照族（`agentSettings` / `proxySettings` / `websearchSettings` / `fullStatus`）② 渠道路由族（provider 增删 / 代理旗标 / 连接测试）③ 密钥与 MCP 族（`saveProviderKey` / `deleteProviderKey` / MCP 三件）——① 拆出 = `thincoder-vscode/src/extension/settings-snapshots.mjs`（拟新增）。
   拆分计划 = 触发阈值 **450 行** 或该档下次结构改动（先到即拆）；到期条件 = 触发阈值到达时。
 
+- **`advisor.guard: null` 磁盘形态 vs 判据用例域**（边界面 · §2.14 载体）：种子循环（`settings-panel-write.mjs:135-139`）对 `v === null` 除 `thinking` 外 continue
+  ⇒ 面板通用保存不 verbatim 携带该形态（既有通例，非本批引入）。本批判据（翻转 / 任意保存前后 config 逐字不变）的用例域 = {键缺席 / `true` / `false`}；
+  **静态预期（本批）= `null` ⇒ 保存后键缺席（非 `null` / 非 `false`）**——机制链（实读）：种子循环先丢该 null ⇒ `patch.advisor` 不含该键（`:174`）⇒ `applyAgentPatch` 顶层整键替换（`:30-37`——`advisor` 顶层键整段覆盖、无深合并）⇒ 盘上该键缺席。
+  消解路径 = 若后续统一 null 语义（全族 carve-out 收拢），则同笔纳入；到期条件 = `settings-panel-write.mjs` 种子循环下次被触碰。
+- **镜像撤写后的措辞残余族（域外坐标 · 只报不修）**（措辞面 · 本批 + #358 撤写的残留语句）：
+  ① `docs/core/design/ENG-TOKEN-BINDING.md:100`（「slot 持久化 = 会话槽 + config.json mirror」——该 mirror 已被 #358 撤销）·
+  ② `docs/core/design/ENGINEERING-MODE-V2.md:377`（读面回退句）· ③ 注释 / 产品文本：`thincoder-vscode/AGENTS.md:86` · `thincoder-vscode/src/extension/settings.mjs:181` · `thincoder-vscode/src/extension/panel-session-write.mjs:92` ·
+  `webview/mode-buttons.js:3-4`（「These mirror config.json fields」——engineering / advisor 两钮语境已失实）。
+  台账 #378 在册集 = `docs/core/design/TOOLS.md:81` / `:122` + 注释三处（③ 前三项）；① 与 ③ 的 `mode-buttons.js` 项为本轮新增实读。
+  消解路径 = 各档下次被触碰逐处收正（设计档笔 = eng-designer；注释 / 产品文本 = 产品代码面）；到期条件 = 各档下次被触碰 / 父侧另册归形小批。
+
 ## 4. 不并项与历史沿革
 
 ### 4.1 历史沿革（(d) 类——**不并**）
@@ -460,8 +498,15 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 | U-S10 | 回填跳过聚焦中的控件（用户输入优先于推送） | 已定（§2.8） |
 | U-S11 | 不可复得类（凭证原文随删除消失）删除 = **面板内确认弹框**（复用 `.auto-confirm` 件）；可重填类 = 直通门 `_confirmDelete`——**本批后为空域**（入口册 **6 行**全数入本门；直通门零调用点） | 已定（§2.10；类名与实例按可复得性判据重述——MCP server 行（2026-09-18）+ provider 行 −（2026-09-19 裁定 A）+ **模型菜单 footer 行（2026-09-19 入口册 #6/6**——口径 = 册序）入本门） |
 | U-S12 | Advisor effort 选择三态：档位值 = 写 `advisor.reasoningEffort`；`none` = 关思考（写 `thinking` off 形 + 删 effort 键）；「—」= 不设档（删 effort 键，不动 thinking） | 已定（§2.13 · §15.4 规则单源） |
+| U-S13 | Advisor guard 开关 = **槽唯一权威**（翻转 / 通用保存两路均不写 config.json）；engineering 同口径（#358） | 已定（§2.14） |
 
 ## 变更记录
+
+- 2026-09-25（**config 镜像写收口批 · 坐标 / 措辞收正（fix 轮 2）· eng-designer**——承 `docs/batches/2026-09-25-config-mirror-closeout.md`）：
+  §2.14 三处坐标收正——徽标闪点 → `settings-agent.js:153-154`；种子循环 → `settings-panel-write.mjs:135-139`；`patch.advisor` 键缺席点 → `:174`。
+  §3 残留族登记删 `WEBVIEW-PROTOCOL.md:111` 项（本轮已收正）+ 余项重编号。**零新语义**。
+
+- 2026-09-25（**config 镜像写收口批 · 坐标收正（fix 轮）· eng-designer**——承 `docs/batches/2026-09-25-config-mirror-closeout.md`）：§2.14 按实读收正——`handleSetAdvisorGuard` → `:161-167`；已删旧位三处标「原 …；本批已删」；种子循环 → `:135-139`；槽写推段 → `:146-147`/`:181-183`；机检档 → `config-io-panel-guard.test.mjs`（用例 T-1–T-8）。**零新语义**。
 
 - 2026-09-22（**hygiene-sweep 批 · 文档卫生轮（上抛处置）· eng-designer**——承 `docs/batches/2026-09-22-hygiene-sweep.md` §2 · 台账 #225）：规范面修订式标记清理（上抛 3 处）——§2.10「受裁例外条作废 / 需求侧措辞已作废」转裁定语（承用户 08:11 裁定 A）；§3 处置沿革条去「例外条作废 →」对照语（留「判据句 = §2.10」）。**语义零改**。
 
@@ -517,6 +562,12 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
   **零新语义**（均为批档 §1 条目 + 门位选型 + 本席实跑读数的直接导出；机制条文其余零改）。
 - 2026-09-25（**规格·effort 轮 · eng-designer**——承 `docs/batches/2026-09-25-spec-effort.md` §2 · 台账 #331 / #330）：新增 **§2.13 Advisor effort 键接线**（`effort` → `reasoningEffort`、off 形、旧键读回+删、未渲染不发字段）+ **U-S12**（三态语义）；effort 归一规则单源指 `doc:MODEL-SPECS.md:§15.4`（本档不复述规则体）。
   需求档 P2-4 的 advisor-effort 半消解（只报，需求档笔不在本席）。
+- 2026-09-25（**off 形族收尾批 · eng-designer**——承 `docs/batches/2026-09-25-off-family-closeout.md` §2 · 台账 #334 / #335 / #346）：§2.13 读面行补 **off 哨兵 × 无 `none` 档 ⇒ 预选「—」（不落注册默认）**（规则单源 = `doc:MODEL-SPECS.md:§16.5`）；off 形族规则体与两菜单形态零改。
 - 2026-09-25（**规格·effort 轮 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承 `docs/batches/2026-09-25-spec-effort.md` §3 轮次 1）：§2.13 off 形行**收正为族别形**（规则单源 = `doc:MODEL-SPECS.md:§15.4-2`——原单式只覆盖自定义开值族，effort 族落 `{type:"disabled"}` 时载荷门不开）
   + 「—」行补 off 形跨保存存活注（写面种子循环 carve-out——`§15.4-5`）+ 旧键行补读面优先级指针（`§15.4-4`）+ **新增读面行**；§3 新增 `settings.mjs`（**409** 行）拆分复核登记（结论 = 本批不拆 · 组边界 · 阈值 450）。
   **零新语义**（= 评审发现 #1 / #3 / #5 的直接导出项）。
+- 2026-09-25（**config 镜像写收口批 · eng-designer**——承 `docs/batches/2026-09-25-config-mirror-closeout.md` §2 · 台账 #380 / #362 · 用户 2026-09-25 16:37 裁定①）：
+  新增 **§2.14**（advisor.guard 停 config 镜像写——槽唯一权威；通用保存面删 guard 赋值行 + 白名单删 `engineering`；面板复选框改接既有 `setAdvisorGuard` 消息）+ **U-S13**；
+  §3 +2 条登记（`advisor.guard: null` 用例域边界 · 镜像撤写后的措辞残余族——域外坐标一览 + 消解路径 + 到期条件）。读面零改；协议零增量。
+- 2026-09-25（**config 镜像写收口批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承 `docs/batches/2026-09-25-config-mirror-closeout.md` §3 轮次 1）：§2.14 读面零改句收正（删错面 `agent-state.mjs:93-101` 引用 ⇒ 快照构建槽优先 + 复选框随建面 / 重开渲染）+ 机检面 `null` 格改「保存后键缺席」+ 补零「已保存」徽标明示（与工具栏同口径）；
+  §3 `advisor.guard: null` 行静态预期定死（保存后键缺席——机制链 + 到期条件收正）。**零新语义**（= 评审发现 #2–#4 的直接导出项；#1 = 协议档表体随实现同步，见批档 §2）。

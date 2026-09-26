@@ -140,6 +140,9 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
 
   // Per-run bookkeeping reset — PRESERVED on `resume` (ContinueError continuation):
   // mutation/guard continuity and the convergence budget must survive a continuation.
+  // §2.3 链内段数（TURN-CAP-CONTINUE.md §4）：首段 1、每次续跑 +1——复位条件同 `_turnSeq`
+  // （链起点复位、续跑不回退）；消费面 = 检查点 ask 载荷 / 池条目留痕二元。
+  agent._continueSegments = resume ? (agent._continueSegments ?? 1) + 1 : 1
   if (!resume) {
     // 第 19 批（TURN-ACROSS-SEGMENTS——设计 TURN-CAP-CONTINUE.md §4）：链内累计编号
     // 只在链起点复位——续跑（resume:true）不重置、不回退（编号帧公式见 helpers.mjs

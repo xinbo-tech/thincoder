@@ -264,7 +264,8 @@ export function buildPanelCallbacks(panel, deps) {
   // （撞帽续跑——归属键在 args.agent）。形态 = 按次解析归属键 ⇒ `makeChildPermission` 按次构造
   // （announce → ask → 清态 + owner 归属——面板卡带 `<role>#<id>` 归属、与活动块同源）；
   // 键不符（嵌套 relay 等）⇒ 回退面板 gate **原样名**询问（卡可达 · 无归属标签）；
-  // AUTO（live）⇒ 直返 true 零卡。核分支：缺失本供给 ⇒ 核 spawn 分支静默 `return false`、
+  // AUTO（live）⇒ 直返 true 零卡——**`continue` 名除外**（续期恒须人答：两分支皆携 gate 豁免）。
+  // 核分支：缺失本供给 ⇒ 核 spawn 分支静默 `return false`、
   // 不出卡（`subagent-spawn.mjs:308-309`——手动档子代写症状源）。
   // 残环批（2026-09-16——承 `docs/batches/2026-09-16-subagent-panel-residual-rings.md` §2）：
   // ① 条目级 signal 接回——按归属键 id 读池条目（与 ⏹ 路由同源同式：`panel._liveLines ??
@@ -273,7 +274,9 @@ export function buildPanelCallbacks(panel, deps) {
   //    `permissionWithdrawn`；迟到弹卡 sig 已 abort ⇒ 即释放）；② model 供给（`escalate <model> #<id>`）；
   // ③ continue 键形解析（「键形才归属」单规则——文法单源 `parseRelayPath`）。
   cbs.onPermissionRequest = async (name, args) => {
-    if (panel._autoApprove) return true // live AUTO（`permissionGate` 同款 mid-turn 语义）
+    // TURN-CAP-CONTINUE.md §1 #7 / D-TC15（2026-09-26）：`continue` 不在 AUTO 授权面——续期恒须人答
+    // （AUTO 其余名短路不变；撞帽收口见 turn loop digest 支）。
+    if (panel._autoApprove && name !== "continue") return true // live AUTO（`permissionGate` 同款 mid-turn 语义）
     // 归属键解析（单规则「键形才归属」——文法单源）：relay 名（`<role>#<id>/<tool>`）；
     // continue = 名锁死、键在 args.agent（全消耗才认——`zhipu:glm-5.2` 等非键形态回退）。
     let ownerKey = null
@@ -295,12 +298,15 @@ export function buildPanelCallbacks(panel, deps) {
         role: ownerKey.slice(0, hash),
         model: entry?.model ?? null,
         signal: entry?.controller?.signal ?? null,
+        // §1 #7 / D-TC15：续期不在 AUTO 授权面——本询豁免 gate 的 live AUTO 短路（键形分支）
+        forceAsk: tool === "continue",
       })
       if (perm) return (await perm(tool, args, null)) === true
     }
-    // 回退：面板 gate 原样名询问；无 gate（headless / AUTO 构建期）⇒ false（核分支同语义）
+    // 回退：面板 gate 原样名询问（`continue` 名同携 AUTO 豁免——续期恒须人答）；
+    // 无 gate（headless）⇒ false（核分支同语义）
     const ask = cbs.onPermissionRequired
-    return ask ? (await ask(name, args, null)) === true : false
+    return ask ? (await ask(name, args, null, { forceAsk: String(name) === "continue" })) === true : false
   }
   return cbs
 }
