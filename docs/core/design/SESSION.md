@@ -60,6 +60,7 @@
 **本批（EXIT-CLAIM-RELEASE · 2026-09-21）落点表** = `docs/batches/2026-09-21-exit-claim-release.md` §2（唯一承载面——一次性批次材料）；本档 §6.18 承载判据句 / 接线序 / 边界情形 / 验收回指。
 **本批（SESSION-INDEX · 2026-09-22）落点表** = `docs/batches/2026-09-22-session-index.md` §2（唯一承载面——一次性批次材料）；本档 §6.19 承载机制判据句 / 取源与水位 / 重建面 / 查询面路由 / 边界情形 / 验收回指。
 **本批（SLOT-END-PARAM · 2026-09-25）落点表** = `docs/batches/2026-09-25-slot-end-param.md` §2（唯一承载面——一次性批次材料）；本档 §6.20 承载端名参数化判据句 / 创建端字段取值链 / 端差注销 / 边界情形 / 验收回指。
+**本批（桌面批 B · 2026-09-27）落点表** = `docs/batches/2026-09-27-desktop-chat-panel-b.md` §2（唯一承载面——一次性批次材料）；本档 §6.21 承载槽字段 / 写出口 / 档位归一 / 施加面 / 边界情形 / 验收回指。
 
 ## 6. 机制面（自 CLI 产品档并入 · 2026-09-14 · B 轮）
 
@@ -130,11 +131,11 @@
 
 ### 6.4 保存与恢复
 
-- **`saveSession`**：`history = (_fullHistory ?? history).filter(非 transient + 非 legacy-transient)`；`contextHistory = agent.history.filter(非 legacy-transient)`（**机读线保留 transient**）；写 `agent._slot` 槽 + 更新 manifest 摘要（`slotDigest`：messageCount / turnCount / firstMessage / activeProvider / title）；
+- **`saveSession`**：`history = (_fullHistory ?? history).filter(非 transient + 非 legacy-transient)`；`contextHistory = agent.history.filter(非 legacy-transient)`（**机读线保留 transient**）；写 `agent._slot` 槽（槽数据字段表含会话级偏好 `effort`——§6.21）+ 更新 manifest 摘要（`slotDigest`：messageCount / turnCount / firstMessage / activeProvider / title）；
 返回轮转的 `.bak` 路径或 null。TUI 每次回合结束保存（崩溃最多丢半轮）。
 - **恢复入口**：启动恢复（TUI）= `await resumeSlot(process.cwd())`（三支决策 + 认领 + 写本端 marker）→ `applySession` → `agent._slot = slot`（**首保存必落恢复槽**）；headless `thincoder chat` 不恢复。`loadSlotFile` = **无认领副作用**的槽文件读取器（version 1/2 + history 数组 + cwd 匹配）：结构不符 → `.unreadable`；解析失败 → `.tmp` 备份优先回退（回退成功则提升为正主）；
 **主文件缺失时恢复孤儿 `.tmp`**。
-- **`applySession`**：人读线 `_fullHistory` ← `data.history`；机读线 `agent.history` ← `data.contextHistory`（缺失/为空才回退 history 播种）；title / tasks / planMode / autoApprove / goal / pendingReminders / sessionStart / advisor 逐字段；`activeProvider ≠ 当前` 按名切回（找不到不回切）；
+- **`applySession`**：人读线 `_fullHistory` ← `data.history`；机读线 `agent.history` ← `data.contextHistory`（缺失/为空才回退 history 播种）；title / tasks / planMode / autoApprove / goal / pendingReminders / sessionStart / advisor / **effort**（会话级档位施加——§6.21）逐字段；`activeProvider ≠ 当前` 按名切回（找不到不回切）；
 清 `_slot` / `_slotMtime` 与 `_compressFailures` / `_verifyRetries`。
 - **机读线必须从 `contextHistory` 恢复**（从完整 history 重建会把已压缩的中间过程塞回上下文——实测 prompt 膨胀到 283%）。
 - **v1 老文件回退播种**时剥离被 slim 截断的 `tool_calls.arguments`（以 `…` 结尾 → 置 `{}`——截断可劈断 `\uXXXX` 产生 400 毒载荷）。
@@ -339,8 +340,8 @@ configDir 版（端侧无直调点）。`sessionsDir()`（`thincoder-vscode/src/
 `engDesignToken` / `engDesignTokens` 用 `"key" in extra ? extra.key : existing.key ?? null` 语义——显式 null
 （清盘）必赢、缺席保留槽值（R16 TTL 过期后 restore 清盘、turn 尾 agentState 携显式 null 必须 pin；abort /
 finally 保存无 agentState → 缺席保留槽值不误清）。
-- **`setSlot*` 写面（W11 起单源 = 核 `thincoder-core/session-slot-write.mjs`；端壳转口）**：`setSlotAutoApprove`（`:126`）/
-`setSlotPlanMode`（`:131`）/ `setSlotEngineering`（`:136`）/ `setSlotAdvisorGuard`（`:141`）/ `newSlotData`（`:38`）；
+- **`setSlot*` 写面（W11 起单源 = 核 `thincoder-core/session-slot-write.mjs`；端壳转口）**：`setSlotAutoApprove`（`:140`）/
+`setSlotPlanMode`（`:145`）/ `setSlotEngineering`（`:150`）/ `setSlotAdvisorGuard`（`:155`）/ `newSlotData`（`:46`）/ `resolveEffortPatch`（`:197`）/ `setSlotPrefs`（`:213`——会话级偏好，见 §6.21）；
 端壳 `thincoder-vscode/src/extension/session-slot-write.mjs` = 转口 + **（cwd, slot）型 token 台账三式**（见上 W11 接线面）。
 `loadSlotForWrite` 对「无文件但本进程刚 claim 的槽」返回 `newSlotData` 默认记录——否则
 `setSlot*` 落在「claim 先行、首保存落盘」的新槽时 `if (!data) return false` 静默丢标志（AUTO-bug 修复）；
@@ -686,7 +687,32 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 
 **不做（边界）**：不做端名校验 / 端名闭集机检 · 不改 marker 内容形态（NF1）· 不改桌面端设计档（`docs/desktop/**`）· 不迁 ACP 显式钉槽面（不经 marker）· 不回填老槽 · 不做「仅 digest 承载」（派生品重建即丢）。
 
-## 7. 关键决策记录（D-SE1–D-SE52）
+### 6.21 会话级偏好槽字段（provider / model / effort）（2026-09-27 · 桌面批 B 核面小改）
+
+> 解决的问题：桌面端「会话级模型 / provider / 推理档位」要求随会话槽持久化、与 CLI / 扩展端**同一份槽**（`docs/desktop/requirements/PROJECT.md` §3.1:47）；而核现无这三键的槽写出口（既有四钥 = `autoApprove` / `planMode` / `engineering` / `advisor.guard`），`effort` **连槽字段都不存在**（`saveSession` 字段表无之）⇒ 端侧只能落 config（全局态：切一处波及全部会话）或自建副本（跨端互写）。本批取**授权核面小改**（批档 §1.2 A）：纯加法、老槽零行为变更。端侧契约（通道 / 载荷 / 回执）= `docs/desktop/design/IPC.md` §2「会话级偏好注」。
+
+- **判据句 1（槽字段）**：`effort` = 槽数据文件顶层字段，值闭集 = `null`（未设 ⇒ 回落配置面 / 渠道默认——**老槽即此态**）∥ `"off"`（关思考**记号**，非枚举字面）∥ `specForModel(model).reasoningEffortEnum` 的成员字面。`provider` / `model` 两键入参映射既有 `activeProvider` / `activeModel`（不新增字段）。
+- **判据句 2（写出口单点）**：新增 `setSlotPrefs(cwd, slot, patch)`（`thincoder-core/session-slot-write.mjs`）——沿 `setSlotAutoApprove` 同形，复用 `writeFlag`（读 → 改 → `saveSlotData`）单点；槽不可读 ⇒ `false`（写未发生）。`patch` 键闭集 = `provider` / `model` / `effort`，**至少一键**（零键 ⇒ 调用面拒）。
+- **判据句 3（档位归一纯函数）**：`resolveEffortPatch(level, model)` —— `level` → 槽 `effort` 值；纯函数、不抛：`null` / `undefined` / `"auto"` ⇒ `null`；`"off"` ⇒ `thinkOffPath(specForModel(model))` 真 ⇒ `"off"`、假 ⇒ `null`（该模型无 off 路径）；其余 ⇒ 枚举含之 ⇒ 原字面、不含 / 无枚举 ⇒ `null`。**off 记号可达性判据单源 = `thincoder-core/think-off.mjs`**（`thinkOffPath` / `thinkOffShape`）、**档位值域单源 = `specForModel(model).reasoningEffortEnum`**（`thincoder-core/model-specs.mjs`）——核内零第二份族别表。`model` 取 `patch.model ?? 槽现值 activeModel`（同 patch 带 model ⇒ 以新值为准）。
+- **判据句 4（施加面）**：`applySession` 在**模型合并支之后**应用 `data.effort`：`null` / 缺键 ⇒ 不动（沿用既有 config 链）；`"off"` ⇒ `agent.provider.thinking = thinkOffShape(spec)`（effort 族该形为 `null` ⇒ 另置 `agent.provider.reasoningEffort = "none"`——§16.4 载荷门）；枚举字面 ⇒ `agent.provider.reasoningEffort = <tier>`。**非活动槽只写盘**，切换时经本支生效；**桌面 ∥ CLI resume 同径本施加面**（桌面 `thincoder-desktop/src/main/session-io.mjs:25` · CLI resume 同径）——**VSC 侧自有施加面**（`thincoder-vscode/src/agent/agent-state.mjs:90` `applySlotSessionState`——端侧自有函数，非本支同径；档位归一单源 = 判据句 3）。
+- **判据句 5（保存携带 · 防整对象抹除）**：`saveSession` 字段表须带 `effort`（值取当前生效档位；**缺之 ⇒ 下一次回合保存把槽写面结果整对象抹除**——同族缺陷在案）；`newSlotData` 产 `effort: null`（全新槽规范结构同源）。**老槽无该键 ⇒ 读侧按 `null` 容忍——零行为变更**。
+
+**边界情形表**：
+
+| 情形 | 行为 | 说明 |
+|---|---|---|
+| 老槽（无 `effort` 键） | 不设档位（回落 config / 渠道默认） | 禁回填——老槽零行为变更（同 `createdBy` 先例） |
+| 表外档位串（跨端 / 手工写入） | 按 `null` 处理（不设） | 读侧容忍——核不校验端侧控件域（沿核读侧口径） |
+| `"off"` 而模型不可 off（`thinkAlwaysOn` 族 / effort 族无 `none`） | 归为 `null` | 判据单源 = `thinkOffPath`——与端侧候选面同判据（两面不漂移） |
+| 换模型（`patch.model` 不带 `effort`） | 槽 `effort` 原值保留、写入不做迁移 | 与新模型枚举不符 ⇒ 按表外行处理；不静默改写槽值 |
+| 写非活动槽 | 只写盘 | 不碰当前内存态（`applySession` 是唯一施加面） |
+| 槽不可读（`loadSlotForWrite` 返回 `null`） | 写返回 `false` | 沿四出口既有契约 |
+
+**验收回指**：① 桌面会话头三值切标签随动 + 非活动槽只写盘 → 判据句 1 / 4 / 5；② 老槽零行为变更 → 判据句 5 + 边界表首行；③ 档位候选面与写面同判据（不可 off 的模型两面一致）→ 判据句 3 + 边界表第 3 行；④ 三包测试全绿 + `doc-check` 零新增闸态失败 → 落点表（批档 §2）。
+
+**不做（边界）**：不改 CLI / VSC 端侧档位面（`/think` / `reasoning-mode.mjs` / `settings-panel-write.mjs` 各自实现沿用——「推理档位面端侧自有」既有裁定；本批只补**槽字段 + 写出口 + 保存携带 + 恢复施加**四事）· 不落 config（`config` 零写——`settings:agent` 仍是设置面全局默认）· 不校验端侧控件域 / 不做档位闭集机检 · 不回填老槽 · 不动 marker 与槽认领语义。
+
+## 7. 关键决策记录（D-SE1–D-SE53）
 
 | # | 决策 | 理由 / 否决备选 |
 |---|---|---|
@@ -742,6 +768,7 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 | D-SE50 | 端名 = **进程级单值声明**（`setSessionEnd` / `sessionEnd`——`END` 仅模块级初值；**缺省取值 = 进程端名**）+ marker 家族**逐函数显式端参**（显式 > 进程默认）；核内零端名分支 | 否决「逐调用点传端名」（CLI/ACP 侧 ~10 处调用点，漏一处 = 跨端互写——正是本批要消的病）；否决「端名进 marker 内容」（跨端事实落进本端单写者文件 = NF1 破）；进程默认 = 端壳/启动点一行，跨仓契约面最小（桌面端 1 行接入） |
 | D-SE51 | 创建端字段 = `createdBy`，**落槽数据文件**（首次物化写一次、此后透传、老槽禁回填 ⇒ 读数「未知」） | 否决「marker 内嵌」（marker 是每端自己的文件，他端读不到 + 语义错位：marker = 最后使用端）；否决「仅 digest 承载」（派生品：槽文件重建即丢事实）；否决「回填老槽」（猜测——边界明令禁止） |
 | D-SE52 | `createdBy` 透传取值 = **守卫解析缓存**（`agent._slotCreatedBy`，盘为真值；无文件 / 轮转后 ⇒ 本端名） | 守卫是磁盘全量解析的唯一落点 ⇒ 顺带解析零额外成本（mtime 缓存保稳态零解析）；否决「`applySession` 置值」（会把旧槽端名粘到 `/new` 新槽）；否决「`saveSession` 现场读盘」（每回合全量解析 ⇒ O(n²) 退化，F2 守卫的原始动因） |
+| D-SE53 | 会话级偏好（provider / model / effort）= **槽字段**（`effort` 新增；写出口 `setSlotPrefs` 复用 `writeFlag` 单点；`applySession` 施加） | 需求 §3.1:47 逐字「随会话槽持久化…与 CLI / 扩展端同一份槽」⇒ 键必须落槽（跨端同源）；否决「落 config」（全局态——切一处波及全部会话，需求已判为现状缺口）；否决「端侧自建副本」（跨端互写 / 双份漂移）；off **不折为枚举字面**——type 族模型可用 `{type:"disabled"}` 关思考而枚举无 `none` ⇒ 记号 + `thinkOffShape` 展开（族别判据核内单源） |
 
 ## 8. 不并项与历史沿革
 
@@ -860,3 +887,7 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 - 2026-09-22（**SESSION-INDEX 批 · 实施后收口轮** · eng-designer——承 `docs/batches/2026-09-22-session-index.md` §5）：源档损坏 ⇒ **查询期不清行**（清行 = 重建 / 趟面职责——查询路径零写纪律）；§6.19 补拆分产物两档行 · FTS5 指针按实读重指 · 撤新档「拟新增」标记 · 边界表登记两处 delta · `all` 首建路径按触发点①收正。**零新语义**（登记类）。
 
 - 2026-09-24（**queue-visible 批 · 设计评审修正轮 1 · eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §3 轮次 1 发现 #1 同族扫描）：§6.15 标题触发条 + §7 D-SE30 两处收正——标题窗口 = **busy 队列受理面（容量 8）**（唯一拒面 = 满队（第 9 条）；判定 / 载体 / 送达 = `docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6）。机制条文零改。
+
+- 2026-09-27（**桌面批 B 对齐批 · eng-designer**——承 `docs/batches/2026-09-27-desktop-chat-panel-b.md` §1.2 A「授权核面小改 · 纯加法」）：新增 **§6.21**（槽字段 `effort` / 写出口 `setSlotPrefs` / 档位归一 `resolveEffortPatch` / `applySession` 施加面 / 保存携带 / 边界情形表 / 验收回指 / 不做）；
+  §6.4 两处列表补 `effort`（保存字段表 · 恢复逐字段）；§5 补本批落点表指针；§7 补 **D-SE53**（标题计数随动）。端侧契约 = `docs/desktop/design/IPC.md` §2「会话级偏好注」。
+- 2026-09-27（**桌面批 B 收口轮**（实施后随动收正 · 数值对盘）· eng-designer——承 `docs/batches/2026-09-27-desktop-chat-panel-b.md` §1.20 + §5 实施读数）：§6.21 两处收正——`:343-344` 写面坐标按实读重指（`newSlotData :38 ⇒ :46` · 四开关 `:126/:131/:136/:141 ⇒ :140/:145/:150/:155`；补 `resolveEffortPatch :197` / `setSlotPrefs :213` 两入口）· 判据句 4 施加面口径收正（`thincoder-desktop/src/main/session-io.mjs:25` = 桌面端同径；**VSC 侧自有施加面** = `thincoder-vscode/src/agent/agent-state.mjs:90` `applySlotSessionState`——非本支同径）。**零新语义**（坐标与口径对盘）。

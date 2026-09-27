@@ -3,7 +3,7 @@
  *  路径 `command === undefined` / `tui` / `chat` / `acp`——观测面收正见下方注）· `session gc`
  *  命令面（dry-run 只列 / confirm --all 回收）。
  *  沙箱 = 假 HOME（`USERPROFILE` / `HOME` 指向 temp ⇒ config / crash-reports / sessions / traces
- *  全落 temp）+ `THINCODER_TUI_WRAPPED=1`（直行现逻辑，不起包装父）——**禁触真实 `~/.thincoder`**。 */
+ *  全落 temp）+ argv `--tui-wrapped`（直行现逻辑，不起包装父）——**禁触真实 `~/.thincoder`**。 */
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, utimesSync, writeFileSync } from "node:fs"
@@ -14,6 +14,8 @@ import { fileURLToPath } from "node:url"
 import { TRACE_CLEANUP_DELAY_MS } from "@thincoder/core/traces/trace-cleanup.mjs"
 
 const BIN = fileURLToPath(new URL("../bin/thincoder.mjs", import.meta.url))
+/** 包装门 = 内部 argv 标志（bin 顶部自剥离——直行现逻辑，不起包装父；生产零路径）。 */
+const WRAP_GATE = "--tui-wrapped"
 const DAY = "2026-01-01" // 早已过期的日目录名（目录级判据 ① 整删可观测）
 const PAST = new Date("2026-01-01T00:00:00.000Z")
 
@@ -21,12 +23,11 @@ const dirs = []
 const tmpRoot = (p) => { const d = mkdtempSync(join(tmpdir(), p)); dirs.push(d); return d }
 process.on("exit", () => { for (const d of dirs) { try { rmSync(d, { recursive: true, force: true }) } catch { /* ignore */ } } })
 
-/** 沙箱 env：假 HOME（`homedir()` 读到 ⇒ `configDir` = `<home>/.thincoder`）+ `THINCODER_TRACES_DIR`
- *  同址钉死（该 env 优先于 `configDir`——`trace-store.mjs` `tracesRoot()`）——装置与清理目标恒一致，
- *  不受外层环境变量影响。 */
+/** 沙箱 env：假 HOME（`homedir()` 读到 ⇒ `configDir` = `<home>/.thincoder`；traces 根同派生自
+ *  `configDir`——`trace-store.mjs` `tracesRoot()`）——装置与清理目标恒一致，不受外层环境变量影响。 */
 function sandbox() {
   const home = tmpRoot("tc-gc-cli-")
-  return { home, env: { ...process.env, USERPROFILE: home, HOME: home, THINCODER_TUI_WRAPPED: "1", THINCODER_TRACES_DIR: join(home, ".thincoder", "traces") } }
+  return { home, env: { ...process.env, USERPROFILE: home, HOME: home } }
 }
 
 /** 过期轨迹夹具（纯 `.jsonl` 日目录——启动清理 ① 整删 ⇒ 目录消失可观测）。 */
@@ -66,7 +67,7 @@ test("T-SL3.5 触发闸·负例：`--version` 零 traces 扫（白名单外命�
   const { home, env } = sandbox()
   const { day } = tracesFixture(home)
   const t0 = Date.now()
-  const r = spawnSync(process.execPath, [BIN, "--version"], { env, encoding: "utf8", timeout: 60_000 })
+  const r = spawnSync(process.execPath, [BIN, WRAP_GATE, "--version"], { env, encoding: "utf8", timeout: 60_000 })
   const ms = Date.now() - t0
   assert.equal(r.status, 0, "退出码 0")
   assert.match(r.stdout.trim(), /^\d+\.\d+\.\d+/, "版本行照常打印")
@@ -83,7 +84,7 @@ test("T-SL3.6 触发闸·正例：acp 长驻路径经延迟拍执行启动清理
   const { home, env } = sandbox()
   const { day } = tracesFixture(home)
   const t0 = Date.now()
-  const child = spawn(process.execPath, [BIN, "acp"], { env, stdio: ["pipe", "ignore", "ignore"] })
+  const child = spawn(process.execPath, [BIN, WRAP_GATE, "acp"], { env, stdio: ["pipe", "ignore", "ignore"] })
   try {
     const gone = await waitGone(day)
     const ms = Date.now() - t0
@@ -113,20 +114,20 @@ test("命令面：`session gc --dry-run` 只列不删 → `--confirm --all` 回�
   seedGroup(sessions, hashB, join(home, "gone-b"))
   seedGroup(sessions, "c".repeat(40), liveCwd, 100 * 86_400_000) // 冷 cwd 面：manifest 陈旧（cwd 存活）
   const before = readdirSync(sessions).length
-  const dry = spawnSync(process.execPath, [BIN, "session", "gc", "--dry-run"], { env, encoding: "utf8", timeout: 120_000 })
+  const dry = spawnSync(process.execPath, [BIN, WRAP_GATE, "session", "gc", "--dry-run"], { env, encoding: "utf8", timeout: 120_000 })
   assert.equal(dry.status, 0)
   assert.equal(readdirSync(sessions).length, before, "dry-run 零删")
   assert.match(dry.stdout, /reason cold-90d/, "冷 cwd 面在列（90 天判据）")
   assert.match(dry.stdout, /reason cwd-gone/, "三合取面在列")
-  const one = spawnSync(process.execPath, [BIN, "session", "gc", "--confirm", "a".repeat(40)], { env, encoding: "utf8", timeout: 120_000 })
+  const one = spawnSync(process.execPath, [BIN, WRAP_GATE, "session", "gc", "--confirm", "a".repeat(40)], { env, encoding: "utf8", timeout: 120_000 })
   assert.equal(one.status, 0)
   assert.ok(!existsSync(join(sessions, `${hashA}.json.manifest`)), "单组面（--confirm <hash>）：目标组已回收")
   assert.ok(existsSync(join(sessions, `${hashB}.json.manifest`)), "单组面不碰其余组")
   assert.match(one.stdout, /Moved \d+ files for/, "单组面：回收行")
-  const conf = spawnSync(process.execPath, [BIN, "session", "gc", "--confirm", "--all"], { env, encoding: "utf8", timeout: 120_000 })
+  const conf = spawnSync(process.execPath, [BIN, WRAP_GATE, "session", "gc", "--confirm", "--all"], { env, encoding: "utf8", timeout: 120_000 })
   assert.equal(conf.status, 0)
   assert.equal(readdirSync(sessions).length, 0, "余量全回收（原目录零残留）")
-  const again = spawnSync(process.execPath, [BIN, "session", "gc", "--confirm", "a".repeat(40)], { env, encoding: "utf8", timeout: 120_000 })
+  const again = spawnSync(process.execPath, [BIN, WRAP_GATE, "session", "gc", "--confirm", "a".repeat(40)], { env, encoding: "utf8", timeout: 120_000 })
   assert.equal(again.status, 1, "已回收组重判 ⇒ 拒（退出码 1）")
   assert.match(again.stderr, /nothing deleted/, "拒行明示零删除")
   const trash = join(home, ".thincoder", "sessions-trash")
@@ -141,10 +142,10 @@ test("#178 进度 / 预估：≥2 候选 ⇒ dry-run 预估行 + confirm --all �
   const sessions = join(home, ".thincoder", "sessions")
   mkdirSync(sessions, { recursive: true })
   for (const h of ["d", "e", "f"]) seedGroup(sessions, h.repeat(40), join(home, `gone-${h}`))
-  const dry = spawnSync(process.execPath, [BIN, "session", "gc", "--dry-run"], { env, encoding: "utf8", timeout: 120_000 })
+  const dry = spawnSync(process.execPath, [BIN, WRAP_GATE, "session", "gc", "--dry-run"], { env, encoding: "utf8", timeout: 120_000 })
   assert.equal(dry.status, 0)
   assert.match(dry.stdout, /Estimate: ~\d+s to scan 3 candidates/, "dry-run 预估行（#178）")
-  const conf = spawnSync(process.execPath, [BIN, "session", "gc", "--confirm", "--all"], { env, encoding: "utf8", timeout: 120_000 })
+  const conf = spawnSync(process.execPath, [BIN, WRAP_GATE, "session", "gc", "--confirm", "--all"], { env, encoding: "utf8", timeout: 120_000 })
   assert.equal(conf.status, 0)
   assert.match(conf.stdout, /3 groups to recycle — estimate ~\d+s/, "全量面预估行")
   assert.match(conf.stdout, /\[1\/3\]/, "逐组进度行（#178）")

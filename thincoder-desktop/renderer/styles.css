@@ -168,6 +168,61 @@ body {
   border-color: var(--accent);
 }
 
+/* 会话行动作面（批 A ④ · `docs/desktop/design/UI.md` §1 左列会话行）：行 = [行控件, 改名, 删除] 一行 flex；
+   换形 = 行**原位**换子序（改名 ⇒ 文本控件 + 两键 ∥ 删除 ⇒ 行控件 + 两键）；字形面 = 两图标控件 `content`
+   （视图档零字形字面 —— KD-f）；两键词面由视图出串（**零新字形** —— 同标签条确认面同形）。
+   行控件在行内改 `flex: 1` + `min-width: 0`（收缩位 —— `width: 100%` 是**区块级**控件形，行内不适用）。 */
+.rail-item {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.rail-item > .rail-row {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
+.rail-rename,
+.rail-delete {
+  flex: 0 0 auto;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--fg-muted);
+  font: inherit;
+}
+.rail-rename::before { content: "✎"; }
+.rail-delete::before { content: "×"; }
+.rail-rename-input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: inherit;
+  font: inherit;
+}
+.rail-cancel,
+.rail-confirm {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: transparent;
+  font: inherit;
+}
+.rail-cancel { color: var(--fg-muted); }
+.rail-confirm { color: var(--accent); }
+.rail-rename:not(:disabled):hover,
+.rail-delete:not(:disabled):hover,
+.rail-cancel:not(:disabled):hover,
+.rail-confirm:not(:disabled):hover {
+  background: var(--bg);
+  cursor: pointer;
+}
+
 /* 单断点：宽 < 900px ⇒ 左列折叠为图标条（骨架；交互随视图批）。 */
 @media (width < 900px) {
   .app {
@@ -181,7 +236,8 @@ body {
 
 /* 中区外壳面（`docs/desktop/design/UI.md` §1 标签条 / 会话头 / 状态栏行 · 批 4）：标签条（标签宽域 + 溢出横滚 +
    两端渐隐）· 位标 · 会话头字段槽 · 状态栏告警位。字形面 = 关闭 / 新建控件的 `content`（视图档零字形字面 —— KD-f）；
-   非活动标签 `inert`（不收 Tab 序 / 不响应焦点）= 浏览器原生面，零样式分叉。 */
+   非活动标签两控件 `tabindex="-1"`（只收 Tab 序 —— 零 `inert`）= 浏览器原生面，零样式分叉；确认态
+   `data-confirm="1"` 项例外（决策面须键盘可达）。 */
 .tabbar {
   display: flex;
   align-items: center;

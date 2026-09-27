@@ -3,7 +3,7 @@
  * §2.6 用例 1–17）。机制单源 = `docs/vsc/design/PROJECT-SWITCHER.md` §4.1。
  *
  * 手法（§2.6）：真实 ChatPanel 原型 + 真实模块链 + tmp 沙箱（`_setSessionsDirForTest` /
- * `_setConfigPathForTest` / `THINCODER_LOG_DIR`）；守卫态显式置 `workspaceFolders = []`
+ * `_setConfigPathForTest` / `_setLogsDirForTest`）；守卫态显式置 `workspaceFolders = []`
  * （存 / 还原——先例 `image-downgrade.test.mjs:30-38`；mock 默认 = 单根）。
  * 两组手法同档混编（先例 `async-visibility.test.mjs`）：宿主组 1–14 + 17（真模块 + 桩/真原型
  * 面板）、webview 组 15–16（happy-dom 驱真 `chat.js` / `send.js` / `loading.js`）。
@@ -19,6 +19,7 @@ import { basename, join } from "node:path"
 import * as vscode from "vscode"
 import { sessionPath } from "@thincoder/core/session-slots.mjs"
 import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
+import { _setLogsDirForTest, _resetLogsDirForTest } from "@thincoder/core/log.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-slots.mjs"
 import { ChatPanel } from "../src/extension/chat-panel.mjs"
 import { handlePanelMessage, setProjectFolder, clearProjectOverride, _cwd } from "../src/extension/panel-messages.mjs"
@@ -41,7 +42,7 @@ before(() => {
   _logDir = join(_tmp, "logs")
   _setSessionsDirForTest(_sessionsDir)
   _setConfigPathForTest(join(_tmp, "config.json")) // 文件可缺席（缺省 {} = 无 provider）
-  process.env.THINCODER_LOG_DIR = _logDir // logEvent 写门 + 隔离（turn:start 断言用）
+  _setLogsDirForTest(_logDir) // logEvent 写门 + 隔离（turn:start 断言用）
   vscode.env.language = "en"
   const env = setupWebview()
   _cleanupEnv = env.cleanup
@@ -55,7 +56,7 @@ after(() => {
   try { if (W?.toast?.showToast?._t) clearTimeout(W.toast.showToast._t) } catch { /* no toast */ }
   try { window.dispatchEvent(new window.Event("unload")) } catch { /* happy-dom teardown edge */ }
   clearProjectOverride()
-  delete process.env.THINCODER_LOG_DIR
+  _resetLogsDirForTest()
   vscode.env.language = undefined
   _setConfigPathForTest(null)
   _resetSessionsDirForTest()
@@ -108,7 +109,7 @@ function cwdFamily(cwd) {
   try { return readdirSync(_sessionsDir).filter((n) => n.startsWith(prefix)).sort() } catch { return [] }
 }
 
-/** turn:start 事件行数（THINCODER_LOG_DIR 隔离目录——先例 `async-parity.test.mjs:48-59`）。 */
+/** turn:start 事件行数（进程内缝隔离目录——先例 `async-parity.test.mjs:49-60`）。 */
 function turnStarts() {
   let names = []
   try { names = readdirSync(_logDir) } catch { return 0 }

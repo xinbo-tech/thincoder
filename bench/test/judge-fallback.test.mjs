@@ -8,6 +8,7 @@
 
 import { readFileSync } from "node:fs"
 import { applyJudgeCosts } from "../lib/prices.mjs"
+import { _setJudgeConfigPathForTest, _resetJudgeConfigPathForTest } from "../lib/judge.mjs"
 import { judgeWithPair } from "../lib/judge-fallback.mjs"
 import { fixtureSlotTransport, fixtureTransport } from "../lib/client.mjs"
 import { rejudgeMain } from "../lib/rejudge.mjs"
@@ -173,7 +174,7 @@ function archiveOf(label) {
 }
 
 test("rejudge.1：补判通道（① 判定替换 ② 被测侧 error 不入列 ③ 原档零改 ④ 缺省标签 ⑤ 零对象 ⑥ 重取后仍失败）", async () => {
-  process.env.BENCH_JUDGE = writeFixture(`judge-rejudge-${process.pid}.json`, JUDGE_STUB)
+  _setJudgeConfigPathForTest(writeFixture(`judge-rejudge-${process.pid}.json`, JUDGE_STUB))
   try {
     // ① ③ ④：判官面 error run ⇒ 定点重取素材 + 级联补判 ⇒ 新对（原档逐字节零改）
     const label = `rj-a-${process.pid}`
@@ -224,6 +225,6 @@ test("rejudge.1：补判通道（① 判定替换 ② 被测侧 error 不入列 
     await assert.rejects(() => rejudgeMain({ from: writeFixture(`rj-bad-${process.pid}.json`, { models: "nope" }) }, { providers: STUB_PROVIDERS }), /结果 JSON 缺 models/, "档形闸：不符 schema ⇒ 1")
     await assert.rejects(() => rejudgeMain({ from: writeFixture(`rj-alien-${process.pid}.json`, alien) }, { providers: STUB_PROVIDERS }), /补判对象的 provider 不在用户 config.*tenant-x/, "被测 provider 缺 ⇒ 1")
   } finally {
-    delete process.env.BENCH_JUDGE
+    _resetJudgeConfigPathForTest()
   }
 })

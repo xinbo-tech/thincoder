@@ -159,6 +159,10 @@ export function saveSession(agent) {
   // 不在盘 ⇒ 进程端名；解析通过 ⇒ 盘上键或 null）——**守卫之后**注入，本端首物化写一次，
   // 此后透传盘上键；盘上无键（老槽）⇒ null ⇒ 键不落盘（禁回填）。
   if (agent._slotCreatedBy != null) fields.createdBy = agent._slotCreatedBy
+  // 会话级档位携带（§6.21 判据句 5 · 防整对象抹除）：值 = 当前生效档位（`applySession` 携带的槽
+  // 原值——`"off"` 记号原样写盘，不回填为具体档）；缺之 ⇒ 下一次回合保存把槽写面结果整对象抹除。
+  // `undefined` = 本会话未携带（老槽无该键 / 未经 `applySession`）⇒ 键不落盘（禁回填）。
+  if (agent._slotEffort !== undefined) fields.effort = agent._slotEffort
   // 绑定态 → 流式投影（段原文拼接——VSC 兼容面逐字同形）；未绑定 → 既有全量物化写
   if (agent._recordStore) saveProjectedSlot(agent, p, fields, contextHistory)
   else writeSessionFile(p, { ...fields, history: legacyHistory(agent), contextHistory })

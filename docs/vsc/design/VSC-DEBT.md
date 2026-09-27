@@ -308,6 +308,9 @@
 **CLI 面（同批拆分 · 登记载体 = 批档 §2——KD-26）**：`thincoder-cli/test/busy-injection.test.mjs` **474 → 209** · `thincoder-cli/test/busy-injection-render.test.mjs` **155**（新档）· `thincoder-cli/test/busy-injection-consume.test.mjs` **198**（新档）——三档均 ≤300 咨询线（无拆分义务）。
 **测试档越线登记（续 · 2026-09-25 file-tier-sweep 批后）**：`thincoder-vscode/test/busy-injection-vsc.test.mjs` **330**（`wc -l`；>300 咨询线——本批拆分落地 546 → 330；≤500 硬限，无拆分义务）——结构不变〔本批拆分后定形：用例族 + 夹具自持〕· 不拆理由 = ≤500 硬限在位（300 为咨询线）。
 
+**测试档越线登记（续 · 2026-09-27 env-config-purge 批后 · `wc -l` 口径）**：`thincoder-vscode/test/async-visibility.test.mjs` **452**（>300 咨询线——**首登**；≤500 硬限，无拆分义务）· `thincoder-vscode/test/activity-live-visibility.test.mjs` **399**（**首登**）
+· `thincoder-vscode/test/trace-store.test.mjs` **399 → ≈395**（本批触碰 · 读数刷新）——均 >300 咨询线、≤500 硬限（无拆分义务）；触发 = 越 500 ∨ 该档下次实质触碰。逐项登记，**非全量普查**。
+
 ### 12.2 逐档方案（职责分面 · 六新档）
 
 #### 12.2.1 `panel-chat.mjs`（499 → ≈240）—— 回合驱动面
@@ -715,3 +718,6 @@
 
 - 2026-09-25（**file-tier-sweep 批 · 实施后收正轮** · eng-designer——承 `docs/batches/2026-09-25-file-tier-sweep.md` §5 代码评审 3 条〔父侧裁「接受并收正」〕）：§12.1 增**批后登记块**（九档批后读数 + 留守档 330 越线登记行〔结构不变 · 不拆理由〕）；
   §13.4 触发句收正 **>450 → >495**（以 §12.1 单源行为准——交付读数 457 未触）。**零语义**：拆点 / 验收 / 需求面零改。
+
+- 2026-09-27（**env-config-purge 批 · 设计评审轮 1 修正轮 · eng-designer**——承 `docs/batches/2026-09-27-env-config-purge.md` §3 轮次 1 发现 5）：§12.1 追加**测试档越线登记块（续 · env-config-purge 批后）**——`thincoder-vscode/test/async-visibility.test.mjs` **452**（首登）
+  · `thincoder-vscode/test/activity-live-visibility.test.mjs` **399**（首登）· `thincoder-vscode/test/trace-store.test.mjs` **399 → ≈395**（本批触碰 · 读数刷新）——均 >300 咨询线、≤500 硬限（读数口径 = `wc -l`）。**零语义**（登记面）。

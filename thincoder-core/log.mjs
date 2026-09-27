@@ -21,8 +21,8 @@
  *   工具事件不记 args；URL 不入事件（llm/tool 事件从不携带 URL；err 文本经形态扫描）。
  * - 摘要截断（B 方案，2026-09-03 用户裁定）：截断处带 "…" 标记（截后仍 ≤上限）。
  * - 测试隔离：node --test 进程（NODE_TEST_CONTEXT）默认不写盘——防测试事件污染真实
- *   诊断日志（两端测试套件都会跑真实 agent 管线）；显式设置 THINCODER_LOG_DIR 强制
- *   写入该目录（log.test.mjs 用它隔离临时目录——refinement #6）。
+ *   诊断日志（两端测试套件都会跑真实 agent 管线）；显式测试缝（_setLogsDirForTest）
+ *   强制写入该目录（log.test.mjs 用它隔离临时目录——refinement #6）。
  * - 轮转清理（refinement #3——长驻进程覆盖）：非仅启动时——每进程每日**首次写事件**
  *   时顺带清理 >1 天的 agent-*.log（extension host 可长驻数月，启动清理覆盖不到）。
  * - seq：每进程单调计数器。双端同写一个文件时 seq 会各自重复——定位同文件时序以
@@ -46,9 +46,14 @@ let _seq = 0
 let _dead = false // 进程内写失败即死（NF-L1 静默降级——不逐事件重复空转）
 let _cleanupDate = null // 本进程已执行过清理的日期（每日首次写时清一次）
 
-/** 日志目录：THINCODER_LOG_DIR（测试隔离/override）> ~/.thincoder/logs（与 sessions/ 同域） */
+/** Test seam: override the logs directory (process-internal seam — CONFIG.md §6.2 ③ 通道). */
+let _logsDir = null
+export function _setLogsDirForTest(p) { _logsDir = p }
+export function _resetLogsDirForTest() { _logsDir = null }
+
+/** 日志目录：显式测试缝 > ~/.thincoder/logs（与 sessions/ 同域） */
 export function logsDir() {
-  return process.env.THINCODER_LOG_DIR ?? join(homedir(), ".thincoder", "logs")
+  return _logsDir ?? join(homedir(), ".thincoder", "logs")
 }
 
 /** 今日日志文件路径（agent-YYYY-MM-DD.log） */
@@ -58,10 +63,10 @@ export function todayLogPath(now = new Date()) {
 }
 
 /** 写门（测试隔离）：test runner 进程（NODE_TEST_CONTEXT）默认跳过——除显式
- *  THINCODER_LOG_DIR override（log.test.mjs 隔离临时目录——refinement #6）。 */
+ *  测试缝 override（log.test.mjs 隔离临时目录——refinement #6）。 */
 function writeEnabled() {
   if (_dead) return false
-  if (process.env.NODE_TEST_CONTEXT && !process.env.THINCODER_LOG_DIR) return false
+  if (process.env.NODE_TEST_CONTEXT && _logsDir === null) return false
   return true
 }
 

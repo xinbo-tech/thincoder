@@ -2,15 +2,17 @@
  * store.test.mjs — E-4 用例（批档 §2.5 U28–U33 + 本批新增 U56 · `docs/desktop/design/SHELL.md` §3 / `RENDERER.md` §2–§3）：
  * 状态树（变更触发订阅 / 通知期入队）+ 数据面切片（窗口 / 回填卫兵 / 跟滚 / 标签）+ 词表面（解析序）+
  * 关闭确认面（判据单源 / 置键 / 直接关 / 清键 —— `docs/desktop/design/UI.md` §1 交互行）+ 三切片定形与纯动作
- * （批 7 U75 —— 兼消费面两读数 `requestCloseTab` / `headModel`：注册后零行为变化）。
+ * （批 7 U75 —— 兼消费面两读数 `requestCloseTab` / `headModel`：注册后零行为变化；批 A ④ 并入行形态两动作
+ * `openRailForm` / `closeRailForm`：闭集 / 拒收 / 收形）+ 队列三纯动作
+ * （批 A U117 —— `pool.queue` 唯一写面：入队上限 / 出队队首 / 排空）。
  * 纯逻辑档：零 DOM / 零 IPC / 零文件系统（渲染面无副作用面判据）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import {
-  appendBlock, beginBackfill, cancelCloseTab, closeTab, confirmCloseTab, createStore, deriveTabBadge,
-  endBackfill, initialState, needsCloseConfirm, openTab, requestCloseTab, returnToBottom, setFollowing,
-  togglePool, visibleWindow,
+  appendBlock, beginBackfill, cancelCloseTab, closeRailForm, closeTab, confirmCloseTab, createStore, dequeue,
+  deriveTabBadge, drainQueue, endBackfill, enqueue, initialState, needsCloseConfirm, openRailForm, openTab,
+  QUEUE_MAX, requestCloseTab, returnToBottom, setFollowing, togglePool, visibleWindow,
 } from "../renderer/store.mjs"
 import { headModel, headTree } from "../renderer/views/chrome.mjs"
 import { FALLBACK_LOCALE, HOST_DICT, SUPPORTED_LOCALES, initDict, locale, normalizeLocale, t } from "../renderer/i18n.mjs"
@@ -231,15 +233,17 @@ test("U33: t 解析序（宿主 → 核投影 → 键名）∧ 语言归一 ⇒ 
 
 // ─── U75 三切片定形与纯动作（批 7 · 批档 §2.2（e））──────────────
 
-test("U75: initialState 切片定形 ∧ pool 三族两读数 ∧ togglePool 三支 ∧ 注册后零行为变化", () => {
+test("U75: initialState 切片定形 ∧ pool 三族两读数 ∧ togglePool 三支 ∧ 行形态两动作 ∧ 注册后零行为变化", () => {
   const base = initialState()
   assert.deepEqual(Object.keys(base).sort(), [
     "activeSession", "activeTab", "blocks", "following", "history", "locale", "pendingClose", "pendingNew",
-    "pool", "poolCollapsed", "project", "projectInfo", "sessionMeta", "sessions", "settings", "tabBadges", "tabs",
-  ], "初态键集 = 定形锁（三切片 + settings / projectInfo 在册 —— 增 / 减键须同改本锁）")
+    "pool", "poolCollapsed", "project", "projectInfo", "railForm", "sessionMeta", "sessions", "settings", "tabBadges", "tabs", "usage",
+  ], "初态键集 = 定形锁（三切片 + settings / projectInfo / railForm 在册 —— 增 / 减键须同改本锁）")
+  assert.deepEqual(base.railForm, null, "railForm 槽位在册（换形态单源 —— 常态 = null，换形 = `{ key, mode }`）")
   assert.deepEqual(base.pool, { running: 0, approval: 0, blocks: [], queue: [], approvals: [] }, "pool 形 = 两读数（折叠头）+ 三族 + 待决项数组（卡面与池面同一源）")
   assert.deepEqual(base.tabBadges, {}, "tabBadges 槽位在册（位标源随供给批）")
   assert.deepEqual(base.sessionMeta, {}, "sessionMeta 槽位在册（会话头字段源随供给批）")
+  assert.deepEqual(base.usage, {}, "usage 槽位在册（占用读数按会话 key 写 —— 值面 = ev:usage 归约，读面随批）")
   assert.deepEqual(base.poolCollapsed, {}, "poolCollapsed 槽位在册（折叠态按会话记忆）")
 
   const fresh = initialState()
@@ -258,7 +262,24 @@ test("U75: initialState 切片定形 ∧ pool 三族两读数 ∧ togglePool 三
     assert.equal(togglePool(absent, bad), absent, `非串键 ⇒ 原引用（实 = ${JSON.stringify(bad) ?? "undefined"}）`)
   }
 
-  // 注册后零行为变化（消费面两读数逐字复现 —— `app.mjs:183` / `chrome.mjs:56`）
+  // 行形态两动作（批 A ④：换形态态单源 —— 闭集 / 拒收 / 收形；`docs/desktop/design/UI.md` §1 左列会话行）
+  const opened = openRailForm(base, "2", "rename")
+  assert.deepEqual(opened.railForm, { key: "2", mode: "rename" }, "换形 ⇒ 本键本形（态单源 = store 槽）")
+  assert.notEqual(opened, base, "受理 ⇒ 新态（原引用 = 未受理）")
+  assert.equal(base.railForm, null, "纯动作：原态零改")
+  assert.equal(openRailForm(opened, "2", "rename"), opened, "同键同形 ⇒ 原引用（无变化）")
+  assert.deepEqual(openRailForm(opened, "2", "delete").railForm, { key: "2", mode: "delete" }, "同键换形 ⇒ 新态")
+  assert.deepEqual(openRailForm(opened, "3", "rename").railForm, { key: "3", mode: "rename" }, "换键 ⇒ 新态（单槽 —— 在形面只及一键）")
+  for (const [key, mode] of [["2", "weird"], ["2", ""], [null, "rename"], [7, "rename"], [undefined, "rename"]]) {
+    assert.equal(openRailForm(base, key, mode), base, `表外键 / 表外形 ⇒ 原引用（key=${JSON.stringify(key) ?? "undefined"} · mode=${JSON.stringify(mode)}）`)
+  }
+  const closed = closeRailForm(opened)
+  assert.equal(closed.railForm, null, "收形 ⇒ 槽清空（取消 / 应用两出口共用尾）")
+  assert.equal(closed.tabs, opened.tabs, "收形不动标签表（页 / 键零波及）")
+  assert.equal(closed.activeTab, opened.activeTab, "收形不动活动键")
+  assert.equal(closeRailForm(base), base, "无形态 ⇒ 原引用（零动作）")
+
+  // 注册后零行为变化（消费面两读数逐字复现 —— `mount-sessions.mjs:118` / `chrome.mjs:56`）
   const pre = initialState()
   for (const key of ["tabBadges", "sessionMeta", "poolCollapsed"]) delete pre[key] // 注册前形（三切片缺位）
   const before = openTab(openTab(pre, "a"), "b")
@@ -276,4 +297,38 @@ test("U75: initialState 切片定形 ∧ pool 三族两读数 ∧ togglePool 三
   const afterHead = headTree(headModel({ tab: after.activeTab ?? null, meta: after.sessionMeta ?? null }))
   assert.equal(afterHead.props["data-meta"], "none", "会话头字段源空 ⇒ data-meta=none（不变）")
   assert.deepEqual(afterHead, beforeHead, "会话头树两态同形（零行为变化）")
+})
+
+// ─── U117 队列三纯动作（批 A · `pool.queue` 唯一写面 —— 批档 §2.4③）──────
+
+test("U117: 队列三纯动作（入队上限 / 出队队首 / 排空 —— `QUEUE_MAX` 单源 ∧ 拒收即原引用）", () => {
+  const base = initialState()
+  assert.equal(QUEUE_MAX, 8, "上限常量单源（满队判据 = 队长 ≥ 此值 —— 树面提示行与拒绝径同源）")
+  assert.deepEqual(base.pool.queue, [], "初态队列空（切片定形）")
+
+  const one = enqueue(base, "第一条")
+  assert.deepEqual(one.pool.queue, [{ title: "第一条", status: "queued" }], "条目形 = 池面消费形（`title` 逐字原样 —— 零显示串副本）")
+  assert.notEqual(one.pool.queue, base.pool.queue, "受理 ⇒ 切片新对象（原引用 = 未受理）")
+  assert.deepEqual(base.pool.queue, [], "纯动作：原态零改")
+  for (const bad of ["", "   ", null, 7, undefined]) {
+    assert.equal(enqueue(one, bad), one, `空白 / 非串 ⇒ 原引用（实 = ${JSON.stringify(bad) ?? "undefined"}）`)
+  }
+
+  let full = base
+  for (let i = 0; i < QUEUE_MAX; i += 1) full = enqueue(full, `第${i + 1}条`)
+  assert.equal(full.pool.queue.length, QUEUE_MAX, `满队前逐条受理（${QUEUE_MAX} 条）`)
+  assert.equal(full.pool.queue[0].title, "第1条", "序 = 先进先出")
+  assert.equal(enqueue(full, "溢出"), full, "满队 ⇒ 原引用（该条不入队 —— 调用面据此判 `full` + 文本保留）")
+
+  const popped = dequeue(full)
+  assert.equal(popped.pool.queue.length, QUEUE_MAX - 1, "出队 -1 条")
+  assert.equal(popped.pool.queue[0].title, "第2条", "摘队首（回合尾读 `queue[0]` 先发后出队）")
+  assert.equal(full.pool.queue.length, QUEUE_MAX, "纯动作：原态零改")
+  assert.equal(dequeue(base), base, "空队出队 ⇒ 原引用（零动作）")
+
+  assert.equal(drainQueue(base), base, "队空 ⇒ 原引用（关页 / 复位面零通知）")
+  const drained = drainQueue(full)
+  assert.notEqual(drained, full, "非空 ⇒ 新态（队空）")
+  assert.deepEqual(drained.pool.queue, [], "排空后零条目")
+  assert.equal(full.pool.queue.length, QUEUE_MAX, "纯动作：原态零改")
 })

@@ -2,8 +2,8 @@
  * trace-bounds.test.mjs — TUI-OOM-ROOTCAUSE 批 组 2（B2-trace——TRACES.md §6.2）
  * 用例表 1:1：T-TR1–T-TR5（单遍序列化等价 / 完整落盘 / 序号缓存）。
  *
- * 形态：快层 unit——临时 THINCODER_TRACES_DIR（写门开启——NODE_TEST_CONTEXT 下需显式
- * override）；readdir 计数经 `_traceHooks` 注入缝（慢写替身随 A21 改判退场）。
+ * 形态：快层 unit——轨迹根进程内缝 `_setTracesRootForTest`（写门开启——NODE_TEST_CONTEXT 下需显式
+ * 设缝）；readdir 计数经 `_traceHooks` 注入缝（慢写替身随 A21 改判退场）。
  *
  * U3（CORE-UNIFICATION §2.6.3）改判登记：实现单源归核（`@thincoder/core/traces/trace-store.mjs`——
  * CLI 副本已删）；容量 / 清理策略随 §2.5 #116 / A21 裁决（取 VSC 侧：完整落盘 + 每写 prune）
@@ -14,21 +14,18 @@ import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, readdirSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { recordChatTrace, nextTraceSeq, _traceHooks, _resetTraceStateForTest } from "@thincoder/core/traces/trace-store.mjs"
+import { recordChatTrace, nextTraceSeq, _traceHooks, _resetTraceStateForTest, _resetTracesRootForTest, _setTracesRootForTest } from "@thincoder/core/traces/trace-store.mjs"
 
 let dir
-let prevEnv
 let prevHooks
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "tc-traces-"))
-  prevEnv = process.env.THINCODER_TRACES_DIR
-  process.env.THINCODER_TRACES_DIR = dir
+  _setTracesRootForTest(dir)
   _resetTraceStateForTest()
   prevHooks = { ..._traceHooks }
 })
 afterEach(() => {
-  if (prevEnv === undefined) delete process.env.THINCODER_TRACES_DIR
-  else process.env.THINCODER_TRACES_DIR = prevEnv
+  _resetTracesRootForTest()
   Object.assign(_traceHooks, prevHooks)
   _resetTraceStateForTest()
   try { rmSync(dir, { recursive: true, force: true }) } catch { /* ignore */ }

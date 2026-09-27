@@ -1,5 +1,6 @@
 /**
- * session-slots.mjs — 端壳：端名声明 + 本端记录（end marker）绑定转口 + 会话清单消费（桌面端）。
+ * session-slots.mjs — 端壳：端名声明 + 本端记录（end marker）绑定转口 + 会话清单消费 + 历史页读面 /
+ * 会话级偏好写面（桌面端）。
  *
  * 单源 = 核（`@thincoder/core/session-slots.mjs` / `session.mjs` / `session-slot-write.mjs`）：
  * 存储契约与算法全在核 —— 本档只有端身份面与绑定转口，**零算法副本**（读源判据 = 零文件系统
@@ -14,7 +15,9 @@
  *   ③ `sessionsDir()` 访问器（核未导出根目录 —— 由核 `sessionPath` 反推，随核 `configDir`
  *      与核沙箱缝自动随动，本档零副本）；
  *   ④ 历史页读面（本批增）：`pageHistory` —— 槽读转口核 `loadSlotFile`、窗口切分转口核 `historyWindow`
- *      （页尺 = 核常量 `HISTORY_PAGE_SIZE`；端层只做页游标注与元信息面 ⇒ 零算法副本）。
+ *      （页尺 = 核常量 `HISTORY_PAGE_SIZE`；端层只做页游标注与元信息面 ⇒ 零算法副本）；
+ *   ⑤ 会话级偏好写面（本批增）：`writeSlotPrefs` —— 核 `setSlotPrefs` 转口（键闭集 / 值归一 / 原子写皆
+ *      在核）+ 回读 `loadSlotFile` 经 `slotMeta` 出串（回执 `meta` 与 `history:page` **同源同形**）。
  *
  * 载入序不变量（批档 §2.4（a））：核 `newSlotData(cwd)` 的 `createdBy = sessionEnd()`
  * （`thincoder-core/session-slot-write.mjs:46`）⇒ 端名声明必须先于任何物化写。本档声明是模块级
@@ -36,7 +39,8 @@ import {
 } from "@thincoder/core/session.mjs"
 // 历史页读面（本批增）：窗口切分与页尺的**单源**在核。
 import { HISTORY_PAGE_SIZE, historyWindow } from "@thincoder/core/history-window.mjs"
-import { loadConfig } from "@thincoder/core/config.mjs"
+// 会话级偏好写面（本批增）：核写口转口 —— 本档零算法副本（只补回读投影）。
+import { setSlotPrefs as coreSetSlotPrefs } from "@thincoder/core/session-slot-write.mjs"
 
 // 单源转口（核面 —— 调用方 import 路径与名面不变）：路径 / manifest / 写 / 摘要 / 认领 / 沙箱缝。
 export {
@@ -90,7 +94,7 @@ export const deleteSlot = (cwd, slot) => coreDeleteSlot(cwd, slot, { end: END })
 
 // ─── 历史页读面（本批增 —— `docs/desktop/design/IPC.md`:52 / §2 会话族）──────────────
 
-/** 会话键 → 槽号（`String(slot)` —— 九条 `ev:*` 通道与 `msg:*` / `history:page` 同键面）：十进制串才认；
+/** 会话键 → 槽号（`String(slot)` —— 十条 `ev:*` 通道与 `msg:*` / `history:page` / `session:prefs` 同键面）：十进制串才认；
  *  坏键 ⇒ null（调用面转 `{ok:false,reason:"bad-key"}`）。**单源**：`agent-host.mjs` 引本导出。 */
 export function slotOfKey(key) {
   const raw = typeof key === "string" ? key.trim() : ""
@@ -100,7 +104,7 @@ export function slotOfKey(key) {
 /** 会话元信息（回执面）：五键**只落非空串**（UI.md §1 会话头行「字段值由**供给面出串**」——消费面
  *  `views/chrome.mjs:8-9` 判据 = 非串 / 空串 ⇒ 零节点）⇒ 两布尔槽在此出词（`ON` / `OFF`，词形同核
  *  `cmd-eng.mjs:72` / `cmd-auto.mjs:9`）；键缺（老槽）⇒ 零节点（不猜形）。
- *  `effort` 槽无字段 ⇒ 回退配置 `provider.reasoningEffort`（核 `config.mjs:138`——端差，报批档 §5）。 */
+ *  `effort` 值只由本槽字段出串（会话级写面记录 —— 未设 ⇒ 零节点，**不回落**配置面：PROJECT.md T-DSK28）。 */
 function slotMeta(data) {
   const meta = {}
   const str = (v) => (typeof v === "string" && v.trim() ? v : null)
@@ -109,7 +113,7 @@ function slotMeta(data) {
   }
   put("provider", str(data.activeProvider))
   put("model", str(data.activeModel))
-  put("effort", str(data.effort) ?? str(loadConfig()?.provider?.reasoningEffort))
+  put("effort", str(data.effort))
   const flag = (v) => (typeof v === "boolean" ? (v ? "ON" : "OFF") : null)
   put("engineering", flag(data.engineering))
   put("autoApprove", flag(data.autoApprove))
@@ -132,4 +136,19 @@ export function pageHistory(cwd, payload) {
   const end = before == null ? total : Math.max(0, Math.min(before, total))
   const next = hasOlder ? Math.max(0, end - HISTORY_PAGE_SIZE) : null
   return { ok: true, messages, hasOlder, next, meta: slotMeta(data) }
+}
+
+// ─── 会话级偏好写面（本批增 —— T-DSK28 · `docs/desktop/design/IPC.md` §2「会话级偏好注」项 2/4/7）──────────
+
+/** `writeSlotPrefs(cwd, slot, patch)` ⇒ `{ ok:true, meta }` ∥ `{ ok:false }`（**写入未发生** —— 理由分档在
+ *  动作层 `agent-host.mjs` `setPrefs`）：写盘单源 = 核 `setSlotPrefs`（键闭集 / 值归一 / 原子写皆在核）；
+ *  回读 = 同档 `loadSlotFile` ⇒ `meta` 与 `history:page` **同源同形**（同一 `slotMeta` 投影 —— 两通道口径
+ *  不分叉）。失败径**无 `meta` 键**（IPC.md §2「会话级偏好注」项 7）；回读失败（写已发生而档不可读）⇒ 直抛
+ *  （矛盾态 fail-loud，不吞）。 */
+export function writeSlotPrefs(cwd, slot, patch) {
+  if (!coreSetSlotPrefs(cwd, slot, patch)) return { ok: false }
+  const data = loadSlotFile(cwd, slot)
+  // 写已发生而档不可读 = 矛盾态 ⇒ fail-loud（**显式判** —— 不倚仗 `slotMeta(null)` 的解引用抛）
+  if (!data) throw new Error(`[session-slots] slot unreadable after prefs write: ${slot}`)
+  return { ok: true, meta: slotMeta(data) }
 }

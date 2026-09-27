@@ -68,7 +68,7 @@
 ### 4.4 VSC 端条目（并入 · 2026-09-15 批 8 · 自 `thincoder-vscode/docs/requirements/LOGGING.md`）
 
 语义同源——VSC 档 F1–F7 / N1–N5 与 §4.1–§4.3 逐条同义（不重并；共享 `~/.thincoder/logs/` 同格式同事件面已载 §4.2 F-L6）；VSC 端坐标（实核 · W1 收正——自持镜像已删）＝ `@thincoder/core/log.mjs`——
-`_dead` 静默降级（`:46` / `:63` / `:137`）· `THINCODER_LOG_DIR` 测试隔离（`:51`）· `NODE_TEST_CONTEXT` 门（`:64`）· 每进程每日首写机会式清理（extension host 长驻兜底）。共享目录与格式 = 两端镜像实现（F6）。
+`_dead` 静默降级（`:46` / `:63` / `:137`）· **日志落点缝（进程内 · 设计档 `docs/core/design/CONFIG.md` §6.2 ③ 类）作测试隔离** · `NODE_TEST_CONTEXT` 门（`:64`）· 每进程每日首写机会式清理（extension host 长驻兜底）。共享目录与格式 = 两端镜像实现（F6）。
 
 > **现状注（2026-09-15 · S2 W1 后）**：尾句「两端镜像实现」= 迁移前形态表述——VSC 自持镜像已删（本段坐标面 W1 同批收正）；语义不变（双端同引核单源）。
 
@@ -88,3 +88,4 @@
 - 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：新增 §4.4 **VSC 端条目**（`_dead` / `THINCODER_LOG_DIR` / 机会式清理坐标——自 `thincoder-vscode/docs/requirements/LOGGING.md` 并入；语义同源不重并）；§5 登记 VSC 档批次材料；**本档新增需求 0**（纯回填）。
 - 2026-09-15（**S2 W1 接线 · VSC 端** · eng-coder 实施轮）：§1 基线句标记「迁移前基线」（两端已迁核——CLI U1 / VSC W1）+ §4.4 VSC 端坐标收正——`thincoder-vscode/src/log.mjs`（自持镜像）随 W1 删档，改「经 `@thincoder/core/log.mjs` 引用」；**本档新增需求 0**（纯坐标收正）。
 - 2026-09-15（**修正轮-6 · W1 上抛 1 落点 · eng-designer**）：§4.2 F-L6 行后 + §4.4 尾各加**现状注**（「镜像实现」= 迁移前形态表述——双端自持镜像已删、现态 = 双端同引核单源；需求语义不变）。
+- 2026-09-27（**env 拔除批 · 规范面随动 · 主 agent**）：§4.4 VSC 端条目——`THINCODER_LOG_DIR` 测试隔离句 ⇒ **日志落点缝（进程内 · 设计档 `docs/core/design/CONFIG.md` §6.2 ③ 类）**；**本档新增需求 0**（规范面随动，用户 2026-09-27 裁定「不用环境变量做配置」）。

@@ -22,6 +22,7 @@ import { relaySubagentEventToken, relaySubagentContentChunk, buildPanelCallbacks
 import { buildSpawnChild } from "@thincoder/core/agent-tools/subagent-spawn.mjs"
 import { emitRelayModel, wrapChildCallbacks } from "@thincoder/core/agent/spawn-child.mjs"
 import { armSyncChildAbort } from "@thincoder/core/agent-tools/subagent.mjs"
+import { _setLogsDirForTest, _resetLogsDirForTest } from "@thincoder/core/log.mjs"
 import { setupWebview, installChatFixture } from "./helpers/webview-env.mjs"
 
 const RS = "\x1e"
@@ -37,7 +38,7 @@ let _tmp, _logDir, cleanupEnv
 before(() => {
   _tmp = mkdtempSync(join(tmpdir(), "tc-nested-token-"))
   _logDir = join(_tmp, "logs")
-  process.env.THINCODER_LOG_DIR = _logDir // logEvent 写门（NODE_TEST_CONTEXT 下默认跳过）
+  _setLogsDirForTest(_logDir) // logEvent 写门（进程内缝——NODE_TEST_CONTEXT 下未设缝则跳过）
   const env = setupWebview()
   cleanupEnv = env.cleanup
   installChatFixture()
@@ -45,7 +46,7 @@ before(() => {
 
 after(() => {
   try { window.dispatchEvent(new window.Event("unload")) } catch { /* happy-dom teardown edge */ }
-  delete process.env.THINCODER_LOG_DIR
+  _resetLogsDirForTest()
   cleanupEnv()
   try { rmSync(_tmp, { recursive: true, force: true }) } catch { /* tmp 清理失败不影响判据 */ }
 })
@@ -58,7 +59,7 @@ function stubPanel() {
   return p
 }
 
-/** logEvent 行读取（THINCODER_LOG_DIR 隔离目录）——`ev:substrip` 痕面断言。 */
+/** logEvent 行读取（进程内缝隔离目录）——`ev:substrip` 痕面断言。 */
 function logEvents(ev) {
   let names = []
   try { names = readdirSync(_logDir) } catch { return [] }

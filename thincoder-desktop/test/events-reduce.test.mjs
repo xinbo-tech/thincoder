@@ -1,13 +1,16 @@
 /**
  * events-reduce.test.mjs — E-4 事件归约面用例（批档 §2.4 U87–U89 · 本批新档 · 300 行拆分层落形：
  * 页应用与审批面出档 `test/events-page.test.mjs`）：
- *   ① 块流写者（U87）· ② 回合态与位标码集（U88）· ③ 标题刷新与 `sessionMeta`（U89）。
+ *   ① 块流写者（U87）· ② 回合态与位标码集（U88）· ③ 标题刷新 + 回合尾 flush 窄口与 `sessionMeta`（U89）·
+ *   ④ 卡面两切片与提问出场（T-DSK24 —— 批 A 归约半：`ev:question` / `ev:task` 写切片 · `clearQuestion` · `stopped` 终局摘项）·
+ *   ⑤ 占用读数归约（T-DSK29 —— 批 B：`ev:usage` 按会话 `key` 写切片 · 有效读数门〔数字且 > 0〕· 同值原引用 ·
+ *      订阅面含 `ev:usage`）。
  * 平 node 直测：零 DOM · 零 electron · 零网 —— 假 `on`（订阅捕获）+ 假 `invoke`（调用记账 · 载荷逐字）。
  * 词面零字面：断言只钉结构锚（`data-*` / 键集 / 引用等值），不引文案副本。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { applyPage, clearApproval, openSession, reduce } from "../renderer/events.mjs"
+import { applyPage, clearApproval, clearQuestion, openSession, reduce } from "../renderer/events.mjs"
 import { attachEvents } from "../renderer/events-subscribe.mjs"
 import { createStore, initialState } from "../renderer/store.mjs"
 
@@ -69,7 +72,7 @@ test("U87 块流写者：token 续写 / 新回合起块 / 工具三事件 / erro
   for (const block of failed.blocks) assert.ok(KINDS.includes(block.kind), `五型闭集：${block.kind}`)
 })
 
-test("U88 回合态 + 位标码集：三码置清四组 / 闭集 / 他键 / 零 turn 键", () => {
+test("U88 回合态 + 位标码集：三码置清四组 + 错误径结算 / 闭集 / 他键 / 零 turn 键", () => {
   const blank = stateOf()
   const turn = reduce(blank, { channel: "ev:activity", key: KEY, event: "turn", n: 1, max: 3 })
   assert.deepEqual(turn.tabBadges[KEY], ["running"], "回合起 ⇒ 置 running")
@@ -101,15 +104,31 @@ test("U88 回合态 + 位标码集：三码置清四组 / 闭集 / 他键 / 零 
   assert.equal(inline, turn, "内联形（fields 在场）⇒ 零写（零回合尾）")
   assert.deepEqual(turn.tabBadges[KEY], ["running"], "内联 done ⇒ 位标不清")
   assert.equal(reduce(blank, { channel: "ev:activity", key: KEY, event: "queued" }), blank, "表外事件名（无 fields）⇒ 零写")
-  assert.equal(reduce(blank, { channel: "ev:question", key: KEY, text: "?" }), blank, "订阅在场 ≠ 写切片")
-  assert.equal(reduce(blank, { channel: "ev:task", key: KEY, text: "t" }), blank)
+  const asked = reduce(blank, { channel: "ev:question", key: KEY, promptId: "q1", question: "?", options: [] })
+  assert.deepEqual(Object.keys(asked.questions), [KEY], "提问通道 ⇒ 写本键切片（他键零写）")
+  const planned = reduce(blank, { channel: "ev:task", key: KEY, items: [{ title: "t" }] })
+  assert.deepEqual(Object.keys(planned.tasks), [KEY], "计划通道 ⇒ 写本键切片（他键零写）")
 
-  for (const code of [done, stopped, opened].flatMap((state) => Object.values(state.tabBadges).flat())) {
+  // 错误径（回合尾三径之三 —— `onError` 无条件结算本键位标；块面仍守键门）
+  const errored = reduce(turn, { channel: "ev:error", key: KEY, message: "boom" })
+  assert.deepEqual(errored.tabBadges[KEY], ["done"], "错误径 ⇒ 去 running + 置 done（与 done / stopped 同结算）")
+  assert.deepEqual(errored.blocks.at(-1), { kind: "error", text: "boom" }, "错误块入流（活动会话）")
+  const twice = reduce(errored, { channel: "ev:error", key: KEY, message: "again" })
+  assert.deepEqual(twice.tabBadges[KEY], ["done"], "再入错误 ⇒ 位标不动（去重幂等）")
+  assert.equal(twice.blocks.length, errored.blocks.length + 1, "位标幂等 ≠ 块面幂等（错误块照入）")
+
+  const otherErr = reduce(turn, { channel: "ev:error", key: "9", message: "x" })
+  assert.deepEqual(otherErr.tabBadges["9"], ["done"], "他键错误 ⇒ 该键自结算")
+  assert.deepEqual(otherErr.tabBadges[KEY], ["running"], "他键错误 ⇒ 本键位标零影响（位标任意键可写 · 键域）")
+  assert.equal(otherErr.blocks, turn.blocks, "非活动会话 ⇒ 块面零写（结算 ≠ 入流：键门仍在）")
+  assert.equal(reduce(otherErr, { channel: "ev:error", key: "9", message: "y" }), otherErr, "位标已结算 ∧ 块面不落 ⇒ 原引用（幂等）")
+
+  for (const code of [done, stopped, opened, errored].flatMap((state) => Object.values(state.tabBadges).flat())) {
     assert.ok(BADGES.includes(code), `码集 ⊆ 闭集：${code}`)
   }
 })
 
-test("U89 标题刷新 + sessionMeta：收尾恰一次 / meta 五行矩阵", async () => {
+test("U89 标题刷新 + 回合尾窄口 + sessionMeta：三径各恰一次 / 窄口同刻 / meta 五行矩阵", async () => {
   const handlers = new Map()
   const calls = []
   const on = (channel, handler) => {
@@ -121,21 +140,25 @@ test("U89 标题刷新 + sessionMeta：收尾恰一次 / meta 五行矩阵", asy
     calls.push(args)
     return Promise.resolve({ rows: [{ key: "1", title: "T" }] })
   }
-  const off = attachEvents({ on, store, invoke })
-  assert.equal(handlers.size, 9, "九通道全订阅")
+  let tails = 0
+  const off = attachEvents({ on, store, invoke, onTurnTail: () => { tails += 1 } })
+  assert.equal(handlers.size, 10, "十通道全订阅")
 
   handlers.get("ev:activity")({ key: KEY, event: "turn", n: 1, max: 2 })
   await tick()
   assert.deepEqual(calls, [], "回合起 ⇒ 零重调")
+  assert.equal(tails, 0, "回合起 ⇒ 窄口零动")
 
   handlers.get("ev:activity")({ key: KEY, event: "done" })
   await tick()
   assert.deepEqual(calls, [["sessions:list"]], "回合尾 `done` ⇒ sessions:list 恰一次（单参逐字）")
+  assert.equal(tails, 1, "回合尾 `done` ⇒ 窄口恰一次（与标题刷新同触发点）")
   assert.deepEqual(store.get().sessions, [{ key: "1", title: "T" }], "行随动入态")
 
   handlers.get("ev:activity")({ key: KEY, event: "stopped" })
   await tick()
   assert.deepEqual(calls, [["sessions:list"], ["sessions:list"]], "回合尾两形（`done` / `stopped`）皆刷新 · 各恰一次")
+  assert.equal(tails, 2, "回合尾两形皆触窄口")
 
   handlers.get("ev:activity")({ key: KEY, event: "done", fields: "x" })
   handlers.get("ev:activity")({ key: KEY, event: "stopped", fields: "x" })
@@ -145,9 +168,30 @@ test("U89 标题刷新 + sessionMeta：收尾恰一次 / meta 五行矩阵", asy
   handlers.get("ev:approval")({ key: KEY, promptId: "p1", shape: "single" })
   await tick()
   assert.equal(calls.length, 2, "内联形（值：串 / null / undefined —— 键在场即内联）/ 回合起 / 他通道 ⇒ 零重调")
+  assert.equal(tails, 2, "内联形（键在场）/ 回合起 / 他通道 ⇒ 窄口零动")
+
+  handlers.get("ev:error")({ key: KEY, message: "boom" })
+  await tick()
+  assert.deepEqual(calls, [["sessions:list"], ["sessions:list"], ["sessions:list"]], "错误径（三径之三）⇒ 刷新恰一次")
+  assert.equal(tails, 3, "错误径 ⇒ 窄口同刻恰一次（判据单源 = `isTurnTail`）")
 
   off()
-  assert.equal(handlers.size, 0, "退订句柄九路全退")
+  assert.equal(handlers.size, 0, "退订句柄十路全退")
+
+  // 窄口非函数（批档 §1.14：未接线调用面合法 ⇒ 零抛零动作 · 标题刷新不受累）
+  const bareHandlers = new Map()
+  const bareCalls = []
+  const offBare = attachEvents({
+    on: (channel, handler) => { bareHandlers.set(channel, handler); return () => bareHandlers.delete(channel) },
+    store: createStore(initialState()),
+    invoke: (...args) => { bareCalls.push(args); return Promise.resolve({ rows: [] }) },
+    onTurnTail: 42,
+  })
+  bareHandlers.get("ev:activity")({ key: KEY, event: "done" })
+  await tick()
+  assert.deepEqual(bareCalls, [["sessions:list"]], "非函数窄口：零抛 + 标题刷新照常（两出口同触发点 · 各司其职）")
+  offBare()
+  assert.equal(bareHandlers.size, 0, "第二实例退订十路全退（实例隔离）")
 
   const page = (meta) => applyPage(
     stateOf({ history: { hasOlder: true, inFlight: true, page: 200 } }),
@@ -159,4 +203,83 @@ test("U89 标题刷新 + sessionMeta：收尾恰一次 / meta 五行矩阵", asy
   const mixed = { provider: "", model: 7, effort: "low", engineering: null, autoApprove: {} }
   assert.deepEqual(page(mixed).sessionMeta[KEY], { effort: "low" }, "空串 / 非串 ⇒ 该键不落")
   assert.deepEqual(page({}).sessionMeta[KEY], {}, "全缺 ⇒ {}")
+})
+
+test("T-DSK24 卡面两切片：首写自种 / 同键就地替换 / clearQuestion / stopped 终局摘项", () => {
+  const blank = stateOf()
+  assert.equal(blank.questions, undefined, "原态零 `questions` 槽（首写自种）")
+
+  const asked = reduce(blank, { channel: "ev:question", key: KEY, promptId: "q1", question: "选哪个？", options: ["a", "b"], text: "表外键" })
+  assert.deepEqual(Object.keys(asked.questions), [KEY], "本键自种（他键零写）")
+  assert.deepEqual(asked.questions[KEY], { promptId: "q1", question: "选哪个？", options: ["a", "b"] }, "载荷三键原样（表外键不落）")
+  assert.deepEqual(asked.tabBadges[KEY], ["approval"], "待作答 ⇒ 本键位标含 `approval`（与 `onApproval` 同形）")
+  assert.equal(blank.questions, undefined, "纯写：原态零改")
+
+  const respoken = reduce(asked, { channel: "ev:question", key: KEY, promptId: "q2", question: "改主意？", options: [] })
+  assert.deepEqual(Object.keys(respoken.questions), [KEY], "同键就地替换（零叠条）")
+  assert.equal(respoken.questions[KEY].promptId, "q2", "新载荷覆旧值")
+
+  const otherKey = reduce(asked, { channel: "ev:question", key: "9", promptId: "q9", question: "x" })
+  assert.deepEqual(Object.keys(otherKey.questions).sort(), [KEY, "9"], "他键写他键槽")
+  assert.deepEqual(otherKey.questions[KEY], asked.questions[KEY], "他键事件 ⇒ 本键切片零写")
+  assert.deepEqual(otherKey.tabBadges[KEY], ["approval"], "本键位标零动")
+
+  const cleared = clearQuestion(otherKey, "9")
+  assert.equal("9" in cleared.questions, false, "摘本键项")
+  assert.deepEqual(cleared.tabBadges["9"], [], "清本键 `approval` 位")
+  assert.deepEqual(cleared.questions[KEY], asked.questions[KEY], "他键切片零动")
+  assert.equal(clearQuestion(cleared, "9"), cleared, "无本键项 ⇒ 原引用（幂等）")
+  assert.equal(clearQuestion(asked, "7"), asked, "非本键 ⇒ 原引用")
+  const approvalOnly = reduce(blank, { channel: "ev:approval", key: KEY, promptId: "p1", shape: "single", tool: "write" })
+  assert.deepEqual(approvalOnly.tabBadges[KEY], ["approval"], "审批项置本键位标")
+  assert.equal(clearQuestion(approvalOnly, KEY), approvalOnly, "零提问项 ⇒ 原引用（码清随项摘 ⇒ 不误清审批码）")
+
+  const busy = reduce(asked, { channel: "ev:activity", key: KEY, event: "turn" })
+  assert.deepEqual(busy.tabBadges[KEY], ["approval", "running"], "回合起叠加本键位标")
+  const halted = reduce(busy, { channel: "ev:activity", key: KEY, event: "stopped" })
+  assert.equal(KEY in halted.questions, false, "`stopped` 终局 ⇒ 事件面摘本键提问项")
+  assert.deepEqual(halted.tabBadges[KEY], ["done"], "清 `approval` + 去 `running` + 置 `done`")
+  assert.equal(KEY in reduce(asked, { channel: "ev:activity", key: KEY, event: "done" }).questions, true, "`done` 径不摘项")
+
+  const items = [{ title: "一", status: "queued" }]
+  const planned = reduce(blank, { channel: "ev:task", key: KEY, items })
+  assert.deepEqual(planned.tasks[KEY], items, "载荷逐字原样")
+  assert.equal(planned.questions, undefined, "两切片互不牵动")
+  assert.deepEqual(reduce(planned, { channel: "ev:task", key: KEY, items: [] }).tasks[KEY], [], "同键就地替换（空列表 = 消费面零节点，槽仍在）")
+  assert.deepEqual(reduce(planned, { channel: "ev:task", key: KEY, items: "x" }).tasks[KEY], [], "非数组 ⇒ `[]`（防御读形）")
+  assert.deepEqual(Object.keys(planned.tasks), [KEY], "他键零写")
+})
+
+test("T-DSK29 占用读数：按 key 写切片 / 有效读数门（未至 · 非正 · 非数 ⇒ 原引用）/ 同值原引用 / 十通道接线", async () => {
+  const blank = stateOf()
+  const seeded = reduce(blank, { channel: "ev:usage", key: KEY, percent: 42 })
+  assert.deepEqual(seeded.usage, { [KEY]: 42 }, "按会话 key 写切片（值 = `percent` 原样）")
+  assert.deepEqual(blank.usage, {}, "纯写：原态零改")
+  const bare = stateOf()
+  delete bare.usage
+  assert.deepEqual(reduce(bare, { channel: "ev:usage", key: KEY, percent: 7 }).usage, { [KEY]: 7 }, "槽缺 ⇒ 首写自种（`?? {}`）")
+
+  assert.equal(reduce(seeded, { channel: "ev:usage", key: KEY, percent: 42 }), seeded, "同键同值 ⇒ 原引用（零重绘）")
+  assert.deepEqual(reduce(seeded, { channel: "ev:usage", key: KEY, percent: 80 }).usage, { [KEY]: 80 }, "同键新值 ⇒ 就地替换")
+  assert.deepEqual(reduce(seeded, { channel: "ev:usage", key: "9", percent: 5 }).usage, { [KEY]: 42, 9: 5 }, "他键写他键槽（本键零写）")
+  for (const percent of [0, -1, NaN, "42", null, undefined, true]) {
+    assert.equal(reduce(seeded, { channel: "ev:usage", key: KEY, percent }), seeded, `门外值 ⇒ 原引用（未至 / 非正 / 非数：${String(percent)}）`)
+  }
+  assert.deepEqual(seeded.usage, { [KEY]: 42 }, "门外反复 ⇒ 切片零写（零节点）")
+
+  const handlers = new Map()
+  const store = createStore(initialState())
+  const off = attachEvents({
+    on: (channel, handler) => { handlers.set(channel, handler); return () => handlers.delete(channel) },
+    store,
+    invoke: () => Promise.resolve({}),
+  })
+  assert.equal(handlers.size, 10, "十通道全订阅")
+  assert.ok(handlers.has("ev:usage"), "订阅含 `ev:usage`")
+  handlers.get("ev:usage")({ key: KEY, percent: 42 })
+  assert.deepEqual(store.get().usage, { [KEY]: 42 }, "通道 → 归约 → store 落态")
+  handlers.get("ev:usage")({ key: KEY, percent: null })
+  assert.deepEqual(store.get().usage, { [KEY]: 42 }, "门外载荷 ⇒ 状态零动（原引用不落 store）")
+  off()
+  assert.equal(handlers.size, 0, "十路全退")
 })

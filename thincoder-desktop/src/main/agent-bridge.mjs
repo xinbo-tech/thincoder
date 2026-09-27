@@ -5,7 +5,7 @@
  * 通道映射 `createBridge`。工具参数摘要 `summarizeArgs` 同行（回调桥与待决门 payload 共用一份口径 ——
  * `suspensions.mjs` 引用本档，不复制）。
  * 依赖面 = 注入（零宿主依赖 ⇒ 平 node 直测）：`post(channel, payload)` = 主进程出站面 ·
- * `askSingle` / `askBatch` = 两门挂起（表与 resolve 在 `suspensions.mjs`，本档只转口、不持表）。
+ * `askSingle` / `askBatch` / `askQuestion` = 三门挂起（表与 resolve 在 `suspensions.mjs`，本档只转口、不持表）。
  */
 
 /** 活动名闭集（SHELL.md §4 · IPC.md §1 桥面）：`⟦ev⟧` 出发的八名 —— 表外名（子代理中继）原样透传（形状同一）。 */
@@ -47,9 +47,10 @@ export function summarizeArgs(name, args) {
   }
 }
 
-/** 九回调桥（`⟦ev⟧` 协议行 ⇒ `ev:activity`；非协议 ⇒ `ev:token` 文本面）：`createBridge({post, askSingle, askBatch})`
- *  ⇒ `bridge(key)`。每帧 `key` 前置并入（帧 payload 自带同名键时后者胜 —— 形状同原实现）。 */
-export function createBridge({ post, askSingle, askBatch }) {
+/** 九回调桥（`⟦ev⟧` 协议行 ⇒ `ev:activity`；非协议 ⇒ `ev:token` 文本面）：
+ *  `createBridge({post, askSingle, askBatch, askQuestion})` ⇒ `bridge(key)`。每帧 `key` 前置并入
+ *  （帧 payload 自带同名键时后者胜 —— 形状同原实现）。 */
+export function createBridge({ post, askSingle, askBatch, askQuestion }) {
   return function bridge(key) {
     const at = (channel, payload) => post(channel, { key, ...payload })
     return {
@@ -67,12 +68,9 @@ export function createBridge({ post, askSingle, askBatch }) {
         at("ev:tool-result", { id, ok: !String(result).startsWith("Error:"), result, ...(subKey ? { subKey } : {}) }),
       onPermissionRequest: (name, args) => askSingle(key, name, args),
       onBatchPermissionRequest: (req) => askBatch(key, req),
-      // 作答面本批无通道（`ev:question` 只出站）⇒ 返回**信号串**（核内范例风格 = `core/tools/question.mjs:20-22`：
-      // 无作答通道时给模型一句可读信号，令其改在正常回复文本里问用户——不抛、不阻塞回合）。
-      onQuestion: (question, options) => {
-        at("ev:question", { question, options })
-        return "(error: question tool not supported in this context (no answer channel in this build) — ask the user in your normal reply text)"
-      },
+      // 作答门（`question` 工具 ⇒ 用户真作答）：转口 `askQuestion` ⇒ 返**悬起 Promise**（出站与结算住
+      // `suspensions.mjs` —— 桥零文案）；工具结果 = 作答串 ∥ 取消串（`QUESTION_CANCELLED`）。
+      onQuestion: (question, options) => askQuestion(key, question, options),
       onTaskUpdate: (items) => at("ev:task", { items }),
     }
   }

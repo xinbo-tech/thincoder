@@ -23,6 +23,7 @@ import files from "./files.mjs"
 import { pushChildUpstream, drainChildUpstream } from "@thincoder/core/agent-tools/parent-channel.mjs"
 import { executeSendAction } from "@thincoder/core/agent-tools/subagent-actions.mjs"
 import { AUTO_TURN_DIGEST_DOMAIN, AUTO_TURN_DIGEST_DOMAIN_ENG, UPSTREAM_TURN_DOMAIN } from "@thincoder/core/agent/helpers.mjs"
+import { _setLogsDirForTest, _resetLogsDirForTest } from "@thincoder/core/log.mjs"
 import { suspensionSession } from "../src/extension/suspension.mjs"
 import { CARRIER_FIELDS as PROD_CARRIER_FIELDS } from "../src/agent.mjs"
 import { composeTurnDomain, VSC_TURN_OVERLAY } from "../src/agent/turn-domains.mjs"
@@ -34,10 +35,10 @@ before(() => {
   _tmp = mkdtempSync(join(tmpdir(), "tc-upstream-parity-"))
   _logDir = join(_tmp, "logs")
   // logEvent 写门（NODE_TEST_CONTEXT 下默认跳过）——digest:start 载荷断言用；隔离目录防污染真实日志。
-  process.env.THINCODER_LOG_DIR = _logDir
+  _setLogsDirForTest(_logDir)
 })
 after(() => {
-  delete process.env.THINCODER_LOG_DIR
+  _resetLogsDirForTest()
   try { rmSync(_tmp, { recursive: true, force: true }) } catch { /* ignore */ }
 })
 

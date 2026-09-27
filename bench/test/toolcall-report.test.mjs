@@ -16,10 +16,11 @@ import { CASES } from "../toolcall/cases.mjs"
 import { assertToolcallLabel, writeToolcallReport } from "../toolcall/report.mjs"
 import { buildVariants, payloadDigest } from "../toolcall/variants.mjs"
 import { scanLeaks } from "../lib/sanitize.mjs"
+import { setResultsDir } from "../lib/output.mjs"
 import { main } from "../toolcall.mjs"
 
 const SANDBOX = mkdtempSync(join(tmpdir(), "toolcall-report-results-"))
-process.env.BENCH_RESULTS_DIR = SANDBOX // 落档面走既有缝（不触 bench/results/）
+setResultsDir(SANDBOX) // 落档面走进程内缝（不触 bench/results/）
 after(() => rmSync(SANDBOX, { recursive: true, force: true }))
 
 async function runCli(args) {
@@ -40,7 +41,7 @@ const AXIS_FIELDS = ["n", "hit", "legal", "semOk", "perfect", "noCall", "multiCa
 
 test("AC-5：--dry-run 产物断言——md 段清单 + JSON 顶层字段 + 混淆矩阵 + 逐例 × 变体矩阵行数 = 用例数 × 变体数", async () => {
   const label = `toolcall-artifact-${process.pid}`
-  const r = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--n", "1", "--label", label])
+  const r = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--n", "1", "--label", label, "--results-dir", SANDBOX])
   assert.equal(r.code, 0, r.out)
   assert.match(r.out, /报告对已落档：/, "控制台回显落档路径")
   const base = artifactPath(label, ".json")
@@ -100,7 +101,7 @@ test("AC-5：--dry-run 产物断言——md 段清单 + JSON 顶层字段 + 混�
   const v0 = buildVariants({ model: "mimo-v2.6-flash" }).find((x) => x.id === "V0")
   const expectDigest = payloadDigest([{ key: "mimo:mimo-v2.6-flash", variant: v0 }])
   assert.equal(data.run.payloadDigest, expectDigest, "选集含 V0 ⇒ 摘要 = V0 载荷摘要")
-  const noV0 = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--n", "1", "--variants", "V1,V2", "--label", `toolcall-nov0-${process.pid}`])
+  const noV0 = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--n", "1", "--variants", "V1,V2", "--label", `toolcall-nov0-${process.pid}`, "--results-dir", SANDBOX])
   assert.equal(noV0.code, 0, noV0.out)
   const alt = readJson(artifact(`toolcall-nov0-${process.pid}`, ".json"))
   assert.equal(alt.run.payloadDigest, expectDigest, "V0 未选 ⇒ 摘要仍 = V0 载荷摘要（非空输入常量哈希）")
@@ -111,12 +112,12 @@ test("落档面：标签前缀强制 / 同名拒写 / 脱敏（writePair 断言�
   assert.equal(assertToolcallLabel("toolcall-baseline"), "toolcall-baseline")
   assert.throws(() => assertToolcallLabel("baseline"), /必以 toolcall- 起/)
   assert.throws(() => assertToolcallLabel(""), /必以 toolcall- 起/)
-  const r = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--n", "1", "--label", `toolcall-dup-${process.pid}`])
+  const r = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--n", "1", "--label", `toolcall-dup-${process.pid}`, "--results-dir", SANDBOX])
   assert.equal(r.code, 0, r.out)
-  const again = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--n", "1", "--label", `toolcall-dup-${process.pid}`])
+  const again = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--n", "1", "--label", `toolcall-dup-${process.pid}`, "--results-dir", SANDBOX])
   assert.equal(again.code, 1, "同名拒写 ⇒ 退出码 1")
   assert.match(again.out, /同名产物已存在/, "同名拒写不静默")
-  const bad = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--n", "1", "--label", `baseline-${process.pid}`])
+  const bad = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--n", "1", "--label", `baseline-${process.pid}`, "--results-dir", SANDBOX])
   assert.equal(bad.code, 1, "标签前缀非 toolcall- ⇒ 退出码 1")
   assert.match(bad.out, /必以 toolcall- 起/)
   // 脱敏：凭据命中 ⇒ 拒写（JSON / md 同一断言面）
@@ -128,7 +129,7 @@ test("落档面：标签前缀强制 / 同名拒写 / 脱敏（writePair 断言�
 
 test("成本闸：假成本到顶 ⇒ 余面 skipped 入 runs[] + 分母排除 + warning + 退出码 0", async () => {
   const label = `toolcall-gate-${process.pid}`
-  const r = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--n", "1", "--max-cost", "0.02", "--label", label])
+  const r = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--n", "1", "--max-cost", "0.02", "--label", label, "--results-dir", SANDBOX])
   assert.equal(r.code, 0, r.out)
   assert.match(r.out, /成本闸截断/, "控制台逐 run 行可见截断")
   const data = readJson(artifact(label, ".json"))
@@ -149,7 +150,7 @@ test("成本闸：假成本到顶 ⇒ 余面 skipped 入 runs[] + 分母排除 +
   assert.equal(v.axis.skipped, v.cases.flatMap((c) => c.runs).filter((x) => x.terminal === "skipped").length, "skipped 单列计数")
   assert.equal(data.warnings.some((w) => String(w).includes("成本闸到顶")), true, "截断 warning 在档")
   // 全跳过极端（闸 = 0）
-  const allSkip = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--n", "1", "--max-cost", "0", "--label", `toolcall-gate0-${process.pid}`])
+  const allSkip = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--n", "1", "--max-cost", "0", "--label", `toolcall-gate0-${process.pid}`, "--results-dir", SANDBOX])
   assert.equal(allSkip.code, 0, allSkip.out)
   const zero = readJson(artifact(`toolcall-gate0-${process.pid}`, ".json"))
   for (const m of zero.models) {

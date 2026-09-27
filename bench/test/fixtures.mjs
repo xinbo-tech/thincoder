@@ -1,7 +1,7 @@
 /**
  * test/fixtures.mjs — 重算 / 渲染两档测试共用件（`report-recompute.test.mjs` 超 300 行 ⇒ 按设计档 §3 拆出）。
  * 本档即夹具档（§3 夹具落点——`report-recompute.test.mjs` 超 300 行拆分时提取）：`fixtureResult` 族 + CLI 驱动 + 沙箱。
- * 装载期即设 `BENCH_RESULTS_DIR`（必须在动态 import run.mjs 之前）⇒ 每档写自己的临时沙箱，不触 `bench/results/`。
+ * 装载期即设 `setResultsDir` 缝 ⇒ 每档写自己的临时沙箱，不触 `bench/results/`（读点惰性 · 与 import 顺序无关）。
  */
 
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
@@ -9,12 +9,13 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
+import { setResultsDir } from "../lib/output.mjs"
 
 export { assert, test }
 
 export const SANDBOX = mkdtempSync(join(tmpdir(), "bench-sandbox-"))
 export const FIXTURES = mkdtempSync(join(tmpdir(), "bench-fixtures-"))
-process.env.BENCH_RESULTS_DIR = SANDBOX // 必须在 import run.mjs 之前（结果目录在模块装载时解析）
+setResultsDir(SANDBOX) // 装载期设缝；落档面不触 bench/results/（读点惰性 · 与 import 顺序无关）
 const { main } = await import("../run.mjs")
 
 after(() => {

@@ -30,8 +30,13 @@ const REASON_MAX = 300
 const VERDICTS = ["pass", "fail"]
 const REVIEW_VERDICTS = ["uphold", "overturn"]
 
-/** 判官配置档路径（默认 `bench/judge.json`；BENCH_JUDGE = 测试夹具缝，§5.13 `judge.4–6/12`）。 */
-export const judgeConfigPath = () => (process.env.BENCH_JUDGE ? resolve(process.env.BENCH_JUDGE) : join(BENCH_DIR, "judge.json"))
+/** 判官配置档路径（默认 `bench/judge.json`）；`--judge-config` / 进程内缝 = 测试夹具（§5.13 `judge.4–6/12`；CONFIG.md §6.2）。 */
+let _judgeConfigPath = null
+export const judgeConfigPath = () => _judgeConfigPath ?? join(BENCH_DIR, "judge.json")
+
+/** 判官档路径缝（③ 成对）：`--judge-config` 经入口落此；测试 set / reset 复原。 */
+export function _setJudgeConfigPathForTest(p) { _judgeConfigPath = resolve(p) }
+export function _resetJudgeConfigPathForTest() { _judgeConfigPath = null }
 
 function slotAt(raw, at) {
   if (!raw || typeof raw !== "object") throw new Error(`judge.json：${at} 不是对象`)

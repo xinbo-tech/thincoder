@@ -29,7 +29,7 @@ import { setupWizard } from "../src/cli/setup-wizard.mjs"
 import { summarize, askPermission } from "../src/cli/permission.mjs"
 import { distillCommand } from "../src/cli/distill-command.mjs"
 import { prepareCrashReporting, recentCrashHint, writeCrashRecord } from "../src/crash-reports.mjs"
-import { setTuiActive, restoreTerminalAfterCrash } from "../src/tui/tui-lifecycle.mjs"
+import { setTuiActive, restoreTerminalAfterCrash, _setCleanupOutPathForTest } from "../src/tui/tui-lifecycle.mjs"
 import { spawnTuiWrapped } from "../src/tui/wrapped-spawn.mjs"
 import { configurePromptInjections } from "@thincoder/core/prompt-files.mjs"
 import { CLI_PROMPT_INJECTIONS } from "../src/prompt-injections.mjs"
@@ -38,25 +38,39 @@ import { CLI_PROMPT_INJECTIONS } from "../src/prompt-injections.mjs"
 // 漏配 = 锚字面静默进模型 ⇒ 入口面用例（test/integration/cli-prompt-entry.test.mjs）显式覆盖本调用路径。
 configurePromptInjections(CLI_PROMPT_INJECTIONS)
 
-const [command, ...args] = process.argv.slice(2)
+// CONFIG.md §6.2 ④：内部 argv 标志（生产零路径）。`--tui-wrapped`（包装门——注入点 =
+// src/tui/wrapped-spawn.mjs）在 bin 顶部自剥离（不进命令解析）；测试钩逐旗标
+// （`--test-crash` / `--test-tui-active` / `--test-cleanup-out=<路径>`）在下方崩溃钩处按原始 argv
+// （位置无关）判定后抛错接管——先于命令分派，永不作为命令被解释。
+const _argvRaw = process.argv.slice(2)
+const _tuiWrapped = _argvRaw.includes("--tui-wrapped")
+const [command, ...args] = _argvRaw.filter((a) => a !== "--tui-wrapped")
 // TUI-STDERR-CAPTURE（F-1）：TUI 启动（tui/无命令）默认包装——父 spawn 子 tee stderr 落盘（外部
 // 终止/native abort——第 4 类崩溃面——诊断默认捕获）。须在 prepareCrashReporting 前（父不预建/不设
-// report——子进程做——R25 保留）。env 门已设（包装内子进程）或包装失败 → 直行现逻辑（尽力面）。
-if ((command === undefined || command === "tui") && !process.env.THINCODER_TUI_WRAPPED) {
+// report——子进程做——R25 保留）。argv 门已设（包装内子进程）或包装失败 → 直行现逻辑（尽力面）。
+if ((command === undefined || command === "tui") && !_tuiWrapped) {
   if (spawnTuiWrapped()) await new Promise(() => {}) // 包装成功 → 挂起（tee/收尾退出全在 wrapped-spawn——不达下方 switch）
 }
 const VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version
 
+// CONFIG.md §6.2 ①（用户面两开关——默认开）：判定单点 = 本入口——读配置键
+// `diagnostics.{heapSnapshot,heapWatch}` 一次，经显式参数传入下方两消费者（读抛 ⇒ 视为默认开）。
+let _diagnostics = {}
+try {
+  _diagnostics = loadConfig().diagnostics ?? {}
+} catch { /* 配置缺失/损坏 → 默认开（零风险） */ }
+
 // R25（F-R25b）：crash-reports 预建 + process.report 启用——入口最前（一切重活前——缩编程
 // 期窗口）——V8 OOM/原生 fatal 自动写 report.*.json（实现批实测：目录缺失时 Node 静默不写
 // ——预建为必要动作）。失败不阻断启动（尽力面）。
-prepareCrashReporting()
+prepareCrashReporting({ heapSnapshot: _diagnostics.heapSnapshot !== false })
 // TUI-OOM-ROOTCAUSE（CRASH-REPORTS.md §8.3 武装点——全命令同源单点）：堆遥测/看门狗——
 // 60s 采样 + 双档（70/85%）比例边缘预警（stderr + TUI 行 + 事件日志）；定时器 unref
-// （一次性命令自然退出零阻塞）；默认开 / THINCODER_HEAP_WATCH 关值集可不启。失败面全吞。
+// （一次性命令自然退出零阻塞）；默认开（配置键 `diagnostics.heapWatch` 取 `false` 可不启）。
+// 失败面全吞。
 try {
   const { startHeapWatch } = await import("../src/heap-watch.mjs")
-  startHeapWatch()
+  startHeapWatch({ enabled: _diagnostics.heapWatch !== false })
 } catch { /* 看门狗启动失败不阻断启动（尽力面） */ }
 
 // R25（F-R25a）异常钩子升级：原"只 console.error 一行（TUI 全屏下不可见）"→ ① 落盘
@@ -91,12 +105,15 @@ function handleFatal(type, error) {
 process.on("uncaughtException", (error) => handleFatal("uncaughtException", error))
 process.on("unhandledRejection", (error) => handleFatal("unhandledRejection", error))
 
-// R25 测试门（T-R25a.1/a.2——子进程 env 注入——生产零路径）：THINCODER_TEST_CRASH=1 抛
-// 未捕获异常走完整崩溃序列；THINCODER_TEST_TUI_ACTIVE=1 模拟 TUI 活动态（同一 setter——
-// 测试缝同源）；THINCODER_TEST_CLEANUP_OUT 指向文件时恢复序列写入该文件（tui-lifecycle 读）。
-if (process.env.THINCODER_TEST_CRASH === "1") {
-  if (process.env.THINCODER_TEST_TUI_ACTIVE === "1") setTuiActive(true)
-  throw new Error("R25 test crash (THINCODER_TEST_CRASH)")
+// R25 测试门（T-R25a.1/a.2——子进程 argv 注入——生产零路径）：`--test-crash` 抛未捕获异常
+// 走完整崩溃序列；`--test-tui-active` 模拟 TUI 活动态（同一 setter——测试缝同源）；
+// `--test-cleanup-out=<路径>` 指到文件时恢复序列写入该文件（tui-lifecycle 缝——启动时读点）。
+// 判定面 = 原始 argv（位置无关——与旧 env 门同语义：旗标可居首/居尾，不依赖命令位）。
+const _cleanupOutArg = _argvRaw.find((a) => a.startsWith("--test-cleanup-out="))
+if (_cleanupOutArg) _setCleanupOutPathForTest(_cleanupOutArg.slice("--test-cleanup-out=".length))
+if (_argvRaw.includes("--test-crash")) {
+  if (_argvRaw.includes("--test-tui-active")) setTuiActive(true)
+  throw new Error("R25 test crash (--test-crash)")
 }
 
 const USAGE = `thincoder - thin coding agent

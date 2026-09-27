@@ -14,9 +14,10 @@ import { after, test } from "node:test"
 
 import { RUN_FIELDS } from "../probe/classify.mjs"
 import { assertProbeLabel, normalizeSelfText, writeProbeReport } from "../probe/report.mjs"
+import { setResultsDir } from "../lib/output.mjs"
 
 const SANDBOX = mkdtempSync(join(tmpdir(), "probe-report-results-"))
-process.env.BENCH_RESULTS_DIR = SANDBOX // 落档面走既有缝（不触 bench/results/）
+setResultsDir(SANDBOX) // 落档面走进程内缝（不触 bench/results/）
 after(() => rmSync(SANDBOX, { recursive: true, force: true }))
 
 async function runProbeCli(args) {
@@ -43,7 +44,7 @@ const readText = (p) => readFileSync(p, "utf8")
 
 test("AC-7：dry-run 报告对——md 段清单六段 + 逐夹具表列集 + JSON 顶层与 runs 字段", async () => {
   const label = `probe-report-${process.pid}`
-  const r = await runProbeCli(["--dry-run", "--models", "mimo-v2.6-flash", "--label", label])
+  const r = await runProbeCli(["--dry-run", "--models", "mimo-v2.6-flash", "--label", label, "--results-dir", SANDBOX])
   assert.equal(r.code, 0, r.out)
   const { md, json } = pairOf(label)
   const text = readText(md)
@@ -93,15 +94,15 @@ test("AC-7：dry-run 报告对——md 段清单六段 + 逐夹具表列集 + JS
 
 test("AC-7：同名拒写（留档不可静默覆盖）+ 标签前缀强制 + --models 必填", async () => {
   const label = `probe-dup-${process.pid}`
-  const first = await runProbeCli(["--dry-run", "--models", "mimo-v2.6-flash", "--label", label])
+  const first = await runProbeCli(["--dry-run", "--models", "mimo-v2.6-flash", "--label", label, "--results-dir", SANDBOX])
   assert.equal(first.code, 0, first.out)
-  const second = await runProbeCli(["--dry-run", "--models", "mimo-v2.6-flash", "--label", label])
+  const second = await runProbeCli(["--dry-run", "--models", "mimo-v2.6-flash", "--label", label, "--results-dir", SANDBOX])
   assert.equal(second.code, 1, "同名 ⇒ 拒写（退出码 1）")
   assert.match(second.out, /同名产物已存在/, "拒写文案可读")
-  const bad = await runProbeCli(["--dry-run", "--models", "mimo-v2.6-flash", "--label", "not-a-probe-label"])
+  const bad = await runProbeCli(["--dry-run", "--models", "mimo-v2.6-flash", "--label", "not-a-probe-label", "--results-dir", SANDBOX])
   assert.equal(bad.code, 1)
   assert.match(bad.out, /必以 probe- 起/)
-  const noModels = await runProbeCli(["--dry-run"])
+  const noModels = await runProbeCli(["--dry-run", "--results-dir", SANDBOX])
   assert.equal(noModels.code, 1)
   assert.match(noModels.out, /--models 必填/)
   assert.equal(assertProbeLabel("probe-x"), "probe-x")
@@ -144,7 +145,7 @@ test("AC-7：脱敏两腿——绝对路径占位（保数据 + warning 计数�
 
 test("AC-8：成本闸到顶 ⇒ 余面 skipped 入 runs[] + 聚合分母排除 + warning + 退出码 0", async () => {
   const label = `probe-gate-${process.pid}`
-  const r = await runProbeCli(["--dry-run", "--models", "mimo-v2.6-flash", "--label", label, "--max-cost", "0.005"])
+  const r = await runProbeCli(["--dry-run", "--models", "mimo-v2.6-flash", "--label", label, "--max-cost", "0.005", "--results-dir", SANDBOX])
   assert.equal(r.code, 0, "成本闸 = 数据不是错误（退出码 0）")
   const data = readJson(pairOf(label).json)
   const runs = data.models[0].runs

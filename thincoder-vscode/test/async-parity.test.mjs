@@ -13,7 +13,7 @@
  *    （T-D8/T-D13）；
  * ③ 挂起驱动缝——桩面板 + mock `runTurn`（T-D7：digest 轮 AbortError 容忍）；
  *    桩面板 + `handlePanelMessage`（T-D10：现状锁）。
- * 事件断言（T-D5/T-D7/T-D11/T-D12）= THINCODER_LOG_DIR 隔离目录读档（log.test 同款；
+ * 事件断言（T-D5/T-D7/T-D11/T-D12）= 进程内缝隔离目录读档（log.test 同款；
  * delta 计数）。
  */
 import { test, before, after } from "node:test"
@@ -29,6 +29,7 @@ import { subagentTool as coreSubagentTool } from "@thincoder/core/agent-tools/su
 import { executeStatusAction } from "@thincoder/core/agent-tools/subagent-actions.mjs"
 import { depInfo } from "@thincoder/core/agent-tools/subagent-scheduler.mjs"
 import { tombstoneOf, writeTombstone } from "@thincoder/core/agent-tools/async-settle.mjs"
+import { _setLogsDirForTest, _resetLogsDirForTest } from "@thincoder/core/log.mjs"
 import { discardAbortedPool, discardAbortedAdvisors } from "../src/agent-tools/async-discard.mjs"
 import { vscSubagentFace } from "../src/agent/setup.mjs"
 import { finalizeAgentTurn } from "../src/agent/run-stages.mjs"
@@ -47,11 +48,11 @@ before(() => {
   _logDir = join(_tmp, "logs")
   // logEvent 写门（NODE_TEST_CONTEXT 下默认跳过）——ev:stopped / ev:discarded /
   // digest:stopped 断言用；隔离目录防污染真实诊断日志。
-  process.env.THINCODER_LOG_DIR = _logDir
+  _setLogsDirForTest(_logDir)
 })
 
 after(() => {
-  delete process.env.THINCODER_LOG_DIR
+  _resetLogsDirForTest()
   try { rmSync(_tmp, { recursive: true, force: true }) } catch { /* ignore */ }
 })
 

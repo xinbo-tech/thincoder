@@ -11,7 +11,7 @@
  *  - T-AF9（#20 · F-3② · AC-AF8）：工具路径收口（`executeCancelAction` advisor 落池分支经核单点）；
  *  - T-AF10（F-6 · AC-AF9）：日志面（queued 出队点直记 / running 经 settle——写点互斥恰一条）。
  *
- * 手法：直驱核导出（零网络 / 零 LLM——排队条目从不 start；T-AF10 以 `THINCODER_LOG_DIR`
+ * 手法：直驱核导出（零网络 / 零 LLM——排队条目从不 start；T-AF10 以 `_setLogsDirForTest`
  * 隔离目录读档）。夹具与 `advisor-pool-queue.test.mjs`（ED-4 池/队列面）同形但**独立自持**
  * （两档均 <300 行——`core-hygiene.test.mjs` 软线机检）。
  */
@@ -24,7 +24,7 @@ import { launchAsyncAdvisor, cancelAsyncAdvisor, runningAdvisorCount, refillAdvi
 import { settleAsyncEntry, tombstoneOf } from "../agent-tools/async-settle.mjs"
 import { queueRunnable, maybeRefillAsync } from "../agent-tools/subagent-scheduler.mjs"
 import { cancelAsyncSubagent, executeCancelAction } from "../agent-tools/subagent-async.mjs"
-import { todayLogPath } from "../log.mjs"
+import { _resetLogsDirForTest, _setLogsDirForTest, todayLogPath } from "../log.mjs"
 
 // ─── 夹具（同 `advisor-pool-queue.test.mjs` 形——本档自持）───────────────────
 
@@ -90,8 +90,7 @@ test("T-AF1 queued 取消收尾三面：机读线恰 +1 + ⟦ev⟧cancelled 恰 
 
 test("T-AF2 同一 queued id 重复取消：同一确认（cancelled）+ 零重复注入 / 零重复发射 / 零重复日志 / 队列与池零变", () => {
   const dir = mkdtempSync(join(tmpdir(), "tc-af-taf2-log-"))
-  const prev = process.env.THINCODER_LOG_DIR
-  process.env.THINCODER_LOG_DIR = dir
+  _setLogsDirForTest(dir)
   try {
     const { p, q1 } = mkFullPoolQueue()
     const tokens = []
@@ -112,8 +111,7 @@ test("T-AF2 同一 queued id 重复取消：同一确认（cancelled）+ 零重�
     const log = readFileSync(todayLogPath(), "utf8").trim().split("\n").map((l) => JSON.parse(l))
     assert.equal(log.filter((l) => l.ev === "ev:cancelled" && l.id === `advisor#${q1.id}`).length, 1, "零重复日志（ev:cancelled 恰 1 条）")
   } finally {
-    if (prev === undefined) delete process.env.THINCODER_LOG_DIR
-    else process.env.THINCODER_LOG_DIR = prev
+    _resetLogsDirForTest()
     rmSync(dir, { recursive: true, force: true })
   }
 })
@@ -220,8 +218,7 @@ test("T-AF9 工具路径收口（F-3②）：executeCancelAction advisor queued 
 
 test("T-AF10 日志面（F-6）：queued 取消直记 ev:cancelled 恰 1 条（两族）；running 面经 settle 仍恰 1（写点互斥）", () => {
   const dir = mkdtempSync(join(tmpdir(), "tc-af-log-"))
-  const prev = process.env.THINCODER_LOG_DIR
-  process.env.THINCODER_LOG_DIR = dir
+  _setLogsDirForTest(dir)
   try {
     // ① 评审族 queued（出队点直记）
     const { p, q1 } = mkFullPoolQueue()
@@ -246,8 +243,7 @@ test("T-AF10 日志面（F-6）：queued 取消直记 ev:cancelled 恰 1 条（�
     assert.equal(ids.filter((id) => id === "coder#9").length, 1, "子代理族 queued 恰 1 条（同事件名 / 同字段形）")
     assert.equal(ids.filter((id) => id === "advisor#7").length, 1, "running 面经 settle 恰 1 条（写点互斥不重复记）")
   } finally {
-    if (prev === undefined) delete process.env.THINCODER_LOG_DIR
-    else process.env.THINCODER_LOG_DIR = prev
+    _resetLogsDirForTest()
     rmSync(dir, { recursive: true, force: true })
   }
 })

@@ -23,6 +23,7 @@ import { suspensionSession } from "../src/tui/suspension-drive.mjs"
 import { renderStatus } from "../src/tui/render-frame.mjs"
 // F-UC8（2026-09-21 信号提示行批 §6.27.12.13 ①–②）：提示行断言以**核容器值**为据（零自持字面）
 import { t } from "@thincoder/core/i18n.mjs"
+import { _resetLogsDirForTest, _setLogsDirForTest } from "@thincoder/core/log.mjs"
 
 /** 最小按键态。 */
 function baseState(over = {}) {
@@ -356,12 +357,12 @@ test("中止丢弃（接线点②）：只清已死条目——出池 + discarde
   agent._asyncAdvisors.set("5", { id: 5, role: "advisor", status: "running", reviewType: "design", controller: aborted() })
   const logDir = mkdtempSync(join(tmpdir(), "tc-susp-discard-"))
   t.after(() => { try { rmSync(logDir, { recursive: true, force: true }) } catch { /* ignore */ } })
-  process.env.THINCODER_LOG_DIR = logDir
+  _setLogsDirForTest(logDir)
   agent._sessionAbort.abort() // 会话 Stop（首行 while 条件即假——直接走 finally 中止路径）
   try {
     await suspensionSession(ctx)
   } finally {
-    delete process.env.THINCODER_LOG_DIR
+    _resetLogsDirForTest()
   }
 
   // 只清已死：死条目（running + queued）出池、存活留池

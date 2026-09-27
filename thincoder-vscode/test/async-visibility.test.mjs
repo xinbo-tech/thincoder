@@ -28,6 +28,7 @@ import { loadSession } from "../src/extension/panel-session.mjs"
 import { ChatPanel } from "../src/extension/chat-panel.mjs"
 import { newSlot, _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-io.mjs"
 import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
+import { _setLogsDirForTest, _resetLogsDirForTest } from "@thincoder/core/log.mjs"
 import { setupWebview, installChatFixture } from "./helpers/webview-env.mjs"
 
 let _tmp
@@ -40,7 +41,7 @@ before(async () => {
   _logDir = join(_tmp, "logs")
   _setConfigPathForTest(join(_tmp, "config.json"))
   _setSessionsDirForTest(join(_tmp, "sessions"))
-  process.env.THINCODER_LOG_DIR = _logDir // logEvent 写门（NODE_TEST_CONTEXT 下默认跳过）——ev:subdeliver 断言用
+  _setLogsDirForTest(_logDir) // logEvent 写门（进程内缝——NODE_TEST_CONTEXT 下未设缝则跳过）——ev:subdeliver 断言用
   vscode.env.language = "en" // vscode mock 无 env.language——webviewReady 的 i18n 推送需要
   await newSlot(_cwd()) // fixture 槽 1（loadSession/resumeSlot 认领确定性）
   const env = setupWebview()
@@ -51,7 +52,7 @@ before(async () => {
 after(() => {
   try { window.dispatchEvent(new window.Event("unload")) } catch { /* happy-dom teardown edge */ }
   vscode.env.language = undefined
-  delete process.env.THINCODER_LOG_DIR
+  _resetLogsDirForTest()
   _setConfigPathForTest(null)
   _resetSessionsDirForTest()
   cleanupEnv()
@@ -105,7 +106,7 @@ function liveLines(extra = {}) {
 const subagentMsgs = (p) => p.posted.filter((m) => m.type === "subagent")
 const typesOf = (p) => p.posted.map((m) => m.type)
 
-/** ev:subdeliver 事件行（THINCODER_LOG_DIR 隔离目录——单日文件）。 */
+/** ev:subdeliver 事件行（进程内缝隔离目录——单日文件）。 */
 function deliverEvents() {
   let names = []
   try { names = readdirSync(_logDir) } catch { return [] }

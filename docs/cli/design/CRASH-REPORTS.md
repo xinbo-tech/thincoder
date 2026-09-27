@@ -30,8 +30,8 @@
 - **预建是必要动作**（非「零成本保险」）：目录缺失时 Node 对 fatal **静默不写**报告。
 - **落点更正（实测）**：`report.*.json` 实测落 `~/.thincoder/crash-reports/`——`process.report.directory` 已由进程内设定，
   **非 CWD**。
-- 接口（注入缝）：`prepareCrashReporting({ dir, env, armHeapSnapshot })`（`thincoder-cli/src/crash-reports.mjs` 导出）
-  ——默认参数保调用点零改；`dir` 选项同时服务 mkdir / `report.directory` / purge / 返回。返回值 = 目录路径。
+- 接口（注入缝）：`prepareCrashReporting({ dir, heapSnapshot = true, armHeapSnapshot })`（`thincoder-cli/src/crash-reports.mjs` 导出）
+  ——默认参数保**其余调用点**（如 `thincoder-cli/test/fixtures/r25-oom.mjs` 无参调用）零改（生产判定单点 = bin 入口读配置键 `diagnostics.heapSnapshot` 后显式传入——§3.2）；`dir` 选项同时服务 mkdir / `report.directory` / purge / 返回。返回值 = 目录路径。
 
 ### 2.2 JS 异常记录与启动提示
 
@@ -72,10 +72,11 @@
 - 独立 `try/catch`（尽力面——武装失败不阻断启动、不影响既有步骤）。
 - **缺口动机**：Node 诊断报告只有堆分区统计，**无「谁在持 8GB」**——对象级快照是该问题的唯一直答。
 
-### 3.2 env 开关
+### 3.2 开关（配置键）
 
-- 名：`THINCODER_HEAP_SNAPSHOT`；**判定单点 = `crash-reports.mjs`**（包装器不判 env——防两处判定漂移）。
-- 关值集合 `{0, false, off, no}`（trim + 小写）；其余（含未设 / 空串 / 未知值）→ **默认开**（fail-open 向取证）。
+- 键：`diagnostics.heapSnapshot`（布尔；判定 / 默认在 `thincoder-core/config.mjs` 装载面）；**判定单点 = bin 入口读键后以显式参数传入**（`prepareCrashReporting({ heapSnapshot })`——包装器不判定，防两处判定漂移）。
+- 取关：键值 `false` → **不武装**；缺省 / 其余值 → **默认开**（fail-open 向取证）。
+- 通道纪律（自有配置禁经 env）= `CONFIG.md` §6.2。
 - 包装器的 `--diagnostic-dir` **无条件注入**（开关已关时该参数无副作用面——报告目录由 `process.report.directory` 决定，同值）。
 
 ### 3.3 TUI 定向（`--diagnostic-dir`）
@@ -110,8 +111,8 @@
 
 ### 4.2 模块契约（`thincoder-cli/src/heap-watch.mjs`）
 
-- `startHeapWatch({ intervalMs = 60_000, ratios = [0.7, 0.85], sample, heapLimit, env, timer })`
-  → `{ stop(), checkNow() }`；`onHeapWarn(cb)` 订阅（返回退订函数）；`heapWatchEnabled(env)` 开关判定。
+- `startHeapWatch({ intervalMs = 60_000, ratios = [0.7, 0.85], sample, heapLimit, enabled = true, timer })`
+  → `{ stop(), checkNow() }`；`onHeapWarn(cb)` 订阅（返回退订函数）——模块不读配置 / env，开关于装配点经参数传入。
 - **阈值 = 堆上限比例**（`heapUsed / v8.getHeapStatistics().heap_size_limit`）——可移植（上限随 `--max-old-space-size` / Node 版本变化），
   无绝对 MB 常量。
 - **双档边缘触发**（70% / 85%——每档一次 / 进程，不重复刷屏）。
@@ -121,8 +122,8 @@
 
 ### 4.3 开关与预警行
 
-- **开关（单点）**：`THINCODER_HEAP_WATCH`——关值集合 `{0, false, off, no}`（trim + 大小写不敏感）→ 不启动；
-  未设 / 空串 / 其他值 → 启动（默认开；与 §3.2 同约定）。
+- **开关（单点）**：配置键 `diagnostics.heapWatch`（布尔）——`false` → 不启动；缺省 / 其余值 → 启动（默认开；与 §3.2 同约定）。
+  bin 入口读键后经显式参数传入（`startHeapWatch({ enabled })`——模块不读配置）。
 - **预警行（逐字——进测试断言）**：
 
 ```text
@@ -195,3 +196,5 @@
   实核三批机制（F3 取证 / F4 遥测 / F5 恢复）均已实现且测试档在位 ⇒ 本档按**现行态**落笔，去在途状态表述；
   ③ 坐标全量改**现状路径**并实核（`thincoder-cli/src/crash-reports.mjs` · `src/heap-watch.mjs` · `src/tui/wrapped-spawn.mjs` · `src/tui/tui-lifecycle.mjs` · `bin/thincoder.mjs`）；
   ④ 旧档批次材料（选型表 / 实测矩阵 / 受影响文件 / 用例 / AC / 问题陈述）入 §6.1；⑤ 三节机制按主题重排为 §1–§5。
+- 2026-09-27（**env-config-purge 批 · eng-designer**——承 `docs/batches/2026-09-27-env-config-purge.md` §1.5）：§3.2 由「env 开关」改**配置键** `diagnostics.heapSnapshot`（判定单点移 bin 入口 → 参数传入；关值集合消失）· §4.2 契约签名去 `env` 形参、加 `enabled = true` · §4.3 开关改 `diagnostics.heapWatch`。通道纪律单源 = `CONFIG.md` §6.2。
+- 2026-09-27（**env-config-purge 批 · 设计评审轮 1 修正轮 · eng-designer**——承 `docs/batches/2026-09-27-env-config-purge.md` §3 轮次 1 发现 1）：§2.1 注入接口行去 `env` 形参、列 `heapSnapshot = true`（与 §3.2 判定单点同形）；`heapSnapshot` 来源句补「bin 入口读配置键后显式传入」。**零语义**：§3.2 / §4.2 / §4.3 机制句零改。

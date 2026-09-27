@@ -1,24 +1,27 @@
 /**
- * mount-settings.mjs — 设置面 / 首启向导 / 项目级信息行接线一族（批档 §2.10 · §2.12–§2.15）：
- * 一容器两树互斥占槽 + 设置面出口族 + 向导出口族 + 信息行单入口 + 四段读数供给（端侧零算法）。
+ * mount-settings.mjs — 设置面 / 首启向导 / 项目级信息行接线一族（批档 §2.10 · §2.12–§2.15；向导接线族
+ * 批 B 拆入 `mount-onboarding.mjs`，本档注入装配）：一容器两树互斥占槽 + 设置面出口族 + 信息行单入口
+ * + 四段读数供给（端侧零算法）。
  *
  * 语义锚（`docs/desktop/design/IPC.md` §2 设置族 / 项目级信息族注）：
  *   ① 占槽裁决（一容器两树互斥）：`configured === false` ∧ 向导未退场 ⇒ 向导树占槽；其余 ⇒ 设置树
  *      （`open` 假 ⇒ 零子节点 —— 退场 = 容器清空，非 `hidden`）；`configured` 未知（畸形档）⇒ 向导不进、设置面可进。
  *      （判据单源 = 向导档 `wizardModel(state).active`，本档零副本。）
- *   ② 值面全经 store 纯动作落值（`patchSettings` / `setWizardStep` / `dismissWizard`）→ `store.set`；
- *      项目级两读数落顶层切片 `projectInfo`（顶层 ⇒ `store.set`，非 `patchSettings`）。**本档零 DOM 构造**（构树归视图档）。
+ *   ② 值面全经 store 纯动作落值（`patchSettings` / 向导族 `setWizardStep` · `dismissWizard` —— 后者住
+ *      `mount-onboarding.mjs`）→ `store.set`；项目级两读数落顶层切片 `projectInfo`（顶层 ⇒ `store.set`，非 `patchSettings`）。
+ *      **本档零 DOM 构造**（构树归视图档）。
  *   ③ 写后回读：`provider:*` / `mcp:*` 写成功 ⇒ 重读本段；`settings:agent` 写 ⇒ 回执 `fields` 直落（核已回读）。
  *   ④ 失败面零静默：读 / 写失败 ⇒ `console.error` + 面级失败串（设置面 `{ scope, reason }`、向导面单串）——
  *      核错误串直传、表内码出词归视图 `reasonWord`；出站失败 ⇒ **零乐观写**（不摘项、不改段读数）；畸形 JSON ⇒ **零发送**。
  *   ⑤ 重绘 = 本档自持订阅（触发切片 `SETTINGS_KEYS`）—— 消费面（`app.mjs`）只一行 `attachSettings(host, …)`
  *      （该档 300 行硬线 —— 批档 §2.15）；`config:write` 成功同回带 ⇒ 词表重刷与向导闸随新档态（**免二跳**）。
  *   ⑥ 向导步 3 目录出口走装配面注入的项目面链（`onProjectOpened` = `app.mjs` `openDir`，含刷新 + 「点开即可续」）：
- *      本档零算法副本；信息行两读数由本档随动复读。
+ *      注入点在本档、连线归向导接线族，本档零算法副本；信息行两读数由本档随动复读。
  * 纪律：零 `node:` / 零裸包（静态闭包判据 = `test/guard-closure.test.mjs`）· 逐通道回执形单源 = IPC.md §2。
  */
 import { initDict } from "./i18n.mjs"
-import { configuredFlag, dismissWizard, patchSettings, setWizardStep, store as defaultStore } from "./store.mjs"
+import { createWizard, presetValue } from "./mount-onboarding.mjs"
+import { configuredFlag, patchSettings, store as defaultStore } from "./store.mjs"
 import { mountInfo } from "./views/info-row.mjs"
 import { mountWizard, wizardModel } from "./views/onboarding.mjs"
 import { mountSettings } from "./views/settings.mjs"
@@ -46,13 +49,6 @@ const listOf = (value) => (Array.isArray(value) ? value : [])
 /** 失败串归一：回执 `reason` 非空串 ⇒ 直传（核错误串 / 表内码）；缺 ⇒ 端侧形判码（零静默 —— 调用面另记错）。 */
 const reasonOf = (receipt) => (typeof receipt?.reason === "string" && receipt.reason !== "" ? receipt.reason : "invalid-shape")
 
-/** 向导步 1 校验（`onVerify(null)`）：自读表单现选 —— 槽内预设选择器现值；缺 ⇒ `null`（零发送）。 */
-function presetValue() {
-  const select = document.querySelector(`${SETTINGS_SLOT} select[name="name"]`)
-  const value = select === null ? "" : String(select.value ?? "")
-  return value === "" ? null : value
-}
-
 /** agent 段变更集：DOM `[data-field]` 可写行 × 现态读数 diff ⇒ 只发变更路径；无变更 ⇒ `null`（零发送）。 */
 function agentPatch(state) {
   const current = new Map()
@@ -74,7 +70,8 @@ function agentPatch(state) {
 }
 
 /**
- * 设置族接线：挂载（两挂载面）+ 出口族（设置面九出口 / 向导六出口 / 信息行单入口）+ 供给面（四段读数）。
+ * 设置族接线：挂载（两挂载面）+ 出口族（设置面十出口 / 向导六出口经 `mount-onboarding.mjs` 装配 / 信息行
+ * 单入口）+ 供给面（四段读数）。
  * `host` = preload 窄桥（只 `invoke`）；`deps.onProjectOpened` = 装配面项目面链注入（缺 ⇒ 目录出口零动作）。
  * 返回 `{ paintSettings, paintInfo, handlers, wizardHandlers, keys, detach }`（消费面只 `attachSettings(host, …)`）。
  */
@@ -138,8 +135,9 @@ export function attachSettings(host, deps = {}) {
     return { provider: name, current: model === null ? null : `${name}:${model}` }
   }
 
-  /** 渠道段读数（`provider:list`：预置表 + 已配行 + 激活渠道三项直取）⇒ 模型段随动（激活渠道候选面）。 */
-  async function loadProviders() {
+  /** 渠道段读数（`provider:list`：预置表 + 已配行 + 激活渠道三项直取）⇒ 模型段随动（激活渠道候选面）。
+   *  `options.models` 假 ⇒ **保留同渠道候选面**（只刷行面 `effort` 现值 —— 档位写后刷新用，零候选清空）。 */
+  async function loadProviders(options = {}) {
     setSettings({ providers: { ...store.get().settings?.providers, state: "loading" } })
     const receipt = await ask("provider:list")
     if (receipt.ok !== true) {
@@ -148,13 +146,15 @@ export function attachSettings(host, deps = {}) {
       return null
     }
     const { provider, current } = activeModel(receipt)
+    const held = store.get().settings?.model ?? {}
+    const kept = options.models === false && held.provider === provider
     setSettings({
       notice: null,
       defaultModel: current,
       providers: { state: "ready", presets: listOf(receipt.presets), providers: listOf(receipt.providers) },
-      model: { state: store.get().settings?.model?.state ?? "none", provider, current, models: [] },
+      model: { state: held.state ?? "none", provider, current, models: kept ? listOf(held.models) : [] },
     })
-    await loadModels(provider)
+    if (!kept) await loadModels(provider)
     return provider
   }
 
@@ -248,7 +248,7 @@ export function attachSettings(host, deps = {}) {
 
   /** 校验出口（`provider:verify`）：`name` 缺（向导步 1）⇒ 自读表单现选；探不通**仍可保存**（只出读数，不拦写）。 */
   async function verifyChannel(name) {
-    const target = typeof name === "string" && name !== "" ? name : presetValue()
+    const target = typeof name === "string" && name !== "" ? name : presetValue(SETTINGS_SLOT)
     if (target === null) {
       console.error("[renderer] provider:verify: no channel selected")
       report("providers", { reason: "invalid-shape" }, "provider:verify")
@@ -303,6 +303,20 @@ export function attachSettings(host, deps = {}) {
     await loadProviders()
   }
 
+  /** 档位出口（`settings:agent` 写 · 意图级 `{ tier }` —— 写形与 `{ patch }` 二择一；`level` 非串 ⇒ **零发送**）：
+   *  失败 ⇒ 段级失败面（**零乐观写** —— 控件值随读档面重绘回退回执前值）；成功 ⇒ 重取行面现值（候选面保留）。 */
+  async function setTier(provider, model, level) {
+    if (typeof level !== "string") return
+    const receipt = await ask("settings:agent", { tier: { provider, model, level } })
+    if (receipt.ok !== true) {
+      report("model", receipt, "settings:agent")
+      return
+    }
+    clearReport()
+    setSettings({ agent: { state: "ready", fields: listOf(receipt.fields) } })
+    await loadProviders({ models: false })
+  }
+
   /** MCP 新增出口：`config` **JSON 解析归提交端** —— 解析失败 / 空名 ⇒ **零发送** + 段级失败面。 */
   async function addMcp(event) {
     const form = formOf(event)
@@ -343,44 +357,6 @@ export function attachSettings(host, deps = {}) {
     await loadMcp()
   }
 
-  /** 向导步 3 目录出口：走装配面项目面链（`openDir` —— 刷新 + 「点开即可续」，本档零副本）⇒ 信息行两读数随动。 */
-  async function pickDir() {
-    if (onProjectOpened === null) {
-      console.error("[renderer] project:open hook missing: wizard dir step inactive")
-      report("panel", { reason: "invalid-shape" }, "project:open")
-      return
-    }
-    clearReport()
-    await onProjectOpened()
-    await refreshInfo()
-  }
-
-  /** 向导步进（步号闭集 1..3；越界 / 等值 ⇒ store 原引用 ⇒ 零通知）；步入步 2 ⇒ 候选面随动。 */
-  function nextStep() {
-    const state = store.get()
-    const step = Number.isInteger(wizardOf(state).step) ? wizardOf(state).step : 1
-    const next = Math.min(3, Math.max(1, step) + 1)
-    const stepped = setWizardStep(state, next)
-    if (stepped === state) return
-    store.set(stepped)
-    if (next === 2) {
-      const provider = state.settings?.model?.provider ?? null
-      void loadModels(typeof provider === "string" && provider !== "" ? provider : null)
-    }
-  }
-
-  /** 向导收尾：复读配置闸（`config:read` ⇒ 三态归一）⇒ 落槽；仍未配 ⇒ 退场旗（会话内幂等，下次冷启动重新过闸）。 */
-  async function finishWizard() {
-    const receipt = await ask("config:read")
-    const configured = receipt.ok === true
-      ? configuredFlag(receipt.configured)
-      : (store.get().settings?.configured ?? null)
-    if (receipt.ok === true) clearReport()
-    else report("panel", receipt, "config:read") // 两臂互斥：失败串留面（禁「先清后报」—— 向导占槽路会把刚落的串同 tick 抹除）
-    const next = patchSettings(store.get(), { configured })
-    store.set(configured === true ? next : dismissWizard(next))
-  }
-
   /** 语言出口（`config:write` 键白名单仅 `locale`）：成功回带 `{ locale, dict, configured }` ⇒ 词表重刷 +
    *  向导闸随新档态（**一次写** —— 免二跳）。 */
   async function toggleLang(target) {
@@ -416,23 +392,15 @@ export function attachSettings(host, deps = {}) {
     onRemoveProvider: (name) => void removeProvider(name),
     onSaveAgent: () => void saveAgent(),
     onUseModel: (provider, name) => void useModel(provider, name),
+    onTier: (provider, model, level) => void setTier(provider, model, level),
     onAddMcp: (event) => void addMcp(event),
     onRemoveMcp: (name) => void removeMcp(name),
   }
 
-  /** 向导出口族（六出口 —— 与视图 `handlers?.on*` 同域）。 */
-  const wizardHandlers = {
-    onSubmit: (event) => void submitChannel(event),
-    onVerify: (name) => void verifyChannel(name),
-    onPickDir: () => void pickDir(),
-    onNext: () => nextStep(),
-    onFinish: () => void finishWizard(),
-    onDismiss: () => {
-      const state = store.get()
-      const next = dismissWizard(state)
-      if (next !== state) store.set(next)
-    },
-  }
+  /** 向导出口族（六出口 —— 接线族住 `mount-onboarding.mjs`，共享三项注入 ⇒ 本档零副本）。 */
+  const { handlers: wizardHandlers } = createWizard({
+    store, ask, report, clearReport, loadModels, submitChannel, verifyChannel, onProjectOpened, refreshInfo,
+  })
 
   /** 挂载面：占槽裁决 ⇒ 向导树 ∥ 设置树（`SETTINGS_SLOT`）+ 信息行（`INFO_SLOT`；容器缺位 ⇒ 视图档空转）。 */
   const paintSettings = (state = store.get()) => {

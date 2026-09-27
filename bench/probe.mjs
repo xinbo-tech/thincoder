@@ -9,10 +9,10 @@
 
 import { dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
-import { isoLocal } from "./lib/output.mjs"
-import { loadPrices, matchPrice, pricesPath } from "./lib/prices.mjs"
+import { isoLocal, setResultsDir } from "./lib/output.mjs"
+import { loadPrices, matchPrice, pricesPath, _setPricesPathForTest } from "./lib/prices.mjs"
 import { loadRoster, selectEntries } from "./lib/roster.mjs"
-import { judgeConfigPath, loadJudgeConfig, resolveJudgeSlots } from "./lib/judge.mjs"
+import { judgeConfigPath, loadJudgeConfig, resolveJudgeSlots, _setJudgeConfigPathForTest } from "./lib/judge.mjs"
 import { buildProbeParent, installProbeProvider, probeProviderEntry, promptsDigest, runProbeRun, assemblyLeg } from "./probe/driver.mjs"
 import { readoutRun } from "./probe/classify.mjs"
 import { classifyReportFace, shouldClassifyReport } from "./probe/judge-report.mjs"
@@ -23,7 +23,7 @@ import { DRY_RUN_FIXTURE, FIXTURES, FIXTURE_IDS, PROBE_VERSION, validateFixtures
 const BENCH_DIR = dirname(fileURLToPath(import.meta.url))
 
 const USAGE = `用法：
-  node bench/probe.mjs --models <列表> [--fixtures p1,p2,p3] [--n 次] [--max-turns N] [--timeout 秒] [--max-cost <CNY>] [--label <名>] [--dry-run]
+  node bench/probe.mjs --models <列表> [--fixtures p1,p2,p3] [--n 次] [--max-turns N] [--timeout 秒] [--max-cost <CNY>] [--label <名>] [--results-dir <路径>] [--judge-config <路径>] [--prices <路径>] [--dry-run]
 
   --models     参测档（逗号分隔；label 或 provider:model——名单源 = bench/models.json）；必填
   --fixtures   夹具选择（p1 / p2 / p3）；缺省 = 全 3 族
@@ -32,6 +32,9 @@ const USAGE = `用法：
   --timeout    单 run 墙钟上限（秒）；缺省 600
   --max-cost   累计成本闸（CNY；累计 = 被测 run + 判官调用；到顶 ⇒ 余面记 skipped（入 runs[] · 聚合分母排除）+ warning，退出码 0）
   --label      报告名标签（须 probe- 起）；缺省 probe-conflict
+  --results-dir   结果目录覆盖（缺省 = bench/results/，相对 bench/ 解析；覆盖值 = 绝对路径直用、相对路径按 cwd 解析）
+  --judge-config  判官配置档覆盖（缺省 = bench/judge.json）
+  --prices        价格表覆盖（缺省 = bench/prices.json）
   --dry-run    零网络自检：真装配腿（buildSpawnChild 直调——真 child 装配、不驱动）+ 脚本化假 child
                驱动（classify / report / judge 链）+ 夹具判官传输；不实弹（零网络）
 
@@ -51,6 +54,7 @@ export function parseArgs(argv) {
   const opts = {
     models: null, fixtures: [...FIXTURE_IDS], repeats: 1, maxTurns: 40, timeoutSec: 600,
     maxCost: null, label: "probe-conflict", dryRun: false, maxTokens: 4096, help: false,
+    resultsDir: null, judgeConfig: null, prices: null,
   }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
@@ -66,6 +70,9 @@ export function parseArgs(argv) {
     else if (a === "--timeout") opts.timeoutSec = intArg(need(), a, 1)
     else if (a === "--max-cost") opts.maxCost = Number(need())
     else if (a === "--label") opts.label = need()
+    else if (a === "--results-dir") opts.resultsDir = need()
+    else if (a === "--judge-config") opts.judgeConfig = need()
+    else if (a === "--prices") opts.prices = need()
     else if (a === "--dry-run") opts.dryRun = true
     else if (a === "--help" || a === "-h") opts.help = true
     else throw new Error(`未知参数 ${a}（--help 看用法）`)
@@ -265,6 +272,10 @@ export async function main(argv = process.argv.slice(2)) {
     return 1
   }
   if (opts.help) { console.log(USAGE); return 0 }
+  // ② 参数 → ③ 缝（CONFIG.md §6.2 混合形）：子进程面经 CLI 参数落到进程内落点
+  if (opts.resultsDir) setResultsDir(opts.resultsDir)
+  if (opts.judgeConfig) _setJudgeConfigPathForTest(opts.judgeConfig)
+  if (opts.prices) _setPricesPathForTest(opts.prices)
   const ac = new AbortController()
   const onSigint = () => ac.abort(new Error("SIGINT"))
   process.once("SIGINT", onSigint)

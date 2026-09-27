@@ -1,6 +1,7 @@
 /**
  * views-locks.test.mjs — E-2 零回归锁面用例（批档 §2.5 U52 · 原住 `test/views-chrome.test.mjs`）：
- * 测试清单两向自检（登记 ⇄ 在盘）/ 八档导出面锁 / 七槽接线结构面 / 会话族 · 对话流 · 审批出口 · 折叠接线结构面。
+ * 测试清单两向自检（登记 ⇄ 在盘）/ 八档导出面锁 / 七槽接线结构面 / 会话族 · 对话流 · 审批出口 · 折叠接线结构面
+ * （会话族四动作锚宿主 = `renderer/mount-sessions.mjs` —— 批 A 拆档随迁）。
  * 拆档理由 = 档行预算（`docs/desktop/design/PROJECT.md` §4.1「300 行 = 主动拆分层」）——面不变、判据不变，只换宿主档；
  * 会话头 / 状态栏 / 全量词表键齐（U49–U51）留 `test/views-chrome.test.mjs`。
  * 纪律：本档只读源（`readFileSync` + `stripComments`）+ 动态 import 导出面 —— **不触 DOM**（挂载面走查随人工）。
@@ -45,13 +46,14 @@ test("U52: 零回归面（清单两向 ∧ 导出面锁 ∧ 七槽接线结构 �
   const approval = await import("../renderer/views/approval.mjs")
   const activity = await import("../renderer/views/activity.mjs")
   assert.deepEqual(Object.keys(store).sort(), [
-    "appendBlock", "beginBackfill", "cancelCloseTab", "closeTab", "configuredFlag", "confirmCloseTab", "createStore",
-    "deriveTabBadge", "dismissWizard", "endBackfill", "initialState", "needsCloseConfirm", "openTab", "patchSettings",
-    "requestCloseTab", "returnToBottom", "setFollowing", "setWizardStep", "store", "togglePool", "visibleWindow",
-  ], "store.mjs 导出面锁（关闭确认四条 + `togglePool` 纯动作 + 设置族四条：`configuredFlag` / `dismissWizard` / `patchSettings` / `setWizardStep`）")
+    "QUEUE_MAX", "appendBlock", "beginBackfill", "cancelCloseTab", "closeRailForm", "closeTab", "configuredFlag", "confirmCloseTab",
+    "createStore", "dequeue", "deriveTabBadge", "dismissWizard", "drainQueue", "endBackfill", "enqueue", "initialState",
+    "needsCloseConfirm", "openRailForm", "openTab", "patchSettings", "requestCloseTab", "returnToBottom", "setFollowing", "setWizardStep",
+    "store", "togglePool", "visibleWindow",
+  ], "store.mjs 导出面锁（关闭确认四条 + `togglePool` 纯动作 + 设置族四条：`configuredFlag` / `dismissWizard` / `patchSettings` / `setWizardStep` + 左列换形态两条：`openRailForm` / `closeRailForm`）")
   assert.deepEqual(Object.keys(dom).sort(), ["build", "clear", "el", "on", "setBoot", "text"], "dom.mjs 导出面锁（本批零改动）")
   assert.deepEqual(Object.keys(sessions).sort(), ["BADGE_WORD", "mountRail", "mountTabbar", "railModel", "railTree", "tabbarModel", "tabbarTree"], "sessions.mjs 导出面 = 左列三段 + 标签条三段 + 位标词键表")
-  assert.deepEqual(Object.keys(chrome).sort(), ["headModel", "headTree", "mountHead", "mountStatus", "statusModel", "statusTree"], "chrome.mjs 导出面 = 会话头三段 + 状态栏三段")
+  assert.deepEqual(Object.keys(chrome).sort(), ["headModel", "headTree", "mountHead", "mountStatus", "sessionMetaOf", "statusModel", "statusTree"], "chrome.mjs 导出面 = 会话头三段 + 供给取面单源一段 + 状态栏三段")
   assert.deepEqual(Object.keys(chat).sort(), ["chatModel", "chatTree", "mountChat", "settleFrame", "syncChrome"], "chat.mjs 导出面 = 三档 + 帧尾态刷 / 帧尾六步")
   assert.deepEqual(Object.keys(chatTool).sort(), [
     "DIFF_FILE_FLOOR", "DIFF_LINE_FLOOR", "STATUS_WORD", "changeTotals", "toggleExpanded", "toolCard", "toolChanges",
@@ -66,6 +68,7 @@ test("U52: 零回归面（清单两向 ∧ 导出面锁 ∧ 七槽接线结构 �
   const app = stripComments(readFileSync(new URL("../renderer/app.mjs", import.meta.url), "utf8"))
   const pool = stripComments(readFileSync(new URL("../renderer/mount-pool.mjs", import.meta.url), "utf8"))
   const settings = stripComments(readFileSync(new URL("../renderer/mount-settings.mjs", import.meta.url), "utf8"))
+  const sessionActions = stripComments(readFileSync(new URL("../renderer/mount-sessions.mjs", import.meta.url), "utf8"))
   for (const slot of ["tabs", "session-head", "status", "flow"]) {
     assert.ok(html.includes(`data-slot="${slot}"`), `index.html 容器锚在位：${slot}`)
     assert.ok(app.includes(`[data-slot="${slot}"]`), `app.mjs 槽锚声明在位：${slot}`)
@@ -97,16 +100,32 @@ test("U52: 零回归面（清单两向 ∧ 导出面锁 ∧ 七槽接线结构 �
   ]) {
     assert.ok(app.includes(call), `接线调用在位：${call}（结构面 —— 端到端 = 冒烟）`)
   }
-  // 会话族接线结构面（批档 §2.12 第 3 条：接线零用例覆盖 ⇒ 源面结构断言 —— `app.mjs` 是唯一接线处）
-  for (const anchor of ["activateSession(", "requestCloseTab(", "confirmCloseTab(", "cancelCloseTab(", "pendingClose"]) {
-    assert.ok(app.includes(anchor), `会话族接线锚在位：${anchor}`)
+  // 会话族接线结构面（批档 §2.12 第 3 条：接线零用例覆盖 ⇒ 源面结构断言）：四动作 + 左列行动作 + 关闭尾宿主 = `mount-sessions.mjs`
+  // （批 A 拆档 —— 整族迁离 `app.mjs`，判据随宿主 · 同批 8 / 批 9 两先例）；`pendingClose` 仍是外壳订阅切片位。
+  for (const anchor of ["activateSession(", "requestCloseTab(", "confirmCloseTab(", "cancelCloseTab(", "openRailForm(", "closeRailForm(", "closeTab(", "closeTail("]) {
+    assert.ok(sessionActions.includes(anchor), `会话族动作锚在位：${anchor}（宿主 = renderer/mount-sessions.mjs）`)
   }
+  // 左列行动作 + 关闭尾（批 A ④/⑥ —— 同源结构断言：两通道载荷字面 = 与主侧 `src/main/ipc.mjs:118-119` 同面）。
+  for (const literal of [
+    'host.invoke("session:rename", { slot: slotOf(key), title: text })',
+    'host.invoke("session:delete", { slot: slotOf(key) })',
+  ]) {
+    assert.ok(sessionActions.includes(literal), `通道载荷字面在位：${literal}（宿主 = renderer/mount-sessions.mjs）`)
+  }
+  assert.ok(app.includes("pendingClose"), "外壳订阅切片位在位：pendingClose（宿主 = renderer/app.mjs）")
   for (const wiring of [
     "onSession: activateSession", "onActivate: activateSession", "onClose: requestClose",
     "onConfirmClose: confirmClose", "onCancelClose: cancelClose",
+    "onRename: renameSession", "onDelete: deleteSession", "onRenameCancel: cancelRailForm",
+    "onDeleteCancel: cancelRailForm", "onRenameConfirm: confirmRenameText", "onDeleteConfirm: confirmDelete",
   ]) {
-    assert.ok(app.includes(wiring), `接线落点在位：${wiring}（三路开标签同一路 / 关闭三出口）`)
+    assert.ok(app.includes(wiring), `接线落点在位：${wiring}（三路开标签同一路 / 关闭三出口 / 左列行十 handlers）`)
   }
+  // 左列重挂切片（批 A ④）：`railForm` 在订阅切片内 —— 换形态改切片 ⇒ 树须重绘（挂载面纯读现态）
+  const railKeys = app.match(/const RAIL_KEYS = \[([^\]]*)\]/)?.[1] ?? ""
+  assert.ok(railKeys.includes('"railForm"'), "左列订阅切片在位：railForm（换形态切片 —— 行原位换形）")
+  // 词面读数落接线面（视图档零 DOM）：改名读在形文本控件值 —— 选择符锚同面
+  assert.ok(app.includes('[data-action="session:rename-input"]'), "词面读数落点在位：在形文本控件选择符（宿主 = renderer/app.mjs）")
   // 审批出口 / 折叠接线结构面（批 7 落形 · 批 8 随迁 `mount-pool.mjs`：卡面与池面条目同一路 —— 三出口描述符单源）
   for (const wiring of [
     "onApprove, onTogglePool", "respondApproval(host, promptId, verdict)", "togglePool(defaultStore.get(), key)",

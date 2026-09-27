@@ -6,7 +6,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { existsSync, readFileSync, writeFileSync } from "node:fs"
-import { loadConfig } from "@thincoder/core/config.mjs"
 import { pageHistory, slotPath } from "../src/main/session-slots.mjs"
 import { useSlotSandbox } from "./slot-sandbox.mjs"
 
@@ -55,16 +54,14 @@ test("U93: 页游（尾 / 中 / 首 / 空历史 / 零消息页）· next = 页�
     assert.deepEqual(zero.messages, [], "页内条目全不可视 ⇒ 零消息页（非错误）")
     assert.equal(zero.hasOlder, true)
     assert.equal(zero.next, 50, "零消息页仍推进游标（next > 0 —— 否则前端卡死在页首）")
-    const cfgEffort = loadConfig()?.provider?.reasoningEffort
-    const effortNode = typeof cfgEffort === "string" && cfgEffort.trim() ? { effort: cfgEffort } : {}
     writeSlot(s.cwd, 4, { history: [u(0)], activeProvider: "p1", activeModel: "m1", engineering: true, autoApprove: true })
     assert.deepEqual(pageHistory(s.cwd, { key: "4" }).meta,
-      { provider: "p1", model: "m1", engineering: "ON", autoApprove: "ON", ...effortNode }, "meta 命中面（两布尔槽 = 供给面出串）")
+      { provider: "p1", model: "m1", engineering: "ON", autoApprove: "ON" }, "meta 命中面（两布尔槽 = 供给面出串）")
     writeSlot(s.cwd, 5, { history: [u(0)], activeProvider: "", activeModel: "  ", engineering: false, autoApprove: false })
     assert.deepEqual(pageHistory(s.cwd, { key: "5" }).meta,
-      { engineering: "OFF", autoApprove: "OFF", ...effortNode }, "非串 / 空串 ⇒ 零节点；两布尔槽 false 亦出词（OFF 是已知态，非「未供给」）")
+      { engineering: "OFF", autoApprove: "OFF" }, "非串 / 空串 ⇒ 零节点；两布尔槽 false 亦出词（OFF 是已知态，非「未供给」）")
     writeSlot(s.cwd, 6, { history: [u(0)] })
-    assert.deepEqual(pageHistory(s.cwd, { key: "6" }).meta, effortNode, "两槽键缺（老槽）⇒ 零节点（不猜形——UI.md §1 会话头行）")
+    assert.deepEqual(pageHistory(s.cwd, { key: "6" }).meta, {}, "键缺（老槽）⇒ 零节点（不猜形——UI.md §1 会话头行）；`effort` 不回落配置面")
     // 源面：窗口切分与页尺**单源在核**（端层零副本 —— 自算切片 = 第二口径）
     const body = SRC.slice(SRC.indexOf("export function pageHistory"))
     assert.ok(!/\.slice\(/.test(body), "pageHistory 零自算切片（窗口单源）")

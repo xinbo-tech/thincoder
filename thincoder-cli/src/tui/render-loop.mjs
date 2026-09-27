@@ -120,9 +120,8 @@ export function createRenderLoop(state, agent, ctx, pushLine, write = (s) => pro
       const cursorSuffix = hasOverlay ? "" : `\x1b[${cursorRow};${cursorCol}H${ansi.hideCursor}`
 
       if (out.length || cursorSuffix) write(ansi.wrapOff + ansi.syncUpdateStart + out.join("") + ansi.syncUpdateEnd + cursorSuffix + ansi.wrapOn)
-    } catch (e) {
+    } catch {
       // Don't let a render error crash the TUI
-      if (process.env.THINCODER_DEBUG_RENDER) process.stderr.write(`[render-error] ${e?.stack ?? e}\n`)
     }
   }
 

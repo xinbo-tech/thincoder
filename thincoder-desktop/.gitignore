@@ -1,0 +1,2 @@
+# 运行期产物（E2E 截图等 —— 不进 git；设计单源 = `docs/desktop/design/E2E-TESTING.md` KD-10）
+test/artifacts/

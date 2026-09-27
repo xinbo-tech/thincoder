@@ -12,8 +12,12 @@ import { assertClean, writeGuarded } from "./sanitize.mjs"
 
 const BENCH_DIR = dirname(dirname(fileURLToPath(import.meta.url)))
 
-/** 结果目录：默认 `bench/results/`（相对 bench/ 解析，任意 cwd 可跑）；BENCH_RESULTS_DIR = 测试沙箱缝。 */
-export const resultsDir = () => (process.env.BENCH_RESULTS_DIR ? resolve(process.env.BENCH_RESULTS_DIR) : join(BENCH_DIR, "results"))
+/** 结果目录：默认 `bench/results/`（相对 bench/ 解析，任意 cwd 可跑）；`setResultsDir` = 沙箱缝（③ · 命名例外，CONFIG.md §6.2）。 */
+let _resultsDir = null
+export const resultsDir = () => _resultsDir ?? join(BENCH_DIR, "results")
+
+/** 结果目录落点：`--results-dir` 参数应用与测试缝共用；无 `_reset` 半——复位面无消费者（CONFIG.md §6.2 名录）。 */
+export function setResultsDir(dir) { _resultsDir = resolve(dir) }
 
 export function isoLocal(d = new Date()) {
   const pad = (n) => String(n).padStart(2, "0")

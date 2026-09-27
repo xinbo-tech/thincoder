@@ -1,12 +1,12 @@
 /**
  * heap-watch.test.mjs — TUI-OOM-ROOTCAUSE 批 组 4（A3——CRASH-REPORTS.md §8.6）
- * 用例表 1:1：T-HW1–T-HW5（默认启动 / 关值矩阵 / 边缘触发 / 逐字与订阅 / 失败面）。
+ * 用例表 1:1：T-HW1–T-HW5（默认启动 / 关值单例 / 边缘触发 / 逐字与订阅 / 失败面）。
  *
  * 形态：快层 unit——注入 sample/heapLimit/timer（零等待、零真实定时器、零真实内存压力）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { startHeapWatch, onHeapWarn, heapWatchEnabled } from "../src/heap-watch.mjs"
+import { startHeapWatch, onHeapWarn } from "../src/heap-watch.mjs"
 
 const GB = 1024 ** 3
 
@@ -24,28 +24,21 @@ function spyTimer() {
 
 test("T-HW1 默认启动：timer 注册恰一次；unref() 被调", () => {
   const timer = spyTimer()
-  const w = startHeapWatch({ timer, env: {} })
+  const w = startHeapWatch({ timer })
   assert.equal(timer.calls.length, 1, "注册恰一次")
   assert.equal(timer.calls[0].ms, 60_000, "60s 采样间隔（默认）")
   assert.equal(timer.calls[0].unrefCalled, true, "unref（一次性命令自然退出）")
   w.stop()
 })
 
-test("T-HW2 关值矩阵：THINCODER_HEAP_WATCH ∈ {0,false,off,no}（含大小写/空格变体）→ 不注册", () => {
-  for (const v of ["0", "false", "off", "no", " FALSE ", "Off", "\tNo\n"]) {
-    const timer = spyTimer()
-    const w = startHeapWatch({ timer, env: { THINCODER_HEAP_WATCH: v } })
-    assert.equal(timer.calls.length, 0, `${JSON.stringify(v)} → 不注册`)
-    assert.deepEqual(w.checkNow(), [], "关值下 checkNow 零输出")
-  }
-  // 未设 / 空串 / 其他值 → 启动（默认开）
-  for (const v of [undefined, "", "1", "yes", "true", "on"]) {
-    const timer = spyTimer()
-    startHeapWatch({ timer, env: v === undefined ? {} : { THINCODER_HEAP_WATCH: v } })
-    assert.equal(timer.calls.length, 1, `${JSON.stringify(v)} → 启动`)
-  }
-  assert.equal(heapWatchEnabled({}), true)
-  assert.equal(heapWatchEnabled({ THINCODER_HEAP_WATCH: "off" }), false)
+test("T-HW2 关值单例：enabled:false → 不注册；默认开（未设）→ 注册", () => {
+  const timer = spyTimer()
+  const w = startHeapWatch({ timer, enabled: false, sample: () => ({ heapUsed: 1 }), heapLimit: () => 8 * GB }) // 注入低于首档 ⇒ 断言确定性，不依赖真实堆态
+  assert.equal(timer.calls.length, 0, "enabled:false → 不注册")
+  assert.deepEqual(w.checkNow(), [], "关值句柄 checkNow 零输出（低于首档注入）")
+  const timer2 = spyTimer()
+  startHeapWatch({ timer: timer2 }) // 未设 enabled → 默认开
+  assert.equal(timer2.calls.length, 1, "默认开 → 注册恰一次")
 })
 
 test("T-HW3 边缘触发：sample 50%→72%→76%→87% → 恰两行（70%/85%）；再采样不重复", () => {
@@ -57,7 +50,7 @@ test("T-HW3 边缘触发：sample 50%→72%→76%→87% → 恰两行（70%/85%�
   console.error = (s) => written.push(s)
   try {
     const w = startHeapWatch({
-      timer: spyTimer(), env: {},
+      timer: spyTimer(),
       sample: () => ({ heapUsed: ratios[Math.min(i, ratios.length - 1)] * limit }),
       heapLimit: () => limit,
     })
@@ -81,7 +74,7 @@ test("T-HW4 逐字与订阅：行文本逐字（正则锚）；订阅回调收�
   console.error = (s) => written.push(s)
   try {
     const w = startHeapWatch({
-      timer: spyTimer(), env: {},
+      timer: spyTimer(),
       sample: () => ({ heapUsed: Math.round(0.83 * limit) }),
       heapLimit: () => limit,
     })
@@ -95,7 +88,7 @@ test("T-HW4 逐字与订阅：行文本逐字（正则锚）；订阅回调收�
     off()
   }
   // 退订后不再收到
-  const w2 = startHeapWatch({ timer: spyTimer(), env: {}, sample: () => ({ heapUsed: 9 * GB }), heapLimit: () => 10 * GB })
+  const w2 = startHeapWatch({ timer: spyTimer(), sample: () => ({ heapUsed: 9 * GB }), heapLimit: () => 10 * GB })
   const before = got.length
   w2.checkNow()
   assert.equal(got.length, before, "退订函数生效")
@@ -103,11 +96,11 @@ test("T-HW4 逐字与订阅：行文本逐字（正则锚）；订阅回调收�
 
 test("T-HW5 失败面：sample 抛错 → 不抛、无输出、timer 存续", () => {
   const timer = spyTimer()
-  const w = startHeapWatch({ timer, env: {}, sample: () => { throw new Error("sample boom") }, heapLimit: () => 8 * GB })
+  const w = startHeapWatch({ timer, sample: () => { throw new Error("sample boom") }, heapLimit: () => 8 * GB })
   assert.doesNotThrow(() => w.checkNow())
   assert.deepEqual(w.checkNow(), [])
   assert.equal(timer.calls.length, 1, "timer 存续（未停）")
   // heapLimit 抛错同样吞
-  const w2 = startHeapWatch({ timer: spyTimer(), env: {}, sample: () => ({ heapUsed: 1 }), heapLimit: () => { throw new Error("limit boom") } })
+  const w2 = startHeapWatch({ timer: spyTimer(), sample: () => ({ heapUsed: 1 }), heapLimit: () => { throw new Error("limit boom") } })
   assert.doesNotThrow(() => w2.checkNow())
 })

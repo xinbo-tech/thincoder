@@ -1,6 +1,7 @@
 /**
  * session-slot-write.mjs — 会话槽「元数据开关」写面（Parnas 边界：开关写决策组——
- * autoApprove / planMode / engineering / advisor guard，外加全新槽默认记录与落盘单点）。
+ * autoApprove / planMode / engineering / advisor guard / 会话级偏好三键
+ * （provider / model / effort——§6.21），外加全新槽默认记录与落盘单点）。
  *
  * 归属：会话数据面（同上位 `session.mjs` / `session-slots.mjs` / `session-store.mjs`）。
  * 本档 = **（cwd, slot）形态**的槽写入面（读-改-写）；另一形态 = `session.mjs` 的
@@ -27,6 +28,10 @@ import { getSessionId, loadManifest, saveManifest, slotDigest, slotPath, writeSe
 import { loadSlotFile } from "./session.mjs"
 // token 形态单源（格式校验 + 到期时刻）——本档的保存面合并规则复用同一判定。
 import { tokenExpiryMs } from "./token-ttl.mjs"
+// 会话级偏好写面（§6.21 判据句 3）的判据单源——档位值域（`specForModel(...).reasoningEffortEnum`）
+// 与 off 可达性（`thinkOffPath`）；两叶档（零 import）⇒ 不涉环，核内零第二份族别 / 枚举表。
+import { specForModel } from "./model-specs.mjs"
+import { thinkOffPath } from "./think-off.mjs"
 
 /** mtime 缓存（键 = 槽文件路径 → 上次所见 mtimeMs）：同一槽连写时跳过重复解析。
  *  测试复位缝（与 `_setSessionsDirForTest` 同款）：缓存为进程级单例，用例间需可复位
@@ -35,13 +40,14 @@ const slotMtimeCache = new Map()
 export function _resetSlotMtimeCacheForTest() { slotMtimeCache.clear() }
 
 /** Fresh slot data default：全新空槽的规范结构（`newSession` 写盘面**同源**——SLOT-END-PARAM
- *  批起 `newSession` 与本构造器单源）。首物化即记创建端（§6.20 判据句 4 写面：本端物化者 =
- *  进程端名；「禁回填」不适用——本构造器只产全新槽）。 */
+ *  批起 `newSession` 与本构造器单源；`effort: null` = 会话级档位未设态——§6.21 判据句 5 规范
+ *  结构同源；老槽无该键由读侧按 `null` 容忍）。首物化即记创建端（§6.20 判据句 4 写面：本端
+ *  物化者 = 进程端名；「禁回填」不适用——本构造器只产全新槽）。 */
 export function newSlotData(cwd) {
   return {
     version: 2, cwd, title: "", updatedAt: Date.now(),
     history: [], contextHistory: [], tasks: [],
-    planMode: false, goal: null, autoApprove: false, advisor: null,
+    planMode: false, goal: null, autoApprove: false, advisor: null, effort: null,
     pendingReminders: [], sessionStart: null,
     createdBy: sessionEnd(),
   }
@@ -173,4 +179,44 @@ export function mergeEngTokensForSave(incoming, existing) {
     if (!(key in out) || expiry(tok) > expiry(out[key])) out[key] = tok
   }
   return out
+}
+
+/** 会话级偏好（§6.21）键闭集——表外键 = 整 patch 拒（写未发生）。 */
+const SLOT_PREF_KEYS = new Set(["provider", "model", "effort"])
+
+/**
+ * 会话级档位归一（§6.21 判据句 3——纯函数、不抛）：`level` → 槽 `effort` 值。
+ *  - `null` / `undefined` / `"auto"` ⇒ `null`（未设 ⇒ 回落配置面 / 渠道默认）；
+ *  - `"off"` ⇒ 该模型**有 off 路径**（判据单源 = `thinkOffPath`，勿在本档重写族别判定）
+ *    ⇒ `"off"`、否则 `null`；
+ *  - 其余 ⇒ 逐模型枚举（单源 = `specForModel(model).reasoningEffortEnum`）含之 ⇒ 原字面、
+ *    不含 / 无枚举 ⇒ `null`。
+ *  `model` 非串（外端脏载 / 手工档）⇒ 按**未登记**归一（`DEFAULT_SPEC` 径）——「不抛」契约。
+ *  写面归一只此一处；读侧另容忍表外串（applySession 边界表——不设，不静默改写）。
+ */
+export function resolveEffortPatch(level, model) {
+  if (level == null || level === "auto") return null
+  const spec = specForModel(typeof model === "string" ? model : "")
+  if (level === "off") return thinkOffPath(spec) ? "off" : null
+  return (spec?.reasoningEffortEnum ?? []).includes(level) ? level : null
+}
+
+/**
+ * 会话级偏好写出口（§6.21 判据句 2——沿 `setSlotAutoApprove` 同形，复用 `writeFlag` 单点）：
+ * `patch` 键闭集 = `provider` / `model` / `effort`，**至少一键**（零键 / 表外键 ⇒ `false`，写未
+ * 发生）；槽不可读 ⇒ `false`。`provider` / `model` 键入参映射既有槽字段 `activeProvider` /
+ * `activeModel`（不新增字段；`null` = 缺键语义——`provider` / `model` 无「未设」态）；`effort` 经
+ * `resolveEffortPatch` 归一（`model` 取 `patch.model ?? 槽现值 activeModel`），归一 `null` = 未设
+ * （回落配置面 / 渠道默认）——**值置 `null` 不删键**（与 `newSlotData` 规范结构同源）。
+ * 只写盘：不碰当前内存态（施加面唯一 = `applySession`——§6.21 判据句 4 / 边界表第 5 行）。
+ */
+export function setSlotPrefs(cwd, slot, patch) {
+  if (!patch || typeof patch !== "object" || Array.isArray(patch)) return false
+  const keys = Object.keys(patch)
+  if (keys.length === 0 || keys.some((k) => !SLOT_PREF_KEYS.has(k))) return false
+  return writeFlag(cwd, slot, (d) => {
+    if (patch.provider != null) d.activeProvider = patch.provider
+    if (patch.model != null) d.activeModel = patch.model
+    if ("effort" in patch) d.effort = resolveEffortPatch(patch.effort, patch.model ?? d.activeModel)
+  })
 }

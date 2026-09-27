@@ -168,3 +168,87 @@
   background: var(--bg);
   cursor: pointer;
 }
+
+/* 提问卡 / 计划卡（流内**非块节点** · `data-card="question"` / `"task"` —— `docs/desktop/design/UI.md` §1 提问呈现 / 计划面行 · 批 A）：
+   卡面沿 `.approval-card` 段**同族同形**（内边距 / 圆角 / 卡间留白 / 操作区 / 键形 —— 卡族形态单源住审批卡段）；
+   提问 = 决策面 ⇒ 强调色边（同审批卡）· 计划 = 事项表 ⇒ 常态边。状态词着色只挂 `data-status` 码
+   （码面 = 机器读面，词面随语言变 ⇒ 色彩判据不入词面），零第二字形；未接线控件 `disabled` 与可点态同形。 */
+.question-card,
+.plan-card {
+  padding: 8px 10px;
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+}
+.question-card {
+  border-color: var(--accent);
+}
+/* 卡与块相邻：块顶端留白只对块—块成立 ⇒ 跨族相邻在本段补齐（审批卡侧住其本段）。 */
+.question-card + .block,
+.block + .question-card,
+.plan-card + .block,
+.block + .plan-card {
+  margin-top: 8px;
+}
+/* 题干行 / 事项行（行族形 = 行内 flex + 换行留白）：事项行两段对置（标题 ↔ 状态词）。 */
+.question-head,
+.plan-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.plan-row {
+  justify-content: space-between;
+}
+.plan-row + .plan-row {
+  margin-top: 4px;
+}
+.plan-row[data-status="in_progress"] {
+  color: var(--accent);
+}
+.plan-row[data-status="done"] {
+  color: var(--fg-muted);
+}
+/* 给答项操作区（同族形 = 审批三出口操作区 —— 同上条）；选项串原样 ⇒ 长串随词换行，不截断。 */
+.question-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+/* 作答区三件：文本控件形沿 `.rail-rename-input`（本仓输入控件单形）· 两键形沿卡族。 */
+.question-answer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.question-option,
+.question-submit,
+.question-cancel {
+  padding: 2px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.question-input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: inherit;
+  font: inherit;
+}
+.question-option:not(:disabled):hover,
+.question-submit:not(:disabled):hover,
+.question-cancel:not(:disabled):hover {
+  background: var(--bg);
+  cursor: pointer;
+}

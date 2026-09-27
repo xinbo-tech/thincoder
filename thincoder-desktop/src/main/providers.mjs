@@ -7,13 +7,17 @@
  * 端侧**零自写盘**。预设展开（`presetToEntry`）住核——端侧只传预设**名**。
  * 密钥纪律（§2.3）：`provider:list` **只回遮罩后值**（端侧遮罩单点 = `settings.mjs` `maskKey`；
  * 判据 = 核导出 `isSensitiveKey`），明文 key 零下发。
+ * 批 B 增：逐行 `effort` = 渠道条目**档位现值投影**（离线——零探针；判据单源 = 核 `thinkOffShape`，
+ * 沿 `docs/desktop/design/IPC.md` §2「档位控件注」）。
  */
-import { PROVIDER_PRESETS } from "@thincoder/core/config.mjs"
+import { PROVIDER_PRESETS, loadConfig, parseModelRef } from "@thincoder/core/config.mjs"
 import {
   _configPath, addProviderEntry, removeProviderEntry, resolveProviders, writeConfigAtomic,
 } from "@thincoder/core/config-io.mjs"
+import { specForModel } from "@thincoder/core/model-specs.mjs"
+import { thinkOffShape } from "@thincoder/core/think-off.mjs"
 import { admissionOf, classifyProbeFailure, probeChannelModels } from "@thincoder/core/provider/list-models.mjs"
-import { maskKey } from "./settings.mjs"
+import { deepEqual, maskKey } from "./settings.mjs"
 
 /** 形表（端侧形判）：两形 = 预设形 / 自定形；自定形协议域 = 核三协议。 */
 const SHAPES = ["preset", "custom"]
@@ -37,7 +41,22 @@ function presetChoices() {
 }
 
 /**
- * `provider:list` ⇒ `{ ok, presets:[{ name, baseURL, model }], providers:[{ name, shape, baseURL, model?, hasKey, maskedKey, active }], active }`。
+ * 渠道条目**档位现值投影**（离线——零探针；`docs/desktop/design/IPC.md` §2「档位控件注」现值条）：
+ * `reasoningEffort` 为串 ⇒ 该串（`"none"` ⇒ `"off"`——其语义由 `"off"` 承载）；否则 `thinking`
+ * 键在场且值 deep-equal `thinkOffShape(spec)` ⇒ `"off"`；否则 ⇒ `"auto"`。
+ * 表外现值（含空串）**照字面出**（不吞 · 零改写——自成一选项归视图面）；判据与写面同源 = 核
+ * `thinkOffShape` 与端侧 `deepEqual`（零族别副本）。`model` = spec 绑定模型（活动行 = `defaultModel`
+ * 模型段——写面同源，保「写后投影恒等」；余行 = 条目自身 `model`；缺 ⇒ 核默认规格）。
+ */
+export function effortOf(entry, model) {
+  const re = entry?.reasoningEffort
+  if (typeof re === "string") return re === "none" ? "off" : re
+  if (entry && "thinking" in entry && deepEqual(entry.thinking, thinkOffShape(specForModel(model)))) return "off"
+  return "auto"
+}
+
+/**
+ * `provider:list` ⇒ `{ ok, presets:[{ name, baseURL, model }], providers:[{ name, shape, baseURL, model?, hasKey, maskedKey, active, effort }], active }`。
  * `presets` = 核预设表投影（21 条 · 序 = 核表声明序——供设置面渠道段与首启向导第一步选预设，
  * 消费面无第二份表）；`shape` = 名在核预设表 ⇒ `preset`，否则 `custom`；
  * `active` 单源 = 核 `resolveProviders().activeProvider`
@@ -46,6 +65,8 @@ function presetChoices() {
  */
 export function providerList() {
   const { providers, activeProvider } = resolveProviders()
+  // spec 绑定模型：`defaultModel` 复合串（核 `parseModelRef` 单源解析）——活动行取模型段，余行取自身 `model`。
+  const ref = parseModelRef(loadConfig()?.defaultModel ?? null, providers)
   return {
     ok: true,
     presets: presetChoices(),
@@ -60,6 +81,7 @@ export function providerList() {
         hasKey,
         maskedKey: hasKey ? maskKey(`providers.${p.name}.apiKey`, p.apiKey) : null,
         active: p.name === activeProvider,
+        effort: effortOf(p, ref.ok && ref.provider.name === p.name ? ref.model : p.model),
       }
     }),
   }

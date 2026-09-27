@@ -2,8 +2,12 @@
  * i18n.mjs — 词表面（`docs/desktop/design/SHELL.md:31` · 批 2 档 §2.4（g）· 本批 §2.1 E-5 / §2.5 U44）：
  *   ① 核域键 = `config:read` 语言面**下发投影**（核 `projectDictionary(locale)` 已扁平投影
  *      ⇒ 渲染面零核导入、零第二词表源）；
- *   ② 宿主 UI 专有键 = `HOST_DICT`（左列 10 键 + 标签条 4 键 + 对话流 6 键 + 活动池 7 键 + 审批卡 7 键
- *      + 设置 48 键 + 向导 10 键 + 信息行 9 键 = **101 键** × 2 语；
+ *   ② 宿主 UI 专有键 = `HOST_DICT`（左列 13 键 + 标签条 4 键 + 对话流 8 键 + 活动池 7 键 + 审批卡 7 键
+ *      + 提问卡 3 键 + 设置 49 键 + 向导 10 键 + 信息行 9 键 + 输入区 6 键 + 会话头 3 键 + 档位 2 键
+ *      + 状态栏 1 键 = **122 键** × 2 语（批 B 增十二键：本舱七 = 对话流复制面 2 · 会话头 3 · 档位 2；
+ *      并行舱五 = 输入区附件面 3 · 设置档位列 1 · 状态栏读数 1 —— 附件降级两键名出
+ *      `docs/desktop/design/UI.md` §1 批 B 注项 2，余键名与全键值面由本档拟定：批 B 注只述形 / 锚，
+ *      词面登记处 = 此处）；
  *      两语键集须相等，增键两语同增、禁单语落键）；
  *   ③ `t(key, params)` 解析序 = **宿主 → 核投影 → 键名自身**（缺键回落键名：不静默吞、不抛、
  *      永不返回空 / `undefined`）；插值 = **核同形** `${name}`（键值由核 `projectDictionary`
@@ -13,19 +17,28 @@
  * 零落盘 · 零 `node:` / 零裸包（渲染面静态闭包判据）。
  */
 
-/** 宿主 UI 专有键（两语键序同 = 对位阅读 · 键集相等 = 用例机检面）：`rail.*` = 左列元素 ·
+/** 宿主 UI 专有键（两语键序同 = 对位阅读 · 键集相等 = 用例机检面）：`rail.*` = 左列元素（含批 A ④ 行动作
+ *  三键 = 改名 / 删除两控件词（经 `aria-label` —— 字形住 `renderer/styles.css`）+ 换形取消键；确认键词 = 本条动作词
+ *  同键（同一事实同词））·
  *  `origin.*` = 会话行来源端标（值与核 `createdBy` 三值同名）· `tab.*` = 标签条（位标词 + 关闭控件词面 +
  *  关闭确认面两键词 —— 两键 = 文本按钮词面，**非图标字形**）· `chat.*` = 对话流（空态提示 / 摘要块 / 药丸两态 /
- *  工具卡改动摘要 + 耗时）· `pool.*` = 活动池（标题 / 三族标 / 折叠控件两态 `aria-label` / 空态提示 ——
+ *  工具卡改动摘要 + 耗时 / 复制面两键 = 逐块控件与末条控件的可及名 —— 两控件 = 块尾 / 输入区尾，取文面与键名
+ *  同档 = `renderer/views/chat-copy.mjs`）· `pool.*` = 活动池（标题 / 三族标 / 折叠控件两态 `aria-label` / 空态提示 ——
  *  折叠字形住 `renderer/pool.css`）· `approval.*` = 审批卡两形三出口词面 + 批形计数（`${count}` 占位；
- *  键位闭集住 `renderer/views/approval.mjs`）· `settings.*` = 设置面（标题 / 关闭 / 语言控件两键 = 目标语自名 /
+ *  键位闭集住 `renderer/views/approval.mjs`）· `question.*` = 提问卡（文本控件 `aria-label` / 提交键 / 取消键 ——
+ *  键位闭集住 `renderer/views/question.mjs`）· `settings.*` = 设置面（标题 / 关闭 / 语言控件两键 = 目标语自名 /
  *  四段名 / 两段态 / 十二失败码 / 渠道段：字段标 · 校验两态 `${count}` 与 `${reason}` · 移除 `${name}` ·
  *  当前标 · 两增键 / agent 段：只读标 · 保存 / 模型段：当前 · 空态 · 采用 / MCP 段：两 kind · 字段标 ·
  *  移除 · 增键 —— 段名键单源 = `renderer/views/settings.mjs` `SECTIONS`，失败面段标 `SCOPE_WORD` 同键）·
  *  `wizard.*` = 首启向导（标题 / 退场 / 三步名 / 两推进键 / 渠道提交键 / 目录步两词）·
  *  `info.*` = 项目级信息行（标题 / 三读数标：需求池 · 技术待办 · 老化——同核台账口径 / 超阈标 / 相位标 ·
  *  两相位值 / 空态 —— 键位闭集住 `renderer/views/info-row.mjs` · `renderer/views/onboarding.mjs`）·
- *  占位方言沿核 `${name}`，本档零字形字面）。 */
+ *  `composer.*` = 输入区（输入框 `aria-label` / 中断控件可见词 / 满队提示行 / 附件面三键 = 逐项移除控件可及名 +
+ *  回执 `degraded` 两态提示行 —— 键位闭集 = `renderer/mount-composer.mjs` + `renderer/attach.mjs`）·
+ *  `head.*` = 会话头（三字段标 = `provider` / `model` / `effort` 三 `select` 可及名 —— 值面 = 供给串原样，
+ *  视图不造词；键位面 = `renderer/views/chrome.mjs`）· `effort.*` = 档位两特值词（`auto` = 未设（`null`）·
+ *  `off` = 关思考 —— 逐模型枚举成员**零词键**、原字面投影）· `status.*` = 状态栏读数串（`${percent}%` ——
+ *  未至 / 非正数 ⇒ 零节点，键面不落空串）· 占位方言沿核 `${name}`，本档零字形字面）。 */
 export const HOST_DICT = Object.freeze({
   en: {
     "rail.action.openDir": "Open folder…",
@@ -34,6 +47,9 @@ export const HOST_DICT = Object.freeze({
     "rail.project.none": "No project open",
     "rail.empty.hint": "No sessions in this project yet",
     "rail.action.newSession": "New session",
+    "rail.action.rename": "Rename",
+    "rail.action.delete": "Delete",
+    "rail.action.cancel": "Cancel",
     "rail.session.untitled": "Untitled session",
     "origin.cli": "CLI",
     "origin.vscode": "VS Code",
@@ -48,6 +64,9 @@ export const HOST_DICT = Object.freeze({
     "chat.summary.older": "${n} earlier messages",
     "chat.tool.changes": "${files} files · +${add} −${del}",
     "chat.tool.duration": "${seconds}s",
+    // ── 复制面（批 B：`views/chat-copy.mjs` —— 块尾 / 输入区尾两控件可及名）──
+    "chat.action.copy": "Copy block text",
+    "chat.action.copyLast": "Copy last reply",
     "pool.title": "Activity",
     "pool.family.approvals": "Approvals",
     "pool.family.blocks": "Running",
@@ -55,6 +74,13 @@ export const HOST_DICT = Object.freeze({
     "pool.collapse": "Collapse activity",
     "pool.expand": "Expand activity",
     "pool.empty.hint": "No activity in this session yet",
+    "composer.input": "Message",
+    "composer.interrupt": "Stop",
+    "composer.queue.full": "Queue full — wait for the running turn to finish",
+    // ── 附件面（批 B：`mount-composer.mjs` + `attach.mjs` —— 逐项移除控件可及名 + 回执 `degraded` 两态提示行）──
+    "composer.attach.remove": "Remove attachment",
+    "composer.attach.nonvision": "Images not sent — this model does not accept images",
+    "composer.attach.partial": "Some images were dropped (over the limit or failed to save) — the rest were sent",
     "approval.once": "Allow once",
     "approval.always": "Always allow",
     "approval.reject": "Reject",
@@ -62,6 +88,10 @@ export const HOST_DICT = Object.freeze({
     "approval.batch.deny": "Deny all",
     "approval.batch.oneByOne": "Review one by one",
     "approval.batch.count": "${count} tools awaiting approval",
+    // ── 提问卡（批 A：`views/question.mjs` —— 键名由该档拟定，登记面即此处）──
+    "question.input": "Your answer",
+    "question.answer": "Send answer",
+    "question.cancel": "Cancel",
     // ── 设置面（批 9：`views/settings.mjs` + `views/settings-sections.mjs`）──
     "settings.title": "Settings",
     "settings.close": "Close settings",
@@ -105,6 +135,7 @@ export const HOST_DICT = Object.freeze({
     "settings.model.current": "Current model",
     "settings.model.empty": "No models yet",
     "settings.model.use": "Use",
+    "settings.model.tier": "Tier",
     "settings.mcp.kind.url": "URL",
     "settings.mcp.kind.command": "Command",
     "settings.mcp.remove": "Remove ${name}",
@@ -132,6 +163,13 @@ export const HOST_DICT = Object.freeze({
     "info.read.tech": "Tech todos",
     "info.read.aged": "Aged",
     "info.state.none": "No reading yet",
+    // ── 批 B 面（`views/chrome.mjs`：会话头三字段标 / 档位两特值词 / 状态栏读数串 —— 键名本档拟定，登记面即此处）──
+    "head.field.provider": "Provider",
+    "head.field.model": "Model",
+    "head.field.effort": "Tier",
+    "effort.auto": "Auto",
+    "effort.off": "Off",
+    "status.usage": "${percent}%",
   },
   zh: {
     "rail.action.openDir": "打开目录…",
@@ -140,6 +178,9 @@ export const HOST_DICT = Object.freeze({
     "rail.project.none": "未打开项目",
     "rail.empty.hint": "项目内暂无会话",
     "rail.action.newSession": "新建会话",
+    "rail.action.rename": "改名",
+    "rail.action.delete": "删除",
+    "rail.action.cancel": "取消",
     "rail.session.untitled": "未命名会话",
     "origin.cli": "CLI",
     "origin.vscode": "扩展端",
@@ -154,6 +195,9 @@ export const HOST_DICT = Object.freeze({
     "chat.summary.older": "更早的 ${n} 条",
     "chat.tool.changes": "${files} 个文件 · +${add} −${del}",
     "chat.tool.duration": "${seconds} 秒",
+    // ── 复制面（批 B：`views/chat-copy.mjs` —— 块尾 / 输入区尾两控件可及名）──
+    "chat.action.copy": "复制块文本",
+    "chat.action.copyLast": "复制末条回复",
     "pool.title": "活动",
     "pool.family.approvals": "待审批",
     "pool.family.blocks": "活动块",
@@ -161,6 +205,13 @@ export const HOST_DICT = Object.freeze({
     "pool.collapse": "折叠活动池",
     "pool.expand": "展开活动池",
     "pool.empty.hint": "本会话暂无活动",
+    "composer.input": "消息",
+    "composer.interrupt": "中断",
+    "composer.queue.full": "队列已满——等当前回合结束后再发",
+    // ── 附件面（批 B：`mount-composer.mjs` + `attach.mjs` —— 逐项移除控件可及名 + 回执 `degraded` 两态提示行）──
+    "composer.attach.remove": "移除附件",
+    "composer.attach.nonvision": "图片未随发——该模型不支持图片",
+    "composer.attach.partial": "部分图片已丢弃（超限或保存失败）——其余照发",
     "approval.once": "允许一次",
     "approval.always": "始终允许",
     "approval.reject": "拒绝",
@@ -168,6 +219,10 @@ export const HOST_DICT = Object.freeze({
     "approval.batch.deny": "全部拒绝",
     "approval.batch.oneByOne": "逐项审查",
     "approval.batch.count": "待审批 ${count} 个工具",
+    // ── 提问卡（批 A：`views/question.mjs` —— 键名由该档拟定，登记面即此处）──
+    "question.input": "你的回答",
+    "question.answer": "提交作答",
+    "question.cancel": "取消",
     // ── 设置面（批 9：`views/settings.mjs` + `views/settings-sections.mjs`）──
     "settings.title": "设置",
     "settings.close": "关闭设置",
@@ -211,6 +266,7 @@ export const HOST_DICT = Object.freeze({
     "settings.model.current": "当前模型",
     "settings.model.empty": "暂无模型",
     "settings.model.use": "采用",
+    "settings.model.tier": "档位",
     "settings.mcp.kind.url": "URL",
     "settings.mcp.kind.command": "命令",
     "settings.mcp.remove": "移除 ${name}",
@@ -238,6 +294,13 @@ export const HOST_DICT = Object.freeze({
     "info.read.tech": "技术待办",
     "info.read.aged": "老化",
     "info.state.none": "暂无读数",
+    // ── 批 B 面（`views/chrome.mjs`：会话头三字段标 / 档位两特值词 / 状态栏读数串 —— 键名本档拟定，登记面即此处）──
+    "head.field.provider": "渠道",
+    "head.field.model": "模型",
+    "head.field.effort": "档位",
+    "effort.auto": "自动",
+    "effort.off": "关闭",
+    "status.usage": "${percent}%",
   },
 })
 

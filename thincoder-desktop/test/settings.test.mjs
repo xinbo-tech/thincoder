@@ -1,8 +1,10 @@
 /**
- * settings.test.mjs — 设置族用例（用例号 U98–U102 · `docs/desktop/design/PROJECT.md` §7 T-DSK7/8/10
+ * settings.test.mjs — 设置族用例（用例号 U98–U108 · `docs/desktop/design/PROJECT.md` §7 T-DSK7/8/10
  * + 批档 §2.6 判据行 D6 / D7 / A2）：`config:write` 键白名单 + 值域 + 回执键 + 他键保留 + 首写建档 /
- * `model:list` 真探（假 HTTP：200 / 非 2xx / 查无渠道）/ `settings:agent` 读面字段形 + 遮罩单点 +
- * 明文零下发 / 写面校验拒绝零写盘 + 写后回读 + 未知键放行 / A2 源面机检 + 畸形档不吞（三面两式）。
+ * `model:list` 真探（假 HTTP：200 / 非 2xx / 查无渠道）+ 逐模型档位投影（元素形 `{ id, effortEnum,
+ * thinkOff }` 三键逐项）/ `settings:agent` 读面字段形 + 遮罩单点 +
+ * 明文零下发 / 写面校验拒绝零写盘 + 写后回读 + 未知键放行 / 档位意图级写径（三径落形 + 写后投影
+ * 恒等 + 两拒零写）/ A2 源面机检 + 畸形档不吞（三面两式）。
  * 纪律：沙箱逐用例 `mkdtemp` + `_setConfigPathForTest` 指临时档（不碰真实用户目录），用例后复位；
  * mtime 冲突不可由外部触发（`writeConfigAtomic` 门控 = 进程内 stat→read→stat）⇒ 本档不测该档。
  */
@@ -16,8 +18,11 @@ import { fileURLToPath } from "node:url"
 import { loadConfig } from "@thincoder/core/config.mjs"
 import { _resetConfigPathForTest, _setConfigPathForTest } from "@thincoder/core/config-io.mjs"
 import { projectDictionary } from "@thincoder/core/i18n.mjs"
+import { specForModel } from "@thincoder/core/model-specs.mjs"
 import { channelUnavailableMessage } from "@thincoder/core/provider/list-models.mjs"
+import { thinkOffPath, thinkOffShape } from "@thincoder/core/think-off.mjs"
 import { MASK, configWrite, isConfigured, modelList, settingsAgent } from "../src/main/settings.mjs"
+import { providerList } from "../src/main/providers.mjs"
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url))
 
@@ -48,7 +53,8 @@ function fakeModels(t, seen) {
       return
     }
     res.writeHead(200, { "content-type": "application/json" })
-    res.end(JSON.stringify({ data: [{ id: "m-b" }, { id: "m-a" }, { id: 7 }, {}] }))
+    // 真名三行（三档判据：`thinkAlwaysOn` / effort 族无 `none` / effort 族含 `none`）+ 未登记两名 + 非串两项
+    res.end(JSON.stringify({ data: [{ id: "m-b" }, { id: "glm-5.3" }, { id: "m-a" }, { id: "qwen3.7-flash" }, { id: "kimi-k3" }, { id: 7 }, {}] }))
   })
   return new Promise((done) => server.listen(0, "127.0.0.1", () => {
     t.after(() => { server.closeAllConnections?.(); server.close() })
@@ -94,7 +100,7 @@ test("U98: config:write —— 键白名单 + 值域 + 失败零写盘 + 两语�
 
 // ─── U99 model:list（真探核链路 / 三类失败）─────────────────────────
 
-test("U99: model:list —— 真调核 listModels（假 HTTP 200）+ 非 2xx 状态入串 + 查无渠道", async (t) => {
+test("U99: model:list —— 真调核 listModels（假 HTTP 200）+ 逐模型档位投影 + 非 2xx 状态入串 + 查无渠道", async (t) => {
   const seen = []
   const base = await fakeModels(t, seen)
   sandbox(t, {
@@ -104,7 +110,23 @@ test("U99: model:list —— 真调核 listModels（假 HTTP 200）+ 非 2xx 状
     ],
   })
   const ok = await modelList({ provider: "local" })
-  assert.deepEqual(ok, { ok: true, models: ["m-a", "m-b"] }, "候选集 = 核 listModels 投影（排序 + 非串项丢弃）")
+  assert.deepEqual(
+    ok,
+    {
+      ok: true,
+      models: [
+        { id: "glm-5.3", effortEnum: ["low", "high", "max"], thinkOff: false }, // thinkAlwaysOn ⇒ off 不可达
+        { id: "kimi-k3", effortEnum: ["low", "high", "max"], thinkOff: false }, // effort 族枚举无 "none" ⇒ 不可达
+        { id: "m-a", effortEnum: [], thinkOff: true }, // 未登记 ⇒ 空候选面（零渲染）；默认规格非 effort 族 ⇒ 可达
+        { id: "m-b", effortEnum: [], thinkOff: true },
+        { id: "qwen3.7-flash", effortEnum: ["none", "minimal", "low", "medium", "high", "xhigh"], thinkOff: true }, // 枚举含 "none" ⇒ 可达
+      ],
+    },
+    "候选集 = 核 listModels 逐模型档位投影（id 排序 + 非串项丢弃 + 两判据单源 = 核 specForModel / thinkOffPath）",
+  )
+  for (const model of ok.models) {
+    assert.deepEqual(Object.keys(model).sort(), ["effortEnum", "id", "thinkOff"], "元素形三键闭集（回执形两向：逐项在场）")
+  }
   assert.deepEqual(seen, [{ url: "/v1/models", auth: "Bearer sk-local" }], "真调核链路：GET <baseURL>/models + Bearer 密钥")
 
   const bad = await modelList({ provider: "bad" })
@@ -210,4 +232,69 @@ test("U102: A2 写面唯一执行体（源面机检）+ 畸形档不吞（读面
   assert.throws(() => settingsAgent({}), /not valid JSON/, "读面：核 loadRaw 抛 ⇒ 本档零 catch 直传")
   assert.throws(() => configWrite({ patch: { locale: "zh" } }), /refusing to overwrite/, "写面：核拒写畸形档（绝不静默覆盖）")
   assert.equal(text(), "{ not json", "畸形档零改写（字节级不变）")
+})
+
+// ─── U146 settings:agent 档位意图级写径（三径 / 投影恒等 / 两拒零写）───
+
+test("U146: settings:agent 档位写径 —— 三径落形 + 写后投影恒等 + 两拒零写 + 形拒", (t) => {
+  const { text, raw } = sandbox(t, {
+    defaultModel: "eff:qwen3.7-flash",
+    providers: [
+      // 双记号（档位串 + type 族残留）⇒ auto 径「两键皆清」可证；活动行 = 本条
+      { name: "eff", baseURL: "https://a.invalid/v1", model: "qwen3.7-flash", apiKey: "sk-eff", thinking: { type: "disabled" }, reasoningEffort: "high" },
+      { name: "type", baseURL: "https://b.invalid/v1", model: "zz-unknown" },
+      { name: "forced", baseURL: "https://c.invalid/v1", model: "glm-5.3" },
+      // 非 off 形残记（自定开值族式）：member 径的 deep-equal 门可证（非「见 thinking 即删」）
+      { name: "custom", baseURL: "https://d.invalid/v1", model: "qwen3.7-flash", thinking: { type: "enabled" } },
+    ],
+  })
+  const row = (name) => providerList().providers.find((p) => p.name === name)
+  const at = (i) => raw().providers[i]
+  const readback = (receipt, i) => receipt.fields.find((f) => f.path === "providers").value[i]
+
+  // 前提（判据单源 = 核导出面——测试与实现同源，不硬编码族别）
+  assert.deepEqual([thinkOffPath(specForModel("qwen3.7-flash")), thinkOffPath(specForModel("glm-5.3"))], [true, false], "前提：含 `none` 族 off 可达 · 强制族 off 无有效路径")
+  assert.deepEqual([thinkOffShape(specForModel("qwen3.7-flash")), thinkOffShape(specForModel("zz-unknown"))], [null, { type: "disabled" }], "前提：effort 族 off 形 = `null` · 未登记模型 ⇒ type 族默认形")
+  assert.deepEqual([row("eff").effort, row("type").effort], ["high", "auto"], "现值投影：`reasoningEffort` 串优先（双记号在场取串）· 无记号 ⇒ auto")
+
+  const text0 = text()
+  const rejects = [
+    [{ tier: {} }, "invalid-patch", "三成员皆缺（非三成员形）"], [{ tier: 7 }, "invalid-patch", "tier 非对象"],
+    [{ tier: { provider: "eff", model: "qwen3.7-flash" } }, "invalid-patch", "level 缺"], [{ tier: { provider: "eff", level: "auto" } }, "invalid-patch", "model 缺"],
+    [{ tier: { provider: "ghost", model: "qwen3.7-flash", level: "auto" } }, "unknown-provider", "名不在配置"], [{ tier: { model: "qwen3.7-flash", level: "auto" } }, "unknown-provider", "provider 缺 ⇒ 空名无对应条目"],
+    [{ tier: { provider: "eff", model: "qwen3.7-flash", level: "ultra" } }, "bad-level", "表外 member"], [{ tier: { provider: "type", model: "zz-unknown", level: "high" } }, "bad-level", "无枚举模型 ⇒ 任一 member 表外"],
+    [{ tier: { provider: "forced", model: "glm-5.3", level: "off" } }, "bad-level", "强制族：off 无有效路径"], [{ tier: { provider: "forced", model: "glm-5.3", level: "none" } }, "bad-level", "`none` 与 `off` 同径（同受 thinkOffPath 门）"],
+    [{ tier: { provider: "eff", model: "qwen3.7-flash", level: 42 } }, "bad-level", "level 非串"], [{ tier: { provider: "eff", model: "qwen3.7-flash", level: "" } }, "bad-level", "level 空串"],
+    [{ patch: { "agent.maxTurns": 3 }, tier: { provider: "eff", model: "qwen3.7-flash", level: "auto" } }, "invalid-patch", "两有效键同在（二择一）"],
+  ]
+  for (const [payload, reason, why] of rejects) {
+    const r = settingsAgent(payload)
+    assert.deepEqual({ ok: r.ok, reason: r.reason }, { ok: false, reason }, `拒绝面：${why} ⇒ ${reason}`)
+    assert.deepEqual([Object.keys(r).sort().join(), r.fields.length > 0], ["fields,ok,reason", true], "拒绝面键闭集 + 字段读数非空（面板不空转）")
+  }
+  assert.equal(text(), text0, "十三拒零写盘（字节级不变）")
+  assert.deepEqual(settingsAgent({ patch: null, tier: null }), settingsAgent({}), "两键皆 null ⇒ 读面（二择一判据 = 非 undefined/null）")
+
+  // 三径落形表（秩序 = 写序 · 逐行改写同一盘面 ⇒ 每行期望含前案落形）：键面 + 两记号落形 + 写后回读 + 投影恒等
+  const cases = [
+    ["① auto 径：两键皆删（先清不相容记号）", 0, { provider: "eff", model: "qwen3.7-flash", level: "auto" }, ["apiKey", "baseURL", "model", "name"], undefined, undefined, "auto"],
+    ["② off 径（type 族）：落形 = 核 thinkOffShape", 1, { provider: "type", model: "zz-unknown", level: "off" }, ["baseURL", "model", "name", "thinking"], { type: "disabled" }, undefined, "off"],
+    ["② off 径（effort 族）：off 形 = `null`（载荷层据此补发 reasoning_effort:none）", 0, { provider: "eff", model: "qwen3.7-flash", level: "off" }, ["apiKey", "baseURL", "model", "name", "thinking"], null, undefined, "off"],
+    ["③ member 径：off 形残记（null）被清 + 置 level", 0, { provider: "eff", model: "qwen3.7-flash", level: "medium" }, ["apiKey", "baseURL", "model", "name", "reasoningEffort"], undefined, "medium", "medium"],
+    ["③ member 径：非 off 形残记保留（deep-equal 门）· 非活动行取自身绑定", 3, { provider: "custom", model: "qwen3.7-flash", level: "low" }, ["baseURL", "model", "name", "reasoningEffort", "thinking"], { type: "enabled" }, "low", "low"],
+    ["④ `none` 归 off 径（不作独立档）", 0, { provider: "eff", model: "qwen3.7-flash", level: "none" }, ["apiKey", "baseURL", "model", "name", "thinking"], null, undefined, "off"],
+  ]
+  for (const [why, i, want, keys, thinking, effort, projected] of cases) {
+    const r = settingsAgent({ tier: want })
+    assert.deepEqual({ ok: r.ok, reason: r.reason }, { ok: true, reason: null }, `${why}：受理（成功面 reason 显式 null）`)
+    const entry = at(i)
+    assert.deepEqual(Object.keys(entry).sort(), keys, `${why}：落盘键面`)
+    assert.deepEqual(entry.thinking, thinking, `${why}：thinking 落形`)
+    assert.equal(entry.reasoningEffort, effort, `${why}：reasoningEffort 落形`)
+    assert.equal(row(want.provider).effort, projected, `${why}：写后投影恒等（provider:list 行 effort 读回）`)
+    assert.deepEqual(readback(r, i).thinking, thinking, `${why}：写后回读同值（D6 —— 回执 fields 已是盘上新值）`)
+  }
+  assert.equal(at(2).reasoningEffort, undefined, "写面 = 条目级局部（余行零改）")
+  assert.deepEqual(at(2), { name: "forced", baseURL: "https://c.invalid/v1", model: "glm-5.3" })
+  assert.equal(raw().defaultModel, "eff:qwen3.7-flash", "档位写径不动 defaultModel（写面 = 渠道条目级默认两键）")
 })

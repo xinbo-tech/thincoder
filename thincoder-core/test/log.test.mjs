@@ -11,6 +11,8 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import {
   MAX_LINE,
+  _resetLogsDirForTest,
+  _setLogsDirForTest,
   cleanupOldLogs,
   classifyErr,
   errText,
@@ -68,22 +70,19 @@ test("headText single-lines + caps; paragraph mode keeps the first paragraph", (
   assert.equal(headText("y".repeat(20), 5).length, 5)
 })
 
-test("logsDir honours THINCODER_LOG_DIR; todayLogPath names agent-YYYY-MM-DD.log", () => {
-  const prev = process.env.THINCODER_LOG_DIR
-  process.env.THINCODER_LOG_DIR = "Z:/tmp/logs"
+test("logsDir honours the test seam; todayLogPath names agent-YYYY-MM-DD.log", () => {
+  _setLogsDirForTest("Z:/tmp/logs")
   try {
     assert.equal(logsDir(), "Z:/tmp/logs")
     assert.ok(todayLogPath(new Date("2026-09-13T12:00:00Z")).endsWith("agent-2026-09-13.log"))
   } finally {
-    if (prev === undefined) delete process.env.THINCODER_LOG_DIR
-    else process.env.THINCODER_LOG_DIR = prev
+    _resetLogsDirForTest()
   }
 })
 
 test("logEvent writes one JSON event line and drops blacklisted fields", () => {
   const dir = mkdtempSync(join(tmpdir(), "core-log-"))
-  const prev = process.env.THINCODER_LOG_DIR
-  process.env.THINCODER_LOG_DIR = dir
+  _setLogsDirForTest(dir)
   try {
     logEvent("llm:done", { model: "m", apiKey: "sk-secret", head: "hello" })
     const files = readdirSync(dir).filter((n) => /^agent-\d{4}-\d{2}-\d{2}\.log$/.test(n))
@@ -96,16 +95,14 @@ test("logEvent writes one JSON event line and drops blacklisted fields", () => {
     assert.ok(ev.seq >= 1)
     assert.ok(line.length <= MAX_LINE)
   } finally {
-    if (prev === undefined) delete process.env.THINCODER_LOG_DIR
-    else process.env.THINCODER_LOG_DIR = prev
+    _resetLogsDirForTest()
     rmSync(dir, { recursive: true, force: true })
   }
 })
 
 test("cleanupOldLogs removes agent-*.log past the retention window, keeps the rest", () => {
   const dir = mkdtempSync(join(tmpdir(), "core-log-"))
-  const prev = process.env.THINCODER_LOG_DIR
-  process.env.THINCODER_LOG_DIR = dir
+  _setLogsDirForTest(dir)
   try {
     writeFileSync(join(dir, "agent-2020-01-01.log"), "{}\n")
     writeFileSync(join(dir, "agent-9999-01-01.log"), "{}\n")
@@ -113,8 +110,7 @@ test("cleanupOldLogs removes agent-*.log past the retention window, keeps the re
     assert.ok(!existsSync(join(dir, "agent-2020-01-01.log")), "old file removed")
     assert.ok(existsSync(join(dir, "agent-9999-01-01.log")), "future file kept")
   } finally {
-    if (prev === undefined) delete process.env.THINCODER_LOG_DIR
-    else process.env.THINCODER_LOG_DIR = prev
+    _resetLogsDirForTest()
     rmSync(dir, { recursive: true, force: true })
   }
 })

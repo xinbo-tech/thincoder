@@ -16,6 +16,7 @@ import { join } from "node:path"
 import { runAgent, createAgent } from "@thincoder/core/agent.mjs"
 import { builtinTools } from "@thincoder/core/tools/index.mjs"
 import { subagentTool } from "@thincoder/core/agent-tools/subagent.mjs"
+import { _resetLogsDirForTest, _setLogsDirForTest } from "@thincoder/core/log.mjs"
 
 const CHILD_TASK = "Survey lib/feature.mjs and report."
 const CHILD_REPORT =
@@ -195,7 +196,7 @@ test("③ 中止丢弃（批 4 CLI-ASYNC-DISCARD）：父回合中止 → 已死
   const { agent } = await makeParent(t)
   const logDir = mkdtempSync(join(tmpdir(), "tc-int-discard-"))
   t.after(() => { try { rmSync(logDir, { recursive: true, force: true }) } catch { /* ignore */ } })
-  process.env.THINCODER_LOG_DIR = logDir
+  _setLogsDirForTest(logDir)
   try {
     // 存活条目（跨回合后台工作——基信号未中止）：本回合 Stop 不得误伤
     const keep = new AbortController()
@@ -238,6 +239,6 @@ test("③ 中止丢弃（批 4 CLI-ASYNC-DISCARD）：父回合中止 → 已死
     )
     assert.equal(agent._asyncSubagents.size, 0, "结算后池清")
   } finally {
-    delete process.env.THINCODER_LOG_DIR
+    _resetLogsDirForTest()
   }
 })

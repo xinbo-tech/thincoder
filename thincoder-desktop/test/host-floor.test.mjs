@@ -3,8 +3,8 @@
  * 覆盖：版本闸边界（24.0 · Node 主版本底线语义）/ 探针分支（Node 够而 `node:sqlite` 缺）/ 本机真探针过闸
  * （兼作环境契约：测试机即产品下限面）/ 启动序机检（下限自检调用点先于协议 / 窗口注册 · 失败走显式退出 ·
  * `main` 值锁 · 本档入册）/ 预载三面（主进程可读不抛 · 平 node 装配判红 · 主侧读取面 = `createRequire`）/
- * 通道配线两向（`CHANNELS` 二十五项 · `HANDLERS` 键集≡白名单集 · 三新处理体转口 · 未装配处理体 fail-loud 源面判红）/
- * 订阅面白名单（`EVENT_CHANNELS` 恰九 ∧ 冻结 · 表内订阅收单参载荷 · 表外 throw · 退订同引用幂等）/
+ * 通道配线两向（`CHANNELS` 二十七项 · `HANDLERS` 键集≡白名单集 · 三新处理体转口 · 未装配处理体 fail-loud 源面判红）/
+ * 订阅面白名单（`EVENT_CHANNELS` 恰十 ∧ 冻结 · 表内订阅收单参载荷 · 表外 throw · 退订同引用幂等）/
  * 行数触发线（批 8 主进程侧 / 渲染侧新档 ≤ 300 · 批 9 新增六档〔用例模块〕≤ 300 · 在册例外两向〔越层档不入 `fresh` 清单〕· 宿主档源面零 `electron`）/
  * 退场复位回路（三薄挂载宿主属性面无残留 —— `docs/desktop/design/RENDERER.md` §1 退场口径 · 属性面）。
  */
@@ -93,9 +93,9 @@ test("U13: 预载档主进程可读不抛 / 平 node 装配判红 / 主侧读取
       "approval:respond", "history:page", "msg:send", "msg:interrupt",
       "provider:list", "provider:save", "provider:remove", "provider:verify",
       "model:list", "settings:agent", "mcp:list", "mcp:save", "mcp:remove",
-      "config:write", "ledger:read", "batch:status",
+      "config:write", "ledger:read", "batch:status", "question:respond", "session:prefs",
     ],
-    "白名单 = 二十五项（既有十三项 + 新增十二项：provider 四 · model 一 · settings 一 · MCP 三 · config:write · ledger:read · batch:status · 顺序锁定）",
+    "白名单 = 二十七项（既有十三项 + 新增十二项：provider 四 · model 一 · settings 一 · MCP 三 · config:write · ledger:read · batch:status + 作答响应 question:respond + 会话级偏好 session:prefs · 顺序锁定）",
   )
   assert.ok(Object.isFrozen(preload.CHANNELS), "CHANNELS 冻结（运行期不可改）")
 
@@ -113,10 +113,10 @@ test("U13: 预载档主进程可读不抛 / 平 node 装配判红 / 主侧读取
 
 // ─── U74 通道配线两向（批 7 + 本批 §2.11 ⑥ 随动）─────────────
 
-test("U74: 白名单二十五项 ∧ 既有十三项序锁定（第 10 项 = approval:respond）∧ HANDLERS ≡ CHANNELS 两向 ∧ 未装配处理体 fail-loud", () => {
+test("U74: 白名单二十七项 ∧ 既有十三项序锁定（第 10 项 = approval:respond）∧ HANDLERS ≡ CHANNELS 两向 ∧ 未装配处理体 fail-loud", () => {
   const preload = createRequire(import.meta.url)(fileURLToPath(new URL("../src/preload/preload.cjs", import.meta.url)))
   const channels = [...preload.CHANNELS]
-  assert.equal(channels.length, 25, "白名单 = 二十五项（既有十三项 + 新增十二项）")
+  assert.equal(channels.length, 27, "白名单 = 二十七项（既有十三项 + 新增十二项 + 作答响应 + 会话级偏好写面）")
   assert.equal(channels[9], "approval:respond", "既有十三项序锁定 —— 第 10 项 = 审批出口（新增段追加其后，不动既有段）")
   assert.deepEqual(channels.slice(10, 13), ["history:page", "msg:send", "msg:interrupt"], "第 11–13 项 = 历史页 + 回合驱动二项（批 7 段）")
   assert.deepEqual(
@@ -124,9 +124,9 @@ test("U74: 白名单二十五项 ∧ 既有十三项序锁定（第 10 项 = app
     [
       "provider:list", "provider:save", "provider:remove", "provider:verify",
       "model:list", "settings:agent", "mcp:list", "mcp:save", "mcp:remove",
-      "config:write", "ledger:read", "batch:status",
+      "config:write", "ledger:read", "batch:status", "question:respond", "session:prefs",
     ],
-    "第 14–25 项 = 新增十二项（序同预载档头注定序）",
+    "第 14–27 项 = 新增十四项（作答响应 + 会话级偏好写面居末位 —— 序同预载档头注定序）",
   )
 
   const ipc = stripComments(readFileSync(new URL("../src/main/ipc.mjs", import.meta.url), "utf8"))
@@ -143,16 +143,16 @@ test("U74: 白名单二十五项 ∧ 既有十三项序锁定（第 10 项 = app
   assert.ok(!/ok\s*:\s*true/.test(body[1]), "未装配处理体零 `{ ok: true }` 字面（不造假成功）")
 })
 
-// ─── U76 出站订阅面白名单（批档 §2.11 收正②/③ · IPC.md §1 九行）─────
+// ─── U76 出站订阅面白名单（批档 §2.11 收正②/③ · IPC.md §1 十行）─────
 
-test("U76: EVENT_CHANNELS 恰九 ∧ 冻结 · 表内订阅收单参载荷 · 表外 throw · 退订同引用幂等", () => {
+test("U76: EVENT_CHANNELS 恰十 ∧ 冻结 · 表内订阅收单参载荷 · 表外 throw · 退订同引用幂等", () => {
   const preload = createRequire(import.meta.url)(fileURLToPath(new URL("../src/preload/preload.cjs", import.meta.url)))
   const names = [...preload.EVENT_CHANNELS]
-  assert.equal(names.length, 9, "恰九条 —— 与九回调桥一一对应")
+  assert.equal(names.length, 10, "恰十条 —— 九回调映射八通道 + 宿主自产两条（`ev:usage` / `ev:error`）")
   assert.deepEqual(names, [
     "ev:token", "ev:activity", "ev:tool-call", "ev:tool-output", "ev:tool-result",
-    "ev:approval", "ev:question", "ev:task", "ev:error",
-  ], "出站白名单 = 九条 `ev:*`（序 = 桥面表）")
+    "ev:approval", "ev:question", "ev:task", "ev:usage", "ev:error",
+  ], "出站白名单 = 十条 `ev:*`（序 = 桥面表）")
   assert.ok(Object.isFrozen(preload.EVENT_CHANNELS), "EVENT_CHANNELS 冻结（运行期不可改）")
 
   const calls = []
@@ -179,7 +179,7 @@ test("U76: EVENT_CHANNELS 恰九 ∧ 冻结 · 表内订阅收单参载荷 · �
 
 // ─── U77 本批三新通道接线面（批档 §2.11 ④/⑤/⑥）──────────────────
 
-test("U77: 二十五项含三新行 ∧ 两向 ≡ ∧ 三新处理体转口 ∧ 零假成功 / 零 reason 字面", () => {
+test("U77: 二十七项含三新行 ∧ 两向 ≡ ∧ 三新处理体转口 ∧ 零假成功 / 零 reason 字面", () => {
   const preload = createRequire(import.meta.url)(fileURLToPath(new URL("../src/preload/preload.cjs", import.meta.url)))
   const channels = [...preload.CHANNELS]
   const ipc = stripComments(readFileSync(new URL("../src/main/ipc.mjs", import.meta.url), "utf8"))
@@ -255,12 +255,19 @@ test("U95: fresh 新档 ≤ 300 行（越层档走例外面）∧ `app.mjs` 拆�
     "src/main/agent-host.mjs", "src/main/agent-bridge.mjs", "src/main/suspensions.mjs", "src/main/session-io.mjs",
     "test/agent-host.test.mjs", "test/history-page.test.mjs", "test/session-io.test.mjs", "test/slot-sandbox.mjs",
     // 渲染侧（8b —— 本批三新档 + 其测试档；行数臂由 8a 落）
-    "renderer/events.mjs", "renderer/events-subscribe.mjs", "renderer/mount-pool.mjs",
+    "renderer/events-subscribe.mjs", "renderer/mount-pool.mjs",
     "test/events-page.test.mjs",
     // 批 9 六档（用例模块 —— 清单一律文件级读数；越层档不入本清单，走下表例外面）
     //   其余新档行数面（主进程侧四源档 / `settings.css`）= §4.1 值列表（父侧臂清单随动项；本清单补入 = 六用例档）。
     "test/settings.test.mjs", "test/providers.test.mjs", "test/mcp-servers.test.mjs", "test/project-info.test.mjs",
-    "test/views-settings.test.mjs", "test/views-onboarding.test.mjs",
+    "test/views-onboarding.test.mjs",
+    // 批 B ⑧ 附件面（本舱）：渲染侧新档一行（码面池随动 —— §2.5:154「批 B 新档两档」之渲染半）
+    //   + 主进程半一行（`8a` 舱新档 —— 设计未立档，源 §1.12 #93 立舱 ⇒ 越声明见 §5）；用例档登记走 `test/files.mjs`。
+    "src/main/attachments.mjs", "renderer/attach.mjs",
+    // 批 B 复制面新档（本舱）：渲染侧一行（机检随动 —— 新增码面档一律入 ≤300 臂读数）
+    "renderer/views/chat-copy.mjs",
+    // 批 B 会话头面（本舱）：接线档一行（`renderer/mount-head.mjs`，未入设计档清单 ⇒ 越声明见 §5）+ 其用例档一行
+    "renderer/mount-head.mjs", "test/views-head.test.mjs",
   ]
   for (const rel of fresh) {
     const n = rows(rel)
@@ -268,7 +275,8 @@ test("U95: fresh 新档 ≤ 300 行（越层档走例外面）∧ `app.mjs` 拆�
   }
   // 在册例外（越层档**逐一登记** —— 不混进 ≤300 臂 / 不入 `fresh` 清单）：两向判据 = 真越层（>300 ⇒ 例外不得
   // 静默变常档）∧ 未触硬限（≤500）；消解窗口 = 该档下次被触碰的批（登记面 = `docs/desktop/design/PROJECT.md` §4.1）。
-  for (const { rel, limit } of [{ rel: "renderer/mount-settings.mjs", limit: 500 }]) {
+  //   `test/views-settings.test.mjs`（本舱 ⑧ 档位控件例入档 ⇒ 越 300）：§4.1 在册拆分预案 = 用例面拆出（档名实施批定）。
+  for (const { rel, limit } of [{ rel: "renderer/mount-settings.mjs", limit: 500 }, { rel: "renderer/events.mjs", limit: 500 }, { rel: "test/views-settings.test.mjs", limit: 500 }]) {
     const n = rows(rel)
     assert.ok(n > 300, `${rel} 仍在册例外面（实 ${n} —— 回落 ≤300 须撤销例外登记）`)
     assert.ok(n <= limit, `${rel} ≤ ${limit} 硬限（实 ${n} —— 距硬限余 ${limit - n} 行）`)

@@ -1,7 +1,7 @@
 /**
  * trace-store.test.mjs — 轨迹存档测试（实现单源 = `@thincoder/core/traces/trace-store.mjs`——
  * 验收 AC1/AC3/AC4/AC5 + F6 边沿——CLI test/trace-bounds.test.mjs 语义参照——NODE_TEST_CONTEXT
- * 写门 + THINCODER_TRACES_DIR 隔离临时目录，同 CLI traces 测试惯例）。
+ * 写门 + 进程内缝（_setTracesRootForTest / _resetTracesRootForTest）隔离临时目录）。
  *
  * S2 W3（CORE-UNIFICATION §2.6.3）改判登记：实现单源归核（VSC 副本已删）——
  * 容量 / 清理策略随 §2.5 #116 / A21 裁决（取 VSC 侧：完整落盘 + 每写 prune）；
@@ -24,13 +24,13 @@ import http from "node:http"
 import {
   recordChatTrace, cleanupTraces, localDateStr,
   traceSessionKey, nextTraceSeq, tracesDirFor,
+  _setTracesRootForTest, _resetTracesRootForTest,
 } from "@thincoder/core/traces/trace-store.mjs"
 import { chat } from "@thincoder/core/provider/core.mjs"
 import { _resetConfigPathForTest, _setConfigPathForTest } from "@thincoder/core/config.mjs"
 
 // ─── 环境隔离 helpers ─────────────────────────────
 
-let _prevTracesDir
 let _cfgTmp
 
 before(() => {
@@ -38,21 +38,19 @@ before(() => {
   _cfgTmp = mkdtempSync(join(tmpdir(), "tc-trace-cfg-"))
   writeFileSync(join(_cfgTmp, "config.json"), JSON.stringify({ traces: { enabled: false, retentionHours: 24 } }))
   _setConfigPathForTest(join(_cfgTmp, "config.json"))
-  _prevTracesDir = process.env.THINCODER_TRACES_DIR
 })
 
 after(() => {
-  if (_prevTracesDir === undefined) delete process.env.THINCODER_TRACES_DIR
-  else process.env.THINCODER_TRACES_DIR = _prevTracesDir
+  _resetTracesRootForTest() // 兜底复位（用例 done() 已复位——防失败路径漏网）
   _resetConfigPathForTest()
   try { rmSync(_cfgTmp, { recursive: true, force: true }) } catch { /* ignore */ }
 })
 
-/** 每个写盘用例一个全新临时根（seq/目录断言互不串扰）；返回清理函数。 */
+/** 每个写盘用例一个全新临时根（seq/目录断言互不串扰）；返回 { root, done }（done = 复位缝 + 清理）。 */
 function freshRoot() {
   const root = mkdtempSync(join(tmpdir(), "tc-trace-"))
-  process.env.THINCODER_TRACES_DIR = root
-  return () => { try { rmSync(root, { recursive: true, force: true }) } catch { /* ignore */ } }
+  _setTracesRootForTest(root)
+  return { root, done: () => { _resetTracesRootForTest(); try { rmSync(root, { recursive: true, force: true }) } catch { /* ignore */ } } }
 }
 
 /** 列全量轨迹文件（根下日期目录内 .jsonl——YYYY-MM-DD 分日组织）。 */
@@ -87,24 +85,18 @@ const P = { name: "test-provider", model: "test-model" }
 const CWD = process.cwd().replace(/^([a-z]):/, (_, d) => d.toUpperCase() + ":")
 const cwdHash = sha1hex(CWD)
 
-// ─── 1. 写门：测试进程（NODE_TEST_CONTEXT）无 THINCODER_TRACES_DIR → 不写 ───
+// ─── 1. 写门：测试进程（NODE_TEST_CONTEXT）未设缝 → 不写 ───
 
-test("写门（D-TR3 测试隔离）：NODE_TEST_CONTEXT 下无 THINCODER_TRACES_DIR 不落盘不碰盘", () => {
-  const prev = process.env.THINCODER_TRACES_DIR
-  delete process.env.THINCODER_TRACES_DIR
-  try {
-    const out = recordChatTrace(P, { messages: [], logCtx: { traces: true } }, { content: "x" }, null)
-    assert.equal(out, undefined, "写门关闭时应直接返回（无 promise——不启动异步写盘）")
-  } finally {
-    if (prev === undefined) delete process.env.THINCODER_TRACES_DIR
-    else process.env.THINCODER_TRACES_DIR = prev
-  }
+test("写门（D-TR3 测试隔离）：NODE_TEST_CONTEXT 下未设缝不落盘不碰盘", () => {
+  _resetTracesRootForTest() // 确保未设缝（默认态）
+  const out = recordChatTrace(P, { messages: [], logCtx: { traces: true } }, { content: "x" }, null)
+  assert.equal(out, undefined, "写门关闭时应直接返回（无 promise——不启动异步写盘）")
 })
 
 // ─── 2. D-TR1 字段集（成功路径 + D-TR5 错误路径）───
 
 test("D-TR1 字段集：成功路径逐字段落档（JSONL 单行 + 命名 sessionKey-seq）", async () => {
-  const done = freshRoot()
+  const { root, done } = freshRoot()
   try {
     const result = {
       content: "hello world", reasoning: "think step", toolCalls: [{ id: "t1", name: "read", arguments: "{}" }],
@@ -118,7 +110,7 @@ test("D-TR1 字段集：成功路径逐字段落档（JSONL 单行 + 命名 sess
       },
     }
     await recordChatTrace(P, opts, result, null)
-    const { record, name } = readSingleRecord(process.env.THINCODER_TRACES_DIR)
+    const { record, name } = readSingleRecord(root)
     assert.match(name.split(/[\\/]/).pop(), new RegExp(`^${traceSessionKey(CWD)}-\\d+\\.jsonl$`))
     assert.equal(typeof record.ts, "string")
     assert.equal(record.session, "sess-1")
@@ -143,16 +135,16 @@ test("D-TR1 字段集：成功路径逐字段落档（JSONL 单行 + 命名 sess
       messages: [{ role: "user", content: "cont" }],
       logCtx: { cwd: CWD, traces: true, isContinuation: true, stage: "turn", kind: "turn" },
     }, { content: "segment" }, null)
-    const cont = readSingleRecord(process.env.THINCODER_TRACES_DIR)
+    const cont = readSingleRecord(root)
     assert.equal(cont.record.isContinuation, true, "续写链记录标记 isContinuation:true")
   } finally { done() }
 })
 
 test("D-TR5 错误路径：error（errText+类别）+ finishReason null 落档", async () => {
-  const done = freshRoot()
+  const { root, done } = freshRoot()
   try {
     await recordChatTrace(P, { messages: [{ role: "user", content: "q" }], logCtx: { cwd: CWD, traces: true } }, null, new Error("boom failed"))
-    const { record } = readSingleRecord(process.env.THINCODER_TRACES_DIR)
+    const { record } = readSingleRecord(root)
     assert.equal(record.content, null)
     assert.equal(record.finishReason, null)
     assert.match(record.error.err, /boom failed/)
@@ -163,7 +155,7 @@ test("D-TR5 错误路径：error（errText+类别）+ finishReason null 落档",
 // ─── 3. D-TR2 脱敏：字段名黑名单遮蔽 + 密钥形态截断 + 递归（文件全文无密钥）───
 
 test("D-TR2 脱敏：apiKey 字段遮蔽、Bearer/key= 形态截断、嵌套递归——原文不出现在文件", async () => {
-  const done = freshRoot()
+  const { root, done } = freshRoot()
   try {
     const secret1 = "sk-abcdef1234567890"
     const secret2 = "Bearer superSECRETtoken123"
@@ -177,7 +169,7 @@ test("D-TR2 脱敏：apiKey 字段遮蔽、Bearer/key= 形态截断、嵌套递�
     }
     const result = { content: `key=${secret3} done`, toolCalls: [{ id: "1", name: "x", arguments: JSON.stringify({ proxy: secret1 }) }] }
     await recordChatTrace(P, opts, result, null)
-    const { record } = readSingleRecord(process.env.THINCODER_TRACES_DIR)
+    const { record } = readSingleRecord(root)
     assert.equal(record.messages[0].apiKey, "[REDACTED]", "黑名单字段 → 整个字段遮蔽")
     assert.equal(record.messages[1].extra.authorization, "[REDACTED]", "嵌套对象黑名单字段 → 遮蔽")
     const raw = JSON.stringify(record)
@@ -190,12 +182,12 @@ test("D-TR2 脱敏：apiKey 字段遮蔽、Bearer/key= 形态截断、嵌套递�
 // ─── 4. D-TR3 fire-and-forget：recordChatTrace 同步返回，写盘自行完成 ───
 
 test("D-TR3 fire-and-forget：不 await 也落盘（chat() 出口零阻塞语义）", async () => {
-  const done = freshRoot()
+  const { root, done } = freshRoot()
   try {
     const out = recordChatTrace(P, { messages: [{ role: "user", content: "x" }], logCtx: { cwd: CWD, traces: true } }, { content: "async done" }, null)
     assert.ok(out instanceof Promise, "写盘 promise 返回——调用方（chat）不消费即 fire-and-forget")
     // 不 await out——轮询等文件出现（确定性——固定睡窗在重负载 CI 下可 flaky）
-    const rec = await waitForTraceFile(process.env.THINCODER_TRACES_DIR, (r) => r.content === "async done")
+    const rec = await waitForTraceFile(root, (r) => r.content === "async done")
     assert.equal(rec.content, "async done")
     await out // 收尾
   } finally { done() }
@@ -204,7 +196,7 @@ test("D-TR3 fire-and-forget：不 await 也落盘（chat() 出口零阻塞语义
 // ─── 5. D-TR3 目录/seq：分日目录 + seq = 磁盘 max+1（跨进程不覆写）───
 
 test("D-TR3 目录 seq：nextTraceSeq = max(磁盘已有, 预留)+1；跨日目录独立", () => {
-  const done = freshRoot()
+  const { done } = freshRoot()
   try {
     const day = "2026-01-01"
     const dir = tracesDirFor(day)
@@ -260,11 +252,11 @@ test("D-TR10 清理：超期 .jsonl 删/期内留/非 jsonl 不碰/空日目录�
 // ─── 7. F6 禁用路径：logCtx.traces=false → 不落盘不报错（零开销）───
 
 test("F6 禁用路径：logCtx.traces=false → 无文件无目录（不报错）", async () => {
-  const done = freshRoot()
+  const { root, done } = freshRoot()
   try {
     const out = recordChatTrace(P, { messages: [{ role: "user", content: "secret-ish" }], logCtx: { cwd: CWD, traces: false } }, { content: "x" }, null)
     assert.equal(out, undefined, "禁用 → 直接返回（不启动异步写盘/prune）")
-    assert.equal(existsSync(process.env.THINCODER_TRACES_DIR) && readdirSync(process.env.THINCODER_TRACES_DIR).length, 0, "根目录零写入")
+    assert.equal(existsSync(root) && readdirSync(root).length, 0, "根目录零写入")
   } finally { done() }
 })
 
@@ -274,22 +266,21 @@ test("F6 写失败静默：落盘路径不可写 → promise resolve 不抛（�
   const root = mkdtempSync(join(tmpdir(), "tc-trace-wfail-"))
   const blocker = join(root, "blocked")
   writeFileSync(blocker, "I am a file, not a dir", "utf8") // tracesRoot 指向一个文件 → mkdir 必败
-  process.env.THINCODER_TRACES_DIR = blocker
+  _setTracesRootForTest(blocker)
   try {
     const out = recordChatTrace(P, { messages: [], logCtx: { cwd: CWD, traces: true } }, { content: "x" }, null)
     assert.ok(out instanceof Promise)
     await out // 必须正常 resolve——写失败静默降级
   } finally {
     try { rmSync(root, { recursive: true, force: true }) } catch { /* ignore */ }
-    delete process.env.THINCODER_TRACES_DIR
-    const done = freshRoot(); done() // 复位 env（避免影响后续用例）
+    _resetTracesRootForTest() // 复位缝（避免影响后续用例）
   }
 })
 
 // ─── 9. per-caller logCtx 形状：主回合/子代理/advisor/compress/distill 元数据落档 ───
 
 test("per-caller 元数据路径：主回合/子代理/advisor/compress/distill logCtx 形状逐域落档", async () => {
-  const done = freshRoot()
+  const { root, done } = freshRoot()
   try {
     const shapes = [
       { name: "主回合", logCtx: { stage: "turn", turn: 1, auto: false, role: null, depth: 0, kind: "turn", session: "sess-top", cwd: CWD, traces: true } },
@@ -301,7 +292,6 @@ test("per-caller 元数据路径：主回合/子代理/advisor/compress/distill 
     for (const { logCtx } of shapes) {
       await recordChatTrace(P, { messages: [{ role: "user", content: "m" }], logCtx }, { content: "r" }, null)
     }
-    const root = process.env.THINCODER_TRACES_DIR
     const files = listTraceFiles(root)
     assert.equal(files.length, shapes.length, "每域一条记录（同目录 seq 递增 = 写入顺序）")
     files.forEach((f, i) => {
@@ -360,7 +350,7 @@ async function waitForTraceFile(root, pred, tries = 50) {
 }
 
 test("AC1 chat() 出口采集：真实 chat() 成功/失败都经单点落盘（fire-and-forget 不 await）", async () => {
-  const done = freshRoot()
+  const { root, done } = freshRoot()
   const srv = await sseServer()
   const provider = { name: "wire-provider", model: "wire-model", apiKey: "test-key", baseURL: srv.url, format: "openai", chatPath: "/ok" }
   try {
@@ -370,7 +360,7 @@ test("AC1 chat() 出口采集：真实 chat() 成功/失败都经单点落盘（
       logCtx: { stage: "turn", turn: 1, kind: "turn", session: "wire-sess", cwd: CWD, traces: true },
     })
     assert.equal(r.content, "wire-hi")
-    const ok = await waitForTraceFile(process.env.THINCODER_TRACES_DIR, (rec) => rec.content === "wire-hi")
+    const ok = await waitForTraceFile(root, (rec) => rec.content === "wire-hi")
     assert.equal(ok.stage, "turn")
     assert.equal(ok.kind, "turn")
     assert.equal(ok.session, "wire-sess")
@@ -387,7 +377,7 @@ test("AC1 chat() 出口采集：真实 chat() 成功/失败都经单点落盘（
       }),
       /400/,
     )
-    const err = await waitForTraceFile(process.env.THINCODER_TRACES_DIR, (rec) => rec.error && rec.kind === "advisor")
+    const err = await waitForTraceFile(root, (rec) => rec.error && rec.kind === "advisor")
     assert.equal(err.stage, "advisor")
     assert.equal(err.finishReason, null)
     assert.equal(err.error.kind, "error")

@@ -24,10 +24,11 @@ import { argsOkOf, denominators, gradeRun } from "../toolcall/grade.mjs"
 import { buildVariants, payloadDigest } from "../toolcall/variants.mjs"
 import { main, runOne } from "../toolcall.mjs"
 import { loadPrices, pricesPath } from "../lib/prices.mjs"
+import { setResultsDir } from "../lib/output.mjs"
 import { FROZEN_CASES, FROZEN_SYSTEM_BASE, FROZEN_TOOL_PROBE_VERSION, FROZEN_V1_ENUM_BLOCKS } from "./toolcall-fixtures.frozen.mjs"
 
 const SANDBOX = mkdtempSync(join(tmpdir(), "toolcall-test-results-"))
-process.env.BENCH_RESULTS_DIR = SANDBOX // 落档面走既有缝（不触 bench/results/）
+setResultsDir(SANDBOX) // 落档面走进程内缝（不触 bench/results/）
 after(() => rmSync(SANDBOX, { recursive: true, force: true }))
 
 /** 进程内跑探针 CLI（捕获 stdout/stderr；返回退出码与输出）。 */
@@ -160,7 +161,7 @@ test("AC-3/AC-6：--dry-run 全链路（夹具六形态 + 三轴 / 分母口径 
   let r
   const label = `toolcall-test-${process.pid}`
   try {
-    r = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--n", "3", "--label", label])
+    r = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--n", "3", "--label", label, "--results-dir", SANDBOX])
   } finally { globalThis.fetch = orig }
   assert.equal(r.code, 0, r.out)
   assert.equal(calls, 0, "dry-run 全链路零网络")
@@ -263,7 +264,7 @@ test("AC-3/AC-4：三轴判据逐例面（谓词求值 / 载荷外名 ⇒ offPay
   assert.equal(noUsage.metrics.cost, null)
   assert.equal(noUsage.legal, false, "缺 required（grep.pattern）仍判 schema 违规")
   const usageLabel = `toolcall-usage-${process.pid}`
-  const r = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--n", "1", "--variants", "V0", "--cases", "tool.12", "--label", usageLabel])
+  const r = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--n", "1", "--variants", "V0", "--cases", "tool.12", "--label", usageLabel, "--results-dir", SANDBOX])
   assert.equal(r.code, 0, r.out)
   const data = readJson(artifact(usageLabel, ".json"))
   const run0 = data.models[0].variants[0].cases[0].runs[0]

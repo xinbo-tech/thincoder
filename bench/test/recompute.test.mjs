@@ -7,6 +7,7 @@
 import { existsSync, readFileSync } from "node:fs"
 import { basename, join } from "node:path"
 import { FIXTURES, SANDBOX, assert, files, findFile, fixtureResult, readJson, runCli, test, writeFixture } from "./fixtures.mjs"
+import { _setPricesPathForTest, _resetPricesPathForTest } from "../lib/prices.mjs"
 
 test("recompute.1：夹具 JSON + 当前价格重算 → 新报告对（<原标签>-recalc）；原档字节不变", async () => {
   const from = writeFixture("fx-base.json", fixtureResult({ label: "fx-base" }))
@@ -87,9 +88,9 @@ test("recompute.1b（§3 夹具落点）：改价后的 prices.json 夹具 ⇒ �
     asOf: "2026-09-24", currency: "CNY", unit: "元 / 百万 token", source: "fixture（改价）",
     entries: [{ match: "deepseek:deepseek-flash", cachedInput: 0.08, input: 4, output: 16 }],
   })
-  process.env.BENCH_PRICES = changed
+  _setPricesPathForTest(changed)
   let r2
-  try { r2 = await runCli(["--recompute", "--from", from, "--label", "fx-price-newprices"]) } finally { delete process.env.BENCH_PRICES }
+  try { r2 = await runCli(["--recompute", "--from", from, "--label", "fx-price-newprices", "--prices", changed]) } finally { _resetPricesPathForTest() }
   assert.equal(r2.code, 0, r2.out)
   const updated = readJson(findFile("fx-price-newprices.json"))
   assert.equal(updated.models[0].cases[0].runs[0].calls[0].costCny, 0.0056, "成本列随新价变化（2×）")
@@ -145,9 +146,9 @@ test("recompute.5（§5.13）：判官（逐位）/ 复核成本随新价重算�
       { match: "mimo:mimo-v2.6-pro", input: 2, output: 4 },
     ],
   })
-  process.env.BENCH_PRICES = changed
+  _setPricesPathForTest(changed)
   let r2
-  try { r2 = await runCli(["--recompute", "--from", from, "--label", "fx-judge-newprices"]) } finally { delete process.env.BENCH_PRICES }
+  try { r2 = await runCli(["--recompute", "--from", from, "--label", "fx-judge-newprices", "--prices", changed]) } finally { _resetPricesPathForTest() }
   assert.equal(r2.code, 0, r2.out)
   const updated = readJson(findFile("fx-judge-newprices.json"))
   assert.equal(updated.judge.judges[0].costCny, 0.00512, "逐位判官成本 ×2")

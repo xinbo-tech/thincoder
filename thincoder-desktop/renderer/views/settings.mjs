@@ -16,7 +16,7 @@
 import { build, clear } from "../dom.mjs"
 import { t } from "../i18n.mjs"
 import { wire } from "./chat-tool.mjs"
-import { agentBody, mcpBody, modelBody, providersBody } from "./settings-sections.mjs"
+import { agentBody, mcpBody, modelBody, modelIdOf, providersBody, tierFace } from "./settings-sections.mjs"
 
 /** 段闭集（序固定 = 渠道 → 模型与档位 → agent 参数 → MCP）：名（`data-section`）+ 词键单源。 */
 export const SECTIONS = Object.freeze([
@@ -98,7 +98,8 @@ export function settingsModel(state) {
       state: stateOf(settings.model),
       provider: typeof settings.model?.provider === "string" ? settings.model.provider : null,
       current: typeof settings.model?.current === "string" ? settings.model.current : null,
-      models: listOf(settings.model?.models).filter((m) => typeof m === "string" && m),
+      models: listOf(settings.model?.models).map(modelIdOf).filter((id) => id !== null),
+      tier: tierFace(settings),
     },
     agent: {
       state: stateOf(settings.agent),

@@ -44,10 +44,10 @@ export function spawnTuiWrapped({ dir = crashReportsDir(), script = fileURLToPat
     try { writeImpl(RECOVERY_SEQUENCE) } catch { /* 尽力面：终端已关/管道已断——不阻断收尾 */ }
   }
   // F3③（CRASH-REPORTS）：近堆上限快照落点定向——--diagnostic-dir 为 Node 选项，须在脚本路径前；
-  // 无条件注入（gate 单点在 crash-reports.mjs——包装器不判 env）；未触发快照时零副作用。
-  const child = spawnImpl(process.execPath, [`--diagnostic-dir=${dir}`, script, ...process.argv.slice(2)], {
+  // 无条件注入（判定单点在 bin 入口读配置键 `diagnostics.heapSnapshot` 后经参数传入——包装器不判）；未触发快照时零副作用。
+  const child = spawnImpl(process.execPath, [`--diagnostic-dir=${dir}`, script, "--tui-wrapped", ...process.argv.slice(2)], {
     stdio: ["inherit", "inherit", "pipe"], // 子 stderr pipe → tee；stdin/stdout 继承（TTY 原样）
-    env: { ...process.env, THINCODER_TUI_WRAPPED: "1" }, // env 门——子内判定不包装——纯现逻辑（红线）
+    // argv 门（子内 bin 顶部自剥离 `--tui-wrapped`、判定不包装——纯现逻辑（红线））；env 直传
     windowsHide: false,
   })
   child.stderr.on("data", (chunk) => { try { process.stderr.write(chunk) } catch { /* 终端已关——日志仍落 */ } note(chunk) }) // ② tee 双写：终端实时 + 日志

@@ -17,6 +17,7 @@ import { handlePermissionMode } from "../src/tui/key-modes.mjs"
 import { renderRows, renderStatus } from "../src/tui/render-frame.mjs"
 import { ContinueError } from "@thincoder/core/agent.mjs"
 import { t } from "@thincoder/core/i18n.mjs"
+import { _resetLogsDirForTest, _setLogsDirForTest } from "@thincoder/core/log.mjs"
 
 const PROVIDER = { name: "glm", baseURL: "https://api.example.com/v1", model: "glm-5.3" }
 /** 供应商错误原文（首行含 baseURL——脱敏面判据；次行 = 不应进首行的后续行）。 */
@@ -260,14 +261,14 @@ async function runLogged(raw, t) {
   t.after(() => { try { rmSync(logDir, { recursive: true, force: true }) } catch { /* ignore */ } })
   const r = rig()
   r.ctx.runAgent = async () => { throw new Error(raw) }
-  process.env.THINCODER_LOG_DIR = logDir
+  _setLogsDirForTest(logDir)
   try {
     const p = runAgentTurn(r.ctx, "hello")
     await until(() => r.state.permission, 3000, () => JSON.stringify(r.lines))
     answer(r, "n")
     await p
   } finally {
-    delete process.env.THINCODER_LOG_DIR
+    _resetLogsDirForTest()
   }
   const file = join(logDir, readdirSync(logDir)[0])
   const line = readFileSync(file, "utf8").split("\n").find((l) => l.includes('"ev":"err:provider"'))

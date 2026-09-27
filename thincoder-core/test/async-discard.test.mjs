@@ -3,7 +3,7 @@
  * §6.20.6 用例表 U1–U8；需求 = `docs/core/requirements/AGENT-LOOP.md` §4.10 F1–F4 / N1–N3）。
  *
  * 断言面 = **行为面**（§6.20.6：池内容 / 墓碑状态 / 注入 / 事件计数），不做散文锚。
- * 事件断言 = `THINCODER_LOG_DIR` 隔离目录读档（`log.test.mjs` 同款——NODE_TEST_CONTEXT 写门）。
+ * 事件断言 = `_setLogsDirForTest` 隔离目录读档（`log.test.mjs` 同款——NODE_TEST_CONTEXT 写门）。
  * 夹具 = **CLI 载体形**（字段挂 agent——`thincoder-core` 侧口径；VSC 载体形由
  * `async-family.test.mjs` 的载体吸收面覆盖）。
  * 直调口径（U7 前提）：两接线点**不传 ctx**（§6.20.3 D-AD6——判据 = controller 支）；
@@ -15,6 +15,7 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
+import { _resetLogsDirForTest, _setLogsDirForTest } from "../log.mjs"
 import { discardAbortedPool, discardAbortedAdvisors } from "../agent-tools/async-discard.mjs"
 import { tombstoneOf } from "../agent-tools/async-settle.mjs"
 import { depInfo } from "../agent-tools/subagent-scheduler.mjs"
@@ -25,11 +26,11 @@ let _logDir
 before(() => {
   _tmp = mkdtempSync(join(tmpdir(), "tc-async-discard-"))
   _logDir = join(_tmp, "logs")
-  process.env.THINCODER_LOG_DIR = _logDir // 写门 override（NODE_TEST_CONTEXT 默认跳过）
+  _setLogsDirForTest(_logDir) // 写门 override（NODE_TEST_CONTEXT 默认跳过）
 })
 
 after(() => {
-  delete process.env.THINCODER_LOG_DIR
+  _resetLogsDirForTest()
   rmSync(_tmp, { recursive: true, force: true })
 })
 

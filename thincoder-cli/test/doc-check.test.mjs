@@ -299,10 +299,14 @@ function fixtureProbeHits() {
   return hits;
 }
 
-/** 本档并发实例（`--test <本档>` 子进程；嵌套层不再派生——防递归）。 */
+/** 本档并发实例（直跑本档 + `--nested`；嵌套层不再派生——防递归）。
+ *  env 去 `NODE_TEST_CONTEXT`：直跑 = 全新测试会话，不继承 runner 的子进程标记
+ *  （继承则 node:test 走序列化子模式，只吐二进制事件流、无文本汇总行——2026-09-27 实跑实证）。 */
 function runSelf() {
+  const env = { ...process.env };
+  delete env.NODE_TEST_CONTEXT;
   return new Promise((done) => {
-    const child = spawn(process.execPath, ["--test", THIS_FILE], { cwd: REPO_ROOT, env: { ...process.env, DOC_CHECK_NESTED: "1" } });
+    const child = spawn(process.execPath, [THIS_FILE, "--nested"], { cwd: REPO_ROOT, env });
     let out = "";
     child.stdout.on("data", (d) => (out += d));
     child.stderr.on("data", (d) => (out += d));
@@ -316,13 +320,17 @@ test("T-DC-15 错误·零落仓 ∧ 并发免疫", { timeout: 180000 }, async (t
   assert.equal(scan(root).dang.path, 1, "夹具照判（仓域只读、夹具在临时域）");
   assert.deepEqual(snapshotRepoScanDomain(), before, "运行前后仓扫描域零差异（零落仓）");
   assert.equal(fixtureProbeHits(), 0, "全仓夹具名零命中");
-  if (process.env.DOC_CHECK_NESTED === "1") {
-    t.diagnostic("嵌套实例（DOC_CHECK_NESTED=1）：并发判据由父实例承担——本实例不派生");
+  if (process.argv.includes("--nested")) {
+    t.diagnostic("嵌套实例（--nested）：并发判据由父实例承担——本实例不派生");
     return;
   }
   const [a, b] = await Promise.all([runSelf(), runSelf()]);
   assert.equal(a.code, 0, `并发实例 A 须 exit 0：\n${a.out.slice(-1500)}`);
   assert.equal(b.code, 0, `并发实例 B 须 exit 0：\n${b.out.slice(-1500)}`);
+  for (const [label, r] of [["A", a], ["B", b]]) {
+    const m = r.out.match(/(?:#|ℹ)\s*pass\s+(\d+)/);
+    assert.ok(m && Number(m[1]) >= 1, `并发实例 ${label} 非空跑（node:test 汇总行 pass ≥ 1）：实测 ${m ? m[1] : "无汇总行"}\n${r.out.slice(-800)}`);
+  }
 });
 
 after(() => {

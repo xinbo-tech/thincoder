@@ -88,7 +88,7 @@
 `tool:*` 在 dispatch `runOne` · `child:*` / `ev:*` 在子代理族 spawn / settle 分流点（另两新条目见 §6.2——`ev:subagent-block-revived` 落显示层复活分支 ·
 `ev:queued-paint-failed` 落排队刷新 catch） · 中止清池（runAgent finally + suspension abort）→ `ev:stopped`。
 
-**存储**：目录 `~/.thincoder/logs/`（与 sessions/ 同域）；`THINCODER_LOG_DIR` 显式 override；文件名 `agent-YYYY-MM-DD.log`（按日——两端同写同文件追加）；**轮转** = 每进程每日首次写事件时清超龄 `agent-*.log`（机会式）；**写入** = `appendFileSync` 小写（每事件一次——事件频率低——开销可忽略——失败静默降级，进程内首次失败置死——不逐事件空转）。
+**存储**：目录 `~/.thincoder/logs/`（与 sessions/ 同域）；文件名 `agent-YYYY-MM-DD.log`（按日——两端同写同文件追加）；**轮转** = 每进程每日首次写事件时清超龄 `agent-*.log`（机会式）；**写入** = `appendFileSync` 小写（每事件一次——事件频率低——开销可忽略——失败静默降级，进程内首次失败置死——不逐事件空转）。
 
 ### 6.3 关键决策
 
@@ -101,8 +101,8 @@
 
 ### 6.4 测试隔离与开发提示
 
-- **测试隔离**：`THINCODER_LOG_DIR` 显式 override + `NODE_TEST_CONTEXT` 门——`node --test` 进程默认跳过写盘（不污染真实日志）；测试用 `THINCODER_LOG_DIR` 指向临时目录。
-- **开发提示**：直接跑脚本验证会写真实 `~/.thincoder/logs`（常驻日志固有行为）——验证脚本请设 `THINCODER_LOG_DIR=临时目录`。
+- **测试隔离**：`NODE_TEST_CONTEXT` 写门 + 进程内落点缝——`node --test` 进程默认跳过写盘（不污染真实日志）；测试以 `_setLogsDirForTest(临时目录)` 显式指定落点（缝形态见 `CONFIG.md` §6.2）。
+- **开发提示**：直接跑脚本验证会写真实 `~/.thincoder/logs`（常驻日志固有行为）——须换落点时在脚本内先调 `_setLogsDirForTest(临时目录)`。
 - **跨平台写失败注入**：父路径为文件（Windows 只读目录不阻止创建文件）。
 - **已知 v1 边界**（非 chat 调用的 LLM 直连点不入 `llm:*` 事件）：generate-title（直连 fetch——非 chat 管线）；embedding 向量调用。诊断价值无碍。
 
@@ -117,7 +117,7 @@
 | D-LG5 | `llm:*` 统一落 **`chat()` 单点** | 单点 = 全覆盖（未来新增调用点自动覆盖）；否决各注入器各自实现 |
 | D-LG6 | 轮转 = **每进程每日首次写事件时机会式清理**（非仅启动时） | extension host 可长驻——启动清理覆盖不到；用户零手动维护 |
 | D-LG7 | 失败 = **静默降级**（进程内首次失败置死——不逐事件空转） | 日志不得影响主流程（fire-and-forget） |
-| D-LG8 | 测试隔离 = `THINCODER_LOG_DIR` + `NODE_TEST_CONTEXT` 门 | 不污染真实日志；两端既有测试套件跑真实管线也零污染 |
+| D-LG8 | 测试隔离 = 进程内落点缝（`_setLogsDirForTest`）+ `NODE_TEST_CONTEXT` 写门 | 不污染真实日志；两端既有测试套件跑真实管线也零污染 |
 | D-LG9 | 两端**同事件面**（共享目录 / 同格式 / 镜像实现） | 双端同构便于合并分析；不做跨端同步依赖（差异如实登记） |
 
 > **现状注（2026-09-15 · S2 W1 后）**：D-LG9 行「镜像实现」= 迁移前形态表述（双端自持镜像已删——见 §1 表）；机制语义（同事件面 / 不做跨端同步依赖）不变。
@@ -158,3 +158,4 @@
 - 2026-09-17（**af 批 · fix 轮 · eng-designer**——承 `docs/batches/2026-09-17-async-face-fixes.md` §2.12）：§6.2 `ev:cancelled` 条补**两个写点**口径（① settle cancelled 分支〔running 取消〕/ ② queued 取消出队点直记——不经 settle）；机制语义零改。
 - 2026-09-17（**af 批 · 二轮 fix 轮 · eng-designer**——承 `docs/batches/2026-09-17-async-face-fixes.md` §2.13）：§6.2 `ev:cancelled` 条写点由两个 → **三个**（加 ③ sync 定向取消提交点 `cancelSyncChild`——F-12）；事件名 / 字段形与既有取消族一致；机制语义零改。
 - 2026-09-20（**VSC 行为/能力两则批 · #132② · eng-designer**）：§6.2 事件面补 **`err:provider`** 条（provider 失败面原文余行——`err` = 脱敏首行 · `head` = 余行合单行、同过脱敏管道、自限 ≤200；余行缺 ⇒ 字段缺省；表面零膨胀）；悬空节引清理（首部机制面节区改 `§6–§8` + 两条历史节号指称）。设计源 = `docs/batches/2026-09-20-vsc-rules-retry-batch.md` §2。
+- 2026-09-27（**env-config-purge 批 · eng-designer**——承 `docs/batches/2026-09-27-env-config-purge.md` §1.5）：§6.2 存储行去 `THINCODER_LOG_DIR` override 子句 · §6.4 测试隔离 / 开发提示两句改**进程内落点缝**（`_setLogsDirForTest`）+ `NODE_TEST_CONTEXT` 写门 · §7 **D-LG8** 同改。缝形态单源 = `CONFIG.md` §6.2。

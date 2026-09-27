@@ -21,8 +21,13 @@ export { applyJudgeCosts }
 const PER_UNIT = 1e6
 const BENCH_DIR = dirname(dirname(fileURLToPath(import.meta.url)))
 
-/** 价格表路径（默认 `bench/prices.json`；BENCH_PRICES = 改价重算的测试夹具缝——每次读、可运行中切换）。 */
-export const pricesPath = () => (process.env.BENCH_PRICES ? resolve(process.env.BENCH_PRICES) : join(BENCH_DIR, "prices.json"))
+/** 价格表路径（默认 `bench/prices.json`）；`--prices` / 进程内缝 = 改价重算的测试夹具（每次读、可运行中切换；CONFIG.md §6.2）。 */
+let _pricesPath = null
+export const pricesPath = () => _pricesPath ?? join(BENCH_DIR, "prices.json")
+
+/** 价格表路径缝（③ 成对）：`--prices` 经入口落此；测试 set / reset 复原。 */
+export function _setPricesPathForTest(p) { _pricesPath = resolve(p) }
+export function _resetPricesPathForTest() { _pricesPath = null }
 
 export function loadPrices(path) {
   let raw

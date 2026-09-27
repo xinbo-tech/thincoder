@@ -116,7 +116,7 @@ npm publish --access public    # scoped 包默认 private——首发必须显�
 
 ```bash
 cd thincoder-cli
-THINCODER_SMOKE=1 node --test test/smoke-qwen-thinking.mjs
+node test/smoke-qwen-thinking.mjs --smoke
 ```
 
 **第 2 步 · 发布**：

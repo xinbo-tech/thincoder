@@ -43,7 +43,7 @@ export function writeCleanupSequence(write = (s) => process.stdout.write(s)) {
 // T-R25a.2 注入 mock 走同一 setter）。
 let tuiActive = false
 
-/** 置/清 TUI 活动态（TUI 启动接管处与退出清理处调用；测试 env 门注入同走此 setter）。 */
+/** 置/清 TUI 活动态（TUI 启动接管处与退出清理处调用；测试钩（argv 门）注入同走此 setter）。 */
 export function setTuiActive(active) {
   tuiActive = active === true
 }
@@ -53,13 +53,22 @@ export function isTuiActive() {
   return tuiActive
 }
 
+// R25 崩溃恢复测试缝（T-R25a.2——argv 门注入）：bin 入口解析 `--test-cleanup-out=<路径>` 后经
+// setter 注入（启动时一次性读点——单半例外，复位面无消费者）；生产零调用 → null（恒 stdout）。
+let _cleanupOut = null
+
+/** 测试缝 setter（仅测试注入——生产零调用）。 */
+export function _setCleanupOutPathForTest(path) {
+  _cleanupOut = typeof path === "string" && path.length > 0 ? path : null
+}
+
 /** R25 崩溃恢复：仅 TUI 活动态执行 writeCleanupSequence（复用本模块清理序列——符号锚）。
- *  测试缝（T-R25a.2——env 门注入）：THINCODER_TEST_CLEANUP_OUT 指向文件时序列写入该文件
- *  （观察恢复被调 + stdout 管道零 ANSI）——生产不设该 env → 恒 stdout（零变化）。
+ *  测试缝（T-R25a.2——argv 门注入）：`_setCleanupOutPathForTest` 指到文件时序列写入该文件
+ *  （观察恢复被调 + stdout 管道零 ANSI）——生产不指 → 恒 stdout（零变化）。
  *  @returns {boolean} 是否执行了恢复（false = TUI 未启动——调用方无需处理） */
 export function restoreTerminalAfterCrash() {
   if (!tuiActive) return false
-  const seamOut = process.env.THINCODER_TEST_CLEANUP_OUT
+  const seamOut = _cleanupOut
   if (seamOut) {
     writeCleanupSequence((s) => appendFileSync(seamOut, s, "utf8"))
   } else {

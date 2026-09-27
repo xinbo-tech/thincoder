@@ -32,7 +32,7 @@
 | A1 | `src/tui/model-picker.mjs` | **499**（raw 500） | 1 | 未触（触发 = >500）· **余量 0~1——高危** | 「触发式 · 不预拆」**转正**：触发 ⇒ 渠道管理四流（add / remove / key / context ≈100 行）析出为 `provider-admin.mjs`（拟新增 · `createProviderAdmin(ctx)` 装配型——同 `createModelPicker` 先例）；预估本档 → ≈390 / 新档 ≈115 / `pickers.mjs` 装配 +3 行 | `docs/batches/2026-09-19-cli-delete-confirm.md` §:91 / §:197（冻结批档·本批转正） |
 | A2 | `test/advisor-chain-guards.test.mjs` | **488** | 12 | 触发 = 后续任何新增（结论块断言扩面 / 新 kind）⇒ **先按组拆** | E 组冻结窗口（T-CG15–T-CG18 ≈91 行）→ `test/advisor-freeze-window.test.mjs`（拟新增）；B 组凭证链（T-CG6–T-CG8 ≈82 行）→ `test/advisor-credential-chain.test.mjs`（拟新增）——组内自持夹具、切点零交叉 | `docs/batches/2026-09-18-advisor-face.md` §2.7 发现 4 收正行 |
 | A3 | `test/edit-tool-improvement.test.mjs` | **486** | 14 | 触发 = 再增用例先拆（本批 +95 后仍 <500） | 核例族 / 桥例族二分（桥 4 例自带 `buildAcpCallbacks` harness——天然切点）→ `test/edit-bridge.test.mjs`（拟新增） | `docs/batches/2026-09-25-edit-arg-guard.md` 受影响表行 + `docs/batches/2026-09-25-file-tier-sweep.md` §2 S5-⑤ |
-| A4 | `bin/thincoder.mjs` | **482** | 18 | **触发已到**（前批定线 = 实施读数 ≥480 ⇒ 命令分发表外提）· 未执行（另案） | 候选面 = 命令分发表（`switch (command)` 的 `case` 族）外提姊妹档（同档先例 = 2026-09-08 直写段外提 `src/completions.mjs`——500 行触碰手法）；实施 = 该档下次实质触碰时；**耦合注**（同批义务）：外提执行批须同批改 MS-1 源码读取面（`thincoder-cli/test/memory-sweep-cli.test.mjs`〔拟新增〕现按源文本锁 `case "memory"` 分发——外提即漂移；机检形 = `docs/cli/design/CLI-ENTRY.md` §4） | `docs/batches/2026-09-22-session-index.md` §:169（触发点 ≥480） |
+| A4 | `bin/thincoder.mjs` | **499**（env-config-purge 批实施读数——482 → 499；`diagnostics` 键面 / 通道纪律注；读数 = `wc -l`） | **1** | **触发已到**（前批定线 = 实施读数 ≥480 ⇒ 命令分发表外提）· 未执行（另案）· **余量 ≤1 期间禁增；命令分发表外提须先于该档下次触碰** | 候选面 = 命令分发表（`switch (command)` 的 `case` 族）外提姊妹档（同档先例 = 2026-09-08 直写段外提 `src/completions.mjs`——500 行触碰手法）；实施 = 该档下次实质触碰**前**；**耦合注**（同批义务）：外提执行批须同批改 MS-1 源码读取面（`thincoder-cli/test/memory-sweep-cli.test.mjs`〔拟新增〕现按源文本锁 `case "memory"` 分发——外提即漂移；机检形 = `docs/cli/design/CLI-ENTRY.md` §4） | `docs/batches/2026-09-22-session-index.md` §:169（触发点 ≥480） |
 | A5 | `test/settings.test.mjs` | **480** | 20 | 触发式（未预拆——越 500 前 ∨ 下次实质触碰） | 候选面（评估项）：T-S3 族（引号 / 解析形态 T-S3.1–S3.3）∥ 防漂移族（T-S2.13–S2.15）分档（用例族 + 夹具自持——先例 = file-tier-sweep KD-23；同判据下的另立档先例 = `test/settings-mask.test.mjs`） | 本册首登（孤儿——台账 #340 指名）；线源 = `docs/batches/2026-09-18-settings-mask.md` §:99（D-ST15） |
 | A6 | `src/tui/cmd-config.mjs` | **471** | 29 | 触发式（未预拆） | 候选面（评估项）：`handleConfigCommand` 菜单族 / 配置读写族分面 | 本册首登（≥400 普查面） |
 | A7 | `test/acp-contract.test.mjs` | **461** | 39 | 触发式（未预拆） | 候选面（评估项）：按族二分——认证族（`:97-153`）/ 会话方法族（`:154-243`）/ 无 TTY 冒烟族（`:365` 起） | 本册首登（孤儿——台账 #340 指名）；读数口径前批 = `docs/batches/2026-09-22-pending-triage.md`（363 → ~393 越线口径行） |
@@ -45,7 +45,7 @@
 | A14 | `test/async-settle.test.mjs` | **411** | 89 | 触发式（未预拆） | 候选面（评估项）：digest 批量预算族（`:242` 起）/ 四族接线族（`:339` 起）二分 | 本册首登（≥400 普查面） |
 | A15 | `test/input-lock.test.mjs` | **403** | 97 | 触发式（未预拆） | 候选面（评估项）：busy 门禁族用例抽档 | `docs/batches/2026-09-24-busy-queue-visible.md` §:458 · `docs/batches/2026-09-19-upstream-channel-availability.md` §:116 |
 
-### 2.2 表 B：<400 · 裁定 / 登记案在册（口径 §1-3——7 档）
+### 2.2 表 B：<400 · 裁定 / 登记案在册（口径 §1-3——9 档）
 
 | # | 档（`thincoder-cli/` 内） | 现读 | 触发 / 状态 | 拆分计划 / 裁定（本册活面表述） | 裁定源（记录面） |
 |---|---|---|---|---|---|
@@ -56,8 +56,10 @@
 | B5 | `src/tui/suspension-drive.mjs` | **341** | 触发式（未预拆） | 候选面：driver 步骤面抽档 | `docs/batches/2026-09-24-busy-queue-visible.md` §:460 |
 | B6 | `test/subagent-observe-send.test.mjs` | **330** | 触发式（不下拆判定） | 「既有超软线 · 增量小 / 非结构改 ⇒ 拆分另议」在册 | `docs/batches/2026-09-18-toolface-fixes.md` §:75 |
 | B7 | `test/tui-memory-budget.test.mjs` | **334** | 触发式（不拆登记在册）· **本批触碰**（注释改指 · ±0 行） | **该批不拆**：理由 = 零结构改 + Δ0；**抽取候选线 = U 族**（占用账 / 保底 / 步进 / 收据 / 占位行移除，`:217`–`:315` ≈99 行 → `tui-memory-account.test.mjs`〔拆分计划目标 · 裸名形态〕——组内夹具 `mkState` / `mkCallbacks`（`:35` / `:45`）随组同迁）；触发 = 越 500 ∨ 该档下次实质改动 | `docs/batches/2026-09-25-doc-face-closeout.md` §2（口径 §1-4 随触碰补登） |
+| B8 | `test/doc-check.test.mjs` | **340**（env-config-purge 批实施读数） | 触发式（未预拆）· **本批触碰**（子实例改直跑本档 + `--nested` 旗标） | 候选面（评估项）：子实例目录树族 ∥ 锚检族分档（用例族 + 夹具自持——先例 = file-tier-sweep KD-23）；触发 = 越 500 ∨ 该档下次实质改动 | 本册首登（env-config-purge 批 §3 轮次 1 发现 5——越 300 咨询线登记） |
+| B9 | `test/provider-error-surface.test.mjs` | **309** | 触发式（未预拆） | 候选面（评估项）：按 provider 族分档（anthropic / openai / responses）；触发 = 越 500 ∨ 该档下次实质改动 | 本册首登（env-config-purge 批 §3 轮次 1 发现 5——越 300 咨询线登记） |
 
-**表 B 说明**：本表 = 自冻结/历史记录**转正**的 <400 项（口径 §1-3）——转录自各批档 / 设计档既有登记句（逐条注源）· 2026-09-25 doc-face-closeout 批随触碰补登 1 行（B7——口径 §1-4）。
+**表 B 说明**：本表 = 自冻结/历史记录**转正**的 <400 项（口径 §1-3）——转录自各批档 / 设计档既有登记句（逐条注源）· 2026-09-25 doc-face-closeout 批随触碰补登 1 行（B7——口径 §1-4）· 2026-09-27 env-config-purge 批随触碰补登 2 行（B8 / B9——本批 §3 轮次 1 发现 5：越 300 咨询线的 <400 未登记档）。
 **并入完整性**：本册首版并入 = 台账 #340 指名项（A1 / A4 / A5 / A7 孤儿 + A1 转正）+ file-tier-sweep / busy-queue-visible / edit-arg-guard / small-debt-batch / hygiene-ab / toolface-fixes 六批在册登记项；
 其余历史批档登记项如有遗漏，随该档下次触碰并入（非全量普查——先例 = VSC-DEBT §12.1）。
 
@@ -94,3 +96,8 @@
 - 2026-09-25（**cli-small-items 批 · 台账 #340 载体收口**）：建档——台账「CLI 档位登记载体缺位」指定本册为载体（承 file-tier-sweep KD-26「不新造册 · 缺口上报」⇒ 本批 = 缺口收口）。
   ① 收录口径四判据句（§1）；② 表 A ≥400 全量 15 档 + 表 B <400 裁定在册 6 档（逐条注裁定源）；③ `model-picker.mjs`「不预拆」案转正（A1，原文在冻结批档 §:91 / §:197）；
   ④ §3 尾项四项 · §4 已消解两行（busy-injection 拆三档 / structure-debt 两档兑现）；⑤ 行数口径与读数 as-of 写明（§ 档头）。
+
+- 2026-09-27（**env-config-purge 批 · 设计评审轮 1 修正轮 · eng-designer**——承 `docs/batches/2026-09-27-env-config-purge.md` §3 轮次 1 发现 5）：A4 读数刷新（**482 → ≈492**——本批 +10；余量 18 → ≈8）+ 
+  **B 表补登 2 行**（B8 `test/doc-check.test.mjs` **332** · B9 `test/provider-error-surface.test.mjs` **309**——越 300 咨询线的 <400 未登记档）+ 档数句 **7 → 9** + 表说明同步。**零语义**（读数与登记面）。
+
+- 2026-09-27（**env-config-purge 批 · 收口轮 · eng-designer**——承该批 §5 实施实证）：A4 读数刷新 **499**（余 **1**——注「余量 ≤1 期间禁增；命令分发表外提须先于该档下次触碰」）· B8 读数刷新 **340**（「±0 行」注撤）。**零语义**（读数与登记面）。

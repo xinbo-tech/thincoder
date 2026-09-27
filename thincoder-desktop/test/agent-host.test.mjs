@@ -137,15 +137,17 @@ test("U82: 九回调 → 九通道（载荷键集按 IPC.md §1/§2）· onToolR
     [() => cb.onToolResult("read", "Error: boom", "id1"), "ev:tool-result", { key: KEY, id: "id1", ok: false, result: "Error: boom" }],
     [() => cb.onToolResult("read", "ok", "id1", "sub-9"), "ev:tool-result", { key: KEY, id: "id1", ok: true, result: "ok", subKey: "sub-9" }],
     [() => cb.onTaskUpdate([{ id: "t1" }]), "ev:task", { key: KEY, items: [{ id: "t1" }] }],
-    [() => cb.onQuestion("q?", ["a", "b"]), "ev:question", { key: KEY, question: "q?", options: ["a", "b"] }],
   ]
   for (const [fire, channel, payload] of arms) {
     fire()
     assert.deepEqual(at(out, channel), payload, `${channel} 载荷逐字（含 ok 判据 / subKey 透传 / 原样转发）`)
   }
-  assert.equal(cb.onQuestion("q?", ["a", "b"]),
-    "(error: question tool not supported in this context (no answer channel in this build) — ask the user in your normal reply text)",
-    "作答面本批无通道 ⇒ 返回信号串（核内范例风格——令模型改在正常回复里问用户；九映射仍成立）")
+  const q = cb.onQuestion("q?", ["a", "b"]) // 作答门载荷携 promptId（动态）⇒ 同审批门：键集 / 值分断言
+  const qp = at(out, "ev:question")
+  assert.deepEqual(Object.keys(qp).sort(), ["key", "options", "promptId", "question"], "作答门载荷键集四键")
+  assert.deepEqual([qp.key, qp.question, qp.options], [KEY, "q?", ["a", "b"]], "作答门载荷值三件（余下 = promptId）")
+  assert.ok(host.respond({ promptId: qp.promptId, answer: "b" }).ok, "作答出口命中（promptId 从表取）")
+  assert.equal(await q, "b", "工具结果 = 作答串（真作答面 —— 悬起 Promise ⇒ resolve）")
   const single = cb.onPermissionRequest("bash", { command: "ls -la" })
   const sp = at(out, "ev:approval")
   assert.deepEqual(Object.keys(sp).sort(), ["argsSummary", "key", "promptId", "shape", "tool"], "逐项门载荷键集")
@@ -190,7 +192,7 @@ test("U84: 挂起表两形（入表读数 · promptId 互异 · 批形 count/too
   const single = cb.onPermissionRequest("read", { path: "/a" })
   assert.equal(host.table.size, 1, "逐项门入表恰一项")
   const singleId = [...host.table.keys()][0]
-  assert.equal(host.table.get(singleId).kind, "single")
+  assert.equal(host.table.get(singleId).shape, "single")
   assert.equal(host.table.get(singleId).key, KEY, "表项携键（respond 时据键置 autoApprove）")
   const batch = cb.onBatchPermissionRequest({ count: 3, tools: [{ name: "bash" }] })
   assert.equal(host.table.size, 2, "批门再入表 ⇒ 两项")
@@ -205,8 +207,8 @@ test("U84: 挂起表两形（入表读数 · promptId 互异 · 批形 count/too
 // ─── U85 verdict 映射与即删 ────────────────────────────────────
 test("U85: 逐项/批门 verdict 矩阵 · 跨形与表外 ⇒ bad-verdict ∧ 表项保留 · 命中即删 · 未知 id", async () => {
   const { cb, host, agent } = await boot()
-  const item = async (verdict, kind = "single") => {
-    const p = kind === "single" ? cb.onPermissionRequest("read", { path: "/a" }) : cb.onBatchPermissionRequest({ count: 1, tools: [{ name: "bash" }] })
+  const item = async (verdict, shape = "single") => {
+    const p = shape === "single" ? cb.onPermissionRequest("read", { path: "/a" }) : cb.onBatchPermissionRequest({ count: 1, tools: [{ name: "bash" }] })
     const promptId = [...host.table.keys()].at(-1)
     return { p, r: host.respond({ promptId, verdict }), promptId }
   }
@@ -223,13 +225,13 @@ test("U85: 逐项/批门 verdict 矩阵 · 跨形与表外 ⇒ bad-verdict ∧ �
     assert.equal(await arm.p, v, `批形三值逐字透传（${v}）`)
   }
   // 跨形 / 表外值 ⇒ 判红 ∧ 挂起保留（合法值可续解 —— 「不 resolve」的反面证据）
-  for (const [verdict, kind, resume, expect] of [
+  for (const [verdict, shape, resume, expect] of [
     ["approveAll", "single", "reject", false],
     ["once", "batch", "deny", "deny"],
     ["maybe", "single", "once", true],
   ]) {
-    const arm = await item(verdict, kind)
-    assert.deepEqual(arm.r, { ok: false, reason: "bad-verdict" }, `${kind} 门收 ${verdict} ⇒ bad-verdict`)
+    const arm = await item(verdict, shape)
+    assert.deepEqual(arm.r, { ok: false, reason: "bad-verdict" }, `${shape} 门收 ${verdict} ⇒ bad-verdict`)
     assert.equal(host.table.has(arm.promptId), true, "非法 ⇒ 表项保留（挂起不丢）")
     assert.ok(host.respond({ promptId: arm.promptId, verdict: resume }).ok)
     assert.equal(await arm.p, expect, "保留项收合法值 ⇒ 续解")

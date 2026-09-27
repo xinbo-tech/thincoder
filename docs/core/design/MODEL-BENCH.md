@@ -75,7 +75,7 @@ run.mjs（CLI 解析 + 编排 + 中断/退出码 + dry-run）
 ### 2.1 CLI 契约
 
 ```text
-node bench/run.mjs [--models <列表>] [--dims <列表>] [--label <名>] [--n <次>] [--max-tokens <N>] [--timeout <秒>] [--dry-run]
+node bench/run.mjs [--models <列表>] [--dims <列表>] [--label <名>] [--n <次>] [--max-tokens <N>] [--timeout <秒>] [--results-dir <路径>] [--judge-config <路径>] [--prices <路径>] [--dry-run]
 node bench/run.mjs --recompute --from <结果.json> [--label <名>]
 node bench/run.mjs --rejudge --from <结果.json> [--label <名>]    # 跑后补判（判官面 error run 定点收正——§2.14）
 node bench/preflight.mjs [--live]     # 跑前参数预检（枚举面缺省跑 · --live 实弹面——§2.13）
@@ -92,6 +92,9 @@ node bench/preflight.mjs [--live]     # 跑前参数预检（枚举面缺省跑 
 | `--dry-run` | 不调模型：用夹具结果（= `bench/run.mjs`（已实现）内联固定响应表，落点见 §3）跑通「判分→指标→报告→脱敏」链路（验证用） | 关 |
 | `--recompute --from` | 离线重算分支（§2.7；AC-10） | —— |
 | `--rejudge --from` | 跑后补判分支（§2.14）：读入结果 JSON，对**判官面 error run** 定点重取素材（重跑该 run 的被测调用）+ 级联补判 → 落新报告对；原档不动（触网分支） | —— |
+| `--results-dir <路径>` | 结果目录覆盖：绝对路径直用、相对路径按 cwd 解析（缺省 = `bench/results/`，相对 `bench/` 解析） | `bench/results/` |
+| `--judge-config <路径>` | 判官配置档覆盖（缺省 = `bench/judge.json`） | `bench/judge.json` |
+| `--prices <路径>` | 价格表覆盖（缺省 = `bench/prices.json`） | `bench/prices.json` |
 
 **语义细则**（冻结）：
 
@@ -103,7 +106,7 @@ node bench/preflight.mjs [--live]     # 跑前参数预检（枚举面缺省跑 
    `thinking` 等其余参数取用户 `~/.thincoder/config.json` 的 provider 条目原值（测「该配置下的实际表现」）。
 5. 退出码：`0` = 跑完（**模型用例失败不影响退出码**——失败是数据不是错误）；`1` = 基建错误（参数错 / 未知模型 / provider 缺配置 / `prices.json` / `models.json` / `judge.json` 不可读或不合 schema
 （**判分路径**；`--dry-run` / `--recompute` 的判官配置按 §2.10.3 豁免）/ 判官 provider 缺配置 / 判官对身份违约（A=B · 仲裁员 ∈ {A, B} · **替代池身份违约**——§2.10.3 ⑤）/ 判官冻结版本不匹配 / **预检枚举面阻断（§2.13——跑前 fail-closed · 逐条点名）** / 本轮合成全灭——§2.10.4）；中断（SIGINT）→ 中止在飞调用、**不落档**、退出码 130（半程结果不得混入留档）。
-6. 输出：stdout 逐例进度行 + 结尾摘要表；`--dry-run` 不触网。结果对落 `bench/results/`（相对 `bench/` 目录解析，任意 cwd 可跑；目录不存在则创建）；结果目录可由环境变量 `BENCH_RESULTS_DIR` 覆盖（测试 / 沙箱用；缺省 = `bench/results/`，相对 `bench/` 解析；覆盖值 = 绝对路径直用、相对路径按 cwd 解析）。
+6. 输出：stdout 逐例进度行 + 结尾摘要表；`--dry-run` 不触网。结果对落 `bench/results/`（相对 `bench/` 目录解析，任意 cwd 可跑；目录不存在则创建）；结果目录可由 `--results-dir <路径>` 覆盖（缺省 = `bench/results/`，相对 `bench/` 解析；覆盖值 = 绝对路径直用、相对路径按 cwd 解析；测试以 `setResultsDir` 缝指定沙箱；通道纪律单源 = `CONFIG.md` §6.2）。
 7. 覆盖保护：目标文件已存在 → **拒写并提示换 `--label`**（留档不可被静默覆盖；删旧档 = 人工显式动作）。
 8. **`--rejudge` 分支（补判 · §2.14）**：0 = 完成（含重取后仍如实 `error` 者）；1 = 基建错误（档不可读 / 不符 schema / 判官配置不齐 / provider 缺 / 预检阻断）；**无补判对象 ⇒ 明示 + 不落档 + 0**；**补判面全灭（全部对象重取后仍无定判）⇒ 仍取 0**——补判 = 定点收正（「如实仍 `error`」为其既定终局），全灭信号属运行面（§2.10.4），不在此重复设闸；SIGINT 同运行面（中止在飞、不落档、130）。
 
@@ -1454,7 +1457,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | AC-2 | 三变体构造（V0 现形 / V1 enum 补强 / V2 结构极简）+ 版本轴单源 | §11.4（构造法 + 5 档块逐字）· §11.2 · KD-50 / KD-55 | 差异面断言（V0 = 实面逐字；V1 − V0 = 5 档描述 + 7 项嵌套参数描述，差集恰好；V2 参数面逐字节等值）+ 版本单源断言 |
 | AC-3 | 三轴逐例机读判据（选择命中 / schema 合法 / 参数语义正确）+ 分母口径 | §11.6（判据与分母冻结）· KD-51 | dry-run 夹具六形态（命中 / 误选近邻 / 无调用 / 多调用 / 非 JSON / schema 违规）+ 轴面与分母断言 + 字段在场 |
 | AC-4 | 上下文成本读数（token） | §11.7（静态 + 实测两腿）· KD-52 | 静态读数确定性断言（三变体 chars / bytes）+ 报告成本列与 Δ vs V0 在场 + 缺 usage ⇒ `null` + warning |
-| AC-5 | 报告对入 `bench/results/`（md + json；逐例 × 变体矩阵 + 汇总 + 成本） | §11.8（报告对）· KD-53 | dry-run 产物断言（`BENCH_RESULTS_DIR` 重定向）：md 段清单 + JSON 顶层字段 + 混淆矩阵 + 矩阵行数 = 用例数 × 变体数；前缀强制 / 同名拒写 / 脱敏腿 |
+| AC-5 | 报告对入 `bench/results/`（md + json；逐例 × 变体矩阵 + 汇总 + 成本） | §11.8（报告对）· KD-53 | dry-run 产物断言（`--results-dir` 重定向）：md 段清单 + JSON 顶层字段 + 混淆矩阵 + 矩阵行数 = 用例数 × 变体数；前缀强制 / 同名拒写 / 脱敏腿 |
 | AC-6 | 失败与成本面不静默（单 run 失败 / 成本闸截断） | §11.3-6 · §11.6（`error` / `skipped`）· §11.9 | 假接口错腿（`error` 逐 run 记 · 不入分母 · 不杀全批）+ 假成本到顶腿（余面 `skipped` 入 `runs[]` + 分母排除 + warning + 退出码 0） |
 | AC-7 | 规模与预算（模型 ≥2 · n ≥3）+ 实弹读数回填 | §11.9（规模基线 + 成本上界 + 建议命令）· §11.10 | 实施轮：落码 + 测试 + `--dry-run`（零网络）；**实弹腿 = 随批自动跑**（三闸：`--max-cost` 累计闸 / 单调用 `--timeout` / 单发上界——§11.3-6）——读数入批次档 §5 / §6 |
 | AC-8 | 产品面零改（`tool-docs/**` / schema 本体 / 工具注册面零触）+ 既有面零动 | §11.4 · KD-54 · §11 头注 · §7-22…-25 | `git diff --stat` 范围核对（写域 = 新增 9 档 + `bench/README.md` + 本档）+ `SUITE_VERSION` 恒 7 ∧ `bench/probe.mjs` ±0 ∧ `bench/cases/**` ±0 断言 |
@@ -1758,7 +1761,7 @@ p2      = docs/batches/probe-fixture-p2.md（目标面 = 其 §2 段；diff 粒�
 ### 10.8 CLI 契约
 
 ```text
-node bench/probe.mjs --models <列表> [--fixtures p1,p2,p3] [--n 次] [--max-turns N] [--timeout 秒] [--max-cost <CNY>] [--label <名>] [--dry-run]
+node bench/probe.mjs --models <列表> [--fixtures p1,p2,p3] [--n 次] [--max-turns N] [--timeout 秒] [--max-cost <CNY>] [--label <名>] [--results-dir <路径>] [--judge-config <路径>] [--prices <路径>] [--dry-run]
 ```
 
 | 参数 | 语义 | 缺省 |
@@ -1771,6 +1774,9 @@ node bench/probe.mjs --models <列表> [--fixtures p1,p2,p3] [--n 次] [--max-tu
 | `--max-cost` | 累计成本闸（CNY；到顶 ⇒ 余面记 `skipped`（**入 `runs[]`**——读数可见 · 聚合分母排除，§10.5 / §10.7）+ warning，退出码 0） | 不设 |
 | `--label` | 报告名标签（须 `probe-` 起） | `probe-conflict` |
 | `--dry-run` | 零网络自检：**真装配腿**（`buildSpawnChild` 直调——真 child 装配、不驱动；§10.10）+ **脚本化假 child** 驱动（classify / report / judge 链——不入 `runChildPipeline`）+ 夹具判官传输（`bench/lib/client.mjs:78`） | 关 |
+| `--results-dir <路径>` | 结果目录覆盖：绝对路径直用、相对路径按 cwd 解析（缺省 = `bench/results/`，相对 `bench/` 解析） | `bench/results/` |
+| `--judge-config <路径>` | 判官配置档覆盖（缺省 = `bench/judge.json`） | `bench/judge.json` |
+| `--prices <路径>` | 价格表覆盖（缺省 = `bench/prices.json`） | `bench/prices.json` |
 
 退出码：0 = 跑完（行为类是数据不是错误）/ 1 = 基建错误（参数 / 未知档 / provider 缺配置 / 夹具不合 schema / `judge.json` 不可读或不合 schema / 同名拒写）/ 130 = SIGINT（不落档）。
 stdout：逐 run 一行（`[i/总数] <模型> <夹具> → <行为类> | 首次上抛 t / 回合 n`）+ 结尾摘要表。
@@ -1983,7 +1989,7 @@ edit：
 ### 11.9 CLI 契约
 
 ```text
-node bench/toolcall.mjs --models <列表> [--variants V0,V1,V2] [--cases <id 列表>] [--n 3] [--max-tokens 4096] [--timeout 120] [--max-cost <CNY>] [--label toolcall-baseline] [--dry-run]
+node bench/toolcall.mjs --models <列表> [--variants V0,V1,V2] [--cases <id 列表>] [--n 3] [--max-tokens 4096] [--timeout 120] [--max-cost <CNY>] [--label toolcall-baseline] [--results-dir <路径>] [--prices <路径>] [--dry-run]
 ```
 
 | 参数 | 语义 | 缺省 |
@@ -1997,6 +2003,8 @@ node bench/toolcall.mjs --models <列表> [--variants V0,V1,V2] [--cases <id 列
 | `--max-cost` | 累计成本闸（CNY；到顶 ⇒ 余面记 `skipped`（**入 `runs[]`** · 聚合分母排除）+ warning，退出码 0）；**闸射程 = 已录成本**（逐 run `cost` 非 `null` 之和——缺 usage / 缺价 ⇒ 该 run 记 `null` 不入累计（KD-6）；全 `null` 极端情形闸不生效 = 认账） | 不设 |
 | `--label` | 报告名标签（须 `toolcall-` 起） | `toolcall-baseline` |
 | `--dry-run` | 零网络自检：夹具传输（`bench/lib/client.mjs:59`）+ 真载荷构造 ⇒ 三轴 / 报告 / 落档全链（不读用户 config） | 关 |
+| `--results-dir <路径>` | 结果目录覆盖：绝对路径直用、相对路径按 cwd 解析（缺省 = `bench/results/`，相对 `bench/` 解析） | `bench/results/` |
+| `--prices <路径>` | 价格表覆盖（缺省 = `bench/prices.json`） | `bench/prices.json` |
 
 退出码：0 = 跑完（未命中 / 无调用是数据不是错误）/ 1 = 基建错误（参数 / 未知档 / provider 缺配置 / 载荷构造失败 / 同名拒写）/ 130 = SIGINT（不落档）。
 stdout：逐 run 一行（`[i/总数] <模型> <变体> <用例> → <首调用|—> | hit/legal/sem`）+ 结尾摘要表（逐模型 × 变体三轴率 + 成本）。
@@ -2170,3 +2178,7 @@ stdout：逐 run 一行（`[i/总数] <模型> <变体> <用例> → <首调用|
 - 2026-09-25：**设计评审轮 2（pass · 2🔵 残余）落地（本批 `2026-09-25-tool-call-probe` · N1 / N2 逐条）**——① N1：KD-50 被否① 计数基数收正（`24 档` → 全档载荷口径「23 档静态表 + 能力位 `read_image`——§11.4 计数口径」，与 §11.4 计数基准逐字对齐）；
   ② N2：§11.11 结构级补机检腿「**V1 枚举块点名工具名 ⊆ 载荷面**」（5 块逐名对读——载荷外工具名零命中；载荷面口径 = §11.10-②）；机制面零改（不实现 · 产品面零触）。
 - 2026-09-25：**实施收口同步（本批 `2026-09-25-tool-call-probe` · 实施完成后 · 父侧直接执行 · 可 revert）**——① §3 表本批行「（拟新增）」→「（已实现）」×9 + 表头注实读行数以批次档 §5.1 为准；② §11 体引用同收 ×6（`:1811` / `:1813`×3 / `:1850` / `:1924`）；③ §11.6 补 `terminal = "error"` 口径行（按实现实况收正——三轴 `null` · 不入分母 · `noCall` 只计 `completed`）。
+- 2026-09-27（**env-config-purge 批 · eng-designer**——承 `docs/batches/2026-09-27-env-config-purge.md` §1.5）：§2.1-6 结果目录覆盖通道由环境变量 `BENCH_RESULTS_DIR` 改 **`--results-dir <路径>` + `setResultsDir` 缝**（相对 `bench/` 解析语义保留）· §6 **AC-5** 判定方式同改。通道纪律单源 = `CONFIG.md` §6.2。
+
+- 2026-09-27（**env-config-purge 批 · 设计评审轮 1 修正轮 · eng-designer**——承 `docs/batches/2026-09-27-env-config-purge.md` §3 轮次 1 发现 6 / 8）：三档 CLI 契约（用法行 + 参数表）补入通道参数——§2.1（`:78` / `:94` 后 3 行：`--results-dir` / `--judge-config` / `--prices`）
+  · §10.8（`:1761` / `:1773` 后 3 行）· §11.9（`:1986` / `:1999` 后 2 行——无判官面）。**零语义**：三档用法行既有参数 / 缺省 / 判分合同零改。

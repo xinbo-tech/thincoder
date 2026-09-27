@@ -4,7 +4,6 @@
  * Tools: { name: "echo", inputSchema: { type: "object", properties: { text: { type: "string" } } } }
  *        { name: "fail",  inputSchema: { type: "object", properties: {} } }  — always errors
  */
-import { readFileSync } from "node:fs"
 import { createInterface } from "node:readline"
 
 const rl = createInterface({ input: process.stdin, crlfDelay: Infinity })
@@ -37,8 +36,3 @@ rl.on("line", (line) => {
     }
   }
 })
-
-// Keep the process alive until stdin closes; also support a parent-ready handshake via env.
-if (process.env.FAKE_MCP_READY_FILE) {
-  readFileSync(process.env.FAKE_MCP_READY_FILE) // touch check — parent creates it before spawn
-}

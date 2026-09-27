@@ -1,5 +1,5 @@
 // smoke-qwen-thinking.mjs — 真实端点 T7 冒烟：验证 enable_thinking 映射在百炼 Qwen 上真正生效
-// 用法：node test/smoke-qwen-thinking.mjs [providerName]   （默认 qwenplan，回退 qwen）
+// 用法：node test/smoke-qwen-thinking.mjs --smoke [providerName]   （默认 qwenplan，回退 qwen）
 // 在本机运行。从 ~/.thincoder/config.json 读 baseURL/model/apiKey —— key 不打印、不外传、不落盘。
 // 三连测（走 CLI 真实 chat() 全链路，含 resolveEnableThinking 注入）：
 //   1. OFF  ：provider.thinking = null    → 期望响应 reasoning 为空（enable_thinking:false 生效）
@@ -9,10 +9,10 @@
 
 /**
  * 真实端点 smoke（enable_thinking 映射）：花真金白银的 token + 网络抖动，
- * 不进常规测试层——仅 THINCODER_SMOKE=1 时运行（发版前人工跑）。
+ * 不进常规测试层——仅带 `--smoke` 时运行（发版前人工跑）。
  */
-if (process.env.THINCODER_SMOKE !== "1") {
-  console.log("[smoke] skipped — set THINCODER_SMOKE=1 to run against the real endpoint")
+if (!process.argv.includes("--smoke")) {
+  console.log("[smoke] skipped — run with --smoke to hit the real endpoint")
 } else {
   // Dynamic import: a static `import` inside the else block is illegal ESM
   // (import declarations must be top-level) — the prepublishOnly glob
@@ -22,7 +22,7 @@ if (process.env.THINCODER_SMOKE !== "1") {
   const { chat } = await import("@thincoder/core/provider/index.mjs")
 
 const cfg = loadConfig()
-const want = process.argv[2] ?? "qwenplan"
+const want = process.argv.slice(2).find((a) => !a.startsWith("--")) ?? "qwenplan"
 const prov = cfg.providers.find((p) => p.name === want) ?? cfg.providers.find((p) => /^qwen/i.test(p.name))
 if (!prov) {
   console.error(`no provider "${want}" in config (available: ${cfg.providers.map((p) => p.name).join(", ") || "none"})`)

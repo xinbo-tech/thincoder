@@ -25,9 +25,10 @@ import { assertNoGitUpward, createSandbox, diffSnapshots, materialize, removeSan
 import { aggregateRuns } from "../probe/report.mjs"
 import { classifyReportFace, shouldClassifyReport } from "../probe/judge-report.mjs"
 import { fixtureSlotTransport } from "../lib/client.mjs"
+import { setResultsDir } from "../lib/output.mjs"
 
 const SANDBOX = mkdtempSync(join(tmpdir(), "probe-test-results-"))
-process.env.BENCH_RESULTS_DIR = SANDBOX // 探针落档面走既有缝（不触 bench/results/）
+setResultsDir(SANDBOX) // 探针落档面走进程内缝（不触 bench/results/）
 after(() => rmSync(SANDBOX, { recursive: true, force: true }))
 
 /** 进程内跑探针 CLI（捕获 stdout/stderr；返回退出码与输出）。 */
@@ -215,7 +216,7 @@ test("AC-7/AC-10：--dry-run 全链路（真装配腿 + 脚本化假 child + 夹
   globalThis.fetch = () => { calls++; throw new Error("network disabled by test") }
   let r
   try {
-    r = await runProbeCli(["--dry-run", "--models", "mimo-v2.6-flash", "--label", `probe-test-${process.pid}`])
+    r = await runProbeCli(["--dry-run", "--models", "mimo-v2.6-flash", "--label", `probe-test-${process.pid}`, "--results-dir", SANDBOX])
   } finally { globalThis.fetch = orig }
   assert.equal(r.code, 0, r.out)
   assert.equal(calls, 0, "dry-run 全链路零网络（真装配腿 + 夹具判官均不触网）")

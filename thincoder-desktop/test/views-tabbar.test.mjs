@@ -1,10 +1,11 @@
 /**
- * views-tabbar.test.mjs — E-1 标签条用例（批档 §2.5 U45–U48 + 本批新增 U54 / U55 · 拆分预案 §2.11 第 3 条 ·
- * `docs/desktop/design/UI.md` §1 标签条行 / 交互行 · §2 项 2）：三态 + 根锚 / 位标四值 + 空闲零节点 / 标题缺省 /
- * 接线形两态 + 零字形 + 样式面常量单源 / 标签接线携键（U54）/ 关闭确认面两态两键（U55）。
- * 纪律：本档只读源 + 调纯函数（`tabbarModel` / `tabbarTree`）——**不触 DOM**（`docs/desktop/design/RENDERER.md`
- * §1.1：挂载函数不进自动面 ⇒ 挂载 / 横滚 / 渐隐 / `inert` 运行时面随人工走查）；「重挂可重入」由**树面重入等价**
- * （同输入两次构树 · 归一后结构相等）承载。
+ * views-tabbar.test.mjs — E-1 标签条用例（U45–U48 + U54 + T-DSK25 加速键面 · `docs/desktop/design/PROJECT.md` §7 批 A 注 ·
+ * `docs/desktop/design/UI.md` §1 标签条行 / 交互行 · §2 项 2 · `docs/desktop/design/RENDERER.md` §1.1 键盘面）：
+ * 三态 + 根锚 / 位标四值 + 空闲零节点 / 标题缺省 / 接线形两态 + 零字形 + 样式面常量单源 / 标签接线携键（U54）/
+ * Tab 序收面两态（非活动项两控件 `tabindex="-1"` · 零 `inert` —— KD-15）/ 加速键纯函数判定（`Ctrl/Cmd+1..9` ⇒ 第 N 档）。
+ * 纪律：本档只读源 + 调纯函数（`tabbarModel` / `tabbarTree` / `acceleratorTab`）——**不触 DOM**（`docs/desktop/design/RENDERER.md`
+ * §1.1：挂载函数不进自动面 ⇒ 挂载 / 横滚 / 渐隐 / 加速键真事件面随人工走查）；「重挂可重入」由**树面重入等价**
+ * （同输入两次构树 · 归一后结构相等）承载。关闭确认面族（U55）住 `test/views-tabbar-close.test.mjs`。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
@@ -12,7 +13,7 @@ import { readFileSync, readdirSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { initDict, t } from "../renderer/i18n.mjs"
-import { BADGE_WORD, tabbarModel, tabbarTree } from "../renderer/views/sessions.mjs"
+import { BADGE_WORD, acceleratorTab, tabbarModel, tabbarTree } from "../renderer/views/tabbar.mjs"
 
 /** 树遍历（深度优先 · 保序）：节点集 / 叶文本集共用 —— `asText` 切换收集面（`null` 空位不入）。 */
 function walk(tree, asText) {
@@ -51,7 +52,7 @@ function stripComments(source) {
 
 /** 字面量内容抽取（极简词法游走：注释剔除 · 字符串 / 模板字面量入集）—— U48 字形扫描只看**字面量位**
  *  （算符位不扫 · 批档 §2.11 第 6 条）。模板字面量 `${}` 内 = 代码位 ⇒ 配平跳过不入集。
- *  扫描域为**字面量内容**：转义符折成其一字符；`.mjs` 本题材无跨行字面量；假设 = 被扫两档无正则字面量
+ *  扫描域为**字面量内容**：转义符折成其一字符；`.mjs` 本题材无跨行字面量；假设 = 被扫三档无正则字面量
  *  （含引号的正则会误起字面量扫描）—— 假设失效时先改本游走再信结论。 */
 function literalContents(source) {
   const out = []
@@ -139,9 +140,9 @@ function useSentinels(ctx, hostKeys, dictKeys = []) {
   return sentinel
 }
 
-// ─── U45 三态 + 根锚（零 / 单 / 多标签）────────────────────────
+// ─── U45 三态 + 根锚 + Tab 序收面（零 / 单 / 多标签）──────────────
 
-test("U45: 标签条三态 + 根锚（零 / 单 / 多标签 ∧ data-slot / data-tabs）", () => {
+test("U45: 标签条三态 + 根锚 + Tab 序收面（零 / 单 / 多标签 ∧ data-slot / data-tabs ∧ 非活动项两控件 tabindex=-1）", () => {
   const cases = [
     ["零标签", {}, [], null],
     ["单标签", { tabs: ["a"], activeTab: "a" }, ["a"], "a"],
@@ -155,8 +156,16 @@ test("U45: 标签条三态 + 根锚（零 / 单 / 多标签 ∧ data-slot / data
     assert.deepEqual(items.map((node) => node.props["data-tab"]), keys, `${state}：标签节点序 = 标签序`)
     const activeList = items.filter((node) => node.props["data-active"] === "1")
     assert.deepEqual(activeList.map((node) => node.props["data-tab"]), active === null ? [] : [active], `${state}：data-active 恰在活动键`)
-    const inertList = items.filter((node) => node.props.inert === true)
-    assert.deepEqual(inertList.map((node) => node.props["data-tab"]), keys.filter((key) => key !== active), `${state}：非活动标签带 inert`)
+    const stops = (node) => nodes(node).filter((kid) => kid.props.tabindex === "-1")
+    const inactive = items.filter((node) => node.props["data-active"] !== "1")
+    assert.ok(inactive.every((node) => stops(node).length === 2 && nodes(node).filter((kid) => kid.tag === "button").every((kid) => kid.props.tabindex === "-1")), `${state}：非活动项两控件各落 tabindex=-1（只收 Tab 序 —— KD-15）`)
+    assert.ok(nodes(tree).every((node) => !("inert" in node.props)), `${state}：全树零 inert（收序不收指针输入）`)
+    assert.ok(activeList.every((node) => nodes(node).every((kid) => kid.props.tabindex === undefined)), `${state}：活动项零 tabindex（自然序可及）`)
+    const seen = []
+    const wired = tabItems(tabbarTree(tabbarModel(input), { onActivate: (key) => seen.push(`activate:${key}`), onClose: (key) => seen.push(`close:${key}`) }))
+    const [other] = wired.filter((node) => node.props["data-active"] !== "1")
+    for (const control of other === undefined ? [] : stops(other).filter((kid) => kid.tag === "button")) control.props.onClick()
+    assert.deepEqual(seen, other === undefined ? [] : [`activate:${other.props["data-tab"]}`, `close:${other.props["data-tab"]}`], `${state}：非活动项点按两控件各携本键（收序不收指针 —— T-DSK25 ①）`)
   }
   assert.equal(tabItems(tabbarTree(tabbarModel({}))).length, 0, "零标签 ⇒ 空条（零标签节点）")
 })
@@ -197,7 +206,7 @@ test("U47: 标题缺省（命中行非空 ⇒ 原串 ∥ title 空 / 无命中 �
 
 // ─── U48 接线形两态 + 零字形 + 常量单源 ─────────────────────
 
-test("U48: 接线形两态 + 零字形 + 常量单源（未接线全 disabled ∧ 接线零 disabled ∧ 视图两档零字形字面）", (ctx) => {
+test("U48: 接线形两态 + 零字形 + 常量单源（未接线全 disabled ∧ 接线零 disabled ∧ 视图三档零字形字面）", (ctx) => {
   const sentinel = useSentinels(ctx, ["tab.action.close", "rail.action.newSession"])
   const input = { tabs: ["a", "b"], activeTab: "b", rows: [row(1), row(2)] }
   const handlers = { onActivate: () => {}, onClose: () => {}, onNew: () => {} }
@@ -232,7 +241,7 @@ test("U48: 接线形两态 + 零字形 + 常量单源（未接线全 disabled �
   assert.deepEqual([...add.children, ...close[0].children], [], "图标控件零文本子（零字形字面）")
 
   const glyphs = ["+", "×", "●", "⚠", "✓"]
-  for (const name of ["sessions.mjs", "chrome.mjs"]) {
+  for (const name of ["sessions.mjs", "tabbar.mjs", "chrome.mjs"]) {
     const source = readFileSync(new URL(`../renderer/views/${name}`, import.meta.url), "utf8")
     const hits = literalContents(source).filter((literal) => glyphs.some((glyph) => literal.includes(glyph)))
     assert.deepEqual(hits, [], `视图档 ${name} 字面量零字形（命中 = ${JSON.stringify(hits)}）`)
@@ -268,62 +277,21 @@ test("U54: 标签接线形（激活 / 关闭各携本键 ∧ 新建无键）", (
   assert.deepEqual(
     seen,
     ["activate:1", "close:1", "activate:2", "close:2", "activate:3", "close:3", "new"],
-    "逐键回代本键（键域 = 串 —— 通道载荷回代归 app.mjs）",
+    "逐键回代本键（键域 = 串 —— 通道载荷回代归 mount-sessions.mjs）",
   )
 })
 
-// ─── U55 关闭确认面（两态 × 两键 · 批档 §2.12 第 8 条）──────────────
+// ─── T-DSK25 加速键纯函数（`Ctrl/Cmd + 1..9` ⇒ 第 N 档键）──────────────
 
-test("U55: 关闭确认面（命中 ⇒ 标签项 data-confirm ∧ 子序 [标签, 取消, 确认] ∧ 未命中 ⇒ 常态关闭控件）", (ctx) => {
-  const sentinel = useSentinels(ctx, [
-    "tab.action.close", "tab.action.close.cancel", "tab.action.close.confirm", "rail.action.newSession",
-  ])
-  const input = { tabs: ["a", "b"], activeTab: "b", rows: [row(1), row(2)], pendingClose: "b" }
-  const tree = tabbarTree(tabbarModel(input))
-  const [other, hit] = tabItems(tree)
-  assert.equal(hit.props["data-confirm"], "1", "命中键 ⇒ 标签项 data-confirm=1（机读锚）")
-  assert.equal(other.props["data-confirm"], undefined, "未命中键 ⇒ 无 data-confirm")
-  assert.equal(other.props.inert, true, "未命中非活动键 inert 照旧（确认面不改标签语义）")
-
-  const hitControls = nodes(hit).filter((node) => node.tag === "button")
-  assert.deepEqual(hitControls.map((node) => node.props["data-action"]), ["tab:activate", "tab:close-cancel", "tab:close-confirm"], "命中项子序 = [标签, 取消, 确认]")
-  assert.deepEqual(hitControls.slice(1).map((node) => node.props.class), ["tabbar-cancel", "tabbar-confirm"], "两键 class 锚")
-  assert.deepEqual(hitControls.slice(1).map((node) => node.children), [[sentinel("tab.action.close.cancel")], [sentinel("tab.action.close.confirm")]], "两键词面 = 文本按钮（词键值 —— 零字形）")
-  assert.ok(hitControls.slice(1).every((node) => node.props["aria-label"] === undefined), "文本按钮不走 aria-label（词面即文案）")
-  assert.ok(hitControls.every((node) => node.props.disabled === true), "未接线 ⇒ 三控全 disabled")
-  assert.equal(nodes(tree).filter((node) => node.props?.["data-action"] === "tab:close").length, 1, "命中项关闭控件原位退出（全树关闭控件恰 1 = 未命中项）")
-
-  const plain = tabbarTree(tabbarModel({ ...input, pendingClose: null }))
-  assert.deepEqual(
-    tabItems(plain).flatMap((node) => nodes(node).filter((kid) => kid.tag === "button").map((kid) => kid.props["data-action"])),
-    ["tab:activate", "tab:close", "tab:activate", "tab:close"],
-    "未命中态 ⇒ 零确认键（两态互斥）",
-  )
-  const stray = tabbarTree(tabbarModel({ ...input, pendingClose: "9" }))
-  assert.equal(nodes(stray).some((node) => node.props?.["data-confirm"] !== undefined), false, "待确认键不在标签集 ⇒ 零确认面（只比在册键）")
-
-  const seen = []
-  const wired = tabbarTree(tabbarModel(input), {
-    onActivate: (key) => seen.push(`activate:${key}`),
-    onClose: (key) => seen.push(`close:${key}`),
-    onCancelClose: () => seen.push("cancel"),
-    onConfirmClose: () => seen.push("confirm"),
-    onNew: () => seen.push("new"),
-  })
-  const wiredControls = nodes(wired).filter((node) => node.tag === "button")
-  assert.deepEqual(
-    wiredControls.map((node) => node.props["data-action"]),
-    ["tab:activate", "tab:close", "tab:activate", "tab:close-cancel", "tab:close-confirm", "session:create"],
-    "接线态控制序（命中项两键取代关闭控件）",
-  )
-  assert.ok(wiredControls.every((node) => node.props.disabled === undefined), "接线 ⇒ 无 disabled")
-  wiredControls[2].props.onClick() // 命中项标签控件（键 b）
-  wiredControls[3].props.onClick() // 取消
-  wiredControls[4].props.onClick() // 确认
-  assert.deepEqual(seen, ["activate:b", "cancel", "confirm"], "两键回代无键（判据单源 = store pendingClose）· 标签控件回代本键")
-
-  const view = stripComments(readFileSync(new URL("../renderer/views/sessions.mjs", import.meta.url), "utf8"))
-  for (const banned of [/\bwindow\.confirm\b/, /<dialog/i, /\bsetTimeout\b/, /\bwindow\.prompt\b/]) {
-    assert.ok(!banned.test(view), `确认面四禁之一落空（字形面由 U48 字面量扫描承载）：${banned}`)
-  }
+test("T-DSK25: 加速键命中面（键 ∈ 1..9 ∧ 第 N 档存在 ⇒ 第 N 档键 ∧ 表外 / 越界 / 无修饰 ⇒ null）", () => {
+  const keys = ["a", "b", "c"]
+  const hit = (over = {}) => acceleratorTab({ key: "2", ctrlKey: true, ...over }, keys)
+  assert.equal(hit(), "b", "Ctrl + 2 ⇒ 第 2 档键（激活面回代）")
+  assert.equal(acceleratorTab({ key: "3", metaKey: true }, keys), "c", "Cmd + 3 ⇒ 第 3 档（双修饰面同律）")
+  assert.equal(acceleratorTab({ key: "1", ctrlKey: true }, tabbarModel({ tabs: keys, activeTab: "a" }).tabs.map((tab) => tab.key)), "a", "读数源 = 模型标签序（挂载面同源）")
+  assert.equal(hit({ key: "0" }), null, "表外键 0 ⇒ null（零动作 · 不吞键）")
+  assert.equal(hit({ key: "9" }), null, "第 9 档不存在（键表 3 档）⇒ null")
+  assert.equal(hit({ key: "b" }), null, "表外键 b ⇒ null")
+  assert.equal(hit({ key: "1", ctrlKey: false }), null, "无修饰键 ⇒ null（零动作 —— 不夺键盘面）")
+  assert.equal(acceleratorTab({ key: "2", ctrlKey: true }, []), null, "空键表 ⇒ null")
 })

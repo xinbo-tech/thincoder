@@ -3,12 +3,15 @@
  * 三档沿 RENDERER.md §1.1：`chatModel`（纯模型 · 窗出口）→ `chatTree`（纯构树 · 机检面）→ `mountChat`（薄挂载 =
  * 本档唯一清空 / 建树处）；DOM 面另两件 = 帧尾态刷 `syncChrome`（根锚四 + 摘要块 + 审批卡 + 药丸 · 幂等 · 无帧豁免）· 帧尾六步
  * `settleFrame`（挂尾段 → 读数 → 态刷 → 头侧摘 / 插 → 读数 → 写）；工具卡面与折叠纯函数 `toggleExpanded` 住
- * `renderer/views/chat-tool.mjs`（§2.3 拆分预案落形 —— 依赖单向：本档 → 它）。
+ * `renderer/views/chat-tool.mjs`（§2.3 拆分预案落形 —— 依赖单向：本档 → 它）；文本族块尾的复制控件 + 末条复制控件
+ * 住 `renderer/views/chat-copy.mjs`（UI.md §1「批 B 注」项 4 —— 依赖单向：本档 → 它）。
  *   ① 三态 `data-state`：无活动会话 ⇒ `none`（零节点——禁假数据）· 有会话零块 ⇒ `empty`（`chat.empty.hint`）· 否则 `flow`；
  *   ② 块五型（`user` / `assistant` / `reasoning` / `tool` / `error`）单序列；块键单源 = `blockKey`（`data-block-id` /
  *      增量缝合 / toggle 同域）；兜底键用**全列表位序**（`hidden + i`）⇒ 窗滑动不改键；文本裸串（零 Markdown / 零注入）；
- *   ③ 根子序 = [摘要块?] → 块序列 → [审批卡?] → [药丸?]；块插入点 = 首个 `[data-card="approval"]` 之前
- *      （无卡 ⇒ `[data-pill]` 之前 · 两锚皆缺 ⇒ 末位）；
+ *   ③ 根子序 = [摘要块?] → 块序列 → [卡序列?] → [药丸?]（卡序 = 待审批 → 提问 → 计划 —— 单源 =
+ *      `docs/desktop/design/RENDERER.md` §1.1 插入点纪律条）；块插入点 = 首个**卡节点**之前（三族任一 ——
+ *      锚 = `[data-card]`；无卡 ⇒ `[data-pill]` 之前 · 两锚皆缺 ⇒ 末位）；本档挂载面只管审批族（提问 / 计划
+ *      两族归 `renderer/mount-cards.mjs` —— 挂载零交叠，卡序判据共用一序单源）；
  *   ④ 工具卡面（三行）已拆出：`renderer/views/chat-tool.mjs`（批档 §2.3 拆分预案落形）——本档经 `toolCard` 调用；
  *      审批卡面（两形）住 `renderer/views/approval.mjs`（批档 §2.2（a））——本档经 `approvalTree` 调用（依赖单向：
  *      本档 → 它）；卡 = **非块节点** ⇒ 与块序列 / 药丸同层不破「DOM 块节点序 ≡ visible 逐位引用等」；
@@ -22,6 +25,7 @@ import { t } from "../i18n.mjs"
 import { visibleWindow } from "../store.mjs"
 import { approvalTree } from "./approval.mjs"
 import { MAX_RENDER_BLOCKS, compensateTop, stickToBottom, tailAction } from "./chat-scroll.mjs"
+import { copyBlockNode, patchTextBlock } from "./chat-copy.mjs"
 import { blockKey } from "./chat-stream.mjs"
 import { toolCard, wire, withKey } from "./chat-tool.mjs"
 
@@ -62,9 +66,10 @@ function chromeProps(model) {
   }
 }
 
-// ─── 三档之②：纯构树（块五型 + 工具卡三行 + 两控件）─────────────────
+// ─── 三档之②：纯构树（块五型 + 工具卡三行 + 三控件）─────────────────
 
-/** 块节点（五型单序列）：文本族 = 裸串子（`white-space: pre-wrap` ⇒ 纯文本零注入）；`tool` ⇒ 工具卡三行。 */
+/** 块节点（五型单序列）：文本族 = 裸串子（`white-space: pre-wrap` ⇒ 纯文本零注入）+ 块尾复制控件（块文本空 ⇒
+ *  零控件）；`tool` ⇒ 工具卡三行（工具卡无文本面 ⇒ 不入复制面）。 */
 function blockNode(block, index, hidden, handlers) {
   const kind = block?.kind
   const key = blockKey(block, hidden + index)
@@ -77,7 +82,7 @@ function blockNode(block, index, hidden, handlers) {
       "data-block-kind": kind,
       "data-streaming": kind === "assistant" && block?.streaming === true ? "1" : undefined,
     },
-    children: [block?.text],
+    children: [block?.text, copyBlockNode(block, key, handlers)],
   }
 }
 
@@ -173,7 +178,8 @@ export function syncChrome(root, model, handlers = {}) {
 }
 
 /** 卡面态刷（帧尾 · 幂等）：在场判据 = 待决项非空；逐位按序对齐 —— 同 `prompt-id` ∧ 同 `data-shape` ∧ 同文本 ⇒
- *  **零 DOM 写**（幂等），否则就地换；多出 ⇒ 摘；缺 ⇒ 插到卡锚位（药丸之前 ⇒ 卡恒居块序列之后、药丸之前）。 */
+ *  **零 DOM 写**（幂等），否则就地换；多出 ⇒ 摘；缺 ⇒ 插到卡锚位（首个更高序卡之前 ⇒ 卡恒居块序列之后、
+ *  同序族之后、药丸之前）。 */
 function syncCards(root, model, handlers) {
   const live = typeof root.querySelectorAll === "function" ? [...root.querySelectorAll('[data-card="approval"]')] : []
   const wanted = Array.isArray(model?.approval) ? model.approval : []
@@ -201,18 +207,22 @@ function equivalentCard(node, next) {
     node.textContent === next.textContent
 }
 
-/** 块节点插点锚（单源 —— 尾段挂载与头侧前插同用）：首个审批卡之前；无卡 ⇒ 药丸之前；两锚皆缺 ⇒ `null`（末位）。 */
+/** 块节点插点锚（单源 —— 尾段挂载与头侧前插同用）：首个**卡节点**之前（三族任一 —— 卡序判据面 = 卡序单源）；
+ *  无卡 ⇒ 药丸之前；两锚皆缺 ⇒ `null`（末位）。 */
 function blockAnchor(root) {
   if (typeof root?.querySelector !== "function") return null
-  return root.querySelector('[data-card="approval"]') ?? root.querySelector("[data-pill]")
+  return root.querySelector("[data-card]") ?? root.querySelector("[data-pill]")
 }
 
-/** 卡面插点锚（新建卡）：药丸之前（`null` ⇒ 末位）—— 卡序逐项，后到者居尾、不夺旧卡位。 */
+/** 卡面插点锚（新建**审批族**卡 —— 卡序 = 待审批 → 提问 → 计划）：首个更高序卡之前（序首 ⇒ 首个提问卡 /
+ *  其次计划卡）；无 ⇒ 药丸之前（`null` ⇒ 末位）—— 卡序逐项，后到者居尾、不夺旧卡位。 */
 function cardAnchor(root) {
-  return typeof root?.querySelector === "function" ? root.querySelector("[data-pill]") : null
+  if (typeof root?.querySelector !== "function") return null
+  const higher = root.querySelector('[data-card="question"]') ?? root.querySelector('[data-card="task"]')
+  return higher ?? root.querySelector("[data-pill]")
 }
 
-/** 尾段挂载（帧尾第 ① 步 · 先于读数）：逐枚建块 ⇒ 插点 = 首个审批卡之前（无卡 ⇒ 药丸之前 · 两锚皆缺 ⇒ 末位）。 */
+/** 尾段挂载（帧尾第 ① 步 · 先于读数）：逐枚建块 ⇒ 插点 = 首个卡节点之前（无卡 ⇒ 药丸之前 · 两锚皆缺 ⇒ 末位）。 */
 function mountTail(root, model, plan, handlers) {
   const start = model.blocks.length - plan.tail.length
   const anchor = blockAnchor(root)
@@ -227,8 +237,8 @@ function setStreaming(node, on) {
   else node.removeAttribute?.("data-streaming")
 }
 
-/** 就地更新尾块（第 ① 步 · `patch` 档）：文本 + 流式锚同刷；kind 变（含 tool 卡 ⇄ 文本族）⇒ 单块重建
- *  （节点形变非就地可改）；非尾块零触碰。 */
+/** 就地更新尾块（第 ① 步 · `patch` 档）：文本 + 复制控件（`patchTextBlock`）+ 流式锚同刷；kind 变（含 tool 卡 ⇄
+ *  文本族）⇒ 单块重建（节点形变非就地可改）；非尾块零触碰。 */
 function patchTail(root, model, handlers) {
   const index = model.blocks.length - 1
   const block = model.blocks[index]
@@ -239,7 +249,7 @@ function patchTail(root, model, handlers) {
     node.replaceWith(build(blockNode(block, index, model.hidden, handlers)))
     return
   }
-  text(node, block.text ?? "")
+  patchTextBlock(node, block, blockKey(block, model.hidden + index), handlers)
   setStreaming(node, block.kind === "assistant" && block.streaming === true)
 }
 

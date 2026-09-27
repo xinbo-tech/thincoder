@@ -13,7 +13,7 @@
 | 台账（项目级唯一真相） | SQLite——用户数据目录键控库 `~/.thincoder/ledger/<sha1(项目根)>.db`（2026-09-17 落点裁定：不在项目目录） | ✅ 唯一台账面 = SQLite（`/ledger` 查询）；`TODO.md` · `TODO-archive.md` = 退役历史（md 形态，无机械校验） |
 | 板块档（需求 / 设计） | `core/requirements/` · `core/design/` | ✅ 核心统一已迁入（2026-09-13）；后续新板块档直接落此。**子系统档（设计 / 需求各 15 档）见 §4** |
 | 批次档 | `batches/` | ✅ 核心统一已迁入（2026-09-13） |
-| 部分档（各端面） | `cli/requirements/` · `cli/design/` · `vsc/requirements/` · `vsc/design/` · `desktop/requirements/` · `desktop/design/` | ✅ **四部分**落点齐（`core/` · `cli/` · `vsc/` · `desktop/`）——**31 档**（`cli/` 14 = design 9 + requirements 5 · `vsc/` 11 = design 8 + requirements 3 · `desktop/` 6 = design 5 + requirements 1；2026-09-15 建 · desktop 部分 2026-09-25 随桌面端立项建 · 实盘对账 as-of 2026-09-25）；desktop 设计五档 = `PROJECT.md`（产品面总览）/ `SHELL.md` / `IPC.md` / `UI.md` / `RENDERER.md`（按板块拆分 · 非迁移档） |
+| 部分档（各端面） | `cli/requirements/` · `cli/design/` · `vsc/requirements/` · `vsc/design/` · `desktop/requirements/` · `desktop/design/` | ✅ **四部分**落点齐（`core/` · `cli/` · `vsc/` · `desktop/`）——**32 档**（`cli/` 14 = design 9 + requirements 5 · `vsc/` 11 = design 8 + requirements 3 · `desktop/` 7 = design 6 + requirements 1；2026-09-15 建 · desktop 部分 2026-09-25 随桌面端立项建 · 实盘对账 as-of 2026-09-25）；desktop 设计**六档** = `PROJECT.md`（产品面总览）/ `SHELL.md` / `IPC.md` / `UI.md` / `RENDERER.md` / `E2E-TESTING.md`（E2E 测试基建 · 2026-09-26 增）（按板块拆分 · 非迁移档） |
 
 ## 2. 迁移政策（2026-09-13 用户裁定——「逐步建立 · 旧档留参照 · 不一刀切」；2026-09-14 层级裁定——根仓 `docs/` = 基准层，产品 `docs/**` = 迁移期保留的参照历史）
 
@@ -91,6 +91,8 @@
 - **四部分不各设地图**——本 README = 四部分（`core/` · `cli/` · `vsc/` · `desktop/`）的唯一地图（目标结构 `core/design/DOC-SYSTEM.md` §4）；`cli/` · `vsc/` 两产品面档所对应的产品树旧档（`thincoder-cli/docs/**` · `thincoder-vscode/docs/**`）= 迁移期参照历史（§2 政策——保留 ≠ 维护）。
 
 ## 变更记录
+
+- 2026-09-26（**桌面端 E2E 基建批 · 主 agent——地图笔**）：desktop 设计 5 → **6**（增 `E2E-TESTING.md`——E2E 测试基建单源：真 Electron 直驱 + 固定落点截图 + 九步断言）；desktop 部分 6 → **7**；全档总数 31 → **32**（实盘对账 as-of 2026-09-26 = 档在盘 · 计数与 §1 表同改）。
 
 - 2026-09-25（**桌面端设计批 1 · 分档轮 · 主 agent——地图笔**）：desktop 部分档数 2 → **6**（设计一档按板块切五档：`PROJECT.md` 留产品面总览 + `SHELL.md` 宿主适配 / `IPC.md` 主↔渲染契约 / `UI.md` 界面形态 / `RENDERER.md` 前端实现工艺）；全档总数 27 → **31**。
 

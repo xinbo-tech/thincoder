@@ -212,7 +212,7 @@ test("U61: 折叠默认态与 toggle（显式优先 ∧ 缺省 error 展开 ∧ 
 
 // ─── U62 接线形与词表面 ──────────────────────────────────────
 
-test("U62: 接线形与词表面（handlers 两态 ∧ 三控出口 ∧ 药丸文本两态）", (ctx) => {
+test("U62: 接线形与词表面（handlers 两态 ∧ 四控出口 ∧ 药丸文本两态）", (ctx) => {
   setupDict(ctx)
   const model = chatModel(state({ blocks: [many(2)[0], many(2)[1], tool({ result: "R" })], following: false, pendingNew: 2 }), 2)
 
@@ -220,24 +220,40 @@ test("U62: 接线形与词表面（handlers 两态 ∧ 三控出口 ∧ 药丸�
   const bareControls = withAttr(bare, "data-action")
   assert.deepEqual(
     bareControls.map((node) => node.props["data-action"]),
-    ["chat:backfill", "chat:tool-toggle", "chat:return"],
-    "三控 data-action 齐（回填 / toggle / 药丸 —— 根子序 = 摘要 → 块 → 药丸）",
+    ["chat:backfill", "chat:copy-block", "chat:tool-toggle", "chat:return"],
+    "四控 data-action 齐（回填 / 块复制 / toggle / 药丸 —— 根子序 = 摘要 → 块 → 药丸；复制控住带文本块尾）",
   )
   for (const node of bareControls) assert.equal(node.props.disabled, true, "缺 handlers ⇒ disabled true（诚实非死控）")
+  const copyAnchors = bareControls.filter((node) => node.props["data-action"] === "chat:copy-block")
+  assert.deepEqual(copyAnchors.map((node) => node.props["data-block-id"]), ["b2"], "复制控携本块键（机读锚 = 文本块键 —— 工具卡无文本 ⇒ 零控件）")
 
   const calls = []
+  const copies = []
   const wired = chatTree(model, {
     onToggleTool: (key) => calls.push(["toggle", key]),
     onBackfill: () => calls.push(["backfill"]),
     onReturn: () => calls.push(["return"]),
+    writeText: (value) => { copies.push(value) },
   })
   const controls = withAttr(wired, "data-action")
   for (const node of controls) {
     assert.equal(typeof node.props.onClick, "function", "handlers 给 ⇒ 落 onClick")
     assert.equal("disabled" in node.props, false, "handlers 给 ⇒ 不落 disabled")
   }
-  for (const node of controls) node.props.onClick()
+  for (const node of controls) {
+    if (node.props["data-action"] !== "chat:copy-block") node.props.onClick()
+  }
   assert.deepEqual(calls, [["backfill"], ["toggle", "t1"], ["return"]], "三控出口：回填 / 药丸零参 · toggle 携本块键")
+
+  // 复制控（本地效应 · 零通道）：点击源 = 控件宿主父节点**现读**文本 ⇒ 注入写效应（RENDERER.md §1.1）
+  const copyNode = controls.find((node) => node.props["data-action"] === "chat:copy-block")
+  assert.equal(copyNode.props["aria-label"], "⟦chat.action.copy⟧", "复制控词面 = 词表键（aria-label · 控形零文本子）")
+  copyNode.props.onClick({ currentTarget: { parentNode: { textContent: "块文本一" } } })
+  assert.deepEqual(copies, ["块文本一"], "点击源现读父节点文本 ⇒ 注入写效应（值逐字）")
+  assert.equal(copyNode.props.onClick(undefined), false, "无 event 裸调 ⇒ 静默 return（不写不报 —— 机检面兜底）")
+  assert.deepEqual(copies, ["块文本一"], "裸调零写（静默）· 空文本同样零写")
+  copyNode.props.onClick({ currentTarget: { parentNode: { textContent: "" } } })
+  assert.deepEqual(copies, ["块文本一"], "现读空串 ⇒ 零写（空文本非失败 —— 零诊断）")
 
   const pill = (over) => one(chatTree(chatModel(state({ blocks: [user()], following: false, ...over }))), "data-pill")
   assert.deepEqual(texts(pill({ pendingNew: 3 })), ["⟦new:3⟧"], "pendingNew > 0 ⇒ chat.pill.new（${n} = 未读数）")

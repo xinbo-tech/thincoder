@@ -21,7 +21,7 @@ const name = args.name
 if (!name) {
   // 2026-08-31：无 --name 参数 = prepublishOnly glob（node --test "test/*.mjs"）收集时的
   // 场景——手动 smoke 不该让发布门禁失败。skip（exit 0）并提示手动用法（与
-  // smoke-qwen-thinking 的 THINCODER_SMOKE 门控同构；0.12.51 教训同型）
+  // smoke-qwen-thinking 的 --smoke 门控同构；0.12.51 教训同型）
   console.log("[smoke] skip — 需手动带 --name 参数运行（真机冒烟不进常规测试层）")
   process.exit(0)
 }

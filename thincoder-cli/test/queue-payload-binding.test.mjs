@@ -16,6 +16,7 @@ import { buildSpawnChild } from "@thincoder/core/agent-tools/subagent-spawn.mjs"
 import { executeAsyncSpawn } from "@thincoder/core/agent-tools/subagent-run.mjs"
 import { maybeRefillAsync } from "@thincoder/core/agent-tools/subagent-scheduler.mjs"
 import { ENG_TASK_BOOK_MIN } from "@thincoder/core/agent-tools/spawn-gates.mjs"
+import { _resetLogsDirForTest, _setLogsDirForTest } from "@thincoder/core/log.mjs"
 
 let ws = null
 let logDir = null
@@ -90,7 +91,7 @@ test("T11 启动序（零回归）：先入者先启动；先入者终态后后�
 
 test("T15 观测留痕两态：提他批存在档 ⇒ 一条 child:batchdoc-ref；只提绑定档 ⇒ 零事件（两态均放行）", () => {
   logDir = mkdtempSync(join(tmpdir(), "qpb-log-"))
-  process.env.THINCODER_LOG_DIR = logDir
+  _setLogsDirForTest(logDir)
   try {
     // 态①：任务书提「他批存在档」两形（相对 + 盘符绝对——同一档 ⇒ 去重后仍恰一条）
     const p1 = parentWithBlocker()
@@ -109,6 +110,6 @@ test("T15 观测留痕两态：提他批存在档 ⇒ 一条 child:batchdoc-ref�
     assert.equal(ev.batchDocBase, "a.md", "绑定档侧基名")
     assert.equal(ev.refBase, "b.md", "引用档侧基名")
   } finally {
-    delete process.env.THINCODER_LOG_DIR
+    _resetLogsDirForTest()
   }
 })

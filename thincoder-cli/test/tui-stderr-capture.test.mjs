@@ -1,5 +1,5 @@
 /** tui-stderr-capture.test.mjs — TUI-STDERR-CAPTURE（TUI-STDERR-CAPTURE.md）F-1~F-3：
- * mock 注入缝面 + slow 真 spawn 面（THINCODER_TEST_CRASH 门）；Windows 实测 process.kill(SIGINT)=硬杀≠Ctrl+C → 信号 mock；crash-reports 经 USERPROFILE/HOME 重定向隔离。 */
+ * mock 注入缝面 + slow 真 spawn 面（`--test-crash` 门）；Windows 实测 process.kill(SIGINT)=硬杀≠Ctrl+C → 信号 mock；crash-reports 经 USERPROFILE/HOME 重定向隔离。 */
 import { test, after } from "node:test"
 import assert from "node:assert/strict"
 import { EventEmitter } from "node:events"
@@ -17,7 +17,7 @@ const fakeChild = () => { const c = new EventEmitter(); c.stderr = new EventEmit
 const tmpRoot = () => { const d = mkdtempSync(join(tmpdir(), "tui-stderr-")); dirs.push(d); return d }
 const runMock = (dir) => { const child = fakeChild(); const exits = []; const writes = []; const wrapped = spawnTuiWrapped({ dir, spawnImpl: () => child, exitImpl: (c) => exits.push(c), writeImpl: (s) => writes.push(s) }); return { wrapped, exits, writes, child } }
 const readLog = (dir) => readFileSync(join(dir, readdirSync(dir)[0]), "utf8")
-const clearSig = () => { for (const s of ["SIGINT", "SIGTERM"]) while (process.listenerCount(s) > 0) process.removeListener(s, ignoreSignal) } // 复原 no-op 监听（单一引用精确摘除——不碰 runner 自带）
+const clearSig = () => { for (const s of ["SIGINT", "SIGTERM"]) while (process.listeners(s).includes(ignoreSignal)) process.removeListener(s, ignoreSignal) } // 复原 no-op 监听（单引用精确摘除——终点 = 本引用归零；异引用监听者不碰，且无空转面）
 test("F-1/F-2 单元：tee 落盘（头行+内容）+ mkdir 前置（评审 #2）+ exit 3 → 同码 3", () => {
   const root = tmpRoot()
   const { wrapped, exits, child } = runMock(join(root, "x", "y")) // 深层目录不存在——评审 #2 自动建
@@ -59,31 +59,18 @@ test("T6 F3③：子 argv 首位 --diagnostic-dir=<dir>（快照落点定向）�
   let seen = null
   const child = fakeChild()
   spawnTuiWrapped({ dir, spawnImpl: (cmd, args) => { seen = { cmd, args }; return child }, exitImpl: () => {}, writeImpl: () => {} })
-  assert.deepEqual(seen.args, [`--diagnostic-dir=${dir}`, BIN, ...process.argv.slice(2)], "首位 = 诊断目录（Node 选项须在脚本前）→ 次位 = bin 脚本 → 其余 argv 序不变")
+  assert.deepEqual(seen.args, [`--diagnostic-dir=${dir}`, BIN, "--tui-wrapped", ...process.argv.slice(2)], "首位 = 诊断目录（Node 选项须在脚本前）→ 次位 = bin 脚本 → `--tui-wrapped`（子内门——argv 注入）→ 其余 argv 序不变")
   assert.equal(seen.cmd, process.execPath, "仍以自身 execPath 起子")
-  // 设计 §3.2/§3.4「无条件注入」钉死：开关关值下包装器仍注入（gate 单点在 crash-reports.mjs——
-  // 包装器不判 env——防两处判定漂移的回归锁）
-  const prev = process.env.THINCODER_HEAP_SNAPSHOT
-  process.env.THINCODER_HEAP_SNAPSHOT = "0"
-  try {
-    const dir2 = tmpRoot()
-    let seen2 = null
-    const child2 = fakeChild()
-    spawnTuiWrapped({ dir: dir2, spawnImpl: (cmd, args) => { seen2 = args; return child2 }, exitImpl: () => {}, writeImpl: () => {} })
-    assert.equal(seen2[0], `--diagnostic-dir=${dir2}`, "env 关值下仍注入（无条件——gate 单点在 crash-reports.mjs）")
-    child2.emit("exit", 0, null); child2.emit("close")
-  } finally {
-    if (prev === undefined) delete process.env.THINCODER_HEAP_SNAPSHOT; else process.env.THINCODER_HEAP_SNAPSHOT = prev
-  }
   child.emit("exit", 0, null); child.emit("close")
   clearSig() // 复原 no-op 监听（本用例起过包装——同 AC-4 纪律）
 })
 
-slow("AC-1/2/3/6 实跑：无 env 门 TUI 崩溃 → 包装 spawn（stderr 日志 + R25 crash 记录 + 同码 1）", () => {
+slow("AC-1/2/3/6 实跑：直跑 TUI（tui 形态、无 --tui-wrapped）崩溃 → 包装 spawn（stderr 日志 + R25 crash 记录 + 同码 1）", () => {
   const root = tmpRoot()
-  // THINCODER_TUI_WRAPPED 显式中和：宿主环境可能已带该门（TUI 会话内跑套件——env 全量透传）——
-  // 不中和则该慢例假红（子直行不包装——无 tui-stderr 日志）
-  const r = spawnSync(process.execPath, [BIN], { env: { ...process.env, USERPROFILE: root, HOME: root, THINCODER_TEST_CRASH: "1", THINCODER_TUI_WRAPPED: "" }, encoding: "utf8", timeout: 60_000 })
+  // 崩溃门 = 原始 argv（`--test-crash`，位置无关——bin:114）；包装触发 = 命令位 ∈ {缺省, tui} ∧ 无
+  // `--tui-wrapped`（bin:51——argv 不受宿主 env 透传影响）。本格取 `tui` 形态：`--test-crash` 居首
+  // 会占命令位 ⇒ 缺省形无法与崩溃旗标共存（缺省形包装触发在本档无真 spawn 覆盖）。
+  const r = spawnSync(process.execPath, [BIN, "tui", "--test-crash"], { env: { ...process.env, USERPROFILE: root, HOME: root }, encoding: "utf8", timeout: 60_000 })
   const crashDir = join(root, ".thincoder", "crash-reports")
   assert.equal(r.status, 1, "AC-3：子崩溃码 1 → 父 1")
   assert.ok(r.stderr.includes("[error] R25 test crash"), "tee 实时转发终端（stderr 可见）")
@@ -93,13 +80,16 @@ slow("AC-1/2/3/6 实跑：无 env 门 TUI 崩溃 → 包装 spawn（stderr 日�
   assert.ok(files.some((f) => f.startsWith("crash-")), "AC-6：子内 R25 crash-*.json 照常")
   assert.ok(readFileSync(join(crashDir, log), "utf8").includes("R25 test crash"), "AC-2：日志含崩溃诊断")
 })
-slow("红线：env 门直接路径零包装 + 非 TUI（chat）零包装——均无 tui-stderr 日志", () => {
-  for (const [args, gate] of [[[], { THINCODER_TUI_WRAPPED: "1" }], [["chat"], {}]]) {
+slow("红线：--tui-wrapped 直接路径零包装 + 非 TUI（chat）零包装——均无 tui-stderr 日志", () => {
+  // 命令位须真为 `tui` / `chat`（门的第一合取项）：`--test-crash` 居尾——它居首会占命令位（bin:47），
+  // 门在任何命令取值下都已假 ⇒ 两格判别力归零（2026-09-27 内部审计发现）。格 1 取 `--tui-wrapped`
+  // + `tui` 形（与 wrapped-spawn 注入位一致——真子 argv 次位即该旗标）。
+  for (const [label, args] of [["--tui-wrapped+tui", ["--tui-wrapped", "tui"]], ["chat", ["chat"]]]) {
     const root = tmpRoot()
-    const r = spawnSync(process.execPath, [BIN, ...args], { env: { ...process.env, USERPROFILE: root, HOME: root, THINCODER_TEST_CRASH: "1", ...gate }, encoding: "utf8", timeout: 60_000 })
-    assert.equal(r.status, 1, `${args[0] ?? "tui"} 崩溃仍 1`)
+    const r = spawnSync(process.execPath, [BIN, ...args, "--test-crash"], { env: { ...process.env, USERPROFILE: root, HOME: root }, encoding: "utf8", timeout: 60_000 })
+    assert.equal(r.status, 1, `${label} 崩溃仍 1`)
     const files = readdirSync(join(root, ".thincoder", "crash-reports"))
-    assert.ok(!files.some((f) => f.startsWith("tui-stderr-")), `${args[0] ?? "tui-gate"}：零包装（无 tui-stderr 日志）`)
+    assert.ok(!files.some((f) => f.startsWith("tui-stderr-")), `${label}：零包装（无 tui-stderr 日志）`)
     assert.ok(files.some((f) => f.startsWith("crash-")), "进程内崩溃记录照常（R25 面未动）")
   }
 })

@@ -48,6 +48,9 @@ node bench/run.mjs --rejudge --from bench/results/<档>.json
 | `--n` | 每例重复次数（速度轴建议 3） | 1 |
 | `--max-tokens` | 单次调用输出上限（可比性冻结面） | 4096 |
 | `--timeout` | 单次调用墙钟上限（秒） | 120 |
+| `--results-dir` | 结果目录覆盖（相对 bench/ 解析；覆盖值 = 绝对路径直用、相对路径按 cwd 解析） | `bench/results/` |
+| `--judge-config` | 判官配置档覆盖 | `bench/judge.json` |
+| `--prices` | 价格表覆盖 | `bench/prices.json` |
 | `--dry-run` | 夹具自检：不调模型、不读用户 config | 关 |
 | `--recompute --from` | 离线重算（读已有结果 JSON，按**当前** `prices.json` 重出报告） | —— |
 | `--rejudge --from` | 跑后补判（读结果 JSON：判官面 `error` run 定点重取素材 + 级联补判 → 新报告对；**触网**；原档不动） | —— |

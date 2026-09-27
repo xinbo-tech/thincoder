@@ -1,6 +1,6 @@
 /**
  * providers.test.mjs — 渠道族用例（用例号 U103–U107 · `docs/desktop/design/PROJECT.md` §7 T-DSK7/8/10
- * + 批档 §2.3 密钥纪律）：`provider:list` 预设投影 / 形判 / 遮罩零明文 · `provider:save` 两形往返 +
+ * + 批档 §2.3 密钥纪律）：`provider:list` 预设投影 / 形判 / 遮罩零明文 / 行 effort 现值投影 · `provider:save` 两形往返 +
  * `active` 同批写 `defaultModel` + 核错误串直传 + 校验失败零写盘 · `provider:remove` 激活保护 + 级联清理 ·
  * `provider:verify` 真探（假 HTTP）三败因分档 + 落账优先于现算 · 畸形档两面两式（端侧零 catch / 核串返回）。
  * 纪律：沙箱逐用例 `mkdtemp` + `_setConfigPathForTest`；探针缝 `_setProbeImplForTest` /
@@ -13,10 +13,12 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { PROVIDER_PRESETS, presetToEntry } from "@thincoder/core/config-presets.mjs"
+import { specForModel } from "@thincoder/core/model-specs.mjs"
 import { _resetConfigPathForTest, _setConfigPathForTest } from "@thincoder/core/config-io.mjs"
 import {
   _resetAdmissionForTest, _setProbeImplForTest, admissionOf, recordAdmission,
 } from "@thincoder/core/provider/list-models.mjs"
+import { thinkOffShape } from "@thincoder/core/think-off.mjs"
 import { MASK } from "../src/main/settings.mjs"
 import { providerList, providerRemove, providerSave, providerVerify } from "../src/main/providers.mjs"
 
@@ -48,13 +50,17 @@ function fakeModels(t) {
 
 // ─── U103 provider:list（预设投影 / 形判 / 遮罩 / 空表）────────────────
 
-test("U103: provider:list —— 核预设投影（21 条三字段）+ 形判 + 遮罩 + 空表 active 串", (t) => {
+test("U103: provider:list —— 核预设投影（21 条三字段）+ 形判 + 遮罩 + 行 effort 现值投影 + 空表 active 串", (t) => {
   sandbox(t, {
-    defaultModel: "local:m-a",
+    // 活动行 model 段 = qwen3.7-flash（effort 族）≠ 行自身 model "m-a"（未登记）——两规格 off 形不同，
+    // 使「活动行取 defaultModel 模型段」的绑定判据可证（取自身 model 则投影为 auto，见下 premise）
+    defaultModel: "local:qwen3.7-flash",
     providers: [
-      { name: "kimi", baseURL: "https://api.moonshot.cn/v1", model: "kimi-k3", apiKey: "sk-kimi-secret" },
-      { name: "local", baseURL: "http://127.0.0.1:9/v1/", model: "m-a" },
+      { name: "kimi", baseURL: "https://api.moonshot.cn/v1", model: "kimi-k3", apiKey: "sk-kimi-secret", reasoningEffort: "high" },
+      { name: "local", baseURL: "http://127.0.0.1:9/v1/", model: "m-a", thinking: null },
       { name: "nomodel", baseURL: "https://x.invalid/v1", model: "" },
+      { name: "eff", baseURL: "https://e.invalid/v1", model: "qwen3.7-flash", thinking: { type: "disabled" } },
+      { name: "odd", baseURL: "https://o.invalid/v1", model: "m-a", reasoningEffort: "ultra" },
     ],
   })
   const r = providerList()
@@ -80,6 +86,19 @@ test("U103: provider:list —— 核预设投影（21 条三字段）+ 形判 + 
   assert.equal(byName.kimi.maskedKey, MASK, "持密钥行只回遮罩字面量")
   assert.equal(byName.local.maskedKey, null, "无密钥行 maskedKey = null")
   assert.equal(JSON.stringify(r).includes("sk-kimi-secret"), false, "明文零下发")
+
+  // 行 effort = 档位现值投影（批 B · 零探针）：表内三态 + 表外照字面两向
+  assert.equal(thinkOffShape(specForModel("qwen3.7-flash")), null, "前提：活动行绑定模型 = effort 族（off 形 `null`）")
+  assert.deepEqual(thinkOffShape(specForModel("m-a")), { type: "disabled" }, "前提：行自身 model 未登记 ⇒ type 族默认形（取自身 model 会得 auto——绑定判据据此可证）")
+  assert.deepEqual(
+    Object.fromEntries(r.providers.map((p) => [p.name, p.effort])),
+    { kimi: "high", local: "off", nomodel: "auto", eff: "auto", odd: "ultra" },
+    "现值投影四向：串优先（kimi）· 核 off 形 deep-equal（local：活动行取 defaultModel 模型段）· 无记号 auto（nomodel）"
+      + " · 族形不符 auto（eff：行自身 effort 族 ⇒ {type:\"disabled\"} ≠ null）· 表外值照字面（odd）",
+  )
+  for (const p of r.providers) {
+    assert.equal("thinking" in p || "reasoningEffort" in p, false, "行形闭集：条目级档位两键不转发（只投影 effort）")
+  }
 
   sandbox(t, { providers: [] })
   const empty = providerList()

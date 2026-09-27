@@ -2,7 +2,8 @@
  * store.mjs — 渲染面单状态树（`docs/desktop/design/SHELL.md:32` · `docs/desktop/design/RENDERER.md:17`）：
  * 单一持有点 + 订阅（**变更触发** · 等值零通知 · 通知中再变更不递归）。
  * 面域 = 会话 / 标签页 / 块与历史 / 活动池 / 设置族 / 项目级信息 —— 数据面切片 = 块 / 历史回填 / 跟滚 / 标签
- * （标签含**关闭确认面**：`pendingClose` + 判据 `needsCloseConfirm` + 三纯动作）；会话族与活动池切片随各自批次填充。
+ * （标签含**关闭确认面**：`pendingClose` + 判据 `needsCloseConfirm` + 三纯动作；左列含**行形态**：`railForm` +
+ * 两纯动作 —— 批 A ④ 改名 / 删除换形）；会话族与活动池切片随各自批次填充。
  * 批 9 增两切片：`settings`（开合 / 四段三态 / 向导 / 校验结果 —— `docs/desktop/design/UI.md` §1 设置面行）与
  * `projectInfo`（三读数 + 超阈标 + 相位 + 失败串）——**值面归接线层**（`renderer/mount-settings.mjs` 只经
  * `patchSettings` 落值），本档只持槽位 + 四条纯动作；`configured` 为**三态读数**（`null` = 未知）。
@@ -11,7 +12,8 @@
  * 语义（批档 §2.4（f）· §2.5 U28–U32）：
  *   ① 切片操作 = **纯函数**（`appendBlock` / `beginBackfill` / `endBackfill` / `setFollowing` /
  *      `returnToBottom` / `openTab` / `closeTab` / `requestCloseTab` / `confirmCloseTab` / `cancelCloseTab` /
- *      `togglePool` / `patchSettings` / `setWizardStep` / `dismissWizard`）——
+ *      `openRailForm` / `closeRailForm` / `togglePool` / `patchSettings` / `setWizardStep` / `dismissWizard` /
+ *      队列三动作 `enqueue` / `dequeue` / `drainQueue`（`pool.queue` 唯一写面 · 满队常量 `QUEUE_MAX` 单源 —— 批 A））——
  *      返回**新态**；拒收 / 无变化 ⇒ **原引用**（引用等值 ⇒ 零通知，视图层可据引用短路）；
  *   ② `set(next)` 逐键 `Object.is` 比较（`next` = 补丁（局部键）或整态（全键）—— 同一路径：
  *      `store.set(appendBlock(store.get(), block))`），**至少一键变更才通知**；回执 = `(state, changedKeys)`；
@@ -26,7 +28,9 @@
 /** 初态：`locale` 由引导面置位；`project` / `sessions` / `pool` 槽位在、消费面随后续批。
  *  `tabBadges` / `sessionMeta` / `poolCollapsed` = **槽位注册**（消费面已在册 —— `views/chrome.mjs` 会话头读
  *  `sessionMeta`、`requestCloseTab` 防御取 `tabBadges`、池面折叠读 `poolCollapsed`）⇒ 注册后零行为变化；
- *  三切片与 `pool` 三族皆 = **供给面写入**（值面未落 ⇒ 零节点 —— 禁假造）。 */
+ *  三切片与 `pool` 三族皆 = **供给面写入**（值面未落 ⇒ 零节点 —— 禁假造）。
+ *  `usage` 为**槽位注册**（写者 = `ev:usage` 归约 · 按会话 `key` 写）；消费面 = 状态栏读数节点
+ *  （`docs/desktop/design/UI.md` §1）—— 消费未落 ⇒ 注册后零行为变化。 */
 export function initialState() {
   return {
     locale: "en",
@@ -36,8 +40,10 @@ export function initialState() {
     tabs: [],
     activeTab: null,
     pendingClose: null,
+    railForm: null,
     tabBadges: {},
     sessionMeta: {},
+    usage: {},
     blocks: [],
     history: { hasOlder: false, inFlight: false, page: null },
     following: true,
@@ -147,6 +153,20 @@ export function cancelCloseTab(state) {
   return state.pendingClose == null ? state : { ...state, pendingClose: null }
 }
 
+/** 左列行形态（**换形态态单源** —— `docs/desktop/design/UI.md` §1 左列会话行 · 批 A ④；沿 `pendingClose` 先例）：
+ *  `{ key, mode }`，`mode ∈ {rename, delete}`（闭集 —— 表外面拒收）；键 / 模式形不合 ⇒ **原引用**（拒收）；
+ *  同键同形 ⇒ 原引用（无变化）。行键域 = 会话行串键（与行控件 `data-slot` 同域）。 */
+export function openRailForm(state, key, mode) {
+  if (typeof key !== "string" || (mode !== "rename" && mode !== "delete")) return state
+  if (state.railForm?.key === key && state.railForm.mode === mode) return state
+  return { ...state, railForm: { key, mode } }
+}
+
+/** 收形（取消 / 应用两出口共用尾）：无形态 ⇒ **原态**；有 ⇒ 清空（`tabs` / `activeTab` 不动）。 */
+export function closeRailForm(state) {
+  return state.railForm == null ? state : { ...state, railForm: null }
+}
+
 /** 标签状态位（T-DSK20 数据面）：四值码，优先序 待审批 > 运行中 > 完成 > 空闲；空集 ⇒ `"idle"`。
  *  词面映射（码 → 文案）归视图批 —— 本处不出词（批档 §2.6 D-5）。 */
 export function deriveTabBadge(states = []) {
@@ -164,6 +184,40 @@ export function togglePool(state, key) {
   const current = collapsed[key]
   const next = current !== true
   return next === current ? state : { ...state, poolCollapsed: { ...collapsed, [key]: next } }
+}
+
+/** 满队常量（**单源** —— `pool.queue` 队长上限；池面队列族与输入区共用同一个数）：
+ *  设计面只点名「常量单源」（`docs/desktop/design/UI.md` §1 输入区行 / §2 项 1「队列入池」）而**未定值** ——
+ *  值 8 = 本档实施选择（满队判据 / 提示行 / 不入队三事皆与该值无关）；披露 = 批次档 §5。 */
+export const QUEUE_MAX = 8
+
+/** 队列写面（`pool.queue` **唯一写面** —— 三纯动作 + 常量单源；条目形 `{ title, status: "queued" }`，
+ *  形单源 = 池面队列条目消费集 `renderer/views/activity.mjs:119-125`）：
+ *  ① `enqueue(state, title)` —— 尾追一条；**满队**（队长 ≥ `QUEUE_MAX`）∥ 非串 / 空白串 ⇒ **原引用**（不收）；
+ *  ② `dequeue(state)` —— 摘队首（只减不取值：值面读 `state.pool.queue[0]` —— 回合尾 flush **先发后出队**）；
+ *  ③ `drainQueue(state)` —— 排空队列（关页 / 复位路径）；空队 ⇒ **原引用**。
+ *  三动作皆态进态出（拒收 / 无变化 ⇒ 原引用 ⇒ 零通知 —— 同本档其余纯函数）。 */
+export function enqueue(state, title) {
+  const pool = state.pool ?? {}
+  const queue = Array.isArray(pool.queue) ? pool.queue : []
+  if (typeof title !== "string" || title.trim() === "" || queue.length >= QUEUE_MAX) return state
+  return { ...state, pool: { ...pool, queue: [...queue, { title, status: "queued" }] } }
+}
+
+/** 摘队首：空队 ⇒ 原引用。 */
+export function dequeue(state) {
+  const pool = state.pool ?? {}
+  const queue = Array.isArray(pool.queue) ? pool.queue : []
+  if (queue.length === 0) return state
+  return { ...state, pool: { ...pool, queue: queue.slice(1) } }
+}
+
+/** 排空队列：空队 ⇒ 原引用。 */
+export function drainQueue(state) {
+  const pool = state.pool ?? {}
+  const queue = Array.isArray(pool.queue) ? pool.queue : []
+  if (queue.length === 0) return state
+  return { ...state, pool: { ...pool, queue: [] } }
 }
 
 /** 设置族切片补丁：逐键 `Object.is` 比较 ⇒ 至少一键变更才落新引用；非对象补丁 / 无变化 ⇒ **原引用**

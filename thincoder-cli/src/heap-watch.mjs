@@ -9,23 +9,14 @@
  * 无绝对 MB 常量）；双档边缘触发（每档一次/进程——不重复刷屏）；零常态开销
  * （60s 一次 memoryUsage()，无输出——D-HW5）。
  *
- * 开关单点：`THINCODER_HEAP_WATCH`——关值集合 {`0`,`false`,`off`,`no`}（trim + 大小写
- * 不敏感）→ 不启动；未设/空串/其他值 → 启动（默认开——与 F3② 同约定）。
+ * 开关：配置键 `diagnostics.heapWatch`（默认开——与 F3① 同约定）——bin 入口读键后经
+ * `enabled` 参数显式传入；关 ⇒ 不注册定时器（返回惰性句柄）。
  *
  * 注入缝（N5 可测）：`sample` / `heapLimit` / `timer`——测试以假实现 + `checkNow()`
  * 直驱（零等待）；失败面全吞（采样抛错不阻断——样本失败静默跳过本次）。
  */
 import { getHeapStatistics } from "node:v8"
 import { logEvent } from "@thincoder/core/log.mjs"
-
-/** 关值集合（单点判定——§3.2 同约定复用）。 */
-export const HEAP_WATCH_OFF = new Set(["0", "false", "off", "no"])
-
-/** 开关判定（单点——grep 面：仅本模块读 env.THINCODER_HEAP_WATCH）。 */
-export function heapWatchEnabled(env = process.env) {
-  const v = String(env.THINCODER_HEAP_WATCH ?? "").trim().toLowerCase()
-  return !HEAP_WATCH_OFF.has(v)
-}
 
 // 订阅表（TUI 行接线——§8.3 订阅制；模块级：武装在 bin、订阅在 startTUI）
 const _subscribers = new Set()
@@ -45,14 +36,14 @@ export function heapWarnLine(used, limit, ratio) {
 
 /**
  * 启动看门狗（返回 `{ stop(), checkNow() }`——checkNow 直驱一次采样并返回本轮新发预警行）。
- * 关值（§8.3）→ 不注册定时器（返回惰性句柄）。
+ * 开关关（`enabled: false`）→ 不注册定时器（返回惰性句柄）。
  */
 export function startHeapWatch({
   intervalMs = 60_000,
   ratios = [0.7, 0.85],
   sample = process.memoryUsage,
   heapLimit = () => getHeapStatistics().heap_size_limit,
-  env = process.env,
+  enabled = true,
   timer = setInterval,
 } = {}) {
   const warned = new Set()
@@ -76,7 +67,7 @@ export function startHeapWatch({
     } catch { /* 失败面全吞（N5——采样/上限抛错不阻断、状态保持） */ }
     return out
   }
-  if (!heapWatchEnabled(env)) return { stop() {}, checkNow }
+  if (!enabled) return { stop() {}, checkNow }
   const handle = timer(checkNow, intervalMs)
   try { handle?.unref?.() } catch { /* unref 失败不阻断（一次性命令自然退出） */ }
   return {

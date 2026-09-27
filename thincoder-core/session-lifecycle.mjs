@@ -34,6 +34,10 @@ import { scheduleSessionGC } from "./session-gc.mjs"
 import { restoreEngTokens } from "./token-ttl.mjs"
 import { clearPlanMode } from "./agent-tools/plan.mjs"
 import { bindRecordStore, unbindRecordStore, RECORD_WINDOW_MESSAGES } from "./session-store.mjs"
+// 会话级档位（§6.21 判据句 4）判据单源：off 形族（`think-off.mjs`）+ 逐模型枚举
+// （`model-specs.mjs`）——两叶档（零 import）⇒ 不新增环，核内零第二份族别表。
+import { specForModel } from "./model-specs.mjs"
+import { thinkOffShape, thinkOffPath } from "./think-off.mjs"
 
 /** 恢复决策包装（SESSION.md §6.12 启动钩子，2026-09-06）：本端恢复入口触发一次残留 GC——
  *  scheduleSessionGC 内部**启动窗外延迟拍**（`GC_PASS_DELAY_MS` = 3s）+ 每进程每前缀去重，
@@ -131,6 +135,10 @@ export function applySession(agent, data, opts = {}) {
   agent._verifyPassed = false
   agent._slot = null // 粘性缓存清空——切换后重新认领（F1b）
   agent._slotMtime = null
+  // 会话级档位携带（§6.21 判据句 5——保存面的一半）：值 = 本槽 `effort` **原样**携带（表外 /
+  // 不可 off 的原值不静默改写——写面归一只在 `setSlotPrefs`）；缺键（老槽）⇒ `undefined` ⇒
+  // `saveSession` 不落该键（禁回填——同 `createdBy` 先例；键在而值为 `null` ⇒ 原样携 `null`）。
+  agent._slotEffort = Object.hasOwn(data, "effort") ? (data.effort ?? null) : undefined
   // ── 记录存储绑定（TUI-OOM-ROOTCAUSE · SESSION.md §6.14 绑定与对账 / 追加时点）──
   // opts.slot 在场（启动恢复 / 非占用的 /session 切换 / ACP 钉槽）→ 绑定（身份核验 + 对账 +
   // 窗口）——人读线 = store.tail(200)；未传（模式 F：被他人活进程占用的槽 / 测试 / ACP fork）
@@ -163,6 +171,23 @@ export function applySession(agent, data, opts = {}) {
     // 重算 compactThreshold（auto 时——阈值跟模型走；原在 bin 的 switched 分支——收拢本处）
     if (switched && agent.config?.agent?.compactThresholdAuto && agent.provider.model) {
       agent.config.agent.compactThreshold = resolveCompactThreshold(null, agent.provider).value
+    }
+    // 会话级档位施加（§6.21 判据句 4——在模型合并支之后，以**合并后**的 `provider.model` 判 spec；
+    // 三端共用本施加面）：`"off"` 记号 ⇒ 该模型有 off 路径才设关思考形（effort 族该形为 `null`
+    // ⇒ 另置 `reasoningEffort: "none"`——§16.4 载荷门，单源 = `think-off.mjs`）；枚举字面 ⇒ 直置；
+    // `null` / 缺键 / 表外串 ⇒ 不动（边界表第 1–3 行：老槽零行为变更，表外不静默改写）。
+    if (data.effort != null) {
+      // 非串 model（外端脏载 / 手工档）按未登记归一——本块不因类型脏载抛（同 `resolveEffortPatch` 口径）
+      const spec = specForModel(typeof agent.provider.model === "string" ? agent.provider.model : "")
+      if (data.effort === "off") {
+        if (thinkOffPath(spec)) {
+          const shape = thinkOffShape(spec)
+          agent.provider.thinking = shape
+          if (shape === null) agent.provider.reasoningEffort = "none"
+        }
+      } else if (spec?.reasoningEffortEnum?.includes(data.effort)) {
+        agent.provider.reasoningEffort = data.effort
+      }
     }
     return switched
   }
@@ -269,6 +294,7 @@ export function resetSessionState(agent) {
   agent._pendingReminders = []
   agent._slot = null
   agent._slotMtime = null
+  agent._slotEffort = null // 新会话无档位（§6.21 判据句 5：全新槽规范形 = `effort: null`）
   agent._osReminderInjected = false
   // §6.11（2026-09-08）：一次性注入标志换名——_restartReminderInjected 推断退役（F3——
   // _sessionStart != null 伪触发）；/new 清零新标记——恢复武装/启动句标志不跨会话复活

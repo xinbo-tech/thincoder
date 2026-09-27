@@ -1,7 +1,7 @@
 # 桌面端（DESKTOP）· 渲染面实现工艺
 
 > 板块 = **桌面端渲染面（前端）实现工艺**——零框架 DOM 层 · 单状态树 `store` · 渲染粒度与流式缝合 · 有界渲染窗口 · 回填与跟滚。
-> 需求侧 = `docs/desktop/requirements/PROJECT.md`（§4 功能点 D1–D12 · §7 验收 A1–A4 · §8 依赖面 P1–P4）。
+> 需求侧 = `docs/desktop/requirements/PROJECT.md`（§4 功能点 D1–D15 · §7 验收 A1–A4 · §8 依赖面 P1–P4）。
 > 同部分相关档：进程与目录形态（渲染面目录与模块注）= `docs/desktop/design/SHELL.md` §1 · 通道与载荷 = `docs/desktop/design/IPC.md` · 界面形态与交互 · 借用清单形态面 = `docs/desktop/design/UI.md` · 逐文件预算（§4.1）= `docs/desktop/design/PROJECT.md`。
 > 核机制面（agent 主循环 / 工具 / 记忆 / 配置 / 会话）**只住核**——本档只做**接入面**设计，不重述核语义（单一权威源）。
 > 建档：2026-09-25（桌面端设计批 1 · 分档轮）；本档坐标 = as-of 2026-09-25 实核（仓根 = `thincoder/`）。
@@ -15,10 +15,11 @@
 | 零框架零构建 | 原生 ESM + 手写 DOM；不引框架、不引打包器、无构建步骤 | `docs/desktop/design/PROJECT.md` §2 KD-4 |
 | DOM 层 | `dom.mjs` 手写 DOM 工具 | `docs/desktop/design/SHELL.md` §1 |
 | 视图面形态 | 视图档 = 纯函数构描述符树 + 薄挂载（机检可脱 DOM；文案一律经 `t()`） | 本档 §1.1 |
-| 接线形通则 | handlers 给 ⇒ 落 `onClick` 且**无** `disabled`；缺省 ⇒ `disabled: true` + `data-action`（**诚实非死控**——树形只随 handlers 变） | 本档 §1.1 |
-| 单状态树 | `store.mjs` 单状态树 + 订阅（会话 / 标签页 / 活动池 / 待审批 / 设置 / 项目级信息——批 9 增两切片），由 IPC 事件驱动 | `docs/desktop/design/SHELL.md` §1 · `docs/desktop/design/IPC.md` §1 |
+| 接线形通则 | handlers 给 ⇒ 落 `onClick` 且**无** `disabled`；缺省 ⇒ `disabled: true` + `data-action`（**诚实非死控**——树形只随 handlers 变）· **键盘面**（批 A）= 挂载面自挂 `keydown`（审批卡根 / 标签条加速键 `Ctrl/Cmd+1..9`——文档级 · 命中才 `preventDefault`） | 本档 §1.1 |
+| 单状态树 | `store.mjs` 单状态树 + 订阅（会话 / 标签页 / 活动池 / 待审批 / 设置 / 项目级信息——批 9 增两切片；**批 A 增** `questions` / `tasks` 两切片 + 队列纯动作 `enqueue` / `dequeue` / `drainQueue`；**批 A 修正轮增**换形态态 `railForm{ key, mode }` + 两纯动作 `openRailForm` / `closeRailForm`；**批 B 增** `usage` 切片），由 IPC 事件驱动 | `docs/desktop/design/SHELL.md` §1 · `docs/desktop/design/IPC.md` §1 |
 | 渲染粒度 · 流式缝合 | `chat-stream.mjs` 按块更新、不整段重画（token / 推理块 / 工具卡增量） | `docs/desktop/design/SHELL.md` §1 · `docs/desktop/design/PROJECT.md` §4.1 |
 | 设置面 / 向导（批 9） | 两形构树（`thincoder-desktop/renderer/views/settings.mjs` / `thincoder-desktop/renderer/views/onboarding.mjs`）+ 薄挂载出档（`thincoder-desktop/renderer/mount-settings.mjs`）；**零新事件通道**（请求通道）；向导闸 = `config:read` 回执 `configured` | 本档 §1.1 · `docs/desktop/design/UI.md` §1 设置面 / 首启向导行 |
+| 提问与计划卡 · 输入区（批 A） | 提问卡 / 计划卡 = 流内非块节点，纯构树（`thincoder-desktop/renderer/views/question.mjs` / `thincoder-desktop/renderer/views/plan.mjs`——零 `store` import）· 输入区 = 中区底行挂载出档（`thincoder-desktop/renderer/mount-composer.mjs`，自 `app.mjs` 拆出）· 卡族挂载与出站 = `thincoder-desktop/renderer/mount-cards.mjs`（批 A 修正轮——`question:respond` 出站 + 清本键 `questions` 切片 + 清位标） | 本档 §1.1 · `docs/desktop/design/UI.md` §1 输入区 / 提问呈现 / 计划面行 |
 | 有界渲染窗口 | 见本档 §2 | 本档 |
 | 回填与跟滚 | 见本档 §3 | 本档 |
 
@@ -27,20 +28,34 @@
 - **两层分家**：视图档（`thincoder-desktop/renderer/views/*.mjs`）分两层 —— ① **纯构树**（`xxxModel(state)` → 态对象；`xxxTree(model)` → **结构描述符树**）；② **薄挂载**（`mountXxx(root, state)` = `clear` + `build` + `append`——**建树面单点**）。视图档 **DOM 触面四处** = 建树（本条）· 接线（下条）· 帧尾态刷（`syncChrome`——本档 §1.1）· 帧尾滚动作（`settleFrame`——本档 §3）。
 - **接线面（第二形）**：事件 / 状态机型视图档（如滚动面）以 **`attachXxx(root, deps)`** 落形——`deps` = 出口回调集（`on*` 键：回填 / 复跟 / 停跟）+ **只读口** `guards?()`（缺 ⇒ 恒假），程序化滚动作经返回 handle 出（不占 `deps` 键）；阈值常量与事件订阅（`scroll` 用 `passive`）收口于该档（常量单源声明 = 档头）；判定与算式一律纯函数（`scrollAction` / `compensateTop` / `nextWindow` / `smoothWindowOpen`）。
 - **接线面依赖面（测试缝）**：`attachXxx` 的 DOM 依赖 = root 三读数（`scrollTop` / `scrollHeight` / `clientHeight`）+ `addEventListener` / `scrollTo` ⇒ **假 root 可注入**（接线面入自动面：直调出口 + 断言 store 读数）；**真实事件触发（用户真滚）仍归人工走查**。
-- **事件归约面（批 8 落）**：`ev:*` 九通道 → 切片写者**单源** = `thincoder-desktop/renderer/events.mjs`——`reduce(state, ev)` 纯函数（零 DOM ⇒ 平 node 直测）+ `applyPage(state, receipt)`（页回执 → 首屏 / 回填两径）+ `blockOfMessage(msg)`（核 message → 块五型：用户 / 助手 / 推理 / 工具 / 错误）；
-  订阅接线拆出 `thincoder-desktop/renderer/events-subscribe.mjs`——`attachEvents({ on, store, invoke })`（九通道订阅 · 退订句柄在场 · 回合尾标题刷新）· 单向依赖归约档（无环）。
+- **事件归约面（批 8 落）**：`ev:*` 十通道 → 切片写者**单源** = `thincoder-desktop/renderer/events.mjs`——`reduce(state, ev)` 纯函数（零 DOM ⇒ 平 node 直测）+ `applyPage(state, receipt)`（页回执 → 首屏 / 回填两径）+ `blockOfMessage(msg)`（核 message → 块五型：用户 / 助手 / 推理 / 工具 / 错误）；
+  订阅接线拆出 `thincoder-desktop/renderer/events-subscribe.mjs`——`attachEvents({ on, store, invoke, onTurnTail })`（十通道订阅 · 退订句柄在场 · 回合尾标题刷新 + 输入区 flush 窄口）· 单向依赖归约档（无环）。
   写者与读者键面同源 = `key`（`docs/desktop/design/IPC.md` §1 会话键面）。
-- **池切片清点口径（批 8 落）**：池条目入池 = `ev:tool-call`（开始）、`ev:tool-result` 只收束 `status`——**清点 = 全量在场**（收束不摘除 ⇒ 长会话池切片单调增长）；**窗限 / 归档 = open**（登记 = `docs/desktop/design/PROJECT.md` §10 · `docs/desktop/design/UI.md` §2 项 1）。
+  **批 A 增（两通道归约）**：`ev:question` / `ev:task` 由「直返 `state`」改**写切片**（`state.questions` / `state.tasks`——同 `key` 就地替换零叠条，**不入 `pool`**）；队列写者 = `thincoder-desktop/renderer/store.mjs` 纯动作（`pool.queue` 唯一写面；**出队即摘除** = `docs/desktop/design/UI.md` §2 项 1 行）。
+  **批 B 增（一通道归约）**：`ev:usage` 写 `usage` 切片（按会话 `key` · 同键就地替换 · 首写自种——**归约面唯一写者**；未至 / 非正数 ⇒ 零节点——KD-20，单源 = `docs/desktop/design/PROJECT.md` §2 KD-20 行）。
+- **池切片清点口径（批 8 落）**：池条目入池 = `ev:tool-call`（开始）、`ev:tool-result` 只收束 `status`——**清点 = 全量在场**（收束不摘除 ⇒ 长会话池切片单调增长）；
+  **窗限 / 归档 = open**（登记 = `docs/desktop/design/PROJECT.md` §10 · `docs/desktop/design/UI.md` §2 项 1）；**队列族例外（批 A 落）** = 出队即摘除（`pool.queue` 非单调——写者 = `thincoder-desktop/renderer/store.mjs` 纯动作）。
+- **回合尾三径（判据单源 · 批 A 修正轮）**：回合尾 = `ev:activity`（无 `fields`）的 `done` ∨ `stopped` ∨ **`ev:error`**（宿主错误结算——`ev:error` 行单源 = `docs/desktop/design/IPC.md` §1）；三径**同判据**（谓词 `isTurnTail` 住 `thincoder-desktop/renderer/events.mjs`）：**谓词入参形（点名）** = 吃**两通道形**——
+  `ev:activity`〔**无** `fields`〕∧ `event ∈ {done, stopped}` ⇒ 真 ∥ `ev:error`（单形载荷 `{ key, message }`——单源 = `docs/desktop/design/IPC.md` §1）⇒ 真 ∥ 余 ⇒ 假（两通道**同调此谓词**——消费面 = 输入区 flush / 回合尾标题刷新；实施落点 = 现谓词体只吃 `ev:activity` 形，批 A 扩吃 `ev:error`）：错误径 ⇒ 本键 `running` 清 + 位落 `done`（落点 = 归约面 `onError`）；
+  消费面三处：输入区 flush（`docs/desktop/design/UI.md` §1 输入区行——**先发后出队**：`ok` 假 ∥ 抛 ⇒ 留队 + `console.error`）· 回合尾标题刷新（`thincoder-desktop/renderer/events-subscribe.mjs`）· `stopped` 兼清本键提问项（本档「卡面在场与随动」条）。
 - **回填接线口径（接线态）**：`onBackfill` 出口与只读口 `guards()` 两读数**同刻接线**——`hasOlder` 源 = `history.hasOlder`（页回执落态）· `inFlight` = 回填在途（`beginBackfill` / `endBackfill` 置清）；触发三步判据 = 本档 §3；摘要块在场仍以 `data-hidden` 为判据（`guards` 不参与树形）。
 - **描述符规格**：`{ tag, props, children }` —— `tag` 必填；`props` = 属性 / 事件（`on*` 键 = 监听器；`true` = 布林属性；`false` / `null` / `undefined` = 不落）；`children` = 子描述符 / 裸串（裸串 = 文本节点；`null` = 空位跳过）。**唯一构造点** = `thincoder-desktop/renderer/dom.mjs` 的 `build(node)`（递归；入参面与同档 `el()` 同形）。
 - **接线形通则**：视图档收 handlers 面的控制项**两态落形**——handlers 给 ⇒ 落 `onClick`（携带本项键）、**不落** `disabled`；缺省 ⇒ `disabled: true` + `data-action` 机读锚（**诚实非死控**：不落假接线、不留死控件）——树形**只随 handlers 变**，不随状态另定形。关闭确认面 = 树面关闭控件**原位换两键**（形态单源 = `docs/desktop/design/UI.md` §1 交互行）。
+- **键盘面（接线第二口径 · 批 A 落）**：挂载面可自挂 `keydown`（既有 = 审批卡根（`thincoder-desktop/renderer/views/approval.mjs`）；批 A 增 = 标签条加速键 `Ctrl/Cmd+1..9`）——加速键**取文档级**（焦点在输入区时亦生效），**命中才** `preventDefault`；命中判据 = **键 ∈ 1..9 ∧ 第 N 档存在**（第 N 档不存在 ∥ 表外键 ⇒ **零动作不吞键**）；形态单源 = `docs/desktop/design/UI.md` §1 交互行 / 标签条行。
+- **页生命周期（接线第三口径 · 批 A 落）**：页键写者**单源** = `openSession`（`thincoder-desktop/renderer/events.mjs`：键 `null` ⇒ 关页 · 开页清本键 `done` 位标）；开页路 = `openPage` / `activateSession` / `createSession`（`thincoder-desktop/renderer/mount-sessions.mjs:63` / `:100` / `:109`）——键面 `activeTab` 与页键 `activeSession` **同刻随动**。
+- **关标签 ⇒ 页随动（零新路 · 批 A 落）**：出口**共用尾** = 比 `activeTab` 前后差 —— 关**活动**标签 ⇒ `activateSession(邻位键)`（`session:switch` ⇒ 邻位页读，与左列点行 / 标签激活**同一路**）；关**唯一**标签 ⇒ `openSession(state, null)` 关页（中区 `none` 态 = **零节点**，不新造空态视觉）；关**非活动** / 拒收 / 待确认 ⇒ **零动作**（键未变 ⇒ 页不动）。
+- **删除会话（左列行控件 · 同批）⇒ 同源出口**：`session:delete` 回执 `ok` ⇒ 键面 `closeTab(本键)` + 上条关闭尾（活动 ⇒ 邻位接管 · 唯一 ⇒ 关页）；`ok:false`（核拒）⇒ 零动作（**不造死标签**——已删键的 `session:switch` 必拒）。
+- **幽灵更新（已覆盖 · 零新增机制）**：块面 / 页写既有键过滤（`ev.key === state.activeSession`）⇒ 关页后已关会话的到达事件零入块面；`sessionMeta` / `tabBadges` 仍写已关键，而标签条只遍历 `tabs` ⇒ 零可见影响（登记为观察，不新增过滤）。
+- **页窗暂留（登记 · 非本批新增）**：页键变更至邻位页回执落之间，屏上暂留前页块（既有口径：页数据随 `history:page` 回执整置）；消解需第三态「载入中」= 新词键 / 新形态 ⇒ 新需求面，本批不落（登记 = `docs/desktop/design/PROJECT.md` §10）。
 - **判据面**：纯构树**零 DOM** ⇒ 视图行为可在平 node 直测（断言描述符树：机器读面用 `data-*` 承载，不依赖 DOM 实现）；挂载函数不进自动面（DOM 面随人工走查）。
 - **文案纪律**：视图档内面向用户字符串**一律经 `t()`**（词表面）——档内零硬编码文案（含英文；机检面 = 词表键哨兵 / 源扫描）。
 - **帧面分派（判据面）**：块面比较对 = 两帧 **`state.blocks`**（全列表引用 + 逐位元素引用）——非模型窗列表（窗列表每帧新数组 ∧ 饱和追加时位移 ⇒ 每 token 全量重挂）；四档判据 = `streamDelta`、分派纯函数 = `paintPlan({ prev, next, changedKeys })` → `{ tier, index, remount, refresh }`（平 node 直测）。
 - **全量重挂键 = `activeSession` / `locale`**：两键变 ⇒ 无条件全量重挂；其余键不重挂——`mountChat` 的 `clear` 清宿主 ⇒ 滚动位置归零（停跟翻转时重挂 = 把用户拽回顶部）。
 - **帧尾态刷（刷新面单点）**：每帧末尾一处 `syncChrome(root, model)`（`chat.mjs` DOM 面 · 幂等 · 与档位解耦——`none` 帧同刷，`refresh` 恒真 = 无帧豁免）⇒ 根锚四（语义单源 = 本档 §2 / `docs/desktop/design/UI.md` §1 对话流行）+ 两控件（摘要块 `hidden > 0` · 药丸 `!following`）在场与文本随判据；`none` 态零节点化不破（只摘不插）。
-- **插入点纪律**：块节点插入点 = **首个 `[data-card="approval"]` 之前**（卡缺席 ⇒ `[data-pill]` 之前；两者皆缺席 ⇒ 末位）——根子序 = [摘要块?] → 块序列 → [卡?] → [药丸?]。
-- **卡面在场与随动（帧尾态刷 · 本批）**：卡节点 `[data-card="approval"]` 的在场与文本随帧内审批判据刷（形态单源 = `docs/desktop/design/UI.md` §1 审批呈现行）；卡 = **非块节点** ⇒ 不入块序不变式（本档 §2），块面比较对与 `data-blocks` 语义不受其影响。
+- **插入点纪律（批 A 扩三卡）**：块节点插入点 = **首个卡节点之前**——卡三类 = `[data-card="approval"]` / `[data-card="question"]` / `[data-card="task"]`，卡间 DOM 次序固定 = 待审批 → 提问 → 计划（缺者跳过）；卡缺席 ⇒ `[data-pill]` 之前；两者皆缺席 ⇒ 末位——根子序 = [摘要块?] → 块序列 → [卡序列?] → [药丸?]。
+- **卡面在场与随动（帧尾态刷 · 批 A 扩三卡）**：卡节点 `[data-card="approval"]` / `[data-card="question"]` / `[data-card="task"]` 的在场与文本随帧内判据刷（形态单源 = `docs/desktop/design/UI.md` §1 审批呈现 / 提问呈现 / 计划面三行）；`question` 卡**退场非乐观**（回执 `ok` 真 ⇒ 清除；失败 ⇒ 卡留可重试 + `console.error`——出口口径见该行；
+  **中断径** = `msg:interrupt` ⇒ 本键各门按取消结算 ⇒ 终局 `stopped` ⇒ **事件面摘本键提问项** + 清位标——判据 = 终局事件面，非回执（单源 = 本档「回合尾三径」条））；
+  三卡皆**非块节点** ⇒ 不入块序不变式（本档 §2），块面比较对与 `data-blocks` 语义不受其影响。
 - **设置面与向导形（批 9 落）**：两形构树（`thincoder-desktop/renderer/views/settings.mjs` 四段面〔渠道 / 模型与档位 / agent 参数 / MCP〕· `thincoder-desktop/renderer/views/onboarding.mjs` 三步向导——纯描述符 + 薄挂载，形态单源 = `docs/desktop/design/UI.md` §1）· 接线出档 = `thincoder-desktop/renderer/mount-settings.mjs`（自 `app.mjs` 拆出）；
   **零新事件通道**——读数 / 写入全走请求通道：写成功**同回带** `{ locale, dict, configured }` ⇒ `initDict` 重刷 + 向导闸随新档态（**免二跳重调**）；填 key 经 `provider:verify` 真调一次；**闸 = `configured`**（档存在性——向导不进 / 设置面可进 + 明示不可读；零静默重置）。
   **容器面（批 9 裁定）**：挂载根 = `index.html` 单容器 `[data-slot="settings"]` 自身（窗口级覆盖层面——设置树 / 向导树**互斥**占槽：`configured` 假 ⇒ 向导树占位；退场 = `clear` 清空容器 ⇒ 主 UI 可用）。
@@ -105,3 +120,12 @@
 - 2026-09-26（**批 9 修复轮 #94**——设计评审 §3 十条逐号 + doc-check 清项）：§1 索引行与 §1.1 设置面与向导形条**补「（拟新增）」六处** + 该条**行宽收正**（≤300——零语义）；
   §1.1 该条写路径口径**收正**——写成功**同回带** `{ locale, dict, configured }`（**免二跳重调** · **零新事件通道**）。
 - 2026-09-26（**批 9 修正轮 #9**——实施后修正轮）：§1 索引行与 §1.1 设置面与向导形条**去「（拟新增）」六处**（两视图档 + 出档已交付——盘上皆落）；§1.1 增**退场口径**条（子节点面 ∥ 属性面——退场后宿主属性集 ⊆ 挂载前；对照 `thincoder-desktop/renderer/views/chat.mjs:227`；`views/onboarding.mjs:156-157` 处所加属性未见复位回路 ⇒ 码面池）；明细 = `docs/batches/2026-09-26-desktop-impl-9.md` §2.16。
+- 2026-09-26（**批 A 对话面板 · 能对话**）：§1 索引增「提问与计划卡 · 输入区」行 + 单状态树行补两切片与队列纯动作 · §1.1 事件归约面条补 `ev:question` / `ev:task` 两通道归约（由**直返**改**写切片**）· 池切片口径条补**队列族例外**（出队即摘除）；
+  插入点纪律条改**三卡序**（待审批 → 提问 → 计划）· 卡面在场与随动条扩三卡 + `question` 卡退场非乐观；明细 = `docs/batches/2026-09-26-desktop-chat-panel-a.md` §2。
+- 2026-09-26（**批 A · ⑤**——键盘面）：§1 索引「接线形通则」行与 §1.1 增**键盘面**条（挂载面自挂 `keydown`——既有 = 审批卡根 / 批 A 增 = 标签条加速键 `Ctrl/Cmd+1..9`，文档级 · 命中才 `preventDefault` · 表外键零动作不吞键；形态单源 = `docs/desktop/design/UI.md` §1 交互行）。
+- 2026-09-26（**批 A 修正轮**——设计评审 §3 十五条逐号点修）：§1 索引两行随动（「单状态树」补 `railForm` + 两纯动作 ·「提问与计划卡 · 输入区」补 `mount-cards.mjs`（拟新增 · 批 A 修正轮））·
+  §1.1 增**回合尾三径**条（`done` / `stopped` ∨ `ev:error`——`isTurnTail` 判据单源；错误径清 `running` + 位落 `done`）· 键盘面条补命中判据（**键 ∈ 1..9 ∧ 第 N 档存在**）· 卡面在场与随动条补**中断径**（终局 `stopped` ⇒ 事件面摘提问项——判据非回执）。
+- 2026-09-26（**批 A 二轮点修**——设计评审 §3 轮次 2 发现 5）：§1.1 回合尾三径条补 `isTurnTail` **谓词入参形**（吃两通道形：`ev:activity` 无 `fields` ∧ `event ∈ {done, stopped}` ∥ `ev:error` 单形）——两通道同调此谓词（实施落点 = 现谓词体只吃 `ev:activity` 形）· 行宽重排（§1.1 回合尾三径条超 300 ⇒ 分句断行，零语义）。
+- 2026-09-27（**批 A 收口轮**——实施后随动收正）：§1 索引「提问与计划卡 · 输入区」行去「（拟新增）」四处（两视图档 + 两挂载档已落盘）· §1.1 订阅面条 `attachEvents` 补第 4 键 `onTurnTail`（输入区 flush 窄口）· §1.1 页生命周期条开页路宿主收正（`thincoder-desktop/renderer/mount-sessions.mjs:63` / `:100` / `:109`——响应表 1）。明细 = `docs/batches/2026-09-26-desktop-chat-panel-a.md` §2.13。
+- 2026-09-27（**批 B 修正轮**——设计评审 §3 十五条逐号点修）：§1.1 事件归约面条与订阅面条**九通道 ⇒ 十通道**（`ev:usage` 入册——计数与 `docs/desktop/design/IPC.md` §1 同源）；档头需求侧行 `D1–D12 ⇒ D1–D15`。
+- 2026-09-27（**批 B 收口轮**——实施后随动收正）：§1 索引「单状态树」行补批 B 增 `usage` 切片 · §1.1 事件归约面条补批 B 一通道归约（`ev:usage` 写 `usage` 切片——KD-20）。明细 = `docs/batches/2026-09-27-desktop-chat-panel-b.md` §2。

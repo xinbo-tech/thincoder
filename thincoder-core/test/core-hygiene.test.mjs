@@ -100,6 +100,11 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
  * `test/batch.test.mjs` 先例）。
  * 拆分方案 = 越 500 硬限时按族现裁（会诊 / 同步族候选外提——夹具同根 ⇒ 拆档 = 复制脚手架）；
  * 触发条件 = 越 500 硬限 · 该档下次实质改动。
+ * env-config-purge 批（2026-09-27 · `docs/batches/2026-09-27-env-config-purge.md` §2.3 行限段）新增登记
+ * `traces/trace-store.mjs`（**302**——写面测试缝（`_tracesRoot` 声明 + set / reset 对）+ 写门同形 + 头注 / 落点注改述）：
+ * 299 → **302**（净 +3）越线；设计预裁「登记不拆」——拆分计划已登设计档
+ * `docs/core/design/CORE-UNIFICATION.md` §2.8.1 子表行 18（拆点 = 序列化面 `OMIT` / `scalarJson` / `writeValue`
+ * 外提姊妹档（`jsonl.mjs` 式），re-export 保 import 面）；消解条件 = 越 500 硬限或该档下次实质改动。
  */
 const SOFT_LINE_REGISTRY = new Set([
   "agent/dispatch.mjs", "agent/helpers.mjs", "agent/setup.mjs", "agent.mjs",
@@ -112,6 +117,7 @@ const SOFT_LINE_REGISTRY = new Set([
   "memory/schema.mjs", "model-specs.mjs", "process-probe.mjs", "provider/core.mjs", "provider/responses.mjs",
   "session-lifecycle.mjs", "session-slots.mjs", "session-slots-manifest.mjs", "session-store.mjs", "session-gc.mjs", "test/batch.test.mjs", "test/manifest.test.mjs", "test/model-specs.test.mjs", "test/session-gc-stale.test.mjs", "test/turn-cap-checkpoint.test.mjs",
   "test/provider-merge.test.mjs", "test/session-slot-write.test.mjs", "test/setup-reminders.test.mjs", "test/tool-seams-agent.test.mjs", "test/compress-form.test.mjs", "test/tool-seams.test.mjs",
+  "traces/trace-store.mjs",
   "tools/edit-diff.mjs", "tools/file.mjs", "tools/git.mjs",
   "tools/lsp.mjs", "tools/repomap.mjs", "tools/shared.mjs",
 ])

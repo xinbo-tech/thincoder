@@ -19,7 +19,7 @@ import {
   cancelSyncChild, mergeChildMutations,
 } from "@thincoder/core/agent-tools/subagent-async.mjs"
 import { STOPPED_MARK } from "@thincoder/core/agent/spawn-child.mjs"
-import { todayLogPath } from "@thincoder/core/log.mjs"
+import { _resetLogsDirForTest, _setLogsDirForTest, todayLogPath } from "@thincoder/core/log.mjs"
 
 /** 最小 parent agent（registry/guard 记账面——mergeChildMutations 读写）。 */
 function mkParent(over = {}) {
@@ -168,8 +168,7 @@ test("controller 链组 4：base abort → ctrl 链式（嵌套递归）+ alread
 
 test("T-AF12 sync ⏹ 日志面（F-12）：提交点直记 ev:cancelled 恰 1 条（id = role#N）；error 两分支零记录", () => {
   const dir = mkdtempSync(join(tmpdir(), "tc-af-sync-log-"))
-  const prev = process.env.THINCODER_LOG_DIR
-  process.env.THINCODER_LOG_DIR = dir
+  _setLogsDirForTest(dir)
   try {
     const ctrl = new AbortController()
     const parent = mkParent()
@@ -182,8 +181,7 @@ test("T-AF12 sync ⏹ 日志面（F-12）：提交点直记 ev:cancelled 恰 1 �
     assert.equal(cancelled.length, 1, "ev:cancelled 恰 1 条（error 两分支零新增）")
     assert.equal(cancelled[0].id, "coder#1", "id = registry 键 role#N（与异步取消族同事件名 / 同字段形）")
   } finally {
-    if (prev === undefined) delete process.env.THINCODER_LOG_DIR
-    else process.env.THINCODER_LOG_DIR = prev
+    _resetLogsDirForTest()
     rmSync(dir, { recursive: true, force: true })
   }
 })

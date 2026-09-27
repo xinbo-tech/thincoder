@@ -1,7 +1,7 @@
 /**
  * run.mjs — 单测试入口（`docs/desktop/design/PROJECT.md` §4.1）：清单 ↔ 盘上**两向自检** + `node --test` 派发。
  * 显式清单而非通配：盘上未登记的 `*.test.mjs` 永不执行 ⇒ 反查即失败（蓝本 = `thincoder-vscode/test/run.mjs`）。
- * 本批无集成域（不建 `test/integration/`）⇒ 只落单元清单；软链目录（junction）遍历穿不过 ⇒ 出错即判红（不静默漏收集）。
+ * 清单 = 单元域 + 集成域（`test/integration/` 真进程用例）同册；软链目录（junction）遍历穿不过 ⇒ 出错即判红（不静默漏收集）。
  * 命名 `.mjs` 而非 `.test.mjs`——runner 只收集 `*.test.mjs`，本档是启动器。
  */
 import { spawnSync } from "node:child_process"

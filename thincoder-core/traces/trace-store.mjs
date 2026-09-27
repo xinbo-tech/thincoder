@@ -11,9 +11,8 @@
  *   写盘异步（node:fs/promises——不 await）；落盘失败静默降级（不抛错、不阻塞
  *   chat() 返回）。recordChatTrace 返回落盘 promise——仅供测试/显式消费方 await。
  * - 测试隔离：node --test 进程（NODE_TEST_CONTEXT）默认不写盘——防测试事件污染真实
- *   轨迹目录（既有测试跑真实 agent 管线会产生数百次 chat 调用）；显式设置
- *   THINCODER_TRACES_DIR 强制写入该目录（traces.test.mjs 用它隔离临时目录——
- *   与 log.mjs 的 THINCODER_LOG_DIR 同惯例）。
+ *   轨迹目录（既有测试跑真实 agent 管线会产生数百次 chat 调用）；显式测试缝
+ *   （`_setTracesRootForTest`）强制写入该目录（与 log.mjs 同惯例——CONFIG.md §6.2）。
  * - 脱敏（D-TR2）：复用 log.mjs 字段名黑名单（apikey/designtoken/password/secret/
  *   token/authorization/proxyuri/proxy）+ SECRET_FORM 形态扫描（redactSecret）——对
  *   messages/content/reasoning/toolCalls/error 全字段应用；不发明新遮蔽模式。
@@ -44,16 +43,20 @@ import { configDir, loadConfig } from "../config.mjs"
 import { redactSecret, errText, classifyErr } from "../log.mjs"
 import { normalizeCwd } from "../session-slots.mjs"
 
-/** 轨迹根目录：THINCODER_TRACES_DIR（测试隔离/override——同 THINCODER_LOG_DIR
- *  惯例）> ~/.thincoder/traces（configDir——D-TR3——与 sessions/ 同域）。 */
+/** Test seam: override the traces root (process-internal seam — CONFIG.md §6.2 ③ 通道). */
+let _tracesRoot = null
+export function _setTracesRootForTest(p) { _tracesRoot = p }
+export function _resetTracesRootForTest() { _tracesRoot = null }
+
+/** 轨迹根目录：显式测试缝 > ~/.thincoder/traces（configDir——D-TR3——与 sessions/ 同域）。 */
 export function tracesRoot() {
-  return process.env.THINCODER_TRACES_DIR ?? join(configDir, "traces")
+  return _tracesRoot ?? join(configDir, "traces")
 }
 
 /** 写门（测试隔离）：test runner 进程（NODE_TEST_CONTEXT）默认跳过——除显式
- *  THINCODER_TRACES_DIR override（traces.test.mjs 隔离临时目录）。 */
+ *  测试缝 override（轨迹测试隔离临时目录）。 */
 function writeEnabled() {
-  if (process.env.NODE_TEST_CONTEXT && !process.env.THINCODER_TRACES_DIR) return false
+  if (process.env.NODE_TEST_CONTEXT && _tracesRoot === null) return false
   return true
 }
 
@@ -292,7 +295,7 @@ export function recordChatTrace(provider, opts = {}, result = null, error = null
 }
 
 /** D-TR10 清理面（D-TR11 目录级三段梯）——实现外提 `traces/trace-cleanup.mjs`；此处包装保
- *  既有 import 面与缺省 `dir`（`tracesRoot()` 单源——测试经 `THINCODER_TRACES_DIR` 隔离）。
+ *  既有 import 面与缺省 `dir`（`tracesRoot()` 单源——测试经 `_setTracesRootForTest` 隔离）。
  *  调用点 = 每写 prune（经 `maybePruneTraces`）+ 启动清理（壳侧）；返回删除文件数。 */
 export function cleanupTraces({ dir = tracesRoot(), retentionHours = 24 } = {}) {
   return cleanupTracesImpl({ dir, retentionHours })

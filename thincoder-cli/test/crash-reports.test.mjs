@@ -1,6 +1,6 @@
 /** crash-reports.test.mjs — CRASH-REPORTS 用例宿主（近堆上限堆快照 F3 + 提示行事实段——台账
  * #212；设计档 = docs/cli/design/CRASH-REPORTS.md §2.2/§3）：用例 T1-T5 / T7 / T7b / T7c——
- * 武装注入缝 + env 开关矩阵 + 武装失败不阻断 + API 存在性守护 + purge/判定集两态。
+ * 武装注入缝 + heapSnapshot 参数两态 + 武装失败不阻断 + API 存在性守护 + purge/判定集两态。
  * **真快照不跑**（实测代价 236MB / ≈10s @64MB 堆——T8 = 手动 QA 面，不进套件）；
  * 全部用例快层（无真 spawn / 无真快照——AC8）。 */
 import { test, after } from "node:test"
@@ -26,33 +26,29 @@ const OLD = new Date(Date.now() - 31 * 24 * 3_600_000) // > 30 天淘汰窗（pu
 test("T1 默认武装：armHeapSnapshot 恰 1 次、参数 1；返回 dir；目录已建（AC1）", () => {
   const dir = join(tmpRoot(), "x", "y") // 深层不存在——顺带核 mkdir 预建
   const arm = spy()
-  const ret = prepareCrashReporting({ dir, env: {}, armHeapSnapshot: arm })
+  const ret = prepareCrashReporting({ dir, armHeapSnapshot: arm })
   assert.equal(ret, dir, "返回目录路径")
   assert.deepEqual(arm.calls, [1], "武装恰一次、参数 1")
   assert.ok(statSync(dir).isDirectory(), "目录已建（Node 对 fatal 静默不写——预建是必要动作）")
 })
 
-test("T2 关值矩阵（大小写 / 空格变体）→ 零武装（AC2）", () => {
-  for (const v of ["0", "false", "off", "no", " 0 ", " FALSE ", "Off", "\tNO\n"]) {
-    const arm = spy()
-    prepareCrashReporting({ dir: tmpRoot(), env: { THINCODER_HEAP_SNAPSHOT: v }, armHeapSnapshot: arm })
-    assert.deepEqual(arm.calls, [], `关值 ${JSON.stringify(v)} 不武装`)
-  }
+test("T2 关值单例：heapSnapshot:false → 零武装（AC2）", () => {
+  const arm = spy()
+  prepareCrashReporting({ dir: tmpRoot(), heapSnapshot: false, armHeapSnapshot: arm })
+  assert.deepEqual(arm.calls, [], "heapSnapshot:false 不武装")
 })
 
-test("T3 默认开：未设 / 空串 / 其余值 → 以 1 武装（AC2）", () => {
-  const envs = [{}, { THINCODER_HEAP_SNAPSHOT: "" }, { THINCODER_HEAP_SNAPSHOT: "1" }, { THINCODER_HEAP_SNAPSHOT: "true" },
-    { THINCODER_HEAP_SNAPSHOT: "yes" }, { THINCODER_HEAP_SNAPSHOT: "未知串" }, { THINCODER_HEAP_SNAPSHOT: " ON " }]
-  for (const env of envs) {
+test("T3 默认开：未设 / heapSnapshot:true → 以 1 武装（AC2）", () => {
+  for (const opts of [{}, { heapSnapshot: true }]) {
     const arm = spy()
-    prepareCrashReporting({ dir: tmpRoot(), env, armHeapSnapshot: arm })
-    assert.deepEqual(arm.calls, [1], `开值 ${JSON.stringify(env)} 武装（fail-open 向取证）`)
+    prepareCrashReporting({ dir: tmpRoot(), ...opts, armHeapSnapshot: arm })
+    assert.deepEqual(arm.calls, [1], `${JSON.stringify(opts)} 武装（fail-open 向取证）`)
   }
 })
 
 test("T4 武装失败不阻断：替身抛错 → 不抛；返回 dir；process.report 设置照常（AC5）", () => {
   const dir = tmpRoot()
-  const ret = prepareCrashReporting({ dir, env: {}, armHeapSnapshot: () => { throw new Error("arm failed (test)") } })
+  const ret = prepareCrashReporting({ dir, armHeapSnapshot: () => { throw new Error("arm failed (test)") } })
   assert.equal(ret, dir, "武装异常不阻断——返回值照常")
   assert.equal(process.report.directory, dir, "F1 既有步骤（report.directory）不受影响")
   assert.equal(process.report.reportOnFatalError, true, "F1 既有步骤（reportOnFatalError）不受影响")

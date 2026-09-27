@@ -13,6 +13,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { after, test } from "node:test"
 import { buildProviderEntry, clampedTemperature, effortFace, enumerationPreflight } from "../lib/params.mjs"
+import { _setJudgeConfigPathForTest, _resetJudgeConfigPathForTest } from "../lib/judge.mjs"
 import { runCli } from "./fixtures.mjs"
 
 const tmpDirs = []
@@ -123,14 +124,14 @@ test("run.mjs 启动门：枚举面零阻断 ⇒ 照跑 exit 0；有阻断（判
       arbiter: { provider: "deepseek", model: "deepseek-flash", maxTokens: 2048, timeoutSec: 30 },
       fallbacks: [{ provider: "deepseek", model: "glm-5.3-flashx", maxTokens: 2048, timeoutSec: 30 }],
     }), "utf8")
-    process.env.BENCH_JUDGE = bad
-    const blocked = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--dims", "reasoning", "--label", `pf-blocked-${process.pid}`])
+    _setJudgeConfigPathForTest(bad)
+    const blocked = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--dims", "reasoning", "--label", `pf-blocked-${process.pid}`, "--judge-config", bad])
     assert.equal(blocked.code, 1, blocked.out)
     assert.ok(blocked.out.includes("跑前预检：枚举面阻断 1 条"), `启动门拒跑（实得：${blocked.out}）`)
     assert.ok(blocked.out.includes("判官 A 位：spec 未命中「no-such-judge-model」"), "阻断逐条点名（预检面点名、非泛化报错）")
     assert.equal(calls, 0, "枚举面零网络（拒跑前不触网、拒跑后亦不触网）")
   } finally {
     globalThis.fetch = orig
-    delete process.env.BENCH_JUDGE
+    _resetJudgeConfigPathForTest()
   }
 })

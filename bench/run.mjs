@@ -21,11 +21,14 @@ import { fileURLToPath, pathToFileURL } from "node:url"
 import { CAPABILITY_SELECTOR, DIMENSIONS, MANUAL_DIM } from "./cases/index.mjs"
 import { recomputeMain, runMain } from "./lib/pipeline.mjs"
 import { rejudgeMain } from "./lib/rejudge.mjs"
+import { setResultsDir } from "./lib/output.mjs"
+import { _setJudgeConfigPathForTest } from "./lib/judge.mjs"
+import { _setPricesPathForTest } from "./lib/prices.mjs"
 
 const BENCH_DIR = dirname(fileURLToPath(import.meta.url))
 
 const USAGE = `用法：
-  node bench/run.mjs [--models <列表>] [--dims <列表>] [--label <名>] [--n <次>] [--max-tokens <N>] [--timeout <秒>] [--dry-run]
+  node bench/run.mjs [--models <列表>] [--dims <列表>] [--label <名>] [--n <次>] [--max-tokens <N>] [--timeout <秒>] [--results-dir <路径>] [--judge-config <路径>] [--prices <路径>] [--dry-run]
   node bench/run.mjs --recompute --from <结果.json> [--label <名>]
   node bench/run.mjs --rejudge --from <结果.json> [--label <名>]
 
@@ -35,6 +38,9 @@ const USAGE = `用法：
   --n          每例重复次数（速度轴建议 3）；缺省 1
   --max-tokens 单次调用输出上限（可比性冻结面）；缺省 4096
   --timeout    单次调用墙钟上限（秒）；缺省 120
+  --results-dir   结果目录覆盖（缺省 = bench/results/，相对 bench/ 解析；覆盖值 = 绝对路径直用、相对路径按 cwd 解析）
+  --judge-config  判官配置档覆盖（缺省 = bench/judge.json）
+  --prices        价格表覆盖（缺省 = bench/prices.json）
   --dry-run    夹具自检：不调模型、不读用户 config，跑通判分（含判官对 / 仲裁 / 复核夹具）→指标→报告→脱敏链路
   --recompute  离线重算：读入已有结果 JSON，以当前 prices.json 重出报告（零 API 调用）
   --rejudge    跑后补判：读入结果 JSON，对判官面 error run 定点重取素材（重跑该 run 的被测调用）+ 级联补判
@@ -181,6 +187,7 @@ function parseArgs(argv) {
   const opts = {
     models: null, dims: null, label: null, repeats: 1, maxTokens: 4096,
     timeoutSec: 120, dryRun: false, recompute: false, rejudge: false, from: null, help: false,
+    resultsDir: null, judgeConfig: null, prices: null,
   }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
@@ -196,6 +203,9 @@ function parseArgs(argv) {
     else if (a === "--max-tokens") opts.maxTokens = intArg(need(), a, 1)
     else if (a === "--timeout") opts.timeoutSec = intArg(need(), a, 1)
     else if (a === "--from") opts.from = need()
+    else if (a === "--results-dir") opts.resultsDir = need()
+    else if (a === "--judge-config") opts.judgeConfig = need()
+    else if (a === "--prices") opts.prices = need()
     else if (a === "--dry-run") opts.dryRun = true
     else if (a === "--recompute") opts.recompute = true
     else if (a === "--rejudge") opts.rejudge = true
@@ -273,6 +283,10 @@ export async function main(argv = process.argv.slice(2)) {
     console.log(USAGE)
     return 0
   }
+  // ② 参数 → ③ 缝（CONFIG.md §6.2 混合形）：子进程面经 CLI 参数落到进程内落点
+  if (opts.resultsDir) setResultsDir(opts.resultsDir)
+  if (opts.judgeConfig) _setJudgeConfigPathForTest(opts.judgeConfig)
+  if (opts.prices) _setPricesPathForTest(opts.prices)
   try {
     if (opts.recompute) return await recomputeMain(opts)
     if (opts.rejudge) return await rejudgeMain(opts) // 跑后补判（触网——§2.14；缺省标签 = <原标签>-rejudged）

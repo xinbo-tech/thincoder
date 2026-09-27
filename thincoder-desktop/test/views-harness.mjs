@@ -73,8 +73,9 @@ export function installSeam(fake) {
     get() {
       if (Object.hasOwn(this, "_value")) return String(this._value)
       if (this.tag !== "select") return String(this.attrs.get("value") ?? "")
-      const option = this.children.find((kid) => kid.tag === "option")
-      return option === undefined ? "" : String(option.attrs.get("value") ?? "")
+      const picked = this.children.find((kid) => kid.tag === "option" && kid.attrs.has("selected"))
+        ?? this.children.find((kid) => kid.tag === "option")
+      return picked === undefined ? "" : String(picked.attrs.get("value") ?? "")
     },
     set(value) { Object.defineProperty(this, "_value", { value: String(value), writable: true, configurable: true }) },
   })
@@ -116,7 +117,7 @@ export function bridge(answer) {
 /** 设置面供给夹（`held` 可变片 = 写通道后重读面随动 —— 写 / 移除两回执可各自翻面）。 */
 export function supplyFace() {
   const held = {
-    rows: [{ name: "p1", model: "m1", hasKey: true, maskedKey: "sk-x", active: true }],
+    rows: [{ name: "p1", model: "m1", effort: "high", hasKey: true, maskedKey: "sk-x", active: true }],
     verify: { ok: true, models: ["a", "b"] },
     save: { ok: true },
     remove: { ok: true },
@@ -125,7 +126,7 @@ export function supplyFace() {
   }
   const answer = (channel) => {
     if (channel === "provider:list") return { ok: true, presets: [{ name: "openai" }], providers: held.rows, active: held.rows[0]?.name ?? null }
-    if (channel === "model:list") return { ok: true, models: ["m1", "m2"] }
+    if (channel === "model:list") return { ok: true, models: [{ id: "m1", effortEnum: ["low", "high"], thinkOff: true }, { id: "m2", effortEnum: ["low"], thinkOff: false }] }
     if (channel === "settings:agent") return { ok: true, fields: [{ path: "agent.maxTurns", kind: "number", value: 12 }, { path: "agent.key", kind: "string", value: "••", sensitive: true }] }
     if (channel === "mcp:list") return { ok: true, servers: held.servers }
     if (channel === "provider:verify") return held.verify

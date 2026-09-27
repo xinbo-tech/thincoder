@@ -810,7 +810,7 @@ spawn 门区（`thincoder-core/agent-tools/subagent-spawn.mjs` 的 `batchDoc` �
 
 **留痕通道 / 事件名**（与 §6.29.2 同通道——`logEvent`，`thincoder-core/log.mjs`）：`child:batchdoc-ref`，键面 = `{ role, batchDocBase, refBase }`（两侧基名，零任务书内容）；**spawn 照常放行**（不阻断）。
 
-**断言面（T15 两态）**：`THINCODER_LOG_DIR` 隔离目录（先例 = `thincoder-core/test/log.test.mjs`）按 `child:batchdoc-ref` 计条数——提及他批存在档 ⇒ 1；只提绑定档 / 无路径型 `.md` 字面 ⇒ 0；两态均放行。
+**断言面（T15 两态）**：日志落点缝（`_setLogsDirForTest(临时目录)`——先例 = `thincoder-core/test/log.test.mjs`；缝形态见 `CONFIG.md` §6.2）按 `child:batchdoc-ref` 计条数——提及他批存在档 ⇒ 1；只提绑定档 / 无路径型 `.md` 字面 ⇒ 0；两态均放行。
 
 **不取硬拒（否决）**：任务书合法引用他批档是常态（前情指针 / 证据引用——台账 #309 的 evidence 自身即引 `docs/batches/2026-09-20-qwen-flash-specs.md` §1.9）——硬拒 = 假拒面。
 
@@ -976,3 +976,4 @@ spawn 门区（`thincoder-core/agent-tools/subagent-spawn.mjs` 的 `batchDoc` �
 - 2026-09-18（**失效表达清理批 · 本批直接执行 · 可 revert**——承用户 2026-09-18 裁定「修订式表达很害人，失效的表达一定要删掉」）：删除现役规范面内的失效表达（不留划改残留）——§6.22 定位句括注 · 功能点 F3 / F4 两行 · 落点句「F3 拆除后回落」半句 · 验收表 AC-M5-4 行。历史沿革 = 本档既有历史段 + 批档 `docs/batches/2026-09-18-stale-expression-purge.md`。
 - 2026-09-20（**P2 机制层端差批 · 车道 3 设计档落笔轮 · eng-designer**——承 `docs/batches/2026-09-20-mechanism-parity-batch.md` §2.21）：§6.27.12.2「挂起驱动坐标」段尾句按现态收正——核驱动 = **参考实现**（唯一消费者 = 核测）；挂起面权威 = 两端驱动（已分叉，**判保留**）；核档读者不得据其改端行为（2026-09-20 §2.21 裁定）。机制条文零改。
 - 2026-09-20（**库存清账批 · v1 测试门词面收正 · eng-designer**——承 `docs/batches/2026-09-20-residual-sweep-batch.md` §2 · 台账 #128）：§6.20.7 A6 行判据收正（v1 三层命令 → `lint` / 各包 `npm test` 单入口）。**零新语义**。
+- 2026-09-27（**env-config-purge 批 · eng-designer**——承 `docs/batches/2026-09-27-env-config-purge.md` §1.5）：T15 断言面留痕读取由 `THINCODER_LOG_DIR` 隔离目录改**日志落点缝** `_setLogsDirForTest(临时目录)`（缝形态单源 = `CONFIG.md` §6.2）。**断言语义零改**。

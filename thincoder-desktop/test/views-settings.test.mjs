@@ -1,9 +1,9 @@
 /**
- * views-settings.test.mjs — T-DSK7 / T-DSK8 / T-DSK10 视图面用例（`docs/desktop/design/PROJECT.md:244` 指派面 =
+ * views-settings.test.mjs — T-DSK7 / T-DSK8 / T-DSK10 / T-DSK31 视图面用例（`docs/desktop/design/PROJECT.md:244` 指派面 =
  * 「表单构树与通道接线」；T-DSK8「切换语言」机检 = `settings` 档（键往返）+ 本档**词表重刷**）：① 四段面（`SECTIONS` 序 ·
  * 三态 · 表外段态 ⇒ `none` · 缺供给零假造 · 退场 = 容器清空 · 失败码出词）；② 面头语言控件（锚序 · 两向词面）；③ 两形表单
  * （字段名 = 载荷键 ⇒ 提交端 `FormData` 直取）；④ 校验 / 移除 / 采用 / MCP 出口（携名 · 零乐观写 · 零静默）；⑤ 词表重刷
- * （一次点按 = 一次写 ⇒ 同回带 ⇒ `initDict` 重刷）；⑥ 信息行两读（D10 视图面 —— 用例号 T-DSK11 · `PROJECT.md:191`：零 `key` 载荷 · 并行 · 一读失败不遮另一）。
+ * （一次点按 = 一次写 ⇒ 同回带 ⇒ `initDict` 重刷）；⑥ 信息行两读（D10 视图面 —— 用例号 T-DSK11 · `PROJECT.md:191`：零 `key` 载荷 · 并行 · 一读失败不遮另一）；⑦ 档位控件（T-DSK31 · `docs/desktop/design/UI.md` §1 批 B 注 5 · `docs/desktop/design/IPC.md` §2 注 9：现值 = 行 `effort` 离线投影 · 选项集与表外现值 · 陈旧面两拒 · 零节点 · 不可 `off` · `mtime-conflict` 直传）。
  * 纪律：假 DOM 房屋样式（`selfCheck` 先行 —— 载体不自证即假绿源）+ 词面哨兵缝（树内文本判键面）；零 CJK 源面与词表键齐两面归
  * `test/views-chrome.test.mjs` U51（扫描集随本批随动）⇒ 本档不重复实现同规则（单源）；夹具 = `test/views-harness.mjs`。
  */
@@ -296,4 +296,151 @@ test("T-DSK11: 两读（零 key 载荷 · 并行 · 一读失败不遮另一 —
     assert.equal(info.querySelector("[data-notice]")?.textContent ?? null, expect.notice, "失败串直传（表内出词 / 表外原样）—— 读数不被遮蔽")
     assert.equal(store.get().projectInfo.notice === null, expect.notice === null, "失败面落 projectInfo（非设置面失败面）")
   }
+})
+
+// ─── ⑦ 档位控件（T-DSK31 · UI.md §1 批 B 注 5 · IPC.md §2 设置族注 9）─────────
+//   本档落 ② 现值投影与选项集 / ③ 陈旧面两拒 / ④ 零节点 / ⑤ 不可 `off` / ⑥ `mtime-conflict` 直传；
+//   ① 写三径 + 写后投影恒等归 `test/settings.test.mjs`（上游档 —— 单源，本档零重复实现）。
+
+test("T-DSK31: 档位现值与选项集（行 `effort` 离线投影 · Auto → off → 枚举 · `none` 滤除 + 去重 · 表外现值自成一选项）", (ctx) => {
+  useSentinels(ctx)
+  const anyHandlers = new Proxy({}, { get: () => () => {} })
+  const face = (effort) => ({
+    defaultModel: "p1:m1",
+    providers: { state: "ready", presets: [], providers: [{ name: "p1", model: "m1", effort, hasKey: true, active: true }] },
+    model: { state: "ready", provider: "p1", current: "p1:m1", models: [{ id: "m1", effortEnum: ["low", "high", "none", "high"], thinkOff: true }] },
+  })
+  const rowOf = (settings) => nodes(settingsTree(settingsModel(stateOf({ open: true, ...settings })), anyHandlers)).find((node) => node.props?.["data-tier"] !== undefined) ?? null
+  const options = (settings) => nodes(rowOf(settings)).filter((node) => node.tag === "option")
+  const values = (settings) => options(settings).map((node) => node.props.value)
+  const picked = (settings) => options(settings).filter((node) => node.props.selected === true).map((node) => node.props.value)
+
+  assert.deepEqual(settingsModel(stateOf({ open: true, ...face("high") })).model.tier, {
+    provider: "p1", model: "m1", current: "high", effortEnum: ["low", "high", "none", "high"], thinkOff: true,
+  }, "档位读数 = `defaultModel` 段解 + 行 `effort` 投影 + 模型段元素面（离线零探针）")
+  assert.equal(nodes(settingsTree(settingsModel(stateOf({ open: true, ...face("high") })), anyHandlers)).filter((node) => node.props?.["data-tier"] !== undefined).length, 1, "四段内恰一档位控件（零副本）")
+  assert.deepEqual(values(face("high")), ["auto", "off", "low", "high"], "选项集 = Auto → off → 枚举（`none` 滤除 · 重复成员去重 · 现值已在集内 ⇒ 不追加）")
+  assert.deepEqual(options(face("high")).map((node) => node.children[0]), [sentinel("effort.auto"), sentinel("effort.off"), "low", "high"], "词面：两意图档出词 · 枚举档 = 字面值（不吞不改写）")
+  assert.deepEqual(picked(face("high")), ["high"], "现选 = 行 `effort` 投影（控件值 ⇒ 盘上真值）")
+  assert.equal(rowOf(face("high")).props["data-tier"], "high", "行锚携现值（设置面读数单源 = 行面）")
+
+  assert.deepEqual(values(face("turbo")), ["auto", "off", "low", "high", "turbo"], "表外现值 ⇒ 自成一选项（不吞）")
+  assert.deepEqual(picked(face("turbo")), ["turbo"], "表外现值 = 现选（零改写 —— 核侧拒面可见）")
+  assert.equal(rowOf(face("turbo")).props["data-tier"], "turbo", "行锚 = 表外现值原样（形面零改写）")
+  assert.deepEqual(values(face(undefined)), ["auto", "off", "low", "high", ""], "行无 `effort` ⇒ 空串项在场（禁吞 —— 非静默取候选首项）")
+  assert.deepEqual(picked(face(undefined)), [""], "空串项 = 现选（条目在场即现选在场）")
+  assert.deepEqual(picked(face(7)), [""], "行 `effort` 非串 ⇒ 归 `\"\"`（表外现值不吞）")
+})
+
+test("T-DSK31: 陈旧面两拒 —— `bad-level` ∥ `unknown-provider`（载荷照发 · 零乐观写 · 控件回退回执前值）", async (ctx) => {
+  const face = supplyFace()
+  const write = { reply: { ok: false, reason: "bad-level" } }
+  const { fake, host, root } = await mountFace(ctx, (channel, payload) => (channel === "settings:agent" && payload?.tier !== undefined ? write.reply : face.answer(channel, payload)))
+  const drain = () => new Promise((resolve) => setImmediate(resolve))
+  const row = () => {
+    const node = root.querySelector("[data-tier]")
+    assert.notEqual(node, null, "档位行在场（零命中即红）")
+    return node
+  }
+  const control = () => {
+    const node = row().querySelector(`[aria-label="${t("settings.model.tier")}"]`)
+    assert.notEqual(node, null, "档位控件在场（零命中即红）")
+    return node
+  }
+  assert.equal(row().getAttribute("data-tier"), "high", "回执前值 = 行 `effort` 投影（挂载面现值）")
+  assert.equal(control().value, "high", "控件现选 = 选中项值")
+  assert.deepEqual(control().children.map((node) => node.getAttribute("value")), ["auto", "off", "low", "high"], "选项集在场（m1：枚举 low / high + off）")
+  assert.equal(root.querySelector("[data-notice]"), null, "初始零失败面")
+  const reads = host.call("provider:list").length
+  for (const [reason, level] of [["bad-level", "low"], ["unknown-provider", "off"]]) {
+    write.reply = { ok: false, reason }
+    assert.equal(fake.fire(control(), "change", { target: { value: level } }), 1, "档位控件真注册（`change` 面）")
+    await drain()
+    assert.deepEqual(host.call("settings:agent").at(-1), ["settings:agent", { tier: { provider: "p1", model: "m1", level } }], `写形 = 意图级 \`{ tier }\` 三键（${reason} 径照发 —— 判据在核侧写时）`)
+    assert.equal(host.call("provider:list").length, reads, `失败 ⇒ 零重读（零乐观写 —— ${reason} 不落半态）`)
+    assert.equal(row().getAttribute("data-tier"), "high", `控件回退回执前值（${reason}）`)
+    assert.equal(control().value, "high", `现选值回退（重绘自读档面 —— ${reason} 零乐观改值）`)
+    const notice = root.querySelector("[data-notice]")
+    assert.equal(notice.getAttribute("data-scope"), "model", `失败面落位 = 模型段（${reason}）`)
+    assert.equal(notice.textContent, t("settings.section.model") + reason, `表外码原样直传（${reason} ∉ REASON_WORD —— 端侧不造码）`)
+  }
+})
+
+test("T-DSK31: 档位控件零节点（`defaultModel` 缺 / 段空 / 该模型无候选 ⇒ 零节点 —— 禁造假候选）", async (ctx) => {
+  useSentinels(ctx)
+  const anyHandlers = new Proxy({}, { get: () => () => {} })
+  const providers = { state: "ready", presets: [], providers: [{ name: "p1", model: "m1", effort: "high", active: true }] }
+  const model = { state: "ready", provider: "p1", current: "p1:m1", models: [{ id: "m1", effortEnum: ["low"], thinkOff: true }] }
+  const at = (defaultModel) => stateOf({ open: true, defaultModel, providers, model })
+  const rows = (defaultModel) => nodes(settingsTree(settingsModel(at(defaultModel)), anyHandlers)).filter((node) => node.props?.["data-tier"] !== undefined).length
+  for (const [defaultModel, why] of [
+    [null, "`defaultModel` 缺（未配）"],
+    ["", "空串"],
+    ["p1", "无冒号 ⇒ 段不可解"],
+    ["p1:", "模型段空"],
+    [":m1", "渠道段空"],
+    ["p1:m2", "该模型无候选元素（枚举面缺 —— 不造假候选）"],
+    [7, "现值非串"],
+  ]) {
+    assert.equal(rows(defaultModel), 0, `控件零节点：${why}`)
+    assert.equal(settingsModel(at(defaultModel)).model.tier, null, `读数 null：${why}`)
+  }
+  assert.equal(rows("p1:m1"), 1, "对照：三段可解 ⇒ 恰一控件（非恒零）")
+
+  const face = supplyFace()
+  const { host, root } = await mountFace(ctx, (channel, payload) => (channel === "model:list" ? { ok: false, models: [], reason: "unavailable" } : face.answer(channel, payload)))
+  assert.equal(root.querySelector("[data-tier]"), null, "探针不可用 ⇒ 模型段零候选 ⇒ 控件零节点（挂载面同判）")
+  assert.deepEqual([host.call("provider:list").length, host.call("model:list").length], [1, 1], "两段照读（零节点 ≠ 零供给 —— 缺席只因不可解）")
+})
+
+test("T-DSK31: 不可 `off` 模型 ⇒ off 选项缺席（`thinkOff` 判据 = 严格真 —— 禁假造档）", async (ctx) => {
+  useSentinels(ctx)
+  const anyHandlers = new Proxy({}, { get: () => () => {} })
+  const values = (thinkOff, effortEnum) => {
+    const settings = {
+      defaultModel: "p1:m1",
+      providers: { state: "ready", presets: [], providers: [{ name: "p1", model: "m1", effort: "low", active: true }] },
+      model: { state: "ready", provider: "p1", current: "p1:m1", models: [{ id: "m1", effortEnum, thinkOff }] },
+    }
+    const tree = settingsTree(settingsModel(stateOf({ open: true, ...settings })), anyHandlers)
+    const row = nodes(tree).find((node) => node.props?.["data-tier"] !== undefined)
+    return nodes(row).filter((node) => node.tag === "option").map((node) => node.props.value)
+  }
+  assert.deepEqual(values(true, ["low", "none"]), ["auto", "off", "low"], "对照：`thinkOff` 真 ⇒ off 在场（序 = Auto → off → 枚举；`none` 恒不入集）")
+  assert.deepEqual(values(false, ["low", "high"]), ["auto", "low", "high"], "`thinkOff` 假 ⇒ off 缺席（该模型 off 不可达 —— 禁假造）")
+  assert.deepEqual(values("true", ["low"]), ["auto", "low"], "非布尔真字面 ⇒ 缺席（判据 = `=== true`）")
+  assert.deepEqual(values(undefined, ["low"]), ["auto", "low"], "缺 `thinkOff` ⇒ 缺席（不猜）")
+
+  const face = supplyFace()
+  face.held.rows = [{ name: "p1", model: "m2", effort: "low", hasKey: true, active: true }]
+  const { root } = await mountFace(ctx, face.answer)
+  const row = root.querySelector("[data-tier]")
+  assert.equal(row.getAttribute("data-tier"), "low", "挂载面现值随行（m2 · `effort` = low）")
+  const control = row.querySelector(`[aria-label="${t("settings.model.tier")}"]`)
+  assert.deepEqual(control.children.map((node) => node.getAttribute("value")), ["auto", "low"], "挂载面同判：不可 off ⇒ off 缺席（现值已在集内 ⇒ 不追加）")
+})
+
+test("T-DSK31: 写盘 `mtime-conflict`（核 reason 直传 · 表内出词 · 零写 + 回退 · 零静默）", async (ctx) => {
+  const face = supplyFace()
+  const write = { reply: { ok: false, reason: "mtime-conflict" } }
+  const { fake, host, root } = await mountFace(ctx, (channel, payload) => (channel === "settings:agent" && payload?.tier !== undefined ? write.reply : face.answer(channel, payload)))
+  const drain = () => new Promise((resolve) => setImmediate(resolve))
+  const logged = []
+  const previous = console.error
+  console.error = (...args) => { logged.push(args.map(String).join(" ")) }
+  ctx.after(() => { console.error = previous })
+  const control = () => root.querySelector("[data-tier]").querySelector(`[aria-label="${t("settings.model.tier")}"]`)
+  assert.equal(control().value, "high", "回执前值（行 `effort` 投影）")
+  const reads = host.call("provider:list").length
+  assert.equal(fake.fire(control(), "change", { target: { value: "low" } }), 1, "档位控件真注册（`change` 面）")
+  await drain()
+  assert.deepEqual(host.call("settings:agent").at(-1), ["settings:agent", { tier: { provider: "p1", model: "m1", level: "low" } }], "载荷 = 意图级三键（写形与 `{ patch }` 二择一）")
+  assert.equal(host.call("provider:list").length, reads, "失败 ⇒ 零重读（零乐观写 —— 盘面未变，读数不刷新）")
+  assert.equal(root.querySelector("[data-tier]").getAttribute("data-tier"), "high", "控件回退回执前值（盘上真值）")
+  assert.equal(control().value, "high", "现选值回退（零乐观改值）")
+  const notice = root.querySelector("[data-notice]")
+  assert.equal(notice.getAttribute("data-scope"), "model", "失败面落位 = 模型段（段标可读）")
+  assert.equal(notice.textContent, t("settings.section.model") + t("settings.reason.mtimeConflict"), "核 reason 直传 + 表内出词（`mtime-conflict` ∈ REASON_WORD）")
+  assert.equal(reasonWord("mtime-conflict"), t("settings.reason.mtimeConflict"), "出词面单源（`reasonWord` —— 零端侧造码）")
+  assert.equal(logged.some((line) => line.includes("settings:agent")), true, "零静默：失败面同时记错")
 })

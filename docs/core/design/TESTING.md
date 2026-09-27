@@ -5,7 +5,8 @@
 > 需求层指针 = `requirements/TESTING.md`（§1 总体 / §2 F1–F14 / §3 N1–N9 / §5 F15–F22 · N10–N12）。
 > 兄弟档：无——原 `design/E2E-HARNESS.md`（CLI 自动验证面）**已删除**（2026-09-15 · 错轴退役；终端程序自动验证面的设计面 = 待重做另轮）。 （迁移期引文）
 > 权威源（实现）：`thincoder-cli/test/run.mjs`（单入口——单元 + 集成 + slow 全跑）+ `thincoder-cli/test/slow.mjs`（`slow` 纯别名）+ 三包 `package.json` scripts（`test` 一条测试入口）。
-> **多实现面（语义同源 · 各面原文自持 · 不做字节一致 · 不加面间同步依赖）**：CLI 面（上行所列）· VSC 对端面（其 `test/` 同构 runner 族）· **核树面**（`thincoder-core/test/run.mjs` + `thincoder-core/package.json` scripts——无集成层）。
+> **多实现面（语义同源 · 各面原文自持 · 不做字节一致 · 不加面间同步依赖）**：CLI 面（上行所列）· VSC 对端面（其 `test/` 同构 runner 族）· **核树面**（`thincoder-core/test/run.mjs` + `thincoder-core/package.json` scripts——无集成层）
+> **桌面面**：`thincoder-desktop/test/run.mjs` + `thincoder-desktop/package.json` scripts——单入口，单元 + 集成同清单（集成域 = `thincoder-desktop/test/integration/`）；驱动 / 隔离 / 截图面单源 = `docs/desktop/design/E2E-TESTING.md`。
 > 关联：本档 §1 是分层纪律的权威叙述；工程模式实现侧分级正文 = `thincoder-core/prompts/persona-eng-coder.md` + `discipline-engineering.md`。
 > 对端对位档 = 对端仓库的同名测试基建档（**语义同源、各端原文自持**）。
 
@@ -278,7 +279,7 @@
 | AC-M10-3 | 无慢测层归册机制（grep `THINCODER_TEST_FULL`/`THINCODER_SLOW_GATE_MS` 代码面零匹配，排除 docs/ 与批次档） |
 | AC-M10-4 | 全量测试全绿（三包 `npm test` → exit 0） |
 
-**边界（本增量不做）**：不做测试内容（各模块自写用例）；不砍 `lint`；不引入新测试框架 / 依赖（零依赖不变）。
+**边界（本增量不做）**：不做测试内容（各模块自写用例）；不砍 `lint`；不引入新测试框架；**运行期零第三方依赖（守）∥ 测试面 `devDependencies` 不在此限（放开）**。
 
 ### 10.1 VSC 测试登记死项清零 + 清单自检① 对称化（2026-09-18 · 批 M-FAMILY-SWEEP · 条目 ③）
 
@@ -411,3 +412,5 @@
   §5 增 TS-8 / TS-9（TS-9 含 CI 口径——核作业同一全量入口 · 裁定 5）· §7 增 A-TS12 · §8 边界行收正（机制**语义**零改——新增实现面带语义外沿）· §10 实测行数收正。
 - 2026-09-15（**TTY-DRIVE 批 · 错轴设计档退役轮 · eng-designer**）：兄弟档 `design/E2E-HARNESS.md` **已删除**（用户 06:02 裁定——错轴档从活档面消失）；首部兄弟档行 + 本文两处切分叙述同批收口。 （迁移期引文）
 - 2026-09-16（**批 6 · 评审修正轮（轮 1）** · eng-designer）：§1.2 核树面措辞收正为「**设计态 / 待落**」（首部多实现面行 + §1.2 节头——评审轮 1 #5）。
+- 2026-09-26（**桌面端 E2E 基建批 · 放行落笔轮** · eng-designer）：首部多实现面行补**桌面面**（`thincoder-desktop/test/run.mjs` + `thincoder-desktop/package.json` scripts——单入口；集成域 = `thincoder-desktop/test/integration/`）
+  §10 边界行收正为「**运行期零第三方依赖（守）∥ 测试面 `devDependencies` 不在此限（放开）**」（本批 `playwright-core` = 测试面驱动，非运行期依赖——判据 = 不进 `dependencies`；裁决 = 用户 2026-09-26 放行 · 批档 `docs/batches/2026-09-26-desktop-e2e-infra.md` §1）。

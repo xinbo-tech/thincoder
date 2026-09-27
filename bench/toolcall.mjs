@@ -10,9 +10,9 @@
 import { dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { fixtureTransport, liveTransport, runCase } from "./lib/client.mjs"
-import { isoLocal } from "./lib/output.mjs"
+import { isoLocal, setResultsDir } from "./lib/output.mjs"
 import { buildProviderEntry, effortFace } from "./lib/params.mjs"
-import { costOf, loadPrices, matchPrice, pricesPath } from "./lib/prices.mjs"
+import { costOf, loadPrices, matchPrice, pricesPath, _setPricesPathForTest } from "./lib/prices.mjs"
 import { loadRoster, selectEntries } from "./lib/roster.mjs"
 import { CASES, casesDigest, validateCases } from "./toolcall/cases.mjs"
 import { SYSTEM_BASE, TOOL_PROBE_VERSION, dryRunResponse } from "./toolcall/fixture.mjs"
@@ -23,7 +23,7 @@ import { VARIANT_IDS, buildVariants, payloadDigest } from "./toolcall/variants.m
 const BENCH_DIR = dirname(fileURLToPath(import.meta.url))
 
 const USAGE = `用法：
-  node bench/toolcall.mjs --models <列表> [--variants V0,V1,V2] [--cases <id 列表>] [--n 3] [--max-tokens 4096] [--timeout 120] [--max-cost <CNY>] [--label toolcall-baseline] [--dry-run]
+  node bench/toolcall.mjs --models <列表> [--variants V0,V1,V2] [--cases <id 列表>] [--n 3] [--max-tokens 4096] [--timeout 120] [--max-cost <CNY>] [--label toolcall-baseline] [--results-dir <路径>] [--prices <路径>] [--dry-run]
 
   --models      参测档（逗号分隔；label 或 provider:model——名单源 = bench/models.json）；必填
   --variants    变体选择（V0 / V1 / V2）；缺省 = 全 3 变体
@@ -33,6 +33,8 @@ const USAGE = `用法：
   --timeout     单次调用墙钟上限（秒）；缺省 120
   --max-cost    累计成本闸（CNY；闸射程 = 已录成本；到顶 ⇒ 余面记 skipped（入 runs[] · 聚合分母排除）+ warning，退出码 0）
   --label       报告名标签（须 toolcall- 起）；缺省 toolcall-baseline
+  --results-dir   结果目录覆盖（缺省 = bench/results/，相对 bench/ 解析；覆盖值 = 绝对路径直用、相对路径按 cwd 解析）
+  --prices        价格表覆盖（缺省 = bench/prices.json）
   --dry-run     零网络自检：夹具传输（bench/lib/client.mjs 的 fixtureTransport）+ 真载荷构造 ⇒ 三轴 / 报告 / 落档全链（不读用户 config）
 
   本面 = 测量面 · 非门控（不按模型设岗 / 不改配置默认）；报告只出读数。成本上界：单 run = 1 次调用
@@ -50,6 +52,7 @@ export function parseArgs(argv) {
   const opts = {
     models: null, variants: [...VARIANT_IDS], cases: CASES.map((c) => c.id), repeats: 3,
     maxTokens: 4096, timeoutSec: 120, maxCost: null, label: "toolcall-baseline", dryRun: false, help: false,
+    resultsDir: null, prices: null,
   }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
@@ -66,6 +69,8 @@ export function parseArgs(argv) {
     else if (a === "--timeout") opts.timeoutSec = intArg(need(), a, 1)
     else if (a === "--max-cost") opts.maxCost = Number(need())
     else if (a === "--label") opts.label = need()
+    else if (a === "--results-dir") opts.resultsDir = need()
+    else if (a === "--prices") opts.prices = need()
     else if (a === "--dry-run") opts.dryRun = true
     else if (a === "--help" || a === "-h") opts.help = true
     else throw new Error(`未知参数 ${a}（--help 看用法）`)
@@ -217,6 +222,9 @@ export async function main(argv = process.argv.slice(2)) {
     return 1
   }
   if (opts.help) { console.log(USAGE); return 0 }
+  // ② 参数 → ③ 缝（CONFIG.md §6.2 混合形）：本面无判官档面（--results-dir / --prices）
+  if (opts.resultsDir) setResultsDir(opts.resultsDir)
+  if (opts.prices) _setPricesPathForTest(opts.prices)
   const ac = new AbortController()
   const onSigint = () => ac.abort(new Error("SIGINT"))
   process.once("SIGINT", onSigint)

@@ -1,9 +1,10 @@
 /**
- * ipc.mjs — IPC 通道注册与分发（`docs/desktop/design/IPC.md` §1 / §2）：**二十五项** = 配置读取 + 项目面
+ * ipc.mjs — IPC 通道注册与分发（`docs/desktop/design/IPC.md` §1 / §2）：**二十七项** = 配置读取 + 项目面
  * `project:open` / `project:recent` + 会话面 `sessions:list` / `session:create` / `session:switch` /
- * `session:rename` / `session:delete` / `session:resume` + 审批响应 `approval:respond` + 历史页 `history:page`
+ * `session:rename` / `session:delete` / `session:resume` + 审批响应 `approval:respond` + 作答响应
+ * `question:respond` —— `question` 工具真作答面 + 历史页 `history:page`
  * + 回合驱动 `msg:send` / `msg:interrupt`（宿主未注入 ⇒ fail-loud）+ **设置族十二项**
- * （provider 四 / model / agent 参数 / MCP 三 / 配置写 / 语言）+ **项目级信息两项**（台账 / 相位）
+ * （provider 四 / model / agent 参数 / MCP 三 / 配置写 / 语言）+ **项目级信息两项**（台账 / 相位）+ 会话级偏好写面 `session:prefs`（**本批落** · 白名单**末位**）
  * （定序 = 预载白名单同序）。
  * 白名单**单源** = `src/preload/preload.cjs` 的 `CHANNELS`（批档 §2.6 D-3）：主侧经 `createRequire` 读之并**据以注册**
  * （一条白名单项 = 一个 `ipcMain.handle` 面 ⇒ 无通道名第二副本）；白名单项无处理体 ⇒ 注册期抛（fail-closed）。
@@ -87,6 +88,8 @@ const HANDLERS = Object.freeze({
   "config:write": configWriteChannel,
   "ledger:read": ledgerReadChannel,
   "batch:status": batchStatusChannel,
+  "question:respond": questionRespond,
+  "session:prefs": sessionPrefs,
 })
 
 /** `project:open(payload)` ⇒ `{ cwd, recent }`：载荷 `{ path }` **可选**（`docs/desktop/design/IPC.md:42`）——
@@ -121,9 +124,14 @@ function sessionResume() { return resumeSession(currentCwd()) }
  *  `session-slots.mjs`（零算法副本；cwd 取主进程当前项目内存态 —— 同会话族）。载荷 `{ key, before }`。 */
 function historyPage(payload) { return pageHistory(currentCwd(), payload) }
 
-/** `msg:send(payload)` ⇒ `{ ok:true }`（**立即回** —— 过程走 `ev:*` 出站）∥ `{ ok:false, reason }`
- *  （`bad-key` / `busy` / `provider-invalid`）：载荷 `{ key, text }`，转口宿主回合驱动。 */
-function msgSend(payload) { return requireAgentHost().send(payload?.key, payload?.text) }
+/** `session:prefs(payload)` ⇒ 族信封 + `meta`（成功携 · 失败缺键）：载荷 `{ key, patch }`（键闭集
+ *  `provider` / `model` / `effort`）—— 转口宿主写面（KD-19 单点：写盘 → 重施；`reason` 五档在动作侧）。 */
+function sessionPrefs(payload) { return requireAgentHost().setPrefs(payload?.key, payload?.patch) }
+
+/** `msg:send(payload)` ⇒ `{ ok:true }`（**立即回** —— 过程走 `ev:*` 出站）∥ `{ ok:true, degraded }`（附件弃项两态
+ *  —— `IPC.md` §2「附件注」项 5）∥ `{ ok:false, reason }`（`bad-key` / `busy` / `provider-invalid`）：
+ *  载荷 `{ key, text, images }`（`images` 逐项 `{ name, mime, dataURL }`），转口宿主回合驱动。 */
+function msgSend(payload) { return requireAgentHost().send(payload?.key, payload?.text, payload?.images) }
 
 /** `msg:interrupt(payload)` ⇒ `{ ok:true }` ∥ `{ ok:false, reason }`（`idle` / `bad-key`）：载荷 `{ key }`。 */
 function msgInterrupt(payload) { return requireAgentHost().interrupt(payload?.key) }
@@ -134,6 +142,15 @@ function msgInterrupt(payload) { return requireAgentHost().interrupt(payload?.ke
  *  （不吞 / 不落假成功 / 本档零假成功字面 —— 沿 `docs/desktop/design/IPC.md` §2 会话族注项 5 与「禁假数据」）。 */
 function approvalRespond(payload) {
   if (!agentHost) throw new Error("[ipc] approval:respond: approval source not assembled")
+  return agentHost.respond(payload)
+}
+
+/** `question:respond(payload)` ⇒ 作答出口（`question` 工具真作答面）：载荷 `{ promptId, answer }`
+ *  （`answer` = 串（给答项原样 ∥ 自由作答）∥ `null`（取消 ⇒ 取消串））。转口宿主待决表（同
+ *  `approval:respond`）：表外 id / 跨 kind 载荷 / 假「作答」形皆有 `{ok:false}` 档且**不 resolve**
+ *  （挂起保留）；宿主未注入 ⇒ fail-loud 直抛（不吞 / 不落假成功）。 */
+function questionRespond(payload) {
+  if (!agentHost) throw new Error("[ipc] question:respond: question source not assembled")
   return agentHost.respond(payload)
 }
 

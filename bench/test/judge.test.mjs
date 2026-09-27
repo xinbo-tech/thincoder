@@ -10,7 +10,7 @@ import { readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { CASES } from "../cases/index.mjs"
 import { judgeResult } from "../lib/grade.mjs"
-import { reviewRun, callSlot, judgeQuestion, loadJudgeConfig, resolveJudgeSlots, shouldReview, turnMaterial } from "../lib/judge.mjs"
+import { reviewRun, callSlot, judgeQuestion, loadJudgeConfig, resolveJudgeSlots, shouldReview, turnMaterial, _setJudgeConfigPathForTest, _resetJudgeConfigPathForTest } from "../lib/judge.mjs"
 import { judgeWithPair } from "../lib/judge-fallback.mjs"
 import { fixtureSlotTransport } from "../lib/client.mjs"
 import { applyJudgeCosts } from "../lib/prices.mjs"
@@ -85,12 +85,12 @@ test("judge.3：两位皆不可解析（单发即败）⇒ 级链穷尽 ⇒ run 
 test("judge.4：`frozenAtSuiteVersion` ≠ SUITE_VERSION ⇒ 拒跑（退出码 1）+ 明示提示", async () => {
   const p = join(FIXTURES, "judge-stale.json")
   writeFileSync(p, JSON.stringify({ version: 1, frozenAtSuiteVersion: 2, judges: [{ provider: "deepseek", model: "m1", maxTokens: 2048, timeoutSec: 30 }, { provider: "deepseek", model: "m2", maxTokens: 2048, timeoutSec: 30 }], arbiter: { provider: "deepseek", model: "m3", maxTokens: 2048, timeoutSec: 30 }, fallbacks: [{ provider: "deepseek", model: "m4", maxTokens: 2048, timeoutSec: 30 }] }), "utf8")
-  process.env.BENCH_JUDGE = p
+  _setJudgeConfigPathForTest(p)
   try {
-    const { code, out } = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--dims", "reasoning", "--label", `fj4-${process.pid}`])
+    const { code, out } = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--dims", "reasoning", "--label", `fj4-${process.pid}`, "--judge-config", p])
     assert.equal(code, 1)
     assert.match(out, /判官配置已换代：judge.json.frozenAtSuiteVersion = 2 ≠ SUITE_VERSION = 7/)
-  } finally { delete process.env.BENCH_JUDGE }
+  } finally { _resetJudgeConfigPathForTest() }
 })
 
 test("judge.5：判官键 ∈ 被测集合 ⇒ 正常跑（不拒跑 · 自判）+ 该位标注与 warnings；同 provider 异 model ⇒ 允许 + sameVendorAsTested 明示", async () => {
@@ -100,8 +100,8 @@ test("judge.5：判官键 ∈ 被测集合 ⇒ 正常跑（不拒跑 · 自判�
     return p
   }
   const runWith = async (cfgPath, label) => {
-    process.env.BENCH_JUDGE = cfgPath
-    try { return await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--dims", "reasoning", "--label", label]) } finally { delete process.env.BENCH_JUDGE }
+    _setJudgeConfigPathForTest(cfgPath)
+    try { return await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--dims", "reasoning", "--label", label, "--judge-config", cfgPath]) } finally { _resetJudgeConfigPathForTest() }
   }
   // 同位（自判）：判官 A 位键 = 被测条目 ⇒ 正常启动 + 跑完（退出码 0——判官不干预被测选择）
   const labelSelf = `fj5a-${process.pid}`

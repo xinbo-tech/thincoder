@@ -6,8 +6,8 @@
  * T-ZB4 清扫存活跳过）· 错误 2（T-ZB5 降级 / T-ZB6 禁静默留痕）。
  * 直驱零网络零定时器（routeSubToken / freezeSubTaskLines / freezeAllSubTasks /
  * refreshQueuedTokens——不建真实子代理、不起回合）；桩面同 queued-stop.test.mjs。
- * 事件断言 = `THINCODER_LOG_DIR` 隔离目录读档（async-discard.test.mjs 同款——
- * NODE_TEST_CONTEXT 写门）；条数取**增量**（不依赖用例执行次序）。
+ * 事件断言 = 日志落点缝 `_setLogsDirForTest` 隔离目录读档（NODE_TEST_CONTEXT 写门）；
+ * 条数取**增量**（不依赖用例执行次序）。
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
@@ -18,6 +18,7 @@ import { join } from "node:path"
 import { routeSubToken, routeSubToolCall, computePanelBlocks } from "../src/tui/subagent-blocks.mjs"
 import { freezeSubTaskLines, freezeAllSubTasks, livePoolHas } from "../src/tui/subagent-freeze.mjs"
 import { refreshQueuedTokens } from "@thincoder/core/agent-tools/subagent-scheduler.mjs"
+import { _resetLogsDirForTest, _setLogsDirForTest } from "@thincoder/core/log.mjs"
 
 let _tmp
 let _logDir
@@ -25,11 +26,11 @@ let _logDir
 before(() => {
   _tmp = mkdtempSync(join(tmpdir(), "tc-zero-block-"))
   _logDir = join(_tmp, "logs")
-  process.env.THINCODER_LOG_DIR = _logDir // 写门 override（NODE_TEST_CONTEXT 默认跳过写盘）
+  _setLogsDirForTest(_logDir) // 写门 override（NODE_TEST_CONTEXT 默认跳过写盘）
 })
 
 after(() => {
-  delete process.env.THINCODER_LOG_DIR
+  _resetLogsDirForTest()
   rmSync(_tmp, { recursive: true, force: true })
 })
 
