@@ -34,7 +34,7 @@ Normal 模式 = 默认（非工程模式）会话的提示词基底。装配层�
 | # | 维度 | 标准（含度量） |
 |---|---|---|
 | **N-NM1** | 单一权威源 | 槽位文件路径字符串以装配表为唯一权威；装配链序固定（人格 → 公共 → 纪律 → 项目层尾部） |
-| **N-NM2** | 正本 ↔ 落地档对位 | 运行期落地档 `thincoder-core/prompts/`（15 档）↔ 中文设计档正本 `docs/core/design/prompts/`（15 档）逐档对位（P4）；各实现面语义同源、原文自持 |
+| **N-NM2** | 正本 ↔ 落地档对位 | 运行期落地档 `thincoder-core/prompts/`（16 档）↔ 中文设计档正本 `docs/core/design/prompts/`（16 档）逐档对位（P4）；各实现面语义同源、原文自持 |
 | **N-NM3** | 隔离性 | 槽位间不回退（缺失 = 跳过 + 警告）——防「看似正常」的静默内容降级 |
 | **N-NM4** | 可测试 | 装配结果、缺失降级、场景映射由用例断言（含字节稳定性断言） |
 
@@ -154,3 +154,4 @@ Normal 模式 = 默认（非工程模式）会话的提示词基底。装配层�
 - 2026-09-15（**B 式迁移轮 · VSC 批 4**）：建档——`thincoder-vscode/docs/requirements/NORMAL-MODE.md` 内容重建入基准层
   （旧档一字未改、原地作参照历史）；判定句坐标按现状实核改写（`thincoder-vscode/src/prompt-overlays.mjs` 行号逐条实核）；
   提示词双源与并入核口径指向 `PROMPT-SYSTEM` 两面（D2 单一权威源）。
+- 2026-09-27（**escalation-canon 随动 · 主 agent 落笔**——承 `docs/batches/2026-09-27-escalation-canon.md` · 台账 #442）：N-NM2（正本 ↔ 落地档对位）计数 15 → **16**（双面——核内 + `subagent-base.md`）。

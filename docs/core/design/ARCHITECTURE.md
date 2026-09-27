@@ -38,7 +38,7 @@
 thincoder/                          ← 合并仓根（git 仓 · 默认分支 main）
 ├── bin/                            ← 仓根引导
 ├── docs/                           ← 基准层文档（唯一权威层）
-│   ├── core/{requirements,design}/ ← 统一面板块档 + design/prompts/（提示词中文正本 15 档）
+│   ├── core/{requirements,design}/ ← 统一面板块档 + design/prompts/（提示词中文正本 16 档）
 │   ├── cli/ · vsc/                 ← 产品面板块档
 │   ├── TODO.md · TODO-archive.md   ← 项目级台账（单仓单账）
 │   └── batches/                    ← 批次档
@@ -58,7 +58,7 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 │   │                               question / tree / write-path / shared /
 │   │                               glob-dialect / index）
 │   ├── tool-docs/                  工具描述面（模型可见文本——24 档）
-│   ├── prompts/                    槽位提示词运行期落地档（15 档——正本 = docs/core/design/prompts/）
+│   ├── prompts/                    槽位提示词运行期落地档（16 档——正本 = docs/core/design/prompts/）
 │   ├── memory/                     三层记忆 + 代码 / 文档索引 + 嵌入（core / docs / code-sync / code-index /
 │   │                               schema / scan / file-walk / delete）
 │   ├── provider/                   供应商 transport（anthropic / google / responses / sse / retry / rate /

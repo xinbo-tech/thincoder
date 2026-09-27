@@ -6,8 +6,8 @@
  * 「成功但无核 / 缺提示词档」的静默产物 exit 0，R6/R8①/R12 实证 ⇒ 必须断言化）。
  *   断言 B（含核 + 版本逐字相等）：vsix 内 `extension/node_modules/@thincoder/core/package.json`
  *     存在，且其 `version` 逐字等于仓内 `thincoder-core/package.json` 的 `version`。
- *   断言 D（提示词面完备性）：vsix 内同目录 `prompts/` 15 档 + `tool-docs/` 24 档——
- *     ① 档数硬等设计口径（15 / 24）；② 档名集合逐字等于仓内 `thincoder-core/` 同名目录；③ 各档内容 sha256 等于仓内同档。
+ *   断言 D（提示词面完备性）：vsix 内同目录 `prompts/` 16 档 + `tool-docs/` 24 档——
+ *     ① 档数硬等设计口径（16 / 24）；② 档名集合逐字等于仓内 `thincoder-core/` 同名目录；③ 各档内容 sha256 等于仓内同档。
  *
  *   断言 E（撞帽检查点接线 · 2026-09-26 · F9② / T6）：vsix 内 `extension/node_modules/@thincoder/core/agent-tools/checkpoint.mjs`
  *     存在，且同目录 `subagent-run.mjs` 含 `registerTurnCapCheckpoint` 接线——防「仓内已修、运行面仍旧」（实盘教训）。
@@ -29,7 +29,7 @@ const arg = process.argv.slice(2).find((a) => !a.startsWith("--"))
 const vsix = resolve(arg ?? join(ROOT, `${PKG.name}-${PKG.version}.vsix`))
 if (!existsSync(vsix)) { console.error(`✘ vsix 不存在：${vsix}（先 \`npm run package\`）`); process.exit(1) }
 const IN_VSIX = "extension/node_modules/@thincoder/core/"
-const EXPECT = { prompts: 15, "tool-docs": 24 } // 档数口径（T-C7 / `CORE-UNIFICATION.md` §2.8——枚举 15 + 24；tool-docs 由 25 收正为 24 = 实盘计数——一致性同步批 §4 批 2 · 父侧直接执行 · 可 revert）
+const EXPECT = { prompts: 16, "tool-docs": 24 } // 档数口径（T-C7 / `CORE-UNIFICATION.md` §2.8——枚举 16 + 24；prompts 由 15 收正为 16 = escalation-canon 批 · 父侧直接执行 · 可 revert；tool-docs 由 25 收正为 24 = 实盘计数——一致性同步批 §4 批 2 · 父侧直接执行 · 可 revert）
 const sha = (buf) => createHash("sha256").update(buf).digest("hex")
 
 const failures = []

@@ -56,7 +56,7 @@ export default [
   // 2026-09-18 清单收正：doc-consistency / ledger-check / doc-anchors / reconcile-lookup 四档随 M8 机检重写批
   // （b9f439c9）删除，条目随删除勾销（残条目让清单虚报套件组成）；其中 doc-consistency 属 2026-09-11 第 5 批入册的五新档之一——该族计数以现值为准。
   // 「5 新档全入册」之第五档（面② 的锚句断言档——文件域属面②，入册归本表）
-  "test/prompts-mirror-anchors.test.mjs", // 提示词双源镜像锚（VSC 端镜像批（2026-09-11 · 第 5 批）；双源/端特有段现行权威 = PROMPT-SYSTEM.md §6）：A1-A8/A11/A12 逐字 + 双源 15 档集合 + 端特有段（T62/T65）
+  "test/prompts-mirror-anchors.test.mjs", // 提示词双源镜像锚（VSC 端镜像批（2026-09-11 · 第 5 批）；双源/端特有段现行权威 = PROMPT-SYSTEM.md §6）：A1-A8/A11/A12 逐字 + 双源同名集合（核包 16 · 归档镜像冻结 15）+ 端特有段（T62/T65）
   "test/config-watch.test.mjs", // 第 21 批（2026-09-11）：外部 config.json 写盘感知 B5——watcher 注册形状/去抖合并/自写基线回填抑制/稳态零推送/create·delete/dispose/降级（T-S1~T-S6；SETTINGS.md §2.6）
   "test/digest-visibility.test.mjs", // 第 21 批（2026-09-11）：消化轮起跑可见指示 B6——起止两态+ok 旗标时序（host）+ #digest-status 三态渲染与幂等（真 chat.js——happy-dom）（T-D1~T-D5；WEBVIEW.md §7.4）
   "test/turn-across-segments.test.mjs", // 第 19 批（2026-09-11）：跨段累计编号 VSC 面——turnFrame 帧向量/不变式扫描 + applyTurnFrame 消费助手 + webview 冻结头消费累计值 + 真 runAgent 直驱段间断言/真 runChild 接线 + 种子源码锚（T1–T11；TURN-CAP-CONTINUE.md §3–§5）

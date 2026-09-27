@@ -96,7 +96,7 @@ thincoder/                                  ← 合并仓根（git 仓）
 │   ├── core/                               ← 部分一 · core（核 = 共享实现 + 共享机制 + 工程模式）
 │   │   ├── requirements/<板块>.md
 │   │   ├── design/<板块>.md
-│   │   └── design/prompts/                 ← 提示词**中文设计档正本**（15 档）
+│   │   └── design/prompts/                 ← 提示词**中文设计档正本**（16 档）
 │   ├── cli/                                ← 部分二 · cli（CLI 壳面）
 │   │   ├── requirements/<板块>.md
 │   │   └── design/<板块>.md
@@ -128,7 +128,7 @@ thincoder/                                  ← 合并仓根（git 仓）
 |---|---|---|
 | `docs/design/*.md`（16 板块档） | `docs/core/design/` | 全部为核心统一子系统档 ⇒ 统一面（§5 判据 P1） |
 | `docs/requirements/*.md`（16 板块档） | `docs/core/requirements/` | 同上 |
-| `docs/design/prompts/`（15 档正本） | `docs/core/design/prompts/` | 提示词正本归 **core**（其落地档 = `thincoder-core/prompts/` · `tool-docs/`） |
+| `docs/design/prompts/`（16 档正本） | `docs/core/design/prompts/` | 提示词正本归 **core**（其落地档 = `thincoder-core/prompts/` · `tool-docs/`） |
 | `docs/README.md` · `docs/TODO*.md` · `docs/batches/` | **原地不动** | 项目级流程面——**不进四部分**（§5 判据 P3） |
 | `thincoder-cli/docs/{design,requirements}/**` | 按 §5 初分类逐档落到 `docs/core/` ∥ `docs/cli/` | **本批不迁**——`docs/README.md` §2「逐档随批迁」不变 |
 | `thincoder-vscode/docs/{design,requirements}/**` | 按同一判据落到 `docs/core/` ∥ `docs/vsc/` | 同上 |

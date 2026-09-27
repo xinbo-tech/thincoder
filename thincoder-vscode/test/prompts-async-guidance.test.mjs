@@ -4,7 +4,7 @@
  *
  * W2（2026-09-15 · `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W2）：本端 `src/prompts/` 15 档 +
  * `src/prompt-overlays.mjs` 已删 ⇒ 断言面改指核（槽位装配面 = 核内单点 `@thincoder/core/prompt-overlays.mjs`）：
- *   ① 删净面：本端 `src/prompts/` / `src/prompt-overlays.mjs` 不存在；核包 `prompts/` 15 档在位；
+ *   ① 删净面：本端 `src/prompts/` / `src/prompt-overlays.mjs` 不存在；核包 `prompts/` 16 档在位；
  *   ② 装配矩阵 / 降级链 / 结构巡检（槽位注释、表行宽、非空）——对象 = 核包槽文件；
  *   ③ 锚注入接线面（A-K5 / §2.13.2「VSC 列」）：表 ⇔ 核锚名集合等值 + 配置态四装配面零 `{{inject:`
  *      字面 + 13 锚 VSC 值逐锚在场 + 入口径（`activate()` 直调）同断言。
@@ -71,7 +71,7 @@ function assemblyFaces() {
   return { prompts, tools, advisor, union: [...prompts, ...tools, advisor].join("\n────────\n") }
 }
 
-test("W2 删净面：本端 src/prompts/ + src/prompt-overlays.mjs 不存在（核包 15 档在位——装配面 = 核单点）", () => {
+test("W2 删净面：本端 src/prompts/ + src/prompt-overlays.mjs 不存在（核包 16 档在位——装配面 = 核单点）", () => {
   assert.ok(!exists("src/prompts"), "src/prompts/ 已随 W2 删除（F9 残留删净）")
   assert.ok(!exists("src/prompt-overlays.mjs"), "src/prompt-overlays.mjs 已删（槽位装配 = 核内单点）")
   assert.ok(!exists("src/tools/bash.md"), "src/tools/*.md 已删（描述面 = 核 tool-docs/）")
@@ -84,10 +84,10 @@ test("W2 删净面：本端 src/prompts/ + src/prompt-overlays.mjs 不存在（�
 test("§3.2 装配矩阵：六主链场景槽文件名与顺序 1:1", () => {
   assert.deepStrictEqual(SCENARIO_SLOT_FILES.engineering, ["persona-engineering.md", "common.md", "discipline-engineering.md"])
   assert.deepStrictEqual(SCENARIO_SLOT_FILES.normal, ["persona-normal.md", "common.md", "discipline-normal.md"])
-  assert.deepStrictEqual(SCENARIO_SLOT_FILES["eng-coder"], ["persona-eng-coder.md", "common.md", "discipline-engineering.md"])
-  assert.deepStrictEqual(SCENARIO_SLOT_FILES.explore, ["persona-explore.md", "common.md", "discipline-normal.md"])
-  assert.deepStrictEqual(SCENARIO_SLOT_FILES.coder, ["persona-coder.md", "common.md", "discipline-normal.md"])
-  assert.deepStrictEqual(SCENARIO_SLOT_FILES.plan, ["persona-plan.md", "common.md", "discipline-normal.md"])
+  assert.deepStrictEqual(SCENARIO_SLOT_FILES["eng-coder"], ["persona-eng-coder.md", "common.md", "discipline-engineering.md", "subagent-base.md"])
+  assert.deepStrictEqual(SCENARIO_SLOT_FILES.explore, ["persona-explore.md", "common.md", "discipline-normal.md", "subagent-base.md"])
+  assert.deepStrictEqual(SCENARIO_SLOT_FILES.coder, ["persona-coder.md", "common.md", "discipline-normal.md", "subagent-base.md"])
+  assert.deepStrictEqual(SCENARIO_SLOT_FILES.plan, ["persona-plan.md", "common.md", "discipline-normal.md", "subagent-base.md"])
 })
 
 test("§3.2 装配矩阵：consult = 自含基底不入主链（null 行）", () => {

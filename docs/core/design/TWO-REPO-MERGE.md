@@ -87,7 +87,7 @@ git blame thincoder-vscode/package.json                # blame 跨 graft 无需�
 
 ## 4. 提示词承载（双源保留）
 
-现状结构：各产品持 `src/prompts/`（运行期落地物）+ `docs/design/prompts/`（中文权威模板）；提示词**正本**已上迁基准层 `docs/core/design/prompts/`（15 档）。
+现状结构：各产品持 `src/prompts/`（运行期落地物）+ `docs/design/prompts/`（中文权威模板）；提示词**正本**已上迁基准层 `docs/core/design/prompts/`（16 档）。
 
 | 层 | 对象 | 处置 |
 |---|---|---|

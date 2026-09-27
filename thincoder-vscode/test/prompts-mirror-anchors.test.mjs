@@ -5,7 +5,7 @@
  * 验收：AC43（双源结构 + 端特有段）；用例 T62——其余（AC39 文本类锚面 / T65）已退场（2026-09-12 PROSE-ANCHOR-RETIRE；见下断言面）。
  *
  * 2026-09-13 单仓化（S5——设计档 TWO-REPO-MERGE.md §2.4 R10）：跨仓断言段退役（兄弟仓路径 /
- * 自指防护 / 跨仓读取与比对）；本端单仓版守卫 = ① 双源同名集合各 15 相等 + ② 本端镜像节引用
+ * 自指防护 / 跨仓读取与比对）；本端单仓版守卫 = ① 核包 16 档 · 归档镜像冻结 15 档（逐名在位）+ ② 本端镜像节引用
  * 可解析——**读取面限于本端文件**（零跨仓读取）。
  *
  * 2026-09-15 W2（`docs/batches/2026-09-15-vsc-core-wiring.md` §2 W2）：英文落地面 `src/prompts/`
@@ -14,7 +14,7 @@
  * 迁移期参照历史）⇒ 「双源」= 核包落地面 ↔ 本端中文镜像。
  *
  * 断言面（2026-09-12 PROSE-ANCHOR-RETIRE 后存留）：
- *   ① 双源同名集合各 15（核包 prompts/ 与 docs/design/prompts——落地 ↔ 镜像对位）；
+ *   ① 双源同名集合：核包 prompts/ 16 档 · 归档镜像冻结 15 档（落地 ↔ 镜像对位）；
  *   ② 本端镜像节引用不悬空（本端可解析，或以「（CLI 侧）」注记豁免——VSC 端镜像批（2026-09-11 · 第 5 批）判据）；
  *   ③ 机制纪律锚串零维护者注（测试内常量面——T-TD3/T-TD4/T-TD7 残余）。
  * 2026-09-12 PROSE-ANCHOR-RETIRE：原 A1–A12 文本类锚 / A8 工具描述 / 端特有段 / 同文组 / 公共层 /
@@ -36,12 +36,30 @@ const readMirror = (name) => readFileSync(join(REPO, "docs", "core", "design", "
 const mdSet = (rel) => readdirSync(join(VSC, rel)).filter((f) => f.endsWith(".md")).sort()
 /** 英文落地面 = 核包 `prompts/`（W2 改指——单一解析面导出的目录常量）。 */
 const mdSetCore = () => readdirSync(CORE_PROMPTS_DIR).filter((f) => f.endsWith(".md")).sort()
+/** 归档镜像面冻结 15 名字面清单（裁定 B 参照历史——不随核包扩档；`docs/_archive/design/prompts/`）。 */
+const MIRROR_FROZEN_15 = [
+  "advisor-design.md",
+  "advisor-round1.md",
+  "advisor-round2.md",
+  "advisor-round3.md",
+  "common.md",
+  "consult-base.md",
+  "discipline-engineering.md",
+  "discipline-normal.md",
+  "persona-coder.md",
+  "persona-eng-coder.md",
+  "persona-eng-designer.md",
+  "persona-engineering.md",
+  "persona-explore.md",
+  "persona-normal.md",
+  "persona-plan.md",
+]
 
-test("③ 双源同名集合各 15（AC43/T62）", () => {
-  assert.equal(mdSetCore().length, 15, `核包 prompts/: 应为 15 档（实 ${mdSetCore().length}）`)
+test("③ 双源同名集合：核包 16 档 · 归档镜像冻结 15 档（AC43/T62）", () => {
+  assert.equal(mdSetCore().length, 16, `核包 prompts/: 应为 16 档（实 ${mdSetCore().length}）`)
   const mirror = mdSet("docs/_archive/design/prompts")
   assert.equal(mirror.length, 15, `docs/design/prompts: 本端应为 15 档（实 ${mirror.length}）`)
-  assert.deepStrictEqual(mirror, mdSetCore(), "核包落地 ↔ 本端镜像同名集合相等")
+  for (const f of MIRROR_FROZEN_15) assert.ok(mirror.includes(f), `归档镜像冻结 15 名在位：${f}`)
 })
 
 test("⑤ 本端镜像节引用不悬空（本端可解析，或「（CLI 侧）」注记豁免——VSC 端镜像批（2026-09-11 · 第 5 批）判据）", () => {

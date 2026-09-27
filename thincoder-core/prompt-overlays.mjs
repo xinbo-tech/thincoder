@@ -3,9 +3,9 @@
  * 施工② G1+G2, 2026-09-10). Slot constants are loaded ONCE (byte-stable, module scope);
  * assemblePrompt composes them per PROMPT-SYSTEM.md §3.2 装配矩阵 (D1 内联表——设计锚).
  *
- * Slot model (PROMPT-SYSTEM.md §1/§2): persona → common → discipline → [4] other
- * (AGENTS/skills ride the existing tail logic). explore/coder/plan reuse PERSONA_NORMAL
- * as their persona slot (蓝图 §3.1 同槽位复用——变体差异归人格层覆写; design D1 G1 note).
+ * Slot model (PROMPT-SYSTEM.md §1/§2): persona → common → discipline → [4] subagent-base
+ * (AGENTS/skills ride the existing tail logic — tail block, no numbered slot). explore/coder/plan
+ * reuse PERSONA_NORMAL as their persona slot (蓝图 §3.1 同槽位复用——变体差异归人格层覆写; design D1 G1 note).
  */
 
 import { loadSlot, applyPromptInjections } from "./prompt-files.mjs"
@@ -22,6 +22,7 @@ const SLOT_CONTENTS = {
   "common.md": loadSlot("common.md"),
   "discipline-engineering.md": loadSlot("discipline-engineering.md"),
   "discipline-normal.md": loadSlot("discipline-normal.md"),
+  "subagent-base.md": loadSlot("subagent-base.md"),
 }
 
 // ── G1 六件导出（评审 #1 计数口径：人格 2 + 公共 1 + 纪律 2 + consult 自含基底；
@@ -40,11 +41,11 @@ export const CONSULT_BASE = loadSlot("consult-base.md")
 export const SCENARIO_SLOT_FILES = {
   engineering: ["persona-engineering.md", "common.md", "discipline-engineering.md"],
   normal: ["persona-normal.md", "common.md", "discipline-normal.md"],
-  "eng-coder": ["persona-eng-coder.md", "common.md", "discipline-engineering.md"],
-  "eng-designer": ["persona-eng-designer.md", "common.md", "discipline-engineering.md"],
-  explore: ["persona-explore.md", "common.md", "discipline-normal.md"],
-  coder: ["persona-coder.md", "common.md", "discipline-normal.md"],
-  plan: ["persona-plan.md", "common.md", "discipline-normal.md"],
+  "eng-coder": ["persona-eng-coder.md", "common.md", "discipline-engineering.md", "subagent-base.md"],
+  "eng-designer": ["persona-eng-designer.md", "common.md", "discipline-engineering.md", "subagent-base.md"],
+  explore: ["persona-explore.md", "common.md", "discipline-normal.md", "subagent-base.md"],
+  coder: ["persona-coder.md", "common.md", "discipline-normal.md", "subagent-base.md"],
+  plan: ["persona-plan.md", "common.md", "discipline-normal.md", "subagent-base.md"],
   consult: null, // §3.3 特殊模块——consult-base.md 自含基底，不入主装配链（CONSULT_BASE 直出）
 }
 
@@ -55,8 +56,8 @@ export function slotWarning(fileName) {
 
 /**
  * G2: the single prompt-assembly function — table-driven (D1), fixed order
- * persona → common → discipline (§3.1 四槽位固定序；[4] AGENTS/skills 由既有尾部
- * 逻辑承担). A missing slot file is SKIPPED with a prominent warning (蓝图 §3.4 降级链);
+ * persona → common → discipline → [4] subagent-base (§3.1 四槽位固定序；AGENTS/skills
+ * 由既有尾部逻辑承担——槽位外尾块，无编号). A missing slot file is SKIPPED with a prominent warning (蓝图 §3.4 降级链);
  * AGENTS.md missing = silent skip in the caller's existing tail logic. Byte-stable
  * per scenario (D3): fixed slot contents + fixed order — no timestamps here.
  *

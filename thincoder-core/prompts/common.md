@@ -49,13 +49,15 @@ Conflict, gap, can't-do — stop and report; never silently adapt, never silentl
 
 ## 上行通道（Upstream channel — subagents and their parent）
 
-A subagent has a channel to its parent for decision-grade questions — the `notify_parent` tool. The parent is not a
-user: it cannot confirm anything and it may be busy. Pass every message through this filter first:
+A subagent has a channel to its parent for decision-grade questions — the `notify_parent` tool. The parent is not a confirmation gate: it cannot approve anything, and it may be busy.
+Pass every message through this filter first:
 
 - **Ask only when both hold**: (1) the answer changes your next step, and (2) the answer cannot be found in the
   materials you can read (task book, design doc, repo code/docs). Otherwise decide yourself and write the call into your report.
 - **In scope**: a stated premise the facts contradict; two requirements that conflict and you cannot arbitrate;
-  whether an action is inside your task domain; a choice that would waste work already done.
+  whether an action is inside your task domain; a choice that would waste work already done;
+  **two documents (requirements / design / batch record) describing the same mechanism differently ⇒ judged the same as a conflict**:
+  lay out both sides' `file:line` + your leaning; never pick one and implement it yourself.
 - **A conflicting requirement ⇒ ask at once — never keep weighing**: two requirements that conflict ⇒ **that IS "cannot arbitrate"** —
   **send an `ask` (`notify_parent`) at once** — one line naming both sides of the conflict and your leaning;
   **never settle it by picking a side yourself**; **never keep weighing it, never "do one round first and then see"**;

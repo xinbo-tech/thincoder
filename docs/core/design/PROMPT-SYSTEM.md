@@ -18,9 +18,9 @@
 | **中文设计档（供人读・非运行期——与运行期档同源）** | `thincoder-cli/docs/design/prompts/*.md`（15 档） | `thincoder-vscode/docs/design/prompts/*.md`（15 档） |
 | 槽位加载面 | `src/prompt-overlays.mjs`（**S2 删**——CLI 已随 U15 落地〔实核档不存在〕/ VSC 已随 `2026-09-15-vsc-core-wiring` W2 落地〔实核档不存在〕；删后装配面 = 核内单点 `thincoder-core/prompt-overlays.mjs`） | 同名（同路径对） |
 
-**核内落点**：`thincoder-core/prompts/`（15 档槽位）+ `thincoder-core/tool-docs/`（24 档工具描述）+ 单一解析面 `prompt-files.mjs`（落 `thincoder-core/`）——**核内唯一副本**（用户裁定 A7）。
+**核内落点**：`thincoder-core/prompts/`（16 档槽位）+ `thincoder-core/tool-docs/`（24 档工具描述）+ 单一解析面 `prompt-files.mjs`（落 `thincoder-core/`）——**核内唯一副本**（用户裁定 A7）。
 
-**核内只有运行期面** ✓——`thincoder-core/prompts/`（15）+ `thincoder-core/tool-docs/`（24）；**中文设计档永进核** ✗（归属**文档面**：两产品原地保留；其改名 / 移动只在文档面，随子系统迁移按文档面计划处置）。
+**核内只有运行期面** ✓——`thincoder-core/prompts/`（16）+ `thincoder-core/tool-docs/`（24）；**中文设计档永进核** ✗（归属**文档面**：两产品原地保留；其改名 / 移动只在文档面，随子系统迁移按文档面计划处置）。
 
 > 工具**实现面**（`src/tools/*.mjs`）的行本体住 `docs/core/design/TOOLS.md`；本档收**文本面**（槽位 / 描述 / 中文设计档）。
 
@@ -154,7 +154,7 @@
 ### 6.1 双面落地流程（现行）
 
 - **提示词 = 产品代码**（FR1 口径不变）；**内容权 = 主 agent**（逐字文本由它定——它就是设计的一部分）；**落笔走正常链**（设计评审 → 用户批准 → eng-coder）；起草分工 = eng-designer 起草逐字 → 主 agent 确认 → eng-coder 机械落笔。
-- **双面**：**中文审核面** = `docs/core/design/prompts/`（15 档——供用户审核；内容权威与设计维护面）∥ **英文运行面** = `thincoder-core/prompts/`（15 档槽位）+ `thincoder-core/tool-docs/`（24 档工具描述）——核内唯一副本（承 F8）。
+- **双面**：**中文审核面** = `docs/core/design/prompts/`（16 档——供用户审核；内容权威与设计维护面）∥ **英文运行面** = `thincoder-core/prompts/`（16 档槽位）+ `thincoder-core/tool-docs/`（24 档工具描述）——核内唯一副本（承 F8）。
 - **公共层（`common.md`）节级结构** → 需求档 `docs/core/requirements/PROMPT-SYSTEM.md` §2.3（**逐节大纲**：每节管什么；正文在两面 common 档）——**本档不复制**（D2）。
 - **行为纪律面的落点形态**：**既有节内增列**（不新增节 ⇒ 零 `##` 块计数连带）；应用实例 = 破坏性命令红线落 `common.md` §10 尾部（→ §7 D-PS5）· 「不可裁决」自止点落 `common.md` §8「上行通道」节内（→ §6.7 · §7 D-PS7）· **台账治理纪律落 `persona-engineering.md`「派发与收尾纪律」节内**（→ §6.8 · §7 D-PS9）· **派单尺寸与任务书形态纪律落 `persona-engineering.md`「实施委托结构化」节内**（→ §6.9 · §7 D-PS10）。
 - **变更流**：改中文正本 → 翻译写入英文运行面（复用存量词句、语义对等；**无同步脚本、无硬一致门**）。提示词档免档位判定（`.md` 结构尺度）。生成流程本体（双面流程 / 路径取法与落地面 / 结构级复核）见 **§10**（本处不重述——D2）。
@@ -164,7 +164,8 @@
 ### 6.2 装配实现事实
 
 - 装配 = **整文件拼接**（`thincoder-core/prompt-overlays.mjs` 槽位表驱动；common 恒第二位、七场景全部注入）——**零段落级解析**：增 / 删节不影响装配代码（增删节类变更 = 零运行时代码改动的充分条件）。
-- 槽位装配矩阵（九场景）与降级链（缺文件 ⇒ 槽空缺 + 警告，**不 fallback**）→ 详述 = `docs/core/requirements/PROMPT-SYSTEM.md` §4.5（本档不复制——D2）。
+  **槽位模型**（与 `prompt-overlays.mjs` 头注同轴）：persona → common → discipline → **[4] 子代理层**（`subagent-base.md`——eng-coder / eng-designer / explore / coder / plan 五场景行末装配）；**AGENTS.md / skills = 槽位外尾块**（无编号——装配于槽链之后的既有尾部逻辑）。
+- 槽位装配矩阵（九场景）与降级链（缺文件 ⇒ 槽空缺 + 警告，**不 fallback**）→ 详述 = `docs/core/requirements/PROMPT-SYSTEM.md` §2.6（装配逻辑——四槽固定序 + 矩阵 + 降级链）（本档不复制——D2）。
 - **装配之后的运行期追加面**：项目指令块（不分 depth）与 skills 尾块（depth-0）——`thincoder-core/agent/setup.mjs:221-229`；以及**派单固块**（spawn 级固定机制性指令，如批次档路径行 / 审计模板；拼接位 = 槽位装配之后、项目指令之前）——字段 `child._spawnSystemBlock`、拼接点 `thincoder-core/agent/setup.mjs:214` 之后；**机制单源 = `AGENT-LOOP-SUBAGENT.md` §6.26，本档不复制**。
 
 ### 6.3 端特有段与多实现面纪律
@@ -186,8 +187,8 @@
 
 ### 6.5 现状坐标（as-of 2026-09-15 实核）
 
-- 运行期槽位 = `thincoder-core/prompts/*.md`（15 档）· 工具描述 = `thincoder-core/tool-docs/*.md`（24 档）；加载面 = `thincoder-core/prompt-files.mjs` + `thincoder-core/prompt-overlays.mjs`。
-- 中文正本 = `docs/core/design/prompts/*.md`（15 档——2026-09-15 批 1 位移落位）。
+- 运行期槽位 = `thincoder-core/prompts/*.md`（16 档）· 工具描述 = `thincoder-core/tool-docs/*.md`（24 档）；加载面 = `thincoder-core/prompt-files.mjs` + `thincoder-core/prompt-overlays.mjs`。
+- 中文正本 = `docs/core/design/prompts/*.md`（16 档——2026-09-15 批 1 位移落位）。
 - **端侧装配面（S2 接线落地读数）**：CLI = `thincoder-cli/bin/thincoder.mjs` 入口首步 `configurePromptInjections(CLI 表)` + `thincoder-cli/src/prompt-injections.mjs`（随 U2 落）；
   VSC = `thincoder-vscode/extension.mjs` `activate()` 首步 `configurePromptInjections(VSC 表)` + `thincoder-vscode/src/prompt-injections.mjs`（随 W2 落）；工具描述装载根两产品同指核 `loadToolDoc`（CORE-UNIFICATION §2.13.2 / §2.13.8）。
 
@@ -222,14 +223,14 @@
 
 **机制**：上行通道 in-scope 的「不可裁决」补一条**发现即触发**的自止边界——**发现两处要求互斥的那一刻即为「不可裁决」⇒ 立即 `ask`**（一句话摆冲突双方 + 你的倾向）；
 不得自选一方解套；不得继续权衡、先做一轮再说；不得拖到最终报告——**不设权衡前置、不设配额**（用户 2026-09-25 06:2x 裁定「满量先行」：先给足药量、过量再减；调参靠实测回拨）。
-同族限定：「降级交付」**不含冲突类**（发现矛盾的要求 ⇒ 立即 ask）· 各人格档「歧义进最终报告 / 计划」类出口**不含冲突类**（冲突点即时 ask）——eng-designer 两处 + 同族四档（`persona-eng-coder` / `persona-coder` / `persona-plan` / `persona-explore`）逐处同点限定。
+同族限定：各本地出口（降级交付 / 歧义注明）**不含冲突类**——冲突处置 = **正典层单源**（`subagent-base.md`「**冲突类必发、不得拖终报**」；发现矛盾的要求 ⇒ 立即 `ask`）。
 
 **分层归属判据**：判据本体 = 公共层（上行通道 in-scope）⇒ 操作化落同节（D2 单一权威源；公共层恒第二位 = 全角色覆盖）；
-人格档逐处限定 = 各档**本地出口的边界**（eng-designer 的回合预算 / 无用户可等句；同族四档的「歧义进报告 / 计划」句——就近落各档本地）——**本地只加出口边界句 + 最短动作锚**（承编写纪律 #10「关键锚点重复」——需求档 `docs/core/requirements/PROMPT-SYSTEM.md` §4 B 组）；
+子代理角色面 = **正典层 `subagent-base.md`**（受众 = 全部子代理角色——「向谁问」与冲突处置的单源面；槽位 [4] 装配）；人格档本地出口（eng-designer 的回合预算句 / plan 的歧义注明句——就近落各档本地）**不承载冲突限定**；
 工程纪律层零增补（其「途中前提失效 ⇒ 上游 `ask`」与公共层同向，无新出口需堵）。**否决备选** → §7 D-PS7。
 
-**落点**：**12 档 · 双源**——`common.md` 两份（自止点：中文正本 `docs/core/design/prompts/common.md` + 英文运行面 `thincoder-core/prompts/common.md`）+
-人格档同点限定五档 × 双面（`persona-eng-designer` · `persona-eng-coder` · `persona-coder` · `persona-plan` · `persona-explore`——逐处坐标 = 批档 §2）；
+**落点**：**双源**——`common.md` 两份（自止点：中文正本 `docs/core/design/prompts/common.md` + 英文运行面 `thincoder-core/prompts/common.md`）+
+**正典层 `subagent-base.md`** 两份（槽位 [4]——全部子代理角色装配：「向谁问」/ 决策级四类 / 冲突类必发不得拖终报）；
 逐字文本 = 批档 §2（一次性材料不混入本档）；零新增节（`##` 块计数 14 守恒 ⇒ T-CL1 无连带）。
 
 **机检面**：引用锁 T9 · T-CL1 · 双源锁照常适用；**不新增断言**（内容在场判据 = 散文锚，禁新增）——在场以一次性逐字比对核（批档 §2）。
@@ -316,7 +317,7 @@
 
 | 面 | 取值规则 | 判据（可机检） |
 |---|---|---|
-| **模板（CN 审核面）** | `docRoot.design` **逐根** + `/prompts`——**取实存者**；本仓 = `docs/core/design/prompts/`（15 档） | 各根下 `prompts/` 目录**实存命中恰 1 处**：0 命中 = 配置缺口（fail-loud，不静默回落）；≥2 命中 = 歧义（拒，须显式声明） |
+| **模板（CN 审核面）** | `docRoot.design` **逐根** + `/prompts`——**取实存者**；本仓 = `docs/core/design/prompts/`（16 档） | 各根下 `prompts/` 目录**实存命中恰 1 处**：0 命中 = 配置缺口（fail-loud，不静默回落）；≥2 命中 = 歧义（拒，须显式声明） |
 | **落地（EN 运行面）** | manifest 顶层平级键 `promptsLanding`（单源声明；缺键 fallback = `DEFAULT_MANIFEST.promptsLanding` = `thincoder-core/prompts`） | 声明值 == `thincoder-core/prompt-files.mjs:30` `PROMPTS_DIR` 实测值（两值同指 ⇒ 声明与实际一致；不一致 = 生成会写偏，报） |
 
 **取法裁定（三候选 → 选定「逐根取实存」）**：
@@ -376,7 +377,7 @@
 
 **AC-M9-3 判据域注**：
 
-- **域** = 两面提示词档（模板 15 + 落地 15 = 30 档）。
+- **域** = 两面提示词档（模板 16 + 落地 16 = 32 档）。
 - **模式** = `方案选型对比|候选 ?≥ ?2|对比表|单方案豁免|方案对比已做|comparison table|single-candidate exemption`。
 - **豁免形态** = 「该纪律已废 / that discipline is retired」**退役声明句**（正面陈述，不复述老要求）——现两处（两面 `persona-eng-designer.md` 各 1）。
 - **排除** = 设计档 / 批次档 / 需求档（纪律本体与历史记录，**非**清理对象——原判据把「指到纪律本体的坐标」与「提示词内的要求」混为一域，本次分彮登记）。
@@ -384,6 +385,10 @@
 **边界（本节不做）**：不做提示词内容权（内容 = 主 agent 内容权 + coder 落笔）；不手改落地档（生成物）；不新增机检门。
 
 ## 变更记录
+
+- 2026-09-27（**批 escalation-canon · 设计面收正轮（F16 排期 ②）** · eng-designer——承 `docs/batches/2026-09-27-escalation-canon.md` §2.13-F16②）：§1 / §6.1 / §6.5 / §10.1 计数 15→16（新层 `subagent-base.md`；§10.5 判据域注 30→32）+ §6.2 补槽位模型句（[4] 子代理层 / 5 子代理场景行末 / AGENTS·skills 槽位外尾块）+ §6.7 口径收正（冲突处置单源 = 正典层）。**零新机制**。
+
+- 2026-09-27（**批 escalation-canon · 评审修正轮 1（F12 · 域外指针复核收正）** · eng-designer——承 `docs/batches/2026-09-27-escalation-canon.md` §3 轮次 1 域外注）：§6.2 装配矩阵「详述」指针按实核收正为需求档「装配逻辑」节（§2.6）。**零新机制**；本批发现表 12 条处置落批档 §2.12，本档改动 = 本处。
 
 - 2026-09-26（**批 dispatch-sizing · 修正轮 2（#16 · 实施后设计面收正）** · eng-designer——承 `docs/batches/2026-09-26-dispatch-sizing.md` §1.11 · §5（#15 报告））：§6.3 端特有段引文坐标按现盘收正（EN `:154`→`:160` · `:158`→`:164`；CN `:151`→`:156`）+ §6.9 落点行数口径收正（「+4 行」→「内容 4 条；EN 物理 5 行——第 4 条折行」）。**零新机制**。
 

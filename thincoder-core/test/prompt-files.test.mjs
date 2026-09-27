@@ -19,7 +19,7 @@ import {
   resetPromptInjections,
 } from "../prompt-files.mjs"
 
-/** S1 核内槽位提示词（15）= 全量（S0a 席位 12 + S1 补齐 3）。 */
+/** S1 核内槽位提示词（16）= 全量（S0a 席位 12 + S1 补齐 3 + [4] 子代理层 1）。 */
 const SLOT_PROMPTS = [
   "advisor-design.md",
   "advisor-round1.md",
@@ -36,6 +36,7 @@ const SLOT_PROMPTS = [
   "persona-explore.md",
   "persona-normal.md",
   "persona-plan.md",
+  "subagent-base.md",
 ]
 
 /** S1 核内工具描述（24）= 全量。 */
@@ -66,7 +67,7 @@ const TOOL_DOCS = [
   "write",
 ]
 
-test("core prompts/ holds exactly the full slot set (15)", () => {
+test("core prompts/ holds exactly the full slot set (16)", () => {
   assert.deepEqual(readdirSync(PROMPTS_DIR).sort(), [...SLOT_PROMPTS].sort())
 })
 

@@ -12,7 +12,7 @@ Design docs in `docs/_archive/design/` (migration-period reference — retained,
 - ESM (`.mjs`) throughout — `package.json` declares `"type": "module"`.
 - LLM calls go through native `fetch` with SSE streaming, same as thincoder core.
 - Tool implementations are adapted for VS Code context (workspace root = cwd; no directory restriction on tools since 2026-09-02 — paths resolve relative to cwd, approval gate is the guard).
-- **提示词面（核内唯一副本——2026-09-15 修订）**：运行期提示词/工具描述 = 核内落地（`thincoder-core/prompts/` 15 档槽位 + `thincoder-core/tool-docs/` 24 档工具描述）——本端自持提示词 / 工具描述镜像已删（F9 零残留）；中文设计档（人读正本）= 仓根 `docs/core/design/prompts/*.md`。装配 = 核单点（`@thincoder/core/prompt-overlays.mjs`）+ 本端 `src/prompt-injections.mjs`（2 锚 VSC 取值表）注入端取值。
+- **提示词面（核内唯一副本——2026-09-15 修订）**：运行期提示词/工具描述 = 核内落地（`thincoder-core/prompts/` 16 档槽位 + `thincoder-core/tool-docs/` 24 档工具描述）——本端自持提示词 / 工具描述镜像已删（F9 零残留）；中文设计档（人读正本）= 仓根 `docs/core/design/prompts/*.md`。装配 = 核单点（`@thincoder/core/prompt-overlays.mjs`）+ 本端 `src/prompt-injections.mjs`（2 锚 VSC 取值表）注入端取值。
 
 
 ## Key Conventions
@@ -124,5 +124,5 @@ webview/index.html   Webview shell (referenced by ChatPanel._html())
 - **Integration set**: business-voice scenarios asserting observable results — they run inside `npm test` (`test/integration/` + its manifest `test/integration/files.mjs`, driven by the unified runner `test/run.mjs`).
 - **Release gate**: `vscode:prepublish` = `npm run lint && npm test` (runs automatically on `vsce package` / bare `vsce publish`).
 - **Doc check (not a gate step)**: `npm run doc:check` — repo-root domain; same command as the CI docs job.
-- **Packaging assertion**: `postpackage` = `node scripts/check-vsix.mjs` (runs automatically after `npm run package`) — unpacks the produced vsix and asserts the embedded core + version literal equality + prompt-face completeness (`prompts/` 15 + `tool-docs/` 24 — names + sha256); fail-closed (a core-less vsix exits 1, though vsce itself exits 0).
+- **Packaging assertion**: `postpackage` = `node scripts/check-vsix.mjs` (runs automatically after `npm run package`) — unpacks the produced vsix and asserts the embedded core + version literal equality + prompt-face completeness (`prompts/` 16 + `tool-docs/` 24 — names + sha256); fail-closed (a core-less vsix exits 1, though vsce itself exits 0).
 - After modifying agent loop or tools: test with a simple file operation (read + write) and a multi-turn conversation.

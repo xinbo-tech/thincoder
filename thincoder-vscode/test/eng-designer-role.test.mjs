@@ -128,7 +128,7 @@ test("T57 零回归：eng-coder 装配面不变（advisor/verify 在，batch 仍
 })
 
 test("T57 边界：场景表（不静默回退）+ 人格槽位 + 纪律槽", () => {
-  assert.deepEqual(SCENARIO_SLOT_FILES["eng-designer"], ["persona-eng-designer.md", "common.md", "discipline-engineering.md"], "designer 场景已登记（槽序 persona→common→discipline）")
+  assert.deepEqual(SCENARIO_SLOT_FILES["eng-designer"], ["persona-eng-designer.md", "common.md", "discipline-engineering.md", "subagent-base.md"], "designer 场景已登记（槽序 persona→common→discipline→subagent-base）")
   const { prompt, warnings } = assemblePrompt("eng-designer")
   assert.ok(prompt.length > 0, "prompt 非空")
   // 人格槽文件由提示词面（面②）交付——落地前唯一允许的警告 = 该槽文件缺失（不误报其他槽）

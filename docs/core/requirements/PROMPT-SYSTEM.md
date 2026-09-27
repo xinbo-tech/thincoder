@@ -9,7 +9,7 @@
 
 提示词系统把工程协作的三类内容——**「你是谁」（人格层）、「协作基础」（公共层）、「怎么干活」（纪律层）**——落成结构化分层提示词；**并入核、核内唯一副本、两端从核加载**（用户 2026-09-13 裁定 A7），使「共享提示词内容」与「共享实现」同源同收益。
 
-- 运行期面 = `thincoder-core/prompts/`（15 档槽位）+ `thincoder-core/tool-docs/`（24 档工具描述）+ 单一解析面 `prompt-files.mjs`；**中文设计档永进核**（供人读、非运行期，文档面）。
+- 运行期面 = `thincoder-core/prompts/`（16 档槽位）+ `thincoder-core/tool-docs/`（24 档工具描述）+ 单一解析面 `prompt-files.mjs`；**中文设计档永进核**（供人读、非运行期，文档面）。
 
 ## 2. 功能需求（逐条可验收）
 
@@ -20,7 +20,7 @@
 | [1] 人格层 | 「你是谁」：模式 / 角色的身份与边界宣言 | 每人格一份（主会话按模式、子代理按角色） |
 | [2] 公共层 | 两模式共用的协作基础（语言 / 人机分工 / 确认门 / 合同纪律） | 恒一份（恒第二位） |
 | [3] 纪律层 | 「怎么干活」：本模式的工作流程 / 行为规则 / 工具观 | 每模式一份 |
-| [4] 其他 | 项目层（AGENTS——cwd 注入）+ skills 清单等追加 | 动态 |
+| [4] 子代理层 | 子代理专用边界与上行通道（`subagent-base.md`——**仅子代理场景装配**） | 恒一份 |
 
 独立于主装配链的**特殊模块**：consult（会诊）、advisor（评审）——自含基底、独立注入（§2.6）。
 
@@ -36,14 +36,14 @@
 | persona-normal.md | ① 身份宣言（coding agent——全项目代码所有者）② 能力边界（直接写码 / 全工具）③ 协作立场（人定方向拍板，我干活） |
 | persona-explore.md | ① 身份：只读侦察 ② 权限边界（只读 / 不碰用户——现由运行时机械承载）③ 报告义务（必列找了什么 / 没找到什么） |
 | persona-coder.md | ① 身份：受控写码实现者 ② 权限边界（写门控）③ 报告义务 |
-| persona-plan.md | ① 身份：只读规划 ② 权限边界（只读 / 不问用户）③ 报告义务（歧义带回主会话裁决） |
+| persona-plan.md | ① 身份：只读规划 ② 权限边界（只读）③ 报告义务（歧义带回主会话裁决） |
 
 > 2026-09-22 增补（用户 08:05 提问 → 08:11 裁定「可以」· 主 agent 落笔）：主会话**「在途提问」模式**（借 busy 队列的边界送达——非阻塞软转向通道）。
 > **目标**：主 agent 在长执行（子代理在飞 / 长链条）中不必二选一「阻塞等人」或「闷头跑完」——问题随正文流发出 + 给默认值继续推进；用户在忙期提交（排队），消费 = **步边界 pickup（主——当前一步结束后即以普通 user 消息生效，不打断在飞工具）** / 回合尾兜底 / 挂起窗消费；校正自下一步生效（2026-09-24 收正——承 queue-visible 批机制升级）。
 > **功能点**：① 双档主会话人格（`persona-engineering.md` + `persona-normal.md`）写入该段：触发条件（长执行 ∧ 有可先行默认值）+ 一句式模板 + 收到 steer 即校正；
 > ② 通道分界：硬门（新范围 / 口径裁决 / 不可带默认前行）⇒ `question` 工具（阻塞）或停下上报；软转向 ⇒ 在途提问（非阻塞）；例行确认门仍走纯文本（现行零变）；
 > ③ 纪律：一次一问（与 `question` 工具 ONE-question 同源）· 不重复索要已授权范围 · 默认先行不空转；④ `tool-docs/question.md` 补两通道分界一句（落点与 TOOLS 面协同——设计裁定）。（折三行 = 父侧直接执行 · 行宽收正 · 零语义 · 可 revert · 2026-09-22 hygiene 批）
-> **边界（不做）**：busy 队列机制本身零动（本项不改造队列；机制口径 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8——2026-09-24 queue-visible 批已落：多槽（容量 8）+ 合并消费（R15 恢复）+ 步边界 pickup）· 不新增工具 · 不替代确认门硬门 · 子代理无此通道（仍「无用户可等」）。
+> **边界（不做）**：busy 队列机制本身零动（本项不改造队列；机制口径 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8——2026-09-24 queue-visible 批已落：多槽（容量 8）+ 合并消费（R15 恢复）+ 步边界 pickup）· 不新增工具 · 不替代确认门硬门 · 子代理无此通道（子代理上行 = `notify_parent` 决策级通道——正典见 `prompts/subagent-base.md`）。
 > **验收**：① 四面副本（工程 / 普通 × 运行期 / 模板）该段在位；**同语言双副本与其语言面逐字草案全等**（`prompts-dual-source` 绿 + 一次性 UTF-8 逐行比对——非常驻散文锚，跨语言逐字相等不可达：中英两面 = 翻译，承 2026-09-17 收正）；② 零文档引用（两界机检族）· 机检净增 0；③ 三包全绿；④ 双面语义等价。
 > **依赖**：F16 busy 队列（TUI 板块——已落 `cc9e0c56`：边界送达 / 挂起窗输入优先）；`tool-docs/question.md` 既有使用纪律；persona-engineering 锚点 = `ENGINEERING-MODE-V2.md` §7.2。**实现序**：待批（归批——可与后续提示词面小项搭同批）。
 
@@ -69,7 +69,7 @@
 | 5 | 证据纪律 | 每条事实/行为断言读代码/文档引 file:line，否则标 unverified；已给过的事实直接引用不重读；不预读无关代码 |
 | 6 | 文档写作纪律 | **禁脚本代笔**——文档改动逐处读/理解语义/亲自写（语义合并）；用户原话优先于自己的任何转述 |
 | 7 | 停下上报 | 冲突/缺口/做不到停下报告，不静默适应/缩水 |
-| 8 | 上行通道 | 子代理 → 父侧的在飞上报：只问「答案会改下一步且材料里查不到」；**发现矛盾的要求 ⇒ 立刻询问（`ask`：摆出冲突双方 + 你的倾向）——不得自选、不得继续权衡、不得拖到收尾**；非阻塞（不空转、不轮询）；父侧回 = `subagent send` |
+| 8 | 上行通道 | 子代理 → 父侧的在飞上报：只问「答案会改下一步且材料里查不到」；**发现矛盾的要求 ⇒ 立刻询问（`ask`：摆出冲突双方 + 你的倾向）——不得自选、不得继续权衡、不得拖到收尾**；**两处文档对同一机制描述不同 ⇒ 同判冲突**（摆双方 `file:line` + 倾向，不得自行择一实现）；非阻塞（不空转、不轮询）；父侧回 = `subagent send` |
 | 9 | 工具观 | 搜索优先 MCP；代码库探索 repo_outline→doc_search→code_search；独立读调用并行 |
 | 10 | 工具路由 | 写类场景按表路由不用 bash（write/edit/…/git/execute）；有专用工具就不 hand-roll；**破坏性命令红线**（删除类禁自构造 · 诊断命令只读 · 禁 `2>nul`/`&` 静默掩盖 · 不可逆前置确认）〔2026-09-20 增补②〕 |
 | 11 | 系统接口语义 | 各角色收到的提醒字段解读（具体由人格层覆写） |
@@ -80,6 +80,8 @@
 > 2026-09-17 收正：确认门**已移出公共层**（只归主会话人格 persona-engineering/persona-normal——公共层留「子代理无用户可等」句）；新增「文档写作纪律」（禁脚本代笔 + 语义合并——两次脚本改文档被用户推翻的教训）。
 > 2026-09-17 再收正：「主会话与子代理（谁有用户可等）」节**移出公共层**——主/子角色差异不属全角色共用内容；「无用户可等」句归入各子代理人格档（persona-{coder,eng-coder,eng-designer,explore,plan}）；主会话确认门已在人格层。
 > 2026-09-17 三收正（用户裁定）：「任务边界与范围外注记」「交付报告」两节**不落人格层（五副本漂移）**——归入**两条纪律层**（`discipline-engineering.md` + `discipline-normal.md`，各一份）：它们是一般工作纪律（主会话读到亦无害），不属角色身份。
+> **2026-09-27 收正（escalation-canon 批 · 台账 #442 · 主 agent 落笔）**：「无用户可等」句族**全量退场**——上行通道正典归 **`subagent-base.md`**（槽位 [4] 子代理层 · 仅子代理场景装配）：**父代理就是子代理的用户**（调用方）· 决策级问题即发（即发即走）· **冲突类必发、不得拖终报**；校准句 =「**禁的是确认型提问，不是决策型提问**」。
+> 本档 `:46` / `:72` 已同步收正；`common.md` 侧同批落「父不是确认门」（确认权威轴）与 in-scope 补条（**文档矛盾 ⇒ 同判冲突**）。批档 = `docs/batches/2026-09-27-escalation-canon.md`。
 > 2026-09-19 增补（用户裁定 · 主 agent 落笔）：① 新增**第 13 节「台账常识」**——台账是**全角色系统常识**（两模式 + 全部子代理都要知道）；工程模式的「何时动账」（事件 → 动作）**不在此层**，留工程模式提示词（`ENGINEERING-MODE-V2.md` §13.8 FR30）。② 同表**补两行历史遗漏**（§8 上行通道〔2026-09-18 上行通道批〕· §12 文档体系评价〔2026-09-18 用户定向新增〕）——计数 10 → 13（D3 同步）。
 
 > 2026-09-20 增补（用户裁定「公共提示词常识面是缺口，**要改**；**六段全图也应该作为常识进入**」· 主 agent 落笔）：新增**第 14 节「批次档常识」**。**目标**：**主链各角色**（两模式 + 五个子代理角色 explore / plan / coder / eng-coder / eng-designer）从常识面即可知批次档全图；
@@ -134,13 +136,14 @@ discipline-normal.md 内容大纲（每节管什么）：
 | [2] 公共层 | common.md |
 | [3] 纪律层·工程 | discipline-engineering.md |
 | [3] 纪律层·普通 | discipline-normal.md |
+| [4] 子代理层 | subagent-base.md（仅子代理场景） |
 | 特殊模块 | consult-base.md / advisor-design.md / advisor-round{1,2,3}.md（自含） |
 
-文件清单总数：主链 **10 文件**（人格 7 + 公共 1 + 纪律 2），特殊模块 5 件计入则 **15**；不含 AGENTS.md（项目层）。
+文件清单总数：主链 **11 文件**（人格 7 + 公共 1 + 纪律 2 + **子代理层 1**），特殊模块 5 件计入则 **16**；不含 AGENTS.md（项目层）。
 
 ### 2.6 装配逻辑（四槽固定序 + 矩阵 + 降级链）
 
-**四槽位固定序**：`[1] 人格层 → [2] 公共层 → [3] 纪律层 → [4] 其他`——每槽至多一份；未命中跳过；**人格先行 · 公共恒二 · 同槽不重复 · 同槽复用**。
+**四槽位固定序**：`[1] 人格层 → [2] 公共层 → [3] 纪律层 → [4] 子代理层（subagent-base.md——仅子代理场景装配）`——每槽至多一份；未命中跳过；**人格先行 · 公共恒二 · 同槽不重复 · 同槽复用**；**AGENTS.md（项目层）与 skills 清单 = 槽位外尾块**（无编号 · 链末追加）。
 
 **装配矩阵（目标态）**：
 
@@ -148,11 +151,11 @@ discipline-normal.md 内容大纲（每节管什么）：
 |---|---|
 | 主会话·工程 | persona-engineering.md → common.md → discipline-engineering.md → AGENTS + skills |
 | 主会话·普通 | persona-normal.md → common.md → discipline-normal.md → AGENTS + skills |
-| 子代理·eng-coder | persona-eng-coder.md → common.md → discipline-engineering.md → AGENTS |
-| 子代理·eng-designer | persona-eng-designer.md → common.md → discipline-engineering.md → AGENTS |
-| 子代理·explore | persona-explore.md → common.md → discipline-normal.md → AGENTS |
-| 子代理·coder | persona-coder.md → common.md → discipline-normal.md → AGENTS |
-| 子代理·plan | persona-plan.md → common.md → discipline-normal.md → AGENTS |
+| 子代理·eng-coder | persona-eng-coder.md → common.md → discipline-engineering.md → subagent-base.md → AGENTS |
+| 子代理·eng-designer | persona-eng-designer.md → common.md → discipline-engineering.md → subagent-base.md → AGENTS |
+| 子代理·explore | persona-explore.md → common.md → discipline-normal.md → subagent-base.md → AGENTS |
+| 子代理·coder | persona-coder.md → common.md → discipline-normal.md → subagent-base.md → AGENTS |
+| 子代理·plan | persona-plan.md → common.md → discipline-normal.md → subagent-base.md → AGENTS |
 | 特殊·consult | consult-base.md（自含——不入主链） |
 | 特殊·advisor | advisor-design.md / advisor-round{N}.md（自含——不入主链） |
 
@@ -160,7 +163,7 @@ discipline-normal.md 内容大纲（每节管什么）：
 
 ### 2.7 并入核（迁移目标——核内唯一副本）
 
-- **F8**（用户故事）：作为维护者，我想要**提示词并入核**（`src/prompts/` 15 档 + `src/tools/*.md` 25 档）：核内只留**唯一副本**、两端从核加载，以便「共享提示词内容」与「共享实现」同源同收益。**范围边界**：不保留产品内提示词副本；不在核内按端分支文本；端特有段以**注入**表达；指令面变更须走 A11 逐条裁定并登记。
+- **F8**（用户故事）：作为维护者，我想要**提示词并入核**（`thincoder-core/prompts/` 16 档 + `thincoder-core/tool-docs/` 24 档）：核内只留**唯一副本**、两端从核加载，以便「共享提示词内容」与「共享实现」同源同收益。**范围边界**：不保留产品内提示词副本；不在核内按端分支文本；端特有段以**注入**表达；指令面变更须走 A11 逐条裁定并登记。
 - **中文设计档不进核内构建面**：两产品 `docs/design/prompts/**` = 迁移期参照历史（裁定 B——不迁不删、保留 ≠ 维护）；F9「无残留双份」覆盖面限实现面 + 提示词落地档。
 - **适用工作流条目（回指）**：F3 / F5 / F9 / F11 / F12 / N3 / N5。
 
@@ -176,7 +179,7 @@ discipline-normal.md 内容大纲（每节管什么）：
 | # | 标准 | 度量 |
 |---|---|---|
 | N1 | 命名即槽位 | 文件名匹配 `层前缀-变体.md`，机检可判 |
-| N2 | 完备性 | 档名集合 = 槽位 15 + 工具描述 25（断言 D） |
+| N2 | 完备性 | 档名集合 = 槽位 16 + 工具描述 24（断言 D） |
 | N3 | 单一权威源 + 核内唯一副本 | 两端从核加载，零产品侧路径 |
 | N4 | 双端语义同源 | 各端原文自持、端特有段原地保留（多实现面纪律）——**例外同 F7-3：端差默认 = 消；保留须结构性不对称 + 证据 + 显式裁定** |
 | N5 | 结构尺度 | `.md` 提示词档免档位判定 |
@@ -234,4 +237,6 @@ discipline-normal.md 内容大纲（每节管什么）：
 - 2026-09-25（**ledger-governance 批 · 需求增补 · 父侧明示委托本轮落——eng-designer 代执行 · 可 revert**——承 `docs/batches/2026-09-25-ledger-governance.md` §1 · 台账 #376）：
   §2.2 人格层新增**台账治理纪律**增补块（做还是记 + 池面 triage；落点 = 双面 `persona-engineering.md`「派发与收尾纪律」节内——`欠账入清单` 邻位）；
   同裁定：双面台账节生命周期 ② 陈旧半句 **×2 同批定点收正**（连带项披露——改后草案逐字 = 批档 §2）。实现归批落地。**无计数连带**（既有节内增列）。
+- 2026-09-27（**escalation-canon 批 · 主 agent 落笔**——承 `docs/batches/2026-09-27-escalation-canon.md` · 台账 #442 · 用户 12:02 / 12:05 / 12:08 裁定链）：**槽位模型 `[4]` 收正为子代理层**（`subagent-base.md`——仅子代理场景装配；AGENTS / skills = 槽位外尾块）——§2.1 表 / §2.5 清单 / §2.6 四槽序 + 装配矩阵 5 子代理行同改；
+  **计数 15 → 16**（`:12` / 文件清单总数 / `:179` N2）+ N2「工具描述 25 → 24」（实盘收正）；`:72` 上行通道行补「**文档矛盾 ⇒ 同判冲突**」半句；`:46` 旧括注指称退场收正；`:80-81` 邻位增 2026-09-27 收正注记。双源同文（提示词面）；无机械门新增。
 

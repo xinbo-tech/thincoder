@@ -1,6 +1,6 @@
 /**
  * core-prompt-face.test.mjs — 核内提示词面 / 工具描述面的**结构**机检
- * （CORE-UNIFICATION T-C8「核内 15 + 24 在位」· D-C13 单一解析面 · 契约 10「核档内零端名分支」）。
+ * （CORE-UNIFICATION T-C8「核内 16 + 24 在位」· D-C13 单一解析面 · 契约 10「核档内零端名分支」）。
  *
  * 断言的形态 = **结构面**（档名集合 / 可加载性 / 注入位语法），不是散文锚——读取档内容仅为
  * 枚举，不对任何句子做在场 / 缺席断言（测试纪律「禁止新写散文锚」）。
@@ -12,9 +12,9 @@ import { loadSlot, loadAdvisorPrompt, loadToolDoc, PROMPTS_DIR, TOOL_DOCS_DIR } 
 
 const md = (dir) => readdirSync(dir).filter((f) => f.endsWith(".md")).sort()
 
-test("prompt slots: 15 files in core (T-C8)", () => {
+test("prompt slots: 16 files in core (T-C8)", () => {
   const slots = md(PROMPTS_DIR)
-  assert.equal(slots.length, 15, `slot prompts: ${slots.join(", ")}`)
+  assert.equal(slots.length, 16, `slot prompts: ${slots.join(", ")}`)
 })
 
 test("tool docs: 24 files in core (T-C8)", () => {

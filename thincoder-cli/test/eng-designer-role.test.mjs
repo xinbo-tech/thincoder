@@ -117,7 +117,7 @@ test("T31 错误：非工程模式 spawn eng-designer → throw（与 eng-coder 
 // T32 边界：装配不静默回退 + 接线（AC17）
 // ═════════════════════════════════════════════════════════════════════════════
 test("T32 边界：assemblePrompt('eng-designer') 非空 ≠ CONSULT_BASE + 槽序正确 + 零警告（防静默回退）", () => {
-  assert.deepEqual(SCENARIO_SLOT_FILES["eng-designer"], ["persona-eng-designer.md", "common.md", "discipline-engineering.md"], "场景槽表行（顺序 = persona→common→discipline）")
+  assert.deepEqual(SCENARIO_SLOT_FILES["eng-designer"], ["persona-eng-designer.md", "common.md", "discipline-engineering.md", "subagent-base.md"], "场景槽表行（顺序 = persona→common→discipline→subagent-base）")
   const a = assemblePrompt("eng-designer")
   assert.ok(a.prompt.length > 500, "装配非空")
   assert.deepEqual(a.warnings, [], "全槽在位零警告（漏登记 SLOT_CONTENTS 即警告）")
