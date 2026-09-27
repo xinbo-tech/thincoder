@@ -7,7 +7,7 @@
  */
 import { resolve, relative } from "node:path"
 import { FILE_MUTATORS } from "./run-helpers.mjs"
-import { isCodePath, loadConventions } from "@thincoder/core/conventions.mjs"
+import { isCodePath, loadProjectDeclaration } from "@thincoder/core/conventions.mjs"
 import { validateDesignToken } from "@thincoder/core/agent-tools/design-token.mjs"
 import { readSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
 // §9 D-24b：冻结窗口判据组装——W12（2026-09-15）原端侧 `advisor-async.mjs` 副本退役后
@@ -88,14 +88,14 @@ export function preGateBlocked(agent, { tool, toolName, args, depth }) {
   // AC4: 判定资格 = "任一活槽存在"（内存 Map / 权威槽回读）——单值镜像已退役（D5）。
   if (agent.config?.agent?.engineering && depth === 0 && FILE_MUTATORS.has(toolName)) {
     const paths = toolTouchPaths(tool, args)
-    const conv = loadConventions(agent.cwd)
+    const conv = loadProjectDeclaration(agent.cwd)
     // Unknown/missing paths (non-string) are treated as code — block conservatively.
     const touchesCode = paths.some((p) => typeof p !== "string" || isCodePath(p, conv))
     if (touchesCode && !agentHasLiveEngSlot(agent)) {
       // Undeclared project → point at the declaration file (降级可见契约).
       const convNote = conv.declared
         ? ""
-        : ` — this path was classified as product code by the default conventions (code paths: ${conv.codePaths.join(", ")}); declare project conventions in .thincoder/conventions.json to adjust.`
+        : ` — this path was classified as product code by the default conventions (code paths: ${conv.codePaths.join(", ")}); declare project conventions in PROJECT-MANIFEST.json to adjust.`
       return { blocked: true, content: `Error: engineering design gate — Engineering mode: write the design document first（location per your project's document conventions）, then call advisor with type='design' to review it, and wait for user approval. Implementation is done by eng-coder subagents.${convNote}` }
     }
   }

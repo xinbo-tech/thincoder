@@ -1,19 +1,25 @@
 /**
  * conventions.mjs — the single authority for code / doc / temp / aux path classification,
- * plus the project convention declaration surface (`.thincoder/conventions.json`).
+ * plus the project declaration surface (the three declaration families of the project's
+ * `PROJECT-MANIFEST.json`: `codePaths` / `index.*` / `advisor.*`).
  *
  * Why one module: the write-domain gates and guards (design gate, review-doc gate,
  * mutation accounting, verify fast path) each carried their own copy of the
  * "what counts as product code" predicate — anchored `^src/` regexes, `docs/`
  * prefix checks, component regexes. Each copy drifted, and each hardcoded THIS
  * repository's layout: a project whose code lives outside `src/` slipped through
- * the design gate silently (PORTABILITY FR12 / PO-10). One classifier + one
- * declaration file = one truth. It is a **shared** classification surface: the gates are consumers, not owners (consumer faces: advisor / agent-tools / both ends).
+ * the design gate silently (PORTABILITY FR12 / PO-10). One classifier + one declared
+ * carrier = one truth. It is a **shared** classification surface: the gates are consumers,
+ * not owners (consumer faces: advisor / agent-tools / both ends).
  *
- * Defaults are DATA (`DEFAULT_CODE_PATHS`) — overridable per project through the
- * declaration file (§4.1 schema). Missing file → pure defaults (no noise);
- * corrupt/unreadable file → defaults + console.warn + a log event (never crash,
- * never swallow — PORTABILITY FR10).
+ * Declaration (2026-09-27 · `.thincoder/conventions.json` retired — single carrier):
+ *   the three families live in the project manifest and are projected HERE through
+ *   `manifest.mjs` (ONE reader / ONE root resolution — `readManifest` + `manifestFilePath`;
+ *   name / shape / defaults are schema-owned by `docs/core/design/MANIFEST.md` §2.2).
+ *   Missing manifest → pure defaults (silent); unusable manifest (invalid / read error) →
+ *   defaults + console.warn + a log event (never crash, never swallow — PORTABILITY FR10/D16).
+ *   A retired `.thincoder/conventions.json` is never read: while present it yields ONE
+ *   visible warning per load (existence check only — zero content parsing — KD-M1-34).
  *
  * Classification vocabulary (PORTABILITY design §3.2):
  *   code — inside a declared code segment (default: the path segment `src`), or the
@@ -23,12 +29,10 @@
  *          F9) that matched no code segment and neither doc nor temp.
  * Precedence: code segment → temp → doc → aux → fallback code.
  */
-import { readFileSync } from "node:fs"
-import { join, resolve } from "node:path"
+import { existsSync } from "node:fs"
+import { dirname, join } from "node:path"
+import { DEFAULT_MANIFEST, manifestFilePath, readManifest } from "./manifest.mjs"
 import { logEvent } from "./log.mjs"
-
-/** Default code-path segments (data, not logic — a project may replace them). */
-export const DEFAULT_CODE_PATHS = ["src"]
 
 /** Default auxiliary-path segment sequences (data, not logic — F9): the engineering-mode
  *  parent gate's default exemption surface — `test` / `tests` / `scripts` at any depth,
@@ -36,8 +40,9 @@ export const DEFAULT_CODE_PATHS = ["src"]
  *  project reclaims a sequence by listing it in `codePaths` (code segment wins). */
 export const DEFAULT_AUX_PATHS = ["test", "tests", "scripts", ".thincoder/tmp"]
 
-/** Project declaration file, relative to the project root. */
-export const CONVENTIONS_REL_PATH = ".thincoder/conventions.json"
+/** Retired declaration carrier (project-root relative). Its EXISTENCE is checked, its
+ *  content is never read — the declaration surface = the manifest three families (KD-M1-34). */
+const RETIRED_REL_PATH = ".thincoder/conventions.json"
 
 /** Documentation predicate (moved here verbatim from advisor/repos.mjs — one copy). */
 const DOC_FILE = /(?:^|[/\\])(?:LICENSE|NOTICE|CHANGELOG|AUTHORS)(?:\.\w+)?$|\.(?:md|markdown|mdx|txt|rst|adoc)$/i
@@ -76,7 +81,7 @@ function hasSegmentSequence(p, sequences) {
 
 /** True when the path contains a declared code segment sequence at any depth. */
 function hasCodeSegment(p, conv) {
-  return hasSegmentSequence(p, conv?.codePaths ?? DEFAULT_CODE_PATHS)
+  return hasSegmentSequence(p, conv?.codePaths ?? DEFAULT_DECLARATION.codePaths)
 }
 
 /** True when the path contains a default auxiliary-path segment sequence (F9). */
@@ -121,8 +126,9 @@ export function isAuxPath(p, conv) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Declaration loading (cached per project root — `clearConventionsCache()` is
-// the test seam; declaration files change rarely and only at session scope).
+// Declaration loading — the three families of PROJECT-MANIFEST.json, projected
+// through manifest.mjs (ONE reader / ONE root resolution) and cached per DATA-FILE
+// PATH (`clearDeclarationCache()` is the test seam; declarations change rarely).
 // ─────────────────────────────────────────────────────────────────────────────
 
 function normalizeExtensions(v) {
@@ -138,7 +144,9 @@ function normalizeExtensions(v) {
   return out
 }
 
-/** Declared code paths replace the default (replacement, not union — §4.1). */
+/** Declared code paths replace the default (replacement, not union — §3.1). An EMPTY
+ *  array is a legal declaration ("no segment-based code face") — only a non-array value
+ *  falls back to `null` (⇒ caller keeps the default). */
 function normalizeCodePaths(v) {
   if (!Array.isArray(v)) return null
   const out = []
@@ -148,51 +156,29 @@ function normalizeCodePaths(v) {
     if (!s || out.includes(s)) continue
     out.push(s)
   }
-  return out.length > 0 ? out : null
+  return out
 }
 
 function normalizeString(v) {
   return typeof v === "string" && v.trim() ? v.trim() : ""
 }
 
-/** Per-key type check for recognized keys (present but wrong type). §3.2/§4.1: a
- *  type error degrades WITH a warning — never silently (the fallback semantics stay
- *  per-key; only the visibility is added here). */
-function typeErrorsOf(raw) {
-  const isObj = (v) => v !== undefined && v !== null && typeof v === "object" && !Array.isArray(v)
-  const strArray = (v) => Array.isArray(v) && v.every((x) => typeof x === "string")
-  const errs = []
-  if (raw.codePaths !== undefined && !strArray(raw.codePaths)) errs.push("codePaths must be an array of strings")
-  const idx = raw.index
-  if (idx !== undefined && !isObj(idx)) errs.push("index must be an object")
-  else if (isObj(idx)) {
-    for (const k of ["codeExtensions", "docExtensions"]) {
-      if (idx[k] !== undefined && !strArray(idx[k])) errs.push(`index.${k} must be an array of strings`)
-    }
-  }
-  const adv = raw.advisor
-  if (adv !== undefined && !isObj(adv)) errs.push("advisor must be an object")
-  else if (isObj(adv)) {
-    for (const k of ["docMap", "standardsDoc"]) {
-      if (adv[k] !== undefined && typeof adv[k] !== "string") errs.push(`advisor.${k} must be a string`)
-    }
-  }
-  return errs
-}
-
-function buildConventions(raw) {
-  const codePaths = normalizeCodePaths(raw?.codePaths)
-  const codeExtensions = normalizeExtensions(raw?.index?.codeExtensions)
-  const docExtensions = normalizeExtensions(raw?.index?.docExtensions)
-  const docMap = normalizeString(raw?.advisor?.docMap)
-  const standardsDoc = normalizeString(raw?.advisor?.standardsDoc)
-  // `declared` = the declaration actually took effect (at least one recognized key
-  // honored) — the design-gate hint reads it to decide whether to point at the
-  // declaration file ("declare project conventions … to adjust").
-  const declared = Boolean(codePaths || codeExtensions.length || docExtensions.length || docMap || standardsDoc)
+/** Project the manifest three families into the frozen declaration object.
+ *  `declared` = VALUE comparison against the defaults — at least one family deviates
+ *  (a key written with its default value still counts as NOT declared; the design-gate
+ *  hint reads it to decide whether to point at the manifest, PORTABILITY §3.1). */
+function buildDeclaration(m) {
+  const codePaths = normalizeCodePaths(m?.codePaths) ?? [...DEFAULT_MANIFEST.codePaths]
+  const codeExtensions = normalizeExtensions(m?.index?.codeExtensions)
+  const docExtensions = normalizeExtensions(m?.index?.docExtensions)
+  const docMap = normalizeString(m?.advisor?.docMap)
+  const standardsDoc = normalizeString(m?.advisor?.standardsDoc)
+  const defaults = normalizeCodePaths(DEFAULT_MANIFEST.codePaths) ?? []
+  const pathsDiffer = codePaths.length !== defaults.length || codePaths.some((p, i) => p !== defaults[i])
+  const declared = pathsDiffer || codeExtensions.length > 0 || docExtensions.length > 0 || Boolean(docMap) || Boolean(standardsDoc)
   return Object.freeze({
     declared,
-    codePaths: Object.freeze(codePaths ?? [...DEFAULT_CODE_PATHS]),
+    codePaths: Object.freeze(codePaths),
     index: Object.freeze({
       codeExtensions: Object.freeze(codeExtensions),
       docExtensions: Object.freeze(docExtensions),
@@ -201,53 +187,58 @@ function buildConventions(raw) {
   })
 }
 
-/** Full-default conventions (no declaration) — the fallback every consumer gets. */
-export const DEFAULT_CONVENTIONS = buildConventions(null)
+/** Full-default declaration (no manifest / unusable manifest) — the fallback every
+ *  consumer gets; built from `DEFAULT_MANIFEST` so the default values stay single-source. */
+export const DEFAULT_DECLARATION = buildDeclaration(null)
 
 const _cache = new Map()
 
-/** Drop the per-root cache (test seam — declaration files are read once per root). */
-export function clearConventionsCache() {
+/** Drop the per-data-file-path cache (test seam — declarations are read once per path). */
+export function clearDeclarationCache() {
   _cache.clear()
 }
 
+/** Retired-carrier warning (existence check only — zero content parsing, zero fallback). */
+function warnRetiredCarrier(root) {
+  console.warn(`[declaration] ${RETIRED_REL_PATH} is retired and no longer read — move codePaths / index.*Extensions / advisor.{docMap,standardsDoc} into PROJECT-MANIFEST.json`)
+  logEvent("declaration:retired-file", { cwd: root })
+}
+
 /**
- * Load (and cache) the normalized conventions for a project root.
- * @param {string} cwd — project root (declaration lives at .thincoder/conventions.json)
+ * Load (and cache) the normalized project declaration for a project.
+ * The data file is located through `manifestFilePath(cwd)` (ONE root resolution — a cwd
+ * deeper than the project root still reads the project's manifest) and read through
+ * `readManifest` (ONE reader — this module carries no second parse of the manifest).
+ * Missing manifest → defaults, silently. Unusable manifest (invalid shape / read error)
+ * → defaults + `console.warn` + a log event (visible degradation, never a throw).
+ * A retired `.thincoder/conventions.json` at the manifest's project root → one warning
+ * per cache miss (content zero-parsed, zero effect on the readings — KD-M1-34).
+ * @param {string} cwd — project dir / anchor (root resolved by manifest.mjs)
  * @returns {Readonly<{declared: boolean, codePaths: readonly string[],
  *   index: {codeExtensions: string[], docExtensions: string[]},
  *   advisor: {docMap: string, standardsDoc: string}}>}
  */
-export function loadConventions(cwd) {
-  const root = resolve(cwd ?? process.cwd())
-  const hit = _cache.get(root)
+export function loadProjectDeclaration(cwd) {
+  const file = manifestFilePath(cwd) // data-file path (single source — manifest.mjs KD-M1-18)
+  const hit = _cache.get(file)
   if (hit) return hit
-  let conv = DEFAULT_CONVENTIONS
+  const root = dirname(file) // project root the manifest belongs to (cwd may be deeper)
+  if (existsSync(join(root, RETIRED_REL_PATH))) warnRetiredCarrier(root)
+  let decl = DEFAULT_DECLARATION
   try {
-    const text = readFileSync(join(root, CONVENTIONS_REL_PATH), "utf8")
-    try {
-      const raw = JSON.parse(text)
-      if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("top level must be a JSON object")
-      conv = buildConventions(raw)
-      const typeErrs = typeErrorsOf(raw)
-      if (typeErrs.length > 0) {
-        // Wrong-typed keys fall back per-key — but the user must SEE that their
-        // declaration did not take effect (never silently swallowed).
-        console.warn(`[conventions] ${CONVENTIONS_REL_PATH} has invalid value types (${typeErrs.join("; ")}) — those keys fall back to defaults`)
-        logEvent("conventions:error", { cwd: root, err: `type errors: ${typeErrs.join("; ").slice(0, 160)}` })
-      }
-    } catch (e) {
-      // Corrupt file / wrong shape → defaults, visible: warn + event (never silent).
-      console.warn(`[conventions] ${CONVENTIONS_REL_PATH} unreadable (${e?.message ?? e}) — falling back to defaults`)
-      logEvent("conventions:error", { cwd: root, err: String(e?.message ?? e).slice(0, 200) })
+    const r = readManifest(cwd)
+    if (r.ok) {
+      decl = buildDeclaration(r.manifest)
+    } else if (r.reason !== "missing") {
+      // Usable-file expectation broken (invalid JSON / wrong shape) → defaults, visible.
+      console.warn(`[declaration] ${file} is not a usable declaration (${(r.errors ?? []).join("; ") || r.reason}) — falling back to defaults`)
+      logEvent("declaration:error", { path: file, err: `invalid: ${(r.errors ?? []).join("; ")}`.slice(0, 200) })
     }
   } catch (e) {
-    if (e?.code !== "ENOENT") {
-      // File exists but cannot be read (EACCES etc.) — same visible degradation.
-      console.warn(`[conventions] ${CONVENTIONS_REL_PATH} not readable (${e?.message ?? e}) — falling back to defaults`)
-      logEvent("conventions:error", { cwd: root, err: String(e?.message ?? e).slice(0, 200) })
-    }
+    // Read error (EACCES …) — same visible degradation, never a throw.
+    console.warn(`[declaration] ${file} not readable (${e?.message ?? e}) — falling back to defaults`)
+    logEvent("declaration:error", { path: file, err: String(e?.message ?? e).slice(0, 200) })
   }
-  _cache.set(root, conv)
-  return conv
+  _cache.set(file, decl)
+  return decl
 }

@@ -367,7 +367,7 @@
 
 **逐族明细（= 执行轮改指清单 · `file:line` 逐条）**：族 A/C 的 **48 引用** = 下列 **19 档**（行号 as-of 2026-09-18 05:0x；其中 5 处坐标随他笔漂移——批档 §2.6 新证据 ⑤，S0 复跑时对齐）——
 `docs/core/design/AGENT-PARAMS.md:85/:138` · `BATCH-RECORD.md:284` · `CONFIG.md:91/:96/:138/:146` · `CONSULTATION.md:99` · `CORE-UNIFICATION.md:567/:603/:1656` ·
-`DOC-CODE-RECONCILE.md:134` · `DOC-DISCIPLINE.md:505/:902` · `DOC-SYSTEM.md:22` · `ENG-TOKEN-BINDING.md:171` · `I18N.md:75` · `LEDGER.md:187` ·
+`DOC-CODE-RECONCILE.md:134` · `DOC-DISCIPLINE.md:505/:902` · `DOC-SYSTEM.md:22` · `ENG-TOKEN-BINDING.md:173` · `I18N.md:75` · `LEDGER.md:187` ·
 `PORTABILITY.md:5/:148` · `SEND-STALL-DISTILL.md:8/:114/:147` · `TOOL-OUTPUT-LIMITS.md:104/:160` · `docs/core/requirements/AGENT-LOOP.md:43×2/:127/:142/:224×2` ·
 `NORMAL-MODE.md:129` · `TWO-REPO-MERGE.md:65` · `docs/vsc/design/VSC-MIGRATION-INVENTORY.md:149/:150/:201/:203/:214/:215/:219/:220/:275/:337/:340/:357/:371/:372` · `docs/vsc/design/VSC-MIGRATION.md:126`。
 族 B 的 **4 引用** = `docs/core/design/DOC-SYSTEM.md:279` · `ENG-TOKEN-BINDING.md:5/:85` · `docs/core/requirements/TWO-REPO-MERGE.md:53`。

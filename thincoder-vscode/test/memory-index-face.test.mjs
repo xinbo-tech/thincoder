@@ -293,5 +293,5 @@ slow("可见化（核面承接）：未列入扩展名 → 完成提示含提示
   }
   const built = infos.find((t) => String(t).startsWith("Index built:"))
   assert.ok(built, "完成提示在案")
-  assert.ok(String(built).includes("2 file(s) skipped — extensions not indexed: .qqq; declare index.codeExtensions in .thincoder/conventions.json to include them."), `未列入提示行（实 ${built}）`)
+  assert.ok(String(built).includes("2 file(s) skipped — extensions not indexed: .qqq; declare index.codeExtensions in PROJECT-MANIFEST.json to include them."), `未列入提示行（实 ${built}）`)
 })

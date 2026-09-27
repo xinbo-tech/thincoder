@@ -9,6 +9,9 @@
  *    再校验通过；整档缺失 → { ok:false, reason:'missing' }（不静默 fallback）。
  *  - validateManifest(obj) → { ok, errors, missingKeys }：枚举 / version 数值 /
  *    docRoot 子键值形态（串 | 数组，F7）——**纯函数、零 fs**；不落盘。
+ *  - 三族声明键（`codePaths` / `index.{codeExtensions,docExtensions}` / `advisor.{docMap,standardsDoc}`——
+ *    KD-M1-31 / M1-32）：缺键补默认；形态错 = 档非法（fail-closed，与 docRoot 子键同款）；
+ *    读向 = `conventions.mjs` 经 `readManifest` / `manifestFilePath` 投影（单向——KD-M1-33）。
  *  - isValidDocRootValue(value) / docRootPaths(value, cwd)（F7 判据单源 KD-M1-8）：值形态谓词
  *    + 值 → 绝对路径数组（展开 / trim + `\` 归一 / 基数 = 项目根 / 去重保序）。
  *  - requireManifest(cwd) → 装配钩子入口 = readManifest(cwd)。
@@ -234,7 +237,7 @@ export function manifestFilePath(cwd) {
   return join(writeRoot(cwd), MANIFEST_REL)
 }
 
-/** 默认五键（架构 §2.3 E1 逐字）——整档初始化的写源与缺键 fallback 的补源。 */
+/** 默认八键（架构 §2.3 E1 五键 + 三族声明键——KD-M1-31）——整档初始化的写源与缺键 fallback 的补源。 */
 export const DEFAULT_MANIFEST = Object.freeze({
   version: 1,
   phase: "initial-dev",
@@ -252,6 +255,10 @@ export const DEFAULT_MANIFEST = Object.freeze({
     anchors: Object.freeze({ domain: "docs", exclude: Object.freeze(["_archive", "batches"]) }),
     exemptions: Object.freeze([]),
   }),
+  // 项目声明三族（2026-09-27 声明载体唯一化批并入——键名 / 形态逐字承前；来源档已退役）。
+  codePaths: Object.freeze(["src"]),
+  index: Object.freeze({ codeExtensions: Object.freeze([]), docExtensions: Object.freeze([]) }),
+  advisor: Object.freeze({ docMap: "", standardsDoc: "" }),
 })
 
 /** 校验判据（模块设计 §2.2）——枚举 / 键存在（fallback 用）；判据单源（KD-M1-4）。 */
@@ -264,8 +271,16 @@ export const MANIFEST_SCHEMA = Object.freeze({
   nestedKeys: Object.freeze({
     docRoot: Object.freeze(Object.keys(DEFAULT_MANIFEST.docRoot)),
     checkConfig: Object.freeze(Object.keys(DEFAULT_MANIFEST.checkConfig)),
+    index: Object.freeze(Object.keys(DEFAULT_MANIFEST.index)),
+    advisor: Object.freeze(Object.keys(DEFAULT_MANIFEST.advisor)),
   }),
 })
+
+/** 三族声明键**元素层**判据（KD-M1-32）：数组且各元素为非空字符串（`trim` 后非空）；
+ *  **数组层**自身可空（`[]` 合法——`codePaths:[]` = 无段名代码面 / `index.*:[]` = 追加零项）。 */
+function isNonEmptyStringArray(v) {
+  return Array.isArray(v) && v.every((e) => typeof e === "string" && e.trim() !== "")
+}
 
 /**
  * 形状校验（模块设计 §2.2）——枚举 / version 数值恒做；**纯函数、零 fs**（原 `{ cwd }`
@@ -297,6 +312,18 @@ export function validateManifest(obj) {
       }
     }
   }
+  // 三族声明键形态（KD-M1-32——fail-closed：非法即 errors，不静默跳过；缺键仍在 missingKeys）。
+  const strArrErr = (key, v) => { if (!isNonEmptyStringArray(v)) errors.push(`${key} 值形态非法：${JSON.stringify(v)}（须为非空字符串数组——KD-M1-32）`) }
+  const strErr = (key, v) => { if (typeof v !== "string") errors.push(`${key} 值形态非法：${JSON.stringify(v)}（须为字符串——KD-M1-32）`) }
+  const objErr = (key, v) => (v === null || typeof v !== "object" || Array.isArray(v)
+    ? `${key} 值形态非法：${JSON.stringify(v)}（须为对象——KD-M1-32）` : null)
+  if (obj.codePaths !== undefined) strArrErr("codePaths", obj.codePaths)
+  const idxBad = obj.index === undefined ? null : objErr("index", obj.index)
+  if (idxBad) errors.push(idxBad)
+  else if (obj.index !== undefined) for (const k of ["codeExtensions", "docExtensions"]) if (obj.index[k] !== undefined) strArrErr(`index.${k}`, obj.index[k])
+  const advBad = obj.advisor === undefined ? null : objErr("advisor", obj.advisor)
+  if (advBad) errors.push(advBad)
+  else if (obj.advisor !== undefined) for (const k of ["docMap", "standardsDoc"]) if (obj.advisor[k] !== undefined) strErr(`advisor.${k}`, obj.advisor[k])
   if (obj.phase !== undefined && !MANIFEST_SCHEMA.enum.phase.includes(obj.phase)) {
     errors.push(`phase 取值非法："${obj.phase}"（允许：${MANIFEST_SCHEMA.enum.phase.join(" | ")}）`)
   }
@@ -306,16 +333,21 @@ export function validateManifest(obj) {
   return { ok: errors.length === 0, errors, missingKeys }
 }
 
-/** 缺键补默认值（module 设计 §2.2 管线）：顶层缺键补默认、docRoot/checkConfig 子键补默认
- *  （与整键缺同语义）；不覆写既有值。深拷贝默认源（structuredClone）——冻结常量永不外泄引用。 */
+/** 缺键补默认值（module 设计 §2.2 管线）：顶层缺键补默认、嵌套键（docRoot/checkConfig/index/advisor）
+ *  子键补默认（与整键缺同语义）；不覆写既有值。深拷贝默认源（structuredClone）——冻结常量永不外泄引用。
+ *  三族键的非对象值**原样透传**（不洗白——再校验拒，KD-M1-32）。 */
 function fillDefaults(obj) {
   const out = structuredClone(DEFAULT_MANIFEST)
   for (const key of MANIFEST_SCHEMA.keys) {
     if (!(key in obj)) continue
-    if (key === "docRoot" || key === "checkConfig") {
+    const def = out[key]
+    if (def !== null && typeof def === "object" && !Array.isArray(def)) {
       const src = obj[key]
-      if (src === null || typeof src !== "object" || Array.isArray(src)) continue // 整键非对象 → 保持默认
-      for (const sub of Object.keys(out[key])) {
+      if (src === null || typeof src !== "object" || Array.isArray(src)) {
+        if (key === "index" || key === "advisor") out[key] = src // 形态错 → 透传（再校验拒）；docRoot/checkConfig 保持默认
+        continue
+      }
+      for (const sub of Object.keys(def)) {
         if (sub in src) out[key][sub] = src[sub]
       }
     } else {
@@ -440,7 +472,7 @@ export function writeManifest(cwd, manifest, { writer = "subagent" } = {}) {
 }
 
 /**
- * 初始化 = 写默认五键档（模块设计 §2.2）：只提供机制，不包交互问答（问答归壳面）。
+ * 初始化 = 写默认八键档（模块设计 §2.2）：只提供机制，不包交互问答（问答归壳面）。
  * 落盘走同一写门（内部 writeManifest(cwd, DEFAULT_MANIFEST, { writer })）——与 AC-M1-5
  * 同一闸，无第二条写路径（KD-M1-4 / 评审 #12）。
  * @returns {object} 写入的默认 manifest

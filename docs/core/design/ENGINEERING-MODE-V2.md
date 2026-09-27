@@ -62,7 +62,7 @@
 
 | # | 模块 | 现有模块（file/dir → 变更） | 职责（一句话） | v2 依据 |
 |---|---|---|---|---|
-| M1 | 项目状态档 manifest | `thincoder-core/manifest.mjs`（**新增**，v1 无对应物）——机制代码在核，操作对象 = 被开发项目**项目根（= 带 manifest 的目录——**git 非前提**；归属 = 最近祖先优先 / 发现梯 = 纯向下一层；2026-09-21 用户裁定——明细 = `docs/core/design/MANIFEST.md` §2.2 / §2.9）**的 `PROJECT-MANIFEST.json`（数据档，N3 迁移点）；`thincoder-core/agent/setup-reminders.mjs` + `thincoder-core/agent/run-stages.mjs`（**修改**——情境行注入，E5.1） | JSON schema + 读/写/校验（version/phase/docRoot/promptsLanding/checkConfig 五键）+ 情境值 → 模型注入行 | §5.1 · §6 · §9 |
+| M1 | 项目状态档 manifest | `thincoder-core/manifest.mjs`（**新增**，v1 无对应物）——机制代码在核，操作对象 = 被开发项目**项目根（= 带 manifest 的目录——**git 非前提**；归属 = 最近祖先优先 / 发现梯 = 纯向下一层；2026-09-21 用户裁定——明细 = `docs/core/design/MANIFEST.md` §2.2 / §2.9）**的 `PROJECT-MANIFEST.json`（数据档，N3 迁移点）；`thincoder-core/agent/setup-reminders.mjs` + `thincoder-core/agent/run-stages.mjs`（**修改**——情境行注入，E5.1） | JSON schema + 读/写/校验（五键 version/phase/docRoot/promptsLanding/checkConfig + 声明三族 codePaths/index/advisor——共八键）+ 情境值 → 模型注入行 | §5.1 · §6 · §9 |
 | M2 | 台账（SQLite） | `thincoder-core/ledger.mjs`（228 行·**修改**）+ `ledger-surface.mjs`（77 行·**修改**）+ CLI/VSC 端 `ledger-surface.mjs`（70/119 行·**修改**，完整清单见接线表） | md 读面 → `node:sqlite` 读面 + 写命令 + 六态 CHECK schema | §5.2 |
 | M3 | 批次档生命周期工具 | `thincoder-core/agent-tools/batch-segment.mjs` → **改名 `batch.mjs`**（265 行·**修改**——action 分发扩 create/status/close，超硬顶则拆 `batch-skeleton.mjs` 模板档） | 批次档生命周期（create/append/status/close）+ 段白名单 + 状态行冻结拒写 | §5.3 · `design/BATCH-RECORD.md` §4.11–§4.14 |
 | M4 | 写权门禁（token 门 + 冻结窗口） | `thincoder-core/agent/dispatch.mjs`（490 行·**修改**，**拆分候选**——近 500 硬上限，拆出 `write-gate.mjs`）+ 新档 `write-gate.mjs`（`resolveReviewTargetPaths` + 冻结窗口判据组装）+ VSC `tool-gates.mjs`（165 行·**修改**，完整清单见接线表） | token 门 + D5 冻结窗口——评审对象/被审文件读 manifest `docRoot`（去硬编码 docs/） | §7 · §8.5 |
@@ -140,13 +140,17 @@ M10 测试（独立简化，无依赖）
     "lineWidth": 300,
     "anchors": { "domain": "docs", "exclude": ["_archive", "batches"] },
     "exemptions": []
-  }
+  },
+  "codePaths": ["src"],
+  "index": { "codeExtensions": [], "docExtensions": [] },
+  "advisor": { "docMap": "", "standardsDoc": "" }
 }
 ```
 
 - `phase` = 情境旋钮落点（E5，模型侧经 E5.1 情境行注入）；`docRoot` = 文档体系声明面（E2）；`promptsLanding` = 提示词落地声明面（E4/M9——顶层平级键：落地是代码仓路径，不入 docRoot）；`checkConfig` = 机检声明面（E4/M8）。
+- `codePaths` / `index` / `advisor` = **项目声明三族键**（分类段名 / 索引扩展名追加 / 评审注入指针——自 `.thincoder/conventions.json` 退役并入 manifest）；声明语义 = `docs/core/design/PORTABILITY.md` §3.1，形态 / 缺省 / 校验 = `docs/core/design/MANIFEST.md` §2.2。
 - **`docRoot` 值形态**（2026-09-17 用户裁定，台账 #32）：非空字符串（单根——默认档即此形态）或**非空字符串数组**（多根：一个文档层跨多个根目录——数组 = 完整声明，不与默认合并）。值域 / 解析 / 消费面单一权威源 = `docs/core/design/MANIFEST.md` §2.7（D2——本档不重述）。
-- 校验：schema 枚举字段（phase 取值、docRoot 各键 + promptsLanding 存在）+ **`docRoot` 子键值形态**（非空串 | 非空且元素皆非空串的数组——非法形态拒）由 M1 的校验器机械判。
+- 校验：schema 枚举字段（phase 取值、docRoot 各键 + promptsLanding 存在）+ **`docRoot` 子键值形态**（非空串 | 非空且元素皆非空串的数组——非法形态拒）+ **三族声明键形态**（`codePaths` / `index.*` / `advisor.*`——KD-M1-32）由 M1 的校验器机械判。
 
 **台账（SQLite）表结构**（M2 产出）：
 
@@ -321,7 +325,7 @@ M10 测试（独立简化，无依赖）
 | 5 | 压缩生存 | **活体守卫自愈重推**——压缩吞掉该行 → 下一回合守卫判「无活体」→ 重推；**不落 system 槽**（system 提示词 = 静态槽文件装配 + 前缀缓存契约，写可变值即破缓存语义；技术待办 #23 的 system 槽方案不适用于本行） |
 | 6 | 值变化 | **单活体**：值变（如阶段推进 `initial-dev` → `production`）→ 就地摘旧行 + 推新行（保 `history` 数组引用） |
 | 7 | 注入深度 | **仅 depth-0**（manifest 是主 agent 的状态账；子代理读任务书，M5 零 manifest 读面——§2.4） |
-| 8 | 模式门 | **仅工程模式**——判据 = **会话权威值**（恢复槽带 `engineering` 字段 ? 槽值 : `config.agent.engineering`——槽优先 + config 回退）；口径 = 本档 §2.3 E2，机制权威 = `MANIFEST.md` §2.2；**归属分层**：模式状态 = **会话级**（槽字段——`SESSION.md` §6.3 / §6.4），项目级 = 台账 · `PROJECT-MANIFEST.json` · `.thincoder/conventions.json`；唯一耦合 = 本门读 manifest 作 ON 准入判据；normal 模式无 manifest 纪律，不注入 |
+| 8 | 模式门 | **仅工程模式**——判据 = **会话权威值**（恢复槽带 `engineering` 字段 ? 槽值 : `config.agent.engineering`——槽优先 + config 回退）；口径 = 本档 §2.3 E2，机制权威 = `MANIFEST.md` §2.2；**归属分层**：模式状态 = **会话级**（槽字段——`SESSION.md` §6.3 / §6.4），项目级 = 台账 · `PROJECT-MANIFEST.json`（含声明三族键——同档）；唯一耦合 = 本门读 manifest 作 ON 准入判据；normal 模式无 manifest 纪律，不注入 |
 
 **行的语义**：`phase` = 纪律强度档（需求 v2 §9.1「初始开发（探索方向，纪律可轻）/ 上线运行（防回归，纪律要强）」——行内标签是对 §9.1 的**呈现**，不新增判据）。**值 → 行为的完整映射**（各档具体怎么调纪律）住提示词层——本批只落「模型可感知」；提示词侧映射句属提示词内容权（主 agent），不在本批。
 
@@ -492,7 +496,7 @@ engineering 真值 ──► 固定段裁剪（plan / task 不入表）───
 |---|---|---|
 | AC1 | 七条目 E1–E7 各有架构级方案，无空条目 | E1–E7（覆盖） |
 | AC2 | 模块划分（§2.2）每行带 v2 依据（章号落在 §5–§9）+ 锚定现有代码模块（现有 file/dir → 变更类型），无抽象目标模块、无缺失行 | §2.2（覆盖） |
-| AC3 | manifest schema 字段枚举完整（**五键**：`version` / `phase` / `docRoot` / `promptsLanding` / `checkConfig`——枚举判据 = phase 取值 · docRoot 五子键 · checkConfig 四子键） | E1/E2/E5 |
+| AC3 | manifest schema 字段枚举完整（**八键**：`version` / `phase` / `docRoot` / `promptsLanding` / `checkConfig` / `codePaths` / `index` / `advisor`——枚举判据 = phase 取值 · docRoot 五子键 · checkConfig 四子键 · 三族声明键形态） | E1/E2/E5 |
 | AC4 | 台账 schema 含六态 CHECK 枚举 + 咬合必填约束 | E1 |
 | AC5 | 写权矩阵每条写权能答「靠哪个门禁」（机械/行为） | E3（N1 结构优先） |
 | AC6 | 机检引擎 = 单引擎 + 声明面（`checkConfig`），无硬编码本仓路径 | E4（N3 可迁移） |
@@ -524,6 +528,10 @@ engineering 真值 ──► 固定段裁剪（plan / task 不入表）───
 | T14 | 错误：普通模式零回归 | 普通模式装配 / `/plan` 切换 / ACP `mode:"plan"` / 槽 `planMode:true` 恢复 | 四条路径全带宽不变（**除本批所列矩阵镜像收正**——`host-shape-spawn.test.mjs` T5：两条工程行删 `plan` + 增 explore 工程行——外，既有测试零改全绿） |
 
 ## 4. 变更记录
+
+- 2026-09-27（**conventions.json 退役批 · 随动收正 · eng-designer**——承 `docs/batches/2026-09-27-conventions-retire.md` §1 · 用户 2026-09-27 19:39 裁定）：
+  E1 键面收正——schema 五键 → **八键**（`.thincoder/conventions.json` 三族声明并入 manifest：`codePaths` / `index` / `advisor`）；E5.1 表第 8 行随动——项目级枚举去退役档（`.thincoder/conventions.json` 移出；`PROJECT-MANIFEST.json` 含声明三族键）；
+  落点 = §2.2 M1 行 + §2.3 E1（键面 JSON + 键注释 + 校验句）+ §2.3 E5.1 表第 8 行 + §3.1 AC3；schema / 默认 / 校验权威 = `docs/core/design/MANIFEST.md` §2.2 + §2.4 KD-M1-31/M1-32。**本档机制条文零改**。
 
 - 2026-09-25（**工程模式归属口径统一批（eng-ownership）· 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-eng-ownership.md` §1 · 台账 #358）：
   ② 归属分层落 E5.1 表第 8 行——模式门判据 = **会话权威值**（槽优先 + config 回退）；口径指本档 §2.3 E2，机制权威指 `MANIFEST.md` §2.2；模式状态 = **会话级**（槽字段），项目级 = 台账 / `PROJECT-MANIFEST.json` / `.thincoder/conventions.json`，唯一耦合 = ON 准入判据读 manifest。

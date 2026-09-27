@@ -14,7 +14,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 
 import { findProjectRoot } from "@thincoder/core/advisor/project-context.mjs" // W12：advisor 镜像删旧——核单源
-import { clearConventionsCache, isDocPath, loadConventions } from "@thincoder/core/conventions.mjs"
+import { clearDeclarationCache, isDocPath, loadProjectDeclaration } from "@thincoder/core/conventions.mjs"
 import { advisorTool } from "@thincoder/core/agent-tools/advisor.mjs" // W12：端侧 advisor 工具退役（W9 起登记册 = 核）——工具面直驱改指核实现
 import { engTool } from "@thincoder/core/agent-tools/eng.mjs"
 import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
@@ -24,7 +24,7 @@ import { _setConfigPathForTest } from "@thincoder/core/config.mjs"
 const tmpDirs = []
 after(() => {
   for (const d of tmpDirs) rmSync(d, { recursive: true, force: true })
-  clearConventionsCache()
+  clearDeclarationCache()
   _setConfigPathForTest(null)
 })
 
@@ -51,7 +51,7 @@ test("T-V11 正常（校验）：design 评审传 documents=[\"docs/design/x.md\
     /batchDoc is not a readable file/,
     "有效文档列表未被文档门禁拦下（校验通过后才到达 batchDoc 门——零评审发起）",
   )
-  const conv = loadConventions(ws)
+  const conv = loadProjectDeclaration(ws)
   assert.equal(isDocPath("docs/design/x.md", conv), true, "isDocPath 正控")
   assert.equal(isDocPath("src/prompts/x.md", conv), false, "src/** 下 .md 非文档（判据换源反证）")
   assert.equal(isDocPath("packages/foo/src/x.md", conv), false, "嵌套布局同判（原 `docs/` 前缀判据退役后不再放行）")

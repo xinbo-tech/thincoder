@@ -10,7 +10,7 @@ import { CODE_EXTS, DOC_EXTS, MAX_CODE_FILE_BYTES, MAX_DOC_FILE_BYTES } from "./
 import { buildFtsQuery, ensureEmbeddings, EMBED_TEXT_MAX_LEN } from "./core.mjs"
 import { detectLanguage, _upsertCodeFile, _upsertDocFile, yieldTick } from "./code-index.mjs"
 import { walkProjectFiles, isSkippedRelPath, extensionOf, createUnlistedTally, MAX_WALK_FILES } from "./file-walk.mjs"
-import { loadConventions } from "../conventions.mjs"
+import { loadProjectDeclaration } from "../conventions.mjs"
 import { logEvent } from "../log.mjs"
 import { safeSliceUTF16 } from "../text-budget.mjs"
 
@@ -19,12 +19,12 @@ const CODE_EMBED_BATCH = 64
 
 /**
  * Index extension sets = built-in tables ∪ project declaration
- * (`.thincoder/conventions.json` → index.codeExtensions / index.docExtensions;
+ * (`PROJECT-MANIFEST.json` → index.codeExtensions / index.docExtensions;
  * PORTABILITY PO-9/§3.7 — a project may declare extensions this product does not
  * ship a default for). Declaration only ADDS (union), never removes.
  */
 export function indexExtensions(dir) {
-  const conv = loadConventions(dir)
+  const conv = loadProjectDeclaration(dir)
   return {
     code: new Set([...CODE_EXTS, ...conv.index.codeExtensions]),
     doc: new Set([...DOC_EXTS, ...conv.index.docExtensions]),

@@ -21,7 +21,7 @@ export const SQLITE_BUSY_TIMEOUT = 3000
 export const WAL_SIZE_LIMIT_BYTES = 64 * 1024 * 1024
 
 // Code index: source file extensions. Curated DEFAULTS — a project can declare
-// more (union) through .thincoder/conventions.json → index.codeExtensions
+// more (union) through PROJECT-MANIFEST.json → index.codeExtensions
 // (PORTABILITY PO-9: an unlisted extension used to be invisible AND undeclarable).
 export const CODE_EXTS = new Set([
   ".mjs", ".js", ".cjs", ".mts", ".cts", ".ts", ".tsx", ".jsx",

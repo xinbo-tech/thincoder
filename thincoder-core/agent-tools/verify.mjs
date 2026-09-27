@@ -11,7 +11,7 @@
  * path (doc-only changes return early) — the task list and self-review checklist.
  */
 
-import { isCodePath, isDocPath, loadConventions } from "../conventions.mjs"
+import { isCodePath, isDocPath, loadProjectDeclaration } from "../conventions.mjs"
 // #96（信息段与执行方式按端注入——CORE-UNIFICATION §2.13.4）：git / node --check 执行
 // 全部经核内执行面单点（默认径 = execFileSync 等价——CLI 语义零行为变；端侧 injected ⇒
 // 可中断执行器）；编辑器诊断段经 `configureVerifyDiagnostics` 注入（缺省不注入）。
@@ -173,10 +173,10 @@ export const verifyTool = {
     // for doc changes, and the task list/self-review checklist add nothing either.
     // Paths inside a declared code segment (default: src — incl. prompts/*.md) are
     // product code — excluded from the fast path, consistent with the design gate.
-    // The project's own layout is declarable (.thincoder/conventions.json).
+    // The project's own layout is declarable (the manifest's codePaths).
     // Empty list (no changes / git unavailable)
     // intentionally falls through to the normal path below.
-    const conv = loadConventions(cwd)
+    const conv = loadProjectDeclaration(cwd)
     if (changedFiles.length > 0 && changedFiles.every((f) => isDocPath(f, conv))) {
       lines.push("")
       lines.push("Documentation-only changes — skipping syntax checks and tests.")

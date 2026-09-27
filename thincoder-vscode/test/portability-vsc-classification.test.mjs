@@ -2,18 +2,20 @@
  * portability-vsc-classification.test.mjs — 批次二（可移植性 VSC 镜像面）用例表 1:1：
  * T-V01–T-V06（设计档 `thincoder-vscode/docs/design/PORTABILITY.md` §6）+ AC-V02–AC-V03 机判面（§7）。
  * F9 辅助面（2026-09-27）：T-V22 分类四例 · T-V23 父侧门放行与仍拒 · T-V24 子门零变。
+ * 声明载体换源（2026-09-27 退役批）：T-V25 无档等值 · T-V26 旧档在场同判。
  * 零网络 / 零真实 LLM（门禁面 = `executeToolBatches` 假工具夹具——与 T-VG19 同型）。
- * 判据权威 = §3.1（分类权威）/ §3.2（接线表）/ §4.1（声明 schema）/ §4.3（文案逐字）。
+ * 判据权威 = docs/core/design/PORTABILITY.md §3.1（声明面）/ §3.2（分类裁判 API）/ §3.4（降级可见契约）；文案逐字本体住产品代码。
  * 2026-09-12 PROSE-ANCHOR-RETIRE：AC-V01 静态面（src/ 全仓判据副本扫描）整删——读 src 文本 = 散文锚
  *（判据见 CLI 侧设计档 TESTING.md §11）。
  */
 import { test, after } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs"
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync, readFileSync, readdirSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
-import { classifyPath, clearConventionsCache, isCodePath, isDocPath, isTempPath, isAuxPath, loadConventions } from "@thincoder/core/conventions.mjs"
+import { classifyPath, clearDeclarationCache, isCodePath, isDocPath, isTempPath, isAuxPath, loadProjectDeclaration, DEFAULT_DECLARATION } from "@thincoder/core/conventions.mjs"
+import { _setLogsDirForTest, _resetLogsDirForTest } from "@thincoder/core/log.mjs"
 // W12（2026-09-15）：advisor 镜像删旧——`isDocOnlyChange` / 陈旧判定改指核单源
 // （`@thincoder/core/advisor/repos.mjs` / `advisor-settle.mjs` 的 `reviewIsStale`——读 `_mutLog`）。
 import { isDocOnlyChange } from "@thincoder/core/advisor/repos.mjs"
@@ -24,7 +26,7 @@ import { executeToolBatches } from "../src/agent/execute-tools.mjs"
 // ─── 夹具 ─────────────────────────────────────────────────────────────────────
 
 const tmpDirs = []
-after(() => { for (const d of tmpDirs) rmSync(d, { recursive: true, force: true }); clearConventionsCache() })
+after(() => { for (const d of tmpDirs) rmSync(d, { recursive: true, force: true }); clearDeclarationCache() })
 
 /** 隔离临时工作区（声明面 / 门禁面——不动真实仓）。 */
 function mkws() {
@@ -45,11 +47,25 @@ function silenceWarn(fn) {
   console.warn = (...a) => seen.push(a.join(" "))
   try { return { value: fn(), warnings: seen } } finally { console.warn = orig }
 }
+
+/** 写项目声明入 manifest 三族键 + 清缓存（`loadProjectDeclaration` 按**档路径**缓存）。 */
+function declare(ws, payload) {
+  write(ws, "PROJECT-MANIFEST.json", typeof payload === "string" ? payload : JSON.stringify(payload))
+  clearDeclarationCache()
+}
+
+/** 隔离日志目录：指定事件名的事件行计数（`log.mjs` 写门在 NODE_TEST_CONTEXT 下需显式测试缝）。 */
+function logEventCount(dir, ev) {
+  let names = []
+  try { names = readdirSync(dir) } catch { return 0 }
+  return names.flatMap((n) => readFileSync(join(dir, n), "utf8").split("\n"))
+    .filter((l) => l.includes(`"${ev}"`)).length
+}
 // ─── T-V01–T-V04：分类裁判（VP-10 / AC-V02） ─────────────────────────────────
 
 test("T-V01 正常：无声明 —— src/x.mjs=code / docs/a.md=doc / tmp-x.mjs=temp（AC-V02）", () => {
   const ws = mkws()
-  const conv = loadConventions(ws)
+  const conv = loadProjectDeclaration(ws)
   assert.equal(conv.declared, false, "无声明 → declared=false")
   assert.equal(classifyPath("src/x.mjs", conv), "code")
   assert.equal(classifyPath("docs/a.md", conv), "doc")
@@ -64,7 +80,7 @@ test("T-V01 正常：无声明 —— src/x.mjs=code / docs/a.md=doc / tmp-x.mjs
 
 test("T-V02 边界（原缺陷反证）：packages/foo/src/x.md 判 code（嵌套漏判消除）", () => {
   const ws = mkws()
-  const conv = loadConventions(ws)
+  const conv = loadProjectDeclaration(ws)
   assert.equal(classifyPath("packages/foo/src/x.md", conv), "code", "嵌套布局不再当文档绕过门禁")
   assert.equal(isDocPath("packages/foo/src/x.md", conv), false)
   assert.equal(isCodePath("packages/foo/src/x.md", conv), true)
@@ -76,8 +92,8 @@ test("T-V02 边界（原缺陷反证）：packages/foo/src/x.md 判 code（嵌�
 
 test("T-V03 边界：声明 codePaths:[\"lib\"] —— lib/a.md=code / src/a.md=doc（声明替换默认）", () => {
   const ws = mkws()
-  write(ws, ".thincoder/conventions.json", JSON.stringify({ codePaths: ["lib"] }))
-  const conv = loadConventions(ws)
+  declare(ws, { codePaths: ["lib"] })
+  const conv = loadProjectDeclaration(ws)
   assert.equal(conv.declared, true)
   assert.deepEqual([...conv.codePaths], ["lib"])
   assert.equal(classifyPath("lib/a.md", conv), "code", "声明段内 .md = 产品代码")
@@ -95,28 +111,26 @@ test("T-V03 边界：声明 codePaths:[\"lib\"] —— lib/a.md=code / src/a.md=
   assert.equal(reviewIsStale(mutAfter(join(ws, "src", "notes.md")), staleEntry), false, "声明替换后 src/notes.md 不判陈旧")
 })
 
-test("T-V04 错误：conventions.json 非法 JSON / 类型错 → 回退默认 + warn + 不抛；clearConventionsCache() 后重读生效", () => {
+test("T-V04 错误：manifest 非法 JSON / 形态错 → 回退默认 + warn + 不抛；clearDeclarationCache() 后重读生效", () => {
   const ws = mkws()
-  write(ws, ".thincoder/conventions.json", "{ not json")
+  declare(ws, "{ not json")
   const r1 = silenceWarn(() => {
     let conv
-    assert.doesNotThrow(() => { conv = loadConventions(ws) })
+    assert.doesNotThrow(() => { conv = loadProjectDeclaration(ws) })
     return conv
   })
   assert.deepEqual([...r1.value.codePaths], ["src"], "损坏 → 回退默认（不抛）")
   assert.equal(r1.value.declared, false)
-  assert.ok(r1.warnings.some((w) => w.includes("conventions")), "warn 可见（不静默吞）")
-  // 类型错（识别键存在但类型错）→ 该键回退 + warn
-  write(ws, ".thincoder/conventions.json", JSON.stringify({ codePaths: "lib", index: { codeExtensions: 5 } }))
-  clearConventionsCache()
-  const r2 = silenceWarn(() => loadConventions(ws))
-  assert.deepEqual([...r2.value.codePaths], ["src"], "类型错键回退默认")
+  assert.ok(r1.warnings.some((w) => w.includes("[declaration]")), "warn 可见（不静默吞）")
+  // 形态错（三族键形态非法 = manifest 非法——fail-closed）→ 整声明回默认 + warn
+  declare(ws, { codePaths: "lib", index: { codeExtensions: 5 } })
+  const r2 = silenceWarn(() => loadProjectDeclaration(ws))
+  assert.deepEqual([...r2.value.codePaths], ["src"], "形态错 → 回退默认")
   assert.equal(r2.value.declared, false)
-  assert.ok(r2.warnings.some((w) => w.includes("invalid value types")), "类型错 warn（不静默）")
+  assert.ok(r2.warnings.some((w) => w.includes("[declaration]")), "形态错 warn（不静默）")
   // 清缓存 → 重读生效（缓存 seam）
-  write(ws, ".thincoder/conventions.json", JSON.stringify({ codePaths: ["lib"] }))
-  clearConventionsCache()
-  assert.deepEqual([...loadConventions(ws).codePaths], ["lib"], "clearConventionsCache 后重读声明生效")
+  declare(ws, { codePaths: ["lib"] })
+  assert.deepEqual([...loadProjectDeclaration(ws).codePaths], ["lib"], "clearDeclarationCache 后重读声明生效")
 })
 
 // ─── T-V05–T-V06：门禁面（VP-10 · VP-11 / AC-V03） ──────────────────────────
@@ -155,19 +169,18 @@ test("T-V05 正常（门禁）：工程模式 + 无令牌 + 写 src/x.mjs → �
   )
   assert.ok(!blocked.includes("in docs/"), "旧 `in docs/` 指路零残留（AC-V09）")
   assert.ok(
-    blocked.includes(" — this path was classified as product code by the default conventions (code paths: src); declare project conventions in .thincoder/conventions.json to adjust."),
+    blocked.includes(" — this path was classified as product code by the default conventions (code paths: src); declare project conventions in PROJECT-MANIFEST.json to adjust."),
     "未声明 → 声明指路追加句逐字（§4.3）",
   )
   assert.deepEqual(executed, [], "被拒写入零执行")
   // 声明后行为切换：codePaths=["lib"] → src/notes.md 判 doc 放行、lib/notes.md 判 code 拒
   // （.mjs 文件两态下都算 code——非文档扩展即产品代码；切换的可观测面 = 文档扩展名的归属）
-  write(ws, ".thincoder/conventions.json", JSON.stringify({ codePaths: ["lib"] }))
-  clearConventionsCache()
+  declare(ws, { codePaths: ["lib"] })
   const allowed = await runWrite({ path: "src/notes.md", content: "x" })
   assert.ok(!allowed.includes("Error: engineering design gate"), "声明替换后 src/notes.md 判 doc → 放行")
   const libBlocked = await runWrite({ path: "lib/notes.md", content: "x" })
   assert.ok(libBlocked.includes("Error: engineering design gate"), "新声明段 lib/notes.md 判 code → 拒（声明面生效）")
-  assert.ok(!libBlocked.includes("declare project conventions in .thincoder/conventions.json"), "已声明 → 无声明指路句（declared=true）")
+  assert.ok(!libBlocked.includes("declare project conventions in PROJECT-MANIFEST.json"), "已声明 → 无声明指路句（declared=true）")
   assert.deepEqual(executed, ["src/notes.md"], "恰放行项执行一次")
 })
 
@@ -240,7 +253,7 @@ test("T-V09 错误（#309 端侧写门）：绑定档 A 的子代理写 B ⇒ �
 
 test("T-V22 边界（F9 辅助面·同判）：test / scripts / .thincoder/tmp ⇒ aux；src/test/** 仍 code", () => {
   const ws = mkws()
-  const conv = loadConventions(ws)
+  const conv = loadProjectDeclaration(ws)
   assert.equal(classifyPath("test/x.mjs", conv), "aux", "test 段 ⇒ aux（≠ code——VSC 经核单源）")
   assert.equal(classifyPath("scripts/x.mjs", conv), "aux")
   assert.equal(classifyPath(".thincoder/tmp/a.mjs", conv), "aux")
@@ -252,9 +265,8 @@ test("T-V22 边界（F9 辅助面·同判）：test / scripts / .thincoder/tmp �
   assert.equal(hasCodeMutations({ cwd: ws, _touchedFiles: [join(ws, "test", "x.mjs")] }), false, "辅助面不再计代码变更")
   assert.equal(hasCodeMutations({ cwd: ws, _touchedFiles: [join(ws, "src", "test", "x.mjs")] }), true, "src/test/** 仍计代码变更")
   // codePaths 收回同判
-  write(ws, ".thincoder/conventions.json", JSON.stringify({ codePaths: ["src", "test"] }))
-  clearConventionsCache()
-  const c2 = loadConventions(ws)
+  declare(ws, { codePaths: ["src", "test"] })
+  const c2 = loadProjectDeclaration(ws)
   assert.equal(classifyPath("test/x.mjs", c2), "code", "声明收回 ⇒ 恢复 code")
   assert.equal(classifyPath("scripts/x.mjs", c2), "aux", "未列入段不受影响")
 })
@@ -288,5 +300,52 @@ test("T-V24 子门（F9 同判）：eng-coder 无令牌写辅助面仍拒——t
   const allowed = await runWrite({ path: "test/x.mjs", content: "x" })
   assert.ok(!allowed.startsWith("Error:"), `令牌在位 ⇒ 放行；实测：${allowed}`)
   assert.deepEqual(executed, ["test/x.mjs"], "恰执行一次")
+})
+
+// ── 声明载体换源（2026-09-27 · conventions.json 退役批）：T-V25 无档等值 · T-V26 旧档在场同判（判据线 = §3.1/§3.2 + §5）──
+
+test("T-V25 正常（无档逐条等值·同判）：loadProjectDeclaration 输出 deepEqual DEFAULT_DECLARATION", () => {
+  const ws = mkws()
+  const conv = loadProjectDeclaration(ws)
+  assert.deepEqual(conv, DEFAULT_DECLARATION, "无 manifest ⇒ 逐条等值默认声明（CLI 同判）")
+  assert.equal(conv.declared, false)
+  assert.deepEqual([...conv.codePaths], ["src"])
+  assert.deepEqual({ ...conv.index }, { codeExtensions: [], docExtensions: [] })
+  assert.deepEqual({ ...conv.advisor }, { docMap: "", standardsDoc: "" })
+})
+
+test("T-V26 边界（旧档在场·同判）：零生效 + 告警 + 事件 + 基准断言（同 T-30）", () => {
+  const ws = mkws()
+  const logDir = mkdtempSync(join(tmpdir(), "pvc-retired-log-"))
+  tmpDirs.push(logDir)
+  const warns = []
+  const origWarn = console.warn
+  console.warn = (...a) => warns.push(a.join(" "))
+  const retiredWarns = () => warns.filter((w) => w.includes(".thincoder/conventions.json") && w.includes("retired")).length
+  try {
+    _setLogsDirForTest(logDir)
+    write(ws, ".thincoder/conventions.json", JSON.stringify({ codePaths: ["sentinel"] }))
+    clearDeclarationCache()
+    const c1 = loadProjectDeclaration(ws)
+    assert.deepEqual(c1, DEFAULT_DECLARATION, "哨兵声明零生效（内容零解析——读数与无档等值）")
+    assert.equal(classifyPath("sentinel/a.md", c1), "doc", "哨兵段位未进入分类面")
+    assert.equal(retiredWarns(), 1, "恰一行退役告警")
+    assert.equal(logEventCount(logDir, "declaration:retired-file"), 1, "日志事件 declaration:retired-file")
+    // ② 坏 JSON——内容零解析（不产 JSON 错误句）
+    write(ws, ".thincoder/conventions.json", "{ not json")
+    clearDeclarationCache()
+    assert.deepEqual(loadProjectDeclaration(ws), DEFAULT_DECLARATION, "坏 JSON 零生效")
+    assert.ok(!warns.some((w) => /JSON|not a usable declaration/.test(w)), "内容零解析（无 JSON 错误句）")
+    // ③ 基准断言：旧档落项目根、cwd 深于项目根 ⇒ 仍命中（基准 = manifestFilePath 项目根）
+    declare(ws, { codePaths: ["lib"] })
+    mkdirSync(join(ws, "sub", "deep"), { recursive: true })
+    const c3 = loadProjectDeclaration(join(ws, "sub", "deep"))
+    assert.equal(c3.declared, true, "深 cwd 读项目根的档（三族生效）；基准 = manifestFilePath")
+    assert.deepEqual([...c3.codePaths], ["lib"])
+    assert.equal(retiredWarns(), 3, "旧档落根、cwd 更深 ⇒ 退役告警仍命中")
+  } finally {
+    console.warn = origWarn
+    _resetLogsDirForTest()
+  }
 })
 

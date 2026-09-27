@@ -8,14 +8,14 @@
  * PORTABILITY VSC mirror · VP-9 (P9): the extension tables were 14 code + 5 doc
  * entries with no declaration surface — a project in any other mainstream language
  * was invisible AND undeclarable, silently. Now: the tables carry the CLI-aligned
- * additions, `.thincoder/conventions.json` (index.codeExtensions / index.docExtensions)
- * unions in project-specific extensions, and files whose extension is in NO list are
+ * additions, the manifest's `index.codeExtensions` / `index.docExtensions` union in
+ * project-specific extensions, and files whose extension is in NO list are
  * TALLIED (`collectUnlisted`) so "my .xyz files are not searchable" stops being
  * invisible (buildIndex → panel hint + a log event).
  */
 import { readdirSync } from "node:fs"
 import { join, relative } from "node:path"
-import { DEFAULT_CONVENTIONS, loadConventions } from "./conventions.mjs"
+import { DEFAULT_DECLARATION, loadProjectDeclaration } from "./conventions.mjs"
 
 const CODE_EXTS = new Set([
   ".js", ".mjs", ".cjs", ".jsx", ".ts", ".tsx", ".py", ".rs", ".go", ".java", ".c", ".cpp", ".h", ".hpp",
@@ -36,11 +36,11 @@ function extensionOf(p) {
 }
 
 /** Effective extension sets for one conventions object: defaults ∪ declared
- *  (declaration is a UNION — §4.1: index.*Extensions APPEND). Cached per frozen
+ *  (declaration is a UNION — §3.1: index.*Extensions APPEND). Cached per frozen
  *  conventions object (the loader hands out stable per-root instances). */
 const _knownCache = new WeakMap()
 function knownExtensions(conv) {
-  const key = conv ?? DEFAULT_CONVENTIONS
+  const key = conv ?? DEFAULT_DECLARATION
   let hit = _knownCache.get(key)
   if (!hit) {
     const code = new Set(CODE_EXTS)
@@ -126,7 +126,7 @@ function isIndexableName(name, allExts) {
  *   files array (backward-compatible with needsRebuild / the memory self-check).
  */
 export function discoverFiles(cwd, signal, { collectUnlisted = false } = {}) {
-  const res = collectFiles(cwd, cwd, false, signal, loadConventions(cwd), collectUnlisted)
+  const res = collectFiles(cwd, cwd, false, signal, loadProjectDeclaration(cwd), collectUnlisted)
   return collectUnlisted ? res : res.files
 }
 
@@ -135,7 +135,7 @@ export function discoverFiles(cwd, signal, { collectUnlisted = false } = {}) {
 export function discoverFilesUnder(cwd, subdir, { collectUnlisted = false } = {}) {
   const base = String(subdir ?? "").replaceAll("\\", "/").replace(/\/+$/, "")
   if (!base) return collectUnlisted ? { files: [], unlisted: { count: 0, exts: [] } } : []
-  const res = collectFiles(join(cwd, base), cwd, false, undefined, loadConventions(cwd), collectUnlisted)
+  const res = collectFiles(join(cwd, base), cwd, false, undefined, loadProjectDeclaration(cwd), collectUnlisted)
   return collectUnlisted ? res : res.files
 }
 

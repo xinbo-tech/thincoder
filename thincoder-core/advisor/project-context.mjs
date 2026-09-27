@@ -13,12 +13,12 @@
  * dimension it could no longer check (silent failure, the worst class: invisible
  * and unfixable by the user). Missing pieces now say so, and the reviewer is told
  * to state the limitation in its findings. Projects can point at their own files
- * through `.thincoder/conventions.json` (advisor.docMap / advisor.standardsDoc).
+ * through the project manifest (advisor.docMap / advisor.standardsDoc).
  */
 import { readFileSync, existsSync } from "node:fs"
 import { resolve, join, relative, dirname, sep } from "node:path"
 import { providerSpec } from "../config.mjs"
-import { loadConventions } from "../conventions.mjs"
+import { loadProjectDeclaration } from "../conventions.mjs"
 
 /** Project guide (AGENTS.md) injection budget — decision 2026-08-08:
  *  NO fixed truncation; long-context models (1M+) get up to 5% of their context
@@ -136,7 +136,7 @@ export function injectProjectGuide(agent, parts, scopeFiles = []) {
  */
 export function injectDocumentMap(agent, parts, root) {
   const base = root ?? agent.cwd
-  const conv = loadConventions(agent.cwd)
+  const conv = loadProjectDeclaration(agent.cwd)
   let mapPath = null
   if (conv.advisor.docMap) {
     const declared = resolve(base, conv.advisor.docMap)
@@ -174,7 +174,7 @@ export function injectDocumentMap(agent, parts, root) {
  */
 export function injectProjectStandards(agent, parts, root) {
   const base = root ?? agent.cwd
-  const conv = loadConventions(agent.cwd)
+  const conv = loadProjectDeclaration(agent.cwd)
   const declared = conv.advisor.standardsDoc ? resolve(base, conv.advisor.standardsDoc) : null
   parts.push("## Project Standards")
   let text = null

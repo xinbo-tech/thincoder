@@ -10,7 +10,7 @@
 import { runAdvisorReview, advisorIncompleteMarker, ADVISOR_LAUNCH_REFUSAL_PREFIX } from "../advisor/run.mjs"
 import { resolveBatchDocPath } from "./batch.mjs"
 // M6（模块设计 §2.1 F3）：评审对象来源读 manifest docRoot（声明面）——复用 M4 的
-// write-gate.mjs 单一权威源（KD-M6-1），替代 v1 的 loadConventions/isDocPath 分类；
+// write-gate.mjs 单一权威源（KD-M6-1），替代 v1 的逐档分类面（isDocPath）；
 // normAbs 同源 re-export（指针非副本）。不 import dispatch.mjs（簇间回边，环风险）。
 import { resolveReviewTargetPaths, normAbs } from "../agent/write-gate.mjs"
 import { sep } from "node:path"

@@ -45,7 +45,7 @@ export async function handleReindexCommand(ctx) {
   const unlisted = cr?.unlistedExts?.count ? cr.unlistedExts : dr?.unlistedExts
   if (unlisted?.count > 0) {
     const sample = unlisted.exts.map((e) => e.ext).join(" ")
-    pushLine(`  ${unlisted.count} file(s) with unlisted extension(s) skipped (${sample}) — declare them in .thincoder/conventions.json (index.codeExtensions / index.docExtensions) to index them`, C.warn)
+    pushLine(`  ${unlisted.count} file(s) with unlisted extension(s) skipped (${sample}) — declare them in PROJECT-MANIFEST.json (index.codeExtensions / index.docExtensions) to index them`, C.warn)
   }
   pushLine(`[reindex] Done, ${total} entries total. Vectors will be lazily generated on next search.`, C.tool)
 }

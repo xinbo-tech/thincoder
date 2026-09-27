@@ -23,7 +23,7 @@
 import { persistEngTokens } from "../token-ttl.mjs"
 import { settleDesignReview, makeDesignTokenRegex, stripApprovedSuffix } from "./design-token.mjs"
 import { looksLikeReviewOutput, advisorIncompleteMarker, ADVISOR_LAUNCH_REFUSAL_PREFIX } from "../advisor/run.mjs"
-import { isCodePath, loadConventions } from "../conventions.mjs"
+import { isCodePath, loadProjectDeclaration } from "../conventions.mjs"
 import { logEvent } from "../log.mjs"
 // 第 33 批（评审失败护栏）：`normAbs` 迁 `review-facts.mjs`（中立模块——陈旧判定与事实面共用同一归一）；
 // 2026-09-18：结算分类 / 结论文案单源迁 `advisor/notice.mjs`（纯函数、零状态、零计数载体）。
@@ -68,9 +68,9 @@ export function reviewIsStale(agent, entry) {
     const set = new Set(scope)
     return since.some((m) => (m.paths ?? []).some((p) => set.has(normAbs(p, agent?.cwd))))
   }
-  // Code face = the shared classifier (src/conventions.mjs) — one authority with
+  // Code face = the shared classifier (thincoder-core/conventions.mjs) — one authority with
   // the design gate and the mutation guard (PORTABILITY FR12 / PO-10).
-  const conv = loadConventions(agent?.cwd)
+  const conv = loadProjectDeclaration(agent?.cwd)
   return since.some((m) => (m.paths ?? []).some((p) => isCodePath(normAbs(p, agent?.cwd), conv)))
 }
 

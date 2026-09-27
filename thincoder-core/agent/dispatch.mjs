@@ -5,7 +5,7 @@ import { logEvent, errText, headText } from "../log.mjs"
 import { offloadToolResult, FILE_MUTATORS, toolTouchPaths } from "./helpers.mjs"
 import { runHooks } from "../hooks.mjs"
 import { snapshotForUndo } from "../undo-stack.mjs"
-import { isCodePath, loadConventions } from "../conventions.mjs"
+import { isCodePath, loadProjectDeclaration } from "../conventions.mjs"
 // R10 L3 (MULTI-INSTANCE-COLLAB §2a.5 D-L3b / §4.4 D-MI17–D-MI21)：写工具钩子——peerCollabNote
 // （执行前冲突与认领命中检测——软提示不阻止）+ recordPeerWrites（成功后足迹与认领登记）。
 import { PEER_WRITE_TOOLS, peerCollabNote, recordPeerWrites, markClaimNoted } from "../peer-domains.mjs"
@@ -183,11 +183,11 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
     // before the design review passed. Signaled by a live design slot (design-review
     // approval — persists in the session slot, survives across turns; _engDesignReviewed
     // is eng-coder-only and reset per run). Exemptions = the non-code classes of
-    // src/conventions.mjs (documentation and temp scratch files) — writing a design
+    // thincoder-core/conventions.mjs (documentation and temp scratch files) — writing a design
     // document IS the design step. Anything inside a declared code segment (default:
     // src — incl. src/prompts/*.md) is product code, not documentation, and needs a
-    // design token. The project can declare its own code paths (.thincoder/
-    // conventions.json) so a non-src layout is not silently exempted. Mechanically
+    // design token. The project can declare its own code paths (the manifest's
+    // `codePaths`) so a non-src layout is not silently exempted. Mechanically
     // blocks "talk then code".
     // DESIGN-TOKEN-SETTLEMENT D3（2026-09-08）：资格判据 = 权威槽"任一活槽存在"
     // （anyLiveDesignSlot——查内存 Map，miss 回读槽文件——单值镜像 `_engDesignToken`
@@ -196,7 +196,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
         && !anyLiveDesignSlot(agent)
         && FILE_MUTATORS.has(toolCall.name)) {
       const paths = toolTouchPaths(tool, args)
-      const conv = loadConventions(agent.cwd)
+      const conv = loadProjectDeclaration(agent.cwd)
       // Unknown/missing paths (non-string, e.g. no path argument) are treated
       // as code — cannot tell what they touch, so block conservatively. Known
       // paths go through the single shared classifier: a declared code segment
@@ -206,7 +206,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
         // Undeclared project → point at the declaration file (§4.3 降级可见契约).
         const convNote = conv.declared
           ? ""
-          : ` — this path was classified as product code by the default conventions (code paths: ${conv.codePaths.join(", ")}); declare project conventions in .thincoder/conventions.json to adjust.`
+          : ` — this path was classified as product code by the default conventions (code paths: ${conv.codePaths.join(", ")}); declare project conventions in PROJECT-MANIFEST.json to adjust.`
         prepared.push({
           toolCall, tool, denied: true,
           reason: "engineering design gate",

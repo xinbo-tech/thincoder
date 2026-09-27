@@ -22,12 +22,12 @@ import { CODE_EXTS, DOC_EXTS } from "@thincoder/core/memory/schema.mjs"
 import { detectLanguage } from "@thincoder/core/memory/code-index.mjs"
 import { handleReindexCommand } from "../src/tui/cmd-reindex.mjs"
 import { createMemory } from "@thincoder/core/memory.mjs"
-import { clearConventionsCache } from "@thincoder/core/conventions.mjs"
+import { clearDeclarationCache } from "@thincoder/core/conventions.mjs"
 
 let tmp
 beforeEach(() => {
   tmp = mkdtempSync(join(tmpdir(), "portability-idx-"))
-  clearConventionsCache()
+  clearDeclarationCache()
 })
 /** Windows：句柄释放滞后 → rmSync 偶发 EPERM——短重试兜底（eng-designer-role 同款手法）。 */
 async function rmTmp(dir) {
@@ -36,7 +36,7 @@ async function rmTmp(dir) {
   }
 }
 afterEach(async () => {
-  clearConventionsCache()
+  clearDeclarationCache()
   await rmTmp(tmp)
 })
 
@@ -47,9 +47,8 @@ const w = (rel, text = "x\n") => {
   return abs
 }
 const declare = (payload) => {
-  mkdirSync(join(tmp, ".thincoder"), { recursive: true })
-  writeFileSync(join(tmp, ".thincoder", "conventions.json"), JSON.stringify(payload))
-  clearConventionsCache()
+  writeFileSync(join(tmp, "PROJECT-MANIFEST.json"), JSON.stringify(payload))
+  clearDeclarationCache()
 }
 
 slow("T-13 正常（非 git）：列表面覆盖 a.mjs/b.md；索引非空（原为全空）", async () => {
@@ -80,7 +79,7 @@ slow("T-14 边界（walk）：node_modules/.hidden 跳过；超限截断标记�
   assert.deepEqual(lp.entries, [], "超限即停（无条目）")
   // 跳过谓词与 git 路径同源（同一函数）
   assert.equal(isSkippedRelPath("node_modules/a/b.mjs"), true)
-  assert.equal(isSkippedRelPath(".thincoder/conventions.json"), true)
+  assert.equal(isSkippedRelPath(".thincoder/memory/memory.db"), true)
   assert.equal(isSkippedRelPath("src\\a.mjs"), false)
 })
 
@@ -106,7 +105,9 @@ slow("T-16 边界（声明）：index.codeExtensions 声明后 .xyz 入索引；
   declare({ index: { codeExtensions: [".xyz"] } })
   const mem2 = createMemory({ dbPath: ":memory:" })
   const cr2 = await codeSync(mem2, tmp)
-  assert.equal(cr2.total, 2, "声明后 .xyz 入索引（并集）")
+  // total 3 = a.xyz + b.mjs + 根位 `PROJECT-MANIFEST.json` 本体（载体换源后档落项目根；
+  // `.json` 属内置代码扩展名——与 package.json 等既有 JSON 面同判，非新机制）。
+  assert.equal(cr2.total, 3, "声明后 .xyz 入索引（并集）")
   assert.equal(cr2.unlistedExts.count, 0, "声明后不再计入 unlisted")
   assert.equal(mem2.db.prepare("SELECT COUNT(*) n FROM code_chunks WHERE path LIKE '%.xyz'").get().n > 0, true, "声明扩展名的文件已索引")
 })
@@ -124,7 +125,7 @@ slow("T-17 正常（文案）：/reindex 在存在 unlisted 时打印声明指�
   })
   const hint = lines.find((l) => l.includes("unlisted extension"))
   assert.ok(hint, "提示行在场")
-  assert.match(hint, /\.thincoder\/conventions\.json/, "声明指路在位")
+  assert.match(hint, /PROJECT-MANIFEST\.json/, "声明指路在位")
   assert.match(hint, /index\.codeExtensions \/ index\.docExtensions/, "声明的键名在案")
   // 对照（反证非空转）：去掉 unlisted 文件后信号归零（提示行的判据字段）
   rmSync(join(tmp, "a.xyz"))

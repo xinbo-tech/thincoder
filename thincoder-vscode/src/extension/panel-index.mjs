@@ -194,7 +194,7 @@ export async function buildIndex(panel) {
         // 两 sync 各产一份 tally（同一已知集、同一文件面）——取其一，不双计。
         const unlisted = [codeRes?.unlistedExts, docRes?.unlistedExts].find((u) => u?.count > 0) ?? null
         const hint = unlisted
-          ? ` ${unlisted.count} file(s) skipped — extensions not indexed: ${unlisted.exts.map((e) => e.ext).join(", ")}; declare index.codeExtensions in .thincoder/conventions.json to include them.`
+          ? ` ${unlisted.count} file(s) skipped — extensions not indexed: ${unlisted.exts.map((e) => e.ext).join(", ")}; declare index.codeExtensions in PROJECT-MANIFEST.json to include them.`
           : ""
         vscode.window.showInformationMessage(
           `Index built: ${files} files.` + (embedder ? " Semantic search is now active." : "") + hint
@@ -217,8 +217,7 @@ export const LEGACY_INDEX_DIR = ".thincoder/index"
 const LEGACY_INDEX_ASKED_KEY = "thincoder.legacyIndexRemovalAsked"
 
 /** 告示（升级后首次面板初始化 · 每项目恰一次——memento 去重）：[删除][保留]。
- *  仅 `.thincoder/index/` 子目录在范围；`.thincoder/` 其余（`memory/` · `conventions.json`）
- *  在读面续用——零触碰。 */
+ *  仅 `.thincoder/index/` 子目录在范围；`.thincoder/` 其余（`memory/` 等）在读面续用——零触碰。 */
 export async function maybePromptLegacyIndexRemoval(panel) {
     const cwd = _cwd()
     if (!cwd) return

@@ -5,7 +5,7 @@
 import { writeFileSync, mkdirSync, existsSync, readdirSync, statSync, unlinkSync } from "node:fs"
 import { join } from "node:path"
 import { loadRaw } from "@thincoder/core/config-io.mjs"
-import { isCodePath, loadConventions } from "@thincoder/core/conventions.mjs"
+import { isCodePath, loadProjectDeclaration } from "@thincoder/core/conventions.mjs"
 
 /** File-modifying tools — the engineering design gate blocks these before review passes (CLI parity). */
 export const FILE_MUTATORS = new Set(["write", "edit", "insert_after", "apply_patch", "delete", "hashline_edit"])
@@ -64,13 +64,13 @@ export function escapeXml(s) {
  * .tmp/.temp — L58 附带差：scratch 脚本不触发 guard——CLI isTempFile 同规则).
  * _touchedFiles stores absolute paths; classification comes from the single
  * authority (@thincoder/core/conventions.mjs) and honors the project declaration
- * (.thincoder/conventions.json) — the same judge as the design gate, never a
+ * (the manifest's codePaths) — the same judge as the design gate, never a
  * second copy of the default list.
  */
 export function hasCodeMutations(agent) {
   const files = agent._touchedFiles ?? []
   if (files.length === 0) return agent._mutatedThisRun
-  const conv = loadConventions(agent.cwd)
+  const conv = loadProjectDeclaration(agent.cwd)
   return files.some((p) => isCodePath(p, conv))
 }
 export const MAX_TOOL_RESULT = 64 * 1024 // chars — large results saved to disk instead of truncated (aligns with CLI)

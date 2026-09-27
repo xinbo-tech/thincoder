@@ -4,7 +4,7 @@
  */
 import { execFileSync } from "node:child_process"
 import { dirname, basename, resolve } from "node:path"
-import { loadConventions, isCodePath } from "../conventions.mjs"
+import { loadProjectDeclaration, isCodePath } from "../conventions.mjs"
 
 const GIT_TIMEOUT = 5_000
 const MAX_EMBEDDED_DIFF = 50_000
@@ -118,7 +118,7 @@ export function collectChangedFiles(repos, cwd) {
 export function hasCodeMutations({ _touchedFiles, _mutatedThisRun, cwd }) {
   const files = _touchedFiles ?? []
   if (files.length === 0) return _mutatedThisRun
-  const conv = loadConventions(cwd)
+  const conv = loadProjectDeclaration(cwd)
   return files.some((p) => isCodePath(p, conv))
 }
 
@@ -126,7 +126,7 @@ export function hasCodeMutations({ _touchedFiles, _mutatedThisRun, cwd }) {
  *  Anything inside a code segment (incl. src/prompts/*.md) counts as product code —
  *  the same authority the design gate uses. Paths here are repo-relative. */
 export function isDocOnlyChange(repos, cwd) {
-  const conv = loadConventions(cwd)
+  const conv = loadProjectDeclaration(cwd)
   const targets = repos.length > 0 ? repos : [cwd]
   let sawChanges = false
   for (const repo of targets) {
