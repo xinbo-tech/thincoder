@@ -37,16 +37,17 @@ export function ledgerCount({ cwd } = {}) {
 /** 路径 = 存在的**档**？（目录 / 缺失 → false——写门存在性判据用）。 */
 const isFile = (p) => { try { return statSync(p).isFile() } catch { return false } }
 
-/** 写门·指针存在性（设计档 §6.1 · 台账 #38 · AC-M2-9）：写命令落盘前判**结果行**——`status ∈
- *  {在途, 待核销}` 且 `task_book` 非空 ⇒ 文件部分（首个 `§` 前子串，trim）须经基准 `resolve(base, …)`
- *  指向存在的档；缺文件部分（`§2` / 全空白）⇒ 拒；不在册 / 非文件 ⇒ 拒（throw，行不变）。
+/** 写门·指针存在性（设计档 §6.1 · 台账 #38 · AC-M2-10）：写命令落盘前判**结果行**——`status ∈
+ *  {在途, 待核销}` ⇒ 判 `task_book`：`null`（缺指针）⇒ 拒（「必填」文案）；非 `null` ⇒ 文件部分
+ *  （首个 `§` 前子串，trim）须经基准 `resolve(base, …)` 指向存在的档；缺文件部分（`§2` / 空串 /
+ *  全空白）⇒ 拒；不在册 / 非文件 ⇒ 拒（throw，行不变）。
  *  判位与迁移表判同层（落盘前）；文案前缀 = 调用函数名（与同函数既有两条文案同款）。
  *  基准 `base` = **与台账库关联键同源**（2026-09-18 fix 轮 · O1 收正）：`resolveProjectRoot(cwd) ??
  *  resolve(cwd ?? ".")`——同表达式见 `ledger-db.mjs` `ledgerDbPath`；容器根会话（锚 cwd 下唯一注册
  *  子仓 P）与子仓会话 ⇒ 库键与指针基准同取 P（同库同基准；原实现 `resolve(cwd, …)` = 原始 cwd 会误拒）。 */
 function assertTaskBookGate(cwd, fnName, status, taskBook) {
   if (status !== "在途" && status !== "待核销") return
-  if (taskBook == null || taskBook === "") return
+  if (taskBook == null) throw new Error(`${fnName}：task_book 必填（在途 / 待核销 须携任务书指针）`)
   const part = String(taskBook).split("§")[0].trim()
   if (!part) throw new Error(`${fnName}：task_book 不可解析（缺文件部分）：${taskBook}`)
   const base = resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")
@@ -129,6 +130,61 @@ export function ledgerClose({ cwd, id, status }) {
 /** 工具 cwd 供值面（缺省 → 当前项目根）。 */
 const cwdOf = (ctx) => ctx?.agent?.cwd ?? ctx?.cwd ?? process.cwd()
 
+// ── 工具层参数守卫（设计档 §3.2 · 2026-09-27 快车道修复 · Gitee #IKIQGK / 台账 #472） ──
+
+/** 值预览（P1–P5 文案的 `<预览>`——设计档 §3.2）：`JSON.stringify`，超 80 字符截断加 `…`
+ *  （`undefined` 无 JSON 形 ⇒ 取文本形）。 */
+const argPreview = (v) => {
+  const s = JSON.stringify(v) ?? String(v)
+  return s.length > 80 ? `${s.slice(0, 80)}…` : s
+}
+
+/** 枚举取值域文本（P3 / P5 文案同源）。 */
+const enumText = (values) => `{${values.join(", ")}}`
+
+/** P3 后缀（声明派生）：枚举字段带取值域 / 非枚举必填串带「非空字符串」/ 数字字段仅「必填」。 */
+const requiredSuffix = (spec) => (spec.enum ? `；取值 ∈ ${enumText(spec.enum)}` : spec.type === "string" ? "；非空字符串" : "")
+
+/**
+ * 工具层参数守卫（设计档 §3.2 · Gitee #IKIQGK / 台账 #472）：判序 P1–P6，文案逐字 = §3.2 模板；
+ * 消费工具自身 `parameters` 声明派生（`required` / `type` / `enum`——枚举 / 必填 / 类型不在守卫内复写）；
+ * 只判不改（零缺省填充 / 零类型转换 / 零文本改写），返回入参对象（唯一归一 = 判序① 的缺省 / `null`
+ * ⇒ `{}`）。非法 ⇒ throw——判于核函数之前（零写、零库动作）。
+ */
+function assertToolArgs(tool, args) {
+  const name = tool.name
+  const decl = tool.parameters ?? {}
+  const props = decl.properties ?? {}
+  const fields = Object.keys(props)
+  // P1：入参缺省 / `null` ⇒ 视作 `{}`；非对象（数组 / 标量）⇒ 拒
+  if (args == null) args = {}
+  else if (typeof args !== "object" || Array.isArray(args)) throw new Error(`${name}：参数须为对象（收到 ${argPreview(args)}）`)
+  // P2：未知键 ⇒ 拒（判序先于缺参——typo 键先给可用参数集）
+  const unknown = Object.keys(args).filter((k) => !Object.hasOwn(props, k))
+  if (unknown.length > 0) throw new Error(`${name}：未知参数：${unknown.join(" / ")}（可用参数 = ${fields.join(" / ")}）`)
+  // P3–P6：逐字段（声明序）——缺失（必填；显式 `null` 同判）→ 类型 / 枚举 → `title` 空串 / 全空白
+  for (const field of fields) {
+    const spec = props[field]
+    const value = args[field]
+    const required = (decl.required ?? []).includes(field)
+    if (value === undefined || value === null) {
+      if (required) throw new Error(`${name}：${field} 缺失（必填${requiredSuffix(spec)}）`)
+      continue // 可空字段 `null` ⇒ 放行（≡ 略去——与 `patch.x ?? 行值` 既有语义同源）
+    }
+    if (spec.enum) {
+      if (!spec.enum.includes(value)) throw new Error(`${name}：${field} 非法：${argPreview(value)}（取值 ∈ ${enumText(spec.enum)}）`)
+    } else if (spec.type === "string" && typeof value !== "string") {
+      throw new Error(`${name}：${field} 非法：${argPreview(value)}（应为字符串）`)
+    } else if (spec.type === "number" && typeof value !== "number") {
+      throw new Error(`${name}：${field} 非法：${argPreview(value)}（应为数字）`)
+    }
+    if (field === "title" && typeof value === "string" && value.trim() === "") {
+      throw new Error(`${name}：${field} 为空（${required ? "必填；" : ""}非空字符串）`)
+    }
+  }
+  return args
+}
+
 export const ledgerQueryTool = {
   name: "ledger_query",
   description: "台账查询（需求池 / 技术待办）——SQLite 行集，只读、全角色可用。未决四态 = 待讨论 / 待设计 / 在途 / 待核销；已核销 / 已废弃 = 归档态（软删除，行保留）。过滤参数缺省 = 全部行。",
@@ -176,9 +232,11 @@ export const ledgerAddTool = {
       evidence: { type: "string", description: "最小证据行（可空）" },
       trigger: { type: "string", enum: ["归批", "条件", "认账不排期"], description: "技术待办触发（可空）" },
     },
+    additionalProperties: false,
   },
   readonly: false,
   async execute(args, ctx) {
+    args = assertToolArgs(ledgerAddTool, args)
     const { cwd, ...row } = args
     const id = ledgerAdd({ cwd: cwd ?? cwdOf(ctx), row })
     return JSON.stringify({ id, status: "待讨论" })
@@ -194,7 +252,7 @@ export const ledgerUpdateTool = {
     properties: {
       cwd: { type: "string", description: "项目根目录——台账按项目根关联存储于用户数据目录（工作树外、不进 git）。相对路径按当前工作目录解析；查/写别的项目请给绝对路径。缺省 = 当前会话项目根" },
       id: { type: "number", description: "条目 id" },
-      status: { type: "string", description: "目标状态（六态之一，缺省 = 不变）" },
+      status: { type: "string", enum: ["待讨论", "待设计", "在途", "待核销", "已核销", "已废弃"], description: "目标状态（六态之一，缺省 = 不变）" },
       title: { type: "string", description: "标题（缺省 = 不变）" },
       board: { type: "string", description: "归属板块（缺省 = 不变）" },
       req_doc: { type: "string", description: "需求档指针（缺省 = 不变）" },
@@ -203,9 +261,11 @@ export const ledgerUpdateTool = {
       trigger: { type: "string", enum: ["归批", "条件", "认账不排期"], description: "触发（缺省 = 不变）" },
       executor: { type: "string", description: "执行者 sessionId（可选——接手改写归属用；缺省 = 按状态迁移语义：进在途自动写本会话 / 出在途自动清空 / 其余不变）" },
     },
+    additionalProperties: false,
   },
   readonly: false,
   async execute(args, ctx) {
+    args = assertToolArgs(ledgerUpdateTool, args)
     const { cwd, id, ...patch } = args
     let executorSessionId
     if (patch.executor === undefined) {
@@ -228,9 +288,11 @@ export const ledgerCloseTool = {
       id: { type: "number", description: "条目 id" },
       status: { type: "string", enum: ["已核销", "已废弃"], description: "目标态（勾销 / 追认核销 / 撤回）" },
     },
+    additionalProperties: false,
   },
   readonly: false,
   async execute(args, ctx) {
+    args = assertToolArgs(ledgerCloseTool, args)
     return JSON.stringify(ledgerClose({ cwd: args.cwd ?? cwdOf(ctx), id: args.id, status: args.status }))
   },
 }
