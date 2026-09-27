@@ -1,5 +1,5 @@
 /**
- * conventions.mjs — the single authority for code / doc / temp path classification,
+ * conventions.mjs — the single authority for code / doc / temp / aux path classification,
  * plus the project convention declaration surface (`.thincoder/conventions.json`).
  *
  * Why one module: the write-domain gates and guards (design gate, review-doc gate,
@@ -15,10 +15,13 @@
  * corrupt/unreadable file → defaults + console.warn + a log event (never crash,
  * never swallow — PORTABILITY FR10).
  *
- * Classification vocabulary (PORTABILITY design §3.1):
- *   code — inside a declared code segment (default: the path segment `src`), or
- *          not a documentation extension;  doc — documentation extension outside
- *          any code segment;  temp — tmp-* name or .tmp/.temp extension.
+ * Classification vocabulary (PORTABILITY design §3.2):
+ *   code — inside a declared code segment (default: the path segment `src`), or the
+ *          fallback;  doc — documentation extension outside any code segment and not
+ *          scratch;  temp — tmp-* name or .tmp/.temp extension;  aux — a default
+ *          auxiliary-path segment sequence (test / tests / scripts / .thincoder/tmp —
+ *          F9) that matched no code segment and neither doc nor temp.
+ * Precedence: code segment → temp → doc → aux → fallback code.
  */
 import { readFileSync } from "node:fs"
 import { join, resolve } from "node:path"
@@ -26,6 +29,12 @@ import { logEvent } from "./log.mjs"
 
 /** Default code-path segments (data, not logic — a project may replace them). */
 export const DEFAULT_CODE_PATHS = ["src"]
+
+/** Default auxiliary-path segment sequences (data, not logic — F9): the engineering-mode
+ *  parent gate's default exemption surface — `test` / `tests` / `scripts` at any depth,
+ *  plus the `.thincoder/tmp` scratch space (two-segment sequence). Not declarable — a
+ *  project reclaims a sequence by listing it in `codePaths` (code segment wins). */
+export const DEFAULT_AUX_PATHS = ["test", "tests", "scripts", ".thincoder/tmp"]
 
 /** Project declaration file, relative to the project root. */
 export const CONVENTIONS_REL_PATH = ".thincoder/conventions.json"
@@ -47,16 +56,15 @@ function segmentsOf(p) {
 }
 
 /**
- * True when the path contains a declared code segment sequence at any depth.
+ * True when the path contains any of the given segment sequences at any depth.
  * Segment matching (not a prefix anchor) is what closes the nested-layout hole:
- * `packages/foo/src/x.md` is product code, not a document. Comparison is
- * case-insensitive — on case-insensitive filesystems `Src/x.mjs` is the same
- * directory, and the gate must not be bypassable by casing.
+ * `packages/foo/src/x.md` matches the sequence ["src"] — product code, not a
+ * document. Comparison is case-insensitive — on case-insensitive filesystems
+ * `Src/x.mjs` is the same directory, and the gate must not be bypassable by casing.
  */
-function hasCodeSegment(p, conv) {
+function hasSegmentSequence(p, sequences) {
   const parts = segmentsOf(p).map((s) => s.toLowerCase())
-  const wanted = conv?.codePaths ?? DEFAULT_CODE_PATHS
-  for (const entry of wanted) {
+  for (const entry of sequences) {
     const want = segmentsOf(entry).map((s) => s.toLowerCase())
     if (want.length === 0) continue
     for (let i = 0; i + want.length <= parts.length; i++) {
@@ -66,15 +74,28 @@ function hasCodeSegment(p, conv) {
   return false
 }
 
-/** "code" | "doc" | "temp" — the single classification decision.
+/** True when the path contains a declared code segment sequence at any depth. */
+function hasCodeSegment(p, conv) {
+  return hasSegmentSequence(p, conv?.codePaths ?? DEFAULT_CODE_PATHS)
+}
+
+/** True when the path contains a default auxiliary-path segment sequence (F9). */
+function hasAuxSegment(p) {
+  return hasSegmentSequence(p, DEFAULT_AUX_PATHS)
+}
+
+/** "code" | "doc" | "temp" | "aux" — the single classification decision.
  *  Precedence: code segment first (src/** stays product code even when the name
  *  looks scratch — the pre-existing unconditional-src rule), then temp, then a
- *  documentation extension, else code (anything not doc/temp is product code). */
+ *  documentation extension, then an auxiliary-path segment sequence (test / tests
+ *  / scripts / .thincoder/tmp — F9), else code (anything not doc/temp/aux is product
+ *  code). */
 export function classifyPath(p, conv) {
   const s = String(p ?? "")
   if (hasCodeSegment(s, conv)) return "code"
   if (TEMP_FILE.test(s)) return "temp"
   if (DOC_FILE.test(s)) return "doc"
+  if (hasAuxSegment(s)) return "aux"
   return "code"
 }
 
@@ -88,6 +109,15 @@ export function isCodePath(p, conv) {
 export function isDocPath(p, conv) {
   const s = String(p ?? "")
   return DOC_FILE.test(s) && !hasCodeSegment(s, conv)
+}
+
+/** True when the path is an auxiliary path (`classifyPath === "aux"`) — the engineering-mode
+ *  parent gate's default exemption surface (test / tests / scripts at any depth ·
+ *  .thincoder/tmp/**). Not declarable: a project reclaims one by listing its sequence in
+ *  `codePaths`, which then wins (code segment first). Production faces read aux through
+ *  classifyPath / isCodePath; this predicate is the readable form for the test face. */
+export function isAuxPath(p, conv) {
+  return classifyPath(p, conv) === "aux"
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

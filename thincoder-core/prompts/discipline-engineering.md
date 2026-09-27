@@ -16,7 +16,7 @@ Judge the **change face** before acting — different faces, different authoriza
 | Change face | Domain | Authorization path |
 |---|---|---|
 | **Doc face** | `docs/**` (requirements / design / batch / ledger / prompts) | Write rights per the D1 matrix (prompts = main agent content authority + landing) |
-| **Engineering-tools face** | project script dirs (`scripts/**`) · tool-config dirs · CI config · lockfiles | parent direct edit (no spawn/designToken) + gate prevails + explicit commit |
+| **Engineering-tools face** | `scripts/**` · `test/**`/`tests/**` · `.thincoder/tmp/**` · tool-config · CI · lockfiles | parent direct edit (no spawn/designToken) + gate prevails + explicit commit |
 | **Product-code face** | **default face** — every path not in the other two faces (fail-closed; incl. **product-text face**) | Requirements → Design → Review → eng-coder (full flow; token gate) |
 
 - **Default classification (fills the enumeration gap)**: **any path not listed under the engineering-tools and doc faces is treated as product-code face** (fail-closed — prefer walking the process, never default to direct edits). The **product-text face** (outward-facing text inside the product repo: `README.md` / `package.json` / release manifests / product `AGENTS.md`) is singled out for a reason: it is the shipped artifact, a user-visible external contract — **not** engineering-tools face.

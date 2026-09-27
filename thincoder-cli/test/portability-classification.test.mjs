@@ -1,6 +1,7 @@
 /**
  * portability-classification.test.mjs — PORTABILITY 批（FR10–FR15 · CLI 面）面①
  * 用例表 T-01–T-09 / T-22（PO-10 · PO-11 文案面）。
+ * F9 辅助面（2026-09-27）：T-26 分类四例 · T-27 父侧门放行与仍拒 · T-28 token 门零变。
  *
  * 断言对象 = @thincoder/core/conventions.mjs（代码/文档/临时分类的唯一权威 + 项目声明面）
  *   + thincoder-core/agent/dispatch.mjs 父侧设计门 + thincoder-core/advisor/repos.mjs 守卫换源。
@@ -14,7 +15,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 
 import {
-  classifyPath, isCodePath, isDocPath, isTempPath, loadConventions, clearConventionsCache,
+  classifyPath, isCodePath, isDocPath, isTempPath, isAuxPath, loadConventions, clearConventionsCache,
 } from "@thincoder/core/conventions.mjs"
 import { hasCodeMutations } from "@thincoder/core/advisor/repos.mjs"
 import { executeToolCalls } from "@thincoder/core/agent/dispatch.mjs"
@@ -217,4 +218,80 @@ test("T-24 消费面（#327）：畸形 arguments（null）零裸抛——记账
     { toolCall: { name: "write", arguments: JSON.stringify({ path: "src/x.mjs" }), id: "c2" }, result: "written", ok: true },
   ])
   assert.deepEqual(agent._touchedFiles, [join(tmp, "src", "x.mjs")])
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// F9 辅助面缺省（2026-09-27）：分类四例 + 父侧门放行与仍拒 + token 门零变（设计档 §5）
+// ─────────────────────────────────────────────────────────────────────────────
+
+test("T-26 边界（F9 辅助面）：test / scripts / .thincoder/tmp 判 aux；src/test/** 仍 code；tests→doc 前置不变", () => {
+  const conv = loadConventions(tmp)
+  // 四例读数（J1–J5）
+  assert.equal(classifyPath("test/x.mjs", conv), "aux", "J1 test 段 ⇒ aux（≠ code）")
+  assert.equal(classifyPath("scripts/x.mjs", conv), "aux", "J2 scripts 段 ⇒ aux")
+  assert.equal(classifyPath(".thincoder/tmp/a.mjs", conv), "aux", "J3 .thincoder/tmp 序列 ⇒ aux")
+  assert.equal(classifyPath("tests/a/b.md", conv), "doc", "J4 doc 前置——既有文档判据不变（≠ code）")
+  assert.equal(classifyPath("src/test/x.mjs", conv), "code", "J5 代码段优先（反例）")
+  assert.equal(isAuxPath("test/x.mjs", conv), true, "谓词面 = classifyPath === 'aux'")
+  assert.equal(isAuxPath("src/test/x.mjs", conv), false)
+  // 边界：任意深度 / 大小写 / 两段序列 / win32 分隔符 / 绝对路径
+  assert.equal(classifyPath("packages/foo/tests/deep/x.mjs", conv), "aux", "任意深度")
+  assert.equal(classifyPath("PKG/TESTS/x.mjs", conv), "aux", "大小写不敏感（段匹配非锚定）")
+  assert.equal(classifyPath(".thincoder\\TMP\\a.mjs", conv), "aux", "两段序列 + win32 分隔符")
+  assert.equal(classifyPath(`${tmp}/scripts/x.mjs`, conv), "aux", "绝对路径同判")
+  // 前置规则零变：temp 先于 aux（辅助面内的 tmp-* 仍判 temp）
+  assert.equal(classifyPath("test/tmp-x.mjs", conv), "temp", "temp 前置（aux 不吞 temp 词义）")
+  assert.equal(classifyPath("docs/a.md", conv), "doc", "既有 doc 判据零变")
+  // J11 收回：codePaths 列入同段序列 ⇒ 代码段优先命中，辅助面缺省失效
+  declare({ codePaths: ["src", "test"] })
+  const c2 = loadConventions(tmp)
+  assert.equal(classifyPath("test/x.mjs", c2), "code", "J11 声明收回 ⇒ 恢复 code（门禁恢复拒）")
+  assert.equal(isAuxPath("test/x.mjs", c2), false)
+  assert.equal(classifyPath("scripts/x.mjs", c2), "aux", "未列入的辅助面段不受影响")
+  assert.equal(classifyPath(".thincoder/tmp/a.mjs", c2), "aux")
+})
+
+test("T-27 门禁（F9 辅助面）：无活槽父侧写辅助面放行（恰执行一次）；src/** 仍拒", async () => {
+  // auto-approve 夹具（设计档 §5 T-27 注）：豁免写才有「恰执行一次」的可观测读数
+  const executed = []
+  const writeTool = {
+    name: "write", readonly: false, touchedPaths: (a) => [a.path],
+    execute: async (a) => { executed.push(a.path); return "written" },
+  }
+  const byName = new Map([["write", writeTool]])
+  const agent = engParent({ autoApprove: true, _touchedFiles: [] })
+  const r1 = await executeToolCalls(agent, byName, [call({ path: "test/x.mjs" })], {}, 0, undefined)
+  assert.equal(r1[0].ok, true, "J6 辅助面无令牌放行")
+  assert.ok(!String(r1[0].result).includes("design review required"), "无设计门拒绝句")
+  const r2 = await executeToolCalls(agent, byName, [call({ path: "scripts/x.mjs" })], {}, 0, undefined)
+  const r3 = await executeToolCalls(agent, byName, [call({ path: ".thincoder/tmp/a.mjs" })], {}, 0, undefined)
+  assert.equal(r2[0].ok, true, "scripts 段同判")
+  assert.equal(r3[0].ok, true, ".thincoder/tmp 序列同判")
+  assert.deepEqual(executed, ["test/x.mjs", "scripts/x.mjs", ".thincoder/tmp/a.mjs"], "恰各执行一次")
+  // J7 仍拒：代码段（含 src/test/**——代码段优先）
+  const r4 = await executeToolCalls(agent, byName, [call({ path: "src/x.mjs" })], {}, 0, undefined)
+  assert.equal(r4[0].ok, false, "J7 src/** 仍拒")
+  assert.match(String(r4[0].result), /design review required/)
+  const r5 = await executeToolCalls(agent, byName, [call({ path: "src/test/x.md" })], {}, 0, undefined)
+  assert.match(String(r5[0].result), /design review required/, "src/test/** 代码段优先仍拒")
+  assert.deepEqual(executed, ["test/x.mjs", "scripts/x.mjs", ".thincoder/tmp/a.mjs"], "被拒项零执行")
+})
+
+test("T-28 门禁（F9）：eng-coder 无令牌写辅助面仍拒——token 门零变（判据不看路径）", async () => {
+  const executed = []
+  const writeTool = {
+    name: "write", readonly: false, touchedPaths: (a) => [a.path],
+    execute: async (a) => { executed.push(a.path); return "written" },
+  }
+  const byName = new Map([["write", writeTool]])
+  const child = engParent({ _role: "eng-coder", autoApprove: true })
+  const r = await executeToolCalls(child, byName, [call({ path: "test/x.mjs" })], {}, 0, undefined)
+  assert.equal(r[0].ok, false, "J8 无令牌 ⇒ 拒（辅助面路径不放行）")
+  assert.match(String(r[0].result), /Call advisor with type='design' to review the design document before any file modification/, "eng-coder 门文案（判据 = 令牌，非路径）")
+  assert.deepEqual(executed, [], "零执行")
+  // 正控：令牌在位 ⇒ 同一辅助面路径放行（门行为零变，唯令牌驱动）
+  const reviewed = engParent({ _role: "eng-coder", autoApprove: true, _engDesignReviewed: true })
+  const r2 = await executeToolCalls(reviewed, byName, [call({ path: "test/x.mjs" })], {}, 0, undefined)
+  assert.equal(r2[0].ok, true, "令牌在位 ⇒ 放行")
+  assert.deepEqual(executed, ["test/x.mjs"], "恰执行一次")
 })

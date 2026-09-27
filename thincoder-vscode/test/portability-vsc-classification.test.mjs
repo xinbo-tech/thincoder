@@ -1,6 +1,7 @@
 /**
  * portability-vsc-classification.test.mjs — 批次二（可移植性 VSC 镜像面）用例表 1:1：
  * T-V01–T-V06（设计档 `thincoder-vscode/docs/design/PORTABILITY.md` §6）+ AC-V02–AC-V03 机判面（§7）。
+ * F9 辅助面（2026-09-27）：T-V22 分类四例 · T-V23 父侧门放行与仍拒 · T-V24 子门零变。
  * 零网络 / 零真实 LLM（门禁面 = `executeToolBatches` 假工具夹具——与 T-VG19 同型）。
  * 判据权威 = §3.1（分类权威）/ §3.2（接线表）/ §4.1（声明 schema）/ §4.3（文案逐字）。
  * 2026-09-12 PROSE-ANCHOR-RETIRE：AC-V01 静态面（src/ 全仓判据副本扫描）整删——读 src 文本 = 散文锚
@@ -12,7 +13,7 @@ import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
-import { classifyPath, clearConventionsCache, isCodePath, isDocPath, isTempPath, loadConventions } from "@thincoder/core/conventions.mjs"
+import { classifyPath, clearConventionsCache, isCodePath, isDocPath, isTempPath, isAuxPath, loadConventions } from "@thincoder/core/conventions.mjs"
 // W12（2026-09-15）：advisor 镜像删旧——`isDocOnlyChange` / 陈旧判定改指核单源
 // （`@thincoder/core/advisor/repos.mjs` / `advisor-settle.mjs` 的 `reviewIsStale`——读 `_mutLog`）。
 import { isDocOnlyChange } from "@thincoder/core/advisor/repos.mjs"
@@ -120,9 +121,10 @@ test("T-V04 错误：conventions.json 非法 JSON / 类型错 → 回退默认 +
 
 // ─── T-V05–T-V06：门禁面（VP-10 · VP-11 / AC-V03） ──────────────────────────
 
-/** 门禁夹具：工程模式父代理 + 假 write 工具（touchedPaths 走 args.path）。 */
-function gateFixture(ws) {
-  const parent = { cwd: ws, history: {}, config: { agent: { engineering: true } }, _touchedFiles: [] }
+/** 门禁夹具：工程模式父代理 + 假 write 工具（touchedPaths 走 args.path）。
+ *  `over` = agent 面覆盖（F9 用例：`_role` 等——既有调用点零改）。 */
+function gateFixture(ws, over = {}) {
+  const parent = { cwd: ws, history: {}, config: { agent: { engineering: true } }, _touchedFiles: [], ...over }
   const executed = []
   const writeTool = {
     name: "write",
@@ -232,5 +234,59 @@ test("T-V09 错误（#309 端侧写门）：绑定档 A 的子代理写 B ⇒ �
   const allowed = await run(join(ws, "docs", "batches", "a.md"))
   assert.ok(!allowed.startsWith("Error:"), `写自己绑定的档 ⇒ 放行（正控）；实测：${allowed}`)
   assert.deepEqual(executed, [join(ws, "docs", "batches", "a.md")], "正控恰执行一次")
+})
+
+// ─── F9 辅助面缺省（2026-09-27）：分类 / 父侧门 / 子门——VSC 同判 ─────────
+
+test("T-V22 边界（F9 辅助面·同判）：test / scripts / .thincoder/tmp ⇒ aux；src/test/** 仍 code", () => {
+  const ws = mkws()
+  const conv = loadConventions(ws)
+  assert.equal(classifyPath("test/x.mjs", conv), "aux", "test 段 ⇒ aux（≠ code——VSC 经核单源）")
+  assert.equal(classifyPath("scripts/x.mjs", conv), "aux")
+  assert.equal(classifyPath(".thincoder/tmp/a.mjs", conv), "aux")
+  assert.equal(classifyPath("tests/a/b.md", conv), "doc", "doc 前置——既有判据不变")
+  assert.equal(classifyPath("src/test/x.mjs", conv), "code", "代码段优先（反例）")
+  assert.equal(isAuxPath("test/x.mjs", conv), true, "谓词面 = classifyPath === 'aux'")
+  assert.equal(classifyPath("PKG/TESTS/deep/x.mjs", conv), "aux", "大小写 + 任意深度")
+  // 消费面随核（run-helpers 的 hasCodeMutations 经核 isCodePath——端侧零改）
+  assert.equal(hasCodeMutations({ cwd: ws, _touchedFiles: [join(ws, "test", "x.mjs")] }), false, "辅助面不再计代码变更")
+  assert.equal(hasCodeMutations({ cwd: ws, _touchedFiles: [join(ws, "src", "test", "x.mjs")] }), true, "src/test/** 仍计代码变更")
+  // codePaths 收回同判
+  write(ws, ".thincoder/conventions.json", JSON.stringify({ codePaths: ["src", "test"] }))
+  clearConventionsCache()
+  const c2 = loadConventions(ws)
+  assert.equal(classifyPath("test/x.mjs", c2), "code", "声明收回 ⇒ 恢复 code")
+  assert.equal(classifyPath("scripts/x.mjs", c2), "aux", "未列入段不受影响")
+})
+
+test("T-V23 门禁（F9 同判）：辅助面写放行（恰执行一次）；src 段仍拒", async () => {
+  const ws = mkws()
+  const { executed, runWrite } = gateFixture(ws)
+  const aux = await runWrite({ path: "test/x.mjs", content: "x" })
+  assert.ok(!aux.includes("Error: engineering design gate"), `辅助面无令牌放行；实测：${aux}`)
+  const scripts = await runWrite({ path: "scripts/x.mjs", content: "x" })
+  assert.ok(!scripts.includes("Error: engineering design gate"), `scripts 段同判；实测：${scripts}`)
+  assert.deepEqual(executed, ["test/x.mjs", "scripts/x.mjs"], "辅助面恰各执行一次")
+  const blocked = await runWrite({ path: "src/x.mjs", content: "x" })
+  assert.ok(blocked.startsWith("Error: engineering design gate — "), `src 段仍拒；实测：${blocked}`)
+  const nested = await runWrite({ path: "src/test/x.md", content: "x" })
+  assert.ok(nested.startsWith("Error: engineering design gate — "), "代码段优先——src/test/** 仍拒")
+  assert.deepEqual(executed, ["test/x.mjs", "scripts/x.mjs"], "被拒项零执行")
+})
+
+test("T-V24 子门（F9 同判）：eng-coder 无令牌写辅助面仍拒——token 门零变", async () => {
+  const ws = mkws()
+  const { parent, executed, runWrite } = gateFixture(ws, { _role: "eng-coder" })
+  const refused = await runWrite({ path: "test/x.mjs", content: "x" })
+  assert.ok(
+    refused.includes("Error: engineering design gate — call advisor with type='design' to review the design document before any file modification."),
+    `token 门零变（判据不看路径）；实测：${refused}`,
+  )
+  assert.deepEqual(executed, [], "零执行")
+  // 正控：令牌在位 ⇒ 同一辅助面路径放行（门行为零变，唯令牌驱动）
+  parent._engDesignReviewed = true
+  const allowed = await runWrite({ path: "test/x.mjs", content: "x" })
+  assert.ok(!allowed.startsWith("Error:"), `令牌在位 ⇒ 放行；实测：${allowed}`)
+  assert.deepEqual(executed, ["test/x.mjs"], "恰执行一次")
 })
 
