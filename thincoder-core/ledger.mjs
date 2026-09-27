@@ -5,7 +5,8 @@
  * v1 md 台账（docs/TODO.md 扫描器）→ SQLite 单表（ledger.db，项目级、不进 git）：六态 CHECK 机械
  * 锁死、COUNT 单源计数、事务保证收口原子、归档 = 软删除。行龄源 = SQLite 时间戳（无 git blame）。
  *
- * 面：① 命令族（查询 = 只读全角色 / 写 = 仅主 agent——接线见 tools/index.mjs 与 agent/family-tools.mjs）
+ * 面：① 命令族（查询 = 只读全角色 / 写 = 仅主 agent——核函数 `ledger-cmd.mjs` + 工具定义 `ledger-tools.mjs`
+ * 两源，接线见 tools/index.mjs 与 agent/family-tools.mjs）
  * ② 族发现（findProject / discoverFamily——标记 = ledger.db）③ scan 组装（buildScan——行集 + ledgerCount
  * → scan 对象，形状契约 = pool/tech/aged/thresholdReached/actionable/root/name/ledger）
  * ④ 通知去重（送达门 + 一次性去重——去重档跨会话、跨端共享）⑤ 格式 helper（行文本逐字契约）。
@@ -209,6 +210,7 @@ export function saveNotifyState(file, state) {
 
 // ── re-export（拆分件接口——命令面接线 = 动态 import 本档，KD-M2-3） ──
 export { ALLOWED_MIGRATIONS, ledgerDbPath, ledgerKey, ledgerDirPath, openLedger, PENDING_STATUSES, _setLedgerDirForTest, _resetLedgerDirForTest, ensureExecutorColumn } from "./ledger-db.mjs"
-export { ledgerAdd, ledgerAddTool, ledgerClose, ledgerCloseTool, ledgerCount, ledgerCountTool, ledgerQuery, ledgerQueryTool, ledgerUpdate, ledgerUpdateTool } from "./ledger-cmd.mjs"
+export { ledgerAdd, ledgerClose, ledgerCount, ledgerQuery, ledgerUpdate } from "./ledger-cmd.mjs"
+export { ledgerAddTool, ledgerCloseTool, ledgerCountTool, ledgerQueryTool, ledgerUpdateTool } from "./ledger-tools.mjs"
 export { runLedgerAudit, runLedgerMigrate } from "./ledger-migrate.mjs"
 export { resolveExecutorStates, executorTail, _setExecutorProbeTtlForTest } from "./ledger-executors.mjs"

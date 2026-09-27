@@ -1,6 +1,8 @@
 /**
  * ledger-args-guard.test.mjs — 台账工具层参数守卫用例（批 ledger-add-guard · 台账 #472——设计档
- * docs/core/design/LEDGER.md §3.2 守卫 + §6.1 写门 + §8 AC-M2-15 / 用例表 T37–T42）。
+ * docs/core/design/LEDGER.md §3.2 守卫 + §6.1 写门 + §8 AC-M2-15 / AC-M2-16 / 用例表 T37–T44）。
+ * 读面守卫与 executor 空值口径（2026-09-28 守卫族微修批 · 台账 #473 / #474）：T43 读命令
+ * 非法形 ⇒ 拒（文案逐字 · 零库动作）+ 合法形零回归 · T44 显式 `executor: null` ≡ 略去。
  *
  * 面：T37 三工具合法形全链（复杂文本逐字落盘 · 可空 `null` 通过 · `cwd` 缺省 / 显式两径）· T38
  * `ledger_add` 非法形逐条（P1–P6 全模板 + 未知键判序 + 显式 `null` 按缺失判）· T39 `ledger_update`
@@ -16,7 +18,8 @@ import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import {
-  ledgerAdd, ledgerAddTool, ledgerCloseTool, ledgerDbPath, ledgerQuery, ledgerUpdate, ledgerUpdateTool,
+  ledgerAdd, ledgerAddTool, ledgerCloseTool, ledgerCount, ledgerCountTool, ledgerDbPath, ledgerQuery,
+  ledgerQueryTool, ledgerUpdate, ledgerUpdateTool,
   _resetLedgerDirForTest, _setLedgerDirForTest,
 } from "../ledger.mjs"
 
@@ -195,4 +198,58 @@ test("T42 错误：缺指针（task_book = null）迁「在途」⇒ 写门「�
   assert.equal(row.status, "待设计", "行不变（仍 待设计）")
   assert.equal(row.task_book, null, "task_book 不变")
   assert.equal(JSON.stringify(rowsOf(proj)), before, "行集不变")
+})
+
+// ── T43 错误：读命令守卫（ledger_query / ledger_count）⇒ 拒（文案逐字 · 零库动作）──────
+test("T43 错误：读命令守卫——ledger_query 非法形逐条 + ledger_count 同判 ⇒ 拒；合法形零回归", async () => {
+  const proj = newProj()
+  const ctx = ctxOf(proj)
+  const six = "（取值 ∈ {待讨论, 待设计, 在途, 待核销, 已核销, 已废弃}）"
+  const qAvail = "可用参数 = cwd / status / kind / board"
+  const cases = [
+    [[], "ledger_query：参数须为对象（收到 []）", "入参数组（P1）"],
+    ["x", 'ledger_query：参数须为对象（收到 "x"）', "入参标量（P1）"],
+    [{ status: 123 }, `ledger_query：status 非法：123${six}`, "status 错型（P5——改前 = 静默空集）"],
+    [{ status: [] }, `ledger_query：status 非法：[]${six}`, "status 数组形（P5——改前 = 绑定原文）"],
+    [{ kind: "bogus" }, 'ledger_query：kind 非法："bogus"（取值 ∈ {requirement, tech_todo}）', "kind 枚举外值（改前 = 静默空集）"],
+    [{ board: 9 }, "ledger_query：board 非法：9（应为字符串）", "board 非串（P4）"],
+    [{ cwd: 3 }, "ledger_query：cwd 非法：3（应为字符串）", "cwd 非串（P4）"],
+    [{ stat: "x" }, `ledger_query：未知参数：stat（${qAvail}）`, "未知键（P2）"],
+  ]
+  for (const [args, msg, label] of cases) await expectReject(ledgerQueryTool, args, ctx, msg, label)
+  // ledger_count 同判（无必填字段 ⇒ 拒面 = P1 / P2 / P4）
+  await expectReject(ledgerCountTool, [], ctx, "ledger_count：参数须为对象（收到 []）", "数组入参（P1）")
+  await expectReject(ledgerCountTool, { cwd: 3 }, ctx, "ledger_count：cwd 非法：3（应为字符串）", "cwd 非串（P4）")
+  await expectReject(ledgerCountTool, { status: "在途" }, ctx, "ledger_count：未知参数：status（可用参数 = cwd）", "未知键（P2）")
+  assert.equal(existsSync(ledgerDbPath(proj)), false, "拒 ⇒ 零库动作（库档不建）")
+  assert.equal(existsSync(join(tmp, "ledgerdir")), false, "拒 ⇒ 台账目录不建")
+  // 合法形零回归：缺省 / 显式 `null` / 合法过滤命中（= 直调核函数等值）
+  const { proj: p2, ctx: ctx2 } = fixture()
+  const direct = (extra) => JSON.parse(JSON.stringify(ledgerQuery({ cwd: p2, ...extra })))
+  assert.deepEqual(JSON.parse(await ledgerQueryTool.execute(undefined, ctx2)), direct({}), "缺省 ⇒ 全行（= 直调核函数等值）")
+  assert.deepEqual(JSON.parse(await ledgerQueryTool.execute({ status: null, kind: null, board: null }, ctx2)), direct({}), "显式 `null` ≡ 略去")
+  assert.deepEqual(JSON.parse(await ledgerQueryTool.execute({ status: "待设计" }, ctx2)), direct({ status: "待设计" }), "合法过滤命中（等值）")
+  assert.deepEqual(JSON.parse(await ledgerQueryTool.execute({ cwd: p2, kind: "requirement" }, ctxOf(tmp))), direct({ kind: "requirement" }), "显式 cwd 径同库")
+  assert.ok(ledgerCount({ cwd: p2 }) >= 1, "前提：夹具行在（未决计数 ≥ 1）")
+  assert.equal(JSON.parse(await ledgerCountTool.execute({ cwd: p2 }, ctx2)).count, ledgerCount({ cwd: p2 }), "计数单源同值")
+})
+
+// ── T44 边界：executor 显式 `null` ≡ 略去（进「在途」取本会话 sessionId）─────────────
+test("T44 边界：ledger_update 显式 executor: null ≡ 略去（进「在途」⇒ 本会话 sessionId）；显式串优先；非迁移零变", async () => {
+  const { getSessionId } = await import("../session-slots.mjs")
+  const a = fixture()
+  await ledgerUpdateTool.execute({ id: a.id, status: "在途", task_book: "docs/batches/here.md§2", executor: null }, a.ctx)
+  assert.equal(rowOf(a.proj, a.id).status, "在途", "迁在途通过写门")
+  assert.equal(rowOf(a.proj, a.id).executor, getSessionId(), "显式 null ≡ 略去 ⇒ 行 executor = 本会话 sessionId")
+  // 显式串仍优先（另一行同一入边）
+  const b = fixture()
+  await ledgerUpdateTool.execute({ id: b.id, status: "在途", task_book: "docs/batches/here.md§2", executor: "other-session" }, b.ctx)
+  assert.equal(rowOf(b.proj, b.id).executor, "other-session", "显式串优先（≠ 本会话 sessionId）")
+  // 非迁移纯字段更新：executor 读数零变（非迁移分支取行现值——sessionId 不入该支）
+  const title = `非迁移纯字段更新 ${seq}`
+  await ledgerUpdateTool.execute({ id: a.id, title }, a.ctx)
+  const row = rowOf(a.proj, a.id)
+  assert.equal(row.title, title, "纯字段更新落盘")
+  assert.equal(row.executor, getSessionId(), "非迁移纯字段更新 executor 零变")
+  assert.equal(rowOf(b.proj, b.id).executor, "other-session", "异行零扰")
 })

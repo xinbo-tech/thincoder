@@ -3,6 +3,7 @@
  * T-V01–T-V06（设计档 `thincoder-vscode/docs/design/PORTABILITY.md` §6）+ AC-V02–AC-V03 机判面（§7）。
  * F9 辅助面（2026-09-27）：T-V22 分类四例 · T-V23 父侧门放行与仍拒 · T-V24 子门零变。
  * 声明载体换源（2026-09-27 退役批）：T-V25 无档等值 · T-V26 旧档在场同判。
+ * 段匹配面（2026-09-28 · #465）：T-V27 面判七读数（同 T-33 读数——VSC 经核单源）。
  * 零网络 / 零真实 LLM（门禁面 = `executeToolBatches` 假工具夹具——与 T-VG19 同型）。
  * 判据权威 = docs/core/design/PORTABILITY.md §3.1（声明面）/ §3.2（分类裁判 API）/ §3.4（降级可见契约）；文案逐字本体住产品代码。
  * 2026-09-12 PROSE-ANCHOR-RETIRE：AC-V01 静态面（src/ 全仓判据副本扫描）整删——读 src 文本 = 散文锚
@@ -12,7 +13,7 @@ import { test, after } from "node:test"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync, readFileSync, readdirSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { join, resolve } from "node:path"
 
 import { classifyPath, clearDeclarationCache, isCodePath, isDocPath, isTempPath, isAuxPath, loadProjectDeclaration, DEFAULT_DECLARATION } from "@thincoder/core/conventions.mjs"
 import { _setLogsDirForTest, _resetLogsDirForTest } from "@thincoder/core/log.mjs"
@@ -307,7 +308,7 @@ test("T-V24 子门（F9 同判）：eng-coder 无令牌写辅助面仍拒——t
 test("T-V25 正常（无档逐条等值·同判）：loadProjectDeclaration 输出 deepEqual DEFAULT_DECLARATION", () => {
   const ws = mkws()
   const conv = loadProjectDeclaration(ws)
-  assert.deepEqual(conv, DEFAULT_DECLARATION, "无 manifest ⇒ 逐条等值默认声明（CLI 同判）")
+  assert.deepEqual({ ...conv, root: null }, DEFAULT_DECLARATION, "无 manifest ⇒ 逐条等值默认声明（CLI 同判；`root` 非声明值）")
   assert.equal(conv.declared, false)
   assert.deepEqual([...conv.codePaths], ["src"])
   assert.deepEqual({ ...conv.index }, { codeExtensions: [], docExtensions: [] })
@@ -327,14 +328,14 @@ test("T-V26 边界（旧档在场·同判）：零生效 + 告警 + 事件 + 基
     write(ws, ".thincoder/conventions.json", JSON.stringify({ codePaths: ["sentinel"] }))
     clearDeclarationCache()
     const c1 = loadProjectDeclaration(ws)
-    assert.deepEqual(c1, DEFAULT_DECLARATION, "哨兵声明零生效（内容零解析——读数与无档等值）")
+    assert.deepEqual({ ...c1, root: null }, DEFAULT_DECLARATION, "哨兵声明零生效（内容零解析——读数与无档等值）")
     assert.equal(classifyPath("sentinel/a.md", c1), "doc", "哨兵段位未进入分类面")
     assert.equal(retiredWarns(), 1, "恰一行退役告警")
     assert.equal(logEventCount(logDir, "declaration:retired-file"), 1, "日志事件 declaration:retired-file")
     // ② 坏 JSON——内容零解析（不产 JSON 错误句）
     write(ws, ".thincoder/conventions.json", "{ not json")
     clearDeclarationCache()
-    assert.deepEqual(loadProjectDeclaration(ws), DEFAULT_DECLARATION, "坏 JSON 零生效")
+    assert.deepEqual({ ...loadProjectDeclaration(ws), root: null }, DEFAULT_DECLARATION, "坏 JSON 零生效")
     assert.ok(!warns.some((w) => /JSON|not a usable declaration/.test(w)), "内容零解析（无 JSON 错误句）")
     // ③ 基准断言：旧档落项目根、cwd 深于项目根 ⇒ 仍命中（基准 = manifestFilePath 项目根）
     declare(ws, { codePaths: ["lib"] })
@@ -347,5 +348,41 @@ test("T-V26 边界（旧档在场·同判）：零生效 + 告警 + 事件 + 基
     console.warn = origWarn
     _resetLogsDirForTest()
   }
+})
+
+// ─── 段匹配面 = 项目根相对面（2026-09-28 · 台账 #465）：同 T-33 读数——VSC 经核单源 ───
+
+test("T-V27 边界（段匹配面·同判）：判定表七读数（报障形 / 反例 / 根内辅助面 / 根外 / 根名段 / 根内 doc 面 / `..` 段）+ 面判边界（面 = ∅ / 含 `.` / 绝对形 .. / 根未知）", () => {
+  const convAt = (root) => ({ ...DEFAULT_DECLARATION, root })
+  const bug = "D:/work/scripts/mytool/lib/a.mjs"
+  // ① 报障形（根之上含辅助面段）：祖先段不参与 ⇒ 兜底 code
+  assert.equal(classifyPath(bug, convAt("D:/work/scripts/mytool")), "code", "根之上的 scripts 不参与 ⇒ 兜底 code")
+  assert.equal(isAuxPath(bug, convAt("D:/work/scripts/mytool")), false, "祖先段不再整片豁免")
+  // ② 反例（同路径 · 根 = D:/work）：scripts 为根内段 ⇒ 面内命中 aux
+  assert.equal(classifyPath(bug, convAt("D:/work")), "aux", "scripts 为根内段 ⇒ aux")
+  // ③ 根内辅助面：任意深度 / 两段序列
+  assert.equal(classifyPath("D:/work/proj/test/a.mjs", convAt("D:/work/proj")), "aux")
+  assert.equal(classifyPath("D:/work/proj/packages/foo/tests/deep/a.mjs", convAt("D:/work/proj")), "aux")
+  assert.equal(classifyPath("D:/work/proj/.thincoder/tmp/a.mjs", convAt("D:/work/proj")), "aux")
+  // ④ 根外绝对形：面不可判 ⇒ 代码段回落全段；无代码段 ⇒ 既判 doc
+  assert.equal(classifyPath("D:/src/app/docs/a.md", convAt("D:/work/proj")), "code", "根外 + 祖先 src ⇒ code")
+  assert.equal(classifyPath("D:/proj/docs/a.md", convAt("D:/work/proj")), "doc", "根外无代码段 ⇒ doc")
+  // ⑤ 根名段不参与：根名 = test ⇒ 不属根内结构
+  const rootTest = join(mkws(), "test")
+  assert.equal(classifyPath(join(rootTest, "x.mjs"), convAt(rootTest)), "code", "根名段不参与 ⇒ 兜底 code")
+  assert.equal(classifyPath(rootTest, convAt(rootTest)), "code", "路径等于根 ⇒ 面 = ∅（无段可匹配）")
+  // ⑥ 根内 doc 面：根之上含代码段 ⇒ 面内无代码段 ⇒ doc
+  assert.equal(classifyPath("D:/src/app/docs/a.md", convAt("D:/src/app")), "doc", "根之上的 src 不参与")
+  // ⑦ 含 `..` 段 ⇒ 面不可判 ⇒ 辅助面不命中
+  assert.equal(classifyPath("../scripts/a.mjs", convAt("D:/work")), "code", "含 .. ⇒ aux 不命中 ⇒ 兜底 code")
+  assert.equal(isAuxPath("../scripts/a.mjs", convAt("D:/work")), false)
+  assert.equal(classifyPath("./scripts/a.mjs", convAt("D:/work")), "code", "相对形含 `.` 段 ⇒ 面不可判 ⇒ aux 不命中")
+  assert.equal(classifyPath("D:/work/proj/../scripts/a.mjs", convAt("D:/work/proj")), "code", "绝对形剩余含 .. ⇒ 面不可判 ⇒ aux 不命中")
+  // 根未知 ⇒ 面不可判 ⇒ 代码段全段旧判
+  assert.equal(classifyPath("C:\\src\\app\\docs\\a.md"), "code", "无 conv（根未知）⇒ 代码段全段旧判")
+  assert.equal(classifyPath("C:\\src\\app\\docs\\a.md", DEFAULT_DECLARATION), "code", "DEFAULT_DECLARATION.root = null ⇒ 根未知")
+  // 声明对象 `root`：loadProjectDeclaration 下发项目根（dirname(manifestFilePath(cwd))——段匹配面所依）
+  const ws = mkws()
+  assert.equal(loadProjectDeclaration(ws).root, resolve(ws), "root = 声明载体的项目根")
 })
 
