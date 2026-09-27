@@ -58,8 +58,11 @@ const row = (slot, over = {}) => ({
 
 /** 核域状态词键（`thincoder-core/i18n.mjs:50-54` 五键 —— 消费面断言，非本端新键）。 */
 const CORE_WORD_KEYS = ["sub.queued", "sub.running", "sub.stopped", "sub.done", "sub.error"]
-/** 对话流宿主键（批 6 新增六键；批 B ⑧ 复制面 +2：`chat.action.copy` / `chat.action.copyLast`）。 */
-const CHAT_WORD_KEYS = ["chat.empty.hint", "chat.pill.new", "chat.pill.bottom", "chat.summary.older", "chat.tool.changes", "chat.tool.duration"]
+/** 对话流宿主键（批 6 新增六键；批 B ⑧ 复制面 +2、追加轮引导面 +2 —— 复制面两键只走下方树清单消费面）。 */
+const CHAT_WORD_KEYS = [
+  "chat.empty.hint", "chat.pill.new", "chat.pill.bottom", "chat.summary.older", "chat.tool.changes", "chat.tool.duration",
+  "chat.guide.noProject", "chat.guide.noSession",
+]
 /** 活动池宿主键（本批新增七键 —— 三族标 + 两读数标题字 + 折叠控件两态 + 空态）。 */
 const POOL_WORD_KEYS = [
   "pool.title", "pool.family.approvals", "pool.family.blocks", "pool.family.queue",
@@ -154,12 +157,12 @@ const infoFace = (over = {}) => ({
 
 // ─── U51 词表键齐 ∧ 零硬编码（全量）────────────────────────
 
-test("U51: 词表键齐 ∧ 零硬编码（两语 122 键键集相等 ∧ 全量与 aria-label 全哨兵 ∧ 十六视图档零 CJK）", (ctx) => {
+test("U51: 词表键齐 ∧ 零硬编码（两语 124 键键集相等 ∧ 全量与 aria-label 全哨兵 ∧ 十七视图档零 CJK）", (ctx) => {
   const keys = Object.keys(HOST_DICT.en)
   // 键数 = 量面锁（**不写死**：数值以盘上实读为准，非设计值 —— 家族链逐舱累进，增键须同改本行与下行链面）。
   assert.equal(
-    keys.length, 13 + 4 + 8 + 7 + 7 + 3 + 49 + 10 + 9 + 6 + 3 + 2 + 1,
-    "宿主键数 = 122（左列 13 + 标签条 4 + 对话流 8 + 活动池 7 + 审批卡 7 + 提问卡 3 + 设置 49 + 首启向导 10 + 信息行 9 + 输入区 6 + 会话头 3 + 档位 2 + 状态栏 1）",
+    keys.length, 13 + 4 + 10 + 7 + 7 + 3 + 49 + 10 + 9 + 6 + 3 + 2 + 1,
+    "宿主键数 = 124（左列 13 + 标签条 4 + 对话流 10 + 活动池 7 + 审批卡 7 + 提问卡 3 + 设置 49 + 首启向导 10 + 信息行 9 + 输入区 6 + 会话头 3 + 档位 2 + 状态栏 1）",
   )
   assert.deepEqual([...keys].sort(), [...Object.keys(HOST_DICT.zh)].sort(), "两语键集相等（增键两语同增）")
   for (const key of ["tab.badge.approval", "tab.action.close", "tab.action.close.cancel", "tab.action.close.confirm"]) {
@@ -197,12 +200,15 @@ test("U51: 词表键齐 ∧ 零硬编码（两语 122 键键集相等 ∧ 全量
     headTree(headModel({ tab: "1", meta: { provider: "P", model: "M" } })),
     // 状态栏读数面（批 B ⑤ 键）：活动键读数 ⇒ 读数节点在场 ⇒ `status.usage` 消费面（题面经 `t()` 参数插值，读数 = `data-usage` 属性面）
     statusTree(statusModel({ tabs: ["1", "2"], activeTab: "1", badges: { 2: ["approval"] }, usage: { "1": 60 } })),
-    // 对话流树入量（本批增）：三态 / 五态工具卡 / 摘要块 / 药丸两态 ⇒ 六宿主键 + 五核状态词消费面
+    // 对话流树入量（本批增）：三态 / 五态工具卡 / 摘要块 / 药丸两态 ⇒ 六宿主键 + 五核状态词消费面；
+    // 追加轮增引导面两码（无项目 / 无会话）⇒ `chat.guide.*` 两键消费面（树面判据住 `test/views-chat-guide.test.mjs`）
     chatTree(chatModel(chatState())),
     chatTree(chatModel(chatState({ blocks: chatBlocks }))),
     chatTree(chatModel(chatState({ blocks: [chatBlocks[0], chatBlocks[1]] }), 1)),
     chatTree(chatModel(chatState({ blocks: [chatBlocks[0]], following: false, pendingNew: 3 }))),
     chatTree(chatModel(chatState({ blocks: [chatBlocks[0]], following: false }))),
+    chatTree(chatModel(chatState({ activeSession: null }))),
+    chatTree(chatModel(chatState({ activeSession: null, project: { cwd: "C:\\proj" } }))),
     // 活动池树入量（本批增）：三态 + 折叠态 ⇒ 池面七键消费面（读数文本 = 数据面数字串）
     poolTree(poolModel(poolState({ pool: { running: 12, approval: 5, blocks: [], queue: [], approvals: [] } }))),
     poolTree(poolModel(poolState({ poolCollapsed: { "1": true } }))),
@@ -277,10 +283,11 @@ test("U51: 词表键齐 ∧ 零硬编码（两语 122 键键集相等 ∧ 全量
       assert.ok(data.has(text), `树内文本须为词表键值或数据串（实 = ${text}）`)
     }
   }
-  assert.deepEqual([...used].sort(), [...keys, ...CORE_WORD_KEYS].sort(), "122 宿主键 + 5 核状态键全被消费（键齐 = 用量面）")
+  assert.deepEqual([...used].sort(), [...keys, ...CORE_WORD_KEYS].sort(), "124 宿主键 + 5 核状态键全被消费（键齐 = 用量面）")
 
   for (const name of [
     "sessions.mjs", "tabbar.mjs", "chrome.mjs", "chat.mjs", "chat-stream.mjs", "chat-scroll.mjs", "chat-tool.mjs", "chat-copy.mjs",
+    "chat-guide.mjs",
     "approval.mjs", "activity.mjs",
     "settings.mjs", "settings-sections.mjs", "onboarding.mjs", "info-row.mjs",
     "question.mjs", "plan.mjs",

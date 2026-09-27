@@ -1,7 +1,7 @@
 # 桌面端（DESKTOP）· 渲染面实现工艺
 
 > 板块 = **桌面端渲染面（前端）实现工艺**——零框架 DOM 层 · 单状态树 `store` · 渲染粒度与流式缝合 · 有界渲染窗口 · 回填与跟滚。
-> 需求侧 = `docs/desktop/requirements/PROJECT.md`（§4 功能点 D1–D15 · §7 验收 A1–A4 · §8 依赖面 P1–P4）。
+> 需求侧 = `docs/desktop/requirements/PROJECT.md`（§4 功能点 D1–D16 · §7 验收 A1–A4 · §8 依赖面 P1–P4）。
 > 同部分相关档：进程与目录形态（渲染面目录与模块注）= `docs/desktop/design/SHELL.md` §1 · 通道与载荷 = `docs/desktop/design/IPC.md` · 界面形态与交互 · 借用清单形态面 = `docs/desktop/design/UI.md` · 逐文件预算（§4.1）= `docs/desktop/design/PROJECT.md`。
 > 核机制面（agent 主循环 / 工具 / 记忆 / 配置 / 会话）**只住核**——本档只做**接入面**设计，不重述核语义（单一权威源）。
 > 建档：2026-09-25（桌面端设计批 1 · 分档轮）；本档坐标 = as-of 2026-09-25 实核（仓根 = `thincoder/`）。
@@ -43,7 +43,8 @@
 - **接线形通则**：视图档收 handlers 面的控制项**两态落形**——handlers 给 ⇒ 落 `onClick`（携带本项键）、**不落** `disabled`；缺省 ⇒ `disabled: true` + `data-action` 机读锚（**诚实非死控**：不落假接线、不留死控件）——树形**只随 handlers 变**，不随状态另定形。关闭确认面 = 树面关闭控件**原位换两键**（形态单源 = `docs/desktop/design/UI.md` §1 交互行）。
 - **键盘面（接线第二口径 · 批 A 落）**：挂载面可自挂 `keydown`（既有 = 审批卡根（`thincoder-desktop/renderer/views/approval.mjs`）；批 A 增 = 标签条加速键 `Ctrl/Cmd+1..9`）——加速键**取文档级**（焦点在输入区时亦生效），**命中才** `preventDefault`；命中判据 = **键 ∈ 1..9 ∧ 第 N 档存在**（第 N 档不存在 ∥ 表外键 ⇒ **零动作不吞键**）；形态单源 = `docs/desktop/design/UI.md` §1 交互行 / 标签条行。
 - **页生命周期（接线第三口径 · 批 A 落）**：页键写者**单源** = `openSession`（`thincoder-desktop/renderer/events.mjs`：键 `null` ⇒ 关页 · 开页清本键 `done` 位标）；开页路 = `openPage` / `activateSession` / `createSession`（`thincoder-desktop/renderer/mount-sessions.mjs:63` / `:100` / `:109`）——键面 `activeTab` 与页键 `activeSession` **同刻随动**。
-- **关标签 ⇒ 页随动（零新路 · 批 A 落）**：出口**共用尾** = 比 `activeTab` 前后差 —— 关**活动**标签 ⇒ `activateSession(邻位键)`（`session:switch` ⇒ 邻位页读，与左列点行 / 标签激活**同一路**）；关**唯一**标签 ⇒ `openSession(state, null)` 关页（中区 `none` 态 = **零节点**，不新造空态视觉）；关**非活动** / 拒收 / 待确认 ⇒ **零动作**（键未变 ⇒ 页不动）。
+- **关标签 ⇒ 页随动（零新路 · 批 A 落）**：出口**共用尾** = 比 `activeTab` 前后差 —— 关**活动**标签 ⇒ `activateSession(邻位键)`（`session:switch` ⇒ 邻位页读，与左列点行 / 标签激活**同一路**）；
+  关**唯一**标签 ⇒ `openSession(state, null)` 关页（中区 `none` 态 = **零块节点**〔不新造空态视觉〕+ 引导节点（`data-guide`——形态单源 = `docs/desktop/design/UI.md` §1 批 B 追加注项 1））；关**非活动** / 拒收 / 待确认 ⇒ **零动作**（键未变 ⇒ 页不动）。
 - **删除会话（左列行控件 · 同批）⇒ 同源出口**：`session:delete` 回执 `ok` ⇒ 键面 `closeTab(本键)` + 上条关闭尾（活动 ⇒ 邻位接管 · 唯一 ⇒ 关页）；`ok:false`（核拒）⇒ 零动作（**不造死标签**——已删键的 `session:switch` 必拒）。
 - **幽灵更新（已覆盖 · 零新增机制）**：块面 / 页写既有键过滤（`ev.key === state.activeSession`）⇒ 关页后已关会话的到达事件零入块面；`sessionMeta` / `tabBadges` 仍写已关键，而标签条只遍历 `tabs` ⇒ 零可见影响（登记为观察，不新增过滤）。
 - **页窗暂留（登记 · 非本批新增）**：页键变更至邻位页回执落之间，屏上暂留前页块（既有口径：页数据随 `history:page` 回执整置）；消解需第三态「载入中」= 新词键 / 新形态 ⇒ 新需求面，本批不落（登记 = `docs/desktop/design/PROJECT.md` §10）。
@@ -51,8 +52,13 @@
 - **文案纪律**：视图档内面向用户字符串**一律经 `t()`**（词表面）——档内零硬编码文案（含英文；机检面 = 词表键哨兵 / 源扫描）。
 - **帧面分派（判据面）**：块面比较对 = 两帧 **`state.blocks`**（全列表引用 + 逐位元素引用）——非模型窗列表（窗列表每帧新数组 ∧ 饱和追加时位移 ⇒ 每 token 全量重挂）；四档判据 = `streamDelta`、分派纯函数 = `paintPlan({ prev, next, changedKeys })` → `{ tier, index, remount, refresh }`（平 node 直测）。
 - **全量重挂键 = `activeSession` / `locale`**：两键变 ⇒ 无条件全量重挂；其余键不重挂——`mountChat` 的 `clear` 清宿主 ⇒ 滚动位置归零（停跟翻转时重挂 = 把用户拽回顶部）。
-- **帧尾态刷（刷新面单点）**：每帧末尾一处 `syncChrome(root, model)`（`chat.mjs` DOM 面 · 幂等 · 与档位解耦——`none` 帧同刷，`refresh` 恒真 = 无帧豁免）⇒ 根锚四（语义单源 = 本档 §2 / `docs/desktop/design/UI.md` §1 对话流行）+ 两控件（摘要块 `hidden > 0` · 药丸 `!following`）在场与文本随判据；`none` 态零节点化不破（只摘不插）。
+- **帧尾态刷（刷新面单点）**：每帧末尾一处 `syncChrome(root, model)`（`chat.mjs` DOM 面 · 幂等 · 与档位解耦——`none` 帧同刷，`refresh` 恒真 = 无帧豁免）⇒ 根锚四（语义单源 = 本档 §2 / `docs/desktop/design/UI.md` §1 对话流行）+ 两控件（摘要块 `hidden > 0` · 药丸 `!following`）
+  + **引导节点**（判据 = `model.guide` 空否——`none` / `empty` 帧由重挂面建 · `flow` 帧由本刷面摘）在场与文本随判据；`none` 态零块节点不破（只摘不插）。
 - **插入点纪律（批 A 扩三卡）**：块节点插入点 = **首个卡节点之前**——卡三类 = `[data-card="approval"]` / `[data-card="question"]` / `[data-card="task"]`，卡间 DOM 次序固定 = 待审批 → 提问 → 计划（缺者跳过）；卡缺席 ⇒ `[data-pill]` 之前；两者皆缺席 ⇒ 末位——根子序 = [摘要块?] → 块序列 → [卡序列?] → [药丸?]。
+- **引导节点（批 B 追加轮 · 非块节点）**：无活动会话 ∥ 零块 ⇒ 引导节点 `div.chat-empty[data-guide]`——`none` 帧 = 根**唯一子** · `empty` 帧 = **首子**（在块序列 / 卡序列之前）· `flow` 帧 = 不在场；零 `data-block-id` ⇒ **不入块序**（上条根子序与 `data-blocks` 不变式不受其影响）。
+  判据（模型 `guide` 字段）= 无活动会话 ⇒ `cwd` 缺 ? `no-project` : `no-session`；有活动会话 ∧ 可见块 0 ⇒ `no-message`；否则 `null`。
+  构树 = `thincoder-desktop/renderer/views/chat-guide.mjs`（批 B 追加轮新档 · 已落 · 实读 **54**——沿流内非块节点构树先例 = `thincoder-desktop/renderer/views/chat-copy.mjs`）；**动作控件在场 ⟺ 句柄在场**（`onOpenDir` / `onNewSession` 缺 ⇒ 整控件缺席——比接线形通则更严：零假按钮）；
+  重挂键集须含 `project`（键名单 = `thincoder-desktop/renderer/app.mjs`）；形态单源 = `docs/desktop/design/UI.md` §1 批 B 追加注项 1 / 2。
 - **卡面在场与随动（帧尾态刷 · 批 A 扩三卡）**：卡节点 `[data-card="approval"]` / `[data-card="question"]` / `[data-card="task"]` 的在场与文本随帧内判据刷（形态单源 = `docs/desktop/design/UI.md` §1 审批呈现 / 提问呈现 / 计划面三行）；`question` 卡**退场非乐观**（回执 `ok` 真 ⇒ 清除；失败 ⇒ 卡留可重试 + `console.error`——出口口径见该行；
   **中断径** = `msg:interrupt` ⇒ 本键各门按取消结算 ⇒ 终局 `stopped` ⇒ **事件面摘本键提问项** + 清位标——判据 = 终局事件面，非回执（单源 = 本档「回合尾三径」条））；
   三卡皆**非块节点** ⇒ 不入块序不变式（本档 §2），块面比较对与 `data-blocks` 语义不受其影响。
@@ -129,3 +135,6 @@
 - 2026-09-27（**批 A 收口轮**——实施后随动收正）：§1 索引「提问与计划卡 · 输入区」行去「（拟新增）」四处（两视图档 + 两挂载档已落盘）· §1.1 订阅面条 `attachEvents` 补第 4 键 `onTurnTail`（输入区 flush 窄口）· §1.1 页生命周期条开页路宿主收正（`thincoder-desktop/renderer/mount-sessions.mjs:63` / `:100` / `:109`——响应表 1）。明细 = `docs/batches/2026-09-26-desktop-chat-panel-a.md` §2.13。
 - 2026-09-27（**批 B 修正轮**——设计评审 §3 十五条逐号点修）：§1.1 事件归约面条与订阅面条**九通道 ⇒ 十通道**（`ev:usage` 入册——计数与 `docs/desktop/design/IPC.md` §1 同源）；档头需求侧行 `D1–D12 ⇒ D1–D15`。
 - 2026-09-27（**批 B 收口轮**——实施后随动收正）：§1 索引「单状态树」行补批 B 增 `usage` 切片 · §1.1 事件归约面条补批 B 一通道归约（`ev:usage` 写 `usage` 切片——KD-20）。明细 = `docs/batches/2026-09-27-desktop-chat-panel-b.md` §2。
+- 2026-09-27（**批 B 追加轮 · 首启空白态引导**）：§1.1 增**引导节点**条（非块节点 · `guide` 三码判据 · 构树档 · 句柄在场判据）· 关标签 ⇒ 页随动条「中区 `none` 态 = 零节点」⇒「**零块节点** + 引导节点」（收正）。明细 = `docs/batches/2026-09-27-desktop-chat-panel-b.md` §2.12。
+- 2026-09-27（**批 B 追加轮 · 修正轮**——设计评审 §3 轮次 1 逐号点修）：§1.1 帧尾态刷条点名**引导节点**成员（判据 = `model.guide` 空否；`none` / `empty` 帧由重挂面建 · `flow` 帧由本刷面摘）· 同条「`none` 态零节点化不破」收正为「`none` 态零块节点不破」。明细 = `docs/batches/2026-09-27-desktop-firstrun-smoke.md` §2.10。
+- 2026-09-27（**批 B 追加轮 · 实施后对账轮**）：§1.1 引导节点条承档位「（拟新增）」⇒「**已落** · 实读 **54**」· 帧尾态刷条拆两行（行宽 315 ⇒ 两行皆 ≤300——零语义）。明细 = `docs/batches/2026-09-27-desktop-firstrun-smoke.md` §2.12。

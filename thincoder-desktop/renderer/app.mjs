@@ -52,7 +52,7 @@ const STATUS_SLOT = '[data-slot="status"]' // 状态栏槽（窗口级底行）
 const FLOW_SLOT = '[data-slot="flow"]' // 对话流容器锚（= 滚动容器自身 —— 挂载根不清宿主）
 const RAIL_KEYS = ["project", "sessions", "locale", "railForm"] // 重挂触发切片（`locale` 在内：文案随词表 ⇒ 树须重绘；`railForm` = 换形态切片——行原位换形）
 const SHELL_KEYS = ["tabs", "activeTab", "sessions", "tabBadges", "sessionMeta", "locale", "pendingClose"] // 外壳重挂触发切片
-const CHAT_KEYS = ["activeSession", "blocks", "history", "following", "pendingNew", "locale", "pool"] // 对话流帧触发切片（`locale` 在内：文案随词表 · `pool`：审批卡宿对话流）
+const CHAT_KEYS = ["activeSession", "blocks", "history", "following", "pendingNew", "locale", "pool", "project"] // 对话流帧触发切片（`locale` 在内：文案随词表 · `pool`：审批卡宿对话流 · `project`：引导码随 cwd——批 B 追加轮）
 const { paintPool, handlers: poolHandlers } = attachPool(host) // 池面一族（右栏重挂 + 两出口 —— 出档 `renderer/mount-pool.mjs`）
 const { paintCards } = attachCards(host) // 卡面一族（提问 / 计划 —— 挂载 + 作答 / 取消出口；出档 `renderer/mount-cards.mjs`）
 attachSettings(host, { onProjectOpened: openDir }) // 设置面 / 向导 / 信息行一族（自持订阅 —— 出档 `renderer/mount-settings.mjs`；目录出口复用项目面链）
@@ -168,7 +168,11 @@ function paintChat(state = store.get(), changedKeys = []) {
   chatLimit = nextWindow({ limit: chatLimit, inFlight: prev?.history?.inFlight === true }, inFlight, added)
   const model = chatModel(state, chatLimit)
   const plan = paintPlan({ prev, next: state, changedKeys })
-  const handlers = { onReturn: returnToLatest, onToggleTool: toggleTool, onApprove: poolHandlers.onApprove, writeText }
+  const handlers = {
+    onReturn: returnToLatest, onToggleTool: toggleTool, onApprove: poolHandlers.onApprove, writeText,
+    onOpenDir: () => openDir(), // 引导面（批 B 追加轮）：与左列同出口（`project:open` 单一实现）
+    onNewSession: createSession, // 引导面：与左列同出口（`session:create` 单一实现 —— 零第二路）
+  }
   let mounted
   if (plan.remount) {
     mounted = mountChat(root, state, handlers, chatLimit).mounted

@@ -9,11 +9,11 @@ export default [
   "test/views-chrome-vocab.test.mjs",
   "test/views-head.test.mjs",
   "test/views-locks.test.mjs",
-  "test/views-chat.test.mjs", "test/views-chat-frame.test.mjs", "test/views-chat-scroll.test.mjs",
+  "test/views-chat.test.mjs", "test/views-chat-frame.test.mjs", "test/views-chat-scroll.test.mjs", "test/views-chat-guide.test.mjs",
   "test/views-approval.test.mjs", "test/views-activity.test.mjs", "test/events-page.test.mjs",
   "test/views-question.test.mjs",
   "test/settings.test.mjs", "test/providers.test.mjs", "test/mcp-servers.test.mjs", "test/project-info.test.mjs",
   "test/views-settings.test.mjs", "test/views-onboarding.test.mjs",
   "test/views-attach.test.mjs", "test/attachments.test.mjs",
-  "test/integration/settings-panel.test.mjs",
+  "test/integration/settings-panel.test.mjs", "test/integration/first-run-smoke.test.mjs",
 ]

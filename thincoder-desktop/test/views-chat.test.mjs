@@ -65,7 +65,7 @@ const tool = (over = {}) => ({ kind: "tool", id: "t1", name: "Bash", argsSummary
 
 // ─── U58 三态与根锚 ──────────────────────────────────────────
 
-test("U58: 三态与根锚（none 零节点 / empty 提示 / flow 四锚）", (ctx) => {
+test("U58: 三态与根锚（none 零块节点 + 引导节点 / empty 提示 / flow 四锚）", (ctx) => {
   setupDict(ctx)
 
   const off = chatModel(state({ activeSession: null, blocks: [user()] }))
@@ -75,7 +75,10 @@ test("U58: 三态与根锚（none 零节点 / empty 提示 / flow 四锚）", (c
   const offTree = chatTree(off)
   assert.equal(offTree.props["data-state"], "none", "data-state = none")
   assert.equal(offTree.props["data-blocks"], 0, "none ⇒ data-blocks = 0")
-  assert.deepEqual(offTree.children, [], "none ⇒ 零节点（禁假数据）")
+  const offKids = offTree.children
+  assert.equal(offKids.length, 1, "none ⇒ 根唯一子 = 引导节点（零**块**节点 —— 禁假数据）")
+  assert.equal(offKids[0].props["data-guide"], "no-project", "无活动会话 ∧ `cwd` 缺 ⇒ no-project（判据单源 = `chatModel.guide`）")
+  assert.equal(off.guide, "no-project", "模型 `guide` 字段同源可读")
 
   const blank = chatModel(state({ blocks: [] }))
   assert.equal(blank.state, "empty", "有会话零块 ⇒ empty")

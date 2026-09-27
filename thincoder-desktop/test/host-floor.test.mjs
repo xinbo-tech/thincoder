@@ -268,6 +268,8 @@ test("U95: fresh 新档 ≤ 300 行（越层档走例外面）∧ `app.mjs` 拆�
     "renderer/views/chat-copy.mjs",
     // 批 B 会话头面（本舱）：接线档一行（`renderer/mount-head.mjs`，未入设计档清单 ⇒ 越声明见 §5）+ 其用例档一行
     "renderer/mount-head.mjs", "test/views-head.test.mjs",
+    // 批 B 引导面新档（本舱 · 追加轮）：渲染侧一行（`renderer/views/chat-guide.mjs`）+ 其用例档一行（同前例）
+    "renderer/views/chat-guide.mjs", "test/views-chat-guide.test.mjs",
   ]
   for (const rel of fresh) {
     const n = rows(rel)

@@ -1,7 +1,7 @@
 # 桌面端（DESKTOP）· 宿主适配层
 
 > 板块 = **桌面端宿主适配层**——三层进程与目录形态 · 宿主面职责（窗口 / 菜单 / 系统主题 · `app://` 供给 · 预载窄桥 · 启动自检）· 与核的接口面**七面** · 壳装配第三份。
-> 需求侧 = `docs/desktop/requirements/PROJECT.md`（§4 功能点 D1–D15 · §7 验收 A1–A4 · §8 依赖面 P1–P4）。
+> 需求侧 = `docs/desktop/requirements/PROJECT.md`（§4 功能点 D1–D16 · §7 验收 A1–A4 · §8 依赖面 P1–P4）。
 > 同部分相关档：总览 / 决策 / 受影响文件 / 发行 / 验收 = `docs/desktop/design/PROJECT.md` · 主 ↔ 渲染通道契约 = `docs/desktop/design/IPC.md` · 界面形态与交互 = `docs/desktop/design/UI.md` · 渲染面实现工艺 = `docs/desktop/design/RENDERER.md`。
 > 核机制面（agent 主循环 / 工具 / 记忆 / 配置 / 会话）**只住核**——本档只做**接入面**设计，不重述核语义（单一权威源）。
 > 文档体系落点（第四部分）判别与命名 = `docs/core/design/DOC-SYSTEM.md`；全仓模块地图与硬约束 = `docs/core/design/ARCHITECTURE.md`。
@@ -52,12 +52,13 @@ thincoder-desktop/                  ← 本端产品包
 │   ├── dom.mjs                     ← 手写 DOM 工具（元素构造 / 事件委托 / 增量渲染）
 │   ├── i18n.mjs                    ← 词表面：核域键取 `config:read` 语言面下发投影 + 宿主 UI 专有键（两语）+ `t()`（供给面 = `docs/desktop/design/IPC.md` §2）
 │   ├── store.mjs                   ← 单状态树 + 订阅（会话 / 标签页 / 活动池 / 待审批 / 设置 / 项目级信息——批 9 增两切片；批 A 增 `questions` / `tasks` 两切片 + 队列三纯动作 `enqueue` / `dequeue` / `drainQueue`——`pool.queue` 唯一写面 · 满队常量 `QUEUE_MAX`；批 A 修正轮增换形态态 `railForm{ key, mode }` + 两纯动作 `openRailForm` / `closeRailForm`）
-│   └── views/                      ← chat.mjs · chat-stream.mjs · chat-scroll.mjs · chat-tool.mjs · chat-copy.mjs · approval.mjs · question.mjs · plan.mjs · sessions.mjs · tabbar.mjs · chrome.mjs · activity.mjs · settings.mjs · settings-sections.mjs · onboarding.mjs · info-row.mjs
+│   └── views/                      ← chat.mjs · chat-stream.mjs · chat-scroll.mjs · chat-tool.mjs · chat-copy.mjs · chat-guide.mjs · approval.mjs · question.mjs · plan.mjs · sessions.mjs · tabbar.mjs · chrome.mjs · activity.mjs · settings.mjs · settings-sections.mjs · onboarding.mjs · info-row.mjs
 ├── scripts/check-dist.mjs          ← 产物校验（照扩展端 check-vsix 先例）
-└── test/                           ← run.mjs（单入口）+ files.mjs（显式清单 · 两向自检）+ 用例模块**三十四档**
-                                      （`{host-floor,guard-closure,agent-host,agent-host-question,events-reduce,history-page,session-io,session-prefs,agent-host-usage,session-contract,projects,store,views,views-tabbar,views-tabbar-close,views-chrome,views-chrome-vocab,views-head,views-locks,views-chat,
-                                      views-chat-frame,views-chat-scroll,views-approval,views-activity,events-page,views-question,settings,providers,mcp-servers,project-info,views-settings,views-onboarding,views-attach,attachments}.test.mjs`——名序 = `thincoder-desktop/test/files.mjs` 现值同序；集成域 `test/integration/settings-panel.test.mjs` 单列）
-                                      + 集成域（`integration/`——E2E 用例 `settings-panel.test.mjs` · 单列）
+└── test/                           ← run.mjs（单入口）+ files.mjs（显式清单 · 两向自检）+ 用例模块**三十五档**
+                                      （`{host-floor,guard-closure,agent-host,agent-host-question,events-reduce,history-page,session-io,session-prefs,agent-host-usage,session-contract,projects,store,views,views-tabbar,views-tabbar-close,views-chrome,views-chrome-vocab,views-head,views-locks,
+                                      views-chat,views-chat-frame,views-chat-scroll,views-chat-guide,views-approval,views-activity,events-page,views-question,
+                                      settings,providers,mcp-servers,project-info,views-settings,views-onboarding,views-attach,attachments}.test.mjs`——名序 = `thincoder-desktop/test/files.mjs` 现值同序）
+                                      + 集成域（`integration/`——E2E 用例 `settings-panel.test.mjs` / `first-run-smoke.test.mjs` · 单列）
                                       （共享助手（非清单档）＝ `fake-dom.mjs` · `slot-sandbox.mjs` · `views-harness.mjs`）
 ```
 
@@ -157,3 +158,5 @@ thincoder-desktop/                  ← 本端产品包
   `test/` 行用例模块 **二十八 ⇒ 三十档** + 名单补 `session-prefs` / `views-attach`；§4 项 1 槽值优先口径收正（`effort` 未设 ⇒ 回落渠道默认——删除配置回落支陈旧坐标）· §3 「不改核」行补限定（不改核**机制语义**；批 B 纯加法三处，授权在案）。明细 = `docs/batches/2026-09-27-desktop-chat-panel-b.md` §2。
 - 2026-09-27（**批 B 收口轮**——实施后随动收正 · 数值对盘）：§1 树新行五（`thincoder-desktop/src/main/attachments.mjs` **125** · `thincoder-desktop/renderer/mount-onboarding.mjs` **88** · `thincoder-desktop/renderer/mount-head.mjs` **147** · `thincoder-desktop/renderer/attach.mjs` **146** · `thincoder-desktop/renderer/views/chat-copy.mjs` **133**）· `views/` 行补 `chat-copy.mjs` 与 `info-row.mjs` · 值收正（`events-subscribe.mjs` **68**〔批 B 末实读〕 · `mount-settings.mjs` **426**〔拆出向导族后〕 · `mount-composer.mjs` **348**〔批 B 末实读〕）·
   `test/` 行用例模块 **三十 ⇒ 三十四档**（补 `agent-host-usage` / `views-chrome-vocab` / `views-head` / `attachments`）· §4 项 1 去「（拟新增）」标记；数值单源 = `docs/desktop/design/PROJECT.md` §4.1。明细 = `docs/batches/2026-09-27-desktop-chat-panel-b.md` §2。
+- 2026-09-27（**批 B 追加轮 · 实施后对账轮**）：§1 树 `views/` 行补 `chat-guide.mjs`（**54**——追加轮实读）· `test/` 行用例模块 **三十四 ⇒ 三十五档**（名单补 `views-chat-guide`——名序同 `thincoder-desktop/test/files.mjs`）·
+  集成域两处并一处（用例 `settings-panel.test.mjs` / `first-run-smoke.test.mjs`）· 行宽重排（`test/` 名单条与本节条目超 300 ⇒ 分句断行——零语义）。明细 = `docs/batches/2026-09-27-desktop-firstrun-smoke.md` §2.12。

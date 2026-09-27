@@ -154,7 +154,7 @@ const shown = (state) => state.blocks.map((piece) => piece.text)
 
 // ─── U120 页随动五例（T-DSK26 · `docs/desktop/design/PROJECT.md`:277）─────────────────
 
-test("U120: 页随动五例（关活动 ⇒ 邻位页 ∕ 关唯一 ⇒ 关页 none 零节点 ∕ 关非活动 ⇒ 零动作 ∕ 待确认按取消 ⇒ 零动作 ∕ 关后迟到回执零写）", async (ctx) => {
+test("U120: 页随动五例（关活动 ⇒ 邻位页 ∕ 关唯一 ⇒ 关页 none 零块节点 + 引导节点 ∕ 关非活动 ⇒ 零动作 ∕ 待确认按取消 ⇒ 零动作 ∕ 关后迟到回执零写）", async (ctx) => {
   useSentinels(ctx)
   const mod = await rail()
 
@@ -170,7 +170,7 @@ test("U120: 页随动五例（关活动 ⇒ 邻位页 ∕ 关唯一 ⇒ 关页 n
   assert.equal(store.get().activeTab, "2", "活动标签 = 邻位键")
   assert.deepEqual(shown(store.get()), ["页2"], "屏面 = 邻位页（关前会话块零残留）")
 
-  // ② 关唯一 ⇒ 关页：中区 `none` 零节点（既有空态复用）· 零 IPC
+  // ② 关唯一 ⇒ 关页：中区 `none` 零块节点 + 引导节点（既有空态文案复用）· 零 IPC
   reset({ tabs: ["1"], activeTab: "1", activeSession: "1", blocks: [block("页1")] })
   const only = store.get()
   mod.requestClose("1")
@@ -184,7 +184,7 @@ test("U120: 页随动五例（关活动 ⇒ 邻位页 ∕ 关唯一 ⇒ 关页 n
   const tree = chatTree(chatModel(closed))
   assert.equal(tree.props["data-state"], "none", "中区态 = none")
   assert.equal(tree.props["data-blocks"], 0, "none ⇒ 零块（不新造空态视觉）")
-  assert.deepEqual(tree.children, [], "中区 none 态零节点")
+  assert.deepEqual(tree.children.map((node) => node.props["data-guide"]), ["no-project"], "中区 none 态 = 根唯一子（引导节点 · 零块节点 —— `cwd` 缺 ⇒ no-project）")
 
   // ③ 关非活动 ⇒ 两键皆不动 · 零 IPC
   reset({ tabs: ["1", "2"], activeTab: "2", activeSession: "2", blocks: [block("页2")] })

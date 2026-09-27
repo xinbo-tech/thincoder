@@ -57,7 +57,7 @@ test("U71: 帧面（待决项源 ∧ 卡居块后药丸前 ∧ syncChrome 幂等
   assert.deepEqual(chatModel(state({ blocks: [u("u1")] })).approval, [], "槽位缺 ⇒ 空表")
   assert.deepEqual(chatModel(state({ blocks: [u("u1")], pool: { approvals: [item] }, activeSession: null })).approval, [], "none ⇒ 空表（不落 stale 卡）")
 
-  // ② 子序 = [摘要?] → 块序列 → [卡?] → [药丸?]；卡 = 非块节点（不破 data-blocks 不变式）
+  // ② 子序 = [引导?] → [摘要?] → 块序列 → [卡?] → [药丸?]；卡 = 非块节点（不破 data-blocks 不变式）
   const ordered = chatTree(chatModel(state({ blocks: [u("u1"), u("u2")], pool: { approvals: [item] }, following: false }), 1))
   const roleOf = (node) => node.props["data-block-kind"] !== undefined ? "block"
     : node.props["data-card"] !== undefined ? "card"
@@ -66,11 +66,11 @@ test("U71: 帧面（待决项源 ∧ 卡居块后药丸前 ∧ syncChrome 幂等
   assert.deepEqual(ordered.children.map(roleOf), ["summary", "block", "card", "pill"], "子序 = 摘要 → 块 → 卡 → 药丸（卡恒居块后药丸前）")
   assert.equal(ordered.props["data-blocks"], 1, "data-blocks = 块节点数（卡不入账 —— 非块节点）")
   assert.equal(ordered.props["data-hidden"], 1, "窗越限 ⇒ data-hidden 随 visibleWindow")
-  assert.deepEqual(chatTree(chatModel(state({ blocks: [], pool: { approvals: [item] } }))).children.map(roleOf), ["chat-empty", "card"], "零块 ⇒ 空态提示 + 卡仍在场（两判据独立）")
+  assert.deepEqual(chatTree(chatModel(state({ blocks: [], pool: { approvals: [item] } }))).children.map(roleOf), ["chat-empty", "card"], "零块 ⇒ 引导节点（空态文案）+ 卡仍在场（两判据独立）")
   const pair = chatTree(chatModel(state({ blocks: [u("u1")], pool: { approvals: [item, item2] }, following: false })))
   assert.deepEqual(pair.children.map(roleOf), ["block", "card", "card", "pill"], "二项 ⇒ 两卡逐位按序（卡恒居块序之后 · 药丸之前）")
   assert.deepEqual(pair.children.map((node) => node.props["data-prompt-id"]).filter((id) => id !== undefined), ["p1", "p2"], "卡序 = 待决项序（data-prompt-id 逐位）")
-  assert.deepEqual(chatTree(chatModel(state({ activeSession: null, pool: { approvals: [item] } }))).children, [], "none ⇒ 零节点（卡亦无）")
+  assert.deepEqual(chatTree(chatModel(state({ activeSession: null, pool: { approvals: [item] } }))).children.map(roleOf), ["chat-empty"], "none ⇒ 根唯一子 = 引导节点（零块节点 · 卡亦无）")
 
   // ③ 帧面落点（假根）：挂载 → 态刷幂等 → 帧尾六步
   assert.equal(selfCheck(), true, "假 DOM 载体自检（选择器闭集 / 锚缺抛 / 写计三档 —— 载体自身不静默失效）")

@@ -1,11 +1,12 @@
 /**
  * chat.mjs — 对话流视图面（`docs/desktop/design/RENDERER.md` §1.1 / §2 / §3 · `docs/desktop/design/UI.md` §1 对话流行）。
  * 三档沿 RENDERER.md §1.1：`chatModel`（纯模型 · 窗出口）→ `chatTree`（纯构树 · 机检面）→ `mountChat`（薄挂载 =
- * 本档唯一清空 / 建树处）；DOM 面另两件 = 帧尾态刷 `syncChrome`（根锚四 + 摘要块 + 审批卡 + 药丸 · 幂等 · 无帧豁免）· 帧尾六步
- * `settleFrame`（挂尾段 → 读数 → 态刷 → 头侧摘 / 插 → 读数 → 写）；工具卡面与折叠纯函数 `toggleExpanded` 住
- * `renderer/views/chat-tool.mjs`（§2.3 拆分预案落形 —— 依赖单向：本档 → 它）；文本族块尾的复制控件 + 末条复制控件
- * 住 `renderer/views/chat-copy.mjs`（UI.md §1「批 B 注」项 4 —— 依赖单向：本档 → 它）。
- *   ① 三态 `data-state`：无活动会话 ⇒ `none`（零节点——禁假数据）· 有会话零块 ⇒ `empty`（`chat.empty.hint`）· 否则 `flow`；
+ * 本档唯一清空 / 建树处）；DOM 面另两件 = 帧尾态刷 `syncChrome`（根锚四 + 摘要块 + 审批卡 + 药丸 · 幂等 · 无帧豁免）· 帧尾六步 `settleFrame`；
+ * 工具卡面与折叠纯函数 `toggleExpanded` 住 `renderer/views/chat-tool.mjs`（§2.3 拆分预案落形 —— 依赖单向：本档 → 它）；文本族块尾的复制控件 + 末条复制控件
+ * 住 `renderer/views/chat-copy.mjs`（UI.md §1「批 B 注」项 4 —— 依赖单向：本档 → 它）；首启空白态引导面（判据
+ * `guideOf` + 构树 `guideNode` + 帧尾只摘态刷 `syncGuide`）住 `renderer/views/chat-guide.mjs`（UI.md §1「批 B 追加注」项 1 —— 依赖单向：本档 → 它）。
+ *   ① 三态 `data-state`：无活动会话 ⇒ `none`（零**块**节点 + 引导节点——禁假数据）· 有会话零块 ⇒ `empty`
+ *      （引导节点 · `chat.empty.hint`）· 否则 `flow`；
  *   ② 块五型（`user` / `assistant` / `reasoning` / `tool` / `error`）单序列；块键单源 = `blockKey`（`data-block-id` /
  *      增量缝合 / toggle 同域）；兜底键用**全列表位序**（`hidden + i`）⇒ 窗滑动不改键；文本裸串（零 Markdown / 零注入）；
  *   ③ 根子序 = [摘要块?] → 块序列 → [卡序列?] → [药丸?]（卡序 = 待审批 → 提问 → 计划 —— 单源 =
@@ -16,8 +17,8 @@
  *      审批卡面（两形）住 `renderer/views/approval.mjs`（批档 §2.2（a））——本档经 `approvalTree` 调用（依赖单向：
  *      本档 → 它）；卡 = **非块节点** ⇒ 与块序列 / 药丸同层不破「DOM 块节点序 ≡ visible 逐位引用等」；
  *      接线两态沿 `renderer/views/sessions.mjs:161` 通则（handlers 给 ⇒ `onClick`；缺 ⇒ `disabled` —— 诚实非死控）；
- *   ⑤ 模型形 = `{ state, state.blocks, hidden, following, pendingNew, hasOlder, inFlight, locale, approval }`
- *      （`blocks` = 窗出口；`approval` = 本会话待决项 ⇒ 卡面）。
+ *   ⑤ 模型形 = `{ state, state.blocks, hidden, following, pendingNew, hasOlder, inFlight, locale, approval, guide }`
+ *      （`blocks` = 窗出口；`approval` = 本会话待决项 ⇒ 卡面；`guide` = 引导码 —— 非块节点，判据单源 = `chat-guide.mjs`）。
  * 文案一律经 `t()`（零硬编码；`+` / `−` / 游标字形住 `renderer/chat.css`）；零 `node:` / 零裸包。
  */
 import { build, clear, text } from "../dom.mjs"
@@ -26,12 +27,14 @@ import { visibleWindow } from "../store.mjs"
 import { approvalTree } from "./approval.mjs"
 import { MAX_RENDER_BLOCKS, compensateTop, stickToBottom, tailAction } from "./chat-scroll.mjs"
 import { copyBlockNode, patchTextBlock } from "./chat-copy.mjs"
+import { guideNode, guideOf, syncGuide } from "./chat-guide.mjs"
 import { blockKey } from "./chat-stream.mjs"
 import { toolCard, wire, withKey } from "./chat-tool.mjs"
 
 // ─── 三档之①：纯模型 ───────────────────────────────────────────────
 
-/** 帧模型：三态 + 窗出口（`visible` / `hidden` 单源 = `renderer/store.mjs:53`）+ 四标量读数 + 待决项（卡面）。
+/** 帧模型：三态 + 窗出口（`visible` / `hidden` 单源 = `renderer/store.mjs:53`）+ 四标量读数 + 待决项（卡面）
+ *  + 引导码（`guide` —— 判据转调 `chat-guide.mjs` 的 `guideOf`）。
  *  `none` ⇒ `blocks` 空 ∧ `hidden` 0 ∧ `approval` 空（守 `data-blocks` = DOM 块节点数不变式 —— 不落 stale 块 / 卡）。 */
 export function chatModel(state, limit = MAX_RENDER_BLOCKS) {
   const live = state?.activeSession !== null && state?.activeSession !== undefined
@@ -39,6 +42,7 @@ export function chatModel(state, limit = MAX_RENDER_BLOCKS) {
   const mode = !live ? "none" : visible.length === 0 ? "empty" : "flow"
   return {
     state: mode,
+    guide: guideOf({ live, cwd: state?.project?.cwd, visible: visible.length }),
     blocks: mode === "none" ? [] : visible,
     hidden: mode === "none" ? 0 : hidden,
     following: state?.following === true,
@@ -108,14 +112,15 @@ function pillNode(model, handlers) {
   }
 }
 
-/** 构树（纯 · 零 DOM）：根 = 挂载根（props 四锚；宿主 `class` / `data-slot` 归 `renderer/index.html` 骨架），
- *  子序 = [摘要块?] → [块序列 | 空态提示] → [审批卡?] → [药丸?] —— `none` 皆无 ⇒ 零节点。 */
+/** 构树（纯 · 零 DOM）：根 = 挂载根（props 四锚；宿主 `class` / `data-slot` 归 `renderer/index.html` 骨架）；子序 = [引导节点?] → [摘要块?] → [块序列] →
+ *  [审批卡?] → [药丸?] —— `none` 帧 = 引导节点唯一子（零**块**节点 · 引导 = 非块节点 ⇒ 不入块序：`docs/desktop/design/UI.md` §1 批 B 追加注项 1）。 */
 export function chatTree(model, handlers = {}) {
   const children = []
+  const guide = guideNode(model, handlers)
+  if (guide) children.push(guide)
   if (model.state !== "none") {
     if (model.hidden > 0) children.push(summaryNode(model, handlers))
-    if (model.state === "empty") children.push({ tag: "div", props: { class: "chat-empty" }, children: [t("chat.empty.hint")] })
-    else children.push(...model.blocks.map((block, index) => blockNode(block, index, model.hidden, handlers)))
+    if (model.state === "flow") children.push(...model.blocks.map((block, index) => blockNode(block, index, model.hidden, handlers)))
     children.push(...model.approval.map((item) => approvalTree(item, handlers)))
     if (!model.following) children.push(pillNode(model, handlers))
   }
@@ -153,11 +158,13 @@ function chromeSlot(root, selector, want, make, update, atStart = false) {
   else root.append(built)
 }
 
-/** 帧尾态刷（刷新面单点 · 幂等 · 与档位解耦 —— `none` 帧同刷）：根锚四 + 摘要块 / 审批卡 / 药丸在场与文本随判据。
- *  `none` 态零节点化不破：三控件判据皆含 `state !== "none"`（卡面由 `chatModel` 归零）⇒ 零插入（只摘）。 */
+/** 帧尾态刷（刷新面单点 · 幂等 · 与档位解耦 —— `none` 帧同刷）：根锚四 + 引导节点 / 摘要块 / 审批卡 / 药丸随判据。
+ *  `none` 态零块节点化不破：三控件判据皆含 `state !== "none"`（卡面由 `chatModel` 归零）⇒ 零插入（只摘——
+ *  引导节点同此面纪律：缺席 ⇒ 零动作 · 判据空 ⇒ 摘，「只摘不插」）。 */
 export function syncChrome(root, model, handlers = {}) {
   if (!root || typeof root.querySelector !== "function") return model
   for (const [name, value] of Object.entries(chromeProps(model))) root.setAttribute(name, String(value))
+  syncGuide(root, model, handlers)
   const live = model.state !== "none"
   chromeSlot(
     root, "[data-summary]", live && model.hidden > 0,

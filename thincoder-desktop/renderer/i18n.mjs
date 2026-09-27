@@ -2,12 +2,13 @@
  * i18n.mjs — 词表面（`docs/desktop/design/SHELL.md:31` · 批 2 档 §2.4（g）· 本批 §2.1 E-5 / §2.5 U44）：
  *   ① 核域键 = `config:read` 语言面**下发投影**（核 `projectDictionary(locale)` 已扁平投影
  *      ⇒ 渲染面零核导入、零第二词表源）；
- *   ② 宿主 UI 专有键 = `HOST_DICT`（左列 13 键 + 标签条 4 键 + 对话流 8 键 + 活动池 7 键 + 审批卡 7 键
+ *   ② 宿主 UI 专有键 = `HOST_DICT`（左列 13 键 + 标签条 4 键 + 对话流 10 键 + 活动池 7 键 + 审批卡 7 键
  *      + 提问卡 3 键 + 设置 49 键 + 向导 10 键 + 信息行 9 键 + 输入区 6 键 + 会话头 3 键 + 档位 2 键
- *      + 状态栏 1 键 = **122 键** × 2 语（批 B 增十二键：本舱七 = 对话流复制面 2 · 会话头 3 · 档位 2；
+ *      + 状态栏 1 键 = **124 键** × 2 语（批 B 增十二键：本舱七 = 对话流复制面 2 · 会话头 3 · 档位 2；
  *      并行舱五 = 输入区附件面 3 · 设置档位列 1 · 状态栏读数 1 —— 附件降级两键名出
  *      `docs/desktop/design/UI.md` §1 批 B 注项 2，余键名与全键值面由本档拟定：批 B 注只述形 / 锚，
- *      词面登记处 = 此处）；
+ *      词面登记处 = 此处）；**批 B 追加轮增二键** = 对话流引导面 2（键名与两语句面单源 =
+ *      `docs/desktop/design/UI.md` §1 批 B 追加注项 4）；
  *      两语键集须相等，增键两语同增、禁单语落键）；
  *   ③ `t(key, params)` 解析序 = **宿主 → 核投影 → 键名自身**（缺键回落键名：不静默吞、不抛、
  *      永不返回空 / `undefined`）；插值 = **核同形** `${name}`（键值由核 `projectDictionary`
@@ -67,6 +68,9 @@ export const HOST_DICT = Object.freeze({
     // ── 复制面（批 B：`views/chat-copy.mjs` —— 块尾 / 输入区尾两控件可及名）──
     "chat.action.copy": "Copy block text",
     "chat.action.copyLast": "Copy last reply",
+    // ── 首启引导面（批 B 追加轮：`views/chat-guide.mjs` —— 两码文案）──
+    "chat.guide.noProject": "No project open — open a folder to start",
+    "chat.guide.noSession": "No session yet — create one to start chatting",
     "pool.title": "Activity",
     "pool.family.approvals": "Approvals",
     "pool.family.blocks": "Running",
@@ -198,6 +202,9 @@ export const HOST_DICT = Object.freeze({
     // ── 复制面（批 B：`views/chat-copy.mjs` —— 块尾 / 输入区尾两控件可及名）──
     "chat.action.copy": "复制块文本",
     "chat.action.copyLast": "复制末条回复",
+    // ── 首启引导面（批 B 追加轮：`views/chat-guide.mjs` —— 两码文案）──
+    "chat.guide.noProject": "未打开项目——先打开一个项目目录即可开始",
+    "chat.guide.noSession": "尚无会话——新建一个会话即可开始对话",
     "pool.title": "活动",
     "pool.family.approvals": "待审批",
     "pool.family.blocks": "活动块",
