@@ -5,7 +5,8 @@
  *   ① 卡根 = `data-card="approval"` + `data-prompt-id`（待决项身份 / 路由键）+ `data-shape`；驻点 = 对话流根
  *      （**非块节点** —— 与块序列 / 药丸同层的根子项，块节点序不变式不受影响）；
  *   ② 逐项形首行 = 工具名 + 参数摘要 + 状态词（复用 `tab.badge.approval` 词键 —— 闭枚举单源，零副本）；
- *      批形首行 = 计数词（`approval.batch.count` 带 `{count}`）+ 逐工具名子串（零分隔符字面 —— 间距归 `chat.css`）；
+ *      批形首行 = 计数词（`approval.batch.count` 带 `{count}`）+ 逐工具名（**两形首行皆逐段包元素**——
+ *      `span[data-seg]` 零分隔符字面 · 间距归 `chat.css`；批形段集不定长 ⇒ 拼串必自造分隔符，违「零构造」）；
  *      两形改动摘要行 = `changes` 在场 ⇒ 复用工具卡降级形（`toolChanges`，越阈判同源）；缺 ⇒ 零节点；
  *      两形标识片 / 单行标称 = `approvalSummary` / `approvalTitle`（**池面条目同源消费** —— 零副本）；
  *   ③ 三出口描述符 = **本档单一 owner**（键位 / 值映射 / 词键 / 置焦）：`approvalActions(shape)` ——
@@ -18,7 +19,7 @@
  * 文案一律经 `t()`（零硬编码）；零字形字面；零 `node:` / 零裸包。
  */
 import { t } from "../i18n.mjs"
-import { STATUS_WORD, toolChanges, wire, withKey } from "./chat-tool.mjs"
+import { STATUS_WORD, segNode, toolChanges, wire, withKey } from "./chat-tool.mjs"
 
 /** 键位闭集（唯一 owner）：形 → 三出口描述符（键位 / 值 / 词键 / 置焦）；表外形 ⇒ `null`（零动作）。
  *  逐位序 = 呈现序；`safe: true` = 置焦「最安全键」（逐项 ⇒ `reject` · 批 ⇒ `deny`）。 */
@@ -99,11 +100,14 @@ export function approvalTitle(item) {
   return item?.shape === "batch" ? t("approval.batch.count", { count: batchCount(item) }) : item?.tool
 }
 
-/** 卡首行：逐项形 = 标识片 + 状态词；批形 = 计数词 + 逐工具名（零分隔符字面 —— 间距归 `chat.css`）。 */
+/** 卡首行：逐项形 = 标识片 + 状态词；批形 = 计数词 + 逐工具名（逐段包元素 —— 间距归 `chat.css`）。 */
 function headNode(item, shape) {
   const props = { class: "approval-head", "data-approval-head": "" }
   const summary = approvalSummary(item)
-  return { tag: "div", props, children: shape === "batch" ? summary : [...summary, t(STATUS_WORD.approval)] }
+  const children = shape === "batch"
+    ? [segNode("count", summary[0]), ...summary.slice(1).map((name) => segNode("name", name))]
+    : [segNode("name", summary[0]), segNode("args", summary[1]), segNode("status", t(STATUS_WORD.approval))]
+  return { tag: "div", props, children }
 }
 
 /** 卡根 `keydown` 两态：`onApprove` 给 ⇒ 键处理在场（闭集命中 ⇒ `preventDefault` + 派发；表外 ⇒ 零动作）。

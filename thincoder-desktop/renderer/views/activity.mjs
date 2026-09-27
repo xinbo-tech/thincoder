@@ -12,6 +12,8 @@
  *   ⑤ 条目**零内容回显**（标称 + 状态词）：待审批 = `approvalTitle` + 状态词 + 操作区（与卡面**同一构造**
  *      `approvalExits` —— 两态同锚 · **不争焦**：零 `data-autofocus`）；活动块 = 工具名 + 状态词 + `data-status`；
  *      队列 = 标题串 + 状态词；表外状态码 ⇒ 零状态词 ∧ 零 `data-status`（禁假造）；
+ *      **本批修（#460）**：标签行两段**逐段包元素**（`span[data-seg]`—— 裸串直作 flex 行子 ⇒ `gap` 静默失效；
+ *      通则 = `docs/desktop/design/RENDERER.md` §1.1）；
  *   ⑥ 键域 = **本会话**：族 / 读数 / 折叠态皆出 `state` 现态（渲染面**零推导 / 零复制** —— 族与读数一致性由
  *      供给面单点写入保证，沿 `docs/desktop/design/UI.md` §1 状态栏行）。
  * 文案一律经 `t()`（零硬编码 · 零字形字面）；零 `node:` / 零裸包 / 零 `store.mjs` import（挂载面纯读现态）。
@@ -19,7 +21,7 @@
 import { build, clear } from "../dom.mjs"
 import { t } from "../i18n.mjs"
 import { approvalExits, approvalTitle } from "./approval.mjs"
-import { STATUS_WORD, wire } from "./chat-tool.mjs"
+import { STATUS_WORD, segNode, wire } from "./chat-tool.mjs"
 
 /** 读数（`pool.running` / `pool.approval`）：数为值、非数 ⇒ `null`（**零节点** —— 禁假造）。 */
 const readingOf = (value) => (Number.isFinite(value) ? value : null)
@@ -86,9 +88,13 @@ function headNode(model, handlers) {
   }
 }
 
-/** 条目标签行（标称 + 状态词）：两片皆缺 ⇒ 空行（`el` 跳空位；`null` / 空串不落文本）。 */
-function labelNode(parts) {
-  return { tag: "div", props: { class: "pool-item-label" }, children: parts }
+/** 条目标签行（标称 + 状态词 —— 段码 `title` / `status`，**逐段包元素**）：两片皆缺 ⇒ 空行（段缺席 ⇒ 该段零节点）。 */
+function labelNode(title, status) {
+  return {
+    tag: "div",
+    props: { class: "pool-item-label" },
+    children: [segNode("title", title), segNode("status", status)],
+  }
 }
 
 /** 待审批条目：标称（逐项 ⇒ 工具名 / 批 ⇒ 计数词）+ 状态词 + 操作区（与卡面**同一构造**；`shape` 表外
@@ -101,7 +107,7 @@ function approvalItemNode(item, handlers) {
       "data-pool-item": "approval",
       "data-prompt-id": item?.promptId == null ? undefined : String(item.promptId),
     },
-    children: [labelNode([approvalTitle(item), t(STATUS_WORD.approval)]), approvalExits(item, handlers)],
+    children: [labelNode(approvalTitle(item), t(STATUS_WORD.approval)), approvalExits(item, handlers)],
   }
 }
 
@@ -111,7 +117,7 @@ function blockItemNode(block) {
   return {
     tag: "div",
     props: { class: "pool-item", "data-pool-item": "block", "data-status": word === null ? undefined : block.status },
-    children: [labelNode([block?.tool, word])],
+    children: [labelNode(block?.tool, word)],
   }
 }
 
@@ -121,7 +127,7 @@ function queueItemNode(entry) {
   return {
     tag: "div",
     props: { class: "pool-item", "data-pool-item": "queue", "data-status": word === null ? undefined : entry.status },
-    children: [labelNode([entry?.title, word])],
+    children: [labelNode(entry?.title, word)],
   }
 }
 

@@ -122,6 +122,22 @@ test("T-DSK13: 三步走完（步 1 零输入保存走核 · 导航零写盘 · 
   assert.equal(linked.root.querySelector("[data-notice]"), null, "成功面零失败串（清位 ⇒ 零残留）")
 })
 
+// ─── T-DSK13 · #461 信息行复读口（句柄面 ∧ 读失败面）──────────────────────
+
+test("T-DSK13: #461 信息行复读（`refreshInfo` 出句柄面 ∧ 幂等直调 ∧ 读失败面 = 该读 reason）", async (ctx) => {
+  const face = await mountFace(ctx, supplyFace().answer, { open: false, configured: true })
+  assert.equal(typeof face.handle.refreshInfo, "function", "`attachSettings` 回值含 `refreshInfo`（开项目成功链复读口）")
+  const reads = face.host.call("ledger:read").length
+  await face.handle.refreshInfo()
+  assert.equal(face.host.call("ledger:read").length, reads + 1, "句柄直调 ⇒ 两读随动（幂等 —— `openDir` 链与向导步 3 同一 handle）")
+  assert.deepEqual(face.store.get().projectInfo.phase, null, "读面无相位 ⇒ 零节点（禁假造读数）")
+
+  const failing = await mountFace(ctx, (channel) => (channel === "ledger:read" ? { ok: false, reason: "no-ledger" } : { ok: false, reason: "missing" }), { open: false, configured: true })
+  await failing.handle.refreshInfo()
+  assert.equal(failing.store.get().projectInfo.notice, "no-ledger", "读通道失败 ⇒ 失败串 = 该读 reason（非启动期 `no-project` —— 既有面不动）")
+  assert.equal(failing.info.getAttribute("data-state"), "error", "信息行失败面在场（既有失败面不变）")
+})
+
 // ─── ③ 步锚闭集 ∧ 缺名自读现选两向（T-DSK13）──────────────────────
 
 test("T-DSK13: 步锚闭集（步标 / 退场锚 / 尾控件）∧ `settings:verify` 缺名自读现选两向", async (ctx) => {

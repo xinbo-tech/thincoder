@@ -13,8 +13,9 @@ import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import { initDict, t } from "../renderer/i18n.mjs"
 import { headModel, headTree, mountHead, sessionMetaOf, statusModel, statusTree } from "../renderer/views/chrome.mjs"
-import { attachComposer, COMPOSER_SLOT, composerModel, composerTree, flushTurnTail } from "../renderer/mount-composer.mjs"
+import { attachComposer, COMPOSER_SLOT, composerModel, composerTree, flushTurnTail, submitDraft } from "../renderer/mount-composer.mjs"
 import { QUEUE_MAX } from "../renderer/store.mjs"
+import { chatModel, chatTree } from "../renderer/views/chat.mjs"
 import { installFakeDom, selfCheck } from "./fake-dom.mjs"
 
 // ─── U49 会话头（中区外壳 · 字段序单源）──────────────────────
@@ -183,7 +184,7 @@ test("U118: 输入区构树（两态锚 / 满队提示行 / 键位接线两态 �
 // ─── U119 输入区挂载/接线面（批 A · §1.3 判据②「DOM 槽 + handlers 接线」两半）─────────────
 
 test("U119: 挂载/接线面（attach 零抛 · 句柄表形 · 槽锚两向与落点 · flush 在飞卫兵）", async () => {
-  const state = () => ({ activeSession: "1", pool: { queue: [{ title: "第一条", status: "queued" }] } })
+  const state = () => ({ activeSession: "1", pool: { queue: [{ title: "第一条", status: "queued" }] }, blocks: [] })
   const store = { get: state, set: () => {}, subscribe: () => () => {} }
 
   // ① 挂载径零抛 + 接线面句柄表在位（平 node：`document` 缺 ⇒ 薄挂载早返径）
@@ -217,7 +218,7 @@ test("U119: 挂载/接线面（attach 零抛 · 句柄表形 · 槽锚两向与�
 test("U126: 组字期 Enter 零发送 / 零 preventDefault / 草稿保留 → 组字结束再 Enter 照常发送（不粘滞）", async () => {
   const calls = []
   const host = { invoke: async (channel, payload) => { calls.push({ channel, payload }); return { ok: true } } }
-  const store = { get: () => ({ activeSession: "1", pool: { queue: [] } }), set: () => {}, subscribe: () => () => {} }
+  const store = { get: () => ({ activeSession: "1", pool: { queue: [] }, blocks: [] }), set: () => {}, subscribe: () => () => {} }
   const attached = attachComposer(host, { store })
   const flush = () => new Promise((resolve) => setImmediate(resolve))
   /** 假 Enter（**不带 `target`** ⇒ 走草稿回退径 —— 兼作草稿保留的旁证：末发文本 = 组字期键入原文）。
@@ -255,4 +256,45 @@ test("U126: 组字期 Enter 零发送 / 零 preventDefault / 草稿保留 → �
   assert.equal(after.prevented, true, "组字结束（`isComposing` 假）⇒ Enter 照常拦下（发送径）")
   assert.deepEqual(calls, [{ channel: "msg:send", payload: { key: "1", text: "组合中文字" } }], "恰一发 ∧ 文本 = 组字期键入原文")
   attached.detach()
+})
+
+// ─── U153 用户块出泡（#458 · KD-23：受理即出 / 键门零写 / 失败零块）────────────
+
+test("U153: 用户块出泡两径（受理即出 ∧ 键门零写 ∧ 失败零块 —— 尾块形 / 引用不变 / 树面随动）", async () => {
+  const ok = () => ({ ok: true })
+  const face = (answer) => {
+    let state = { activeSession: "1", pool: { queue: [{ title: "队首", status: "queued" }] }, blocks: [] }
+    return { get: () => state, set: (next) => { state = next }, subscribe: () => () => {}, host: { invoke: (c, p) => Promise.resolve(answer(c, p)) } }
+  }
+  /** 树面 `user` 块节点（`div.block[data-block-kind="user"]`）：① / ③ 两判据共用。 */
+  const usersOf = (blocks) => chatTree(chatModel({ activeSession: "1", blocks })).children.filter((node) => node.props?.["data-block-kind"] === "user")
+  // ① 直发受理（`ok` 真 ∧ 键 = 活动会话）⇒ 尾块 = 用户块恰一枚（文本逐字）+ 树面 `data-blocks` +1
+  const direct = face(ok)
+  assert.equal(await submitDraft({ store: direct, host: direct.host }, "文本 A"), "sent", "受理 ⇒ sent")
+  assert.deepEqual(direct.get().blocks, [{ kind: "user", text: "文本 A" }], "尾块 = { kind: 'user', text } 恰一枚（与回放块同形 —— 无 id / 无 status）")
+  assert.equal(chatTree(chatModel({ activeSession: "1", blocks: direct.get().blocks })).props["data-blocks"], 1, "树面 data-blocks = 块数（恰 +1）")
+  assert.deepEqual([usersOf(direct.get().blocks).length, usersOf(direct.get().blocks)[0].children[0]], [1, "文本 A"], "树面 = user 块在场 ∧ 文本逐字")
+  // ② 键门：在飞期切走（本键 ≠ 现刻活动会话）⇒ 零写 · `blocks` 引用不变（该条由页读整置）
+  const held = []
+  let activeSession = "1"
+  let gated = null
+  const gateHost = { invoke: async () => { activeSession = "2"; return { ok: true } } }
+  const gateStore = { get: () => ({ activeSession, pool: { queue: [] }, blocks: held }), set: (next) => { gated = next }, subscribe: () => () => {} }
+  assert.equal(await submitDraft({ store: gateStore, host: gateHost }, "文本 B"), "sent", "受理属实（键门只拦块面写）")
+  assert.equal(gated.blocks, held, "键 ≠ 活动会话 ⇒ 零写（`blocks` 引用不变）")
+  // ③ 失败两径（回执假 / 抛）⇒ 零乐观块 + 树面零块（T-DSK32 ⑩「零假回合」单元同判据）
+  const failed = face(() => ({ ok: false, reason: "provider-invalid" }))
+  const thrown = face(() => { throw new Error("boom") })
+  const kept = [failed.get().blocks, thrown.get().blocks]
+  assert.equal(await submitDraft({ store: failed, host: failed.host }, "文本 C"), "kept", "回执假 ⇒ kept")
+  assert.equal(await submitDraft({ store: thrown, host: thrown.host }, "文本 D"), "kept", "抛 ⇒ kept")
+  assert.deepEqual([failed.get().blocks, thrown.get().blocks], kept, "两径皆零乐观块（引用不变）")
+  assert.equal(usersOf(failed.get().blocks).length, 0, "失败径 ⇒ 树面零块（零假回合）")
+  // ④ 回合尾 flush 同源（取文源 = 队首标题逐字）：受理 ⇒ 出队 + 用户块入流 ∥ 失败 ⇒ 留队 + 零块
+  const flushed = face(ok)
+  assert.equal(await flushTurnTail({ store: flushed, host: flushed.host }), true, "受理 ⇒ 发出")
+  assert.deepEqual([flushed.get().blocks, flushed.get().pool.queue], [[{ kind: "user", text: "队首" }], []], "同源用户块（文本逐字）∧ 受理 ⇒ 出队（先发后出队）")
+  const flushHeld = face(() => ({ ok: false, reason: "busy" }))
+  assert.equal(await flushTurnTail({ store: flushHeld, host: flushHeld.host }), false, "回执假 ⇒ 零动作")
+  assert.deepEqual([flushHeld.get().blocks.length, flushHeld.get().pool.queue.length], [0, 1], "失败 ⇒ 零块 ∧ 留队（原形不动）")
 })

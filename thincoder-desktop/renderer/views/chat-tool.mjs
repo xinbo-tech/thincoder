@@ -3,7 +3,8 @@
  * 本档 = 批档 §2.3 在册**拆分预案**落形：`chat.mjs` 交付实读越 300 层 ⇒ 工具块构树三件（头行 / 改动摘要 / 卡）+
  * 折叠纯函数 `toggleExpanded` 拆出；控件接线两态原语（`wire` / `withKey`）随迁 —— 工具头 / 回填 / 药丸三控件同源，
  * 住本档守依赖单向（`chat.mjs` → 本档；反向无引用 ⇒ 无环）。
- *   ① 头行：数据串（名称 / 参数摘要）+ 状态词（闭枚举单源 = 核词表）+ 耗时（仅 `done` / `error` ∧ 数）；
+ *   ① 头行：数据串（名称 / 参数摘要）+ 状态词（闭枚举单源 = 核词表）+ 耗时（仅 `done` / `error` ∧ 数）——
+ *      **四段逐段包元素**（`span[data-seg]` —— 裸串直作 flex 行子 ⇒ `gap` 静默失效；通则 = `docs/desktop/design/RENDERER.md` §1.1）；
  *   ② 改动摘要：`files` 计数 + 增删合计 ⇒ 越阈（文件数 ∨ 增删合计）降级 = 只留摘要行（零 `[data-file]`）；
  *   ③ 结果区：`result` 非空 ∧ 展开态；`result` 空 ⇒ 头行退纯展示 `div`（零 toggle 控件 —— 诚实非死控）；
  *   ④ 折叠判据：显式 `expanded` 优先，缺省 = `status="error"` 展开（错误取证优先）；
@@ -44,6 +45,14 @@ export function withKey(handler, key) {
   return typeof handler === "function" ? () => handler(key) : undefined
 }
 
+/** 文本段节点（**通则单源** —— `docs/desktop/design/RENDERER.md` §1.1「文本段行形态通则」）：非空串 ⇒
+ *  `span[data-seg="<段码>"]`；段缺席（非串 / 空串）⇒ `null`（**零节点** —— 空段仍占 flex 项 = 假间隔）；
+ *  导出 = 四处行内多段面（工具卡头行 / 池条目标签行 / 审批卡首行 / 计划行）同表消费（零副本）。 */
+export function segNode(code, value) {
+  if (typeof value !== "string" || value === "") return null
+  return { tag: "span", props: { "data-seg": code }, children: [value] }
+}
+
 /** 折叠判据（显式优先；缺省 = `error` 展开）。 */
 function isExpanded(block) {
   return typeof block?.expanded === "boolean" ? block.expanded : block?.status === "error"
@@ -71,10 +80,10 @@ function toolHead(block, key, handlers) {
     "data-status": typeof block?.status === "string" ? block.status : undefined,
   }
   const children = [
-    block?.name,
-    block?.argsSummary,
-    word === undefined ? null : t(word),
-    timed ? t("chat.tool.duration", { seconds: (block.durationMs / 1000).toFixed(1) }) : null,
+    segNode("name", block?.name),
+    segNode("args", block?.argsSummary),
+    segNode("status", word === undefined ? null : t(word)),
+    segNode("time", timed ? t("chat.tool.duration", { seconds: (block.durationMs / 1000).toFixed(1) }) : null),
   ]
   if (!hasText(block?.result)) return { tag: "div", props, children }
   return { tag: "button", props: wire({ ...props, "data-action": "chat:tool-toggle" }, withKey(handlers.onToggleTool, key)), children }

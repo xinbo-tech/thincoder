@@ -68,6 +68,14 @@
   **退场口径（批 9 补——子节点面 ∥ 属性面）**：退场 = `clear` 清空容器（子节点面）**+ 薄挂载属性应收**——挂载期所加宿主属性须有复位回路；判据 = **退场后宿主属性集 ⊆ 挂载前属性集**（只增不减 ⇒ 判据不达）；**回路已落 · 单源 = `thincoder-desktop/renderer/views/settings.mjs` `syncHostProps`**（复位表 = `root` → 上次薄挂载所落属性名集 · 未再声明者摘除 · 骨架属性零动）——三挂载共用（设置 / 向导 / 信息行）。
   `removeAttribute` 两命中 = `thincoder-desktop/renderer/views/chat.mjs:227`（`data-streaming` 摘除）+ `thincoder-desktop/renderer/views/settings.mjs:281`（复位表摘除）；**长驻两面** = `thincoder-desktop/renderer/views/{chat,activity}.mjs`（:134 / :167）**无复位回路 ⇒ 码面池**（属性名集常量〔`chromeProps` 四名 · 池树两名〕⇒ 跨重绘不增 ⇒ 现值零残留）。
 
+- **用户块（本批修 · 写者与出泡时刻 —— #458）**：活流 `user` 块 = **发送面写者**（`thincoder-desktop/renderer/mount-composer.mjs` 两径同源：直发 / 回合尾 flush——判据 = `msg:send` 回执 `ok` **真**；裁决与边界 = `docs/desktop/design/PROJECT.md` §2 KD-23）+ **键门**（回执键 = 现刻 `activeSession`，非活动 ⇒ 零写；
+  **在飞回合内切回** ⇒ 本回合用户块随回合尾落盘后、于下次页读在场——页读 = `thincoder-desktop/src/main/session-slots.mjs:123` / `:145`；槽落盘在回合尾 = `thincoder-desktop/src/main/agent-host.mjs:214` / `:219`）；
+  块形 = `{ kind: "user", text }`（**与 `blockOfMessage` 回放块同形**——无 `id` ⇒ 键域回落位序，同回放）· 写入走 `appendBlock`（**既有**纯动作——`thincoder-desktop/renderer/store.mjs:73` 导出，归约面 `thincoder-desktop/renderer/events.mjs:21` / `:97` / `:105` / `:220` 四处已消费；`pendingNew` 语义同源）· 十通道零 `user` 通道（写入时刻 = 受理时刻 ⇒ 活流块 ⟺ 已受理）。
+- **流式游标清点（本批修 —— #459）**：清点两族 = ① 回合尾三径（`done` / `stopped` ∨ `ev:error`）② **段界**（`ev:tool-call` 入场 ⇒ 助手文本段收束）；
+  清点**须落块面引用**（新块对象 ⇒ `blocks` 键变 ⇒ 帧触发 ⇒ 就地更新摘 `data-streaming` 锚——旁路态无刷新路径 = 缺陷成因面）· 辅助与两族调用点住归约面（`thincoder-desktop/renderer/events.mjs`）· 游标语义 = **末块追加态**（形态单源 = `docs/desktop/design/UI.md` §1 本批注项 3 · 裁决 = `docs/desktop/design/PROJECT.md` §2 KD-24）。
+- **文本段行形态通则（本批修 —— #460）**：行内 ≥2 文本段（flex 行：`gap` ∨ `space-between`）⇒ **逐段包元素**（`span[data-seg="<段码>"]`；段缺席 ⇒ 零节点——空段仍占 flex 项 ⇒ 假间隔）；
+  **裸串不得直作 flex 行子**（相邻文本节点合为单一匿名项 ⇒ `gap` / `space-between` 静默失效）；逐处段码与取舍 = `docs/desktop/design/UI.md` §1 本批注项 4。
+
 ## 2. 有界渲染窗口
 
 - **MAX_RENDER_BLOCKS = 200**：只渲染尾部窗口，更早块折**「摘要块」**（可一键回填，回填后仍守窗口）；**不做虚拟化**（DOM 块数有界即达标——虚拟化不列入本版）。
@@ -138,3 +146,5 @@
 - 2026-09-27（**批 B 追加轮 · 首启空白态引导**）：§1.1 增**引导节点**条（非块节点 · `guide` 三码判据 · 构树档 · 句柄在场判据）· 关标签 ⇒ 页随动条「中区 `none` 态 = 零节点」⇒「**零块节点** + 引导节点」（收正）。明细 = `docs/batches/2026-09-27-desktop-chat-panel-b.md` §2.12。
 - 2026-09-27（**批 B 追加轮 · 修正轮**——设计评审 §3 轮次 1 逐号点修）：§1.1 帧尾态刷条点名**引导节点**成员（判据 = `model.guide` 空否；`none` / `empty` 帧由重挂面建 · `flow` 帧由本刷面摘）· 同条「`none` 态零节点化不破」收正为「`none` 态零块节点不破」。明细 = `docs/batches/2026-09-27-desktop-firstrun-smoke.md` §2.10。
 - 2026-09-27（**批 B 追加轮 · 实施后对账轮**）：§1.1 引导节点条承档位「（拟新增）」⇒「**已落** · 实读 **54**」· 帧尾态刷条拆两行（行宽 315 ⇒ 两行皆 ≤300——零语义）。明细 = `docs/batches/2026-09-27-desktop-firstrun-smoke.md` §2.12。
+- 2026-09-27（**可见面修复批 · 设计轮**）：§1.1 增三条款（**用户块**——写者 / 出泡时刻 / 键门 / 同回放块形 · **流式游标清点**——两族 + 块面引用刷新径 · **文本段行形态通则**——逐段包元素）。裁决 / 理由 = `docs/desktop/design/PROJECT.md` §2 KD-23 / KD-24；形态逐处 = `docs/desktop/design/UI.md` §1 本批注；明细 = `docs/batches/2026-09-27-desktop-visible-face-fix.md` §2。
+- 2026-09-27（**可见面修复批 · 修正轮 1**——设计评审 §3 轮次 1 逐号点修）：用户块条——`appendBlock` 就地点名（**既有**纯动作 · `thincoder-desktop/renderer/store.mjs:73` 导出 · 归约面四处已消费）+「切回整置」收正为限定形（在飞回合内切回 ⇒ 随回合尾落盘后、于下次页读在场——附两档实核坐标）。明细 = `docs/batches/2026-09-27-desktop-visible-face-fix.md` §2.9。

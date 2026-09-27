@@ -81,6 +81,20 @@ function indexOfTool(blocks, id) {
   return -1
 }
 
+/** 流式游标清点（#459 · KD-24 · `renderer/views/chat.mjs` 游标语义 = **末块追加态**）：命中带 `streaming` 真项者换
+ *  **新块对象**（去游标 —— 位序与其余块引用不动）；无命中 ⇒ **原引用**（零通知）。清点须落块面引用 = 唯一刷新径
+ *  （`blocks` 键变 ⇒ 帧触发 ⇒ 摘 `data-streaming` 锚；旁路态不触发帧 = 缺陷成因面）。 */
+function clearCursor(state) {
+  const list = Array.isArray(state.blocks) ? state.blocks : []
+  let hit = false
+  const next = list.map((block) => {
+    if (block?.streaming !== true) return block
+    hit = true
+    return { ...block, streaming: false }
+  })
+  return hit ? { ...state, blocks: next } : state
+}
+
 // ─── 纯归约（十通道 → 切片）──────────────────────────────────────────────────
 
 /** `ev:token`——助手尾块续写（判据 = 尾块 `kind === "assistant"` ∧ `streaming === true`）；否则起活块。
@@ -98,11 +112,12 @@ function onToken(state, ev) {
 }
 
 /** `ev:tool-call`——工具块入（活块形 = 池条目形**同源异形**：活块 `{kind,id,name,argsSummary,status,startedAt}` ·
- *  池条目 `{id,tool,status}`（消费面 `views/activity.mjs` 读取集））。 */
+ *  池条目 `{id,tool,status}`（消费面 `views/activity.mjs` 读取集））；**段界游标清点**（#459 ② 族：入场 ⇒ 前序
+ *  助手文本段收束 —— 清点先于追加，两事不同块）。 */
 function onToolCall(state, ev, now) {
   if (!forActive(state, ev)) return state
   const block = { kind: "tool", id: ev.id, name: ev.name, argsSummary: ev.argsSummary, status: "running", startedAt: now }
-  const next = appendBlock(state, block)
+  const next = appendBlock(clearCursor(state), block)
   return withPool(next, { blocks: [...poolOf(state).blocks, { id: ev.id, tool: ev.name, status: "running" }] })
 }
 
@@ -199,7 +214,9 @@ export function isTurnTail(ev) {
 /** `ev:activity` 三形（§2.16② 写死）：① `fields` 在场 ⇒ 内联形（核 token 流内 ⟦ev⟧ 段）⇒ **零写零重调**（内联 `done` ⇒ 不清位标）；
  *  ② 无 `fields` ∧ `event === "turn"`（`{ n, max }`）⇒ 置 `running`（`n` / `max` 无槽 ⇒ 不落，禁造键）；
  *  ③ 无 `fields` ∧ `isTurnTail` ⇒ **唯一回合尾**（去 `running` + 置 `done`；`stopped` 兼摘本键提问项 + 清本键 `approval` 位 ——
- *  中断径各门按取消结算 ⇒ 卡随事件面出场；`done` 径不摘 —— `docs/desktop/design/RENDERER.md` §1.1）。 */
+ *  中断径各门按取消结算 ⇒ 卡随事件面出场；`done` 径不摘 —— `docs/desktop/design/RENDERER.md` §1.1）；
+ *  **回合尾三径皆兼游标清点**（#459 ① 族 —— 尾块追加态结束 ⇒ 游标不得常驻；**键门同 `onError` / `onToolCall`** ——
+ *  块面写须 `ev.key === state.activeSession`：非活动会话的回合尾只落位标，不动本会话块面）。 */
 function onActivity(state, ev) {
   if ("fields" in ev) return state
   if (!isTurnTail(ev)) {
@@ -208,16 +225,17 @@ function onActivity(state, ev) {
     return stamps.changed ? { ...state, tabBadges: stamps.badges } : state
   }
   const tail = ev.event === "stopped" ? clearQuestion(state, ev.key) : state
+  const cursor = forActive(state, ev) ? clearCursor(tail) : tail
   const cleared = badgeStamps(tail.tabBadges ?? {}, ev.key, "running", false)
   const marked = badgeStamps(cleared.badges, ev.key, "done", true)
-  if (tail === state && !cleared.changed && !marked.changed) return state
-  return { ...tail, tabBadges: marked.badges }
+  if (cursor === tail && tail === state && !cleared.changed && !marked.changed) return state
+  return { ...cursor, tabBadges: marked.badges }
 }
 
 /** `ev:error`——错误块入流（文本 = 载荷 `message` 原样；无槽位自造）+ **错误径 = 回合结算**（三径同判据 —— `docs/desktop/design/RENDERER.md` §1.1）：
- *  本键 `running` 清 + 位落 `done`（错误终局后输入区不再判忙 · 队首可 flush —— `ok` 假 ∥ 抛 ⇒ 留队 + 下次回合尾重触发）；位标键源 = `ev.key`（任意键可写）。 */
+ *  本键 `running` 清 + 位落 `done`（错误终局后输入区不再判忙 · 队首可 flush —— `ok` 假 ∥ 抛 ⇒ 留队 + 下次回合尾重触发）+ **游标清点**（错误径 ∈ 三径）；位标键源 = `ev.key`（任意键可写），块面仍守键门。 */
 function onError(state, ev) {
-  const blocks = forActive(state, ev) ? appendBlock(state, { kind: "error", text: ev.message }) : state
+  const blocks = forActive(state, ev) ? clearCursor(appendBlock(state, { kind: "error", text: ev.message })) : state
   const cleared = badgeStamps(blocks.tabBadges ?? {}, ev.key, "running", false)
   const marked = badgeStamps(cleared.badges, ev.key, "done", true)
   if (!cleared.changed && !marked.changed) return blocks

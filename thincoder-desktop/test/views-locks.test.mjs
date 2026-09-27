@@ -56,9 +56,9 @@ test("U52: 零回归面（清单两向 ∧ 导出面锁 ∧ 七槽接线结构 �
   assert.deepEqual(Object.keys(chrome).sort(), ["headModel", "headTree", "mountHead", "mountStatus", "sessionMetaOf", "statusModel", "statusTree"], "chrome.mjs 导出面 = 会话头三段 + 供给取面单源一段 + 状态栏三段")
   assert.deepEqual(Object.keys(chat).sort(), ["chatModel", "chatTree", "mountChat", "settleFrame", "syncChrome"], "chat.mjs 导出面 = 三档 + 帧尾态刷 / 帧尾六步")
   assert.deepEqual(Object.keys(chatTool).sort(), [
-    "DIFF_FILE_FLOOR", "DIFF_LINE_FLOOR", "STATUS_WORD", "changeTotals", "toggleExpanded", "toolCard", "toolChanges",
+    "DIFF_FILE_FLOOR", "DIFF_LINE_FLOOR", "STATUS_WORD", "changeTotals", "segNode", "toggleExpanded", "toolCard", "toolChanges",
     "wire", "withKey",
-  ], "chat-tool.mjs 导出面 = 工具卡构树 + 接线两态 + 折叠纯函数 + 核状态词表 / 改动摘要阈值与合计（本批增复用面 —— 审批卡同源消费）")
+  ], "chat-tool.mjs 导出面 = 工具卡构树 + 接线两态 + 折叠纯函数 + 核状态词表 / 改动摘要阈值与合计（本批增复用面 —— 审批卡同源消费；`segNode` = 文本段通则单源 —— 四处行内多段面同表消费）")
   assert.deepEqual(Object.keys(approval).sort(), [
     "approvalActions", "approvalExits", "approvalSummary", "approvalTitle", "approvalTree", "respondApproval", "verdictOfKey",
   ], "approval.mjs 导出面 = 卡面（两形构树 / 键位闭集 / 出口表 · 操作区 · 两标称）+ 出口动作（同一路）")
@@ -132,4 +132,29 @@ test("U52: 零回归面（清单两向 ∧ 导出面锁 ∧ 七槽接线结构 �
   ]) {
     assert.ok(pool.includes(wiring), `接线落点在位：${wiring}（审批出口同一路 / 折叠入状态树）`)
   }
+})
+
+// ─── U152 可见面修复本批锁（#457 输入区五类规则 ∧ #461 开项目链复读序）──────────
+
+test("U152: 输入区样式与开项目链（#457 五类 + 两附属行在 `chat.css` 有规则 ∧ #461 复读步在 `refreshRail()` 之后）", () => {
+  const root = fileURLToPath(new URL("../", import.meta.url))
+  const css = stripComments(readFileSync(join(root, "renderer/chat.css"), "utf8"))
+  /** 规则在场判据 = 类名以**选择器位**起头（行首 ∨ 逗号后）∧ 尾随 `,` ∨ `{` —— 值面 / 别类名后缀（`.composer-input`）不算。 */
+  const hasRule = (name) => new RegExp(`(?:^|,)\\s*\\${name}\\s*(?:,|\\{)`, "m").test(css)
+  for (const name of [".composer", ".composer-input", ".composer-interrupt", ".chat-copy-block", ".chat-copy-last"]) {
+    assert.ok(hasRule(name), `chat.css 含 ${name} 规则（#457 五类 —— 零规则 = 空默认按钮形态）`)
+  }
+  for (const name of [".composer-notice", ".composer-attachments"]) {
+    assert.ok(hasRule(name), `chat.css 含 ${name} 规则（两附属行）`)
+    assert.ok(new RegExp(`${name}\\s*(?:,[^{]*)?\\{[^}]*flex:\\s*1 1 100%`, "s").test(css), `${name} = 整行（flex: 1 1 100%）`)
+  }
+  assert.ok(/\.composer-input[^{]*\{[^}]*flex:\s*1\s*;/s.test(css), "输入框 `flex: 1`（撑满中区余宽）")
+  assert.ok(/\.composer-input[^{]*\{[^}]*min-width:\s*0/s.test(css), "输入框 `min-width: 0`（窄窗可缩 —— 不撑破栅格）")
+  assert.ok(/\.chat-copy-block::before[^{]*\{[^}]*content/s.test(css), "复制面字形住 CSS `content`（视图档零字形字面）")
+
+  const app = stripComments(readFileSync(join(root, "renderer/app.mjs"), "utf8"))
+  const railAt = app.indexOf("await refreshRail()")
+  const infoAt = app.indexOf("await settingsFace.refreshInfo()")
+  assert.ok(app.includes("const settingsFace = attachSettings("), "设置面句柄捕获在位（`openDir` 复读口来源）")
+  assert.ok(railAt >= 0 && infoAt > railAt, "#461 复读步在 `refreshRail()` 之后（**调用行形**锚定 —— 注释已剥 ∧ 只认 `await` 调用形）")
 })

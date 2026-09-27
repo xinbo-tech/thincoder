@@ -80,6 +80,10 @@ test("U68: 卡面两形与键位闭集（根锚 / 首行 / 三出口逐位 / 焦
     "逐项首行 = 工具名 + 参数摘要 + 状态词（复用位标词键 —— 零副本）",
   )
   assert.equal(one(card, "data-approval-head").tag, "div", "首行 = 纯展示行（非控件）")
+  const headSegs = (tree) => withAttr(one(tree, "data-approval-head"), "data-seg").map((node) => node.props["data-seg"])
+  assert.deepEqual(headSegs(card), ["name", "args", "status"], "逐项首行段码序 = name / args / status")
+  assert.equal(headSegs(card).length, one(card, "data-approval-head").children.length, "首行子节点**全为** `[data-seg]` 元素（裸串零入 flex 行）")
+  assert.deepEqual(headSegs(approvalTree(single({ argsSummary: undefined }))), ["name", "status"], "参摘缺 ⇒ 该段零节点（段数 = 在场段数）")
   assert.deepEqual(
     exitsOf(card).map((node) => node.props["data-action"]),
     ["approval:once", "approval:always", "approval:reject"],
@@ -95,6 +99,7 @@ test("U68: 卡面两形与键位闭集（根锚 / 首行 / 三出口逐位 / 焦
   assert.equal(wide.props["data-prompt-id"], "7", "非串 prompt-id ⇒ 串形（锚单形）")
   assert.equal(wide.props["data-shape"], "batch", "形锚 = batch")
   assert.deepEqual(texts(one(wide, "data-approval-head")), ["⟦batch:3⟧", "Bash", "Edit", "Read"], "批形首行 = 计数词 + 逐工具名（零状态词）")
+  assert.deepEqual(headSegs(wide), ["count", "name", "name", "name"], "批形首行段码 = count + 逐名 name（不定长段集）")
   assert.deepEqual(
     exitsOf(wide).map((node) => node.props["data-action"]),
     ["approval:approveAll", "approval:deny", "approval:oneByOne"],

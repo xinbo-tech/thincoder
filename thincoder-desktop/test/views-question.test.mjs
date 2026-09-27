@@ -320,6 +320,11 @@ test("U125 T-DSK24 ②: 计划卡（空列表零节点 · 三态逐行 · 表外
   assert.equal(tree.props["data-card"], "task", "卡根锚 = data-card=task")
   assert.deepEqual(codesOf(tree), ["pending", "in_progress", "done"], "逐行码面 = 原始码逐位同序")
   assert.deepEqual(texts(tree), ["第一步", sentinel("sub.queued"), "第二步", sentinel("sub.running"), "第三步", sentinel("sub.done")], "逐行 = 标题串原样 + 状态词（词面经 t()）")
+  // #460：事项行两段逐段包元素（裸文本子 ⇒ 行 `justify-content: space-between` 数学上不可达；缺席段零节点）
+  const rowSegs = (row) => nodes(row).filter((node) => node.props?.["data-seg"] !== undefined).map((node) => node.props["data-seg"])
+  assert.deepEqual(rowsOf(tree).map(rowSegs), [["title", "status"], ["title", "status"], ["title", "status"]], "行段码序 = title / status（逐行同形）")
+  assert.equal(rowsOf(tree).every((row) => rowSegs(row).length === row.children.length), true, "行子节点**全为** `[data-seg]` 元素")
+  assert.deepEqual(rowSegs(rowsOf(planTree([{ title: "x" }]))[0]), ["title"], "状态码缺 ⇒ 状态段零节点（段数 = 在场段数）")
   assert.deepEqual(texts(planTree([{ title: "x", status: "blocked" }])), ["x"], "表外码 ⇒ 零状态词节点（沿表外降级）")
   assert.deepEqual(codesOf(planTree([{ title: "x", status: "blocked" }])), ["blocked"], "表外码仍上属性（码面 ≠ 词面）")
   assert.deepEqual(codesOf(planTree([{ title: "x" }])), [undefined], "码缺 ⇒ 零属性（零假造）")

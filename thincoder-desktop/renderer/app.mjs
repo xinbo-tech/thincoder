@@ -55,7 +55,9 @@ const SHELL_KEYS = ["tabs", "activeTab", "sessions", "tabBadges", "sessionMeta",
 const CHAT_KEYS = ["activeSession", "blocks", "history", "following", "pendingNew", "locale", "pool", "project"] // 对话流帧触发切片（`locale` 在内：文案随词表 · `pool`：审批卡宿对话流 · `project`：引导码随 cwd——批 B 追加轮）
 const { paintPool, handlers: poolHandlers } = attachPool(host) // 池面一族（右栏重挂 + 两出口 —— 出档 `renderer/mount-pool.mjs`）
 const { paintCards } = attachCards(host) // 卡面一族（提问 / 计划 —— 挂载 + 作答 / 取消出口；出档 `renderer/mount-cards.mjs`）
-attachSettings(host, { onProjectOpened: openDir }) // 设置面 / 向导 / 信息行一族（自持订阅 —— 出档 `renderer/mount-settings.mjs`；目录出口复用项目面链）
+// 设置面 / 向导 / 信息行一族（自持订阅 —— 出档 `renderer/mount-settings.mjs`；目录出口复用项目面链）；
+// 句柄捕获 = 信息行复读口（#461 —— `openDir` 成功链消费 `refreshInfo`，零第二订阅点）。
+const settingsFace = attachSettings(host, { onProjectOpened: openDir })
 const { flushTurnTail } = attachComposer(host, { writeText }) // 输入区一族（挂载 + handlers + 回合尾 flush 句柄 —— 出档 `renderer/mount-composer.mjs`）
 const head = attachHead({ host, onRepaint: () => paintHead() }) // 会话头接线一族（候选面 + 写路 `session:prefs` —— 出档 `renderer/mount-head.mjs`）
 
@@ -116,12 +118,14 @@ function paintShell(state = store.get()) {
 }
 
 /** `project:open`（打开目录 / 点最近项）：`path` 给定时直用、缺省走主进程原生目录选择；成功后同链刷新 +
- *  「成功」判据命中 ⇒ **自动一次** `session:resume`（点开即续）。 */
+ *  「成功」判据命中 ⇒ **自动一次** `session:resume`（点开即续）；`refreshRail()` 之后补一步**信息行复读**
+ *  （#461 —— 项目级信息随项目变；句柄 = 设置面挂载档出 `refreshInfo`，幂等）。 */
 async function openDir(path) {
   try {
     const before = store.get().project?.cwd ?? null
     const receipt = await host.invoke("project:open", path ? { path } : undefined)
     await refreshRail()
+    await settingsFace.refreshInfo()
     if (opened(receipt, before, path)) await resumeOpened()
   } catch (error) {
     console.error("[renderer] project:open failed:", error)

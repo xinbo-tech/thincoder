@@ -73,8 +73,8 @@ function agentPatch(state) {
  * 设置族接线：挂载（两挂载面）+ 出口族（设置面十出口 / 向导六出口经 `mount-onboarding.mjs` 装配 / 信息行
  * 单入口）+ 供给面（四段读数）。
  * `host` = preload 窄桥（只 `invoke`）；`deps.onProjectOpened` = 装配面项目面链注入（缺 ⇒ 目录出口零动作）。
- * 返回 `{ paintSettings, paintInfo, handlers, wizardHandlers, keys, detach }`（消费面只 `attachSettings(host, …)`）。
- */
+ * 返回 `{ paintSettings, paintInfo, refreshInfo, handlers, wizardHandlers, keys, detach }`（消费面只 `attachSettings(host, …)`；
+ * `refreshInfo` 出句柄面 = 开项目成功链复读口（#461 —— `renderer/app.mjs` `openDir` 消费 · 幂等）。 */
 export function attachSettings(host, deps = {}) {
   const store = deps.store ?? defaultStore
   const onProjectOpened = typeof deps.onProjectOpened === "function" ? deps.onProjectOpened : null
@@ -422,5 +422,5 @@ export function attachSettings(host, deps = {}) {
   void loadProviders()
   void refreshInfo()
 
-  return { paintSettings, paintInfo, handlers, wizardHandlers, keys: SETTINGS_KEYS, detach }
+  return { paintSettings, paintInfo, refreshInfo, handlers, wizardHandlers, keys: SETTINGS_KEYS, detach }
 }

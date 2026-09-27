@@ -283,3 +283,18 @@ test("T-DSK29 占用读数：按 key 写切片 / 有效读数门（未至 · 非
   off()
   assert.equal(handlers.size, 0, "十路全退")
 })
+
+test("#459 游标清点两族（回合尾三径 / 段界 ev:tool-call ⇒ 零 `streaming` 真项 ∧ 新块对象；非活动键 / 无命中 ⇒ 块面零写）", () => {
+  const live = reduce(stateOf(), { channel: "ev:token", key: KEY, text: "he" })
+  assert.equal(live.blocks[0].streaming, true, "对照臂：活块带游标")
+  const tails = [[{ event: "done" }, "done"], [{ event: "stopped" }, "stopped"], [{ channel: "ev:error", message: "boom" }, "ev:error"]]
+  for (const [over, name] of tails) {
+    const after = reduce(live, { channel: "ev:activity", key: KEY, ...over })
+    assert.equal(after.blocks.some((block) => block.streaming === true), false, `回合尾 ${name} ⇒ 归约态零 streaming 真项`)
+    assert.notEqual(after.blocks[0], live.blocks[0], `回合尾 ${name} ⇒ 清点落块面引用（新块对象 ⇒ 帧触发摘锚）`)
+  }
+  const seg = reduce(live, { channel: "ev:tool-call", key: KEY, id: "t1", name: "read_file" }, 1000)
+  assert.deepEqual([seg.blocks[0].streaming, seg.blocks.at(-1).kind], [false, "tool"], "段界（`ev:tool-call` 入场）⇒ 前序助手段游标清 ∧ 工具块照落（两事不同块）")
+  const idle = stateOf({ blocks: [{ kind: "user", text: "x" }] })
+  assert.deepEqual([reduce(idle, { channel: "ev:activity", key: KEY, event: "done" }).blocks, reduce(live, { channel: "ev:activity", key: "9", event: "done" }).blocks], [idle.blocks, live.blocks], "无游标命中 ∥ 非活动键回合尾 ⇒ 块面引用不变（零写两臂）")
+})

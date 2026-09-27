@@ -11,7 +11,10 @@
  *   ④ 回合尾 flush = **逻辑在此档 · 触发在订阅接线面**（批档 §1.14 裁定「句柄 + 接线面」形）：
  *      `renderer/events-subscribe.mjs` 的回合尾窄口经 `renderer/app.mjs` 递本档 `flushTurnTail` 句柄
  *      ⇒ 本档零第二订阅点；出队序 = **先发后出队**（回执 `ok` 真才出队 —— `ok` 假 ∥ 抛 ⇒ 留队 + `console.error`）；
- *   ⑤ 失败径零静默：直发失败 ⇒ 文本保留 + `console.error`；中断出口 = **零乐观写**（不置任何位标）。
+ *   ⑤ 出泡（#458 · KD-23 · `docs/desktop/design/UI.md` §1 本批注项 2）：`msg:send` 回执 `ok` **真** ∧ 回执键 = 现刻
+ *      `activeSession` ⇒ 用户块入流（`{ kind: "user", text }`—— 与回放块同形 · 文本逐字 · 两径同源 = 直发 / 回合尾 flush）；
+ *      失败 ∥ 非活动键 ⇒ **零写**（零乐观态 ⇒ 无回滚语义）。失败径零静默：直发失败 ⇒ 文本保留 + `console.error`；
+ *      中断出口 = **零乐观写**（不置任何位标）。
  *   ⑥ 草稿 = 本档闭包局部量（**非 store 切片** —— 用户键入零重绘）；重绘按草稿复填（不丢字）、
  *      键入焦点与光标原位还原（回合内池面频变，重绘与键入并发）；
  *   ⑦ 附件面（批 B ⑧）：采集 / 条构树 / 移除 / 载荷投影住 `renderer/attach.mjs`，本档只持**暂存与接线**
@@ -27,7 +30,7 @@
 import { attachmentBar, collectImages, degradedCode, degradedNotice, toImages } from "./attach.mjs"
 import { build, clear } from "./dom.mjs"
 import { t } from "./i18n.mjs"
-import { dequeue, enqueue, QUEUE_MAX, store as defaultStore } from "./store.mjs"
+import { appendBlock, dequeue, enqueue, QUEUE_MAX, store as defaultStore } from "./store.mjs"
 import { lastAssistantText, lastCopyNode } from "./views/chat-copy.mjs"
 import { wire } from "./views/chat-tool.mjs"
 
@@ -172,11 +175,19 @@ async function ask(host, channel, payload) {
   }
 }
 
+/** 用户块写入（#458 · KD-23 单源）：回执 `ok` 真 ∧ 本键 = **现刻**活动会话 ⇒ 尾追 `{ kind: "user", text }`
+ *  （与 `blockOfMessage` 回放块**同形** —— 无 `id` / 无 `status`）；非活动键 ⇒ **零写**（`blocks` 引用不变）；
+ *  写入走**既有**纯动作 `appendBlock`（`renderer/store.mjs:73`）。回值 = 下一态（供调用面续接同一次 `store.set`）。 */
+function withUserBlock(state, key, text) {
+  if (state?.activeSession !== key) return state
+  return appendBlock(state, { kind: "user", text })
+}
+
 /** 提交判据（纯逻辑薄壳 · 注入面 = `{ store, host, onReceipt }` —— 平 node 可测；回值 = 出口语汇）：
  *  空白串 ⇒ `empty`（零动作 · 零 IPC）· 无活动会话 ⇒ `no-session`（零动作 —— 锚已 `disabled`，防御档）；
  *  忙态 ⇒ **入队**（满队 ⇒ `full` —— 不入队、文本保留 ∥ 受理 ⇒ `queued`；队条目形载不了附件 ⇒ 图形零动作）；
  *  闲态 ⇒ 直发（载荷 `{ key, text, images? }` —— 零附件 ⇒ **不落 `images` 键**（批 A 形不变）；回执 `ok` 真 ⇒ `sent`
- *  ∥ 假 ⇒ `kept` —— 文本保留；失败已由 `ask` 响亮）；`onReceipt` = 回执钩（降级面记录，随 `ask` 回递）。 */
+ *  ∧ **用户块入流**（`withUserBlock`）∥ 假 ⇒ `kept` —— 文本保留；失败已由 `ask` 响亮）；`onReceipt` = 回执钩（降级面记录，随 `ask` 回递）。 */
 export async function submitDraft({ store = defaultStore, host, onReceipt } = {}, text, images) {
   const value = typeof text === "string" ? text : ""
   if (value.trim() === "") return "empty"
@@ -193,12 +204,14 @@ export async function submitDraft({ store = defaultStore, host, onReceipt } = {}
   if (Array.isArray(images) && images.length > 0) payload.images = images
   const receipt = await ask(host, "msg:send", payload)
   if (typeof onReceipt === "function") onReceipt(receipt)
+  if (receipt.ok === true) store.set(withUserBlock(store.get(), key, value))
   return receipt.ok === true ? "sent" : "kept"
 }
 
 /** 回合尾 flush：队首一条经 `msg:send` 发出，**回执 `ok` 真才出队**（先发后出队 —— 失败 ⇒ 留队 + `console.error`，
  *  零静默丢条）；空队 ⇒ 零动作（零 IPC）。目标会话 = 现刻 `activeSession`（队列**不按会话分键** —— 条目形单源
- *  `{ title, status }` 无会话位）；无活动会话 ⇒ 留队 + `console.error`。回值 = 是否发出。
+ *  `{ title, status }` 无会话位）；无活动会话 ⇒ 留队 + `console.error`；**受理 ⇒ 用户块入流**（#458 键门内判 ——
+ *  非活动键零写）并出队（同一次 `set` —— 同帧零二次重绘）。回值 = 是否发出。
  *  **在飞卫兵**：同刻只许一次（交叠 ⇒ 本刻零动作 + 一行诊断 —— 余者待下一回合尾；防同条双发 / 连摘两条 ⇒ 保「一次一条」）。 */
 let flushInFlight = false
 export async function flushTurnTail({ store = defaultStore, host } = {}) {
@@ -217,7 +230,8 @@ export async function flushTurnTail({ store = defaultStore, host } = {}) {
     }
     const receipt = await ask(host, "msg:send", { key, text: head.title })
     if (receipt.ok !== true) return false
-    store.set(dequeue(store.get()))
+    // 受理 ⇒ 用户块入流（#458 键门内判 —— 非活动会话零写）+ 出队：同一次 `set`（同帧 —— 零二次重绘）
+    store.set(dequeue(withUserBlock(store.get(), key, head.title)))
     return true
   } finally {
     flushInFlight = false

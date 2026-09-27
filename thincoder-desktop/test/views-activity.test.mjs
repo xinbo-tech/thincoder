@@ -120,6 +120,13 @@ test("U72: 池面三族与三态（none 零节点 / empty 提示 / 族序固定 
   assert.deepEqual(texts(mutedItems[0]), ["Edit"], "表外码 ⇒ 零状态词（不自造词）")
   assert.equal(mutedItems[1].props["data-status"], undefined, "非串状态 ⇒ 零 data-status")
   assert.deepEqual(texts(mutedItems[1]), ["待跑任务"], "非串状态 ⇒ 零状态词")
+  // #460：标签行两段**逐段包元素**（`span[data-seg]` —— 裸串直作 flex 行子 ⇒ `gap` 静默失效；缺席段零节点）
+  const labelOf = (item) => item.children[0]
+  const labelSegs = (item) => withAttr(labelOf(item), "data-seg").map((node) => node.props["data-seg"])
+  assert.deepEqual(labelSegs(card[0]), ["title", "status"], "待审批标签行段码序 = title / status")
+  assert.deepEqual(labelSegs(card[1]), ["title", "status"], "活动块条目同段集（三种条目同形）")
+  assert.equal(withAttr(labelOf(card[2]), "data-seg").length, labelOf(card[2]).children.length, "标签行子节点**全为** `[data-seg]` 元素（裸串零入 flex 行）")
+  assert.deepEqual(labelSegs(mutedItems[0]), ["title"], "表外状态码 ⇒ 状态段零节点（段数 = 在场段数 —— 假间隔不落）")
   assert.equal(withAttr(poolTree(poolModel(state({ pool: { approvals: [approvalItem({ shape: "weird" })] } }))), "data-approval-actions").length, 0, "表外形 ⇒ 零操作区（账目仍在）")
   assert.equal(withAttr(poolTree(poolModel(state({ pool: { approvals: [approvalItem({ shape: "weird", promptId: 9 })] } }))), "data-prompt-id")[0].props["data-prompt-id"], "9", "表外形 ⇒ 身份锚仍在（不掩盖事实）")
 

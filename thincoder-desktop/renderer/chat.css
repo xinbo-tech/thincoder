@@ -1,4 +1,4 @@
-/* chat.css — 对话流面（`docs/desktop/design/UI.md` §1 对话流行 / 工具卡行 · `docs/desktop/design/RENDERER.md` §2 / §3）。
+/* chat.css — 对话流面 + 输入区面（`docs/desktop/design/UI.md` §1 对话流行 / 工具卡行 / 输入区行 · `docs/desktop/design/RENDERER.md` §2 / §3）。
    滚动容器 = `.flow` 宿主自身（骨架 `styles.css:86` 已给 flex / 溢出 / 内边距——本档只补 `overflow-anchor: none`：
    补偿**单权源**（RENDERER.md §3）——头侧变更的视口锚定只由 `compensateTop` 显式承担，免浏览器自动锚定叠算。
    字形面 = 改动增删符号 / 流式游标（`content` —— **视图档零字形字面**，与标签条 / 关闭控件同纪律 KD-f）；
@@ -252,3 +252,47 @@
   background: var(--bg);
   cursor: pointer;
 }
+
+/* 输入区（#457 · 本批修 —— `docs/desktop/design/UI.md` §1 本批注项 1）：根 = 单行 flex（wrap · gap · 顶边线）；
+   输入框撑满中区余宽且可缩（`flex: 1` + `min-width: 0`）；三控件同一控件单形（沿 `.question-input` /
+   `.chat-backfill` / `.approval-action` 家族）；字形面 = 两复制控件 `content`（视图档零字形字面）；
+   提示行 / 附件条 = 整行（附件条**内部**尺寸仍 open —— UI.md §1 open 行）。 */
+.composer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--line);
+}
+.composer-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 2.25rem;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: inherit;
+  font: inherit;
+  resize: vertical;
+}
+/* 三控件单形（`.composer-interrupt` / `.chat-copy-block` / `.chat-copy-last`）；两复制控件零文本子 ⇒ 字形 = `content`。 */
+.composer-interrupt,
+.chat-copy-block,
+.chat-copy-last {
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.chat-copy-block::before, .chat-copy-last::before { content: "⧉"; }
+.composer-interrupt:not(:disabled):hover,
+.chat-copy-block:not(:disabled):hover,
+.chat-copy-last:not(:disabled):hover {
+  background: var(--bg);
+  cursor: pointer;
+}
+.composer-notice, .composer-attachments { flex: 1 1 100%; }

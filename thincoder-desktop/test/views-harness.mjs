@@ -5,7 +5,7 @@
  * （`stateOf`）；④ 假 DOM 三片补缝（`installSeam` —— 槽面选择器 / `closest("form")` / `value` 读写）；⑤ 提交端
  * `FormData` 替身（`FormDataStub`）；⑥ 窄桥替身（`bridge` —— 回执可编程 + 调用录）；⑦ 设置面供给夹
  * （`supplyFace` —— 两写回执可翻）；⑧ 挂载夹具（`mountFace` —— 假面自检 + 两槽 + 初态补丁 + 独立 store
- * + 可选装配面 `deps` 注入 ⇒ 接线）；⑨ `clickOn`。
+ * + 可选装配面 `deps` 注入 ⇒ 接线，回值含 `handle` = `attachSettings` 句柄面）；⑨ `clickOn`。
  * 消费面：`thincoder-desktop/test/views-settings.test.mjs`（T-DSK7 / T-DSK8 / T-DSK10 视图面）·
  * `thincoder-desktop/test/views-onboarding.test.mjs`（T-DSK13 视图面）。
  */
@@ -139,7 +139,8 @@ export function supplyFace() {
 }
 
 /** 挂载夹具：假面自检 + 两槽 + 桩替身 + 独立 store ⇒ 接线（`over` = 初态补丁 —— 闸 / 占槽面消费；
- *  `deps` = 装配面注入 —— 例 `onProjectOpened`（步 3 目录出口正路）；每例自装环境（`ctx.after` 逐次复原 · 例内不复用面））。 */
+ *  `deps` = 装配面注入 —— 例 `onProjectOpened`（步 3 目录出口正路）；每例自装环境（`ctx.after` 逐次复原 · 例内不复用面）。
+ *  `handle` = `attachSettings` 回值（消费面拿到的接线句柄面 —— 例 `refreshInfo` 复读口）。 */
 export async function mountFace(ctx, answer = supplyFace().answer, over = { open: true }, deps = {}) {
   assert.equal(selfCheck(), true, "假 DOM 载体自检（选择器闭集 / 锚缺抛 / 写计三档）")
   const fake = installFakeDom()
@@ -153,9 +154,9 @@ export async function mountFace(ctx, answer = supplyFace().answer, over = { open
   const store = createStore(stateOf(over))
   const root = seam.slot(slotOf(SETTINGS_SLOT), "section")
   const info = seam.slot(slotOf(INFO_SLOT), "aside")
-  attachSettings(host, { store, ...deps })
+  const handle = attachSettings(host, { store, ...deps })
   await new Promise((resolve) => setImmediate(resolve))
-  return { fake, host, store, root, info }
+  return { fake, host, store, root, info, handle }
 }
 
 export const clickOn = (fake, node) => assert.equal(fake.fire(node, "click", { currentTarget: node }), 1, "出口控件真注册")
