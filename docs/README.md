@@ -13,7 +13,7 @@
 | 台账（项目级唯一真相） | SQLite——用户数据目录键控库 `~/.thincoder/ledger/<sha1(项目根)>.db`（2026-09-17 落点裁定：不在项目目录） | ✅ 唯一台账面 = SQLite（`/ledger` 查询）；`TODO.md` · `TODO-archive.md` = 退役历史（md 形态，无机械校验） |
 | 板块档（需求 / 设计） | `core/requirements/` · `core/design/` | ✅ 核心统一已迁入（2026-09-13）；后续新板块档直接落此。**子系统档（设计 / 需求各 15 档）见 §4** |
 | 批次档 | `batches/` | ✅ 核心统一已迁入（2026-09-13） |
-| 部分档（各端面） | `cli/requirements/` · `cli/design/` · `vsc/requirements/` · `vsc/design/` · `desktop/requirements/` · `desktop/design/` | ✅ **四部分**落点齐（`core/` · `cli/` · `vsc/` · `desktop/`）——**32 档**（`cli/` 14 = design 9 + requirements 5 · `vsc/` 11 = design 8 + requirements 3 · `desktop/` 7 = design 6 + requirements 1；2026-09-15 建 · desktop 部分 2026-09-25 随桌面端立项建 · 实盘对账 as-of 2026-09-25）；desktop 设计**六档** = `PROJECT.md`（产品面总览）/ `SHELL.md` / `IPC.md` / `UI.md` / `RENDERER.md` / `E2E-TESTING.md`（E2E 测试基建 · 2026-09-26 增）（按板块拆分 · 非迁移档） |
+| 部分档（各端面） | `cli/requirements/` · `cli/design/` · `vsc/requirements/` · `vsc/design/` · `desktop/requirements/` · `desktop/design/` · `render-core/design/` | ✅ **五部分**落点齐（`core/` · `cli/` · `vsc/` · `desktop/` · `render-core/`）——**33 档**（`cli/` 14 = design 9 + requirements 5 · `vsc/` 11 = design 8 + requirements 3 · `desktop/` 7 = design 6 + requirements 1 · `render-core/` 1 = design 1；2026-09-15 建 · desktop 部分 2026-09-25 随桌面端立项建 · render-core 部分 2026-09-27 随渲染核立项建（模块镜像裁定）；实盘对账 as-of 2026-09-27）；desktop 设计**六档** = `PROJECT.md`（产品面总览）/ `SHELL.md` / `IPC.md` / `UI.md` / `RENDERER.md` / `E2E-TESTING.md`（E2E 测试基建 · 2026-09-26 增）（按板块拆分 · 非迁移档）；render-core 设计**一档** = `RENDER-CORE.md`（共享渲染核面单源 · 2026-09-27 落） |
 
 ## 2. 迁移政策（2026-09-13 用户裁定——「逐步建立 · 旧档留参照 · 不一刀切」；2026-09-14 层级裁定——根仓 `docs/` = 基准层，产品 `docs/**` = 迁移期保留的参照历史）
 
@@ -22,7 +22,7 @@
 3. **不复制**——同一档同一时间只有一份实体（迁移是**移动**不是拷贝），避免双权威源。
 4. **产品级档留各产品树**；**哪些旧档属项目级随触碰逐个判定**（判定依据：是否跨两产品被引用）。
 5. 迁移动作的验收 = 仓根机检（`node scripts/doc-check.mjs`——单引擎：锚 + 行宽）exit 0，且**零悬空锚**。
-6. **四部分落点规划**（core / CLI / VSC / desktop）——目标结构 / 命名规则 / 归属判据 / 交叉引用形态 = `core/design/DOC-SYSTEM.md`（2026-09-14 建档；2026-09-25 桌面端设计批收正为四部分）；
+6. **五部分落点规划**（core / CLI / VSC / desktop / render-core）——目标结构 / 命名规则 / 归属判据 / 交叉引用形态 = `core/design/DOC-SYSTEM.md`（2026-09-14 建档；2026-09-25 桌面端设计批收正为四部分；2026-09-27 布局收正轮收正为五部分——模块镜像裁定）；
    本节政策（逐档随批迁 / 不复制 / 旧档留参照）不变，迁入时的**落点与档名**按该档 §4–§6 判定。
 
 > **退役状态（2026-09-18 · v1 文档退役批（台账 #22）· 轮 A 已落）**：`thincoder-vscode/docs/**` 136 活档已 `git mv` 入 `thincoder-vscode/docs/_archive/<原相对路径>`（恒等映射 · 正文一字未改）——VSC 树自本政策第 4 / 5 条的「随批迁」路径转为**归档形退役**（保留语义不变；执行记录 = `docs/batches/2026-09-18-v1-retire.md` §5）；
@@ -60,7 +60,7 @@
 | 工作区约定（技能 / 规则 / 同伴 / 台账） | `WORKSPACE.md` | #71–#73 · #170–#174 | 8 |
 | **合计** | —— | —— | **181**（另 4 行 = 端特有桶 #180–#183，住工作流档 §2.5） |
 
-**其它板块（非核心统一拆分）**：`core/design/DOC-SYSTEM.md` + `core/requirements/DOC-SYSTEM.md`——文档体系（`docs/` 的 core / CLI / VSC / desktop 四部分落点规划）；2026-09-14 建档，**只做规划、不执行迁移**。
+**其它板块（非核心统一拆分）**：`core/design/DOC-SYSTEM.md` + `core/requirements/DOC-SYSTEM.md`——文档体系（`docs/` 的 core / CLI / VSC / desktop / render-core 五部分落点规划）；2026-09-14 建档，**只做规划、不执行迁移**。
 
 **迁移批迁入档（2026-09-15——非核心统一拆分）**：按 §2 政策「逐档随批迁」自产品树迁入（B 式重建——源档留原地作参照历史），落点按 `core/design/DOC-SYSTEM.md` §5.1 判据（P1 统一面 ⇒ `core/` · P2 产品面 ⇒ `cli/` ∥ `vsc/`）：
 - `core/design/` **5 档**：`ARCHITECTURE.md` · `PORTABILITY.md` · `STRUCTURE-DEBT.md` · `TWO-REPO-MERGE.md` · `DOC-MIGRATION.md`（迁移台账——承 `core/design/DOC-SYSTEM.md` §11 拆分规划）；
@@ -88,9 +88,12 @@
 - CLI 产品地图 = `thincoder-cli/docs/README.md`（**CLI 产品**的文档入口）——它此前登记了项目级板块（历史原因：合并前无项目级层）；板块迁入本层后，其登记行**撤除**（该板块不再属 CLI 产品树——本层为唯一登记处）。
 - VSC 产品地图 = `thincoder-vscode/docs/README.md`（VSC 产品入口）。
 - 本层**不进**两产品的文档域扫描；本层自带机检覆盖（`node scripts/doc-check.mjs`，扫描域 = `docs`）；台账核销面 = `/ledger`（`thincoder-core/ledger.mjs`）。
-- **四部分不各设地图**——本 README = 四部分（`core/` · `cli/` · `vsc/` · `desktop/`）的唯一地图（目标结构 `core/design/DOC-SYSTEM.md` §4）；`cli/` · `vsc/` 两产品面档所对应的产品树旧档（`thincoder-cli/docs/**` · `thincoder-vscode/docs/**`）= 迁移期参照历史（§2 政策——保留 ≠ 维护）。
+- **五部分不各设地图**——本 README = 五部分（`core/` · `cli/` · `vsc/` · `desktop/` · `render-core/`）的唯一地图（目标结构 `core/design/DOC-SYSTEM.md` §4）；`cli/` · `vsc/` 两产品面档所对应的产品树旧档（`thincoder-cli/docs/**` · `thincoder-vscode/docs/**`）= 迁移期参照历史（§2 政策——保留 ≠ 维护）。
 
 ## 变更记录
+
+- 2026-09-27（**对齐重定位批 · 文档布局收正轮 · eng-designer——用户 2026-09-27 裁定「目录要分开」**）：地图补第五部分——§1 部分档行改「五部分」（落点补 `render-core/design/`；档数 32 → **33** = cli 14 + vsc 11 + desktop 7 + render-core 1）· §2 第 6 条 → 五部分 ·
+  §4「其它板块」行同收正 · §5「四部分不各设地图」→ 五部分；`RENDER-CORE.md` 由 `docs/core/design/` 迁 `docs/render-core/design/`（模块镜像——先例 = desktop 2026-09-25）；联动 = `core/design/DOC-SYSTEM.md` 同轮五部分收正。
 
 - 2026-09-26（**桌面端 E2E 基建批 · 主 agent——地图笔**）：desktop 设计 5 → **6**（增 `E2E-TESTING.md`——E2E 测试基建单源：真 Electron 直驱 + 固定落点截图 + 九步断言）；desktop 部分 6 → **7**；全档总数 31 → **32**（实盘对账 as-of 2026-09-26 = 档在盘 · 计数与 §1 表同改）。
 
