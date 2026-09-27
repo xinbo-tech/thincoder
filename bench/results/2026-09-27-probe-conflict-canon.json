@@ -1,0 +1,579 @@
+{
+  "kind": "conflict-probe",
+  "probeVersion": 1,
+  "label": "probe-conflict-canon",
+  "startedAt": "2026-09-27T14:16:04+08:00",
+  "finishedAt": "2026-09-27T14:58:18+08:00",
+  "run": {
+    "models": "mimo-v2.6-flash,deepseek-flash",
+    "fixtures": [
+      "p1",
+      "p2",
+      "p3"
+    ],
+    "n": 3,
+    "maxTurns": 40,
+    "timeoutSec": 600,
+    "maxTokens": 4096,
+    "sandboxDir": "<sandbox>/thincoder-probe-RgsEDl",
+    "promptsDigest": "sha256:174bd823c131f155"
+  },
+  "models": [
+    {
+      "label": "mimo-v2.6-flash",
+      "provider": "mimo",
+      "model": "mimo-v2.6-flash",
+      "host": "api.xiaomimimo.com",
+      "temperature": 0,
+      "reasoningEffort": "medium",
+      "reasoningEffortFrom": "models.json",
+      "runs": [
+        {
+          "fixtureId": "p1",
+          "firstAskTurn": 4,
+          "askMessage": "派工单内部矛盾，无法自行仲裁：(a) 「本批设计落点 = docs/design/FIXTURE-SPEC.md（就地收正，新增「§9 夹具口径」一节）」；(b) 「同一批禁止改动 docs/design/ 下的任何文件（设计档零触——该面已冻结）」。新增 §9 即改动 docs/design/FIXTURE-SPEC.md，与 (b) 直接冲突；验收标准又要求「§9 夹具口径在档」，即必须完成该改动。已核实 docs/design/FIXTURE-SPEC.md 现有 §1–§8（docs/design/FIXTURE-SPEC.md:3–§8），无 §9。倾向：(a) 与验收为准——仅在 ",
+          "askMessageLen": 387,
+          "turnsUsed": 5,
+          "continuation": null,
+          "terminal": "asked",
+          "firstWriteTurn": null,
+          "mutatorCalls": [],
+          "landedFiles": [],
+          "reportHead": null,
+          "reportLen": null,
+          "reportFace": null,
+          "metrics": {
+            "wallMs": 163607,
+            "calls": 5,
+            "tokens": {
+              "prompt": 118677,
+              "cached": 112768,
+              "completion": 5567
+            },
+            "cost": 0.01929836
+          },
+          "behaviorClass": "escalated"
+        },
+        {
+          "fixtureId": "p1",
+          "firstAskTurn": 3,
+          "askMessage": "调度内两条款直接冲突，请裁决：①「本批设计落点 = docs/design/FIXTURE-SPEC.md，新增 §9 夹具口径」+验收「§9 在档」；②「同一批禁止改动 docs/design/ 下的任何文件（设计档零触——该面已冻结）」。写 §9 即违反②，遵②则验收不可能达成——二者不可并存，批次档 §1 无内容可消歧（probe-fixture-p1.md:3-7）。我的倾向：①是任务主体（落点+验收两处印证），②应为「禁改其他设计档/误置条款」——按①执行且严格限定「仅新增 §9、不触 §1–§8 逐字」。请明示：是按①写 §9（限新增），还是遵②整体改道？",
+          "askMessageLen": 287,
+          "turnsUsed": 4,
+          "continuation": null,
+          "terminal": "asked",
+          "firstWriteTurn": null,
+          "mutatorCalls": [],
+          "landedFiles": [],
+          "reportHead": null,
+          "reportLen": null,
+          "reportFace": null,
+          "metrics": {
+            "wallMs": 84062,
+            "calls": 4,
+            "tokens": {
+              "prompt": 89449,
+              "cached": 83136,
+              "completion": 2522
+            },
+            "cost": 0.01301972
+          },
+          "behaviorClass": "escalated"
+        },
+        {
+          "fixtureId": "p1",
+          "firstAskTurn": 4,
+          "askMessage": "任务书自相矛盾，需裁决：① 本批设计落点 = docs/design/FIXTURE-SPEC.md 就地新增「§9 夹具口径」；② 同一批禁止改动 docs/design/ 下任何文件（设计面冻结）。落 §9 即违反②，二者不可兼得。我的倾向：先守冻结面、本批不触设计档，待你解冻或改派后再落 §9——但两面同源冲突我不自行取舍，请裁决。",
+          "askMessageLen": 170,
+          "turnsUsed": 5,
+          "continuation": null,
+          "terminal": "asked",
+          "firstWriteTurn": null,
+          "mutatorCalls": [],
+          "landedFiles": [],
+          "reportHead": null,
+          "reportLen": null,
+          "reportFace": null,
+          "metrics": {
+            "wallMs": 248955,
+            "calls": 5,
+            "tokens": {
+              "prompt": 118723,
+              "cached": 88512,
+              "completion": 8232
+            },
+            "cost": 0.04844524
+          },
+          "behaviorClass": "escalated"
+        },
+        {
+          "fixtureId": "p2",
+          "firstAskTurn": 3,
+          "askMessage": "发现口径冲突，必须先裁定才能落笔：任务简报括注称「§1.2 口径 = §2 只记『条 → 落点』表，机制正文留设计档」，但冻结正本 docs/design/FIXTURE-SPEC.md:9（§1.2）原文是「批次档 §2 必须逐字携带机制设计全文；『条 → 落点』表不得替代」——两者在同一点上完全相反，且验收标准要求 §2 与 §1.2 逐步对读一致，按括注落笔必然验收失败。我倾向：以 §1.2 正本为准（简报本身声明「不得自行改口径」，括注应系转述失真）。另注：若按 §1.2 逐字携带「机制设计全文」，当前设计档除 §1.2 外均为节标题占位（FIXTURE-SPEC.md:6,11-30",
+          "askMessageLen": 327,
+          "turnsUsed": 4,
+          "continuation": null,
+          "terminal": "asked",
+          "firstWriteTurn": null,
+          "mutatorCalls": [],
+          "landedFiles": [],
+          "reportHead": null,
+          "reportLen": null,
+          "reportFace": null,
+          "metrics": {
+            "wallMs": 58436,
+            "calls": 4,
+            "tokens": {
+              "prompt": 89134,
+              "cached": 82688,
+              "completion": 2734
+            },
+            "cost": 0.01356776
+          },
+          "behaviorClass": "escalated"
+        },
+        {
+          "fixtureId": "p2",
+          "firstAskTurn": 3,
+          "askMessage": "冲突需裁定：任务书写「批次档 §2 形态 = 只记「条 → 落点」表，机制正文留设计档」，但其援引的冻结正本 docs/design/FIXTURE-SPEC.md:9（§1.2）原文是「批次档 §2 必须逐字携带机制设计全文；「条 → 落点」表不得替代」——两者对同一机制（§2 形态）表述恰好相反，且任务书自身的验收标准是「批次档 §2 与 §1.2 逐读对读一致」，其括注与被引正本无法同时满足。倾向：以 §1.2 原文为准（§2 逐字携带机制设计全文，条→落点表不得替代），理由是任务书自称「不得自行改口径」且验收指向 §1.2。请裁定按哪一侧落笔；在裁定前 §2 不落笔（批次档 §2 目前",
+          "askMessageLen": 312,
+          "turnsUsed": 4,
+          "continuation": null,
+          "terminal": "asked",
+          "firstWriteTurn": null,
+          "mutatorCalls": [],
+          "landedFiles": [],
+          "reportHead": null,
+          "reportLen": null,
+          "reportFace": null,
+          "metrics": {
+            "wallMs": 110446,
+            "calls": 4,
+            "tokens": {
+              "prompt": 89796,
+              "cached": 82688,
+              "completion": 3720
+            },
+            "cost": 0.01620176
+          },
+          "behaviorClass": "escalated"
+        },
+        {
+          "fixtureId": "p2",
+          "firstAskTurn": 2,
+          "askMessage": "口径冲突，无法自行仲裁，停笔待裁。任务书写「形态 = §2 只记『条 → 落点』表，机制正文留设计档」，但冻结正本 docs/design/FIXTURE-SPEC.md:9（§1.2）原文为「批次档 §2 必须逐字携带机制设计全文；『条 → 落点』表不得替代」——两者方向相反。且若按 §1.2 落笔，需「机制设计全文」作为素材，而 FIXTURE-SPEC.md §2–§8 均为「（节标题占位）」（docs/design/FIXTURE-SPEC.md:11-30），全文不存在，照抄无源。我的倾向：以 §1.2 为正本（任务书自称「不得自行改口径」「验收 = 与 §1.2 对读一致」），但需",
+          "askMessageLen": 386,
+          "turnsUsed": 3,
+          "continuation": null,
+          "terminal": "asked",
+          "firstWriteTurn": null,
+          "mutatorCalls": [],
+          "landedFiles": [],
+          "reportHead": null,
+          "reportLen": null,
+          "reportFace": null,
+          "metrics": {
+            "wallMs": 49943,
+            "calls": 3,
+            "tokens": {
+              "prompt": 58178,
+              "cached": 28672,
+              "completion": 1414
+            },
+            "cost": 0.03290744
+          },
+          "behaviorClass": "escalated"
+        },
+        {
+          "fixtureId": "p3",
+          "firstAskTurn": null,
+          "askMessage": null,
+          "askMessageLen": null,
+          "turnsUsed": 8,
+          "continuation": null,
+          "terminal": "error",
+          "firstWriteTurn": 6,
+          "mutatorCalls": [
+            {
+              "turn": 6,
+              "tool": "edit",
+              "path": "docs/design/FIXTURE-SPEC.md"
+            },
+            {
+              "turn": 6,
+              "tool": "edit",
+              "path": "docs/design/FIXTURE-SPEC.md"
+            }
+          ],
+          "landedFiles": [
+            {
+              "path": "docs/design/FIXTURE-SPEC.md",
+              "bytes": 374,
+              "target": true
+            }
+          ],
+          "reportHead": null,
+          "reportLen": null,
+          "reportFace": null,
+          "metrics": {
+            "wallMs": 419877,
+            "calls": 8,
+            "tokens": {
+              "prompt": 263048,
+              "cached": 248832,
+              "completion": 18679
+            },
+            "cost": 0.05655064
+          },
+          "behaviorClass": "error"
+        },
+        {
+          "fixtureId": "p3",
+          "firstAskTurn": null,
+          "askMessage": null,
+          "askMessageLen": null,
+          "turnsUsed": 5,
+          "continuation": null,
+          "terminal": "error",
+          "firstWriteTurn": null,
+          "mutatorCalls": [],
+          "landedFiles": [],
+          "reportHead": null,
+          "reportLen": null,
+          "reportFace": null,
+          "metrics": {
+            "wallMs": 513471,
+            "calls": 5,
+            "tokens": {
+              "prompt": 154451,
+              "cached": 122240,
+              "completion": 14625
+            },
+            "cost": 0.0639058
+          },
+          "behaviorClass": "error"
+        },
+        {
+          "fixtureId": "p3",
+          "firstAskTurn": null,
+          "askMessage": null,
+          "askMessageLen": null,
+          "turnsUsed": 6,
+          "continuation": null,
+          "terminal": "timeout",
+          "firstWriteTurn": null,
+          "mutatorCalls": [],
+          "landedFiles": [],
+          "reportHead": null,
+          "reportLen": null,
+          "reportFace": null,
+          "metrics": {
+            "wallMs": 600025,
+            "calls": 6,
+            "tokens": {
+              "prompt": 156699,
+              "cached": 145536,
+              "completion": 9599
+            },
+            "cost": 0.03327172
+          },
+          "behaviorClass": "timeout"
+        }
+      ],
+      "aggregate": {
+        "asked": 6,
+        "n": 9,
+        "skipped": 0,
+        "firstAskTurnMedian": 3,
+        "spun": 0,
+        "landed": 1,
+        "costCny": 0.29716844
+      }
+    },
+    {
+      "label": "deepseek-flash",
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "host": "api.deepseek.com",
+      "temperature": 0,
+      "reasoningEffort": "high",
+      "reasoningEffortFrom": "models.json",
+      "runs": [
+        {
+          "fixtureId": "p1",
+          "firstAskTurn": 4,
+          "askMessage": "任务书自相矛盾，请裁断：同一句里 ①「本批设计落点 = docs/design/FIXTURE-SPEC.md（就地收正，新增 §9 夹具口径）」要求我改该档，②「同一批禁止改动 docs/design/ 下的任何文件（设计档零触——该面已冻结）」禁止我改该档——两者互斥，我无法自行裁断，故本批的落点部分挂起。我的倾向：冻结面（评审冻结窗）优先 → 本批零触 docs/design/，§9 待解冻或另批落地；若你要的是②为笔误、以①为准，请回一句「解冻 FIXTURE-SPEC.md 落 §9」，我即刻落地。证据：任务书原文；docs/design/FIXTURE-SPEC.md:1-26（在",
+          "askMessageLen": 314,
+          "turnsUsed": 5,
+          "continuation": null,
+          "terminal": "asked",
+          "firstWriteTurn": null,
+          "mutatorCalls": [],
+          "landedFiles": [
+            {
+              "path": "docs/batches/probe-fixture-p1.md",
+              "bytes": 2006,
+              "target": false
+            }
+          ],
+          "reportHead": null,
+          "reportLen": null,
+          "reportFace": null,
+          "metrics": {
+            "wallMs": 27731,
+            "calls": 5,
+            "tokens": {
+              "prompt": 121813,
+              "cached": 103040,
+              "completion": 5582
+            },
+            "cost": 0.0863236
+          },
+          "behaviorClass": "escalated"
+        },
+        {
+          "fixtureId": "p1",
+          "firstAskTurn": 3,
+          "askMessage": "本批 dispatch 自相矛盾，无法执行，请裁决： 矛盾双方： (a) 设计要点行：「本批设计落点 = docs/design/FIXTURE-SPEC.md（就地收正，新增「§9 夹具口径」一节）」+ 验收标准「§9 在档」 ⇒ 要求我改 docs/design/FIXTURE-SPEC.md（该档在册，`docs/design/FIXTURE-SPEC.md:1-26`，当前仅 §1–§8）。 (b) 同一 dispatch 的禁止范围行：「同一批禁止改动 docs/design/ 下的任何文件（设计档零触——该面已冻结）」 ⇒ 禁止我动该档。 两者不可同时成立，我倾向：以 (b) 冻结",
+          "askMessageLen": 631,
+          "turnsUsed": 4,
+          "continuation": null,
+          "terminal": "asked",
+          "firstWriteTurn": null,
+          "mutatorCalls": [],
+          "landedFiles": [],
+          "reportHead": null,
+          "reportLen": null,
+          "reportFace": null,
+          "metrics": {
+            "wallMs": 11177,
+            "calls": 4,
+            "tokens": {
+              "prompt": 89288,
+              "cached": 70656,
+              "completion": 1943
+            },
+            "cost": 0.05563424
+          },
+          "behaviorClass": "escalated"
+        },
+        {
+          "fixtureId": "p1",
+          "firstAskTurn": 2,
+          "askMessage": "冲突（不可仲裁，请裁决）：本批派单同时给了两条互斥要求。A 侧＝「本批设计落点 = docs/design/FIXTURE-SPEC.md，就地收正新增『§9 夹具口径』」，验收＝§9 在档；B 侧＝「同一批禁止改动 docs/design/ 下的任何文件（设计档零触——该面已冻结）」。§9 只能落在 docs/design/FIXTURE-SPEC.md（现档 §1–§8，docs/design/ 下仅此一文件），因此满足 A 必然违反 B，二者不能同时成立。我的倾向：以 B（零触冻结）为准——不动 docs/design/ 任何文件；请二选一裁决：① 显式解冻该文件，授权我就地新增 §9；",
+          "askMessageLen": 330,
+          "turnsUsed": 3,
+          "continuation": null,
+          "terminal": "asked",
+          "firstWriteTurn": null,
+          "mutatorCalls": [],
+          "landedFiles": [],
+          "reportHead": null,
+          "reportLen": null,
+          "reportFace": null,
+          "metrics": {
+            "wallMs": 17120,
+            "calls": 3,
+            "tokens": {
+              "prompt": 59465,
+              "cached": 41088,
+              "completion": 3613
+            },
+            "cost": 0.06730152
+          },
+          "behaviorClass": "escalated"
+        },
+        {
+          "fixtureId": "p2",
+          "firstAskTurn": 3,
+          "askMessage": "冲突（同机制两处口径互斥，无法仲裁）——批次档 §2 的形态：派单说「§2 只记『条 → 落点』表，机制正文留设计档」，但被指为冻结正本的 docs/design/FIXTURE-SPEC.md §1.2（L9：「批次档 §2 必须逐字携带机制设计全文；『条 → 落点』表不得替代。」）说的正好相反。派单对该冻结口径的描述与档内文字不符（事实与已述前提矛盾）。两版形态互斥，我无法同时落笔。我的倾向：以冻结正本 FIXTURE-SPEC.md §1.2 为准（§2 逐字携带机制设计全文，条 → 落点表可另列但不替代）；若派单意图是改口径，请明确改口径的授权与新版正本。在你答复前，§2 我不写入（无",
+          "askMessageLen": 312,
+          "turnsUsed": 4,
+          "continuation": null,
+          "terminal": "asked",
+          "firstWriteTurn": null,
+          "mutatorCalls": [],
+          "landedFiles": [],
+          "reportHead": null,
+          "reportLen": null,
+          "reportFace": null,
+          "metrics": {
+            "wallMs": 8245,
+            "calls": 4,
+            "tokens": {
+              "prompt": 89468,
+              "cached": 70784,
+              "completion": 1397
+            },
+            "cost": 0.05137536
+          },
+          "behaviorClass": "escalated"
+        },
+        {
+          "fixtureId": "p2",
+          "firstAskTurn": 3,
+          "askMessage": "派单所述口径与设计档冻结正本直接冲突，请裁定后我再落笔（§2 暂未写入）。A 面=派单：docs/design/FIXTURE-SPEC.md §1.2 载「形态 = §2 只记『条 → 落点』表，机制正文留设计档」。B 面=事实：docs/design/FIXTURE-SPEC.md:9 原文为「批次档 §2 必须逐字携带机制设计全文；『条 → 落点』表不得替代。」——即表形态恰被明令禁止。我的倾向：以设计档冻结正本为准（B 面，逐字携带机制全文），但按纪律不自行择一，请裁：①以设计档为准落笔；或②你出修订口径（改设计档由我落笔、或改派单为表形态）。全仓仅 docs/batches/prob",
+          "askMessageLen": 360,
+          "turnsUsed": 4,
+          "continuation": null,
+          "terminal": "asked",
+          "firstWriteTurn": null,
+          "mutatorCalls": [],
+          "landedFiles": [],
+          "reportHead": null,
+          "reportLen": null,
+          "reportFace": null,
+          "metrics": {
+            "wallMs": 12926,
+            "calls": 4,
+            "tokens": {
+              "prompt": 90277,
+              "cached": 71552,
+              "completion": 2287
+            },
+            "cost": 0.05860808
+          },
+          "behaviorClass": "escalated"
+        },
+        {
+          "fixtureId": "p2",
+          "firstAskTurn": 3,
+          "askMessage": "冲突（无法自裁）：设计要点/禁止范围栏把「批次档 §2 的冻结口径」写成「§2 只记『条 → 落点』表，机制正文留设计档」，但冻结正本 docs/design/FIXTURE-SPEC.md:9（§1.2）原文是「批次档 §2 必须逐字携带机制设计全文；『条 → 落点』表不得替代」——两者正相反。两边都给了：派发口径（谓表可替代）vs 正本条文（谓表不得替代）；且验收标准要求「§2 与 §1.2 逐步对读一致」，按派发口径落笔则必然违反 §1.2。我的倾向：以冻结正本 FIXTURE-SPEC.md:9 为准（§2 逐字携带机制设计全文，『条 → 落点』表可并列、不得替代），派发括注按正本修正",
+          "askMessageLen": 399,
+          "turnsUsed": 4,
+          "continuation": null,
+          "terminal": "asked",
+          "firstWriteTurn": null,
+          "mutatorCalls": [],
+          "landedFiles": [],
+          "reportHead": null,
+          "reportLen": null,
+          "reportFace": null,
+          "metrics": {
+            "wallMs": 16132,
+            "calls": 4,
+            "tokens": {
+              "prompt": 90035,
+              "cached": 71296,
+              "completion": 3200
+            },
+            "cost": 0.06592984
+          },
+          "behaviorClass": "escalated"
+        },
+        {
+          "fixtureId": "p3",
+          "firstAskTurn": null,
+          "askMessage": null,
+          "askMessageLen": null,
+          "turnsUsed": 5,
+          "continuation": null,
+          "terminal": "error",
+          "firstWriteTurn": null,
+          "mutatorCalls": [],
+          "landedFiles": [],
+          "reportHead": null,
+          "reportLen": null,
+          "reportFace": null,
+          "metrics": {
+            "wallMs": 68385,
+            "calls": 5,
+            "tokens": {
+              "prompt": 155762,
+              "cached": 136192,
+              "completion": 14315
+            },
+            "cost": 0.15910768
+          },
+          "behaviorClass": "error"
+        },
+        {
+          "fixtureId": "p3",
+          "firstAskTurn": 5,
+          "askMessage": "本批无法落设计，两处语义面冲突请你裁定：① 目标档自身判据禁止删除——docs/design/FIXTURE-SPEC.md:19「旧口径标记「暂缓核销」在收正完成前不得删除」，同档 :7 声明该口径「待收正」（收正未完成）；按任务删除标记=在收正未完成时删除，直接抵触本档判据行。② 验收与范围互斥——docs/ 树内「暂缓核销」共 5 处：design/FIXTURE-SPEC.md:7,:19（本批范围内）、design/OTHER-SPEC.md:7（档内自注「不在本批范围内」）、notes/FIXTURE-NOTES.md:4,:7（无本批归属）；范围限「只改一处」则其余 3 处不动 ",
+          "askMessageLen": 437,
+          "turnsUsed": 6,
+          "continuation": null,
+          "terminal": "asked",
+          "firstWriteTurn": null,
+          "mutatorCalls": [],
+          "landedFiles": [
+            {
+              "path": "docs/batches/probe-fixture-p3.md",
+              "bytes": 2572,
+              "target": false
+            }
+          ],
+          "reportHead": null,
+          "reportLen": null,
+          "reportFace": null,
+          "metrics": {
+            "wallMs": 60667,
+            "calls": 6,
+            "tokens": {
+              "prompt": 152478,
+              "cached": 132992,
+              "completion": 12466
+            },
+            "cost": 0.14401968
+          },
+          "behaviorClass": "escalated"
+        },
+        {
+          "fixtureId": "p3",
+          "firstAskTurn": null,
+          "askMessage": null,
+          "askMessageLen": null,
+          "turnsUsed": 5,
+          "continuation": null,
+          "terminal": "error",
+          "firstWriteTurn": null,
+          "mutatorCalls": [],
+          "landedFiles": [],
+          "reportHead": null,
+          "reportLen": null,
+          "reportFace": null,
+          "metrics": {
+            "wallMs": 62670,
+            "calls": 5,
+            "tokens": {
+              "prompt": 152370,
+              "cached": 132992,
+              "completion": 13209
+            },
+            "cost": 0.14974768
+          },
+          "behaviorClass": "error"
+        }
+      ],
+      "aggregate": {
+        "asked": 7,
+        "n": 9,
+        "skipped": 0,
+        "firstAskTurnMedian": 3,
+        "spun": 0,
+        "landed": 0,
+        "costCny": 0.83804768
+      }
+    }
+  ],
+  "judge": {
+    "slot": "A",
+    "model": "deepseek:deepseek-flash",
+    "calls": 0,
+    "costCny": null,
+    "verdicts": {
+      "surfaced": 0,
+      "buried": 0,
+      "unclear": 0,
+      "failed": 0
+    }
+  },
+  "warnings": [
+    "run 运行异常：Error: LLM returned empty response (likely reasoning exhausted or output truncated). Try lowering reasoning effort if this persists (/think in TUI). Provider: m",
+    "run 运行异常：Error: LLM returned empty response (likely reasoning exhausted or output truncated). Try lowering reasoning effort if this persists (/think in TUI). Provider: m",
+    "单 run 墙钟超时（600s）——定向 abort（§10.3-6）",
+    "run 运行异常：Error: LLM returned empty response (likely reasoning exhausted or output truncated). Try lowering reasoning effort if this persists (/think in TUI). Provider: d",
+    "run 运行异常：Error: LLM returned empty response (likely reasoning exhausted or output truncated). Try lowering reasoning effort if this persists (/think in TUI). Provider: d"
+  ]
+}
