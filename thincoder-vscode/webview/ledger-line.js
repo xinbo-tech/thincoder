@@ -1,18 +1,13 @@
 /**
- * ledger-line.js — 台账行渲染（LEDGER-SURFACE——设计档 §2.30.3.5 webview 面）。
- *
- * 载荷 `{type:"ledgerNotice", lines:[{text, warn}]}`（端内自有投递通道——与 CLI 的 pushLine
- * 各自实现、语义同源）：逐行 `<div class="ledger-line [warn]">` append 到 `#messages`
- * （会话流、可回看——非状态区）。样式在 `chat.css`（`ui.js` 491 行——不寄居新函数）。
+ * ledger-line.js — 台账行投递壳（LEDGER-SURFACE——设计档 §2.30.3.5 webview 面）。
+ * 行构造与类名单源 = 核包 `flow/ledger-line.mjs`（R2 换接）；留端 = append 位与跟滚。
+ * 载荷 `{type:"ledgerNotice", lines:[{text, warn}]}`（端内自有投递通道——与 CLI 的
+ * pushLine 各自实现、语义同源）；样式在 `chat.css`。
  */
+import { renderLedgerLine } from "../node_modules/@thincoder/render-core/flow/ledger-line.mjs"
 import { maybeScrollDown } from "./ui.js"
 
 export function addLedgerNotice(ctx, lines) {
-  for (const line of lines ?? []) {
-    const el = document.createElement("div")
-    el.className = line?.warn ? "ledger-line warn" : "ledger-line"
-    el.textContent = line?.text ?? ""
-    ctx.messagesEl.appendChild(el)
-  }
+  for (const line of lines ?? []) ctx.messagesEl.appendChild(renderLedgerLine(line))
   maybeScrollDown(ctx)
 }

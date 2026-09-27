@@ -2,55 +2,35 @@
  * panels.js — side panels: task progress, goal + suspension message handlers
  * and the subagent/turnState bridge routing.
  * SESSION-ACTIVITY-REVISED（行面板撤除）→ ACTIVITY-REWRITE-SIMPLE（2026-09-09）→
- * 活动区收口（2026-09-12——WEBVIEW.md §14）：簿记段全删（活动块 meta 事件字段自足）——
- * handleSubagentMessage 纯转发 applySubagentStatus；挂起退出 freeze 兜底保留
- * （freezeLiveBlocks——区全体归档——§14 C-8）；`_panelTimer` 同点刷 live 块头（§14 C-11④）。
+ * 活动区收口（2026-09-12——WEBVIEW.md §14）：簿记段全删——handleSubagentMessage 纯转发
+ * applySubagentStatus；挂起退出 freeze 兜底保留（freezeLiveBlocks——区全体归档——§14 C-8）；
+ * `_panelTimer` 同点刷 live 块头（§14 C-11④）。
+ * R2 换接：面板**构树 + 显隐判据**单源 = 核包 `cards/panel.mjs`；本档留端 = 挂起 / 回合态 /
+ * 目标消息分流与 DOM 写入（`replaceChildren` / `style.display`）。
  */
 import { ctx, S } from "./state.js"
-import { t } from "./i18n.js"
-import { escHtml } from "./ui.js"
 import { setLoading } from "./loading.js"
 import { renderStatusBar } from "./status-bar.js"
 import { applySubagentStatus, freezeLiveBlocks, refreshLiveHeaders } from "./activity.js"
+import {
+  taskPanelVisible, goalPanelVisible, renderTaskPanel as taskPanelFragment, renderGoalPanel as goalPanelFragment,
+} from "../node_modules/@thincoder/render-core/cards/panel.mjs"
 
 export function renderTaskPanel() {
   const panel = document.getElementById("task-panel")
-  if (!S._taskProgress || !S._taskProgress.items || S._taskProgress.items.length === 0) {
-    panel.style.display = "none"
+  if (!taskPanelVisible(S._taskProgress, panel.style.display === "block")) {
+    // 空 items ⇒ 隐；全完成且未显示 ⇒ 不动（badge 已表达 ✓N/N——不新示亦不擦既有内容）
+    if (!S._taskProgress?.items?.length) panel.style.display = "none"
     return
   }
-  const allDone = S._taskProgress.items.every((item) => item.status === "done")
-  if (allDone && panel.style.display !== "block") {
-    // Don't show — badge already says ✓N/N, no need for the panel
-    return
-  }
-  const icons = { pending: "○", in_progress: "◉", done: "✓" }
-  panel.innerHTML = `<div class="panel-desc">${t("panel.taskDesc") || "Tracks multi-step work — created and updated by the agent"}</div>` +
-    S._taskProgress.items.map((item) =>
-    `<div class="task-item">
-      <span class="task-mark">${icons[item.status] || " "}</span>
-      <span class="task-title">${escHtml(item.title)}</span>
-      <span class="task-status">${item.status === "in_progress" ? t("task.in_progress") : item.status}</span>
-    </div>`
-  ).join("")
+  panel.replaceChildren(taskPanelFragment(S._taskProgress, { shown: true }).el)
   panel.style.display = "block"
 }
 
 export function renderGoalPanel() {
   const panel = document.getElementById("goal-panel")
-  if (!S._goalInfo) { panel.style.display = "none"; return }
-  const g = S._goalInfo
-  const statusCls = g.status === "active" ? "active" : g.status === "done" ? "done" : "cancelled"
-  panel.innerHTML = `<div class="panel-desc">${t("panel.goalDesc") || "Long-running objective — runs until complete or cancelled"}</div>
-    <div class="goal-section">
-    <div class="goal-label">${t("goal.objective")}</div>
-    <div class="goal-value">${escHtml(g.objective || "")}</div>
-  </div>
-  <div class="goal-section">
-    <div class="goal-label">${t("goal.criteria")}</div>
-    <div class="goal-value">${escHtml(g.criteria || "—")}</div>
-  </div>
-  <span class="goal-status-badge ${statusCls}">${g.status}</span>`
+  if (!goalPanelVisible(S._goalInfo)) { panel.style.display = "none"; return }
+  panel.replaceChildren(goalPanelFragment(S._goalInfo).el)
   panel.style.display = "block"
 }
 
@@ -97,7 +77,7 @@ export function handleSubagentMessage(m) {
  *  background mode (input stays usable; Stop 语义 = susp 纯池跑不显——子代理停止靠逐块
  *  ⏹——无全停——池空自然消化完), updates the status-line counts, and on session exit
  *  archives the whole activity region into the conversation (CLI freezeAllSubTasks
- *  parity — 无 digest 消费、不留悬空块；§14 C-8：live → 折叠、awaitingDigest → 归档）。 */
+ *  parity —— 无 digest 消费、不留悬空块；§14 C-8：live → 折叠、awaitingDigest → 归档）。 */
 export function handleSuspensionMessage(m) {
   S._suspended = !!m.active
   if (m.active) {

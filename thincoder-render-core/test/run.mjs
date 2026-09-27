@@ -6,7 +6,9 @@
  * 树递归全部 *.test.mjs 须被上面单层 glob 命中（嵌套档永不执行 ⇒ 反查即失败）。
  * ②'' 软链目录拒绝：junction 的 Dirent 报 isSymbolicLink ∧ !isDirectory（递归与 glob 都穿不过
  * ⇒ 其中 *.test.mjs 永不执行却零告警）——检出即 fail（不跟遍历 · 避环）；软链文件不受影响。
- * ③ 包面自检（C1 常驻机检）：零 dependencies / devDependencies；核内 import 面只含核内相对路径 + `node:`。
+ * ③ 包面自检（C1 常驻机检）：零 dependencies / devDependencies；核内 import 面只含核内相对路径 +
+ *   `node:`（**递归全树**——R2 起含 flow/ cards/ subblocks/ 与 test/；非递归旧形会放过嵌套目录）。
+ * ④ 全档语法面（C1 机检面之 `node --check`——递归全树；无用例/无消费的构件档也只有这层常驻防线）。
  */
 import { spawnSync } from "node:child_process"
 import { readFileSync, readdirSync, statSync } from "node:fs"
@@ -38,20 +40,35 @@ for (const rel of onDisk) {
   }
 }
 
-// ③ 包面自检（C1 机检面常驻化）：零依赖 + 核内 import 面只含核内相对路径 + `node:`
+// ③ 包面自检（C1 机检面常驻化）：零依赖 + 核内 import 面只含核内相对路径 + `node:`（递归全树）
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"))
 for (const k of ["dependencies", "devDependencies"]) {
   const v = pkg[k]
   if (v && Object.keys(v).length > 0) fail(`package.json declares ${k} — the render core is zero-dependency: ${JSON.stringify(v)}`)
 }
 const IMPORT_RE = /^\s*(?:import|export)\b[^"'\n]*?from\s*["']([^"']+)["']|^\s*import\s*["']([^"']+)["']/gm
-for (const f of readdirSync(root).filter((n) => n.endsWith(".mjs"))) {
+const mjsFiles = []
+const walkMjs = (rel) => {
+  for (const e of readdirSync(join(root, rel), { withFileTypes: true })) {
+    const p = rel === "" ? e.name : `${rel}/${e.name}`
+    if (e.isDirectory()) walkMjs(p)
+    else if (e.name.endsWith(".mjs")) mjsFiles.push(p)
+  }
+}
+walkMjs("")
+for (const f of mjsFiles) {
   for (const m of readFileSync(join(root, f), "utf8").matchAll(IMPORT_RE)) {
     const spec = m[1] ?? m[2]
-    if (!spec.startsWith("./") && !spec.startsWith("node:")) {
+    if (!spec.startsWith(".") && !spec.startsWith("node:")) {
       fail(`non-core import in ${f}: ${JSON.stringify(spec)} (core imports are core-relative paths or node: builtins only)`)
     }
   }
+}
+
+// ④ 全档语法面（C1：核档内 .mjs 全档 `node --check` 过——递归全树，与 ③ 同收集面）
+for (const f of mjsFiles) {
+  const r = spawnSync(process.execPath, ["--check", join(root, f)], { encoding: "utf8" })
+  if (r.status !== 0) fail(`node --check failed: ${f}\n${String(r.stderr ?? "").trim()}`)
 }
 
 // execPath 可能含空格（C:\Program Files\...）——spawn + shell:true 时必须整体加引号

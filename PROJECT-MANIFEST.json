@@ -14,7 +14,8 @@
       "docs/core/design",
       "docs/cli/design",
       "docs/vsc/design",
-      "docs/desktop/design"
+      "docs/desktop/design",
+      "docs/render-core/design"
     ],
     "modules": "docs/core/design/modules",
     "batches": "docs/batches"

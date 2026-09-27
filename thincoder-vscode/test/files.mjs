@@ -139,5 +139,8 @@ export default [
   "test/peer-instances.test.mjs", // peer 收口批（2026-09-25 · 台账 #302 · MULTI-INSTANCE-COLLAB.md §3.1）：分组半段引核对拍——T-PI1 同 manifest 四形态（多槽同 sessionId / 非数字槽 / 空 sessionId / pid 不可解析）⇒ 端聚合产物 ≡ 核 groupSlotSessions 产物（AC-302-2）
   "test/effort-select-views.test.mjs", // MODEL-SPECS 清理批（2026-09-25 · `docs/batches/2026-09-25-model-specs-cleanup.md` §2 · `docs/core/design/MODEL-SPECS.md` §14.8 E-5）：思考档三视图消费面——未注册默认 ⇒「—」（非枚举首项）/ 注册默认 ∈ 枚举预选 · ∉ 枚举回落 / 空枚举零渲染 + 两径同源（初渲染内联串 ∥ `buildEffortSelect` 重建）+ 载荷归一（none/「—」⇒ null——删键不写字面）——E-5 两例；§16.5 追加入 off 哨兵避支（⓪ 支）三视图判据（W-9）
   "test/reasoning-mode.test.mjs", // off 形族收尾批（2026-09-25 · `docs/batches/2026-09-25-off-family-closeout.md` §2 · `docs/core/design/MODEL-SPECS.md` §16.2-3 / §15.4-2）：VSC 主模型面 off 取形（该面首测）——`resolveReasoningMode` 族别形（type 族 ⇒ `{type:"disabled"}` 达载荷层 = #335 本体 / effort 族 ⇒ `null` / 自定义开值族随 §15.4-2 表改判）+ `enabled` / 档位两支零回归——R-1..R-3（先红 = type 族 off 不发字段）
+  // render-core R2 换接批（2026-09-27 · `docs/batches/2026-09-27-render-core-r2.md` · 设计 `docs/render-core/design/RENDER-CORE.md` §6/§7）：核构件层用例宿主 = 消费端套件（核包零 devDep）
+  "test/render-core-components.test.mjs", // 核构件（DOM）面直驱——块容器/用户气泡/恢复帧/错误横幅（出站 emit）+ 工具卡三面 + linkify + 审批/提问/面板卡（三出口载荷逐字）+ 推理块 + rAF 缝合器（帧/节流/flush/跟滚脏集）+ 复制钮 + 台账行 + 子代理块结构——RC-B1…RC-S4（14 例）
+  "test/render-core-relay-map.test.mjs", // relay 映射差分锁（C2 · §7）：核单源全表逐行（`⟦ev⟧stopped` ⇒ `cancelled` 逐字）+ 状态值闭集负向（零 stopped/error）+ 跨包对拍（扩展侧产者 ∥ 核单源逐 token 同产物——R2 交接项）+ 前缀文法零依赖副本对拍权威——RM-1…RM-4
 
 ]

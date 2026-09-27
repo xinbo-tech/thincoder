@@ -3,80 +3,34 @@
  * code-block copy buttons, and subagent activity-stream chunks.
  * (2026-09-11 活动区回归 → 2026-09-12 §14 收口：live/awaitingDigest 驻留 `#subagent-activity`；
  * 终态折叠与归档落流在 activity.js——ensureBlock 可返 null（subagentChunk 空安全守卫）；rAF 尾
- * 区 pin = maybeScrollActivity + 块级跟滚 maybeScrollBlock。)
+ * 区 pin = maybeScrollActivity + 块级跟滚。
+ *
+ * R2 换接（§3 行 47）：rAF 降频缝合（`createStreamRenderer`）/ md 重渲 / 推理块构件 / 代码块
+ * 复制钮单源 = 核包 `flow/stream.mjs` + `flow/reasoning.mjs`；本档留端 = `ctx` / `S` 指针与
+ * 子回合边界判据、回合尾装配（清扫 / [stopped] / 复位）、块级跟滚脏集接线。
  */
 import { ctx, S } from "./state.js"
-import { md } from "./md.js"
 import { t } from "./i18n.js"
-import {
-  newBlock, maybeScrollDown, maybeScrollActivity, escHtml,
-  appendAdvisorChunk,
-} from "./ui.js"
+import { newBlock, maybeScrollDown, maybeScrollActivity, escHtml } from "./ui.js"
 import { setLoading } from "./loading.js"
 import { renderStatusBar } from "./status-bar.js"
-// 2026-09-11 活动区回归: subagent activity blocks are born in the region
-// (#subagent-activity — activity.js) — lifecycle (create/flip/fold/⏹) lives there;
-// panels.js never imports streaming.js and activity.js imports neither (no cycles).
-import { ensureBlock, noteChunk, resetActivity, maybeScrollBlock } from "./activity.js"
+import { ensureBlock, resetActivity, maybeScrollBlock } from "./activity.js"
 import { traceSubOnce } from "./activity-diag.js"
+import { md } from "../node_modules/@thincoder/render-core/md.mjs"
+import { createStreamRenderer, attachCopyButtons } from "../node_modules/@thincoder/render-core/flow/stream.mjs"
+import { renderReasoning } from "../node_modules/@thincoder/render-core/flow/reasoning.mjs"
+import { renderSubagentChunk } from "../node_modules/@thincoder/render-core/subblocks/block.mjs"
 
-// Stream render scheduler: reasoning/token chunks arrive at thousands/sec; rendering
-// markdown + innerHTML on EVERY chunk is O(n²) and floods the main thread — the backlog
-// keeps the Stop button unresponsive long after the backend aborted (2026-08-16
-// "Stop won't stop while thinking" bug). rAF throttles to one render per frame.
-// Subagent content appends incrementally (appendAdvisorChunk) with block-level
-// follow-scroll (maybeScrollBlock) — folded into the same frame here.
-let _renderScheduled = false
-let _reasoningDirty = false
-let _tokenDirty = false
-let _subScrollDirty = null // 子代理块跟滚脏集（Set 惰性建——§13 C-LU2；rAF 尾应用后置空）
-let _lastStreamRender = 0
-const STREAM_RENDER_MIN_MS = 50 // 长回复降频：全量 md() 重渲染限到 ≥50ms 一次
+export { attachCopyButtons }
 
-function scheduleStreamRender() {
-  if (_renderScheduled) return
-  _renderScheduled = true
-  requestAnimationFrame(() => {
-    _renderScheduled = false
-    const now = Date.now()
-    if (now - _lastStreamRender < STREAM_RENDER_MIN_MS) {
-      // 距上次渲染 <50ms：跳过一次，仍有脏内容则继续排队（flushStreamRender 兜底尾帧）
-      if (_tokenDirty || _reasoningDirty || _subScrollDirty) scheduleStreamRender()
-      return
-    }
-    _lastStreamRender = now
-    if (ctx.currentReasoning && _reasoningDirty) {
-      try { ctx.currentReasoning.innerHTML = md(ctx.currentReasoningRaw) } catch { ctx.currentReasoning.textContent = ctx.currentReasoningRaw }
-      ctx.currentReasoning.scrollTop = ctx.currentReasoning.scrollHeight
-      _reasoningDirty = false
-    }
-    if (ctx.currentBubble && _tokenDirty) {
-      try { ctx.currentBubble.innerHTML = md(ctx.currentRaw) } catch { ctx.currentBubble.textContent = ctx.currentRaw }
-      _tokenDirty = false
-    }
-    if (_subScrollDirty) {
-      // 子代理块块级跟滚（§13 C-LU2——逐块应用后置空；让位旗标 = 内容区 _pinFollow）
-      for (const block of _subScrollDirty) maybeScrollBlock(block)
-      _subScrollDirty = null
-    }
-    maybeScrollDown(ctx)
-    maybeScrollActivity(ctx) // 活动区独立 pin（§12.3 第 7 条——不与消息区互拉）
-  })
-}
-
-function flushStreamRender() {
-  // Synchronous flush on turn end — the final chunk must be painted before finish()
-  // resets the bubble pointers, or the tail of the reply never renders.
-  if (ctx.currentReasoning && _reasoningDirty) {
-    try { ctx.currentReasoning.innerHTML = md(ctx.currentReasoningRaw) } catch { ctx.currentReasoning.textContent = ctx.currentReasoningRaw }
-    ctx.currentReasoning.scrollTop = ctx.currentReasoning.scrollHeight
-    _reasoningDirty = false
-  }
-  if (ctx.currentBubble && _tokenDirty) {
-    try { ctx.currentBubble.innerHTML = md(ctx.currentRaw) } catch { ctx.currentBubble.textContent = ctx.currentRaw }
-    _tokenDirty = false
-  }
-}
+/** 流式重渲器（核实例态 = 源档模块级脏位；帧尾 = 双区 pin——源档 `:62-63` 同面；子代理块
+ *  跟滚脏集经 `subScroll` 逐块应用——§13 C-LU2）。`ctx` 指针帧内现取（与源档同形）。 */
+const renderer = createStreamRenderer({
+  reasoning: () => (ctx.currentReasoning ? { el: ctx.currentReasoning, raw: ctx.currentReasoningRaw } : null),
+  token: () => (ctx.currentBubble ? { el: ctx.currentBubble, raw: ctx.currentRaw } : null),
+  subScroll: (blocks) => { for (const block of blocks) maybeScrollBlock(block) },
+  frameEnd: () => { maybeScrollDown(ctx); maybeScrollActivity(ctx) },
+})
 
 export function onReasoning(text) {
   // Start a new block if tool results arrived, if there are tools in the current
@@ -91,22 +45,13 @@ export function onReasoning(text) {
   }
   if (!ctx.currentBlock) newBlock(ctx)
   if (!ctx.currentReasoning) {
-    const details = document.createElement("details")
-    details.className = "reasoning-block"
-    details.open = true
-    const summary = document.createElement("summary")
-    summary.textContent = t("status.thinking") + "..."
-    details.appendChild(summary)
-    const div = document.createElement("div")
-    div.className = "reasoning-content"
-    details.appendChild(div)
-    ctx.currentBlock.appendChild(details)
-    ctx.currentReasoning = div
+    const { el, content } = renderReasoning()
+    ctx.currentBlock.appendChild(el)
+    ctx.currentReasoning = content
     ctx.currentReasoningRaw = ""
   }
   ctx.currentReasoningRaw += text
-  _reasoningDirty = true
-  scheduleStreamRender()
+  renderer.markReasoning()
 }
 
 export function onToken(text) {
@@ -120,8 +65,7 @@ export function onToken(text) {
     ctx.currentRaw = ""
   }
   ctx.currentRaw += text
-  _tokenDirty = true
-  scheduleStreamRender()
+  renderer.markToken()
 }
 
 export function onTurnBreak() {
@@ -130,10 +74,10 @@ export function onTurnBreak() {
   // The webview otherwise cannot see that boundary — no toolCall/toolResult
   // fires — so the onReasoning heuristic (reasoning-after-content) is the only
   // backup. This explicit reset covers BOTH thinking and non-thinking models.
-  // Paint any pending throttled chunks first (flushStreamRender) — resetting the
+  // Paint any pending throttled chunks first (renderer.flush) — resetting the
   // bubble pointers with unrendered tail would silently drop the last rendered
   // chunk (same guard as finish()).
-  flushStreamRender()
+  renderer.flush()
   ctx.currentBubble = null
   ctx.currentBlock = null
   ctx.currentReasoning = null
@@ -173,7 +117,7 @@ function sweepUnsettledToolCards(ctx) {
 export function finish(aborted) {
   // Paint any pending throttled chunks before the bubble pointers reset — otherwise
   // the tail of the reply/reasoning never renders.
-  flushStreamRender()
+  renderer.flush()
   // M1：回合尾清扫**无条件**执行（complete / aborted 两路径同规 = CLI 回合 `finally` 恒清扫
   // ——`agent-turn.mjs:265`）；必须先于下方 `ctx._toolRefs = {}` 复位。
   sweepUnsettledToolCards(ctx)
@@ -214,33 +158,14 @@ export function finish(aborted) {
   renderStatusBar()
 }
 
-/** Attach copy buttons to all code blocks in a container */
-export function attachCopyButtons(container) {
-  if (!container) return
-  const blocks = container.querySelectorAll(".code-block")
-  for (const block of blocks) {
-    if (block.querySelector(".code-copy-btn")) continue // already has one
-    const btn = document.createElement("button")
-    btn.className = "code-copy-btn"
-    btn.textContent = t("msg.copy")
-    btn.addEventListener("click", async () => {
-      const code = block.querySelector("code")?.textContent || ""
-      try { await navigator.clipboard.writeText(code) } catch { /* */ }
-      btn.textContent = t("msg.copied")
-      btn.classList.add("copied")
-      setTimeout(() => { btn.textContent = t("msg.copy"); btn.classList.remove("copied") }, 2000)
-    })
-    block.appendChild(btn)
-  }
-}
-
 /** Subagent/consultant/escalate activity stream — 2026-09-11 活动区回归: 块出生即
  *  活动区 `#subagent-activity` 区尾（activity.js ensureBlock——channel "sub:explore#1"/
  *  "sub:consult glm:glm-5.2 #4"…——label 去 sub: 前缀）；终态原地折叠（live→frozen
  *  ——头词 ✓ done Ns）；queued spawns 得 ⏳ 等待头（含取消 ⏹——F-2）。ensureBlock 可返
  *  null（map 有键且已终态 = 幂等守卫 / live 元素被移除 tombstone）——空安全守卫丢弃。
  *  2026-09-11 第 10 批（§5.1.4 第 5 条）：新代接管后本频道键指向**新块**——旧实例的迟到
- *  chunk 因而落进新块（显式取舍：仅“id 重复 + 两实例消息交错”可见——不做代际过滤守卫）。 */
+ *  chunk 因而落进新块（显式取舍：仅“id 重复 + 两实例消息交错”可见——不做代际过滤守卫）。
+ *  构图（内容追加 + 状态词写点）单源 = 核 `subblocks/block.mjs` `renderSubagentChunk`。 */
 export function subagentChunk(m) {
   const name = String(m.name ?? "")
   const block = ensureBlock(name)
@@ -252,11 +177,6 @@ export function subagentChunk(m) {
     else if (entry && !entry.isConnected) traceSubOnce("drop-tombstone", name)
     return
   }
-  const kind = m.kind ?? "text" // R4（渲染粒度对齐批 · §2.2 埋雷归一）：单点默认——与桥
-  // `panel-toolpanel.mjs:15` 及 CLI `tool-events.mjs:324` 同值（旧 `?? "tool"` 会把绕过桥的裸载荷静默渲成工具行）
-  appendAdvisorChunk(block, kind, m.text, m.sub, m) // m 随行（§5.6 合并判据读 face/tool）
-  noteChunk(block, kind, m.text, m) // m 携结构化 tool/cmd（§14 C-11①——结果 chunk 不改写状态区）
-  _subScrollDirty ??= new Set() // 块级跟滚脏集（§13 C-LU2——rAF 尾逐块应用）
-  _subScrollDirty.add(block)
-  scheduleStreamRender() // 块级跟滚随 rAF 帧应用（§13——节流帧不丢：重排条件含脏集）
+  renderSubagentChunk(block, m) // kind 单点默认 `"text"`（R4 埋雷归一——与桥 `panel-toolpanel.mjs:15` 及 CLI `tool-events.mjs:324` 同值）
+  renderer.markSubScroll(block) // 块级跟滚随 rAF 帧应用（§13——节流帧不丢：重排条件含脏集）
 }

@@ -2,87 +2,23 @@
  * ui.js — DOM helpers for the chat panel
  * All functions take `ctx` which provides DOM refs and mutable state.
  * Leaf module: NO state.js import (loading.js owns the S-dependent setLoading).
+ *
+ * R2 换接（§3 行 51）：四构件面（块容器 / 工具卡 / 恢复面 / 错误横幅）单源 = 核包
+ * `flow/block.mjs` + `flow/tool-card.mjs`——本档留端 = `ctx` 装配面
+ * （`currentBlock` / `_toolRefs` / `_nextIdx` 簿记、append 位、滚动族、消息窗裁剪、欢迎条与
+ * 横幅）与唯一出站 `retry` 的 `postMessage` 绑定。类名 / 结构契约 = KD-RC-7（核逐字承源档）。
  */
-
-import { md, mdInline, esc } from "./md.js"
-import { fmtTime, capText, isToolFailure } from "./lib.js"
+import { esc as escHtml } from "../node_modules/@thincoder/render-core/md.mjs"
 import { t } from "./i18n.js"
-import { buildFinishedToolCard } from "./tool-card-restore.mjs"
-import { formatToolSummary } from "./tool-summary.js" // X3/X7：摘要族迁出（500 行限——见该叶头注）
+import {
+  buildAdvisorBlock, appendAdvisorChunk, buildUserMessage as coreUserMessage,
+  buildAssistantRestore as coreAssistantRestore, renderBlock, renderErrorBanner,
+} from "../node_modules/@thincoder/render-core/flow/block.mjs"
+import {
+  renderToolCard, finishToolCard, renderToolHistory,
+} from "../node_modules/@thincoder/render-core/flow/tool-card.mjs"
 
-// ─── Advisor review block (in-conversation, reasoning-style) ──
-
-/**
- * Create the details block that streams an advisor review into the conversation.
- * `roundLabel` is the summary text (e.g. "Advisor Review (Round 2)").
- */
-export function buildAdvisorBlock(roundLabel) {
-  const details = document.createElement("details")
-  details.className = "advisor-block"
-  details.open = true
-  const summary = document.createElement("summary")
-  summary.textContent = roundLabel
-  const content = document.createElement("div")
-  content.className = "advisor-content"
-  details.appendChild(summary)
-  details.appendChild(content)
-  return details
-}
-
-/**
- * Append one advisor progress chunk ({ kind: "think"|"tool"|"text", text }) to
- * the block's scrolling content region. Same-kind text runs merge; nothing is
- * ever truncated — the full review stays in the block (scrolling).
- * AGENT-LOOP-SUBAGENT.md §6.7.2 D-M8 nested sub-label: `sub` (e.g. "explore#1" — an INNER spawn's
- * attribution, carried on the chunk by subagent.mjs runChild forward) rides `dataset.sub` — 数据面
- * 保留（下方合并判据读它），**行首无可见子标**（两端同形 · 台账 #185 2026-09-25 收口；对齐方向 = VSC → CLI）。
- * §5.6 (渲染粒度对齐批): `meta` (optional structured chunk — absent = old behavior) carries
- * `face` / `tool` for the tool-face merge judgment: an output row (face "toolOutput") merges
- * into the last row iff that row is a tool row with the same face / tool / sub ⇒ RAW text-node
- * append (zero separator — CLI pushBlock parity); call rows (face "toolCall") and chunks without
- * face/tool always start a fresh row (fail-safe — never guessed).
- */
-export function appendAdvisorChunk(block, kind, text, sub, meta) {
-  // §27.1 F3（缺陷①）: 冻结块不接受追加（advisor 块无 _subMeta——不受影响）
-  if (block._subMeta?.frozen) return
-  const content = block.querySelector(".advisor-content")
-  if (!content) return
-  const str = String(text ?? "")
-  if (!str) return
-  const subLabel = typeof sub === "string" && sub ? sub : null
-  if (kind === "tool") {
-    const face = typeof meta?.face === "string" ? meta.face : null, tool = typeof meta?.tool === "string" && meta.tool ? meta.tool : null
-    const last = content.lastElementChild
-    // §5.6 合并路径（CLI pushBlock 判据）：末子行 ∧ 面 = toolOutput ∧ tool 同 ∧ sub 同 ⇒ RAW 拼接
-    // （零分隔符）；不满足（调用行 / 旧形无 face·tool / 不同 sub）⇒ 恒新行。
-    if (face === "toolOutput" && tool && last?.classList.contains("advisor-tool-line")
-      && last.dataset.face === "toolOutput" && last.dataset.tool === tool && (last.dataset.sub ?? "") === (subLabel ?? "")) {
-      last.appendChild(document.createTextNode(str)); return
-    }
-    const line = document.createElement("div")
-    line.className = "advisor-tool-line"
-    if (face) line.dataset.face = face; if (tool) line.dataset.tool = tool
-    if (subLabel) line.dataset.sub = subLabel
-    line.textContent = str
-    content.appendChild(line)
-    return
-  }
-  const k = kind ?? "text"
-  const last = content.lastElementChild
-  const sameRow = last && last.classList.contains("advisor-text")
-    && last.dataset.kind === k && (last.dataset.sub ?? "") === (subLabel ?? "")
-  if (sameRow) {
-    // 续写 = 追加文本节点（chunk RAW 拼接零分隔符；首行 `textContent = str` 同效）
-    last.appendChild(document.createTextNode(str))
-  } else {
-    const div = document.createElement("div")
-    div.className = "advisor-text" + (k === "think" ? " advisor-think" : "")
-    div.dataset.kind = k
-    if (subLabel) div.dataset.sub = subLabel
-    div.textContent = str
-    content.appendChild(div)
-  }
-}
+export { escHtml, buildAdvisorBlock, appendAdvisorChunk }
 
 // ─── Welcome / Banner ──────────────────────────
 
@@ -129,19 +65,10 @@ export function showBanner(ctx, text, keyOk) {
 
 // ─── Messages ──────────────────────────────────
 
-/** Historical user message. `idx` (when set) is stored as data-idx on the element
- *  for lazy-load paging (minLoadedIdx) — no action buttons on messages.
- *  F（SESSION-RESTORE-PARITY）：时间只显真实 ts——缺失不显示（无 fmtTime(new Date())
- *  误导回退——恢复老文件无 ts 消息不得假显示"现在"）。 */
+/** Historical user message（`ctx` 入参保留——核件去参，端壳面不变）。 */
 export function buildUserMessage(ctx, text, timestamp, idx) {
-  const el = document.createElement("div")
-  el.className = "message user"
-  el.dataset.raw = String(text) // 待发送标记面锚定源（`queued-mark.js`——快照按原文匹配气泡）
-  const ts = timestamp ? fmtTime(new Date(timestamp)) : ""
-  if (timestamp) el.dataset.ts = String(timestamp) // 清标重建标签行用（无 ts 不显示纪律保持）
-  if (idx !== undefined) el.dataset.idx = String(idx)
-  el.innerHTML = `<div class="msg-label">❯ ${t("msg.user")}:${ts ? ` <span class="msg-time">${ts}</span>` : ""}</div><div class="bubble">${mdInline(text)}</div>` // mdInline escapes raw text — single escape point
-  return el
+  void ctx
+  return coreUserMessage(text, timestamp, idx)
 }
 
 export function addUser(ctx, text, timestamp, idx) {
@@ -153,40 +80,20 @@ export function addUser(ctx, text, timestamp, idx) {
   return el // 标记面（`queued-mark.js`）需持有气泡引用
 }
 
-/** Restored assistant FRAME container (SESSION-RESTORE-PARITY — live-DOM parity):
- *  label（turnStart 才画——❯ ThinCoder: 恒无时间，live 同构）→ thinking 块
- *  （reasoning → details.reasoning-block[open]——md 渲染，live 同 DOM）→ content bubble
- *  → 嵌套工具卡 ×n。data-idx = 帧原始全局 idx——分页锚只外层消息。 */
+/** Restored assistant FRAME container（核 `buildAssistantRestore`——live-DOM parity 同形）。 */
 export function buildAssistantRestore(ctx, msg) {
-  const el = document.createElement("div")
-  el.className = "message assistant"
-  if (msg.idx !== undefined) el.dataset.idx = String(msg.idx)
-  let html = ""
-  if (msg.turnStart) html += `<div class="msg-label">❯ ${t("msg.assistant")}:</div>`
-  if (msg.reasoning) html += `<details class="reasoning-block" open><summary>${escHtml(t("status.thinking"))}...</summary><div class="reasoning-content">${md(msg.reasoning)}</div></details>`
-  if (typeof msg.text === "string" && msg.text.trim() !== "") html += `<div class="bubble content">${md(msg.text)}</div>`
-  el.innerHTML = html
-  for (const tc of msg.tools || []) {
-    const card = buildFinishedToolCard(tc)
-    if (card) el.appendChild(card)
-  }
-  return el
+  void ctx
+  return coreAssistantRestore(msg)
 }
 
+/** 空助手块 + `ctx` 装配（`_nextIdx` 分配 / `assistantLabeled` 翻转 / append / 窗口裁剪留端）。 */
 export function newBlock(ctx) {
   ctx.currentTools = []
   ctx.currentBubble = null
   ctx.currentRaw = ""
-  ctx.currentBlock = document.createElement("div")
-  ctx.currentBlock.className = "message assistant"
-  ctx.currentBlock.dataset.idx = String(ctx._nextIdx++) // 窗口裁剪：live 块补全局 idx，供 loadOlder 锚回
-  // One "❯ ThinCoder:" per turn (CLI ensureAssistantLabel parity): only the
-  // turn's FIRST block carries the label; segments after tool batches start
-  // fresh blocks but must not paint a second label.
-  if (!ctx.assistantLabeled) {
-    ctx.assistantLabeled = true
-    ctx.currentBlock.innerHTML = `<div class="msg-label">❯ ${t("msg.assistant")}:</div>`
-  }
+  const withLabel = !ctx.assistantLabeled
+  if (withLabel) ctx.assistantLabeled = true // One "❯ ThinCoder:" per turn (CLI ensureAssistantLabel parity)
+  ctx.currentBlock = renderBlock({ idx: ctx._nextIdx++, withLabel })
   ctx.messagesEl.appendChild(ctx.currentBlock)
   trimOldMessages(ctx)
 }
@@ -199,131 +106,15 @@ export function advisorRoundTag(round, model) {
   return `(round ${round}${model ? " · " + model : ""})`
 }
 
-/** `roundTag`（X2，可选）= advisor 轮次标签——非空才加一格 span（其余调用零改）。 */
+/** 建工具卡 + `ctx` 簿记（`_toolRefs` 平表 / `currentTools` 表 / append / scrollDown 留端）。 */
 export function addTool(ctx, name, args, id, roundTag) {
   if (!ctx.currentBlock) newBlock(ctx)
-
-  const c = document.createElement("div")
-  c.className = "tool-call"
-  c.dataset.startTime = String(Date.now())
-
-  const h = document.createElement("div")
-  h.className = "tool-call-header"
-  h.tabIndex = 0
-  h.setAttribute("role", "button")
-  h.setAttribute("aria-expanded", "false")
-  h.innerHTML =
-    `<span class="tool-call-icon"></span>` +
-    `<span class="tool-call-name">${esc(name)}</span>` +
-    (roundTag ? `<span class="tool-call-round">${esc(roundTag)}</span>` : "") +
-    `<span class="tool-call-args" title="${esc(args)}">${esc(args.slice(0, 80))}</span>` +
-    `<span class="tool-call-status">${t("tool.running")}</span>`
-
-  const b = document.createElement("div")
-  b.className = "tool-call-body"
-  b.setAttribute("role", "region")
-  b.setAttribute("aria-label", `Output of ${name}`)
-  b.textContent = t("tool.initial")
-
-  h.addEventListener("click", () => {
-    h.querySelector(".tool-call-icon").classList.toggle("open")
-    b.classList.toggle("open")
-    h.setAttribute("aria-expanded", String(b.classList.contains("open")))
-  })
-
-  c.appendChild(h)
-  c.appendChild(b)
-  c.dataset.toolId = id || name  // fallback: findable via DOM query even if _toolRefs cleared
-  ctx.currentBlock.appendChild(c)
+  const { el, ref } = renderToolCard({ name, args, id, roundTag })
+  ctx.currentBlock.appendChild(el)
   // `done` = 「已结算」唯一写点（`finishToolCard` 置真；回合尾清扫 `streaming.js` 只碰 `!done` 卡）
-  const ref = { h, b, name, id: id || name, startTime: Date.now(), done: false }
   ctx.currentTools.push(ref)
   ctx._toolRefs[id || name] = ref  // flat lookup — primary path
   scrollDown(ctx)
-}
-
-/** Wrap verified file paths in clickable spans (text-node level — never inside
- *  attributes). One link per text node is enough; paths repeat across output. */
-function linkifyPaths(bodyEl, links) {
-  if (!links?.length) return
-  const NF = window.NodeFilter
-  const walker = document.createTreeWalker(bodyEl, NF.SHOW_TEXT)
-  const nodes = []
-  let n
-  while ((n = walker.nextNode())) nodes.push(n)
-  for (const node of nodes) {
-    const text = node.nodeValue
-    let idx = -1, hit = null
-    for (const l of links) {
-      const i = text.indexOf(l.raw)
-      if (i >= 0 && (idx < 0 || i < idx)) { idx = i; hit = l }
-    }
-    if (!hit) continue
-    const frag = document.createDocumentFragment()
-    if (idx > 0) frag.appendChild(document.createTextNode(text.slice(0, idx)))
-    const span = document.createElement("span")
-    span.className = "file-link"
-    span.textContent = hit.raw
-    span.dataset.path = hit.path
-    if (hit.line) span.dataset.line = String(hit.line)
-    span.setAttribute("role", "link")
-    span.tabIndex = 0
-    frag.appendChild(span)
-    const rest = text.slice(idx + hit.raw.length)
-    if (rest) frag.appendChild(document.createTextNode(rest))
-    node.parentNode.replaceChild(frag, node)
-  }
-}
-
-// 摘要族（`resultSummary`）已整段迁出 `tool-summary.js`（X3/X7——500 行限；判据/字面单源见该叶）。
-
-/** Update a tool card to its done state: elapsed ms, result summary, collapse/expand, error tint. */
-function finishToolCard(ref, name, text, links, truncated) {
-  ref.done = true // M1：已结算唯一写点（回合尾清扫只碰 `!done` 卡）
-  // 截断超长输出入 DOM（防无界增长），完整结果不保留——摘要已在 header 显示
-  ref.b.textContent = capText(text || "")
-  // X5（显示面消差批 §2.2）：宿主切片点携事实旗标 ⇒ 正文明示截断（**旗标驱动**——不由长度比较
-  // 驱动：恰 64K 与超出同判，`lib.js capText` 的 `<= max` 边界洞不复辟）。
-  if (truncated) ref.b.textContent += "\n" + t("tool.truncated")
-  linkifyPaths(ref.b, links)
-  const ms = Date.now() - (ref.startTime || Date.now())
-  const isError = isToolFailure(text) // F-W16：判据单源（lib.js——与恢复卡同读）
-  const statusEl = ref.h.querySelector(".tool-call-status")
-  if (statusEl) {
-    if (isError) {
-      statusEl.textContent = `${t("tool.error")} (${ms}ms)`
-      statusEl.style.color = "#f14c4c"
-    } else {
-      statusEl.textContent = `${t("tool.done")} (${ms}ms)`
-      statusEl.style.color = "#4ec9b0"
-    }
-  }
-  // CLI parity: completion summary visible in the header（X3/X7：分派字面见 tool-summary.js）
-  const summary = formatToolSummary(name, text)
-  let summaryEl = ref.h.querySelector(".tool-call-summary")
-  if (summary || truncated) {
-    if (!summaryEl) {
-      summaryEl = document.createElement("span")
-      summaryEl.className = "tool-call-summary"
-      ref.h.appendChild(summaryEl)
-    }
-    summaryEl.textContent = "→ " + [summary, truncated ? t("tool.truncated") : ""].filter(Boolean).join(" ")
-    summaryEl.style.display = ""
-  } else if (summaryEl) {
-    summaryEl.style.display = "none"
-  }
-  // Auto-collapse on success: the header already shows the → summary, so a finished
-  // card folds up to one line (CLI outputPanel parity). Errors stay EXPANDED — the
-  // user must see what failed without an extra click.
-  if (isError) {
-    ref.b.classList.add("open")
-    ref.h.querySelector(".tool-call-icon")?.classList.add("open")
-    ref.h.setAttribute("aria-expanded", "true")
-  } else {
-    ref.b.classList.remove("open")
-    ref.h.querySelector(".tool-call-icon")?.classList.remove("open")
-    ref.h.setAttribute("aria-expanded", "false")
-  }
 }
 
 export function finishTool(ctx, name, id, text, links, truncated) {
@@ -347,51 +138,18 @@ export function finishTool(ctx, name, id, text, links, truncated) {
   }
 }
 
-// ─── Loading / Error ───────────────────────────
-// setLoading moved to loading.js (AGENT-LOOP-ASYNC-POOL.md §6.8 split — ui.js stays free of the state.js
-// bridge dependency; suspension-aware loading state lives with state.js consumers)
-
-/** Historical tool call rendered from the human line (collapsed card, read-only). */
+/** Historical tool call rendered from the human line (collapsed card, read-only；`ctx` 入参未用)。 */
 export function buildToolHistory(ctx, name, text, idx) {
-  const c = document.createElement("div")
-  c.className = "tool-call"
-  c.dataset.toolId = "hist-" + (idx ?? name)
-
-  const h = document.createElement("div")
-  h.className = "tool-call-header"
-  h.tabIndex = 0
-  h.setAttribute("role", "button")
-  h.setAttribute("aria-expanded", "false")
-  if (idx !== undefined) c.dataset.idx = String(idx) // lazy-load paging (minLoadedIdx)
-  const summary = formatToolSummary(name, text) // 恢复面同判据（X3/X7 单源——活卡/恢复卡同字面）
-  h.innerHTML =
-    `<span class="tool-call-icon"></span>` +
-    `<span class="tool-call-name">${esc(name)}</span>` +
-    `<span class="tool-call-status" style="color:#4ec9b0">${t("tool.done")}</span>` +
-    (summary ? `<span class="tool-call-summary">→ ${esc(summary)}</span>` : "")
-
-  const b = document.createElement("div")
-  b.className = "tool-call-body"
-  b.setAttribute("role", "region")
-  b.setAttribute("aria-label", `Output of ${name}`)
-  b.textContent = text || ""
-
-  h.addEventListener("click", () => {
-    h.querySelector(".tool-call-icon").classList.toggle("open")
-    b.classList.toggle("open")
-    h.setAttribute("aria-expanded", String(b.classList.contains("open")))
-  })
-
-  c.appendChild(h)
-  c.appendChild(b)
-  return c
+  void ctx
+  return renderToolHistory(name, text, idx)
 }
 
 /**
  * Build one history element from a historyPage message ({ kind, text, name,
  * timestamp, idx, turnStart?, reasoning?, tools? }) — the lazy-loading counterpart
- * of the eager per-message loaders above. Returns null for kinds the UI does not
- * render. assistant = 帧容器（reasoning/嵌套工具卡）；tool = 真孤儿保底顶层卡。
+ * of the eager per-message loaders above（`ctx` 装配面留端——核构件去参）。
+ * 注：核 `flow/block.mjs` 同名导出 = 无 ctx 形（桌面侧消费面）；本档 = 核/端**双份分派壳**
+ * （实件单源仍是核件各 builder——本处只做 `ctx` 穿参与 kind→构件映射）。
  */
 export function buildHistoryMessage(ctx, msg) {
   if (!msg) return null
@@ -401,24 +159,18 @@ export function buildHistoryMessage(ctx, msg) {
   return null
 }
 
+/** 错误横幅：唯一出站 `retry`（`:413`）经 `ctx.vscode.postMessage` 绑定注入（判别式字面量须在
+ *  发射位可提取——§13 发面机检）；建块 / append / 跟滚留端。 */
 export function showError(ctx, text, techInfo) {
   if (!ctx.currentBlock) newBlock(ctx)
-  const err = document.createElement("div")
-  err.className = "error-banner"
-  let html = `<div class="error-text">${escHtml(text)}</div>`
-  if (techInfo) html += `<details class="error-details"><summary>Details</summary><pre>${escHtml(techInfo)}</pre></details>`
-  html += `<button class="error-retry-btn">${t("error.retry")}</button>`
-  err.innerHTML = html
-  err.querySelector(".error-retry-btn").addEventListener("click", () => {
-    ctx.vscode.postMessage({ type: "retry" })
-  })
+  const err = renderErrorBanner(text, techInfo, { emit: () => ctx.vscode.postMessage({ type: "retry" }) })
   ctx.currentBlock.appendChild(err)
   scrollDown(ctx)
 }
 
-export function escHtml(s) {
-  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
-}
+// ─── Loading / Error ───────────────────────────
+// setLoading moved to loading.js (AGENT-LOOP-ASYNC-POOL.md §6.8 split — ui.js stays free of the state.js
+// bridge dependency; suspension-aware loading state lives with state.js consumers)
 
 /** Follow-scroll: pinned to the bottom by default; the user scrolling up unpins
  *  (reading history), scrolling back to the bottom repins. Stream-driven callers use

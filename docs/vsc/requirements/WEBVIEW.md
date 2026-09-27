@@ -66,7 +66,7 @@ webview 只做 UI 渲染与用户交互；agent 循环与工具执行在 extensi
 - **P2-1** `ctx.activeSession` 死写（`chat.js:195` 写 / 全树零读） · **P2-2** `S._llmCalls` 死计数（`send.js:31` + `status-bar.js:83` 写 / 零读）⇒ 消解 = 下次触碰该档时清；到期 = 相应档下次修改。
 - **P2-3** idle 状态行残留 `turn N/M`（`streaming.js:173` `finish()` 只清 `_turnStart`；`_turnFrame` 仅 `clearMessages` 清）⇒ 消解 = `finish()` 同清；到期 = 状态行面下次触碰。
 - **P2-4** `@` 下拉 Escape 后迟到结果重开（`autocomplete.js:37` 自行 `display:block` + `_atActive=true`）⇒ 消解 = 请求失效标记；到期 = autocomplete 面下次触碰。
-- **P2-5** 恢复路径嵌套工具卡缺 `→ 摘要` 表头段（`tool-card-restore.mjs:39-43` vs 活卡 `ui.js:304-315`）⇒ 登记（F-W4 只约束折叠语义）。
+- **P2-5** 恢复路径嵌套工具卡缺 `→ 摘要` 表头段（`thincoder-render-core/flow/tool-card-restore.mjs:39-43` vs 活卡 `thincoder-render-core/flow/tool-card.mjs:95`（`finishToolCard`））⇒ 登记（F-W4 只约束折叠语义）。
 - **P2-6** 裁剪窗不含 `.ledger-line` / `.digest-*` / `.error-banner` / `#compress-status`（`ui.js:446-454` 只统计 4 类）⇒ 消解 = 扩裁剪族；到期 = N-W2 面下次触碰。
 - **P2-7** 索引进度 statusText 无失败清除路径（`panel-index.mjs:196` 弹窗不补发 `done`）⇒ 消解 = 失败补发清除；到期 = 索引面下次触碰。
 - **P2-8** webview 重载撞在飞回合（`panel-session.mjs:154-159` 置 `_agent=null` + abort 蒸馏）⇒ 登记（跨 reload 恢复 = 既定不做 I-7）。

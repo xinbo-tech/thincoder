@@ -104,8 +104,8 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
 | `thincoder-desktop/.gitignore`（新增） | ~5 | 忽略 `thincoder-desktop/test/artifacts/`（运行期产物不进 git——KD 单源 = `docs/desktop/design/E2E-TESTING.md` KD-10） |
 | `thincoder-desktop/src/main/main.mjs` | **93**（批 B 末实读） | 入口：单实例锁 · 协议注册 · 窗口 · 启动自检（KD-7）——ready 前初始化一律 await |
 | `thincoder-desktop/src/main/host-floor.mjs` | 42 | `main.mjs` 同面拆分 · 零 `electron` 导入的叶子（宿主下限谓词 + `node:sqlite` 探针——实施批 1 已落） |
-| `thincoder-desktop/src/main/window.mjs` | **130**（批 B 末实读） | BrowserWindow · 菜单 · 系统主题 · 窗口态 |
-| `thincoder-desktop/src/main/protocol.mjs` | **68**（批 B 末实读） | `app://` 供给 + 路径逃逸防护（照官方示例判据） |
+| `thincoder-desktop/src/main/window.mjs` | **136**（R1 末实读） | BrowserWindow · 菜单 · 系统主题 · 窗口态 |
+| `thincoder-desktop/src/main/protocol.mjs` | **88**（R1 末实读） | `app://` 供给 + 路径逃逸防护（照官方示例判据） |
 | `thincoder-desktop/src/main/ipc.mjs` | **201**（批 B 末实读） | 通道注册与分发（白名单 **26 ⇒ 27 项**——批 B 增 `session:prefs` 末位；`docs/desktop/design/IPC.md` §2「白名单面」）；超 200 行按面拆分（批 9 贴层 ⇒ 在册预案）；**越 200 ⇒ 在册预案触发**（批 B 末实读 201——批 B 增 `session:prefs` 处理体 + 白名单项 1 行入账） |
 | `thincoder-desktop/src/main/agent-host.mjs` | **271**（批 B 末实读） | 壳装配第三份 + 回合驱动（`docs/desktop/design/SHELL.md` §4）——**在册拆档落形**：回调桥 / 待决门 / 槽 I-O 三面已成出档（下三行）；**批 B 增**：会话级偏好施加径 `setPrefs`（写盘 → `loadAgentSlot` 重施单点 · 在飞 `flights.has(key)` ⇒ 拒 `busy` 零写——KD-19） |
 | `thincoder-desktop/src/main/agent-bridge.mjs` | **77**（批 A 末实读——§5 表列 79 按盘收正） | 回调桥出档（自 `agent-host.mjs` 拆出——批 8 §1.14 ③）：活动名闭集八名 + 协议行解析（`⟦ev⟧`）+ 九回调 ⇒ `ev:*` 映射 + 工具参数摘要（与待决门共用口径）——注入 `post` / `askSingle` / `askBatch` / `askQuestion`（批 A 增第 4 键——自挂起门出 `ev:question`，桥零文案），零宿主依赖 ⇒ 平 node 直测（映射单源 = `docs/desktop/design/IPC.md` §1）；批 A 增量 = 第 4 键 + `ev:question` 映射（~6 行，结构不变） |
@@ -595,4 +595,5 @@ T-DSK30 的机检面 = `thincoder-desktop/test/views-attach.test.mjs`（附件�
   核面单源 = `docs/render-core/design/RENDER-CORE.md`（本档 §2 KD-27 指针）；明细 = `docs/batches/2026-09-27-desktop-ui-alignment.md` §2。
 - 2026-09-27（**对齐重定位批 · 设计评审轮 1 点修**）：§4.1 越层段补**本批触碰登记**（越层三档 + 贴层一档——数值 = §4.2 本批行，单源）；§4.2 本批行补**逐档「现行 ⇒ 预期」**（新增 agent-host / renderer 六档 / 样式档等行；指针不再悬空——§6 ↔ §4.1 环解）；
   §6.1 D20 行补出生自愈句；§7 **T-DSK34** 机检档名收正（`sessions.test.mjs` ⇒ `session-contract.test.mjs` 原址补例——盘上不存前名，实读收正）· **T-DSK36** 补⑤出生自愈判据 + ③实收值收正（`cancelled`）。明细 = `docs/batches/2026-09-27-desktop-ui-alignment.md` §2.11。
+- 2026-09-27（**R1 结算随动 · 设计面收正微轮**）：§4.1 两行按盘回填（`thincoder-desktop/src/main/window.mjs` **130 ⇒ 136** · `thincoder-desktop/src/main/protocol.mjs` **68 ⇒ 88**——render-core R1 末实读）；零语义。
 

@@ -373,7 +373,9 @@ test("T-CL23 输出面携 cmd 亦零写（§2.8-4）：face=toolOutput ⇒ 状�
 })
 
 test("T-CL24 结构锁（§2.8-5 · 防复辟）：noteChunk 状态区写点恰 2（结构化 / think）∧ 无末行取值形态", () => {
-  const src = readFileSync(new URL("../webview/activity-view.js", import.meta.url), "utf8")
+  // 锁对象随机制走（R2 换接）：实现单源 = 核包 `subblocks/activity-view.mjs`（端档 = 再导出
+  // shim，零逻辑）——路径形同各 shim 的接入形（junction 解析）；核包路径不可达 ⇒ 本锁自然红。
+  const src = readFileSync(new URL("../node_modules/@thincoder/render-core/subblocks/activity-view.mjs", import.meta.url), "utf8")
   const start = src.indexOf("export function noteChunk(")
   assert.ok(start >= 0, "noteChunk 在位")
   const end = src.indexOf("\n}\n", start)

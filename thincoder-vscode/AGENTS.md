@@ -56,14 +56,14 @@ src/tools/{index,shell,code,ide,focus,shared}.mjs  端壳工具面（index = 核
 src/extension/        ChatPanel 分解模块（chat-panel.mjs 类本体 + panel-chat/panel-messages/panel-session/panel-project/panel-mcp/panel-index/panel-toolpanel/panel-callbacks/panel-settings-push 等载荷分模块 + session-io/session-slots/settings/presets）
 webview/chat.js
 webview/state.js     UI 状态单一持有（S + DOM ctx + vscode——全模块共享同一运行时对象——WEBVIEW.md）
-webview/streaming.js  token/reasoning 流式渲染（rAF 节流）+ 回合收尾 + 活动块路由（块出生即活动区 `#subagent-activity` 区尾——activity.js——subagentChunk 空安全守卫）
+webview/streaming.js  token/reasoning 流式渲染（rAF 节流——帧驱动单源 = 核 `@thincoder/render-core/flow/stream.mjs`；端注 `ctx` / `S` 指针与回合尾装配）+ 回合收尾 + 活动块路由（块出生即活动区 `#subagent-activity` 区尾——activity.js——subagentChunk 空安全守卫）
 webview/panels.js    侧面板：task progress / goal + 挂起态 + 桥路由（行面板已撤——簿记 map 已删——handleSubagentMessage 纯转发——活动块生命周期在 activity.js）
-webview/activity.js   编排层（ACTIVITY-REWRITE-SIMPLE 重写——B1 流尾形态已由活动区回归取代）：ensureBlock（出生 append 活动区 `#subagent-activity` 区尾——终态幂等守卫返 null）+ applySubagentStatus 三态机（queued ⏳ 头含取消 ⏹/started 翻 running/其余 status 一律终态折叠——非出生消息 lookup-only 绝不建块（终态补桩例外——§5.3「终态必现」）——settled ⇒ awaitingDigest 驻留（回收 done 才归档））+ freeze 原地折叠 + resetActivity + freezeLiveBlocks——导出消费面 panels/chat/streaming（noteChunk 经此 re-export）——`../docs/vsc/design/WEBVIEW.md` §5.1
-webview/activity-view.js   呈现叶（refreshBlock/updateStopButton/noteChunk——块头/状态词/⏹——区显隐/pin/ticker/awaiting 词删）——leaf（i18n only——不依赖核心）——`../docs/vsc/design/WEBVIEW.md` §5.2
+webview/activity.js   编排层（R2 换接：迁移判据 / 键文法 / 补桩表单源 = 核 `@thincoder/render-core/subblocks/state.mjs` + `subblocks/channel.mjs`）：DOM 效果执行（按序逐条——`key → DOM` 即时解析）+ 出生位 / 说明行 / 归档入流 / 区复位 / 块级跟滚 / 头词定时刷新——导出消费面 panels/chat/streaming（noteChunk 经此 re-export）——`../docs/vsc/design/WEBVIEW.md` §5.1
+webview/activity-view.js   2 行再导出 shim → 核 `@thincoder/render-core/subblocks/activity-view.mjs`（块头 / 状态词 / 折叠 tail / ⏹ 与取消控件——refreshBlock / noteChunk 实现单源 = 核件）——`../docs/vsc/design/WEBVIEW.md` §5.2
 webview/activity-new.js    未钉底期新块出生未读计数钮（建/更/删 + 点击回底 + resetActivity 同清——`../docs/vsc/design/WEBVIEW.md` §5.5 D-W27）
 webview/activity-diag.js   诊断痕迹面（七 kind + 环载体 SUB_TRACE_MAX=50 + `panelDiag` 批内合并上行——`../docs/vsc/design/WEBVIEW.md` §5.3 D-W22；2026-09-19 批自 activity.js/state.js 迁出）
-webview/ui.js        DOM helpers: welcome banner, message bubbles, tool call rendering
-webview/md.js        Lightweight Markdown → HTML renderer
+webview/ui.js        端壳面：welcome banner / 横幅 + `ctx` 装配（气泡 / 工具卡 / advisor 块 / 恢复帧 / 错误横幅构件单源 = 核 `@thincoder/render-core/flow/block.mjs` + `flow/tool-card.mjs`）+ 滚动族 / 150 窗裁剪（`retry` 唯一出站）
+webview/md.js        2 行再导出 shim → 核 `@thincoder/render-core/md.mjs`（R1 迁核；实现单源 = 核件——含全量转义闸）
 webview/base.css     Base styles, variables, layout
 webview/chat.css     Messages, markdown, tool calls, error
 webview/controls.css Input area, controls, dropdown
