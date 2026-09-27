@@ -7,7 +7,8 @@
  * ⇒ 按 `CORE-UNIFICATION.md` §2.8.1 表第 3 行**随批**外提清单 / 认领 / 属主面至
  * `session-slots-manifest.mjs`（语义原样迁移；本档 re-export 该档导出保既有 import 面——
  * 消费档 import 路径与名面不动）。本档保留 = 存储原语（cwd 哈希 / 路径 / 原子写 / 进程
- * sessionId）· 端记录（end marker）· 列表面（listSlots / loadSlotMeta）· 删槽 · 恢复决策面
+ * sessionId）· 端记录（end marker）· 列表面（listSlots——条目集 = 盘面实读；扫描面住
+ * `session-slot-scan.mjs`）· 删槽 · 恢复决策面
  * （usableSlot / loadLegacyFile / resumeSlot）。
  *
  * 端名缝（SESSION.md §6.20 D-SE50 · 2026-09-25 SLOT-END-PARAM 批）：端名 = **进程内的单值
@@ -44,9 +45,12 @@ import { probeOwnersAsync, isProcessAlive } from "./process-probe.mjs"
 // 清单 / 认领 / 属主面（init-block 批外提——双向静态环见头注）：本档 import 取用 + re-export
 // 保既有 import 面（消费档路径与名面不动）。
 import {
-  extractSlotMeta, loadManifest, saveManifest, ownerPids, ownerStateOf, cleanDeadOwners,
+  loadManifest, saveManifest, ownerPids, ownerStateOf, cleanDeadOwners,
   allocateFresh, claimSlot, activeSlot,
 } from "./session-slots-manifest.mjs"
+// 盘面扫描面（SESSION-LIST-DISK 批 §6.22）：条目集 = 盘面实读——枚举 / 早键截读 / 取数链装配住
+// 新档；本档 listSlots 收敛为组合 + 条目投影。静态环（本档 ↔ 扫描档；环安全见头注同形）。
+import { scanSlotMetas } from "./session-slot-scan.mjs"
 export {
   slotDigest, loadManifest, saveManifest, ownerPid, ownerPids,
   allocateFresh, claimSlot, activeSlot,
@@ -169,55 +173,35 @@ export function writeSessionFile(p, data) {
  *  **三态**：`true` 活 / `false` 死 / `undefined` 未知——未知不作死判据（D-MI10）。 */
 export { isProcessAlive }
 
-/** Lazy-load slot metadata from slot file (for old-format manifest entries that lack metadata) */
-function loadSlotMeta(cwd, slot, v) {
-  if (typeof v === "object" && v !== null && "ts" in v) return v
-  const ts = typeof v === "number" ? v : 0
-  try {
-    const p = slotPath(cwd, slot)
-    if (!existsSync(p)) return { ts }
-    const data = JSON.parse(readFileSync(p, "utf8"))
-    const history = data.history ?? []
-    const meta = extractSlotMeta(history, data.activeProvider, data.updatedAt ?? ts, data.title ?? "")
-    if (data.activeModel) meta.activeModel = data.activeModel
-    // 创建端（§6.20 判据句 4 读面——有值才带：老槽无键 ⇒ 此处不带键 = 未知）
-    if (data.createdBy) meta.createdBy = data.createdBy
-    return { ts, ...meta }
-  } catch {
-    return { ts }
-  }
-}
-
-/** List all slots, newest first. Includes isActive flag.
- *  2026-09-01 会诊 🟢：只读操作不认领——原实现 active 缺失时调 activeSlot（写 manifest
- *  副作用，ACP session/list 可触发）。m.active 缺失时全部 isActive=false，由下一次
- *  activeSlot 正常认领。 */
+/** List all slots **from disk**, newest first. Includes isActive flag.
+ *  §6.22（SESSION-LIST-DISK 批 · 2026-09-28）：条目集 = **盘面实读**（sessions 根下槽文件枚举 /
+ *  取数链装配住 `session-slot-scan.mjs`）——manifest `m.slots` 只作摘要缓存，不参与条目集
+ *  （既不筛也不补）；排序 = `updatedAt` 降序（同值按槽号降序）；行形态逐字段零改。
+ *  2026-09-01 会诊 🟢：只读操作不认领（清单链**零写**——不认领、不写 manifest、零探测）——
+ *  原实现 active 缺失时调 activeSlot（写 manifest 副作用，ACP session/list 可触发）。
+ *  m.active 缺失时全部 isActive=false，由下一次 activeSlot 正常认领。 */
 export function listSlots(cwd) {
   const m = loadManifest(cwd)
   const active = m.active ?? null
-  return Object.entries(m.slots)
-    .filter(([n]) => /^\d+$/.test(n))
-    .map(([n, v]) => {
-      const meta = loadSlotMeta(cwd, Number(n), v)
-      return {
-        slot: Number(n),
-        isActive: Number(n) === active,
-        timestamp: meta.ts,
-        date: new Date(meta.ts).toLocaleString(),
-        messageCount: meta.messageCount ?? 0,
-        turnCount: meta.turnCount ?? 0,
-        firstMessage: meta.firstMessage ?? "",
-        // MODEL-MERGE-SESSION 摘要 "p:m"：activeProvider 保持裸渠道名——列表消费面显复合
-        // （旧摘要无 activeModel → 回退裸渠道名——新老兼容；cmd-session/VSC sessions 行免改）
-        activeProvider: meta.activeProvider ? (meta.activeModel ? `${meta.activeProvider}:${meta.activeModel}` : meta.activeProvider) : "",
-        updatedAt: meta.updatedAt ?? meta.ts,
-        updatedDate: new Date(meta.updatedAt ?? meta.ts).toLocaleString(),
-        title: meta.title ?? "",
-        // 创建端（§6.20 判据句 4 读面——缺键/老槽 ⇒ "" = 未知；「未知」的渲染文案归消费面）
-        createdBy: meta.createdBy ?? "",
-      }
-    })
-    .sort((a, b) => b.updatedAt - a.updatedAt)
+  return scanSlotMetas(cwd, m.slots ?? {})
+    .map(({ slot, meta }) => ({
+      slot,
+      isActive: slot === active,
+      timestamp: meta.ts,
+      date: new Date(meta.ts).toLocaleString(),
+      messageCount: meta.messageCount ?? 0,
+      turnCount: meta.turnCount ?? 0,
+      firstMessage: meta.firstMessage ?? "",
+      // MODEL-MERGE-SESSION 摘要 "p:m"：activeProvider 保持裸渠道名——列表消费面显复合
+      // （旧摘要无 activeModel → 回退裸渠道名——新老兼容；cmd-session/VSC sessions 行免改）
+      activeProvider: meta.activeProvider ? (meta.activeModel ? `${meta.activeProvider}:${meta.activeModel}` : meta.activeProvider) : "",
+      updatedAt: meta.updatedAt ?? meta.ts,
+      updatedDate: new Date(meta.updatedAt ?? meta.ts).toLocaleString(),
+      title: meta.title ?? "",
+      // 创建端（§6.20 判据句 4 读面——缺键/老槽 ⇒ "" = 未知；「未知」的渲染文案归消费面）
+      createdBy: meta.createdBy ?? "",
+    }))
+    .sort((a, b) => b.updatedAt - a.updatedAt || b.slot - a.slot)
 }
 
 /** Delete a slot: remove its file and manifest entry. Deleting the active slot
@@ -226,7 +210,9 @@ export function deleteSlot(cwd, slot, { end = sessionEnd() } = {}) {
   const n = Number(slot)
   if (!Number.isInteger(n) || n < 1) return false
   const m = loadManifest(cwd)
-  if (!m.slots[n]) return false
+  // §6.22 判据句 4（SESSION-LIST-DISK 批）：准入 = 盘面文件存在 ∨ manifest 有条目——盘上独有槽
+  // （文件在盘、条目缺失）可删；旧分支逐字保留（有条目无文件 ⇒ 仍清条目，行为同今日）。
+  if (!m.slots[n] && !existsSync(slotPath(cwd, n))) return false
   delete m.slots[n]
   delete m.slotSessions?.[n] // orphan session-id entries bloat the manifest forever
   try { unlinkSync(slotPath(cwd, n)) } catch { /* missing file is fine */ }
@@ -245,11 +231,12 @@ export function deleteSlot(cwd, slot, { end = sessionEnd() } = {}) {
 
 // ========== resumeSlot（SESSION.md §6.10 D-2——端分离恢复决策）==========
 
-/** 本端记录槽可用判据（D-2）：slot ∈ m.slots + 槽文件在盘 + 属主 空、死、本进程。
+/** 本端记录槽可用判据（D-2）：**槽文件在盘**（§6.22 判据句 4——条目缺失不作门）+ 属主
+ *  空、死、本进程。
  *  F-MI7：占用判据查调用面束（零自有探测）；属主 unknown（探测失败 / 缺行）⇒ **不可用**
  *  （不认领——保守：回落到 allocateFresh 取全新号，绝不与"可能活着"的属主同槽）。 */
 function usableSlot(cwd, m, slot, bundle = null) {
-  if (!m.slots[slot] || !existsSync(slotPath(cwd, slot))) return false
+  if (!existsSync(slotPath(cwd, slot))) return false
   const owner = m.slotSessions?.[slot]
   if (!owner || owner === getSessionId()) return true
   return ownerStateOf(owner, bundle) === "dead"
@@ -287,7 +274,8 @@ function loadLegacyFile(cwd) {
  * 恢复决策（SESSION.md §6.10 D-2）——TUI 启动的本端恢复入口（VS Code 面板同构镜像）。
  * **async**（F-MI7：入口一次异步束——探测不阻塞事件循环；调用面必须 await）。
  * 返回 { slot, data }（data 可为 null——全新起步或读槽失败）。判据：
- *   ① 本端记录可用（slot ≠ null 且 ∈ m.slots 且槽文件在盘 且属主 空/死/本进程）→ claimSlot；
+ *   ① 本端记录可用（slot ≠ null 且槽文件在盘 且属主 空/死/本进程——§6.22 判据句 4：manifest
+ *      条目缺失不作门）→ claimSlot；
  *   ② 记录缺失（从未记录 = 升级/首用迁移窗口）：②a active 属主 = 本进程（同进程重入——
  *      ensureActive 早退语义镜像：认领后尚未写 slots 条目/文件的窗口）→ 直接沿用；
  *      ②b 否则一次性继承 manifest.active（同判据；活属主绝不继承——全新槽起步，T-M3）；

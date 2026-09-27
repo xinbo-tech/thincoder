@@ -314,7 +314,9 @@ export function resetSessionState(agent) {
  *  2026-09-01 会诊三家 🟡：saveManifest 条目级合并 + setActive（不把并发方刚翻的指针回滚）。 */
 export function switchToSlot(cwd, slot, { end = sessionEnd() } = {}) {
   const m = loadManifest(cwd)
-  if (!m.slots[slot]) return null
+  // §6.22 判据句 4（SESSION-LIST-DISK 批）：准入 = 盘面文件存在 ∨ manifest 有条目——盘上独有槽
+  // 可切；旧分支逐字保留（有条目无文件 ⇒ 读槽返 null 同今日）。
+  if (!m.slots[slot] && !existsSync(slotPath(cwd, slot))) return null
   const data = loadSlotFile(cwd, slot)
   if (!data) return null
   m.active = slot
