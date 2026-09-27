@@ -10,6 +10,7 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import { applyPage, openSession, reduce } from "../renderer/events.mjs"
 import { createStore, initialState } from "../renderer/store.mjs"
+import { STATUS_KEYS } from "../renderer/mount-status.mjs"
 import { submitVerdict } from "../renderer/mount-pool.mjs"
 import { chatModel, chatTree } from "../renderer/views/chat.mjs"
 import { poolModel, poolTree } from "../renderer/views/activity.mjs"
@@ -169,4 +170,45 @@ test("U92 出站后清除：成功两侧同清 / 回执非 ok 与拒绝皆零乐
   assert.equal(await submitVerdict({ store: broken, host: brokenHost }, "p1", "reject"), false)
   assert.equal(broken.get().pool.approvals.length, 1, "拒绝 ⇒ 零乐观摘除")
   assert.ok(logged.some((line) => line.includes("approval:respond")), "console.error 在场（不静默）")
+})
+
+// ─── U176 首屏播种（D17 · `docs/desktop/design/IPC.md` §2「打开态播种注」项 3/4）────────
+
+test("U176 首屏播种：`seed` 同笔写两切片 · 缺席 / 形不合 ⇒ 零写 · 在飞（回合未尾）⇒ 种不落", () => {
+  const blank = stateOf()
+  const seed = { tasks: [{ id: 1, status: "done" }, { id: 2, status: "pending" }], usage: 42 }
+  const receipt = { ok: true, messages: [], hasOlder: false, next: null, meta: {}, seed }
+
+  const seeded = applyPage(blank, receipt, { key: KEY, before: null })
+  assert.deepEqual(seeded.tasks[KEY], seed.tasks, "tasks[key] = 槽数据直取（逐字）")
+  assert.equal(seeded.usage[KEY], 42, "usage[key] = 打开态读数（域 0–100 整数直传）")
+  assert.deepEqual(seeded.sessionMeta[KEY], {}, "与 `meta` 同一写点（首屏回执照写）")
+  assert.equal(blank.tasks, undefined, "原态零改写（纯归约）")
+
+  const noSeed = applyPage(blank, { ...receipt, seed: undefined }, { key: KEY, before: null })
+  assert.equal(noSeed.tasks, blank.tasks, "`seed` 缺省 ⇒ tasks 零写")
+  assert.equal(noSeed.usage, blank.usage, "`seed` 缺省 ⇒ usage 零写")
+
+  const malformed = applyPage(blank, { ...receipt, seed: { tasks: "nope", usage: "42" } }, { key: KEY, before: null })
+  assert.equal(malformed.tasks, blank.tasks, "tasks 形不合 ⇒ 该槽零写（禁假造）")
+  assert.equal(malformed.usage, blank.usage, "usage 形不合 ⇒ 该槽零写")
+  const zero = applyPage(blank, { ...receipt, seed: { tasks: [], usage: 0 } }, { key: KEY, before: null })
+  assert.deepEqual(zero.tasks[KEY], [], "tasks 空数组照落（槽数据直取——零节点判据归显示面）")
+  assert.equal(zero.usage, blank.usage, "usage ≤ 0 ⇒ 该槽零写（同 `ev:usage` 有效门）")
+
+  const live = stateOf({ tasks: { [KEY]: [{ id: 9 }] }, usage: { [KEY]: 7 }, tabBadges: { [KEY]: ["running"] } })
+  const inFlight = applyPage(live, receipt, { key: KEY, before: null })
+  assert.equal(inFlight.tasks, live.tasks, "在飞（回合未尾）⇒ 种不落：tasks 活切片为准")
+  assert.equal(inFlight.usage, live.usage, "在飞 ⇒ usage 活切片为准")
+  assert.deepEqual(inFlight.blocks, [], "页整置仍走（只种不落——既有页读语义零改）")
+  const settled = applyPage({ ...live, tabBadges: { [KEY]: ["done"] } }, receipt, { key: KEY, before: null })
+  assert.deepEqual(settled.tasks[KEY], seed.tasks, "回合尾（位标无 `running`）⇒ 种落")
+
+  const backfill = applyPage(blank, receipt, { key: KEY, before: 4 })
+  assert.equal(backfill.tasks, blank.tasks, "回填径不消费 `seed`（`before != null`）")
+  assert.equal(backfill.usage, blank.usage)
+  const stray = applyPage(blank, receipt, { key: "9", before: null })
+  assert.equal(stray.tasks, blank.tasks, "非活动会话 ⇒ 零写（沿 `meta` 之外的切片键门）")
+
+  assert.equal(STATUS_KEYS.includes("tasks") && STATUS_KEYS.includes("usage"), true, "订阅键面零改（两键已在 `STATUS_KEYS` ⇒ 帧随切片变自动重挂）")
 })

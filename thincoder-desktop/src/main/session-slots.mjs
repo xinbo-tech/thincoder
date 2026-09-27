@@ -17,7 +17,11 @@
  *   ④ 历史页读面（本批增）：`pageHistory` —— 槽读转口核 `loadSlotFile`、窗口切分转口核 `historyWindow`
  *      （页尺 = 核常量 `HISTORY_PAGE_SIZE`；端层只做页游标注与元信息面 ⇒ 零算法副本）；
  *   ⑤ 会话级偏好写面（本批增）：`writeSlotPrefs` —— 核 `setSlotPrefs` 转口（键闭集 / 值归一 / 原子写皆
- *      在核）+ 回读 `loadSlotFile` 经 `slotMeta` 出串（回执 `meta` 与 `history:page` **同源同形**）。
+ *      在核）+ 回读 `loadSlotFile` 经 `slotMeta` 出串（回执 `meta` 与 `history:page` **同源同形**）；
+ *   ⑥ 打开态播种面（桌面残余批 · D17）：`pageHistory` 首屏回执携 `seed` —— `tasks` = 槽数据直取、
+ *      `usage` = 核 `sessionReading` 投影（读数算法全在核）；端层只做出参装配（`loadConfig()` →
+ *      `providersList` / `provider`）与有效门（数字 ∧ `> 0`）⇒ 零算法副本（形态 / 在场 / 缺席降级单源 =
+ *      `docs/desktop/design/IPC.md` §2「打开态播种注」）。
  *
  * 载入序不变量（批档 §2.4（a））：核 `newSlotData(cwd)` 的 `createdBy = sessionEnd()`
  * （`thincoder-core/session-slot-write.mjs:46`）⇒ 端名声明必须先于任何物化写。本档声明是模块级
@@ -33,10 +37,13 @@ import {
   writeEndMarker as coreWriteEndMarker, resumeSlot as coreResumeSlot,
 } from "@thincoder/core/session-slots.mjs"
 // 会话族核门（本批增 —— 三名皆在 `@thincoder/core/session.mjs` re-export：`:41` / `:52`；`renameSlot` 见下 re-export 面）。
+// 打开态读数（桌面残余批 · §6.24）：同一 re-export 面 `:52`——端层只装配入参。
 import {
   newSession as coreNewSession, switchToSlot as coreSwitchToSlot, deleteSlot as coreDeleteSlot,
-  loadSlotFile,
+  loadSlotFile, sessionReading,
 } from "@thincoder/core/session.mjs"
+// 装配面（打开态播种出参）：`providersList` / `provider` 两值由核 `loadConfig` 出（单源）。
+import { loadConfig } from "@thincoder/core/config.mjs"
 // 历史页读面（本批增）：窗口切分与页尺的**单源**在核。
 import { HISTORY_PAGE_SIZE, historyWindow } from "@thincoder/core/history-window.mjs"
 // 会话级偏好写面（本批增）：核写口转口 —— 本档零算法副本（只补回读投影）。
@@ -120,10 +127,27 @@ function slotMeta(data) {
   return meta
 }
 
-/** `history:page(payload)` 读面：载荷 `{ key, before }` ⇒ `{ ok:true, messages, hasOlder, next, meta }`；
+/** 打开态播种面（`history:page` 回执 `seed` —— 形态 / 在场 / 缺席降级单源 = `docs/desktop/design/IPC.md`
+ *  §2「打开态播种注」）：`tasks` = 槽数据直取（非数组 ⇒ `[]`——沿核水合口径 `data.tasks ?? []`）；
+ *  `usage` = 核 `sessionReading` 打开态读数（有效门 = 数字 ∧ `> 0`——否则键缺席，沿 `ev:usage` 同门）；
+ *  配置不可读 / 读数计算抛 ⇒ `usage` 键缺席 + `console.error`（零静默；读面保持 fail-soft）。 */
+function openingSeed(data) {
+  const seed = { tasks: Array.isArray(data.tasks) ? data.tasks : [] }
+  try {
+    const config = loadConfig()
+    const percent = sessionReading(data, { providers: config.providersList, fallback: config.provider })
+    if (typeof percent === "number" && percent > 0) seed.usage = percent
+  } catch (error) {
+    console.error("[session-slots] opening reading unavailable:", error)
+  }
+  return seed
+}
+
+/** `history:page(payload)` 读面：载荷 `{ key, before }` ⇒ `{ ok:true, messages, hasOlder, next, meta, seed? }`；
  *  坏键 / 槽缺（含坏档、异项目档 —— 核 `loadSlotFile` 三因同出口回 null）⇒ `{ ok:false, reason }`
  *  （码 = `bad-key` / `slot-missing`，单源 `docs/desktop/design/IPC.md`:52；**不抛** —— 读面 fail-soft）。
- *  窗口切分 = 核 `historyWindow`（页尺缺省 = 核常量）；`next` = 更旧一页的 `before`（`hasOlder === false ⇒ null`）。 */
+ *  窗口切分 = 核 `historyWindow`（页尺缺省 = 核常量）；`next` = 更旧一页的 `before`（`hasOlder === false ⇒ null`）。
+ *  `seed` = 打开态播种面：**仅首屏读**（`before == null`）在场——回填读不携（防回填以盘上旧值覆盖活切片）。 */
 export function pageHistory(cwd, payload) {
   const slot = slotOfKey(payload?.key)
   if (slot === null) return { ok: false, reason: "bad-key" }
@@ -135,7 +159,9 @@ export function pageHistory(cwd, payload) {
   const total = history.length
   const end = before == null ? total : Math.max(0, Math.min(before, total))
   const next = hasOlder ? Math.max(0, end - HISTORY_PAGE_SIZE) : null
-  return { ok: true, messages, hasOlder, next, meta: slotMeta(data) }
+  const receipt = { ok: true, messages, hasOlder, next, meta: slotMeta(data) }
+  if (before == null) receipt.seed = openingSeed(data)
+  return receipt
 }
 
 // ─── 会话级偏好写面（本批增 —— T-DSK28 · `docs/desktop/design/IPC.md` §2「会话级偏好注」项 2/4/7）──────────

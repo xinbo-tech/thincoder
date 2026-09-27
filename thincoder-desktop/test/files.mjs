@@ -18,4 +18,5 @@ export default [
   "test/views-settings.test.mjs", "test/views-onboarding.test.mjs",
   "test/views-attach.test.mjs", "test/attachments.test.mjs",
   "test/integration/settings-panel.test.mjs", "test/integration/first-run-smoke.test.mjs", "test/integration/chat-render.test.mjs",
+  "test/integration/session-open.test.mjs",
 ]

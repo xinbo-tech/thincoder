@@ -14,16 +14,19 @@
  */
 import { build } from "../dom.mjs"
 import { t } from "../i18n.mjs"
-import { md } from "/rc/md.mjs"
+import { md, mdInline } from "/rc/md.mjs"
 import { paintStreamTarget } from "/rc/flow/stream.mjs"
 import { blockTextOf, copyBlockNode } from "./chat-copy.mjs"
 
-/** 文本块面（核 Markdown 单源）：`data-raw` = 原文逐字（复制取文源 · 空串 ⇒ 照落，判据归复制控件面）；
- *  `html` = 核 `md` 产出 —— **渲染面唯一 `innerHTML` 字面** = `renderer/dom.mjs` `el()` 的 `html` prop
+/** 文本块面（核 Markdown 单源 · **深度分流** = D19）：`data-raw` = 原文逐字（复制取文源 · 空串 ⇒ 照落，判据归复制控件面）；
+ *  深度按 `block.kind` 分流（口径标尺 = 核件 `thincoder-render-core/flow/block.mjs`：user 气泡 = `mdInline` ∥ 助手内容面 = `md`）：
+ *  `user` ⇒ `mdInline`（行内深度 —— 块级构件零节点）；`assistant` / `reasoning` / `error` ⇒ 全量 `md`（零回归）；
+ *  `html` = 核产出 —— **渲染面唯一 `innerHTML` 字面** = `renderer/dom.mjs` `el()` 的 `html` prop
  *  （帧尾重渲径经核 `paintStreamTarget` —— 核内同闸同写；两径值皆过全量转义闸）。 */
 export function textFace(block, className = "block-text") {
   const raw = blockTextOf(block)
-  return { tag: "div", props: { class: className, "data-raw": raw, html: md(raw) }, children: [] }
+  const html = block?.kind === "user" ? mdInline(raw) : md(raw)
+  return { tag: "div", props: { class: className, "data-raw": raw, html }, children: [] }
 }
 
 /** 推理块（核件结构同形 —— 核 `flow/reasoning.mjs` `renderReasoning`）：块壳 = 桌面五型锚（`data-block-id` /

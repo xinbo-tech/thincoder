@@ -46,10 +46,10 @@ export { renameSlot } from "./session-rename.mjs"
 // 人读线惰性窗口面（`history-window.mjs`）——re-export 保调用方单一路径。
 export { historyWindow, HISTORY_PAGE_SIZE, isRealUserMsg } from "./history-window.mjs"
 // 会话生命周期面（init-block 批 · F-MI7 拆分——语义原样外提）：本端恢复入口包装（含残留 GC
-// 钩子）/ 槽数据应用 / 新建 / 运行态清空 / 槽切换 / 占用查询。**resumeSlot/newSession 为 async**
-// （入口一次异步探测束——调用面必须 await）。
+// 钩子）/ 槽数据应用 / 新建 / 运行态清空 / 槽切换 / 占用查询 / 打开态读数（桌面残余批 · §6.24——
+// 只读纯投影）。**resumeSlot/newSession 为 async**（入口一次异步探测束——调用面必须 await）。
 export {
-  resumeSlot, applySession, newSession, resetSessionState, switchToSlot, slotOccupancy,
+  resumeSlot, applySession, newSession, resetSessionState, switchToSlot, slotOccupancy, sessionReading,
 } from "./session-lifecycle.mjs"
 import { resumeSlot as lifecycleResumeSlot } from "./session-lifecycle.mjs"
 

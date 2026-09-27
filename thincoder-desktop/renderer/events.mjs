@@ -1,7 +1,9 @@
 /**
  * events.mjs — 渲染面事件归约核心（十二通道写切片 · 批档 §2.2(e) / §2.11⑧ · `docs/desktop/design/IPC.md` §1）：
  * 切片写者的**单源**——主进程只产事件 / 回执，值面落树全在本档；订阅接线面出档 `renderer/events-subscribe.mjs`
- * （十二通道表 · `attachEvents` · 回合尾标题刷新 —— 300 行拆分层落形，批档 §5 登记）。
+ * （十二通道表 · `attachEvents` · 回合尾标题刷新 —— 300 行拆分层落形，批档 §5 登记）；问题 / 任务切片面
+ * 出档 `renderer/questions.mjs`、位标面出档 `renderer/badges.mjs`（桌面残余批拆档产物——本档 500 行硬限
+ * 顶格，在册拆分预案执行；`clearQuestion` 本档 re-export 保导出名面）。
  *
  * 导出面七（`docs/desktop/design/RENDERER.md` §1.1 事件归约面条 —— 订阅接线一发已拆出同源档）：
  *   `reduce(state, ev, now)`   纯归约（零 DOM / 零 IPC ⇒ 平 node 直测）；无变化 ⇒ **原引用**
@@ -9,7 +11,8 @@
  *   `blockOfMessage(msg)`      核 message → 块（五型闭集 `user|assistant|reasoning|tool|error`，决策 D8-8）
  *   `openSession(state, key)`  `activeSession` 写者（置键 / `null` 关页 + 清本键 `done` 位标）
  *   `clearApproval(state, promptId)`  出站成功后摘项（写者表隐含 —— 见 §2.11⑦；调用面 = `renderer/mount-pool.mjs`）
- *   `clearQuestion(state, key)`  提问出场 ⇒ 摘本键项 + 清本键 `approval` 位（两调用面 = 出站 `ok` 真 ∥ `stopped` 终局）
+ *   `clearQuestion(state, key)`  提问出场 ⇒ 摘本键项 + 清本键 `approval` 位（两调用面 = 出站 `ok` 真 ∥ `stopped` 终局；
+ *                              住 `renderer/questions.mjs`——本档 re-export 保名面）
  *   `isTurnTail(ev)`           回合尾判据**单源**（**三径** = `ev:activity` 无 `fields` 的 `done` / `stopped` ∥ `ev:error` —— `onActivity` / `onError` 与订阅面 `events-subscribe.mjs` 同用）
  *
  * 纪律：块面写（`blocks`）须 `ev.key === state.activeSession`（否则原引用 —— 非活动会话的事件不落本会话流）；
@@ -21,19 +24,21 @@
  * 活块 / 页块两面差异（决策 D8-8）：页块**不落** `status` / `durationMs`（活块有），键集一致性判据 = 五型闭集。
  */
 import { appendBlock, endBackfill } from "./store.mjs"
+// 问题 / 任务切片面（桌面残余批拆档产物）：两归约体归 `reduce` 分派；`clearQuestion` 两调用面同源。
+import { clearQuestion, onQuestion, onTask } from "./questions.mjs"
+export { clearQuestion }
+// 位标面单源（同批拆出——`events.mjs` 500 行硬限顶格）；本档 `onApproval` / `onActivity` / `onError` /
+// `openSession` / `clearApproval` 与 `renderer/questions.mjs` 同引。
+import { badgeStamps } from "./badges.mjs"
 // 子 agent 块态机（R3b · D20）：核共享件（单源 = `docs/render-core/design/RENDER-CORE.md` §5 状态机族）——桌面经 `app://desktop/rc/**` 第二根取（同源 URL，非裸包：`test/guard-closure.test.mjs` `/rc/` 白名单）。
 import { subBlocksReduce } from "/rc/subblocks/state.mjs"
 
 /** 活流块 id 派生前缀（页块 id 域 = 核给（工具 id）/ 缺省无 —— 两域不混）。 */
 const LIVE_ID = "live-"
-/** 位标码闭集（`running` / `approval` / `done` —— §2.2(e) 值面写者表）；闭集外码 = 内部误用 ⇒ fail-loud。 */
-const BADGES = ["running", "approval", "done"]
 /** 会话头字段白名单（`thincoder-desktop/renderer/views/chrome.mjs:8-9` 判据：非串 / 空串 ⇒ 零节点）。 */
 const META_FIELDS = ["provider", "model", "effort", "engineering", "autoApprove"]
 /** 审批池条目键白名单（零新键 —— 消费面 `views/approval.mjs` / `views/activity.mjs` 读取集）。 */
 const APPROVAL_KEYS = ["promptId", "shape", "tool", "argsSummary", "changes", "batch"]
-/** 提问项键白名单（零新键 —— 卡面读取集 = `data-prompt-id` / 题干 / 给答项；载荷缺键 ⇒ 不落槽）。 */
-const QUESTION_KEYS = ["promptId", "question", "options"]
 /** 子 agent 状态闭集（**单源** = `docs/render-core/design/RENDER-CORE.md` §5 token → patch 全表：核 relay 谱
  *  `started` / `queued` / `turn` / `done` / `settled` / `cancelled` —— `⟦ev⟧stopped` ⇒ `cancelled` 先例兼容 ·
  *  `error` 有意不载）；表外码 ⇒ **零写**（禁假造 —— 沿池面「表外码零节点」纪律）。 */
@@ -61,20 +66,6 @@ function withPool(state, { approvals = null, running = null } = {}) {
   const nextApprovals = approvals ?? pool.approvals
   const nextRunning = running === null ? pool.running : running
   return { ...state, pool: { ...pool, approvals: nextApprovals, approval: nextApprovals.length, running: nextRunning } }
-}
-
-/** 位标写（码闭集按会话键维护；值等 ⇒ 原对象 —— `tabBadges` 引用不变 ⇒ 零通知）。 */
-function badgeStamps(badges, key, code, present) {
-  if (!BADGES.includes(code)) throw new Error(`[events] badge code outside closed set: ${code}`)
-  const current = Array.isArray(badges[key]) ? badges[key] : []
-  const next = present
-    ? (current.includes(code) ? current : [...current, code])
-    : current.filter((item) => item !== code)
-  if (next === current) return { badges, changed: false }
-  if (next.length === current.length && next.every((item, index) => item === current[index])) {
-    return { badges, changed: false }
-  }
-  return { badges: { ...badges, [key]: next }, changed: true }
 }
 
 /** 键过滤（块 / 池写者面）：非活动会话的事件 ⇒ 调用面原引用。 */
@@ -186,23 +177,6 @@ function onApproval(state, ev) {
   const withItem = withPool(state, { approvals })
   const stamps = badgeStamps(withItem.tabBadges ?? {}, ev.key, "approval", true)
   return stamps.changed ? { ...withItem, tabBadges: stamps.badges } : withItem
-}
-
-/** `ev:question`——待答项写 `questions[ev.key]`（**首写自种** · 同键就地替换零叠条 · 不入 `pool` —— `docs/desktop/design/RENDERER.md` §1.1 事件归约面条）；
- *  位标 `tabBadges[key] ⊇ {approval}`（与 `onApproval` 同形 —— 置位面 = 本档归约面，`docs/desktop/design/UI.md` §1 提问呈现行）；
- *  零键门：非活动会话的项与位标同样在场（切回即见卡）。出场只走 `clearQuestion`（零乐观写）。 */
-function onQuestion(state, ev) {
-  const item = {}
-  for (const field of QUESTION_KEYS) if (ev[field] !== undefined) item[field] = ev[field]
-  const questions = { ...(state.questions ?? {}), [ev.key]: item }
-  const stamps = badgeStamps(state.tabBadges ?? {}, ev.key, "approval", true)
-  return stamps.changed ? { ...state, questions, tabBadges: stamps.badges } : { ...state, questions }
-}
-
-/** `ev:task`——计划面整卡内容写 `tasks[ev.key]`（**同键就地替换不叠卡** · 空列表 ⇒ 消费面零节点 —— `docs/desktop/design/UI.md` §1 计划面行）；载荷 `items` 逐字原样（非数组 ⇒ `[]` —— 沿 `applyPage` 防御读形）；不入 `pool`。 */
-function onTask(state, ev) {
-  const items = Array.isArray(ev.items) ? ev.items : []
-  return { ...state, tasks: { ...(state.tasks ?? {}), [ev.key]: items } }
 }
 
 // ─── 子 agent 块面（R3b · D20）─────────────────────────────────────────────
@@ -400,10 +374,11 @@ function metaOf(meta) {
   return out
 }
 
-/** 页回执应用（`docs/desktop/design/IPC.md` §2 `history:page` 定形）：`{ ok, messages, hasOlder, next, meta }`。
+/** 页回执应用（`docs/desktop/design/IPC.md` §2 `history:page` 定形）：`{ ok, messages, hasOlder, next, meta, seed? }`。
  *  `ok !== true` ⇒ **清在途**（成败皆清 —— finally 语义）且不写其余切片；
  *  `key !== activeSession` ⇒ 跳块 / 历史写（`sessionMeta[key]` 仍写）；
- *  首屏（`before == null`）⇒ 块整置 + 回底（`following = true` / `pendingNew = 0`；空页同径）；
+ *  首屏（`before == null`）⇒ 块整置 + 回底（`following = true` / `pendingNew = 0`；空页同径）+ **打开态播种**
+ *  （`seed` ⇒ `tasks[key]` / `usage[key]` 同笔——判据住 `seedPatch`）；
  *  回填 ⇒ 前插 + `history` 落态（`hasOlder === false ⇒ next = null`；高度补偿归 `settleFrame` 六步既有）。 */
 export function applyPage(state, receipt, { key, before } = {}) {
   if (receipt?.ok !== true) return endBackfill(state)
@@ -416,9 +391,21 @@ export function applyPage(state, receipt, { key, before } = {}) {
   const messages = Array.isArray(receipt.messages) ? receipt.messages : []
   const page = messages.flatMap((msg) => blockOfMessage(msg))
   if (before == null) {
-    return { ...state, blocks: page, sessionMeta, history, following: true, pendingNew: 0 }
+    return { ...state, ...seedPatch(state, key, receipt.seed), blocks: page, sessionMeta, history, following: true, pendingNew: 0 }
   }
   return { ...state, blocks: [...page, ...(state.blocks ?? [])], sessionMeta, history }
+}
+
+/** 首屏播种补丁（D17 · `docs/desktop/design/IPC.md` §2「打开态播种注」项 4）：`seed` 同笔写 `tasks[key]` /
+ *  `usage[key]` 两切片（与 `meta` 同一写点）；**时序判据** = 本键在飞（回合未尾 ⇒ 位标含 `running`）
+ *  ⇒ 种不落（**零写**——活切片为准）；`seed` 缺省 / 该槽形不合 ⇒ 该槽零写（禁假造）。 */
+function seedPatch(state, key, seed) {
+  if (seed === null || typeof seed !== "object") return {}
+  if (Array.isArray(state.tabBadges?.[key]) && state.tabBadges[key].includes("running")) return {}
+  const patch = {}
+  if (Array.isArray(seed.tasks)) patch.tasks = { ...(state.tasks ?? {}), [key]: seed.tasks }
+  if (typeof seed.usage === "number" && seed.usage > 0) patch.usage = { ...(state.usage ?? {}), [key]: seed.usage }
+  return patch
 }
 
 // ─── 页 → 块归约（五型闭集）────────────────────────────────────────────────
@@ -483,18 +470,4 @@ export function clearApproval(state, promptId) {
   if (remaining.length > 0) return next
   const cleared = badgeStamps(next.tabBadges ?? {}, next.activeSession, "approval", false)
   return cleared.changed ? { ...next, tabBadges: cleared.badges } : next
-}
-
-/** 提问出场 ⇒ 摘本键项 + 清本键 `approval` 位（§2.11⑦ 零乐观写 —— 两调用面 = 出站回执 `ok === true`（`renderer/mount-cards.mjs`）∥
- *  `stopped` 终局（本档 `onActivity`：中断径各门按取消结算 ⇒ 卡随事件面出场）；位标键源 = 切片键（与置位源 `ev.key` 同值同源）。
- *  无本键项 ⇒ 原引用（幂等 —— 重复回执 ∥ 无项终局零写）。 */
-export function clearQuestion(state, key) {
-  const questions = state.questions
-  if (questions === undefined || !Object.hasOwn(questions, key)) return state
-  const remaining = { ...questions }
-  delete remaining[key]
-  const cleared = badgeStamps(state.tabBadges ?? {}, key, "approval", false)
-  return cleared.changed
-    ? { ...state, questions: remaining, tabBadges: cleared.badges }
-    : { ...state, questions: remaining }
 }

@@ -3,7 +3,8 @@
  * 硬限；各函数语义原样外提，SESSION.md §6.10 D-2 / §6.12 / §6.11 注记随迁）：
  * 本端恢复入口包装（resumeSlot——残留 GC 钩子）/ 槽数据应用（applySession）/ 新建槽
  * （newSession）/ 运行态清空（resetSessionState）/ 槽切换（switchToSlot）/ 占用查询
- * （slotOccupancy）/ v1 老文件清扫（stripTruncatedToolArgs）。
+ * （slotOccupancy）/ 打开态读数（sessionReading——§6.24 只读纯投影，桌面残余批落）/
+ * v1 老文件清扫（stripTruncatedToolArgs）。
  *
  * 静态环（与 session-slots.mjs ↔ session.mjs 同形）：本档引 `session.mjs` 的
  * `loadSlotFile`（data 层读留 session.mjs——2026-09-05 §6.10 D-2 拆分点），session.mjs re-export
@@ -30,6 +31,8 @@ import { loadSlotFile } from "./session.mjs"
 // 与 VSC `newSlot` / `loadSlotForWrite` 全新分支同一构造器；环 import 同上，函数体内运行时使用）。
 import { newSlotData } from "./session-slot-write.mjs"
 import { mergeAdjacentAssistantEchoes } from "./context.mjs"
+// 打开态读数公式（§6.24 判据句 2——与 CLI 状态行 / VSC 同式；零新公式，只组合）。
+import { historyPercent } from "./token-window.mjs"
 import { scheduleSessionGC } from "./session-gc.mjs"
 import { restoreEngTokens } from "./token-ttl.mjs"
 import { clearPlanMode } from "./agent-tools/plan.mjs"
@@ -351,4 +354,24 @@ export function slotOccupancy(cwd, slot) {
   if (st === "alive") return { occupied: true, owner }
   if (st === "unknown") return { occupied: true, unknown: true, owner }
   return { occupied: false }
+}
+
+/** 打开态读数（SESSION.md §6.24 · 桌面残余批——恢复态播种的读数**单源**）：槽数据 ⇒ 状态行上下文
+ *  读数百分数（整数）。与 `applySession` 后读数**同源同式**（四事同判——组合既有件，零新公式）：
+ *  ① 线选 = `contextHistory` 非空取之，否则 `history` 经 `stripTruncatedToolArgs` 回退（同 applySession）；
+ *  ② 回声归并 = `mergeAdjacentAssistantEchoes`（同 applySession 装线前一步）；
+ *  ③ 渠道合并 = `providers` 命中 `data.activeProvider` ⇒ `{ ...entry, model: data.activeModel || entry.model }`
+ *     （模型合并支 ① 同判）；未命中 ⇒ `fallback`（支 ②「静默保持现状」的装配口径 = `loadConfig().provider`）；
+ *  ④ 公式 = `historyPercent`（`thincoder-core/token-window.mjs`——与 CLI 状态行 / VSC 同式）。
+ *  **零副作用**：`data` / `providers` / `fallback` 皆入参（不读盘、不写盘、不改任何进程态）；
+ *  `data` 非对象 ⇒ `0`（与空历史同值——「非正 ⇒ 零节点」显示门归端侧，沿 `historyPercent` 空历史口径）。 */
+export function sessionReading(data, { providers, fallback } = {}) {
+  if (data === null || typeof data !== "object") return 0
+  const full = Array.isArray(data.history) ? data.history : []
+  const ch = data.contextHistory
+  const machine = (Array.isArray(ch) && ch.length > 0) ? ch : full.map(stripTruncatedToolArgs)
+  const line = mergeAdjacentAssistantEchoes(machine)
+  const entry = data.activeProvider ? providers?.find((pr) => pr.name === data.activeProvider) : null
+  const provider = entry ? { ...entry, model: data.activeModel || entry.model } : fallback
+  return historyPercent(line, provider)
 }

@@ -12,6 +12,7 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import { HOST_DICT, initDict, t } from "../renderer/i18n.mjs"
 import { chatModel, chatTree, mountChat, settleFrame } from "../renderer/views/chat.mjs"
+import { textFace } from "../renderer/views/chat-text.mjs"
 import { installFakeDom, selfCheck } from "./fake-dom.mjs"
 
 /** 词面哨兵：插值键保留占位方言 ⇒ 断言同时钉「键 + 参数入词」。 */
@@ -136,4 +137,36 @@ test("U173: 代码块复制钮挂点（核件 `attachCopyButtons` —— 挂载 
   assert.deepEqual(written, ["const a = 1"], "点按 ⇒ `clipboard.writeText` 收**代码文本**（块内 `code` 面现读 —— C7/T-DSK35 ①）")
   assert.equal(buttons[0].textContent, "⟦msg.copied⟧", "回执面 = 核键 `msg.copied`（核件自刷）")
   assert.equal(buttons[0].classList.contains("copied"), true, "`copied` state class 在场（核件同源）")
+})
+
+// ─── U177 用户块 md 深度（D19 · 口径标尺 = 核件 `flow/block.mjs`：user = `mdInline` ∥ assistant = `md`）──
+
+test("U177: 深度分流（`user` ⇒ `mdInline` 块级构件零节点 ∥ `assistant` / `reasoning` / `error` ⇒ 全量 `md`）· 原文锚零回归", () => {
+  const fenced = "```js\nconst a = 1\n```"
+  const heading = "## 标题"
+  const mixed = `${fenced}\n\n${heading}`
+
+  const user = textFace({ kind: "user", text: mixed })
+  assert.equal(/code-block/.test(user.props.html), false, "user：围栏零块级构件（行内深度）")
+  assert.equal(/<h[1-6]>/.test(user.props.html), false, "user：标题零块级构件")
+  assert.equal(user.props.html.includes("const a = 1"), true, "user：文本内容仍在场")
+  assert.equal(user.props["data-raw"], mixed, "`[data-raw]` 原文逐字（复制面零回归）")
+  assert.equal(/<strong>有|<code>码/.test(textFace({ kind: "user", text: "**有** `码`" }).props.html), true, "user：行内 md 仍渲染（深度分流 ≠ 停用）")
+
+  const assistant = textFace({ kind: "assistant", text: mixed })
+  assert.equal(assistant.props.html.includes('pre class="code-block"'), true, "assistant：围栏 ⇒ `pre.code-block`（全量 `md` 零回归）")
+  assert.equal(/<h2>/.test(assistant.props.html), true, "assistant：标题 ⇒ 块级节点")
+  assert.equal(assistant.props["data-raw"], mixed, "assistant 原文锚同判")
+  for (const kind of ["reasoning", "error"]) {
+    assert.equal(textFace({ kind, text: fenced }).props.html.includes('pre class="code-block"'), true, `${kind} ⇒ 全量 md（零回归）`)
+  }
+  assert.equal(textFace({ kind: "user", text: mixed }).props.class, "block-text", "类名缺省不变")
+  assert.equal(textFace({ kind: "user", text: mixed }, "reasoning-content").props.class, "reasoning-content", "类名注入不变")
+
+  // 构树面（纯构树 —— 同一文本两型逐块分流）
+  const blocks = [{ kind: "user", id: "u1", text: fenced }, { kind: "assistant", id: "a1", text: fenced }]
+  const faces = withAttr(chatTree(chatModel(state({ blocks }))), "data-raw")
+  assert.equal(faces.length, 2, "两文本面（user / assistant）")
+  assert.equal(/code-block/.test(faces[0].props.html), false, "树面 user 块零块级构件")
+  assert.equal(faces[1].props.html.includes('pre class="code-block"'), true, "树面 assistant 块块级在场（对拍有牙）")
 })

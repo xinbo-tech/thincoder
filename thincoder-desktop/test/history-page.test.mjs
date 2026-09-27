@@ -5,7 +5,12 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { existsSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { loadConfig } from "@thincoder/core/config.mjs"
+import { _resetConfigPathForTest, _setConfigPathForTest } from "@thincoder/core/config-io.mjs"
+import { sessionReading } from "@thincoder/core/session.mjs"
 import { pageHistory, slotPath } from "../src/main/session-slots.mjs"
 import { useSlotSandbox } from "./slot-sandbox.mjs"
 
@@ -73,7 +78,6 @@ test("U93: 页游（尾 / 中 / 首 / 空历史 / 零消息页）· next = 页�
 })
 
 // ─── U94 读面 fail-soft ────────────────────────────────────────
-
 test("U94: 读面 fail-soft（坏键 / 槽缺 / 异项目 / 坏档 / 新版档 —— 不抛 · 只出 {ok,reason}）", () => {
   const s = useSlotSandbox()
   try {
@@ -102,4 +106,58 @@ test("U94: 读面 fail-soft（坏键 / 槽缺 / 异项目 / 坏档 / 新版档 �
   } finally {
     s.cleanup()
   }
+})
+
+// ─── U175 打开态播种面（`seed` · D17 · `docs/desktop/design/IPC.md` §2「打开态播种注」）────────
+
+/** 配置沙箱（读数单源 = 核 `loadConfig` → `providersList` / `provider`）：渠道两枚窄窗（1K / 4K）
+ *  + 默认模型指向 p2 ⇒「槽命中 p1」与「回退 p2」两口径读数可分辨（装配入参有牙）。 */
+function seedConfigSandbox(t) {
+  const dir = mkdtempSync(join(tmpdir(), "tc-desktop-seed-"))
+  const path = join(dir, "config.json")
+  _setConfigPathForTest(path)
+  t.after(() => { _resetConfigPathForTest(); rmSync(dir, { recursive: true, force: true }) })
+  return path
+}
+
+test("U175: seed —— tasks 直取（非数组 ⇒ []）· usage 有效门（> 0 才在场）· 回填不携 · 坏配置降级", (t) => {
+  const s = useSlotSandbox(t)
+  const cfgPath = seedConfigSandbox(t)
+  const config = { providers: [{ name: "p1", model: "m1", context: 1 }, { name: "p2", model: "m2", context: 4 }], defaultModel: "p2:m2" }
+  writeFileSync(cfgPath, JSON.stringify(config))
+
+  const long = (i) => ({ role: "user", content: `u${i} `.repeat(200) })
+  const tasks = [{ id: 1, text: "A", status: "done" }, { id: 2, text: "B", status: "pending" }]
+  const slot = { history: [long(0), { role: "assistant", content: "ok", reasoning_content: "r" }], tasks, activeProvider: "p1", activeModel: "m1" }
+  writeSlot(s.cwd, 1, slot)
+
+  const first = pageHistory(s.cwd, { key: "1" })
+  assert.deepEqual(Object.keys(first).sort(), ["hasOlder", "messages", "meta", "next", "ok", "seed"], "首屏回执含 `seed`（既有五键不动）")
+  assert.deepEqual(first.seed.tasks, tasks, "tasks = 槽数据直取（逐字）")
+  assert.equal(first.seed.usage, sessionReading(slot, { providers: loadConfig().providersList, fallback: loadConfig().provider }), "usage = 核 `sessionReading`（装配入参 = `loadConfig()` 两值）")
+  assert.ok(first.seed.usage > 0, "有效门正臂：读数 > 0 才在场")
+  assert.notEqual(first.seed.usage, sessionReading(slot, { providers: [], fallback: loadConfig().provider }), "槽渠道命中（≠ 回退口径 ⇒ 入参两值有牙）")
+
+  // 负臂：空史（读数 0）· tasks 缺键 / 非数组
+  writeSlot(s.cwd, 2, { history: [] })
+  assert.deepEqual(pageHistory(s.cwd, { key: "2" }).seed, { tasks: [] }, "空史 ⇒ usage 键缺席（0 不落）· tasks 缺 ⇒ []（沿核水合口径）")
+  writeSlot(s.cwd, 3, { history: [], tasks: "nope" })
+  assert.deepEqual(pageHistory(s.cwd, { key: "3" }).seed.tasks, [], "非数组 ⇒ []（沿 `data.tasks ?? []`）")
+
+  // 回填读不携（防以盘上旧值覆盖活切片）
+  writeSlot(s.cwd, 4, { history: [long(0), long(1), { role: "assistant", content: "ok" }], tasks, activeProvider: "p1" })
+  const back = pageHistory(s.cwd, { key: "4", before: 1 })
+  assert.equal("seed" in back, false, "回填读（`before != null`）⇒ 回执无 `seed` 键")
+  assert.ok("seed" in pageHistory(s.cwd, { key: "4" }), "首屏读同槽在场（对照臂）")
+
+  // 配置不可读 ⇒ `usage` 键缺席 + `console.error`（零静默；读面 fail-soft）
+  const logged = []
+  const original = console.error
+  console.error = (...args) => logged.push(args.map((part) => String(part)).join(" "))
+  t.after(() => { console.error = original })
+  writeFileSync(cfgPath, "{not json")
+  const bad = pageHistory(s.cwd, { key: "1" })
+  assert.equal(bad.ok, true, "读面保持 fail-soft（ok 真）")
+  assert.deepEqual(bad.seed, { tasks }, "坏配置 ⇒ usage 缺席 · tasks 照出")
+  assert.ok(logged.some((line) => line.includes("opening reading unavailable")), "console.error 在场（不静默）")
 })
