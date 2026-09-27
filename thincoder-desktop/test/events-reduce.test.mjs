@@ -40,12 +40,22 @@ test("U87 块流写者：token 续写 / 新回合起块 / 工具三事件 / erro
   assert.equal(reduce(continued, { channel: "ev:token", key: KEY, text: "" }), continued, "空文本 ⇒ 零写")
   assert.equal(reduce(continued, { channel: "ev:token", key: "9", text: "x" }), continued, "非活动会话 ⇒ 零写")
 
+  // R3c · D19：`ev:reasoning` —— 推理块增量（续写判据 = 尾块 `kind === "reasoning"`；IPC.md §1 该行）
+  const thought = reduce(continued, { channel: "ev:reasoning", key: KEY, text: "想" })
+  assert.deepEqual(thought.blocks.at(-1), { kind: "reasoning", id: `live-${continued.blocks.length}`, text: "想" }, "新推理块（助手块后起 —— 尾块非 reasoning）")
+  const more = reduce(thought, { channel: "ev:reasoning", key: KEY, text: "更多" })
+  assert.equal(more.blocks.length, thought.blocks.length, "同块续写（不叠块）")
+  assert.equal(more.blocks.at(-1).text, "想更多", "推理文本累积")
+  assert.equal(reduce(more, { channel: "ev:reasoning", key: KEY, text: "" }), more, "空文本 ⇒ 零写")
+  assert.equal(reduce(more, { channel: "ev:reasoning", key: "9", text: "x" }), more, "非活动会话 ⇒ 零写")
+  assert.equal(reduce(more, { channel: "ev:reasoning", key: KEY, text: null }), more, "非串文本 ⇒ 零写（不落槽）")
+
   const called = reduce(continued, { channel: "ev:tool-call", key: KEY, id: "t1", name: "read_file", argsSummary: "a.mjs" }, 1000)
   assert.deepEqual(called.blocks.at(-1), {
     kind: "tool", id: "t1", name: "read_file", argsSummary: "a.mjs", status: "running", startedAt: 1000,
   }, "活块形（含 startedAt）")
-  assert.deepEqual(called.pool.blocks, [{ id: "t1", tool: "read_file", status: "running" }], "池条目形 = {id,tool,status}")
-  assert.equal(called.pool.running, 1, "读数随动")
+  assert.equal(called.pool.blocks, undefined, "**R3b 摘工具行**：工具块入流 ⇒ 池切片零写（工具调用面 = 对话流工具卡）")
+  assert.equal(called.pool.running, 0, "折叠头 `running` 读数不再源于工具行（子 agent 块面源）")
 
   const regrown = reduce(called, { channel: "ev:token", key: KEY, text: "again" })
   assert.equal(regrown.blocks.length, 3, "尾块非 assistant·streaming ⇒ 新回合起块")
@@ -60,7 +70,7 @@ test("U87 块流写者：token 续写 / 新回合起块 / 工具三事件 / erro
     ["argsSummary", "durationMs", "id", "kind", "name", "result", "status"], "结果块键集收束（丢 startedAt）")
   assert.equal(settled.blocks.at(-1).status, "done")
   assert.equal(settled.blocks.at(-1).durationMs, 400, "时长 = 现刻 − 起刻")
-  assert.deepEqual(settled.pool.blocks, [{ id: "t1", tool: "read_file", status: "done" }], "池条目随动")
+  assert.equal(settled.pool.blocks, undefined, "结果收尾 ⇒ 池零写（同摘工具行）")
   assert.equal(settled.pool.running, 0)
 
   const worded = reduce(settled, { channel: "ev:tool-result", key: KEY, id: "t1", result: "Error: boom", ok: true }, 1500)
@@ -72,14 +82,14 @@ test("U87 块流写者：token 续写 / 新回合起块 / 工具三事件 / erro
   for (const block of failed.blocks) assert.ok(KINDS.includes(block.kind), `五型闭集：${block.kind}`)
 })
 
-test("U88 回合态 + 位标码集：三码置清四组 + 错误径结算 / 闭集 / 他键 / 零 turn 键", () => {
+test("U88 回合态 + 位标码集：三码置清四组 + 错误径结算 / 闭集 / 他键 / 回合槽两值", () => {
   const blank = stateOf()
-  const turn = reduce(blank, { channel: "ev:activity", key: KEY, event: "turn", n: 1, max: 3 })
+  const turn = reduce(blank, { channel: "ev:activity", key: KEY, event: "turn", n: 1, max: 3 }, 700)
   assert.deepEqual(turn.tabBadges[KEY], ["running"], "回合起 ⇒ 置 running")
-  assert.equal("n" in turn, false, "n 无槽 ⇒ 不落（禁造键）")
-  assert.equal("max" in turn, false, "max 无槽 ⇒ 不落")
+  assert.deepEqual(turn.turns[KEY], { n: 1, max: 3 }, "回合槽落 n / max（D17 段 7 —— 有意取代旧「不落」态）")
+  assert.equal(turn.turnStarts[KEY], 700, "回合起刻 = turn 首帧现刻（D17 段 5 耗时源）")
   assert.deepEqual(turn.sessionMeta, {}, "sessionMeta 零 turn 键")
-  assert.equal(reduce(turn, { channel: "ev:activity", key: KEY, event: "turn", n: 2, max: 3 }), turn, "位标已在 ⇒ 原引用")
+  assert.equal(reduce(turn, { channel: "ev:activity", key: KEY, event: "turn", n: 1, max: 3 }, 900), turn, "同帧重复（同 n/max ∧ 起刻不改）⇒ 原引用")
 
   const done = reduce(turn, { channel: "ev:activity", key: KEY, event: "done" })
   assert.deepEqual(done.tabBadges[KEY], ["done"], "回合尾 ⇒ 去 running + 置 done")
@@ -142,7 +152,7 @@ test("U89 标题刷新 + 回合尾窄口 + sessionMeta：三径各恰一次 / �
   }
   let tails = 0
   const off = attachEvents({ on, store, invoke, onTurnTail: () => { tails += 1 } })
-  assert.equal(handlers.size, 10, "十通道全订阅")
+  assert.equal(handlers.size, 12, "十二通道全订阅（R3b 增 `ev:subagent` · R3c 增 `ev:reasoning`）")
 
   handlers.get("ev:activity")({ key: KEY, event: "turn", n: 1, max: 2 })
   await tick()
@@ -176,7 +186,7 @@ test("U89 标题刷新 + 回合尾窄口 + sessionMeta：三径各恰一次 / �
   assert.equal(tails, 3, "错误径 ⇒ 窄口同刻恰一次（判据单源 = `isTurnTail`）")
 
   off()
-  assert.equal(handlers.size, 0, "退订句柄十路全退")
+  assert.equal(handlers.size, 0, "退订句柄十二路全退")
 
   // 窄口非函数（批档 §1.14：未接线调用面合法 ⇒ 零抛零动作 · 标题刷新不受累）
   const bareHandlers = new Map()
@@ -191,7 +201,7 @@ test("U89 标题刷新 + 回合尾窄口 + sessionMeta：三径各恰一次 / �
   await tick()
   assert.deepEqual(bareCalls, [["sessions:list"]], "非函数窄口：零抛 + 标题刷新照常（两出口同触发点 · 各司其职）")
   offBare()
-  assert.equal(bareHandlers.size, 0, "第二实例退订十路全退（实例隔离）")
+  assert.equal(bareHandlers.size, 0, "第二实例退订十二路全退（实例隔离）")
 
   const page = (meta) => applyPage(
     stateOf({ history: { hasOlder: true, inFlight: true, page: 200 } }),
@@ -250,7 +260,7 @@ test("T-DSK24 卡面两切片：首写自种 / 同键就地替换 / clearQuestio
   assert.deepEqual(Object.keys(planned.tasks), [KEY], "他键零写")
 })
 
-test("T-DSK29 占用读数：按 key 写切片 / 有效读数门（未至 · 非正 · 非数 ⇒ 原引用）/ 同值原引用 / 十通道接线", async () => {
+test("T-DSK29 占用读数：按 key 写切片 / 有效读数门（未至 · 非正 · 非数 ⇒ 原引用）/ 同值原引用 / 十二通道接线", async () => {
   const blank = stateOf()
   const seeded = reduce(blank, { channel: "ev:usage", key: KEY, percent: 42 })
   assert.deepEqual(seeded.usage, { [KEY]: 42 }, "按会话 key 写切片（值 = `percent` 原样）")
@@ -274,14 +284,16 @@ test("T-DSK29 占用读数：按 key 写切片 / 有效读数门（未至 · 非
     store,
     invoke: () => Promise.resolve({}),
   })
-  assert.equal(handlers.size, 10, "十通道全订阅")
+  assert.equal(handlers.size, 12, "十二通道全订阅（R3b 增 `ev:subagent` · R3c 增 `ev:reasoning`）")
   assert.ok(handlers.has("ev:usage"), "订阅含 `ev:usage`")
+  assert.ok(handlers.has("ev:subagent"), "订阅含 `ev:subagent`（D20 块面）")
+  assert.ok(handlers.has("ev:reasoning"), "订阅含 `ev:reasoning`（D19 推理块）")
   handlers.get("ev:usage")({ key: KEY, percent: 42 })
   assert.deepEqual(store.get().usage, { [KEY]: 42 }, "通道 → 归约 → store 落态")
   handlers.get("ev:usage")({ key: KEY, percent: null })
   assert.deepEqual(store.get().usage, { [KEY]: 42 }, "门外载荷 ⇒ 状态零动（原引用不落 store）")
   off()
-  assert.equal(handlers.size, 0, "十路全退")
+  assert.equal(handlers.size, 0, "十二路全退")
 })
 
 test("#459 游标清点两族（回合尾三径 / 段界 ev:tool-call ⇒ 零 `streaming` 真项 ∧ 新块对象；非活动键 / 无命中 ⇒ 块面零写）", () => {

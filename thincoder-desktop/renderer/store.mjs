@@ -7,6 +7,10 @@
  * 批 9 增两切片：`settings`（开合 / 四段三态 / 向导 / 校验结果 —— `docs/desktop/design/UI.md` §1 设置面行）与
  * `projectInfo`（三读数 + 超阈标 + 相位 + 失败串）——**值面归接线层**（`renderer/mount-settings.mjs` 只经
  * `patchSettings` 落值），本档只持槽位 + 四条纯动作；`configured` 为**三态读数**（`null` = 未知）。
+ * R3a 增四槽（D17 状态行读数面 —— `renderer/views/statusline.mjs` 读面）：`turns` / `turnStarts` / `tokens` / `timers`。
+ * R3b 增一槽（D20 子 agent 面 —— `renderer/views/activity.mjs` 读面）：`subBlocks`（**按会话键分槽**：
+ *  `{ [会话键]: 块模型[] }`；写者 = 归约面 `ev:subagent`（核态机 —— `/rc/subblocks/state.mjs`）；同笔**摘工具行**
+ *  —— `pool` 切片不再载 `blocks`（工具调用面 = 对话流工具卡 —— `docs/desktop/design/UI.md` §1 本批注项 2）。
  * 纯数据面：零 DOM / 零 IPC；零 `node:` / 零裸包（渲染面静态闭包判据）。
  *
  * 语义（批档 §2.4（f）· §2.5 U28–U32）：
@@ -28,9 +32,15 @@
 /** 初态：`locale` 由引导面置位；`project` / `sessions` / `pool` 槽位在、消费面随后续批。
  *  `tabBadges` / `sessionMeta` / `poolCollapsed` = **槽位注册**（消费面已在册 —— `views/chrome.mjs` 会话头读
  *  `sessionMeta`、`requestCloseTab` 防御取 `tabBadges`、池面折叠读 `poolCollapsed`）⇒ 注册后零行为变化；
- *  三切片与 `pool` 三族皆 = **供给面写入**（值面未落 ⇒ 零节点 —— 禁假造）。
+ *  三切片与 `pool` 族（待审批 / 队列两族）皆 = **供给面写入**（值面未落 ⇒ 零节点 —— 禁假造）。
  *  `usage` 为**槽位注册**（写者 = `ev:usage` 归约 · 按会话 `key` 写）；消费面 = 状态栏读数节点
- *  （`docs/desktop/design/UI.md` §1）—— 消费未落 ⇒ 注册后零行为变化。 */
+ *  （`docs/desktop/design/UI.md` §1）—— 消费未落 ⇒ 注册后零行为变化。
+ *  `turns` / `turnStarts` / `tokens` / `timers` 四槽 = **状态行读数槽随动**（R3a · D17 承载段数据源 ——
+ *  写者 = 归约面（`turns` / `turnStarts` 自 `ev:activity` turn 载荷；`tokens` / `timers` 自 `ev:usage` 载荷扩），
+ *  读面 = `renderer/views/statusline.mjs`；值面未落 ⇒ 对应段零节点 —— 禁假造）。
+ *  `subBlocks` = **子 agent 块切片**（R3b · D20）：按会话键分槽（无该键 / 非数组 ⇒ 该会话零块 —— 禁假造）；
+ *  元素 = 核态机模型（`renderer/events.mjs` 归约面写，读面 `renderer/views/activity.mjs`）。`pool.running` 读数
+ *  同源（活动会话在飞块数——范归约面写；`pool` 切片不再载 `blocks`——摘工具行）。 */
 export function initialState() {
   return {
     locale: "en",
@@ -44,11 +54,16 @@ export function initialState() {
     tabBadges: {},
     sessionMeta: {},
     usage: {},
+    turns: {},
+    turnStarts: {},
+    tokens: {},
+    timers: {},
+    subBlocks: {},
     blocks: [],
     history: { hasOlder: false, inFlight: false, page: null },
     following: true,
     pendingNew: 0,
-    pool: { running: 0, approval: 0, blocks: [], queue: [], approvals: [] },
+    pool: { running: 0, approval: 0, queue: [], approvals: [] },
     poolCollapsed: {},
     settings: {
       open: false,

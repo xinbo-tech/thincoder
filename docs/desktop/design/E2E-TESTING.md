@@ -124,6 +124,7 @@ _electron.launch({
 |---|---|---|---|
 | `thincoder-desktop/test/integration/settings-panel.test.mjs` | 0 ⇒ **137**（内容行数） | ~120 行（预算） | 用例 1（§3.3 九步）· 常驻类 · **已落**（2026-09-27 实读） |
 | `thincoder-desktop/test/integration/first-run-smoke.test.mjs` | 0 ⇒ **171**（内容行数——2026-09-27 实读） | +171 行（已落） | 用例 2（§3.5 十二序）· 常驻类 · **已落**（批 B 追加轮） |
+| `thincoder-desktop/test/integration/chat-render.test.mjs` | 0 ⇒ **146**（内容行数——2026-09-28 实读） | +146 行（已落） | 用例 3（`T-DSK37` 会话流经核 + 会话面板元数据 · 真 Electron 直驱）· 常驻类 · **已落**（R3c） |
 | `thincoder-desktop/test/files.mjs` | 12 ⇒ **19**（2026-09-27 实读） | +1 行（已落）· 本批两档入册 ⇒ 净 0 行（名打包入既有行） | 登记新用例档（walk 递归 + 反向自检据此覆盖） |
 | `thincoder-desktop/test/run.mjs` | 41 | ±1 行（`:4` 注释改写 · **逻辑零改动**） | 注释须与本批「集成域已建」同实 ⇒ 本批随改（walk 递归天然覆盖新档） |
 | `thincoder-desktop/.gitignore`（新增） | 0 | ~5 行 | 忽略 `thincoder-desktop/test/artifacts/`（KD-10） |
@@ -157,6 +158,7 @@ _electron.launch({
 |---|---|---|---|---|
 | `T-DSK27 settings-panel` | 正常 | 空 fixture 家（唯一预置 `<临时家>/.thincoder/config.json` = `{"locale":"en"}`）· 无项目 | boot `ok`；入口在；点按后面板 `open`；段序 `providers,model,agent,mcp`；态 `ready,none,ready,ready`；PNG 落固定落点（§3.3 第 7 步）；关闭后 `closed` 且子节点 0 | ✅ 做 |
 | `T-DSK32 first-run-smoke` | 正常 | 空 fixture 家（零 config ⇒ 无项目 / 无会话；预置族档一枚） | 五断言面（向导退场 → `no-project` → 真点开项目 `no-message` → 真点关标签 `no-session` → 真点 `session:create` → 键入必败面）· 全形 = §3.5 十二序 | ✅ 做（批 B 追加轮） |
+| `T-DSK37 chat-render` | 正常 | fixture 家（`{"locale":"en"}` + 会话槽族四档——槽 1 回放历史：围栏块 / 注入样本 / 路径候选 / 推理块） | 引导位 `ok`；真点最近目录 ⇒ `data-state="flow"` ∧ 块序 = `user/assistant/reasoning/user`；`pre.code-block` 恰一枚 + 复制钮点按 ⇒ 剪贴板收代码文本；注入样本字面在场 ∧ 零 `script` 节点；推理块（`details.reasoning-block`）恰一枚；路径候选零 `.file-link`；行元数据段序 = `provider / msgs / updated` ∧ 含 `p1:m1` | ✅ 做（R3c） |
 | `T-DSK27b config 档缺失` | 边界 | 临时家**不预置** config | 引导位仍 `ok`（档缺 ⇒ `configured` 判假）；向导面占槽（设置面是否仍可开 **待实施期实证**） | ❌ 不做（§8-3） |
 | `T-DSK27c 面板重复开 / 关` | 边界 | 连点入口两次 + 关两次 | `open` / `closed` 收敛无残留 | ❌ 不做（§8-3） |
 | `T-DSK27d 引导失败面` | 错误 | 需破坏 preload 桥（不可达） | boot `error`，用例以「boot 值 = error」失败并回显该值 | ❌ 不做（§8-3） |
@@ -164,7 +166,8 @@ _electron.launch({
 **`T-DSK32` 断言面（判据单源 = §3.5 十二序）**：① 向导退场后 `[data-guide="no-project"]`（含 `project:open` 控件）∧ 输入框 `disabled` ② **真点**最近目录项（带 `data-path` 形）⇒ `[data-guide="no-message"]` ∧ 非 `disabled`
 ③ **真点**关唯一标签 ⇒ `[data-guide="no-session"]`（含 `session:create` 控件）∧ 仍 `disabled` ④ **真点** `session:create` ⇒ `no-message` ∧ 非 `disabled` ⑤ 键入 + Enter ⇒ 值逐字保留 ∧ `data-blocks=0` ∧ console `provider-invalid`。
 
-> **按批读**：建档批（E2E 基建批）落 `T-DSK27`（判据②：至少一条）；**批 B 追加轮**补落 `T-DSK32`（首启空态引导冒烟 —— 判据面单源 = `docs/desktop/design/PROJECT.md` §7）。边界 / 错误三条（`T-DSK27b`–`T-DSK27d`）**登记不做**，不静默缩水。编号以 `docs/desktop/design/PROJECT.md` §7 落定序为准（`T-DSK27` = 2026-09-26 落 · `T-DSK32` = 批 B 追加轮落）。
+> **按批读**：建档批（E2E 基建批）落 `T-DSK27`（判据②：至少一条）；**批 B 追加轮**补落 `T-DSK32`（首启空态引导冒烟）· **R3c** 补落 `T-DSK37`（会话流经核 + 会话面板元数据——判据面单源 = `docs/desktop/design/PROJECT.md` §7 T-DSK35 / T-DSK34）。
+> 边界 / 错误三条（`T-DSK27b`–`T-DSK27d`）**登记不做**，不静默缩水；编号以 `docs/desktop/design/PROJECT.md` §7 落定序为准（`T-DSK27` = 2026-09-26 落 · `T-DSK32` = 批 B 追加轮落 · `T-DSK37` = R3c 落——自铸披露 = `docs/batches/2026-09-27-render-core-r3.md` §5）。
 
 ## 7. 边界（不做）
 
@@ -210,3 +213,4 @@ _electron.launch({
   ⇒ 关唯一标签核 `no-session` ⇒ 引导面 `session:create` 真点（旁证）；桥直调步删 · §3.4 收正「零新通道」+ 本批登记锚 `data-guide` · §4 / §6 行同笔 · 明细 = `docs/batches/2026-09-27-desktop-firstrun-smoke.md` §2.10。
 - 2026-09-27（**批 B 追加轮 · 注记修正轮 #106**——设计评审 §3 轮次 2 注记 N3 落）：§3.2 fixture 行加用例面限定（「唯一预置内容」= **用例 1 面；用例 2 见 §3.5**）；明细 = `docs/batches/2026-09-27-desktop-firstrun-smoke.md` §2.11。
 - 2026-09-27（**批 B 追加轮 · 实施后对账轮**）：§4 表两行收正（`first-run-smoke.test.mjs` 0 ⇒ **171** 已落 · `files.mjs` 12 ⇒ **19**——两档入册 · 净 0 行）。明细 = `docs/batches/2026-09-27-desktop-firstrun-smoke.md` §2.12。
+- 2026-09-28（**R3 结算随收 · 设计面收正微轮**——承 `docs/batches/2026-09-27-render-core-r3.md` §5.9）：§4 补 `chat-render.test.mjs` 行（0 ⇒ **146** 已落）；§6 补 `T-DSK37` 行（✅ 做——R3c）+ 表下注「按批读」补 R3c 落项。零新语义。

@@ -2,13 +2,15 @@
  * chat.mjs — 对话流视图面（`docs/desktop/design/RENDERER.md` §1.1 / §2 / §3 · `docs/desktop/design/UI.md` §1 对话流行）。
  * 三档沿 RENDERER.md §1.1：`chatModel`（纯模型 · 窗出口）→ `chatTree`（纯构树 · 机检面）→ `mountChat`（薄挂载 =
  * 本档唯一清空 / 建树处）；DOM 面另两件 = 帧尾态刷 `syncChrome`（根锚四 + 摘要块 + 审批卡 + 药丸 · 幂等 · 无帧豁免）· 帧尾六步 `settleFrame`；
+ * **卡面态刷**住 `renderer/views/chat-cards.mjs`（R3c 拆档 —— 在册预案 = 卡构树拆出；本档经 `syncCards` 调用）；
  * 工具卡面与折叠纯函数 `toggleExpanded` 住 `renderer/views/chat-tool.mjs`（§2.3 拆分预案落形 —— 依赖单向：本档 → 它）；文本族块尾的复制控件 + 末条复制控件
- * 住 `renderer/views/chat-copy.mjs`（UI.md §1「批 B 注」项 4 —— 依赖单向：本档 → 它）；首启空白态引导面（判据
+ * 住 `renderer/views/chat-copy.mjs`（UI.md §1「批 B 注」项 4 —— 依赖单向：本档 → 它）；**文本面（核 Markdown 呈现）+ 推理块 + 就地更新**住 `renderer/views/chat-text.mjs`（R3c · D19 —— 依赖单向：本档 → 它）；首启空白态引导面（判据
  * `guideOf` + 构树 `guideNode` + 帧尾只摘态刷 `syncGuide`）住 `renderer/views/chat-guide.mjs`（UI.md §1「批 B 追加注」项 1 —— 依赖单向：本档 → 它）。
  *   ① 三态 `data-state`：无活动会话 ⇒ `none`（零**块**节点 + 引导节点——禁假数据）· 有会话零块 ⇒ `empty`
  *      （引导节点 · `chat.empty.hint`）· 否则 `flow`；
  *   ② 块五型（`user` / `assistant` / `reasoning` / `tool` / `error`）单序列；块键单源 = `blockKey`（`data-block-id` /
- *      增量缝合 / toggle 同域）；兜底键用**全列表位序**（`hidden + i`）⇒ 窗滑动不改键；文本裸串（零 Markdown / 零注入）；
+ *      增量缝合 / toggle 同域）；兜底键用**全列表位序**（`hidden + i`）⇒ 窗滑动不改键；文本族块面 = **经核 Markdown**
+ *      呈现（KD-RC-4 · R3c —— 单源 = `renderer/views/chat-text.mjs`；转义闸在核；原文逐字另存 `[data-raw]` 锚供复制面）；
  *   ③ 根子序 = [摘要块?] → 块序列 → [卡序列?] → [药丸?]（卡序 = 待审批 → 提问 → 计划 —— 单源 =
  *      `docs/desktop/design/RENDERER.md` §1.1 插入点纪律条）；块插入点 = 首个**卡节点**之前（三族任一 ——
  *      锚 = `[data-card]`；无卡 ⇒ `[data-pill]` 之前 · 两锚皆缺 ⇒ 末位）；本档挂载面只管审批族（提问 / 计划
@@ -23,13 +25,16 @@
  */
 import { build, clear, text } from "../dom.mjs"
 import { t } from "../i18n.mjs"
+import { attachCopyButtons } from "/rc/flow/stream.mjs"
 import { visibleWindow } from "../store.mjs"
 import { approvalTree } from "./approval.mjs"
 import { MAX_RENDER_BLOCKS, compensateTop, stickToBottom, tailAction } from "./chat-scroll.mjs"
-import { copyBlockNode, patchTextBlock } from "./chat-copy.mjs"
+import { copyBlockNode } from "./chat-copy.mjs"
+import { syncCards } from "./chat-cards.mjs"
 import { guideNode, guideOf, syncGuide } from "./chat-guide.mjs"
 import { blockKey } from "./chat-stream.mjs"
-import { toolCard, wire, withKey } from "./chat-tool.mjs"
+import { patchTextBlock, reasoningNode, textFace } from "./chat-text.mjs"
+import { toolCard, wire } from "./chat-tool.mjs"
 
 // ─── 三档之①：纯模型 ───────────────────────────────────────────────
 
@@ -72,12 +77,14 @@ function chromeProps(model) {
 
 // ─── 三档之②：纯构树（块五型 + 工具卡三行 + 三控件）─────────────────
 
-/** 块节点（五型单序列）：文本族 = 裸串子（`white-space: pre-wrap` ⇒ 纯文本零注入）+ 块尾复制控件（块文本空 ⇒
- *  零控件）；`tool` ⇒ 工具卡三行（工具卡无文本面 ⇒ 不入复制面）。 */
+/** 块节点（五型单序列）：文本族 = 核 Markdown 面（`textFace` —— 转义闸在核 · 原文另存 `[data-raw]`）+ 块尾复制控件
+ *  （块文本空 ⇒ 零控件）；`reasoning` ⇒ 核推理块结构（`reasoningNode`）；`tool` ⇒ 工具卡三行（工具卡无文本面 ⇒
+ *  不入复制面）。 */
 function blockNode(block, index, hidden, handlers) {
   const kind = block?.kind
   const key = blockKey(block, hidden + index)
   if (kind === "tool") return toolCard(block, key, handlers)
+  if (kind === "reasoning") return reasoningNode(block, key, handlers)
   return {
     tag: "div",
     props: {
@@ -86,7 +93,7 @@ function blockNode(block, index, hidden, handlers) {
       "data-block-kind": kind,
       "data-streaming": kind === "assistant" && block?.streaming === true ? "1" : undefined,
     },
-    children: [block?.text, copyBlockNode(block, key, handlers)],
+    children: [textFace(block), copyBlockNode(block, key, handlers)],
   }
 }
 
@@ -135,6 +142,15 @@ function mountedOf(root, blocks) {
   return nodes.map((node, index) => ({ node, block: blocks[index] }))
 }
 
+/** 代码块复制钮挂点（核件 `attachCopyButtons` —— 真代码块面随核落：围栏切分 / 语言高亮 / **代码块级复制**；
+ *  KD-22 两控件（块级 / 末条）口径不变 ⇒ 三控件并存）：根内逐 `pre.code-block` 补按钮（**已挂着跳过** ⇒ 幂等）；
+ *  `t` 注入 = 桌面词表（核件 `deps.t`；词键 `msg.copy` / `msg.copied` = **端供给面**——核 dict 无此两键，
+ *  值住 `renderer/i18n.mjs` 宿主表，词值同 VSC 同键）；钮定位住 `renderer/core.css`（`position: absolute`
+ *  ⇒ 不入高度读数 ⇒ 补偿算式零扰）。 */
+function attachCodeCopies(root) {
+  attachCopyButtons(root, { t })
+}
+
 /** 薄挂载（本档唯一清空 / 建树处）：根描述符四锚复制到宿主（**保留** `data-slot`）⇒ `clear` ⇒ 子节点入位。
  *  返回 `{ model, mounted }`；容器缺位 ⇒ 模型照给、零节点（非重挂帧的对齐输入 = 空序）。 */
 export function mountChat(root, state, handlers = {}, limit = MAX_RENDER_BLOCKS) {
@@ -144,6 +160,7 @@ export function mountChat(root, state, handlers = {}, limit = MAX_RENDER_BLOCKS)
   for (const name of tree.getAttributeNames()) root.setAttribute(name, tree.getAttribute(name))
   clear(root)
   for (const child of [...tree.childNodes]) root.append(child)
+  attachCodeCopies(root)
   return { model, mounted: mountedOf(root, model.blocks) }
 }
 
@@ -160,7 +177,8 @@ function chromeSlot(root, selector, want, make, update, atStart = false) {
 
 /** 帧尾态刷（刷新面单点 · 幂等 · 与档位解耦 —— `none` 帧同刷）：根锚四 + 引导节点 / 摘要块 / 审批卡 / 药丸随判据。
  *  `none` 态零块节点化不破：三控件判据皆含 `state !== "none"`（卡面由 `chatModel` 归零）⇒ 零插入（只摘——
- *  引导节点同此面纪律：缺席 ⇒ 零动作 · 判据空 ⇒ 摘，「只摘不插」）。 */
+ *  引导节点同此面纪律：缺席 ⇒ 零动作 · 判据空 ⇒ 摘，「只摘不插」）；卡面态刷住 `renderer/views/chat-cards.mjs`
+ *  （R3c 拆档 —— 在册预案 = 卡构树拆出）。 */
 export function syncChrome(root, model, handlers = {}) {
   if (!root || typeof root.querySelector !== "function") return model
   for (const [name, value] of Object.entries(chromeProps(model))) root.setAttribute(name, String(value))
@@ -184,49 +202,11 @@ export function syncChrome(root, model, handlers = {}) {
   return model
 }
 
-/** 卡面态刷（帧尾 · 幂等）：在场判据 = 待决项非空；逐位按序对齐 —— 同 `prompt-id` ∧ 同 `data-shape` ∧ 同文本 ⇒
- *  **零 DOM 写**（幂等），否则就地换；多出 ⇒ 摘；缺 ⇒ 插到卡锚位（首个更高序卡之前 ⇒ 卡恒居块序列之后、
- *  同序族之后、药丸之前）。 */
-function syncCards(root, model, handlers) {
-  const live = typeof root.querySelectorAll === "function" ? [...root.querySelectorAll('[data-card="approval"]')] : []
-  const wanted = Array.isArray(model?.approval) ? model.approval : []
-  const keep = Math.min(live.length, wanted.length)
-  for (let index = 0; index < keep; index += 1) {
-    const next = build(approvalTree(wanted[index], handlers))
-    if (equivalentCard(live[index], next)) continue
-    live[index].replaceWith(next)
-    live[index] = next
-  }
-  for (const node of live.slice(keep)) node.remove()
-  const anchor = cardAnchor(root)
-  for (const item of wanted.slice(keep)) {
-    const node = build(approvalTree(item, handlers))
-    if (typeof root.insertBefore === "function") root.insertBefore(node, anchor)
-    else root.append(node)
-  }
-}
-
-/** 卡内容等价判据（刷新幂等）：`prompt-id` ∧ `data-shape` ∧ 文本三面全等 ⇒ 零 DOM 写；
- *  出口锚集 = `data-shape` 的单值函数（同形 ⇒ 同三出口）⇒ 不另比。 */
-function equivalentCard(node, next) {
-  return node.getAttribute?.("data-prompt-id") === next.getAttribute("data-prompt-id") &&
-    node.getAttribute?.("data-shape") === next.getAttribute("data-shape") &&
-    node.textContent === next.textContent
-}
-
 /** 块节点插点锚（单源 —— 尾段挂载与头侧前插同用）：首个**卡节点**之前（三族任一 —— 卡序判据面 = 卡序单源）；
  *  无卡 ⇒ 药丸之前；两锚皆缺 ⇒ `null`（末位）。 */
 function blockAnchor(root) {
   if (typeof root?.querySelector !== "function") return null
   return root.querySelector("[data-card]") ?? root.querySelector("[data-pill]")
-}
-
-/** 卡面插点锚（新建**审批族**卡 —— 卡序 = 待审批 → 提问 → 计划）：首个更高序卡之前（序首 ⇒ 首个提问卡 /
- *  其次计划卡）；无 ⇒ 药丸之前（`null` ⇒ 末位）—— 卡序逐项，后到者居尾、不夺旧卡位。 */
-function cardAnchor(root) {
-  if (typeof root?.querySelector !== "function") return null
-  const higher = root.querySelector('[data-card="question"]') ?? root.querySelector('[data-card="task"]')
-  return higher ?? root.querySelector("[data-pill]")
 }
 
 /** 尾段挂载（帧尾第 ① 步 · 先于读数）：逐枚建块 ⇒ 插点 = 首个卡节点之前（无卡 ⇒ 药丸之前 · 两锚皆缺 ⇒ 末位）。 */
@@ -237,7 +217,6 @@ function mountTail(root, model, plan, handlers) {
     root.insertBefore(build(blockNode(block, start + step, model.hidden, handlers)), anchor)
   })
 }
-
 /** 流式锚同刷（就地更新面）：`assistant` ∧ `streaming` ⇒ 落 `data-streaming`，否则摘（残锚不留）。 */
 function setStreaming(node, on) {
   if (on) node.setAttribute("data-streaming", "1")
@@ -295,5 +274,7 @@ export function settleFrame(root, model, scroll, align, tier, handlers = {}) {
   else if (writing === "compensate") {
     root.scrollTop = compensateTop({ prevTop: t0.scrollTop, prevHeight: t0.scrollHeight, nextHeight: t1.scrollHeight })
   }
+  // 尾段 / 就地更新两径新出的代码块补钮（六步后 —— 钮绝对定位 ⇒ 不入高度读数）
+  attachCodeCopies(root)
   return mountedOf(root, model.blocks)
 }

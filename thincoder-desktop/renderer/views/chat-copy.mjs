@@ -1,13 +1,14 @@
 /**
  * chat-copy.mjs — 对话流复制面（`docs/desktop/design/UI.md` §1「批 B 注」项 4 · `docs/desktop/design/RENDERER.md` §1.1）：
  * 逐块复制控件 `copyBlockNode(block, key, handlers)`（块尾 —— 块文本空 ⇒ 零控件）+ 末条复制控件
- * `lastCopyNode(blocks, handlers)`（输入区尾 —— 无 `assistant` 块 ⇒ 零控件）。文本面 = **纯文本取块文本逐字**
- * （对话流本就 `pre-wrap` 零 Markdown ⇒ 复制面不加解析）；出口 = **注入效应** `handlers.writeText`（单点供给 =
+ * `lastCopyNode(blocks, handlers)`（输入区尾 —— 无 `assistant` 块 ⇒ 零控件）。文本面 = **原文逐字**（KD-22：
+ * 「块文本逐字（不经渲染面解析）」—— R3c 文本面经核 Markdown 后，原文另存块面 `[data-raw]` 锚（视图面
+ * `renderer/views/chat-text.mjs`），本档**现读该锚**取文源）；出口 = **注入效应** `handlers.writeText`（单点供给 =
  * `renderer/app.mjs` —— 唯一实现处 = 宿主 `navigator.clipboard.writeText`，`app://` 注册为 secure ⇒ 安全上下文
  * 成立：`docs/desktop/design/PROJECT.md` §2 KD-2；本档零 `globalThis` 触面 ⇒ 直测面以替身入位）。成功 /
  * 失败**零布局变化**（不引提示条机制）；失败 ⇒ `console.error`（零静默 —— 面级写径无障碍 ⇒ 本档零回执面）。
- * 本档触 DOM 面 = `patchTextBlock`（就地 patch 档 —— `views/chat.mjs` 侧唯一调用点）；其余四件（`blockTextOf` /
- * `lastAssistantText` / `copyBlockNode` / `lastCopyNode`）= 纯函数 / 描述符 ⇒ 平 node 直测。
+ * 本档**纯面**（零 DOM 触面 —— R3c 就地更新面迁 `renderer/views/chat-text.mjs` `patchTextBlock`）：五件
+ * （`blockTextOf` / `lastAssistantText` / `copyText` / `copyBlockNode` / `lastCopyNode`）= 纯函数 / 描述符。
  * 两控件**不自接线**：`data-action` 恒在 = 机读锚、事件面只随 handlers 变（`views/sessions.mjs` 标签条通则
  * —— 复制为**本地效应**：零通道 / 无宿主依赖，效应本体由挂载面注入）；**没有注入 ⇒ 不落 `onClick`，落 `disabled`**
  * （通则 = `docs/desktop/design/RENDERER.md` §1.1「handler 给 ⇒ `onClick` 且不落 `disabled`；缺 ⇒ `disabled:true`」）。
@@ -15,7 +16,6 @@
  * 文案一律经 `t()`（零硬编码 —— 控形零文本子，词面住 `aria-label`）；零 `node:` / 零裸包；代码零 CJK 字面
  * （同列视图档 —— 面向用户文案全住 `renderer/i18n.mjs`）。
  */
-import { build, text } from "../dom.mjs"
 import { t } from "../i18n.mjs"
 
 /** 块文本（复制源单源）：`block.text` 非串 ⇒ `""`（工具卡等无文本块 ⇒ 不入复制面 —— 与「文本空 ⇒ 零控件」同判据）。 */
@@ -57,12 +57,15 @@ function writerOf(handlers) {
   return typeof handlers?.writeText === "function" ? handlers.writeText : undefined
 }
 
-/** 点击源（逐块控件）：**现读**宿主父节点文本（帧间 patch 就地改文本 ⇒ 闭包持块会 stale —— 故读 DOM）；
- *  无宿主 / 裸调 ⇒ 空串。 */
+/** 点击源（逐块控件）：**现读**宿主块面的原文锚 `[data-raw]`（帧间 patch 就地改文本 ⇒ 闭包持块会 stale ——
+ *  故读 DOM；R3c 文本面经核 Markdown ⇒ DOM 文本已非原文 ⇒ 取文源 = 原文锚，**原文逐字**：KD-22）。
+ *  无宿主 / 无面 / 裸调 ⇒ 空串。 */
 function domTextOf(event) {
   const node = event?.currentTarget ?? event?.target
   const holder = node?.parentNode
-  return typeof holder?.textContent === "string" ? holder.textContent : ""
+  const face = typeof holder?.querySelector === "function" ? holder.querySelector("[data-raw]") : null
+  const raw = typeof face?.getAttribute === "function" ? face.getAttribute("data-raw") : null
+  return typeof raw === "string" ? raw : ""
 }
 
 /** 点击出口（零通道）：`source(event)` 现算文本 ⇒ 非串 / 空串 ⇒ 静默 return（不写不报）；否则走复制出口。
@@ -107,27 +110,4 @@ export function lastCopyNode(blocks, handlers = {}) {
     },
     children: [],
   }
-}
-
-/** 就地更新文本块（帧尾 `patch` 档）：文本非空 ∧ 首子为文本节点 ⇒ 就地写 `data`（**零结构写** —— 流式帧常态）+
- *  控件缺席则补；否则 `text()` 重建后按文本非空补控件（首子非文本 / 文本空 ⇒ 旧控件随之摘 ⇒「块文本空 ⟺ 零控件」
- *  恒等）。`key` = 块键（单源 = `views/chat-stream.mjs` `blockKey` —— 由调用面传来）；`handlers` 透传 ⇒
- *  补入控件的接线态与构树同源（两态通则）。 */
-export function patchTextBlock(node, block, key, handlers = {}) {
-  if (!node || typeof node.querySelector !== "function") return node
-  const value = blockTextOf(block)
-  const first = node.childNodes == null ? null : node.childNodes[0]
-  if (value !== "" && typeof first?.data === "string") {
-    first.data = value
-    if (node.querySelector('[data-action="chat:copy-block"]') === null) {
-      const control = copyBlockNode(block, key, handlers)
-      if (control !== null) node.append(build(control))
-    }
-    return node
-  }
-  text(node, value)
-  if (value === "") return node
-  const control = copyBlockNode(block, key, handlers)
-  if (control !== null) node.append(build(control))
-  return node
 }

@@ -271,7 +271,7 @@ test("U150: 状态栏读数两态（在读 / `>= 80` 警示 / 未至 ⇒ 零节�
   assert.equal(usageNode(read({ "1": 99 }, null)), null, "无活动键 ⇒ 零节点")
   assert.equal(usageNode(read({ "2": 99 })), null, "读数键 ≠ 活动键 ⇒ 零节点（取活动键切片）")
   // ④ 节点序 = 读数 → 告警；告警码两向（`approval` / `running` 入列 · `done` / 空闲 / 活动标签本位 ⇒ 零节点）
-  const alertsOf = (badges) => statusTree(statusModel({ tabs: ["1", "2"], activeTab: "1", badges, usage: { "1": 85 } })).children.map((node) => node.props["data-usage"] ?? node.props["data-alert"])
+  const alertsOf = (badges) => statusTree(statusModel({ tabs: ["1", "2"], activeTab: "1", badges, usage: { "1": 85 } })).children.map((node) => node.props["data-usage"] ?? node.props["data-alert"]).filter((value) => value !== undefined)
   assert.deepEqual(alertsOf({ "2": ["running"] }), ["85", "running"], "节点序 = 读数 → 告警")
   assert.deepEqual(alertsOf({ "2": ["approval"] }), ["85", "approval"], "`approval` 入列（词与标签位同源）")
   assert.deepEqual(alertsOf({ "2": ["done"] }), ["85"], "`done` 非告警码 ⇒ 零节点")

@@ -26,9 +26,12 @@
  * 回合尾重绘（`refreshTitles`）不吞草稿；草稿住 DOM（零 store 字段、零签名改）。拆档纪律：本档与 `chat-tool.mjs` / `tabbar.mjs` 各持 `wire` / `withKey`
  * 私有副本（同形同律 —— 单源是设计档 §1.1，不是某一份副本）。
  * 文案一律经 `t()`（本档零硬编码 —— 词表单源 = `renderer/i18n.mjs`）；零 `node:` / 零裸包（渲染面闭包判据）。
+ * **行元数据族（R3c · D18）** = 三值（provider · N msgs · updated——对位 VSC 会话栏，单源 = `docs/desktop/design/UI.md` §1
+ * 「本批注（对齐重定位）」项 4）；**多标签结构不削**（本注不改形 —— 仅增行内元数据节点；换形/行动作两面零动）。
  */
 import { build, clear } from "../dom.mjs"
 import { t } from "../i18n.mjs"
+import { segNode } from "./chat-tool.mjs"
 // 同名 re-export（消费面零改 —— 导入路径与名面保持；语义单源 = 新档）。
 export { BADGE_WORD, mountTabbar, tabbarModel, tabbarTree } from "./tabbar.mjs"
 
@@ -170,7 +173,34 @@ function rowItem(row, handlers, form) {
 function rowButton(row, handlers) {
   const props = { type: "button", class: "rail-row", "data-action": "session:switch", "data-slot": String(row.slot) }
   if (row.isActive === true) props["data-active"] = "1"
-  return { tag: "button", props: wire(props, withKey(handlers.onSession, String(row.slot))), children: [rowTitle(row), originLabel(row.createdBy)] }
+  return { tag: "button", props: wire(props, withKey(handlers.onSession, String(row.slot))), children: [rowTitle(row), rowMeta(row), originLabel(row.createdBy)] }
+}
+
+/** 行元数据族（R3c · D18 —— 对位 VSC 会话栏行元数据 `session-bar.js:40-41`）：provider（行载 `provider`
+ *  = 核槽投影 `activeProvider` 逐字）· `messageCount`（计数）· `updatedAt`（本地化短日期）。
+ *  三值各自缺席（非串 / 空串 / 非数）⇒ 该值**零节点**（禁假造 —— 沿本档「标题缺省 / 无标」同律）；
+ *  三值皆缺 ⇒ 元数据节点零节点。段锚 = `data-seg`（通则 = `docs/desktop/design/RENDERER.md` §1.1「逐段包元素」；
+ *  段间分隔符归样式档 —— 视图档零字形字面）。 */
+function rowMeta(row) {
+  const provider = typeof row?.provider === "string" && row.provider !== "" ? row.provider : null
+  const count = Number.isFinite(row?.messageCount) ? row.messageCount : null
+  const updated = Number.isFinite(row?.updatedAt) ? shortDate(row.updatedAt) : null
+  const children = [
+    segNode("provider", provider),
+    count === null ? null : { tag: "span", props: { "data-seg": "msgs" }, children: [t("rail.session.msgs", { n: count })] },
+    updated === null ? null : { tag: "span", props: { "data-seg": "updated" }, children: [t("rail.session.updated", { date: updated })] },
+  ].filter((child) => child !== null)
+  if (children.length === 0) return null
+  return { tag: "span", props: { class: "rail-row-meta", "data-row-meta": "" }, children }
+}
+
+/** 本地化短日期（沿 VSC `fmtDate` 形：月 / 日 + 时:分 —— 运行时本地化；显示形单源 = `docs/desktop/design/UI.md`
+ *  §1 项 4「本地化短日期」）。 */
+function shortDate(ts) {
+  const date = new Date(ts)
+  const day = date.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+  const clock = date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+  return `${day} ${clock}`
 }
 
 /** 行内动作控件（常态两控件 = 改名 / 删除）：词面经 `aria-label`（零文本子 —— 字形住 `styles.css`），锚 = `data-action`。 */

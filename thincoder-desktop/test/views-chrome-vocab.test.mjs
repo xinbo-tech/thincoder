@@ -56,17 +56,21 @@ const row = (slot, over = {}) => ({
   slot, title: `标题${slot}`, createdBy: "desktop", updatedAt: 1, messageCount: 0, isActive: false, ...over,
 })
 
-/** 核域状态词键（`thincoder-core/i18n.mjs:50-54` 五键 —— 消费面断言，非本端新键）。 */
-const CORE_WORD_KEYS = ["sub.queued", "sub.running", "sub.stopped", "sub.done", "sub.error"]
+/** 核域状态词键（`thincoder-core/i18n.mjs:50-54` 五键 + `:67` 回合帧键 —— 消费面断言，非本端新键；R3a 增 `status.turn`；
+ *  R3c 增 `status.thinking` —— 推理块摘要词）。 */
+const CORE_WORD_KEYS = ["sub.queued", "sub.running", "sub.stopped", "sub.done", "sub.error", "status.turn", "status.thinking"]
+/** 核件复制钮两键（R3c：核 `flow/stream.mjs` `attachCopyButtons` 词键）—— 端供给面：值住核产出 DOM 面
+ *  （树面零消费）⇒ 出树消费判据外列（消费面 = `test/views-chat-text.test.mjs` U173）。 */
+const EXTRA_WORD_KEYS = ["msg.copy", "msg.copied"]
 /** 对话流宿主键（批 6 新增六键；批 B ⑧ 复制面 +2、追加轮引导面 +2 —— 复制面两键只走下方树清单消费面）。 */
 const CHAT_WORD_KEYS = [
   "chat.empty.hint", "chat.pill.new", "chat.pill.bottom", "chat.summary.older", "chat.tool.changes", "chat.tool.duration",
   "chat.guide.noProject", "chat.guide.noSession",
 ]
-/** 活动池宿主键（本批新增七键 —— 三族标 + 两读数标题字 + 折叠控件两态 + 空态）。 */
+/** 活动池宿主键（本批新增七键；R3b：族标 `pool.family.blocks` ⇒ `pool.family.subagents` + 增 `pool.stop` —— 共八键）。 */
 const POOL_WORD_KEYS = [
-  "pool.title", "pool.family.approvals", "pool.family.blocks", "pool.family.queue",
-  "pool.collapse", "pool.expand", "pool.empty.hint",
+  "pool.title", "pool.family.approvals", "pool.family.subagents", "pool.family.queue",
+  "pool.collapse", "pool.expand", "pool.empty.hint", "pool.stop",
 ]
 /** 审批卡宿主键（本批新增七键 —— 两形三出口 + 批形计数）。 */
 const APPROVAL_WORD_KEYS = [
@@ -83,10 +87,16 @@ const chatState = (over = {}) => ({
   following: true, pendingNew: 0, locale: "en", ...over,
 })
 
-/** 活动池 / 审批卡帧态夹具（U51 消费面 —— 树面判据住 `views-activity` / `views-approval` 两档）。 */
+/** 活动池 / 审批卡帧态夹具（U51 消费面 —— 树面判据住 `views-activity` / `views-approval` 两档）。
+ *  R3b：池切片摘 `blocks`（工具行）⇒ 子 agent 块表 `subBlocks`（按会话键分槽）。 */
 const poolState = (over = {}) => ({
-  activeSession: "s1", activeTab: "1", poolCollapsed: {},
-  pool: { running: 0, approval: 0, blocks: [], queue: [], approvals: [] }, ...over,
+  activeSession: "s1", activeTab: "1", poolCollapsed: {}, subBlocks: {},
+  pool: { running: 0, approval: 0, queue: [], approvals: [] }, ...over,
+})
+/** 子 agent 块夹具（R3b 消费面 —— 块头四段 + 状态词 + 停止钮词）。 */
+const subBlock = (over = {}) => ({
+  key: "sub:eng-coder#1", role: "eng-coder", id: 1, model: "m-block", startedAt: 1000, doneAt: null,
+  turn: 2, maxTurns: 4, status: "running", pool: true, syncLive: false, queued: false, frozen: false, ...over,
 })
 const approvalSingle = {
   promptId: "p1", shape: "single", tool: "Bash", argsSummary: "npm test",
@@ -95,10 +105,11 @@ const approvalSingle = {
 const approvalBatch = { promptId: "p2", shape: "batch", batch: { count: 3, tools: ["Bash", "Read"] } }
 const chatBlock = (kind, id, over = {}) => ({ kind, id, text: `正文-${id}`, ...over })
 const chatTool = (id, status, over = {}) => ({ kind: "tool", id, name: "Bash", argsSummary: "npm test", status, ...over })
-/** 五态工具卡 + 两文本块（消费面：五状态词 / 改动摘要 / 耗时 / 结果区）。 */
+/** 五态工具卡 + 三文本块（消费面：五状态词 / 改动摘要 / 耗时 / 结果区 + R3c 推理块）。 */
 const chatBlocks = [
   chatBlock("user", "u1"),
   chatBlock("assistant", "a1"),
+  { kind: "reasoning", id: "r1", text: "想-r1" },
   chatTool("t1", "done", { durationMs: 1500, changes: { items: [{ path: "a.mjs", insertions: 12, deletions: 5 }] } }),
   chatTool("t2", "queued"),
   chatTool("t3", "running"),
@@ -157,12 +168,12 @@ const infoFace = (over = {}) => ({
 
 // ─── U51 词表键齐 ∧ 零硬编码（全量）────────────────────────
 
-test("U51: 词表键齐 ∧ 零硬编码（两语 124 键键集相等 ∧ 全量与 aria-label 全哨兵 ∧ 十七视图档零 CJK）", (ctx) => {
+test("U51: 词表键齐 ∧ 零硬编码（两语 139 键键集相等 ∧ 全量与 aria-label 全哨兵 ∧ 十九视图档零 CJK）", (ctx) => {
   const keys = Object.keys(HOST_DICT.en)
   // 键数 = 量面锁（**不写死**：数值以盘上实读为准，非设计值 —— 家族链逐舱累进，增键须同改本行与下行链面）。
   assert.equal(
-    keys.length, 13 + 4 + 10 + 7 + 7 + 3 + 49 + 10 + 9 + 6 + 3 + 2 + 1,
-    "宿主键数 = 124（左列 13 + 标签条 4 + 对话流 10 + 活动池 7 + 审批卡 7 + 提问卡 3 + 设置 49 + 首启向导 10 + 信息行 9 + 输入区 6 + 会话头 3 + 档位 2 + 状态栏 1）",
+    keys.length, 15 + 4 + 10 + 8 + 7 + 3 + 49 + 10 + 9 + 6 + 3 + 2 + 1 + 10 + 2,
+    "宿主键数 = 139（左列 15 + 标签条 4 + 对话流 10 + 活动池 8 + 审批卡 7 + 提问卡 3 + 设置 49 + 首启向导 10 + 信息行 9 + 输入区 6 + 会话头 3 + 档位 2 + 状态栏 1 + 状态行 10 + 核件复制钮 2）",
   )
   assert.deepEqual([...keys].sort(), [...Object.keys(HOST_DICT.zh)].sort(), "两语键集相等（增键两语同增）")
   for (const key of ["tab.badge.approval", "tab.action.close", "tab.action.close.cancel", "tab.action.close.confirm"]) {
@@ -209,12 +220,13 @@ test("U51: 词表键齐 ∧ 零硬编码（两语 124 键键集相等 ∧ 全量
     chatTree(chatModel(chatState({ blocks: [chatBlocks[0]], following: false }))),
     chatTree(chatModel(chatState({ activeSession: null }))),
     chatTree(chatModel(chatState({ activeSession: null, project: { cwd: "C:\\proj" } }))),
-    // 活动池树入量（本批增）：三态 + 折叠态 ⇒ 池面七键消费面（读数文本 = 数据面数字串）
-    poolTree(poolModel(poolState({ pool: { running: 12, approval: 5, blocks: [], queue: [], approvals: [] } }))),
+    // 活动池树入量（本批增）：三态 + 折叠态 ⇒ 池面八键消费面（读数文本 = 数据面数字串；R3b：块面 + 停止钮）
+    poolTree(poolModel(poolState({ pool: { running: 12, approval: 5, queue: [], approvals: [] } }))),
     poolTree(poolModel(poolState({ poolCollapsed: { "1": true } }))),
     poolTree(poolModel(poolState({
+      subBlocks: { s1: [subBlock()] },
       pool: {
-        running: 12, approval: 5, blocks: [{ tool: "Bash", status: "running" }],
+        running: 12, approval: 5,
         queue: [{ title: "队列一", status: "queued" }], approvals: [approvalSingle, approvalBatch],
       },
     }))),
@@ -254,8 +266,10 @@ test("U51: 词表键齐 ∧ 零硬编码（两语 124 键键集相等 ∧ 全量
     degradedNotice("non-vision"),
     degradedNotice("partial"),
     composerTree(composerModel({ activeSession: "1", pool: { queue: [] }, blocks: [{ kind: "assistant", text: "正文-a1" }] }), {}),
-    // 状态栏读数入量（批 B · 项 3）：活动键读数 > 0 ⇒ 读数节点（`status.usage` 消费面）
+    // 状态行读数入量（批 B · 项 3）：活动键读数 > 0 ⇒ 读数节点（`status.usage` 消费面）
     statusTree(statusModel({ tabs: ["1", "2"], activeTab: "1", badges: { 2: ["running"] }, usage: { 1: 62 } })),
+    statusTree(statusModel({ tabs: ["1", "2"], activeTab: "1", badges: { "1": ["running", "approval"] }, usage: { "1": 85 }, sessions: [row(1, { title: "" })], pool: { queue: [] }, blocks: [chatTool("t1", "running")], tasks: { "1": [{ status: "done" }, { status: "pending" }] }, turns: { "1": { n: 2, max: 8 } }, turnStarts: { "1": 1 }, now: 5000, tokens: { "1": { prompt: 1200, completion: 300, reasoningTokens: 40, cacheHit: 6, cacheMiss: 4 } }, timers: { "1": { count: 2, expired: 1 } }, projectInfo: { thresholdReached: true } })), // R3a 状态行（D17 承载 12 段）：满场一树 —— 十个段词键消费面（段判据住 `test/views-statusline.test.mjs`）
+    statusTree(statusModel({ tabs: ["1"], activeTab: "1", badges: { "1": ["running"] }, pool: { queue: [{ title: "队列一", status: "queued" }] } })),
   ]
   const data = new Set([
     "C:\\r1", "C:\\proj", "标题2", "标题3", "P", "M", "Read", "队列一", "0",
@@ -269,6 +283,8 @@ test("U51: 词表键齐 ∧ 零硬编码（两语 124 键键集相等 ∧ 全量
     "low", "high",
     // 附件面数据串（非哨兵文本 —— 粘贴文件名）
     "pic.png",
+    // 子 agent 块面数据串（非哨兵文本 —— 角色 / 型号）
+    "eng-coder", "m-block",
   ])
   const used = new Set()
   for (const tree of trees) {
@@ -283,11 +299,11 @@ test("U51: 词表键齐 ∧ 零硬编码（两语 124 键键集相等 ∧ 全量
       assert.ok(data.has(text), `树内文本须为词表键值或数据串（实 = ${text}）`)
     }
   }
-  assert.deepEqual([...used].sort(), [...keys, ...CORE_WORD_KEYS].sort(), "124 宿主键 + 5 核状态键全被消费（键齐 = 用量面）")
+  assert.deepEqual([...used].sort(), [...keys.filter((key) => !EXTRA_WORD_KEYS.includes(key)), ...CORE_WORD_KEYS].sort(), "宿主键（树消费面 137）+ 7 核状态键全被消费（键齐 = 用量面；核件复制钮两键 = 挂载面消费，出本判）")
 
   for (const name of [
     "sessions.mjs", "tabbar.mjs", "chrome.mjs", "chat.mjs", "chat-stream.mjs", "chat-scroll.mjs", "chat-tool.mjs", "chat-copy.mjs",
-    "chat-guide.mjs",
+    "chat-cards.mjs", "chat-text.mjs", "chat-guide.mjs", "statusline.mjs",
     "approval.mjs", "activity.mjs",
     "settings.mjs", "settings-sections.mjs", "onboarding.mjs", "info-row.mjs",
     "question.mjs", "plan.mjs",

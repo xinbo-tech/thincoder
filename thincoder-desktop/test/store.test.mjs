@@ -233,17 +233,20 @@ test("U33: t 解析序（宿主 → 核投影 → 键名）∧ 语言归一 ⇒ 
 
 // ─── U75 三切片定形与纯动作（批 7 · 批档 §2.2（e））──────────────
 
-test("U75: initialState 切片定形 ∧ pool 三族两读数 ∧ togglePool 三支 ∧ 行形态两动作 ∧ 注册后零行为变化", () => {
+test("U75: initialState 切片定形 ∧ pool 两族两读数 ∧ togglePool 三支 ∧ 行形态两动作 ∧ 注册后零行为变化", () => {
   const base = initialState()
   assert.deepEqual(Object.keys(base).sort(), [
     "activeSession", "activeTab", "blocks", "following", "history", "locale", "pendingClose", "pendingNew",
-    "pool", "poolCollapsed", "project", "projectInfo", "railForm", "sessionMeta", "sessions", "settings", "tabBadges", "tabs", "usage",
-  ], "初态键集 = 定形锁（三切片 + settings / projectInfo / railForm 在册 —— 增 / 减键须同改本锁）")
+    "pool", "poolCollapsed", "project", "projectInfo", "railForm", "sessionMeta", "sessions", "settings", "subBlocks", "tabBadges", "tabs",
+    "timers", "tokens", "turnStarts", "turns", "usage",
+  ], "初态键集 = 定形锁（三切片 + settings / projectInfo / railForm / 状态行四槽 + subBlocks 在册 —— 增 / 减键须同改本锁）")
   assert.deepEqual(base.railForm, null, "railForm 槽位在册（换形态单源 —— 常态 = null，换形 = `{ key, mode }`）")
-  assert.deepEqual(base.pool, { running: 0, approval: 0, blocks: [], queue: [], approvals: [] }, "pool 形 = 两读数（折叠头）+ 三族 + 待决项数组（卡面与池面同一源）")
+  assert.deepEqual(base.pool, { running: 0, approval: 0, queue: [], approvals: [] }, "pool 形 = 两读数（折叠头）+ 两族（待审批 / 队列）+ 待决项数组；**无 `blocks`**（R3b 摘工具行 —— 工具调用面 = 对话流工具卡）")
+  assert.deepEqual(base.subBlocks, {}, "subBlocks 槽位在册（R3b 子 agent 块切片 —— 按会话键分槽；空表 ⇒ 该会话零块）")
   assert.deepEqual(base.tabBadges, {}, "tabBadges 槽位在册（位标源随供给批）")
   assert.deepEqual(base.sessionMeta, {}, "sessionMeta 槽位在册（会话头字段源随供给批）")
   assert.deepEqual(base.usage, {}, "usage 槽位在册（占用读数按会话 key 写 —— 值面 = ev:usage 归约，读面随批）")
+  assert.deepEqual([base.turns, base.turnStarts, base.tokens, base.timers], [{}, {}, {}, {}], "R3a 四槽在册（状态行读数 —— 写者 = 归约面；值面未落 ⇒ 对应段零节点 —— 禁假造）")
   assert.deepEqual(base.poolCollapsed, {}, "poolCollapsed 槽位在册（折叠态按会话记忆）")
 
   const fresh = initialState()

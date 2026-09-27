@@ -41,7 +41,7 @@ const HOST_TEMPLATE = {
   "chat.tool.changes": "⟦chg:${files}+${add}-${del}⟧",
   "chat.tool.duration": "⟦dur:${seconds}⟧",
 }
-const CORE_WORD = ["sub.queued", "sub.running", "sub.done", "sub.stopped", "sub.error"]
+const CORE_WORD = ["sub.queued", "sub.running", "sub.done", "sub.stopped", "sub.error", "status.thinking"]
 
 function setupDict(ctx) {
   const host = Object.fromEntries(Object.keys(HOST_DICT.en).map((key) => [key, HOST_TEMPLATE[key] ?? `⟦${key}⟧`]))
@@ -97,7 +97,7 @@ test("U58: 三态与根锚（none 零块节点 + 引导节点 / empty 提示 / f
 
 // ─── U59 块五型与块序 ────────────────────────────────────────
 
-test("U59: 块五型与块序（逐位同序 ∧ 兜底键 = 全列表位序 ∧ 文本裸串）", (ctx) => {
+test("U59: 块五型与块序（逐位同序 ∧ 兜底键 = 全列表位序 ∧ 文本面 = 核 md + 原文锚）", (ctx) => {
   setupDict(ctx)
   const blocks = [
     user({ id: "u1", text: "<b>原文</b>" }),
@@ -120,10 +120,18 @@ test("U59: 块五型与块序（逐位同序 ∧ 兜底键 = 全列表位序 ∧
   )
   assert.equal(kindNodes[1].props["data-streaming"], "1", "assistant.streaming ⇒ data-streaming=1")
   assert.equal(kindNodes[0].props["data-streaming"], undefined, "非流式块零 data-streaming（不落空锚）")
-  const sent = one(chatTree(chatModel(state({ blocks: [{ kind: "user", text: "发送文本" }] }))), "data-block-kind")
-  assert.deepEqual([sent.props["data-block-kind"], sent.props["data-block-id"], texts(sent)[0]], ["user", "0", "发送文本"], "发送面块形（无 id）⇒ 树面 user 块 + 兜底位序键 + 文本逐字（#458 ③）")
-  assert.ok(texts(tree).includes("<b>原文</b>"), "文本节点 = 入参原样（零 HTML / Markdown 转换）")
-  assert.ok(texts(tree).includes("流中") && texts(tree).includes("想") && texts(tree).includes("崩"), "四型文本逐位在场")
+  const sentTree = chatTree(chatModel(state({ blocks: [{ kind: "user", text: "发送文本" }] })))
+  const sent = one(sentTree, "data-block-kind")
+  assert.deepEqual([sent.props["data-block-kind"], sent.props["data-block-id"]], ["user", "0"], "发送面块形（无 id）⇒ 树面 user 块 + 兜底位序键（#458 ③）")
+  // 文本面（R3c · KD-RC-4 改判）：`data-raw` = 原文逐字（复制取文源 —— KD-22）；`html` = 核 `md` 产出（转义闸在核）。
+  const faces = withAttr(tree, "data-raw")
+  assert.deepEqual(faces.map((node) => node.props["data-raw"]), ["<b>原文</b>", "流中", "想", "崩"], "文本族块面原文逐字（`data-raw` —— 四型逐位；工具卡无文本面不入）")
+  assert.deepEqual(faces.map((node) => node.props.class), ["block-text", "block-text", "reasoning-content", "block-text"], "文本面类名（推理块内容区 = 核件类名）")
+  assert.deepEqual(texts(sentTree), [], "树面零裸文本子（文本全在 `html` 面 —— 渲染面经核 md；空文本块同形）")
+  const html = faces.map((node) => node.props.html)
+  assert.equal(html[0].includes("&lt;b&gt;原文&lt;/b&gt;"), true, "注入样本 ⇒ 转义闸（核 `md`）后 = 字面文本（C7 ②）")
+  assert.equal(html[0].includes("<b>"), false, "零裸标签入渲染面（转义闸判据）")
+  assert.equal(html[1].includes("流中") && html[2].includes("想") && html[3].includes("崩"), true, "四型文本逐位在场（渲染面）")
 })
 
 // ─── U60 工具卡三行与降级 ────────────────────────────────────
@@ -254,15 +262,18 @@ test("U62: 接线形与词表面（handlers 两态 ∧ 四控出口 ∧ 药丸�
   }
   assert.deepEqual(calls, [["backfill"], ["toggle", "t1"], ["return"]], "三控出口：回填 / 药丸零参 · toggle 携本块键")
 
-  // 复制控（本地效应 · 零通道）：点击源 = 控件宿主父节点**现读**文本 ⇒ 注入写效应（RENDERER.md §1.1）
+  // 复制控（本地效应 · 零通道）：点击源 = 控件宿主的**原文锚** `[data-raw]` 现读 ⇒ 注入写效应（RENDERER.md §1.1 ·
+  //   R3c：文本面经核 Markdown 后 DOM 文本已非原文 ⇒ 取文源 = 原文锚，**逐字**：KD-22）
   const copyNode = controls.find((node) => node.props["data-action"] === "chat:copy-block")
   assert.equal(copyNode.props["aria-label"], "⟦chat.action.copy⟧", "复制控词面 = 词表键（aria-label · 控形零文本子）")
-  copyNode.props.onClick({ currentTarget: { parentNode: { textContent: "块文本一" } } })
-  assert.deepEqual(copies, ["块文本一"], "点击源现读父节点文本 ⇒ 注入写效应（值逐字）")
+  const holder = (raw) => ({ parentNode: { querySelector: () => ({ getAttribute: () => raw }) } })
+  copyNode.props.onClick({ currentTarget: holder("**块文本一**") })
+  assert.deepEqual(copies, ["**块文本一**"], "点击源现读原文锚 ⇒ 注入写效应（**原文逐字** —— Markdown 记号不丢）")
   assert.equal(copyNode.props.onClick(undefined), false, "无 event 裸调 ⇒ 静默 return（不写不报 —— 机检面兜底）")
-  assert.deepEqual(copies, ["块文本一"], "裸调零写（静默）· 空文本同样零写")
-  copyNode.props.onClick({ currentTarget: { parentNode: { textContent: "" } } })
-  assert.deepEqual(copies, ["块文本一"], "现读空串 ⇒ 零写（空文本非失败 —— 零诊断）")
+  assert.deepEqual(copies, ["**块文本一**"], "裸调零写（静默）· 空文本同样零写")
+  copyNode.props.onClick({ currentTarget: holder("") })
+  assert.deepEqual(copies, ["**块文本一**"], "现读空串 ⇒ 零写（空文本非失败 —— 零诊断）")
+  assert.equal(copyNode.props.onClick({ currentTarget: { parentNode: { querySelector: () => null } } }), false, "原文锚缺席（无面宿主）⇒ 零写（不抛 —— 防御读）")
 
   const pill = (over) => one(chatTree(chatModel(state({ blocks: [user()], following: false, ...over }))), "data-pill")
   assert.deepEqual(texts(pill({ pendingNew: 3 })), ["⟦new:3⟧"], "pendingNew > 0 ⇒ chat.pill.new（${n} = 未读数）")

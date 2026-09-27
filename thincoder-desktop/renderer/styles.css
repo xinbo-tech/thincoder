@@ -10,6 +10,7 @@
   --fg-muted: #5c6672;
   --line: #dfe3e8;
   --accent: #2f6feb;
+  --warn: #b45309;
   --radius: 8px;
   --gap: 12px;
   --rail-w: 15rem;
@@ -26,6 +27,7 @@
     --fg-muted: #9aa4b2;
     --line: #2a2f37;
     --accent: #5b8def;
+    --warn: #e8b06a;
   }
 }
 
@@ -166,6 +168,24 @@ body {
 }
 .rail-row[data-active="1"] {
   border-color: var(--accent);
+}
+/* 会话行元数据族（D18 · R3c）：三值逐段包元素（段锚 `data-seg` —— 视图档零字形字面）；段间分隔符归本条
+   （相邻段选择器 ⇒ 缺席段不落空分隔）；长串可缩（窄窗不扑破栅格）。 */
+.rail-row-meta {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  gap: 4px;
+  color: var(--fg-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.rail-row-meta > [data-seg] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rail-row-meta > [data-seg] + [data-seg]::before {
+  content: "· ";
 }
 
 /* 会话行动作面（批 A ④ · `docs/desktop/design/UI.md` §1 左列会话行）：行 = [行控件, 改名, 删除] 一行 flex；
@@ -332,9 +352,23 @@ body {
   font-size: 12px;
 }
 
-/* 状态栏面（同档 §1 状态栏行）：本批只落告警位（非活动标签的待审批 / 运行中）——上下文读数供给未落 ⇒ 零读数节点。 */
+/* 状态行面（D17 十五段裁定「承载 12」—— 本批 R3a）：段 = 横排 `span[data-seg]`（段锚 = 机读面；段内件 = `data-part`）；
+   警示色四段（注意力 / 台账超阈 / 计时到期 / 上下文 ≥ 80%）；四段外置位面（告警）见上 `.status-alert`。 */
 .status-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 4px 12px;
+}
+.status-bar > [data-seg] {
+  display: inline-flex;
+  gap: 4px;
+  flex: 0 0 auto;
+  color: var(--fg-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.status-bar .status-seg-warn,
+.status-bar .status-usage-warn {
+  color: var(--warn);
 }

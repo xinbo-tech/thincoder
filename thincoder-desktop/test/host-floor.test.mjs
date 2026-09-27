@@ -1,10 +1,10 @@
 /**
  * host-floor.test.mjs — E-7 用例（PROJECT.md §2 KD-7；批档 §2.5 U1–U4 + U13 + U74 · 本批 §2.11 收正⑤/⑥ + U76/U77/U95）。
  * 覆盖：版本闸边界（24.0 · Node 主版本底线语义）/ 探针分支（Node 够而 `node:sqlite` 缺）/ 本机真探针过闸
- * （兼作环境契约：测试机即产品下限面）/ 启动序机检（下限自检调用点先于协议 / 窗口注册 · 失败走显式退出 ·
- * `main` 值锁 · 本档入册）/ 预载三面（主进程可读不抛 · 平 node 装配判红 · 主侧读取面 = `createRequire`）/
- * 通道配线两向（`CHANNELS` 二十七项 · `HANDLERS` 键集≡白名单集 · 三新处理体转口 · 未装配处理体 fail-loud 源面判红）/
- * 订阅面白名单（`EVENT_CHANNELS` 恰十 ∧ 冻结 · 表内订阅收单参载荷 · 表外 throw · 退订同引用幂等）/
+ * （兼作环境契约：测试机即产品下限面）/ 启动序机检（下限自检调用点先于协议 / 窗口注册 · 失败走显式退出 · `main` 值锁 · 本档入册）/
+ * 预载三面（主进程可读不抛 · 平 node 装配判红 · 主侧读取面 = `createRequire`）/
+ * 通道配线两向（`CHANNELS` 二十八项 · `HANDLERS` 键集≡白名单集 · 三新处理体转口 · 未装配处理体 fail-loud 源面判红）/
+ * 订阅面白名单（`EVENT_CHANNELS` 十二条 ∧ 冻结 · 表内订阅收单参载荷 · 表外 throw · 退订同引用幂等）/
  * 行数触发线（批 8 主进程侧 / 渲染侧新档 ≤ 300 · 批 9 新增六档〔用例模块〕≤ 300 · 在册例外两向〔越层档不入 `fresh` 清单〕· 宿主档源面零 `electron`）/
  * 退场复位回路（三薄挂载宿主属性面无残留 —— `docs/desktop/design/RENDERER.md` §1 退场口径 · 属性面）。
  */
@@ -93,9 +93,9 @@ test("U13: 预载档主进程可读不抛 / 平 node 装配判红 / 主侧读取
       "approval:respond", "history:page", "msg:send", "msg:interrupt",
       "provider:list", "provider:save", "provider:remove", "provider:verify",
       "model:list", "settings:agent", "mcp:list", "mcp:save", "mcp:remove",
-      "config:write", "ledger:read", "batch:status", "question:respond", "session:prefs",
+      "config:write", "ledger:read", "batch:status", "question:respond", "session:prefs", "subagent:stop",
     ],
-    "白名单 = 二十七项（既有十三项 + 新增十二项：provider 四 · model 一 · settings 一 · MCP 三 · config:write · ledger:read · batch:status + 作答响应 question:respond + 会话级偏好 session:prefs · 顺序锁定）",
+    "白名单二十八项定序（R3b 增 `subagent:stop` —— 末位）",
   )
   assert.ok(Object.isFrozen(preload.CHANNELS), "CHANNELS 冻结（运行期不可改）")
 
@@ -113,10 +113,10 @@ test("U13: 预载档主进程可读不抛 / 平 node 装配判红 / 主侧读取
 
 // ─── U74 通道配线两向（批 7 + 本批 §2.11 ⑥ 随动）─────────────
 
-test("U74: 白名单二十七项 ∧ 既有十三项序锁定（第 10 项 = approval:respond）∧ HANDLERS ≡ CHANNELS 两向 ∧ 未装配处理体 fail-loud", () => {
+test("U74: 白名单二十八项 ∧ 既有十三项序锁定（第 10 项 = approval:respond）∧ HANDLERS ≡ CHANNELS 两向 ∧ 未装配处理体 fail-loud", () => {
   const preload = createRequire(import.meta.url)(fileURLToPath(new URL("../src/preload/preload.cjs", import.meta.url)))
   const channels = [...preload.CHANNELS]
-  assert.equal(channels.length, 27, "白名单 = 二十七项（既有十三项 + 新增十二项 + 作答响应 + 会话级偏好写面）")
+  assert.equal(channels.length, 28, "白名单 = 二十八项（既有十三项 + 新增十二项 + 作答响应 + 会话级偏好写面 + 子 agent 停止出口）")
   assert.equal(channels[9], "approval:respond", "既有十三项序锁定 —— 第 10 项 = 审批出口（新增段追加其后，不动既有段）")
   assert.deepEqual(channels.slice(10, 13), ["history:page", "msg:send", "msg:interrupt"], "第 11–13 项 = 历史页 + 回合驱动二项（批 7 段）")
   assert.deepEqual(
@@ -124,9 +124,9 @@ test("U74: 白名单二十七项 ∧ 既有十三项序锁定（第 10 项 = app
     [
       "provider:list", "provider:save", "provider:remove", "provider:verify",
       "model:list", "settings:agent", "mcp:list", "mcp:save", "mcp:remove",
-      "config:write", "ledger:read", "batch:status", "question:respond", "session:prefs",
+      "config:write", "ledger:read", "batch:status", "question:respond", "session:prefs", "subagent:stop",
     ],
-    "第 14–27 项 = 新增十四项（作答响应 + 会话级偏好写面居末位 —— 序同预载档头注定序）",
+    "第 14–28 项 = 新增十五项（作答响应 + 会话级偏好写面 + 子 agent 停止出口居末位 —— 序同预载档头注定序）",
   )
 
   const ipc = stripComments(readFileSync(new URL("../src/main/ipc.mjs", import.meta.url), "utf8"))
@@ -143,16 +143,16 @@ test("U74: 白名单二十七项 ∧ 既有十三项序锁定（第 10 项 = app
   assert.ok(!/ok\s*:\s*true/.test(body[1]), "未装配处理体零 `{ ok: true }` 字面（不造假成功）")
 })
 
-// ─── U76 出站订阅面白名单（批档 §2.11 收正②/③ · IPC.md §1 十行）─────
+// ─── U76 出站订阅面白名单（批档 §2.11 收正②/③ · IPC.md §1 十一行）─────
 
-test("U76: EVENT_CHANNELS 恰十 ∧ 冻结 · 表内订阅收单参载荷 · 表外 throw · 退订同引用幂等", () => {
+test("U76: EVENT_CHANNELS 十二条 ∧ 冻结 · 表内订阅收单参载荷 · 表外 throw · 退订同引用幂等", () => {
   const preload = createRequire(import.meta.url)(fileURLToPath(new URL("../src/preload/preload.cjs", import.meta.url)))
   const names = [...preload.EVENT_CHANNELS]
-  assert.equal(names.length, 10, "恰十条 —— 九回调映射八通道 + 宿主自产两条（`ev:usage` / `ev:error`）")
+  assert.equal(names.length, 12, "恰十二条 —— 回调映射十通道 + 宿主自产两条（`ev:usage` / `ev:error`）；R3b 增 `ev:subagent` · R3c 增 `ev:reasoning`")
   assert.deepEqual(names, [
-    "ev:token", "ev:activity", "ev:tool-call", "ev:tool-output", "ev:tool-result",
+    "ev:token", "ev:reasoning", "ev:activity", "ev:subagent", "ev:tool-call", "ev:tool-output", "ev:tool-result",
     "ev:approval", "ev:question", "ev:task", "ev:usage", "ev:error",
-  ], "出站白名单 = 十条 `ev:*`（序 = 桥面表）")
+  ], "出站白名单 = 十二条 `ev:*`（序 = 桥面表 —— `ev:reasoning` 随 `ev:token` 后）")
   assert.ok(Object.isFrozen(preload.EVENT_CHANNELS), "EVENT_CHANNELS 冻结（运行期不可改）")
 
   const calls = []
@@ -179,7 +179,7 @@ test("U76: EVENT_CHANNELS 恰十 ∧ 冻结 · 表内订阅收单参载荷 · �
 
 // ─── U77 本批三新通道接线面（批档 §2.11 ④/⑤/⑥）──────────────────
 
-test("U77: 二十七项含三新行 ∧ 两向 ≡ ∧ 三新处理体转口 ∧ 零假成功 / 零 reason 字面", () => {
+test("U77: 二十八项含三新行 ∧ 两向 ≡ ∧ 三新处理体转口 ∧ 零假成功 / 零 reason 字面", () => {
   const preload = createRequire(import.meta.url)(fileURLToPath(new URL("../src/preload/preload.cjs", import.meta.url)))
   const channels = [...preload.CHANNELS]
   const ipc = stripComments(readFileSync(new URL("../src/main/ipc.mjs", import.meta.url), "utf8"))
@@ -270,6 +270,14 @@ test("U95: fresh 新档 ≤ 300 行（越层档走例外面）∧ `app.mjs` 拆�
     "renderer/mount-head.mjs", "test/views-head.test.mjs",
     // 批 B 引导面新档（本舱 · 追加轮）：渲染侧一行（`renderer/views/chat-guide.mjs`）+ 其用例档一行（同前例）
     "renderer/views/chat-guide.mjs", "test/views-chat-guide.test.mjs",
+    // R3a 状态行族两档（本舱）：`renderer/views/statusline.mjs`（自 chrome.mjs 拆出）+ `renderer/mount-status.mjs` + 用例档一行
+    "renderer/views/statusline.mjs", "renderer/mount-status.mjs", "test/views-statusline.test.mjs",
+    // R3b 子 agent 面出档（本舱）：`src/main/subagent-face.mjs`（停止出口 + 存活投影起 / 停 / 清点 —— `agent-host.mjs` R3a 末态 288 ⇒ 同档必越 300）
+    "src/main/subagent-face.mjs",
+    // R3b 用例三档（本舱）：桥面 relay 分流 + 存活投影 / 宿主停止出口 + 拍体 / `ev:subagent` 归约面
+    "test/agent-bridge-subagent.test.mjs", "test/agent-host-subagent.test.mjs", "test/events-subagent.test.mjs",
+    // R3c 视图新档（本舱）：`chat-text.mjs`（核文本面）+ `chat-cards.mjs`（卡面态刷拆档 —— 在册预案「卡构树拆出」落形）+ 用例两档（同入 ≤300 臂）
+    "renderer/views/chat-text.mjs", "renderer/views/chat-cards.mjs", "test/views-chat-text.test.mjs", "test/views-rail-actions.test.mjs",
   ]
   for (const rel of fresh) {
     const n = rows(rel)
@@ -284,8 +292,7 @@ test("U95: fresh 新档 ≤ 300 行（越层档走例外面）∧ `app.mjs` 拆�
     assert.ok(n <= limit, `${rel} ≤ ${limit} 硬限（实 ${n} —— 距硬限余 ${limit - n} 行）`)
     assert.ok(!fresh.includes(rel), `${rel} 不入 \`fresh\` 清单（越层档 = 例外面，非 ≤300 臂）`)
   }
-  // 判据 = 行数规则线本身（「无文件 >300 行」· **含线上** —— 恰 300 合规 · 非余量口径）：接线族已在
-  // `mount-*.mjs` 出档，`app.mjs` 无设置族接线可移。
+  // 判据 = 行数规则线本身（「无文件 >300 行」· **含线上** —— 恰 300 合规 · 非余量口径）：接线族已在 `mount-*.mjs` 出档。
   assert.ok(rows("renderer/app.mjs") <= 300, `renderer/app.mjs 拆后 ≤ 300（实 ${rows("renderer/app.mjs")}）`)
   const host = readFileSync(new URL("../src/main/agent-host.mjs", import.meta.url), "utf8")
   assert.ok(!/electron/i.test(host), "宿主档源面零 `electron`（脱壳直测前提）")

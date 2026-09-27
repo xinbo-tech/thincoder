@@ -1,8 +1,10 @@
 /**
  * agent-host.mjs — 宿主装配桥（`docs/desktop/design/SHELL.md` §4 装配第三份 · `docs/desktop/design/IPC.md` §1 桥面）。
- * 五职责：① 装配（懒 · 按需 · 同键复用）② 九回调桥（协议行解析 ⇒ `ev:*` 出站）③ 待决表（三门形：审批逐项 / 审批批次 / 提问）
+ * 五职责：① 装配（懒 · 按需 · 同键复用）② 十回调桥（协议行解析 ⇒ `ev:*` 出站 · R3a 增 `onUsage` 入会话累计令牌表）
+ * ③ 待决表（三门形：审批逐项 / 审批批次 / 提问）
  * ④ 回合驱动（`send` / `interrupt` + 结算三映射：done · stopped · error + 回合尾 `ev:usage` 读数〔`postUsage` · 三径同点〕）
  * ⑤ 会话级偏好写面（`setPrefs`：写盘 → 重施；在飞拒 —— 批次档 KD-19 单点）。
+ * **R3b（D20）**：子 agent 面（停止出口 + 存活投影起 / 停 / 清点）出档 `subagent-face.mjs`（行数触发线 —— 档名实施批定）。
  * 装配端差（SHELL.md §4 显式登记两项 + 取值面一项）：`cwd` = 项目根（注入的 `projects.currentCwd()`）——**非**
  * `process.cwd()`；不附着 M1 装配钩子（本端读面未接）；不连外部工具服务器（本端无此面）。
  * 零宿主依赖：出站 `emit` 由主进程注入 ⇒ 平 node 直测。
@@ -24,10 +26,11 @@ import { assembleBuiltinTools } from "@thincoder/core/tools/index.mjs"
 import { historyPercent } from "@thincoder/core/token-window.mjs"
 // 会话键语义（`String(slot)` 单源）与端壳同档 —— 键面归一不造第二口径；偏好写面（`writeSlotPrefs`）同档。
 import { slotOfKey, writeSlotPrefs } from "./session-slots.mjs"
-// 三出档（见档头）：回调桥 / 待决门 / 槽 I/O —— 本档只装配与驱动，算法面各归其档。
+// 四出档（见档头）：回调桥 / 待决门 / 槽 I/O / 子 agent 面 —— 本档只装配与驱动，算法面各归其档。
 import { createBridge } from "./agent-bridge.mjs"
 import { createGates } from "./suspensions.mjs"
 import { loadAgentSlot, saveAgentSlot } from "./session-io.mjs"
+import { createSubagentFace } from "./subagent-face.mjs"
 // 附件面（`docs/desktop/design/IPC.md` §2「附件注」）：起跑前装配（非视觉门 / 落盘 / 交核指引）+ 回合尾清理。
 import { cleanupTurn, prepareTurnAttachments } from "./attachments.mjs"
 // 同名 re-export（调用面零改 —— 既有 import 路径与名面保持）。
@@ -130,7 +133,8 @@ async function assembleFor({ cwd, slot, deps = {} }) {
 }
 
 /** 宿主装配桥：`emit(channel, payload)` = 出站面（主进程注入）· `run` = 回合运行器 · `assemble` = 装配函数（皆可注入）。
- *  `projects` = 项目面（`currentCwd()` 供装配取值）；返回 `{ ensure, send, interrupt, setPrefs, respond, dispose, table, agents }`。 */
+ *  `projects` = 项目面（`currentCwd()` 供装配取值）；返回六个正文面 + 子 agent 面（`subagent-face.mjs` 展开：
+ *  `stopSubagent` / `heartbeatBeat` / `startHeartbeat` / `stopHeartbeat`）+ `table` / `agents`。 */
 export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, deps = {}, projects } = {}) {
   if (typeof emit !== "function") throw new Error("[agent-host] emit required (out-bound channel)")
   const post = (channel, payload) => emit(channel, payload)
@@ -138,20 +142,38 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
   const agents = new Map()
   /** 在途装配（并发同键去重 —— 两次 `ensure` 只装配一次）。 */
   const ensuring = new Map()
+  /** 会话累计令牌表（key → 五键记录 —— R3a：写者 = 桥面 `onUsage`，读面 = 回合尾 `ev:usage` 载荷；`dispose` 随清）。 */
+  const usageTally = new Map()
+  const tokensOf = (key) => {
+    if (!usageTally.has(key)) usageTally.set(key, { prompt: 0, completion: 0, reasoningTokens: 0, cacheHit: 0, cacheMiss: 0 })
+    return usageTally.get(key)
+  }
   /** 待决门（表 + 五操作 —— 出档 `suspensions.mjs`；`table` 随宿主面继续暴露）。 */
   const { table, askSingle, askBatch, askQuestion, denyGates, respond } = createGates({ post, agents })
-  /** 九回调桥（出档 `agent-bridge.mjs` —— `post` 与三门转口注入）。 */
-  const bridge = createBridge({ post, askSingle, askBatch, askQuestion })
+  /** 十回调桥（出档 `agent-bridge.mjs` —— `post` 与三门转口 + 令牌表读取面 `tokensOf` + sync registry 只读采样注入）。 */
+  const bridge = createBridge({
+    post, askSingle, askBatch, askQuestion, tokensOf,
+    syncLiveOf: (key, head) => agents.get(key)?._syncChildAborts?.has(head) === true,
+  })
   /** 在飞回合：key → AbortController（单驱动器 ⇒ 禁双 run 竞态）。 */
   const flights = new Map()
 
-  /** 回合尾用量读数（`docs/desktop/design/IPC.md`:21 = 产出方「宿主回合尾结算」· 载荷 `{key,percent}` 见 :41）：
-   *  值 = 核 `historyPercent` 投影（**端侧零重算** —— 读数域 0–100 整数直传）；门 = 有效读数〔数字 ∧ `> 0`〕
-   *  才发 —— 判据与渲染侧占用切片同式（非数 / 零 / 负 ⇒ 不发，不假造读数）。**三径同点调用**：落盘之后、终局事件之前 · **不抛前提** = `agent.history` 恒数组（核装配缺省 `thincoder-core/agent.mjs:64` · 接续恒置 `thincoder-core/session-lifecycle.mjs:108`）⇒ 本读数不改结算链（终局帧不受读数影响）。 */
+  /** 计时读数（R3a 载荷扩 `timers` —— 核 `_pendingTimers` 活读投影 `{count, expired}`；新鲜度 = 本回合尾时点
+   *  （RENDER-CORE §10 F 行：空闲期到期不即时刷新）；`expiresAt` 非数项不计到期）。 */
+  function pendingTimers(agent, now = Date.now()) {
+    const list = Array.isArray(agent?._pendingTimers) ? agent._pendingTimers : []
+    return { count: list.length, expired: list.filter((timer) => typeof timer?.expiresAt === "number" && timer.expiresAt <= now).length }
+  }
+
+  /** 回合尾用量读数（`docs/desktop/design/IPC.md` §1 `ev:usage` 行 —— 产出方 = 宿主回合尾结算）：
+   *  载荷 = `{ key, percent, tokens, timers }` —— `percent` = 核 `historyPercent` 投影（**端侧零重算** · 门 = 有效读数〔数字 ∧ `> 0`〕，
+   *  不假造）；`tokens` = 本键会话累计（桥面 `onUsage` 累加 · CLI 同源映射）· `timers` = 核 `_pendingTimers` 活读（空在途 ⇒ 零值——
+   *  显示面自持「非正 ⇒ 零节点」）。**三径同点调用**：落盘之后、终局事件之前 · **不抛前提** = `agent.history` 恒数组
+   *  （核装配缺省 `thincoder-core/agent.mjs:64` · 接续恒置 `thincoder-core/session-lifecycle.mjs:108`）⇒ 本读数不改结算链。 */
   function postUsage(key, agent) {
     const percent = historyPercent(agent?.history ?? [], agent?.provider)
     if (typeof percent !== "number" || !(percent > 0)) return
-    post("ev:usage", { key, percent })
+    post("ev:usage", { key, percent, tokens: { ...tokensOf(key) }, timers: pendingTimers(agent) })
   }
 
   /** 装配 + 装载本键槽：`loadAgentSlot` 在**宿主内**（假 `assemble` 注入同走装载 —— §1.14 ① 的语义面
@@ -258,14 +280,21 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
     return { ok: true, reason: null, cwd, slot, meta: written.meta }
   }
 
-  /** 装配实例清除（会话关闭面 —— 防泄漏）：装配表 / 在途装配 / 本键待决门（按拒结算 —— 不留悬 Promise）。 */
+  /** 子 agent 面（R3b · D20 —— 出档 `subagent-face.mjs`）：停止出口 + 存活投影起 / 停 / 清点。 */
+  const subagentFace = createSubagentFace({ agents, bridge })
+
+  /** 装配实例清除（会话关闭面 —— 防泄漏）：装配表 / 在途装配 / 本键待决门（按拒结算 —— 不留悬 Promise）/ 本键令牌表 / 本键桥面 relay scope。
+   *  **R3b**：同时 = 存活投影**清点**面（该键不再入拍）。 */
   function dispose(key) {
     agents.delete(key)
     ensuring.delete(key)
+    usageTally.delete(key)
+    bridge.dropScope(key)
     denyGates(key)
   }
 
   // `respond` 取自待决门出档（契约：表外 id ⇒ `unknown-prompt` · 跨 kind 载荷 ⇒ `bad-kind` · 跨形 / 表外
   // verdict ⇒ `bad-verdict` · 非串且非 `null` 作答 ⇒ `bad-answer`；四档皆不 resolve —— 挂起保留）。
-  return { ensure, send, interrupt, setPrefs, respond, dispose, table, agents }
+  subagentFace.startHeartbeat() // 出生自愈起拍（起在装配期；停 `stopHeartbeat()` / 逐键清 `dispose(key)`）
+  return { ensure, send, interrupt, setPrefs, respond, dispose, ...subagentFace, table, agents }
 }

@@ -8,7 +8,8 @@
   overflow-anchor: none;
 }
 
-/* 块（五型单序列）：纯文本落面（`pre-wrap` —— 零 Markdown / 零 HTML 注入）；块间留白 = 相邻块上边距。 */
+/* 块（五型单序列）：文本面经**核 Markdown**呈现（R3c · KD-RC-4 —— 渲染面单源 = `renderer/views/chat-text.mjs`；核产出面样式 = `renderer/core.css`）；
+   本段只给块壳（边距 / 边框）：`pre-wrap` 保留（核 md 产出无裸换行 · 行内块件自持 `white-space`），流式游标住 `.block-assistant[data-streaming="1"]`。 */
 .block {
   padding: 8px 10px;
   border: 1px solid var(--line);

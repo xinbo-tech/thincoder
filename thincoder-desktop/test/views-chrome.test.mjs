@@ -1,10 +1,10 @@
 /**
- * views-chrome.test.mjs — E-2 中区外壳用例（会话头 / 状态栏告警位 / 输入区构树与挂载接线面）：
- * 会话头（字段序单源 · 薄挂载供给面）/ 状态栏告警位 / 输入区构树与两态锚（批 A U118）· 挂载接线面与槽锚（批 A U119）·
+ * views-chrome.test.mjs — E-2 中区外壳用例（会话头 / 状态行出档 / 输入区构树与挂载接线面）：
+ * 会话头（字段序单源 · 薄挂载供给面）/ 状态行出档与段表（R3a U158；告警位与 12 段判据面随状态行族迁 `test/views-statusline.test.mjs`——U50 同迁）/
  * 组字门（批 A §1.16㈢ · U126）。全量词表键齐 ∧ 零硬编码（U51）住 `test/views-chrome-vocab.test.mjs`（硬限拆档：原 537 行
  * 越 `docs/desktop/design/PROJECT.md` §4.1 的 500 行硬限 ⇒ 词表族分出——面不变、判据不变，只换宿主档（同笔唯 U51 零 CJK 名单补 `chat-copy.mjs`：15 ⇒ 16）。
  * 零回归面（清单两向 ∧ 导出面锁 ∧ 七槽接线结构面）住 `test/views-locks.test.mjs`；左列面留 `test/views.test.mjs`（U39–U44 + U53）。
- * 纪律：本档只读源 + 调纯函数（`headModel` / `headTree` / `mountHead` / `sessionMetaOf` / `statusModel` / `statusTree` /
+ * 纪律：本档只读源 + 调纯函数（`headModel` / `headTree` / `mountHead` / `sessionMetaOf` / `STATUS_SEGMENTS` /
  * `composerModel` / `composerTree` / `attachComposer` / `flushTurnTail`（平 node：`document` 缺 ⇒ 薄挂载早返径））——**不触真 DOM**
  * （会话头挂载落点一段走假 DOM `test/fake-dom.mjs`；真机走查随人工）。
  */
@@ -12,7 +12,8 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import { initDict, t } from "../renderer/i18n.mjs"
-import { headModel, headTree, mountHead, sessionMetaOf, statusModel, statusTree } from "../renderer/views/chrome.mjs"
+import { headModel, headTree, mountHead, sessionMetaOf } from "../renderer/views/chrome.mjs"
+import { STATUS_SEGMENTS } from "../renderer/views/statusline.mjs"
 import { attachComposer, COMPOSER_SLOT, composerModel, composerTree, flushTurnTail, submitDraft } from "../renderer/mount-composer.mjs"
 import { QUEUE_MAX } from "../renderer/store.mjs"
 import { chatModel, chatTree } from "../renderer/views/chat.mjs"
@@ -93,36 +94,18 @@ test("U49b: 会话头薄挂载（供给面 = `sessionMeta[activeTab]` —— 整
   }
 })
 
-// ─── U50 状态栏告警位 ───────────────────────────────────────
+// ─── U158 状态行出档与段表（R3a · T-DSK33 原址补例）────────────
 
-test("U50: 状态栏告警位（非活动标签的待审批 / 运行中 ∧ 序 = 标签序 ∧ 零告警零节点）", (ctx) => {
-  const sentinel = (key) => `⟦${key}⟧`
-  initDict({
-    locale: "en",
-    host: Object.fromEntries(["tab.badge.approval"].map((key) => [key, sentinel(key)])),
-    dict: Object.fromEntries(["sub.running", "sub.done"].map((key) => [key, sentinel(key)])),
-  })
-  ctx.after(() => initDict({}))
-
-  const one = statusTree(statusModel({ tabs: ["a", "b"], activeTab: "a", badges: { a: ["approval"], b: ["running"] } }))
-  assert.equal(one.props["data-alerts"], 1, "data-alerts = 告警数")
-  assert.deepEqual(one.children.map((node) => node.props["data-alert"]), ["running"], "活动标签的待审批不入状态栏（活动态由标签位承载）")
-  assert.deepEqual(one.children.map((node) => node.props["data-tab"]), ["b"], "告警携带标签键（随动面）")
-  assert.deepEqual(one.children.map((node) => node.children[0]), [sentinel("sub.running")], "告警文本 = BADGE_WORD[码] 词表值")
-
-  const two = statusTree(statusModel({
-    tabs: ["a", "b", "c", "d"], activeTab: "a", badges: { b: ["approval"], c: ["running"], d: ["done"] },
-  }))
-  assert.equal(two.props["data-alerts"], 2, "N ≥ 2 例（4 标签 · b / c 两告警）")
-  assert.deepEqual(two.children.map((node) => node.props["data-alert"]), ["approval", "running"], "告警序 = 标签序")
-  assert.deepEqual(two.children.map((node) => node.props["data-tab"]), ["b", "c"], "标签键随告警同序")
-  assert.deepEqual(two.children.map((node) => node.children[0]), [sentinel("tab.badge.approval"), sentinel("sub.running")], "两告警文本 = 各自词表值（待审批 · 运行中）")
-
-  const quiet = statusTree(statusModel({ tabs: ["a", "d"], activeTab: "a", badges: { d: ["done"] } }))
-  assert.equal(quiet.props["data-alerts"], 0, "done 不入告警码集（零告警）")
-  assert.deepEqual(quiet.children, [], "零告警 ⇒ 零节点（不造占位）")
+test("U158: 状态行出档面（槽锚两向 · 单点重建不落 app.mjs · 承载 12 段表）", () => {
+  const html = readFileSync(new URL("../renderer/index.html", import.meta.url), "utf8")
+  const app = readFileSync(new URL("../renderer/app.mjs", import.meta.url), "utf8")
+  const mount = readFileSync(new URL("../renderer/mount-status.mjs", import.meta.url), "utf8")
+  assert.ok(html.includes('data-slot="status"'), "骨架容器锚在位（窗口级底行 —— UI.md §1 状态栏行）")
+  assert.ok(mount.includes('STATUS_SLOT = \'[data-slot="status"]\''), "槽锚常量与骨架属性同值（两向锁 —— 状态行族出档）")
+  assert.ok(app.includes("attachStatus()") && app.includes("paintStatus(state)"), "接线 = 出档装配 + 订阅派发（`STATUS_KEYS` 面）")
+  assert.equal(app.includes("mountStatus("), false, "状态行挂载不落 app.mjs（单点重建归状态行族档）")
+  assert.equal(STATUS_SEGMENTS.length, 12, "承载 12 段（D17 计数 —— 旁置 2 / 不适用 1 与逐段判据住 `test/views-statusline.test.mjs`）")
 })
-
 // ─── U118 输入区构树与两态锚（批 A · T-DSK22 / T-DSK23）──────────────
 
 test("U118: 输入区构树（两态锚 / 满队提示行 / 键位接线两态 ∧ 零乐观写）", () => {
@@ -273,7 +256,7 @@ test("U153: 用户块出泡两径（受理即出 ∧ 键门零写 ∧ 失败零�
   assert.equal(await submitDraft({ store: direct, host: direct.host }, "文本 A"), "sent", "受理 ⇒ sent")
   assert.deepEqual(direct.get().blocks, [{ kind: "user", text: "文本 A" }], "尾块 = { kind: 'user', text } 恰一枚（与回放块同形 —— 无 id / 无 status）")
   assert.equal(chatTree(chatModel({ activeSession: "1", blocks: direct.get().blocks })).props["data-blocks"], 1, "树面 data-blocks = 块数（恰 +1）")
-  assert.deepEqual([usersOf(direct.get().blocks).length, usersOf(direct.get().blocks)[0].children[0]], [1, "文本 A"], "树面 = user 块在场 ∧ 文本逐字")
+  assert.deepEqual([usersOf(direct.get().blocks).length, usersOf(direct.get().blocks)[0].children[0].props["data-raw"]], [1, "文本 A"], "树面 = user 块在场 ∧ 文本逐字（R3c：原文住文本面 `data-raw` 锚 —— 渲染面经核 md）")
   // ② 键门：在飞期切走（本键 ≠ 现刻活动会话）⇒ 零写 · `blocks` 引用不变（该条由页读整置）
   const held = []
   let activeSession = "1"

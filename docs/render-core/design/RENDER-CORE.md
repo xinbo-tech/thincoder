@@ -68,7 +68,7 @@
 | KD-RC-3 | 核**输出形态 = DOM 构件 + 纯函数**（浏览器原生；不引框架、不定 HTML 字符串契约） | 两端渲染面同为 Chromium DOM；DOM 非宿主特权（§1.2）；VSC 现状 = DOM 命令式、桌面现状 = 描述符树——核构件（返回 DOM 节点）可被两端各挂各的壳（桌面挂载面直接 append） | **纯逻辑核（不碰 DOM）**（桌面须保第二份 DOM 实现 ⇒「共用核」名存实亡——用户改判对象即此）；**HTML 字符串核**（转义闸责任漂移 + 桌面现制零 HTML 注入面全量重构）；**引框架**（违零框架裁定） |
 | KD-RC-4 | 桌面**「零 Markdown」口径改判**：对话流文本面 ⇒ 经核 Markdown 呈现（`md.mjs` 单源；助手块 / 用户块同径） | 用户 2026-09-27 20:45 走查第 3 点「会话流…应该跟 VSC 对齐」+ D19 明列 Markdown；对齐须经同核（同文本 ⇒ 同渲） | **保留纯文本 `pre-wrap`**（背离走查原话；D19 列举失守）；**桌面自写第二份 md**（第二实现 = 漂移面）；**只渲助手块、用户块保纯文本**（同流两制 = 读感断层；VSC 用户块亦走 md） |
 | KD-RC-5 | 桌面**文件链接不承载**（核含 `linkify`，桌面不消费 ⇒ 零链接节点） | 需求 §5.1：**文件视图与编辑器（打开 / 编辑 / 保存 / 内置 diff）暂缓**——链接出口 = 「打开文件」⇒ 落链接即假控件（违「诚实非死控」律 `docs/desktop/design/RENDERER.md:43`） | **落链接 + 无出口**（假控件）；**落链接 + 系统程序打开**（越暂缓边界，须需求侧先裁）；**核删 linkify**（VSC 消费面在——核不夺） |
-| KD-RC-6 | 桌面**子 agent 面内容 chunk 分流 = 取工具名 · 丢内容** | 需求 §3.1:51 / D4 逐字「粒度 = 工具名 + 状态，**不回显内容**」；现状漏 = 带 `role#id/` 前缀的内容 chunk **原样进主流**（`thincoder-desktop/src/main/agent-bridge.mjs:57-63` 只剥 `⟦ev⟧` 协议段，其余前缀不剥）⇒ 分流 = 修漏 + 定形 | **照 VSC 回显 tail-3**（违 D4 语义面）；**原样留主流**（前缀字面泄漏入对话流）；**剥前缀后并入主流正文**（子代理内容冒充主会话正文——三端语义分叉） |
+| KD-RC-6 | 桌面**子 agent 面内容 chunk 分流 = 工具名仅作分流判据 · 丢内容**（块面无工具位——D20 单源） | 需求 §3.1:51 / D4「不回显内容」+ D20 块形（子 agent 实例——无工具位）；现状漏 = 带 `role#id/` 前缀的内容 chunk **原样进主流**（`thincoder-desktop/src/main/agent-bridge.mjs:57-63` 只剥 `⟦ev⟧` 协议段，其余前缀不剥）⇒ 分流 = 修漏 + 定形 | **照 VSC 回显 tail-3**（违 D4 语义面）；**原样留主流**（前缀字面泄漏入对话流）；**剥前缀后并入主流正文**（子代理内容冒充主会话正文——三端语义分叉） |
 | KD-RC-7 | 核**构件类名沿用被抽档现行名**（逐字搬迁纪律）；样式变量面 = 各端映射（桌面新增「核类名 → 桌面变量」样式档） | VSC 侧 CSS（`chat.css` / `controls.css`）与逐字文案锁按现行名成文 ⇒ 改名 = 全量机械重构、收益为零；桌面样式自有（`styles.css` 340 行） | **改命名空间 `rc-*`**（VSC 全量 CSS + 测试靶重构）；**核搬整套 CSS**（两端主题体系打架——KD-RC-7 即为此面裁定） |
 
 ## 3. 核边界 · 逐模块判定表（VSC webview 51 档 · 单源）
@@ -142,13 +142,13 @@
 |---|---|---|---|---|
 | 1 | Markdown 渲染（含转义闸） | `md.js:67` / `:106` / `:146` | `md.mjs` | **显式裁（改判）**：桌面由 `pre-wrap` 纯文本改为经核 Markdown——KD-RC-4 |
 | 2 | 语法高亮 | `highlight.mjs:165`（R1 迁核） | `highlight.mjs` | **自然成立**（随 md；代码块面由核给 `<pre class="code-block">`） |
-| 3 | 流式增量渲染（rAF 降频缝合） | `streaming.js:36-79` / `:112` | 核缝合件 | **需补面**：桌面换接核缝合（现制 = `renderer/events.mjs` `onToken` 追加 + `thincoder-desktop/renderer/views/chat-stream.mjs` 档位分派——语义不变、实现收口） |
+| 3 | 流式增量渲染（rAF 降频缝合） | `streaming.js:36-79` / `:112` | 核缝合件 | **需补面**（核件分件消费 · 桌面外壳留存）：帧尾就地重渲经核 `paintStreamTarget`；流式档位分派 / 落位留桌面（`renderer/events.mjs` `onToken` + `thincoder-desktop/renderer/views/chat-stream.mjs`——未接核 rAF 缝合件） |
 | 4 | 推理块（think） | `streaming.js:81-107` | 核推理块构件 | **需补面**：核回调 `onReasoning`（`thincoder-core/agent.mjs:273`）未接——桌面 `agent-bridge.mjs` 补回调（现九键）+ 新通道 + 归约块型（块型 `reasoning` 已在桌面五型内） |
-| 5 | 帧 / 块容器（回合块与 idx） | `ui.js:176-189` | 核块容器构件 | **需补面**：桌面块五型容器换接核容器（现制 = `thincoder-desktop/renderer/views/chat.mjs` 描述符树） |
-| 6 | 工具卡面 | `ui.js:203` / `:281` / `:329` | 核工具卡构件 | **需补面**：桌面 `thincoder-desktop/renderer/views/chat-tool.mjs` 换接核卡面（现制含折叠 / 耗时 / 改动摘要——对齐项） |
-| 7 | 工具摘要单源 | `tool-summary.js:35` | `tool-summary.mjs` | **需补面**：桌面摘要现住**主进程**（`src/main/agent-bridge.mjs:30-48` `summarizeArgs`）⇒ 换引核单源（Node 侧可 import 核 `.mjs`） |
+| 5 | 帧 / 块容器（回合块与 idx） | `ui.js:176-189` | 核块容器构件 | **需补面**（核件分件消费 · 桌面外壳留存）：块容器 = 桌面描述符树留存（三锚 `data-block-kind` / `data-block-id` / `data-seg` 不动）；文本面 / 推理内容经核 `md`——否「整件替换核 DOM」 |
+| 6 | 工具卡面 | `ui.js:203` / `:281` / `:329` | 核工具卡构件 | **需补面**（核件分件消费 · 桌面外壳留存）：工具结果面经核 `capText`（渲染单源）；卡壳四段头 / 折叠 / 耗时 / 改动摘要留存（`thincoder-desktop/renderer/views/chat-tool.mjs`）；`formatToolSummary` / `isToolFailure` **不消费**（非缺口——卡面单源 = `docs/desktop/design/UI.md:25`「四段头 + 改动摘要」· 成败判据单源 = `docs/desktop/design/IPC.md:40` 载荷 `ok`） |
+| 7 | 工具摘要单源 | `tool-summary.js:35` | `tool-summary.mjs` | **显式裁（不消费 · 非缺口）**：桌面摘要住**主进程**（`thincoder-desktop/src/main/agent-bridge.mjs` `summarizeArgs`）——核 `formatToolSummary` 不消费（登记句 = 本表行 6） |
 | 8 | 工具输出增量（含 64K 截断） | `chat-messages.js:70-89` · `lib.js:27` | 核截断 + 呈现件 | **自然成立**（桌面 `ev:tool-output` 通道 + `events.mjs:125-135` 累积已在；截断口径随核） |
-| 9 | 工具结果收尾（成败 / 耗时 / 折叠） | `ui.js:318-326` · `lib.js:73` / `:94` | 核判据 + 卡面 | **自然成立**（桌面 `events.mjs:140-156` 收尾 + `durationMs` 已在；判据换核单源） |
+| 9 | 工具结果收尾（成败 / 耗时 / 折叠） | `ui.js:318-326` · `lib.js:73` / `:94` | 核判据 + 卡面 | **自然成立**（桌面 `events.mjs:140-156` 收尾 + `durationMs` 已在；成败判据单源 = `docs/desktop/design/IPC.md:40` 载荷 `ok`——核 `isToolFailure` 不消费 · 登记句 = 本表行 6） |
 | 10 | 行级 diff（审批预览） | `diff.js:13` / `:90` | `diff.mjs` | **显式裁（不消费）**：桌面审批卡无 `changes` 预览面且需求 §3.1:50 明写「不做 diff」——核含、桌面不消费 |
 | 11 | 代码块复制 | `streaming.js:218-231` | 核复制控件 | **需补面**：桌面现只有块级 / 末条复制（KD-22）⇒ 真代码块复制随核落（§10 Y 消解） |
 | 12 | 文件链接 | `ui.js:247` · `chat.js:71-79` | 核 linkify | **显式裁（不承载）**：需求 §5.1 暂缓面——KD-RC-5 |
@@ -157,13 +157,13 @@
 | 15 | 跟滚 / 回底 | `ui.js:426-468` · `scroll.js:13-20` | 不入核 | **显式裁（各自）**：桌面跟滚 / 药丸已在册（`RENDERER.md` §3 判据面） |
 | 16 | 队列标记（待发送） | `queued-mark.js:29` / `:63` | 核标记逻辑 | **自然成立**（桌面队列族 + flush 机制已在——`store.mjs` `enqueue` / `drainQueue`） |
 | 17 | 忙态门 / 载入态 | `loading.js:86` / `:67` | 不入核 | **自然成立**（桌面忙态 = 位标 `running` + 输入区判据已在） |
-| 18 | 审批卡 | `permission.js:21` / `:86` | 核卡面 | **需补面**：桌面 `thincoder-desktop/renderer/views/approval.mjs` 换接核卡面（三出口 / 批形已在） |
-| 19 | 提问卡 | `question.js:10` / `:59-76` | 核卡面 | **需补面**：桌面 `thincoder-desktop/renderer/views/question.mjs` 换接核卡面（两作答路已在） |
-| 20 | 计划 / 任务面板 | `panels.js:16` / `:39` | 核面板构树 | **需补面**：桌面计划卡（`thincoder-desktop/renderer/views/plan.mjs`）换接核构树；搜索（`search.js`）桌面**本轮不承载**（VSC 端面） |
+| 18 | 审批卡 | `permission.js:21` / `:86` | 核卡面 | **按 ② 同判（卡族外壳留存）**：桌面 `thincoder-desktop/renderer/views/approval.mjs` 自持卡面（三出口 / 批形已在）；不迁核卡面件（VSC 形态——与桌面锚系 / 用例相抵） |
+| 19 | 提问卡 | `question.js:10` / `:59-76` | 核卡面 | **按 ② 同判（卡族外壳留存）**：桌面 `thincoder-desktop/renderer/views/question.mjs` 自持卡面（两作答路已在）；不迁核卡面件 |
+| 20 | 计划 / 任务面板 | `panels.js:16` / `:39` | 核面板构树 | **按 ② 同判（面板外壳留存）**：桌面计划卡（`thincoder-desktop/renderer/views/plan.mjs`）自持构树；不迁核面板件；搜索（`search.js`）桌面**本轮不承载**（VSC 端面） |
 | 21 | 子代理活动区（live 面板） | `activity.js` · `activity-view.js` | 核块态机 + 块面 | **需补面**：桌面右列重定位为子 agent 面板（D20——通道 / 归约 / 形态三面 + **出生自愈**：宿主存活投影 2s 再断言（拍体沿 `thincoder-vscode/src/extension/panel-messages.mjs:42-74` 语义——只发在飞实例）；见 `docs/desktop/design/IPC.md` §1） |
 | 22 | 状态栏 / 状态行 | `status-bar.js:13` | 不入核 | **显式裁**：桌面状态行**对齐 CLI**（D17）而非共用 VSC 状态栏——15 段逐项裁定表住 `docs/desktop/design/UI.md` §1 本批注 |
 
-**计数（D3）**：22 行 = 自然成立 **5**（行 2 / 8 / 9 / 16 / 17）· 需补面 **10**（行 3 / 4 / 5 / 6 / 7 / 11 / 18 / 19 / 20 / 21）· 显式裁 **7**（行 1 / 10 / 12 / 13 / 14 / 15 / 22）。
+**计数（D3）**：22 行 = 自然成立 **5**（行 2 / 8 / 9 / 16 / 17）· 需补面 **9**（行 3 / 4 / 5 / 6 / 11 / 18 / 19 / 20 / 21）· 显式裁 **8**（行 1 / 7 / 10 / 12 / 13 / 14 / 15 / 22）。
 
 ## 5. 接口契约（核导出面 · 端注入面 · 样式契约）
 
@@ -204,13 +204,14 @@
 
 **端注入面（核不持句柄）**：`deps = { emit(type, payload), t, now? }`——出站一律经 `emit`（VSC 绑 `postMessage`；桌面绑 `invoke`）；R2 构件件另注入端事实读取族（`connectedOf` / `regionOf` / `trace` / `syncLiveOf` / `onStripped`——逐件件头）；核内零全局单例（现 VSC 的 `ctx` / `S` 全局态属端）。
 
-**样式契约**：核构件类名 = 被抽档现行名（KD-RC-7）；两端各供样式——VSC 沿用 `chat.css` / `controls.css`（零改），桌面新增「核类名 → 桌面变量」样式面（实施批 R3c 落）。
+**样式契约**：核构件类名 = 被抽档现行名（KD-RC-7）；两端各供样式——VSC 沿用 `chat.css` / `controls.css`（零改）；桌面「核类名 → 桌面变量」映射 = `thincoder-desktop/renderer/core.css`（**已落** · R3c 实读 **140**——md 产出 / 推理块 / 复制钮三族 + `task-check`）。
+**「会话流经核」= 渲染逻辑单源**（核件分件消费：`md` / `attachCopyButtons` / `renderReasoning`〔推理块壳 · 结构同形〕/ `capText`）；**桌面外壳留存**（三锚 / 滚动 · 回填 · 窗口裁剪——核不夺）。
 
 ## 6. 受影响文件与测试面（三端 · 实施分批随动）
 
 口径：现行 = 本批设计轮实读（2026-09-27 · 内容行数口径——文末换行不计）；预期 = 估值（R1 / R2 已按实读回填——行内「N 实读」旁注）；「结构不变」= 档职责边界不动。
 
-**核包（新建 · 逐档拟新增）**：`thincoder-render-core/package.json`（拟新增） · `md.mjs` · `highlight.mjs` · `diff.mjs` · `lib.mjs` · `tool-summary.mjs` · `i18n.mjs`（R1——逐字搬迁：行数 = VSC 原档现行值，见下表） ·
+**核包（新建——R1 已落）**：`thincoder-render-core/package.json` · `md.mjs` · `highlight.mjs` · `diff.mjs` · `lib.mjs` · `tool-summary.mjs` · `i18n.mjs`（R1——逐字搬迁：行数 = VSC 原档现行值，见下表） ·
   `flow/*.mjs`（块 / 工具卡 / 推理 / 缝合）· `cards/*.mjs`（审批 / 提问 / 计划）· `subblocks/*.mjs`（态机 / 块面）（R2） · `test/*.test.mjs`（平 node 直测——**纯函数层 + 态机层**）。
   **DOM 构件层用例宿主 = 消费端套件**（非核包）：VSC = `thincoder-vscode/test/**`（happy-dom devDep 既有）· 桌面 = `thincoder-desktop/test/fake-dom.mjs`（假 root 既有）——核包自身零 devDep（C1 机检恒可过），不引 happy-dom ∥ 不另立第二假 root。
 
@@ -265,9 +266,9 @@
 |---|---|---|---|---|
 | **R1** | 核抽取（纯函数层）+ 双端加载管道 | 核包 `md/highlight/diff/lib/tool-summary/i18n`；VSC 依赖 / 反排除 / 断言 / 六档换 import；桌面依赖 / `protocol.mjs` 双根 / guard / `check-dist` | C1–C6 + VSC 全绿 | 先行（其余批全部依赖） |
 | **R2** | 核抽取（会话流构件层）+ VSC 换接 | 核包 `flow/cards/subblocks`；VSC `ui.js` / `streaming.js` / `permission.js` / `question.js` / `panels.js` / `activity*.js` / `ledger-line.js` / `queued-mark.js` 换接 | C2（零回归——含映射差分锁）+ 核档用例 | R1 后；**与 R3a 可并行**（文件面不交叠：核包 / VSC ∥ 桌面）；先行于 R3b / R3c（核件依赖） |
-| **R3a** | 桌面状态行（D17） | 桌面 `agent-bridge.mjs`（`onUsage` 回调——九键 ⇒ 十键）· `agent-host.mjs`（回合尾结算携 `tokens?` / `timers?`）· `IPC.md` `ev:usage` 载荷扩 · `events.mjs` 归约（turn 槽 / currentTool / 回合起刻 / timers）· `renderer/views/chrome.mjs` + 状态行族档（拟新增 · 档名实施批定）· `i18n.mjs` · 测试面 | D17 十五段逐行判据 | R1 后（与 R2 可并行）；**R3b / R3c 随后串行**（共享三档——见上条） |
-| **R3b** | 桌面右列 = 子 agent 面（D20） | 桌面 `agent-bridge.mjs`（relay 分流 → `ev:subagent`；前缀剥除；**存活投影挂点**）· 宿主存活投影 + 2s 拍体（档名实施批定 ∥ 附 `agent-host.mjs`——起 / 停 / 清点）· `IPC.md` 新通道 + `subagent:stop` · `ipc.mjs` / `preload.cjs`（白名单 +1）· `events.mjs`（新切片 + 摘工具行）· `renderer/views/activity.mjs` 重写 · `mount-*` · 测试面 | D20 四判据（五类射程 / 零工具行 / 块态机 / 停止往返）+ **出生自愈**（丢首发出生 ⇒ 一拍内复现 · 终态零再断言） | R2 后（需核态机）+ **R3a 后**（共享三档串行） |
-| **R3c** | 桌面会话流经核 + 会话面板（D19 / D18） | 桌面 `renderer/views/chat*.mjs` 换接核构件 · `agent-bridge.mjs`（`onReasoning` 回调——十键 ⇒ 十一键）· `events.mjs`（`ev:reasoning` 归约）· `IPC.md`（`ev:reasoning`）· `sessions.mjs`（行投影 + `activeProvider`）· `thincoder-desktop/renderer/views/sessions.mjs`（元数据族）· `styles`（核类名映射）· 测试面 | C7 + D18 / D19 | R2 后（需核构件）+ **R3b 后**（共享三档串行） |
+| **R3a** | 桌面状态行（D17） | 桌面 `agent-bridge.mjs`（`onUsage` 回调——九键 ⇒ 十键）· `agent-host.mjs`（回合尾结算携 `tokens?` / `timers?`）· `IPC.md` `ev:usage` 载荷扩 · `events.mjs` 归约（turn 槽 / 回合起刻 / timers；`currentTool` 由视图段自 `blocks` 派生——零新槽 · 免双源）· `renderer/views/chrome.mjs` + 状态行族档（`views/statusline.mjs` + `mount-status.mjs`——R3a 已落）· `i18n.mjs` · 测试面 | D17 十五段逐行判据 | R1 后（与 R2 可并行）；**R3b / R3c 随后串行**（共享三档——见上条） |
+| **R3b** | 桌面右列 = 子 agent 面（D20） | 桌面 `agent-bridge.mjs`（relay 分流 → `ev:subagent`；前缀剥除；**存活投影挂点**）· 宿主存活投影 + 2s 拍体（`src/main/subagent-face.mjs` ∥ 附 `agent-host.mjs`——起 / 停 / 清点）· `IPC.md` 新通道 + `subagent:stop` · `ipc.mjs` / `preload.cjs`（白名单 +1）· `events.mjs`（新切片 + 摘工具行）· `renderer/views/activity.mjs` 重写 · `mount-*` · 测试面 | D20 四判据（五类射程 / 零工具行 / 块态机 / 停止往返）+ **出生自愈**（丢首发出生 ⇒ 一拍内复现 · 终态零再断言） | R2 后（需核态机）+ **R3a 后**（共享三档串行） |
+| **R3c** | 桌面会话流经核 + 会话面板（D19 / D18） | 桌面 `renderer/views/chat*.mjs` 核件分件消费（渲染逻辑单源 · 桌面外壳留存）· `agent-bridge.mjs`（`onReasoning` 回调——十键 ⇒ 十一键）· `events.mjs`（`ev:reasoning` 归约）· `IPC.md`（`ev:reasoning`）· `sessions.mjs`（行投影 + `activeProvider`）· `thincoder-desktop/renderer/views/sessions.mjs`（元数据族）· `styles`（核类名映射）· 测试面 | C7 + D18 / D19 | R2 后（需核构件）+ **R3b 后**（共享三档串行） |
 
 ## 9. 边界（不做）
 
@@ -278,6 +279,8 @@
 - **桌面多标签结构不削**；桌面零框架纪律不变；提示词面与需求档零触碰（笔权在父侧）。
 - **「同文重项 + 盘面零气泡」端差在册**（父侧 2026-09-27 裁「接受并登记为在册端差」；登记 = `docs/batches/2026-09-27-render-core-r2.md` §6.2）：
   Reload 冷启 / 清屏重推形（`items: ["x","x"]`）核 `queued-mark` 按 items 逐条建泡（2 泡），源档第二条经 `lastBubbleWithRaw` 文本查重复用首条（1 泡）——裁因 = 核与队列计数镜像自洽（源档 1 泡 = 查重副产物），C2 面无锁该形；核不为此改形（回「1 泡」口径 = 新需求另裁）。
+- **R3 端差登记（三项 · 结算随收 · 源 = `docs/batches/2026-09-27-render-core-r3.md`）**：① `ev:usage` 帧门 = `percent > 0` ⇒ percent 取整 0 的回合 `tokens` / `timers` 一并不达（段 8 / 12 前段不显——自愈：数据随 percent ≥ 1 自显；§1.2）；
+  ② 「会话关闭 ⇒ 该键投影清」**无端面**——标签关闭 = 渲染面动作 · 主侧无该通道（已落 = 删除 / 宿主退出两径；如需覆盖须另裁主侧通道；§1.3）；③ consult 族**无停止径**——块面零钮（诚实非死控 · 「用时」亦不随 2s 拍刷新；§1.3）。
 
 ## 10. 上抛与报告项
 
@@ -305,3 +308,5 @@
 - 2026-09-27（**R1 结算微轮**——设计面收正 · 逐条）：§1.3 发行面/先例坑句按实测收正（物化路线对 render-core 不可执行 ⇒ link 形 + `--follow-symlinks`）+ 内嵌面收窄规则（vsix 只携运行必需件；`.vscodeignore` 补排除行）；
   §1.3/§2 行锚按终态实读收正（`protocol.mjs` `:17` / `:22-29` / `:53-54` · `guard-closure.test.mjs:70` · `check-dist.mjs:18-24` · `check-vsix.mjs:56-63`）；
   §6 六档行补 R1 实施注（含 `diff.mjs:6` 逐字性唯一例外）· §5 `formatToolSummary` 签名收正（`text`）· KD-RC-1 收正「链接 / 物化 / 断言三纪律 + 永不发布」（§10 B 同裁改「不入发布序列」）。
+- 2026-09-28（**R3 结算随动 · 设计面收正微轮**——承 `docs/batches/2026-09-27-render-core-r3.md` §1.2–§1.4）：§2 KD-RC-6 与 §4 行 3 / 5 / 6 措辞收正（「换接核件」= 渲染逻辑单源——核件分件消费 · 桌面外壳留存；`formatToolSummary` / `isToolFailure` 不消费 = 非缺口登记）；
+  §4 行 7 / 9 齐不消费口径 + 计数行随动（需补面 9 / 显式裁 8）；§5 样式契约落 `renderer/core.css`（实读 140）；§8 R3a `currentTool` 词项回填（由视图段自 `blocks` 派生——零新槽）· R3c 措辞同笔；§9 增 R3 端差三项。零新语义。

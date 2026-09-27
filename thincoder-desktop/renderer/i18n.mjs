@@ -2,14 +2,21 @@
  * i18n.mjs — 词表面（`docs/desktop/design/SHELL.md:31` · 批 2 档 §2.4（g）· 本批 §2.1 E-5 / §2.5 U44）：
  *   ① 核域键 = `config:read` 语言面**下发投影**（核 `projectDictionary(locale)` 已扁平投影
  *      ⇒ 渲染面零核导入、零第二词表源）；
- *   ② 宿主 UI 专有键 = `HOST_DICT`（左列 13 键 + 标签条 4 键 + 对话流 10 键 + 活动池 7 键 + 审批卡 7 键
+ *   ② 宿主 UI 专有键 = `HOST_DICT`（左列 15 键 + 标签条 4 键 + 对话流 10 键 + 活动池 8 键 + 审批卡 7 键
  *      + 提问卡 3 键 + 设置 49 键 + 向导 10 键 + 信息行 9 键 + 输入区 6 键 + 会话头 3 键 + 档位 2 键
- *      + 状态栏 1 键 = **124 键** × 2 语（批 B 增十二键：本舱七 = 对话流复制面 2 · 会话头 3 · 档位 2；
+ *      + 状态栏 1 键 + 状态行 10 键 + 核件复制钮 2 键 = **139 键** × 2 语（批 B 增十二键：本舱七 = 对话流复制面 2 · 会话头 3 · 档位 2；
  *      并行舱五 = 输入区附件面 3 · 设置档位列 1 · 状态栏读数 1 —— 附件降级两键名出
  *      `docs/desktop/design/UI.md` §1 批 B 注项 2，余键名与全键值面由本档拟定：批 B 注只述形 / 锚，
  *      词面登记处 = 此处）；**批 B 追加轮增二键** = 对话流引导面 2（键名与两语句面单源 =
  *      `docs/desktop/design/UI.md` §1 批 B 追加注项 4）；
- *      两语键集须相等，增键两语同增、禁单语落键）；
+ *      两语键集须相等，增键两语同增、禁单语落键）；**R3a 增十键** = 状态行段词（D17 承载 12 段 —— 注意力 / 当前工具 /
+ *      耗时 / 任务计数 / 令牌三件 / 计时 / 排队两句；状态词「运行中」与回合 N/M 两段**复用核 i18n 键**
+ *      `sub.running` / `status.turn` —— 同义词不另立，词形与核同源）；
+ *      **R3b**：活动池族标 `pool.family.blocks` ⇒ **`pool.family.subagents`**（右列重定位 = 子 agent 块面 ——
+ *      旧键退场不留残）+ 增 `pool.stop`（子 agent 块停止钮词）= 活动池 7 ⇒ **8** 键、计 134 ⇒ **135**；
+ *      **R3c**：左列会话行元数据族（D18）两键 = `rail.session.msgs` / `rail.session.updated` —— 左列 13 ⇒ **15**、
+ *      计 135 ⇒ **137**；另**增核件复制钮两键** `msg.copy` / `msg.copied`（核 `flow/stream.mjs` `attachCopyButtons`
+ *      词键 —— 端供给面：树面零消费（值住核产出 DOM 面），词值同 VSC 同键）—— 计 **137 ⇒ 139**；
  *   ③ `t(key, params)` 解析序 = **宿主 → 核投影 → 键名自身**（缺键回落键名：不静默吞、不抛、
  *      永不返回空 / `undefined`）；插值 = **核同形** `${name}`（键值由核 `projectDictionary`
  *      原样投影 ⇒ 占位方言只能随核 —— `thincoder-core/i18n.mjs:12`「两端同约定」），缺参原样保留；
@@ -38,8 +45,9 @@
  *  回执 `degraded` 两态提示行 —— 键位闭集 = `renderer/mount-composer.mjs` + `renderer/attach.mjs`）·
  *  `head.*` = 会话头（三字段标 = `provider` / `model` / `effort` 三 `select` 可及名 —— 值面 = 供给串原样，
  *  视图不造词；键位面 = `renderer/views/chrome.mjs`）· `effort.*` = 档位两特值词（`auto` = 未设（`null`）·
- *  `off` = 关思考 —— 逐模型枚举成员**零词键**、原字面投影）· `status.*` = 状态栏读数串（`${percent}%` ——
- *  未至 / 非正数 ⇒ 零节点，键面不落空串）· 占位方言沿核 `${name}`，本档零字形字面）。 */
+ *  `off` = 关思考 —— 逐模型枚举成员**零词键**、原字面投影）· `status.*` = 状态行（读数串 `${percent}%` ——
+ *  未至 / 非正数 ⇒ 零节点，键面不落空串；R3a 段词十键 = 注意力 / 当前工具 / 耗时 / 任务计数 / 令牌三件 / 计时 /
+ *  排队两句——段词与判据单源 = `renderer/views/statusline.mjs`）· 占位方言沿核 `${name}`，本档零字形字面）。 */
 export const HOST_DICT = Object.freeze({
   en: {
     "rail.action.openDir": "Open folder…",
@@ -52,6 +60,8 @@ export const HOST_DICT = Object.freeze({
     "rail.action.delete": "Delete",
     "rail.action.cancel": "Cancel",
     "rail.session.untitled": "Untitled session",
+    "rail.session.msgs": "${n} msgs",
+    "rail.session.updated": "${date}",
     "origin.cli": "CLI",
     "origin.vscode": "VS Code",
     "origin.desktop": "Desktop",
@@ -68,16 +78,21 @@ export const HOST_DICT = Object.freeze({
     // ── 复制面（批 B：`views/chat-copy.mjs` —— 块尾 / 输入区尾两控件可及名）──
     "chat.action.copy": "Copy block text",
     "chat.action.copyLast": "Copy last reply",
+    // ── 核件复制钮两键（R3c：核 `flow/stream.mjs` `attachCopyButtons` 词键 —— **端供给面**，树面零消费；
+    //    词值同 VSC 同键（`thincoder-vscode/locales/en.json:34-35`）—— 同一控件同词）──
+    "msg.copy": "Copy",
+    "msg.copied": "Copied!",
     // ── 首启引导面（批 B 追加轮：`views/chat-guide.mjs` —— 两码文案）──
     "chat.guide.noProject": "No project open — open a folder to start",
     "chat.guide.noSession": "No session yet — create one to start chatting",
     "pool.title": "Activity",
     "pool.family.approvals": "Approvals",
-    "pool.family.blocks": "Running",
+    "pool.family.subagents": "Subagents",
     "pool.family.queue": "Queued",
     "pool.collapse": "Collapse activity",
     "pool.expand": "Expand activity",
     "pool.empty.hint": "No activity in this session yet",
+    "pool.stop": "Stop",
     "composer.input": "Message",
     "composer.interrupt": "Stop",
     "composer.queue.full": "Queue full — wait for the running turn to finish",
@@ -174,6 +189,17 @@ export const HOST_DICT = Object.freeze({
     "effort.auto": "Auto",
     "effort.off": "Off",
     "status.usage": "${percent}%",
+    // ── 状态行（R3a · D17 承载 12 段：`views/statusline.mjs` —— 键名本档拟定，登记面即此处）──
+    "status.attention.blocked": "⚠ Awaiting your approval or answer",
+    "status.tool": "${name}…",
+    "status.elapsed": "${seconds}s",
+    "status.tasks": "✓${done}/${total}",
+    "status.tokens": "↑${up} ↓${down}",
+    "status.tokens.reasoning": "✦${tokens}",
+    "status.tokens.hit": "hit${percent}%",
+    "status.timer": "⏰${count}",
+    "status.queue.enter": "Enter to queue",
+    "status.queue.n": "${n} queued message(s)",
   },
   zh: {
     "rail.action.openDir": "打开目录…",
@@ -186,6 +212,8 @@ export const HOST_DICT = Object.freeze({
     "rail.action.delete": "删除",
     "rail.action.cancel": "取消",
     "rail.session.untitled": "未命名会话",
+    "rail.session.msgs": "${n} 条消息",
+    "rail.session.updated": "${date}",
     "origin.cli": "CLI",
     "origin.vscode": "扩展端",
     "origin.desktop": "桌面端",
@@ -202,16 +230,21 @@ export const HOST_DICT = Object.freeze({
     // ── 复制面（批 B：`views/chat-copy.mjs` —— 块尾 / 输入区尾两控件可及名）──
     "chat.action.copy": "复制块文本",
     "chat.action.copyLast": "复制末条回复",
+    // ── 核件复制钮两键（R3c：核 `flow/stream.mjs` `attachCopyButtons` 词键 —— **端供给面**，树面零消费；
+    //    词值同 VSC 同键（`thincoder-vscode/locales/zh.json:34-35`）—— 同一控件同词）──
+    "msg.copy": "复制",
+    "msg.copied": "已复制！",
     // ── 首启引导面（批 B 追加轮：`views/chat-guide.mjs` —— 两码文案）──
     "chat.guide.noProject": "未打开项目——先打开一个项目目录即可开始",
     "chat.guide.noSession": "尚无会话——新建一个会话即可开始对话",
     "pool.title": "活动",
     "pool.family.approvals": "待审批",
-    "pool.family.blocks": "活动块",
+    "pool.family.subagents": "子 agent",
     "pool.family.queue": "队列",
     "pool.collapse": "折叠活动池",
     "pool.expand": "展开活动池",
     "pool.empty.hint": "本会话暂无活动",
+    "pool.stop": "停止",
     "composer.input": "消息",
     "composer.interrupt": "中断",
     "composer.queue.full": "队列已满——等当前回合结束后再发",
@@ -308,6 +341,17 @@ export const HOST_DICT = Object.freeze({
     "effort.auto": "自动",
     "effort.off": "关闭",
     "status.usage": "${percent}%",
+    // ── 状态行（R3a · D17 承载 12 段：`views/statusline.mjs` —— 键名本档拟定，登记面即此处）──
+    "status.attention.blocked": "⚠ 等待你的审批或回答",
+    "status.tool": "${name}…",
+    "status.elapsed": "${seconds} 秒",
+    "status.tasks": "✓${done}/${total}",
+    "status.tokens": "↑${up} ↓${down}",
+    "status.tokens.reasoning": "✦${tokens}",
+    "status.tokens.hit": "命中${percent}%",
+    "status.timer": "⏰${count}",
+    "status.queue.enter": "Enter 排队",
+    "status.queue.n": "已排队 ${n} 条消息",
   },
 })
 

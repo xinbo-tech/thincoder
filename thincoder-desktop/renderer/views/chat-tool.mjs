@@ -6,13 +6,15 @@
  *   ① 头行：数据串（名称 / 参数摘要）+ 状态词（闭枚举单源 = 核词表）+ 耗时（仅 `done` / `error` ∧ 数）——
  *      **四段逐段包元素**（`span[data-seg]` —— 裸串直作 flex 行子 ⇒ `gap` 静默失效；通则 = `docs/desktop/design/RENDERER.md` §1.1）；
  *   ② 改动摘要：`files` 计数 + 增删合计 ⇒ 越阈（文件数 ∨ 增删合计）降级 = 只留摘要行（零 `[data-file]`）；
- *   ③ 结果区：`result` 非空 ∧ 展开态；`result` 空 ⇒ 头行退纯展示 `div`（零 toggle 控件 —— 诚实非死控）；
+ *   ③ 结果区：核件面（R3c —— 截断口径单源 = 核 `lib.mjs` `capText`：超 64K 截断并自携说明）；`result` 非空 ∧ 展开态；
+ *      `result` 空 ⇒ 头行退纯展示 `div`（零 toggle 控件 —— 诚实非死控）；
  *   ④ 折叠判据：显式 `expanded` 优先，缺省 = `status="error"` 展开（错误取证优先）；
  *   ⑤ 共享导出面（**消费零副本** —— `views/approval.mjs`（审批卡）/ `views/activity.mjs`（活动池）复用）：
  *      `STATUS_WORD`（六词闭枚举状态词）+ 降级阈值两常数 + `changeTotals` / `toolChanges`（改动摘要降级形）。
  * 文案一律经 `t()`（零硬编码；`+` / `−` 字形住 `renderer/chat.css`）；零 `node:` / 零裸包。
  */
 import { t } from "../i18n.mjs"
+import { capText } from "/rc/lib.mjs"
 import { blockKey } from "./chat-stream.mjs"
 
 /** 状态词码 → 词键（核五键 + 宿主一键 `tab.badge.approval` —— 单源不复制）；表外码 ⇒ 零状态词节点。
@@ -111,10 +113,11 @@ export function toolChanges(block) {
   }
 }
 
-/** 工具卡（三行 · `data-block-id` = 本块键）：头行 + 改动摘要行 + [展开结果区?]（`result` 非空 ∧ 展开态）。 */
+/** 工具卡（三行 · `data-block-id` = 本块键）：头行 + 改动摘要行 + [展开结果区?]（`result` 非空 ∧ 展开态）。
+ *  结果文本 = 核 `capText`（截断口径单源 —— 超 64K ⇒ 截断 + 核自携说明；DOM 有界）。 */
 export function toolCard(block, key, handlers) {
   const rows = hasText(block?.result) && isExpanded(block)
-    ? [{ tag: "div", props: { class: "tool-result", "data-tool-result": "" }, children: [block.result] }]
+    ? [{ tag: "div", props: { class: "tool-result", "data-tool-result": "" }, children: [capText(block.result)] }]
     : []
   return {
     tag: "div",

@@ -3,11 +3,13 @@
  * 显式清单而非通配：盘上未登记的 `*.test.mjs` 永不执行 ⇒ 反查即失败（蓝本 = `thincoder-vscode/test/run.mjs`）。
  * 清单 = 单元域 + 集成域（`test/integration/` 真进程用例）同册；软链目录（junction）遍历穿不过 ⇒ 出错即判红（不静默漏收集）。
  * 命名 `.mjs` 而非 `.test.mjs`——runner 只收集 `*.test.mjs`，本档是启动器。
+ * **R3b**：`--import test/rc-resolve.mjs`（`/rc/` 渲染取核路径的平 node 解析钩子 —— 渲染档在测试与生产下走
+ *  同一份核件；不预载 ⇒ 引入核件的渲染档 import 即 `ERR_MODULE_NOT_FOUND`）。
  */
 import { spawnSync } from "node:child_process"
 import { existsSync, readdirSync, statSync } from "node:fs"
 import { dirname, join } from "node:path"
-import { fileURLToPath } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import unitFiles from "./files.mjs"
 
 const testDir = dirname(fileURLToPath(import.meta.url))
@@ -37,5 +39,5 @@ const walk = (rel) => {
 }
 walk("test")
 
-const result = spawnSync(process.execPath, ["--test", ...unitFiles], { stdio: "inherit" })
+const result = spawnSync(process.execPath, ["--import", pathToFileURL(join(testDir, "rc-resolve.mjs")).href, "--test", ...unitFiles], { stdio: "inherit" })
 process.exit(result.status ?? 1)

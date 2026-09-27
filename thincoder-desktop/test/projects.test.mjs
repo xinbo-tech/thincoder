@@ -156,7 +156,7 @@ test("U26: 坏 JSON / 无 cwd / 候选坏 ⇒ 整族跳过，其余族正常", (
 
 // ─── U27 接线机检（picker + 白名单）────────────────────────────
 
-test("U27: 接线机检（ipc.mjs picker / 语言面归一 ∧ preload 白名单二十七项顺序）", () => {
+test("U27: 接线机检（ipc.mjs picker / 语言面归一 ∧ preload 白名单二十八项顺序）", () => {
   const ipc = readFileSync(here("../src/main/ipc.mjs"), "utf8")
   for (const needle of ["showOpenDialog", "openDirectory", "payload?.path", "\"project:open\"", "normalizeLocale("]) {
     assert.ok(ipc.includes(needle), `ipc.mjs 含 ${needle}`)
@@ -170,9 +170,9 @@ test("U27: 接线机检（ipc.mjs picker / 语言面归一 ∧ preload 白名单
       "approval:respond", "history:page", "msg:send", "msg:interrupt",
       "provider:list", "provider:save", "provider:remove", "provider:verify",
       "model:list", "settings:agent", "mcp:list", "mcp:save", "mcp:remove",
-      "config:write", "ledger:read", "batch:status", "question:respond", "session:prefs",
+      "config:write", "ledger:read", "batch:status", "question:respond", "session:prefs", "subagent:stop",
     ],
-    "白名单二十七项 + 顺序（U27）",
+    "白名单二十八项 + 顺序（U27）",
   )
 })
 

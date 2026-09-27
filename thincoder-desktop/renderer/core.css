@@ -1,0 +1,140 @@
+/* core.css — 核类名 → 桌面变量映射（KD-RC-7 · R3c · `docs/render-core/design/RENDER-CORE.md` §5 样式契约）：
+   覆盖面 = **核产出 DOM 面**（核类名 + 核 md 产出的原生件）；作用域容器 = 桌面两个文本面类（`.block-text` /
+   `.reasoning-content`——容器本身即核内容的落点，非桌面卡/块外壳）；值面变量 = `styles.css` 主题表（亮暗两套）。
+   三族：
+   ① 核 Markdown 产出（核 `md.mjs`：代码块 / 行内 / 表 / 引 / 列表 / 标题 / 分隔线 / 图片 / 链接）；
+   ② 推理块（核 `flow/reasoning.mjs` `renderReasoning`：`details.reasoning-block` + `.reasoning-content`）；
+   ③ 代码块复制钮（核 `flow/stream.mjs` `attachCopyButtons`：`button.code-copy-btn`）。
+   块 / 卡 / 池 / 输入区等**桌面外壳类**（`.block*` 除文本面容器 · `.tool-*` · `.chat-*` 等）住 `chat.css` ——
+   本档零外壳面规则（`data-raw` 等锚为属性，零样式）。 */
+
+/* ── ① 核 Markdown 产出（容器 = 文本面 `.block-text` / 推理内容区 `.reasoning-content`）── */
+.block-text > :first-child,
+.reasoning-content > :first-child {
+  margin-top: 0;
+}
+.block-text > :last-child,
+.reasoning-content > :last-child {
+  margin-bottom: 0;
+}
+.block-text a,
+.reasoning-content a {
+  color: var(--accent);
+}
+.block-text code,
+.reasoning-content code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--bg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+.block-text blockquote,
+.reasoning-content blockquote {
+  margin: 8px 0;
+  padding: 2px 10px;
+  border-left: 2px solid var(--line);
+  color: var(--fg-muted);
+}
+.block-text table,
+.reasoning-content table {
+  border-collapse: collapse;
+  margin: 8px 0;
+}
+.block-text th,
+.block-text td,
+.reasoning-content th,
+.reasoning-content td {
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+}
+.block-text ul,
+.block-text ol,
+.reasoning-content ul,
+.reasoning-content ol {
+  margin: 8px 0;
+  padding-left: 22px;
+}
+.block-text h1, .block-text h2, .block-text h3, .block-text h4, .block-text h5, .block-text h6,
+.reasoning-content h1, .reasoning-content h2, .reasoning-content h3, .reasoning-content h4, .reasoning-content h5, .reasoning-content h6 {
+  margin: 10px 0 4px;
+  font-size: 1em;
+  font-weight: 600;
+}
+.block-text hr,
+.reasoning-content hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 10px 0;
+}
+.block-text img,
+.reasoning-content img {
+  max-width: 100%;
+}
+/* 代码块（核 `md` 产出 = `pre.code-block` + `.code-lang`）：块内自成一体（背景 / 边框 / 横向滚动）；
+   `.block` 的 `pre-wrap` 由 UA 的 `pre` 规则让位（核产出 `white-space: pre`）。 */
+.code-block {
+  position: relative;
+  margin: 8px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  overflow: auto;
+}
+.code-block code {
+  padding: 0;
+  background: transparent;
+  font-size: 12.5px;
+  white-space: pre;
+}
+.code-lang {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+
+/* 任务清单勾选框（核 md `task-check` 类 —— `thincoder-render-core/md.mjs` 产出）：与文本基线对齐。 */
+.block-text input.task-check,
+.reasoning-content input.task-check {
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* ── ② 推理块（核件结构）：块壳 `.block-reasoning` 住 `chat.css`，此处只核面两件（summary / 内容区）。 ── */
+.reasoning-block {
+  margin: 0;
+}
+.reasoning-summary {
+  color: var(--fg-muted);
+  font-style: italic;
+  cursor: pointer;
+}
+/* 摘要尾缀（核件同形 = `t("status.thinking") + "..."`）—— 字形住样式档（视图档零字形字面）。 */
+.reasoning-summary::after {
+  content: "…";
+}
+.reasoning-content {
+  margin-top: 6px;
+  color: var(--fg-muted);
+  overflow-wrap: anywhere;
+}
+
+/* ── ③ 代码块复制钮（核 `attachCopyButtons`）：绝对定位 ⇒ 不入文档流高度（帧尾补偿算式零扰）。 ── */
+.code-copy-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.code-copy-btn.copied {
+  color: var(--accent);
+}

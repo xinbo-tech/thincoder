@@ -1,10 +1,11 @@
 /**
- * ipc.mjs — IPC 通道注册与分发（`docs/desktop/design/IPC.md` §1 / §2）：**二十七项** = 配置读取 + 项目面
+ * ipc.mjs — IPC 通道注册与分发（`docs/desktop/design/IPC.md` §1 / §2）：**二十八项** = 配置读取 + 项目面
  * `project:open` / `project:recent` + 会话面 `sessions:list` / `session:create` / `session:switch` /
  * `session:rename` / `session:delete` / `session:resume` + 审批响应 `approval:respond` + 作答响应
  * `question:respond` —— `question` 工具真作答面 + 历史页 `history:page`
  * + 回合驱动 `msg:send` / `msg:interrupt`（宿主未注入 ⇒ fail-loud）+ **设置族十二项**
- * （provider 四 / model / agent 参数 / MCP 三 / 配置写 / 语言）+ **项目级信息两项**（台账 / 相位）+ 会话级偏好写面 `session:prefs`（**本批落** · 白名单**末位**）
+ * （provider 四 / model / agent 参数 / MCP 三 / 配置写 / 语言）+ **项目级信息两项**（台账 / 相位）+ 会话级偏好写面 `session:prefs`
+ * + **子 agent 停止出口 `subagent:stop`（R3b 落 · 白名单末位）**
  * （定序 = 预载白名单同序）。
  * 白名单**单源** = `src/preload/preload.cjs` 的 `CHANNELS`（批档 §2.6 D-3）：主侧经 `createRequire` 读之并**据以注册**
  * （一条白名单项 = 一个 `ipcMain.handle` 面 ⇒ 无通道名第二副本）；白名单项无处理体 ⇒ 注册期抛（fail-closed）。
@@ -90,6 +91,7 @@ const HANDLERS = Object.freeze({
   "batch:status": batchStatusChannel,
   "question:respond": questionRespond,
   "session:prefs": sessionPrefs,
+  "subagent:stop": subagentStop,
 })
 
 /** `project:open(payload)` ⇒ `{ cwd, recent }`：载荷 `{ path }` **可选**（`docs/desktop/design/IPC.md:42`）——
@@ -117,7 +119,13 @@ function sessionList() { return listSessions(currentCwd()) }
 function sessionCreate() { return createSession(currentCwd()) }
 function sessionSwitch(payload) { return switchSession(currentCwd(), payload?.slot) }
 function sessionRename(payload) { return renameSession(currentCwd(), payload?.slot, payload?.title) }
-function sessionDelete(payload) { return deleteSession(currentCwd(), payload?.slot) }
+function sessionDelete(payload) {
+  const receipt = deleteSession(currentCwd(), payload?.slot)
+  // R3b（D20 数据链「会话关闭 / 删除 / 宿主退出 ⇒ 该键投影清」）：删除成功 ⇒ 装配实例出表（宿主 `dispose`
+  //  ⇒ 存活投影**清点**：已删会话不随 2s 拍重投）；未装配宿主 / 零键 ⇒ 软跳过（零抛 —— 删除面不受累）。
+  if (receipt?.ok === true && payload?.slot != null) agentHost?.dispose(String(payload.slot))
+  return receipt
+}
 function sessionResume() { return resumeSession(currentCwd()) }
 
 /** `history:page(payload)` ⇒ `{ ok, messages, hasOlder, next, meta }` ∥ `{ ok:false, reason }`：读面转口
@@ -153,6 +161,11 @@ function questionRespond(payload) {
   if (!agentHost) throw new Error("[ipc] question:respond: question source not assembled")
   return agentHost.respond(payload)
 }
+
+/** `subagent:stop(payload)` ⇒ `{ ok, reason }`（reason 闭集 = `unknown-sub` / `bad-key`）：载荷 `{ key, id, role? }`
+ *  （`id` = 实例号——与 `ev:subagent` 同源同值）—— 转口宿主子 agent 面（核既有取消出口 —— 零算法副本；
+ *  `thincoder-desktop/src/main/subagent-face.mjs`）；宿主未注入 ⇒ fail-loud 直抛（沿 `approval:respond` 先例）。 */
+function subagentStop(payload) { return requireAgentHost().stopSubagent(payload?.key, payload?.id, payload?.role) }
 
 /** 在装配 agent 列表（MCP 随动面用）：宿主未注入 ⇒ `null`（无宿主面 ⇒ 随动空操作，非报错——
  *  配置已落盘，下次装配生效）。 */

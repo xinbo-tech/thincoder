@@ -1,9 +1,7 @@
 /**
  * agent-host.test.mjs — 宿主装配桥脱壳直测（批档 §2.4 U78–U86）。
- * 纪律：替身 `deps` + 替身 `run` + 假 `emit` ⇒ **零网 / 零 electron / 零用户目录**（`loadConfig` 亦替身；
- *      真盘面落于 tmp sessions 根 —— 本档多例经 `send` 必走终点保存，故**模块级**沙箱一次）。
- * 覆盖：脱壳纪律 · 装配序与端差取值 · 装配形 + provider 判定 · 实例生命周期 · 桥面九映射 · `⟦ev⟧` 分流 ·
- *      挂起表两形 · verdict 矩阵与即删 · 回合驱动与中断（U78–U86 同序）。
+ * 纪律：替身 `deps` + 替身 `run` + 假 `emit` ⇒ **零网 / 零 electron / 零用户目录**（`loadConfig` 亦替身；真盘面落于 tmp sessions 根 —— 本档多例经 `send` 必走终点保存，故**模块级**沙箱一次）。
+ * 覆盖：脱壳纪律 · 装配序与端差取值 · 装配形 + provider 判定 · 实例生命周期 · 桥面十一回调（含 `onUsage`——非独立通道）· `⟦ev⟧` 分流 · 挂起表两形 · verdict 矩阵与即删 · 回合驱动与中断（U78–U86 同序）。
  */
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
@@ -126,11 +124,12 @@ test("U81: 同键复用 · dispose 后重装配 · 装配表清", async () => {
   assert.equal(h.order.filter((x) => x === "createAgent").length, 2, "dispose 后重装配（恰二次）")
 })
 
-// ─── U82 桥面九映射 ────────────────────────────────────────────
-test("U82: 九回调 → 九通道（载荷键集按 IPC.md §1/§2）· onToolResult 第 4 参透传", async () => {
+// ─── U82 桥面十一回调（十通道映射 + `onUsage` 并入会话累计）──────
+test("U82: 十一回调 → 十通道（载荷键集按 IPC.md §1/§2）· `onUsage` 非通道（回合尾 `ev:usage` 携载荷）· onToolResult 第 4 参透传", async () => {
   const { cb, out, host } = await boot()
   const arms = [
     [() => cb.onToken("plain text"), "ev:token", { key: KEY, text: "plain text" }],
+    [() => cb.onReasoning("think chunk"), "ev:reasoning", { key: KEY, text: "think chunk" }],
     [() => cb.onAgentTurn(2, 8), "ev:activity", { key: KEY, event: "turn", n: 2, max: 8 }],
     [() => cb.onToolCall("read", { path: "/a" }, "id1"), "ev:tool-call", { key: KEY, id: "id1", name: "read", argsSummary: '"/a"' }],
     [() => cb.onToolOutput("read", "chunk", "id1"), "ev:tool-output", { key: KEY, id: "id1", chunk: "chunk" }],
@@ -164,20 +163,21 @@ test("U82: 九回调 → 九通道（载荷键集按 IPC.md §1/§2）· onToolR
 })
 
 // ─── U83 `⟦ev⟧` 分流 ───────────────────────────────────────────
-test("U83: 协议行分流矩阵（多字段 / 空字段 / turn / relay 前缀 / 表外名 / 普通文本）+ 零协议行进文本面", async () => {
+test("U83: 协议行分流矩阵（多字段 / 空字段 / turn / relay 前缀 ⇒ ev:subagent / 表外名 / 普通文本）+ 零协议行进文本面", async () => {
   const { cb, out } = await boot()
   const ev = () => at(out, "ev:activity")
   const matrix = [
     ["⟦ev⟧queued\x1e1\x1e2", { key: KEY, event: "queued", fields: "1\x1e2" }, "多字段原样（`\\x1e` 串不拆）"],
     ["⟦ev⟧still\x1e", { key: KEY, event: "still", fields: "" }, "空字段 = 空串（非 null —— 分隔符在场）"],
     ["⟦ev⟧turn", { key: KEY, event: "turn", fields: null }, "内联 turn：`fields` 键在场（判别写死 —— IPC.md §1 载荷键集段）"],
-    ["advisor#7/⟦ev⟧settled\x1ex", { key: KEY, event: "settled", fields: "x" }, "relay 前缀剥离后解析成立"],
     ["⟦ev⟧weird\x1ez", { key: KEY, event: "weird", fields: "z" }, "表外事件名 ⇒ 进 ev:activity（不丢）"],
   ]
   for (const [line, payload, label] of matrix) {
     cb.onToken(line)
     assert.deepEqual(ev(), payload, label)
   }
+  cb.onToken("advisor#7/⟦ev⟧settled\x1ex") // R3b：relay 前缀族 ⇒ `ev:subagent`（前缀剥除；映射单源 = 核 relay 表）
+  assert.equal(out.filter(([c]) => c === "ev:subagent").length, 1, "relay 前缀 ⟦ev⟧ ⇒ `ev:subagent` 恰一帧（零前缀泄漏入 ev:activity）")
   const textBefore = out.filter(([c]) => c === "ev:token").length
   cb.onToken("see ⟦ev⟧x above")
   assert.deepEqual(out.at(-1), ["ev:token", { key: KEY, text: "see ⟦ev⟧x above" }], "非 relay 前缀不剥 ⇒ 整串进文本面（防误判）")

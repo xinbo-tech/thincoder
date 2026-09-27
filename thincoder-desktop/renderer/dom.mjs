@@ -4,10 +4,15 @@
  * 只用浏览器原生能力，零 `node:` / 零 `@thincoder/core`（E-6 静态闭包判据）。
  */
 
-/** 建节点：`props` 供属性 / 事件（`on*`）· `children` 供文本或子节点。 */
+/** 建节点：`props` 供属性 / 事件（`on*`）· `html` 供**核 Markdown 呈现面**（R3c · D19）· `children` 供文本或子节点。
+ *  `html` = **唯一 HTML 注入点**：值 = 核 `md` 产出（全量转义闸在核 —— KD-RC-4）；非串 / 空串 ⇒ 不注入（零写）。 */
 export function el(tag, props = {}, children = []) {
   const node = document.createElement(tag)
   for (const [key, value] of Object.entries(props)) {
+    if (key === "html") {
+      if (typeof value === "string" && value !== "") node.innerHTML = value
+      continue
+    }
     if (key.startsWith("on") && typeof value === "function") node.addEventListener(key.slice(2).toLowerCase(), value)
     else if (value === true) node.setAttribute(key, "")
     else if (value !== false && value != null) node.setAttribute(key, String(value))
@@ -16,8 +21,8 @@ export function el(tag, props = {}, children = []) {
 }
 
 /** 描述符建树（**唯一 DOM 构造点** —— `docs/desktop/design/RENDERER.md` §1.1）：`{ tag, props, children }` 递归；
- *  `children` 内裸串 = 文本节点、`null` / `undefined` = 空位跳过、带 `tag` 的对象 = 子描述符。入参面与 `el()`
- *  同形 ⇒ 视图档只产描述符（零 DOM），DOM 落点只在本档两函数。*/
+ *  `children` 内裸串 = 文本节点、`null` / `undefined` = 空位跳过、带 `tag` 的对象 = 子描述符；`props.html` =
+ *  核 Markdown 呈现面（见 `el` —— 本档为唯一注入点）。入参面与 `el()` 同形 ⇒ 视图档只产描述符（零 DOM），DOM 落点只在本档两函数。*/
 export function build(node) {
   const list = node.children == null ? [] : node.children
   return el(node.tag, node.props ?? {}, (Array.isArray(list) ? list : [list]).map(expand))

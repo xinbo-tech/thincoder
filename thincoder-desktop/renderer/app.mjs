@@ -10,10 +10,11 @@
  * 或增量面（`alignPlan` ⇒ `settleFrame` 六步）；窗限 `chatLimit` **只增**（`nextWindow` 收束沿 + 本页**实并入块数**）。
  * 出档面：池面一族 = `renderer/mount-pool.mjs` · 会话族 = `renderer/mount-sessions.mjs` · 输入区 = `renderer/mount-composer.mjs`
  * · 会话头接线 = `renderer/mount-head.mjs`（候选面 / 写路 `session:prefs` / 回执刷行 —— 头面刷行调用点仍住本档）
+ * · 状态行 = `renderer/mount-status.mjs`（D17 承载 12 段单点重建 + 订阅切片键面 `STATUS_KEYS`）
  * · 卡族两族 = `renderer/mount-cards.mjs`（提问 / 计划 —— 挂载 + 作答 / 取消出口）
  * · 事件归约 + 页应用 = `renderer/events.mjs` · 订阅接线 = `renderer/events-subscribe.mjs`；本档接线两处 = `attachScroll`
  * （回填 / 跟滚 / 停跟三出口 + 只读口 `guards()`；药丸回底 / 工具卡 toggle 两出口）· `attachEvents({ on, onTurnTail })`
- * （十通道订阅 + 回合尾 flush 窄口 —— 批档 §1.14）；退订句柄本档无消费点 —— 页面生命周期 = 进程生命周期。
+ * （十二通道订阅 + 回合尾 flush 窄口 —— 批档 §1.14）；退订句柄本档无消费点 —— 页面生命周期 = 进程生命周期。
  * 读面失败一律 `console.error` + 零切片写（不静默）；零直连 IPC（只经窄桥 `window.thincoder.invoke`）；
  * 剪贴板写效应（`writeText`）**单点供给** = 本档（同给对话流 handlers 与输入区 `attachComposer` —— 复制面唯一实现处）；
  * 静态闭包零 `node:` / 零裸包（守卫 = `test/guard-closure.test.mjs`）。
@@ -25,6 +26,7 @@ import { attachCards, CARDS_KEYS } from "./mount-cards.mjs"
 import { attachComposer } from "./mount-composer.mjs"
 import { attachHead } from "./mount-head.mjs"
 import { attachPool, POOL_KEYS } from "./mount-pool.mjs"
+import { attachStatus, STATUS_KEYS } from "./mount-status.mjs"
 import {
   activateSession, backfill, cancelClose, cancelRailForm, confirmClose, confirmDelete, confirmRename,
   createSession, deleteSession, refreshRail, renameSession, requestClose, resumeOpened,
@@ -32,7 +34,7 @@ import {
 import { attachSettings } from "./mount-settings.mjs"
 import { configuredFlag, patchSettings, returnToBottom, setFollowing, store } from "./store.mjs"
 import { mountRail, mountTabbar } from "./views/sessions.mjs"
-import { mountHead, mountStatus } from "./views/chrome.mjs"
+import { mountHead } from "./views/chrome.mjs"
 import { MAX_RENDER_BLOCKS, attachScroll, nextWindow } from "./views/chat-scroll.mjs"
 import { alignPlan, paintPlan } from "./views/chat-stream.mjs"
 import { chatModel, mountChat, settleFrame, syncChrome } from "./views/chat.mjs"
@@ -47,8 +49,7 @@ const writeText =
     : undefined
 const RAIL_SLOT = '[data-slot="projects"]' // 左列容器锚（骨架 = `renderer/index.html`）
 const TABS_SLOT = '[data-slot="tabs"]' // 标签条容器锚（`.session` 首子元素——命中在挂载树根之前）
-const HEAD_SLOT = '[data-slot="session-head"]' // 会话头槽
-const STATUS_SLOT = '[data-slot="status"]' // 状态栏槽（窗口级底行）
+const HEAD_SLOT = '[data-slot="session-head"]' // 会话头槽（状态行槽锚随状态行族出档 —— `renderer/mount-status.mjs`）
 const FLOW_SLOT = '[data-slot="flow"]' // 对话流容器锚（= 滚动容器自身 —— 挂载根不清宿主）
 const RAIL_KEYS = ["project", "sessions", "locale", "railForm"] // 重挂触发切片（`locale` 在内：文案随词表 ⇒ 树须重绘；`railForm` = 换形态切片——行原位换形）
 const SHELL_KEYS = ["tabs", "activeTab", "sessions", "tabBadges", "sessionMeta", "locale", "pendingClose"] // 外壳重挂触发切片
@@ -60,6 +61,7 @@ const { paintCards } = attachCards(host) // 卡面一族（提问 / 计划 —�
 const settingsFace = attachSettings(host, { onProjectOpened: openDir })
 const { flushTurnTail } = attachComposer(host, { writeText }) // 输入区一族（挂载 + handlers + 回合尾 flush 句柄 —— 出档 `renderer/mount-composer.mjs`）
 const head = attachHead({ host, onRepaint: () => paintHead() }) // 会话头接线一族（候选面 + 写路 `session:prefs` —— 出档 `renderer/mount-head.mjs`）
+const { paintStatus } = attachStatus() // 状态行一族（D17 承载 12 段单点重建 —— 出档 `renderer/mount-status.mjs`）
 
 /** 载荷形判据（`config:read` 往返：`{ config, locale, dict }`——三字段齐备才算往返成立）。 */
 function isValidPayload(payload) {
@@ -103,7 +105,7 @@ function paintHead(state = store.get()) {
   mountHead(document.querySelector(HEAD_SLOT), state, { candidates: head.candidates, onField: head.onField })
 }
 
-/** 外壳重挂（中区三槽：标签条 / 会话头 / 状态栏 —— 挂载面**纯读**现态；容器缺位 ⇒ 各挂载函数空转）。
+/** 外壳重挂（中区两槽：标签条 / 会话头 —— 挂载面**纯读**现态；容器缺位 ⇒ 各挂载函数空转；状态行另档单点重建）。
  *  标签条接线 = 五 handlers（激活 / 关闭 / 确认 / 取消 / 新建 —— 接线形通则 `docs/desktop/design/RENDERER.md` §1.1）。 */
 function paintShell(state = store.get()) {
   mountTabbar(document.querySelector(TABS_SLOT), state, {
@@ -114,7 +116,6 @@ function paintShell(state = store.get()) {
     onNew: createSession,
   })
   paintHead(state)
-  mountStatus(document.querySelector(STATUS_SLOT), state)
 }
 
 /** `project:open`（打开目录 / 点最近项）：`path` 给定时直用、缺省走主进程原生目录选择；成功后同链刷新 +
@@ -229,7 +230,7 @@ chatScroll = attachScroll(document.querySelector(FLOW_SLOT), {
   guards: () => ({ hasOlder: store.get().history?.hasOlder === true, inFlight: store.get().history?.inFlight === true }),
 })
 
-/** 事件面接线（装配一次 · 批 8 · 批档 §2.11）：十通道订阅 ⇒ 值面写者单源 = `renderer/events.mjs`（归约）+ `renderer/events-subscribe.mjs`
+/** 事件面接线（装配一次 · 批 8 · 批档 §2.11）：十二通道订阅 ⇒ 值面写者单源 = `renderer/events.mjs`（归约）+ `renderer/events-subscribe.mjs`
  *  （订阅）；回合尾 ⇒ `flushTurnTail` 窄口（批档 §1.14 —— flush 触发只此一处）；退订句柄本档无消费点（页面生命周期 = 进程生命周期）。
  *  `on` 缺位 ⇒ 该档记错 + 空操作（不静默死订阅）。 */
 attachEvents({ on: host?.on, onTurnTail: flushTurnTail })
@@ -245,6 +246,7 @@ store.subscribe((state, changedKeys) => {
     paintShell(state)
     void head.sync(state) // 头面候选面随动（活动会话 / provider 变 ⇒ 重取后就地刷行 —— 单点调用）
   }
+  if (changedKeys.some((key) => STATUS_KEYS.includes(key))) paintStatus(state)
   if (changedKeys.some((key) => CHAT_KEYS.includes(key))) paintChat(state, changedKeys)
   if (changedKeys.some((key) => POOL_KEYS.includes(key))) paintPool(state)
   if (changedKeys.some((key) => CARDS_KEYS.includes(key))) paintCards(state)

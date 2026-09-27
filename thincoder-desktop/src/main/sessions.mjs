@@ -10,12 +10,14 @@
 import { listSlots } from "./session-slots.mjs"
 
 /** 载荷行字段集（闭集 · 单源 = IPC 会话族注项 1）：`date` / `updatedDate` 是核本地化显示串、
- *  `firstMessage` 非左列所需 ⇒ **不载**（关键决策 D-4）。 */
+ *  `firstMessage` 非左列所需 ⇒ **不载**（关键决策 D-4）；**R3c 增** `provider`（= 核条目 `activeProvider`
+ *  —— D18 元数据族首值；核 `listSlots` 投影口径：`provider:model` 复合串（无活动模型 ⇒ 裸渠道名）· 老槽 ⇒ `""`）。 */
 export const ROW_FIELDS = Object.freeze([
-  "slot", "title", "createdBy", "updatedAt", "messageCount", "isActive",
+  "slot", "title", "createdBy", "updatedAt", "messageCount", "isActive", "provider",
 ])
 
-/** 核条目 → 载荷行：**只挑字段、不改写**（字段名与核投影同源 —— 零改名、零重算、零缺省回填）。 */
+/** 核条目 → 载荷行：**只挑字段、不改写**（字段名与核投影同源 —— 零改名、零重算、零缺省回填；
+ *  `provider` = 核 `activeProvider` 逐字（老槽缺键 ⇒ 核已归 `""` —— 渲染面不标注）。 */
 function toRow(entry) {
   return {
     slot: entry.slot,
@@ -24,6 +26,7 @@ function toRow(entry) {
     updatedAt: entry.updatedAt,
     messageCount: entry.messageCount,
     isActive: entry.isActive,
+    provider: entry.activeProvider,
   }
 }
 

@@ -1,10 +1,12 @@
 /**
- * chrome.mjs — 中区外壳面（`docs/desktop/design/UI.md` §1 会话头行 / 状态栏行 · §1「批 B 注」项 1 · 项 3 ·
- * `docs/desktop/design/RENDERER.md` §1.1）：各三段（model / tree / mount），挂载面 = 本档唯一触 DOM 处。
+ * chrome.mjs — 中区外壳面（`docs/desktop/design/UI.md` §1 会话头行 · §1「批 B 注」项 1 ·
+ * `docs/desktop/design/RENDERER.md` §1.1）：会话头三段（model / tree / mount），挂载面 = 本档唯一触 DOM 处。
  *   ① 会话头：`headModel({ tab, meta })` / `headTree(model, handlers)` / `mountHead(root, state, handlers)` ——
  *      读切片 `activeTab` / `sessionMeta`（供给取面 = `sessionMetaOf(state)` ⇒ **本行** `sessionMeta[activeTab]`
- *      —— 整表不是一份供给）；② 状态栏：`statusModel({ tabs, activeTab, badges, usage })` /
- *      `statusTree(model)` / `mountStatus(root, state)` —— 读切片 `tabs` / `activeTab` / `tabBadges` / `usage`。
+ *      —— 整表不是一份供给）。
+ *   ② 状态行：本批自本档拆出（300 行拆分层预案落形 —— `docs/desktop/design/PROJECT.md` §4.2 状态行族档）
+ *      ⇒ 语义单源 = `renderer/views/statusline.mjs`（D17 · 承载 12 段构树 + 薄挂载）；本档**同名再出口**
+ *      （`statusModel` / `statusTree` / `mountStatus` —— 消费面零改，沿 `views/sessions.mjs` 转口先例）。
  * 会话头字段（UI.md §1 会话头行槽序）：provider → model → effort → engineering → autoApprove（序单源在此，
  * 不随供给键序）；只落**已给的非空串**值 —— 非串 / 空串 ⇒ 零节点（不补空位、不造形、不猜测）；零字段 ⇒ 根
  * `data-meta="none"`（供给未落 = 常态 —— 禁假数据，KD-e）。值 = 供给串**原样**（数据面非词表 —— 视图不造词）；
@@ -20,19 +22,13 @@
  * 档位控件零节点」）。写面 = 通道 `session:prefs`（**接线住挂载档** `renderer/mount-head.mjs`：写路 + 回执刷行 +
  * 失败回退 —— 本档只出控件与供给取面）；控件两态沿房规（`views/chat.mjs` 头注通则）：handler 给 ⇒ `onChange`（值 `""` = Auto ⇒ `null` 出参），
  * 缺 ⇒ `disabled`（诚实非死控）。
- * 状态栏读数（UI.md §1「批 B 注」项 3）：`statusModel` 取**活动键**切片值（`usage` 按会话 `key` 归约 ——
- * `renderer/events.mjs` `onUsage`）；未至 / 非正数 ⇒ `null` ⇒ **零读数节点**（禁假造）；≥ 80% ⇒ 警示 class
- * （阈值数值单源 = `docs/desktop/design/UI.md` 状态栏行）；节点序 = 读数 → 告警（沿状态栏行读数次序）。
- * 状态栏告警位（`statusModel`）：告警码 = **非活动**标签的位标码 ∈ {approval, running}（活动标签的位标由
- * 标签条承载 —— 同一事实只出现一处）；词面 = `BADGE_WORD[码]`（与标签位**同源同词** —— UI.md 标签条行）；序 =
- * 标签序；`done` / `idle` 不入告警。位标码单源 = `renderer/store.mjs` `deriveTabBadge`（视图不复写
- * 优先序 —— KD-d）。文案一律经 `t()`（零硬编码）；零 `node:` / 零裸包。
+ * 文案一律经 `t()`（零硬编码）；零 `node:` / 零裸包。
  */
 import { build, clear } from "../dom.mjs"
 import { t } from "../i18n.mjs"
-import { deriveTabBadge } from "../store.mjs"
-import { BADGE_WORD } from "./sessions.mjs"
 import { modelIdOf } from "./settings-sections.mjs"
+// 同名 re-export（消费面零改 —— 导入路径与名面保持；语义单源 = 状态行族档）。
+export { mountStatus, statusModel, statusTree } from "./statusline.mjs"
 
 /** 会话头字段槽序（UI.md §1 会话头行 —— 序不随供给键序）。 */
 const FIELD_ORDER = Object.freeze(["provider", "model", "effort", "engineering", "autoApprove"])
@@ -42,12 +38,6 @@ const PICK_FIELDS = Object.freeze(["provider", "model", "effort"])
 
 /** 档位滤词（`"none"` 不作独立档 —— 语义由 `"off"` 承载：`docs/desktop/design/IPC.md` §2 档位闭集）。 */
 const EFFORT_NONE = "none"
-
-/** 读数警示阈（数值单源 = `docs/desktop/design/UI.md` 状态栏行「≥ 80% 转警示色」）。 */
-const USAGE_WARN = 80
-
-/** 告警码集（状态栏取值 = 三码中入告警的子集；`done` / `idle` 不入 —— 完成 / 空闲非跨会话告警面）。 */
-const ALERT_CODES = Object.freeze(["approval", "running"])
 
 /** 单字段供体（`null` ⇔ 未落 ⇒ 零字段节点）：`provider` / `model` / 其余两位 = 非空串（原规则）；`effort` =
  *  非空串 ∥ `""`（未设 ⇒ Auto），**在场 ⟺ `model` 在场**（档位候选逐模型 —— 无模型无档位控件）。 */
@@ -169,71 +159,5 @@ export function mountHead(root, state, handlers = {}) {
   const model = headModel({ tab: state?.activeTab ?? null, meta: sessionMetaOf(state) })
   clear(root)
   root.append(build(headTree(model, handlers)))
-  return model
-}
-
-/** 状态栏模型：`alerts` = 告警节点集（序 = 标签序）；`usage` = 活动键读数（`null` ⇔ 零读数节点）；`badges` 非载体 /
- *  缺键 ⇒ 该标签按空集判（空闲）；告警码须有词键（与标签位同源同词）⇒ 无词键的码不落节点（防 `t()` 把 `undefined`
- *  变字面文本）。 */
-export function statusModel({ tabs = [], activeTab = null, badges = {}, usage = {} } = {}) {
-  const list = Array.isArray(tabs) ? tabs : []
-  const table = badges !== null && typeof badges === "object" ? badges : {}
-  const active = activeTab == null ? null : String(activeTab)
-  const alerts = []
-  for (const key of list) {
-    if (String(key) === active) continue
-    const code = deriveTabBadge(Array.isArray(table[key]) ? table[key] : [])
-    if (ALERT_CODES.includes(code) && typeof BADGE_WORD[code] === "string") alerts.push({ tab: String(key), code })
-  }
-  return { alerts, usage: usageOf(usage, active) }
-}
-
-/** 活动键读数（UI.md §1「批 B 注」项 3）：数字 ∧ `> 0` ⇒ 值；未至 / 非正数 / 非数 / 无活动键 ⇒ `null`。 */
-function usageOf(slice, active) {
-  if (active === null) return null
-  const table = slice !== null && typeof slice === "object" ? slice : {}
-  const value = table[active]
-  return typeof value === "number" && value > 0 ? value : null
-}
-
-/** 结构描述符树（根 `data-alerts` = 告警数；读数节点 `data-usage` = 读数串（`>= 80` ⇒ 警示 class）· 告警节点
- *  `data-alert` = 码 · `data-tab` = 标签键 · 文本 = 位标词键值；节点序 = 读数 → 告警）。 */
-export function statusTree(model) {
-  const children = []
-  if (model.usage !== null) {
-    children.push({
-      tag: "span",
-      props: {
-        class: model.usage >= USAGE_WARN ? "status-usage status-usage-warn" : "status-usage",
-        "data-usage": String(model.usage),
-      },
-      children: [t("status.usage", { percent: model.usage })],
-    })
-  }
-  for (const alert of model.alerts) {
-    children.push({
-      tag: "span",
-      props: { class: "status-alert", "data-alert": alert.code, "data-tab": alert.tab },
-      children: [t(BADGE_WORD[alert.code])],
-    })
-  }
-  return {
-    tag: "div",
-    props: { class: "status-bar", "data-alerts": model.alerts.length },
-    children,
-  }
-}
-
-/** 薄挂载（`tabs` / `activeTab` / `tabBadges` / `usage` ⇒ 状态栏）；返回模型（读数 / 走查面）。 */
-export function mountStatus(root, state) {
-  if (!root || typeof root.append !== "function") return null
-  const model = statusModel({
-    tabs: state?.tabs ?? [],
-    activeTab: state?.activeTab ?? null,
-    badges: state?.tabBadges ?? {},
-    usage: state?.usage ?? {},
-  })
-  clear(root)
-  root.append(build(statusTree(model)))
   return model
 }

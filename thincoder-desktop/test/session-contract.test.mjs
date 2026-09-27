@@ -1,7 +1,7 @@
 /**
  * session-contract.test.mjs — E-3 / E-1 用例（批档 §2.5 U14–U19 + U37 / U38 · `docs/desktop/design/IPC.md` §2 会话面 / 会话族注）：
  * 端壳形态（源零算法副本 + 端名已声明）/ 本端记录往返（`.manifest.desktop`）/ 端间不互写 /
- * 跨端接续 / 沙箱缝随动 / `createdBy` 三态（截图判据③ · T-DSK3）/ 白名单二十七项定序（U37）/ 会话族读面三态（U38）/
+ * 跨端接续 / 沙箱缝随动 / `createdBy` 三态（截图判据③ · T-DSK3）/ 白名单二十八项定序（U37）/ 会话族读面三态（U38）/
  * 会话族五通道往返（U57）。
  * 沙箱：逐用例 `mkdtemp` + 核沙箱缝 `_setSessionsDirForTest`（缝在核，端壳零副本）；用例后复位。
  */
@@ -145,7 +145,7 @@ test("U19: createdBy 三态（新建 desktop / 老槽 \"\" / 认领后仍 \"\"�
 
 // ─── U37 白名单定序（E-1 · 批档 §2.4（b））──────────────────────
 
-test("U37: preload 白名单二十七项定序 ∧ 冻结", () => {
+test("U37: preload 白名单二十八项定序 ∧ 冻结", () => {
   const preload = createRequire(import.meta.url)(fileURLToPath(new URL("../src/preload/preload.cjs", import.meta.url)))
   assert.deepEqual(
     [...preload.CHANNELS],
@@ -155,9 +155,9 @@ test("U37: preload 白名单二十七项定序 ∧ 冻结", () => {
       "approval:respond", "history:page", "msg:send", "msg:interrupt",
       "provider:list", "provider:save", "provider:remove", "provider:verify",
       "model:list", "settings:agent", "mcp:list", "mcp:save", "mcp:remove",
-      "config:write", "ledger:read", "batch:status", "question:respond", "session:prefs",
+      "config:write", "ledger:read", "batch:status", "question:respond", "session:prefs", "subagent:stop",
     ],
-    "二十七项 + 定序（既有十三项段不动；末十四项 = 设置族十 + 项目级信息二 + 作答响应一 + 会话级偏好一）",
+    "二十八项 + 定序（既有十三项段不动；末十五项 = 设置族十 + 项目级信息二 + 作答响应一 + 会话级偏好一 + 子 agent 停止出口一）",
   )
   assert.ok(Object.isFrozen(preload.CHANNELS), "冻结（运行期不可改）")
 })
@@ -170,9 +170,9 @@ test("U38: sessions:list 三态（main/sessions.mjs + 白名单）", (t) => {
   assert.deepEqual(listSessions(""), { cwd: null, rows: [] }, "空串同判（cwd 空）")
 
   const fixtures = [
-    [1, { ...newSlotData(cwd), createdBy: "cli", title: "CLI 夹具" }],
+    [1, { ...newSlotData(cwd), createdBy: "cli", title: "CLI 夹具", activeProvider: "p1", activeModel: "m1" }],
     [2, { ...newSlotData(cwd), createdBy: "vscode" }],
-    [3, { ...newSlotData(cwd), createdBy: "desktop" }],
+    [3, { ...newSlotData(cwd), createdBy: "desktop", activeProvider: "p2" }],
     [4, { ...newSlotData(cwd) }],
   ]
   delete fixtures[3][1].createdBy // 老槽：无 createdBy 键（未知——禁回填）
@@ -188,10 +188,11 @@ test("U38: sessions:list 三态（main/sessions.mjs + 白名单）", (t) => {
   assert.equal(res.rows.length, 4, "行数 = 槽数")
   const bySlot = new Map(res.rows.map((row) => [row.slot, row]))
   for (const row of res.rows) {
-    assert.deepEqual(Object.keys(row).sort(), [...ROW_FIELDS].sort(), "字段闭集 = 2.4（e）六字段（date / updatedDate / firstMessage 不载）")
+    assert.deepEqual(Object.keys(row).sort(), [...ROW_FIELDS].sort(), "字段闭集 = 2.4（e）+ R3c `provider`（date / updatedDate / firstMessage 不载）")
     assert.equal(typeof row.updatedAt, "number", "updatedAt = 机器读数（非本地化显示串）")
     assert.equal(typeof row.messageCount, "number", "messageCount 读数")
     assert.equal(row.isActive, false, "本批不认领活动槽 ⇒ 零 isActive")
+    assert.equal(typeof row.provider, "string", "provider 读数 = 串（老槽 / 无活动模型 ⇒ 空串）")
   }
   assert.equal(bySlot.get(1)?.title, "CLI 夹具", "标题直通（零改写）")
   assert.equal(bySlot.get(2)?.title, "", "无标题 ⇒ 空串原样出（缺省词归渲染面）")
@@ -199,6 +200,12 @@ test("U38: sessions:list 三态（main/sessions.mjs + 白名单）", (t) => {
     [1, 2, 3, 4].map((n) => bySlot.get(n)?.createdBy),
     ["cli", "vscode", "desktop", ""],
     "createdBy 三值 ∧ 缺键 ⇒ \"\"（禁回填）",
+  )
+  // R3c · D18（T-DSK34 行投影两向）：`provider` = 核 `activeProvider` 投影 —— 复合串逐字 / 裸渠道名 / 老槽空串
+  assert.deepEqual(
+    [1, 2, 3, 4].map((n) => bySlot.get(n)?.provider),
+    ["p1:m1", "", "p2", ""],
+    "provider = 槽投影 `activeProvider` 逐字（含活动模型 ⇒ 复合串 p:m · 无 ⇒ 裸渠道名 · 老槽 / 无键 ⇒ \"\"）",
   )
 
   const fresh = join(dir, "fresh")
