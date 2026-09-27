@@ -69,7 +69,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
  * EXIT-CLAIM-RELEASE 批（2026-09-21 · `docs/batches/2026-09-21-exit-claim-release.md` §2 现值列 +
  * §5 尺度结论）登记**两档**（评审 #2 预判命中——同批越线）：`session-slots-manifest.mjs`
  * （**316**——`releaseClaimsAll` +~19：释放函数与谓词 / 落盘同档单源 D-SE41，单凝面不拆；
- * 拆分触发 = 越 500 硬限或下次触碰该档的批随批拆出认领面）· `test/session-slot-write.test.mjs`
+ * 拆分触发 = 越 500 硬限或下次触碰该档的批随批拆出认领面——2026-09-28 守卫批触碰（316→324→366，承既有形态 · `docs/core/design/SESSION.md` §6.23 裁定）⇒ 认领面族拆分**顺延**〔台账 #484 · 专门批〕）· `test/session-slot-write.test.mjs`
  * （**358**——T1/T2/T3 释放用例新组：夹具 `seedReleaseState` / `countingProbe` 与既有组共享，
  * 拆档 = 复制脚手架；触发条件同前——随批拆出退出释放组）。
  * TOOL-DISCIPLINE 批（2026-09-21 · `docs/batches/2026-09-21-tool-discipline.md`）新增登记 `agent-tools/batch-lifecycle.mjs`（**301**——create source/prev 归一 + status note + value 谓词收紧 + 占位机检挂点；设计预裁「登记不拆」：create 面外提为后手，消解条件 = 越 500 硬限或该档下次实质改动）；同批 `test/batch.test.mjs` 380 → **473**（F11 A/B 组；C 组按行数纪律拆出邻档 `test/batch-placeholder-gate.test.mjs`（89）——≤300 不登记）。

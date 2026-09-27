@@ -63,6 +63,32 @@ export function loadManifest(cwd) {
   } catch { return { slots: {}, sessionId: null } }
 }
 
+/** 可信合并基座判据（§6.23 判据句 1 · ②）：顶层非 null 非数组对象 ∧（`slots` / `slotSessions`
+ *  缺席或为对象）。**假值（null / `0` / `""` / `false`）按缺席归一**——判据线单源 = `loadManifest`
+ *  的 `!m.slots → {}`（同向：空基座可合并、不拒写；展开后自然落 `{}`）；真值非对象（`42` / `"x"`）
+ *  与数组 ⇒ 不可信。形态非法 ⇒ 不写盘（判据句 2(c)）。 */
+function isTrustedBase(fresh) {
+  if (!fresh || typeof fresh !== "object" || Array.isArray(fresh)) return false
+  const mapField = (v) => !v || (typeof v === "object" && !Array.isArray(v))
+  return mapField(fresh.slots) && mapField(fresh.slotSessions)
+}
+
+/** (b)(c) 现场保全：原字节改名 `{manifest 路径}.corrupted`（与槽文件面同形）——同名已存在 ⇒
+ *  覆盖（单槽位 · last-wins）；改名失败被吞、**不阻断拒写**（§6.23 判据句 2）。返回值为**改名目标
+ *  路径**（拒写 loud 行的 `preserved=` 即取此）——非存在性保证：改名失败面 = `.corrupted` 缺席自证。 */
+function preserveScene(p) {
+  const dst = `${p}.corrupted`
+  try { renameSync(p, dst) } catch {}
+  return dst
+}
+
+/** 拒写（§6.23 判据句 2/3）：不调 `writeSessionFile`（本次调用对盘面零字节写——(b)(c) 的一次
+ *  改名已在上游完成），stderr 一行 loud（`preserved` = 现场改名目标——(b)(c) 面），返回 `false`。 */
+function refuseManifestWrite(p, reason, preserved = null) {
+  console.error(`[session] saveManifest: write refused (reason=${reason}) path=${p}${preserved ? ` preserved=${preserved}` : ""}`)
+  return false
+}
+
 export function saveManifest(cwd, m, deletions = null, opts = {}) {
   // 2026-08-31 会诊 kimi/deepseek 🟡：写前重读并按"条目级"合并——原实现把"读时快照"
   // 整对象写回，另一进程在窗口内对 slots/slotSessions/active 的变更被覆盖抹除（被抹
@@ -77,38 +103,54 @@ export function saveManifest(cwd, m, deletions = null, opts = {}) {
   // （落点槽 ∪ 本进程其余活绑定槽；被占落点 ⇒ 空集）。③ 内存认领表先移除残留条目（否则下方
   // 条目级合并会把它从内存复活回写）——先于 try（fresh 不可读时亦须生效）。
   if (opts.release) dropStaleClaims(m, opts.release)
+  // MANIFEST-WRITE-GUARD 批（2026-09-28 · SESSION.md §6.23 判据句 1–3 / D-SE59）：写前分类——只有
+  // 「① 合法创建（ENOENT）」与「② 可信合并基座」两路通向 writeSessionFile；文件在盘而基座不可信
+  // （读失败 / 解析失败 / 形态非法）⇒ **拒绝写**（不整档替换——#476 实证：读不可信窗口内一次保存把
+  // manifest 永久缩水且零告警）。拒写 = stderr 一行 + 返回 false（唯一消费点 = releaseClaimsAll 透传；
+  // 其余调用点忽略返回值——零行为变化）；拒写不回滚调用方内存态（认领等内存变更归调用方所有，
+  // 下一次保存重试——与 F-XR1 同向的失败容忍形态）。
+  const p = manifestPath(cwd)
+  let fresh
   try {
-    const fresh = JSON.parse(readFileSync(manifestPath(cwd), "utf8"))
-    if (fresh && typeof fresh === "object" && fresh.slots && typeof fresh.slots === "object") {
-      const merged = { ...fresh }
-      if (opts.setActive) merged.active = m.active
-      merged.slots = { ...fresh.slots, ...(m.slots ?? {}) }
-      merged.slotSessions = { ...(fresh.slotSessions ?? {}), ...(m.slotSessions ?? {}) }
-      if (m.sessionId) merged.sessionId = m.sessionId
-      // ① 释放集按**本次 fresh 快照**取值（不得以陈旧内存 manifest 构 deletions）；② **值条件删除**
-      // （仅当 fresh 属主仍为本进程——窗口内他人的新认领不在集内、不被误删）⇒ 并入本次 deletions。
-      if (opts.release) {
-        const released = staleClaims(fresh, opts.release)
-        if (released.length > 0) {
-          deletions = { ...(deletions ?? {}), slotSessions: [...(deletions?.slotSessions ?? []), ...released] }
-        }
-      }
-      if (deletions) {
-        for (const [section, keys] of Object.entries(deletions)) {
-          for (const k of keys) delete merged[section]?.[k]
-        }
-      }
-      m = merged
+    fresh = JSON.parse(readFileSync(p, "utf8"))
+  } catch (err) {
+    // ① 合法创建：路径不存在（首建）⇒ 以调用方对象建新档（现行为保留）
+    if (err?.code === "ENOENT") {
+      m.sessionId = getSessionId()
+      writeSessionFile(p, m)
+      return true
     }
-  } catch {
-    // 首次创建或 manifest 不可读：用传入对象。2026-09-01 advisor 🟡：解析失败时先改名
-    // 保留现场（与 loadSlotFile 对 slot 文件的 .corrupted 原则一致）——否则覆盖后全部
-    // 槽位元数据（digest/title/updatedAt）永久丢失，/session 列表变空。文件不存在时
-    // rename 抛错被吞，无害。
-    try { renameSync(manifestPath(cwd), `${manifestPath(cwd)}.corrupted`) } catch {}
+    // (a) 读失败（非 ENOENT：EISDIR / EPERM / EBUSY 等）⇒ 拒写 · 不改名（读不到 ≠ 损坏——现场
+    // 原样保留；该窗口正是 #476 缩水损伤的成因窗口）
+    if (!(err instanceof SyntaxError)) return refuseManifestWrite(p, "read-failed")
+    // (b) 解析失败 ⇒ 拒写 · 保底改名 .corrupted（现场保全 + 解封下一写——原路径不重建）
+    return refuseManifestWrite(p, "parse-failed", preserveScene(p))
   }
+  // (c) 形态非法（顶层非 null 非数组对象 / `slots` 非对象 / `slotSessions` 非对象）⇒ 同 (b)
+  if (!isTrustedBase(fresh)) return refuseManifestWrite(p, "shape-invalid", preserveScene(p))
+  // ② 可信合并基座：读-合并-写（条目级合并 / deletions / setActive / opts.release 四判据零改）
+  const merged = { ...fresh }
+  if (opts.setActive) merged.active = m.active
+  merged.slots = { ...fresh.slots, ...(m.slots ?? {}) }
+  merged.slotSessions = { ...(fresh.slotSessions ?? {}), ...(m.slotSessions ?? {}) }
+  if (m.sessionId) merged.sessionId = m.sessionId
+  // ① 释放集按**本次 fresh 快照**取值（不得以陈旧内存 manifest 构 deletions）；② **值条件删除**
+  // （仅当 fresh 属主仍为本进程——窗口内他人的新认领不在集内、不被误删）⇒ 并入本次 deletions。
+  if (opts.release) {
+    const released = staleClaims(fresh, opts.release)
+    if (released.length > 0) {
+      deletions = { ...(deletions ?? {}), slotSessions: [...(deletions?.slotSessions ?? []), ...released] }
+    }
+  }
+  if (deletions) {
+    for (const [section, keys] of Object.entries(deletions)) {
+      for (const k of keys) delete merged[section]?.[k]
+    }
+  }
+  m = merged
   m.sessionId = getSessionId()
-  writeSessionFile(manifestPath(cwd), m)
+  writeSessionFile(p, m)
+  return true
 }
 
 /** 本进程**残留认领集**（F-CR1 释放谓词 —— **判据单源** · SESSION.md §6.2 / §6.16）：
@@ -303,7 +345,8 @@ export const _releaseStats = { calls: 0 }
  *  无属主短路零探测直达恢复）；崩溃路径不经此（信号无 JS 钩子——F-XR3）。
  *  早退面：磁盘无 manifest ⇒ `existsSync` 单条目早退**零写**（不造盘面）；本进程无认领 ⇒
  *  零写返回 false。失败容忍（F-XR1「退出恒达」）：整体 try/catch **永不抛出**，返回 boolean
- *  （true = 有释放且落盘成功；false = 早退 / 失败——断言面）；写失败盘面 = 认领残留 →
+ *  （true = 有释放且落盘成功；false = 早退 / 失败 / **写面拒写**——`saveManifest` 返回值透传，
+ *  §6.23 判据句 3——断言面）；写失败盘面 = 认领残留 →
  *  恢复走既有探测面（现状形态，数据零险）。 */
 export function releaseClaimsAll(cwd) {
   _releaseStats.calls += 1
@@ -311,8 +354,7 @@ export function releaseClaimsAll(cwd) {
     if (!existsSync(manifestPath(cwd))) return false // 无 manifest ⇒ 零写（不造盘面）
     const m = loadManifest(cwd)
     if (staleClaims(m, []).length === 0) return false // 无本进程认领 ⇒ 零写（免白刷共享 sessionId）
-    saveManifest(cwd, m, null, { release: [] }) // 保留集空 = 全释放；不 setActive（active 共享指针不动）
-    return true
+    return saveManifest(cwd, m, null, { release: [] }) !== false // 保留集空 = 全释放；不 setActive；返回值透传（§6.23 判据句 3——拒写 ⇒ false）
   } catch { return false } // F-XR1：退出恒达（写失败 = 认领残留 → 恢复走探测面）
 }
 
