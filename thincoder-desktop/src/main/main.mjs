@@ -80,7 +80,7 @@ async function main() {
 
   const reading = await runSmoke(win, recordError)
   const ok =
-    floorMet && sqlite && reading.loaded && reading.protocol.served > 0 && reading.protocol.blocked >= 3 &&
+    floorMet && sqlite && reading.loaded && reading.protocol.served > 0 && reading.protocol.blocked >= 5 && // 负探针 5 枚（R1 增 `rcEscape` / `escapeSrc`）——计数与逐探针读数双证
     reading.boot === "ok" && errors.length === 0 && probesSatisfied(reading.protocol.probes)
   if (!ok) {
     recordError(`smoke not ok: loaded=${reading.loaded} served=${reading.protocol.served} blocked=${reading.protocol.blocked} boot=${reading.boot}`)

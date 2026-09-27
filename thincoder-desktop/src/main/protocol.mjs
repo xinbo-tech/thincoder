@@ -1,16 +1,22 @@
 /**
  * protocol.mjs — `app://desktop/…` 供给（PROJECT.md §2 KD-2）：特权 scheme 注册（ready 前 · 仅一次）+ `protocol.handle`（ready 后）。
  * 防护判定序**写死**（批档 §2.11 收正⑧）：① 逃逸门（resolve 越界）⇒ 404 + `blocked++` ② 扩展名白名单门 ⇒ 404 + `blocked++`
- * ③ 存在性 ⇒ 404（不计数）。读数 `served` / `blocked` = `protocolStats` 单点持有；5 探针的发起点在窗口冒烟读回面（window.mjs）。
+ * ③ 存在性 ⇒ 404（不计数）。读数 `served` / `blocked` = `protocolStats` 单点持有；探针的发起点在窗口冒烟读回面（window.mjs）。
+ * 供给面**双根**（RENDER-CORE.md §1.3「桌面端加载形」· R1）：`/` → `renderer/`（现状）· `/rc/` → 核包目录
+ * （`@thincoder/render-core` 包根——主进程按包名解析；渲染面以同源绝对路径 import `/rc/xxx.mjs`）。
+ * 各根各留逃逸门——供给语义（判定序 / 计数）与单根时代不变。
  */
 import { protocol } from "electron"
 import { readFile } from "node:fs/promises"
-import { extname, isAbsolute, relative, resolve } from "node:path"
+import { createRequire } from "node:module"
+import { dirname, extname, isAbsolute, relative, resolve } from "node:path"
 
 /** scheme / host / 供给根：本档单源（窗口加载 URL 与探针 URL 皆引此）。 */
 export const SCHEME = "app"
 export const HOST = "desktop"
 export const RENDERER_ROOT = resolve(import.meta.dirname, "../../renderer")
+/** 第二根 · 核包根：按包名解析（`node_modules` 链接 / 实拷两态同址——打包物化 = `npm install --install-links`）；缺包 ⇒ 装载期 fail-loud。 */
+export const CORE_ROOT = dirname(createRequire(import.meta.url).resolve("@thincoder/render-core/package.json"))
 
 /** 扩展名白名单 + MIME 表（同一表两用；探针读数的 mime 取媒体类型段）。 */
 const MIME = Object.freeze({
@@ -21,6 +27,12 @@ const MIME = Object.freeze({
   ".png": "image/png",
   ".woff2": "font/woff2",
 })
+
+/** 供给根表（显式登记 · 前缀序：`/rc/` 先于 `/` 兜底根；各根同走区间判据逃逸门）。 */
+const ROOTS = Object.freeze([
+  { prefix: "/rc/", root: CORE_ROOT },
+  { prefix: "/", root: RENDERER_ROOT },
+])
 
 /** 供给读数（单点持有）：`served` = 真供给次数；`blocked` = 门拒绝次数。 */
 export const protocolStats = { served: 0, blocked: 0 }
@@ -36,8 +48,9 @@ export function registerAppScheme() {
 export function serveAppProtocol() {
   protocol.handle(SCHEME, async (request) => {
     const pathname = decodePath(request.url) ?? ""
-    const target = resolve(RENDERER_ROOT, `.${pathname}`)
-    const relativePath = relative(RENDERER_ROOT, target)
+    const { root, subPath } = routeRoot(pathname)
+    const target = resolve(root, `.${subPath}`)
+    const relativePath = relative(root, target)
     if (relativePath.startsWith("..") || isAbsolute(relativePath)) return refuse(request, "escape") // 门①
     const mime = MIME[extname(target).toLowerCase()]
     if (mime === undefined) return refuse(request, "extension") // 门②
@@ -49,6 +62,13 @@ export function serveAppProtocol() {
       return new Response("not found", { status: 404 })
     }
   })
+}
+
+/** 根路由（双根单源）：前缀命中 ⇒ 该根 + 去前缀子路径（保前导 `/`）；未命中（畸形 pathname）⇒ 兜底根 `/` 原路径。 */
+function routeRoot(pathname) {
+  const hit = ROOTS.find(({ prefix }) => pathname.startsWith(prefix))
+  const { prefix, root } = hit ?? ROOTS[ROOTS.length - 1]
+  return { root, subPath: pathname.slice(prefix.length - 1) }
 }
 
 /** 畸形百分号编码 ⇒ null（不抛——交由门② fail-closed）。 */

@@ -1,0 +1,41 @@
+{
+  "name": "@thincoder/render-core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ThinCoder shared render core — host-agnostic render modules (markdown / highlight / diff / lib / tool-summary / i18n) shared by the VS Code extension webview and the desktop renderer.",
+  "keywords": [
+    "ai",
+    "render",
+    "markdown",
+    "shared",
+    "webview",
+    "desktop"
+  ],
+  "type": "module",
+  "scripts": {
+    "test": "node test/run.mjs",
+    "prepublishOnly": "npm test"
+  },
+  "license": "MIT",
+  "author": "liwei <liwei@51marine.com> (上海新舶)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xinbo-tech/thincoder.git"
+  },
+  "homepage": "https://github.com/xinbo-tech/thincoder",
+  "bugs": {
+    "url": "https://github.com/xinbo-tech/thincoder/issues"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "exports": {
+    "./*": "./*"
+  },
+  "files": [
+    "*.mjs",
+    "flow/",
+    "cards/",
+    "subblocks/"
+  ]
+}

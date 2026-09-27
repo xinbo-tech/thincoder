@@ -30,7 +30,8 @@
     "vscode": "^1.104.0"
   },
   "dependencies": {
-    "@thincoder/core": "^0.9.5"
+    "@thincoder/core": "^0.9.5",
+    "@thincoder/render-core": "file:../thincoder-render-core"
   },
   "type": "module",
   "main": "./extension.mjs",

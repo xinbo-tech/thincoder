@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 /**
- * scripts/check-vsix.mjs — vsix 含核断言（T-C7 vsix 域：断言 B + D + E——CORE-UNIFICATION N4/N5/F7/F8；E = 撞帽检查点接线 · 2026-09-26）。
+ * scripts/check-vsix.mjs — vsix 含核断言（T-C7 vsix 域：断言 B + D + E + F——CORE-UNIFICATION N4/N5/F7/F8；E = 撞帽检查点接线 · 2026-09-26；F = 渲染核 · R1）。
  *
  * 零构建 · 只读：解 vsix 逐条断言，任何一条不过即 exit 1（fail-closed——vsce 自身对
  * 「成功但无核 / 缺提示词档」的静默产物 exit 0，R6/R8①/R12 实证 ⇒ 必须断言化）。
  *   断言 B（含核 + 版本逐字相等）：vsix 内 `extension/node_modules/@thincoder/core/package.json`
  *     存在，且其 `version` 逐字等于仓内 `thincoder-core/package.json` 的 `version`。
+ *   断言 F（渲染核含核 + 版本逐字相等 · R1）：vsix 内 `extension/node_modules/@thincoder/render-core/package.json`
+ *     存在，且其 `version` 逐字等于仓内 `thincoder-render-core/package.json` 的 `version`。
  *   断言 D（提示词面完备性）：vsix 内同目录 `prompts/` 16 档 + `tool-docs/` 24 档——
  *     ① 档数硬等设计口径（16 / 24）；② 档名集合逐字等于仓内 `thincoder-core/` 同名目录；③ 各档内容 sha256 等于仓内同档。
  *
@@ -23,12 +25,15 @@ import yauzl from "yauzl"
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url)) // thincoder-vscode/
 const CORE = join(resolve(ROOT, ".."), "thincoder-core")
+const RC = join(resolve(ROOT, ".."), "thincoder-render-core")
 const PKG = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"))
 const CORE_PKG = JSON.parse(readFileSync(join(CORE, "package.json"), "utf8"))
+const RC_PKG = JSON.parse(readFileSync(join(RC, "package.json"), "utf8"))
 const arg = process.argv.slice(2).find((a) => !a.startsWith("--"))
 const vsix = resolve(arg ?? join(ROOT, `${PKG.name}-${PKG.version}.vsix`))
 if (!existsSync(vsix)) { console.error(`✘ vsix 不存在：${vsix}（先 \`npm run package\`）`); process.exit(1) }
 const IN_VSIX = "extension/node_modules/@thincoder/core/"
+const IN_VSIX_RC = "extension/node_modules/@thincoder/render-core/"
 const EXPECT = { prompts: 16, "tool-docs": 24 } // 档数口径（T-C7 / `CORE-UNIFICATION.md` §2.8——枚举 16 + 24；prompts 由 15 收正为 16 = escalation-canon 批 · 父侧直接执行 · 可 revert；tool-docs 由 25 收正为 24 = 实盘计数——一致性同步批 §4 批 2 · 父侧直接执行 · 可 revert）
 const sha = (buf) => createHash("sha256").update(buf).digest("hex")
 
@@ -57,6 +62,15 @@ else {
   else bad(`断言 B：vsix 内核版本 ${got} ≠ 仓内 thincoder-core/package.json ${CORE_PKG.version}`)
 }
 
+// 断言 F —— 含渲染核 + 版本逐字相等（R1 · render-core 加载管道：webview 以相对路径取核）
+const rcEntry = entries.find((e) => e.fileName === `${IN_VSIX_RC}package.json`)
+if (!rcEntry) bad(`断言 F：vsix 缺 ${IN_VSIX_RC}package.json（无渲染核——.vscodeignore 反排除行漏写？）`)
+else {
+  const got = JSON.parse((await readEntry(zip, rcEntry)).toString("utf8")).version
+  if (got === RC_PKG.version) ok(`断言 F：vsix 含渲染核且版本逐字相等（@thincoder/render-core ${got}）`)
+  else bad(`断言 F：vsix 内渲染核版本 ${got} ≠ 仓内 thincoder-render-core/package.json ${RC_PKG.version}`)
+}
+
 // 断言 E —— 打包核含撞帽检查点接线（2026-09-26 · F9② / T6）
 //   防「仓内已修、运行面仍旧」：实盘教训 = 安装面冻结旧构建 ⇒ 撞帽静默续段。
 const cpEntry = entries.find((e) => e.fileName === `${IN_VSIX}agent-tools/checkpoint.mjs`)
@@ -82,5 +96,5 @@ for (const dir of ["prompts", "tool-docs"]) {
 }
 
 zip.close()
-console.log(failures.length ? `\n✘ check-vsix：${failures.length} 条断言失败` : "\n✔ check-vsix：断言 B + D + E 全过")
+console.log(failures.length ? `\n✘ check-vsix：${failures.length} 条断言失败` : "\n✔ check-vsix：断言 B + D + E + F 全过")
 process.exit(failures.length ? 1 : 0)

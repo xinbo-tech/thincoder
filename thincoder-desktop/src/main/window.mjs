@@ -17,13 +17,19 @@ const WINDOW = Object.freeze({ WIDTH: 1200, HEIGHT: 800, MIN_WIDTH: 800, MIN_HEI
 /** 画布色镜像（非通道面）：与 `styles.css` 主题变量同值，防首帧白闪；单源在 `styles.css` ⇒ 改色须两处同步（待修正轮定形）。 */
 const THEME_COLORS = Object.freeze({ dark: "#15171c", light: "#f7f8fa" })
 
-/** 5 探针（批档 §2.11 收正⑧）：正 2 + 负 3；各负探针命中的门见 stderr 归属行。 */
+/** 探针（批档 §2.11 收正⑧ 5 枚 + R1 双根 3 枚）：正 3 + 负 5；各负探针命中的门见 stderr 归属行。 */
 const PROBES = Object.freeze([
   { id: "html", path: "index.html", expect: 200, mime: "text/html" },
   { id: "css", path: "styles.css", expect: 200, mime: "text/css" },
+  { id: "rcMd", path: "rc/md.mjs", expect: 200, mime: "text/javascript" }, // R1 双根：`/rc/` 实供给（核包 md.mjs）
   { id: "escape", path: "../package.json", expect: 404 },
   { id: "escapePct", path: "%2e%2e/package.json", expect: 404 },
   { id: "ext", path: "probe.json", expect: 404 },
+  // R1 双根：逃逸负探针（`%2F` 解码 ⇒ `..` 真逃出 `/rc/` 根；判据 = 404 + `blocked++`，门①归属见 stderr）。判别力注（两态）：
+  // dev-link 态（smoke 态）落点 = 源树 `thincoder-core/i18n.mjs` 在盘 ⇒ 破门即 200；物化态落点退化为缺失 ⇒ 该态由 `blocked` 计数双证兜底。
+  { id: "rcEscape", path: "rc/..%2Fthincoder-core%2Fi18n.mjs", expect: 404 },
+  // R1 双根：逃逸门“两向”补齐——渲染面根同理（逃向主进程源码；门①的运行期覆盖）
+  { id: "escapeSrc", path: "..%2Fsrc%2Fmain%2Fprotocol.mjs", expect: 404 },
 ])
 
 /** 引导位读回表达式（主进程侧读法 = `executeJavaScript`；值域 `ok | error | none`）。 */
@@ -68,7 +74,7 @@ export function createWindow(onError) {
   return win
 }
 
-/** 冒烟读回：等首载（`loaded`）→ 5 探针 → 引导位读回；返回 `{ loaded, protocol, boot }`。 */
+/** 冒烟读回：等首载（`loaded`）→ 探针表逐项 → 引导位读回；返回 `{ loaded, protocol, boot }`。 */
 export async function runSmoke(win, onError) {
   const loaded = await firstLoad(win, onError)
   const probes = []

@@ -3,7 +3,8 @@
  * ① 行为：`runSessionIndexCommand` 处理体（清四表 → 全量重扫临时 sessions 根 → 摘要 + 宿主提示）；
  * ② AC-7 VSC 侧机检：`contributes.commands` 注册 + `extension.mjs` 处理体 / 启动拍挂点 +
  *    端壳档**零静态核索引 import**（node:sqlite 不进端壳静态闭包——W8 契约②同族判据）；
- * ③ T-17 VSC 侧：`dependencies` 零新增 + 核新档经 `@thincoder/core/*` 可达；本档入册 `test/files.mjs`。
+ * ③ T-17 VSC 侧：`dependencies` 在册两键（核 + 渲染核——R1 render-core 批改判：依赖 +1 随设计）
+ *    + 核新档经 `@thincoder/core/*` 可达；本档入册 `test/files.mjs`。
  * 夹具纪律：显式注入 temp `dir` / `dbPath`（禁触真实 `~/.thincoder`）+ mock 宿主面（`api` 注入）。
  */
 import { test } from "node:test"
@@ -90,9 +91,11 @@ test("机检：contributes.commands 注册 + extension.mjs 处理体与启动拍
   assert.ok(manifest.includes('"test/session-index-command.test.mjs"'), "本档已登记 test/files.mjs（未登记 ⇒ runner fail-closed）")
 })
 
-test("T-17 VSC 侧：dependencies 零新增 ∧ 核新档经 @thincoder/core 可达", () => {
+test("T-17 VSC 侧：dependencies 在册两键 ∧ 核新档经 @thincoder/core 可达", () => {
   const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"))
-  assert.deepEqual(Object.keys(pkg.dependencies ?? {}), ["@thincoder/core"], "VSC 依赖面零新增")
+  // R1（render-core）批改判：依赖面 +1 = `@thincoder/render-core`（`file:` 本地链接形——核包不发布；
+  // 设计 §6 发行三件之一）。本锁随设计显式过目——再新增第三键即红。
+  assert.deepEqual(Object.keys(pkg.dependencies ?? {}), ["@thincoder/core", "@thincoder/render-core"], "VSC 依赖面 = 在册两键（新增须显式过目）")
   assert.equal(Object.keys(pkg.devDependencies ?? {}).includes("node:sqlite"), false)
   for (const f of ["session-index.mjs", "session-index-query.mjs", "session-index-build.mjs", "session-index-pass.mjs", "fts-text.mjs"]) {
     assert.ok(existsSync(new URL(`../node_modules/@thincoder/core/${f}`, import.meta.url)), `核新档可达：${f}`)

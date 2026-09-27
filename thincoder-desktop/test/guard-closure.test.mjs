@@ -2,6 +2,7 @@
  * guard-closure.test.mjs — E-6 用例（SHELL.md §1 进程面三层；批档 §2.5 U5–U7）。
  * 覆盖：渲染面静态闭包（零 `node:` ∧ 零裸包 ∧ 闭包非空 ∧ 逐档已读失败即判红）/ 违规样本判红
  * （内存合成源 · **不写盘**——保证规则本身不是假绿）/ 渲染面零内联脚本 + CSP 无 `unsafe-*`。
+ * R1 增：`/rc/` 前缀白名单（RENDER-CORE.md §1.3 双根——核经 `app://` 第二根取；**裸包禁令不变**）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
@@ -25,17 +26,19 @@ function staticSpecifiers(source) {
   return specs
 }
 
-/** 分类（单源规则 · U6 直接喂合成源）：`node:` 内置 / 裸包 / 相对。 */
+/** 分类（单源规则 · U6 直接喂合成源）：`node:` 内置 / 裸包 / 相对 / `/rc/` 前缀（R1 白名单——同源 URL 取核，非裸包）。 */
 function classifySpecifiers(specs) {
   const builtins = new Set()
   const bare = new Set()
   const relative = new Set()
+  const rc = new Set()
   for (const spec of specs) {
     if (spec.startsWith("node:")) builtins.add(spec)
+    else if (spec.startsWith("/rc/")) rc.add(spec)
     else if (spec.startsWith(".")) relative.add(spec)
     else bare.add(spec)
   }
-  return { builtins, bare, relative }
+  return { builtins, bare, relative, rc }
 }
 
 // ─── U5 渲染面静态闭包 ─────────────────────────────────────────
@@ -69,12 +72,13 @@ test("U5: 渲染面静态闭包零 node: ∧ 零裸包（逐档已读 · 读不�
 
 // ─── U6 判红正证（内存合成源）──────────────────────────────────
 
-test("U6: 违规样本判红（内存合成源 · 不写盘）", () => {
+test("U6: 违规样本判红 + `/rc/` 前缀白名单放行（内存合成源 · 不写盘）", () => {
   const cases = [
     ['import { x } from "node:fs"', "node:fs"],
     ['export { y } from "node:path"', "node:path"],
     ['import "node:test"', "node:test"],
     ['import { x } from "@thincoder/core/i18n.mjs"', "@thincoder/core/i18n.mjs"],
+    ['import { x } from "@thincoder/render-core/md.mjs"', "@thincoder/render-core/md.mjs"],
     ['import { x } from "electron"', "electron"],
   ]
   for (const [source, expected] of cases) {
@@ -84,6 +88,13 @@ test("U6: 违规样本判红（内存合成源 · 不写盘）", () => {
   const ok = classifySpecifiers(staticSpecifiers('import { setBoot } from "./dom.mjs"'))
   assert.deepEqual([...ok.builtins], [], "合法样本零内置")
   assert.deepEqual([...ok.bare], [], "合法样本零裸包")
+  // R1 双根白名单：`/rc/` 前缀放行（核经 `app://` 第二根取）；裸包名仍判红（禁令不变）。
+  const rcOk = classifySpecifiers(staticSpecifiers('import { md } from "/rc/md.mjs"'))
+  assert.deepEqual([...rcOk.rc], ["/rc/md.mjs"], "`/rc/` 前缀命中白名单")
+  assert.deepEqual([...rcOk.bare], [], "白名单样本零裸包")
+  const rcBare = classifySpecifiers(staticSpecifiers('import { md } from "@thincoder/render-core/md.mjs"'))
+  assert.deepEqual([...rcBare.rc], [], "裸名不命中前缀白名单")
+  assert.deepEqual([...rcBare.bare], ["@thincoder/render-core/md.mjs"], "核经裸包名取 ⇒ 仍判红")
 })
 
 // ─── U7 零内联脚本 + CSP ───────────────────────────────────────
