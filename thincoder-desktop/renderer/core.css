@@ -6,135 +6,254 @@
    ② 推理块（核 `flow/reasoning.mjs` `renderReasoning`：`details.reasoning-block` + `.reasoning-content`）；
    ③ 代码块复制钮（核 `flow/stream.mjs` `attachCopyButtons`：`button.code-copy-btn`）。
    块 / 卡 / 池 / 输入区等**桌面外壳类**（`.block*` 除文本面容器 · `.tool-*` · `.chat-*` 等）住 `chat.css` ——
-   本档零外壳面规则（`data-raw` 等锚为属性，零样式）。 */
+   本档零外壳面规则（`data-raw` 等锚为属性，零样式）。
+   **D21 视觉对齐（2026-09-28 · 需求 §4）**：内容面 21 面值以 VSC webview 实值为源（逐面映射表 = 核档 §5 行 1–21；
+   口径三律 = ①宿主主题色角色对位 ②语义常量值照搬 ③盒层单层律〔块壳已承载的块内边距 / 边框 / 圆角不搬〕）；
+   本档注释内「面 N」= 该表行号。 */
 
 /* ── ① 核 Markdown 产出（容器 = 文本面 `.block-text` / 推理内容区 `.reasoning-content`）── */
-.block-text > :first-child,
-.reasoning-content > :first-child {
-  margin-top: 0;
+
+/* 面 1 正文（字族 = 编辑器等宽栈；断词沿壳层 `.block` 的 `overflow-wrap: anywhere`，本档零重复落）。 */
+.block-text,
+.reasoning-content {
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+/* 面 2 段落留白（首子归零规则已删 —— VSC 首件保留自身上边距；容器级尾子归零保留 = 壳层留白口径）。 */
+.block-text p,
+.reasoning-content p {
+  margin: 0 0 6px;
+}
+.block-text p:last-child,
+.reasoning-content p:last-child {
+  margin-bottom: 0;
 }
 .block-text > :last-child,
 .reasoning-content > :last-child {
   margin-bottom: 0;
 }
-.block-text a,
-.reasoning-content a {
-  color: var(--accent);
-}
-.block-text code,
-.reasoning-content code {
-  padding: 1px 4px;
-  border-radius: 4px;
-  background: var(--bg);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.9em;
-}
-.block-text blockquote,
-.reasoning-content blockquote {
-  margin: 8px 0;
-  padding: 2px 10px;
-  border-left: 2px solid var(--line);
-  color: var(--fg-muted);
-}
-.block-text table,
-.reasoning-content table {
-  border-collapse: collapse;
-  margin: 8px 0;
-}
-.block-text th,
-.block-text td,
-.reasoning-content th,
-.reasoning-content td {
-  padding: 2px 8px;
-  border: 1px solid var(--line);
-}
+
+/* 面 3 标题 h1–h6 逐级（字号 / 边距 / 字重；h6 另带 `opacity: 0.8`）。 */
+.block-text h1, .reasoning-content h1 { font-size: 1.3em; margin: 12px 0 6px; font-weight: 700; }
+.block-text h2, .reasoning-content h2 { font-size: 1.15em; margin: 10px 0 4px; font-weight: 700; }
+.block-text h3, .reasoning-content h3 { font-size: 1.05em; margin: 8px 0 4px; font-weight: 600; }
+.block-text h4, .reasoning-content h4 { font-size: 1em; margin: 6px 0 2px; font-weight: 600; }
+.block-text h5, .reasoning-content h5 { font-size: 0.95em; margin: 5px 0 2px; font-weight: 600; }
+.block-text h6, .reasoning-content h6 { font-size: 0.9em; margin: 4px 0 2px; font-weight: 600; opacity: 0.8; }
+
+/* 面 4 列表（含嵌套三条）。 */
 .block-text ul,
 .block-text ol,
 .reasoning-content ul,
 .reasoning-content ol {
-  margin: 8px 0;
-  padding-left: 22px;
+  margin: 4px 0 6px;
+  padding-left: 20px;
 }
-.block-text h1, .block-text h2, .block-text h3, .block-text h4, .block-text h5, .block-text h6,
-.reasoning-content h1, .reasoning-content h2, .reasoning-content h3, .reasoning-content h4, .reasoning-content h5, .reasoning-content h6 {
-  margin: 10px 0 4px;
-  font-size: 1em;
+.block-text ol, .reasoning-content ol { list-style: decimal; }
+.block-text li, .reasoning-content li { margin: 2px 0; line-height: 1.5; }
+.block-text ul ul, .block-text ol ul, .reasoning-content ul ul, .reasoning-content ol ul { margin: 0 0 2px; }
+.block-text ul ol, .block-text ol ol, .reasoning-content ul ol, .reasoning-content ol ol { margin: 0 0 2px; }
+.block-text li > ul, .block-text li > ol, .reasoning-content li > ul, .reasoning-content li > ol { margin: 2px 0 0; }
+
+/* 面 5 引用（`color` 撤 `--fg-muted` —— VSC `--textSecondary` 未定义 ⇒ 回退 `--fg`）。 */
+.block-text blockquote,
+.reasoning-content blockquote {
+  margin: 6px 0;
+  padding: 6px 12px;
+  border-left: 3px solid var(--line);
+  background: var(--hover-bg-strong);
+  border-radius: 0 4px 4px 0;
+}
+
+/* 面 6 行内码。 */
+.block-text code,
+.reasoning-content code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: var(--hover-bg-strong);
+  padding: 1px 5px;
+  border-radius: 3px;
+  word-break: break-word;
+}
+
+/* 面 7 代码块壳（核 `md` 产出 = `pre.code-block`）：块内自成一体（背景 / 边框 / 横向滚动——滚动条归代码体）；
+   `.block` 的 `pre-wrap` 由 UA 的 `pre` 规则让位（核产出 `white-space: pre`）。 */
+.code-block {
+  position: relative;
+  margin: 8px 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--overlay);
+  overflow: hidden;
+}
+
+/* 面 8 语言条。 */
+.code-lang {
+  display: block;
+  padding: 3px 10px;
+  font-size: 10px;
+  color: var(--fg);
+  opacity: 0.5;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--mono);
+}
+
+/* 面 9 代码体（两容器内同形 —— 端差②：推理内代码块不复制 VSC 的灰底覆盖）；
+   选择器带容器前缀 = 层序高于行内码规则（面 6 / 面 20 同元素命中）。 */
+.block-text .code-block code,
+.reasoning-content .code-block code {
+  display: block;
+  padding: 8px 10px;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 0.88em;
+  line-height: 1.5;
+  background: transparent;
+  border-radius: 0;
+  white-space: pre;
+}
+
+/* 面 10 语法高亮 9 类（核 `highlight.mjs` 产出类；类 → `--syn-*` 变量 = VSC 同表）。 */
+.tk-keyword { color: var(--syn-kw); }
+.tk-string { color: var(--syn-str); }
+.tk-comment { color: var(--syn-cmt); font-style: italic; }
+.tk-number { color: var(--syn-num); }
+.tk-type { color: var(--syn-type); }
+.tk-property { color: var(--syn-prop); }
+.tk-atrule { color: var(--syn-atrule); }
+.tk-class { color: var(--syn-type); }
+.tk-id { color: var(--syn-atrule); }
+
+/* 面 11 表格。 */
+.block-text table,
+.reasoning-content table {
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 0.9em;
+  width: 100%;
+}
+
+/* 面 12 表头与单元格（表头底色 = `--hover-bg-strong`）。 */
+.block-text th,
+.block-text td,
+.reasoning-content th,
+.reasoning-content td {
+  border: 1px solid var(--line);
+  padding: 6px 10px;
+  text-align: left;
+}
+.block-text th,
+.reasoning-content th {
+  background: var(--hover-bg-strong);
   font-weight: 600;
 }
+
+/* 面 13 链接。 */
+.block-text a,
+.reasoning-content a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.block-text a:hover,
+.reasoning-content a:hover {
+  text-decoration: underline;
+}
+
+/* 面 14 行内强调（核 `md` 产 `<strong>` / `<em>` / `<s>`）。 */
+.block-text strong, .reasoning-content strong { font-weight: 700; }
+.block-text em, .reasoning-content em { font-style: italic; }
+.block-text s, .reasoning-content s { text-decoration: line-through; opacity: 0.7; }
+
+/* 面 15 图片。 */
+.block-text img,
+.reasoning-content img {
+  max-width: 100%;
+  border-radius: 4px;
+}
+
+/* 面 16 分隔线。 */
 .block-text hr,
 .reasoning-content hr {
   border: 0;
   border-top: 1px solid var(--line);
   margin: 10px 0;
 }
-.block-text img,
-.reasoning-content img {
-  max-width: 100%;
-}
-/* 代码块（核 `md` 产出 = `pre.code-block` + `.code-lang`）：块内自成一体（背景 / 边框 / 横向滚动）；
-   `.block` 的 `pre-wrap` 由 UA 的 `pre` 规则让位（核产出 `white-space: pre`）。 */
-.code-block {
-  position: relative;
-  margin: 8px 0;
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--bg);
-  overflow: auto;
-}
-.code-block code {
-  padding: 0;
-  background: transparent;
-  font-size: 12.5px;
-  white-space: pre;
-}
-.code-lang {
-  display: block;
-  margin-bottom: 4px;
-  color: var(--fg-muted);
-  font-size: 12px;
-}
 
-/* 任务清单勾选框（核 md `task-check` 类 —— `thincoder-render-core/md.mjs` 产出）：与文本基线对齐。 */
+/* 面 17 任务清单勾选框（核 md `task-check` 类 —— `thincoder-render-core/md.mjs` 产出）：与文本基线对齐 + 只读呈现。 */
 .block-text input.task-check,
 .reasoning-content input.task-check {
   margin-right: 6px;
   vertical-align: middle;
+  pointer-events: none;
+}
+.block-text input.task-check[disabled],
+.reasoning-content input.task-check[disabled] {
+  opacity: 0.85;
 }
 
-/* ── ② 推理块（核件结构）：块壳 `.block-reasoning` 住 `chat.css`，此处只核面两件（summary / 内容区）。 ── */
+/* ── ② 推理块（核件结构）：块壳 `.block-reasoning` 住 `chat.css`，此处只核面件（summary / 内容区 / 内 md）。 ── */
 .reasoning-block {
   margin: 0;
 }
+/* 面 18 推理摘要（`padding: 4px 10px` 不搬 —— 盒层单层律：水平内边距归壳层；端差①= 核档 §9）。 */
 .reasoning-summary {
-  color: var(--fg-muted);
+  color: var(--fg);
+  font-size: 12px;
   font-style: italic;
+  opacity: 0.5;
   cursor: pointer;
+  user-select: none;
 }
 /* 摘要尾缀（核件同形 = `t("status.thinking") + "..."`）—— 字形住样式档（视图档零字形字面）。 */
 .reasoning-summary::after {
   content: "…";
 }
+/* 面 19 推理内容区（水平 `10px` 不搬 —— 盒层单层律；端差①= 核档 §9）；
+   前景色 = `--fg`（VSC 不单设 ⇒ 继承 `body`；壳层 `.block-reasoning` 的 `--fg-muted` 承接已废——父侧 2026-09-28 裁定）。 */
 .reasoning-content {
-  margin-top: 6px;
-  color: var(--fg-muted);
-  overflow-wrap: anywhere;
+  padding: 6px 0 0;
+  border-top: 1px solid var(--line);
+  color: var(--fg);
+  font-size: 12px;
+  opacity: 0.65;
+  line-height: 1.45;
+  max-height: 200px;
+  overflow-y: auto;
+  word-break: break-word;
 }
 
+/* 面 20 推理块内 Markdown（VSC `.reasoning-content` 段实值 —— 覆盖 ① 共享项；`li` / `strong` / `em` 与 ① 同值）；
+   代码块不来推（端差② —— 面 7 / 9 全局件同形，不复制 VSC 的 `.reasoning-content pre` 灰底覆盖）。 */
+.reasoning-content h1, .reasoning-content h2, .reasoning-content h3 { margin: 8px 0 4px; font-weight: 700; }
+.reasoning-content p { margin: 0 0 5px; }
+.reasoning-content code {
+  font-family: var(--mono);
+  font-size: 0.92em;
+  background: rgba(127,127,127,.15);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+.reasoning-content ul, .reasoning-content ol { margin: 4px 0 6px; padding-left: 18px; }
+
 /* ── ③ 代码块复制钮（核 `attachCopyButtons`）：绝对定位 ⇒ 不入文档流高度（帧尾补偿算式零扰）。 ── */
+/* 面 21 复制钮（`.copied` = `--green` 着色；静息 `opacity: 0.4` ⇒ hover 全显）。 */
 .code-copy-btn {
   position: absolute;
   top: 6px;
   right: 6px;
-  padding: 2px 8px;
+  padding: 3px 8px;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--bg-raised);
-  color: var(--fg-muted);
+  border-radius: 4px;
+  background: var(--overlay);
+  color: var(--fg);
   font: inherit;
-  font-size: 12px;
+  font-size: 11px;
+  opacity: 0.4;
   cursor: pointer;
+  transition: opacity 0.15s, background 0.15s;
 }
-.code-copy-btn.copied {
-  color: var(--accent);
-}
+.code-copy-btn:hover { opacity: 1; background: var(--hover-bg-strong); }
+.code-copy-btn.copied { opacity: 1; color: var(--green); border-color: var(--green); }

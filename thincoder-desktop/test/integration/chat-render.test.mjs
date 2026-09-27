@@ -1,7 +1,7 @@
 /**
- * chat-render.test.mjs — E2E 用例 `T-DSK37`（会话流经核 + 会话面板元数据 · 真 Electron 直驱；设计单源 =
- * `docs/desktop/design/PROJECT.md` §7 T-DSK35（C7 面）/ T-DSK34（D18 面）+ 需求 §4 D16「凡改桌面可见面 ⇒
- * 验收须含一条真 Electron 使用面用例」（用例号自铸披露 = 批档 §5））。
+ * chat-render.test.mjs — E2E 用例 `T-DSK37`（会话流经核 + 会话面板元数据 + D21 内容面视觉读数 · 真 Electron 直驱；
+ * 设计单源 = `docs/desktop/design/PROJECT.md` §7 T-DSK35（C7 面）/ T-DSK34（D18 面）+ 需求 §4 D16「凡改桌面可见面 ⇒
+ * 验收须含一条真 Electron 使用面用例」（用例号自铸披露 = 批档 §5）；D21 值表 = `docs/render-core/design/RENDER-CORE.md` §5）。
  * 域界 = 目录界：本档住 `test/integration/`（集成域 —— 真进程 / 真窗口 / 真 DOM ⇒ 核产出 HTML 的**真解析面**
  * 〔假面 `test/fake-dom.mjs` 不解析 HTML —— 单元面判据 = 串/锚，本档 = 逐选择器实核〕）。
  * 隔离 = 每用例两枚 `mkdtemp`（家 + 项目根）：HOME / USERPROFILE / APPDATA / XDG_CONFIG_HOME 四者同指该家；
@@ -56,7 +56,7 @@ const slotData = (cwd) => ({
   createdBy: "desktop", activeProvider: "p1", activeModel: "m1",
 })
 
-test("T-DSK37 chat-render — 会话流经核（围栏块 / 复制钮 / 推理块 / 转义闸 / 文件链接零节点）+ 会话面板元数据（真 Electron）", async (t) => {
+test("T-DSK37 chat-render — 会话流经核（围栏块 / 复制钮 / 推理块 / 转义闸 / 文件链接零节点）+ 会话面板元数据 + D21 视觉读数（真 Electron）", async (t) => {
   const home = mkdtempSync(join(tmpdir(), "tc-desktop-e2e-"))
   const project = mkdtempSync(join(tmpdir(), "tc-desktop-e2e-proj-"))
   let app = null
@@ -106,7 +106,36 @@ test("T-DSK37 chat-render — 会话流经核（围栏块 / 复制钮 / 推理�
   const kinds = await page.locator(`${FLOW} [data-block-kind]`).evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-block-kind")))
   assert.deepEqual(kinds, ["user", "assistant", "reasoning", "user"], "回放块序 = 历史序（助手条目序 = [assistant, reasoning] + 尾注入样本用户块）")
 
-  // ③ C7 ① / T-DSK35 ①：围栏块 ⇒ `pre.code-block` 真在场（核 md 围栏切分）+ 复制钮真在场
+  // ③ D21 内容面视觉读数（真机 computed style —— 需求 §4 D21 · 值表 = 核档 §5；置于复制钮点按（④）**之前**：
+  //    静息 `opacity: 0.4` 只在未点按（未落 `.copied`）时可读）
+  const styleOf = (selector, prop) => page.locator(selector).first().evaluate((node, name) => getComputedStyle(node).getPropertyValue(name), prop)
+  assert.equal(await styleOf(`${FLOW} .block-text`, "line-height"), "21.7px", "面 1：正文行高 1.55 × 14px = 21.7px")
+  assert.equal((await styleOf(`${FLOW} .block-text`, "font-family")).includes("mono"), true, "面 1：正文面字族 = `--mono` 等宽栈")
+  assert.equal(await styleOf(CODE_BLOCK, "background-color"), "rgba(0, 0, 0, 0.08)", "面 7：代码块壳底 = `--overlay` 亮值")
+  assert.equal(await styleOf(CODE_BLOCK, "border-radius"), "6px", "面 7：代码块壳圆角 6px")
+  assert.equal(await styleOf(CODE_BLOCK, "padding-top"), "0px", "面 7：壳内边距归零（盒层单层律）")
+  assert.equal(await styleOf(`${CODE_BLOCK} .code-lang`, "font-size"), "10px", "面 8：语言条 10px")
+  assert.equal(await styleOf(`${CODE_BLOCK} code`, "font-size"), "12.32px", "面 9：代码体 0.88em × 14px = 12.32px")
+  const kwColor = await styleOf(`${CODE_BLOCK} .tk-keyword`, "color")
+  const numColor = await styleOf(`${CODE_BLOCK} .tk-number`, "color")
+  assert.equal(kwColor, "rgb(0, 0, 255)", "面 10：`.tk-keyword` 亮色 = `--syn-kw` #0000ff")
+  assert.equal(numColor, "rgb(9, 134, 88)", "面 10：`.tk-number` 亮色 = `--syn-num` #098658")
+  assert.notEqual(kwColor, numColor, "面 10：两类着色互异（高亮真生效 —— 本批首要缺口）")
+  assert.equal(await styleOf(`${REASONING} .reasoning-content`, "font-size"), "12px", "面 19：推理内容区 12px")
+  assert.equal(await styleOf(`${REASONING} .reasoning-content`, "color"), "rgb(27, 31, 36)", "面 19：前景色 = `--fg` 亮值 #1b1f24（≠ 壳层 `--fg-muted` #5c6672 承接 —— 父侧 2026-09-28 裁定）")
+  assert.equal(await styleOf(`${REASONING} .reasoning-content`, "opacity"), "0.65", "面 19：推理内容区 opacity 0.65")
+  assert.equal(await styleOf(CODE_COPY, "opacity"), "0.4", "面 21：复制钮静息 opacity 0.4")
+  assert.equal(await styleOf(CODE_COPY, "font-size"), "11px", "面 21：复制钮 11px")
+  assert.equal(await styleOf(CODE_COPY, "border-radius"), "4px", "面 21：复制钮圆角 4px")
+  // 面板面 6（D21 会话面板面）真机态读数：行 hover ⇒ 半显 0.5；钮自身 hover ⇒ 全显 1（选择器层序的行为面锁 —— 两钮为行兄弟）
+  const railRow = page.locator(`${PROJECTS} .rail-row`).first()
+  const railRename = page.locator(`${PROJECTS} .rail-rename`).first()
+  await railRow.hover()
+  assert.equal(await railRename.evaluate((node) => getComputedStyle(node).opacity), "0.5", "面板面 6：行 hover ⇒ 改名钮半显 0.5")
+  await railRename.hover()
+  assert.equal(await railRename.evaluate((node) => getComputedStyle(node).opacity), "1", "面板面 6：钮自身 hover ⇒ 全显 1")
+
+  // ④ C7 ① / T-DSK35 ①：围栏块 ⇒ `pre.code-block` 真在场（核 md 围栏切分）+ 复制钮真在场
   assert.equal(await page.locator(CODE_BLOCK).count(), 1, "围栏块 ⇒ `pre.code-block` 恰一枚（真解析面）")
   assert.equal((await page.locator(`${CODE_BLOCK} code`).innerText()).includes("const a = 1 < 2"), true, "代码文本在场（块内 `code`）")
   assert.equal(await page.locator(CODE_COPY).count(), 1, "代码块复制钮在场（核件 `attachCopyButtons`）")
@@ -116,21 +145,21 @@ test("T-DSK37 chat-render — 会话流经核（围栏块 / 复制钮 / 推理�
   const clip = await app.evaluate(({ clipboard }) => clipboard.readText())
   assert.equal(clip.includes("const a = 1 < 2"), true, `复制钮点按 ⇒ 剪贴板收代码文本（实 = ${JSON.stringify(clip)}）`)
 
-  // ④ C7 ②：注入样本 ⇒ 字面文本（转义闸）+ 零脚本节点（真执行面）
+  // ⑤ C7 ②：注入样本 ⇒ 字面文本（转义闸）+ 零脚本节点（真执行面）
   const flowText = await page.locator(FLOW).innerText()
   assert.equal(flowText.includes(INJECTED), true, "注入样本以**字面文本**在场（转义闸）")
   assert.equal(await page.locator(`${FLOW} script`).count(), 0, "零脚本节点（渲染面零执行面）")
 
-  // ⑤ T-DSK35 ③：推理块 = 折叠块（`details.reasoning-block` —— 核件结构）
+  // ⑥ T-DSK35 ③：推理块 = 折叠块（`details.reasoning-block` —— 核件结构）
   assert.equal(await page.locator(REASONING).count(), 1, "推理块 = 折叠块恰一枚")
   assert.equal((await page.locator(`${REASONING} summary`).innerText()).trim().length > 0, true, "折叠头词面在场（核键 `status.thinking` 出串）")
   assert.equal((await page.locator(`${REASONING} .reasoning-content`).innerText()).includes(REASONING_TEXT), true, "推理内容在场（经核 md）")
 
-  // ⑥ T-DSK35 ④（KD-RC-5）：文件路径文本在场但**零链接节点**
+  // ⑦ T-DSK35 ④（KD-RC-5）：文件路径文本在场但**零链接节点**
   assert.equal(flowText.includes("src/main/app.mjs"), true, "文件路径文本在场")
   assert.equal(await page.locator(`${FLOW} .file-link`).count(), 0, "文件链接零节点（KD-RC-5 —— 核 linkifyPaths 桌面不消费）")
 
-  // ⑦ D18：会话面板元数据族三值（provider · N msgs · updated）+ 多标签结构不削
+  // ⑧ D18：会话面板元数据族三值（provider · N msgs · updated）+ 多标签结构不削
   const meta = page.locator(`${PROJECTS} [data-row-meta]`).first()
   await meta.waitFor({ state: "visible", ...WAIT })
   assert.deepEqual(
@@ -142,5 +171,5 @@ test("T-DSK37 chat-render — 会话流经核（围栏块 / 复制钮 / 推理�
   assert.equal(metaText.includes("p1:m1"), true, `provider = 槽投影逐字（实 = ${JSON.stringify(metaText)}）`)
   assert.equal(/3/.test(metaText), true, "N msgs = 读数（槽清单 messageCount = 3）")
   assert.equal(await page.locator('[data-slot="tabs"] .tabbar-item').count(), 1, "多标签结构不削（本序单标签 —— 结构面 = 标签条在场）")
-  console.log(`[e2e] T-DSK37 ok —— 块序 = ${kinds.join("/")} · 剪贴板 = ${JSON.stringify(clip.slice(0, 40))} · 元数据 = ${JSON.stringify(metaText)}`)
+  console.log(`[e2e] T-DSK37 ok —— 块序 = ${kinds.join("/")} · 剪贴板 = ${JSON.stringify(clip.slice(0, 40))} · 元数据 = ${JSON.stringify(metaText)} · 高亮 = ${kwColor} / ${numColor}`)
 })

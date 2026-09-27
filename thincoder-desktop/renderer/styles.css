@@ -17,6 +17,22 @@
   --rail-w-collapsed: 3.25rem;
   --pool-w: 18rem;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
+  /* D21 内容面 / 会话面板面变量（值 = VSC webview 实值 —— 逐面映射表 = `docs/render-core/design/RENDER-CORE.md` §5 ·
+     `docs/desktop/design/UI.md` §1 项 2）：语法配色族 / 叠加层 rgba / 字族栈 / 语义色。 */
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --hover-bg: rgba(0,0,0,0.06);
+  --hover-bg-strong: rgba(0,0,0,0.12);
+  --overlay: rgba(0,0,0,0.08);
+  --green: #1a8a4a;
+  --syn-kw: #0000ff;
+  --syn-str: #a31515;
+  --syn-cmt: #008000;
+  --syn-num: #098658;
+  --syn-type: #267f99;
+  --syn-prop: #795e26;
+  --syn-atrule: #af00db;
+  --diff-del-bg: rgba(201,37,37,0.12);
+  --error-fg: #f44747;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -28,6 +44,21 @@
     --line: #2a2f37;
     --accent: #5b8def;
     --warn: #e8b06a;
+    /* D21 同名变量暗色值（`--mono` / `--error-fg` 设计与暗同值——「同亮」，同值重声明 = 两套齐备可直读）。 */
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --hover-bg: rgba(255,255,255,0.08);
+    --hover-bg-strong: rgba(255,255,255,0.16);
+    --overlay: rgba(0,0,0,0.3);
+    --green: #4ec9b0;
+    --syn-kw: #569cd6;
+    --syn-str: #ce9178;
+    --syn-cmt: #6a9955;
+    --syn-num: #b5cea8;
+    --syn-type: #4ec9b0;
+    --syn-prop: #9cdcfe;
+    --syn-atrule: #d7ba7d;
+    --diff-del-bg: rgba(244,71,71,0.14);
+    --error-fg: #f44747;
   }
 }
 
@@ -146,7 +177,6 @@ body {
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 6px 8px;
   border: 1px solid transparent;
   border-radius: var(--radius);
   background: transparent;
@@ -154,30 +184,63 @@ body {
   font: inherit;
   text-align: left;
 }
-.rail-control:not(:disabled):hover,
-.rail-row:not(:disabled):hover {
+/* 打开目录 / 最近项（本端独有 D2 / D1 面 —— 沿在册，零动）。 */
+.rail-control {
+  padding: 6px 8px;
+}
+/* D21 · 会话面板面 1：行容器（内边距 8px 10px + 行底分隔线；末行无线 —— 对位 VSC `.session-item`）。 */
+.rail-row {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.rail-item:last-child > .rail-row {
+  border-bottom: none;
+}
+.rail-control:not(:disabled):hover {
   background: var(--bg);
   cursor: pointer;
 }
+/* D21 · 会话面板面 2：行 hover 底色 = `--hover-bg`（对上 VSC `.session-item:hover`）。 */
+.rail-row:not(:disabled):hover {
+  background: var(--hover-bg);
+  cursor: pointer;
+}
+/* D21 · 会话面板面 9：行聚焦（父侧 2026-09-28 裁定照落 VSC `.session-item:focus-visible` 同三值 ——
+   `thincoder-vscode/webview/base.css:449-457`〔选择器 :450 / 三值 :454-456〕；键盘可达面）。 */
+.rail-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: var(--hover-bg-strong);
+}
+/* D21 · 会话面板面 4：行标题（13px / 500；省略三件沿在册）。 */
 .rail-row-title {
   flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
 }
-.rail-row[data-active="1"] {
-  border-color: var(--accent);
+/* D21 · 会话面板面 3：活动行态（底色 = 强调色 10% 混同 —— 对位 VSC `.session-item.active`）；选择器带
+   `.rail-item` 前缀 = 层序高于行 hover 规则（活动行 hover 仍显活动底色 —— VSC 同序）。 */
+.rail-item > .rail-row[data-active="1"] {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.rail-row[data-active="1"] .rail-row-title {
+  color: var(--accent);
 }
 /* 会话行元数据族（D18 · R3c）：三值逐段包元素（段锚 `data-seg` —— 视图档零字形字面）；段间分隔符归本条
-   （相邻段选择器 ⇒ 缺席段不落空分隔）；长串可缩（窄窗不扑破栅格）。 */
+   （相邻段选择器 ⇒ 缺席段不落空分隔）；长串可缩（窄窗不扑破栅格）。
+   D21 · 会话面板面 5：11px · `var(--fg)` · `opacity: 0.4`（对位 VSC `.session-item-meta`）。 */
 .rail-row-meta {
   display: flex;
   flex: 0 1 auto;
   min-width: 0;
   gap: 4px;
-  color: var(--fg-muted);
-  font-size: 12px;
+  color: var(--fg);
+  font-size: 11px;
+  opacity: 0.4;
   white-space: nowrap;
 }
 .rail-row-meta > [data-seg] {
@@ -202,18 +265,24 @@ body {
   width: auto;
   min-width: 0;
 }
+/* D21 · 会话面板面 6：行内动作钮（改名 / 删除）—— 22px 方 · 静息隐没（`opacity: 0`）· 行 hover 半显
+   （0.5）· 自身 hover 全显（1）+ 底色色值照落；`:focus-visible` 一臂 = 键盘可达（端差登记 = 核档 §9）。 */
 .rail-rename,
 .rail-delete {
   flex: 0 0 auto;
-  padding: 4px 6px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
   border: 0;
-  border-radius: var(--radius);
+  border-radius: 4px;
   background: transparent;
-  color: var(--fg-muted);
+  color: var(--fg);
   font: inherit;
+  font-size: 12px;
+  opacity: 0;
 }
 .rail-rename::before { content: "✎"; }
-.rail-delete::before { content: "×"; }
+.rail-delete::before { content: "✕"; }
 .rail-rename-input {
   flex: 1;
   min-width: 0;
@@ -235,12 +304,31 @@ body {
 }
 .rail-cancel { color: var(--fg-muted); }
 .rail-confirm { color: var(--accent); }
-.rail-rename:not(:disabled):hover,
-.rail-delete:not(:disabled):hover,
 .rail-cancel:not(:disabled):hover,
 .rail-confirm:not(:disabled):hover {
   background: var(--bg);
   cursor: pointer;
+}
+/* 行 hover 半显（两钮 = 行**兄弟**节点 —— `views/sessions.mjs` 行原位换形定义子序 `[行, 改名, 删除]` ⇒ 臂锚 `.rail-item`）。 */
+.rail-item:hover .rail-rename,
+.rail-item:hover .rail-delete {
+  opacity: 0.5;
+}
+.rail-rename:not(:disabled):hover {
+  opacity: 1;
+  background: var(--hover-bg-strong);
+  color: var(--accent);
+  cursor: pointer;
+}
+.rail-delete:not(:disabled):hover {
+  opacity: 1;
+  background: var(--diff-del-bg);
+  color: var(--error-fg);
+  cursor: pointer;
+}
+.rail-rename:focus-visible,
+.rail-delete:focus-visible {
+  opacity: 1;
 }
 
 /* 单断点：宽 < 900px ⇒ 左列折叠为图标条（骨架；交互随视图批）。 */

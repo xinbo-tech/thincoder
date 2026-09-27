@@ -188,3 +188,92 @@ test("U152: 输入区样式与开项目链（#457 五类 + 两附属行在 `chat
   assert.ok(app.includes("const settingsFace = attachSettings("), "设置面句柄捕获在位（`openDir` 复读口来源）")
   assert.ok(railAt >= 0 && infoAt > railAt, "#461 复读步在 `refreshRail()` 之后（**调用行形**锚定 —— 注释已剥 ∧ 只认 `await` 调用形）")
 })
+
+// ─── U174 D21 值落点锁（内容面 21 面 · 会话面板面 9 面 —— 值表单源 = 核档 §5 / `docs/desktop/design/UI.md` §1 项 2）──
+
+test("U174: D21 值落点锁（core.css 高亮 9 规则 ∧ 关键值 · styles.css 新增变量 14 × 亮暗两套 ∧ 会话行九面值）", () => {
+  const root = fileURLToPath(new URL("../", import.meta.url))
+  const core = stripComments(readFileSync(join(root, "renderer/core.css"), "utf8"))
+  const coreHas = (pattern) => new RegExp(pattern, "s").test(core)
+
+  // 面 10：语法高亮 9 规则在场 ∧ 类 → 变量映射（桌面此前零 `tk-*` 规则 ⇒ 高亮全同色 = 本批首要缺口）
+  for (const [suffix, variable] of [["keyword", "kw"], ["string", "str"], ["comment", "cmt"], ["number", "num"], ["type", "type"], ["property", "prop"], ["atrule", "atrule"]]) {
+    assert.ok(coreHas(`\\.tk-${suffix}\\s*\\{[^}]*var\\(--syn-${variable}\\)`), `.tk-${suffix} ⇒ var(--syn-${variable})（面 10 —— 零规则 = 高亮不可见）`)
+  }
+  assert.ok(coreHas("\\.tk-class\\s*\\{[^}]*var\\(--syn-type\\)"), "`.tk-class` ⇒ `--syn-type`（复用）")
+  assert.ok(coreHas("\\.tk-id\\s*\\{[^}]*var\\(--syn-atrule\\)"), "`.tk-id` ⇒ `--syn-atrule`（复用）")
+  assert.ok(coreHas("\\.tk-comment\\s*\\{[^}]*font-style:\\s*italic"), "`.tk-comment` 斜体（VSC 同表）")
+
+  // 内容面关键值（逐面抽样 —— 值源 = 核档 §5 映射表 21 面）
+  assert.ok(coreHas("\\.block-text,\\s*\\.reasoning-content\\s*\\{[^}]*font-family:\\s*var\\(--mono\\)"), "面 1：两容器字族 = var(--mono)")
+  assert.ok(coreHas("\\.block-text,\\s*\\.reasoning-content\\s*\\{[^}]*line-height:\\s*1\\.55"), "面 1：正文行高 1.55")
+  assert.ok(coreHas("\\.block-text p,\\s*\\.reasoning-content p\\s*\\{[^}]*margin:\\s*0 0 6px"), "面 2：段落 0 0 6px")
+  assert.ok(coreHas("blockquote\\s*\\{[^}]*background:\\s*var\\(--hover-bg-strong\\)"), "面 5：引用底 = var(--hover-bg-strong)")
+  assert.ok(coreHas("\\.block-text code,\\s*\\.reasoning-content code\\s*\\{[^}]*background:\\s*var\\(--hover-bg-strong\\)"), "面 6：行内码底 = var(--hover-bg-strong)")
+  assert.ok(coreHas("\\.code-block\\s*\\{[^}]*border-radius:\\s*6px"), "面 7：代码块壳圆角 6px")
+  assert.ok(coreHas("\\.code-block\\s*\\{[^}]*background:\\s*var\\(--overlay\\)"), "面 7：代码块壳底 = var(--overlay)")
+  assert.ok(coreHas("\\.code-lang\\s*\\{[^}]*font-size:\\s*10px"), "面 8：语言条 10px")
+  assert.ok(coreHas("\\.code-block code\\s*\\{[^}]*font-size:\\s*0\\.88em"), "面 9：代码体 0.88em")
+  assert.ok(coreHas("th\\s*\\{[^}]*background:\\s*var\\(--hover-bg-strong\\)"), "面 12：表头底 = var(--hover-bg-strong)")
+  assert.ok(coreHas("\\.reasoning-summary\\s*\\{[^}]*opacity:\\s*0\\.5"), "面 18：推理摘要 opacity 0.5")
+  assert.ok(coreHas("\\.reasoning-content\\s*\\{[^}]*font-size:\\s*12px"), "面 19：推理内容区 12px")
+  assert.ok(coreHas("\\.reasoning-content\\s*\\{[^}]*padding:\\s*6px 0 0"), "面 19：内边距 6px 0 0（水平不搬 = 盒层单层律）")
+  assert.ok(coreHas("\\.reasoning-content h1,\\s*\\.reasoning-content h2,\\s*\\.reasoning-content h3\\s*\\{[^}]*margin:\\s*8px 0 4px"), "面 20：推理内标题 8px 0 4px")
+  assert.ok(coreHas("\\.reasoning-content ul, \\.reasoning-content ol\\s*\\{[^}]*padding-left:\\s*18px"), "面 20：推理内列表 padding-left 18px")
+  assert.ok(coreHas("\\.code-copy-btn\\s*\\{[^}]*opacity:\\s*0\\.4"), "面 21：复制钮静息 opacity 0.4")
+  assert.ok(coreHas("\\.code-copy-btn\\.copied\\s*\\{[^}]*var\\(--green\\)"), "面 21：`.copied` 着色 = var(--green)")
+
+  // 会话面板面（值源 = `docs/desktop/design/UI.md` §1 项 2 —— 落点 = 左列段）
+  const styles = stripComments(readFileSync(join(root, "renderer/styles.css"), "utf8"))
+  const stylesHas = (pattern) => new RegExp(pattern, "s").test(styles)
+  assert.ok(stylesHas("\\.rail-row\\s*\\{[^}]*padding:\\s*8px 10px"), "面板面 1：行容器 8px 10px")
+  assert.ok(stylesHas("\\.rail-row\\s*\\{[^}]*border-bottom:\\s*1px solid var\\(--line\\)"), "面板面 1：行底分隔线")
+  assert.ok(stylesHas("\\.rail-item:last-child > \\.rail-row\\s*\\{[^}]*border-bottom:\\s*none"), "面板面 1：末行无线")
+  assert.ok(stylesHas("\\.rail-row:not\\(:disabled\\):hover\\s*\\{[^}]*background:\\s*var\\(--hover-bg\\)"), "面板面 2：行 hover 底色 = var(--hover-bg)")
+  assert.ok(stylesHas("\\.rail-item > \\.rail-row\\[data-active=\"1\"\\]\\s*\\{[^}]*background:\\s*color-mix\\(in srgb, var\\(--accent\\) 10%, transparent\\)"), "面板面 3：活动行底色 = 强调色 10% 混同")
+  assert.ok(stylesHas("\\.rail-row\\[data-active=\"1\"\\] \\.rail-row-title\\s*\\{[^}]*color:\\s*var\\(--accent\\)"), "面板面 3：活动行标题 = var(--accent)")
+  assert.ok(stylesHas("\\.rail-row-title\\s*\\{[^}]*font-size:\\s*13px"), "面板面 4：行标题 13px")
+  assert.ok(stylesHas("\\.rail-row-title\\s*\\{[^}]*font-weight:\\s*500"), "面板面 4：行标题 500")
+  assert.ok(stylesHas("\\.rail-row-meta\\s*\\{[^}]*color:\\s*var\\(--fg\\)"), "面板面 5：元数据 var(--fg)")
+  assert.ok(stylesHas("\\.rail-row-meta\\s*\\{[^}]*font-size:\\s*11px"), "面板面 5：元数据 11px")
+  assert.ok(stylesHas("\\.rail-row-meta\\s*\\{[^}]*opacity:\\s*0\\.4"), "面板面 5：元数据 opacity 0.4")
+  assert.ok(stylesHas("\\.rail-rename,\\s*\\.rail-delete\\s*\\{[^}]*width:\\s*22px"), "面板面 6：两钮 22px 方")
+  assert.ok(stylesHas("\\.rail-rename,\\s*\\.rail-delete\\s*\\{[^}]*border-radius:\\s*4px"), "面板面 6：两钮 4px 圆角")
+  assert.ok(stylesHas("\\.rail-rename,\\s*\\.rail-delete\\s*\\{[^}]*opacity:\\s*0"), "面板面 6：静息隐没 opacity 0")
+  assert.ok(stylesHas("\\.rail-item:hover \\.rail-rename,\\s*\\.rail-item:hover \\.rail-delete\\s*\\{[^}]*opacity:\\s*0\\.5"), "面板面 6：行 hover 半显 0.5（臂锚 `.rail-item` —— 两钮为行兄弟）")
+  assert.ok(stylesHas("\\.rail-rename:not\\(:disabled\\):hover\\s*\\{[^}]*background:\\s*var\\(--hover-bg-strong\\)"), "面板面 6：改名 hover 底 = var(--hover-bg-strong)")
+  assert.ok(stylesHas("\\.rail-rename:not\\(:disabled\\):hover\\s*\\{[^}]*color:\\s*var\\(--accent\\)"), "面板面 6：改名 hover 色 = var(--accent)")
+  assert.ok(stylesHas("\\.rail-delete:not\\(:disabled\\):hover\\s*\\{[^}]*background:\\s*var\\(--diff-del-bg\\)"), "面板面 6：删除 hover 底 = var(--diff-del-bg)")
+  assert.ok(stylesHas("\\.rail-delete:not\\(:disabled\\):hover\\s*\\{[^}]*color:\\s*var\\(--error-fg\\)"), "面板面 6：删除 hover 色 = var(--error-fg)")
+  assert.ok(stylesHas("\\.rail-rename:focus-visible,\\s*\\.rail-delete:focus-visible\\s*\\{[^}]*opacity:\\s*1"), "面板面 6：本端 focus 臂（键盘可达）")
+  assert.ok(stylesHas("\\.rail-delete::before\\s*\\{\\s*content:\\s*\"✕\""), "面板面 7：删除字形 ✕")
+  assert.ok(stylesHas("\\.rail-row:focus-visible\\s*\\{[^}]*outline:\\s*2px solid var\\(--accent\\)"), "面板面 9：行聚焦 outline 2px solid var(--accent)（VSC 同三值 · 父侧裁定）")
+  assert.ok(stylesHas("\\.rail-row:focus-visible\\s*\\{[^}]*outline-offset:\\s*-2px"), "面板面 9：行聚焦 outline-offset -2px")
+  assert.ok(stylesHas("\\.rail-row:focus-visible\\s*\\{[^}]*background:\\s*var\\(--hover-bg-strong\\)"), "面板面 9：行聚焦底 = var(--hover-bg-strong)")
+
+  // 主题表：新增变量 14 × 亮暗两套（值源 = VSC webview 实值 · 单源 = 本档）
+  const lightVars = styles.match(/:root\s*\{([^}]*)\}/s)?.[1] ?? ""
+  const darkVars = styles.match(/prefers-color-scheme: dark\)\s*\{\s*:root\s*\{([^}]*)\}/s)?.[1] ?? ""
+  assert.ok(lightVars !== "" && darkVars !== "", "两模式变量块在场（`:root` 亮 / 暗媒体查询同名块）")
+  const NEW_VARS = {
+    "--mono": ["ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"],
+    "--hover-bg": ["rgba(0,0,0,0.06)", "rgba(255,255,255,0.08)"],
+    "--hover-bg-strong": ["rgba(0,0,0,0.12)", "rgba(255,255,255,0.16)"],
+    "--overlay": ["rgba(0,0,0,0.08)", "rgba(0,0,0,0.3)"],
+    "--green": ["#1a8a4a", "#4ec9b0"],
+    "--syn-kw": ["#0000ff", "#569cd6"],
+    "--syn-str": ["#a31515", "#ce9178"],
+    "--syn-cmt": ["#008000", "#6a9955"],
+    "--syn-num": ["#098658", "#b5cea8"],
+    "--syn-type": ["#267f99", "#4ec9b0"],
+    "--syn-prop": ["#795e26", "#9cdcfe"],
+    "--syn-atrule": ["#af00db", "#d7ba7d"],
+    "--diff-del-bg": ["rgba(201,37,37,0.12)", "rgba(244,71,71,0.14)"],
+    "--error-fg": ["#f44747", "#f44747"],
+  }
+  assert.equal(Object.keys(NEW_VARS).length, 14, "新增变量合计 14（内容面 12 + 会话面板面 2 —— D3 计数）")
+  for (const [name, [light, dark]] of Object.entries(NEW_VARS)) {
+    assert.ok(lightVars.includes(`${name}: ${light};`), `亮模式 ${name} = ${light}`)
+    assert.ok(darkVars.includes(`${name}: ${dark};`), `暗模式 ${name} = ${dark}`)
+  }
+})
