@@ -263,7 +263,9 @@ test("T-16/T-17 主存零改 + 零依赖：树三元组不变 ∧ dependencies �
   assert.deepEqual(snapshot(), before, "索引只读主存（绝不写回 sessions 树）")
   const deps = (rel) => Object.keys(JSON.parse(readFileSync(join(REPO, rel), "utf8")).dependencies ?? {})
   assert.deepEqual(deps("thincoder-core/package.json"), [], "核零依赖")
-  for (const rel of ["thincoder-cli/package.json", "thincoder-vscode/package.json"]) assert.deepEqual(deps(rel), ["@thincoder/core"], `${rel} 零新增`)
+  assert.deepEqual(deps("thincoder-cli/package.json"), ["@thincoder/core"], "thincoder-cli/package.json 零新增")
+  // R1（render-core）批改判：VSC 依赖面 +1（`file:` 形——核包不发布）；本锁随设计显式过目——再新增第三键即红（与 VSC 侧 T-17 同判）。
+  assert.deepEqual(deps("thincoder-vscode/package.json"), ["@thincoder/core", "@thincoder/render-core"], "thincoder-vscode/package.json 零新增")
   const clean = (src) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1")
   const files = ["session-index.mjs", "session-index-query.mjs", "session-index-build.mjs", "session-index-pass.mjs", "session-index-cmd.mjs", "fts-text.mjs"]
   for (const f of files) {
