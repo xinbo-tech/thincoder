@@ -149,6 +149,7 @@ Configuration comes exclusively from `~/.thincoder/config.json` — no environme
     "subagentModel": null, // default subagent provider/model override: "provider:model" | provider name | model name; null = inherit parent provider. Per-call: subagent tool `model` arg
     "subagentModels": {}, // per-type override: { "explore": "...", "plan": "...", "coder": "...", "eng-coder": "...", "eng-designer": "..." }; priority: tool model arg > this > subagentModel > parent provider
     "compactThreshold": 100000, // context compaction threshold (approx. tokens)
+    "timerWake": true, // timer idle wake: an expired timer is delivered on the spot and starts a turn when the session is idle (CLI foreground / suspension window); false = step-boundary delivery only
   },
   "memory": {
     // Path fields (dbPath / projectDir / team.dir / shell) expand a leading ~ (~, ~/, ~\) to the home directory at load time

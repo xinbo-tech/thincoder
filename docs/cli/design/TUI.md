@@ -545,7 +545,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 |---|---|---|
 | 审批卡挂起（`state.permission`） | **计**（blocked） | agent 阻塞——不回应则零进展 |
 | 提问卡挂起（`state.question`） | **计**（blocked） | 同上 |
-| 回合结束等待输入（顶层回合链尾） | **计**（awaiting） | agent 已停、无自动续跑——「不用反复切回来」的主用例 |
+| 回合结束等待输入（顶层回合链尾） | **计**（awaiting）——**除外**：在途 timer ∧ 唤醒会武装（`agent.timerWake` 开） | agent 已停、无自动续跑——「不用反复切回来」的主用例；**除外理由** = 自动续跑在途（到期 ⇒ timer 轮——`docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30）⇒ 不计 awaiting（2026-09-27 timer-wake 批） |
 | picker / wizard / search / interruptPrompt | 不计 | 用户自己发起——在场已由发起动作证明 |
 | pendingInput 队列（挂起 / busy 期；容量 8） | 不计 | 是**用户自己的**待交接输入，非 agent 需要用户 |
 | 挂起会话（池 live） | 不计 | 自动续跑中——不需要用户动作 |
@@ -564,7 +564,8 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 - **稳态（不闪烁）**：attention 色随帧派生——**无空闲重绘定时器**。
 - **负向锁（零侵入）**：attention 为 null ⇒ 输出与改动前**逐字节等价**（机判口径 = 零 `\x1b[43m` 序列 + strip-ANSI 文本无 chip）。
 - **置位（1 点——回合链尾）**：`userNeededAtTurnEnd(state, agent, skipSession)`（`agent-turn.mjs` 导出纯函数，可直测）——
-  排除 `skipSession` / 挂起两态 / 池 live / 队列非空 / processing；命中 ⇒ `state.attentionAwaiting = true` + `render()`。
+  排除 `skipSession` / 挂起两态 / 池 live / 队列非空 / processing / **在途 timer ∧ 唤醒会武装**（主 agent `_pendingTimers` 非空 ∧ `agent.timerWake` 开——§7.1 表 awaiting 行除外；唤醒会武装 ⇒ 自动续跑在途；机判 = T-TW13）；
+  命中 ⇒ `state.attentionAwaiting = true` + `render()`。
   置位点 = 顶层链尾（**非回合末 finally**——finally 后还有队列续发与挂起会话，在那之后才真正「无人接手」）。
   中断结束与错误结束同样置位（agent 已停、等用户——语义一致）。
 - **清位（2 点——输入即在场）**：**键盘** = `key-handler.mjs` `onKeypress` 入口（模态分派**之前**）清位 + 仅当原值为真时 `render()`；
@@ -660,6 +661,41 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 机制单源 = `WEBVIEW-INPUT.md` §1 C-B2-6；webview 反馈 = 本地气泡（提交入槽即现 / 送达即 user 回声面——形态各端自落，语义同源）；
 **排队期标记** = 各条气泡带 `pending` 标记 + 标签行 `⏳ 待发送 · …`（键 = `queued.pending`）；消费即除标记、**多条批就地合并为一条气泡**（单条批就地保留——回声面；细则⑦——同处 C-B2-6）；**步边界消费**（用户回合在飞——端壳循环头同址回调；同判据 = `WEBVIEW-INPUT.md` §1 C-B2-6 细则②④）同走「消费成形」快照。
 
+### 7.6 timer 可见面（三态 · 有才出声——FR24 同法）（2026-09-27 · 批 timer-wake · 台账 #444）
+
+> 机制面（到期件 / 自唤醒 / 开轮）= `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30——本节只落**显示形态**（D2）。
+> 语法来源 = FR24（台账提醒与可见面，`docs/core/requirements/ENGINEERING-MODE-V2.md` §13.3）「状态行极简标记 + 会话流明细行 + 有才出声零噪音」；
+> F13 豁免对齐（同 §7.5 口径）：timer 面 = **信息面**（用户自己让 timer 在跑）——零注意力色对（非 43 底 + 30 字）、非 chip、不进 `attentionKind` 触发集合（**§7.1 表本轮补 awaiting 行除外限定**：在途 timer ∧ 唤醒会武装 ⇒ 不计 awaiting——§7.1 / §7.2；timer 面自身零新增 signal 面）。
+
+**三态定义（逐字）**：
+
+| 态 | 判据（活读） | 形态 |
+|---|---|---|
+| 已设 | `agent._pendingTimers` 非空 | 状态行段 `⏰N`（N = 在途数；常态 = 既有 dim 段样式） |
+| 到期 | 任一在途项 `expiresAt <= now`（未送达） | 同段取**警示色**（`C.warn`——同 `ledgerHint` 警示段实现口径） |
+| 触发 | 送达发生（历史注入 + 开轮） | 会话流一行 + timer 轮开跑 |
+
+**落点与形态**：
+
+- 状态行段落点 = `buildStatusLine` **状态段簇尾**——`ledgerHint` 之后、`titleHint` 之前（先例 = §7.4 标题段与 LEDGER-SURFACE 同区）；形态 = ` │ ⏰N`（warn 态 = `ansi.reset` + `C.warn` 包裹后复归 dim——同 ledgerHint 实现口径）。
+- 取值 = `agent._pendingTimers` **活读**（每帧 recompute——零缓存副本 / 零推送链，同 §7.3 / §7.4 纪律）；**不显倒计时**（空闲无重绘定时器 = §7.2 既有负向锁；剩余时间只在 `/timers` 列表按需现算）。
+  **到期态可达条件**（评审轮 1 #6 收正）：警示色需有帧窗口——以处理中 / 挂起期为主（空闲期零重绘 ⇒ 到期到送达间可能零帧）；`agent.timerWake` 关的空闲面 = 无闩、无空闲重绘 ⇒
+  只在下一次偶发重绘（用户输入 / 回合起）可见——**不承诺空闲期即时可见**（§7.2 零空闲重绘定时器纪律）。
+- **触发落流（一行）**：送达处推一行——逐字 = 既有系统提醒形态 `[System reminder: ⏰ timer — <message>]`（`C.warn`；三行 + 省略号上限同既有提醒镜像口径）。两路同形：
+  ① 在飞回合 = 既有回合尾镜像（`thincoder-cli/src/tui/tool-events.mjs:434-441`——零改）；② 空闲 / 挂起窗唤醒 = 投递处直推（本批新增）。
+- **`/timers`（只读列表——最薄）**：逐条 dim 行 `⏰<i> · 剩余 <mm:ss> · <message 首行（截断）>`；零在途 ⇒ 一行 `无在途 timer`。
+  **取消面不做**（理由：取消 = 控制面（门 / 回执 / 持久化语义）——出「可见面只观测不阻塞」边界；停轮 = Ctrl+C，停机制 = `agent.timerWake` 关）。
+
+**负向锁（可机判）**：
+
+- 零在途 ⇒ 状态行**逐字节等价**（零 `⏰`、零新增色对）——同 §7.2 负向锁口径；
+- 子代理（depth>0）自身 timer **不进本面**（读对象 = 主 agent 单对象——构造性零泄漏；其面板时间面零改）；
+- 不新增空闲重绘定时器（§7.2 纪律）；`/timers` 零在途时仍可调（空态行——非模态）。
+
+**可机判**：`renderStatus` 纯函数直驱——`_pendingTimers` 两态（在途 2 ⇒ strip-ANSI 含 `⏰2`；含过期项 ⇒ 含警示色序列；空 ⇒ 零该串 + 逐字节等价）；`/timers` handler 直驱（逐条行 / 空态行）。
+
+**VSC / 桌面对位**：本批不接（判据 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.5——唤醒面不具备或成本高）；后续接入时取本表同语义、各自实现（非 byte-identical）。
+
 ## 8. 不并项与历史沿革
 
 ### 8.1 历史沿革（(d) 类——**不并**）
@@ -692,6 +728,12 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 | VSC webview 对位 | webview 渲染 / 消息协议 | `docs/vsc/design/WEBVIEW*.md`——**非同机制**（端差异如实登记——登记 ≠ 默认保留；**登记面 = 记录已裁的保留项**，✗ 非未决差项兜底；端差默认 = 消，保留须结构性不对称 + 证据 + 显式裁定（A9）；各端独立实现只述实现形态，✗ 不构成差异保留依据；**已裁保留 · A9 三件齐**：① 结构性不对称 = 渲染宿主不同（VSC webview DOM + 宿主↔面板消息协议 ∥ CLI 裸 ANSI 终端行内渲染；消息协议仅单侧存在）；② 证据 = 两实现树（`thincoder-vscode/webview/**` + `WEBVIEW-PROTOCOL.md` ∥ `thincoder-cli/src/tui/**`）；③ 显式裁定 = 2026-09-14「逻辑 / 渲染分家」（同判据 · `CORE-UNIFICATION.md` §2.5 端特有桶）+ 2026-09-25 本批确认（台账 #185）） |
 
 ## 变更记录
+
+- 2026-09-27（**timer-wake 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-27-timer-wake.md` §2 · 台账 #444）：新增 §7.6（timer 可见面）——三态（已设 / 到期 / 触发）· 状态行 `⏰N` 派生标记（零在途零注入）· 触发落流一行 · `/timers` 只读列表。
+  `/timers` 命令束落点 = `thincoder-cli/src/tui/cmd-timers.mjs`（拟新增）；机制面零改（单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30）。
+
+- 2026-09-27（**timer-wake 批 · 设计评审轮 1 修正轮（fix）· eng-designer**——承 `docs/batches/2026-09-27-timer-wake.md` §3 轮次 1 · 父侧逐条裁定）：§7.1 表 awaiting 行补**除外限定**（在途 timer ∧ 唤醒会武装 ⇒ 不计 awaiting）+ §7.2 置位谓词排除集同步（`userNeededAtTurnEnd`——机判 = T-TW13）；
+  §7.6 收正——F13 豁免句改与本轮实际一致（§7.1 表 awaiting 行除外限定，timer 面自身零新增 signal 面）+ 补**到期态可达条件**句（有帧窗口；开关关的空闲面不承诺即时可见）。**机制语义零改**（除父侧定稿的 attention 除外）。
 
 - 2026-09-25（**cli-small-items 批 · 设计修正轮 · eng-designer**——承 `docs/batches/2026-09-25-cli-small-items.md` §3 发现 5）：§6.8.3.4 `subagent-blocks.mjs` 行的档位登记**指针化**——读数 / 触发改指 `docs/cli/design/CLI-DEBT.md` §2.1 A9 行（数据单一活面；本档不复读读数）。**机制面零变**。
 

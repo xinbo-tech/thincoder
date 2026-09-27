@@ -7,7 +7,7 @@
  * 「update the task list … (allowed)」= 死胡同 + 错误陈述 ⇒ 平行导出 + 按模式选串。
  *
  * 用例：DOM-C1（两常量形态：普通档逐字零变 / 变体单行且零旧指引）·
- *       DOM-C2（核选串结构机检：变体名消费点唯一 ∧ 注入点三元内 ∧ 两级选择同式）。
+ *       DOM-C2（核选串结构机检：变体名消费点唯一 ∧ 注入点三元内 ∧ 两级选择同式 ∧ timer 第三分支序）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
@@ -49,9 +49,13 @@ test("DOM-C2 核选串结构机检：变体名与 `(autoTurn || upstreamTurn)` �
   assert.ok(at >= 0, "注入点条件锚 `(autoTurn || upstreamTurn)` 在场")
   const block = lines.slice(at, at + 3).join("\n")
   assert.equal(count(block, "AUTO_TURN_DIGEST_DOMAIN_ENG"), 1, "注入点三元内变体名恰 1 处")
-  assert.match(block, /upstreamTurn \? UPSTREAM_TURN_DOMAIN : \(agent\.config\?\.agent\?\.engineering === true \? AUTO_TURN_DIGEST_DOMAIN_ENG : AUTO_TURN_DIGEST_DOMAIN\)/,
-    "两级选择同式（轮型 → 模式；条件 / transient / 位置零改）")
+  assert.match(block, /upstreamTurn \? UPSTREAM_TURN_DOMAIN : timerTurn \? TIMER_TURN_DOMAIN : \(agent\.config\?\.agent\?\.engineering === true \? AUTO_TURN_DIGEST_DOMAIN_ENG : AUTO_TURN_DIGEST_DOMAIN\)/,
+    "三级选择同式（轮型 → 轮型 → 模式；条件 / transient / 位置零改）")
   // 消费点唯一：import 绑定不计（ES 模块必须具名引入——设计括注「注入点三元内」= 计数域）
   const uses = lines.filter((l) => l.includes("AUTO_TURN_DIGEST_DOMAIN_ENG") && !/^\s*AUTO_TURN_DIGEST_DOMAIN_ENG,/.test(l))
   assert.equal(uses.length, 1, "变体名消费点唯一（其余命中 = import 绑定行）")
+  // timer-wake 批（2026-09-27 · `AGENT-LOOP-ASYNC-POOL.md` §6.30.3 D-TW4）：第三变体 `timerTurn`
+  // 同段在场——分支序 = 上游轮 → timer 轮 → 模式两级（`upstreamTurn` 优先不回归）；
+  // 行为面（选中 / AUTO 档零注入）= `test/timer-wake.test.mjs` T-TW9。
+  assert.equal(count(block, "TIMER_TURN_DOMAIN"), 1, "注入点三元内 timer 变体名恰 1 处")
 })

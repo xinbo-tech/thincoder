@@ -20,10 +20,12 @@
 // 函数级静态环（2026-09-05）：drive 的 digestTurn/用户回合经 runAgentTurn 递归进入
 // agent-turn；agent-turn 的回合尾经 suspensionSession 进入本文件——互相 import。
 import { runAgentTurn } from "./agent-turn.mjs"
+import { deliverExpiredTimers } from "./timer-watch.mjs"
 import { freezeAllSubTasks, freezeReclaimDigestedBlocks } from "./subagent-blocks.mjs"
 import { sweepToolBlocks } from "./tool-events.mjs"
 import { planQueuedInput } from "./queued-merge.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"
+import { pendingTimerDeadline } from "@thincoder/core/agent/timers.mjs"
 import { C } from "./ansi.mjs"
 // ASYNC-RESULT-CONTAINER.md D1/D2：池 accessor（双池 absorb）+ pending 单容器停靠
 import { getAsyncPool, parkAsyncPending, releaseSettledEntry } from "@thincoder/core/agent-tools/async-settle.mjs"
@@ -115,13 +117,18 @@ function sweepSettledToPending(agent) {
   }
 }
 
-/** 等待下一次 settle（running 子代理 promise 完成）或用户唤醒（Enter 入队 / Ctrl+C /
- *  会话 abort）。唤醒器经 state._suspWake 单槽注入；abort 监听兜底。 */
-function waitForSettleOrWake(agent, state) {
+/** 等待下一次 settle（running 子代理 promise 完成）/ 用户唤醒（Enter 入队 / Ctrl+C /
+ *  会话 abort）/ **timer 到期**（§6.30.2 载体③——窗内第三兑现态，与 settle / wake 同槽先到先得）。
+ *  唤醒器经 state._suspWake 单槽注入；abort 监听兜底；timer 一次性（unref——不阻断退出）。 */
+function waitForSettleOrWake(agent, state, { deadline = null, timer = setTimeout, clear = clearTimeout } = {}) {
   return new Promise((resolve) => {
     let finished = false
+    let handle = null
     const cleanup = () => {
       state._suspWake = null
+      const h = handle
+      handle = null
+      if (h !== null) { try { clear(h) } catch { /* 已触发 / 不可清——尽力面 */ } }
       const i = (agent._asyncWaiters ?? []).indexOf(w)
       if (i >= 0) agent._asyncWaiters.splice(i, 1)
       agent._sessionAbort?.signal.removeEventListener("abort", onAbort)
@@ -135,8 +142,14 @@ function waitForSettleOrWake(agent, state) {
     const w = () => finish("settle")
     const wake = () => finish("wake")
     const onAbort = () => finish("aborted")
+    const onTimer = () => finish("timer")
     ;(agent._asyncWaiters ??= []).push(w)
     state._suspWake = wake
+    // 窗内 deadline（§6.30.5）：池 live + 在途 timer ⇒ 本窗兑现（不等池空）；无在途 ⇒ 零注册
+    if (deadline != null) {
+      handle = timer(onTimer, Math.max(0, deadline - Date.now()))
+      try { handle?.unref?.() } catch { /* unref 失败不阻断 */ }
+    }
     if (agent._sessionAbort?.signal.aborted) { onAbort(); return }
     agent._sessionAbort?.signal.addEventListener("abort", onAbort, { once: true })
   })
@@ -281,8 +294,16 @@ export async function suspensionSession(ctx) {
       }
       // 3. 池空（无 running/queued/未注入）→ 自然退出回 idle（补发冻结在 finally）
       if (!poolLive(agent)) break
-      // 4. 等下一 settle / 用户唤醒（Enter 入队、Ctrl+C）
-      await waitForSettleOrWake(agent, state)
+      // 4. 等下一 settle / 用户唤醒（Enter 入队、Ctrl+C）/ timer 到期（§6.30.2 载体③——第三兑现态）
+      const why = await waitForSettleOrWake(agent, state, { deadline: pendingTimerDeadline(agent), timer: ctx.timer, clear: ctx.clear })
+      // 窗内到期（§6.30.5）：本窗兑现——送达 + timer 轮（同 digest 轮形态 skipSession: true）；不等池空。
+      // 池空窗退 ⇒ 交空闲闩（到期件已出列——零重复投递）。
+      if (why === "timer" && deliverExpiredTimers(ctx) > 0) {
+        await runAgentTurn(ctx, "", { autoTurn: true, timerTurn: true, skipSession: true })
+        freezeReclaimDigestedBlocks(state, allPendingEntries(agent))
+        state.status = backgroundStatusText(agent)
+        render()
+      }
     }
   } finally {
     clearInterval(suspTick)

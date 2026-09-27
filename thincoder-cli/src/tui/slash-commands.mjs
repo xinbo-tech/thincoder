@@ -19,6 +19,7 @@ import { handleInitCommand } from "./cmd-init.mjs"
 import { handleRestoreCommand } from "./cmd-restore.mjs"
 import { handlePlanCommand } from "./cmd-plan.mjs"
 import { handleGoalCommand } from "./cmd-goal.mjs"
+import { handleTimersCommand } from "./cmd-timers.mjs" // timer 可见面（TUI.md §7.6）：`/timers` 只读列表
 import { handleSkillsCommand } from "./cmd-skills.mjs"
 import { handleMcpCommand } from "./cmd-mcp.mjs"
 import { handleAutoCommand } from "./cmd-auto.mjs"
@@ -45,6 +46,7 @@ export const SLASH_COMMANDS = [
   { name: "/submodel", group: "Agent", desc: "subagent model per type (explore/plan/coder/eng-coder/eng-designer)" },
   { name: "/shell", group: "System", desc: "bash tool shell (git-bash/pwsh path; win11 cmd encoding fix)" },
   { name: "/goal", group: "Agent", desc: "set/view/cancel long-term goal" },
+  { name: "/timers", group: "Agent", desc: "list pending timers (read-only)" },
   { name: "/think", group: "Agent", desc: "thinking mode & reasoning effort" },
   { name: "/upgrade", group: "System", desc: "check for updates & upgrade" },
   { name: "/config", group: "System", desc: "agent config (embedding, proxy, turns, threshold, consult pool)" },
@@ -80,6 +82,7 @@ export const HANDLERS = {
   "/restore": handleRestoreCommand,
   "/plan": handlePlanCommand,
   "/goal": handleGoalCommand,
+  "/timers": handleTimersCommand,
   "/skills": handleSkillsCommand,
   "/mcp": handleMcpCommand,
   "/auto": handleAutoCommand,

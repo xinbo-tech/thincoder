@@ -28,6 +28,7 @@ import {
   AUTO_TURN_DIGEST_DOMAIN,
   AUTO_TURN_DIGEST_DOMAIN_ENG, // §6.15.3（F10 第三面）：工程模式 digest 基座变体（task 指针改批次档 + 台账）
   UPSTREAM_TURN_DOMAIN, // §6.27.12.8：上行唤醒轮域文本（手动档——ask 轮不沿用 digest 域文本）
+  TIMER_TURN_DOMAIN, // §6.30.3 D-TW4：timer 唤醒轮域文本（第三变体——到期 timer 自动开轮）
   restoreGuard, // digest D-S6 读侧单点（AGENT-LOOP-ASYNC-POOL.md §6.8；P2 机制层端差批 §2.18——键清单归核）
   SUBAGENT_TOOL_EXCLUSIONS, excludeSubagentTools, // TOOLS.md §6.16：子代面按面排除（helpers 单源）
 } from "./agent/helpers.mjs"
@@ -98,7 +99,7 @@ export function streamOutputAllowed(depth, role, streamOutput = false) {
 }
 
 /** Run the agent loop: LLM ↔ tool-call cycle until task completion or turn limit. Returns final text content. */
-export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal, maxTurns: overrideTurns, resume = false, autoTurn = false, upstreamTurn = false, suspDriven = false, consumeInjected = null, consumeQueuedInput = null, streamOutput = false, extraTools = null } = {}) {
+export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal, maxTurns: overrideTurns, resume = false, autoTurn = false, upstreamTurn = false, timerTurn = false, suspDriven = false, consumeInjected = null, consumeQueuedInput = null, streamOutput = false, extraTools = null } = {}) {
   // Previous run's async exploration distillation must settle before this run pushes
   // input (SEND-STALL-DISTILL §2.2 N1) — await first, or its history replace wipes it.
   if (agent._pendingDistill) {
@@ -172,8 +173,10 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
   // digest D-S6 manual tier（AGENT-LOOP-ASYNC-POOL.md §6.8）: action-domain reminder (system-driven turn — organize only).
   // §6.27.12.4 ②: an up-stream wake turn answers a RUNNING subagent waiting for the reply — it
   // must not reuse the digest text ("no one is waiting" is the opposite of the truth).
+  // §6.30.3 D-TW4: timer wake turn (third auto-turn variant) — 到期 timer 自动开轮，仅作域文本选择
+  // （`upstreamTurn` 优先不回归：ask 轮是「有人在等回复」，比 timer 轮更紧）。
   if ((autoTurn || upstreamTurn) && !agent.autoApprove) {
-    agent.history.push({ role: "user", content: upstreamTurn ? UPSTREAM_TURN_DOMAIN : (agent.config?.agent?.engineering === true ? AUTO_TURN_DIGEST_DOMAIN_ENG : AUTO_TURN_DIGEST_DOMAIN), transient: true })
+    agent.history.push({ role: "user", content: upstreamTurn ? UPSTREAM_TURN_DOMAIN : timerTurn ? TIMER_TURN_DOMAIN : (agent.config?.agent?.engineering === true ? AUTO_TURN_DIGEST_DOMAIN_ENG : AUTO_TURN_DIGEST_DOMAIN), transient: true })
   }
   // eng-coder authorization (_engDesignReviewed) is eng-coder-only: set by subagent-spawn.mjs
   // (spawn gate) / design-token.mjs (design review pass) BEFORE the child runAgent — the
@@ -262,7 +265,6 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
       await classifyAndApply(agent, turn).catch(() => {})
     }
 
-    if (process.env.ADVISOR_DEBUG) console.error("[chat-call]", JSON.stringify({ turn, histLen: agent.history.length, lastRole: agent.history.at(-1)?.role }))
     try {      response = await chat(agent.provider, {
         messages, tools: toolSchemas,
         // §2.5 #78 并入（VSC onToken 三态门）：depth 0 恒通；consult 子代理豁免（其输出进

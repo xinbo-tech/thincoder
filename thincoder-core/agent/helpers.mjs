@@ -450,6 +450,15 @@ export const AUTO_TURN_DIGEST_DOMAIN_ENG =
 export const UPSTREAM_TURN_DOMAIN =
   "[System reminder: auto-turn — a running subagent sent you an in-flight message (shown below). No user message is waiting. Decide it now and reply with subagent action:'send' (id + message) — the child consumes the reply at its next turn boundary and keeps working on the unaffected parts; if the message needs no answer, say so in one line and move on. If finished subagent reports are also present above, summarize them as usual in the same turn. Do not start new work: FORBIDDEN this turn (mechanically enforced): modifying files, bash/execute/verify, spawning subagents, asking questions — those need a real user message. End the turn once the reply is sent.]"
 
+/** Timer wake-turn domain (AGENT-LOOP-ASYNC-POOL.md §6.30.3 D-TW4): a pending timer
+ *  expired while the session was idle and the CLI latch opened this turn automatically —
+ *  neither the digest domain ("no one is waiting", organize-only) nor the up-stream domain
+ *  (a subagent waiting for a reply) fits: the timer's own semantics is "act on what the
+ *  timer was for". Verbatim from the parent-side final text (single line — no newlines).
+ *  Content authority = parent side. */
+export const TIMER_TURN_DOMAIN =
+  "[System reminder: auto-turn — a timer you set earlier has expired (reminder above). No user message is waiting. Act on what the timer was for now: pull the data or run the check rather than continuing to reason in the abstract. Stay within the work that was in flight when the timer was set; do not open unrelated new work. Wrap up as soon as the action is done or blocked.]"
+
 /** Engineering-mode status injection — one reminder on EVERY transition (2026-08-25:
  *  OFF is announced too — the model must know the gates lifted; silence after /eng-off
  *  left it guessing. Covers TUI /eng, resume, and any path bypassing the eng tool.) */

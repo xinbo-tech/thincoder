@@ -42,6 +42,7 @@ import { createTuiState } from "./tui-state.mjs"
 import { createInputFace } from "./input-face.mjs"
 import { createConversationWriter } from "./conversation-writer.mjs"
 import { createTurnFace } from "./turn-face.mjs"
+import { createTimerWatch, fireTimerWake } from "./timer-watch.mjs"
 
 export { upgradeFailureText, pendingNoticeReady } from "./update-notice.mjs"
 
@@ -141,9 +142,21 @@ export async function startTUI(agent, opts = {}) {
   })
 
   // 回合面（turn-face.mjs，原址 :366）：submit / interaction（权限 + 提问）/ 图片粘贴 / turnCtx / turn
-  const { submit, turnCtx, askPermission, askQuestion, pasteClipboardImage } = createTurnFace({
+  const { submit, turn, turnCtx, askPermission, askQuestion, pasteClipboardImage } = createTurnFace({
     agent, state, pushLine, pushLabel, render, ensureAssistantLabel, summarize, conversation,
     handleSlash: (t) => handleSlash(t),
+  })
+  // timer 空闲自唤醒闩（AGENT-LOOP-ASYNC-POOL.md §6.30.5 载体②）：装配点 = 回合面之后（`turn` 已就绪）；
+  // 触发 ⇒ 到期批送达 + 开 timer 轮（顶层链——`{ autoTurn: true, timerTurn: true }`）；
+  // 开关关（`agent.timerWake` false）⇒ 闩惰性（sync 内判——零注册）。
+  turnCtx.timerWatch = createTimerWatch({
+    agent,
+    // 火面异常兜底（先例 = key-handler `submit().catch(...)`）：无人值守的空闲轮报错不得走
+    // 进程级 `unhandledRejection`（闩已自撤）——落错误行 + 重同步（在途项仍在 ⇒ 链尾/此处再武装）。
+    onFire: () => fireTimerWake(turnCtx, { runTurn: turn }).catch((e) => {
+      pushLine(`[error] ${e?.message ?? e}`, C.error)
+      turnCtx.timerWatch?.sync()
+    }),
   })
 
   // ---------------------------------------------------------- Slash Commands

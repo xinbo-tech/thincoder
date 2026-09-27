@@ -23,6 +23,7 @@ import { ensureSessionTitle } from "@thincoder/core/generate-title.mjs"
 import { logEvent, errText } from "@thincoder/core/log.mjs"
 import { t } from "@thincoder/core/i18n.mjs"
 import { suspensionSession, poolLive } from "./suspension-drive.mjs"
+import { timerWakeArmed } from "./timer-watch.mjs" // §6.30.3 门三件③：在途 timer ∧ 开关开 ⇒ 唤醒会武装
 import { planQueuedInput } from "./queued-merge.mjs"
 import { pickupQueuedAtStepBoundary } from "./queued-pickup.mjs"
 
@@ -39,12 +40,13 @@ const PROVIDER_URL_RE = /https?:\/\/[^\s,)"]+/g
  * 第 33 批（TUI §14.3(d)——纯函数，供测试直驱）：回合链尾「需要用户」谓词——agent 已停
  * 且无自动续跑 ⇒ 置 attention 位。排除项语义（F13）：`skipSession`（digest / 会话内回合
  *  ——由外层链尾统一置位）· 挂起两态 / 池 live / 队列非空（自动续跑中——不由用户接手）·
- *  processing（回合在跑）。
+ *  processing（回合在跑）· **在途 timer ∧ 唤醒会武装**（`docs/cli/design/TUI.md` §7.1 awaiting
+ *  行除外 / §7.2 置位谓词——自动续跑在途 ⇒ 不计 awaiting；机判 = T-TW13；timer-wake 批 2026-09-27）。
  *  @returns {boolean}
  */
 export function userNeededAtTurnEnd(state, agent, skipSession) {
   return !skipSession && !state.suspended && !state._suspPending && !poolLive(agent)
-    && state.queue.length === 0 && !state.processing
+    && state.queue.length === 0 && !state.processing && !timerWakeArmed(agent)
 }
 
 /**
@@ -77,7 +79,7 @@ export async function runAgentTurn(ctx, text, opts = {}) {
 
 /** runAgentTurn 本体（LOGGING 包装之外——见上方包装器）。 */
 async function runAgentTurnInner(ctx, text, opts) {
-  const { autoTurn = false, skipSession = false, upstreamTurn = false } = opts ?? {} // upstreamTurn：上行 ask 唤醒轮旗标（§6.27.12.5 D/I——透传核 runAgent，仅供域文本选择）
+  const { autoTurn = false, skipSession = false, upstreamTurn = false, timerTurn = false } = opts ?? {} // upstreamTurn / timerTurn：系统轮旗标（§6.27.12.5 D/I · §6.30.3 D-TW4）——透传核 `runAgent`，仅供域文本选择
   const { agent, state, pushLine, pushLabel, render, scheduleRender, ensureAssistantLabel, askPermission, askBatchPermission, askQuestion, handleSlash } = ctx
   // 可注入覆盖（测试用）；默认走真实实现
   const runAgentImpl = ctx.runAgent ?? runAgent
@@ -156,7 +158,7 @@ async function runAgentTurnInner(ctx, text, opts) {
   try {
     for (let resume = false; ; resume = true) {
       try {
-        await runAgentImpl(agent, text, callbacks, { signal: state.controller.signal, resume, autoTurn, upstreamTurn, suspDriven: true, consumeQueuedInput })
+        await runAgentImpl(agent, text, callbacks, { signal: state.controller.signal, resume, autoTurn, upstreamTurn, timerTurn, suspDriven: true, consumeQueuedInput })
         flushStream()
         break // Normal completion, exit loop
       } catch (error) {
@@ -369,9 +371,14 @@ async function runAgentTurnInner(ctx, text, opts) {
     state._suspAborted = false
   }
 
+  // AGENT-LOOP-ASYNC-POOL.md §6.30.5 载体②武装点：回合链尾「无人自动接手」判据**邻位**——到期 timer
+  // 空闲自唤醒闩（一次性 deadline；无在途 / 开关关 ⇒ 撤旧零注册）。挂起会话退出后同点接管。
+  ctx.timerWatch?.sync()
+
   // 第 33 批（TUI §14.3(d)）：顶层链尾（队列续发循环与挂起会话退出**之后**）——无人自动
   // 接手 ⇒ 置 attention 位（渲染层实时派生 blocked/awaiting；用户任意输入清位）。D-AT6：
   // 不放在回合末 finally——那之后还有队列续发 / 挂起会话（digest 自动消费），不是「需要用户」。
+  // timer-wake 批：谓词内新增「在途 timer ∧ 唤醒会武装」除外（§7.1 awaiting 行限定）。
   if (userNeededAtTurnEnd(state, agent, skipSession)) {
     state.attentionAwaiting = true
     render()

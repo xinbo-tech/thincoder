@@ -61,6 +61,9 @@ export const DEFAULTS = {
     // ADVISOR_POOL_LIMIT 逐键同值（运行时回退常量）——耦合锚 T-24a4 断言锁住——
     // 勿单侧改默认。
     poolLimits: { engCoder: 4, other: 4, advisor: 4 },
+    // §6.30.3 门三件③（D-TW5）：timer 空闲自唤醒开关——默认开（工具描述面已承诺到点提醒）；
+    // false ⇒ 端侧不武装闩（回既有回合边界投递——零调度器面）。键面随 DEFAULTS 派生进 settings 类型表。
+    timerWake: true,
   },
   memory: {
     dbPath: join(configDir, "memory.db"),
@@ -83,6 +86,8 @@ export const DEFAULTS = {
     enabled: false,  // §18.6 D-TR6 修订（2026-09-05 用户裁定——发布隐私："不希望用户那边也采集"）：轨迹存档默认 OFF——新用户零采集；本地调试分析可显式开（~/.thincoder/config.json traces.enabled:true）
     retentionHours: 24, // D-TR10：轨迹文件保留小时数——CLI 启动时删除超过该时长的文件（默认 24h）
   },
+  // 诊断开关（用户面 ① 配置键——CONFIG.md §6.2 名录；默认开，设 false 关闭）
+  diagnostics: { heapWatch: true, heapSnapshot: true },
 }
 
 // Model capability table + spec lookup live in model-specs.mjs (2026-08-31
@@ -257,6 +262,7 @@ export function loadConfig() {
     memory: { ...DEFAULTS.memory, ...config.memory },
     embedding: { ...DEFAULTS.embedding, ...config.embedding },
     traces: { ...DEFAULTS.traces, ...config.traces },
+    diagnostics: { ...DEFAULTS.diagnostics },
   }
 
   // 家目录展开（第 29 批）：config 路径字段单一规范化点——只读归一（磁盘原文保留）
@@ -267,6 +273,10 @@ export function loadConfig() {
     merged.memory.team = { ...team, dir: expandHome(team.dir) }   // 无 dir 键不注入（零键面变化）
   }
   merged.shell = expandHome(merged.shell)
+
+  // diagnostics（① 配置键，CONFIG.md §6.2 名录）：两键只认布尔值——非法 / 缺失回退默认（不 throw）
+  const _diagRaw = config.diagnostics && typeof config.diagnostics === "object" && !Array.isArray(config.diagnostics) ? config.diagnostics : {}
+  for (const key of ["heapWatch", "heapSnapshot"]) if (typeof _diagRaw[key] === "boolean") merged.diagnostics[key] = _diagRaw[key]
 
   // providers[].model 内存归一（v2 M3：非空字符串保留；非字符串/空串归一删除）——渠道默认模型
   // 单值；无默认模型合法（模型选择经 /models 拉取候选——准入判据见 M8/M9）。

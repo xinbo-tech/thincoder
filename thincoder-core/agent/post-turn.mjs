@@ -4,6 +4,7 @@
  * stall detection, and goal status tracking.
  */
 import { escapeXml, tryCanonicalize, DEFAULT_GOAL_TURNS } from "./helpers.mjs"
+import { takeExpiredTimers, injectTimerReminders } from "./timers.mjs"
 
 export const STALL_WINDOW_SIZE = 5
 export const STALL_THRESHOLD = 3
@@ -15,14 +16,9 @@ export const GOAL_BUDGET_WARN_RATIO = 0.75
  */
 export function injectPostTurn(agent, results, recentCallSigs, callbacks, turn) {
   // Expired timers — inject reminders when thinking budget is up
-  if (agent._pendingTimers.length > 0) {
-    const now = Date.now()
-    const expired = agent._pendingTimers.filter((t) => t.expiresAt <= now)
-    agent._pendingTimers = agent._pendingTimers.filter((t) => t.expiresAt > now)
-    for (const t of expired) {
-      agent.history.push({ role: "user", content: `[System reminder: ⏰ timer — ${t.message}]` })
-    }
-  }
+  // AGENT-LOOP-ASYNC-POOL.md §6.30.2：过滤 / 注入语义单源于 `agent/timers.mjs`（CLI 空闲闩 /
+  // 挂起窗同读）；本处 = 回合边界轮询调用点——行为零变（最近到期 / 出列幂等 / 逐字形态逐条不变）。
+  injectTimerReminders(agent, takeExpiredTimers(agent))
 
   // Pending reminders
   if (agent._pendingReminders.length > 0) {

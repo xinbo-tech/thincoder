@@ -264,6 +264,24 @@ N4 范围 = **核侧 + CLI + VSC 两端对位**（**2026-09-19 23:23 用户裁�
 
 
 
+### 4.14 timer 空闲唤醒（到期自唤醒——第三开轮源）（新增 · 2026-09-27 · 批 timer-wake · 台账 #443）
+
+**总体需求**：作为**设了 timer 的会话**，我想要**到期 timer 在会话空闲期被主动送达并自唤醒一个系统回合**，
+以便挂机续跑 / 到点自查类用法不再依赖「下一条用户消息」的推动——现况 = 到期注入仅在回合边界轮询（空闲无回合 ⇒ 零送达）。
+
+| # | 需求（能力逐条可交付） | 范围边界（明确不做什么） |
+|---|---|---|
+| F-TW1 | **到期件**：核 `thincoder-core/agent/timers.mjs`（拟新增）三件纯函数（deadline / takeExpired / injectReminders）——`post-turn.mjs` 改调（行为零变 · 投递形态逐字沿用） | 不新增并行调度器；不改注入文本形态 |
+| F-TW2 | **空闲唤醒**：CLI 空闲面一次性 deadline 闩（到点自撤 / `unref` / 单槽）+ 挂起窗第三兑现态 `timer` ⇒ 开轮经既有驱动器（auto-turn 第三变体 `timerTurn` · 普通权限面） | 不借 busy 队列（用户消息语义）；不入 `poolLive`（挂起态三面）；headless / 桌面 / VSC = 不支持（理由在设计档 §6.30.5） |
+| F-TW3 | **门三件**：仅系统类可自唤醒（唤醒源 = `_pendingTimers` 唯一写点）· 成本闸（合并一轮 / 到期即消费幂等 / `maxTurns` 帽 / 撞帽不续跑 / 在途帽 8 超限显式拒）· 开关 `agent.timerWake` 默认 true | 不新增机械门（动作域 = 系统轮既有机械面沿用）；timer 参数 schema 零改 |
+| F-TW4 | **可见面**（台账 #444）：单源 = `docs/cli/requirements/TUI.md` F17 | 本档不复制（D2） |
+
+**非功能**：N1 零回归（post-turn 行为零变 · 既有测试全绿）· N2 无关显示面零改 · N3 可机判（T-TW1–T-TW13 · 假 timer 直驱 · 零真实等待）· N4 跨 run 存活 = 规范语义（VSC 端差 = 另批登记）。
+
+**设计侧 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30 + `docs/cli/design/TUI.md` §7.6**（判据单源）——本档不复制（D2）。
+
+**批 = `docs/batches/2026-09-27-timer-wake.md`**（台账 #443 + #444）。
+
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）
 
 | 旧档节 | 内容 | 何故不并 |
@@ -277,6 +295,8 @@ N4 范围 = **核侧 + CLI + VSC 两端对位**（**2026-09-19 23:23 用户裁�
 | 变更记录 | 逐批流水账 | 历史叙述——本档自有变更记录 |
 
 ## 变更记录
+
+- 2026-09-27（**批 timer-wake · 设计轮 · 主 agent**——承 `docs/batches/2026-09-27-timer-wake.md` §1（用户 15:34 发现 + 15:36 立批））：新增 **§4.14 timer 空闲唤醒**（F-TW1–F-TW4 · 设计侧 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30 · 可见面回指 `docs/cli/requirements/TUI.md` F17）。本档新增需求 1。（父侧直接执行 · 可 revert）
 
 - 2026-09-21（**批 SUBAGENT-SIGNAL-LINES · 父侧直接执行 · 可 revert**——承用户 01:55 报告 + 01:58 口径「全档 × 双端」）：§4.12 新增 **F-UC8 信号提示行**（全档按因分流 + ask 携来源与问题摘要 + CLI digest 起跑对位 VSC；范围 = CLI + VSC 两端）；
   设计侧 = `docs/core/design/AGENT-LOOP-UPSTREAM.md` §6.27.12.5 D；批 = `docs/batches/2026-09-21-subagent-signal-lines.md`（台账 #166）。**本档新增需求 1**。（父侧改指 2026-09-22 · 可 revert）
