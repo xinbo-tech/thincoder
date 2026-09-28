@@ -40,6 +40,8 @@ export {
   writeSessionFile, slotDigest, loadManifest, saveManifest, activeSlot, listSlots,
   deleteSlot, isProcessAlive, END, endMarkerPath,
   readEndMarker, writeEndMarker, claimSlot, allocateFresh,
+  // §6.25 判据句 4：账本健康出口随动（端壳警示面消费——CLI / VSC 接线另座）
+  ledgerHealth,
 } from "./session-slots.mjs"
 // §6.12 标题写契约使 session-slots.mjs 超 500 行硬限 → renameSlot 拆至 session-rename.mjs（§6.12 模块与实现约束）
 export { renameSlot } from "./session-rename.mjs"

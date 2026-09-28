@@ -25,6 +25,8 @@ import {
   resumeSlot as slotsResumeSlot,
 } from "./session-slots.mjs"
 import { probeOwnersSync, probeOwnersAsync, ownerState } from "./process-probe.mjs"
+// 落点 A 顺手补写（§6.25 判据句 3 · LEDGER-RELIABILITY 批）——判据单源住清单档（与 resumeSlot 同函数）。
+import { healDigest, slotMtime } from "./session-slots-manifest.mjs"
 // 环 import：见头注（loadSlotFile 属 session.mjs 的 data 层读面）。
 import { loadSlotFile } from "./session.mjs"
 // 全新槽首物化构造器单源（SLOT-END-PARAM 批 §6.20 判据句 4 写面：「`newSession` 并入」——
@@ -322,6 +324,9 @@ export function switchToSlot(cwd, slot, { end = sessionEnd() } = {}) {
   if (!m.slots[slot] && !existsSync(slotPath(cwd, slot))) return null
   const data = loadSlotFile(cwd, slot)
   if (!data) return null
+  // 落点 A（§6.25 判据句 3）：数据已在手 ⇒ 摘要顺手补写——随本次 saveManifest 落（**零额外读 /
+  // 零额外写**；新鲜条目不写——幂等，§6.25 谓词单源 `healNeeded`）。
+  healDigest(m, slot, data, slotMtime(cwd, slot))
   m.active = slot
   const occ = slotOccupancy(cwd, slot)
   if (!occ.occupied) {

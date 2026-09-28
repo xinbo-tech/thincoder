@@ -13,9 +13,9 @@
  * （`size ≤ SCAN_FULL_MAX` = 256 KiB ⇒ JSON 全解析、全字段）③ 大档早键截读（读头 `min(size,
  * SCAN_HEAD_BYTES)` = 64 KiB——**结构感知扫描**：键值边界由结构定界、小值解码走 `JSON.parse`
  * 切片，零正则、零整档物化；遇顶层键 `history` 即停，其后的键不读）④ stat 兜底（`updatedAt` =
- * mtime）。字段优先级 = **盘面实读值 > 摘要值（任意新鲜度）> 缺省**（`""` / `0` / mtime）；单次
+ * mtime）。字段优先级 = **盘面实读值 > 摘要值（任意新鲜度）> 缺省**（`""` / `null` / mtime）；单次
  * 调用槽文件读 ≤ `SCAN_BUDGET_BYTES`（4 MiB）——预算按 mtime 降序耗用（最上面 = 用户最可能看
- * 的行），越预算条目退 ④。
+ * 的行），越预算条目退 ④。计数两字段**不可得 = `null`**（真 0 与未知可分——§6.25 判据句 4）。
  *
  * 降级阶梯（判据句 3 · 入列不筛）：坏 JSON / 半写 / `version > 2` / 异 cwd 内容档一律入列
  * （存在性 ≠ 可读性）——内容面不可用 ⇒ 该档退摘要 ∪ 缺省、日期退 mtime；点开走既有失败面。
@@ -228,9 +228,9 @@ function readHeadText(path) {
   }
 }
 
-/** 字段装配（判据句 2 优先级）：盘面实读值 > 摘要值（任意新鲜度）> 缺省（`""` / `0` / mtime）。
- *  `disk` = ②/③ 盘面供给面（`null` = 无盘面数据）；`digest` = manifest 摘要（对象形）；
- *  `dateFromStat` = 日期取 stat mtime（① 之外的无盘面数据档——判据句 2 ④ 与判据句 3 降级档）。 */
+/** 字段装配（判据句 2 优先级）：盘面实读值 > 摘要值（任意新鲜度）> 缺省（`""` / `null` / mtime）；计数两字段
+ *  **不可得 = `null`**（非 `0`——真 0 与「不知道」可分；§6.25 判据句 4 / D-SE62）。`disk` = ②/③ 盘面供给面；
+ *  `digest` = manifest 摘要；`dateFromStat` = 日期取 stat mtime（判据句 2 ④ 与判据句 3 降级档）。 */
 function mergeFields(disk, digest, mtime, tsBase, dateFromStat) {
   const d = disk ?? {}
   const g = digest ?? {}
@@ -238,8 +238,8 @@ function mergeFields(disk, digest, mtime, tsBase, dateFromStat) {
   const str = (a, b, fallback) => isStr(a) ? a : (isStr(b) ? b : fallback)
   const meta = {
     ts: tsBase,
-    messageCount: num(d.messageCount, g.messageCount, 0),
-    turnCount: num(d.turnCount, g.turnCount, 0),
+    messageCount: num(d.messageCount, g.messageCount, null),
+    turnCount: num(d.turnCount, g.turnCount, null),
     firstMessage: str(d.firstMessage, g.firstMessage, ""),
     activeProvider: str(d.activeProvider, g.activeProvider, ""),
     updatedAt: dateFromStat ? mtime : num(d.updatedAt, g.updatedAt, mtime),
@@ -282,8 +282,8 @@ function readSlot(f, entry, budget, cwd) {
   return { meta: mergeFields(disk, digest, mtime, tsBase, disk === null), spent: cost }
 }
 
-/** 扫描本 cwd 的槽文件并装配每档元数据（判据句 1 + 2）：返回 `[{ slot, meta }]`（序 = 枚举序，
- *  行序归调用面投影）。`digests` = manifest `m.slots`（摘要缓存——不参与条目集）。 */
+/** 扫描本 cwd 的槽文件并装配每档元数据（判据句 1 + 2）：返回 `[{ slot, meta, mtime }]`（序 = 枚举序——
+ *  行序归调用面投影；`mtime` = 文件 mtime，判定链 / 核实面新鲜度判据入参）。`digests` = manifest `m.slots`。 */
 export function scanSlotMetas(cwd, digests = {}) {
   _scanStats.calls++
   const found = enumerateSlots(cwd)
@@ -293,7 +293,7 @@ export function scanSlotMetas(cwd, digests = {}) {
   for (const f of found) {
     const { meta, spent } = readSlot(f, digests[f.slot], budget, cwd)
     budget -= spent
-    out.push({ slot: f.slot, meta })
+    out.push({ slot: f.slot, meta, mtime: f.mtime })
   }
   return out
 }

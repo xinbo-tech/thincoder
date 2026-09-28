@@ -67,6 +67,7 @@
 | AC-M2-13 | 审计面只读：逐库定性（目标 / 变体源 / 空库 / 不可归因（有行）/ 不可归因（读取失败）/ 不可读（坏档））+ 候选根集合归因；全目录文件集合 / 大小 / mtime 三不变 | 审计用例 |
 | AC-M2-14 | 收口两源：待讨论 / 待设计 → 已核销 **直通**（`evidence` 非空）；缺 `evidence` ⇒ 拒（行不变）；在途 → 已核销 ⇒ 拒（不可跳 待核销）；已核销 / 已废弃 现态 ⇒ 拒；撤回路径零改 | `ledgerClose` 源态 / `evidence` 校验（T33–T36） |
 | AC-M2-15 | 工具层参数守卫：写命令三工具（`ledger_add` / `ledger_update` / `ledger_close`）非法入参（非对象 / 未知键 / 缺必填〔含显式 `null`〕 / 错型 / 非枚举 / `title` 空串或全空白）⇒ 拒（throw，零写零库动作）+ 文案逐字（设计 §3.2 P1–P6）；在途 / 待核销 缺 `task_book` 指针 ⇒ 写门拒（设计 §6.1）；合法形（含复杂文本 / 可空 `null` 字段 / `cwd` 缺省）零回归 | `ledger-args-guard` 用例（T37–T42；设计档 §8） |
+| AC-M2-16 | 读命令守卫 + `executor` 空值口径（2026-09-28 · 台账 #473 / #474）：`ledger_query` / `ledger_count` 非法入参（非对象 / 未知键 / 错型 / 非枚举）⇒ 拒（文案逐字，P1–P3 同径）；`ledger_update.executor` 显式 `null` ⇒ 按略去（取 sessionId 自动归属） | `ledger-args-guard` 用例（T43–T44；设计档 `docs/core/design/LEDGER.md` §8） |
 
 > AC-M2-6 = KD7 实核（M2 实现前必验；失败则重开存储选型）。
 
@@ -93,3 +94,4 @@ v2 §5.2（台账）· §5.4（条目字段）· 架构设计 §2.3 E1（表结�
   ③ 上条下方「痛点实证 = 三跳纯仪式」行 = **09-25 收口两源批**动机（同 §②.2 表语；承批档 `2026-09-25-ledger-governance`）——非本批。
 - 2026-09-25（**批 ledger-governance · 评审修正轮 1（发现 #1）** · eng-designer——父侧明示委托 · 可 revert——承批档 `docs/batches/2026-09-25-ledger-governance.md` §3 轮次 1）：
   §②.1 `executor` 字段格收正——清除条件按设计档 `docs/core/design/LEDGER.md` §3.1 ②/④ 口径（离开「在途」（→ 待核销 / → 已废弃）与撤回（任意态 → 已废弃）时清空；核销路径（勾销 / 追认）零触碰）；「回退」一词删（六态无回退边）。
+- 2026-09-28（**守卫族微修批 · 需求侧同步** · 主 agent——父侧笔）：新增 **AC-M2-16 读命令守卫 + `executor` 空值口径**（读二工具非法入参 ⇒ 拒 + 文案逐字；`executor` 显式 `null` ⇒ 按略去·取 sessionId）；来源 = 台账 #473 / #474 + 批 `docs/batches/2026-09-28-guard-face-micro.md`。

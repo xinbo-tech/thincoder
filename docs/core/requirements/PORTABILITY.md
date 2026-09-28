@@ -31,7 +31,7 @@
 | **F6** | 非 git 项目行为有定义 | 索引：无 git → 全量 walk + per-file mtime 回退（`thincoder-vscode/src/indexer.mjs:185-186` · `:241`；W8 已退役——核面现体 `thincoder-core/memory/code-sync.mjs`）；评审：`NO_GIT_NOTICE` 降级句、评审照常 （迁移期引文） |
 | **F7** | 门禁面同源 | 工程写门禁按声明分类判定（`thincoder-vscode/src/agent/tool-gates.mjs:89-91`）——不以 `src/` 硬编码 / `docs/` 前缀放行 |
 | **F8** | 提示词面不假定本仓形态 | 提示词内指令性引用零本仓指涉（「本产品自研仓 =」标注形态除外——判据式见 `PORTABILITY（VSC 侧）`） |
-| **F9** | 父侧写域缺省（2026-09-27 用户裁定） | 工程模式**父侧门**分类缺省：路径段 `test` / `tests` / `scripts`（任意深度）与 `.thincoder/tmp/**` **判非代码面** ⇒ 父侧无令牌可写；**代码段优先级在前**（`src/test/**` 仍判 code）；范围 = **父侧门**（`thincoder-core/agent/dispatch.mjs:195-217` ∥ VSC `thincoder-vscode/src/agent/tool-gates.mjs`——VSC 随核单源）；**eng-coder 门不动**；项目可用 `codePaths` 声明（F2）收回该缺省。判据 = `classifyPath` 四例（`test/<x>.mjs` ≠ code · `scripts/<x>.mjs` ≠ code · `.thincoder/tmp/<a>.mjs` ≠ code · `src/test/<x>.mjs` = code） |
+| **F9** | 父侧写域缺省（2026-09-27 用户裁定） | 工程模式**父侧门**分类缺省：路径段 `test` / `tests` / `scripts`（**项目根相对面** · 根内任意深度——根外 / 根未知 ⇒ 面不可判 ⇒ 缺省不命中；2026-09-28 #465 收口）与 `.thincoder/tmp/**` **判非代码面** ⇒ 父侧无令牌可写；**代码段优先级在前**（`src/test/**` 仍判 code）；范围 = **父侧门**（`thincoder-core/agent/dispatch.mjs:195-217` ∥ VSC `thincoder-vscode/src/agent/tool-gates.mjs`——VSC 随核单源）；**eng-coder 门不动**；项目可用 `codePaths` 声明（F2）收回该缺省。判据 = `classifyPath` 四例（`test/<x>.mjs` ≠ code · `scripts/<x>.mjs` ≠ code · `.thincoder/tmp/<a>.mjs` ≠ code · `src/test/<x>.mjs` = code） |
 
 ## 3. 非功能性需求
 
@@ -125,3 +125,4 @@
 - 2026-09-27（**写门放行批 · 评审轮 1 收正 · 主 agent——需求档笔权**）：F3 括注补 **aux 层**（对齐设计档 §3.2 四值链——F9 增补）；变更记录 2026-09-15 行「体量」节引用加现状注（零语义）。
 - 2026-09-27（**声明面载体换源 · 需求侧同步** · 主 agent——需求档笔权）：F2 声明文件句 ⇒ **`PROJECT-MANIFEST.json` 三族键**（自 `.thincoder/conventions.json` 退役并入）；§4 本仓自用句同判收正。来源 = 批 `docs/batches/2026-09-27-conventions-retire.md`；台账 #464。（同日 · **父侧直接执行** · 零语义：档头计数 F1–F8 ⇒ **F1–F9**——评审 #103 发现 9）
 - 2026-09-27（**conventions.json 退役批 · 评审轮 2 收正 · 主 agent——需求档笔权**）：N4 清单收正为现行两档 + 承接入核面档（`portability-vsc-index.test.mjs` 已随 W8 退役——同设计侧注；零语义）。
+- 2026-09-28（**守卫族微修批 · 需求侧同步** · 主 agent——需求档笔权）：F9 判据句补「**项目根相对面**」限定（根外 / 根未知 ⇒ 面不可判 ⇒ 缺省不命中）——对齐设计档 `docs/core/design/PORTABILITY.md` §3.2 段匹配面（#465 收口）；零行为加码。

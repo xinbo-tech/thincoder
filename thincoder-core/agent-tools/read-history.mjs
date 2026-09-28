@@ -219,7 +219,8 @@ function querySessionFile(pathArg, { role, kwRe, tool, since, until, direction, 
 
 /** Discovery surface (path = "cwd:<dir>"): list every slot stored for that directory, one line
  *  per slot — slot number + FULL session file path + title/message count/updatedAt（§6.13 D-R19a
- *  ——评审 #2：摘要必须含寻址字段——模型第二步深查 = 复制行内文件路径重调 path=）。 */
+ *  ——评审 #2：摘要必须含寻址字段——模型第二步深查 = 复制行内文件路径重调 path=）。
+ *  计数不可得 = `null` ⇒ `messages: —`（§6.25 判据句 4——禁显示数值 0：真 0 与未知可分）。 */
 function discoverCwd(raw, baseCwd) {
   const dir = resolve(baseCwd ?? process.cwd(), raw)
   let st = null
@@ -235,7 +236,7 @@ function discoverCwd(raw, baseCwd) {
   }
   const lines = slots.map((s) => {
     const title = s.title ? `"${s.title}"` : "(untitled)"
-    return `slot ${s.slot}: ${slotPath(dir, s.slot)} — title: ${title}, messages: ${s.messageCount}, updatedAt: ${s.updatedAt}`
+    return `slot ${s.slot}: ${slotPath(dir, s.slot)} — title: ${title}, messages: ${s.messageCount ?? "—"}, updatedAt: ${s.updatedAt}`
   })
   return `Session slots for cwd: ${dir} (newest first):\n${lines.join("\n")}`
 }

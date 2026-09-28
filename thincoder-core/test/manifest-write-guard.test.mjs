@@ -198,7 +198,9 @@ test("G9 零回归 · 认领链：claimSlot / switchToSlot / activeSlot 粘性�
   assert.equal(m2.slotSessions[40], my, "目标槽认领 = 本进程")
   assert.equal(m2.slotSessions[41], undefined, "旧绑定释放（release 判据）")
   assert.equal(m2.active, 40, "共享指针翻至目标（setActive）")
-  assert.deepEqual(m2.slots, seed.slots, "m.slots 摘要条目零动")
+  assert.deepEqual(m2.slots[41], seed.slots[41], "非目标槽摘要条目零动（合并 / 认领面只碰目标）")
+  assert.equal(typeof m2.slots[40].messageCount, "number", "目标槽陈旧条目（无 ts）⇒ 落点 A 顺手补写（§6.25 判据句 3）")
+  assert.equal(m2.slots[40].title, "", "补写值 = slotDigest 重建形（非发明）")
 
   const bytes = readFileSync(manifestPath(CWD), "utf8")
   assert.equal(activeSlot(CWD), 40, "已拥有 active ⇒ 粘性复用")

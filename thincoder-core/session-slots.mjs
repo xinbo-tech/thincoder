@@ -46,14 +46,16 @@ import { probeOwnersAsync, isProcessAlive } from "./process-probe.mjs"
 // 保既有 import 面（消费档路径与名面不动）。
 import {
   loadManifest, saveManifest, ownerPids, ownerStateOf, cleanDeadOwners,
-  allocateFresh, claimSlot, activeSlot,
+  allocateFresh, claimSlot, activeSlot, healDigest, slotMtime,
 } from "./session-slots-manifest.mjs"
 // 盘面扫描面（SESSION-LIST-DISK 批 §6.22）：条目集 = 盘面实读——枚举 / 早键截读 / 取数链装配住
 // 新档；本档 listSlots 收敛为组合 + 条目投影。静态环（本档 ↔ 扫描档；环安全见头注同形）。
 import { scanSlotMetas } from "./session-slot-scan.mjs"
+// 读面懒核实面（§6.25 判据句 3 落点 B——不可信清单调度：纯内存登记 + 启动窗外延迟拍）；静态环同形。
+import { scheduleVerify } from "./session-slot-verify.mjs"
 export {
   slotDigest, loadManifest, saveManifest, ownerPid, ownerPids,
-  allocateFresh, claimSlot, activeSlot,
+  allocateFresh, claimSlot, activeSlot, ledgerHealth,
 } from "./session-slots-manifest.mjs"
 
 let currentSessionId = null
@@ -145,10 +147,13 @@ export function activePath(cwd) {
   return slotPath(cwd, activeSlot(cwd))
 }
 
-/** Atomic write: write to temp file then rename to replace, preventing truncated JSON from mid-write crash. */
-export function writeSessionFile(p, data) {
+/** Atomic write: write to temp file then rename to replace, preventing truncated JSON from mid-write crash.
+ *  `opts.tmpUnique`（§6.25 判据句 5 · D-SE65——**账本面专用**）：临时名 = `${p}.${pid}-${seq}.tmp`
+ *  （进程内自增）⇒ 清「并发写者共用 `${p}.tmp` ⇒ 互覆 / 混写」；槽文件 / 端标记面零改。返回所用临时名。 */
+let tmpSeq = 0
+export function writeSessionFile(p, data, { tmpUnique = false } = {}) {
   mkdirSync(dirname(p), { recursive: true })
-  const tmp = `${p}.tmp`
+  const tmp = tmpUnique ? `${p}.${process.pid}-${++tmpSeq}.tmp` : `${p}.tmp`
   writeFileSync(tmp, JSON.stringify(data), "utf8")
   try {
     renameSync(tmp, p)
@@ -161,6 +166,7 @@ export function writeSessionFile(p, data) {
       writeFileSync(p, readFileSync(tmp, "utf8"), "utf8")
     }
   }
+  return tmp
 }
 
 // ========== 清单 / 认领 / 属主面（init-block 批外提——见头注）==========
@@ -177,20 +183,24 @@ export { isProcessAlive }
  *  §6.22（SESSION-LIST-DISK 批 · 2026-09-28）：条目集 = **盘面实读**（sessions 根下槽文件枚举 /
  *  取数链装配住 `session-slot-scan.mjs`）——manifest `m.slots` 只作摘要缓存，不参与条目集
  *  （既不筛也不补）；排序 = `updatedAt` 降序（同值按槽号降序）；行形态逐字段零改。
+ *  计数不可得 = `null`（§6.25 判据句 4——非 0：真 0 与未知可分）；**读面懒核实**（判据句 3 落点 B）：
+ *  不可信档清单交核实面（纯内存登记 + 延迟拍——调用本体零写；核完回写 ⇒ 下次列表回快路）。
  *  2026-09-01 会诊 🟢：只读操作不认领（清单链**零写**——不认领、不写 manifest、零探测）——
  *  原实现 active 缺失时调 activeSlot（写 manifest 副作用，ACP session/list 可触发）。
  *  m.active 缺失时全部 isActive=false，由下一次 activeSlot 正常认领。 */
 export function listSlots(cwd) {
   const m = loadManifest(cwd)
   const active = m.active ?? null
-  return scanSlotMetas(cwd, m.slots ?? {})
+  const scanned = scanSlotMetas(cwd, m.slots ?? {})
+  scheduleVerify(cwd, scanned, m.slots ?? {})
+  return scanned
     .map(({ slot, meta }) => ({
       slot,
       isActive: slot === active,
       timestamp: meta.ts,
       date: new Date(meta.ts).toLocaleString(),
-      messageCount: meta.messageCount ?? 0,
-      turnCount: meta.turnCount ?? 0,
+      messageCount: meta.messageCount ?? null,
+      turnCount: meta.turnCount ?? null,
       firstMessage: meta.firstMessage ?? "",
       // MODEL-MERGE-SESSION 摘要 "p:m"：activeProvider 保持裸渠道名——列表消费面显复合
       // （旧摘要无 activeModel → 回退裸渠道名——新老兼容；cmd-session/VSC sessions 行免改）
@@ -280,8 +290,9 @@ function loadLegacyFile(cwd) {
  *      ensureActive 早退语义镜像：认领后尚未写 slots 条目/文件的窗口）→ 直接沿用；
  *      ②b 否则一次性继承 manifest.active（同判据；活属主绝不继承——全新槽起步，T-M3）；
  *   ③ 其余一切（slot:null 显式置空 / 槽被删 / 属主为活外人 / 继承失败）→ allocateFresh。
- * 每次落点都写本端记录；claim 后读槽失败（.corrupted/.unreadable——loadSlotFile 既有改名
- * 保全语义）→ 保持已 claim 槽 + data:null——不改 marker——下次保存原地重建（T-M15）。
+ * 每次落点都写本端记录；**读序前移**（§6.25 判据句 3 落点 A）：槽数据读先于认领落盘——读槽失败
+ * （.corrupted/.unreadable——loadSlotFile 既有改名保全语义）→ 仍按上述判据落点 + data:null——不改
+ * marker——下次保存原地重建（T-M15）；数据在手 ⇒ 摘要顺手补写随认领那次 saveManifest 落。
  * `opts.end`（§6.20 判据句 2——显式端参 > 进程端名）：本端记录的读写端名——端壳经绑定转口
  * 传本端常量（消费核本体的端壳零副本）；缺省 = 进程端名（CLI 全调用点零改）。
  */
@@ -299,10 +310,16 @@ export async function resumeSlot(cwd, { end = sessionEnd() } = {}) {
     if (m.active && m.slotSessions?.[m.active] === getSessionId()) slot = m.active // ②a 同进程重入
     else if (m.active && usableSlot(cwd, m, m.active, bundle)) slot = m.active // ②b 一次性继承
   }
-  if (slot !== null) claimSlot(cwd, slot, m, deadParam)
-  else slot = allocateFresh(cwd, m, deadParam, bundle) // ③ 全新分配（slot:null 绝不继承——T-M4）
-  // data 层：读已认领槽（loadSlotFile 自 session.mjs——环 import 见文件头）；读失败/槽文件不在 → legacy 单文件兜底（仅 data）
-  let data = loadSlotFile(cwd, slot)
+  // 落点 A（§6.25 判据句 3）：**读序前移**——纯读先于认领落盘 ⇒ 数据在手，摘要补写随认领那次 saveManifest 落
+  // （零额外读 + 零额外写）；认领决策树 / 保留集 / 端标记 / 改名语义逐条零变。
+  let data = slot !== null ? loadSlotFile(cwd, slot) : null
+  if (slot !== null) {
+    if (data) healDigest(m, slot, data, slotMtime(cwd, slot))
+    claimSlot(cwd, slot, m, deadParam)
+  } else {
+    slot = allocateFresh(cwd, m, deadParam, bundle) // ③ 全新分配（slot:null 绝不继承——T-M4）
+  }
+  // data 层：读已认领槽（loadSlotFile 自 session.mjs——环 import 见文件头）；读失败/槽文件不在 → legacy 兑底（仅 data）
   if (!data) data = loadLegacyFile(cwd)
   writeEndMarker(cwd, slot, end)
   return { slot, data }

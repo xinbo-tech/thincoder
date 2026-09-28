@@ -7,6 +7,9 @@
  * 认领面（`ensureActive` / `allocateFresh` / `claimSlot` / `activeSlot` / **认领释放集
  * `staleClaims`**——F-CR1 · SESSION-CLAIM 批：判据单源，`saveManifest` 落盘 + 各落点共用）。
  *
+ * LEDGER-RELIABILITY 批（2026-09-28 · SESSION.md §6.25）：补摘要谓词 `healNeeded` + 落点 A 顺手补写
+ * `healDigest` / `slotMtime`（判据句 3）· 账本面写安全（判据句 5）· 账本健康出口 `ledgerHealth`（判据句 4）。
+ *
  * 静态环（与既有的 session.mjs ↔ session-slots.mjs 同形）：本档引 `session-slots.mjs` 的
  * 存储原语（`getSessionId` / `manifestPath` / `slotPath` / `writeSessionFile`），
  * `session-slots.mjs` 反向 re-export 本档导出保持既有 import 面——函数声明在实例化期已
@@ -19,7 +22,7 @@
  * 不认领 / 不判死 / 不删（方向不对称见 process-probe.mjs 头注 · D-MI10）。
  */
 
-import { existsSync, readFileSync, renameSync } from "node:fs"
+import { existsSync, readFileSync, renameSync, statSync } from "node:fs"
 // 「真实用户消息」谓词单源（`history-window.mjs`——人读线窗口与槽摘要同判据）。
 import { isRealUserMsg } from "./history-window.mjs"
 // 探测束（判活）+ 属主三态判据 / 死主判定（本档零自有 exec——判据面与探测面分离）。
@@ -52,6 +55,30 @@ export function slotDigest(data) {
   return { ts: Date.now(), ...meta }
 }
 
+const isNum = (v) => typeof v === "number" && Number.isFinite(v)
+
+/** 摘要补写谓词（§6.25 判据句 3 · **单源**）：缺失 ∨ 陈旧（`ts < mtime`）⇒ 补写；新鲜 ⇒ 不写（幂等）。 */
+export function healNeeded(entry, mtime) {
+  if (!entry || typeof entry !== "object") return true
+  if (!isNum(entry.ts)) return true
+  return isNum(mtime) ? entry.ts < mtime : false
+}
+
+/** 落点 A 顺手补写（§6.25 判据句 3 · 打开 / 切槽）：数据**已在手** ⇒ 置入调用方 manifest 对象，随其
+ *  既有那次 `saveManifest` 落盘（**零额外槽文件读 + 零额外写**）；`mtime` 不可得 ⇒ 不妄断陈旧。 */
+export function healDigest(m, slot, data, mtime) {
+  if (!data || typeof data !== "object") return false
+  if (!healNeeded(m.slots?.[slot], mtime)) return false
+  m.slots ??= {}
+  m.slots[slot] = slotDigest(data)
+  return true
+}
+
+/** 槽文件 mtime（`healDigest` 新鲜度判据入参——读失败 ⇒ `null` = 不可得）。 */
+export function slotMtime(cwd, slot) {
+  try { return statSync(slotPath(cwd, slot)).mtimeMs } catch { return null }
+}
+
 export function loadManifest(cwd) {
   try {
     const p = manifestPath(cwd)
@@ -82,10 +109,40 @@ function preserveScene(p) {
   return dst
 }
 
-/** 拒写（§6.23 判据句 2/3）：不调 `writeSessionFile`（本次调用对盘面零字节写——(b)(c) 的一次
- *  改名已在上游完成），stderr 一行 loud（`preserved` = 现场改名目标——(b)(c) 面），返回 `false`。 */
+/** 账本健康计数（§6.25 判据句 4——**本进程累计**）：拒写（§6.23）+ 写后读回失败次数与最近一条。 */
+const ledgerRefusals = { refused: 0, lastReason: null, lastPath: null, lastAt: null }
+const noteRefusal = (reason, p) => Object.assign(ledgerRefusals, { refused: ledgerRefusals.refused + 1, lastReason: reason, lastPath: p, lastAt: Date.now() })
+
+/** 账本健康出口（§6.25 判据句 4 · **判据单源**）：`refused` = 本进程累计（§6.23 拒写 + 判据句 5 读回
+ *  失败）+ `lastReason` ∈ 四类（read-failed / parse-failed / shape-invalid / readback-failed）；`scene` =
+ *  该 cwd 的 `{manifest}.corrupted` 在盘（损坏现场——随 30 天 GC / 手工清除而止）。 */
+export function ledgerHealth(cwd) {
+  let scene = false
+  try { scene = existsSync(`${manifestPath(cwd)}.corrupted`) } catch { /* cwd 不可解析 ⇒ 无现场 */ }
+  return { ...ledgerRefusals, scene }
+}
+
+/** 拒写（§6.23 判据句 2/3）：不调 `writeSessionFile`（本次调用对盘面零字节写），stderr 一行 loud，返回 `false`。 */
 function refuseManifestWrite(p, reason, preserved = null) {
+  noteRefusal(reason, p)
   console.error(`[session] saveManifest: write refused (reason=${reason}) path=${p}${preserved ? ` preserved=${preserved}` : ""}`)
+  return false
+}
+
+/** 写后钩子缝（§6.25 判据句 5：写后 / 读回前注入；生产零消费）：`fn({ path, tmp })`。 */
+let manifestWriteHook = null
+export function _setManifestWriteHookForTest(fn) { manifestWriteHook = fn }
+
+/** 账本面写（两路共用 · D-SE65）：独占临时名 + **写后结构读回**（判据单源 = `isTrustedBase`）；不过 ⇒
+ *  loud 一行 + 现场改名 `.corrupted`（解封下一写）+ `false`。**非逐字节相等**（并发合法后写会假红——明裁）。 */
+function writeManifestBase(p, m) {
+  const tmp = writeSessionFile(p, m, { tmpUnique: true })
+  manifestWriteHook?.({ path: p, tmp })
+  let trusted = false
+  try { trusted = isTrustedBase(JSON.parse(readFileSync(p, "utf8"))) } catch { trusted = false }
+  if (trusted) return true
+  noteRefusal("readback-failed", p)
+  console.error(`[session] saveManifest: readback-failed path=${p} preserved=${preserveScene(p)}`)
   return false
 }
 
@@ -117,8 +174,7 @@ export function saveManifest(cwd, m, deletions = null, opts = {}) {
     // ① 合法创建：路径不存在（首建）⇒ 以调用方对象建新档（现行为保留）
     if (err?.code === "ENOENT") {
       m.sessionId = getSessionId()
-      writeSessionFile(p, m)
-      return true
+      return writeManifestBase(p, m)
     }
     // (a) 读失败（非 ENOENT：EISDIR / EPERM / EBUSY 等）⇒ 拒写 · 不改名（读不到 ≠ 损坏——现场
     // 原样保留；该窗口正是 #476 缩水损伤的成因窗口）
@@ -149,8 +205,7 @@ export function saveManifest(cwd, m, deletions = null, opts = {}) {
   }
   m = merged
   m.sessionId = getSessionId()
-  writeSessionFile(p, m)
-  return true
+  return writeManifestBase(p, m)
 }
 
 /** 本进程**残留认领集**（F-CR1 释放谓词 —— **判据单源** · SESSION.md §6.2 / §6.16）：

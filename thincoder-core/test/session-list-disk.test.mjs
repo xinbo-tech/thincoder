@@ -18,6 +18,7 @@ import {
 } from "../session-slots.mjs"
 import { resumeSlot, switchToSlot } from "../session-lifecycle.mjs"
 import { _resetScanStats, _scanStats, SCAN_BUDGET_BYTES, SCAN_FULL_MAX, SCAN_HEAD_BYTES } from "../session-slot-scan.mjs"
+import { _resetVerifyStateForTest } from "../session-slot-verify.mjs"
 
 const CWD = process.platform === "win32" ? "C:\\proj\\list-disk-test" : "/proj/list-disk-test"
 const MSG = (content) => ({ role: "user", content })
@@ -33,6 +34,7 @@ after(() => { _resetSessionsDirForTest(); rmSync(dir, { recursive: true, force: 
 beforeEach(() => {
   for (const e of readdirSync(dir)) rmSync(join(dir, e), { recursive: true, force: true })
   _resetScanStats()
+  _resetVerifyStateForTest() // 核实面隔离（§6.25）：清 pending 拍 / 负缓存——免跨例残留轮改判
 })
 
 /** 槽数据夹具（写者键序同形：`version` / `cwd` 靠前、`history` 在标题族之后）。 */
@@ -116,14 +118,14 @@ test("T-SD5 读放大上界：Σ ≤ 预算 ∧ 单档 ≤ 256 KiB ∧ 超档 �
   for (const r of starved) assert.equal(r.updatedAt, statSync(slotPath(CWD, r.slot)).mtimeMs, "④ stat 兜底：日期 = mtime")
 })
 
-test("T-SD6 计数降级：大档 + 无摘要 ⇒ 计数 0（类型 number）", () => {
+test("T-SD6 计数降级：大档 + 无摘要 ⇒ 计数不可得 = null（非 0）", () => {
   putBigSlot(7, (d) => { d.title = "big-no-digest"; d.history = [MSG("m1"), MSG("m2")] })
   const r = listSlots(CWD).find((x) => x.slot === 7)
   assert.equal(r.title, "big-no-digest", "头窗仍供 title（③ 命中）")
-  assert.equal(typeof r.messageCount, "number")
-  assert.equal(typeof r.turnCount, "number")
-  assert.equal(r.messageCount, 0, "计数不在 ③ 供给面（未知 ∨ 真 0 —— D-SE56 二义登记）")
-  assert.equal(r.turnCount, 0)
+  assert.notEqual(r.messageCount, 0, "非 0（防与真 0 二义——§6.25 判据句 4）")
+  assert.notEqual(r.turnCount, 0)
+  assert.equal(r.messageCount, null, "计数不在 ③ 供给面 ⇒ 不可得 = null（D-SE62）")
+  assert.equal(r.turnCount, null)
 })
 
 test("T-SD7 坏档入列：不抛 ∧ title \"\" ∧ 日期 = mtime", () => {
@@ -133,7 +135,7 @@ test("T-SD7 坏档入列：不抛 ∧ title \"\" ∧ 日期 = mtime", () => {
   assert.equal(rows[0].slot, 9)
   assert.equal(rows[0].title, "")
   assert.equal(rows[0].firstMessage, "")
-  assert.equal(rows[0].turnCount, 0)
+  assert.equal(rows[0].turnCount, null, "坏档 ⇒ 计数不可得 = null（非 0）")
   assert.equal(rows[0].updatedAt, statSync(slotPath(CWD, 9)).mtimeMs, "日期 = mtime")
   // 半写 / 结构不符（大档面）：`history` 非数组 ⇒ 内容面不可用（判据句 3 降级）
   writeFileSync(slotPath(CWD, 10), JSON.stringify({ ...slotData((d) => { d.title = "half-written" }), history: "not-an-array", pad: "x".repeat(SCAN_FULL_MAX + 1024) }))
@@ -222,7 +224,7 @@ test("T-SD16 零回归 · 高亮：m.active = N（N 盘在无条目）⇒ isActi
 
 test("T-SD17 消费面契约：行字段名 / 次序 / 类型逐字段零变", () => {
   putSlot(14, (d) => { d.title = "row-shape"; d.history = [MSG("x")] })
-  putRaw(15, "{ bad") // 降级行——计数仍须为 number（null 会在 VSC webview 渲染成 "nullmsgs"）
+  putRaw(15, "{ bad") // 降级行——计数 = null（不可得；消费面显示分流 = 段缺席 / —，另座落）
   const rows = listSlots(CWD)
   const normal = rows.find((r) => r.slot === 14)
   const degraded = rows.find((r) => r.slot === 15)
@@ -236,8 +238,8 @@ test("T-SD17 消费面契约：行字段名 / 次序 / 类型逐字段零变", (
     assert.equal(typeof r.isActive, "boolean")
     assert.equal(typeof r.timestamp, "number")
     assert.equal(typeof r.date, "string")
-    assert.equal(typeof r.messageCount, "number")
-    assert.equal(typeof r.turnCount, "number")
+    assert.equal(typeof r.messageCount === "number" || r.messageCount === null, true, "计数 ∈ {number, null}（不可得 = null——消费面分流门）")
+    assert.equal(typeof r.turnCount === "number" || r.turnCount === null, true)
     assert.equal(typeof r.firstMessage, "string")
     assert.equal(typeof r.activeProvider, "string")
     assert.equal(typeof r.updatedAt, "number")
