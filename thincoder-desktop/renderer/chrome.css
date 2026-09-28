@@ -39,6 +39,13 @@
   padding: var(--gap);
 }
 
+/* 对话流上距 = 14px（R12 收口修复轮 —— 首块上距 VSC 逐值：`#messages { padding: 0 12px 12px }`（`webview/base.css:93-97`）
+   + 首块 `.message { margin-top: 14px }`（`webview/chat.css:20-23`）；桌面首块无块距（`.block + .block` 只管相邻块）
+   ⇒ 上距由骨架承担；左右 ∕ 下沿用 `--gap`（12px —— 与 VSC 左右 ∕ 下 12px 同值）。 */
+.flow {
+  padding-top: 14px;
+}
+
 .session-head {
   min-height: 44px;
   padding: 10px 12px;

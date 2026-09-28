@@ -141,6 +141,12 @@
 - **呈报项裁定（父侧）**：① 件级外边距 ∕ ② 首块上距 ∕ ③ 头行段样式四组（读在册「头行色」项，相抵即停报）∕ ④ file-link 三值——**裁 = 全落**（F3「差 ⇒ 消除」）→ 修复轮 **#25**（fix · 在跑 · `chrome.css` 入界授权在册）；⑤ digest-cap 面缺（U-R12-1）→ **台账 #541**（归另轮）；⑥ `window.mjs` 死探针引用 → 已随 R9 舱任务书（届盘重勘）✓；⑦ 设计面收正清单（§5.15 未办 5）→ 设计同步轮 **#26**（fix · 排队等 #22）。
 - **剩余**：#25 ∕ #26 落定后，本批设计面 ∕ 收口面齐备（→ §6 收口预检）。
 
+### 1.28 R12 修复轮 #25 交付收下 + 三裁（父侧 · 2026-09-29 00:4x）
+- **交付**（#25 · fix · 终态 converged ⇒ clean）：四项逐落——① 件级外边距三覆盖（工具 8 ∕ 错误 8 ∕ 推理 4——`chat.css:31-39`）② 首块上距 14px（`chrome.css:45-47`——触发面自勘确认在 `.flow` 骨架）③ 工具卡头行四组 **16 ∕ 18 值**（`chat.css:108-131`；**2 值相抵停报**（name-accent ∕ args-fg ⟷ 在册整行两态色）——按裁定「相抵即停报」✓）④ file-link 三值（`core.css:434-436`——offset 2 ∕ hover solid ∕ focus `1px + 2px + offset 2px`）。**真机探针 26 ∕ 26 · pageerror 0**（复跑两次）；内审 1 轮 + 代码评审 2 轮（🟡 → fix → 复核 pass）。**父侧抽验四处吻合 ✓**。写域扩张照实报（chrome.css 授权 ∕ core.css 先例面 ∕ 探针临时件）。
+- **裁① 头行「耗时段」（评审新发现）**：判「**补一行**」（11px ∕ .6）——**待 #38 色口径裁定后与头行色一并落**（一轮 coder fix，免两开）。
+- **裁② ③ 残余色域差**（整行两态 ⟷ VSC name-accent 口径）：**设计面裁 → #38**（默认按对齐判据 = VSC 逐值；例外须真端差三件齐）。
+- **裁③ 文档面**：`UI.md:361` ⟷ `:362` 漂移 + §2.8 chrome.css 锚 **229 ⇒ 313** 重锚（本舱 +44）→ 同归 **#38**。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成 · 2026-09-29（评审轮 1 十二发现落修 + R13 入书（§2.10）+ 评审 #1 ①–⑥ ∕ ⑧ 微轮收正（§2.11）；实施任务书 R1–R13 在册）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
@@ -1270,5 +1276,55 @@ VERDICT: changes-required
 5. **设计面轮收正清单**：`RENDERER.md` §3/§4（回填 48 ⇒ 40 · 跟滚 ≤ ⇒ < · `:128` ∕ `:101` 互抵）· `UI.md` §1 对话流行（块壳透明 ∕ 面宽 100% ∕ 块距 14px ∕ 扁平化模型）+ D24 保留面两处旧文（`:265` ∕ `:272`）· `E2E-TESTING.md`（真机面）· 批档 §2.8 R12 行动表 ∕ 验收行仍为拆前旧值（480 ∕ `styles.css` 499）——父侧准备单已按拆后落点重锚，§2 就地收正待父侧落笔。
 6. **外舱转呈**：`src/main/window.mjs:27` 冒烟探针 `{ id:"css", path:"styles.css", expect:200 }` 死引用（`styles.css` 已随 R13-A 拆档删除）—— 归 R13-A 收尾漏项，非 R12 面。
 7. **测试面**：R12 验收行机检三档（`views-chat` ∕ `views-chat-frame` ∕ `integration/chat-render`）+「套件绿（≥263）」随全清令取消 —— 与 §1.10 准备单口径一致。
+
+### 5.21 R12 收口修复轮（fix · 四项逐落）· eng-coder · 2026-09-29
+
+**目标**：批档 §5.15 未办清单中父侧已裁四项（承裁定行 `:141`「裁 = 全落」）——① 件级外边距（工具 8 ∕ 错误 8 ∕ 推理 4——VSC `webview/chat.css:179-180` ∕ `:417-422` ∕ `:277-278`）② 首块上距 12 ⇒ 14（`.flow` 骨架面）③ 工具卡头行段样式四组（name ∕ args ∕ status ∕ summary——VSC `:216-244`；**先读在册「头行色」项口径，相抵 ⇒ 停并报该项、其余照落**）④ file-link 三值（按 §5.15 未办 4 原值）。边界：VSC 树 ∕ 核件（`thincoder-render-core/**`）零触 · 流尾件零撤 · 已消 5 项（digest-failed opacity ∕ ledger 三值 ∕ tool-head gap ∕ 标签分色 ∕ 引据注文）零回改 · `test/**` 零触。
+
+**逐档表（本舱笔 4 档 · 行数 = 末行实读）**
+
+| # | 档 | 前 ⇒ 后 | 动作 |
+|---|---|---|---|
+| 1 | `renderer/chat.css` | 269 ⇒ **313** | ① 三覆盖规则（`.block + .block-tool` 8px ∕ `.block + .block-error` 8px ∕ `.block + .block-reasoning` 4px——置 `.block + .block` 后、同特异度后置取胜；余型仍 14px）+ 随动注两处收正（工具卡盒注 ∕ 见下）；③ 头行段四组（`.tool-head [data-seg="…"]`：name `font-weight: 600` ∕ args `opacity: .5` + 省略四值 + `flex: 1` ∕ status `11px` + `.6` ∕ summary `11px` + `.75` + `margin-left: 8px` + `max-width: 45%` + `flex-shrink: 1` + 省略三值）——**name ∕ args 两项 `color` 停落**（详见决策表） |
+| 2 | `renderer/chrome.css` | 425 ⇒ **432** | ② `.flow { padding-top: 14px }`（后于 `.pool-body, .flow { padding: var(--gap) }`；左右 ∕ 下仍 12px = VSC 同值）——**行动表外 · 父侧授权入界** |
+| 3 | `renderer/core.css` | 431 ⇒ **437** | ④ file-link 三值：补 `text-underline-offset: 2px` ∕ 补 `.file-link:hover { text-decoration-style: solid }` ∕ `:focus-visible` = `outline: 1px solid var(--accent); border-radius: 2px; outline-offset: 2px`（VSC 有效值——详见决策表）+ 随动注一处收正（推理块件级外边距落点句） |
+| 4 | `.r12-probe.mjs`（临时探针 · 未跟踪） | 238 ⇒ **327** | 四臂扩展：件级 margin 三值 ∕ 首块上距（`flow` padding-top + 内容空间偏移，scrollTop 补偿）∕ 头行四组（含 name ∕ args 色 = 头行两态色保留锁）∕ file-link 三值（CDP `CSS.forcePseudoState` 强制 hover ∕ focus-visible 伪态读有效值） |
+
+**决策透明表（设计未逐字之处）**
+
+| 决策 | 取值 | 依据 | 被否备选 |
+|---|---|---|---|
+| ③ 色面两项停落 | name `color: var(--accent)` ∕ args `color: var(--fg)` **不落**（两段仍承头行两态色） | 与在册 `UI.md:361`（头行色 = `[data-status="error"]` ⇒ `#f14c4c` ∕ `"done"` ⇒ `#4ec9b0`——VSC 内联色）相抵：两色若落 ⇒ name ∕ args 失两态色；父侧裁定「先读在册头行色项口径，相抵 ⇒ 停并报该项、其余照落」；§5.15 项 3 自述「与在册头行色设计需一并决策 ⇒ 另轮 ∕ 设计面裁」 | 硬落两色（破在册整行两态色设计）· 四组全项停落（过度停落） |
+| 件级外边距落形 | 三覆盖规则（`.block + .block-X`，置基块距后） | §5.15 项 1 指定行内退场路径逐字（「`.block + .block-tool { margin-top: 8px }` 等三处」） | 按件型拆消息边界（消息边界不可恢复） |
+| file-link focus 态取值 | 类规则三值 + `outline-offset: 2px`（VSC 有效值） | VSC 类规则（`webview/chat.css:255`）不含 offset——其有效值来自全局 `:focus-visible { outline-offset: 2px }`（`webview/base.css:445`）；桌面无全局同规则 ⇒ 本规则自携；改前值 2px 本就与 VSC 有效值同 ⇒ 保之（评审轮 1 🟡#2 复核收正） | 只落类规则三值（有效几何仍差 2px）· 按端内族律 `-2px`（偏离 VSC 有效值） |
+| 探针伪态读值 | CDP `CSS.forcePseudoState`（hover ∕ focus-visible） | 两伪态无静态可读面；强制态 = 真交互等价读值（hover ∕ focus 结论均以有效值立判） | 真 hover（窗口位置敏感 · 脆）· 只读样式表规则（非有效值，不达「逐值」口径） |
+
+**读数（实跑）**
+
+- **真机探针**（Electron + playwright-core · 隔离家目录 · 亮色 · `boot = ok`）：**26 ∕ 26 通过**（旧 22 臂零回归 + 新四臂实读：① `{tool: "8px", error: "8px", reasoning: "4px"}` ② `{flowPaddingTop: "14px", firstMarginTop: "0px", delta: 14}` ③ name weight `600` 且 name ∕ args 色 = head 色 `rgb(78, 201, 176)`（两态色保留）· args `0.5 ∕ hidden ∕ ellipsis ∕ nowrap ∕ flexGrow 1` · status `11px ∕ 0.6` · summary `11px ∕ 0.75 ∕ 8px ∕ ellipsis ∕ nowrap ∕ 45% ∕ shrink 1` ④ offset `2px` ∕ hover `solid` ∕ focus `1px solid` + radius `2px` + offset `2px`）；`pageerror` **0**（两行 `[renderer] …` console.error = 既有无 project 状况日志，非 pageerror）。
+- **语法**：`node --check` `.r12-probe.mjs` = OK；CSS 三档花括号平衡（chat 54∕54 · chrome 71∕71 · core 88∕88）——CSS 无 `node --check` 适用面，以真机探针实读代偿（验收②口径）。
+- **测试面**：随全清令取消（不写测试档 ∕ 不跑套件 ∕ 不改 `files.mjs`）——「not repo-suite verified — the parent-side closeout run is the only repo-suite run.」
+
+**审计与代码评审（终态 = converged ⇒ clean）**
+
+| 轮 | 形式 | 结果 |
+|---|---|---|
+| 1 | 内审 ∕ 背离审计（read-only explore · 4 档对四项 + 边界逐项） | **DEVIATIONS 1（DOC-DRIFT 🟡）**：本舱 §5 记录未落（随本文闭合）；PARTIAL 0 ∕ SILENT-SIMPLIFICATION 0 ∕ OUT-OF-LIST 0；边界五项（VSC 树 ∕ 核件 ∕ 流尾件 ∕ 已消 5 项 ∕ `test/**`）命中 **0**；专问三答：③ 停落裁定**成立**（无过度停落 ∕ 无硬落）· 表外两档可回溯 · 注文与实现相符 |
+| 2 | 代码评审（advisor · type=code · 4 档 + 批档 ∕ UI.md ∕ VSC 两档 ∕ 核 `tool-card.mjs`） | **VERDICT pass**（零 🔴；🟡2 可选 ∕ 🟡1 协调 ∕ 🔵4）：🟡 = 头行「耗时」段无对位规则（`[data-seg="time"]` 12px ∕ 1.0 ⟷ VSC 同字串住 status 段 11px ∕ .6——射程外新发现【只报】）+ `.file-link:focus-visible` 缺 `outline-offset: 2px`（VSC 有效值）；🟡协调 = ③ 停落后残余色域差（在册 · 归设计面）；🔵 = 引用漂移（`UI.md:361` 引作 `:362`）· 探针 327 行 ∕ 档头名漂移 · 三档越 300 顾问线（在册）· 块距映射回合边界（只报） |
+| fix round 1 | 🟡 收正（评审发现 #2）：`core.css` `.file-link:focus-visible` 补携 `outline-offset: 2px`（VSC 有效值）+ 注释重写（引用四条逐行为真）；探针收口④断言增 `focusStyle.outlineOffset === "2px"`（消「读数空转」）；复跑探针 **26 ∕ 26 绿** | 已落 |
+| 3 | 代码评审（advisor · fix 复核轮 · 2 档） | **VERDICT pass**：两半逐条核实（值 ∕ 注释四条引用逐行为真 ∕「桌面无全局同规则」核实 ∕ `.file-link` 单源未破；断言判别性 ∕ 空值守卫序）；无新 🔴∕🟡；端内 focus 族 `-2px` 惯例与 `+2px` 之异 = 对齐口径指定值（非阻断观察） |
+
+**越域披露（超声明面 · 逐处给由）**
+
+1. `renderer/chrome.css`（行动表外——**父侧授权入界**，授权在册）：② 首块上距触发面 = `.flow` 骨架 padding（自勘确认）⇒ 落该档；`.pool-body` 面零影响（选择器仅 `.flow`）。
+2. `renderer/core.css`（行动表外——**值面必要落点**，同 R12 前轮 `.ledger-line` 先例）：④ file-link 三值的类名样式单源面（`chat-fixes.css:96` 同声明的「类名样式单源 = core.css 核类名映射面〔本段零规则〕」）⇒ 三值 + 有效 offset 均落此。
+3. `.r12-probe.mjs`（临时验证工具 · 未跟踪 · 沿前轮处置）：四臂扩展 + CDP 伪态臂。
+
+**未办 ∕ 待父侧（本舱边界外，只报）**
+
+1. **头行「耗时段」无对位规则**（评审轮 1 🟡 · **射程外只报**）：VSC 同字串住 `.tool-call-status`（11px ∕ .6），桌面耗时住独立段 `[data-seg="time"]`（`views/chat-tool.mjs:110`）⇒ 现读 12px ∕ 1.0。修法两择一（补一行规则 ∕ 按 VSC 原形并入 status 段——后者触视图段集 ⇒ 随设计面轮）；父侧裁。
+2. **③ 停落后的残余色域差**（协调项）：桌面「整行两态色」⟷ VSC「name 段 accent + 两态色仅住 status 段」——待设计面一并决策（§5.15 项 3 在册）；本舱按裁定零动作。
+3. **设计面轮收正清单（续）**：`UI.md:361` 引用漂移收正（在册引 `:362`）· §2.8 行动表锚值 229 与现值 313 之差（父侧落笔面 · 已知）· 头行段四组 ∕ 件级外边距 ∕ 首块上距 ∕ file-link 有效 focus 值在册规格（现只住 CSS 注释）——随设计面轮 #26。
+4. **块距映射回合边界只报**（评审轮 1 🔵）：`.block + .block-tool` 不分回合边界（前件为 `user` 块时亦 8px；VSC 同序列 ≈14px——未实机验证）——如判需区分 = 视图侧增锚（非本轮射程）。
 
 ## §6 验证与收口（父代理）

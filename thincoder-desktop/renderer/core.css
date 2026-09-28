@@ -202,7 +202,8 @@
 
 /* ── ② 推理块（核件结构）：盒值（边框 ∕ 圆角 6px ∕ `--tool-bg` 角色对位 ⇒ `--overlay` ∕ 字号 12px ∕ `overflow: hidden`）+
    行内边距（summary `4px 10px` ∕ 内容区 `6px 10px`）= VSC `webview/chat.css:277-294` ∕ `:393-401` 逐值——
-   盒层单层律随块壳去盒退场（R12 会话流对齐：盒值归面级；`margin: 4px 0` 不叠落——扁平化模型由块级块距承担）。 ── */
+   盒层单层律随块壳去盒退场（R12 会话流对齐：盒值归面级；`margin: 4px 0` = 件级外边距 ⇒ 落
+   `.block + .block-reasoning { margin-top: 4px }`（`chat.css` 件级外边距段——扁平化模型下由块级块距承担）。 ── */
 .reasoning-block {
   margin: 0;
   border: 1px solid var(--line);
@@ -426,5 +427,10 @@
    `.chat-ledger` —— `chat-fixes.css` 侧 11px ∕ `--fg-muted` 继承）。 */
 .ledger-line { padding: 1px 0; line-height: 1.5; opacity: 0.85; white-space: pre-wrap; overflow-wrap: anywhere; }
 .ledger-line.warn { color: var(--warn); opacity: 1; }
-.file-link { color: var(--accent); cursor: pointer; text-decoration: underline dotted; }
-.file-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* 文件链接值 = VSC 逐值（R12 收口修复轮 —— 三值差消除）：基态补 `text-underline-offset: 2px`（`webview/chat.css:251`）·
+   补 hover 实线（`:254`）· `:focus-visible` 取 VSC 类规则值 `1px solid` + `border-radius: 2px`（`:255`）**并携 `outline-offset: 2px`**
+   （VSC 有效 offset 来自全局 `:focus-visible { outline-offset: 2px }`（`webview/base.css:445`）——`outline` 简写不含 offset；
+   桌面无全局同规则 ⇒ 本规则自携，使有效 focus 环与 VSC 同效：`1px solid` + 圆角 2px + 外扩 2px）。 */
+.file-link { color: var(--accent); cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
+.file-link:hover { text-decoration-style: solid; }
+.file-link:focus-visible { outline: 1px solid var(--accent); border-radius: 2px; outline-offset: 2px; }
