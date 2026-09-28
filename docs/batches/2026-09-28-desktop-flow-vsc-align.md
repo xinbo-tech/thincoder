@@ -147,8 +147,13 @@
 - **裁② ③ 残余色域差**（整行两态 ⟷ VSC name-accent 口径）：**设计面裁 → #38**（默认按对齐判据 = VSC 逐值；例外须真端差三件齐）。
 - **裁③ 文档面**：`UI.md:361` ⟷ `:362` 漂移 + §2.8 chrome.css 锚 **229 ⇒ 313** 重锚（本舱 +44）→ 同归 **#38**。
 
+### 1.29 R12 设计面同步轮 #26 交付收下（父侧 · 2026-09-29 00:5x）
+- **交付**（#26 · fix）：15 处逐落——`RENDERER.md`：滚顶阈值 **40px** 收正（`BACKFILL_PX` 单源）+ `FOLLOW_PX` 严格小于句 + §4 行页量改指（核 `historyWindow` 缺省 200 条——消 `:128` ∕ `:101` 互抵）；`UI.md`：`:18` R12 行内指针 + D24 三处清出（`.block` ∕ `.rail-rename-input` ∕ 卡族框指针）+ **新增本批注（`:465-472`）五项** + changelog；批档 §2：R1/R10/R13 三残留实例收正（480×2 ∕ 499×1）+ R12 终稿读数补录 + **§2.12 回执**。doc-check **162 ⇒ 161（Δ −1）** ∕ 行宽 0（首落一处 311 已拆）。§2 append + 状态行 ✓。
+- **勘误（父侧）**：§1.28 裁② ∕ ③ 中「#38」= 实 id **#37**（设计面裁轮在队）。
+- **候裁 ∕ 转出**：① `.approval-card` ∕ `.composer-input` 死类疑点 + ② UI.md D24 余残留（`:245` ∕ `:248-249` ∕ `:251-253` ∕ `:264`）→ 台账 **#548**；③ UI.md 余悬空 15 处（`styles.css` ×14 + `composer-send` ×1）= CSS ∕ 发布重构轮面（在册）；④ `E2E-TESTING.md` 真机面（§5.15 未办 5 余项）→ 台账 **#549**；⑤ #37 归口面（`:361/:362` + 229⇒313）零触 ✓ 正确。
+
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成 · 2026-09-29（评审轮 1 十二发现落修 + R13 入书（§2.10）+ 评审 #1 ①–⑥ ∕ ⑧ 微轮收正（§2.11）；实施任务书 R1–R13 在册）
+**状态行**：设计完成 · 2026-09-29（评审轮 1 十二发现落修 + R13 入书（§2.10）+ 评审 #1 ①–⑥ ∕ ⑧ 微轮收正（§2.11）+ R12 设计面同步轮 #26（§2.12）；实施任务书 R1–R13 在册）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 ### 2.0 交付形态与计量口径（本 §2 = 实施任务书）
@@ -220,7 +225,7 @@
 | 7 | `thincoder-desktop/renderer/queue.mjs`（42） | `thincoder-render-core/flow/queued-mark.mjs:74`（`planBusyQueued`） | 快照应用改**随核计划**（标记 ∕ 合并 ∕ 防悬空口径单源 = 核；**`planBusyQueued` 消费 = 准**——父侧裁 2026-09-28）；快照来源 ∕ 气泡 DOM 留端（核留端面） | 42 ⇒ 估算 ≈35–42 |
 | 8 | `thincoder-desktop/renderer/views/chat-pending.mjs`（78） | 同 #7 | 待发送组呈现随核计划（合并批 ⇒ 单泡形随核）；**容器 ∕ 落位 = ① 消除**（在连泡就近标记形——VSC 形；`[data-pending]` 独立组退场）；并笔序 = 姊妹批 B12 先行（§2.0 跨批序） | 78 ⇒ 估算 ≈70–80 |
 | 9 | `thincoder-desktop/renderer/i18n-views.mjs`（69） | 核卡词键（值**逐字同** `thincoder-vscode/locales/{zh,en}.json`） | 增核卡词键 ≈15 键 × 2 语（`perm.*` 7 · `question.label/mark/submit/customPlaceholder/placeholder` 5 · `panel.*` 2 · `goal.objective` 1）；**入本档不入 `i18n.mjs`**（本体 **490** 距 500 硬限 **10** 行；拆分 = 输入面板批 R1 承接——§2.0 跨批序） | 69 ⇒ 估算 ≈100–120 |
-| 10 | `thincoder-desktop/renderer/chat.css`（480） | 核卡类名面（`.permission-prompt` ∕ `.perm-*` ∕ `.question-*` ∕ `.panel-desc` ∕ `.task-*`） | 核卡类名映射（复用既有 `.question-card` ∕ `.question-*` 规则；补 `.permission-prompt` ∕ `.perm-btn` ∕ `.task-*` 面——沿「对齐第三批」core.css ∕ chat.css 映射先例） | 480 ⇒ 估算 ≈490–510（**越 500 ⇒ 先拆后改**——拆档定稿见 §2.1） |
+| 10 | `thincoder-desktop/renderer/chat.css`（480 ⇒ **229**——R1 四拆后主档） | 核卡类名面（`.permission-prompt` ∕ `.perm-*` ∕ `.question-*` ∕ `.panel-desc` ∕ `.task-*`） | 核卡类名映射（复用既有 `.question-card` ∕ `.question-*` 规则；补 `.permission-prompt` ∕ `.perm-btn` ∕ `.task-*` 面——沿「对齐第三批」core.css ∕ chat.css 映射先例） | **已落（R1 四拆）**：主档 **229** ＋三新档（`chat-cards.css` ∕ `chat-composer.css` ∕ `chat-fixes.css`）；核卡类名映射落 `chat-cards.css` ∕ `core.css` ⑤ 段——§5.11 |
 | 11 | `thincoder-desktop/renderer/core.css`（346） | 同 #10 | 核类名映射承接面（第二落点——拆压优先） | 346 ⇒ 估算 ≈355–375 |
 
 **端壳适配（逐条实证给由——核件零改；IME 组字门 = 核件小修候选 · §1.6 已裁 = 准 · 见 §2.5-5）**：
@@ -414,7 +419,7 @@
 | 6 | `thincoder-desktop/renderer/pool.css`（85） | 池 ∕ 块 chrome 样式换装（值源 = VSC `base.css:82-117` ∕ `chat.css:317-374`；变量别名） | 85 ⇒ 估算 ≈90–130 |
 | 7 | `thincoder-desktop/renderer/views/activity-new.mjs`（**新档**——定名） | 出生计数贴（VSC `activity-new.js:21-54` 照搬；消费面 = 池面挂载 ∕ 拍面） | 新档 ≈40–70 |
 | 8 | `thincoder-desktop/renderer/events.mjs`（498）+ `renderer/app.mjs`（300） | 归约 ∕ 拍点接线随动（**拆分已由输入面板批 R1 承接**——`renderer/events-flags.mjs` ≈+75；本行引用之，不重复计划；主档批后 ≈482） | 随动 |
-| 9 | `thincoder-desktop/renderer/chat.css`（480） | 块规则随动（若触；与 R12 面避让；**先拆后改**——拆档见 §2.1） | 随动 |
+| 9 | `thincoder-desktop/renderer/chat.css`（480 ⇒ **229**——R1 四拆后主档） | 块规则随动（若触；与 R12 面避让；**先拆后改**——拆档见 §2.1）——**已落（零触）**：R10 与 R12 避让 ⇒ `chat.css` 零笔（§5.14） | 随动 |
 
 **适配逐条实证**：① 位置（右列 vs 横带）= 用户 ② 已裁方向（`docs/batches/2026-09-28-desktop-input-vsc-align.md` §2.11②-1）；② 停止通道名映射（`cancelSubagent` → `subagent:stop`）；③ 事件载荷映射（relay 面 → `ev:subagent`，桌面已在）；④ 2s 宿主拍 = R6 核件（本表衔接）。
 **验收**：机检——池空态退场 ∕ 生命期 ∕ 归档位置 ∕ 拍体判据（原址补例（现读 ∕ 处置）：`test/views-activity.test.mjs`（391 ∕ 改锚） ∕ `events-subagent.test.mjs`（171 ∕ 改锚） ∕ `agent-host-subagent.test.mjs`（144 ∕ 改锚） ∕ `views.test.mjs`（270 ∕ 改锚））；套件——desktop 绿（≥263）。真机（父侧）——右列子代理全族走查（出生 ∕ 在飞走时 ∕ ⏹ ∕ 终态留场 ∕ 归档 ∕ 计数贴 ∕ 空态）。
@@ -450,6 +455,9 @@
 
 **行动表**：`renderer/chat.css`（**229**——拆后主档：块壳 ∕ 面宽 ∕ 间距）· `renderer/theme.css`（**90**）∕ `renderer/chrome.css`（**424**）——变量 ∕ 骨架面（原 `styles.css` 已删档 ⇒ 改指）
 · `renderer/views/chat.mjs`（**350**——>300：拆点登记随结构 ∕ 设计面轮（R1 舱 `§5.11` 在册）；本批内不拆）· `renderer/views/chat-text.mjs`（**132**）· `renderer/views/chat-scroll.mjs`（**91**）· `renderer/views/chat-guide.mjs`（**79**——空态面随动）——原档 ≤15；预期 = 值面收正（±0～−10 ∕ 档）。
+
+**R12 终稿读数（§5.15 ∕ §1.27 · 2026-09-29）**：`chat.css` **269** ∕ `core.css` **430** ∕ `chat-fixes.css` **95** ∕ `chat-text.mjs` **126**；真机探针 **22 ∕ 22**（亮色 · `pageerror` 0）。
+**R12 收口修复轮（#25 · fix · 四项逐落）**：件级外边距（工具 ∕ 错误 **8** ∕ 推理 **4**）· 首块上距 **14px** · 头行段样式四组（**16 ∕ 18 值**；2 值相抵停报）· file-link 三值——逐落；真机探针 **26 ∕ 26**（§1.28 收下 ∕ §5.21 在册；行数读数随 #38 重锚）。
 **验收**：以 §1.24 准备单为准——逐值表 + 探针复跑 + 全清令注记。机检测试面（`views-chat` ∕ `views-chat-frame` ∕ `integration/chat-render` 三档原址改锚 +「套件 desktop 绿（≥263）」）**随全清令取消**（用户 2026-09-28 23:18 令——测试树已全删）；机械面改逐值表 ∕ 真机探针留证。真机（父侧）——会话流与 VSC 同刻对照（文本 ∕ 工具卡 ∕ 推理 ∕ 错误 ∕ 滚动）。
 **边界**：流尾件面零撤（前批裁定）；与 R10 的 `chat.css` 面避让（串行）。
 **文档收正（随轮）**：`UI.md` §1 对话流行（块壳 ∕ 面宽 ∕ 间距）+ `RENDERER.md`（帧面若触）+ `E2E-TESTING.md`（真机面）+ `PROJECT.md`（**D24 行「消息块壳」保留面收正——已落 · 2026-09-29 设计微轮**；§7 用例行）+ `RENDER-CORE.md` §5（若值面触）。
@@ -490,7 +498,7 @@
 | 4 | `renderer/mount-sessions.mjs`（199） | 改造：会话控制面（下拉开合 ∕ 条目构树 ∕ 三出口）——标签族调用面退场；`refreshRail` ⇒ 列表供下拉 | 199 ⇒ 估算 ≈180–210 |
 | 5 | `renderer/store.mjs`（329） | 标签族退场（`tabs` ∕ `activeTab` ∕ `pendingClose` ∕ 关闭确认族 ∕ `openRailForm` 族）；保留 `activeSession` ∕ 位标 ∕ `sessionMeta` 切片 | 329 ⇒ 估算 ≈250–290 |
 | 6 | `renderer/index.html`（48） | 左列块（`.rail` 三槽）退场；中区首槽改会话控制锚 | 48 ⇒ 估算 ≈35–45 |
-| 7 | `renderer/styles.css`（499） | 左列 ∕ 标签条段退场（**先拆后改**——拆档定稿见 §2.1） | 499 ⇒ 净减 ≈230–260 |
+| 7 | `renderer/styles.css`（499 ⇒ **已删档**——R13-A 四拆） | 左列 ∕ 标签条段退场（**先拆后改**——拆档定稿见 §2.1）——**已落（R13-A 四拆）**：`theme.css` 85 ∕ `chrome.css` 415 ∕ `skin.css` 13；`styles.css` ∕ `rail.css` 删档（§5.16） | 四拆落定读数（R11 补轮后 90 ∕ 424） |
 | 8 | `renderer/app.mjs`（300） | 接线随动（`RAIL_KEYS` ∕ 挂载点重指） | 随动 |
 | 9 | `renderer/mount-head.mjs`（156） | 会话头面随动（会话级三值句若触） | 随动（若触） |
 | 10 | `renderer/views/chat-guide.mjs`（80） | 引导面随动（`no-project` 入口句与左列裁撤对齐——出口不变） | 随动 |
@@ -549,6 +557,34 @@
 | ⑤ | R12 F1 行 ∕ `PROJECT.md` D24 行 | 锁句改述（锁载体随全清令退役 ⇒ 留证改逐值表 ∕ 探针）+ `.block` 移出保留面（`.rail-row` 随 R13-A 退场同拍） |
 | ⑥ | R12 行动表 ∕ `PROJECT.md` §4.2 行 | 数值统一回填（**350** ∕ **132** ∕ **91** ∕ **79**；chat-guide 54 ⇒ 79） |
 | ⑧ | §1 ∕ §5 段号 | 就地顺正打标（见上）——内容零改 |
+
+### 2.12 R12 设计面同步轮 —— 打标（§2 就地修正 + 设计档同轮 · 2026-09-29 · eng-designer）
+
+**来源**：flow 批 R12 §5.15 未办清单 5（设计面轮收正清单）⇒ 设计同步轮 #26（fix · 定点 · §1.27 ⑦）。**口径**：零语义——只收设计面按 R12 终稿的同步值 ∕ 锚 ∕ 残留旧值；条目零增；产品码 ∕ 需求档 ∕ §5 已交付段零触。
+
+**§2 就地修正（本作者段内）**
+
+| # | 落点 | 前 ⇒ 后 |
+|---|---|---|
+| 1 | §2.8 R12 行动表尾 | 补 **R12 终稿读数**（`chat.css` 269 ∕ `core.css` 430 ∕ `chat-fixes.css` 95 ∕ `chat-text.mjs` 126；探针 22 ∕ 22）+ 收口修复轮（#25）落定注（§1.28 ∕ §5.21） |
+| 2 | §2.2 R1 行动表 行 10 | `chat.css`（480 ⇒ **229**——R1 四拆后主档）；预期列改 **已落（R1 四拆）**（§5.11） |
+| 3 | §2.8 R10 行动表 行 9 | 同上锚正 + 动作列补 **已落（零触 · §5.14）** |
+| 4 | §2.9 R13 行动表 行 7 | `styles.css`（499 ⇒ **已删档**——R13-A 四拆）；预期列改四拆落定读数（§5.16） |
+
+**设计档同轮同步（本座笔）**
+
+| # | 设计档 | 前 ⇒ 后 |
+|---|---|---|
+| 1 | `RENDERER.md` §3 回填条 | 滚至顶 ≤ 48px ⇒ **≤ 40px** |
+| 2 | `RENDERER.md` §3 跟滚条 | 判据 `≤ FOLLOW_PX` ⇒ **`< FOLLOW_PX`**（严格小于——恰 24px 不判近底） |
+| 3 | `RENDERER.md` §4 行 3 | 顶 ≤ 48px ⇒ 40px；「（100 块）」⇒ 页量口径（核 `historyWindow` 缺省 200 条——消 `:128` ∕ `:101` 互抵） |
+| 4 | `UI.md` §1 对话流（:18） | 行内指针 +「本批注（R12 会话流 ⇒ VSC 对齐）」新增（块壳透明 ∕ 面宽 100% ∕ 块距 14px ∕ 件级外边距与首块上距 ∕ 扁平块模型） |
+| 5 | `UI.md` D24 项 6（保留面） | `.block` 移出（R12 F1）· `.rail-rename-input` 清出（类零命中）· 卡族框指针收正为 `chat-cards.css` |
+| 6 | `UI.md` D24 项 7（负向锁） | 清出 `.block`（R12 F1）∕ `.rail-row` ∕ `.rail-rename-input`；余 = accent（`.approval-card` ∕ `.question-card`）＋ `--line`（`.composer-input` ∕ `.plan-card`） |
+
+**机检读数**（`node scripts/doc-check.mjs` · 仓根 `thincoder/`）：行前 = 悬空 **162** ∕ 行宽 **0**；行后 = 悬空 **161** ∕ 行宽 **0**（Δ = −1：UI.md 保留面收正时清出一处既有悬空行；无新增）。
+
+**未办（派单外 · 只报）**：① `docs/desktop/design/E2E-TESTING.md`（真机面）= §5.15 未办 5 余项——归父侧另轮；② UI.md 余悬空 15 处（R13 ∕ 输入面板批 ∕ R1 迁移遗留——同源待收，零新动作）；③ `.approval-card` ∕ `.composer-input` 死类疑点（PROJECT.md §6.1 D24 行与 UI.md D24 注均列为保留面；全仓码面零命中）——只报候裁。
 
 ## §3 设计评审（评审子代理）
 
