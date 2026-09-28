@@ -104,6 +104,12 @@
 - **余（33 条）**：条件型（触发未到，如 #369 / #470 / #434）· 真债待轮（如 #363 / #499 / #503）· 在飞待勾（#429 / #448 / #451 / #515 = 轮 8 交付后落）。
 - **结论**：待设计 **76 ⇒ 33**；未决总 **124 ⇒ 80**（42 待讨论 ＋ 33 待设计 ＋ 5 在途）。
 
+### 1.19 轮 8 交付收下（父侧 · 2026-09-29 03:0x）
+- **交付**（#33 · 终态 clean · fix 1）：8 条——#429 **取批面放行**（`consumableAction` 新导出 ∕ 两取批点换判据；复现两臂 + 三用例 + 负控判红）· #448① 模态期抑制 + 关闭后补评估（四关闭点装配）· #448② 异常径重武装 + 会话停 ∕ 显式撤销除外（粘滞位收口；`runAgentTurnBody` 改名）· #515①/#507 切项目级联清装配（`forgetAll` + 不回流 + 级联清）· #515② send 跨中止闸 + 新 reason 码 `aborted` · #515③ 中止后交付闸（代次比对）· **#356 渠道校验级真取证**（glm-5.2 ∕ glm-5：`disabled` 受理且生效 ⇒ `thinkAlwaysOn` 维持不标、默认侧成立）· **#451 结论 = 无槽 effort 施加面**（证据链三件齐）· #251 ∕ #255 ∕ #298 转档登记（报告列）。**批次本地件**落位 `docs/batches/2026-09-28-tech-debt-closeout-r8.test.mjs`（351 行）——**终位亲跑 8 ∕ 8 · 0 fail**；负控七桩判红取证（已还原）。`node --check` 11 档绿；§5 已落（6868 字符 + 状态行）。
+- **台账**：#429 ∕ #448 ∕ #451 ∕ #515 ∕ #356 **五条核销**。
+- **收正行（→ 下一设计面轮 ∕ 届盘）**：① `AGENT-LOOP-ASYNC-POOL.md` §6.30（#448 两句 + #513 CLI 句）② `SESSION.md` §6.21（#451 结论卸载）③ `MODEL-SPECS.md` §16.9-2 ∕ §16.3（#356 读数入档）④ `IPC.md` §2 `msg:send` + `ipc.mjs:183-186` 注释（`aborted`）⑤ `WEBVIEW-INPUT.md` C-B2-6（#429 落形）⑥ **§2.6 码表：`agent-turn.mjs` 407 > 300——补行 + 拆分预案**（实改档、表未列）+ #251 ∕ #255 ∕ #298 三登记句落点。
+- **披露**：表外三档（`pickers` ∕ `wizard` ∕ `index`——#448① 关闭点装配必需）+ `agent-turn.mjs`（实改档）——逐理由在 §5。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：✅ 设计完成（initial 轮 + 修正轮 1–2（评审 #3 收正已落）· 63 条 8 轮 · 每轮 ≤10 档）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
@@ -739,7 +745,7 @@
 - **实施序**：§2.3 分层执行——轮 4 ∕ 轮 5（码面）与轮 1（文档 sweep）即起；轮 2 ∕ 3 ∕ 6–8 随派（先小设计项按轮定形）。
 
 ## §5 实施记录（eng-coder）
-**状态行**：实施完成（轮 7（拆档 ∕ 尺寸 ∕ 工具清理 · 8 条）——审计 1 轮 clean ∕ 代码评审 1 轮 pass（🔴0）；批次本地件 9 ∕ 9 绿；终态 clean）
+**状态行**：✅ 实施完成 · 2026-09-29（轮 8（处置 ∕ 实证族 · 8 条）——审计 1 轮 + 代码评审 1 轮 pass（🔴0）；fix round 1（#448② 粘滞位收口）；批次本地件 8 ∕ 8 绿；终态 clean）
 
 
 
@@ -937,5 +943,54 @@
 **审计与代码评审轮次与终态**：内部 explore 背离审计（只读 · 1 轮）= **clean**（四类偏差零；附 2 项记录面：§5 未写 = 本笔补、`isComposing` 注释漂移 = 随轮收正）；advisor 代码评审（type=code · 1 轮）= **pass**（🔴0 ∕ 🟡1【编排项：设计档回填待 Doc-B #35 ∕ #551 —— 非 must-fix】∕ 🔵3【`mount-composer` 档头陈旧注释 ×2 ∕ 批测时序等待】）；**fix round = 1**（三项逐处收正：`:33` 归属改指派生面档 · `:35` 死指针标记 · 批测改确定性轮询；复跑 9 ∕ 9 保持）。**终态 = clean**。
 
 **披露**：① 测试件暂存 `.thincoder/tmp/` 待父侧 copy（写门实测拒 —— 台账 #545）；② 本舱零触设计档 ∕ 需求档 ∕ 其他批档（`thincoder-core/**` 只读）；③ 表外两处见决策表 #6；④ 工作树含他批未提交改动（`mount-composer.mjs` 改前非 HEAD 基线——字节级重演不适用，如上述）。
+
+**轮 8 · 实施记录（处置 ∕ 实证族 · 8 条 · eng-coder #33 · 2026-09-29 · initial 轮）**
+
+**逐条落点（条 → 处置 → file:line · 终稿实读）**
+
+| 条 | 处置 | 落点 / 证据 |
+|---|---|---|
+| #429 | **落：取批面放行**（父侧 2026-09-29 裁——设计备选；「堵源」前提证伪） | `thincoder-vscode/src/extension/queued-merge.mjs:37-39`（新导出 `consumableAction`——slash ∕ turn 同判可消费）· `thincoder-vscode/src/extension/queued-pickup.mjs:35`（步边界）· `:53`（载具取项）两点换判据。**复现（模块级 · 两臂）**：`planQueuedInput(["/x","y"])` 首动作 `kind:"slash"` ∧ 旧判据 `action.kind !== "turn"` ⇒ `takeQueuedBatchItem` ∕ `pickupQueuedAtStepBoundary` 双双零消费 ⇒ slash 滞留队首**且堵住其后全部条目**（`/x` 后条目一并不得消费）。 |
+| #448① | **落：模态期抑制 + 关闭后补评估** | `thincoder-cli/src/tui/timer-watch.mjs:78-82`（`modalOpen(state)` 单谓词）· `:96`（`fireTimerWake` 模态门——零送达 ∕ 零开轮 ∕ 在途 timer 零触碰）；关闭后补评估装配 = `pickers.mjs:33-35`（picker 栈空点）· `wizard.mjs:169-171`（`cancelWizard`）· `:240-243`（`finishWizard` 收尾链）· `index.mjs:162-165`（`reevalTimerWake`）+ `:174` ∕ `:181`（pickers ∕ wizard 双注入）。 |
+| #448② | **落：异常径重武装（`sync()` 入 `finally`）+ 会话停 ∕ 显式撤销除外** | `agent-turn.mjs:94-100`（收口层 `runAgentTurnInner`——正文之后 `finally` 内守卫重武装）· `:84-88`（`timerRearmBlocked` 四腿）· `:219-221`（**Ctrl+C 全停粘滞位**落点——`{abortTrigger:"stop"}` 中止分支）· `:397`（**会话停粘滞位**——`_suspAborted` 复位前捕获）· `:151-157`（链头复位）；正文改名 `runAgentTurnBody`（`:102-103`）。 |
+| #451 | **实读结论 = 无「槽 effort 施加面」（注册；零码改）** | `thincoder-vscode/src/agent/agent-state.mjs:89-129`（`applySlotSessionState` 槽映射无 `effort`）· `src/agent/setup.mjs:186-207`（VSC hydrate = 只读槽 provider/model）· 核档位施加块 `thincoder-core/session-lifecycle.mjs:186-198`（注「三端共用本施加面」）但 **VSC 全树 `applySession` 零 import 命中**（该施加面未被 VSC 调用）；VSC 自有面 = 每回合 `reasoning` 参数（`panel-turn-stages.mjs:94-99` → `resolveReasoningMode`）+ workspaceState prefs（`panel-chat.mjs:212-213`）——**槽 `effort` 既不读也不写**。端差三件齐：证据（上列）· 影响（CLI ∕ 桌面写的档位在 VSC 恢复不生效；VSC 选档不落槽 ⇒ 跨端档位不共享）· 处置候选（补接线须设计轮定形：`applySlotSessionState` 增 effort 映射 + webview 初值播种）。 |
+| #515① ∕ #507 | **落：切项目级联清装配** | `thincoder-desktop/src/main/agent-host.mjs:104-118`（`forgetAll`——agents ∕ 在途装配 ∕ 令牌表三面全清）· `:160-172`（`ensure` 清后**不回流**——装配完时按 `pending` 身份比对）· `turn-driver.mjs:205-213`（`abortSuspensions` 调 `forgetAll`——旧项目装配全清 ⇒ 同槽号键不再命中旧项目 agent ∧ 陈旧尾「代次就地覆写」面随对象更换消除）。 |
+| #515② | **落：send 跨中止闸 + 新 reason 码 `aborted`** | `turn-driver.mjs:145-154`（装配 `await` 后查占位在场；被 `dispose` ∕ 切项目清 ⇒ `{ok:false, reason:"aborted"}`——零起跑零落盘）。 |
+| #515③ | **落：中止后交付闸** | `suspension-drive.mjs:41-54`（`abortGens` + `onFire` 武装刻代次比对——陈旧点火丢弃）· `:236-238`（中止先落代次）· `:268-272`（`abortAll` 闩键入列）；`timer-watch.mjs:29-45`（武装刻代次捕获 `rev`）· `:63`（`keys()`）。 |
+| #251 ∕ #255 ∕ #298 | **转档登记（设计面收正行——本舱零触）** | 三登记句落点 = 设计面（send ∕ 注入面设计档 · judge ∕ bench 设计档 · VSC 设计档）——归 Doc-B（#35）。 |
+| #356 | **落：渠道校验级读数（真取证）** | 探针 `.thincoder/tmp/r8-glm-probe.mjs`（非交付物）；读数见下（入档 = 设计面收正行——MODEL-SPECS §16.9-2 ∕ §16.3 行注）。 |
+
+**决策透明表**
+
+| # | 决策 | 依据 |
+|---|---|---|
+| 1 | #429 取「取批面放行」（设计备选）而非「堵源」 | 父侧裁（前提证伪：VSC 提交面已搬共享核件 `thincoder-render-core/composer/panel.mjs`（#526 在途域、VSC ∕ 桌面共用）⇒ 堵源无处落且必波及桌面）；先例 = 桌面 KD-40 D-2「无斜杠面 ⇒ 逐条直发」；VSC 全树零 `/` 命令执行面（证据在册） |
+| 2 | #448② 以**粘滞位 `_timerRearmRevoked`** 实现 KD-6 除外 | 首版三腿判据在收口点**不可达**（`state.controller` 于正文 `finally:322` 先置空 ∕ `_suspAborted` 复位先于收口 ∕ `_sessionAbort` 先清）——顾问评审 🟡#1 同判；改在停止语义可观察点落粘滞位（stop 中止分支 + 会话停复位前捕获；链头复位）⇒ 真链两臂（stop ⇒ 不重武装 ∕ 普通停 ⇒ 重武装） |
+| 3 | #515① 取「级联清装配」（全表清）而非「回合域代次」 | 设计倾向 + #507 合并面（跨项目同槽号键清点）；`dispose` 臂同型先例 |
+| 4 | `ensure` 增「清后不回流」 | 级联清与在途装配竞态（清后回填旧 agent）——不加则 #507 半修 |
+| 5 | 新 reason 码取名 `aborted` | 语义 = 装配 await 期被中止；登记面（`IPC.md` §2 ∕ `ipc.mjs` 注释）不在本舱笔域 ⇒ 上报 |
+| 6 | 探针真跑（#356）而非「未取证」登记 | 渠道 `glm` 配置在盘 + 探针为设计指定取证路径；读数决定性（见验证读数） |
+
+**验证读数（亲跑）**
+
+- 批次本地件（**暂存** `.thincoder/tmp/2026-09-28-tech-debt-closeout-r8.test.mjs`——两层深 ⇒ 相对 import 与终位一致，待父侧 copy 至 `docs/batches/`）：`node --test .thincoder/tmp/2026-09-28-tech-debt-closeout-r8.test.mjs`（仓根）= **8 ∕ 8 pass · 0 fail**（日志 `.thincoder/tmp/r8-final-run.log`）。用例名逐条：① #429 复现读 + 判据置换；② #429 载具取项面（slash 单条直达 ∕ 后续条目可达）；③ #429 步边界取批同判；④ #448① 模态期不点火 + 关闭后补评估（重武装即达）；⑤ #448② 异常逃逸照常重武装 + Ctrl+C 全停经真链不重武装 + 普通停照常重武装；⑥ #515① 切项目级联清装配（陈旧回合不洗白 ∕ 装配表清点）；⑦ #515② 跨中止不起跑（abortSuspensions ∕ dispose 两臂 + 正控）；⑧ #515③ 中止后不投递（陈旧点火零交付 ∕ 零开轮 + 正控）。
+- `node --check`：触碰 **11 档全绿**；装配装载探针（cli `timer-watch` ∕ `agent-turn` ∕ `pickers` ∕ `wizard` ∕ `index`）= LOAD-OK。
+- **负控（六桩判红取证 · 已还原 · 源面零残留）**：① #429 两取批点复旧判据 ⇒ 载具 ∕ 步边界两例判红（`actual: null` ∕ 队未消费）；② #448① 模态门撤 ⇒ 判红（抑制臂 `true !== false`）；③ #448② 收口 `sync` 撤 ⇒ 判红（`0 !== 1`）；④ #448② 粘滞位腿撤（**真链 stop 臂**）⇒ 判红（`actual: 1, expected: 0`）；⑤ #515① `forgetAll` 撤 ⇒ 判红（装配表 `1 !== 0`）；⑥ #515② `aborted` 闸撤 ⇒ 判红（`{ok:true}` vs `{ok:false, reason:"aborted"}`）；⑦ #515③ 代次闸撤 ⇒ 判红（`1 !== 0`）。
+- **#356 探针读数**（渠道 = `glm` · `https://open.bigmodel.cn/api/paas/v4`；只读状态码 + `reasoning_content` 在场位）：`glm-5.2` —— control=200（reasoning=true）· `thinking:{type:"disabled"}`=200（**reasoning=false**）· `reasoning_effort:"none"`=200（reasoning=true）；`glm-5` 同形 ⇒ **两模型 off 路径存在（disabled 载荷受理且生效——族形态与 `glm-5.3` 族相反）⇒ `thinkAlwaysOn` 维持不标、判据默认侧（可宣称 OFF）成立**。
+- **not repo-suite verified — the parent-side closeout run is the only repo-suite run.**
+
+**审计与代码评审轮次与终态**：内部 explore 背离审计（只读 · 1 轮）= 码 ∕ 用例面四类偏差零；发现集中**文档 ∕ 登记面**（全部为本舱零触的设计面收正行——见下清单）。advisor 代码评审（type=code · 1 轮）= **pass**（🔴0 ∕ 🟡2 ∕ 🔵6）：🟡#1 = #448② 守卫腿不可达（同内审判读）⇒ **本舱 fix round 1 收口**（粘滞位 + 真链用例 + 负控判红）；🟡#2 = `agent-turn.mjs` 407 > 300 顾问线（登记 + 拆分预案）；🔵①=新 reason 码登记面 · 🔵②=切项目未回收桥面 relay scope（登记）· 🔵③=测试负控判别力（随 fix 收口）· 🔵④=档头两指针（`queue-visible-vsc` 对拍锁档已清 ∕ §5 前向引用）· 🔵⑤=行数超差（`queued-merge.mjs` 79 vs ≤74）· 🔵⑥=「关闭后补评估」静态链缺直驱臂。**fix round = 1 · 终态 = clean**。
+
+**收正行（设计面 · 归 Doc-B #35 ∕ 届盘 · 本舱零触）**
+
+1. `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30：**#448 两句**（模态期抑制 + 关闭后补评估；异常径重武装——会话停 ∕ 显式撤销除外 · 实落 = 粘滞位 `_timerRearmRevoked`）+ **#513 CLI 句**（§6.30.10 邻位——CLI 窗内 timer 支 AbortError 容纳，轮 6 已落码）。
+2. `docs/core/design/SESSION.md` §6.21 邻位：**#451 结论卸载**（unverified 标注 ⇒ 「无槽 effort 施加面（实读 2026-09-29）；补接线归设计轮」）。
+3. `docs/core/design/MODEL-SPECS.md` §16.9-2 ∕ §16.3 行注：**#356 取证读数入档**（glm-5.2 ∕ glm-5 = 有 off 路径——disabled 受理且生效；`thinkAlwaysOn` 维持不标）。
+4. `docs/desktop/design/IPC.md` §2 `msg:send` 行 + `thincoder-desktop/src/main/ipc.mjs:183-186` 注释：**新 reason 码 `aborted`**（跨中止径）。
+5. `docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6 细则⑦ 邻位：**#429 落形**（VSC 取批面放行——KD-9 以备选结案；旧「入队门禁不可达」防御面句收正）。
+6. 批档 §2.6 码表：`thincoder-cli/src/tui/agent-turn.mjs` **407 > 300**（#448② 实改档 · 设计表未列——补行 + 拆分预案）；`thincoder-vscode/src/extension/queued-merge.mjs` 现读 **79**（设计 ≤74——超差 5 行如实登记）。
+7. #251 ∕ #255 ∕ #298 三登记句落点（send ∕ 注入面 · judge ∕ bench · VSC 设计档）。
+
+**披露**：① 测试件暂存 `.thincoder/tmp/`（两层深）待父侧 copy 至 `docs/batches/`；② **表外触碰（设计列外 · 逐档理由）**：`thincoder-cli/src/tui/{pickers,wizard,index}.mjs`（#448①「关闭后补评估」装配三件——关闭点判据必须住各关闭点）+ `thincoder-cli/src/tui/agent-turn.mjs`（#448② 实改档——设计 §2.6 未列）；③ 工作树含他批未提交改动（`thincoder-desktop/src/main/timer-watch.mjs` 等档含他批已落形）；④ 探针 ∕ 日志 ∕ 负控副本 = `.thincoder/tmp/` 临时物（非交付物；负控副本已清）。
 
 ## §6 验证与收口（父代理）
