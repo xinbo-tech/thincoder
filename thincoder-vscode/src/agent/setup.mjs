@@ -290,7 +290,8 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   if (projectRules) {
     systemPrompt += `\n\nProject instructions (follow these as project conventions):\n<untrusted_project_instructions>\n${escapeXml(projectRules)}\n</untrusted_project_instructions>`
   }
-  // #130 B-3/B-4：`.cursor/rules` 常驻集 [4] 层尾块 + 作用域集缓存载体（本 run 唯一一次目录读）
+  // #130 B-3/B-4：`.cursor/rules` 常驻集 [4] 层尾块 + 作用域集缓存载体（本 run 唯一一次目录读；
+  // R10 上提后目录读取 = 核 `rules.mjs` `loadRules`——调用面与行为零变）
   systemPrompt += scopedRulesBlock(agent, cwd)
   if (depth === 0) {
     const skillsList = Array.isArray(skills) ? skills : loadSkills(cwd)

@@ -25,7 +25,8 @@ import { noteMutations } from "@thincoder/core/agent-tools/advisor-settle.mjs"
 import { l3TouchedPaths, preGateBlocked, isSubagentConsumeDesignAction, collectBatchPermission } from "./tool-gates.mjs"
 // #327（`docs/core/design/TOOLS.md` §6.17）：记账面触达路径提取单源谓词（核单源——零副本）。
 import { toolTouchPaths } from "@thincoder/core/agent/helpers.mjs"
-// #130 B-4：`.cursor/rules` 作用域集 JIT 注入（派发前——判据单源 `rules-face.mjs`）
+// #130 B-4：`.cursor/rules` 作用域集 JIT 注入（派发前——判据单源 `rules-face.mjs`；
+// 目录读取 = 核 `rules.mjs` `loadRules`——R10 上提）
 import { injectScopedRules } from "./rules-face.mjs"
 
 // R10 L3（MULTI-INSTANCE-COLLAB.md D-L3a/b——VS Code 接线面）：结构化写工具集 =
@@ -243,7 +244,7 @@ export async function executeToolBatches(agent, { response, history, fullHistory
             onOutput: (chunk) => callbacks.onToolOutput?.(toolName, chunk, tc.id),
           }
           const raw = await tool.execute(args, toolCtx)
-          // C-7（AGENT-LOOP（VSC 仓）§12.3）工具结果类型守卫：非字符串 → throw（catch 转
+          // C-7（工具结果类型守卫）：非字符串 → throw（catch 转
           // "Error: …" 可见结果）；禁静默 String(raw) 成 "[object Object]"（issue ① 病征类）。
           if (typeof raw !== "string") throw new Error(`${toolName} must return a string value — got ${raw === null ? "null" : typeof raw}`)
           result = raw

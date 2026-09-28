@@ -1,10 +1,15 @@
 /**
- * rules.mjs — load scoped project rules from `.cursor/rules/` (VSC-only face).
+ * rules.mjs — `.cursor/rules/` 作用域规则（B 面）**VSC 端壳**：读取转口 + glob 匹配面。
  *
  * Face definition (authoritative) = `docs/core/design/WORKSPACE.md` §2.3: `.cursor/rules/*`
  * is the VSC end's SCOPE face; `.thincoder/rules/*` is the STREAM face (both ends — read by
- * the core `thincoder-core/rules.mjs` + consumed via `chat()`). This loader reads the scope
- * face only — never `.thincoder/rules/` (one thread, one semantic).
+ * the core `thincoder-core/rules.mjs` + consumed via `chat()`). One thread, one semantic:
+ * this end never reads `.thincoder/rules/` here.
+ *
+ * R10 上提（批档 `docs/batches/2026-09-28-desktop-feature-parity.md` §2.2 R10 · KD-T2）：
+ * 目录**读取面**（原 `loadRules` + 私有 frontmatter 解析）已纯搬并入核 `thincoder-core/rules.mjs`
+ * ⇒ 本档 `loadRules` = 核件**同名转口**（既有 import 名面零改 · 端壳零行为变）；glob 匹配面
+ * （`matchesGlob`）仍住本档 —— 消费单源 = `src/agent/rules-face.mjs`。
  *
  * Format: Markdown files (`.md` / `.mdc`) with optional YAML frontmatter.
  *
@@ -22,63 +27,8 @@
  *   ④ `description` only (Cursor's agent-requested semantic) ⇒ never injected here (registered)
  */
 
-import { readdirSync, readFileSync, existsSync } from "node:fs"
-import { join } from "node:path"
-
-/**
- * Load all scoped rules from `.cursor/rules/`.
- * Returns [{ name, content, globs, alwaysApply, description, source }, ...]
- */
-export function loadRules(cwd) {
-  const dir = join(cwd, ".cursor/rules")
-  if (!existsSync(dir)) return []
-  const results = []
-  let entries
-  try { entries = readdirSync(dir, { withFileTypes: true }) } catch { return results }
-  for (const e of entries) {
-    if (!e.isFile() || e.name.startsWith(".") || (!e.name.endsWith(".md") && !e.name.endsWith(".mdc"))) continue
-    try {
-      const raw = readFileSync(join(dir, e.name), "utf8").trim()
-      if (raw.length === 0) continue
-      const { content, meta } = parseFrontmatter(raw)
-      results.push({
-        name: e.name.replace(/\.(md|mdc)$/, ""),
-        content,
-        globs: meta.globs ? String(meta.globs).split(/[;\n]/).map(s => s.trim()).filter(Boolean) : null,
-        alwaysApply: meta.alwaysApply === "true",
-        description: meta.description ? String(meta.description) : null,
-        source: ".cursor/rules",
-      })
-    } catch { /* skip unreadable */ }
-  }
-  return results
-}
-
-/**
- * Split frontmatter block from content.
- * Frontmatter starts and ends with `---` on its own line.
- */
-function parseFrontmatter(raw) {
-  const m = raw.match(/^---\s*\n([\s\S]*?)\n---\s*\n?/)
-  if (!m) return { content: raw, meta: {} }
-
-  const front = m[1]
-  const content = raw.slice(m[0].length).trim()
-  const meta = {}
-  for (const line of front.split("\n")) {
-    const kv = line.match(/^(\w[\w-]*)\s*:\s*(.+?)\s*$/)
-    if (kv) {
-      const key = kv[1]
-      let val = kv[2]
-      // Strip surrounding quotes
-      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-        val = val.slice(1, -1)
-      }
-      meta[key] = val
-    }
-  }
-  return { content, meta }
-}
+// 读取面 = 核件同名转口（R10 上提——纯搬零语义改；实现单源 = `thincoder-core/rules.mjs`）。
+export { loadRules } from "@thincoder/core/rules.mjs"
 
 /**
  * Check if a file path matches any of the given glob patterns.

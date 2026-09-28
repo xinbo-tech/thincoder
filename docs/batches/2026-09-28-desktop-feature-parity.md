@@ -91,6 +91,11 @@
 - **列报转出（在册）**：① 事件通道 **19 ⇒ 21**（R4 码面已落——`IPC.md` §1 十九通道行 ∕ §2 两注行 ∕ `PROJECT.md:753` 事件半）→ 归 **R4 文档收正行**（届盘同拍）；② §4.1 行数值滞后（ipc **296** ∕ preload **62** vs 实读 308 ∕ 65）→ **#28 拆点 + 轮 8 落定后对账**；③ `UI.md:465` 行宽瞬时项 = flow 批 R12 在途注（自收正 ∕ 非本舱）。
 - **口径确认**：§2 原表值以 append 块覆盖为最新（overlay 先例）；两通道 = 请求面 ⇒ 落 §2（§1 事件面零改）。
 
+### 1.16 R10 交付收下（父侧 · 2026-09-29 00:5x）
+- **交付**（#15 · 终态 clean）：核 `rules.mjs` 54 ⇒ **124**（`.cursor/rules` 读取面上提——纯搬，唯一声明转口 = 私有件机械改名；档头两面说明）；VSC 四档改指（`extension/rules.mjs` 125 ⇒ **75**——同名转口名面零改；`rules-face.mjs` ∕ `setup.mjs` ∕ `execute-tools.mjs` 注记随落）；**桌面零改**（运行期自证：同一性 + `discoverRules` 实读 2 条）。机检：`node --check` 7/7；TEXT_PARITY 4 项全 true；fixture 电池两臂逐字节等（1730B ×2）；SHELL glob **16/16**；基准 **4256B === 4256B**；CHAIN 绿。**复核清单 8 项 + 判定登记 5 项**书面结论在册 §5（`:1045-1105`）。内审 DEVIATIONS（DOC-DRIFT 2）→ 代码评审 2 轮 pass ⇒ clean。
+- **转出 → #39（设计面收正轮）**：① R10 靶行（`PROJECT.md` §10 ∕ KD-42 补句）+ `WORKSPACE.md` 读取面归位四处（§2.3:51 ∕ §1:15 ∕ `:36` ∕ `:41`）；② 行数重锚（**54 ⇒ 124 实** ∕ 设计估 ≈104）；③ **修正 9 `:528` 设计句与盘面不符**（⑤ 直引 = **0/4**——端侧自持 + 核件留端注，非「已证消费经 chat-text」）。
+- **备注**：`execute-tools.mjs:244-247` = 他批在途笔迹（提交按路径留意）；`%TEMP%/tc-r10-*` 沙箱留现场（先例）；§5 状态行未动（R1/R3 先例，随届盘统一）。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（初始轮 + 评审轮 1 修正（1–14 逐号）+ R1 设计面收正轮（#129 ∕ #131 · 六档八笔；flow 批档三处归父侧）+ 评审轮 3（重发复核）修正 · 微轮 #16（1–10 逐号）+ 退役面本体收正轮 + R2 设计面收正轮（#29 · ①–⑥ 逐号）在册）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
@@ -1041,5 +1046,74 @@ KD-42（`PROJECT.md:81`）补句：**「域外对账保持人工」**——理�
 4. **探针留现场**：`thincoder-vscode/.thincoder/tmp/`（`r6-search-probe.mjs` ∕ `r6-baseline-search.mjs` ∕ 两 JSON ∕ 两 err）——非产品档（`.gitignore:19` 已忽略）。
 
 **行数口径注（R6 段 · 补记）**：上表 #7 `app.mjs` = **276** 与 #9 `i18n-views.mjs` = **158** 系 `split("\n").length` 口径（含文末换行空项）⇒ 按本批既有 `read` 总行数口径 = **275** ∕ **157**（系统差 +1，同 §3 修正 11 折算注）；与他舱 `§5 记录收正`（`i18n-views.mjs` 届盘重锚 **157**）同轴一致。其余各档两口径同值（无文末空项）。
+
+### R10 · 判定与复核族（eng-coder · 2026-09-29 · initial 轮）
+
+**交付摘要（逐档 · 行数 = `split("\n").length` 口径〔含文末空项〕；`read` 末行号口径 = −1，沿 §3 修正 11 折算）**
+
+| # | 档 | 行数 | 落点 |
+|---|---|---|---|
+| 1 | 核 `thincoder-core/rules.mjs` | 54 ⇒ **124** | `.cursor/rules` 读取面上提（**纯搬**——唯一声明转口 = 私有件改名 `parseFrontmatter` ⇒ `parseScopedFrontmatter`〔与 `./markdown.mjs` 导入同名冲突的机械改名，体逐字〕）；档头两面说明 + 上提注（说明块增量 = 124 vs 设计预告 ≈104 之差的全部来源） |
+| 2 | VSC `src/extension/rules.mjs` | 125 ⇒ **75** | 端壳改指：`:31` `export { loadRules } from "@thincoder/core/rules.mjs"`（同名转口——**名面零改**）；`matchesGlob` ∕ `simpleGlobMatch` 逐字留存（B 面 glob 匹配 = 端壳面） |
+| 2 | VSC `src/agent/rules-face.mjs` | 120 | 导入改指核件（`:10` `{ discoverRules, loadRules }` 直取核；`:11` `matchesGlob` 端壳）+ B 面注记随落；判据面（分类 ∕ 常驻块 ∕ JIT）逐字零改 |
+| 2 | VSC `src/agent/setup.mjs` | 429 | `:293-294` 注记随落（目录读取 = 核件）——调用面 ∕ 行为零变 |
+| 2 | VSC `src/agent/execute-tools.mjs` | 421 | `:28-29` 注记随落——调用面 ∕ 行为零变（该档另含他批在途笔迹 `:244-247`，非本舱） |
+| 3 | 桌面 `src/main/agent-assemble.mjs` | 104（R3 后现读） | **零改** ✓——`:22` 已从核导入 `discoverRules` ∕ `:29` 入 `DEFAULT_DEPS` ∕ `:72` 消费（上提即得）；运行期自证探针在盘 |
+| 证 | `thincoder-vscode/.thincoder/tmp/r10-rules-parity.mjs`（162）＋快照 `r10-baseline-rules.mjs`（125） | 新档 | 对拍自证四段：①源文本逐字（改名归一后）②fixture 电池 5 案逐字节 ③端壳同一性 + glob 矩阵 16 例 ④B 链烟测 |
+| 证 | `thincoder-desktop/.thincoder/tmp/r10-desktop-selfcheck.mjs`（44） | 新档 | 桌面零改自证：装配面同一性 + 源文本断言（度量形）+ `.thincoder/rules` 实读 |
+
+**机检读数（命令 + 结果）**
+- `node --check` × 7 触碰档（5 产品 + 2 探针）→ 全 `Syntax OK`（fix 轮后两探针复检同）。
+- **对拍自证（验收①）**：`TEXT_PARITY = {loadRules_identical:true, parserBody_identical:true, matchesGlob_identical:true, simpleGlobMatch_identical:true}`；fixture 电池 `ALL_CASES_EQUAL = true`（rich 13 条 ∕ absent ∕ emptydir ∕ fileNotDir ∕ skipsOnly 五案两臂逐字节等——rich 两 JSON 各 1730B，落盘 `r10-baseline.json` ∕ `r10-candidate.json`）；`SHELL = {loadRules_isCoreFunction:true, globAllIdentical:true(16/16)}`；`CHAIN`：always 5 ∕ scoped 7 ∕ desc-only 两集皆无 ∕ 常驻块含 `Project rules (.cursor/rules):` ∕ JIT 首注 1 → 重注 0（去重）→ 他路径 0。
+- **基准可信**：baseline 快照 = `git show HEAD:thincoder-vscode/src/extension/rules.mjs` **4256B === 4256B 逐字节等**（改前档，无他批混入）。
+- **桌面零改（验收③）**：`discoverRules_isCoreFunction = true`（`DEFAULT_DEPS.discoverRules === core.discoverRules` 同一性）；`desktop_bridge_imports_coreRulesModule = true`（读 `agent-assemble.mjs` 源文本断言 `from "@thincoder/core/rules.mjs"`+`discoverRules`——度量形）；实读 fixture：`console`（abort∕once）+ `message-fallback`（warn∕always）2 条、畸形档跳过、无目录 ⇒ 0、两臂稳定。
+
+**复核清单（8 项 · 零码 · 实读结论——「缺则立轮」逐项判）**
+
+| # | 项 | 结论 | 证据（本轮实读） |
+|---|---|---|---|
+| ① | C8∕C7 多实例端侧附加面（peer L2 提醒 ∕ panel 展示） | **非缺项（销）**——桌面经核径得 L1/L2/L3；VSC 端侧附加面 = 宿主响应性优化（非用户可见功能），无 panel 展示面 | L1：核 `agent/setup.mjs:136-139` → `agent/setup-reminders.mjs:210-224`（异步 + TTL 缓存）；L2：核 `tools/index.mjs:62/:73`（`assembleBuiltinTools` 内含，桌面 `agent-assemble.mjs:89` 直调）；L3：核 `agent/dispatch-run.mjs:51-65/:115/:133` + `run-stages.mjs:21`；VSC 附加面 = `setup-reminders.mjs:88-102`（SWR 镜像）∥ `panel-session.mjs:322-324`（预热）；VSC webview ∕ 桌面 renderer `peer` 面板面零命中 |
+| ② | 顾问面 ∕ 认领 | **有（逐回调）** | 顾问面：池枚举投影 `agent-bridge.mjs:150-173`（含 `_asyncAdvisors`）+ 轮次∕模型采样 `:188-190`（供面 `agent-host.mjs:77-82/:118`）+ 取消路由 `subagent-face.mjs:51/:66-67`（advisor 池 fallback）；认领：核径 `dispatch-run.mjs:13/:51-65`（`PEER_WRITE_TOOLS` ∕ `peerCollabNote` ∕ `recordPeerWrites` ∕ `markClaimNoted`）+ `run-stages.mjs:21`（`flushPeerDomains`） |
+| ③ | 检查点回退（VSC 对位面未证） | **销（非缺项）**——核出口面在、VSC 无独立 UI 消费面 ⇒ 两端经核工具面同引 | 核 `git/checkpoint.mjs` 全族 + `tools/git-checkpoint.mjs`（`checkpoint` action：list∕create∕rewind∕cat∕versions）；VSC 消费 = 权限分类 `tools/index.mjs:48-50` + bash guard 镜像 `tools/shell.mjs:143-149`（↔ 核 `tools/bash.mjs:88-94`）；VSC `webview/**` 与桌面 renderer `checkpoint` 零命中 |
+| ④ | 回声合并 | **销（非缺项）**——实现单源在核、桌面消费核 `applySession` 装线径 | 核 `context.mjs:163`（`mergeAdjacentAssistantEchoes`）→ `session-lifecycle.mjs:110`（applySession 装线前一步）；桌面 `session-io.mjs:19/:25`（`applySession`）|
+| ⑤ | flow 四档逐档消费面 | **直引 = 0/4**（与设计句「已证消费 = `flow/block.mjs` 经 `views/chat-text.mjs`」**不符**——报告项）；四档对位面 = 端侧自持（结构 ∕ 类名契约 + 核件头注「append 与跟滚留端」）⇒ 非用户可见缺项 | 桌面 `/rc/flow/` 直引全集 = `queued-mark` ∕ `stream` ∕ `tool-card` 三档（grep 实读）；四档对位：block → `views/chat-text.mjs:5/:28`（结构同形注）+ 错误横幅 `views/chat.mjs:140-161`；reasoning → `views/chat-text.mjs:38-59`（同形注）+ `core.css:8`（类名映射）；tool-card-restore → `views/chat-tool.mjs`（三行卡；`linkifyPaths` 直引 `flow/tool-card.mjs`）+ 页读 `page-read.mjs:63-81`；ledger-line → `views/chat-chrome.mjs:93-103`（类名契约注） |
+| ⑥ | `configureTreeResolve` | **端差登记（非缺项）**——宿主路径形态注入；CLI ∕ 桌面同零（核缺省即全量行为） | VSC `src/tools/shared.mjs:106`（join 式 `resolvePath`）；核 `tools/tree.mjs:24-28`（缺省 `resolveInCwd`）；CLI ∕ 桌面零命中 |
+| ⑦ | #522「内容先到」可达性 | **运行期项——挂起（窗口 = R5 #2③；判死线在册）**——静态不可证，R10 侧零动作 | 修正 9 :530 判据（乱序 fixture + 真机）；R5 未交付 |
+| ⑧ | `flow/ledger-line` 跟滚 | **证毕（非缺项）**——append ✓ + 跟滚 ✓ | append：`views/chat.mjs:132-138`（切片）+ `:218`（组入树）+ `views/chat-chrome.mjs:187-197`（`syncLedger` 帧尾原位换 ∕ 建组，锚 = 首个卡节点）；跟滚：`views/chat.mjs:338/:341-342`（`settleFrame`：`syncChrome` 后 `tailAction({following})` ⇒ `stick` ⇒ `stickToBottom`——行组插流尾 ⇒ 高度变化随 `following` 跟底；非跟 ⇒ 补偿 ∕ 零写） |
+
+**判定登记（5 项 · 零码 · 登记行）**
+
+| # | 登记项 | 判定（三件齐 ∕ 依据） |
+|---|---|---|
+| ① | 探针忙闸 = **端差登记** | 结构性不对称 = 闸源为 VS Code 宿主响应性采样（桌面无宿主忙判据）；证据 = VSC `loop-sampler.mjs:36/:59`（`startSampler` ∕ `hostBusy`）+ 应用 `provider-probe-window.mjs:13/:111-114`——桌面零对位；裁定 = 留（登记）〔源 = §2.2 C21 · KD-T3〕 |
+| ② | `traces` ∕ `stopTrace` = **不做**（非用户可见面） | 上抛 4 在册；VSC 侧 = 开发者诊断链路（`stop-trace.mjs` 在盘 + `package.json` 开关）——非用户可见功能 ⇒ 不做 |
+| ③ | #436 = **归先落者 + 判定句** | 归先落者 = 输入批 R1；判定句（KD-T6）=「队长 > 0 ∧ 键位空闲 ⇒ Enter 先发队首（不新发）」——执行留先落者，本舱只登记 |
+| ④ | 命令面板 = **端差登记** | 宿主能力面（VSC QuickPick ∕ 命令注册）；桌面入口 = 主进程菜单（R1 已落）；本体不新造〔源 = §2.2 A5/A6 行 · KD-T3〕 |
+| ⑤ | 核休眠缝三项 = **核侧裁** | `configureEditReceipt` ∕ `configureGitApproval` ∕ `setWaitForConditionSource`（三端零消费者）——本舱**零动**（边界遵守）〔源 = §2.8 边界 2〕 |
+
+**决策透明表（越出行动表的额外改动 · 逐条）**
+
+| # | 改动 | 为何必要 | 披露 |
+|---|---|---|---|
+| 1 | 端壳 `loadRules` 转口保留（零 in-tree 消费者仍留） | 设计「改指核件（端壳零行为变）」+ **名面零改**（`WORKSPACE.md` §2.3 现文即指该档 `loadRules`）——删则名面破 | 本段 + 代码注 |
+| 2 | `rules-face.mjs` ∕ `setup.mjs` ∕ `execute-tools.mjs` 三档注记随落（零行为） | 设计列四档改指；后三档无导入可改（消费面经 `rules-face` 转口）⇒ 以注记使改指链在册 | 本段 + 各注 |
+| 3 | 私有件改名 `parseFrontmatter` ⇒ `parseScopedFrontmatter` | 与核 `./markdown.mjs` 导入同名冲突（同名函数声明 ⇒ SyntaxError）的机械改名；**体逐字纯搬** | 本段 + 代码注 + 探针归一 |
+| 4 | 探针 2 枚 + baseline 快照（`.thincoder/tmp/`，gitignored） | 测试面随全清令取消 ⇒ 验收①③的机读承载（平 node 直跑，非测试档） | 本段 + 各探针头注 |
+
+**测试面处置（随全清令）**：R10 表 **#4 跳过并注明**（核 `test/rules-cursor.test.mjs` + VSC `test/scoped-rules.test.mjs` 随动）——未写测试 ∕ 未改 `test/**` ∕ 未跑任何套件（存量测试已随全清令退役）；机检面由「两枚探针 + `node --check`」承载。**not repo-suite verified — the parent-side closeout run is the only repo-suite run.**
+
+**审计与代码评审（轮次与终态 = `clean`）**
+- 内部偏审（explore · 1 轮）：判 **DEVIATIONS** —— 仅 DOC-DRIFT 2 行（`WORKSPACE.md` §2.3 :51 ∕ §1 :15〔同族 :36/:41〕读取面归位滞后——零触令下只报不改）+ §5 待落段项；部分实现 ∕ 静默简化 ∕ 越表三类零命中；独立逐字复核纯搬对账 + 独立重跑 `node --check` 7/7。
+- 代码评审轮 1（advisor · code）：`VERDICT: pass`（🔴0 ∕ 🟡1 ∕ 🔵5）。**fix 轮 1（4 项）**：① 桌面探针硬编码常量 ⇒ 度量形（读源文本断言导入面）② 对拍探针路径空转段收直 ③ `grabFn` 列 0 启发式 ⇒ 花括号配平 + 不平衡响亮失败 ④ `allIdentical` 判决位只取顺序无关臂（raw 降诊断）→ 复跑两探针全绿。
+- 代码评审轮 2（fix 复核 · 定点）：`VERDICT: pass` —— 四项逐项核实（含抽取区间手工走查：六枚目标函数无截断 ∕ 无假失败）；新建议 1 项（`grabFn`「找不到」仍静默等价 ⇒ 假绿风险）⇒ **fix 轮 2**：`not found` throw 化 + `?? ""` 摘除 → 复跑绿。
+- 终态 = **clean**（内审 1 轮 ∕ 代码评审 2 轮 pass ∕ fix 2 轮；无未闭合项）。
+
+**遗留 ∕ 转出（不属本舱授权面，供父侧）**
+1. 设计档收正未落（本舱零触文档面——沿 R1/R3/R6 先例）：R10 靶行（`PROJECT.md` §10 端差登记 ∕ 判定结论随落 · KD-42 补句〔修正 12〕）+ **本舱新增发现**：`docs/core/design/WORKSPACE.md` §2.3 :51 与 §1 :15（同族 :36/:41）读取面归位（现仍记 VSC 档 `loadRules`；盘面 = 核件单源 + 端壳转口）。
+2. 核 `rules.mjs` 届盘重锚：**54 ⇒ 124**（split 口径；read 口径 123）——设计行「+≈50 ⇒ ≈104」实际 +70（差 = 档头 ∕ 注记说明块）；请收正 R10 #1 行 ∕ §2.5 R10 行。
+3. 设计句与盘面不符一处（报告项 · 修正 9 :528）：⑤「已证消费 = `flow/block.mjs` 经 `views/chat-text.mjs`」——实读桌面 `/rc/flow/` 直引 = `queued-mark` ∕ `stream` ∕ `tool-card` 三档，四档（block ∕ reasoning ∕ tool-card-restore ∕ ledger-line）直引零；请收正或补「对位面」措辞。
+4. §5 状态行未动（多轮并行在手——不抢写；沿 R1/R3 先例）。
+5. 他批在途笔迹：`execute-tools.mjs:244-247`（C-7 注释收正）——非本舱；按路径提交时留意。
+6. 沙箱残留 `%TEMP%/tc-r10-rules-*` ∕ `tc-r10-desktop-*`（自查用，留现场——同 R1 先例）。
 
 ## §6 验证与收口（父代理）

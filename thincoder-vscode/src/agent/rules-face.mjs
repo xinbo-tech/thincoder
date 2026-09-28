@@ -2,12 +2,13 @@
  * rules-face.mjs — VSC 端规则面判据单源（#130 · 批档
  * `docs/batches/2026-09-20-vsc-rules-retry-batch.md` §2.1）：
  * - **A 面** = stream 规则（`.thincoder/rules/*.md`——两端同义；消费 = 核 provider `chat()`）
- * - **B 面** = `.cursor/rules/*` 作用域规则（VSC 专属面——常驻集 / 作用域集 JIT / 不注入）
+ * - **B 面** = `.cursor/rules/*` 作用域规则（VSC 端面——常驻集 / 作用域集 JIT / 不注入；
+ *   读取 = 核 `rules.mjs` `loadRules`（R10 上提），分类 ∕ 注入判据住本档）
  * 面定义权威 = `docs/core/design/WORKSPACE.md` §2.3（一线程一语义）。本档为两面判据的
  * 落地单源（`setup.mjs` / `execute-tools.mjs` / `agent.mjs` 同引）。
  */
-import { discoverRules } from "@thincoder/core/rules.mjs"
-import { loadRules, matchesGlob } from "../extension/rules.mjs"
+import { discoverRules, loadRules } from "@thincoder/core/rules.mjs" // B 面读取 = 核件（R10 上提——纯搬零语义改）
+import { matchesGlob } from "../extension/rules.mjs" // glob 匹配面 = 端壳（B 面 JIT 判定消费）
 import { FILE_MUTATORS, pushReal } from "./run-helpers.mjs"
 // #327（`docs/core/design/TOOLS.md` §6.17）：触达路径提取单源谓词（核单源——零副本；恒数组 · 恒零抛）。
 import { toolTouchPaths } from "@thincoder/core/agent/helpers.mjs"
