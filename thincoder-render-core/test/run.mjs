@@ -1,6 +1,6 @@
 /**
  * run.mjs — 核包统一测试入口（单一 `npm test` 全绿门禁；镜像 `thincoder-core/test/run.mjs` 形——
- * 单层 glob + 双向 fail-closed）。目标 = `test/*.test.mjs`（全量跑，无 skip）。
+ * 单层 glob + 双向 fail-closed）。目标 = `test/*.test.mjs`（照跑，无 skip）。
  *
  * 启动前自检（fail-closed——收集面反向判据，先于 node --test 启动）：②' 无漏收集——`test/`
  * 树递归全部 *.test.mjs 须被上面单层 glob 命中（嵌套档永不执行 ⇒ 反查即失败）。

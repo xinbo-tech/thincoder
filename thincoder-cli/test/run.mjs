@@ -1,7 +1,7 @@
 /**
  * run.mjs — 统一测试入口（M10 测试纪律：单一 `npm test` 全绿门禁——2026-09-17）。
  * 目标 = `test/*.test.mjs`（单元）+ `test/integration/*.test.mjs`（集成——两层 glob）；
- * slow ≡ test（test/slow.mjs 纯别名——全量跑，无 skip）。
+ * slow ≡ test（test/slow.mjs 纯别名——照跑，无 skip）。
  * 命名 .mjs 而非 .test.mjs —— runner 只收集 *.test.mjs，本文件是启动器。
  *
  * 启动前自检（fail-closed——收集面反向判据，先于 node --test 启动）：②' 无漏收集——`test/`

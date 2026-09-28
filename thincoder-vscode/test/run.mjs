@@ -2,7 +2,7 @@
  * run.mjs — 统一测试入口（M10 测试纪律：单一 `npm test` 全绿门禁——2026-09-17）。
  * 目标 = `test/files.mjs`（单元清单）+ `test/integration/files.mjs`（集成清单）——
  * 非 .test.mjs 命名的 smoke 档（smoke-provider.mjs / smoke-settings.mjs）必须保持可跑，故用显式清单。
- * slow ≡ test（test/slow.mjs 纯别名——全量跑，无 skip）。
+ * slow ≡ test（test/slow.mjs 纯别名——照跑，无 skip）。
  * 命名 .mjs 而非 .test.mjs —— runner 只收集 *.test.mjs，本文件是启动器。
  *
  * 启动前自检（fail-closed——两清单契约的机械面，承接自原集成 runner）：
