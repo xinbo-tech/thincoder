@@ -1,7 +1,7 @@
 /**
  * events.mjs — 渲染面事件归约核心（事件通道 → 切片写者**单源** · 批档 §2.2(e) / §2.11⑧ · `docs/desktop/design/IPC.md` §1）：
  * 切片写者的**单源**——主进程只产事件 / 回执，值面落树全在本档；订阅接线面出档 `renderer/events-subscribe.mjs`
- *（二十二通道表 · `attachEvents` · 回合尾窄口携键 —— 300 行拆分层落形）；问题 / 任务切片面出档 `renderer/questions.mjs`、
+ *（二十三通道表 · `attachEvents` · 回合尾窄口携键 —— 300 行拆分层落形）；问题 / 任务切片面出档 `renderer/questions.mjs`、
  * **宿主唤醒面三切片**（挂起 ∕ 消化 ∕ 到期）= **出档 `renderer/events-wake.mjs`**（R5 先拆后改 —— 本档触 500
  * 硬限；三归约体 + 共件 `countOf` 迁入该档，本档引三件分派，无环）；
  * 位标面出档 `renderer/badges.mjs`（桌面残余批拆档产物 —— `clearQuestion` 本档 re-export 保导出名面）；
@@ -103,7 +103,7 @@ function clearCursor(state) {
   return hit ? { ...state, blocks: next } : state
 }
 
-// ─── 纯归约（二十二通道 → 切片）────────────────────────────────────
+// ─── 纯归约（二十二通道 → 切片；`ev:config` = 纯信号窄口不入归约）────────────
 
 /** `ev:reasoning`——推理块增量（R3c · D19 · `docs/desktop/design/IPC.md` §1 该行）：续写判据 = **尾块 `kind === "reasoning"`**（与正文同形）；
  *  否则起新推理块；键门同 `onToken`（非活动会话零落）。 */

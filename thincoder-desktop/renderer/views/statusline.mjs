@@ -13,6 +13,8 @@
  * 先例；在场判据随核件 = `renderer/views/goal.mjs` `goalBadgeVisible` —— 非 `active` 态 ⇒ 零节点）。
  * 承载段数据源（逐段）居段构建器族档（本档只给装配序与切片取值）；段 3 态机（挂起句 / 零节点 / 状态文本 / 运行中 / 就绪）单源 = 同档。
  * **R4（提示锚 + 状态面）**：段 3 态机增**状态文本支**（五 kind —— `ev:statusText` 切片；归约面写者 = `renderer/events-status.mjs`）。
+ * **R8（台账周期刷新 + L2 明细）**：段 11 台账标记增 **L2 明细行载波**（段 `title` —— 顶层切片 `ledgerDetail`
+ * 直传段构建器；判据 / 空集零 title 归 `statusline-segments.mjs` `ledgerSegment`；段在场判据零改）。
  * 判据（D17 · KD-25）：**未至 / 非正 / 缺片 ⇒ 该段零节点**（禁假造）；段锚 = `data-seg`（闭集 = `STATUS_SEGMENTS`）·
  * 段内件锚 = `data-part`（令牌三件）；跨会话告警位（**他会话**的待审批 / 运行提示 —— 源 = `sessions` 行投影，
  * 会话模型轮 R13：原标签键表随标签裁撤退场）沿既有面（`data-alert` —— 非 16 段之一）。
@@ -48,7 +50,7 @@ const ALERT_CODES = Object.freeze(["approval", "running"])
 export function statusModel({
   activeSession = null, badges = {}, usage = {}, sessions = [], pending = {},
   blocks = [], tasks = {}, turns = {}, turnStarts = {}, tokens = {}, timers = {}, projectInfo = null,
-  sessionFlags = {}, susp = {}, statusText = {}, goal = {}, now = Date.now(),
+  sessionFlags = {}, susp = {}, statusText = {}, goal = {}, ledgerDetail = [], now = Date.now(),
 } = {}) {
   const rows = Array.isArray(sessions) ? sessions : []
   const active = activeSession == null ? null : String(activeSession)
@@ -69,7 +71,7 @@ export function statusModel({
     turnSegment(turns, active),
     tokensSegment(tokens, active),
     contextSegment(usage, active),
-    ledgerSegment(projectInfo),
+    ledgerSegment(projectInfo, ledgerDetail),
     timerSegment(timers, active),
     titleSegment(sessions, active),
     enterSegment(pending, active, codes),
@@ -147,6 +149,7 @@ export function mountStatus(root, state) {
     tokens: state?.tokens ?? {},
     timers: state?.timers ?? {},
     projectInfo: state?.projectInfo ?? null,
+    ledgerDetail: state?.ledgerDetail ?? [],
     sessionFlags: state?.sessionFlags ?? {},
     susp: state?.susp ?? {},
     statusText: state?.statusText ?? {},

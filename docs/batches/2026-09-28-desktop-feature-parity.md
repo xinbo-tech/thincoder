@@ -119,6 +119,15 @@
 - **裁②（转出 ③ · 端差两处）**：登记待裁 → 台账 **#554**（`interrupted` 注记无载体 ∕ 🎯 无点击面——随下一桌面对位轮，默认对齐）。
 - **裁③（转出 ① · 设计面）**：#39（R4 单）**已撤单**——与 R5 五项**合并为原子一轮**（同批文档、一次落齐；编号以届时回执为准）。
 
+### 1.21 补记（父侧 · 2026-09-29 01:3x）
+- R4 + R5 **合并设计面轮 = #40**（已派 · 在队——等 #35 ∕ #36 ∕ #37 让出同批文档；单内计数口径 = 实读为准）。
+- R8 起手三裁（#13）：① **授权 `ev:config` 新通道**（验收行「手改 config.json ⇒ 设置面随动」按设计承诺落——通道 22 ⇒ 23，设计面收正行）；② 周期拍 = **直消费核 `startLedgerSurface`**（零第二实现；假时钟以全局定时器替身）；③ L2 明细行 = `ev:ledger` 增键 `detailLines`（零新通道）✓。
+
+### 1.22 R8 交付收下 + 合并轮重派（父侧 · 2026-09-29 01:5x）
+- **交付**（#13 · 终态 clean · fix 1）：13 档——`project-info.mjs` 97 ⇒ **152**（**直消费核 `startLedgerSurface`**：首拍 `setImmediate` ∕ 周期 **120s** ∕ 拍重叠护栏；L2 明细行集 = 核 compose 直取）+ 核新 `config-watch.mjs`（**83**，KD-T2 上提纯搬）+ VSC 壳 78 ⇒ 36 改指 + 桌面壳新 41（`node:fs.watch` 平台落子）+ `main.mjs` 130（就绪起 watch + `ev:config` 出站 + 窗关双退）+ 渲染链六档随动。**三态读数在册**（watch 三臂：外写 +1 ∕ 自写 +0 ∕ 无变更 +0 ∕ dispose 全退；周期拍假时钟：120000ms 注册 + 首拍 ∕ 周期拍 ∕ 无变化 0）+ 通道 **23 = 23 同序**。三裁照落 ✓；§5 两笔（6737 + 2761 字符）。
+- **裁定 ∕ 转出**：① 登记项四项（`events` 482 顾问线 ∕ `LEDGER_STATE` 门与 VSC 同形 ∕ L2 随超阈段 ∕ 单槽互清）= **免裁在册**；② **合并轮重派**：#40（R4+R5）**撤单** → R4 + R5 + **R8 漂移列（七档 ~17 组）** 合并为原子一轮（在队）；③ `ev:config` 载荷不携 `key` = 会话键面通则例外——收正轮**明写**；④ `.r7-wire.mjs`（R7 期 ad-hoc 闸住包根）= 随 R7 收尾同处置（在册）。
+- **对账**：`flow/ledger-line` 跟滚面 = **真无缺口**（增量帧 ∕ 贴底判据实读）✓。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（初始轮 + 评审轮 1 修正（1–14 逐号）+ R1 设计面收正轮（#129 ∕ #131 · 六档八笔；flow 批档三处归父侧）+ 评审轮 3（重发复核）修正 · 微轮 #16（1–10 逐号）+ 退役面本体收正轮 + R2 设计面收正轮（#29 · ①–⑥ 逐号）+ R3 ∕ R6 设计面收正轮（#30 · ①–④ 逐号 + 三档 changelog）在册）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
@@ -1295,5 +1304,70 @@ KD-42（`PROJECT.md:81`）补句：**「域外对账保持人工」**——理�
 3. 端差登记两处待裁：① `interrupted` 注记无真值载体（VSC `freezeLiveBlocks(interrupted)` 有入参；桌面出窗帧无该键 ⇒ 恒零注记 —— 若须 X11 面则宿主 `suspension-drive.mjs` 出窗帧扩键）② 🎯 无点击面（VSC `wire("goal-badge","goal-panel")` 无对位）。
 4. 沙箱残留：`.thincoder/tmp/r5-readings.mjs`（自查脚本 · 可按需复跑 —— 留现场，同 R1 ∕ R4 先例）。
 5. §5 状态行未动（多轮并行在手 —— 不抢写；沿 R1 ∕ R3 ∕ R4 ∕ R10 先例）。
+
+### R8 · 台账周期刷新 + L2 明细 + config 热更（eng-coder · 2026-09-29 · initial 轮）
+
+**交付摘要（逐档 · 后 = `read` 总行数实读；前 = 设计「现读」基线 ∕ 本舱起手实读）**
+
+| # | 档 | 后 | 落点 |
+|---|---|---|---|
+| 1 | `src/main/project-info.mjs`（前 97 ⇒） | **146** | 台账刷新面重写：`pushLedgerLines` = **直消费核 `startLedgerSurface`**（`:60/:73` —— 首拍 `setImmediate` ∕ 周期 `REFRESH_MS`=120000 ∕ `dispose`）+ 启动拍 ∕ 周期拍变化行出站 + **L2 明细行集**（核 `discoverFamily` ∕ `buildScan` ∕ `resolveExecutorStates` ∕ `detailScans` ∕ `formatDetailLine` compose —— VSC `ledger-surface.mjs:69` 对位）⇒ `ev:ledger` 增键 `detailLines`；+`stopLedgerRefresh()`（重锚 ∕ 收尾）；端零扫描算法 |
+| 2 | 核 新 `thincoder-core/config-watch.mjs` | **83** | **上提**（KD-T2 · 纯搬零语义改）：去抖 300ms ∕ stat 元组（`mtimeMs:size`）比对 ∕ 自写抑制（缺省订阅核 `onConfigSelfWrite`）+ `configTupleOf`；平台两注入 = `attach`（fs 事件源）∕ `setTimer`·`clearTimer`；降级 no-op 面 |
+| 3 | VSC `src/extension/config-watch.mjs`（前 78 ⇒） | **36** | 改指核件：仅留平台落子 `createFileSystemWatcher`（`RelativePattern` 目录+基名；三事件同缝 `onEvent`）+ dispose；**契约零改**（签名 ∕ no-op ∕ 调用面 `extension.mjs:12/:128` 未动） |
+| 4 | 新 `src/main/config-watch.mjs` | **41** | 桌面壳：`node:fs.watch` 源（**目录监视** ⇒ 首建 ∕ 删除 ∕ 改名可见；名字过滤到目标档；`persistent:false`）+ 定时器注入转发；目录不可得 ⇒ 核件降级 no-op |
+| 5 | `src/main/main.mjs`（前 109 ⇒） | **128** | 起 watch（就绪后 = 建窗后）+ `onChange ⇒ emit("ev:config", { at })` + `win.on("closed") ⇒ dispose`（生命周期随窗口） |
+| 6 | `renderer/views/statusline.mjs`（前 293 设计基线 ∕ 157 起手 ⇒） | **161** | `statusModel` ∕ `mountStatus` 增 `ledgerDetail` 切片直传 + `ledgerSegment(projectInfo, ledgerDetail)`；**段在场判据零改** |
+| 7 | `src/preload/preload.cjs`（表外 · 父侧授权①） | **70** | `EVENT_CHANNELS` 22 ⇒ **23**（+`ev:config` 末位；计数注同步） |
+| 8 | `renderer/events-subscribe.mjs`（表外 · 授权①） | **93** | 订阅表 22 ⇒ **23** + **`onConfig` 窄口**（纯信号直送调用面；归约面零写者） |
+| 9 | `renderer/mount-settings.mjs`（表外 · 授权①下游） | **149** | +`refreshSettings()`：设置 ∕ 向导面**在场才复读**四段（providers ∕ agent ∕ mcp ∕ index）；关态零动作 |
+| 10 | `renderer/app.mjs`（表外 · 授权①） | **276** | 窄口接线：`attachEvents({ on, onConfig: () => settingsFace.refreshSettings() })` |
+| 11 | `renderer/events.mjs`（表外 · 授权③） | **482** | `onLedger` 扩两键独立归约：`lines`（既有）· `detailLines` ⇒ **顶层切片 `ledgerDetail`**（项目级）；同值原引用 ∕ 空集照写（清 tooltip） |
+| 12 | `renderer/mount-status.mjs`（表外 · 授权③） | **32** | `STATUS_KEYS` += `ledgerDetail`（状态行重挂触发） |
+| 13 | `renderer/views/statusline-segments.mjs`（表外 · 授权③ · R4 拆分产物） | **198** | `ledgerSegment(projectInfo, detailLines)` ⇒ 段 `attrs.title = detailLines.join("\n")`（tooltip 载波；空集零 title；行文本核产逐字） |
+
+**机检读数（命令 + 结果）**
+- **④ `node --check`**：产品面 13 档 + 自查脚本 3 档 —— 本舱复跑 **16/16 全 OK**；内审（explore）独立复跑同值 16/16。
+- **① 周期拍（假时钟注入自证）** —— `.thincoder/tmp/r8-ledger-readings.mjs`（假时钟 = 全局 `setImmediate` ∕ `setInterval` ∕ `clearInterval` 替身注入**真实核拍面**；台账库 ∕ 去重档走核沙箱缝 + tmp 档）：注册 ms = **120000**（核 `REFRESH_MS`）· 启动拍出站 `{"key":"3","detailLines":["台账 proj：需求池 1 · 技术待办 0（老化 0）"]}` · 周期拍（pool 1⇒3 阈值越线）出站增量 **1** = 变化行 `[{"text":"台账变化：proj 需求池达阈值（3 条）— 可开批","warn":true}]` + **③ 明细行** `["台账 proj：需求池 3 · 技术待办 0（老化 0） — 可开批"]` · 无变化拍出站增量 **0** · `dispose` ⇒ `clearInterval` 1 次 + 其后驱动出站增量 **0**。
+- **② watch 三态（注入自查 + 真实 fs + VSC 沙箱）** —— 核件注入自查（`r8-watch-readings.mjs` ①）：去抖默认 **300** ms · 外写 push **1** ∕ 自写增量 **0** ∕ 无变更增量 **0** · 同拍两事件去抖合并后 push 总数 **2**（单拍单推）· dispose = attach 退订 1 ∕ 待发计时器 0 ∕ 自写退订 true。桌面壳真实 fs（同脚本 ②）：外写 **+1** ∕ 自写（核 `writeConfigAtomic`）**+0** ∕ 无变更 **+0** ∕ dispose 后写盘 **+0**（自写原子写回执 ok=true）。VSC 壳沙箱（`r8-vsc-check/run.mjs`，假 `vscode` + 真档副本 —— `sha256` 与真档**逐字节等**（754d7df9a623a3ae · 1922B · IDENTICAL:true））：外写 **1** ∕ 自写 **0** ∕ 无变更 **0** ∕ 去抖合并 **2** · dispose ⇒ watcher.disposed=true ∕ 子退订 3 ∕ 其后驱动 **0**。
+- **`ev:config` 接线** —— 通道两表同序同值 **23 = 23**（`preload.cjs` `EVENT_CHANNELS` ∧ `events-subscribe.mjs` `CHANNELS`；`ev:config` 末位）= true；窄口：订阅 23 路 · `ev:config` ⇒ `onConfig` 调用 1 ⇒ 二次触发 2 · 缺注入零抛 true。
+- **④′ 渲染面两切片** —— `onLedger` 同值载荷 ⇒ 原引用 true · detail-only 载荷 ⇒ 切片更新 · 段 11 `title` = 明细行逐字 · 空明细 ⇒ 零 title true · 非超阈 ⇒ 段不在场 true。
+- **随轮核（§2.3 对账节 13 / 修正 9 项 8 · `flow/ledger-line` 跟滚）**：append ✓（`views/chat.mjs:234` 构树 + `chat-chrome.mjs:189-200` `syncLedger` 幂等原位换 ∕ 摘除）· **跟滚面 = 真且无缺口**：`ledgerLines` ∈ `CHAT_KEYS`（`app.mjs:66`）且 ∉ `REMOUNT_KEYS`（`chat-stream.mjs:67`）⇒ 台账行变走增量帧；帧尾 `tailAction({following})`（`chat.mjs:357`）—— 跟滚 ⇒ `stickToBottom`（新增行在滚动容器内 ⇒ 贴底保持）∥ 非跟滚 ∧ 头部零动 ⇒ 零写（页位零跳）。
+- 负控：核 `ledger-surface.mjs` ∕ `ledger.mjs` ∕ `config-io.mjs` **零改**（核扫描语义零改成立）；桌面树零第二扫描实现（端侧仅核导出 compose）。
+
+**测试面**：随全清令（2026-09-28 用户令）**跳过 R8 表 #7 ∕ #8 两行**（核新 `test/config-watch.test.mjs` ∕ 桌面 `test/project-info.test.mjs` 随动）—— 本舱未写测试 ∕ 未跑套件；三态 ∕ 周期拍 ∕ 明细行 ∕ 切片读数由上述 ad-hoc 脚本承载（脚本为打印型读数面，期望值逐项随行；可按需复跑）。**not repo-suite verified — the parent-side closeout run is the only repo-suite run.**
+
+**决策透明表（逐条 · 依据）**
+
+| # | 决策 | 依据 |
+|---|---|---|
+| D1 | 新增事件通道 `ev:config`（22 ⇒ 23）替代「仅 stderr 可见」 | 父侧裁①（R8 验收行「手改 config.json ⇒ 设置面随动」= 设计承诺）；表外四档（`preload.cjs` ∕ `events-subscribe.mjs` ∕ `app.mjs` ∕ `mount-settings.mjs`）随落照实披露；载荷 `{ at }` 轻量信号（不携 `key` —— 非会话面，收正时随 IPC.md 明写） |
+| D2 | 周期拍口径 = 直消费核 `startLedgerSurface`（非端持薄驱动 + 参数时钟缝） | 父侧裁②（零第二实现 = 上位判据 KD-T2 ∕ 修正 5）；假时钟自证经全局定时器替身（核拍面无参注入缝——如实披露） |
+| D3 | L2 明细行承载 = `ev:ledger` 增键 `detailLines` + 顶层切片 `ledgerDetail` → 段 `title` | 父侧裁③；零新通道 ∕ 零 preload 改动；表外三档（`events.mjs` ∕ `mount-status.mjs` ∕ `statusline-segments.mjs`）随落披露 |
+| D4 | L2 明细产出 = 每拍 compose 核族扫描导出（`discoverFamily→buildScan→resolveExecutorStates→detailScans→formatDetailLine`） | 设计行 #1 明文「VSC `:69` 对位」；与 VSC `scanFamily` 同法（非第二实现——零本地扫描算法）；观察项 = 每拍二次族扫描（VSC 同），可作核面 `detailLines` 单一出口候选（留父侧） |
+| D5 | `pushLedgerLines` 名面保留、语义升级（启动拍 + 周期拍；返回值改拍面句柄） | 调用点（`ipc.mjs` `session:resume` 成功径 `void`）零改；R8 表列无 `ipc.mjs` ⇒ 零触该档 |
+| D6 | 桌面监视 = **目录级** `node:fs.watch` + 基名过滤（非文件级） | 文件级监视对「档首建 ∕ 删除后重建」不可见（ENOENT）⇒ 目录级与 VSC `RelativePattern` 同见三态；`persistent:false` 不拴事件循环 |
+| D7 | `refreshSettings` 以「面在场」为闸（wizard ∨ settings.open） | 关态复读 = 空转（下次开面自读）；四段读数与 `openSettings` 同批同源 |
+| D8 | 审计复核项：`onLedger` 两键独立判据 ∕ `ledgerSegment` 空集零 title ∕ 段在场判据零改 | 向后兼容（旧载荷仅 `lines` ⇒ `detailLines=null` ⇒ 零写）；禁假造（空集清 tooltip）；段 11「只承超阈警示位」单源不动 |
+
+**留遗 ∕ 转出（不属本舱授权面，供父侧）**
+1. **设计面收正（本舱零触 · 逐处点名）**：`IPC.md` §1 —— `ev:ledger` 行（载荷增 `detailLines`；删「周期刷新不在本批」死句）· 新增 `ev:config` 行 + 事件映射段自产注 · 通道计数 **19 ⇒ 23 五处**（`：42 ∕ :72 ∕ :75` + 两注 `:175 ∕ :188`）· `:66` 载荷键集行；`PROJECT.md` §10 **BI**（`:760` —— 台账周期刷新「后续批」句 ⇒ 已落）· §10 BE ∕ §4.1（事件通道 22 ⇒ 23）；`UI.md` open 行（`:34` —— 台账行周期刷新**销**）· 状态栏行族（`:182` ∕ `:200` —— 段 11 L2 tooltip 载波）；`RENDERER.md` §1.1（十八条 ⇒ 23 + `ledgerDetail` 切片行 —— 含 `ev:ledger` 存量欠账）；`docs/vsc/design/SETTINGS.md`（`:66 ∕ :70` 坐标双失效 —— 现档 36 行、逻辑住核）；核侧 `docs/core/design/CONFIG.md:20 ∕ :48`（「端特有段」判词收窄：纯逻辑已住核）· `CORE-UNIFICATION.md:42`（行数 77 失据 ⇒ 36）· `:1352` ④ 端特有面登记（`:328` 为指针可解）。
+2. `ev:config` 载荷不携 `key` = 会话键面通则的例外（非会话面纯信号）——随 IPC.md 收正一并定形。
+
+**审计与代码评审（轮次与终态）**
+
+- **内部偏审（explore · 只读 · 1 轮）**：判 **DEVIATIONS** —— 部分实现 ∕ 静默简化 ∕ 越表三类**零命中**（越表核 = 全树 grep 命中集 ⊆ 披露面；14 档逐档「有由」）；命中 = ① 🔴 记录面（§5 未落 —— 本块前一笔即消解）② 设计档漂移清单（报告项，含补充点名：`IPC.md` 五处计数 + 缺 `ev:config` 行 + `RENDERER.md` 存量欠账 + `SETTINGS.md:66/:70` 坐标失效 + 核侧 `CONFIG.md:48` ∕ `CORE-UNIFICATION.md:42`）③ 对账节 13（`flow/ledger-line` 跟滚）无处置痕迹 —— 本舱已补（机读链见首笔「随轮核」行）。独立复跑 `node --check` **16/16** 全绿。**设计档零触**由 mtime 核实成立（四设计档 mtime 均早于 R8 窗口）。
+- **代码评审轮 1（advisor · code）**：`VERDICT: changes-required`（🔴1 ∕ 🟡3 ∕ 🔵6）。🔴 = `mount-settings.mjs` `refreshSettings` 调 `reads.loadIndex()`（R7 已更名 `loadTools`；全树 `loadIndex` = 注释 ∕ 他档判据，零函数）⇒ 设置面在场时 `ev:config` 回调抛 `TypeError` ∧ tools 段恒不复读（正落验收行「设置面随动」）。另：🟡 设计档滞后（转出在册 · 非 must-fix）· 🟡 复读四段 vs 面段闭集 7 · 🟡 `events.mjs` 体量（登记不升级）+ 🔵 五项（注释计数 ∕ 收尾径未接线 ∕ processing 门 ∕ 拍重叠 ∕ 脚本复原 ∕ L2 可见面）。
+- **fix 轮 1（本舱）**：① 🔴 —— 现盘已由**并发对账笔迹**修为 `loadEnv` + `loadTools`（R7 段闭集扩：四段 ⇒ 七段覆盖）；本舱复核名实相符（五读者 ⊂ 工厂导出面 `mount-settings-reads.mjs:187`）∧ 按盘补**机械闸**（`r8-watch-readings.mjs` §⑤：名实相符 + 集等值双断）。② 🔵 落修：`events.mjs` 注释计数 22 ⇒ 23（`:4` ∕ `:106`）· `main.mjs` 收尾接线（`win.on("closed") ⇒ configWatch.dispose() + stopLedgerRefresh()`，`main.mjs:111` + 导入 `:19`）· `project-info.mjs` 拍重叠防衛（`flushing` 旗，`:103/:106/:127`）+ `processing` 门登记注释（`:50-51`）· `r8-ledger-readings.mjs` 全局定时器复原走 `process.on("exit")` 兜底。③ 三脚本重跑全绿（含新增 §⑤ 双断 = true）；改动档 `node --check` 全 OK。
+- **代码评审轮 2（fix 复核）**：`VERDICT: pass`（🔴 0）—— 修项逐行核实（含与 `openSettings` 同读者集互证 `mount-settings-exits.mjs:207-208`）；新增仅三项 🔵：① `events.mjs:106` 分界语（22 归约 vs 23 通道表）② §⑤ 闸脆弱性（截体可空过 ∕ 不查覆盖）③ 单槽失败串观察（既有形）。**随落两笔**：`:106` 收正「二十二通道 → 切片；`ev:config` = 纯信号窄口不入归约」+ §⑤ 加集等值断言（重跑 true）；单槽串项按登记收（见下）。
+- **终态 = clean**（内审 1 轮（记录面项随本段消解）∕ 代码评审 2 轮：轮 1 changes-required ⇒ fix 轮 1 ⇒ 轮 2 pass；fix 轮含并发对账复核 + 两笔评审随落加固）。
+
+**登记项（不修 · 供父侧 ∕ 后续轮）**
+1. `renderer/events.mjs` 现读 **482**（split 口径 ∕ read 口径 483）——超 300 顾问线、≤500 硬限；沿 R3 登记维持（拆点先例 = `events-wake.mjs`）。
+2. `project-info.mjs` `LEDGER_STATE` 无 `processing` ⇒ 核拍面避让门恒不触发（与 VSC 同形）；代码注释已登记（`:50-51`）。
+3. L2 明细可见面随超阈段（未超阈 ⇒ 无承载——VSC 常驻 item 面不同）；D8 披露维持；若要常驻承载面 ⇒ 另轮（沿 🎯 `data-goal` 非段位元素先例）。
+4. `mount-settings-reads.mjs` 单槽失败串与并发成功径互清（`:61` ∕ `:147` ∕ `:178`）——既有面级单槽形，R8 并发读者 4 ⇒ 5（+env）微扩，非本修引入；如设计有意 ⇒ 登记即可。
+5. **并发笔迹归属**：`mount-settings.mjs` 的 R7 更名对账（六档行数注同拍）与 `mount-settings-exits.mjs` ∕ `-reads.mjs` ∕ `-segments.mjs` 17:34–17:38 窗笔迹 = **他舱**（非本舱；请父侧 git 归属复核）。本舱最终触碰 13 产品档 + 3 自查脚本（`.thincoder/tmp/r8-*`）。
+
+**报告读数（最终盘面 · 可按需复跑）**：`node .thincoder/tmp/r8-ledger-readings.mjs` ∕ `r8-watch-readings.mjs` ∕ `r8-vsc-check/run.mjs`（自 `thincoder-desktop`）——三脚本全绿：周期拍 120000ms 真触发 + 明细行逐字 + 无变化零出站 + dispose 拦截；watch 三态 ×3 臂（核注入 ∕ 桌面真 fs ∕ VSC 假宿主沙箱，副本与真档 `sha256` 逐字节等）；通道两表 23 = 23 同序 + `ev:config` 窄口 + §⑤ 段读面名实相符 ∕ 集等值双 true。
 
 ## §6 验证与收口（父代理）

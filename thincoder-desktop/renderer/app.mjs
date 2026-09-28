@@ -236,8 +236,9 @@ chatScroll = attachScroll(document.querySelector(FLOW_SLOT), {
 })
 
 /** 事件面接线（装配一次 · 批 8 · 批档 §2.11）：多通道订阅 ⇒ 值面写者单源 = `renderer/events.mjs`（归约）+ `renderer/events-subscribe.mjs`
- *  （订阅）；回合尾窄口存续（标题刷新面）—— 输入区 flush 携行随「回合中插入」批退场（队列消费改宿主驱动）；退订句柄本档无消费点；`on` 缺位 ⇒ 该档记错 + 空操作。 */
-attachEvents({ on: host?.on })
+ *  （订阅）；回合尾窄口存续（标题刷新面）—— 输入区 flush 携行随「回合中插入」批退场（队列消费改宿主驱动）；退订句柄本档无消费点；`on` 缺位 ⇒ 该档记错 + 空操作。
+ *  **R8 增 `ev:config` 窄口**（config 写盘感知 —— 纯信号 ⇒ 设置面复读：`refreshSettings` 自判在场，关态零动作）。 */
+attachEvents({ on: host?.on, onConfig: () => { settingsFace.refreshSettings() } })
 
 /** 文件链接着装与委托（相抵②）：着装面（核 `linkifyPaths` + `data-path` 锚）归 `views/chat-tool.mjs` / `views/chat.mjs`；**委托注册单点 = 本档**（装配期一次 —— 挂载根 = 对话流宿主；幂等 `_fileLinksBound`）。 */
 bindFileLinks(document.querySelector(FLOW_SLOT), openFile)

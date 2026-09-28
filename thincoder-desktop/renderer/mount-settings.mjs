@@ -28,21 +28,22 @@ import { createInfoFace } from "./mount-info.mjs"
 import { createReads } from "./mount-settings-reads.mjs"
 import { createExits } from "./mount-settings-exits.mjs"
 import { mountWizard, wizardModel } from "./views/onboarding.mjs"
-import { mountSettings } from "./views/settings.mjs"
+import { SECTIONS, mountSettings } from "./views/settings.mjs"
 
 /** 设置 / 向导容器锚（**一容器两树互斥** —— 骨架属性住 `index.html`）。 */
 export const SETTINGS_SLOT = '[data-slot="settings"]'
 /** 重挂触发切片：`settings`（设置族全态）/ `locale`（词表切换重挂）。 */
 export const SETTINGS_KEYS = Object.freeze(["settings", "locale"])
 
-/** 段名闭集（与视图 `SECTIONS` 同域 —— 失败面段标域；表外 ⇒ `panel`）。 */
-const SCOPES = Object.freeze(["providers", "model", "agent", "mcp", "tools"])
+/** 段名闭集（**由视图 `SECTIONS` 派生** —— 同源单份，零双抄；失败面段标域；表外 ⇒ `panel`）。 */
+const SCOPES = Object.freeze(SECTIONS.map((section) => section.name))
 
 /**
  * 设置族接线：装配三族（读数供给 / 出口 / 项目级读数）+ 挂载（一挂载面：设置 / 向导两树互斥）+ 向导接线 + 自持重绘订阅。
  * `host` = preload 窄桥（只 `invoke`）；`deps.onProjectOpened` = 装配面项目面链注入（缺 ⇒ 目录出口零动作）。
- * 返回 `{ paintSettings, refreshInfo, openSettings, handlers, wizardHandlers, keys, detach }`（消费面只
- * `attachSettings(host, …)`；`refreshInfo` 出句柄面 = 开项目成功链复读口（#461 —— `renderer/app.mjs` `openDir` 消费 · 幂等）。 */
+ * 返回 `{ paintSettings, refreshInfo, openSettings, refreshSettings, handlers, wizardHandlers, keys, detach }`（消费面只
+ * `attachSettings(host, …)`；`refreshInfo` 出句柄面 = 开项目成功链复读口（#461 —— `renderer/app.mjs` `openDir` 消费 · 幂等）；
+ * `refreshSettings` 出句柄面 = config 写盘感知复读口（R8 · `ev:config` 窄口 —— `renderer/app.mjs` `attachEvents` 消费）。 */
 export function attachSettings(host, deps = {}) {
   const store = deps.store ?? defaultStore
   const onProjectOpened = typeof deps.onProjectOpened === "function" ? deps.onProjectOpened : null
@@ -128,8 +129,23 @@ export function attachSettings(host, deps = {}) {
   void reads.loadProviders()
   void infoFace.refreshInfo()
 
+  /** config 写盘感知复读（R8 · `ev:config` 窄口 —— 接线 = `renderer/app.mjs`）：设置 ∕ 向导面**在场** ⇒ 七段读数
+   *  复读（providers ∕ agent〔携 models〕 ∕ mcp ∕ env ∕ tools —— 与 `openSettings` 同批同源；R7 随段闭集扩：
+   *  `loadIndex` 更名 `loadTools` + 增 `loadEnv`）；关态 ⇒ 零动作（下次开面自读 —— 免空转）。
+   *  返回是否复读（读数 ∕ 走查面）。 */
+  function refreshSettings() {
+    const state = store.get()
+    if (!occupies(state) && state?.settings?.open !== true) return false
+    void reads.loadProviders()
+    void reads.loadAgent()
+    void reads.loadMcp()
+    void reads.loadEnv()
+    void reads.loadTools()
+    return true
+  }
+
   return {
-    paintSettings, refreshInfo: infoFace.refreshInfo, openSettings: exits.openSettings,
+    paintSettings, refreshInfo: infoFace.refreshInfo, openSettings: exits.openSettings, refreshSettings,
     handlers: exits.handlers, wizardHandlers, keys: SETTINGS_KEYS, detach,
   }
 }

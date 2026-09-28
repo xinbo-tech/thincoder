@@ -155,10 +155,17 @@ export function contextSegment(usage, key) {
   }
 }
 
-/** 段 11 · 台账标记（**只承超阈警示位** —— `projectInfo.thresholdReached` 严格真；计数住左列信息行，不重复读数）。 */
-export function ledgerSegment(projectInfo) {
+/** 段 11 · 台账标记（**只承超阈警示位** —— `projectInfo.thresholdReached` 严格真；R8 增 L2 明细行**载波** = 段
+ *  `title`（tooltip 面 —— VSC `ledger-surface.mjs:69` 对位；行文本核产逐字 ∕ 端零行构造；空集 ⇒ 零 title）。 */
+export function ledgerSegment(projectInfo, detailLines) {
   if (projectInfo?.thresholdReached !== true) return null
-  return { code: "ledger", warn: true, parts: [{ text: t("info.threshold") }] }
+  const details = Array.isArray(detailLines) ? detailLines.filter((text) => typeof text === "string" && text !== "") : []
+  return {
+    code: "ledger",
+    warn: true,
+    ...(details.length > 0 ? { attrs: { title: details.join("\n") } } : {}),
+    parts: [{ text: t("info.threshold") }],
+  }
 }
 
 /** 段 12 · 计时（`timers[key]` —— 核 `_pendingTimers` 活读投影；非正 / 非数 ⇒ 零节点；到期未送达 ⇒ 警示）。 */

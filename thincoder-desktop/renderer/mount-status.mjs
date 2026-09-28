@@ -22,6 +22,7 @@ export const STATUS_KEYS = [
   "susp", // 挂起计数切片（段 3 支①挂起句源 —— 桌面空闲唤醒批；写径 = 归约面 `ev:susp`）
   "statusText", // 状态文本切片（段 3 支③五 kind 源 —— R4；写径 = 归约面 `ev:statusText`）
   "goal", // 目标面切片（🎯 非段位元素源 —— R5；写径 = 归约面 `ev:goal`）
+  "ledgerDetail", // L2 明细行切片（段 11 tooltip 载波 —— R8；写径 = 归约面 `ev:ledger` 的 `detailLines` 键）
 ]
 
 /** 状态行一族装配（装配期一次）：返回挂载面 `paintStatus`（`store` 注入面 = 测试缝）。 */

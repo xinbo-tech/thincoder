@@ -15,7 +15,11 @@ import { createAgentHost } from "./agent-host.mjs"
 import { currentCwd } from "./projects.mjs"
 // 会话维护线（R1 · 桌面功能对位批）：启动拍供面（GC ∕ 索引两枚延迟拍 —— 处理体同档）。
 import { scheduleSessionMaintenancePasses } from "./session-maintenance.mjs"
+// 台账刷新面收尾（R8 —— 拍面随开项目链重锚；窗口关 = 退出径同点——`stopLedgerRefresh` 幂等、核 interval 已 unref）。
+import { stopLedgerRefresh } from "./project-info.mjs"
 import { createWindow, probesSatisfied, runSmoke } from "./window.mjs"
+// config 写盘感知（R8 · 桌面功能对位批 · C3）：核件 `config-watch` 桌面壳（`node:fs.watch` 源 + 自写抑制）。
+import { startConfigWatch } from "./config-watch.mjs"
 // 提示锚取值表（R4 · 桌面功能对位批 · #519）：核缝供值面（`prompt-files.mjs` `configurePromptInjections`）。
 import { configurePromptInjections } from "@thincoder/core/prompt-files.mjs"
 import { DESKTOP_PROMPT_INJECTIONS } from "./prompt-injections.mjs"
@@ -100,6 +104,11 @@ async function main() {
   setLedgerEmit(emit)
   registerIpcHandlers()
   win = createWindow(recordError)
+  // config 热更感知（R8 · C3——核 `config-watch.mjs` 桌面消费）：外部写盘（手编 ∕ CLI 端）⇒ 去抖 + 元组真变
+  // ⇒ `ev:config`（宿主自产推送；渲染面设置面复读）；自写抑制 = 核 `onConfigSelfWrite`（核件缺省内接——端零自持，
+  // 自身写盘不抖动）。生命周期随窗口：窗口 closed ⇒ 撤监视（单窗应用 = 退出径同点）。
+  const configWatch = startConfigWatch({ onChange: () => emit("ev:config", { at: Date.now() }) })
+  win.on("closed", () => { configWatch.dispose(); stopLedgerRefresh() }) // 生命周期随窗口：两长活面（监视 + 台账拍面）同点收尾
   // 启动拍（R1 · 会话维护 · KD-T4② 端层显式点火）：窗口起后两枚延迟拍（核侧 3s 启动窗外；异步非阻塞、
   // 失败静默 —— 索引 = 派生品）。GC 拍须项目 cwd：开机未开项目 ⇒ 此处零动作，由恢复入口（`ipc.mjs`
   // `session:resume` 成功径）同款点火；索引拍 = 全根扫描（无需 cwd），此处恒点火（核内每进程一次去重）。
